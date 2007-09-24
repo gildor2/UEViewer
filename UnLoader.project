@@ -1,0 +1,24 @@
+# perl highlighting
+
+LIBC       = shared
+#LIBC       = static
+#OUT        = Release
+#MAPFILES   = 1
+CONSOLE    = 1
+OPTIMIZE   = size
+
+#PDB        = 1
+
+INCLUDES   = libs/include
+LIBRARIES  = libs
+OBJDIR     = obj
+
+sources(MAIN) = {
+	UnCore.cpp
+	UnLoader.cpp
+	# libraries
+	GlWindow.cpp
+	Math3D.cpp
+}
+
+target(executable, UnLoader, MAIN, MAIN)

@@ -1,0 +1,2 @@
+http://udn.epicgames.com/Two/AnimBrowserReference.html
+  Using the Animation Browser and UKX Animation Packages
