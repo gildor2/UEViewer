@@ -91,3 +91,40 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 	}
 	return Ar;
 }
+
+
+/*-----------------------------------------------------------------------------
+	Miscellaneous
+-----------------------------------------------------------------------------*/
+
+int appSprintf(char *dest, int size, const char *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	int len = vsnprintf(dest, size, fmt, argptr);
+	va_end(argptr);
+	if (len < 0 || len >= size - 1)
+		printf("appSprintf: overflow of %d\n", size);
+
+	return len;
+}
+
+
+void appStrncpyz(char *dst, const char *src, int count)
+{
+
+	if (count <= 0) return;	// zero-length string
+
+	char c;
+	do
+	{
+		if (!--count)
+		{
+			// out of dst space -- add zero to the string end
+			*dst = 0;
+			return;
+		}
+		c = *src++;
+		*dst++ = c;
+	} while (c);
+}

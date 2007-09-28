@@ -15,6 +15,7 @@ OBJDIR     = obj
 
 sources(MAIN) = {
 	UnCore.cpp
+	UnPackage.cpp
 	UnLoader.cpp
 	# libraries
 	GlWindow.cpp

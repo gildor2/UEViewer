@@ -11,15 +11,24 @@ class FArchive
 public:
 	bool	IsLoading;
 	int		ArVer;
+	int		ArPos;
+	int		ArStopper;
 
 	FArchive()
 	:	f(NULL)
+	,	ArStopper(0)
 	{}
+
+	~FArchive()
+	{
+		if (f) fclose(f);
+	}
 
 	FArchive(FILE *InFile)
 	:	f(InFile)
 	,	IsLoading(true)		//?? no writting now
 	,	ArVer(9999)			//?? something large
+	,	ArStopper(0)
 	{}
 
 	void Setup(FILE *InFile, bool Loading)
@@ -28,9 +37,16 @@ public:
 		IsLoading = Loading;
 	}
 
+	void Seek(int Pos)
+	{
+		fseek(f, Pos, SEEK_SET);
+		ArPos = ftell(f);
+		assert(Pos == ArPos);
+	}
+
 	int GetPos()
 	{
-		return ftell(f);
+		return ArPos;
 	}
 
 	bool IsEof()
@@ -38,6 +54,11 @@ public:
 		int pos  = ftell(f); fseek(f, 0, SEEK_END);
 		int size = ftell(f); fseek(f, pos, SEEK_SET);
 		return size == pos;
+	}
+
+	bool IsStopper()
+	{
+		return ArStopper == ArPos;
 	}
 
 protected:
@@ -49,7 +70,11 @@ protected:
 			res = fread(data, size, 1, f);
 		else
 			res = fwrite(data, size, 1, f);
-		assert(res == 1);
+		ArPos += size;
+		if (ArStopper > 0 && ArPos > ArStopper)
+			appError("Serailizing behind stopper");
+		if (res != 1)
+			appError("Unable to serialize data");
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, char &B)
@@ -279,11 +304,18 @@ template<class T> class TLazyArray : public TArray<T>
 //	UObject class
 //-----------------------------------------------------------------------------
 
+class UnPackage;
+
 class UObject
 {
 public:
-//	FName	Name;
-//	uint32	ObjectFlags;
+	// internal storage
+	UnPackage	*Package;
+	FName		Name;			// index in package name table
+	FName		ClassName;		// index in package name table
+	int			PackageIndex;	// index in package export table
+
+//	unsigned	ObjectFlags;
 	virtual void Serialize(FArchive &Ar)
 	{
 		// stack frame
@@ -295,7 +327,7 @@ public:
 	}
 };
 
-inline FArchive& operator<<(FArchive &Ar, UObject* &Obj)
+inline FArchive& operator<<(FArchive &Ar, UObject *&Obj)
 {
 	int index;
 	Ar << AR_INDEX(index);

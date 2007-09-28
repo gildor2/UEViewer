@@ -1,6 +1,8 @@
 #define FREEGLUT_STATIC
 #include <freeglut.h>
 
+#undef GetClassName		// windows define
+
 #include "Core.h"
 
 

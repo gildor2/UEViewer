@@ -47,6 +47,9 @@ void appFree(void *ptr);
 extern const char *GNotifyInfo;
 void appNotify(char *fmt, ...);
 
+int appSprintf(char *dest, int size, const char *fmt, ...);
+void appStrncpyz(char *dst, const char *src, int count);
+
 
 FORCEINLINE void* operator new(size_t size)
 {

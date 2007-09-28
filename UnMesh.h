@@ -303,6 +303,7 @@ struct FMeshAnimSeq
 
 class UVertMesh : public ULodMesh
 {
+	DECLARE_CLASS(UVertMesh);
 public:
 	TArray<FMeshVert>		Verts2;			// empty; used ULodMesh.Verts
 	TArray<FMeshNorm>		Normals;		// [NumFrames * NumVerts]
@@ -324,6 +325,79 @@ public:
 		Ar << AnimSeqs << Normals;
 		Ar << VertexCount << FrameCount;
 		Ar << BoundingBoxes << BoundingSpheres;
+	}
+};
+
+
+/*-----------------------------------------------------------------------------
+	UMeshAnimation class
+-----------------------------------------------------------------------------*/
+
+// 'Analog' animation key track (for single bone/element.)
+// Either KeyPos or KeyQuat can be single/empty? entries to signify no movement at all;
+// for N>1 entries there's always N keytimers available.
+struct AnalogTrack
+{
+	unsigned		Flags;					// reserved
+	TArray<FQuat>	KeyQuat;				// Orientation key track
+	TArray<FVector>	KeyPos;					// Position key track
+	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track.)
+
+	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
+	{
+		return Ar << A.Flags << A.KeyQuat << A.KeyPos << A.KeyTime;
+	}
+};
+
+
+// Individual animation; subgroup of bones with compressed animation.
+struct MotionChunk
+{
+	FVector					RootSpeed3D;	// Net 3d speed.
+	float					TrackTime;		// Total time (Same for each track.)
+	int						StartBone;		// If we're a partial-hierarchy-movement, this is the lowest bone.
+	unsigned				Flags;			// Reserved
+
+	TArray<int>				BoneIndices;	// Refbones number of Bone indices (-1 or valid one) to fast-find tracks for a particular bone.
+	// Frame-less, compressed animation tracks. NumBones times NumAnims tracks in total
+	TArray<AnalogTrack>		AnimTracks;		// Compressed key tracks (one for each bone)
+	AnalogTrack				RootTrack;		// May or may not be used; actual traverse-a-scene root tracks for use
+	// with cutscenes / special physics modes, in addition to the regular skeletal root track.
+
+	friend FArchive& operator<<(FArchive &Ar, MotionChunk &M)
+	{
+		return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+	}
+};
+
+
+// Named bone for the animating skeleton data.
+struct FNamedBone
+{
+	FName			Name;					// Bone's name (== single 32-bit index to name)
+	unsigned		Flags;					// reserved
+	int				ParentIndex;			// 0/NULL if this is the root bone.
+
+	friend FArchive& operator<<(FArchive &Ar, FNamedBone &F)
+	{
+		return Ar << F.Name << F.Flags << F.ParentIndex;
+	}
+};
+
+
+class UMeshAnimation : public UObject
+{
+	DECLARE_CLASS(UMeshAnimation);
+public:
+	int						f2C;			//?? RawNumFrames
+	TArray<FNamedBone>		RefBones;
+	TArray<MotionChunk>		Moves;
+	TArray<FMeshAnimSeq>	AnimSeqs;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		UObject::Serialize(Ar);
+		Ar << f2C << RefBones << Moves << AnimSeqs;
 	}
 };
 
@@ -572,6 +646,7 @@ struct FStaticLODModel
 
 class USkeletalMesh : public ULodMesh
 {
+	DECLARE_CLASS(USkeletalMesh);
 public:
 	TLazyArray<FVector>		Points;			// note: have ULodMesh.Verts
 	TLazyArray<FMeshWedge>	Wedges;
@@ -585,7 +660,7 @@ public:
 	TArray<FVector>			f1FC;
 	TArray<VWeightIndex>	WeightIndices;
 	TArray<VBoneInfluence>	BoneInfluences;
-	UObject*				Animation;		// UMeshAnimation*
+	UMeshAnimation*			Animation;
 	UObject*				f224;			//?? always NULL
 
 //	FLODMeshInfo			Lods[4];
@@ -630,82 +705,9 @@ public:
 		{
 			Ar << KarmaProps << BoundingSpheres << BoundingBoxes << f32C;
 		}
-/*!! use later, when implement package loading! - have packages of v=126
 		if (Ar.ArVer > 126)
 		{
 			Ar << f338;
-		} */
-	}
-};
-
-
-/*-----------------------------------------------------------------------------
-	UMeshAnimation class
------------------------------------------------------------------------------*/
-
-// 'Analog' animation key track (for single bone/element.)
-// Either KeyPos or KeyQuat can be single/empty? entries to signify no movement at all;
-// for N>1 entries there's always N keytimers available.
-struct AnalogTrack
-{
-	unsigned		Flags;					// reserved
-	TArray<FQuat>	KeyQuat;				// Orientation key track
-	TArray<FVector>	KeyPos;					// Position key track
-	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track.)
-
-	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
-	{
-		return Ar << A.Flags << A.KeyQuat << A.KeyPos << A.KeyTime;
-	}
-};
-
-
-// Individual animation; subgroup of bones with compressed animation.
-struct MotionChunk
-{
-	FVector					RootSpeed3D;	// Net 3d speed.
-	float					TrackTime;		// Total time (Same for each track.)
-	int						StartBone;		// If we're a partial-hierarchy-movement, this is the lowest bone.
-	unsigned				Flags;			// Reserved
-
-	TArray<int>				BoneIndices;	// Refbones number of Bone indices (-1 or valid one) to fast-find tracks for a particular bone.
-	// Frame-less, compressed animation tracks. NumBones times NumAnims tracks in total
-	TArray<AnalogTrack>		AnimTracks;		// Compressed key tracks (one for each bone)
-	AnalogTrack				RootTrack;		// May or may not be used; actual traverse-a-scene root tracks for use
-	// with cutscenes / special physics modes, in addition to the regular skeletal root track.
-
-	friend FArchive& operator<<(FArchive &Ar, MotionChunk &M)
-	{
-		return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
-	}
-};
-
-
-// Named bone for the animating skeleton data.
-struct FNamedBone
-{
-	FName			Name;					// Bone's name (== single 32-bit index to name)
-	unsigned		Flags;					// reserved
-	int				ParentIndex;			// 0/NULL if this is the root bone.
-
-	friend FArchive& operator<<(FArchive &Ar, FNamedBone &F)
-	{
-		return Ar << F.Name << F.Flags << F.ParentIndex;
-	}
-};
-
-
-class UMeshAnimation : public UObject
-{
-public:
-	int						f2C;			//?? RawNumFrames
-	TArray<FNamedBone>		RefBones;
-	TArray<MotionChunk>		Moves;
-	TArray<FMeshAnimSeq>	AnimSeqs;
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		UObject::Serialize(Ar);
-		Ar << f2C << RefBones << Moves << AnimSeqs;
+		}
 	}
 };

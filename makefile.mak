@@ -22,6 +22,7 @@ MAIN : UnLoader.exe
 
 MAIN = \
 	obj/UnCore.obj \
+	obj/UnPackage.obj \
 	obj/UnLoader.obj \
 	obj/GlWindow.obj \
 	obj/Math3D.obj
@@ -52,7 +53,8 @@ DEPENDS = \
 	GlWindow.h \
 	Math3D.h \
 	UnCore.h \
-	UnMesh.h
+	UnMesh.h \
+	UnPackage.h
 
 obj/UnLoader.obj : UnLoader.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnLoader.obj" UnLoader.cpp
@@ -71,6 +73,13 @@ DEPENDS = \
 
 obj/UnCore.obj : UnCore.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnCore.obj" UnCore.cpp
+
+DEPENDS = \
+	UnCore.h \
+	UnPackage.h
+
+obj/UnPackage.obj : UnPackage.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnPackage.obj" UnPackage.cpp
 
 #------------------------------------------------------------------------------
 #	creating output directories

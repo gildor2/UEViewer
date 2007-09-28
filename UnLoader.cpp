@@ -2,12 +2,13 @@
 
 #include "UnCore.h"
 #include "UnMesh.h"
+#include "UnPackage.h"
 
 #include "GlWindow.h"
 
 
 #define TEST_FILES		1
-#define APP_CAPTION		"UT2004 Mesh Viewer"
+#define APP_CAPTION		"UT2 Mesh Viewer"
 
 
 enum
@@ -257,14 +258,16 @@ static void InfoSkelMesh(const USkeletalMesh *Mesh)
 
 void main(int argc, char **argv)
 {
-	if (argc < 3)
+	if (argc < 2)
 	{
 	help:
-		printf("Usage: UnLoader [-dump] <raw file> <class name>\n");
+		printf( "Usage:\n"
+				"  UnLoader [-dump] <.ukx file> <mesh name>\n"
+				"  UnLoader -list <.ukx file>\n");
 		exit(0);
 	}
 
-	bool dumpOnly = false;
+	bool dumpOnly = false, listOnly = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -272,6 +275,8 @@ void main(int argc, char **argv)
 		{
 			if (!strcmp(argv[arg]+1, "dump"))
 				dumpOnly = true;
+			else if (!strcmp(argv[arg]+1, "list"))
+				listOnly = true;
 			else
 				goto help;
 		}
@@ -281,22 +286,41 @@ void main(int argc, char **argv)
 		}
 	}
 
-	// open file
 	GNotifyInfo = argv[arg];
-	MeshName    = argv[arg];
-	FILE *f;
-	if (!(f = fopen(MeshName, "rb")))
-		appError("Unable to open file %s\n", MeshName);
+	UnPackage Pkg(argv[arg]);
+
+	if (listOnly)
+	{
+		for (int i = 0; i < Pkg.Summary.ExportCount; i++)
+		{
+			const FObjectExport &Exp = Pkg.ExportTable[i];
+			printf("%d %s %s\n", i, Pkg.GetClassName(Exp.ClassIndex), Pkg.GetName(Exp.ObjectName));
+		}
+		return;
+	}
+
+	int idx = Pkg.FindExport(argv[arg+1]);
+	if (idx < 0)
+		appError("Export \"%s\" was not found", argv[arg+1]);
+	printf("Export \"%s\" was found at index %d\n", argv[arg+1], idx);
+	const char *className = Pkg.GetClassName(Pkg.ExportTable[idx].ClassIndex);
+
+	FArchive Ar;
+	Pkg.SetupReader(idx, Ar);
 
 	// check mesh type
-	if (!stricmp(argv[arg+1], "VertMesh"))
+	if (!strcmp(className, "VertMesh"))
 		MeshType = MESH_VERTEX;
-	else if (!stricmp(argv[arg+1], "SkeletalMesh"))
+	else if (!strcmp(className, "SkeletalMesh"))
 		MeshType = MESH_SKEL;
 	else
-		appError("Unknown class: %s\n", argv[arg+1]);
+		appError("Unknown class: %s\n", className);
 
-	// load mesh
+	char nameBuf[256];
+	appSprintf(ARRAY_ARG(nameBuf), "%s, %s (%s)", argv[arg], argv[arg+1], className);
+	GNotifyInfo = MeshName = nameBuf;
+
+	// create mesh
 	if (MeshType == MESH_VERTEX)
 		Mesh = new UVertMesh;
 	else if (MeshType == MESH_SKEL)
@@ -304,15 +328,11 @@ void main(int argc, char **argv)
 	else
 		assert(0);
 
-	printf("****** Loading %s \"%s\" ******\n", argv[arg+1], MeshName);
-
-	// create archive wrapper
-	FArchive Ar(f);
 	// serialize mesh
 	Mesh->Serialize(Ar);
 
 	// check for unread bytes
-//!!	if (!Ar.IsEof()) appError("extra bytes!");
+	if (!Ar.IsStopper()) appError("extra bytes!");
 
 	InfoLodMesh(Mesh);
 

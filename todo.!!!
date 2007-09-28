@@ -1,3 +1,5 @@
+! 2K4_NvidiaIntro has animation+model to be the same names, different types only
+
 ! skeleton is inverted
   * note: q2 model axis: forward/left/up (?); q2 world axis: forward/right/up (?); ut model axis
     is right/forward/up
