@@ -21,9 +21,12 @@ MAIN : UnLoader.exe
 #------------------------------------------------------------------------------
 
 MAIN = \
+	obj/Main.obj \
 	obj/UnCore.obj \
 	obj/UnPackage.obj \
-	obj/UnLoader.obj \
+	obj/MeshViewer.obj \
+	obj/VertMeshViewer.obj \
+	obj/SkelMeshViewer.obj \
 	obj/GlWindow.obj \
 	obj/Math3D.obj
 
@@ -52,12 +55,30 @@ DEPENDS = \
 	Core.h \
 	GlWindow.h \
 	Math3D.h \
+	ObjectViewer.h \
+	UnCore.h \
+	UnMesh.h
+
+obj/MeshViewer.obj : MeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MeshViewer.obj" MeshViewer.cpp
+
+obj/SkelMeshViewer.obj : SkelMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshViewer.obj" SkelMeshViewer.cpp
+
+obj/VertMeshViewer.obj : VertMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshViewer.obj" VertMeshViewer.cpp
+
+DEPENDS = \
+	Core.h \
+	GlWindow.h \
+	Math3D.h \
+	ObjectViewer.h \
 	UnCore.h \
 	UnMesh.h \
 	UnPackage.h
 
-obj/UnLoader.obj : UnLoader.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnLoader.obj" UnLoader.cpp
+obj/Main.obj : Main.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Main.obj" Main.cpp
 
 DEPENDS = \
 	Core.h \
@@ -75,6 +96,8 @@ obj/UnCore.obj : UnCore.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnCore.obj" UnCore.cpp
 
 DEPENDS = \
+	Core.h \
+	Math3D.h \
 	UnCore.h \
 	UnPackage.h
 

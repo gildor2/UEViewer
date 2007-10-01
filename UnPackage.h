@@ -1,3 +1,7 @@
+#ifndef __UNPACKAGE_H__
+#define __UNPACKAGE_H__
+
+
 #define PACKAGE_FILE_TAG 0x9E2A83C1
 
 #if 1
@@ -180,3 +184,6 @@ public:
 		return -1;
 	}
 };
+
+
+#endif // __UNPACKAGE_H__

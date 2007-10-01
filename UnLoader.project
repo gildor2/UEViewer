@@ -14,9 +14,15 @@ LIBRARIES  = libs
 OBJDIR     = obj
 
 sources(MAIN) = {
+	# main unit
+	Main.cpp
+	# Unreal Engine support files
 	UnCore.cpp
 	UnPackage.cpp
-	UnLoader.cpp
+	# viewers
+	MeshViewer.cpp
+	VertMeshViewer.cpp
+	SkelMeshViewer.cpp
 	# libraries
 	GlWindow.cpp
 	Math3D.cpp

@@ -1,0 +1,22 @@
+Animation:
+- http://udn.epicgames.com/Two/SkeletalSetup.html
+- http://udn.epicgames.com/Two/AnimNotifies.html
+- http://udn.epicgames.com/Two/AnimBrowserTutorial.html
+- http://udn.epicgames.com/Two/MyFirstPawn.html
+- http://udn.epicgames.com/Two/SkelAnim2.html
+- http://udn.epicgames.com/Two/SkeletalBlending.html
+- http://udn.epicgames.com/Two/AnimBrowserReference.html
+  Using the Animation Browser and UKX Animation Packages
+
+Materials:
+- http://udn.epicgames.com/Two/MaterialsShaders.html
+- http://udn.epicgames.com/Two/MaterialsCombiners.html
+- http://udn.epicgames.com/Two/MaterialsFinalBlend.html
+- http://udn.epicgames.com/Two/MaterialsModifiers.html
+- http://udn.epicgames.com/Two/UnrealTexturing.html
+  have info about texture formats, info about team textures
+
+Physics:
+- http://udn.epicgames.com/Two/KarmaAuthoringTool.html
+- http://udn.epicgames.com/Two/RagdollsInUT2003.html
+- http://udn.epicgames.com/Two/KarmaReference.html

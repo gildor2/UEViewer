@@ -1,3 +1,7 @@
+#ifndef __GLWINDOW_H__
+#define __GLWINDOW_H__
+
+
 #define FREEGLUT_STATIC
 #include <freeglut.h>
 
@@ -17,3 +21,6 @@ namespace GL
 	void text(const char *text, int x = -1, int y = -1);
 	void textf(const char *fmt, ...);
 };
+
+
+#endif // __GLWINDOW_H__

@@ -5,7 +5,7 @@ project="UnLoader.project"
 makefile="makefile.mak"
 
 # update makefile when needed
-[ $makefile -ot $project ] &&
+# [ $makefile -ot $project ] &&
 	Tools/genmake $project TARGET=vc-win32 > $makefile
 
 # build

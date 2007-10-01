@@ -1,3 +1,7 @@
+#ifndef __UNCORE_H__
+#define __UNCORE_H__
+
+
 typedef unsigned char		byte;
 typedef unsigned short		word;
 
@@ -341,3 +345,6 @@ inline FArchive& operator<<(FArchive &Ar, UObject *&Obj)
 	{ \
 		return Ar << *(UObject**)&Res; \
 	}
+
+
+#endif // __UNCORE_H__
