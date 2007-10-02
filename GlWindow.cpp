@@ -101,7 +101,7 @@ namespace GL
 
 	//-------------------------------------------------------------------------
 	// called when window resized
-	void reshapeFunc(int w, int h)
+	void ReshapeFunc(int w, int h)
 	{
 		width  = w;
 		height = h;
@@ -113,7 +113,7 @@ namespace GL
 	// Mouse control
 	//-------------------------------------------------------------------------
 
-	void onMouseButton(int button, int state, int x, int y)
+	void OnMouseButton(int button, int state, int x, int y)
 	{
 		int mask = 1 << button;
 		if (state == GLUT_DOWN)
@@ -124,7 +124,7 @@ namespace GL
 	}
 
 
-	void onMouseMove(int x, int y)
+	void OnMouseMove(int x, int y)
 	{
 		int dx = x - mouseX;
 		int dy = y - mouseY;
@@ -257,9 +257,9 @@ namespace GL
 //		glutInitWindowPosition(0, 0);
 		glutCreateWindow(caption);
 		// common hooks
-		glutReshapeFunc(reshapeFunc);
-		glutMouseFunc(onMouseButton);
-		glutMotionFunc(onMouseMove);
+		glutReshapeFunc(ReshapeFunc);
+		glutMouseFunc(OnMouseButton);
+		glutMotionFunc(OnMouseMove);
 
 		// init gl
 		glDisable(GL_BLEND);
@@ -280,7 +280,7 @@ namespace GL
 // Hook functions
 //-----------------------------------------------------------------------------
 
-static void onDisplay()
+static void OnDisplay()
 {
 	// set default text position
 	glRasterPos2i(20, 20);
@@ -329,7 +329,7 @@ static void onDisplay()
 }
 
 
-static void onKeyboard(unsigned char key, int x, int y)
+static void OnKeyboard(unsigned char key, int x, int y)
 {
 	switch (tolower(key))
 	{
@@ -353,12 +353,12 @@ static void onKeyboard(unsigned char key, int x, int y)
 
 
 // timer handler
-void onTimer(int timerId)
+static void OnTimer(int timerId)
 {
 	// display scene
-	onDisplay();
+	OnDisplay();
 	// and restart timer
-	glutTimerFunc(timerId, onTimer, 10);
+	glutTimerFunc(timerId, OnTimer, 10);
 }
 
 
@@ -374,9 +374,9 @@ void VisualizerLoop(const char *caption)
 	glutInit(&fakeArgc, fakeArgv);
 	GL::init(caption);
 	// application hooks
-	glutDisplayFunc(onDisplay);
-	glutKeyboardFunc(onKeyboard);
-	onTimer(0);					// init timer
+	glutDisplayFunc(OnDisplay);
+	glutKeyboardFunc(OnKeyboard);
+	OnTimer(0);					// init timer
 	// start
 	glutMainLoop();
 }

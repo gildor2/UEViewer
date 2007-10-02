@@ -5,10 +5,50 @@
 typedef unsigned char		byte;
 typedef unsigned short		word;
 
+class FArchive;
+class UObject;
+class UnPackage;
 
-//-----------------------------------------------------------------------------
-//	FArchive class
-//-----------------------------------------------------------------------------
+
+/*-----------------------------------------------------------------------------
+	FName class
+-----------------------------------------------------------------------------*/
+
+class FName
+{
+public:
+	int			Index;
+	const char	*Str;
+
+	inline const char *operator*() const
+	{
+		return Str;
+	}
+	inline operator const char*() const
+	{
+		return Str;
+	}
+};
+
+
+/*-----------------------------------------------------------------------------
+	FCompactIndex class for serializing objects in a compactly, mapping
+	small values to fewer bytes.
+-----------------------------------------------------------------------------*/
+
+class FCompactIndex
+{
+public:
+	int		Value;
+	friend FArchive& operator<<(FArchive &Ar, FCompactIndex &I);
+};
+
+#define AR_INDEX(intref)	(*(FCompactIndex*)&(intref))
+
+
+/*-----------------------------------------------------------------------------
+	FArchive class
+-----------------------------------------------------------------------------*/
 
 class FArchive
 {
@@ -19,66 +59,20 @@ public:
 	int		ArStopper;
 
 	FArchive()
-	:	f(NULL)
-	,	ArStopper(0)
-	{}
-
-	~FArchive()
-	{
-		if (f) fclose(f);
-	}
-
-	FArchive(FILE *InFile)
-	:	f(InFile)
-	,	IsLoading(true)		//?? no writting now
+	:	ArStopper(0)
 	,	ArVer(9999)			//?? something large
-	,	ArStopper(0)
 	{}
 
-	void Setup(FILE *InFile, bool Loading)
-	{
-		f         = InFile;
-		IsLoading = Loading;
-	}
+	virtual ~FArchive()
+	{}
 
-	void Seek(int Pos)
-	{
-		fseek(f, Pos, SEEK_SET);
-		ArPos = ftell(f);
-		assert(Pos == ArPos);
-	}
-
-	int GetPos()
-	{
-		return ArPos;
-	}
-
-	bool IsEof()
-	{
-		int pos  = ftell(f); fseek(f, 0, SEEK_END);
-		int size = ftell(f); fseek(f, pos, SEEK_SET);
-		return size == pos;
-	}
+	virtual void Seek(int Pos) = NULL;
+	virtual bool IsEof() = NULL;
+	virtual void Serialize(void *data, int size) = NULL;
 
 	bool IsStopper()
 	{
 		return ArStopper == ArPos;
-	}
-
-protected:
-	FILE	*f;
-	void Serialize(void *data, int size)
-	{
-		int res;
-		if (IsLoading)
-			res = fread(data, size, 1, f);
-		else
-			res = fwrite(data, size, 1, f);
-		ArPos += size;
-		if (ArStopper > 0 && ArPos > ArStopper)
-			appError("Serailizing behind stopper");
-		if (res != 1)
-			appError("Unable to serialize data");
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, char &B)
@@ -116,43 +110,93 @@ protected:
 		Ar.Serialize(&B, 4);
 		return Ar;
 	}
+
+	virtual FArchive& operator<<(FName &N) = NULL;
+	virtual FArchive& operator<<(UObject *&Obj) = NULL;
 };
 
 
-//-----------------------------------------------------------------------------
-//	FCompactIndex class for serializing objects in a compactly, mapping small values
-//	to fewer bytes.
-//-----------------------------------------------------------------------------
-
-class FCompactIndex
+class FFileReader : public FArchive
 {
 public:
-	int		Value;
-	friend FArchive& operator<<(FArchive &Ar, FCompactIndex &I);
-};
+	FFileReader()
+	:	f(NULL)
+	{}
 
-#define AR_INDEX(intref)	(*(FCompactIndex*)&(intref))
-
-
-//-----------------------------------------------------------------------------
-//	FName class
-//-----------------------------------------------------------------------------
-
-class FName
-{
-public:
-	int		Index;
-
-	friend FArchive& operator<<(FArchive &Ar, FName &Name)
+	FFileReader(FILE *InFile)
+	:	f(InFile)
 	{
-		return Ar << AR_INDEX(Name);
+		IsLoading = true;
+	}
+
+	FFileReader(const char *Filename)
+	:	f(fopen(Filename, "rb"))
+	{
+		if (!f)
+			appError("Unable to open file %s", Filename);
+		IsLoading = true;
+	}
+
+	virtual ~FFileReader()
+	{
+		if (f) fclose(f);
+	}
+
+	void Setup(FILE *InFile, bool Loading)
+	{
+		f         = InFile;
+		IsLoading = Loading;
+	}
+
+	virtual void Seek(int Pos)
+	{
+		fseek(f, Pos, SEEK_SET);
+		ArPos = ftell(f);
+		assert(Pos == ArPos);
+	}
+
+	virtual bool IsEof()
+	{
+		int pos  = ftell(f); fseek(f, 0, SEEK_END);
+		int size = ftell(f); fseek(f, pos, SEEK_SET);
+		return size == pos;
+	}
+
+	virtual FArchive& operator<<(FName &N)
+	{
+		*this << AR_INDEX(N.Index);
+		return *this;
+	}
+
+	virtual FArchive& operator<<(UObject *&Obj)
+	{
+		int tmp;
+		*this << AR_INDEX(tmp);
+		printf("Object: %d\n", tmp);
+		return *this;
+	}
+
+protected:
+	FILE	*f;
+	virtual void Serialize(void *data, int size)
+	{
+		int res;
+		if (IsLoading)
+			res = fread(data, size, 1, f);
+		else
+			res = fwrite(data, size, 1, f);
+		ArPos += size;
+		if (ArStopper > 0 && ArPos > ArStopper)
+			appError("Serailizing behind stopper");
+		if (res != 1)
+			appError("Unable to serialize data");
 	}
 };
 
 
-//-----------------------------------------------------------------------------
-//	Math classes
-//-----------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------
+	Math classes
+-----------------------------------------------------------------------------*/
 
 struct FVector
 {
@@ -228,9 +272,9 @@ struct FSphere : public FVector
 };
 
 
-//-----------------------------------------------------------------------------
-//	TArray/TLazyArray templates
-//-----------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------
+	TArray/TLazyArray templates
+-----------------------------------------------------------------------------*/
 
 template<class T> class TArray
 {
@@ -304,22 +348,28 @@ template<class T> class TLazyArray : public TArray<T>
 };
 
 
-//-----------------------------------------------------------------------------
-//	UObject class
-//-----------------------------------------------------------------------------
-
-class UnPackage;
+/*-----------------------------------------------------------------------------
+	UObject class
+-----------------------------------------------------------------------------*/
 
 class UObject
 {
 public:
 	// internal storage
 	UnPackage	*Package;
-	FName		Name;			// index in package name table
-	FName		ClassName;		// index in package name table
 	int			PackageIndex;	// index in package export table
+	const char	*Name;
 
 //	unsigned	ObjectFlags;
+
+	virtual ~UObject()
+	{}
+
+	virtual const char *GetClassName()
+	{
+		return "Object";
+	}
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		// stack frame
@@ -331,19 +381,46 @@ public:
 	}
 };
 
-inline FArchive& operator<<(FArchive &Ar, UObject *&Obj)
+
+/*-----------------------------------------------------------------------------
+	Simple RTTI
+-----------------------------------------------------------------------------*/
+
+// NOTE: DECLARE_CLASS and REGISTER_CLASS will skip 1st class name char
+
+#define DECLARE_CLASS(Class)					\
+	public:										\
+		typedef Class ThisClass;				\
+		static ThisClass* StaticConstructor()	\
+		{ return new ThisClass; }				\
+		virtual const char* GetClassName()		\
+		{ return #Class+1; }					\
+	private:									\
+		friend FArchive& operator<<(FArchive &Ar, Class *&Res) \
+		{										\
+			return Ar << *(UObject**)&Res;		\
+		}
+
+
+struct CClassInfo
 {
-	int index;
-	Ar << AR_INDEX(index);
-	printf("Object: %d\n", index);	//!! implement, use imports table
-	return Ar;
-}
+	const char *Name;
+	UObject* (*Constructor)();
+};
 
 
-#define DECLARE_CLASS(TClass) \
-	friend FArchive& operator<<(FArchive &Ar, TClass *&Res) \
-	{ \
-		return Ar << *(UObject**)&Res; \
+void RegisterClasses(CClassInfo *Table, int Count);
+UObject *CreateClass(const char *Name);
+
+
+#define BEGIN_CLASS_TABLE						\
+	{											\
+		static CClassInfo Table[] = {
+#define REGISTER_CLASS(Class)					\
+			{ #Class+1, (UObject* (*) ())Class::StaticConstructor },
+#define END_CLASS_TABLE							\
+		};										\
+		RegisterClasses(ARRAY_ARG(Table));		\
 	}
 
 

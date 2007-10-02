@@ -102,11 +102,10 @@ struct FObjectImport
 };
 
 
-class UnPackage
+class UnPackage : public FFileReader
 {
 public:
-	char					SelfName[256];
-	FArchive				Ar;
+	char					SelfName[256];		//?? rename
 	// package header
 	FPackageFileSummary		Summary;
 	// tables
@@ -126,24 +125,14 @@ public:
 		delete ExportTable;
 	}
 
-	void SetupReader(int ExportIndex, FArchive &Ar)
+	void SetupReader(int ExportIndex)
 	{
 		if (ExportIndex < 0 || ExportIndex >= Summary.ExportCount)
 			appError("Package \"%s\": wrong export index %d", SelfName, ExportIndex);
 		const FObjectExport &Exp = ExportTable[ExportIndex];
-
-		FILE *f = fopen(SelfName, "rb");
-		if (!f)
-			appError("Unable to open package file %s\n", SelfName);
-		Ar.Setup(f, true);
-		Ar.ArVer     = Summary.FileVersion;
-		Ar.ArStopper = Exp.SerialOffset + Exp.SerialSize;
-		Ar.Seek(Exp.SerialOffset);
-	}
-
-	const char* GetName(const FName& AName)
-	{
-		return GetName(AName.Index);
+		// setup FArchive
+		ArStopper = Exp.SerialOffset + Exp.SerialSize;
+		Seek(Exp.SerialOffset);
 	}
 
 	const char* GetName(int index)
@@ -153,35 +142,104 @@ public:
 		return NameTable[index];
 	}
 
-	const char* GetClassName(int i)
+	const FObjectImport& GetImport(int index)
+	{
+		if (index >= Summary.ImportCount)
+			appError("Package \"%s\": wrong import index %d", SelfName, index);
+		return ImportTable[index];
+	}
+
+	const FObjectExport& GetExport(int index)
+	{
+		if (index >= Summary.ExportCount)
+			appError("Package \"%s\": wrong export index %d", SelfName, index);
+		return ExportTable[index];
+	}
+
+	const char* GetObjectName(int i)	//?? GetExportClassName()
 	{
 		if (i < 0)
 		{
-			// index in import table
-			i = -i-1;
-			if (i >= Summary.ImportCount)
-				appError("Package \"%s\": wrong import index %d", SelfName, i);
-			// should point to 'Class' object
-			return GetName(ImportTable[i].ObjectName);
+			//?? should point to 'Class' object
+			return GetImport(-i-1).ObjectName;
 		}
-		else
+		else if (i > 0)
 		{
-			// index in export table
-			if (i >= Summary.ExportCount)
-				appError("Package \"%s\": wrong export index %d", SelfName, i);
-			// should point to 'Class' object
-			return GetName(ExportTable[i].ObjectName);
+			//?? should point to 'Class' object
+			return GetExport(i-1).ObjectName;
+		}
+		else // i == 0
+		{
+			return "Class";
 		}
 	}
 
-	int FindExport(const char* name)
+	int FindExport(const char *name, const char *className = NULL)
 	{
 		for (int i = 0; i < Summary.ExportCount; i++)
 		{
-			if (!strcmp(GetName(ExportTable[i].ObjectName), name))
-				return i;
+			const FObjectExport &Exp = ExportTable[i];
+			// compare object name
+			if (strcmp(Exp.ObjectName, name) != 0)
+				continue;
+			// if class name specified - compare it too
+			if (className && strcmp(GetObjectName(Exp.ClassIndex), className) != 0)
+				continue;
+			return i;
 		}
 		return -1;
+	}
+
+	UObject* CreateExport(int index)
+	{
+		// create empty object
+		const FObjectExport &Exp = GetExport(index);
+		const char *ClassName = GetObjectName(Exp.ClassIndex);
+		UObject *Obj = CreateClass(ClassName);
+		if (!Obj)
+			appError("Unknown object class: %s'%s'", ClassName, *Exp.ObjectName);
+		Obj->Package      = this;
+		Obj->PackageIndex = index;
+		Obj->Name         = Exp.ObjectName;
+		// serialize object
+		//!! code below should be executed later (after current object serialization
+		//!! finished, if one)
+		SetupReader(index);
+		Obj->Serialize(*this);
+		// check for unread bytes
+		if (!IsStopper()) appError("%s: extra bytes", Obj->Name);
+		return Obj;
+	}
+
+	// FArchive interface
+	virtual FArchive& operator<<(FName &N)
+	{
+		*this << AR_INDEX(N.Index);
+		N.Str = GetName(N.Index);
+		return *this;
+	}
+
+	virtual FArchive& operator<<(UObject *&Obj)
+	{
+		int index;
+		*this << AR_INDEX(index);
+		if (index < 0)
+		{
+			const FObjectImport &Imp = GetImport(-index-1);
+			printf("PKG: Import[%s,%d] OBJ=%s CLS=%s\n", GetObjectName(Imp.PackageIndex), index, *Imp.ObjectName, *Imp.ClassName);
+			//!! create object
+		}
+		else if (index > 0)
+		{
+			const FObjectExport &Exp = GetExport(index-1);
+			printf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
+			//!! create object
+		}
+		else // index == 0
+		{
+			Obj = NULL;
+		}
+		return *this;
 	}
 };
 

@@ -5,26 +5,22 @@
 
 
 UnPackage::UnPackage(const char *filename)
+:	FFileReader(filename)
 {
 	appStrncpyz(SelfName, filename, ARRAY_COUNT(SelfName));
 
-	FILE *f;
-	if (!(f = fopen(SelfName, "rb")))
-		appError("Unable to open package file %s\n", SelfName);
-	Ar.Setup(f, true);
-
 	// read summary
-	Ar << Summary;
+	*this << Summary;
 	if (Summary.Tag != PACKAGE_FILE_TAG)
 		appError("Wrong tag in package %s\n", SelfName);
-	Ar.ArVer = Summary.FileVersion;
+	ArVer = Summary.FileVersion;
 	PKG_LOG(("Package: %s Ver: %d Names: %d Exports: %d Imports: %d\n", SelfName, Summary.FileVersion,
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 	// read name table
 	if (Summary.NameCount > 0)
 	{
-		Ar.Seek(Summary.NameOffset);
+		Seek(Summary.NameOffset);
 		NameTable = new char*[Summary.NameCount];
 		for (int i = 0; i < Summary.NameCount; i++)
 		{
@@ -35,7 +31,7 @@ UnPackage::UnPackage(const char *filename)
 				for (len = 0; len < ARRAY_COUNT(buf); len++)
 				{
 					char c;
-					Ar << c;
+					*this << c;
 					buf[len] = c;
 					if (!c) break;
 				}
@@ -43,19 +39,19 @@ UnPackage::UnPackage(const char *filename)
 				NameTable[i] = strdup(buf);
 				// skip object flags
 				int tmp;
-				Ar << tmp;
+				*this << tmp;
 			}
 			else
 			{
 				int len;
-				Ar << AR_INDEX(len);
+				*this << AR_INDEX(len);
 				char *s = NameTable[i] = new char[len];
 				while (len-- > 0)
-					Ar << *s++;
-//				PKG_LOG("Name[%d]: \"%s\"\n", i, NameTable[i]);
+					*this << *s++;
+//				PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 				// skip object flags
 				int tmp;
-				Ar << tmp;
+				*this << tmp;
 			}
 		}
 	}
@@ -63,27 +59,25 @@ UnPackage::UnPackage(const char *filename)
 	// load import table
 	if (Summary.ImportCount > 0)
 	{
-		Ar.Seek(Summary.ImportOffset);
+		Seek(Summary.ImportOffset);
 		FObjectImport *Imp = ImportTable = new FObjectImport[Summary.ImportCount];
 		for (int i = 0; i < Summary.ImportCount; i++, Imp++)
 		{
-			Ar << *Imp;
-//			PKG_LOG(("Import[%d]: %s'%s'\n", i, GetName(Imp->ClassName), GetName(Imp->ObjectName)));
+			*this << *Imp;
+//			PKG_LOG(("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName));
 		}
 	}
 
 	// load exports table
 	if (Summary.ExportCount > 0)
 	{
-		Ar.Seek(Summary.ExportOffset);
+		Seek(Summary.ExportOffset);
 		FObjectExport *Exp = ExportTable = new FObjectExport[Summary.ExportCount];
 		for (int i = 0; i < Summary.ExportCount; i++, Exp++)
 		{
-			Ar << *Exp;
-//			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X\n", i, GetClassName(Exp->ClassIndex),
-//				GetName(Exp->ObjectName), Exp->SerialOffset, Exp->SerialSize));
+			*this << *Exp;
+//			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X\n", i, GetObjectName(Exp->ClassIndex),
+//				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize));
 		}
 	}
-
-	fclose(f);
 }

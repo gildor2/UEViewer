@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnCore.h"
 #include "UnMesh.h"
+#include "UnPackage.h"
 
 #include "GlWindow.h"
 
@@ -17,6 +18,10 @@ class CObjectViewer
 public:
 	UObject*	Object;
 
+	CObjectViewer(UObject *Obj)
+	:	Object(Obj)
+	{}
+
 	virtual void Dump()
 	{}
 
@@ -25,7 +30,10 @@ public:
 
 	virtual void Draw2D()
 	{
-		// display: Object->ClassName: Object->Package->Name / Object->Name
+		GL::textf("Package: %s\n"
+				  "Class  : %s\n"
+				  "Object : %s\n\n",
+				  Object->Package->SelfName, Object->GetClassName(), Object->Name);
 	}
 
 	virtual void Draw3D()
@@ -44,8 +52,9 @@ class CMeshViewer : public CObjectViewer
 public:
 	bool	bShowNormals;
 
-	CMeshViewer()
-	:	bShowNormals(false)
+	CMeshViewer(ULodMesh *Mesh)
+	:	CObjectViewer(Mesh)
+	,	bShowNormals(false)
 	{}
 
 	virtual void ShowHelp()
@@ -80,10 +89,9 @@ public:
 	int		FrameNum;
 
 	CVertMeshViewer(UVertMesh *Mesh)
-	:	FrameNum(0)
-	{
-		Object = Mesh;
-	}
+	:	CMeshViewer(Mesh)
+	,	FrameNum(0)
+	{}
 
 	virtual void Dump();
 	virtual void Draw3D();
@@ -118,10 +126,9 @@ public:
 	int		LodNum;
 
 	CSkelMeshViewer(USkeletalMesh *Mesh)
-	:	LodNum(-1)
-	{
-		Object = Mesh;
-	}
+	:	CMeshViewer(Mesh)
+	,	LodNum(-1)
+	{}
 
 	virtual void ShowHelp()
 	{

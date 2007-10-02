@@ -94,6 +94,30 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 
 
 /*-----------------------------------------------------------------------------
+	RTTI support
+-----------------------------------------------------------------------------*/
+
+static CClassInfo* GClasses    = NULL;
+static int         GClassCount = 0;
+
+void RegisterClasses(CClassInfo *Table, int Count)
+{
+	assert(GClasses == NULL);		// no multiple tables
+	GClasses    = Table;
+	GClassCount = Count;
+}
+
+
+UObject *CreateClass(const char *Name)
+{
+	for (int i = 0; i < GClassCount; i++)
+		if (!strcmp(GClasses[i].Name, Name))
+			return GClasses[i].Constructor();
+	return NULL;
+}
+
+
+/*-----------------------------------------------------------------------------
 	Miscellaneous
 -----------------------------------------------------------------------------*/
 

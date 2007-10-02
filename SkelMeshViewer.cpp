@@ -16,8 +16,7 @@ void CSkelMeshViewer::Dump()
 		"WeightIds #    %d\n"
 		"BoneInfs # %d 	VertInfs # %d\n"
 		"Attachments #  %d\n"
-		"StaticLODModels # %d\n"
-		"12345 = %d\n",
+		"StaticLODModels # %d\n",
 		Mesh->f1FC.Num(),
 		Mesh->Bones.Num(),
 		Mesh->Points.Num(),
@@ -28,8 +27,7 @@ void CSkelMeshViewer::Dump()
 		Mesh->BoneInfluences.Num(),
 		Mesh->VertInfluences.Num(),
 		Mesh->AttachBoneNames.Num(),
-		Mesh->StaticLODModels.Num(),
-		12345
+		Mesh->StaticLODModels.Num()
 	);
 //	TEST_ARRAY(Mesh->CollapseWedge);
 //	TEST_ARRAY(Mesh->f1C8);
