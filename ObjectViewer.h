@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "UnCore.h"
+#include "UnObject.h"
 #include "UnMesh.h"
 #include "UnPackage.h"
 
@@ -7,6 +8,13 @@
 
 
 #define TEST_FILES		1		// comment line to disable some notifications
+
+
+#if TEST_FILES
+#	define TEST_OBJECT	virtual void Test()
+#else
+#	define TEST_OBJECT
+#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -24,6 +32,10 @@ public:
 
 	virtual void Dump()
 	{}
+#if TEST_FILES
+	virtual void Test()
+	{}
+#endif
 
 	virtual void ShowHelp()
 	{}
@@ -55,7 +67,12 @@ public:
 	CMeshViewer(ULodMesh *Mesh)
 	:	CObjectViewer(Mesh)
 	,	bShowNormals(false)
-	{}
+	{
+		// compute model center by Z-axis (vertical)
+		CVec3 offset;
+		offset.Set(0, 0, (Mesh->BoundingBox.Max.Z + Mesh->BoundingBox.Min.Z) / 2);
+		GL::SetViewOffset(offset);
+	}
 
 	virtual void ShowHelp()
 	{
@@ -75,6 +92,7 @@ public:
 	}
 
 	virtual void Dump();
+	TEST_OBJECT;
 	virtual void Draw3D();
 };
 
@@ -94,6 +112,7 @@ public:
 	{}
 
 	virtual void Dump();
+	TEST_OBJECT;
 	virtual void Draw3D();
 
 	virtual void ProcessKey(unsigned char key)
@@ -124,37 +143,66 @@ class CSkelMeshViewer : public CMeshViewer
 {
 public:
 	int		LodNum;
+	int		CurrAnim;
+	float	AnimTime;
 
 	CSkelMeshViewer(USkeletalMesh *Mesh)
 	:	CMeshViewer(Mesh)
 	,	LodNum(-1)
+	,	CurrAnim(-1)
+	,	AnimTime(0)
 	{}
 
 	virtual void ShowHelp()
 	{
 		CMeshViewer::ShowHelp();
 		GL::text("L           cycle mesh LODs\n");
-	}
-
-	virtual void Draw2D()
-	{
-		CMeshViewer::Draw2D();
-		if (LodNum < 0)
-			GL::textf("LOD: base mesh\n");
-		else
-			GL::textf("LOD: %d\n", LodNum);
+		GL::text("[]          prev/next animation\n");
+		GL::text("<>          prev/next frame\n");
 	}
 
 	virtual void Dump();
+	TEST_OBJECT;
+	virtual void Draw2D();
 	virtual void Draw3D();
 
 	virtual void ProcessKey(unsigned char key)
 	{
+		USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+		int NumAnims = 0, NumFrames = 0;
+		if (Mesh->Animation)
+			NumAnims  = Mesh->Animation->AnimSeqs.Num();
+		if (CurrAnim >= 0)
+			NumFrames = Mesh->Animation->AnimSeqs[CurrAnim].NumFrames;
+
 		switch (key)
 		{
 		case 'l':
-			if (++LodNum >= static_cast<USkeletalMesh*>(Object)->StaticLODModels.Num())
+			if (++LodNum >= Mesh->StaticLODModels.Num())
 				LodNum = -1;
+			break;
+		case '[':
+			if (--CurrAnim < -1)
+				CurrAnim = NumAnims - 1;
+			AnimTime = 0;
+			break;
+		case ']':
+			if (++CurrAnim >= NumAnims)
+				CurrAnim = -1;
+			AnimTime = 0;
+			break;
+		case ',':		// '<'
+			AnimTime -= 0.1;
+			if (AnimTime < 0)
+				AnimTime = 0;
+			break;
+		case '.':		// '>'
+			if (NumFrames > 0)
+			{
+				AnimTime += 0.1;
+				if (AnimTime > NumFrames - 1)
+					AnimTime = NumFrames - 1;
+			}
 			break;
 		default:
 			CMeshViewer::ProcessKey(key);

@@ -23,6 +23,7 @@ MAIN : UnLoader.exe
 MAIN = \
 	obj/Main.obj \
 	obj/UnCore.obj \
+	obj/UnObject.obj \
 	obj/UnPackage.obj \
 	obj/MeshViewer.obj \
 	obj/VertMeshViewer.obj \
@@ -58,6 +59,7 @@ DEPENDS = \
 	ObjectViewer.h \
 	UnCore.h \
 	UnMesh.h \
+	UnObject.h \
 	UnPackage.h
 
 obj/Main.obj : Main.cpp $(DEPENDS)
@@ -91,7 +93,11 @@ DEPENDS = \
 	Core.h \
 	Math3D.h \
 	UnCore.h \
+	UnObject.h \
 	UnPackage.h
+
+obj/UnObject.obj : UnObject.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnObject.obj" UnObject.cpp
 
 obj/UnPackage.obj : UnPackage.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnPackage.obj" UnPackage.cpp

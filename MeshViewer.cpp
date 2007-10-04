@@ -1,6 +1,13 @@
 #include "ObjectViewer.h"
 
 
+#if TEST_FILES
+void CMeshViewer::Test()
+{
+}
+#endif
+
+
 void CMeshViewer::Dump()
 {
 	CObjectViewer::Dump();

@@ -75,7 +75,7 @@ struct FObjectExport
 	unsigned	ObjectFlags;
 	int			SerialSize;
 	int			SerialOffset;
-//	UObject		*Object;
+	UObject		*Object;					// not serialized, filled by object loader
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E)
 	{
@@ -114,16 +114,11 @@ public:
 	FObjectExport			*ExportTable;
 
 	UnPackage(const char *filename);
+	~UnPackage();
 
-	~UnPackage()
-	{
-		int i;
-		for (i = 0; i < Summary.NameCount; i++)
-			free(NameTable[i]);
-		delete NameTable;
-		delete ImportTable;
-		delete ExportTable;
-	}
+	// load package using short name (without path and extension)
+	static UnPackage *LoadPackage(const char *Name);
+	static void       SetSearchPath(const char *Path);
 
 	void SetupReader(int ExportIndex)
 	{
@@ -149,7 +144,7 @@ public:
 		return ImportTable[index];
 	}
 
-	const FObjectExport& GetExport(int index)
+	FObjectExport& GetExport(int index) // not 'const'
 	{
 		if (index >= Summary.ExportCount)
 			appError("Package \"%s\": wrong export index %d", SelfName, index);
@@ -193,22 +188,41 @@ public:
 	UObject* CreateExport(int index)
 	{
 		// create empty object
-		const FObjectExport &Exp = GetExport(index);
+		FObjectExport &Exp = GetExport(index);
+		if (Exp.Object)
+			return Exp.Object;
+
 		const char *ClassName = GetObjectName(Exp.ClassIndex);
-		UObject *Obj = CreateClass(ClassName);
+		UObject *Obj = Exp.Object = CreateClass(ClassName);
 		if (!Obj)
-			appError("Unknown object class: %s'%s'", ClassName, *Exp.ObjectName);
+		{
+			printf("WARNING: Unknown object class: %s (%s)\n", ClassName, *Exp.ObjectName);
+			return NULL;
+		}
+		// setup constant object fields
 		Obj->Package      = this;
 		Obj->PackageIndex = index;
 		Obj->Name         = Exp.ObjectName;
-		// serialize object
-		//!! code below should be executed later (after current object serialization
-		//!! finished, if one)
-		SetupReader(index);
-		Obj->Serialize(*this);
-		// check for unread bytes
-		if (!IsStopper()) appError("%s: extra bytes", Obj->Name);
+		// add object to GObjLoaded for later serialization
+		UObject::GObjLoaded.AddItem(Obj);
 		return Obj;
+	}
+
+	UObject* CreateImport(int index)
+	{
+		const FObjectImport &Imp = GetImport(index);
+		// find/load package
+		const char *PackageName = GetObjectName(Imp.PackageIndex);
+		UnPackage  *Package     = LoadPackage(PackageName);
+		if (!Package)
+		{
+			printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
+			return NULL;
+		}
+		// find object in loaded package export table
+		int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
+		// create object
+		return Package->CreateExport(NewIndex);
 	}
 
 	// FArchive interface
@@ -226,14 +240,14 @@ public:
 		if (index < 0)
 		{
 			const FObjectImport &Imp = GetImport(-index-1);
-			printf("PKG: Import[%s,%d] OBJ=%s CLS=%s\n", GetObjectName(Imp.PackageIndex), index, *Imp.ObjectName, *Imp.ClassName);
-			//!! create object
+//			printf("PKG: Import[%s,%d] OBJ=%s CLS=%s\n", GetObjectName(Imp.PackageIndex), index, *Imp.ObjectName, *Imp.ClassName);
+			Obj = CreateImport(-index-1);
 		}
 		else if (index > 0)
 		{
 			const FObjectExport &Exp = GetExport(index-1);
-			printf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
-			//!! create object
+//			printf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
+			Obj = CreateExport(index-1);
 		}
 		else // index == 0
 		{
@@ -241,6 +255,16 @@ public:
 		}
 		return *this;
 	}
+
+private:
+	// package list
+	struct PackageEntry
+	{
+		char		Name[64];			// short name, without extemsion
+		UnPackage	*Package;
+	};
+	static TArray<PackageEntry> PackageMap;
+	static char SearchPath[256];
 };
 
 

@@ -273,7 +273,7 @@ struct FMeshAnimNotify
 {
 	float			Time;					// Time to occur, 0.0-1.0.
 	FName			Function;				// Name of the actor function to call.
-	UObject			*NotifyObj;				//??
+	UObject			*NotifyObj;				//?? UAnimNotify
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshAnimNotify &N)
 	{
@@ -295,7 +295,7 @@ struct FMeshAnimSeq
 	int						NumFrames;		// Number of frames in sequence.
 	float					Rate;			// Playback rate in frames per second.
 	TArray<FMeshAnimNotify> Notifys;		// Notifications.
-	float					f28;
+	float					f28;			//??
 	friend FArchive& operator<<(FArchive &Ar, FMeshAnimSeq &A)
 	{
 		if (Ar.ArVer > 114)
@@ -345,7 +345,7 @@ struct AnalogTrack
 	unsigned		Flags;					// reserved
 	TArray<FQuat>	KeyQuat;				// Orientation key track
 	TArray<FVector>	KeyPos;					// Position key track
-	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track.)
+	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track)
 
 	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
 	{
@@ -380,7 +380,8 @@ struct FNamedBone
 {
 	FName			Name;					// Bone's name (== single 32-bit index to name)
 	unsigned		Flags;					// reserved
-	int				ParentIndex;			// 0/NULL if this is the root bone.
+	int				ParentIndex;			// same meaning as FMeshBone.ParentIndex; when drawing model, should
+											// use bone info from mesh, not from animation (may be different)
 
 	friend FArchive& operator<<(FArchive &Ar, FNamedBone &F)
 	{

@@ -1,6 +1,7 @@
 #include "Core.h"
 
 #include "UnCore.h"
+#include "UnObject.h"
 #include "UnPackage.h"
 
 
@@ -14,7 +15,7 @@ UnPackage::UnPackage(const char *filename)
 	if (Summary.Tag != PACKAGE_FILE_TAG)
 		appError("Wrong tag in package %s\n", SelfName);
 	ArVer = Summary.FileVersion;
-	PKG_LOG(("Package: %s Ver: %d Names: %d Exports: %d Imports: %d\n", SelfName, Summary.FileVersion,
+	PKG_LOG(("Loading package: %s Ver: %d Names: %d Exports: %d Imports: %d\n", SelfName, Summary.FileVersion,
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 	// read name table
@@ -80,4 +81,95 @@ UnPackage::UnPackage(const char *filename)
 //				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize));
 		}
 	}
+
+	// add self to package map
+	PackageEntry &Info = PackageMap[PackageMap.Add()];
+	char buf[256];
+	const char *s = strrchr(filename, '/');
+	if (!s) s = strrchr(filename, '\\');			// WARNING: not processing mixed '/' and '\'
+	if (s) s++; else s = filename;
+	appStrncpyz(buf, s, ARRAY_COUNT(buf));
+	char *s2 = strchr(buf, '.');
+	if (s2) *s2 = 0;
+	appStrncpyz(Info.Name, buf, ARRAY_COUNT(Info.Name));
+	Info.Package = this;
+}
+
+
+UnPackage::~UnPackage()
+{
+	// free resources
+	int i;
+	for (i = 0; i < Summary.NameCount; i++)
+		free(NameTable[i]);
+	delete NameTable;
+	delete ImportTable;
+	delete ExportTable;
+	// remove self from package table
+	for (i = 0; i < PackageMap.Num(); i++)
+		if (PackageMap[i].Package == this)
+		{
+			PackageMap.Remove(i);
+			break;
+		}
+}
+
+
+/*-----------------------------------------------------------------------------
+	Searching for package and package list
+-----------------------------------------------------------------------------*/
+
+TArray<UnPackage::PackageEntry> UnPackage::PackageMap;
+char							UnPackage::SearchPath[256];
+
+
+void UnPackage::SetSearchPath(const char *Path)
+{
+	appStrncpyz(SearchPath, Path, ARRAY_COUNT(SearchPath));
+}
+
+
+static const char *PackageExtensions[] =
+{
+	"u", "ut2", "utx", "uax", "usx", "ukx"
+};
+
+static const char *PackagePaths[] =
+{
+	"",
+	"Animations/",
+	"Maps/",
+	"Sounds/",
+	"StaticMeshes/",
+	"System/",
+	"Textures/"
+};
+
+
+UnPackage *UnPackage::LoadPackage(const char *Name)
+{
+	// check in loaded packages list
+	for (int i = 0; i < PackageMap.Num(); i++)
+		if (!stricmp(Name, PackageMap[i].Name))
+			return PackageMap[i].Package;
+
+	// find package file
+	for (int path = 0; path < ARRAY_COUNT(PackagePaths); path++)
+		for (int ext = 0; ext < ARRAY_COUNT(PackageExtensions); ext++)
+		{
+			// build filename
+			char	buf[256];
+			appSprintf(ARRAY_ARG(buf), "%s%s" "%s%s" ".%s",
+				SearchPath, SearchPath[0] ? "/" : "",
+				PackagePaths[path],
+				Name,
+				PackageExtensions[ext]);
+			// check file existance
+			if (FILE *f = fopen(buf, "rb"))
+			{
+				fclose(f);
+				return new UnPackage(buf);
+			}
+		}
+	return NULL;
 }

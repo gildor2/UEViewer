@@ -1,6 +1,37 @@
 #include "ObjectViewer.h"
 
 
+#if TEST_FILES
+void CVertMeshViewer::Test()
+{
+	CMeshViewer::Test();
+
+	const UVertMesh *Mesh = static_cast<UVertMesh*>(Object);
+	// verify some assumptions
+// (macro broken)	VERIFY2(VertexCount, VertexCount);
+	VERIFY_NOT_NULL(VertexCount);
+	VERIFY_NOT_NULL(Textures.Num());
+	VERIFY(FaceLevel.Num(), Faces.Num());
+	VERIFY_NOT_NULL(Faces.Num());
+	VERIFY_NOT_NULL(Wedges.Num());
+	VERIFY(CollapseWedgeThus.Num(), Wedges.Num());
+//	VERIFY(Materials.Num(), Textures.Num()); -- different
+	VERIFY_NULL(HasImpostor);
+	VERIFY_NULL(fF8);
+	VERIFY_NULL(f130);
+	VERIFY_NULL(Verts2.Num());
+	VERIFY(Verts.Num(), Normals.Num());
+	VERIFY_NOT_NULL(Verts.Num());
+	assert(Mesh->Verts.Num() == Mesh->VertexCount * Mesh->FrameCount);
+	VERIFY_NULL(f150.Num());
+	VERIFY(BoundingBoxes.Num(), BoundingSpheres.Num());
+	VERIFY(BoundingBoxes.Num(), FrameCount);
+	VERIFY_NULL(AnimMeshVerts.Num());
+	VERIFY_NULL(StreamVersion);
+}
+#endif
+
+
 void CVertMeshViewer::Dump()
 {
 	CMeshViewer::Dump();
@@ -26,29 +57,6 @@ void CVertMeshViewer::Dump()
 		Mesh->AnimMeshVerts.Num(),
 		Mesh->StreamVersion
 	);
-#if TEST_FILES
-	// verify some assumptions
-// (macro broken)	VERIFY2(VertexCount, VertexCount);
-	VERIFY_NOT_NULL(VertexCount);
-	VERIFY_NOT_NULL(Textures.Num());
-	VERIFY(FaceLevel.Num(), Faces.Num());
-	VERIFY_NOT_NULL(Faces.Num());
-	VERIFY_NOT_NULL(Wedges.Num());
-	VERIFY(CollapseWedgeThus.Num(), Wedges.Num());
-//	VERIFY(Materials.Num(), Textures.Num()); -- different
-	VERIFY_NULL(HasImpostor);
-	VERIFY_NULL(fF8);
-	VERIFY_NULL(f130);
-	VERIFY_NULL(Verts2.Num());
-	VERIFY(Verts.Num(), Normals.Num());
-	VERIFY_NOT_NULL(Verts.Num());
-	assert(Mesh->Verts.Num() == Mesh->VertexCount * Mesh->FrameCount);
-	VERIFY_NULL(f150.Num());
-	VERIFY(BoundingBoxes.Num(), BoundingSpheres.Num());
-	VERIFY(BoundingBoxes.Num(), FrameCount);
-	VERIFY_NULL(AnimMeshVerts.Num());
-	VERIFY_NULL(StreamVersion);
-#endif
 }
 
 

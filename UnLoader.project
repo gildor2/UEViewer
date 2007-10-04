@@ -18,6 +18,7 @@ sources(MAIN) = {
 	Main.cpp
 	# Unreal Engine support files
 	UnCore.cpp
+	UnObject.cpp
 	UnPackage.cpp
 	# viewers
 	MeshViewer.cpp

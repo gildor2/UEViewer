@@ -20,6 +20,7 @@ namespace GL
 {
 	void text(const char *text, int x = -1, int y = -1);
 	void textf(const char *fmt, ...);
+	void SetViewOffset(const CVec3 &offset);
 };
 
 

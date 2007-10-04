@@ -1,9 +1,19 @@
-! UPackage:
-  - remember created (serialized) objects in package ExportTable
-  - 'UObject*' serializer: should find RTTI for class name, create class (default),
-    and remember it for later serialization
-    ! needs ability to find and open other packages
-    ! test: automatically serialize UMeshAnimation for skeletal meshes
+Animation:
+- realtime playback
+- looped animation playback
+
+Mesh:
+- display as wireframe
+- deform with skeleton
+
+! UObject:
+  - EndLoad(): use 'while (GObjLoaded.Num())'
+    1) sort by package/offset; priority for CURRENT package
+    2) if object was not created (not found or unknown class) - should not try to do
+       it again (infinite loop possible!) -- create dummy object?
+    3) add assert before serialization: should not be already loaded (bool flag for UObject)
+  - add 2 global lists: complete objects and objects, required serialization; use
+    bool flag to check, which list holds object
 
 * 2K4_NvidiaIntro has animation+model to be the same names, different types only
   * used from MOV-UT2004-Intro.ut2
@@ -18,9 +28,53 @@
   ? from UnrealEd: all vertex meshes uses no backface culling, but skeletal meshes uses culling
   ! 'FinalBlend' class has property 'bool TwoSided', which is 'true' in described situation
 
+
+EXTRA KEYS:
+~~~~~~~~~~~
+- show boxes
+- show skeleton: none, bones, bones+names
+
+
 NOTES:
 ~~~~~~
 - check XGame/Classes/SpeciesType.uc + Species_*.uc -- setting many properties for
   player model
 - system/*.upl: files, containing links between meshes/skins/voices/names/portraits etc
   http://wiki.beyondunreal.com/wiki/UPL_File
+
+
+MATERIALS TREE:
+~~~~~~~~~~~~~~~
+Material
+  Combiner
+  Modifier
+    ColorModifier
+    FinalBlend
+    MaterialSequence
+    MaterialSwitch
+    OpacityModifier
+    TexModifier
+      TexCoordSource
+      TexEnvMap
+      TexMatrix
+      TexOscillator
+        TexOscillatorTriggered
+      TexPanner
+        TexPannerTriggered
+      TexRotator
+      TexScaler
+      VariableTexPanner
+  RenderedMaterial
+    BitmapMaterial
+      ScriptedTexture
+      ShadowBitmapMaterial
+      Texture
+        Cubemap
+    ConstantMaterial
+      ConstantColor
+      FadeColor
+    ParticleMaterial
+    ProjectorMaterial
+    Shader
+    TerrainMaterial
+    VertexColor

@@ -6,7 +6,7 @@
 // State variables
 //-----------------------------------------------------------------------------
 
-static bool  isHelpVisible = true;
+static bool  isHelpVisible = false;
 static float frameTime;
 
 
@@ -36,6 +36,7 @@ namespace GL
 	CVec3 viewAngles;
 	float viewDist   = DEFAULT_DIST;
 	CVec3 viewOrigin = { -DEFAULT_DIST, 0, 0 };
+	CVec3 viewOffset = {0, 0, 0};
 	CAxis viewAxis;				// generated from angles
 	bool  isWireframe = false;
 
@@ -75,6 +76,19 @@ namespace GL
 		glCullFace(GL_FRONT);
 	}
 
+	void ResetView()
+	{
+		viewAngles.Set(0, 0, 0);
+		viewDist = DEFAULT_DIST;
+		viewOrigin.Set(-DEFAULT_DIST, 0, 0);
+		viewOrigin.Add(viewOffset);
+	}
+
+	void SetViewOffset(const CVec3 &offset)
+	{
+		viewOffset = offset;
+		ResetView();
+	}
 
 	//-------------------------------------------------------------------------
 	// Text output
@@ -146,6 +160,7 @@ namespace GL
 		CVec3 viewDir;
 		Euler2Vecs(viewAngles, &viewDir, NULL, NULL);
 		VectorScale(viewDir, -viewDist, viewOrigin);
+		viewOrigin.Add(viewOffset);
 	}
 
 
@@ -333,15 +348,14 @@ static void OnKeyboard(unsigned char key, int x, int y)
 {
 	switch (tolower(key))
 	{
-	case 0x1B:				// Esc
-		exit(0);
+	case 0x1B:					// Esc
+		glutLeaveMainLoop();	// freeglut only; MJK glut callback should use 'exit(0)'
+		break;
 	case 'h':
 		isHelpVisible = !isHelpVisible;
 		break;
 	case 'r':
-		GL::viewAngles.Set(0, 0, 0);
-		GL::viewDist = DEFAULT_DIST;
-		GL::viewOrigin.Set(-DEFAULT_DIST, 0, 0);
+		GL::ResetView();
 		break;
 	case 'w':
 		GL::isWireframe = !GL::isWireframe;
@@ -377,6 +391,8 @@ void VisualizerLoop(const char *caption)
 	glutDisplayFunc(OnDisplay);
 	glutKeyboardFunc(OnKeyboard);
 	OnTimer(0);					// init timer
+	GL::ResetView();
 	// start
+	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);	// freeglut only
 	glutMainLoop();
 }

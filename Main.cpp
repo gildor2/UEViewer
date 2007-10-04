@@ -33,8 +33,10 @@ void main(int argc, char **argv)
 	{
 	help:
 		printf( "Usage:\n"
-				"  UnLoader [-dump] <package file> <object name> [<class name>]\n"
-				"  UnLoader -list <package file>\n");
+				"  UnLoader [-dump] [-path=PATH] <package file> <object name> [<class name>]\n"
+				"  UnLoader -list <package file>\n"
+				"    PATH = path to UT root directory\n"
+		);
 		exit(0);
 	}
 
@@ -45,10 +47,13 @@ void main(int argc, char **argv)
 	{
 		if (argv[arg][0] == '-')
 		{
-			if (!strcmp(argv[arg]+1, "dump"))
+			const char *opt = argv[arg]+1;
+			if (!strcmp(opt, "dump"))
 				dumpOnly = true;
-			else if (!strcmp(argv[arg]+1, "list"))
+			else if (!strcmp(opt, "list"))
 				listOnly = true;
+			else if (!strncmp(opt, "path=", 5))
+				UnPackage::SetSearchPath(opt+5);
 			else
 				goto help;
 		}
@@ -94,7 +99,9 @@ void main(int argc, char **argv)
 	GNotifyInfo = nameBuf;
 
 	// create object from package
+	UObject::BeginLoad();	//!!!
 	UObject *Obj = Pkg.CreateExport(idx);
+	UObject::EndLoad();		//!!!
 
 	// create viewer class
 	if (!strcmp(className, "VertMesh"))
@@ -111,10 +118,14 @@ void main(int argc, char **argv)
 	}
 
 	// print mesh info
-	Viewer->Dump();
+#if TEST_FILES
+	Viewer->Test();
+#endif
 
-	if (!dumpOnly)
-		VisualizerLoop(APP_CAPTION);
+	if (dumpOnly)
+		Viewer->Dump();					// dump to console and exit
+	else
+		VisualizerLoop(APP_CAPTION);	// show object
 
 	delete Viewer;
 	delete Obj;
@@ -133,6 +144,11 @@ void AppDrawFrame()
 
 void AppKeyEvent(unsigned char key)
 {
+	if (key == 'd')
+	{
+		Viewer->Dump();
+		return;
+	}
 	Viewer->ProcessKey(key);
 }
 
@@ -141,8 +157,9 @@ void AppDisplayTexts(bool helpVisible)
 {
 	if (helpVisible)
 	{
+		GL::text("D           dump info\n");
 		Viewer->ShowHelp();
-		GL::textf("-----\n\n");		// divider
+		GL::text("-----\n\n");		// divider
 	}
 	Viewer->Draw2D();
 }

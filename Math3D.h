@@ -245,4 +245,7 @@ struct CQuat
 		FNegate(y);
 		FNegate(z);
 	}
+	void Normalize();
 };
+
+void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst);

@@ -276,14 +276,15 @@ struct FSphere : public FVector
 	TArray/TLazyArray templates
 -----------------------------------------------------------------------------*/
 
-template<class T> class TArray
+class FArray
 {
 public:
-	TArray()
+	FArray()
 	:	DataCount(0)
+	,	MaxCount(0)
 	,	DataPtr(NULL)
 	{}
-	~TArray()
+	~FArray()
 	{
 		Empty();
 	}
@@ -301,34 +302,113 @@ public:
 		DataCount = 0;
 	}
 
+protected:
+	void	*DataPtr;
+	int		DataCount;
+	int		MaxCount;
+
+	void Insert(int index, int count, int elementSize)
+	{
+		assert(index >= 0);
+		assert(index <= DataCount);
+		assert(count > 0);
+		// check for available space
+		if (DataCount + count > MaxCount)
+		{
+			// not enough space, resize ...
+			int prevCount = MaxCount;
+			MaxCount = ((DataCount + count + 7) / 8) * 8 + 8;
+			DataPtr = realloc(DataPtr, MaxCount * elementSize);
+			// zero added memory
+			memset(
+				(byte*)DataPtr + prevCount * elementSize,
+				0,
+				(MaxCount - prevCount) * elementSize
+			);
+		}
+		// move data
+		memmove(
+			(byte*)DataPtr + (index + count)     * elementSize,
+			(byte*)DataPtr + index               * elementSize,
+							 (DataCount - index) * elementSize
+		);
+		// last operation: advance counter
+		DataCount += count;
+	}
+
+	void Remove(int index, int count, int elementSize)
+	{
+		assert(index >= 0);
+		assert(count > 0);
+		assert(index + count <= DataCount);
+		// move data
+		memcpy(
+			(byte*)DataPtr + index                       * elementSize,
+			(byte*)DataPtr + (index + count)             * elementSize,
+							 (DataCount - index - count) * elementSize
+		);
+		// decrease counter
+		DataCount -= count;
+	}
+};
+
+// NOTE: this container cannot hold objects, required constructor/destructor
+// (at least, Add/Insert/Remove functions are not supported, but can serialize
+// such data)
+template<class T> class TArray : public FArray
+{
+public:
+	// data accessors
 	T& operator[](int index)
 	{
 		assert(index >= 0 && index < DataCount);
-		return DataPtr[index];
+		return *((T*)DataPtr + index);
 	}
 	const T& operator[](int index) const
 	{
 		assert(index >= 0 && index < DataCount);
-		return DataPtr[index];
+		return *((T*)DataPtr + index);
 	}
 
+	int Add(int count = 1)
+	{
+		int index = DataCount;
+		FArray::Insert(index, 1, sizeof(T));
+		return index;
+	}
+
+	void Insert(int index, int count = 1)
+	{
+		FArray::Insert(index, count, sizeof(T));
+	}
+
+	void Remove(int index, int count = 1)
+	{
+		FArray::Remove(index, count, sizeof(T));
+	}
+
+	int AddItem(const T& item)
+	{
+		int index = Add();
+		(*this)[index] = item;
+		return index;
+	}
+
+	// serializer
 	friend FArchive& operator<<(FArchive &Ar, TArray &A)
 	{
-		assert(Ar.IsLoading);	//?? savig requires more code
+		assert(Ar.IsLoading);	//?? saving requires more code
 		A.Empty();
 		int Count;
 		Ar << AR_INDEX(Count);
 		T* Ptr = new T[Count];
 		A.DataPtr   = Ptr;
 		A.DataCount = Count;
+		A.MaxCount  = Count;
 		for (int i = 0; i < Count; i++)
 			Ar << *Ptr++;
 		return Ar;
 	}
-
-protected:
-	T		*DataPtr;
-	int		DataCount;
 };
 
 // TLazyArray implemented as simple wrapper around TArray with
@@ -346,82 +426,6 @@ template<class T> class TLazyArray : public TArray<T>
 		return Ar << (TArray<T>&)A;
 	}
 };
-
-
-/*-----------------------------------------------------------------------------
-	UObject class
------------------------------------------------------------------------------*/
-
-class UObject
-{
-public:
-	// internal storage
-	UnPackage	*Package;
-	int			PackageIndex;	// index in package export table
-	const char	*Name;
-
-//	unsigned	ObjectFlags;
-
-	virtual ~UObject()
-	{}
-
-	virtual const char *GetClassName()
-	{
-		return "Object";
-	}
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		// stack frame
-//		assert(!(ObjectFlags & RF_HasStack));
-		// property list
-		int tmp;				// really, FName
-		Ar << AR_INDEX(tmp);
-//		assert(tmp == 0);		// index of "None"
-	}
-};
-
-
-/*-----------------------------------------------------------------------------
-	Simple RTTI
------------------------------------------------------------------------------*/
-
-// NOTE: DECLARE_CLASS and REGISTER_CLASS will skip 1st class name char
-
-#define DECLARE_CLASS(Class)					\
-	public:										\
-		typedef Class ThisClass;				\
-		static ThisClass* StaticConstructor()	\
-		{ return new ThisClass; }				\
-		virtual const char* GetClassName()		\
-		{ return #Class+1; }					\
-	private:									\
-		friend FArchive& operator<<(FArchive &Ar, Class *&Res) \
-		{										\
-			return Ar << *(UObject**)&Res;		\
-		}
-
-
-struct CClassInfo
-{
-	const char *Name;
-	UObject* (*Constructor)();
-};
-
-
-void RegisterClasses(CClassInfo *Table, int Count);
-UObject *CreateClass(const char *Name);
-
-
-#define BEGIN_CLASS_TABLE						\
-	{											\
-		static CClassInfo Table[] = {
-#define REGISTER_CLASS(Class)					\
-			{ #Class+1, (UObject* (*) ())Class::StaticConstructor },
-#define END_CLASS_TABLE							\
-		};										\
-		RegisterClasses(ARRAY_ARG(Table));		\
-	}
 
 
 #endif // __UNCORE_H__

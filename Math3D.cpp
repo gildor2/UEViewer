@@ -317,3 +317,63 @@ float CQuat::GetLength() const
 {
 	return sqrt(x * x + y * y + z * z + w * w);
 }
+
+
+void CQuat::Normalize()
+{
+	float len = GetLength();
+	if (len)
+	{
+		len = 1.0f / len;
+		x *= len;
+		y *= len;
+		z *= len;
+		w *= len;
+	}
+}
+
+
+void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
+{
+	// Check "Hacking Quaternions" article for fast approximated slerp
+
+	// silly optimizations
+	if (Alpha <= 0)
+	{
+		dst = A;
+		return;
+	}
+	if (Alpha >= 1)
+	{
+		dst = B;
+		return;
+	}
+	// can also compare A and B and return A when equals ...
+
+	// get cosine of angle between quaternions
+	float cosom = A.x * B.x + A.y * B.y + A.z * B.z + A.w * B.w;
+	float scaleA, scaleB;
+	if (1.0f - cosom > 1e-6f)
+	{
+#if 1
+		float f        = 1.0f - cosom * cosom;
+		float sinomInv = appRsqrt(f);
+		float omega    = atan2(f * sinomInv, fabs(cosom));	//!! slow
+#else
+		float omega    = acos(cosom);						//!! slow
+		float sinomInv = 1.0f / sin(omega);					//!! slow
+#endif
+		scaleA = sin((1.0f - Alpha) * omega) * sinomInv;	//!! slow
+		scaleB = sin(Alpha * omega) * sinomInv;				//!! slow
+	}
+	else
+	{
+		scaleA = 1.0f - Alpha;
+		scaleB = Alpha;
+	}
+	// lerp result
+	dst.x = scaleA * A.x + scaleB * B.x;
+	dst.y = scaleA * A.y + scaleB * B.y;
+	dst.z = scaleA * A.z + scaleB * B.z;
+	dst.w = scaleA * A.w + scaleB * B.w;
+}
