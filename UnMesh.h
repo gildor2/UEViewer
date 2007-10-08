@@ -8,14 +8,17 @@
 
 class UPrimitive : public UObject
 {
+	DECLARE_CLASS(UPrimitive, UObject);
 public:
 	FBox			BoundingBox;
 	FSphere			BoundingSphere;
 
 	virtual void Serialize(FArchive &Ar)
 	{
-		UObject::Serialize(Ar);
+		guard(UPrimitive::Serialize);
+		Super::Serialize(Ar);
 		Ar << BoundingBox << BoundingSphere;
+		unguard;
 	}
 };
 
@@ -26,7 +29,7 @@ public:
 
 class UMaterial : public UObject
 {
-	DECLARE_CLASS(UMaterial);
+	DECLARE_CLASS(UMaterial, UObject);
 };
 
 
@@ -143,6 +146,7 @@ struct FMeshMaterial
 // abstract class UMesh (which is derived from UPrimitive)
 class ULodMesh : public UPrimitive
 {
+	DECLARE_CLASS(ULodMesh, UPrimitive);
 public:
 	unsigned			AuthKey;			// used in USkeletalMesh only?
 	int					Version;			// UT2 have '4' in this field
@@ -176,7 +180,9 @@ public:
 
 	virtual void Serialize(FArchive &Ar)
 	{
-		UPrimitive::Serialize(Ar);
+		guard(ULodMesh::Serialize);
+		Super::Serialize(Ar);
+
 		Ar << Version << VertexCount << Verts;
 
 		if (Version <= 1)
@@ -211,6 +217,8 @@ public:
 		{
 			Ar << f130;
 		}
+
+		unguard;
 	}
 };
 
@@ -307,7 +315,7 @@ struct FMeshAnimSeq
 
 class UVertMesh : public ULodMesh
 {
-	DECLARE_CLASS(UVertMesh);
+	DECLARE_CLASS(UVertMesh, ULodMesh);
 public:
 	TArray<FMeshVert>		Verts2;			// empty; used ULodMesh.Verts
 	TArray<FMeshNorm>		Normals;		// [NumFrames * NumVerts]
@@ -323,12 +331,15 @@ public:
 
 	virtual void Serialize(FArchive &Ar)
 	{
-		ULodMesh::Serialize(Ar);
+		guard(UVertMesh::Serialize);
+		Super::Serialize(Ar);
+
 		Ar << AnimMeshVerts << StreamVersion; // FAnimMeshVertexStream: may skip this (simply seek archive)
 		Ar << Verts2 << f150;
 		Ar << AnimSeqs << Normals;
 		Ar << VertexCount << FrameCount;
 		Ar << BoundingBoxes << BoundingSpheres;
+		unguard;
 	}
 };
 
@@ -343,8 +354,8 @@ public:
 struct AnalogTrack
 {
 	unsigned		Flags;					// reserved
-	TArray<FQuat>	KeyQuat;				// Orientation key track
-	TArray<FVector>	KeyPos;					// Position key track
+	TArray<FQuat>	KeyQuat;				// Orientation key track (count = 1 or KeyTime.Count)
+	TArray<FVector>	KeyPos;					// Position key track (count = 1 or KeyTime.Count)
 	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track)
 
 	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
@@ -376,6 +387,9 @@ struct MotionChunk
 
 
 // Named bone for the animating skeleton data.
+// Note: bone set may slightly differ in USkeletalMesh and UMeshAnimation objects (missing bones, different order)
+// - should compute a map from one bone set to another; skeleton hierarchy should be taken from mesh (may differ
+// too)
 struct FNamedBone
 {
 	FName			Name;					// Bone's name (== single 32-bit index to name)
@@ -392,17 +406,19 @@ struct FNamedBone
 
 class UMeshAnimation : public UObject
 {
-	DECLARE_CLASS(UMeshAnimation);
+	DECLARE_CLASS(UMeshAnimation, UObject);
 public:
-	int						f2C;			//?? RawNumFrames
+	int						f2C;			// always zero?
 	TArray<FNamedBone>		RefBones;
 	TArray<MotionChunk>		Moves;
 	TArray<FMeshAnimSeq>	AnimSeqs;
 
 	virtual void Serialize(FArchive &Ar)
 	{
-		UObject::Serialize(Ar);
+		guard(UMeshAnimation.Serialize);
+		Super::Serialize(Ar);
 		Ar << f2C << RefBones << Moves << AnimSeqs;
+		unguard;
 	}
 };
 
@@ -448,13 +464,13 @@ struct FMeshBone
 // similar to VRawBoneInfluence, but used 'word' instead of 'int'
 struct FVertInfluences
 {
-	float			Weidht;
+	float			Weight;
 	word			PointIndex;
 	word			BoneIndex;
 
 	friend FArchive& operator<<(FArchive &Ar, FVertInfluences &I)
 	{
-		return Ar << I.Weidht << I.PointIndex << I.BoneIndex;
+		return Ar << I.Weight << I.PointIndex << I.BoneIndex;
 	}
 };
 
@@ -545,6 +561,7 @@ struct FSkelBoneBox
 //
 
 // Textured triangle.
+// This is an extended FMeshFace structure
 struct VTriangle
 {
 	word			WedgeIndex[3];			// Point to three vertices in the vertex list.
@@ -559,16 +576,6 @@ struct VTriangle
 		return Ar;
 	}
 };
-
-
-#if 0
-struct FLODMeshInfo //?? different name
-{
-	float					unk1;
-	FRawIndexBuffer			unk2;
-	TArray<FLODMeshSection>	unk3;
-};
-#endif
 
 
 struct FSkinPoint
@@ -617,8 +624,8 @@ struct FSkelMeshSection
 struct FStaticLODModel
 {
 	TArray<unsigned>		f0;				//?? something for dynamic sections; count >= NumDynWedges*3+1; packed influences?
-	TArray<FSkinPoint>		SkinPoints;		// dynamic surface points
-	int						NumDynWedges;	// number of wedges in dynamic sections
+	TArray<FSkinPoint>		SkinPoints;		// smooth surface points
+	int						NumDynWedges;	// number of wedges in smooth sections
 	TArray<FSkelMeshSection> SmoothSections;
 	TArray<FSkelMeshSection> RigidSections;
 	FRawIndexBuffer			SmoothIndices;
@@ -630,7 +637,7 @@ struct FStaticLODModel
 	TLazyArray<FVector>		Points;			// all surface points
 	float					LODDistanceFactor;
 	float					LODHysteresis;
-	int						f10C;
+	int						NumSharedVerts;	// number of verts, which is used in more than one wedge
 	int						LODMaxInfluences;
 	int						f114;
 	int						f118;
@@ -638,20 +645,24 @@ struct FStaticLODModel
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel &M)
 	{
+		guard(FStaticLODModel<<);
+
 		Ar << M.f0 << M.SkinPoints << M.NumDynWedges;
 		Ar << M.SmoothSections << M.RigidSections << M.SmoothIndices << M.RigidIndices;
 		Ar << M.VertexStream;
 		Ar << M.VertInfluences << M.Wedges << M.Faces << M.Points;
-		Ar << M.LODDistanceFactor << M.LODHysteresis << M.f10C;
+		Ar << M.LODDistanceFactor << M.LODHysteresis << M.NumSharedVerts;
 		Ar << M.LODMaxInfluences << M.f114 << M.f118;
 		return Ar;
+
+		unguard;
 	}
 };
 
 
 class USkeletalMesh : public ULodMesh
 {
-	DECLARE_CLASS(USkeletalMesh);
+	DECLARE_CLASS(USkeletalMesh, ULodMesh);
 public:
 	TLazyArray<FVector>		Points;			// note: have ULodMesh.Verts
 	TLazyArray<FMeshWedge>	Wedges;
@@ -663,15 +674,10 @@ public:
 	int						BoneDepth;		// bone hierarchy depth
 	TArray<FStaticLODModel>	StaticLODModels;
 	TArray<FVector>			f1FC;
-	TArray<VWeightIndex>	WeightIndices;
+	TArray<VWeightIndex>	WeightIndices;	// empty
 	TArray<VBoneInfluence>	BoneInfluences;
 	UMeshAnimation*			Animation;
 	UObject*				f224;			//?? always NULL
-
-//	FLODMeshInfo			Lods[4];
-
-//	TArray<FCoords>			f2D8;
-//	TArray<VertInfIndex>	f2E4;
 	// AttachSocket data
 	TArray<FName>			AttachAliases;
 	TArray<FName>			AttachBoneNames;
@@ -685,7 +691,9 @@ public:
 
 	virtual void Serialize(FArchive &Ar)
 	{
-		ULodMesh::Serialize(Ar);
+		guard(USkeletalMesh::Serialize);
+
+		Super::Serialize(Ar);
 		Ar << f1FC << Bones << Animation;
 		Ar << BoneDepth << WeightIndices << BoneInfluences;
 		Ar << AttachAliases << AttachBoneNames << AttachCoords;
@@ -714,6 +722,8 @@ public:
 		{
 			Ar << f338;
 		}
+
+		unguard;
 	}
 };
 

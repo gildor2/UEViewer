@@ -46,6 +46,7 @@ struct FPackageFileSummary
 
 	friend FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	{
+		guard(FPackageFileSummary<<);
 		assert(Ar.IsLoading);						// saving is not supported
 
 		Ar << S.Tag << S.FileVersion << S.LicenseeVersion << S.PackageFlags;
@@ -62,6 +63,7 @@ struct FPackageFileSummary
 			Ar << tmp1 << tmp2;
 		}
 		return Ar;
+		unguard;
 	}
 };
 
@@ -122,12 +124,16 @@ public:
 
 	void SetupReader(int ExportIndex)
 	{
+		guard(UnPackage::SetupReader);
+
 		if (ExportIndex < 0 || ExportIndex >= Summary.ExportCount)
 			appError("Package \"%s\": wrong export index %d", SelfName, ExportIndex);
 		const FObjectExport &Exp = ExportTable[ExportIndex];
 		// setup FArchive
 		ArStopper = Exp.SerialOffset + Exp.SerialSize;
 		Seek(Exp.SerialOffset);
+
+		unguard;
 	}
 
 	const char* GetName(int index)
@@ -187,6 +193,8 @@ public:
 
 	UObject* CreateExport(int index)
 	{
+		guard(UnPackage::CreateExport);
+
 		// create empty object
 		FObjectExport &Exp = GetExport(index);
 		if (Exp.Object)
@@ -206,10 +214,14 @@ public:
 		// add object to GObjLoaded for later serialization
 		UObject::GObjLoaded.AddItem(Obj);
 		return Obj;
+
+		unguardf(("%s:%d", SelfName, index));
 	}
 
 	UObject* CreateImport(int index)
 	{
+		guard(UnPackage::CreateImport);
+
 		const FObjectImport &Imp = GetImport(index);
 		// find/load package
 		const char *PackageName = GetObjectName(Imp.PackageIndex);
@@ -223,6 +235,8 @@ public:
 		int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
 		// create object
 		return Package->CreateExport(NewIndex);
+
+		unguardf(("%s:%d", SelfName, index));
 	}
 
 	// FArchive interface
@@ -266,6 +280,17 @@ private:
 	static TArray<PackageEntry> PackageMap;
 	static char SearchPath[256];
 };
+
+
+// VC7 has strange bug with friend functions, declared in class
+// Here is a workaround
+#if _MSC_VER >= 1300 && _MSC_VER < 1400
+template<class T>
+FArchive& operator<<(UnPackage &Ar, T &V)
+{
+	return static_cast<FArchive&>(Ar) << V;
+}
+#endif
 
 
 #endif // __UNPACKAGE_H__

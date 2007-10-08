@@ -1,13 +1,38 @@
 #ifndef __UNCORE_H__
 #define __UNCORE_H__
 
-
+// necessary types
 typedef unsigned char		byte;
 typedef unsigned short		word;
 
+// forward declarations
 class FArchive;
 class UObject;
 class UnPackage;
+
+// empty guard macros, if not defined
+#ifndef guard
+#define guard(x)
+#endif
+
+#ifndef unguard
+#define unguard
+#endif
+
+#ifndef unguardf
+#define unguardf(x)
+#endif
+
+
+// field offset macros
+// get offset of the field in struc
+#ifdef offsetof
+#	define FIELD2OFS(struc, field)		(offsetof(struc, field))				// more compatible
+#else
+#	define FIELD2OFS(struc, field)		((unsigned) &((struc *)NULL)->field)	// just in case
+#endif
+// get field of type by offset inside struc
+#define OFS2FIELD(struc, ofs, type)	(*(type*) ((byte*)(struc) + ofs))
 
 
 /*-----------------------------------------------------------------------------
@@ -19,6 +44,11 @@ class FName
 public:
 	int			Index;
 	const char	*Str;
+
+	FName()
+	:	Index(0)
+	,	Str(NULL)
+	{}
 
 	inline const char *operator*() const
 	{
@@ -132,9 +162,11 @@ public:
 	FFileReader(const char *Filename)
 	:	f(fopen(Filename, "rb"))
 	{
+		guard(FFileReader::FFileReader);
 		if (!f)
 			appError("Unable to open file %s", Filename);
 		IsLoading = true;
+		unguardf(("%s", Filename));
 	}
 
 	virtual ~FFileReader()
@@ -187,7 +219,7 @@ protected:
 			res = fwrite(data, size, 1, f);
 		ArPos += size;
 		if (ArStopper > 0 && ArPos > ArStopper)
-			appError("Serailizing behind stopper");
+			appError("Serializing behind stopper");
 		if (res != 1)
 			appError("Unable to serialize data");
 	}
@@ -201,6 +233,11 @@ protected:
 struct FVector
 {
 	float	X, Y, Z;
+
+	void Set(float _X, float _Y, float _Z)
+	{
+		X = _X; Y = _Y; Z = _Z;
+	}
 
 	friend FArchive& operator<<(FArchive &Ar, FVector &V)
 	{
@@ -397,6 +434,7 @@ public:
 	// serializer
 	friend FArchive& operator<<(FArchive &Ar, TArray &A)
 	{
+		guard(TArray<<);
 		assert(Ar.IsLoading);	//?? saving requires more code
 		A.Empty();
 		int Count;
@@ -408,6 +446,7 @@ public:
 		for (int i = 0; i < Count; i++)
 			Ar << *Ptr++;
 		return Ar;
+		unguard;
 	}
 };
 

@@ -4,6 +4,8 @@
 #if TEST_FILES
 void CMeshViewer::Test()
 {
+	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
+	if (Mesh->HasImpostor) appNotify("HAS IMPOSTOR");
 }
 #endif
 

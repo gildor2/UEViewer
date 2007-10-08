@@ -8,6 +8,8 @@
 UnPackage::UnPackage(const char *filename)
 :	FFileReader(filename)
 {
+	guard(UnPackage::UnPackage);
+
 	appStrncpyz(SelfName, filename, ARRAY_COUNT(SelfName));
 
 	// read summary
@@ -93,6 +95,8 @@ UnPackage::UnPackage(const char *filename)
 	if (s2) *s2 = 0;
 	appStrncpyz(Info.Name, buf, ARRAY_COUNT(Info.Name));
 	Info.Package = this;
+
+	unguardf(("%s", filename));
 }
 
 

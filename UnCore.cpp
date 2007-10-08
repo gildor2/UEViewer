@@ -15,9 +15,10 @@ void appError(char *fmt, ...)
 	va_end(argptr);
 	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
 
-	printf("ERROR: %s\n", buf);
-	appNotify("ERROR: %s\n", buf);
-	exit(1);
+//	appNotify("ERROR: %s\n", buf);
+	strcpy(GErrorHistory, buf);
+	appStrcatn(ARRAY_ARG(GErrorHistory), "\n");
+	THROW;
 }
 
 
@@ -38,6 +39,46 @@ void appNotify(char *fmt, ...)
 		fclose(f);
 	}
 	printf("[%s] %s\n", GNotifyInfo, buf);
+}
+
+
+char GErrorHistory[2048];
+static bool WasError = false;
+
+static void LogHistory(const char *part)
+{
+	appStrcatn(ARRAY_ARG(GErrorHistory), part);
+}
+
+void appUnwindPrefix(const char *fmt)
+{
+	char buf[512];
+	appSprintf(ARRAY_ARG(buf), WasError ? " <- %s:" : "%s:", fmt);
+	LogHistory(buf);
+	WasError = false;
+}
+
+
+void appUnwindThrow(const char *fmt, ...)
+{
+	char buf[512];
+	va_list argptr;
+
+	va_start(argptr, fmt);
+	if (WasError)
+	{
+		strcpy(buf, " <- ");
+		vsnprintf(buf+4, sizeof(buf)-4, fmt, argptr);
+	}
+	else
+	{
+		vsnprintf(buf, sizeof(buf), fmt, argptr);
+		WasError = true;
+	}
+	va_end(argptr);
+	LogHistory(buf);
+
+	THROW;
 }
 
 
@@ -127,4 +168,13 @@ void appStrncpyz(char *dst, const char *src, int count)
 		c = *src++;
 		*dst++ = c;
 	} while (c);
+}
+
+
+void appStrcatn(char *dst, int count, const char *src)
+{
+	char *p = strchr(dst, 0);
+	int maxLen = count - (p - dst);
+	if (maxLen > 1)
+		appStrncpyz(p, src, maxLen);
 }

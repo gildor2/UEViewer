@@ -36,6 +36,7 @@
 #if _MSC_VER
 #	define vsnprintf		_vsnprintf
 #	define FORCEINLINE		__forceinline
+#	define NORETURN			__declspec(noreturn)
 #endif
 
 
@@ -49,6 +50,7 @@ void appNotify(char *fmt, ...);
 
 int appSprintf(char *dest, int size, const char *fmt, ...);
 void appStrncpyz(char *dst, const char *src, int count);
+void appStrcatn(char *dst, int count, const char *src);
 
 
 FORCEINLINE void* operator new(size_t size)
@@ -65,6 +67,34 @@ FORCEINLINE void operator delete(void* ptr)
 {
 	appFree(ptr);
 }
+
+
+// C++excpetion-based guard/unguard system
+#define guard(func)						\
+	{									\
+		static const char __FUNC__[] = #func; \
+		try {
+
+#define unguard							\
+		} catch (...) {					\
+			appUnwindThrow(__FUNC__);	\
+		}								\
+	}
+
+#define unguardf(msg)					\
+		} catch (...) {					\
+			appUnwindPrefix(__FUNC__);	\
+			appUnwindThrow msg;			\
+		}								\
+	}
+
+#define	THROW_AGAIN		throw
+#define THROW			throw 1
+
+void appUnwindPrefix(const char *fmt);		// not vararg (will display function name for unguardf only)
+NORETURN void appUnwindThrow(const char *fmt, ...);
+
+extern char GErrorHistory[2048];
 
 
 #include "Math3D.h"

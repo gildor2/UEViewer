@@ -145,18 +145,21 @@ public:
 	int		LodNum;
 	int		CurrAnim;
 	float	AnimTime;
+	int		ShowSkel;		// 0 - mesh, 1 - mesh+skel, 2 - skel only
 
 	CSkelMeshViewer(USkeletalMesh *Mesh)
 	:	CMeshViewer(Mesh)
 	,	LodNum(-1)
 	,	CurrAnim(-1)
 	,	AnimTime(0)
+	,	ShowSkel(0)
 	{}
 
 	virtual void ShowHelp()
 	{
 		CMeshViewer::ShowHelp();
 		GL::text("L           cycle mesh LODs\n");
+		GL::text("S           show skeleton\n");
 		GL::text("[]          prev/next animation\n");
 		GL::text("<>          prev/next frame\n");
 	}
@@ -165,49 +168,7 @@ public:
 	TEST_OBJECT;
 	virtual void Draw2D();
 	virtual void Draw3D();
-
-	virtual void ProcessKey(unsigned char key)
-	{
-		USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
-		int NumAnims = 0, NumFrames = 0;
-		if (Mesh->Animation)
-			NumAnims  = Mesh->Animation->AnimSeqs.Num();
-		if (CurrAnim >= 0)
-			NumFrames = Mesh->Animation->AnimSeqs[CurrAnim].NumFrames;
-
-		switch (key)
-		{
-		case 'l':
-			if (++LodNum >= Mesh->StaticLODModels.Num())
-				LodNum = -1;
-			break;
-		case '[':
-			if (--CurrAnim < -1)
-				CurrAnim = NumAnims - 1;
-			AnimTime = 0;
-			break;
-		case ']':
-			if (++CurrAnim >= NumAnims)
-				CurrAnim = -1;
-			AnimTime = 0;
-			break;
-		case ',':		// '<'
-			AnimTime -= 0.1;
-			if (AnimTime < 0)
-				AnimTime = 0;
-			break;
-		case '.':		// '>'
-			if (NumFrames > 0)
-			{
-				AnimTime += 0.1;
-				if (AnimTime > NumFrames - 1)
-					AnimTime = NumFrames - 1;
-			}
-			break;
-		default:
-			CMeshViewer::ProcessKey(key);
-		}
-	}
+	virtual void ProcessKey(unsigned char key);
 };
 
 

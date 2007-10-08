@@ -3,7 +3,8 @@
 #type="VertMesh"
 #type="SkeletalMesh"
 type="VertMesh|SkeletalMesh"
-dump="-dump"
+#dump="-dump"
+dump="-check"
 
 for package in data/*; do
 	case "$package" in

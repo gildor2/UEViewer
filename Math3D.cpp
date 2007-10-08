@@ -172,6 +172,26 @@ void UnTransformPoint(const CVec3 &origin, const CAxis &axis, const CVec3 &src, 
 }
 
 
+void InvertCoords(const CCoords &S, CCoords &D)
+{
+	CCoords T;		// to allow inplace inversion (when &D==&S)
+	// negate inverse rotated origin
+	S.axis.TransformVector(S.origin, T.origin);
+	T.origin.Negate();
+	// transpose axis
+	T.axis[0][0] = S.axis[0][0];
+	T.axis[0][1] = S.axis[1][0];
+	T.axis[0][2] = S.axis[2][0];
+	T.axis[1][0] = S.axis[0][1];
+	T.axis[1][1] = S.axis[1][1];
+	T.axis[1][2] = S.axis[2][1];
+	T.axis[2][0] = S.axis[0][2];
+	T.axis[2][1] = S.axis[1][2];
+	T.axis[2][2] = S.axis[2][2];
+	D = T;
+}
+
+
 /*-----------------------------------------------------------------------------
 	Angle math
 -----------------------------------------------------------------------------*/

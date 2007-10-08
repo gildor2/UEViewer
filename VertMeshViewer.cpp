@@ -16,7 +16,6 @@ void CVertMeshViewer::Test()
 	VERIFY_NOT_NULL(Wedges.Num());
 	VERIFY(CollapseWedgeThus.Num(), Wedges.Num());
 //	VERIFY(Materials.Num(), Textures.Num()); -- different
-	VERIFY_NULL(HasImpostor);
 	VERIFY_NULL(fF8);
 	VERIFY_NULL(f130);
 	VERIFY_NULL(Verts2.Num());

@@ -57,6 +57,7 @@ DEPENDS = \
 	GlWindow.h \
 	Math3D.h \
 	ObjectViewer.h \
+	UnAnimNotify.h \
 	UnCore.h \
 	UnMesh.h \
 	UnObject.h \
@@ -64,6 +65,16 @@ DEPENDS = \
 
 obj/Main.obj : Main.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Main.obj" Main.cpp
+
+DEPENDS = \
+	Core.h \
+	GlWindow.h \
+	Math3D.h \
+	ObjectViewer.h \
+	UnCore.h \
+	UnMesh.h \
+	UnObject.h \
+	UnPackage.h
 
 obj/MeshViewer.obj : MeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MeshViewer.obj" MeshViewer.cpp

@@ -23,6 +23,7 @@ namespace GL
 	float zNear = 4;			// near clipping plane
 	float zFar  = 4096;			// far clipping plane
 	float yFov  = 80;
+	bool  invertXAxis = false;
 	// window size
 	int   width  = 800;
 	int   height = 600;
@@ -73,7 +74,7 @@ namespace GL
 		glViewport(0, 0, width, height);
 		glScissor(0, 0, width, height);
 		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT);
+//		glCullFace(GL_FRONT);
 	}
 
 	void ResetView()
@@ -148,7 +149,10 @@ namespace GL
 		if (mouseButtons & 1)	// left mouse button
 		{
 			// rotate camera
-			viewAngles[YAW]   -= (float)dx / width * 360;
+			float yawDelta = (float)dx / width * 360;
+			if (GL::invertXAxis)
+				yawDelta = -yawDelta;
+			viewAngles[YAW]   -= yawDelta;
 			viewAngles[PITCH] -= (float)dy / height * 360;
 			// bound angles
 			viewAngles[YAW]   = fmod(viewAngles[YAW], 360);
@@ -171,7 +175,8 @@ namespace GL
 	{
 		// view angles -> view axis
 		Euler2Vecs(viewAngles, &viewAxis[0], &viewAxis[1], &viewAxis[2]);
-		viewAxis[1].Negate();
+		if (!invertXAxis)
+			viewAxis[1].Negate();
 //		textf("origin: %6.1f %6.1f %6.1f\n", VECTOR_ARG(viewOrigin));
 //		textf("angles: %6.1f %6.1f %6.1f\n", VECTOR_ARG(viewAngles));
 #if 0

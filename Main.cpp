@@ -1,5 +1,7 @@
 #include "ObjectViewer.h"
 
+#include "UnAnimNotify.h"
+
 
 #define APP_CAPTION		"UT2 Mesh Viewer"
 
@@ -14,10 +16,20 @@ static CObjectViewer *Viewer;			// used from GlWindow callbacks
 static void RegisterUnrealClasses()
 {
 BEGIN_CLASS_TABLE
+	// Materials
 	REGISTER_CLASS(UMaterial)
+	// Meshes
 	REGISTER_CLASS(USkeletalMesh)
 	REGISTER_CLASS(UVertMesh)
 	REGISTER_CLASS(UMeshAnimation)
+	// AnimNotify
+	REGISTER_CLASS(UAnimNotify)
+	REGISTER_CLASS(UAnimNotify_Script)
+	REGISTER_CLASS(UAnimNotify_Effect)
+	REGISTER_CLASS(UAnimNotify_DestroyEffect)
+	REGISTER_CLASS(UAnimNotify_Sound)
+	REGISTER_CLASS(UAnimNotify_Scripted)
+	REGISTER_CLASS(UAnimNotify_Trigger)
 END_CLASS_TABLE
 }
 
@@ -28,12 +40,16 @@ END_CLASS_TABLE
 
 void main(int argc, char **argv)
 {
+	try {
+
+	guard(Main);
+
 	// display usage
 	if (argc < 2)
 	{
 	help:
 		printf( "Usage:\n"
-				"  UnLoader [-dump] [-path=PATH] <package file> <object name> [<class name>]\n"
+				"  UnLoader [-dump|-check] [-path=PATH] <package file> <object name> [<class name>]\n"
 				"  UnLoader -list <package file>\n"
 				"    PATH = path to UT root directory\n"
 		);
@@ -41,7 +57,7 @@ void main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dumpOnly = false, listOnly = false;
+	bool dump = false, view = true, listOnly = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -49,7 +65,15 @@ void main(int argc, char **argv)
 		{
 			const char *opt = argv[arg]+1;
 			if (!strcmp(opt, "dump"))
-				dumpOnly = true;
+			{
+				dump = true;
+				view = false;
+			}
+			else if (!strcmp(opt, "check"))
+			{
+				dump = false;
+				view = false;
+			}
 			else if (!strcmp(opt, "list"))
 				listOnly = true;
 			else if (!strncmp(opt, "path=", 5))
@@ -78,12 +102,14 @@ void main(int argc, char **argv)
 
 	if (listOnly)
 	{
+		guard(List);
 		// dump package exports table
 		for (int i = 0; i < Pkg.Summary.ExportCount; i++)
 		{
 			const FObjectExport &Exp = Pkg.ExportTable[i];
 			printf("%d %s %s\n", i, Pkg.GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
 		}
+		unguard;
 		return;
 	}
 
@@ -103,6 +129,7 @@ void main(int argc, char **argv)
 	UObject *Obj = Pkg.CreateExport(idx);
 	UObject::EndLoad();		//!!!
 
+	guard(CreateVisualizer);
 	// create viewer class
 	if (!strcmp(className, "VertMesh"))
 	{
@@ -116,19 +143,41 @@ void main(int argc, char **argv)
 	{
 		Viewer = new CObjectViewer(Obj);
 	}
+	unguard;
 
 	// print mesh info
 #if TEST_FILES
 	Viewer->Test();
 #endif
 
-	if (dumpOnly)
+	if (dump)
 		Viewer->Dump();					// dump to console and exit
-	else
+	if (view)
+	{
+		GL::invertXAxis = true;
+		guard(MainLoop);
 		VisualizerLoop(APP_CAPTION);	// show object
+		unguard;
+	}
 
 	delete Viewer;
 	delete Obj;
+
+	unguard;
+
+	} catch (...) {
+		if (GErrorHistory[0])
+		{
+//			printf("ERROR: %s\n", GErrorHistory);
+			appNotify("ERROR: %s\n", GErrorHistory);
+		}
+		else
+		{
+//			printf("Unknown error\n");
+			appNotify("Unknown error\n");
+		}
+		exit(1);
+	}
 }
 
 

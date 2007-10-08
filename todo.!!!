@@ -2,6 +2,10 @@ Animation:
 - realtime playback
 - looped animation playback
 
+Packages:
+! packages have tree-like structure of objects, should use whole tree to map export->import (use
+  package's "package" field recursively; note: depth can be any)
+
 Mesh:
 - display as wireframe
 - deform with skeleton
@@ -15,12 +19,6 @@ Mesh:
   - add 2 global lists: complete objects and objects, required serialization; use
     bool flag to check, which list holds object
 
-* 2K4_NvidiaIntro has animation+model to be the same names, different types only
-  * used from MOV-UT2004-Intro.ut2
-
-! skeleton is inverted
-  * note: q2 model axis: forward/left/up (?); q2 world axis: forward/right/up (?); ut model axis
-    is right/forward/up
 ! rigid parts are not displayed in LOD mode
 ? X-axis (red) should look at viewer; now - looking forward (should negate X axis)
 ! should rotate/offset models
@@ -28,11 +26,13 @@ Mesh:
   ? from UnrealEd: all vertex meshes uses no backface culling, but skeletal meshes uses culling
   ! 'FinalBlend' class has property 'bool TwoSided', which is 'true' in described situation
 
+- try to compile with MinGW or for Linux
+
 
 EXTRA KEYS:
 ~~~~~~~~~~~
 - show boxes
-- show skeleton: none, bones, bones+names
+- show bone names
 
 
 NOTES:
@@ -41,6 +41,11 @@ NOTES:
   player model
 - system/*.upl: files, containing links between meshes/skins/voices/names/portraits etc
   http://wiki.beyondunreal.com/wiki/UPL_File
+- 2K4_NvidiaIntro has animation+model to be the same names, different types only
+  * used from MOV-UT2004-Intro.ut2
+- q2 model axis: forward/left/up (?); q2 world axis: forward/right/up (?); ut model axis
+  is right/forward/up
+
 
 
 MATERIALS TREE:

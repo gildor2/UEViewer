@@ -200,6 +200,8 @@ struct CCoords
 void TransformPoint(const CVec3 &origin, const CAxis &axis, const CVec3 &src, CVec3 &dst);
 // local coordinate system -> global coordinate system
 void UnTransformPoint(const CVec3 &origin, const CAxis &axis, const CVec3 &src, CVec3 &dst);
+// compute reverse transformation
+void InvertCoords(const CCoords &S, CCoords &D);
 
 
 /*-----------------------------------------------------------------------------
