@@ -24,16 +24,6 @@ public:
 
 
 /*-----------------------------------------------------------------------------
-	UMaterial class
------------------------------------------------------------------------------*/
-
-class UMaterial : public UObject
-{
-	DECLARE_CLASS(UMaterial, UObject);
-};
-
-
-/*-----------------------------------------------------------------------------
 	ULodMesh class and common data structures
 -----------------------------------------------------------------------------*/
 
@@ -726,6 +716,12 @@ public:
 		unguard;
 	}
 };
+
+
+#define REGISTER_MESH_CLASSES		\
+	REGISTER_CLASS(USkeletalMesh)	\
+	REGISTER_CLASS(UVertMesh)		\
+	REGISTER_CLASS(UMeshAnimation)
 
 
 #endif // __UNMESH_H__

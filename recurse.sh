@@ -1,10 +1,10 @@
 #/bin/bash
 
-#type="VertMesh"
+type="VertMesh"
 #type="SkeletalMesh"
-type="VertMesh|SkeletalMesh"
+#type="VertMesh|SkeletalMesh"
 #dump="-dump"
-dump="-check"
+#dump="-check"
 
 for package in data/*; do
 	case "$package" in
@@ -20,7 +20,7 @@ for package in data/*; do
 				obj="${cut#* }"
 				class="${cut% *}"
 #				echo "    OBJ=$obj   CLS=$class"
-				./UnLoader.exe $dump $package $obj $class
+				./UnLoader.exe -path=data $dump $package $obj $class
 			done
 		}
 		;;

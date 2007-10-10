@@ -1,5 +1,4 @@
 #include "ObjectViewer.h"
-
 #include "UnAnimNotify.h"
 
 
@@ -16,20 +15,9 @@ static CObjectViewer *Viewer;			// used from GlWindow callbacks
 static void RegisterUnrealClasses()
 {
 BEGIN_CLASS_TABLE
-	// Materials
-	REGISTER_CLASS(UMaterial)
-	// Meshes
-	REGISTER_CLASS(USkeletalMesh)
-	REGISTER_CLASS(UVertMesh)
-	REGISTER_CLASS(UMeshAnimation)
-	// AnimNotify
-	REGISTER_CLASS(UAnimNotify)
-	REGISTER_CLASS(UAnimNotify_Script)
-	REGISTER_CLASS(UAnimNotify_Effect)
-	REGISTER_CLASS(UAnimNotify_DestroyEffect)
-	REGISTER_CLASS(UAnimNotify_Sound)
-	REGISTER_CLASS(UAnimNotify_Scripted)
-	REGISTER_CLASS(UAnimNotify_Trigger)
+	REGISTER_MATERIAL_CLASSES
+	REGISTER_MESH_CLASSES
+	REGISTER_ANIM_NOTIFY_CLASSES
 END_CLASS_TABLE
 }
 
@@ -95,8 +83,8 @@ void main(int argc, char **argv)
 	// prepare classes
 	RegisterUnrealClasses();
 
-	// setup GNotifyInfo to describe package only
-	GNotifyInfo = argPkgName;
+	// setup NotifyInfo to describe package only
+	appSetNotifyHeader(argPkgName);
 	// load package
 	UnPackage Pkg(argPkgName);
 
@@ -119,10 +107,8 @@ void main(int argc, char **argv)
 		appError("Export \"%s\" was not found", argObjName);
 	const char *className = Pkg.GetObjectName(Pkg.ExportTable[idx].ClassIndex);
 
-	// setup GNotifyInfo to describe object
-	char nameBuf[256];
-	appSprintf(ARRAY_ARG(nameBuf), "%s:  %s'%s'", argPkgName, className, argObjName);
-	GNotifyInfo = nameBuf;
+	// setup NotifyInfo to describe object
+	appSetNotifyHeader("%s:  %s'%s'", argPkgName, className, argObjName);
 
 	// create object from package
 	UObject::BeginLoad();	//!!!
@@ -187,23 +173,28 @@ void main(int argc, char **argv)
 
 void AppDrawFrame()
 {
+	guard(AppDrawFrame);
 	Viewer->Draw3D();
+	unguard;
 }
 
 
 void AppKeyEvent(unsigned char key)
 {
+	guard(AppKeyEvent);
 	if (key == 'd')
 	{
 		Viewer->Dump();
 		return;
 	}
 	Viewer->ProcessKey(key);
+	unguard;
 }
 
 
 void AppDisplayTexts(bool helpVisible)
 {
+	guard(AppDisplayTexts);
 	if (helpVisible)
 	{
 		GL::text("D           dump info\n");
@@ -211,4 +202,5 @@ void AppDisplayTexts(bool helpVisible)
 		GL::text("-----\n\n");		// divider
 	}
 	Viewer->Draw2D();
+	unguard;
 }

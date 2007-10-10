@@ -71,6 +71,31 @@ void CVertMeshViewer::Draw3D()
 	glDisable(GL_CULL_FACE);
 //	glCullFace(GL_BACK);
 
+	//!!!
+	if (Mesh->Textures.Num() > 0)
+	{
+		UMaterial* M = Mesh->Textures[0];
+		if (M)
+		{
+			if (!strcmp(M->GetClassName(), "Texture"))
+			{
+				static_cast<UTexture*>(M)->Bind();
+				glEnable(GL_TEXTURE_2D);
+			}
+//!!!!
+glBegin(GL_QUADS);
+glTexCoord2f(0,0);
+glVertex3f(-100,-100,0);
+glTexCoord2f(0,1);
+glVertex3f(-100,100,0);
+glTexCoord2f(1,1);
+glVertex3f(100,100,0);
+glTexCoord2f(1,0);
+glVertex3f(100,-100,0);
+glEnd();
+		}
+	}
+
 	CVec3 Vert[3];
 	CVec3 Norm[3];
 
@@ -99,6 +124,8 @@ void CVertMeshViewer::Draw3D()
 		glBegin(GL_TRIANGLES);
 		for (j = 0; j < 3; j++)
 		{
+			const FMeshWedge &W = Mesh->Wedges[F.iWedge[j]];
+			glTexCoord2f(W.TexUV.U, W.TexUV.V);
 			glNormal3fv(Norm[j].v);
 			glVertex3fv(Vert[j].v);
 		}
@@ -121,5 +148,6 @@ void CVertMeshViewer::Draw3D()
 			glColor3f(1, 1, 1);
 		}
 	}
+	glDisable(GL_TEXTURE_2D);
 	glEnd();
 }

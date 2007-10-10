@@ -112,4 +112,14 @@ public:
 };
 
 
+#define REGISTER_ANIM_NOTIFY_CLASSES			\
+	REGISTER_CLASS(UAnimNotify)					\
+	REGISTER_CLASS(UAnimNotify_Script)			\
+	REGISTER_CLASS(UAnimNotify_Effect)			\
+	REGISTER_CLASS(UAnimNotify_DestroyEffect)	\
+	REGISTER_CLASS(UAnimNotify_Sound)			\
+	REGISTER_CLASS(UAnimNotify_Scripted)		\
+	REGISTER_CLASS(UAnimNotify_Trigger)
+
+
 #endif // __UNANIMNOTIFY_H__

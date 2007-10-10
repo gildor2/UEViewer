@@ -32,27 +32,31 @@ struct CClassInfo
 
 struct CPropInfo
 {
-	const char *Name;
-	int			Offset;
-	const char *TypeName;
+	const char *Name;		// field name
+	const char *TypeName;	// name of field type; simple type names used for verification only
+	word		Offset;		// offset of field from class start
+	word		Count;		// number of array items
 };
+
+#define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(Field) / sizeof(Type) },
+
 
 #define BEGIN_PROP_TABLE						\
 	virtual const CPropInfo *FindProperty(const char *Name) const \
 	{											\
 		static const CPropInfo props[] =		\
 		{
-
 // simple types
-#define PROP_BYTE(Field)		{ #Field, FIELD2OFS(ThisClass, Field), "byte"    },
-#define PROP_INT(Field)			{ #Field, FIELD2OFS(ThisClass, Field), "int"     },
-#define PROP_BOOL(Field)		{ #Field, FIELD2OFS(ThisClass, Field), "bool"    },
-#define PROP_FLOAT(Field)		{ #Field, FIELD2OFS(ThisClass, Field), "float"   },
-#define PROP_NAME(Field)		{ #Field, FIELD2OFS(ThisClass, Field), "name"    },
-#define PROP_OBJ(Field)			{ #Field, FIELD2OFS(ThisClass, Field), "object"  },
+#define PROP_BYTE(Field)		_PROP_BASE(Field, byte     )
+#define PROP_INT(Field)			_PROP_BASE(Field, int      )
+#define PROP_BOOL(Field)		_PROP_BASE(Field, bool     )
+#define PROP_FLOAT(Field)		_PROP_BASE(Field, float    )
+#define PROP_NAME(Field)		_PROP_BASE(Field, FName    )
+#define PROP_OBJ(Field)			_PROP_BASE(Field, UObject* )
 // structure types; note: structure names corresponds to F<StrucName> C++ struc
-#define PROP_VECTOR(Field)		{ #Field, FIELD2OFS(ThisClass, Field), "Vector"  },
-#define PROP_ROTATOR(Field)		{ #Field, FIELD2OFS(ThisClass, Field), "Rotator" },
+#define PROP_VECTOR(Field)		_PROP_BASE(Field, FVector  )
+#define PROP_ROTATOR(Field)		_PROP_BASE(Field, FRotator )
+#define PROP_COLOR(Field)		_PROP_BASE(Field, FColor   )
 
 #define END_PROP_TABLE							\
 		};										\

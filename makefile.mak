@@ -25,11 +25,13 @@ MAIN = \
 	obj/UnCore.obj \
 	obj/UnObject.obj \
 	obj/UnPackage.obj \
+	obj/UnRenderer.obj \
 	obj/MeshViewer.obj \
 	obj/VertMeshViewer.obj \
 	obj/SkelMeshViewer.obj \
 	obj/GlWindow.obj \
-	obj/Math3D.obj
+	obj/Math3D.obj \
+	obj/ddslib.obj
 
 MAIN_DIRS = \
 	obj
@@ -42,7 +44,7 @@ UnLoader.exe : $(MAIN_DIRS) $(MAIN)
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -O1 -EHsc -I libs/include
+OPT_MAIN = -O1 -EHsc -D RENDERING -I libs/include
 
 DEPENDS = \
 	Core.h \
@@ -59,6 +61,7 @@ DEPENDS = \
 	ObjectViewer.h \
 	UnAnimNotify.h \
 	UnCore.h \
+	UnMaterial.h \
 	UnMesh.h \
 	UnObject.h \
 	UnPackage.h
@@ -72,6 +75,7 @@ DEPENDS = \
 	Math3D.h \
 	ObjectViewer.h \
 	UnCore.h \
+	UnMaterial.h \
 	UnMesh.h \
 	UnObject.h \
 	UnPackage.h
@@ -84,6 +88,18 @@ obj/SkelMeshViewer.obj : SkelMeshViewer.cpp $(DEPENDS)
 
 obj/VertMeshViewer.obj : VertMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshViewer.obj" VertMeshViewer.cpp
+
+DEPENDS = \
+	Core.h \
+	GlWindow.h \
+	Math3D.h \
+	UnCore.h \
+	UnMaterial.h \
+	UnObject.h \
+	libs/ddslib.h
+
+obj/UnRenderer.obj : UnRenderer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnRenderer.obj" UnRenderer.cpp
 
 DEPENDS = \
 	Core.h \
@@ -112,6 +128,12 @@ obj/UnObject.obj : UnObject.cpp $(DEPENDS)
 
 obj/UnPackage.obj : UnPackage.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnPackage.obj" UnPackage.cpp
+
+DEPENDS = \
+	libs/ddslib.h
+
+obj/ddslib.obj : libs/ddslib.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ddslib.obj" libs/ddslib.c
 
 #------------------------------------------------------------------------------
 #	creating output directories

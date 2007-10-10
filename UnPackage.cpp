@@ -168,6 +168,7 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 				PackagePaths[path],
 				Name,
 				PackageExtensions[ext]);
+//			printf("... check: %s\n", buf);
 			// check file existance
 			if (FILE *f = fopen(buf, "rb"))
 			{

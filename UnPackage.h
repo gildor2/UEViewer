@@ -223,14 +223,25 @@ public:
 		guard(UnPackage::CreateImport);
 
 		const FObjectImport &Imp = GetImport(index);
-		// find/load package
-		const char *PackageName = GetObjectName(Imp.PackageIndex);
-		UnPackage  *Package     = LoadPackage(PackageName);
+
+		// find root package
+		int PackageIndex = Imp.PackageIndex;
+		const char *PackageName = NULL;
+		while (PackageIndex)
+		{
+			const FObjectImport &Rec = GetImport(-PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+		}
+		// load package
+		UnPackage  *Package = LoadPackage(PackageName);
+
 		if (!Package)
 		{
 			printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
 			return NULL;
 		}
+		//!! use full object path
 		// find object in loaded package export table
 		int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
 		// create object

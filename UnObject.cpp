@@ -24,6 +24,10 @@ UObject::~UObject()
 }
 
 
+/*-----------------------------------------------------------------------------
+	UObject loading from package
+-----------------------------------------------------------------------------*/
+
 int              UObject::GObjBeginLoadCount = 0;
 TArray<UObject*> UObject::GObjLoaded;
 
@@ -55,7 +59,9 @@ void UObject::EndLoad()
 		Obj->Serialize(*Package);
 		// check for unread bytes
 		if (!Package->IsStopper())
-			appError("%s: extra bytes", Obj->Name);
+			appError("%s.Serialize(%s): %d unread bytes",
+				Obj->GetClassName(), Obj->Name,
+				Package->ArStopper - Package->ArPos);
 
 		unguardf(("%s", Obj->Name));
 	}
@@ -64,18 +70,45 @@ void UObject::EndLoad()
 }
 
 
-static void SerializeStruc(FArchive &Ar, void *Data, const char *StrucName)
+/*-----------------------------------------------------------------------------
+	Properties support
+-----------------------------------------------------------------------------*/
+
+static bool SerializeStruc(FArchive &Ar, void *Data, const char *StrucName)
 {
+	guard(SerializeStruc);
 #define STRUC_TYPE(name)				\
 	if (!strcmp(StrucName, #name))		\
 	{									\
 		Ar << *((F##name*)Data);		\
-		return;							\
+		return true;					\
 	}
 	STRUC_TYPE(Vector)
 	STRUC_TYPE(Rotator)
-	appError("Unknown structure class: %s", StrucName);
+	STRUC_TYPE(Color)
+	return false;
+	unguardf(("%s", StrucName));
 }
+
+
+enum EPropType // hardcoded in Unreal
+{
+	PT_BYTE = 1,
+	PT_INT,
+	PT_BOOL,
+	PT_FLOAT,
+	PT_OBJECT,
+	PT_NAME,
+	PT_STRING,
+	PT_CLASS,
+	PT_ARRAY,
+	PT_STRUCT,
+	PT_VECTOR,
+	PT_ROTATOR,
+	PT_STR,
+	PT_MAP,
+	PT_FIXED_ARRAY
+};
 
 
 void UObject::Serialize(FArchive &Ar)
@@ -112,107 +145,162 @@ void UObject::Serialize(FArchive &Ar)
 		case 7: Ar << *((int *)&Size); break;
 		}
 
-		if (PropType != 3)			// 'bool' type has separate meaning of 'array' flag
+		int ArrayIndex = 0;
+		if (PropType != 3 && IsArray)	// 'bool' type has separate meaning of 'array' flag
 		{
-			assert(!IsArray);		//!! implement
+			// read array index
+			byte b;
+			Ar << b;
+			if (b < 128)
+				ArrayIndex = b;
+			else
+			{
+				byte b2;
+				Ar << b2;
+				if (b & 0x40)			// really, (b & 0xC0) == 0xC0
+				{
+					byte b3, b4;
+					Ar << b3 << b4;
+					ArrayIndex = ((b << 24) | (b2 << 16) | (b3 << 8) | b4) & 0x3FFFFF;
+				}
+				else
+					ArrayIndex = ((b << 8) | b2) & 0x3FFF;
+			}
 		}
+
+		int StopPos = Ar.ArPos + Size;	// for verification; overrided below for some types
 
 		const CPropInfo *Prop = FindProperty(PropName);
 		if (!Prop)
-			appError("Class \"%s\": property \"%s\" was not found", GetClassName(), *PropName);
+		{
+			appNotify("WARNING: Class \"%s\": property \"%s\" was not found", GetClassName(), *PropName);
+			switch (PropType)
+			{
+			case PT_STRUCT:
+				{
+					// skip name (variable sized)
+					FName tmp;
+					Ar << tmp;
+					// correct StopPos
+					StopPos = Ar.ArPos + Size;
+				}
+				break;
+			}
+			// skip property data
+			Ar.Seek(StopPos);
+			// serialize other properties
+			continue;
+		}
+		// verify array index
+		if (ArrayIndex >= Prop->Count)
+			appError("Class \"%s\": %s %s[%d]: serializing index %d",
+				GetClassName(), Prop->TypeName, Prop->Name, Prop->Count, ArrayIndex);
 		byte *value = (byte*)this + Prop->Offset;
 
 #define TYPE(name) \
 	if (strcmp(Prop->TypeName, name)) \
-		appError("Property %s expected type %s by has %s", *PropName, Prop->TypeName, name)
+		appError("Property %s expected type %s but read %s", *PropName, Prop->TypeName, name)
 
-#define PROP(type)		( *((type*)&value) )
+#define PROP(type)		( ((type*)value)[ArrayIndex] )
 
 #if DEBUG_PROPS
 #	define PROP_DBG(fmt, value) \
-		printf("  %s = " fmt "\n", *PropName, value);
+		printf("  %s[%d] = " fmt "\n", *PropName, ArrayIndex, value);
 #else
 #	define PROP_DBG(fmt, value)
 #endif
 
 		switch (PropType)
 		{
-		case 1:		//------  byte
+		case PT_BYTE:
 			TYPE("byte");
 			Ar << PROP(byte);
 			PROP_DBG("%d", PROP(byte));
 			break;
 
-		case 2:		//------  int
+		case PT_INT:
 			TYPE("int");
 			Ar << PROP(int);
 			PROP_DBG("%d", PROP(int));
 			break;
 
-		case 3:		//------  bool
+		case PT_BOOL:
 			TYPE("bool");
 			PROP(bool) = IsArray;
 			PROP_DBG("%s", PROP(bool) ? "true" : "false");
 			break;
 
-		case 4:		//------  float
+		case PT_FLOAT:
 			TYPE("float");
 			Ar << PROP(float);
 			PROP_DBG("%g", PROP(float));
 			break;
 
-		case 5:		//------  object
-			TYPE("object");
+		case PT_OBJECT:
+			TYPE("UObject*");
 			Ar << PROP(UObject*);
 			PROP_DBG("%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 			break;
 
-		case 6:		//------  name
-			TYPE("name");
+		case PT_NAME:
+			TYPE("FName");
 			Ar << PROP(FName);
 			PROP_DBG("%s", *PROP(FName));
 			break;
 
-		case 8:		//------  class
+		case PT_CLASS:
 			appError("Class property not implemented");
 			break;
 
-		case 9:		//------  array
+		case PT_ARRAY:
 			appError("Array property not implemented");
 			break;
 
-		case 10:	//------ struct
+		case PT_STRUCT:
 			{
+				assert(ArrayIndex == 0);	//!! implement structure arrays
 				// read structure name
 				FName StrucName;
 				Ar << StrucName;
-				TYPE(*StrucName);
-				SerializeStruc(Ar, value, StrucName);
-				PROP_DBG("(complex)", 0);
+				StopPos = Ar.ArPos + Size;
+				if (strcmp(Prop->TypeName+1, *StrucName))
+					appError("Struc property %s expected type %s but read %s", *PropName, Prop->TypeName, *StrucName);
+				if (SerializeStruc(Ar, value, StrucName))
+				{
+					PROP_DBG("(complex)", 0);
+				}
+				else
+				{
+					appNotify("WARNING: Unknown structure type: %s", *StrucName);
+					Ar.Seek(StopPos);
+				}
 			}
 			break;
 
-		case 13:	//------  str
+		case PT_STR:
 			appError("String property not implemented");
 			break;
 
-		case 14:	//------  map
+		case PT_MAP:
 			appError("Map property not implemented");
 			break;
 
-		case 15:	//------  fixed array
+		case PT_FIXED_ARRAY:
 			appError("FixedArray property not implemented");
 			break;
 
 		// reserved, but not implemented in unreal:
-		case 7:		//------  string  => used str
-		case 11:	//------  vector  => used structure"Vector"
-		case 12:	//------  rotator => used structure"Rotator"
+		case PT_STRING:		//------  string  => used str
+		case PT_VECTOR:	//------  vector  => used structure"Vector"
+		case PT_ROTATOR:	//------  rotator => used structure"Rotator"
 			appError("Unknown property");
 			break;
 		}
+		//!!!!!!
+//		assert(Ar.ArPos == StopPos);
+		if (Ar.ArPos != StopPos) appNotify("ArPos-StopPos = %d", Ar.ArPos - StopPos);
 
-		unguardf(("%s", *PropName));
+		unguardf(("(%s.%s)", GetClassName(), *PropName));
 	}
 	unguard;
 }

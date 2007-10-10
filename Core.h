@@ -8,12 +8,22 @@
 #include <math.h>
 
 
+#if RENDERING
+#	define FREEGLUT_STATIC
+#	include <freeglut.h>
+#	undef GetClassName		// windows define
+#endif
+
+
 #define VECTOR_ARG(name)	name[0],name[1],name[2]
 #define ARRAY_ARG(array)	array, sizeof(array)/sizeof(array[0])
 #define ARRAY_COUNT(array)	(sizeof(array)/sizeof(array[0]))
 
 #define FVECTOR_ARG(v)		v.X, v.Y, v.Z
 #define ROTATOR_ARG(r)		r.Yaw, r.Pitch, r.Roll
+
+#define BYTES4(a,b,c,d)	((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
+
 
 #define assert(x)	\
 	if (!(x))		\
@@ -45,7 +55,7 @@ void* appMalloc(int size);
 void appFree(void *ptr);
 
 // log some interesting information
-extern const char *GNotifyInfo;
+void appSetNotifyHeader(const char *fmt, ...);
 void appNotify(char *fmt, ...);
 
 int appSprintf(char *dest, int size, const char *fmt, ...);

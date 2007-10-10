@@ -1,6 +1,7 @@
 #ifndef __UNCORE_H__
 #define __UNCORE_H__
 
+
 // necessary types
 typedef unsigned char		byte;
 typedef unsigned short		word;
@@ -306,6 +307,25 @@ struct FSphere : public FVector
 			Ar << S.R;
 		return Ar;
 	};
+};
+
+
+struct FColor
+{
+	byte	R, G, B, A;
+
+	FColor()
+	{}
+	FColor(byte r, byte g, byte b)
+	:	R(r), G(g), B(b), A(255)
+	{}
+	FColor(byte r, byte g, byte b, byte a)
+	:	R(r), G(g), B(b), A(a)
+	{}
+	friend FArchive& operator<<(FArchive &Ar, FColor &C)
+	{
+		return Ar << C.R << C.G << C.B << C.A;
+	}
 };
 
 

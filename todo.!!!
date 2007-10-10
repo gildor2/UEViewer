@@ -1,10 +1,13 @@
+! packages have tree-like structure of objects, should use whole tree to map export->import (use
+  package's "package" field recursively; note: depth can be any)
+  * load proper package
+  - use object with the same path
+- load arrays of 'struct'
+  ? remember sizeof(type) - for array iteration
+
 Animation:
 - realtime playback
 - looped animation playback
-
-Packages:
-! packages have tree-like structure of objects, should use whole tree to map export->import (use
-  package's "package" field recursively; note: depth can be any)
 
 Mesh:
 - display as wireframe
@@ -45,41 +48,3 @@ NOTES:
   * used from MOV-UT2004-Intro.ut2
 - q2 model axis: forward/left/up (?); q2 world axis: forward/right/up (?); ut model axis
   is right/forward/up
-
-
-
-MATERIALS TREE:
-~~~~~~~~~~~~~~~
-Material
-  Combiner
-  Modifier
-    ColorModifier
-    FinalBlend
-    MaterialSequence
-    MaterialSwitch
-    OpacityModifier
-    TexModifier
-      TexCoordSource
-      TexEnvMap
-      TexMatrix
-      TexOscillator
-        TexOscillatorTriggered
-      TexPanner
-        TexPannerTriggered
-      TexRotator
-      TexScaler
-      VariableTexPanner
-  RenderedMaterial
-    BitmapMaterial
-      ScriptedTexture
-      ShadowBitmapMaterial
-      Texture
-        Cubemap
-    ConstantMaterial
-      ConstantColor
-      FadeColor
-    ParticleMaterial
-    ProjectorMaterial
-    Shader
-    TerrainMaterial
-    VertexColor

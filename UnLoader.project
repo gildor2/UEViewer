@@ -13,6 +13,8 @@ INCLUDES   = libs/include
 LIBRARIES  = libs
 OBJDIR     = obj
 
+DEFINES    = RENDERING
+
 sources(MAIN) = {
 	# main unit
 	Main.cpp
@@ -20,6 +22,8 @@ sources(MAIN) = {
 	UnCore.cpp
 	UnObject.cpp
 	UnPackage.cpp
+	# rendering
+	UnRenderer.cpp
 	# viewers
 	MeshViewer.cpp
 	VertMeshViewer.cpp
@@ -27,6 +31,7 @@ sources(MAIN) = {
 	# libraries
 	GlWindow.cpp
 	Math3D.cpp
+	libs/ddslib.c
 }
 
 target(executable, UnLoader, MAIN, MAIN)

@@ -22,7 +22,16 @@ void appError(char *fmt, ...)
 }
 
 
-const char *GNotifyInfo = "";
+static char NotifyBuf[512];
+
+void appSetNotifyHeader(const char *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	int len = vsnprintf(ARRAY_ARG(NotifyBuf), fmt, argptr);
+	va_end(argptr);
+}
+
 
 void appNotify(char *fmt, ...)
 {
@@ -33,12 +42,20 @@ void appNotify(char *fmt, ...)
 	va_end(argptr);
 	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
 
+	// print to log file
 	if (FILE *f = fopen("notify.log", "a"))
 	{
-		fprintf(f, "[%s] %s\n", GNotifyInfo, buf);
+		if (NotifyBuf[0])
+			fprintf(f, "\n******** %s ********\n\n", NotifyBuf);
+		fprintf(f, "%s\n", buf);
 		fclose(f);
 	}
-	printf("[%s] %s\n", GNotifyInfo, buf);
+	// print to console
+	if (NotifyBuf[0])
+		printf("******** %s ********\n", NotifyBuf);
+	printf("*** %s\n", buf);
+	// clean notify header
+	NotifyBuf[0] = 0;
 }
 
 
