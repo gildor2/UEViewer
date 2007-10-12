@@ -207,12 +207,16 @@ public:
 			printf("WARNING: Unknown object class: %s (%s)\n", ClassName, *Exp.ObjectName);
 			return NULL;
 		}
+		UObject::BeginLoad();
+
 		// setup constant object fields
 		Obj->Package      = this;
 		Obj->PackageIndex = index;
 		Obj->Name         = Exp.ObjectName;
 		// add object to GObjLoaded for later serialization
 		UObject::GObjLoaded.AddItem(Obj);
+
+		UObject::EndLoad();
 		return Obj;
 
 		unguardf(("%s:%d", SelfName, index));

@@ -42,15 +42,19 @@ void UObject::BeginLoad()
 void UObject::EndLoad()
 {
 	assert(GObjBeginLoadCount > 0);
-	if (--GObjBeginLoadCount > 0)
+	if (GObjBeginLoadCount > 1)
+	{
+		GObjBeginLoadCount--;
 		return;
+	}
 
 	guard(UObject::EndLoad);
 	// process GObjLoaded array
 	// NOTE: while loading one array element, array may grow!
-	for (int i = 0; i < GObjLoaded.Num(); i++)
+	while (GObjLoaded.Num())
 	{
-		UObject *Obj = GObjLoaded[i];
+		UObject *Obj = GObjLoaded[0];
+		GObjLoaded.Remove(0);
 		guard(LoadObject);
 		//!! should sort by packages
 		UnPackage *Package = Obj->Package;
@@ -66,6 +70,8 @@ void UObject::EndLoad()
 		unguardf(("%s", Obj->Name));
 	}
 	GObjLoaded.Empty();
+	GObjBeginLoadCount--;		// decrement after loading
+	assert(GObjBeginLoadCount == 0);
 	unguard;
 }
 
@@ -74,13 +80,13 @@ void UObject::EndLoad()
 	Properties support
 -----------------------------------------------------------------------------*/
 
-static bool SerializeStruc(FArchive &Ar, void *Data, const char *StrucName)
+static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *StrucName)
 {
 	guard(SerializeStruc);
 #define STRUC_TYPE(name)				\
 	if (!strcmp(StrucName, #name))		\
 	{									\
-		Ar << *((F##name*)Data);		\
+		Ar << ((F##name*)Data)[Index];	\
 		return true;					\
 	}
 	STRUC_TYPE(Vector)
@@ -258,14 +264,13 @@ void UObject::Serialize(FArchive &Ar)
 
 		case PT_STRUCT:
 			{
-				assert(ArrayIndex == 0);	//!! implement structure arrays
 				// read structure name
 				FName StrucName;
 				Ar << StrucName;
 				StopPos = Ar.ArPos + Size;
 				if (strcmp(Prop->TypeName+1, *StrucName))
 					appError("Struc property %s expected type %s but read %s", *PropName, Prop->TypeName, *StrucName);
-				if (SerializeStruc(Ar, value, StrucName))
+				if (SerializeStruc(Ar, value, ArrayIndex, StrucName))
 				{
 					PROP_DBG("(complex)", 0);
 				}

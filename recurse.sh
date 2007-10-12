@@ -1,12 +1,14 @@
 #/bin/bash
 
-type="VertMesh"
+#type="VertMesh"
 #type="SkeletalMesh"
-#type="VertMesh|SkeletalMesh"
+type="VertMesh|SkeletalMesh"
 #dump="-dump"
-#dump="-check"
+dump="-check"
+#path="-path=data"
+path="c:/games/unreal/ut2004"
 
-for package in data/*; do
+for package in $path/Animations/*; do
 	case "$package" in
 	*.UKX|*.ukx|*.U|*.u)
 		echo
@@ -20,7 +22,7 @@ for package in data/*; do
 				obj="${cut#* }"
 				class="${cut% *}"
 #				echo "    OBJ=$obj   CLS=$class"
-				./UnLoader.exe -path=data $dump $package $obj $class
+				./UnLoader.exe -path=$path $dump $package $obj $class
 			done
 		}
 		;;

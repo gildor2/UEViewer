@@ -225,6 +225,18 @@ static void Upload(int handle, const void *pic, int width, int height, bool doMi
 	Unreal materials support
 -----------------------------------------------------------------------------*/
 
+// replaces random 'alpha=0' color with black
+static void PostProcessAlpha(byte *pic, int width, int height)
+{
+	for (int pixelCount = width * height; pixelCount > 0; pixelCount--, pic += 4)
+	{
+		if (pic[3] != 0)	// not completely transparent
+			continue;
+		pic[0] = pic[1] = pic[2] = 0;
+	}
+}
+
+
 static byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat, const char *Name)
 {
 	guard(DecompressTexture);
@@ -261,28 +273,45 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 		memset(dst, 0xFF, width * height * 4);
 		return dst;
 	}
-#if 1
 	if (DDSDecompress(&dds, dst) != 0)
 		appError("Error in DDSDecompress");
-#else
-	for (int x = 0; x < width; x++)
+	if (SrcFormat == TEXF_DXT1)
+		PostProcessAlpha(dst, width, height);
+
+	return dst;
+	unguardf(("fmt=%d", SrcFormat));
+}
+
+
+UMaterial *BindDefaultMaterial()
+{
+	static UTexture *Mat = NULL;
+	if (Mat)
 	{
-		for (int y = 0; y < height; y++)
+		Mat->Bind();
+		return Mat;
+	}
+	Mat = new UTexture();
+	byte pic[16*16*4];
+
+	for (int x = 0; x < 16; x++)
+	{
+		for (int y = 0; y < 16; y++)
 		{
 			static const byte colors[4][4] = {
 				{255,128,0}, {0,32,32}, {128,32,32}, {32,128,32}
 			};
-			byte *p = dst + y * width * 4 + x * 4;
-			int i1 = x < width  / 2;
-			int i2 = y < height / 2;
+			byte *p = pic + y * 16 * 4 + x * 4;
+			int i1 = x < 16 / 2;
+			int i2 = y < 16 / 2;
 			const byte *c = colors[i1 * 2 + i2];
 			memcpy(p, c, 4);
 		}
 	}
-#endif
-
-	return dst;
-	unguardf(("fmt=%d", SrcFormat));
+	Upload(0, pic, 16, 16, true, true, true);
+	Mat->TexNum    = 0;
+	Mat->bTwoSided = true;
+	return Mat;
 }
 
 
@@ -290,6 +319,39 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 void UTexture::Bind()
 {
 	guard(UTexture::Bind);
+	glEnable(GL_TEXTURE_2D);
+	// bTwoSided
+	if (bTwoSided)
+		glDisable(GL_CULL_FACE);
+	else
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
+#if 0
+	// bad results ...
+	if (bAlphaTexture)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	else
+		glDisable(GL_BLEND);
+#else
+	if (bAlphaTexture)
+	{
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.8);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	else
+	{
+		glDisable(GL_ALPHA_TEST);
+		glDisable(GL_BLEND);
+	}
+#endif
+	// uploading ...
 	if (TexNum < 0)
 	{
 		assert(Mips.Num());
@@ -297,11 +359,87 @@ void UTexture::Bind()
 		static GLint lastTexNum = 0;
 		TexNum = ++lastTexNum;
 
-		const FMipmap &Mip = Mips[0];
-		byte *pic = DecompressTexture(&Mip.DataArray[0], Mip.USize, Mip.VSize, Format, Name);
-		Upload(TexNum, pic, Mip.USize, Mip.VSize, Mips.Num() > 1,
-			UClampMode == TC_Clamp, VClampMode == TC_Clamp);
+		int n;
+		for (n = 0; n < Mips.Num(); n++)
+		{
+			// find 1st mipmap with non-null data array
+			// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
+			const FMipmap &Mip = Mips[n];
+			if (!Mip.DataArray.Num())
+				continue;
+			byte *pic = DecompressTexture(&Mip.DataArray[0], Mip.USize, Mip.VSize, Format, Name);
+			Upload(TexNum, pic, Mip.USize, Mip.VSize, Mips.Num() > 1,
+				UClampMode == TC_Clamp, VClampMode == TC_Clamp);
+			break;
+		}
+		if (n >= Mips.Num())
+		{
+			appNotify("WARNING: texture %s has no valid mapmaps", Name);
+			TexNum = 0;		// "default texture"
+		}
 	}
+	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
 	unguardf(("%s", Name));
+}
+
+
+void UFinalBlend::Bind()
+{
+	if (!Material)
+	{
+		BindDefaultMaterial();
+		return;
+	}
+	Material->Bind();
+	// override material settings
+	// TwoSided
+	if (TwoSided)
+		glDisable(GL_CULL_FACE);
+	else
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
+	// AlphaTest
+	if (AlphaTest)
+	{
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, AlphaRef / 255.0f);
+	}
+	else
+		glDisable(GL_ALPHA_TEST);
+	// FrameBufferBlending
+	if (FrameBufferBlending == FB_Overwrite)
+		glDisable(GL_BLEND);
+	else
+		glEnable(GL_BLEND);
+	switch (FrameBufferBlending)
+	{
+	case FB_Overwrite:
+		glBlendFunc(GL_ONE, GL_ZERO);				// src
+		break;
+	case FB_Modulate:
+		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);	// src*dst*2
+		break;
+	case FB_AlphaBlend:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		break;
+	case FB_AlphaModulate_MightNotFogCorrectly:
+		//!!
+		break;
+	case FB_Translucent:
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+		break;
+	case FB_Darken:
+		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // dst - src
+		break;
+	case FB_Brighten:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);			// src*srcA + dst
+		break;
+	case FB_Invisible:
+		glBlendFunc(GL_ZERO, GL_ONE);				// dst
+		break;
+	}
+	//!! ZWrite, ZTest
 }

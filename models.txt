@@ -1,3 +1,5 @@
 AS_VehiclesFull_M
   SpaceFighter_Human:
     13 sections + 12 static sections
+
+DemoFemaleA/Skeleton_Female has texture DemoPlayerSkins.utx/DemoSkeleton with removed 1st 2 mipmaps

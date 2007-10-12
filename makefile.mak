@@ -28,7 +28,9 @@ MAIN = \
 	obj/UnRenderer.obj \
 	obj/MeshViewer.obj \
 	obj/VertMeshViewer.obj \
+	obj/VertMeshInstance.obj \
 	obj/SkelMeshViewer.obj \
+	obj/SkelMeshInstance.obj \
 	obj/GlWindow.obj \
 	obj/Math3D.obj \
 	obj/ddslib.obj
@@ -58,21 +60,7 @@ DEPENDS = \
 	Core.h \
 	GlWindow.h \
 	Math3D.h \
-	ObjectViewer.h \
-	UnAnimNotify.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnMesh.h \
-	UnObject.h \
-	UnPackage.h
-
-obj/Main.obj : Main.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Main.obj" Main.cpp
-
-DEPENDS = \
-	Core.h \
-	GlWindow.h \
-	Math3D.h \
+	MeshInstance.h \
 	ObjectViewer.h \
 	UnCore.h \
 	UnMaterial.h \
@@ -83,11 +71,32 @@ DEPENDS = \
 obj/MeshViewer.obj : MeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MeshViewer.obj" MeshViewer.cpp
 
+obj/SkelMeshInstance.obj : SkelMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshInstance.obj" SkelMeshInstance.cpp
+
 obj/SkelMeshViewer.obj : SkelMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshViewer.obj" SkelMeshViewer.cpp
 
+obj/VertMeshInstance.obj : VertMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshInstance.obj" VertMeshInstance.cpp
+
 obj/VertMeshViewer.obj : VertMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshViewer.obj" VertMeshViewer.cpp
+
+DEPENDS = \
+	Core.h \
+	GlWindow.h \
+	Math3D.h \
+	ObjectViewer.h \
+	UnAnimNotify.h \
+	UnCore.h \
+	UnMaterial.h \
+	UnMesh.h \
+	UnObject.h \
+	UnPackage.h
+
+obj/Main.obj : Main.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Main.obj" Main.cpp
 
 DEPENDS = \
 	Core.h \

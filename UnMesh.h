@@ -159,14 +159,16 @@ public:
 	float				LODHysteresis;
 	// version 3 fields
 	int					HasImpostor;		// sprite object to replace mesh when distance too far
-	UObject*			fF8;
-	FVector				fFC;
-	FRotator			f108;
-	FVector				f114;
-	byte				f120, f121, f122, f123;
-	FRotator			f124;
+	UMaterial*			SpriteMaterial;
+	FVector				ImpScale;			// Impostor.Scale3D
+	FRotator			ImpRotation;		// Impostor.RelativeRotation
+	FVector				ImpLocation;		// Impostor.RelativeLocation
+	FColor				ImpColor;
+	int					ImpSpaceMode;		// EImpSpaceMode
+	int					ImpDrawMode;		// EImpDrawMode
+	int					ImpLightMode;		// EImpLightMode
 	// version 4 fields
-	float				f130;
+	float				SkinTesselationFactor; // LOD.SkinTesselationFactor
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -196,16 +198,14 @@ public:
 
 		if (Version >= 3)
 		{
-			Ar << HasImpostor;
-			Ar << fF8;
-			Ar << f114 << f108 << fFC;
-			Ar << f122 << f121 << f120 << f123;
-			Ar << f124;
+			Ar << HasImpostor << SpriteMaterial;
+			Ar << ImpLocation << ImpRotation << ImpScale << ImpColor;
+			Ar << ImpSpaceMode << ImpDrawMode << ImpLightMode;
 		}
 
 		if (Version >= 4)
 		{
-			Ar << f130;
+			Ar << SkinTesselationFactor;
 		}
 
 		unguard;
@@ -667,7 +667,7 @@ public:
 	TArray<VWeightIndex>	WeightIndices;	// empty
 	TArray<VBoneInfluence>	BoneInfluences;
 	UMeshAnimation*			Animation;
-	UObject*				f224;			//?? always NULL
+	UObject*				f224;			//?? always NULL (seen in IDA)
 	// AttachSocket data
 	TArray<FName>			AttachAliases;
 	TArray<FName>			AttachBoneNames;
@@ -676,7 +676,7 @@ public:
 	TArray<FSkelBoneSphere>	BoundingSpheres;
 	TArray<FSkelBoneBox>	BoundingBoxes;
 	TArray<UObject*>		f32C;			// TArray<UModel*>; collision models??
-	UObject*				f338;
+	UObject*				CollisionMesh;	// UStaticMesh*
 	UObject*				KarmaProps;		// UKMeshProps*
 
 	virtual void Serialize(FArchive &Ar)
@@ -710,7 +710,7 @@ public:
 		}
 		if (Ar.ArVer > 126)
 		{
-			Ar << f338;
+			Ar << CollisionMesh;
 		}
 
 		unguard;

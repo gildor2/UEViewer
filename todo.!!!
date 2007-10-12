@@ -1,9 +1,18 @@
+! options for:
+  - option to toggle lighting
+  - option to toggle texturing
+  * toggle material-to-color display (different materials -- different colors, no texturing)
+  - move wireframe selection to CMeshViewer/CMeshInstance
+! move parts of VertMeshViewer::Test to MeshViewer
 ! packages have tree-like structure of objects, should use whole tree to map export->import (use
   package's "package" field recursively; note: depth can be any)
   * load proper package
   - use object with the same path
-- load arrays of 'struct'
-  ? remember sizeof(type) - for array iteration
+- change alternative skin (?)
+- correct wireframe (w/o texturing)
+- material viewer: plane, box
+  ? browser for loaded objects
+  ? option to load all objects from package
 
 Animation:
 - realtime playback
@@ -11,23 +20,20 @@ Animation:
 
 Mesh:
 - display as wireframe
-- deform with skeleton
 
 ! UObject:
-  - EndLoad(): use 'while (GObjLoaded.Num())'
+  - EndLoad():
     1) sort by package/offset; priority for CURRENT package
-    2) if object was not created (not found or unknown class) - should not try to do
-       it again (infinite loop possible!) -- create dummy object?
-    3) add assert before serialization: should not be already loaded (bool flag for UObject)
+    2) add assert before serialization: should not be already loaded (bool flag for UObject)
   - add 2 global lists: complete objects and objects, required serialization; use
     bool flag to check, which list holds object
+  ? can enumerate properties using FindProperty() function: add argument 'enumerator', which will
+    be used for each property; if function return 'false' - stop iterating. Field searching may be
+    easily implemented using this tech.
 
 ! rigid parts are not displayed in LOD mode
 ? X-axis (red) should look at viewer; now - looking forward (should negate X axis)
 ! should rotate/offset models
-? VertMesh: choose glCull mode -- impossible? (skaarj model: have single-side polys)
-  ? from UnrealEd: all vertex meshes uses no backface culling, but skeletal meshes uses culling
-  ! 'FinalBlend' class has property 'bool TwoSided', which is 'true' in described situation
 
 - try to compile with MinGW or for Linux
 

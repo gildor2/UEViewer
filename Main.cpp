@@ -37,9 +37,10 @@ void main(int argc, char **argv)
 	{
 	help:
 		printf( "Usage:\n"
-				"  UnLoader [-dump|-check] [-path=PATH] <package file> <object name> [<class name>]\n"
+				"  UnLoader [-dump|-check] [-path=PATH] <package> <object> [<class>]\n"
 				"  UnLoader -list <package file>\n"
-				"    PATH = path to UT root directory\n"
+				"    PATH      = path to UT root directory\n"
+				"    <package> = full package filename (path/name.ext) or short name\n"
 		);
 		exit(0);
 	}
@@ -86,42 +87,49 @@ void main(int argc, char **argv)
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);
 	// load package
-	UnPackage Pkg(argPkgName);
+	UnPackage *Package;
+	if (strchr(argPkgName, '.'))
+		Package = new UnPackage(argPkgName);
+	else
+		Package = UnPackage::LoadPackage(argPkgName);
+	if (!Package)
+	{
+		printf("Unable to find/load package %s\n", argPkgName);
+		exit(1);
+	}
 
 	if (listOnly)
 	{
 		guard(List);
 		// dump package exports table
-		for (int i = 0; i < Pkg.Summary.ExportCount; i++)
+		for (int i = 0; i < Package->Summary.ExportCount; i++)
 		{
-			const FObjectExport &Exp = Pkg.ExportTable[i];
-			printf("%d %s %s\n", i, Pkg.GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			const FObjectExport &Exp = Package->ExportTable[i];
+			printf("%d %s %s\n", i, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
 		}
 		unguard;
 		return;
 	}
 
 	// get requested object info
-	int idx = Pkg.FindExport(argObjName, argClassName);
+	int idx = Package->FindExport(argObjName, argClassName);
 	if (idx < 0)
 		appError("Export \"%s\" was not found", argObjName);
-	const char *className = Pkg.GetObjectName(Pkg.ExportTable[idx].ClassIndex);
+	const char *className = Package->GetObjectName(Package->ExportTable[idx].ClassIndex);
 
 	// setup NotifyInfo to describe object
 	appSetNotifyHeader("%s:  %s'%s'", argPkgName, className, argObjName);
 
 	// create object from package
-	UObject::BeginLoad();	//!!!
-	UObject *Obj = Pkg.CreateExport(idx);
-	UObject::EndLoad();		//!!!
+	UObject *Obj = Package->CreateExport(idx);
 
 	guard(CreateVisualizer);
 	// create viewer class
-	if (!strcmp(className, "VertMesh"))
+	if (Obj->IsA("VertMesh"))
 	{
 		Viewer = new CVertMeshViewer(static_cast<UVertMesh*>(Obj));
 	}
-	else if (!strcmp(className, "SkeletalMesh"))
+	else if (Obj->IsA("SkeletalMesh"))
 	{
 		Viewer = new CSkelMeshViewer(static_cast<USkeletalMesh*>(Obj));
 	}

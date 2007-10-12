@@ -14,8 +14,14 @@
 		typedef Base	Super;					\
 		static ThisClass* StaticConstructor()	\
 		{ return new ThisClass; }				\
-		virtual const char* GetClassName()		\
+		virtual const char* GetClassName() const\
 		{ return #Class+1; }					\
+		virtual bool IsA(const char *ClassName) const \
+		{										\
+			if (!strcmp(ClassName, #Class+1))	\
+				return true;					\
+			return Super::IsA(ClassName);		\
+		}										\
 	private:									\
 		friend FArchive& operator<<(FArchive &Ar, Class *&Res) \
 		{										\
@@ -101,9 +107,13 @@ public:
 	virtual void Serialize(FArchive &Ar);
 
 	// RTTI support
-	virtual const char *GetClassName()
+	virtual const char *GetClassName() const
 	{
 		return "Object";
+	}
+	virtual bool IsA(const char *ClassName) const
+	{
+		return strcmp(ClassName, "Object") == 0;
 	}
 	virtual const CPropInfo *FindProperty(const char *Name) const
 	{
@@ -116,7 +126,6 @@ private:
 	static int				GObjBeginLoadCount;
 	static TArray<UObject*>	GObjLoaded;
 
-public: //!!!! PRIVATE
 	static void BeginLoad();
 	static void EndLoad();
 };

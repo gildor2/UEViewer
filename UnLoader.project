@@ -27,7 +27,9 @@ sources(MAIN) = {
 	# viewers
 	MeshViewer.cpp
 	VertMeshViewer.cpp
+	VertMeshInstance.cpp
 	SkelMeshViewer.cpp
+	SkelMeshInstance.cpp
 	# libraries
 	GlWindow.cpp
 	Math3D.cpp

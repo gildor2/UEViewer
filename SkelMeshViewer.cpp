@@ -1,4 +1,13 @@
 #include "ObjectViewer.h"
+#include "MeshInstance.h"
+
+
+CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
+:	CMeshViewer(Mesh)
+,	ShowSkel(0)
+{
+	Inst = new CSkelMeshInstance(Mesh, this);
+}
 
 
 #if TEST_FILES
@@ -24,8 +33,8 @@ void CSkelMeshViewer::Test()
 //?? (not always)	if (lod.NumDynWedges != lod.Wedges.Num()) appNotify("lod[%d]: NumDynWedges!=wedges.Num()", i);
 		if (lod.SkinPoints.Num() != lod.Points.Num() && lod.RigidSections.Num() == 0)
 			appNotify("[%d] skinPoints: %d", i,	lod.SkinPoints.Num());
-		if (lod.SmoothIndices.Indices.Num() + lod.RigidIndices.Indices.Num() != lod.Faces.Num() * 3)
-			appNotify("[%d] strange indices count", i);
+//		if (lod.SmoothIndices.Indices.Num() + lod.RigidIndices.Indices.Num() != lod.Faces.Num() * 3)
+//			appNotify("[%d] strange indices count", i);
 //		if ((lod.f0.Num() != 0 || lod.NumDynWedges != 0) &&
 //			(lod.f0.Num() != lod.NumDynWedges * 3 + 1)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
 		if ((lod.f0.Num() == 0) != (lod.NumDynWedges == 0)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
@@ -166,291 +175,26 @@ void CSkelMeshViewer::Dump()
 }
 
 
-//!!
-
-void GetBonePosition(const AnalogTrack &A, float time, CVec3 &DstPos, CQuat &DstQuat)
-{
-	int i;
-	float frac;
-
-	// fast case: 1 frame only
-	if (A.KeyTime.Num() == 1)
-	{
-		DstPos  = (CVec3&)A.KeyPos[0];
-		DstQuat = (CQuat&)A.KeyQuat[0];
-		return;
-	}
-
-	// find index in time key array
-	//!! linear search -> binary search
-	for (i = 0; i < A.KeyTime.Num(); i++)
-	{
-		if (time == A.KeyTime[i])
-		{
-			// exact key found
-			DstPos  = (A.KeyPos.Num()  > 1) ? (CVec3&)A.KeyPos[i]  : (CVec3&)A.KeyPos[0];
-			DstQuat = (A.KeyQuat.Num() > 1) ? (CQuat&)A.KeyQuat[i] : (CQuat&)A.KeyQuat[0];
-			return;
-		}
-		if (time < A.KeyTime[i])
-		{
-			i--;
-			break;
-		}
-	}
-	//?? clamp time, should wrap
-	if (i >= A.KeyTime.Num() - 1)
-	{
-		i = A.KeyTime.Num() - 1;
-		frac = 0;
-	}
-	else
-	{
-		//!! when last frame, looping should use NumFrames instead of 2nd time
-		frac = (time - A.KeyTime[i]) / (A.KeyTime[i+1] - A.KeyTime[i]);
-	}
-	// get position
-	if (A.KeyPos.Num() > 1)
-		Lerp((CVec3&)A.KeyPos[i], (CVec3&)A.KeyPos[i+1], frac, DstPos);
-	else
-		DstPos = (CVec3&)A.KeyPos[0];
-	// get orientation
-	if (A.KeyQuat.Num() > 1)
-		Slerp((CQuat&)A.KeyQuat[i], (CQuat&)A.KeyQuat[i+1], frac, DstQuat);
-	else
-		DstQuat = (CQuat&)A.KeyQuat[0];
-}
-
-
-//!! mesh instance data
-static CCoords *BoneCoords    = NULL;
-static CCoords *RefBoneCoords = NULL;
-static CCoords *BoneTransform = NULL;		// transformation for verts from reference pose to deformed
-static CVec3   *MeshVerts     = NULL;
-static int     *BoneMap       = NULL;		// remap indices of Mesh.FMeshBone[] to Anim.FNamedBone[]
-
-static void InitBuffers(const USkeletalMesh *Mesh)
-{
-	if (BoneCoords)
-		return;			// already initialized
-	//!! should free on exit too
-	int NumBones = Mesh->Bones.Num();
-
-	BoneCoords    = new CCoords[NumBones];
-	RefBoneCoords = new CCoords[NumBones];
-	BoneTransform = new CCoords[NumBones];
-	BoneMap       = new int    [NumBones];
-	MeshVerts     = new CVec3  [Mesh->Points.Num()];
-
-	const UMeshAnimation *Anim = Mesh->Animation;
-
-	for (int i = 0; i < NumBones; i++)
-	{
-		const FMeshBone &B = Mesh->Bones[i];
-		// NOTE: assumed, that parent bones goes first
-		assert(B.ParentIndex <= i);
-
-		// find reference bone in animation track
-		BoneMap[i] = -1;
-		if (Anim)
-		{
-			for (int j = 0; j < Anim->RefBones.Num(); j++)
-				if (!strcmp(B.Name, Anim->RefBones[j].Name))
-				{
-					BoneMap[i] = j;
-					break;
-				}
-		}
-
-		// compute reference bone coords
-		CVec3 BP;
-		CQuat BO;
-		// get default pose
-		BP = (CVec3&)B.BonePos.Position;
-		BO = (CQuat&)B.BonePos.Orientation;
-		if (!i) BO.Conjugate();
-
-		CCoords &BC = RefBoneCoords[i];
-		BC.origin = BP;
-		BO.ToAxis(BC.axis);
-		// move bone position to global coordinate space
-		if (i)	// do not rotate root bone
-			RefBoneCoords[Mesh->Bones[i].ParentIndex].UnTransformCoords(BC, BC);
-	}
-}
-
-
-void UpdateSkeleton(const USkeletalMesh *Mesh, const UMeshAnimation *Anim, int Seq, float Time)
-{
-	InitBuffers(Mesh);		//!! call from constructor
-
-	const MotionChunk *Motion = NULL;
-	if (Seq >= 0)
-		Motion = &Anim->Moves[Seq];
-
-	for (int i = 0; i < Mesh->Bones.Num(); i++)
-	{
-		const FMeshBone &B = Mesh->Bones[i];
-
-		CVec3 BP;
-		CQuat BO;
-		int BoneIndex = BoneMap[i];
-		if (Motion && BoneIndex >= 0)
-		{
-			// get bone position from track
-			GetBonePosition(Motion->AnimTracks[BoneIndex], Time, BP, BO);
-		}
-		else
-		{
-			// get default pose
-			BP = (CVec3&)B.BonePos.Position;
-			BO = (CQuat&)B.BonePos.Orientation;
-		}
-		if (!i) BO.Conjugate();
-
-		CCoords &BC = BoneCoords[i];
-		BC.origin = BP;
-		BO.ToAxis(BC.axis);
-		// move bone position to global coordinate space
-		if (i)	// do not rotate root bone
-			BoneCoords[Mesh->Bones[i].ParentIndex].UnTransformCoords(BC, BC);
-		// compute transformation for world-space vertices from reference pose
-		// to desired pose
-		CCoords tmp;
-		InvertCoords(BoneCoords[i], tmp);
-		RefBoneCoords[i].UnTransformCoords(tmp, BoneTransform[i]);
-	}
-}
-
-
-void DrawSkeleton(USkeletalMesh *Mesh)
-{
-	glLineWidth(3);
-	glEnable(GL_LINE_SMOOTH);
-
-	glBegin(GL_LINES);
-	for (int i = 0; i < Mesh->Bones.Num(); i++)
-	{
-		const FMeshBone &B  = Mesh->Bones[i];
-		const CCoords   &BC = BoneCoords[i];
-
-		CVec3 v2;
-		v2.Set(10, 0, 0);
-		BC.UnTransformPoint(v2, v2);
-
-		glColor3f(1,0,0);
-		glVertex3fv(BC.origin.v);
-		glVertex3fv(v2.v);
-
-		if (i > 0)
-		{
-			glColor3f(1,1,0.3);
-			glVertex3fv(BoneCoords[B.ParentIndex].origin.v);
-		}
-		else
-		{
-			glColor3f(1,0,1);
-			glVertex3f(0, 0, 0);
-		}
-		glVertex3fv(BC.origin.v);
-	}
-	glColor3f(1,1,1);
-	glEnd();
-
-	glLineWidth(1);
-	glDisable(GL_LINE_SMOOTH);
-}
-
-
-void DrawBaseSkeletalMesh(const USkeletalMesh *Mesh)
-{
-	int i;
-
-	memset(MeshVerts, 0, sizeof(CVec3) * Mesh->VertexCount);
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
-	{
-		const FVertInfluences &Inf = Mesh->VertInfluences[i];
-		int BoneIndex  = Inf.BoneIndex;
-		int PointIndex = Inf.PointIndex;
-		const CVec3 &Src = (CVec3&)Mesh->Points[PointIndex];
-		CVec3 tmp;
-#if 0
-		// variant 1: ref pose -> local bone space -> transformed bone to world
-		RefBoneCoords[BoneIndex].TransformPoint(Src, tmp);
-		BoneCoords[BoneIndex].UnTransformPoint(tmp, tmp);
-#else
-		// variant 2: use prepared transformation (same result, but faster)
-		BoneTransform[BoneIndex].TransformPoint(Src, tmp);
-#endif
-		VectorMA(MeshVerts[PointIndex], Inf.Weight, tmp);
-	}
-
-	glBegin(GL_TRIANGLES);
-	for (i = 0; i < Mesh->Triangles.Num(); i++)
-	{
-		const VTriangle &Face = Mesh->Triangles[i];
-		for (int j = 0; j < 3; j++)
-		{
-			const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
-			glVertex3fv(&MeshVerts[W.iVertex][0]);
-		}
-	}
-	glEnd();
-}
-
-
-void DrawLodSkeletalMesh(const USkeletalMesh *Mesh, const FStaticLODModel *lod)
-{
-	int i;
-	glBegin(GL_POINTS);
-	for (i = 0; i < lod->SkinPoints.Num(); i++)
-	{
-		const FVector &V = lod->SkinPoints[i].Point;
-		glVertex3fv(&V.X);
-	}
-	glEnd();
-}
-
-
-void CSkelMeshViewer::Draw3D()
-{
-	CMeshViewer::Draw3D();
-
-	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
-
-	UpdateSkeleton(Mesh, Mesh->Animation, CurrAnim, AnimTime);
-	// show skeleton
-	if (ShowSkel)
-		DrawSkeleton(Mesh);
-	// show mesh
-	if (ShowSkel != 2)
-	{
-		if (LodNum < 0)
-			DrawBaseSkeletalMesh(Mesh);
-		else
-			DrawLodSkeletalMesh(Mesh, &Mesh->StaticLODModels[LodNum]);
-	}
-}
-
-
 void CSkelMeshViewer::Draw2D()
 {
 	CMeshViewer::Draw2D();
 
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+
 	int NumAnims = 0;
 	if (Mesh->Animation)
 		NumAnims = Mesh->Animation->AnimSeqs.Num();
-	const char *AnimName = CurrAnim < 0 ? "default" : *Mesh->Animation->AnimSeqs[CurrAnim].Name;
-	float AnimRate       = CurrAnim < 0 ? 0         :  Mesh->Animation->AnimSeqs[CurrAnim].Rate;
-	int   AnimFrames     = CurrAnim < 0 ? 0         :  Mesh->Animation->AnimSeqs[CurrAnim].NumFrames;
+	const char *AnimName = MeshInst->CurrAnim < 0 ? "default" : *Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].Name;
+	float AnimRate       = MeshInst->CurrAnim < 0 ? 0         :  Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].Rate;
+	int   AnimFrames     = MeshInst->CurrAnim < 0 ? 0         :  Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].NumFrames;
 
-	if (LodNum < 0)
+	if (MeshInst->LodNum < 0)
 		GL::textf("LOD : base mesh\n");
 	else
-		GL::textf("LOD : %d/%d\n", LodNum+1, Mesh->StaticLODModels.Num());
-	GL::textf("Anim: %d/%d (%s) rate: %g frames: %d\n", CurrAnim+1, NumAnims, AnimName, AnimRate, AnimFrames);
-	GL::textf("Time: %.1f/%d\n", AnimTime, AnimFrames);
+		GL::textf("LOD : %d/%d\n", MeshInst->LodNum+1, Mesh->StaticLODModels.Num());
+	GL::textf("Anim: %d/%d (%s) rate: %g frames: %d\n", MeshInst->CurrAnim+1, NumAnims, AnimName, AnimRate, AnimFrames);
+	GL::textf("Time: %.1f/%d\n", MeshInst->AnimTime, AnimFrames);
 #if 0
 	if (CurrAnim >= 0)
 	{
@@ -469,39 +213,41 @@ void CSkelMeshViewer::Draw2D()
 void CSkelMeshViewer::ProcessKey(unsigned char key)
 {
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+
 	int NumAnims = 0, NumFrames = 0;
 	if (Mesh->Animation)
 		NumAnims  = Mesh->Animation->AnimSeqs.Num();
-	if (CurrAnim >= 0)
-		NumFrames = Mesh->Animation->AnimSeqs[CurrAnim].NumFrames;
+	if (MeshInst->CurrAnim >= 0)
+		NumFrames = Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].NumFrames;
 
 	switch (key)
 	{
 	case 'l':
-		if (++LodNum >= Mesh->StaticLODModels.Num())
-			LodNum = -1;
+		if (++MeshInst->LodNum >= Mesh->StaticLODModels.Num())
+			MeshInst->LodNum = -1;
 		break;
 	case '[':
-		if (--CurrAnim < -1)
-			CurrAnim = NumAnims - 1;
-		AnimTime = 0;
+		if (--MeshInst->CurrAnim < -1)
+			MeshInst->CurrAnim = NumAnims - 1;
+		MeshInst->AnimTime = 0;
 		break;
 	case ']':
-		if (++CurrAnim >= NumAnims)
-			CurrAnim = -1;
-		AnimTime = 0;
+		if (++MeshInst->CurrAnim >= NumAnims)
+			MeshInst->CurrAnim = -1;
+		MeshInst->AnimTime = 0;
 		break;
 	case ',':		// '<'
-		AnimTime -= 0.2;
-		if (AnimTime < 0)
-			AnimTime = 0;
+		MeshInst->AnimTime -= 0.2;
+		if (MeshInst->AnimTime < 0)
+			MeshInst->AnimTime = 0;
 		break;
 	case '.':		// '>'
 		if (NumFrames > 0)
 		{
-			AnimTime += 0.2;
-			if (AnimTime > NumFrames - 1)
-				AnimTime = NumFrames - 1;
+			MeshInst->AnimTime += 0.2;
+			if (MeshInst->AnimTime > NumFrames - 1)
+				MeshInst->AnimTime = NumFrames - 1;
 		}
 		break;
 	case 's':
@@ -511,9 +257,9 @@ void CSkelMeshViewer::ProcessKey(unsigned char key)
 #if 1
 	//!! REMOVE
 	case 'a':
-		if (LodNum >= 0)
+		if (MeshInst->LodNum >= 0)
 		{
-			const TArray<unsigned>& A = Mesh->StaticLODModels[LodNum].f0;
+			const TArray<unsigned>& A = Mesh->StaticLODModels[MeshInst->LodNum].f0;
 			for (int i = 0; i < A.Num(); i++)
 				printf("%-4d %08X  /  %d  /  %g\n", i, A[i], A[i], (float&)A[i]);
 		}

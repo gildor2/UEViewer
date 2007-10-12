@@ -7,6 +7,10 @@
 
 #include "GlWindow.h"
 
+class CMeshInstance;
+class CVertMeshInstance;
+class CSkelMeshInstance;
+
 
 #define TEST_FILES		1		// comment line to disable some notifications
 
@@ -16,6 +20,10 @@
 #else
 #	define TEST_OBJECT
 #endif
+
+
+//?? move outside
+UMaterial *BindDefaultMaterial();
 
 
 /*-----------------------------------------------------------------------------
@@ -29,6 +37,8 @@ public:
 
 	CObjectViewer(UObject *Obj)
 	:	Object(Obj)
+	{}
+	virtual ~CObjectViewer()
 	{}
 
 	virtual void Dump()
@@ -63,7 +73,11 @@ public:
 class CMeshViewer : public CObjectViewer
 {
 public:
-	bool	bShowNormals;
+	// view mode
+	bool			bShowNormals;
+	bool			bColorMaterials;
+	// linked data
+	CMeshInstance	*Inst;
 
 	CMeshViewer(ULodMesh *Mesh)
 	:	CObjectViewer(Mesh)
@@ -75,9 +89,15 @@ public:
 		GL::SetViewOffset(offset);
 	}
 
+	virtual ~CMeshViewer()
+	{
+		delete Inst;
+	}
+
 	virtual void ShowHelp()
 	{
 		GL::text("N           show normals\n");
+		GL::text("M           colorize materials\n");
 	}
 
 	virtual void ProcessKey(unsigned char key)
@@ -86,6 +106,9 @@ public:
 		{
 		case 'n':
 			bShowNormals = !bShowNormals;
+			break;
+		case 'm':
+			bColorMaterials = !bColorMaterials;
 			break;
 		default:
 			CObjectViewer::ProcessKey(key);
@@ -105,34 +128,10 @@ public:
 class CVertMeshViewer : public CMeshViewer
 {
 public:
-	int		FrameNum;
-
-	CVertMeshViewer(UVertMesh *Mesh)
-	:	CMeshViewer(Mesh)
-	,	FrameNum(0)
-	{}
-
+	CVertMeshViewer(UVertMesh *Mesh);
 	virtual void Dump();
 	TEST_OBJECT;
-	virtual void Draw3D();
-
-	virtual void ProcessKey(unsigned char key)
-	{
-		int FrameCount = (static_cast<UVertMesh*>(Object))->FrameCount;
-		switch (key)
-		{
-		case '1':
-			if (++FrameNum >= FrameCount)
-				FrameNum = 0;
-			break;
-		case '2':
-			if (--FrameNum < 0)
-				FrameNum = FrameCount-1;
-			break;
-		default:
-			CMeshViewer::ProcessKey(key);
-		}
-	}
+	virtual void ProcessKey(unsigned char key);
 };
 
 
@@ -143,19 +142,9 @@ public:
 class CSkelMeshViewer : public CMeshViewer
 {
 public:
-	int		LodNum;
-	int		CurrAnim;
-	float	AnimTime;
 	int		ShowSkel;		// 0 - mesh, 1 - mesh+skel, 2 - skel only
 
-	CSkelMeshViewer(USkeletalMesh *Mesh)
-	:	CMeshViewer(Mesh)
-	,	LodNum(-1)
-	,	CurrAnim(-1)
-	,	AnimTime(0)
-	,	ShowSkel(0)
-	{}
-
+	CSkelMeshViewer(USkeletalMesh *Mesh);
 	virtual void ShowHelp()
 	{
 		CMeshViewer::ShowHelp();
@@ -168,7 +157,6 @@ public:
 	virtual void Dump();
 	TEST_OBJECT;
 	virtual void Draw2D();
-	virtual void Draw3D();
 	virtual void ProcessKey(unsigned char key);
 };
 

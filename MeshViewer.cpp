@@ -1,11 +1,12 @@
 #include "ObjectViewer.h"
+#include "MeshInstance.h"
 
 
 #if TEST_FILES
 void CMeshViewer::Test()
 {
 	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
-	if (Mesh->HasImpostor) appNotify("HAS IMPOSTOR");
+	// empty ...
 }
 #endif
 
@@ -19,7 +20,6 @@ void CMeshViewer::Dump()
 		"version        %d\n"
 		"VertexCount    %d\n"
 		"Verts #        %d\n"
-		"Textures #     %d\n"
 		"MeshScale      %g %g %g\n"
 		"MeshOrigin     %g %g %g\n"
 		"RotOrigin      %d %d %d\n"
@@ -27,19 +27,11 @@ void CMeshViewer::Dump()
 		"Faces #        %d\n"
 		"CollapseWedgeThus # %d\n"
 		"Wedges #       %d\n"
-		"Materials #    %d\n"
-		"HasImpostor    %d\n"
-		"fF8            %X ??\n"
-		"fFC            %g %g %g\n"
-		"f108           %d %d %d\n"
-		"f114           %g %g %g\n"
-		"f120..123      %d %d %d %d\n"
-		"f124           %d %d %d\n"
-		"f130           %g\n",
+		"Impostor: %s  (%s)\n"
+		"SkinTessFactor %g\n",
 		Mesh->Version,
 		Mesh->VertexCount,
 		Mesh->Verts.Num(),
-		Mesh->Textures.Num(),
 		FVECTOR_ARG(Mesh->MeshScale),
 		FVECTOR_ARG(Mesh->MeshOrigin),
 		ROTATOR_ARG(Mesh->RotOrigin),
@@ -47,16 +39,22 @@ void CMeshViewer::Dump()
 		Mesh->Faces.Num(),
 		Mesh->CollapseWedgeThus.Num(),
 		Mesh->Wedges.Num(),
-		Mesh->Materials.Num(),
-		Mesh->HasImpostor,
-		Mesh->fF8,
-		FVECTOR_ARG(Mesh->fFC),
-		ROTATOR_ARG(Mesh->f108),
-		FVECTOR_ARG(Mesh->f114),
-		Mesh->f120, Mesh->f121, Mesh->f122, Mesh->f123,
-		ROTATOR_ARG(Mesh->f124),
-		Mesh->f130
+		Mesh->HasImpostor ? "true" : "false", Mesh->SpriteMaterial ? Mesh->SpriteMaterial->Name : "none",
+		Mesh->SkinTesselationFactor
 	);
+	int i;
+	printf("Textures: %d\n", Mesh->Textures.Num());
+	for (i = 0; i < Mesh->Textures.Num(); i++)
+	{
+		const UMaterial *Tex = Mesh->Textures[i];
+		printf("  %d: %s\n", i, Tex ? Tex->Name : "null");
+	}
+	printf("Materials: %d\n", Mesh->Materials.Num());
+	for (i = 0; i < Mesh->Materials.Num(); i++)
+	{
+		const FMeshMaterial &Mat = Mesh->Materials[i];
+		printf("  %d: tex=%d  flags=%08X\n", i, Mat.TextureIndex, Mat.PolyFlags);
+	}
 }
 
 
@@ -74,4 +72,7 @@ void CMeshViewer::Draw3D()
 	}
 	glEnd();
 	glColor3f(1, 1, 1);
+
+	assert(Inst);
+	Inst->Draw();
 }

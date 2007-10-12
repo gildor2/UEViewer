@@ -1,0 +1,76 @@
+class CMeshInstance
+{
+public:
+	// linked data
+	ULodMesh		*pMesh;
+	CMeshViewer		*Viewport;
+
+	CMeshInstance(ULodMesh *Mesh, CMeshViewer *Viewer)
+	:	pMesh(Mesh)
+	,	Viewport(Viewer)
+	{}
+
+	void SetMaterial(int Index)
+	{
+		if (!Viewport->bColorMaterials)
+		{
+			int TexIndex = pMesh->Materials[Index].TextureIndex;
+			if (TexIndex >= pMesh->Textures.Num())		// possible situation; see ONSWeapons-A.ukx/ParasiteMine
+				TexIndex = 0;
+			UMaterial *Mat = pMesh->Textures[TexIndex];
+			if (Mat)
+				Mat->Bind();
+			else
+				BindDefaultMaterial();
+		}
+		else
+		{
+			glDisable(GL_TEXTURE_2D);
+			glDisable(GL_CULL_FACE);
+			int color = Index + 1;
+			if (color > 7) color = 2;
+			glColor3f(color & 1, (color & 2) >> 1, (color & 4) >> 2);
+		}
+	}
+
+	virtual void Draw() = NULL;
+};
+
+
+class CVertMeshInstance : public CMeshInstance
+{
+public:
+	// mesh state
+	int			FrameNum;
+
+	CVertMeshInstance(UVertMesh *_Mesh, CVertMeshViewer *_Viewer)
+	:	CMeshInstance(_Mesh, _Viewer)
+	,	FrameNum(0)
+	{}
+	virtual void Draw();
+};
+
+
+class CSkelMeshInstance : public CMeshInstance
+{
+public:
+	// mesh data
+	CCoords		*BoneCoords;
+	CCoords		*RefBoneCoords;
+	CCoords		*BoneTransform;		// transformation for verts from reference pose to deformed
+	CVec3		*MeshVerts;
+	int			*BoneMap;			// remap indices of Mesh.FMeshBone[] to Anim.FNamedBone[]
+	// mesh state
+	int			LodNum;
+	int			CurrAnim;
+	float		AnimTime;
+
+	CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewer);
+	virtual ~CSkelMeshInstance();
+	virtual void Draw();
+
+	void UpdateSkeleton(int Seq, float Time);
+	void DrawSkeleton();
+	void DrawBaseSkeletalMesh();
+	void DrawLodSkeletalMesh(const FStaticLODModel *lod);
+};

@@ -39,6 +39,11 @@ MATERIALS TREE:
       VertexColor
 */
 
+#if RENDERING
+#	define BIND		virtual void Bind()
+#else
+#	define BIND
+#endif
 
 
 class UMaterial : public UObject
@@ -58,6 +63,11 @@ public:
 		PROP_OBJ(FallbackMaterial)
 		PROP_OBJ(DefaultMaterial)
 	END_PROP_TABLE
+
+#if RENDERING
+	virtual void Bind()
+	{}
+#endif
 };
 
 
@@ -233,9 +243,7 @@ public:
 		PROP_FLOAT(MaxFrameRate)
 	END_PROP_TABLE
 
-#if RENDERING
-	void Bind();
-#endif
+	BIND;
 };
 
 
@@ -280,7 +288,6 @@ public:
 	,	ZTest(true)
 	,	TwoSided(false)
 	{}
-
 	BEGIN_PROP_TABLE
 		PROP_BYTE(FrameBufferBlending)
 		PROP_BOOL(ZWrite)
@@ -289,6 +296,8 @@ public:
 		PROP_BOOL(TwoSided)
 		PROP_BYTE(AlphaRef)
 	END_PROP_TABLE
+
+	BIND;
 };
 
 
