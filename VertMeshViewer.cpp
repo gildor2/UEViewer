@@ -19,21 +19,19 @@ void CVertMeshViewer::Test()
 	//!! move some parts to CMeshViewer::Test()
 // (macro broken)	VERIFY2(VertexCount, VertexCount);
 	VERIFY_NOT_NULL(VertexCount);
-	VERIFY_NOT_NULL(Textures.Num());
-	VERIFY(FaceLevel.Num(), Faces.Num());
-	VERIFY_NOT_NULL(Faces.Num());
-	VERIFY_NOT_NULL(Wedges.Num());
-	VERIFY(CollapseWedgeThus.Num(), Wedges.Num());
-//	VERIFY(Materials.Num(), Textures.Num()); -- different
 	VERIFY_NULL(Verts2.Num());
 	VERIFY(Verts.Num(), Normals.Num());
-	VERIFY_NOT_NULL(Verts.Num());
 	assert(Mesh->Verts.Num() == Mesh->VertexCount * Mesh->FrameCount);
 	VERIFY_NULL(f150.Num());
 	VERIFY(BoundingBoxes.Num(), BoundingSpheres.Num());
 	VERIFY(BoundingBoxes.Num(), FrameCount);
 	VERIFY_NULL(AnimMeshVerts.Num());
 	VERIFY_NULL(StreamVersion);
+	// ULodMesh fields
+	VERIFY_NOT_NULL(Faces.Num());
+	VERIFY_NOT_NULL(Verts.Num());
+	VERIFY(FaceLevel.Num(), Faces.Num());
+	VERIFY_NOT_NULL(Wedges.Num());
 }
 #endif
 
@@ -66,7 +64,7 @@ void CVertMeshViewer::Dump()
 }
 
 
-void CVertMeshViewer::ProcessKey(unsigned char key)
+void CVertMeshViewer::ProcessKey(int key)
 {
 	CVertMeshInstance *MeshInst = static_cast<CVertMeshInstance*>(Inst);
 	int FrameCount = (static_cast<UVertMesh*>(Object))->FrameCount;

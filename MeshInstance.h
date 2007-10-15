@@ -1,3 +1,10 @@
+#ifndef __MESHINSTANCE_H__
+#define __MESHINSTANCE_H__
+
+/*-----------------------------------------------------------------------------
+	Basic CMeshInstance class
+-----------------------------------------------------------------------------*/
+
 class CMeshInstance
 {
 public:
@@ -8,6 +15,8 @@ public:
 	CMeshInstance(ULodMesh *Mesh, CMeshViewer *Viewer)
 	:	pMesh(Mesh)
 	,	Viewport(Viewer)
+	{}
+	virtual ~CMeshInstance()
 	{}
 
 	void SetMaterial(int Index)
@@ -37,19 +46,27 @@ public:
 };
 
 
+/*-----------------------------------------------------------------------------
+	CVertMeshInstance class
+-----------------------------------------------------------------------------*/
+
 class CVertMeshInstance : public CMeshInstance
 {
 public:
 	// mesh state
 	int			FrameNum;
 
-	CVertMeshInstance(UVertMesh *_Mesh, CVertMeshViewer *_Viewer)
-	:	CMeshInstance(_Mesh, _Viewer)
+	CVertMeshInstance(UVertMesh *Mesh, CVertMeshViewer *Viewer)
+	:	CMeshInstance(Mesh, Viewer)
 	,	FrameNum(0)
 	{}
 	virtual void Draw();
 };
 
+
+/*-----------------------------------------------------------------------------
+	CSkelMeshInstance class
+-----------------------------------------------------------------------------*/
 
 class CSkelMeshInstance : public CMeshInstance
 {
@@ -74,3 +91,6 @@ public:
 	void DrawBaseSkeletalMesh();
 	void DrawLodSkeletalMesh(const FStaticLODModel *lod);
 };
+
+
+#endif // __MESHINSTANCE_H__

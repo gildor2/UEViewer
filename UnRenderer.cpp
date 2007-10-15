@@ -354,7 +354,6 @@ void UTexture::Bind()
 	// uploading ...
 	if (TexNum < 0)
 	{
-		assert(Mips.Num());
 		// upload texture
 		static GLint lastTexNum = 0;
 		TexNum = ++lastTexNum;

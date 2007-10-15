@@ -357,6 +357,7 @@ public:
 			delete[] DataPtr;
 		DataPtr   = NULL;
 		DataCount = 0;
+		MaxCount  = 0;
 	}
 
 protected:

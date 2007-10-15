@@ -2,11 +2,19 @@
 #include "MeshInstance.h"
 
 
+CMeshViewer::~CMeshViewer()
+{
+	delete Inst;
+}
+
+
 #if TEST_FILES
 void CMeshViewer::Test()
 {
 	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
 	// empty ...
+	VERIFY_NOT_NULL(Textures.Num());
+	VERIFY(CollapseWedgeThus.Num(), Wedges.Num());
 }
 #endif
 

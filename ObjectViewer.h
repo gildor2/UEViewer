@@ -37,7 +37,10 @@ public:
 
 	CObjectViewer(UObject *Obj)
 	:	Object(Obj)
-	{}
+	{
+		GL::ResetView();
+		GL::SetViewOffset(nullVec3);
+	}
 	virtual ~CObjectViewer()
 	{}
 
@@ -61,8 +64,39 @@ public:
 
 	virtual void Draw3D()
 	{}
-	virtual void ProcessKey(unsigned char key)
+	virtual void ProcessKey(int key)
 	{}
+};
+
+
+/*-----------------------------------------------------------------------------
+	Material viewer
+-----------------------------------------------------------------------------*/
+
+class CMaterialViewer : public CObjectViewer
+{
+public:
+	CMaterialViewer(UMaterial *Material)
+	:	CObjectViewer(Material)
+	{}
+
+	virtual void ShowHelp()
+	{
+		CObjectViewer::ShowHelp();
+		//!!
+	}
+
+	virtual void ProcessKey(int key)
+	{
+		switch (key)
+		{
+//		case ''
+		default:
+			CObjectViewer::ProcessKey(key);
+		}
+	}
+
+	virtual void Draw3D();
 };
 
 
@@ -89,18 +123,16 @@ public:
 		GL::SetViewOffset(offset);
 	}
 
-	virtual ~CMeshViewer()
-	{
-		delete Inst;
-	}
+	virtual ~CMeshViewer();
 
 	virtual void ShowHelp()
 	{
+		CObjectViewer::ShowHelp();
 		GL::text("N           show normals\n");
 		GL::text("M           colorize materials\n");
 	}
 
-	virtual void ProcessKey(unsigned char key)
+	virtual void ProcessKey(int key)
 	{
 		switch (key)
 		{
@@ -131,7 +163,7 @@ public:
 	CVertMeshViewer(UVertMesh *Mesh);
 	virtual void Dump();
 	TEST_OBJECT;
-	virtual void ProcessKey(unsigned char key);
+	virtual void ProcessKey(int key);
 };
 
 
@@ -157,7 +189,7 @@ public:
 	virtual void Dump();
 	TEST_OBJECT;
 	virtual void Draw2D();
-	virtual void ProcessKey(unsigned char key);
+	virtual void ProcessKey(int key);
 };
 
 

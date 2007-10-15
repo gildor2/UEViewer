@@ -54,3 +54,51 @@ NOTES:
   * used from MOV-UT2004-Intro.ut2
 - q2 model axis: forward/left/up (?); q2 world axis: forward/right/up (?); ut model axis
   is right/forward/up
+
+COMPLEX MATERIALS:
+~~~~~~~~~~~~~~~~~~
+- AW-2k4XP.Weapons.ShockShieldFinal
+                   ShockShieldShaftFallbackFinal
+- AW-ShieldShaders.Shaders.BlueShieldFinal - has nested Combiners
+- DeRez.Shaders.DeRezFinalHead
+- EpicParticles.Shaders.FireFinal
+- InterfaceContent.Logos.fbSymbolShader (UT menu logo)
+                   HUD.fbBombFocus
+                   SPMenu.SP_FinalButton (has combiner with const color)
+- MenuEffects.ScoreBoard.ScoreboardU_FB (alternative UT logo)
+- PickupSkins.Shaders.FinalHealthCore
+                      FinalDamShader
+- UT2004Weapons.Shaders.BlueShockFinal
+                        PurpleShockFinal (complex, nested Combiners)
+                        LinkGunYellowShader
+                        PowerPulseShaderYellow
+- WarEffectsTextures.Particles.N_energy01_S_JM (Shader uses FinalBlend; simple)
+- XEffectMat.goop.GoopFB (has Shader -> Modifier -> Combiner)
+- XGameTextures.SuperPickups.DOMMabRs
+                             DOMScreens
+                             HealthPackTexS
+
+SIMPLE MODIFIERS:
+~~~~~~~~~~~~~~~~~
+- check HUDContent package
+- PickupSkins.Shaders.ShieldFinal
+- ULogo.MainMenu.CornerMenuFinal (UT menu slideshow)
+- UT2004Weapons.Shaders.ShockHitShader
+                WeaponSpecMap2 (used as specular overlay for rocket launcher)
+- VMVehicle-TX.VehicleExplosions.GENERICshrapnelTEX
+               Environments.ReflectionEnv (envmap using single texture)
+- WeaponSkins.Skins.SniperScreen1C
+
+Notes:
+- it is possible, that Shader will have same object in Diffuse and SelfIllumination fields -
+  - can ignore Diffuse here? (really, such shaders require SelfIllumination only, but UE
+  requires non-null Diffuse, otherwise 'white' will be displayed)
+
+COMMON MATERIAL USE TREE:
+~~~~~~~~~~~~~~~~~~~~~~~~~
+FinalBlend
+  -> Shader
+     -> Combiner(s)
+       -> Modifier (any count)
+         -> Texture
+         -> Modifier (const color)

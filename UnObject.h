@@ -74,6 +74,7 @@ struct CPropInfo
 
 void RegisterClasses(CClassInfo *Table, int Count);
 UObject *CreateClass(const char *Name);
+bool IsKnownClass(const char *Name);
 
 
 #define BEGIN_CLASS_TABLE						\
@@ -121,10 +122,11 @@ public:
 	}
 	static const CPropInfo *FindProperty(const CPropInfo *Table, int Count, const char *PropName);
 
-private:
+//private: -- not private to allow object browser ...
 	// static data and methods
 	static int				GObjBeginLoadCount;
 	static TArray<UObject*>	GObjLoaded;
+	static TArray<UObject*> GObjObjects;
 
 	static void BeginLoad();
 	static void EndLoad();

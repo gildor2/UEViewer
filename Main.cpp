@@ -23,6 +23,21 @@ END_CLASS_TABLE
 
 
 /*-----------------------------------------------------------------------------
+	Object list support
+	change!!
+-----------------------------------------------------------------------------*/
+
+static bool CreateVisualizer(UObject *Obj, bool test = false);
+
+inline bool ObjectSupported(UObject *Obj)
+{
+	return CreateVisualizer(Obj, true);
+}
+
+static int ObjIndex = 0;
+
+
+/*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
 
@@ -37,7 +52,7 @@ void main(int argc, char **argv)
 	{
 	help:
 		printf( "Usage:\n"
-				"  UnLoader [-dump|-check] [-path=PATH] <package> <object> [<class>]\n"
+				"  UnLoader [-dump|-check] [-path=PATH] <package> [<object> [<class>]]\n"
 				"  UnLoader -list <package file>\n"
 				"    PATH      = path to UT root directory\n"
 				"    <package> = full package filename (path/name.ext) or short name\n"
@@ -76,8 +91,10 @@ void main(int argc, char **argv)
 		}
 	}
 	const char *argPkgName   = argv[arg];
-	const char *argObjName   = argv[arg+1];
+	const char *argObjName   = NULL;
 	const char *argClassName = NULL;
+	if (arg < argc-1)
+		argObjName   = argv[arg+1];
 	if (arg < argc-2)
 		argClassName = argv[arg+2];
 
@@ -111,34 +128,42 @@ void main(int argc, char **argv)
 		return;
 	}
 
+	UObject *Obj = NULL;
 	// get requested object info
-	int idx = Package->FindExport(argObjName, argClassName);
-	if (idx < 0)
-		appError("Export \"%s\" was not found", argObjName);
-	const char *className = Package->GetObjectName(Package->ExportTable[idx].ClassIndex);
-
-	// setup NotifyInfo to describe object
-	appSetNotifyHeader("%s:  %s'%s'", argPkgName, className, argObjName);
-
-	// create object from package
-	UObject *Obj = Package->CreateExport(idx);
-
-	guard(CreateVisualizer);
-	// create viewer class
-	if (Obj->IsA("VertMesh"))
+	if (argObjName)
 	{
-		Viewer = new CVertMeshViewer(static_cast<UVertMesh*>(Obj));
-	}
-	else if (Obj->IsA("SkeletalMesh"))
-	{
-		Viewer = new CSkelMeshViewer(static_cast<USkeletalMesh*>(Obj));
+		int idx = Package->FindExport(argObjName, argClassName);
+		if (idx < 0)
+			appError("Export \"%s\" was not found", argObjName);
+		const char *className = Package->GetObjectName(Package->ExportTable[idx].ClassIndex);
+
+		// setup NotifyInfo to describe object
+		appSetNotifyHeader("%s:  %s'%s'", argPkgName, className, argObjName);
+		// create object from package
+		Obj = Package->CreateExport(idx);
 	}
 	else
 	{
-		Viewer = new CObjectViewer(Obj);
+		guard(LoadWholePackage);
+		// load whole package
+		for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
+		{
+			if (!IsKnownClass(Package->GetObjectName(Package->GetExport(idx).ClassIndex)))
+				continue;
+			int TmpObjIdx = UObject::GObjObjects.Num();
+			UObject *TmpObj = Package->CreateExport(idx);
+			if (!Obj && ObjectSupported(TmpObj))
+			{
+				Obj = TmpObj;
+				ObjIndex = TmpObjIdx;
+			}
+		}
+		if (!Obj)
+			Obj = UObject::GObjObjects[1];
+		unguard;
 	}
-	unguard;
 
+	CreateVisualizer(Obj);
 	// print mesh info
 #if TEST_FILES
 	Viewer->Test();
@@ -179,6 +204,37 @@ void main(int argc, char **argv)
 	GlWindow callbacks
 -----------------------------------------------------------------------------*/
 
+static bool CreateVisualizer(UObject *Obj, bool test)
+{
+	guard(CreateVisualizer);
+	if (!test)
+		appSetNotifyHeader("%s:  %s'%s'", Obj->Package->SelfName, Obj->GetClassName(), Obj->Name);
+	// create viewer class
+	if (Obj->IsA("VertMesh"))
+	{
+		if (test) return true;
+		Viewer = new CVertMeshViewer(static_cast<UVertMesh*>(Obj));
+	}
+	else if (Obj->IsA("SkeletalMesh"))
+	{
+		if (test) return true;
+		Viewer = new CSkelMeshViewer(static_cast<USkeletalMesh*>(Obj));
+	}
+	else if (Obj->IsA("Material"))
+	{
+		if (test) return true;
+		Viewer = new CMaterialViewer(static_cast<UMaterial*>(Obj));
+	}
+	else
+	{
+		if (test) return false;
+		Viewer = new CObjectViewer(Obj);
+	}
+	return true;
+	unguard;
+}
+
+
 void AppDrawFrame()
 {
 	guard(AppDrawFrame);
@@ -187,9 +243,44 @@ void AppDrawFrame()
 }
 
 
-void AppKeyEvent(unsigned char key)
+void AppKeyEvent(int key)
 {
 	guard(AppKeyEvent);
+	if (key == SPEC_KEY(PAGE_DOWN) || key == SPEC_KEY(PAGE_UP))
+	{
+		int looped = 0;
+		UObject *Obj;
+		while (true)
+		{
+			if (key == SPEC_KEY(PAGE_DOWN))
+			{
+				ObjIndex++;
+				if (ObjIndex >= UObject::GObjObjects.Num())
+				{
+					ObjIndex = 0;
+					looped++;
+				}
+			}
+			else
+			{
+				ObjIndex--;
+				if (ObjIndex < 0)
+				{
+					ObjIndex = UObject::GObjObjects.Num()-1;
+					looped++;
+				}
+			}
+			if (looped > 1)
+				return;		// prevent infinite loop
+			Obj = UObject::GObjObjects[ObjIndex];
+			if (ObjectSupported(Obj))
+				break;
+		}
+		// change visualizer
+		delete Viewer;
+		CreateVisualizer(Obj);
+		return;
+	}
 	if (key == 'd')
 	{
 		Viewer->Dump();
@@ -205,6 +296,7 @@ void AppDisplayTexts(bool helpVisible)
 	guard(AppDisplayTexts);
 	if (helpVisible)
 	{
+		GL::text("PgUp/PgDn   browse objects\n");
 		GL::text("D           dump info\n");
 		Viewer->ShowHelp();
 		GL::text("-----\n\n");		// divider

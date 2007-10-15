@@ -613,7 +613,7 @@ struct FSkelMeshSection
 
 struct FStaticLODModel
 {
-	TArray<unsigned>		f0;				//?? something for dynamic sections; count >= NumDynWedges*3+1; packed influences?
+	TArray<unsigned>		f0;				//?? floating stream format, contains U/V, weights etc
 	TArray<FSkinPoint>		SkinPoints;		// smooth surface points
 	int						NumDynWedges;	// number of wedges in smooth sections
 	TArray<FSkelMeshSection> SmoothSections;
@@ -655,7 +655,7 @@ class USkeletalMesh : public ULodMesh
 	DECLARE_CLASS(USkeletalMesh, ULodMesh);
 public:
 	TLazyArray<FVector>		Points;			// note: have ULodMesh.Verts
-	TLazyArray<FMeshWedge>	Wedges;
+	TLazyArray<FMeshWedge>	Wedges;			// note: have ULodMesh.Wedges
 	TLazyArray<VTriangle>	Triangles;
 	TLazyArray<FVertInfluences> VertInfluences;
 	TLazyArray<word>		CollapseWedge;	// Num == Wedges.Num; used to automatically build StaticLODModels

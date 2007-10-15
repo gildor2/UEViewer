@@ -30,6 +30,7 @@ sources(MAIN) = {
 	VertMeshInstance.cpp
 	SkelMeshViewer.cpp
 	SkelMeshInstance.cpp
+	MaterialViewer.cpp
 	# libraries
 	GlWindow.cpp
 	Math3D.cpp

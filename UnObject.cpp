@@ -14,6 +14,13 @@
 UObject::~UObject()
 {
 //	printf("deleting %s\n", Name);
+	// remove self from GObjObjects
+	for (int i = 0; i < GObjObjects.Num(); i++)
+		if (GObjObjects[i] == this)
+		{
+			GObjObjects.Remove(i);
+			break;
+		}
 	// remove self from package export table
 	if (Package)
 	{
@@ -30,6 +37,7 @@ UObject::~UObject()
 
 int              UObject::GObjBeginLoadCount = 0;
 TArray<UObject*> UObject::GObjLoaded;
+TArray<UObject*> UObject::GObjObjects;
 
 
 void UObject::BeginLoad()
@@ -330,8 +338,25 @@ UObject *CreateClass(const char *Name)
 {
 	for (int i = 0; i < GClassCount; i++)
 		if (!strcmp(GClasses[i].Name, Name))
-			return GClasses[i].Constructor();
+		{
+			UObject *Obj = GClasses[i].Constructor();
+			// NOTE: do not add object to GObjObjects in UObject constructor
+			// to allow runtime creation of objects without linked package
+			// Really, should add to this list after loading from package
+			// (in CreateExport/Import or after serialization)
+			UObject::GObjObjects.AddItem(Obj);
+			return Obj;
+		}
 	return NULL;
+}
+
+
+bool IsKnownClass(const char *Name)
+{
+	for (int i = 0; i < GClassCount; i++)
+		if (!strcmp(GClasses[i].Name, Name))
+			return true;
+	return false;
 }
 
 

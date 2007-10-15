@@ -31,6 +31,7 @@ MAIN = \
 	obj/VertMeshInstance.obj \
 	obj/SkelMeshViewer.obj \
 	obj/SkelMeshInstance.obj \
+	obj/MaterialViewer.obj \
 	obj/GlWindow.obj \
 	obj/Math3D.obj \
 	obj/ddslib.obj
@@ -97,6 +98,20 @@ DEPENDS = \
 
 obj/Main.obj : Main.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Main.obj" Main.cpp
+
+DEPENDS = \
+	Core.h \
+	GlWindow.h \
+	Math3D.h \
+	ObjectViewer.h \
+	UnCore.h \
+	UnMaterial.h \
+	UnMesh.h \
+	UnObject.h \
+	UnPackage.h
+
+obj/MaterialViewer.obj : MaterialViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MaterialViewer.obj" MaterialViewer.cpp
 
 DEPENDS = \
 	Core.h \

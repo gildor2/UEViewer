@@ -371,6 +371,12 @@ static void OnKeyboard(unsigned char key, int x, int y)
 }
 
 
+static void OnSpecial(int key, int x, int y)
+{
+	AppKeyEvent(key + 256);
+}
+
+
 // timer handler
 static void OnTimer(int timerId)
 {
@@ -395,6 +401,7 @@ void VisualizerLoop(const char *caption)
 	// application hooks
 	glutDisplayFunc(OnDisplay);
 	glutKeyboardFunc(OnKeyboard);
+	glutSpecialFunc(OnSpecial);
 	OnTimer(0);					// init timer
 	GL::ResetView();
 	// start

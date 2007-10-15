@@ -18,6 +18,11 @@ void CSkelMeshViewer::Test()
 	CMeshViewer::Test();
 
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+
+	// ULodMesh fields
+	VERIFY_NULL(Faces.Num());
+	VERIFY_NULL(Verts.Num());
+
 	int NumBones = Mesh->Bones.Num();
 //	TEST_ARRAY(Mesh->CollapseWedge);
 //	TEST_ARRAY(Mesh->f1C8);
@@ -26,6 +31,7 @@ void CSkelMeshViewer::Test()
 	VERIFY_NULL(WeightIndices.Num());
 	VERIFY_NULL(BoneInfluences.Num());
 	VERIFY_NOT_NULL(VertInfluences.Num());
+	VERIFY_NOT_NULL(Wedges.Num());
 
 	for (i = 0; i < Mesh->StaticLODModels.Num(); i++)
 	{
@@ -210,7 +216,7 @@ void CSkelMeshViewer::Draw2D()
 }
 
 
-void CSkelMeshViewer::ProcessKey(unsigned char key)
+void CSkelMeshViewer::ProcessKey(int key)
 {
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);

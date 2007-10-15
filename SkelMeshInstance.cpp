@@ -9,7 +9,7 @@ CSkelMeshInstance::CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewe
 ,	AnimTime(0)
 {
 	guard(CSkelMeshInstance::CSkelMeshInstance);
-	//!! should free on exit too
+
 	int NumBones = Mesh->Bones.Num();
 
 	BoneCoords    = new CCoords[NumBones];
@@ -311,7 +311,7 @@ void CSkelMeshInstance::Draw()
 {
 	guard(CSkelMeshInstance::Draw);
 
-	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	USkeletalMesh   *Mesh   = static_cast<USkeletalMesh*>(pMesh);
 	CSkelMeshViewer *Viewer = static_cast<CSkelMeshViewer*>(Viewport);
 
 	UpdateSkeleton(CurrAnim, AnimTime);
