@@ -15,9 +15,9 @@ rem ---------------------------------------------------------------------------
 
 rem %run% HumanFemaleA
 rem %run% HumanFemaleA MercFemaleB
-%run% SkaarjPack_rc
+rem %run% SkaarjPack_rc
 rem %run% SkaarjPack_rc NaliCow
-rem %run% HumanMaleA MercMaleB
+%run% HumanMaleA
 rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
 rem UnLoader.exe -path=data data/MarineModel.ukx MarineMesh_Male
 rem UnLoader.exe data/test.ukx Male SkeletalMesh

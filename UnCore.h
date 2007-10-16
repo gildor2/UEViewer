@@ -249,11 +249,11 @@ struct FVector
 
 struct FRotator
 {
-	int		Yaw, Pitch, Roll;
+	int		Pitch, Yaw, Roll;
 
 	friend FArchive& operator<<(FArchive &Ar, FRotator &R)
 	{
-		return Ar << R.Yaw << R.Pitch << R.Roll;
+		return Ar << R.Pitch << R.Yaw << R.Roll;
 	}
 };
 

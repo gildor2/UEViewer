@@ -168,7 +168,8 @@ void CSkelMeshInstance::UpdateSkeleton(int Seq, float Time)	//?? can use local v
 	if (Seq >= 0)
 		Motion = &Anim->Moves[Seq];
 
-	for (int i = 0; i < Mesh->Bones.Num(); i++)
+	int i;
+	for (i = 0; i < Mesh->Bones.Num(); i++)
 	{
 		const FMeshBone &B = Mesh->Bones[i];
 
@@ -198,7 +199,16 @@ void CSkelMeshInstance::UpdateSkeleton(int Seq, float Time)	//?? can use local v
 		// to desired pose
 		CCoords tmp;
 		InvertCoords(BoneCoords[i], tmp);
-		RefBoneCoords[i].UnTransformCoords(tmp, BoneTransform[i]);
+		RefBoneCoords[i].UnTransformCoords(tmp, tmp);
+		// add base transform (scale, offset, rotate)
+		tmp.UnTransformCoords(BaseTransformScaled, BoneTransform[i]);
+	}
+	// scale/rotate/offset BoneCoords[] (used for skeleton visualization and
+	// may be used for bone collision detection)
+	for (i = 0; i < Mesh->Bones.Num(); i++)
+	{
+		CCoords &C = BoneCoords[i];
+		BaseTransformScaled.TransformCoords(C, C);
 	}
 	unguard;
 }

@@ -11,11 +11,23 @@ public:
 	// linked data
 	ULodMesh		*pMesh;
 	CMeshViewer		*Viewport;
+	// common properties
+	CCoords			BaseTransform;
+	CCoords			BaseTransformScaled;
 
 	CMeshInstance(ULodMesh *Mesh, CMeshViewer *Viewer)
 	:	pMesh(Mesh)
 	,	Viewport(Viewer)
-	{}
+	{
+		SetAxis(Mesh->RotOrigin, BaseTransform.axis);
+		BaseTransform.origin[0] = Mesh->MeshOrigin.X * Mesh->MeshScale.X;
+		BaseTransform.origin[1] = Mesh->MeshOrigin.Y * Mesh->MeshScale.Y;
+		BaseTransform.origin[2] = Mesh->MeshOrigin.Z * Mesh->MeshScale.Z;
+
+		BaseTransformScaled.axis = BaseTransform.axis;
+		BaseTransformScaled.axis.PrescaleSource((CVec3&)Mesh->MeshScale);
+		BaseTransformScaled.origin = (CVec3&)Mesh->MeshOrigin;
+	}
 	virtual ~CMeshInstance()
 	{}
 

@@ -120,6 +120,19 @@ void CAxis::UnTransformAxis(const CAxis &src, CAxis &dst) const
 	dst = tmp;
 }
 
+void CAxis::PrescaleSource(const CVec3 &scale)
+{
+	v[0][0] *= scale[0];
+	v[1][0] *= scale[0];
+	v[2][0] *= scale[0];
+	v[0][1] *= scale[1];
+	v[1][1] *= scale[1];
+	v[2][1] *= scale[1];
+	v[0][2] *= scale[2];
+	v[1][2] *= scale[2];
+	v[2][2] *= scale[2];
+}
+
 
 /*-----------------------------------------------------------------------------
 	CCoords

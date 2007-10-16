@@ -21,18 +21,19 @@ void CVertMeshInstance::Draw()
 		for (j = 0; j < 3; j++)
 		{
 			const FMeshWedge &W = Mesh->Wedges[F.iWedge[j]];
+			CVec3 tmp;
 			// vertex
 			const FMeshVert &V = Mesh->Verts[base + W.iVertex];
-			CVec3 &v = Vert[j];
-			v[0] = V.X * Mesh->MeshScale.X /*+ Mesh->MeshOrigin.X*/;
-			v[1] = V.Y * Mesh->MeshScale.Y /*+ Mesh->MeshOrigin.Y*/;
-			v[2] = V.Z * Mesh->MeshScale.Z /*+ Mesh->MeshOrigin.Z*/;
+			tmp[0] = V.X * Mesh->MeshScale.X;
+			tmp[1] = V.Y * Mesh->MeshScale.Y;
+			tmp[2] = V.Z * Mesh->MeshScale.Z;
+			BaseTransform.TransformPoint(tmp, Vert[j]);
 			// normal
 			const FMeshNorm &N = ((UVertMesh*)Mesh)->Normals[base + W.iVertex];
-			CVec3 &n = Norm[j];
-			n[0] = (N.X - 512.0f) / 512;
-			n[1] = (N.Y - 512.0f) / 512;
-			n[2] = (N.Z - 512.0f) / 512;
+			tmp[0] = (N.X - 512.0f) / 512;
+			tmp[1] = (N.Y - 512.0f) / 512;
+			tmp[2] = (N.Z - 512.0f) / 512;
+			BaseTransform.axis.TransformVector(tmp, Norm[j]);
 		}
 
 		// draw mesh
@@ -47,9 +48,10 @@ void CVertMeshInstance::Draw()
 			glVertex3fv(Vert[j].v);
 		}
 		glEnd();
-		glDisable(GL_LIGHTING);
 		if (Viewport->bShowNormals)
 		{
+			glDisable(GL_LIGHTING);
+			glDisable(GL_TEXTURE_2D);
 			// draw normals
 			glBegin(GL_LINES);
 			glColor3f(1, 0.5, 0);

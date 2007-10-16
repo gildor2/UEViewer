@@ -1,6 +1,34 @@
 #include "ObjectViewer.h"
 #include "MeshInstance.h"
 
+//!! move outside
+void SetAxis(const FRotator &Rot, CAxis &Axis)
+{
+	CVec3 angles;
+	angles[YAW]   = -Rot.Yaw   / 32768.0f * 180;
+	angles[ROLL]  = -Rot.Pitch / 32768.0f * 180;
+	angles[PITCH] =  Rot.Roll  / 32768.0f * 180;
+	Axis.FromEuler(angles);
+}
+
+
+CMeshViewer::CMeshViewer(ULodMesh *Mesh)
+:	CObjectViewer(Mesh)
+,	bShowNormals(false)
+,	bWireframe(false)
+{
+	// compute model center by Z-axis (vertical)
+	CVec3 offset;
+	float z = (Mesh->BoundingBox.Max.Z + Mesh->BoundingBox.Min.Z) / 2;
+	// scale/translate origin
+	z = ((z - Mesh->MeshOrigin.Z) * Mesh->MeshScale.Z);
+	// offset view
+	offset.Set(0, 0, z);
+	GL::SetViewOffset(offset);
+	// automatically scale view distance depending on model size
+	GL::SetDistScale(Mesh->MeshScale.X * Mesh->BoundingSphere.R / 150);
+}
+
 
 CMeshViewer::~CMeshViewer()
 {
@@ -68,19 +96,24 @@ void CMeshViewer::Dump()
 
 void CMeshViewer::Draw3D()
 {
+	// draw axis
 	glBegin(GL_LINES);
 	for (int i = 0; i < 3; i++)
 	{
 		CVec3 tmp = nullVec3;
 		tmp[i] = 1;
 		glColor3fv(tmp.v);
-		tmp[i] = 100;
+		tmp[i] = 70;
 		glVertex3fv(tmp.v);
 		glVertex3fv(nullVec3.v);
 	}
 	glEnd();
 	glColor3f(1, 1, 1);
-
+	// draw mesh
 	assert(Inst);
+	glPolygonMode(GL_FRONT_AND_BACK, bWireframe ? GL_LINE : GL_FILL);
 	Inst->Draw();
+	// restore draw state
+	glColor3f(1, 1, 1);
+	glDisable(GL_TEXTURE_2D);
 }

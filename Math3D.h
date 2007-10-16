@@ -170,6 +170,7 @@ struct CAxis
 	void UnTransformVector(const CVec3 &src, CVec3 &dst) const;
 	void TransformAxis(const CAxis &src, CAxis &dst) const;
 	void UnTransformAxis(const CAxis &src, CAxis &dst) const;
+	void PrescaleSource(const CVec3 &scale);
 	// indexed access
 	inline CVec3& operator[](int index)
 	{

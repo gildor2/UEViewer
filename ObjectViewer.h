@@ -24,6 +24,7 @@ class CSkelMeshInstance;
 
 //?? move outside
 UMaterial *BindDefaultMaterial();
+void SetAxis(const FRotator &Rot, CAxis &Axis);
 
 
 /*-----------------------------------------------------------------------------
@@ -38,6 +39,7 @@ public:
 	CObjectViewer(UObject *Obj)
 	:	Object(Obj)
 	{
+		GL::SetDistScale(1);
 		GL::ResetView();
 		GL::SetViewOffset(nullVec3);
 	}
@@ -110,26 +112,19 @@ public:
 	// view mode
 	bool			bShowNormals;
 	bool			bColorMaterials;
+	bool			bWireframe;
 	// linked data
 	CMeshInstance	*Inst;
 
-	CMeshViewer(ULodMesh *Mesh)
-	:	CObjectViewer(Mesh)
-	,	bShowNormals(false)
-	{
-		// compute model center by Z-axis (vertical)
-		CVec3 offset;
-		offset.Set(0, 0, (Mesh->BoundingBox.Max.Z + Mesh->BoundingBox.Min.Z) / 2);
-		GL::SetViewOffset(offset);
-	}
-
+	CMeshViewer(ULodMesh *Mesh);
 	virtual ~CMeshViewer();
 
 	virtual void ShowHelp()
 	{
 		CObjectViewer::ShowHelp();
-		GL::text("N           show normals\n");
-		GL::text("M           colorize materials\n");
+		GL::text("N           show normals\n"
+				 "W           toggle wireframe\n"
+				 "M           colorize materials\n");
 	}
 
 	virtual void ProcessKey(int key)
@@ -141,6 +136,9 @@ public:
 			break;
 		case 'm':
 			bColorMaterials = !bColorMaterials;
+			break;
+		case 'w':
+			bWireframe = !bWireframe;
 			break;
 		default:
 			CObjectViewer::ProcessKey(key);

@@ -1,25 +1,16 @@
 ! options for:
   - option to toggle lighting
   - option to toggle texturing
-  * toggle material-to-color display (different materials -- different colors, no texturing)
-  - move wireframe selection to CMeshViewer/CMeshInstance
-! move parts of VertMeshViewer::Test to MeshViewer
 ! packages have tree-like structure of objects, should use whole tree to map export->import (use
   package's "package" field recursively; note: depth can be any)
   * load proper package
   - use object with the same path
 - change alternative skin (?)
 - correct wireframe (w/o texturing)
-- material viewer: plane, box
-  ? browser for loaded objects
-  ? option to load all objects from package
 
 Animation:
 - realtime playback
 - looped animation playback
-
-Mesh:
-- display as wireframe
 
 ! UObject:
   - EndLoad():
@@ -33,9 +24,9 @@ Mesh:
 
 ! rigid parts are not displayed in LOD mode
 ? X-axis (red) should look at viewer; now - looking forward (should negate X axis)
-! should rotate/offset models
 
 - try to compile with MinGW or for Linux
+- migrate to SDL
 
 
 EXTRA KEYS:

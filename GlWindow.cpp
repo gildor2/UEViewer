@@ -37,9 +37,9 @@ namespace GL
 	CVec3 viewAngles;
 	float viewDist   = DEFAULT_DIST;
 	CVec3 viewOrigin = { -DEFAULT_DIST, 0, 0 };
+	float distScale  = 1;
 	CVec3 viewOffset = {0, 0, 0};
 	CAxis viewAxis;				// generated from angles
-	bool  isWireframe = false;
 
 
 	//-------------------------------------------------------------------------
@@ -79,10 +79,16 @@ namespace GL
 
 	void ResetView()
 	{
-		viewAngles.Set(0, 0, 0);
-		viewDist = DEFAULT_DIST;
-		viewOrigin.Set(-DEFAULT_DIST, 0, 0);
+		viewAngles.Set(0, 180, 0);
+		viewDist = DEFAULT_DIST * distScale;
+		viewOrigin.Set(DEFAULT_DIST * distScale, 0, 0);
 		viewOrigin.Add(viewOffset);
+	}
+
+	void SetDistScale(float scale)
+	{
+		distScale = scale;
+		ResetView();
 	}
 
 	void SetViewOffset(const CVec3 &offset)
@@ -160,7 +166,7 @@ namespace GL
 		}
 		if (mouseButtons & 4)	// right mouse button
 			viewDist += (float)dy / height * 400;
-		viewDist = bound(viewDist, 100, 1024);
+		viewDist = bound(viewDist, 100 * distScale, 1024 * distScale);
 		CVec3 viewDir;
 		Euler2Vecs(viewAngles, &viewDir, NULL, NULL);
 		VectorScale(viewDir, -viewDist, viewOrigin);
@@ -312,10 +318,8 @@ static void OnDisplay()
 	GL::buildMatrices();
 	GL::set3Dmode();
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL::isWireframe ? GL_LINE : GL_FILL);
-
 	// enable lighting
-	static const float lightPos[4] = {-100, 200, 100, 0};
+	static const float lightPos[4] = {100, 200, 100, 0};
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_LIGHT0);
 //	glEnable(GL_LIGHTING);
@@ -340,8 +344,7 @@ static void OnDisplay()
 				 "H           toggle help\n"
 				 "LeftMouse   rotate view\n"
 				 "RightMouse  move view\n"
-				 "R           reset view\n"
-				 "W           toggle wireframe\n");
+				 "R           reset view\n");
 	}
 	AppDisplayTexts(isHelpVisible);
 
@@ -361,9 +364,6 @@ static void OnKeyboard(unsigned char key, int x, int y)
 		break;
 	case 'r':
 		GL::ResetView();
-		break;
-	case 'w':
-		GL::isWireframe = !GL::isWireframe;
 		break;
 	default:
 		AppKeyEvent(key);
