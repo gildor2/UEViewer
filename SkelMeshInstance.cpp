@@ -2,6 +2,20 @@
 #include "MeshInstance.h"
 
 
+struct CMeshBoneData
+{
+	// static data (computed after mesh loading)
+	int			BoneMap;			// index of bone in animation tracks
+	CCoords		RefCoords;			// coordinates of bone in reference pose
+	CCoords		RefCoordsInv;		// inverse of RefCoordsInv
+	// dynamic data (depends from current pose)
+	CCoords		Coords;				// current coordinates of bone
+	CCoords		Transform;			// used to transform vertex from reference pose to current pose
+	// skeleton configuration
+	float		Scale;				// bone scale; 1=unscaled
+};
+
+
 CSkelMeshInstance::CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewer)
 :	CMeshInstance(Mesh, Viewer)
 ,	LodNum(-1)
@@ -11,30 +25,28 @@ CSkelMeshInstance::CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewe
 	guard(CSkelMeshInstance::CSkelMeshInstance);
 
 	int NumBones = Mesh->Bones.Num();
-
-	BoneCoords    = new CCoords[NumBones];
-	RefBoneCoords = new CCoords[NumBones];
-	BoneTransform = new CCoords[NumBones];
-	BoneMap       = new int    [NumBones];
-	MeshVerts     = new CVec3  [Mesh->Points.Num()];
-
 	const UMeshAnimation *Anim = Mesh->Animation;
 
+	// allocate some arrays
+	BoneData  = new CMeshBoneData[NumBones];
+	MeshVerts = new CVec3[Mesh->Points.Num()];
+
 	int i;
-	for (i = 0; i < NumBones; i++)
+	CMeshBoneData *data;
+	for (i = 0, data = BoneData; i < NumBones; i++, data++)
 	{
 		const FMeshBone &B = Mesh->Bones[i];
 		// NOTE: assumed, that parent bones goes first
 		assert(B.ParentIndex <= i);
 
 		// find reference bone in animation track
-		BoneMap[i] = -1;
+		data->BoneMap = -1;
 		if (Anim)
 		{
 			for (int j = 0; j < Anim->RefBones.Num(); j++)
 				if (!strcmp(B.Name, Anim->RefBones[j].Name))
 				{
-					BoneMap[i] = j;
+					data->BoneMap = j;
 					break;
 				}
 		}
@@ -47,12 +59,16 @@ CSkelMeshInstance::CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewe
 		BO = (CQuat&)B.BonePos.Orientation;
 		if (!i) BO.Conjugate();
 
-		CCoords &BC = RefBoneCoords[i];
+		CCoords &BC = data->RefCoords;
 		BC.origin = BP;
 		BO.ToAxis(BC.axis);
 		// move bone position to global coordinate space
 		if (i)	// do not rotate root bone
-			RefBoneCoords[Mesh->Bones[i].ParentIndex].UnTransformCoords(BC, BC);
+			BoneData[Mesh->Bones[i].ParentIndex].RefCoords.UnTransformCoords(BC, BC);
+		// store inverted transformation too
+		InvertCoords(data->RefCoords, data->RefCoordsInv);
+		// initialize skeleton configuration
+		data->Scale = 1.0f;			// default bone scale
 	}
 
 	// normalize VertInfluences: sum of all influences may be != 1
@@ -95,11 +111,26 @@ CSkelMeshInstance::CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewe
 
 CSkelMeshInstance::~CSkelMeshInstance()
 {
-	delete BoneCoords;
-	delete RefBoneCoords;
-	delete BoneTransform;
-	delete BoneMap;
+	delete BoneData;
 	delete MeshVerts;
+}
+
+
+int CSkelMeshInstance::FindBone(const char *BoneName) const
+{
+	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	for (int i = 0; i < Mesh->Bones.Num(); i++)
+		if (!strcmp(Mesh->Bones[i].Name, BoneName))
+			return i;
+	return -1;
+}
+
+
+void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
+{
+	int BoneIndex = FindBone(BoneName);
+	if (BoneIndex < 0) return;
+	BoneData[BoneIndex].Scale = scale;
 }
 
 
@@ -169,13 +200,14 @@ void CSkelMeshInstance::UpdateSkeleton(int Seq, float Time)	//?? can use local v
 		Motion = &Anim->Moves[Seq];
 
 	int i;
-	for (i = 0; i < Mesh->Bones.Num(); i++)
+	CMeshBoneData *data;
+	for (i = 0, data = BoneData; i < Mesh->Bones.Num(); i++, data++)
 	{
 		const FMeshBone &B = Mesh->Bones[i];
 
 		CVec3 BP;
 		CQuat BO;
-		int BoneIndex = BoneMap[i];
+		int BoneIndex = data->BoneMap;
 		if (Motion && BoneIndex >= 0)
 		{
 			// get bone position from track
@@ -189,26 +221,31 @@ void CSkelMeshInstance::UpdateSkeleton(int Seq, float Time)	//?? can use local v
 		}
 		if (!i) BO.Conjugate();
 
-		CCoords &BC = BoneCoords[i];
+		CCoords &BC = data->Coords;
 		BC.origin = BP;
 		BO.ToAxis(BC.axis);
 		// move bone position to global coordinate space
-		if (i)	// do not rotate root bone
-			BoneCoords[Mesh->Bones[i].ParentIndex].UnTransformCoords(BC, BC);
+		if (!i)
+		{
+			// root bone - use BaseTransform
+			// can use inverted BaseTransformScaled to avoid 'slow' operation
+			BaseTransformScaled.TransformCoordsSlow(BC, BC);
+		}
+		else
+		{
+			// other bones - rotate around parent bone
+			BoneData[Mesh->Bones[i].ParentIndex].Coords.UnTransformCoords(BC, BC);
+		}
+		// deform skeleton according to external settings
+		if (data->Scale != 1.0f)
+		{
+			BC.axis[0].Scale(data->Scale);
+			BC.axis[1].Scale(data->Scale);
+			BC.axis[2].Scale(data->Scale);
+		}
 		// compute transformation for world-space vertices from reference pose
 		// to desired pose
-		CCoords tmp;
-		InvertCoords(BoneCoords[i], tmp);
-		RefBoneCoords[i].UnTransformCoords(tmp, tmp);
-		// add base transform (scale, offset, rotate)
-		tmp.UnTransformCoords(BaseTransformScaled, BoneTransform[i]);
-	}
-	// scale/rotate/offset BoneCoords[] (used for skeleton visualization and
-	// may be used for bone collision detection)
-	for (i = 0; i < Mesh->Bones.Num(); i++)
-	{
-		CCoords &C = BoneCoords[i];
-		BaseTransformScaled.TransformCoords(C, C);
+		BC.UnTransformCoords(data->RefCoordsInv, data->Transform);
 	}
 	unguard;
 }
@@ -227,7 +264,7 @@ void CSkelMeshInstance::DrawSkeleton()
 	for (int i = 0; i < Mesh->Bones.Num(); i++)
 	{
 		const FMeshBone &B  = Mesh->Bones[i];
-		const CCoords   &BC = BoneCoords[i];
+		const CCoords   &BC = BoneData[i].Coords;
 
 		CVec3 v2;
 		v2.Set(10, 0, 0);
@@ -240,7 +277,7 @@ void CSkelMeshInstance::DrawSkeleton()
 		if (i > 0)
 		{
 			glColor3f(1,1,0.3);
-			glVertex3fv(BoneCoords[B.ParentIndex].origin.v);
+			glVertex3fv(BoneData[B.ParentIndex].Coords.origin.v);
 		}
 		else
 		{
@@ -270,17 +307,17 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh()
 	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
 	{
 		const FVertInfluences &Inf = Mesh->VertInfluences[i];
-		int BoneIndex  = Inf.BoneIndex;
+		const CMeshBoneData &data = BoneData[Inf.BoneIndex];
 		int PointIndex = Inf.PointIndex;
 		const CVec3 &Src = (CVec3&)Mesh->Points[PointIndex];
 		CVec3 tmp;
 #if 0
 		// variant 1: ref pose -> local bone space -> transformed bone to world
-		RefBoneCoords[BoneIndex].TransformPoint(Src, tmp);
-		BoneCoords[BoneIndex].UnTransformPoint(tmp, tmp);
+		data.RefCoords.TransformPoint(Src, tmp);
+		data.Coords.UnTransformPoint(tmp, tmp);
 #else
 		// variant 2: use prepared transformation (same result, but faster)
-		BoneTransform[BoneIndex].TransformPoint(Src, tmp);
+		data.Transform.UnTransformPoint(Src, tmp);
 #endif
 		VectorMA(MeshVerts[PointIndex], Inf.Weight, tmp);
 	}

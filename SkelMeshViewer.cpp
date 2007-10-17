@@ -7,6 +7,16 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 ,	ShowSkel(0)
 {
 	Inst = new CSkelMeshInstance(Mesh, this);
+#if 0
+	CSkelMeshInstance* Inst2 = (CSkelMeshInstance*)Inst;
+	Inst2->SetBoneScale("Bip01 Pelvis", 1.4);
+//	Inst2->SetBoneScale("Bip01 Spine1", 2);
+	Inst2->SetBoneScale("Bip01 Head", 0.8);
+	Inst2->SetBoneScale("Bip01 L UpperArm", 1.2);
+	Inst2->SetBoneScale("Bip01 R UpperArm", 1.2);
+	Inst2->SetBoneScale("Bip01 R Thigh", 0.4);
+	Inst2->SetBoneScale("Bip01 L Thigh", 0.4);
+#endif
 }
 
 

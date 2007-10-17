@@ -1,12 +1,11 @@
 ! options for:
   - option to toggle lighting
-  - option to toggle texturing
+  ? option to toggle texturing
 ! packages have tree-like structure of objects, should use whole tree to map export->import (use
   package's "package" field recursively; note: depth can be any)
   * load proper package
-  - use object with the same path
+  - use object with the same path (problem: how to pass object path to search?)
 - change alternative skin (?)
-- correct wireframe (w/o texturing)
 
 Animation:
 - realtime playback
@@ -26,7 +25,7 @@ Animation:
 ? X-axis (red) should look at viewer; now - looking forward (should negate X axis)
 
 - try to compile with MinGW or for Linux
-- migrate to SDL
+- migrate to SDL; use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
 
 
 EXTRA KEYS:

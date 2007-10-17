@@ -210,27 +210,22 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	if (!test)
 		appSetNotifyHeader("%s:  %s'%s'", Obj->Package->SelfName, Obj->GetClassName(), Obj->Name);
 	// create viewer class
-	if (Obj->IsA("VertMesh"))
-	{
-		if (test) return true;
-		Viewer = new CVertMeshViewer(static_cast<UVertMesh*>(Obj));
+#define CLASS_VIEWER(UClass, CViewer)	\
+	if (Obj->IsA(#UClass + 1))			\
+	{									\
+		if (!test)						\
+			Viewer = new CViewer(static_cast<UClass*>(Obj)); \
+		return true;					\
 	}
-	else if (Obj->IsA("SkeletalMesh"))
-	{
-		if (test) return true;
-		Viewer = new CSkelMeshViewer(static_cast<USkeletalMesh*>(Obj));
-	}
-	else if (Obj->IsA("Material"))
-	{
-		if (test) return true;
-		Viewer = new CMaterialViewer(static_cast<UMaterial*>(Obj));
-	}
-	else
-	{
-		if (test) return false;
+	// create viewer for known class
+	CLASS_VIEWER(UVertMesh,     CVertMeshViewer);
+	CLASS_VIEWER(USkeletalMesh, CSkelMeshViewer);
+	CLASS_VIEWER(UMaterial,     CMaterialViewer);
+	// fallback for unknown class
+	if (!test)
 		Viewer = new CObjectViewer(Obj);
-	}
-	return true;
+	return false;
+#undef CLASS_VIEWER
 	unguard;
 }
 
@@ -248,6 +243,7 @@ void AppKeyEvent(int key)
 	guard(AppKeyEvent);
 	if (key == SPEC_KEY(PAGE_DOWN) || key == SPEC_KEY(PAGE_UP))
 	{
+		// browse loaded objects
 		int looped = 0;
 		UObject *Obj;
 		while (true)

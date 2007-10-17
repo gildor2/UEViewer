@@ -12,8 +12,8 @@ public:
 	ULodMesh		*pMesh;
 	CMeshViewer		*Viewport;
 	// common properties
-	CCoords			BaseTransform;
-	CCoords			BaseTransformScaled;
+	CCoords			BaseTransform;			// rotation for mesh; have identity axis
+	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
 
 	CMeshInstance(ULodMesh *Mesh, CMeshViewer *Viewer)
 	:	pMesh(Mesh)
@@ -25,7 +25,11 @@ public:
 		BaseTransform.origin[2] = Mesh->MeshOrigin.Z * Mesh->MeshScale.Z;
 
 		BaseTransformScaled.axis = BaseTransform.axis;
-		BaseTransformScaled.axis.PrescaleSource((CVec3&)Mesh->MeshScale);
+		CVec3 tmp;
+		tmp[0] = 1.0f / Mesh->MeshScale.X;
+		tmp[1] = 1.0f / Mesh->MeshScale.Y;
+		tmp[2] = 1.0f / Mesh->MeshScale.Z;
+		BaseTransformScaled.axis.PrescaleSource(tmp);
 		BaseTransformScaled.origin = (CVec3&)Mesh->MeshOrigin;
 	}
 	virtual ~CMeshInstance()
@@ -49,7 +53,7 @@ public:
 			glDisable(GL_TEXTURE_2D);
 			glDisable(GL_CULL_FACE);
 			int color = Index + 1;
-			if (color > 7) color = 2;
+			if (color > 7) color = 7;
 			glColor3f(color & 1, (color & 2) >> 1, (color & 4) >> 2);
 		}
 	}
@@ -83,12 +87,6 @@ public:
 class CSkelMeshInstance : public CMeshInstance
 {
 public:
-	// mesh data
-	CCoords		*BoneCoords;
-	CCoords		*RefBoneCoords;
-	CCoords		*BoneTransform;		// transformation for verts from reference pose to deformed
-	CVec3		*MeshVerts;
-	int			*BoneMap;			// remap indices of Mesh.FMeshBone[] to Anim.FNamedBone[]
 	// mesh state
 	int			LodNum;
 	int			CurrAnim;
@@ -102,6 +100,16 @@ public:
 	void DrawSkeleton();
 	void DrawBaseSkeletalMesh();
 	void DrawLodSkeletalMesh(const FStaticLODModel *lod);
+
+	// skeleton configuration
+	void SetBoneScale(const char *BoneName, float scale = 1.0f);
+
+private:
+	// mesh data
+	struct CMeshBoneData *BoneData;
+	CVec3		*MeshVerts;
+
+	int FindBone(const char *BoneName) const;
 };
 
 

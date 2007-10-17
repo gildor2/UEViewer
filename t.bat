@@ -8,22 +8,25 @@ if exist %ut_path%/system/ut2004.exe goto path_ok
 set ut_path=c:/games/unreal/ut2004
 :path_ok
 set run=UnLoader.exe -path=%ut_path%
+set run2=UnLoader.exe -path=data
 
 rem goto materials
 
 rem ---------------------------------------------------------------------------
 
-rem %run% HumanFemaleA
+%run% HumanMaleA MercMaleD
 rem %run% HumanFemaleA MercFemaleB
+rem %run% HumanFemaleA
+rem %run% HumanMaleA
+
 rem %run% SkaarjPack_rc
 rem %run% SkaarjPack_rc NaliCow
-%run% HumanMaleA
 rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
-rem UnLoader.exe -path=data data/MarineModel.ukx MarineMesh_Male
-rem UnLoader.exe data/test.ukx Male SkeletalMesh
-rem UnLoader.exe -path=c:/games/unreal/ut2004 data/2K4_NvidiaIntro.ukx Intro2k4Skaarj SkeletalMesh
-rem UnLoader.exe data/2K4_NvidiaIntro.ukx Intro2k4Skaarj
-rem %run% data/HumanMaleA.ukx MercMaleD
+rem %run2% MarineModel MarineMesh_Male
+rem %run2% TarjaAnim
+rem %run2% test Male SkeletalMesh
+rem %run% 2K4_NvidiaIntro Intro2k4Skaarj SkeletalMesh
+rem %run2% Bender
 goto exit
 
 

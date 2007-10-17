@@ -72,9 +72,15 @@ struct CVec3
 	}
 	//!! +ScaleTo(dst)
 	float GetLength() const;
+	inline float GetLengthSq() const
+	{
+		return dot(*this, *this);
+	}
 	float Normalize();			// returns vector length
 	float NormalizeFast();		//?? 2-arg version too?
 	void FindAxisVectors(CVec3 &right, CVec3 &up) const;
+
+	friend float dot(const CVec3&, const CVec3&);
 };
 
 
@@ -166,9 +172,11 @@ struct CAxis
 	CVec3	v[3];
 	// methods
 	void FromEuler(const CVec3 &angles);
-	void TransformVector(const CVec3 &src, CVec3 &dst) const;
+	void TransformVector(const CVec3 &src, CVec3 &dst) const;		// orthonormal 'this'
+	void TransformVectorSlow(const CVec3 &src, CVec3 &dst) const;	// any 'this'
 	void UnTransformVector(const CVec3 &src, CVec3 &dst) const;
-	void TransformAxis(const CAxis &src, CAxis &dst) const;
+	void TransformAxis(const CAxis &src, CAxis &dst) const;			// orthonormal 'this'
+	void TransformAxisSlow(const CAxis &src, CAxis &dst) const;		// any 'this'
 	void UnTransformAxis(const CAxis &src, CAxis &dst) const;
 	void PrescaleSource(const CVec3 &scale);
 	// indexed access
@@ -181,7 +189,7 @@ struct CAxis
 		return v[index];
 	}
 };
-// NOTE: to produce inverted axis, can transpose matrix (valid for orthogonal matrix only)
+
 
 struct CCoords
 {
@@ -189,9 +197,11 @@ struct CCoords
 	CVec3	origin;
 	CAxis	axis;
 	// methods
-	void TransformPoint(const CVec3 &src, CVec3 &dst) const;
+	void TransformPoint(const CVec3 &src, CVec3 &dst) const;		// orthonormal 'this'
+	void TransformPointSlow(const CVec3 &src, CVec3 &dst) const;	// any 'this'
 	void UnTransformPoint(const CVec3 &src, CVec3 &dst) const;
-	void TransformCoords(const CCoords &src, CCoords &dst) const;
+	void TransformCoords(const CCoords &src, CCoords &dst) const;	// orthonormal 'this'
+	void TransformCoordsSlow(const CCoords &src, CCoords &dst) const; // any 'this'
 	void UnTransformCoords(const CCoords &src, CCoords &dst) const;
 };
 
@@ -202,7 +212,8 @@ void TransformPoint(const CVec3 &origin, const CAxis &axis, const CVec3 &src, CV
 // local coordinate system -> global coordinate system
 void UnTransformPoint(const CVec3 &origin, const CAxis &axis, const CVec3 &src, CVec3 &dst);
 // compute reverse transformation
-void InvertCoords(const CCoords &S, CCoords &D);
+void InvertCoords(const CCoords &S, CCoords &D);					// orthonormal S
+void InvertCoordsSlow(const CCoords &S, CCoords &D);				// any S
 
 
 /*-----------------------------------------------------------------------------
@@ -226,9 +237,10 @@ float Vec2Yaw(const CVec3 &vec);
 	Some constants
 -----------------------------------------------------------------------------*/
 
-extern const CVec3 nullVec3;
+extern const CVec3   nullVec3;
 //extern const CBox  nullBox;
-extern const CAxis identAxis;
+extern const CAxis   identAxis;
+extern const CCoords identCoords;
 
 
 /*-----------------------------------------------------------------------------

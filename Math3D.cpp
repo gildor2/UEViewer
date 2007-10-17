@@ -5,9 +5,10 @@
 	Constant geometry objects
 -----------------------------------------------------------------------------*/
 
-const CVec3 nullVec3  = {0,0,0};
+const CVec3   nullVec3    = {0,0,0};
 //const CBox	nullBox   = {{0,0,0}, {0,0,0}};
-const CAxis identAxis = {1,0,0,  0,1,0,  0,0,1};
+const CAxis   identAxis   = {1,0,0,  0,1,0,  0,0,1};
+const CCoords identCoords = { {0,0,0}, {1,0,0, 0,1,0, 0,0,1} };
 
 
 /*-----------------------------------------------------------------------------
@@ -94,6 +95,13 @@ void CAxis::TransformVector(const CVec3 &src, CVec3 &dst) const
 	dst[2] = dot(src, v[2]);
 }
 
+void CAxis::TransformVectorSlow(const CVec3 &src, CVec3 &dst) const
+{
+	dst[0] = dot(src, v[0]) / v[0].GetLengthSq();
+	dst[1] = dot(src, v[1]) / v[1].GetLengthSq();
+	dst[2] = dot(src, v[2]) / v[2].GetLengthSq();
+}
+
 void CAxis::UnTransformVector(const CVec3 &src, CVec3 &dst) const
 {
 	CVec3 tmp;
@@ -108,6 +116,15 @@ void CAxis::TransformAxis(const CAxis &src, CAxis &dst) const
 	TransformVector(src[0], tmp[0]);
 	TransformVector(src[1], tmp[1]);
 	TransformVector(src[2], tmp[2]);
+	dst = tmp;
+}
+
+void CAxis::TransformAxisSlow(const CAxis &src, CAxis &dst) const
+{
+	CAxis tmp;
+	TransformVectorSlow(src[0], tmp[0]);
+	TransformVectorSlow(src[1], tmp[1]);
+	TransformVectorSlow(src[2], tmp[2]);
 	dst = tmp;
 }
 
@@ -147,6 +164,15 @@ void CCoords::TransformPoint(const CVec3 &src, CVec3 &dst) const
 	dst[2] = dot(tmp, axis[2]);
 }
 
+void CCoords::TransformPointSlow(const CVec3 &src, CVec3 &dst) const
+{
+	CVec3 tmp;
+	VectorSubtract(src, origin, tmp);
+	dst[0] = dot(tmp, axis[0]) / axis[0].GetLengthSq();
+	dst[1] = dot(tmp, axis[1]) / axis[1].GetLengthSq();
+	dst[2] = dot(tmp, axis[2]) / axis[2].GetLengthSq();
+}
+
 void CCoords::UnTransformPoint(const CVec3 &src, CVec3 &dst) const
 {
 	CVec3 tmp;
@@ -159,6 +185,12 @@ void CCoords::TransformCoords(const CCoords &src, CCoords &dst) const
 {
 	TransformPoint(src.origin, dst.origin);
 	axis.TransformAxis(src.axis, dst.axis);
+}
+
+void CCoords::TransformCoordsSlow(const CCoords &src, CCoords &dst) const
+{
+	TransformPointSlow(src.origin, dst.origin);
+	axis.TransformAxisSlow(src.axis, dst.axis);
 }
 
 void CCoords::UnTransformCoords(const CCoords &src, CCoords &dst) const
@@ -185,6 +217,7 @@ void UnTransformPoint(const CVec3 &origin, const CAxis &axis, const CVec3 &src, 
 }
 
 
+// orthonormal coords can be inverted fast
 void InvertCoords(const CCoords &S, CCoords &D)
 {
 	CCoords T;		// to allow inplace inversion (when &D==&S)
@@ -202,6 +235,12 @@ void InvertCoords(const CCoords &S, CCoords &D)
 	T.axis[2][1] = S.axis[1][2];
 	T.axis[2][2] = S.axis[2][2];
 	D = T;
+}
+
+
+void InvertCoordsSlow(const CCoords &S, CCoords &D)
+{
+	S.TransformCoordsSlow(identCoords, D);
 }
 
 

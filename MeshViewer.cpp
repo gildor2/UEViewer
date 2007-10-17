@@ -116,4 +116,5 @@ void CMeshViewer::Draw3D()
 	// restore draw state
 	glColor3f(1, 1, 1);
 	glDisable(GL_TEXTURE_2D);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
