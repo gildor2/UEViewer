@@ -7,10 +7,6 @@
   - use object with the same path (problem: how to pass object path to search?)
 - change alternative skin (?)
 
-Animation:
-- realtime playback
-- looped animation playback
-
 ! UObject:
   - EndLoad():
     1) sort by package/offset; priority for CURRENT package
@@ -26,6 +22,7 @@ Animation:
 
 - try to compile with MinGW or for Linux
 - migrate to SDL; use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
+- move new Math3D parts to Quake2 core
 
 
 EXTRA KEYS:

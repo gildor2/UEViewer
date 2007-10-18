@@ -631,7 +631,7 @@ struct FStaticLODModel
 	int						LODMaxInfluences;
 	int						f114;
 	int						f118;
-	// have another params: ReductionError (float), Coherence (int)
+	// have another params: float ReductionError, int Coherence
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel &M)
 	{

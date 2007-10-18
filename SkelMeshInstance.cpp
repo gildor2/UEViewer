@@ -16,10 +16,14 @@ struct CMeshBoneData
 };
 
 
+/*-----------------------------------------------------------------------------
+	Create/destroy
+-----------------------------------------------------------------------------*/
+
 CSkelMeshInstance::CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewer)
 :	CMeshInstance(Mesh, Viewer)
 ,	LodNum(-1)
-,	CurrAnim(-1)
+,	AnimIndex(-1)
 ,	AnimTime(0)
 {
 	guard(CSkelMeshInstance::CSkelMeshInstance);
@@ -116,11 +120,28 @@ CSkelMeshInstance::~CSkelMeshInstance()
 }
 
 
+/*-----------------------------------------------------------------------------
+	Miscellaneous
+-----------------------------------------------------------------------------*/
+
 int CSkelMeshInstance::FindBone(const char *BoneName) const
 {
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
 	for (int i = 0; i < Mesh->Bones.Num(); i++)
 		if (!strcmp(Mesh->Bones[i].Name, BoneName))
+			return i;
+	return -1;
+}
+
+
+int CSkelMeshInstance::FindAnim(const char *AnimName) const
+{
+	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const UMeshAnimation *Anim = Mesh->Animation;
+	if (!Anim)
+		return -1;
+	for (int i = 0; i < Anim->AnimSeqs.Num(); i++)
+		if (!strcmp(Anim->AnimSeqs[i].Name, AnimName))
 			return i;
 	return -1;
 }
@@ -134,10 +155,16 @@ void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 }
 
 
-void GetBonePosition(const AnalogTrack &A, float time, CVec3 &DstPos, CQuat &DstQuat)
+/*-----------------------------------------------------------------------------
+	Skeletal animation support
+-----------------------------------------------------------------------------*/
+
+static void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
+	CVec3 &DstPos, CQuat &DstQuat)
 {
+	guard(GetBonePosition);
+
 	int i;
-	float frac;
 
 	// fast case: 1 frame only
 	if (A.KeyTime.Num() == 1)
@@ -149,55 +176,81 @@ void GetBonePosition(const AnalogTrack &A, float time, CVec3 &DstPos, CQuat &Dst
 
 	// find index in time key array
 	//!! linear search -> binary search
-	for (i = 0; i < A.KeyTime.Num(); i++)
+	int NumKeys = A.KeyTime.Num();
+	for (i = 0; i < NumKeys; i++)
 	{
-		if (time == A.KeyTime[i])
+		if (Frame == A.KeyTime[i])
 		{
 			// exact key found
 			DstPos  = (A.KeyPos.Num()  > 1) ? (CVec3&)A.KeyPos[i]  : (CVec3&)A.KeyPos[0];
 			DstQuat = (A.KeyQuat.Num() > 1) ? (CQuat&)A.KeyQuat[i] : (CQuat&)A.KeyQuat[0];
 			return;
 		}
-		if (time < A.KeyTime[i])
+		if (Frame < A.KeyTime[i])
 		{
 			i--;
 			break;
 		}
 	}
-	//?? clamp time, should wrap
-	if (i >= A.KeyTime.Num() - 1)
+	if (i > NumKeys-1)
+		i = NumKeys-1;
+
+	int X = i;
+	int Y = i+1;
+	float frac;
+	if (Y >= NumKeys)
 	{
-		i = A.KeyTime.Num() - 1;
-		frac = 0;
+		if (!Loop)
+		{
+			// clamp animation
+			Y = NumKeys-1;
+			assert(X == Y);
+			frac = 0;
+		}
+		else
+		{
+			// loop animation
+			Y = 0;
+			frac = (Frame - A.KeyTime[X]) / (NumFrames - A.KeyTime[X]);
+		}
 	}
 	else
 	{
-		//!! when last frame, looping should use NumFrames instead of 2nd time
-		frac = (time - A.KeyTime[i]) / (A.KeyTime[i+1] - A.KeyTime[i]);
+		frac = (Frame - A.KeyTime[X]) / (A.KeyTime[Y] - A.KeyTime[X]);
 	}
+
+	assert(X >= 0 && X < NumKeys);
+	assert(Y >= 0 && Y < NumKeys);
+
 	// get position
 	if (A.KeyPos.Num() > 1)
-		Lerp((CVec3&)A.KeyPos[i], (CVec3&)A.KeyPos[i+1], frac, DstPos);
+		Lerp((CVec3&)A.KeyPos[X], (CVec3&)A.KeyPos[Y], frac, DstPos);
 	else
 		DstPos = (CVec3&)A.KeyPos[0];
 	// get orientation
 	if (A.KeyQuat.Num() > 1)
-		Slerp((CQuat&)A.KeyQuat[i], (CQuat&)A.KeyQuat[i+1], frac, DstQuat);
+		Slerp((CQuat&)A.KeyQuat[X], (CQuat&)A.KeyQuat[Y], frac, DstQuat);
 	else
 		DstQuat = (CQuat&)A.KeyQuat[0];
+
+	unguard;
 }
 
 
-void CSkelMeshInstance::UpdateSkeleton(int Seq, float Time)	//?? can use local vars instead of Seq/Time
+void CSkelMeshInstance::UpdateSkeleton()
 {
 	guard(CSkelMeshInstance::UpdateSkeleton);
 
 	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
 	const UMeshAnimation *Anim = Mesh->Animation;
 
-	const MotionChunk *Motion = NULL;
-	if (Seq >= 0)
-		Motion = &Anim->Moves[Seq];
+	const MotionChunk  *Motion = NULL;
+	const FMeshAnimSeq *AnimSeq = NULL;
+	if (AnimIndex >= 0)
+	{
+		Motion  = &Anim->Moves[AnimIndex];
+		AnimSeq = &Anim->AnimSeqs[AnimIndex];
+	}
 
 	int i;
 	CMeshBoneData *data;
@@ -211,7 +264,7 @@ void CSkelMeshInstance::UpdateSkeleton(int Seq, float Time)	//?? can use local v
 		if (Motion && BoneIndex >= 0)
 		{
 			// get bone position from track
-			GetBonePosition(Motion->AnimTracks[BoneIndex], Time, BP, BO);
+			GetBonePosition(Motion->AnimTracks[BoneIndex], AnimTime, AnimSeq->NumFrames, AnimLooped, BP, BO);
 		}
 		else
 		{
@@ -250,6 +303,103 @@ void CSkelMeshInstance::UpdateSkeleton(int Seq, float Time)	//?? can use local v
 	unguard;
 }
 
+
+void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, bool Looped)
+{
+	guard(CSkelMeshInstance::PlayAnimInternal);
+
+	AnimIndex = FindAnim(AnimName);
+	if (AnimIndex < 0)
+	{
+		// show default pose
+		AnimTime   = 0;
+		AnimRate   = 0;
+		AnimLooped = false;
+		return;
+	}
+
+	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const UMeshAnimation *Anim = Mesh->Animation;
+	assert(Anim);
+
+	AnimTime   = 0;
+	AnimRate   = Anim->AnimSeqs[AnimIndex].Rate * Rate;
+	AnimLooped = Looped;
+
+	unguard;
+}
+
+
+void CSkelMeshInstance::FreezeAnimAt(float Time)
+{
+	guard(CSkelMeshInstance::FreezeAnimAt);
+	AnimTime = Time;
+	AnimRate = 0;
+	unguard;
+}
+
+
+void CSkelMeshInstance::GetAnimParams(const char *&AnimName, float &Frame, float &NumFrames, float &Rate)
+{
+	guard(CSkelMeshInstance::GetAnimParams);
+
+	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const UMeshAnimation *Anim = Mesh->Animation;
+	if (!Anim || AnimIndex < 0)
+	{
+		AnimName  = "None";
+		Frame     = 0;
+		NumFrames = 0;
+		Rate      = 0;
+		return;
+	}
+	const FMeshAnimSeq &AnimSeq = Anim->AnimSeqs[AnimIndex];
+	AnimName  = AnimSeq.Name;
+	Frame     = AnimTime;
+	NumFrames = AnimSeq.NumFrames;
+	Rate      = AnimRate;
+
+	unguard;
+}
+
+
+void CSkelMeshInstance::Tick(float TimeDelta)
+{
+	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const UMeshAnimation *Anim = Mesh->Animation;
+
+	if (AnimIndex >= 0)
+	{
+		AnimTime += TimeDelta * AnimRate;
+		const FMeshAnimSeq &Seq = Anim->AnimSeqs[AnimIndex];
+		if (AnimLooped)
+		{
+			if (AnimTime >= Seq.NumFrames)
+			{
+				// wrap time
+				int numSkip = appFloor(AnimTime / Seq.NumFrames);
+				AnimTime -= numSkip * Seq.NumFrames;
+			}
+		}
+		else
+		{
+			if (AnimTime >= Seq.NumFrames-1)
+			{
+				// clamp time
+				AnimTime = Seq.NumFrames-1;
+				if (AnimTime < 0)
+					AnimTime = 0;
+			}
+		}
+	}
+
+	UpdateSkeleton();
+}
+
+
+/*-----------------------------------------------------------------------------
+	Drawing
+-----------------------------------------------------------------------------*/
 
 void CSkelMeshInstance::DrawSkeleton()
 {
@@ -361,7 +511,6 @@ void CSkelMeshInstance::Draw()
 	USkeletalMesh   *Mesh   = static_cast<USkeletalMesh*>(pMesh);
 	CSkelMeshViewer *Viewer = static_cast<CSkelMeshViewer*>(Viewport);
 
-	UpdateSkeleton(CurrAnim, AnimTime);
 	// show skeleton
 	if (Viewer->ShowSkel)		//!! move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
 		DrawSkeleton();

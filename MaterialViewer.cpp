@@ -3,8 +3,10 @@
 
 void CMaterialViewer::Draw3D()
 {
+	// bind material
 	UMaterial *Mat = static_cast<UMaterial*>(Object);
 	Mat->Bind();
+	// and draw box
 	static const CVec3 box[] =
 	{
 #define A 100

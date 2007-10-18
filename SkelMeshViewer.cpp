@@ -5,6 +5,7 @@
 CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	ShowSkel(0)
+,	AnimIndex(-1)
 {
 	Inst = new CSkelMeshInstance(Mesh, this);
 #if 0
@@ -201,41 +202,48 @@ void CSkelMeshViewer::Draw2D()
 	int NumAnims = 0;
 	if (Mesh->Animation)
 		NumAnims = Mesh->Animation->AnimSeqs.Num();
-	const char *AnimName = MeshInst->CurrAnim < 0 ? "default" : *Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].Name;
-	float AnimRate       = MeshInst->CurrAnim < 0 ? 0         :  Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].Rate;
-	int   AnimFrames     = MeshInst->CurrAnim < 0 ? 0         :  Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].NumFrames;
+
+	const char *AnimName;
+	float Frame, NumFrames, Rate;
+	MeshInst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
 
 	if (MeshInst->LodNum < 0)
 		GL::textf("LOD : base mesh\n");
 	else
 		GL::textf("LOD : %d/%d\n", MeshInst->LodNum+1, Mesh->StaticLODModels.Num());
-	GL::textf("Anim: %d/%d (%s) rate: %g frames: %d\n", MeshInst->CurrAnim+1, NumAnims, AnimName, AnimRate, AnimFrames);
-	GL::textf("Time: %.1f/%d\n", MeshInst->AnimTime, AnimFrames);
-#if 0
-	if (CurrAnim >= 0)
-	{
-		// display bone tracks info for selected animation
-		for (int i = 0; i < Mesh->Bones.Num(); i++)
-		{
-			const AnalogTrack &A = Mesh->Animation->Moves[CurrAnim].AnimTracks[i];
-			GL::textf("%2d: %-20s: q[%d] p[%d] t[%d](%g .. %g)\n", i, *Mesh->Bones[i].Name,
-				A.KeyQuat.Num(), A.KeyPos.Num(), A.KeyTime.Num(), A.KeyTime[0], A.KeyTime[A.KeyTime.Num()-1]);
-		}
-	}
-#endif
+	GL::textf("Anim: %d/%d (%s) rate: %g frames: %g\n", AnimIndex+1, NumAnims, AnimName, Rate, NumFrames);
+	GL::textf("Time: %.1f/%g\n", Frame, NumFrames);
+}
+
+
+void CSkelMeshViewer::ShowHelp()
+{
+	CMeshViewer::ShowHelp();
+	GL::text("L           cycle mesh LODs\n");
+	GL::text("S           show skeleton\n");
+	GL::text("[]          prev/next animation\n");
+	GL::text("<>          prev/next frame\n");
+	GL::text("Space       play animation\n");
+	GL::text("X           play looped animation\n");
 }
 
 
 void CSkelMeshViewer::ProcessKey(int key)
 {
+	guard(CSkelMeshViewer::ProcessKey);
+
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
-	int NumAnims = 0, NumFrames = 0;
+	int NumAnims = 0;
 	if (Mesh->Animation)
 		NumAnims  = Mesh->Animation->AnimSeqs.Num();
-	if (MeshInst->CurrAnim >= 0)
-		NumFrames = Mesh->Animation->AnimSeqs[MeshInst->CurrAnim].NumFrames;
+
+	const char *AnimName;
+	float		Frame;
+	float		NumFrames;
+	float		Rate;
+	MeshInst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
 
 	switch (key)
 	{
@@ -243,45 +251,67 @@ void CSkelMeshViewer::ProcessKey(int key)
 		if (++MeshInst->LodNum >= Mesh->StaticLODModels.Num())
 			MeshInst->LodNum = -1;
 		break;
+
 	case '[':
-		if (--MeshInst->CurrAnim < -1)
-			MeshInst->CurrAnim = NumAnims - 1;
-		MeshInst->AnimTime = 0;
-		break;
 	case ']':
-		if (++MeshInst->CurrAnim >= NumAnims)
-			MeshInst->CurrAnim = -1;
-		MeshInst->AnimTime = 0;
-		break;
-	case ',':		// '<'
-		MeshInst->AnimTime -= 0.2;
-		if (MeshInst->AnimTime < 0)
-			MeshInst->AnimTime = 0;
-		break;
-	case '.':		// '>'
-		if (NumFrames > 0)
+		if (NumAnims)
 		{
-			MeshInst->AnimTime += 0.2;
-			if (MeshInst->AnimTime > NumFrames - 1)
-				MeshInst->AnimTime = NumFrames - 1;
+			if (key == '[')
+			{
+				if (--AnimIndex < -1)
+					AnimIndex = NumAnims - 1;
+			}
+			else
+			{
+				if (++AnimIndex >= NumAnims)
+					AnimIndex = -1;
+			}
+			// note: AnimIndex changed now
+			if (AnimIndex >= 0)
+				AnimName = Mesh->Animation->AnimSeqs[AnimIndex].Name;
+			else
+				AnimName = "None";
+			MeshInst->PlayAnim(AnimName);
+			MeshInst->FreezeAnimAt(0);
 		}
 		break;
+
+	case ',':		// '<'
+	case '.':		// '>'
+		if (key == ',')
+		{
+			Frame -= 0.2f;
+			if (Frame < 0)
+				Frame = 0;
+		}
+		else
+		{
+			Frame += 0.2f;
+			if (Frame > NumFrames - 1)
+				Frame = NumFrames - 1;
+			if (Frame < 0)
+				Frame = 0;
+		}
+		MeshInst->FreezeAnimAt(Frame);
+		break;
+
+	case ' ':
+		if (AnimIndex >= 0)
+			MeshInst->PlayAnim(AnimName);
+		break;
+	case 'x':
+		if (AnimIndex >= 0)
+			MeshInst->LoopAnim(AnimName);
+		break;
+
 	case 's':
 		if (++ShowSkel > 2)
 			ShowSkel = 0;
 		break;
-#if 1
-	//!! REMOVE
-	case 'a':
-		if (MeshInst->LodNum >= 0)
-		{
-			const TArray<unsigned>& A = Mesh->StaticLODModels[MeshInst->LodNum].f0;
-			for (int i = 0; i < A.Num(); i++)
-				printf("%-4d %08X  /  %d  /  %g\n", i, A[i], A[i], (float&)A[i]);
-		}
-		break;
-#endif
+
 	default:
 		CMeshViewer::ProcessKey(key);
 	}
+
+	unguard;
 }

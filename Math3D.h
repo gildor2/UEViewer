@@ -52,11 +52,17 @@ struct CVec3
 		FNegate(v[2]);
 	}
 	//!! +NegateTo(dst)
-	inline void Scale(float scale) //?? == "operator *=(float)"
+	inline void Scale(float scale)
 	{
 		v[0] *= scale;
 		v[1] *= scale;
 		v[2] *= scale;
+	}
+	inline void Scale(const CVec3 &scale)
+	{
+		v[0] *= scale[0];
+		v[1] *= scale[1];
+		v[2] *= scale[2];
 	}
 	inline void Add(const CVec3 &a) //?? == "operator +=(CVec3&)"
 	{
@@ -178,7 +184,7 @@ struct CAxis
 	void TransformAxis(const CAxis &src, CAxis &dst) const;			// orthonormal 'this'
 	void TransformAxisSlow(const CAxis &src, CAxis &dst) const;		// any 'this'
 	void UnTransformAxis(const CAxis &src, CAxis &dst) const;
-	void PrescaleSource(const CVec3 &scale);
+	void PrescaleSource(const CVec3 &scale);						// scale vector before transformation by this axis
 	// indexed access
 	inline CVec3& operator[](int index)
 	{
@@ -237,9 +243,9 @@ float Vec2Yaw(const CVec3 &vec);
 	Some constants
 -----------------------------------------------------------------------------*/
 
-extern const CVec3   nullVec3;
+#define nullVec3	identCoords.origin
 //extern const CBox  nullBox;
-extern const CAxis   identAxis;
+#define identAxis	identCoords.axis
 extern const CCoords identCoords;
 
 

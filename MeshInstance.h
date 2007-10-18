@@ -59,6 +59,8 @@ public:
 	}
 
 	virtual void Draw() = NULL;
+	virtual void Tick(float TimeDelta)
+	{}
 };
 
 
@@ -89,14 +91,11 @@ class CSkelMeshInstance : public CMeshInstance
 public:
 	// mesh state
 	int			LodNum;
-	int			CurrAnim;
-	float		AnimTime;
 
 	CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewer);
 	virtual ~CSkelMeshInstance();
 	virtual void Draw();
 
-	void UpdateSkeleton(int Seq, float Time);
 	void DrawSkeleton();
 	void DrawBaseSkeletalMesh();
 	void DrawLodSkeletalMesh(const FStaticLODModel *lod);
@@ -104,12 +103,39 @@ public:
 	// skeleton configuration
 	void SetBoneScale(const char *BoneName, float scale = 1.0f);
 
+	// animation
+	void PlayAnim(const char *AnimName, float Rate = 1 /*, float TweenTime = 0, int Channel = 0*/)
+	{
+		PlayAnimInternal(AnimName, Rate, false);
+	}
+	void LoopAnim(const char *AnimName, float Rate = 1 /*, float TweenTime = 0, int Channel = 0*/)
+	{
+		PlayAnimInternal(AnimName, Rate, true);
+	}
+	void FreezeAnimAt(float Time       /*, int Channel = 0*/);
+	// get animation information:
+	// Frame     = 0..NumFrames
+	// NumFrames = animation length, frames
+	// Rate      = frames per seconds
+	void GetAnimParams(/*int Channel,*/ const char *&AnimName, float &Frame, float &NumFrames, float &Rate);
+
+	virtual void Tick(float TimeDelta);
+
 private:
 	// mesh data
 	struct CMeshBoneData *BoneData;
 	CVec3		*MeshVerts;
+	// animation state
+	//!! make multi-channel
+	int			AnimIndex;
+	float		AnimTime;
+	float		AnimRate;
+	bool		AnimLooped;
 
 	int FindBone(const char *BoneName) const;
+	int FindAnim(const char *AnimName) const;
+	void PlayAnimInternal(const char *AnimName, float Rate /*, TweenTime, Channel */, bool Looped);
+	void UpdateSkeleton();
 };
 
 

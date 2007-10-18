@@ -116,6 +116,8 @@ public:
 	// linked data
 	CMeshInstance	*Inst;
 
+	unsigned		CurrentTime;
+
 	CMeshViewer(ULodMesh *Mesh);
 	virtual ~CMeshViewer();
 
@@ -173,17 +175,10 @@ class CSkelMeshViewer : public CMeshViewer
 {
 public:
 	int		ShowSkel;		// 0 - mesh, 1 - mesh+skel, 2 - skel only
+	int		AnimIndex;
 
 	CSkelMeshViewer(USkeletalMesh *Mesh);
-	virtual void ShowHelp()
-	{
-		CMeshViewer::ShowHelp();
-		GL::text("L           cycle mesh LODs\n");
-		GL::text("S           show skeleton\n");
-		GL::text("[]          prev/next animation\n");
-		GL::text("<>          prev/next frame\n");
-	}
-
+	virtual void ShowHelp();
 	virtual void Dump();
 	TEST_OBJECT;
 	virtual void Draw2D();

@@ -16,6 +16,11 @@ CMeshViewer::CMeshViewer(ULodMesh *Mesh)
 :	CObjectViewer(Mesh)
 ,	bShowNormals(false)
 ,	bWireframe(false)
+#if _WIN32
+,	CurrentTime(GetTickCount())
+#else
+#error Port!  //!! WIN32
+#endif
 {
 	// compute model center by Z-axis (vertical)
 	CVec3 offset;
@@ -70,7 +75,7 @@ void CMeshViewer::Dump()
 		Mesh->Verts.Num(),
 		FVECTOR_ARG(Mesh->MeshScale),
 		FVECTOR_ARG(Mesh->MeshOrigin),
-		ROTATOR_ARG(Mesh->RotOrigin),
+		FROTATOR_ARG(Mesh->RotOrigin),
 		Mesh->FaceLevel.Num(),
 		Mesh->Faces.Num(),
 		Mesh->CollapseWedgeThus.Num(),
@@ -96,6 +101,19 @@ void CMeshViewer::Dump()
 
 void CMeshViewer::Draw3D()
 {
+	guard(CMeshViewer::Draw3D);
+	assert(Inst);
+
+	// tick animations
+#if _WIN32
+	unsigned time = GetTickCount();
+#else
+#error Port!		//!! WIN32
+#endif
+	float TimeDelta = (time - CurrentTime) / 1000.0f;
+	CurrentTime = time;
+	Inst->Tick(TimeDelta);
+
 	// draw axis
 	glBegin(GL_LINES);
 	for (int i = 0; i < 3; i++)
@@ -109,12 +127,15 @@ void CMeshViewer::Draw3D()
 	}
 	glEnd();
 	glColor3f(1, 1, 1);
+
 	// draw mesh
-	assert(Inst);
 	glPolygonMode(GL_FRONT_AND_BACK, bWireframe ? GL_LINE : GL_FILL);
 	Inst->Draw();
+
 	// restore draw state
 	glColor3f(1, 1, 1);
 	glDisable(GL_TEXTURE_2D);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	unguard;
 }

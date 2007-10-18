@@ -20,7 +20,7 @@
 #define ARRAY_COUNT(array)	(sizeof(array)/sizeof(array[0]))
 
 #define FVECTOR_ARG(v)		v.X, v.Y, v.Z
-#define ROTATOR_ARG(r)		r.Yaw, r.Pitch, r.Roll
+#define FROTATOR_ARG(r)		r.Yaw, r.Pitch, r.Roll
 
 #define BYTES4(a,b,c,d)	((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
 
@@ -41,6 +41,9 @@
 #define min(a,b)  (((a) < (b)) ? (a) : (b))
 #define max(a,b)  (((a) > (b)) ? (a) : (b))
 #define bound(a,minval,maxval)  ( ((a) > (minval)) ? ( ((a) < (maxval)) ? (a) : (maxval) ) : (minval) )
+
+#define appFloor(x)		( (int)floor(x) )
+#define appCeil(x)		( (int)ceil(x) )
 
 
 #if _MSC_VER

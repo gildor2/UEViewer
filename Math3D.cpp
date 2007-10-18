@@ -5,9 +5,7 @@
 	Constant geometry objects
 -----------------------------------------------------------------------------*/
 
-const CVec3   nullVec3    = {0,0,0};
 //const CBox	nullBox   = {{0,0,0}, {0,0,0}};
-const CAxis   identAxis   = {1,0,0,  0,1,0,  0,0,1};
 const CCoords identCoords = { {0,0,0}, {1,0,0, 0,1,0, 0,0,1} };
 
 
@@ -121,6 +119,8 @@ void CAxis::TransformAxis(const CAxis &src, CAxis &dst) const
 
 void CAxis::TransformAxisSlow(const CAxis &src, CAxis &dst) const
 {
+	//!! can speedup operation by pre-computing scales for axes (1/LenSq)
+	//?? also, can speedup CCoords 'slow' functions
 	CAxis tmp;
 	TransformVectorSlow(src[0], tmp[0]);
 	TransformVectorSlow(src[1], tmp[1]);
@@ -139,15 +139,9 @@ void CAxis::UnTransformAxis(const CAxis &src, CAxis &dst) const
 
 void CAxis::PrescaleSource(const CVec3 &scale)
 {
-	v[0][0] *= scale[0];
-	v[1][0] *= scale[0];
-	v[2][0] *= scale[0];
-	v[0][1] *= scale[1];
-	v[1][1] *= scale[1];
-	v[2][1] *= scale[1];
-	v[0][2] *= scale[2];
-	v[1][2] *= scale[2];
-	v[2][2] *= scale[2];
+	v[0].Scale(scale);
+	v[1].Scale(scale);
+	v[2].Scale(scale);
 }
 
 
