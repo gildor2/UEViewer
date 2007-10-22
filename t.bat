@@ -18,9 +18,10 @@ rem ---------------------------------------------------------------------------
 rem %run% HumanFemaleA MercFemaleB
 rem %run% HumanFemaleA
 rem %run% HumanMaleA
+rem %run% Bot
 
 rem %run% SkaarjPack_rc
-rem %run% SkaarjPack_rc NaliCow
+%run% SkaarjPack_rc NaliCow
 rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
 rem %run2% MarineModel MarineMesh_Male
 rem %run2% TarjaAnim

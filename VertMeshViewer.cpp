@@ -62,23 +62,3 @@ void CVertMeshViewer::Dump()
 		Mesh->StreamVersion
 	);
 }
-
-
-void CVertMeshViewer::ProcessKey(int key)
-{
-	CVertMeshInstance *MeshInst = static_cast<CVertMeshInstance*>(Inst);
-	int FrameCount = (static_cast<UVertMesh*>(Object))->FrameCount;
-	switch (key)
-	{
-	case '1':
-		if (++MeshInst->FrameNum >= FrameCount)
-			MeshInst->FrameNum = 0;
-		break;
-	case '2':
-		if (--MeshInst->FrameNum < 0)
-			MeshInst->FrameNum = FrameCount-1;
-		break;
-	default:
-		CMeshViewer::ProcessKey(key);
-	}
-}

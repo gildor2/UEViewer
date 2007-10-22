@@ -59,8 +59,36 @@ public:
 	}
 
 	virtual void Draw() = NULL;
-	virtual void Tick(float TimeDelta)
-	{}
+	virtual void UpdateAnimation(float TimeDelta) = NULL;
+
+	// animation control
+	void PlayAnim(const char *AnimName, float Rate = 1, float TweenTime = 0 /*, int Channel = 0*/)
+	{
+		PlayAnimInternal(AnimName, Rate, TweenTime, false);
+	}
+	void LoopAnim(const char *AnimName, float Rate = 1, float TweenTime = 0 /*, int Channel = 0*/)
+	{
+		PlayAnimInternal(AnimName, Rate, TweenTime, true);
+	}
+	void TweenAnim(const char *AnimName, float TweenTime /*, int Channel */)
+	{
+		PlayAnimInternal(AnimName, 0, TweenTime, false);
+	}
+
+	virtual void AnimStopLooping(/*int Channel */) = NULL;
+	virtual void FreezeAnimAt(float Time /*, int Channel = 0*/) = NULL;
+
+	// animation state
+	virtual void GetAnimParams(/*int Channel,*/ const char *&AnimName,
+		float &Frame, float &NumFrames, float &Rate) const = NULL;
+	virtual bool IsTweening(/*int Channel*/) = NULL;
+
+	// animation enumeration
+	virtual int GetAnimCount() const = NULL;
+	virtual const char *GetAnimName(int Index) const = NULL;
+
+private:
+	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime /*, int Channel*/, bool Looped) = NULL;
 };
 
 
@@ -71,14 +99,57 @@ public:
 class CVertMeshInstance : public CMeshInstance
 {
 public:
-	// mesh state
-	int			FrameNum;
-
 	CVertMeshInstance(UVertMesh *Mesh, CVertMeshViewer *Viewer)
 	:	CMeshInstance(Mesh, Viewer)
-	,	FrameNum(0)
+	,	AnimIndex(-1)
+	,	AnimTime(0)
 	{}
 	virtual void Draw();
+
+	// animation control
+	virtual void AnimStopLooping(/*int Channel */)
+	{
+		AnimLooped = false;
+	}
+	virtual void FreezeAnimAt(float Time /*, int Channel = 0*/);
+
+	// animation state
+	virtual void GetAnimParams(/*int Channel,*/ const char *&AnimName,
+		float &Frame, float &NumFrames, float &Rate) const;
+	virtual bool IsTweening(/*int Channel*/)
+	{
+		return false;
+	}
+
+	// animation enumeration
+	virtual int GetAnimCount() const
+	{
+		const UVertMesh *Mesh = GetMesh();
+		return Mesh->AnimSeqs.Num();
+	}
+	virtual const char *GetAnimName(int Index) const
+	{
+		guard(CVertMeshInstance::GetAnimName);
+		if (Index < 0) return "None";
+		return GetMesh()->AnimSeqs[Index].Name;
+		unguard;
+	}
+
+	virtual void UpdateAnimation(float TimeDelta);
+
+private:
+	// animation state
+	int			AnimIndex;			// current animation sequence
+	float		AnimTime;			// current animation frame
+	float		AnimRate;			// animation rate, frames per seconds
+	bool		AnimLooped;
+
+	const UVertMesh *GetMesh() const
+	{
+		return static_cast<UVertMesh*>(pMesh);
+	}
+	int FindAnim(const char *AnimName) const;
+	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime /*, int Channel*/, bool Looped);
 };
 
 
@@ -103,23 +174,49 @@ public:
 	// skeleton configuration
 	void SetBoneScale(const char *BoneName, float scale = 1.0f);
 
-	// animation
-	void PlayAnim(const char *AnimName, float Rate = 1 /*, float TweenTime = 0, int Channel = 0*/)
+	// animation control
+	virtual void AnimStopLooping(/*int Channel */)
 	{
-		PlayAnimInternal(AnimName, Rate, false);
+		AnimLooped = false;
 	}
-	void LoopAnim(const char *AnimName, float Rate = 1 /*, float TweenTime = 0, int Channel = 0*/)
-	{
-		PlayAnimInternal(AnimName, Rate, true);
-	}
-	void FreezeAnimAt(float Time       /*, int Channel = 0*/);
-	// get animation information:
+	virtual void FreezeAnimAt(float Time /*, int Channel = 0*/);
+
+	// animation state
+
+	// get current animation information:
 	// Frame     = 0..NumFrames
 	// NumFrames = animation length, frames
 	// Rate      = frames per seconds
-	void GetAnimParams(/*int Channel,*/ const char *&AnimName, float &Frame, float &NumFrames, float &Rate);
+	virtual void GetAnimParams(/*int Channel,*/ const char *&AnimName,
+		float &Frame, float &NumFrames, float &Rate) const;
 
-	virtual void Tick(float TimeDelta);
+	bool HasAnim(const char *AnimName) const
+	{
+		return FindAnim(AnimName) >= 0;
+	}
+	virtual bool IsTweening(/*int Channel*/)
+	{
+		return AnimTweenTime > 0;
+	}
+
+	// animation enumeration
+	virtual int GetAnimCount() const
+	{
+		const USkeletalMesh *Mesh = GetMesh();
+		if (!Mesh->Animation) return 0;
+		return Mesh->Animation->AnimSeqs.Num();
+	}
+	virtual const char *GetAnimName(int Index) const
+	{
+		guard(CSkelMeshInstance::GetAnimName);
+		if (Index < 0) return "None";
+		const USkeletalMesh *Mesh = GetMesh();
+		assert(Mesh->Animation);
+		return Mesh->Animation->AnimSeqs[Index].Name;
+		unguard;
+	}
+
+	virtual void UpdateAnimation(float TimeDelta);
 
 private:
 	// mesh data
@@ -127,14 +224,20 @@ private:
 	CVec3		*MeshVerts;
 	// animation state
 	//!! make multi-channel
-	int			AnimIndex;
-	float		AnimTime;
-	float		AnimRate;
+	int			AnimIndex;			// current animation sequence; -1 for default pose
+	float		AnimTime;			// current animation frame
+	float		AnimRate;			// animation rate, frames per seconds
+	float		AnimTweenTime;		// time to stop tweening; 0 when no tweening at all
+	float		AnimTweenStep;		// fraction between current pose and desired pose; updated in UpdateAnimation()
 	bool		AnimLooped;
 
+	const USkeletalMesh *GetMesh() const
+	{
+		return static_cast<USkeletalMesh*>(pMesh);
+	}
 	int FindBone(const char *BoneName) const;
 	int FindAnim(const char *AnimName) const;
-	void PlayAnimInternal(const char *AnimName, float Rate /*, TweenTime, Channel */, bool Looped);
+	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime /*, int Channel*/, bool Looped);
 	void UpdateSkeleton();
 };
 

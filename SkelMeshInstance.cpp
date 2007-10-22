@@ -9,8 +9,11 @@ struct CMeshBoneData
 	CCoords		RefCoords;			// coordinates of bone in reference pose
 	CCoords		RefCoordsInv;		// inverse of RefCoordsInv
 	// dynamic data (depends from current pose)
-	CCoords		Coords;				// current coordinates of bone
+	CCoords		Coords;				// current coordinates of bone, model-space
 	CCoords		Transform;			// used to transform vertex from reference pose to current pose
+	// data for tweening; bone-space
+	CVec3		Pos;				// current position of bone
+	CQuat		Quat;				// current orientation quaternion
 	// skeleton configuration
 	float		Scale;				// bone scale; 1=unscaled
 };
@@ -25,6 +28,7 @@ CSkelMeshInstance::CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewe
 ,	LodNum(-1)
 ,	AnimIndex(-1)
 ,	AnimTime(0)
+,	AnimTweenTime(0)
 {
 	guard(CSkelMeshInstance::CSkelMeshInstance);
 
@@ -126,7 +130,7 @@ CSkelMeshInstance::~CSkelMeshInstance()
 
 int CSkelMeshInstance::FindBone(const char *BoneName) const
 {
-	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh *Mesh = GetMesh();
 	for (int i = 0; i < Mesh->Bones.Num(); i++)
 		if (!strcmp(Mesh->Bones[i].Name, BoneName))
 			return i;
@@ -136,7 +140,7 @@ int CSkelMeshInstance::FindBone(const char *BoneName) const
 
 int CSkelMeshInstance::FindAnim(const char *AnimName) const
 {
-	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh *Mesh  = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 	if (!Anim)
 		return -1;
@@ -241,7 +245,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 {
 	guard(CSkelMeshInstance::UpdateSkeleton);
 
-	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh  *Mesh = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 
 	const MotionChunk  *Motion = NULL;
@@ -261,6 +265,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 		CVec3 BP;
 		CQuat BO;
 		int BoneIndex = data->BoneMap;
+		// compute bone orientation
 		if (Motion && BoneIndex >= 0)
 		{
 			// get bone position from track
@@ -274,9 +279,19 @@ void CSkelMeshInstance::UpdateSkeleton()
 		}
 		if (!i) BO.Conjugate();
 
+		if (IsTweening())
+		{
+			// interpolate orientation using AnimTweenStep
+			// current orientation -> {BP,BO}
+			Lerp(data->Pos,   BP, AnimTweenStep, BP);
+			Slerp(data->Quat, BO, AnimTweenStep, BO);
+		}
+
 		CCoords &BC = data->Coords;
 		BC.origin = BP;
 		BO.ToAxis(BC.axis);
+		data->Quat = BO;
+		data->Pos  = BP;
 		// move bone position to global coordinate space
 		if (!i)
 		{
@@ -304,27 +319,38 @@ void CSkelMeshInstance::UpdateSkeleton()
 }
 
 
-void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, bool Looped)
+void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, bool Looped)
 {
 	guard(CSkelMeshInstance::PlayAnimInternal);
 
-	AnimIndex = FindAnim(AnimName);
-	if (AnimIndex < 0)
+	int NewAnimIndex = FindAnim(AnimName);
+	if (NewAnimIndex < 0)
 	{
 		// show default pose
-		AnimTime   = 0;
-		AnimRate   = 0;
-		AnimLooped = false;
+		AnimIndex     = -1;
+		AnimTime      = 0;
+		AnimRate      = 0;
+		AnimLooped    = false;
+		AnimTweenTime = TweenTime;
 		return;
 	}
 
-	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh  *Mesh = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 	assert(Anim);
 
-	AnimTime   = 0;
-	AnimRate   = Anim->AnimSeqs[AnimIndex].Rate * Rate;
+	AnimRate   = (NewAnimIndex >= 0) ? Anim->AnimSeqs[NewAnimIndex].Rate * Rate : 0;
 	AnimLooped = Looped;
+
+	if (NewAnimIndex == AnimIndex && Looped)
+	{
+		// animation not changed, just set some flags (above)
+		return;
+	}
+
+	AnimIndex     = NewAnimIndex;
+	AnimTime      = 0;
+	AnimTweenTime = TweenTime;
 
 	unguard;
 }
@@ -339,11 +365,12 @@ void CSkelMeshInstance::FreezeAnimAt(float Time)
 }
 
 
-void CSkelMeshInstance::GetAnimParams(const char *&AnimName, float &Frame, float &NumFrames, float &Rate)
+void CSkelMeshInstance::GetAnimParams(const char *&AnimName,
+	float &Frame, float &NumFrames, float &Rate) const
 {
 	guard(CSkelMeshInstance::GetAnimParams);
 
-	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh  *Mesh = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 	if (!Anim || AnimIndex < 0)
 	{
@@ -363,32 +390,50 @@ void CSkelMeshInstance::GetAnimParams(const char *&AnimName, float &Frame, float
 }
 
 
-void CSkelMeshInstance::Tick(float TimeDelta)
+void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 {
-	const USkeletalMesh  *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh  *Mesh = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 
-	if (AnimIndex >= 0)
+	//?? loop for channels
 	{
-		AnimTime += TimeDelta * AnimRate;
-		const FMeshAnimSeq &Seq = Anim->AnimSeqs[AnimIndex];
-		if (AnimLooped)
+		// update tweening
+		if (AnimTweenTime)
 		{
-			if (AnimTime >= Seq.NumFrames)
+			AnimTweenStep = TimeDelta / AnimTweenTime;
+			AnimTweenTime -= TimeDelta;
+			if (AnimTweenTime < 0)
 			{
-				// wrap time
-				int numSkip = appFloor(AnimTime / Seq.NumFrames);
-				AnimTime -= numSkip * Seq.NumFrames;
+				// stop tweening, start animation
+				TimeDelta = -AnimTweenTime;
+				AnimTweenTime = 0;
 			}
+			assert(AnimTime == 0);
 		}
-		else
+		// note: AnimTweenTime may be changed now, check again
+		if (!AnimTweenTime && AnimIndex >= 0)
 		{
-			if (AnimTime >= Seq.NumFrames-1)
+			// update animation time
+			AnimTime += TimeDelta * AnimRate;
+			const FMeshAnimSeq &Seq = Anim->AnimSeqs[AnimIndex];
+			if (AnimLooped)
 			{
-				// clamp time
-				AnimTime = Seq.NumFrames-1;
-				if (AnimTime < 0)
-					AnimTime = 0;
+				if (AnimTime >= Seq.NumFrames)
+				{
+					// wrap time
+					int numSkip = appFloor(AnimTime / Seq.NumFrames);
+					AnimTime -= numSkip * Seq.NumFrames;
+				}
+			}
+			else
+			{
+				if (AnimTime >= Seq.NumFrames-1)
+				{
+					// clamp time
+					AnimTime = Seq.NumFrames-1;
+					if (AnimTime < 0)
+						AnimTime = 0;
+				}
 			}
 		}
 	}
@@ -405,7 +450,7 @@ void CSkelMeshInstance::DrawSkeleton()
 {
 	guard(CSkelMeshInstance::DrawSkeleton);
 
-	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh *Mesh = GetMesh();
 
 	glLineWidth(3);
 	glEnable(GL_LINE_SMOOTH);
@@ -451,7 +496,7 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh()
 	guard(CSkelMeshInstance::DrawBaseSkeletalMesh);
 	int i;
 
-	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(pMesh);
+	const USkeletalMesh *Mesh = GetMesh();
 
 	memset(MeshVerts, 0, sizeof(CVec3) * Mesh->VertexCount);
 	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
@@ -508,8 +553,8 @@ void CSkelMeshInstance::Draw()
 {
 	guard(CSkelMeshInstance::Draw);
 
-	USkeletalMesh   *Mesh   = static_cast<USkeletalMesh*>(pMesh);
-	CSkelMeshViewer *Viewer = static_cast<CSkelMeshViewer*>(Viewport);
+	const USkeletalMesh *Mesh = GetMesh();
+	CSkelMeshViewer *Viewer   = static_cast<CSkelMeshViewer*>(Viewport);
 
 	// show skeleton
 	if (Viewer->ShowSkel)		//!! move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc

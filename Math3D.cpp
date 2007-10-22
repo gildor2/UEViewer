@@ -418,6 +418,13 @@ void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
 
 	// get cosine of angle between quaternions
 	float cosom = A.x * B.x + A.y * B.y + A.z * B.z + A.w * B.w;
+	float sign = 1;
+	if (cosom < 0)
+	{
+		// rotation for more than 180 degree, inverse it for better result
+		cosom = -cosom;
+		sign  = -1;
+	}
 	float scaleA, scaleB;
 	if (1.0f - cosom > 1e-6f)
 	{
@@ -437,6 +444,7 @@ void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
 		scaleA = 1.0f - Alpha;
 		scaleB = Alpha;
 	}
+	scaleB *= sign;
 	// lerp result
 	dst.x = scaleA * A.x + scaleB * B.x;
 	dst.y = scaleA * A.y + scaleB * B.y;

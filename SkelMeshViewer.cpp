@@ -5,7 +5,6 @@
 CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	ShowSkel(0)
-,	AnimIndex(-1)
 {
 	Inst = new CSkelMeshInstance(Mesh, this);
 #if 0
@@ -28,7 +27,7 @@ void CSkelMeshViewer::Test()
 
 	CMeshViewer::Test();
 
-	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 
 	// ULodMesh fields
 	VERIFY_NULL(Faces.Num());
@@ -108,7 +107,7 @@ void CSkelMeshViewer::Dump()
 {
 	CMeshViewer::Dump();
 
-	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	printf(
 		"\nSkelMesh info:\n==============\n"
 		"f1FC #         %d\n"
@@ -172,23 +171,6 @@ void CSkelMeshViewer::Dump()
 			}
 		}
 	}
-
-#if 0
-	if (Mesh->Animation)
-	{
-		UMeshAnimation *Anim = Mesh->Animation;
-		printf("\nAnimation: %s\n", Anim->Name);
-		printf("f2C: %d  Moves # %d", Anim->f2C, Anim->Moves.Num());
-		for (i = 0; i < Anim->AnimSeqs.Num(); i++)
-		{
-			const FMeshAnimSeq &S = Anim->AnimSeqs[i];
-			const MotionChunk  &M = Anim->Moves[i];
-			printf("[%d] %s  %d:%d; Bones=%d:%d tracks=%d\n", i,
-				*S.Name, S.StartFrame, S.NumFrames,
-				M.StartBone, M.BoneIndices.Num(), M.AnimTracks.Num());
-		}
-	}
-#endif
 }
 
 
@@ -199,20 +181,10 @@ void CSkelMeshViewer::Draw2D()
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
-	int NumAnims = 0;
-	if (Mesh->Animation)
-		NumAnims = Mesh->Animation->AnimSeqs.Num();
-
-	const char *AnimName;
-	float Frame, NumFrames, Rate;
-	MeshInst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
-
 	if (MeshInst->LodNum < 0)
 		GL::textf("LOD : base mesh\n");
 	else
 		GL::textf("LOD : %d/%d\n", MeshInst->LodNum+1, Mesh->StaticLODModels.Num());
-	GL::textf("Anim: %d/%d (%s) rate: %g frames: %g\n", AnimIndex+1, NumAnims, AnimName, Rate, NumFrames);
-	GL::textf("Time: %.1f/%g\n", Frame, NumFrames);
 }
 
 
@@ -221,10 +193,6 @@ void CSkelMeshViewer::ShowHelp()
 	CMeshViewer::ShowHelp();
 	GL::text("L           cycle mesh LODs\n");
 	GL::text("S           show skeleton\n");
-	GL::text("[]          prev/next animation\n");
-	GL::text("<>          prev/next frame\n");
-	GL::text("Space       play animation\n");
-	GL::text("X           play looped animation\n");
 }
 
 
@@ -235,80 +203,16 @@ void CSkelMeshViewer::ProcessKey(int key)
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
-	int NumAnims = 0;
-	if (Mesh->Animation)
-		NumAnims  = Mesh->Animation->AnimSeqs.Num();
-
-	const char *AnimName;
-	float		Frame;
-	float		NumFrames;
-	float		Rate;
-	MeshInst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
-
 	switch (key)
 	{
 	case 'l':
 		if (++MeshInst->LodNum >= Mesh->StaticLODModels.Num())
 			MeshInst->LodNum = -1;
 		break;
-
-	case '[':
-	case ']':
-		if (NumAnims)
-		{
-			if (key == '[')
-			{
-				if (--AnimIndex < -1)
-					AnimIndex = NumAnims - 1;
-			}
-			else
-			{
-				if (++AnimIndex >= NumAnims)
-					AnimIndex = -1;
-			}
-			// note: AnimIndex changed now
-			if (AnimIndex >= 0)
-				AnimName = Mesh->Animation->AnimSeqs[AnimIndex].Name;
-			else
-				AnimName = "None";
-			MeshInst->PlayAnim(AnimName);
-			MeshInst->FreezeAnimAt(0);
-		}
-		break;
-
-	case ',':		// '<'
-	case '.':		// '>'
-		if (key == ',')
-		{
-			Frame -= 0.2f;
-			if (Frame < 0)
-				Frame = 0;
-		}
-		else
-		{
-			Frame += 0.2f;
-			if (Frame > NumFrames - 1)
-				Frame = NumFrames - 1;
-			if (Frame < 0)
-				Frame = 0;
-		}
-		MeshInst->FreezeAnimAt(Frame);
-		break;
-
-	case ' ':
-		if (AnimIndex >= 0)
-			MeshInst->PlayAnim(AnimName);
-		break;
-	case 'x':
-		if (AnimIndex >= 0)
-			MeshInst->LoopAnim(AnimName);
-		break;
-
 	case 's':
 		if (++ShowSkel > 2)
 			ShowSkel = 0;
 		break;
-
 	default:
 		CMeshViewer::ProcessKey(key);
 	}

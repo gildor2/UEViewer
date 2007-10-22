@@ -109,6 +109,7 @@ public:
 class CMeshViewer : public CObjectViewer
 {
 public:
+	int				AnimIndex;
 	// view mode
 	bool			bShowNormals;
 	bool			bColorMaterials;
@@ -121,34 +122,11 @@ public:
 	CMeshViewer(ULodMesh *Mesh);
 	virtual ~CMeshViewer();
 
-	virtual void ShowHelp()
-	{
-		CObjectViewer::ShowHelp();
-		GL::text("N           show normals\n"
-				 "W           toggle wireframe\n"
-				 "M           colorize materials\n");
-	}
-
-	virtual void ProcessKey(int key)
-	{
-		switch (key)
-		{
-		case 'n':
-			bShowNormals = !bShowNormals;
-			break;
-		case 'm':
-			bColorMaterials = !bColorMaterials;
-			break;
-		case 'w':
-			bWireframe = !bWireframe;
-			break;
-		default:
-			CObjectViewer::ProcessKey(key);
-		}
-	}
-
+	virtual void ShowHelp();
+	virtual void ProcessKey(int key);
 	virtual void Dump();
 	TEST_OBJECT;
+	virtual void Draw2D();
 	virtual void Draw3D();
 };
 
@@ -163,7 +141,6 @@ public:
 	CVertMeshViewer(UVertMesh *Mesh);
 	virtual void Dump();
 	TEST_OBJECT;
-	virtual void ProcessKey(int key);
 };
 
 
@@ -175,7 +152,6 @@ class CSkelMeshViewer : public CMeshViewer
 {
 public:
 	int		ShowSkel;		// 0 - mesh, 1 - mesh+skel, 2 - skel only
-	int		AnimIndex;
 
 	CSkelMeshViewer(USkeletalMesh *Mesh);
 	virtual void ShowHelp();

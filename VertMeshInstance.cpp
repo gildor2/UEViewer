@@ -2,17 +2,54 @@
 #include "MeshInstance.h"
 
 
+int CVertMeshInstance::FindAnim(const char *AnimName) const
+{
+	const UVertMesh *Mesh = GetMesh();
+	for (int i = 0; i < Mesh->AnimSeqs.Num(); i++)
+		if (!strcmp(Mesh->AnimSeqs[i].Name, AnimName))
+			return i;
+	return -1;
+}
+
+
 void CVertMeshInstance::Draw()
 {
 	guard(CVertMeshInstance::Draw);
 
-	const UVertMesh *Mesh = static_cast<UVertMesh*>(pMesh);
+	const UVertMesh *Mesh = GetMesh();
 	int i;
 
-	int base = Mesh->VertexCount * FrameNum;
+	int FrameNum1, FrameNum2;
+	float frac;
+	if (AnimIndex >= 0)
+	{
+		FrameNum1 = appFloor(AnimTime);
+		FrameNum2 = FrameNum1 + 1;
+		if (FrameNum2 >= Mesh->AnimSeqs[AnimIndex].NumFrames)
+			FrameNum2 = 0;
+		frac      = AnimTime - FrameNum1;
+		FrameNum1 += Mesh->AnimSeqs[AnimIndex].StartFrame;
+		FrameNum2 += Mesh->AnimSeqs[AnimIndex].StartFrame;
+	}
+	else
+	{
+		FrameNum1 = 0;
+		FrameNum2 = 0;
+		frac      = 0;
+	}
+	//!! lerp frames (verts+normals)
+
+	int base1 = Mesh->VertexCount * FrameNum1;
+	int base2 = Mesh->VertexCount * FrameNum2;
 
 	CVec3 Vert[3];
 	CVec3 Norm[3];
+
+	float backLerp = 1 - frac;
+	CVec3 Scale1, Scale2;
+	Scale1 = Scale2 = (CVec3&)Mesh->MeshScale;
+	Scale1.Scale(backLerp);
+	Scale2.Scale(frac);
 
 	for (i = 0; i < Mesh->Faces.Num(); i++)
 	{
@@ -22,6 +59,7 @@ void CVertMeshInstance::Draw()
 		{
 			const FMeshWedge &W = Mesh->Wedges[F.iWedge[j]];
 			CVec3 tmp;
+#if 0
 			// vertex
 			const FMeshVert &V = Mesh->Verts[base + W.iVertex];
 			tmp[0] = V.X * Mesh->MeshScale.X;
@@ -29,11 +67,27 @@ void CVertMeshInstance::Draw()
 			tmp[2] = V.Z * Mesh->MeshScale.Z;
 			BaseTransform.TransformPoint(tmp, Vert[j]);
 			// normal
-			const FMeshNorm &N = ((UVertMesh*)Mesh)->Normals[base + W.iVertex];
+			const FMeshNorm &N = Mesh->Normals[base + W.iVertex];
 			tmp[0] = (N.X - 512.0f) / 512;
 			tmp[1] = (N.Y - 512.0f) / 512;
 			tmp[2] = (N.Z - 512.0f) / 512;
 			BaseTransform.axis.TransformVector(tmp, Norm[j]);
+#else
+			// vertex
+			const FMeshVert &V1 = Mesh->Verts[base1 + W.iVertex];
+			const FMeshVert &V2 = Mesh->Verts[base2 + W.iVertex];
+			tmp[0] = V1.X * Scale1[0] + V2.X * Scale2[0];
+			tmp[1] = V1.Y * Scale1[1] + V2.Y * Scale2[1];
+			tmp[2] = V1.Z * Scale1[2] + V2.Z * Scale2[2];
+			BaseTransform.TransformPoint(tmp, Vert[j]);
+			// normal
+			const FMeshNorm &N1 = Mesh->Normals[base1 + W.iVertex];
+			const FMeshNorm &N2 = Mesh->Normals[base2 + W.iVertex];
+			tmp[0] = (N1.X * backLerp + N2.X * frac - 512.0f) / 512;
+			tmp[1] = (N1.Y * backLerp + N2.Y * frac - 512.0f) / 512;
+			tmp[2] = (N1.Z * backLerp + N2.Z * frac - 512.0f) / 512;
+			BaseTransform.axis.TransformVector(tmp, Norm[j]);
+#endif
 		}
 
 		// draw mesh
@@ -71,4 +125,101 @@ void CVertMeshInstance::Draw()
 	glEnd();
 
 	unguard;
+}
+
+
+void CVertMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, bool Looped)
+{
+	guard(CVertMeshInstance::PlayAnimInternal);
+
+	int NewAnimIndex = FindAnim(AnimName);
+	if (NewAnimIndex < 0)
+	{
+		// show default pose
+		AnimIndex     = -1;
+		AnimTime      = 0;
+		AnimRate      = 0;
+		AnimLooped    = false;
+		return;
+	}
+
+	const UVertMesh *Mesh = GetMesh();
+	AnimRate   = (NewAnimIndex >= 0) ? Mesh->AnimSeqs[NewAnimIndex].Rate * Rate : 0;
+	AnimLooped = Looped;
+
+	if (NewAnimIndex == AnimIndex && Looped)
+	{
+		// animation not changed, just set some flags (above)
+		return;
+	}
+
+	AnimIndex     = NewAnimIndex;
+	AnimTime      = 0;
+
+	unguard;
+}
+
+
+void CVertMeshInstance::FreezeAnimAt(float Time)
+{
+	guard(CVertMeshInstance::FreezeAnimAt);
+	AnimTime = Time;
+	AnimRate = 0;
+	unguard;
+}
+
+
+void CVertMeshInstance::GetAnimParams(const char *&AnimName,
+	float &Frame, float &NumFrames, float &Rate) const
+{
+	guard(CVertMeshInstance::GetAnimParams);
+
+	const UVertMesh *Mesh = GetMesh();
+	if (AnimIndex < 0)
+	{
+		AnimName  = "None";
+		Frame     = 0;
+		NumFrames = 0;
+		Rate      = 0;
+		return;
+	}
+	const FMeshAnimSeq &AnimSeq = Mesh->AnimSeqs[AnimIndex];
+	AnimName  = AnimSeq.Name;
+	Frame     = AnimTime;
+	NumFrames = AnimSeq.NumFrames;
+	Rate      = AnimRate;
+
+	unguard;
+}
+
+
+void CVertMeshInstance::UpdateAnimation(float TimeDelta)
+{
+	const UVertMesh *Mesh = GetMesh();
+
+	if (AnimIndex >= 0)
+	{
+		// update animation time
+		AnimTime += TimeDelta * AnimRate;
+		const FMeshAnimSeq &Seq = Mesh->AnimSeqs[AnimIndex];
+		if (AnimLooped)
+		{
+			if (AnimTime >= Seq.NumFrames)
+			{
+				// wrap time
+				int numSkip = appFloor(AnimTime / Seq.NumFrames);
+				AnimTime -= numSkip * Seq.NumFrames;
+			}
+		}
+		else
+		{
+			if (AnimTime >= Seq.NumFrames-1)
+			{
+				// clamp time
+				AnimTime = Seq.NumFrames-1;
+				if (AnimTime < 0)
+					AnimTime = 0;
+			}
+		}
+	}
 }

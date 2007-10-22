@@ -25,6 +25,18 @@
 - move new Math3D parts to Quake2 core
 
 
+REST TO IMPLEMENT:
+~~~~~~~~~~~~~~~~~~
+- VertexMesh:
+  - tweening
+  ? LOD support
+- SkeletalMesh:
+  - compute normals for base mesh
+    + lighting
+  - correctly display LOD models
+  - hardware skinning
+
+
 EXTRA KEYS:
 ~~~~~~~~~~~
 - show boxes
@@ -41,6 +53,7 @@ NOTES:
   * used from MOV-UT2004-Intro.ut2
 - q2 model axis: forward/left/up (?); q2 world axis: forward/right/up (?); ut model axis
   is right/forward/up
+
 
 COMPLEX MATERIALS:
 ~~~~~~~~~~~~~~~~~~
@@ -80,6 +93,7 @@ Notes:
 - it is possible, that Shader will have same object in Diffuse and SelfIllumination fields -
   - can ignore Diffuse here? (really, such shaders require SelfIllumination only, but UE
   requires non-null Diffuse, otherwise 'white' will be displayed)
+
 
 COMMON MATERIAL USE TREE:
 ~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -14,6 +14,7 @@ void SetAxis(const FRotator &Rot, CAxis &Axis)
 
 CMeshViewer::CMeshViewer(ULodMesh *Mesh)
 :	CObjectViewer(Mesh)
+,	AnimIndex(-1)
 ,	bShowNormals(false)
 ,	bWireframe(false)
 #if _WIN32
@@ -99,6 +100,24 @@ void CMeshViewer::Dump()
 }
 
 
+void CMeshViewer::Draw2D()
+{
+	guard(CMeshViewer::Draw2D);
+	CObjectViewer::Draw2D();
+
+	const char *AnimName;
+	float Frame, NumFrames, Rate;
+	Inst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
+
+	GL::textf("Anim: %d/%d (%s) rate: %g frames: %g%s\n",
+		AnimIndex+1, Inst->GetAnimCount(), AnimName, Rate, NumFrames,
+		Inst->IsTweening() ? " [tweening]" : "");
+	GL::textf("Time: %.1f/%g\n", Frame, NumFrames);
+
+	unguard;
+}
+
+
 void CMeshViewer::Draw3D()
 {
 	guard(CMeshViewer::Draw3D);
@@ -112,7 +131,7 @@ void CMeshViewer::Draw3D()
 #endif
 	float TimeDelta = (time - CurrentTime) / 1000.0f;
 	CurrentTime = time;
-	Inst->Tick(TimeDelta);
+	Inst->UpdateAnimation(TimeDelta);
 
 	// draw axis
 	glBegin(GL_LINES);
@@ -138,4 +157,95 @@ void CMeshViewer::Draw3D()
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	unguard;
+}
+
+
+void CMeshViewer::ShowHelp()
+{
+	CObjectViewer::ShowHelp();
+	GL::text("N           show normals\n"
+			 "W           toggle wireframe\n"
+			 "M           colorize materials\n"
+			 "[]          prev/next animation\n"
+			 "<>          prev/next frame\n"
+			 "Space       play animation\n"
+			 "X           play looped animation\n");
+}
+
+
+void CMeshViewer::ProcessKey(int key)
+{
+	int NumAnims = Inst->GetAnimCount();
+
+	const char *AnimName;
+	float		Frame;
+	float		NumFrames;
+	float		Rate;
+	Inst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
+
+	switch (key)
+	{
+	case 'n':
+		bShowNormals = !bShowNormals;
+		break;
+
+	case 'm':
+		bColorMaterials = !bColorMaterials;
+		break;
+
+	case 'w':
+		bWireframe = !bWireframe;
+		break;
+
+	case '[':
+	case ']':
+		if (NumAnims)
+		{
+			if (key == '[')
+			{
+				if (--AnimIndex < -1)
+					AnimIndex = NumAnims - 1;
+			}
+			else
+			{
+				if (++AnimIndex >= NumAnims)
+					AnimIndex = -1;
+			}
+			// note: AnimIndex changed now
+			AnimName = Inst->GetAnimName(AnimIndex);
+			Inst->TweenAnim(AnimName, 0.25);	// change animation with tweening
+		}
+		break;
+
+	case ',':		// '<'
+	case '.':		// '>'
+		if (key == ',')
+		{
+			Frame -= 0.2f;
+			if (Frame < 0)
+				Frame = 0;
+		}
+		else
+		{
+			Frame += 0.2f;
+			if (Frame > NumFrames - 1)
+				Frame = NumFrames - 1;
+			if (Frame < 0)
+				Frame = 0;
+		}
+		Inst->FreezeAnimAt(Frame);
+		break;
+
+	case ' ':
+		if (AnimIndex >= 0)
+			Inst->PlayAnim(AnimName);
+		break;
+	case 'x':
+		if (AnimIndex >= 0)
+			Inst->LoopAnim(AnimName);
+		break;
+
+	default:
+		CObjectViewer::ProcessKey(key);
+	}
 }
