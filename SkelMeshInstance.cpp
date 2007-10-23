@@ -248,7 +248,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 	const USkeletalMesh  *Mesh = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 
-	const MotionChunk  *Motion = NULL;
+	const MotionChunk  *Motion  = NULL;
 	const FMeshAnimSeq *AnimSeq = NULL;
 	if (AnimIndex >= 0)
 	{
@@ -273,7 +273,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 		}
 		else
 		{
-			// get default pose
+			// get default bone position
 			BP = (CVec3&)B.BonePos.Position;
 			BO = (CQuat&)B.BonePos.Orientation;
 		}
@@ -311,8 +311,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 			BC.axis[1].Scale(data->Scale);
 			BC.axis[2].Scale(data->Scale);
 		}
-		// compute transformation for world-space vertices from reference pose
-		// to desired pose
+		// compute transformation of world-space model vertices from reference
+		// pose to desired pose
 		BC.UnTransformCoords(data->RefCoordsInv, data->Transform);
 	}
 	unguard;
@@ -498,6 +498,9 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh()
 
 	const USkeletalMesh *Mesh = GetMesh();
 
+	//?? try other tech: compute weighted sum of matrices, and then
+	//?? transform vector (+ normal ?; note: normals requires normalized
+	//?? transformations ?? (or normalization guaranteed by sum(weights)==1?))
 	memset(MeshVerts, 0, sizeof(CVec3) * Mesh->VertexCount);
 	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
 	{
@@ -538,14 +541,55 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh()
 
 void CSkelMeshInstance::DrawLodSkeletalMesh(const FStaticLODModel *lod)
 {
-	int i;
-	glBegin(GL_POINTS);
-	for (i = 0; i < lod->SkinPoints.Num(); i++)
+	guard(CSkelMeshInstance::DrawLodSkeletalMesh);
+	int i, sec;
+	// smooth sections (influence count >= 2)
+	for (sec = 0; sec < lod->SmoothSections.Num(); sec++)
 	{
-		const FVector &V = lod->SkinPoints[i].Point;
-		glVertex3fv(&V.X);
+		const FSkelMeshSection &ms = lod->SmoothSections[sec];
+		SetMaterial(ms.MaterialIndex);
+		glBegin(GL_TRIANGLES);
+		//?? use smooth indices
+		for (i = 0; i < ms.NumFaces; i++)
+		{
+			const FMeshFace &F = lod->Faces[ms.FirstFace + i];
+//?? ignore F.MaterialIndex - may be any
+//			assert(F.MaterialIndex == 0);
+//			assert(F.MaterialIndex == ms.MaterialIndex);
+			for (int j = 0; j < 3; j++)
+			{
+				const FMeshWedge &W = lod->Wedges[F.iWedge[j]];
+				glTexCoord2f(W.TexUV.U, W.TexUV.V);
+				glVertex3fv(&lod->SkinPoints[W.iVertex].Point.X);
+			}
+		}
+		glEnd();
 	}
-	glEnd();
+	// rigid sections (influence count == 1)
+	for (sec = 0; sec < lod->RigidSections.Num(); sec++)
+	{
+		const FSkelMeshSection &ms = lod->RigidSections[sec];
+		SetMaterial(ms.MaterialIndex);
+		glBegin(GL_TRIANGLES);
+		for (i = 0; i < ms.NumFaces; i++)
+		{
+			const FMeshFace &F = lod->Faces[ms.FirstFace + i];
+			for (int j = 0; j < 3; j++)
+			{
+				const FMeshWedge &W = lod->Wedges[F.iWedge[j]];
+				glTexCoord2f(W.TexUV.U, W.TexUV.V);
+				glVertex3fv(&lod->VertexStream.Verts[W.iVertex].Pos.X);
+			}
+		}
+		for (i = ms.MinStreamIndex; i < ms.MinStreamIndex + ms.NumStreamIndices; i++)
+		{
+			const FAnimMeshVertex &V = lod->VertexStream.Verts[lod->RigidIndices.Indices[i]];
+			glTexCoord2f(V.Tex.U, V.Tex.V);
+			glVertex3fv(&V.Pos.X);
+		}
+		glEnd();
+	}
+	unguard;
 }
 
 
@@ -553,8 +597,8 @@ void CSkelMeshInstance::Draw()
 {
 	guard(CSkelMeshInstance::Draw);
 
-	const USkeletalMesh *Mesh = GetMesh();
-	CSkelMeshViewer *Viewer   = static_cast<CSkelMeshViewer*>(Viewport);
+	const USkeletalMesh   *Mesh   = GetMesh();
+	const CSkelMeshViewer *Viewer = static_cast<CSkelMeshViewer*>(Viewport);
 
 	// show skeleton
 	if (Viewer->ShowSkel)		//!! move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc

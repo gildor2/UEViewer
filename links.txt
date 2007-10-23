@@ -9,6 +9,8 @@ Animation:
   Using the Animation Browser and UKX Animation Packages
 
 Materials:
+- http://udn.epicgames.com/Two/TextureBrowserReference.html
+  contains documentation about texture properties
 - http://udn.epicgames.com/Two/MaterialsShaders.html
 - http://udn.epicgames.com/Two/MaterialsCombiners.html
 - http://udn.epicgames.com/Two/MaterialsFinalBlend.html

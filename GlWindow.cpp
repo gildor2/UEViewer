@@ -15,6 +15,7 @@ static float frameTime;
 //-----------------------------------------------------------------------------
 
 #define DEFAULT_DIST	256
+#define MAX_DIST		2048
 
 namespace GL
 {
@@ -166,7 +167,7 @@ namespace GL
 		}
 		if (mouseButtons & 4)	// right mouse button
 			viewDist += (float)dy / height * 400;
-		viewDist = bound(viewDist, 100 * distScale, 1024 * distScale);
+		viewDist = bound(viewDist, 100 * distScale, MAX_DIST * distScale);
 		CVec3 viewDir;
 		Euler2Vecs(viewAngles, &viewDir, NULL, NULL);
 		VectorScale(viewDir, -viewDist, viewOrigin);

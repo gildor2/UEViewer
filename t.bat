@@ -10,24 +10,25 @@ set ut_path=c:/games/unreal/ut2004
 set run=UnLoader.exe -path=%ut_path%
 set run2=UnLoader.exe -path=data
 
-rem goto materials
+goto bugs
 
 rem ---------------------------------------------------------------------------
 
-%run% HumanMaleA MercMaleD
-rem %run% HumanFemaleA MercFemaleB
+rem %run% HumanMaleA MercMaleD
+%run% HumanFemaleA MercFemaleB
 rem %run% HumanFemaleA
 rem %run% HumanMaleA
 rem %run% Bot
 
 rem %run% SkaarjPack_rc
-%run% SkaarjPack_rc NaliCow
+rem %run% SkaarjPack_rc NaliCow
 rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
 rem %run2% MarineModel MarineMesh_Male
 rem %run2% TarjaAnim
 rem %run2% test Male SkeletalMesh
 rem %run% 2K4_NvidiaIntro Intro2k4Skaarj SkeletalMesh
 rem %run2% Bender
+rem %run% NewWeapons2004
 goto exit
 
 
@@ -35,8 +36,13 @@ rem ---------------------------------------------------------------------------
 rem 	BUGS
 rem ---------------------------------------------------------------------------
 :bugs
+rem %run2% AyaneMesh ayane
+%run2% Mechanatrix_t mech_two
+rem %run2% TarjaAnim SuperFemale
+rem %run2% soria soria
 rem %run% NewWeapons2004 NewTranslauncher_1st
 rem %run% HumanMaleA NightMaleB
+rem %run% HumanFemaleA MercFemaleB
 goto exit
 
 

@@ -327,20 +327,20 @@ void UTexture::Bind()
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
-#if 0
-	// bad results ...
-	if (bAlphaTexture)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
-	else
-		glDisable(GL_BLEND);
-#else
-	if (bAlphaTexture)
+	// alpha-test
+	if (bMasked || (bAlphaTexture && Format == TEXF_DXT1))	// masked or 1-bit alpha
 	{
 		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.8);
+		glAlphaFunc(GL_GREATER, 0.8f);
+	}
+	else if (bAlphaTexture)
+	{
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.0f);
+	}
+	// blending
+	if (bAlphaTexture || bMasked)
+	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
@@ -349,7 +349,6 @@ void UTexture::Bind()
 		glDisable(GL_ALPHA_TEST);
 		glDisable(GL_BLEND);
 	}
-#endif
 	// uploading ...
 	if (TexNum < 0)
 	{

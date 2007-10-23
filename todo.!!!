@@ -17,7 +17,6 @@
     be used for each property; if function return 'false' - stop iterating. Field searching may be
     easily implemented using this tech.
 
-! rigid parts are not displayed in LOD mode
 ? X-axis (red) should look at viewer; now - looking forward (should negate X axis)
 
 - try to compile with MinGW or for Linux
