@@ -62,33 +62,33 @@ public:
 	virtual void UpdateAnimation(float TimeDelta) = NULL;
 
 	// animation control
-	void PlayAnim(const char *AnimName, float Rate = 1, float TweenTime = 0 /*, int Channel = 0*/)
+	void PlayAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
 	{
-		PlayAnimInternal(AnimName, Rate, TweenTime, false);
+		PlayAnimInternal(AnimName, Rate, TweenTime, Channel, false);
 	}
-	void LoopAnim(const char *AnimName, float Rate = 1, float TweenTime = 0 /*, int Channel = 0*/)
+	void LoopAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
 	{
-		PlayAnimInternal(AnimName, Rate, TweenTime, true);
+		PlayAnimInternal(AnimName, Rate, TweenTime, Channel, true);
 	}
-	void TweenAnim(const char *AnimName, float TweenTime /*, int Channel */)
+	void TweenAnim(const char *AnimName, float TweenTime, int Channel = 0)
 	{
-		PlayAnimInternal(AnimName, 0, TweenTime, false);
+		PlayAnimInternal(AnimName, 0, TweenTime, Channel, false);
 	}
 
-	virtual void AnimStopLooping(/*int Channel */) = NULL;
-	virtual void FreezeAnimAt(float Time /*, int Channel = 0*/) = NULL;
+	virtual void AnimStopLooping(int Channel = 0) = NULL;
+	virtual void FreezeAnimAt(float Time, int Channel = 0) = NULL;
 
 	// animation state
-	virtual void GetAnimParams(/*int Channel,*/ const char *&AnimName,
+	virtual void GetAnimParams(int Channel, const char *&AnimName,
 		float &Frame, float &NumFrames, float &Rate) const = NULL;
-	virtual bool IsTweening(/*int Channel*/) = NULL;
+	virtual bool IsTweening(int Channel = 0) = NULL;
 
 	// animation enumeration
 	virtual int GetAnimCount() const = NULL;
 	virtual const char *GetAnimName(int Index) const = NULL;
 
 private:
-	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime /*, int Channel*/, bool Looped) = NULL;
+	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped) = NULL;
 };
 
 
@@ -107,16 +107,16 @@ public:
 	virtual void Draw();
 
 	// animation control
-	virtual void AnimStopLooping(/*int Channel */)
+	virtual void AnimStopLooping(int Channel)
 	{
 		AnimLooped = false;
 	}
-	virtual void FreezeAnimAt(float Time /*, int Channel = 0*/);
+	virtual void FreezeAnimAt(float Time, int Channel);
 
 	// animation state
-	virtual void GetAnimParams(/*int Channel,*/ const char *&AnimName,
+	virtual void GetAnimParams(int Channel, const char *&AnimName,
 		float &Frame, float &NumFrames, float &Rate) const;
-	virtual bool IsTweening(/*int Channel*/)
+	virtual bool IsTweening(int Channel)
 	{
 		return false;
 	}
@@ -149,7 +149,7 @@ private:
 		return static_cast<UVertMesh*>(pMesh);
 	}
 	int FindAnim(const char *AnimName) const;
-	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime /*, int Channel*/, bool Looped);
+	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 };
 
 
@@ -157,8 +157,23 @@ private:
 	CSkelMeshInstance class
 -----------------------------------------------------------------------------*/
 
+#define MAX_SKELANIMCHANNELS	32
+
+
 class CSkelMeshInstance : public CMeshInstance
 {
+	struct CAnimChan
+	{
+		int			AnimIndex;		// current animation sequence; -1 for default pose
+		int			RootBone;		// root animation bone
+		float		BlendAlpha;		// 0 = not affected, 1 = fully affected
+		float		Time;			// current animation frame
+		float		Rate;			// animation rate, frames per seconds
+		float		TweenTime;		// time to stop tweening; 0 when no tweening at all
+		float		TweenStep;		// fraction between current pose and desired pose; updated in UpdateAnimation()
+		bool		Looped;
+	};
+
 public:
 	// mesh state
 	int			LodNum;
@@ -175,11 +190,8 @@ public:
 	void SetBoneScale(const char *BoneName, float scale = 1.0f);
 
 	// animation control
-	virtual void AnimStopLooping(/*int Channel */)
-	{
-		AnimLooped = false;
-	}
-	virtual void FreezeAnimAt(float Time /*, int Channel = 0*/);
+	virtual void AnimStopLooping(int Channel);
+	virtual void FreezeAnimAt(float Time, int Channel = 0);
 
 	// animation state
 
@@ -187,17 +199,20 @@ public:
 	// Frame     = 0..NumFrames
 	// NumFrames = animation length, frames
 	// Rate      = frames per seconds
-	virtual void GetAnimParams(/*int Channel,*/ const char *&AnimName,
+	virtual void GetAnimParams(int Channel, const char *&AnimName,
 		float &Frame, float &NumFrames, float &Rate) const;
 
 	bool HasAnim(const char *AnimName) const
 	{
 		return FindAnim(AnimName) >= 0;
 	}
-	virtual bool IsTweening(/*int Channel*/)
+	virtual bool IsTweening(int Channel)
 	{
-		return AnimTweenTime > 0;
+		return GetStage(Channel).TweenTime > 0;
 	}
+
+	// animation blending
+	void SetBlendParams(int Channel, float BlendAlpha, const char *BoneName = NULL);
 
 	// animation enumeration
 	virtual int GetAnimCount() const
@@ -223,21 +238,26 @@ private:
 	struct CMeshBoneData *BoneData;
 	CVec3		*MeshVerts;
 	// animation state
-	//!! make multi-channel
-	int			AnimIndex;			// current animation sequence; -1 for default pose
-	float		AnimTime;			// current animation frame
-	float		AnimRate;			// animation rate, frames per seconds
-	float		AnimTweenTime;		// time to stop tweening; 0 when no tweening at all
-	float		AnimTweenStep;		// fraction between current pose and desired pose; updated in UpdateAnimation()
-	bool		AnimLooped;
+	CAnimChan	Channels[MAX_SKELANIMCHANNELS];
+	int			MaxAnimChannel;
 
 	const USkeletalMesh *GetMesh() const
 	{
 		return static_cast<USkeletalMesh*>(pMesh);
 	}
+	CAnimChan &GetStage(int StageIndex)
+	{
+		assert(StageIndex >= 0 && StageIndex < MAX_SKELANIMCHANNELS);
+		return Channels[StageIndex];
+	}
+	const CAnimChan &GetStage(int StageIndex) const
+	{
+		assert(StageIndex >= 0 && StageIndex < MAX_SKELANIMCHANNELS);
+		return Channels[StageIndex];
+	}
 	int FindBone(const char *BoneName) const;
 	int FindAnim(const char *AnimName) const;
-	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime /*, int Channel*/, bool Looped);
+	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 	void UpdateSkeleton();
 };
 

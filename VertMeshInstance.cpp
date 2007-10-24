@@ -128,9 +128,10 @@ void CVertMeshInstance::Draw()
 }
 
 
-void CVertMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, bool Looped)
+void CVertMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped)
 {
 	guard(CVertMeshInstance::PlayAnimInternal);
+	assert(Channel == 0);
 
 	int NewAnimIndex = FindAnim(AnimName);
 	if (NewAnimIndex < 0)
@@ -160,19 +161,21 @@ void CVertMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 }
 
 
-void CVertMeshInstance::FreezeAnimAt(float Time)
+void CVertMeshInstance::FreezeAnimAt(float Time, int Channel)
 {
 	guard(CVertMeshInstance::FreezeAnimAt);
+	assert(Channel == 0);
 	AnimTime = Time;
 	AnimRate = 0;
 	unguard;
 }
 
 
-void CVertMeshInstance::GetAnimParams(const char *&AnimName,
+void CVertMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 	float &Frame, float &NumFrames, float &Rate) const
 {
 	guard(CVertMeshInstance::GetAnimParams);
+	assert(Channel == 0);
 
 	const UVertMesh *Mesh = GetMesh();
 	if (AnimIndex < 0)

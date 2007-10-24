@@ -10,7 +10,7 @@ set ut_path=c:/games/unreal/ut2004
 set run=UnLoader.exe -path=%ut_path%
 set run2=UnLoader.exe -path=data
 
-goto bugs
+rem goto bugs
 
 rem ---------------------------------------------------------------------------
 

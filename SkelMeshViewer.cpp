@@ -213,6 +213,19 @@ void CSkelMeshViewer::ProcessKey(int key)
 		if (++ShowSkel > 2)
 			ShowSkel = 0;
 		break;
+
+	//!! testing, remove later
+	case 'y':
+		MeshInst->LoopAnim("Gesture_Taunt02", 1, 0, 1);
+		MeshInst->SetBlendParams(1, 1.0f, "Bip01 Spine1");
+		MeshInst->LoopAnim("WalkF", 1, 0, 2);
+		MeshInst->SetBlendParams(2, 1.0f, "Bip01 R Thigh");
+//		MeshInst->LoopAnim("Swim_Tread", 1, 0, 3);
+//		MeshInst->SetBlendParams(3, 1.0f, "Bip01 L Thigh");
+		MeshInst->LoopAnim("AssSmack", 1, 0, 4);
+		MeshInst->SetBlendParams(4, 1.0f, "Bip01 L UpperArm");
+		break;
+
 	default:
 		CMeshViewer::ProcessKey(key);
 	}

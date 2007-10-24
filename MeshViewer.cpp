@@ -107,7 +107,7 @@ void CMeshViewer::Draw2D()
 
 	const char *AnimName;
 	float Frame, NumFrames, Rate;
-	Inst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
+	Inst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
 
 	GL::textf("Anim: %d/%d (%s) rate: %g frames: %g%s\n",
 		AnimIndex+1, Inst->GetAnimCount(), AnimName, Rate, NumFrames,
@@ -181,7 +181,7 @@ void CMeshViewer::ProcessKey(int key)
 	float		Frame;
 	float		NumFrames;
 	float		Rate;
-	Inst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
+	Inst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
 
 	switch (key)
 	{
