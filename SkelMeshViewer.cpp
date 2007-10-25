@@ -6,7 +6,8 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	ShowSkel(0)
 {
-	Inst = new CSkelMeshInstance(Mesh, this);
+	Inst = new CSkelMeshInstance(this);
+	Inst->SetMesh(Mesh);
 #if 0
 	CSkelMeshInstance* Inst2 = (CSkelMeshInstance*)Inst;
 	Inst2->SetBoneScale("Bip01 Pelvis", 1.4);
@@ -199,6 +200,7 @@ void CSkelMeshViewer::ShowHelp()
 void CSkelMeshViewer::ProcessKey(int key)
 {
 	guard(CSkelMeshViewer::ProcessKey);
+	static float Alpha = -1.0f; //!!!!
 
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
@@ -216,14 +218,38 @@ void CSkelMeshViewer::ProcessKey(int key)
 
 	//!! testing, remove later
 	case 'y':
-		MeshInst->LoopAnim("Gesture_Taunt02", 1, 0, 1);
-		MeshInst->SetBlendParams(1, 1.0f, "Bip01 Spine1");
+		if (Alpha >= 0)
+		{
+			Alpha = -1;
+			MeshInst->ClearSkelAnims();
+			return;
+		}
+		Alpha = 1;
+//		MeshInst->LoopAnim("Gesture_Taunt02", 1, 0, 1);
+//		MeshInst->SetBlendParams(1, 1.0f, "Bip01 Spine1");
+//!! Walk: 30/24; Run: 30/18; Crouch: 30/26
+#if 0
+		MeshInst->LoopAnim("WalkF", 1, 0, 1);
+		MeshInst->LoopAnim("CrouchF",  26.0f/24, 0, 2);
+#else
+		MeshInst->LoopAnim("RunF",  18.0f/24, 0, 1);
 		MeshInst->LoopAnim("WalkF", 1, 0, 2);
-		MeshInst->SetBlendParams(2, 1.0f, "Bip01 R Thigh");
+#endif
+//		MeshInst->SetBlendParams(2, 1.0f, "Bip01 R Thigh");
 //		MeshInst->LoopAnim("Swim_Tread", 1, 0, 3);
 //		MeshInst->SetBlendParams(3, 1.0f, "Bip01 L Thigh");
-		MeshInst->LoopAnim("AssSmack", 1, 0, 4);
-		MeshInst->SetBlendParams(4, 1.0f, "Bip01 L UpperArm");
+//		MeshInst->LoopAnim("AssSmack", 1, 0, 4);
+//		MeshInst->SetBlendParams(4, 1.0f, "Bip01 L UpperArm");
+		break;
+	case 'c':
+		Alpha -= 0.05;
+		if (Alpha < 0) Alpha = 0;
+		MeshInst->SetBlendAlpha(2, Alpha);
+		break;
+	case 'v':
+		Alpha += 0.05;
+		if (Alpha > 1) Alpha = 1;
+		MeshInst->SetBlendAlpha(2, Alpha);
 		break;
 
 	default:

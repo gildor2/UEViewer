@@ -3,10 +3,10 @@
 #type="VertMesh"
 #type="SkeletalMesh"
 type="VertMesh|SkeletalMesh"
-#dump="-dump"
+dump="-dump"
 #dump="-check"
-path="data"
-#path="c:/games/unreal/ut2004"
+#path="data"
+path="c:/games/unreal/ut2004"
 
 for package in $path/Animations/*; do
 	case "$package" in

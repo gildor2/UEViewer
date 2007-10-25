@@ -15,10 +15,17 @@ public:
 	CCoords			BaseTransform;			// rotation for mesh; have identity axis
 	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
 
-	CMeshInstance(ULodMesh *Mesh, CMeshViewer *Viewer)
-	:	pMesh(Mesh)
+	CMeshInstance(CMeshViewer *Viewer)
+	:	pMesh(NULL)
 	,	Viewport(Viewer)
+	{}
+
+	virtual ~CMeshInstance()
+	{}
+
+	virtual void SetMesh(ULodMesh *Mesh)
 	{
+		pMesh = Mesh;
 		SetAxis(Mesh->RotOrigin, BaseTransform.axis);
 		BaseTransform.origin[0] = Mesh->MeshOrigin.X * Mesh->MeshScale.X;
 		BaseTransform.origin[1] = Mesh->MeshOrigin.Y * Mesh->MeshScale.Y;
@@ -32,8 +39,6 @@ public:
 		BaseTransformScaled.axis.PrescaleSource(tmp);
 		BaseTransformScaled.origin = (CVec3&)Mesh->MeshOrigin;
 	}
-	virtual ~CMeshInstance()
-	{}
 
 	void SetMaterial(int Index)
 	{
@@ -87,7 +92,7 @@ public:
 	virtual int GetAnimCount() const = NULL;
 	virtual const char *GetAnimName(int Index) const = NULL;
 
-private:
+protected:
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped) = NULL;
 };
 
@@ -99,8 +104,8 @@ private:
 class CVertMeshInstance : public CMeshInstance
 {
 public:
-	CVertMeshInstance(UVertMesh *Mesh, CVertMeshViewer *Viewer)
-	:	CMeshInstance(Mesh, Viewer)
+	CVertMeshInstance(CVertMeshViewer *Viewer)
+	:	CMeshInstance(Viewer)
 	,	AnimIndex(-1)
 	,	AnimTime(0)
 	{}
@@ -137,7 +142,7 @@ public:
 
 	virtual void UpdateAnimation(float TimeDelta);
 
-private:
+protected:
 	// animation state
 	int			AnimIndex;			// current animation sequence
 	float		AnimTime;			// current animation frame
@@ -178,8 +183,20 @@ public:
 	// mesh state
 	int			LodNum;
 
-	CSkelMeshInstance(USkeletalMesh *Mesh, CSkelMeshViewer *Viewer);
+	CSkelMeshInstance(CSkelMeshViewer *Viewer)
+	:	CMeshInstance(Viewer)
+	,	LodNum(-1)
+	,	MaxAnimChannel(-1)
+	,	BoneData(NULL)
+	,	MeshVerts(NULL)
+	{
+		ClearSkelAnims();
+	}
+
+	virtual void SetMesh(ULodMesh *Mesh);
 	virtual ~CSkelMeshInstance();
+	void ClearSkelAnims();
+//??	void StopAnimating(bool ClearAllButBase);
 	virtual void Draw();
 
 	void DrawSkeleton();
@@ -188,6 +205,7 @@ public:
 
 	// skeleton configuration
 	void SetBoneScale(const char *BoneName, float scale = 1.0f);
+	//!! SetBone[Direction|Location|Rotation]()
 
 	// animation control
 	virtual void AnimStopLooping(int Channel);
@@ -213,6 +231,19 @@ public:
 
 	// animation blending
 	void SetBlendParams(int Channel, float BlendAlpha, const char *BoneName = NULL);
+	void SetBlendAlpha(int Channel, float BlendAlpha);
+
+	//???? SKETCH, NOT IMPLEMENTED ????
+	struct BlendParams
+	{
+		int			Channel1, Channel2;
+		const char	*Anim1, *Anim2;
+		float		Alpha;
+		float		Rate;
+		bool		Looped;
+	};
+	void BlendAnims(BlendParams &Parms);
+
 
 	// animation enumeration
 	virtual int GetAnimCount() const
@@ -233,7 +264,7 @@ public:
 
 	virtual void UpdateAnimation(float TimeDelta);
 
-private:
+protected:
 	// mesh data
 	struct CMeshBoneData *BoneData;
 	CVec3		*MeshVerts;

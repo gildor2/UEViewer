@@ -5,7 +5,8 @@
 CVertMeshViewer::CVertMeshViewer(UVertMesh *Mesh)
 :	CMeshViewer(Mesh)
 {
-	Inst = new CVertMeshInstance(Mesh, this);
+	Inst = new CVertMeshInstance(this);
+	Inst->SetMesh(Mesh);
 }
 
 
