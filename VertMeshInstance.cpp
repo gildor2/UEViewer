@@ -4,6 +4,8 @@
 
 int CVertMeshInstance::FindAnim(const char *AnimName) const
 {
+	if (!AnimName)
+		return -1;
 	const UVertMesh *Mesh = GetMesh();
 	for (int i = 0; i < Mesh->AnimSeqs.Num(); i++)
 		if (!strcmp(Mesh->AnimSeqs[i].Name, AnimName))

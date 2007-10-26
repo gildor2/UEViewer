@@ -169,11 +169,14 @@ class CSkelMeshInstance : public CMeshInstance
 {
 	struct CAnimChan
 	{
-		int			AnimIndex;		// current animation sequence; -1 for default pose
+		int			AnimIndex1;		// current animation sequence; -1 for default pose
+		int			AnimIndex2;		// secondary animation for blending with; -1 = not used
+		float		Time1;			// current animation frame for primary animation
+		float		Time2;			// animation frame for secondary animation
+		float		SecondaryBlend;	// value = 0 (use primary animation) .. 1 (use secondary animation)
+		float		BlendAlpha;		// blend with previous channels; 0 = not affected, 1 = fully affected
 		int			RootBone;		// root animation bone
-		float		BlendAlpha;		// 0 = not affected, 1 = fully affected
-		float		Time;			// current animation frame
-		float		Rate;			// animation rate, frames per seconds
+		float		Rate;			// animation rate multiplier for Anim.Rate
 		float		TweenTime;		// time to stop tweening; 0 when no tweening at all
 		float		TweenStep;		// fraction between current pose and desired pose; updated in UpdateAnimation()
 		bool		Looped;
@@ -232,18 +235,12 @@ public:
 	// animation blending
 	void SetBlendParams(int Channel, float BlendAlpha, const char *BoneName = NULL);
 	void SetBlendAlpha(int Channel, float BlendAlpha);
-
-	//???? SKETCH, NOT IMPLEMENTED ????
-	struct BlendParams
-	{
-		int			Channel1, Channel2;
-		const char	*Anim1, *Anim2;
-		float		Alpha;
-		float		Rate;
-		bool		Looped;
-	};
-	void BlendAnims(BlendParams &Parms);
-
+	void SetSecondaryAnim(int Channel, const char *AnimName = NULL);
+	void SetSecondaryBlend(int Channel, float BlendAlpha);
+	//?? -	AnimBlendToAlpha() - animate BlendAlpha coefficient
+	//?? -	functions to smoothly replace current animation with another in a fixed time
+	//??	(run new anim as secondary, ramp alpha from 0 to 1, and when blend becomes 1.0f
+	//??	- replace 1st anim with 2nd, and clear 2nd
 
 	// animation enumeration
 	virtual int GetAnimCount() const

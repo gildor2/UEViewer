@@ -17,6 +17,11 @@ inline float appRsqrt(float number)
 	return 1.0f / sqrt(number);
 }
 
+template<class T> inline T Lerp(const T& A, const T& B, float Alpha)
+{
+	return A + Alpha * (B-A);
+}
+
 
 /*-----------------------------------------------------------------------------
 	Vector
