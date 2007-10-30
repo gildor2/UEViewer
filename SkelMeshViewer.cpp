@@ -183,9 +183,9 @@ void CSkelMeshViewer::Draw2D()
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
 	if (MeshInst->LodNum < 0)
-		GL::textf("LOD : base mesh\n");
+		GL::textf(S_GREEN"LOD :"S_WHITE" base mesh\n");
 	else
-		GL::textf("LOD : %d/%d\n", MeshInst->LodNum+1, Mesh->StaticLODModels.Num());
+		GL::textf(S_GREEN"LOD :"S_WHITE" %d/%d\n", MeshInst->LodNum+1, Mesh->StaticLODModels.Num());
 }
 
 
@@ -225,9 +225,9 @@ void CSkelMeshViewer::ProcessKey(int key)
 			return;
 		}
 		Alpha = 0;
-//		MeshInst->LoopAnim("CrouchL", 1, 0, 2);
-//		MeshInst->LoopAnim("WalkF", 1, 0, 2);
-		MeshInst->LoopAnim("RunR", 1, 0, 2);
+//		MeshInst->LoopAnim("CrouchF", 1, 0, 2);
+		MeshInst->LoopAnim("WalkF", 1, 0, 2);
+//		MeshInst->LoopAnim("RunR", 1, 0, 2);
 //		MeshInst->LoopAnim("SwimF", 1, 0, 2);
 		MeshInst->SetSecondaryAnim(2, "RunF");
 		break;
@@ -241,6 +241,14 @@ void CSkelMeshViewer::ProcessKey(int key)
 		if (Alpha > 1) Alpha = 1;
 		MeshInst->SetSecondaryBlend(2, Alpha);
 		break;
+
+	case 'u':
+		MeshInst->LoopAnim("Gesture_Taunt02", 1, 0, 1);
+		MeshInst->SetBlendParams(1, 1.0f, "Bip01 Spine1");
+		MeshInst->LoopAnim("WalkF", 1, 0, 2);
+		MeshInst->SetBlendParams(2, 1.0f, "Bip01 R Thigh");
+		MeshInst->LoopAnim("AssSmack", 1, 0, 4);
+		MeshInst->SetBlendParams(4, 1.0f, "Bip01 L UpperArm");
 
 	default:
 		CMeshViewer::ProcessKey(key);

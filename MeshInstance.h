@@ -171,8 +171,7 @@ class CSkelMeshInstance : public CMeshInstance
 	{
 		int			AnimIndex1;		// current animation sequence; -1 for default pose
 		int			AnimIndex2;		// secondary animation for blending with; -1 = not used
-		float		Time1;			// current animation frame for primary animation
-		float		Time2;			// animation frame for secondary animation
+		float		Time;			// current animation frame for primary animation
 		float		SecondaryBlend;	// value = 0 (use primary animation) .. 1 (use secondary animation)
 		float		BlendAlpha;		// blend with previous channels; 0 = not affected, 1 = fully affected
 		int			RootBone;		// root animation bone

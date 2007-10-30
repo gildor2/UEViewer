@@ -41,7 +41,7 @@ static int ObjIndex = 0;
 	Main function
 -----------------------------------------------------------------------------*/
 
-void main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	try {
 
@@ -125,7 +125,7 @@ void main(int argc, char **argv)
 			printf("%d %s %s\n", i, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
 		}
 		unguard;
-		return;
+		return 0;
 	}
 
 	UObject *Obj = NULL;
@@ -197,6 +197,7 @@ void main(int argc, char **argv)
 		}
 		exit(1);
 	}
+	return 0;
 }
 
 
@@ -208,7 +209,7 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 {
 	guard(CreateVisualizer);
 	if (!test)
-		appSetNotifyHeader("%s:  %s'%s'", Obj->Package->SelfName, Obj->GetClassName(), Obj->Name);
+		appSetNotifyHeader("%s:  %s'%s'", Obj->Package->Filename, Obj->GetClassName(), Obj->Name);
 	// create viewer class
 #define CLASS_VIEWER(UClass, CViewer)	\
 	if (Obj->IsA(#UClass + 1))			\
@@ -241,14 +242,14 @@ void AppDrawFrame()
 void AppKeyEvent(int key)
 {
 	guard(AppKeyEvent);
-	if (key == SPEC_KEY(PAGE_DOWN) || key == SPEC_KEY(PAGE_UP))
+	if (key == SPEC_KEY(PAGEDOWN) || key == SPEC_KEY(PAGEUP))
 	{
 		// browse loaded objects
 		int looped = 0;
 		UObject *Obj;
 		while (true)
 		{
-			if (key == SPEC_KEY(PAGE_DOWN))
+			if (key == SPEC_KEY(PAGEDOWN))
 			{
 				ObjIndex++;
 				if (ObjIndex >= UObject::GObjObjects.Num())

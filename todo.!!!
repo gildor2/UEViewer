@@ -1,3 +1,5 @@
+! use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
+
 ! options for:
   - option to toggle lighting
   ? option to toggle texturing
@@ -19,8 +21,8 @@
 
 ? X-axis (red) should look at viewer; now - looking forward (should negate X axis)
 
-- try to compile with MinGW or for Linux
-- migrate to SDL; use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
+
+- try to compile with MinGW and for Linux
 - move new Math3D parts to Quake2 core
 
 

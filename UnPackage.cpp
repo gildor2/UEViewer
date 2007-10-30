@@ -5,19 +5,23 @@
 #include "UnPackage.h"
 
 
+/*-----------------------------------------------------------------------------
+	Package loading (creation) / unloading
+-----------------------------------------------------------------------------*/
+
 UnPackage::UnPackage(const char *filename)
 :	FFileReader(filename)
 {
 	guard(UnPackage::UnPackage);
 
-	appStrncpyz(SelfName, filename, ARRAY_COUNT(SelfName));
+	appStrncpyz(Filename, filename, ARRAY_COUNT(Filename));
 
 	// read summary
 	*this << Summary;
 	if (Summary.Tag != PACKAGE_FILE_TAG)
-		appError("Wrong tag in package %s\n", SelfName);
+		appError("Wrong tag in package %s\n", Filename);
 	ArVer = Summary.FileVersion;
-	PKG_LOG(("Loading package: %s Ver: %d Names: %d Exports: %d Imports: %d\n", SelfName, Summary.FileVersion,
+	PKG_LOG(("Loading package: %s Ver: %d Names: %d Exports: %d Imports: %d\n", Filename, Summary.FileVersion,
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 	// read name table
@@ -120,7 +124,76 @@ UnPackage::~UnPackage()
 
 
 /*-----------------------------------------------------------------------------
-	Searching for package and package list
+	Loading particular import or export package entry
+-----------------------------------------------------------------------------*/
+
+UObject* UnPackage::CreateExport(int index)
+{
+	guard(UnPackage::CreateExport);
+
+	// create empty object
+	FObjectExport &Exp = GetExport(index);
+	if (Exp.Object)
+		return Exp.Object;
+
+	const char *ClassName = GetObjectName(Exp.ClassIndex);
+	UObject *Obj = Exp.Object = CreateClass(ClassName);
+	if (!Obj)
+	{
+		printf("WARNING: Unknown object class: %s (%s)\n", ClassName, *Exp.ObjectName);
+		return NULL;
+	}
+	UObject::BeginLoad();
+
+	// setup constant object fields
+	Obj->Package      = this;
+	Obj->PackageIndex = index;
+	Obj->Name         = Exp.ObjectName;
+	// add object to GObjLoaded for later serialization
+	UObject::GObjLoaded.AddItem(Obj);
+
+	UObject::EndLoad();
+	return Obj;
+
+	unguardf(("%s:%d", Filename, index));
+}
+
+
+UObject* UnPackage::CreateImport(int index)
+{
+	guard(UnPackage::CreateImport);
+
+	const FObjectImport &Imp = GetImport(index);
+
+	// find root package
+	int PackageIndex = Imp.PackageIndex;
+	const char *PackageName = NULL;
+	while (PackageIndex)
+	{
+		const FObjectImport &Rec = GetImport(-PackageIndex-1);
+		PackageIndex = Rec.PackageIndex;
+		PackageName  = Rec.ObjectName;
+	}
+	// load package
+	UnPackage  *Package = LoadPackage(PackageName);
+
+	if (!Package)
+	{
+		printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
+		return NULL;
+	}
+	//!! use full object path
+	// find object in loaded package export table
+	int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
+	// create object
+	return Package->CreateExport(NewIndex);
+
+	unguardf(("%s:%d", Filename, index));
+}
+
+
+/*-----------------------------------------------------------------------------
+	Searching for package and maintaining package list
 -----------------------------------------------------------------------------*/
 
 TArray<UnPackage::PackageEntry> UnPackage::PackageMap;

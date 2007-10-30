@@ -9,9 +9,31 @@
 
 
 #if RENDERING
-#	define FREEGLUT_STATIC
-#	include <freeglut.h>
-#	undef GetClassName		// windows define
+#	include <SDL/SDL.h>		//?? move outside
+
+#if _WIN32
+#	ifndef APIENTRY
+#		define APIENTRY __stdcall
+#	endif
+#	ifndef WINGDIAPI
+#		define WINGDIAPI
+		typedef unsigned		HDC;
+		typedef unsigned		HGLRC;
+		typedef const char *	LPCSTR;
+		typedef int				BOOL;
+		typedef unsigned char	BYTE;
+		typedef unsigned short	WORD;
+		typedef unsigned int	UINT;
+		typedef int (APIENTRY *PROC)();
+		typedef void PIXELFORMATDESCRIPTOR;		// structure
+		typedef PIXELFORMATDESCRIPTOR * LPPIXELFORMATDESCRIPTOR;
+#	endif // WINGDIAPI
+#	ifndef CONST
+#		define CONST const
+#	endif
+#endif
+
+#	include <GL/gl.h>
 #endif
 
 
@@ -51,6 +73,22 @@
 #	define FORCEINLINE		__forceinline
 #	define NORETURN			__declspec(noreturn)
 #endif
+
+// necessary types
+typedef unsigned char		byte;
+typedef unsigned short		word;
+
+
+#define COLOR_ESCAPE	'^'		// may be used for quick location of color-processing code
+
+#define S_BLACK			"^0"
+#define S_RED			"^1"
+#define S_GREEN			"^2"
+#define S_YELLOW		"^3"
+#define S_BLUE			"^4"
+#define S_MAGENTA		"^5"
+#define S_CYAN			"^6"
+#define S_WHITE			"^7"
 
 
 void appError(char *fmt, ...);
@@ -108,6 +146,9 @@ void appUnwindPrefix(const char *fmt);		// not vararg (will display function nam
 NORETURN void appUnwindThrow(const char *fmt, ...);
 
 extern char GErrorHistory[2048];
+
+
+#define appMilliseconds()		SDL_GetTicks()
 
 
 #include "Math3D.h"

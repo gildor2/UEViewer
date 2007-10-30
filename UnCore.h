@@ -2,10 +2,6 @@
 #define __UNCORE_H__
 
 
-// necessary types
-typedef unsigned char		byte;
-typedef unsigned short		word;
-
 // forward declarations
 class FArchive;
 class UObject;

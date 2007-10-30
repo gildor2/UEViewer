@@ -17,11 +17,7 @@ CMeshViewer::CMeshViewer(ULodMesh *Mesh)
 ,	AnimIndex(-1)
 ,	bShowNormals(false)
 ,	bWireframe(false)
-#if _WIN32
-,	CurrentTime(GetTickCount())
-#else
-#error Port!  //!! WIN32
-#endif
+,	CurrentTime(appMilliseconds())
 {
 	// compute model center by Z-axis (vertical)
 	CVec3 offset;
@@ -109,10 +105,10 @@ void CMeshViewer::Draw2D()
 	float Frame, NumFrames, Rate;
 	Inst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
 
-	GL::textf("Anim: %d/%d (%s) rate: %g frames: %g%s\n",
+	GL::textf(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g%s\n",
 		AnimIndex+1, Inst->GetAnimCount(), AnimName, Rate, NumFrames,
 		Inst->IsTweening() ? " [tweening]" : "");
-	GL::textf("Time: %.1f/%g\n", Frame, NumFrames);
+	GL::textf(S_GREEN"Time:"S_WHITE" %.1f/%g\n", Frame, NumFrames);
 
 	unguard;
 }
@@ -124,11 +120,7 @@ void CMeshViewer::Draw3D()
 	assert(Inst);
 
 	// tick animations
-#if _WIN32
-	unsigned time = GetTickCount();
-#else
-#error Port!		//!! WIN32
-#endif
+	unsigned time = appMilliseconds();
 	float TimeDelta = (time - CurrentTime) / 1000.0f;
 	CurrentTime = time;
 	Inst->UpdateAnimation(TimeDelta);

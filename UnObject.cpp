@@ -67,7 +67,7 @@ void UObject::EndLoad()
 		//!! should sort by packages
 		UnPackage *Package = Obj->Package;
 		Package->SetupReader(Obj->PackageIndex);
-		printf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->SelfName);
+		printf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
 		Obj->Serialize(*Package);
 		// check for unread bytes
 		if (!Package->IsStopper())

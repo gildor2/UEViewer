@@ -12,7 +12,7 @@ struct CMeshBoneData
 	// dynamic data
 	// skeleton configuration
 	float		Scale;				// bone scale; 1=unscaled
-	short		FirstChannel;		// first animation channel, affecting this bone
+	int			FirstChannel;		// first animation channel, affecting this bone
 	// current pose
 	CCoords		Coords;				// current coordinates of bone, model-space
 	CCoords		Transform;			// used to transform vertex from reference pose to current pose
@@ -214,18 +214,18 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 				if (depth[n] == j+1) found = true;
 				break;
 			}
-		#if 0
-			// ASCII
-			if (j == depth[i]-1)
-				printf(found ? "+--" : "\\--");
-			else
-				printf(found ? "|  " : "   ");
-		#else
+		#if _WIN32
 			// pseudographics
 			if (j == depth[i]-1)
 				printf(found ? "\xC3\xC4\xC4" : "\xC0\xC4\xC4");	// [+--] : [\--]
 			else
                 printf(found ? "\xB3  " : "   ");					// [|  ] : [   ]
+		#else
+			// ASCII
+			if (j == depth[i]-1)
+				printf(found ? "+--" : "\\--");
+			else
+				printf(found ? "|  " : "   ");
         #endif
 	#endif
 		}
@@ -357,8 +357,7 @@ static void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, 
 }
 
 
-//!! remove later
-static int BoneUpdateCounts[256];
+static int BoneUpdateCounts[MAX_MESHBONES];	//!! remove later
 
 void CSkelMeshInstance::UpdateSkeleton()
 {
@@ -379,6 +378,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 
 		const MotionChunk  *Motion1  = NULL, *Motion2  = NULL;
 		const FMeshAnimSeq *AnimSeq1 = NULL, *AnimSeq2 = NULL;
+		float Time2;
 		if (Chn->AnimIndex1 >= 0)
 		{
 			Motion1  = &Anim->Moves   [Chn->AnimIndex1];
@@ -387,6 +387,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 			{
 				Motion2  = &Anim->Moves   [Chn->AnimIndex2];
 				AnimSeq2 = &Anim->AnimSeqs[Chn->AnimIndex2];
+				// compute time for secondary channel; always in sync with primary channel
+				Time2 = Chn->Time / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
 			}
 		}
 
@@ -421,7 +423,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 				if (!Motion2 || Chn->SecondaryBlend != 1.0f)
 				{
 					BoneUpdateCounts[i]++;		//!! remove later
-					GetBonePosition(Motion1->AnimTracks[BoneIndex], Chn->Time1, AnimSeq1->NumFrames,
+					GetBonePosition(Motion1->AnimTracks[BoneIndex], Chn->Time, AnimSeq1->NumFrames,
 						Chn->Looped, BP, BO);
 				}
 				// blend secondary animation
@@ -430,7 +432,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 					CVec3 BP2;
 					CQuat BO2;
 					BoneUpdateCounts[i]++;		//!! remove later
-					GetBonePosition(Motion2->AnimTracks[BoneIndex], Chn->Time2, AnimSeq2->NumFrames,
+					GetBonePosition(Motion2->AnimTracks[BoneIndex], Time2, AnimSeq2->NumFrames,
 						Chn->Looped, BP2, BO2);
 					if (Chn->SecondaryBlend == 1.0f)
 					{
@@ -446,20 +448,22 @@ void CSkelMeshInstance::UpdateSkeleton()
 			}
 			else
 			{
-				const FMeshBone &B = Mesh->Bones[i];
 				// get default bone position
+				const FMeshBone &B = Mesh->Bones[i];
 				BP = (CVec3&)B.BonePos.Position;
 				BO = (CQuat&)B.BonePos.Orientation;
 			}
 			if (!i) BO.Conjugate();
 
-			if (Chn->TweenTime > 0)	// tweening
+			// tweening
+			if (Chn->TweenTime > 0)
 			{
 				// interpolate orientation using AnimTweenStep
 				// current orientation -> {BP,BO}
 				Lerp (data->Pos,  BP, Chn->TweenStep, BP);
 				Slerp(data->Quat, BO, Chn->TweenStep, BO);
 			}
+			// blending with previous channels
 			if (Chn->BlendAlpha < 1.0f)
 			{
 				Lerp (data->Pos,  BP, Chn->BlendAlpha, BP);
@@ -535,15 +539,16 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 				TimeDelta = -Chn->TweenTime;
 				Chn->TweenTime = 0;
 			}
-			assert(Chn->Time1 == 0);
+			assert(Chn->Time == 0);
 		}
 		// note: TweenTime may be changed now, check again
 		if (!Chn->TweenTime && Chn->AnimIndex1 >= 0)
 		{
 			// update animation time
 			const FMeshAnimSeq *Seq1 = &Anim->AnimSeqs[Chn->AnimIndex1];
-			const FMeshAnimSeq *Seq2 = (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend) ?
-				&Anim->AnimSeqs[Chn->AnimIndex2] : NULL;
+			const FMeshAnimSeq *Seq2 = (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
+				? &Anim->AnimSeqs[Chn->AnimIndex2]
+				: NULL;
 
 			float Rate1 = Chn->Rate * Seq1->Rate;
 			if (Seq2)
@@ -552,38 +557,33 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 				Rate1 = Lerp(Seq1->Rate / Seq1->NumFrames, Seq2->Rate / Seq2->NumFrames, Chn->SecondaryBlend)
 					* Seq1->NumFrames;
 			}
-			Chn->Time1 += TimeDelta * Rate1;
+			Chn->Time += TimeDelta * Rate1;
 
 			if (Chn->Looped)
 			{
-				if (Chn->Time1 >= Seq1->NumFrames)
+				if (Chn->Time >= Seq1->NumFrames)
 				{
 					// wrap time
-					int numSkip = appFloor(Chn->Time1 / Seq1->NumFrames);
-					Chn->Time1 -= numSkip * Seq1->NumFrames;
+					int numSkip = appFloor(Chn->Time / Seq1->NumFrames);
+					Chn->Time -= numSkip * Seq1->NumFrames;
 				}
 			}
 			else
 			{
-				if (Chn->Time1 >= Seq1->NumFrames-1)
+				if (Chn->Time >= Seq1->NumFrames-1)
 				{
 					// clamp time
-					Chn->Time1 = Seq1->NumFrames-1;
-					if (Chn->Time1 < 0)
-						Chn->Time1 = 0;
+					Chn->Time = Seq1->NumFrames-1;
+					if (Chn->Time < 0)
+						Chn->Time = 0;
 				}
 			}
-			// compute time for secondary channel; always in sync with primary channel
-			if (Seq2)
-				Chn->Time2 = Chn->Time1 / Seq1->NumFrames * Seq2->NumFrames;
 		}
 		// assign bones to channel
 		if (Chn->BlendAlpha >= 1.0f && Stage > 0) // stage 0 already set
 		{
-			//?? optimize: update when animation changed only
-			int bone, count;
-			for (bone = Chn->RootBone, count = BoneData[bone].SubtreeSize; count >= 0; count--, bone++)
-				BoneData[bone].FirstChannel = Stage;
+			// whole subtree will be skipped in UpdateSkeleton(), so - mark root bone only
+			BoneData[Chn->RootBone].FirstChannel = Stage;
 		}
 	}
 
@@ -609,7 +609,7 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 		// show default pose
 		Chn.AnimIndex1     = -1;
 		Chn.AnimIndex2     = -1;
-		Chn.Time1          = 0;
+		Chn.Time           = 0;
 		Chn.Rate           = 0;
 		Chn.Looped         = false;
 		Chn.TweenTime      = TweenTime;
@@ -628,7 +628,7 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 
 	Chn.AnimIndex1     = NewAnimIndex;
 	Chn.AnimIndex2     = -1;
-	Chn.Time1          = 0;
+	Chn.Time           = 0;
 	Chn.SecondaryBlend = 0;
 	Chn.TweenTime      = TweenTime;
 
@@ -692,8 +692,8 @@ void CSkelMeshInstance::FreezeAnimAt(float Time, int Channel)
 {
 	guard(CSkelMeshInstance::FreezeAnimAt);
 	CAnimChan &Chn = GetStage(Channel);
-	Chn.Time1 = Time;
-	Chn.Rate  = 0;
+	Chn.Time = Time;
+	Chn.Rate = 0;
 	unguard;
 }
 
@@ -716,7 +716,7 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 	}
 	const FMeshAnimSeq &AnimSeq = Anim->AnimSeqs[Chn.AnimIndex1];
 	AnimName  = AnimSeq.Name;
-	Frame     = Chn.Time1;
+	Frame     = Chn.Time;
 	NumFrames = AnimSeq.NumFrames;
 	Rate      = AnimSeq.Rate * Chn.Rate;
 
@@ -734,6 +734,7 @@ void CSkelMeshInstance::DrawSkeleton()
 
 	const USkeletalMesh *Mesh = GetMesh();
 
+	glDisable(GL_TEXTURE_2D);
 	glLineWidth(3);
 	glEnable(GL_LINE_SMOOTH);
 
@@ -790,8 +791,8 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh()
 	memset(MeshVerts, 0, sizeof(CVec3) * Mesh->VertexCount);
 	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
 	{
-		const FVertInfluences &Inf = Mesh->VertInfluences[i];
-		const CMeshBoneData &data = BoneData[Inf.BoneIndex];
+		const FVertInfluences &Inf  = Mesh->VertInfluences[i];
+		const CMeshBoneData   &data = BoneData[Inf.BoneIndex];
 		int PointIndex = Inf.PointIndex;
 		const CVec3 &Src = (CVec3&)Mesh->Points[PointIndex];
 		CVec3 tmp;
@@ -836,10 +837,11 @@ void CSkelMeshInstance::DrawLodSkeletalMesh(const FStaticLODModel *lod)
 		SetMaterial(ms.MaterialIndex);
 		glBegin(GL_TRIANGLES);
 		//?? use smooth indices
+		//?? use weights
 		for (i = 0; i < ms.NumFaces; i++)
 		{
 			const FMeshFace &F = lod->Faces[ms.FirstFace + i];
-//?? ignore F.MaterialIndex - may be any
+			//?? ignore F.MaterialIndex - may be any
 //			assert(F.MaterialIndex == 0);
 //			assert(F.MaterialIndex == ms.MaterialIndex);
 			for (int j = 0; j < 3; j++)

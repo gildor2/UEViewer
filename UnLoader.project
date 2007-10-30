@@ -12,6 +12,7 @@ OPTIMIZE   = size
 INCLUDES   = libs/include
 LIBRARIES  = libs
 OBJDIR     = obj
+STDLIBS    = SDL SDLmain
 
 DEFINES    = RENDERING
 

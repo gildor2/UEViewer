@@ -1,6 +1,13 @@
 #include "Core.h"
 #include "GlWindow.h"
 
+// font
+#include "GlFont.h"
+
+#define CHARS_PER_LINE	(TEX_WIDTH/CHAR_WIDTH)
+
+//!! remove, use dynamic link
+#pragma comment(lib, "opengl32.lib")
 
 //-----------------------------------------------------------------------------
 // State variables
@@ -16,6 +23,11 @@ static float frameTime;
 
 #define DEFAULT_DIST	256
 #define MAX_DIST		2048
+#define CLEAR_COLOR		0.2, 0.3, 0.3, 0
+
+#define FONT_TEXID		1
+#define TEXT_LEFT		4
+#define TEXT_TOP		4
 
 namespace GL
 {
@@ -28,12 +40,13 @@ namespace GL
 	// window size
 	int   width  = 800;
 	int   height = 600;
+	// text output position
+	int   textX, textY;
 	// matrices
 	float projectionMatrix[4][4];
 	float modelMatrix[4][4];
 	// mouse state
 	int   mouseButtons;			// bit mask: left=1, middle=2, right=4, wheel up=8, wheel down=16
-	int   mouseX, mouseY;
 	// view state
 	CVec3 viewAngles;
 	float viewDist   = DEFAULT_DIST;
@@ -47,10 +60,12 @@ namespace GL
 	// Switch 2D/3D rendering mode
 	//-------------------------------------------------------------------------
 
-	void set2Dmode()
+	void Set2Dmode()
 	{
 		if (is2Dmode) return;
 		is2Dmode = true;
+		textX = TEXT_LEFT;
+		textY = TEXT_TOP;
 
 		glViewport(0, 0, width, height);
 		glScissor(0, 0, width, height);
@@ -63,7 +78,7 @@ namespace GL
 	}
 
 
-	void set3Dmode()
+	void Set3Dmode()
 	{
 		if (!is2Dmode) return;
 		is2Dmode = false;
@@ -102,13 +117,104 @@ namespace GL
 	// Text output
 	//-------------------------------------------------------------------------
 
-	void text(const char *text, int x, int y)
+	void LoadFont()
 	{
-		if (x >= 0 && y >= 0)
-			glRasterPos2i(x, y);
-		glutBitmapString(GLUT_BITMAP_8_BY_13, (unsigned char*) text);
+		// decompress font texture
+		byte *pic = (byte*)malloc(TEX_WIDTH * TEX_HEIGHT * 4);
+		int i;
+		byte *p, *dst;
+		for (i = 0, p = TEX_DATA, dst = pic; i < TEX_WIDTH * TEX_HEIGHT / 8; i++, p++)
+		{
+			byte s = *p;
+			for (int bit = 0; bit < 8; bit++, dst += 4)
+			{
+				dst[0] = 255;
+				dst[1] = 255;
+				dst[2] = 255;
+				dst[3] = (s & (1 << bit)) ? 255 : 0;
+			}
+		}
+		// upload it
+		glBindTexture(GL_TEXTURE_2D, FONT_TEXID);
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, TEX_WIDTH, TEX_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		delete pic;
 	}
 
+	void text(const char *text)
+	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, FONT_TEXID);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.5);
+
+		int color = 7;
+		static float colorTable[][3] = {
+			{0, 0, 0},
+			{1, 0, 0},
+			{0, 1, 0},
+			{1, 1, 0},
+			{0, 0, 1},
+			{1, 0, 1},
+			{0, 1, 1},
+			{1, 1, 1}
+		};
+
+		glBegin(GL_QUADS);
+
+		while (char c = *text++)
+		{
+			if (c == '\n')
+			{
+				textX =  TEXT_LEFT;
+				textY += CHAR_HEIGHT;
+				continue;
+			}
+			if (c == COLOR_ESCAPE)
+			{
+				char c2 = *text;
+				if (c2 >= '0' && c2 <= '7')
+				{
+					color = c2 - '0';
+					text++;
+					continue;
+				}
+			}
+			c -= FONT_FIRST_CHAR;
+			int x1 = textX;
+			int y1 = textY;
+			int x2 = textX + CHAR_WIDTH;
+			int y2 = textY + CHAR_HEIGHT;
+			int line = c / CHARS_PER_LINE;
+			int col  = c - line * CHARS_PER_LINE;
+			float s0 = (col      * CHAR_WIDTH)  / (float)TEX_WIDTH;
+			float s1 = ((col+1)  * CHAR_WIDTH)  / (float)TEX_WIDTH;
+			float t0 = (line     * CHAR_HEIGHT) / (float)TEX_HEIGHT;
+			float t1 = ((line+1) * CHAR_HEIGHT) / (float)TEX_HEIGHT;
+
+			textX += CHAR_WIDTH;
+
+			for (int s = 1; s >= 0; s--)
+			{
+				if (s)
+					glColor3f(0, 0, 0);
+				else
+					glColor3fv(colorTable[color]);
+				glTexCoord2f(s0, t0);
+				glVertex3f(x1+s, y1+s, 0);
+				glTexCoord2f(s1, t0);
+				glVertex3f(x2+s, y1+s, 0);
+				glTexCoord2f(s1, t1);
+				glVertex3f(x2+s, y2+s, 0);
+				glTexCoord2f(s0, t1);
+				glVertex3f(x1+s, y2+s, 0);
+			}
+		}
+		glEnd();
+	}
 
 	void textf(const char *fmt, ...)
 	{
@@ -123,11 +229,23 @@ namespace GL
 
 	//-------------------------------------------------------------------------
 	// called when window resized
-	void ReshapeFunc(int w, int h)
+	void OnResize(int w, int h)
 	{
 		width  = w;
 		height = h;
 		glViewport(0, 0, w, h);
+		SDL_SetVideoMode(width, height, 24, SDL_OPENGL|SDL_RESIZABLE);
+		LoadFont();
+		// init gl
+		glDisable(GL_BLEND);
+		glDisable(GL_ALPHA_TEST);
+//		glDepthMask(GL_TRUE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		glEnable(GL_SCISSOR_TEST);
+//		glShadeModel(GL_SMOOTH);
+//		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		Set2Dmode();
 	}
 
 
@@ -135,25 +253,23 @@ namespace GL
 	// Mouse control
 	//-------------------------------------------------------------------------
 
-	void OnMouseButton(int button, int state, int x, int y)
+	void OnMouseButton(int type, int button)
 	{
-		int mask = 1 << button;
-		if (state == GLUT_DOWN)
+		int mask = SDL_BUTTON(button);
+		if (type == SDL_MOUSEBUTTONDOWN)
 			mouseButtons |= mask;
 		else
 			mouseButtons &= ~mask;
-		mouseX = x; mouseY = y;
 	}
 
 
 	void OnMouseMove(int x, int y)
 	{
-		int dx = x - mouseX;
-		int dy = y - mouseY;
-		mouseX = x; mouseY = y;
+		int dx = x;
+		int dy = y;
 		if (!mouseButtons) return;
 
-		if (mouseButtons & 1)	// left mouse button
+		if (mouseButtons & SDL_BUTTON(SDL_BUTTON_LEFT))
 		{
 			// rotate camera
 			float yawDelta = (float)dx / width * 360;
@@ -165,7 +281,7 @@ namespace GL
 			viewAngles[YAW]   = fmod(viewAngles[YAW], 360);
 			viewAngles[PITCH] = bound(viewAngles[PITCH], -90, 90);
 		}
-		if (mouseButtons & 4)	// right mouse button
+		if (mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT))
 			viewDist += (float)dy / height * 400;
 		viewDist = bound(viewDist, 100 * distScale, MAX_DIST * distScale);
 		CVec3 viewDir;
@@ -178,7 +294,7 @@ namespace GL
 	//-------------------------------------------------------------------------
 	// Building modelview and projection matrices
 	//-------------------------------------------------------------------------
-	void buildMatrices()
+	void BuildMatrices()
 	{
 		// view angles -> view axis
 		Euler2Vecs(viewAngles, &viewAxis[0], &viewAxis[1], &viewAxis[2]);
@@ -274,30 +390,26 @@ namespace GL
 #undef m
 	}
 
-
 	//-------------------------------------------------------------------------
-	void init(const char *caption)
+	void Init(const char *caption)
 	{
-		// init glut
-		glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-		glutInitWindowSize(width, height);
-//		glutInitWindowPosition(0, 0);
-		glutCreateWindow(caption);
-		// common hooks
-		glutReshapeFunc(ReshapeFunc);
-		glutMouseFunc(OnMouseButton);
-		glutMotionFunc(OnMouseMove);
+		// init SDL
+		if (SDL_Init(SDL_INIT_VIDEO) == -1)
+			appError("Failed to initialize SDL");
 
-		// init gl
-		glDisable(GL_BLEND);
-		glDisable(GL_ALPHA_TEST);
-//		glDepthMask(GL_TRUE);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glEnable(GL_SCISSOR_TEST);
-//		glShadeModel(GL_SMOOTH);
-//		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		set2Dmode();
+		SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8);
+		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+
+		SDL_WM_SetCaption(caption, caption);
+		OnResize(width, height);
+	}
+
+	void Shutdown()
+	{
+		SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	}
 
 } // end of GL namespace
@@ -307,17 +419,17 @@ namespace GL
 // Hook functions
 //-----------------------------------------------------------------------------
 
-static void OnDisplay()
+static void Display()
 {
 	// set default text position
 	glRasterPos2i(20, 20);
 	// clear screen buffer
-	glClearColor(0.2, 0.2, 0.4, 0);
+	glClearColor(CLEAR_COLOR);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// 3D drawings
-	GL::buildMatrices();
-	GL::set3Dmode();
+	GL::BuildMatrices();
+	GL::Set3Dmode();
 
 	// enable lighting
 	static const float lightPos[4] = {100, 200, 100, 0};
@@ -335,12 +447,12 @@ static void OnDisplay()
 	glDisable(GL_LIGHT0);
 
 	// 2D drawings
-	GL::set2Dmode();
+	GL::Set2Dmode();
 
 	// display help when needed
 	if (isHelpVisible)
 	{
-		GL::text("Help:\n-----\n"
+		GL::text(S_RED"Help:\n-----\n"S_WHITE
 				 "Esc         exit\n"
 				 "H           toggle help\n"
 				 "LeftMouse   rotate view\n"
@@ -349,16 +461,18 @@ static void OnDisplay()
 	}
 	AppDisplayTexts(isHelpVisible);
 
-	glutSwapBuffers();
+	SDL_GL_SwapBuffers();
 }
 
 
-static void OnKeyboard(unsigned char key, int x, int y)
+static bool RequestingQuit = false;
+
+static void OnKeyboard(unsigned key)
 {
 	switch (tolower(key))
 	{
-	case 0x1B:					// Esc
-		glutLeaveMainLoop();	// freeglut only; MJK glut callback should use 'exit(0)'
+	case SDLK_ESCAPE:
+		RequestingQuit = true;
 		break;
 	case 'h':
 		isHelpVisible = !isHelpVisible;
@@ -372,40 +486,43 @@ static void OnKeyboard(unsigned char key, int x, int y)
 }
 
 
-static void OnSpecial(int key, int x, int y)
-{
-	AppKeyEvent(key + 256);
-}
-
-
-// timer handler
-static void OnTimer(int timerId)
-{
-	// display scene
-	OnDisplay();
-	// and restart timer
-	glutTimerFunc(timerId, OnTimer, 10);
-}
-
-
 //-----------------------------------------------------------------------------
 // Main function
 //-----------------------------------------------------------------------------
 
 void VisualizerLoop(const char *caption)
 {
-	// create glut window
-	char *fakeArgv[2];
-	int  fakeArgc = 0;
-	glutInit(&fakeArgc, fakeArgv);
-	GL::init(caption);
-	// application hooks
-	glutDisplayFunc(OnDisplay);
-	glutKeyboardFunc(OnKeyboard);
-	glutSpecialFunc(OnSpecial);
-	OnTimer(0);					// init timer
+	GL::Init(caption);
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 	GL::ResetView();
-	// start
-	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);	// freeglut only
-	glutMainLoop();
+	// main loop
+	SDL_Event evt;
+	while (!RequestingQuit)
+	{
+		while (SDL_PollEvent(&evt))
+		{
+			switch (evt.type)
+			{
+			case SDL_KEYDOWN:
+				OnKeyboard(evt.key.keysym.sym);
+				break;
+			case SDL_VIDEORESIZE:
+				GL::OnResize(evt.resize.w, evt.resize.h);
+				break;
+			case SDL_MOUSEBUTTONUP:
+			case SDL_MOUSEBUTTONDOWN:
+				GL::OnMouseButton(evt.type, evt.button.button);
+				break;
+			case SDL_MOUSEMOTION:
+				GL::OnMouseMove(evt.motion.xrel, evt.motion.yrel);
+				break;
+			case SDL_QUIT:
+				RequestingQuit = true;
+				break;
+			}
+		}
+		Display();
+	}
+	// shutdown
+	GL::Shutdown();
 }

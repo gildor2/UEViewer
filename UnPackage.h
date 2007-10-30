@@ -107,7 +107,7 @@ struct FObjectImport
 class UnPackage : public FFileReader
 {
 public:
-	char					SelfName[256];		//?? rename
+	char					Filename[256];
 	// package header
 	FPackageFileSummary		Summary;
 	// tables
@@ -127,7 +127,7 @@ public:
 		guard(UnPackage::SetupReader);
 
 		if (ExportIndex < 0 || ExportIndex >= Summary.ExportCount)
-			appError("Package \"%s\": wrong export index %d", SelfName, ExportIndex);
+			appError("Package \"%s\": wrong export index %d", Filename, ExportIndex);
 		const FObjectExport &Exp = ExportTable[ExportIndex];
 		// setup FArchive
 		ArStopper = Exp.SerialOffset + Exp.SerialSize;
@@ -139,21 +139,21 @@ public:
 	const char* GetName(int index)
 	{
 		if (index < 0 || index >= Summary.NameCount)
-			appError("Package \"%s\": wrong name index %d", SelfName, index);
+			appError("Package \"%s\": wrong name index %d", Filename, index);
 		return NameTable[index];
 	}
 
 	const FObjectImport& GetImport(int index)
 	{
 		if (index >= Summary.ImportCount)
-			appError("Package \"%s\": wrong import index %d", SelfName, index);
+			appError("Package \"%s\": wrong import index %d", Filename, index);
 		return ImportTable[index];
 	}
 
 	FObjectExport& GetExport(int index) // not 'const'
 	{
 		if (index >= Summary.ExportCount)
-			appError("Package \"%s\": wrong export index %d", SelfName, index);
+			appError("Package \"%s\": wrong export index %d", Filename, index);
 		return ExportTable[index];
 	}
 
@@ -191,68 +191,8 @@ public:
 		return -1;
 	}
 
-	UObject* CreateExport(int index)
-	{
-		guard(UnPackage::CreateExport);
-
-		// create empty object
-		FObjectExport &Exp = GetExport(index);
-		if (Exp.Object)
-			return Exp.Object;
-
-		const char *ClassName = GetObjectName(Exp.ClassIndex);
-		UObject *Obj = Exp.Object = CreateClass(ClassName);
-		if (!Obj)
-		{
-			printf("WARNING: Unknown object class: %s (%s)\n", ClassName, *Exp.ObjectName);
-			return NULL;
-		}
-		UObject::BeginLoad();
-
-		// setup constant object fields
-		Obj->Package      = this;
-		Obj->PackageIndex = index;
-		Obj->Name         = Exp.ObjectName;
-		// add object to GObjLoaded for later serialization
-		UObject::GObjLoaded.AddItem(Obj);
-
-		UObject::EndLoad();
-		return Obj;
-
-		unguardf(("%s:%d", SelfName, index));
-	}
-
-	UObject* CreateImport(int index)
-	{
-		guard(UnPackage::CreateImport);
-
-		const FObjectImport &Imp = GetImport(index);
-
-		// find root package
-		int PackageIndex = Imp.PackageIndex;
-		const char *PackageName = NULL;
-		while (PackageIndex)
-		{
-			const FObjectImport &Rec = GetImport(-PackageIndex-1);
-			PackageIndex = Rec.PackageIndex;
-			PackageName  = Rec.ObjectName;
-		}
-		// load package
-		UnPackage  *Package = LoadPackage(PackageName);
-
-		if (!Package)
-		{
-			printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
-			return NULL;
-		}
-		//!! use full object path
-		// find object in loaded package export table
-		int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
-		// create object
-		return Package->CreateExport(NewIndex);
-
-		unguardf(("%s:%d", SelfName, index));
-	}
+	UObject* CreateExport(int index);
+	UObject* CreateImport(int index);
 
 	// FArchive interface
 	virtual FArchive& operator<<(FName &N)

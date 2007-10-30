@@ -41,7 +41,7 @@ MAIN_DIRS = \
 
 UnLoader.exe : $(MAIN_DIRS) $(MAIN)
 	echo Creating executable "UnLoader.exe" ...
-	$(LINK) -out:"UnLoader.exe" -libpath:"libs" $(MAIN) -subsystem:console
+	$(LINK) -out:"UnLoader.exe" -libpath:"libs" SDL.lib SDLmain.lib $(MAIN) -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
@@ -51,6 +51,7 @@ OPT_MAIN = -O1 -EHsc -D RENDERING -I libs/include
 
 DEPENDS = \
 	Core.h \
+	GlFont.h \
 	GlWindow.h \
 	Math3D.h
 

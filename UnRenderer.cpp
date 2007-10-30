@@ -350,12 +350,21 @@ void UTexture::Bind()
 		glDisable(GL_BLEND);
 	}
 	// uploading ...
+	bool upload = false;
 	if (TexNum < 0)
 	{
-		// upload texture
-		static GLint lastTexNum = 0;
+		static GLint lastTexNum = 128;	// first 128 textures reserved
 		TexNum = ++lastTexNum;
-
+		upload = true;
+	}
+	else if (!glIsTexture(TexNum))
+	{
+		// surface lost (window resized etc), should re-upload texture
+		upload = true;
+	}
+	if (upload)
+	{
+		// upload texture
 		int n;
 		for (n = 0; n < Mips.Num(); n++)
 		{

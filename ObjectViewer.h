@@ -58,10 +58,10 @@ public:
 
 	virtual void Draw2D()
 	{
-		GL::textf("Package: %s\n"
-				  "Class  : %s\n"
-				  "Object : %s\n\n",
-				  Object->Package->SelfName, Object->GetClassName(), Object->Name);
+		GL::textf(S_GREEN"Package:"S_WHITE" %s\n"
+				  S_GREEN"Class  :"S_WHITE" %s\n"
+				  S_GREEN"Object :"S_WHITE" %s\n\n",
+				  Object->Package->Filename, Object->GetClassName(), Object->Name);
 	}
 
 	virtual void Draw3D()
