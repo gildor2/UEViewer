@@ -304,13 +304,11 @@ void UObject::Serialize(FArchive &Ar)
 
 		// reserved, but not implemented in unreal:
 		case PT_STRING:		//------  string  => used str
-		case PT_VECTOR:	//------  vector  => used structure"Vector"
+		case PT_VECTOR:		//------  vector  => used structure"Vector"
 		case PT_ROTATOR:	//------  rotator => used structure"Rotator"
 			appError("Unknown property");
 			break;
 		}
-		//!!!!!!
-//		assert(Ar.ArPos == StopPos);
 		if (Ar.ArPos != StopPos) appNotify("ArPos-StopPos = %d", Ar.ArPos - StopPos);
 
 		unguardf(("(%s.%s)", GetClassName(), *PropName));

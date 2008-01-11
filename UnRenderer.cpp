@@ -7,7 +7,9 @@
 #include "libs/ddslib.h"
 
 
-#define MAX_IMG_SIZE	4096
+#define MAX_IMG_SIZE		4096
+#define DEFAULT_TEX_NUM		2			// note: glIsTexture(0) will always return GL_FALSE
+#define RESERVED_TEXTURES	32
 
 
 /*-----------------------------------------------------------------------------
@@ -307,8 +309,8 @@ UMaterial *BindDefaultMaterial()
 			memcpy(p, c, 4);
 		}
 	}
-	Upload(0, pic, 16, 16, true, true, true);
-	Mat->TexNum    = 0;
+	Upload(DEFAULT_TEX_NUM, pic, 16, 16, true, true, true);
+	Mat->TexNum    = DEFAULT_TEX_NUM;
 	Mat->bTwoSided = true;
 	return Mat;
 }
@@ -353,7 +355,7 @@ void UTexture::Bind()
 	bool upload = false;
 	if (TexNum < 0)
 	{
-		static GLint lastTexNum = 128;	// first 128 textures reserved
+		static GLint lastTexNum = RESERVED_TEXTURES;
 		TexNum = ++lastTexNum;
 		upload = true;
 	}
@@ -381,7 +383,7 @@ void UTexture::Bind()
 		if (n >= Mips.Num())
 		{
 			appNotify("WARNING: texture %s has no valid mapmaps", Name);
-			TexNum = 0;		// "default texture"
+			TexNum = DEFAULT_TEX_NUM;		// "default texture"
 		}
 	}
 	// bind texture

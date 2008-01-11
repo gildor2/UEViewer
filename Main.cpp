@@ -293,10 +293,10 @@ void AppDisplayTexts(bool helpVisible)
 	guard(AppDisplayTexts);
 	if (helpVisible)
 	{
-		GL::text("PgUp/PgDn   browse objects\n");
-		GL::text("D           dump info\n");
+		DrawTextLeft("PgUp/PgDn   browse objects");
+		DrawTextLeft("D           dump info");
 		Viewer->ShowHelp();
-		GL::text("-----\n\n");		// divider
+		DrawTextLeft("-----\n");		// divider
 	}
 	Viewer->Draw2D();
 	unguard;

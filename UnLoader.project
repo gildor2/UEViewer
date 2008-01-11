@@ -35,6 +35,7 @@ sources(MAIN) = {
 	# libraries
 	GlWindow.cpp
 	Math3D.cpp
+	TextContainer.cpp
 	libs/ddslib.c
 }
 

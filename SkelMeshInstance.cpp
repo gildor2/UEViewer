@@ -6,8 +6,8 @@ struct CMeshBoneData
 {
 	// static data (computed after mesh loading)
 	int			BoneMap;			// index of bone in animation tracks
-	CCoords		RefCoords;			// coordinates of bone in reference pose
-	CCoords		RefCoordsInv;		// inverse of RefCoordsInv
+	CCoords		RefCoords;			// coordinates of bone in reference pose (unused!!)
+	CCoords		RefCoordsInv;		// inverse of RefCoords
 	int			SubtreeSize;		// count of all children bones (0 for leaf bone)
 	// dynamic data
 	// skeleton configuration
@@ -32,8 +32,13 @@ struct CMeshBoneData
 
 CSkelMeshInstance::~CSkelMeshInstance()
 {
-	if (BoneData)  delete BoneData;
-	if (MeshVerts) delete MeshVerts;
+	if (BoneData)
+	{
+		delete BoneData;
+		delete MeshVerts;
+		delete MeshNormals;
+		delete RefNormals;
+	}
 }
 
 
@@ -93,6 +98,46 @@ static int CheckBoneTree(const TArray<FMeshBone> &Bones, int Index,
 }
 
 
+static void BuildNormals(USkeletalMesh *Mesh, CVec3 *Normals)
+{
+	int i;
+	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	{
+		const VTriangle &Face = Mesh->Triangles[i];
+		// get vertex indices
+		int i1 = Mesh->Wedges[Face.WedgeIndex[0]].iVertex;
+		int i2 = Mesh->Wedges[Face.WedgeIndex[1]].iVertex;
+		int i3 = Mesh->Wedges[Face.WedgeIndex[2]].iVertex;
+		// compute edges
+		const CVec3 &V1 = (CVec3&)Mesh->Points[i1];
+		const CVec3 &V2 = (CVec3&)Mesh->Points[i2];
+		const CVec3 &V3 = (CVec3&)Mesh->Points[i3];
+		CVec3 D1, D2, D3;
+		VectorSubtract(V2, V1, D1);
+		VectorSubtract(V3, V2, D2);
+		VectorSubtract(V1, V3, D3);
+		// compute normal
+		CVec3 norm;
+		cross(D2, D1, norm);
+		norm.Normalize();
+		// compute angles
+		D1.Normalize();
+		D2.Normalize();
+		D3.Normalize();
+		float angle1 = acos(-dot(D1, D3));
+		float angle2 = acos(-dot(D1, D2));
+		float angle3 = acos(-dot(D2, D3));
+		// add normals for triangle verts
+		VectorMA(Normals[i1], angle1, norm);
+		VectorMA(Normals[i2], angle2, norm);
+		VectorMA(Normals[i3], angle3, norm);
+	}
+	// normalize normals
+	for (i = 0; i < Mesh->Points.Num(); i++)
+		Normals[i].Normalize();
+}
+
+
 void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 {
 	guard(CSkelMeshInstance::SetMesh);
@@ -100,21 +145,28 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 	CMeshInstance::SetMesh(LodMesh);
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(LodMesh);
 
-	int NumBones = Mesh->Bones.Num();
+	int NumBones = Mesh->RefSkeleton.Num();
 	int NumVerts = Mesh->Points.Num();
 	const UMeshAnimation *Anim = Mesh->Animation;
 
 	// allocate some arrays
-	if (BoneData)  delete BoneData;
-	if (MeshVerts) delete MeshVerts;
-	BoneData  = new CMeshBoneData[NumBones];
-	MeshVerts = new CVec3        [NumVerts];
+	if (BoneData)
+	{
+		delete BoneData;
+		delete MeshVerts;
+		delete MeshNormals;
+		delete RefNormals;
+	}
+	BoneData    = new CMeshBoneData[NumBones];
+	MeshVerts   = new CVec3        [NumVerts];
+	MeshNormals = new CVec3        [NumVerts];
+	RefNormals  = new CVec3        [NumVerts];
 
 	int i;
 	CMeshBoneData *data;
 	for (i = 0, data = BoneData; i < NumBones; i++, data++)
 	{
-		const FMeshBone &B = Mesh->Bones[i];
+		const FMeshBone &B = Mesh->RefSkeleton[i];
 		// NOTE: assumed, that parent bones goes first
 		assert(B.ParentIndex <= i);
 
@@ -143,12 +195,14 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 		BO.ToAxis(BC.axis);
 		// move bone position to global coordinate space
 		if (i)	// do not rotate root bone
-			BoneData[Mesh->Bones[i].ParentIndex].RefCoords.UnTransformCoords(BC, BC);
+			BoneData[B.ParentIndex].RefCoords.UnTransformCoords(BC, BC);
 		// store inverted transformation too
 		InvertCoords(data->RefCoords, data->RefCoordsInv);
 		// initialize skeleton configuration
 		data->Scale = 1.0f;			// default bone scale
 	}
+
+	BuildNormals(Mesh, RefNormals);
 
 	// normalize VertInfluences: sum of all influences may be != 1
 	// (possible situation, see SkaarjAnims/Skaarj2, SkaarjAnims/Skaarj_Skel, XanRobots/XanF02)
@@ -189,7 +243,7 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 	//?? should be done in USkeletalMesh
 	int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
 	int numIndices = 0;
-	CheckBoneTree(Mesh->Bones, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
+	CheckBoneTree(Mesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
 	assert(numIndices == NumBones);
 	for (i = 0; i < numIndices; i++)
 		BoneData[i].SubtreeSize = treeSizes[i];	// remember subtree size
@@ -198,7 +252,7 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 	//?? dump tree; separate function (requires depth information)
 	for (i = 0; i < numIndices; i++)
 	{
-		int parent = Mesh->Bones[i].ParentIndex;
+		int parent = Mesh->RefSkeleton[i].ParentIndex;
 		printf("bone#%2d (parent %2d); tree size: %2d   ", i, parent, treeSizes[i]);
 		for (int j = 0; j < depth[i]; j++)
 		{
@@ -229,7 +283,7 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
         #endif
 	#endif
 		}
-		printf("%s\n", *Mesh->Bones[i].Name);
+		printf("%s\n", *Mesh->RefSkeleton[i].Name);
 	}
 #endif
 
@@ -247,8 +301,8 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 int CSkelMeshInstance::FindBone(const char *BoneName) const
 {
 	const USkeletalMesh *Mesh = GetMesh();
-	for (int i = 0; i < Mesh->Bones.Num(); i++)
-		if (!strcmp(Mesh->Bones[i].Name, BoneName))
+	for (int i = 0; i < Mesh->RefSkeleton.Num(); i++)
+		if (!strcmp(Mesh->RefSkeleton[i].Name, BoneName))
 			return i;
 	return -1;
 }
@@ -279,6 +333,18 @@ void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 	Skeletal animation itself
 -----------------------------------------------------------------------------*/
 
+#define MAX_LINEAR_KEYS		4
+
+//!! DEBUGGING, remove later
+#define DEBUG_BIN_SEARCH	1
+#if 0
+#	define DBG		printf
+#else
+#	define DBG		if (1) {} else printf
+#endif
+//!! ^^^^^^
+
+
 static void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
 	CVec3 &DstPos, CQuat &DstQuat)
 {
@@ -295,25 +361,69 @@ static void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, 
 	}
 
 	// find index in time key array
-	//!! linear search -> binary search
 	int NumKeys = A.KeyTime.Num();
-	for (i = 0; i < NumKeys; i++)
+	// *** binary search ***
+	int Low = 0, High = NumKeys-1;
+	DBG(">>> find %.5f\n", Frame);
+	while (Low + MAX_LINEAR_KEYS < High)
 	{
-		if (Frame == A.KeyTime[i])
+		int Mid = (Low + High) / 2;
+		DBG("   [%d..%d] mid: [%d]=%.5f", Low, High, Mid, A.KeyTime[Mid]);
+		if (Frame < A.KeyTime[Mid])
+			High = Mid-1;
+		else
+			Low = Mid;
+		DBG("   d=%f\n", A.KeyTime[Mid]-Frame);
+	}
+
+	// *** linear search ***
+	DBG("   linear: %d..%d\n", Low, High);
+	for (i = Low; i <= High; i++)
+	{
+		float CurrKeyTime = A.KeyTime[i];
+		DBG("   #%d: %.5f\n", i, CurrKeyTime);
+		if (Frame == CurrKeyTime)
 		{
 			// exact key found
 			DstPos  = (A.KeyPos.Num()  > 1) ? (CVec3&)A.KeyPos[i]  : (CVec3&)A.KeyPos[0];
 			DstQuat = (A.KeyQuat.Num() > 1) ? (CQuat&)A.KeyQuat[i] : (CQuat&)A.KeyQuat[0];
 			return;
 		}
-		if (Frame < A.KeyTime[i])
+		if (Frame < CurrKeyTime)
 		{
 			i--;
 			break;
 		}
 	}
-	if (i > NumKeys-1)
-		i = NumKeys-1;
+	if (i > High)
+		i = High;
+
+#if DEBUG_BIN_SEARCH
+	//!! --- checker ---
+	int i1;
+	for (i1 = 0; i1 < NumKeys; i1++)
+	{
+		float CurrKeyTime = A.KeyTime[i1];
+		if (Frame == CurrKeyTime)
+		{
+			// exact key found
+			DstPos  = (A.KeyPos.Num()  > 1) ? (CVec3&)A.KeyPos[i]  : (CVec3&)A.KeyPos[0];
+			DstQuat = (A.KeyQuat.Num() > 1) ? (CQuat&)A.KeyQuat[i] : (CQuat&)A.KeyQuat[0];
+			return;
+		}
+		if (Frame < CurrKeyTime)
+		{
+			i1--;
+			break;
+		}
+	}
+	if (i1 > NumKeys-1)
+		i1 = NumKeys-1;
+	if (i != i1)
+	{
+		appError("i=%d != i1=%d", i, i1);
+	}
+#endif
 
 	int X = i;
 	int Y = i+1;
@@ -395,7 +505,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 		// compute bone range, affected by specified animation bone
 		int firstBone = Chn->RootBone;
 		int lastBone  = firstBone + BoneData[firstBone].SubtreeSize;
-		assert(lastBone < Mesh->Bones.Num());
+		assert(lastBone < Mesh->RefSkeleton.Num());
 
 		int i;
 		CMeshBoneData *data;
@@ -449,7 +559,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 			else
 			{
 				// get default bone position
-				const FMeshBone &B = Mesh->Bones[i];
+				const FMeshBone &B = Mesh->RefSkeleton[i];
 				BP = (CVec3&)B.BonePos.Position;
 				BO = (CQuat&)B.BonePos.Orientation;
 			}
@@ -478,7 +588,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 	// transform bones using skeleton hierarchy
 	int i;
 	CMeshBoneData *data;
-	for (i = 0, data = BoneData; i < Mesh->Bones.Num(); i++, data++)
+	for (i = 0, data = BoneData; i < Mesh->RefSkeleton.Num(); i++, data++)
 	{
 		CCoords &BC = data->Coords;
 		BC.origin = data->Pos;
@@ -494,7 +604,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 		else
 		{
 			// other bones - rotate around parent bone
-			BoneData[Mesh->Bones[i].ParentIndex].Coords.UnTransformCoords(BC, BC);
+			BoneData[Mesh->RefSkeleton[i].ParentIndex].Coords.UnTransformCoords(BC, BC);
 		}
 		// deform skeleton according to external settings
 		if (data->Scale != 1.0f)
@@ -518,7 +628,7 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 
 	// prepare bone-to-channel map
 	//?? optimize: update when animation changed only
-	for (int i = 0; i < Mesh->Bones.Num(); i++)
+	for (int i = 0; i < Mesh->RefSkeleton.Num(); i++)
 		BoneData[i].FirstChannel = 0;
 
 	assert(MaxAnimChannel < MAX_SKELANIMCHANNELS);
@@ -728,7 +838,7 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 	Drawing
 -----------------------------------------------------------------------------*/
 
-void CSkelMeshInstance::DrawSkeleton()
+void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 {
 	guard(CSkelMeshInstance::DrawSkeleton);
 
@@ -739,9 +849,9 @@ void CSkelMeshInstance::DrawSkeleton()
 	glEnable(GL_LINE_SMOOTH);
 
 	glBegin(GL_LINES);
-	for (int i = 0; i < Mesh->Bones.Num(); i++)
+	for (int i = 0; i < Mesh->RefSkeleton.Num(); i++)
 	{
-		const FMeshBone &B  = Mesh->Bones[i];
+		const FMeshBone &B  = Mesh->RefSkeleton[i];
 		const CCoords   &BC = BoneData[i].Coords;
 
 		CVec3 v2;
@@ -752,6 +862,7 @@ void CSkelMeshInstance::DrawSkeleton()
 //		glVertex3fv(BC.origin.v);
 //		glVertex3fv(v2.v);
 
+		CVec3 v1;
 		if (i > 0)
 		{
 			glColor3f(1,1,0.3);
@@ -759,14 +870,23 @@ void CSkelMeshInstance::DrawSkeleton()
 			int t = BoneUpdateCounts[i];
 			glColor3f(t & 1, (t >> 1) & 1, (t >> 2) & 1);
 			//!! ^^^^^^^^^^^^^
-			glVertex3fv(BoneData[B.ParentIndex].Coords.origin.v);
+			v1 = BoneData[B.ParentIndex].Coords.origin;
 		}
 		else
 		{
 			glColor3f(1,0,1);
-			glVertex3f(0, 0, 0);
+			v1.Zero();
 		}
+		glVertex3fv(v1.v);
 		glVertex3fv(BC.origin.v);
+
+		if (ShowLabels)
+		{
+			// show bone label
+			v1.Add(BC.origin);
+			v1.Scale(0.5f);
+			DrawText3D(v1, S_YELLOW"%s", *B.Name);
+		}
 	}
 	glColor3f(1,1,1);
 	glEnd();
@@ -778,33 +898,33 @@ void CSkelMeshInstance::DrawSkeleton()
 }
 
 
-void CSkelMeshInstance::DrawBaseSkeletalMesh()
+void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 {
 	guard(CSkelMeshInstance::DrawBaseSkeletalMesh);
 	int i;
 
 	const USkeletalMesh *Mesh = GetMesh();
 
+	glEnable(GL_LIGHTING);
+
 	//?? try other tech: compute weighted sum of matrices, and then
 	//?? transform vector (+ normal ?; note: normals requires normalized
 	//?? transformations ?? (or normalization guaranteed by sum(weights)==1?))
-	memset(MeshVerts, 0, sizeof(CVec3) * Mesh->VertexCount);
+	memset(MeshVerts,   0, sizeof(CVec3) * Mesh->VertexCount);
+	memset(MeshNormals, 0, sizeof(CVec3) * Mesh->VertexCount);
+
 	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
 	{
 		const FVertInfluences &Inf  = Mesh->VertInfluences[i];
 		const CMeshBoneData   &data = BoneData[Inf.BoneIndex];
 		int PointIndex = Inf.PointIndex;
-		const CVec3 &Src = (CVec3&)Mesh->Points[PointIndex];
 		CVec3 tmp;
-#if 0
-		// variant 1: ref pose -> local bone space -> transformed bone to world
-		data.RefCoords.TransformPoint(Src, tmp);
-		data.Coords.UnTransformPoint(tmp, tmp);
-#else
-		// variant 2: use prepared transformation (same result, but faster)
-		data.Transform.UnTransformPoint(Src, tmp);
-#endif
+		// transform vertex
+		data.Transform.UnTransformPoint((CVec3&)Mesh->Points[PointIndex], tmp);
 		VectorMA(MeshVerts[PointIndex], Inf.Weight, tmp);
+		// transform normal
+		data.Transform.axis.UnTransformVector(RefNormals[PointIndex], tmp);
+		VectorMA(MeshNormals[PointIndex], Inf.Weight, tmp);
 	}
 
 	for (i = 0; i < Mesh->Triangles.Num(); i++)
@@ -816,11 +936,28 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh()
 		{
 			const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
 			glTexCoord2f(W.TexUV.U, W.TexUV.V);
-			glVertex3fv(&MeshVerts[W.iVertex][0]);
+			glNormal3fv(MeshNormals[W.iVertex].v);
+			glVertex3fv(MeshVerts[W.iVertex].v);
 		}
 		glEnd();
 	}
 	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_LIGHTING);
+
+	// draw mesh normals
+	if (ShowNormals)
+	{
+		glBegin(GL_LINES);
+		glColor3f(0.5, 1, 0);
+		for (i = 0; i < Mesh->Points.Num(); i++)
+		{
+			glVertex3fv(MeshVerts[i].v);
+			CVec3 tmp;
+			VectorMA(MeshVerts[i], 2, MeshNormals[i], tmp);
+			glVertex3fv(tmp.v);
+		}
+		glEnd();
+	}
 
 	unguard;
 }
@@ -890,14 +1027,14 @@ void CSkelMeshInstance::Draw()
 
 	// show skeleton
 	if (Viewer->ShowSkel)		//!! move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
-		DrawSkeleton();
+		DrawSkeleton(Viewer->ShowLabels);
 	// show mesh
 	if (Viewer->ShowSkel != 2)
 	{
 		if (LodNum < 0)
-			DrawBaseSkeletalMesh();
+			DrawBaseSkeletalMesh(Viewer->bShowNormals);
 		else
-			DrawLodSkeletalMesh(&Mesh->StaticLODModels[LodNum]);
+			DrawLodSkeletalMesh(&Mesh->LODModels[LodNum]);
 	}
 
 	unguard;

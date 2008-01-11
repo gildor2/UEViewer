@@ -14,11 +14,14 @@ rem goto bugs
 
 rem ---------------------------------------------------------------------------
 
-rem %run% HumanMaleA MercMaleD
-%run% HumanFemaleA MercFemaleB
+%run% HumanMaleA MercMaleD
+rem %run% HumanFemaleA MercFemaleB
+rem %run2% Aida
 rem %run% HumanFemaleA
+rem %run% Aliens
 rem %run% HumanMaleA
 rem %run% Bot
+rem %run% Jugg JuggMaleA
 
 rem %run% SkaarjPack_rc
 rem %run% SkaarjPack_rc NaliCow

@@ -58,10 +58,10 @@ public:
 
 	virtual void Draw2D()
 	{
-		GL::textf(S_GREEN"Package:"S_WHITE" %s\n"
-				  S_GREEN"Class  :"S_WHITE" %s\n"
-				  S_GREEN"Object :"S_WHITE" %s\n\n",
-				  Object->Package->Filename, Object->GetClassName(), Object->Name);
+		DrawTextLeft(S_GREEN"Package:"S_WHITE" %s\n"
+					 S_GREEN"Class  :"S_WHITE" %s\n"
+					 S_GREEN"Object :"S_WHITE" %s\n",
+					 Object->Package->Filename, Object->GetClassName(), Object->Name);
 	}
 
 	virtual void Draw3D()
@@ -152,6 +152,7 @@ class CSkelMeshViewer : public CMeshViewer
 {
 public:
 	int		ShowSkel;		// 0 - mesh, 1 - mesh+skel, 2 - skel only
+	bool	ShowLabels;
 
 	CSkelMeshViewer(USkeletalMesh *Mesh);
 	virtual void ShowHelp();

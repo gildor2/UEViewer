@@ -660,9 +660,9 @@ public:
 	TLazyArray<FVertInfluences> VertInfluences;
 	TLazyArray<word>		CollapseWedge;	// Num == Wedges.Num; used to automatically build StaticLODModels
 	TLazyArray<word>		f1C8;			// Num == Triangles.Num, element = index in Points array; not used?
-	TArray<FMeshBone>		Bones;
-	int						BoneDepth;		// bone hierarchy depth
-	TArray<FStaticLODModel>	StaticLODModels;
+	TArray<FMeshBone>		RefSkeleton;
+	int						SkeletalDepth;
+	TArray<FStaticLODModel>	LODModels;
 	TArray<FVector>			f1FC;
 	TArray<VWeightIndex>	WeightIndices;	// empty
 	TArray<VBoneInfluence>	BoneInfluences;
@@ -684,8 +684,8 @@ public:
 		guard(USkeletalMesh::Serialize);
 
 		Super::Serialize(Ar);
-		Ar << f1FC << Bones << Animation;
-		Ar << BoneDepth << WeightIndices << BoneInfluences;
+		Ar << f1FC << RefSkeleton << Animation;
+		Ar << SkeletalDepth << WeightIndices << BoneInfluences;
 		Ar << AttachAliases << AttachBoneNames << AttachCoords;
 		if (Version <= 1)
 		{
@@ -696,7 +696,7 @@ public:
 		}
 		else
 		{
-			Ar << StaticLODModels << f224 << Points << Wedges << Triangles << VertInfluences;
+			Ar << LODModels << f224 << Points << Wedges << Triangles << VertInfluences;
 			Ar << CollapseWedge << f1C8;
 		}
 

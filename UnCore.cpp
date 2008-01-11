@@ -170,7 +170,6 @@ int appSprintf(char *dest, int size, const char *fmt, ...)
 
 void appStrncpyz(char *dst, const char *src, int count)
 {
-
 	if (count <= 0) return;	// zero-length string
 
 	char c;

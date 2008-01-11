@@ -5,6 +5,7 @@
 CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	ShowSkel(0)
+,	ShowLabels(false)
 {
 	Inst = new CSkelMeshInstance(this);
 	Inst->SetMesh(Mesh);
@@ -34,7 +35,7 @@ void CSkelMeshViewer::Test()
 	VERIFY_NULL(Faces.Num());
 	VERIFY_NULL(Verts.Num());
 
-	int NumBones = Mesh->Bones.Num();
+	int NumBones = Mesh->RefSkeleton.Num();
 //	TEST_ARRAY(Mesh->CollapseWedge);
 //	TEST_ARRAY(Mesh->f1C8);
 	VERIFY(AttachBoneNames.Num(), AttachAliases.Num());
@@ -44,9 +45,9 @@ void CSkelMeshViewer::Test()
 	VERIFY_NOT_NULL(VertInfluences.Num());
 	VERIFY_NOT_NULL(Wedges.Num());
 
-	for (i = 0; i < Mesh->StaticLODModels.Num(); i++)
+	for (i = 0; i < Mesh->LODModels.Num(); i++)
 	{
-		const FStaticLODModel &lod = Mesh->StaticLODModels[i];
+		const FStaticLODModel &lod = Mesh->LODModels[i];
 //?? (not always)	if (lod.NumDynWedges != lod.Wedges.Num()) appNotify("lod[%d]: NumDynWedges!=wedges.Num()", i);
 		if (lod.SkinPoints.Num() != lod.Points.Num() && lod.RigidSections.Num() == 0)
 			appNotify("[%d] skinPoints: %d", i,	lod.SkinPoints.Num());
@@ -118,31 +119,31 @@ void CSkelMeshViewer::Dump()
 		"BoneDepth      %d\n"
 		"WeightIds # %d  BoneInfs # %d  VertInfs # %d\n"
 		"Attachments #  %d\n"
-		"StaticLODModels # %d\n",
+		"LODModels # %d\n",
 		Mesh->f1FC.Num(),
-		Mesh->Bones.Num(),
+		Mesh->RefSkeleton.Num(),
 		Mesh->Points.Num(),
 		Mesh->Wedges.Num(),Mesh->Triangles.Num(),
 		Mesh->CollapseWedge.Num(), Mesh->f1C8.Num(),
-		Mesh->BoneDepth,
+		Mesh->SkeletalDepth,
 		Mesh->WeightIndices.Num(), Mesh->BoneInfluences.Num(), Mesh->VertInfluences.Num(),
 		Mesh->AttachBoneNames.Num(),
-		Mesh->StaticLODModels.Num()
+		Mesh->LODModels.Num()
 	);
 
 	int i;
 
 	// check bone sort order (assumed, that child go after parent)
-	for (i = 0; i < Mesh->Bones.Num(); i++)
+	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
 	{
-		const FMeshBone &B = Mesh->Bones[i];
+		const FMeshBone &B = Mesh->RefSkeleton[i];
 		if (B.ParentIndex >= i + 1) appNotify("bone[%d] has parent %d", i+1, B.ParentIndex);
 	}
 
-	for (i = 0; i < Mesh->StaticLODModels.Num(); i++)
+	for (i = 0; i < Mesh->LODModels.Num(); i++)
 	{
 		printf("model # %d\n", i);
-		const FStaticLODModel &lod = Mesh->StaticLODModels[i];
+		const FStaticLODModel &lod = Mesh->LODModels[i];
 		printf(
 			"  f0=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
 			"  DistanceFactor=%g  Hysteresis=%g  SharedVerts=%d  MaxInfluences=%d  114=%d  118=%d\n"
@@ -183,17 +184,18 @@ void CSkelMeshViewer::Draw2D()
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
 	if (MeshInst->LodNum < 0)
-		GL::textf(S_GREEN"LOD :"S_WHITE" base mesh\n");
+		DrawTextLeft(S_GREEN"LOD : "S_WHITE"base mesh\n");
 	else
-		GL::textf(S_GREEN"LOD :"S_WHITE" %d/%d\n", MeshInst->LodNum+1, Mesh->StaticLODModels.Num());
+		DrawTextLeft(S_GREEN"LOD : "S_WHITE" %d/%d\n", MeshInst->LodNum+1, Mesh->LODModels.Num());
 }
 
 
 void CSkelMeshViewer::ShowHelp()
 {
 	CMeshViewer::ShowHelp();
-	GL::text("L           cycle mesh LODs\n");
-	GL::text("S           show skeleton\n");
+	DrawTextLeft("L           cycle mesh LODs\n"
+				 "S           show skeleton\n"
+				 "B           show bone names");
 }
 
 
@@ -208,12 +210,15 @@ void CSkelMeshViewer::ProcessKey(int key)
 	switch (key)
 	{
 	case 'l':
-		if (++MeshInst->LodNum >= Mesh->StaticLODModels.Num())
+		if (++MeshInst->LodNum >= Mesh->LODModels.Num())
 			MeshInst->LodNum = -1;
 		break;
 	case 's':
 		if (++ShowSkel > 2)
 			ShowSkel = 0;
+		break;
+	case 'b':
+		ShowLabels = !ShowLabels;
 		break;
 
 	//!! testing, remove later
@@ -225,8 +230,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 			return;
 		}
 		Alpha = 0;
-//		MeshInst->LoopAnim("CrouchF", 1, 0, 2);
-		MeshInst->LoopAnim("WalkF", 1, 0, 2);
+		MeshInst->LoopAnim("CrouchF", 1, 0, 2);
+//		MeshInst->LoopAnim("WalkF", 1, 0, 2);
 //		MeshInst->LoopAnim("RunR", 1, 0, 2);
 //		MeshInst->LoopAnim("SwimF", 1, 0, 2);
 		MeshInst->SetSecondaryAnim(2, "RunF");

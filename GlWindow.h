@@ -22,6 +22,12 @@ namespace GL
 	extern bool invertXAxis;
 };
 
+void DrawTextLeft(const char *text, ...);
+void DrawTextRight(const char *text, ...);
+void DrawText3D(const CVec3 &pos, const char *text, ...);
+void FlushTexts();
+
+
 #define SPEC_KEY(x)		(SDLK_##x)
 
 

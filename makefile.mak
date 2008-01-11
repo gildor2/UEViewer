@@ -34,6 +34,7 @@ MAIN = \
 	obj/MaterialViewer.obj \
 	obj/GlWindow.obj \
 	obj/Math3D.obj \
+	obj/TextContainer.obj \
 	obj/ddslib.obj
 
 MAIN_DIRS = \
@@ -53,7 +54,8 @@ DEPENDS = \
 	Core.h \
 	GlFont.h \
 	GlWindow.h \
-	Math3D.h
+	Math3D.h \
+	TextContainer.h
 
 obj/GlWindow.obj : GlWindow.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/GlWindow.obj" GlWindow.cpp
@@ -132,6 +134,14 @@ DEPENDS = \
 
 obj/Math3D.obj : Math3D.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Math3D.obj" Math3D.cpp
+
+DEPENDS = \
+	Core.h \
+	Math3D.h \
+	TextContainer.h
+
+obj/TextContainer.obj : TextContainer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/TextContainer.obj" TextContainer.cpp
 
 DEPENDS = \
 	Core.h \

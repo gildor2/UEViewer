@@ -105,10 +105,10 @@ void CMeshViewer::Draw2D()
 	float Frame, NumFrames, Rate;
 	Inst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
 
-	GL::textf(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g%s\n",
+	DrawTextLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g%s",
 		AnimIndex+1, Inst->GetAnimCount(), AnimName, Rate, NumFrames,
 		Inst->IsTweening() ? " [tweening]" : "");
-	GL::textf(S_GREEN"Time:"S_WHITE" %.1f/%g\n", Frame, NumFrames);
+	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
 
 	unguard;
 }
@@ -126,6 +126,7 @@ void CMeshViewer::Draw3D()
 	Inst->UpdateAnimation(TimeDelta);
 
 	// draw axis
+	glDisable(GL_TEXTURE_2D);
 	glBegin(GL_LINES);
 	for (int i = 0; i < 3; i++)
 	{
@@ -155,13 +156,13 @@ void CMeshViewer::Draw3D()
 void CMeshViewer::ShowHelp()
 {
 	CObjectViewer::ShowHelp();
-	GL::text("N           show normals\n"
-			 "W           toggle wireframe\n"
-			 "M           colorize materials\n"
-			 "[]          prev/next animation\n"
-			 "<>          prev/next frame\n"
-			 "Space       play animation\n"
-			 "X           play looped animation\n");
+	DrawTextLeft("N           show normals\n"
+				 "W           toggle wireframe\n"
+				 "M           colorize materials\n"
+				 "[]          prev/next animation\n"
+				 "<>          prev/next frame\n"
+				 "Space       play animation\n"
+				 "X           play looped animation");
 }
 
 

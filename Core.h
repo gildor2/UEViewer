@@ -66,6 +66,7 @@
 
 #define appFloor(x)		( (int)floor(x) )
 #define appCeil(x)		( (int)ceil(x) )
+#define appRound(x)		( (int) (x >= 0 ? (x)+0.5f : (x)-0.5f) )
 
 
 #if _MSC_VER
@@ -89,6 +90,12 @@ typedef unsigned short		word;
 #define S_MAGENTA		"^5"
 #define S_CYAN			"^6"
 #define S_WHITE			"^7"
+
+
+template<class T> inline T OffsetPointer(const T ptr, int offset)
+{
+	return (T) ((unsigned)ptr + offset);
+}
 
 
 void appError(char *fmt, ...);

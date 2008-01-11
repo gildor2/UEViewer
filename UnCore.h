@@ -427,7 +427,7 @@ public:
 	int Add(int count = 1)
 	{
 		int index = DataCount;
-		FArray::Insert(index, 1, sizeof(T));
+		FArray::Insert(index, count, sizeof(T));
 		return index;
 	}
 

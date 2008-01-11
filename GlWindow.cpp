@@ -1,4 +1,5 @@
 #include "Core.h"
+#include "TextContainer.h"
 #include "GlWindow.h"
 
 // font
@@ -25,7 +26,7 @@ static float frameTime;
 #define MAX_DIST		2048
 #define CLEAR_COLOR		0.2, 0.3, 0.3, 0
 
-#define FONT_TEXID		1
+#define FONT_TEX_NUM	1
 #define TEXT_LEFT		4
 #define TEXT_TOP		4
 
@@ -36,6 +37,7 @@ namespace GL
 	float zNear = 4;			// near clipping plane
 	float zFar  = 4096;			// far clipping plane
 	float yFov  = 80;
+	float tFovX, tFovY;			// tan(fov_x|y)
 	bool  invertXAxis = false;
 	// window size
 	int   width  = 800;
@@ -135,24 +137,23 @@ namespace GL
 			}
 		}
 		// upload it
-		glBindTexture(GL_TEXTURE_2D, FONT_TEXID);
+		glBindTexture(GL_TEXTURE_2D, FONT_TEX_NUM);
 		glTexImage2D(GL_TEXTURE_2D, 0, 4, TEX_WIDTH, TEX_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		delete pic;
 	}
 
-	void text(const char *text)
+	void DrawChar(char c, int color, int textX, int textY)
 	{
 		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, FONT_TEXID);
+		glBindTexture(GL_TEXTURE_2D, FONT_TEX_NUM);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.5);
 
-		int color = 7;
-		static float colorTable[][3] = {
+		static const float colorTable[][3] = {
 			{0, 0, 0},
 			{1, 0, 0},
 			{0, 1, 0},
@@ -164,6 +165,42 @@ namespace GL
 		};
 
 		glBegin(GL_QUADS);
+
+		c -= FONT_FIRST_CHAR;
+
+		int x1 = textX;
+		int y1 = textY;
+		int x2 = textX + CHAR_WIDTH;
+		int y2 = textY + CHAR_HEIGHT;
+		int line = c / CHARS_PER_LINE;
+		int col  = c - line * CHARS_PER_LINE;
+		float s0 = (col      * CHAR_WIDTH)  / (float)TEX_WIDTH;
+		float s1 = ((col+1)  * CHAR_WIDTH)  / (float)TEX_WIDTH;
+		float t0 = (line     * CHAR_HEIGHT) / (float)TEX_HEIGHT;
+		float t1 = ((line+1) * CHAR_HEIGHT) / (float)TEX_HEIGHT;
+
+		for (int s = 1; s >= 0; s--)
+		{
+			if (s)
+				glColor3f(0, 0, 0);
+			else
+				glColor3fv(colorTable[color]);
+			glTexCoord2f(s0, t0);
+			glVertex3f(x1+s, y1+s, 0);
+			glTexCoord2f(s1, t0);
+			glVertex3f(x2+s, y1+s, 0);
+			glTexCoord2f(s1, t1);
+			glVertex3f(x2+s, y2+s, 0);
+			glTexCoord2f(s0, t1);
+			glVertex3f(x1+s, y2+s, 0);
+		}
+
+		glEnd();
+	}
+
+	void text(const char *text)
+	{
+		int color = 7;
 
 		while (char c = *text++)
 		{
@@ -183,49 +220,24 @@ namespace GL
 					continue;
 				}
 			}
-			c -= FONT_FIRST_CHAR;
-			int x1 = textX;
-			int y1 = textY;
-			int x2 = textX + CHAR_WIDTH;
-			int y2 = textY + CHAR_HEIGHT;
-			int line = c / CHARS_PER_LINE;
-			int col  = c - line * CHARS_PER_LINE;
-			float s0 = (col      * CHAR_WIDTH)  / (float)TEX_WIDTH;
-			float s1 = ((col+1)  * CHAR_WIDTH)  / (float)TEX_WIDTH;
-			float t0 = (line     * CHAR_HEIGHT) / (float)TEX_HEIGHT;
-			float t1 = ((line+1) * CHAR_HEIGHT) / (float)TEX_HEIGHT;
-
+			DrawChar(c, color, textX, textY);
 			textX += CHAR_WIDTH;
-
-			for (int s = 1; s >= 0; s--)
-			{
-				if (s)
-					glColor3f(0, 0, 0);
-				else
-					glColor3fv(colorTable[color]);
-				glTexCoord2f(s0, t0);
-				glVertex3f(x1+s, y1+s, 0);
-				glTexCoord2f(s1, t0);
-				glVertex3f(x2+s, y1+s, 0);
-				glTexCoord2f(s1, t1);
-				glVertex3f(x2+s, y2+s, 0);
-				glTexCoord2f(s0, t1);
-				glVertex3f(x1+s, y2+s, 0);
-			}
 		}
-		glEnd();
 	}
+
+#define FORMAT_BUF(fmt,buf)		\
+	va_list	argptr;				\
+	va_start(argptr, fmt);		\
+	char msg[4096];				\
+	vsnprintf(ARRAY_ARG(buf), fmt, argptr); \
+	va_end(argptr);
+
 
 	void textf(const char *fmt, ...)
 	{
-		va_list	argptr;
-		va_start(argptr, fmt);
-		char msg[4096];
-		vsnprintf(ARRAY_ARG(msg), fmt, argptr);
-		va_end(argptr);
+		FORMAT_BUF(fmt, msg);
 		text(msg);
 	}
-
 
 	//-------------------------------------------------------------------------
 	// called when window resized
@@ -233,7 +245,6 @@ namespace GL
 	{
 		width  = w;
 		height = h;
-		glViewport(0, 0, w, h);
 		SDL_SetVideoMode(width, height, 24, SDL_OPENGL|SDL_RESIZABLE);
 		LoadFont();
 		// init gl
@@ -276,7 +287,7 @@ namespace GL
 			if (GL::invertXAxis)
 				yawDelta = -yawDelta;
 			viewAngles[YAW]   -= yawDelta;
-			viewAngles[PITCH] -= (float)dy / height * 360;
+			viewAngles[PITCH] += (float)dy / height * 360;
 			// bound angles
 			viewAngles[YAW]   = fmod(viewAngles[YAW], 360);
 			viewAngles[PITCH] = bound(viewAngles[PITCH], -90, 90);
@@ -300,13 +311,13 @@ namespace GL
 		Euler2Vecs(viewAngles, &viewAxis[0], &viewAxis[1], &viewAxis[2]);
 		if (!invertXAxis)
 			viewAxis[1].Negate();
-//		textf("origin: %6.1f %6.1f %6.1f\n", VECTOR_ARG(viewOrigin));
-//		textf("angles: %6.1f %6.1f %6.1f\n", VECTOR_ARG(viewAngles));
+//		DrawTextLeft("origin: %6.1f %6.1f %6.1f", VECTOR_ARG(viewOrigin));
+//		DrawTextLeft("angles: %6.1f %6.1f %6.1f", VECTOR_ARG(viewAngles));
 #if 0
-		textf("---- view axis ----\n");
-		textf("[0]: %g %g %g\n",    VECTOR_ARG(viewAxis[0]));
-		textf("[1]: %g %g %g\n",    VECTOR_ARG(viewAxis[1]));
-		textf("[2]: %g %g %g\n",    VECTOR_ARG(viewAxis[2]));
+		DrawTextLeft("---- view axis ----");
+		DrawTextLeft("[0]: %g %g %g",    VECTOR_ARG(viewAxis[0]));
+		DrawTextLeft("[1]: %g %g %g",    VECTOR_ARG(viewAxis[1]));
+		DrawTextLeft("[2]: %g %g %g",    VECTOR_ARG(viewAxis[2]));
 #endif
 
 		// compute modelview matrix
@@ -346,15 +357,15 @@ namespace GL
 			}
 #if 0
 #define m matrix // modelMatrix
-		textf("----- modelview matrix ------\n");
+		DrawTextLeft("----- modelview matrix ------");
 		for (i = 0; i < 4; i++)
-			textf("{%9.4g, %9.4g, %9.4g, %9.4g}\n", m[0][i], m[1][i], m[2][i], m[3][i]);
+			DrawTextLeft("{%9.4g, %9.4g, %9.4g, %9.4g}", m[0][i], m[1][i], m[2][i], m[3][i]);
 #undef m
 #endif
 
 		// compute projection matrix
-		float tFovY = tan(yFov * M_PI / 360.0f);
-		float tFovX = tFovY / height * width; // tan(xFov * M_PI / 360.0f);
+		tFovY = tan(yFov * M_PI / 360.0f);
+		tFovX = tFovY / height * width; // tan(xFov * M_PI / 360.0f);
 		float zMin = zNear;
 		float zMax = zFar;
 		float xMin = -zMin * tFovX;
@@ -380,12 +391,12 @@ namespace GL
 		m[3][2] = -2.0f * zMin * zMax / (zMax - zMin);	// F
 
 #if 0
-		textf("zFar: %g;  frustum: x[%g, %g] y[%g, %g]\n", zFar, xMin, xMax, yMin, yMax);
-		textf("----- projection matrix -----\n");
-		textf("{%9.4g, %9.4g, %9.4g, %9.4g}\n", m[0][0], m[1][0], m[2][0], m[3][0]);
-		textf("{%9.4g, %9.4g, %9.4g, %9.4g}\n", m[0][1], m[1][1], m[2][1], m[3][1]);
-		textf("{%9.4g, %9.4g, %9.4g, %9.4g}\n", m[0][2], m[1][2], m[2][2], m[3][2]);
-		textf("{%9.4g, %9.4g, %9.4g, %9.4g}\n", m[0][3], m[1][3], m[2][3], m[3][3]);
+		DrawTextLeft("zFar: %g;  frustum: x[%g, %g] y[%g, %g]", zFar, xMin, xMax, yMin, yMax);
+		DrawTextLeft("----- projection matrix -----");
+		DrawTextLeft("{%9.4g, %9.4g, %9.4g, %9.4g}", m[0][0], m[1][0], m[2][0], m[3][0]);
+		DrawTextLeft("{%9.4g, %9.4g, %9.4g, %9.4g}", m[0][1], m[1][1], m[2][1], m[3][1]);
+		DrawTextLeft("{%9.4g, %9.4g, %9.4g, %9.4g}", m[0][2], m[1][2], m[2][2], m[3][2]);
+		DrawTextLeft("{%9.4g, %9.4g, %9.4g, %9.4g}", m[0][3], m[1][3], m[2][3], m[3][3]);
 #endif
 #undef m
 	}
@@ -416,13 +427,170 @@ namespace GL
 
 
 //-----------------------------------------------------------------------------
+// Text output
+//-----------------------------------------------------------------------------
+
+#define TOP_TEXT_POS	CHAR_HEIGHT
+#define LEFT_BORDER		CHAR_WIDTH
+#define RIGHT_BORDER	CHAR_WIDTH
+
+
+struct CRText : public CTextRec
+{
+	short	x, y;
+};
+
+static TTextContainer<CRText, 65536> Text;
+
+static int nextLeft_y  = TOP_TEXT_POS;
+static int nextRight_y = TOP_TEXT_POS;
+
+
+void ClearTexts()
+{
+	nextLeft_y = nextRight_y = TOP_TEXT_POS;
+	Text.Clear();
+}
+
+
+static void GetTextExtents(const char *s, int &width, int &height)
+{
+	int x = 0, w = 0;
+	int h = CHAR_HEIGHT;
+	while (char c = *s++)
+	{
+		if (c == COLOR_ESCAPE)
+		{
+			if (*s)
+				s++;
+			continue;
+		}
+		if (c == '\n')
+		{
+			if (x > w) w = x;
+			x = 0;
+			h += CHAR_HEIGHT;
+			continue;
+		}
+		x += CHAR_WIDTH;
+	}
+	width = max(x, w);
+	height = h;
+}
+
+
+static void DrawText(const CRText *rec)
+{
+	int y = rec->y;
+	const char *text = rec->text;
+
+	int color = 7;
+	while (true)
+	{
+		const char *s = strchr(text, '\n');
+		int len = s ? s - text : strlen(text);
+
+		int x = rec->x;
+		for (int i = 0; i < len; i++)
+		{
+			char c = text[i];
+			if (c == COLOR_ESCAPE)
+			{
+				char c2 = text[i+1];
+				if (c2 >= '0' && c2 <= '7')
+				{
+					color = c2 - '0';
+					i++;
+					continue;
+				}
+			}
+			GL::DrawChar(c, color, x, y);
+			x += CHAR_WIDTH;
+		}
+		if (!s) return;							// all done
+
+		y += CHAR_HEIGHT;
+		text = s + 1;
+	}
+}
+
+
+void FlushTexts()
+{
+	Text.Enumerate(DrawText);
+	nextLeft_y = nextRight_y = TOP_TEXT_POS;
+	ClearTexts();
+}
+
+
+void DrawTextPos(int x, int y, const char *text)
+{
+	CRText *rec = Text.Add(text);
+	if (!rec) return;
+	rec->x = x;
+	rec->y = y;
+}
+
+
+void DrawTextLeft(const char *text, ...)
+{
+	int w, h;
+	if (nextLeft_y >= GL::height) return;	// out of screen
+	FORMAT_BUF(text, msg);
+	GetTextExtents(msg, w, h);
+	DrawTextPos(LEFT_BORDER, nextLeft_y, msg);
+	nextLeft_y += h;
+}
+
+
+void DrawTextRight(const char *text, ...)
+{
+	int w, h;
+	if (nextRight_y >= GL::height) return;	// out of screen
+	FORMAT_BUF(text, msg);
+	GetTextExtents(msg, w, h);
+	DrawTextPos(GL::width - RIGHT_BORDER - w, nextRight_y, msg);
+	nextRight_y += h;
+}
+
+
+// Project 3D point to screen coordinates; return false when not in view frustum
+static bool ProjectToScreen(const CVec3 &pos, int scr[2])
+{
+	CVec3	vec;
+	VectorSubtract(pos, GL::viewOrigin, vec);
+
+	float z = dot(vec, GL::viewAxis[0]);
+	if (z <= GL::zNear) return false;			// not visible
+
+	float x = dot(vec, GL::viewAxis[1]) / z / GL::tFovX;
+	if (x < -1 || x > 1) return false;
+
+	float y = dot(vec, GL::viewAxis[2]) / z / GL::tFovY;
+	if (y < -1 || y > 1) return false;
+
+	scr[0] = appRound(/*GL::x + */ GL::width  * (0.5 - x / 2));
+	scr[1] = appRound(/*GL::y + */ GL::height * (0.5 - y / 2));
+
+	return true;
+}
+
+
+void DrawText3D(const CVec3 &pos, const char *text, ...)
+{
+	int coords[2];
+	if (!ProjectToScreen(pos, coords)) return;
+	FORMAT_BUF(text, msg);
+	DrawTextPos(coords[0], coords[1], msg);
+}
+
+
+//-----------------------------------------------------------------------------
 // Hook functions
 //-----------------------------------------------------------------------------
 
 static void Display()
 {
-	// set default text position
-	glRasterPos2i(20, 20);
 	// clear screen buffer
 	glClearColor(CLEAR_COLOR);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -432,11 +600,17 @@ static void Display()
 	GL::Set3Dmode();
 
 	// enable lighting
-	static const float lightPos[4] = {100, 200, 100, 0};
+	static const float lightPos[4]      = {100, 200, 100, 0};
+	static const float lightAmbient[4]  = {0.3, 0.3, 0.3, 1};
+//	static const float specIntens[4]    = {1, 1, 1, 0};
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_LIGHT0);
+	glEnable(GL_NORMALIZE);		// allow non-normalized normal arrays
 //	glEnable(GL_LIGHTING);
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+	glLightfv(GL_LIGHT0, GL_AMBIENT,  lightAmbient);
+//	glMaterialfv(GL_FRONT, GL_SPECULAR, specIntens);
+//	glMaterialf(GL_FRONT, GL_SHININESS, 12);
 
 	// draw scene
 	AppDrawFrame();
@@ -452,14 +626,15 @@ static void Display()
 	// display help when needed
 	if (isHelpVisible)
 	{
-		GL::text(S_RED"Help:\n-----\n"S_WHITE
-				 "Esc         exit\n"
-				 "H           toggle help\n"
-				 "LeftMouse   rotate view\n"
-				 "RightMouse  move view\n"
-				 "R           reset view\n");
+		DrawTextLeft(S_RED"Help:\n-----\n"S_WHITE
+					"Esc         exit\n"
+					"H           toggle help\n"
+					"LeftMouse   rotate view\n"
+					"RightMouse  move view\n"
+					"R           reset view");
 	}
 	AppDisplayTexts(isHelpVisible);
+	FlushTexts();
 
 	SDL_GL_SwapBuffers();
 }

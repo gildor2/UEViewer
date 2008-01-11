@@ -59,7 +59,9 @@ public:
 			glDisable(GL_CULL_FACE);
 			int color = Index + 1;
 			if (color > 7) color = 7;
-			glColor3f(color & 1, (color & 2) >> 1, (color & 4) >> 2);
+#define C(n)	( ((color >> n) & 1) * 0.5f + 0.3f )
+			glColor3f(C(0), C(1), C(2));
+#undef C
 		}
 	}
 
@@ -191,6 +193,7 @@ public:
 	,	MaxAnimChannel(-1)
 	,	BoneData(NULL)
 	,	MeshVerts(NULL)
+	,	MeshNormals(NULL)
 	{
 		ClearSkelAnims();
 	}
@@ -201,8 +204,8 @@ public:
 //??	void StopAnimating(bool ClearAllButBase);
 	virtual void Draw();
 
-	void DrawSkeleton();
-	void DrawBaseSkeletalMesh();
+	void DrawSkeleton(bool ShowLabels);
+	void DrawBaseSkeletalMesh(bool ShowNormals);
 	void DrawLodSkeletalMesh(const FStaticLODModel *lod);
 
 	// skeleton configuration
@@ -263,7 +266,9 @@ public:
 protected:
 	// mesh data
 	struct CMeshBoneData *BoneData;
-	CVec3		*MeshVerts;
+	CVec3		*MeshVerts;			// soft-skinned vertices
+	CVec3		*MeshNormals;		// soft-skinned normals
+	CVec3		*RefNormals;		// normals for main mesh in bind pose
 	// animation state
 	CAnimChan	Channels[MAX_SKELANIMCHANNELS];
 	int			MaxAnimChannel;
