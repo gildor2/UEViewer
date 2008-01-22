@@ -32,8 +32,6 @@ REST TO IMPLEMENT:
   - tweening
   ? LOD support
 - SkeletalMesh:
-  - compute normals for base mesh
-    + lighting
   - correctly display LOD models
   - hardware skinning
 

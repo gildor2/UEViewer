@@ -151,6 +151,13 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 }
 
 
+void SerializeChars(FArchive &Ar, char *buf, int length)
+{
+	for (int i = 0; i < length; i++)
+		Ar << *buf++;
+}
+
+
 /*-----------------------------------------------------------------------------
 	Miscellaneous
 -----------------------------------------------------------------------------*/

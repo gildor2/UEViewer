@@ -19,6 +19,7 @@ DEFINES    = RENDERING
 sources(MAIN) = {
 	# main unit
 	Main.cpp
+	Psk.cpp
 	# Unreal Engine support files
 	UnCore.cpp
 	UnObject.cpp

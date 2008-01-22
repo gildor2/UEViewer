@@ -156,13 +156,13 @@ public:
 		IsLoading = true;
 	}
 
-	FFileReader(const char *Filename)
-	:	f(fopen(Filename, "rb"))
+	FFileReader(const char *Filename, bool loading = true)
+	:	f(fopen(Filename, loading ? "rb" : "wb"))
 	{
 		guard(FFileReader::FFileReader);
 		if (!f)
 			appError("Unable to open file %s", Filename);
-		IsLoading = true;
+		IsLoading = loading;
 		unguardf(("%s", Filename));
 	}
 
@@ -221,6 +221,9 @@ protected:
 			appError("Unable to serialize data");
 	}
 };
+
+
+void SerializeChars(FArchive &Ar, char *buf, int length);
 
 
 /*-----------------------------------------------------------------------------

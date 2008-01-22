@@ -54,6 +54,7 @@ namespace GL
 	float viewDist   = DEFAULT_DIST;
 	CVec3 viewOrigin = { -DEFAULT_DIST, 0, 0 };
 	float distScale  = 1;
+	CVec3 rotOrigin  = {0, 0, 0};
 	CVec3 viewOffset = {0, 0, 0};
 	CAxis viewAxis;				// generated from angles
 
@@ -101,6 +102,7 @@ namespace GL
 		viewDist = DEFAULT_DIST * distScale;
 		viewOrigin.Set(DEFAULT_DIST * distScale, 0, 0);
 		viewOrigin.Add(viewOffset);
+		rotOrigin.Zero();
 	}
 
 	void SetDistScale(float scale)
@@ -266,38 +268,61 @@ namespace GL
 
 	void OnMouseButton(int type, int button)
 	{
+		int prevButtons = mouseButtons;
+		// update mouse buttons state
 		int mask = SDL_BUTTON(button);
 		if (type == SDL_MOUSEBUTTONDOWN)
 			mouseButtons |= mask;
 		else
 			mouseButtons &= ~mask;
+		// show/hide cursor
+		if (!prevButtons && mouseButtons)
+		{
+			SDL_ShowCursor(0);
+			SDL_WM_GrabInput(SDL_GRAB_ON);
+		}
+		else if (prevButtons && !mouseButtons)
+		{
+			SDL_ShowCursor(1);
+			SDL_WM_GrabInput(SDL_GRAB_OFF);
+		}
 	}
 
 
-	void OnMouseMove(int x, int y)
+	void OnMouseMove(int dx, int dy)
 	{
-		int dx = x;
-		int dy = y;
 		if (!mouseButtons) return;
+
+		float xDelta = (float)dx / width;
+		float yDelta = (float)dy / height;
+		if (invertXAxis)
+			xDelta = -xDelta;
 
 		if (mouseButtons & SDL_BUTTON(SDL_BUTTON_LEFT))
 		{
 			// rotate camera
-			float yawDelta = (float)dx / width * 360;
-			if (GL::invertXAxis)
-				yawDelta = -yawDelta;
-			viewAngles[YAW]   -= yawDelta;
-			viewAngles[PITCH] += (float)dy / height * 360;
+			viewAngles[YAW]   -= xDelta * 360;
+			viewAngles[PITCH] += yDelta * 360;
 			// bound angles
 			viewAngles[YAW]   = fmod(viewAngles[YAW], 360);
 			viewAngles[PITCH] = bound(viewAngles[PITCH], -90, 90);
 		}
 		if (mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT))
-			viewDist += (float)dy / height * 400;
+		{
+			// change distance to object
+			viewDist += yDelta * 400;
+		}
+		CAxis axis;
+		axis.FromEuler(viewAngles);
+		if (mouseButtons & SDL_BUTTON(SDL_BUTTON_MIDDLE))
+		{
+			// pan camera
+			VectorMA(rotOrigin, xDelta * viewDist * 2, axis[1]);
+			VectorMA(rotOrigin, yDelta * viewDist * 2, axis[2]);
+		}
 		viewDist = bound(viewDist, 100 * distScale, MAX_DIST * distScale);
-		CVec3 viewDir;
-		Euler2Vecs(viewAngles, &viewDir, NULL, NULL);
-		VectorScale(viewDir, -viewDist, viewOrigin);
+		VectorScale(axis[0], -viewDist, viewOrigin);
+		viewOrigin.Add(rotOrigin);
 		viewOrigin.Add(viewOffset);
 	}
 
@@ -630,7 +655,8 @@ static void Display()
 					"Esc         exit\n"
 					"H           toggle help\n"
 					"LeftMouse   rotate view\n"
-					"RightMouse  move view\n"
+					"RightMouse  zoom view\n"
+					"MiddleMouse move camera\n"
 					"R           reset view");
 	}
 	AppDisplayTexts(isHelpVisible);

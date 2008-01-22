@@ -175,7 +175,7 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 		if (Anim)
 		{
 			for (int j = 0; j < Anim->RefBones.Num(); j++)
-				if (!strcmp(B.Name, Anim->RefBones[j].Name))
+				if (!stricmp(B.Name, Anim->RefBones[j].Name))
 				{
 					data->BoneMap = j;
 					break;

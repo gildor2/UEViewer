@@ -8,6 +8,12 @@
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
 
 
+// exporter functions
+//?? move to header?
+//?? move export interfaces to ObjectViewer?
+void ExportPsk(USkeletalMesh *Mesh, FArchive &Ar);
+
+
 /*-----------------------------------------------------------------------------
 	Table of known Unreal classes
 -----------------------------------------------------------------------------*/
@@ -52,7 +58,7 @@ int main(int argc, char **argv)
 	{
 	help:
 		printf( "Usage:\n"
-				"  UnLoader [-dump|-check] [-path=PATH] <package> [<object> [<class>]]\n"
+				"  UnLoader [-dump|-check|-export] [-path=PATH] <package> [<object> [<class>]]\n"
 				"  UnLoader -list <package file>\n"
 				"    PATH      = path to UT root directory\n"
 				"    <package> = full package filename (path/name.ext) or short name\n"
@@ -61,7 +67,7 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, listOnly = false;
+	bool dump = false, view = true, export = false, listOnly = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -70,13 +76,21 @@ int main(int argc, char **argv)
 			const char *opt = argv[arg]+1;
 			if (!strcmp(opt, "dump"))
 			{
-				dump = true;
-				view = false;
+				dump   = true;
+				view   = false;
+				export = false;
 			}
 			else if (!strcmp(opt, "check"))
 			{
-				dump = false;
-				view = false;
+				dump   = false;
+				view   = false;
+				export = false;
+			}
+			else if (!strcmp(opt, "export"))
+			{
+				dump   = false;
+				view   = false;
+				export = true;
 			}
 			else if (!strcmp(opt, "list"))
 				listOnly = true;
@@ -171,6 +185,18 @@ int main(int argc, char **argv)
 
 	if (dump)
 		Viewer->Dump();					// dump to console and exit
+	if (export)
+	{
+		if (!Obj->IsA("SkeletalMesh"))
+		{
+			appNotify("ERROR: %s is not a SkeletalMesh", Obj->Name);
+			exit(1);
+		}
+		char filename[64];
+		appSprintf(ARRAY_ARG(filename), "%s.psk", Obj->Name);
+		FFileReader Ar(filename, false);
+		ExportPsk(static_cast<USkeletalMesh*>(Obj), Ar);
+	}
 	if (view)
 	{
 		GL::invertXAxis = true;

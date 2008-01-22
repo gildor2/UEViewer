@@ -98,6 +98,14 @@ template<class T> inline T OffsetPointer(const T ptr, int offset)
 }
 
 
+template<class T> inline void Exchange(T& A, T& B)
+{
+	const T tmp = A;
+	A = B;
+	B = tmp;
+}
+
+
 void appError(char *fmt, ...);
 void* appMalloc(int size);
 void appFree(void *ptr);

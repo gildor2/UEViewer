@@ -10,10 +10,18 @@ set ut_path=c:/games/unreal/ut2004
 set run=UnLoader.exe -path=%ut_path%
 set run2=UnLoader.exe -path=data
 
+if "%1%" == "" goto cont
+echo %*
+%run% %*
+exit
+
+:cont
+
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
 
+rem %run% -export HumanMaleA MercMaleA
 %run% HumanMaleA MercMaleD
 rem %run% HumanFemaleA MercFemaleB
 rem %run2% Aida
@@ -21,7 +29,7 @@ rem %run% HumanFemaleA
 rem %run% Aliens
 rem %run% HumanMaleA
 rem %run% Bot
-rem %run% Jugg JuggMaleA
+rem %run% Jugg
 
 rem %run% SkaarjPack_rc
 rem %run% SkaarjPack_rc NaliCow

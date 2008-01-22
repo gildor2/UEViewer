@@ -22,6 +22,7 @@ MAIN : UnLoader.exe
 
 MAIN = \
 	obj/Main.obj \
+	obj/Psk.obj \
 	obj/UnCore.obj \
 	obj/UnObject.obj \
 	obj/UnPackage.obj \
@@ -134,6 +135,18 @@ DEPENDS = \
 
 obj/Math3D.obj : Math3D.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Math3D.obj" Math3D.cpp
+
+DEPENDS = \
+	Core.h \
+	Math3D.h \
+	Psk.h \
+	UnCore.h \
+	UnMaterial.h \
+	UnMesh.h \
+	UnObject.h
+
+obj/Psk.obj : Psk.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Psk.obj" Psk.cpp
 
 DEPENDS = \
 	Core.h \
