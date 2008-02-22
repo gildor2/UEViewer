@@ -12,6 +12,7 @@ static CObjectViewer *Viewer;			// used from GlWindow callbacks
 //?? move to header?
 //?? move export interfaces to ObjectViewer?
 void ExportPsk(USkeletalMesh *Mesh, FArchive &Ar);
+void ExportPsa(UMeshAnimation *Anim, FArchive &Ar);
 
 
 /*-----------------------------------------------------------------------------
@@ -187,15 +188,25 @@ int main(int argc, char **argv)
 		Viewer->Dump();					// dump to console and exit
 	if (export)
 	{
-		if (!Obj->IsA("SkeletalMesh"))
+		if (Obj->IsA("SkeletalMesh"))
 		{
-			appNotify("ERROR: %s is not a SkeletalMesh", Obj->Name);
+			char filename[64];
+			appSprintf(ARRAY_ARG(filename), "%s.psk", Obj->Name);
+			FFileReader Ar(filename, false);
+			ExportPsk(static_cast<USkeletalMesh*>(Obj), Ar);
+		}
+		else if (Obj->IsA("MeshAnimation"))
+		{
+			char filename[64];
+			appSprintf(ARRAY_ARG(filename), "%s.psa", Obj->Name);
+			FFileReader Ar(filename, false);
+			ExportPsa(static_cast<UMeshAnimation*>(Obj), Ar);
+		}
+		else
+		{
+			appNotify("ERROR: exporting object %s: unsupported type %s", Obj->Name, Obj->GetClassName());
 			exit(1);
 		}
-		char filename[64];
-		appSprintf(ARRAY_ARG(filename), "%s.psk", Obj->Name);
-		FFileReader Ar(filename, false);
-		ExportPsk(static_cast<USkeletalMesh*>(Obj), Ar);
 	}
 	if (view)
 	{

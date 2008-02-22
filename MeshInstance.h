@@ -9,7 +9,7 @@ class CMeshInstance
 {
 public:
 	// linked data
-	ULodMesh		*pMesh;
+	const ULodMesh	*pMesh;
 	CMeshViewer		*Viewport;
 	// common properties
 	CCoords			BaseTransform;			// rotation for mesh; have identity axis
@@ -23,7 +23,7 @@ public:
 	virtual ~CMeshInstance()
 	{}
 
-	virtual void SetMesh(ULodMesh *Mesh)
+	virtual void SetMesh(const ULodMesh *Mesh)
 	{
 		pMesh = Mesh;
 		SetAxis(Mesh->RotOrigin, BaseTransform.axis);
@@ -153,7 +153,7 @@ protected:
 
 	const UVertMesh *GetMesh() const
 	{
-		return static_cast<UVertMesh*>(pMesh);
+		return static_cast<const UVertMesh*>(pMesh);
 	}
 	int FindAnim(const char *AnimName) const;
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
@@ -198,7 +198,7 @@ public:
 		ClearSkelAnims();
 	}
 
-	virtual void SetMesh(ULodMesh *Mesh);
+	virtual void SetMesh(const ULodMesh *Mesh);
 	virtual ~CSkelMeshInstance();
 	void ClearSkelAnims();
 //??	void StopAnimating(bool ClearAllButBase);
@@ -275,7 +275,7 @@ protected:
 
 	const USkeletalMesh *GetMesh() const
 	{
-		return static_cast<USkeletalMesh*>(pMesh);
+		return static_cast<const USkeletalMesh*>(pMesh);
 	}
 	CAnimChan &GetStage(int StageIndex)
 	{

@@ -3,10 +3,9 @@
 
 
 /******************************************************************************
- *	PSK file format structures
+ *	Common structures
  *****************************************************************************/
 
-// common (psk and psa) structure: chunk header
 struct VChunkHeader
 {
 	char			ChunkID[20];			// text identifier
@@ -21,6 +20,23 @@ struct VChunkHeader
 	}
 };
 
+
+#define LOAD_CHUNK(var, name)	\
+	VChunkHeader var;			\
+	Ar << var;					\
+	if (strcmp(var.ChunkID, name) != 0) \
+		appError("LoadChunk: expecting header \"%s\", but found \"%s\"", name, var.ChunkID);
+//	appPrintf("%s: type=%d / count=%d / size=%d\n", var.ChunkID, var.TypeFlag, var.DataCount, var.DataSize);
+
+#define SAVE_CHUNK(var, name)	\
+	strcpy(var.ChunkID, name);	\
+	var.TypeFlag = 1999801;		\
+	Ar << var;
+
+
+/******************************************************************************
+ *	PSK file format structures
+ *****************************************************************************/
 
 struct VVertex
 {
@@ -120,12 +136,12 @@ struct AnimInfoBinary
 
 	int				RootInclude;			// 0 none 1 included (unused)
 	int				KeyCompressionStyle;	// Reserved: variants in tradeoffs for compression.
-	int				KeyQuotum;				// Max key quotum for compression
+	int				KeyQuotum;				// Max key quotum for compression; ActorX sets this to numFrames*numBones
 	float			KeyReduction;			// desired
 	float			TrackTime;				// explicit - can be overridden by the animation rate
 	float			AnimRate;				// frames per second.
 	int				StartBone;				// Reserved: for partial animations
-	int				FirstRawFrame;
+	int				FirstRawFrame;			// global number of first animation frame
 	int				NumRawFrames;			// NumRawFrames and AnimRate dictate tracktime...
 
 	friend FArchive& operator<<(FArchive &Ar, AnimInfoBinary &A)
@@ -150,12 +166,6 @@ struct VQuatAnimKey
 		return Ar << K.Position << K.Orientation << K.Time;
 	}
 };
-
-
-#define SAVE_CHUNK(var, name)	\
-	strcpy(var.ChunkID, name);	\
-	var.TypeFlag = 1999801;		\
-	Ar << var;
 
 
 #endif // __PSK_H__

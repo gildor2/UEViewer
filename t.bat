@@ -21,8 +21,10 @@ rem goto bugs
 
 rem ---------------------------------------------------------------------------
 
-rem %run% -export HumanMaleA MercMaleA
-%run% HumanMaleA MercMaleD
+rem %run% -export HumanMaleA MercMaleD
+rem %run% -export HumanMaleA BipedMaleA
+rem %run2% -export Bender BenderAnims
+rem %run% HumanMaleA MercMaleD
 rem %run% HumanFemaleA MercFemaleB
 rem %run2% Aida
 rem %run% HumanFemaleA
@@ -38,7 +40,7 @@ rem %run2% MarineModel MarineMesh_Male
 rem %run2% TarjaAnim
 rem %run2% test Male SkeletalMesh
 rem %run% 2K4_NvidiaIntro Intro2k4Skaarj SkeletalMesh
-rem %run2% Bender
+%run2% Bender
 rem %run% NewWeapons2004
 goto exit
 

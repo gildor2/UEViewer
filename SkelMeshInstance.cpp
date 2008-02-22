@@ -98,7 +98,7 @@ static int CheckBoneTree(const TArray<FMeshBone> &Bones, int Index,
 }
 
 
-static void BuildNormals(USkeletalMesh *Mesh, CVec3 *Normals)
+static void BuildNormals(const USkeletalMesh *Mesh, CVec3 *Normals)
 {
 	int i;
 	for (i = 0; i < Mesh->Triangles.Num(); i++)
@@ -138,12 +138,12 @@ static void BuildNormals(USkeletalMesh *Mesh, CVec3 *Normals)
 }
 
 
-void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
+void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 {
 	guard(CSkelMeshInstance::SetMesh);
 
 	CMeshInstance::SetMesh(LodMesh);
-	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(LodMesh);
+	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(LodMesh);
 
 	int NumBones = Mesh->RefSkeleton.Num();
 	int NumVerts = Mesh->Points.Num();
@@ -206,6 +206,7 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 
 	// normalize VertInfluences: sum of all influences may be != 1
 	// (possible situation, see SkaarjAnims/Skaarj2, SkaarjAnims/Skaarj_Skel, XanRobots/XanF02)
+	//!! should be done in USkeletalMesh
 	float *VertSumWeights = new float[NumVerts];	// zeroed
 	int   *VertInfCount   = new int  [NumVerts];	// zeroed
 	// count sum of weights for all verts
@@ -228,7 +229,7 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 	// normalize weights
 	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
 	{
-		FVertInfluences &Inf = Mesh->VertInfluences[i];
+		FVertInfluences &Inf = const_cast<USkeletalMesh*>(Mesh)->VertInfluences[i]; // to avoid const_cast, implement in mesh
 		int PointIndex = Inf.PointIndex;
 		float sum = VertSumWeights[PointIndex];
 		if (fabs(sum - 1.0f) < 0.01f) continue;
@@ -240,7 +241,7 @@ void CSkelMeshInstance::SetMesh(ULodMesh *LodMesh)
 	delete VertInfCount;
 
 	// check bones tree
-	//?? should be done in USkeletalMesh
+	//!! should be done in USkeletalMesh
 	int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
 	int numIndices = 0;
 	CheckBoneTree(Mesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
@@ -345,7 +346,9 @@ void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 //!! ^^^^^^
 
 
-static void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
+// not 'static', because used in ExportPsa()
+//?? place function into UMeshAnimation
+void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
 	CVec3 &DstPos, CQuat &DstQuat)
 {
 	guard(GetBonePosition);
@@ -853,14 +856,6 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 	{
 		const FMeshBone &B  = Mesh->RefSkeleton[i];
 		const CCoords   &BC = BoneData[i].Coords;
-
-		CVec3 v2;
-		v2.Set(10, 0, 0);
-		BC.UnTransformPoint(v2, v2);
-
-//		glColor3f(1,0,0);
-//		glVertex3fv(BC.origin.v);
-//		glVertex3fv(v2.v);
 
 		CVec3 v1;
 		if (i > 0)

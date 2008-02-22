@@ -332,6 +332,15 @@ struct FColor
 	TArray/TLazyArray templates
 -----------------------------------------------------------------------------*/
 
+/*
+ * NOTES:
+ *	- FArray/TArray should not contain objects with virtual tables (no
+ *	  constructor/destructor support)
+ *	- should not use new[] and delete[] here, because compiler will alloc
+ *	  additional 'count' field for correct delete[], but we uses appMalloc/
+ *	  appFree calls.
+ */
+
 class FArray
 {
 public:
@@ -353,7 +362,7 @@ public:
 	void Empty()
 	{
 		if (DataPtr)
-			delete[] DataPtr;
+			appFree(DataPtr);
 		DataPtr   = NULL;
 		DataCount = 0;
 		MaxCount  = 0;
@@ -375,7 +384,7 @@ protected:
 			// not enough space, resize ...
 			int prevCount = MaxCount;
 			MaxCount = ((DataCount + count + 7) / 8) * 8 + 8;
-			DataPtr = realloc(DataPtr, MaxCount * elementSize);
+			DataPtr = realloc(DataPtr, MaxCount * elementSize);	//?? appRealloc
 			// zero added memory
 			memset(
 				(byte*)DataPtr + prevCount * elementSize,
@@ -459,7 +468,7 @@ public:
 		A.Empty();
 		int Count;
 		Ar << AR_INDEX(Count);
-		T* Ptr = new T[Count];
+		T* Ptr = (T*) appMalloc(sizeof(T) * Count);
 		A.DataPtr   = Ptr;
 		A.DataCount = Count;
 		A.MaxCount  = Count;

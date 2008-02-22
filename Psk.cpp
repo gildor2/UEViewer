@@ -13,12 +13,14 @@
 // Here we performing reverse transformation.
 #define MIRROR_MESH			1
 
+void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
+	CVec3 &DstPos, CQuat &DstQuat);
+
 
 void ExportPsk(USkeletalMesh *Mesh, FArchive &Ar)
 {
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
-
 	int i;
 
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
@@ -105,4 +107,89 @@ void ExportPsk(USkeletalMesh *Mesh, FArchive &Ar)
 		I.BoneIndex  = S.BoneIndex;
 		Ar << I;
 	}
+}
+
+
+void ExportPsa(UMeshAnimation *Anim, FArchive &Ar)
+{
+	// using 'static' here to avoid zero-filling unused fields
+	static VChunkHeader MainHdr, BoneHdr, AnimHdr, KeyHdr;
+	int i;
+
+	int numBones = Anim->RefBones.Num();
+	int numAnims = Anim->AnimSeqs.Num();
+
+	SAVE_CHUNK(MainHdr, "ANIMHEAD");
+
+	BoneHdr.DataCount = numBones;
+	BoneHdr.DataSize  = sizeof(FNamedBoneBinary);
+	SAVE_CHUNK(BoneHdr, "BONENAMES");
+	for (i = 0; i < numBones; i++)
+	{
+		FNamedBoneBinary B;
+		const FNamedBone &S = Anim->RefBones[i];
+		strcpy(B.Name, *S.Name);
+		B.Flags       = S.Flags;		// reserved, but copy ...
+		B.NumChildren = 0;				// unknown here
+		B.ParentIndex = S.ParentIndex;
+//		B.BonePos     =					// unknown here
+		Ar << B;
+	}
+
+	AnimHdr.DataCount = numAnims;
+	AnimHdr.DataSize  = sizeof(AnimInfoBinary);
+	SAVE_CHUNK(AnimHdr, "ANIMINFO");
+	int framesCount = 0;
+	for (i = 0; i < numAnims; i++)
+	{
+		AnimInfoBinary A;
+		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
+		strcpy(A.Name,  *S.Name);
+		strcpy(A.Group, S.Groups.Num() ? *S.Groups[0] : "None");
+		A.TotalBones          = numBones;
+		A.RootInclude         = 0;				// unused
+		A.KeyCompressionStyle = 0;				// reserved
+		A.KeyQuotum           = S.NumFrames * numBones; // reserved, but fill with keys count
+		A.KeyReduction        = 0;				// reserved
+		A.TrackTime           = S.NumFrames;
+		A.AnimRate            = S.Rate;
+		A.StartBone           = 0;				// reserved
+		A.FirstRawFrame       = framesCount;	// useless, but used in UnrealEd when importing
+		A.NumRawFrames        = S.NumFrames;
+		Ar << A;
+
+		framesCount += S.NumFrames;
+	}
+
+	int keysCount = framesCount * numBones;
+	KeyHdr.DataCount = keysCount;
+	KeyHdr.DataSize  = sizeof(VQuatAnimKey);
+	SAVE_CHUNK(KeyHdr, "ANIMKEYS");
+	for (i = 0; i < numAnims; i++)
+	{
+		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
+		const MotionChunk  &M = Anim->Moves[i];
+		for (int t = 0; t < S.NumFrames; t++)
+		{
+			for (int b = 0; b < numBones; b++)
+			{
+				VQuatAnimKey K;
+				CVec3 BP;
+				CQuat BO;
+				GetBonePosition(M.AnimTracks[b], t, S.NumFrames, false, BP, BO);
+				K.Position    = (FVector&) BP;
+				K.Orientation = (FQuat&)   BO;
+				K.Time        = 1;
+#if MIRROR_MESH
+				K.Orientation.Y *= -1;
+				K.Orientation.W *= -1;
+				K.Position.Y    *= -1;
+#endif
+
+				Ar << K;
+				keysCount--;
+			}
+		}
+	}
+	assert(keysCount == 0);
 }
