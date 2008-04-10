@@ -13,7 +13,7 @@ for package in $path/Animations/*; do
 	*.UKX|*.ukx|*.U|*.u)
 		echo
 		echo "***** Package: $package *****"
-		./UnLoader.exe -list $package | grep -E "$type" | {
+		./umodel.exe -list $package | grep -E "$type" | {
 			# block with redirected stdin from grep
 			while read line; do
 				# cut number
@@ -22,7 +22,7 @@ for package in $path/Animations/*; do
 				obj="${cut#* }"
 				class="${cut% *}"
 #				echo "    OBJ=$obj   CLS=$class"
-				./UnLoader.exe -path=$path $dump $package $obj $class
+				./umodel.exe -path=$path $dump $package $obj $class
 			done
 		}
 		;;

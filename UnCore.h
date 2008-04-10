@@ -23,11 +23,11 @@ class UnPackage;
 
 // field offset macros
 // get offset of the field in struc
-#ifdef offsetof
+//#ifdef offsetof
 #	define FIELD2OFS(struc, field)		(offsetof(struc, field))				// more compatible
-#else
-#	define FIELD2OFS(struc, field)		((unsigned) &((struc *)NULL)->field)	// just in case
-#endif
+//#else
+//#	define FIELD2OFS(struc, field)		((unsigned) &((struc *)NULL)->field)	// just in case
+//#endif
 // get field of type by offset inside struc
 #define OFS2FIELD(struc, ofs, type)	(*(type*) ((byte*)(struc) + ofs))
 
@@ -93,9 +93,9 @@ public:
 	virtual ~FArchive()
 	{}
 
-	virtual void Seek(int Pos) = NULL;
-	virtual bool IsEof() = NULL;
-	virtual void Serialize(void *data, int size) = NULL;
+	virtual void Seek(int Pos) = 0;
+	virtual bool IsEof() = 0;
+	virtual void Serialize(void *data, int size) = 0;
 
 	bool IsStopper()
 	{
@@ -138,8 +138,8 @@ public:
 		return Ar;
 	}
 
-	virtual FArchive& operator<<(FName &N) = NULL;
-	virtual FArchive& operator<<(UObject *&Obj) = NULL;
+	virtual FArchive& operator<<(FName &N) = 0;
+	virtual FArchive& operator<<(UObject *&Obj) = 0;
 };
 
 
@@ -424,6 +424,13 @@ protected:
 template<class T> class TArray : public FArray
 {
 public:
+	~TArray()
+	{
+		// destruct all array items
+		T *P, *P2;
+		for (P = (T*)DataPtr, P2 = P + DataCount; P < P2; P++)
+			P->~T();
+	}
 	// data accessors
 	T& operator[](int index)
 	{
@@ -450,6 +457,11 @@ public:
 
 	void Remove(int index, int count = 1)
 	{
+		// destruct specified array items
+		T *P, *P2;
+		for (P = (T*)DataPtr + index, P2 = P + count; P < P2; P++)
+			P->~T();
+		// remove items from array
 		FArray::Remove(index, count, sizeof(T));
 	}
 
@@ -468,7 +480,11 @@ public:
 		A.Empty();
 		int Count;
 		Ar << AR_INDEX(Count);
-		T* Ptr = (T*) appMalloc(sizeof(T) * Count);
+		T* Ptr;
+		if (Count)
+			Ptr = (T*)appMalloc(sizeof(T) * Count);
+		else
+			Ptr = NULL;
 		A.DataPtr   = Ptr;
 		A.DataCount = Count;
 		A.MaxCount  = Count;

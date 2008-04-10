@@ -88,16 +88,20 @@ void CAxis::FromEuler(const CVec3 &angles)
 
 void CAxis::TransformVector(const CVec3 &src, CVec3 &dst) const
 {
-	dst[0] = dot(src, v[0]);
-	dst[1] = dot(src, v[1]);
-	dst[2] = dot(src, v[2]);
+	CVec3 tmp;
+	tmp[0] = dot(src, v[0]);
+	tmp[1] = dot(src, v[1]);
+	tmp[2] = dot(src, v[2]);
+	dst = tmp;
 }
 
 void CAxis::TransformVectorSlow(const CVec3 &src, CVec3 &dst) const
 {
-	dst[0] = dot(src, v[0]) / v[0].GetLengthSq();
-	dst[1] = dot(src, v[1]) / v[1].GetLengthSq();
-	dst[2] = dot(src, v[2]) / v[2].GetLengthSq();
+	CVec3 tmp;
+	tmp[0] = dot(src, v[0]) / v[0].GetLengthSq();
+	tmp[1] = dot(src, v[1]) / v[1].GetLengthSq();
+	tmp[2] = dot(src, v[2]) / v[2].GetLengthSq();
+	dst = tmp;
 }
 
 void CAxis::UnTransformVector(const CVec3 &src, CVec3 &dst) const

@@ -65,8 +65,8 @@ public:
 		}
 	}
 
-	virtual void Draw() = NULL;
-	virtual void UpdateAnimation(float TimeDelta) = NULL;
+	virtual void Draw() = 0;
+	virtual void UpdateAnimation(float TimeDelta) = 0;
 
 	// animation control
 	void PlayAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
@@ -82,20 +82,20 @@ public:
 		PlayAnimInternal(AnimName, 0, TweenTime, Channel, false);
 	}
 
-	virtual void AnimStopLooping(int Channel = 0) = NULL;
-	virtual void FreezeAnimAt(float Time, int Channel = 0) = NULL;
+	virtual void AnimStopLooping(int Channel = 0) = 0;
+	virtual void FreezeAnimAt(float Time, int Channel = 0) = 0;
 
 	// animation state
 	virtual void GetAnimParams(int Channel, const char *&AnimName,
-		float &Frame, float &NumFrames, float &Rate) const = NULL;
-	virtual bool IsTweening(int Channel = 0) = NULL;
+		float &Frame, float &NumFrames, float &Rate) const = 0;
+	virtual bool IsTweening(int Channel = 0) = 0;
 
 	// animation enumeration
-	virtual int GetAnimCount() const = NULL;
-	virtual const char *GetAnimName(int Index) const = NULL;
+	virtual int GetAnimCount() const = 0;
+	virtual const char *GetAnimName(int Index) const = 0;
 
 protected:
-	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped) = NULL;
+	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped) = 0;
 };
 
 

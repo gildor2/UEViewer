@@ -58,17 +58,39 @@ int main(int argc, char **argv)
 	if (argc < 2)
 	{
 	help:
-		printf( "Usage:\n"
-				"  UnLoader [-dump|-check|-export] [-path=PATH] <package> [<object> [<class>]]\n"
-				"  UnLoader -list <package file>\n"
-				"    PATH      = path to UT root directory\n"
-				"    <package> = full package filename (path/name.ext) or short name\n"
+		printf(	"Unreal Tournament 2 model viewer / exporter\n"
+				"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
+				"\n"
+				"    <package>       name of package to load, without file extension\n"
+				"    <object>        name of object to load\n"
+				"    <class>         class of object to load (useful, when trying to load\n"
+				"                    object with ambiguous name)\n"
+				"\n"
+				"Commands:\n"
+				"    (default)       visualize object; when <object> not specified, will load\n"
+				"                    whole package\n"
+				"    -list           list contents of package\n"
+				"    -export         export specified object or whole package\n"
+				"\n"
+				"Developer commands:\n"
+				"    -dump           dump object information to console\n"
+				"    -check          check some assumptions, no other actions performed\n"
+				"\n"
+				"Options:\n"
+				"    -path=PATH      path to UT installation directory; if not specified,\n"
+				"                    program will search for packages in current directory\n"
+				"\n"
+				"Supported resources for export:\n"
+				"    SkeletalMesh    exported as ActorX psk file\n"
+				"    MeshAnimation   exported as ActorX psa file\n"
+				"\n"
+				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
 		);
 		exit(0);
 	}
 
 	// parse command line
-	bool dump = false, view = true, export = false, listOnly = false;
+	bool dump = false, view = true, exprt = false, listOnly = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -77,21 +99,21 @@ int main(int argc, char **argv)
 			const char *opt = argv[arg]+1;
 			if (!strcmp(opt, "dump"))
 			{
-				dump   = true;
-				view   = false;
-				export = false;
+				dump  = true;
+				view  = false;
+				exprt = false;
 			}
 			else if (!strcmp(opt, "check"))
 			{
-				dump   = false;
-				view   = false;
-				export = false;
+				dump  = false;
+				view  = false;
+				exprt = false;
 			}
 			else if (!strcmp(opt, "export"))
 			{
-				dump   = false;
-				view   = false;
-				export = true;
+				dump  = false;
+				view  = false;
+				exprt = true;
 			}
 			else if (!strcmp(opt, "list"))
 				listOnly = true;
@@ -186,26 +208,30 @@ int main(int argc, char **argv)
 
 	if (dump)
 		Viewer->Dump();					// dump to console and exit
-	if (export)
+	if (exprt)
 	{
-		if (Obj->IsA("SkeletalMesh"))
+		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
-			char filename[64];
-			appSprintf(ARRAY_ARG(filename), "%s.psk", Obj->Name);
-			FFileReader Ar(filename, false);
-			ExportPsk(static_cast<USkeletalMesh*>(Obj), Ar);
-		}
-		else if (Obj->IsA("MeshAnimation"))
-		{
-			char filename[64];
-			appSprintf(ARRAY_ARG(filename), "%s.psa", Obj->Name);
-			FFileReader Ar(filename, false);
-			ExportPsa(static_cast<UMeshAnimation*>(Obj), Ar);
-		}
-		else
-		{
-			appNotify("ERROR: exporting object %s: unsupported type %s", Obj->Name, Obj->GetClassName());
-			exit(1);
+			Obj = UObject::GObjObjects[idx];
+			if (Obj->IsA("SkeletalMesh"))
+			{
+				char filename[64];
+				appSprintf(ARRAY_ARG(filename), "%s.psk", Obj->Name);
+				FFileReader Ar(filename, false);
+				ExportPsk(static_cast<USkeletalMesh*>(Obj), Ar);
+			}
+			else if (Obj->IsA("MeshAnimation"))
+			{
+				char filename[64];
+				appSprintf(ARRAY_ARG(filename), "%s.psa", Obj->Name);
+				FFileReader Ar(filename, false);
+				ExportPsa(static_cast<UMeshAnimation*>(Obj), Ar);
+			}
+			else
+			{
+				printf("ERROR: exporting object %s: unsupported type %s\n", Obj->Name, Obj->GetClassName());
+			}
+			if (argObjName) break;		// export specified (1st) object only
 		}
 	}
 	if (view)

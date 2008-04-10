@@ -238,16 +238,37 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 }
 
 
-static byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat, const char *Name)
+static byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
+	const char *Name, UPalette *Palette)
 {
 	guard(DecompressTexture);
-	byte *dst = new byte [width * height * 4];
+	int size = width * height * 4;
+	byte *dst = new byte [size];
 
-	// process uncompressed formats here
+	// process non-dxt formats here
 	switch (SrcFormat)
 	{
+	case TEXF_P8:
+		{
+			if (!Palette)
+			{
+				appNotify("DecompressTexture: TEXF_P8 with NULL palette");
+				memset(dst, 0xFF, size);
+				return dst;
+			}
+			byte *d = dst;
+			for (int i = 0; i < width * height; i++)
+			{
+				const FColor &c = Palette->Colors[Data[i]];
+				*d++ = c.R;
+				*d++ = c.G;
+				*d++ = c.B;
+				*d++ = c.A;
+			}
+		}
+		return dst;
 	case TEXF_RGBA8:
-		memcpy(dst, Data, width * height * 4);
+		memcpy(dst, Data, size);
 		return dst;
 	}
 
@@ -271,7 +292,7 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 		break;
 	default:
 		appNotify("%s: unknown texture format %d \n", Name, SrcFormat);
-		memset(dst, 0xFF, width * height * 4);
+		memset(dst, 0xFF, size);
 		return dst;
 	}
 	if (DDSDecompress(&dds, dst) != 0)
@@ -375,14 +396,14 @@ void UTexture::Bind()
 			const FMipmap &Mip = Mips[n];
 			if (!Mip.DataArray.Num())
 				continue;
-			byte *pic = DecompressTexture(&Mip.DataArray[0], Mip.USize, Mip.VSize, Format, Name);
+			byte *pic = DecompressTexture(&Mip.DataArray[0], Mip.USize, Mip.VSize, Format, Name, Palette);
 			Upload(TexNum, pic, Mip.USize, Mip.VSize, Mips.Num() > 1,
 				UClampMode == TC_Clamp, VClampMode == TC_Clamp);
 			break;
 		}
 		if (n >= Mips.Num())
 		{
-			appNotify("WARNING: texture %s has no valid mapmaps", Name);
+			appNotify("WARNING: texture %s has no valid mipmaps", Name);
 			TexNum = DEFAULT_TEX_NUM;		// "default texture"
 		}
 	}

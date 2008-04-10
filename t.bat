@@ -1,14 +1,14 @@
 @echo off
 
-rm UnLoader.exe
+rm umodel.exe
 bash build.sh
 
 set ut_path=c:/games/unreal~1/ut2004
 if exist %ut_path%/system/ut2004.exe goto path_ok
 set ut_path=c:/games/unreal/ut2004
 :path_ok
-set run=UnLoader.exe -path=%ut_path%
-set run2=UnLoader.exe -path=data
+set run=umodel.exe -path=%ut_path%
+set run2=umodel.exe -path=data
 
 if "%1%" == "" goto cont
 echo %*
@@ -86,7 +86,7 @@ goto exit
 
 rem ---------------------------------------------------------------------------
 
-rem UnLoader.exe -list data/SplinterCell/EFemale.ukx
+rem umodel.exe -list data/SplinterCell/EFemale.ukx
 
 rem ---------------------------------------------------------------------------
 

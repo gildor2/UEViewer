@@ -73,6 +73,18 @@
 #	define vsnprintf		_vsnprintf
 #	define FORCEINLINE		__forceinline
 #	define NORETURN			__declspec(noreturn)
+#elif __GNUC__
+#	define NORETURN			__attribute__((noreturn))
+#	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
+	// strange, but there is only way to work (inline+always_inline)
+#		define FORCEINLINE	inline __attribute__((always_inline))
+#	else
+#		define FORCEINLINE	inline
+#	endif
+#	define stricmp			strcasecmp
+#	define strnicmp			strncasecmp
+#else
+#	error "Unsupported compiler"
 #endif
 
 // necessary types
