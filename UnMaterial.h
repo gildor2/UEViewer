@@ -213,6 +213,9 @@ public:
 	,	TexNum(-1)
 #endif
 	{}
+#if RENDERING
+	byte *Decompress(int &USize, int &VSize);
+#endif
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UTexture::Serialize);

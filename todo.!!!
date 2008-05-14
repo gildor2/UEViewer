@@ -1,4 +1,5 @@
 ! use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
+! support 24-bit textures (currently 32-bit for any textures)
 
 ! options for:
   - option to toggle lighting

@@ -171,6 +171,8 @@ static void GetImageDimensions(int width, int height, int* scaledWidth, int* sca
 
 static void Upload(int handle, const void *pic, int width, int height, bool doMipmap, bool clampS, bool clampT)
 {
+	guard(Upload);
+
 	/*----- Calculate internal dimensions of the new texture --------*/
 	int scaledWidth, scaledHeight;
 	GetImageDimensions(width, height, &scaledWidth, &scaledHeight);
@@ -219,6 +221,8 @@ static void Upload(int handle, const void *pic, int width, int height, bool doMi
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clampT ? GL_CLAMP : GL_REPEAT);
 
 	delete scaledPic;
+
+	unguard;
 }
 
 
@@ -337,6 +341,27 @@ UMaterial *BindDefaultMaterial()
 }
 
 
+byte *UTexture::Decompress(int &USize, int &VSize)
+{
+	guard(UTexture::Decompress);
+	//?? combine with DecompressTexture() ?
+	for (int n = 0; n < Mips.Num(); n++)
+	{
+		// find 1st mipmap with non-null data array
+		// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
+		const FMipmap &Mip = Mips[n];
+		if (!Mip.DataArray.Num())
+			continue;
+		USize = Mip.USize;
+		VSize = Mip.VSize;
+		return DecompressTexture(&Mip.DataArray[0], USize, VSize, Format, Name, Palette);
+	}
+	// no valid mipmaps
+	return NULL;
+	unguard;
+}
+
+
 //!! note: unloading textures is not supported now
 void UTexture::Bind()
 {
@@ -388,20 +413,15 @@ void UTexture::Bind()
 	if (upload)
 	{
 		// upload texture
-		int n;
-		for (n = 0; n < Mips.Num(); n++)
+		int USize, VSize;
+		byte *pic = Decompress(USize, VSize);
+		if (pic)
 		{
-			// find 1st mipmap with non-null data array
-			// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
-			const FMipmap &Mip = Mips[n];
-			if (!Mip.DataArray.Num())
-				continue;
-			byte *pic = DecompressTexture(&Mip.DataArray[0], Mip.USize, Mip.VSize, Format, Name, Palette);
-			Upload(TexNum, pic, Mip.USize, Mip.VSize, Mips.Num() > 1,
+			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1,
 				UClampMode == TC_Clamp, VClampMode == TC_Clamp);
-			break;
+			delete pic;
 		}
-		if (n >= Mips.Num())
+		else
 		{
 			appNotify("WARNING: texture %s has no valid mipmaps", Name);
 			TexNum = DEFAULT_TEX_NUM;		// "default texture"

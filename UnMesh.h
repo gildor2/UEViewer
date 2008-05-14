@@ -139,7 +139,7 @@ class ULodMesh : public UPrimitive
 	DECLARE_CLASS(ULodMesh, UPrimitive);
 public:
 	unsigned			AuthKey;			// used in USkeletalMesh only?
-	int					Version;			// UT2 have '4' in this field
+	int					Version;			// UT2 have '4' in this field, SplinterCell have '1'
 	int					VertexCount;
 	TArray<FMeshVert>	Verts;				// UVertMesh: NumFrames*NumVerts, USkeletalMesh: empty
 	TArray<UMaterial*>	Textures;			// skins of mesh parts
@@ -260,6 +260,20 @@ struct FSkinVertexStream
 		return Ar << S.Revision << S.f18 << S.f1C << S.Verts;
 	}
 };
+
+
+#if 0
+// old USkeletalMesh format
+struct FAnimMeshVertexStream
+{
+	int						f4;			//?? unk
+	TArray<FAnimMeshVertex>	Verts;
+	int						f14, f18;	//?? unk
+	int						Revision;
+	int						f20, f24;	//?? unk
+	int						PartialSize;
+};
+#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -650,6 +664,25 @@ struct FStaticLODModel
 };
 
 
+// old USkeletalMesh
+struct FLODMeshSection
+{
+	short					f0, f2, f4;
+	short					LastIndex;
+	short					f8, fA, fC;
+	short					iFace;
+	short					f10;
+//	FAnimMeshVertexStream	VertStream;
+//	FRawIndexBuffer			IndexBuffer;
+
+	friend FArchive& operator<<(FArchive &Ar, FLODMeshSection &S)
+	{
+		return Ar << S.f0 << S.f2 << S.f4 << S.LastIndex <<
+					 S.f8 << S.fA << S.fC << S.iFace << S.f10;
+	}
+};
+
+
 class USkeletalMesh : public ULodMesh
 {
 	DECLARE_CLASS(USkeletalMesh, ULodMesh);
@@ -689,10 +722,13 @@ public:
 		Ar << AttachAliases << AttachBoneNames << AttachCoords;
 		if (Version <= 1)
 		{
+#if 0
 			appError("Unsupported ULodMesh version %d", Version);
-			/* TArray<FLODMeshSection> tmp1, tmp2;
+#else
+			TArray<FLODMeshSection> tmp1, tmp2;
 			TArray<word> tmp3;
-			Ar << tmp1 << tmp2 << tmp3; */
+			Ar << tmp1 << tmp2 << tmp3;
+#endif
 		}
 		else
 		{

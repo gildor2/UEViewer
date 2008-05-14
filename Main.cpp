@@ -1,18 +1,12 @@
 #include "ObjectViewer.h"
 #include "UnAnimNotify.h"
+#include "Exporters.h"
 
 
 #define APP_CAPTION		"UT2 Mesh Viewer"
 
 
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
-
-
-// exporter functions
-//?? move to header?
-//?? move export interfaces to ObjectViewer?
-void ExportPsk(USkeletalMesh *Mesh, FArchive &Ar);
-void ExportPsa(UMeshAnimation *Anim, FArchive &Ar);
 
 
 /*-----------------------------------------------------------------------------
@@ -83,6 +77,7 @@ int main(int argc, char **argv)
 				"Supported resources for export:\n"
 				"    SkeletalMesh    exported as ActorX psk file\n"
 				"    MeshAnimation   exported as ActorX psa file\n"
+				"    Texture         exported in tga format\n"
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
 		);
@@ -226,6 +221,13 @@ int main(int argc, char **argv)
 				appSprintf(ARRAY_ARG(filename), "%s.psa", Obj->Name);
 				FFileReader Ar(filename, false);
 				ExportPsa(static_cast<UMeshAnimation*>(Obj), Ar);
+			}
+			else if (Obj->IsA("Texture"))
+			{
+				char filename[64];
+				appSprintf(ARRAY_ARG(filename), "%s.tga", Obj->Name);
+				FFileReader Ar(filename, false);
+				ExportTga(static_cast<UTexture*>(Obj), Ar);
 			}
 			else
 			{

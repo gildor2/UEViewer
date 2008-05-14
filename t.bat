@@ -9,6 +9,7 @@ set ut_path=c:/games/unreal/ut2004
 :path_ok
 set run=umodel.exe -path=%ut_path%
 set run2=umodel.exe -path=data
+set run3=umodel.exe -path=data/SplinterCell
 
 if "%1%" == "" goto cont
 echo %*
@@ -17,6 +18,7 @@ exit
 
 :cont
 
+rem goto scell
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -24,12 +26,13 @@ rem ---------------------------------------------------------------------------
 rem %run% -export HumanMaleA MercMaleD
 rem %run% -export HumanMaleA BipedMaleA
 rem %run2% -export Bender BenderAnims
+rem %run% -export HumanMaleA
 rem %run% HumanMaleA MercMaleD
 rem %run% HumanFemaleA MercFemaleB
 rem %run2% Aida
 rem %run% HumanFemaleA
 rem %run% Aliens
-rem %run% HumanMaleA
+%run% HumanMaleA
 rem %run% Bot
 rem %run% Jugg
 
@@ -40,10 +43,17 @@ rem %run2% MarineModel MarineMesh_Male
 rem %run2% TarjaAnim
 rem %run2% test Male SkeletalMesh
 rem %run% 2K4_NvidiaIntro Intro2k4Skaarj SkeletalMesh
-%run2% Bender
+rem %run2% Bender
 rem %run% NewWeapons2004
 goto exit
 
+
+rem ---------------------------------------------------------------------------
+rem		SplinterCell
+rem ---------------------------------------------------------------------------
+:scell
+%run3% ESam samAMesh
+goto exit
 
 rem ---------------------------------------------------------------------------
 rem 	BUGS

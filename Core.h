@@ -7,6 +7,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "Build.h"
 
 #if RENDERING
 #	include <SDL/SDL.h>		//?? move outside
@@ -35,7 +36,6 @@
 
 #	include <GL/gl.h>
 #endif
-
 
 #define VECTOR_ARG(name)	name[0],name[1],name[2]
 #define ARRAY_ARG(array)	array, sizeof(array)/sizeof(array[0])
@@ -73,6 +73,7 @@
 #	define vsnprintf		_vsnprintf
 #	define FORCEINLINE		__forceinline
 #	define NORETURN			__declspec(noreturn)
+#	define GCC_PACK			// VC uses #pragma pack()
 #elif __GNUC__
 #	define NORETURN			__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
@@ -83,6 +84,7 @@
 #	endif
 #	define stricmp			strcasecmp
 #	define strnicmp			strncasecmp
+#	define GCC_PACK			__attribute__((__packed__))
 #else
 #	error "Unsupported compiler"
 #endif

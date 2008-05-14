@@ -51,6 +51,16 @@ struct FPackageFileSummary
 
 		Ar << S.Tag << S.FileVersion << S.LicenseeVersion << S.PackageFlags;
 		Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+#if SPLINTER_CELL
+		if (S.LicenseeVersion >= 0x0C && S.LicenseeVersion <= 0x1C)
+		{
+			// SplinterCell
+			int tmp;
+			Ar << tmp;								// 0xFF0ADDE
+			Ar << AR_INDEX(tmp);					// TArray<byte> -- some encoded computer information
+			Ar.Seek(Ar.ArPos + tmp);
+		}
+#endif
 		if (S.FileVersion < 68)
 		{
 			int HeritageCount, HeritageOffset;

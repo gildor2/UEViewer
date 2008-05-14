@@ -105,11 +105,13 @@ void appUnwindThrow(const char *fmt, ...)
 
 void *appMalloc(int size)
 {
+	guard(appMalloc);
 	assert(size >= 0);
 	void *data = malloc(size);
 	if (size > 0)
 		memset(data, 0, size);
 	return data;
+	unguard;
 }
 
 
