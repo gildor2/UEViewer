@@ -134,6 +134,14 @@ struct FMeshMaterial
 
 // Base class for UVertMesh and USkeletalMesh; in Unreal Engine it is derived from
 // abstract class UMesh (which is derived from UPrimitive)
+
+/*
+ * Possible versions:
+ *	1	SplinterCell		LodMesh is same as UT, SkeletalMesh modified
+ *	2	Postal 2			same as UT
+ *	4	UT2003, UT2004
+ */
+
 class ULodMesh : public UPrimitive
 {
 	DECLARE_CLASS(ULodMesh, UPrimitive);
@@ -683,6 +691,51 @@ struct FLODMeshSection
 };
 
 
+#if SPLINTER_CELL
+
+struct FSCellUnk1
+{
+	int						f0, f4, f8, fC;
+
+	friend FArchive& operator<<(FArchive &Ar, FSCellUnk1 &S)
+	{
+		return Ar << S.f0 << S.f4 << S.f8 << S.fC;
+	}
+};
+
+struct FSCellUnk2
+{
+	int						f0, f4, f8, fC, f10;
+
+	friend FArchive& operator<<(FArchive &Ar, FSCellUnk2 &S)
+	{
+		return Ar << S.f0 << S.f4 << S.f10 << S.f8 << S.fC;
+	}
+};
+
+struct FSCellUnk3
+{
+	int						f0, f4, f8, fC;
+
+	friend FArchive& operator<<(FArchive &Ar, FSCellUnk3 &S)
+	{
+		return Ar << S.f0 << S.fC << S.f4 << S.f8;
+	}
+};
+
+struct FSCellUnk4
+{
+	TArray<char>			f;			// FString
+
+	friend FArchive& operator<<(FArchive &Ar, FSCellUnk4 &S)
+	{
+		return Ar;
+	}
+};
+
+#endif
+
+
 class USkeletalMesh : public ULodMesh
 {
 	DECLARE_CLASS(USkeletalMesh, ULodMesh);
@@ -725,9 +778,20 @@ public:
 #if 0
 			appError("Unsupported ULodMesh version %d", Version);
 #else
+	#if SPLINTER_CELL
+			//?? how to detect SPlinterCell archive?
+			TArray<FSCellUnk1> tmp1;
+			TArray<FSCellUnk2> tmp2;
+			TArray<FSCellUnk3> tmp3;
+			TArray<FLODMeshSection> tmp4, tmp5;
+			TArray<word> tmp6;
+			FSCellUnk4 complex;
+			Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex;
+	#else
 			TArray<FLODMeshSection> tmp1, tmp2;
 			TArray<word> tmp3;
 			Ar << tmp1 << tmp2 << tmp3;
+	#endif
 #endif
 		}
 		else

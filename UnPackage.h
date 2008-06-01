@@ -55,10 +55,12 @@ struct FPackageFileSummary
 		if (S.LicenseeVersion >= 0x0C && S.LicenseeVersion <= 0x1C)
 		{
 			// SplinterCell
-			int tmp;
+/*			int tmp;
 			Ar << tmp;								// 0xFF0ADDE
 			Ar << AR_INDEX(tmp);					// TArray<byte> -- some encoded computer information
-			Ar.Seek(Ar.ArPos + tmp);
+			Ar.Seek(Ar.ArPos + tmp); */
+			FString tmp;
+			Ar << tmp;
 		}
 #endif
 		if (S.FileVersion < 68)

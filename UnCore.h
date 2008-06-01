@@ -512,4 +512,13 @@ template<class T> class TLazyArray : public TArray<T>
 };
 
 
+/*-----------------------------------------------------------------------------
+	FString
+-----------------------------------------------------------------------------*/
+
+class FString : public TArray<char>
+{
+};
+
+
 #endif // __UNCORE_H__
