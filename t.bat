@@ -10,6 +10,7 @@ set ut_path=c:/games/unreal/ut2004
 set run=umodel.exe -path=%ut_path%
 set run2=umodel.exe -path=data
 set run3=umodel.exe -path=data/SplinterCell
+set run4=umodel.exe -path=data/SplinterCell2
 
 if "%1%" == "" goto cont
 echo %*
@@ -18,7 +19,7 @@ exit
 
 :cont
 
-rem goto scell
+goto scell
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -52,7 +53,12 @@ rem ---------------------------------------------------------------------------
 rem		SplinterCell
 rem ---------------------------------------------------------------------------
 :scell
-%run3% ESam samAMesh
+rem %run3% ESam
+rem %run3% EFemale
+rem %run3% ENPC
+rem %run3% EminiV
+rem ----- CANNOT LOAD ANIMATION -----
+%run4% ESam
 goto exit
 
 rem ---------------------------------------------------------------------------

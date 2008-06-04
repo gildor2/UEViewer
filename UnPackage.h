@@ -52,15 +52,14 @@ struct FPackageFileSummary
 		Ar << S.Tag << S.FileVersion << S.LicenseeVersion << S.PackageFlags;
 		Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
 #if SPLINTER_CELL
-		if (S.LicenseeVersion >= 0x0C && S.LicenseeVersion <= 0x1C)
+		if (S.LicenseeVersion >= 0x0C && S.LicenseeVersion <= 0x1C &&
+			(S.FileVersion == 100 || S.FileVersion == 102))
 		{
 			// SplinterCell
-/*			int tmp;
+			int tmp;
+			FString tmp2;
 			Ar << tmp;								// 0xFF0ADDE
-			Ar << AR_INDEX(tmp);					// TArray<byte> -- some encoded computer information
-			Ar.Seek(Ar.ArPos + tmp); */
-			FString tmp;
-			Ar << tmp;
+			Ar << tmp2;
 		}
 #endif
 		if (S.FileVersion < 68)

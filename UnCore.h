@@ -82,12 +82,14 @@ class FArchive
 public:
 	bool	IsLoading;
 	int		ArVer;
+	int		ArLicenseeVer;
 	int		ArPos;
 	int		ArStopper;
 
 	FArchive()
 	:	ArStopper(0)
-	,	ArVer(9999)			//?? something large
+	,	ArVer(99999)			//?? something large
+	,	ArLicenseeVer(0)
 	{}
 
 	virtual ~FArchive()
@@ -140,6 +142,16 @@ public:
 
 	virtual FArchive& operator<<(FName &N) = 0;
 	virtual FArchive& operator<<(UObject *&Obj) = 0;
+
+	// different game platforms autodetection
+	//?? should change this, if will implement command line switch to force mode
+#if SPLINTER_CELL
+	bool IsSplinterCell()
+	{
+		return (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
+			   (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
+	}
+#endif
 };
 
 
@@ -351,16 +363,6 @@ public:
 	{}
 	~FArray()
 	{
-		Empty();
-	}
-
-	int Num() const
-	{
-		return DataCount;
-	}
-
-	void Empty()
-	{
 		if (DataPtr)
 			appFree(DataPtr);
 		DataPtr   = NULL;
@@ -368,54 +370,19 @@ public:
 		MaxCount  = 0;
 	}
 
+	int Num() const
+	{
+		return DataCount;
+	}
+
 protected:
 	void	*DataPtr;
 	int		DataCount;
 	int		MaxCount;
 
-	void Insert(int index, int count, int elementSize)
-	{
-		assert(index >= 0);
-		assert(index <= DataCount);
-		assert(count > 0);
-		// check for available space
-		if (DataCount + count > MaxCount)
-		{
-			// not enough space, resize ...
-			int prevCount = MaxCount;
-			MaxCount = ((DataCount + count + 7) / 8) * 8 + 8;
-			DataPtr = realloc(DataPtr, MaxCount * elementSize);	//?? appRealloc
-			// zero added memory
-			memset(
-				(byte*)DataPtr + prevCount * elementSize,
-				0,
-				(MaxCount - prevCount) * elementSize
-			);
-		}
-		// move data
-		memmove(
-			(byte*)DataPtr + (index + count)     * elementSize,
-			(byte*)DataPtr + index               * elementSize,
-							 (DataCount - index) * elementSize
-		);
-		// last operation: advance counter
-		DataCount += count;
-	}
-
-	void Remove(int index, int count, int elementSize)
-	{
-		assert(index >= 0);
-		assert(count > 0);
-		assert(index + count <= DataCount);
-		// move data
-		memcpy(
-			(byte*)DataPtr + index                       * elementSize,
-			(byte*)DataPtr + (index + count)             * elementSize,
-							 (DataCount - index - count) * elementSize
-		);
-		// decrease counter
-		DataCount -= count;
-	}
+	void Empty(int count, int elementSize);
+	void Insert(int index, int count, int elementSize);
+	void Remove(int index, int count, int elementSize);
 };
 
 // NOTE: this container cannot hold objects, required constructor/destructor
@@ -472,6 +439,11 @@ public:
 		return index;
 	}
 
+	void Empty(int count = 0)
+	{
+		FArray::Empty(count, sizeof(T));
+	}
+
 	// serializer
 	friend FArchive& operator<<(FArchive &Ar, TArray &A)
 	{
@@ -518,6 +490,15 @@ template<class T> class TLazyArray : public TArray<T>
 
 class FString : public TArray<char>
 {
+public:
+	inline const char *operator*() const
+	{
+		return (char*)DataPtr;
+	}
+	inline operator const char*() const
+	{
+		return (char*)DataPtr;
+	}
 };
 
 

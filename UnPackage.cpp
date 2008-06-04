@@ -20,7 +20,8 @@ UnPackage::UnPackage(const char *filename)
 	*this << Summary;
 	if (Summary.Tag != PACKAGE_FILE_TAG)
 		appError("Wrong tag in package %s\n", Filename);
-	ArVer = Summary.FileVersion;
+	ArVer         = Summary.FileVersion;
+	ArLicenseeVer = Summary.LicenseeVersion;
 	PKG_LOG(("Loading package: %s Ver: %d Names: %d Exports: %d Imports: %d\n", Filename, Summary.FileVersion,
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 

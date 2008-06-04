@@ -2,6 +2,18 @@
 #define __UNMESH_H__
 
 
+#define COPY_ARRAY(Src, Dst)					\
+		if (Src.Num() && !Dst.Num())			\
+		{										\
+			guard(Src);							\
+			Dst.Empty(Src.Num());				\
+			Dst.Add(Src.Num());					\
+			for (i = 0; i < Src.Num(); i++)		\
+				Dst[i] = Src[i];				\
+			unguard;							\
+		}
+
+
 /*-----------------------------------------------------------------------------
 	UPrimitive class
 -----------------------------------------------------------------------------*/
@@ -297,10 +309,19 @@ struct FMeshAnimNotify
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshAnimNotify &N)
 	{
+		guard(FMeshAnimNotify<<);
 		Ar << N.Time << N.Function;
+#if SPLINTER_CELL
+		if (Ar.IsSplinterCell())
+		{
+			FName Obj;
+			Ar << Obj;						// instead of UObject*
+		}
+#endif
 		if (Ar.ArVer > 111)
 			Ar << N.NotifyObj;
 		return Ar;
+		unguard;
 	}
 };
 
@@ -320,7 +341,15 @@ struct FMeshAnimSeq
 	{
 		if (Ar.ArVer > 114)
 			Ar << A.f28;
-		return Ar << A.Name << A.Groups << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
+		Ar << A.Name << A.Groups << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
+#if SPLINTER_CELL
+		if (Ar.IsSplinterCell())
+		{
+			byte unk;
+			Ar << unk;
+		}
+#endif
+		return Ar;
 	}
 };
 
@@ -360,6 +389,30 @@ public:
 	UMeshAnimation class
 -----------------------------------------------------------------------------*/
 
+#if SPLINTER_CELL
+// quaternion with 16-bit fixed point fields
+struct FQuatComp
+{
+	short			X, Y, Z, W;				// signed short, corresponds to float*32767
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		r.X = X / 32767.0f;
+		r.Y = Y / 32767.0f;
+		r.Z = Z / 32767.0f;
+		r.W = W / 32767.0f;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatComp &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z << Q.W;
+	}
+};
+#endif
+
+
 // 'Analog' animation key track (for single bone/element.)
 // Either KeyPos or KeyQuat can be single/empty? entries to signify no movement at all;
 // for N>1 entries there's always N keytimers available.
@@ -372,12 +425,74 @@ struct AnalogTrack
 
 	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
 	{
+		guard(AnalogTrack<<);
+#if SPLINTER_CELL
+		if (Ar.IsSplinterCell())
+		{
+			if (Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
+			{
+				int i;
+				TArray<FQuatComp> KeyQuat2;
+				TArray<short> KeyTime2;
+				Ar << KeyQuat2 << A.KeyPos << KeyTime2;
+				// copy with conversion
+				COPY_ARRAY(KeyQuat2, A.KeyQuat);
+				COPY_ARRAY(KeyTime2, A.KeyTime);
+				return Ar;
+			}
+		}
+#endif
 		return Ar << A.Flags << A.KeyQuat << A.KeyPos << A.KeyTime;
+		unguard;
 	}
 };
 
 
+#if SPLINTER_CELL && 0 //!!!!!
+
+struct FixedPointTrack
+{
+	TArray<FQuatComp>		KeyQuat;
+	TArray<FQuatComp>		KeyPos;			//?? 4 * short instead of 3
+	TArray<short>			KeyTime;
+};
+
+// FQuatComp2 -- 3*short
+// FVectorComp -- 3*short
+
+struct Fix16PosTrack						// all types "large"
+{
+	TArray<FQuatComp2>		KeyQuat;
+	TArray<FVector>			KeyPos;
+	TArray<short>			KeyTime;
+};
+
+struct FixPosTrack							// "small" KeyPos
+{
+	TArray<FQuatComp2>		KeyQuat;
+	TArray<FVectorComp>		KeyPos;
+	TArray<short>			KeyTime;
+};
+
+struct FixTimeTrack							// "small" KeyTime
+{
+	TArray<FQuatComp2>		KeyQuat;
+	TArray<FVector>			KeyPos;
+	TArray<byte>			KeyTime;
+};
+
+struct FixPosTimeTrack						// "small" KeyPos and KeyTime
+{
+	TArray<FQuatComp2>		KeyQuat;
+	TArray<FVectorComp>		KeyPos;
+	TArray<byte>			KeyTime;
+};
+
+#endif
+
+
 // Individual animation; subgroup of bones with compressed animation.
+// Note: SplinterCell uses MotionChunkFixedPoint and MotionChunkFloat structures
 struct MotionChunk
 {
 	FVector					RootSpeed3D;	// Net 3d speed.
@@ -420,7 +535,7 @@ class UMeshAnimation : public UObject
 {
 	DECLARE_CLASS(UMeshAnimation, UObject);
 public:
-	int						f2C;			// always zero?
+	int						Version;		// always zero?
 	TArray<FNamedBone>		RefBones;
 	TArray<MotionChunk>		Moves;
 	TArray<FMeshAnimSeq>	AnimSeqs;
@@ -429,7 +544,13 @@ public:
 	{
 		guard(UMeshAnimation.Serialize);
 		Super::Serialize(Ar);
-		Ar << f2C << RefBones << Moves << AnimSeqs;
+		Ar << Version << RefBones << Moves << AnimSeqs;
+#if SPLINTER_CELL
+		if (Ar.IsSplinterCell())
+		{
+//			if (Version > )
+		}
+#endif
 		unguard;
 	}
 };
@@ -489,25 +610,28 @@ struct FVertInfluences
 
 struct VWeightIndex
 {
-	//?? unknown
-	TArray<word>	idxArray1;
-	int				idx2;
+	TArray<word>	BoneInfIndices;			// array of vertex indices (in Points array)
+	int				StartBoneInf;			// start index in BoneInfluences array
 
 	friend FArchive& operator<<(FArchive &Ar, VWeightIndex &I)
 	{
-		return Ar << I.idxArray1 << I.idx2;
+		return Ar << I.BoneInfIndices << I.StartBoneInf;
 	}
 };
 
 
 struct VBoneInfluence						// Weight and vertex number
 {
-	word			PointIndex;				// 3d vertex
-	word			BoneWeight;				// 0..1 scaled influence
+	/* NOTE: UT1 has different VBoneInfluence layout:
+	word PointIndex;
+	word BoneWeight;
+	*/
+	word			BoneWeight;				// 0..65535
+	word			BoneIndex;
 
 	friend FArchive& operator<<(FArchive &Ar, VBoneInfluence &V)
 	{
-		return Ar << V.PointIndex << V.BoneWeight;
+		return Ar << V.BoneWeight << V.BoneIndex;
 	}
 };
 
@@ -723,12 +847,62 @@ struct FSCellUnk3
 	}
 };
 
+struct FSCellUnk4a
+{
+	FVector					f0;
+	FVector					fC;
+	int						f18;			// float?
+
+	friend FArchive& operator<<(FArchive &Ar, FSCellUnk4a &S)
+	{
+		return Ar << S.f0 << S.fC << S.f18;
+	}
+};
+
 struct FSCellUnk4
 {
-	TArray<char>			f;			// FString
+	int						Size;
+	int						Count;
+	TArray<FString>			BoneNames;		// BoneNames.Num() == Count
+	FString					f14;
+	FSCellUnk4a**			Data;			// (FSCellUnk4a*)[Count][Size]
+
+	FSCellUnk4()
+	:	Data(NULL)
+	{}
+	~FSCellUnk4()
+	{
+		// cleanup data
+		if (Data)
+		{
+			for (int i = 0; i < Count; i++)
+				delete Data[i];
+			delete Data;
+		}
+	}
 
 	friend FArchive& operator<<(FArchive &Ar, FSCellUnk4 &S)
 	{
+		int i, j;
+
+		// serialize scalars
+		Ar << S.Size << S.Count << S.BoneNames << S.f14;
+
+		if (Ar.IsLoading)
+		{
+			// allocate array of pointers
+			S.Data = new FSCellUnk4a* [S.Count];
+			// allocate arrays
+			for (i = 0; i < S.Count; i++)
+				S.Data[i] = new FSCellUnk4a [S.Size];
+		}
+		// serialize arrays
+		for (i = 0; i < S.Count; i++)
+		{
+			FSCellUnk4a* Ptr = S.Data[i];
+			for (j = 0; j < S.Size; j++, Ptr++)
+				Ar << *Ptr;
+		}
 		return Ar;
 	}
 };
@@ -749,7 +923,7 @@ public:
 	TArray<FMeshBone>		RefSkeleton;
 	int						SkeletalDepth;
 	TArray<FStaticLODModel>	LODModels;
-	TArray<FVector>			f1FC;
+	TArray<FVector>			Points2;		// used for Version=1 only
 	TArray<VWeightIndex>	WeightIndices;	// empty
 	TArray<VBoneInfluence>	BoneInfluences;
 	UMeshAnimation*			Animation;
@@ -765,12 +939,67 @@ public:
 	UObject*				CollisionMesh;	// UStaticMesh*
 	UObject*				KarmaProps;		// UKMeshProps*
 
+	void UpgradeMesh()
+	{
+		guard(USkeletalMesh::UpgradeMesh);
+
+		int i;
+		COPY_ARRAY(Points2, Points)
+		COPY_ARRAY(ULodMesh::Wedges, Wedges);
+		// convert 'FMeshFace Faces' to 'VTriangle Triangles'
+		if (Faces.Num() && !Triangles.Num())
+		{
+			guard(Faces);
+			Triangles.Empty(Faces.Num());
+			Triangles.Add(Faces.Num());
+			for (i = 0; i < Faces.Num(); i++)
+			{
+				const FMeshFace &F = Faces[i];
+				VTriangle &T = Triangles[i];
+				T.WedgeIndex[0] = F.iWedge[0];
+				T.WedgeIndex[1] = F.iWedge[1];
+				T.WedgeIndex[2] = F.iWedge[2];
+				T.MatIndex      = F.MaterialIndex;
+			}
+			unguard;
+		}
+		// convert VBoneInfluence and VWeightIndex to FVertInfluences
+		// count total influences
+		guard(Influences);
+		int numInfluences = 0;
+		for (i = 0; i < WeightIndices.Num(); i++)
+			numInfluences += WeightIndices[i].BoneInfIndices.Num() * (i + 1);
+		VertInfluences.Empty(numInfluences);
+		VertInfluences.Add(numInfluences);
+		int vIndex = 0;
+		for (i = 0; i < WeightIndices.Num(); i++)				// loop by influence count per vertex
+		{
+			const VWeightIndex &WI = WeightIndices[i];
+			int index = WI.StartBoneInf;
+			for (int j = 0; j < WI.BoneInfIndices.Num(); j++)	// loop by vertices
+			{
+				int iVertex = WI.BoneInfIndices[j];
+				for (int k = 0; k <= i; k++)					// enumerate all bones per vertex
+				{
+					const VBoneInfluence &BI = BoneInfluences[index++];
+					FVertInfluences &I = VertInfluences[vIndex++];
+					I.Weight     = BI.BoneWeight / 65535.0f;
+					I.BoneIndex  = BI.BoneIndex;
+					I.PointIndex = iVertex;
+				}
+			}
+		}
+		unguard;
+
+		unguard;
+	}
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(USkeletalMesh::Serialize);
 
 		Super::Serialize(Ar);
-		Ar << f1FC << RefSkeleton << Animation;
+		Ar << Points2 << RefSkeleton << Animation;
 		Ar << SkeletalDepth << WeightIndices << BoneInfluences;
 		Ar << AttachAliases << AttachBoneNames << AttachCoords;
 		if (Version <= 1)
@@ -779,19 +1008,25 @@ public:
 			appError("Unsupported ULodMesh version %d", Version);
 #else
 	#if SPLINTER_CELL
-			//?? how to detect SPlinterCell archive?
-			TArray<FSCellUnk1> tmp1;
-			TArray<FSCellUnk2> tmp2;
-			TArray<FSCellUnk3> tmp3;
-			TArray<FLODMeshSection> tmp4, tmp5;
-			TArray<word> tmp6;
-			FSCellUnk4 complex;
-			Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex;
-	#else
-			TArray<FLODMeshSection> tmp1, tmp2;
-			TArray<word> tmp3;
-			Ar << tmp1 << tmp2 << tmp3;
+			if (Ar.IsSplinterCell())
+			{
+				TArray<FSCellUnk1> tmp1;
+				TArray<FSCellUnk2> tmp2;
+				TArray<FSCellUnk3> tmp3;
+				TArray<FLODMeshSection> tmp4, tmp5;
+				TArray<word> tmp6;
+				FSCellUnk4 complex;
+				Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex;
+			}
+			else
 	#endif
+			{
+				TArray<FLODMeshSection> tmp1, tmp2;
+				TArray<word> tmp3;
+				Ar << tmp1 << tmp2 << tmp3;
+			}
+			// copy and convert data from old mesh format
+			UpgradeMesh();
 #endif
 		}
 		else

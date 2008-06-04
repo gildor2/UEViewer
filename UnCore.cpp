@@ -122,6 +122,78 @@ void appFree(void *ptr)
 
 
 /*-----------------------------------------------------------------------------
+	FArray
+-----------------------------------------------------------------------------*/
+
+void FArray::Empty(int count, int elementSize)
+{
+	guard(FArray::Empty);
+	if (DataPtr)
+		appFree(DataPtr);
+	DataPtr   = NULL;
+	DataCount = 0;
+	MaxCount  = count;
+	if (count)
+	{
+		DataPtr = appMalloc(count * elementSize);
+		memset(DataPtr, 0, count * elementSize);
+	}
+	unguard;
+}
+
+
+void FArray::Insert(int index, int count, int elementSize)
+{
+	guard(FArray::Insert);
+	assert(index >= 0);
+	assert(index <= DataCount);
+	assert(count >= 0);
+	if (!count) return;
+	// check for available space
+	if (DataCount + count > MaxCount)
+	{
+		// not enough space, resize ...
+		int prevCount = MaxCount;
+		MaxCount = ((DataCount + count + 7) / 8) * 8 + 8;
+		DataPtr = realloc(DataPtr, MaxCount * elementSize);	//?? appRealloc
+		// zero added memory
+		memset(
+			(byte*)DataPtr + prevCount * elementSize,
+			0,
+			(MaxCount - prevCount) * elementSize
+		);
+	}
+	// move data
+	memmove(
+		(byte*)DataPtr + (index + count)     * elementSize,
+		(byte*)DataPtr + index               * elementSize,
+						 (DataCount - index) * elementSize
+	);
+	// last operation: advance counter
+	DataCount += count;
+	unguard;
+}
+
+
+void FArray::Remove(int index, int count, int elementSize)
+{
+	guard(FArray::Remove);
+	assert(index >= 0);
+	assert(count > 0);
+	assert(index + count <= DataCount);
+	// move data
+	memcpy(
+		(byte*)DataPtr + index                       * elementSize,
+		(byte*)DataPtr + (index + count)             * elementSize,
+						 (DataCount - index - count) * elementSize
+	);
+	// decrease counter
+	DataCount -= count;
+	unguard;
+}
+
+
+/*-----------------------------------------------------------------------------
 	FArchive methods
 -----------------------------------------------------------------------------*/
 

@@ -32,7 +32,10 @@ void CSkelMeshViewer::Test()
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 
 	// ULodMesh fields
-	VERIFY_NULL(Faces.Num());
+	if (Mesh->Version > 1)
+	{
+		VERIFY_NULL(Faces.Num());
+	}
 	VERIFY_NULL(Verts.Num());
 
 	int NumBones = Mesh->RefSkeleton.Num();
@@ -40,8 +43,11 @@ void CSkelMeshViewer::Test()
 //	TEST_ARRAY(Mesh->f1C8);
 	VERIFY(AttachBoneNames.Num(), AttachAliases.Num());
 	VERIFY(AttachBoneNames.Num(), AttachCoords.Num());
-	VERIFY_NULL(WeightIndices.Num());
-	VERIFY_NULL(BoneInfluences.Num());
+	if (Mesh->Version > 1)
+	{
+		VERIFY_NULL(WeightIndices.Num());
+		VERIFY_NULL(BoneInfluences.Num());
+	}
 	VERIFY_NOT_NULL(VertInfluences.Num());
 	VERIFY_NOT_NULL(Wedges.Num());
 
@@ -85,7 +91,7 @@ void CSkelMeshViewer::Test()
 	if (Mesh->Animation)
 	{
 		UMeshAnimation *Anim = Mesh->Animation;
-		if (Anim->f2C) appNotify("Anim.f2C = %d", Anim->f2C);
+		if (Anim->Version) appNotify("Anim.Version = %d", Anim->Version);
 		if (Anim->Moves.Num() != Anim->AnimSeqs.Num())
 			appNotify("Moves.Num=%d  !=  AnimSeqs.Num=%d", Anim->Moves.Num(), Anim->AnimSeqs.Num());
 		for (i = 0; i < Anim->AnimSeqs.Num(); i++)
@@ -112,17 +118,15 @@ void CSkelMeshViewer::Dump()
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	printf(
 		"\nSkelMesh info:\n==============\n"
-		"f1FC #         %d\n"
-		"Bones  # %4d  Points    # %4d\n"
+		"Bones  # %4d  Points    # %4d  Points2  # %4d\n"
 		"Wedges # %4d  Triangles # %4d\n"
 		"CollapseWedge # %4d  f1C8      # %4d\n"
 		"BoneDepth      %d\n"
 		"WeightIds # %d  BoneInfs # %d  VertInfs # %d\n"
 		"Attachments #  %d\n"
 		"LODModels # %d\n",
-		Mesh->f1FC.Num(),
 		Mesh->RefSkeleton.Num(),
-		Mesh->Points.Num(),
+		Mesh->Points.Num(), Mesh->Points2.Num(),
 		Mesh->Wedges.Num(),Mesh->Triangles.Num(),
 		Mesh->CollapseWedge.Num(), Mesh->f1C8.Num(),
 		Mesh->SkeletalDepth,

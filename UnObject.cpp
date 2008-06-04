@@ -187,7 +187,7 @@ void UObject::Serialize(FArchive &Ar)
 		const CPropInfo *Prop = FindProperty(PropName);
 		if (!Prop)
 		{
-			appNotify("WARNING: Class \"%s\": property \"%s\" was not found", GetClassName(), *PropName);
+			appNotify("WARNING: Class \"%s\": property \"%s\" (type=%d) was not found", GetClassName(), *PropName, PropType);
 			switch (PropType)
 			{
 			case PT_STRUCT:

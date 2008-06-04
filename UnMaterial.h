@@ -198,6 +198,11 @@ public:
 	float			MinFrameRate, MaxFrameRate;
 	// mipmaps
 	TArray<FMipmap>	Mips;		// native
+#if SPLINTER_CELL
+	// Splinter Cell extra fields
+	bool			bUseTextureAsHeat;
+	UObject			*HeatMaterial;
+#endif
 
 #if RENDERING
 	// rendering implementation fields
@@ -244,6 +249,10 @@ public:
 		PROP_BYTE(PrimeCount)
 		PROP_FLOAT(MinFrameRate)
 		PROP_FLOAT(MaxFrameRate)
+#if SPLINTER_CELL
+		PROP_BOOL(bUseTextureAsHeat)
+		PROP_OBJ(HeatMaterial)
+#endif
 	END_PROP_TABLE
 
 	BIND;
