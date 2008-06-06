@@ -445,27 +445,31 @@ public:
 	}
 
 	// serializer
-	friend FArchive& operator<<(FArchive &Ar, TArray &A)
-	{
-		guard(TArray<<);
-		assert(Ar.IsLoading);	//?? saving requires more code
-		A.Empty();
-		int Count;
-		Ar << AR_INDEX(Count);
-		T* Ptr;
-		if (Count)
-			Ptr = (T*)appMalloc(sizeof(T) * Count);
-		else
-			Ptr = NULL;
-		A.DataPtr   = Ptr;
-		A.DataCount = Count;
-		A.MaxCount  = Count;
-		for (int i = 0; i < Count; i++)
-			Ar << *Ptr++;
-		return Ar;
-		unguard;
-	}
+	friend FArchive& operator<<(FArchive &Ar, TArray &A);
 };
+
+// VC6 sometimes cannot instantiate this function, when declared inside
+// template class
+template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
+{
+	guard(TArray<<);
+	assert(Ar.IsLoading);	//?? saving requires more code
+	A.Empty();
+	int Count;
+	Ar << AR_INDEX(Count);
+	T* Ptr;
+	if (Count)
+		Ptr = (T*)appMalloc(sizeof(T) * Count);
+	else
+		Ptr = NULL;
+	A.DataPtr   = Ptr;
+	A.DataCount = Count;
+	A.MaxCount  = Count;
+	for (int i = 0; i < Count; i++)
+		Ar << *Ptr++;
+	return Ar;
+	unguard;
+}
 
 // TLazyArray implemented as simple wrapper around TArray with
 // different serialization function

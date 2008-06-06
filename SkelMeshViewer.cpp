@@ -91,7 +91,9 @@ void CSkelMeshViewer::Test()
 	if (Mesh->Animation)
 	{
 		UMeshAnimation *Anim = Mesh->Animation;
+#ifndef SPLINTER_CELL
 		if (Anim->Version) appNotify("Anim.Version = %d", Anim->Version);
+#endif
 		if (Anim->Moves.Num() != Anim->AnimSeqs.Num())
 			appNotify("Moves.Num=%d  !=  AnimSeqs.Num=%d", Anim->Moves.Num(), Anim->AnimSeqs.Num());
 		for (i = 0; i < Anim->AnimSeqs.Num(); i++)

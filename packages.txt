@@ -1,0 +1,7 @@
+		LicenseeVer	FileVer
+Unreal1, UT1	0
+UT2003				77-79
+UT2004		19,1B,1C,1D	77-80
+Postal2		1,2
+SplinterCell	09,0A,11	64
+SplinterCell2	14,19-1C	66

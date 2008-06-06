@@ -8,7 +8,7 @@
 			guard(Src);							\
 			Dst.Empty(Src.Num());				\
 			Dst.Add(Src.Num());					\
-			for (i = 0; i < Src.Num(); i++)		\
+			for (int i = 0; i < Src.Num(); i++)	\
 				Dst[i] = Src[i];				\
 			unguard;							\
 		}
@@ -390,7 +390,8 @@ public:
 -----------------------------------------------------------------------------*/
 
 #if SPLINTER_CELL
-// quaternion with 16-bit fixed point fields
+
+// quaternion with 4 16-bit fixed point fields
 struct FQuatComp
 {
 	short			X, Y, Z, W;				// signed short, corresponds to float*32767
@@ -404,12 +405,61 @@ struct FQuatComp
 		r.W = W / 32767.0f;
 		return r;
 	}
+	inline operator FVector() const			//?? for FixedPointTrack
+	{
+		FVector r;
+		r.X = X;
+		r.Y = Y;
+		r.Z = Z;
+		return r;
+	}
 
 	friend FArchive& operator<<(FArchive &Ar, FQuatComp &Q)
 	{
 		return Ar << Q.X << Q.Y << Q.Z << Q.W;
 	}
 };
+
+// normalized quaternion with 3 16-bit fixed point fields
+struct FQuatComp2
+{
+	short			X, Y, Z;				// signed short, corresponds to float*32767
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		r.X = X / 32767.0f;
+		r.Y = Y / 32767.0f;
+		r.Z = Z / 32767.0f;
+		r.W = sqrt(1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z));
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatComp2 &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z;
+	}
+};
+
+struct FVectorComp
+{
+	short			X, Y, Z;
+
+	inline operator FVector() const
+	{
+		FVector r;
+		r.X = X / 64.0f;
+		r.Y = Y / 64.0f;
+		r.Z = Z / 64.0f;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorComp &V)
+	{
+		return Ar << V.X << V.Y << V.Z;
+	}
+};
+
 #endif
 
 
@@ -431,9 +481,8 @@ struct AnalogTrack
 		{
 			if (Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
 			{
-				int i;
 				TArray<FQuatComp> KeyQuat2;
-				TArray<short> KeyTime2;
+				TArray<word>      KeyTime2;
 				Ar << KeyQuat2 << A.KeyPos << KeyTime2;
 				// copy with conversion
 				COPY_ARRAY(KeyQuat2, A.KeyQuat);
@@ -441,54 +490,43 @@ struct AnalogTrack
 				return Ar;
 			}
 		}
-#endif
+#endif // SPLINTER_CELL
 		return Ar << A.Flags << A.KeyQuat << A.KeyPos << A.KeyTime;
 		unguard;
 	}
 };
 
 
-#if SPLINTER_CELL && 0 //!!!!!
+#if SPLINTER_CELL
 
-struct FixedPointTrack
-{
-	TArray<FQuatComp>		KeyQuat;
-	TArray<FQuatComp>		KeyPos;			//?? 4 * short instead of 3
-	TArray<short>			KeyTime;
+#define SCELL_TRACK(Name,Quat,Pos,Time)						\
+struct Name													\
+{															\
+	TArray<Quat>			KeyQuat;						\
+	TArray<Pos>				KeyPos;							\
+	TArray<Time>			KeyTime;						\
+															\
+	void Decompress(AnalogTrack &D)							\
+	{														\
+		D.Flags = 0;										\
+		COPY_ARRAY(KeyQuat, D.KeyQuat);						\
+		COPY_ARRAY(KeyPos,  D.KeyPos );						\
+		COPY_ARRAY(KeyTime, D.KeyTime);						\
+	}														\
+															\
+	friend FArchive& operator<<(FArchive &Ar, Name &A)		\
+	{														\
+		return Ar << A.KeyQuat << A.KeyPos << A.KeyTime;	\
+	}														\
 };
 
-// FQuatComp2 -- 3*short
-// FVectorComp -- 3*short
+SCELL_TRACK(FixedPointTrack, FQuatComp,  FQuatComp,   word)
+SCELL_TRACK(Quat16Track,     FQuatComp2, FVector,     word)	// all types "large"
+SCELL_TRACK(FixPosTrack,     FQuatComp2, FVectorComp, word)	// "small" KeyPos
+SCELL_TRACK(FixTimeTrack,    FQuatComp2, FVector,     byte)	// "small" KeyTime
+SCELL_TRACK(FixPosTimeTrack, FQuatComp2, FVectorComp, byte)	// "small" KeyPos and KeyTime
 
-struct Fix16PosTrack						// all types "large"
-{
-	TArray<FQuatComp2>		KeyQuat;
-	TArray<FVector>			KeyPos;
-	TArray<short>			KeyTime;
-};
-
-struct FixPosTrack							// "small" KeyPos
-{
-	TArray<FQuatComp2>		KeyQuat;
-	TArray<FVectorComp>		KeyPos;
-	TArray<short>			KeyTime;
-};
-
-struct FixTimeTrack							// "small" KeyTime
-{
-	TArray<FQuatComp2>		KeyQuat;
-	TArray<FVector>			KeyPos;
-	TArray<byte>			KeyTime;
-};
-
-struct FixPosTimeTrack						// "small" KeyPos and KeyTime
-{
-	TArray<FQuatComp2>		KeyQuat;
-	TArray<FVectorComp>		KeyPos;
-	TArray<byte>			KeyTime;
-};
-
-#endif
+#endif // SPLINTER_CELL
 
 
 // Individual animation; subgroup of bones with compressed animation.
@@ -511,6 +549,60 @@ struct MotionChunk
 		return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
 	}
 };
+
+
+#if SPLINTER_CELL
+
+struct MotionChunkFixedPoint
+{
+	FVector					RootSpeed3D;
+	float					TrackTime;
+	int						StartBone;
+	unsigned				Flags;
+	TArray<FixedPointTrack>	AnimTracks;
+
+	friend FArchive& operator<<(FArchive &Ar, MotionChunkFixedPoint &M)
+	{
+		appNotify("MotionChunkFixedPoint is used!");		//!!
+		return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.AnimTracks;
+	}
+};
+
+// Note: standard UE2 MotionChunk is equalent to MotionChunkCompress<AnalogTrack>
+template<class T> struct MotionChunkCompress
+{
+	FVector					RootSpeed3D;
+	float					TrackTime;
+	int						StartBone;
+	unsigned				Flags;
+	TArray<int>				BoneIndices;
+	TArray<T>				AnimTracks;
+	AnalogTrack				RootTrack;		// standard track
+
+	void Decompress(MotionChunk &D)
+	{
+		D.RootSpeed3D = RootSpeed3D;
+		D.TrackTime   = TrackTime;
+		D.StartBone   = StartBone;
+		D.Flags       = Flags;
+		COPY_ARRAY(BoneIndices, D.BoneIndices);
+		int numAnims = AnimTracks.Num();
+		D.AnimTracks.Empty(numAnims);
+		D.AnimTracks.Add(numAnims);
+		for (int i = 0; i < numAnims; i++)
+			AnimTracks[i].Decompress(D.AnimTracks[i]);
+		//?? do nothing with RootTrack ...
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, MotionChunkCompress &M);
+};
+
+template<class T> FArchive& operator<<(FArchive &Ar, MotionChunkCompress<T> &M)
+{
+	return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+}
+
+#endif // SPLINTER_CELL
 
 
 // Named bone for the animating skeleton data.
@@ -548,7 +640,40 @@ public:
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell())
 		{
-//			if (Version > )
+			TArray<MotionChunkFixedPoint>					T1;
+			TArray<MotionChunkCompress<Quat16Track> >		T2;
+			TArray<MotionChunkCompress<FixPosTrack> >		T3;
+			TArray<MotionChunkCompress<FixTimeTrack> >		T4;
+			TArray<MotionChunkCompress<FixPosTimeTrack> >	T5;
+			if (Version >= 1000)
+			{
+				int unk;
+				Ar << unk << T1;
+				if (unk) appNotify("unk=%d", unk);//!!
+				if (T1.Num()) appNotify("T1 used!");//!!
+//appNotify("\n%s ver=%d anims=%d moves[%d]", Name, Version, AnimSeqs.Num(), Moves.Num());//!!
+//appNotify("unk=%d", Version);//!!
+//appNotify("T1[%d]", T1.Num());//!!
+			}
+			if (Version >= 2000)
+			{
+//appNotify("v2000");//!!
+				int unk2;		//?? compression type? 4->T5
+				Ar << unk2 << T2 << T3 << T4 << T5;
+				if (unk2 != 0 && unk2 != 4) appNotify("unk2=%d", unk2);//!!
+				if (T2.Num() || T3.Num() || T4.Num()) appNotify("T2-T4 used!");//!!
+				if (unk2 == 0 && ( (Moves.Num() != AnimSeqs.Num()) || T5.Num()    )) appNotify("check#1");//!!
+				if (unk2 == 4 && ( (T5.Num()    != AnimSeqs.Num()) || Moves.Num() )) appNotify("check#2");//!!
+//appNotify("unk2=%d T2[%d] T3[%d] T4[%d] T5[%d]", unk2, T2.Num(), T3.Num(), T4.Num(), T5.Num());
+				if (unk2 == 4 && T5.Num() && !Moves.Num())
+				{
+					int numMoves = T5.Num();
+					Moves.Empty(numMoves);
+					Moves.Add(numMoves);
+					for (int i = 0; i < numMoves; i++)
+						T5[i].Decompress(Moves[i]);
+				}
+			}
 		}
 #endif
 		unguard;
