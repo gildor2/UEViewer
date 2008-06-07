@@ -79,6 +79,10 @@ int main(int argc, char **argv)
 				"    MeshAnimation   exported as ActorX psa file\n"
 				"    Texture         exported in tga format\n"
 				"\n"
+				"Supported games:\n"
+				"    Unreal Tournament 2003,2004\n"
+				"    Splinter Cell 1,2\n"
+				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
 		);
 		exit(0);

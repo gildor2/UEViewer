@@ -73,7 +73,8 @@
 #	define vsnprintf		_vsnprintf
 #	define FORCEINLINE		__forceinline
 #	define NORETURN			__declspec(noreturn)
-#	define GCC_PACK			// VC uses #pragma pack()
+#	define GCC_PACK							// VC uses #pragma pack()
+#	pragma warning(disable : 4291)			// no matched operator delete found
 #elif __GNUC__
 #	define NORETURN			__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
@@ -146,6 +147,12 @@ FORCEINLINE void* operator new[](size_t size)
 FORCEINLINE void operator delete(void* ptr)
 {
 	appFree(ptr);
+}
+
+// inplace new
+FORCEINLINE void* operator new(size_t size, void* ptr)
+{
+	return ptr;
 }
 
 

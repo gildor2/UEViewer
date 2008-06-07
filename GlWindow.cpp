@@ -392,7 +392,7 @@ namespace GL
 		tFovY = tan(yFov * M_PI / 360.0f);
 		tFovX = tFovY / height * width; // tan(xFov * M_PI / 360.0f);
 		float zMin = zNear;
-		float zMax = zFar;
+		float zMax = zFar + viewOrigin.GetLength();
 		float xMin = -zMin * tFovX;
 		float xMax =  zMin * tFovX;
 		float yMin = -zMin * tFovY;
@@ -416,7 +416,7 @@ namespace GL
 		m[3][2] = -2.0f * zMin * zMax / (zMax - zMin);	// F
 
 #if 0
-		DrawTextLeft("zFar: %g;  frustum: x[%g, %g] y[%g, %g]", zFar, xMin, xMax, yMin, yMax);
+		DrawTextLeft("zMax: %g;  frustum: x[%g, %g] y[%g, %g]", zMax, xMin, xMax, yMin, yMax);
 		DrawTextLeft("----- projection matrix -----");
 		DrawTextLeft("{%9.4g, %9.4g, %9.4g, %9.4g}", m[0][0], m[1][0], m[2][0], m[3][0]);
 		DrawTextLeft("{%9.4g, %9.4g, %9.4g, %9.4g}", m[0][1], m[1][1], m[2][1], m[3][1]);

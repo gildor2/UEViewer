@@ -197,10 +197,11 @@ public:
 	byte			PrimeCount;
 	float			MinFrameRate, MaxFrameRate;
 	// mipmaps
-	TArray<FMipmap>	Mips;		// native
+	TArray<FMipmap>	Mips;				// native
 #if SPLINTER_CELL
 	// Splinter Cell extra fields
 	bool			bUseTextureAsHeat;
+	byte			SurfaceType;		// enum ?
 	UObject			*HeatMaterial;
 #endif
 
@@ -251,6 +252,7 @@ public:
 		PROP_FLOAT(MaxFrameRate)
 #if SPLINTER_CELL
 		PROP_BOOL(bUseTextureAsHeat)
+		PROP_BYTE(SurfaceType)
 		PROP_OBJ(HeatMaterial)
 #endif
 	END_PROP_TABLE

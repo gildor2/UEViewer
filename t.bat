@@ -58,10 +58,10 @@ rem %run3% EFemale
 rem %run3% ENPC
 rem %run3% EminiV
 rem %run4% EIntro
-rem --- NOT YET SUPPORTED ---
 %run4% ESam
 rem %run4% EDuck
 rem %run4% EDog
+rem %run4% ENPC
 rem %run4% EFemale
 goto exit
 

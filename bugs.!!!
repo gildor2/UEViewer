@@ -7,6 +7,3 @@
     - change mipmap generation algorithm
     ? check source of "wrong" color on texture borders (alpha 1->0) - may be, incorrect DXT decompression?
   ! to fix: should resort surface triangles taking in account alpha of applied to it texture
-
-- when resizing window, "default material" will be damaged and not re-uploaded (automatic re-upload requires
-  TArray of mipmap levels)

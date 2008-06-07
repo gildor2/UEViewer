@@ -414,6 +414,8 @@ public:
 	{
 		int index = DataCount;
 		FArray::Insert(index, count, sizeof(T));
+		for (int i = 0; i < count; i++)
+			new ((T*)DataPtr + index + i) T;
 		return index;
 	}
 
@@ -445,7 +447,11 @@ public:
 	}
 
 	// serializer
+#if _MSC_VER == 1200		// VC6 bugs
 	friend FArchive& operator<<(FArchive &Ar, TArray &A);
+#else
+	template<class T2> friend FArchive& operator<<(FArchive &Ar, TArray<T2> &A);
+#endif
 };
 
 // VC6 sometimes cannot instantiate this function, when declared inside
@@ -466,7 +472,10 @@ template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 	A.DataCount = Count;
 	A.MaxCount  = Count;
 	for (int i = 0; i < Count; i++)
-		Ar << *Ptr++;
+	{
+		new (Ptr) T;		// construct object first
+		Ar << *Ptr++;		// and then serialize
+	}
 	return Ar;
 	unguard;
 }

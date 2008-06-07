@@ -312,31 +312,34 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 UMaterial *BindDefaultMaterial()
 {
 	static UTexture *Mat = NULL;
-	if (Mat)
+	if (!Mat)
 	{
-		Mat->Bind();
-		return Mat;
-	}
-	Mat = new UTexture();
-	byte pic[16*16*4];
-
-	for (int x = 0; x < 16; x++)
-	{
-		for (int y = 0; y < 16; y++)
+		// allocate material
+		Mat = new UTexture;
+		Mat->bTwoSided = true;
+		Mat->Mips.Add();
+		Mat->Format = TEXF_RGBA8;
+		// create 1st mipmap
+		FMipmap &Mip = Mat->Mips[0];
+		Mip.USize = Mip.VSize = 16;
+		Mip.DataArray.Add(16*16*4);
+		byte *pic = &Mip.DataArray[0];
+		for (int x = 0; x < 16; x++)
 		{
-			static const byte colors[4][4] = {
-				{255,128,0}, {0,32,32}, {128,32,32}, {32,128,32}
-			};
-			byte *p = pic + y * 16 * 4 + x * 4;
-			int i1 = x < 16 / 2;
-			int i2 = y < 16 / 2;
-			const byte *c = colors[i1 * 2 + i2];
-			memcpy(p, c, 4);
+			for (int y = 0; y < 16; y++)
+			{
+				static const byte colors[4][4] = {
+					{255,128,0}, {0,32,32}, {128,32,32}, {32,128,32}
+				};
+				byte *p = pic + y * 16 * 4 + x * 4;
+				int i1 = x < 16 / 2;
+				int i2 = y < 16 / 2;
+				const byte *c = colors[i1 * 2 + i2];
+				memcpy(p, c, 4);
+			}
 		}
 	}
-	Upload(DEFAULT_TEX_NUM, pic, 16, 16, true, true, true);
-	Mat->TexNum    = DEFAULT_TEX_NUM;
-	Mat->bTwoSided = true;
+	Mat->Bind();
 	return Mat;
 }
 

@@ -408,9 +408,9 @@ struct FQuatComp
 	inline operator FVector() const			//?? for FixedPointTrack
 	{
 		FVector r;
-		r.X = X;
-		r.Y = Y;
-		r.Z = Z;
+		r.X = X / 64.0f;
+		r.Y = Y / 64.0f;
+		r.Z = Z / 64.0f;
 		return r;
 	}
 
@@ -521,7 +521,7 @@ struct Name													\
 };
 
 SCELL_TRACK(FixedPointTrack, FQuatComp,  FQuatComp,   word)
-SCELL_TRACK(Quat16Track,     FQuatComp2, FVector,     word)	// all types "large"
+SCELL_TRACK(Quat16Track,     FQuatComp2, FVector,     word)	// all types are "large"
 SCELL_TRACK(FixPosTrack,     FQuatComp2, FVectorComp, word)	// "small" KeyPos
 SCELL_TRACK(FixTimeTrack,    FQuatComp2, FVector,     byte)	// "small" KeyTime
 SCELL_TRACK(FixPosTimeTrack, FQuatComp2, FVectorComp, byte)	// "small" KeyPos and KeyTime
@@ -563,28 +563,38 @@ struct MotionChunkFixedPoint
 
 	friend FArchive& operator<<(FArchive &Ar, MotionChunkFixedPoint &M)
 	{
-		appNotify("MotionChunkFixedPoint is used!");		//!!
 		return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.AnimTracks;
 	}
 };
 
 // Note: standard UE2 MotionChunk is equalent to MotionChunkCompress<AnalogTrack>
-template<class T> struct MotionChunkCompress
+struct MotionChunkCompressBase
 {
 	FVector					RootSpeed3D;
 	float					TrackTime;
 	int						StartBone;
 	unsigned				Flags;
 	TArray<int>				BoneIndices;
-	TArray<T>				AnimTracks;
-	AnalogTrack				RootTrack;		// standard track
 
-	void Decompress(MotionChunk &D)
+	virtual void Decompress(MotionChunk &D)
 	{
 		D.RootSpeed3D = RootSpeed3D;
 		D.TrackTime   = TrackTime;
 		D.StartBone   = StartBone;
 		D.Flags       = Flags;
+	}
+};
+
+template<class T> struct MotionChunkCompress : public MotionChunkCompressBase
+{
+	TArray<T>				AnimTracks;
+	AnalogTrack				RootTrack;		// standard track
+
+	virtual void Decompress(MotionChunk &D)
+	{
+		guard(Decompress);
+		MotionChunkCompressBase::Decompress(D);
+		// copy/convert tracks
 		COPY_ARRAY(BoneIndices, D.BoneIndices);
 		int numAnims = AnimTracks.Num();
 		D.AnimTracks.Empty(numAnims);
@@ -592,9 +602,14 @@ template<class T> struct MotionChunkCompress
 		for (int i = 0; i < numAnims; i++)
 			AnimTracks[i].Decompress(D.AnimTracks[i]);
 		//?? do nothing with RootTrack ...
+		unguard;
 	}
 
+#if _MSC_VER == 1200	// VC6 bugs
 	friend FArchive& operator<<(FArchive &Ar, MotionChunkCompress &M);
+#else
+	template<class T2> friend FArchive& operator<<(FArchive &Ar, MotionChunkCompress<T2> &M);
+#endif
 };
 
 template<class T> FArchive& operator<<(FArchive &Ar, MotionChunkCompress<T> &M)
@@ -640,40 +655,56 @@ public:
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell())
 		{
-			TArray<MotionChunkFixedPoint>					T1;
-			TArray<MotionChunkCompress<Quat16Track> >		T2;
-			TArray<MotionChunkCompress<FixPosTrack> >		T3;
-			TArray<MotionChunkCompress<FixTimeTrack> >		T4;
-			TArray<MotionChunkCompress<FixPosTimeTrack> >	T5;
+			// for logic of track decompression check UMeshAnimation::Moves() function
+			int OldCompression = 0, CompressType = 0;
+			TArray<MotionChunkFixedPoint>					T0;		// OldCompression!=0, CompressType=0
+			TArray<MotionChunkCompress<Quat16Track> >		T1;		// CompressType=1
+			TArray<MotionChunkCompress<FixPosTrack> >		T2;		// CompressType=2
+			TArray<MotionChunkCompress<FixTimeTrack> >		T3;		// CompressType=3
+			TArray<MotionChunkCompress<FixPosTimeTrack> >	T4;		// CompressType=4
 			if (Version >= 1000)
 			{
-				int unk;
-				Ar << unk << T1;
-				if (unk) appNotify("unk=%d", unk);//!!
-				if (T1.Num()) appNotify("T1 used!");//!!
-//appNotify("\n%s ver=%d anims=%d moves[%d]", Name, Version, AnimSeqs.Num(), Moves.Num());//!!
-//appNotify("unk=%d", Version);//!!
-//appNotify("T1[%d]", T1.Num());//!!
+				Ar << OldCompression << T0;
+				// note: this compression type is not supported (absent BoneIndices in MotionChunkFixedPoint)
 			}
 			if (Version >= 2000)
 			{
-//appNotify("v2000");//!!
-				int unk2;		//?? compression type? 4->T5
-				Ar << unk2 << T2 << T3 << T4 << T5;
-				if (unk2 != 0 && unk2 != 4) appNotify("unk2=%d", unk2);//!!
-				if (T2.Num() || T3.Num() || T4.Num()) appNotify("T2-T4 used!");//!!
-				if (unk2 == 0 && ( (Moves.Num() != AnimSeqs.Num()) || T5.Num()    )) appNotify("check#1");//!!
-				if (unk2 == 4 && ( (T5.Num()    != AnimSeqs.Num()) || Moves.Num() )) appNotify("check#2");//!!
-//appNotify("unk2=%d T2[%d] T3[%d] T4[%d] T5[%d]", unk2, T2.Num(), T3.Num(), T4.Num(), T5.Num());
-				if (unk2 == 4 && T5.Num() && !Moves.Num())
+				Ar << CompressType << T1 << T2 << T3 << T4;
+				// decompress motion
+				if (CompressType)
 				{
-					int numMoves = T5.Num();
-					Moves.Empty(numMoves);
-					Moves.Add(numMoves);
-					for (int i = 0; i < numMoves; i++)
-						T5[i].Decompress(Moves[i]);
+					int i = 0, Count = 1;
+					while (i < Count)
+					{
+						MotionChunkCompressBase *M = NULL;
+						switch (CompressType)
+						{
+						case 1: Count = T1.Num(); M = &T1[i]; break;
+						case 2: Count = T2.Num(); M = &T2[i]; break;
+						case 3: Count = T3.Num(); M = &T3[i]; break;
+						case 4: Count = T4.Num(); M = &T4[i]; break;
+						default:
+							appError("Unsupported CompressType: %d", CompressType);
+						}
+						if (!Count)
+						{
+							appNotify("CompressType=%d with no tracks", CompressType);
+							break;
+						}
+						if (!i)
+						{
+							// 1st iteration, prepare Moves[] array
+							Moves.Empty(Count);
+							Moves.Add(Count);
+						}
+						// decompress current track
+						M->Decompress(Moves[i]);
+						// next track
+						i++;
+					}
 				}
 			}
+			if (OldCompression) appNotify("OldCompression=%d", OldCompression, CompressType);//!!
 		}
 #endif
 		unguard;

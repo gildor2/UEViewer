@@ -6,9 +6,20 @@ type="VertMesh|SkeletalMesh"
 dump="-dump"
 #dump="-check"
 #path="data"
+
+# UT2004
 path="c:/games/unreal/ut2004"
 
-for package in $path/Animations/*; do
+# SplinterCell
+#path="data/SplinterCell"
+
+# SplinterCell2
+#path="data/SplinterCell2"
+
+path2=$path
+[ -d $path/Animations ] && path2="$path/Animations"
+
+for package in $path2/*; do
 	case "$package" in
 	*.UKX|*.ukx|*.U|*.u)
 		echo
