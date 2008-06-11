@@ -198,6 +198,7 @@ int main(int argc, char **argv)
 			Obj = UObject::GObjObjects[1];
 		unguard;
 	}
+	if (!Obj) return 0;					// object was not created
 
 	CreateVisualizer(Obj);
 	// print mesh info
@@ -293,7 +294,9 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	CLASS_VIEWER(UMaterial,     CMaterialViewer);
 	// fallback for unknown class
 	if (!test)
+	{
 		Viewer = new CObjectViewer(Obj);
+	}
 	return false;
 #undef CLASS_VIEWER
 	unguard;

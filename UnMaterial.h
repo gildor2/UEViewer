@@ -1,6 +1,13 @@
 #ifndef __UNMATERIAL_H__
 #define __UNMATERIAL_H__
 
+// Ploygon flags (used in UE1 only ?)
+#define PF_Masked			0x00000002
+#define PF_Translucent		0x00000004
+#define PF_Modulated		0x00000040
+#define PF_TwoSided			0x00000100
+
+
 /*
 MATERIALS TREE:
 ~~~~~~~~~~~~~~~
@@ -40,7 +47,7 @@ MATERIALS TREE:
 */
 
 #if RENDERING
-#	define BIND		virtual void Bind()
+#	define BIND		virtual void Bind(unsigned PolyFlags)
 #else
 #	define BIND
 #endif
@@ -65,7 +72,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind()
+	virtual void Bind(unsigned PolyFlags)
 	{}
 #endif
 };
@@ -136,6 +143,10 @@ public:
 		Super::Serialize(Ar);
 		Ar << Colors;
 		assert(Colors.Num() == 256);	// NUM_PAL_COLORS in UT
+		// UE1 uses Palette[0] as color {0,0,0,0} when texture uses PF_Masked flag
+		// (see UOpenGLRenderDevice::SetTexture())
+		if (Ar.ArVer < 100)
+			Colors[0].A = 0;
 		unguard;
 	}
 };

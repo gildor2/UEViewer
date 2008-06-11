@@ -2,6 +2,7 @@ UMODEL
 Unlreal Tournament 2 (2003/2004) Model Viewer
 
 List of supported games:
+- Unreal 1, Unreal Tournament 1
 - Unreal Tournament 2003/2004
 - Postal 2
 - Splinter Cell 1,2
@@ -15,6 +16,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+11.06.2008
+- added Unreal1 and UT VertMesh support
+
 06.06.2008
 - added Splinter Cell 2 support
 - fixed "default" material loss when window is resized

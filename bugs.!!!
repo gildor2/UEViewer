@@ -1,3 +1,8 @@
+- UT1 meshes:
+  ? orientation is wrong (human models are top-bottom)
+    - but UnrealEd showing models in random orientation (no standard)
+  ! should build normals
+
 * MercFemaleB: bugs with alpha-texture on head (hear)
   - translocator: same
   - NightMaleB: same

@@ -25,13 +25,20 @@ void CVertMeshInstance::Draw()
 	float frac;
 	if (AnimIndex >= 0)
 	{
+		const FMeshAnimSeq &A = Mesh->AnimSeqs[AnimIndex];
 		FrameNum1 = appFloor(AnimTime);
 		FrameNum2 = FrameNum1 + 1;
-		if (FrameNum2 >= Mesh->AnimSeqs[AnimIndex].NumFrames)
+		if (FrameNum2 >= A.NumFrames)
 			FrameNum2 = 0;
 		frac      = AnimTime - FrameNum1;
-		FrameNum1 += Mesh->AnimSeqs[AnimIndex].StartFrame;
-		FrameNum2 += Mesh->AnimSeqs[AnimIndex].StartFrame;
+		FrameNum1 += A.StartFrame;
+		FrameNum2 += A.StartFrame;
+		// clamp frame numbers (has mesh with wrong frame count in last animation:
+		// UT1/BotPack/cdgunmainM; this animation is shown in UnrealEd as lerping to null size)
+		if (FrameNum1 >= Mesh->FrameCount)
+			FrameNum1 = Mesh->FrameCount-1;
+		if (FrameNum2 >= Mesh->FrameCount)
+			FrameNum2 = Mesh->FrameCount-1;
 	}
 	else
 	{
@@ -76,6 +83,8 @@ void CVertMeshInstance::Draw()
 			BaseTransform.axis.TransformVector(tmp, Norm[j]);
 #else
 			// vertex
+if (base1 + W.iVertex >= Mesh->Verts.Num()) appError("1: %d %d / %d", base1, W.iVertex, Mesh->Verts.Num());
+if (base2 + W.iVertex >= Mesh->Verts.Num()) appError("2: %d %d / %d", base2, W.iVertex, Mesh->Verts.Num());
 			const FMeshVert &V1 = Mesh->Verts[base1 + W.iVertex];
 			const FMeshVert &V2 = Mesh->Verts[base2 + W.iVertex];
 			tmp[0] = V1.X * Scale1[0] + V2.X * Scale2[0];

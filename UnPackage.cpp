@@ -141,7 +141,7 @@ UObject* UnPackage::CreateExport(int index)
 	UObject *Obj = Exp.Object = CreateClass(ClassName);
 	if (!Obj)
 	{
-		printf("WARNING: Unknown object class: %s (%s)\n", ClassName, *Exp.ObjectName);
+		printf("WARNING: Unknown class \"%s\" for object \"%s\"\n", ClassName, *Exp.ObjectName);
 		return NULL;
 	}
 	UObject::BeginLoad();

@@ -339,7 +339,7 @@ UMaterial *BindDefaultMaterial()
 			}
 		}
 	}
-	Mat->Bind();
+	Mat->Bind(0);
 	return Mat;
 }
 
@@ -366,12 +366,12 @@ byte *UTexture::Decompress(int &USize, int &VSize)
 
 
 //!! note: unloading textures is not supported now
-void UTexture::Bind()
+void UTexture::Bind(unsigned PolyFlags)
 {
 	guard(UTexture::Bind);
 	glEnable(GL_TEXTURE_2D);
 	// bTwoSided
-	if (bTwoSided)
+	if (bTwoSided || (PolyFlags & PF_TwoSided))
 		glDisable(GL_CULL_FACE);
 	else
 	{
@@ -390,7 +390,18 @@ void UTexture::Bind()
 		glAlphaFunc(GL_GREATER, 0.0f);
 	}
 	// blending
-	if (bAlphaTexture || bMasked)
+	// partially taken from UT/OpenGLDrv
+	if (PolyFlags & PF_Translucent)				// UE1
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+	}
+	else if (PolyFlags & PF_Modulated)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+	}
+	else if (bAlphaTexture || bMasked || (PolyFlags & PF_Masked))
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -436,17 +447,17 @@ void UTexture::Bind()
 }
 
 
-void UFinalBlend::Bind()
+void UFinalBlend::Bind(unsigned PolyFlags)
 {
 	if (!Material)
 	{
 		BindDefaultMaterial();
 		return;
 	}
-	Material->Bind();
+	Material->Bind(PolyFlags);
 	// override material settings
 	// TwoSided
-	if (TwoSided)
+	if (TwoSided || (PolyFlags & PF_TwoSided))
 		glDisable(GL_CULL_FACE);
 	else
 	{
@@ -454,7 +465,7 @@ void UFinalBlend::Bind()
 		glCullFace(GL_BACK);
 	}
 	// AlphaTest
-	if (AlphaTest)
+	if (AlphaTest || (PolyFlags & PF_Masked))
 	{
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, AlphaRef / 255.0f);

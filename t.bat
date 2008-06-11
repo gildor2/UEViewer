@@ -19,7 +19,7 @@ exit
 
 :cont
 
-goto scell
+goto ut1
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -53,16 +53,45 @@ rem ---------------------------------------------------------------------------
 rem		SplinterCell
 rem ---------------------------------------------------------------------------
 :scell
-rem %run3% ESam
+%run3% ESam
 rem %run3% EFemale
 rem %run3% ENPC
 rem %run3% EminiV
+rem %run3% EDog
 rem %run4% EIntro
-%run4% ESam
+rem %run4% ESam
 rem %run4% EDuck
 rem %run4% EDog
 rem %run4% ENPC
 rem %run4% EFemale
+goto exit
+
+rem ---------------------------------------------------------------------------
+rem 	UNREAL1
+rem ---------------------------------------------------------------------------
+:unreal1
+rem umodel.exe -path=c:/games/unreal/UnrealGold UnrealI
+umodel.exe -path=c:/games/unreal/UnrealGold UnrealI WarlordM
+goto exit
+
+:ut1
+set run=umodel.exe -path=c:/games/unreal/UnrealTournament
+rem %run% BotPack
+%run% BotPack Razor2
+goto exit
+%run% BotPack FCommando
+%run% BotPack Minigun2m
+%run% BotPack ShockCoreM
+%run% BotPack WHPick
+%run% BotPack Eightm
+%run% BotPack Rifle2m
+%run% BotPack ctftrophyM
+%run% BotPack cdgunmainM
+%run% BotPack chainsawM
+%run% BotPack muzzEF3
+%run% BotPack muzzPF3
+%run% BotPack Razor2
+%run% BotPack stukkam
 goto exit
 
 rem ---------------------------------------------------------------------------

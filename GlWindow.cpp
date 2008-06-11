@@ -34,7 +34,7 @@ namespace GL
 {
 	bool  is2Dmode = false;
 	// view params (const)
-	float zNear = 4;			// near clipping plane
+	float zNear = 1;//??4;		// near clipping plane -- should auto-adjust
 	float zFar  = 4096;			// far clipping plane
 	float yFov  = 80;
 	float tFovX, tFovY;			// tan(fov_x|y)
@@ -391,8 +391,8 @@ namespace GL
 		// compute projection matrix
 		tFovY = tan(yFov * M_PI / 360.0f);
 		tFovX = tFovY / height * width; // tan(xFov * M_PI / 360.0f);
-		float zMin = zNear;
-		float zMax = zFar + viewOrigin.GetLength();
+		float zMin = zNear * distScale;
+		float zMax = zFar  * distScale;
 		float xMin = -zMin * tFovX;
 		float xMax =  zMin * tFovX;
 		float yMin = -zMin * tFovY;

@@ -44,12 +44,13 @@ public:
 	{
 		if (!Viewport->bColorMaterials)
 		{
-			int TexIndex = pMesh->Materials[Index].TextureIndex;
+			const FMeshMaterial &M = pMesh->Materials[Index];
+			int TexIndex = M.TextureIndex;
 			if (TexIndex >= pMesh->Textures.Num())		// possible situation; see ONSWeapons-A.ukx/ParasiteMine
 				TexIndex = 0;
 			UMaterial *Mat = pMesh->Textures[TexIndex];
 			if (Mat)
-				Mat->Bind();
+				Mat->Bind(M.PolyFlags);
 			else
 				BindDefaultMaterial();
 		}

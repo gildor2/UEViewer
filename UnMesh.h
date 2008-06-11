@@ -81,21 +81,15 @@ struct FMeshUV
 	}
 };
 
-
-// temp structure, skipped while mesh loading
-struct FMeshTri
+// UE1 FMeshUV
+struct FMeshUV1
 {
-	word			iVertex[3];				// Vertex indices.
-	FMeshUV			Tex[3];					// Texture UV coordinates.
-	unsigned		PolyFlags;				// Surface flags.
-	int				TextureIndex;			// Source texture index.
+	byte			U;
+	byte			V;
 
-	friend FArchive& operator<<(FArchive& Ar, FMeshTri &T)
+	friend FArchive& operator<<(FArchive &Ar, FMeshUV1 &M)
 	{
-		Ar << T.iVertex[0] << T.iVertex[1] << T.iVertex[2];
-		Ar << T.Tex[0] << T.Tex[1] << T.Tex[2];
-		Ar << T.PolyFlags << T.TextureIndex;
-		return Ar;
+		return Ar << M.U << M.V;
 	}
 };
 
@@ -110,6 +104,24 @@ struct FMeshFace
 	{
 		Ar << F.iWedge[0] << F.iWedge[1] << F.iWedge[2];
 		Ar << F.MaterialIndex;
+		return Ar;
+	}
+};
+
+
+// temp structure, skipped while mesh loading
+struct FMeshTri
+{
+	word			iVertex[3];				// Vertex indices.
+	FMeshUV			Tex[3];					// Texture UV coordinates.
+	unsigned		PolyFlags;				// Surface flags.
+	int				TextureIndex;			// Source texture index.
+
+	friend FArchive& operator<<(FArchive& Ar, FMeshTri &T)
+	{
+		Ar << T.iVertex[0] << T.iVertex[1] << T.iVertex[2];
+		Ar << T.Tex[0] << T.Tex[1] << T.Tex[2];
+		Ar << T.PolyFlags << T.TextureIndex;
 		return Ar;
 	}
 };
@@ -131,6 +143,28 @@ struct FMeshWedge
 	}
 };
 
+// UE1 FMeshWedge
+struct FMeshWedge1
+{
+	word			iVertex;
+	FMeshUV1		TexUV;
+
+	operator FMeshWedge() const
+	{
+		FMeshWedge r;
+		r.iVertex = iVertex;
+		r.TexUV.U = TexUV.U / 256.0f;
+		r.TexUV.V = TexUV.V / 256.0f;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshWedge1 &T)
+	{
+		Ar << T.iVertex << T.TexUV;
+		return Ar;
+	}
+};
+
 
 // LOD-style mesh material.
 struct FMeshMaterial
@@ -140,6 +174,21 @@ struct FMeshMaterial
 	friend FArchive& operator<<(FArchive &Ar, FMeshMaterial &M)
 	{
 		return Ar << M.PolyFlags << M.TextureIndex;
+	}
+};
+
+
+// Says which triangles a particular mesh vertex is associated with.
+// Precomputed so that mesh triangles can be shaded with Gouraud-style
+// shared, interpolated normal shading.
+// Used for UE1 UMesh only
+struct FMeshVertConnect
+{
+	int				NumVertTriangles;
+	int				TriangleListOffset;
+	friend FArchive &operator<<(FArchive &Ar, FMeshVertConnect &C)
+	{
+		return Ar << C.NumVertTriangles << C.TriangleListOffset;
 	}
 };
 
@@ -341,6 +390,12 @@ struct FMeshAnimSeq
 	{
 		if (Ar.ArVer > 114)
 			Ar << A.f28;
+		if (Ar.ArVer < 100)
+		{
+			// UE1 support
+			FName tmpGroup;					// single group
+			return Ar << A.Name << tmpGroup << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
+		}
 		Ar << A.Name << A.Groups << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell())
@@ -370,9 +425,73 @@ public:
 	TArray<FAnimMeshVertex> AnimMeshVerts;	// empty; generated after loading
 	int						StreamVersion;	// unused
 
+	void SerializeUE1(FArchive &Ar)
+	{
+		guard(SerializeMesh1);
+
+		// UE1: different layout
+		TLazyArray<FMeshVert>			tmpVerts;
+		TLazyArray<FMeshTri>			tmpTris;
+		TLazyArray<FMeshVertConnect>	tmpConnects;
+		TLazyArray<int>					tmpVertLinks;
+		float							tmpTextureLOD_65;	// version 65
+		TArray<float>					tmpTextureLOD;		// version 66+
+		unsigned						tmpAndFlags, tmpOrFlags;
+		int								tmpCurPoly, tmpCurVertex;
+		TArray<word>					tmpCollapsePointThus;
+		TArray<FMeshWedge1>				tmpWedges;
+		TArray<FMeshFace>				tmpSpecialFaces;
+		int								tmpModelVerts, tmpSpecialVerts;
+		TArray<word>					tmpRemapAnimVerts;
+		int								tmpOldFrameVerts;
+
+		// UPrimitive
+		UPrimitive::Serialize(Ar);
+		// UMesh
+		Ar << tmpVerts << tmpTris << AnimSeqs << tmpConnects;
+		Ar << BoundingBox << BoundingSphere;	// serialize UPrimitive fields again
+		Ar << tmpVertLinks << Textures << BoundingBoxes << BoundingSpheres << VertexCount << FrameCount;
+		Ar << tmpAndFlags << tmpOrFlags << MeshScale << MeshOrigin << RotOrigin;
+		Ar << tmpCurPoly << tmpCurVertex;
+		if (Ar.ArVer == 65)
+			Ar << tmpTextureLOD_65;
+		else if (Ar.ArVer >= 66)
+			Ar << tmpTextureLOD;
+		// ULodMesh
+		Ar << tmpCollapsePointThus << FaceLevel << Faces << CollapseWedgeThus << tmpWedges;
+		Ar << Materials << tmpSpecialFaces << tmpModelVerts << tmpSpecialVerts;
+		Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
+		Ar << tmpRemapAnimVerts << tmpOldFrameVerts;
+		// convert data
+//		RotOrigin.Yaw   = -RotOrigin.Yaw;
+//		RotOrigin.Pitch = -RotOrigin.Pitch;
+//		RotOrigin.Roll  = -RotOrigin.Roll;
+		RotOrigin.Yaw   = 16384;
+		RotOrigin.Pitch = 0;
+		RotOrigin.Roll  = 16384;
+		COPY_ARRAY(tmpVerts,  Verts);			// TLazyArray  -> TArray
+		COPY_ARRAY(tmpWedges, Wedges);			// FMeshWedge1 -> FMeshWedge
+		for (int i = 0; i < Wedges.Num(); i++)	// remap wedges (skip SpecialVerts)
+			Wedges[i].iVertex += tmpSpecialVerts;
+		//!! build normals
+		Normals.Add(Verts.Num());
+		printf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
+		if (tmpRemapAnimVerts.Num()) appNotify("RemapVerts: %d", tmpRemapAnimVerts.Num());//!!
+		return;
+
+		unguard;
+	}
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UVertMesh::Serialize);
+
+		if (Ar.ArVer < 100)
+		{
+			SerializeUE1(Ar);
+			return;
+		}
+
 		Super::Serialize(Ar);
 
 		Ar << AnimMeshVerts << StreamVersion; // FAnimMeshVertexStream: may skip this (simply seek archive)
@@ -647,6 +766,66 @@ public:
 	TArray<MotionChunk>		Moves;
 	TArray<FMeshAnimSeq>	AnimSeqs;
 
+#if SPLINTER_CELL
+	void SerializeSCell(FArchive &Ar)
+	{
+		guard(SerializeSCell);
+
+		// for logic of track decompression check UMeshAnimation::Moves() function
+		int OldCompression = 0, CompressType = 0;
+		TArray<MotionChunkFixedPoint>					T0;		// OldCompression!=0, CompressType=0
+		TArray<MotionChunkCompress<Quat16Track> >		T1;		// CompressType=1
+		TArray<MotionChunkCompress<FixPosTrack> >		T2;		// CompressType=2
+		TArray<MotionChunkCompress<FixTimeTrack> >		T3;		// CompressType=3
+		TArray<MotionChunkCompress<FixPosTimeTrack> >	T4;		// CompressType=4
+		if (Version >= 1000)
+		{
+			Ar << OldCompression << T0;
+			// note: this compression type is not supported (absent BoneIndices in MotionChunkFixedPoint)
+		}
+		if (Version >= 2000)
+		{
+			Ar << CompressType << T1 << T2 << T3 << T4;
+			// decompress motion
+			if (CompressType)
+			{
+				int i = 0, Count = 1;
+				while (i < Count)
+				{
+					MotionChunkCompressBase *M = NULL;
+					switch (CompressType)
+					{
+					case 1: Count = T1.Num(); M = &T1[i]; break;
+					case 2: Count = T2.Num(); M = &T2[i]; break;
+					case 3: Count = T3.Num(); M = &T3[i]; break;
+					case 4: Count = T4.Num(); M = &T4[i]; break;
+					default:
+						appError("Unsupported CompressType: %d", CompressType);
+					}
+					if (!Count)
+					{
+						appNotify("CompressType=%d with no tracks", CompressType);
+						break;
+					}
+					if (!i)
+					{
+						// 1st iteration, prepare Moves[] array
+						Moves.Empty(Count);
+						Moves.Add(Count);
+					}
+					// decompress current track
+					M->Decompress(Moves[i]);
+					// next track
+					i++;
+				}
+			}
+		}
+		if (OldCompression) appNotify("OldCompression=%d", OldCompression, CompressType);//!!
+
+		unguard;
+	}
+#endif
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UMeshAnimation.Serialize);
@@ -654,58 +833,7 @@ public:
 		Ar << Version << RefBones << Moves << AnimSeqs;
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell())
-		{
-			// for logic of track decompression check UMeshAnimation::Moves() function
-			int OldCompression = 0, CompressType = 0;
-			TArray<MotionChunkFixedPoint>					T0;		// OldCompression!=0, CompressType=0
-			TArray<MotionChunkCompress<Quat16Track> >		T1;		// CompressType=1
-			TArray<MotionChunkCompress<FixPosTrack> >		T2;		// CompressType=2
-			TArray<MotionChunkCompress<FixTimeTrack> >		T3;		// CompressType=3
-			TArray<MotionChunkCompress<FixPosTimeTrack> >	T4;		// CompressType=4
-			if (Version >= 1000)
-			{
-				Ar << OldCompression << T0;
-				// note: this compression type is not supported (absent BoneIndices in MotionChunkFixedPoint)
-			}
-			if (Version >= 2000)
-			{
-				Ar << CompressType << T1 << T2 << T3 << T4;
-				// decompress motion
-				if (CompressType)
-				{
-					int i = 0, Count = 1;
-					while (i < Count)
-					{
-						MotionChunkCompressBase *M = NULL;
-						switch (CompressType)
-						{
-						case 1: Count = T1.Num(); M = &T1[i]; break;
-						case 2: Count = T2.Num(); M = &T2[i]; break;
-						case 3: Count = T3.Num(); M = &T3[i]; break;
-						case 4: Count = T4.Num(); M = &T4[i]; break;
-						default:
-							appError("Unsupported CompressType: %d", CompressType);
-						}
-						if (!Count)
-						{
-							appNotify("CompressType=%d with no tracks", CompressType);
-							break;
-						}
-						if (!i)
-						{
-							// 1st iteration, prepare Moves[] array
-							Moves.Empty(Count);
-							Moves.Add(Count);
-						}
-						// decompress current track
-						M->Decompress(Moves[i]);
-						// next track
-						i++;
-					}
-				}
-			}
-			if (OldCompression) appNotify("OldCompression=%d", OldCompression, CompressType);//!!
-		}
+			SerializeSCell(Ar);
 #endif
 		unguard;
 	}
@@ -1209,9 +1337,11 @@ public:
 };
 
 
+// Note: we have registered UVertMesh as ULodMesh too for UE1 compatibility
 #define REGISTER_MESH_CLASSES		\
 	REGISTER_CLASS(USkeletalMesh)	\
 	REGISTER_CLASS(UVertMesh)		\
+	REGISTER_CLASS_NAME(UVertMesh, ULodMesh) \
 	REGISTER_CLASS(UMeshAnimation)
 
 
