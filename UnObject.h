@@ -82,7 +82,7 @@ bool IsKnownClass(const char *Name);
 		static CClassInfo Table[] = {
 #define REGISTER_CLASS(Class)					\
 			{ #Class+1, (UObject* (*) ())Class::StaticConstructor },
-#define REGISTER_CLASS_NAME(Class,ClassName)	\
+#define REGISTER_CLASS_ALIAS(Class,ClassName)	\
 			{ #ClassName+1, (UObject* (*) ())Class::StaticConstructor },
 #define END_CLASS_TABLE							\
 		};										\

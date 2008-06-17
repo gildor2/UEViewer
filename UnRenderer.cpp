@@ -320,24 +320,26 @@ UMaterial *BindDefaultMaterial()
 		Mat->Mips.Add();
 		Mat->Format = TEXF_RGBA8;
 		// create 1st mipmap
+#define TEX_SIZE	64
 		FMipmap &Mip = Mat->Mips[0];
-		Mip.USize = Mip.VSize = 16;
-		Mip.DataArray.Add(16*16*4);
+		Mip.USize = Mip.VSize = TEX_SIZE;
+		Mip.DataArray.Add(TEX_SIZE*TEX_SIZE*4);
 		byte *pic = &Mip.DataArray[0];
-		for (int x = 0; x < 16; x++)
+		for (int x = 0; x < TEX_SIZE; x++)
 		{
-			for (int y = 0; y < 16; y++)
+			for (int y = 0; y < TEX_SIZE; y++)
 			{
 				static const byte colors[4][4] = {
-					{255,128,0}, {0,32,32}, {128,32,32}, {32,128,32}
+					{255,128,0}, {0,192,192}, {255,64,64}, {64,255,64}
 				};
-				byte *p = pic + y * 16 * 4 + x * 4;
-				int i1 = x < 16 / 2;
-				int i2 = y < 16 / 2;
+				byte *p = pic + y * TEX_SIZE * 4 + x * 4;
+				int i1 = x < TEX_SIZE / 2;
+				int i2 = y < TEX_SIZE / 2;
 				const byte *c = colors[i1 * 2 + i2];
 				memcpy(p, c, 4);
 			}
 		}
+#undef TEX_SIZE
 	}
 	Mat->Bind(0);
 	return Mat;

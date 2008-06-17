@@ -42,6 +42,7 @@ public:
 
 	void SetMaterial(int Index)
 	{
+		guard(CMeshInstance::SetMaterial);
 		if (!Viewport->bColorMaterials)
 		{
 			const FMeshMaterial &M = pMesh->Materials[Index];
@@ -64,6 +65,7 @@ public:
 			glColor3f(C(0), C(1), C(2));
 #undef C
 		}
+		unguard;
 	}
 
 	virtual void Draw() = 0;
@@ -205,6 +207,7 @@ public:
 //??	void StopAnimating(bool ClearAllButBase);
 	virtual void Draw();
 
+	void DumpBones();
 	void DrawSkeleton(bool ShowLabels);
 	void DrawBaseSkeletalMesh(bool ShowNormals);
 	void DrawLodSkeletalMesh(const FStaticLODModel *lod);

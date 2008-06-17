@@ -46,7 +46,6 @@ void CVertMeshInstance::Draw()
 		FrameNum2 = 0;
 		frac      = 0;
 	}
-	//!! lerp frames (verts+normals)
 
 	int base1 = Mesh->VertexCount * FrameNum1;
 	int base2 = Mesh->VertexCount * FrameNum2;
@@ -69,22 +68,21 @@ void CVertMeshInstance::Draw()
 			const FMeshWedge &W = Mesh->Wedges[F.iWedge[j]];
 			CVec3 tmp;
 #if 0
+			// path with no frame lerp
 			// vertex
-			const FMeshVert &V = Mesh->Verts[base + W.iVertex];
+			const FMeshVert &V = Mesh->Verts[base1 + W.iVertex];
 			tmp[0] = V.X * Mesh->MeshScale.X;
 			tmp[1] = V.Y * Mesh->MeshScale.Y;
 			tmp[2] = V.Z * Mesh->MeshScale.Z;
 			BaseTransform.TransformPoint(tmp, Vert[j]);
 			// normal
-			const FMeshNorm &N = Mesh->Normals[base + W.iVertex];
+			const FMeshNorm &N = Mesh->Normals[base1 + W.iVertex];
 			tmp[0] = (N.X - 512.0f) / 512;
 			tmp[1] = (N.Y - 512.0f) / 512;
 			tmp[2] = (N.Z - 512.0f) / 512;
 			BaseTransform.axis.TransformVector(tmp, Norm[j]);
 #else
 			// vertex
-if (base1 + W.iVertex >= Mesh->Verts.Num()) appError("1: %d %d / %d", base1, W.iVertex, Mesh->Verts.Num());
-if (base2 + W.iVertex >= Mesh->Verts.Num()) appError("2: %d %d / %d", base2, W.iVertex, Mesh->Verts.Num());
 			const FMeshVert &V1 = Mesh->Verts[base1 + W.iVertex];
 			const FMeshVert &V2 = Mesh->Verts[base2 + W.iVertex];
 			tmp[0] = V1.X * Scale1[0] + V2.X * Scale2[0];
@@ -125,7 +123,7 @@ if (base2 + W.iVertex >= Mesh->Verts.Num()) appError("2: %d %d / %d", base2, W.i
 				glVertex3fv(Vert[j].v);
 				CVec3 tmp;
 				tmp = Vert[j];
-				VectorMA(tmp, 3, Norm[j]);
+				VectorMA(tmp, 2, Norm[j]);
 				glVertex3fv(tmp.v);
 			}
 			glEnd();

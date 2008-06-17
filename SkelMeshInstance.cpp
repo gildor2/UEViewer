@@ -249,9 +249,22 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 	for (i = 0; i < numIndices; i++)
 		BoneData[i].SubtreeSize = treeSizes[i];	// remember subtree size
 
+	ClearSkelAnims();
+	PlayAnim(NULL);
+
+	unguard;
+}
+
+
+void CSkelMeshInstance::DumpBones()
+{
 #if 1
+	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(pMesh);
+	int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
+	int numIndices = 0;
+	CheckBoneTree(Mesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
 	//?? dump tree; separate function (requires depth information)
-	for (i = 0; i < numIndices; i++)
+	for (int i = 0; i < numIndices; i++)
 	{
 		int parent = Mesh->RefSkeleton[i].ParentIndex;
 		printf("bone#%2d (parent %2d); tree size: %2d   ", i, parent, treeSizes[i]);
@@ -287,11 +300,6 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 		printf("%s\n", *Mesh->RefSkeleton[i].Name);
 	}
 #endif
-
-	ClearSkelAnims();
-	PlayAnim(NULL);
-
-	unguard;
 }
 
 

@@ -193,6 +193,66 @@ struct FMeshVertConnect
 };
 
 
+// An actor notification event associated with an animation sequence.
+struct FMeshAnimNotify
+{
+	float			Time;					// Time to occur, 0.0-1.0.
+	FName			Function;				// Name of the actor function to call.
+	UObject			*NotifyObj;				//?? UAnimNotify
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshAnimNotify &N)
+	{
+		guard(FMeshAnimNotify<<);
+		Ar << N.Time << N.Function;
+#if SPLINTER_CELL
+		if (Ar.IsSplinterCell())
+		{
+			FName Obj;
+			Ar << Obj;						// instead of UObject*
+		}
+#endif
+		if (Ar.ArVer > 111)
+			Ar << N.NotifyObj;
+		return Ar;
+		unguard;
+	}
+};
+
+
+// Information about one animation sequence associated with a mesh,
+// a group of contiguous frames.
+struct FMeshAnimSeq
+{
+	FName					Name;			// Sequence's name.
+	TArray<FName>			Groups;			// Group.
+	int						StartFrame;		// Starting frame number.
+	int						NumFrames;		// Number of frames in sequence.
+	float					Rate;			// Playback rate in frames per second.
+	TArray<FMeshAnimNotify> Notifys;		// Notifications.
+	float					f28;			//??
+	friend FArchive& operator<<(FArchive &Ar, FMeshAnimSeq &A)
+	{
+		if (Ar.ArVer > 114)
+			Ar << A.f28;
+		if (Ar.ArVer < 100)
+		{
+			// UE1 support
+			FName tmpGroup;					// single group
+			return Ar << A.Name << tmpGroup << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
+		}
+		Ar << A.Name << A.Groups << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
+#if SPLINTER_CELL
+		if (Ar.IsSplinterCell())
+		{
+			byte unk;
+			Ar << unk;
+		}
+#endif
+		return Ar;
+	}
+};
+
+
 // Base class for UVertMesh and USkeletalMesh; in Unreal Engine it is derived from
 // abstract class UMesh (which is derived from UPrimitive)
 
@@ -279,6 +339,56 @@ public:
 
 		unguard;
 	}
+
+	void SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, TArray<FBox> &BoundingBoxes,
+		TArray<FSphere> &BoundingSpheres, int &FrameCount)
+	{
+		guard(SerializeLodMesh1);
+
+		// UE1: different layout
+		TLazyArray<FMeshVert>			tmpVerts;
+		TLazyArray<FMeshTri>			tmpTris;
+		TLazyArray<FMeshVertConnect>	tmpConnects;
+		TLazyArray<int>					tmpVertLinks;
+		float							tmpTextureLOD_65;	// version 65
+		TArray<float>					tmpTextureLOD;		// version 66+
+		unsigned						tmpAndFlags, tmpOrFlags;
+		int								tmpCurPoly, tmpCurVertex;
+		TArray<word>					tmpCollapsePointThus;
+		TArray<FMeshWedge1>				tmpWedges;
+		TArray<FMeshFace>				tmpSpecialFaces;
+		int								tmpModelVerts, tmpSpecialVerts;
+		TArray<word>					tmpRemapAnimVerts;
+		int								tmpOldFrameVerts;
+
+		// UPrimitive
+		UPrimitive::Serialize(Ar);
+		// UMesh
+		Ar << tmpVerts << tmpTris << AnimSeqs << tmpConnects;
+		Ar << BoundingBox << BoundingSphere;	// serialize UPrimitive fields again
+		Ar << tmpVertLinks << Textures << BoundingBoxes << BoundingSpheres << VertexCount << FrameCount;
+		Ar << tmpAndFlags << tmpOrFlags << MeshScale << MeshOrigin << RotOrigin;
+		Ar << tmpCurPoly << tmpCurVertex;
+		if (Ar.ArVer == 65)
+			Ar << tmpTextureLOD_65;
+		else if (Ar.ArVer >= 66)
+			Ar << tmpTextureLOD;
+		// ULodMesh
+		Ar << tmpCollapsePointThus << FaceLevel << Faces << CollapseWedgeThus << tmpWedges;
+		Ar << Materials << tmpSpecialFaces << tmpModelVerts << tmpSpecialVerts;
+		Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
+		Ar << tmpRemapAnimVerts << tmpOldFrameVerts;
+		// convert data
+		COPY_ARRAY(tmpVerts,  Verts);			// TLazyArray  -> TArray
+		COPY_ARRAY(tmpWedges, Wedges);			// FMeshWedge1 -> FMeshWedge
+		for (int i = 0; i < Wedges.Num(); i++)	// remap wedges (skip SpecialVerts)
+			Wedges[i].iVertex += tmpSpecialVerts;
+		printf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
+		if (tmpRemapAnimVerts.Num()) appNotify("RemapVerts: %d", tmpRemapAnimVerts.Num());//!!
+		return;
+
+		unguard;
+	}
 };
 
 
@@ -349,66 +459,6 @@ struct FAnimMeshVertexStream
 	UVertMesh class
 -----------------------------------------------------------------------------*/
 
-// An actor notification event associated with an animation sequence.
-struct FMeshAnimNotify
-{
-	float			Time;					// Time to occur, 0.0-1.0.
-	FName			Function;				// Name of the actor function to call.
-	UObject			*NotifyObj;				//?? UAnimNotify
-
-	friend FArchive& operator<<(FArchive &Ar, FMeshAnimNotify &N)
-	{
-		guard(FMeshAnimNotify<<);
-		Ar << N.Time << N.Function;
-#if SPLINTER_CELL
-		if (Ar.IsSplinterCell())
-		{
-			FName Obj;
-			Ar << Obj;						// instead of UObject*
-		}
-#endif
-		if (Ar.ArVer > 111)
-			Ar << N.NotifyObj;
-		return Ar;
-		unguard;
-	}
-};
-
-
-// Information about one animation sequence associated with a mesh,
-// a group of contiguous frames.
-struct FMeshAnimSeq
-{
-	FName					Name;			// Sequence's name.
-	TArray<FName>			Groups;			// Group.
-	int						StartFrame;		// Starting frame number.
-	int						NumFrames;		// Number of frames in sequence.
-	float					Rate;			// Playback rate in frames per second.
-	TArray<FMeshAnimNotify> Notifys;		// Notifications.
-	float					f28;			//??
-	friend FArchive& operator<<(FArchive &Ar, FMeshAnimSeq &A)
-	{
-		if (Ar.ArVer > 114)
-			Ar << A.f28;
-		if (Ar.ArVer < 100)
-		{
-			// UE1 support
-			FName tmpGroup;					// single group
-			return Ar << A.Name << tmpGroup << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
-		}
-		Ar << A.Name << A.Groups << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
-#if SPLINTER_CELL
-		if (Ar.IsSplinterCell())
-		{
-			byte unk;
-			Ar << unk;
-		}
-#endif
-		return Ar;
-	}
-};
-
-
 class UVertMesh : public ULodMesh
 {
 	DECLARE_CLASS(UVertMesh, ULodMesh);
@@ -425,59 +475,83 @@ public:
 	TArray<FAnimMeshVertex> AnimMeshVerts;	// empty; generated after loading
 	int						StreamVersion;	// unused
 
-	void SerializeUE1(FArchive &Ar)
+	void BuildNormals()
 	{
-		guard(SerializeMesh1);
+		// UE1 meshes have no stored normals, should build them
+		// This function is similar to BuildNormals() from SkelMeshInstance.cpp
+		int numVerts = Verts.Num();
+		int i;
+		Normals.Empty(numVerts);
+		Normals.Add(numVerts);
+		TArray<CVec3> tmpVerts, tmpNormals;
+		tmpVerts.Add(numVerts);
+		tmpNormals.Add(numVerts);
+		// convert verts
+		for (i = 0; i < numVerts; i++)
+		{
+			const FMeshVert &SV = Verts[i];
+			CVec3           &DV = tmpVerts[i];
+			DV[0] = SV.X * MeshScale.X;
+			DV[1] = SV.Y * MeshScale.Y;
+			DV[2] = SV.Z * MeshScale.Z;
+		}
+		// iterate faces
+		for (i = 0; i < Faces.Num(); i++)
+		{
+			const FMeshFace &F = Faces[i];
+			// get vertex indices
+			int i1 = Wedges[F.iWedge[0]].iVertex;
+			int i2 = Wedges[F.iWedge[2]].iVertex;		// note: reverse order in comparison with SkeletalMesh
+			int i3 = Wedges[F.iWedge[1]].iVertex;
+			// iterate all frames
+			for (int j = 0; j < FrameCount; j++)
+			{
+				int base = VertexCount * j;
+				// compute edges
+				const CVec3 &V1 = tmpVerts[base + i1];
+				const CVec3 &V2 = tmpVerts[base + i2];
+				const CVec3 &V3 = tmpVerts[base + i3];
+				CVec3 D1, D2, D3;
+				VectorSubtract(V2, V1, D1);
+				VectorSubtract(V3, V2, D2);
+				VectorSubtract(V1, V3, D3);
+				// compute normal
+				CVec3 norm;
+				cross(D2, D1, norm);
+				norm.Normalize();
+				// compute angles
+				D1.Normalize();
+				D2.Normalize();
+				D3.Normalize();
+				float angle1 = acos(-dot(D1, D3));
+				float angle2 = acos(-dot(D1, D2));
+				float angle3 = acos(-dot(D2, D3));
+				// add normals for triangle verts
+				VectorMA(tmpNormals[base + i1], angle1, norm);
+				VectorMA(tmpNormals[base + i2], angle2, norm);
+				VectorMA(tmpNormals[base + i3], angle3, norm);
+			}
+		}
+		// normalize and convert computed normals
+		for (i = 0; i < numVerts; i++)
+		{
+			CVec3 &SN     = tmpNormals[i];
+			FMeshNorm &DN = Normals[i];
+			SN.Normalize();
+			DN.X = appRound(SN[0] * 511 + 512);
+			DN.Y = appRound(SN[1] * 511 + 512);
+			DN.Z = appRound(SN[2] * 511 + 512);
+		}
+	}
 
-		// UE1: different layout
-		TLazyArray<FMeshVert>			tmpVerts;
-		TLazyArray<FMeshTri>			tmpTris;
-		TLazyArray<FMeshVertConnect>	tmpConnects;
-		TLazyArray<int>					tmpVertLinks;
-		float							tmpTextureLOD_65;	// version 65
-		TArray<float>					tmpTextureLOD;		// version 66+
-		unsigned						tmpAndFlags, tmpOrFlags;
-		int								tmpCurPoly, tmpCurVertex;
-		TArray<word>					tmpCollapsePointThus;
-		TArray<FMeshWedge1>				tmpWedges;
-		TArray<FMeshFace>				tmpSpecialFaces;
-		int								tmpModelVerts, tmpSpecialVerts;
-		TArray<word>					tmpRemapAnimVerts;
-		int								tmpOldFrameVerts;
+	void SerializeVertMesh1(FArchive &Ar)
+	{
+		guard(SerializeVertMesh1);
 
-		// UPrimitive
-		UPrimitive::Serialize(Ar);
-		// UMesh
-		Ar << tmpVerts << tmpTris << AnimSeqs << tmpConnects;
-		Ar << BoundingBox << BoundingSphere;	// serialize UPrimitive fields again
-		Ar << tmpVertLinks << Textures << BoundingBoxes << BoundingSpheres << VertexCount << FrameCount;
-		Ar << tmpAndFlags << tmpOrFlags << MeshScale << MeshOrigin << RotOrigin;
-		Ar << tmpCurPoly << tmpCurVertex;
-		if (Ar.ArVer == 65)
-			Ar << tmpTextureLOD_65;
-		else if (Ar.ArVer >= 66)
-			Ar << tmpTextureLOD;
-		// ULodMesh
-		Ar << tmpCollapsePointThus << FaceLevel << Faces << CollapseWedgeThus << tmpWedges;
-		Ar << Materials << tmpSpecialFaces << tmpModelVerts << tmpSpecialVerts;
-		Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
-		Ar << tmpRemapAnimVerts << tmpOldFrameVerts;
-		// convert data
-//		RotOrigin.Yaw   = -RotOrigin.Yaw;
-//		RotOrigin.Pitch = -RotOrigin.Pitch;
-//		RotOrigin.Roll  = -RotOrigin.Roll;
-		RotOrigin.Yaw   = 16384;
-		RotOrigin.Pitch = 0;
-		RotOrigin.Roll  = 16384;
-		COPY_ARRAY(tmpVerts,  Verts);			// TLazyArray  -> TArray
-		COPY_ARRAY(tmpWedges, Wedges);			// FMeshWedge1 -> FMeshWedge
-		for (int i = 0; i < Wedges.Num(); i++)	// remap wedges (skip SpecialVerts)
-			Wedges[i].iVertex += tmpSpecialVerts;
-		//!! build normals
-		Normals.Add(Verts.Num());
-		printf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
-		if (tmpRemapAnimVerts.Num()) appNotify("RemapVerts: %d", tmpRemapAnimVerts.Num());//!!
-		return;
+		SerializeLodMesh1(Ar, AnimSeqs, BoundingBoxes, BoundingSpheres, FrameCount);
+		VertexCount = Super::VertexCount;
+		RotOrigin.Roll = -RotOrigin.Roll;
+		BuildNormals();
 
 		unguard;
 	}
@@ -488,7 +562,7 @@ public:
 
 		if (Ar.ArVer < 100)
 		{
-			SerializeUE1(Ar);
+			SerializeVertMesh1(Ar);
 			return;
 		}
 
@@ -830,11 +904,39 @@ public:
 	{
 		guard(UMeshAnimation.Serialize);
 		Super::Serialize(Ar);
-		Ar << Version << RefBones << Moves << AnimSeqs;
+		if (Ar.ArVer >= 100)
+			Ar << Version;			// no such field in UE1
+		Ar << RefBones << Moves << AnimSeqs;
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell())
 			SerializeSCell(Ar);
 #endif
+		if (Ar.ArVer < 100)
+		{
+			// UE1 code
+			int i;
+			for (i = 0; i < Moves.Num(); i++)
+			{
+				MotionChunk &M = Moves[i];
+				for (int j = 0; j < M.AnimTracks.Num(); j++)
+				{
+					AnalogTrack &A = M.AnimTracks[j];
+					int k;
+					// fix time tracks
+					for (k = 0; k < A.KeyTime.Num(); k++)
+						A.KeyTime[k] = k;
+					// mirror position and orientation
+					for (k = 0; k < A.KeyPos.Num(); k++)
+						A.KeyPos[k].X *= -1;
+					for (k = 0; k < A.KeyQuat.Num(); k++)
+					{
+						FQuat &Q = A.KeyQuat[k];
+						Q.X *= -1;
+						Q.W *= -1;
+					}
+				}
+			}
+		}
 		unguard;
 	}
 };
@@ -904,18 +1006,40 @@ struct VWeightIndex
 };
 
 
-struct VBoneInfluence						// Weight and vertex number
+struct VBoneInfluence1						// Weight and vertex number
 {
-	/* NOTE: UT1 has different VBoneInfluence layout:
-	word PointIndex;
-	word BoneWeight;
-	*/
-	word			BoneWeight;				// 0..65535
+	word			PointIndex;
+	word			BoneWeight;				// 0..63363 == 0..1
+
+	friend FArchive& operator<<(FArchive &Ar, VBoneInfluence1 &V)
+	{
+		return Ar << V.PointIndex << V.BoneWeight;
+	}
+};
+
+
+struct VBoneInfluence						// Weight and bone number
+{
+	word			BoneWeight;				// 0..65535 == 0..1
 	word			BoneIndex;
 
 	friend FArchive& operator<<(FArchive &Ar, VBoneInfluence &V)
 	{
 		return Ar << V.BoneWeight << V.BoneIndex;
+	}
+};
+
+
+struct VBoneInfIndex
+{
+	word			WeightIndex;
+	word			Number;
+	word			DetailA;
+	word			DetailB;
+
+	friend FArchive& operator<<(FArchive &Ar, VBoneInfIndex &V)
+	{
+		return Ar << V.WeightIndex << V.Number << V.DetailA << V.DetailB;
 	}
 };
 
@@ -1223,20 +1347,15 @@ public:
 	UObject*				CollisionMesh;	// UStaticMesh*
 	UObject*				KarmaProps;		// UKMeshProps*
 
-	void UpgradeMesh()
+	void UpgradeFaces()
 	{
-		guard(USkeletalMesh::UpgradeMesh);
-
-		int i;
-		COPY_ARRAY(Points2, Points)
-		COPY_ARRAY(ULodMesh::Wedges, Wedges);
+		guard(UpgradeFaces);
 		// convert 'FMeshFace Faces' to 'VTriangle Triangles'
 		if (Faces.Num() && !Triangles.Num())
 		{
-			guard(Faces);
 			Triangles.Empty(Faces.Num());
 			Triangles.Add(Faces.Num());
-			for (i = 0; i < Faces.Num(); i++)
+			for (int i = 0; i < Faces.Num(); i++)
 			{
 				const FMeshFace &F = Faces[i];
 				VTriangle &T = Triangles[i];
@@ -1245,8 +1364,18 @@ public:
 				T.WedgeIndex[2] = F.iWedge[2];
 				T.MatIndex      = F.MaterialIndex;
 			}
-			unguard;
 		}
+		unguard;
+	}
+
+	void UpgradeMesh()
+	{
+		guard(USkeletalMesh::UpgradeMesh);
+
+		int i;
+		COPY_ARRAY(Points2, Points)
+		COPY_ARRAY(ULodMesh::Wedges, Wedges);
+		UpgradeFaces();
 		// convert VBoneInfluence and VWeightIndex to FVertInfluences
 		// count total influences
 		guard(Influences);
@@ -1278,9 +1407,82 @@ public:
 		unguard;
 	}
 
+	void SerializeSkelMesh1(FArchive &Ar)
+	{
+		guard(SerializeSkelMesh1);
+		TArray<FMeshAnimSeq>	tmpAnimSeqs;
+		TArray<FBox>			tmpBoundingBoxes;
+		TArray<FSphere>			tmpBoundingSpheres;
+		int						tmpFrameCount;
+		TArray<FMeshWedge>		tmpWedges;
+		TArray<FVector>			tmpPoints;
+		TArray<VBoneInfIndex>	tmpBoneWeightIdx;
+		TArray<VBoneInfluence1>	tmpBoneWeights;
+		int						tmpWeaponBoneIndex;
+		FCoords					tmpWeaponAdjust;
+
+		// serialize data
+		SerializeLodMesh1(Ar, tmpAnimSeqs, tmpBoundingBoxes, tmpBoundingSpheres, tmpFrameCount);
+		Ar << tmpWedges << tmpPoints << RefSkeleton << tmpBoneWeightIdx << tmpBoneWeights;
+		Ar << Points2;						// LocalPoints
+		Ar << SkeletalDepth << Animation << tmpWeaponBoneIndex << tmpWeaponAdjust;
+
+		// convert data
+		COPY_ARRAY(tmpWedges, Wedges);		// TLazyArray -> TArray
+		COPY_ARRAY(tmpPoints, Points);		// ...
+		COPY_ARRAY(Super::Wedges, Wedges);
+		UpgradeFaces();
+		RotOrigin.Yaw   = -RotOrigin.Yaw;
+
+		// convert VBoneInfluence and VWeightIndex to FVertInfluences
+		// count total influences
+		guard(Influences);
+		int numInfluences = tmpBoneWeights.Num();
+		VertInfluences.Empty(numInfluences);
+		VertInfluences.Add(numInfluences);
+		int vIndex = 0;
+		assert(tmpBoneWeightIdx.Num() == RefSkeleton.Num());
+		for (int bone = 0; bone < tmpBoneWeightIdx.Num(); bone++) // loop by bones
+		{
+			const VBoneInfIndex &BI = tmpBoneWeightIdx[bone];
+			if (!BI.Number) continue;							// no influences for this bone
+			for (int j = 0; j < BI.Number; j++)					// loop by vertices
+			{
+				const VBoneInfluence1 &V = tmpBoneWeights[j + BI.WeightIndex];
+				FVertInfluences &I = VertInfluences[vIndex++];
+				I.Weight     = V.BoneWeight / 65535.0f;
+				I.BoneIndex  = bone;
+				I.PointIndex = V.PointIndex;
+			}
+		}
+		unguard;
+
+		// mirror model: points, faces and skeleton
+		int i;
+		for (i = 0; i < Points.Num(); i++)
+			Points[i].X *= -1;
+		for (i = 0; i < Triangles.Num(); i++)
+			Exchange(Triangles[i].WedgeIndex[0], Triangles[i].WedgeIndex[1]);
+		for (i = 0; i < RefSkeleton.Num(); i++)
+		{
+			FMeshBone &S = RefSkeleton[i];
+			S.BonePos.Position.X    *= -1;
+			S.BonePos.Orientation.X *= -1;
+			S.BonePos.Orientation.W *= -1;
+		}
+
+		unguard;
+	}
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(USkeletalMesh::Serialize);
+
+		if (Ar.ArVer < 100)
+		{
+			SerializeSkelMesh1(Ar);
+			return;
+		}
 
 		Super::Serialize(Ar);
 		Ar << Points2 << RefSkeleton << Animation;
@@ -1288,10 +1490,7 @@ public:
 		Ar << AttachAliases << AttachBoneNames << AttachCoords;
 		if (Version <= 1)
 		{
-#if 0
-			appError("Unsupported ULodMesh version %d", Version);
-#else
-	#if SPLINTER_CELL
+#if SPLINTER_CELL
 			if (Ar.IsSplinterCell())
 			{
 				TArray<FSCellUnk1> tmp1;
@@ -1303,15 +1502,15 @@ public:
 				Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex;
 			}
 			else
-	#endif
+#endif
 			{
+				appNotify("SkeletalMesh of version %d\n", Version);
 				TArray<FLODMeshSection> tmp1, tmp2;
 				TArray<word> tmp3;
 				Ar << tmp1 << tmp2 << tmp3;
 			}
 			// copy and convert data from old mesh format
 			UpgradeMesh();
-#endif
 		}
 		else
 		{
@@ -1341,8 +1540,9 @@ public:
 #define REGISTER_MESH_CLASSES		\
 	REGISTER_CLASS(USkeletalMesh)	\
 	REGISTER_CLASS(UVertMesh)		\
-	REGISTER_CLASS_NAME(UVertMesh, ULodMesh) \
-	REGISTER_CLASS(UMeshAnimation)
+	REGISTER_CLASS_ALIAS(UVertMesh, ULodMesh) \
+	REGISTER_CLASS(UMeshAnimation)	\
+	REGISTER_CLASS_ALIAS(UMeshAnimation, UAnimation)
 
 
 #endif // __UNMESH_H__

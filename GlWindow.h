@@ -29,6 +29,9 @@ void FlushTexts();
 
 
 #define SPEC_KEY(x)		(SDLK_##x)
+#define KEY_CTRL		0x80000000
+#define KEY_SHIFT		0x40000000
+#define KEY_ALT			0x20000000
 
 
 #endif // __GLWINDOW_H__

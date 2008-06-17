@@ -59,8 +59,13 @@ class UMaterial : public UObject
 public:
 	UMaterial		*FallbackMaterial;
 	UMaterial		*DefaultMaterial;
-	int				SurfaceType;			// enum ESurfaceType: wood, metal etc
+	byte			SurfaceType;			// enum ESurfaceType: wood, metal etc
 	int				MaterialType;			// same as SurfaceType ?
+#if SPLINTER_CELL
+	// Splinter Cell extra fields
+	bool			bUseTextureAsHeat;
+	UObject			*HeatMaterial;
+#endif
 
 	UMaterial()
 	:	FallbackMaterial(NULL)
@@ -69,6 +74,11 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_OBJ(FallbackMaterial)
 		PROP_OBJ(DefaultMaterial)
+		PROP_BYTE(SurfaceType)
+#if SPLINTER_CELL
+		PROP_BOOL(bUseTextureAsHeat)
+		PROP_OBJ(HeatMaterial)
+#endif
 	END_PROP_TABLE
 
 #if RENDERING
@@ -210,11 +220,10 @@ public:
 	// mipmaps
 	TArray<FMipmap>	Mips;				// native
 #if SPLINTER_CELL
-	// Splinter Cell extra fields
-	bool			bUseTextureAsHeat;
-	byte			SurfaceType;		// enum ?
-	UObject			*HeatMaterial;
+	byte			CompFormat;
 #endif
+	// UE1 fields
+	byte			bHasComp;
 
 #if RENDERING
 	// rendering implementation fields
@@ -238,6 +247,16 @@ public:
 		guard(UTexture::Serialize);
 		Super::Serialize(Ar);
 		Ar << Mips;
+		if (Ar.ArVer < 100)
+		{
+			// UE1
+			bMasked = false;			// ignored by UE1, used surface.PolyFlags instead (but UE2 ignores PolyFlags ...)
+			if (bHasComp)				// skip compressed mipmaps
+			{
+				TArray<FMipmap>	CompMips;
+				Ar << CompMips;
+			}
+		}
 		unguard;
 	}
 	BEGIN_PROP_TABLE
@@ -262,10 +281,9 @@ public:
 		PROP_FLOAT(MinFrameRate)
 		PROP_FLOAT(MaxFrameRate)
 #if SPLINTER_CELL
-		PROP_BOOL(bUseTextureAsHeat)
-		PROP_BYTE(SurfaceType)
-		PROP_OBJ(HeatMaterial)
+		PROP_BYTE(CompFormat)
 #endif
+		PROP_BOOL(bHasComp)
 	END_PROP_TABLE
 
 	BIND;

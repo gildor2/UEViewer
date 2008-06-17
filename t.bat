@@ -3,11 +3,16 @@
 rm umodel.exe
 bash build.sh
 
-set ut_path=c:/games/unreal~1/ut2004
-if exist %ut_path%/system/ut2004.exe goto path_ok
-set ut_path=c:/games/unreal/ut2004
-:path_ok
-set run=umodel.exe -path=%ut_path%
+set ut1_path=c:/games/unreal~1/UnrealTournament
+if exist %ut1_path%/system/unreal.exe goto path1_ok
+set ut1_path=c:/games/unreal/UnrealTournament
+:path1_ok
+
+set ut2_path=c:/games/unreal~1/ut2004
+if exist %ut2_path%/system/ut2004.exe goto path2_ok
+set ut2_path=c:/games/unreal/ut2004
+:path2_ok
+set run=umodel.exe -path=%ut2_path%
 set run2=umodel.exe -path=data
 set run3=umodel.exe -path=data/SplinterCell
 set run4=umodel.exe -path=data/SplinterCell2
@@ -29,11 +34,11 @@ rem %run% -export HumanMaleA BipedMaleA
 rem %run2% -export Bender BenderAnims
 rem %run% -export HumanMaleA
 rem %run% HumanMaleA MercMaleD
-rem %run% HumanFemaleA MercFemaleB
+%run% HumanFemaleA MercFemaleB
 rem %run2% Aida
 rem %run% HumanFemaleA
 rem %run% Aliens
-%run% HumanMaleA
+rem %run% HumanMaleA
 rem %run% Bot
 rem %run% Jugg
 
@@ -53,7 +58,7 @@ rem ---------------------------------------------------------------------------
 rem		SplinterCell
 rem ---------------------------------------------------------------------------
 :scell
-%run3% ESam
+rem %run3% ESam
 rem %run3% EFemale
 rem %run3% ENPC
 rem %run3% EminiV
@@ -62,8 +67,9 @@ rem %run4% EIntro
 rem %run4% ESam
 rem %run4% EDuck
 rem %run4% EDog
-rem %run4% ENPC
+%run4% ENPC
 rem %run4% EFemale
+
 goto exit
 
 rem ---------------------------------------------------------------------------
@@ -75,9 +81,10 @@ umodel.exe -path=c:/games/unreal/UnrealGold UnrealI WarlordM
 goto exit
 
 :ut1
-set run=umodel.exe -path=c:/games/unreal/UnrealTournament
-rem %run% BotPack
-%run% BotPack Razor2
+set run=umodel.exe -path=%ut1_path%
+%run% BotPack
+rem %run% UnrealI
+rem %run% SkeletalChars
 goto exit
 %run% BotPack FCommando
 %run% BotPack Minigun2m
@@ -92,6 +99,13 @@ goto exit
 %run% BotPack muzzPF3
 %run% BotPack Razor2
 %run% BotPack stukkam
+goto exit
+
+:ut1x
+set run=umodel.exe -path=data/UT1
+%run% Grim
+rem %run% ut2k4chars malcolm
+rem %run% Homer
 goto exit
 
 rem ---------------------------------------------------------------------------

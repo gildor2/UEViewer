@@ -201,7 +201,8 @@ void CSkelMeshViewer::ShowHelp()
 	CMeshViewer::ShowHelp();
 	DrawTextLeft("L           cycle mesh LODs\n"
 				 "S           show skeleton\n"
-				 "B           show bone names");
+				 "B           show bone names\n"
+				 "Ctrl+B      dump skeleton to console");
 }
 
 
@@ -225,6 +226,9 @@ void CSkelMeshViewer::ProcessKey(int key)
 		break;
 	case 'b':
 		ShowLabels = !ShowLabels;
+		break;
+	case 'b'|KEY_CTRL:
+		MeshInst->DumpBones();
 		break;
 
 	//!! testing, remove later

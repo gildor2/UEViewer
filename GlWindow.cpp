@@ -668,9 +668,18 @@ static void Display()
 
 static bool RequestingQuit = false;
 
-static void OnKeyboard(unsigned key)
+static void OnKeyboard(unsigned key, unsigned mod)
 {
-	switch (tolower(key))
+	key = tolower(key);
+
+	if (mod & KMOD_CTRL)
+		key |= KEY_CTRL;
+	else if (mod & KMOD_SHIFT)
+		key |= KEY_SHIFT;
+	else if (mod & KMOD_ALT)
+		key |= KEY_ALT;
+
+	switch (key)
 	{
 	case SDLK_ESCAPE:
 		RequestingQuit = true;
@@ -705,7 +714,7 @@ void VisualizerLoop(const char *caption)
 			switch (evt.type)
 			{
 			case SDL_KEYDOWN:
-				OnKeyboard(evt.key.keysym.sym);
+				OnKeyboard(evt.key.keysym.sym, evt.key.keysym.mod);
 				break;
 			case SDL_VIDEORESIZE:
 				GL::OnResize(evt.resize.w, evt.resize.h);

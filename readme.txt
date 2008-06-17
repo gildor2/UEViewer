@@ -1,5 +1,5 @@
 UMODEL
-Unlreal Tournament 2 (2003/2004) Model Viewer
+Unlreal Model Viewer
 
 List of supported games:
 - Unreal 1, Unreal Tournament 1
@@ -16,6 +16,13 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+15.06.2008
+- skeleton dump has been moved to Ctrl+B key (previously was automatically
+  made on mesh selection)
+- fixed crash when handling broken object imports (import object from package,
+  which does not hold it)
+- implemented UT1 SkeletalMesh support
+
 11.06.2008
 - added Unreal1 and UT VertMesh support
 

@@ -22,7 +22,8 @@ UnPackage::UnPackage(const char *filename)
 		appError("Wrong tag in package %s\n", Filename);
 	ArVer         = Summary.FileVersion;
 	ArLicenseeVer = Summary.LicenseeVersion;
-	PKG_LOG(("Loading package: %s Ver: %d Names: %d Exports: %d Imports: %d\n", Filename, Summary.FileVersion,
+	PKG_LOG(("Loading package: %s Ver: %d/%d Names: %d Exports: %d Imports: %d\n", Filename,
+		Summary.FileVersion, Summary.LicenseeVersion,
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 	// read name table
@@ -186,6 +187,11 @@ UObject* UnPackage::CreateImport(int index)
 	//!! use full object path
 	// find object in loaded package export table
 	int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
+	if (NewIndex < 0)
+	{
+		printf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
+		return NULL;
+	}
 	// create object
 	return Package->CreateExport(NewIndex);
 

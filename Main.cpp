@@ -3,7 +3,7 @@
 #include "Exporters.h"
 
 
-#define APP_CAPTION		"UT2 Mesh Viewer"
+#define APP_CAPTION		"Unreal Model Viewer"
 
 
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	if (argc < 2)
 	{
 	help:
-		printf(	"Unreal Tournament 2 model viewer / exporter\n"
+		printf(	"Unreal model viewer / exporter\n"
 				"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
 				"\n"
 				"    <package>       name of package to load, without file extension\n"
@@ -80,6 +80,7 @@ int main(int argc, char **argv)
 				"    Texture         exported in tga format\n"
 				"\n"
 				"Supported games:\n"
+				"    Unreal1, Unreal Tournament 1\n"
 				"    Unreal Tournament 2003,2004\n"
 				"    Splinter Cell 1,2\n"
 				"\n"
@@ -170,7 +171,10 @@ int main(int argc, char **argv)
 	{
 		int idx = Package->FindExport(argObjName, argClassName);
 		if (idx < 0)
-			appError("Export \"%s\" was not found", argObjName);
+		{
+			printf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
+			exit(1);
+		}
 		const char *className = Package->GetObjectName(Package->ExportTable[idx].ClassIndex);
 
 		// setup NotifyInfo to describe object

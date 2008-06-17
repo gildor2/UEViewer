@@ -2,13 +2,16 @@
 
 #type="VertMesh"
 #type="SkeletalMesh"
-type="VertMesh|SkeletalMesh"
-dump="-dump"
+type="VertMesh|SkeletalMesh|LodMesh"
+#dump="-dump"
 #dump="-check"
 #path="data"
 
+# UT1
+path="data/UT1"
+
 # UT2004
-path="c:/games/unreal/ut2004"
+#path="c:/games/unreal/ut2004"
 
 # SplinterCell
 #path="data/SplinterCell"
