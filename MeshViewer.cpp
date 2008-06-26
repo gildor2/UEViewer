@@ -26,9 +26,9 @@ CMeshViewer::CMeshViewer(ULodMesh *Mesh)
 	z = ((z - Mesh->MeshOrigin.Z) * Mesh->MeshScale.Z);
 	// offset view
 	offset.Set(0, 0, z);
-	GL::SetViewOffset(offset);
+	SetViewOffset(offset);
 	// automatically scale view distance depending on model size
-	GL::SetDistScale(Mesh->MeshScale.X * Mesh->BoundingSphere.R / 150);
+	SetDistScale(Mesh->MeshScale.X * Mesh->BoundingSphere.R / 150);
 }
 
 
@@ -109,6 +109,20 @@ void CMeshViewer::Draw2D()
 		AnimIndex+1, Inst->GetAnimCount(), AnimName, Rate, NumFrames,
 		Inst->IsTweening() ? " [tweening]" : "");
 	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
+
+	if (Inst->Viewport->bColorMaterials)
+	{
+		const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
+		DrawTextLeft(S_GREEN"Textures: %d", Mesh->Textures.Num());
+		for (int i = 0; i < Mesh->Textures.Num(); i++)
+		{
+			const UMaterial *Tex = Mesh->Textures[i];
+			DrawTextLeft("^%d  %d: %s",
+				i < 7 ? i + 1 : 7,
+				i, Tex ? Tex->Name : "null");
+		}
+		DrawTextLeft("");
+	}
 
 	unguard;
 }

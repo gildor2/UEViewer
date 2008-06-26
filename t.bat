@@ -24,7 +24,7 @@ exit
 
 :cont
 
-goto ut1
+goto scell
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ rem ---------------------------------------------------------------------------
 rem		SplinterCell
 rem ---------------------------------------------------------------------------
 :scell
-rem %run3% ESam
+%run3% ESam
 rem %run3% EFemale
 rem %run3% ENPC
 rem %run3% EminiV
@@ -67,7 +67,7 @@ rem %run4% EIntro
 rem %run4% ESam
 rem %run4% EDuck
 rem %run4% EDog
-%run4% ENPC
+rem %run4% ENPC
 rem %run4% EFemale
 
 goto exit

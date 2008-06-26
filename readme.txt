@@ -1,5 +1,5 @@
 UMODEL
-Unlreal Model Viewer
+Unreal Model Viewer
 
 List of supported games:
 - Unreal 1, Unreal Tournament 1
@@ -16,6 +16,10 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+23.06.2008
+- fixed error in compressed TGA export, caused format incompatibility with some
+  image viewer/editor software
+
 15.06.2008
 - skeleton dump has been moved to Ctrl+B key (previously was automatically
   made on mesh selection)

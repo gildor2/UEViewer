@@ -1,5 +1,4 @@
 ! use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
-! support 24-bit textures (currently 32-bit for any textures)
 
 ! options for:
   - option to toggle lighting
@@ -20,8 +19,14 @@
     be used for each property; if function return 'false' - stop iterating. Field searching may be
     easily implemented using this tech.
 
+Loading:
+- add profiling for loading
+- ensure "whole package" loaded using locks (load all top-level objects, then subobjects)
+- periodically sort object list before serialization
+- profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
+- try to load from CD (slow random access)
 
-- try to compile with MinGW and for Linux
+- try to compile with MinGW
 - move new Math3D parts to Quake2 core
 
 
@@ -31,7 +36,7 @@ REST TO IMPLEMENT:
   - tweening
   ? LOD support
 - SkeletalMesh:
-  - correctly display LOD models
+  - correctly display LOD models (with skinning)
   - hardware skinning
 
 

@@ -126,7 +126,8 @@ void CSkelMeshViewer::Dump()
 		"BoneDepth      %d\n"
 		"WeightIds # %d  BoneInfs # %d  VertInfs # %d\n"
 		"Attachments #  %d\n"
-		"LODModels # %d\n",
+		"LODModels # %d\n"
+		"Animations: %s\n",
 		Mesh->RefSkeleton.Num(),
 		Mesh->Points.Num(), Mesh->Points2.Num(),
 		Mesh->Wedges.Num(),Mesh->Triangles.Num(),
@@ -134,7 +135,8 @@ void CSkelMeshViewer::Dump()
 		Mesh->SkeletalDepth,
 		Mesh->WeightIndices.Num(), Mesh->BoneInfluences.Num(), Mesh->VertInfluences.Num(),
 		Mesh->AttachBoneNames.Num(),
-		Mesh->LODModels.Num()
+		Mesh->LODModels.Num(),
+		Mesh->Animation ? Mesh->Animation->Name : "None"
 	);
 
 	int i;

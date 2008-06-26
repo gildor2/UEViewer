@@ -11,16 +11,14 @@ void AppKeyEvent(int key);
 void AppDisplayTexts(bool helpVisible);
 
 
-namespace GL
-{
-	void text(const char *text);
-	void textf(const char *fmt, ...);
-	void SetDistScale(float scale);
-	void SetViewOffset(const CVec3 &offset);
-	void ResetView();
+void SetDistScale(float scale);
+void SetViewOffset(const CVec3 &offset);
+void ResetView();
 
-	extern bool invertXAxis;
-};
+
+// viewport params
+extern bool vpInvertXAxis;
+
 
 void DrawTextLeft(const char *text, ...);
 void DrawTextRight(const char *text, ...);

@@ -211,9 +211,11 @@ int main(int argc, char **argv)
 #endif
 
 	if (dump)
-		Viewer->Dump();					// dump to console and exit
+		Viewer->Dump();					// dump info to console
+
 	if (exprt)
 	{
+		// export object, if possible
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			Obj = UObject::GObjObjects[idx];
@@ -245,14 +247,17 @@ int main(int argc, char **argv)
 			if (argObjName) break;		// export specified (1st) object only
 		}
 	}
+
 	if (view)
 	{
-		GL::invertXAxis = true;
+		// show object
+		vpInvertXAxis = true;
 		guard(MainLoop);
-		VisualizerLoop(APP_CAPTION);	// show object
+		VisualizerLoop(APP_CAPTION);
 		unguard;
 	}
 
+	// cleanup
 	delete Viewer;
 	delete Obj;
 

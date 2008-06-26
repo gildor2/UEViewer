@@ -327,10 +327,7 @@ struct FColor
 
 	FColor()
 	{}
-	FColor(byte r, byte g, byte b)
-	:	R(r), G(g), B(b), A(255)
-	{}
-	FColor(byte r, byte g, byte b, byte a)
+	FColor(byte r, byte g, byte b, byte a = 255)
 	:	R(r), G(g), B(b), A(a)
 	{}
 	friend FArchive& operator<<(FArchive &Ar, FColor &C)
@@ -447,7 +444,7 @@ public:
 	}
 
 	// serializer
-#if _MSC_VER == 1200		// VC6 bugs
+#if _MSC_VER == 1200			// VC6 bugs
 	friend FArchive& operator<<(FArchive &Ar, TArray &A);
 #else
 	template<class T2> friend FArchive& operator<<(FArchive &Ar, TArray<T2> &A);
@@ -459,7 +456,7 @@ public:
 template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 {
 	guard(TArray<<);
-	assert(Ar.IsLoading);	//?? saving requires more code
+	assert(Ar.IsLoading);		//?? saving requires more code
 	A.Empty();
 	int Count;
 	Ar << AR_INDEX(Count);
@@ -473,8 +470,8 @@ template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 	A.MaxCount  = Count;
 	for (int i = 0; i < Count; i++)
 	{
-		new (Ptr) T;		// construct object first
-		Ar << *Ptr++;		// and then serialize
+		new (Ptr) T;			// construct object first
+		Ar << *Ptr++;			// and then serialize
 	}
 	return Ar;
 	unguard;

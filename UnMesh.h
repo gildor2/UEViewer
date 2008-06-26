@@ -900,43 +900,46 @@ public:
 	}
 #endif
 
+	void Upgrade()
+	{
+		guard(UMeshAnimation.Upgrade);
+		for (int i = 0; i < Moves.Num(); i++)
+		{
+			MotionChunk &M = Moves[i];
+			for (int j = 0; j < M.AnimTracks.Num(); j++)
+			{
+				AnalogTrack &A = M.AnimTracks[j];
+				int k;
+				// fix time tracks
+				for (k = 0; k < A.KeyTime.Num(); k++)
+					A.KeyTime[k] = k;
+				// mirror position and orientation
+				for (k = 0; k < A.KeyPos.Num(); k++)
+					A.KeyPos[k].X *= -1;
+				for (k = 0; k < A.KeyQuat.Num(); k++)
+				{
+					FQuat &Q = A.KeyQuat[k];
+					Q.X *= -1;
+					Q.W *= -1;
+				}
+			}
+		}
+		unguard;
+	}
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UMeshAnimation.Serialize);
 		Super::Serialize(Ar);
 		if (Ar.ArVer >= 100)
-			Ar << Version;			// no such field in UE1
+			Ar << Version;					// no such field in UE1
 		Ar << RefBones << Moves << AnimSeqs;
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell())
 			SerializeSCell(Ar);
 #endif
-		if (Ar.ArVer < 100)
-		{
-			// UE1 code
-			int i;
-			for (i = 0; i < Moves.Num(); i++)
-			{
-				MotionChunk &M = Moves[i];
-				for (int j = 0; j < M.AnimTracks.Num(); j++)
-				{
-					AnalogTrack &A = M.AnimTracks[j];
-					int k;
-					// fix time tracks
-					for (k = 0; k < A.KeyTime.Num(); k++)
-						A.KeyTime[k] = k;
-					// mirror position and orientation
-					for (k = 0; k < A.KeyPos.Num(); k++)
-						A.KeyPos[k].X *= -1;
-					for (k = 0; k < A.KeyQuat.Num(); k++)
-					{
-						FQuat &Q = A.KeyQuat[k];
-						Q.X *= -1;
-						Q.W *= -1;
-					}
-				}
-			}
-		}
+		if (Ar.ArVer < 100) Upgrade();		// UE1 code
+
 		unguard;
 	}
 };
@@ -1370,7 +1373,7 @@ public:
 
 	void UpgradeMesh()
 	{
-		guard(USkeletalMesh::UpgradeMesh);
+		guard(USkeletalMesh.UpgradeMesh);
 
 		int i;
 		COPY_ARRAY(Points2, Points)
@@ -1378,7 +1381,6 @@ public:
 		UpgradeFaces();
 		// convert VBoneInfluence and VWeightIndex to FVertInfluences
 		// count total influences
-		guard(Influences);
 		int numInfluences = 0;
 		for (i = 0; i < WeightIndices.Num(); i++)
 			numInfluences += WeightIndices[i].BoneInfIndices.Num() * (i + 1);
@@ -1402,7 +1404,6 @@ public:
 				}
 			}
 		}
-		unguard;
 
 		unguard;
 	}
@@ -1432,7 +1433,7 @@ public:
 		COPY_ARRAY(tmpPoints, Points);		// ...
 		COPY_ARRAY(Super::Wedges, Wedges);
 		UpgradeFaces();
-		RotOrigin.Yaw   = -RotOrigin.Yaw;
+		RotOrigin.Yaw = -RotOrigin.Yaw;
 
 		// convert VBoneInfluence and VWeightIndex to FVertInfluences
 		// count total influences

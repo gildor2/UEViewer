@@ -47,8 +47,17 @@ void ExportTga(UTexture *Tex, FArchive &Ar)
 	for (i = 0, src = pic; i < size; i++, src += 4)
 		Exchange(src[0], src[2]);
 
-	byte *packed = (byte*)appMalloc(width * height * 4);
-	byte *threshold = packed + width * height * 4 - 16;		// threshold for "dst"
+	// check for 24 bit image possibility
+	int colorBytes = 3;
+	for (i = 0, src = pic + 3; i < size; i++, src += 4)
+		if (src[0] != 255)									// src initialized with offset 3
+		{
+			colorBytes = 4;
+			break;
+		}
+
+	byte *packed = (byte*)appMalloc(width * height * colorBytes);
+	byte *threshold = packed + width * height * colorBytes - 16; // threshold for "dst"
 
 	src = pic;
 	byte *dst = packed;
@@ -71,7 +80,7 @@ void ExportTga(UTexture *Tex, FArchive &Ar)
 		byte a = *src++;
 
 		if (column < width - 1 &&							// not on screen edge; NOTE: when i == size-1, col==width-1
-			b == src[0] && g == src[1] && r == src[2] && a == src[3] &&	// next byte will be the same
+			b == src[0] && g == src[1] && r == src[2] && a == src[3] &&	// next pixel will be the same
 			!(rle && flag && *flag == 254))					// flag overflow
 		{
 			if (!rle || !flag)
@@ -79,7 +88,8 @@ void ExportTga(UTexture *Tex, FArchive &Ar)
 				// starting new RLE sequence
 				flag = dst++;
 				*flag = 128 - 1;							// will be incremented below
-				*dst++ = b; *dst++ = g; *dst++ = r; *dst++ = a;
+				*dst++ = b; *dst++ = g; *dst++ = r;			// store RGB
+				if (colorBytes == 4) *dst++ = a;			// store alpha
 			}
 			(*flag)++;										// enqueue one more texel
 			rle = true;
@@ -95,13 +105,16 @@ void ExportTga(UTexture *Tex, FArchive &Ar)
 			}
 			else
 			{
+				if (column == 0)							// check for screen edge
+					flag = NULL;
 				if (!flag)
 				{
 					// start new copy sequence
 					flag = dst++;
 					*flag = 0 - 1;							// 255, to be exact
 				}
-				*dst++ = b; *dst++ = g; *dst++ = r; *dst++ = a;	// copy texel
+				*dst++ = b; *dst++ = g; *dst++ = r;			// store RGB
+				if (colorBytes == 4) *dst++ = a;			// store alpha
 				(*flag)++;
 				if (*flag == 127) flag = NULL;				// check for overflow
 			}
@@ -127,7 +140,7 @@ void ExportTga(UTexture *Tex, FArchive &Ar)
 		fwrite(&c, 1, 1, f);
 	}
 #else
-	header.pixel_size = 32;			//!! support 24 bit too
+	header.pixel_size = colorBytes * 8;
 	header.attributes = TGA_TOPLEFT;
 	if (useCompression)
 	{
@@ -139,9 +152,18 @@ void ExportTga(UTexture *Tex, FArchive &Ar)
 	else
 	{
 		header.image_type = 2;		// uncompressed
+		// convert to 24 bits image, when needed
+		if (colorBytes == 3)
+			for (i = 0, src = dst = pic; i < size; i++)
+			{
+				*dst++ = *src++;
+				*dst++ = *src++;
+				*dst++ = *src++;
+				src++;
+			}
 		// write data
 		Ar.Serialize(&header, sizeof(header));
-		Ar.Serialize(pic, size * 4);
+		Ar.Serialize(pic, size * colorBytes);
 	}
 #endif
 

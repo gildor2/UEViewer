@@ -39,9 +39,9 @@ public:
 	CObjectViewer(UObject *Obj)
 	:	Object(Obj)
 	{
-		GL::SetDistScale(1);
-		GL::ResetView();
-		GL::SetViewOffset(nullVec3);
+		SetDistScale(1);
+		ResetView();
+		SetViewOffset(nullVec3);
 	}
 	virtual ~CObjectViewer()
 	{}
