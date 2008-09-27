@@ -380,6 +380,7 @@ protected:
 	void Empty(int count, int elementSize);
 	void Insert(int index, int count, int elementSize);
 	void Remove(int index, int count, int elementSize);
+	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 };
 
 // NOTE: this container cannot hold objects, required constructor/destructor
@@ -391,9 +392,16 @@ public:
 	~TArray()
 	{
 		// destruct all array items
+#if 0
 		T *P, *P2;
 		for (P = (T*)DataPtr, P2 = P + DataCount; P < P2; P++)
 			P->~T();
+#else
+		// this code is more compact at least for VC6 when T has no destructor
+		// (for code above, compiler will always compute P2, even when not needed)
+		for (int i = 0; i < DataCount; i++)
+			((T*)DataPtr)->~T();
+#endif
 	}
 	// data accessors
 	T& operator[](int index)
@@ -424,9 +432,14 @@ public:
 	void Remove(int index, int count = 1)
 	{
 		// destruct specified array items
+#if 0
 		T *P, *P2;
 		for (P = (T*)DataPtr + index, P2 = P + count; P < P2; P++)
 			P->~T();
+#else
+		for (int i = index; i < index + count; i++)
+			((T*)DataPtr)->~T();
+#endif
 		// remove items from array
 		FArray::Remove(index, count, sizeof(T));
 	}
@@ -438,43 +451,41 @@ public:
 		return index;
 	}
 
-	void Empty(int count = 0)
+	FORCEINLINE void Empty(int count = 0)
 	{
+		// destruct all array items
+		for (int i = 0; i < DataCount; i++)
+			((T*)DataPtr)->~T();
+		// remove data array (count=0) or preallocate memory (count>0)
 		FArray::Empty(count, sizeof(T));
 	}
 
 	// serializer
-#if _MSC_VER == 1200			// VC6 bugs
+#if _MSC_VER == 1200			// VC6 bug
 	friend FArchive& operator<<(FArchive &Ar, TArray &A);
 #else
 	template<class T2> friend FArchive& operator<<(FArchive &Ar, TArray<T2> &A);
 #endif
+
+protected:
+	// serializer helper; used from 'operator<<(FArchive, TArray<>)' only
+	static void SerializeItem(FArchive &Ar, void *item)
+	{
+		if (Ar.IsLoading)
+			new (item) T;		// construct item before reading
+		Ar << *(T*)item;		// serialize item
+	}
 };
+
+
 
 // VC6 sometimes cannot instantiate this function, when declared inside
 // template class
 template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 {
-	guard(TArray<<);
-	assert(Ar.IsLoading);		//?? saving requires more code
-	A.Empty();
-	int Count;
-	Ar << AR_INDEX(Count);
-	T* Ptr;
-	if (Count)
-		Ptr = (T*)appMalloc(sizeof(T) * Count);
-	else
-		Ptr = NULL;
-	A.DataPtr   = Ptr;
-	A.DataCount = Count;
-	A.MaxCount  = Count;
-	for (int i = 0; i < Count; i++)
-	{
-		new (Ptr) T;			// construct object first
-		Ar << *Ptr++;			// and then serialize
-	}
-	return Ar;
-	unguard;
+	if (Ar.IsLoading)
+		A.Empty();				// erase previous data before loading
+	return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
 }
 
 // TLazyArray implemented as simple wrapper around TArray with

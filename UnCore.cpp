@@ -193,6 +193,37 @@ void FArray::Remove(int index, int count, int elementSize)
 }
 
 
+FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize)
+{
+	guard(TArray::Serialize);
+
+//-- if (Ar.IsLoading) Empty();	-- cleanup is done in TArray serializer (do not need
+//								-- to pass array eraser/destructor to this function)
+	// Here:
+	// 1) when loading: 'this' array is empty (cleared from TArray's operator<<)
+	// 2) when saving : data is not modified by this function
+
+	// serialize data count
+	Ar << AR_INDEX(DataCount);
+
+	if (Ar.IsLoading)
+	{
+		// loading array items - should prepare array
+		// read data count
+		// allocate space for data
+		DataPtr  = (DataCount) ? appMalloc(elementSize * DataCount) : NULL;
+		MaxCount = DataCount;
+	}
+	// perform serialization itself
+	int i;
+	void *ptr;
+	for (i = 0, ptr = DataPtr; i < DataCount; i++, ptr = OffsetPointer(ptr, elementSize))
+		Serializer(Ar, ptr);
+	return Ar;
+
+	unguard;
+}
+
 /*-----------------------------------------------------------------------------
 	FArchive methods
 -----------------------------------------------------------------------------*/

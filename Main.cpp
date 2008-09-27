@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 				"    Texture         exported in tga format\n"
 				"\n"
 				"Supported games:\n"
-				"    Unreal1, Unreal Tournament 1\n"
+				"    Unreal 1, Unreal Tournament 1\n"
 				"    Unreal Tournament 2003,2004\n"
 				"    Splinter Cell 1,2\n"
 				"\n"
@@ -219,6 +219,7 @@ int main(int argc, char **argv)
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			Obj = UObject::GObjObjects[idx];
+			printf("Exporting %s ...\n", Obj->Name);
 			if (Obj->IsA("SkeletalMesh"))
 			{
 				char filename[64];

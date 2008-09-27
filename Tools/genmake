@@ -86,7 +86,8 @@ at a time of registration of source files
 	OPTIONS		= string				compiler-dependent: extra options for command line
 
 4. Commands:
-	sources(NAME) = source files		add source files to list <NAME> with flags DEFINES,INCLUDES,OBJDIR
+	sources(NAME) = source files		add source files to list <NAME> with flags DEFINES,INCLUDES,OBJDIR;
+										all items separated with spaces; item may be a wildcard
 	target(type, outfile, NAME[, sym])	build target with type=={executable,dynamic (dll,so), static (lib,a)}
 										from objects, specified in list sources(NAME); if sym specified,
 										will be added symbolic name for a target; may specify few symbolic
@@ -255,6 +256,9 @@ sub CheckCondition {
 		$cond = 1 if !exists $vars{$expr};
 	} else {
 		Error ("unknown if... directive: $cmd");
+	}
+	if (!$cond) {
+		$cond = 0;
 	}
 	return $cond;
 }
@@ -697,6 +701,52 @@ sub GetDirsList {
 	return $list;
 }
 
+# function similar to ExpandVars()
+sub ExpandWildcards {
+	my ($line) = @_;
+	return "" if !defined($line) || $line eq ""; # do not try to process empty line
+
+	return $line if $line !~ /\*/;				# line contains no wildcards
+
+	my $line2 = "";
+	for my $src (split (' ', $line)) {
+		my $srcInfo = $src;
+		if ($src !~ /\*/) {
+			$line2 .= " $src";
+			next;
+		}
+		# normalize and convert mask
+		$src =~ s/\\/\//g;			# '\' -> '/'
+		$src =~ s/\./\\./g;			# '.' -> '\.'
+		$src =~ s/\*/\.\*/g;		# '*' -> '.*'
+		# get path, if exists
+		my (undef, $path, $mask) = $src =~ /((.*)\/)?([^\/]+)/;
+		$path = "." if !defined($path);
+		# scan directory
+		opendir (DIR, $path) or Error ("Directory \"$path\" was not found");
+		my @filelist = readdir (DIR);
+		closedir (DIR);
+		# case-insensitive sort of files (for predictable behaviour)
+		@filelist = sort {uc($a) cmp uc($b)} @filelist;
+		# check files
+		my $found = 0;
+		for my $f (@filelist) {
+			if (-f "$path/$f" && ($f =~ $mask)) {
+				if ($path ne ".") {
+					$line2 .= " $path/$f";
+				} else {
+					$line2 .= " $f";
+				}
+				$found = 1;
+			}
+		}
+		Warning ("No files for wildcard \"$srcInfo\"") if !$found;
+	}
+	# remove leading space
+	$line2 =~ s/^\ //;
+	return $line2;
+}
+
 
 #------------------------------------------------------------------------------
 #	Generating compiler commands
@@ -744,9 +794,7 @@ sub CollectFileDependencies {
 
 		$found++ if -f $inc2;
 
-		if ($inc =~ /\//) {
-			# name contains path -- do not use INCLUDES var
-		} elsif ($includes ne "") {
+		if ($includes ne "") {
 			# INCLUDES is not empty ...
 			for my $path2 (split(" ", $includes)) {
 				next if $path eq $path2;		# already checked
@@ -902,7 +950,9 @@ sub FlushObjectFile {
 		if ($srcType eq "asm") {
 			$line = "nasm.exe -f win32 -i $srcDir -o \"$objFile\"";
 		} elsif ($srcType eq "rc") {
-			$line = "rc.exe -l 0x409 -i $srcDir -fo\"$objFile\" -dNDEBUG";
+			my $inc = "";
+			$inc = " ".GenerateOptions ($includes, "-I ") if $includes ne "";
+			$line = "rc.exe -l 0x409 -i $srcDir$inc -fo\"$objFile\" -dNDEBUG";
 		} else {
 			# C/C++ file
 			my $crt = GetSrcOption ("LIBC");
@@ -1172,6 +1222,7 @@ while (getline ())
 		my ($objListName, $srcFiles) = $line =~ /\(\s*(\w+)\s*\)\s*\=\s*(\S+(.*\S+)?)$/;
 		$srcFiles = GetMultiLine() if defined($srcFiles) && $srcFiles eq "{";
 		$srcFiles = ExpandVars($srcFiles);
+		$srcFiles = ExpandWildcards($srcFiles);
 		AddObjectList ($objListName, $srcFiles);
 	} elsif ($line =~ /^target\(.*\)$/) {
 		my ($type, $outfile, $objListName, undef, $symName) = $line =~
