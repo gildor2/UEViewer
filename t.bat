@@ -24,7 +24,7 @@ exit
 
 :cont
 
-goto scell
+goto deusex
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -106,6 +106,11 @@ set run=umodel.exe -path=data/UT1
 %run% Grim
 rem %run% ut2k4chars malcolm
 rem %run% Homer
+goto exit
+
+:deusex
+set run=umodel.exe -path=data/DeusEx
+%run% DeusExCharacters
 goto exit
 
 rem ---------------------------------------------------------------------------

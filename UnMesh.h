@@ -52,6 +52,39 @@ struct FMeshVert
 	}
 };
 
+#if DEUS_EX
+
+struct FMeshVertDeus
+{
+	union
+	{
+		struct
+		{
+			int X:16; int Y:16; short Z:16; short Pad:16;
+		};
+		struct
+		{
+			unsigned D1; unsigned D2;
+		};
+	};
+
+	inline operator FMeshVert() const
+	{
+		FMeshVert r;
+		r.X = X;
+		r.Y = Y;
+		r.Z = Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshVertDeus &V)
+	{
+//		return Ar << V.X << V.Y << V.Z << V.Pad;
+		return Ar << V.D1 << V.D2;
+	}
+};
+#endif
+
 
 // Packed mesh vertex point for skinned meshes.
 #define GET_MESHNORM_DWORD(mv) (*(unsigned*)&(mv))
@@ -364,11 +397,72 @@ public:
 		// UPrimitive
 		UPrimitive::Serialize(Ar);
 		// UMesh
-		Ar << tmpVerts << tmpTris << AnimSeqs << tmpConnects;
+#if !DEUS_EX
+		Ar << tmpVerts;
+#else
+		// DeusEx have larger FMeshVert structure, and there is no way to detect this game by package ...
+		// But file uses TLazyArray<FMeshVert>, which have ability to detect item size - here we will
+		// analyze it
+		bool isDeusEx = false;
+		TLazyArray<FMeshVertDeus> deusVerts;
+		if (Ar.ArVer > 61)									// part of TLazyArray serializer code
+		{
+			int pos = Ar.ArPos;								// remember position
+			int skipPos, numVerts;
+			Ar << skipPos << AR_INDEX(numVerts);			// read parameters
+//			appNotify("***> size=%g numVerts=%d", (float)(skipPos - Ar.ArPos) / numVerts, numVerts);
+			if (skipPos - Ar.ArPos == numVerts * sizeof(FMeshVertDeus))
+				isDeusEx = true;
+			Ar.Seek(pos);									// and restore position for serialization as TLazyArray
+		}
+		if (!isDeusEx)
+			Ar << tmpVerts;									// regular Unreal1 model
+		else
+			Ar << deusVerts;
+#endif // DEUS_EX
+		Ar << tmpTris << AnimSeqs << tmpConnects;
 		Ar << BoundingBox << BoundingSphere;	// serialize UPrimitive fields again
 		Ar << tmpVertLinks << Textures << BoundingBoxes << BoundingSpheres << VertexCount << FrameCount;
 		Ar << tmpAndFlags << tmpOrFlags << MeshScale << MeshOrigin << RotOrigin;
 		Ar << tmpCurPoly << tmpCurVertex;
+#if DEUS_EX
+		if (isDeusEx)
+		{
+			// rescale mesh and copy verts
+			int i;
+			// detect mesh extents
+			int maxCoord = 0;
+			for (i = 0; i < deusVerts.Num(); i++)
+			{
+				const FMeshVertDeus& V = deusVerts[i];
+				int c;
+	#define STEP(x)	\
+				c = abs(V.x); \
+				if (c > maxCoord) maxCoord = c;
+				STEP(X); STEP(Y); STEP(Z);
+	#undef STEP
+			}
+			if (maxCoord > 511)
+			{
+				float scale = 511.0f / maxCoord;
+				printf("Scaling DeusEx VertMech by factor %g\n", scale);
+				MeshScale.Scale(1 / scale);
+				MeshOrigin.Scale(scale);
+				BoundingBox.Min.Scale(scale);
+				BoundingBox.Max.Scale(scale);
+				BoundingSphere.R *= scale;
+
+				for (i = 0; i < deusVerts.Num(); i++)
+				{
+					FMeshVertDeus& V = deusVerts[i];
+					V.X = appRound(V.X * scale);
+					V.Y = appRound(V.Y * scale);
+					V.Z = appRound(V.Z * scale);
+				}
+			}
+			COPY_ARRAY(deusVerts, tmpVerts);
+		}
+#endif // DEUS_EX
 		if (Ar.ArVer == 65)
 			Ar << tmpTextureLOD_65;
 		else if (Ar.ArVer >= 66)
@@ -653,7 +747,7 @@ struct FVectorComp
 	}
 };
 
-#endif
+#endif // SPLINTER_CELL
 
 
 // 'Analog' animation key track (for single bone/element.)

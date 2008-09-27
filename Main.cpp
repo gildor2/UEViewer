@@ -81,6 +81,7 @@ int main(int argc, char **argv)
 				"\n"
 				"Supported games:\n"
 				"    Unreal 1, Unreal Tournament 1\n"
+				"    DeusEx\n"
 				"    Unreal Tournament 2003,2004\n"
 				"    Splinter Cell 1,2\n"
 				"\n"
@@ -199,7 +200,14 @@ int main(int argc, char **argv)
 			}
 		}
 		if (!Obj)
+		{
+			if (!UObject::GObjObjects.Num())
+			{
+				printf("Package \"%s\" has no supported objects\n", argPkgName);
+				exit(1);
+			}
 			Obj = UObject::GObjObjects[1];
+		}
 		unguard;
 	}
 	if (!Obj) return 0;					// object was not created

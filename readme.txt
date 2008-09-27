@@ -3,6 +3,7 @@ Unreal Model Viewer
 
 List of supported games:
 - Unreal 1, Unreal Tournament 1
+- DeusEx
 - Unreal Tournament 2003/2004
 - Postal 2
 - Splinter Cell 1,2
@@ -16,6 +17,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+28.09.2008
+- implemented DeusEx VertMesh support
+
 23.06.2008
 - fixed error in compressed TGA export, caused format incompatibility with some
   image viewer/editor software

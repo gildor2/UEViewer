@@ -251,6 +251,11 @@ struct FVector
 		X = _X; Y = _Y; Z = _Z;
 	}
 
+	void Scale(float value)
+	{
+		X *= value; Y *= value; Z *= value;
+	}
+
 	friend FArchive& operator<<(FArchive &Ar, FVector &V)
 	{
 		return Ar << V.X << V.Y << V.Z;
