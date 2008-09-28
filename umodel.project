@@ -43,6 +43,7 @@ sources(MAIN) = {
 	UnCore.cpp
 	UnObject.cpp
 	UnPackage.cpp
+	UnMesh.cpp
 	# rendering
 	UnRenderer.cpp
 	# viewers

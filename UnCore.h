@@ -510,6 +510,18 @@ template<class T> class TLazyArray : public TArray<T>
 };
 
 
+#define COPY_ARRAY(Src, Dst)				\
+	if (Src.Num() && !Dst.Num())			\
+	{										\
+		guard(Src);							\
+		Dst.Empty(Src.Num());				\
+		Dst.Add(Src.Num());					\
+		for (int i = 0; i < Src.Num(); i++)	\
+			Dst[i] = Src[i];				\
+		unguard;							\
+	}
+
+
 /*-----------------------------------------------------------------------------
 	FString
 -----------------------------------------------------------------------------*/

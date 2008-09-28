@@ -27,6 +27,7 @@ MAIN = \
 	obj/UnCore.obj \
 	obj/UnObject.obj \
 	obj/UnPackage.obj \
+	obj/UnMesh.obj \
 	obj/UnRenderer.obj \
 	obj/MeshViewer.obj \
 	obj/VertMeshViewer.obj \
@@ -174,6 +175,18 @@ DEPENDS = \
 
 obj/UnCore.obj : UnCore.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnCore.obj" UnCore.cpp
+
+DEPENDS = \
+	Build.h \
+	Core.h \
+	Math3D.h \
+	UnCore.h \
+	UnMaterial.h \
+	UnMesh.h \
+	UnObject.h
+
+obj/UnMesh.obj : UnMesh.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnMesh.obj" UnMesh.cpp
 
 DEPENDS = \
 	Build.h \
