@@ -98,6 +98,7 @@ public:
 		}
 	}
 
+	virtual void Draw2D();
 	virtual void Draw3D();
 };
 

@@ -279,8 +279,10 @@ public:
 		unguard;
 	}
 
+#if UNREAL1
 	void SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, TArray<FBox> &BoundingBoxes,
 		TArray<FSphere> &BoundingSpheres, int &FrameCount);
+#endif
 };
 
 
@@ -368,17 +370,21 @@ public:
 	int						StreamVersion;	// unused
 
 	void BuildNormals();
+#if UNREAL1
 	void SerializeVertMesh1(FArchive &Ar);
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UVertMesh::Serialize);
 
+#if UNREAL1
 		if (Ar.ArVer < 100)
 		{
 			SerializeVertMesh1(Ar);
 			return;
 		}
+#endif
 
 		Super::Serialize(Ar);
 
@@ -553,7 +559,9 @@ public:
 #if SPLINTER_CELL
 	void SerializeSCell(FArchive &Ar);
 #endif
+#if UNREAL1
 	void Upgrade();
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -566,7 +574,9 @@ public:
 		if (Ar.IsSplinterCell())
 			SerializeSCell(Ar);
 #endif
+#if UNREAL1
 		if (Ar.ArVer < 100) Upgrade();		// UE1 code
+#endif
 
 		unguard;
 	}
@@ -954,17 +964,21 @@ public:
 
 	void UpgradeFaces();
 	void UpgradeMesh();
+#if UNREAL1
 	void SerializeSkelMesh1(FArchive &Ar);
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(USkeletalMesh::Serialize);
 
+#if UNREAL1
 		if (Ar.ArVer < 100)
 		{
 			SerializeSkelMesh1(Ar);
 			return;
 		}
+#endif
 
 		Super::Serialize(Ar);
 		Ar << Points2 << RefSkeleton << Animation;

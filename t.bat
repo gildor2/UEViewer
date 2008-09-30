@@ -24,7 +24,7 @@ exit
 
 :cont
 
-goto deusex
+rem goto deusex
 rem goto bugs
 
 rem ---------------------------------------------------------------------------

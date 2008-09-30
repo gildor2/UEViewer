@@ -17,7 +17,7 @@ void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Lo
 	CVec3 &DstPos, CQuat &DstQuat);
 
 
-void ExportPsk(USkeletalMesh *Mesh, FArchive &Ar)
+void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 {
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
@@ -110,7 +110,7 @@ void ExportPsk(USkeletalMesh *Mesh, FArchive &Ar)
 }
 
 
-void ExportPsa(UMeshAnimation *Anim, FArchive &Ar)
+void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 {
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, BoneHdr, AnimHdr, KeyHdr;

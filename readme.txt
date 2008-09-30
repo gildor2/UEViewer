@@ -17,6 +17,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+30.09.2008
+- displaying of texture information in material viewer
+
 28.09.2008
 - implemented DeusEx VertMesh support
 

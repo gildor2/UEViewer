@@ -39,6 +39,57 @@ static int ObjIndex = 0;
 
 
 /*-----------------------------------------------------------------------------
+	Exporters
+-----------------------------------------------------------------------------*/
+
+#define MAX_EXPORTERS		16
+
+typedef void (*ExporterFunc_t)(UObject*, FArchive&);
+
+struct CExporterInfo
+{
+	const char		*ClassName;
+	const char		*FileExt;
+	ExporterFunc_t	Func;
+};
+
+static CExporterInfo exporters[MAX_EXPORTERS];
+static int numExporters = 0;
+
+static void RegisterExporter(const char *ClassName, const char *FileExt, ExporterFunc_t Func)
+{
+	guard(RegisterExporter);
+	assert(numExporters < MAX_EXPORTERS);
+	CExporterInfo &Info = exporters[numExporters];
+	Info.ClassName = ClassName;
+	Info.FileExt   = FileExt;
+	Info.Func      = Func;
+	numExporters++;
+	unguard;
+}
+
+#define EXPORTER(class,ext,func)		RegisterExporter(class, ext, (ExporterFunc_t)func)
+
+
+static bool ExportObject(UObject *Obj)
+{
+	for (int i = 0; i < numExporters; i++)
+	{
+		const CExporterInfo &Info = exporters[i];
+		if (Obj->IsA(Info.ClassName))
+		{
+			char filename[64];
+			appSprintf(ARRAY_ARG(filename), "%s.%s", Obj->Name, Info.FileExt);
+			FFileReader Ar(filename, false);
+			Info.Func(Obj, Ar);
+			return true;
+		}
+	}
+	return false;
+}
+
+
+/*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
 
@@ -129,12 +180,18 @@ int main(int argc, char **argv)
 		}
 	}
 	const char *argPkgName   = argv[arg];
+	if (!argPkgName) goto help;
 	const char *argObjName   = NULL;
 	const char *argClassName = NULL;
 	if (arg < argc-1)
 		argObjName   = argv[arg+1];
 	if (arg < argc-2)
 		argClassName = argv[arg+2];
+
+	// register exporters
+	EXPORTER("SkeletalMesh",  "psk", ExportPsk);
+	EXPORTER("MeshAnimation", "psa", ExportPsa);
+	EXPORTER("Texture",       "tga", ExportTga);
 
 	// prepare classes
 	RegisterUnrealClasses();
@@ -228,31 +285,8 @@ int main(int argc, char **argv)
 		{
 			Obj = UObject::GObjObjects[idx];
 			printf("Exporting %s ...\n", Obj->Name);
-			if (Obj->IsA("SkeletalMesh"))
-			{
-				char filename[64];
-				appSprintf(ARRAY_ARG(filename), "%s.psk", Obj->Name);
-				FFileReader Ar(filename, false);
-				ExportPsk(static_cast<USkeletalMesh*>(Obj), Ar);
-			}
-			else if (Obj->IsA("MeshAnimation"))
-			{
-				char filename[64];
-				appSprintf(ARRAY_ARG(filename), "%s.psa", Obj->Name);
-				FFileReader Ar(filename, false);
-				ExportPsa(static_cast<UMeshAnimation*>(Obj), Ar);
-			}
-			else if (Obj->IsA("Texture"))
-			{
-				char filename[64];
-				appSprintf(ARRAY_ARG(filename), "%s.tga", Obj->Name);
-				FFileReader Ar(filename, false);
-				ExportTga(static_cast<UTexture*>(Obj), Ar);
-			}
-			else
-			{
+			if (!ExportObject(Obj))
 				printf("ERROR: exporting object %s: unsupported type %s\n", Obj->Name, Obj->GetClassName());
-			}
 			if (argObjName) break;		// export specified (1st) object only
 		}
 	}

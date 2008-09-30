@@ -29,7 +29,7 @@ struct GCC_PACK tgaHdr_t
 #endif
 
 
-void ExportTga(UTexture *Tex, FArchive &Ar)
+void ExportTga(const UTexture *Tex, FArchive &Ar)
 {
 	int		i;
 

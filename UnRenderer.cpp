@@ -346,7 +346,7 @@ UMaterial *BindDefaultMaterial()
 }
 
 
-byte *UTexture::Decompress(int &USize, int &VSize)
+byte *UTexture::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture::Decompress);
 	//?? combine with DecompressTexture() ?

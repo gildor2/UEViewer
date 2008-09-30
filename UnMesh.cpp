@@ -43,6 +43,8 @@ struct FMeshVertDeus
 #endif
 
 
+#if UNREAL1
+
 // UE1 FMeshUV
 struct FMeshUV1
 {
@@ -205,6 +207,8 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	unguard;
 }
 
+#endif // UNREAL1
+
 
 /*-----------------------------------------------------------------------------
 	UVertMesh class
@@ -279,6 +283,8 @@ void UVertMesh::BuildNormals()
 	}
 }
 
+#if UNREAL1
+
 void UVertMesh::SerializeVertMesh1(FArchive &Ar)
 {
 	guard(SerializeVertMesh1);
@@ -290,6 +296,8 @@ void UVertMesh::SerializeVertMesh1(FArchive &Ar)
 
 	unguard;
 }
+
+#endif // UNREAL1
 
 
 /*-----------------------------------------------------------------------------
@@ -452,6 +460,8 @@ void UMeshAnimation::SerializeSCell(FArchive &Ar)
 #endif // SPLINTER_CELL
 
 
+#if UNREAL1
+
 void UMeshAnimation::Upgrade()
 {
 	guard(UMeshAnimation.Upgrade);
@@ -479,36 +489,12 @@ void UMeshAnimation::Upgrade()
 	unguard;
 }
 
+#endif
+
 
 /*-----------------------------------------------------------------------------
 	USkeletalMesh class
 -----------------------------------------------------------------------------*/
-
-struct VBoneInfluence1						// Weight and vertex number
-{
-	word			PointIndex;
-	word			BoneWeight;				// 0..63363 == 0..1
-
-	friend FArchive& operator<<(FArchive &Ar, VBoneInfluence1 &V)
-	{
-		return Ar << V.PointIndex << V.BoneWeight;
-	}
-};
-
-
-struct VBoneInfIndex
-{
-	word			WeightIndex;
-	word			Number;
-	word			DetailA;
-	word			DetailB;
-
-	friend FArchive& operator<<(FArchive &Ar, VBoneInfIndex &V)
-	{
-		return Ar << V.WeightIndex << V.Number << V.DetailA << V.DetailB;
-	}
-};
-
 
 void USkeletalMesh::UpgradeFaces()
 {
@@ -567,6 +553,34 @@ void USkeletalMesh::UpgradeMesh()
 
 	unguard;
 }
+
+
+#if UNREAL1
+
+struct VBoneInfluence1						// Weight and vertex number
+{
+	word			PointIndex;
+	word			BoneWeight;				// 0..63363 == 0..1
+
+	friend FArchive& operator<<(FArchive &Ar, VBoneInfluence1 &V)
+	{
+		return Ar << V.PointIndex << V.BoneWeight;
+	}
+};
+
+struct VBoneInfIndex
+{
+	word			WeightIndex;
+	word			Number;
+	word			DetailA;
+	word			DetailB;
+
+	friend FArchive& operator<<(FArchive &Ar, VBoneInfIndex &V)
+	{
+		return Ar << V.WeightIndex << V.Number << V.DetailA << V.DetailB;
+	}
+};
+
 
 void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 {
@@ -634,3 +648,5 @@ void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 
 	unguard;
 }
+
+#endif // UNREAL1

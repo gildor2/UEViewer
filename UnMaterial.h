@@ -240,7 +240,7 @@ public:
 #endif
 	{}
 #if RENDERING
-	byte *Decompress(int &USize, int &VSize);
+	byte *Decompress(int &USize, int &VSize) const;
 #endif
 	virtual void Serialize(FArchive &Ar)
 	{
