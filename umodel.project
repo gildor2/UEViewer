@@ -38,6 +38,7 @@ sources(MAIN) = {
 	# main unit
 	Main.cpp
 	ExportPsk.cpp
+	Export3D.cpp
 	ExportTga.cpp
 	# Unreal Engine support files
 	UnCore.cpp

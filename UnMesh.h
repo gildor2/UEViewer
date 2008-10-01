@@ -1,6 +1,10 @@
 #ifndef __UNMESH_H__
 #define __UNMESH_H__
 
+#if DEUS_EX && !UNREAL1
+#	error DEUS_EX requires UNREAL1
+#endif
+
 
 /*-----------------------------------------------------------------------------
 	UPrimitive class
@@ -382,17 +386,20 @@ public:
 		if (Ar.ArVer < 100)
 		{
 			SerializeVertMesh1(Ar);
+			RotOrigin.Roll = -RotOrigin.Roll;	//??
 			return;
 		}
 #endif
 
 		Super::Serialize(Ar);
+		RotOrigin.Roll = -RotOrigin.Roll;		//??
 
 		Ar << AnimMeshVerts << StreamVersion; // FAnimMeshVertexStream: may skip this (simply seek archive)
 		Ar << Verts2 << f150;
 		Ar << AnimSeqs << Normals;
 		Ar << VertexCount << FrameCount;
 		Ar << BoundingBoxes << BoundingSpheres;
+
 		unguard;
 	}
 };
@@ -1032,12 +1039,14 @@ public:
 };
 
 
-// Note: we have registered UVertMesh as ULodMesh too for UE1 compatibility
 #define REGISTER_MESH_CLASSES		\
 	REGISTER_CLASS(USkeletalMesh)	\
 	REGISTER_CLASS(UVertMesh)		\
+	REGISTER_CLASS(UMeshAnimation)
+
+// Note: we have registered UVertMesh as ULodMesh too for UE1 compatibility
+#define REGISTER_MESH_CLASSES_U1	\
 	REGISTER_CLASS_ALIAS(UVertMesh, ULodMesh) \
-	REGISTER_CLASS(UMeshAnimation)	\
 	REGISTER_CLASS_ALIAS(UMeshAnimation, UAnimation)
 
 

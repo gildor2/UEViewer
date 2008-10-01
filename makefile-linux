@@ -23,10 +23,12 @@ MAIN : umodel
 MAIN = \
 	obj/Main.o \
 	obj/ExportPsk.o \
+	obj/Export3D.o \
 	obj/ExportTga.o \
 	obj/UnCore.o \
 	obj/UnObject.o \
 	obj/UnPackage.o \
+	obj/UnMesh.o \
 	obj/UnRenderer.o \
 	obj/MeshViewer.o \
 	obj/VertMeshViewer.o \
@@ -181,12 +183,27 @@ DEPENDS_10 = \
 	Math3D.h \
 	UnCore.h \
 	UnMaterial.h \
+	UnMesh.h \
 	UnObject.h
 
-obj/ExportTga.o : ExportTga.cpp $(DEPENDS_10)
-	$(CPP) $(OPT_MAIN) -o obj/ExportTga.o ExportTga.cpp
+obj/Export3D.o : Export3D.cpp $(DEPENDS_10)
+	$(CPP) $(OPT_MAIN) -o obj/Export3D.o Export3D.cpp
+
+obj/UnMesh.o : UnMesh.cpp $(DEPENDS_10)
+	$(CPP) $(OPT_MAIN) -o obj/UnMesh.o UnMesh.cpp
 
 DEPENDS_11 = \
+	Build.h \
+	Core.h \
+	Math3D.h \
+	UnCore.h \
+	UnMaterial.h \
+	UnObject.h
+
+obj/ExportTga.o : ExportTga.cpp $(DEPENDS_11)
+	$(CPP) $(OPT_MAIN) -o obj/ExportTga.o ExportTga.cpp
+
+DEPENDS_12 = \
 	Build.h \
 	Core.h \
 	Math3D.h \
@@ -194,16 +211,16 @@ DEPENDS_11 = \
 	UnObject.h \
 	UnPackage.h
 
-obj/UnObject.o : UnObject.cpp $(DEPENDS_11)
+obj/UnObject.o : UnObject.cpp $(DEPENDS_12)
 	$(CPP) $(OPT_MAIN) -o obj/UnObject.o UnObject.cpp
 
-obj/UnPackage.o : UnPackage.cpp $(DEPENDS_11)
+obj/UnPackage.o : UnPackage.cpp $(DEPENDS_12)
 	$(CPP) $(OPT_MAIN) -o obj/UnPackage.o UnPackage.cpp
 
-DEPENDS_12 = \
+DEPENDS_13 = \
 	libs/ddslib.h
 
-obj/ddslib.o : libs/ddslib.c $(DEPENDS_12)
+obj/ddslib.o : libs/ddslib.c $(DEPENDS_13)
 	$(CPP) $(OPT_MAIN) -o obj/ddslib.o libs/ddslib.c
 
 #------------------------------------------------------------------------------

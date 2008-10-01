@@ -17,6 +17,11 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+01.10.2008
+- implemented VertMesh export into Unreal's .3d format
+- fixed wrong orientation of VertMesh in viewer
+- "dump" command now displays object properties
+
 30.09.2008
 - displaying of texture information in material viewer
 

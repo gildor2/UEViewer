@@ -47,7 +47,11 @@ public:
 	{}
 
 	virtual void Dump()
-	{}
+	{
+		printf("\nObject info:\n============\n");
+		printf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
+		Object->DumpProps();
+	}
 #if TEST_FILES
 	virtual void Test()
 	{}

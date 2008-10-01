@@ -15,9 +15,6 @@
     2) add assert before serialization: should not be already loaded (bool flag for UObject)
   - add 2 global lists: complete objects and objects, required serialization; use
     bool flag to check, which list holds object
-  ? can enumerate properties using FindProperty() function: add argument 'enumerator', which will
-    be used for each property; if function return 'false' - stop iterating. Field searching may be
-    easily implemented using this tech.
 
 Loading:
 - add profiling for loading

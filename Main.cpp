@@ -18,6 +18,9 @@ static void RegisterUnrealClasses()
 BEGIN_CLASS_TABLE
 	REGISTER_MATERIAL_CLASSES
 	REGISTER_MESH_CLASSES
+#if UNREAL1
+	REGISTER_MESH_CLASSES_U1
+#endif
 	REGISTER_ANIM_NOTIFY_CLASSES
 END_CLASS_TABLE
 }
@@ -78,10 +81,17 @@ static bool ExportObject(UObject *Obj)
 		const CExporterInfo &Info = exporters[i];
 		if (Obj->IsA(Info.ClassName))
 		{
-			char filename[64];
-			appSprintf(ARRAY_ARG(filename), "%s.%s", Obj->Name, Info.FileExt);
-			FFileReader Ar(filename, false);
-			Info.Func(Obj, Ar);
+			if (Info.FileExt)
+			{
+				char filename[64];
+				appSprintf(ARRAY_ARG(filename), "%s.%s", Obj->Name, Info.FileExt);
+				FFileReader Ar(filename, false);
+				Info.Func(Obj, Ar);
+			}
+			else
+			{
+				Info.Func(Obj, *GDummySave);
+			}
 			return true;
 		}
 	}
@@ -128,6 +138,7 @@ int main(int argc, char **argv)
 				"Supported resources for export:\n"
 				"    SkeletalMesh    exported as ActorX psk file\n"
 				"    MeshAnimation   exported as ActorX psa file\n"
+				"    VertMesh        exported as Unreal 3d file\n"
 				"    Texture         exported in tga format\n"
 				"\n"
 				"Supported games:\n"
@@ -191,6 +202,7 @@ int main(int argc, char **argv)
 	// register exporters
 	EXPORTER("SkeletalMesh",  "psk", ExportPsk);
 	EXPORTER("MeshAnimation", "psa", ExportPsa);
+	EXPORTER("VertMesh",      NULL,  Export3D );
 	EXPORTER("Texture",       "tga", ExportTga);
 
 	// prepare classes

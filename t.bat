@@ -4,7 +4,7 @@ rm umodel.exe
 bash build.sh
 
 set ut1_path=c:/games/unreal~1/UnrealTournament
-if exist %ut1_path%/system/unreal.exe goto path1_ok
+if exist %ut1_path%/system/UnrealTournament.exe goto path1_ok
 set ut1_path=c:/games/unreal/UnrealTournament
 :path1_ok
 
@@ -24,7 +24,7 @@ exit
 
 :cont
 
-rem goto deusex
+goto ut1
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -82,8 +82,8 @@ goto exit
 
 :ut1
 set run=umodel.exe -path=%ut1_path%
-%run% BotPack
-rem %run% UnrealI
+rem %run% BotPack
+%run% UnrealI
 rem %run% SkeletalChars
 goto exit
 %run% BotPack FCommando
@@ -110,7 +110,8 @@ goto exit
 
 :deusex
 set run=umodel.exe -path=data/DeusEx
-%run% DeusExCharacters
+rem %run% DeusExCharacters
+%run% -export DeusExCharacters Mutt
 goto exit
 
 rem ---------------------------------------------------------------------------

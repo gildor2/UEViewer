@@ -23,6 +23,7 @@ MAIN : umodel.exe
 MAIN = \
 	obj/Main.obj \
 	obj/ExportPsk.obj \
+	obj/Export3D.obj \
 	obj/ExportTga.obj \
 	obj/UnCore.obj \
 	obj/UnObject.obj \
@@ -184,6 +185,9 @@ DEPENDS = \
 	UnMaterial.h \
 	UnMesh.h \
 	UnObject.h
+
+obj/Export3D.obj : Export3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Export3D.obj" Export3D.cpp
 
 obj/UnMesh.obj : UnMesh.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnMesh.obj" UnMesh.cpp

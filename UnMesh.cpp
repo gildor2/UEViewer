@@ -291,7 +291,6 @@ void UVertMesh::SerializeVertMesh1(FArchive &Ar)
 
 	SerializeLodMesh1(Ar, AnimSeqs, BoundingBoxes, BoundingSpheres, FrameCount);
 	VertexCount = Super::VertexCount;
-	RotOrigin.Roll = -RotOrigin.Roll;
 	BuildNormals();
 
 	unguard;

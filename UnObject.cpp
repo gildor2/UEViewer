@@ -358,10 +358,63 @@ bool IsKnownClass(const char *Name)
 }
 
 
-const CPropInfo *UObject::FindProperty(const CPropInfo *Table, int Count, const char *PropName)
+const CPropInfo *UObject::FindProperty(const char *Name) const
 {
-	for (int i = 0; i < Count; i++, Table++)
-		if (!strcmp(Table->Name, PropName))
-			return Table;
+	for (int index = 0; /*empty*/; index++)
+	{
+		const CPropInfo *info = EnumProps(index);
+		if (!info) break;		// all props enumerated
+		if (!strcmp(info->Name, Name))
+			return info;
+	}
 	return NULL;
+}
+
+
+void UObject::DumpProps() const
+{
+	//!! BUG: scalar (non-array) props with sizeof(type)==1 (bool, byte) will be
+	//!! displayed as "type name[4]" (bug in _PROP_BASE macro)
+	for (int PropIndex = 0; /*empty*/; PropIndex++)
+	{
+		const CPropInfo *Prop = EnumProps(PropIndex);
+		if (!Prop) break;		// all props enumerated
+		printf("%3d: %s %s", PropIndex, Prop->TypeName, Prop->Name);
+		if (Prop->Count > 1)
+			printf("[%d] = { ", Prop->Count);
+		else
+			printf(" = ");
+
+		byte *value = (byte*)this + Prop->Offset;
+
+		for (int ArrayIndex = 0; ArrayIndex < Prop->Count; ArrayIndex++)
+		{
+			if (ArrayIndex > 0) printf(", ");
+#define IS(name)  strcmp(Prop->TypeName, #name) == 0
+#define PROCESS(type, format, value) \
+			if (IS(type)) { printf(format, value); }
+			PROCESS(byte,     "%d", PROP(byte));
+			PROCESS(int,      "%d", PROP(int));
+			PROCESS(bool,     "%s", PROP(bool) ? "true" : "false");
+			PROCESS(float,    "%g", PROP(float));
+#if 1
+			if (IS(UObject*))
+			{
+				UObject *obj = PROP(UObject*);
+				if (obj)
+					printf("%s'%s'", obj->GetClassName(), obj->Name);
+				else
+					printf("Null");
+			}
+#else
+			PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
+#endif
+			PROCESS(FName,    "%s", *PROP(FName));
+		}
+
+		if (Prop->Count > 1)
+			printf(" }\n");
+		else
+			printf("\n");
+	}
 }

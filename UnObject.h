@@ -48,7 +48,7 @@ struct CPropInfo
 
 
 #define BEGIN_PROP_TABLE						\
-	virtual const CPropInfo *FindProperty(const char *Name) const \
+	virtual const CPropInfo *EnumProps(int index) const \
 	{											\
 		static const CPropInfo props[] =		\
 		{
@@ -66,10 +66,10 @@ struct CPropInfo
 
 #define END_PROP_TABLE							\
 		};										\
-		const CPropInfo *Prop = UObject::FindProperty(ARRAY_ARG(props), Name); \
-		if (!Prop) Prop = Super::FindProperty(Name); \
-		return Prop;							\
-	}
+		if (index >= ARRAY_COUNT(props))		\
+			return Super::EnumProps(index - ARRAY_COUNT(props)); \
+		return props + index;					\
+	}											\
 
 
 void RegisterClasses(CClassInfo *Table, int Count);
@@ -118,11 +118,12 @@ public:
 	{
 		return strcmp(ClassName, "Object") == 0;
 	}
-	virtual const CPropInfo *FindProperty(const char *Name) const
+	virtual const CPropInfo *EnumProps(int index) const
 	{
 		return NULL;
 	}
-	static const CPropInfo *FindProperty(const CPropInfo *Table, int Count, const char *PropName);
+	const CPropInfo *FindProperty(const char *Name) const;
+	void DumpProps() const;
 
 //private: -- not private to allow object browser ...
 	// static data and methods

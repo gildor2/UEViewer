@@ -99,6 +99,8 @@ public:
 	virtual bool IsEof() = 0;
 	virtual void Serialize(void *data, int size) = 0;
 
+	void Printf(const char *fmt, ...);
+
 	bool IsStopper()
 	{
 		return ArStopper == ArPos;
@@ -538,6 +540,13 @@ public:
 		return (char*)DataPtr;
 	}
 };
+
+
+/*-----------------------------------------------------------------------------
+	Global variables
+-----------------------------------------------------------------------------*/
+
+extern FArchive *GDummySave;
 
 
 #endif // __UNCORE_H__

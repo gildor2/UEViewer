@@ -28,7 +28,7 @@ void appSetNotifyHeader(const char *fmt, ...)
 {
 	va_list	argptr;
 	va_start(argptr, fmt);
-	int len = vsnprintf(ARRAY_ARG(NotifyBuf), fmt, argptr);
+	vsnprintf(ARRAY_ARG(NotifyBuf), fmt, argptr);
 	va_end(argptr);
 }
 
@@ -228,6 +228,18 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 	FArchive methods
 -----------------------------------------------------------------------------*/
 
+void FArchive::Printf(const char *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	char buf[4096];
+	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
+	va_end(argptr);
+	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
+	Serialize(buf, len);
+}
+
+
 FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 {
 	if (Ar.IsLoading)
@@ -261,6 +273,36 @@ void SerializeChars(FArchive &Ar, char *buf, int length)
 	for (int i = 0; i < length; i++)
 		Ar << *buf++;
 }
+
+
+/*-----------------------------------------------------------------------------
+	Dummy archive class
+-----------------------------------------------------------------------------*/
+
+class CDummyArchive : public FArchive
+{
+public:
+	virtual void Seek(int Pos)
+	{}
+	virtual bool IsEof()
+	{
+		return true;
+	}
+	virtual void Serialize(void *data, int size)
+	{}
+	virtual FArchive& operator<<(FName &N)
+	{
+		return *this;
+	}
+	virtual FArchive& operator<<(UObject *&Obj)
+	{
+		return *this;
+	}
+};
+
+
+static CDummyArchive DummyArchive;
+FArchive *GDummySave = &DummyArchive;
 
 
 /*-----------------------------------------------------------------------------
