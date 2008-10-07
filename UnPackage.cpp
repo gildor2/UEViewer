@@ -216,6 +216,9 @@ void UnPackage::SetSearchPath(const char *Path)
 static const char *PackageExtensions[] =
 {
 	"u", "ut2", "utx", "uax", "usx", "ukx"
+#if RUNE
+	, "ums"
+#endif
 };
 
 static const char *PackagePaths[] =

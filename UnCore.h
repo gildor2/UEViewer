@@ -269,6 +269,11 @@ struct FRotator
 {
 	int		Pitch, Yaw, Roll;
 
+	void Set(int _Yaw, int _Pitch, int _Roll)
+	{
+		Pitch = _Pitch; Yaw = _Yaw; Roll = _Roll;
+	}
+
 	friend FArchive& operator<<(FArchive &Ar, FRotator &R)
 	{
 		return Ar << R.Pitch << R.Yaw << R.Roll;
@@ -279,6 +284,11 @@ struct FRotator
 struct FQuat
 {
 	float	X, Y, Z, W;
+
+	void Set(float _X, float _Y, float _Z, float _W)
+	{
+		X = _X; Y = _Y; Z = _Z; W = _W;
+	}
 
 	friend FArchive& operator<<(FArchive &Ar, FQuat &F)
 	{
@@ -325,6 +335,32 @@ struct FSphere : public FVector
 			Ar << S.R;
 		return Ar;
 	};
+};
+
+
+struct FPlane : public FVector
+{
+	float	W;
+
+	friend FArchive& operator<<(FArchive &Ar, FPlane &S)
+	{
+		return Ar << (FVector&)S << S.W;
+	};
+};
+
+
+class FScale
+{
+public:
+	FVector	Scale;
+	float	SheerRate;
+	byte	SheerAxis;	// ESheerAxis
+
+	// Serializer.
+	friend FArchive& operator<<(FArchive &Ar, FScale &S)
+	{
+		return Ar << S.Scale << S.SheerRate << S.SheerAxis;
+	}
 };
 
 
@@ -396,6 +432,9 @@ protected:
 template<class T> class TArray : public FArray
 {
 public:
+	TArray()
+	:	FArray()
+	{}
 	~TArray()
 	{
 		// destruct all array items
@@ -482,6 +521,16 @@ protected:
 			new (item) T;		// construct item before reading
 		Ar << *(T*)item;		// serialize item
 	}
+
+private:
+	// disable array copying
+	TArray(const TArray &Other)
+	:	FArray()
+	{}
+	TArray& operator=(const TArray &Other)
+	{
+		return this;
+	}
 };
 
 
@@ -494,6 +543,16 @@ template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 		A.Empty();				// erase previous data before loading
 	return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
 }
+
+template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
+{
+	guard(TArray::operator new);
+	assert(size == sizeof(T));
+	int index = Array.Add(1);
+	return &Array[index];
+	unguard;
+}
+
 
 // TLazyArray implemented as simple wrapper around TArray with
 // different serialization function

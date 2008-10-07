@@ -189,6 +189,16 @@ DEPENDS = \
 obj/Export3D.obj : Export3D.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Export3D.obj" Export3D.cpp
 
+DEPENDS = \
+	Build.h \
+	Core.h \
+	Math3D.h \
+	UnCore.h \
+	UnMaterial.h \
+	UnMesh.h \
+	UnObject.h \
+	UnPackage.h
+
 obj/UnMesh.obj : UnMesh.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnMesh.obj" UnMesh.cpp
 

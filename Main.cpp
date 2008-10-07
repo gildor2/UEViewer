@@ -21,6 +21,9 @@ BEGIN_CLASS_TABLE
 #if UNREAL1
 	REGISTER_MESH_CLASSES_U1
 #endif
+#if RUNE
+	REGISTER_MESH_CLASSES_RUNE
+#endif
 	REGISTER_ANIM_NOTIFY_CLASSES
 END_CLASS_TABLE
 }
@@ -142,10 +145,19 @@ int main(int argc, char **argv)
 				"    Texture         exported in tga format\n"
 				"\n"
 				"Supported games:\n"
+#if UNREAL1
 				"    Unreal 1, Unreal Tournament 1\n"
+#endif
+#if DEUS_EX
 				"    DeusEx\n"
+#endif
+#if RUNE
+				"    Rune\n"
+#endif
 				"    Unreal Tournament 2003,2004\n"
+#if SPLINTER_CELL
 				"    Splinter Cell 1,2\n"
+#endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
 		);

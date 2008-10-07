@@ -4,3 +4,4 @@
 #define UNREAL1			1
 #define SPLINTER_CELL	1
 #define DEUS_EX			1
+#define RUNE			1

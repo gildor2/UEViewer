@@ -24,7 +24,7 @@ exit
 
 :cont
 
-goto ut1
+goto rune
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -110,8 +110,16 @@ goto exit
 
 :deusex
 set run=umodel.exe -path=data/DeusEx
-rem %run% DeusExCharacters
-%run% -export DeusExCharacters Mutt
+%run% DeusExCharacters
+rem %run% -export DeusExCharacters Mutt
+goto exit
+
+:rune
+set run=umodel.exe -path=data/Rune
+%run% players Ragnar
+rem %run% plants
+rem %run% objects
+rem %run% objects Skull
 goto exit
 
 rem ---------------------------------------------------------------------------

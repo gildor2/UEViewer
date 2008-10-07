@@ -16,6 +16,12 @@
   - add 2 global lists: complete objects and objects, required serialization; use
     bool flag to check, which list holds object
 
+Exporting:
+- TextBuffer export
+  - will require to get defaultproperties from "Class'Name'.properties" (object with name=ClassName and
+    class name="")
+- option to enable paths when exporting objects (will create directory for each group)
+
 Loading:
 - add profiling for loading
 - ensure "whole package" loaded using locks (load all top-level objects, then subobjects)

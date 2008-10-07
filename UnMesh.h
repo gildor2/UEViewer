@@ -177,13 +177,21 @@ struct FMeshAnimSeq
 	{
 		if (Ar.ArVer > 114)
 			Ar << A.f28;
+		Ar << A.Name;
 		if (Ar.ArVer < 100)
 		{
 			// UE1 support
+			assert(Ar.IsLoading);
 			FName tmpGroup;					// single group
-			return Ar << A.Name << tmpGroup << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
+			Ar << tmpGroup;
+			if (strcmp(tmpGroup, "None") != 0)
+				A.Groups.AddItem(tmpGroup);
 		}
-		Ar << A.Name << A.Groups << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
+		else
+		{
+			Ar << A.Groups;					// array of groups
+		}
+		Ar << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell())
 		{
@@ -849,7 +857,7 @@ struct FLODMeshSection
 
 struct FSCellUnk1
 {
-	int						f0, f4, f8, fC;
+	int				f0, f4, f8, fC;
 
 	friend FArchive& operator<<(FArchive &Ar, FSCellUnk1 &S)
 	{
@@ -859,7 +867,7 @@ struct FSCellUnk1
 
 struct FSCellUnk2
 {
-	int						f0, f4, f8, fC, f10;
+	int				f0, f4, f8, fC, f10;
 
 	friend FArchive& operator<<(FArchive &Ar, FSCellUnk2 &S)
 	{
@@ -869,7 +877,7 @@ struct FSCellUnk2
 
 struct FSCellUnk3
 {
-	int						f0, f4, f8, fC;
+	int				f0, f4, f8, fC;
 
 	friend FArchive& operator<<(FArchive &Ar, FSCellUnk3 &S)
 	{
@@ -879,9 +887,9 @@ struct FSCellUnk3
 
 struct FSCellUnk4a
 {
-	FVector					f0;
-	FVector					fC;
-	int						f18;			// float?
+	FVector			f0;
+	FVector			fC;
+	int				f18;					// float?
 
 	friend FArchive& operator<<(FArchive &Ar, FSCellUnk4a &S)
 	{
@@ -891,11 +899,11 @@ struct FSCellUnk4a
 
 struct FSCellUnk4
 {
-	int						Size;
-	int						Count;
-	TArray<FString>			BoneNames;		// BoneNames.Num() == Count
-	FString					f14;
-	FSCellUnk4a**			Data;			// (FSCellUnk4a*)[Count][Size]
+	int				Size;
+	int				Count;
+	TArray<FString>	BoneNames;				// BoneNames.Num() == Count
+	FString			f14;
+	FSCellUnk4a**	Data;					// (FSCellUnk4a*)[Count][Size]
 
 	FSCellUnk4()
 	:	Data(NULL)
@@ -1039,6 +1047,24 @@ public:
 };
 
 
+#if RUNE
+
+class USkelModel : public UPrimitive
+{
+	DECLARE_CLASS(USkelModel, UPrimitive);
+public:
+	// transient data
+	TArray<USkeletalMesh*>	Meshes;
+	TArray<char*>			MeshNames;
+	UMeshAnimation			*Anim;
+	virtual ~USkelModel();
+
+	virtual void Serialize(FArchive &Ar);
+};
+
+#endif // RUNE
+
+
 #define REGISTER_MESH_CLASSES		\
 	REGISTER_CLASS(USkeletalMesh)	\
 	REGISTER_CLASS(UVertMesh)		\
@@ -1048,6 +1074,9 @@ public:
 #define REGISTER_MESH_CLASSES_U1	\
 	REGISTER_CLASS_ALIAS(UVertMesh, ULodMesh) \
 	REGISTER_CLASS_ALIAS(UMeshAnimation, UAnimation)
+
+#define REGISTER_MESH_CLASSES_RUNE	\
+	REGISTER_CLASS(USkelModel)
 
 
 #endif // __UNMESH_H__

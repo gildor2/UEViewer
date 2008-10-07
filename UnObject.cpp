@@ -22,7 +22,10 @@ UObject::~UObject()
 			break;
 		}
 	// remove self from package export table
-	if (Package)
+	// note: we using PackageIndex==-1 when creating dummy object, not exported from
+	// any package, but which still belongs to this package (for example check Rune's
+	// USkelModel)
+	if (Package && PackageIndex >= 0)
 	{
 		assert(Package->ExportTable[PackageIndex].Object == this);
 		Package->ExportTable[PackageIndex].Object = NULL;
