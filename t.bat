@@ -24,7 +24,7 @@ exit
 
 :cont
 
-goto rune
+goto unreal1
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -77,13 +77,14 @@ rem 	UNREAL1
 rem ---------------------------------------------------------------------------
 :unreal1
 rem umodel.exe -path=c:/games/unreal/UnrealGold UnrealI
-umodel.exe -path=c:/games/unreal/UnrealGold UnrealI WarlordM
+umodel.exe -path=c:/games/unreal/UnrealGold UPak pyramid
+rem umodel.exe -path=c:/games/unreal/UnrealGold UnrealI WarlordM
 goto exit
 
 :ut1
 set run=umodel.exe -path=%ut1_path%
-rem %run% BotPack
-%run% UnrealI
+%run% BotPack PylonM
+rem %run% UnrealI
 rem %run% SkeletalChars
 goto exit
 %run% BotPack FCommando

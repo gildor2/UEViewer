@@ -74,6 +74,27 @@ struct FMeshUV
 };
 
 
+// UE1 FMeshUV
+struct FMeshUV1
+{
+	byte			U;
+	byte			V;
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshUV1 &M)
+	{
+		return Ar << M.U << M.V;
+	}
+
+	operator FMeshUV() const
+	{
+		FMeshUV r;
+		r.U = U / 255.0f;
+		r.V = V / 255.0f;
+		return r;
+	}
+};
+
+
 // LOD-style triangular polygon in a mesh, which references three textured vertices.
 struct FMeshFace
 {
@@ -89,11 +110,11 @@ struct FMeshFace
 };
 
 
-// temp structure, skipped while mesh loading
+// temp structure, skipped while mesh loading; used by UE1 UMesh only
 struct FMeshTri
 {
 	word			iVertex[3];				// Vertex indices.
-	FMeshUV			Tex[3];					// Texture UV coordinates.
+	FMeshUV1		Tex[3];					// Texture UV coordinates.
 	unsigned		PolyFlags;				// Surface flags.
 	int				TextureIndex;			// Source texture index.
 
@@ -219,7 +240,7 @@ class ULodMesh : public UPrimitive
 	DECLARE_CLASS(ULodMesh, UPrimitive);
 public:
 	unsigned			AuthKey;			// used in USkeletalMesh only?
-	int					Version;			// UT2 have '4' in this field, SplinterCell have '1'
+	int					Version;			// UT2 have '4' in this field
 	int					VertexCount;
 	TArray<FMeshVert>	Verts;				// UVertMesh: NumFrames*NumVerts, USkeletalMesh: empty
 	TArray<UMaterial*>	Textures;			// skins of mesh parts
@@ -1070,8 +1091,9 @@ public:
 	REGISTER_CLASS(UVertMesh)		\
 	REGISTER_CLASS(UMeshAnimation)
 
-// Note: we have registered UVertMesh as ULodMesh too for UE1 compatibility
+// Note: we have registered UVertMesh and UMesh as ULodMesh too for UE1 compatibility
 #define REGISTER_MESH_CLASSES_U1	\
+	REGISTER_CLASS_ALIAS(UVertMesh, UMesh) \
 	REGISTER_CLASS_ALIAS(UVertMesh, ULodMesh) \
 	REGISTER_CLASS_ALIAS(UMeshAnimation, UAnimation)
 

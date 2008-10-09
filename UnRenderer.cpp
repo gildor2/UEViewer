@@ -386,7 +386,7 @@ void UTexture::Bind(unsigned PolyFlags)
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.8f);
 	}
-	else if (bAlphaTexture)
+	else if (bAlphaTexture || (PolyFlags & (PF_Masked|PF_TwoSided)))
 	{
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.0f);
@@ -403,7 +403,7 @@ void UTexture::Bind(unsigned PolyFlags)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 	}
-	else if (bAlphaTexture || bMasked || (PolyFlags & PF_Masked))
+	else if (bAlphaTexture || bMasked || (PolyFlags & (PF_Masked|PF_TwoSided)))
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

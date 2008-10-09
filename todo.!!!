@@ -1,3 +1,6 @@
+! implement socket support (visualization)
+? support Undying
+
 ! use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
 
 ! options for:

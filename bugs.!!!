@@ -3,6 +3,9 @@
     - but UnrealEd showing models in random orientation (no standard)
   ! should build normals
 
+- sometimes after relatively long time of application inactivity, program becomes inresponsible to
+  keyboard and mouse
+
 * MercFemaleB: bugs with alpha-texture on head (hear)
   - translocator: same
   - NightMaleB: same

@@ -561,18 +561,18 @@ template<class T> class TLazyArray : public TArray<T>
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
 		assert(Ar.IsLoading);
+		int SkipPos = 0;								// ignored
 		if (Ar.ArVer > 61)
-		{
-			int SkipPos;		// ignored
 			Ar << SkipPos;
-		}
-		return Ar << (TArray<T>&)A;
+		Ar << (TArray<T>&)A;
+		assert(SkipPos == 0 || SkipPos == Ar.ArPos);	// check position
+		return Ar;
 	}
 };
 
 
 #define COPY_ARRAY(Src, Dst)				\
-	if (Src.Num() && !Dst.Num())			\
+	if (Src.Num())							\
 	{										\
 		guard(Src);							\
 		Dst.Empty(Src.Num());				\

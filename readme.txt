@@ -3,10 +3,9 @@ Unreal Model Viewer
 
 List of supported games:
 - Unreal 1, Unreal Tournament 1
-- DeusEx, Rune
+- The Wheel of Time, DeusEx, Rune
 - Unreal Tournament 2003/2004
-- Postal 2
-- Splinter Cell 1,2
+- Postal 2, Splinter Cell 1,2
 
 Project home page and forum:
 http://www.gildor.org/projects/umodel
@@ -17,6 +16,14 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+09.10.2008
+- implemented support for Unreal Engine 1 UMesh class
+- improved UE1 LodMesh support
+
+08.10.2008
+- linux: workaround for SDL bug caused undesired mesh rotation when pressing left
+  mouse button
+
 06.10.2008
 - implemented Rune mesh support
 

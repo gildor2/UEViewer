@@ -77,18 +77,6 @@ struct FJSDataHeader
 	}
 };
 
-// copied from UnMesh.cpp
-struct FMeshUV1
-{
-	byte			U;
-	byte			V;
-
-	friend FArchive& operator<<(FArchive &Ar, FMeshUV1 &M)
-	{
-		return Ar << M.U << M.V;
-	}
-};
-
 // Mesh triangle.
 struct FJSMeshTri
 {

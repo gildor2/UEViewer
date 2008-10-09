@@ -3,7 +3,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMesh.h"
-#include "UnPackage.h"			// for loading texures by name (Rune)
+#include "UnPackage.h"			// for loading texures by name (Rune) and checking real class name
 
 
 /*-----------------------------------------------------------------------------
@@ -42,27 +42,6 @@ struct FMeshVertDeus
 	}
 };
 #endif
-
-
-// UE1 FMeshUV
-struct FMeshUV1
-{
-	byte			U;
-	byte			V;
-
-	friend FArchive& operator<<(FArchive &Ar, FMeshUV1 &M)
-	{
-		return Ar << M.U << M.V;
-	}
-
-	operator FMeshUV() const
-	{
-		FMeshUV r;
-		r.U = U / 255.0f;
-		r.V = V / 255.0f;
-		return r;
-	}
-};
 
 
 #if UNREAL1
@@ -110,7 +89,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	guard(SerializeLodMesh1);
 
 	// UE1: different layout
-	TLazyArray<FMeshVert>			tmpVerts;
+	// UMesh fields
 	TLazyArray<FMeshTri>			tmpTris;
 	TLazyArray<FMeshVertConnect>	tmpConnects;
 	TLazyArray<int>					tmpVertLinks;
@@ -118,6 +97,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	TArray<float>					tmpTextureLOD;		// version 66+
 	unsigned						tmpAndFlags, tmpOrFlags;
 	int								tmpCurPoly, tmpCurVertex;
+	// ULodMesh fields
 	TArray<word>					tmpCollapsePointThus;
 	TArray<FMeshWedge1>				tmpWedges;
 	TArray<FMeshFace>				tmpSpecialFaces;
@@ -125,12 +105,15 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	TArray<word>					tmpRemapAnimVerts;
 	int								tmpOldFrameVerts;
 
+	// get real class name
+	FObjectExport &Exp = Package->GetExport(PackageIndex);
+	const char *realClassName = Package->GetObjectName(Exp.ClassIndex);
+	// here: realClassName may be "LodMesh" or "Mesh"
+
 	// UPrimitive
 	UPrimitive::Serialize(Ar);
 	// UMesh
-#if !DEUS_EX
-	Ar << tmpVerts;
-#else
+#if DEUS_EX
 	// DeusEx have larger FMeshVert structure, and there is no way to detect this game by package ...
 	// But file uses TLazyArray<FMeshVert>, which have ability to detect item size - here we will
 	// analyze it
@@ -146,13 +129,19 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 			isDeusEx = true;
 		Ar.Seek(pos);									// and restore position for serialization as TLazyArray
 	}
-	if (!isDeusEx)
-		Ar << tmpVerts;									// regular Unreal1 model
-	else
+	if (isDeusEx)
+	{
 		Ar << deusVerts;
+	}
+	else
 #endif // DEUS_EX
+	{
+		TLazyArray<FMeshVert> tmpVerts;
+		Ar << tmpVerts;									// regular Unreal1 model
+		COPY_ARRAY(tmpVerts, Verts);					// TLazyArray  -> TArray
+	}
 	Ar << tmpTris << AnimSeqs << tmpConnects;
-	Ar << BoundingBox << BoundingSphere;	// serialize UPrimitive fields again
+	Ar << BoundingBox << BoundingSphere;				// serialize UPrimitive fields again
 	Ar << tmpVertLinks << Textures << BoundingBoxes << BoundingSpheres << VertexCount << FrameCount;
 	Ar << tmpAndFlags << tmpOrFlags << MeshScale << MeshOrigin << RotOrigin;
 	Ar << tmpCurPoly << tmpCurVertex;
@@ -191,26 +180,76 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 				V.Z = appRound(V.Z * scale);
 			}
 		}
-		COPY_ARRAY(deusVerts, tmpVerts);
+		COPY_ARRAY(deusVerts, Verts);
 	}
 #endif // DEUS_EX
 	if (Ar.ArVer == 65)
 		Ar << tmpTextureLOD_65;
 	else if (Ar.ArVer >= 66)
 		Ar << tmpTextureLOD;
-	// ULodMesh
-	Ar << tmpCollapsePointThus << FaceLevel << Faces << CollapseWedgeThus << tmpWedges;
-	Ar << Materials << tmpSpecialFaces << tmpModelVerts << tmpSpecialVerts;
-	Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
-	Ar << tmpRemapAnimVerts << tmpOldFrameVerts;
-	// convert data
-	COPY_ARRAY(tmpVerts,  Verts);			// TLazyArray  -> TArray
-	COPY_ARRAY(tmpWedges, Wedges);			// FMeshWedge1 -> FMeshWedge
-	for (int i = 0; i < Wedges.Num(); i++)	// remap wedges (skip SpecialVerts)
-		Wedges[i].iVertex += tmpSpecialVerts;
-	printf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
-	if (tmpRemapAnimVerts.Num()) appNotify("RemapVerts: %d", tmpRemapAnimVerts.Num());//!!
-	return;
+
+	if (!strcmp(realClassName, "LodMesh"))
+	{
+		// ULodMesh
+		Ar << tmpCollapsePointThus << FaceLevel << Faces << CollapseWedgeThus << tmpWedges;
+		Ar << Materials << tmpSpecialFaces << tmpModelVerts << tmpSpecialVerts;
+		Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
+		Ar << tmpRemapAnimVerts << tmpOldFrameVerts;
+		// convert data
+		COPY_ARRAY(tmpWedges, Wedges);			// FMeshWedge1 -> FMeshWedge
+		for (int i = 0; i < Wedges.Num(); i++)	// remap wedges (skip SpecialVerts)
+			Wedges[i].iVertex += tmpSpecialVerts;
+		printf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
+		// remap animation vertices, if needed
+		if (tmpRemapAnimVerts.Num())
+		{
+			guard(RemapVerts);
+			TArray<FMeshVert> NewVerts;
+			NewVerts.Add(FrameCount * VertexCount);
+			for (int j = 0; j < FrameCount; j++)
+			{
+				int base    = VertexCount * j;
+				int oldBase = tmpOldFrameVerts * j;
+				for (int k = 0; k < VertexCount; k++)
+					NewVerts[base + k] = Verts[oldBase + tmpRemapAnimVerts[k]];
+			}
+			COPY_ARRAY(NewVerts, Verts)
+			unguard;
+		}
+	}
+	else
+	{
+		int i, j;
+		// we have loaded UMesh, should upgrade it to ULodMesh
+		assert(!strcmp(realClassName, "Mesh"));
+
+		// create materials
+		Materials.Empty(Textures.Num());
+		for (i = 0; i < Textures.Num(); i++)
+		{
+			FMeshMaterial *M = new(Materials) FMeshMaterial;
+			M->PolyFlags    = 0;	// should take from triangles - will be OR of all tris.PolyFlags
+			M->TextureIndex = i;
+		}
+		// generate faces and wedges; have similar code in Rune's USkelModel::Serialize()
+		int TrisCount = tmpTris.Num();
+		Faces.Empty(TrisCount);
+		Wedges.Empty(TrisCount * 3);
+		for (i = 0; i < TrisCount; i++)
+		{
+			const FMeshTri &SrcTri = tmpTris[i];
+			FMeshFace *F = new(Faces) FMeshFace;
+			F->MaterialIndex = SrcTri.TextureIndex;
+			Materials[SrcTri.TextureIndex].PolyFlags |= SrcTri.PolyFlags;
+			for (j = 0; j < 3; j++)
+			{
+				F->iWedge[j] = Wedges.Num();
+				FMeshWedge *W = new(Wedges) FMeshWedge;
+				W->iVertex = SrcTri.iVertex[j];
+				W->TexUV   = SrcTri.Tex[j];
+			}
+		}
+	}
 
 	unguard;
 }

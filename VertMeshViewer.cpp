@@ -31,7 +31,7 @@ void CVertMeshViewer::Test()
 	// ULodMesh fields
 	VERIFY_NOT_NULL(Faces.Num());
 	VERIFY_NOT_NULL(Verts.Num());
-	VERIFY(FaceLevel.Num(), Faces.Num());
+//	VERIFY(FaceLevel.Num(), Faces.Num()); -- no for UMesh
 	VERIFY_NOT_NULL(Wedges.Num());
 }
 #endif
