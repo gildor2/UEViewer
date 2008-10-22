@@ -231,7 +231,7 @@ public:
 
 	bool HasAnim(const char *AnimName) const
 	{
-		return FindAnim(AnimName) >= 0;
+		return FindAnim(AnimName) != INDEX_NONE;
 	}
 	virtual bool IsTweening(int Channel)
 	{

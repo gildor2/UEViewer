@@ -5,3 +5,4 @@
 #define SPLINTER_CELL	1
 #define DEUS_EX			1
 #define RUNE			1
+#define TRIBES3			1

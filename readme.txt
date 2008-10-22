@@ -2,13 +2,22 @@ UMODEL
 Unreal Model Viewer
 
 List of supported games:
-- Unreal 1, Unreal Tournament 1
-- The Wheel of Time, DeusEx, Rune
-- Unreal Tournament 2003/2004
-- Postal 2, Splinter Cell 1,2
+~~~~~~~~~~~~~~~~~~~~~~~~
+Unreal Engine 1:
+  Unreal 1, Unreal Tournament 1
+  The Wheel of Time
+Modified Unreal Engine 1:
+  DeusEx, Rune
+Unreal Engine 2:
+  Unreal Tournament 2003/2004
+  Postal 2
+Modified Unreal Engine 2:
+  Splinter Cell 1,2
+  Tribes: Vengeance
 
 Project home page and forum:
 http://www.gildor.org/projects/umodel
+
 
 For command line information run 'umodel' without arguments.
 Keyboard: press <H> for help, <ESC> for exit.
@@ -16,6 +25,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+22.10.2008
+- implemented Tribes: Vengeance support
+
 09.10.2008
 - implemented support for Unreal Engine 1 UMesh class
 - improved UE1 LodMesh support

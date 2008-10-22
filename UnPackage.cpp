@@ -187,7 +187,7 @@ UObject* UnPackage::CreateImport(int index)
 	//!! use full object path
 	// find object in loaded package export table
 	int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
-	if (NewIndex < 0)
+	if (NewIndex == INDEX_NONE)
 	{
 		printf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
 		return NULL;
@@ -218,6 +218,9 @@ static const char *PackageExtensions[] =
 	"u", "ut2", "utx", "uax", "usx", "ukx"
 #if RUNE
 	, "ums"
+#endif
+#if TRIBES3
+	, "pkg"
 #endif
 };
 

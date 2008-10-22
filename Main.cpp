@@ -147,6 +147,7 @@ int main(int argc, char **argv)
 				"Supported games:\n"
 #if UNREAL1
 				"    Unreal 1, Unreal Tournament 1\n"
+				"    The Wheel of Time\n"
 #endif
 #if DEUS_EX
 				"    DeusEx\n"
@@ -157,6 +158,9 @@ int main(int argc, char **argv)
 				"    Unreal Tournament 2003,2004\n"
 #if SPLINTER_CELL
 				"    Splinter Cell 1,2\n"
+#endif
+#if TRIBES3
+				"    Tribes: Vengeance\n"
 #endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
@@ -252,7 +256,7 @@ int main(int argc, char **argv)
 	if (argObjName)
 	{
 		int idx = Package->FindExport(argObjName, argClassName);
-		if (idx < 0)
+		if (idx == INDEX_NONE)
 		{
 			printf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
 			exit(1);

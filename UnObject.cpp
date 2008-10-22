@@ -22,10 +22,10 @@ UObject::~UObject()
 			break;
 		}
 	// remove self from package export table
-	// note: we using PackageIndex==-1 when creating dummy object, not exported from
+	// note: we using PackageIndex==INDEX_NONE when creating dummy object, not exported from
 	// any package, but which still belongs to this package (for example check Rune's
 	// USkelModel)
-	if (Package && PackageIndex >= 0)
+	if (Package && PackageIndex != INDEX_NONE)
 	{
 		assert(Package->ExportTable[PackageIndex].Object == this);
 		Package->ExportTable[PackageIndex].Object = NULL;
@@ -133,6 +133,10 @@ void UObject::Serialize(FArchive &Ar)
 	guard(UObject::Serialize);
 	// stack frame
 //	assert(!(ObjectFlags & RF_HasStack));
+
+#if TRIBES3
+	TRIBES_HDR(Ar, 0x19);
+#endif
 
 	// property list
 	while (true)
@@ -312,7 +316,7 @@ void UObject::Serialize(FArchive &Ar)
 			appError("Unknown property");
 			break;
 		}
-		if (Ar.ArPos != StopPos) appNotify("ArPos-StopPos = %d", Ar.ArPos - StopPos);
+		if (Ar.ArPos != StopPos) appNotify("%s\'%s\'.%s: ArPos-StopPos = %d", GetClassName(), Name, *PropName, Ar.ArPos - StopPos);
 
 		unguardf(("(%s.%s)", GetClassName(), *PropName));
 	}

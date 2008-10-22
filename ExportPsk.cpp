@@ -80,6 +80,7 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
 	{
 		VBone B;
+		memset(&B, 0, sizeof(B));
 		const FMeshBone &S = Mesh->RefSkeleton[i];
 		strcpy(B.Name, S.Name);
 		B.NumChildren = S.NumChildren;
@@ -127,6 +128,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	for (i = 0; i < numBones; i++)
 	{
 		FNamedBoneBinary B;
+		memset(&B, 0, sizeof(B));
 		const FNamedBone &S = Anim->RefBones[i];
 		strcpy(B.Name, *S.Name);
 		B.Flags       = S.Flags;		// reserved, but copy ...
@@ -143,6 +145,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	for (i = 0; i < numAnims; i++)
 	{
 		AnimInfoBinary A;
+		memset(&A, 0, sizeof(A));
 		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
 		strcpy(A.Name,  *S.Name);
 		strcpy(A.Group, S.Groups.Num() ? *S.Groups[0] : "None");

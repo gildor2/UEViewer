@@ -196,6 +196,14 @@ struct FMeshAnimSeq
 	float					f28;			//??
 	friend FArchive& operator<<(FArchive &Ar, FMeshAnimSeq &A)
 	{
+#if TRIBES3
+		TRIBES_HDR(Ar, 0x17);
+		if (Ar.IsTribes3() && t3_hdrV == 1)
+		{
+			int unk;
+			Ar << unk;
+		}
+#endif
 		if (Ar.ArVer > 114)
 			Ar << A.f28;
 		Ar << A.Name;
@@ -351,6 +359,19 @@ struct FRawIndexBuffer
 };
 
 
+#if TRIBES3
+struct T3_BasisVector
+{
+	FVector			v1;
+	FVector			v2;
+
+	friend FArchive& operator<<(FArchive &Ar, T3_BasisVector &V)
+	{
+		return Ar << V.v1 << V.v2;
+	}
+};
+#endif
+
 struct FSkinVertexStream
 {
 	//?? unknown
@@ -363,7 +384,19 @@ struct FSkinVertexStream
 
 	friend FArchive& operator<<(FArchive &Ar, FSkinVertexStream &S)
 	{
-		return Ar << S.Revision << S.f18 << S.f1C << S.Verts;
+#if TRIBES3
+		TRIBES_HDR(Ar, 0x11);
+#endif
+		Ar << S.Revision << S.f18 << S.f1C << S.Verts;
+#if TRIBES3
+		if (Ar.IsTribes3() && t3_hdrSV >= 1)
+		{
+			int unk1;
+			TArray<T3_BasisVector> unk2;
+			Ar << unk1 << unk2;
+		}
+#endif
+		return Ar;
 	}
 };
 
@@ -543,6 +576,11 @@ struct AnalogTrack
 };
 
 
+#if TRIBES3
+void SerializeFlexTracks(FArchive &Ar);
+void FixTribesMotionChunk(struct MotionChunk &M);
+#endif
+
 // Individual animation; subgroup of bones with compressed animation.
 // Note: SplinterCell uses MotionChunkFixedPoint and MotionChunkFloat structures
 struct MotionChunk
@@ -560,7 +598,16 @@ struct MotionChunk
 
 	friend FArchive& operator<<(FArchive &Ar, MotionChunk &M)
 	{
-		return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+#if TRIBES3
+		if (Ar.IsTribes3())
+		{
+			if (M.Flags >= 3)
+				SerializeFlexTracks(Ar);
+			FixTribesMotionChunk(M);
+		}
+#endif
+		return Ar;
 	}
 };
 
@@ -582,6 +629,13 @@ struct FNamedBone
 	}
 };
 
+/*
+ * Possible versions:
+ *	0			UT2003, UT2004
+ *	6			Tribes3
+ *	1000		SplinterCell
+ *	2000		SplinterCell2
+ */
 
 class UMeshAnimation : public UObject
 {
@@ -613,7 +667,6 @@ public:
 #if UNREAL1
 		if (Ar.ArVer < 100) Upgrade();		// UE1 code
 #endif
-
 		unguard;
 	}
 };
@@ -842,12 +895,23 @@ struct FStaticLODModel
 	{
 		guard(FStaticLODModel<<);
 
+#if TRIBES3
+		TRIBES_HDR(Ar, 9);
+#endif
 		Ar << M.f0 << M.SkinPoints << M.NumDynWedges;
 		Ar << M.SmoothSections << M.RigidSections << M.SmoothIndices << M.RigidIndices;
 		Ar << M.VertexStream;
 		Ar << M.VertInfluences << M.Wedges << M.Faces << M.Points;
 		Ar << M.LODDistanceFactor << M.LODHysteresis << M.NumSharedVerts;
 		Ar << M.LODMaxInfluences << M.f114 << M.f118;
+#if TRIBES3
+		if (Ar.IsTribes3() && t3_hdrSV >= 1)
+		{
+			TLazyArray<T3_BasisVector> unk1;
+			TArray<T3_BasisVector> unk2;
+			Ar << unk1 << unk2;
+		}
+#endif
 		return Ar;
 
 		unguard;
@@ -966,7 +1030,23 @@ struct FSCellUnk4
 	}
 };
 
-#endif
+#endif // SPLINTER_CELL
+
+#if TRIBES3
+
+struct FT3Unk1
+{
+	short		f0[3];
+	byte		f1[2];
+	int			f2;
+
+	friend FArchive& operator<<(FArchive &Ar, FT3Unk1 &V)
+	{
+		return Ar << V.f0[0] << V.f0[1] << V.f0[2] << V.f1[0] << V.f1[1] << V.f2;
+	}
+};
+
+#endif // TRIBES3
 
 
 class USkeletalMesh : public ULodMesh
@@ -1017,6 +1097,9 @@ public:
 #endif
 
 		Super::Serialize(Ar);
+#if TRIBES3
+		TRIBES_HDR(Ar, 4);
+#endif
 		Ar << Points2 << RefSkeleton << Animation;
 		Ar << SkeletalDepth << WeightIndices << BoneInfluences;
 		Ar << AttachAliases << AttachBoneNames << AttachCoords;
@@ -1049,6 +1132,28 @@ public:
 			Ar << LODModels << f224 << Points << Wedges << Triangles << VertInfluences;
 			Ar << CollapseWedge << f1C8;
 		}
+#if TRIBES3
+		if (Ar.IsTribes3() && t3_hdrSV >= 3)
+		{
+	#if 0
+			// it looks like format of following data was chenged sinse
+			// data was prepared, and game executeble does not load these
+			// LazyArrays (otherwise error should occur) -- so we are
+			// simply skipping these arrays
+			TLazyArray<FT3Unk1>    unk1;
+			TLazyArray<FMeshWedge> unk2;
+			TLazyArray<word>       unk3;
+			Ar << unk1 << unk2 << unk3;
+	#else
+			SkipLazyArray(Ar);
+			SkipLazyArray(Ar);
+			SkipLazyArray(Ar);
+	#endif
+			// nothing interesting below ...
+			Ar.Seek(Ar.ArStopper);
+			return;
+		}
+#endif
 
 		if (Ar.ArVer > 119)
 		{

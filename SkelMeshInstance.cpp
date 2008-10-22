@@ -171,7 +171,7 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 		assert(B.ParentIndex <= i);
 
 		// find reference bone in animation track
-		data->BoneMap = -1;
+		data->BoneMap = INDEX_NONE;
 		if (Anim)
 		{
 			for (int j = 0; j < Anim->RefBones.Num(); j++)
@@ -313,7 +313,7 @@ int CSkelMeshInstance::FindBone(const char *BoneName) const
 	for (int i = 0; i < Mesh->RefSkeleton.Num(); i++)
 		if (!strcmp(Mesh->RefSkeleton[i].Name, BoneName))
 			return i;
-	return -1;
+	return INDEX_NONE;
 }
 
 
@@ -322,18 +322,18 @@ int CSkelMeshInstance::FindAnim(const char *AnimName) const
 	const USkeletalMesh *Mesh  = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 	if (!Anim || !AnimName)
-		return -1;
+		return INDEX_NONE;
 	for (int i = 0; i < Anim->AnimSeqs.Num(); i++)
 		if (!strcmp(Anim->AnimSeqs[i].Name, AnimName))
 			return i;
-	return -1;
+	return INDEX_NONE;
 }
 
 
 void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 {
 	int BoneIndex = FindBone(BoneName);
-	if (BoneIndex < 0) return;
+	if (BoneIndex == INDEX_NONE) return;
 	BoneData[BoneIndex].Scale = scale;
 }
 
@@ -500,7 +500,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 		const MotionChunk  *Motion1  = NULL, *Motion2  = NULL;
 		const FMeshAnimSeq *AnimSeq1 = NULL, *AnimSeq2 = NULL;
 		float Time2;
-		if (Chn->AnimIndex1 >= 0)
+		if (Chn->AnimIndex1 != INDEX_NONE)
 		{
 			Motion1  = &Anim->Moves   [Chn->AnimIndex1];
 			AnimSeq1 = &Anim->AnimSeqs[Chn->AnimIndex1];
@@ -537,8 +537,12 @@ void CSkelMeshInstance::UpdateSkeleton()
 			CVec3 BP;
 			CQuat BO;
 			int BoneIndex = data->BoneMap;
+			// check for disabled bone (required for Tribes3)
+			if (Motion1 && Motion1->BoneIndices.Num() && BoneIndex != INDEX_NONE &&
+				Motion1->BoneIndices[BoneIndex] == INDEX_NONE)
+				BoneIndex = INDEX_NONE;		// will use RefSkeleton for this bone
 			// compute bone orientation
-			if (Motion1 && BoneIndex >= 0)
+			if (Motion1 && BoneIndex != INDEX_NONE)
 			{
 				// get bone position from track
 				if (!Motion2 || Chn->SecondaryBlend != 1.0f)
@@ -725,11 +729,11 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 		MaxAnimChannel = Channel;
 
 	int NewAnimIndex = FindAnim(AnimName);
-	if (NewAnimIndex < 0)
+	if (NewAnimIndex == INDEX_NONE)
 	{
 		// show default pose
-		Chn.AnimIndex1     = -1;
-		Chn.AnimIndex2     = -1;
+		Chn.AnimIndex1     = INDEX_NONE;
+		Chn.AnimIndex2     = INDEX_NONE;
 		Chn.Time           = 0;
 		Chn.Rate           = 0;
 		Chn.Looped         = false;
@@ -748,7 +752,7 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 	}
 
 	Chn.AnimIndex1     = NewAnimIndex;
-	Chn.AnimIndex2     = -1;
+	Chn.AnimIndex2     = INDEX_NONE;
 	Chn.Time           = 0;
 	Chn.SecondaryBlend = 0;
 	Chn.TweenTime      = TweenTime;
@@ -768,7 +772,7 @@ void CSkelMeshInstance::SetBlendParams(int Channel, float BlendAlpha, const char
 	if (BoneName)
 	{
 		Chn.RootBone = FindBone(BoneName);
-		if (Chn.RootBone < 0)	// bone not found -- ignore animation
+		if (Chn.RootBone == INDEX_NONE)	// bone not found -- ignore animation
 			Chn.BlendAlpha = 0;
 	}
 	unguard;

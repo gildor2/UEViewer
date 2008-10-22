@@ -105,7 +105,7 @@ void CSkelMeshViewer::Test()
 		{
 			const MotionChunk &M = Anim->Moves[i];
 			for (int j = 0; j < M.BoneIndices.Num(); j++)
-				if (M.BoneIndices[j] != j)
+				if (M.BoneIndices[j] != j && M.BoneIndices[j] != INDEX_NONE)
 					appNotify("anim[%d]: idx %d != %d", i, j, M.BoneIndices[j]);
 		}
 	}

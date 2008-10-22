@@ -24,7 +24,7 @@ exit
 
 :cont
 
-goto unreal1
+rem goto tribes3
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -121,6 +121,14 @@ set run=umodel.exe -path=data/Rune
 rem %run% plants
 rem %run% objects
 rem %run% objects Skull
+goto exit
+
+rem ---------------------------------------------------------------------------
+rem		TRIBES3
+rem ---------------------------------------------------------------------------
+:tribes3
+set run=umodel.exe -path="C:/GAMES/Tribes - Vengeance/Content/Art"
+%run% LightArmourFem ImperialLightJulia
 goto exit
 
 rem ---------------------------------------------------------------------------

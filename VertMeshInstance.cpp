@@ -5,12 +5,12 @@
 int CVertMeshInstance::FindAnim(const char *AnimName) const
 {
 	if (!AnimName)
-		return -1;
+		return INDEX_NONE;
 	const UVertMesh *Mesh = GetMesh();
 	for (int i = 0; i < Mesh->AnimSeqs.Num(); i++)
 		if (!strcmp(Mesh->AnimSeqs[i].Name, AnimName))
 			return i;
-	return -1;
+	return INDEX_NONE;
 }
 
 
@@ -23,7 +23,7 @@ void CVertMeshInstance::Draw()
 
 	int FrameNum1, FrameNum2;
 	float frac;
-	if (AnimIndex >= 0)
+	if (AnimIndex != INDEX_NONE)
 	{
 		const FMeshAnimSeq &A = Mesh->AnimSeqs[AnimIndex];
 		FrameNum1 = appFloor(AnimTime);
@@ -143,18 +143,18 @@ void CVertMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 	assert(Channel == 0);
 
 	int NewAnimIndex = FindAnim(AnimName);
-	if (NewAnimIndex < 0)
+	if (NewAnimIndex == INDEX_NONE)
 	{
 		// show default pose
-		AnimIndex     = -1;
-		AnimTime      = 0;
-		AnimRate      = 0;
-		AnimLooped    = false;
+		AnimIndex  = INDEX_NONE;
+		AnimTime   = 0;
+		AnimRate   = 0;
+		AnimLooped = false;
 		return;
 	}
 
 	const UVertMesh *Mesh = GetMesh();
-	AnimRate   = (NewAnimIndex >= 0) ? Mesh->AnimSeqs[NewAnimIndex].Rate * Rate : 0;
+	AnimRate   = (NewAnimIndex != INDEX_NONE) ? Mesh->AnimSeqs[NewAnimIndex].Rate * Rate : 0;
 	AnimLooped = Looped;
 
 	if (NewAnimIndex == AnimIndex && Looped)
@@ -163,8 +163,8 @@ void CVertMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 		return;
 	}
 
-	AnimIndex     = NewAnimIndex;
-	AnimTime      = 0;
+	AnimIndex = NewAnimIndex;
+	AnimTime  = 0;
 
 	unguard;
 }

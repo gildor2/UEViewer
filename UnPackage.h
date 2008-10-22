@@ -199,7 +199,7 @@ public:
 				continue;
 			return i;
 		}
-		return -1;
+		return INDEX_NONE;
 	}
 
 	UObject* CreateExport(int index);

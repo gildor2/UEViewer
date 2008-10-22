@@ -721,6 +721,7 @@ sub ExpandWildcards {
 		$src =~ s/\*/\.\*/g;		# '*' -> '.*'
 		# get path, if exists
 		my (undef, $path, $mask) = $src =~ /((.*)\/)?([^\/]+)/;
+		$mask = "^".$mask."\$";		# add ^ at start and $ at end
 		$path = "." if !defined($path);
 		# scan directory
 		opendir (DIR, $path) or Error ("Directory \"$path\" was not found");

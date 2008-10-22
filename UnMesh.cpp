@@ -188,7 +188,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	else if (Ar.ArVer >= 66)
 		Ar << tmpTextureLOD;
 
-	if (!strcmp(realClassName, "LodMesh"))
+	if (strcmp(realClassName, "Mesh") != 0)
 	{
 		// ULodMesh
 		Ar << tmpCollapsePointThus << FaceLevel << Faces << CollapseWedgeThus << tmpWedges;
@@ -221,8 +221,6 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	{
 		int i, j;
 		// we have loaded UMesh, should upgrade it to ULodMesh
-		assert(!strcmp(realClassName, "Mesh"));
-
 		// create materials
 		Materials.Empty(Textures.Num());
 		for (i = 0; i < Textures.Num(); i++)
@@ -506,6 +504,91 @@ void UMeshAnimation::SerializeSCell(FArchive &Ar)
 #endif // SPLINTER_CELL
 
 
+#if TRIBES3
+
+struct FlexTrackStatic
+{
+	FVector		v1;
+	FVector		v2;
+
+	friend FArchive& operator<<(FArchive &Ar, FlexTrackStatic &T)
+	{
+		return Ar << T.v1 << T.v2;
+	}
+};
+
+void SerializeFlexTracks(FArchive &Ar)
+{
+	guard(SerializeFlexTracks);
+
+	int numTracks;
+	Ar << AR_INDEX(numTracks);
+
+	if (numTracks) appNotify("%d FlexTracks\n", numTracks);	//!!!
+
+	for (int i = 0; i < numTracks; i++)
+	{
+		int trackType;
+		Ar << trackType;
+
+		switch (trackType)
+		{
+		case 1:
+			// FlexTrackStatic
+			{
+				appError("1");
+				FlexTrackStatic track;
+				Ar << track;
+			}
+			break;
+
+		case 2:
+			appError("2");
+			break;
+
+		case 3:
+			// FlexTrack48
+			appError("3");
+			break;
+
+		case 4:
+			// FlexTrack48RotOnly
+			appError("4");
+			break;
+		}
+		printf("flex: %d\n", trackType);
+	}
+
+	unguard;
+}
+
+void FixTribesMotionChunk(MotionChunk &M)
+{
+	int numBones = M.AnimTracks.Num();
+	for (int i = 0; i < numBones; i++)
+	{
+		AnalogTrack &A = M.AnimTracks[i];
+		if (A.Flags & 0x1000)
+		{
+			if (!M.BoneIndices.Num())
+			{
+				// create BoneIndices
+				M.BoneIndices.Empty(numBones);
+				for (int j = 0; j < numBones; j++)
+					M.BoneIndices.AddItem(j);
+			}
+			// bone overrided by Impersonator LipSinc
+			A.KeyQuat.Empty();
+			A.KeyPos.Empty();
+			A.KeyTime.Empty();
+			M.BoneIndices[i] = INDEX_NONE;
+		}
+	}
+}
+
+#endif // TRIBES3
+
+
 #if UNREAL1
 
 void UMeshAnimation::Upgrade()
@@ -535,7 +618,7 @@ void UMeshAnimation::Upgrade()
 	unguard;
 }
 
-#endif
+#endif // UNREAL1
 
 
 /*-----------------------------------------------------------------------------
@@ -1016,13 +1099,13 @@ void USkelModel::Serialize(FArchive &Ar)
 		// setup UOnject
 		sm->Name         = name;
 		sm->Package      = Package;
-		sm->PackageIndex = -1;				// not really exported
+		sm->PackageIndex = INDEX_NONE;		// not really exported
 	}
 	// create animation
 	Anim = static_cast<UMeshAnimation*>(CreateClass("MeshAnimation"));
 	Anim->Name         = Name;
 	Anim->Package      = Package;
-	Anim->PackageIndex = -1;				// not really exported
+	Anim->PackageIndex = INDEX_NONE;		// not really exported
 	ConvertRuneAnimations(*Anim, joints, AnimSeqs);
 	// get baseframe
 	assert(strcmp(Anim->AnimSeqs[0].Name, "baseframe") == 0);
@@ -1124,7 +1207,7 @@ void USkelModel::Serialize(FArchive &Ar)
 			}
 			// find texture in object's package
 			int texExportIdx = Package->FindExport(texName);
-			if (texExportIdx < 0)
+			if (texExportIdx == INDEX_NONE)
 			{
 				printf("ERROR: unable to find export \"%s\" for mesh \"%s\" (%d)\n",
 					texName, Name, modelIdx);

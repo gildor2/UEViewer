@@ -183,6 +183,14 @@ struct FMipmap
 
 	friend FArchive& operator<<(FArchive &Ar, FMipmap &M)
 	{
+#if TRIBES3
+		TRIBES_HDR(Ar, 0x1A);
+		if (t3_hdrSV >= 1)
+		{
+			TLazyArray<byte> SkipArray;
+			Ar << SkipArray;
+		}
+#endif
 		return Ar << M.DataArray << M.USize << M.VSize << M.UBits << M.VBits;
 	}
 };
@@ -219,9 +227,7 @@ public:
 	float			MinFrameRate, MaxFrameRate;
 	// mipmaps
 	TArray<FMipmap>	Mips;				// native
-#if SPLINTER_CELL
-	byte			CompFormat;
-#endif
+	ETextureFormat	CompFormat;			// UT1, SplinterCell, Tribes3
 	// UE1 fields
 	byte			bHasComp;
 
@@ -280,9 +286,7 @@ public:
 		PROP_BYTE(PrimeCount)
 		PROP_FLOAT(MinFrameRate)
 		PROP_FLOAT(MaxFrameRate)
-#if SPLINTER_CELL
 		PROP_BYTE(CompFormat)
-#endif
 		PROP_BOOL(bHasComp)
 	END_PROP_TABLE
 

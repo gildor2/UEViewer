@@ -1,3 +1,14 @@
+?? TRIBES3:
+  ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)
+    ! check this un UnrealEd
+    * To fix: should create Moves.BoneIndices[], fill with 'i' and mark 0x1000-flags bones with -1
+      ! check PSA generation too (will be buggy) -- require RefPose bones, but no in UMeshAnimation ...
+  ! check all meshes, find FlexTracks
+  - have unknown texture type (see BitmapMaterial.uc: have compressed normalmaps)
+  - packages: not classical directory structure
+  - crash (assert) when switching mesh LOD levels
+  * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
+
 ! implement socket support (visualization)
 ? support Undying
 

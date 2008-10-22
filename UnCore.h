@@ -32,6 +32,9 @@ class UnPackage;
 #define OFS2FIELD(struc, ofs, type)	(*(type*) ((byte*)(struc) + ofs))
 
 
+#define INDEX_NONE			-1
+
+
 /*-----------------------------------------------------------------------------
 	FName class
 -----------------------------------------------------------------------------*/
@@ -152,6 +155,14 @@ public:
 	{
 		return (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
 			   (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
+	}
+#endif
+#if TRIBES3
+	bool IsTribes3()
+	{
+		return ((ArVer == 0x81 || ArVer == 0x82) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
+			   ((ArVer == 0x7B) && (ArLicenseeVer >= 3 && ArLicenseeVer <= 0xF)) ||
+			   ((ArVer == 0x7E) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
 	}
 #endif
 };
@@ -571,6 +582,18 @@ template<class T> class TLazyArray : public TArray<T>
 };
 
 
+inline void SkipLazyArray(FArchive &Ar)
+{
+	guard(SkipLazyArray);
+	assert(Ar.IsLoading);
+	int pos;
+	Ar << pos;
+	assert(Ar.ArPos < pos);
+	Ar.Seek(pos);
+	unguard;
+}
+
+
 #define COPY_ARRAY(Src, Dst)				\
 	if (Src.Num())							\
 	{										\
@@ -606,6 +629,24 @@ public:
 -----------------------------------------------------------------------------*/
 
 extern FArchive *GDummySave;
+
+
+/*-----------------------------------------------------------------------------
+	Miscellaneous game support
+-----------------------------------------------------------------------------*/
+
+#if TRIBES3
+// macro to skip Tribes3 FHeader structure
+#define TRIBES_HDR(Ar,Ver)			\
+	int t3_hdrV = 0, t3_hdrSV = 0;	\
+	if (Ar.IsTribes3() && Ar.ArLicenseeVer >= Ver) \
+	{								\
+		int check;					\
+		Ar << check;				\
+		assert(check == 3);			\
+		Ar << t3_hdrV << t3_hdrSV;	\
+	}
+#endif
 
 
 #endif // __UNCORE_H__
