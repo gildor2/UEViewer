@@ -44,7 +44,7 @@ void CMeshViewer::Test()
 {
 	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
 	// empty ...
-	VERIFY_NOT_NULL(Textures.Num());
+//	VERIFY_NOT_NULL(Textures.Num());
 //	VERIFY(CollapseWedgeThus.Num(), Wedges.Num()); -- no for UMesh
 }
 #endif

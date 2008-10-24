@@ -207,6 +207,7 @@ struct FMeshAnimSeq
 		if (Ar.ArVer > 114)
 			Ar << A.f28;
 		Ar << A.Name;
+#if UNREAL1
 		if (Ar.ArVer < 100)
 		{
 			// UE1 support
@@ -217,6 +218,7 @@ struct FMeshAnimSeq
 				A.Groups.AddItem(tmpGroup);
 		}
 		else
+#endif
 		{
 			Ar << A.Groups;					// array of groups
 		}
@@ -248,7 +250,7 @@ class ULodMesh : public UPrimitive
 	DECLARE_CLASS(ULodMesh, UPrimitive);
 public:
 	unsigned			AuthKey;			// used in USkeletalMesh only?
-	int					Version;			// UT2 have '4' in this field
+	int					Version;			// see table above
 	int					VertexCount;
 	TArray<FMeshVert>	Verts;				// UVertMesh: NumFrames*NumVerts, USkeletalMesh: empty
 	TArray<UMaterial*>	Textures;			// skins of mesh parts
@@ -588,7 +590,7 @@ struct MotionChunk
 	FVector					RootSpeed3D;	// Net 3d speed.
 	float					TrackTime;		// Total time (Same for each track.)
 	int						StartBone;		// If we're a partial-hierarchy-movement, this is the lowest bone.
-	unsigned				Flags;			// Reserved
+	unsigned				Flags;			// Reserved; used as UMeshAnimation.Version in post-UT2004 UE2 versions
 
 	TArray<int>				BoneIndices;	// Refbones number of Bone indices (-1 or valid one) to fast-find tracks for a particular bone.
 	// Frame-less, compressed animation tracks. NumBones times NumAnims tracks in total
@@ -599,13 +601,14 @@ struct MotionChunk
 	friend FArchive& operator<<(FArchive &Ar, MotionChunk &M)
 	{
 		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+#if TRIBES3 || HP3
+		//?? new UE2 version, not game-specific
+		if (M.Flags >= 3)					//?? version >= 0x81 ? (not checked)
+			SerializeFlexTracks(Ar);
+#endif
 #if TRIBES3
 		if (Ar.IsTribes3())
-		{
-			if (M.Flags >= 3)
-				SerializeFlexTracks(Ar);
 			FixTribesMotionChunk(M);
-		}
 #endif
 		return Ar;
 	}
@@ -632,6 +635,7 @@ struct FNamedBone
 /*
  * Possible versions:
  *	0			UT2003, UT2004
+ *	4			Harry Potter and the Prisoner of Azkaban
  *	6			Tribes3
  *	1000		SplinterCell
  *	2000		SplinterCell2
@@ -1155,15 +1159,19 @@ public:
 		}
 #endif
 
-		if (Ar.ArVer > 119)
+		if (Ar.ArVer >= 120)
 		{
 			Ar << AuthKey;
 		}
-		if (Ar.ArVer > 121)
+		if (Ar.ArVer >= 122)
 		{
 			Ar << KarmaProps << BoundingSpheres << BoundingBoxes << f32C;
 		}
-		if (Ar.ArVer > 126)
+#if HP3
+		if (Ar.ArVer >= 129)	// post-UT2 code
+			return;
+#endif
+		if (Ar.ArVer >= 127)
 		{
 			Ar << CollisionMesh;
 		}

@@ -144,23 +144,29 @@ int main(int argc, char **argv)
 				"    VertMesh        exported as Unreal 3d file\n"
 				"    Texture         exported in tga format\n"
 				"\n"
-				"Supported games:\n"
+				"List of supported games:\n"
 #if UNREAL1
-				"    Unreal 1, Unreal Tournament 1\n"
-				"    The Wheel of Time\n"
-#endif
-#if DEUS_EX
-				"    DeusEx\n"
-#endif
-#if RUNE
-				"    Rune\n"
-#endif
+				"Unreal Engine 1:\n"
+				"    Unreal 1, Unreal Tournament 1, The Wheel of Time"
+	#if DEUS_EX
+				", DeusEx"
+	#endif
+	#if RUNE
+				", Rune"
+	#endif
+				"\n"
+#endif // UNREAL1
+				"Unreal Engine 2:\n"
+
 				"    Unreal Tournament 2003,2004\n"
 #if SPLINTER_CELL
 				"    Splinter Cell 1,2\n"
 #endif
 #if TRIBES3
 				"    Tribes: Vengeance\n"
+#endif
+#if HP3
+				"    Harry Potter and the Prisoner of Azkaban\n"
 #endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"

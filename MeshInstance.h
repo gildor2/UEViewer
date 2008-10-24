@@ -49,7 +49,8 @@ public:
 			int TexIndex = M.TextureIndex;
 			if (TexIndex >= pMesh->Textures.Num())		// possible situation; see ONSWeapons-A.ukx/ParasiteMine
 				TexIndex = 0;
-			UMaterial *Mat = pMesh->Textures[TexIndex];
+			// it is possible, that Textures array is empty (mesh textured by script)
+			UMaterial *Mat = pMesh->Textures.Num() ? pMesh->Textures[TexIndex] : NULL;
 			if (Mat)
 				Mat->Bind(M.PolyFlags);
 			else

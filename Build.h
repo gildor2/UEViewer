@@ -6,3 +6,4 @@
 #define DEUS_EX			1
 #define RUNE			1
 #define TRIBES3			1
+#define HP3				1

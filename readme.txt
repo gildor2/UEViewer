@@ -11,6 +11,7 @@ Modified Unreal Engine 1:
 Unreal Engine 2:
   Unreal Tournament 2003/2004
   Postal 2
+  Harry Potter and the Prisoner of Azkaban
 Modified Unreal Engine 2:
   Splinter Cell 1,2
   Tribes: Vengeance
@@ -25,6 +26,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+23.10.2008
+- implemented Harry Potter and the Prisoner of Azkaban support
+
 22.10.2008
 - implemented Tribes: Vengeance support
 

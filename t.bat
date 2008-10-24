@@ -24,7 +24,9 @@ exit
 
 :cont
 
-rem goto tribes3
+rem umodel.exe "C:\!umodel-data\--Dark Sector 9--\PAWNAI.u" OBrien
+goto hp3
+goto exit
 rem goto bugs
 
 rem ---------------------------------------------------------------------------
@@ -130,6 +132,15 @@ rem ---------------------------------------------------------------------------
 set run=umodel.exe -path="C:/GAMES/Tribes - Vengeance/Content/Art"
 %run% LightArmourFem ImperialLightJulia
 goto exit
+
+rem ---------------------------------------------------------------------------
+rem Harry Potter and the Prisoner of Azkaban
+rem ---------------------------------------------------------------------------
+:hp3
+set run=umodel.exe -path=data/HP3
+%run% HPCharacters
+goto exit
+
 
 rem ---------------------------------------------------------------------------
 rem 	BUGS

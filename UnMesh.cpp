@@ -190,6 +190,8 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 
 	if (strcmp(realClassName, "Mesh") != 0)
 	{
+		guard(ULodMesh1::Serialize);
+
 		// ULodMesh
 		Ar << tmpCollapsePointThus << FaceLevel << Faces << CollapseWedgeThus << tmpWedges;
 		Ar << Materials << tmpSpecialFaces << tmpModelVerts << tmpSpecialVerts;
@@ -216,6 +218,8 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 			COPY_ARRAY(NewVerts, Verts)
 			unguard;
 		}
+
+		unguard;
 	}
 	else
 	{
@@ -504,7 +508,7 @@ void UMeshAnimation::SerializeSCell(FArchive &Ar)
 #endif // SPLINTER_CELL
 
 
-#if TRIBES3
+#if TRIBES3 || HP3
 
 struct FlexTrackStatic
 {
@@ -561,6 +565,10 @@ void SerializeFlexTracks(FArchive &Ar)
 
 	unguard;
 }
+
+#endif // TRIBES3 || HP3
+
+#if TRIBES3
 
 void FixTribesMotionChunk(MotionChunk &M)
 {
