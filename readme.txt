@@ -16,6 +16,12 @@ Modified Unreal Engine 2:
   Splinter Cell 1,2
   Tribes: Vengeance
 
+List of games with limited support:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using "-noanim" option (unsupported animation format):
+  Harry Potter (UE1)
+  Devastation
+
 Project home page and forum:
 http://www.gildor.org/projects/umodel
 
@@ -26,6 +32,10 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+30.10.2008
+- added "-noanim" command line option to prevent MeshAnimation (UE2) / Animation
+  (UE1) class loading in a case of unsupported data format
+
 23.10.2008
 - implemented Harry Potter and the Prisoner of Azkaban support
 

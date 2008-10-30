@@ -586,9 +586,9 @@ void FixTribesMotionChunk(MotionChunk &M)
 					M.BoneIndices.AddItem(j);
 			}
 			// bone overrided by Impersonator LipSinc
-			A.KeyQuat.Empty();
-			A.KeyPos.Empty();
-			A.KeyTime.Empty();
+//			A.KeyQuat.Empty();
+//			A.KeyPos.Empty();
+//			A.KeyTime.Empty();
 			M.BoneIndices[i] = INDEX_NONE;
 		}
 	}

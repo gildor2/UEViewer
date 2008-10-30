@@ -73,6 +73,7 @@ struct CPropInfo
 
 
 void RegisterClasses(CClassInfo *Table, int Count);
+void UnregisterClass(const char *Name);
 UObject *CreateClass(const char *Name);
 bool IsKnownClass(const char *Name);
 

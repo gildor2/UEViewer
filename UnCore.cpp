@@ -26,6 +26,11 @@ static char NotifyBuf[512];
 
 void appSetNotifyHeader(const char *fmt, ...)
 {
+	if (!fmt)
+	{
+		NotifyBuf[0] = 0;
+		return;
+	}
 	va_list	argptr;
 	va_start(argptr, fmt);
 	vsnprintf(ARRAY_ARG(NotifyBuf), fmt, argptr);

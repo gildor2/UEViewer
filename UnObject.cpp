@@ -339,6 +339,26 @@ void RegisterClasses(CClassInfo *Table, int Count)
 }
 
 
+// may be useful
+void UnregisterClass(const char *Name)
+{
+	for (int i = 0; i < GClassCount; i++)
+		if (!strcmp(GClasses[i].Name, Name))
+		{
+			printf("Unregistered %s\n", Name);
+			// class was found
+			if (i == GClassCount-1)
+			{
+				// last table entry
+				GClassCount--;
+				return;
+			}
+			memcpy(GClasses+i, GClasses+i+1, GClassCount-i-1);
+			GClassCount--;
+		}
+}
+
+
 UObject *CreateClass(const char *Name)
 {
 	for (int i = 0; i < GClassCount; i++)

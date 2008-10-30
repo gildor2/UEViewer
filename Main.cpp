@@ -79,6 +79,8 @@ static void RegisterExporter(const char *ClassName, const char *FileExt, Exporte
 
 static bool ExportObject(UObject *Obj)
 {
+	guard(ExportObject);
+
 	for (int i = 0; i < numExporters; i++)
 	{
 		const CExporterInfo &Info = exporters[i];
@@ -99,6 +101,8 @@ static bool ExportObject(UObject *Obj)
 		}
 	}
 	return false;
+
+	unguardf(("%s'%s'", Obj->GetClassName(), Obj->Name));
 }
 
 
@@ -137,6 +141,8 @@ int main(int argc, char **argv)
 				"Options:\n"
 				"    -path=PATH      path to UT installation directory; if not specified,\n"
 				"                    program will search for packages in current directory\n"
+				"    -noanim         disable loading of MeshAnimation classes in a case of\n"
+				"                    unsupported data format\n"
 				"\n"
 				"Supported resources for export:\n"
 				"    SkeletalMesh    exported as ActorX psk file\n"
@@ -175,34 +181,36 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, listOnly = false;
+	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
 		if (argv[arg][0] == '-')
 		{
 			const char *opt = argv[arg]+1;
-			if (!strcmp(opt, "dump"))
+			if (!stricmp(opt, "dump"))
 			{
 				dump  = true;
 				view  = false;
 				exprt = false;
 			}
-			else if (!strcmp(opt, "check"))
+			else if (!stricmp(opt, "check"))
 			{
 				dump  = false;
 				view  = false;
 				exprt = false;
 			}
-			else if (!strcmp(opt, "export"))
+			else if (!stricmp(opt, "export"))
 			{
 				dump  = false;
 				view  = false;
 				exprt = true;
 			}
-			else if (!strcmp(opt, "list"))
+			else if (!stricmp(opt, "list"))
 				listOnly = true;
-			else if (!strncmp(opt, "path=", 5))
+			else if (!stricmp(opt, "noanim"))
+				noAnim = true;
+			else if (!strnicmp(opt, "path=", 5))
 				UnPackage::SetSearchPath(opt+5);
 			else
 				goto help;
@@ -229,6 +237,12 @@ int main(int argc, char **argv)
 
 	// prepare classes
 	RegisterUnrealClasses();
+	// remove UMeshAnimation loader when requisted by command line
+	if (noAnim)
+	{
+		UnregisterClass("MeshAnimation");
+		UnregisterClass("Animation");
+	}
 
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);
@@ -314,6 +328,7 @@ int main(int argc, char **argv)
 
 	if (exprt)
 	{
+		appSetNotifyHeader(NULL);
 		// export object, if possible
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
