@@ -24,8 +24,11 @@ exit
 
 :cont
 
+umodel.exe -path=C:\!UModel\data\Lineage2 LineageMonsters
 rem umodel.exe "C:\!umodel-data\--Dark Sector 9--\PAWNAI.u" OBrien
-goto hp3
+rem umodel.exe "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx"
+rem umodel.exe -noanim "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx" MElf_m000_l
+rem goto hp3
 goto exit
 rem goto bugs
 

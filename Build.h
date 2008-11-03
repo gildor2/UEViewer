@@ -7,3 +7,4 @@
 #define RUNE			1
 #define TRIBES3			1
 #define HP3				1
+#define LINEAGE2		1

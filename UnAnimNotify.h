@@ -38,6 +38,11 @@ public:
 	FName			Tag;
 	float			DrawScale;
 	FVector			DrawScale3D;
+#if LINEAGE2
+	bool			TrailCamera;
+	bool			IndependentRotation;
+	float			EffectScale;
+#endif
 
 	UAnimNotify_Effect()
 	:	DrawScale(1.0f)
@@ -53,6 +58,11 @@ public:
 		PROP_NAME(Tag)
 		PROP_FLOAT(DrawScale)
 		PROP_VECTOR(DrawScale3D)
+#if LINEAGE2
+		PROP_BOOL(TrailCamera)
+		PROP_BOOL(IndependentRotation)
+		PROP_FLOAT(EffectScale)
+#endif
 	END_PROP_TABLE
 };
 
@@ -81,6 +91,17 @@ public:
 	UObject			*Sound;			// USound*
 	float			Volume;
 	int				Radius;
+#if LINEAGE2
+	int				Random;
+	UObject			*DefaultWalkSound[3];
+	UObject			*DefaultRunSound[3];
+	UObject			*GrassWalkSound[3];
+	UObject			*GrassRunSound[3];
+	UObject			*WaterWalkSound[3];
+	UObject			*WaterRunSound[3];
+	UObject			*DefaultActorWalkSound[3];
+	UObject			*DefaultActorRunSound[3];
+#endif
 
 	UAnimNotify_Sound()
 	:	Radius(0)
@@ -90,6 +111,17 @@ public:
 		PROP_OBJ(Sound)
 		PROP_FLOAT(Volume)
 		PROP_INT(Radius)
+#if LINEAGE2
+		PROP_INT(Random)
+		PROP_OBJ(DefaultWalkSound)
+		PROP_OBJ(DefaultRunSound)
+		PROP_OBJ(GrassWalkSound)
+		PROP_OBJ(GrassRunSound)
+		PROP_OBJ(WaterWalkSound)
+		PROP_OBJ(WaterRunSound)
+		PROP_OBJ(DefaultActorWalkSound)
+		PROP_OBJ(DefaultActorRunSound)
+#endif
 	END_PROP_TABLE
 };
 

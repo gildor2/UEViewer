@@ -81,6 +81,63 @@ public:
 #endif
 	END_PROP_TABLE
 
+#if LINEAGE2
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UMaterial::Serialize);
+		Super::Serialize(Ar);
+		if (Ar.IsLineage2)
+		{
+			//?? separate to cpp
+			//?? look at latest script code for data layout
+			int unk1;
+			word unk2, unk3;
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x10)
+				Ar << unk1;
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1E)
+			{
+				int i;
+				// some function
+				char c0, TextureTranform, MAX_SAMPLER_NUM, MAX_TEXMAT_NUM, MAX_PASS_NUM, TwoPassRenderState, AlphaRef;
+				if (Ar.ArLicenseeVer >= 0x21)
+					Ar << c0;
+				Ar << TextureTranform << MAX_SAMPLER_NUM << MAX_TEXMAT_NUM << MAX_PASS_NUM << TwoPassRenderState << AlphaRef;
+				int SrcBlend, DestBlend, OverriddenFogColor;
+				Ar << SrcBlend << DestBlend << OverriddenFogColor;
+				// serialize matTexMatrix[16] (strange code)
+				for (i = 0; i < 8; i++)
+				{
+					char b1, b2;
+					Ar << b1 << b2;
+					for (int j = 0; j < 126; j++)
+					{
+						// really, 1Kb of floats and ints ...
+						char b3;
+						Ar << b3;
+					}
+				}
+				// another nested function - serialize FC_* variables
+				char c[8];					// union with "int FC_Color1, FC_Color2" (strange code)
+				Ar << c[2] << c[1] << c[0] << c[3] << c[6] << c[5] << c[4] << c[7];
+				int FC_FadePeriod, FC_FadePhase, FC_ColorFadeType;	// really, floats?
+				Ar << FC_FadePeriod << FC_FadePhase << FC_ColorFadeType;
+				// end of nested function
+				for (i = 0; i < 16; i++)
+				{
+					FString strTex;			// strTex[16]
+					Ar << strTex;
+				}
+				// end of function
+				FString ShaderCode;
+				Ar << ShaderCode;
+				if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1F)
+					Ar << unk2 << unk3;
+			}
+		}
+		unguard;
+	}
+#endif
+
 #if RENDERING
 	virtual void Bind(unsigned PolyFlags)
 	{}
@@ -328,6 +385,9 @@ public:
 	bool			AlphaTest;
 	bool			TwoSided;
 	byte			AlphaRef;
+#if LINEAGE2
+	bool			TreatAsTwoSided;			// strange ...
+#endif
 
 	UFinalBlend()
 	:	FrameBufferBlending(FB_Overwrite)
@@ -342,6 +402,7 @@ public:
 		PROP_BOOL(AlphaTest)
 		PROP_BOOL(TwoSided)
 		PROP_BYTE(AlphaRef)
+		PROP_BOOL(TreatAsTwoSided)
 	END_PROP_TABLE
 
 	BIND;

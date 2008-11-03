@@ -16,6 +16,26 @@ UnPackage::UnPackage(const char *filename)
 
 	appStrncpyz(Filename, filename, ARRAY_COUNT(Filename));
 
+#if LINEAGE2
+	int checkDword;
+	*this << checkDword;
+	if (checkDword == ('L' | ('i' << 16)))	// unicode string "Lineage2Ver111"
+	{
+		// this is a Lineage2 package
+		Seek(28);							// skip identifier string
+		// here is a encrypted by 'xor' standard FPackageFileSummary
+		// to get encryption key, can check 1st byte
+		byte b;
+		*this << b;
+		XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
+		IsLineage2  = 1;
+		ArPosOffset = 28;
+		// Seek(0) below will behave differently after PosOffset is set
+	}
+	// seek to header
+	Seek(0);
+#endif
+
 	// read summary
 	*this << Summary;
 	if (Summary.Tag != PACKAGE_FILE_TAG)
@@ -102,6 +122,18 @@ UnPackage::UnPackage(const char *filename)
 	appStrncpyz(Info.Name, buf, ARRAY_COUNT(Info.Name));
 	Info.Package = this;
 
+	// different game platforms autodetection
+	//?? should change this, if will implement command line switch to force mode
+#if SPLINTER_CELL
+	IsSplinterCell = (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
+					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
+#endif
+#if TRIBES3
+	IsTribes3 = ((ArVer == 0x81 || ArVer == 0x82) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
+				((ArVer == 0x7B) && (ArLicenseeVer >= 3 && ArLicenseeVer <= 0xF)) ||
+				((ArVer == 0x7E) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
+#endif
+
 	unguardf(("%s", filename));
 }
 
@@ -177,11 +209,11 @@ UObject* UnPackage::CreateImport(int index)
 		PackageName  = Rec.ObjectName;
 	}
 	// load package
-	UnPackage  *Package = LoadPackage(PackageName);
+	UnPackage *Package = LoadPackage(PackageName);
 
 	if (!Package)
 	{
-		printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
+//		printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
 		return NULL;
 	}
 	//!! use full object path
@@ -205,6 +237,7 @@ UObject* UnPackage::CreateImport(int index)
 
 TArray<UnPackage::PackageEntry> UnPackage::PackageMap;
 char							UnPackage::SearchPath[256];
+TArray<char*>					MissingPackages;
 
 
 void UnPackage::SetSearchPath(const char *Path)
@@ -232,16 +265,24 @@ static const char *PackagePaths[] =
 	"Sounds/",
 	"StaticMeshes/",
 	"System/",
+#if LINEAGE2
+	"Systextures",
+#endif
 	"Textures/"
 };
 
 
 UnPackage *UnPackage::LoadPackage(const char *Name)
 {
+	int i;
 	// check in loaded packages list
-	for (int i = 0; i < PackageMap.Num(); i++)
+	for (i = 0; i < PackageMap.Num(); i++)
 		if (!stricmp(Name, PackageMap[i].Name))
 			return PackageMap[i].Package;
+	// check missing packages
+	for (i = 0; i < MissingPackages.Num(); i++)
+		if (!stricmp(Name, MissingPackages[i]))
+			return NULL;
 
 	// find package file
 	for (int path = 0; path < ARRAY_COUNT(PackagePaths); path++)
@@ -262,5 +303,8 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 				return new UnPackage(buf);
 			}
 		}
+	// package is missing
+	printf("WARNING: package %s was not found\n", Name);
+	MissingPackages.AddItem(strdup(Name));
 	return NULL;
 }

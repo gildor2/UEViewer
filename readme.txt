@@ -15,6 +15,7 @@ Unreal Engine 2:
 Modified Unreal Engine 2:
   Splinter Cell 1,2
   Tribes: Vengeance
+  Lineage 2
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,6 +33,12 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+02.11.2008
+- implemented Lineage 2 texture and MeshAnimation support
+
+01.11.2008
+- implemented Lineage 2 package and SkeletalMesh support
+
 30.10.2008
 - added "-noanim" command line option to prevent MeshAnimation (UE2) / Animation
   (UE1) class loading in a case of unsupported data format

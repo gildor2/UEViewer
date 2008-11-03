@@ -4,7 +4,7 @@ All values are hexadecimal
 Unreal1, UT1, DeusEx,
 Rune			0		44,45
 UT2003					77-79
-UT2004			19,1B,1C,1D	77-80
+UT2004			19,1B-1D	77-80
 Postal2			1,2
 SplinterCell		09,0A,11	64
 SplinterCell2		14,19-1C	66
@@ -13,3 +13,4 @@ Tribes3 (*.pkg)		0		63,78
 			12-15,17	7E
 			17,18,1A,1B	81
 			1B		82
+Lineage2		1C,1E,1F	7B

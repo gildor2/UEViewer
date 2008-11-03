@@ -48,8 +48,8 @@ void CSkelMeshViewer::Test()
 		VERIFY_NULL(WeightIndices.Num());
 		VERIFY_NULL(BoneInfluences.Num());
 	}
-	VERIFY_NOT_NULL(VertInfluences.Num());
-	VERIFY_NOT_NULL(Wedges.Num());
+//	VERIFY_NOT_NULL(VertInfluences.Num());
+//	VERIFY_NOT_NULL(Wedges.Num());
 
 	for (i = 0; i < Mesh->LODModels.Num(); i++)
 	{
@@ -63,7 +63,7 @@ void CSkelMeshViewer::Test()
 //			(lod.f0.Num() != lod.NumDynWedges * 3 + 1)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
 		if ((lod.f0.Num() == 0) != (lod.NumDynWedges == 0)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
 // (may be empty)	if (lod.VertexStream.Verts.Num() != lod.Wedges.Num()) appNotify("lod%d: bad VertexStream size", i);
-		if (lod.f114 || lod.f118) appNotify("[%d]: f114=%d, f118=%d", lod.f114, lod.f118);
+//		if (lod.f114 || lod.f118) appNotify("[%d]: f114=%d, f118=%d", lod.f114, lod.f118);
 
 		const TArray<FSkelMeshSection> *sec[2];
 		sec[0] = &lod.SmoothSections;

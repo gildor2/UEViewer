@@ -89,10 +89,30 @@ public:
 	int		ArPos;
 	int		ArStopper;
 
+	// game-specific flags
+#if SPLINTER_CELL
+	int		IsSplinterCell:1;
+#endif
+#if TRIBES3
+	int		IsTribes3:1;
+#endif
+#if LINEAGE2
+	int		IsLineage2:1;
+#endif
+
 	FArchive()
 	:	ArStopper(0)
 	,	ArVer(99999)			//?? something large
 	,	ArLicenseeVer(0)
+#if SPLINTER_CELL
+	,	IsSplinterCell(0)
+#endif
+#if TRIBES3
+	,	IsTribes3(0)
+#endif
+#if LINEAGE2
+	,	IsLineage2(0)
+#endif
 	{}
 
 	virtual ~FArchive()
@@ -147,24 +167,6 @@ public:
 
 	virtual FArchive& operator<<(FName &N) = 0;
 	virtual FArchive& operator<<(UObject *&Obj) = 0;
-
-	// different game platforms autodetection
-	//?? should change this, if will implement command line switch to force mode
-#if SPLINTER_CELL
-	bool IsSplinterCell()
-	{
-		return (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
-			   (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
-	}
-#endif
-#if TRIBES3
-	bool IsTribes3()
-	{
-		return ((ArVer == 0x81 || ArVer == 0x82) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
-			   ((ArVer == 0x7B) && (ArLicenseeVer >= 3 && ArLicenseeVer <= 0xF)) ||
-			   ((ArVer == 0x7E) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
-	}
-#endif
 };
 
 
@@ -173,16 +175,19 @@ class FFileReader : public FArchive
 public:
 	FFileReader()
 	:	f(NULL)
+	,	ArPosOffset(0)
 	{}
 
 	FFileReader(FILE *InFile)
 	:	f(InFile)
+	,	ArPosOffset(0)
 	{
 		IsLoading = true;
 	}
 
 	FFileReader(const char *Filename, bool loading = true)
 	:	f(fopen(Filename, loading ? "rb" : "wb"))
+	,	ArPosOffset(0)
 	{
 		guard(FFileReader::FFileReader);
 		if (!f)
@@ -204,8 +209,8 @@ public:
 
 	virtual void Seek(int Pos)
 	{
-		fseek(f, Pos, SEEK_SET);
-		ArPos = ftell(f);
+		fseek(f, Pos + ArPosOffset, SEEK_SET);
+		ArPos = ftell(f) - ArPosOffset;
 		assert(Pos == ArPos);
 	}
 
@@ -232,6 +237,8 @@ public:
 
 protected:
 	FILE	*f;
+	int		ArPosOffset;
+
 	virtual void Serialize(void *data, int size)
 	{
 		int res;
@@ -639,7 +646,7 @@ extern FArchive *GDummySave;
 // macro to skip Tribes3 FHeader structure
 #define TRIBES_HDR(Ar,Ver)			\
 	int t3_hdrV = 0, t3_hdrSV = 0;	\
-	if (Ar.IsTribes3() && Ar.ArLicenseeVer >= Ver) \
+	if (Ar.IsTribes3 && Ar.ArLicenseeVer >= Ver) \
 	{								\
 		int check;					\
 		Ar << check;				\

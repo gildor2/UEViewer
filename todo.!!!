@@ -11,6 +11,9 @@
 
 ! implement socket support (visualization)
 ? support Undying
+! when cannot load some material type, or file is absent - sould at least give ability to list this
+  mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
+  in its Bind() - in this case, default material itself is not needed)
 
 ! use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
 

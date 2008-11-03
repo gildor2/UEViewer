@@ -137,6 +137,7 @@ int main(int argc, char **argv)
 				"Developer commands:\n"
 				"    -dump           dump object information to console\n"
 				"    -check          check some assumptions, no other actions performed\n"
+				"    -nop            load package and do nothing\n"
 				"\n"
 				"Options:\n"
 				"    -path=PATH      path to UT installation directory; if not specified,\n"
@@ -174,6 +175,9 @@ int main(int argc, char **argv)
 #if HP3
 				"    Harry Potter and the Prisoner of Azkaban\n"
 #endif
+#if LINEAGE2
+				"    Lineage 2\n"
+#endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
 		);
@@ -181,7 +185,7 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false;
+	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, noOp = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -206,6 +210,8 @@ int main(int argc, char **argv)
 				view  = false;
 				exprt = true;
 			}
+			else if (!stricmp(opt, "nop"))
+				noOp = true;
 			else if (!stricmp(opt, "list"))
 				listOnly = true;
 			else if (!stricmp(opt, "noanim"))
@@ -257,6 +263,9 @@ int main(int argc, char **argv)
 		printf("Unable to find/load package %s\n", argPkgName);
 		exit(1);
 	}
+
+	if (noOp)
+		return 0;
 
 	if (listOnly)
 	{

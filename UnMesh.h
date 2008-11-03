@@ -169,18 +169,67 @@ struct FMeshAnimNotify
 		guard(FMeshAnimNotify<<);
 		Ar << N.Time << N.Function;
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell())
+		if (Ar.IsSplinterCell)
 		{
 			FName Obj;
 			Ar << Obj;						// instead of UObject*
 		}
 #endif
-		if (Ar.ArVer > 111)
+		if (Ar.ArVer >= 112)
 			Ar << N.NotifyObj;
 		return Ar;
 		unguard;
 	}
 };
+
+
+#if LINEAGE2
+
+struct FLineageUnk2
+{
+	int						f0;
+	int						f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FLineageUnk2 &S)
+	{
+		return Ar << S.f0 << S.f4;
+	}
+};
+
+
+struct FLineageUnk3
+{
+	int						f0;
+	TArray<FLineageUnk2>	f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FLineageUnk3 &S)
+	{
+		return Ar << S.f0 << S.f4;
+	}
+};
+
+
+struct FLineageUnk4
+{
+	byte					f0;
+	TArray<FLineageUnk2>	f4;
+	TArray<FLineageUnk3>	f10;
+	int						f1C;
+	int						f20;
+	TArray<FLineageUnk2>	f24;
+
+	friend FArchive& operator<<(FArchive &Ar, FLineageUnk4 &S)
+	{
+		if (Ar.ArVer == 0x1A)
+			return Ar << S.f4;
+		else if (Ar.ArVer >= 0x1B)
+			return Ar << S.f0 << S.f4 << S.f10 << S.f1C << S.f20 << S.f24;
+		else
+			return Ar;
+	}
+};
+
+#endif
 
 
 // Information about one animation sequence associated with a mesh,
@@ -198,13 +247,13 @@ struct FMeshAnimSeq
 	{
 #if TRIBES3
 		TRIBES_HDR(Ar, 0x17);
-		if (Ar.IsTribes3() && t3_hdrV == 1)
+		if (Ar.IsTribes3 && t3_hdrV == 1)
 		{
 			int unk;
 			Ar << unk;
 		}
 #endif
-		if (Ar.ArVer > 114)
+		if (Ar.ArVer >= 115)
 			Ar << A.f28;
 		Ar << A.Name;
 #if UNREAL1
@@ -224,10 +273,24 @@ struct FMeshAnimSeq
 		}
 		Ar << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell())
+		if (Ar.IsSplinterCell)
 		{
 			byte unk;
 			Ar << unk;
+		}
+#endif
+#if LINEAGE2
+		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 1)
+		{
+			int				f2C, f30, f34, f3C, f40;
+			UObject			*f38;
+			FLineageUnk4	f44;
+			Ar << f2C << f30;
+			if (Ar.ArLicenseeVer >= 2)    Ar << f34;
+			if (Ar.ArLicenseeVer >= 1)    Ar << f38;
+			if (Ar.ArLicenseeVer >= 0x14) Ar << f3C;
+			if (Ar.ArLicenseeVer >= 0x19) Ar << f40;
+			if (Ar.ArLicenseeVer >= 0x1A) Ar << f44;
 		}
 #endif
 		return Ar;
@@ -243,6 +306,7 @@ struct FMeshAnimSeq
  *	1	SplinterCell		LodMesh is same as UT, SkeletalMesh modified
  *	2	Postal 2			same as UT
  *	4	UT2003, UT2004
+ *	5	Lineage2
  */
 
 class ULodMesh : public UPrimitive
@@ -318,6 +382,13 @@ public:
 		{
 			Ar << SkinTesselationFactor;
 		}
+#if LINEAGE2
+		if (Version >= 5 && Ar.IsLineage2)
+		{
+			int unk;
+			Ar << unk;
+		}
+#endif
 
 		unguard;
 	}
@@ -391,7 +462,7 @@ struct FSkinVertexStream
 #endif
 		Ar << S.Revision << S.f18 << S.f1C << S.Verts;
 #if TRIBES3
-		if (Ar.IsTribes3() && t3_hdrSV >= 1)
+		if (Ar.IsTribes3 && t3_hdrSV >= 1)
 		{
 			int unk1;
 			TArray<T3_BasisVector> unk2;
@@ -558,7 +629,7 @@ struct AnalogTrack
 	{
 		guard(AnalogTrack<<);
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell())
+		if (Ar.IsSplinterCell)
 		{
 			if (Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
 			{
@@ -607,7 +678,7 @@ struct MotionChunk
 			SerializeFlexTracks(Ar);
 #endif
 #if TRIBES3
-		if (Ar.IsTribes3())
+		if (Ar.IsTribes3)
 			FixTribesMotionChunk(M);
 #endif
 		return Ar;
@@ -635,6 +706,7 @@ struct FNamedBone
 /*
  * Possible versions:
  *	0			UT2003, UT2004
+ *	1			Lineage2
  *	4			Harry Potter and the Prisoner of Azkaban
  *	6			Tribes3
  *	1000		SplinterCell
@@ -657,15 +729,53 @@ public:
 	void Upgrade();
 #endif
 
+#if LINEAGE2
+	void SerializeLineageMoves(FArchive &Ar)
+	{
+		// serialize TRoughArray<MotionChunk> into TArray<MotionChunk>
+		guard(SerializeLineageMoves);
+		//!! move to cpp
+		assert(Ar.IsLoading);
+		if (Ar.ArVer < 123 || Ar.ArLicenseeVer < 0x19)
+		{
+			// standard UE2 format
+			Ar << Moves;
+			return;
+		}
+		int pos, count;						// pos = global skip pos, count = data count
+		Ar << pos << AR_INDEX(count);
+		Moves.Empty(count);
+		for (int i = 0; i < count; i++)
+		{
+			int localPos;
+			Ar << localPos;
+			MotionChunk *M = new(Moves) MotionChunk;
+			Ar << *M;
+			assert(localPos == Ar.ArPos);
+		}
+		assert(pos == Ar.ArPos);
+		unguard;
+	}
+#endif
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UMeshAnimation.Serialize);
 		Super::Serialize(Ar);
 		if (Ar.ArVer >= 100)
 			Ar << Version;					// no such field in UE1
+#if LINEAGE2
+		Ar << RefBones;
+		if (!Ar.IsLineage2)
+			Ar << Moves;
+		else
+			SerializeLineageMoves(Ar);
+		Ar << AnimSeqs;
+#else
 		Ar << RefBones << Moves << AnimSeqs;
+#endif
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell())
+		if (Ar.IsSplinterCell)
 			SerializeSCell(Ar);
 #endif
 #if UNREAL1
@@ -868,9 +978,37 @@ struct FSkelMeshSection
 	{
 		Ar << S.MaterialIndex << S.MinStreamIndex << S.MinWedgeIndex << S.MaxWedgeIndex << S.NumStreamIndices;
 		Ar << S.BoneIndex << S.fE << S.FirstFace << S.NumFaces;
+#if LINEAGE2
+		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 0x1C)
+		{
+			TArray<int> unk;
+			Ar << unk;
+		}
+#endif
 		return Ar;
 	}
 };
+
+
+#if LINEAGE2
+
+struct FLineageUnk1
+{
+	FVector			vec1;
+	FVector			vec2;
+	float			f1;
+	float			f2;
+	FColor			c;
+	float			f3, f4, f5, f6;
+
+	friend FArchive& operator<<(FArchive &Ar, FLineageUnk1 &S)
+	{
+		return Ar << S.vec1 << S.vec2 << S.f1 << S.f2 << S.c
+				  << S.f3 << S.f4 << S.f5 << S.f6;
+	}
+};
+
+#endif
 
 
 struct FStaticLODModel
@@ -909,10 +1047,18 @@ struct FStaticLODModel
 		Ar << M.LODDistanceFactor << M.LODHysteresis << M.NumSharedVerts;
 		Ar << M.LODMaxInfluences << M.f114 << M.f118;
 #if TRIBES3
-		if (Ar.IsTribes3() && t3_hdrSV >= 1)
+		if (Ar.IsTribes3 && t3_hdrSV >= 1)
 		{
 			TLazyArray<T3_BasisVector> unk1;
 			TArray<T3_BasisVector> unk2;
+			Ar << unk1 << unk2;
+		}
+#endif
+#if LINEAGE2
+		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 0x1C)
+		{
+			int unk1;
+			TArray<FLineageUnk1> unk2;
 			Ar << unk1 << unk2;
 		}
 #endif
@@ -1110,7 +1256,7 @@ public:
 		if (Version <= 1)
 		{
 #if SPLINTER_CELL
-			if (Ar.IsSplinterCell())
+			if (Ar.IsSplinterCell)
 			{
 				TArray<FSCellUnk1> tmp1;
 				TArray<FSCellUnk2> tmp2;
@@ -1137,7 +1283,7 @@ public:
 			Ar << CollapseWedge << f1C8;
 		}
 #if TRIBES3
-		if (Ar.IsTribes3() && t3_hdrSV >= 3)
+		if (Ar.IsTribes3 && t3_hdrSV >= 3)
 		{
 	#if 0
 			// it looks like format of following data was chenged sinse
@@ -1155,6 +1301,23 @@ public:
 	#endif
 			// nothing interesting below ...
 			Ar.Seek(Ar.ArStopper);
+			return;
+		}
+#endif
+
+#if LINEAGE2
+		if (Ar.IsLineage2)
+		{
+			int unk1, unk3, unk4;
+			TArray<int> unk2;
+			if (Ar.ArVer >= 118 && Ar.ArLicenseeVer >= 3)
+				Ar << unk1;
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x12)
+				Ar << unk2;
+			if (Ar.ArVer >= 120)
+				Ar << unk3;		// AuthKey ?
+			if (Ar.ArLicenseeVer >= 0x23)
+				Ar << unk4;
 			return;
 		}
 #endif
