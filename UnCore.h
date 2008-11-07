@@ -241,14 +241,15 @@ protected:
 
 	virtual void Serialize(void *data, int size)
 	{
+		if (ArStopper > 0 && ArPos + size > ArStopper)
+			appError("Serializing behind stopper");
+
 		int res;
 		if (IsLoading)
 			res = fread(data, size, 1, f);
 		else
 			res = fwrite(data, size, 1, f);
 		ArPos += size;
-		if (ArStopper > 0 && ArPos > ArStopper)
-			appError("Serializing behind stopper");
 		if (res != 1)
 			appError("Unable to serialize data");
 	}
@@ -364,6 +365,20 @@ struct FPlane : public FVector
 	{
 		return Ar << (FVector&)S << S.W;
 	};
+};
+
+
+struct FMatrix
+{
+	FPlane	XPlane;
+	FPlane	YPlane;
+	FPlane	ZPlane;
+	FPlane	WPlane;
+
+	friend FArchive& operator<<(FArchive &Ar, FMatrix &F)
+	{
+		return Ar << F.XPlane << F.YPlane << F.ZPlane << F.WPlane;
+	}
 };
 
 

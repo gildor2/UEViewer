@@ -481,9 +481,9 @@ void UFinalBlend::Bind(unsigned PolyFlags)
 		glEnable(GL_BLEND);
 	switch (FrameBufferBlending)
 	{
-	case FB_Overwrite:
-		glBlendFunc(GL_ONE, GL_ZERO);				// src
-		break;
+//	case FB_Overwrite:
+//		glBlendFunc(GL_ONE, GL_ZERO);				// src
+//		break;
 	case FB_Modulate:
 		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);	// src*dst*2
 		break;
@@ -507,4 +507,81 @@ void UFinalBlend::Bind(unsigned PolyFlags)
 		break;
 	}
 	//!! ZWrite, ZTest
+}
+
+
+void UShader::Bind(unsigned PolyFlags)
+{
+	// UShader is UE2, which have PolyFlags deprecated
+	//!!
+	// bind material first
+	if (Diffuse)
+		Diffuse->Bind(PolyFlags);
+	else
+		BindDefaultMaterial();
+
+	// and then override properties
+
+	// TwoSided
+	if (TwoSided)
+		glDisable(GL_CULL_FACE);
+	else
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
+	//?? glEnable(GL_ALPHA_TEST) only when Opacity is set ?
+	glDisable(GL_ALPHA_TEST);
+
+	// blending
+	if (OutputBlending == OB_Normal)
+		glDisable(GL_BLEND);
+	else
+		glEnable(GL_BLEND);
+	switch (OutputBlending)
+	{
+//	case OB_Normal:
+//		glBlendFunc(GL_ONE, GL_ZERO);				// src
+//		break;
+	case OB_Masked:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glAlphaFunc(GL_GREATER, 0.0f);
+		glEnable(GL_ALPHA_TEST);
+		break;
+	case OB_Modulate:
+		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);	// src*dst*2
+		break;
+	case OB_Translucent:
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+		break;
+	case OB_Invisible:
+		glBlendFunc(GL_ZERO, GL_ONE);				// dst
+		break;
+	case OB_Brighten:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);			// src*srcA + dst
+		break;
+	case OB_Darken:
+		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // dst - src
+		break;
+	}
+}
+
+
+void UCombiner::Bind(unsigned PolyFlags)
+{
+	//!! implement
+//	if (Material1)
+//		Material1->Bind(PolyFlags);
+//	else
+		BindDefaultMaterial();
+}
+
+
+void UTexModifier::Bind(unsigned PolyFlags)
+{
+	//!! implement (in derived classes?)
+	if (Material)
+		Material->Bind(PolyFlags);
+	else
+		BindDefaultMaterial();
 }

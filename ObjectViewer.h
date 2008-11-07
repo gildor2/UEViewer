@@ -82,25 +82,14 @@ public:
 class CMaterialViewer : public CObjectViewer
 {
 public:
+	static bool		ShowOutline;
+
 	CMaterialViewer(UMaterial *Material)
 	:	CObjectViewer(Material)
 	{}
 
-	virtual void ShowHelp()
-	{
-		CObjectViewer::ShowHelp();
-		//!!
-	}
-
-	virtual void ProcessKey(int key)
-	{
-		switch (key)
-		{
-//		case ''
-		default:
-			CObjectViewer::ProcessKey(key);
-		}
-	}
+	virtual void ShowHelp();
+	virtual void ProcessKey(int key);
 
 	virtual void Draw2D();
 	virtual void Draw3D();

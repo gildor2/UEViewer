@@ -45,6 +45,7 @@ struct CPropInfo
 };
 
 #define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(Field) / sizeof(Type) },
+#define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
 
 
 #define BEGIN_PROP_TABLE						\

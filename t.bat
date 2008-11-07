@@ -24,11 +24,12 @@ exit
 
 :cont
 
-umodel.exe -path=C:\!UModel\data\Lineage2 LineageMonsters
+%run% AW-2k4XP ShockShieldFinal
+rem umodel.exe -path="C:\!umodel-data\--Lineage2--" LineageMonsters
 rem umodel.exe "C:\!umodel-data\--Dark Sector 9--\PAWNAI.u" OBrien
 rem umodel.exe "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx"
 rem umodel.exe -noanim "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx" MElf_m000_l
-rem goto hp3
+rem %run% ONSVehicles-A
 goto exit
 rem goto bugs
 
@@ -39,8 +40,8 @@ rem %run% -export HumanMaleA BipedMaleA
 rem %run2% -export Bender BenderAnims
 rem %run% -export HumanMaleA
 rem %run% HumanMaleA MercMaleD
-%run% HumanFemaleA MercFemaleB
-rem %run2% Aida
+rem %run% HumanFemaleA MercFemaleB
+%run2% Aida
 rem %run% HumanFemaleA
 rem %run% Aliens
 rem %run% HumanMaleA
@@ -133,7 +134,7 @@ rem		TRIBES3
 rem ---------------------------------------------------------------------------
 :tribes3
 set run=umodel.exe -path="C:/GAMES/Tribes - Vengeance/Content/Art"
-%run% LightArmourFem ImperialLightJulia
+%run% Vehicles
 goto exit
 
 rem ---------------------------------------------------------------------------

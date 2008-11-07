@@ -266,7 +266,7 @@ static const char *PackagePaths[] =
 	"StaticMeshes/",
 	"System/",
 #if LINEAGE2
-	"Systextures",
+	"Systextures/",
 #endif
 	"Textures/"
 };

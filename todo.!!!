@@ -1,3 +1,7 @@
+FONTGEN
+! BUG: '&' displayed as '_' (WinAPI feature)
+? add pseudographics chars (for material outline)
+
 ?? TRIBES3:
   ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)
     ! check this un UnrealEd

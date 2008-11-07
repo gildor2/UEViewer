@@ -86,7 +86,10 @@ void CMeshViewer::Dump()
 	for (i = 0; i < Mesh->Textures.Num(); i++)
 	{
 		const UMaterial *Tex = Mesh->Textures[i];
-		printf("  %d: %s\n", i, Tex ? Tex->Name : "null");
+		if (Tex)
+			printf("  %d: %s (%s)\n", i, Tex->Name, Tex->GetClassName());
+		else
+			printf("  %d: null\n", i);
 	}
 	printf("Materials: %d\n", Mesh->Materials.Num());
 	for (i = 0; i < Mesh->Materials.Num(); i++)
@@ -118,9 +121,12 @@ void CMeshViewer::Draw2D()
 		for (int i = 0; i < Mesh->Textures.Num(); i++)
 		{
 			const UMaterial *Tex = Mesh->Textures[i];
-			DrawTextLeft("^%d  %d: %s",
-				i < 7 ? i + 1 : 7,
-				i, Tex ? Tex->Name : "null");
+			int color = i < 7 ? i + 1 : 7;
+			if (Tex)
+				DrawTextLeft("^%d  %d: %s (%s)", color, i, Tex->Name, Tex->GetClassName());
+			else
+				DrawTextLeft("^%d  %d: null", color, i);
+
 		}
 		DrawTextLeft("");
 	}

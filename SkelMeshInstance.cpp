@@ -23,7 +23,7 @@ struct CMeshBoneData
 
 
 #define ANIM_UNASSIGNED			-2
-#define MAX_MESHBONES			256
+#define MAX_MESHBONES			512
 
 
 /*-----------------------------------------------------------------------------

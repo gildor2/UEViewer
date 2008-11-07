@@ -33,6 +33,16 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+07.11.2008
+- implemented serializers for most UE2 materials
+- long texts on screen may be scrolled now with Ctrl+PgUp/Ctrl+PgDn keys
+
+06.11.2008
+- implemented material outline viewer (key 'M')
+
+05.11.2008
+- implemented quick support for Shader material (does works in most cases)
+
 02.11.2008
 - implemented Lineage 2 texture and MeshAnimation support
 

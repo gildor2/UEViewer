@@ -12,23 +12,23 @@
 MATERIALS TREE:
 ~~~~~~~~~~~~~~~
 - Material
-    Combiner
+-   Combiner
 -   Modifier
       ColorModifier
 -     FinalBlend
       MaterialSequence
       MaterialSwitch
       OpacityModifier
-      TexModifier
+-     TexModifier
         TexCoordSource
-        TexEnvMap
+-       TexEnvMap
         TexMatrix
-        TexOscillator
+-       TexOscillator
           TexOscillatorTriggered
-        TexPanner
+-       TexPanner
           TexPannerTriggered
-        TexRotator
-        TexScaler
+-       TexRotator
+-       TexScaler
         VariableTexPanner
 -   RenderedMaterial
 -     BitmapMaterial
@@ -36,12 +36,12 @@ MATERIALS TREE:
         ShadowBitmapMaterial
 -       Texture
           Cubemap
-      ConstantMaterial
-        ConstantColor
+-     ConstantMaterial
+-       ConstantColor
         FadeColor
       ParticleMaterial
       ProjectorMaterial
-      Shader
+-     Shader
       TerrainMaterial
       VertexColor
 */
@@ -89,18 +89,16 @@ public:
 		if (Ar.IsLineage2)
 		{
 			//?? separate to cpp
-			//?? look at latest script code for data layout
 			int unk1;
-			word unk2, unk3;
 			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x10)
-				Ar << unk1;
+				Ar << unk1;					// simply drop obsolete variable (int Reserved ?)
 			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1E)
 			{
 				int i;
 				// some function
-				char c0, TextureTranform, MAX_SAMPLER_NUM, MAX_TEXMAT_NUM, MAX_PASS_NUM, TwoPassRenderState, AlphaRef;
+				byte MaterialInfo, TextureTranform, MAX_SAMPLER_NUM, MAX_TEXMAT_NUM, MAX_PASS_NUM, TwoPassRenderState, AlphaRef;
 				if (Ar.ArLicenseeVer >= 0x21)
-					Ar << c0;
+					Ar << MaterialInfo;
 				Ar << TextureTranform << MAX_SAMPLER_NUM << MAX_TEXMAT_NUM << MAX_PASS_NUM << TwoPassRenderState << AlphaRef;
 				int SrcBlend, DestBlend, OverriddenFogColor;
 				Ar << SrcBlend << DestBlend << OverriddenFogColor;
@@ -117,7 +115,7 @@ public:
 					}
 				}
 				// another nested function - serialize FC_* variables
-				char c[8];					// union with "int FC_Color1, FC_Color2" (strange code)
+				char c[8];					// union with "int FC_Color1, FC_Color2" (strange byte order)
 				Ar << c[2] << c[1] << c[0] << c[3] << c[6] << c[5] << c[4] << c[7];
 				int FC_FadePeriod, FC_FadePhase, FC_ColorFadeType;	// really, floats?
 				Ar << FC_FadePeriod << FC_FadePhase << FC_ColorFadeType;
@@ -129,9 +127,10 @@ public:
 				}
 				// end of function
 				FString ShaderCode;
+				word ver1, ver2;			// 'int MaterialCodeVersion' serialized as 2 words
 				Ar << ShaderCode;
 				if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1F)
-					Ar << unk2 << unk3;
+					Ar << ver1 << ver2;
 			}
 		}
 		unguard;
@@ -149,6 +148,24 @@ class URenderedMaterial : public UMaterial
 {
 	DECLARE_CLASS(URenderedMaterial, UMaterial);
 	// no properties here
+};
+
+
+class UConstantMaterial : public URenderedMaterial
+{
+	DECLARE_CLASS(UConstantMaterial, URenderedMaterial);
+};
+
+
+class UConstantColor : public UConstantMaterial
+{
+	DECLARE_CLASS(UConstantColor, UConstantMaterial);
+public:
+	FColor			Color;
+
+	BEGIN_PROP_TABLE
+		PROP_COLOR(Color)
+	END_PROP_TABLE
 };
 
 
@@ -212,8 +229,8 @@ public:
 		assert(Colors.Num() == 256);	// NUM_PAL_COLORS in UT
 		// UE1 uses Palette[0] as color {0,0,0,0} when texture uses PF_Masked flag
 		// (see UOpenGLRenderDevice::SetTexture())
-		if (Ar.ArVer < 100)
-			Colors[0].A = 0;
+		// Note: UT2 does not use paletted textures, but HP3 does ...
+		Colors[0].A = 0;
 		unguard;
 	}
 };
@@ -351,6 +368,76 @@ public:
 };
 
 
+enum EOutputBlending
+{
+	OB_Normal,
+	OB_Masked,
+	OB_Modulate,
+	OB_Translucent,
+	OB_Invisible,
+	OB_Brighten,
+	OB_Darken,
+};
+
+
+class UShader : public URenderedMaterial
+{
+	DECLARE_CLASS(UShader, URenderedMaterial);
+public:
+	UMaterial		*Diffuse;
+	UMaterial		*Opacity;
+	UMaterial		*Specular;
+	UMaterial		*SpecularityMask;
+	UMaterial		*SelfIllumination;
+	UMaterial		*SelfIlluminationMask;
+	UMaterial		*Detail;
+	float			DetailScale;
+	EOutputBlending	OutputBlending;
+	bool			TwoSided;
+	bool			Wireframe;
+	bool			ModulateStaticLighting2X;
+	bool			PerformLightingOnSpecularPass;
+	bool			ModulateSpecular2X;
+#if LINEAGE2
+	bool			TreatAsTwoSided;			// strange ...
+	bool			ZWrite;
+	bool			AlphaTest;
+	byte			AlphaRef;
+#endif
+
+	UShader()
+	:	ModulateStaticLighting2X(true)
+	,	ModulateSpecular2X(false)
+	,	DetailScale(8.0f)
+	{}
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Diffuse)
+		PROP_OBJ(Opacity)
+		PROP_OBJ(Specular)
+		PROP_OBJ(SpecularityMask)
+		PROP_OBJ(SelfIllumination)
+		PROP_OBJ(SelfIlluminationMask)
+		PROP_OBJ(Detail)
+		PROP_FLOAT(DetailScale)
+		PROP_BYTE(OutputBlending)
+		PROP_BOOL(TwoSided)
+		PROP_BOOL(Wireframe)
+		PROP_BOOL(ModulateStaticLighting2X)
+		PROP_BOOL(PerformLightingOnSpecularPass)
+		PROP_BOOL(ModulateSpecular2X)
+#if LINEAGE2
+		PROP_BOOL(TreatAsTwoSided)
+		PROP_BOOL(ZWrite)
+		PROP_BOOL(AlphaTest)
+		PROP_BYTE(AlphaRef)
+#endif
+	END_PROP_TABLE
+
+	BIND;
+};
+
+
 class UModifier : public UMaterial
 {
 	DECLARE_CLASS(UModifier, UMaterial);
@@ -373,6 +460,11 @@ enum EFrameBufferBlending
 	FB_Darken,
 	FB_Brighten,
 	FB_Invisible,
+#if LINEAGE2			// possibly, new UE2 blends
+	FB_Add,
+	FB_InWaterBlend,
+	FB_Capture,
+#endif
 };
 
 class UFinalBlend : public UModifier
@@ -409,12 +501,280 @@ public:
 };
 
 
+enum EColorOperation
+{
+	CO_Use_Color_From_Material1,
+	CO_Use_Color_From_Material2,
+	CO_Multiply,
+	CO_Add,
+	CO_Subtract,
+	CO_AlphaBlend_With_Mask,
+	CO_Add_With_Mask_Modulation,
+	CO_Use_Color_From_Mask,
+};
+
+enum EAlphaOperation
+{
+	AO_Use_Mask,
+	AO_Multiply,
+	AO_Add,
+	AO_Use_Alpha_From_Material1,
+	AO_Use_Alpha_From_Material2,
+};
+
+class UCombiner : public UMaterial
+{
+	DECLARE_CLASS(UCombiner, UMaterial);
+public:
+	EColorOperation	CombineOperation;
+	EAlphaOperation	AlphaOperation;
+	UMaterial		*Material1;
+	UMaterial		*Material2;
+	UMaterial		*Mask;
+	bool			InvertMask;
+	bool			Modulate2X;
+	bool			Modulate4X;
+
+	UCombiner()
+	:	AlphaOperation(AO_Use_Mask)
+	{}
+
+	BEGIN_PROP_TABLE
+		PROP_BYTE(CombineOperation)
+		PROP_BYTE(AlphaOperation)
+		PROP_OBJ(Material1)
+		PROP_OBJ(Material2)
+		PROP_OBJ(Mask)
+		PROP_BOOL(InvertMask)
+		PROP_BOOL(Modulate2X)
+		PROP_BOOL(Modulate4X)
+	END_PROP_TABLE
+
+	BIND;
+};
+
+
+enum ETexCoordSrc
+{
+	TCS_Stream0,
+	TCS_Stream1,
+	TCS_Stream2,
+	TCS_Stream3,
+	TCS_Stream4,
+	TCS_Stream5,
+	TCS_Stream6,
+	TCS_Stream7,
+	TCS_WorldCoords,
+	TCS_CameraCoords,
+	TCS_WorldEnvMapCoords,
+	TCS_CameraEnvMapCoords,
+	TCS_ProjectorCoords,
+	TCS_NoChange,				// don't specify a source, just modify it
+};
+
+enum ETexCoordCount
+{
+	TCN_2DCoords,
+	TCN_3DCoords,
+	TCN_4DCoords
+};
+
+class UTexModifier : public UModifier
+{
+	DECLARE_CLASS(UTexModifier, UModifier);
+public:
+	ETexCoordSrc	TexCoordSource;
+	ETexCoordCount	TexCoordCount;
+	bool			TexCoordProjected;
+
+	UTexModifier()
+	:	TexCoordSource(TCS_NoChange)
+	,	TexCoordCount(TCN_2DCoords)
+	{}
+
+	BEGIN_PROP_TABLE
+		PROP_BYTE(TexCoordSource)
+		PROP_BYTE(TexCoordCount)
+		PROP_BYTE(TexCoordProjected)
+	END_PROP_TABLE
+
+	BIND;
+};
+
+
+enum ETexEnvMapType
+{
+	EM_WorldSpace,
+	EM_CameraSpace,
+};
+
+class UTexEnvMap : public UTexModifier
+{
+	DECLARE_CLASS(UTexEnvMap, UTexModifier)
+public:
+	ETexEnvMapType	EnvMapType;
+
+	UTexEnvMap()
+	:	EnvMapType(EM_CameraSpace)
+	{
+		TexCoordCount = TCN_3DCoords;
+	}
+
+	BEGIN_PROP_TABLE
+		PROP_BYTE(EnvMapType)
+	END_PROP_TABLE
+};
+
+
+enum ETexOscillationType
+{
+	OT_Pan,
+	OT_Stretch,
+	OT_StretchRepeat,
+	OT_Jitter,
+};
+
+class UTexOscillator : public UTexModifier
+{
+	DECLARE_CLASS(UTexOscillator, UTexModifier);
+public:
+	float			UOscillationRate;
+	float			VOscillationRate;
+	float			UOscillationPhase;
+	float			VOscillationPhase;
+	float			UOscillationAmplitude;
+	float			VOscillationAmplitude;
+	ETexOscillationType UOscillationType;
+	ETexOscillationType VOscillationType;
+	float			UOffset;
+	float			VOffset;
+	// transient variables
+//	FMatrix			M;
+//	float			CurrentUJitter;
+//	float			CurrentVJitter;
+
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(UOscillationRate)
+		PROP_FLOAT(VOscillationRate)
+		PROP_FLOAT(UOscillationPhase)
+		PROP_FLOAT(VOscillationPhase)
+		PROP_FLOAT(UOscillationAmplitude)
+		PROP_FLOAT(VOscillationAmplitude)
+		PROP_BYTE(UOscillationType)
+		PROP_BYTE(VOscillationType)
+		PROP_FLOAT(UOffset)
+		PROP_FLOAT(VOffset)
+		PROP_DROP(M)
+		PROP_DROP(CurrentUJitter)
+		PROP_DROP(CurrentVJitter)
+	END_PROP_TABLE
+
+	UTexOscillator()
+	:	UOscillationRate(1)
+	,	VOscillationRate(1)
+	,	UOscillationAmplitude(0.1f)
+	,	VOscillationAmplitude(0.1f)
+	,	UOscillationType(OT_Pan)
+	,	VOscillationType(OT_Pan)
+	{}
+};
+
+
+class UTexPanner : public UTexModifier
+{
+	DECLARE_CLASS(UTexPanner, UTexModifier);
+public:
+	FRotator		PanDirection;
+	float			PanRate;
+//	FMatrix			M;
+
+	BEGIN_PROP_TABLE
+		PROP_ROTATOR(PanDirection)
+		PROP_FLOAT(PanRate)
+		PROP_DROP(M)
+	END_PROP_TABLE
+
+	UTexPanner()
+	:	PanRate(0.1f)
+	{}
+};
+
+
+enum ETexRotationType
+{
+	TR_FixedRotation,
+	TR_ConstantlyRotating,
+	TR_OscillatingRotation,
+};
+
+class UTexRotator : public UTexModifier
+{
+	DECLARE_CLASS(UTexRotator, UTexModifier);
+public:
+	ETexRotationType TexRotationType;
+	FRotator		Rotation;
+	float			UOffset;
+	float			VOffset;
+	FRotator		OscillationRate;
+	FRotator		OscillationAmplitude;
+	FRotator		OscillationPhase;
+//	FMatrix			M;
+
+	BEGIN_PROP_TABLE
+		PROP_BYTE(TexRotationType)
+		PROP_ROTATOR(Rotation)
+		PROP_FLOAT(UOffset)
+		PROP_FLOAT(VOffset)
+		PROP_ROTATOR(OscillationRate)
+		PROP_ROTATOR(OscillationAmplitude)
+		PROP_ROTATOR(OscillationPhase)
+		PROP_DROP(M)
+	END_PROP_TABLE
+
+	UTexRotator()
+	:	TexRotationType(TR_FixedRotation)
+	{}
+};
+
+
+class UTexScaler : public UTexModifier
+{
+	DECLARE_CLASS(UTexScaler, UTexModifier)
+public:
+	float			UScale;
+	float			VScale;
+	float			UOffset;
+	float			VOffset;
+//	FMatrix			M;
+
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(UScale)
+		PROP_FLOAT(VScale)
+		PROP_FLOAT(UOffset)
+		PROP_FLOAT(VOffset)
+		PROP_DROP(M)
+	END_PROP_TABLE
+
+	UTexScaler()
+	:	UScale(1.0f)
+	,	VScale(1.0f)
+	{}
+};
+
+
 #define REGISTER_MATERIAL_CLASSES		\
-	REGISTER_CLASS(UMaterial)			\
+	REGISTER_CLASS(UConstantColor)		\
 	REGISTER_CLASS(UBitmapMaterial)		\
 	REGISTER_CLASS(UPalette)			\
+	REGISTER_CLASS(UShader)				\
+	REGISTER_CLASS(UCombiner)			\
 	REGISTER_CLASS(UTexture)			\
-	REGISTER_CLASS(UFinalBlend)
+	REGISTER_CLASS(UFinalBlend)			\
+	REGISTER_CLASS(UTexEnvMap)			\
+	REGISTER_CLASS(UTexOscillator)		\
+	REGISTER_CLASS(UTexPanner)			\
+	REGISTER_CLASS(UTexRotator)			\
+	REGISTER_CLASS(UTexScaler)
 
 
 #endif // __UNMATERIAL_H__

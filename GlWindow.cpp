@@ -6,6 +6,7 @@
 #include "GlFont.h"
 
 #define CHARS_PER_LINE			(TEX_WIDTH/CHAR_WIDTH)
+#define TEXT_SCROLL_LINES		(CHAR_HEIGHT/2)
 
 #if _MSC_VER
 #pragma comment(lib, "opengl32.lib")
@@ -159,6 +160,10 @@ static void LoadFont()
 
 static void DrawChar(char c, int color, int textX, int textY)
 {
+	if (textX <= -CHAR_WIDTH || textY <= -CHAR_HEIGHT ||
+		textX > winWidth || textY > winHeight)
+		return;				// outside of screen
+
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, FONT_TEX_NUM);
 	glEnable(GL_BLEND);
@@ -444,11 +449,12 @@ static TTextContainer<CRText, 65536> Text;
 
 static int nextLeft_y  = TOP_TEXT_POS;
 static int nextRight_y = TOP_TEXT_POS;
+static int textOffset  = 0;
 
 
 void ClearTexts()
 {
-	nextLeft_y = nextRight_y = TOP_TEXT_POS;
+	nextLeft_y = nextRight_y = TOP_TEXT_POS + textOffset;
 	Text.Clear();
 }
 
@@ -546,7 +552,8 @@ void DrawTextLeft(const char *text, ...)
 	if (nextLeft_y >= winHeight) return;		// out of screen
 	FORMAT_BUF(text, msg);
 	GetTextExtents(msg, w, h);
-	DrawTextPos(LEFT_BORDER, nextLeft_y, msg);
+	if (nextLeft_y + h >= 0)
+		DrawTextPos(LEFT_BORDER, nextLeft_y, msg);
 	nextLeft_y += h;
 }
 
@@ -557,7 +564,8 @@ void DrawTextRight(const char *text, ...)
 	if (nextRight_y >= winHeight) return;		// out of screen
 	FORMAT_BUF(text, msg);
 	GetTextExtents(msg, w, h);
-	DrawTextPos(winWidth - RIGHT_BORDER - w, nextRight_y, msg);
+	if (nextRight_y + h >= 0)
+		DrawTextPos(winWidth - RIGHT_BORDER - w, nextRight_y, msg);
 	nextRight_y += h;
 }
 
@@ -672,6 +680,13 @@ static void OnKeyboard(unsigned key, unsigned mod)
 		break;
 	case 'r':
 		ResetView();
+		break;
+	case SPEC_KEY(PAGEUP)|KEY_CTRL:
+		textOffset += TEXT_SCROLL_LINES;
+		if (textOffset > 0) textOffset = 0;
+		break;
+	case SPEC_KEY(PAGEDOWN)|KEY_CTRL:
+		textOffset -= TEXT_SCROLL_LINES;
 		break;
 	default:
 		AppKeyEvent(key);

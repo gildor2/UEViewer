@@ -141,7 +141,7 @@ void UObject::Serialize(FArchive &Ar)
 	// property list
 	while (true)
 	{
-		FName PropName;
+		FName PropName, StrucName;
 		Ar << PropName;
 		if (!strcmp(PropName, "None"))
 			break;
@@ -152,6 +152,9 @@ void UObject::Serialize(FArchive &Ar)
 		Ar << info;
 		bool IsArray  = (info & 0x80) != 0;
 		byte PropType = info & 0xF;
+		// serialize structure type name
+		if (PropType == PT_STRUCT)
+			Ar << StrucName;
 		// analyze 'size' field
 		int  Size = 0;
 		switch ((info >> 4) & 7)
@@ -189,24 +192,13 @@ void UObject::Serialize(FArchive &Ar)
 			}
 		}
 
-		int StopPos = Ar.ArPos + Size;	// for verification; overrided below for some types
+		int StopPos = Ar.ArPos + Size;	// for verification
 
 		const CPropInfo *Prop = FindProperty(PropName);
-		if (!Prop)
+		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
-			appNotify("WARNING: Class \"%s\": property \"%s\" (type=%d) was not found", GetClassName(), *PropName, PropType);
-			switch (PropType)
-			{
-			case PT_STRUCT:
-				{
-					// skip name (variable sized)
-					FName tmp;
-					Ar << tmp;
-					// correct StopPos
-					StopPos = Ar.ArPos + Size;
-				}
-				break;
-			}
+			if (!Prop)
+				appNotify("WARNING: Class \"%s\": property \"%s\" (type=%d) was not found", GetClassName(), *PropName, PropType);
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
@@ -279,10 +271,6 @@ void UObject::Serialize(FArchive &Ar)
 
 		case PT_STRUCT:
 			{
-				// read structure name
-				FName StrucName;
-				Ar << StrucName;
-				StopPos = Ar.ArPos + Size;
 				if (strcmp(Prop->TypeName+1, *StrucName))
 					appError("Struc property %s expected type %s but read %s", *PropName, Prop->TypeName, *StrucName);
 				if (SerializeStruc(Ar, value, ArrayIndex, StrucName))
@@ -406,6 +394,11 @@ void UObject::DumpProps() const
 	{
 		const CPropInfo *Prop = EnumProps(PropIndex);
 		if (!Prop) break;		// all props enumerated
+		if (!Prop->TypeName)
+		{
+			printf("%3d: (dummy) %s\n", PropIndex, Prop->Name);
+			continue;
+		}
 		printf("%3d: %s %s", PropIndex, Prop->TypeName, Prop->Name);
 		if (Prop->Count > 1)
 			printf("[%d] = { ", Prop->Count);
