@@ -1,5 +1,9 @@
-#include "ObjectViewer.h"
+#include "Core.h"
+
+#include "UnrealClasses.h"
 #include "MeshInstance.h"
+
+#include "GlWindow.h"
 
 
 struct CMeshBoneData
@@ -1029,17 +1033,16 @@ void CSkelMeshInstance::Draw()
 {
 	guard(CSkelMeshInstance::Draw);
 
-	const USkeletalMesh   *Mesh   = GetMesh();
-	const CSkelMeshViewer *Viewer = static_cast<CSkelMeshViewer*>(Viewport);
+	const USkeletalMesh *Mesh = GetMesh();
 
 	// show skeleton
-	if (Viewer->ShowSkel)		//!! move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
-		DrawSkeleton(Viewer->ShowLabels);
+	if (ShowSkel)			//?? move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
+		DrawSkeleton(ShowLabels);
 	// show mesh
-	if (Viewer->ShowSkel != 2)
+	if (ShowSkel != 2)
 	{
 		if (LodNum < 0)
-			DrawBaseSkeletalMesh(Viewer->bShowNormals);
+			DrawBaseSkeletalMesh(bShowNormals);
 		else
 			DrawLodSkeletalMesh(&Mesh->LODModels[LodNum]);
 	}

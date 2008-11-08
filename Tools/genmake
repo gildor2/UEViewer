@@ -667,6 +667,8 @@ sub AppendFilePath {
 	# NOTE: $inc =~ s/\b\w+\/\.\.\///g; -- does not works when dir name containg "." (\b will work incorrect)
 	$file =~ s/^[^\/]+\/\.\.\///g;			# at begin of string
 	$file =~ s/\/[^\/]+\/\.\.//g;			# in the middle of the string
+	# remove "./" at filename start
+	$file =~ s/^\.\///;
 	return $file;
 }
 
@@ -798,8 +800,9 @@ sub CollectFileDependencies {
 		if ($includes ne "") {
 			# INCLUDES is not empty ...
 			for my $path2 (split(" ", $includes)) {
-				next if $path eq $path2;		# already checked
+				next if $path eq $path2;		# this path was already checked
 				my $inc3 = AppendFilePath ($inc, $path2);
+				next if $inc3 eq $inc2;			# file with appended path is known ...
 				if (-f $inc3) {
 					WarningOnce ("file \"$inc\" present in few places from INCLUDES=[$includes]", "many:$inc:$includes") if $found != 0;
 					$found++;

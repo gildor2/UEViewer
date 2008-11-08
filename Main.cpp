@@ -1,6 +1,9 @@
-#include "ObjectViewer.h"
+#include "Core.h"
+#include "UnrealClasses.h"
 #include "UnAnimNotify.h"
-#include "Exporters.h"
+
+#include "Viewers/ObjectViewer.h"
+#include "Exporters/Exporters.h"
 
 
 #define APP_CAPTION		"Unreal Model Viewer"

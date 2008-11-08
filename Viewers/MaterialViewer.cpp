@@ -1,3 +1,6 @@
+#include "Core.h"
+#include "UnrealClasses.h"
+
 #include "ObjectViewer.h"
 
 

@@ -1,11 +1,5 @@
-#include "Core.h"
-#include "UnCore.h"
-#include "UnObject.h"
-#include "UnMaterial.h"
-#include "UnMesh.h"
-#include "UnPackage.h"
-
 #include "GlWindow.h"
+
 
 class CMeshInstance;
 class CVertMeshInstance;
@@ -20,11 +14,6 @@ class CSkelMeshInstance;
 #else
 #	define TEST_OBJECT
 #endif
-
-
-//?? move outside
-UMaterial *BindDefaultMaterial();
-void SetAxis(const FRotator &Rot, CAxis &Axis);
 
 
 /*-----------------------------------------------------------------------------
@@ -104,10 +93,6 @@ class CMeshViewer : public CObjectViewer
 {
 public:
 	int				AnimIndex;
-	// view mode
-	bool			bShowNormals;
-	bool			bColorMaterials;
-	bool			bWireframe;
 	// linked data
 	CMeshInstance	*Inst;
 
@@ -145,9 +130,6 @@ public:
 class CSkelMeshViewer : public CMeshViewer
 {
 public:
-	int		ShowSkel;		// 0 - mesh, 1 - mesh+skel, 2 - skel only
-	bool	ShowLabels;
-
 	CSkelMeshViewer(USkeletalMesh *Mesh);
 	virtual void ShowHelp();
 	virtual void Dump();

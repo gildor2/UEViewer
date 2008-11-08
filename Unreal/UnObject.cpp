@@ -388,8 +388,6 @@ const CPropInfo *UObject::FindProperty(const char *Name) const
 
 void UObject::DumpProps() const
 {
-	//!! BUG: scalar (non-array) props with sizeof(type)==1 (bool, byte) will be
-	//!! displayed as "type name[4]" (bug in _PROP_BASE macro)
 	for (int PropIndex = 0; /*empty*/; PropIndex++)
 	{
 		const CPropInfo *Prop = EnumProps(PropIndex);

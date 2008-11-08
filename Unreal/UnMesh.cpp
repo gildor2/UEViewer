@@ -1,9 +1,5 @@
 #include "Core.h"
-#include "UnCore.h"
-#include "UnObject.h"
-#include "UnMaterial.h"
-#include "UnMesh.h"
-#include "UnPackage.h"			// for loading texures by name (Rune) and checking real class name
+#include "UnrealClasses.h"
 
 
 /*-----------------------------------------------------------------------------

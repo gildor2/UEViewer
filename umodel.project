@@ -34,30 +34,15 @@ LIBRARIES  = libs
 OBJDIR     = obj
 STDLIBS   += SDL SDLmain
 
+INCLUDES += . Core Unreal
+
 sources(MAIN) = {
-	# main unit
 	Main.cpp
-	ExportPsk.cpp
-	Export3D.cpp
-	ExportTga.cpp
-	# Unreal Engine support files
-	UnCore.cpp
-	UnObject.cpp
-	UnPackage.cpp
-	UnMesh.cpp
-	# rendering
-	UnRenderer.cpp
-	# viewers
-	MeshViewer.cpp
-	VertMeshViewer.cpp
-	VertMeshInstance.cpp
-	SkelMeshViewer.cpp
-	SkelMeshInstance.cpp
-	MaterialViewer.cpp
-	# libraries
-	GlWindow.cpp
-	Math3D.cpp
-	TextContainer.cpp
+	Exporters/*.cpp
+	Unreal/*.cpp
+	Viewers/*.cpp
+	MeshInstance/*.cpp
+	Core/*.cpp
 	libs/ddslib.c
 }
 

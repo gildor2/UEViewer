@@ -1,23 +1,12 @@
+#include "Core.h"
+#include "UnrealClasses.h"
+
 #include "ObjectViewer.h"
-#include "MeshInstance.h"
-
-//!! move outside
-void SetAxis(const FRotator &Rot, CAxis &Axis)
-{
-	CVec3 angles;
-	//?? check: swapped pitch and roll ?
-	angles[YAW]   = -Rot.Yaw   / 32768.0f * 180;
-	angles[ROLL]  = -Rot.Pitch / 32768.0f * 180;
-	angles[PITCH] = -Rot.Roll  / 32768.0f * 180;
-	Axis.FromEuler(angles);
-}
-
+#include "../MeshInstance/MeshInstance.h"
 
 CMeshViewer::CMeshViewer(ULodMesh *Mesh)
 :	CObjectViewer(Mesh)
 ,	AnimIndex(-1)
-,	bShowNormals(false)
-,	bWireframe(false)
 ,	CurrentTime(appMilliseconds())
 {
 	// compute model center by Z-axis (vertical)
@@ -114,7 +103,7 @@ void CMeshViewer::Draw2D()
 		Inst->IsTweening() ? " [tweening]" : "");
 	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
 
-	if (Inst->Viewport->bColorMaterials)
+	if (Inst->bColorMaterials)
 	{
 		const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
 		DrawTextLeft(S_GREEN"Textures: %d", Mesh->Textures.Num());
@@ -162,7 +151,7 @@ void CMeshViewer::Draw3D()
 	glColor3f(1, 1, 1);
 
 	// draw mesh
-	glPolygonMode(GL_FRONT_AND_BACK, bWireframe ? GL_LINE : GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, Inst->bWireframe ? GL_LINE : GL_FILL);	//?? bWireframe is inside Inst, but used here only ?
 	Inst->Draw();
 
 	// restore draw state
@@ -200,15 +189,15 @@ void CMeshViewer::ProcessKey(int key)
 	switch (key)
 	{
 	case 'n':
-		bShowNormals = !bShowNormals;
+		Inst->bShowNormals = !Inst->bShowNormals;
 		break;
 
 	case 'm':
-		bColorMaterials = !bColorMaterials;
+		Inst->bColorMaterials = !Inst->bColorMaterials;
 		break;
 
 	case 'w':
-		bWireframe = !bWireframe;
+		Inst->bWireframe = !Inst->bWireframe;
 		break;
 
 	case '[':

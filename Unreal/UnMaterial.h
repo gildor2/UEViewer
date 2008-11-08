@@ -11,39 +11,39 @@
 /*
 MATERIALS TREE:
 ~~~~~~~~~~~~~~~
-- Material
--   Combiner
--   Modifier
-      ColorModifier
--     FinalBlend
-      MaterialSequence
-      MaterialSwitch
-      OpacityModifier
--     TexModifier
-        TexCoordSource
--       TexEnvMap
-        TexMatrix
--       TexOscillator
-          TexOscillatorTriggered
--       TexPanner
-          TexPannerTriggered
--       TexRotator
--       TexScaler
-        VariableTexPanner
--   RenderedMaterial
--     BitmapMaterial
-        ScriptedTexture
-        ShadowBitmapMaterial
--       Texture
-          Cubemap
--     ConstantMaterial
--       ConstantColor
-        FadeColor
-      ParticleMaterial
-      ProjectorMaterial
--     Shader
-      TerrainMaterial
-      VertexColor
+-	Material
+-		Combiner
+-		Modifier
+			ColorModifier
+-			FinalBlend
+			MaterialSequence
+			MaterialSwitch
+			OpacityModifier
+-			TexModifier
+				TexCoordSource
+-				TexEnvMap
+				TexMatrix
+-				TexOscillator
+					TexOscillatorTriggered
+-				TexPanner
+					TexPannerTriggered
+-				TexRotator
+-				TexScaler
+				VariableTexPanner
+-		RenderedMaterial
+-			BitmapMaterial
+				ScriptedTexture
+				ShadowBitmapMaterial
+-				Texture
+					Cubemap
+-			ConstantMaterial
+-				ConstantColor
+				FadeColor
+			ParticleMaterial
+			ProjectorMaterial
+-			Shader
+			TerrainMaterial
+			VertexColor
 */
 
 #if RENDERING
@@ -74,7 +74,7 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_OBJ(FallbackMaterial)
 		PROP_OBJ(DefaultMaterial)
-		PROP_BYTE(SurfaceType)
+		PROP_ENUM(SurfaceType)
 #if SPLINTER_CELL
 		PROP_BOOL(bUseTextureAsHeat)
 		PROP_OBJ(HeatMaterial)
@@ -202,9 +202,9 @@ public:
 	int				UClamp, VClamp;	// same as UClampMode/VClampMode ?
 
 	BEGIN_PROP_TABLE
-		PROP_BYTE(Format)
-		PROP_BYTE(UClampMode)
-		PROP_BYTE(VClampMode)
+		PROP_ENUM(Format)
+		PROP_ENUM(UClampMode)
+		PROP_ENUM(VClampMode)
 		PROP_BYTE(UBits)
 		PROP_BYTE(VBits)
 		PROP_INT(USize)
@@ -353,14 +353,14 @@ public:
 		PROP_BOOL(bHighTextureQuality)
 		PROP_BOOL(bRealtime)
 		PROP_BOOL(bParametric)
-		PROP_BYTE(LODSet)
+		PROP_ENUM(LODSet)
 		PROP_INT(NormalLOD)
 		PROP_INT(MinLOD)
 		PROP_OBJ(AnimNext)
 		PROP_BYTE(PrimeCount)
 		PROP_FLOAT(MinFrameRate)
 		PROP_FLOAT(MaxFrameRate)
-		PROP_BYTE(CompFormat)
+		PROP_ENUM(CompFormat)
 		PROP_BOOL(bHasComp)
 	END_PROP_TABLE
 
@@ -420,7 +420,7 @@ public:
 		PROP_OBJ(SelfIlluminationMask)
 		PROP_OBJ(Detail)
 		PROP_FLOAT(DetailScale)
-		PROP_BYTE(OutputBlending)
+		PROP_ENUM(OutputBlending)
 		PROP_BOOL(TwoSided)
 		PROP_BOOL(Wireframe)
 		PROP_BOOL(ModulateStaticLighting2X)
@@ -488,7 +488,7 @@ public:
 	,	TwoSided(false)
 	{}
 	BEGIN_PROP_TABLE
-		PROP_BYTE(FrameBufferBlending)
+		PROP_ENUM(FrameBufferBlending)
 		PROP_BOOL(ZWrite)
 		PROP_BOOL(ZTest)
 		PROP_BOOL(AlphaTest)
@@ -540,8 +540,8 @@ public:
 	{}
 
 	BEGIN_PROP_TABLE
-		PROP_BYTE(CombineOperation)
-		PROP_BYTE(AlphaOperation)
+		PROP_ENUM(CombineOperation)
+		PROP_ENUM(AlphaOperation)
 		PROP_OBJ(Material1)
 		PROP_OBJ(Material2)
 		PROP_OBJ(Mask)
@@ -593,9 +593,9 @@ public:
 	{}
 
 	BEGIN_PROP_TABLE
-		PROP_BYTE(TexCoordSource)
-		PROP_BYTE(TexCoordCount)
-		PROP_BYTE(TexCoordProjected)
+		PROP_ENUM(TexCoordSource)
+		PROP_ENUM(TexCoordCount)
+		PROP_ENUM(TexCoordProjected)
 	END_PROP_TABLE
 
 	BIND;
@@ -621,7 +621,7 @@ public:
 	}
 
 	BEGIN_PROP_TABLE
-		PROP_BYTE(EnvMapType)
+		PROP_ENUM(EnvMapType)
 	END_PROP_TABLE
 };
 
@@ -660,8 +660,8 @@ public:
 		PROP_FLOAT(VOscillationPhase)
 		PROP_FLOAT(UOscillationAmplitude)
 		PROP_FLOAT(VOscillationAmplitude)
-		PROP_BYTE(UOscillationType)
-		PROP_BYTE(VOscillationType)
+		PROP_ENUM(UOscillationType)
+		PROP_ENUM(VOscillationType)
 		PROP_FLOAT(UOffset)
 		PROP_FLOAT(VOffset)
 		PROP_DROP(M)
@@ -721,7 +721,7 @@ public:
 //	FMatrix			M;
 
 	BEGIN_PROP_TABLE
-		PROP_BYTE(TexRotationType)
+		PROP_ENUM(TexRotationType)
 		PROP_ROTATOR(Rotation)
 		PROP_FLOAT(UOffset)
 		PROP_FLOAT(VOffset)

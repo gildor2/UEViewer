@@ -54,6 +54,11 @@ struct CPropInfo
 		static const CPropInfo props[] =		\
 		{
 // simple types
+// note: has special PROP_ENUM(), which is the same as PROP_BYTE(), but when using
+// PROP_BYTE for enumeration value, _PROP_BASE macro will set 'Count' field of
+// CPropInfo to 4 instead of 1 (enumeration values are serialized as byte, but
+// compiler report it as 4-byte field)
+#define PROP_ENUM(Field)		{ #Field, "byte", FIELD2OFS(ThisClass, Field), 1 },
 #define PROP_BYTE(Field)		_PROP_BASE(Field, byte     )
 #define PROP_INT(Field)			_PROP_BASE(Field, int      )
 #define PROP_BOOL(Field)		_PROP_BASE(Field, bool     )

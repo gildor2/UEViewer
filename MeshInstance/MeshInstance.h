@@ -5,19 +5,38 @@
 	Basic CMeshInstance class
 -----------------------------------------------------------------------------*/
 
+//?? move outside
+UMaterial *BindDefaultMaterial();
+
+inline void SetAxis(const FRotator &Rot, CAxis &Axis)
+{
+	CVec3 angles;
+	//?? check: swapped pitch and roll ?
+	angles[YAW]   = -Rot.Yaw   / 32768.0f * 180;
+	angles[ROLL]  = -Rot.Pitch / 32768.0f * 180;
+	angles[PITCH] = -Rot.Roll  / 32768.0f * 180;
+	Axis.FromEuler(angles);
+}
+
+
 class CMeshInstance
 {
 public:
 	// linked data
 	const ULodMesh	*pMesh;
-	CMeshViewer		*Viewport;
 	// common properties
 	CCoords			BaseTransform;			// rotation for mesh; have identity axis
 	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
+	// debugging
+	bool			bShowNormals;
+	bool			bColorMaterials;
+	bool			bWireframe;
 
-	CMeshInstance(CMeshViewer *Viewer)
+	CMeshInstance()
 	:	pMesh(NULL)
-	,	Viewport(Viewer)
+	,	bShowNormals(false)
+	,	bColorMaterials(false)
+	,	bWireframe(false)
 	{}
 
 	virtual ~CMeshInstance()
@@ -43,7 +62,7 @@ public:
 	void SetMaterial(int Index)
 	{
 		guard(CMeshInstance::SetMaterial);
-		if (!Viewport->bColorMaterials)
+		if (!bColorMaterials)
 		{
 			const FMeshMaterial &M = pMesh->Materials[Index];
 			int TexIndex = M.TextureIndex;
@@ -110,9 +129,8 @@ protected:
 class CVertMeshInstance : public CMeshInstance
 {
 public:
-	CVertMeshInstance(CVertMeshViewer *Viewer)
-	:	CMeshInstance(Viewer)
-	,	AnimIndex(-1)
+	CVertMeshInstance()
+	:	AnimIndex(-1)
 	,	AnimTime(0)
 	{}
 	virtual void Draw();
@@ -190,14 +208,18 @@ class CSkelMeshInstance : public CMeshInstance
 public:
 	// mesh state
 	int			LodNum;
+	// debugging
+	int			ShowSkel;			// 0 - mesh, 1 - mesh+skel, 2 - skel only
+	bool		ShowLabels;
 
-	CSkelMeshInstance(CSkelMeshViewer *Viewer)
-	:	CMeshInstance(Viewer)
-	,	LodNum(-1)
+	CSkelMeshInstance()
+	:	LodNum(-1)
 	,	MaxAnimChannel(-1)
 	,	BoneData(NULL)
 	,	MeshVerts(NULL)
 	,	MeshNormals(NULL)
+	,	ShowSkel(0)
+	,	ShowLabels(false)
 	{
 		ClearSkelAnims();
 	}

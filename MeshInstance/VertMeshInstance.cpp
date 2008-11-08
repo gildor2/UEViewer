@@ -1,4 +1,5 @@
-#include "ObjectViewer.h"
+#include "Core.h"
+#include "UnrealClasses.h"
 #include "MeshInstance.h"
 
 
@@ -111,7 +112,7 @@ void CVertMeshInstance::Draw()
 			glVertex3fv(Vert[j].v);
 		}
 		glEnd();
-		if (Viewport->bShowNormals)
+		if (bShowNormals)
 		{
 			glDisable(GL_LIGHTING);
 			glDisable(GL_TEXTURE_2D);

@@ -22,20 +22,21 @@ MAIN : umodel.exe
 
 MAIN = \
 	obj/Main.obj \
-	obj/ExportPsk.obj \
 	obj/Export3D.obj \
+	obj/ExportPsk.obj \
 	obj/ExportTga.obj \
 	obj/UnCore.obj \
+	obj/UnMesh.obj \
 	obj/UnObject.obj \
 	obj/UnPackage.obj \
-	obj/UnMesh.obj \
 	obj/UnRenderer.obj \
-	obj/MeshViewer.obj \
-	obj/VertMeshViewer.obj \
-	obj/VertMeshInstance.obj \
-	obj/SkelMeshViewer.obj \
-	obj/SkelMeshInstance.obj \
 	obj/MaterialViewer.obj \
+	obj/MeshViewer.obj \
+	obj/SkelMeshViewer.obj \
+	obj/VertMeshViewer.obj \
+	obj/SkelMeshInstance.obj \
+	obj/VertMeshInstance.obj \
+	obj/Core.obj \
 	obj/GlWindow.obj \
 	obj/Math3D.obj \
 	obj/TextContainer.obj \
@@ -52,180 +53,212 @@ umodel.exe : $(MAIN_DIRS) $(MAIN)
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -O1 -EHsc -I libs/include
+OPT_MAIN = -O1 -EHsc -I libs/include -I . -I Core -I Unreal
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	Exporters.h \
-	GlWindow.h \
-	Math3D.h \
-	ObjectViewer.h \
-	UnAnimNotify.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnMesh.h \
-	UnObject.h \
-	UnPackage.h
+	Core/Core.h \
+	Core/GlFont.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/TextContainer.h
+
+obj/GlWindow.obj : Core/GlWindow.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/GlWindow.obj" Core/GlWindow.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnAnimNotify.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
 
 obj/Main.obj : Main.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Main.obj" Main.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	GlFont.h \
-	GlWindow.h \
-	Math3D.h \
-	TextContainer.h
+	Core/Core.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
 
-obj/GlWindow.obj : GlWindow.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/GlWindow.obj" GlWindow.cpp
-
-DEPENDS = \
-	Build.h \
-	Core.h \
-	GlWindow.h \
-	Math3D.h \
-	MeshInstance.h \
-	ObjectViewer.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnMesh.h \
-	UnObject.h \
-	UnPackage.h
-
-obj/MeshViewer.obj : MeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MeshViewer.obj" MeshViewer.cpp
-
-obj/SkelMeshInstance.obj : SkelMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshInstance.obj" SkelMeshInstance.cpp
-
-obj/SkelMeshViewer.obj : SkelMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshViewer.obj" SkelMeshViewer.cpp
-
-obj/VertMeshInstance.obj : VertMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshInstance.obj" VertMeshInstance.cpp
-
-obj/VertMeshViewer.obj : VertMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshViewer.obj" VertMeshViewer.cpp
+obj/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	GlWindow.h \
-	Math3D.h \
-	ObjectViewer.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnMesh.h \
-	UnObject.h \
-	UnPackage.h
+	Core/Core.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
 
-obj/MaterialViewer.obj : MaterialViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MaterialViewer.obj" MaterialViewer.cpp
+obj/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MeshViewer.obj" Viewers/MeshViewer.cpp
+
+obj/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
+
+obj/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	GlWindow.h \
-	Math3D.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnObject.h \
+	Core/Core.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+obj/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MaterialViewer.obj" Viewers/MaterialViewer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
 	libs/ddslib.h
 
-obj/UnRenderer.obj : UnRenderer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnRenderer.obj" UnRenderer.cpp
+obj/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnRenderer.obj" Unreal/UnRenderer.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	Math3D.h
+	Core/Core.h \
+	Core/Math3D.h
 
-obj/Math3D.obj : Math3D.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Math3D.obj" Math3D.cpp
+obj/Core.obj : Core/Core.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Core.obj" Core/Core.cpp
 
-DEPENDS = \
-	Build.h \
-	Core.h \
-	Math3D.h \
-	Psk.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnMesh.h \
-	UnObject.h
-
-obj/ExportPsk.obj : ExportPsk.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ExportPsk.obj" ExportPsk.cpp
+obj/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Math3D.obj" Core/Math3D.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	Math3D.h \
-	TextContainer.h
+	Core/Core.h \
+	Core/Math3D.h \
+	Core/TextContainer.h
 
-obj/TextContainer.obj : TextContainer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/TextContainer.obj" TextContainer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core.h \
-	Math3D.h \
-	UnCore.h
-
-obj/UnCore.obj : UnCore.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnCore.obj" UnCore.cpp
+obj/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/TextContainer.obj" Core/TextContainer.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	Math3D.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnMesh.h \
-	UnObject.h
+	Core/Core.h \
+	Core/Math3D.h \
+	Exporters/Psk.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h
 
-obj/Export3D.obj : Export3D.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Export3D.obj" Export3D.cpp
-
-DEPENDS = \
-	Build.h \
-	Core.h \
-	Math3D.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnMesh.h \
-	UnObject.h \
-	UnPackage.h
-
-obj/UnMesh.obj : UnMesh.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnMesh.obj" UnMesh.cpp
+obj/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ExportPsk.obj" Exporters/ExportPsk.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	Math3D.h \
-	UnCore.h \
-	UnMaterial.h \
-	UnObject.h
+	Core/Core.h \
+	Core/Math3D.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
 
-obj/ExportTga.obj : ExportTga.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ExportTga.obj" ExportTga.cpp
+obj/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
 
 DEPENDS = \
 	Build.h \
-	Core.h \
-	Math3D.h \
-	UnCore.h \
-	UnObject.h \
-	UnPackage.h
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h
 
-obj/UnObject.obj : UnObject.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnObject.obj" UnObject.cpp
+obj/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnCore.obj" Unreal/UnCore.cpp
 
-obj/UnPackage.obj : UnPackage.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnPackage.obj" UnPackage.cpp
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h
+
+obj/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Export3D.obj" Exporters/Export3D.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+obj/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnMesh.obj" Unreal/UnMesh.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h
+
+obj/ExportTga.obj : Exporters/ExportTga.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ExportTga.obj" Exporters/ExportTga.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+obj/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnObject.obj" Unreal/UnObject.cpp
+
+obj/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnPackage.obj" Unreal/UnPackage.cpp
 
 DEPENDS = \
 	libs/ddslib.h

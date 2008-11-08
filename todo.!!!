@@ -1,6 +1,15 @@
 FONTGEN
 ! BUG: '&' displayed as '_' (WinAPI feature)
 ? add pseudographics chars (for material outline)
+! combine with Samples/BitmapBuilder (tool for generating .h file)
+! place font information into font DATA[] (not #define), this will allow to use few fonts at the
+  same time
+
+! ObjectViewer.h is used incorrectly -- as include for all Unreal/Un*.h headers
+
+! UTexture has AnimNext field
+! UMaterialSequence (check 2K4Menus package)
+? key to toggle fullscreen, key to toggle debug text and lines (good for screenshots)
 
 ?? TRIBES3:
   ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)

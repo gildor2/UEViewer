@@ -1,13 +1,14 @@
+#include "Core.h"
+#include "UnrealClasses.h"
+
 #include "ObjectViewer.h"
-#include "MeshInstance.h"
+#include "../MeshInstance/MeshInstance.h"
 
 
 CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 :	CMeshViewer(Mesh)
-,	ShowSkel(0)
-,	ShowLabels(false)
 {
-	Inst = new CSkelMeshInstance(this);
+	Inst = new CSkelMeshInstance();
 	Inst->SetMesh(Mesh);
 #if 0
 	CSkelMeshInstance* Inst2 = (CSkelMeshInstance*)Inst;
@@ -223,11 +224,11 @@ void CSkelMeshViewer::ProcessKey(int key)
 			MeshInst->LodNum = -1;
 		break;
 	case 's':
-		if (++ShowSkel > 2)
-			ShowSkel = 0;
+		if (++MeshInst->ShowSkel > 2)
+			MeshInst->ShowSkel = 0;
 		break;
 	case 'b':
-		ShowLabels = !ShowLabels;
+		MeshInst->ShowLabels = !MeshInst->ShowLabels;
 		break;
 	case 'b'|KEY_CTRL:
 		MeshInst->DumpBones();

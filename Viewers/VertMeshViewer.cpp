@@ -1,11 +1,14 @@
+#include "Core.h"
+#include "UnrealClasses.h"
+
 #include "ObjectViewer.h"
-#include "MeshInstance.h"
+#include "../MeshInstance/MeshInstance.h"
 
 
 CVertMeshViewer::CVertMeshViewer(UVertMesh *Mesh)
 :	CMeshViewer(Mesh)
 {
-	Inst = new CVertMeshInstance(this);
+	Inst = new CVertMeshInstance();
 	Inst->SetMesh(Mesh);
 }
 
