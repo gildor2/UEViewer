@@ -1,4 +1,5 @@
 #include "GlWindow.h"
+#include "UnPackage.h"			// for CObjectViewer::Draw2D()
 
 
 class CMeshInstance;

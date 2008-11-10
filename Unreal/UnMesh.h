@@ -245,6 +245,7 @@ struct FMeshAnimSeq
 	float					f28;			//??
 	friend FArchive& operator<<(FArchive &Ar, FMeshAnimSeq &A)
 	{
+		guard(FMeshAnimSeq<<);
 #if TRIBES3
 		TRIBES_HDR(Ar, 0x17);
 		if (Ar.IsTribes3 && t3_hdrV == 1)
@@ -294,6 +295,7 @@ struct FMeshAnimSeq
 		}
 #endif
 		return Ar;
+		unguard;
 	}
 };
 
@@ -544,80 +546,6 @@ public:
 	UMeshAnimation class
 -----------------------------------------------------------------------------*/
 
-#if SPLINTER_CELL
-
-// quaternion with 4 16-bit fixed point fields
-struct FQuatComp
-{
-	short			X, Y, Z, W;				// signed short, corresponds to float*32767
-
-	inline operator FQuat() const
-	{
-		FQuat r;
-		r.X = X / 32767.0f;
-		r.Y = Y / 32767.0f;
-		r.Z = Z / 32767.0f;
-		r.W = W / 32767.0f;
-		return r;
-	}
-	inline operator FVector() const			//?? for FixedPointTrack
-	{
-		FVector r;
-		r.X = X / 64.0f;
-		r.Y = Y / 64.0f;
-		r.Z = Z / 64.0f;
-		return r;
-	}
-
-	friend FArchive& operator<<(FArchive &Ar, FQuatComp &Q)
-	{
-		return Ar << Q.X << Q.Y << Q.Z << Q.W;
-	}
-};
-
-// normalized quaternion with 3 16-bit fixed point fields
-struct FQuatComp2
-{
-	short			X, Y, Z;				// signed short, corresponds to float*32767
-
-	inline operator FQuat() const
-	{
-		FQuat r;
-		r.X = X / 32767.0f;
-		r.Y = Y / 32767.0f;
-		r.Z = Z / 32767.0f;
-		r.W = sqrt(1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z));
-		return r;
-	}
-
-	friend FArchive& operator<<(FArchive &Ar, FQuatComp2 &Q)
-	{
-		return Ar << Q.X << Q.Y << Q.Z;
-	}
-};
-
-struct FVectorComp
-{
-	short			X, Y, Z;
-
-	inline operator FVector() const
-	{
-		FVector r;
-		r.X = X / 64.0f;
-		r.Y = Y / 64.0f;
-		r.Z = Z / 64.0f;
-		return r;
-	}
-
-	friend FArchive& operator<<(FArchive &Ar, FVectorComp &V)
-	{
-		return Ar << V.X << V.Y << V.Z;
-	}
-};
-
-#endif // SPLINTER_CELL
-
-
 struct AnalogTrack
 {
 	unsigned		Flags;					// reserved
@@ -625,22 +553,18 @@ struct AnalogTrack
 	TArray<FVector>	KeyPos;					// Position key track (count = 1 or KeyTime.Count)
 	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track)
 
+#if SPLINTER_CELL
+	void SerializeSCell(FArchive &Ar);
+#endif
+
 	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
 	{
 		guard(AnalogTrack<<);
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell)
+		if (Ar.IsSplinterCell && Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
 		{
-			if (Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
-			{
-				TArray<FQuatComp> KeyQuat2;
-				TArray<word>      KeyTime2;
-				Ar << KeyQuat2 << A.KeyPos << KeyTime2;
-				// copy with conversion
-				COPY_ARRAY(KeyQuat2, A.KeyQuat);
-				COPY_ARRAY(KeyTime2, A.KeyTime);
-				return Ar;
-			}
+			A.SerializeSCell(Ar);
+			return Ar;
 		}
 #endif // SPLINTER_CELL
 		return Ar << A.Flags << A.KeyQuat << A.KeyPos << A.KeyTime;
@@ -671,6 +595,7 @@ struct MotionChunk
 
 	friend FArchive& operator<<(FArchive &Ar, MotionChunk &M)
 	{
+		guard(MotionChunk<<);
 		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
 #if TRIBES3 || HP3
 		//?? new UE2 version, not game-specific
@@ -682,6 +607,7 @@ struct MotionChunk
 			FixTribesMotionChunk(M);
 #endif
 		return Ar;
+		unguard;
 	}
 };
 
@@ -730,32 +656,8 @@ public:
 #endif
 
 #if LINEAGE2
-	void SerializeLineageMoves(FArchive &Ar)
-	{
-		// serialize TRoughArray<MotionChunk> into TArray<MotionChunk>
-		guard(SerializeLineageMoves);
-		//!! move to cpp
-		assert(Ar.IsLoading);
-		if (Ar.ArVer < 123 || Ar.ArLicenseeVer < 0x19)
-		{
-			// standard UE2 format
-			Ar << Moves;
-			return;
-		}
-		int pos, count;						// pos = global skip pos, count = data count
-		Ar << pos << AR_INDEX(count);
-		Moves.Empty(count);
-		for (int i = 0; i < count; i++)
-		{
-			int localPos;
-			Ar << localPos;
-			MotionChunk *M = new(Moves) MotionChunk;
-			Ar << *M;
-			assert(localPos == Ar.ArPos);
-		}
-		assert(pos == Ar.ArPos);
-		unguard;
-	}
+	// serialize TRoughArray<MotionChunk> into TArray<MotionChunk>
+	void SerializeLineageMoves(FArchive &Ar);
 #endif
 
 	virtual void Serialize(FArchive &Ar)
@@ -1088,100 +990,6 @@ struct FLODMeshSection
 };
 
 
-#if SPLINTER_CELL
-
-struct FSCellUnk1
-{
-	int				f0, f4, f8, fC;
-
-	friend FArchive& operator<<(FArchive &Ar, FSCellUnk1 &S)
-	{
-		return Ar << S.f0 << S.f4 << S.f8 << S.fC;
-	}
-};
-
-struct FSCellUnk2
-{
-	int				f0, f4, f8, fC, f10;
-
-	friend FArchive& operator<<(FArchive &Ar, FSCellUnk2 &S)
-	{
-		return Ar << S.f0 << S.f4 << S.f10 << S.f8 << S.fC;
-	}
-};
-
-struct FSCellUnk3
-{
-	int				f0, f4, f8, fC;
-
-	friend FArchive& operator<<(FArchive &Ar, FSCellUnk3 &S)
-	{
-		return Ar << S.f0 << S.fC << S.f4 << S.f8;
-	}
-};
-
-struct FSCellUnk4a
-{
-	FVector			f0;
-	FVector			fC;
-	int				f18;					// float?
-
-	friend FArchive& operator<<(FArchive &Ar, FSCellUnk4a &S)
-	{
-		return Ar << S.f0 << S.fC << S.f18;
-	}
-};
-
-struct FSCellUnk4
-{
-	int				Size;
-	int				Count;
-	TArray<FString>	BoneNames;				// BoneNames.Num() == Count
-	FString			f14;
-	FSCellUnk4a**	Data;					// (FSCellUnk4a*)[Count][Size]
-
-	FSCellUnk4()
-	:	Data(NULL)
-	{}
-	~FSCellUnk4()
-	{
-		// cleanup data
-		if (Data)
-		{
-			for (int i = 0; i < Count; i++)
-				delete Data[i];
-			delete Data;
-		}
-	}
-
-	friend FArchive& operator<<(FArchive &Ar, FSCellUnk4 &S)
-	{
-		int i, j;
-
-		// serialize scalars
-		Ar << S.Size << S.Count << S.BoneNames << S.f14;
-
-		if (Ar.IsLoading)
-		{
-			// allocate array of pointers
-			S.Data = new FSCellUnk4a* [S.Count];
-			// allocate arrays
-			for (i = 0; i < S.Count; i++)
-				S.Data[i] = new FSCellUnk4a [S.Size];
-		}
-		// serialize arrays
-		for (i = 0; i < S.Count; i++)
-		{
-			FSCellUnk4a* Ptr = S.Data[i];
-			for (j = 0; j < S.Size; j++, Ptr++)
-				Ar << *Ptr;
-		}
-		return Ar;
-	}
-};
-
-#endif // SPLINTER_CELL
-
 #if TRIBES3
 
 struct FT3Unk1
@@ -1233,6 +1041,9 @@ public:
 #if UNREAL1
 	void SerializeSkelMesh1(FArchive &Ar);
 #endif
+#if SPLINTER_CELL
+	void SerializeSCell(FArchive &Ar);
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -1258,13 +1069,7 @@ public:
 #if SPLINTER_CELL
 			if (Ar.IsSplinterCell)
 			{
-				TArray<FSCellUnk1> tmp1;
-				TArray<FSCellUnk2> tmp2;
-				TArray<FSCellUnk3> tmp3;
-				TArray<FLODMeshSection> tmp4, tmp5;
-				TArray<word> tmp6;
-				FSCellUnk4 complex;
-				Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex;
+				SerializeSCell(Ar);
 			}
 			else
 #endif

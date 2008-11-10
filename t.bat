@@ -24,8 +24,8 @@ exit
 
 :cont
 
-%run% AW-2k4XP ShockShieldFinal
-rem umodel.exe -path="C:\!umodel-data\--Lineage2--" LineageMonsters
+rem %run% AW-2k4XP ShockShieldFinal
+umodel.exe -path="C:\!umodel-data\--Lineage2--" LineageNPCs2
 rem umodel.exe "C:\!umodel-data\--Dark Sector 9--\PAWNAI.u" OBrien
 rem umodel.exe "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx"
 rem umodel.exe -noanim "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx" MElf_m000_l

@@ -33,6 +33,12 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+10.11.2008
+- updated Lineage 2 support (for latest Lineage 2 Gracia)
+
+09.11.2008
+- implemented support for unicode strings (sometimes used in Lineage 2 packages)
+
 07.11.2008
 - implemented serializers for most UE2 materials
 - long texts on screen may be scrolled now with Ctrl+PgUp/Ctrl+PgDn keys

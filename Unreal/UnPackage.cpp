@@ -27,7 +27,7 @@ UnPackage::UnPackage(const char *filename)
 		// to get encryption key, can check 1st byte
 		byte b;
 		*this << b;
-		XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
+		XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);		// for Ver111 XorKey==0xAC, for Ver121 computed from filename
 		IsLineage2  = 1;
 		ArPosOffset = 28;
 		// Seek(0) below will behave differently after PosOffset is set
@@ -47,6 +47,7 @@ UnPackage::UnPackage(const char *filename)
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 	// read name table
+	guard(ReadNameTable);
 	if (Summary.NameCount > 0)
 	{
 		Seek(Summary.NameOffset);
@@ -72,11 +73,20 @@ UnPackage::UnPackage(const char *filename)
 			}
 			else
 			{
+#if 0
+				// FString, but less allocations ...
 				int len;
 				*this << AR_INDEX(len);
 				char *s = NameTable[i] = new char[len];
 				while (len-- > 0)
 					*this << *s++;
+#else
+				// Lineage sometimes uses Unicode strings ...
+				FString name;
+				*this << name;
+				NameTable[i] = new char[name.Num()];
+				strcpy(NameTable[i], *name);
+#endif
 //				PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 				// skip object flags
 				int tmp;
@@ -84,8 +94,10 @@ UnPackage::UnPackage(const char *filename)
 			}
 		}
 	}
+	unguard;
 
 	// load import table
+	guard(ReadImportTable);
 	if (Summary.ImportCount > 0)
 	{
 		Seek(Summary.ImportOffset);
@@ -96,8 +108,10 @@ UnPackage::UnPackage(const char *filename)
 //			PKG_LOG(("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName));
 		}
 	}
+	unguard;
 
 	// load exports table
+	guard(ReadExportTable);
 	if (Summary.ExportCount > 0)
 	{
 		Seek(Summary.ExportOffset);
@@ -109,6 +123,7 @@ UnPackage::UnPackage(const char *filename)
 //				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize));
 		}
 	}
+	unguard;
 
 	// add self to package map
 	PackageEntry &Info = PackageMap[PackageMap.Add()];

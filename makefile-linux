@@ -95,10 +95,17 @@ DEPENDS_3 = \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
 
-obj/SkelMeshInstance.o : MeshInstance/SkelMeshInstance.cpp $(DEPENDS_3)
-	$(CPP) $(OPT_MAIN) -o obj/SkelMeshInstance.o MeshInstance/SkelMeshInstance.cpp
+obj/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_3)
+	$(CPP) $(OPT_MAIN) -o obj/MeshViewer.o Viewers/MeshViewer.cpp
+
+obj/SkelMeshViewer.o : Viewers/SkelMeshViewer.cpp $(DEPENDS_3)
+	$(CPP) $(OPT_MAIN) -o obj/SkelMeshViewer.o Viewers/SkelMeshViewer.cpp
+
+obj/VertMeshViewer.o : Viewers/VertMeshViewer.cpp $(DEPENDS_3)
+	$(CPP) $(OPT_MAIN) -o obj/VertMeshViewer.o Viewers/VertMeshViewer.cpp
 
 DEPENDS_4 = \
 	Build.h \
@@ -110,18 +117,10 @@ DEPENDS_4 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
+	Unreal/UnrealClasses.h
 
-obj/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o obj/MeshViewer.o Viewers/MeshViewer.cpp
-
-obj/SkelMeshViewer.o : Viewers/SkelMeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o obj/SkelMeshViewer.o Viewers/SkelMeshViewer.cpp
-
-obj/VertMeshViewer.o : Viewers/VertMeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o obj/VertMeshViewer.o Viewers/VertMeshViewer.cpp
+obj/SkelMeshInstance.o : MeshInstance/SkelMeshInstance.cpp $(DEPENDS_4)
+	$(CPP) $(OPT_MAIN) -o obj/SkelMeshInstance.o MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS_5 = \
 	Build.h \
@@ -194,7 +193,6 @@ DEPENDS_10 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 obj/VertMeshInstance.o : MeshInstance/VertMeshInstance.cpp $(DEPENDS_10)

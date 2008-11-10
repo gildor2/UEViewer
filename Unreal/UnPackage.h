@@ -115,6 +115,7 @@ struct FObjectImport
 };
 
 
+// In Unreal Engine class with similar functionality named "ULinkerLoad"
 class UnPackage : public FFileReader
 {
 public:

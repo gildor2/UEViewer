@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This tool will create archive with source code.
+# All .svn dirs and "obj", "data", "bak" are excluded.
+
 # Enable extended pattern matching (for (a|b|c)); see bash manpage, "Pattern matching".
 shopt -s extglob
 

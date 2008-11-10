@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "UnrealClasses.h"
+#include "UnPackage.h"
 #include "UnAnimNotify.h"
 
 #include "Viewers/ObjectViewer.h"
@@ -140,7 +141,7 @@ int main(int argc, char **argv)
 				"Developer commands:\n"
 				"    -dump           dump object information to console\n"
 				"    -check          check some assumptions, no other actions performed\n"
-				"    -nop            load package and do nothing\n"
+				"    -pkginfo        load package and display its information\n"
 				"\n"
 				"Options:\n"
 				"    -path=PATH      path to UT installation directory; if not specified,\n"
@@ -188,7 +189,7 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, noOp = false;
+	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -213,8 +214,8 @@ int main(int argc, char **argv)
 				view  = false;
 				exprt = true;
 			}
-			else if (!stricmp(opt, "nop"))
-				noOp = true;
+			else if (!stricmp(opt, "pkginfo"))
+				pkgInfo = true;
 			else if (!stricmp(opt, "list"))
 				listOnly = true;
 			else if (!stricmp(opt, "noanim"))
@@ -267,7 +268,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (noOp)
+	if (pkgInfo)
 		return 0;
 
 	if (listOnly)

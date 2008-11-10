@@ -149,6 +149,41 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 }
 
 
+FArchive& operator<<(FArchive &Ar, FString &S)
+{
+	if (!Ar.IsLoading)
+	{
+		Ar << (TArray<char>&)S;
+		return Ar;
+	}
+	// loading
+	int len, i;
+	Ar << AR_INDEX(len);
+	S.Empty((len >= 0) ? len : -len);
+	if (len >= 0)
+	{
+		// ANSI string
+		for (i = 0; i < len; i++)
+		{
+			char c;
+			Ar << c;
+			S.AddItem(c);
+		}
+	}
+	else
+	{
+		// UNICODE string
+		for (i = 0; i < -len; i++)
+		{
+			short c;
+			Ar << c;
+			S.AddItem(c & 255);		//!! incorrect ...
+		}
+	}
+	return Ar;
+}
+
+
 void SerializeChars(FArchive &Ar, char *buf, int length)
 {
 	for (int i = 0; i < length; i++)

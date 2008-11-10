@@ -88,6 +88,7 @@ public:
 		Super::Serialize(Ar);
 		if (Ar.IsLineage2)
 		{
+			guard(SerializeLineage2Material);
 			//?? separate to cpp
 			int unk1;
 			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x10)
@@ -97,7 +98,7 @@ public:
 				int i;
 				// some function
 				byte MaterialInfo, TextureTranform, MAX_SAMPLER_NUM, MAX_TEXMAT_NUM, MAX_PASS_NUM, TwoPassRenderState, AlphaRef;
-				if (Ar.ArLicenseeVer >= 0x21)
+				if (Ar.ArLicenseeVer >= 0x21 && Ar.ArLicenseeVer < 0x24)
 					Ar << MaterialInfo;
 				Ar << TextureTranform << MAX_SAMPLER_NUM << MAX_TEXMAT_NUM << MAX_PASS_NUM << TwoPassRenderState << AlphaRef;
 				int SrcBlend, DestBlend, OverriddenFogColor;
@@ -106,7 +107,8 @@ public:
 				for (i = 0; i < 8; i++)
 				{
 					char b1, b2;
-					Ar << b1 << b2;
+					Ar << b1;
+					if (Ar.ArLicenseeVer < 0x24) Ar << b2;
 					for (int j = 0; j < 126; j++)
 					{
 						// really, 1Kb of floats and ints ...
@@ -132,6 +134,7 @@ public:
 				if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1F)
 					Ar << ver1 << ver2;
 			}
+			unguard;
 		}
 		unguard;
 	}

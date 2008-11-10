@@ -643,6 +643,8 @@ public:
 	{
 		return (char*)DataPtr;
 	}
+
+	friend FArchive& operator<<(FArchive &Ar, FString &S);
 };
 
 
