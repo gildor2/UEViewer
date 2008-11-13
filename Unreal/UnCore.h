@@ -90,6 +90,9 @@ public:
 	int		ArStopper;
 
 	// game-specific flags
+#if UT2
+	int		IsUT2:1;
+#endif
 #if SPLINTER_CELL
 	int		IsSplinterCell:1;
 #endif
@@ -104,6 +107,9 @@ public:
 	:	ArStopper(0)
 	,	ArVer(99999)			//?? something large
 	,	ArLicenseeVer(0)
+#if UT2
+	,	IsUT2(0)
+#endif
 #if SPLINTER_CELL
 	,	IsSplinterCell(0)
 #endif

@@ -573,8 +573,10 @@ struct AnalogTrack
 };
 
 
-#if TRIBES3
+#if UNREAL25
 void SerializeFlexTracks(FArchive &Ar);
+#endif
+#if TRIBES3
 void FixTribesMotionChunk(struct MotionChunk &M);
 #endif
 
@@ -597,9 +599,8 @@ struct MotionChunk
 	{
 		guard(MotionChunk<<);
 		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
-#if TRIBES3 || HP3
-		//?? new UE2 version, not game-specific
-		if (M.Flags >= 3)					//?? version >= 0x81 ? (not checked)
+#if UNREAL25
+		if (M.Flags >= 3)
 			SerializeFlexTracks(Ar);
 #endif
 #if TRIBES3
@@ -774,21 +775,26 @@ struct FSkelBoneSphere
 	FName			BoneName;
 	FVector			Offset;
 	float			Radius;
+#if UT2
 	int				bBlockKarma;
 	int				bBlockNonZeroExtent;
 	int				bBlockZeroExtent;
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelBoneSphere &B)
 	{
 		Ar << B.BoneName << B.Offset << B.Radius;
+#if UT2
 		if (Ar.IsLoading)
 		{
 			B.bBlockKarma = B.bBlockNonZeroExtent = B.bBlockZeroExtent = 1;
 		}
-		if (Ar.ArVer > 123)
-			Ar << B.bBlockKarma;
-		if (Ar.ArVer > 124)
-			Ar << B.bBlockZeroExtent << B.bBlockNonZeroExtent;
+		if (Ar.IsUT2)
+		{
+			if (Ar.ArVer > 123) Ar << B.bBlockKarma;
+			if (Ar.ArVer > 124)	Ar << B.bBlockZeroExtent << B.bBlockNonZeroExtent;
+		}
+#endif // UT2
 		return Ar;
 	}
 };
@@ -800,21 +806,26 @@ struct FSkelBoneBox
 	FName			BoneName;
 	FVector			Offset;
 	FVector			Radii;
+#if UT2
 	int				bBlockKarma;
 	int				bBlockNonZeroExtent;
 	int				bBlockZeroExtent;
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelBoneBox &B)
 	{
 		Ar << B.BoneName << B.Offset << B.Radii;
+#if UT2
 		if (Ar.IsLoading)
 		{
 			B.bBlockKarma = B.bBlockNonZeroExtent = B.bBlockZeroExtent = 1;
 		}
-		if (Ar.ArVer > 123)
-			Ar << B.bBlockKarma;
-		if (Ar.ArVer > 124)
-			Ar << B.bBlockZeroExtent << B.bBlockNonZeroExtent;
+		if (Ar.IsUT2)
+		{
+			if (Ar.ArVer > 123) Ar << B.bBlockKarma;
+			if (Ar.ArVer > 124) Ar << B.bBlockZeroExtent << B.bBlockNonZeroExtent;
+		}
+#endif // UT2
 		return Ar;
 	}
 };
@@ -1131,18 +1142,25 @@ public:
 		{
 			Ar << AuthKey;
 		}
-		if (Ar.ArVer >= 122)
+
+#if UT2
+		if (Ar.IsUT2)
 		{
-			Ar << KarmaProps << BoundingSpheres << BoundingBoxes << f32C;
-		}
-#if HP3
-		if (Ar.ArVer >= 129)	// post-UT2 code
+			// UT2004 has branched version of UE2, which is slightly different
+			// in comparison with generic UE2, which is used in all other UE2 games.
+			if (Ar.ArVer >= 122)
+				Ar << KarmaProps << BoundingSpheres << BoundingBoxes << f32C;
+			if (Ar.ArVer >= 127)
+				Ar << CollisionMesh;
 			return;
-#endif
-		if (Ar.ArVer >= 127)
-		{
-			Ar << CollisionMesh;
 		}
+#endif // UT2
+
+		// generic UE2 code
+		if (Ar.ArVer >= 124)
+			Ar << KarmaProps << BoundingSpheres << BoundingBoxes;
+		if (Ar.ArVer >= 125)
+			Ar << f32C;
 
 		unguard;
 	}

@@ -5,11 +5,28 @@ FONTGEN
 ! place font information into font DATA[] (not #define), this will allow to use few fonts at the
   same time
 
-! ObjectViewer.h is used incorrectly -- as include for all Unreal/Un*.h headers
+GENMAKE:
+- "OPTIONS" -> CFLAGS + CPPFLAGS (check, how OPTIONS is currently used), and use separate vars
+  for compiling C++ and C code
+  - have one C++ option for ddslib.c - compiler show warning
+
+? option to collect full statistics about all available packages: supply "-path", umodel will recurse
+  all directories and try to load all files with known extensions (load 'summary' only); after that,
+  program will sort all files by package version and display statistics: 'count', 'ver', 'lic_ver'
+  (can be useful for updating 'packages.txt')
+    ! best idea - place this into 'Samples' or 'Tools' as separate program, which uses my 'Core' and
+    'Unreal' libs; possibly - place 'umodel' into similar directory too:
+       /Apps
+          /Umodel
+          /PkgScan
+          ...
+    * if so, can remove '-check', '-pkginfo' etc from umodel
 
 ! UTexture has AnimNext field
 ! UMaterialSequence (check 2K4Menus package)
-? key to toggle fullscreen, key to toggle debug text and lines (good for screenshots)
+? key to toggle fullscreen with desktop resolution (no way to implement using SDL only?)
+  - X.org has SDL_WM_ToggleFullScreen(), and can use USER32 code for Win32
+- key to toggle debug text and 3D lines (good for screenshots)
 
 ?? TRIBES3:
   ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)
@@ -22,7 +39,8 @@ FONTGEN
   - crash (assert) when switching mesh LOD levels
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
 
-! implement socket support (visualization)
+! implement attach sockets support (visualization)
+  ? when exporting mesh, can create .uc with sockets too (if possible)
 ? support Undying
 ! when cannot load some material type, or file is absent - sould at least give ability to list this
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
@@ -37,7 +55,7 @@ FONTGEN
   package's "package" field recursively; note: depth can be any)
   * load proper package
   - use object with the same path (problem: how to pass object path to search?)
-- change alternative skin (?)
+? change alternative skin (team color for UT2)
 
 ! UObject:
   - EndLoad():
@@ -60,17 +78,17 @@ Loading:
 - try to load from CD (slow random access)
 
 - try to compile with MinGW
-- move new Math3D parts to Quake2 core
+- move new Math3D parts to Quake2 core (more code to move ?)
 
 
 REST TO IMPLEMENT:
 ~~~~~~~~~~~~~~~~~~
 - VertexMesh:
-  - tweening
+  ? tweening
   ? LOD support
 - SkeletalMesh:
   - correctly display LOD models (with skinning)
-  - hardware skinning
+  ? hardware skinning (but: Lineage2 has meshes with more than 256 bones)
 
 
 EXTRA KEYS:

@@ -139,6 +139,10 @@ UnPackage::UnPackage(const char *filename)
 
 	// different game platforms autodetection
 	//?? should change this, if will implement command line switch to force mode
+#if UT2
+	IsUT2 = ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
+			((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D);
+#endif
 #if SPLINTER_CELL
 	IsSplinterCell = (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
 					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));

@@ -155,6 +155,8 @@ int main(int argc, char **argv)
 				"    VertMesh        exported as Unreal 3d file\n"
 				"    Texture         exported in tga format\n"
 				"\n"
+				//?? separate option for this list?
+				//?? this list looks ugly ... apply some formatting?
 				"List of supported games:\n"
 #if UNREAL1
 				"Unreal Engine 1:\n"
@@ -168,19 +170,21 @@ int main(int argc, char **argv)
 				"\n"
 #endif // UNREAL1
 				"Unreal Engine 2:\n"
-
+#if UT2
 				"    Unreal Tournament 2003,2004\n"
+#endif
 #if SPLINTER_CELL
 				"    Splinter Cell 1,2\n"
 #endif
+#if LINEAGE2
+				"    Lineage 2\n"
+#endif
+//				"Unreal Engine 2.5:\n"
 #if TRIBES3
 				"    Tribes: Vengeance\n"
 #endif
-#if HP3
+#if UNREAL25
 				"    Harry Potter and the Prisoner of Azkaban\n"
-#endif
-#if LINEAGE2
-				"    Lineage 2\n"
 #endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"

@@ -11,11 +11,13 @@ Modified Unreal Engine 1:
 Unreal Engine 2:
   Unreal Tournament 2003/2004
   Postal 2
-  Harry Potter and the Prisoner of Azkaban
 Modified Unreal Engine 2:
   Splinter Cell 1,2
-  Tribes: Vengeance
   Lineage 2
+Unreal Engine 2.5:
+  Harry Potter and the Prisoner of Azkaban
+Modified Unreal Engine 2.5
+  Tribes: Vengeance
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,6 +35,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+13.11.2008
+- detecting UT2 (UT2003/2004) packages, separated UT2 support and generic UE2 support
+
 10.11.2008
 - updated Lineage 2 support (for latest Lineage 2 Gracia)
 

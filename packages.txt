@@ -3,8 +3,9 @@ All values are hexadecimal
 			LicenseeVer	FileVer
 Unreal1, UT1, DeusEx,
 Rune			0		44,45
-UT2003					77-79
-UT2004			19,1B-1D	77-80
+UT2003,UT2004		0		44-7E (uax,utx,usx)
+			19-1C		75-78
+UT2004 (cont)		1D		79-80
 Postal2			1,2
 SplinterCell		09,0A,11	64
 SplinterCell2		14,19-1C	66

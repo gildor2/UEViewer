@@ -616,7 +616,7 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 #endif // LINEAGE2
 
 
-#if TRIBES3 || HP3
+#if UNREAL25
 
 struct FlexTrackStatic
 {
@@ -674,7 +674,7 @@ void SerializeFlexTracks(FArchive &Ar)
 	unguard;
 }
 
-#endif // TRIBES3 || HP3
+#endif // UNREAL25
 
 #if TRIBES3
 

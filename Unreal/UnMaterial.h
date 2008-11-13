@@ -497,7 +497,9 @@ public:
 		PROP_BOOL(AlphaTest)
 		PROP_BOOL(TwoSided)
 		PROP_BYTE(AlphaRef)
+#if LINEAGE2
 		PROP_BOOL(TreatAsTwoSided)
+#endif
 	END_PROP_TABLE
 
 	BIND;
