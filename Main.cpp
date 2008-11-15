@@ -184,7 +184,7 @@ int main(int argc, char **argv)
 				"    Tribes: Vengeance\n"
 #endif
 #if UNREAL25
-				"    Harry Potter and the Prisoner of Azkaban\n"
+				"    UE2Runtime, Harry Potter and the Prisoner of Azkaban\n"
 #endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"

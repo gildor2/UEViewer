@@ -242,7 +242,8 @@ struct FMeshAnimSeq
 	int						NumFrames;		// Number of frames in sequence.
 	float					Rate;			// Playback rate in frames per second.
 	TArray<FMeshAnimNotify> Notifys;		// Notifications.
-	float					f28;			//??
+	float					f28;			//?? unknown; default=0
+
 	friend FArchive& operator<<(FArchive &Ar, FMeshAnimSeq &A)
 	{
 		guard(FMeshAnimSeq<<);
@@ -574,7 +575,7 @@ struct AnalogTrack
 
 
 #if UNREAL25
-void SerializeFlexTracks(FArchive &Ar);
+void SerializeFlexTracks(FArchive &Ar, struct MotionChunk &M);
 #endif
 #if TRIBES3
 void FixTribesMotionChunk(struct MotionChunk &M);
@@ -587,7 +588,7 @@ struct MotionChunk
 	FVector					RootSpeed3D;	// Net 3d speed.
 	float					TrackTime;		// Total time (Same for each track.)
 	int						StartBone;		// If we're a partial-hierarchy-movement, this is the lowest bone.
-	unsigned				Flags;			// Reserved; used as UMeshAnimation.Version in post-UT2004 UE2 versions
+	unsigned				Flags;			// Reserved; equals to UMeshAnimation.Version in UE2.5
 
 	TArray<int>				BoneIndices;	// Refbones number of Bone indices (-1 or valid one) to fast-find tracks for a particular bone.
 	// Frame-less, compressed animation tracks. NumBones times NumAnims tracks in total
@@ -601,7 +602,7 @@ struct MotionChunk
 		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
 #if UNREAL25
 		if (M.Flags >= 3)
-			SerializeFlexTracks(Ar);
+			SerializeFlexTracks(Ar, M);
 #endif
 #if TRIBES3
 		if (Ar.IsTribes3)
@@ -634,7 +635,7 @@ struct FNamedBone
  * Possible versions:
  *	0			UT2003, UT2004
  *	1			Lineage2
- *	4			Harry Potter and the Prisoner of Azkaban
+ *	4			UE2Runtime, Harry Potter and the Prisoner of Azkaban
  *	6			Tribes3
  *	1000		SplinterCell
  *	2000		SplinterCell2

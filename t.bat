@@ -24,14 +24,13 @@ exit
 
 :cont
 
-umodel -path="C:\!umodel-data\--Land of the Dead--" DOTZAZombies
+rem umodel D:\22222\Runtime\Animations\TestAnims.ukx
+rem umodel -path="C:\!umodel-data\--Land of the Dead--" DOTZAZombies
 rem %run% AW-2k4XP ShockShieldFinal
 rem umodel.exe -path="C:\!umodel-data\--Lineage2--" LineageNPCs2
 rem umodel.exe "C:\!umodel-data\--Dark Sector 9--\PAWNAI.u" OBrien
-rem umodel.exe "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx"
-rem umodel.exe -noanim "C:\!umodel-data\--Lineage2--\Animations\Elf.ukx" MElf_m000_l
 rem %run% ONSVehicles-A
-goto exit
+rem goto exit
 rem goto bugs
 
 rem ---------------------------------------------------------------------------

@@ -618,57 +618,184 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 
 #if UNREAL25
 
-struct FlexTrackStatic
+//?? possibly, use FlexTrack directly in SkelMeshInstance - can derive AnalogTrack from FlexTrackBase
+//?? and implement GetBonePosition() as its virtual method ...
+struct FlexTrackBase
 {
-	FVector		v1;
-	FVector		v2;
+	virtual void Serialize(FArchive &Ar) = 0;
+	virtual void Decompress(AnalogTrack &T) = 0;
 
-	friend FArchive& operator<<(FArchive &Ar, FlexTrackStatic &T)
+	//?? send TArray<float> instead of <short>; possibly - allow empty 'Times' array in AnalogTrack
+	//?? (in GetBonePosition())
+	//?? if TArray<float> -> can scale time keys
+	void CheckTimeTrack(TArray<short> &Times, int NumPos, int NumQuat)
 	{
-		return Ar << T.v1 << T.v2;
+		guard(FlexTrackBase::CheckTimeTrack);
+		if (Times.Num()) return;
+		int keys = max(NumPos, NumQuat);
+		assert(NumPos  == keys || NumPos  == 1);
+		assert(NumQuat == keys || NumQuat == 1);
+		Times.Empty(keys);
+		for (int i = 0; i < keys; i++)
+			Times.AddItem(i);
+		unguard;
 	}
 };
 
-void SerializeFlexTracks(FArchive &Ar)
+struct FQuatComp3	//?? rename it according to data size
+{
+	float			X, Y, Z;
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		r.X = X;
+		r.Y = Y;
+		r.Z = Z;
+		r.W = sqrt(1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z));
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatComp3 &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z;
+	}
+};
+
+// normalized quaternion with 3 16-bit fixed point fields
+struct FQuatComp4
+{
+	word			X, Y, Z;				// unsigned short, corresponds to (float+1)*32767
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		r.X = (X - 32767) / 32767.0f;
+		r.Y = (Y - 32767) / 32767.0f;
+		r.Z = (Z - 32767) / 32767.0f;
+		r.W = sqrt(1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z));
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatComp4 &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z;
+	}
+};
+
+struct FlexTrackStatic : public FlexTrackBase
+{
+	FQuatComp3			KeyQuat;
+	FVector				KeyPos;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Ar << KeyQuat << KeyPos;
+	}
+
+	virtual void Decompress(AnalogTrack &T)
+	{
+		T.KeyTime.Empty(1);
+		T.KeyPos.Empty(1);
+		T.KeyQuat.Empty(1);
+
+		T.KeyTime.AddItem(0);		// value does not matter, only one key is stored
+		T.KeyQuat.AddItem(KeyQuat);
+		T.KeyPos.AddItem(KeyPos);
+	}
+};
+
+struct FlexTrack48 : public FlexTrackBase
+{
+	TArray<FQuatComp4>	KeyQuat;
+	TArray<short>		KeyTime;
+	TArray<FVector>		KeyPos;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Ar << KeyQuat << KeyPos << KeyTime;
+		CheckTimeTrack(KeyTime, KeyPos.Num(), KeyQuat.Num());
+	}
+
+	virtual void Decompress(AnalogTrack &T)
+	{
+		COPY_ARRAY(KeyQuat, T.KeyQuat);
+		COPY_ARRAY(KeyPos,  T.KeyPos );
+		COPY_ARRAY(KeyTime, T.KeyTime);
+	}
+};
+
+struct FlexTrack48RotOnly : public FlexTrackBase
+{
+	TArray<FQuatComp4>	KeyQuat;
+	TArray<short>		KeyTime;
+	FVector				KeyPos;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Ar << KeyQuat << KeyTime << KeyPos;
+		CheckTimeTrack(KeyTime, 1, KeyQuat.Num());
+	}
+
+	virtual void Decompress(AnalogTrack &T)
+	{
+		COPY_ARRAY(KeyQuat, T.KeyQuat);
+		COPY_ARRAY(KeyTime, T.KeyTime);
+		T.KeyPos.Empty(KeyTime.Num());
+		for (int i = 0; i < KeyTime.Num(); i++)
+			T.KeyPos.AddItem(KeyPos);
+	}
+};
+
+
+// serialize TArray<FlexTrack>
+void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 {
 	guard(SerializeFlexTracks);
 
 	int numTracks;
 	Ar << AR_INDEX(numTracks);
+	if (!numTracks) return;
 
-	if (numTracks) appNotify("%d FlexTracks\n", numTracks);	//!!!
+	assert(M.AnimTracks.Num() == 0);
+	M.AnimTracks.Empty(numTracks);
+	M.AnimTracks.Add(numTracks);
 
 	for (int i = 0; i < numTracks; i++)
 	{
 		int trackType;
 		Ar << trackType;
+		FlexTrackBase *track = NULL;
 
 		switch (trackType)
 		{
 		case 1:
-			// FlexTrackStatic
-			{
-				appError("1");
-				FlexTrackStatic track;
-				Ar << track;
-			}
+			track = new FlexTrackStatic;
 			break;
 
 		case 2:
-			appError("2");
+			// This type uses structure with TArray<FVector>, TArray<FQuatComp3> and TArray<short>.
+			// It's Footprint() method returns 0, GetRotPos() does nothing, but serializer is working.
+			appError("Unsupported FlexTrack type=2");
 			break;
 
 		case 3:
-			// FlexTrack48
-			appError("3");
+			track = new FlexTrack48;
 			break;
 
 		case 4:
-			// FlexTrack48RotOnly
-			appError("4");
+			track = new FlexTrack48RotOnly;
 			break;
 		}
-		printf("flex: %d\n", trackType);
+		if (track)
+		{
+			track->Serialize(Ar);
+			track->Decompress(M.AnimTracks[i]);
+			assert(M.AnimTracks[i].KeyTime.Num());
+			delete track;
+		}
+		else
+			appError("no track!");	//?? possibly, mask tracks
 	}
 
 	unguard;

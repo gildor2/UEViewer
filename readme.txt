@@ -15,6 +15,7 @@ Modified Unreal Engine 2:
   Splinter Cell 1,2
   Lineage 2
 Unreal Engine 2.5:
+  UE2Runtime
   Harry Potter and the Prisoner of Azkaban
 Modified Unreal Engine 2.5
   Tribes: Vengeance
@@ -35,6 +36,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+14.11.2008
+- implemented support for UE2Runtime mesh animation format
+
 13.11.2008
 - detecting UT2 (UT2003/2004) packages, separated UT2 support and generic UE2 support
 
