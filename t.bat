@@ -24,13 +24,20 @@ exit
 
 :cont
 
+rem %run% HumanMaleA MercMaleD
+rem %run% ONSVehicles-A RV
+rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
+rem %run% AS_VehiclesFull_M
+umodel.exe -path=data/Lineage2 Elf FElf_m007_u
+
+rem umodel.exe -path="C:\!umodel-data\--Lineage2--" Elf FElf_m007_u
 rem umodel D:\22222\Runtime\Animations\TestAnims.ukx
 rem umodel -path="C:\!umodel-data\--Land of the Dead--" DOTZAZombies
 rem %run% AW-2k4XP ShockShieldFinal
 rem umodel.exe -path="C:\!umodel-data\--Lineage2--" LineageNPCs2
 rem umodel.exe "C:\!umodel-data\--Dark Sector 9--\PAWNAI.u" OBrien
 rem %run% ONSVehicles-A
-rem goto exit
+goto exit
 rem goto bugs
 
 rem ---------------------------------------------------------------------------

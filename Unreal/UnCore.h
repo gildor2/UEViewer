@@ -102,6 +102,9 @@ public:
 #if LINEAGE2
 	int		IsLineage2:1;
 #endif
+#if RAGNAROK2
+	int		IsRagnarok2:1;
+#endif
 
 	FArchive()
 	:	ArStopper(0)
@@ -118,6 +121,9 @@ public:
 #endif
 #if LINEAGE2
 	,	IsLineage2(0)
+#endif
+#if RAGNAROK2
+	,	IsRagnarok2(0)
 #endif
 	{}
 
@@ -288,6 +294,11 @@ struct FVector
 		return Ar << V.X << V.Y << V.Z;
 	}
 };
+
+inline bool operator==(const FVector &V1, const FVector &V2)
+{
+	return V1.X == V2.X && V1.Y == V2.Y && V1.Z == V2.Z;
+}
 
 
 struct FRotator

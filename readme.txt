@@ -13,7 +13,7 @@ Unreal Engine 2:
   Postal 2
 Modified Unreal Engine 2:
   Splinter Cell 1,2
-  Lineage 2
+  Lineage 2 Gracia
 Unreal Engine 2.5:
   UE2Runtime
   Harry Potter and the Prisoner of Azkaban
@@ -36,6 +36,19 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+23.11.2008
+- fixed skeletal LOD model visualisation
+- implemented skinning for LOD models
+- Lineage2: implemented support for Lineage-specific LOD models
+- Lineage2: restoring base skeletal mesh from 1st LOD when needed
+
+21.11.2008
+- fixed RGBA8 texture format loading (swapping red and blue channels)
+- fixed PSK format export: material assignment was lost when importing mesh into
+  UnrealEd
+- using bottom-top orientation when exporting TGA file, because UnrealEd prior to
+  UE3 have no top-bottom TGA support (texture is flipped vertically when imported)
+
 14.11.2008
 - implemented support for UE2Runtime mesh animation format
 

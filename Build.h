@@ -17,3 +17,4 @@
 
 // requires UNREAL25
 #define TRIBES3			1
+//#define RAGNAROK2		1

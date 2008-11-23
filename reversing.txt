@@ -1,0 +1,59 @@
+===============================================================================
+Ragnarok Online II
+===============================================================================
+
+Core.dll:
+- ?CryptKey@FArchive@@1PAEA       = byte* FArchive::CryptKey
+- ?CryptData@FArchive@@SAXPAXII@Z = FArchive::CryptData(void *, unsigned int, unsigned int)
+- ?BeginCrypt@FArchive@@UAEXXZ    = FArchive::BeginCrypt(void) => FArchive.vmt+5Ch
+  dword [ecx+3Ch]=1
+- ?EndCrypt@FArchive@@UAEXXZ      = FArchive::EndCrypt(void) => FArchive.vmt+60h
+  dword [ecx+3Ch]=0
+- FArchive.vmt+4 => FArchive.Serialize()
+
+FArchive::CryptData(void *,uint,uint)
+{
+	push    esi
+	mov     esi, [esp+4+count]
+	test    esi, esi
+	jbe     short loc_1010B5EE
+	mov     eax, [esp+4+buffer]
+	mov     ecx, [esp+4+filePos]
+	sub     ecx, eax                        ; filePos-buffer
+	push    ebx
+
+ loc_1010B5D4:
+	mov     bl, [eax]
+	lea     edx, [ecx+eax]                  ; edx=ptr-buffer+filePos
+	and     edx, 0FFh
+	mov     dl, ds:uchar * FArchive::CryptKey[edx]
+	xor     bl, dl
+	mov     [eax], bl
+	inc     eax
+	dec     esi
+	jnz     short loc_1010B5D4
+	pop     ebx
+
+ loc_1010B5EE:
+	pop     esi
+	retn
+}
+
+protected: static unsigned char * FArchive::CryptKey
+	db 55, 74, 26, 192, 254, 97, 212, 213, 54, 154, 202, 83, 219, 144, 119
+	db 217, 223, 251, 8, 242, 115, 224, 189, 235, 131, 5, 145, 226, 127, 168
+	db 29, 32, 97, 112, 186, 169, 236, 164, 230, 16, 49, 155, 233, 144, 88
+	db 116, 184, 89, 157, 7, 25, 40, 153, 26, 8, 26, 195, 217, 89, 194, 54
+	db 128, 160, 121, 181, 91, 78, 245, 236, 240, 28, 30, 248, 123, 173, 28
+	db 42, 154, 110, 181, 8, 74, 194, 214, 149, 18, 92, 111, 211, 126, 235
+	db 132, 133, 207, 253, 130, 57, 241, 29, 207, 134, 173, 63, 164, 147, 32
+	db 95, 31, 216, 108, 100, 148, 41, 173, 74, 37, 240, 47, 128, 146, 186
+	db 222, 143, 82, 245, 2 dup(253), 226, 247, 27, 113, 93, 2 dup(67), 23
+	db 77, 8, 116, 70, 192, 235, 80, 97, 159, 6, 24, 251, 60, 49, 216, 62
+	db 42, 128, 223, 141, 81, 13, 114, 104, 65, 247, 194, 144, 199, 170, 27
+	db 108, 190, 97, 93, 172, 40, 234, 176, 44, 126, 169, 116, 27, 68, 224
+	db 119, 92, 223, 46, 107, 44, 171, 85, 151, 6, 73, 64, 204, 195, 54, 68
+	db 155, 6, 162, 166, 197, 215, 127, 93, 243, 142, 216, 26, 167, 243, 100
+	db 134, 115, 163, 91, 202, 105, 182, 136, 85, 210, 158, 160, 217, 35, 82
+	db 210, 151, 44, 173, 159, 221, 147, 16, 236, 205, 129, 79, 85, 95, 155
+	db 203, 197, 170, 52, 219, 67, 95, 192, 113, 15, 150, 140, 250, 238

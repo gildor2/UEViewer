@@ -273,7 +273,19 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 		}
 		return dst;
 	case TEXF_RGBA8:
-		memcpy(dst, Data, size);
+		{
+			const byte *s = Data;
+			byte *d = dst;
+			for (int i = 0; i < width * height; i++)
+			{
+				// BGRA -> RGBA
+				*d++ = s[2];
+				*d++ = s[1];
+				*d++ = s[0];
+				*d++ = s[3];
+				s += 4;
+			}
+		}
 		return dst;
 	}
 

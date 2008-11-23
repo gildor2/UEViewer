@@ -56,13 +56,14 @@ void CSkelMeshViewer::Test()
 	{
 		const FStaticLODModel &lod = Mesh->LODModels[i];
 //?? (not always)	if (lod.NumDynWedges != lod.Wedges.Num()) appNotify("lod[%d]: NumDynWedges!=wedges.Num()", i);
-		if (lod.SkinPoints.Num() != lod.Points.Num() && lod.RigidSections.Num() == 0)
-			appNotify("[%d] skinPoints: %d", i,	lod.SkinPoints.Num());
+//		if (lod.SkinPoints.Num() != lod.Points.Num() && lod.RigidSections.Num() == 0)
+//			appNotify("[%d] skinPoints: %d", i,	lod.SkinPoints.Num());
 //		if (lod.SmoothIndices.Indices.Num() + lod.RigidIndices.Indices.Num() != lod.Faces.Num() * 3)
 //			appNotify("[%d] strange indices count", i);
 //		if ((lod.f0.Num() != 0 || lod.NumDynWedges != 0) &&
 //			(lod.f0.Num() != lod.NumDynWedges * 3 + 1)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
-		if ((lod.f0.Num() == 0) != (lod.NumDynWedges == 0)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
+		if ((lod.SkinningData.Num() == 0) != (lod.NumDynWedges == 0))
+			appNotify("SkinningData=%d  NumDynWedges=%d",lod.SkinningData.Num(), lod.NumDynWedges);
 // (may be empty)	if (lod.VertexStream.Verts.Num() != lod.Wedges.Num()) appNotify("lod%d: bad VertexStream size", i);
 //		if (lod.f114 || lod.f118) appNotify("[%d]: f114=%d, f118=%d", lod.f114, lod.f118);
 
@@ -154,10 +155,10 @@ void CSkelMeshViewer::Dump()
 		printf("model # %d\n", i);
 		const FStaticLODModel &lod = Mesh->LODModels[i];
 		printf(
-			"  f0=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
+			"  SkinningData=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
 			"  DistanceFactor=%g  Hysteresis=%g  SharedVerts=%d  MaxInfluences=%d  114=%d  118=%d\n"
 			"  smoothInds=%d  rigidInds=%d  vertStream.Size=%d\n",
-			lod.f0.Num(),
+			lod.SkinningData.Num(),
 			lod.SkinPoints.Num(),
 			lod.VertInfluences.Num(),
 			lod.Wedges.Num(), lod.NumDynWedges,
@@ -165,6 +166,24 @@ void CSkelMeshViewer::Dump()
 			lod.Points.Num(),
 			lod.LODDistanceFactor, lod.LODHysteresis, lod.NumSharedVerts, lod.LODMaxInfluences, lod.f114, lod.f118,
 			lod.SmoothIndices.Indices.Num(), lod.RigidIndices.Indices.Num(), lod.VertexStream.Verts.Num());
+
+		int i0 = 99999999, i1 = -99999999;
+		int j;
+		for (j = 0; j < lod.SmoothIndices.Indices.Num(); j++)
+		{
+			int x = lod.SmoothIndices.Indices[j];
+			if (x < i0) i0 = x;
+			if (x > i1) i1 = x;
+		}
+		printf("  smoothIndices: [%d .. %d]\n", i0, i1);
+		i0 = 99999999; i1 = -99999999;
+		for (j = 0; j < lod.RigidIndices.Indices.Num(); j++)
+		{
+			int x = lod.RigidIndices.Indices[j];
+			if (x < i0) i0 = x;
+			if (x > i1) i1 = x;
+		}
+		printf("  rigidIndices:  [%d .. %d]\n", i0, i1);
 
 		const TArray<FSkelMeshSection> *sec[2];
 		sec[0] = &lod.SmoothSections;
@@ -193,9 +212,22 @@ void CSkelMeshViewer::Draw2D()
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
 	if (MeshInst->LodNum < 0)
-		DrawTextLeft(S_GREEN"LOD : "S_WHITE"base mesh\n");
+	{
+		DrawTextLeft(S_GREEN"LOD  : "S_WHITE"base mesh\n"
+					 S_GREEN"Verts: "S_WHITE"%d (%d wedges)\n"
+					 S_GREEN"Tris : "S_WHITE"%d",
+					 Mesh->Points.Num(), Mesh->Wedges.Num(), Mesh->Triangles.Num());
+	}
 	else
-		DrawTextLeft(S_GREEN"LOD : "S_WHITE" %d/%d\n", MeshInst->LodNum+1, Mesh->LODModels.Num());
+	{
+		const FStaticLODModel *Lod = &Mesh->LODModels[MeshInst->LodNum];
+		int NumFaces = (Lod->SmoothIndices.Indices.Num() + Lod->RigidIndices.Indices.Num()) / 3;
+		DrawTextLeft(S_GREEN"LOD  : "S_WHITE"%d/%d\n"
+					 S_GREEN"Verts: "S_WHITE"%d (%d wedges)\n"
+					 S_GREEN"Tris : "S_WHITE"%d",
+					 MeshInst->LodNum+1, Mesh->LODModels.Num(),
+					 Lod->Points.Num(), Lod->Wedges.Num(), NumFaces);
+	}
 }
 
 

@@ -188,6 +188,7 @@ protected:
 
 #define MAX_SKELANIMCHANNELS	32
 
+struct FVertInfluences;
 
 class CSkelMeshInstance : public CMeshInstance
 {
@@ -314,6 +315,7 @@ protected:
 		assert(StageIndex >= 0 && StageIndex < MAX_SKELANIMCHANNELS);
 		return Channels[StageIndex];
 	}
+	void TransformMesh(int NumInfs, const FVertInfluences *Infs, int NumVerts, const FVector *Verts, const CVec3 *Norms);
 	int FindBone(const char *BoneName) const;
 	int FindAnim(const char *AnimName) const;
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);

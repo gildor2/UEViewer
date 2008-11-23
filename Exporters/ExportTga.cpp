@@ -3,6 +3,8 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
+#define TGA_SAVE_BOTTOMLEFT	1
+
 
 #define TGA_ORIGIN_MASK		0x30
 #define TGA_BOTLEFT			0x00
@@ -40,6 +42,18 @@ void ExportTga(const UTexture *Tex, FArchive &Ar)
 		appNotify("WARNING: texture %s has no valid mipmaps", *Tex->Name);
 		return;		//?? should erase file ?
 	}
+
+#if TGA_SAVE_BOTTOMLEFT
+	// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
+	// it simply ignores orientation flags)
+	for (i = 0; i < height / 2; i++)
+	{
+		byte *p1 = pic + width * 4 * i;
+		byte *p2 = pic + width * 4 * (height - i - 1);
+		for (int j = 0; j < width * 4; j++)
+			Exchange(p1[j], p2[j]);
+	}
+#endif
 
 	byte *src;
 	int size = width * height;
@@ -141,7 +155,11 @@ void ExportTga(const UTexture *Tex, FArchive &Ar)
 	}
 #else
 	header.pixel_size = colorBytes * 8;
+#if TGA_SAVE_BOTTOMLEFT
+	header.attributes = TGA_BOTLEFT;
+#else
 	header.attributes = TGA_TOPLEFT;
+#endif
 	if (useCompression)
 	{
 		header.image_type = 10;		// RLE

@@ -37,6 +37,17 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 		Ar << V;
 	}
 
+	TArray<int> WedgeMat;
+	WedgeMat.Empty(Mesh->Wedges.Num());
+	WedgeMat.Add(Mesh->Wedges.Num());
+	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	{
+		const VTriangle &T = Mesh->Triangles[i];
+		WedgeMat[T.WedgeIndex[0]] = T.MatIndex;
+		WedgeMat[T.WedgeIndex[1]] = T.MatIndex;
+		WedgeMat[T.WedgeIndex[2]] = T.MatIndex;
+	}
+
 	WedgHdr.DataCount = Mesh->Wedges.Num();
 	WedgHdr.DataSize  = sizeof(VVertex);
 	SAVE_CHUNK(WedgHdr, "VTXW0000");
@@ -47,7 +58,7 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 		W.PointIndex = S.iVertex;
 		W.U          = S.TexUV.U;
 		W.V          = S.TexUV.V;
-		W.MatIndex   = 0;
+		W.MatIndex   = WedgeMat[i];
 		W.Reserved   = 0;
 		W.Pad        = 0;
 		Ar << W;
@@ -70,7 +81,9 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 	SAVE_CHUNK(MatrHdr, "MATT0000");
 	for (i = 0; i < Mesh->Materials.Num(); i++)
 	{
-		static VMaterial M;
+		VMaterial M;
+		memset(&M, 0, sizeof(M));
+		appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
 		Ar << M;
 	}
 

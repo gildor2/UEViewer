@@ -851,6 +851,14 @@ struct VTriangle
 		Ar << T.MatIndex << T.AuxMatIndex << T.SmoothingGroups;
 		return Ar;
 	}
+
+	VTriangle& operator=(const FMeshFace &F)
+	{
+		WedgeIndex[0] = F.iWedge[0];
+		WedgeIndex[1] = F.iWedge[1];
+		WedgeIndex[2] = F.iWedge[2];
+		MatIndex      = F.MaterialIndex;
+	}
 };
 
 
@@ -878,6 +886,9 @@ struct FSkelMeshSection
 	word			fE;						// serialized, not used
 	word			FirstFace;
 	word			NumFaces;
+#if LINEAGE2
+	TArray<int>		LineageBoneMap;
+#endif
 	// Rigid sections:
 	//	MinWedgeIndex/MaxWedgeIndex -> FStaticLODModel.Wedges
 	//	NumStreamIndices = NumFaces*3 == MaxWedgeIndex-MinWedgeIndex+1
@@ -895,8 +906,8 @@ struct FSkelMeshSection
 #if LINEAGE2
 		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 0x1C)
 		{
-			TArray<int> unk;
-			Ar << unk;
+			// bone map (local bone index -> mesh bone index)
+			Ar << S.LineageBoneMap;
 		}
 #endif
 		return Ar;
@@ -906,46 +917,94 @@ struct FSkelMeshSection
 
 #if LINEAGE2
 
-struct FLineageUnk1
+struct FLineageWedge
 {
-	FVector			vec1;
-	FVector			vec2;
-	float			f1;
-	float			f2;
-	FColor			c;
-	float			f3, f4, f5, f6;
+	FVector			Point;
+	FVector			Normal;				// note: length = 512
+	FMeshUV			Tex;
+	byte			Bones[4];
+	float			Weights[4];
 
-	friend FArchive& operator<<(FArchive &Ar, FLineageUnk1 &S)
+	friend FArchive& operator<<(FArchive &Ar, FLineageWedge &S)
 	{
-		return Ar << S.vec1 << S.vec2 << S.f1 << S.f2 << S.c
-				  << S.f3 << S.f4 << S.f5 << S.f6;
+		return Ar << S.Point << S.Normal << S.Tex
+				  << S.Bones[0] << S.Bones[1] << S.Bones[2] << S.Bones[3]
+				  << S.Weights[0] << S.Weights[1] << S.Weights[2] << S.Weights[3];
 	}
 };
 
 #endif
 
 
+#if RAGNAROK2
+
+struct FRag2FSkinGPUVertex
+{
+	FVector			f0;
+	FVector			fC;
+	float			f18[10];
+
+	friend FArchive& operator<<(FArchive &Ar, FRag2FSkinGPUVertex &S)
+	{
+		Ar << S.f0 << S.fC;
+		for (int i = 0; i < 10; i++) Ar << S.f18[i];
+		return Ar;
+	}
+};
+
+struct FRag2FSkinGPUVertexStream
+{
+	int				f14, f18, f1C;
+	TArray<FRag2FSkinGPUVertex> f20;
+
+	friend FArchive& operator<<(FArchive &Ar, FRag2FSkinGPUVertexStream &S)
+	{
+		return Ar << S.f14 << S.f18 << S.f1C << S.f20;
+	}
+};
+
+
+struct FRag2Unk1
+{
+	word			f0;
+	TArray<word>	f2;
+
+	friend FArchive& operator<<(FArchive &Ar, FRag2Unk1 &S)
+	{
+		return Ar << S.f0 << S.f2;
+	}
+};
+
+#endif // RAGNAROK2
+
+
 struct FStaticLODModel
 {
-	TArray<unsigned>		f0;				//?? floating stream format, contains U/V, weights etc
-	TArray<FSkinPoint>		SkinPoints;		// smooth surface points
-	int						NumDynWedges;	// number of wedges in smooth sections
+	TArray<unsigned>		SkinningData;		// floating stream format, contains U/V, weights etc
+	TArray<FSkinPoint>		SkinPoints;			// smooth surface points
+	int						NumDynWedges;		// number of wedges in smooth sections
 	TArray<FSkelMeshSection> SmoothSections;
 	TArray<FSkelMeshSection> RigidSections;
 	FRawIndexBuffer			SmoothIndices;
 	FRawIndexBuffer			RigidIndices;
-	FSkinVertexStream		VertexStream;	// for rigid parts
+	FSkinVertexStream		VertexStream;		// for rigid parts
 	TLazyArray<FVertInfluences> VertInfluences;
 	TLazyArray<FMeshWedge>	Wedges;
 	TLazyArray<FMeshFace>	Faces;
-	TLazyArray<FVector>		Points;			// all surface points
+	TLazyArray<FVector>		Points;				// all surface points
 	float					LODDistanceFactor;
 	float					LODHysteresis;
-	int						NumSharedVerts;	// number of verts, which is used in more than one wedge
+	int						NumSharedVerts;		// number of verts, which is used in more than one wedge
 	int						LODMaxInfluences;
 	int						f114;
 	int						f118;
 	// have another params: float ReductionError, int Coherence
+
+#if LINEAGE2
+	TArray<FLineageWedge>	LineageWedges;
+
+	void RestoreLineageMesh();
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel &M)
 	{
@@ -954,7 +1013,7 @@ struct FStaticLODModel
 #if TRIBES3
 		TRIBES_HDR(Ar, 9);
 #endif
-		Ar << M.f0 << M.SkinPoints << M.NumDynWedges;
+		Ar << M.SkinningData << M.SkinPoints << M.NumDynWedges;
 		Ar << M.SmoothSections << M.RigidSections << M.SmoothIndices << M.RigidIndices;
 		Ar << M.VertexStream;
 		Ar << M.VertInfluences << M.Wedges << M.Faces << M.Points;
@@ -971,11 +1030,25 @@ struct FStaticLODModel
 #if LINEAGE2
 		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 0x1C)
 		{
-			int unk1;
-			TArray<FLineageUnk1> unk2;
-			Ar << unk1 << unk2;
+			int UseNewWedges;
+			Ar << UseNewWedges << M.LineageWedges;
+			M.RestoreLineageMesh();
 		}
 #endif
+#if RAGNAROK2
+		if (Ar.IsRagnarok2 && Ar.ArVer >= 0x80)
+		{
+			int tmp;
+			FRawIndexBuffer unk2;
+			FRag2FSkinGPUVertexStream unk3;
+			TArray<FRag2Unk1> unk4;
+			// TArray of word[9]
+			Ar << AR_INDEX(tmp);
+			Ar.Seek(Ar.ArPos + tmp*9*2);
+			// other ...
+			Ar << unk2 << unk3 << unk4;
+		}
+#endif // RAGNAROK2
 		return Ar;
 
 		unguard;
@@ -1056,6 +1129,9 @@ public:
 #if SPLINTER_CELL
 	void SerializeSCell(FArchive &Ar);
 #endif
+#if LINEAGE2
+	void RecreateMeshFromLOD();
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -1099,6 +1175,7 @@ public:
 			Ar << LODModels << f224 << Points << Wedges << Triangles << VertInfluences;
 			Ar << CollapseWedge << f1C8;
 		}
+
 #if TRIBES3
 		if (Ar.IsTribes3 && t3_hdrSV >= 3)
 		{
@@ -1135,6 +1212,7 @@ public:
 				Ar << unk3;		// AuthKey ?
 			if (Ar.ArLicenseeVer >= 0x23)
 				Ar << unk4;
+			RecreateMeshFromLOD();
 			return;
 		}
 #endif
@@ -1162,6 +1240,14 @@ public:
 			Ar << KarmaProps << BoundingSpheres << BoundingBoxes;
 		if (Ar.ArVer >= 125)
 			Ar << f32C;
+
+#if RAGNAROK2
+		if (Ar.IsRagnarok2 && Ar.ArVer >= 131)
+		{
+			float unk1, unk2;
+			Ar << unk1 << unk2;
+		}
+#endif
 
 		unguard;
 	}

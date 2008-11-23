@@ -1,13 +1,8 @@
-- UT1 meshes:
-  ? orientation is wrong (human models are top-bottom)
-    - but UnrealEd showing models in random orientation (no standard)
-  ! should build normals
-
 - HP3:
   - Dimentor: uses paletted Texture with Masked=true, has pink borders when alpha changed
 
 - sometimes after relatively long time of application inactivity, program becomes inresponsible to
-  keyboard and mouse
+  keyboard and mouse (should press Ctrl+Shift? but why even ESC does not works?)
 
 * MercFemaleB: bugs with alpha-texture on head (hear)
   - translocator: same

@@ -11,6 +11,7 @@ path="data"
 #path="data/UT1"
 
 # UT2004
+#path="c:/games/Unreal/ut2004"
 #path="c:/games/Unreal Anthology/ut2004"
 
 # SplinterCell

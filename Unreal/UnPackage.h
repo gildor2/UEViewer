@@ -62,6 +62,20 @@ struct FPackageFileSummary
 			Ar << tmp2;
 		}
 #endif
+#if RAGNAROK2
+		if (S.PackageFlags & 0x10000 && S.FileVersion >= 0x81)
+		{
+			// encrypted Ragnarok Online archive header (data taken by archive analysis)
+			Ar.IsRagnarok2 = 1;
+			S.NameCount    ^= 0xD97790C7 ^ 0x1C;
+			S.NameOffset   ^= 0xF208FB9F ^ 0x40;
+			S.ExportCount  ^= 0xEBBDE077 ^ 0x04;
+			S.ExportOffset ^= 0xE292EC62 ^ 0x03E9E1;
+			S.ImportCount  ^= 0x201DA87A ^ 0x05;
+			S.ImportOffset ^= 0xA9B999DF ^ 0x003E9BE;
+			return Ar;								// other data is useless for us, and they are encrypted too
+		}
+#endif
 		if (S.FileVersion < 68)
 		{
 			int HeritageCount, HeritageOffset;

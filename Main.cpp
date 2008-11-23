@@ -177,14 +177,17 @@ int main(int argc, char **argv)
 				"    Splinter Cell 1,2\n"
 #endif
 #if LINEAGE2
-				"    Lineage 2\n"
+				"    Lineage 2 Gracia\n"
 #endif
 //				"Unreal Engine 2.5:\n"
+#if UNREAL25
+				"    UE2Runtime, Harry Potter and the Prisoner of Azkaban\n"
+#endif
 #if TRIBES3
 				"    Tribes: Vengeance\n"
 #endif
-#if UNREAL25
-				"    UE2Runtime, Harry Potter and the Prisoner of Azkaban\n"
+#if RAGNAROK2
+				"    Ragnarok Online 2\n"
 #endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"

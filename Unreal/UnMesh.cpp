@@ -1593,8 +1593,130 @@ USkelModel::~USkelModel()
 		delete Meshes[i];
 	delete Anim;
 	for (i = 0; i < MeshNames.Num(); i++)
-		free(MeshNames[i]);			// allocated with strdup()
+		free(MeshNames[i]);				// allocated with strdup()
 }
 
 
 #endif // RUNE
+
+
+#if LINEAGE2
+
+void FStaticLODModel::RestoreLineageMesh()
+{
+	guard(FStaticLODModel::RestoreLineageMesh);
+
+	if (VertInfluences.Num() || !LineageWedges.Num())
+		return;							// nothing to restore
+	printf("Converting Lineage2 LODModel to standard ...\n");
+
+	int i, j, k;
+	int NumWedges = LineageWedges.Num();
+	Wedges.Empty(NumWedges);
+	Points.Empty(NumWedges);			// really, should be a smaller count
+	VertInfluences.Empty(NumWedges);	// min count = NumVerts
+	Faces.Empty((SmoothIndices.Indices.Num() + RigidIndices.Indices.Num()) / 3);
+
+	// remap bones and build faces
+	TArray<const FSkelMeshSection*> WedgeSection;
+	WedgeSection.Empty(NumWedges);
+	for (i = 0; i < NumWedges; i++)
+		WedgeSection.AddItem(NULL);
+	// smooth sections
+	for (k = 0; k < SmoothSections.Num(); k++)
+	{
+		const FSkelMeshSection &ms = SmoothSections[k];
+		for (i = 0; i < ms.NumFaces; i++)
+		{
+			FMeshFace *F = new (Faces) FMeshFace;
+			F->MaterialIndex = ms.MaterialIndex;
+			for (j = 0; j < 3; j++)
+			{
+				int WedgeIndex = SmoothIndices.Indices[(ms.FirstFace + i) * 3 + j];
+				assert(WedgeSection[WedgeIndex] == NULL || WedgeSection[WedgeIndex] == &ms);
+				WedgeSection[WedgeIndex] = &ms;
+				F->iWedge[j] = WedgeIndex;
+			}
+		}
+	}
+	// and the same code for rigid sections
+	for (k = 0; k < RigidSections.Num(); k++)
+	{
+		const FSkelMeshSection &ms = RigidSections[k];
+		for (i = 0; i < ms.NumFaces; i++)
+		{
+			FMeshFace *F = new (Faces) FMeshFace;
+			F->MaterialIndex = ms.MaterialIndex;
+			for (j = 0; j < 3; j++)
+			{
+				int WedgeIndex = RigidIndices.Indices[(ms.FirstFace + i) * 3 + j];
+				assert(WedgeSection[WedgeIndex] == NULL || WedgeSection[WedgeIndex] == &ms);
+				WedgeSection[WedgeIndex] = &ms;
+				F->iWedge[j] = WedgeIndex;
+			}
+		}
+	}
+
+	// process wedges
+	TArray<int> PointMap;
+	PointMap.Empty(NumWedges);
+	for (i = 0; i < NumWedges; i++)
+	{
+		const FLineageWedge &LW = LineageWedges[i];
+		// find the same point in previous items
+		int PointIndex = INDEX_NONE;
+		for (j = 0; j < i; j++)
+		{
+			const FLineageWedge &LW1 = LineageWedges[j];
+			if (LW.Point == LW1.Point && LW.Normal == LW1.Normal)
+			{
+				PointIndex = PointMap[j];
+				break;
+			}
+		}
+		if (PointIndex == INDEX_NONE)
+		{
+			// point was not found - create it
+			PointIndex = Points.Add();
+			Points[PointIndex] = LW.Point;
+			// build influences
+			const FSkelMeshSection *ms = WedgeSection[i];
+			assert(ms);
+			for (j = 0; j < 4; j++)
+			{
+				if (LW.Bones[j] == 255) continue;
+				FVertInfluences *Inf = new (VertInfluences) FVertInfluences;
+				Inf->Weight     = LW.Weights[j];
+				Inf->BoneIndex  = ms->LineageBoneMap[LW.Bones[j]];
+				Inf->PointIndex = PointIndex;
+			}
+		}
+		PointMap.AddItem(PointIndex);
+		// create wedge
+		FMeshWedge *W = new (Wedges) FMeshWedge;
+		W->iVertex = PointIndex;
+		W->TexUV   = LW.Tex;
+	}
+
+	unguard;
+}
+
+
+void USkeletalMesh::RecreateMeshFromLOD()
+{
+	guard(USkeletalMesh::RecreateMeshFromLOD);
+	if (Wedges.Num() || !LODModels.Num()) return;		// nothing to do
+	printf("Restoring Lineage2 mesh from LOD ...\n");
+
+	FStaticLODModel &Lod = LODModels[0];
+
+	COPY_ARRAY(Lod.Wedges, Wedges);
+	COPY_ARRAY(Lod.Points, Points);
+	COPY_ARRAY(Lod.VertInfluences, VertInfluences);
+	COPY_ARRAY(Lod.Faces, Triangles);
+	VertexCount = Points.Num();
+
+	unguard;
+}
+
+#endif // LINEAGE2
