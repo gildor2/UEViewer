@@ -13,10 +13,15 @@ void appError(char *fmt, ...)
 	va_end(argptr);
 	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
 
+#if DO_GUARD
 //	appNotify("ERROR: %s\n", buf);
 	strcpy(GErrorHistory, buf);
 	appStrcatn(ARRAY_ARG(GErrorHistory), "\n");
 	THROW;
+#else
+	printf("Fatal Error: %s\n", buf);
+	exit(1);
+#endif
 }
 
 
@@ -78,6 +83,7 @@ void appUnwindPrefix(const char *fmt)
 	WasError = false;
 }
 
+#if DO_GUARD
 
 void appUnwindThrow(const char *fmt, ...)
 {
@@ -100,6 +106,8 @@ void appUnwindThrow(const char *fmt, ...)
 
 	THROW;
 }
+
+#endif // DO_GUARD
 
 
 /*-----------------------------------------------------------------------------

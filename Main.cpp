@@ -116,7 +116,9 @@ static bool ExportObject(UObject *Obj)
 
 int main(int argc, char **argv)
 {
+#if DO_GUARD
 	try {
+#endif
 
 	guard(Main);
 
@@ -375,6 +377,7 @@ int main(int argc, char **argv)
 
 	unguard;
 
+#if DO_GUARD
 	} catch (...) {
 		if (GErrorHistory[0])
 		{
@@ -388,6 +391,7 @@ int main(int argc, char **argv)
 		}
 		exit(1);
 	}
+#endif
 	return 0;
 }
 

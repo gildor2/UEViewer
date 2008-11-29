@@ -247,10 +247,6 @@ public:
 		return *this;
 	}
 
-protected:
-	FILE	*f;
-	int		ArPosOffset;
-
 	virtual void Serialize(void *data, int size)
 	{
 		if (ArStopper > 0 && ArPos + size > ArStopper)
@@ -265,6 +261,10 @@ protected:
 		if (res != 1)
 			appError("Unable to serialize data");
 	}
+
+protected:
+	FILE	*f;
+	int		ArPosOffset;
 };
 
 
@@ -633,16 +633,18 @@ inline void SkipLazyArray(FArchive &Ar)
 }
 
 
-#define COPY_ARRAY(Src, Dst)				\
-	if (Src.Num())							\
-	{										\
-		guard(Src);							\
-		Dst.Empty(Src.Num());				\
-		Dst.Add(Src.Num());					\
-		for (int i = 0; i < Src.Num(); i++)	\
-			Dst[i] = Src[i];				\
-		unguard;							\
+template<class T1, class T2> void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
+{
+	guard(CopyArray);
+	Dst.Empty(Src.Num());
+	if (Src.Num())
+	{
+		Dst.Add(Src.Num());
+		for (int i = 0; i < Src.Num(); i++)
+			Dst[i] = Src[i];
 	}
+	unguard;
+}
 
 
 /*-----------------------------------------------------------------------------

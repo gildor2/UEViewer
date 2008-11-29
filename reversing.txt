@@ -57,3 +57,15 @@ protected: static unsigned char * FArchive::CryptKey
 	db 134, 115, 163, 91, 202, 105, 182, 136, 85, 210, 158, 160, 217, 35, 82
 	db 210, 151, 44, 173, 159, 221, 147, 16, 236, 205, 129, 79, 85, 95, 155
 	db 203, 197, 170, 52, 219, 67, 95, 192, 113, 15, 150, 140, 250, 238
+
+
+===============================================================================
+Lineage 2
+===============================================================================
+
+Scripts:
+Interface/Classes/CharacterCreateMenuWnd.uc, InventoryWnd.uc
+  generate personage look
+
+MeshComponent
+RequestCreateCharacter() - native

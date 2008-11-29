@@ -195,7 +195,7 @@ void CSkelMeshViewer::Dump()
 			for (int j = 0; j < sec[k]->Num(); j++)
 			{
 				const FSkelMeshSection &S = (*sec[k])[j];
-				printf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
+				printf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d] b#%d\n", j,
 					S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
 					S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
 			}
@@ -237,6 +237,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawTextLeft("L           cycle mesh LODs\n"
 				 "S           show skeleton\n"
 				 "B           show bone names\n"
+				 "A           show attach sockets\n"
 				 "Ctrl+B      dump skeleton to console");
 }
 
@@ -261,6 +262,9 @@ void CSkelMeshViewer::ProcessKey(int key)
 		break;
 	case 'b':
 		MeshInst->ShowLabels = !MeshInst->ShowLabels;
+		break;
+	case 'a':
+		MeshInst->ShowAttach = !MeshInst->ShowAttach;
 		break;
 	case 'b'|KEY_CTRL:
 		MeshInst->DumpBones();

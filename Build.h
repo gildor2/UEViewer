@@ -1,3 +1,4 @@
+#define DO_GUARD		1
 #define RENDERING		1
 
 // Support for other games

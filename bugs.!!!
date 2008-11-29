@@ -1,8 +1,13 @@
+? L2 attach sockets: incorrect socket origin - L2 models have e_bone socket, which should be
+  near mouch (?) for breath effect etc - it is (in umodel) located above-left of head ...
+  ! checked in UT2004: modified socket in UnrealEd, appears correctly in umodel
+
 - HP3:
   - Dimentor: uses paletted Texture with Masked=true, has pink borders when alpha changed
 
 - sometimes after relatively long time of application inactivity, program becomes inresponsible to
   keyboard and mouse (should press Ctrl+Shift? but why even ESC does not works?)
+  ?? sticky Ctrl key ? Once I was pressed <B> and received Ctrl+B bone list ...
 
 * MercFemaleB: bugs with alpha-texture on head (hear)
   - translocator: same

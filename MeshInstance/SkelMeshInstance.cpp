@@ -504,7 +504,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 		const MotionChunk  *Motion1  = NULL, *Motion2  = NULL;
 		const FMeshAnimSeq *AnimSeq1 = NULL, *AnimSeq2 = NULL;
 		float Time2;
-		if (Chn->AnimIndex1 != INDEX_NONE)
+		if (Chn->AnimIndex1 >= 0)		// not INDEX_NONE or ANIM_UNASSIGNED
 		{
 			Motion1  = &Anim->Moves   [Chn->AnimIndex1];
 			AnimSeq1 = &Anim->AnimSeqs[Chn->AnimIndex1];
@@ -896,7 +896,7 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 			// show bone label
 			v1.Add(BC.origin);
 			v1.Scale(0.5f);
-			DrawText3D(v1, S_YELLOW"%s", *B.Name);
+			DrawText3D(v1, S_YELLOW"(%d)%s", i, *B.Name);
 		}
 	}
 	glColor3f(1,1,1);
@@ -904,6 +904,51 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 
 	glLineWidth(1);
 	glDisable(GL_LINE_SMOOTH);
+
+	unguard;
+}
+
+void CSkelMeshInstance::DrawAttachments()
+{
+	guard(CSkelMeshInstance::DrawAttachments);
+
+	const USkeletalMesh *Mesh = GetMesh();
+	if (!Mesh->AttachAliases.Num()) return;
+
+	glDisable(GL_TEXTURE_2D);
+
+	glBegin(GL_LINES);
+	for (int i = 0; i < Mesh->AttachAliases.Num(); i++)
+	{
+		const char *BoneName = Mesh->AttachBoneNames[i];
+		int BoneIndex = FindBone(BoneName);
+		if (BoneIndex == INDEX_NONE) continue;		// should not happen
+
+		CCoords AC;
+		BoneData[BoneIndex].Coords.UnTransformCoords((CCoords&)Mesh->AttachCoords[i], AC);
+
+		for (int j = 0; j < 3; j++)
+		{
+			float color[3];
+			CVec3 point0, point1;
+
+			color[0] = color[1] = color[2] = 0.1f; color[j] = 1.0f;
+			point0.Set(0, 0, 0); point0[j] = 10;
+			AC.UnTransformPoint(point0, point1);
+
+			glColor3fv(color);
+			glVertex3fv(AC.origin.v);
+			glVertex3fv(point1.v);
+		}
+
+		// show attachment label
+		CVec3 labelOrigin;
+		static const CVec3 origin0 = { 4, 4, 4 };
+		AC.UnTransformPoint(origin0, labelOrigin);
+		DrawText3D(labelOrigin, S_GREEN"%s\n(%s)", *Mesh->AttachAliases[i], BoneName);
+	}
+	glColor3f(1,1,1);
+	glEnd();
 
 	unguard;
 }
@@ -1096,6 +1141,8 @@ void CSkelMeshInstance::Draw()
 		else
 			DrawLodSkeletalMesh(&Mesh->LODModels[LodNum]);
 	}
+	if (ShowAttach)
+		DrawAttachments();
 
 	unguard;
 }

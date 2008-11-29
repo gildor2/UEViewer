@@ -141,22 +141,6 @@ public:
 	FObjectImport			*ImportTable;
 	FObjectExport			*ExportTable;
 
-#if LINEAGE2
-	byte					XorKey;
-	// FArchive interface
-	virtual void Serialize(void *data, int size)
-	{
-		FFileReader::Serialize(data, size);
-		if (XorKey)
-		{
-			int i;
-			byte *p;
-			for (i = 0, p = (byte*)data; i < size; i++, p++)
-				*p ^= XorKey;
-		}
-	}
-#endif
-
 	UnPackage(const char *filename);
 	~UnPackage();
 
@@ -266,6 +250,22 @@ public:
 		}
 		return *this;
 	}
+
+#if LINEAGE2
+	byte					XorKey;
+	// FArchive interface
+	virtual void Serialize(void *data, int size)
+	{
+		FFileReader::Serialize(data, size);
+		if (XorKey)
+		{
+			int i;
+			byte *p;
+			for (i = 0, p = (byte*)data; i < size; i++, p++)
+				*p ^= XorKey;
+		}
+	}
+#endif
 
 private:
 	// package list

@@ -20,6 +20,10 @@ path="data"
 # SplinterCell2
 #path="data/SplinterCell2"
 
+# Lineage2
+path="c:/!umodel-data/--Lineage2--"
+
+
 path2=$path
 [ -d "$path/Animations" ] && path2="$path/Animations"
 

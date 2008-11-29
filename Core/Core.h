@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdarg.h>
 #include <string.h>
 #include <math.h>
@@ -156,6 +157,8 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 }
 
 
+#if DO_GUARD
+
 // C++excpetion-based guard/unguard system
 #define guard(func)						\
 	{									\
@@ -182,6 +185,14 @@ void appUnwindPrefix(const char *fmt);		// not vararg (will display function nam
 NORETURN void appUnwindThrow(const char *fmt, ...);
 
 extern char GErrorHistory[2048];
+
+#else  // DO_GUARD
+
+#define guard(func)		{
+#define unguard			}
+#define unguardf(msg)	}
+
+#endif // DO_GUARD
 
 
 #define appMilliseconds()		SDL_GetTicks()

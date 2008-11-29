@@ -127,23 +127,49 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 	{
 		byte b;
 		Ar << b;
-		int sign  = b & 0x80;
+		int sign  = b & 0x80;	// sign bit
 		int shift = 6;
 		int r     = b & 0x3F;
-		if (b & 0x40)
+		if (b & 0x40)			// has 2nd byte
 		{
 			do
 			{
 				Ar << b;
 				r |= (b & 0x7F) << shift;
 				shift += 7;
-			} while (b & 0x80);
+			} while (b & 0x80);	// has more bytes
 		}
 		I.Value = sign ? -r : r;
 	}
 	else
 	{
-		appError("write AR_INDEX is not implemented");
+		int v = I.Value;
+		byte b = 0;
+		if (v < 0)
+		{
+			v = -v;
+			b |= 0x80;			// sign
+		}
+		b |= v & 0x3F;
+		if (v <= 0x3F)
+		{
+			Ar << b;
+		}
+		else
+		{
+			b |= 0x40;			// has 2nd byte
+			v >>= 6;
+			Ar << b;
+			assert(v);
+			while (v)
+			{
+				b = v & 0x7F;
+				v >>= 7;
+				if (v)
+					b |= 0x80;	// has more bytes
+				Ar << b;
+			}
+		}
 	}
 	return Ar;
 }

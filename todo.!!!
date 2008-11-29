@@ -39,8 +39,7 @@ GENMAKE:
   - crash (assert) when switching mesh LOD levels
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
 
-! implement attach sockets support (visualization)
-  ? when exporting mesh, can create .uc with sockets too (if possible)
+? when exporting mesh, can create .uc with sockets too (if possible)
 ? support Undying
 ! when cannot load some material type, or file is absent - sould at least give ability to list this
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
@@ -157,3 +156,10 @@ FinalBlend
        -> Modifier (any count)
          -> Texture
          -> Modifier (const color)
+
+http://udn.epicgames.com/Three/UT3CustomCharacters.html
+  some info about UT3 skeletal models
+
+http://www.twcenter.net/forums/showthread.php?t=151655
+http://www.twcenter.net/forums/showthread.php?t=134461
+  ms3d <-> 3ds max converters (max script)

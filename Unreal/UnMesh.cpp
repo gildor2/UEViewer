@@ -135,7 +135,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	{
 		TLazyArray<FMeshVert> tmpVerts;
 		Ar << tmpVerts;									// regular Unreal1 model
-		COPY_ARRAY(tmpVerts, Verts);					// TLazyArray  -> TArray
+		CopyArray(Verts, tmpVerts);						// TLazyArray  -> TArray
 	}
 	Ar << tmpTris << AnimSeqs << tmpConnects;
 	Ar << BoundingBox << BoundingSphere;				// serialize UPrimitive fields again
@@ -177,7 +177,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 				V.Z = appRound(V.Z * scale);
 			}
 		}
-		COPY_ARRAY(deusVerts, Verts);
+		CopyArray(Verts, deusVerts);
 	}
 #endif // DEUS_EX
 	if (Ar.ArVer == 65)
@@ -195,7 +195,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 		Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
 		Ar << tmpRemapAnimVerts << tmpOldFrameVerts;
 		// convert data
-		COPY_ARRAY(tmpWedges, Wedges);			// FMeshWedge1 -> FMeshWedge
+		CopyArray(Wedges, tmpWedges);			// FMeshWedge1 -> FMeshWedge
 		for (int i = 0; i < Wedges.Num(); i++)	// remap wedges (skip SpecialVerts)
 			Wedges[i].iVertex += tmpSpecialVerts;
 		printf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
@@ -212,7 +212,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 				for (int k = 0; k < VertexCount; k++)
 					NewVerts[base + k] = Verts[oldBase + tmpRemapAnimVerts[k]];
 			}
-			COPY_ARRAY(NewVerts, Verts)
+			CopyArray(Verts, NewVerts);
 			unguard;
 		}
 
@@ -431,9 +431,9 @@ struct Name													\
 	void Decompress(AnalogTrack &D)							\
 	{														\
 		D.Flags = 0;										\
-		COPY_ARRAY(KeyQuat, D.KeyQuat);						\
-		COPY_ARRAY(KeyPos,  D.KeyPos );						\
-		COPY_ARRAY(KeyTime, D.KeyTime);						\
+		CopyArray(D.KeyQuat, KeyQuat);						\
+		CopyArray(D.KeyPos,  KeyPos );						\
+		CopyArray(D.KeyTime, KeyTime);						\
 	}														\
 															\
 	friend FArchive& operator<<(FArchive &Ar, Name &A)		\
@@ -455,8 +455,8 @@ void AnalogTrack::SerializeSCell(FArchive &Ar)
 	TArray<word>      KeyTime2;
 	Ar << KeyQuat2 << KeyPos << KeyTime2;
 	// copy with conversion
-	COPY_ARRAY(KeyQuat2, KeyQuat);
-	COPY_ARRAY(KeyTime2, KeyTime);
+	CopyArray(KeyQuat, KeyQuat2);
+	CopyArray(KeyTime, KeyTime2);
 }
 
 
@@ -502,7 +502,7 @@ template<class T> struct MotionChunkCompress : public MotionChunkCompressBase
 		guard(Decompress);
 		MotionChunkCompressBase::Decompress(D);
 		// copy/convert tracks
-		COPY_ARRAY(BoneIndices, D.BoneIndices);
+		CopyArray(D.BoneIndices, BoneIndices);
 		int numAnims = AnimTracks.Num();
 		D.AnimTracks.Empty(numAnims);
 		D.AnimTracks.Add(numAnims);
@@ -719,9 +719,9 @@ struct FlexTrack48 : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		COPY_ARRAY(KeyQuat, T.KeyQuat);
-		COPY_ARRAY(KeyPos,  T.KeyPos );
-		COPY_ARRAY(KeyTime, T.KeyTime);
+		CopyArray(T.KeyQuat, KeyQuat);
+		CopyArray(T.KeyPos,  KeyPos );
+		CopyArray(T.KeyTime, KeyTime);
 	}
 };
 
@@ -739,8 +739,8 @@ struct FlexTrack48RotOnly : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		COPY_ARRAY(KeyQuat, T.KeyQuat);
-		COPY_ARRAY(KeyTime, T.KeyTime);
+		CopyArray(T.KeyQuat, KeyQuat);
+		CopyArray(T.KeyTime, KeyTime);
 		T.KeyPos.Empty(KeyTime.Num());
 		for (int i = 0; i < KeyTime.Num(); i++)
 			T.KeyPos.AddItem(KeyPos);
@@ -894,8 +894,8 @@ void USkeletalMesh::UpgradeMesh()
 	guard(USkeletalMesh.UpgradeMesh);
 
 	int i;
-	COPY_ARRAY(Points2, Points)
-	COPY_ARRAY(ULodMesh::Wedges, Wedges);
+	CopyArray(Points, Points2);
+	CopyArray(Wedges, Super::Wedges);
 	UpgradeFaces();
 	// convert VBoneInfluence and VWeightIndex to FVertInfluences
 	// count total influences
@@ -975,9 +975,9 @@ void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 	Ar << SkeletalDepth << Animation << tmpWeaponBoneIndex << tmpWeaponAdjust;
 
 	// convert data
-	COPY_ARRAY(tmpWedges, Wedges);		// TLazyArray -> TArray
-	COPY_ARRAY(tmpPoints, Points);		// ...
-	COPY_ARRAY(Super::Wedges, Wedges);
+	CopyArray(Wedges, tmpWedges);		// TLazyArray -> TArray
+	CopyArray(Points, tmpPoints);		// ...
+	CopyArray(Wedges, Super::Wedges);
 	UpgradeFaces();
 	RotOrigin.Yaw = -RotOrigin.Yaw;
 
@@ -1306,7 +1306,7 @@ static void ConvertRuneAnimations(UMeshAnimation &Anim, const TArray<RJoint> &Bo
 		const FRSkelAnimSeq &SS = Seqs[i];
 		FMeshAnimSeq *S = new(Anim.AnimSeqs) FMeshAnimSeq;
 		S->Name       = SS.Name;
-		COPY_ARRAY(SS.Groups, S->Groups);
+		CopyArray(S->Groups, SS.Groups);
 		S->StartFrame = 0;
 		S->NumFrames  = SS.NumFrames;
 		S->Rate       = SS.Rate;
@@ -1606,12 +1606,15 @@ void FStaticLODModel::RestoreLineageMesh()
 {
 	guard(FStaticLODModel::RestoreLineageMesh);
 
-	if (VertInfluences.Num() || !LineageWedges.Num())
-		return;							// nothing to restore
-	printf("Converting Lineage2 LODModel to standard ...\n");
+	if (Wedges.Num()) return;			// nothing to restore
+	printf("Converting Lineage2 LODModel to standard LODModel ...\n");
+	if (SmoothSections.Num() && RigidSections.Num())
+		appNotify("have smooth & rigid sections");
 
 	int i, j, k;
-	int NumWedges = LineageWedges.Num();
+	int NumWedges = LineageWedges.Num() + VertexStream.Verts.Num(); //??
+	assert(LineageWedges.Num() == 0 || VertexStream.Verts.Num() == 0);
+
 	Wedges.Empty(NumWedges);
 	Points.Empty(NumWedges);			// really, should be a smaller count
 	VertInfluences.Empty(NumWedges);	// min count = NumVerts
@@ -1623,6 +1626,7 @@ void FStaticLODModel::RestoreLineageMesh()
 	for (i = 0; i < NumWedges; i++)
 		WedgeSection.AddItem(NULL);
 	// smooth sections
+	guard(SmoothWedges);
 	for (k = 0; k < SmoothSections.Num(); k++)
 	{
 		const FSkelMeshSection &ms = SmoothSections[k];
@@ -1639,6 +1643,8 @@ void FStaticLODModel::RestoreLineageMesh()
 			}
 		}
 	}
+	unguard;
+	guard(RigidWedges);
 	// and the same code for rigid sections
 	for (k = 0; k < RigidSections.Num(); k++)
 	{
@@ -1656,11 +1662,14 @@ void FStaticLODModel::RestoreLineageMesh()
 			}
 		}
 	}
+	unguard;
 
 	// process wedges
 	TArray<int> PointMap;
 	PointMap.Empty(NumWedges);
-	for (i = 0; i < NumWedges; i++)
+	// convert LineageWedges (smooth sections)
+	guard(BuildSmoothWedges);
+	for (i = 0; i < LineageWedges.Num(); i++)
 	{
 		const FLineageWedge &LW = LineageWedges[i];
 		// find the same point in previous items
@@ -1697,6 +1706,43 @@ void FStaticLODModel::RestoreLineageMesh()
 		W->iVertex = PointIndex;
 		W->TexUV   = LW.Tex;
 	}
+	unguard;
+	// similar code for VertexStream (rigid sections)
+	guard(BuildRigidWedges);
+	for (i = 0; i < VertexStream.Verts.Num(); i++)
+	{
+		const FAnimMeshVertex &LW = VertexStream.Verts[i];
+		// find the same point in previous items
+		int PointIndex = INDEX_NONE;
+		for (j = 0; j < i; j++)
+		{
+			const FAnimMeshVertex &LW1 = VertexStream.Verts[j];
+			if (LW.Pos == LW1.Pos && LW.Norm == LW1.Norm)
+			{
+				PointIndex = PointMap[j];
+				break;
+			}
+		}
+		if (PointIndex == INDEX_NONE)
+		{
+			// point was not found - create it
+			PointIndex = Points.Add();
+			Points[PointIndex] = LW.Pos;
+			// build influences
+			const FSkelMeshSection *ms = WedgeSection[i];
+			assert(ms);
+			FVertInfluences *Inf = new (VertInfluences) FVertInfluences;
+			Inf->Weight     = 1.0f;
+			Inf->BoneIndex  = /*VertexStream.Revision; //??*/ ms->BoneIndex; //-- equals 0 in Lineage2 ...
+			Inf->PointIndex = PointIndex;
+		}
+		PointMap.AddItem(PointIndex);
+		// create wedge
+		FMeshWedge *W = new (Wedges) FMeshWedge;
+		W->iVertex = PointIndex;
+		W->TexUV   = LW.Tex;
+	}
+	unguard;
 
 	unguard;
 }
@@ -1710,10 +1756,10 @@ void USkeletalMesh::RecreateMeshFromLOD()
 
 	FStaticLODModel &Lod = LODModels[0];
 
-	COPY_ARRAY(Lod.Wedges, Wedges);
-	COPY_ARRAY(Lod.Points, Points);
-	COPY_ARRAY(Lod.VertInfluences, VertInfluences);
-	COPY_ARRAY(Lod.Faces, Triangles);
+	CopyArray(Wedges, Lod.Wedges);
+	CopyArray(Points, Lod.Points);
+	CopyArray(VertInfluences, Lod.VertInfluences);
+	CopyArray(Triangles, Lod.Faces);
 	VertexCount = Points.Num();
 
 	unguard;

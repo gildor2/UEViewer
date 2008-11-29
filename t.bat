@@ -24,11 +24,14 @@ exit
 
 :cont
 
-rem %run% HumanMaleA MercMaleD
+%run% HumanMaleA MercMaleD
 rem %run% ONSVehicles-A RV
 rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
 rem %run% AS_VehiclesFull_M
-umodel.exe -path=data/Lineage2 Elf FElf_m007_u
+rem umodel.exe -path=data/Lineage2 Elf FElf_m000_f
+rem !!! BUG !!! bad bone influences (all face meshes attached to wrong bone)
+rem umodel C:\!umodel-data\--Lineage2--\animations\Orc.ukx FOrc_m000_f
+rem umodel C:\!umodel-data\--Lineage2--\animations\Orc.ukx
 
 rem umodel.exe -path="C:\!umodel-data\--Lineage2--" Elf FElf_m007_u
 rem umodel D:\22222\Runtime\Animations\TestAnims.ukx

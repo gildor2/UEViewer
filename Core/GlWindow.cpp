@@ -8,6 +8,9 @@
 #define CHARS_PER_LINE			(TEX_WIDTH/CHAR_WIDTH)
 #define TEXT_SCROLL_LINES		(CHAR_HEIGHT/2)
 
+
+#if RENDERING
+
 #if _MSC_VER
 #pragma comment(lib, "opengl32.lib")
 #endif
@@ -18,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #define DEFAULT_DIST			256
+#define MIN_DIST				50
 #define MAX_DIST				2048
 #define CLEAR_COLOR				0.2, 0.3, 0.3, 0
 
@@ -301,7 +305,7 @@ static void OnMouseMove(int dx, int dy)
 		VectorMA(rotOrigin, xDelta * viewDist * 2, axis[1]);
 		VectorMA(rotOrigin, yDelta * viewDist * 2, axis[2]);
 	}
-	viewDist = bound(viewDist, 100 * distScale, MAX_DIST * distScale);
+	viewDist = bound(viewDist, MIN_DIST * distScale, MAX_DIST * distScale);
 	VectorScale(axis[0], -viewDist, viewOrigin);
 	viewOrigin.Add(rotOrigin);
 	viewOrigin.Add(viewOffset);
@@ -734,3 +738,5 @@ void VisualizerLoop(const char *caption)
 	// shutdown
 	Shutdown();
 }
+
+#endif // RENDERING

@@ -887,7 +887,7 @@ struct FSkelMeshSection
 	word			FirstFace;
 	word			NumFaces;
 #if LINEAGE2
-	TArray<int>		LineageBoneMap;
+	TArray<int>		LineageBoneMap;			// for smooth sections only
 #endif
 	// Rigid sections:
 	//	MinWedgeIndex/MaxWedgeIndex -> FStaticLODModel.Wedges
@@ -917,6 +917,7 @@ struct FSkelMeshSection
 
 #if LINEAGE2
 
+// FAnimMeshVertex with influence info
 struct FLineageWedge
 {
 	FVector			Point;
@@ -1203,7 +1204,7 @@ public:
 		if (Ar.IsLineage2)
 		{
 			int unk1, unk3, unk4;
-			TArray<int> unk2;
+			TArray<float> unk2;
 			if (Ar.ArVer >= 118 && Ar.ArLicenseeVer >= 3)
 				Ar << unk1;
 			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x12)

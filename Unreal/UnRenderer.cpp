@@ -1,5 +1,7 @@
 #include "Core.h"
 
+#if RENDERING
+
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnMaterial.h"
@@ -598,3 +600,5 @@ void UTexModifier::Bind(unsigned PolyFlags)
 	else
 		BindDefaultMaterial();
 }
+
+#endif // RENDERING

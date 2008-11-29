@@ -665,8 +665,8 @@ sub AppendFilePath {
 	$file = $path.$file;					# append path
 	# compress path: remove "word/../"
 	# NOTE: $inc =~ s/\b\w+\/\.\.\///g; -- does not works when dir name containg "." (\b will work incorrect)
-	$file =~ s/^[^\/]+\/\.\.\///g;			# at begin of string
-	$file =~ s/\/[^\/]+\/\.\.//g;			# in the middle of the string
+	$file =~ s/^[^\/\.]+\/\.\.\///g;		# at begin of string
+	$file =~ s/\/[^\/\.]+\/\.\.//g;			# in the middle of the string
 	# remove "./" at filename start
 	$file =~ s/^\.\///;
 	return $file;
@@ -717,12 +717,12 @@ sub ExpandWildcards {
 			$line2 .= " $src";
 			next;
 		}
-		# normalize and convert mask
 		$src =~ s/\\/\//g;			# '\' -> '/'
-		$src =~ s/\./\\./g;			# '.' -> '\.'
-		$src =~ s/\*/\.\*/g;		# '*' -> '.*'
 		# get path, if exists
 		my (undef, $path, $mask) = $src =~ /((.*)\/)?([^\/]+)/;
+		# normalize and convert mask
+		$mask =~ s/\./\\./g;		# '.' -> '\.'
+		$mask =~ s/\*/\.\*/g;		# '*' -> '.*'
 		$mask = "^".$mask."\$";		# add ^ at start and $ at end
 		$path = "." if !defined($path);
 		# scan directory

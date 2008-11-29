@@ -36,6 +36,12 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+26.11.2008
+- implemented attachment socket visualization for skeletal mesh (key A)
+
+25.11.2008
+- additional fix for Lineage LOD models
+
 23.11.2008
 - fixed skeletal LOD model visualisation
 - implemented skinning for LOD models

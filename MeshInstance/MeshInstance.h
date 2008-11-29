@@ -212,6 +212,7 @@ public:
 	// debugging
 	int			ShowSkel;			// 0 - mesh, 1 - mesh+skel, 2 - skel only
 	bool		ShowLabels;
+	bool		ShowAttach;
 
 	CSkelMeshInstance()
 	:	LodNum(-1)
@@ -221,6 +222,7 @@ public:
 	,	MeshNormals(NULL)
 	,	ShowSkel(0)
 	,	ShowLabels(false)
+	,	ShowAttach(false)
 	{
 		ClearSkelAnims();
 	}
@@ -233,6 +235,7 @@ public:
 
 	void DumpBones();
 	void DrawSkeleton(bool ShowLabels);
+	void DrawAttachments();
 	void DrawBaseSkeletalMesh(bool ShowNormals);
 	void DrawLodSkeletalMesh(const FStaticLODModel *lod);
 
