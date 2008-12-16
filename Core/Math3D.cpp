@@ -403,6 +403,17 @@ void CQuat::Normalize()
 }
 
 
+void CQuat::Mul(const CQuat &Q)
+{
+	CQuat tmp;
+	tmp.x = w * Q.x + x * Q.w + y * Q.z - z * Q.y;
+	tmp.y = w * Q.y - x * Q.z + y * Q.w + z * Q.x;
+	tmp.z = w * Q.z + x * Q.y - y * Q.x + z * Q.w;
+	tmp.w = w * Q.w - x * Q.x - y * Q.y - z * Q.z;
+	*this = tmp;
+}
+
+
 void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
 {
 	// Check "Hacking Quaternions" article for fast approximated slerp

@@ -10,7 +10,9 @@
 #define APP_CAPTION		"Unreal Model Viewer"
 
 
+#if RENDERING
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
+#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -38,12 +40,24 @@ END_CLASS_TABLE
 	change!!
 -----------------------------------------------------------------------------*/
 
+
+#if RENDERING
+
 static bool CreateVisualizer(UObject *Obj, bool test = false);
 
 inline bool ObjectSupported(UObject *Obj)
 {
 	return CreateVisualizer(Obj, true);
 }
+
+#else
+
+inline bool ObjectSupported(UObject *Obj)
+{
+	return true;
+}
+
+#endif // RENDERING
 
 static int ObjIndex = 0;
 
@@ -145,11 +159,14 @@ int main(int argc, char **argv)
 				"    -check          check some assumptions, no other actions performed\n"
 				"    -pkginfo        load package and display its information\n"
 				"\n"
-				"Options:\n"
+				"Common options:\n"
 				"    -path=PATH      path to UT installation directory; if not specified,\n"
 				"                    program will search for packages in current directory\n"
 				"    -noanim         disable loading of MeshAnimation classes in a case of\n"
 				"                    unsupported data format\n"
+				"\n"
+				"Export options:\n"
+				"    -all            export all linked objects too\n"
 				"\n"
 				"Supported resources for export:\n"
 				"    SkeletalMesh    exported as ActorX psk file\n"
@@ -198,7 +215,8 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
+	bool dump = false, view = true, exprt = false, exprtAll = false,
+		 listOnly = false, noAnim = false, pkgInfo = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -223,6 +241,8 @@ int main(int argc, char **argv)
 				view  = false;
 				exprt = true;
 			}
+			else if (!stricmp(opt, "all"))
+				exprtAll = true;
 			else if (!stricmp(opt, "pkginfo"))
 				pkgInfo = true;
 			else if (!stricmp(opt, "list"))
@@ -339,29 +359,43 @@ int main(int argc, char **argv)
 	}
 	if (!Obj) return 0;					// object was not created
 
+#if RENDERING
 	CreateVisualizer(Obj);
 	// print mesh info
-#if TEST_FILES
+#	if TEST_FILES
 	Viewer->Test();
-#endif
+#	endif
 
 	if (dump)
 		Viewer->Dump();					// dump info to console
+#endif // RENDERING
 
 	if (exprt)
 	{
 		appSetNotifyHeader(NULL);
-		// export object, if possible
+		printf("Exporting objects ...\n");
+		// export object(s), if possible
+		bool oneObjectOnly = (argObjName != NULL && !exprtAll);
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			Obj = UObject::GObjObjects[idx];
-			printf("Exporting %s ...\n", Obj->Name);
-			if (!ExportObject(Obj))
-				printf("ERROR: exporting object %s: unsupported type %s\n", Obj->Name, Obj->GetClassName());
-			if (argObjName) break;		// export specified (1st) object only
+			if (!exprtAll && Obj->Package != Package)	// refine object by package
+				continue;
+			if (ExportObject(Obj))
+			{
+				printf("Exported %s %s\n", Obj->GetClassName(), Obj->Name);
+			}
+			else
+			{
+				printf("%sExport object %s: unsupported type %s\n",
+					(oneObjectOnly) ? "ERROR: " : "",
+					Obj->Name, Obj->GetClassName());
+			}
+			if (oneObjectOnly) break;
 		}
 	}
 
+#if RENDERING
 	if (view)
 	{
 		// show object
@@ -370,9 +404,12 @@ int main(int argc, char **argv)
 		VisualizerLoop(APP_CAPTION);
 		unguard;
 	}
+#endif // RENDERING
 
 	// cleanup
+#if RENDERING
 	delete Viewer;
+#endif
 	delete Obj;
 
 	unguard;
@@ -399,6 +436,8 @@ int main(int argc, char **argv)
 /*-----------------------------------------------------------------------------
 	GlWindow callbacks
 -----------------------------------------------------------------------------*/
+
+#if RENDERING
 
 static bool CreateVisualizer(UObject *Obj, bool test)
 {
@@ -498,3 +537,5 @@ void AppDisplayTexts(bool helpVisible)
 	Viewer->Draw2D();
 	unguard;
 }
+
+#endif // RENDERING

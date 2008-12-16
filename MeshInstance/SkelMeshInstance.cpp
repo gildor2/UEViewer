@@ -270,8 +270,10 @@ void CSkelMeshInstance::DumpBones()
 	//?? dump tree; separate function (requires depth information)
 	for (int i = 0; i < numIndices; i++)
 	{
-		int parent = Mesh->RefSkeleton[i].ParentIndex;
+		const FMeshBone &B = Mesh->RefSkeleton[i];
+		int parent = B.ParentIndex;
 		printf("bone#%2d (parent %2d); tree size: %2d   ", i, parent, treeSizes[i]);
+#if 1
 		for (int j = 0; j < depth[i]; j++)
 		{
 	#if 0
@@ -301,7 +303,10 @@ void CSkelMeshInstance::DumpBones()
         #endif
 	#endif
 		}
-		printf("%s\n", *Mesh->RefSkeleton[i].Name);
+		printf("%s\n", *B.Name);
+#else
+		printf("%s {%g %g %g} {%g %g %g %g}\n", *B.Name, FVECTOR_ARG(B.BonePos.Position), FQUAT_ARG(B.BonePos.Orientation));
+#endif
 	}
 #endif
 }

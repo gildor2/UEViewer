@@ -24,7 +24,8 @@ exit
 
 :cont
 
-%run% HumanMaleA MercMaleD
+rem %run% HumanMaleA MercMaleD
+umodel -path="C:\!umodel-data\--Lineage2--" LineageNPCs2 Pumpkin_Head_man_m00
 rem %run% ONSVehicles-A RV
 rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
 rem %run% AS_VehiclesFull_M

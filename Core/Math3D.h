@@ -272,6 +272,7 @@ struct CQuat
 		FNegate(z);
 	}
 	void Normalize();
+	void Mul(const CQuat &Q);
 };
 
 void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst);

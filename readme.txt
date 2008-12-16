@@ -36,6 +36,18 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+16.12.2008
+- added "-all" command line option - modifier for exporting logic
+
+09.12.2008
+- workaround for strange ATI bug with recent Catalyst drivers: texturing were
+  disappeared, background color becomes black and everything colorized red; bug
+  description is here: http://bugzilla.icculus.org/show_bug.cgi?id=3526
+
+01.12.2008
+- implemented (temporary) support for different lighting modes: specular, diffuse
+  and ambient only; switched by Ctrl+L
+
 26.11.2008
 - implemented attachment socket visualization for skeletal mesh (key A)
 

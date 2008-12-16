@@ -1,13 +1,14 @@
 #include "Core.h"
 
-#if RENDERING
-
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnMaterial.h"
 
+#include "libs/ddslib.h"				// texture decompression
+
+#if RENDERING
+
 #include "GlWindow.h"
-#include "libs/ddslib.h"
 
 
 #define MAX_IMG_SIZE		4096
@@ -233,97 +234,6 @@ static void Upload(int handle, const void *pic, int width, int height, bool doMi
 	Unreal materials support
 -----------------------------------------------------------------------------*/
 
-// replaces random 'alpha=0' color with black
-static void PostProcessAlpha(byte *pic, int width, int height)
-{
-	for (int pixelCount = width * height; pixelCount > 0; pixelCount--, pic += 4)
-	{
-		if (pic[3] != 0)	// not completely transparent
-			continue;
-		pic[0] = pic[1] = pic[2] = 0;
-	}
-}
-
-
-static byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
-	const char *Name, UPalette *Palette)
-{
-	guard(DecompressTexture);
-	int size = width * height * 4;
-	byte *dst = new byte [size];
-
-	// process non-dxt formats here
-	switch (SrcFormat)
-	{
-	case TEXF_P8:
-		{
-			if (!Palette)
-			{
-				appNotify("DecompressTexture: TEXF_P8 with NULL palette");
-				memset(dst, 0xFF, size);
-				return dst;
-			}
-			byte *d = dst;
-			for (int i = 0; i < width * height; i++)
-			{
-				const FColor &c = Palette->Colors[Data[i]];
-				*d++ = c.R;
-				*d++ = c.G;
-				*d++ = c.B;
-				*d++ = c.A;
-			}
-		}
-		return dst;
-	case TEXF_RGBA8:
-		{
-			const byte *s = Data;
-			byte *d = dst;
-			for (int i = 0; i < width * height; i++)
-			{
-				// BGRA -> RGBA
-				*d++ = s[2];
-				*d++ = s[1];
-				*d++ = s[0];
-				*d++ = s[3];
-				s += 4;
-			}
-		}
-		return dst;
-	}
-
-	// setup for DDSLib
-	ddsBuffer_t dds;
-	memcpy(dds.magic, "DDS ", 4);
-	dds.size   = 124;
-	dds.width  = width;
-	dds.height = height;
-	dds.data   = const_cast<byte*>(Data);
-	switch (SrcFormat)
-	{
-	case TEXF_DXT1:
-		dds.pixelFormat.fourCC = BYTES4('D','X','T','1');
-		break;
-	case TEXF_DXT3:
-		dds.pixelFormat.fourCC = BYTES4('D','X','T','3');
-		break;
-	case TEXF_DXT5:
-		dds.pixelFormat.fourCC = BYTES4('D','X','T','5');
-		break;
-	default:
-		appNotify("%s: unknown texture format %d \n", Name, SrcFormat);
-		memset(dst, 0xFF, size);
-		return dst;
-	}
-	if (DDSDecompress(&dds, dst) != 0)
-		appError("Error in DDSDecompress");
-	if (SrcFormat == TEXF_DXT1)
-		PostProcessAlpha(dst, width, height);
-
-	return dst;
-	unguardf(("fmt=%d", SrcFormat));
-}
-
-
 UMaterial *BindDefaultMaterial()
 {
 	static UTexture *Mat = NULL;
@@ -358,27 +268,6 @@ UMaterial *BindDefaultMaterial()
 	}
 	Mat->Bind(0);
 	return Mat;
-}
-
-
-byte *UTexture::Decompress(int &USize, int &VSize) const
-{
-	guard(UTexture::Decompress);
-	//?? combine with DecompressTexture() ?
-	for (int n = 0; n < Mips.Num(); n++)
-	{
-		// find 1st mipmap with non-null data array
-		// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
-		const FMipmap &Mip = Mips[n];
-		if (!Mip.DataArray.Num())
-			continue;
-		USize = Mip.USize;
-		VSize = Mip.VSize;
-		return DecompressTexture(&Mip.DataArray[0], USize, VSize, Format, Name, Palette);
-	}
-	// no valid mipmaps
-	return NULL;
-	unguard;
 }
 
 
@@ -602,3 +491,115 @@ void UTexModifier::Bind(unsigned PolyFlags)
 }
 
 #endif // RENDERING
+
+
+// replaces random 'alpha=0' color with black
+static void PostProcessAlpha(byte *pic, int width, int height)
+{
+	for (int pixelCount = width * height; pixelCount > 0; pixelCount--, pic += 4)
+	{
+		if (pic[3] != 0)	// not completely transparent
+			continue;
+		pic[0] = pic[1] = pic[2] = 0;
+	}
+}
+
+
+static byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
+	const char *Name, UPalette *Palette)
+{
+	guard(DecompressTexture);
+	int size = width * height * 4;
+	byte *dst = new byte [size];
+
+	// process non-dxt formats here
+	switch (SrcFormat)
+	{
+	case TEXF_P8:
+		{
+			if (!Palette)
+			{
+				appNotify("DecompressTexture: TEXF_P8 with NULL palette");
+				memset(dst, 0xFF, size);
+				return dst;
+			}
+			byte *d = dst;
+			for (int i = 0; i < width * height; i++)
+			{
+				const FColor &c = Palette->Colors[Data[i]];
+				*d++ = c.R;
+				*d++ = c.G;
+				*d++ = c.B;
+				*d++ = c.A;
+			}
+		}
+		return dst;
+	case TEXF_RGBA8:
+		{
+			const byte *s = Data;
+			byte *d = dst;
+			for (int i = 0; i < width * height; i++)
+			{
+				// BGRA -> RGBA
+				*d++ = s[2];
+				*d++ = s[1];
+				*d++ = s[0];
+				*d++ = s[3];
+				s += 4;
+			}
+		}
+		return dst;
+	}
+
+	// setup for DDSLib
+	ddsBuffer_t dds;
+	memcpy(dds.magic, "DDS ", 4);
+	dds.size   = 124;
+	dds.width  = width;
+	dds.height = height;
+	dds.data   = const_cast<byte*>(Data);
+	switch (SrcFormat)
+	{
+	case TEXF_DXT1:
+		dds.pixelFormat.fourCC = BYTES4('D','X','T','1');
+		break;
+	case TEXF_DXT3:
+		dds.pixelFormat.fourCC = BYTES4('D','X','T','3');
+		break;
+	case TEXF_DXT5:
+		dds.pixelFormat.fourCC = BYTES4('D','X','T','5');
+		break;
+	default:
+		appNotify("%s: unknown texture format %d \n", Name, SrcFormat);
+		memset(dst, 0xFF, size);
+		return dst;
+	}
+	if (DDSDecompress(&dds, dst) != 0)
+		appError("Error in DDSDecompress");
+	if (SrcFormat == TEXF_DXT1)
+		PostProcessAlpha(dst, width, height);
+
+	return dst;
+	unguardf(("fmt=%d", SrcFormat));
+}
+
+
+byte *UTexture::Decompress(int &USize, int &VSize) const
+{
+	guard(UTexture::Decompress);
+	//?? combine with DecompressTexture() ?
+	for (int n = 0; n < Mips.Num(); n++)
+	{
+		// find 1st mipmap with non-null data array
+		// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
+		const FMipmap &Mip = Mips[n];
+		if (!Mip.DataArray.Num())
+			continue;
+		USize = Mip.USize;
+		VSize = Mip.VSize;
+		return DecompressTexture(&Mip.DataArray[0], USize, VSize, Format, Name, Palette);
+	}
+	// no valid mipmaps
+	return NULL;
+	unguard;
+}

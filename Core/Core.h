@@ -42,7 +42,9 @@
 #define ARRAY_ARG(array)	array, sizeof(array)/sizeof(array[0])
 #define ARRAY_COUNT(array)	(sizeof(array)/sizeof(array[0]))
 
+//?? move to UnCore.h ?
 #define FVECTOR_ARG(v)		v.X, v.Y, v.Z
+#define FQUAT_ARG(v)		v.X, v.Y, v.Z, v.W
 #define FROTATOR_ARG(r)		r.Yaw, r.Pitch, r.Roll
 
 #define BYTES4(a,b,c,d)	((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))

@@ -9,10 +9,28 @@
 #define TEXT_SCROLL_LINES		(CHAR_HEIGHT/2)
 
 
+#define LIGHTING_MODES			1
+
+
 #if RENDERING
 
 #if _MSC_VER
 #pragma comment(lib, "opengl32.lib")
+#endif
+
+
+#if LIGHTING_MODES
+
+enum
+{
+	LIGHTING_NONE,
+	LIGHTING_SPECULAR,
+	LIGHTING_DIFFUSE,
+	LIGHTING_LAST
+};
+
+static int lightingMode = LIGHTING_SPECULAR;
+
 #endif
 
 
@@ -423,7 +441,7 @@ static void Init(const char *caption)
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+//	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
 	SDL_WM_SetCaption(caption, caption);
 	OnResize(winWidth, winHeight);
@@ -621,16 +639,40 @@ static void Display()
 
 	// enable lighting
 	static const float lightPos[4]      = {100, 200, 100, 0};
-	static const float lightAmbient[4]  = {0.3, 0.3, 0.3, 1};
-//	static const float specIntens[4]    = {1, 1, 1, 0};
+	static const float lightAmbient[4]  = {0.3, 0.3, 0.4, 1};
+	static const float specIntens[4]    = {0.7, 0.7, 0.5, 0};
+	static const float black[4]         = {0,   0,   0,   0};
+	static const float white[4]         = {1,   1,   1,   0};
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_NORMALIZE);		// allow non-normalized normal arrays
 //	glEnable(GL_LIGHTING);
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  lightAmbient);
-//	glMaterialfv(GL_FRONT, GL_SPECULAR, specIntens);
-//	glMaterialf(GL_FRONT, GL_SHININESS, 12);
+//	glLightfv(GL_LIGHT0, GL_SPECULAR, specIntens);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, specIntens);
+	glMaterialf(GL_FRONT, GL_SHININESS, 20);
+#if LIGHTING_MODES
+	if (lightingMode == LIGHTING_NONE)
+	{
+		// disable diffuse
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, black);
+		glLightfv(GL_LIGHT0, GL_AMBIENT, white);
+	}
+	else
+	{
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
+	}
+	if (lightingMode == LIGHTING_SPECULAR)
+	{
+		// GL_EXT_separate_specular_color
+		glLightModeli(0x81F8/*GL_LIGHT_MODEL_COLOR_CONTROL*/, 0x81FA/*GL_SEPARATE_SPECULAR_COLOR*/);
+	}
+	else
+	{
+		glMaterialfv(GL_FRONT, GL_SPECULAR, black);
+	}
+#endif
 
 	// draw scene
 	AppDrawFrame();
@@ -692,6 +734,11 @@ static void OnKeyboard(unsigned key, unsigned mod)
 	case SPEC_KEY(PAGEDOWN)|KEY_CTRL:
 		textOffset -= TEXT_SCROLL_LINES;
 		break;
+#if LIGHTING_MODES
+	case 'l'|KEY_CTRL:
+		if (++lightingMode == LIGHTING_LAST) lightingMode = 0;
+		break;
+#endif
 	default:
 		AppKeyEvent(key);
 	}
