@@ -53,6 +53,48 @@ MATERIALS TREE:
 #endif
 
 
+#if LINEAGE2
+
+struct FLineageMaterialStageProperty
+{
+	FString			unk1;
+	TArray<FString>	unk2;
+
+	friend FArchive& operator<<(FArchive &Ar, FLineageMaterialStageProperty &P)
+	{
+		Ar << P.unk1 << P.unk2;
+	}
+};
+
+struct FLineageShaderProperty
+{
+	// possibly, MaterialInfo, TextureTranform, TwoPassRenderState, AlphaRef
+	byte			b1[4];
+	// possibly, SrcBlend, DestBlend, OverriddenFogColor
+	int				i1[3];
+	// nested structure
+	// possibly, int FC_Color1, FC_Color2 (strange byte order)
+	byte			b2[8];
+	// possibly, float FC_FadePeriod, FC_FadePhase, FC_ColorFadeType
+	int				i2[3];
+	// stages
+	TArray<FLineageMaterialStageProperty> Stages;
+
+	friend FArchive& operator<<(FArchive &Ar, FLineageShaderProperty &P)
+	{
+		int i;
+		for (i = 0; i < 4; i++) Ar << P.b1[i];
+		for (i = 0; i < 3; i++) Ar << P.i1[i];
+		for (i = 0; i < 8; i++) Ar << P.b2[i];
+		for (i = 0; i < 3; i++) Ar << P.i2[i];
+		Ar << P.Stages;
+		return Ar;
+	}
+};
+
+#endif // LINEAGE2
+
+
 class UMaterial : public UObject
 {
 	DECLARE_CLASS(UMaterial, UObject);
@@ -90,10 +132,12 @@ public:
 		{
 			guard(SerializeLineage2Material);
 			//?? separate to cpp
-			int unk1;
-			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x10)
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x10 && Ar.ArLicenseeVer < 0x25)
+			{
+				int unk1;
 				Ar << unk1;					// simply drop obsolete variable (int Reserved ?)
-			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1E)
+			}
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1E && Ar.ArLicenseeVer < 0x25)
 			{
 				int i;
 				// some function
@@ -129,10 +173,19 @@ public:
 				}
 				// end of function
 				FString ShaderCode;
-				word ver1, ver2;			// 'int MaterialCodeVersion' serialized as 2 words
 				Ar << ShaderCode;
-				if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1F)
-					Ar << ver1 << ver2;
+			}
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x25)
+			{
+				// ShaderProperty + ShaderCode
+				FLineageShaderProperty ShaderProp;
+				FString ShaderCode;
+				Ar << ShaderProp << ShaderCode;
+			}
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1F)
+			{
+				word ver1, ver2;			// 'int MaterialCodeVersion' serialized as 2 words
+				Ar << ver1 << ver2;
 			}
 			unguard;
 		}

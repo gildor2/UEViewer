@@ -36,6 +36,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+24.12.2008
+- updated Lineage2 material support for version 123/37
+
 16.12.2008
 - added "-all" command line option - modifier for exporting logic
 
