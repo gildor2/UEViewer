@@ -391,6 +391,13 @@ public:
 				Ar << CompMips;
 			}
 		}
+#if EXTEEL
+		if (Ar.IsExteel)
+		{
+			byte MaterialType;			// enum GFMaterialType
+			Ar << MaterialType;
+		}
+#endif
 		unguard;
 	}
 	BEGIN_PROP_TABLE

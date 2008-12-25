@@ -16,7 +16,7 @@ UnPackage::UnPackage(const char *filename)
 
 	appStrncpyz(Filename, filename, ARRAY_COUNT(Filename));
 
-#if LINEAGE2
+#if LINEAGE2 || EXTEEL
 	int checkDword;
 	*this << checkDword;
 	if (checkDword == ('L' | ('i' << 16)))	// unicode string "Lineage2Ver111"
@@ -27,8 +27,14 @@ UnPackage::UnPackage(const char *filename)
 		// to get encryption key, can check 1st byte
 		byte b;
 		*this << b;
-		XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);		// for Ver111 XorKey==0xAC, for Ver121 computed from filename
+		// for Ver111 XorKey==0xAC for Lineage or ==0x42 for Exteel, for Ver121 computed from filename
+		XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
+	#if LINEAGE2
 		IsLineage2  = 1;
+	#endif
+	#if EXTEEL
+		IsExteel    = 1;
+	#endif
 		ArPosOffset = 28;
 		// Seek(0) below will behave differently after PosOffset is set
 	}
@@ -151,6 +157,14 @@ UnPackage::UnPackage(const char *filename)
 	IsTribes3 = ((ArVer == 0x81 || ArVer == 0x82) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
 				((ArVer == 0x7B) && (ArLicenseeVer >= 3 && ArLicenseeVer <= 0xF)) ||
 				((ArVer == 0x7E) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
+#endif
+#if LINEAGE2
+	if (IsLineage2 && (ArLicenseeVer >= 1000))	// lineage LicenseeVer < 1000
+		IsLineage2 = 0;
+#endif
+#if EXTEEL
+	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
+		IsExteel = 0;
 #endif
 
 	unguardf(("%s", filename));

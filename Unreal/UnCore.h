@@ -102,6 +102,9 @@ public:
 #if LINEAGE2
 	int		IsLineage2:1;
 #endif
+#if EXTEEL
+	int		IsExteel:1;
+#endif
 #if RAGNAROK2
 	int		IsRagnarok2:1;
 #endif
@@ -121,6 +124,9 @@ public:
 #endif
 #if LINEAGE2
 	,	IsLineage2(0)
+#endif
+#if EXTEEL
+	,	IsExteel(0)
 #endif
 #if RAGNAROK2
 	,	IsRagnarok2(0)

@@ -19,6 +19,7 @@ Unreal Engine 2.5:
   Harry Potter and the Prisoner of Azkaban
 Modified Unreal Engine 2.5
   Tribes: Vengeance
+  Exteel
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -36,6 +37,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+25.12.2008
+- implemented Exteel support
+
 24.12.2008
 - updated Lineage2 material support for version 123/37
 

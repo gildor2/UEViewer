@@ -200,14 +200,18 @@ int main(int argc, char **argv)
 #endif
 //				"Unreal Engine 2.5:\n"
 #if UNREAL25
-				"    UE2Runtime, Harry Potter and the Prisoner of Azkaban\n"
-#endif
-#if TRIBES3
-				"    Tribes: Vengeance\n"
-#endif
-#if RAGNAROK2
-				"    Ragnarok Online 2\n"
-#endif
+				"    UE2Runtime, Harry Potter and the Prisoner of Azkaban"
+#	if TRIBES3
+				", Tribes: Vengeance"
+#	endif
+#	if RAGNAROK2
+				", Ragnarok Online 2"
+#	endif
+#	if EXTEEL
+				", Exteel"
+#	endif
+				"\n"
+#endif // UNREAL25
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
 		);
