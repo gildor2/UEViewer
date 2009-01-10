@@ -6,6 +6,7 @@
 // Turn on/off different engine versions support
 #define UNREAL1			1
 #define UNREAL25		1
+#define UNREAL3			1
 
 // UE2 (supported by default)
 #define UT2				1
@@ -20,3 +21,6 @@
 #define TRIBES3			1
 //#define RAGNAROK2		1
 #define EXTEEL			1
+
+// requires UNREAL3
+// ... none ...

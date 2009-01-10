@@ -35,6 +35,11 @@ class UnPackage;
 #define INDEX_NONE			-1
 
 
+// detect engine version by package
+#define PACKAGE_V2			100
+#define PACKAGE_V3			180
+
+
 /*-----------------------------------------------------------------------------
 	FName class
 -----------------------------------------------------------------------------*/

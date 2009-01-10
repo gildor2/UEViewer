@@ -259,7 +259,7 @@ struct FMeshAnimSeq
 			Ar << A.f28;
 		Ar << A.Name;
 #if UNREAL1
-		if (Ar.ArVer < 100)
+		if (Ar.ArVer < PACKAGE_V2)
 		{
 			// UE1 support
 			assert(Ar.IsLoading);
@@ -521,7 +521,7 @@ public:
 		guard(UVertMesh::Serialize);
 
 #if UNREAL1
-		if (Ar.ArVer < 100)
+		if (Ar.ArVer < PACKAGE_V2)
 		{
 			SerializeVertMesh1(Ar);
 			RotOrigin.Roll = -RotOrigin.Roll;	//??
@@ -666,7 +666,7 @@ public:
 	{
 		guard(UMeshAnimation.Serialize);
 		Super::Serialize(Ar);
-		if (Ar.ArVer >= 100)
+		if (Ar.ArVer >= PACKAGE_V2)
 			Ar << Version;					// no such field in UE1
 #if LINEAGE2
 		Ar << RefBones;
@@ -683,7 +683,7 @@ public:
 			SerializeSCell(Ar);
 #endif
 #if UNREAL1
-		if (Ar.ArVer < 100) Upgrade();		// UE1 code
+		if (Ar.ArVer < PACKAGE_V2) Upgrade();		// UE1 code
 #endif
 		unguard;
 	}
@@ -1139,7 +1139,7 @@ public:
 		guard(USkeletalMesh::Serialize);
 
 #if UNREAL1
-		if (Ar.ArVer < 100)
+		if (Ar.ArVer < PACKAGE_V2)
 		{
 			SerializeSkelMesh1(Ar);
 			return;

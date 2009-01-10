@@ -52,6 +52,14 @@ UnPackage::UnPackage(const char *filename)
 		Summary.FileVersion, Summary.LicenseeVersion,
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
+#if UNREAL3
+	// read compressed chunk table
+	if (ArVer >= PACKAGE_V3 && Summary.CompressionFlags)
+	{
+		appError("Compressed chunks are not supported (flags=%d, %d items)", Summary.CompressionFlags, Summary.CompressedChunks.Num());
+	}
+#endif
+
 	// read name table
 	guard(ReadNameTable);
 	if (Summary.NameCount > 0)
@@ -93,10 +101,18 @@ UnPackage::UnPackage(const char *filename)
 				NameTable[i] = new char[name.Num()];
 				strcpy(NameTable[i], *name);
 #endif
-//				PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 				// skip object flags
 				int tmp;
 				*this << tmp;
+	#if UNREAL3
+				if (ArVer >= PACKAGE_V3)
+				{
+					// object flags are 64-bit in UE3, skip additional 32 bits
+					int unk;
+					*this << unk;
+				}
+	#endif // UNREAL3
+//				PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 			}
 		}
 	}
@@ -154,9 +170,9 @@ UnPackage::UnPackage(const char *filename)
 					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
 #endif
 #if TRIBES3
-	IsTribes3 = ((ArVer == 0x81 || ArVer == 0x82) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
-				((ArVer == 0x7B) && (ArLicenseeVer >= 3 && ArLicenseeVer <= 0xF)) ||
-				((ArVer == 0x7E) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
+	IsTribes3 = ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
+				((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
+				((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
 #endif
 #if LINEAGE2
 	if (IsLineage2 && (ArLicenseeVer >= 1000))	// lineage LicenseeVer < 1000

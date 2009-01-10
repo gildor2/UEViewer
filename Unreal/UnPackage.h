@@ -14,10 +14,18 @@
 struct FGenerationInfo
 {
 	int			ExportCount, NameCount;
+#if UNREAL3
+	int			NetObjectCount;
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, FGenerationInfo &I)
 	{
-		return Ar << I.ExportCount << I.NameCount;
+		Ar << I.ExportCount << I.NameCount;
+#if UNREAL3
+		if (Ar.ArVer >= PACKAGE_V3)
+			Ar << I.NetObjectCount;
+#endif
+		return Ar;
 	}
 };
 
@@ -33,6 +41,34 @@ public:
 	}
 };
 
+#if UNREAL3
+
+struct FCompressedChunk
+{
+	int			UncompressedOffset;
+	int			UncompressedSize;
+	int			CompressedOffset;
+	int			CompressedSize;
+
+	friend FArchive& operator<<(FArchive &Ar, FCompressedChunk &C)
+	{
+		return Ar << C.UncompressedOffset << C.UncompressedSize << C.CompressedOffset << C.CompressedSize;
+	}
+};
+
+struct FComponentMapPair
+{
+	FName		Name;
+	int			Value;
+
+	friend FArchive& operator<<(FArchive &Ar, FComponentMapPair &P)
+	{
+		return Ar << P.Name << P.Value;
+	}
+};
+
+#endif // UNREAL3
+
 
 struct FPackageFileSummary
 {
@@ -43,14 +79,41 @@ struct FPackageFileSummary
 	int			NameCount,   NameOffset;
 	int			ExportCount, ExportOffset;
 	int			ImportCount, ImportOffset;
+	FGuid		Guid;
+	TArray<FGenerationInfo> Generations;
+#if UNREAL3
+	int			HeadersSize;		// used by UE3 for precaching name table
+	FString		U3unk10;
+	int			DependsOffset;		// number of items = ExportCount
+	int			EngineVersion;
+	int			CookerVersion;
+	int			CompressionFlags;
+	TArray<FCompressedChunk> CompressedChunks;
+	int			U3unk60;
+#endif // UNREAL3
 
 	friend FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	{
 		guard(FPackageFileSummary<<);
 		assert(Ar.IsLoading);						// saving is not supported
 
-		Ar << S.Tag << S.FileVersion << S.LicenseeVersion << S.PackageFlags;
-		Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+		// read tag and version
+		Ar << S.Tag << S.FileVersion << S.LicenseeVersion;
+		// store file version to archive (required for some structures, for UNREAL3 path)
+		Ar.ArVer         = S.FileVersion;
+		Ar.ArLicenseeVer = S.LicenseeVersion;
+		// read other fields
+#if UNREAL3
+		if (S.FileVersion >= PACKAGE_V3)
+		{
+			Ar << S.HeadersSize << S.U3unk10;
+		}
+#endif
+		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+#if UNREAL3
+		if (S.FileVersion >= PACKAGE_V3)
+			Ar << S.DependsOffset;
+#endif
 #if SPLINTER_CELL
 		if (S.LicenseeVersion >= 0x0C && S.LicenseeVersion <= 0x1C &&
 			(S.FileVersion == 100 || S.FileVersion == 102))
@@ -61,7 +124,7 @@ struct FPackageFileSummary
 			Ar << tmp;								// 0xFF0ADDE
 			Ar << tmp2;
 		}
-#endif
+#endif // SPLINTER_CELL
 #if RAGNAROK2
 		if (S.PackageFlags & 0x10000 && S.FileVersion >= 0x81)
 		{
@@ -75,18 +138,34 @@ struct FPackageFileSummary
 			S.ImportOffset ^= 0xA9B999DF ^ 0x003E9BE;
 			return Ar;								// other data is useless for us, and they are encrypted too
 		}
-#endif
+#endif // RAGNAROK2
 		if (S.FileVersion < 68)
 		{
 			int HeritageCount, HeritageOffset;
 			Ar << HeritageCount << HeritageOffset;	// not used
+			if (Ar.IsLoading)
+			{
+				S.Generations.Empty(1);
+				FGenerationInfo gen;
+				gen.ExportCount = S.ExportCount;
+				gen.NameCount   = S.NameCount;
+				S.Generations.AddItem(gen);
+			}
 		}
 		else
 		{
-			FGuid tmp1;
-			TArray<FGenerationInfo> tmp2;
-			Ar << tmp1 << tmp2;
+			Ar << S.Guid << S.Generations;
 		}
+#if UNREAL3
+		if (S.FileVersion >= PACKAGE_V3)
+		{
+			Ar << S.EngineVersion << S.CookerVersion << S.CompressionFlags;
+			Ar << S.CompressedChunks << S.U3unk60;
+		}
+//		printf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
+//		printf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
+//		printf("HeadersSize:%X U10:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.U3unk10, S.DependsOffset, S.U3unk60);
+#endif // UNREAL3
 		return Ar;
 		unguard;
 	}
@@ -99,13 +178,33 @@ struct FObjectExport
 	int			SuperIndex;					// object reference
 	int			PackageIndex;				// object reference
 	FName		ObjectName;
-	unsigned	ObjectFlags;
 	int			SerialSize;
 	int			SerialOffset;
 	UObject		*Object;					// not serialized, filled by object loader
+	unsigned	ObjectFlags;
+#if UNREAL3
+	unsigned	ObjectFlags2;				// really, 'int64 ObjectFlags'
+	int			Archetype;
+	unsigned	ExportFlags;
+	TArray<FComponentMapPair> ComponentMap;	// TMap<FName, int>
+	TArray<int>	NetObjectCount;				// generations
+	FGuid		Guid;
+	int			U3unk6C;
+#endif // UNREAL3
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E)
 	{
+#if UNREAL3
+		if (Ar.ArVer >= PACKAGE_V3)
+		{
+			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex;
+			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2;
+			Ar << E.SerialSize << E.SerialOffset;
+			Ar << E.ComponentMap << E.ExportFlags << E.NetObjectCount;
+			Ar << E.Guid << E.U3unk6C;
+			return Ar;
+		}
+#endif // UNREAL3
 		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
 		Ar << E.ObjectName << E.ObjectFlags << AR_INDEX(E.SerialSize);
 		if (E.SerialSize)
@@ -223,7 +322,15 @@ public:
 	// FArchive interface
 	virtual FArchive& operator<<(FName &N)
 	{
-		*this << AR_INDEX(N.Index);
+#if UNREAL3
+		if (ArVer >= PACKAGE_V3)
+		{
+			int UnkFlags;
+			*this << N.Index << UnkFlags;
+		}
+		else
+#endif
+			*this << AR_INDEX(N.Index);
 		N.Str = GetName(N.Index);
 		return *this;
 	}

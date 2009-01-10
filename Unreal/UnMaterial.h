@@ -381,7 +381,7 @@ public:
 		guard(UTexture::Serialize);
 		Super::Serialize(Ar);
 		Ar << Mips;
-		if (Ar.ArVer < 100)
+		if (Ar.ArVer < PACKAGE_V2)
 		{
 			// UE1
 			bMasked = false;			// ignored by UE1, used surface.PolyFlags instead (but UE2 ignores PolyFlags ...)

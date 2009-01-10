@@ -85,7 +85,12 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 	// 2) when saving : data is not modified by this function
 
 	// serialize data count
-	Ar << AR_INDEX(DataCount);
+#if UNREAL3
+	if (Ar.ArVer >= PACKAGE_V3)
+		Ar << DataCount;
+	else
+#endif
+		Ar << AR_INDEX(DataCount);
 
 	if (Ar.IsLoading)
 	{
@@ -123,6 +128,10 @@ void FArchive::Printf(const char *fmt, ...)
 
 FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 {
+#if UNREAL3
+	if (Ar.ArVer >= PACKAGE_V3)
+		appError("FCompactIndex is missing in UE3");
+#endif
 	if (Ar.IsLoading)
 	{
 		byte b;
@@ -184,7 +193,12 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	}
 	// loading
 	int len, i;
-	Ar << AR_INDEX(len);
+#if UNREAL3
+	if (Ar.ArVer >= PACKAGE_V3)
+		Ar << len;
+	else
+#endif
+		Ar << AR_INDEX(len);
 	S.Empty((len >= 0) ? len : -len);
 	if (len >= 0)
 	{
