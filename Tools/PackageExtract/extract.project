@@ -1,0 +1,30 @@
+# perl highlighting
+
+LIBC       = shared
+#LIBC       = static
+#OUT        = Release
+#MAPFILES   = 1
+CONSOLE    = 1
+OPTIMIZE   = size
+
+#CPP_EXCEPT = 0
+#PDB        = 1
+
+#LIBRARIES  = libs
+OBJDIR     = obj
+#STDLIBS   += SDL SDLmain
+
+INCLUDES += . ../../libs/include ../../Core ../../Unreal
+
+sources(MAIN) = {
+	Main.cpp
+	../../Unreal/UnCore.cpp
+	../../Unreal/UnObject.cpp
+	../../Unreal/UnPackage.cpp
+	../../Core/*.cpp
+	# UE3 support
+	../../libs/lzo/lzo_init.c
+	../../libs/lzo/lzo1x_d2.c
+}
+
+target(executable, extract, MAIN, MAIN)

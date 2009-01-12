@@ -40,7 +40,9 @@ MAIN = \
 	obj/GlWindow.obj \
 	obj/Math3D.obj \
 	obj/TextContainer.obj \
-	obj/ddslib.obj
+	obj/ddslib.obj \
+	obj/lzo_init.obj \
+	obj/lzo1x_d2.obj
 
 MAIN_DIRS = \
 	obj
@@ -255,6 +257,17 @@ DEPENDS = \
 obj/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnObject.obj" Unreal/UnObject.cpp
 
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	libs/include/lzo/lzo1x.h \
+	libs/include/lzo/lzoconf.h \
+	libs/include/lzo/lzodefs.h
+
 obj/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnPackage.obj" Unreal/UnPackage.cpp
 
@@ -263,6 +276,33 @@ DEPENDS = \
 
 obj/ddslib.obj : libs/ddslib.c $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ddslib.obj" libs/ddslib.c
+
+DEPENDS = \
+	libs/include/lzo/lzo1x.h \
+	libs/include/lzo/lzoconf.h \
+	libs/include/lzo/lzodefs.h \
+	libs/lzo/config1x.h \
+	libs/lzo/lzo1_d.ch \
+	libs/lzo/lzo1x_d.ch \
+	libs/lzo/lzo_conf.h \
+	libs/lzo/lzo_dict.h \
+	libs/lzo/lzo_ptr.h \
+	libs/lzo/miniacc.h
+
+obj/lzo1x_d2.obj : libs/lzo/lzo1x_d2.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/lzo1x_d2.obj" libs/lzo/lzo1x_d2.c
+
+DEPENDS = \
+	libs/include/lzo/lzoconf.h \
+	libs/include/lzo/lzodefs.h \
+	libs/lzo/lzo_conf.h \
+	libs/lzo/lzo_dll.ch \
+	libs/lzo/lzo_ptr.h \
+	libs/lzo/miniacc.h \
+	libs/lzo/miniacc.h
+
+obj/lzo_init.obj : libs/lzo/lzo_init.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"obj/lzo_init.obj" libs/lzo/lzo_init.c
 
 #------------------------------------------------------------------------------
 #	creating output directories

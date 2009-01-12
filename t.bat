@@ -23,9 +23,10 @@ echo %*
 exit
 
 :cont
-
+%run% C:/!UE3-u/CH_Necris.upk
+%run% -list C:/!UE3-u/Core.u
 rem %run% HumanMaleA MercMaleD
-umodel -path="C:\!umodel-data\--Lineage2--" LineageNPCs2 Pumpkin_Head_man_m00
+rem umodel -path="C:\!umodel-data\--Lineage2--" LineageNPCs2 Pumpkin_Head_man_m00
 rem %run% ONSVehicles-A RV
 rem %run% AS_VehiclesFull_M SpaceFighter_Human SkeletalMesh
 rem %run% AS_VehiclesFull_M

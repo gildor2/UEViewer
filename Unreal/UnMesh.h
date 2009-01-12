@@ -1195,7 +1195,7 @@ public:
 			SkipLazyArray(Ar);
 	#endif
 			// nothing interesting below ...
-			Ar.Seek(Ar.ArStopper);
+			Ar.Seek(Ar.GetStopper());
 			return;
 		}
 #endif

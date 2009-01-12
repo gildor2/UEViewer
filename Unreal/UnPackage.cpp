@@ -4,15 +4,274 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 
+#if UNREAL3
+#include "lzo/lzo1x.h"
+#endif
+
+/*-----------------------------------------------------------------------------
+	Lineage2 file reader
+-----------------------------------------------------------------------------*/
+
+#if LINEAGE2 || EXTEEL
+
+#define LINEAGE_HEADER_SIZE		28
+
+class FFileReaderLineage : public FFileReader
+{
+public:
+	int			ArPosOffset;
+	byte		XorKey;
+
+	FFileReaderLineage(const char *Filename, int Key)
+	:	FFileReader(Filename)
+	,	ArPosOffset(LINEAGE_HEADER_SIZE)
+	,	XorKey(Key)
+	{
+		Seek(0);		// skip header
+	}
+
+	virtual void Serialize(void *data, int size)
+	{
+		FFileReader::Serialize(data, size);
+		if (XorKey)
+		{
+			int i;
+			byte *p;
+			for (i = 0, p = (byte*)data; i < size; i++, p++)
+				*p ^= XorKey;
+		}
+	}
+	virtual void Seek(int Pos)
+	{
+		FFileReader::Seek(Pos + ArPosOffset);
+	}
+	virtual int  Tell() const
+	{
+		return FFileReader::Tell() - ArPosOffset;
+	}
+	virtual void SetStopper(int Pos)
+	{
+		FFileReader::SetStopper(Pos + ArPosOffset);
+	}
+	virtual int  GetStopper() const
+	{
+		return FFileReader::GetStopper() - ArPosOffset;
+	}
+};
+
+#endif // LINEAGE2 || EXTEEL
+
+
+/*-----------------------------------------------------------------------------
+	UE3 compressed file reader
+-----------------------------------------------------------------------------*/
+
+#if UNREAL3
+
+struct FCompressedChunkBlock
+{
+	int			CompressedSize;
+	int			UncompressedSize;
+
+	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
+	{
+		return Ar << B.CompressedSize << B.UncompressedSize;
+	}
+};
+
+struct FCompressedChunkHeader
+{
+	int			Tag;
+	int			BlockSize;				// maximal size of uncompressed block
+	int			CompressedSize;
+	int			UncompressedSize;
+	TArray<FCompressedChunkBlock> Blocks;
+
+	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
+	{
+		int i;
+		Ar << H.Tag << H.BlockSize << H.CompressedSize << H.UncompressedSize;
+		int BlockCount = (H.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
+		assert(H.Tag == PACKAGE_FILE_TAG);
+		H.Blocks.Empty(BlockCount);
+		H.Blocks.Add(BlockCount);
+		for (i = 0; i < BlockCount; i++)
+			Ar << H.Blocks[i];
+		return Ar;
+	}
+};
+
+class FUE3ArchiveReader : public FArchive
+{
+public:
+	FFileReader				*Reader;
+	// compression data
+	int						CompressionFlags;
+	const TArray<FCompressedChunk> *CompressedChunks;
+	// own file positions, overriding FArchive's one (because parent class is
+	// used for compressed data)
+	int						Stopper;
+	int						Position;
+	// decompression buffer
+	byte					*Buffer;
+	int						BufferSize;
+	int						BufferStart;
+	int						BufferEnd;
+	// chunk
+	const FCompressedChunk	*CurrentChunk;
+	FCompressedChunkHeader	ChunkHeader;
+	int						ChunkDataPos;
+
+	FUE3ArchiveReader(const char *Filename, int Flags, const TArray<FCompressedChunk> *Chunks)
+	:	CompressionFlags(Flags)
+	,	CompressedChunks(Chunks)
+	,	Buffer(NULL)
+	,	BufferSize(0)
+	,	BufferStart(0)
+	,	BufferEnd(0)
+	,	CurrentChunk(NULL)
+	{
+		guard(FUE3ArchiveReader::FUE3ArchiveReader);
+		assert(CompressionFlags);
+		assert(Chunks->Num());
+		if (CompressionFlags != 2)
+			appError("Unsupported compression type: %d", CompressionFlags);
+		Reader = new FFileReader(Filename);
+		unguard;
+	}
+
+	~FUE3ArchiveReader()
+	{
+		if (Buffer) delete Buffer;
+		if (Reader) delete Reader;
+	}
+
+	virtual void Serialize(void *data, int size)
+	{
+		guard(FUE3ArchiveReader::Serialize);
+
+		if (Stopper > 0 && Position + size > Stopper)
+			appError("Serializing behind stopper");
+
+		while (true)
+		{
+			// check for valid buffer
+			if (Position >= BufferStart && Position < BufferEnd)
+			{
+				int ToCopy = BufferEnd - Position;						// available size
+				if (ToCopy > size) ToCopy = size;						// shrink by required size
+				memcpy(data, Buffer + Position - BufferStart, ToCopy);	// copy data
+				// advance pointers/counters
+				Position += ToCopy;
+				size     -= ToCopy;
+				OffsetPointer(data, ToCopy);
+				if (!size) return;										// copied enough
+			}
+			// here: data/size points outside of loaded Buffer
+			PrepareBuffer(Position, size);
+			assert(Position >= BufferStart && Position < BufferEnd);	// validate PrepareBuffer()
+		}
+
+		unguard;
+	}
+
+	void PrepareBuffer(int Pos, int Size)
+	{
+		guard(FUE3ArchiveReader::PrepareBuffer);
+		// find compressed chunk
+		const FCompressedChunk *Chunk = NULL;
+		for (int ChunkIndex = 0; ChunkIndex < CompressedChunks->Num(); ChunkIndex++)
+		{
+			Chunk = &(*CompressedChunks)[ChunkIndex];
+			if (Pos >= Chunk->UncompressedOffset && Pos < Chunk->UncompressedOffset + Chunk->UncompressedSize)
+				break;
+		}
+		assert(Chunk); // should be found
+
+		if (Chunk != CurrentChunk)
+		{
+			// serialize compressed chunk header
+			Reader->Seek(Chunk->CompressedOffset);
+			*Reader << ChunkHeader;
+			ChunkDataPos = Reader->Tell();
+			CurrentChunk = Chunk;
+		}
+		// find block in ChunkHeader.Blocks
+		int ChunkPosition = Chunk->UncompressedOffset;
+		int ChunkData     = ChunkDataPos;
+		int UncompSize = 0, CompSize = 0;
+		assert(ChunkPosition <= Pos);
+		const FCompressedChunkBlock *Block = NULL;
+		for (int BlockIndex = 0; BlockIndex < ChunkHeader.Blocks.Num(); BlockIndex++)
+		{
+			Block = &ChunkHeader.Blocks[BlockIndex];
+			if (ChunkPosition + Block->UncompressedSize > Pos)
+				break;
+			ChunkPosition += Block->UncompressedSize;
+			ChunkData     += Block->CompressedSize;
+		}
+		assert(Block);
+		// read compressed data
+		//?? optimize? can share compressed buffer and decompressed buffer between packages
+		byte *CompressedBlock = new byte[Block->CompressedSize];
+		Reader->Seek(ChunkData);
+		Reader->Serialize(CompressedBlock, Block->CompressedSize);
+		// prepare buffer for decompression
+		if (Block->UncompressedSize > BufferSize)
+		{
+			if (Buffer) delete Buffer;
+			Buffer = new byte[Block->UncompressedSize];
+			BufferSize = Block->UncompressedSize;
+		}
+		// decompress data
+		int r;
+		r = lzo_init();
+		if (r != LZO_E_OK) appError("lzo_init() returned %d", r);
+		unsigned long newLen = Block->UncompressedSize;
+		r = lzo1x_decompress_safe(CompressedBlock, Block->CompressedSize, Buffer, &newLen, NULL);
+		if (r != LZO_E_OK) appError("lzo_decompress() returned %d", r);
+		if (newLen != Block->UncompressedSize) appError("len mismatch: %d != %d", newLen, Block->UncompressedSize);
+		// setup BufferStart/BufferEnd
+		BufferStart = ChunkPosition;
+		BufferEnd   = ChunkPosition + Block->UncompressedSize;
+		// cleanup
+		delete CompressedBlock;
+		unguard;
+	}
+
+	// position controller
+	virtual void Seek(int Pos)
+	{
+		Position = Pos;
+	}
+	virtual int  Tell() const
+	{
+		return Position;
+	}
+	virtual void SetStopper(int Pos)
+	{
+		Stopper = Pos;
+	}
+	virtual int  GetStopper() const
+	{
+		return Stopper;
+	}
+};
+
+#endif // UNREAL3
 
 /*-----------------------------------------------------------------------------
 	Package loading (creation) / unloading
 -----------------------------------------------------------------------------*/
 
 UnPackage::UnPackage(const char *filename)
-:	FFileReader(filename)
+:	Loader(NULL)
 {
 	guard(UnPackage::UnPackage);
+
+	// setup FArchive
+	Loader = new FFileReader(filename);
+	IsLoading = true;
 
 	appStrncpyz(Filename, filename, ARRAY_COUNT(Filename));
 
@@ -22,24 +281,24 @@ UnPackage::UnPackage(const char *filename)
 	if (checkDword == ('L' | ('i' << 16)))	// unicode string "Lineage2Ver111"
 	{
 		// this is a Lineage2 package
-		Seek(28);							// skip identifier string
+		Seek(LINEAGE_HEADER_SIZE);
 		// here is a encrypted by 'xor' standard FPackageFileSummary
 		// to get encryption key, can check 1st byte
 		byte b;
 		*this << b;
 		// for Ver111 XorKey==0xAC for Lineage or ==0x42 for Exteel, for Ver121 computed from filename
-		XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
+		byte XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
 	#if LINEAGE2
 		IsLineage2  = 1;
 	#endif
 	#if EXTEEL
 		IsExteel    = 1;
 	#endif
-		ArPosOffset = 28;
-		// Seek(0) below will behave differently after PosOffset is set
+		delete Loader;
+		Loader = new FFileReaderLineage(Filename, XorKey);
 	}
-	// seek to header
-	Seek(0);
+	else
+		Seek(0);	// seek back to header
 #endif
 
 	// read summary
@@ -53,10 +312,11 @@ UnPackage::UnPackage(const char *filename)
 		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 #if UNREAL3
-	// read compressed chunk table
 	if (ArVer >= PACKAGE_V3 && Summary.CompressionFlags)
 	{
-		appError("Compressed chunks are not supported (flags=%d, %d items)", Summary.CompressionFlags, Summary.CompressedChunks.Num());
+		// create special loader for compressed UE3 archives
+		delete Loader;
+		Loader = new FUE3ArchiveReader(Filename, Summary.CompressionFlags, &Summary.CompressedChunks);
 	}
 #endif
 
@@ -190,6 +450,7 @@ UnPackage::UnPackage(const char *filename)
 UnPackage::~UnPackage()
 {
 	// free resources
+	if (Loader) delete Loader;
 	int i;
 	for (i = 0; i < Summary.NameCount; i++)
 		free(NameTable[i]);

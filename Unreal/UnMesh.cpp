@@ -118,11 +118,11 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	TLazyArray<FMeshVertDeus> deusVerts;
 	if (Ar.ArVer > 61)									// part of TLazyArray serializer code
 	{
-		int pos = Ar.ArPos;								// remember position
+		int pos = Ar.Tell();							// remember position
 		int skipPos, numVerts;
 		Ar << skipPos << AR_INDEX(numVerts);			// read parameters
 //		appNotify("***> size=%g numVerts=%d", (float)(skipPos - Ar.ArPos) / numVerts, numVerts);
-		if (skipPos - Ar.ArPos == numVerts * sizeof(FMeshVertDeus))
+		if (skipPos - Ar.Tell() == numVerts * sizeof(FMeshVertDeus))
 			isDeusEx = true;
 		Ar.Seek(pos);									// and restore position for serialization as TLazyArray
 	}
@@ -607,9 +607,9 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 		Ar << localPos;
 		MotionChunk *M = new(Moves) MotionChunk;
 		Ar << *M;
-		assert(localPos == Ar.ArPos);
+		assert(Ar.Tell() == localPos);
 	}
-	assert(pos == Ar.ArPos);
+	assert(Ar.Tell() == pos);
 	unguard;
 }
 

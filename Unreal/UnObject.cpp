@@ -76,7 +76,7 @@ void UObject::EndLoad()
 		if (!Package->IsStopper())
 			appError("%s.Serialize(%s): %d unread bytes",
 				Obj->GetClassName(), Obj->Name,
-				Package->ArStopper - Package->ArPos);
+				Package->GetStopper() - Package->Tell());
 
 		unguardf(("%s", Obj->Name));
 	}
@@ -192,7 +192,7 @@ void UObject::Serialize(FArchive &Ar)
 			}
 		}
 
-		int StopPos = Ar.ArPos + Size;	// for verification
+		int StopPos = Ar.Tell() + Size;	// for verification
 
 		const CPropInfo *Prop = FindProperty(PropName);
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
@@ -304,7 +304,7 @@ void UObject::Serialize(FArchive &Ar)
 			appError("Unknown property");
 			break;
 		}
-		if (Ar.ArPos != StopPos) appNotify("%s\'%s\'.%s: ArPos-StopPos = %d", GetClassName(), Name, *PropName, Ar.ArPos - StopPos);
+		if (Ar.Tell() != StopPos) appNotify("%s\'%s\'.%s: Pos-StopPos = %d", GetClassName(), Name, *PropName, Ar.Tell() - StopPos);
 
 		unguardf(("(%s.%s)", GetClassName(), *PropName));
 	}

@@ -48,11 +48,17 @@ class FName
 {
 public:
 	int			Index;
+#if UNREAL3
+	int			Flags;
+#endif
 	const char	*Str;
 
 	FName()
 	:	Index(0)
 	,	Str(NULL)
+#if UNREAL3
+	,	Flags(0)
+#endif
 	{}
 
 	inline const char *operator*() const
@@ -91,9 +97,11 @@ public:
 	bool	IsLoading;
 	int		ArVer;
 	int		ArLicenseeVer;
+protected:
 	int		ArPos;
 	int		ArStopper;
 
+public:
 	// game-specific flags
 #if UT2
 	int		IsUT2:1;
@@ -142,14 +150,29 @@ public:
 	{}
 
 	virtual void Seek(int Pos) = 0;
-	virtual bool IsEof() = 0;
+
+	virtual int Tell() const
+	{
+		return ArPos;
+	}
+
 	virtual void Serialize(void *data, int size) = 0;
 
 	void Printf(const char *fmt, ...);
 
+	virtual void SetStopper(int Pos)
+	{
+		ArStopper = Pos;
+	}
+
+	virtual int GetStopper() const
+	{
+		return ArStopper;
+	}
+
 	bool IsStopper()
 	{
-		return ArStopper == ArPos;
+		return Tell() == GetStopper();
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, char &B)
@@ -187,9 +210,14 @@ public:
 		Ar.Serialize(&B, 4);
 		return Ar;
 	}
-
-	virtual FArchive& operator<<(FName &N) = 0;
-	virtual FArchive& operator<<(UObject *&Obj) = 0;
+	virtual FArchive& operator<<(FName &N)
+	{
+		return *this;
+	}
+	virtual FArchive& operator<<(UObject *&Obj)
+	{
+		return *this;
+	}
 };
 
 
@@ -198,19 +226,16 @@ class FFileReader : public FArchive
 public:
 	FFileReader()
 	:	f(NULL)
-	,	ArPosOffset(0)
 	{}
 
 	FFileReader(FILE *InFile)
 	:	f(InFile)
-	,	ArPosOffset(0)
 	{
 		IsLoading = true;
 	}
 
 	FFileReader(const char *Filename, bool loading = true)
 	:	f(fopen(Filename, loading ? "rb" : "wb"))
-	,	ArPosOffset(0)
 	{
 		guard(FFileReader::FFileReader);
 		if (!f)
@@ -232,12 +257,14 @@ public:
 
 	virtual void Seek(int Pos)
 	{
-		fseek(f, Pos + ArPosOffset, SEEK_SET);
-		ArPos = ftell(f) - ArPosOffset;
+		guard(FFileReader::Seek);
+		fseek(f, Pos, SEEK_SET);
+		ArPos = ftell(f);
 		assert(Pos == ArPos);
+		unguard;
 	}
 
-	virtual bool IsEof()
+	bool IsEof() const
 	{
 		int pos  = ftell(f); fseek(f, 0, SEEK_END);
 		int size = ftell(f); fseek(f, pos, SEEK_SET);
@@ -275,7 +302,6 @@ public:
 
 protected:
 	FILE	*f;
-	int		ArPosOffset;
 };
 
 
@@ -626,7 +652,7 @@ template<class T> class TLazyArray : public TArray<T>
 		if (Ar.ArVer > 61)
 			Ar << SkipPos;
 		Ar << (TArray<T>&)A;
-		assert(SkipPos == 0 || SkipPos == Ar.ArPos);	// check position
+		assert(SkipPos == 0 || Ar.Tell() == SkipPos);	// check position
 		return Ar;
 	}
 };
@@ -638,7 +664,7 @@ inline void SkipLazyArray(FArchive &Ar)
 	assert(Ar.IsLoading);
 	int pos;
 	Ar << pos;
-	assert(Ar.ArPos < pos);
+	assert(Ar.Tell() < pos);
 	Ar.Seek(pos);
 	unguard;
 }

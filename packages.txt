@@ -15,3 +15,9 @@ Tribes3 (*.pkg)		0		63,78
 			17,18,1A,1B	81
 			1B		82
 Lineage2		1C-25		7B
+
+
+			LicenseeVer	FileVer		EngineVer	NetVer
+Gears Of War		9		1EA(490)	D01(3329)	C05(3077)
+Mass Effect		3F0(1008)	1EB(491)			C05(3077)
+UT3

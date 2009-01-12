@@ -240,20 +240,8 @@ class CDummyArchive : public FArchive
 public:
 	virtual void Seek(int Pos)
 	{}
-	virtual bool IsEof()
-	{
-		return true;
-	}
 	virtual void Serialize(void *data, int size)
 	{}
-	virtual FArchive& operator<<(FName &N)
-	{
-		return *this;
-	}
-	virtual FArchive& operator<<(UObject *&Obj)
-	{
-		return *this;
-	}
 };
 
 

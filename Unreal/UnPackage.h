@@ -22,7 +22,7 @@ struct FGenerationInfo
 	{
 		Ar << I.ExportCount << I.NameCount;
 #if UNREAL3
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.ArVer >= 322) // PACKAGE_V3
 			Ar << I.NetObjectCount;
 #endif
 		return Ar;
@@ -83,7 +83,7 @@ struct FPackageFileSummary
 	TArray<FGenerationInfo> Generations;
 #if UNREAL3
 	int			HeadersSize;		// used by UE3 for precaching name table
-	FString		U3unk10;
+	FString		U3unk10;			// seems, always "None"
 	int			DependsOffset;		// number of items = ExportCount
 	int			EngineVersion;
 	int			CookerVersion;
@@ -104,14 +104,22 @@ struct FPackageFileSummary
 		Ar.ArLicenseeVer = S.LicenseeVersion;
 		// read other fields
 #if UNREAL3
-		if (S.FileVersion >= PACKAGE_V3)
-		{
-			Ar << S.HeadersSize << S.U3unk10;
-		}
+//		if (S.FileVersion >= PACKAGE_V3)
+//		{
+			if (S.FileVersion >= 249)
+				Ar << S.HeadersSize;
+			else
+				S.HeadersSize = 0;
+			if (S.FileVersion >= 269)
+			{
+				Ar << S.U3unk10;
+				if (strcmp(*S.U3unk10, "None") != 0) appNotify("U3unk10 = \"%s\"", *S.U3unk10);
+			}
+//		}
 #endif
 		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
 #if UNREAL3
-		if (S.FileVersion >= PACKAGE_V3)
+		if (S.FileVersion >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
 #endif
 #if SPLINTER_CELL
@@ -119,9 +127,9 @@ struct FPackageFileSummary
 			(S.FileVersion == 100 || S.FileVersion == 102))
 		{
 			// SplinterCell
-			int tmp;
+			int tmp1;
 			FString tmp2;
-			Ar << tmp;								// 0xFF0ADDE
+			Ar << tmp1;								// 0xFF0ADDE
 			Ar << tmp2;
 		}
 #endif // SPLINTER_CELL
@@ -157,11 +165,30 @@ struct FPackageFileSummary
 			Ar << S.Guid << S.Generations;
 		}
 #if UNREAL3
-		if (S.FileVersion >= PACKAGE_V3)
-		{
-			Ar << S.EngineVersion << S.CookerVersion << S.CompressionFlags;
-			Ar << S.CompressedChunks << S.U3unk60;
-		}
+//		if (S.FileVersion >= PACKAGE_V3)
+//		{
+			if (S.FileVersion >= 245)
+				Ar << S.EngineVersion;
+			if (S.FileVersion >= 277)
+				Ar << S.CookerVersion;
+			// ... MassEffect has some additional structure here ...
+			/*	if (Ar.IsMassEffect()) -- requires initializing of IsMassEffect before summary completely readed !!
+				// NOTE: should detect version after reading all required fields: FileVersion, LicenseeVersion, EngineVersion etc ...
+				{
+					if (Ar.ArLicenseeVer >= 16) serialize 1*int - random value
+					if (Ar.ArLicenseeVer >= 32) serialize 1*int
+					if (Ar.ArLicenseeVer >= 35) some arrays ...
+					if (Ar.ArLicenseeVer >= 37) serialize 2*int
+					if (Ar.ArLicenseeVer >= 39) serialize 2*int
+				}
+			*/
+			if (S.FileVersion >= 334)
+				Ar << S.CompressionFlags << S.CompressedChunks;
+			if (S.FileVersion >= 482)
+				Ar << S.U3unk60;
+			// ... MassEffect has additional field here ...
+			// if (Ar.IsMassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
+//		}
 //		printf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
 //		printf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
 //		printf("HeadersSize:%X U10:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.U3unk10, S.DependsOffset, S.U3unk60);
@@ -229,10 +256,11 @@ struct FObjectImport
 
 
 // In Unreal Engine class with similar functionality named "ULinkerLoad"
-class UnPackage : public FFileReader
+class UnPackage : public FArchive
 {
 public:
 	char					Filename[256];
+	FArchive				*Loader;
 	// package header
 	FPackageFileSummary		Summary;
 	// tables
@@ -255,7 +283,7 @@ public:
 			appError("Package \"%s\": wrong export index %d", Filename, ExportIndex);
 		const FObjectExport &Exp = ExportTable[ExportIndex];
 		// setup FArchive
-		ArStopper = Exp.SerialOffset + Exp.SerialSize;
+		SetStopper(Exp.SerialOffset + Exp.SerialSize);
 		Seek(Exp.SerialOffset);
 
 		unguard;
@@ -324,10 +352,7 @@ public:
 	{
 #if UNREAL3
 		if (ArVer >= PACKAGE_V3)
-		{
-			int UnkFlags;
-			*this << N.Index << UnkFlags;
-		}
+			*this << N.Index << N.Flags;
 		else
 #endif
 			*this << AR_INDEX(N.Index);
@@ -358,27 +383,32 @@ public:
 		return *this;
 	}
 
-#if LINEAGE2
-	byte					XorKey;
-	// FArchive interface
 	virtual void Serialize(void *data, int size)
 	{
-		FFileReader::Serialize(data, size);
-		if (XorKey)
-		{
-			int i;
-			byte *p;
-			for (i = 0, p = (byte*)data; i < size; i++, p++)
-				*p ^= XorKey;
-		}
+		Loader->Serialize(data, size);
 	}
-#endif
+	virtual void Seek(int Pos)
+	{
+		Loader->Seek(Pos);
+	}
+	virtual int  Tell() const
+	{
+		return Loader->Tell();
+	}
+	virtual void SetStopper(int Pos)
+	{
+		Loader->SetStopper(Pos);
+	}
+	virtual int  GetStopper() const
+	{
+		return Loader->GetStopper();
+	}
 
 private:
 	// package list
 	struct PackageEntry
 	{
-		char		Name[64];			// short name, without extemsion
+		char		Name[64];			// short name, without extension
 		UnPackage	*Package;
 	};
 	static TArray<PackageEntry> PackageMap;
