@@ -108,6 +108,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 }
 
 
+//?? change to NAME_ByteProperty, NAME_IntProperty ... (hardcoded in Core/UnNames.h)
 enum EPropType // hardcoded in Unreal
 {
 	PT_BYTE = 1,
@@ -128,6 +129,88 @@ enum EPropType // hardcoded in Unreal
 };
 
 
+struct FPropertyTag
+{
+	FName		Name;
+	int			Type;				// FName in Unreal Engine; always equals to one of hardcoded type names ?
+	FName		StrucName;
+	int			ArrayIndex;
+	int			DataSize;
+	bool		BoolValue;
+
+	bool IsValid()
+	{
+		return strcmp(Name, "None") != 0;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FPropertyTag &Tag)
+	{
+		guard(FPropertyTag<<);
+		assert(Ar.IsLoading);		// saving is not supported
+
+		Ar << Tag.Name;
+		if (!strcmp(Tag.Name, "None"))
+			return Ar;
+
+		byte info;
+		Ar << info;
+
+		bool IsArray = (info & 0x80) != 0;
+
+		Tag.Type = info & 0xF;
+		// serialize structure type name
+//		Tag.StrucName = NAME_None;
+		if (Tag.Type == PT_STRUCT)
+			Ar << Tag.StrucName;
+
+		// analyze 'size' field
+		Tag.DataSize = 0;
+		switch ((info >> 4) & 7)
+		{
+		case 0: Tag.DataSize = 1; break;
+		case 1: Tag.DataSize = 2; break;
+		case 2: Tag.DataSize = 4; break;
+		case 3: Tag.DataSize = 12; break;
+		case 4: Tag.DataSize = 16; break;
+		case 5: Ar << *((byte*)&Tag.DataSize); break;
+		case 6: Ar << *((word*)&Tag.DataSize); break;
+		case 7: Ar << *((int *)&Tag.DataSize); break;
+		}
+
+		Tag.ArrayIndex = 0;
+		if (Tag.Type != PT_BOOL && IsArray)	// 'bool' type has own meaning of 'array' flag
+		{
+			// read array index
+			byte b;
+			Ar << b;
+			if (b < 128)
+				Tag.ArrayIndex = b;
+			else
+			{
+				byte b2;
+				Ar << b2;
+				if (b & 0x40)			// really, (b & 0xC0) == 0xC0
+				{
+					byte b3, b4;
+					Ar << b3 << b4;
+					Tag.ArrayIndex = ((b << 24) | (b2 << 16) | (b3 << 8) | b4) & 0x3FFFFF;
+				}
+				else
+					Tag.ArrayIndex = ((b << 8) | b2) & 0x3FFF;
+			}
+		}
+		// boolean value
+		Tag.BoolValue = false;
+		if (Tag.Type == PT_BOOL)
+			Tag.BoolValue = IsArray;
+
+		return Ar;
+
+		unguard;
+	}
+};
+
+
 void UObject::Serialize(FArchive &Ar)
 {
 	guard(UObject::Serialize);
@@ -141,89 +224,46 @@ void UObject::Serialize(FArchive &Ar)
 	// property list
 	while (true)
 	{
-		FName PropName, StrucName;
-		Ar << PropName;
-		if (!strcmp(PropName, "None"))
+		FPropertyTag Tag;
+		Ar << Tag;
+		if (!Tag.IsValid())
 			break;
 
 		guard(ReadProperty);
 
-		byte info;
-		Ar << info;
-		bool IsArray  = (info & 0x80) != 0;
-		byte PropType = info & 0xF;
-		// serialize structure type name
-		if (PropType == PT_STRUCT)
-			Ar << StrucName;
-		// analyze 'size' field
-		int  Size = 0;
-		switch ((info >> 4) & 7)
-		{
-		case 0: Size = 1; break;
-		case 1: Size = 2; break;
-		case 2: Size = 4; break;
-		case 3: Size = 12; break;
-		case 4: Size = 16; break;
-		case 5: Ar << *((byte*)&Size); break;
-		case 6: Ar << *((word*)&Size); break;
-		case 7: Ar << *((int *)&Size); break;
-		}
+		int StopPos = Ar.Tell() + Tag.DataSize;	// for verification
 
-		int ArrayIndex = 0;
-		if (PropType != 3 && IsArray)	// 'bool' type has separate meaning of 'array' flag
-		{
-			// read array index
-			byte b;
-			Ar << b;
-			if (b < 128)
-				ArrayIndex = b;
-			else
-			{
-				byte b2;
-				Ar << b2;
-				if (b & 0x40)			// really, (b & 0xC0) == 0xC0
-				{
-					byte b3, b4;
-					Ar << b3 << b4;
-					ArrayIndex = ((b << 24) | (b2 << 16) | (b3 << 8) | b4) & 0x3FFFFF;
-				}
-				else
-					ArrayIndex = ((b << 8) | b2) & 0x3FFF;
-			}
-		}
-
-		int StopPos = Ar.Tell() + Size;	// for verification
-
-		const CPropInfo *Prop = FindProperty(PropName);
+		const CPropInfo *Prop = FindProperty(Tag.Name);
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
 			if (!Prop)
-				appNotify("WARNING: Class \"%s\": property \"%s\" (type=%d) was not found", GetClassName(), *PropName, PropType);
+				appNotify("WARNING: Class \"%s\": property \"%s\" (type=%d) was not found", GetClassName(), *Tag.Name, Tag.Type);
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
 			continue;
 		}
 		// verify array index
-		if (ArrayIndex >= Prop->Count)
+		if (Tag.ArrayIndex >= Prop->Count)
 			appError("Class \"%s\": %s %s[%d]: serializing index %d",
-				GetClassName(), Prop->TypeName, Prop->Name, Prop->Count, ArrayIndex);
+				GetClassName(), Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
 		byte *value = (byte*)this + Prop->Offset;
 
 #define TYPE(name) \
 	if (strcmp(Prop->TypeName, name)) \
-		appError("Property %s expected type %s but read %s", *PropName, Prop->TypeName, name)
+		appError("Property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, name)
 
 #define PROP(type)		( ((type*)value)[ArrayIndex] )
 
 #if DEBUG_PROPS
 #	define PROP_DBG(fmt, value) \
-		printf("  %s[%d] = " fmt "\n", *PropName, ArrayIndex, value);
+		printf("  %s[%d] = " fmt "\n", *Tag.Name, Tag.ArrayIndex, value);
 #else
 #	define PROP_DBG(fmt, value)
 #endif
 
-		switch (PropType)
+		int ArrayIndex = Tag.ArrayIndex;
+		switch (Tag.Type)
 		{
 		case PT_BYTE:
 			TYPE("byte");
@@ -239,7 +279,7 @@ void UObject::Serialize(FArchive &Ar)
 
 		case PT_BOOL:
 			TYPE("bool");
-			PROP(bool) = IsArray;
+			PROP(bool) = Tag.BoolValue;
 			PROP_DBG("%s", PROP(bool) ? "true" : "false");
 			break;
 
@@ -271,15 +311,15 @@ void UObject::Serialize(FArchive &Ar)
 
 		case PT_STRUCT:
 			{
-				if (strcmp(Prop->TypeName+1, *StrucName))
-					appError("Struc property %s expected type %s but read %s", *PropName, Prop->TypeName, *StrucName);
-				if (SerializeStruc(Ar, value, ArrayIndex, StrucName))
+				if (strcmp(Prop->TypeName+1, *Tag.StrucName))
+					appError("Struc property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, *Tag.StrucName);
+				if (SerializeStruc(Ar, value, Tag.ArrayIndex, Tag.StrucName))
 				{
 					PROP_DBG("(complex)", 0);
 				}
 				else
 				{
-					appNotify("WARNING: Unknown structure type: %s", *StrucName);
+					appNotify("WARNING: Unknown structure type: %s", *Tag.StrucName);
 					Ar.Seek(StopPos);
 				}
 			}
@@ -304,9 +344,9 @@ void UObject::Serialize(FArchive &Ar)
 			appError("Unknown property");
 			break;
 		}
-		if (Ar.Tell() != StopPos) appNotify("%s\'%s\'.%s: Pos-StopPos = %d", GetClassName(), Name, *PropName, Ar.Tell() - StopPos);
+		if (Ar.Tell() != StopPos) appNotify("%s\'%s\'.%s: Pos-StopPos = %d", GetClassName(), Name, *Tag.Name, Ar.Tell() - StopPos);
 
-		unguardf(("(%s.%s)", GetClassName(), *PropName));
+		unguardf(("(%s.%s)", GetClassName(), *Tag.Name));
 	}
 	unguard;
 }

@@ -76,28 +76,74 @@ int main(int argc, char **argv)
 	char *s2 = strchr(buf, '.');
 	if (s2) *s2 = 0;
 	_mkdir(buf);
-	// process objects
-	for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
+	// extract objects and write export table
+	FILE *f;
+	char buf2[512];
+	int idx;
+	guard(ExtractObjects);
+	appSprintf(ARRAY_ARG(buf2), "%s/ExportTable.txt", buf);
+	f = fopen(buf2, "w");
+	assert(f);
+	for (idx = 0; idx < Package->Summary.ExportCount; idx++)
 	{
 		FObjectExport &Exp = Package->ExportTable[idx];
 		// prepare file
 		const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
-		const char *Outer     = Package->GetObjectName(Exp.PackageIndex);
-		char buf2[512];
-		appSprintf(ARRAY_ARG(buf2), "%s/%s.%s.%s", buf, Outer, *Exp.ObjectName, ClassName);
-		FILE *f = fopen(buf2, "wb");
-		assert(f);
+		char buf3[256];
+		buf3[0] = 0;
+		if (Exp.PackageIndex) //?? GetObjectName() will return "Class" for index=0 ...
+		{
+			const char *Outer = Package->GetObjectName(Exp.PackageIndex);
+			appSprintf(ARRAY_ARG(buf3), "%s.", Outer);
+		}
+		fprintf(f, "%d = %s'%s%s'\n", idx, ClassName, buf3, *Exp.ObjectName);
+		appSprintf(ARRAY_ARG(buf2), "%s/%s%s.%s", buf, buf3, *Exp.ObjectName, ClassName);
+		FILE *f2 = fopen(buf2, "wb");
+		assert(f2);
 		// read data
 		byte *data = new byte[Exp.SerialSize];
 		Package->Seek(Exp.SerialOffset);
 		Package->Serialize(data, Exp.SerialSize);
 		// write data
-		fwrite(data, Exp.SerialSize, 1, f);
+		fwrite(data, Exp.SerialSize, 1, f2);
 		// cleanup
 		delete data;
-		fclose(f);
+		fclose(f2);
 	}
-	//!! also write import/export/name table
+	fclose(f);
+	unguard;
+	// write name table
+	guard(WriteNameTable);
+	appSprintf(ARRAY_ARG(buf2), "%s/NameTable.txt", buf);
+	f = fopen(buf2, "w");
+	assert(f);
+	for (idx = 0; idx < Package->Summary.NameCount; idx++)
+		fprintf(f, "%d = \"%s\"\n", idx, Package->NameTable[idx]);
+	fclose(f);
+	unguard;
+	// write import table
+	guard(WriteImportTable);
+	appSprintf(ARRAY_ARG(buf2), "%s/ImportTable.txt", buf);
+	f = fopen(buf2, "w");
+	assert(f);
+	for (idx = 0; idx < Package->Summary.ImportCount; idx++)
+	{
+		const FObjectImport &Imp = Package->GetImport(idx);
+		// find root package
+		//!! code from UnPackage.cpp, should generalize
+		int PackageIndex = Imp.PackageIndex;
+		const char *PackageName = NULL;
+		while (PackageIndex)
+		{
+			const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+		}
+		fprintf(f, "%d = %s'%s.%s'\n", idx, *Imp.ClassName, PackageName, *Imp.ObjectName);
+	}
+	fclose(f);
+	unguard;
+
 	unguard;
 
 	unguard;

@@ -1,0 +1,78 @@
+NOTES:
+* UObject has unknown dword at start
+- possibly, unknown int value after 'prop size' is an array index
+- ByteProperty stored as enumeration value ?
+
+1st dword: UObject::NetIndex
+properties:
+  // header
+  FName PropertyName -> "None" => no props (break loop)
+  FName PropertyType
+  int   PropertySize
+  int   ArrayIndex
+  // data (size = PropertySize)
+  1) IntProperty  : dword
+  2) ByteProperty : a) 1 byte; b) FString -> enum index
+  3) StrProperty  : FString
+
+
+0000000000: 46 00 00 00 50 00 00 00 ¦ 00 00 00 00 2D 00 00 00
+            |Obj.NetIdx||<--- prop name ------->| |<--- prop
+                        | "SizeX"                 | "IntProperty"
+0000000010: 00 00 00 00 04 00 00 00 ¦ 00 00 00 00 00 08 00 00
+            type  --->| |prop size|   |  ????   | |  value  |
+0000000020: 51 00 00 00 00 00 00 00 ¦ 2D 00 00 00 00 00 00 00
+            |<--- prop name ----->|   |<--- prop type ----->|
+            | "SizeY"             |   | "IntProperty"       |
+0000000030: 04 00 00 00 00 00 00 00 ¦ 00 08 00 00 2B 00 00 00
+            |prop size| |  ????   |   |  value  | |<--- prop
+                                                  | "Format"
+0000000040: 00 00 00 00 09 00 00 00 ¦ 00 00 00 00 08 00 00 00
+            name ---->| |<---- prop type ------>| |prop size|
+            ...       | | "ByteProperty"        |
+0000000050: 00 00 00 00 4B 00 00 00 ¦ 00 00 00 00 43 00 00 00
+            |  ????   | |<---- FName value ---->| |<--- prop
+                        | "PF_DXT5"             | |"MipTailBaseIdx"
+0000000060: 00 00 00 00 2D 00 00 00 ¦ 00 00 00 00 04 00 00 00
+            name ---->| |<--- prop type ------->| |prop size|
+            ...       | | "IntProperty"         |
+0000000070: 00 00 00 00 0B 00 00 00 ¦ 2E 00 00 00 00 00 00 00
+            |  ????   | |  value  |   | "LODGroup"          |
+0000000080: 09 00 00 00 00 00 00 00 ¦ 08 00 00 00 00 00 00 00
+            | "ByteProperty"      |   |prop size| |  ????   |
+0000000090: 75 00 00 00 00 00 00 00 ¦ 52 00 00 00 00 00 00 00
+          |"TEXTUREGROUP_Character"|  |<--- FName prop ---->|
+                                      | "SourceFilePath"    |
+00000000A0: 57 00 00 00 00 00 00 00 ¦ 6D 00 00 00 00 00 00 00
+            |<--- FName type ---->|   |prop size| |  ????   |
+            | "StrProperty"       |
+00000000B0: 69 00 00 00 45 3A 5C 42 ¦ 75 69 6C 64 5C 45 6E 76      E:\Build\Env
+            | Str.Len | |<---- string
+00000000C0: 79 41 72 74 5C 43 6F 6E ¦ 74 65 6E 74 5C 43 68 61  yArt\Content\Cha
+00000000D0: 72 61 63 74 65 72 73 5C ¦ 43 48 5F 4E 65 63 72 69  racters\CH_Necri
+00000000E0: 73 5C 43 48 5F 4E 65 63 ¦ 72 69 73 4D 61 6C 65 42  s\CH_NecrisMaleB
+00000000F0: 5C 4D 61 74 65 72 69 61 ¦ 6C 73 5C 54 5F 43 48 5F  \Materials\T_CH_
+0000000100: 4E 65 63 72 69 73 4D 61 ¦ 6C 65 42 5F 44 69 66 66  NecrisMaleB_Diff
+0000000110: 75 73 65 5F 42 6F 64 79 ¦ 2E 74 67 61 00 53 00 00  use_Body.tga
+                                       string ---->| |<-FName
+                                                     |"Source"...
+0000000120: 00 00 00 00 00 57 00 00 ¦ 00 00 00 00 00 18 00 00
+            prop ------->| |<--- FName type ------>| |<--- int prop size
+       ..."FileTimestamp"| | "StrProperty"         |
+0000000130: 00 00 00 00 00 14 00 00 ¦ 00 32 30 30 37 2D 30 33           2007-03
+          -->| |  ????   | | Str.Len   | |<---- string
+0000000140: 2D 31 39 20 31 39 3A 34 ¦ 37 3A 33 34 00 45 00 00  -19 19:47:34
+                                       string ---->| |"None"
+                                                     END MARK
+0000000150: 00 00 00 00 00 00 00 00 ¦ 00 00 00 00 00 00 00 00
+            ...          |
+0000000160: 00 8D DA 00 00 0C 00 00 ¦ 00 21 00 00 00 00 00 00
+0000000170: 00 FF FF FF FF FF FF FF ¦ FF 00 08 00 00 00 08 00
+0000000180: 00 10 00 00 00 00 00 10 ¦ 00 75 B2 0C 00 B9 DA 00
+0000000190: 00 C1 83 2A 9E 00 00 02 ¦ 00 25 B2 0C 00 00 00 10
+00000001A0: 00 72 99 01 00 00 00 02 ¦ 00 25 8A 01 00 00 00 02
+00000001B0: 00 FE 87 01 00 00 00 02 ¦ 00 CC 95 01 00 00 00 02
+00000001C0: 00 F2 95 01 00 00 00 02 ¦ 00 B6 96 01 00 00 00 02
+00000001D0: 00 3B B9 01 00 00 00 02 ¦ 00 E1 8A 01 00 00 00 02
+00000001E0: 00 0D 00 01 00 00 00 00 ¦ 00 00 CC 83 6A 73 A8 FF
+00000001F0: 77 79 FC 01 05 2D 8C 8B ¦ 7B E0 55 E9 E9 FC 01 05

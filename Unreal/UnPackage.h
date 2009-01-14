@@ -225,10 +225,14 @@ struct FObjectExport
 		if (Ar.ArVer >= PACKAGE_V3)
 		{
 			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex;
-			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2;
-			Ar << E.SerialSize << E.SerialOffset;
-			Ar << E.ComponentMap << E.ExportFlags << E.NetObjectCount;
-			Ar << E.Guid << E.U3unk6C;
+			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize;
+			if (E.SerialSize || Ar.ArVer >= 249)
+				Ar << E.SerialOffset;
+			Ar << E.ComponentMap;
+			if (Ar.ArVer >= 247)
+				Ar << E.ExportFlags;
+			if (Ar.ArVer >= 322)
+				Ar << E.NetObjectCount << E.Guid << E.U3unk6C;
 			return Ar;
 		}
 #endif // UNREAL3

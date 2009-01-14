@@ -16,14 +16,15 @@
 
 #define LINEAGE_HEADER_SIZE		28
 
-class FFileReaderLineage : public FFileReader
+class FFileReaderLineage : public FArchive
 {
 public:
+	FArchive	*Reader;
 	int			ArPosOffset;
 	byte		XorKey;
 
-	FFileReaderLineage(const char *Filename, int Key)
-	:	FFileReader(Filename)
+	FFileReaderLineage(FArchive *File, int Key)
+	:	Reader(File)
 	,	ArPosOffset(LINEAGE_HEADER_SIZE)
 	,	XorKey(Key)
 	{
@@ -32,7 +33,7 @@ public:
 
 	virtual void Serialize(void *data, int size)
 	{
-		FFileReader::Serialize(data, size);
+		Reader->Serialize(data, size);
 		if (XorKey)
 		{
 			int i;
@@ -43,19 +44,19 @@ public:
 	}
 	virtual void Seek(int Pos)
 	{
-		FFileReader::Seek(Pos + ArPosOffset);
+		Reader->Seek(Pos + ArPosOffset);
 	}
 	virtual int  Tell() const
 	{
-		return FFileReader::Tell() - ArPosOffset;
+		return Reader->Tell() - ArPosOffset;
 	}
 	virtual void SetStopper(int Pos)
 	{
-		FFileReader::SetStopper(Pos + ArPosOffset);
+		Reader->SetStopper(Pos + ArPosOffset);
 	}
 	virtual int  GetStopper() const
 	{
-		return FFileReader::GetStopper() - ArPosOffset;
+		return Reader->GetStopper() - ArPosOffset;
 	}
 };
 
@@ -104,7 +105,7 @@ struct FCompressedChunkHeader
 class FUE3ArchiveReader : public FArchive
 {
 public:
-	FFileReader				*Reader;
+	FArchive				*Reader;
 	// compression data
 	int						CompressionFlags;
 	const TArray<FCompressedChunk> *CompressedChunks;
@@ -122,8 +123,9 @@ public:
 	FCompressedChunkHeader	ChunkHeader;
 	int						ChunkDataPos;
 
-	FUE3ArchiveReader(const char *Filename, int Flags, const TArray<FCompressedChunk> *Chunks)
-	:	CompressionFlags(Flags)
+	FUE3ArchiveReader(FArchive *File, int Flags, const TArray<FCompressedChunk> *Chunks)
+	:	Reader(File)
+	,	CompressionFlags(Flags)
 	,	CompressedChunks(Chunks)
 	,	Buffer(NULL)
 	,	BufferSize(0)
@@ -136,7 +138,6 @@ public:
 		assert(Chunks->Num());
 		if (CompressionFlags != 2)
 			appError("Unsupported compression type: %d", CompressionFlags);
-		Reader = new FFileReader(Filename);
 		unguard;
 	}
 
@@ -294,8 +295,8 @@ UnPackage::UnPackage(const char *filename)
 	#if EXTEEL
 		IsExteel    = 1;
 	#endif
-		delete Loader;
-		Loader = new FFileReaderLineage(Filename, XorKey);
+		// replace Loader
+		Loader = new FFileReaderLineage(Loader, XorKey);
 	}
 	else
 		Seek(0);	// seek back to header
@@ -314,9 +315,8 @@ UnPackage::UnPackage(const char *filename)
 #if UNREAL3
 	if (ArVer >= PACKAGE_V3 && Summary.CompressionFlags)
 	{
-		// create special loader for compressed UE3 archives
-		delete Loader;
-		Loader = new FUE3ArchiveReader(Filename, Summary.CompressionFlags, &Summary.CompressedChunks);
+		// replace Loader with special reader for compressed UE3 archives
+		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, &Summary.CompressedChunks);
 	}
 #endif
 

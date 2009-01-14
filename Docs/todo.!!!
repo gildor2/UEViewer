@@ -10,7 +10,7 @@ GENMAKE:
   for compiling C++ and C code
   - have one C++ option for ddslib.c - compiler show warning
 
-? option to collect full statistics about all available packages: supply "-path", umodel will recurse
+? tool to collect full statistics about all available packages: supply "-path", umodel will recurse
   all directories and try to load all files with known extensions (load 'summary' only); after that,
   program will sort all files by package version and display statistics: 'count', 'ver', 'lic_ver'
   (can be useful for updating 'packages.txt')
@@ -40,21 +40,18 @@ GENMAKE:
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
 
 ? when exporting mesh, can create .uc with sockets too (if possible)
-? support Undying
 ! when cannot load some material type, or file is absent - sould at least give ability to list this
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
 
 ! use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
 
-! options for:
-  - option to toggle lighting
-  ? option to toggle texturing
 ! packages have tree-like structure of objects, should use whole tree to map export->import (use
   package's "package" field recursively; note: depth can be any)
   * load proper package
   - use object with the same path (problem: how to pass object path to search?)
-? change alternative skin (team color for UT2)
+? change alternative skin (team color for UT2) - in separate tool, "uplayer" - player model viewer
+  (UT, UT2004, Lineage2, later - UT3)
 
 ! UObject:
   - EndLoad():
@@ -64,7 +61,7 @@ GENMAKE:
     bool flag to check, which list holds object
 
 Exporting:
-- TextBuffer export
+- TextBuffer export (separate tool?)
   - will require to get defaultproperties from "Class'Name'.properties" (object with name=ClassName and
     class name="")
 - option to enable paths when exporting objects (will create directory for each group)
@@ -86,14 +83,7 @@ REST TO IMPLEMENT:
   ? tweening
   ? LOD support
 - SkeletalMesh:
-  - correctly display LOD models (with skinning)
   ? hardware skinning (but: Lineage2 has meshes with more than 256 bones)
-
-
-EXTRA KEYS:
-~~~~~~~~~~~
-- show boxes
-  ? no boxes in UT2 (reserved, but not used)
 
 
 NOTES:
