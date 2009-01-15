@@ -110,6 +110,9 @@ public:
 	UnPackage		*Package;
 	int				PackageIndex;	// index in package export table
 	const char		*Name;
+#if UNREAL3
+	int				NetIndex;
+#endif
 
 //	unsigned	ObjectFlags;
 

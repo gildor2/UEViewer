@@ -67,14 +67,14 @@ void UObject::EndLoad()
 		UObject *Obj = GObjLoaded[0];
 		GObjLoaded.Remove(0);
 		guard(LoadObject);
-		//!! should sort by packages
+		//!! should sort by packages + package offset
 		UnPackage *Package = Obj->Package;
 		Package->SetupReader(Obj->PackageIndex);
 		printf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
 		Obj->Serialize(*Package);
 		// check for unread bytes
 		if (!Package->IsStopper())
-			appError("%s.Serialize(%s): %d unread bytes",
+			appError("%s::Serialize(%s): %d unread bytes",
 				Obj->GetClassName(), Obj->Name,
 				Package->GetStopper() - Package->Tell());
 
@@ -108,26 +108,65 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 }
 
 
-//?? change to NAME_ByteProperty, NAME_IntProperty ... (hardcoded in Core/UnNames.h)
 enum EPropType // hardcoded in Unreal
 {
-	PT_BYTE = 1,
-	PT_INT,
-	PT_BOOL,
-	PT_FLOAT,
-	PT_OBJECT,
-	PT_NAME,
-	PT_STRING,
-	PT_CLASS,
-	PT_ARRAY,
-	PT_STRUCT,
-	PT_VECTOR,
-	PT_ROTATOR,
-	PT_STR,
-	PT_MAP,
-	PT_FIXED_ARRAY
+	NAME_ByteProperty = 1,
+	NAME_IntProperty,
+	NAME_BoolProperty,
+	NAME_FloatProperty,
+	NAME_ObjectProperty,
+	NAME_NameProperty,
+	NAME_StringProperty,		// missing in UE3
+	NAME_ClassProperty,
+	NAME_ArrayProperty,
+	NAME_StructProperty,
+	NAME_VectorProperty,
+	NAME_RotatorProperty,
+	NAME_StrProperty,
+	NAME_MapProperty,
+	NAME_FixedArrayProperty,	// missing in UE3
+#if UNREAL3
+	NAME_DelegateProperty,		// equals to NAME_StringProperty = 7
+	NAME_InterfaceProperty		// euqals to NAME_FixedArrayProperty = 15
+#endif
 };
 
+#if UNREAL3
+static const struct
+{
+	int			Index;
+	const char *Name;
+} NameToIndex[] = {
+#define F(Name)		{ NAME_##Name, #Name }
+	F(ByteProperty),
+	F(IntProperty),
+	F(BoolProperty),
+	F(FloatProperty),
+	F(ObjectProperty),
+	F(NameProperty),
+	F(DelegateProperty),
+	F(ClassProperty),
+	F(ArrayProperty),
+	F(StructProperty),
+	F(VectorProperty),
+	F(RotatorProperty),
+	F(StrProperty),
+	F(MapProperty),
+	F(InterfaceProperty)
+#undef F
+};
+
+static int MapTypeName(const char *Name)
+{
+	guard(MapTypeName);
+	for (int i = 0; i < ARRAY_COUNT(NameToIndex); i++)
+		if (!strcmp(Name, NameToIndex[i].Name))
+			return NameToIndex[i].Index;
+	appError("MapTypeName: unknown type '%s'", Name);
+	return 0;
+	unguard;
+}
+#endif
 
 struct FPropertyTag
 {
@@ -136,7 +175,7 @@ struct FPropertyTag
 	FName		StrucName;
 	int			ArrayIndex;
 	int			DataSize;
-	bool		BoolValue;
+	int			BoolValue;
 
 	bool IsValid()
 	{
@@ -152,6 +191,20 @@ struct FPropertyTag
 		if (!strcmp(Tag.Name, "None"))
 			return Ar;
 
+#if UNREAL3
+		if (Ar.ArVer >= PACKAGE_V3)
+		{
+			FName PropType;
+			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
+			Tag.Type = MapTypeName(PropType);
+			if (Tag.Type == NAME_StructProperty)
+				Ar << Tag.StrucName;
+			if (Tag.Type == NAME_BoolProperty)
+				Ar << Tag.BoolValue;
+			return Ar;
+		}
+#endif // UNREAL3
+
 		byte info;
 		Ar << info;
 
@@ -160,7 +213,7 @@ struct FPropertyTag
 		Tag.Type = info & 0xF;
 		// serialize structure type name
 //		Tag.StrucName = NAME_None;
-		if (Tag.Type == PT_STRUCT)
+		if (Tag.Type == NAME_StructProperty)
 			Ar << Tag.StrucName;
 
 		// analyze 'size' field
@@ -178,7 +231,7 @@ struct FPropertyTag
 		}
 
 		Tag.ArrayIndex = 0;
-		if (Tag.Type != PT_BOOL && IsArray)	// 'bool' type has own meaning of 'array' flag
+		if (Tag.Type != NAME_BoolProperty && IsArray)	// 'bool' type has own meaning of 'array' flag
 		{
 			// read array index
 			byte b;
@@ -200,8 +253,8 @@ struct FPropertyTag
 			}
 		}
 		// boolean value
-		Tag.BoolValue = false;
-		if (Tag.Type == PT_BOOL)
+		Tag.BoolValue = 0;
+		if (Tag.Type == NAME_BoolProperty)
 			Tag.BoolValue = IsArray;
 
 		return Ar;
@@ -219,6 +272,11 @@ void UObject::Serialize(FArchive &Ar)
 
 #if TRIBES3
 	TRIBES_HDR(Ar, 0x19);
+#endif
+
+#if UNREAL3
+	if (Ar.ArVer >= 322)
+		Ar << NetIndex;
 #endif
 
 	// property list
@@ -265,51 +323,62 @@ void UObject::Serialize(FArchive &Ar)
 		int ArrayIndex = Tag.ArrayIndex;
 		switch (Tag.Type)
 		{
-		case PT_BYTE:
+		case NAME_ByteProperty:
 			TYPE("byte");
-			Ar << PROP(byte);
+#if UNREAL3
+			if (Tag.DataSize != 1)
+			{
+				assert(Tag.DataSize == 8);
+				FName EnumValue;
+				Ar << EnumValue;
+				//!! map string -> byte
+				printf("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
+			}
+			else
+#endif
+				Ar << PROP(byte);
 			PROP_DBG("%d", PROP(byte));
 			break;
 
-		case PT_INT:
+		case NAME_IntProperty:
 			TYPE("int");
 			Ar << PROP(int);
 			PROP_DBG("%d", PROP(int));
 			break;
 
-		case PT_BOOL:
+		case NAME_BoolProperty:
 			TYPE("bool");
-			PROP(bool) = Tag.BoolValue;
+			PROP(bool) = Tag.BoolValue != 0;
 			PROP_DBG("%s", PROP(bool) ? "true" : "false");
 			break;
 
-		case PT_FLOAT:
+		case NAME_FloatProperty:
 			TYPE("float");
 			Ar << PROP(float);
 			PROP_DBG("%g", PROP(float));
 			break;
 
-		case PT_OBJECT:
+		case NAME_ObjectProperty:
 			TYPE("UObject*");
 			Ar << PROP(UObject*);
 			PROP_DBG("%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 			break;
 
-		case PT_NAME:
+		case NAME_NameProperty:
 			TYPE("FName");
 			Ar << PROP(FName);
 			PROP_DBG("%s", *PROP(FName));
 			break;
 
-		case PT_CLASS:
+		case NAME_ClassProperty:
 			appError("Class property not implemented");
 			break;
 
-		case PT_ARRAY:
+		case NAME_ArrayProperty:
 			appError("Array property not implemented");
 			break;
 
-		case PT_STRUCT:
+		case NAME_StructProperty:
 			{
 				if (strcmp(Prop->TypeName+1, *Tag.StrucName))
 					appError("Struc property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, *Tag.StrucName);
@@ -325,26 +394,26 @@ void UObject::Serialize(FArchive &Ar)
 			}
 			break;
 
-		case PT_STR:
+		case NAME_StrProperty:
 			appError("String property not implemented");
 			break;
 
-		case PT_MAP:
+		case NAME_MapProperty:
 			appError("Map property not implemented");
 			break;
 
-		case PT_FIXED_ARRAY:
+		case NAME_FixedArrayProperty:
 			appError("FixedArray property not implemented");
 			break;
 
 		// reserved, but not implemented in unreal:
-		case PT_STRING:		//------  string  => used str
-		case PT_VECTOR:		//------  vector  => used structure"Vector"
-		case PT_ROTATOR:	//------  rotator => used structure"Rotator"
+		case NAME_StringProperty:	//------  string  => used str
+		case NAME_VectorProperty:	//------  vector  => used structure"Vector"
+		case NAME_RotatorProperty:	//------  rotator => used structure"Rotator"
 			appError("Unknown property");
 			break;
 		}
-		if (Ar.Tell() != StopPos) appNotify("%s\'%s\'.%s: Pos-StopPos = %d", GetClassName(), Name, *Tag.Name, Ar.Tell() - StopPos);
+		if (Ar.Tell() != StopPos) appError("%s\'%s\'.%s: Pos-StopPos = %d", GetClassName(), Name, *Tag.Name, Ar.Tell() - StopPos);
 
 		unguardf(("(%s.%s)", GetClassName(), *Tag.Name));
 	}
