@@ -131,7 +131,6 @@ enum EPropType // hardcoded in Unreal
 #endif
 };
 
-#if UNREAL3
 static const struct
 {
 	int			Index;
@@ -144,7 +143,7 @@ static const struct
 	F(FloatProperty),
 	F(ObjectProperty),
 	F(NameProperty),
-	F(DelegateProperty),
+	F(StringProperty),
 	F(ClassProperty),
 	F(ArrayProperty),
 	F(StructProperty),
@@ -152,7 +151,11 @@ static const struct
 	F(RotatorProperty),
 	F(StrProperty),
 	F(MapProperty),
+	F(FixedArrayProperty),
+#if UNREAL3
+	F(DelegateProperty),
 	F(InterfaceProperty)
+#endif
 #undef F
 };
 
@@ -166,7 +169,18 @@ static int MapTypeName(const char *Name)
 	return 0;
 	unguard;
 }
-#endif
+
+static const char* GetTypeName(int Index)
+{
+	guard(GetTypeName);
+	for (int i = 0; i < ARRAY_COUNT(NameToIndex); i++)
+		if (Index == NameToIndex[i].Index)
+			return NameToIndex[i].Name;
+	appError("GetTypeName: unknown type index %d", Index);
+	return NULL;
+	unguard;
+}
+
 
 struct FPropertyTag
 {
@@ -295,7 +309,7 @@ void UObject::Serialize(FArchive &Ar)
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
 			if (!Prop)
-				appNotify("WARNING: Class \"%s\": property \"%s\" (type=%d) was not found", GetClassName(), *Tag.Name, Tag.Type);
+				appNotify("WARNING: %s \"%s::%s\" was not found", GetTypeName(Tag.Type), GetClassName(), *Tag.Name);
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties

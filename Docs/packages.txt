@@ -16,6 +16,7 @@ Tribes3 (*.pkg)		0		63,78
 			1B		82
 Lineage2		1C-25		7B
 
+Unreal Championship 2	1		97(151)
 
 			LicenseeVer	FileVer		EngineVer	NetVer
 Gears Of War		9		1EA(490)	D01(3329)	C05(3077)

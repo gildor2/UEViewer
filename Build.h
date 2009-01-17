@@ -22,5 +22,8 @@
 //#define RAGNAROK2		1
 #define EXTEEL			1
 
+// UE2.X
+#define UC2				1
+
 // requires UNREAL3
 // ... none ...

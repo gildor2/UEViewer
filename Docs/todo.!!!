@@ -1,3 +1,5 @@
+!! document in readme and help support for UC2, GOW and UT3
+
 FONTGEN
 ! BUG: '&' displayed as '_' (WinAPI feature)
 ? add pseudographics chars (for material outline)

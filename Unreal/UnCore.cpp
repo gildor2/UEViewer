@@ -86,7 +86,7 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 
 	// serialize data count
 #if UNREAL3
-	if (Ar.ArVer >= PACKAGE_V3)
+	if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
 		Ar << DataCount;
 	else
 #endif
@@ -186,6 +186,8 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 
 FArchive& operator<<(FArchive &Ar, FString &S)
 {
+	guard(FString<<);
+
 	if (!Ar.IsLoading)
 	{
 		Ar << (TArray<char>&)S;
@@ -194,7 +196,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	// loading
 	int len, i;
 #if UNREAL3
-	if (Ar.ArVer >= PACKAGE_V3)
+	if (Ar.ArVer >= 145) // PACKAGE_V3 ? found exact version in UC2
 		Ar << len;
 	else
 #endif
@@ -221,6 +223,8 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		}
 	}
 	return Ar;
+
+	unguard;
 }
 
 

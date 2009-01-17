@@ -407,6 +407,26 @@ UnPackage::UnPackage(const char *filename)
 	}
 	unguard;
 
+#if UNREAL3
+	if (Summary.FileVersion >= 415) // PACKAGE_V3
+	{
+		guard(ReadDependsTable);
+		Seek(Summary.DependsOffset);
+		FObjectDepends *Dep = DependsTable = new FObjectDepends[Summary.ExportCount];
+		for (int i = 0; i < Summary.ExportCount; i++, Dep++)
+		{
+			*this << *Dep;
+/*			if (Dep->Objects.Num())
+			{
+				const FObjectExport &Exp = ExportTable[i];
+				printf("Depends for %s'%s' = %d\n", GetObjectName(Exp.ClassIndex),
+					*Exp.ObjectName, Dep->Objects[i]);
+			} */
+		}
+		unguard;
+	}
+#endif // UNREAL3
+
 	// add self to package map
 	PackageEntry &Info = PackageMap[PackageMap.Add()];
 	char buf[256];
@@ -457,6 +477,9 @@ UnPackage::~UnPackage()
 	delete NameTable;
 	delete ImportTable;
 	delete ExportTable;
+#if UNREAL3
+	if (DependsTable) delete DependsTable;
+#endif
 	// remove self from package table
 	for (i = 0; i < PackageMap.Num(); i++)
 		if (PackageMap[i].Package == this)

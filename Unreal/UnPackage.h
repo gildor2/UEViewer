@@ -236,6 +236,29 @@ struct FObjectExport
 			return Ar;
 		}
 #endif // UNREAL3
+#if UC2
+		if (Ar.ArVer >= 145) // && < PACKAGE_V3
+		{
+			Ar << E.ClassIndex << E.SuperIndex;
+			if (Ar.ArVer >= 150)
+			{
+				short idx = E.PackageIndex;
+				Ar << idx;
+				E.PackageIndex = idx;
+			}
+			else
+				Ar << E.PackageIndex;
+			Ar << E.ObjectName << E.ObjectFlags << E.SerialSize;
+			if (E.SerialSize)
+				Ar << E.SerialOffset;
+			// UC2 has strange thing here: indices are serialized as 4-byte int (instead of AR_INDEX),
+			// but stored into 2-byte shorts
+			E.ClassIndex = short(E.ClassIndex);
+			E.SuperIndex = short(E.SuperIndex);
+			return Ar;
+		}
+#endif
+		// generic UE1/UE2 code
 		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
 		Ar << E.ObjectName << E.ObjectFlags << AR_INDEX(E.SerialSize);
 		if (E.SerialSize)
@@ -254,9 +277,32 @@ struct FObjectImport
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 	{
+#if UC2
+		if (Ar.ArVer >= 150 && Ar.ArVer < PACKAGE_V3)	// UC2 ??
+		{
+			short idx = I.PackageIndex;
+			Ar << I.ClassPackage << I.ClassName << idx << I.ObjectName;
+			I.PackageIndex = idx;
+			return Ar;
+		}
+#endif
 		return Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
 	}
 };
+
+#if UNREAL3
+
+struct FObjectDepends
+{
+	TArray<int>	Objects;
+
+	friend FArchive& operator<<(FArchive &Ar, FObjectDepends &D)
+	{
+		return Ar << D.Objects;
+	}
+};
+
+#endif // UNREAL3
 
 
 // In Unreal Engine class with similar functionality named "ULinkerLoad"
@@ -271,6 +317,9 @@ public:
 	char					**NameTable;
 	FObjectImport			*ImportTable;
 	FObjectExport			*ExportTable;
+#if UNREAL3
+	FObjectDepends			*DependsTable;
+#endif
 
 	UnPackage(const char *filename);
 	~UnPackage();
@@ -355,8 +404,12 @@ public:
 	virtual FArchive& operator<<(FName &N)
 	{
 #if UNREAL3
-		if (ArVer >= PACKAGE_V3)
-			*this << N.Index << N.Flags;
+		if (ArVer >= 145) // PACKAGE_V3, but have version in UC2
+		{
+			*this << N.Index;
+			if (ArVer >= PACKAGE_V3)
+				*this << N.Flags;
+		}
 		else
 #endif
 			*this << AR_INDEX(N.Index);
@@ -367,6 +420,13 @@ public:
 	virtual FArchive& operator<<(UObject *&Obj)
 	{
 		int index;
+#if UNREAL3
+		if (ArVer >= 145) // PACKAGE_V3, but has in UC2
+		{
+			appError("Check UObject*<<");
+			//?? not verified with UE3
+		}
+#endif
 		*this << AR_INDEX(index);
 		if (index < 0)
 		{

@@ -14,5 +14,7 @@
 //#define RAGNAROK2		1
 #define EXTEEL			1
 
+#define UC2				1
+
 // requires UNREAL3
 // ... none ...

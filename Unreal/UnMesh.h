@@ -309,7 +309,7 @@ struct FMeshAnimSeq
  *	1	SplinterCell		LodMesh is same as UT, SkeletalMesh modified
  *	2	Postal 2			same as UT
  *	4	UT2003, UT2004
- *	5	Lineage2
+ *	5	Lineage2, UC2		different extensions
  */
 
 class ULodMesh : public UPrimitive

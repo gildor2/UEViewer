@@ -37,6 +37,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+17.01.2009
+- implemented support for loading Unreal Championship 2 packages
+
 12.01.2009
 - implemented support for loading UE3 packages (supported UT3 and Gears of War)
 
