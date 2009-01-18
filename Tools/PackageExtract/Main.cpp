@@ -139,7 +139,10 @@ int main(int argc, char **argv)
 			PackageIndex = Rec.PackageIndex;
 			PackageName  = Rec.ObjectName;
 		}
-		fprintf(f, "%d = %s'%s.%s'\n", idx, *Imp.ClassName, PackageName, *Imp.ObjectName);
+		if (PackageName)
+			fprintf(f, "%d = %s'%s.%s'\n", idx, *Imp.ClassName, PackageName, *Imp.ObjectName);
+		else
+			fprintf(f, "%d = %s'%s'\n", idx, *Imp.ClassName, *Imp.ObjectName);
 	}
 	fclose(f);
 	unguard;

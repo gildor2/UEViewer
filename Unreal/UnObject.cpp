@@ -66,9 +66,9 @@ void UObject::EndLoad()
 	{
 		UObject *Obj = GObjLoaded[0];
 		GObjLoaded.Remove(0);
-		guard(LoadObject);
 		//!! should sort by packages + package offset
 		UnPackage *Package = Obj->Package;
+		guard(LoadObject);
 		Package->SetupReader(Obj->PackageIndex);
 		printf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
 		Obj->Serialize(*Package);
@@ -78,7 +78,7 @@ void UObject::EndLoad()
 				Obj->GetClassName(), Obj->Name,
 				Package->GetStopper() - Package->Tell());
 
-		unguardf(("%s", Obj->Name));
+		unguardf(("%s, pos=%X", Obj->Name, Package->Tell()));
 	}
 	GObjLoaded.Empty();
 	GObjBeginLoadCount--;		// decrement after loading
@@ -200,6 +200,25 @@ struct FPropertyTag
 	{
 		guard(FPropertyTag<<);
 		assert(Ar.IsLoading);		// saving is not supported
+
+#if UC2
+		if (Ar.ArVer >= 148 && Ar.ArVer < PACKAGE_V3)
+		{
+			assert(Ar.IsLoading);
+			byte UseObject;
+			int  Object;			// really, UObject*
+			Ar << UseObject;
+			if (UseObject)
+			{
+				Ar << Object;
+				if (!Object)
+					Tag.Name.Str = "None";
+					return Ar;
+				// now, should continue serialization, skipping Name serialization
+				appError("Unknown field: Object #%d", Object);
+			}
+		}
+#endif // UC2
 
 		Ar << Tag.Name;
 		if (!strcmp(Tag.Name, "None"))

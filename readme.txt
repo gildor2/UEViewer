@@ -20,6 +20,8 @@ Unreal Engine 2.5:
 Modified Unreal Engine 2.5
   Tribes: Vengeance
   Exteel
+Unreal Engine 2X
+  Unreal Championship 2: The Liandri Conflict
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,6 +39,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+18.01.2009
+- implemented support for Unreal Championship 2 skeletal models
+
 17.01.2009
 - implemented support for loading Unreal Championship 2 packages
 

@@ -392,6 +392,10 @@ struct FBox
 
 	friend FArchive& operator<<(FArchive &Ar, FBox &Box)
 	{
+#if UC2
+		if (Ar.ArVer >= 146 && Ar.ArVer < PACKAGE_V3)
+			return Ar << Box.Min << Box.Max;
+#endif
 		return Ar << Box.Min << Box.Max << Box.IsValid;
 	}
 };

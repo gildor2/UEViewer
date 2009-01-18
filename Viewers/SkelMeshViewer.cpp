@@ -62,8 +62,8 @@ void CSkelMeshViewer::Test()
 //			appNotify("[%d] strange indices count", i);
 //		if ((lod.f0.Num() != 0 || lod.NumDynWedges != 0) &&
 //			(lod.f0.Num() != lod.NumDynWedges * 3 + 1)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
-		if ((lod.SkinningData.Num() == 0) != (lod.NumDynWedges == 0))
-			appNotify("SkinningData=%d  NumDynWedges=%d",lod.SkinningData.Num(), lod.NumDynWedges);
+//		if ((lod.SkinningData.Num() == 0) != (lod.NumDynWedges == 0))
+//			appNotify("SkinningData=%d  NumDynWedges=%d",lod.SkinningData.Num(), lod.NumDynWedges);
 // (may be empty)	if (lod.VertexStream.Verts.Num() != lod.Wedges.Num()) appNotify("lod%d: bad VertexStream size", i);
 //		if (lod.f114 || lod.f118) appNotify("[%d]: f114=%d, f118=%d", lod.f114, lod.f118);
 

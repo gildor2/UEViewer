@@ -218,6 +218,10 @@ int main(int argc, char **argv)
 #	endif
 				"\n"
 #endif // UNREAL25
+#if UC2
+				"Unreal Engine 2X:\n"
+				"    Unreal Championship 2: The Liandri Conflict\n"
+#endif
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
 		);

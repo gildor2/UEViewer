@@ -404,7 +404,7 @@ public:
 	virtual FArchive& operator<<(FName &N)
 	{
 #if UNREAL3
-		if (ArVer >= 145) // PACKAGE_V3, but have version in UC2
+		if (ArVer >= 145)				// PACKAGE_V3, but have version in UC2
 		{
 			*this << N.Index;
 			if (ArVer >= PACKAGE_V3)
@@ -421,13 +421,11 @@ public:
 	{
 		int index;
 #if UNREAL3
-		if (ArVer >= 145) // PACKAGE_V3, but has in UC2
-		{
-			appError("Check UObject*<<");
-			//?? not verified with UE3
-		}
+		if (ArVer >= 145)				 // PACKAGE_V3, but has in UC2
+			*this << index;
+		else
 #endif
-		*this << AR_INDEX(index);
+			*this << AR_INDEX(index);
 		if (index < 0)
 		{
 			const FObjectImport &Imp = GetImport(-index-1);

@@ -1,4 +1,6 @@
-!! document in readme and help support for UC2, GOW and UT3
+!! document in readme and help support for GOW and UT3
+!! UC2: make Ar.IsUC2() instead of version checking
+!! UC2: load animations, textures
 
 FONTGEN
 ! BUG: '&' displayed as '_' (WinAPI feature)

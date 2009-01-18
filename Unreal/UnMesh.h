@@ -979,6 +979,115 @@ struct FRag2Unk1
 #endif // RAGNAROK2
 
 
+#if UC2
+
+struct FUC2Vector1
+{
+	short			X, Y, Z;
+
+	friend FArchive& operator<<(FArchive &Ar, FUC2Vector1 &V)
+	{
+		if (Ar.ArLicenseeVer == 1)
+			return Ar << V.X << V.Y << V.Z;
+		// LicenseeVer == 0 -- serialize as int[3] and rescale, using some global scale
+		int X, Y, Z;
+		return Ar << X << Y << Z;
+	}
+};
+
+#define GET_UC2VEC2_DWORD(mv) (*(unsigned*)&(mv))
+
+struct FUC2Vector2
+{
+	int				X:11;
+	int				Y:10;
+	int				Z:11;
+
+	friend FArchive& operator<<(FArchive &Ar, FUC2Vector2 &V)
+	{
+		if (Ar.ArLicenseeVer == 1)
+			return Ar << GET_UC2VEC2_DWORD(V);
+		// LicenseeVer == 0 -- serialize as int[3] and rescale by consts
+		int X, Y, Z;
+		return Ar << X << Y << Z;
+	}
+};
+
+struct FUC2Int
+{
+	short			V;
+
+	friend FArchive& operator<<(FArchive &Ar, FUC2Int &V)
+	{
+		if (Ar.ArLicenseeVer == 1)
+			return Ar << V.V;
+		// LicenseeVer == 0 -- serialize as int and rescale by consts
+		int X;
+		return Ar << X;
+	}
+};
+
+
+struct FUC2Unk3
+{
+	FUC2Vector1		f0;
+	FUC2Vector2		f6;
+	FUC2Int			fA, fC;
+
+	friend FArchive& operator<<(FArchive &Ar, FUC2Unk3 &S)
+	{
+		Ar << S.f0 << S.f6 << S.fA << S.fC;
+		if (Ar.ArLicenseeVer == 1)
+		{
+			byte b[8];
+			Ar << b[0] << b[1] << b[2] << b[3] << b[4] << b[5] << b[6] << b[7];
+		}
+		else
+		{
+			int i[8];
+			Ar << i[0] << i[1] << i[2] << i[3] << i[4] << i[5] << i[6] << i[7];
+		}
+		return Ar;
+	}
+};
+
+struct FUC2Unk1
+{
+	int				f14;
+	int				f18;
+	int				f1C;
+	// some of TArray<> variations, allocated in GPU memory (?)
+	int				SomeFlag;
+	TArray<FUC2Unk3> f20;
+
+	friend FArchive& operator<<(FArchive &Ar, FUC2Unk1 &S)
+	{
+		Ar << S.f14 << S.f18 << S.f1C;
+		S.SomeFlag = 0;
+		if (Ar.ArLicenseeVer == 1)
+			Ar << S.SomeFlag;
+		if (S.SomeFlag == 0)
+			Ar << S.f20;
+		return Ar;
+	}
+};
+
+
+struct FUC2Unk2
+{
+	word			f0;
+	TArray<word>	f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FUC2Unk2 &S)
+	{
+		return Ar << S.f0 << S.f4;
+	}
+};
+
+
+#endif // UC2
+
+
 struct FStaticLODModel
 {
 	TArray<unsigned>		SkinningData;		// floating stream format, contains U/V, weights etc
@@ -1027,7 +1136,7 @@ struct FStaticLODModel
 			TArray<T3_BasisVector> unk2;
 			Ar << unk1 << unk2;
 		}
-#endif
+#endif // TRIBES3
 #if LINEAGE2
 		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 0x1C)
 		{
@@ -1035,7 +1144,7 @@ struct FStaticLODModel
 			Ar << UseNewWedges << M.LineageWedges;
 			M.RestoreLineageMesh();
 		}
-#endif
+#endif // LINEAGE2
 #if RAGNAROK2
 		if (Ar.IsRagnarok2 && Ar.ArVer >= 0x80)
 		{
@@ -1045,11 +1154,32 @@ struct FStaticLODModel
 			TArray<FRag2Unk1> unk4;
 			// TArray of word[9]
 			Ar << AR_INDEX(tmp);
-			Ar.Seek(Ar.ArPos + tmp*9*2);
+			Ar.Seek(Ar.Tell() + tmp*9*2);
 			// other ...
 			Ar << unk2 << unk3 << unk4;
 		}
 #endif // RAGNAROK2
+#if UC2
+		if (Ar.ArVer >= 145) //?? IsUC2
+		{
+			if (Ar.ArVer >= 136)
+			{
+				FVector f17C, f188, f194;
+				Ar << f17C << f188 << f194;
+			}
+			if (Ar.ArVer >= 127)
+			{
+				TArray<FSkelMeshSection> f98;
+				TArray<word>		fB0;
+				int					fBC;
+				FUC2Unk1			fC0;
+				TArray<FUC2Unk2>	fEC;
+				Ar << f98 << fB0 << fBC << fC0;
+				if (Ar.ArVer >= 128)
+					Ar << fEC;
+			}
+		}
+#endif // UC2
 		return Ar;
 
 		unguard;
@@ -1173,6 +1303,13 @@ public:
 		}
 		else
 		{
+#if UC2
+			if (Ar.ArVer >= 136)
+			{
+				int f338;
+				Ar << f338;
+			}
+#endif // UC2
 			Ar << LODModels << f224 << Points << Wedges << Triangles << VertInfluences;
 			Ar << CollapseWedge << f1C8;
 		}
@@ -1198,7 +1335,14 @@ public:
 			Ar.Seek(Ar.GetStopper());
 			return;
 		}
-#endif
+#endif // TRIBES3
+#if UC2
+		if (Ar.ArVer >= 145) // IsUC2
+		{
+			Ar.Seek(Ar.GetStopper());
+			return;
+		}
+#endif // UC2
 
 #if LINEAGE2
 		if (Ar.IsLineage2)
