@@ -20,14 +20,13 @@ Unreal Engine 2.5:
 Modified Unreal Engine 2.5
   Tribes: Vengeance
   Exteel
-Unreal Engine 2X
-  Unreal Championship 2: The Liandri Conflict
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
+  Unreal Championship 2: The Liandri Conflict (UE2X)
 
 Project home page and forum:
 http://www.gildor.org/projects/umodel

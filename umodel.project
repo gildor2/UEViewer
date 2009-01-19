@@ -1,40 +1,8 @@
 # perl highlighting
 
-LIBC       = shared
-#LIBC       = static
-#OUT        = Release
-#MAPFILES   = 1
-CONSOLE    = 1
-OPTIMIZE   = size
-
-#PDB        = 1
-
-!if "$PLATFORM" eq "win32"
-	INCLUDES = libs/include
-!else
-	# linux/cygwin + GCC
-	STDLIBS   = stdc++ GL
-	!if "$PLATFORM" ne "cygwin"
-		STDLIBS += dl	# dlopen() and friends
-	!endif
-!endif
-
-!if "$COMPILER" eq "GnuC"
-	LIBC      = shared
-	OPTIONS   =  -fno-strict-aliasing	# required for our uint_cast()-based FP hacks
-	OPTIONS   += -fno-stack-protector	# this will remove GLIBC_2.4 dependency
-	OPTIONS   += {
-		# disable some warnings
-		-Wno-invalid-offsetof
-	}
-!endif
-
-
-LIBRARIES  = libs
-OBJDIR     = obj
-STDLIBS   += SDL SDLmain
-
-INCLUDES += . Core Unreal
+R   = .
+PRJ = umodel
+!include common.project
 
 sources(MAIN) = {
 	Main.cpp
@@ -51,4 +19,4 @@ sources(MAIN) = {
 	libs/lzo/lzo1x_d2.c
 }
 
-target(executable, umodel, MAIN, MAIN)
+target(executable, $PRJ, MAIN, MAIN)

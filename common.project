@@ -1,0 +1,38 @@
+# perl highlighting
+
+LIBC       = shared
+#LIBC       = static
+#OUT        = Release
+#MAPFILES   = 1
+CONSOLE    = 1
+OPTIMIZE   = size
+
+#PDB        = 1
+
+!if "$PLATFORM" ne "win32"
+	# linux/cygwin + GCC
+	STDLIBS   = stdc++ GL
+	!if "$PLATFORM" ne "cygwin"
+		STDLIBS += dl	# dlopen() and friends
+	!endif
+!endif
+
+!if "$COMPILER" eq "GnuC"
+	LIBC      = shared
+	OPTIONS   =  -fno-strict-aliasing	# required for our uint_cast()-based FP hacks
+	OPTIONS   += -fno-stack-protector	# this will remove GLIBC_2.4 dependency
+	OPTIONS   += {
+		# disable some warnings
+		-Wno-invalid-offsetof
+	}
+!endif
+
+
+LIBRARIES  = $R/libs
+OBJDIR     = $R/obj/$PRJ-$PLATFORM
+STDLIBS   += SDL SDLmain
+
+INCLUDES += . $R/Core $R/Unreal $R/libs/include
+!if "$PLATFORM" eq "win32"
+	INCLUDES += $R/libs/includewin32
+!endif

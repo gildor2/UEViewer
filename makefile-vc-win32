@@ -21,41 +21,41 @@ MAIN : umodel.exe
 #------------------------------------------------------------------------------
 
 MAIN = \
-	obj/Main.obj \
-	obj/Export3D.obj \
-	obj/ExportPsk.obj \
-	obj/ExportTga.obj \
-	obj/UnCore.obj \
-	obj/UnMesh.obj \
-	obj/UnObject.obj \
-	obj/UnPackage.obj \
-	obj/UnRenderer.obj \
-	obj/MaterialViewer.obj \
-	obj/MeshViewer.obj \
-	obj/SkelMeshViewer.obj \
-	obj/VertMeshViewer.obj \
-	obj/SkelMeshInstance.obj \
-	obj/VertMeshInstance.obj \
-	obj/Core.obj \
-	obj/GlWindow.obj \
-	obj/Math3D.obj \
-	obj/TextContainer.obj \
-	obj/ddslib.obj \
-	obj/lzo_init.obj \
-	obj/lzo1x_d2.obj
+	./obj/umodel-win32/Main.obj \
+	./obj/umodel-win32/Export3D.obj \
+	./obj/umodel-win32/ExportPsk.obj \
+	./obj/umodel-win32/ExportTga.obj \
+	./obj/umodel-win32/UnCore.obj \
+	./obj/umodel-win32/UnMesh.obj \
+	./obj/umodel-win32/UnObject.obj \
+	./obj/umodel-win32/UnPackage.obj \
+	./obj/umodel-win32/UnRenderer.obj \
+	./obj/umodel-win32/MaterialViewer.obj \
+	./obj/umodel-win32/MeshViewer.obj \
+	./obj/umodel-win32/SkelMeshViewer.obj \
+	./obj/umodel-win32/VertMeshViewer.obj \
+	./obj/umodel-win32/SkelMeshInstance.obj \
+	./obj/umodel-win32/VertMeshInstance.obj \
+	./obj/umodel-win32/Core.obj \
+	./obj/umodel-win32/GlWindow.obj \
+	./obj/umodel-win32/Math3D.obj \
+	./obj/umodel-win32/TextContainer.obj \
+	./obj/umodel-win32/ddslib.obj \
+	./obj/umodel-win32/lzo_init.obj \
+	./obj/umodel-win32/lzo1x_d2.obj
 
 MAIN_DIRS = \
-	obj
+	./obj/umodel-win32
 
 umodel.exe : $(MAIN_DIRS) $(MAIN)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:"libs" SDL.lib SDLmain.lib $(MAIN) -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:"./libs" SDL.lib SDLmain.lib $(MAIN) -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -O1 -EHsc -I libs/include -I . -I Core -I Unreal
+OPT_MAIN = -O1 -EHsc -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32
 
 DEPENDS = \
 	Build.h \
@@ -65,8 +65,8 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/TextContainer.h
 
-obj/GlWindow.obj : Core/GlWindow.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/GlWindow.obj" Core/GlWindow.cpp
+./obj/umodel-win32/GlWindow.obj : Core/GlWindow.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/GlWindow.obj" Core/GlWindow.cpp
 
 DEPENDS = \
 	Build.h \
@@ -83,8 +83,8 @@ DEPENDS = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-obj/Main.obj : Main.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Main.obj" Main.cpp
+./obj/umodel-win32/Main.obj : Main.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Main.obj" Main.cpp
 
 DEPENDS = \
 	Build.h \
@@ -100,14 +100,14 @@ DEPENDS = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-obj/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MeshViewer.obj" Viewers/MeshViewer.cpp
+./obj/umodel-win32/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MeshViewer.obj" Viewers/MeshViewer.cpp
 
-obj/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
+./obj/umodel-win32/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
 
-obj/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
+./obj/umodel-win32/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
 
 DEPENDS = \
 	Build.h \
@@ -121,8 +121,8 @@ DEPENDS = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-obj/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
+./obj/umodel-win32/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS = \
 	Build.h \
@@ -137,8 +137,8 @@ DEPENDS = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-obj/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/MaterialViewer.obj" Viewers/MaterialViewer.cpp
+./obj/umodel-win32/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MaterialViewer.obj" Viewers/MaterialViewer.cpp
 
 DEPENDS = \
 	Build.h \
@@ -150,19 +150,19 @@ DEPENDS = \
 	Unreal/UnObject.h \
 	libs/ddslib.h
 
-obj/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnRenderer.obj" Unreal/UnRenderer.cpp
+./obj/umodel-win32/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnRenderer.obj" Unreal/UnRenderer.cpp
 
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h
 
-obj/Core.obj : Core/Core.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Core.obj" Core/Core.cpp
+./obj/umodel-win32/Core.obj : Core/Core.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Core.obj" Core/Core.cpp
 
-obj/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Math3D.obj" Core/Math3D.cpp
+./obj/umodel-win32/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Math3D.obj" Core/Math3D.cpp
 
 DEPENDS = \
 	Build.h \
@@ -170,8 +170,8 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/TextContainer.h
 
-obj/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/TextContainer.obj" Core/TextContainer.cpp
+./obj/umodel-win32/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/TextContainer.obj" Core/TextContainer.cpp
 
 DEPENDS = \
 	Build.h \
@@ -183,8 +183,8 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h
 
-obj/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ExportPsk.obj" Exporters/ExportPsk.cpp
+./obj/umodel-win32/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportPsk.obj" Exporters/ExportPsk.cpp
 
 DEPENDS = \
 	Build.h \
@@ -197,8 +197,8 @@ DEPENDS = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-obj/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
+./obj/umodel-win32/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
 
 DEPENDS = \
 	Build.h \
@@ -206,8 +206,8 @@ DEPENDS = \
 	Core/Math3D.h \
 	Unreal/UnCore.h
 
-obj/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnCore.obj" Unreal/UnCore.cpp
+./obj/umodel-win32/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnCore.obj" Unreal/UnCore.cpp
 
 DEPENDS = \
 	Build.h \
@@ -218,8 +218,8 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h
 
-obj/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/Export3D.obj" Exporters/Export3D.cpp
+./obj/umodel-win32/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Export3D.obj" Exporters/Export3D.cpp
 
 DEPENDS = \
 	Build.h \
@@ -232,8 +232,8 @@ DEPENDS = \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-obj/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnMesh.obj" Unreal/UnMesh.cpp
+./obj/umodel-win32/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh.obj" Unreal/UnMesh.cpp
 
 DEPENDS = \
 	Build.h \
@@ -243,8 +243,8 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h
 
-obj/ExportTga.obj : Exporters/ExportTga.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ExportTga.obj" Exporters/ExportTga.cpp
+./obj/umodel-win32/ExportTga.obj : Exporters/ExportTga.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportTga.obj" Exporters/ExportTga.cpp
 
 DEPENDS = \
 	Build.h \
@@ -254,8 +254,8 @@ DEPENDS = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-obj/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnObject.obj" Unreal/UnObject.cpp
+./obj/umodel-win32/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnObject.obj" Unreal/UnObject.cpp
 
 DEPENDS = \
 	Build.h \
@@ -268,14 +268,14 @@ DEPENDS = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h
 
-obj/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/UnPackage.obj" Unreal/UnPackage.cpp
+./obj/umodel-win32/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnPackage.obj" Unreal/UnPackage.cpp
 
 DEPENDS = \
 	libs/ddslib.h
 
-obj/ddslib.obj : libs/ddslib.c $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/ddslib.obj" libs/ddslib.c
+./obj/umodel-win32/ddslib.obj : libs/ddslib.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ddslib.obj" libs/ddslib.c
 
 DEPENDS = \
 	libs/include/lzo/lzo1x.h \
@@ -289,8 +289,8 @@ DEPENDS = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-obj/lzo1x_d2.obj : libs/lzo/lzo1x_d2.c $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/lzo1x_d2.obj" libs/lzo/lzo1x_d2.c
+./obj/umodel-win32/lzo1x_d2.obj : libs/lzo/lzo1x_d2.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzo1x_d2.obj" libs/lzo/lzo1x_d2.c
 
 DEPENDS = \
 	libs/include/lzo/lzoconf.h \
@@ -301,13 +301,13 @@ DEPENDS = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-obj/lzo_init.obj : libs/lzo/lzo_init.c $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"obj/lzo_init.obj" libs/lzo/lzo_init.c
+./obj/umodel-win32/lzo_init.obj : libs/lzo/lzo_init.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzo_init.obj" libs/lzo/lzo_init.c
 
 #------------------------------------------------------------------------------
 #	creating output directories
 #------------------------------------------------------------------------------
 
-obj:
-	if not exist "obj" mkdir "obj"
+./obj/umodel-win32:
+	if not exist "./obj/umodel-win32" mkdir "./obj/umodel-win32"
 

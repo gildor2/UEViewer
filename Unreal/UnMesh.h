@@ -627,7 +627,17 @@ struct FNamedBone
 
 	friend FArchive& operator<<(FArchive &Ar, FNamedBone &F)
 	{
-		return Ar << F.Name << F.Flags << F.ParentIndex;
+		Ar << F.Name << F.Flags << F.ParentIndex;
+#if UC2
+		if (Ar.ArVer >= 145) // IsUC2()
+		{
+			FVector unused1;				// strange code: serialized into stack and dropped
+			byte    unused2;
+			if (Ar.ArVer >= 130) Ar << unused1;
+			if (Ar.ArVer >= 132) Ar << unused2;
+		}
+#endif // UC2
+		return Ar;
 	}
 };
 

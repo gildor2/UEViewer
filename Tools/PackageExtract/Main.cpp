@@ -2,7 +2,11 @@
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 
+#if _WIN32
 #include <direct.h>					// for mkdir()
+#else
+#include <sys/stat.h>				// for mkdir()
+#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -75,7 +79,11 @@ int main(int argc, char **argv)
 	appStrncpyz(buf, s, ARRAY_COUNT(buf));
 	char *s2 = strchr(buf, '.');
 	if (s2) *s2 = 0;
+#if _WIN32
 	_mkdir(buf);
+#else
+	mkdir(buf, S_IRWXU);
+#endif
 	// extract objects and write export table
 	FILE *f;
 	char buf2[512];

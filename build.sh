@@ -7,12 +7,13 @@ PLATFORM="vc-win32"
 [ "$OSTYPE" == "linux-gnu" ] && PLATFORM="linux"
 
 #export vc_ver=7
-project="umodel.project"
+[ "$project" ] || project="umodel"		# setup default prohect name
+[ "$root" ] || root="."
 makefile="makefile-$PLATFORM"
 
 # update makefile when needed
 # [ $makefile -ot $project ] &&
-Tools/genmake $project TARGET=$PLATFORM > $makefile
+$root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 
 # build
 case "$PLATFORM" in
