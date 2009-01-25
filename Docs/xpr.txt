@@ -1,0 +1,38 @@
+also: http://www.watto.org/extract/program/archives.txt
+
++0  4 XPR1
++4  4 file len
++8  4 data start (special case when == file len, unknown format ...)
++C  4 file count
++10 4 ?
++14 (file count * 2 dwords)
+    +0 4 name offset (+12)
+    +4 4 data offset (+12) -> file data (not mips)
++?? 4 = 0
+
+File data:
++0  4 data size
++4  4 ?
++8  4 data offset (+ data start)
+
+
+07 01 00 00 (size in dwords)   XX XX XX XX (offset)
+
+NN NN MM MM -- NNNN = size in dwords, MMMM - number of extra dwords
+
+N words:
+2
+4 - offset at [3]
+5 - offset at [1]
+
+-------
+Malcolm_pb.xpr - ?? large header (some, but not all *_pb.xpr files ??)
+Malcolm_Team_pb.xpr
+Lilith_Team_pb.xpr
+
+in this format Hdr.FileLen == Hdr.DataStart
+possibly, texture data goes immediately, Hdr[i].DataOffset -> texture (some hdr + short[], hi-byte of
+each short is 0,1,2)
+
+I was not found any UTX, which uses *_pb textures
+Used from Engine.u/LevelInfo.PrecacheMap.Function

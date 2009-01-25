@@ -658,7 +658,7 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_ENUM(TexCoordSource)
 		PROP_ENUM(TexCoordCount)
-		PROP_ENUM(TexCoordProjected)
+		PROP_BOOL(TexCoordProjected)
 	END_PROP_TABLE
 
 	BIND;

@@ -264,7 +264,7 @@ int main(int argc, char **argv)
 			else if (!stricmp(opt, "noanim"))
 				noAnim = true;
 			else if (!strnicmp(opt, "path=", 5))
-				UnPackage::SetSearchPath(opt+5);
+				appSetRootDirectory(opt+5);
 			else
 				goto help;
 		}

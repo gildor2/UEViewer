@@ -148,6 +148,7 @@ DEPENDS_6 = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
 	libs/ddslib.h
 
 ./obj/umodel-unix/UnRenderer.o : Unreal/UnRenderer.cpp $(DEPENDS_6)

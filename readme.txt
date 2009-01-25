@@ -38,6 +38,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+23.01.2009
+- implemented loading of texture mips from xpr files (for Unreal Championship)
+
 18.01.2009
 - implemented support for Unreal Championship 2 skeletal models
 

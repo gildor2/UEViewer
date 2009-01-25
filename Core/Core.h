@@ -132,6 +132,9 @@ void appFree(void *ptr);
 void appSetNotifyHeader(const char *fmt, ...);
 void appNotify(char *fmt, ...);
 
+void appSetRootDirectory(const char *dir);
+const char *appGetRootDirectory();
+
 int appSprintf(char *dest, int size, const char *fmt, ...);
 void appStrncpyz(char *dst, const char *src, int count);
 void appStrcatn(char *dst, int count, const char *src);

@@ -232,6 +232,7 @@ public:
 	:	f(InFile)
 	{
 		IsLoading = true;
+		ArPos     = 0;
 	}
 
 	FFileReader(const char *Filename, bool loading = true)
@@ -241,6 +242,7 @@ public:
 		if (!f)
 			appError("Unable to open file %s", Filename);
 		IsLoading = loading;
+		ArPos     = 0;
 		unguardf(("%s", Filename));
 	}
 

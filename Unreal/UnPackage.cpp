@@ -569,14 +569,7 @@ UObject* UnPackage::CreateImport(int index)
 -----------------------------------------------------------------------------*/
 
 TArray<UnPackage::PackageEntry> UnPackage::PackageMap;
-char							UnPackage::SearchPath[256];
 TArray<char*>					MissingPackages;
-
-
-void UnPackage::SetSearchPath(const char *Path)
-{
-	appStrncpyz(SearchPath, Path, ARRAY_COUNT(SearchPath));
-}
 
 
 static const char *PackageExtensions[] =
@@ -601,12 +594,18 @@ static const char *PackagePaths[] =
 #if LINEAGE2
 	"Systextures/",
 #endif
+#if UC2
+	"XboxTextures/",
+	"XboxAnimations/",
+#endif
 	"Textures/"
 };
 
 
 UnPackage *UnPackage::LoadPackage(const char *Name)
 {
+	guard(UnPackage::LoadPackage);
+
 	int i;
 	// check in loaded packages list
 	for (i = 0; i < PackageMap.Num(); i++)
@@ -617,6 +616,8 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 		if (!stricmp(Name, MissingPackages[i]))
 			return NULL;
 
+	const char *RootDir = appGetRootDirectory();
+
 	// find package file
 	for (int path = 0; path < ARRAY_COUNT(PackagePaths); path++)
 		for (int ext = 0; ext < ARRAY_COUNT(PackageExtensions); ext++)
@@ -624,7 +625,8 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 			// build filename
 			char	buf[256];
 			appSprintf(ARRAY_ARG(buf), "%s%s" "%s%s" ".%s",
-				SearchPath, SearchPath[0] ? "/" : "",
+				RootDir ? RootDir : "",
+				RootDir ? "/" : "",
 				PackagePaths[path],
 				Name,
 				PackageExtensions[ext]);
@@ -640,4 +642,6 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 	printf("WARNING: package %s was not found\n", Name);
 	MissingPackages.AddItem(strdup(Name));
 	return NULL;
+
+	unguardf(("%s", Name));
 }

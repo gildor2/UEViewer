@@ -2,6 +2,19 @@
 #include "UnCore.h"
 
 
+static char RootDirectory[256];
+
+void appSetRootDirectory(const char *dir)
+{
+	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
+}
+
+const char *appGetRootDirectory()
+{
+	return RootDirectory[0] ? RootDirectory : NULL;
+}
+
+
 /*-----------------------------------------------------------------------------
 	FArray
 -----------------------------------------------------------------------------*/

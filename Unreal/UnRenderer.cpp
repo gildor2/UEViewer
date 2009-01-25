@@ -6,6 +6,15 @@
 
 #include "libs/ddslib.h"				// texture decompression
 
+#if UC2
+#	include "UnPackage.h"				// just for ArVer ...
+#	if _WIN32
+#		include <io.h>					// for findfirst() set
+#	else
+#		include <dirent.h>				// for opendir() etc
+#	endif
+#endif // UC2
+
 #if RENDERING
 
 #include "GlWindow.h"
@@ -492,6 +501,7 @@ void UTexModifier::Bind(unsigned PolyFlags)
 
 #endif // RENDERING
 
+//?? move this part to UnMaterial.cpp
 
 // replaces random 'alpha=0' color with black
 static void PostProcessAlpha(byte *pic, int width, int height)
@@ -584,6 +594,200 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 }
 
 
+#if UC2
+
+static bool ScannedXprs = false;
+
+struct XprEntry
+{
+	char	Name[64];
+	int		DataOffset;
+	int		DataSize;
+};
+
+struct XprInfo
+{
+	char	Filename[256];
+	TArray<XprEntry> Items;
+};
+
+static TArray<XprInfo> xprFiles;
+
+static void ReadXprFile(const char *Filename)
+{
+	guard(ReadXprFile);
+	FFileReader Ar(Filename);
+
+	int Tag, FileLen, DataStart, DataCount;
+	Ar << Tag << FileLen << DataStart << DataCount;
+	if (Tag != BYTES4('X','P','R','1'))
+	{
+//		printf("Unknown XPR tag in %s\n", Filename);
+		return;
+	}
+	if (FileLen <= DataStart)
+	{
+//		printf("Unsupported XPR layout in %s\n", Filename);
+		return;
+	}
+
+	XprInfo *Info = new(xprFiles) XprInfo;
+	appStrncpyz(Info->Filename, Filename, ARRAY_COUNT(Info->Filename));
+	// read filelist
+	int i;
+	for (i = 0; i < DataCount; i++)
+	{
+		int NameOffset, DataOffset;
+		Ar << NameOffset << DataOffset;
+		int savePos = Ar.Tell();
+		Ar.Seek(NameOffset + 12);
+		// read name
+		char c, buf[256];
+		int n = 0;
+		while (true)
+		{
+			Ar << c;
+			if (n < ARRAY_COUNT(buf))
+				buf[n++] = c;
+			if (!c) break;
+		}
+		buf[ARRAY_COUNT(buf)-1] = 0;			// just in case
+		// create item
+		XprEntry *Entry = new(Info->Items) XprEntry;
+		appStrncpyz(Entry->Name, buf, ARRAY_COUNT(Entry->Name));
+		Entry->DataOffset = DataOffset + 12;	// will be overriden later
+		// seek back
+		Ar.Seek(savePos);
+	}
+	// read file data
+	Ar.Seek(Info->Items[0].DataOffset);
+	TArray<int> data;
+	while (true)
+	{
+		int v;
+		Ar << v;
+		if (v == -1) break;						// end marker, 0xFFFFFFFF
+		data.AddItem(v);
+	}
+//	assert(data.Num() && data.Num() % DataCount == 0);
+	int dataSize = data.Num() / DataCount;
+	if (data.Num() % DataCount != 0 || dataSize > 5)
+	{
+//		printf("Unsupported XPR layout in %s\n", Filename);
+		xprFiles.Remove(xprFiles.Num()-1);
+		return;
+	}
+	for (i = 0; i < DataCount; i++)
+	{
+		int idx = i * dataSize;
+		XprEntry *Entry = &Info->Items[i];
+		int start;
+		switch (dataSize)
+		{
+		case 2:
+			start = data[idx+1];
+			break;
+		case 4:
+			start = data[idx+3];
+			break;
+		case 5:
+			start = data[idx+1];
+			break;
+		default:
+			appNotify("Unknown XPR layout of %s: %d dwords", Filename, dataSize);
+			xprFiles.Remove(xprFiles.Num()-1);
+			return;
+		}
+		Entry->DataOffset = DataStart + start;
+	}
+//	printf("Scanned %s, %d files\n", Filename, DataCount);
+	for (i = 0; i < DataCount; i++)
+	{
+		XprEntry *Entry = &Info->Items[i];
+		int nextOffset;
+		if (i < DataCount-1)
+			nextOffset = Info->Items[i+1].DataOffset;
+		else
+			nextOffset = FileLen;
+		Entry->DataSize = nextOffset - Entry->DataOffset;
+//		printf("%s -> %X + %X\n", Entry->Name, Entry->DataOffset, Entry->DataSize);
+	}
+
+	unguardf(("%s", Filename));
+}
+
+static void ScanXprDir(const char *dir)
+{
+	guard(ScanXprDir);
+
+	char Path[256];
+#if _WIN32
+	appSprintf(ARRAY_ARG(Path), "%s/%s/*.xpr", appGetRootDirectory(), dir);
+	_finddata_t found;
+	long hFind = _findfirst(Path, &found);
+	if (hFind == -1) return;
+	do
+	{
+		appSprintf(ARRAY_ARG(Path), "%s/%s/%s", appGetRootDirectory(), dir, found.name);
+		// now: Path = full filename
+		ReadXprFile(Path);
+	} while (_findnext(hFind, &found) != -1);
+	_findclose(hFind);
+#else
+	appSprintf(ARRAY_ARG(Path), "%s/%s", appGetRootDirectory(), dir);
+	DIR *find = opendir(Path);
+	if (!find) return;
+	while (struct dirent *ent = readdir(find))
+	{
+		// check file extension
+		char *s = strrchr(ent->d_name, '.');
+		if (!s || strcmp(s, ".xpr") != 0) continue;
+		appSprintf(ARRAY_ARG(Path), "%s/%s/%s", appGetRootDirectory(), dir, ent->d_name);
+printf("scan: %s\n", Path);
+		// now: Path = full filename
+		ReadXprFile(Path);
+	}	
+	closedir(find);
+#endif
+
+	unguardf(("%s", dir));
+}
+
+static void ScanXprs()
+{
+	if (ScannedXprs) return;
+	ScannedXprs = true;
+
+	if (!appGetRootDirectory()) return;	// don't know, where to scan
+	ScanXprDir("Textures");
+	ScanXprDir("XboxTextures");
+}
+
+static byte *FindXpr(const char *Name)
+{
+	for (int i = 0; i < xprFiles.Num(); i++)
+	{
+		XprInfo *Info = &xprFiles[i];
+		for (int j = 0; j < Info->Items.Num(); j++)
+		{
+			XprEntry *File = &Info->Items[j];
+			if (strcmp(File->Name, Name) == 0)
+			{
+				// found
+				byte *buf = new byte[File->DataSize];
+				FFileReader Reader(Info->Filename);
+				Reader.Seek(File->DataOffset);
+				Reader.Serialize(buf, File->DataSize);
+				return buf;
+			}
+		}
+	}
+	return NULL;
+}
+
+#endif // UC2
+
+
 byte *UTexture::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture::Decompress);
@@ -599,6 +803,22 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 		VSize = Mip.VSize;
 		return DecompressTexture(&Mip.DataArray[0], USize, VSize, Format, Name, Palette);
 	}
+#if UC2
+	if (Package && Package->ArVer >= 145)
+	{
+		// try to find texture inside XBox xpr files
+		if (!ScannedXprs)
+			ScanXprs();
+		byte *pic = FindXpr(Name);
+		if (!pic)
+			return NULL;
+		USize = this->USize;
+		VSize = this->VSize;
+		byte *pic2 = DecompressTexture(pic, USize, VSize, Format, Name, Palette);
+		delete pic;
+		return pic2;
+	}
+#endif // UC2
 	// no valid mipmaps
 	return NULL;
 	unguard;

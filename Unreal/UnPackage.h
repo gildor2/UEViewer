@@ -326,7 +326,6 @@ public:
 
 	// load package using short name (without path and extension)
 	static UnPackage *LoadPackage(const char *Name);
-	static void       SetSearchPath(const char *Path);
 
 	void SetupReader(int ExportIndex)
 	{
@@ -474,7 +473,6 @@ private:
 		UnPackage	*Package;
 	};
 	static TArray<PackageEntry> PackageMap;
-	static char SearchPath[256];
 };
 
 
