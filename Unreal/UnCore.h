@@ -40,6 +40,9 @@ class UnPackage;
 #define PACKAGE_V3			180
 
 
+#define PACKAGE_FILE_TAG	0x9E2A83C1
+
+
 /*-----------------------------------------------------------------------------
 	FName class
 -----------------------------------------------------------------------------*/
@@ -708,6 +711,100 @@ public:
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);
 };
+
+
+#if UNREAL3
+
+/*-----------------------------------------------------------------------------
+	Support for UE3 compressed files
+-----------------------------------------------------------------------------*/
+
+struct FCompressedChunkBlock
+{
+	int			CompressedSize;
+	int			UncompressedSize;
+
+	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
+	{
+		return Ar << B.CompressedSize << B.UncompressedSize;
+	}
+};
+
+struct FCompressedChunkHeader
+{
+	int			Tag;
+	int			BlockSize;				// maximal size of uncompressed block
+	int			CompressedSize;
+	int			UncompressedSize;
+	TArray<FCompressedChunkBlock> Blocks;
+
+	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
+	{
+		int i;
+		Ar << H.Tag << H.BlockSize << H.CompressedSize << H.UncompressedSize;
+		assert(H.Tag == PACKAGE_FILE_TAG);
+		if (H.BlockSize == PACKAGE_FILE_TAG)
+			H.BlockSize = (Ar.ArVer >= 0x171) ? 0x20000 : 0x8000;
+		int BlockCount = (H.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
+		H.Blocks.Empty(BlockCount);
+		H.Blocks.Add(BlockCount);
+		for (i = 0; i < BlockCount; i++)
+			Ar << H.Blocks[i];
+		return Ar;
+	}
+};
+
+void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int CompressionFlags);
+
+
+/*-----------------------------------------------------------------------------
+	UE3 bulk data
+-----------------------------------------------------------------------------*/
+
+#define BULKDATA_StoreInSeparateFile	0x01
+#define BULKDATA_CompressedZlib			0x02		// unknown name
+#define BULKDATA_Compressed				0x10		// unknown name
+#define BULKDATA_NoData					0x20		// unknown name
+
+struct FByteBulkData //?? separate FUntypedBulkData
+{
+	int		BulkDataFlags;				// 0x12 -> compressed
+	int		ElementCount;				// number of array elements
+	int		BulkDataOffsetInFile;		// position in file, points to BulkData
+	int		BulkDataSizeOnDisk;			// size of bulk data on disk
+//	int		SavedBulkDataFlags;
+//	int		SavedElementCount;
+//	int		SavedBulkDataOffsetInFile;
+//	int		SavedBulkDataSizeOnDisk;
+	byte	*BulkData;					// pointer to array data
+//	int		LockStatus;
+//	FArchive *AttachedAr;
+
+	FByteBulkData()
+	:	BulkData(NULL)
+	{}
+
+	virtual ~FByteBulkData()
+	{
+		if (BulkData) appFree(BulkData);
+	}
+
+	inline int GetElementSize() const //?? not needed now
+	{
+		return 1;
+	}
+
+	void Serialize(FArchive &Ar);
+};
+
+// UE3 compression flags
+#define COMPRESS_ZLIB		1
+#define COMPRESS_LZO		2
+
+void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
+
+
+#endif // UNREAL3
 
 
 /*-----------------------------------------------------------------------------

@@ -1,5 +1,8 @@
 #include "Core.h"
 #include "UnCore.h"
+#if UNREAL3
+#include "lzo/lzo1x.h"
+#endif
 
 
 static char RootDirectory[256];
@@ -209,7 +212,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	// loading
 	int len, i;
 #if UNREAL3
-	if (Ar.ArVer >= 145) // PACKAGE_V3 ? found exact version in UC2
+	if (Ar.ArVer >= 145)		// PACKAGE_V3 ? found exact version in UC2
 		Ar << len;
 	else
 #endif
@@ -264,3 +267,157 @@ public:
 
 static CDummyArchive DummyArchive;
 FArchive *GDummySave = &DummyArchive;
+
+
+#if UNREAL3
+
+/*-----------------------------------------------------------------------------
+	Reading UE3 compressed chunks
+-----------------------------------------------------------------------------*/
+
+void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
+{
+	guard(appDecompress);
+	if (Flags == COMPRESS_LZO)
+	{
+		int r;
+		r = lzo_init();
+		if (r != LZO_E_OK) appError("lzo_init() returned %d", r);
+		unsigned long newLen = UncompressedSize;
+		r = lzo1x_decompress_safe(CompressedBuffer, CompressedSize, UncompressedBuffer, &newLen, NULL);
+		if (r != LZO_E_OK) appError("lzo_decompress() returned %d", r);
+		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
+	}
+	else
+	{
+		appError("appDecompress: unknown compression flags: %d", Flags);
+	}
+	unguard;
+}
+
+
+// code is similar to FUE3ArchiveReader::PrepareBuffer()
+void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int CompressionFlags)
+{
+	guard(appReadCompressedChunk);
+
+	// read header
+	FCompressedChunkHeader ChunkHeader;
+	Ar << ChunkHeader;
+	// prepare buffer for reading compressed data
+	byte *ReadBuffer = (byte*)appMalloc(ChunkHeader.BlockSize * 2);	// BlockSize is size of uncompressed data
+	// read and decompress data
+	for (int BlockIndex = 0; BlockIndex < ChunkHeader.Blocks.Num(); BlockIndex++)
+	{
+		const FCompressedChunkBlock *Block = &ChunkHeader.Blocks[BlockIndex];
+		assert(ChunkHeader.BlockSize * 2 >= Block->CompressedSize);
+		assert(Block->UncompressedSize <= Size);
+		Ar.Serialize(ReadBuffer, Block->CompressedSize);
+		appDecompress(ReadBuffer, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
+		Size   -= Block->UncompressedSize;
+		Buffer += Block->UncompressedSize;
+	}
+	// finalize
+	assert(Size == 0);			// should be comletely read
+	delete ReadBuffer;
+	unguard;
+}
+
+
+void FByteBulkData::Serialize(FArchive &Ar)
+{
+	guard(FByteBulkData::Serialize);
+
+	if (Ar.ArVer < 266)
+	{
+		// old bulk format
+		assert(Ar.IsLoading);
+		//!! GET FROM SerializeByteBulkData_OLD() (WarGame)
+		//?? TLazyArray -> FBulkData migration
+		assert(0);
+
+		BulkDataFlags = 4;					// unknown
+		BulkDataSizeOnDisk = INDEX_NONE;
+		int EndPosition;
+		Ar << EndPosition;
+		if (Ar.ArVer >= 254)
+			Ar << BulkDataSizeOnDisk;
+		if (Ar.ArVer >= 251)
+		{
+			int LazyLoaderFlags;
+			Ar << LazyLoaderFlags;
+			assert((LazyLoaderFlags & 1) == 0);	// LLF_PayloadInSeparateFile
+			if (LazyLoaderFlags & 2)
+				BulkDataFlags |= BULKDATA_CompressedZlib;
+		}
+		if (Ar.ArVer >= 260)
+		{
+			FName unk;
+			Ar << unk;
+		}
+		Ar << ElementCount;
+		if (BulkDataSizeOnDisk == INDEX_NONE)
+			BulkDataSizeOnDisk = ElementCount * GetElementSize();
+		BulkDataOffsetInFile = Ar.Tell();
+		BulkDataSizeOnDisk   = EndPosition - BulkDataOffsetInFile;
+	}
+	else
+	{
+		// current bulk format
+		// read header
+		Ar << BulkDataFlags << ElementCount;
+		assert(Ar.IsLoading);
+		Ar << BulkDataSizeOnDisk << BulkDataOffsetInFile;
+		if (BulkDataFlags & BULKDATA_NoData)	// skip serializing
+			return;								//?? what to do with BulkData ?
+	}
+
+	assert((BulkDataFlags & BULKDATA_StoreInSeparateFile) || (BulkDataOffsetInFile == Ar.Tell()));
+
+	// allocate array
+	if (BulkData) appFree(BulkData);
+	BulkData = NULL;
+	int DataSize = ElementCount * GetElementSize();
+	if (!DataSize) return;		// nothing to serialize
+	BulkData = (byte*)appMalloc(DataSize);
+
+//	int savePos, saveStopper;
+	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
+	{
+		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+		return;		//????
+//		// seek to data block
+//		savePos     = Ar.Tell();
+//		saveStopper = Ar.GetStopper();
+//		Ar.SetStopper(0);
+//		Ar.Seek(BulkDataOffsetInFile);
+	}
+
+	// serialize data block
+	if (BulkDataFlags & (BULKDATA_Compressed | BULKDATA_CompressedZlib))
+	{
+		// compressed block
+		appReadCompressedChunk(
+			Ar, BulkData, DataSize,
+			(BulkDataFlags & BULKDATA_CompressedZlib) ? COMPRESS_ZLIB : COMPRESS_LZO
+		);
+	}
+	else
+	{
+		// uncompressed block
+		Ar.Serialize(BulkData, DataSize);
+	}
+	assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell());
+
+//	// restore stream position
+//	if (isSeparateBlock)		//????
+//	{
+//		Ar.Seek(savePos);
+//		Ar.SetStopper(saveStopper);
+//	}
+
+	unguard;
+}
+
+
+#endif // UNREAL3

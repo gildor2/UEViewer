@@ -31,15 +31,17 @@ struct GCC_PACK tgaHdr_t
 #endif
 
 
-void ExportTga(const UTexture *Tex, FArchive &Ar)
+void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar)
 {
+	guard(ExportTga);
+
 	int		i;
 
 	int width, height;
 	byte *pic = Tex->Decompress(width, height);
 	if (!pic)
 	{
-		appNotify("WARNING: texture %s has no valid mipmaps", *Tex->Name);
+		appNotify("WARNING: texture %s has no valid mipmaps", Tex->Name);
 		return;		//?? should erase file ?
 	}
 
@@ -186,4 +188,6 @@ void ExportTga(const UTexture *Tex, FArchive &Ar)
 #endif
 
 	appFree(packed);
+
+	unguard;
 }

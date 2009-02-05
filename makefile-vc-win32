@@ -205,15 +205,6 @@ DEPENDS = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
-	Unreal/UnCore.h
-
-./obj/umodel-win32/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnCore.obj" Unreal/UnCore.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
@@ -258,19 +249,20 @@ DEPENDS = \
 ./obj/umodel-win32/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnObject.obj" Unreal/UnObject.cpp
 
+./obj/umodel-win32/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnPackage.obj" Unreal/UnPackage.cpp
+
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h
 
-./obj/umodel-win32/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnPackage.obj" Unreal/UnPackage.cpp
+./obj/umodel-win32/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnCore.obj" Unreal/UnCore.cpp
 
 DEPENDS = \
 	libs/ddslib.h

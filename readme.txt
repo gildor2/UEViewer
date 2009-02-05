@@ -38,6 +38,12 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+03.02.2009
+- added "-nomesh" command line option to prevent SkeletalMesh class loading in
+  a case of unsupported data format
+- implemented UE3 UTexture2D class support
+- fixed bug in UE3 package decompression code
+
 23.01.2009
 - implemented loading of texture mips from xpr files (for Unreal Championship)
 

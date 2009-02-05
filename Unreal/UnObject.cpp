@@ -357,19 +357,30 @@ void UObject::Serialize(FArchive &Ar)
 		switch (Tag.Type)
 		{
 		case NAME_ByteProperty:
-			TYPE("byte");
 #if UNREAL3
 			if (Tag.DataSize != 1)
 			{
 				assert(Tag.DataSize == 8);
-				FName EnumValue;
-				Ar << EnumValue;
-				//!! map string -> byte
-				printf("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
+				if (!strcmp(Prop->TypeName, "enum3")) //!! temp solution
+				{
+					TYPE("enum3");
+					Ar << *((FName*)value);
+				}
+				else
+				{
+					TYPE("byte");
+					FName EnumValue;
+					Ar << EnumValue;
+					//!! map string -> byte
+					printf("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
+				}
 			}
 			else
 #endif
+			{
+				TYPE("byte");
 				Ar << PROP(byte);
+			}
 			PROP_DBG("%d", PROP(byte));
 			break;
 
@@ -483,7 +494,7 @@ void UnregisterClass(const char *Name)
 				GClassCount--;
 				return;
 			}
-			memcpy(GClasses+i, GClasses+i+1, GClassCount-i-1);
+			memcpy(GClasses+i, GClasses+i+1, (GClassCount-i-1) * sizeof(GClasses[0]));
 			GClassCount--;
 		}
 }

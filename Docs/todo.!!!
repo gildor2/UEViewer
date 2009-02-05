@@ -2,6 +2,14 @@
 !! UC2: make Ar.IsUC2() instead of version checking
 !! UC2: load animations, textures
 
+ForcedExport handling: should use this information for UE3 package loading:
+- loading:
+  1) do not load such objects
+  2) load such objects from another package
+     a) use metadata from another package - ignore local FBulkData structure
+     b) use local metadata + external bulk (simply load compressed/uncompressed data block)
+- prevent export/listing of such resources (or list with "forced" flag?)
+
 FONTGEN
 ! BUG: '&' displayed as '_' (WinAPI feature)
 ? add pseudographics chars (for material outline)

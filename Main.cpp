@@ -31,12 +31,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_RUNE
 #endif
 	REGISTER_ANIM_NOTIFY_CLASSES
-
-//!! TEMPORARY for UObject loading tests
 #if UNREAL3
-	REGISTER_CLASS_ALIAS(UTexture,UTexture2D)
+	REGISTER_MATERIAL_CLASSES_U3
 #endif
-
 END_CLASS_TABLE
 }
 
@@ -168,8 +165,9 @@ int main(int argc, char **argv)
 				"Common options:\n"
 				"    -path=PATH      path to UT installation directory; if not specified,\n"
 				"                    program will search for packages in current directory\n"
-				"    -noanim         disable loading of MeshAnimation classes in a case of\n"
+				"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
 				"                    unsupported data format\n"
+				"    -noanim         disable loading of MeshAnimation classes\n"
 				"\n"
 				"Export options:\n"
 				"    -all            export all linked objects too\n"
@@ -230,7 +228,7 @@ int main(int argc, char **argv)
 
 	// parse command line
 	bool dump = false, view = true, exprt = false, exprtAll = false,
-		 listOnly = false, noAnim = false, pkgInfo = false;
+		 listOnly = false, noMesh = false, noAnim = false, pkgInfo = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -261,6 +259,8 @@ int main(int argc, char **argv)
 				pkgInfo = true;
 			else if (!stricmp(opt, "list"))
 				listOnly = true;
+			else if (!stricmp(opt, "nomesh"))
+				noMesh = true;
 			else if (!stricmp(opt, "noanim"))
 				noAnim = true;
 			else if (!strnicmp(opt, "path=", 5))
@@ -287,14 +287,23 @@ int main(int argc, char **argv)
 	EXPORTER("MeshAnimation", "psa", ExportPsa);
 	EXPORTER("VertMesh",      NULL,  Export3D );
 	EXPORTER("Texture",       "tga", ExportTga);
+#if UNREAL3
+	EXPORTER("Texture2D",     "tga", ExportTga);
+#endif
 
 	// prepare classes
+	//?? NOTE: can register classes after loading package: in this case we can know engine version (1/2/3)
+	//?? and register appropriate classes only (for example, separate UKeletalMesh classes for UE2/UE3)
 	RegisterUnrealClasses();
 	// remove UMeshAnimation loader when requisted by command line
 	if (noAnim)
 	{
 		UnregisterClass("MeshAnimation");
 		UnregisterClass("Animation");
+	}
+	if (noMesh)
+	{
+		UnregisterClass("SkeletalMesh");
 	}
 
 	// setup NotifyInfo to describe package only
@@ -321,7 +330,8 @@ int main(int argc, char **argv)
 		for (int i = 0; i < Package->Summary.ExportCount; i++)
 		{
 			const FObjectExport &Exp = Package->ExportTable[i];
-			printf("%d %s %s\n", i, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+//			printf("%d %s %s\n", i, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			printf("%d %X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
 		}
 		unguard;
 		return 0;
@@ -467,9 +477,9 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 		return true;					\
 	}
 	// create viewer for known class
-	CLASS_VIEWER(UVertMesh,     CVertMeshViewer);
-	CLASS_VIEWER(USkeletalMesh, CSkelMeshViewer);
-	CLASS_VIEWER(UMaterial,     CMaterialViewer);
+	CLASS_VIEWER(UVertMesh,       CVertMeshViewer);
+	CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer);
+	CLASS_VIEWER(UUnrealMaterial, CMaterialViewer);
 	// fallback for unknown class
 	if (!test)
 	{

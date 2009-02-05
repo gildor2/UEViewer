@@ -9,8 +9,8 @@
 
 
 /*
-MATERIALS TREE:
-~~~~~~~~~~~~~~~
+UE2 MATERIALS TREE:
+~~~~~~~~~~~~~~~~~~~
 -	Material
 -		Combiner
 -		Modifier
@@ -44,6 +44,29 @@ MATERIALS TREE:
 -			Shader
 			TerrainMaterial
 			VertexColor
+#if UC2
+			PixelShaderMaterial
+				PSEmissiveShader
+				PSSkinShader
+					PSEmissiveSkinShader
+#endif
+
+UE3 MATERIALS TREE:
+~~~~~~~~~~~~~~~~~~~
+	Surface
+		MaterialInterface
+		Texture
+			Texture2D
+				ShadowMapTexture2D
+				TerrainWeightMapTexture
+				TextureFlipBook
+			Texture2DComposite
+			Texture3D
+			TextureCube
+			TextureMovie
+			TextureRenderTarget
+				TextureRenderTarget2D
+				TextureRenderTargetCube
 */
 
 #if RENDERING
@@ -52,6 +75,25 @@ MATERIALS TREE:
 #	define BIND
 #endif
 
+
+class UUnrealMaterial : public UObject		// no such class in Unreal Engine, needed as common base for UE1/UE2/UE3
+{
+	DECLARE_CLASS(UUnrealMaterial, UObject);
+public:
+	virtual byte *Decompress(int &USize, int &VSize) const
+	{
+		return NULL;
+	}
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags)
+	{}
+#endif
+};
+
+
+/*-----------------------------------------------------------------------------
+	Unreal Engine 1/2 materials
+-----------------------------------------------------------------------------*/
 
 #if LINEAGE2
 
@@ -95,9 +137,9 @@ struct FLineageShaderProperty
 #endif // LINEAGE2
 
 
-class UMaterial : public UObject
+class UMaterial : public UUnrealMaterial	// real base is UObject
 {
-	DECLARE_CLASS(UMaterial, UObject);
+	DECLARE_CLASS(UMaterial, UUnrealMaterial);
 public:
 	UMaterial		*FallbackMaterial;
 	UMaterial		*DefaultMaterial;
@@ -191,11 +233,6 @@ public:
 		}
 		unguard;
 	}
-#endif
-
-#if RENDERING
-	virtual void Bind(unsigned PolyFlags)
-	{}
 #endif
 };
 
@@ -375,7 +412,7 @@ public:
 	,	TexNum(-1)
 #endif
 	{}
-	byte *Decompress(int &USize, int &VSize) const;
+	virtual byte *Decompress(int &USize, int &VSize) const;
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UTexture::Serialize);
@@ -825,6 +862,134 @@ public:
 };
 
 
+#if UNREAL3
+
+/*-----------------------------------------------------------------------------
+	Unreal Engine 3 materials
+-----------------------------------------------------------------------------*/
+
+class UTexture3 : public UUnrealMaterial	// in UE3 it is derived from USurface->UObject; real name is UTexture
+{
+	DECLARE_CLASS(UTexture3, UUnrealMaterial)
+public:
+	FByteBulkData	SourceArt;
+
+	BEGIN_PROP_TABLE
+		// no properties required (all are for importing and cooking)
+		PROP_DROP(SRGB)
+		PROP_DROP(RGBE)
+		PROP_DROP(UnpackMin)
+		PROP_DROP(UnpackMax)
+		PROP_DROP(CompressionNoAlpha)
+		PROP_DROP(CompressionNone)
+		PROP_DROP(CompressionNoMipmaps)
+		PROP_DROP(CompressionFullDynamicRange)
+		PROP_DROP(DeferCompression)
+		PROP_DROP(NeverStream)
+		PROP_DROP(bDitherMipMapAlpha)
+		PROP_DROP(bPreserveBorderR)
+		PROP_DROP(bPreserveBorderG)
+		PROP_DROP(bPreserveBorderB)
+		PROP_DROP(bPreserveBorderA)
+		PROP_DROP(CompressionSettings)
+		PROP_DROP(Filter)
+		PROP_DROP(LODGroup)
+		PROP_DROP(LODBias)
+		PROP_DROP(SourceFilePath)
+		PROP_DROP(SourceFileTimestamp)
+	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		SourceArt.Serialize(Ar);
+	}
+};
+
+enum EPixelFormat
+{
+	PF_Unknown,
+	PF_A32B32G32R32F,
+	PF_A8R8G8B8,
+	PF_G8,
+	PF_G16,
+	PF_DXT1,
+	PF_DXT3,
+	PF_DXT5,
+	PF_UYVY,
+	PF_FloatRGB,		// A RGB FP format with platform-specific implementation, for use with render targets
+	PF_FloatRGBA,		// A RGBA FP format with platform-specific implementation, for use with render targets
+	PF_DepthStencil,	// A depth+stencil format with platform-specific implementation, for use with render targets
+	PF_ShadowDepth,		// A depth format with platform-specific implementation, for use with render targets
+	PF_FilteredShadowDepth, // A depth format with platform-specific implementation, that can be filtered by hardware
+	PF_R32F,
+	PF_G16R16,
+	PF_G16R16F,
+	PF_G32R32F,
+	PF_A2B10G10R10,
+	PF_A16B16G16R16,
+	PF_D24
+};
+
+struct FTexture2DMipMap
+{
+	FByteBulkData	Data;	// FTextureMipBulkData
+	int				SizeX;
+	int				SizeY;
+
+	friend FArchive& operator<<(FArchive &Ar, FTexture2DMipMap &Mip)
+	{
+		Mip.Data.Serialize(Ar);
+		return Ar << Mip.SizeX << Mip.SizeY;
+	}
+};
+
+class UTexture2D : public UTexture3
+{
+	DECLARE_CLASS(UTexture2D, UTexture3)
+public:
+	TArray<FTexture2DMipMap> Mips;
+	int				SizeX;
+	int				SizeY;
+	FName			Format;		//!! EPixelFormat
+
+#if RENDERING
+	// rendering implementation fields
+	GLint			TexNum;
+#endif
+
+	BEGIN_PROP_TABLE
+		PROP_INT(SizeX)
+		PROP_INT(SizeY)
+		PROP_ENUM3(Format)		//!! FString (on-disk) -> byte (in-memory)
+		// drop unneeded props
+		PROP_DROP(AddressX)
+		PROP_DROP(AddressY)
+		PROP_DROP(bGlobalForceMipLevelsToBeResident)
+		PROP_DROP(TextureFileCacheName)
+		PROP_DROP(MipTailBaseIdx)
+	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UTexture2D::Serialize);
+		Super::Serialize(Ar);
+		if (Ar.ArVer < 297)
+		{
+			appError("'Format' should be byte (now FName)");	//!! fix Format property
+			Ar << SizeX << SizeY << Format;
+		}
+		Ar << Mips;
+		unguard;
+	}
+
+	virtual byte *Decompress(int &USize, int &VSize) const;
+	BIND;
+};
+
+#endif // UNREAL3
+
+
 #define REGISTER_MATERIAL_CLASSES		\
 	REGISTER_CLASS(UConstantColor)		\
 	REGISTER_CLASS(UBitmapMaterial)		\
@@ -838,6 +1003,9 @@ public:
 	REGISTER_CLASS(UTexPanner)			\
 	REGISTER_CLASS(UTexRotator)			\
 	REGISTER_CLASS(UTexScaler)
+
+#define REGISTER_MATERIAL_CLASSES_U3	\
+	REGISTER_CLASS(UTexture2D)
 
 
 #endif // __UNMATERIAL_H__

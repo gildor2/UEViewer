@@ -133,7 +133,7 @@ void CMaterialViewer::Draw3D()
 {
 	glColor4f(1, 1, 1, 1);
 	// bind material
-	UMaterial *Mat = static_cast<UMaterial*>(Object);
+	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
 	Mat->Bind(0);
 	// and draw box
 	static const CVec3 box[] =
@@ -290,9 +290,9 @@ static char propBuf[1024];
 
 #define MAX_LINKS			256
 
-static const char *linkNames[MAX_LINKS];
-static UMaterial  *links[MAX_LINKS];
-static int        firstLink, numLinks;
+static const char      *linkNames[MAX_LINKS];
+static UUnrealMaterial *links[MAX_LINKS];
+static int             firstLink, numLinks;
 
 inline void InitProps(bool firstLevel)
 {
@@ -362,7 +362,7 @@ static void Prop(bool value, const char *name)
 	appStrcatn(ARRAY_ARG(propBuf), name);
 }
 
-static void Prop(UMaterial *value, const char *name)
+static void Prop(UUnrealMaterial *value, const char *name)
 {
 	if (!value) return;
 	assert(firstLink + numLinks < ARRAY_COUNT(linkNames));

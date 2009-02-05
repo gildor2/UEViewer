@@ -74,7 +74,7 @@ class CMaterialViewer : public CObjectViewer
 public:
 	static bool		ShowOutline;
 
-	CMaterialViewer(UMaterial *Material)
+	CMaterialViewer(UUnrealMaterial *Material)
 	:	CObjectViewer(Material)
 	{}
 

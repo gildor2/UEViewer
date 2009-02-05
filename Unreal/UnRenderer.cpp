@@ -280,6 +280,8 @@ UMaterial *BindDefaultMaterial()
 }
 
 
+static GLint lastTexNum = RESERVED_TEXTURES;
+
 //!! note: unloading textures is not supported now
 void UTexture::Bind(unsigned PolyFlags)
 {
@@ -330,7 +332,6 @@ void UTexture::Bind(unsigned PolyFlags)
 	bool upload = false;
 	if (TexNum < 0)
 	{
-		static GLint lastTexNum = RESERVED_TEXTURES;
 		TexNum = ++lastTexNum;
 		upload = true;
 	}
@@ -498,6 +499,52 @@ void UTexModifier::Bind(unsigned PolyFlags)
 	else
 		BindDefaultMaterial();
 }
+
+
+#if UNREAL3
+
+void UTexture2D::Bind(unsigned PolyFlags)
+{
+	guard(UTexture2D::Bind);
+
+	// uploading ...
+	bool upload = false;
+	if (TexNum < 0)
+	{
+		TexNum = ++lastTexNum;
+		upload = true;
+	}
+	else if (!glIsTexture(TexNum))
+	{
+		// surface lost (window resized etc), should re-upload texture
+		upload = true;
+	}
+	if (upload)
+	{
+		// upload texture
+		int USize, VSize;
+		byte *pic = Decompress(USize, VSize);
+		if (pic)
+		{
+			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1,
+				true /*??UClampMode == TC_Clamp*/,
+				true /*??VClampMode == TC_Clamp*/);
+			delete pic;
+		}
+		else
+		{
+			appNotify("WARNING: texture %s has no valid mipmaps", Name);
+			TexNum = DEFAULT_TEX_NUM;		// "default texture"
+		}
+	}
+	// bind texture
+	glBindTexture(GL_TEXTURE_2D, TexNum);
+	unguardf(("%s", Name));
+}
+
+
+#endif // UNREAL3
+
 
 #endif // RENDERING
 
@@ -746,7 +793,7 @@ static void ScanXprDir(const char *dir)
 printf("scan: %s\n", Path);
 		// now: Path = full filename
 		ReadXprFile(Path);
-	}	
+	}
 	closedir(find);
 #endif
 
@@ -823,3 +870,40 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 	return NULL;
 	unguard;
 }
+
+#if UNREAL3
+
+byte *UTexture2D::Decompress(int &USize, int &VSize) const
+{
+	guard(UTexture::Decompress);
+	for (int n = 0; n < Mips.Num(); n++)
+	{
+		// find 1st mipmap with non-null data array
+		// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
+		const FTexture2DMipMap &Mip = Mips[n];
+		if (!Mip.Data.BulkData)
+			continue;
+		USize = Mip.SizeX;
+		VSize = Mip.SizeY;
+		ETextureFormat intFormat;
+		if (!strcmp(Format, "PF_A8R8G8B8"))
+			intFormat = TEXF_RGBA8;
+		else if (!strcmp(Format, "PF_DXT1"))
+			intFormat = TEXF_DXT1;
+		else if (!strcmp(Format, "PF_DXT3"))
+			intFormat = TEXF_DXT3;
+		else if (!strcmp(Format, "PF_DXT5"))
+			intFormat = TEXF_DXT5;
+		else
+		{
+			appNotify("Unknown texture format: %s", *Format);
+			return NULL;
+		}
+		return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
+	}
+	// no valid mipmaps
+	return NULL;
+	unguard;
+}
+
+#endif // UNREAL3

@@ -59,6 +59,9 @@ struct CPropInfo
 // CPropInfo to 4 instead of 1 (enumeration values are serialized as byte, but
 // compiler report it as 4-byte field)
 #define PROP_ENUM(Field)		{ #Field, "byte", FIELD2OFS(ThisClass, Field), 1 },
+#if UNREAL3
+#define PROP_ENUM3(Field)		{ #Field, "enum3", FIELD2OFS(ThisClass, Field), 1 },	//!! should change this
+#endif
 #define PROP_BYTE(Field)		_PROP_BASE(Field, byte     )
 #define PROP_INT(Field)			_PROP_BASE(Field, int      )
 #define PROP_BOOL(Field)		_PROP_BASE(Field, bool     )

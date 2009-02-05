@@ -2,8 +2,6 @@
 #define __UNPACKAGE_H__
 
 
-#define PACKAGE_FILE_TAG 0x9E2A83C1
-
 #if 1
 #	define PKG_LOG(x)		printf x
 #else
@@ -198,6 +196,10 @@ struct FPackageFileSummary
 	}
 };
 
+#if UNREAL3
+#define EF_ForcedExport		1
+// other values: 2
+#endif
 
 struct FObjectExport
 {
@@ -212,7 +214,7 @@ struct FObjectExport
 #if UNREAL3
 	unsigned	ObjectFlags2;				// really, 'int64 ObjectFlags'
 	int			Archetype;
-	unsigned	ExportFlags;
+	unsigned	ExportFlags;				// EF_* flags
 	TArray<FComponentMapPair> ComponentMap;	// TMap<FName, int>
 	TArray<int>	NetObjectCount;				// generations
 	FGuid		Guid;
@@ -350,14 +352,14 @@ public:
 
 	const FObjectImport& GetImport(int index)
 	{
-		if (index >= Summary.ImportCount)
+		if (index < 0 || index >= Summary.ImportCount)
 			appError("Package \"%s\": wrong import index %d", Filename, index);
 		return ImportTable[index];
 	}
 
 	FObjectExport& GetExport(int index) // not 'const'
 	{
-		if (index >= Summary.ExportCount)
+		if (index < 0 || index >= Summary.ExportCount)
 			appError("Package \"%s\": wrong export index %d", Filename, index);
 		return ExportTable[index];
 	}

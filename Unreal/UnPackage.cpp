@@ -4,10 +4,6 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 
-#if UNREAL3
-#include "lzo/lzo1x.h"
-#endif
-
 /*-----------------------------------------------------------------------------
 	Lineage2 file reader
 -----------------------------------------------------------------------------*/
@@ -69,39 +65,6 @@ public:
 
 #if UNREAL3
 
-struct FCompressedChunkBlock
-{
-	int			CompressedSize;
-	int			UncompressedSize;
-
-	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
-	{
-		return Ar << B.CompressedSize << B.UncompressedSize;
-	}
-};
-
-struct FCompressedChunkHeader
-{
-	int			Tag;
-	int			BlockSize;				// maximal size of uncompressed block
-	int			CompressedSize;
-	int			UncompressedSize;
-	TArray<FCompressedChunkBlock> Blocks;
-
-	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
-	{
-		int i;
-		Ar << H.Tag << H.BlockSize << H.CompressedSize << H.UncompressedSize;
-		int BlockCount = (H.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
-		assert(H.Tag == PACKAGE_FILE_TAG);
-		H.Blocks.Empty(BlockCount);
-		H.Blocks.Add(BlockCount);
-		for (i = 0; i < BlockCount; i++)
-			Ar << H.Blocks[i];
-		return Ar;
-	}
-};
-
 class FUE3ArchiveReader : public FArchive
 {
 public:
@@ -136,8 +99,6 @@ public:
 		guard(FUE3ArchiveReader::FUE3ArchiveReader);
 		assert(CompressionFlags);
 		assert(Chunks->Num());
-		if (CompressionFlags != 2)
-			appError("Unsupported compression type: %d", CompressionFlags);
 		unguard;
 	}
 
@@ -165,18 +126,18 @@ public:
 				// advance pointers/counters
 				Position += ToCopy;
 				size     -= ToCopy;
-				OffsetPointer(data, ToCopy);
+				data     = OffsetPointer(data, ToCopy);
 				if (!size) return;										// copied enough
 			}
 			// here: data/size points outside of loaded Buffer
-			PrepareBuffer(Position, size);
+			PrepareBuffer(Position);
 			assert(Position >= BufferStart && Position < BufferEnd);	// validate PrepareBuffer()
 		}
 
 		unguard;
 	}
 
-	void PrepareBuffer(int Pos, int Size)
+	void PrepareBuffer(int Pos)
 	{
 		guard(FUE3ArchiveReader::PrepareBuffer);
 		// find compressed chunk
@@ -225,13 +186,7 @@ public:
 			BufferSize = Block->UncompressedSize;
 		}
 		// decompress data
-		int r;
-		r = lzo_init();
-		if (r != LZO_E_OK) appError("lzo_init() returned %d", r);
-		unsigned long newLen = Block->UncompressedSize;
-		r = lzo1x_decompress_safe(CompressedBlock, Block->CompressedSize, Buffer, &newLen, NULL);
-		if (r != LZO_E_OK) appError("lzo_decompress() returned %d", r);
-		if (newLen != Block->UncompressedSize) appError("len mismatch: %d != %d", newLen, Block->UncompressedSize);
+		appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
 		// setup BufferStart/BufferEnd
 		BufferStart = ChunkPosition;
 		BufferEnd   = ChunkPosition + Block->UncompressedSize;
@@ -510,6 +465,26 @@ UObject* UnPackage::CreateExport(int index)
 		printf("WARNING: Unknown class \"%s\" for object \"%s\"\n", ClassName, *Exp.ObjectName);
 		return NULL;
 	}
+#if UNREAL3
+	if (ArVer >= PACKAGE_V3 && (Exp.ExportFlags & EF_ForcedExport)) // ExportFlags appeared in ArVer=247
+	{
+		// find outermost package
+		int PackageIndex = Exp.PackageIndex;
+		if (PackageIndex)
+		{
+			while (true)
+			{
+				const FObjectExport &Exp2 = GetExport(PackageIndex - 1);
+				if (!Exp2.PackageIndex) break;
+				PackageIndex = Exp2.PackageIndex;
+			}
+			const FObjectExport &Exp2 = GetExport(PackageIndex - 1);
+			assert(Exp2.ExportFlags & EF_ForcedExport);
+			const char *PackageName = Exp2.ObjectName;
+			printf("Forced export: %s'%s.%s'\n", ClassName, PackageName, *Exp.ObjectName);
+		}
+	}
+#endif // UNREAL3
 	UObject::BeginLoad();
 
 	// setup constant object fields
