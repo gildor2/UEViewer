@@ -542,7 +542,7 @@ public:
 		// this code is more compact at least for VC6 when T has no destructor
 		// (for code above, compiler will always compute P2, even when not needed)
 		for (int i = 0; i < DataCount; i++)
-			((T*)DataPtr)->~T();
+			((T*)DataPtr + i)->~T();
 #endif
 	}
 	// data accessors
@@ -744,7 +744,7 @@ struct FCompressedChunkHeader
 		Ar << H.Tag << H.BlockSize << H.CompressedSize << H.UncompressedSize;
 		assert(H.Tag == PACKAGE_FILE_TAG);
 		if (H.BlockSize == PACKAGE_FILE_TAG)
-			H.BlockSize = (Ar.ArVer >= 0x171) ? 0x20000 : 0x8000;
+			H.BlockSize = (Ar.ArVer >= 369) ? 0x20000 : 0x8000;
 		int BlockCount = (H.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
 		H.Blocks.Empty(BlockCount);
 		H.Blocks.Add(BlockCount);
@@ -789,12 +789,20 @@ struct FByteBulkData //?? separate FUntypedBulkData
 		if (BulkData) appFree(BulkData);
 	}
 
-	inline int GetElementSize() const //?? not needed now
+	virtual int GetElementSize() const
 	{
 		return 1;
 	}
 
 	void Serialize(FArchive &Ar);
+};
+
+struct FWordBulkData : public FByteBulkData
+{
+	virtual int GetElementSize() const
+	{
+		return 2;
+	}
 };
 
 // UE3 compression flags

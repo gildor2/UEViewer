@@ -87,6 +87,8 @@ public:
 #if RENDERING
 	virtual void Bind(unsigned PolyFlags)
 	{}
+	virtual void Release()
+	{}
 #endif
 };
 
@@ -400,7 +402,7 @@ public:
 
 #if RENDERING
 	// rendering implementation fields
-	GLint			TexNum;
+	GLuint			TexNum;
 #endif
 
 	UTexture()
@@ -409,7 +411,7 @@ public:
 	,	MaxColor(255, 255, 255, 255)
 	,	DetailScale(8.0f)
 #if RENDERING
-	,	TexNum(-1)
+	,	TexNum(0)
 #endif
 	{}
 	virtual byte *Decompress(int &USize, int &VSize) const;
@@ -462,7 +464,10 @@ public:
 		PROP_BOOL(bHasComp)
 	END_PROP_TABLE
 
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	virtual void Release();
+#endif
 };
 
 
@@ -955,7 +960,13 @@ public:
 
 #if RENDERING
 	// rendering implementation fields
-	GLint			TexNum;
+	GLuint			TexNum;
+#endif
+
+#if RENDERING
+	UTexture2D()
+	:	TexNum(0)
+	{}
 #endif
 
 	BEGIN_PROP_TABLE
@@ -984,7 +995,10 @@ public:
 	}
 
 	virtual byte *Decompress(int &USize, int &VSize) const;
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	virtual void Release();
+#endif
 };
 
 #endif // UNREAL3

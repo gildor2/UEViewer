@@ -26,6 +26,22 @@ public:
 	}
 };
 
+#if UNREAL3
+
+struct FBoxSphereBounds
+{
+	FVector			Origin;
+	FVector			BoxExtent;
+	float			SphereRadius;
+
+	friend FArchive& operator<<(FArchive &Ar, FBoxSphereBounds &B)
+	{
+		return Ar << B.Origin << B.BoxExtent << B.SphereRadius;
+	}
+};
+
+#endif // UNREAL3
+
 
 /*-----------------------------------------------------------------------------
 	ULodMesh class and common data structures
@@ -220,9 +236,9 @@ struct FLineageUnk4
 
 	friend FArchive& operator<<(FArchive &Ar, FLineageUnk4 &S)
 	{
-		if (Ar.ArVer == 0x1A)
+		if (Ar.ArLicenseeVer == 0x1A)
 			return Ar << S.f4;
-		else if (Ar.ArVer >= 0x1B)
+		else if (Ar.ArLicenseeVer >= 0x1B)
 			return Ar << S.f0 << S.f4 << S.f10 << S.f1C << S.f20 << S.f24;
 		else
 			return Ar;
@@ -600,6 +616,10 @@ struct MotionChunk
 	{
 		guard(MotionChunk<<);
 		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+#if SPLINTER_CELL
+		if (Ar.IsSplinterCell)				// possibly M.Flags != 0, skip FlexTrack serializer
+			return Ar;
+#endif
 #if UNREAL25
 		if (M.Flags >= 3)
 			SerializeFlexTracks(Ar, M);
@@ -718,6 +738,10 @@ struct VJointPos
 
 	friend FArchive& operator<<(FArchive &Ar, VJointPos &P)
 	{
+#if UNREAL3
+		if (Ar.ArVer >= 224)
+			return Ar << P.Orientation << P.Position;
+#endif
 		return Ar << P.Orientation << P.Position << P.Length << P.Size;
 	}
 };
@@ -1156,7 +1180,7 @@ struct FStaticLODModel
 		}
 #endif // LINEAGE2
 #if RAGNAROK2
-		if (Ar.IsRagnarok2 && Ar.ArVer >= 0x80)
+		if (Ar.IsRagnarok2 && Ar.ArVer >= 128)
 		{
 			int tmp;
 			FRawIndexBuffer unk2;
@@ -1273,6 +1297,9 @@ public:
 #if LINEAGE2
 	void RecreateMeshFromLOD();
 #endif
+#if UNREAL3
+	void SerializeSkelMesh3(FArchive &Ar);
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -1282,6 +1309,13 @@ public:
 		if (Ar.ArVer < PACKAGE_V2)
 		{
 			SerializeSkelMesh1(Ar);
+			return;
+		}
+#endif
+#if UNREAL3
+		if (Ar.ArVer >= PACKAGE_V3)
+		{
+			SerializeSkelMesh3(Ar);
 			return;
 		}
 #endif

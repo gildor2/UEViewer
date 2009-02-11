@@ -330,7 +330,7 @@ void UTexture::Bind(unsigned PolyFlags)
 	}
 	// uploading ...
 	bool upload = false;
-	if (TexNum < 0)
+	if (!TexNum)
 	{
 		TexNum = ++lastTexNum;
 		upload = true;
@@ -360,6 +360,12 @@ void UTexture::Bind(unsigned PolyFlags)
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
 	unguardf(("%s", Name));
+}
+
+
+void UTexture::Release()
+{
+	glDeleteTextures(1, &TexNum);
 }
 
 
@@ -509,7 +515,7 @@ void UTexture2D::Bind(unsigned PolyFlags)
 
 	// uploading ...
 	bool upload = false;
-	if (TexNum < 0)
+	if (!TexNum)
 	{
 		TexNum = ++lastTexNum;
 		upload = true;
@@ -542,6 +548,11 @@ void UTexture2D::Bind(unsigned PolyFlags)
 	unguardf(("%s", Name));
 }
 
+
+void UTexture2D::Release()
+{
+	glDeleteTextures(1, &TexNum);
+}
 
 #endif // UNREAL3
 
@@ -603,6 +614,20 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 				*d++ = s[0];
 				*d++ = s[3];
 				s += 4;
+			}
+		}
+		return dst;
+	case TEXF_L8:
+		{
+			const byte *s = Data;
+			byte *d = dst;
+			for (int i = 0; i < width * height; i++)
+			{
+				byte b = *s++;
+				*d++ = b;
+				*d++ = b;
+				*d++ = b;
+				*d++ = 255;
 			}
 		}
 		return dst;
@@ -790,7 +815,6 @@ static void ScanXprDir(const char *dir)
 		char *s = strrchr(ent->d_name, '.');
 		if (!s || strcmp(s, ".xpr") != 0) continue;
 		appSprintf(ARRAY_ARG(Path), "%s/%s/%s", appGetRootDirectory(), dir, ent->d_name);
-printf("scan: %s\n", Path);
 		// now: Path = full filename
 		ReadXprFile(Path);
 	}
@@ -894,6 +918,8 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			intFormat = TEXF_DXT3;
 		else if (!strcmp(Format, "PF_DXT5"))
 			intFormat = TEXF_DXT5;
+		else if (!strcmp(Format, "PF_G8"))
+			intFormat = TEXF_L8;
 		else
 		{
 			appNotify("Unknown texture format: %s", *Format);

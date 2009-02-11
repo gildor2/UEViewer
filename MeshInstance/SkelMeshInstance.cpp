@@ -996,7 +996,8 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 
 	const USkeletalMesh *Mesh = GetMesh();
 
-	TransformMesh(Mesh->VertInfluences.Num(), &Mesh->VertInfluences[0], Mesh->Points.Num(), &Mesh->Points[0], RefNormals);
+	if (Mesh->VertInfluences.Num())		// condition is just in case
+		TransformMesh(Mesh->VertInfluences.Num(), &Mesh->VertInfluences[0], Mesh->Points.Num(), &Mesh->Points[0], RefNormals);
 
 	glEnable(GL_LIGHTING);
 	for (i = 0; i < Mesh->Triangles.Num(); i++)

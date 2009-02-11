@@ -1766,3 +1766,304 @@ void USkeletalMesh::RecreateMeshFromLOD()
 }
 
 #endif // LINEAGE2
+
+
+#if UNREAL3
+
+struct FSkelMeshSection3
+{
+	short				u1[2];
+	int					FirstIndex;
+	short				NumTriangles;
+
+	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
+	{
+		return Ar << S.u1[0] << S.u1[1] << S.FirstIndex << S.NumTriangles;
+	}
+};
+
+struct FIndexBuffer3
+{
+	TArray<short>		Indices;
+
+	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
+	{
+		int ElementSize;
+		Ar << ElementSize;
+		assert(ElementSize == sizeof(short));
+		return Ar << I.Indices;
+	}
+};
+
+static bool CompareCompNormals(int Normal1, int Normal2)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		char b1 = Normal1 & 0xFF;
+		char b2 = Normal2 & 0xFF;
+		if (abs(b1 - b2) > 10) return false;
+		Normal1 >>= 8;
+		Normal2 >>= 8;
+	}
+	return true;
+}
+
+struct FRigidVertex3
+{
+	FVector				Pos;
+	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	float				U, V;
+	byte				BoneIndex;
+
+	friend FArchive& operator<<(FArchive &Ar, FRigidVertex3 &V)
+	{
+		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V << V.BoneIndex;
+	}
+};
+
+struct FSmoothVertex3
+{
+	FVector				Pos;
+	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	float				U, V;
+	byte				BoneIndex[4];
+	byte				BoneWeight[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
+	{
+		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V
+				  << V.BoneIndex[0] << V.BoneIndex[1] << V.BoneIndex[2] << V.BoneIndex[3]
+				  << V.BoneWeight[0] << V.BoneWeight[1] << V.BoneWeight[2] << V.BoneWeight[3];
+	}
+};
+
+struct FSkinChunk3
+{
+	int					FirstVertex;
+	TArray<FRigidVertex3>  RigidVerts;
+	TArray<FSmoothVertex3> SmoothVerts;
+	TArray<short>		Bones;
+	int					NumRigidVerts;
+	int					NumSmoothVerts;
+	int					f30;
+
+	friend FArchive& operator<<(FArchive &Ar, FSkinChunk3 &V)
+	{
+		return Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts << V.Bones
+				  << V.NumRigidVerts << V.NumSmoothVerts << V.f30;
+	}
+};
+
+struct FUE3Lod1
+{
+	int					f0;
+	int					f4;
+	int					f8;
+	int					fC;
+
+	friend FArchive& operator<<(FArchive &Ar, FUE3Lod1 &V)
+	{
+		return Ar << V.f0 << V.f4 << V.f8 << V.fC;
+	}
+};
+
+struct FSkinData3
+{
+	friend FArchive& operator<<(FArchive &Ar, FSkinData3 &S)
+	{
+		guard(FSkinData3<<);
+		if (Ar.ArVer < 493)
+		{
+			int ElementSize;
+			TArray<FSmoothVertex3> Verts;
+			return Ar << ElementSize << Verts; // don't want it ...
+		}
+		int VertexType;
+		Ar << VertexType;
+		if (VertexType == 0)
+		{
+			int ElementSize, Count;
+			Ar << ElementSize << Count;
+			assert(ElementSize == 0x20);
+			Ar.Seek(Ar.Tell() + ElementSize * Count); // don't want it ...
+		}
+		else
+		{
+			int ElementSize, Count;
+			Ar << ElementSize << Count;
+			assert(ElementSize == 0x24);
+			Ar.Seek(Ar.Tell() + ElementSize * Count); // don't want it ...
+		}
+		return Ar;
+		unguard;
+	}
+};
+
+struct FStaticLODModel3
+{
+	TArray<FSkelMeshSection3> Sections;
+	TArray<FSkinChunk3>	Chunks;
+	FIndexBuffer3		IndexBuffer;
+	TArray<byte>		f24;
+	TArray<short>		f68, f18;
+	TArray<byte>		f74;
+	int					f80;
+	int					NumVertices;
+	TArray<FUE3Lod1>	f5C;
+	FWordBulkData		BulkData;
+	FSkinData3			GPUSkin;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel3 &Lod)
+	{
+		guard(FStaticLODModel3<<);
+
+		Ar << Lod.Sections << Lod.IndexBuffer << Lod.f68 << Lod.f18 << Lod.f74 << Lod.Chunks;
+		Ar << Lod.f80 << Lod.NumVertices << Lod.f5C << Lod.f24;
+		Lod.BulkData.Serialize(Ar);
+		Ar << Lod.GPUSkin;
+		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num());
+		assert(Lod.BulkData.ElementCount == Lod.NumVertices);
+		return Ar;
+
+		unguard;
+	}
+};
+
+void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
+{
+	guard(USkeletalMesh::SerializeSkelMesh3);
+
+	UObject::Serialize(Ar);			// no UPrimitive ...
+
+	FBoxSphereBounds	Bounds;
+	TArray<UObject*>	Materials1;
+	TArray<FStaticLODModel3> Lods;
+
+	Ar << Bounds << Materials1 << MeshOrigin << RotOrigin;
+	Ar << RefSkeleton << SkeletalDepth << Lods;
+#if 0
+	//!! also: NameIndexMap (ArVer >= 296), PerPolyKDOPs (ArVer >= 435)
+#else
+	Ar.Seek(Ar.GetStopper());
+#endif
+
+	// convert LOD 0 to mesh
+	guard(ConvertMesh);
+
+	const FStaticLODModel3 &Lod = Lods[0];
+	TArray<int> PointNormals;
+	Points.Empty(Lod.NumVertices);
+	PointNormals.Empty(Lod.NumVertices);
+	// create wedges, vertices and influences
+	guard(ProcessChunks);
+	for (int Chunk = 0; Chunk < Lod.Chunks.Num(); Chunk++)
+	{
+		int Vert, j;
+		const FSkinChunk3 &C = Lod.Chunks[Chunk];
+		for (Vert = 0; Vert < C.NumRigidVerts; Vert++)
+		{
+			const FRigidVertex3 &V = C.RigidVerts[Vert];
+			// find the same point in previous items
+			int PointIndex = INDEX_NONE;
+			for (j = 0; j < Points.Num(); j++)
+			{
+				if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
+				{
+					PointIndex = j;
+					break;
+				}
+			}
+			if (PointIndex == INDEX_NONE)
+			{
+				// point was not found - create it
+				PointIndex = Points.Add();
+				Points[PointIndex] = V.Pos;
+				PointNormals.AddItem(V.Normal[0]);
+			}
+			// create wedge
+			FMeshWedge *W = new(Wedges) FMeshWedge;
+			W->iVertex = PointIndex;
+			W->TexUV.U = V.U;
+			W->TexUV.V = V.V;
+			// add influence
+			FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
+			Inf->PointIndex = PointIndex;
+			Inf->Weight     = 1.0f;
+			Inf->BoneIndex  = C.Bones[V.BoneIndex];
+		}
+		for (Vert = 0; Vert < C.NumSmoothVerts; Vert++)
+		{
+			const FSmoothVertex3 &V = C.SmoothVerts[Vert];
+			// find the same point in previous items
+			int PointIndex = INDEX_NONE;
+			for (j = 0; j < Points.Num(); j++)
+			{
+				if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
+				{
+					PointIndex = j;
+					break;
+				}
+			}
+			if (PointIndex == INDEX_NONE)
+			{
+				// point was not found - create it
+				PointIndex = Points.Add();
+				Points[PointIndex] = V.Pos;
+				PointNormals.AddItem(V.Normal[0]);
+			}
+			// create wedge
+			FMeshWedge *W = new(Wedges) FMeshWedge;
+			W->iVertex = PointIndex;
+			W->TexUV.U = V.U;
+			W->TexUV.V = V.V;
+			// add influence
+			for (int i = 0; i < 4; i++)
+			{
+				int BoneIndex = V.BoneIndex[i];
+//!!	printf("[%d] %d -- %d\n", i, BoneIndex, V.BoneWeight[BoneIndex]);
+				FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
+				Inf->PointIndex = PointIndex;
+				Inf->Weight     = V.BoneWeight[BoneIndex] / 255.0f;
+				Inf->BoneIndex  = C.Bones[BoneIndex];
+//!! try to import some small known UT2 mesh to UT3, check their influences
+			}
+		}
+	}
+	unguard;
+	// create triangles
+	for (int Sec = 0; Sec < Lod.Sections.Num(); Sec++)
+	{
+		const FSkelMeshSection3 &S = Lod.Sections[Sec];
+		int Index = S.FirstIndex;
+		for (int i = 0; i < S.NumTriangles; i++)
+		{
+			VTriangle *Face = new(Triangles) VTriangle;
+			Face->MatIndex = S.u1[0];		//??
+			Face->WedgeIndex[0] = Lod.IndexBuffer.Indices[Index++];
+			Face->WedgeIndex[1] = Lod.IndexBuffer.Indices[Index++];
+			Face->WedgeIndex[2] = Lod.IndexBuffer.Indices[Index++];
+		}
+	}
+
+	MeshOrigin.Scale(-1);
+
+	// fix skeleton
+	for (int i = 0; i < RefSkeleton.Num(); i++)
+		RefSkeleton[i].BonePos.Orientation.W *= -1;
+
+	// materials
+	Textures.Add(Materials1.Num());
+	Materials.Add(Materials1.Num());
+
+	// setup missing properties
+	MeshScale.Set(1, 1, 1);
+	BoundingSphere.R = Bounds.SphereRadius;
+
+	unguard;
+
+	unguard;
+
+	return;
+}
+
+#endif // UNREAL3

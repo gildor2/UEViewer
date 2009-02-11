@@ -77,6 +77,7 @@ public:
 	CMaterialViewer(UUnrealMaterial *Material)
 	:	CObjectViewer(Material)
 	{}
+	virtual ~CMaterialViewer();
 
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);

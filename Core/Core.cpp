@@ -122,13 +122,15 @@ void *appMalloc(int size)
 	if (size > 0)
 		memset(data, 0, size);
 	return data;
-	unguard;
+	unguardf(("size=%d", size));
 }
 
 
 void appFree(void *ptr)
 {
+	guard(appFree);
 	free(ptr);
+	unguard;
 }
 
 

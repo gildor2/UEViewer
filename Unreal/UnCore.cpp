@@ -374,13 +374,6 @@ void FByteBulkData::Serialize(FArchive &Ar)
 
 	assert((BulkDataFlags & BULKDATA_StoreInSeparateFile) || (BulkDataOffsetInFile == Ar.Tell()));
 
-	// allocate array
-	if (BulkData) appFree(BulkData);
-	BulkData = NULL;
-	int DataSize = ElementCount * GetElementSize();
-	if (!DataSize) return;		// nothing to serialize
-	BulkData = (byte*)appMalloc(DataSize);
-
 //	int savePos, saveStopper;
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
 	{
@@ -392,6 +385,13 @@ void FByteBulkData::Serialize(FArchive &Ar)
 //		Ar.SetStopper(0);
 //		Ar.Seek(BulkDataOffsetInFile);
 	}
+
+	// allocate array
+	if (BulkData) appFree(BulkData);
+	BulkData = NULL;
+	int DataSize = ElementCount * GetElementSize();
+	if (!DataSize) return;		// nothing to serialize
+	BulkData = (byte*)appMalloc(DataSize);
 
 	// serialize data block
 	if (BulkDataFlags & (BULKDATA_Compressed | BULKDATA_CompressedZlib))

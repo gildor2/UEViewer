@@ -212,6 +212,13 @@ void CMaterialViewer::Draw2D()
 }
 
 
+CMaterialViewer::~CMaterialViewer()
+{
+	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
+	Mat->Release();
+}
+
+
 /*-----------------------------------------------------------------------------
 	Displaying material graph
 -----------------------------------------------------------------------------*/

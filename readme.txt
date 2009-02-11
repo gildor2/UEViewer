@@ -20,6 +20,8 @@ Unreal Engine 2.5:
 Modified Unreal Engine 2.5
   Tribes: Vengeance
   Exteel
+Unreal Engine 3:
+  Unreal Tournament 3
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,6 +40,16 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+11.02.2009
+- implemented UE3 SkeletalMesh support
+- releasing OpenGL texture memory when closing material viewer (smaller memory usage)
+
+09.02.2009
+- fixed bug with Splinter Cell animation loading (code was conflicted with
+  UE2Runtime animations)
+- fixed loading UE3 textures with missing first mipmap levels
+- implemented support for TEXF_L8 (UE2) and PF_G8 (UE3) greyscale texture formats
+
 03.02.2009
 - added "-nomesh" command line option to prevent SkeletalMesh class loading in
   a case of unsupported data format
