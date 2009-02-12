@@ -1772,7 +1772,7 @@ void USkeletalMesh::RecreateMeshFromLOD()
 
 struct FSkelMeshSection3
 {
-	short				u1[2];
+	short				u1[2];			//?? one of this should be MaterialIndex, another unknown
 	int					FirstIndex;
 	short				NumTriangles;
 
@@ -1788,9 +1788,12 @@ struct FIndexBuffer3
 
 	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
 	{
-		int ElementSize;
-		Ar << ElementSize;
-		assert(ElementSize == sizeof(short));
+		if (Ar.ArVer >= 453)
+		{
+			int ElementSize;
+			Ar << ElementSize;
+			assert(ElementSize == sizeof(short));
+		}
 		return Ar << I.Indices;
 	}
 };
@@ -1817,6 +1820,8 @@ struct FRigidVertex3
 
 	friend FArchive& operator<<(FArchive &Ar, FRigidVertex3 &V)
 	{
+		// note: version prior 477 have different normal/tangent format (same layout, but different
+		// data meaning)
 		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V << V.BoneIndex;
 	}
 };
@@ -1831,9 +1836,21 @@ struct FSmoothVertex3
 
 	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
 	{
-		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V
-				  << V.BoneIndex[0] << V.BoneIndex[1] << V.BoneIndex[2] << V.BoneIndex[3]
-				  << V.BoneWeight[0] << V.BoneWeight[1] << V.BoneWeight[2] << V.BoneWeight[3];
+		int i;
+		// note: version prior 477 have different normal/tangent format (same layout, but different
+		// data meaning)
+		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
+		if (Ar.ArVer >= 333)
+		{
+			for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
+			for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
+		}
+		else
+		{
+			for (i = 0; i < 4; i++)
+				Ar << V.BoneIndex[i] << V.BoneWeight[i];
+		}
+		return Ar;
 	}
 };
 
@@ -1845,25 +1862,32 @@ struct FSkinChunk3
 	TArray<short>		Bones;
 	int					NumRigidVerts;
 	int					NumSmoothVerts;
-	int					f30;
+	int					MaxInfluences;
 
 	friend FArchive& operator<<(FArchive &Ar, FSkinChunk3 &V)
 	{
-		return Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts << V.Bones
-				  << V.NumRigidVerts << V.NumSmoothVerts << V.f30;
+		Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts << V.Bones;
+		if (Ar.ArVer >= 333)
+			Ar << V.NumRigidVerts << V.NumSmoothVerts;
+		else
+		{
+			V.NumRigidVerts  = V.RigidVerts.Num();
+			V.NumSmoothVerts = V.SmoothVerts.Num();
+		}
+		if (Ar.ArVer >= 362)
+			Ar << V.MaxInfluences;
+		return Ar;
 	}
 };
 
-struct FUE3Lod1
+struct FEdge3
 {
-	int					f0;
-	int					f4;
-	int					f8;
-	int					fC;
+	int					iVertex[2];
+	int					iFace[2];
 
-	friend FArchive& operator<<(FArchive &Ar, FUE3Lod1 &V)
+	friend FArchive& operator<<(FArchive &Ar, FEdge3 &V)
 	{
-		return Ar << V.f0 << V.f4 << V.f8 << V.fC;
+		return Ar << V.iVertex[0] << V.iVertex[1] << V.iFace[0] << V.iFace[1];
 	}
 };
 
@@ -1904,23 +1928,29 @@ struct FStaticLODModel3
 	TArray<FSkelMeshSection3> Sections;
 	TArray<FSkinChunk3>	Chunks;
 	FIndexBuffer3		IndexBuffer;
-	TArray<byte>		f24;
-	TArray<short>		f68, f18;
-	TArray<byte>		f74;
+	TArray<short>		UsedBones;		// bones, value = [0, NumBones-1]
+	TArray<byte>		f24;			// count = NumBones, value = [0, NumBones-1]; note: BoneIndex is 'short', not 'byte' ...
+	TArray<short>		f68;			// indices, value = [0, NumVertices-1]
+	TArray<byte>		f74;			// count = NumTriangles
 	int					f80;
 	int					NumVertices;
-	TArray<FUE3Lod1>	f5C;
-	FWordBulkData		BulkData;
+	TArray<FEdge3>		Edges;			// links 2 vertices and 2 faces (triangles)
+	FWordBulkData		BulkData;		// ElementCount = NumVertices
 	FSkinData3			GPUSkin;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel3 &Lod)
 	{
 		guard(FStaticLODModel3<<);
 
-		Ar << Lod.Sections << Lod.IndexBuffer << Lod.f68 << Lod.f18 << Lod.f74 << Lod.Chunks;
-		Ar << Lod.f80 << Lod.NumVertices << Lod.f5C << Lod.f24;
+		int tmp1;
+		Ar << Lod.Sections << Lod.IndexBuffer;
+		if (Ar.ArVer < 297)
+			Ar << tmp1;
+		Ar << Lod.f68 << Lod.UsedBones << Lod.f74 << Lod.Chunks;
+		Ar << Lod.f80 << Lod.NumVertices << Lod.Edges << Lod.f24;
 		Lod.BulkData.Serialize(Ar);
-		Ar << Lod.GPUSkin;
+		if (Ar.ArVer >= 333)
+			Ar << Lod.GPUSkin;
 		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num());
 		assert(Lod.BulkData.ElementCount == Lod.NumVertices);
 		return Ar;

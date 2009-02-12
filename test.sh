@@ -87,7 +87,7 @@ case "" in
 "")
 #	ut3 C:/!UE3-u/CH_Necris.upk
 #!!	ut3 C:/GAMES/UT3/UTGame/CookedPC/Characters/CH_AnimHuman.upk ImportMesh_Human_Male
-	run data/ut3/CH_AnimHuman.upk ImportMesh_Human_Male
+	run data/ut3/CH_AnimHuman.upk
 #	ut3 -nomesh C:/GAMES/UT3/UTGame/CookedPC/Maps/DM-Deck.ut3
 #	run -list C:/!UE3-u/Core.u
 #	ut2 HumanMaleA MercMaleD

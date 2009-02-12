@@ -112,6 +112,7 @@ static bool ExportObject(UObject *Obj)
 				char filename[64];
 				appSprintf(ARRAY_ARG(filename), "%s.%s", Obj->Name, Info.FileExt);
 				FFileReader Ar(filename, false);
+				Ar.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
 				Info.Func(Obj, Ar);
 			}
 			else
