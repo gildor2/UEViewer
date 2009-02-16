@@ -224,6 +224,9 @@ int main(int argc, char **argv)
 #if UNREAL3
 				"Unreal Engine 3:\n"
 				"    Unreal Tournament 3\n"
+#	if MEDGE
+				"    Mirror's Edge\n"
+#	endif
 #endif // UNREAL3
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"

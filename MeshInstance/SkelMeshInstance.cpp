@@ -95,7 +95,8 @@ static int CheckBoneTree(const TArray<FMeshBone> &Bones, int Index,
 			depth--;
 		}
 	// store gathered information
-	assert(currIndex == Index);
+//	assert(currIndex == Index);		//??
+	if (currIndex != Index) appNotify("Strange skeleton!");
 	Sizes[currIndex] = treeSize;
 	Depth[currIndex] = depth;
 	return treeSize + 1;
@@ -248,8 +249,10 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 	//!! should be done in USkeletalMesh
 	int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
 	int numIndices = 0;
+	guard(VerifySkeleton);
 	CheckBoneTree(Mesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
 	assert(numIndices == NumBones);
+	unguard;
 	for (i = 0; i < numIndices; i++)
 		BoneData[i].SubtreeSize = treeSizes[i];	// remember subtree size
 

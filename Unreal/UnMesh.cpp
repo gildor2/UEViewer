@@ -1822,7 +1822,17 @@ struct FRigidVertex3
 	{
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
-		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V << V.BoneIndex;
+		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		Ar << V.U << V.V;
+#if MEDGE
+		if (Ar.ArLicenseeVer >= 13)	//?? IsMirrorEdge
+		{
+			float U1, V1, U2, V2;
+			Ar << U1 << V1 << U2 << V2;
+		}
+#endif // MEDGE
+		Ar << V.BoneIndex;
+		return Ar;
 	}
 };
 
@@ -1840,6 +1850,13 @@ struct FSmoothVertex3
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
+#if MEDGE
+		if (Ar.ArLicenseeVer >= 13)	//?? IsMirrorEdge
+		{
+			float U1, V1, U2, V2;
+			Ar << U1 << V1 << U2 << V2;
+		}
+#endif // MEDGE
 		if (Ar.ArVer >= 333)
 		{
 			for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
@@ -1866,9 +1883,14 @@ struct FSkinChunk3
 
 	friend FArchive& operator<<(FArchive &Ar, FSkinChunk3 &V)
 	{
+		guard(FSkinChunk3<<);
 		Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts << V.Bones;
 		if (Ar.ArVer >= 333)
+		{
 			Ar << V.NumRigidVerts << V.NumSmoothVerts;
+//			assert(V.NumRigidVerts == V.RigidVerts.Num()); -- not always!
+//			assert(V.NumSmoothVerts == V.SmoothVerts.Num()); -- not always!
+		}
 		else
 		{
 			V.NumRigidVerts  = V.RigidVerts.Num();
@@ -1877,6 +1899,7 @@ struct FSkinChunk3
 		if (Ar.ArVer >= 362)
 			Ar << V.MaxInfluences;
 		return Ar;
+		unguard;
 	}
 };
 
@@ -1902,20 +1925,33 @@ struct FSkinData3
 			TArray<FSmoothVertex3> Verts;
 			return Ar << ElementSize << Verts; // don't want it ...
 		}
+#if MEDGE
+		int componentCount = 1;
+		if (Ar.ArLicenseeVer >= 0xF)	//?? IsMirrorEdge
+			Ar << componentCount;
+#endif // MEDGE
 		int VertexType;
 		Ar << VertexType;
 		if (VertexType == 0)
 		{
 			int ElementSize, Count;
 			Ar << ElementSize << Count;
+#if MEDGE
+			assert(ElementSize == 0x20 + (componentCount - 1) * 4);
+#else
 			assert(ElementSize == 0x20);
+#endif
 			Ar.Seek(Ar.Tell() + ElementSize * Count); // don't want it ...
 		}
 		else
 		{
 			int ElementSize, Count;
 			Ar << ElementSize << Count;
+#if MEDGE
+			assert(ElementSize == 0x24 + (componentCount - 1) * 8);
+#else
 			assert(ElementSize == 0x24);
+#endif
 			Ar.Seek(Ar.Tell() + ElementSize * Count); // don't want it ...
 		}
 		return Ar;
@@ -1951,8 +1987,8 @@ struct FStaticLODModel3
 		Lod.BulkData.Serialize(Ar);
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
-		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num());
-		assert(Lod.BulkData.ElementCount == Lod.NumVertices);
+//		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num()); -- mostly equals (failed in CH_TwinSouls_Cine.upk)
+//		assert(Lod.BulkData.ElementCount == Lod.NumVertices); -- mostly equals (failed on some GoW packages)
 		return Ar;
 
 		unguard;
@@ -1969,6 +2005,13 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	TArray<UObject*>	Materials1;
 	TArray<FStaticLODModel3> Lods;
 
+#if MEDGE
+	if (Ar.ArLicenseeVer >= 0xF)	//?? IsMirrorEdge
+	{
+		int unk264;
+		Ar << unk264;
+	}
+#endif // MEDGE
 	Ar << Bounds << Materials1 << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth << Lods;
 #if 0
@@ -1990,6 +2033,15 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	{
 		int Vert, j;
 		const FSkinChunk3 &C = Lod.Chunks[Chunk];
+
+		if ((C.NumRigidVerts != C.RigidVerts.Num() && C.RigidVerts.Num() == 0) ||
+			(C.NumSmoothVerts != C.SmoothVerts.Num() && C.SmoothVerts.Num() == 0))
+		{
+			appNotify("Mesh %s have no vertices (GPU skin only)", Name);
+			return;
+		}
+
+		guard(RigidVerts);
 		for (Vert = 0; Vert < C.NumRigidVerts; Vert++)
 		{
 			const FRigidVertex3 &V = C.RigidVerts[Vert];
@@ -2021,6 +2073,8 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 			Inf->Weight     = 1.0f;
 			Inf->BoneIndex  = C.Bones[V.BoneIndex];
 		}
+		unguard;
+		guard(SmoothVerts);
 		for (Vert = 0; Vert < C.NumSmoothVerts; Vert++)
 		{
 			const FSmoothVertex3 &V = C.SmoothVerts[Vert];
@@ -2049,15 +2103,16 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 			// add influence
 			for (int i = 0; i < 4; i++)
 			{
-				int BoneIndex = V.BoneIndex[i];
-//!!	printf("[%d] %d -- %d\n", i, BoneIndex, V.BoneWeight[BoneIndex]);
+				int BoneIndex  = V.BoneIndex[i];
+				int BoneWeight = V.BoneWeight[i];
+				if (BoneWeight == 0) continue;
 				FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
 				Inf->PointIndex = PointIndex;
-				Inf->Weight     = V.BoneWeight[BoneIndex] / 255.0f;
+				Inf->Weight     = BoneWeight / 255.0f;
 				Inf->BoneIndex  = C.Bones[BoneIndex];
-//!! try to import some small known UT2 mesh to UT3, check their influences
 			}
 		}
+		unguard;
 	}
 	unguard;
 	// create triangles
@@ -2069,6 +2124,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		{
 			VTriangle *Face = new(Triangles) VTriangle;
 			Face->MatIndex = S.u1[0];		//??
+			if (S.u1[1] != Sec) appNotify("Sec=%d u1[1]=%d", Sec, S.u1[1]);	//??
 			Face->WedgeIndex[0] = Lod.IndexBuffer.Indices[Index++];
 			Face->WedgeIndex[1] = Lod.IndexBuffer.Indices[Index++];
 			Face->WedgeIndex[2] = Lod.IndexBuffer.Indices[Index++];
@@ -2077,8 +2133,8 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 
 	MeshOrigin.Scale(-1);
 
-	// fix skeleton
-	for (int i = 0; i < RefSkeleton.Num(); i++)
+	// fix skeleton; all bones but 0
+	for (int i = 1; i < RefSkeleton.Num(); i++)
 		RefSkeleton[i].BonePos.Orientation.W *= -1;
 
 	// materials

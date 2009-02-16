@@ -26,4 +26,4 @@
 #define UC2				1
 
 // requires UNREAL3
-// ... none ...
+#define MEDGE			1		// Mirror's Edge

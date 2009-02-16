@@ -5,6 +5,31 @@
 #	error DEUS_EX requires UNREAL1
 #endif
 
+/*-----------------------------------------------------------------------------
+UE1 CLASS TREE:
+~~~~~~~~~~~~~~~
+	UObject
+		UPrimitive
+			UMesh
+				ULodMesh
+					USkeletalMesh
+			USkelModel (Rune)
+
+UE2 CLASS TREE:
+~~~~~~~~~~~~~~~
+	UObject
+		UPrimitive
+			ULodMesh
+				USkeletalMesh
+				UVertMesh
+
+UE3 CLASS TREE:
+~~~~~~~~~~~~~~~
+	UObject
+		USkeletalMesh
+
+-----------------------------------------------------------------------------*/
+
 
 /*-----------------------------------------------------------------------------
 	UPrimitive class
@@ -757,7 +782,15 @@ struct FMeshBone
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshBone &B)
 	{
-		return Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
+		Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
+#if UNREAL3
+		if (Ar.ArVer >= 515 && Ar.ArVer != 522)
+		{
+			int unk44;						// byte[4] ? default is 0xFF x 4
+			Ar << unk44;
+		}
+#endif
+		return Ar;
 	}
 };
 

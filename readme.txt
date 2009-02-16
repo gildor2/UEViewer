@@ -22,6 +22,9 @@ Modified Unreal Engine 2.5
   Exteel
 Unreal Engine 3:
   Unreal Tournament 3
+  Gears of War
+  The Last Remnant (benchmark)
+  Mirror's Edge
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,6 +43,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+16.02.2009
+- implemented Mirror's Edge SkeletalMesh support
+
 11.02.2009
 - implemented UE3 SkeletalMesh support
 - releasing OpenGL texture memory when closing material viewer (smaller memory usage)

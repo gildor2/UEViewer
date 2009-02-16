@@ -81,7 +81,7 @@ struct FPackageFileSummary
 	TArray<FGenerationInfo> Generations;
 #if UNREAL3
 	int			HeadersSize;		// used by UE3 for precaching name table
-	FString		U3unk10;			// seems, always "None"
+	FString		PackageGroup;		// "None" or directory name
 	int			DependsOffset;		// number of items = ExportCount
 	int			EngineVersion;
 	int			CookerVersion;
@@ -109,10 +109,7 @@ struct FPackageFileSummary
 			else
 				S.HeadersSize = 0;
 			if (S.FileVersion >= 269)
-			{
-				Ar << S.U3unk10;
-				if (strcmp(*S.U3unk10, "None") != 0) appNotify("U3unk10 = \"%s\"", *S.U3unk10);
-			}
+				Ar << S.PackageGroup;
 //		}
 #endif
 		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
@@ -189,7 +186,7 @@ struct FPackageFileSummary
 //		}
 //		printf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
 //		printf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
-//		printf("HeadersSize:%X U10:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.U3unk10, S.DependsOffset, S.U3unk60);
+//		printf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
 #endif // UNREAL3
 		return Ar;
 		unguard;

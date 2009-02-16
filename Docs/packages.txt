@@ -20,5 +20,6 @@ Unreal Championship 2	1		97(151)
 
 			LicenseeVer	FileVer		EngineVer	NetVer		MinFileVer	MinEngVer
 Gears Of War		9		1EA(490)	D01(3329)	C05(3077)	E1(225)
+UT3			0		200(512)	DC1(3521)	D8B(3467)	1EB(491)	D8B(3467)
 Mass Effect		3F0(1008)	1EB(491)			C05(3077)
-UT3			0		200(512)	DC1(3521	D8B(3467)	1EB(491)	D8B(3467)
+Mirror's Edge		2B(43)		218(636)	E84(3716)	C05(3077)	1EB(491)	C05(3077)
