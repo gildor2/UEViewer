@@ -39,7 +39,7 @@ static int lightingMode = LIGHTING_SPECULAR;
 //-----------------------------------------------------------------------------
 
 #define DEFAULT_DIST			256
-#define MIN_DIST				50
+#define MIN_DIST				25
 #define MAX_DIST				2048
 #define CLEAR_COLOR				0.2, 0.3, 0.3, 0
 
@@ -185,13 +185,6 @@ static void DrawChar(char c, int color, int textX, int textY)
 	if (textX <= -CHAR_WIDTH || textY <= -CHAR_HEIGHT ||
 		textX > winWidth || textY > winHeight)
 		return;				// outside of screen
-
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, FONT_TEX_NUM);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.5);
 
 	static const float colorTable[][3] =
 	{
@@ -545,6 +538,14 @@ static void DrawText(const CRText *rec)
 
 void FlushTexts()
 {
+	// setup GL
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, FONT_TEX_NUM);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.5);
+
 	Text.Enumerate(DrawText);
 	nextLeft_y = nextRight_y = TOP_TEXT_POS;
 	ClearTexts();

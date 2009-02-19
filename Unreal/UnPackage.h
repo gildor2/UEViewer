@@ -28,17 +28,6 @@ struct FGenerationInfo
 };
 
 
-class FGuid
-{
-public:
-	unsigned	A, B, C, D;
-
-	friend FArchive& operator<<(FArchive &Ar, FGuid &G)
-	{
-		return Ar << G.A << G.B << G.C << G.D;
-	}
-};
-
 #if UNREAL3
 
 struct FCompressedChunk
@@ -97,6 +86,8 @@ struct FPackageFileSummary
 
 		// read tag and version
 		Ar << S.Tag << S.FileVersion << S.LicenseeVersion;
+		if (S.Tag != PACKAGE_FILE_TAG)
+			appError("Wrong tag in package");
 		// store file version to archive (required for some structures, for UNREAL3 path)
 		Ar.ArVer         = S.FileVersion;
 		Ar.ArLicenseeVer = S.LicenseeVersion;

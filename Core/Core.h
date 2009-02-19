@@ -137,7 +137,9 @@ const char *appGetRootDirectory();
 
 int appSprintf(char *dest, int size, const char *fmt, ...);
 void appStrncpyz(char *dst, const char *src, int count);
+void appStrncpylwr(char *dst, const char *src, int count);
 void appStrcatn(char *dst, int count, const char *src);
+const char *appStristr(const char *s1, const char *s2);
 
 
 FORCEINLINE void* operator new(size_t size)

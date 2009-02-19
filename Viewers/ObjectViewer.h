@@ -40,7 +40,7 @@ public:
 	{
 		printf("\nObject info:\n============\n");
 		printf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
-		Object->DumpProps();
+		Object->GetTypeinfo()->DumpProps(Object);
 	}
 #if TEST_FILES
 	virtual void Test()

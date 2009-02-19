@@ -72,6 +72,7 @@ static bool WasError = false;
 
 static void LogHistory(const char *part)
 {
+	if (!GErrorHistory[0]) strcpy(GErrorHistory, "General Protection Fault !\n");
 	appStrcatn(ARRAY_ARG(GErrorHistory), part);
 }
 
@@ -170,10 +171,40 @@ void appStrncpyz(char *dst, const char *src, int count)
 }
 
 
+void appStrncpylwr(char *dst, const char *src, int count)
+{
+	if (count <= 0) return;
+
+	char c;
+	do
+	{
+		if (!--count)
+		{
+			// out of dst space -- add zero to the string end
+			*dst = 0;
+			return;
+		}
+		c = tolower(*src++);
+		*dst++ = c;
+	} while (c);
+}
+
+
 void appStrcatn(char *dst, int count, const char *src)
 {
 	char *p = strchr(dst, 0);
 	int maxLen = count - (p - dst);
 	if (maxLen > 1)
 		appStrncpyz(p, src, maxLen);
+}
+
+
+const char *appStristr(const char *s1, const char *s2)
+{
+	char buf1[1024], buf2[1024];
+	appStrncpylwr(buf1, s1, ARRAY_COUNT(buf1));
+	appStrncpylwr(buf2, s2, ARRAY_COUNT(buf2));
+	char *s = strstr(buf1, buf2);
+	if (!s) return NULL;
+	return s1 + (s - buf1);
 }

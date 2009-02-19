@@ -312,6 +312,18 @@ void UObject::Serialize(FArchive &Ar)
 		Ar << NetIndex;
 #endif
 
+	const CTypeInfo *Type = GetTypeinfo();
+	assert(Type);
+	Type->SerializeProps(Ar, this);
+
+	unguard;
+}
+
+
+void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
+{
+	guard(CTypeInfo::SerializeProps);
+
 	// property list
 	while (true)
 	{
@@ -328,17 +340,23 @@ void UObject::Serialize(FArchive &Ar)
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
 			if (!Prop)
-				appNotify("WARNING: %s \"%s::%s\" was not found", GetTypeName(Tag.Type), GetClassName(), *Tag.Name);
+				appNotify("WARNING: %s \"%s::%s\" was not found", GetTypeName(Tag.Type), Name, *Tag.Name);
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
 			continue;
 		}
 		// verify array index
-		if (Tag.ArrayIndex >= Prop->Count)
-			appError("Class \"%s\": %s %s[%d]: serializing index %d",
-				GetClassName(), Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
-		byte *value = (byte*)this + Prop->Offset;
+		if (Tag.Type == NAME_ArrayProperty)
+		{
+			if (!(Prop->Count == -1 && Tag.ArrayIndex == 0))
+				appError("Struct \"%s\": %s %s has Prop.Count=%d (should be -1) and ArrayIndex=%d (should be 0)",
+					Name, Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
+		}
+		else if (Tag.ArrayIndex >= Prop->Count)
+			appError("Struct \"%s\": %s %s[%d]: serializing index %d",
+				Name, Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
+		byte *value = (byte*)ObjectData + Prop->Offset;
 
 #define TYPE(name) \
 	if (strcmp(Prop->TypeName, name)) \
@@ -415,11 +433,42 @@ void UObject::Serialize(FArchive &Ar)
 			break;
 
 		case NAME_ClassProperty:
-			appError("Class property not implemented");
+			appError("Class property is not implemented");
 			break;
 
 		case NAME_ArrayProperty:
-			appError("Array property not implemented");
+			{
+				FArray *Arr = (FArray*)value;
+#define SIMPLE_ARRAY_TYPE(type) \
+		if (!strcmp(Prop->TypeName, #type)) { Ar << *(TArray<type>*)Arr; }
+				SIMPLE_ARRAY_TYPE(int)
+				else SIMPLE_ARRAY_TYPE(float)
+				else SIMPLE_ARRAY_TYPE(UObject*)
+				else SIMPLE_ARRAY_TYPE(FName)
+#undef SIMPLE_ARRAY_TYPE
+				else
+				{
+					// read data count
+					int DataCount;
+#if UNREAL3
+					if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
+						Ar << DataCount;
+					else
+#endif
+						Ar << AR_INDEX(DataCount);	//?? check - AR_INDEX or not
+					// find data typeinfo
+					const CTypeInfo *ItemType = FindStructType(Prop->TypeName + 1);	//?? skip 'F' in name
+					if (!ItemType)
+						appError("Unknown structure type %s", Prop->TypeName);
+					// prepare array
+					Arr->Empty(DataCount, ItemType->SizeOf);
+					Arr->Add(DataCount, ItemType->SizeOf);
+					// serialize items
+					byte *item = (byte*)Arr->GetData();
+					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
+						ItemType->SerializeProps(Ar, item);
+				}
+			}
 			break;
 
 		case NAME_StructProperty:
@@ -432,6 +481,7 @@ void UObject::Serialize(FArchive &Ar)
 				}
 				else
 				{
+					//!! implement this (use FindStructType()->SerializeProps())
 					appNotify("WARNING: Unknown structure type: %s", *Tag.StrucName);
 					Ar.Seek(StopPos);
 				}
@@ -457,10 +507,11 @@ void UObject::Serialize(FArchive &Ar)
 			appError("Unknown property");
 			break;
 		}
-		if (Ar.Tell() != StopPos) appError("%s\'%s\'.%s: Pos-StopPos = %d", GetClassName(), Name, *Tag.Name, Ar.Tell() - StopPos);
+		if (Ar.Tell() != StopPos) appError("%s\'%s\'.%s: Pos-StopPos = %d", Name, Name, *Tag.Name, Ar.Tell() - StopPos);
 
-		unguardf(("(%s.%s)", GetClassName(), *Tag.Name));
+		unguardf(("(%s.%s)", Name, *Tag.Name));
 	}
+
 	unguard;
 }
 
@@ -500,20 +551,39 @@ void UnregisterClass(const char *Name)
 }
 
 
-UObject *CreateClass(const char *Name)
+const CTypeInfo *FindClassType(const char *Name, bool ClassType)
 {
+	guard(CreateClass);
 	for (int i = 0; i < GClassCount; i++)
 		if (!strcmp(GClasses[i].Name, Name))
 		{
-			UObject *Obj = GClasses[i].Constructor();
-			// NOTE: do not add object to GObjObjects in UObject constructor
-			// to allow runtime creation of objects without linked package
-			// Really, should add to this list after loading from package
-			// (in CreateExport/Import or after serialization)
-			UObject::GObjObjects.AddItem(Obj);
-			return Obj;
+			if (!GClasses[i].TypeInfo) appError("No typeinfo for class");
+			const CTypeInfo *Type = GClasses[i].TypeInfo();
+			if (Type->IsClass() != ClassType) continue;
+			return Type;
 		}
 	return NULL;
+	unguardf(("%s", Name));
+}
+
+
+UObject *CreateClass(const char *Name)
+{
+	guard(CreateClass);
+
+	const CTypeInfo *Type = FindClassType(Name);
+	if (!Type) return NULL;
+
+	UObject *Obj = (UObject*)appMalloc(Type->SizeOf);
+	Type->Constructor(Obj);
+	// NOTE: do not add object to GObjObjects in UObject constructor
+	// to allow runtime creation of objects without linked package
+	// Really, should add to this list after loading from package
+	// (in CreateExport/Import or after serialization)
+	UObject::GObjObjects.AddItem(Obj);
+	return Obj;
+
+	unguardf(("%s", Name));
 }
 
 
@@ -526,66 +596,74 @@ bool IsKnownClass(const char *Name)
 }
 
 
-const CPropInfo *UObject::FindProperty(const char *Name) const
+const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 {
-	for (int index = 0; /*empty*/; index++)
+	guard(CTypeInfo::FindProperty);
+	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
 	{
-		const CPropInfo *info = EnumProps(index);
-		if (!info) break;		// all props enumerated
-		if (!strcmp(info->Name, Name))
-			return info;
+		for (int i = 0; i < Type->NumProps; i++)
+			if (!(strcmp(Type->Props[i].Name, Name)))
+				return Type->Props + i;
 	}
 	return NULL;
+	unguard;
 }
 
 
-void UObject::DumpProps() const
+void CTypeInfo::DumpProps(void *Data) const
 {
-	for (int PropIndex = 0; /*empty*/; PropIndex++)
+	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
 	{
-		const CPropInfo *Prop = EnumProps(PropIndex);
-		if (!Prop) break;		// all props enumerated
-		if (!Prop->TypeName)
+		if (!Type->NumProps) continue;
+		printf("%s properties:\n", Type->Name);
+		for (int PropIndex = 0; PropIndex < Type->NumProps; PropIndex++)
 		{
-			printf("%3d: (dummy) %s\n", PropIndex, Prop->Name);
-			continue;
-		}
-		printf("%3d: %s %s", PropIndex, Prop->TypeName, Prop->Name);
-		if (Prop->Count > 1)
-			printf("[%d] = { ", Prop->Count);
-		else
-			printf(" = ");
+			const CPropInfo *Prop = Type->Props + PropIndex;
+			if (!Prop->TypeName)
+			{
+				printf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
+				continue;
+			}
+			printf("  %3d: %s %s", PropIndex, Prop->TypeName, Prop->Name);
+			if (Prop->Count > 1)
+				printf("[%d] = { ", Prop->Count);
+			else
+				printf(" = ");
 
-		byte *value = (byte*)this + Prop->Offset;
+			byte *value = (byte*)Data + Prop->Offset;
 
-		for (int ArrayIndex = 0; ArrayIndex < Prop->Count; ArrayIndex++)
-		{
-			if (ArrayIndex > 0) printf(", ");
+			for (int ArrayIndex = 0; ArrayIndex < Prop->Count; ArrayIndex++)
+			{
+				if (ArrayIndex > 0) printf(", ");
 #define IS(name)  strcmp(Prop->TypeName, #name) == 0
 #define PROCESS(type, format, value) \
-			if (IS(type)) { printf(format, value); }
-			PROCESS(byte,     "%d", PROP(byte));
-			PROCESS(int,      "%d", PROP(int));
-			PROCESS(bool,     "%s", PROP(bool) ? "true" : "false");
-			PROCESS(float,    "%g", PROP(float));
+				if (IS(type)) { printf(format, value); }
+				PROCESS(byte,     "%d", PROP(byte));
+				PROCESS(int,      "%d", PROP(int));
+				PROCESS(bool,     "%s", PROP(bool) ? "true" : "false");
+				PROCESS(float,    "%g", PROP(float));
 #if 1
-			if (IS(UObject*))
-			{
-				UObject *obj = PROP(UObject*);
-				if (obj)
-					printf("%s'%s'", obj->GetClassName(), obj->Name);
-				else
-					printf("Null");
-			}
+				if (IS(UObject*))
+				{
+					UObject *obj = PROP(UObject*);
+					if (obj)
+						printf("%s'%s'", obj->GetClassName(), obj->Name);
+					else
+						printf("Null");
+				}
 #else
-			PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
+				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 #endif
-			PROCESS(FName,    "%s", *PROP(FName));
-		}
+				PROCESS(FName,    "%s", *PROP(FName));
+#if UNREAL3
+				PROCESS(enum3,    "%s", *PROP(FName))
+#endif
+			}
 
-		if (Prop->Count > 1)
-			printf(" }\n");
-		else
-			printf("\n");
+			if (Prop->Count > 1)
+				printf(" }\n");
+			else
+				printf("\n");
+		}
 	}
 }

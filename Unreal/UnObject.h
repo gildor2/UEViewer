@@ -8,12 +8,32 @@
 
 // NOTE: DECLARE_CLASS and REGISTER_CLASS will skip 1st class name char
 
-#define DECLARE_CLASS(Class,Base)				\
+#define DECLARE_BASE(Class,SuperType)						\
 	public:										\
 		typedef Class	ThisClass;				\
+		static void InternalConstructor(void *Mem) \
+		{ new(Mem) ThisClass; }					\
+		static const CTypeInfo *StaticGetTypeinfo() \
+		{										\
+			int numProps;						\
+			const CPropInfo *props = StaticGetProps(numProps); \
+			static const CTypeInfo type(		\
+				#Class,							\
+				SuperType,						\
+				sizeof(ThisClass),				\
+				props, numProps,				\
+				InternalConstructor				\
+			);									\
+			return &type;						\
+			return StaticGetTypeinfo();			\
+		}
+
+#define DECLARE_STRUCT(Class)					\
+		DECLARE_BASE(Class, NULL)
+
+#define DECLARE_CLASS(Class,Base)				\
+		DECLARE_BASE(Class, Super::StaticGetTypeinfo()) \
 		typedef Base	Super;					\
-		static ThisClass* StaticConstructor()	\
-		{ return new ThisClass; }				\
 		virtual const char* GetClassName() const\
 		{ return #Class+1; }					\
 		virtual bool IsA(const char *ClassName) const \
@@ -22,6 +42,10 @@
 				return true;					\
 			return Super::IsA(ClassName);		\
 		}										\
+		virtual const CTypeInfo *GetTypeinfo() const \
+		{										\
+			return StaticGetTypeinfo();			\
+		}										\
 	private:									\
 		friend FArchive& operator<<(FArchive &Ar, Class *&Res) \
 		{										\
@@ -29,27 +53,50 @@
 		}
 
 
-struct CClassInfo
-{
-	const char *Name;
-	UObject* (*Constructor)();
-};
-
-
 struct CPropInfo
 {
-	const char *Name;		// field name
-	const char *TypeName;	// name of field type; simple type names used for verification only
-	word		Offset;		// offset of field from class start
-	word		Count;		// number of array items
+	const char	   *Name;		// field name
+	const char	   *TypeName;	// name of field type; simple type names used for verification only
+	word			Offset;		// offset of field from class start
+	short			Count;		// number of array items
 };
 
-#define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(Field) / sizeof(Type) },
+
+struct CTypeInfo
+{
+	const char		*Name;
+	const CTypeInfo *Parent;
+	int				SizeOf;
+	const CPropInfo *Props;
+	int				NumProps;
+	void (*Constructor)(void*);
+	// methods
+	inline CTypeInfo(const char *AName, const CTypeInfo *AParent, int DataSize,
+					 const CPropInfo *AProps, int PropCount, void (*AConstructor)(void*))
+	:	Name(AName)
+	,	Parent(AParent)
+	,	SizeOf(DataSize)
+	,	Props(AProps)
+	,	NumProps(PropCount)
+	,	Constructor(AConstructor)
+	{}
+	inline bool IsClass() const
+	{
+		return Name[0] != 'F';		// UE structure type names are started with 'F'
+	}
+	const CPropInfo *FindProperty(const char *Name) const;
+	void SerializeProps(FArchive &Ar, void *ObjectData) const;
+	void DumpProps(void *Data) const;
+};
+
+
+#define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(((ThisClass*)NULL)->Field) / sizeof(Type) },
+#define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
 #define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
 
 
 #define BEGIN_PROP_TABLE						\
-	virtual const CPropInfo *EnumProps(int index) const \
+	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps) \
 	{											\
 		static const CPropInfo props[] =		\
 		{
@@ -75,14 +122,28 @@ struct CPropInfo
 
 #define END_PROP_TABLE							\
 		};										\
-		if (index >= ARRAY_COUNT(props))		\
-			return Super::EnumProps(index - ARRAY_COUNT(props)); \
-		return props + index;					\
-	}											\
+		numProps = ARRAY_COUNT(props);			\
+		return props;							\
+	}
+
+
+struct CClassInfo
+{
+	const char		*Name;
+	const CTypeInfo* (*TypeInfo)();
+};
 
 
 void RegisterClasses(CClassInfo *Table, int Count);
 void UnregisterClass(const char *Name);
+
+const CTypeInfo *FindClassType(const char *Name, bool ClassType = true);
+
+FORCEINLINE const CTypeInfo *FindStructType(const char *Name)
+{
+	return FindClassType(Name, false);
+}
+
 UObject *CreateClass(const char *Name);
 bool IsKnownClass(const char *Name);
 
@@ -91,9 +152,9 @@ bool IsKnownClass(const char *Name);
 	{											\
 		static CClassInfo Table[] = {
 #define REGISTER_CLASS(Class)					\
-			{ #Class+1, (UObject* (*) ())Class::StaticConstructor },
+			{ #Class+1, Class::StaticGetTypeinfo },
 #define REGISTER_CLASS_ALIAS(Class,ClassName)	\
-			{ #ClassName+1, (UObject* (*) ())Class::StaticConstructor },
+			{ #ClassName+1, Class::StaticGetTypeinfo },
 #define END_CLASS_TABLE							\
 		};										\
 		RegisterClasses(ARRAY_ARG(Table));		\
@@ -131,12 +192,20 @@ public:
 	{
 		return strcmp(ClassName, "Object") == 0;
 	}
-	virtual const CPropInfo *EnumProps(int index) const
+	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps)
 	{
+		numProps = 0;
 		return NULL;
 	}
-	const CPropInfo *FindProperty(const char *Name) const;
-	void DumpProps() const;
+	static FORCEINLINE const CTypeInfo *StaticGetTypeinfo()
+	{
+		static const CTypeInfo Typeinfo("UObject", NULL, sizeof(UObject), NULL, 0, NULL);
+		return &Typeinfo;
+	}
+	virtual const CTypeInfo *GetTypeinfo() const
+	{
+		return StaticGetTypeinfo();
+	}
 
 //private: -- not private to allow object browser ...
 	// static data and methods
@@ -146,7 +215,19 @@ public:
 
 	static void BeginLoad();
 	static void EndLoad();
-};
 
+	void *operator new(size_t Size)
+	{
+		return appMalloc(Size);
+	}
+	void *operator new(size_t Size, void *Mem)	// for inplace constructor
+	{
+		return Mem;
+	}
+	void operator delete(void *Object)
+	{
+		appFree(Object);
+	}
+};
 
 #endif // __UNOBJECT_H__

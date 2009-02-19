@@ -53,8 +53,7 @@ UE2 MATERIALS TREE:
 
 UE3 MATERIALS TREE:
 ~~~~~~~~~~~~~~~~~~~
-	Surface
-		MaterialInterface
+	Surface (empty)
 		Texture
 			Texture2D
 				ShadowMapTexture2D
@@ -67,6 +66,14 @@ UE3 MATERIALS TREE:
 			TextureRenderTarget
 				TextureRenderTarget2D
 				TextureRenderTargetCube
+		MaterialInterface (empty)
+			Material
+				MaterialExpression
+					MaterialExpressionTextureSample
+					...
+			MaterialInstance
+				MaterialInstanceConstant
+				MaterialInstanceTimeVarying
 */
 
 #if RENDERING
@@ -106,7 +113,7 @@ struct FLineageMaterialStageProperty
 
 	friend FArchive& operator<<(FArchive &Ar, FLineageMaterialStageProperty &P)
 	{
-		Ar << P.unk1 << P.unk2;
+		return Ar << P.unk1 << P.unk2;
 	}
 };
 
@@ -877,14 +884,21 @@ class UTexture3 : public UUnrealMaterial	// in UE3 it is derived from USurface->
 {
 	DECLARE_CLASS(UTexture3, UUnrealMaterial)
 public:
+	float			UnpackMin[4];
+	float			UnpackMax[4];
 	FByteBulkData	SourceArt;
 
+	UTexture3()
+	{
+		UnpackMax[0] = UnpackMax[1] = UnpackMax[2] = UnpackMax[3] = 1.0f;
+	}
+
 	BEGIN_PROP_TABLE
+		PROP_FLOAT(UnpackMin)
+		PROP_FLOAT(UnpackMax)
 		// no properties required (all are for importing and cooking)
 		PROP_DROP(SRGB)
 		PROP_DROP(RGBE)
-		PROP_DROP(UnpackMin)
-		PROP_DROP(UnpackMax)
 		PROP_DROP(CompressionNoAlpha)
 		PROP_DROP(CompressionNone)
 		PROP_DROP(CompressionNoMipmaps)
@@ -922,10 +936,10 @@ enum EPixelFormat
 	PF_DXT3,
 	PF_DXT5,
 	PF_UYVY,
-	PF_FloatRGB,		// A RGB FP format with platform-specific implementation, for use with render targets
-	PF_FloatRGBA,		// A RGBA FP format with platform-specific implementation, for use with render targets
-	PF_DepthStencil,	// A depth+stencil format with platform-specific implementation, for use with render targets
-	PF_ShadowDepth,		// A depth format with platform-specific implementation, for use with render targets
+	PF_FloatRGB,			// A RGB FP format with platform-specific implementation, for use with render targets
+	PF_FloatRGBA,			// A RGBA FP format with platform-specific implementation, for use with render targets
+	PF_DepthStencil,		// A depth+stencil format with platform-specific implementation, for use with render targets
+	PF_ShadowDepth,			// A depth format with platform-specific implementation, for use with render targets
 	PF_FilteredShadowDepth, // A depth format with platform-specific implementation, that can be filtered by hardware
 	PF_R32F,
 	PF_G16R16,
@@ -934,6 +948,19 @@ enum EPixelFormat
 	PF_A2B10G10R10,
 	PF_A16B16G16R16,
 	PF_D24
+};
+
+enum ETextureFilter
+{
+	TF_Nearest,
+	TF_Linear
+};
+
+enum ETextureAddress
+{
+	TA_Wrap,
+	TA_Clamp,
+	TA_Mirror
 };
 
 struct FTexture2DMipMap
@@ -957,6 +984,8 @@ public:
 	int				SizeX;
 	int				SizeY;
 	FName			Format;		//!! EPixelFormat
+	FName			AddressX;	//!! ETextureAddress
+	FName			AddressY;	//!! ETextureAddress
 
 #if RENDERING
 	// rendering implementation fields
@@ -966,16 +995,19 @@ public:
 #if RENDERING
 	UTexture2D()
 	:	TexNum(0)
-	{}
+	{
+		AddressX.Str = "TA_Wrap";
+		AddressY.Str = "TA_Wrap";
+	}
 #endif
 
 	BEGIN_PROP_TABLE
 		PROP_INT(SizeX)
 		PROP_INT(SizeY)
 		PROP_ENUM3(Format)		//!! FString (on-disk) -> byte (in-memory)
+		PROP_ENUM3(AddressX)
+		PROP_ENUM3(AddressY)
 		// drop unneeded props
-		PROP_DROP(AddressX)
-		PROP_DROP(AddressY)
 		PROP_DROP(bGlobalForceMipLevelsToBeResident)
 		PROP_DROP(TextureFileCacheName)
 		PROP_DROP(MipTailBaseIdx)
@@ -1001,6 +1033,140 @@ public:
 #endif
 };
 
+enum EBlendMode
+{
+	BLEND_Opaque,
+	BLEND_Masked,
+	BLEND_Translucent,
+	BLEND_Additive,
+	BLEND_Modulate
+};
+
+enum EMaterialLightingModel
+{
+	MLM_Phong,
+	MLM_NonDirectional,
+	MLM_Unlit,
+	MLM_SHPRT,
+	MLM_Custom
+};
+
+class UMaterial3 : public UUnrealMaterial
+{
+	DECLARE_CLASS(UMaterial3, UUnrealMaterial)
+public:
+	bool			TwoSided;
+	bool			bDisableDepthTest;
+	bool			bIsMasked;
+	TArray<UTexture3*> ReferencedTextures;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		Ar.Seek(Ar.GetStopper());		//?? drop native data
+	}
+
+	BEGIN_PROP_TABLE
+		PROP_BOOL(TwoSided)
+		PROP_BOOL(bDisableDepthTest)
+		PROP_BOOL(bIsMasked)
+		PROP_ARRAY(ReferencedTextures, UObject*)
+		// MaterialInterface fields
+		PROP_DROP(PreviewMesh)
+		// drop other props
+		PROP_DROP(PhysMaterial)
+		PROP_DROP(PhysicalMaterial)
+		PROP_DROP(DiffuseColor)
+		PROP_DROP(SpecularColor)
+		PROP_DROP(SpecularPower)
+		PROP_DROP(Normal)
+		PROP_DROP(EmissiveColor)
+		PROP_DROP(Opacity)
+		PROP_DROP(OpacityMask)
+		PROP_DROP(OpacityMaskClipValue)
+		PROP_DROP(Distortion)
+		PROP_DROP(BlendMode)			//!! use it (EBlendMode)
+		PROP_DROP(LightingModel)		//!! use it (EMaterialLightingModel)
+		PROP_DROP(CustomLighting)
+		PROP_DROP(TwoSidedLightingMask)
+		PROP_DROP(TwoSidedLightingColor)
+		PROP_DROP(bUsedAsLightFunction)
+		PROP_DROP(bUsedWithFogVolumes)
+		PROP_DROP(bUsedAsSpecialEngineMaterial)
+		PROP_DROP(bUsedWithSkeletalMesh)
+		PROP_DROP(bUsedWithParticleSystem)
+		PROP_DROP(bUsedWithParticleSprites)
+		PROP_DROP(bUsedWithBeamTrails)
+		PROP_DROP(bUsedWithParticleSubUV)
+		PROP_DROP(bUsedWithFoliage)
+		PROP_DROP(bUsedWithSpeedTree)
+		PROP_DROP(bUsedWithStaticLighting)
+		PROP_DROP(bUsedWithLensFlare)
+		PROP_DROP(bUsedWithGammaCorrection)
+		PROP_DROP(bUsedWithInstancedMeshParticles)
+		PROP_DROP(Wireframe)
+		PROP_DROP(bIsFallbackMaterial)
+		PROP_DROP(FallbackMaterial)		//!! use it
+		PROP_DROP(EditorX)
+		PROP_DROP(EditorY)
+		PROP_DROP(EditorPitch)
+		PROP_DROP(EditorYaw)
+		PROP_DROP(Expressions)			//!! use it
+		PROP_DROP(EditorComments)
+		PROP_DROP(EditorCompounds)
+		PROP_DROP(bUsesDistortion)
+		PROP_DROP(bUsesSceneColor)
+	END_PROP_TABLE
+
+	BIND;
+};
+
+class UMaterialInstance : public UMaterial3
+{
+	DECLARE_CLASS(UMaterialInstance, UMaterial3)
+public:
+
+	BEGIN_PROP_TABLE
+//		PROP_DROP(PhysMaterial) -- duplicate ?
+		PROP_DROP(Parent)		// should use this, if implementing correct material
+		PROP_DROP(bHasStaticPermutationResource)
+//		PROP_DROP(ReferencedTextures) -- duplicate ?
+	END_PROP_TABLE
+};
+
+struct FTextureParameterValue
+{
+	DECLARE_STRUCT(FTextureParameterValue)
+
+	FName			ParameterName;
+	UTexture3		*ParameterValue;
+//	FGuid			ExpressionGUID;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(ParameterName)
+		PROP_OBJ(ParameterValue)
+		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+	END_PROP_TABLE
+};
+
+class UMaterialInstanceConstant : public UMaterialInstance
+{
+	DECLARE_CLASS(UMaterialInstanceConstant, UMaterialInstance)
+public:
+	TArray<FTextureParameterValue> TextureParameterValues;
+
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(TextureParameterValues, FTextureParameterValue)
+		// drop other props
+		PROP_DROP(FontParameterValues)
+		PROP_DROP(ScalarParameterValues)
+//		PROP_DROP(TextureParameterValues)	//!! use it
+		PROP_DROP(VectorParameterValues)
+	END_PROP_TABLE
+
+	BIND;
+};
+
 #endif // UNREAL3
 
 
@@ -1019,7 +1185,10 @@ public:
 	REGISTER_CLASS(UTexScaler)
 
 #define REGISTER_MATERIAL_CLASSES_U3	\
-	REGISTER_CLASS(UTexture2D)
+	REGISTER_CLASS_ALIAS(UMaterial3, UMaterial) \
+	REGISTER_CLASS(UTexture2D)			\
+	REGISTER_CLASS(FTextureParameterValue) \
+	REGISTER_CLASS(UMaterialInstanceConstant)
 
 
 #endif // __UNMATERIAL_H__

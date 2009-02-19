@@ -17,8 +17,34 @@ void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Lo
 	CVec3 &DstPos, CQuat &DstQuat);
 
 
+static void ExportScript(const USkeletalMesh *Mesh, FArchive &Ar)
+{
+	// mesh info
+	Ar.Printf(
+		"class %s extends Actor;\n\n"
+		"#exec MESH MODELIMPORT MESH=%s MODELFILE=%s.psk\n"
+		"#exec MESH ORIGIN      MESH=%s X=%g Y=%g Z=%g YAW=%d PITCH=%d ROLL=%d\n",
+		Mesh->Name,
+		Mesh->Name, Mesh->Name,
+		Mesh->Name, FVECTOR_ARG(Mesh->MeshOrigin),
+			Mesh->RotOrigin.Yaw >> 8, Mesh->RotOrigin.Pitch >> 8, Mesh->RotOrigin.Roll >> 8
+	);
+	// mesh scale
+	Ar.Printf(
+		"#exec MESH SCALE       MESH=%s X=%g Y=%g Z=%g\n\n",
+		Mesh->Name, FVECTOR_ARG(Mesh->MeshScale)
+	);
+}
+
+
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 {
+	// export script file
+	char filename[64];
+	appSprintf(ARRAY_ARG(filename), "%s.uc", Mesh->Name);
+	FFileReader Ar1(filename, false);
+	ExportScript(Mesh, Ar1);
+
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
 	int i;

@@ -506,19 +506,29 @@ public:
 		MaxCount  = 0;
 	}
 
+	void *GetData()
+	{
+		return DataPtr;
+	}
+	const void *GetData() const
+	{
+		return DataPtr;
+	}
 	int Num() const
 	{
 		return DataCount;
 	}
+
+	void Empty (int count, int elementSize);
+	void Add   (int count, int elementSize);
+	void Insert(int index, int count, int elementSize);
+	void Remove(int index, int count, int elementSize);
 
 protected:
 	void	*DataPtr;
 	int		DataCount;
 	int		MaxCount;
 
-	void Empty(int count, int elementSize);
-	void Insert(int index, int count, int elementSize);
-	void Remove(int index, int count, int elementSize);
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 };
 
@@ -710,6 +720,30 @@ public:
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);
+};
+
+
+/*-----------------------------------------------------------------------------
+	Guid
+-----------------------------------------------------------------------------*/
+
+class FGuid
+{
+//!!	DECLARE_STRUCT(FGuid) -- require include UnObject.h before this; possibly - separate typeinfo and UObject headers
+public:
+	unsigned	A, B, C, D;
+
+/*	BEGIN_PROP_TABLE
+		PROP_INT(A)
+		PROP_INT(B)
+		PROP_INT(C)
+		PROP_INT(D)
+	END_PROP_TABLE */
+
+	friend FArchive& operator<<(FArchive &Ar, FGuid &G)
+	{
+		return Ar << G.A << G.B << G.C << G.D;
+	}
 };
 
 

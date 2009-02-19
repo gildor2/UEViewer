@@ -925,6 +925,7 @@ struct VTriangle
 		WedgeIndex[1] = F.iWedge[1];
 		WedgeIndex[2] = F.iWedge[2];
 		MatIndex      = F.MaterialIndex;
+		return *this;
 	}
 };
 

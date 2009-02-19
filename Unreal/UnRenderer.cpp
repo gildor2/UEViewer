@@ -509,9 +509,83 @@ void UTexModifier::Bind(unsigned PolyFlags)
 
 #if UNREAL3
 
+void UMaterial3::Bind(unsigned PolyFlags)
+{
+	guard(UMaterial3::Bind);
+
+	UTexture3 *Diffuse = NULL;
+	for (int i = 0; i < ReferencedTextures.Num(); i++)
+	{
+		UTexture3 *Tex = ReferencedTextures[i];
+		if (!Tex) continue;
+		const char *Name = Tex->Name;
+		int len = strlen(Name);
+		//!! - separate code (common for UMaterial3 + UMaterialInstanceConstant)
+		//!! - weights for different paths
+		//!! - may implement with tables + macros
+		//!! - catch normalmap, specular and emissive textures
+		if (!stricmp(Name + len - 4, "_Tex"))
+			Diffuse = Tex;
+		if (!stricmp(Name + len - 2, "_D"))
+			Diffuse = Tex;
+#if 0
+		if (!stricmp(Name + len - 3, "_DI"))		// The Last Remnant ...
+			Diffuse = Tex;
+		if (!strnicmp(Name + len - 4, "_DI", 3))	// The Last Remnant ...
+			Diffuse = Tex;
+		if (appStristr(Name, "_Diffuse"))
+			Diffuse = Tex;
+#else
+		if (appStristr(Name, "_DI"))
+			Diffuse = Tex;
+		if (appStristr(Name, "_MA") && !Diffuse)	// The Last Remnant; low priority
+			Diffuse = Tex;
+		const char *s = strrchr(Name, '_');
+		if (!s) continue;
+		s++;
+		if (toupper(*s) == 'D' && !Diffuse)
+			Diffuse = Tex;
+#endif
+	}
+
+	if (!Diffuse && ReferencedTextures.Num() == 1)	// not found, but have only 1 texture
+		Diffuse = ReferencedTextures[0];
+
+	if (Diffuse)
+	{
+		glDisable(GL_ALPHA_TEST);
+		glDisable(GL_BLEND);
+
+		Diffuse->Bind(PolyFlags);
+		// TwoSided
+		if (TwoSided)
+			glDisable(GL_CULL_FACE);
+		else
+		{
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+		}
+		// alpha mask
+		if (bIsMasked)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glAlphaFunc(GL_GREATER, 0.0f);
+			glEnable(GL_ALPHA_TEST);
+		}
+	}
+	else
+		BindDefaultMaterial();
+
+	unguardf(("%s", Name));
+}
+
+
 void UTexture2D::Bind(unsigned PolyFlags)
 {
 	guard(UTexture2D::Bind);
+
+	glEnable(GL_TEXTURE_2D);
 
 	// uploading ...
 	bool upload = false;
@@ -533,8 +607,7 @@ void UTexture2D::Bind(unsigned PolyFlags)
 		if (pic)
 		{
 			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1,
-				true /*??UClampMode == TC_Clamp*/,
-				true /*??VClampMode == TC_Clamp*/);
+				strcmp(*AddressX, "TA_Clamp") == 0, strcmp(*AddressY, "TA_Clamp") == 0);
 			delete pic;
 		}
 		else
@@ -552,6 +625,33 @@ void UTexture2D::Bind(unsigned PolyFlags)
 void UTexture2D::Release()
 {
 	glDeleteTextures(1, &TexNum);
+}
+
+
+void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
+{
+	if (!TextureParameterValues.Num())
+	{
+		Super::Bind(PolyFlags);
+		return;
+	}
+
+	UTexture3 *Diffuse = NULL;
+	for (int i = 0; i < TextureParameterValues.Num(); i++)
+	{
+		const FTextureParameterValue &P = TextureParameterValues[i];
+		const char *p = P.ParameterName;
+		if (appStristr(p, "diffuse"))
+			Diffuse = P.ParameterValue;
+	}
+
+	if (!Diffuse && TextureParameterValues.Num() == 1)
+		Diffuse = TextureParameterValues[0].ParameterValue;
+
+	if (Diffuse)
+		Diffuse->Bind(PolyFlags);
+	else
+		BindDefaultMaterial();
 }
 
 #endif // UNREAL3

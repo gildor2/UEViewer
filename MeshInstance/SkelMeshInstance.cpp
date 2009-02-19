@@ -1003,11 +1003,19 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 		TransformMesh(Mesh->VertInfluences.Num(), &Mesh->VertInfluences[0], Mesh->Points.Num(), &Mesh->Points[0], RefNormals);
 
 	glEnable(GL_LIGHTING);
+	int lastMatIndex = -1;	//!! implement same glBegin/glEnd/glBindTexture optimizations for DrawLodSkeletalMesh + VertMesh
+	glBegin(GL_TRIANGLES);
 	for (i = 0; i < Mesh->Triangles.Num(); i++)
 	{
 		const VTriangle &Face = Mesh->Triangles[i];
-		SetMaterial(Face.MatIndex);
-		glBegin(GL_TRIANGLES);
+		if (Face.MatIndex != lastMatIndex)
+		{
+			// change active material
+			glEnd();					// stop drawing sequence
+			SetMaterial(Face.MatIndex);
+			lastMatIndex = Face.MatIndex;
+			glBegin(GL_TRIANGLES);		// restart drawing sequence
+		}
 		for (int j = 0; j < 3; j++)
 		{
 			const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
@@ -1015,8 +1023,8 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 			glNormal3fv(MeshNormals[W.iVertex].v);
 			glVertex3fv(MeshVerts[W.iVertex].v);
 		}
-		glEnd();
 	}
+	glEnd();
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 

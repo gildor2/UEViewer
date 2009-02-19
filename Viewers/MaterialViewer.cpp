@@ -460,6 +460,26 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		PROP(Mask)
 	MAT_END
 
+	MAT_BEGIN(UMaterial3)
+		PROP(TwoSided)
+		PROP(bDisableDepthTest)
+		PROP(bIsMasked)
+		for (int i = 0; i < Mat->ReferencedTextures.Num(); i++)
+		{
+			const UTexture3 *Tex = Mat->ReferencedTextures[i];
+			if (!Tex) continue;
+			Outline("Textures[%d] = %s", i, Tex->Name);
+		}
+	MAT_END
+
+	MAT_BEGIN(UMaterialInstanceConstant)
+		for (int i = 0; i < Mat->TextureParameterValues.Num(); i++)
+		{
+			const FTextureParameterValue &P = Mat->TextureParameterValues[i];
+			Outline("%s = %s", *P.ParameterName, P.ParameterValue ? P.ParameterValue->Name : "NULL");
+		}
+	MAT_END
+
 	if (!processed)
 	{
 		//!! unknown material

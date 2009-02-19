@@ -43,6 +43,14 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+19.02.2009
+- implemented quick support for UE3 Material and MaterialInstanceConstant texturing
+  (diffuse only)
+- significantly improved mesh rendering speed
+
+17.02.2009
+- writting uc-script when exporting SkeletalMesh
+
 16.02.2009
 - implemented Mirror's Edge SkeletalMesh support
 

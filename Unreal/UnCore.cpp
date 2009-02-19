@@ -39,6 +39,12 @@ void FArray::Empty(int count, int elementSize)
 }
 
 
+void FArray::Add(int count, int elementSize)
+{
+	Insert(0, count, elementSize);
+}
+
+
 void FArray::Insert(int index, int count, int elementSize)
 {
 	guard(FArray::Insert);

@@ -1772,13 +1772,14 @@ void USkeletalMesh::RecreateMeshFromLOD()
 
 struct FSkelMeshSection3
 {
-	short				u1[2];			//?? one of this should be MaterialIndex, another unknown
+	short				MaterialIndex;
+	short				unk1;
 	int					FirstIndex;
 	short				NumTriangles;
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
 	{
-		return Ar << S.u1[0] << S.u1[1] << S.FirstIndex << S.NumTriangles;
+		return Ar << S.MaterialIndex << S.unk1 << S.FirstIndex << S.NumTriangles;
 	}
 };
 
@@ -2002,7 +2003,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	UObject::Serialize(Ar);			// no UPrimitive ...
 
 	FBoxSphereBounds	Bounds;
-	TArray<UObject*>	Materials1;
+	TArray<UMaterial*>	Materials1;	// MaterialInterface*
 	TArray<FStaticLODModel3> Lods;
 
 #if MEDGE
@@ -2123,8 +2124,8 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		for (int i = 0; i < S.NumTriangles; i++)
 		{
 			VTriangle *Face = new(Triangles) VTriangle;
-			Face->MatIndex = S.u1[0];		//??
-			if (S.u1[1] != Sec) appNotify("Sec=%d u1[1]=%d", Sec, S.u1[1]);	//??
+			Face->MatIndex = S.MaterialIndex;
+			if (S.unk1 != Sec) appNotify("Sec=%d unk1=%d", Sec, S.unk1);	//??
 			Face->WedgeIndex[0] = Lod.IndexBuffer.Indices[Index++];
 			Face->WedgeIndex[1] = Lod.IndexBuffer.Indices[Index++];
 			Face->WedgeIndex[2] = Lod.IndexBuffer.Indices[Index++];
@@ -2133,13 +2134,19 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 
 	MeshOrigin.Scale(-1);
 
+	int i;
 	// fix skeleton; all bones but 0
-	for (int i = 1; i < RefSkeleton.Num(); i++)
+	for (i = 1; i < RefSkeleton.Num(); i++)
 		RefSkeleton[i].BonePos.Orientation.W *= -1;
 
 	// materials
 	Textures.Add(Materials1.Num());
 	Materials.Add(Materials1.Num());
+	for (i = 0; i < Materials.Num(); i++)
+	{
+		Textures[i] = Materials1[i];
+		Materials[i].TextureIndex = i;
+	}
 
 	// setup missing properties
 	MeshScale.Set(1, 1, 1);
