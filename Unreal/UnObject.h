@@ -8,18 +8,21 @@
 
 // NOTE: DECLARE_CLASS and REGISTER_CLASS will skip 1st class name char
 
-#define DECLARE_BASE(Class,SuperType)						\
+#define DECLARE_BASE(Class,Base)				\
 	public:										\
 		typedef Class	ThisClass;				\
+		typedef Base	Super;					\
 		static void InternalConstructor(void *Mem) \
 		{ new(Mem) ThisClass; }					\
 		static const CTypeInfo *StaticGetTypeinfo() \
 		{										\
-			int numProps;						\
-			const CPropInfo *props = StaticGetProps(numProps); \
+			int numProps = 0;					\
+			const CPropInfo *props = NULL;		\
+			if ((int)PropLevel != (int)Super::PropLevel) \
+				props = StaticGetProps(numProps); \
 			static const CTypeInfo type(		\
 				#Class,							\
-				SuperType,						\
+				Super::StaticGetTypeinfo(),		\
 				sizeof(ThisClass),				\
 				props, numProps,				\
 				InternalConstructor				\
@@ -28,20 +31,13 @@
 			return StaticGetTypeinfo();			\
 		}
 
+//!! can easily derive one structure from another
 #define DECLARE_STRUCT(Class)					\
-		DECLARE_BASE(Class, NULL)
+		DECLARE_BASE(Class, CNullType)
 
+//?? can replace virtual GetClassName() with GetTypeinfo()->Name
 #define DECLARE_CLASS(Class,Base)				\
-		DECLARE_BASE(Class, Super::StaticGetTypeinfo()) \
-		typedef Base	Super;					\
-		virtual const char* GetClassName() const\
-		{ return #Class+1; }					\
-		virtual bool IsA(const char *ClassName) const \
-		{										\
-			if (!strcmp(ClassName, #Class+1))	\
-				return true;					\
-			return Super::IsA(ClassName);		\
-		}										\
+		DECLARE_BASE(Class, Base)				\
 		virtual const CTypeInfo *GetTypeinfo() const \
 		{										\
 			return StaticGetTypeinfo();			\
@@ -90,12 +86,30 @@ struct CTypeInfo
 };
 
 
+// Helper class to simplify DECLARE_CLASS() macro group
+// This class is used as Base for DECLARE_BASE()/DECLARE_CLASS() macros
+struct CNullType
+{
+	enum { PropLevel = -1 };		// overriden in BEGIN_CLASS_TABLE
+	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps)
+	{
+		numProps = 0;
+		return NULL;
+	}
+	static FORCEINLINE const CTypeInfo *StaticGetTypeinfo()
+	{
+		return NULL;
+	}
+};
+
+
 #define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(((ThisClass*)NULL)->Field) / sizeof(Type) },
 #define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
 #define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
 
 
 #define BEGIN_PROP_TABLE						\
+	enum { PropLevel = Super::PropLevel + 1 };	\
 	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps) \
 	{											\
 		static const CPropInfo props[] =		\
@@ -168,6 +182,7 @@ bool IsKnownClass(const char *Name);
 class UObject
 {
 	friend class UnPackage;
+	DECLARE_BASE(UObject, CNullType)
 
 public:
 	// internal storage
@@ -184,23 +199,17 @@ public:
 	virtual void Serialize(FArchive &Ar);
 
 	// RTTI support
-	virtual const char *GetClassName() const
+	bool IsA(const char *ClassName) const;
+	inline const char *GetClassName() const
 	{
-		return "Object";
+		return GetTypeinfo()->Name + 1;
 	}
-	virtual bool IsA(const char *ClassName) const
-	{
-		return strcmp(ClassName, "Object") == 0;
-	}
+
+	enum { PropLevel = 0 };
 	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps)
 	{
 		numProps = 0;
 		return NULL;
-	}
-	static FORCEINLINE const CTypeInfo *StaticGetTypeinfo()
-	{
-		static const CTypeInfo Typeinfo("UObject", NULL, sizeof(UObject), NULL, 0, NULL);
-		return &Typeinfo;
 	}
 	virtual const CTypeInfo *GetTypeinfo() const
 	{

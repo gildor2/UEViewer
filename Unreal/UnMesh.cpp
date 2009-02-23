@@ -927,6 +927,23 @@ void USkeletalMesh::UpgradeMesh()
 }
 
 
+void USkeletalMesh::RecreateMeshFromLOD()
+{
+	guard(USkeletalMesh::RecreateMeshFromLOD);
+	if (Wedges.Num() || !LODModels.Num()) return;		// nothing to do
+	printf("Restoring mesh from LOD ...\n");
+
+	FStaticLODModel &Lod = LODModels[0];
+
+	CopyArray(Wedges, Lod.Wedges);
+	CopyArray(Points, Lod.Points);
+	CopyArray(VertInfluences, Lod.VertInfluences);
+	CopyArray(Triangles, Lod.Faces);
+	VertexCount = Points.Num();
+
+	unguard;
+}
+
 #if UNREAL1
 
 struct VBoneInfluence1						// Weight and vertex number
@@ -1748,23 +1765,6 @@ void FStaticLODModel::RestoreLineageMesh()
 }
 
 
-void USkeletalMesh::RecreateMeshFromLOD()
-{
-	guard(USkeletalMesh::RecreateMeshFromLOD);
-	if (Wedges.Num() || !LODModels.Num()) return;		// nothing to do
-	printf("Restoring Lineage2 mesh from LOD ...\n");
-
-	FStaticLODModel &Lod = LODModels[0];
-
-	CopyArray(Wedges, Lod.Wedges);
-	CopyArray(Points, Lod.Points);
-	CopyArray(VertInfluences, Lod.VertInfluences);
-	CopyArray(Triangles, Lod.Faces);
-	VertexCount = Points.Num();
-
-	unguard;
-}
-
 #endif // LINEAGE2
 
 
@@ -1785,16 +1785,10 @@ struct FSkelMeshSection3
 
 struct FIndexBuffer3
 {
-	TArray<short>		Indices;
+	TRawArray<short>	Indices;
 
 	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
 	{
-		if (Ar.ArVer >= 453)
-		{
-			int ElementSize;
-			Ar << ElementSize;
-			assert(ElementSize == sizeof(short));
-		}
 		return Ar << I.Indices;
 	}
 };
@@ -1922,9 +1916,8 @@ struct FSkinData3
 		guard(FSkinData3<<);
 		if (Ar.ArVer < 493)
 		{
-			int ElementSize;
-			TArray<FSmoothVertex3> Verts;
-			return Ar << ElementSize << Verts; // don't want it ...
+			TRawArray<FSmoothVertex3> Verts;
+			return Ar << Verts;			// don't want it ...
 		}
 #if MEDGE
 		int componentCount = 1;
@@ -1935,25 +1928,19 @@ struct FSkinData3
 		Ar << VertexType;
 		if (VertexType == 0)
 		{
-			int ElementSize, Count;
-			Ar << ElementSize << Count;
 #if MEDGE
-			assert(ElementSize == 0x20 + (componentCount - 1) * 4);
+			SkipRawArray(Ar, 0x20 + (componentCount - 1) * 4);
 #else
-			assert(ElementSize == 0x20);
+			SkipRawArray(Ar, 0x20);
 #endif
-			Ar.Seek(Ar.Tell() + ElementSize * Count); // don't want it ...
 		}
 		else
 		{
-			int ElementSize, Count;
-			Ar << ElementSize << Count;
 #if MEDGE
-			assert(ElementSize == 0x24 + (componentCount - 1) * 8);
+			SkipRawArray(Ar, 0x24 + (componentCount - 1) * 8);
 #else
-			assert(ElementSize == 0x24);
+			SkipRawArray(Ar, 0x24);
 #endif
-			Ar.Seek(Ar.Tell() + ElementSize * Count); // don't want it ...
 		}
 		return Ar;
 		unguard;
@@ -2021,13 +2008,51 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	Ar.Seek(Ar.GetStopper());
 #endif
 
-	// convert LOD 0 to mesh
 	guard(ConvertMesh);
+	int i;
 
-	const FStaticLODModel3 &Lod = Lods[0];
+	// convert LODs
+	LODModels.Empty(Lods.Num());
+	LODModels.Add(Lods.Num());
+	for (i = 0; i < Lods.Num(); i++)
+		LODModels[i].RestoreMesh3(*this, Lods[i]);
+
+	// convert LOD 0 to mesh
+	RecreateMeshFromLOD();
+
+	MeshOrigin.Scale(-1);
+
+	// fix skeleton; all bones but 0
+	for (i = 1; i < RefSkeleton.Num(); i++)
+		RefSkeleton[i].BonePos.Orientation.W *= -1;
+
+	// materials
+	Textures.Add(Materials1.Num());
+	Materials.Add(Materials1.Num());
+	for (i = 0; i < Materials.Num(); i++)
+	{
+		Textures[i] = Materials1[i];
+		Materials[i].TextureIndex = i;
+	}
+
+	// setup missing properties
+	MeshScale.Set(1, 1, 1);
+	BoundingSphere.R = Bounds.SphereRadius;
+
+	unguard;
+
+	unguard;
+}
+
+
+void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODModel3 &Lod)
+{
+	guard(FStaticLODModel::RestoreMesh3);
+
 	TArray<int> PointNormals;
 	Points.Empty(Lod.NumVertices);
 	PointNormals.Empty(Lod.NumVertices);
+
 	// create wedges, vertices and influences
 	guard(ProcessChunks);
 	for (int Chunk = 0; Chunk < Lod.Chunks.Num(); Chunk++)
@@ -2038,7 +2063,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		if ((C.NumRigidVerts != C.RigidVerts.Num() && C.RigidVerts.Num() == 0) ||
 			(C.NumSmoothVerts != C.SmoothVerts.Num() && C.SmoothVerts.Num() == 0))
 		{
-			appNotify("Mesh %s have no vertices (GPU skin only)", Name);
+			appNotify("Mesh %s have no vertices (GPU skin only)", Mesh.Name);
 			return;
 		}
 
@@ -2062,26 +2087,27 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 				PointIndex = Points.Add();
 				Points[PointIndex] = V.Pos;
 				PointNormals.AddItem(V.Normal[0]);
+				// add influence
+				FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
+				Inf->PointIndex = PointIndex;
+				Inf->Weight     = 1.0f;
+				Inf->BoneIndex  = C.Bones[V.BoneIndex];
 			}
 			// create wedge
 			FMeshWedge *W = new(Wedges) FMeshWedge;
 			W->iVertex = PointIndex;
 			W->TexUV.U = V.U;
 			W->TexUV.V = V.V;
-			// add influence
-			FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
-			Inf->PointIndex = PointIndex;
-			Inf->Weight     = 1.0f;
-			Inf->BoneIndex  = C.Bones[V.BoneIndex];
 		}
 		unguard;
+
 		guard(SmoothVerts);
 		for (Vert = 0; Vert < C.NumSmoothVerts; Vert++)
 		{
 			const FSmoothVertex3 &V = C.SmoothVerts[Vert];
 			// find the same point in previous items
 			int PointIndex = INDEX_NONE;
-			for (j = 0; j < Points.Num(); j++)
+			for (j = 0; j < Points.Num(); j++)	//!! should compare influences too !
 			{
 				if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
 				{
@@ -2095,64 +2121,51 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 				PointIndex = Points.Add();
 				Points[PointIndex] = V.Pos;
 				PointNormals.AddItem(V.Normal[0]);
+				// add influences
+				for (int i = 0; i < 4; i++)
+				{
+					int BoneIndex  = V.BoneIndex[i];
+					int BoneWeight = V.BoneWeight[i];
+					if (BoneWeight == 0) continue;
+					FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
+					Inf->PointIndex = PointIndex;
+					Inf->Weight     = BoneWeight / 255.0f;
+					Inf->BoneIndex  = C.Bones[BoneIndex];
+				}
 			}
 			// create wedge
 			FMeshWedge *W = new(Wedges) FMeshWedge;
 			W->iVertex = PointIndex;
 			W->TexUV.U = V.U;
 			W->TexUV.V = V.V;
-			// add influence
-			for (int i = 0; i < 4; i++)
-			{
-				int BoneIndex  = V.BoneIndex[i];
-				int BoneWeight = V.BoneWeight[i];
-				if (BoneWeight == 0) continue;
-				FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
-				Inf->PointIndex = PointIndex;
-				Inf->Weight     = BoneWeight / 255.0f;
-				Inf->BoneIndex  = C.Bones[BoneIndex];
-			}
 		}
 		unguard;
 	}
 	unguard;
-	// create triangles
+
+	// create faces
 	for (int Sec = 0; Sec < Lod.Sections.Num(); Sec++)
 	{
 		const FSkelMeshSection3 &S = Lod.Sections[Sec];
+
+		FSkelMeshSection *Dst = new (SmoothSections) FSkelMeshSection;
+		Dst->MaterialIndex = S.MaterialIndex;
+		Dst->FirstFace     = Faces.Num();
+		Dst->NumFaces      = S.NumTriangles;
+
 		int Index = S.FirstIndex;
 		for (int i = 0; i < S.NumTriangles; i++)
 		{
-			VTriangle *Face = new(Triangles) VTriangle;
-			Face->MatIndex = S.MaterialIndex;
+			FMeshFace *Face = new (Faces) FMeshFace;
+			Face->MaterialIndex = S.MaterialIndex;
 			if (S.unk1 != Sec) appNotify("Sec=%d unk1=%d", Sec, S.unk1);	//??
-			Face->WedgeIndex[0] = Lod.IndexBuffer.Indices[Index++];
-			Face->WedgeIndex[1] = Lod.IndexBuffer.Indices[Index++];
-			Face->WedgeIndex[2] = Lod.IndexBuffer.Indices[Index++];
+			Face->iWedge[0] = Lod.IndexBuffer.Indices[Index++];
+			Face->iWedge[1] = Lod.IndexBuffer.Indices[Index++];
+			Face->iWedge[2] = Lod.IndexBuffer.Indices[Index++];
 		}
 	}
 
-	MeshOrigin.Scale(-1);
-
-	int i;
-	// fix skeleton; all bones but 0
-	for (i = 1; i < RefSkeleton.Num(); i++)
-		RefSkeleton[i].BonePos.Orientation.W *= -1;
-
-	// materials
-	Textures.Add(Materials1.Num());
-	Materials.Add(Materials1.Num());
-	for (i = 0; i < Materials.Num(); i++)
-	{
-		Textures[i] = Materials1[i];
-		Materials[i].TextureIndex = i;
-	}
-
-	// setup missing properties
-	MeshScale.Set(1, 1, 1);
-	BoundingSphere.R = Bounds.SphereRadius;
-
-	unguard;
+	//!! recreate SmoothSections and RigidSections
 
 	unguard;
 

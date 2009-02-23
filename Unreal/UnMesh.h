@@ -1183,6 +1183,9 @@ struct FStaticLODModel
 
 	void RestoreLineageMesh();
 #endif
+#if UNREAL3
+	void RestoreMesh3(const class USkeletalMesh &Mesh, const class FStaticLODModel3 &Lod);	//?? forward declarations for classes
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel &M)
 	{
@@ -1322,14 +1325,12 @@ public:
 
 	void UpgradeFaces();
 	void UpgradeMesh();
+	void RecreateMeshFromLOD();
 #if UNREAL1
 	void SerializeSkelMesh1(FArchive &Ar);
 #endif
 #if SPLINTER_CELL
 	void SerializeSCell(FArchive &Ar);
-#endif
-#if LINEAGE2
-	void RecreateMeshFromLOD();
 #endif
 #if UNREAL3
 	void SerializeSkelMesh3(FArchive &Ar);

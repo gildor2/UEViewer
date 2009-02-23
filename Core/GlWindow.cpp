@@ -306,7 +306,7 @@ static void OnMouseMove(int dx, int dy)
 	if (mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT))
 	{
 		// change distance to object
-		viewDist += yDelta * 400;
+		viewDist += yDelta * 400 * distScale;
 	}
 	CAxis axis;
 	axis.FromEuler(viewAngles);

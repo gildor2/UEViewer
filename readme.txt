@@ -43,6 +43,11 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+23.02.2009
+- implemented support for UE3 SkeletalMesh lods
+- fixed duplicate weights for some UE3 SkeletalMesh vertices
+- fixed zooming with right mouse button
+
 19.02.2009
 - implemented quick support for UE3 Material and MaterialInstanceConstant texturing
   (diffuse only)

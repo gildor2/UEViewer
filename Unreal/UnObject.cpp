@@ -34,6 +34,15 @@ UObject::~UObject()
 }
 
 
+bool UObject::IsA(const char *ClassName) const
+{
+	for (const CTypeInfo *Type = GetTypeinfo(); Type; Type = Type->Parent)
+		if (!strcmp(ClassName, Type->Name + 1))
+			return true;
+	return false;
+}
+
+
 /*-----------------------------------------------------------------------------
 	UObject loading from package
 -----------------------------------------------------------------------------*/
@@ -456,6 +465,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 					else
 #endif
 						Ar << AR_INDEX(DataCount);	//?? check - AR_INDEX or not
+					//!! note: some structures should be serialized using SerializeStruc() (FVector etc)
 					// find data typeinfo
 					const CTypeInfo *ItemType = FindStructType(Prop->TypeName + 1);	//?? skip 'F' in name
 					if (!ItemType)
@@ -466,7 +476,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 					// serialize items
 					byte *item = (byte*)Arr->GetData();
 					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
+					{
+						ItemType->Constructor(item);		// fill default properties
 						ItemType->SerializeProps(Ar, item);
+					}
 				}
 			}
 			break;
@@ -632,6 +645,7 @@ void CTypeInfo::DumpProps(void *Data) const
 
 			byte *value = (byte*)Data + Prop->Offset;
 
+			//?? can support TArray props here (Prop->Count == -1)
 			for (int ArrayIndex = 0; ArrayIndex < Prop->Count; ArrayIndex++)
 			{
 				if (ArrayIndex > 0) printf(", ");

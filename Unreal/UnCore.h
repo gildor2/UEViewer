@@ -662,10 +662,14 @@ template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 
 // TLazyArray implemented as simple wrapper around TArray with
 // different serialization function
+// Purpose in UE: array with can me loaded asynchronously (when serializing
+// it 1st time only disk position is remembered, and later array can be
+// read from file when needed)
 template<class T> class TLazyArray : public TArray<T>
 {
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
+		guard(TLazyArray<<);
 		assert(Ar.IsLoading);
 		int SkipPos = 0;								// ignored
 		if (Ar.ArVer > 61)
@@ -673,6 +677,7 @@ template<class T> class TLazyArray : public TArray<T>
 		Ar << (TArray<T>&)A;
 		assert(SkipPos == 0 || Ar.Tell() == SkipPos);	// check position
 		return Ar;
+		unguard;
 	}
 };
 
@@ -687,6 +692,60 @@ inline void SkipLazyArray(FArchive &Ar)
 	Ar.Seek(pos);
 	unguard;
 }
+
+
+#if UNREAL3
+
+// NOTE: real class name is unknown; other suitable names: TCookedArray
+// Purpose in UE: array, which file contents exactly the same as in-memory
+// contents. Whole array can be read using single read call. Package
+// engine version should equals to game engine version, otherwise per-element
+// reading will be performed (as usual in TArray)
+// There is no reading optimizationperformed here (in umodel)
+template<class T> class TRawArray : public TArray<T>
+{
+	friend FArchive& operator<<(FArchive &Ar, TRawArray &A)
+	{
+		guard(TRawArray<<);
+		assert(Ar.IsLoading);
+		if (Ar.ArVer >= 453)
+		{
+			int ElementSize;
+			Ar << ElementSize;
+			assert(ElementSize == sizeof(T));
+			int SavePos = Ar.Tell();
+			Ar << (TArray<T>&)A;
+			assert(Ar.Tell() == SavePos + 4 + A.Num() * ElementSize);	// check position
+			return Ar;
+		}
+		// old version: no ElementSize property
+		return Ar << (TArray<T>&)A;
+		unguard;
+	}
+};
+
+
+inline void SkipRawArray(FArchive &Ar, int Size)
+{
+	guard(SkipRawArray);
+	if (Ar.ArVer >= 453)
+	{
+		int ElementSize, Count;
+		Ar << ElementSize << Count;
+		assert(ElementSize == Size);
+		Ar.Seek(Ar.Tell() + ElementSize * Count);
+	}
+	else
+	{
+		assert(Size > 0);
+		int Count;
+		Ar << Count;
+		Ar.Seek(Ar.Tell() + Size * Count);
+	}
+	unguard;
+}
+
+#endif // UNREAL3
 
 
 template<class T1, class T2> void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)

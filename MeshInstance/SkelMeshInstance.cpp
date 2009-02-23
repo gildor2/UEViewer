@@ -1003,7 +1003,7 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 		TransformMesh(Mesh->VertInfluences.Num(), &Mesh->VertInfluences[0], Mesh->Points.Num(), &Mesh->Points[0], RefNormals);
 
 	glEnable(GL_LIGHTING);
-	int lastMatIndex = -1;	//!! implement same glBegin/glEnd/glBindTexture optimizations for DrawLodSkeletalMesh + VertMesh
+	int lastMatIndex = -1;	//!! implement same glBegin/glEnd/glBindTexture optimizations for VertMesh
 	glBegin(GL_TRIANGLES);
 	for (i = 0; i < Mesh->Triangles.Num(); i++)
 	{

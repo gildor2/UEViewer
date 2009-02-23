@@ -13,7 +13,7 @@ CMeshViewer::CMeshViewer(ULodMesh *Mesh)
 	CVec3 offset;
 	float z = (Mesh->BoundingBox.Max.Z + Mesh->BoundingBox.Min.Z) / 2;
 	// scale/translate origin
-	z = ((z - Mesh->MeshOrigin.Z) * Mesh->MeshScale.Z);
+	z = (z - Mesh->MeshOrigin.Z) * Mesh->MeshScale.Z;	//!! bad formula
 	// offset view
 	offset.Set(0, 0, z);
 	SetViewOffset(offset);

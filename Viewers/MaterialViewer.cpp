@@ -202,6 +202,19 @@ void CMaterialViewer::Draw2D()
 					 Tex->USize, Tex->VSize, fmt);
 	}
 
+#if UNREAL3
+	if (Object->IsA("Texture2D"))
+	{
+		const UTexture2D *Tex = static_cast<UTexture2D*>(Object);
+
+		const char *fmt = Tex->Format;
+		DrawTextLeft(S_GREEN"Width  :"S_WHITE" %d\n"
+					 S_GREEN"Height :"S_WHITE" %d\n"
+					 S_GREEN"Format :"S_WHITE" %s",
+					 Tex->SizeX, Tex->SizeY, fmt);
+	}
+#endif // UNREAL3
+
 	if (ShowOutline)
 	{
 		DrawTextLeft("");
@@ -460,6 +473,7 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		PROP(Mask)
 	MAT_END
 
+#if UNREAL3
 	MAT_BEGIN(UMaterial3)
 		PROP(TwoSided)
 		PROP(bDisableDepthTest)
@@ -479,6 +493,7 @@ static void OutlineMaterial(UObject *Obj, int indent)
 			Outline("%s = %s", *P.ParameterName, P.ParameterValue ? P.ParameterValue->Name : "NULL");
 		}
 	MAT_END
+#endif // UNREAL3
 
 	if (!processed)
 	{
