@@ -88,7 +88,9 @@ case "" in
 #	ut3 C:/!UE3-u/CH_Necris.upk
 #!!	ut3 C:/GAMES/UT3/UTGame/CookedPC/Characters/CH_AnimHuman.upk ImportMesh_Human_Male
 #	run data/ut3/CH_AnimHuman.upk
-	run data/ut3/VH_Fury.upk SK_VH_Fury #MI_VH_Fury_Blue
+#!!	run data/ut3/VH_Fury.upk K_VH_Fury #MI_VH_Fury_Blue
+	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
+#!!	run data/HumanMale.upk
 #	run C:/!umodel-data/--GearsOfWar--/COG_MarcusFenix.upk Cine_COG_MarcusFenix
 #	ut3 -nomesh C:/GAMES/UT3/UTGame/CookedPC/Maps/DM-Deck.ut3
 #	run -list C:/!UE3-u/Core.u

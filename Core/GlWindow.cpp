@@ -255,6 +255,10 @@ static void OnResize(int w, int h)
 // Mouse control
 //-----------------------------------------------------------------------------
 
+#if !_WIN32
+static int dropMouseMotion = 0;
+#endif
+
 static void OnMouseButton(int type, int button)
 {
 	int prevButtons = mouseButtons;
@@ -269,13 +273,12 @@ static void OnMouseButton(int type, int button)
 	{
 		SDL_ShowCursor(0);
 		SDL_WM_GrabInput(SDL_GRAB_ON);
+#if !_WIN32
 		// in linux, when calling SDL_ShowCursor(0), SDL will produce unnecessary mouse
 		// motion event, which will cause major scene rotation if not removed; here
 		// we will remove this event
-		// for win32 we will also perform this (just in case)
-		SDL_PumpEvents();
-		SDL_Event evt;
-		SDL_PeepEvents(&evt, 1, SDL_GETEVENT, SDL_EVENTMASK(SDL_MOUSEMOTION));
+		dropMouseMotion = 2;
+#endif
 	}
 	else if (prevButtons && !mouseButtons)
 	{
@@ -288,6 +291,14 @@ static void OnMouseButton(int type, int button)
 static void OnMouseMove(int dx, int dy)
 {
 	if (!mouseButtons) return;
+
+#if !_WIN32
+	if (dropMouseMotion > 0)
+	{
+		dropMouseMotion--;
+		return;
+	}
+#endif
 
 	float xDelta = (float)dx / winWidth;
 	float yDelta = (float)dy / winHeight;

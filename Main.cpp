@@ -33,6 +33,7 @@ BEGIN_CLASS_TABLE
 	REGISTER_ANIM_NOTIFY_CLASSES
 #if UNREAL3
 	REGISTER_MATERIAL_CLASSES_U3
+	REGISTER_MESH_CLASSES_U3
 #endif
 END_CLASS_TABLE
 }
@@ -223,7 +224,7 @@ int main(int argc, char **argv)
 #endif
 #if UNREAL3
 				"Unreal Engine 3:\n"
-				"    Unreal Tournament 3\n"
+				"    Unreal Tournament 3, Gears of War, The Last Remnant\n"
 #	if MEDGE
 				"    Mirror's Edge\n"
 #	endif
@@ -308,6 +309,7 @@ int main(int argc, char **argv)
 	{
 		UnregisterClass("MeshAnimation");
 		UnregisterClass("Animation");
+		UnregisterClass("AnimSet");
 	}
 	if (noMesh)
 	{

@@ -101,6 +101,25 @@ void CMeshViewer::Draw2D()
 	DrawTextLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g%s",
 		AnimIndex+1, Inst->GetAnimCount(), AnimName, Rate, NumFrames,
 		Inst->IsTweening() ? " [tweening]" : "");
+#if 0 //UNREAL3
+	//!! REMOVE LATER
+	if (Inst->pMesh->IsA("SkeletalMesh") && AnimIndex >= 0)
+	{
+		const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(Inst->pMesh);
+		if (Mesh->Animation && Mesh->Animation->IsA("AnimSet"))
+		{
+			const UAnimSet *Anim = static_cast<const UAnimSet*>(Mesh->Animation);
+			const UAnimSequence *Seq = Anim->Sequences[AnimIndex];
+			DrawTextLeft("Anim: %s  Comp: %s", *Seq->SequenceName, *Seq->RotationCompressionFormat);
+			for (int i = 0; i < Anim->TrackBoneNames.Num(); i++)
+			{
+				int TransKeys = Seq->CompressedTrackOffsets[i*4+1];
+				int RotKeys   = Seq->CompressedTrackOffsets[i*4+3];
+				DrawTextLeft("  Bone: %-15s PosKeys: %3d RotKeys: %3d", *Anim->TrackBoneNames[i], TransKeys, RotKeys);
+			}
+		}
+	}
+#endif
 	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
 
 	if (Inst->bColorMaterials)
@@ -247,6 +266,21 @@ void CMeshViewer::ProcessKey(int key)
 		if (AnimIndex >= 0)
 			Inst->LoopAnim(AnimName);
 		break;
+#if 0
+	//!! REMOVE
+	case 'a' + KEY_CTRL:
+		{
+			int idx = Inst->pMesh->Package->FindExport("K_AnimHuman_BaseMale", "AnimSet");
+			if (idx != INDEX_NONE)
+			{
+				USkeletalMesh *Mesh = (USkeletalMesh*)Inst->pMesh;
+				Mesh->Animation = (UAnimSet*)Inst->pMesh->Package->CreateExport(idx);
+				Inst->SetMesh(Mesh);	// again, for recomputing animation linkup
+				Inst->PlayAnim("Rotate_Settle_Rif");
+			}
+		}
+		break;
+#endif
 
 	default:
 		CObjectViewer::ProcessKey(key);

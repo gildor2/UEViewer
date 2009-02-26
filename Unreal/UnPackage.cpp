@@ -97,6 +97,7 @@ public:
 	,	CurrentChunk(NULL)
 	{
 		guard(FUE3ArchiveReader::FUE3ArchiveReader);
+		ReverseBytes = File->ReverseBytes;
 		assert(CompressionFlags);
 		assert(Chunks->Num());
 		unguard;
@@ -259,6 +260,7 @@ UnPackage::UnPackage(const char *filename)
 
 	// read summary
 	*this << Summary;
+	Loader->ReverseBytes = ReverseBytes;	//!! should implement as virtual function
 	ArVer         = Summary.FileVersion;
 	ArLicenseeVer = Summary.LicenseeVersion;
 	PKG_LOG(("Loading package: %s Ver: %d/%d Names: %d Exports: %d Imports: %d\n", Filename,
@@ -553,6 +555,9 @@ static const char *PackageExtensions[] =
 #endif
 #if TRIBES3
 	, "pkg"
+#endif
+#if UNREAL3
+	, "upk", "xxx"
 #endif
 };
 

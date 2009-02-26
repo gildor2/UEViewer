@@ -562,6 +562,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 					BoneUpdateCounts[i]++;		//!! remove later
 					GetBonePosition(Motion1->AnimTracks[BoneIndex], Chn->Time, AnimSeq1->NumFrames,
 						Chn->Looped, BP, BO);
+//DrawTextLeft("Bone (%s) : P{ %g %g %g }  Q{ %g %g %g %g }", *Mesh->RefSkeleton[BoneIndex].Name, BP[0], BP[1], BP[2], BO.x, BO.y, BO.z, BO.w);
 				}
 				// blend secondary animation
 				if (Motion2)

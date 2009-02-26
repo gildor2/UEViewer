@@ -1,6 +1,7 @@
 #ifndef __UNMESH_H__
 #define __UNMESH_H__
 
+//?? either remove this line or make analogous lines for other targets
 #if DEUS_EX && !UNREAL1
 #	error DEUS_EX requires UNREAL1
 #endif
@@ -73,7 +74,7 @@ struct FBoxSphereBounds
 -----------------------------------------------------------------------------*/
 
 // Packed mesh vertex point for vertex meshes
-#define GET_MESHVERT_DWORD(mv) (*(unsigned*)&(mv))
+#define GET_DWORD(v) (*(unsigned*)&(v))
 
 struct FMeshVert
 {
@@ -81,13 +82,10 @@ struct FMeshVert
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshVert &V)
 	{
-		return Ar << GET_MESHVERT_DWORD(V);
+		return Ar << GET_DWORD(V);
 	}
 };
 
-
-// Packed mesh vertex point for skinned meshes.
-#define GET_MESHNORM_DWORD(mv) (*(unsigned*)&(mv))
 
 struct FMeshNorm
 {
@@ -97,7 +95,7 @@ struct FMeshNorm
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshNorm &V)
 	{
-		return Ar << GET_MESHNORM_DWORD(V);
+		return Ar << GET_DWORD(V);
 	}
 };
 
@@ -1063,8 +1061,6 @@ struct FUC2Vector1
 	}
 };
 
-#define GET_UC2VEC2_DWORD(mv) (*(unsigned*)&(mv))
-
 struct FUC2Vector2
 {
 	int				X:11;
@@ -1074,7 +1070,7 @@ struct FUC2Vector2
 	friend FArchive& operator<<(FArchive &Ar, FUC2Vector2 &V)
 	{
 		if (Ar.ArLicenseeVer == 1)
-			return Ar << GET_UC2VEC2_DWORD(V);
+			return Ar << GET_DWORD(V);
 		// LicenseeVer == 0 -- serialize as int[3] and rescale by consts
 		int X, Y, Z;
 		return Ar << X << Y << Z;
@@ -1336,6 +1332,21 @@ public:
 	void SerializeSkelMesh3(FArchive &Ar);
 #endif
 
+#if UNREAL3
+	//!! separate class for UE3 !
+	BEGIN_PROP_TABLE
+		PROP_DROP(Sockets)
+		PROP_DROP(LODInfo)
+		PROP_DROP(SkelMeshGUID)
+		PROP_DROP(SkelMirrorTable)
+		PROP_DROP(FaceFXAsset)
+		PROP_DROP(bDisableSkeletalAnimationLOD)
+		PROP_DROP(BoundsPreviewAsset)
+		PROP_DROP(PerPolyCollisionBones)
+		PROP_DROP(AddToParentPerPolyCollisionBone)
+	END_PROP_TABLE
+#endif // UNREAL3
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(USkeletalMesh::Serialize);
@@ -1496,6 +1507,109 @@ public:
 #endif // RUNE
 
 
+#if UNREAL3
+
+struct FRawAnimSequenceTrack
+{
+	DECLARE_STRUCT(FRawAnimSequenceTrack);
+	TArray<FVector>			PosKeys;
+	TArray<FQuat>			RotKeys;
+	TArray<float>			KeyTimes;
+
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(PosKeys, FVector)
+		PROP_ARRAY(RotKeys, FQuat)
+		PROP_ARRAY(KeyTimes, float)
+	END_PROP_TABLE
+};
+
+class UAnimSequence : public UObject
+{
+	DECLARE_CLASS(UAnimSequence, UObject);
+public:
+	FName					SequenceName;
+//	TArray<FAnimNotifyEvent> Notifies;	// analogue of FMeshAnimNotify
+	float					SequenceLength;
+	int						NumFrames;
+	float					RateScale;
+	bool					bNoLoopingInterpolation;
+	TArray<FRawAnimSequenceTrack> RawAnimData;
+	FName					TranslationCompressionFormat;	// AnimationCompressionFormat
+	FName					RotationCompressionFormat;		// AnimationCompressionFormat
+	TArray<int>				CompressedTrackOffsets;
+	TArray<byte>			CompressedByteStream;
+
+	UAnimSequence()
+	:	RateScale(1.0f)
+	{
+		TranslationCompressionFormat.Str = "ACF_None";
+		RotationCompressionFormat.Str = "ACF_None";
+	}
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(SequenceName)
+		PROP_FLOAT(SequenceLength)
+		PROP_INT(NumFrames)
+		PROP_FLOAT(RateScale)
+		PROP_BOOL(bNoLoopingInterpolation)
+		PROP_ARRAY(RawAnimData, FRawAnimSequenceTrack)
+		PROP_ENUM3(TranslationCompressionFormat)
+		PROP_ENUM3(RotationCompressionFormat)
+		PROP_ARRAY(CompressedTrackOffsets, int)
+		// unsupported
+		PROP_DROP(Notifies)
+		PROP_DROP(CompressionScheme)
+	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		Ar << CompressedByteStream;
+	}
+};
+
+class UAnimSet : public UMeshAnimation // real parent is UObject
+{
+	DECLARE_CLASS(UAnimSet, UMeshAnimation);
+public:
+	bool					bAnimRotationOnly;
+	TArray<FName>			TrackBoneNames;
+	TArray<UAnimSequence*>	Sequences;
+	TArray<FName>			UseTranslationBoneNames;
+	FName					PreviewSkelMeshName;
+
+	UAnimSet()
+	:	bAnimRotationOnly(true)
+	{
+		PreviewSkelMeshName.Str = "None";
+	}
+
+	BEGIN_PROP_TABLE
+		PROP_BOOL(bAnimRotationOnly)
+		PROP_ARRAY(TrackBoneNames, FName)
+		PROP_ARRAY(Sequences, UObject*)
+		PROP_ARRAY(UseTranslationBoneNames, FName)
+		PROP_NAME(PreviewSkelMeshName)
+	END_PROP_TABLE
+
+	void ConvertAnims();
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UAnimSet::Serialize);
+		UObject::Serialize(Ar);
+		unguard;
+	}
+
+	virtual void PostLoad()
+	{
+		ConvertAnims();		//!! should be called after loading of all used objects !
+	}
+};
+
+#endif // UNREAL3
+
+
 #define REGISTER_MESH_CLASSES		\
 	REGISTER_CLASS(USkeletalMesh)	\
 	REGISTER_CLASS(UVertMesh)		\
@@ -1510,5 +1624,9 @@ public:
 #define REGISTER_MESH_CLASSES_RUNE	\
 	REGISTER_CLASS(USkelModel)
 
+#define REGISTER_MESH_CLASSES_U3	\
+	REGISTER_CLASS(FRawAnimSequenceTrack) \
+	REGISTER_CLASS(UAnimSequence)	\
+	REGISTER_CLASS(UAnimSet)
 
 #endif // __UNMESH_H__

@@ -197,6 +197,8 @@ public:
 
 	virtual ~UObject();
 	virtual void Serialize(FArchive &Ar);
+	virtual void PostLoad()			// called after serializing all objects
+	{}
 
 	// RTTI support
 	bool IsA(const char *ClassName) const;

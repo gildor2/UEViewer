@@ -1125,10 +1125,11 @@ class UMaterialInstance : public UMaterial3
 {
 	DECLARE_CLASS(UMaterialInstance, UMaterial3)
 public:
+	UMaterial3		*Parent;			//?? use it
 
 	BEGIN_PROP_TABLE
+		PROP_OBJ(Parent)
 //		PROP_DROP(PhysMaterial) -- duplicate ?
-		PROP_DROP(Parent)		// should use this, if implementing correct material
 		PROP_DROP(bHasStaticPermutationResource)
 //		PROP_DROP(ReferencedTextures) -- duplicate ?
 	END_PROP_TABLE

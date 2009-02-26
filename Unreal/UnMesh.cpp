@@ -391,7 +391,9 @@ struct FQuatComp2
 		r.X = X / 32767.0f;
 		r.Y = Y / 32767.0f;
 		r.Z = Z / 32767.0f;
-		r.W = sqrt(1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z));
+		// check FQuatFloat96NoW ...
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;
 		return r;
 	}
 
@@ -642,7 +644,7 @@ struct FlexTrackBase
 	}
 };
 
-struct FQuatComp3	//?? rename it according to data size
+struct FQuatFloat96NoW
 {
 	float			X, Y, Z;
 
@@ -652,18 +654,19 @@ struct FQuatComp3	//?? rename it according to data size
 		r.X = X;
 		r.Y = Y;
 		r.Z = Z;
-		r.W = sqrt(1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z));
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;	// really have data, when wSq == -0.0f, and sqrt(wSq) was returned -INF
 		return r;
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, FQuatComp3 &Q)
+	friend FArchive& operator<<(FArchive &Ar, FQuatFloat96NoW &Q)
 	{
 		return Ar << Q.X << Q.Y << Q.Z;
 	}
 };
 
 // normalized quaternion with 3 16-bit fixed point fields
-struct FQuatComp4
+struct FQuatFixed48NoW
 {
 	word			X, Y, Z;				// unsigned short, corresponds to (float+1)*32767
 
@@ -673,11 +676,13 @@ struct FQuatComp4
 		r.X = (X - 32767) / 32767.0f;
 		r.Y = (Y - 32767) / 32767.0f;
 		r.Z = (Z - 32767) / 32767.0f;
-		r.W = sqrt(1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z));
+		// check FQuatFloat96NoW ...
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;
 		return r;
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, FQuatComp4 &Q)
+	friend FArchive& operator<<(FArchive &Ar, FQuatFixed48NoW &Q)
 	{
 		return Ar << Q.X << Q.Y << Q.Z;
 	}
@@ -685,7 +690,7 @@ struct FQuatComp4
 
 struct FlexTrackStatic : public FlexTrackBase
 {
-	FQuatComp3			KeyQuat;
+	FQuatFloat96NoW		KeyQuat;
 	FVector				KeyPos;
 
 	virtual void Serialize(FArchive &Ar)
@@ -707,7 +712,7 @@ struct FlexTrackStatic : public FlexTrackBase
 
 struct FlexTrack48 : public FlexTrackBase
 {
-	TArray<FQuatComp4>	KeyQuat;
+	TArray<FQuatFixed48NoW>	KeyQuat;
 	TArray<short>		KeyTime;
 	TArray<FVector>		KeyPos;
 
@@ -727,7 +732,7 @@ struct FlexTrack48 : public FlexTrackBase
 
 struct FlexTrack48RotOnly : public FlexTrackBase
 {
-	TArray<FQuatComp4>	KeyQuat;
+	TArray<FQuatFixed48NoW>	KeyQuat;
 	TArray<short>		KeyTime;
 	FVector				KeyPos;
 
@@ -774,7 +779,7 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 			break;
 
 		case 2:
-			// This type uses structure with TArray<FVector>, TArray<FQuatComp3> and TArray<short>.
+			// This type uses structure with TArray<FVector>, TArray<FQuatFloat96NoW> and TArray<short>.
 			// It's Footprint() method returns 0, GetRotPos() does nothing, but serializer is working.
 			appError("Unsupported FlexTrack type=2");
 			break;
@@ -2171,5 +2176,209 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 
 	return;
 }
+
+
+// normalized quaternion with 11/11/10-bit fixed point fields
+struct FQuatFixed32NoW
+{
+	unsigned		Z:10, Y:11, X:11;
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		r.X = X / 1023.0f - 1.0f;
+		r.Y = Y / 1023.0f - 1.0f;
+		r.Z = Z / 511.0f  - 1.0f;
+		// check FQuatFloat96NoW ...
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatFixed32NoW &Q)
+	{
+		return Ar << GET_DWORD(Q);
+	}
+};
+
+
+struct FQuatIntervalFixed32NoW
+{
+	unsigned		Z:10, Y:11, X:11;
+
+	FQuat ToQuat(const FVector &Mins, const FVector &Ranges) const
+	{
+		FQuat r;
+		r.X = (X / 1023.0f - 1.0f) * Ranges.X + Mins.X;
+		r.Y = (Y / 1023.0f - 1.0f) * Ranges.Y + Mins.Y;
+		r.Z = (Z / 511.0f  - 1.0f) * Ranges.Z + Mins.Z;
+		// check FQuatFloat96NoW ...
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatIntervalFixed32NoW &Q)
+	{
+		return Ar << GET_DWORD(Q);
+	}
+};
+
+
+void UAnimSet::ConvertAnims()
+{
+	guard(UAnimSet::ConvertAnims);
+
+	int i;
+
+	RefBones.Empty(TrackBoneNames.Num());
+	for (i = 0; i < TrackBoneNames.Num(); i++)
+	{
+		FNamedBone *Bone = new (RefBones) FNamedBone;
+		Bone->Name = TrackBoneNames[i];
+		// Flags, ParentIndex unused
+	}
+
+	for (i = 0; i < Sequences.Num(); i++)
+	{
+		const UAnimSequence *Seq = Sequences[i];
+		// create FMeshAnimSeq
+		FMeshAnimSeq *Dst = new (AnimSeqs) FMeshAnimSeq;
+		Dst->Name      = Seq->SequenceName;
+		Dst->NumFrames = Seq->NumFrames;
+		Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
+		// create MotionChunk
+		MotionChunk *M = new (Moves) MotionChunk;
+
+		int NumTracks = TrackBoneNames.Num();
+
+		// bone tracks ...
+		M->AnimTracks.Empty(NumTracks);
+		for (int j = 0; j < NumTracks; j++)
+		{
+			AnalogTrack *A = new (M->AnimTracks) AnalogTrack;
+
+			int k;
+
+			//!! use FMemoryReader here, do not parse data directly
+			if (!Seq->CompressedTrackOffsets.Num())	//?? or if RawAnimData.Num() != 0
+			{
+				// using RawAnimData array
+				assert(Seq->RawAnimData.Num() == NumTracks);
+				CopyArray(A->KeyPos,  Seq->RawAnimData[j].PosKeys);
+				CopyArray(A->KeyQuat, Seq->RawAnimData[j].RotKeys);
+				CopyArray(A->KeyTime, Seq->RawAnimData[j].KeyTimes);
+				for (int kk = 0; kk < A->KeyTime.Num(); kk++)
+					A->KeyTime[kk] *= Dst->Rate;
+				continue;
+			}
+
+			// decompress animations
+			assert(NumTracks * 4 == Seq->CompressedTrackOffsets.Num());
+
+			int TransOffset = Seq->CompressedTrackOffsets[j*4  ];
+			int TransKeys   = Seq->CompressedTrackOffsets[j*4+1];
+			int RotOffset   = Seq->CompressedTrackOffsets[j*4+2];
+			int RotKeys     = Seq->CompressedTrackOffsets[j*4+3];
+
+			const void *TransData = &Seq->CompressedByteStream[TransOffset];
+			const void *RotData   = &Seq->CompressedByteStream[RotOffset];
+
+			const FVector *vec;
+			for (k = 0, vec = (const FVector*)TransData; k < TransKeys; k++, vec++)
+				A->KeyPos.AddItem(*vec);
+			if (!TransKeys)
+			{
+				static FVector zero;
+				A->KeyPos.AddItem(zero);
+				appNotify("No translation keys!");
+			}
+
+			const void *data = RotData;
+			if (RotKeys == 1)
+			{
+				const FQuatFloat96NoW *q = (const FQuatFloat96NoW*)data;
+				data = q + 1;
+				A->KeyQuat.AddItem(*q);
+			}
+			else
+			{
+				// read mins/ranges
+				FVector Mins   = *(FVector*)data;
+				data = OffsetPointer(data, 12);
+				FVector Ranges = *(FVector*)data;
+				data = OffsetPointer(data, 12);
+
+				for (k = 0; k < RotKeys; k++)
+				{
+					if (!strcmp(Seq->RotationCompressionFormat, "ACF_None"))
+					{
+						const FQuat *q = (const FQuat*)data;
+						data = q + 1;
+						A->KeyQuat.AddItem(*q);
+					}
+					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Float96NoW"))
+					{
+						const FQuatFloat96NoW *q = (const FQuatFloat96NoW*)data;
+						data = q + 1;
+						A->KeyQuat.AddItem(*q);
+					}
+					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed48NoW"))
+					{
+						const FQuatFixed48NoW *q = (const FQuatFixed48NoW*)data;
+						data = q + 1;
+						A->KeyQuat.AddItem(*q);
+					}
+					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed32NoW"))
+					{
+						const FQuatFixed32NoW *q = (const FQuatFixed32NoW*)data;
+						data = q + 1;
+						A->KeyQuat.AddItem(*q);
+					}
+					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_IntervalFixed32NoW"))
+					{
+						const FQuatIntervalFixed32NoW *q = (const FQuatIntervalFixed32NoW*)data;
+						data = q + 1;
+						A->KeyQuat.AddItem(q->ToQuat(Mins, Ranges));
+					}
+					//!! other: ACF_Float32NoW
+//FQuat qq = Seq->RawAnimData[j].RotKeys[k];
+//A->KeyQuat.AddItem(qq);
+//static int execed = 0;
+//if (++execed < 10) {
+//printf("q: %X : (%d %d %d)  (%g %g %g %g)\n", GET_DWORD(*q), q->X-1023, q->Y-1023, q->Z-511, FQUAT_ARG(qq));
+//}
+					else
+						appError("Unknown compression method: %s", *Seq->RotationCompressionFormat);
+				}
+			}
+
+			int NumKeys = max(TransKeys, RotKeys);
+			assert(NumKeys);
+			// fill KeyPos array when needed
+			if (A->KeyPos.Num() != NumKeys)
+			{
+				assert(A->KeyPos.Num() == 1);
+				FVector v = A->KeyPos[0];
+				while (A->KeyPos.Num() < NumKeys)
+					A->KeyPos.AddItem(v);
+			}
+			// fill KeyQuat array when needed
+			if (A->KeyQuat.Num() != NumKeys)
+			{
+				assert(A->KeyQuat.Num() == 1);
+				FQuat q = A->KeyQuat[0];
+				while (A->KeyQuat.Num() < NumKeys)
+					A->KeyQuat.AddItem(q);
+			}
+			// fill KeyTime array
+			for (k = 0; k < NumKeys; k++)
+				A->KeyTime.AddItem(k);
+		}
+	}
+
+	unguard;
+}
+
 
 #endif // UNREAL3

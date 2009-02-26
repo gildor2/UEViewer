@@ -43,6 +43,14 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+26.02.2009
+- Ctrl+A key will switch animations sets for current skeletal mesh
+- implemented support for loading XBox360 packages
+
+25.02.2009
+- implemented support for UE3 AnimSet (all compresion algorithms are supported except
+  ACF_Float32NoW)
+
 23.02.2009
 - implemented support for UE3 SkeletalMesh lods
 - fixed duplicate weights for some UE3 SkeletalMesh vertices

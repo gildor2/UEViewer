@@ -85,9 +85,18 @@ struct FPackageFileSummary
 		assert(Ar.IsLoading);						// saving is not supported
 
 		// read tag and version
-		Ar << S.Tag << S.FileVersion << S.LicenseeVersion;
+		Ar << S.Tag;
 		if (S.Tag != PACKAGE_FILE_TAG)
-			appError("Wrong tag in package");
+		{
+			if (S.Tag != PACKAGE_FILE_TAG_REV)
+				appError("Wrong tag in package");
+			Ar.ReverseBytes = true;
+			S.Tag = PACKAGE_FILE_TAG;
+		}
+		int Version;
+		Ar << Version;
+		S.FileVersion     = Version & 0xFFFF;
+		S.LicenseeVersion = Version >> 16;
 		// store file version to archive (required for some structures, for UNREAL3 path)
 		Ar.ArVer         = S.FileVersion;
 		Ar.ArLicenseeVer = S.LicenseeVersion;
@@ -222,7 +231,9 @@ struct FObjectExport
 			if (Ar.ArVer >= 247)
 				Ar << E.ExportFlags;
 			if (Ar.ArVer >= 322)
-				Ar << E.NetObjectCount << E.Guid << E.U3unk6C;
+				Ar << E.NetObjectCount << E.Guid;
+			if (Ar.ArVer >= 475)
+				Ar << E.U3unk6C;
 			return Ar;
 		}
 #endif // UNREAL3

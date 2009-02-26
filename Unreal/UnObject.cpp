@@ -71,6 +71,7 @@ void UObject::EndLoad()
 	guard(UObject::EndLoad);
 	// process GObjLoaded array
 	// NOTE: while loading one array element, array may grow!
+	TArray<UObject*> LoadedObjects;
 	while (GObjLoaded.Num())
 	{
 		UObject *Obj = GObjLoaded[0];
@@ -86,9 +87,16 @@ void UObject::EndLoad()
 			appError("%s::Serialize(%s): %d unread bytes",
 				Obj->GetClassName(), Obj->Name,
 				Package->GetStopper() - Package->Tell());
+		LoadedObjects.AddItem(Obj);
 
 		unguardf(("%s, pos=%X", Obj->Name, Package->Tell()));
 	}
+	// postload objects
+	guard(PostLoad);
+	for (int i = 0; i < LoadedObjects.Num(); i++)
+		LoadedObjects[i]->PostLoad();
+	unguard;
+	// cleanup
 	GObjLoaded.Empty();
 	GObjBeginLoadCount--;		// decrement after loading
 	assert(GObjBeginLoadCount == 0);
@@ -402,6 +410,13 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 					printf("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
 				}
 			}
+			else if (!strcmp(Prop->TypeName, "enum3"))
+			{
+				// old XBox360 GoW: enums are byte
+				byte b;
+				Ar << b;
+				printf("EnumProp: %s = %d\n", *Tag.Name, b);
+			}
 			else
 #endif
 			{
@@ -454,6 +469,8 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				else SIMPLE_ARRAY_TYPE(float)
 				else SIMPLE_ARRAY_TYPE(UObject*)
 				else SIMPLE_ARRAY_TYPE(FName)
+				else SIMPLE_ARRAY_TYPE(FVector)
+				else SIMPLE_ARRAY_TYPE(FQuat)
 #undef SIMPLE_ARRAY_TYPE
 				else
 				{
@@ -634,7 +651,7 @@ void CTypeInfo::DumpProps(void *Data) const
 			const CPropInfo *Prop = Type->Props + PropIndex;
 			if (!Prop->TypeName)
 			{
-				printf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
+//				printf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
 				continue;
 			}
 			printf("  %3d: %s %s", PropIndex, Prop->TypeName, Prop->Name);

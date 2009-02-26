@@ -40,7 +40,8 @@ class UnPackage;
 #define PACKAGE_V3			180
 
 
-#define PACKAGE_FILE_TAG	0x9E2A83C1
+#define PACKAGE_FILE_TAG		0x9E2A83C1
+#define PACKAGE_FILE_TAG_REV	0xC1832A9E
 
 
 /*-----------------------------------------------------------------------------
@@ -100,6 +101,7 @@ public:
 	bool	IsLoading;
 	int		ArVer;
 	int		ArLicenseeVer;
+	bool	ReverseBytes;
 protected:
 	int		ArPos;
 	int		ArStopper;
@@ -129,6 +131,7 @@ public:
 	:	ArStopper(0)
 	,	ArVer(99999)			//?? something large
 	,	ArLicenseeVer(0)
+	,	ReverseBytes(false)
 #if UT2
 	,	IsUT2(0)
 #endif
@@ -160,6 +163,7 @@ public:
 	}
 
 	virtual void Serialize(void *data, int size) = 0;
+	void ByteOrderSerialize(void *data, int size);
 
 	void Printf(const char *fmt, ...);
 
@@ -185,32 +189,32 @@ public:
 	}
 	friend FArchive& operator<<(FArchive &Ar, byte &B)
 	{
-		Ar.Serialize(&B, 1);
+		Ar.ByteOrderSerialize(&B, 1);
 		return Ar;
 	}
 	friend FArchive& operator<<(FArchive &Ar, short &B)
 	{
-		Ar.Serialize(&B, 2);
+		Ar.ByteOrderSerialize(&B, 2);
 		return Ar;
 	}
 	friend FArchive& operator<<(FArchive &Ar, word &B)
 	{
-		Ar.Serialize(&B, 2);
+		Ar.ByteOrderSerialize(&B, 2);
 		return Ar;
 	}
 	friend FArchive& operator<<(FArchive &Ar, int &B)
 	{
-		Ar.Serialize(&B, 4);
+		Ar.ByteOrderSerialize(&B, 4);
 		return Ar;
 	}
 	friend FArchive& operator<<(FArchive &Ar, unsigned &B)
 	{
-		Ar.Serialize(&B, 4);
+		Ar.ByteOrderSerialize(&B, 4);
 		return Ar;
 	}
 	friend FArchive& operator<<(FArchive &Ar, float &B)
 	{
-		Ar.Serialize(&B, 4);
+		Ar.ByteOrderSerialize(&B, 4);
 		return Ar;
 	}
 	virtual FArchive& operator<<(FName &N)

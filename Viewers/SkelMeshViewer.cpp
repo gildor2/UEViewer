@@ -238,7 +238,8 @@ void CSkelMeshViewer::ShowHelp()
 				 "S           show skeleton\n"
 				 "B           show bone names\n"
 				 "A           show attach sockets\n"
-				 "Ctrl+B      dump skeleton to console");
+				 "Ctrl+B      dump skeleton to console\n"
+				 "Ctrl+A      cycle mesh animation sets");
 }
 
 
@@ -303,6 +304,42 @@ void CSkelMeshViewer::ProcessKey(int key)
 		MeshInst->SetBlendParams(2, 1.0f, "Bip01 R Thigh");
 		MeshInst->LoopAnim("AssSmack", 1, 0, 4);
 		MeshInst->SetBlendParams(4, 1.0f, "Bip01 L UpperArm");
+		break;
+
+	case 'a'|KEY_CTRL:
+		{
+			UMeshAnimation *Anim = Mesh->Animation;
+			// find next animation set (code is similar to PAGEDOWN handler)
+			int looped = 0;
+			int ObjIndex = -1;
+			bool found = (Anim == NULL);				// NULL -> any
+			while (true)
+			{
+				ObjIndex++;
+				if (ObjIndex >= UObject::GObjObjects.Num())
+				{
+					ObjIndex = 0;
+					looped++;
+					if (looped > 1) break;				// no other objects
+				}
+				UObject *Obj = UObject::GObjObjects[ObjIndex];
+				if (Obj == Anim)
+				{
+					if (found) break;					// loop detected
+					found = true;
+					continue;
+				}
+				if (found && Obj->IsA("MeshAnimation"))
+				{
+					Mesh->Animation = static_cast<UMeshAnimation*>(Obj);
+					MeshInst->SetMesh(Mesh);			// will rebind mesh to new animation set
+					AnimIndex = -1;
+					printf("Bound %s'%s' to %s'%s'\n", Mesh->GetClassName(), Mesh->Name, Obj->GetClassName(), Obj->Name);
+					break;
+				}
+			}
+		}
+		break;
 
 	default:
 		CMeshViewer::ProcessKey(key);

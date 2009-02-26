@@ -136,6 +136,27 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 	FArchive methods
 -----------------------------------------------------------------------------*/
 
+void FArchive::ByteOrderSerialize(void *data, int size)
+{
+	guard(FArchive::ByteOrderSerialize);
+
+	Serialize(data, size);
+	if (!ReverseBytes || size <= 1) return;
+
+	assert(IsLoading);
+	byte *p1 = (byte*)data;
+	byte *p2 = p1 + size - 1;
+	while (p1 < p2)
+	{
+		Exchange(*p1, *p2);
+		p1++;
+		p2--;
+	}
+
+	unguard;
+}
+
+
 void FArchive::Printf(const char *fmt, ...)
 {
 	va_list	argptr;
