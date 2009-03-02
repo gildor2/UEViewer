@@ -512,9 +512,23 @@ UObject* UnPackage::CreateImport(int index)
 	const char *PackageName = NULL;
 	while (PackageIndex)
 	{
-		const FObjectImport &Rec = GetImport(-PackageIndex-1);
-		PackageIndex = Rec.PackageIndex;
-		PackageName  = Rec.ObjectName;
+		if (PackageIndex < 0)
+		{
+			const FObjectImport &Rec = GetImport(-PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+		}
+		else
+		{
+#if UNREAL3
+			// possible for UE3 forced exports
+			const FObjectExport &Rec = GetExport(PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+#else
+			appError("Wrong package index: %d", PackageIndex);
+#endif // UNREAL3
+		}
 	}
 	// load package
 	UnPackage *Package = LoadPackage(PackageName);

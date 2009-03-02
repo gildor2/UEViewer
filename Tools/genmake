@@ -64,7 +64,7 @@ global:
 	MAPFILES	= 1 | 0 == undef
 	PDB			= 1 | 0 == undef (VisualC only)
 	STDLIBS		= list of used libraries (for "GNU Make" will append "lib" and will search in paths)
-	LIBRARIES   = path to additional library files
+	LIBRARIES   = path(s) to additional library files
 	LIBC		= static | shared == undef
 	ALLOW_MISSING_INCLUDES = 1 | 0		when #include "filename" will fail, warning will be generated instead of error
 
@@ -1112,7 +1112,7 @@ sub FlushTargetText {
 	if ($COMPILER eq "VisualC") {
 		$prefix .= "\techo Creating $target \"$n\" ...\n";
 		$line = "\t\$(LINK) -out:\"$n\"";
-		$line .= " -libpath:\"$libpath\"" if $libpath ne "";
+		$line .= GenerateOptions ($libpath, "-libpath:") if $libpath ne "";
 		$line .= " $stdlibs" if $stdlibs ne "";
 		$line .= " $libs" if $libs ne "";
 		$line .= " -base:0x$baseaddr" if $baseaddr ne "";
@@ -1156,7 +1156,7 @@ sub FlushTargetText {
 		} else {
 			Error ("unknown LIBC type: $crt");
 		}
-		$line .= " -L$libpath" if $libpath ne "";		#?? what about multiple dirs? use GenerateOptions() (sync with VC!)
+		$line .= GenerateOptions ($libpath, "-L") if $libpath ne "";
 		$line .= GenerateOptions ($stdlibs, "-l") if $stdlibs ne "";
 		$line .= " $libs" if $libs ne "";
 		if ($PLATFORM eq "win32") {

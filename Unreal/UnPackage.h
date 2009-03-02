@@ -181,6 +181,8 @@ struct FPackageFileSummary
 				Ar << S.CompressionFlags << S.CompressedChunks;
 			if (S.FileVersion >= 482)
 				Ar << S.U3unk60;
+//			if (S.FileVersion >= 516)
+//				Ar << some array ... (U3unk70)
 			// ... MassEffect has additional field here ...
 			// if (Ar.IsMassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
 //		}
@@ -227,7 +229,8 @@ struct FObjectExport
 			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize;
 			if (E.SerialSize || Ar.ArVer >= 249)
 				Ar << E.SerialOffset;
-			Ar << E.ComponentMap;
+			if (Ar.ArVer < 543)
+				Ar << E.ComponentMap;
 			if (Ar.ArVer >= 247)
 				Ar << E.ExportFlags;
 			if (Ar.ArVer >= 322)

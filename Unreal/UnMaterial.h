@@ -1023,6 +1023,11 @@ public:
 			Ar << SizeX << SizeY << Format;
 		}
 		Ar << Mips;
+		if (Ar.ArVer >= 567)
+		{
+			int fE0, fE4, fE8, fEC;
+			Ar << fE0 << fE4 << fE8 << fEC;
+		}
 		unguard;
 	}
 
@@ -1116,6 +1121,10 @@ public:
 		PROP_DROP(EditorCompounds)
 		PROP_DROP(bUsesDistortion)
 		PROP_DROP(bUsesSceneColor)
+#if MEDGE
+		PROP_DROP(BakerBleedBounceAmount)
+		PROP_DROP(BakerAlpha)
+#endif // MEDGE
 	END_PROP_TABLE
 
 	BIND;

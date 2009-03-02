@@ -228,6 +228,9 @@ int main(int argc, char **argv)
 #	if MEDGE
 				"    Mirror's Edge\n"
 #	endif
+#	if XBOX360
+				"    Gears of War 2\n"
+#	endif
 #endif // UNREAL3
 				"\n"
 				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
@@ -508,6 +511,42 @@ void AppDrawFrame()
 	unguard;
 }
 
+#if 0
+
+class FArchiveGetDepends : public FArchive
+{
+public:
+	TArray<UObject*>	Depends;
+
+	FArchiveGetDepends(UObject *Object)
+	{
+		IsLoading = false;
+		Depends.AddItem(Object);
+		Object->Serialize(*this);
+	}
+
+	virtual void Seek(int Pos)
+	{}
+	virtual void Serialize(void *data, int size)
+	{}
+	virtual FArchive& operator<<(UObject *&Obj)
+	{
+		guard(FArchiveGetDepends::operator<<(UObject*));
+//		printf("? Obj: %s'%s'\n", Obj->GetClassName(), Obj->Name);
+		if (Depends.FindItem(Obj) == INDEX_NONE)
+		{
+//			printf("... new, parsing\n");
+			Depends.AddItem(Obj);
+			Obj->Serialize(*this);
+//			printf("... end parsing\n");
+		}
+//		else printf("... found\n");
+		return *this;
+		unguard;
+	}
+};
+
+#endif
 
 void AppKeyEvent(int key)
 {
@@ -553,6 +592,15 @@ void AppKeyEvent(int key)
 		Viewer->Dump();
 		return;
 	}
+#if 0
+	//!! disabled: Object.Serialize(SomeArchive) requires UObject writting properties capability
+	if (key == ('x'|KEY_CTRL))
+	{
+		assert(Viewer->Object);
+		FArchiveGetDepends Deps(Viewer->Object);
+		//!! export here
+	}
+#endif
 	Viewer->ProcessKey(key);
 	unguard;
 }
@@ -565,6 +613,9 @@ void AppDisplayTexts(bool helpVisible)
 	{
 		DrawTextLeft("PgUp/PgDn   browse objects");
 		DrawTextLeft("D           dump info");
+#if 0
+		DrawTextLeft("Ctrl+X      export object");
+#endif
 		Viewer->ShowHelp();
 		DrawTextLeft("-----\n");		// divider
 	}

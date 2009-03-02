@@ -1,8 +1,22 @@
 #include "Core.h"
 #include "UnCore.h"
 #if UNREAL3
-#include "lzo/lzo1x.h"
+#	include "lzo/lzo1x.h"
 #endif
+
+#if USE_XDK
+#	if _WIN32
+#		pragma comment(lib, "xdecompress.lib")
+		extern "C"
+		{
+			int  __stdcall XMemCreateDecompressionContext(int CodecType, const void* pCodecParams, unsigned Flags, void** pContext);
+			void __stdcall XMemDestroyDecompressionContext(void* Context);
+			int  __stdcall XMemDecompress(void* Context, void* pDestination, size_t* pDestSize, const void* pSource, size_t SrcSize);
+		}
+#	else
+#		undef USE_XDK
+#	endif
+#endif // USE_XDK
 
 
 static char RootDirectory[256];
@@ -305,6 +319,7 @@ FArchive *GDummySave = &DummyArchive;
 void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
 {
 	guard(appDecompress);
+
 	if (Flags == COMPRESS_LZO)
 	{
 		int r;
@@ -315,10 +330,27 @@ void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompresse
 		if (r != LZO_E_OK) appError("lzo_decompress() returned %d", r);
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
 	}
-	else
+	else if (Flags == COMPRESS_ZLIB)
+		appError("appDecompress: Zlib compression is not supported");
+	else if (Flags == COMPRESS_LZX)
 	{
-		appError("appDecompress: unknown compression flags: %d", Flags);
+#if !USE_XDK
+		appError("appDecompress: LZX compression is not supported");
+#else
+		void *context;
+		int r;
+		r = XMemCreateDecompressionContext(0, NULL, 0, &context);
+		if (r < 0) appError("XMemCreateDecompressionContext failed");
+		unsigned int newLen = UncompressedSize;
+		r = XMemDecompress(context, UncompressedBuffer, &newLen, CompressedBuffer, CompressedSize);
+		if (r < 0) appError("XMemDecompress failed");
+		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
+		XMemDestroyDecompressionContext(context);
+#endif
 	}
+	else
+		appError("appDecompress: unknown compression flags: %d", Flags);
+
 	unguard;
 }
 
@@ -421,7 +453,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	BulkData = (byte*)appMalloc(DataSize);
 
 	// serialize data block
-	if (BulkDataFlags & (BULKDATA_Compressed | BULKDATA_CompressedZlib))
+	if (BulkDataFlags & (BULKDATA_CompressedLzo | BULKDATA_CompressedZlib))
 	{
 		// compressed block
 		appReadCompressedChunk(

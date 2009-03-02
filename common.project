@@ -28,7 +28,7 @@ OPTIMIZE   = size
 !endif
 
 
-LIBRARIES  = $R/libs
+LIBRARIES  = $R/libs $R/libs/xbox
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
 STDLIBS   += SDL SDLmain
 

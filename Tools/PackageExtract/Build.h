@@ -17,4 +17,4 @@
 #define UC2				1
 
 // requires UNREAL3
-// ... none ...
+#define XBOX360			1

@@ -63,17 +63,22 @@ CheckDir L2 "C:/!umodel-data/--Lineage2--"
 
 #------------------------------------------------------------------------------
 
-# handle arguments
 if [ $# -gt 0 ]; then
 	# started with arguments
-	# extract command from "-cmd" argument
-	if [ "${1:0:1}" == "-" ]; then
-		cmd=${1:1}
+	# extract command from "--cmd" argument
+	if [ "${1:0:2}" == "--" ]; then
+		cmd=${1:2}
 		shift
 	else
-		cmd=ut2			# default command; may be "run" ??
+		cmd=ut2						# default command; may be "run" ??
 	fi
-	eval $cmd $*
+	declare -a args
+	while [ $# -gt 0 ]; do
+		value=${1//\\/\/}			# replace backslashes with forward slashes
+		args[${#args[@]}]="$value"	# add value to array
+		shift
+	done
+	eval $cmd ${args[*]}
 	exit
 fi
 
@@ -85,11 +90,17 @@ fi
 case "" in
 
 "")
+	#!! CRASH (assert)
+#	run C:/!umodel-data/--GearsOfWar--/Geist_Reaver.upk
+#	run C:/1/GOW2/CookedXenon/SP_Rescue_P.xxx CubemapFace0
+#	run C:/!umodel-data/--GearsOfWar2_X360--/SP_Rescue_P.xxx CubemapFace0
+	run C:/!umodel-data/--GearsOfWar2_X360--/SP_Rescue_P.xxx T_LightBeam_Falloff_02
+
 #	ut3 C:/!UE3-u/CH_Necris.upk
 #!!	ut3 C:/GAMES/UT3/UTGame/CookedPC/Characters/CH_AnimHuman.upk ImportMesh_Human_Male
 #	run data/ut3/CH_AnimHuman.upk
 #!!	run data/ut3/VH_Fury.upk K_VH_Fury #MI_VH_Fury_Blue
-	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
+#!!	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
 #!!	run data/HumanMale.upk
 #	run C:/!umodel-data/--GearsOfWar--/COG_MarcusFenix.upk Cine_COG_MarcusFenix
 #	ut3 -nomesh C:/GAMES/UT3/UTGame/CookedPC/Maps/DM-Deck.ut3

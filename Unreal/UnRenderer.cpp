@@ -995,7 +995,82 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 	unguard;
 }
 
+
 #if UNREAL3
+
+#if XBOX360
+
+inline int appLog2(int n)
+{
+	int r;
+	for (r = -1; n; n >>= 1, r++)
+	{ /*empty*/ }
+	return r;
+}
+
+// Input: x/y coordinate of block
+//		  width  - width of image in blocks
+//		  logBpp - log2(bytesPerBlock)
+// Original funtions is XGAddress2DTiledOffset() from XDK
+//?? rename function, try to simplify
+static unsigned XGAddress2DTiledOffset(int x, int y, int width, int logBpp)
+{
+	assert(width <= 8192);	// Width in memory must be less than or equal to 8K texels
+    assert(x < width);
+
+	int alignedWidth = Align(width, 32);
+	// top bits of coordinates
+	int macro  = ((x >> 5) + (y >> 5) * (alignedWidth >> 5)) << (logBpp + 7);
+	// lower bits of coordinates (result is 7-bit value)
+	int micro  = (((x & 7) + ((y & 6) << 2)) << logBpp);
+	// mix micro/macro + add remaining x/y bits
+	int offset = macro + ((micro & ~15) << 1) + (micro & 15) + ((y & 8) << (3 + logBpp)) + ((y & 1) << 4);
+	// mix bits again
+	return (((offset & ~0x1FF) << 3) +	// upper bits
+			((offset & 0x1C0) << 2) +	// next 3 bits
+			(offset & 0x3F) +			// lower 6 bits
+			((y & 16) << 7) + (((((y & 8) >> 2) + (x >> 3)) & 3) << 6))
+			>> logBpp;
+}
+
+static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+{
+	guard(UntileXbox360Texture);
+
+	int blockWidth  = width  / blockSizeX;
+	int blockHeight = height / blockSizeY;
+	int logBpp      = appLog2(bytesPerBlock);
+	for (int y = 0; y < blockHeight; y++)
+	{
+		for (int x = 0; x < blockWidth; x++)
+		{
+			int swzAddr = XGAddress2DTiledOffset(x, y, blockWidth, logBpp);
+			assert(swzAddr < blockWidth * blockHeight);
+			int sy = swzAddr / blockWidth;
+			int sx = swzAddr % blockWidth;
+			assert(sx >= 0 && sx < blockWidth);
+			assert(sy >= 0 && sy < blockHeight);
+			for (int y1 = 0; y1 < blockSizeY; y1++)
+			{
+				for (int x1 = 0; x1 < blockSizeX; x1++)
+				{
+					int x2 = (x * blockSizeX) + x1;
+					int y2 = (y * blockSizeY) + y1;
+					int x3 = (sx * blockSizeX) + x1;
+					int y3 = (sy * blockSizeY) + y1;
+					assert(x2 >= 0 && x2 < width);
+					assert(x3 >= 0 && x3 < width);
+					assert(y2 >= 0 && y2 < height);
+					assert(y3 >= 0 && y3 < height);
+					dst[y2 * width + x2] = src[y3 * width + x3];
+				}
+			}
+		}
+	}
+	unguard;
+}
+
+#endif // XBOX360
 
 byte *UTexture2D::Decompress(int &USize, int &VSize) const
 {
@@ -1025,7 +1100,87 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			appNotify("Unknown texture format: %s", *Format);
 			return NULL;
 		}
-		return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
+
+		if (!Package->ReverseBytes)	//?? another way to detect xbox package
+			return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
+
+#if XBOX360
+		// align U/V texture size to 128 texels
+		int USize1 = Align(USize, 128);
+		int VSize1 = Align(VSize, 128);
+		int bytesPerBlock, blockSizeX, blockSizeY;
+		switch (intFormat)
+		{
+		case TEXF_DXT1:
+			bytesPerBlock = 8;
+			blockSizeX = blockSizeY = 4;
+			break;
+		case TEXF_DXT3:
+		case TEXF_DXT5:
+			bytesPerBlock = 16;
+			blockSizeX = blockSizeY = 4;
+			break;
+		case TEXF_L8:
+			bytesPerBlock = 1;
+			blockSizeX = blockSizeY = 1;
+			USize1 = USize;		// no alignment
+			VSize1 = VSize;		// ,,,
+			break;
+		default:
+			appNotify("bytesPerBlock: unknown texture format %d (%s)", intFormat, *Format);
+		}
+//		printf("bulk: %d  w=%d  h=%d\n", Mip.Data.BulkDataSizeOnDisk, USize, VSize);
+		if (Mip.Data.BulkDataSizeOnDisk / bytesPerBlock * blockSizeX * blockSizeY != USize1 * VSize1)
+			appError("bytesPerBlock: got %g, need %d",
+				(float)Mip.Data.BulkDataSizeOnDisk / (USize1 * VSize1) * blockSizeX * blockSizeY,
+				bytesPerBlock);
+		// decompress texture ...
+		byte *pic;
+		if (bytesPerBlock > 1)
+		{
+			// reverse byte order (16-bit integers)
+			byte *buf2 = new byte[Mip.Data.BulkDataSizeOnDisk];
+			byte *p  = Mip.Data.BulkData;
+			byte *p2 = buf2;
+			for (int i = 0; i < Mip.Data.BulkDataSizeOnDisk; i += 2, p += 2, p2 += 2)
+			{
+				p2[0] = p[1];
+				p2[1] = p[0];
+			}
+			// decompress texture
+			pic = DecompressTexture(buf2, USize1, VSize1, intFormat, Name, NULL);
+			// delete reordered buffer
+			delete buf2;
+		}
+		else
+		{
+			// 1 byte per block, no byte reordering
+			pic = DecompressTexture(Mip.Data.BulkData, USize1, VSize1, intFormat, Name, NULL);
+		}
+		// untile texture
+		byte *pic2 = new byte[USize1 * VSize1 * 4];
+		UntileXbox360Texture((unsigned*)pic, (unsigned*)pic2, USize1, VSize1, blockSizeX, blockSizeY, bytesPerBlock);
+		delete pic;
+		// shrink texture buffer (remove U alignment)
+		if (USize != USize1 && 1) //!!
+		{
+			guard(ShrinkTexture);
+			int line1 = USize  * 4;
+			int line2 = USize1 * 4;
+			byte *p1 = pic2;
+			byte *p2 = pic2;
+			for (int y = 0; y < VSize; y++)
+			{
+				memcpy(p2, p1, line1);
+				p2 += line1;
+				p1 += line2;
+			}
+			unguard;
+		}
+		return pic2;
+#else  // XBOX360
+		appError("Compiled without XBox360 support");
+#endif // XBOX360
 	}
 	// no valid mipmaps
 	return NULL;

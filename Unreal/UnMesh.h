@@ -1344,6 +1344,9 @@ public:
 		PROP_DROP(BoundsPreviewAsset)
 		PROP_DROP(PerPolyCollisionBones)
 		PROP_DROP(AddToParentPerPolyCollisionBone)
+#	if MEDGE
+		PROP_DROP(NumUVSets)
+#	endif
 	END_PROP_TABLE
 #endif // UNREAL3
 

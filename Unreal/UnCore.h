@@ -607,11 +607,19 @@ public:
 		return index;
 	}
 
+	int FindItem(const T& item)
+	{
+		for (int i = 0; i < DataCount; i++)
+			if (*((T*)DataPtr + i) == item)
+				return i;
+		return INDEX_NONE;
+	}
+
 	FORCEINLINE void Empty(int count = 0)
 	{
 		// destruct all array items
 		for (int i = 0; i < DataCount; i++)
-			((T*)DataPtr)->~T();
+			((T*)DataPtr + i)->~T();
 		// remove data array (count=0) or preallocate memory (count>0)
 		FArray::Empty(count, sizeof(T));
 	}
@@ -860,7 +868,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 #define BULKDATA_StoreInSeparateFile	0x01
 #define BULKDATA_CompressedZlib			0x02		// unknown name
-#define BULKDATA_Compressed				0x10		// unknown name
+#define BULKDATA_CompressedLzo			0x10		// unknown name
 #define BULKDATA_NoData					0x20		// unknown name
 
 struct FByteBulkData //?? separate FUntypedBulkData
@@ -905,6 +913,7 @@ struct FWordBulkData : public FByteBulkData
 // UE3 compression flags
 #define COMPRESS_ZLIB		1
 #define COMPRESS_LZO		2
+#define COMPRESS_LZX		4
 
 void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 

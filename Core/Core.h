@@ -115,6 +115,11 @@ template<class T> inline T OffsetPointer(const T ptr, int offset)
 	return (T) ((unsigned)ptr + offset);
 }
 
+// Align integer or pointer of any type
+template<class T> inline T Align(const T ptr, int alignment)
+{
+	return (T) (((unsigned)ptr + alignment - 1) & ~(alignment - 1));
+}
 
 template<class T> inline void Exchange(T& A, T& B)
 {

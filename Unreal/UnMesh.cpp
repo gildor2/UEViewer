@@ -2274,7 +2274,20 @@ void UAnimSet::ConvertAnims()
 			}
 
 			// decompress animations
+#if 0
+			if (NumTracks * 4 != Seq->CompressedTrackOffsets.Num())
+			{
+//				printf("%d * 4 != %d\n", NumTracks, Seq->CompressedTrackOffsets.Num());
+				if (NumTracks * 4 > Seq->CompressedTrackOffsets.Num())
+				{
+					NumTracks = Seq->CompressedTrackOffsets.Num() / 4;
+//					printf("Removing %d bone names\n", TrackBoneNames.Num() - NumTracks);
+					TrackBoneNames.Remove(NumTracks, TrackBoneNames.Num() - NumTracks);
+				}
+			}
+#else
 			assert(NumTracks * 4 == Seq->CompressedTrackOffsets.Num());
+#endif
 
 			int TransOffset = Seq->CompressedTrackOffsets[j*4  ];
 			int TransKeys   = Seq->CompressedTrackOffsets[j*4+1];

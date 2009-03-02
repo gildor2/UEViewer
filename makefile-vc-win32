@@ -49,7 +49,7 @@ MAIN_DIRS = \
 
 umodel.exe : $(MAIN_DIRS) $(MAIN)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:"./libs" SDL.lib SDLmain.lib $(MAIN) -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs -libpath:./libs/xbox SDL.lib SDLmain.lib $(MAIN) -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
