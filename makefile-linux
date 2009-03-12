@@ -42,14 +42,15 @@ MAIN = \
 	./obj/umodel-unix/TextContainer.o \
 	./obj/umodel-unix/ddslib.o \
 	./obj/umodel-unix/lzo_init.o \
-	./obj/umodel-unix/lzo1x_d2.o
+	./obj/umodel-unix/lzo1x_d2.o \
+	./obj/umodel-unix/lzxd.o
 
 MAIN_DIRS = \
 	./obj/umodel-unix
 
 umodel : $(MAIN_DIRS) $(MAIN)
 	@echo Creating executable "umodel" ...
-	$(LINK) -o umodel $(MAIN) -shared-libgcc -L./libs -lstdc++ -lGL -ldl -lSDL -lSDLmain
+	$(LINK) -o umodel $(MAIN) -shared-libgcc -L./libs -L./libs/xbox -lstdc++ -lGL -ldl -lSDL -lSDLmain
 
 #------------------------------------------------------------------------------
 #	compiling source files
@@ -259,7 +260,9 @@ DEPENDS_15 = \
 	Unreal/UnCore.h \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
-	libs/include/lzo/lzodefs.h
+	libs/include/lzo/lzodefs.h \
+	libs/include/mspack/lzx.h \
+	libs/include/mspack/mspack.h
 
 ./obj/umodel-unix/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_15)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnCore.o Unreal/UnCore.cpp
@@ -267,8 +270,8 @@ DEPENDS_15 = \
 DEPENDS_16 = \
 	libs/ddslib.h
 
-./obj/umodel-unix/ddslib.o : libs/ddslib.c $(DEPENDS_16)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ddslib.o libs/ddslib.c
+./obj/umodel-unix/ddslib.o : ./libs/ddslib.c $(DEPENDS_16)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ddslib.o ./libs/ddslib.c
 
 DEPENDS_17 = \
 	libs/include/lzo/lzo1x.h \
@@ -282,8 +285,8 @@ DEPENDS_17 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo1x_d2.o : libs/lzo/lzo1x_d2.c $(DEPENDS_17)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo1x_d2.o libs/lzo/lzo1x_d2.c
+./obj/umodel-unix/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_17)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
 DEPENDS_18 = \
 	libs/include/lzo/lzoconf.h \
@@ -294,8 +297,14 @@ DEPENDS_18 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo_init.o : libs/lzo/lzo_init.c $(DEPENDS_18)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo_init.o libs/lzo/lzo_init.c
+./obj/umodel-unix/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_18)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo_init.o ./libs/lzo/lzo_init.c
+
+DEPENDS_19 = \
+	libs/mspack/system.h
+
+./obj/umodel-unix/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_19)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzxd.o ./libs/mspack/lzxd.c
 
 #------------------------------------------------------------------------------
 #	creating output directories

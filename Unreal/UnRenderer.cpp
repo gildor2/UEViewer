@@ -1008,29 +1008,31 @@ inline int appLog2(int n)
 	return r;
 }
 
-// Input: x/y coordinate of block
-//		  width  - width of image in blocks
-//		  logBpp - log2(bytesPerBlock)
-// Original funtions is XGAddress2DTiledOffset() from XDK
-//?? rename function, try to simplify
-static unsigned XGAddress2DTiledOffset(int x, int y, int width, int logBpp)
+// Input:
+//		x/y		coordinate of block
+//		width	width of image in blocks
+//		logBpb	log2(bytesPerBlock)
+// Reference:
+//		XGAddress2DTiledOffset() from XDK
+static unsigned GetTiledOffset(int x, int y, int width, int logBpb)
 {
-	assert(width <= 8192);	// Width in memory must be less than or equal to 8K texels
-    assert(x < width);
+	assert(width <= 8192);
+	assert(x < width);
 
 	int alignedWidth = Align(width, 32);
 	// top bits of coordinates
-	int macro  = ((x >> 5) + (y >> 5) * (alignedWidth >> 5)) << (logBpp + 7);
-	// lower bits of coordinates (result is 7-bit value)
-	int micro  = (((x & 7) + ((y & 6) << 2)) << logBpp);
-	// mix micro/macro + add remaining x/y bits
-	int offset = macro + ((micro & ~15) << 1) + (micro & 15) + ((y & 8) << (3 + logBpp)) + ((y & 1) << 4);
+	int macro  = ((x >> 5) + (y >> 5) * (alignedWidth >> 5)) << (logBpb + 7);
+	// lower bits of coordinates (result is 6-bit value)
+	int micro  = ((x & 7) + ((y & 0xE) << 2)) << logBpb;
+	// mix micro/macro + add few remaining x/y bits
+	int offset = macro + ((micro & ~0xF) << 1) + (micro & 0xF) + ((y & 1) << 4);
 	// mix bits again
-	return (((offset & ~0x1FF) << 3) +	// upper bits
-			((offset & 0x1C0) << 2) +	// next 3 bits
-			(offset & 0x3F) +			// lower 6 bits
-			((y & 16) << 7) + (((((y & 8) >> 2) + (x >> 3)) & 3) << 6))
-			>> logBpp;
+	return (((offset & ~0x1FF) << 3) +					// upper bits (offset bits [*-9])
+			((y & 16) << 7) +							// next 1 bit
+			((offset & 0x1C0) << 2) +					// next 3 bits (offset bits [8-6])
+			(((((y & 8) >> 2) + (x >> 3)) & 3) << 6) +	// next 2 bits
+			(offset & 0x3F)								// lower 6 bits (offset bits [5-0])
+			) >> logBpb;
 }
 
 static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
@@ -1044,7 +1046,7 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 	{
 		for (int x = 0; x < blockWidth; x++)
 		{
-			int swzAddr = XGAddress2DTiledOffset(x, y, blockWidth, logBpp);
+			int swzAddr = GetTiledOffset(x, y, blockWidth, logBpp);
 			assert(swzAddr < blockWidth * blockHeight);
 			int sy = swzAddr / blockWidth;
 			int sx = swzAddr % blockWidth;
@@ -1074,7 +1076,7 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 
 byte *UTexture2D::Decompress(int &USize, int &VSize) const
 {
-	guard(UTexture::Decompress);
+	guard(UTexture2D::Decompress);
 	for (int n = 0; n < Mips.Num(); n++)
 	{
 		// find 1st mipmap with non-null data array
@@ -1124,10 +1126,17 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			bytesPerBlock = 1;
 			blockSizeX = blockSizeY = 1;
 			USize1 = USize;		// no alignment
-			VSize1 = VSize;		// ,,,
+			VSize1 = VSize;		// ...
+			break;
+		case TEXF_RGBA8:
+			bytesPerBlock = 4;
+			blockSizeX = blockSizeY = 1;
+			USize1 = Align(USize, 32);
+			VSize1 = VSize;
 			break;
 		default:
 			appNotify("bytesPerBlock: unknown texture format %d (%s)", intFormat, *Format);
+			return NULL;
 		}
 //		printf("bulk: %d  w=%d  h=%d\n", Mip.Data.BulkDataSizeOnDisk, USize, VSize);
 		if (Mip.Data.BulkDataSizeOnDisk / bytesPerBlock * blockSizeX * blockSizeY != USize1 * VSize1)
@@ -1162,7 +1171,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 		UntileXbox360Texture((unsigned*)pic, (unsigned*)pic2, USize1, VSize1, blockSizeX, blockSizeY, bytesPerBlock);
 		delete pic;
 		// shrink texture buffer (remove U alignment)
-		if (USize != USize1 && 1) //!!
+		if (USize != USize1)
 		{
 			guard(ShrinkTexture);
 			int line1 = USize  * 4;

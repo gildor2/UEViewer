@@ -38,27 +38,27 @@ function run()    { run1 "." $@;     }	# without path
 # all following functions are called as "-func" argument
 # example: test.sh -ut2 HumanMaleA
 
-function u1()     { run1 "$U1" $*;  }
-function ut1()    { run1 "$UT1" $*; }
-function ut2()    { run1 "$UT2" $*; }
-function ut3()    { run1 "$UT3" $*; }
-function rund()   { run1 "data" $*; }
+function u1()     { run1 "$U1" $*;   }
+function ut1()    { run1 "$UT1" $*;  }
+function ut2()    { run1 "$UT2" $*;  }
+function ut3()    { run1 "$UT3" $*;  }
+function gow()    { run1 "$GOW" $*;  }
+function gow2()   { run1 "$GOW2" $*; }
+function rund()   { run1 "data" $*;  }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
-function l2()     { run1 "$L2" $*;  }
+function l2()     { run1 "$L2" $*;   }
 
 rm umodel.exe	#?? win32 only
 ./build.sh
 
-# Unreal1
+# Check directories
 CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
-# UT1
 CheckDir UT1 c:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament
-# UT2
 CheckDir UT2 c:/games/unreal~1/ut2004 c:/games/unreal/ut2004
-# UT3
 CheckDir UT3 c:/games/ut3
-# Lineage2
+CheckDir GOW "C:/!umodel-data/--GearsOfWar--"
+CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/--GearsOfWar2_X360--"
 CheckDir L2 "C:/!umodel-data/--Lineage2--"
 
 #------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ if [ $# -gt 0 ]; then
 		args[${#args[@]}]="$value"	# add value to array
 		shift
 	done
-	eval $cmd ${args[*]}
+	eval $cmd ${args[*]}			# execute command
 	exit
 fi
 
@@ -91,20 +91,19 @@ case "" in
 
 "")
 	#!! CRASH (assert)
-#	run C:/!umodel-data/--GearsOfWar--/Geist_Reaver.upk
-#	run C:/1/GOW2/CookedXenon/SP_Rescue_P.xxx CubemapFace0
-#	run C:/!umodel-data/--GearsOfWar2_X360--/SP_Rescue_P.xxx CubemapFace0
-	run C:/!umodel-data/--GearsOfWar2_X360--/SP_Rescue_P.xxx T_LightBeam_Falloff_02
+#	gow Geist_Reaver
+	gow2 SP_Rescue_P Jackbot_animset
+#	run data/HumanMale_comp1.upk
 
 #	ut3 C:/!UE3-u/CH_Necris.upk
-#!!	ut3 C:/GAMES/UT3/UTGame/CookedPC/Characters/CH_AnimHuman.upk ImportMesh_Human_Male
+#	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman #ImportMesh_Human_Male
+#	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_TwinSouls_Cine #SK_CH_TwinSouls_Crowd_01
 #	run data/ut3/CH_AnimHuman.upk
 #!!	run data/ut3/VH_Fury.upk K_VH_Fury #MI_VH_Fury_Blue
 #!!	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
 #!!	run data/HumanMale.upk
-#	run C:/!umodel-data/--GearsOfWar--/COG_MarcusFenix.upk Cine_COG_MarcusFenix
-#	ut3 -nomesh C:/GAMES/UT3/UTGame/CookedPC/Maps/DM-Deck.ut3
-#	run -list C:/!UE3-u/Core.u
+#	gow COG_MarcusFenix #Cine_COG_MarcusFenix
+#	ut3 C:/GAMES/UT3/UTGame/CookedPC/Maps/DM-Deck.ut3
 #	ut2 HumanMaleA MercMaleD
 #	l2 LineageNPCs2 Pumpkin_Head_man_m00
 #	ut2 ONSVehicles-A RV

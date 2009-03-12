@@ -782,7 +782,7 @@ struct FMeshBone
 	{
 		Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
 #if UNREAL3
-		if (Ar.ArVer >= 515 && Ar.ArVer != 522)
+		if (Ar.ArVer >= 515 && Ar.ArVer != 522)	//?? note: 522 check is in Mirror's Edge, no in GoW2
 		{
 			int unk44;						// byte[4] ? default is 0xFF x 4
 			Ar << unk44;
@@ -1539,6 +1539,7 @@ public:
 	TArray<FRawAnimSequenceTrack> RawAnimData;
 	FName					TranslationCompressionFormat;	// AnimationCompressionFormat
 	FName					RotationCompressionFormat;		// AnimationCompressionFormat
+	FName					KeyEncodingFormat;				//?? GoW2, unknown property
 	TArray<int>				CompressedTrackOffsets;
 	TArray<byte>			CompressedByteStream;
 
@@ -1546,7 +1547,7 @@ public:
 	:	RateScale(1.0f)
 	{
 		TranslationCompressionFormat.Str = "ACF_None";
-		RotationCompressionFormat.Str = "ACF_None";
+		RotationCompressionFormat.Str    = "ACF_None";
 	}
 
 	BEGIN_PROP_TABLE
@@ -1558,6 +1559,7 @@ public:
 		PROP_ARRAY(RawAnimData, FRawAnimSequenceTrack)
 		PROP_ENUM3(TranslationCompressionFormat)
 		PROP_ENUM3(RotationCompressionFormat)
+		PROP_ENUM3(KeyEncodingFormat)
 		PROP_ARRAY(CompressedTrackOffsets, int)
 		// unsupported
 		PROP_DROP(Notifies)
@@ -1566,8 +1568,11 @@ public:
 
 	virtual void Serialize(FArchive &Ar)
 	{
+		guard(UAnimSequence::Serialize);
+		assert(Ar.ArVer >= 372);		// older version is not yet ready
 		Super::Serialize(Ar);
 		Ar << CompressedByteStream;
+		unguard;
 	}
 };
 

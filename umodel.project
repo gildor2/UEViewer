@@ -12,11 +12,8 @@ sources(MAIN) = {
 	MeshInstance/*.cpp
 	Core/*.cpp
 	# libraries
-	# ... dds decompression
-	libs/ddslib.c
-	# ... lzo for compressed UE3 packages
-	libs/lzo/lzo_init.c
-	libs/lzo/lzo1x_d2.c
+	$DDS_LIBS
+	$UE3_LIBS
 }
 
 target(executable, $PRJ, MAIN, MAIN)

@@ -117,8 +117,11 @@ int main(int argc, char **argv)
 		// cleanup
 		delete data;
 		fclose(f2);
+		// notification
+		printf("Done: %d/%d ...\r", idx, Package->Summary.ExportCount);
 	}
 	fclose(f);
+	printf("Done ...             \n");
 	unguard;
 	// write name table
 	guard(WriteNameTable);
@@ -143,9 +146,23 @@ int main(int argc, char **argv)
 		const char *PackageName = NULL;
 		while (PackageIndex)
 		{
-			const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
-			PackageIndex = Rec.PackageIndex;
-			PackageName  = Rec.ObjectName;
+			if (PackageIndex < 0)
+			{
+				const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
+				PackageIndex = Rec.PackageIndex;
+				PackageName  = Rec.ObjectName;
+			}
+			else
+			{
+#if UNREAL3
+				// possible for UE3 forced exports
+				const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
+				PackageIndex = Rec.PackageIndex;
+				PackageName  = Rec.ObjectName;
+#else
+				appError("Wrong package index: %d", PackageIndex);
+#endif // UNREAL3
+			}
 		}
 		if (PackageName)
 			fprintf(f, "%d = %s'%s.%s'\n", idx, *Imp.ClassName, PackageName, *Imp.ObjectName);

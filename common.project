@@ -36,3 +36,18 @@ INCLUDES += . $R/Core $R/Unreal $R/libs/include
 !if "$PLATFORM" eq "win32"
 	INCLUDES += $R/libs/includewin32
 !endif
+
+
+# libraries
+DDS_LIBS = {
+	# ... dds decompression
+	$R/libs/ddslib.c
+}
+
+UE3_LIBS = {
+	# ... lzo for compressed UE3 packages
+	$R/libs/lzo/lzo_init.c
+	$R/libs/lzo/lzo1x_d2.c
+	# ... lzx for compresses XBox360 UE3 packages
+	$R/libs/mspack/lzxd.c
+}

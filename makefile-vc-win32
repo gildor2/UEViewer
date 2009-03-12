@@ -42,7 +42,8 @@ MAIN = \
 	./obj/umodel-win32/TextContainer.obj \
 	./obj/umodel-win32/ddslib.obj \
 	./obj/umodel-win32/lzo_init.obj \
-	./obj/umodel-win32/lzo1x_d2.obj
+	./obj/umodel-win32/lzo1x_d2.obj \
+	./obj/umodel-win32/lzxd.obj
 
 MAIN_DIRS = \
 	./obj/umodel-win32
@@ -259,7 +260,9 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
-	libs/include/lzo/lzodefs.h
+	libs/include/lzo/lzodefs.h \
+	libs/include/mspack/lzx.h \
+	libs/include/mspack/mspack.h
 
 ./obj/umodel-win32/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnCore.obj" Unreal/UnCore.cpp
@@ -267,8 +270,8 @@ DEPENDS = \
 DEPENDS = \
 	libs/ddslib.h
 
-./obj/umodel-win32/ddslib.obj : libs/ddslib.c $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ddslib.obj" libs/ddslib.c
+./obj/umodel-win32/ddslib.obj : ./libs/ddslib.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ddslib.obj" ./libs/ddslib.c
 
 DEPENDS = \
 	libs/include/lzo/lzo1x.h \
@@ -282,8 +285,8 @@ DEPENDS = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-win32/lzo1x_d2.obj : libs/lzo/lzo1x_d2.c $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzo1x_d2.obj" libs/lzo/lzo1x_d2.c
+./obj/umodel-win32/lzo1x_d2.obj : ./libs/lzo/lzo1x_d2.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzo1x_d2.obj" ./libs/lzo/lzo1x_d2.c
 
 DEPENDS = \
 	libs/include/lzo/lzoconf.h \
@@ -294,8 +297,14 @@ DEPENDS = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-win32/lzo_init.obj : libs/lzo/lzo_init.c $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzo_init.obj" libs/lzo/lzo_init.c
+./obj/umodel-win32/lzo_init.obj : ./libs/lzo/lzo_init.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzo_init.obj" ./libs/lzo/lzo_init.c
+
+DEPENDS = \
+	libs/mspack/system.h
+
+./obj/umodel-win32/lzxd.obj : ./libs/mspack/lzxd.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzxd.obj" ./libs/mspack/lzxd.c
 
 #------------------------------------------------------------------------------
 #	creating output directories

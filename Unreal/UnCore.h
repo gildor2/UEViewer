@@ -296,6 +296,7 @@ public:
 
 	virtual void Serialize(void *data, int size)
 	{
+		guard(FFileReader::Serialize);
 		if (ArStopper > 0 && ArPos + size > ArStopper)
 			appError("Serializing behind stopper");
 
@@ -307,10 +308,48 @@ public:
 		ArPos += size;
 		if (res != 1)
 			appError("Unable to serialize data");
+		unguard;
 	}
 
 protected:
 	FILE	*f;
+};
+
+
+
+class FMemReader : public FArchive
+{
+public:
+	FMemReader(const void *data, int size)
+	:	DataPtr((const byte*)data)
+	,	DataSize(size)
+	{
+		IsLoading = true;
+	}
+
+	virtual void Seek(int Pos)
+	{
+		guard(FMemReader::Seek);
+		assert(Pos >= 0 && Pos < DataSize);
+		ArPos = Pos;
+		unguard;
+	}
+
+	virtual void Serialize(void *data, int size)
+	{
+		guard(FMemReader::Serialize);
+		if (ArStopper > 0 && ArPos + size > ArStopper)
+			appError("Serializing behind stopper");
+		if (ArPos + size > DataSize)
+			appError("Serializing behind end of buffer");
+		memcpy(data, DataPtr + ArPos, size);
+		ArPos += size;
+		unguard;
+	}
+
+protected:
+	const byte *DataPtr;
+	int		DataSize;
 };
 
 
@@ -724,7 +763,7 @@ template<class T> class TRawArray : public TArray<T>
 		{
 			int ElementSize;
 			Ar << ElementSize;
-			assert(ElementSize == sizeof(T));
+//			assert(ElementSize == sizeof(T));
 			int SavePos = Ar.Tell();
 			Ar << (TArray<T>&)A;
 			assert(Ar.Tell() == SavePos + 4 + A.Num() * ElementSize);	// check position
@@ -863,7 +902,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 
 /*-----------------------------------------------------------------------------
-	UE3 bulk data
+	UE3 bulk data - replacement for TLazyArray
 -----------------------------------------------------------------------------*/
 
 #define BULKDATA_StoreInSeparateFile	0x01

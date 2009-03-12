@@ -34,15 +34,6 @@ UObject::~UObject()
 }
 
 
-bool UObject::IsA(const char *ClassName) const
-{
-	for (const CTypeInfo *Type = GetTypeinfo(); Type; Type = Type->Parent)
-		if (!strcmp(ClassName, Type->Name + 1))
-			return true;
-	return false;
-}
-
-
 /*-----------------------------------------------------------------------------
 	UObject loading from package
 -----------------------------------------------------------------------------*/
@@ -92,10 +83,11 @@ void UObject::EndLoad()
 		unguardf(("%s, pos=%X", Obj->Name, Package->Tell()));
 	}
 	// postload objects
+	int i;
 	guard(PostLoad);
-	for (int i = 0; i < LoadedObjects.Num(); i++)
+	for (i = 0; i < LoadedObjects.Num(); i++)
 		LoadedObjects[i]->PostLoad();
-	unguard;
+	unguardf(("%s", LoadedObjects[i]->Name));
 	// cleanup
 	GObjLoaded.Empty();
 	GObjBeginLoadCount--;		// decrement after loading
@@ -562,12 +554,13 @@ void RegisterClasses(CClassInfo *Table, int Count)
 
 
 // may be useful
-void UnregisterClass(const char *Name)
+void UnregisterClass(const char *Name, bool WholeTree)
 {
 	for (int i = 0; i < GClassCount; i++)
-		if (!strcmp(GClasses[i].Name, Name))
+		if (!strcmp(GClasses[i].Name, Name) ||
+			(WholeTree && (GClasses[i].TypeInfo()->IsA(Name))))
 		{
-			printf("Unregistered %s\n", Name);
+			printf("Unregistered %s\n", GClasses[i].Name);
 			// class was found
 			if (i == GClassCount-1)
 			{
@@ -577,6 +570,7 @@ void UnregisterClass(const char *Name)
 			}
 			memcpy(GClasses+i, GClasses+i+1, (GClassCount-i-1) * sizeof(GClasses[0]));
 			GClassCount--;
+			i--;
 		}
 }
 
@@ -621,6 +615,15 @@ bool IsKnownClass(const char *Name)
 {
 	for (int i = 0; i < GClassCount; i++)
 		if (!strcmp(GClasses[i].Name, Name))
+			return true;
+	return false;
+}
+
+
+bool CTypeInfo::IsA(const char *TypeName) const
+{
+	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
+		if (!strcmp(TypeName, Type->Name + 1))
 			return true;
 	return false;
 }

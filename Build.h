@@ -26,6 +26,6 @@
 #define UC2				1
 
 // requires UNREAL3
-#define MEDGE			1		// Mirror's Edge
 #define XBOX360			1		// XBox360 resources
-#define USE_XDK			1		// use some proprietary code for XBox360 support
+#define MEDGE			1		// Mirror's Edge
+//#define USE_XDK			1		// use some proprietary code for XBox360 support

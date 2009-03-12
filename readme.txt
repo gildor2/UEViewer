@@ -43,6 +43,18 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+12.03.2009
+- implemented support for animations, compressed with "remove every second key"
+  algorithm
+
+11.03.2009
+- implemented support for loading compressed XBox360 packages
+
+05.03.2009
+- restoring UE3 mesh from GPU skin when needed
+- added "-notex" command line option to prevent Texture/Texture2D class loading in a
+  case of unsupported data format
+
 26.02.2009
 - Ctrl+A key will switch animations sets for current skeletal mesh
 - implemented support for loading XBox360 packages

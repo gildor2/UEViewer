@@ -11,8 +11,7 @@ sources(MAIN) = {
 	$R/Unreal/UnPackage.cpp
 	$R/Core/*.cpp
 	# UE3 support
-	$R/libs/lzo/lzo_init.c
-	$R/libs/lzo/lzo1x_d2.c
+	$UE3_LIBS
 }
 
 target(executable, $PRJ, MAIN, MAIN)

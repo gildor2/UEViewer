@@ -1888,8 +1888,8 @@ struct FSkinChunk3
 		if (Ar.ArVer >= 333)
 		{
 			Ar << V.NumRigidVerts << V.NumSmoothVerts;
-//			assert(V.NumRigidVerts == V.RigidVerts.Num()); -- not always!
-//			assert(V.NumSmoothVerts == V.SmoothVerts.Num()); -- not always!
+			// note: NumRigidVerts and NumSmoothVerts may be non-zero while corresponding
+			// arrays are empty - that's when GPU skin only left
 		}
 		else
 		{
@@ -1914,41 +1914,137 @@ struct FEdge3
 	}
 };
 
-struct FSkinData3
+struct FGPUVert3Common
 {
-	friend FArchive& operator<<(FArchive &Ar, FSkinData3 &S)
+	FVector				Pos;
+	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	byte				BoneIndex[4];
+	byte				BoneWeight[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Common &V)
+	{
+		int i;
+		Ar << V.Pos << V.Normal[0] << V.Normal[1];
+		if (Ar.ArVer < 494)
+			Ar << V.Normal[2];
+		for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
+		for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
+		return Ar;
+	}
+};
+
+/*
+ * Half = Float16
+ * http://www.openexr.com/  source: ilmbase-*.tar.gz/Half/toFloat.cpp
+ * http://en.wikipedia.org/wiki/Half_precision
+ * Also look GL_ARB_half_float_pixel
+ */
+struct FGPUVert3Half : FGPUVert3Common
+{
+	word				U, V;			//?? create class float16 ?
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Half &V)
+	{
+		Ar << *((FGPUVert3Common*)&V) << V.U << V.V;
+		return Ar;
+	}
+};
+
+struct FGPUVert3Float : FGPUVert3Common
+{
+	float				U, V;
+
+	FGPUVert3Float &operator=(const FSmoothVertex3 &S)
+	{
+		Pos = S.Pos;
+		U   = S.U;
+		V   = S.V;
+		for (int i = 0; i < 4; i++)
+		{
+			BoneIndex[i]  = S.BoneIndex[i];
+			BoneWeight[i] = S.BoneWeight[i];
+		}
+		return *this;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Float &V)
+	{
+		Ar << *((FGPUVert3Common*)&V) << V.U << V.V;
+		return Ar;
+	}
+};
+
+struct FGPUSkin3
+{
+	int							bUseFullPrecisionUVs;	// 0 = half, 1 = float; copy of corresponding USkeletalMesh field
+	TRawArray<FGPUVert3Half>	VertsHalf;				// only one of these vertex sets are used
+	TRawArray<FGPUVert3Float>	VertsFloat;
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUSkin3 &S)
 	{
 		guard(FSkinData3<<);
 		if (Ar.ArVer < 493)
 		{
+			// old version - FSmoothVertex3 array
 			TRawArray<FSmoothVertex3> Verts;
-			return Ar << Verts;			// don't want it ...
+			Ar << Verts;
+			// convert verts
+			CopyArray(S.VertsFloat, Verts);
+			S.bUseFullPrecisionUVs = true;
+			return Ar;
 		}
-#if MEDGE
-		int componentCount = 1;
+		// new version
+	#if MEDGE
+		int NumUVSets = 1;
 		if (Ar.ArLicenseeVer >= 0xF)	//?? IsMirrorEdge
-			Ar << componentCount;
-#endif // MEDGE
-		int VertexType;
-		Ar << VertexType;
-		if (VertexType == 0)
+			Ar << NumUVSets;
+	#endif // MEDGE
+		Ar << S.bUseFullPrecisionUVs;
+		if (!S.bUseFullPrecisionUVs)
 		{
-#if MEDGE
-			SkipRawArray(Ar, 0x20 + (componentCount - 1) * 4);
-#else
-			SkipRawArray(Ar, 0x20);
-#endif
+	#if MEDGE
+			if (NumUVSets > 1)
+			{
+				SkipRawArray(Ar, 0x20 + (NumUVSets - 1) * 4);
+				return Ar;
+			}
+	#endif
+			Ar << S.VertsHalf;
 		}
 		else
 		{
-#if MEDGE
-			SkipRawArray(Ar, 0x24 + (componentCount - 1) * 8);
-#else
-			SkipRawArray(Ar, 0x24);
-#endif
+	#if MEDGE
+			if (NumUVSets > 1)
+			{
+				SkipRawArray(Ar, 0x24 + (NumUVSets - 1) * 8);
+				return Ar;
+			}
+	#endif
+			Ar << S.VertsFloat;
 		}
 		return Ar;
 		unguard;
+	}
+};
+
+struct FMesh3Unk1
+{
+	int					f0;
+	int					f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk1 &S)
+	{
+		return Ar << S.f0 << S.f4;
+	}
+};
+
+struct FMesh3Unk2
+{
+	TArray<FMesh3Unk1>	f0;
+
+	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk2 &S)
+	{
+		return Ar << S.f0;
 	}
 };
 
@@ -1965,7 +2061,8 @@ struct FStaticLODModel3
 	int					NumVertices;
 	TArray<FEdge3>		Edges;			// links 2 vertices and 2 faces (triangles)
 	FWordBulkData		BulkData;		// ElementCount = NumVertices
-	FSkinData3			GPUSkin;
+	FGPUSkin3			GPUSkin;
+	TArray<FMesh3Unk2>	fC4;			// unknown, has in GoW2
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel3 &Lod)
 	{
@@ -1980,6 +2077,8 @@ struct FStaticLODModel3
 		Lod.BulkData.Serialize(Ar);
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
+		if (Ar.ArVer >= 534)
+			Ar << Lod.fC4;
 //		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num()); -- mostly equals (failed in CH_TwinSouls_Cine.upk)
 //		assert(Lod.BulkData.ElementCount == Lod.NumVertices); -- mostly equals (failed on some GoW packages)
 		return Ar;
@@ -2050,6 +2149,25 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 }
 
 
+static float half2float(word h)
+{
+	union
+	{
+		float		f;
+		unsigned	df;
+	} f;
+
+	int sign = (h >> 15) & 0x00000001;
+	int exp  = (h >> 10) & 0x0000001F;
+	int mant =  h        & 0x000003FF;
+
+	exp  = exp + (127 - 15);
+	mant = mant << 13;
+	f.df = (sign << 31) | (exp << 23) | mant;
+	return f.f;
+}
+
+
 void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODModel3 &Lod)
 {
 	guard(FStaticLODModel::RestoreMesh3);
@@ -2065,13 +2183,74 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 		int Vert, j;
 		const FSkinChunk3 &C = Lod.Chunks[Chunk];
 
+		// when base mesh vertices are missing - try to get information from GPU skin
 		if ((C.NumRigidVerts != C.RigidVerts.Num() && C.RigidVerts.Num() == 0) ||
 			(C.NumSmoothVerts != C.SmoothVerts.Num() && C.SmoothVerts.Num() == 0))
 		{
-			appNotify("Mesh %s have no vertices (GPU skin only)", Mesh.Name);
-			return;
+			guard(GPUVerts);
+			if (!Chunk) printf("Restoring LOD verts from GPU skin\n", Mesh.Name);
+
+			const FGPUSkin3 &S = Lod.GPUSkin;
+			int LastVertex = C.FirstVertex + C.NumRigidVerts + C.NumSmoothVerts;
+
+			for (Vert = C.FirstVertex; Vert < LastVertex; Vert++)
+			{
+				const FGPUVert3Common &V = (!S.bUseFullPrecisionUVs)
+					? *(FGPUVert3Common*)&S.VertsHalf[Vert]
+					: *(FGPUVert3Common*)&S.VertsFloat[Vert];
+				// find the same point in previous items
+				int PointIndex = INDEX_NONE;
+				for (j = 0; j < Points.Num(); j++)
+				{
+					if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
+					{
+						PointIndex = j;
+						break;
+					}
+				}
+				if (PointIndex == INDEX_NONE)
+				{
+					// point was not found - create it
+					PointIndex = Points.Add();
+					Points[PointIndex] = V.Pos;
+					PointNormals.AddItem(V.Normal[0]);
+					// add influences
+//					int TotalWeight = 0;
+					for (int i = 0; i < 4; i++)
+					{
+						int BoneIndex  = V.BoneIndex[i];
+						int BoneWeight = V.BoneWeight[i];
+						if (BoneWeight == 0) continue;
+						FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
+						Inf->PointIndex = PointIndex;
+						Inf->Weight     = BoneWeight / 255.0f;
+						Inf->BoneIndex  = C.Bones[BoneIndex];
+//						TotalWeight += BoneWeight;
+					}
+//					assert(TotalWeight = 255);
+				}
+				// create wedge
+				FMeshWedge *W = new(Wedges) FMeshWedge;
+				W->iVertex = PointIndex;
+				if (!S.bUseFullPrecisionUVs)
+				{
+					const FGPUVert3Half &V1 = *(const FGPUVert3Half*)&V;
+					W->TexUV.U = half2float(V1.U);
+					W->TexUV.V = half2float(V1.V);
+				}
+				else
+				{
+					const FGPUVert3Float &V1 = *(const FGPUVert3Float*)&V;
+					W->TexUV.U = V1.U;
+					W->TexUV.V = V1.V;
+				}
+			}
+			unguard;
+
+			continue;		// process other chunks
 		}
 
+		// get information from base (CPU) mesh
 		guard(RigidVerts);
 		for (Vert = 0; Vert < C.NumRigidVerts; Vert++)
 		{
@@ -2242,6 +2421,11 @@ void UAnimSet::ConvertAnims()
 	for (i = 0; i < Sequences.Num(); i++)
 	{
 		const UAnimSequence *Seq = Sequences[i];
+		if (!Seq)
+		{
+			printf("WARNING: %s: no sequence %d\n", Name, i);
+			continue;
+		}
 		// create FMeshAnimSeq
 		FMeshAnimSeq *Dst = new (AnimSeqs) FMeshAnimSeq;
 		Dst->Name      = Seq->SequenceName;
@@ -2294,69 +2478,79 @@ void UAnimSet::ConvertAnims()
 			int RotOffset   = Seq->CompressedTrackOffsets[j*4+2];
 			int RotKeys     = Seq->CompressedTrackOffsets[j*4+3];
 
-			const void *TransData = &Seq->CompressedByteStream[TransOffset];
-			const void *RotData   = &Seq->CompressedByteStream[RotOffset];
+			FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
+			Reader.ReverseBytes = Package->ReverseBytes;
 
-			const FVector *vec;
-			for (k = 0, vec = (const FVector*)TransData; k < TransKeys; k++, vec++)
-				A->KeyPos.AddItem(*vec);
-			if (!TransKeys)
+			TArray<FVector> KeyPos;
+			TArray<FQuat>   KeyQuat;
+			KeyPos.Empty(Seq->NumFrames);
+			KeyQuat.Empty(Seq->NumFrames);
+
+			if (TransKeys)
+			{
+				Reader.Seek(TransOffset);
+				for (k = 0; k < TransKeys; k++)
+				{
+					FVector vec;
+					Reader << vec;
+					KeyPos.AddItem(vec);
+				}
+			}
+			else
 			{
 				static FVector zero;
-				A->KeyPos.AddItem(zero);
+				KeyPos.AddItem(zero);
 				appNotify("No translation keys!");
 			}
 
-			const void *data = RotData;
+			Reader.Seek(RotOffset);
 			if (RotKeys == 1)
 			{
-				const FQuatFloat96NoW *q = (const FQuatFloat96NoW*)data;
-				data = q + 1;
-				A->KeyQuat.AddItem(*q);
+				FQuatFloat96NoW q;
+				Reader << q;
+				KeyQuat.AddItem(q);
 			}
 			else
 			{
 				// read mins/ranges
-				FVector Mins   = *(FVector*)data;
-				data = OffsetPointer(data, 12);
-				FVector Ranges = *(FVector*)data;
-				data = OffsetPointer(data, 12);
+				FVector Mins, Ranges;
+				Reader << Mins << Ranges;
 
 				for (k = 0; k < RotKeys; k++)
 				{
 					if (!strcmp(Seq->RotationCompressionFormat, "ACF_None"))
 					{
-						const FQuat *q = (const FQuat*)data;
-						data = q + 1;
-						A->KeyQuat.AddItem(*q);
+						FQuat q;
+						Reader << q;
+						KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Float96NoW"))
 					{
-						const FQuatFloat96NoW *q = (const FQuatFloat96NoW*)data;
-						data = q + 1;
-						A->KeyQuat.AddItem(*q);
+						FQuatFloat96NoW q;
+						Reader << q;
+						KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed48NoW"))
 					{
-						const FQuatFixed48NoW *q = (const FQuatFixed48NoW*)data;
-						data = q + 1;
-						A->KeyQuat.AddItem(*q);
+						FQuatFixed48NoW q;
+						Reader << q;
+						KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed32NoW"))
 					{
-						const FQuatFixed32NoW *q = (const FQuatFixed32NoW*)data;
-						data = q + 1;
-						A->KeyQuat.AddItem(*q);
+						FQuatFixed32NoW q;
+						Reader << q;
+						KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_IntervalFixed32NoW"))
 					{
-						const FQuatIntervalFixed32NoW *q = (const FQuatIntervalFixed32NoW*)data;
-						data = q + 1;
-						A->KeyQuat.AddItem(q->ToQuat(Mins, Ranges));
+						FQuatIntervalFixed32NoW q;
+						Reader << q;
+						KeyQuat.AddItem(q.ToQuat(Mins, Ranges));
 					}
 					//!! other: ACF_Float32NoW
 //FQuat qq = Seq->RawAnimData[j].RotKeys[k];
-//A->KeyQuat.AddItem(qq);
+//KeyQuat.AddItem(qq);
 //static int execed = 0;
 //if (++execed < 10) {
 //printf("q: %X : (%d %d %d)  (%g %g %g %g)\n", GET_DWORD(*q), q->X-1023, q->Y-1023, q->Z-511, FQUAT_ARG(qq));
@@ -2366,27 +2560,117 @@ void UAnimSet::ConvertAnims()
 				}
 			}
 
-			int NumKeys = max(TransKeys, RotKeys);
-			assert(NumKeys);
+			guard(DecompressAnims);
+
+			int NumKeys = Seq->NumFrames;
+
 			// fill KeyPos array when needed
-			if (A->KeyPos.Num() != NumKeys)
+			printf("Frames=%d KeyPos.Num=%d KeyQuat.Num=%d NumKeys=%d KeyFmt=%s\n", Seq->NumFrames, KeyPos.Num(), KeyQuat.Num(), NumKeys, *Seq->KeyEncodingFormat);
+			guard(KeyPos);
+			if (KeyPos.Num() < NumKeys)
 			{
-				assert(A->KeyPos.Num() == 1);
-				FVector v = A->KeyPos[0];
-				while (A->KeyPos.Num() < NumKeys)
-					A->KeyPos.AddItem(v);
+				int n = KeyPos.Num();
+				FVector v;
+				if (n == 1)
+				{
+					// compressed into single key
+					v = KeyPos[0];
+					while (KeyPos.Num() < NumKeys)
+						KeyPos.AddItem(v);
+				}
+				else if (1)//??(n * 2 == NumKeys || n * 2 - 1 == NumKeys || n * 2 + 1 == NumKeys)
+				{
+					// used compression scheme "remove every second key"
+					TArray<FVector> KeyPos2;
+					KeyPos2.Empty(NumKeys);
+					for (k = 0; k < NumKeys; k++)
+					{
+						if (k / 2 + 1 >= n)
+						{
+							// key after last element - keep previous value (== v)
+							KeyPos2.AddItem(KeyPos[n-1]);
+							//?? lerp with 1st key
+						}
+						else if ((k & 1) == 0)
+						{
+							// exact key
+							v = KeyPos[k / 2];
+							KeyPos2.AddItem(v);
+						}
+						else
+						{
+							FVector v2 = KeyPos[k / 2 + 1];
+							FVector v3;
+							Lerp((CVec3&)v, (CVec3&)v2, 0.5f, (CVec3&)v3);
+							KeyPos2.AddItem(v3);
+						}
+					}
+					CopyArray(KeyPos, KeyPos2);
+				}
+				else
+					assert(0);
 			}
+			unguard
+
 			// fill KeyQuat array when needed
-			if (A->KeyQuat.Num() != NumKeys)
+			guard(KeyQuat);
+			if (KeyQuat.Num() < NumKeys)
 			{
-				assert(A->KeyQuat.Num() == 1);
-				FQuat q = A->KeyQuat[0];
-				while (A->KeyQuat.Num() < NumKeys)
-					A->KeyQuat.AddItem(q);
+				int n = KeyQuat.Num();
+				FQuat v;
+				if (n == 1)
+				{
+					// compressed into single key
+					v = KeyQuat[0];
+					while (KeyQuat.Num() < NumKeys)
+						KeyQuat.AddItem(v);
+				}
+				else if (1)//??(n * 2 == NumKeys || n * 2 - 1 == NumKeys || n * 2 + 1 == NumKeys)
+				{
+					// used compression scheme "remove every second key"
+					TArray<FQuat> KeyQuat2;
+					KeyQuat2.Empty(NumKeys);
+					for (k = 0; k < NumKeys; k++)
+					{
+						if (k / 2 + 1 >= n)
+						{
+							// key after last element - keep previous value (== v)
+							KeyQuat2.AddItem(KeyQuat[n-1]);
+							//?? lerp with 1st key
+						}
+						else if ((k & 1) == 0)
+						{
+							// exact key
+							v = KeyQuat[k / 2];
+							KeyQuat2.AddItem(v);
+						}
+						else
+						{
+							FQuat v2 = KeyQuat[k / 2 + 1];
+							FQuat v3;
+							Slerp((CQuat&)v, (CQuat&)v2, 0.5f, (CQuat&)v3);
+							KeyQuat2.AddItem(v3);
+						}
+					}
+					CopyArray(KeyQuat, KeyQuat2);
+				}
+				else
+					assert(0);
 			}
+			unguard;
+
 			// fill KeyTime array
 			for (k = 0; k < NumKeys; k++)
 				A->KeyTime.AddItem(k);
+
+			// copy data
+			CopyArray(A->KeyPos,  KeyPos);
+			CopyArray(A->KeyQuat, KeyQuat);
+			assert(A->KeyPos.Num() == NumKeys);
+			assert(A->KeyQuat.Num() == NumKeys);
+			assert(A->KeyTime.Num() == NumKeys);
+
+			unguard;
 		}
 	}
 

@@ -164,12 +164,15 @@ int main(int argc, char **argv)
 				"    -check          check some assumptions, no other actions performed\n"
 				"    -pkginfo        load package and display its information\n"
 				"\n"
-				"Common options:\n"
+				"Options:\n"
 				"    -path=PATH      path to UT installation directory; if not specified,\n"
 				"                    program will search for packages in current directory\n"
+				"\n"
+				"Compatibility options:\n"
 				"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
 				"                    unsupported data format\n"
 				"    -noanim         disable loading of MeshAnimation classes\n"
+				"    -notex          disable loading of Material classes\n"
 				"\n"
 				"Export options:\n"
 				"    -all            export all linked objects too\n"
@@ -240,7 +243,7 @@ int main(int argc, char **argv)
 
 	// parse command line
 	bool dump = false, view = true, exprt = false, exprtAll = false,
-		 listOnly = false, noMesh = false, noAnim = false, pkgInfo = false;
+		 listOnly = false, noMesh = false, noAnim = false, noTex = false, pkgInfo = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -275,6 +278,8 @@ int main(int argc, char **argv)
 				noMesh = true;
 			else if (!stricmp(opt, "noanim"))
 				noAnim = true;
+			else if (!stricmp(opt, "notex"))
+				noTex = true;
 			else if (!strnicmp(opt, "path=", 5))
 				appSetRootDirectory(opt+5);
 			else
@@ -307,17 +312,15 @@ int main(int argc, char **argv)
 	//?? NOTE: can register classes after loading package: in this case we can know engine version (1/2/3)
 	//?? and register appropriate classes only (for example, separate UKeletalMesh classes for UE2/UE3)
 	RegisterUnrealClasses();
-	// remove UMeshAnimation loader when requisted by command line
+	// remove some class loaders when requisted by command line
 	if (noAnim)
 	{
-		UnregisterClass("MeshAnimation");
-		UnregisterClass("Animation");
-		UnregisterClass("AnimSet");
+		UnregisterClass("MeshAnimation", true);
+		UnregisterClass("AnimSequence");
+		UnregisterClass("AnimNotify", true);
 	}
-	if (noMesh)
-	{
-		UnregisterClass("SkeletalMesh");
-	}
+	if (noMesh) UnregisterClass("SkeletalMesh",   true);
+	if (noTex)  UnregisterClass("UnrealMaterial", true);
 
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);

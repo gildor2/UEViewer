@@ -80,6 +80,7 @@ struct CTypeInfo
 	{
 		return Name[0] != 'F';		// UE structure type names are started with 'F'
 	}
+	bool IsA(const char *TypeName) const;
 	const CPropInfo *FindProperty(const char *Name) const;
 	void SerializeProps(FArchive &Ar, void *ObjectData) const;
 	void DumpProps(void *Data) const;
@@ -149,7 +150,7 @@ struct CClassInfo
 
 
 void RegisterClasses(CClassInfo *Table, int Count);
-void UnregisterClass(const char *Name);
+void UnregisterClass(const char *Name, bool WholeTree = false);
 
 const CTypeInfo *FindClassType(const char *Name, bool ClassType = true);
 
@@ -201,7 +202,10 @@ public:
 	{}
 
 	// RTTI support
-	bool IsA(const char *ClassName) const;
+	inline bool IsA(const char *ClassName) const
+	{
+		return GetTypeinfo()->IsA(ClassName);
+	}
 	inline const char *GetClassName() const
 	{
 		return GetTypeinfo()->Name + 1;
