@@ -92,14 +92,14 @@ case "" in
 "")
 	#!! CRASH (assert)
 #	gow Geist_Reaver
-	gow2 SP_Rescue_P Jackbot_animset
+#	gow2 SP_Rescue_P Jackbot_animset
+	gow2 -notex SP_Maria_Cine_Outro #Baked_11_4_Maria_v1_Anims
 #	run data/HumanMale_comp1.upk
 
-#	ut3 C:/!UE3-u/CH_Necris.upk
 #	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman #ImportMesh_Human_Male
 #	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_TwinSouls_Cine #SK_CH_TwinSouls_Crowd_01
 #	run data/ut3/CH_AnimHuman.upk
-#!!	run data/ut3/VH_Fury.upk K_VH_Fury #MI_VH_Fury_Blue
+#	run data/ut3/VH_Fury.upk K_VH_Fury #MI_VH_Fury_Blue
 #!!	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
 #!!	run data/HumanMale.upk
 #	gow COG_MarcusFenix #Cine_COG_MarcusFenix

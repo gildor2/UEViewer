@@ -23,6 +23,7 @@ Modified Unreal Engine 2.5
 Unreal Engine 3:
   Unreal Tournament 3
   Gears of War
+  Gears of War 2
   The Last Remnant (benchmark)
   Mirror's Edge
 
@@ -43,6 +44,9 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+13.03.2009
+- implemented support for GOW2 animations
+
 12.03.2009
 - implemented support for animations, compressed with "remove every second key"
   algorithm

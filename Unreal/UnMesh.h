@@ -592,6 +592,10 @@ struct AnalogTrack
 	TArray<FQuat>	KeyQuat;				// Orientation key track (count = 1 or KeyTime.Count)
 	TArray<FVector>	KeyPos;					// Position key track (count = 1 or KeyTime.Count)
 	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track)
+#if UNREAL3
+	TArray<float>	KeyQuatTime;			// not serialized, used for UE3 animations with separate time tracks for
+	TArray<float>	KeyPosTime;				//	position and rotation channels
+#endif
 
 #if SPLINTER_CELL
 	void SerializeSCell(FArchive &Ar);
@@ -1548,6 +1552,7 @@ public:
 	{
 		TranslationCompressionFormat.Str = "ACF_None";
 		RotationCompressionFormat.Str    = "ACF_None";
+		KeyEncodingFormat.Str            = "AKF_None";		//?? unknown enum values
 	}
 
 	BEGIN_PROP_TABLE

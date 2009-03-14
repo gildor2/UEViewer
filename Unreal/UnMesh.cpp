@@ -626,22 +626,6 @@ struct FlexTrackBase
 {
 	virtual void Serialize(FArchive &Ar) = 0;
 	virtual void Decompress(AnalogTrack &T) = 0;
-
-	//?? send TArray<float> instead of <short>; possibly - allow empty 'Times' array in AnalogTrack
-	//?? (in GetBonePosition())
-	//?? if TArray<float> -> can scale time keys
-	void CheckTimeTrack(TArray<short> &Times, int NumPos, int NumQuat)
-	{
-		guard(FlexTrackBase::CheckTimeTrack);
-		if (Times.Num()) return;
-		int keys = max(NumPos, NumQuat);
-		assert(NumPos  == keys || NumPos  == 1);
-		assert(NumQuat == keys || NumQuat == 1);
-		Times.Empty(keys);
-		for (int i = 0; i < keys; i++)
-			Times.AddItem(i);
-		unguard;
-	}
 };
 
 struct FQuatFloat96NoW
@@ -700,11 +684,6 @@ struct FlexTrackStatic : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		T.KeyTime.Empty(1);
-		T.KeyPos.Empty(1);
-		T.KeyQuat.Empty(1);
-
-		T.KeyTime.AddItem(0);		// value does not matter, only one key is stored
 		T.KeyQuat.AddItem(KeyQuat);
 		T.KeyPos.AddItem(KeyPos);
 	}
@@ -719,7 +698,6 @@ struct FlexTrack48 : public FlexTrackBase
 	virtual void Serialize(FArchive &Ar)
 	{
 		Ar << KeyQuat << KeyPos << KeyTime;
-		CheckTimeTrack(KeyTime, KeyPos.Num(), KeyQuat.Num());
 	}
 
 	virtual void Decompress(AnalogTrack &T)
@@ -739,16 +717,14 @@ struct FlexTrack48RotOnly : public FlexTrackBase
 	virtual void Serialize(FArchive &Ar)
 	{
 		Ar << KeyQuat << KeyTime << KeyPos;
-		CheckTimeTrack(KeyTime, 1, KeyQuat.Num());
 	}
 
 	virtual void Decompress(AnalogTrack &T)
 	{
 		CopyArray(T.KeyQuat, KeyQuat);
 		CopyArray(T.KeyTime, KeyTime);
-		T.KeyPos.Empty(KeyTime.Num());
-		for (int i = 0; i < KeyTime.Num(); i++)
-			T.KeyPos.AddItem(KeyPos);
+		T.KeyPos.Empty(1);
+		T.KeyPos.AddItem(KeyPos);
 	}
 };
 
@@ -796,7 +772,6 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 		{
 			track->Serialize(Ar);
 			track->Decompress(M.AnimTracks[i]);
-			assert(M.AnimTracks[i].KeyTime.Num());
 			delete track;
 		}
 		else
@@ -850,8 +825,7 @@ void UMeshAnimation::Upgrade()
 			AnalogTrack &A = M.AnimTracks[j];
 			int k;
 			// fix time tracks
-			for (k = 0; k < A.KeyTime.Num(); k++)
-				A.KeyTime[k] = k;
+			A.KeyTime.Empty();
 			// mirror position and orientation
 			for (k = 0; k < A.KeyPos.Num(); k++)
 				A.KeyPos[k].X *= -1;
@@ -1385,7 +1359,6 @@ static void ConvertRuneAnimations(UMeshAnimation &Anim, const TArray<RJoint> &Bo
 				A.KeyQuat.AddItem(EulerToQuat(rot));
 				A.KeyPos.AddItem(pos);
 				//?? notify about scale!=(1,1,1)
-				A.KeyTime.AddItem(frame);
 			}
 		}
 		assert(data == &SS.animdata[0] + SS.animdata.Num());
@@ -2403,6 +2376,9 @@ struct FQuatIntervalFixed32NoW
 	}
 };
 
+// following defines will help finding new undocumented compression schemes
+#define FIND_HOLES			1
+//#define DEBUG_DECOMPRESS	1
 
 void UAnimSet::ConvertAnims()
 {
@@ -2417,6 +2393,10 @@ void UAnimSet::ConvertAnims()
 		Bone->Name = TrackBoneNames[i];
 		// Flags, ParentIndex unused
 	}
+
+#if FIND_HOLES
+	bool findHoles = true;
+#endif
 
 	for (i = 0; i < Sequences.Num(); i++)
 	{
@@ -2436,15 +2416,23 @@ void UAnimSet::ConvertAnims()
 
 		int NumTracks = TrackBoneNames.Num();
 
+#if DEBUG_DECOMPRESS
+		printf("ComprTrack: %d bytes\n", Seq->CompressedByteStream.Num());
+#endif
+
 		// bone tracks ...
 		M->AnimTracks.Empty(NumTracks);
+
+		FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
+		Reader.ReverseBytes = Package->ReverseBytes;
+		bool hasTimeTracks = strcmp(Seq->KeyEncodingFormat, "AKF_VariableKeyLerp") == 0;
+
 		for (int j = 0; j < NumTracks; j++)
 		{
 			AnalogTrack *A = new (M->AnimTracks) AnalogTrack;
 
 			int k;
 
-			//!! use FMemoryReader here, do not parse data directly
 			if (!Seq->CompressedTrackOffsets.Num())	//?? or if RawAnimData.Num() != 0
 			{
 				// using RawAnimData array
@@ -2457,7 +2445,7 @@ void UAnimSet::ConvertAnims()
 				continue;
 			}
 
-			// decompress animations
+			// read animations
 #if 0
 			if (NumTracks * 4 != Seq->CompressedTrackOffsets.Num())
 			{
@@ -2478,37 +2466,64 @@ void UAnimSet::ConvertAnims()
 			int RotOffset   = Seq->CompressedTrackOffsets[j*4+2];
 			int RotKeys     = Seq->CompressedTrackOffsets[j*4+3];
 
-			FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
-			Reader.ReverseBytes = Package->ReverseBytes;
-
-			TArray<FVector> KeyPos;
-			TArray<FQuat>   KeyQuat;
-			KeyPos.Empty(Seq->NumFrames);
-			KeyQuat.Empty(Seq->NumFrames);
+			A->KeyPos.Empty(TransKeys);
+			A->KeyQuat.Empty(RotKeys);
+			if (hasTimeTracks)
+			{
+				A->KeyPosTime.Empty(TransKeys);
+				A->KeyQuatTime.Empty(RotKeys);
+			}
 
 			if (TransKeys)
 			{
+#if FIND_HOLES
+				if (findHoles && Reader.Tell() != TransOffset)
+				{
+					appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before TransTrack", Name, *Seq->SequenceName, j, TransOffset - Reader.Tell());
+					findHoles = false;
+				}
+#endif
 				Reader.Seek(TransOffset);
 				for (k = 0; k < TransKeys; k++)
 				{
 					FVector vec;
 					Reader << vec;
-					KeyPos.AddItem(vec);
+					A->KeyPos.AddItem(vec);
+				}
+				if (TransKeys > 1 && hasTimeTracks)
+				{
+					for (k = 0; k < TransKeys; k++)
+					{
+						word v;
+						Reader << v;
+						A->KeyPosTime.AddItem(v);
+					}
+					Reader.Seek(Align(Reader.Tell(), 4));
 				}
 			}
 			else
 			{
 				static FVector zero;
-				KeyPos.AddItem(zero);
+				A->KeyPos.AddItem(zero);
 				appNotify("No translation keys!");
 			}
 
+#if DEBUG_DECOMPRESS
+			int TransEnd = Reader.Tell();
+#endif
+#if FIND_HOLES
+			if (findHoles && Reader.Tell() != RotOffset)
+			{
+				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack", Name, *Seq->SequenceName, j, RotOffset - Reader.Tell());
+				findHoles = false;
+			}
+#endif
 			Reader.Seek(RotOffset);
 			if (RotKeys == 1)
 			{
 				FQuatFloat96NoW q;
 				Reader << q;
-				KeyQuat.AddItem(q);
+				A->KeyQuat.AddItem(q);
 			}
 			else
 			{
@@ -2522,31 +2537,31 @@ void UAnimSet::ConvertAnims()
 					{
 						FQuat q;
 						Reader << q;
-						KeyQuat.AddItem(q);
+						A->KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Float96NoW"))
 					{
 						FQuatFloat96NoW q;
 						Reader << q;
-						KeyQuat.AddItem(q);
+						A->KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed48NoW"))
 					{
 						FQuatFixed48NoW q;
 						Reader << q;
-						KeyQuat.AddItem(q);
+						A->KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed32NoW"))
 					{
 						FQuatFixed32NoW q;
 						Reader << q;
-						KeyQuat.AddItem(q);
+						A->KeyQuat.AddItem(q);
 					}
 					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_IntervalFixed32NoW"))
 					{
 						FQuatIntervalFixed32NoW q;
 						Reader << q;
-						KeyQuat.AddItem(q.ToQuat(Mins, Ranges));
+						A->KeyQuat.AddItem(q.ToQuat(Mins, Ranges));
 					}
 					//!! other: ACF_Float32NoW
 //FQuat qq = Seq->RawAnimData[j].RotKeys[k];
@@ -2558,119 +2573,22 @@ void UAnimSet::ConvertAnims()
 					else
 						appError("Unknown compression method: %s", *Seq->RotationCompressionFormat);
 				}
-			}
-
-			guard(DecompressAnims);
-
-			int NumKeys = Seq->NumFrames;
-
-			// fill KeyPos array when needed
-			printf("Frames=%d KeyPos.Num=%d KeyQuat.Num=%d NumKeys=%d KeyFmt=%s\n", Seq->NumFrames, KeyPos.Num(), KeyQuat.Num(), NumKeys, *Seq->KeyEncodingFormat);
-			guard(KeyPos);
-			if (KeyPos.Num() < NumKeys)
-			{
-				int n = KeyPos.Num();
-				FVector v;
-				if (n == 1)
+				if (RotKeys > 1 && hasTimeTracks)
 				{
-					// compressed into single key
-					v = KeyPos[0];
-					while (KeyPos.Num() < NumKeys)
-						KeyPos.AddItem(v);
-				}
-				else if (1)//??(n * 2 == NumKeys || n * 2 - 1 == NumKeys || n * 2 + 1 == NumKeys)
-				{
-					// used compression scheme "remove every second key"
-					TArray<FVector> KeyPos2;
-					KeyPos2.Empty(NumKeys);
-					for (k = 0; k < NumKeys; k++)
+					for (k = 0; k < RotKeys; k++)
 					{
-						if (k / 2 + 1 >= n)
-						{
-							// key after last element - keep previous value (== v)
-							KeyPos2.AddItem(KeyPos[n-1]);
-							//?? lerp with 1st key
-						}
-						else if ((k & 1) == 0)
-						{
-							// exact key
-							v = KeyPos[k / 2];
-							KeyPos2.AddItem(v);
-						}
-						else
-						{
-							FVector v2 = KeyPos[k / 2 + 1];
-							FVector v3;
-							Lerp((CVec3&)v, (CVec3&)v2, 0.5f, (CVec3&)v3);
-							KeyPos2.AddItem(v3);
-						}
+						word v;
+						Reader << v;
+						A->KeyQuatTime.AddItem(v);
 					}
-					CopyArray(KeyPos, KeyPos2);
+					Reader.Seek(Align(Reader.Tell(), 4));
 				}
-				else
-					assert(0);
 			}
-			unguard
-
-			// fill KeyQuat array when needed
-			guard(KeyQuat);
-			if (KeyQuat.Num() < NumKeys)
-			{
-				int n = KeyQuat.Num();
-				FQuat v;
-				if (n == 1)
-				{
-					// compressed into single key
-					v = KeyQuat[0];
-					while (KeyQuat.Num() < NumKeys)
-						KeyQuat.AddItem(v);
-				}
-				else if (1)//??(n * 2 == NumKeys || n * 2 - 1 == NumKeys || n * 2 + 1 == NumKeys)
-				{
-					// used compression scheme "remove every second key"
-					TArray<FQuat> KeyQuat2;
-					KeyQuat2.Empty(NumKeys);
-					for (k = 0; k < NumKeys; k++)
-					{
-						if (k / 2 + 1 >= n)
-						{
-							// key after last element - keep previous value (== v)
-							KeyQuat2.AddItem(KeyQuat[n-1]);
-							//?? lerp with 1st key
-						}
-						else if ((k & 1) == 0)
-						{
-							// exact key
-							v = KeyQuat[k / 2];
-							KeyQuat2.AddItem(v);
-						}
-						else
-						{
-							FQuat v2 = KeyQuat[k / 2 + 1];
-							FQuat v3;
-							Slerp((CQuat&)v, (CQuat&)v2, 0.5f, (CQuat&)v3);
-							KeyQuat2.AddItem(v3);
-						}
-					}
-					CopyArray(KeyQuat, KeyQuat2);
-				}
-				else
-					assert(0);
-			}
-			unguard;
-
-			// fill KeyTime array
-			for (k = 0; k < NumKeys; k++)
-				A->KeyTime.AddItem(k);
-
-			// copy data
-			CopyArray(A->KeyPos,  KeyPos);
-			CopyArray(A->KeyQuat, KeyQuat);
-			assert(A->KeyPos.Num() == NumKeys);
-			assert(A->KeyQuat.Num() == NumKeys);
-			assert(A->KeyTime.Num() == NumKeys);
-
-			unguard;
+#if DEBUG_DECOMPRESS
+//			printf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
+//				Seq->NumFrames, A->KeyPos.Num(), A->KeyQuat.Num(), *Seq->KeyEncodingFormat);
+			printf("    [%d]: %d - %d + %d - %d\n", j, TransOffset, TransEnd, RotOffset, Reader.Tell());
+#endif
 		}
 	}
 

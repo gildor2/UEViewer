@@ -356,135 +356,195 @@ void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 
 #define MAX_LINEAR_KEYS		4
 
-//!! DEBUGGING, remove later
-#define DEBUG_BIN_SEARCH	1
-#if 0
-#	define DBG		printf
-#else
-#	define DBG		if (1) {} else printf
-#endif
-//!! ^^^^^^
+static int FindTimeKey(const TArray<float> &KeyTime, float Frame)
+{
+	guard(FindTimeKey);
+
+	// find index in time key array
+	int NumKeys = KeyTime.Num();
+	// *** binary search ***
+	int Low = 0, High = NumKeys-1;
+	while (Low + MAX_LINEAR_KEYS < High)
+	{
+		int Mid = (Low + High) / 2;
+		if (Frame < KeyTime[Mid])
+			High = Mid-1;
+		else
+			Low = Mid;
+	}
+	// *** linear search ***
+	int i;
+	for (i = Low; i <= High; i++)
+	{
+		float CurrKeyTime = KeyTime[i];
+		if (Frame == CurrKeyTime)
+			return i;		// exact key
+		if (Frame < CurrKeyTime)
+			return (i > 0) ? i - 1 : 0;	// previous key
+	}
+	if (i > High)
+		i = High;
+	return i;
+
+	unguard;
+}
+
+
+// In:  KeyTime, Frame, NumFrames, Loop
+// Out: X - previous key index, Y - next key index, F - fraction between keys
+static void GetKeyParams(const TArray<float> &KeyTime, float Frame, float NumFrames, bool Loop, int &X, int &Y, float &F)
+{
+	guard(GetKeyParams);
+	X = FindTimeKey(KeyTime, Frame);
+if (X < 0) appError("11");
+if (X >= KeyTime.Num()) appError("22");
+	Y = X + 1;
+	int NumTimeKeys = KeyTime.Num();
+	if (Y >= NumTimeKeys)
+	{
+		if (!Loop)
+		{
+			// clamp animation
+			Y = NumTimeKeys - 1;
+			assert(X == Y);
+			F = 0;
+		}
+		else
+		{
+			// loop animation
+			Y = 0;
+			F = (Frame - KeyTime[X]) / (NumFrames - KeyTime[X]);
+		}
+	}
+	else
+	{
+		F = (Frame - KeyTime[X]) / (KeyTime[Y] - KeyTime[X]);
+	}
+	unguard;
+}
 
 
 // not 'static', because used in ExportPsa()
-//?? place function into UMeshAnimation
+//?? place function(s) into UMeshAnimation
 void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
 	CVec3 &DstPos, CQuat &DstQuat)
 {
 	guard(GetBonePosition);
 
-	int i;
-
 	// fast case: 1 frame only
-	if (A.KeyTime.Num() == 1)
+	if (A.KeyTime.Num() == 1 || NumFrames == 1 || Frame == 0)
 	{
 		DstPos  = (CVec3&)A.KeyPos[0];
 		DstQuat = (CQuat&)A.KeyQuat[0];
 		return;
 	}
 
-	// find index in time key array
-	int NumKeys = A.KeyTime.Num();
-	// *** binary search ***
-	int Low = 0, High = NumKeys-1;
-	DBG(">>> find %.5f\n", Frame);
-	while (Low + MAX_LINEAR_KEYS < High)
-	{
-		int Mid = (Low + High) / 2;
-		DBG("   [%d..%d] mid: [%d]=%.5f", Low, High, Mid, A.KeyTime[Mid]);
-		if (Frame < A.KeyTime[Mid])
-			High = Mid-1;
-		else
-			Low = Mid;
-		DBG("   d=%f\n", A.KeyTime[Mid]-Frame);
-	}
+	// data for lerping
+	int posX, rotX;			// index of previous frame
+	int posY, rotY;			// index of next frame
+	float posF, rotF;		// fraction between X and Y for lerping
 
-	// *** linear search ***
-	DBG("   linear: %d..%d\n", Low, High);
-	for (i = Low; i <= High; i++)
-	{
-		float CurrKeyTime = A.KeyTime[i];
-		DBG("   #%d: %.5f\n", i, CurrKeyTime);
-		if (Frame == CurrKeyTime)
-		{
-			// exact key found
-			DstPos  = (A.KeyPos.Num()  > 1) ? (CVec3&)A.KeyPos[i]  : (CVec3&)A.KeyPos[0];
-			DstQuat = (A.KeyQuat.Num() > 1) ? (CQuat&)A.KeyQuat[i] : (CQuat&)A.KeyQuat[0];
-			return;
-		}
-		if (Frame < CurrKeyTime)
-		{
-			i--;
-			break;
-		}
-	}
-	if (i > High)
-		i = High;
+	int NumTimeKeys = A.KeyTime.Num();
+	int NumPosKeys  = A.KeyPos.Num();
+	int NumRotKeys  = A.KeyQuat.Num();
 
-#if DEBUG_BIN_SEARCH
-	//!! --- checker ---
-	int i1;
-	for (i1 = 0; i1 < NumKeys; i1++)
+	if (NumTimeKeys)
 	{
-		float CurrKeyTime = A.KeyTime[i1];
-		if (Frame == CurrKeyTime)
-		{
-			// exact key found
-			DstPos  = (A.KeyPos.Num()  > 1) ? (CVec3&)A.KeyPos[i]  : (CVec3&)A.KeyPos[0];
-			DstQuat = (A.KeyQuat.Num() > 1) ? (CQuat&)A.KeyQuat[i] : (CQuat&)A.KeyQuat[0];
-			return;
-		}
-		if (Frame < CurrKeyTime)
-		{
-			i1--;
-			break;
-		}
-	}
-	if (i1 > NumKeys-1)
-		i1 = NumKeys-1;
-	if (i != i1)
-	{
-		appError("i=%d != i1=%d", i, i1);
-	}
-#endif
+		// here: KeyPos and KeyQuat sizes either equals to 1 or equals to KeyTime size
+		assert(NumPosKeys == 1 || NumPosKeys == NumTimeKeys);
+		assert(NumRotKeys == 1 || NumRotKeys == NumTimeKeys);
 
-	int X = i;
-	int Y = i+1;
-	float frac;
-	if (Y >= NumKeys)
-	{
-		if (!Loop)
+		GetKeyParams(A.KeyTime, Frame, NumFrames, Loop, posX, posY, posF);
+		rotX = posX;
+		rotY = posY;
+		rotF = posF;
+
+		if (NumPosKeys == 1)
 		{
-			// clamp animation
-			Y = NumKeys-1;
-			assert(X == Y);
-			frac = 0;
+			posX = posY = 0;
+			posF = 0;
 		}
-		else
+		if (NumRotKeys == 1)
 		{
-			// loop animation
-			Y = 0;
-			frac = (Frame - A.KeyTime[X]) / (NumFrames - A.KeyTime[X]);
+			rotX = rotY = 0;
+			rotF = 0;
 		}
 	}
 	else
 	{
-		frac = (Frame - A.KeyTime[X]) / (A.KeyTime[Y] - A.KeyTime[X]);
-	}
+		// empty KeyTime array - keys are evenly spaced on a time line
+		// note: KeyPos and KeyQuat sizes can be different
+#if UNREAL3
+		if (A.KeyPosTime.Num())
+		{
+			GetKeyParams(A.KeyPosTime, Frame, NumFrames, Loop, posX, posY, posF);
+		}
+		else
+#endif
+		if (NumPosKeys > 1)
+		{
+			float Position = Frame / NumFrames * NumPosKeys;
+			posX = appFloor(Position);
+			posF = Position - posX;
+			posY = posX + 1;
+			if (posY >= NumPosKeys)
+			{
+				if (!Loop)
+				{
+					posY = NumPosKeys - 1;
+					posF = 0;
+				}
+				else
+					posY = 0;
+			}
+		}
+		else
+		{
+			posX = posY = 0;
+			posF = 0;
+		}
 
-	assert(X >= 0 && X < NumKeys);
-	assert(Y >= 0 && Y < NumKeys);
+#if UNREAL3
+		if (A.KeyQuatTime.Num())
+		{
+			GetKeyParams(A.KeyQuatTime, Frame, NumFrames, Loop, rotX, rotY, rotF);
+		}
+		else
+#endif
+		if (NumRotKeys > 1)
+		{
+			float Position = Frame / NumFrames * NumRotKeys;
+			rotX = appFloor(Position);
+			rotF = Position - rotX;
+			rotY = rotX + 1;
+			if (rotY >= NumRotKeys)
+			{
+				if (!Loop)
+				{
+					rotY = NumRotKeys - 1;
+					rotF = 0;
+				}
+				else
+					rotY = 0;
+			}
+		}
+		else
+		{
+			rotX = rotY = 0;
+			rotF = 0;
+		}
+	}
 
 	// get position
-	if (A.KeyPos.Num() > 1)
-		Lerp((CVec3&)A.KeyPos[X], (CVec3&)A.KeyPos[Y], frac, DstPos);
+	if (posF > 0)
+		Lerp((CVec3&)A.KeyPos[posX], (CVec3&)A.KeyPos[posY], posF, DstPos);
 	else
-		DstPos = (CVec3&)A.KeyPos[0];
+		DstPos = (CVec3&)A.KeyPos[posX];
 	// get orientation
-	if (A.KeyQuat.Num() > 1)
-		Slerp((CQuat&)A.KeyQuat[X], (CQuat&)A.KeyQuat[Y], frac, DstQuat);
+	if (rotF > 0)
+		Slerp((CQuat&)A.KeyQuat[rotX], (CQuat&)A.KeyQuat[rotY], rotF, DstQuat);
 	else
-		DstQuat = (CQuat&)A.KeyQuat[0];
+		DstQuat = (CQuat&)A.KeyQuat[rotX];
 
 	unguard;
 }

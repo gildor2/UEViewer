@@ -128,7 +128,8 @@ public:
 #endif
 
 	FArchive()
-	:	ArStopper(0)
+	:	ArPos(0)
+	,	ArStopper(0)
 	,	ArVer(99999)			//?? something large
 	,	ArLicenseeVer(0)
 	,	ReverseBytes(false)
