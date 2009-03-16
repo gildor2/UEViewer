@@ -1077,13 +1077,37 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 byte *UTexture2D::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture2D::Decompress);
+
 	for (int n = 0; n < Mips.Num(); n++)
 	{
 		// find 1st mipmap with non-null data array
 		// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
 		const FTexture2DMipMap &Mip = Mips[n];
 		if (!Mip.Data.BulkData)
+		{
+			// check for external bulk
+			//!! * -notfc cmdline switch
+			//!! * support for textures from non-cooked packages (PC)
+			//!! * material viewer: support switching mip levels (for xbox decompression testing)
+#if XBOX360
+			if (Mip.Data.BulkDataFlags & BULKDATA_NoData) continue;
+			if (!strcmp(TextureFileCacheName, "None")) continue;
+			//!! cache checking of tfc file(s) + cache handles (FFileReader)
+			//!! note: there can be few cache files!
+			char Path[256];
+			appSprintf(ARRAY_ARG(Path), "%s/%s.tfc", appGetRootDirectory(), *TextureFileCacheName);
+			FILE *f = fopen(Path, "rb");
+			if (!f) continue;
+			fclose(f);
+			FFileReader Ar(Path);
+			Ar.ReverseBytes = Package->ReverseBytes;
+			FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
+//printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
+			Bulk->SerializeChunk(Ar);
+#else
 			continue;
+#endif
+		}
 		USize = Mip.SizeX;
 		VSize = Mip.SizeY;
 		ETextureFormat intFormat;
@@ -1107,51 +1131,58 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
 
 #if XBOX360
-		// align U/V texture size to 128 texels
-		int USize1 = Align(USize, 128);
-		int VSize1 = Align(VSize, 128);
-		int bytesPerBlock, blockSizeX, blockSizeY;
+		int bytesPerBlock, blockSizeX, blockSizeY, align;
 		switch (intFormat)
 		{
 		case TEXF_DXT1:
 			bytesPerBlock = 8;
 			blockSizeX = blockSizeY = 4;
+			align = 128;
 			break;
 		case TEXF_DXT3:
 		case TEXF_DXT5:
 			bytesPerBlock = 16;
 			blockSizeX = blockSizeY = 4;
+			align = 128;
 			break;
 		case TEXF_L8:
 			bytesPerBlock = 1;
 			blockSizeX = blockSizeY = 1;
-			USize1 = USize;		// no alignment
-			VSize1 = VSize;		// ...
+			align = 64;
 			break;
 		case TEXF_RGBA8:
 			bytesPerBlock = 4;
 			blockSizeX = blockSizeY = 1;
-			USize1 = Align(USize, 32);
-			VSize1 = VSize;
+			align = 32;
 			break;
 		default:
-			appNotify("bytesPerBlock: unknown texture format %d (%s)", intFormat, *Format);
+			appNotify("TextureFormatParameters: unknown texture format %d (%s)", intFormat, *Format);
 			return NULL;
 		}
-//		printf("bulk: %d  w=%d  h=%d\n", Mip.Data.BulkDataSizeOnDisk, USize, VSize);
-		if (Mip.Data.BulkDataSizeOnDisk / bytesPerBlock * blockSizeX * blockSizeY != USize1 * VSize1)
-			appError("bytesPerBlock: got %g, need %d",
-				(float)Mip.Data.BulkDataSizeOnDisk / (USize1 * VSize1) * blockSizeX * blockSizeY,
+		int USize1 = USize, VSize1 = VSize;
+		if (align)
+		{
+			USize1 = Align(USize, align);
+			VSize1 = Align(VSize, align);
+		}
+		int BulkSize = Mip.Data.ElementCount * Mip.Data.GetElementSize();
+//		printf("fmt=%s  bulk=%d  w=%d  h=%d\n", *Format, BulkSize, USize, VSize);
+		if (BulkSize / bytesPerBlock * blockSizeX * blockSizeY != USize1 * VSize1)
+		{
+			appNotify("%s'%s': bytesPerBlock: got %g, need %d", GetClassName(), Name,
+				(float)BulkSize / (USize1 * VSize1) * blockSizeX * blockSizeY,
 				bytesPerBlock);
+			return NULL;
+		}
 		// decompress texture ...
 		byte *pic;
 		if (bytesPerBlock > 1)
 		{
 			// reverse byte order (16-bit integers)
-			byte *buf2 = new byte[Mip.Data.BulkDataSizeOnDisk];
+			byte *buf2 = new byte[BulkSize];
 			byte *p  = Mip.Data.BulkData;
 			byte *p2 = buf2;
-			for (int i = 0; i < Mip.Data.BulkDataSizeOnDisk; i += 2, p += 2, p2 += 2)
+			for (int i = 0; i < BulkSize; i += 2, p += 2, p2 += 2)
 			{
 				p2[0] = p[1];
 				p2[1] = p[0];
@@ -1193,6 +1224,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 	}
 	// no valid mipmaps
 	return NULL;
+
 	unguard;
 }
 

@@ -986,6 +986,7 @@ public:
 	FName			Format;		//!! EPixelFormat
 	FName			AddressX;	//!! ETextureAddress
 	FName			AddressY;	//!! ETextureAddress
+	FName			TextureFileCacheName;
 
 #if RENDERING
 	// rendering implementation fields
@@ -998,6 +999,7 @@ public:
 	{
 		AddressX.Str = "TA_Wrap";
 		AddressY.Str = "TA_Wrap";
+		TextureFileCacheName.Str = "None";
 	}
 #endif
 
@@ -1007,9 +1009,9 @@ public:
 		PROP_ENUM3(Format)		//!! FString (on-disk) -> byte (in-memory)
 		PROP_ENUM3(AddressX)
 		PROP_ENUM3(AddressY)
+		PROP_NAME(TextureFileCacheName)
 		// drop unneeded props
 		PROP_DROP(bGlobalForceMipLevelsToBeResident)
-		PROP_DROP(TextureFileCacheName)
 		PROP_DROP(MipTailBaseIdx)
 	END_PROP_TABLE
 

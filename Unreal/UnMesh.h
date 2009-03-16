@@ -1569,6 +1569,10 @@ public:
 		// unsupported
 		PROP_DROP(Notifies)
 		PROP_DROP(CompressionScheme)
+		PROP_DROP(bDoNotOverrideCompression)
+		//!! additive animations
+		PROP_DROP(bIsAdditive)
+		PROP_DROP(AdditiveRefName)
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -1603,6 +1607,8 @@ public:
 		PROP_ARRAY(Sequences, UObject*)
 		PROP_ARRAY(UseTranslationBoneNames, FName)
 		PROP_NAME(PreviewSkelMeshName)
+		//!! unsupported
+		PROP_DROP(ForceMeshTranslationBoneNames)
 	END_PROP_TABLE
 
 	void ConvertAnims();

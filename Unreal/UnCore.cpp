@@ -567,14 +567,26 @@ void FByteBulkData::Serialize(FArchive &Ar)
 //	int savePos, saveStopper;
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
 	{
-		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
-		return;		//????
+//		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+		return;
 //		// seek to data block
 //		savePos     = Ar.Tell();
 //		saveStopper = Ar.GetStopper();
 //		Ar.SetStopper(0);
 //		Ar.Seek(BulkDataOffsetInFile);
 	}
+
+	SerializeChunk(Ar);
+
+	unguard;
+}
+
+
+void FByteBulkData::SerializeChunk(FArchive &Ar)
+{
+	guard(FByteBulkData::SerializeChunk);
+
+	assert(!(BulkDataFlags & BULKDATA_NoData));
 
 	// allocate array
 	if (BulkData) appFree(BulkData);
@@ -584,13 +596,15 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	BulkData = (byte*)appMalloc(DataSize);
 
 	// serialize data block
-	if (BulkDataFlags & (BULKDATA_CompressedLzo | BULKDATA_CompressedZlib))
+	Ar.Seek(BulkDataOffsetInFile);
+	if (BulkDataFlags & (BULKDATA_CompressedLzo | BULKDATA_CompressedZlib | BULKDATA_CompressedLzx))
 	{
 		// compressed block
-		appReadCompressedChunk(
-			Ar, BulkData, DataSize,
-			(BulkDataFlags & BULKDATA_CompressedZlib) ? COMPRESS_ZLIB : COMPRESS_LZO
-		);
+		int flags = 0;
+		if (BulkDataFlags & BULKDATA_CompressedZlib) flags = COMPRESS_ZLIB;
+		if (BulkDataFlags & BULKDATA_CompressedLzo)  flags = COMPRESS_LZO;
+		if (BulkDataFlags & BULKDATA_CompressedLzx)  flags = COMPRESS_LZX;
+		appReadCompressedChunk(Ar, BulkData, DataSize, flags);
 	}
 	else
 	{
@@ -598,13 +612,6 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		Ar.Serialize(BulkData, DataSize);
 	}
 	assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell());
-
-//	// restore stream position
-//	if (isSeparateBlock)		//????
-//	{
-//		Ar.Seek(savePos);
-//		Ar.SetStopper(saveStopper);
-//	}
 
 	unguard;
 }

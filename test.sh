@@ -91,10 +91,16 @@ case "" in
 
 "")
 	#!! CRASH (assert)
-#	gow Geist_Reaver
+	gow2 SP_Rescue_P T_COG_BOT_Screen_Anya01
+#	gow2 SP_Maria_1_S #AnimSetMarcus_CamSkel_Heavy_Mortar
+#	gow2 geargamehorde_SF
+#!!	gow Geist_Reaver
 #	gow2 SP_Rescue_P Jackbot_animset
-	gow2 -notex SP_Maria_Cine_Outro #Baked_11_4_Maria_v1_Anims
 #	run data/HumanMale_comp1.upk
+
+	# check texture formats
+#	gow2 SP_Leviathan_BF T_Barge_Grad
+#	gow2 SP_Rescue_P T_LightBeam_Falloff_02
 
 #	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman #ImportMesh_Human_Male
 #	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_TwinSouls_Cine #SK_CH_TwinSouls_Crowd_01

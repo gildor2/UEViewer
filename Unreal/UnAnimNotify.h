@@ -126,6 +126,7 @@ public:
 		PROP_DROP(SoundCue)
 		PROP_DROP(bFollowActor)
 		PROP_DROP(BoneName)
+		PROP_DROP(bIgnoreIfActorHidden)
 #endif
 	END_PROP_TABLE
 };

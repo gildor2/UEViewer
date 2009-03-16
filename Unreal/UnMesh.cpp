@@ -2380,6 +2380,35 @@ struct FQuatIntervalFixed32NoW
 #define FIND_HOLES			1
 //#define DEBUG_DECOMPRESS	1
 
+static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int NumFrames)
+{
+	guard(ReadTimeArray);
+	if (NumKeys <= 1) return;
+
+	if (NumFrames < 256)
+	{
+		for (int k = 0; k < NumKeys; k++)
+		{
+			byte v;
+			Ar << v;
+			Times.AddItem(v);
+		}
+	}
+	else
+	{
+		for (int k = 0; k < NumKeys; k++)
+		{
+			word v;
+			Ar << v;
+			Times.AddItem(v);
+		}
+	}
+	// align to 4 bytes
+	Ar.Seek(Align(Ar.Tell(), 4));
+	unguard;
+}
+
+
 void UAnimSet::ConvertAnims()
 {
 	guard(UAnimSet::ConvertAnims);
@@ -2417,7 +2446,7 @@ void UAnimSet::ConvertAnims()
 		int NumTracks = TrackBoneNames.Num();
 
 #if DEBUG_DECOMPRESS
-		printf("ComprTrack: %d bytes\n", Seq->CompressedByteStream.Num());
+		printf("ComprTrack: %d bytes, %d frames\n", Seq->CompressedByteStream.Num(), Seq->NumFrames);
 #endif
 
 		// bone tracks ...
@@ -2477,9 +2506,10 @@ void UAnimSet::ConvertAnims()
 			if (TransKeys)
 			{
 #if FIND_HOLES
-				if (findHoles && Reader.Tell() != TransOffset)
+				int hole = TransOffset - Reader.Tell();
+				if (findHoles && hole && abs(hole) > 4)	//?? should not be holes at all
 				{
-					appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before TransTrack", Name, *Seq->SequenceName, j, TransOffset - Reader.Tell());
+					appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before TransTrack", Name, *Seq->SequenceName, j, hole);
 					findHoles = false;
 				}
 #endif
@@ -2490,16 +2520,8 @@ void UAnimSet::ConvertAnims()
 					Reader << vec;
 					A->KeyPos.AddItem(vec);
 				}
-				if (TransKeys > 1 && hasTimeTracks)
-				{
-					for (k = 0; k < TransKeys; k++)
-					{
-						word v;
-						Reader << v;
-						A->KeyPosTime.AddItem(v);
-					}
-					Reader.Seek(Align(Reader.Tell(), 4));
-				}
+				if (hasTimeTracks)
+					ReadTimeArray(Reader, TransKeys, A->KeyPosTime, Seq->NumFrames);
 			}
 			else
 			{
@@ -2512,9 +2534,11 @@ void UAnimSet::ConvertAnims()
 			int TransEnd = Reader.Tell();
 #endif
 #if FIND_HOLES
-			if (findHoles && Reader.Tell() != RotOffset)
+			int hole = RotOffset - Reader.Tell();
+			if (findHoles && hole && abs(hole) > 4)	//?? should not be holes at all
 			{
-				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack", Name, *Seq->SequenceName, j, RotOffset - Reader.Tell());
+				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack (KeyFormat=%s)",
+					Name, *Seq->SequenceName, j, hole, *Seq->KeyEncodingFormat);
 				findHoles = false;
 			}
 #endif
@@ -2573,21 +2597,14 @@ void UAnimSet::ConvertAnims()
 					else
 						appError("Unknown compression method: %s", *Seq->RotationCompressionFormat);
 				}
-				if (RotKeys > 1 && hasTimeTracks)
-				{
-					for (k = 0; k < RotKeys; k++)
-					{
-						word v;
-						Reader << v;
-						A->KeyQuatTime.AddItem(v);
-					}
-					Reader.Seek(Align(Reader.Tell(), 4));
-				}
+				if (hasTimeTracks)
+					ReadTimeArray(Reader, RotKeys, A->KeyQuatTime, Seq->NumFrames);
 			}
 #if DEBUG_DECOMPRESS
 //			printf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
 //				Seq->NumFrames, A->KeyPos.Num(), A->KeyQuat.Num(), *Seq->KeyEncodingFormat);
-			printf("    [%d]: %d - %d + %d - %d\n", j, TransOffset, TransEnd, RotOffset, Reader.Tell());
+			printf("    [%d]: %d - %d + %d - %d (%d/%d)\n", j,
+				TransOffset, TransEnd, RotOffset, Reader.Tell(), TransKeys, RotKeys);
 #endif
 		}
 	}

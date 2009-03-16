@@ -157,6 +157,10 @@ public:
 	{}
 
 	virtual void Seek(int Pos) = 0;
+	virtual bool IsEof() const
+	{
+		return false;
+	}
 
 	virtual int Tell() const
 	{
@@ -274,7 +278,7 @@ public:
 		unguard;
 	}
 
-	bool IsEof() const
+	virtual bool IsEof() const
 	{
 		int pos  = ftell(f); fseek(f, 0, SEEK_END);
 		int size = ftell(f); fseek(f, pos, SEEK_SET);
@@ -331,9 +335,14 @@ public:
 	virtual void Seek(int Pos)
 	{
 		guard(FMemReader::Seek);
-		assert(Pos >= 0 && Pos < DataSize);
+		assert(Pos >= 0 && Pos <= DataSize);
 		ArPos = Pos;
 		unguard;
+	}
+
+	virtual bool IsEof() const
+	{
+		return ArPos >= DataSize;
 	}
 
 	virtual void Serialize(void *data, int size)
@@ -910,6 +919,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 #define BULKDATA_CompressedZlib			0x02		// unknown name
 #define BULKDATA_CompressedLzo			0x10		// unknown name
 #define BULKDATA_NoData					0x20		// unknown name
+#define BULKDATA_CompressedLzx			0x80		// unknown name
 
 struct FByteBulkData //?? separate FUntypedBulkData
 {
@@ -940,6 +950,7 @@ struct FByteBulkData //?? separate FUntypedBulkData
 	}
 
 	void Serialize(FArchive &Ar);
+	void SerializeChunk(FArchive &Ar);
 };
 
 struct FWordBulkData : public FByteBulkData

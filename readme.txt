@@ -23,7 +23,7 @@ Modified Unreal Engine 2.5
 Unreal Engine 3:
   Unreal Tournament 3
   Gears of War
-  Gears of War 2
+  Gears of War 2 (XBox360)
   The Last Remnant (benchmark)
   Mirror's Edge
 
@@ -44,6 +44,10 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+16.03.2009
+- implemented support for UE3 texture cache (textures.tfc) - for XBox360 games
+- improved GOW2 animation support
+
 13.03.2009
 - implemented support for GOW2 animations
 
