@@ -38,6 +38,9 @@ struct FMeshVertDeus
 		return Ar << V.D1 << V.D2;
 	}
 };
+
+SIMPLE_TYPE(FMeshVertDeus, unsigned)
+
 #endif
 
 
@@ -64,6 +67,8 @@ struct FMeshWedge1
 	}
 };
 
+RAW_TYPE(FMeshWedge1)
+
 
 // Says which triangles a particular mesh vertex is associated with.
 // Precomputed so that mesh triangles can be shaded with Gouraud-style
@@ -73,11 +78,14 @@ struct FMeshVertConnect
 {
 	int				NumVertTriangles;
 	int				TriangleListOffset;
+
 	friend FArchive &operator<<(FArchive &Ar, FMeshVertConnect &C)
 	{
 		return Ar << C.NumVertTriangles << C.TriangleListOffset;
 	}
 };
+
+SIMPLE_TYPE(FMeshVertConnect, int)
 
 
 void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, TArray<FBox> &BoundingBoxes,
@@ -380,6 +388,8 @@ struct FQuatComp
 	}
 };
 
+SIMPLE_TYPE(FQuatComp, short)
+
 // normalized quaternion with 3 16-bit fixed point fields
 struct FQuatComp2
 {
@@ -403,6 +413,8 @@ struct FQuatComp2
 	}
 };
 
+SIMPLE_TYPE(FQuatComp2, short)
+
 struct FVectorComp
 {
 	short			X, Y, Z;
@@ -421,6 +433,8 @@ struct FVectorComp
 		return Ar << V.X << V.Y << V.Z;
 	}
 };
+
+SIMPLE_TYPE(FVectorComp, short)
 
 
 #define SCELL_TRACK(Name,Quat,Pos,Time)						\
@@ -649,6 +663,8 @@ struct FQuatFloat96NoW
 	}
 };
 
+SIMPLE_TYPE(FQuatFloat96NoW, float)
+
 // normalized quaternion with 3 16-bit fixed point fields
 struct FQuatFixed48NoW
 {
@@ -671,6 +687,8 @@ struct FQuatFixed48NoW
 		return Ar << Q.X << Q.Y << Q.Z;
 	}
 };
+
+SIMPLE_TYPE(FQuatFixed48NoW, word)
 
 struct FlexTrackStatic : public FlexTrackBase
 {
@@ -936,6 +954,8 @@ struct VBoneInfluence1						// Weight and vertex number
 	}
 };
 
+SIMPLE_TYPE(VBoneInfluence1, word)
+
 struct VBoneInfIndex
 {
 	word			WeightIndex;
@@ -948,6 +968,8 @@ struct VBoneInfIndex
 		return Ar << V.WeightIndex << V.Number << V.DetailA << V.DetailB;
 	}
 };
+
+SIMPLE_TYPE(VBoneInfIndex, word)
 
 
 void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
@@ -1146,6 +1168,8 @@ struct RVertex
 	}
 };
 
+SIMPLE_TYPE(RVertex, int)
+
 
 struct RTriangle
 {
@@ -1161,6 +1185,8 @@ struct RTriangle
 		return Ar;
 	}
 };
+
+RAW_TYPE(RTriangle)
 
 
 struct RMesh
@@ -1887,6 +1913,8 @@ struct FEdge3
 	}
 };
 
+SIMPLE_TYPE(FEdge3, int)
+
 struct FGPUVert3Common
 {
 	FVector				Pos;
@@ -2011,6 +2039,8 @@ struct FMesh3Unk1
 	}
 };
 
+SIMPLE_TYPE(FMesh3Unk1, int)
+
 struct FMesh3Unk2
 {
 	TArray<FMesh3Unk1>	f0;
@@ -2114,7 +2144,9 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 
 	// setup missing properties
 	MeshScale.Set(1, 1, 1);
-	BoundingSphere.R = Bounds.SphereRadius;
+	BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
+	VectorSubtract((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Min);
+	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Max);
 
 	unguard;
 
@@ -2353,6 +2385,8 @@ struct FQuatFixed32NoW
 	}
 };
 
+SIMPLE_TYPE(FQuatFixed32NoW, unsigned)
+
 
 struct FQuatIntervalFixed32NoW
 {
@@ -2376,6 +2410,9 @@ struct FQuatIntervalFixed32NoW
 	}
 };
 
+SIMPLE_TYPE(FQuatIntervalFixed32NoW, unsigned)
+
+
 // following defines will help finding new undocumented compression schemes
 #define FIND_HOLES			1
 //#define DEBUG_DECOMPRESS	1
@@ -2385,6 +2422,7 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 	guard(ReadTimeArray);
 	if (NumKeys <= 1) return;
 
+//	printf("  pos=%4X keys (max=%X)[ ", Ar.Tell(), NumFrames);
 	if (NumFrames < 256)
 	{
 		for (int k = 0; k < NumKeys; k++)
@@ -2392,6 +2430,8 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 			byte v;
 			Ar << v;
 			Times.AddItem(v);
+//			if (k < 4 || k > NumKeys - 5) printf(" %02X ", v);
+//			else if (k == 4) printf("...");
 		}
 	}
 	else
@@ -2401,10 +2441,15 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 			word v;
 			Ar << v;
 			Times.AddItem(v);
+//			if (k < 4 || k > NumKeys - 5) printf(" %04X ", v);
+//			else if (k == 4) printf("...");
 		}
 	}
+//	printf(" ]\n");
+
 	// align to 4 bytes
 	Ar.Seek(Align(Ar.Tell(), 4));
+
 	unguard;
 }
 
@@ -2503,14 +2548,15 @@ void UAnimSet::ConvertAnims()
 				A->KeyQuatTime.Empty(RotKeys);
 			}
 
+			// read translation keys
 			if (TransKeys)
 			{
 #if FIND_HOLES
 				int hole = TransOffset - Reader.Tell();
-				if (findHoles && hole && abs(hole) > 4)	//?? should not be holes at all
+				if (findHoles && hole/** && abs(hole) > 4*/)	//?? should not be holes at all
 				{
 					appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before TransTrack", Name, *Seq->SequenceName, j, hole);
-					findHoles = false;
+///					findHoles = false;
 				}
 #endif
 				Reader.Seek(TransOffset);
@@ -2520,6 +2566,8 @@ void UAnimSet::ConvertAnims()
 					Reader << vec;
 					A->KeyPos.AddItem(vec);
 				}
+				// align to 4 bytes
+				Reader.Seek(Align(Reader.Tell(), 4));
 				if (hasTimeTracks)
 					ReadTimeArray(Reader, TransKeys, A->KeyPosTime, Seq->NumFrames);
 			}
@@ -2535,13 +2583,14 @@ void UAnimSet::ConvertAnims()
 #endif
 #if FIND_HOLES
 			int hole = RotOffset - Reader.Tell();
-			if (findHoles && hole && abs(hole) > 4)	//?? should not be holes at all
+			if (findHoles && hole/** && abs(hole) > 4*/)	//?? should not be holes at all
 			{
 				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack (KeyFormat=%s)",
 					Name, *Seq->SequenceName, j, hole, *Seq->KeyEncodingFormat);
-				findHoles = false;
+///				findHoles = false;
 			}
 #endif
+			// read rotation keys
 			Reader.Seek(RotOffset);
 			if (RotKeys == 1)
 			{
@@ -2597,6 +2646,8 @@ void UAnimSet::ConvertAnims()
 					else
 						appError("Unknown compression method: %s", *Seq->RotationCompressionFormat);
 				}
+				// align to 4 bytes
+				Reader.Seek(Align(Reader.Tell(), 4));
 				if (hasTimeTracks)
 					ReadTimeArray(Reader, RotKeys, A->KeyQuatTime, Seq->NumFrames);
 			}

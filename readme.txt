@@ -44,6 +44,17 @@ Keyboard: press <H> for help, <ESC> for exit.
 
 Changes:
 ~~~~~~~~
+18.03.2009
+- completely rewritten "-path" handling - now works with UE3 games too
+- significantly faster (10 times) UE2 package loading
+
+17.03.2009
+- added "-meshes" command line switch to disable material viewer (object browser
+  will iterate meshes only)
+- added "-uc" command line switch to allow creating scripts for exported meshes
+  (was created unconditionally before)
+- improved initial positioning of UE3 mesh in viewer
+
 16.03.2009
 - implemented support for UE3 texture cache (textures.tfc) - for XBox360 games
 - improved GOW2 animation support

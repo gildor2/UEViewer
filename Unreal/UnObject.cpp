@@ -72,7 +72,9 @@ void UObject::EndLoad()
 		guard(LoadObject);
 		Package->SetupReader(Obj->PackageIndex);
 		printf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
+//		appResetProfiler();
 		Obj->Serialize(*Package);
+//		appPrintProfiler();
 		// check for unread bytes
 		if (!Package->IsStopper())
 			appError("%s::Serialize(%s): %d unread bytes",

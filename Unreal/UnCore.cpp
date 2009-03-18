@@ -1,6 +1,15 @@
 #include "Core.h"
 #include "UnCore.h"
 
+// includes for file enumeration
+#if _WIN32
+#	include <io.h>					// for findfirst() set
+#else
+#	include <dirent.h>				// for opendir() etc
+#	include <sys/stat.h>			// for stat()
+#endif
+
+// includes for package decompression
 #if UNREAL3
 #	include "lzo/lzo1x.h"
 
@@ -34,16 +43,272 @@
 #endif // UNREAL3
 
 
+#if PROFILE
+
+int GNumSerialize = 0;
+int GSerializeBytes = 0;
+static int ProfileStartTime = -1;
+
+void appResetProfiler()
+{
+	GNumAllocs = GNumSerialize = GSerializeBytes = 0;
+	ProfileStartTime = appMilliseconds();
+}
+
+
+void appPrintProfiler()
+{
+	if (ProfileStartTime == -1) return;
+	printf("Loaded in %.2g sec. %d allocs, %d bytes serialized in %d calls.\n",
+		(appMilliseconds() - ProfileStartTime) / 1000.0f, GNumAllocs, GSerializeBytes, GNumSerialize);
+	ProfileStartTime = -1;
+}
+
+#endif // PROFILE
+
+/*-----------------------------------------------------------------------------
+	Game file system
+-----------------------------------------------------------------------------*/
+
+#define MAX_GAME_FILES			8192
+#define MAX_FOREIGN_FILES		16384
+
 static char RootDirectory[256];
+
+
+static const char *PackageExtensions[] =
+{
+	"u", "ut2", "utx", "uax", "usx", "ukx"
+#if RUNE
+	, "ums"
+#endif
+#if TRIBES3
+	, "pkg"
+#endif
+#if UNREAL3
+	, "upk", "ut3", "xxx"
+#endif
+};
+
+#if UNREAL3 || UC2
+static const char *KnownExtensions[] =
+{
+#	if UNREAL3
+	"tfc",			// Texture File Cache
+#	endif
+#	if UC2
+	"xpr",
+#	endif
+};
+#endif
+
+
+static bool FindExtension(const char *Filename, const char **Extensions, int NumExtensions)
+{
+	const char *ext = strrchr(Filename, '.');
+	if (!ext) return false;
+	ext++;
+	for (int i = 0; i < NumExtensions; i++)
+		if (!stricmp(ext, Extensions[i])) return true;
+	return false;
+}
+
+
+static CGameFileInfo *GameFiles[MAX_GAME_FILES];
+static int           NumGameFiles = 0;
+static int           NumForeignFiles = 0;
+
+
+static bool RegisterGameFile(const char *FullName)
+{
+	guard(RegisterGameFile);
+
+	// return false when MAX_GAME_FILES
+	if (NumGameFiles >= ARRAY_COUNT(GameFiles))
+		return false;
+
+	bool IsPackage = false;
+	if (!FindExtension(FullName, ARRAY_ARG(PackageExtensions)))
+	{
+#if UNREAL3 || UC2
+		if (!FindExtension(FullName, ARRAY_ARG(KnownExtensions)))
+#endif
+		{
+			// unknown file type
+			if (++NumForeignFiles >= MAX_FOREIGN_FILES)
+				appError("Too much unknown files - bad root directory?");
+			return true;
+		}
+	}
+	else
+		IsPackage = true;
+
+	// create entry
+	CGameFileInfo *info = new CGameFileInfo;
+	GameFiles[NumGameFiles++] = info;
+	info->IsPackage = IsPackage;
+
+	// cut RootDirectory from filename
+	const char *s = FullName + strlen(RootDirectory) + 1;
+	assert(s[-1] == '/');
+	appStrncpyz(info->RelativeName, s, ARRAY_COUNT(info->RelativeName));
+	// find filename
+	s = strrchr(info->RelativeName, '/');
+	if (s) s++; else s = info->RelativeName;
+	info->ShortFilename = s;
+	// find extension
+	s = strrchr(info->ShortFilename, '.');
+	if (s) s++;
+	info->Extension = s;
+
+	return true;
+
+	unguardf(("%s", FullName));
+}
+
+
+static bool ScanGameDirectory(const char *dir)
+{
+	guard(ScanGameDirectory);
+
+	char Path[256];
+	bool res = true;
+#if _WIN32
+	appSprintf(ARRAY_ARG(Path), "%s/*.*", dir);
+	_finddata_t found;
+	long hFind = _findfirst(Path, &found);
+	if (hFind == -1) return true;
+	do
+	{
+		if (found.name[0] == '.') continue;			// "." or ".."
+		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, found.name);
+		// directory -> recurse
+		if (found.attrib & _A_SUBDIR)
+			res = ScanGameDirectory(Path);
+		else
+			res = RegisterGameFile(Path);
+	} while (res && _findnext(hFind, &found) != -1);
+	_findclose(hFind);
+#else
+	DIR *find = opendir(dir);
+	if (!find) return true;
+	struct dirent *ent;
+	while (/*res &&*/ (ent = readdir(find)))
+	{
+		if (ent->d_name[0] == '.') continue;			// "." or ".."
+		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, ent->d_name);
+		// directory -> recurse
+		struct stat buf;
+		if (stat(Path, &buf) < 0) continue;			// or break?
+		if (S_ISDIR(buf.st_mode))
+			res = ScanGameDirectory(Path);
+		else
+			res = RegisterGameFile(Path);
+	}
+	closedir(find);
+#endif
+	return res;
+
+	unguard;
+}
+
 
 void appSetRootDirectory(const char *dir)
 {
+	guard(appSetRootDirectory);
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
+	ScanGameDirectory(RootDirectory);
+	printf("Found %d game files (%d skipped)\n", NumGameFiles, NumForeignFiles);
+	unguardf(("dir=%s", dir));
 }
+
 
 const char *appGetRootDirectory()
 {
 	return RootDirectory[0] ? RootDirectory : NULL;
+}
+
+
+const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
+{
+	guard(appFindGameFile);
+
+	char buf[256];
+	appStrncpyz(buf, Filename, ARRAY_COUNT(buf));
+
+	// validate name
+	assert(strchr(Filename, '/') == NULL);
+	assert(strchr(Filename, '\\') == NULL);
+
+	if (Ext)
+	{
+		// extension is provided
+		assert(!strchr(buf, '.'));
+	}
+	else
+	{
+		// check for extension in filename
+		char *s = strrchr(buf, '.');
+		if (s)
+		{
+			Ext = s + 1;	// remember extension
+			*s = 0;			// cut extension
+		}
+	}
+
+	CGameFileInfo *info = NULL;
+	int nameLen = strlen(buf);
+	for (int i = 0; i < NumGameFiles; i++)
+	{
+		CGameFileInfo *info2 = GameFiles[i];
+		// verify filename
+		if (strnicmp(info2->ShortFilename, buf, nameLen) != 0) continue;
+		if (info2->ShortFilename[nameLen] != '.') continue;
+		// verify extension
+		if (Ext)
+		{
+			if (stricmp(info2->Extension, Ext) != 0) continue;
+		}
+		else
+		{
+			// Ext = NULL => should be any package extension
+			if (!info2->IsPackage) continue;
+		}
+		// file was found
+		info = info2;
+		break;
+	}
+	return info;
+
+	unguardf(("name=%s ext=%s", Filename, Ext));
+}
+
+
+FArchive *appCreateFileReader(const CGameFileInfo *info)
+{
+	char buf[256];
+	appSprintf(ARRAY_ARG(buf), "%s/%s", RootDirectory, info->RelativeName);
+	return new FFileReader(buf);
+}
+
+
+void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext)
+{
+	for (int i = 0; i < NumGameFiles; i++)
+	{
+		const CGameFileInfo *info = GameFiles[i];
+		if (!Ext)
+		{
+			// enumerate packages
+			if (!info->IsPackage) continue;
+		}
+		else
+		{
+			// check extension
+			if (stricmp(info->Extension, Ext) != 0) continue;
+		}
+		if (!Callback(info)) break;
+	}
 }
 
 
@@ -125,6 +390,19 @@ void FArray::Remove(int index, int count, int elementSize)
 }
 
 
+void FArray::RawCopy(const FArray &Src, int elementSize)
+{
+	guard(FArray::RawCopy);
+
+	Empty(Src.DataCount, elementSize);
+	if (!Src.DataCount) return;
+	DataCount = Src.DataCount;
+	memcpy(DataPtr, Src.DataPtr, Src.DataCount * elementSize);
+
+	unguard;
+}
+
+
 FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize)
 {
 	guard(TArray::Serialize);
@@ -160,6 +438,95 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 
 	unguard;
 }
+
+
+static void ReverseBytes(void *Block, int NumItems, int ItemSize)
+{
+	byte *p1 = (byte*)Block;
+	byte *p2 = p1 + ItemSize - 1;
+	for (int i = 0; i < NumItems; i++, p1 += ItemSize, p2 += ItemSize)
+	{
+		byte *p1a = p1;
+		byte *p2a = p2;
+		while (p1a < p2a)
+		{
+			Exchange(*p1a, *p2a);
+			p1a++;
+			p2a--;
+		}
+	}
+}
+
+
+FArchive& FArray::SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize)
+{
+	guard(TArray::SerializeRaw);
+
+	if (Ar.ReverseBytes)	// reverse bytes -> cannot use fast serializer
+		return Serialize(Ar, Serializer, elementSize);
+
+	// serialize data count
+#if UNREAL3
+	if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
+		Ar << DataCount;
+	else
+#endif
+		Ar << AR_INDEX(DataCount);
+
+	if (Ar.IsLoading)
+	{
+		// loading array items - should prepare array
+		// read data count
+		// allocate space for data
+		DataPtr  = (DataCount) ? appMalloc(elementSize * DataCount) : NULL;
+		MaxCount = DataCount;
+	}
+	if (!DataCount) return Ar;
+
+	// perform serialization itself
+	Ar.Serialize(DataPtr, elementSize * DataCount);
+	return Ar;
+
+	unguard;
+}
+
+
+FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
+{
+	guard(TArray::SerializeSimple);
+
+	// serialize data count
+#if UNREAL3
+	if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
+		Ar << DataCount;
+	else
+#endif
+		Ar << AR_INDEX(DataCount);
+
+	int elementSize = NumFields * FieldSize;
+	if (Ar.IsLoading)
+	{
+		// loading array items - should prepare array
+		// read data count
+		// allocate space for data
+		DataPtr  = (DataCount) ? appMalloc(elementSize * DataCount) : NULL;
+		MaxCount = DataCount;
+	}
+	if (!DataCount) return Ar;
+
+	// perform serialization itself
+	Ar.Serialize(DataPtr, elementSize * DataCount);
+	// reverse bytes when needed
+	if (FieldSize > 1 && Ar.ReverseBytes)
+	{
+		assert(Ar.IsLoading);
+		ReverseBytes(DataPtr, DataCount * NumFields, FieldSize);
+	}
+	return Ar;
+
+	unguard;
+}
+
 
 /*-----------------------------------------------------------------------------
 	FArchive methods

@@ -179,6 +179,7 @@ DEPENDS = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
+	Exporters/Exporters.h \
 	Exporters/Psk.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -187,6 +188,19 @@ DEPENDS = \
 
 ./obj/umodel-win32/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportPsk.obj" Exporters/ExportPsk.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h
+
+./obj/umodel-win32/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Export3D.obj" Exporters/Export3D.cpp
 
 DEPENDS = \
 	Build.h \
@@ -201,18 +215,6 @@ DEPENDS = \
 
 ./obj/umodel-win32/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h
-
-./obj/umodel-win32/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Export3D.obj" Exporters/Export3D.cpp
 
 DEPENDS = \
 	Build.h \

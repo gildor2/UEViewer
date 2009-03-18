@@ -8,12 +8,7 @@
 
 #if UC2
 #	include "UnPackage.h"				// just for ArVer ...
-#	if _WIN32
-#		include <io.h>					// for findfirst() set
-#	else
-#		include <dirent.h>				// for opendir() etc
-#	endif
-#endif // UC2
+#endif
 
 #if RENDERING
 
@@ -779,46 +774,48 @@ struct XprEntry
 
 struct XprInfo
 {
-	char	Filename[256];
+	const CGameFileInfo *File;
 	TArray<XprEntry> Items;
 };
 
 static TArray<XprInfo> xprFiles;
 
-static void ReadXprFile(const char *Filename)
+static bool ReadXprFile(const CGameFileInfo *file) //??(const char *Filename)
 {
 	guard(ReadXprFile);
-	FFileReader Ar(Filename);
+	FArchive *Ar = appCreateFileReader(file);
 
 	int Tag, FileLen, DataStart, DataCount;
-	Ar << Tag << FileLen << DataStart << DataCount;
+	*Ar << Tag << FileLen << DataStart << DataCount;
 	if (Tag != BYTES4('X','P','R','1'))
 	{
-//		printf("Unknown XPR tag in %s\n", Filename);
-		return;
+//		printf("Unknown XPR tag in %s\n", file->RelativeName);
+		delete Ar;
+		return true;
 	}
 	if (FileLen <= DataStart)
 	{
-//		printf("Unsupported XPR layout in %s\n", Filename);
-		return;
+//		printf("Unsupported XPR layout in %s\n", file->RelativeName);
+		delete Ar;
+		return true;
 	}
 
 	XprInfo *Info = new(xprFiles) XprInfo;
-	appStrncpyz(Info->Filename, Filename, ARRAY_COUNT(Info->Filename));
+	Info->File = file;
 	// read filelist
 	int i;
 	for (i = 0; i < DataCount; i++)
 	{
 		int NameOffset, DataOffset;
-		Ar << NameOffset << DataOffset;
-		int savePos = Ar.Tell();
-		Ar.Seek(NameOffset + 12);
+		*Ar << NameOffset << DataOffset;
+		int savePos = Ar->Tell();
+		Ar->Seek(NameOffset + 12);
 		// read name
 		char c, buf[256];
 		int n = 0;
 		while (true)
 		{
-			Ar << c;
+			*Ar << c;
 			if (n < ARRAY_COUNT(buf))
 				buf[n++] = c;
 			if (!c) break;
@@ -829,15 +826,15 @@ static void ReadXprFile(const char *Filename)
 		appStrncpyz(Entry->Name, buf, ARRAY_COUNT(Entry->Name));
 		Entry->DataOffset = DataOffset + 12;	// will be overriden later
 		// seek back
-		Ar.Seek(savePos);
+		Ar->Seek(savePos);
 	}
 	// read file data
-	Ar.Seek(Info->Items[0].DataOffset);
+	Ar->Seek(Info->Items[0].DataOffset);
 	TArray<int> data;
 	while (true)
 	{
 		int v;
-		Ar << v;
+		*Ar << v;
 		if (v == -1) break;						// end marker, 0xFFFFFFFF
 		data.AddItem(v);
 	}
@@ -845,9 +842,10 @@ static void ReadXprFile(const char *Filename)
 	int dataSize = data.Num() / DataCount;
 	if (data.Num() % DataCount != 0 || dataSize > 5)
 	{
-//		printf("Unsupported XPR layout in %s\n", Filename);
+//		printf("Unsupported XPR layout in %s\n", file->RelativeName);
 		xprFiles.Remove(xprFiles.Num()-1);
-		return;
+		delete Ar;
+		return true;
 	}
 	for (i = 0; i < DataCount; i++)
 	{
@@ -866,9 +864,10 @@ static void ReadXprFile(const char *Filename)
 			start = data[idx+1];
 			break;
 		default:
-			appNotify("Unknown XPR layout of %s: %d dwords", Filename, dataSize);
+			appNotify("Unknown XPR layout of %s: %d dwords", file->RelativeName, dataSize);
 			xprFiles.Remove(xprFiles.Num()-1);
-			return;
+			delete Ar;
+			return true;
 		}
 		Entry->DataOffset = DataStart + start;
 	}
@@ -885,53 +884,17 @@ static void ReadXprFile(const char *Filename)
 //		printf("%s -> %X + %X\n", Entry->Name, Entry->DataOffset, Entry->DataSize);
 	}
 
-	unguardf(("%s", Filename));
-}
+	delete Ar;
+	return true;
 
-static void ScanXprDir(const char *dir)
-{
-	guard(ScanXprDir);
-
-	char Path[256];
-#if _WIN32
-	appSprintf(ARRAY_ARG(Path), "%s/%s/*.xpr", appGetRootDirectory(), dir);
-	_finddata_t found;
-	long hFind = _findfirst(Path, &found);
-	if (hFind == -1) return;
-	do
-	{
-		appSprintf(ARRAY_ARG(Path), "%s/%s/%s", appGetRootDirectory(), dir, found.name);
-		// now: Path = full filename
-		ReadXprFile(Path);
-	} while (_findnext(hFind, &found) != -1);
-	_findclose(hFind);
-#else
-	appSprintf(ARRAY_ARG(Path), "%s/%s", appGetRootDirectory(), dir);
-	DIR *find = opendir(Path);
-	if (!find) return;
-	while (struct dirent *ent = readdir(find))
-	{
-		// check file extension
-		char *s = strrchr(ent->d_name, '.');
-		if (!s || strcmp(s, ".xpr") != 0) continue;
-		appSprintf(ARRAY_ARG(Path), "%s/%s/%s", appGetRootDirectory(), dir, ent->d_name);
-		// now: Path = full filename
-		ReadXprFile(Path);
-	}
-	closedir(find);
-#endif
-
-	unguardf(("%s", dir));
+	unguardf(("%s", file->RelativeName));
 }
 
 static void ScanXprs()
 {
 	if (ScannedXprs) return;
 	ScannedXprs = true;
-
-	if (!appGetRootDirectory()) return;	// don't know, where to scan
-	ScanXprDir("Textures");
-	ScanXprDir("XboxTextures");
+	appEnumGameFiles(ReadXprFile, "xpr");
 }
 
 static byte *FindXpr(const char *Name)
@@ -946,9 +909,10 @@ static byte *FindXpr(const char *Name)
 			{
 				// found
 				byte *buf = new byte[File->DataSize];
-				FFileReader Reader(Info->Filename);
-				Reader.Seek(File->DataOffset);
-				Reader.Serialize(buf, File->DataSize);
+				FArchive *Reader = appCreateFileReader(Info->File);
+				Reader->Seek(File->DataOffset);
+				Reader->Serialize(buf, File->DataSize);
+				delete Reader;
 				return buf;
 			}
 		}
@@ -1094,16 +1058,14 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			if (!strcmp(TextureFileCacheName, "None")) continue;
 			//!! cache checking of tfc file(s) + cache handles (FFileReader)
 			//!! note: there can be few cache files!
-			char Path[256];
-			appSprintf(ARRAY_ARG(Path), "%s/%s.tfc", appGetRootDirectory(), *TextureFileCacheName);
-			FILE *f = fopen(Path, "rb");
-			if (!f) continue;
-			fclose(f);
-			FFileReader Ar(Path);
-			Ar.ReverseBytes = Package->ReverseBytes;
+			const CGameFileInfo *tfc = appFindGameFile(TextureFileCacheName, "tfc");
+			if (!tfc) continue;
+			FArchive *Ar = appCreateFileReader(tfc);
+			Ar->ReverseBytes = Package->ReverseBytes;
 			FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
 //printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
-			Bulk->SerializeChunk(Ar);
+			Bulk->SerializeChunk(*Ar);
+			delete Ar;
 #else
 			continue;
 #endif
@@ -1182,7 +1144,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			byte *buf2 = new byte[BulkSize];
 			byte *p  = Mip.Data.BulkData;
 			byte *p2 = buf2;
-			for (int i = 0; i < BulkSize; i += 2, p += 2, p2 += 2)
+			for (int i = 0; i < BulkSize; i += 2, p += 2, p2 += 2)	//?? use ReverseBytes() from UnCore (but: inplace)
 			{
 				p2[0] = p[1];
 				p2[1] = p[0];

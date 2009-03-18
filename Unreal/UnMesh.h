@@ -86,6 +86,8 @@ struct FMeshVert
 	}
 };
 
+SIMPLE_TYPE(FMeshVert, unsigned)
+
 
 struct FMeshNorm
 {
@@ -99,6 +101,8 @@ struct FMeshNorm
 	}
 };
 
+SIMPLE_TYPE(FMeshNorm, unsigned)
+
 
 // corresponds to UT1 FMeshFloatUV
 struct FMeshUV
@@ -111,6 +115,8 @@ struct FMeshUV
 		return Ar << M.U << M.V;
 	}
 };
+
+SIMPLE_TYPE(FMeshUV, float)
 
 
 // UE1 FMeshUV
@@ -133,6 +139,8 @@ struct FMeshUV1
 	}
 };
 
+SIMPLE_TYPE(FMeshUV1, byte)
+
 
 // LOD-style triangular polygon in a mesh, which references three textured vertices.
 struct FMeshFace
@@ -147,6 +155,8 @@ struct FMeshFace
 		return Ar;
 	}
 };
+
+SIMPLE_TYPE(FMeshFace, word)
 
 
 // temp structure, skipped while mesh loading; used by UE1 UMesh only
@@ -182,6 +192,8 @@ struct FMeshWedge
 		return Ar;
 	}
 };
+
+//RAW_TYPE(FMeshWedge) -- not raw type because of alignment between iVertex and TexUV
 
 
 // LOD-style mesh material.
@@ -459,6 +471,8 @@ struct FAnimMeshVertex
 		return Ar << V.Pos << V.Norm << V.Tex;
 	}
 };
+
+SIMPLE_TYPE(FAnimMeshVertex, float)
 
 
 struct FRawIndexBuffer
@@ -810,6 +824,8 @@ struct FVertInfluences
 	}
 };
 
+RAW_TYPE(FVertInfluences)
+
 
 struct VWeightIndex
 {
@@ -833,6 +849,8 @@ struct VBoneInfluence						// Weight and bone number
 		return Ar << V.BoneWeight << V.BoneIndex;
 	}
 };
+
+SIMPLE_TYPE(VBoneInfluence, word)
 
 
 //
@@ -931,6 +949,7 @@ struct VTriangle
 	}
 };
 
+RAW_TYPE(VTriangle)
 
 struct FSkinPoint
 {
@@ -943,6 +962,7 @@ struct FSkinPoint
 	}
 };
 
+RAW_TYPE(FSkinPoint)
 
 struct FSkelMeshSection
 {
@@ -1003,6 +1023,8 @@ struct FLineageWedge
 				  << S.Weights[0] << S.Weights[1] << S.Weights[2] << S.Weights[3];
 	}
 };
+
+RAW_TYPE(FLineageWedge)
 
 #endif
 

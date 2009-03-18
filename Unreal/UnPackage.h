@@ -325,7 +325,7 @@ public:
 	FObjectDepends			*DependsTable;
 #endif
 
-	UnPackage(const char *filename);
+	UnPackage(const char *filename, FArchive *Ar = NULL);
 	~UnPackage();
 
 	// load package using short name (without path and extension)

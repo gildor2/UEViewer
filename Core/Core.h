@@ -56,6 +56,16 @@
 		appError("assertion failed: %s\n", #x); \
 	}
 
+// helper declararion
+template<int> struct CompileTimeError;
+template<>    struct CompileTimeError<true> {};
+
+#define staticAssert(expr,name)			\
+	{									\
+		CompileTimeError<(expr) != 0> assert_##name; \
+		(void)assert_##name;			\
+	}
+
 #undef M_PI
 #define M_PI				(3.14159265358979323846)
 
@@ -137,9 +147,6 @@ void appFree(void *ptr);
 void appSetNotifyHeader(const char *fmt, ...);
 void appNotify(char *fmt, ...);
 
-void appSetRootDirectory(const char *dir);
-const char *appGetRootDirectory();
-
 int appSprintf(char *dest, int size, const char *fmt, ...);
 void appStrncpyz(char *dst, const char *src, int count);
 void appStrncpylwr(char *dst, const char *src, int count);
@@ -208,6 +215,10 @@ extern char GErrorHistory[2048];
 
 
 #define appMilliseconds()		SDL_GetTicks()
+
+#if PROFILE
+extern int GNumAllocs;
+#endif
 
 
 #include "Math3D.h"

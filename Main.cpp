@@ -12,6 +12,7 @@
 
 #if RENDERING
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
+static bool meshOnly = false;
 #endif
 
 
@@ -71,6 +72,8 @@ static int ObjIndex = 0;
 -----------------------------------------------------------------------------*/
 
 #define MAX_EXPORTERS		16
+
+bool GExportScripts = false;
 
 typedef void (*ExporterFunc_t)(UObject*, FArchive&);
 
@@ -165,8 +168,9 @@ int main(int argc, char **argv)
 				"    -pkginfo        load package and display its information\n"
 				"\n"
 				"Options:\n"
-				"    -path=PATH      path to UT installation directory; if not specified,\n"
+				"    -path=PATH      path to game installation directory; if not specified,\n"
 				"                    program will search for packages in current directory\n"
+				"    -meshes         view meshes only\n"
 				"\n"
 				"Compatibility options:\n"
 				"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
@@ -176,6 +180,7 @@ int main(int argc, char **argv)
 				"\n"
 				"Export options:\n"
 				"    -all            export all linked objects too\n"
+				"    -uc             create unreal script when possible\n"
 				"\n"
 				"Supported resources for export:\n"
 				"    SkeletalMesh    exported as ActorX psk file\n"
@@ -243,7 +248,8 @@ int main(int argc, char **argv)
 
 	// parse command line
 	bool dump = false, view = true, exprt = false, exprtAll = false,
-		 listOnly = false, noMesh = false, noAnim = false, noTex = false, pkgInfo = false;
+		 listOnly = false, noMesh = false, noAnim = false, noTex = false, pkgInfo = false,
+		 hasRootDir = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -268,8 +274,12 @@ int main(int argc, char **argv)
 				view  = false;
 				exprt = true;
 			}
+			else if (!stricmp(opt, "meshes"))
+				meshOnly = true;
 			else if (!stricmp(opt, "all"))
 				exprtAll = true;
+			else if (!stricmp(opt, "uc"))
+				GExportScripts = true;
 			else if (!stricmp(opt, "pkginfo"))
 				pkgInfo = true;
 			else if (!stricmp(opt, "list"))
@@ -281,7 +291,10 @@ int main(int argc, char **argv)
 			else if (!stricmp(opt, "notex"))
 				noTex = true;
 			else if (!strnicmp(opt, "path=", 5))
+			{
 				appSetRootDirectory(opt+5);
+				hasRootDir = true;
+			}
 			else
 				goto help;
 		}
@@ -322,14 +335,25 @@ int main(int argc, char **argv)
 	if (noMesh) UnregisterClass("SkeletalMesh",   true);
 	if (noTex)  UnregisterClass("UnrealMaterial", true);
 
+#if PROFILE
+	appResetProfiler();
+#endif
+
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);
 	// load package
 	UnPackage *Package;
-	if (strchr(argPkgName, '.'))
+	if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
+	{
+		// has path in filename
 		Package = new UnPackage(argPkgName);
+	}
 	else
+	{
+		// no path in filename
+		if (!hasRootDir) appSetRootDirectory(".");		// scan for packages
 		Package = UnPackage::LoadPackage(argPkgName);
+	}
 	if (!Package)
 	{
 		printf("Unable to find/load package %s\n", argPkgName);
@@ -398,6 +422,10 @@ int main(int argc, char **argv)
 		unguard;
 	}
 	if (!Obj) return 0;					// object was not created
+
+#if PROFILE
+	appPrintProfiler();
+#endif
 
 #if RENDERING
 	CreateVisualizer(Obj);
@@ -495,7 +523,10 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	// create viewer for known class
 	CLASS_VIEWER(UVertMesh,       CVertMeshViewer);
 	CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer);
-	CLASS_VIEWER(UUnrealMaterial, CMaterialViewer);
+	if (!meshOnly)
+	{
+		CLASS_VIEWER(UUnrealMaterial, CMaterialViewer);
+	}
 	// fallback for unknown class
 	if (!test)
 	{

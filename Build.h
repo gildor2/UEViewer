@@ -1,5 +1,6 @@
 #define DO_GUARD		1
 #define RENDERING		1
+#define PROFILE			1
 
 // Support for other games
 

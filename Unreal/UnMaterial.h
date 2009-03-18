@@ -1070,7 +1070,7 @@ public:
 	virtual void Serialize(FArchive &Ar)
 	{
 		Super::Serialize(Ar);
-		Ar.Seek(Ar.GetStopper());		//?? drop native data
+		Ar.Seek(Ar.GetStopper());			//?? drop native data
 	}
 
 	BEGIN_PROP_TABLE
@@ -1080,23 +1080,26 @@ public:
 		PROP_ARRAY(ReferencedTextures, UObject*)
 		// MaterialInterface fields
 		PROP_DROP(PreviewMesh)
+		//!! should be used (main material inputs in UE3 material editor)
+		PROP_DROP(DiffuseColor)
+		PROP_DROP(DiffusePower)				// GoW2
+		PROP_DROP(EmissiveColor)
+		PROP_DROP(SpecularColor)
+		PROP_DROP(SpecularPower)
+		PROP_DROP(Opacity)
+		PROP_DROP(OpacityMask)
+		PROP_DROP(Distortion)
+		PROP_DROP(TwoSidedLightingMask)		// TransmissionMask ?
+		PROP_DROP(TwoSidedLightingColor)	//TransmissionColor ?
+		PROP_DROP(Normal)
+		PROP_DROP(CustomLighting)
 		// drop other props
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(PhysicalMaterial)
-		PROP_DROP(DiffuseColor)
-		PROP_DROP(SpecularColor)
-		PROP_DROP(SpecularPower)
-		PROP_DROP(Normal)
-		PROP_DROP(EmissiveColor)
-		PROP_DROP(Opacity)
-		PROP_DROP(OpacityMask)
 		PROP_DROP(OpacityMaskClipValue)
-		PROP_DROP(Distortion)
-		PROP_DROP(BlendMode)			//!! use it (EBlendMode)
-		PROP_DROP(LightingModel)		//!! use it (EMaterialLightingModel)
-		PROP_DROP(CustomLighting)
-		PROP_DROP(TwoSidedLightingMask)
-		PROP_DROP(TwoSidedLightingColor)
+		PROP_DROP(BlendMode)				//!! use it (EBlendMode)
+		PROP_DROP(LightingModel)			//!! use it (EMaterialLightingModel)
+		// usage
 		PROP_DROP(bUsedAsLightFunction)
 		PROP_DROP(bUsedWithFogVolumes)
 		PROP_DROP(bUsedAsSpecialEngineMaterial)
@@ -1111,14 +1114,17 @@ public:
 		PROP_DROP(bUsedWithLensFlare)
 		PROP_DROP(bUsedWithGammaCorrection)
 		PROP_DROP(bUsedWithInstancedMeshParticles)
+		PROP_DROP(bUsedWithDecals)			// GoW2
+		PROP_DROP(bUsedWithFracturedMeshes)	// GoW2
+		// other
 		PROP_DROP(Wireframe)
 		PROP_DROP(bIsFallbackMaterial)
-		PROP_DROP(FallbackMaterial)		//!! use it
+		PROP_DROP(FallbackMaterial)			//!! use it
 		PROP_DROP(EditorX)
 		PROP_DROP(EditorY)
 		PROP_DROP(EditorPitch)
 		PROP_DROP(EditorYaw)
-		PROP_DROP(Expressions)			//!! use it
+		PROP_DROP(Expressions)				//!! use it
 		PROP_DROP(EditorComments)
 		PROP_DROP(EditorCompounds)
 		PROP_DROP(bUsesDistortion)

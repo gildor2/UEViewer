@@ -179,6 +179,7 @@ DEPENDS_9 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
+	Exporters/Exporters.h \
 	Exporters/Psk.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -192,6 +193,19 @@ DEPENDS_10 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h
+
+./obj/umodel-unix/Export3D.o : Exporters/Export3D.cpp $(DEPENDS_10)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Export3D.o Exporters/Export3D.cpp
+
+DEPENDS_11 = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -199,20 +213,8 @@ DEPENDS_10 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/VertMeshInstance.o : MeshInstance/VertMeshInstance.cpp $(DEPENDS_10)
+./obj/umodel-unix/VertMeshInstance.o : MeshInstance/VertMeshInstance.cpp $(DEPENDS_11)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/VertMeshInstance.o MeshInstance/VertMeshInstance.cpp
-
-DEPENDS_11 = \
-	Build.h \
-	Core/Core.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h
-
-./obj/umodel-unix/Export3D.o : Exporters/Export3D.cpp $(DEPENDS_11)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Export3D.o Exporters/Export3D.cpp
 
 DEPENDS_12 = \
 	Build.h \

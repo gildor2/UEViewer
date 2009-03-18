@@ -5,6 +5,8 @@
 #include "UnMaterial.h"
 #include "UnMesh.h"
 
+#include "Exporters.h"
+
 
 static void ExportScript(const UVertMesh *Mesh, FArchive &Ar)
 {
@@ -159,9 +161,12 @@ void Export3D(const UVertMesh *Mesh, FArchive &Ar)
 
 	char filename[64];
 	// export script file
-	appSprintf(ARRAY_ARG(filename), "%s.uc", Mesh->Name);
-	FFileReader Ar1(filename, false);
-	ExportScript(Mesh, Ar1);
+	if (GExportScripts)
+	{
+		appSprintf(ARRAY_ARG(filename), "%s.uc", Mesh->Name);
+		FFileReader Ar1(filename, false);
+		ExportScript(Mesh, Ar1);
+	}
 	// export mesh data
 	appSprintf(ARRAY_ARG(filename), "%s_d.3d", Mesh->Name);
 	FFileReader Ar2(filename, false);

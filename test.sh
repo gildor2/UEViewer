@@ -44,6 +44,7 @@ function ut2()    { run1 "$UT2" $*;  }
 function ut3()    { run1 "$UT3" $*;  }
 function gow()    { run1 "$GOW" $*;  }
 function gow2()   { run1 "$GOW2" $*; }
+function uc2()    { run1 "$UC2" $*;  }
 function rund()   { run1 "data" $*;  }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
@@ -56,9 +57,10 @@ rm umodel.exe	#?? win32 only
 CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
 CheckDir UT1 c:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament
 CheckDir UT2 c:/games/unreal~1/ut2004 c:/games/unreal/ut2004
-CheckDir UT3 c:/games/ut3
+CheckDir UT3 c:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/--GearsOfWar--"
 CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/--GearsOfWar2_X360--"
+CheckDir UC2 "C:/!umodel-data/--UnrealChampionship2--"
 CheckDir L2 "C:/!umodel-data/--Lineage2--"
 
 #------------------------------------------------------------------------------
@@ -90,26 +92,30 @@ fi
 case "" in
 
 "")
+	gow2 -meshes geargamehorde_SF
 	#!! CRASH (assert)
-	gow2 SP_Rescue_P T_COG_BOT_Screen_Anya01
-#	gow2 SP_Maria_1_S #AnimSetMarcus_CamSkel_Heavy_Mortar
-#	gow2 geargamehorde_SF
 #!!	gow Geist_Reaver
 #	gow2 SP_Rescue_P Jackbot_animset
 #	run data/HumanMale_comp1.upk
+
+	# anims
+#	gow2 -meshes SP_Maria_Cine_Outro
+#	gow2 -meshes SP_Rescue_P #T_COG_BOT_Screen_Anya01
+#	gow2 -notex -nomesh SP_Rescue_P #COG_Baird_Hair_UV_MERGE_Mat
+#	gow2 -meshes SP_Maria_1_S #AnimSetMarcus_CamSkel_Heavy_Mortar
 
 	# check texture formats
 #	gow2 SP_Leviathan_BF T_Barge_Grad
 #	gow2 SP_Rescue_P T_LightBeam_Falloff_02
 
-#	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman #ImportMesh_Human_Male
-#	ut3 -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_TwinSouls_Cine #SK_CH_TwinSouls_Crowd_01
+#	ut3 CH_AnimHuman #ImportMesh_Human_Male
+#	ut3 -meshes CH_TwinSouls_Cine #SK_CH_TwinSouls_Crowd_01
 #	run data/ut3/CH_AnimHuman.upk
 #	run data/ut3/VH_Fury.upk K_VH_Fury #MI_VH_Fury_Blue
 #!!	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
 #!!	run data/HumanMale.upk
 #	gow COG_MarcusFenix #Cine_COG_MarcusFenix
-#	ut3 C:/GAMES/UT3/UTGame/CookedPC/Maps/DM-Deck.ut3
+#	ut3 DM-Deck
 #	ut2 HumanMaleA MercMaleD
 #	l2 LineageNPCs2 Pumpkin_Head_man_m00
 #	ut2 ONSVehicles-A RV
@@ -155,6 +161,13 @@ case "" in
 #	ut2 NewWeapons2004
 	;;
 
+
+#------------------------------------------------------------------------------
+#	Unreal Championship
+#------------------------------------------------------------------------------
+"uc2")
+	uc2 -noanim T_CharacterSkins
+	;;
 
 #------------------------------------------------------------------------------
 #	SplinterCell

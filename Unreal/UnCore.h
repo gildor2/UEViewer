@@ -43,6 +43,36 @@ class UnPackage;
 #define PACKAGE_FILE_TAG		0x9E2A83C1
 #define PACKAGE_FILE_TAG_REV	0xC1832A9E
 
+#if PROFILE
+extern int GNumSerialize;
+extern int GSerializeBytes;
+
+void appResetProfiler();
+void appPrintProfiler();
+
+#endif
+
+/*-----------------------------------------------------------------------------
+	Game directory support
+-----------------------------------------------------------------------------*/
+
+void appSetRootDirectory(const char *dir);
+const char *appGetRootDirectory();
+
+struct CGameFileInfo
+{
+	char		RelativeName[256];		// relative to RootDirectory
+	const char *ShortFilename;			// without path
+	const char *Extension;				// points to extension part (after '.')
+	bool		IsPackage;
+};
+
+// Ext = NULL -> use any package extension
+// Filename can contain extension, but should not contain path
+const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NULL);
+FArchive *appCreateFileReader(const CGameFileInfo *info);
+void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext = NULL);
+
 
 /*-----------------------------------------------------------------------------
 	FName class
@@ -311,6 +341,10 @@ public:
 		else
 			res = fwrite(data, size, 1, f);
 		ArPos += size;
+#if PROFILE
+		GNumSerialize++;
+		GSerializeBytes += size;
+#endif
 		if (res != 1)
 			appError("Unable to serialize data");
 		unguard;
@@ -530,6 +564,65 @@ struct FColor
 
 
 /*-----------------------------------------------------------------------------
+	Typeinfo for fast array serialization
+-----------------------------------------------------------------------------*/
+
+// Default typeinfo
+template<class T> struct TTypeInfo
+{
+	enum { FieldSize = sizeof(T) };
+	enum { NumFields = 1         };
+	enum { IsSimpleType = 0      };
+	enum { IsRawType = 0         };
+};
+
+// Declare type, consists from fields of the same type length
+// (e.g. from ints and floats, or from chars and bytes etc), and
+// which memory layout is the same as disk layout (if endian of
+// package and platform is the same)
+#define SIMPLE_TYPE(Type,BaseType)			\
+template<> struct TTypeInfo<Type>			\
+{											\
+	enum { FieldSize = sizeof(BaseType) };	\
+	enum { NumFields = sizeof(Type) / sizeof(BaseType) }; \
+	enum { IsSimpleType = 1 };				\
+	enum { IsRawType = 1 };					\
+};											\
+template<> inline void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
+{											\
+	Dst.RawCopy(Src, sizeof(Type));			\
+}
+
+
+// Declare type, which memory layout is the same as disk layout
+//!! NOTE: not used now
+#define RAW_TYPE(Type)						\
+template<> struct TTypeInfo<Type>			\
+{											\
+	enum { FieldSize = sizeof(Type) };		\
+	enum { NumFields = 1 };					\
+	enum { IsSimpleType = 0 };				\
+	enum { IsRawType = 1 };					\
+};											\
+template<> inline void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
+{											\
+	Dst.RawCopy(Src, sizeof(Type));			\
+}
+
+
+// Note: SIMPLE and RAW types does not need constructors for loading
+//!! add special mode to check SIMPLE/RAW types (serialize twice and compare results)
+
+#if 0
+//!! testing
+#undef  SIMPLE_TYPE
+#undef  RAW_TYPE
+#define SIMPLE_TYPE(x,y)
+#define RAW_TYPE(x)
+#endif
+
+
+/*-----------------------------------------------------------------------------
 	TArray/TLazyArray templates
 -----------------------------------------------------------------------------*/
 
@@ -577,12 +670,16 @@ public:
 	void Insert(int index, int count, int elementSize);
 	void Remove(int index, int count, int elementSize);
 
+	void RawCopy(const FArray &Src, int elementSize);
+
 protected:
 	void	*DataPtr;
 	int		DataCount;
 	int		MaxCount;
 
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
+	FArchive& SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
+	FArchive& SerializeSimple(FArchive &Ar, int NumFields, int FieldSize);
 };
 
 // NOTE: this container cannot hold objects, required constructor/destructor
@@ -708,6 +805,20 @@ template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 {
 	if (Ar.IsLoading)
 		A.Empty();				// erase previous data before loading
+	// support simple types
+	if (TTypeInfo<T>::IsSimpleType)
+	{
+		staticAssert(sizeof(T) == TTypeInfo<T>::NumFields * TTypeInfo<T>::FieldSize,
+			Error_In_TypeInfo);
+		//?? note: SerializeSimple() can reverse bytes on loading only, saving should
+		//?? be done using generic serializer, or SerializeSimple should be
+		//?? extended for this
+		return A.SerializeSimple(Ar, TTypeInfo<T>::NumFields, TTypeInfo<T>::FieldSize);
+	}
+	// support raw types
+	if (TTypeInfo<T>::IsRawType)
+		return A.SerializeRaw(Ar, TArray<T>::SerializeItem, sizeof(T));
+	// generic serializer
 	return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
 }
 
@@ -808,10 +919,9 @@ inline void SkipRawArray(FArchive &Ar, int Size)
 
 #endif // UNREAL3
 
-
-template<class T1, class T2> void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
+template<typename T1, typename T2> void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
 {
-	guard(CopyArray);
+	guard(CopyArray2);
 	Dst.Empty(Src.Num());
 	if (Src.Num())
 	{
@@ -821,6 +931,21 @@ template<class T1, class T2> void CopyArray(TArray<T1> &Dst, const TArray<T2> &S
 	}
 	unguard;
 }
+
+
+// Declare fundamental types
+SIMPLE_TYPE(byte, byte)
+SIMPLE_TYPE(char, char)
+SIMPLE_TYPE(short, short)
+SIMPLE_TYPE(word, word)
+SIMPLE_TYPE(int, int)
+SIMPLE_TYPE(unsigned, unsigned)
+SIMPLE_TYPE(float, float)
+
+// Aggregates
+SIMPLE_TYPE(FVector, float)
+SIMPLE_TYPE(FQuat,   float)
+SIMPLE_TYPE(FCoords, float)
 
 
 /*-----------------------------------------------------------------------------

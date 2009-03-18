@@ -115,6 +115,10 @@ void appUnwindThrow(const char *fmt, ...)
 	Memory management
 -----------------------------------------------------------------------------*/
 
+#if PROFILE
+int GNumAllocs = 0;
+#endif
+
 void *appMalloc(int size)
 {
 	guard(appMalloc);
@@ -122,6 +126,9 @@ void *appMalloc(int size)
 	void *data = malloc(size);
 	if (size > 0)
 		memset(data, 0, size);
+#if PROFILE
+	GNumAllocs++;
+#endif
 	return data;
 	unguardf(("size=%d", size));
 }

@@ -221,13 +221,13 @@ public:
 	Package loading (creation) / unloading
 -----------------------------------------------------------------------------*/
 
-UnPackage::UnPackage(const char *filename)
+UnPackage::UnPackage(const char *filename, FArchive *Ar)
 :	Loader(NULL)
 {
 	guard(UnPackage::UnPackage);
 
 	// setup FArchive
-	Loader = new FFileReader(filename);
+	Loader = (Ar) ? Ar : new FFileReader(filename);
 	IsLoading = true;
 
 	appStrncpyz(Filename, filename, ARRAY_COUNT(Filename));
@@ -561,20 +561,7 @@ TArray<UnPackage::PackageEntry> UnPackage::PackageMap;
 TArray<char*>					MissingPackages;
 
 
-static const char *PackageExtensions[] =
-{
-	"u", "ut2", "utx", "uax", "usx", "ukx"
-#if RUNE
-	, "ums"
-#endif
-#if TRIBES3
-	, "pkg"
-#endif
-#if UNREAL3
-	, "upk", "xxx"
-#endif
-};
-
+//!!! use outside
 static const char *PackagePaths[] =
 {
 	"",
@@ -608,28 +595,8 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 		if (!stricmp(Name, MissingPackages[i]))
 			return NULL;
 
-	const char *RootDir = appGetRootDirectory();
-
-	// find package file
-	for (int path = 0; path < ARRAY_COUNT(PackagePaths); path++)
-		for (int ext = 0; ext < ARRAY_COUNT(PackageExtensions); ext++)
-		{
-			// build filename
-			char	buf[256];
-			appSprintf(ARRAY_ARG(buf), "%s%s" "%s%s" ".%s",
-				RootDir ? RootDir : "",
-				RootDir ? "/" : "",
-				PackagePaths[path],
-				Name,
-				PackageExtensions[ext]);
-//			printf("... check: %s\n", buf);
-			// check file existance
-			if (FILE *f = fopen(buf, "rb"))
-			{
-				fclose(f);
-				return new UnPackage(buf);
-			}
-		}
+	if (const CGameFileInfo *info = appFindGameFile(Name))
+		return new UnPackage(info->RelativeName, appCreateFileReader(info));
 	// package is missing
 	printf("WARNING: package %s was not found\n", Name);
 	MissingPackages.AddItem(strdup(Name));

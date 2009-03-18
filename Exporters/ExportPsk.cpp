@@ -6,6 +6,7 @@
 #include "UnMesh.h"
 
 #include "Psk.h"
+#include "Exporters.h"
 
 
 // PSK uses right-hand coordinates, but unreal uses left-hand.
@@ -41,10 +42,12 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 {
 	// export script file
 	char filename[64];
-	appSprintf(ARRAY_ARG(filename), "%s.uc", Mesh->Name);
-	FFileReader Ar1(filename, false);
-	ExportScript(Mesh, Ar1);
-
+	if (GExportScripts)
+	{
+		appSprintf(ARRAY_ARG(filename), "%s.uc", Mesh->Name);
+		FFileReader Ar1(filename, false);
+		ExportScript(Mesh, Ar1);
+	}
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
 	int i;
