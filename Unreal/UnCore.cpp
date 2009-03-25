@@ -59,8 +59,8 @@ void appResetProfiler()
 void appPrintProfiler()
 {
 	if (ProfileStartTime == -1) return;
-	printf("Loaded in %.2g sec. %d allocs, %d bytes serialized in %d calls.\n",
-		(appMilliseconds() - ProfileStartTime) / 1000.0f, GNumAllocs, GSerializeBytes, GNumSerialize);
+	printf("Loaded in %.2g sec, %d allocs, %.2f MBytes serialized in %d calls.\n",
+		(appMilliseconds() - ProfileStartTime) / 1000.0f, GNumAllocs, GSerializeBytes / (1024.0f * 1024.0f), GNumSerialize);
 	ProfileStartTime = -1;
 }
 
@@ -229,6 +229,67 @@ const char *appGetRootDirectory()
 }
 
 
+static const char *KnownDirs[] =
+{
+	"Animations",
+	"Maps",
+	"Sounds",
+	"StaticMeshes",
+	"System",
+#if LINEAGE2
+	"Systextures",
+#endif
+#if UC2
+	"XboxTextures",
+	"XboxAnimations",
+#endif
+	"Textures"
+};
+
+void appSetRootDirectory2(const char *filename)
+{
+	char buf[256], buf2[256];
+	appStrncpyz(buf, filename, ARRAY_COUNT(buf));
+	char *s;
+	// replace slashes
+	for (s = buf; *s; s++)
+		if (*s == '\\') *s = '/';
+	// cut filename
+	s = strrchr(buf, '/');
+	*s = 0;
+	// make a copy for fallback
+	strcpy(buf2, buf);
+	// analyze path
+	bool detected = false;
+	for (int i = 0; i < 3; i++)
+	{
+		// find deepest directory name
+		s = strrchr(buf, '/');
+		if (!s) break;
+		*s++ = 0;
+		if (i == 0)
+		{
+			for (int j = 0; j < ARRAY_COUNT(KnownDirs); j++)
+				if (!stricmp(KnownDirs[j], s))
+				{
+					detected = true;
+					break;
+				}
+		}
+		if (detected) break;
+		if (strstr(s, "Cooked") || strstr(s, "Content"))
+		{
+			s[-1] = '/';	// put it back
+			detected = true;
+			break;
+		}
+	}
+	const char *root = (detected) ? buf : buf2;
+	printf("Detected game root %s\n", root);
+	appSetRootDirectory(root);
+}
+
+
 const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 {
 	guard(appFindGameFile);
@@ -352,6 +413,9 @@ void FArray::Insert(int index, int count, int elementSize)
 		// not enough space, resize ...
 		int prevCount = MaxCount;
 		MaxCount = ((DataCount + count + 7) / 8) * 8 + 8;
+#if PROFILE
+		GNumAllocs++;
+#endif
 		DataPtr = realloc(DataPtr, MaxCount * elementSize);	//?? appRealloc
 		// zero added memory
 		memset(
@@ -641,15 +705,13 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 #endif
 		Ar << AR_INDEX(len);
 	S.Empty((len >= 0) ? len : -len);
-	if (len >= 0)
+	if (!len)
+		return Ar;
+	if (len > 0)
 	{
 		// ANSI string
-		for (i = 0; i < len; i++)
-		{
-			char c;
-			Ar << c;
-			S.AddItem(c);
-		}
+		S.Add(len);
+		Ar.Serialize(S.GetData(), len);
 	}
 	else
 	{
@@ -669,6 +731,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 
 void SerializeChars(FArchive &Ar, char *buf, int length)
 {
+	//?? use Ar.Serialize(buf, length)
 	for (int i = 0; i < length; i++)
 		Ar << *buf++;
 }

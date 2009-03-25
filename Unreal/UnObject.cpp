@@ -4,7 +4,8 @@
 #include "UnPackage.h"
 
 
-//#define DEBUG_PROPS		1
+//#define DEBUG_PROPS			1
+//#define PROFILE_LOADING		1
 
 
 /*-----------------------------------------------------------------------------
@@ -72,9 +73,13 @@ void UObject::EndLoad()
 		guard(LoadObject);
 		Package->SetupReader(Obj->PackageIndex);
 		printf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
-//		appResetProfiler();
+#if PROFILE_LOADING
+		appResetProfiler();
+#endif
 		Obj->Serialize(*Package);
-//		appPrintProfiler();
+#if PROFILE_LOADING
+		appPrintProfiler();
+#endif
 		// check for unread bytes
 		if (!Package->IsStopper())
 			appError("%s::Serialize(%s): %d unread bytes",

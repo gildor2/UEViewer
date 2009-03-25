@@ -262,6 +262,7 @@ struct CQuat
 {
 	float	x, y, z, w;
 
+	void FromAxis(const CAxis &src);
 	void ToAxis(CAxis &dst) const;
 	float GetLength() const;
 
@@ -270,6 +271,13 @@ struct CQuat
 		FNegate(x);
 		FNegate(y);
 		FNegate(z);
+	}
+	inline void Negate()
+	{
+		FNegate(x);
+		FNegate(y);
+		FNegate(z);
+		FNegate(w);
 	}
 	void Normalize();
 	void Mul(const CQuat &Q);

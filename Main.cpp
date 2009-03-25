@@ -181,10 +181,11 @@ int main(int argc, char **argv)
 				"Export options:\n"
 				"    -all            export all linked objects too\n"
 				"    -uc             create unreal script when possible\n"
+				"    -md5            use md5mesh/md5anim format for skeletal mesh export\n"
 				"\n"
 				"Supported resources for export:\n"
-				"    SkeletalMesh    exported as ActorX psk file\n"
-				"    MeshAnimation   exported as ActorX psa file\n"
+				"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
+				"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
 				"    VertMesh        exported as Unreal 3d file\n"
 				"    Texture         exported in tga format\n"
 				"\n"
@@ -247,7 +248,7 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, exprtAll = false,
+	bool dump = false, view = true, exprt = false, md5 = false, exprtAll = false,
 		 listOnly = false, noMesh = false, noAnim = false, noTex = false, pkgInfo = false,
 		 hasRootDir = false;
 	int arg;
@@ -278,6 +279,8 @@ int main(int argc, char **argv)
 				meshOnly = true;
 			else if (!stricmp(opt, "all"))
 				exprtAll = true;
+			else if (!stricmp(opt, "md5"))
+				md5 = true;
 			else if (!stricmp(opt, "uc"))
 				GExportScripts = true;
 			else if (!stricmp(opt, "pkginfo"))
@@ -313,8 +316,16 @@ int main(int argc, char **argv)
 		argClassName = argv[arg+2];
 
 	// register exporters
-	EXPORTER("SkeletalMesh",  "psk", ExportPsk);
-	EXPORTER("MeshAnimation", "psa", ExportPsa);
+	if (!md5)
+	{
+		EXPORTER("SkeletalMesh",  "psk", ExportPsk);
+		EXPORTER("MeshAnimation", "psa", ExportPsa);
+	}
+	else
+	{
+		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
+		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim); // separate file for each animation track
+	}
 	EXPORTER("VertMesh",      NULL,  Export3D );
 	EXPORTER("Texture",       "tga", ExportTga);
 #if UNREAL3
@@ -346,6 +357,7 @@ int main(int argc, char **argv)
 	if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
 	{
 		// has path in filename
+		if (!hasRootDir) appSetRootDirectory2(argPkgName);
 		Package = new UnPackage(argPkgName);
 	}
 	else

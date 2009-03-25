@@ -50,6 +50,8 @@ extern int GSerializeBytes;
 void appResetProfiler();
 void appPrintProfiler();
 
+#define PROFILE_POINT(Label)	appPrintProfiler(); appResetProfiler(); printf("PROFILE: " #Label "\n");
+
 #endif
 
 /*-----------------------------------------------------------------------------
@@ -57,6 +59,7 @@ void appPrintProfiler();
 -----------------------------------------------------------------------------*/
 
 void appSetRootDirectory(const char *dir);
+void appSetRootDirectory2(const char *filename);
 const char *appGetRootDirectory();
 
 struct CGameFileInfo
@@ -141,6 +144,9 @@ public:
 #if UT2
 	int		IsUT2:1;
 #endif
+#if PARIAH
+	int		IsPariah:1;
+#endif
 #if SPLINTER_CELL
 	int		IsSplinterCell:1;
 #endif
@@ -165,6 +171,9 @@ public:
 	,	ReverseBytes(false)
 #if UT2
 	,	IsUT2(0)
+#endif
+#if PARIAH
+	,	IsPariah(0)
 #endif
 #if SPLINTER_CELL
 	,	IsSplinterCell(0)
@@ -217,41 +226,6 @@ public:
 		return Tell() == GetStopper();
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, char &B)
-	{
-		Ar.Serialize(&B, 1);
-		return Ar;
-	}
-	friend FArchive& operator<<(FArchive &Ar, byte &B)
-	{
-		Ar.ByteOrderSerialize(&B, 1);
-		return Ar;
-	}
-	friend FArchive& operator<<(FArchive &Ar, short &B)
-	{
-		Ar.ByteOrderSerialize(&B, 2);
-		return Ar;
-	}
-	friend FArchive& operator<<(FArchive &Ar, word &B)
-	{
-		Ar.ByteOrderSerialize(&B, 2);
-		return Ar;
-	}
-	friend FArchive& operator<<(FArchive &Ar, int &B)
-	{
-		Ar.ByteOrderSerialize(&B, 4);
-		return Ar;
-	}
-	friend FArchive& operator<<(FArchive &Ar, unsigned &B)
-	{
-		Ar.ByteOrderSerialize(&B, 4);
-		return Ar;
-	}
-	friend FArchive& operator<<(FArchive &Ar, float &B)
-	{
-		Ar.ByteOrderSerialize(&B, 4);
-		return Ar;
-	}
 	virtual FArchive& operator<<(FName &N)
 	{
 		return *this;
@@ -261,6 +235,43 @@ public:
 		return *this;
 	}
 };
+
+
+inline FArchive& operator<<(FArchive &Ar, char &B)
+{
+	Ar.Serialize(&B, 1);
+	return Ar;
+}
+inline FArchive& operator<<(FArchive &Ar, byte &B)
+{
+	Ar.ByteOrderSerialize(&B, 1);
+	return Ar;
+}
+inline FArchive& operator<<(FArchive &Ar, short &B)
+{
+	Ar.ByteOrderSerialize(&B, 2);
+	return Ar;
+}
+inline FArchive& operator<<(FArchive &Ar, word &B)
+{
+	Ar.ByteOrderSerialize(&B, 2);
+	return Ar;
+}
+inline FArchive& operator<<(FArchive &Ar, int &B)
+{
+	Ar.ByteOrderSerialize(&B, 4);
+	return Ar;
+}
+inline FArchive& operator<<(FArchive &Ar, unsigned &B)
+{
+	Ar.ByteOrderSerialize(&B, 4);
+	return Ar;
+}
+inline FArchive& operator<<(FArchive &Ar, float &B)
+{
+	Ar.ByteOrderSerialize(&B, 4);
+	return Ar;
+}
 
 
 class FFileReader : public FArchive
@@ -740,7 +751,7 @@ public:
 			P->~T();
 #else
 		for (int i = index; i < index + count; i++)
-			((T*)DataPtr)->~T();
+			((T*)DataPtr + i)->~T();
 #endif
 		// remove items from array
 		FArray::Remove(index, count, sizeof(T));
@@ -753,11 +764,19 @@ public:
 		return index;
 	}
 
-	int FindItem(const T& item)
+	int FindItem(const T& item, int startIndex = 0)
 	{
-		for (int i = 0; i < DataCount; i++)
+#if 1
+		const T *P;
+		int i;
+		for (i = startIndex, P = (const T*)DataPtr + startIndex; i < DataCount; i++, P++)
+			if (*P == item)
+				return i;
+#else
+		for (int i = startIndex; i < DataCount; i++)
 			if (*((T*)DataPtr + i) == item)
 				return i;
+#endif
 		return INDEX_NONE;
 	}
 

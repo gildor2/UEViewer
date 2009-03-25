@@ -88,6 +88,10 @@ template<>    struct CompileTimeError<true> {};
 #	define NORETURN			__declspec(noreturn)
 #	define GCC_PACK							// VC uses #pragma pack()
 #	pragma warning(disable : 4291)			// no matched operator delete found
+	// this functions are smaller, when in intrinsic form (and, of course, faster):
+#	pragma intrinsic(memcpy, memset, memcmp, abs, fabs)
+	// allow nested inline expansions
+#	pragma inline_depth(8)
 #elif __GNUC__
 #	define NORETURN			__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))

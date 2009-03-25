@@ -351,6 +351,42 @@ float Vec2Yaw(const CVec3 &vec)
 	Quaternion
 -----------------------------------------------------------------------------*/
 
+void CQuat::FromAxis(const CAxis &src)
+{
+	float trace = src[0][0] + src[1][1] + src[2][2];
+
+	if (trace > 0)
+	{
+		float t = trace + 1.0f;
+		float s = appRsqrt(t) * 0.5f;
+
+		w = s * t;
+		x = (src[2][1] - src[1][2]) * s;
+		y = (src[0][2] - src[2][0]) * s;
+		z = (src[1][0] - src[0][1]) * s;
+	}
+	else
+	{
+		static const int next[3] = {1, 2, 0};
+		int i = 0;
+		if (src[1][1] > src[0][0])
+			i = 1;
+		if (src[2][2] > src[i][i])
+			i = 2;
+		int j = next[i];
+		int k = next[j];
+
+		float t = (src[i][i] - (src[j][j] + src[k][k])) + 1.0f;
+		float s = appRsqrt(t) * 0.5f;
+
+		float *q = (float*)this;
+		q[i] = s * t;
+		q[3] = (src[k][j] - src[j][k]) * s;
+		q[j] = (src[j][i] + src[i][j]) * s;
+		q[k] = (src[k][i] + src[i][k]) * s;
+	}
+}
+
 void CQuat::ToAxis(CAxis &dst) const
 {
 	float x2 = x * 2;

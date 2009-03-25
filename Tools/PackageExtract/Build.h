@@ -6,6 +6,7 @@
 
 // UE2 (supported by default)
 #define UT2				1
+#define PARIAH			1
 #define SPLINTER_CELL	1
 #define LINEAGE2		1
 

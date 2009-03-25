@@ -2124,6 +2124,14 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	for (i = 0; i < Lods.Num(); i++)
 		LODModels[i].RestoreMesh3(*this, Lods[i]);
 
+	//!! Optimize search for PointIndex in RestoreMesh3()
+	/*!!
+	 *	Profile results (GoW2 package): total time = 7.8s, partial:
+	 *	load = 1.5s, GPU lods -> CPU = 5.5s, restore mesh = 0.7s
+	 *	Loading w/o seraching for good PointIndex = 1.6s, with search = 7.7s (not depends on restore mesh!)
+	 *	With disabled CompareCompNormals() = 6.3s
+	 *	New version (find PointIndex using TArray::FindItem()) = 4.4s
+	 */
 	// convert LOD 0 to mesh
 	RecreateMeshFromLOD();
 
@@ -2177,9 +2185,12 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 {
 	guard(FStaticLODModel::RestoreMesh3);
 
+	// prepare arrays
 	TArray<int> PointNormals;
-	Points.Empty(Lod.NumVertices);
-	PointNormals.Empty(Lod.NumVertices);
+	Points.Empty        (Lod.NumVertices);
+	PointNormals.Empty  (Lod.NumVertices);
+	Wedges.Empty        (Lod.NumVertices);
+	VertInfluences.Empty(Lod.NumVertices * 4);
 
 	// create wedges, vertices and influences
 	guard(ProcessChunks);
@@ -2204,6 +2215,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 					? *(FGPUVert3Common*)&S.VertsHalf[Vert]
 					: *(FGPUVert3Common*)&S.VertsFloat[Vert];
 				// find the same point in previous items
+#if 0
 				int PointIndex = INDEX_NONE;
 				for (j = 0; j < Points.Num(); j++)
 				{
@@ -2213,6 +2225,15 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 						break;
 					}
 				}
+#else
+				int PointIndex = -1;	// start with 0, see below
+				while (true)
+				{
+					PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
+					if (PointIndex == INDEX_NONE) break;
+					if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
+				}
+#endif
 				if (PointIndex == INDEX_NONE)
 				{
 					// point was not found - create it
@@ -2261,6 +2282,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 		{
 			const FRigidVertex3 &V = C.RigidVerts[Vert];
 			// find the same point in previous items
+#if 0
 			int PointIndex = INDEX_NONE;
 			for (j = 0; j < Points.Num(); j++)
 			{
@@ -2270,6 +2292,15 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 					break;
 				}
 			}
+#else
+			int PointIndex = -1;	// start with 0, see below
+			while (true)
+			{
+				PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
+				if (PointIndex == INDEX_NONE) break;
+				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
+			}
+#endif
 			if (PointIndex == INDEX_NONE)
 			{
 				// point was not found - create it
@@ -2295,6 +2326,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 		{
 			const FSmoothVertex3 &V = C.SmoothVerts[Vert];
 			// find the same point in previous items
+#if 0
 			int PointIndex = INDEX_NONE;
 			for (j = 0; j < Points.Num(); j++)	//!! should compare influences too !
 			{
@@ -2304,6 +2336,16 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 					break;
 				}
 			}
+#else
+			int PointIndex = -1;	// start with 0, see below
+			while (true)
+			{
+				PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
+				if (PointIndex == INDEX_NONE) break;
+				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
+				//?? should compare influences too !
+			}
+#endif
 			if (PointIndex == INDEX_NONE)
 			{
 				// point was not found - create it
@@ -2332,8 +2374,14 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 	}
 	unguard;
 
+	// count triangles (speed optimization for TArray allocations)
+	int NumTriangles = 0;
+	int Sec;
+	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
+		NumTriangles += Lod.Sections[Sec].NumTriangles;
+	Faces.Empty(NumTriangles);
 	// create faces
-	for (int Sec = 0; Sec < Lod.Sections.Num(); Sec++)
+	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
 	{
 		const FSkelMeshSection3 &S = Lod.Sections[Sec];
 

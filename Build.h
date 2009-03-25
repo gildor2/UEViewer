@@ -11,6 +11,7 @@
 
 // UE2 (supported by default)
 #define UT2				1
+//#define PARIAH			1		// not supported, because of major serializer incompatibility
 #define SPLINTER_CELL	1
 #define LINEAGE2		1
 

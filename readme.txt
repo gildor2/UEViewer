@@ -42,8 +42,27 @@ For command line information run 'umodel' without arguments.
 Keyboard: press <H> for help, <ESC> for exit.
 
 
+Notes about md5mesh/md5anim export.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To use these exporters you should add "-md5" key to a command line options.
+MeshAnimation/AnimSet objects are exported as multiple md5anim files (one
+file per animation track). "bounds" section in md5anim is filled with dummy
+data. Also, "hierarchy" section does not contain real skeleton hierarchy,
+because Unreal Engine uses hierarchy from mesh, not from animations. Some md5
+viewers/importers does require md5anim hierarchy, some - does not.
+
+
 Changes:
 ~~~~~~~~
+24.03.2009
+- implemented export of skeletal mesh and animation to md5mesh/md5anim format
+  (activated with "-md5" command line switch)
+- psk export: when possible, real material names are used instead of "material_N"
+
+19.03.2009
+- faster (almost 2x) UE3 mesh loading
+- added simple path autodetection from full package filename
+
 18.03.2009
 - completely rewritten "-path" handling - now works with UE3 games too
 - significantly faster (10 times) UE2 package loading

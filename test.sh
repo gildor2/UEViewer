@@ -92,7 +92,8 @@ fi
 case "" in
 
 "")
-	gow2 -meshes geargamehorde_SF
+	ut2 -export -md5 -all HumanMaleA MercMaleD
+#	gow2 -meshes geargamehorde_SF
 	#!! CRASH (assert)
 #!!	gow Geist_Reaver
 #	gow2 SP_Rescue_P Jackbot_animset

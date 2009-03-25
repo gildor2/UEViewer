@@ -275,6 +275,34 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	}
 #endif
 
+	// different game platforms autodetection
+	//?? should change this, if will implement command line switch to force mode
+	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
+#if UT2
+	IsUT2 = ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
+			((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D);
+#endif
+#if PARIAH
+	IsPariah = (ArVer == 119 && ArLicenseeVer == 0x9127);
+#endif
+#if SPLINTER_CELL
+	IsSplinterCell = (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
+					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
+#endif
+#if TRIBES3
+	IsTribes3 = ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
+				((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
+				((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
+#endif
+#if LINEAGE2
+	if (IsLineage2 && (ArLicenseeVer >= 1000))	// lineage LicenseeVer < 1000
+		IsLineage2 = 0;
+#endif
+#if EXTEEL
+	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
+		IsExteel = 0;
+#endif
+
 	// read name table
 	guard(ReadNameTable);
 	if (Summary.NameCount > 0)
@@ -300,6 +328,19 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				int tmp;
 				*this << tmp;
 			}
+#if PARIAH
+			else if (IsPariah && ((ArLicenseeVer & 0x3F) >= 0x1C))
+			{
+				// used word + char[] instead of FString
+				word len;
+				*this << len;
+				NameTable[i] = new char[len+1];
+				Serialize(NameTable[i], len+1);
+				// skip object flags
+				int tmp;
+				*this << tmp;
+			}
+#endif
 			else
 			{
 #if 0
@@ -327,8 +368,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					*this << unk;
 				}
 	#endif // UNREAL3
-//				PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 			}
+//			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 		}
 	}
 	unguard;
@@ -393,30 +434,6 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	if (s2) *s2 = 0;
 	appStrncpyz(Info.Name, buf, ARRAY_COUNT(Info.Name));
 	Info.Package = this;
-
-	// different game platforms autodetection
-	//?? should change this, if will implement command line switch to force mode
-#if UT2
-	IsUT2 = ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
-			((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D);
-#endif
-#if SPLINTER_CELL
-	IsSplinterCell = (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
-					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
-#endif
-#if TRIBES3
-	IsTribes3 = ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
-				((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
-				((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
-#endif
-#if LINEAGE2
-	if (IsLineage2 && (ArLicenseeVer >= 1000))	// lineage LicenseeVer < 1000
-		IsLineage2 = 0;
-#endif
-#if EXTEEL
-	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
-		IsExteel = 0;
-#endif
 
 	unguardf(("%s", filename));
 }
@@ -559,27 +576,6 @@ UObject* UnPackage::CreateImport(int index)
 
 TArray<UnPackage::PackageEntry> UnPackage::PackageMap;
 TArray<char*>					MissingPackages;
-
-
-//!!! use outside
-static const char *PackagePaths[] =
-{
-	"",
-	"Animations/",
-	"Maps/",
-	"Sounds/",
-	"StaticMeshes/",
-	"System/",
-#if LINEAGE2
-	"Systextures/",
-#endif
-#if UC2
-	"XboxTextures/",
-	"XboxAnimations/",
-#endif
-	"Textures/"
-};
-
 
 UnPackage *UnPackage::LoadPackage(const char *Name)
 {

@@ -43,6 +43,8 @@ struct FCompressedChunk
 	}
 };
 
+RAW_TYPE(FCompressedChunk)
+
 struct FComponentMapPair
 {
 	FName		Name;
@@ -261,7 +263,17 @@ struct FObjectExport
 			E.SuperIndex = short(E.SuperIndex);
 			return Ar;
 		}
-#endif
+#endif // UC2
+#if PARIAH
+		if (Ar.IsPariah)
+		{
+			Ar << E.ObjectName << AR_INDEX(E.SuperIndex) << E.PackageIndex << E.ObjectFlags;
+			Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SerialSize);
+			if (E.SerialSize)
+				Ar << AR_INDEX(E.SerialOffset);
+			return Ar;
+		}
+#endif // PARIAH
 		// generic UE1/UE2 code
 		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
 		Ar << E.ObjectName << E.ObjectFlags << AR_INDEX(E.SerialSize);
@@ -289,6 +301,10 @@ struct FObjectImport
 			I.PackageIndex = idx;
 			return Ar;
 		}
+#endif // UC2
+#if PARIAH
+		if (Ar.IsPariah)
+			return Ar << I.PackageIndex << I.ObjectName << I.ClassPackage << I.ClassName;
 #endif
 		return Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
 	}

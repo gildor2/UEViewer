@@ -112,7 +112,11 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 	{
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
-		appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
+		const UObject *Tex = Mesh->Textures[Mesh->Materials[i].TextureIndex];
+		if (Tex)
+			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
+		else
+			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
 		Ar << M;
 	}
 
