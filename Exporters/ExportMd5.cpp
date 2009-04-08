@@ -48,6 +48,19 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<FMeshBone> &Bone
 			assert(B.ParentIndex < i);
 			Coords[B.ParentIndex].UnTransformCoords(BC, BC);
 		}
+#if 0
+	//!!
+if (i == 32)
+{
+	appNotify("Bone %d (%8.3f %8.3f %8.3f) - (%8.3f %8.3f %8.3f %8.3f)", i, VECTOR_ARG(BP), QUAT_ARG(BO));
+#define C BC
+	appNotify("REF   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
+	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+}
+#endif
 	}
 
 	unguard;
@@ -93,11 +106,36 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 		if (BO.w < 0) BO.Negate();				// W-component of quaternion will be removed ...
 
 		Ar.Printf(
-			"\t\"%s\"\t%d ( %g %g %g ) ( %g %g %g )\n",
+			"\t\"%s\"\t%d ( %f %f %f ) ( %.10f %.10f %.10f )\n",
 			*B.Name, (i == 0) ? -1 : B.ParentIndex,
 			VECTOR_ARG(BP),
 			BO.x, BO.y, BO.z
 		);
+#if 0
+	//!!
+if (i == 32 || i == 34)
+{
+	CCoords BC;
+	BC.origin = BP;
+	BO.ToAxis(BC.axis);
+	appNotify("Bone %d (%8.3f %8.3f %8.3f) - (%8.3f %8.3f %8.3f %8.3f)", i, VECTOR_ARG(BP), QUAT_ARG(BO));
+#define C BC
+	appNotify("INV   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
+	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+//	BO.Negate();
+	BO.w *= -1;
+	BO.ToAxis(BC.axis);
+#define C BC
+	appNotify("INV2  : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
+	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+}
+#endif
 	}
 	Ar.Printf("}\n\n");
 
@@ -179,7 +217,7 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 		{
 			const FMeshWedge &W = Mesh->Wedges[MeshVerts[i]];
 			int iPoint = W.iVertex;
-			Ar.Printf("\tvert %d ( %g %g ) %d %d\n",
+			Ar.Printf("\tvert %d ( %f %f ) %d %d\n",
 				i, W.TexUV.U, W.TexUV.V, MeshWeights[iPoint], Weights[iPoint].InfIndex.Num());
 		}
 		// triangles
@@ -213,7 +251,7 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 #endif
 				BoneCoords[I.BoneIndex].TransformPoint(v, v);
 				Ar.Printf(
-					"\tweight %d %d %g ( %g %g %g )\n",
+					"\tweight %d %d %f ( %f %f %f )\n",
 					WeightIndex, I.BoneIndex, I.Weight,
 					VECTOR_ARG(v)
 				);
@@ -302,9 +340,9 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 #endif
 				if (BO.w < 0) BO.Negate();		// W-component of quaternion will be removed ...
 				if (Frame < 0)
-					Ar.Printf("\t( %g %g %g ) ( %g %g %g )\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
+					Ar.Printf("\t( %f %f %f ) ( %.10f %.10f %.10f )\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
 				else
-					Ar.Printf("\t%g %g %g %g %g %g\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
+					Ar.Printf("\t%f %f %f %.10f %.10f %.10f\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
 			}
 			Ar.Printf("}\n\n");
 		}

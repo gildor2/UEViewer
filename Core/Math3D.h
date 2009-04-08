@@ -262,6 +262,11 @@ struct CQuat
 {
 	float	x, y, z, w;
 
+	inline void Set(float _x, float _y, float _z, float _w)
+	{
+		x = _x; y = _y; z = _z; w = _w;
+	}
+
 	void FromAxis(const CAxis &src);
 	void ToAxis(CAxis &dst) const;
 	float GetLength() const;

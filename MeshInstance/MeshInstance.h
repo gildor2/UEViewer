@@ -211,6 +211,7 @@ public:
 	int			LodNum;
 	// debugging
 	int			ShowSkel;			// 0 - mesh, 1 - mesh+skel, 2 - skel only
+	bool		ShowInfluences;
 	bool		ShowLabels;
 	bool		ShowAttach;
 
@@ -220,9 +221,11 @@ public:
 	,	BoneData(NULL)
 	,	MeshVerts(NULL)
 	,	MeshNormals(NULL)
+	,	InfColors(NULL)
 	,	ShowSkel(0)
 	,	ShowLabels(false)
 	,	ShowAttach(false)
+	,	ShowInfluences(false)
 	{
 		ClearSkelAnims();
 	}
@@ -300,6 +303,7 @@ protected:
 	CVec3		*MeshVerts;			// soft-skinned vertices
 	CVec3		*MeshNormals;		// soft-skinned normals
 	CVec3		*RefNormals;		// normals for main mesh in bind pose
+	CVec3		*InfColors;			// debug: color-by-influence for vertices
 	// animation state
 	CAnimChan	Channels[MAX_SKELANIMCHANNELS];
 	int			MaxAnimChannel;
@@ -323,6 +327,7 @@ protected:
 	int FindAnim(const char *AnimName) const;
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 	void UpdateSkeleton();
+	void BuildInfColors();
 };
 
 

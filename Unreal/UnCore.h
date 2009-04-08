@@ -237,6 +237,11 @@ public:
 };
 
 
+inline FArchive& operator<<(FArchive &Ar, bool &B)
+{
+	Ar.Serialize(&B, 1);
+	return Ar;
+}
 inline FArchive& operator<<(FArchive &Ar, char &B)
 {
 	Ar.Serialize(&B, 1);

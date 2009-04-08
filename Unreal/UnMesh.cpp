@@ -2080,7 +2080,11 @@ struct FStaticLODModel3
 		Lod.BulkData.Serialize(Ar);
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
-		if (Ar.ArVer >= 534)
+#if MEDGE
+		if (Ar.ArLicenseeVer >= 0xF)	//?? IsMirrorEdge: has conflict with GoW2
+			return Ar;
+#endif // MEDGE
+		if (Ar.ArVer >= 534)		// GoW2 code
 			Ar << Lod.fC4;
 //		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num()); -- mostly equals (failed in CH_TwinSouls_Cine.upk)
 //		assert(Lod.BulkData.ElementCount == Lod.NumVertices); -- mostly equals (failed on some GoW packages)
@@ -2119,10 +2123,11 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	int i;
 
 	// convert LODs
+	assert(Lods.Num() == LODInfo.Num());
 	LODModels.Empty(Lods.Num());
 	LODModels.Add(Lods.Num());
 	for (i = 0; i < Lods.Num(); i++)
-		LODModels[i].RestoreMesh3(*this, Lods[i]);
+		LODModels[i].RestoreMesh3(*this, Lods[i], LODInfo[i]);
 
 	//!! Optimize search for PointIndex in RestoreMesh3()
 	/*!!
@@ -2181,7 +2186,7 @@ static float half2float(word h)
 }
 
 
-void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODModel3 &Lod)
+void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODModel3 &Lod, const FSkeletalMeshLODInfo &Info)
 {
 	guard(FStaticLODModel::RestoreMesh3);
 
@@ -2384,9 +2389,13 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
 	{
 		const FSkelMeshSection3 &S = Lod.Sections[Sec];
+		if (S.unk1 != Sec) appNotify("Sec=%d unk1=%d", Sec, S.unk1);	//??
 
 		FSkelMeshSection *Dst = new (SmoothSections) FSkelMeshSection;
-		Dst->MaterialIndex = S.MaterialIndex;
+		int MaterialIndex = S.MaterialIndex;
+		if (Info.LODMaterialMap.Num())
+			MaterialIndex = Info.LODMaterialMap[MaterialIndex];
+		Dst->MaterialIndex = MaterialIndex;
 		Dst->FirstFace     = Faces.Num();
 		Dst->NumFaces      = S.NumTriangles;
 
@@ -2394,8 +2403,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 		for (int i = 0; i < S.NumTriangles; i++)
 		{
 			FMeshFace *Face = new (Faces) FMeshFace;
-			Face->MaterialIndex = S.MaterialIndex;
-			if (S.unk1 != Sec) appNotify("Sec=%d unk1=%d", Sec, S.unk1);	//??
+			Face->MaterialIndex = MaterialIndex;
 			Face->iWedge[0] = Lod.IndexBuffer.Indices[Index++];
 			Face->iWedge[1] = Lod.IndexBuffer.Indices[Index++];
 			Face->iWedge[2] = Lod.IndexBuffer.Indices[Index++];

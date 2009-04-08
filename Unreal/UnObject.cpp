@@ -465,6 +465,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #define SIMPLE_ARRAY_TYPE(type) \
 		if (!strcmp(Prop->TypeName, #type)) { Ar << *(TArray<type>*)Arr; }
 				SIMPLE_ARRAY_TYPE(int)
+				else SIMPLE_ARRAY_TYPE(bool)
 				else SIMPLE_ARRAY_TYPE(float)
 				else SIMPLE_ARRAY_TYPE(UObject*)
 				else SIMPLE_ARRAY_TYPE(FName)

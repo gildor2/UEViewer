@@ -6,6 +6,12 @@
 #include "GlWindow.h"
 
 
+// debugging
+//#define CHECK_INFLUENCES		1
+//#define SHOW_INFLUENCES		1
+//#define SHOW_ANIM				1
+
+
 struct CMeshBoneData
 {
 	// static data (computed after mesh loading)
@@ -43,6 +49,7 @@ CSkelMeshInstance::~CSkelMeshInstance()
 		delete MeshNormals;
 		delete RefNormals;
 	}
+	if (InfColors) delete InfColors;
 }
 
 
@@ -162,6 +169,11 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 		delete MeshNormals;
 		delete RefNormals;
 	}
+	if (InfColors)
+	{
+		delete InfColors;
+		InfColors = NULL;
+	}
 	BoneData    = new CMeshBoneData[NumBones];
 	MeshVerts   = new CVec3        [NumVerts];
 	MeshNormals = new CVec3        [NumVerts];
@@ -203,6 +215,25 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 			BoneData[B.ParentIndex].RefCoords.UnTransformCoords(BC, BC);
 		// store inverted transformation too
 		InvertCoords(data->RefCoords, data->RefCoordsInv);
+#if 0
+	//!!
+if (i == 32 || i == 34)
+{
+	appNotify("Bone %d (%8.3f %8.3f %8.3f) - (%8.3f %8.3f %8.3f %8.3f)", i, VECTOR_ARG(BP), QUAT_ARG(BO));
+#define C data->RefCoords
+	appNotify("REF   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
+	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+#define C data->RefCoordsInv
+	appNotify("REFIN : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
+	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+}
+#endif
 		// initialize skeleton configuration
 		data->Scale = 1.0f;			// default bone scale
 	}
@@ -396,8 +427,6 @@ static void GetKeyParams(const TArray<float> &KeyTime, float Frame, float NumFra
 {
 	guard(GetKeyParams);
 	X = FindTimeKey(KeyTime, Frame);
-if (X < 0) appError("11");
-if (X >= KeyTime.Num()) appError("22");
 	Y = X + 1;
 	int NumTimeKeys = KeyTime.Num();
 	if (Y >= NumTimeKeys)
@@ -622,7 +651,16 @@ void CSkelMeshInstance::UpdateSkeleton()
 					BoneUpdateCounts[i]++;		//!! remove later
 					GetBonePosition(Motion1->AnimTracks[BoneIndex], Chn->Time, AnimSeq1->NumFrames,
 						Chn->Looped, BP, BO);
-//DrawTextLeft("Bone (%s) : P{ %g %g %g }  Q{ %g %g %g %g }", *Mesh->RefSkeleton[BoneIndex].Name, BP[0], BP[1], BP[2], BO.x, BO.y, BO.z, BO.w);
+//const char *bname = *Mesh->RefSkeleton[i].Name;
+//CQuat BOO = BO;
+//if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
+#if SHOW_ANIM
+if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
+					DrawTextLeft("Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
+						*Mesh->RefSkeleton[i].Name, VECTOR_ARG(BP), QUAT_ARG(BO));
+//if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
+#endif
+//BO.Normalize();
 				}
 				// blend secondary animation
 				if (Motion2)
@@ -704,6 +742,30 @@ void CSkelMeshInstance::UpdateSkeleton()
 		// compute transformation of world-space model vertices from reference
 		// pose to desired pose
 		BC.UnTransformCoords(data->RefCoordsInv, data->Transform);
+#if 0
+//!!
+if (i == 32 || i == 34)
+{
+#define C BC
+	DrawTextLeft("[%2d] : o=%8.3f %8.3f %8.3f", i, VECTOR_ARG(C.origin ));
+	DrawTextLeft("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	DrawTextLeft("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	DrawTextLeft("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+#define C data->Transform
+	DrawTextLeft("TRN   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
+	DrawTextLeft("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	DrawTextLeft("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	DrawTextLeft("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+#define C data->RefCoordsInv
+	DrawTextLeft("REF   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
+	DrawTextLeft("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
+	DrawTextLeft("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
+	DrawTextLeft("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
+#undef C
+}
+#endif
 	}
 	unguard;
 }
@@ -926,6 +988,13 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 	Drawing
 -----------------------------------------------------------------------------*/
 
+static void GetBoneInfColor(int BoneIndex, CVec3 &Color)
+{
+	static float table[] = {0.1f, 0.4f, 0.7f, 1.0f};
+	Color.Set(table[BoneIndex & 3], table[(BoneIndex >> 2) & 3], table[(BoneIndex >> 4) & 3]);
+}
+
+
 void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 {
 	guard(CSkelMeshInstance::DrawSkeleton);
@@ -943,20 +1012,24 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 		const CCoords   &BC = BoneData[i].Coords;
 
 		CVec3 v1;
+		CVec3 Color;
 		if (i > 0)
 		{
-			glColor3f(1,1,0.3);
+//			Color.Set(1,1,0.3);
 			//!! REMOVE LATER:
 			int t = BoneUpdateCounts[i];
-			glColor3f(t & 1, (t >> 1) & 1, (t >> 2) & 1);
+			Color.Set(t & 1, (t >> 1) & 1, (t >> 2) & 1);
 			//!! ^^^^^^^^^^^^^
 			v1 = BoneData[B.ParentIndex].Coords.origin;
 		}
 		else
 		{
-			glColor3f(1,0,1);
+			Color.Set(1,0,1);
 			v1.Zero();
 		}
+		if (ShowInfluences)
+			GetBoneInfColor(i, Color);
+		glColor3fv(Color.v);
 		glVertex3fv(v1.v);
 		glVertex3fv(BC.origin.v);
 
@@ -1032,6 +1105,23 @@ void CSkelMeshInstance::TransformMesh(int NumInfs, const FVertInfluences *Infs, 
 	memset(MeshVerts,   0, sizeof(CVec3) * NumVerts);
 	if (Norms)
 		memset(MeshNormals, 0, sizeof(CVec3) * NumVerts);
+#if CHECK_INFLUENCES
+	float *infAccum = new float[NumVerts];
+	memset(infAccum, 0, sizeof(float) * NumVerts);
+#endif
+
+#if 0
+	//!!
+	bool vertUsed[32768];
+	memset(&vertUsed, 0, sizeof(vertUsed));
+	int j;
+	for (j = 0; j < NumInfs; j++)
+	{
+		int idx = Infs[j].PointIndex;
+		if (Infs[j].BoneIndex == 34 && (Verts[idx].X < -27) && (Verts[idx].X > -28))
+			vertUsed[idx] = true;
+	}
+#endif
 
 	for (int i = 0; i < NumInfs; i++)
 	{
@@ -1048,7 +1138,32 @@ void CSkelMeshInstance::TransformMesh(int NumInfs, const FVertInfluences *Infs, 
 			data.Transform.axis.UnTransformVector(Norms[PointIndex], tmp);
 			VectorMA(MeshNormals[PointIndex], Inf.Weight, tmp);
 		}
+#if CHECK_INFLUENCES
+		if (Inf.Weight <= 0 || Inf.Weight > 1)
+			DrawTextLeft("point[%d] have bad inf = %g", PointIndex, Inf.Weight);
+		infAccum[PointIndex] += Inf.Weight;
+#endif
+#if 0
+		//!!
+		if (vertUsed[PointIndex])
+			DrawTextLeft("%d: v[%g %g %g] b[%d] w[%g]", PointIndex, FVECTOR_ARG(Verts[PointIndex]), Inf.BoneIndex, Inf.Weight);
+		else
+			MeshVerts[PointIndex].Set(0, 0, 0);
+#endif
 	}
+#if 0
+	//!!
+	DrawTextLeft("--------");
+	for (j = 0; j < NumVerts; j++)
+		if (vertUsed[j])
+			DrawTextLeft("%5d: %7.2f %7.2f %7.2f", j, VECTOR_ARG(MeshVerts[j]));
+#endif
+#if CHECK_INFLUENCES
+	for (int j = 0; j < NumVerts; j++)
+		if (infAccum[j] < 0.9999f || infAccum[j] > 1.0001f)
+			DrawTextLeft("point[%d] have bad inf sum = %g", j, infAccum[j]);
+	delete infAccum;
+#endif
 	unguard;
 }
 
@@ -1066,28 +1181,69 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 	glEnable(GL_LIGHTING);
 	int lastMatIndex = -1;	//!! implement same glBegin/glEnd/glBindTexture optimizations for VertMesh
 	glBegin(GL_TRIANGLES);
-	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	if (!ShowInfluences)
 	{
-		const VTriangle &Face = Mesh->Triangles[i];
-		if (Face.MatIndex != lastMatIndex)
+		// draw normal mesh
+		for (i = 0; i < Mesh->Triangles.Num(); i++)
 		{
-			// change active material
-			glEnd();					// stop drawing sequence
-			SetMaterial(Face.MatIndex);
-			lastMatIndex = Face.MatIndex;
-			glBegin(GL_TRIANGLES);		// restart drawing sequence
+			const VTriangle &Face = Mesh->Triangles[i];
+			if (Face.MatIndex != lastMatIndex)
+			{
+				// change active material
+				glEnd();					// stop drawing sequence
+				SetMaterial(Face.MatIndex);
+				lastMatIndex = Face.MatIndex;
+				glBegin(GL_TRIANGLES);		// restart drawing sequence
+			}
+			for (int j = 0; j < 3; j++)
+			{
+				const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
+				glTexCoord2f(W.TexUV.U, W.TexUV.V);
+				glNormal3fv(MeshNormals[W.iVertex].v);
+				glVertex3fv(MeshVerts[W.iVertex].v);
+			}
 		}
-		for (int j = 0; j < 3; j++)
+	}
+	else
+	{
+		// draw influences
+		if (!InfColors)
+			BuildInfColors();
+		assert(InfColors);
+
+		glDisable(GL_TEXTURE_2D);
+		for (i = 0; i < Mesh->Triangles.Num(); i++)
 		{
-			const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
-			glTexCoord2f(W.TexUV.U, W.TexUV.V);
-			glNormal3fv(MeshNormals[W.iVertex].v);
-			glVertex3fv(MeshVerts[W.iVertex].v);
+			const VTriangle &Face = Mesh->Triangles[i];
+			for (int j = 0; j < 3; j++)
+			{
+				const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
+				glNormal3fv(MeshNormals[W.iVertex].v);
+				glColor3fv(InfColors[W.iVertex].v);
+				glVertex3fv(MeshVerts[W.iVertex].v);
+			}
 		}
 	}
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
+
+#if SHOW_INFLUENCES
+	glBegin(GL_LINES);
+	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
+	{
+		const FVertInfluences &Inf = Mesh->VertInfluences[i];
+		int iBone = Inf.BoneIndex;
+		const FMeshBone       &B   = Mesh->RefSkeleton[iBone];
+		const CCoords         &BC  = BoneData[iBone].Coords;
+		CVec3 Color;
+		GetBoneInfColor(iBone, Color);
+		glColor3fv(Color.v);
+		glVertex3fv(MeshVerts[Inf.PointIndex].v);
+		glVertex3fv(BC.origin.v);
+	}
+	glEnd();
+#endif // SHOW_INFLUENCES
 
 	// draw mesh normals
 	if (ShowNormals)
@@ -1221,6 +1377,33 @@ void CSkelMeshInstance::Draw()
 	}
 	if (ShowAttach)
 		DrawAttachments();
+
+	unguard;
+}
+
+
+void CSkelMeshInstance::BuildInfColors()
+{
+	guard(CSkelMeshInstance::BuildInfColors);
+
+	int i;
+
+	const USkeletalMesh *Mesh = GetMesh();
+	if (InfColors) delete InfColors;
+	InfColors = new CVec3[Mesh->Points.Num()];
+
+	// get colors for bones
+	int NumBones = Mesh->RefSkeleton.Num();
+	CVec3 BoneColors[MAX_MESHBONES];
+	for (i = 0; i < NumBones; i++)
+		GetBoneInfColor(i, BoneColors[i]);
+
+	// process influences
+	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
+	{
+		const FVertInfluences &Inf = Mesh->VertInfluences[i];
+		VectorMA(InfColors[Inf.PointIndex], Inf.Weight, BoneColors[Inf.BoneIndex]);
+	}
 
 	unguard;
 }

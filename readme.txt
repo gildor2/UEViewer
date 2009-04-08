@@ -24,7 +24,7 @@ Unreal Engine 3:
   Unreal Tournament 3
   Gears of War
   Gears of War 2 (XBox360)
-  The Last Remnant (benchmark)
+  The Last Remnant
   Mirror's Edge
 
 List of games with limited support:
@@ -54,6 +54,12 @@ viewers/importers does require md5anim hierarchy, some - does not.
 
 Changes:
 ~~~~~~~~
+08.04.2009
+- implemented bone influence visualization for SkeletalMesh (activated with key I)
+
+07.04.2009
+- fixed texture mapping for UE3 SkeletalMesh LODs
+
 24.03.2009
 - implemented export of skeletal mesh and animation to md5mesh/md5anim format
   (activated with "-md5" command line switch)

@@ -237,6 +237,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawTextLeft("L           cycle mesh LODs\n"
 				 "S           show skeleton\n"
 				 "B           show bone names\n"
+				 "I           show influences\n"
 				 "A           show attach sockets\n"
 				 "Ctrl+B      dump skeleton to console\n"
 				 "Ctrl+A      cycle mesh animation sets");
@@ -267,6 +268,9 @@ void CSkelMeshViewer::ProcessKey(int key)
 	case 'a':
 		MeshInst->ShowAttach = !MeshInst->ShowAttach;
 		break;
+	case 'i':
+		MeshInst->ShowInfluences = !MeshInst->ShowInfluences;
+		break;
 	case 'b'|KEY_CTRL:
 		MeshInst->DumpBones();
 		break;
@@ -285,6 +289,11 @@ void CSkelMeshViewer::ProcessKey(int key)
 //		MeshInst->LoopAnim("RunR", 1, 0, 2);
 //		MeshInst->LoopAnim("SwimF", 1, 0, 2);
 		MeshInst->SetSecondaryAnim(2, "RunF");
+		break;
+	case 'y'|KEY_CTRL:
+		MeshInst->SetBlendParams(0, 1.0f, "b_MF_Forearm_R");
+//		MeshInst->SetBlendParams(0, 1.0f, "b_MF_Hand_R");
+//		MeshInst->SetBlendParams(0, 1.0f, "b_MF_ForeTwist2_R");
 		break;
 	case 'c':
 		Alpha -= 0.02;

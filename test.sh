@@ -92,7 +92,12 @@ fi
 case "" in
 
 "")
-	ut2 -export -md5 -all HumanMaleA MercMaleD
+	#!! BUG: bad material for legs (LOD#0), and more errors in other lods
+	./umodel -meshes -path=c:/1 CA0060_00_00.upk
+	#!! BUG: LOD 2/2: bad material index (mesh displayed with material #3, but there is only 2 materials)
+#	gow2 -meshes geargamehorde_SF.xxx Locust_Butcher_Boomer
+
+#!!	ut2 -export -md5 -all HumanMaleA MercMaleD
 #	gow2 -meshes geargamehorde_SF
 	#!! CRASH (assert)
 #!!	gow Geist_Reaver

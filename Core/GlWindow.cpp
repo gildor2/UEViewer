@@ -10,6 +10,7 @@
 
 
 #define LIGHTING_MODES			1
+#define DUMP_TEXTS				1
 
 
 #if RENDERING
@@ -546,6 +547,9 @@ static void DrawText(const CRText *rec)
 	}
 }
 
+#if DUMP_TEXTS
+static bool dumpTexts = false;
+#endif
 
 void FlushTexts()
 {
@@ -557,14 +561,30 @@ void FlushTexts()
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.5);
 
+#if DUMP_TEXTS
+	appSetNotifyHeader("Screen texts");
+#endif
 	Text.Enumerate(DrawText);
 	nextLeft_y = nextRight_y = TOP_TEXT_POS;
 	ClearTexts();
+#if DUMP_TEXTS
+	appSetNotifyHeader(NULL);
+	dumpTexts = false;
+#endif
 }
 
 
 void DrawTextPos(int x, int y, const char *text)
 {
+#if DUMP_TEXTS
+	if (dumpTexts)
+	{
+		// dump to log
+		appNotify("%s", text);
+		// hack to view all texts
+		nextLeft_y = nextRight_y = TOP_TEXT_POS;
+	}
+#endif
 	CRText *rec = Text.Add(text);
 	if (!rec) return;
 	rec->x = x;
@@ -749,6 +769,11 @@ static void OnKeyboard(unsigned key, unsigned mod)
 #if LIGHTING_MODES
 	case 'l'|KEY_CTRL:
 		if (++lightingMode == LIGHTING_LAST) lightingMode = 0;
+		break;
+#endif
+#if DUMP_TEXTS
+	case 'd'|KEY_CTRL:
+		dumpTexts = true;
 		break;
 #endif
 	default:

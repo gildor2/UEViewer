@@ -1206,7 +1206,7 @@ struct FStaticLODModel
 	void RestoreLineageMesh();
 #endif
 #if UNREAL3
-	void RestoreMesh3(const class USkeletalMesh &Mesh, const class FStaticLODModel3 &Lod);	//?? forward declarations for classes
+	void RestoreMesh3(const class USkeletalMesh &Mesh, const class FStaticLODModel3 &Lod, const struct FSkeletalMeshLODInfo &Info);	//?? forward declarations for classes
 #endif
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel &M)
@@ -1315,6 +1315,23 @@ struct FT3Unk1
 
 #endif // TRIBES3
 
+#if UNREAL3
+struct FSkeletalMeshLODInfo
+{
+	DECLARE_STRUCT(FSkeletalMeshLODInfo);
+	float					DisplayFactor;
+	float					LODHysteresis;
+	TArray<int>				LODMaterialMap;
+	TArray<bool>			bEnableShadowCasting;
+
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(DisplayFactor)
+		PROP_FLOAT(LODHysteresis)
+		PROP_ARRAY(LODMaterialMap, int)
+		PROP_ARRAY(bEnableShadowCasting, bool)
+	END_PROP_TABLE
+};
+#endif
 
 class USkeletalMesh : public ULodMesh
 {
@@ -1344,6 +1361,9 @@ public:
 	TArray<UObject*>		f32C;			// TArray<UModel*>; collision models??
 	UObject*				CollisionMesh;	// UStaticMesh*
 	UObject*				KarmaProps;		// UKMeshProps*
+#if UNREAL3
+	TArray<FSkeletalMeshLODInfo> LODInfo;	//?? move outside
+#endif
 
 	void UpgradeFaces();
 	void UpgradeMesh();
@@ -1361,8 +1381,8 @@ public:
 #if UNREAL3
 	//!! separate class for UE3 !
 	BEGIN_PROP_TABLE
+		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
 		PROP_DROP(Sockets)
-		PROP_DROP(LODInfo)
 		PROP_DROP(SkelMeshGUID)
 		PROP_DROP(SkelMirrorTable)
 		PROP_DROP(FaceFXAsset)
@@ -1667,6 +1687,7 @@ public:
 
 #define REGISTER_MESH_CLASSES_U3	\
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
+	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)
 

@@ -39,6 +39,7 @@
 #endif
 
 #define VECTOR_ARG(name)	name[0],name[1],name[2]
+#define QUAT_ARG(name)		name.x,name.y,name.z,name.w
 #define ARRAY_ARG(array)	array, sizeof(array)/sizeof(array[0])
 #define ARRAY_COUNT(array)	(sizeof(array)/sizeof(array[0]))
 
