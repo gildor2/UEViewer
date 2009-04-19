@@ -242,7 +242,7 @@ public:
 		}
 		unguard;
 	}
-#endif
+#endif // LINEAGE2
 };
 
 
@@ -366,7 +366,7 @@ struct FMipmap
 			TLazyArray<byte> SkipArray;
 			Ar << SkipArray;
 		}
-#endif
+#endif // TRIBES3
 		return Ar << M.DataArray << M.USize << M.VSize << M.UBits << M.VBits;
 	}
 };
@@ -443,7 +443,7 @@ public:
 			byte MaterialType;			// enum GFMaterialType
 			Ar << MaterialType;
 		}
-#endif
+#endif // EXTEEL
 		unguard;
 	}
 	BEGIN_PROP_TABLE
@@ -513,7 +513,7 @@ public:
 	bool			ZWrite;
 	bool			AlphaTest;
 	byte			AlphaRef;
-#endif
+#endif // LINEAGE2
 
 	UShader()
 	:	ModulateStaticLighting2X(true)
@@ -1133,6 +1133,9 @@ public:
 		PROP_DROP(BakerBleedBounceAmount)
 		PROP_DROP(BakerAlpha)
 #endif // MEDGE
+#if TLR
+		PROP_DROP(VFXShaderType)
+#endif
 	END_PROP_TABLE
 
 	BIND;

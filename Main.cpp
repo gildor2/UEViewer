@@ -8,6 +8,7 @@
 
 
 #define APP_CAPTION		"Unreal Model Viewer"
+#define HOMEPAGE		"http://www.gildor.org/en/projects/umodel"
 
 
 #if RENDERING
@@ -233,7 +234,10 @@ int main(int argc, char **argv)
 #endif
 #if UNREAL3
 				"Unreal Engine 3:\n"
-				"    Unreal Tournament 3, Gears of War, The Last Remnant\n"
+				"    Unreal Tournament 3, Gears of War\n"
+#	if TLR
+				"    The Last Remnant\n"
+#	endif
 #	if MEDGE
 				"    Mirror's Edge\n"
 #	endif
@@ -242,7 +246,7 @@ int main(int argc, char **argv)
 #	endif
 #endif // UNREAL3
 				"\n"
-				"For details and updates please visit http://www.gildor.org/projects/umodel\n"
+				"For details and updates please visit " HOMEPAGE "\n"
 		);
 		exit(0);
 	}
@@ -324,9 +328,9 @@ int main(int argc, char **argv)
 	else
 	{
 		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
-		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim); // separate file for each animation track
+		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
 	}
-	EXPORTER("VertMesh",      NULL,  Export3D );
+	EXPORTER("VertMesh",      NULL,  Export3D );				// will generate 2 files
 	EXPORTER("Texture",       "tga", ExportTga);
 #if UNREAL3
 	EXPORTER("Texture2D",     "tga", ExportTga);

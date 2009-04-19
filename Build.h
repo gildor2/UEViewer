@@ -30,4 +30,5 @@
 // requires UNREAL3
 #define XBOX360			1		// XBox360 resources
 #define MEDGE			1		// Mirror's Edge
+#define TLR				1		// The Last Remnant
 //#define USE_XDK			1		// use some proprietary code for XBox360 support

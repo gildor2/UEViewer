@@ -24,6 +24,7 @@ Unreal Engine 3:
   Unreal Tournament 3
   Gears of War
   Gears of War 2 (XBox360)
+Modified Unreal Engine 3:
   The Last Remnant
   Mirror's Edge
 
@@ -35,6 +36,8 @@ Using "-noanim" option (unsupported animation format):
   Unreal Championship 2: The Liandri Conflict (UE2X)
 
 Project home page and forum:
+http://www.gildor.org/en/projects/umodel
+or Russian page:
 http://www.gildor.org/projects/umodel
 
 
@@ -54,6 +57,12 @@ viewers/importers does require md5anim hierarchy, some - does not.
 
 Changes:
 ~~~~~~~~
+17.04.2009
+- implemented support for The Last Remnant animations
+
+09.04.2009
+- improved stability of loading bad UE3 animation tracks (GOW1 Geist_Reaver)
+
 08.04.2009
 - implemented bone influence visualization for SkeletalMesh (activated with key I)
 

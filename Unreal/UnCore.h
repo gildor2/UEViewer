@@ -162,6 +162,9 @@ public:
 #if RAGNAROK2
 	int		IsRagnarok2:1;
 #endif
+#if TLR
+	int		IsTLR:1;
+#endif
 
 	FArchive()
 	:	ArPos(0)
@@ -189,6 +192,9 @@ public:
 #endif
 #if RAGNAROK2
 	,	IsRagnarok2(0)
+#endif
+#if TLR
+	,	IsTLR(0)
 #endif
 	{}
 

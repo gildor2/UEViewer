@@ -92,17 +92,21 @@ fi
 case "" in
 
 "")
-	#!! BUG: bad material for legs (LOD#0), and more errors in other lods
-	./umodel -meshes -path=c:/1 CA0060_00_00.upk
-	#!! BUG: LOD 2/2: bad material index (mesh displayed with material #3, but there is only 2 materials)
-#	gow2 -meshes geargamehorde_SF.xxx Locust_Butcher_Boomer
+	#!! BUGS with GOW animations
+#	gow -meshes COG_GasTanker.upk
+#	gow -meshes Geist_Beast.upk
+#	gow -meshes Locust_Seeder.upk
+	#!! CheckBoneTree -> "Strange skeleton" (IK bones?)
+	gow -meshes Neutral_Stranded_01.upk NPC01_COG
+	#!! CRASH with UE3 animations (assert)
+#-	gow -meshes Geist_Reaver.upk
+	#!! CRASH with TLR animations (assert) -- have 6 offsets per bone (time keys?)
+#	run C:/1/CA0000_MOT_0.upk
+#	run C:/1/CA0001_MOT_0.upk
+#	run C:/1/CB0220_MOT_0.upk
 
 #!!	ut2 -export -md5 -all HumanMaleA MercMaleD
 #	gow2 -meshes geargamehorde_SF
-	#!! CRASH (assert)
-#!!	gow Geist_Reaver
-#	gow2 SP_Rescue_P Jackbot_animset
-#	run data/HumanMale_comp1.upk
 
 	# anims
 #	gow2 -meshes SP_Maria_Cine_Outro

@@ -1,4 +1,3 @@
-!! document in readme and help support for GOW and UT3
 !! UC2: make Ar.IsUC2() instead of version checking
 !! UC2: load animations, textures
 
@@ -8,6 +7,7 @@ ForcedExport handling: should use this information for UE3 package loading:
   2) load such objects from another package
      a) use metadata from another package - ignore local FBulkData structure
      b) use local metadata + external bulk (simply load compressed/uncompressed data block)
+  *) done for GOW2 textures
 - prevent export/listing of such resources (or list with "forced" flag?)
 
 FONTGEN
@@ -34,7 +34,7 @@ GENMAKE:
           ...
     * if so, can remove '-check', '-pkginfo' etc from umodel
 
-! UTexture has AnimNext field
+! UE1 UTexture has AnimNext field
 ! UMaterialSequence (check 2K4Menus package)
 ? key to toggle fullscreen with desktop resolution (no way to implement using SDL only?)
   - X.org has SDL_WM_ToggleFullScreen(), and can use USER32 code for Win32

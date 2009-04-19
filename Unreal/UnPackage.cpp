@@ -302,6 +302,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
 		IsExteel = 0;
 #endif
+#if TLR
+	if (ArVer == 507 && ArLicenseeVer == 11)
+		IsTLR = 1;
+#endif
 
 	// read name table
 	guard(ReadNameTable);

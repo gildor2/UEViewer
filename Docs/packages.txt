@@ -1,4 +1,6 @@
-All values are hexadecimal
+All values are hexadecimal (decimal values in parentheses)
+
+UNREAL ENGINE 1, 2, 2X:
 
 			LicenseeVer	FileVer
 Unreal1, UT1, DeusEx,
@@ -18,8 +20,13 @@ Lineage2		1C-25		7B
 
 Unreal Championship 2	1		97(151)
 
+
+UNREAL ENGINE 3:
+
 			LicenseeVer	FileVer		EngineVer	NetVer		MinFileVer	MinEngVer
 Gears Of War		9		1EA(490)	D01(3329)	C05(3077)	E1(225)
+Gears Of War 2		0		23F(575)	?		?		?		?
 UT3			0		200(512)	DC1(3521)	D8B(3467)	1EB(491)	D8B(3467)
 Mass Effect		3F0(1008)	1EB(491)			C05(3077)
 Mirror's Edge		2B(43)		218(636)	E84(3716)	C05(3077)	1EB(491)	C05(3077)
+The Last Remnant	0B(11)		1FB(507)	?		?		?		?

@@ -2527,6 +2527,7 @@ void UAnimSet::ConvertAnims()
 #if FIND_HOLES
 	bool findHoles = true;
 #endif
+	int NumTracks = TrackBoneNames.Num();
 
 	for (i = 0; i < Sequences.Num(); i++)
 	{
@@ -2536,6 +2537,22 @@ void UAnimSet::ConvertAnims()
 			printf("WARNING: %s: no sequence %d\n", Name, i);
 			continue;
 		}
+		// some checks
+		int offsetsPerBone = 4;
+#if TLR
+		if (Package->IsTLR) offsetsPerBone = 6;
+#endif
+		if (NumTracks * offsetsPerBone != Seq->CompressedTrackOffsets.Num())
+		{
+			//!! Solutions: (when not enough CompressedTrackOffsets)
+			//!!	1) fill missing "bad" track with some constant
+			//!!	2) remove "bad" track
+			//!!	3) remove extra bones from all sequences
+			appNotify("AnimSequence %s/%s has wrong CompressedTrackOffsets size (%d != %d), removing track",
+				Name, *Seq->SequenceName, Seq->CompressedTrackOffsets.Num(), NumTracks * 4);
+			continue;
+		}
+
 		// create FMeshAnimSeq
 		FMeshAnimSeq *Dst = new (AnimSeqs) FMeshAnimSeq;
 		Dst->Name      = Seq->SequenceName;
@@ -2543,8 +2560,6 @@ void UAnimSet::ConvertAnims()
 		Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
 		// create MotionChunk
 		MotionChunk *M = new (Moves) MotionChunk;
-
-		int NumTracks = TrackBoneNames.Num();
 
 #if DEBUG_DECOMPRESS
 		printf("ComprTrack: %d bytes, %d frames\n", Seq->CompressedByteStream.Num(), Seq->NumFrames);
@@ -2557,6 +2572,7 @@ void UAnimSet::ConvertAnims()
 		Reader.ReverseBytes = Package->ReverseBytes;
 		bool hasTimeTracks = strcmp(Seq->KeyEncodingFormat, "AKF_VariableKeyLerp") == 0;
 
+		int offsetIndex = 0;
 		for (int j = 0; j < NumTracks; j++)
 		{
 			AnalogTrack *A = new (M->AnimTracks) AnalogTrack;
@@ -2576,25 +2592,18 @@ void UAnimSet::ConvertAnims()
 			}
 
 			// read animations
-#if 0
-			if (NumTracks * 4 != Seq->CompressedTrackOffsets.Num())
+			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex++];
+			int TransKeys   = Seq->CompressedTrackOffsets[offsetIndex++];
+			int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex++];
+			int RotKeys     = Seq->CompressedTrackOffsets[offsetIndex++];
+#if TLR
+			int ScaleOffset = 0, ScaleKeys = 0;
+			if (Package->IsTLR)
 			{
-//				printf("%d * 4 != %d\n", NumTracks, Seq->CompressedTrackOffsets.Num());
-				if (NumTracks * 4 > Seq->CompressedTrackOffsets.Num())
-				{
-					NumTracks = Seq->CompressedTrackOffsets.Num() / 4;
-//					printf("Removing %d bone names\n", TrackBoneNames.Num() - NumTracks);
-					TrackBoneNames.Remove(NumTracks, TrackBoneNames.Num() - NumTracks);
-				}
+				ScaleOffset  = Seq->CompressedTrackOffsets[offsetIndex++];
+				ScaleKeys    = Seq->CompressedTrackOffsets[offsetIndex++];
 			}
-#else
-			assert(NumTracks * 4 == Seq->CompressedTrackOffsets.Num());
 #endif
-
-			int TransOffset = Seq->CompressedTrackOffsets[j*4  ];
-			int TransKeys   = Seq->CompressedTrackOffsets[j*4+1];
-			int RotOffset   = Seq->CompressedTrackOffsets[j*4+2];
-			int RotKeys     = Seq->CompressedTrackOffsets[j*4+3];
 
 			A->KeyPos.Empty(TransKeys);
 			A->KeyQuat.Empty(RotKeys);
@@ -2707,6 +2716,14 @@ void UAnimSet::ConvertAnims()
 				if (hasTimeTracks)
 					ReadTimeArray(Reader, RotKeys, A->KeyQuatTime, Seq->NumFrames);
 			}
+#if TLR
+			if (ScaleKeys)
+			{
+				//?? no ScaleKeys support, simply drop data
+				Reader.Seek(ScaleOffset + ScaleKeys * 12);
+				Reader.Seek(Align(Reader.Tell(), 4));
+			}
+#endif
 #if DEBUG_DECOMPRESS
 //			printf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
 //				Seq->NumFrames, A->KeyPos.Num(), A->KeyQuat.Num(), *Seq->KeyEncodingFormat);

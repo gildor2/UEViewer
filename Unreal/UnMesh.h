@@ -1615,6 +1615,10 @@ public:
 		//!! additive animations
 		PROP_DROP(bIsAdditive)
 		PROP_DROP(AdditiveRefName)
+#if TLR
+		PROP_DROP(ActionID)
+		PROP_DROP(m_ExtraData)
+#endif
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
