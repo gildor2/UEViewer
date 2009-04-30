@@ -729,11 +729,47 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 }
 
 
-void SerializeChars(FArchive &Ar, char *buf, int length)
+void FArchive::DetectGame()
 {
-	//?? use Ar.Serialize(buf, length)
-	for (int i = 0; i < length; i++)
-		Ar << *buf++;
+	// different game platforms autodetection
+	//?? should change this, if will implement command line switch to force mode
+	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
+#if UT2
+	IsUT2 = ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
+			((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D);
+#endif
+#if PARIAH
+	IsPariah = (ArVer == 119 && ArLicenseeVer == 0x9127);
+#endif
+#if SPLINTER_CELL
+	IsSplinterCell = (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
+					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
+#endif
+#if TRIBES3
+	IsTribes3 = ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
+				((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
+				((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
+#endif
+#if LINEAGE2
+	if (IsLineage2 && (ArLicenseeVer >= 1000))	// lineage LicenseeVer < 1000
+		IsLineage2 = 0;
+#endif
+#if EXTEEL
+	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
+		IsExteel = 0;
+#endif
+#if MASSEFF
+	if (ArVer == 491 && ArLicenseeVer == 0x3F0)
+		IsMassEffect = 1;
+#endif
+#if MEDGE
+	if (ArVer == 536 && ArLicenseeVer == 0x2B)
+		IsMirrorEdge = 1;
+#endif
+#if TLR
+	if (ArVer == 507 && ArLicenseeVer == 11)
+		IsTLR = 1;
+#endif
 }
 
 

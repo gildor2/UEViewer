@@ -1714,9 +1714,11 @@ void FStaticLODModel::RestoreLineageMesh()
 			assert(ms);
 			for (j = 0; j < 4; j++)
 			{
-				if (LW.Bones[j] == 255) continue;
+				if (LW.Bones[j] == 255) continue;	// no bone assigned
+				float Weight = LW.Weights[j];
+				if (Weight < 0.000001f) continue;	// zero weight
 				FVertInfluences *Inf = new (VertInfluences) FVertInfluences;
-				Inf->Weight     = LW.Weights[j];
+				Inf->Weight     = Weight;
 				Inf->BoneIndex  = ms->LineageBoneMap[LW.Bones[j]];
 				Inf->PointIndex = PointIndex;
 			}
@@ -1824,7 +1826,7 @@ struct FRigidVertex3
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
 		Ar << V.U << V.V;
 #if MEDGE
-		if (Ar.ArLicenseeVer >= 13)	//?? IsMirrorEdge
+		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 13)
 		{
 			float U1, V1, U2, V2;
 			Ar << U1 << V1 << U2 << V2;
@@ -1850,7 +1852,7 @@ struct FSmoothVertex3
 		// data meaning)
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
 #if MEDGE
-		if (Ar.ArLicenseeVer >= 13)	//?? IsMirrorEdge
+		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 13)
 		{
 			float U1, V1, U2, V2;
 			Ar << U1 << V1 << U2 << V2;
@@ -1997,7 +1999,7 @@ struct FGPUSkin3
 		// new version
 	#if MEDGE
 		int NumUVSets = 1;
-		if (Ar.ArLicenseeVer >= 0xF)	//?? IsMirrorEdge
+		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 0xF)
 			Ar << NumUVSets;
 	#endif // MEDGE
 		Ar << S.bUseFullPrecisionUVs;
@@ -2081,7 +2083,7 @@ struct FStaticLODModel3
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
 #if MEDGE
-		if (Ar.ArLicenseeVer >= 0xF)	//?? IsMirrorEdge: has conflict with GoW2
+		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 0xF)
 			return Ar;
 #endif // MEDGE
 		if (Ar.ArVer >= 534)		// GoW2 code
@@ -2105,7 +2107,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	TArray<FStaticLODModel3> Lods;
 
 #if MEDGE
-	if (Ar.ArLicenseeVer >= 0xF)	//?? IsMirrorEdge
+	if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 0xF)
 	{
 		int unk264;
 		Ar << unk264;

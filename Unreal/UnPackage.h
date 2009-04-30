@@ -58,6 +58,21 @@ struct FComponentMapPair
 
 #endif // UNREAL3
 
+#if MASSEFF
+
+struct FStringArrayMap // unknown name; TMap<FString, TArray<FString> > ?
+{
+	FString			Key;
+	TArray<FString> Value;
+
+	friend FArchive& operator<<(FArchive &Ar, FStringArrayMap &P)
+	{
+		return Ar << P.Key << P.Value;
+	}
+};
+
+#endif // MASSEFF
+
 
 struct FPackageFileSummary
 {
@@ -102,6 +117,8 @@ struct FPackageFileSummary
 		// store file version to archive (required for some structures, for UNREAL3 path)
 		Ar.ArVer         = S.FileVersion;
 		Ar.ArLicenseeVer = S.LicenseeVersion;
+		// detect game
+		Ar.DetectGame();
 		// read other fields
 #if UNREAL3
 //		if (S.FileVersion >= PACKAGE_V3)
@@ -120,10 +137,8 @@ struct FPackageFileSummary
 			Ar << S.DependsOffset;
 #endif
 #if SPLINTER_CELL
-		if (S.LicenseeVersion >= 0x0C && S.LicenseeVersion <= 0x1C &&
-			(S.FileVersion == 100 || S.FileVersion == 102))
+		if (Ar.IsSplinterCell)
 		{
-			// SplinterCell
 			int tmp1;
 			FString tmp2;
 			Ar << tmp1;								// 0xFF0ADDE
@@ -168,17 +183,22 @@ struct FPackageFileSummary
 				Ar << S.EngineVersion;
 			if (S.FileVersion >= 277)
 				Ar << S.CookerVersion;
+	#if MASSEFF
 			// ... MassEffect has some additional structure here ...
-			/*	if (Ar.IsMassEffect()) -- requires initializing of IsMassEffect before summary completely readed !!
-				// NOTE: should detect version after reading all required fields: FileVersion, LicenseeVersion, EngineVersion etc ...
+			if (Ar.IsMassEffect)
+			{
+				int unk1, unk2, unk3[2], unk4[2];
+				if (Ar.ArLicenseeVer >= 16) Ar << unk1;					// random value
+				if (Ar.ArLicenseeVer >= 32) Ar << unk2;					// unknown
+				if (Ar.ArLicenseeVer >= 35)
 				{
-					if (Ar.ArLicenseeVer >= 16) serialize 1*int - random value
-					if (Ar.ArLicenseeVer >= 32) serialize 1*int
-					if (Ar.ArLicenseeVer >= 35) some arrays ...
-					if (Ar.ArLicenseeVer >= 37) serialize 2*int
-					if (Ar.ArLicenseeVer >= 39) serialize 2*int
+					TArray<FStringArrayMap> unk5;
+					Ar << unk5;
 				}
-			*/
+				if (Ar.ArLicenseeVer >= 37) Ar << unk3[0] << unk3[1];	// 2 ints: 1, 0
+				if (Ar.ArLicenseeVer >= 39) Ar << unk4[0] << unk4[1];	// 2 ints: -1, -1
+			}
+	#endif // MASSEFF
 			if (S.FileVersion >= 334)
 				Ar << S.CompressionFlags << S.CompressedChunks;
 			if (S.FileVersion >= 482)

@@ -263,9 +263,12 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	Loader->ReverseBytes = ReverseBytes;	//!! should implement as virtual function
 	ArVer         = Summary.FileVersion;
 	ArLicenseeVer = Summary.LicenseeVersion;
-	PKG_LOG(("Loading package: %s Ver: %d/%d Names: %d Exports: %d Imports: %d\n", Filename,
-		Summary.FileVersion, Summary.LicenseeVersion,
-		Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
+	PKG_LOG(("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion));
+#if UNREAL3
+	if (ArVer >= PACKAGE_V3)
+		PKG_LOG(("Engine: %d ", Summary.EngineVersion));
+#endif
+	PKG_LOG(("Names: %d Exports: %d Imports: %d\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 #if UNREAL3
 	if (ArVer >= PACKAGE_V3 && Summary.CompressionFlags)
@@ -273,38 +276,6 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		// replace Loader with special reader for compressed UE3 archives
 		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, &Summary.CompressedChunks);
 	}
-#endif
-
-	// different game platforms autodetection
-	//?? should change this, if will implement command line switch to force mode
-	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
-#if UT2
-	IsUT2 = ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
-			((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D);
-#endif
-#if PARIAH
-	IsPariah = (ArVer == 119 && ArLicenseeVer == 0x9127);
-#endif
-#if SPLINTER_CELL
-	IsSplinterCell = (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
-					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
-#endif
-#if TRIBES3
-	IsTribes3 = ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
-				((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
-				((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
-#endif
-#if LINEAGE2
-	if (IsLineage2 && (ArLicenseeVer >= 1000))	// lineage LicenseeVer < 1000
-		IsLineage2 = 0;
-#endif
-#if EXTEEL
-	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
-		IsExteel = 0;
-#endif
-#if TLR
-	if (ArVer == 507 && ArLicenseeVer == 11)
-		IsTLR = 1;
 #endif
 
 	// read name table

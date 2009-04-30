@@ -103,7 +103,7 @@ static int CheckBoneTree(const TArray<FMeshBone> &Bones, int Index,
 		}
 	// store gathered information
 //	assert(currIndex == Index);		//??
-	if (currIndex != Index) appNotify("Strange skeleton!");
+	if (currIndex != Index) appNotify("Strange skeleton, check childs of bone %d", Index);
 	Sizes[currIndex] = treeSize;
 	Depth[currIndex] = depth;
 	return treeSize + 1;

@@ -19,3 +19,4 @@
 
 // requires UNREAL3
 #define XBOX360			1
+#define MASSEFF			1

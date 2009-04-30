@@ -162,6 +162,12 @@ public:
 #if RAGNAROK2
 	int		IsRagnarok2:1;
 #endif
+#if MASSEFF
+	int		IsMassEffect:1;
+#endif
+#if MEDGE
+	int		IsMirrorEdge:1;
+#endif
 #if TLR
 	int		IsTLR:1;
 #endif
@@ -193,6 +199,12 @@ public:
 #if RAGNAROK2
 	,	IsRagnarok2(0)
 #endif
+#if MASSEFF
+	,	IsMassEffect(0)
+#endif
+#if MEDGE
+	,	IsMirrorEdge(0)
+#endif
 #if TLR
 	,	IsTLR(0)
 #endif
@@ -200,6 +212,8 @@ public:
 
 	virtual ~FArchive()
 	{}
+
+	void DetectGame();
 
 	virtual void Seek(int Pos) = 0;
 	virtual bool IsEof() const
@@ -417,9 +431,6 @@ protected:
 	const byte *DataPtr;
 	int		DataSize;
 };
-
-
-void SerializeChars(FArchive &Ar, char *buf, int length);
 
 
 /*-----------------------------------------------------------------------------

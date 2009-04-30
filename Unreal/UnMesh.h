@@ -1432,7 +1432,7 @@ public:
 			else
 #endif
 			{
-				appNotify("SkeletalMesh of version %d\n", Version);
+//				appNotify("SkeletalMesh of version %d\n", Version);
 				TArray<FLODMeshSection> tmp1, tmp2;
 				TArray<word> tmp3;
 				Ar << tmp1 << tmp2 << tmp3;
@@ -1532,6 +1532,12 @@ public:
 			Ar << unk1 << unk2;
 		}
 #endif
+
+		if (Ar.ArLicenseeVer && (Ar.Tell() != Ar.GetStopper()))
+		{
+			appNotify("Serializing SkeletalMesh'%s' of unknown game: %d unreal bytes", Name, Ar.GetStopper() - Ar.Tell());
+			Ar.Seek(Ar.GetStopper());
+		}
 
 		unguard;
 	}

@@ -97,7 +97,8 @@ case "" in
 #	gow -meshes Geist_Beast.upk
 #	gow -meshes Locust_Seeder.upk
 	#!! CheckBoneTree -> "Strange skeleton" (IK bones?)
-	gow -meshes Neutral_Stranded_01.upk NPC01_COG
+	run1 "C:/!umodel-data/--Mass Effect--" -list Engine.u
+#-	gow -meshes Neutral_Stranded_01.upk NPC01_COG
 	#!! CRASH with UE3 animations (assert)
 #-	gow -meshes Geist_Reaver.upk
 	#!! CRASH with TLR animations (assert) -- have 6 offsets per bone (time keys?)

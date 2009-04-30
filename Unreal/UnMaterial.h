@@ -1025,6 +1025,13 @@ public:
 			Ar << SizeX << SizeY << Format;
 		}
 		Ar << Mips;
+#if MASSEFF
+		if (Ar.IsMassEffect && Ar.ArLicenseeVer >= 65)
+		{
+			int unkFC;
+			Ar << unkFC;
+		}
+#endif
 		if (Ar.ArVer >= 567)
 		{
 			int fE0, fE4, fE8, fEC;

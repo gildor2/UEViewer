@@ -13,6 +13,7 @@ Unreal Engine 2:
   Postal 2
 Modified Unreal Engine 2:
   Splinter Cell 1,2
+  Rainbow 6: Raven Shield
   Lineage 2 Gracia
 Unreal Engine 2.5:
   UE2Runtime
@@ -26,6 +27,7 @@ Unreal Engine 3:
   Gears of War 2 (XBox360)
 Modified Unreal Engine 3:
   The Last Remnant
+  Mass Effect
   Mirror's Edge
 
 List of games with limited support:
@@ -34,6 +36,9 @@ Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
   Unreal Championship 2: The Liandri Conflict (UE2X)
+Unsupported animations (without umodel crash):
+  Mass Effect
+  Mirror's Edge
 
 Project home page and forum:
 http://www.gildor.org/en/projects/umodel
@@ -57,6 +62,13 @@ viewers/importers does require md5anim hierarchy, some - does not.
 
 Changes:
 ~~~~~~~~
+29.04.2009
+- implemented support for some kind of unknown UE2 SkeletalMesh-es
+  (supported Rainbow 6: Raven Shield)
+
+27.04.2009
+- implemented support for Mass Effect SkeletalMesh
+
 17.04.2009
 - implemented support for The Last Remnant animations
 
