@@ -461,6 +461,9 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 		case NAME_ArrayProperty:
 			{
+#if DEBUG_PROPS
+				printf("  %s[] = {\n", *Tag.Name);
+#endif
 				FArray *Arr = (FArray*)value;
 #define SIMPLE_ARRAY_TYPE(type) \
 		if (!strcmp(Prop->TypeName, #type)) { Ar << *(TArray<type>*)Arr; }
@@ -494,9 +497,36 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 					byte *item = (byte*)Arr->GetData();
 					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
 					{
+#if DEBUG_PROPS
+						printf("Item[%d]:\n", i);
+#endif
 						ItemType->Constructor(item);		// fill default properties
 						ItemType->SerializeProps(Ar, item);
 					}
+#if 1
+					// fix for strange (UE?) bug - array[1] of empty structure has 1 extra byte
+					// or size is incorrect - 1 byte smaller than should be (?)
+					// Note: such properties cannot be dropped (PROP_DROP) - invalid Tag.Size !
+					int Pos = Ar.Tell();
+					if (Pos + 1 == StopPos && DataCount == 1)
+					{
+#if DEBUG_PROPS
+						appNotify("%s.%s: skipping 1 byte for array property", Name, *Tag.Name);
+#endif
+						Ar.Seek(StopPos);
+					}
+					else if (Pos > StopPos)
+					{
+#if DEBUG_PROPS
+						appNotify("%s.%s: bad size (%d byte less) for array property", Name, *Tag.Name, Pos - StopPos);
+#endif
+						StopPos = Pos;
+					}
+#endif // 1 -- fix
+
+#if DEBUG_PROPS
+					printf("  }\n");
+#endif
 				}
 			}
 			break;

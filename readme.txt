@@ -29,6 +29,7 @@ Modified Unreal Engine 3:
   The Last Remnant
   Mass Effect
   Mirror's Edge
+  X-Men Origins: Wolverine
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -39,6 +40,7 @@ Using "-noanim" option (unsupported animation format):
 Unsupported animations (without umodel crash):
   Mass Effect
   Mirror's Edge
+  X-Men Origins: Wolverine
 
 Project home page and forum:
 http://www.gildor.org/en/projects/umodel
@@ -60,8 +62,20 @@ because Unreal Engine uses hierarchy from mesh, not from animations. Some md5
 viewers/importers does require md5anim hierarchy, some - does not.
 
 
+Notes about StaticMesh support.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- StaticMesh class is supported for a few game titles only, use "-nostat"
+  command line switch when you are trying to load package from some game title,
+  but umodel is crashed on StaticMesh loading
+- StaticMesh export is not implemented
+
+
 Changes:
 ~~~~~~~~
+06.05.2009
+- implemented StaticMesh support for UT2003/2004 and UE2Runtime
+- added "-nostat" command line switch to disable StaticMesh loading
+
 29.04.2009
 - implemented support for some kind of unknown UE2 SkeletalMesh-es
   (supported Rainbow 6: Raven Shield)

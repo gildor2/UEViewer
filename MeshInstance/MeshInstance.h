@@ -22,8 +22,6 @@ inline void SetAxis(const FRotator &Rot, CAxis &Axis)
 class CMeshInstance
 {
 public:
-	// linked data
-	const ULodMesh	*pMesh;
 	// common properties
 	CCoords			BaseTransform;			// rotation for mesh; have identity axis
 	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
@@ -33,13 +31,49 @@ public:
 	bool			bWireframe;
 
 	CMeshInstance()
-	:	pMesh(NULL)
-	,	bShowNormals(false)
+	:	bShowNormals(false)
 	,	bColorMaterials(false)
 	,	bWireframe(false)
 	{}
 
 	virtual ~CMeshInstance()
+	{}
+
+	void SetMaterial(UMaterial *Mat, int Index, int PolyFlags)
+	{
+		guard(CMeshInstance::SetMaterial);
+		if (!bColorMaterials)
+		{
+			if (Mat)
+				Mat->Bind(PolyFlags);
+			else
+				BindDefaultMaterial();
+		}
+		else
+		{
+			glDisable(GL_TEXTURE_2D);
+			glDisable(GL_CULL_FACE);
+			int color = Index + 1;
+			if (color > 7) color = 7;
+#define C(n)	( ((color >> n) & 1) * 0.5f + 0.3f )
+			glColor3f(C(0), C(1), C(2));
+#undef C
+		}
+		unguard;
+	}
+
+	virtual void Draw() = 0;
+};
+
+
+class CLodMeshInstance : public CMeshInstance
+{
+public:
+	// linked data
+	const ULodMesh	*pMesh;
+
+	CLodMeshInstance()
+	:	pMesh(NULL)
 	{}
 
 	virtual void SetMesh(const ULodMesh *Mesh)
@@ -61,34 +95,17 @@ public:
 
 	void SetMaterial(int Index)
 	{
-		guard(CMeshInstance::SetMaterial);
-		if (!bColorMaterials)
-		{
-			const FMeshMaterial &M = pMesh->Materials[Index];
-			int TexIndex = M.TextureIndex;
-			if (TexIndex >= pMesh->Textures.Num())		// possible situation; see ONSWeapons-A.ukx/ParasiteMine
-				TexIndex = 0;
-			// it is possible, that Textures array is empty (mesh textured by script)
-			UMaterial *Mat = pMesh->Textures.Num() ? pMesh->Textures[TexIndex] : NULL;
-			if (Mat)
-				Mat->Bind(M.PolyFlags);
-			else
-				BindDefaultMaterial();
-		}
-		else
-		{
-			glDisable(GL_TEXTURE_2D);
-			glDisable(GL_CULL_FACE);
-			int color = Index + 1;
-			if (color > 7) color = 7;
-#define C(n)	( ((color >> n) & 1) * 0.5f + 0.3f )
-			glColor3f(C(0), C(1), C(2));
-#undef C
-		}
+		guard(CLodMeshInstance::SetMaterial);
+		const FMeshMaterial &M = pMesh->Materials[Index];
+		int TexIndex = M.TextureIndex;
+		if (TexIndex >= pMesh->Textures.Num())		// possible situation; see ONSWeapons-A.ukx/ParasiteMine
+			TexIndex = 0;
+		// it is possible, that Textures array is empty (mesh textured by script)
+		UMaterial *Mat = pMesh->Textures.Num() ? pMesh->Textures[TexIndex] : NULL;
+		CMeshInstance::SetMaterial(Mat, Index, M.PolyFlags);
 		unguard;
 	}
 
-	virtual void Draw() = 0;
 	virtual void UpdateAnimation(float TimeDelta) = 0;
 
 	// animation control
@@ -126,7 +143,7 @@ protected:
 	CVertMeshInstance class
 -----------------------------------------------------------------------------*/
 
-class CVertMeshInstance : public CMeshInstance
+class CVertMeshInstance : public CLodMeshInstance
 {
 public:
 	CVertMeshInstance()
@@ -190,7 +207,7 @@ protected:
 
 struct FVertInfluences;
 
-class CSkelMeshInstance : public CMeshInstance
+class CSkelMeshInstance : public CLodMeshInstance
 {
 	struct CAnimChan
 	{
@@ -328,6 +345,28 @@ protected:
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 	void UpdateSkeleton();
 	void BuildInfColors();
+};
+
+
+/*-----------------------------------------------------------------------------
+	CStatMeshInstance class
+-----------------------------------------------------------------------------*/
+
+class CStatMeshInstance : public CMeshInstance
+{
+public:
+	UStaticMesh *pMesh;
+
+	CStatMeshInstance()
+	:	pMesh(NULL)
+	{}
+
+	void SetMesh(UStaticMesh *Mesh)
+	{
+		pMesh = Mesh;
+	}
+
+	virtual void Draw();
 };
 
 

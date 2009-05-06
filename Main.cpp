@@ -177,6 +177,7 @@ int main(int argc, char **argv)
 				"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
 				"                    unsupported data format\n"
 				"    -noanim         disable loading of MeshAnimation classes\n"
+				"    -nostat         disable loading of StaticMesh class\n"
 				"    -notex          disable loading of Material classes\n"
 				"\n"
 				"Export options:\n"
@@ -255,9 +256,9 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, md5 = false, exprtAll = false,
-		 listOnly = false, noMesh = false, noAnim = false, noTex = false, pkgInfo = false,
-		 hasRootDir = false;
+	bool dump = false, view = true, exprt = false, md5 = false, exprtAll = false, listOnly = false,
+		 noMesh = false, noStat = false, noAnim = false, noTex = false,
+		 pkgInfo = false, hasRootDir = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -296,6 +297,8 @@ int main(int argc, char **argv)
 				listOnly = true;
 			else if (!stricmp(opt, "nomesh"))
 				noMesh = true;
+			else if (!stricmp(opt, "nostat"))
+				noStat = true;
 			else if (!stricmp(opt, "noanim"))
 				noAnim = true;
 			else if (!stricmp(opt, "notex"))
@@ -351,6 +354,7 @@ int main(int argc, char **argv)
 		UnregisterClass("AnimNotify", true);
 	}
 	if (noMesh) UnregisterClass("SkeletalMesh",   true);
+	if (noStat) UnregisterClass("StaticMesh",     true);
 	if (noTex)  UnregisterClass("UnrealMaterial", true);
 
 #if PROFILE
@@ -542,6 +546,7 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	// create viewer for known class
 	CLASS_VIEWER(UVertMesh,       CVertMeshViewer);
 	CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer);
+	CLASS_VIEWER(UStaticMesh,     CStatMeshViewer);
 	if (!meshOnly)
 	{
 		CLASS_VIEWER(UUnrealMaterial, CMaterialViewer);

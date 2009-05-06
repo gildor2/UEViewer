@@ -97,7 +97,10 @@ case "" in
 #	gow -meshes Geist_Beast.upk
 #	gow -meshes Locust_Seeder.upk
 	#!! CheckBoneTree -> "Strange skeleton" (IK bones?)
-	run1 "C:/!umodel-data/--Mass Effect--" -list Engine.u
+#	run1 "C:/!umodel-data/--Mass Effect--" -list Engine.u
+#!!	ut2 -meshes StreamlineMeshes.usx
+#!!	ut2 -meshes ONSDeadVehicles-SM.usx
+	ut2 -meshes DOM-CBP2-Gerroid.ut2		#!! CRASH
 #-	gow -meshes Neutral_Stranded_01.upk NPC01_COG
 	#!! CRASH with UE3 animations (assert)
 #-	gow -meshes Geist_Reaver.upk

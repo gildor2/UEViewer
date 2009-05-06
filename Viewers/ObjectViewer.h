@@ -94,14 +94,30 @@ public:
 class CMeshViewer : public CObjectViewer
 {
 public:
-	int				AnimIndex;
 	// linked data
 	CMeshInstance	*Inst;
 
+	CMeshViewer(UObject *Mesh)
+	:	CObjectViewer(Mesh)
+	{}
+	virtual ~CMeshViewer();
+
+	virtual void ShowHelp();
+	virtual void ProcessKey(int key);
+//	virtual void Dump();
+//	virtual void Draw2D();
+	virtual void Draw3D();
+};
+
+
+class CLodMeshViewer : public CMeshViewer
+{
+public:
+	int				AnimIndex;
+
 	unsigned		CurrentTime;
 
-	CMeshViewer(ULodMesh *Mesh);
-	virtual ~CMeshViewer();
+	CLodMeshViewer(ULodMesh *Mesh);
 
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
@@ -116,7 +132,7 @@ public:
 	Vertex mesh viewer (UVertMesh)
 -----------------------------------------------------------------------------*/
 
-class CVertMeshViewer : public CMeshViewer
+class CVertMeshViewer : public CLodMeshViewer
 {
 public:
 	CVertMeshViewer(UVertMesh *Mesh);
@@ -129,7 +145,7 @@ public:
 	Skeletal mesh viewer (USkeletalMesh)
 -----------------------------------------------------------------------------*/
 
-class CSkelMeshViewer : public CMeshViewer
+class CSkelMeshViewer : public CLodMeshViewer
 {
 public:
 	CSkelMeshViewer(USkeletalMesh *Mesh);
@@ -138,6 +154,19 @@ public:
 	TEST_OBJECT;
 	virtual void Draw2D();
 	virtual void ProcessKey(int key);
+};
+
+
+/*-----------------------------------------------------------------------------
+	Static mesh viewer (UStaticMesh)
+-----------------------------------------------------------------------------*/
+
+class CStatMeshViewer : public CMeshViewer
+{
+public:
+	CStatMeshViewer(UStaticMesh *Mesh);
+	virtual void Dump();
+	virtual void Draw2D();
 };
 
 

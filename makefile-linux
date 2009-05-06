@@ -31,11 +31,14 @@ MAIN = \
 	./obj/umodel-unix/UnObject.o \
 	./obj/umodel-unix/UnPackage.o \
 	./obj/umodel-unix/UnRenderer.o \
+	./obj/umodel-unix/LodMeshViewer.o \
 	./obj/umodel-unix/MaterialViewer.o \
 	./obj/umodel-unix/MeshViewer.o \
 	./obj/umodel-unix/SkelMeshViewer.o \
+	./obj/umodel-unix/StatMeshViewer.o \
 	./obj/umodel-unix/VertMeshViewer.o \
 	./obj/umodel-unix/SkelMeshInstance.o \
+	./obj/umodel-unix/StatMeshInstance.o \
 	./obj/umodel-unix/VertMeshInstance.o \
 	./obj/umodel-unix/Core.o \
 	./obj/umodel-unix/GlWindow.o \
@@ -102,11 +105,17 @@ DEPENDS_3 = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
+./obj/umodel-unix/LodMeshViewer.o : Viewers/LodMeshViewer.cpp $(DEPENDS_3)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/LodMeshViewer.o Viewers/LodMeshViewer.cpp
+
 ./obj/umodel-unix/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_3)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/MeshViewer.o Viewers/MeshViewer.cpp
 
 ./obj/umodel-unix/SkelMeshViewer.o : Viewers/SkelMeshViewer.cpp $(DEPENDS_3)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/SkelMeshViewer.o Viewers/SkelMeshViewer.cpp
+
+./obj/umodel-unix/StatMeshViewer.o : Viewers/StatMeshViewer.cpp $(DEPENDS_3)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/StatMeshViewer.o Viewers/StatMeshViewer.cpp
 
 ./obj/umodel-unix/VertMeshViewer.o : Viewers/VertMeshViewer.cpp $(DEPENDS_3)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/VertMeshViewer.o Viewers/VertMeshViewer.cpp
@@ -213,6 +222,9 @@ DEPENDS_11 = \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
+
+./obj/umodel-unix/StatMeshInstance.o : MeshInstance/StatMeshInstance.cpp $(DEPENDS_11)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/StatMeshInstance.o MeshInstance/StatMeshInstance.cpp
 
 ./obj/umodel-unix/VertMeshInstance.o : MeshInstance/VertMeshInstance.cpp $(DEPENDS_11)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/VertMeshInstance.o MeshInstance/VertMeshInstance.cpp

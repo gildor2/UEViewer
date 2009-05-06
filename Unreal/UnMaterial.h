@@ -168,6 +168,7 @@ public:
 		PROP_OBJ(FallbackMaterial)
 		PROP_OBJ(DefaultMaterial)
 		PROP_ENUM(SurfaceType)
+		PROP_INT(MaterialType)
 #if SPLINTER_CELL
 		PROP_BOOL(bUseTextureAsHeat)
 		PROP_OBJ(HeatMaterial)

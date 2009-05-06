@@ -154,7 +154,7 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 {
 	guard(CSkelMeshInstance::SetMesh);
 
-	CMeshInstance::SetMesh(LodMesh);
+	CLodMeshInstance::SetMesh(LodMesh);
 	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(LodMesh);
 
 	int NumBones = Mesh->RefSkeleton.Num();

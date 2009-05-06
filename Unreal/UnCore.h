@@ -987,6 +987,7 @@ SIMPLE_TYPE(float, float)
 SIMPLE_TYPE(FVector, float)
 SIMPLE_TYPE(FQuat,   float)
 SIMPLE_TYPE(FCoords, float)
+RAW_TYPE(FColor)
 
 
 /*-----------------------------------------------------------------------------

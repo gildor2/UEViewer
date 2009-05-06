@@ -31,11 +31,14 @@ MAIN = \
 	./obj/umodel-win32/UnObject.obj \
 	./obj/umodel-win32/UnPackage.obj \
 	./obj/umodel-win32/UnRenderer.obj \
+	./obj/umodel-win32/LodMeshViewer.obj \
 	./obj/umodel-win32/MaterialViewer.obj \
 	./obj/umodel-win32/MeshViewer.obj \
 	./obj/umodel-win32/SkelMeshViewer.obj \
+	./obj/umodel-win32/StatMeshViewer.obj \
 	./obj/umodel-win32/VertMeshViewer.obj \
 	./obj/umodel-win32/SkelMeshInstance.obj \
+	./obj/umodel-win32/StatMeshInstance.obj \
 	./obj/umodel-win32/VertMeshInstance.obj \
 	./obj/umodel-win32/Core.obj \
 	./obj/umodel-win32/GlWindow.obj \
@@ -102,11 +105,17 @@ DEPENDS = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
+./obj/umodel-win32/LodMeshViewer.obj : Viewers/LodMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/LodMeshViewer.obj" Viewers/LodMeshViewer.cpp
+
 ./obj/umodel-win32/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MeshViewer.obj" Viewers/MeshViewer.cpp
 
 ./obj/umodel-win32/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
+
+./obj/umodel-win32/StatMeshViewer.obj : Viewers/StatMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StatMeshViewer.obj" Viewers/StatMeshViewer.cpp
 
 ./obj/umodel-win32/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
@@ -213,6 +222,9 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
+
+./obj/umodel-win32/StatMeshInstance.obj : MeshInstance/StatMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StatMeshInstance.obj" MeshInstance/StatMeshInstance.cpp
 
 ./obj/umodel-win32/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp

@@ -6,10 +6,11 @@
 
 
 CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
-:	CMeshViewer(Mesh)
+:	CLodMeshViewer(Mesh)
 {
-	Inst = new CSkelMeshInstance();
-	Inst->SetMesh(Mesh);
+	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
+	SkelInst->SetMesh(Mesh);
+	Inst = SkelInst;
 #if 0
 	CSkelMeshInstance* Inst2 = (CSkelMeshInstance*)Inst;
 	Inst2->SetBoneScale("Bip01 Pelvis", 1.4);
@@ -28,7 +29,7 @@ void CSkelMeshViewer::Test()
 {
 	int i;
 
-	CMeshViewer::Test();
+	CLodMeshViewer::Test();
 
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 
@@ -117,7 +118,7 @@ void CSkelMeshViewer::Test()
 
 void CSkelMeshViewer::Dump()
 {
-	CMeshViewer::Dump();
+	CLodMeshViewer::Dump();
 
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	printf(
@@ -206,7 +207,7 @@ void CSkelMeshViewer::Dump()
 
 void CSkelMeshViewer::Draw2D()
 {
-	CMeshViewer::Draw2D();
+	CLodMeshViewer::Draw2D();
 
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
@@ -233,7 +234,7 @@ void CSkelMeshViewer::Draw2D()
 
 void CSkelMeshViewer::ShowHelp()
 {
-	CMeshViewer::ShowHelp();
+	CLodMeshViewer::ShowHelp();
 	DrawTextLeft("L           cycle mesh LODs\n"
 				 "S           show skeleton\n"
 				 "B           show bone names\n"
@@ -351,7 +352,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 		break;
 
 	default:
-		CMeshViewer::ProcessKey(key);
+		CLodMeshViewer::ProcessKey(key);
 	}
 
 	unguard;

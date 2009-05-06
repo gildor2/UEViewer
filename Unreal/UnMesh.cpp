@@ -2575,7 +2575,7 @@ void UAnimSet::ConvertAnims()
 		bool hasTimeTracks = strcmp(Seq->KeyEncodingFormat, "AKF_VariableKeyLerp") == 0;
 
 		int offsetIndex = 0;
-		for (int j = 0; j < NumTracks; j++)
+		for (int j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
 		{
 			AnalogTrack *A = new (M->AnimTracks) AnalogTrack;
 
@@ -2594,18 +2594,19 @@ void UAnimSet::ConvertAnims()
 			}
 
 			// read animations
-			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex++];
-			int TransKeys   = Seq->CompressedTrackOffsets[offsetIndex++];
-			int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex++];
-			int RotKeys     = Seq->CompressedTrackOffsets[offsetIndex++];
+			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
+			int TransKeys   = Seq->CompressedTrackOffsets[offsetIndex+1];
+			int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex+2];
+			int RotKeys     = Seq->CompressedTrackOffsets[offsetIndex+3];
 #if TLR
 			int ScaleOffset = 0, ScaleKeys = 0;
 			if (Package->IsTLR)
 			{
-				ScaleOffset  = Seq->CompressedTrackOffsets[offsetIndex++];
-				ScaleKeys    = Seq->CompressedTrackOffsets[offsetIndex++];
+				ScaleOffset  = Seq->CompressedTrackOffsets[offsetIndex+4];
+				ScaleKeys    = Seq->CompressedTrackOffsets[offsetIndex+5];
 			}
 #endif
+//			printf("[%d] :  %d[%d]  %d[%d]  %d[%d]\n", TransOffset, TransKeys, RotOffset, RotKeys, ScaleOffset, ScaleKeys);
 
 			A->KeyPos.Empty(TransKeys);
 			A->KeyQuat.Empty(RotKeys);

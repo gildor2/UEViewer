@@ -6,21 +6,22 @@
 
 
 CVertMeshViewer::CVertMeshViewer(UVertMesh *Mesh)
-:	CMeshViewer(Mesh)
+:	CLodMeshViewer(Mesh)
 {
-	Inst = new CVertMeshInstance();
-	Inst->SetMesh(Mesh);
+	CVertMeshInstance *VertInst = new CVertMeshInstance();
+	VertInst->SetMesh(Mesh);
+	Inst = VertInst;
 }
 
 
 #if TEST_FILES
 void CVertMeshViewer::Test()
 {
-	CMeshViewer::Test();
+	CLodMeshViewer::Test();
 
 	const UVertMesh *Mesh = static_cast<UVertMesh*>(Object);
 	// verify some assumptions
-	//!! move some parts to CMeshViewer::Test()
+	//!! move some parts to CLodMeshViewer::Test()
 // (macro broken)	VERIFY2(VertexCount, VertexCount);
 	VERIFY_NOT_NULL(VertexCount);
 	VERIFY_NULL(Verts2.Num());
@@ -42,7 +43,7 @@ void CVertMeshViewer::Test()
 
 void CVertMeshViewer::Dump()
 {
-	CMeshViewer::Dump();
+	CLodMeshViewer::Dump();
 
 	const UVertMesh *Mesh = static_cast<UVertMesh*>(Object);
 	printf(

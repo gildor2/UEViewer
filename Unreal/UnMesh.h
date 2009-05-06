@@ -1681,10 +1681,327 @@ public:
 #endif // UNREAL3
 
 
+/*-----------------------------------------------------------------------------
+	UStaticMesh class
+-----------------------------------------------------------------------------*/
+
+struct FStaticMeshSection
+{
+	int						f4;				// always 0 ??
+	short					FirstIndex;		// first index
+	short					FirstVertex;	// first used vertex
+	short					LastVertex;		// last used vertex
+	short					fE;				// ALMOST always equals to f10
+	short					NumFaces;		// number of faces in section
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshSection &S)
+	{
+		guard(FStaticMeshSection<<);
+		assert(Ar.ArVer >= 112);
+		return Ar << S.f4 << S.FirstIndex << S.FirstVertex << S.LastVertex << S.fE << S.NumFaces;
+		unguard;
+	}
+};
+
+struct FStaticMeshVertex
+{
+	FVector					Pos;			//??
+	FVector					Normal;			//??
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertex &V)
+	{
+		assert(Ar.ArVer >= 112);
+		return Ar << V.Pos << V.Normal;
+		// Ver < 112 -- +2 floats
+		// Ver < 112 && LicVer >= 5 -- +2 floats
+		// Ver == 111 -- +4 bytes (FColor?)
+		//!! check SIMPLE_TYPE() possibility when modifying this function
+	}
+};
+
+SIMPLE_TYPE(FStaticMeshVertex, float)		//?? check each version
+
+struct FRawColorStream
+{
+	TArray<FColor>			Color;
+	int						Revision;
+
+	friend FArchive& operator<<(FArchive &Ar, FRawColorStream &S)
+	{
+		return Ar << S.Color << S.Revision;
+	}
+};
+
+struct FStaticMeshUV
+{
+	float					U;
+	float					V;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUV &V)
+	{
+		return Ar << V.U << V.V;
+	}
+};
+
+SIMPLE_TYPE(FStaticMeshUV, float)
+
+struct FStaticMeshUVStream
+{
+	TArray<FStaticMeshUV>	Data;
+	int						f10;
+	int						f1C;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream &S)
+	{
+		return Ar << S.Data << S.f10 << S.f1C;
+	}
+};
+
+struct FStaticMeshTriangleUnk
+{
+	float					unk1[2];
+	float					unk2[2];
+	float					unk3[2];
+};
+
+// complex FStaticMeshTriangle structure
+struct FStaticMeshTriangle
+{
+	FVector					f0;
+	FVector					fC;
+	FVector					f18;
+	FStaticMeshTriangleUnk	f24[8];
+	byte					fE4[12];
+	int						fF0;
+	int						fF4;
+	int						fF8;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshTriangle &T)
+	{
+		guard(FStaticMeshTriangle<<);
+		int i;
+
+		assert(Ar.ArVer >= 112);
+		Ar << T.f0 << T.fC << T.f18;
+		Ar << T.fF8;
+		assert(T.fF8 <= ARRAY_COUNT(T.f24));
+		for (i = 0; i < T.fF8; i++)
+		{
+			FStaticMeshTriangleUnk &V = T.f24[i];
+			Ar << V.unk1[0] << V.unk1[1] << V.unk2[0] << V.unk2[1] << V.unk3[0] << V.unk3[1];
+		}
+		for (i = 0; i < 12; i++)
+			Ar << T.fE4[i];			// UT2 has strange order of field serialization: [2,1,0,3] x 3 times
+		Ar << T.fF0 << T.fF4;
+		// extra fields for older version (<= 111)
+
+		return Ar;
+		unguard;
+	}
+};
+
+struct FkDOPNode
+{
+	float					unk1[3];
+	float					unk2[3];
+	int						unk3;		//?? index * 32 ?
+	short					unk4;
+	short					unk5;
+
+	friend FArchive& operator<<(FArchive &Ar, FkDOPNode &N)
+	{
+		guard(FkDOPNode<<);
+		int i;
+		for (i = 0; i < 3; i++)
+			Ar << N.unk1[i];
+		for (i = 0; i < 3; i++)
+			Ar << N.unk2[i];
+		Ar << N.unk3 << N.unk4 << N.unk5;
+		return Ar;
+		unguard;
+	}
+};
+
+RAW_TYPE(FkDOPNode)
+
+struct FkDOPCollisionTriangle
+{
+	short					v[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FkDOPCollisionTriangle &T)
+	{
+		return Ar << T.v[0] << T.v[1] << T.v[2] << T.v[3];
+	}
+};
+
+SIMPLE_TYPE(FkDOPCollisionTriangle, short)
+
+struct FStaticMeshCollisionNode
+{
+	int						f1[4];
+	float					f2[6];
+	byte					f3;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshCollisionNode &N)
+	{
+		int i;
+		for (i = 0; i < 4; i++) Ar << AR_INDEX(N.f1[i]);
+		for (i = 0; i < 6; i++) Ar << N.f2[i];
+		Ar << N.f3;
+		return Ar;
+	}
+};
+
+struct FStaticMeshCollisionTriangle
+{
+	float					f1[16];
+	int						f2[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshCollisionTriangle &T)
+	{
+		int i;
+		for (i = 0; i < 16; i++) Ar << T.f1[i];
+		for (i = 0; i <  4; i++) Ar << AR_INDEX(T.f2[i]);
+		return Ar;
+	}
+};
+
+struct FStaticMeshMaterial
+{
+	DECLARE_STRUCT(FStaticMeshMaterial);
+	UMaterial				*Material;
+	bool					EnableCollision;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Material)
+		PROP_BOOL(EnableCollision)
+#if LINEAGE2
+		PROP_DROP(EnableCollisionforShadow)
+		PROP_DROP(bNoDynamicShadowCast)
+#endif // LINEAGE2
+	END_PROP_TABLE
+};
+
+class UStaticMesh : public UPrimitive
+{
+	DECLARE_CLASS(UStaticMesh, UPrimitive);
+public:
+	TArray<FStaticMeshMaterial> Materials;
+	TArray<FStaticMeshSection>  Sections;
+	TArray<FStaticMeshVertex>   Verts;
+	int						f7C;
+	FRawColorStream			ColorStream1;	// for Verts
+	FRawColorStream			ColorStream2;	// size = f7C
+	TArray<FStaticMeshUVStream> UVStream;
+	FRawIndexBuffer			IndexStream1;
+	FRawIndexBuffer			IndexStream2;
+	TArray<FkDOPNode>		kDOPNodes;
+	TArray<FkDOPCollisionTriangle> kDOPCollisionFaces;
+	TLazyArray<FStaticMeshTriangle> Faces;
+	UObject					*f108;
+	int						f124;			//?? FRotator?
+	int						f128;
+	int						f12C;
+	int						Version;		// set to 11 when saving mesh
+	TArray<float>			f150;
+	int						f15C;
+	UObject					*f16C;
+	bool					UseSimpleLineCollision;
+	bool					UseSimpleBoxCollision;
+	bool					UseSimpleKarmaCollision;
+	bool					UseVertexColor;
+
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(Materials, FStaticMeshMaterial)
+		PROP_BOOL(UseSimpleLineCollision)
+		PROP_BOOL(UseSimpleBoxCollision)
+		PROP_BOOL(UseSimpleKarmaCollision)
+		PROP_BOOL(UseVertexColor)
+#if LINEAGE2
+		PROP_DROP(bMakeTwoSideMesh)
+#endif
+	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UStaticMesh::Serialize);
+
+		if (Ar.ArVer >= PACKAGE_V3)
+		{
+			//!! not yet supported
+			Ar.Seek(Ar.GetStopper());
+			return;
+		}
+
+		if (Ar.ArVer < 112)
+		{
+			appNotify("StaticMesh of old version %d/%d has been found", Ar.ArVer, Ar.ArLicenseeVer);
+			Ar.Seek(Ar.GetStopper());
+			return;
+		}
+
+		Super::Serialize(Ar);
+		Ar << Sections;
+		Ar << BoundingBox;			// UPrimitive field, serialized twice ...
+		Ar << Verts << f7C << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
+
+#if 1
+		// UT2 and UE2Runtime has very different collision structures
+		// We don't need it, so don't bother serializing it
+		Ar.Seek(Ar.GetStopper());
+		return;
+#else
+		if (Ar.ArVer < 126)
+		{
+			assert(Ar.ArVer >= 112);
+			TArray<FStaticMeshCollisionTriangle> CollisionFaces;
+			TArray<FStaticMeshCollisionNode>     CollisionNodes;
+			Ar << CollisionFaces << CollisionNodes;
+		}
+		else
+		{
+			// this is an UT2 code, UE2Runtime has different structures
+			Ar << kDOPNodes << kDOPCollisionFaces;
+		}
+		if (Ar.ArVer < 114)
+			Ar << f124 << f128 << f12C;
+
+		Ar << Faces;					// can skip this array
+		Ar << Version;
+
+#if UT2
+		if (Ar.IsUT2)
+		{
+			//?? check for generic UE2
+			if (Ar.ArLicenseeVer == 22)
+			{
+				float unk;				// predecessor of f150
+				Ar << unk;
+			}
+			else if (Ar.ArLicenseeVer >= 23)
+				Ar << f150;
+			Ar << f16C;
+			if (Ar.ArVer >= 120)
+				Ar << f15C;
+		}
+#endif // UT2
+#endif // 0
+
+		unguard;
+	}
+};
+
+
+/*-----------------------------------------------------------------------------
+	Class registration
+-----------------------------------------------------------------------------*/
+
 #define REGISTER_MESH_CLASSES		\
 	REGISTER_CLASS(USkeletalMesh)	\
 	REGISTER_CLASS(UVertMesh)		\
-	REGISTER_CLASS(UMeshAnimation)
+	REGISTER_CLASS(UMeshAnimation)	\
+	REGISTER_CLASS(UStaticMesh)		\
+	REGISTER_CLASS(FStaticMeshMaterial)
 
 // Note: we have registered UVertMesh and UMesh as ULodMesh too for UE1 compatibility
 #define REGISTER_MESH_CLASSES_U1	\
