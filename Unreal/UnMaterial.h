@@ -917,6 +917,10 @@ public:
 		PROP_DROP(LODBias)
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
+#if HUXLEY
+		PROP_DROP(SourceArtWidth)
+		PROP_DROP(SourceArtHeight)
+#endif // HUXLEY
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -984,9 +988,9 @@ public:
 	TArray<FTexture2DMipMap> Mips;
 	int				SizeX;
 	int				SizeY;
-	FName			Format;		//!! EPixelFormat
-	FName			AddressX;	//!! ETextureAddress
-	FName			AddressY;	//!! ETextureAddress
+	FName			Format;			//!! EPixelFormat
+	FName			AddressX;		//!! ETextureAddress
+	FName			AddressY;		//!! ETextureAddress
 	FName			TextureFileCacheName;
 
 #if RENDERING
@@ -998,6 +1002,7 @@ public:
 	UTexture2D()
 	:	TexNum(0)
 	{
+		Format.Str   = "Unknown";	//?? workaround for FName/byte difference in property serialization
 		AddressX.Str = "TA_Wrap";
 		AddressY.Str = "TA_Wrap";
 		TextureFileCacheName.Str = "None";
@@ -1032,7 +1037,15 @@ public:
 			int unkFC;
 			Ar << unkFC;
 		}
-#endif
+#endif // MASSEFF
+#if HUXLEY
+		if (Ar.IsHuxley)
+		{
+			// don't need this ...
+			Ar.Seek(Ar.GetStopper());
+			return;
+		}
+#endif // HUXLEY
 		if (Ar.ArVer >= 567)
 		{
 			int fE0, fE4, fE8, fEC;

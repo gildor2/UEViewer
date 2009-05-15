@@ -96,13 +96,16 @@ public:
 	void SetMaterial(int Index)
 	{
 		guard(CLodMeshInstance::SetMaterial);
-		const FMeshMaterial &M = pMesh->Materials[Index];
-		int TexIndex = M.TextureIndex;
-		if (TexIndex >= pMesh->Textures.Num())		// possible situation; see ONSWeapons-A.ukx/ParasiteMine
-			TexIndex = 0;
+		int TexIndex = 1000000, PolyFlags = 0;
+		if (Index < pMesh->Materials.Num())
+		{
+			const FMeshMaterial &M = pMesh->Materials[Index];
+			TexIndex  = M.TextureIndex;
+			PolyFlags = M.PolyFlags;
+		}
 		// it is possible, that Textures array is empty (mesh textured by script)
-		UMaterial *Mat = pMesh->Textures.Num() ? pMesh->Textures[TexIndex] : NULL;
-		CMeshInstance::SetMaterial(Mat, Index, M.PolyFlags);
+		UMaterial *Mat = (TexIndex < pMesh->Textures.Num()) ? pMesh->Textures[TexIndex] : NULL;
+		CMeshInstance::SetMaterial(Mat, Index, PolyFlags);
 		unguard;
 	}
 

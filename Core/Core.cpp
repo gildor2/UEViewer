@@ -122,7 +122,7 @@ int GNumAllocs = 0;
 void *appMalloc(int size)
 {
 	guard(appMalloc);
-	assert(size >= 0);
+	assert(size >= 0 && size < (256<<20));	// upper limit to allocation is 256Mb
 	void *data = malloc(size);
 	if (size > 0)
 		memset(data, 0, size);

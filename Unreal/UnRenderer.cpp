@@ -780,7 +780,7 @@ struct XprInfo
 
 static TArray<XprInfo> xprFiles;
 
-static bool ReadXprFile(const CGameFileInfo *file) //??(const char *Filename)
+static bool ReadXprFile(const CGameFileInfo *file)
 {
 	guard(ReadXprFile);
 	FArchive *Ar = appCreateFileReader(file);

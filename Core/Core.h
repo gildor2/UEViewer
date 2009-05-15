@@ -143,6 +143,10 @@ template<class T> inline void Exchange(T& A, T& B)
 	B = tmp;
 }
 
+template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*, const T*))
+{
+	qsort(array, count, sizeof(T), (int (*)(const void*, const void*)) cmpFunc);
+}
 
 void appError(char *fmt, ...);
 void* appMalloc(int size);

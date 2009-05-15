@@ -76,6 +76,13 @@ void CStatMeshViewer::Draw2D()
 {
 	CObjectViewer::Draw2D();
 
+	const UStaticMesh* Mesh = static_cast<UStaticMesh*>(Object);
+	DrawTextLeft(S_GREEN"Verts   : "S_WHITE"%d\n"
+				 S_GREEN"Tris    : "S_WHITE"%d\n"
+				 S_GREEN"Sections: "S_WHITE"%d\n"
+				 S_GREEN"UV Sets : "S_WHITE"%d",
+				 Mesh->Verts.Num(), Mesh->IndexStream1.Indices.Num() / 3, Mesh->Sections.Num(), Mesh->UVStream.Num());
+
 	// code similar to CLodMeshViewer::Draw2D(), but using different fields
 	if (Inst->bColorMaterials)
 	{

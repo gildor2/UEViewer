@@ -47,6 +47,12 @@ MAIN = \
 	./obj/umodel-win32/ddslib.obj \
 	./obj/umodel-win32/lzo_init.obj \
 	./obj/umodel-win32/lzo1x_d2.obj \
+	./obj/umodel-win32/adler32.obj \
+	./obj/umodel-win32/crc32.obj \
+	./obj/umodel-win32/inffast.obj \
+	./obj/umodel-win32/inflate.obj \
+	./obj/umodel-win32/inftrees.obj \
+	./obj/umodel-win32/uncompr.obj \
 	./obj/umodel-win32/lzxd.obj
 
 MAIN_DIRS = \
@@ -289,7 +295,9 @@ DEPENDS = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/include/mspack/lzx.h \
-	libs/include/mspack/mspack.h
+	libs/include/mspack/mspack.h \
+	libs/include/zlib/zconf.h \
+	libs/include/zlib/zlib.h
 
 ./obj/umodel-win32/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnCore.obj" Unreal/UnCore.cpp
@@ -332,6 +340,57 @@ DEPENDS = \
 
 ./obj/umodel-win32/lzxd.obj : ./libs/mspack/lzxd.c $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/lzxd.obj" ./libs/mspack/lzxd.c
+
+DEPENDS = \
+	libs/zlib/crc32.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+./obj/umodel-win32/crc32.obj : ./libs/zlib/crc32.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/crc32.obj" ./libs/zlib/crc32.c
+
+DEPENDS = \
+	libs/zlib/inffast.h \
+	libs/zlib/inffixed.h \
+	libs/zlib/inflate.h \
+	libs/zlib/inftrees.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+./obj/umodel-win32/inflate.obj : ./libs/zlib/inflate.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/inflate.obj" ./libs/zlib/inflate.c
+
+DEPENDS = \
+	libs/zlib/inffast.h \
+	libs/zlib/inflate.h \
+	libs/zlib/inftrees.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+./obj/umodel-win32/inffast.obj : ./libs/zlib/inffast.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/inffast.obj" ./libs/zlib/inffast.c
+
+DEPENDS = \
+	libs/zlib/inftrees.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+./obj/umodel-win32/inftrees.obj : ./libs/zlib/inftrees.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/inftrees.obj" ./libs/zlib/inftrees.c
+
+DEPENDS = \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h
+
+./obj/umodel-win32/adler32.obj : ./libs/zlib/adler32.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/adler32.obj" ./libs/zlib/adler32.c
+
+./obj/umodel-win32/uncompr.obj : ./libs/zlib/uncompr.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/uncompr.obj" ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------
 #	creating output directories

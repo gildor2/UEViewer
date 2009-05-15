@@ -112,6 +112,10 @@ struct FPackageFileSummary
 		}
 		int Version;
 		Ar << Version;
+#if UNREAL3
+		if (Version == PACKAGE_FILE_TAG || Version == 0x20000)
+			appError("Fully compressed packages are not supported");
+#endif // UNREAL3
 		S.FileVersion     = Version & 0xFFFF;
 		S.LicenseeVersion = Version >> 16;
 		// store file version to archive (required for some structures, for UNREAL3 path)
@@ -120,6 +124,18 @@ struct FPackageFileSummary
 		// detect game
 		Ar.DetectGame();
 		// read other fields
+#if HUXLEY
+		if (Ar.IsHuxley && Ar.ArLicenseeVer >= 8)
+		{
+			int skip;
+			Ar << skip;								// 0xFEFEFEFE
+			if (Ar.ArLicenseeVer >= 17)
+			{
+				int unk8;							// unknown used field
+				Ar << unk8;
+			}
+		}
+#endif // HUXLEY
 #if UNREAL3
 //		if (S.FileVersion >= PACKAGE_V3)
 //		{
@@ -127,15 +143,22 @@ struct FPackageFileSummary
 				Ar << S.HeadersSize;
 			else
 				S.HeadersSize = 0;
+	#if A51
+			if (Ar.IsA51 && S.LicenseeVersion >= 2)
+			{
+				int Tag, UnkC;
+				Ar << Tag << UnkC;					// Tag == "A52 "
+			}
+	#endif // A51
 			if (S.FileVersion >= 269)
 				Ar << S.PackageGroup;
 //		}
-#endif
+#endif // UNREAL3
 		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
 #if UNREAL3
 		if (S.FileVersion >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
-#endif
+#endif // UNREAL3
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell)
 		{
@@ -146,7 +169,7 @@ struct FPackageFileSummary
 		}
 #endif // SPLINTER_CELL
 #if RAGNAROK2
-		if (S.PackageFlags & 0x10000 && S.FileVersion >= 0x81)
+		if (S.PackageFlags & 0x10000 && (S.FileVersion >= 0x81 && S.FileVersion < 0x88))	//?? unknown upper limit; known: 0x81
 		{
 			// encrypted Ragnarok Online archive header (data taken by archive analysis)
 			Ar.IsRagnarok2 = 1;
@@ -213,7 +236,7 @@ struct FPackageFileSummary
 //		printf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
 #endif // UNREAL3
 		return Ar;
-		unguard;
+		unguardf(("Ver=%d/%d", S.FileVersion, S.LicenseeVersion));
 	}
 };
 
@@ -251,6 +274,13 @@ struct FObjectExport
 			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize;
 			if (E.SerialSize || Ar.ArVer >= 249)
 				Ar << E.SerialOffset;
+#	if HUXLEY
+			if (Ar.IsHuxley && Ar.ArLicenseeVer >= 22)
+			{
+				int unk24;
+				Ar << unk24;
+			}
+#	endif
 			if (Ar.ArVer < 543)
 				Ar << E.ComponentMap;
 			if (Ar.ArVer >= 247)

@@ -12,6 +12,7 @@
 // includes for package decompression
 #if UNREAL3
 #	include "lzo/lzo1x.h"
+#	include "zlib/zlib.h"
 
 #	if XBOX360
 
@@ -66,6 +67,24 @@ void appPrintProfiler()
 
 #endif // PROFILE
 
+
+/*-----------------------------------------------------------------------------
+	ZLib support
+-----------------------------------------------------------------------------*/
+
+// using Core memory manager
+
+extern "C" void *zcalloc(int opaque, int items, int size)
+{
+	return appMalloc(items * size);
+}
+
+extern "C" void zcfree(int opaque, void *ptr)
+{
+	appFree(ptr);
+}
+
+
 /*-----------------------------------------------------------------------------
 	Game file system
 -----------------------------------------------------------------------------*/
@@ -91,13 +110,14 @@ static const char *PackageExtensions[] =
 };
 
 #if UNREAL3 || UC2
+// secondary (non-package) files
 static const char *KnownExtensions[] =
 {
 #	if UNREAL3
 	"tfc",			// Texture File Cache
 #	endif
 #	if UC2
-	"xpr",
+	"xpr",			// XBox texture container
 #	endif
 };
 #endif
@@ -123,6 +143,7 @@ static bool RegisterGameFile(const char *FullName)
 {
 	guard(RegisterGameFile);
 
+//	printf("..file %s\n", FullName);
 	// return false when MAX_GAME_FILES
 	if (NumGameFiles >= ARRAY_COUNT(GameFiles))
 		return false;
@@ -160,6 +181,7 @@ static bool RegisterGameFile(const char *FullName)
 	s = strrchr(info->ShortFilename, '.');
 	if (s) s++;
 	info->Extension = s;
+//	printf("..  -> %s (pkg=%d)\n", info->ShortFilename, info->IsPackage);
 
 	return true;
 
@@ -167,12 +189,13 @@ static bool RegisterGameFile(const char *FullName)
 }
 
 
-static bool ScanGameDirectory(const char *dir)
+static bool ScanGameDirectory(const char *dir, bool recurse)
 {
 	guard(ScanGameDirectory);
 
 	char Path[256];
 	bool res = true;
+//	printf("Scan %s\n", dir);
 #if _WIN32
 	appSprintf(ARRAY_ARG(Path), "%s/*.*", dir);
 	_finddata_t found;
@@ -184,7 +207,12 @@ static bool ScanGameDirectory(const char *dir)
 		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, found.name);
 		// directory -> recurse
 		if (found.attrib & _A_SUBDIR)
-			res = ScanGameDirectory(Path);
+		{
+			if (recurse)
+				res = ScanGameDirectory(Path, recurse);
+			else
+				res = true;
+		}
 		else
 			res = RegisterGameFile(Path);
 	} while (res && _findnext(hFind, &found) != -1);
@@ -201,7 +229,12 @@ static bool ScanGameDirectory(const char *dir)
 		struct stat buf;
 		if (stat(Path, &buf) < 0) continue;			// or break?
 		if (S_ISDIR(buf.st_mode))
-			res = ScanGameDirectory(Path);
+		{
+			if (recurse)
+				res = ScanGameDirectory(Path, recurse);
+			else
+				res = true;
+		}
 		else
 			res = RegisterGameFile(Path);
 	}
@@ -213,11 +246,11 @@ static bool ScanGameDirectory(const char *dir)
 }
 
 
-void appSetRootDirectory(const char *dir)
+void appSetRootDirectory(const char *dir, bool recurse)
 {
 	guard(appSetRootDirectory);
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
-	ScanGameDirectory(RootDirectory);
+	ScanGameDirectory(RootDirectory, recurse);
 	printf("Found %d game files (%d skipped)\n", NumGameFiles, NumForeignFiles);
 	unguardf(("dir=%s", dir));
 }
@@ -261,7 +294,7 @@ void appSetRootDirectory2(const char *filename)
 	strcpy(buf2, buf);
 	// analyze path
 	bool detected = false;
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 4; i++)
 	{
 		// find deepest directory name
 		s = strrchr(buf, '/');
@@ -285,8 +318,8 @@ void appSetRootDirectory2(const char *filename)
 		}
 	}
 	const char *root = (detected) ? buf : buf2;
-	printf("Detected game root %s\n", root);
-	appSetRootDirectory(root);
+	printf("Detected game root %s%s\n", root, (detected == false) ? " (no recurse)" : "");
+	appSetRootDirectory(root, detected);
 }
 
 
@@ -734,6 +767,10 @@ void FArchive::DetectGame()
 	// different game platforms autodetection
 	//?? should change this, if will implement command line switch to force mode
 	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
+
+	/*-----------------------------------------------------------------------
+	 * UE2 games
+	 *-----------------------------------------------------------------------*/
 #if UT2
 	IsUT2 = ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
 			((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D);
@@ -758,17 +795,26 @@ void FArchive::DetectGame()
 	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
 		IsExteel = 0;
 #endif
+
+	/*-----------------------------------------------------------------------
+	 * UE3 games
+	 *-----------------------------------------------------------------------*/
+#if A51
+	IsA51 = (ArVer == 377 && ArLicenseeVer == 25);									//!! has extra tag
+#endif
 #if MASSEFF
-	if (ArVer == 491 && ArLicenseeVer == 0x3F0)
-		IsMassEffect = 1;
+	IsMassEffect = (ArVer == 491 && ArLicenseeVer == 0x3F0);
 #endif
 #if MEDGE
-	if (ArVer == 536 && ArLicenseeVer == 0x2B)
-		IsMirrorEdge = 1;
+	IsMirrorEdge = (ArVer == 536 && ArLicenseeVer == 0x2B);
 #endif
 #if TLR
-	if (ArVer == 507 && ArLicenseeVer == 11)
-		IsTLR = 1;
+	IsTLR = (ArVer == 507 && ArLicenseeVer == 11);
+#endif
+#if HUXLEY
+	IsHuxley = (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
+			   (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
+			   (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22));
 #endif
 }
 
@@ -925,7 +971,15 @@ void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompresse
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
 	}
 	else if (Flags == COMPRESS_ZLIB)
+	{
+#if 0
 		appError("appDecompress: Zlib compression is not supported");
+#else
+		unsigned long newLen = UncompressedSize;
+		int r = uncompress(UncompressedBuffer, &newLen, CompressedBuffer, CompressedSize);
+		if (r != Z_OK) appError("zlib uncompress() returned %d", r);
+#endif
+	}
 	else if (Flags == COMPRESS_LZX)
 	{
 #if XBOX360
@@ -1028,20 +1082,31 @@ void FByteBulkData::Serialize(FArchive &Ar)
 			return;								//?? what to do with BulkData ?
 	}
 
-	assert((BulkDataFlags & BULKDATA_StoreInSeparateFile) || (BulkDataOffsetInFile == Ar.Tell()));
+//	printf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n", Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 
-//	int savePos, saveStopper;
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
 	{
 //		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 		return;
-//		// seek to data block
-//		savePos     = Ar.Tell();
-//		saveStopper = Ar.GetStopper();
-//		Ar.SetStopper(0);
-//		Ar.Seek(BulkDataOffsetInFile);
 	}
 
+	if (BulkDataFlags & BULKDATA_SeparateData)
+	{
+		// save archive position
+		int savePos, saveStopper;
+		savePos     = Ar.Tell();
+		saveStopper = Ar.GetStopper();
+		// seek to data block and read data
+		Ar.SetStopper(0);
+		Ar.Seek(BulkDataOffsetInFile);
+		SerializeChunk(Ar);
+		// restore archive position
+		Ar.Seek(savePos);
+		Ar.SetStopper(saveStopper);
+		return;
+	}
+
+	assert(BulkDataOffsetInFile == Ar.Tell());
 	SerializeChunk(Ar);
 
 	unguard;

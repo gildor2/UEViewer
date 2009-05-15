@@ -239,6 +239,9 @@ int main(int argc, char **argv)
 #	if MASSEFF
 				"    Mass Effect\n"
 #	endif
+#	if HUXLEY
+				"    Huxley\n"
+#	endif
 #	if TLR
 				"    The Last Remnant\n"
 #	endif

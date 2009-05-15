@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	}
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
+//	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
 	int arg = 1;
 /*	for (arg = 1; arg < argc; arg++)
 	{
@@ -107,7 +107,11 @@ int main(int argc, char **argv)
 		fprintf(f, "%d = %s'%s%s'\n", idx, ClassName, buf3, *Exp.ObjectName);
 		appSprintf(ARRAY_ARG(buf2), "%s/%s%s.%s", buf, buf3, *Exp.ObjectName, ClassName);
 		FILE *f2 = fopen(buf2, "wb");
-		assert(f2);
+		if (!f2)
+		{
+			printf("%d/%d: unable to create file %s\n", idx, Package->Summary.ExportCount, buf2);
+			continue;
+		}
 		// read data
 		byte *data = new byte[Exp.SerialSize];
 		Package->Seek(Exp.SerialOffset);

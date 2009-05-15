@@ -29,6 +29,8 @@ Modified Unreal Engine 3:
   The Last Remnant
   Mass Effect
   Mirror's Edge
+  Huxley
+  Rise of the Argonauts
   X-Men Origins: Wolverine
 
 List of games with limited support:
@@ -41,6 +43,7 @@ Unsupported animations (without umodel crash):
   Mass Effect
   Mirror's Edge
   X-Men Origins: Wolverine
+  Rise of the Argonauts
 
 Project home page and forum:
 http://www.gildor.org/en/projects/umodel
@@ -72,6 +75,18 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+15.05.2009
+- implemented support for Zlib-compressed UE3 packages
+
+14.05.2009
+- implemented support for Blacksite: Area 51 packages
+
+08.05.2009
+- implemented support for Huxley
+
+07.05.2009
+- better game root autodetection when "-path" is not specified
+
 06.05.2009
 - implemented StaticMesh support for UT2003/2004 and UE2Runtime
 - added "-nostat" command line switch to disable StaticMesh loading

@@ -1986,8 +1986,12 @@ struct FGPUSkin3
 	friend FArchive& operator<<(FArchive &Ar, FGPUSkin3 &S)
 	{
 		guard(FSkinData3<<);
+	#if HUXLEY
+		if (Ar.IsHuxley) goto old_version;
+	#endif
 		if (Ar.ArVer < 493)
 		{
+		old_version:
 			// old version - FSmoothVertex3 array
 			TRawArray<FSmoothVertex3> Verts;
 			Ar << Verts;

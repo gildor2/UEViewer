@@ -58,7 +58,7 @@ void appPrintProfiler();
 	Game directory support
 -----------------------------------------------------------------------------*/
 
-void appSetRootDirectory(const char *dir);
+void appSetRootDirectory(const char *dir, bool recurse = true);
 void appSetRootDirectory2(const char *filename);
 const char *appGetRootDirectory();
 
@@ -141,6 +141,7 @@ protected:
 
 public:
 	// game-specific flags
+	// UE2 games
 #if UT2
 	int		IsUT2:1;
 #endif
@@ -162,6 +163,10 @@ public:
 #if RAGNAROK2
 	int		IsRagnarok2:1;
 #endif
+	// UE3 games
+#if A51
+	int		IsA51:1;
+#endif
 #if MASSEFF
 	int		IsMassEffect:1;
 #endif
@@ -170,6 +175,9 @@ public:
 #endif
 #if TLR
 	int		IsTLR:1;
+#endif
+#if HUXLEY
+	int		IsHuxley:1;
 #endif
 
 	FArchive()
@@ -199,6 +207,9 @@ public:
 #if RAGNAROK2
 	,	IsRagnarok2(0)
 #endif
+#if A51
+	,	IsA51(0)
+#endif
 #if MASSEFF
 	,	IsMassEffect(0)
 #endif
@@ -207,6 +218,9 @@ public:
 #endif
 #if TLR
 	,	IsTLR(0)
+#endif
+#if HUXLEY
+	,	IsHuxley(0)
 #endif
 	{}
 
@@ -811,6 +825,11 @@ public:
 		FArray::Empty(count, sizeof(T));
 	}
 
+	void Sort(int (*cmpFunc)(const T*, const T*))
+	{
+		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
+	}
+
 	// serializer
 #if _MSC_VER == 1200			// VC6 bug
 	friend FArchive& operator<<(FArchive &Ar, TArray &A);
@@ -1082,10 +1101,11 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 	UE3 bulk data - replacement for TLazyArray
 -----------------------------------------------------------------------------*/
 
-#define BULKDATA_StoreInSeparateFile	0x01
+#define BULKDATA_StoreInSeparateFile	0x01		// bulk stored in different file
 #define BULKDATA_CompressedZlib			0x02		// unknown name
 #define BULKDATA_CompressedLzo			0x10		// unknown name
-#define BULKDATA_NoData					0x20		// unknown name
+#define BULKDATA_NoData					0x20		// unknown name - empty bulk block
+#define BULKDATA_SeparateData			0x40		// unknown name - bulk stored in a different place in the same file
 #define BULKDATA_CompressedLzx			0x80		// unknown name
 
 struct FByteBulkData //?? separate FUntypedBulkData

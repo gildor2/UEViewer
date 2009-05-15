@@ -92,6 +92,10 @@ fi
 case "" in
 
 "")
+	# A51
+	run1 C:/!umodel-data/.possible/--Area51Blacksite-- a52start
+#	run1 C:/!umodel-data/.possible/--Area51Blacksite-- enginefonts
+
 	#!! BUGS with GOW animations
 #	gow -meshes COG_GasTanker.upk
 #	gow -meshes Geist_Beast.upk
@@ -100,7 +104,7 @@ case "" in
 #	run1 "C:/!umodel-data/--Mass Effect--" -list Engine.u
 #!!	ut2 -meshes StreamlineMeshes.usx
 #!!	ut2 -meshes ONSDeadVehicles-SM.usx
-	ut2 -meshes DOM-CBP2-Gerroid.ut2		#!! CRASH
+#!!	ut2 -meshes DOM-CBP2-Gerroid.ut2		#!! CRASH
 #-	gow -meshes Neutral_Stranded_01.upk NPC01_COG
 	#!! CRASH with UE3 animations (assert)
 #-	gow -meshes Geist_Reaver.upk
