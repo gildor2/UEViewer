@@ -2100,6 +2100,19 @@ struct FStaticLODModel3
 	}
 };
 
+#if A51
+struct FA51Unk1
+{
+	int					f0;
+	FName				f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FA51Unk1 &V)
+	{
+		return Ar << V.f0 << V.f4;
+	}
+};
+#endif // A51
+
 void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 {
 	guard(USkeletalMesh::SerializeSkelMesh3);
@@ -2118,7 +2131,15 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	}
 #endif // MEDGE
 	Ar << Bounds << Materials1 << MeshOrigin << RotOrigin;
-	Ar << RefSkeleton << SkeletalDepth << Lods;
+	Ar << RefSkeleton << SkeletalDepth;
+#if A51
+	if (Ar.IsA51 && Ar.ArLicenseeVer >= 0xF)
+	{
+		TArray<FA51Unk1> unkD4;
+		Ar << unkD4;
+	}
+#endif // A51
+	Ar << Lods;
 #if 0
 	//!! also: NameIndexMap (ArVer >= 296), PerPolyKDOPs (ArVer >= 435)
 #else
@@ -2576,7 +2597,7 @@ void UAnimSet::ConvertAnims()
 
 		FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
 		Reader.ReverseBytes = Package->ReverseBytes;
-		bool hasTimeTracks = strcmp(Seq->KeyEncodingFormat, "AKF_VariableKeyLerp") == 0;
+		bool hasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
 
 		int offsetIndex = 0;
 		for (int j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
@@ -2657,8 +2678,8 @@ void UAnimSet::ConvertAnims()
 			int hole = RotOffset - Reader.Tell();
 			if (findHoles && hole/** && abs(hole) > 4*/)	//?? should not be holes at all
 			{
-				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack (KeyFormat=%s)",
-					Name, *Seq->SequenceName, j, hole, *Seq->KeyEncodingFormat);
+				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack (KeyFormat=%d)",
+					Name, *Seq->SequenceName, j, hole, Seq->KeyEncodingFormat);
 ///				findHoles = false;
 			}
 #endif
@@ -2678,31 +2699,31 @@ void UAnimSet::ConvertAnims()
 
 				for (k = 0; k < RotKeys; k++)
 				{
-					if (!strcmp(Seq->RotationCompressionFormat, "ACF_None"))
+					if (Seq->RotationCompressionFormat == ACF_None)
 					{
 						FQuat q;
 						Reader << q;
 						A->KeyQuat.AddItem(q);
 					}
-					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Float96NoW"))
+					else if (Seq->RotationCompressionFormat == ACF_Float96NoW)
 					{
 						FQuatFloat96NoW q;
 						Reader << q;
 						A->KeyQuat.AddItem(q);
 					}
-					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed48NoW"))
+					else if (Seq->RotationCompressionFormat == ACF_Fixed48NoW)
 					{
 						FQuatFixed48NoW q;
 						Reader << q;
 						A->KeyQuat.AddItem(q);
 					}
-					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_Fixed32NoW"))
+					else if (Seq->RotationCompressionFormat == ACF_Fixed32NoW)
 					{
 						FQuatFixed32NoW q;
 						Reader << q;
 						A->KeyQuat.AddItem(q);
 					}
-					else if (!strcmp(Seq->RotationCompressionFormat, "ACF_IntervalFixed32NoW"))
+					else if (Seq->RotationCompressionFormat == ACF_IntervalFixed32NoW)
 					{
 						FQuatIntervalFixed32NoW q;
 						Reader << q;
@@ -2716,7 +2737,7 @@ void UAnimSet::ConvertAnims()
 //printf("q: %X : (%d %d %d)  (%g %g %g %g)\n", GET_DWORD(*q), q->X-1023, q->Y-1023, q->Z-511, FQUAT_ARG(qq));
 //}
 					else
-						appError("Unknown compression method: %s", *Seq->RotationCompressionFormat);
+						appError("Unknown compression method: %d", Seq->RotationCompressionFormat);
 				}
 				// align to 4 bytes
 				Reader.Seek(Align(Reader.Tell(), 4));

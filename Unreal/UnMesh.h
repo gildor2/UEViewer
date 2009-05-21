@@ -1578,6 +1578,38 @@ struct FRawAnimSequenceTrack
 	END_PROP_TABLE
 };
 
+enum AnimationCompressionFormat
+{
+	ACF_None,
+	ACF_Float96NoW,
+	ACF_Fixed48NoW,
+	ACF_IntervalFixed32NoW,
+	ACF_Fixed32NoW,
+	ACF_Float32NoW,
+};
+
+_ENUM(AnimationCompressionFormat)
+{
+	_E(ACF_None),
+	_E(ACF_Float96NoW),
+	_E(ACF_Fixed48NoW),
+	_E(ACF_IntervalFixed32NoW),
+	_E(ACF_Fixed32NoW),
+	_E(ACF_Float32NoW),
+};
+
+enum AnimationKeyFormat		//?? enum name and values are unknown
+{
+	AKF_None,
+	AKF_VariableKeyLerp
+};
+
+_ENUM(AnimationKeyFormat)
+{
+	_E(AKF_None),
+	_E(AKF_VariableKeyLerp)
+};
+
 class UAnimSequence : public UObject
 {
 	DECLARE_CLASS(UAnimSequence, UObject);
@@ -1589,19 +1621,18 @@ public:
 	float					RateScale;
 	bool					bNoLoopingInterpolation;
 	TArray<FRawAnimSequenceTrack> RawAnimData;
-	FName					TranslationCompressionFormat;	// AnimationCompressionFormat
-	FName					RotationCompressionFormat;		// AnimationCompressionFormat
-	FName					KeyEncodingFormat;				//?? GoW2, unknown property
+	AnimationCompressionFormat TranslationCompressionFormat;
+	AnimationCompressionFormat RotationCompressionFormat;
+	AnimationKeyFormat		KeyEncodingFormat;				//?? GoW2, unknown property
 	TArray<int>				CompressedTrackOffsets;
 	TArray<byte>			CompressedByteStream;
 
 	UAnimSequence()
 	:	RateScale(1.0f)
-	{
-		TranslationCompressionFormat.Str = "ACF_None";
-		RotationCompressionFormat.Str    = "ACF_None";
-		KeyEncodingFormat.Str            = "AKF_None";		//?? unknown enum values
-	}
+	,	TranslationCompressionFormat(ACF_None)
+	,	RotationCompressionFormat(ACF_None)
+	,	KeyEncodingFormat(AKF_None)
+	{}
 
 	BEGIN_PROP_TABLE
 		PROP_NAME(SequenceName)
@@ -1610,9 +1641,9 @@ public:
 		PROP_FLOAT(RateScale)
 		PROP_BOOL(bNoLoopingInterpolation)
 		PROP_ARRAY(RawAnimData, FRawAnimSequenceTrack)
-		PROP_ENUM3(TranslationCompressionFormat)
-		PROP_ENUM3(RotationCompressionFormat)
-		PROP_ENUM3(KeyEncodingFormat)
+		PROP_ENUM2(TranslationCompressionFormat, AnimationCompressionFormat)
+		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
+		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
 		PROP_ARRAY(CompressedTrackOffsets, int)
 		// unsupported
 		PROP_DROP(Notifies)
@@ -2017,5 +2048,9 @@ public:
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)
+
+#define REGISTER_MESH_ENUMS_U3		\
+	REGISTER_ENUM(AnimationCompressionFormat) \
+	REGISTER_ENUM(AnimationKeyFormat)
 
 #endif // __UNMESH_H__

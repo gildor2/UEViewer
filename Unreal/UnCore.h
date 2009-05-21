@@ -940,8 +940,12 @@ template<class T> class TRawArray : public TArray<T>
 	{
 		guard(TRawArray<<);
 		assert(Ar.IsLoading);
+#if A51
+		if (Ar.IsA51 && Ar.ArVer >= 376) goto new_ver;					// partially upgraded old engine
+#endif // A51
 		if (Ar.ArVer >= 453)
 		{
+		new_ver:
 			int ElementSize;
 			Ar << ElementSize;
 //			assert(ElementSize == sizeof(T));

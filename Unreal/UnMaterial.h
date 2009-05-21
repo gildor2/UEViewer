@@ -288,10 +288,32 @@ enum ETextureFormat
 	TEXF_RRRGGGBBB
 };
 
+_ENUM(ETextureFormat)
+{
+	_E(TEXF_P8),
+	_E(TEXF_RGBA7),
+	_E(TEXF_RGB16),
+	_E(TEXF_DXT1),
+	_E(TEXF_RGB8),
+	_E(TEXF_RGBA8),
+	_E(TEXF_NODATA),
+	_E(TEXF_DXT3),
+	_E(TEXF_DXT5),
+	_E(TEXF_L8),
+	_E(TEXF_G16),
+	_E(TEXF_RRRGGGBBB)
+};
+
 enum ETexClampMode
 {
 	TC_Wrap,
 	TC_Clamp
+};
+
+_ENUM(ETexClampMode)
+{
+	_E(TC_Wrap),
+	_E(TC_Clamp)
 };
 
 class UBitmapMaterial : public URenderedMaterial // abstract
@@ -305,9 +327,9 @@ public:
 	int				UClamp, VClamp;	// same as UClampMode/VClampMode ?
 
 	BEGIN_PROP_TABLE
-		PROP_ENUM(Format)
-		PROP_ENUM(UClampMode)
-		PROP_ENUM(VClampMode)
+		PROP_ENUM2(Format, ETextureFormat)
+		PROP_ENUM2(UClampMode, ETexClampMode)
+		PROP_ENUM2(VClampMode, ETexClampMode)
 		PROP_BYTE(UBits)
 		PROP_BYTE(VBits)
 		PROP_INT(USize)
@@ -487,7 +509,18 @@ enum EOutputBlending
 	OB_Translucent,
 	OB_Invisible,
 	OB_Brighten,
-	OB_Darken,
+	OB_Darken
+};
+
+_ENUM(EOutputBlending)
+{
+	_E(OB_Normal),
+	_E(OB_Masked),
+	_E(OB_Modulate),
+	_E(OB_Translucent),
+	_E(OB_Invisible),
+	_E(OB_Brighten),
+	_E(OB_Darken)
 };
 
 
@@ -531,7 +564,7 @@ public:
 		PROP_OBJ(SelfIlluminationMask)
 		PROP_OBJ(Detail)
 		PROP_FLOAT(DetailScale)
-		PROP_ENUM(OutputBlending)
+		PROP_ENUM2(OutputBlending, EOutputBlending)
 		PROP_BOOL(TwoSided)
 		PROP_BOOL(Wireframe)
 		PROP_BOOL(ModulateStaticLighting2X)
@@ -571,10 +604,27 @@ enum EFrameBufferBlending
 	FB_Darken,
 	FB_Brighten,
 	FB_Invisible,
-#if LINEAGE2			// possibly, new UE2 blends
+#if LINEAGE2	//?? not needed
 	FB_Add,
 	FB_InWaterBlend,
 	FB_Capture,
+#endif
+};
+
+_ENUM(EFrameBufferBlending)
+{
+	_E(FB_Overwrite),
+	_E(FB_Modulate),
+	_E(FB_AlphaBlend),
+	_E(FB_AlphaModulate_MightNotFogCorrectly),
+	_E(FB_Translucent),
+	_E(FB_Darken),
+	_E(FB_Brighten),
+	_E(FB_Invisible),
+#if LINEAGE2	//?? not needed
+	_E(FB_Add),
+	_E(FB_InWaterBlend),
+	_E(FB_Capture),
 #endif
 };
 
@@ -599,7 +649,7 @@ public:
 	,	TwoSided(false)
 	{}
 	BEGIN_PROP_TABLE
-		PROP_ENUM(FrameBufferBlending)
+		PROP_ENUM2(FrameBufferBlending, EFrameBufferBlending)
 		PROP_BOOL(ZWrite)
 		PROP_BOOL(ZTest)
 		PROP_BOOL(AlphaTest)
@@ -626,6 +676,18 @@ enum EColorOperation
 	CO_Use_Color_From_Mask,
 };
 
+_ENUM(EColorOperation)
+{
+	_E(CO_Use_Color_From_Material1),
+	_E(CO_Use_Color_From_Material2),
+	_E(CO_Multiply),
+	_E(CO_Add),
+	_E(CO_Subtract),
+	_E(CO_AlphaBlend_With_Mask),
+	_E(CO_Add_With_Mask_Modulation),
+	_E(CO_Use_Color_From_Mask)
+};
+
 enum EAlphaOperation
 {
 	AO_Use_Mask,
@@ -633,6 +695,15 @@ enum EAlphaOperation
 	AO_Add,
 	AO_Use_Alpha_From_Material1,
 	AO_Use_Alpha_From_Material2,
+};
+
+_ENUM(EAlphaOperation)
+{
+	_E(AO_Use_Mask),
+	_E(AO_Multiply),
+	_E(AO_Add),
+	_E(AO_Use_Alpha_From_Material1),
+	_E(AO_Use_Alpha_From_Material2),
 };
 
 class UCombiner : public UMaterial
@@ -653,8 +724,8 @@ public:
 	{}
 
 	BEGIN_PROP_TABLE
-		PROP_ENUM(CombineOperation)
-		PROP_ENUM(AlphaOperation)
+		PROP_ENUM2(CombineOperation, EColorOperation)
+		PROP_ENUM2(AlphaOperation, EAlphaOperation)
 		PROP_OBJ(Material1)
 		PROP_OBJ(Material2)
 		PROP_OBJ(Mask)
@@ -685,11 +756,36 @@ enum ETexCoordSrc
 	TCS_NoChange,				// don't specify a source, just modify it
 };
 
+_ENUM(ETexCoordSrc)
+{
+	_E(TCS_Stream0),
+	_E(TCS_Stream1),
+	_E(TCS_Stream2),
+	_E(TCS_Stream3),
+	_E(TCS_Stream4),
+	_E(TCS_Stream5),
+	_E(TCS_Stream6),
+	_E(TCS_Stream7),
+	_E(TCS_WorldCoords),
+	_E(TCS_CameraCoords),
+	_E(TCS_WorldEnvMapCoords),
+	_E(TCS_CameraEnvMapCoords),
+	_E(TCS_ProjectorCoords),
+	_E(TCS_NoChange),
+};
+
 enum ETexCoordCount
 {
 	TCN_2DCoords,
 	TCN_3DCoords,
 	TCN_4DCoords
+};
+
+_ENUM(ETexCoordCount)
+{
+	_E(TCN_2DCoords),
+	_E(TCN_3DCoords),
+	_E(TCN_4DCoords)
 };
 
 class UTexModifier : public UModifier
@@ -706,8 +802,8 @@ public:
 	{}
 
 	BEGIN_PROP_TABLE
-		PROP_ENUM(TexCoordSource)
-		PROP_ENUM(TexCoordCount)
+		PROP_ENUM2(TexCoordSource, ETexCoordSrc)
+		PROP_ENUM2(TexCoordCount, ETexCoordCount)
 		PROP_BOOL(TexCoordProjected)
 	END_PROP_TABLE
 
@@ -719,6 +815,12 @@ enum ETexEnvMapType
 {
 	EM_WorldSpace,
 	EM_CameraSpace,
+};
+
+_ENUM(ETexEnvMapType)
+{
+	_E(EM_WorldSpace),
+	_E(EM_CameraSpace),
 };
 
 class UTexEnvMap : public UTexModifier
@@ -734,7 +836,7 @@ public:
 	}
 
 	BEGIN_PROP_TABLE
-		PROP_ENUM(EnvMapType)
+		PROP_ENUM2(EnvMapType, ETexEnvMapType)
 	END_PROP_TABLE
 };
 
@@ -745,6 +847,14 @@ enum ETexOscillationType
 	OT_Stretch,
 	OT_StretchRepeat,
 	OT_Jitter,
+};
+
+_ENUM(ETexOscillationType)
+{
+	_E(OT_Pan),
+	_E(OT_Stretch),
+	_E(OT_StretchRepeat),
+	_E(OT_Jitter),
 };
 
 class UTexOscillator : public UTexModifier
@@ -773,8 +883,8 @@ public:
 		PROP_FLOAT(VOscillationPhase)
 		PROP_FLOAT(UOscillationAmplitude)
 		PROP_FLOAT(VOscillationAmplitude)
-		PROP_ENUM(UOscillationType)
-		PROP_ENUM(VOscillationType)
+		PROP_ENUM2(UOscillationType, ETexOscillationType)
+		PROP_ENUM2(VOscillationType, ETexOscillationType)
 		PROP_FLOAT(UOffset)
 		PROP_FLOAT(VOffset)
 		PROP_DROP(M)
@@ -820,6 +930,13 @@ enum ETexRotationType
 	TR_OscillatingRotation,
 };
 
+_ENUM(ETexRotationType)
+{
+	_E(TR_FixedRotation),
+	_E(TR_ConstantlyRotating),
+	_E(TR_OscillatingRotation),
+};
+
 class UTexRotator : public UTexModifier
 {
 	DECLARE_CLASS(UTexRotator, UTexModifier);
@@ -834,7 +951,7 @@ public:
 //	FMatrix			M;
 
 	BEGIN_PROP_TABLE
-		PROP_ENUM(TexRotationType)
+		PROP_ENUM2(TexRotationType, ETexRotationType)
 		PROP_ROTATOR(Rotation)
 		PROP_FLOAT(UOffset)
 		PROP_FLOAT(VOffset)
@@ -921,6 +1038,9 @@ public:
 		PROP_DROP(SourceArtWidth)
 		PROP_DROP(SourceArtHeight)
 #endif // HUXLEY
+#if A51
+		PROP_DROP(LODBiasWindows)
+#endif // A51
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -955,6 +1075,31 @@ enum EPixelFormat
 	PF_D24
 };
 
+_ENUM(EPixelFormat)
+{
+	_E(PF_Unknown),
+	_E(PF_A32B32G32R32F),
+	_E(PF_A8R8G8B8),
+	_E(PF_G8),
+	_E(PF_G16),
+	_E(PF_DXT1),
+	_E(PF_DXT3),
+	_E(PF_DXT5),
+	_E(PF_UYVY),
+	_E(PF_FloatRGB),
+	_E(PF_FloatRGBA),
+	_E(PF_DepthStencil),
+	_E(PF_ShadowDepth),
+	_E(PF_FilteredShadowDepth),
+	_E(PF_R32F),
+	_E(PF_G16R16),
+	_E(PF_G16R16F),
+	_E(PF_G32R32F),
+	_E(PF_A2B10G10R10),
+	_E(PF_A16B16G16R16),
+	_E(PF_D24)
+};
+
 enum ETextureFilter
 {
 	TF_Nearest,
@@ -966,6 +1111,13 @@ enum ETextureAddress
 	TA_Wrap,
 	TA_Clamp,
 	TA_Mirror
+};
+
+_ENUM(ETextureAddress)
+{
+	_E(TA_Wrap),
+	_E(TA_Clamp),
+	_E(TA_Mirror)
 };
 
 struct FTexture2DMipMap
@@ -988,9 +1140,9 @@ public:
 	TArray<FTexture2DMipMap> Mips;
 	int				SizeX;
 	int				SizeY;
-	FName			Format;			//!! EPixelFormat
-	FName			AddressX;		//!! ETextureAddress
-	FName			AddressY;		//!! ETextureAddress
+	EPixelFormat	Format;
+	ETextureAddress	AddressX;
+	ETextureAddress	AddressY;
 	FName			TextureFileCacheName;
 
 #if RENDERING
@@ -1001,10 +1153,10 @@ public:
 #if RENDERING
 	UTexture2D()
 	:	TexNum(0)
+	,	Format(PF_Unknown)
+	,	AddressX(TA_Wrap)
+	,	AddressY(TA_Wrap)
 	{
-		Format.Str   = "Unknown";	//?? workaround for FName/byte difference in property serialization
-		AddressX.Str = "TA_Wrap";
-		AddressY.Str = "TA_Wrap";
 		TextureFileCacheName.Str = "None";
 	}
 #endif
@@ -1012,9 +1164,9 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_INT(SizeX)
 		PROP_INT(SizeY)
-		PROP_ENUM3(Format)		//!! FString (on-disk) -> byte (in-memory)
-		PROP_ENUM3(AddressX)
-		PROP_ENUM3(AddressY)
+		PROP_ENUM2(Format, EPixelFormat)
+		PROP_ENUM2(AddressX, ETextureAddress)
+		PROP_ENUM2(AddressY, ETextureAddress)
 		PROP_NAME(TextureFileCacheName)
 		// drop unneeded props
 		PROP_DROP(bGlobalForceMipLevelsToBeResident)
@@ -1027,8 +1179,7 @@ public:
 		Super::Serialize(Ar);
 		if (Ar.ArVer < 297)
 		{
-			appError("'Format' should be byte (now FName)");	//!! fix Format property
-			Ar << SizeX << SizeY << Format;
+			Ar << SizeX << SizeY << (byte&)Format;
 		}
 		Ar << Mips;
 #if MASSEFF
@@ -1232,5 +1383,22 @@ public:
 	REGISTER_CLASS(FTextureParameterValue) \
 	REGISTER_CLASS(UMaterialInstanceConstant)
 
+
+#define REGISTER_MATERIAL_ENUMS			\
+	REGISTER_ENUM(ETextureFormat)		\
+	REGISTER_ENUM(ETexClampMode)		\
+	REGISTER_ENUM(EOutputBlending)		\
+	REGISTER_ENUM(EFrameBufferBlending)	\
+	REGISTER_ENUM(EColorOperation)		\
+	REGISTER_ENUM(EAlphaOperation)		\
+	REGISTER_ENUM(ETexCoordSrc)			\
+	REGISTER_ENUM(ETexCoordCount)		\
+	REGISTER_ENUM(ETexEnvMapType)		\
+	REGISTER_ENUM(ETexOscillationType)	\
+	REGISTER_ENUM(ETexRotationType)
+
+#define REGISTER_MATERIAL_ENUMS_U3		\
+	REGISTER_ENUM(EPixelFormat)			\
+	REGISTER_ENUM(ETextureAddress)
 
 #endif // __UNMATERIAL_H__

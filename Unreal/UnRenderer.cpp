@@ -601,8 +601,7 @@ void UTexture2D::Bind(unsigned PolyFlags)
 		byte *pic = Decompress(USize, VSize);
 		if (pic)
 		{
-			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1,
-				strcmp(*AddressX, "TA_Clamp") == 0, strcmp(*AddressY, "TA_Clamp") == 0);
+			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
 			delete pic;
 		}
 		else
@@ -1073,19 +1072,21 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 		USize = Mip.SizeX;
 		VSize = Mip.SizeY;
 		ETextureFormat intFormat;
-		if (!strcmp(Format, "PF_A8R8G8B8"))
+		const char *FmtName = EnumToName("EPixelFormat", Format);
+		if (!FmtName) FmtName = "???";
+		if (Format == PF_A8R8G8B8)
 			intFormat = TEXF_RGBA8;
-		else if (!strcmp(Format, "PF_DXT1"))
+		else if (Format == PF_DXT1)
 			intFormat = TEXF_DXT1;
-		else if (!strcmp(Format, "PF_DXT3"))
+		else if (Format == PF_DXT3)
 			intFormat = TEXF_DXT3;
-		else if (!strcmp(Format, "PF_DXT5"))
+		else if (Format == PF_DXT5)
 			intFormat = TEXF_DXT5;
-		else if (!strcmp(Format, "PF_G8"))
+		else if (Format == PF_G8)
 			intFormat = TEXF_L8;
 		else
 		{
-			appNotify("Unknown texture format: %s", *Format);
+			appNotify("Unknown texture format: %s (%d)", FmtName, Format);
 			return NULL;
 		}
 
@@ -1118,7 +1119,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			align = 32;
 			break;
 		default:
-			appNotify("TextureFormatParameters: unknown texture format %d (%s)", intFormat, *Format);
+			appNotify("TextureFormatParameters: unknown texture format %s (%d)", FmtName, Format);
 			return NULL;
 		}
 		int USize1 = USize, VSize1 = VSize;

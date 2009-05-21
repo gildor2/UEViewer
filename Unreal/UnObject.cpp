@@ -147,6 +147,7 @@ enum EPropType // hardcoded in Unreal
 #endif
 };
 
+//?? use _ENUM/_E macros
 static const struct
 {
 	int			Index;
@@ -394,32 +395,35 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #if UNREAL3
 			if (Tag.DataSize != 1)
 			{
+				// modern UE3 enum saved as FName
 				assert(Tag.DataSize == 8);
-				if (!strcmp(Prop->TypeName, "enum3")) //!! temp solution
+				if (Prop->TypeName[0] == '#')
 				{
-					TYPE("enum3");
-					Ar << *((FName*)value);
+					FName tmpName;
+					Ar << tmpName;
+					int tmpInt = NameToEnum(Prop->TypeName+1, *tmpName);
+					if (tmpInt == ENUM_UNKNOWN)
+						appNotify("unknown member %s of enum %s", *tmpName, Prop->TypeName+1);
+					assert(tmpInt >= 0 && tmpInt <= 255);
+					*value = tmpInt;
 				}
 				else
 				{
+					// this property is not marked using PROP_ENUM2
 					TYPE("byte");
 					FName EnumValue;
 					Ar << EnumValue;
 					//!! map string -> byte
-					printf("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
+					appNotify("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
 				}
-			}
-			else if (!strcmp(Prop->TypeName, "enum3"))
-			{
-				// old XBox360 GoW: enums are byte
-				byte b;
-				Ar << b;
-				printf("EnumProp: %s = %d\n", *Tag.Name, b);
 			}
 			else
 #endif
 			{
-				TYPE("byte");
+				if (Prop->TypeName[0] != '#')
+				{
+					TYPE("byte");
+				}
 				Ar << PROP(byte);
 			}
 			PROP_DBG("%d", PROP(byte));
@@ -695,7 +699,10 @@ void CTypeInfo::DumpProps(void *Data) const
 //				printf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
 				continue;
 			}
-			printf("  %3d: %s %s", PropIndex, Prop->TypeName, Prop->Name);
+			printf("  %3d: %s %s",
+				PropIndex,
+				(Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName+1,	// skip enum marker
+				Prop->Name);
 			if (Prop->Count > 1)
 				printf("[%d] = { ", Prop->Count);
 			else
@@ -727,9 +734,12 @@ void CTypeInfo::DumpProps(void *Data) const
 				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 #endif
 				PROCESS(FName,    "%s", *PROP(FName));
-#if UNREAL3
-				PROCESS(enum3,    "%s", *PROP(FName))
-#endif
+				if (Prop->TypeName[0] == '#')
+				{
+					// enum value
+					const char *v = EnumToName(Prop->TypeName+1, *value);		// skip enum marker
+					printf("%s (%d)", v ? v : "<unknown>", *value);
+				}
 			}
 
 			if (Prop->Count > 1)
@@ -738,4 +748,64 @@ void CTypeInfo::DumpProps(void *Data) const
 				printf("\n");
 		}
 	}
+}
+
+
+#define MAX_ENUMS		32
+
+struct enumInfo
+{
+	const char       *Name;
+	const enumToStr  *Values;
+	int              NumValues;
+};
+
+static enumInfo RegisteredEnums[MAX_ENUMS];
+static int NumEnums = 0;
+
+void RegisterEnum(const char *EnumName, const enumToStr *Values, int Count)
+{
+	guard(RegisterEnum);
+
+	assert(NumEnums < MAX_ENUMS);
+	enumInfo &Info = RegisteredEnums[NumEnums++];
+	Info.Name      = EnumName;
+	Info.Values    = Values;
+	Info.NumValues = Count;
+
+	unguard;
+}
+
+const enumInfo *FindEnum(const char *EnumName)
+{
+	for (int i = 0; i < NumEnums; i++)
+		if (!strcmp(RegisteredEnums[i].Name, EnumName))
+			return &RegisteredEnums[i];
+	return NULL;
+}
+
+const char *EnumToName(const char *EnumName, int Value)
+{
+	const enumInfo *Info = FindEnum(EnumName);
+	if (!Info) return NULL;				// enum was not found
+	for (int i = 0; i < Info->NumValues; i++)
+	{
+		const enumToStr &V = Info->Values[i];
+		if (V.value == Value)
+			return V.name;
+	}
+	return NULL;						// no such value
+}
+
+int NameToEnum(const char *EnumName, const char *Value)
+{
+	const enumInfo *Info = FindEnum(EnumName);
+	if (!Info) return ENUM_UNKNOWN;		// enum was not found
+	for (int i = 0; i < Info->NumValues; i++)
+	{
+		const enumToStr &V = Info->Values[i];
+		if (!strcmp(V.name, Value))
+			return V.value;
+	}
+	return ENUM_UNKNOWN;				// no such value
 }

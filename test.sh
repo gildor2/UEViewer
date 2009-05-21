@@ -89,12 +89,13 @@ fi
 # no arguments
 
 # select path here
-case "" in
+case "shaders" in
 
 "")
 	# A51
-	run1 C:/!umodel-data/.possible/--Area51Blacksite-- a52start
-#	run1 C:/!umodel-data/.possible/--Area51Blacksite-- enginefonts
+#	run1 C:/!umodel-data//--Area51Blacksite-- a52start
+#	run1 C:/!umodel-data//--Area51Blacksite-- enginefonts
+	run1 C:/!umodel-data//--Area51Blacksite-- -noanim -meshes ep7_wrecked_p
 
 	#!! BUGS with GOW animations
 #	gow -meshes COG_GasTanker.upk

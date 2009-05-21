@@ -120,10 +120,8 @@ struct CNullType
 // PROP_BYTE for enumeration value, _PROP_BASE macro will set 'Count' field of
 // CPropInfo to 4 instead of 1 (enumeration values are serialized as byte, but
 // compiler report it as 4-byte field)
-#define PROP_ENUM(Field)		{ #Field, "byte", FIELD2OFS(ThisClass, Field), 1 },
-#if UNREAL3
-#define PROP_ENUM3(Field)		{ #Field, "enum3", FIELD2OFS(ThisClass, Field), 1 },	//!! should change this
-#endif
+#define PROP_ENUM(Field)		{ #Field, "byte",   FIELD2OFS(ThisClass, Field), 1 },
+#define PROP_ENUM2(Field,Type)	{ #Field, "#"#Type, FIELD2OFS(ThisClass, Field), 1 },
 #define PROP_BYTE(Field)		_PROP_BASE(Field, byte     )
 #define PROP_INT(Field)			_PROP_BASE(Field, int      )
 #define PROP_BOOL(Field)		_PROP_BASE(Field, bool     )
@@ -174,6 +172,26 @@ bool IsKnownClass(const char *Name);
 		};										\
 		RegisterClasses(ARRAY_ARG(Table));		\
 	}
+
+
+struct enumToStr
+{
+	int			value;
+	const char* name;
+};
+
+#define _ENUM(name)				const enumToStr name##Names[] =
+#define _E(name)				{ name, #name }
+
+#define REGISTER_ENUM(name)		RegisterEnum(#name, ARRAY_ARG(name##Names));
+
+#define ENUM_UNKNOWN			255
+
+void RegisterEnum(const char *EnumName, const enumToStr *Values, int Count);
+// find name of enum item, NULL when not found
+const char *EnumToName(const char *EnumName, int Value);
+// find interer value by enum name, ENUM_UNKNOWN when not found
+int NameToEnum(const char *EnumName, const char *Value);
 
 
 /*-----------------------------------------------------------------------------

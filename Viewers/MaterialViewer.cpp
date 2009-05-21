@@ -12,98 +12,6 @@ static void OutlineMaterial(UObject *Obj, int indent = 0);
 
 
 /*-----------------------------------------------------------------------------
-	Enum data
------------------------------------------------------------------------------*/
-
-#define _STR(s) {s, #s}
-#define _ENUM(name)		static const enumToStr name##Names[] =
-
-struct enumToStr
-{
-	int			value;
-	const char* name;
-};
-
-_ENUM(ETextureFormat)
-{
-	_STR(TEXF_P8),
-	_STR(TEXF_RGBA7),
-	_STR(TEXF_RGB16),
-	_STR(TEXF_DXT1),
-	_STR(TEXF_RGB8),
-	_STR(TEXF_RGBA8),
-	_STR(TEXF_NODATA),
-	_STR(TEXF_DXT3),
-	_STR(TEXF_DXT5),
-	_STR(TEXF_L8),
-	_STR(TEXF_G16),
-	_STR(TEXF_RRRGGGBBB)
-};
-
-_ENUM(EFrameBufferBlending)
-{
-	_STR(FB_Overwrite),
-	_STR(FB_Modulate),
-	_STR(FB_AlphaBlend),
-	_STR(FB_AlphaModulate_MightNotFogCorrectly),
-	_STR(FB_Translucent),
-	_STR(FB_Darken),
-	_STR(FB_Brighten),
-	_STR(FB_Invisible),
-#if LINEAGE2
-	_STR(FB_Add),
-	_STR(FB_InWaterBlend),
-	_STR(FB_Capture),
-#endif
-};
-
-_ENUM(EOutputBlending)
-{
-	_STR(OB_Normal),
-	_STR(OB_Masked),
-	_STR(OB_Modulate),
-	_STR(OB_Translucent),
-	_STR(OB_Invisible),
-	_STR(OB_Brighten),
-	_STR(OB_Darken),
-};
-
-_ENUM(EColorOperation)
-{
-	_STR(CO_Use_Color_From_Material1),
-	_STR(CO_Use_Color_From_Material2),
-	_STR(CO_Multiply),
-	_STR(CO_Add),
-	_STR(CO_Subtract),
-	_STR(CO_AlphaBlend_With_Mask),
-	_STR(CO_Add_With_Mask_Modulation),
-	_STR(CO_Use_Color_From_Mask),
-};
-
-_ENUM(EAlphaOperation)
-{
-	_STR(AO_Use_Mask),
-	_STR(AO_Multiply),
-	_STR(AO_Add),
-	_STR(AO_Use_Alpha_From_Material1),
-	_STR(AO_Use_Alpha_From_Material2),
-};
-
-
-/*-----------------------------------------------------------------------------
-	Service functions
------------------------------------------------------------------------------*/
-
-static const char* EnumToStr(int value, const enumToStr *table, int tableSize)
-{
-	for (int i = 0; i < tableSize; i++)
-		if (table[i].value == value)
-			return table[i].name;
-	return "???";
-}
-
-
-/*-----------------------------------------------------------------------------
 	Main code
 -----------------------------------------------------------------------------*/
 
@@ -195,11 +103,11 @@ void CMaterialViewer::Draw2D()
 	{
 		const UBitmapMaterial *Tex = static_cast<UBitmapMaterial*>(Object);
 
-		const char *fmt = EnumToStr(Tex->Format, ARRAY_ARG(ETextureFormatNames));
+		const char *fmt = EnumToName("ETextureFormat", Tex->Format);
 		DrawTextLeft(S_GREEN"Width  :"S_WHITE" %d\n"
 					 S_GREEN"Height :"S_WHITE" %d\n"
 					 S_GREEN"Format :"S_WHITE" %s",
-					 Tex->USize, Tex->VSize, fmt);
+					 Tex->USize, Tex->VSize, fmt ? fmt : "???");
 	}
 
 #if UNREAL3
@@ -207,11 +115,11 @@ void CMaterialViewer::Draw2D()
 	{
 		const UTexture2D *Tex = static_cast<UTexture2D*>(Object);
 
-		const char *fmt = Tex->Format;
+		const char *fmt = EnumToName("EPixelFormat", Tex->Format);
 		DrawTextLeft(S_GREEN"Width  :"S_WHITE" %d\n"
 					 S_GREEN"Height :"S_WHITE" %d\n"
 					 S_GREEN"Format :"S_WHITE" %s",
-					 Tex->SizeX, Tex->SizeY, fmt);
+					 Tex->SizeX, Tex->SizeY, fmt ? fmt : "???");
 	}
 #endif // UNREAL3
 
@@ -392,9 +300,10 @@ static void Prop(UUnrealMaterial *value, const char *name)
 	numLinks++;
 }
 
-static void Prop(int value, const char *name, const enumToStr *table, int tableSize)
+static void PropEnum(int value, const char *name, const char *EnumName)
 {
-	Outline("%s = %s (%d)", name, EnumToStr(value, table, tableSize), value);
+	const char *n = EnumToName(EnumName, value);
+	Outline("%s = %s (%d)", name, n ? n : "???", value);
 }
 
 
@@ -426,7 +335,7 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		Prop(Mat->name, #name);
 
 #define PROP2(name,type)		\
-		Prop(Mat->name, #name, ARRAY_ARG(type##Names));
+		PropEnum(Mat->name, #name, #type);
 
 	MAT_BEGIN(UTexture)
 		PROP(bMasked)

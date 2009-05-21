@@ -23,6 +23,7 @@ static bool meshOnly = false;
 
 static void RegisterUnrealClasses()
 {
+	// classes and structures
 BEGIN_CLASS_TABLE
 	REGISTER_MATERIAL_CLASSES
 	REGISTER_MESH_CLASSES
@@ -38,6 +39,12 @@ BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U3
 #endif
 END_CLASS_TABLE
+	// enumerations
+	REGISTER_MATERIAL_ENUMS
+#if UNREAL3
+	REGISTER_MATERIAL_ENUMS_U3
+	REGISTER_MESH_ENUMS_U3
+#endif
 }
 
 
@@ -238,6 +245,9 @@ int main(int argc, char **argv)
 				"    Unreal Tournament 3, Gears of War\n"
 #	if MASSEFF
 				"    Mass Effect\n"
+#	endif
+#	if A51
+				"    BlackSite: Area 51\n"
 #	endif
 #	if HUXLEY
 				"    Huxley\n"

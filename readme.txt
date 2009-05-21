@@ -28,6 +28,7 @@ Unreal Engine 3:
 Modified Unreal Engine 3:
   The Last Remnant
   Mass Effect
+  BlackSite: Area 51
   Mirror's Edge
   Huxley
   Rise of the Argonauts
@@ -49,6 +50,9 @@ Project home page and forum:
 http://www.gildor.org/en/projects/umodel
 or Russian page:
 http://www.gildor.org/projects/umodel
+
+Please support project by making a donation here:
+http://www.gildor.org/en/donate
 
 
 For command line information run 'umodel' without arguments.
@@ -75,6 +79,12 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+20.05.2009
+- implemented support for old UE3 property formats
+
+18.05.2009
+- implemented support for BlackSite: Area 51 SkeletalMesh
+
 15.05.2009
 - implemented support for Zlib-compressed UE3 packages
 
