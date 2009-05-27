@@ -519,6 +519,8 @@ void UMaterial3::Bind(unsigned PolyFlags)
 		//!! - weights for different paths
 		//!! - may implement with tables + macros
 		//!! - catch normalmap, specular and emissive textures
+		if (appStristr(Name, "diff"))
+			Diffuse = Tex;
 		if (!stricmp(Name + len - 4, "_Tex"))
 			Diffuse = Tex;
 		if (!stricmp(Name + len - 2, "_D"))
@@ -635,7 +637,7 @@ void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
 	{
 		const FTextureParameterValue &P = TextureParameterValues[i];
 		const char *p = P.ParameterName;
-		if (appStristr(p, "diffuse"))
+		if (appStristr(p, "diff"))
 			Diffuse = P.ParameterValue;
 	}
 

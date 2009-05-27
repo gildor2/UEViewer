@@ -11,6 +11,7 @@
 
 #define LIGHTING_MODES			1
 #define DUMP_TEXTS				1
+#define FUNNY_BACKGROUND		1
 
 
 #if RENDERING
@@ -42,7 +43,8 @@ static int lightingMode = LIGHTING_SPECULAR;
 #define DEFAULT_DIST			256
 #define MIN_DIST				25
 #define MAX_DIST				2048
-#define CLEAR_COLOR				0.2, 0.3, 0.3, 0
+#define CLEAR_COLOR				0.3, 0.4, 0.6, 1
+#define CLEAR_COLOR2			0.2, 0.4, 0.3, 1
 
 #define FONT_TEX_NUM			1
 
@@ -662,8 +664,12 @@ void DrawText3D(const CVec3 &pos, const char *text, ...)
 static void Display()
 {
 	// clear screen buffer
+#if FUNNY_BACKGROUND
 	glClearColor(CLEAR_COLOR);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#else
+	glClear(GL_DEPTH_BUFFER_BIT);
+#endif
 
 	// 3D drawings
 	BuildMatrices();
@@ -716,6 +722,18 @@ static void Display()
 
 	// 2D drawings
 	Set2Dmode();
+#if FUNNY_BACKGROUND
+	glDepthRange(1, 1);
+	glBegin(GL_QUADS);
+	glColor4f(CLEAR_COLOR);
+	glVertex2f(0, 0);
+	glVertex2f(winWidth, 0);
+	glColor4f(CLEAR_COLOR2);
+	glVertex2f(winWidth, winHeight);
+	glVertex2f(0, winHeight);
+	glEnd();
+	glDepthRange(0, 1);
+#endif // FUNNY_BACKGROUND
 
 	// display help when needed
 	if (isHelpVisible)

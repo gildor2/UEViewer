@@ -114,11 +114,27 @@ static bool ExportObject(UObject *Obj)
 {
 	guard(ExportObject);
 
+	static UniqueNameList ExportedNames;
+
 	for (int i = 0; i < numExporters; i++)
 	{
 		const CExporterInfo &Info = exporters[i];
 		if (Obj->IsA(Info.ClassName))
 		{
+			// get name uniqie index
+			char uniqueName[256];
+			appSprintf(ARRAY_ARG(uniqueName), "%s.%s", Obj->Name, Obj->GetClassName());
+			int uniqieIdx = ExportedNames.RegisterName(uniqueName);
+			const char *OriginalName = NULL;
+			if (uniqieIdx >= 2)
+			{
+				appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqieIdx);
+				printf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, Obj->GetClassName(), uniqueName);
+				//?? HACK: temporary replace object name with unique one
+				OriginalName = Obj->Name;
+				Obj->Name    = uniqueName;
+			}
+
 			if (Info.FileExt)
 			{
 				char filename[64];
@@ -131,6 +147,9 @@ static bool ExportObject(UObject *Obj)
 			{
 				Info.Func(Obj, *GDummySave);
 			}
+
+			//?? restore object name
+			if (OriginalName) Obj->Name = OriginalName;
 			return true;
 		}
 	}
@@ -248,6 +267,9 @@ int main(int argc, char **argv)
 #	endif
 #	if A51
 				"    BlackSite: Area 51\n"
+#	endif
+#	if MKVSDC
+				"    Mortal Kombat vs. DC Universe\n"
 #	endif
 #	if HUXLEY
 				"    Huxley\n"
@@ -407,7 +429,7 @@ int main(int argc, char **argv)
 		{
 			const FObjectExport &Exp = Package->ExportTable[i];
 //			printf("%d %s %s\n", i, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
-			printf("%d %X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			printf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
 		}
 		unguard;
 		return 0;

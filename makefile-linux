@@ -218,6 +218,9 @@ DEPENDS_10 = \
 ./obj/umodel-unix/Export3D.o : Exporters/Export3D.cpp $(DEPENDS_10)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Export3D.o Exporters/Export3D.cpp
 
+./obj/umodel-unix/ExportMd5.o : Exporters/ExportMd5.cpp $(DEPENDS_10)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportMd5.o Exporters/ExportMd5.cpp
+
 DEPENDS_11 = \
 	Build.h \
 	Core/Core.h \
@@ -242,10 +245,12 @@ DEPENDS_12 = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
-	Unreal/UnObject.h
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/ExportMd5.o : Exporters/ExportMd5.cpp $(DEPENDS_12)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportMd5.o Exporters/ExportMd5.cpp
+./obj/umodel-unix/UnMesh.o : Unreal/UnMesh.cpp $(DEPENDS_12)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh.o Unreal/UnMesh.cpp
 
 DEPENDS_13 = \
 	Build.h \
@@ -253,26 +258,12 @@ DEPENDS_13 = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-unix/UnMesh.o : Unreal/UnMesh.cpp $(DEPENDS_13)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh.o Unreal/UnMesh.cpp
-
-DEPENDS_14 = \
-	Build.h \
-	Core/Core.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
 	Unreal/UnObject.h
 
-./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_14)
+./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_13)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
 
-DEPENDS_15 = \
+DEPENDS_14 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
@@ -280,13 +271,13 @@ DEPENDS_15 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-./obj/umodel-unix/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_15)
+./obj/umodel-unix/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_14)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnObject.o Unreal/UnObject.cpp
 
-./obj/umodel-unix/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_15)
+./obj/umodel-unix/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_14)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnPackage.o Unreal/UnPackage.cpp
 
-DEPENDS_16 = \
+DEPENDS_15 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
@@ -299,16 +290,16 @@ DEPENDS_16 = \
 	libs/include/zlib/zconf.h \
 	libs/include/zlib/zlib.h
 
-./obj/umodel-unix/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_16)
+./obj/umodel-unix/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_15)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnCore.o Unreal/UnCore.cpp
 
-DEPENDS_17 = \
+DEPENDS_16 = \
 	libs/ddslib.h
 
-./obj/umodel-unix/ddslib.o : ./libs/ddslib.c $(DEPENDS_17)
+./obj/umodel-unix/ddslib.o : ./libs/ddslib.c $(DEPENDS_16)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ddslib.o ./libs/ddslib.c
 
-DEPENDS_18 = \
+DEPENDS_17 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
@@ -320,10 +311,10 @@ DEPENDS_18 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_18)
+./obj/umodel-unix/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_17)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
-DEPENDS_19 = \
+DEPENDS_18 = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/lzo/lzo_conf.h \
@@ -332,25 +323,25 @@ DEPENDS_19 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_19)
+./obj/umodel-unix/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_18)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo_init.o ./libs/lzo/lzo_init.c
 
-DEPENDS_20 = \
+DEPENDS_19 = \
 	libs/mspack/system.h
 
-./obj/umodel-unix/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_20)
+./obj/umodel-unix/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_19)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzxd.o ./libs/mspack/lzxd.c
 
-DEPENDS_21 = \
+DEPENDS_20 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_21)
+./obj/umodel-unix/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_20)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_22 = \
+DEPENDS_21 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -359,10 +350,10 @@ DEPENDS_22 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_22)
+./obj/umodel-unix/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_21)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_23 = \
+DEPENDS_22 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -370,26 +361,26 @@ DEPENDS_23 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_23)
+./obj/umodel-unix/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_22)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_24 = \
+DEPENDS_23 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_24)
+./obj/umodel-unix/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_23)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_25 = \
+DEPENDS_24 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-./obj/umodel-unix/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_25)
+./obj/umodel-unix/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_24)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/adler32.o ./libs/zlib/adler32.c
 
-./obj/umodel-unix/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_25)
+./obj/umodel-unix/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_24)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

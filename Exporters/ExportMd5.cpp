@@ -5,6 +5,7 @@
 #include "UnMaterial.h"
 #include "UnMesh.h"
 
+#include "Exporters.h"						// for UniqueNameList
 
 // MD5 uses right-hand coordinates, but unreal uses left-hand.
 // When importing PSK into UnrealEd, it mirrors model.
@@ -77,6 +78,14 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 
 	int i;
 
+	int NumMaterials = Mesh->Materials.Num();	// count USED materials
+	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	{
+		const VTriangle &T = Mesh->Triangles[i];
+		int Mat = T.MatIndex;
+		if (Mat >= NumMaterials) NumMaterials = Mat + 1;
+	}
+
 	Ar.Printf(
 		"MD5Version 10\n"
 		"commandline \"Created with Unreal Model Viewer\"\n"
@@ -85,7 +94,7 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 		"numMeshes %d\n"
 		"\n",
 		Mesh->RefSkeleton.Num(),
-		Mesh->Materials.Num()
+		NumMaterials
 	);
 
 	// compute skeleton
@@ -94,6 +103,7 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 
 	// write joints
 	Ar.Printf("joints {\n");
+	UniqueNameList UsedBones;
 	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
 	{
 		const FMeshBone &B = Mesh->RefSkeleton[i];
@@ -105,9 +115,21 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 		BO.FromAxis(BC.axis);
 		if (BO.w < 0) BO.Negate();				// W-component of quaternion will be removed ...
 
+		int BoneSuffix = UsedBones.RegisterName(*B.Name);
+		char BoneName[256];
+		if (BoneSuffix < 2)
+		{
+			appStrncpyz(BoneName, *B.Name, ARRAY_COUNT(BoneName));
+		}
+		else
+		{
+			appSprintf(ARRAY_ARG(BoneName), "%s_%d", *B.Name, BoneSuffix);
+			printf("duplicate bone %s, renamed to %s\n", *B.Name, BoneName);
+		}
+
 		Ar.Printf(
 			"\t\"%s\"\t%d ( %f %f %f ) ( %.10f %.10f %.10f )\n",
-			*B.Name, (i == 0) ? -1 : B.ParentIndex,
+			BoneName, (i == 0) ? -1 : B.ParentIndex,
 			VECTOR_ARG(BP),
 			BO.x, BO.y, BO.z
 		);
@@ -149,7 +171,7 @@ if (i == 32 || i == 34)
 	}
 
 	// write meshes
-	for (int m = 0; m < Mesh->Materials.Num(); m++)
+	for (int m = 0; m < NumMaterials; m++)
 	{
 		TArray<int>  MeshTris;					// surface triangle -> mesh face
 		TArray<int>  MeshVerts;					// surface vertex -> mesh wedge
@@ -194,7 +216,10 @@ if (i == 32 || i == 34)
 		}
 
 		// mesh header
-		const UObject *Tex = Mesh->Textures[Mesh->Materials[m].TextureIndex];
+		const UObject *Tex = NULL;
+		if (m < Mesh->Materials.Num())
+			Tex = Mesh->Textures[Mesh->Materials[m].TextureIndex];
+
 		if (Tex)
 		{
 			Ar.Printf(

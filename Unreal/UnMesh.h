@@ -1598,15 +1598,15 @@ _ENUM(AnimationCompressionFormat)
 	_E(ACF_Float32NoW),
 };
 
-enum AnimationKeyFormat		//?? enum name and values are unknown
+enum AnimationKeyFormat
 {
-	AKF_None,
-	AKF_VariableKeyLerp
+	AKF_ConstantKeyLerp,									// animation keys are placed on evenly-spaced intervals
+	AKF_VariableKeyLerp										// animation keys have explicit key times
 };
 
 _ENUM(AnimationKeyFormat)
 {
-	_E(AKF_None),
+	_E(AKF_ConstantKeyLerp),
 	_E(AKF_VariableKeyLerp)
 };
 
@@ -1623,7 +1623,7 @@ public:
 	TArray<FRawAnimSequenceTrack> RawAnimData;
 	AnimationCompressionFormat TranslationCompressionFormat;
 	AnimationCompressionFormat RotationCompressionFormat;
-	AnimationKeyFormat		KeyEncodingFormat;				//?? GoW2, unknown property
+	AnimationKeyFormat		KeyEncodingFormat;				// GoW2+
 	TArray<int>				CompressedTrackOffsets;
 	TArray<byte>			CompressedByteStream;
 
@@ -1631,7 +1631,7 @@ public:
 	:	RateScale(1.0f)
 	,	TranslationCompressionFormat(ACF_None)
 	,	RotationCompressionFormat(ACF_None)
-	,	KeyEncodingFormat(AKF_None)
+	,	KeyEncodingFormat(AKF_ConstantKeyLerp)
 	{}
 
 	BEGIN_PROP_TABLE

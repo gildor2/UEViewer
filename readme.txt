@@ -23,12 +23,13 @@ Modified Unreal Engine 2.5
   Exteel
 Unreal Engine 3:
   Unreal Tournament 3
-  Gears of War
+  Gears of War (XBox360 and PC)
   Gears of War 2 (XBox360)
 Modified Unreal Engine 3:
   The Last Remnant
   Mass Effect
   BlackSite: Area 51
+  Mortal Kombat vs. DC Universe (XBox360)
   Mirror's Edge
   Huxley
   Rise of the Argonauts
@@ -40,6 +41,8 @@ Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
   Unreal Championship 2: The Liandri Conflict (UE2X)
+  BlackSite: Area 51
+  Mortal Kombat vs. DC Universe
 Unsupported animations (without umodel crash):
   Mass Effect
   Mirror's Edge
@@ -79,6 +82,19 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+26.05.2009
+- implemented support for loading UE3 fully compressed packages (mostly used for *.u)
+
+25.05.2009
+- exporter improvements
+  - correct exporting skeletal meshes with unregistered materials (both psk and md5mesh)
+  - correct handling of duplicate skeletal mesh bone names (md5mesh only)
+  - when exporting 2 objects with the same name index suffix (_2, _3 etc) will be appended
+    to the filename
+
+22.05.2009
+- implemented support for Mortal Kombat vs. DC Universe (package, texture, SkeletalMesh)
+
 20.05.2009
 - implemented support for old UE3 property formats
 

@@ -30,6 +30,8 @@
 // requires UNREAL3
 #define XBOX360			1		// XBox360 resources
 #define A51				1		// Blacksite: Area 51
+#define WHEELMAN		1
+#define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define MASSEFF			1		// Mass Effect
 #define MEDGE			1		// Mirror's Edge
 #define TLR				1		// The Last Remnant

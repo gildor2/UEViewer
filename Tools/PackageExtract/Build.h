@@ -20,4 +20,7 @@
 // requires UNREAL3
 #define XBOX360			1
 #define MASSEFF			1
+#define A51				1		// Blacksite: Area 51
+#define WHEELMAN		1
+#define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define HUXLEY			1

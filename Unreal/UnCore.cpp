@@ -802,6 +802,12 @@ void FArchive::DetectGame()
 #if A51
 	IsA51 = (ArVer == 377 && ArLicenseeVer == 25);									//!! has extra tag
 #endif
+#if WHEELMAN
+	IsWheelman = (ArVer == 390 && ArLicenseeVer == 32);								//!! has extra tag
+#endif
+#if MKVSDC
+	IsMK = (ArVer == 402 && ArLicenseeVer == 30);									//!! has extra tag
+#endif
 #if MASSEFF
 	IsMassEffect = (ArVer == 491 && ArLicenseeVer == 0x3F0);
 #endif

@@ -1634,6 +1634,11 @@ void FStaticLODModel::RestoreLineageMesh()
 
 	int i, j, k;
 	int NumWedges = LineageWedges.Num() + VertexStream.Verts.Num(); //??
+	if (!NumWedges)
+	{
+		appNotify("Cannot restore mesh: no wedges");
+		return;
+	}
 	assert(LineageWedges.Num() == 0 || VertexStream.Verts.Num() == 0);
 
 	Wedges.Empty(NumWedges);
@@ -1858,6 +1863,13 @@ struct FSmoothVertex3
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
+#if MKVSDC
+		if (Ar.IsMK && Ar.ArLicenseeVer >= 11)
+		{
+			float U1, V1;
+			Ar << U1 << V1;
+		}
+#endif // MKVSDC
 		if (Ar.ArVer >= 333)
 		{
 			for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
@@ -2132,13 +2144,13 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 #endif // MEDGE
 	Ar << Bounds << Materials1 << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
-#if A51
-	if (Ar.IsA51 && Ar.ArLicenseeVer >= 0xF)
+#if A51 || MKVSDC
+	if ((Ar.IsA51 || Ar.IsMK) && Ar.ArLicenseeVer >= 0xF)
 	{
 		TArray<FA51Unk1> unkD4;
 		Ar << unkD4;
 	}
-#endif // A51
+#endif // A51 || MKVSDC
 	Ar << Lods;
 #if 0
 	//!! also: NameIndexMap (ArVer >= 296), PerPolyKDOPs (ArVer >= 435)

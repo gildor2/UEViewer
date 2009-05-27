@@ -1,6 +1,11 @@
 !! UC2: make Ar.IsUC2() instead of version checking
 !! UC2: load animations, textures
 
+Notify.log:
+- add "-nolog" switch to disable it
+? place notify.log into directory of umodel.exe
+- add current date/time, some umodel info (version) and cmdline in a case of crash
+
 ForcedExport handling: should use this information for UE3 package loading:
 - loading:
   1) do not load such objects

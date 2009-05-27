@@ -89,13 +89,15 @@ fi
 # no arguments
 
 # select path here
-case "shaders" in
+case "" in
 
 "")
+	# MK vs DC
+	run1 C:/!umodel-data/.possible/--MKvsDC_X360-- -noanim -meshes CHAR_Batman
 	# A51
 #	run1 C:/!umodel-data//--Area51Blacksite-- a52start
 #	run1 C:/!umodel-data//--Area51Blacksite-- enginefonts
-	run1 C:/!umodel-data//--Area51Blacksite-- -noanim -meshes ep7_wrecked_p
+#	run1 C:/!umodel-data//--Area51Blacksite-- -noanim -meshes ep7_wrecked_p
 
 	#!! BUGS with GOW animations
 #	gow -meshes COG_GasTanker.upk

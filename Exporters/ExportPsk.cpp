@@ -66,15 +66,18 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 		Ar << V;
 	}
 
+	int NumMaterials = Mesh->Materials.Num();	// count USED materials
 	TArray<int> WedgeMat;
 	WedgeMat.Empty(Mesh->Wedges.Num());
 	WedgeMat.Add(Mesh->Wedges.Num());
 	for (i = 0; i < Mesh->Triangles.Num(); i++)
 	{
 		const VTriangle &T = Mesh->Triangles[i];
-		WedgeMat[T.WedgeIndex[0]] = T.MatIndex;
-		WedgeMat[T.WedgeIndex[1]] = T.MatIndex;
-		WedgeMat[T.WedgeIndex[2]] = T.MatIndex;
+		int Mat = T.MatIndex;
+		WedgeMat[T.WedgeIndex[0]] = Mat;
+		WedgeMat[T.WedgeIndex[1]] = Mat;
+		WedgeMat[T.WedgeIndex[2]] = Mat;
+		if (Mat >= NumMaterials) NumMaterials = Mat + 1;
 	}
 
 	WedgHdr.DataCount = Mesh->Wedges.Num();
@@ -105,14 +108,16 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 		Ar << T;
 	}
 
-	MatrHdr.DataCount = Mesh->Materials.Num();
+	MatrHdr.DataCount = NumMaterials;
 	MatrHdr.DataSize  = sizeof(VMaterial);
 	SAVE_CHUNK(MatrHdr, "MATT0000");
-	for (i = 0; i < Mesh->Materials.Num(); i++)
+	for (i = 0; i < NumMaterials; i++)
 	{
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
-		const UObject *Tex = Mesh->Textures[Mesh->Materials[i].TextureIndex];
+		const UObject *Tex = NULL;
+		if (i < Mesh->Materials.Num())
+			Tex = Mesh->Textures[Mesh->Materials[i].TextureIndex];
 		if (Tex)
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
 		else

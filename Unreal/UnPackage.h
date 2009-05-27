@@ -114,7 +114,7 @@ struct FPackageFileSummary
 		Ar << Version;
 #if UNREAL3
 		if (Version == PACKAGE_FILE_TAG || Version == 0x20000)
-			appError("Fully compressed packages are not supported");
+			appError("Fully compressed package header?");
 #endif // UNREAL3
 		S.FileVersion     = Version & 0xFFFF;
 		S.LicenseeVersion = Version >> 16;
@@ -143,19 +143,38 @@ struct FPackageFileSummary
 				Ar << S.HeadersSize;
 			else
 				S.HeadersSize = 0;
-	#if A51
-			if (Ar.IsA51 && S.LicenseeVersion >= 2)
+	// NOTE: A51 and MKVSDC has exactly the same code paths!
+	#if A51 || WHEELMAN || MKVSDC					//?? special define ?
+			int midwayVer = 0;
+			if ((Ar.IsA51 || Ar.IsWheelman || Ar.IsMK) && S.LicenseeVersion >= 2)	//?? Wheelman not checked
 			{
-				int Tag, UnkC;
-				Ar << Tag << UnkC;					// Tag == "A52 "
+				int Tag;							// Tag == "A52 ", "MK8 " or "WMAN"
+				Ar << Tag << midwayVer;
 			}
-	#endif // A51
+	#endif // MIDWAY
 			if (S.FileVersion >= 269)
 				Ar << S.PackageGroup;
 //		}
 #endif // UNREAL3
 		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
 #if UNREAL3
+	#if MKVSDC
+		if (Ar.IsMK)
+		{
+			int unk3C, unk40;
+			if (midwayVer >= 16)
+				Ar << unk3C;
+			if (Ar.ArVer >= 391)
+				Ar << unk40;
+		}
+	#endif // MKVSDC
+	#if WHEELMAN
+		if (Ar.IsWheelman && midwayVer >= 23)
+		{
+			int unk3C;
+			Ar << unk3C;
+		}
+	#endif // WHEELMAN
 		if (S.FileVersion >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
 #endif // UNREAL3

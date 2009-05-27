@@ -218,6 +218,9 @@ DEPENDS = \
 ./obj/umodel-win32/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Export3D.obj" Exporters/Export3D.cpp
 
+./obj/umodel-win32/ExportMd5.obj : Exporters/ExportMd5.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportMd5.obj" Exporters/ExportMd5.cpp
+
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
@@ -234,18 +237,6 @@ DEPENDS = \
 
 ./obj/umodel-win32/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h
-
-./obj/umodel-win32/ExportMd5.obj : Exporters/ExportMd5.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportMd5.obj" Exporters/ExportMd5.cpp
 
 DEPENDS = \
 	Build.h \

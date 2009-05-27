@@ -167,6 +167,12 @@ public:
 #if A51
 	int		IsA51:1;
 #endif
+#if WHEELMAN
+	int		IsWheelman:1;
+#endif
+#if MKVSDC
+	int		IsMK:1;
+#endif
 #if MASSEFF
 	int		IsMassEffect:1;
 #endif
@@ -209,6 +215,12 @@ public:
 #endif
 #if A51
 	,	IsA51(0)
+#endif
+#if WHEELMAN
+	,	IsWheelman(0)
+#endif
+#if MKVSDC
+	,	IsMK(0)
 #endif
 #if MASSEFF
 	,	IsMassEffect(0)
@@ -1084,9 +1096,15 @@ struct FCompressedChunkHeader
 
 	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 	{
+		guard(FCompressedChunkHeader<<);
 		int i;
-		Ar << H.Tag << H.BlockSize << H.CompressedSize << H.UncompressedSize;
-		assert(H.Tag == PACKAGE_FILE_TAG);
+		Ar << H.Tag;
+		if (H.Tag == PACKAGE_FILE_TAG_REV)
+			Ar.ReverseBytes = !Ar.ReverseBytes;
+		else
+			assert(H.Tag == PACKAGE_FILE_TAG);
+		Ar << H.BlockSize << H.CompressedSize << H.UncompressedSize;
+#if 0
 		if (H.BlockSize == PACKAGE_FILE_TAG)
 			H.BlockSize = (Ar.ArVer >= 369) ? 0x20000 : 0x8000;
 		int BlockCount = (H.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
@@ -1094,7 +1112,23 @@ struct FCompressedChunkHeader
 		H.Blocks.Add(BlockCount);
 		for (i = 0; i < BlockCount; i++)
 			Ar << H.Blocks[i];
+#else
+		H.BlockSize = 0x20000;
+		H.Blocks.Empty((H.UncompressedSize + 0x20000 - 1) / 0x20000);	// optimized for block size 0x20000
+		int CompSize = 0, UncompSize = 0;
+		while (CompSize < H.CompressedSize)
+		{
+			FCompressedChunkBlock *Block = new (H.Blocks) FCompressedChunkBlock;
+			Ar << *Block;
+			CompSize   += Block->CompressedSize;
+			UncompSize += Block->UncompressedSize;
+		}
+		assert(CompSize == H.CompressedSize && UncompSize == H.UncompressedSize);
+		if (H.Blocks.Num() > 1)
+			H.BlockSize = H.Blocks[0].UncompressedSize;
+#endif
 		return Ar;
+		unguard;
 	}
 };
 

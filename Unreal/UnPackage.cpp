@@ -71,7 +71,7 @@ public:
 	FArchive				*Reader;
 	// compression data
 	int						CompressionFlags;
-	const TArray<FCompressedChunk> *CompressedChunks;
+	TArray<FCompressedChunk> CompressedChunks;
 	// own file positions, overriding FArchive's one (because parent class is
 	// used for compressed data)
 	int						Stopper;
@@ -86,10 +86,9 @@ public:
 	FCompressedChunkHeader	ChunkHeader;
 	int						ChunkDataPos;
 
-	FUE3ArchiveReader(FArchive *File, int Flags, const TArray<FCompressedChunk> *Chunks)
+	FUE3ArchiveReader(FArchive *File, int Flags, const TArray<FCompressedChunk> &Chunks)
 	:	Reader(File)
 	,	CompressionFlags(Flags)
-	,	CompressedChunks(Chunks)
 	,	Buffer(NULL)
 	,	BufferSize(0)
 	,	BufferStart(0)
@@ -97,9 +96,10 @@ public:
 	,	CurrentChunk(NULL)
 	{
 		guard(FUE3ArchiveReader::FUE3ArchiveReader);
+		CopyArray(CompressedChunks, Chunks);
 		ReverseBytes = File->ReverseBytes;
 		assert(CompressionFlags);
-		assert(Chunks->Num());
+		assert(CompressedChunks.Num());
 		unguard;
 	}
 
@@ -143,9 +143,9 @@ public:
 		guard(FUE3ArchiveReader::PrepareBuffer);
 		// find compressed chunk
 		const FCompressedChunk *Chunk = NULL;
-		for (int ChunkIndex = 0; ChunkIndex < CompressedChunks->Num(); ChunkIndex++)
+		for (int ChunkIndex = 0; ChunkIndex < CompressedChunks.Num(); ChunkIndex++)
 		{
-			Chunk = &(*CompressedChunks)[ChunkIndex];
+			Chunk = &CompressedChunks[ChunkIndex];
 			if (Pos >= Chunk->UncompressedOffset && Pos < Chunk->UncompressedOffset + Chunk->UncompressedSize)
 				break;
 		}
@@ -258,23 +258,60 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Seek(0);	// seek back to header
 #endif
 
+#if UNREAL3
+	// code for fully compressed packages support
+	//!! rewrite this code, merge with game autodetection
+	bool fullyCompressed = false;
+	int checkDword1, checkDword2;
+	*this << checkDword1;
+	if (checkDword1 == PACKAGE_FILE_TAG_REV)
+		ReverseBytes = true;
+	*this << checkDword2;
+	Loader->Seek(0);
+	if (checkDword2 == PACKAGE_FILE_TAG || checkDword2 == 0x20000)
+	{
+		//!! NOTES:
+		//!! 1)	GOW1/X360 byte-order logic is failed with Core.u and Ungine.u: package header is little-endian,
+		//!!	but internal structures (should be) big endian; crashed on decompression: should use LZX, but
+		//!!	used ZLIB
+		//!! 2)	MKvsDC/X360 Core.u and Engine.u uses LZO instead of LZX
+		guard(ReadFullyCompressedHeader);
+		// this is a fully compressed package
+		FCompressedChunkHeader H;
+		*this << H;
+		TArray<FCompressedChunk> Chunks;
+		FCompressedChunk *Chunk = new (Chunks) FCompressedChunk;
+		Chunk->UncompressedOffset = 0;
+		Chunk->UncompressedSize   = H.UncompressedSize;
+		Chunk->CompressedOffset   = 0;
+		Chunk->CompressedSize     = H.CompressedSize;
+		Loader->ReverseBytes = ReverseBytes;				//?? low-level loader; possibly, do it in FUE3ArchiveReader()
+		Loader = new FUE3ArchiveReader(Loader, ReverseBytes ? COMPRESS_LZX : COMPRESS_ZLIB, Chunks);
+		fullyCompressed = true;
+		unguard;
+	}
+#endif
+
 	// read summary
 	*this << Summary;
-	Loader->ReverseBytes = ReverseBytes;	//!! should implement as virtual function
+	Loader->ReverseBytes = ReverseBytes;					//!! should implement as virtual function
 	ArVer         = Summary.FileVersion;
 	ArLicenseeVer = Summary.LicenseeVersion;
 	PKG_LOG(("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion));
 #if UNREAL3
 	if (ArVer >= PACKAGE_V3)
 		PKG_LOG(("Engine: %d ", Summary.EngineVersion));
+	if (fullyCompressed)
+		PKG_LOG(("[FullComp] "));
 #endif
 	PKG_LOG(("Names: %d Exports: %d Imports: %d\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 #if UNREAL3
 	if (ArVer >= PACKAGE_V3 && Summary.CompressionFlags)
 	{
+		if (fullyCompressed) appError("Fully compressed package %s has additional compression table", filename);
 		// replace Loader with special reader for compressed UE3 archives
-		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, &Summary.CompressedChunks);
+		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, Summary.CompressedChunks);
 	}
 #endif
 
@@ -336,6 +373,9 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				int tmp;
 				*this << tmp;
 	#if UNREAL3
+		#if WHEELMAN
+				if (IsWheelman) goto done;	// no flags
+		#endif
 				if (ArVer >= PACKAGE_V3)
 				{
 					// object flags are 64-bit in UE3, skip additional 32 bits
@@ -344,6 +384,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				}
 	#endif // UNREAL3
 			}
+		done: ;
 //			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 		}
 	}
