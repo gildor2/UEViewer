@@ -440,7 +440,6 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #endif // UNREAL3
 
 	// add self to package map
-	PackageEntry &Info = PackageMap[PackageMap.Add()];
 	char buf[256];
 	const char *s = strrchr(filename, '/');
 	if (!s) s = strrchr(filename, '\\');			// WARNING: not processing mixed '/' and '\'
@@ -448,8 +447,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	appStrncpyz(buf, s, ARRAY_COUNT(buf));
 	char *s2 = strchr(buf, '.');
 	if (s2) *s2 = 0;
-	appStrncpyz(Info.Name, buf, ARRAY_COUNT(Info.Name));
-	Info.Package = this;
+	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
+	PackageMap.AddItem(this);
 
 	unguardf(("%s", filename));
 }
@@ -457,6 +456,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 
 UnPackage::~UnPackage()
 {
+	guard(UnPackage::~UnPackage);
 	// free resources
 	if (Loader) delete Loader;
 	int i;
@@ -469,12 +469,10 @@ UnPackage::~UnPackage()
 	if (DependsTable) delete DependsTable;
 #endif
 	// remove self from package table
-	for (i = 0; i < PackageMap.Num(); i++)
-		if (PackageMap[i].Package == this)
-		{
-			PackageMap.Remove(i);
-			break;
-		}
+	i = PackageMap.FindItem(this);
+	assert(i != INDEX_NONE);
+	PackageMap.Remove(i);
+	unguard;
 }
 
 
@@ -590,8 +588,8 @@ UObject* UnPackage::CreateImport(int index)
 	Searching for package and maintaining package list
 -----------------------------------------------------------------------------*/
 
-TArray<UnPackage::PackageEntry> UnPackage::PackageMap;
-TArray<char*>					MissingPackages;
+TArray<UnPackage*>	UnPackage::PackageMap;
+TArray<char*>		MissingPackages;
 
 UnPackage *UnPackage::LoadPackage(const char *Name)
 {
@@ -600,8 +598,8 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 	int i;
 	// check in loaded packages list
 	for (i = 0; i < PackageMap.Num(); i++)
-		if (!stricmp(Name, PackageMap[i].Name))
-			return PackageMap[i].Package;
+		if (!stricmp(Name, PackageMap[i]->Name))
+			return PackageMap[i];
 	// check missing packages
 	for (i = 0; i < MissingPackages.Num(); i++)
 		if (!stricmp(Name, MissingPackages[i]))

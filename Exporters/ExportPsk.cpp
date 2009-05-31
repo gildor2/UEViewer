@@ -4,6 +4,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMesh.h"
+#include "UnPackage.h"		// for Package->Name
 
 #include "Psk.h"
 #include "Exporters.h"
@@ -44,7 +45,8 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 	char filename[64];
 	if (GExportScripts)
 	{
-		appSprintf(ARRAY_ARG(filename), "%s.uc", Mesh->Name);
+		char filename[256];
+		appSprintf(ARRAY_ARG(filename), "%s/%s/%s.uc", Mesh->Package->Name, Mesh->GetClassName(), Mesh->Name);
 		FFileReader Ar1(filename, false);
 		ExportScript(Mesh, Ar1);
 	}

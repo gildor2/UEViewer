@@ -30,6 +30,7 @@ Modified Unreal Engine 3:
   Mass Effect
   BlackSite: Area 51
   Mortal Kombat vs. DC Universe (XBox360)
+  Army of Two (XBox360)
   Mirror's Edge
   Huxley
   Rise of the Argonauts
@@ -82,6 +83,13 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+29.05.2009
+- improved UE3 material rendering (better diffuse texture detection)
+- implemented Army of Two SkeletalMesh support
+
+28.05.2009
+- creating subdirectories when exporting data from packages
+
 26.05.2009
 - implemented support for loading UE3 fully compressed packages (mostly used for *.u)
 

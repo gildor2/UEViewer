@@ -1909,6 +1909,13 @@ struct FSkinChunk3
 			V.NumRigidVerts  = V.RigidVerts.Num();
 			V.NumSmoothVerts = V.SmoothVerts.Num();
 		}
+#if ARMYOF2
+		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 7)
+		{
+			TRawArray<FMeshUV> extraUV;
+			Ar << extraUV;
+		}
+#endif // ARMYOF2
 		if (Ar.ArVer >= 362)
 			Ar << V.MaxInfluences;
 		return Ar;
@@ -2001,6 +2008,18 @@ struct FGPUSkin3
 	#if HUXLEY
 		if (Ar.IsHuxley) goto old_version;
 	#endif
+	#if ARMYOF2
+		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 74)
+		{
+			int UseNewFormat;
+			Ar << UseNewFormat;
+			if (UseNewFormat)
+			{
+				appError("ArmyOfTwo: new vertex format!");	//!!!
+				return Ar;
+			}
+		}
+	#endif // ARMYOF2
 		if (Ar.ArVer < 493)
 		{
 		old_version:
@@ -2096,6 +2115,14 @@ struct FStaticLODModel3
 		Ar << Lod.f68 << Lod.UsedBones << Lod.f74 << Lod.Chunks;
 		Ar << Lod.f80 << Lod.NumVertices << Lod.Edges << Lod.f24;
 		Lod.BulkData.Serialize(Ar);
+#if ARMYOF2
+		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 7)
+		{
+			int unk84;
+			TRawArray<FMeshUV> extraUV;
+			Ar << unk84 << extraUV;
+		}
+#endif // ARMYOF2
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
 #if MEDGE

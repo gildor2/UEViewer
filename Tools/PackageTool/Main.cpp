@@ -2,13 +2,6 @@
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 
-#if _WIN32
-#include <direct.h>					// for mkdir()
-#else
-#include <sys/stat.h>				// for mkdir()
-#endif
-
-
 /*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/

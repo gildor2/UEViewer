@@ -200,7 +200,8 @@ DEPENDS_9 = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
-	Unreal/UnObject.h
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
 
 ./obj/umodel-unix/ExportPsk.o : Exporters/ExportPsk.cpp $(DEPENDS_9)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportPsk.o Exporters/ExportPsk.cpp
@@ -213,7 +214,8 @@ DEPENDS_10 = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
-	Unreal/UnObject.h
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
 
 ./obj/umodel-unix/Export3D.o : Exporters/Export3D.cpp $(DEPENDS_10)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Export3D.o Exporters/Export3D.cpp

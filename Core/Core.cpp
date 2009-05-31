@@ -1,5 +1,11 @@
 #include "Core.h"
 
+#if _WIN32
+#include <direct.h>					// for mkdir()
+#else
+#include <sys/stat.h>				// for mkdir()
+#endif
+
 /*-----------------------------------------------------------------------------
 	Simple error/notofication functions
 -----------------------------------------------------------------------------*/
@@ -214,4 +220,64 @@ const char *appStristr(const char *s1, const char *s2)
 	char *s = strstr(buf1, buf2);
 	if (!s) return NULL;
 	return s1 + (s - buf1);
+}
+
+#if _WIN32
+
+void appMakeDirectory(const char *dirname)
+{
+	if (!dirname[0]) return;
+	// mkdir() and win32 CreateDirectory() does not support "a/b/c" creation,
+	// so - we will create "a", then "a/b", then "a/b/c"
+	char Name[256];
+	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
+	for (char *s = Name; /* empty */ ; s++)
+	{
+		char c = *s;
+		if (c != '/' && c != 0)
+			continue;
+		*s = 0;						// temporarily cut rest of path
+		// here: path delimiter or end of string
+		if (Name[0] != '.' || Name[1] != 0)		// do not create "."
+			_mkdir(Name);
+		if (!c) break;				// end of string
+		*s = '/';					// restore string (c == '/')
+	}
+}
+
+#else  // _WIN32
+
+void appMakeDirectory(const char *dirname)
+{
+	if (!dirname[0]) return;
+	// mkdir() does not support "a/b/c" creation,
+	// so - we will create "a", then "a/b", then "a/b/c"
+	char Name[256];
+	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
+	for (char *s = Name; /* empty */ ; s++)
+	{
+		char c = *s;
+		if (c != '/' && c != 0)
+			continue;
+		*s = 0;						// temporarily cut rest of path
+		// here: path delimiter or end of string
+		if (Name[0] != '.' || Name[1] != 0)		// do not create "."
+			mkdir(Name, S_IRWXU);
+		if (!c) break;				// end of string
+		*s = '/';					// restore string (c == '/')
+	}
+}
+
+#endif // _WIN32
+
+void appMakeDirectoryForFile(const char *filename)
+{
+	char Name[256];
+	appStrncpyz(Name, filename, ARRAY_COUNT(Name));
+	char *s = strrchr(Name, '/');
+	if (s)
+	{
+		*s = 0;
+		appMakeDirectory(Name);
+	}
 }

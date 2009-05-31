@@ -387,6 +387,7 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		PROP(TwoSided)
 		PROP(bDisableDepthTest)
 		PROP(bIsMasked)
+		PROP2(BlendMode, EBlendMode)
 		for (int i = 0; i < Mat->ReferencedTextures.Num(); i++)
 		{
 			const UTexture3 *Tex = Mat->ReferencedTextures[i];

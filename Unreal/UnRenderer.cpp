@@ -509,6 +509,14 @@ void UMaterial3::Bind(unsigned PolyFlags)
 	guard(UMaterial3::Bind);
 
 	UTexture3 *Diffuse = NULL;
+	int DiffWeight = 0;
+#define DIFFUSE(check,weight)			\
+	if (check && weight > DiffWeight)	\
+	{									\
+	/*	DrawTextLeft("%d > %d = %s", weight, DiffWeight, Tex->Name); */ \
+		Diffuse    = Tex;				\
+		DiffWeight = weight;			\
+	}
 	for (int i = 0; i < ReferencedTextures.Num(); i++)
 	{
 		UTexture3 *Tex = ReferencedTextures[i];
@@ -516,15 +524,11 @@ void UMaterial3::Bind(unsigned PolyFlags)
 		const char *Name = Tex->Name;
 		int len = strlen(Name);
 		//!! - separate code (common for UMaterial3 + UMaterialInstanceConstant)
-		//!! - weights for different paths
 		//!! - may implement with tables + macros
 		//!! - catch normalmap, specular and emissive textures
-		if (appStristr(Name, "diff"))
-			Diffuse = Tex;
-		if (!stricmp(Name + len - 4, "_Tex"))
-			Diffuse = Tex;
-		if (!stricmp(Name + len - 2, "_D"))
-			Diffuse = Tex;
+		DIFFUSE(appStristr(Name, "diff"), 100)
+		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80)
+		DIFFUSE(!stricmp(Name + len - 2, "_D"), 10)
 #if 0
 		if (!stricmp(Name + len - 3, "_DI"))		// The Last Remnant ...
 			Diffuse = Tex;
@@ -533,20 +537,12 @@ void UMaterial3::Bind(unsigned PolyFlags)
 		if (appStristr(Name, "_Diffuse"))
 			Diffuse = Tex;
 #else
-		if (appStristr(Name, "_DI"))
-			Diffuse = Tex;
-		if (appStristr(Name, "_MA") && !Diffuse)	// The Last Remnant; low priority
-			Diffuse = Tex;
-		const char *s = strrchr(Name, '_');
-		if (!s) continue;
-		s++;
-		if (toupper(*s) == 'D' && !Diffuse)
-			Diffuse = Tex;
+		DIFFUSE(appStristr(Name, "_DI"), 20)
+		DIFFUSE(appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
+		DIFFUSE(appStristr(Name, "_D" ), 2)
 #endif
+		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
 	}
-
-	if (!Diffuse && ReferencedTextures.Num() == 1)	// not found, but have only 1 texture
-		Diffuse = ReferencedTextures[0];
 
 	if (Diffuse)
 	{
@@ -566,9 +562,33 @@ void UMaterial3::Bind(unsigned PolyFlags)
 		if (bIsMasked)
 		{
 			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glAlphaFunc(GL_GREATER, 0.0f);
 			glEnable(GL_ALPHA_TEST);
+		}
+		if (BlendMode == BLEND_Opaque)
+			glDisable(GL_BLEND);
+		else
+		{
+			glEnable(GL_BLEND);
+			switch (BlendMode)
+			{
+			case BLEND_Masked:
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
+				break;
+			case BLEND_Translucent:
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; no lighting
+				break;
+			case BLEND_Additive:
+				glBlendFunc(GL_ONE, GL_ONE);
+				break;
+			case BLEND_Modulate:
+				glBlendFunc(GL_DST_COLOR, GL_ZERO);
+				break;
+			default:
+				glDisable(GL_BLEND);
+				DrawTextLeft("Unknown BlendMode %d", BlendMode);
+			}
 		}
 	}
 	else
@@ -641,13 +661,13 @@ void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
 			Diffuse = P.ParameterValue;
 	}
 
-	if (!Diffuse && TextureParameterValues.Num() == 1)
+	if (!Diffuse && TextureParameterValues.Num() == 1 && !ReferencedTextures.Num())
 		Diffuse = TextureParameterValues[0].ParameterValue;
 
 	if (Diffuse)
 		Diffuse->Bind(PolyFlags);
 	else
-		BindDefaultMaterial();
+		Super::Bind(PolyFlags);
 }
 
 #endif // UNREAL3

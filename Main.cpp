@@ -121,15 +121,16 @@ static bool ExportObject(UObject *Obj)
 		const CExporterInfo &Info = exporters[i];
 		if (Obj->IsA(Info.ClassName))
 		{
+			const char *ClassName = Obj->GetClassName();
 			// get name uniqie index
 			char uniqueName[256];
-			appSprintf(ARRAY_ARG(uniqueName), "%s.%s", Obj->Name, Obj->GetClassName());
+			appSprintf(ARRAY_ARG(uniqueName), "%s.%s", Obj->Name, ClassName);
 			int uniqieIdx = ExportedNames.RegisterName(uniqueName);
 			const char *OriginalName = NULL;
 			if (uniqieIdx >= 2)
 			{
 				appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqieIdx);
-				printf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, Obj->GetClassName(), uniqueName);
+				printf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
 				//?? HACK: temporary replace object name with unique one
 				OriginalName = Obj->Name;
 				Obj->Name    = uniqueName;
@@ -137,8 +138,9 @@ static bool ExportObject(UObject *Obj)
 
 			if (Info.FileExt)
 			{
-				char filename[64];
-				appSprintf(ARRAY_ARG(filename), "%s.%s", Obj->Name, Info.FileExt);
+				char filename[256];
+				appSprintf(ARRAY_ARG(filename), "%s/%s/%s.%s", Obj->Package->Name, ClassName, Obj->Name, Info.FileExt);
+				appMakeDirectoryForFile(filename);
 				FFileReader Ar(filename, false);
 				Ar.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
 				Info.Func(Obj, Ar);
@@ -270,6 +272,9 @@ int main(int argc, char **argv)
 #	endif
 #	if MKVSDC
 				"    Mortal Kombat vs. DC Universe\n"
+#	endif
+#	if ARMYOF2
+				"    Army of Two\n"
 #	endif
 #	if HUXLEY
 				"    Huxley\n"

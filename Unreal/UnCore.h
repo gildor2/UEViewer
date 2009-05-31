@@ -173,6 +173,9 @@ public:
 #if MKVSDC
 	int		IsMK:1;
 #endif
+#if ARMYOF2
+	int		IsArmyOf2:1;
+#endif
 #if MASSEFF
 	int		IsMassEffect:1;
 #endif
@@ -221,6 +224,9 @@ public:
 #endif
 #if MKVSDC
 	,	IsMK(0)
+#endif
+#if ARMYOF2
+	,	IsArmyOf2(0)
 #endif
 #if MASSEFF
 	,	IsMassEffect(0)

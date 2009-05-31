@@ -58,10 +58,10 @@ CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
 CheckDir UT1 c:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament
 CheckDir UT2 c:/games/unreal~1/ut2004 c:/games/unreal/ut2004
 CheckDir UT3 c:/games/ut3/UTGame/CookedPC
-CheckDir GOW "C:/!umodel-data/--GearsOfWar--"
-CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/--GearsOfWar2_X360--"
-CheckDir UC2 "C:/!umodel-data/--UnrealChampionship2--"
-CheckDir L2 "C:/!umodel-data/--Lineage2--"
+CheckDir GOW "C:/!umodel-data/GearsOfWar"
+CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
+CheckDir UC2 "C:/!umodel-data/UnrealChampionship2"
+CheckDir L2 "C:/!umodel-data/Lineage2"
 
 #------------------------------------------------------------------------------
 
@@ -92,19 +92,21 @@ fi
 case "" in
 
 "")
+	# Army of Two
+	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
 	# MK vs DC
-	run1 C:/!umodel-data/.possible/--MKvsDC_X360-- -noanim -meshes CHAR_Batman
+#	run1 C:/!umodel-data/.possible/MKvsDC_X360 -noanim -meshes CHAR_Batman
 	# A51
-#	run1 C:/!umodel-data//--Area51Blacksite-- a52start
-#	run1 C:/!umodel-data//--Area51Blacksite-- enginefonts
-#	run1 C:/!umodel-data//--Area51Blacksite-- -noanim -meshes ep7_wrecked_p
+#	run1 C:/!umodel-data/Area51Blacksite a52start
+#	run1 C:/!umodel-data/Area51Blacksite enginefonts
+#	run1 C:/!umodel-data/Area51Blacksite -noanim -meshes ep7_wrecked_p
 
 	#!! BUGS with GOW animations
 #	gow -meshes COG_GasTanker.upk
 #	gow -meshes Geist_Beast.upk
 #	gow -meshes Locust_Seeder.upk
 	#!! CheckBoneTree -> "Strange skeleton" (IK bones?)
-#	run1 "C:/!umodel-data/--Mass Effect--" -list Engine.u
+#	run1 "C:/!umodel-data/Mass Effect" -list Engine.u
 #!!	ut2 -meshes StreamlineMeshes.usx
 #!!	ut2 -meshes ONSDeadVehicles-SM.usx
 #!!	ut2 -meshes DOM-CBP2-Gerroid.ut2		#!! CRASH
@@ -147,10 +149,10 @@ case "" in
 #	l2 Orc FOrc_m000_f
 
 #	l2 Elf FElf_m007_u
-#	run1 "C:/!umodel-data/--Land of the Dead--" DOTZAZombies
+#	run1 "C:/!umodel-data/Land of the Dead" DOTZAZombies
 #	ut2 AW-2k4XP ShockShieldFinal
 #	l2 LineageNPCs2
-#	run "C:/!umodel-data/--Dark Sector 9--/PAWNAI.u" OBrien
+#	run "C:/!umodel-data/Dark Sector 9/PAWNAI.u" OBrien
 	;;
 
 

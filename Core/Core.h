@@ -162,6 +162,9 @@ void appStrncpylwr(char *dst, const char *src, int count);
 void appStrcatn(char *dst, int count, const char *src);
 const char *appStristr(const char *s1, const char *s2);
 
+void appMakeDirectory(const char *dirname);
+void appMakeDirectoryForFile(const char *filename);
+
 
 FORCEINLINE void* operator new(size_t size)
 {

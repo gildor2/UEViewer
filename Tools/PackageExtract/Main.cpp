@@ -2,12 +2,7 @@
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 
-#if _WIN32
-#include <direct.h>					// for mkdir()
-#else
-#include <sys/stat.h>				// for mkdir()
-#endif
-
+#define MAKE_DIRS		1
 
 /*-----------------------------------------------------------------------------
 	Main function
@@ -72,24 +67,20 @@ int main(int argc, char **argv)
 
 	guard(ProcessPackage);
 	// extract package name, create directory for it
-	char buf[256];
+	char PkgName[256];
 	const char *s = strrchr(argPkgName, '/');
 	if (!s) s = strrchr(argPkgName, '\\');			// WARNING: not processing mixed '/' and '\'
 	if (s) s++; else s = argPkgName;
-	appStrncpyz(buf, s, ARRAY_COUNT(buf));
-	char *s2 = strchr(buf, '.');
+	appStrncpyz(PkgName, s, ARRAY_COUNT(PkgName));
+	char *s2 = strchr(PkgName, '.');
 	if (s2) *s2 = 0;
-#if _WIN32
-	_mkdir(buf);
-#else
-	mkdir(buf, S_IRWXU);
-#endif
+	appMakeDirectory(PkgName);
 	// extract objects and write export table
 	FILE *f;
-	char buf2[512];
+	char buf2[1024];
 	int idx;
 	guard(ExtractObjects);
-	appSprintf(ARRAY_ARG(buf2), "%s/ExportTable.txt", buf);
+	appSprintf(ARRAY_ARG(buf2), "%s/ExportTable.txt", PkgName);
 	f = fopen(buf2, "w");
 	assert(f);
 	for (idx = 0; idx < Package->Summary.ExportCount; idx++)
@@ -97,6 +88,7 @@ int main(int argc, char **argv)
 		FObjectExport &Exp = Package->ExportTable[idx];
 		// prepare file
 		const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
+#if !MAKE_DIRS
 		char buf3[256];
 		buf3[0] = 0;
 		if (Exp.PackageIndex) //?? GetObjectName() will return "Class" for index=0 ...
@@ -106,9 +98,61 @@ int main(int argc, char **argv)
 		}
 		fprintf(f, "%d = %s'%s%s'\n", idx, ClassName, buf3, *Exp.ObjectName);
 		appSprintf(ARRAY_ARG(buf2), "%s/%s%s.%s", buf, buf3, *Exp.ObjectName, ClassName);
+#else
+		int PackageIndices[256];
+		int NestLevel = 0;
+		int PackageIndex = Exp.PackageIndex;
+		// gather nest packages
+		while (PackageIndex)
+		{
+			PackageIndices[NestLevel++] = PackageIndex;
+			assert(NestLevel < ARRAY_COUNT(PackageIndices));
+			//!! duplicated code
+			if (PackageIndex < 0)
+			{
+				const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
+				PackageIndex = Rec.PackageIndex;
+			}
+			else
+			{
+				// possible for UE3 forced exports
+				const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
+				PackageIndex = Rec.PackageIndex;
+			}
+		}
+		// collect packages in reverse order (from root to object)
+		fprintf(f, "%d = %s'", idx, ClassName);
+		appSprintf(ARRAY_ARG(buf2), "%s/", PkgName);
+		for (int i = NestLevel-1; i >= 0; i--)
+		{
+			int PackageIndex = PackageIndices[i];
+			const char *PackageName = NULL;
+			//!! duplicate code
+			if (PackageIndex < 0)
+			{
+				const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
+				PackageName = Rec.ObjectName;
+			}
+			else
+			{
+				// possible for UE3 forced exports
+				const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
+				PackageName = Rec.ObjectName;
+			}
+			fprintf(f, "%s.", PackageName);
+			char *dst = strchr(buf2, 0);
+			appSprintf(dst, ARRAY_COUNT(buf2) - (dst - buf2), "%s/", PackageName);
+		}
+		fprintf(f, "%s'\n",  *Exp.ObjectName);
+		char *dst = strchr(buf2, 0);
+		//!! use UniqueNameList for names
+		appSprintf(dst, ARRAY_COUNT(buf2) - (dst - buf2), "%s.%s", *Exp.ObjectName, ClassName);
+		appMakeDirectoryForFile(buf2);
+#endif
 		FILE *f2 = fopen(buf2, "wb");
 		if (!f2)
 		{
+			//!! note: cannot create file with name "con" (any extension)
 			printf("%d/%d: unable to create file %s\n", idx, Package->Summary.ExportCount, buf2);
 			continue;
 		}
@@ -129,7 +173,7 @@ int main(int argc, char **argv)
 	unguard;
 	// write name table
 	guard(WriteNameTable);
-	appSprintf(ARRAY_ARG(buf2), "%s/NameTable.txt", buf);
+	appSprintf(ARRAY_ARG(buf2), "%s/NameTable.txt", PkgName);
 	f = fopen(buf2, "w");
 	assert(f);
 	for (idx = 0; idx < Package->Summary.NameCount; idx++)
@@ -138,7 +182,7 @@ int main(int argc, char **argv)
 	unguard;
 	// write import table
 	guard(WriteImportTable);
-	appSprintf(ARRAY_ARG(buf2), "%s/ImportTable.txt", buf);
+	appSprintf(ARRAY_ARG(buf2), "%s/ImportTable.txt", PkgName);
 	f = fopen(buf2, "w");
 	assert(f);
 	for (idx = 0; idx < Package->Summary.ImportCount; idx++)
@@ -148,6 +192,7 @@ int main(int argc, char **argv)
 		//!! code from UnPackage.cpp, should generalize
 		int PackageIndex = Imp.PackageIndex;
 		const char *PackageName = NULL;
+		//!! duplicated code
 		while (PackageIndex)
 		{
 			if (PackageIndex < 0)
@@ -158,14 +203,10 @@ int main(int argc, char **argv)
 			}
 			else
 			{
-#if UNREAL3
 				// possible for UE3 forced exports
 				const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
 				PackageIndex = Rec.PackageIndex;
 				PackageName  = Rec.ObjectName;
-#else
-				appError("Wrong package index: %d", PackageIndex);
-#endif // UNREAL3
 			}
 		}
 		if (PackageName)

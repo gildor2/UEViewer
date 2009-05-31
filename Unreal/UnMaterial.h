@@ -1221,6 +1221,15 @@ enum EBlendMode
 	BLEND_Modulate
 };
 
+_ENUM(EBlendMode)
+{
+	_E(BLEND_Opaque),
+	_E(BLEND_Masked),
+	_E(BLEND_Translucent),
+	_E(BLEND_Additive),
+	_E(BLEND_Modulate)
+};
+
 enum EMaterialLightingModel
 {
 	MLM_Phong,
@@ -1237,6 +1246,7 @@ public:
 	bool			TwoSided;
 	bool			bDisableDepthTest;
 	bool			bIsMasked;
+	EBlendMode		BlendMode;
 	TArray<UTexture3*> ReferencedTextures;
 
 	virtual void Serialize(FArchive &Ar)
@@ -1250,6 +1260,7 @@ public:
 		PROP_BOOL(bDisableDepthTest)
 		PROP_BOOL(bIsMasked)
 		PROP_ARRAY(ReferencedTextures, UObject*)
+		PROP_ENUM2(BlendMode, EBlendMode)
 		// MaterialInterface fields
 		PROP_DROP(PreviewMesh)
 		//!! should be used (main material inputs in UE3 material editor)
@@ -1262,14 +1273,13 @@ public:
 		PROP_DROP(OpacityMask)
 		PROP_DROP(Distortion)
 		PROP_DROP(TwoSidedLightingMask)		// TransmissionMask ?
-		PROP_DROP(TwoSidedLightingColor)	//TransmissionColor ?
+		PROP_DROP(TwoSidedLightingColor)	// TransmissionColor ?
 		PROP_DROP(Normal)
 		PROP_DROP(CustomLighting)
 		// drop other props
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(PhysicalMaterial)
 		PROP_DROP(OpacityMaskClipValue)
-		PROP_DROP(BlendMode)				//!! use it (EBlendMode)
 		PROP_DROP(LightingModel)			//!! use it (EMaterialLightingModel)
 		// usage
 		PROP_DROP(bUsedAsLightFunction)
@@ -1399,6 +1409,7 @@ public:
 
 #define REGISTER_MATERIAL_ENUMS_U3		\
 	REGISTER_ENUM(EPixelFormat)			\
-	REGISTER_ENUM(ETextureAddress)
+	REGISTER_ENUM(ETextureAddress)		\
+	REGISTER_ENUM(EBlendMode)
 
 #endif // __UNMATERIAL_H__

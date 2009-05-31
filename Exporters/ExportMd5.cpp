@@ -4,6 +4,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMesh.h"
+#include "UnPackage.h"						// for Package->Name
 
 #include "Exporters.h"						// for UniqueNameList
 
@@ -299,6 +300,10 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 
 	int numBones = Anim->RefBones.Num();
 
+	char basename[256];
+	appSprintf(ARRAY_ARG(basename), "%s/%s/%s", Anim->Package->Name, Anim->GetClassName(), Anim->Name);
+	appMakeDirectory(basename);
+
 	for (int AnimIndex = 0; AnimIndex < Anim->AnimSeqs.Num(); AnimIndex++)
 	{
 		int i;
@@ -306,7 +311,7 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 		const MotionChunk  &M = Anim->Moves[AnimIndex];
 
 		char FileName[256];
-		appSprintf(ARRAY_ARG(FileName), "%s_%s.md5anim", Anim->Name, *S.Name);
+		appSprintf(ARRAY_ARG(FileName), "%s/%s.md5anim", basename, *S.Name);
 
 		FFileReader Ar(FileName, false);
 

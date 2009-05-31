@@ -398,7 +398,8 @@ struct FObjectDepends
 class UnPackage : public FArchive
 {
 public:
-	char					Filename[256];
+	char					Filename[256];			// full name with path and extension
+	char					Name[64];				// short name
 	FArchive				*Loader;
 	// package header
 	FPackageFileSummary		Summary;
@@ -555,13 +556,7 @@ public:
 	}
 
 private:
-	// package list
-	struct PackageEntry
-	{
-		char		Name[64];			// short name, without extension
-		UnPackage	*Package;
-	};
-	static TArray<PackageEntry> PackageMap;
+	static TArray<UnPackage*> PackageMap;
 };
 
 

@@ -808,6 +808,9 @@ void FArchive::DetectGame()
 #if MKVSDC
 	IsMK = (ArVer == 402 && ArLicenseeVer == 30);									//!! has extra tag
 #endif
+#if ARMYOF2
+	IsArmyOf2 = (ArVer == 445 && ArLicenseeVer == 79);
+#endif
 #if MASSEFF
 	IsMassEffect = (ArVer == 491 && ArLicenseeVer == 0x3F0);
 #endif
