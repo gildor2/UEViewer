@@ -130,6 +130,8 @@ void *appMalloc(int size)
 	guard(appMalloc);
 	assert(size >= 0 && size < (256<<20));	// upper limit to allocation is 256Mb
 	void *data = malloc(size);
+	if (!data)
+		appError("Failed to allocate %d bytes", size);
 	if (size > 0)
 		memset(data, 0, size);
 #if PROFILE

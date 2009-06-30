@@ -122,6 +122,9 @@ public:
 		PROP_OBJ(DefaultActorWalkSound)
 		PROP_OBJ(DefaultActorRunSound)
 #endif
+#if RAGNAROK2
+		PROP_DROP(SoundInfo)
+#endif
 #if UNREAL3
 		PROP_DROP(SoundCue)
 		PROP_DROP(bFollowActor)

@@ -104,6 +104,9 @@ static const char *PackageExtensions[] =
 #if TRIBES3
 	, "pkg"
 #endif
+#if BIOSHOCK
+	, "bsm"
+#endif
 #if UNREAL3
 	, "upk", "ut3", "xxx"
 #endif
@@ -118,6 +121,9 @@ static const char *KnownExtensions[] =
 #	endif
 #	if UC2
 	"xpr",			// XBox texture container
+#	endif
+#	if BIOSHOCK
+	"blk", "bdc"	// Bulk Content + Catalog
 #	endif
 };
 #endif
@@ -731,11 +737,19 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	}
 	// loading
 	int len, i;
+#if BIOSHOCK
+	if (Ar.IsBioshock)
+	{
+		Ar << AR_INDEX(len);
+		len = -len;
+		goto unicode;
+	}
+#endif // BIOSHOCK
 #if UNREAL3
 	if (Ar.ArVer >= 145)		// PACKAGE_V3 ? found exact version in UC2
 		Ar << len;
 	else
-#endif
+#endif // UNREAL3
 		Ar << AR_INDEX(len);
 	S.Empty((len >= 0) ? len : -len);
 	if (!len)
@@ -748,6 +762,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	}
 	else
 	{
+	unicode:
 		// UNICODE string
 		for (i = 0; i < -len; i++)
 		{
@@ -794,6 +809,9 @@ void FArchive::DetectGame()
 #if EXTEEL
 	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
 		IsExteel = 0;
+#endif
+#if BIOSHOCK
+	IsBioshock = (ArVer == 141 && ArLicenseeVer == 56);
 #endif
 
 	/*-----------------------------------------------------------------------
@@ -965,7 +983,7 @@ static void appDecompressLZX(byte *CompressedBuffer, int CompressedSize, byte *U
 
 #endif // USE_XDK
 
-void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
+int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
 {
 	guard(appDecompress);
 
@@ -978,6 +996,7 @@ void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompresse
 		r = lzo1x_decompress_safe(CompressedBuffer, CompressedSize, UncompressedBuffer, &newLen, NULL);
 		if (r != LZO_E_OK) appError("lzo_decompress() returned %d", r);
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
+		return newLen;
 	}
 	else if (Flags == COMPRESS_ZLIB)
 	{
@@ -987,6 +1006,8 @@ void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompresse
 		unsigned long newLen = UncompressedSize;
 		int r = uncompress(UncompressedBuffer, &newLen, CompressedBuffer, CompressedSize);
 		if (r != Z_OK) appError("zlib uncompress() returned %d", r);
+//		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize); -- needed by Bioshock
+		return newLen;
 #endif
 	}
 	else if (Flags == COMPRESS_LZX)
@@ -994,6 +1015,7 @@ void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompresse
 #if XBOX360
 #	if !USE_XDK
 		appDecompressLZX(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
+		return UncompressedSize;
 #	else
 		void *context;
 		int r;
@@ -1004,6 +1026,7 @@ void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompresse
 		if (r < 0) appError("XMemDecompress failed");
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
 		XMemDestroyDecompressionContext(context);
+		return newLen;
 #	endif // USE_XDK
 #else  // XBOX360
 		appError("appDecompress: LZX compression is not supported");
@@ -1011,6 +1034,7 @@ void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompresse
 	}
 	else
 		appError("appDecompress: unknown compression flags: %d", Flags);
+	return 0;
 
 	unguard;
 }

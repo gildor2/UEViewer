@@ -1,0 +1,181 @@
+#include "Core.h"
+#include "UnrealClasses.h"
+#include "UnHavok.h"
+
+#if BIOSHOCK			//?? separate define for HAVOK
+
+//#define DUMP_TYPEINFO	1
+
+
+#if DUMP_TYPEINFO
+
+static void DumpClass(const hkClass *Class)
+{
+	guard(DumpClass);
+
+	int i;
+
+	// header
+	printf("// sizeof=%d\n", Class->m_objectSize);
+	printf("struct %s", Class->m_name);
+	if (Class->m_parent) printf(" : %s", Class->m_parent->m_name);
+	printf("\n{\n");
+	// enums
+	for (i = 0; i < Class->m_numDeclaredEnums; i++)
+	{
+		const hkClassEnum *Enum = Class->m_declaredEnums + i;
+		printf("\tenum %s\n\t{\n", Enum->m_name);
+		for (int j = 0; j < Enum->m_numItems; j++)
+		{
+			const hkClassEnum::Item *Item = Enum->m_items + j;
+			printf("\t\t%s = %d,\n", Item->m_name, Item->m_value);
+		}
+		printf("\t};\n\n");
+	}
+	// contents
+	for (i = 0; i < Class->m_numDeclaredMembers; i++)
+	{
+		static const char *TypeTable[] = {
+			"void", "hkBool", "char", "hkInt8", "hkUint8",
+			"hkInt16", "hkUint16", "hkInt32", "hkUint32", "hkInt64",
+			"hkUint64", "hkReal", "hkVector4", "hkQuaternion", "hkMatrix3",
+			"hkRotation", "hkQsTransform", "hkMatrix4", "hkTransform", "unknown",
+			"pointer", "pfunction", "hkArray", "hkInplaceArray", "hkEnum",
+			"Struct", "SimpleArray", "HomogenousArray", "hkVariant", "char*",
+			"hkUlong", "hkFlags"
+		};
+		assert(ARRAY_COUNT(TypeTable) == hkClassMember::TYPE_MAX);
+		const hkClassMember *Mem = Class->m_declaredMembers + i;
+
+		// dump internal information
+		printf("\t// offset=%d type=%s", Mem->m_offset, TypeTable[Mem->m_type.m_storage]);
+		if (Mem->m_subtype.m_storage != hkClassMember::TYPE_VOID)
+			printf("/%s", TypeTable[Mem->m_subtype.m_storage]);
+		if (Mem->m_class)
+			printf(" class=%s", Mem->m_class->m_name);
+		if (Mem->m_flags.m_storage)
+			printf(" flags=%X", Mem->m_flags.m_storage);
+		printf("\n");
+
+		int TypeId = Mem->m_type.m_storage;
+		const char *Ptr = "**" + 2;				// points to null char
+
+		if (TypeId == hkClassMember::TYPE_SIMPLEARRAY)
+		{
+			Ptr--;
+			TypeId = Mem->m_subtype.m_storage;
+		}
+		const char *Type = TypeTable[TypeId];
+		if (TypeId == hkClassMember::TYPE_STRUCT)
+			Type = Mem->m_class->m_name;
+		if (TypeId == hkClassMember::TYPE_POINTER)
+		{
+			Ptr--;
+			if (Mem->m_class)
+				Type = Mem->m_class->m_name;
+			else
+				Type = TypeTable[Mem->m_subtype.m_storage];
+		}
+		if (TypeId == hkClassMember::TYPE_ENUM && Mem->m_enum)
+		{
+			static char EnumName[64];
+			appSprintf(ARRAY_ARG(EnumName), "hkEnum<%s>", Mem->m_enum->m_name);
+			Type = EnumName;
+		}
+		if (TypeId == hkClassMember::TYPE_ARRAY && Mem->m_class)
+		{
+			static char ArrayName[64];
+			appSprintf(ARRAY_ARG(ArrayName), "hkArray<%s>", Mem->m_class->m_name);
+			Type = ArrayName;
+		}
+		printf("\t%s%s m_%s", Type, Ptr, Mem->m_name);
+		if (Mem->m_cArraySize) printf("[%d]", Mem->m_cArraySize);
+		printf(";\n");
+		// array types may have extra fields
+		if (Mem->m_type.m_storage == hkClassMember::TYPE_SIMPLEARRAY)
+		{
+			// create m_numVariableName field with uppercased 1st char
+			printf("\thkInt32 m_num%c%s;\n", toupper(Mem->m_name[0]), Mem->m_name+1);
+		}
+	}
+	// footer
+	printf("};\n\n");
+
+	unguard;
+}
+
+#endif // DUMP_TYPEINFO
+
+
+//!! NOTE: not endian-friendly code
+void FixupHavokPackfile(const char *Name, void *PackData)
+{
+	guard(FixupHavokPackfile);
+	int i;
+
+	byte *PackStart = (byte*)PackData;
+	hkPackfileHeader *Hdr = (hkPackfileHeader*)PackStart;
+//	printf("Magic: %X %X Ver: %d (%s)\n", Hdr->m_magic[0], Hdr->m_magic[1], Hdr->m_fileVersion, Hdr->m_contentsVersion);
+
+	// relocate all sections
+	hkPackfileSectionHeader *Sections = (hkPackfileSectionHeader*)(Hdr + 1);
+	for (i = 0; i < Hdr->m_numSections; i++)
+	{
+		hkPackfileSectionHeader *Sec = Sections + i;
+		byte *SectionStart = PackStart + Sec->m_absoluteDataStart;
+//		printf("Sec[%d] = %s (%X)\n", i, Sec->m_sectionTag, Sec->m_absoluteDataStart);
+		// process local fixups
+		for (LocalFixup *LF = (LocalFixup*)(SectionStart + Sec->m_localFixupsOffset);
+			 LF < (LocalFixup*)(SectionStart + Sec->m_globalFixupsOffset);
+			 LF++)
+		{
+			if (LF->fromOffset == 0xFFFFFFFF) continue;		// padding
+//			printf("Lfix: %X -> %X\n", LF->fromOffset, LF->toOffset);
+			// fixup
+			*(byte**)(SectionStart + LF->fromOffset) = SectionStart + LF->toOffset;
+		}
+		// process global fixups
+		for (GlobalFixup *GF = (GlobalFixup*)(SectionStart + Sec->m_globalFixupsOffset);
+			 GF < (GlobalFixup*)(SectionStart + Sec->m_virtualFixupsOffset);
+			 GF++)
+		{
+			if (GF->fromOffset == 0xFFFFFFFF) continue;		// padding
+//			printf("Gfix: %X -> %X / %X\n", GF->fromOffset, GF->toSec, GF->toOffset);
+			// fixup
+			byte *SectionStart2 = PackStart + Sections[GF->toSec].m_absoluteDataStart;
+			*(byte**)(SectionStart + GF->fromOffset) = SectionStart2 + GF->toOffset;
+		}
+#if DUMP_TYPEINFO
+		// process virtual fixups
+		for (GlobalFixup *VF = (GlobalFixup*)(SectionStart + Sec->m_virtualFixupsOffset);
+			 VF < (GlobalFixup*)(SectionStart + Sec->m_exportsOffset);
+			 VF++)
+		{
+			if (VF->fromOffset == 0xFFFFFFFF) continue;		// padding
+//			printf("Vfix: %X -> %X / %X\n", VF->fromOffset, VF->toSec, VF->toOffset);
+			// fixup
+			const char *ClassName = (char*)PackStart + Sections[VF->toSec].m_absoluteDataStart + VF->toOffset;
+//			printf("Vfix: %X -> %s\n", VF->fromOffset, ClassName);
+//			*(byte**)(SectionStart + VF->fromOffset) = SectionStart2 + VF->toOffset;
+			if (!strcmp(ClassName, "hkClass"))
+				DumpClass((hkClass*)(SectionStart + VF->fromOffset));
+		}
+#endif // DUMP_TYPEINFO
+		if (Sec->m_exportsOffset != Sec->m_importsOffset) appNotify("%s, Sec[%s] has exports", Name, Sec->m_sectionTag);
+		if (Sec->m_importsOffset != Sec->m_endOffset)     appNotify("%s, Sec[%s] has imports", Name, Sec->m_sectionTag);
+	}
+	unguard;
+}
+
+
+void GetHavokPackfileContents(const void *PackData, void **Object, const char **ClassName)
+{
+	byte *PackStart = (byte*)PackData;
+	hkPackfileHeader *Hdr = (hkPackfileHeader*)PackStart;
+	hkPackfileSectionHeader *Sections = (hkPackfileSectionHeader*)(Hdr + 1);
+	*Object    = (char*)PackStart + Sections[Hdr->m_contentsSectionIndex         ].m_absoluteDataStart + Hdr->m_contentsSectionOffset;
+	*ClassName = (char*)PackStart + Sections[Hdr->m_contentsClassNameSectionIndex].m_absoluteDataStart + Hdr->m_contentsClassNameSectionOffset;
+}
+
+
+#endif // BIOSHOCK

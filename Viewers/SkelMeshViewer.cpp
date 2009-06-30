@@ -196,7 +196,7 @@ void CSkelMeshViewer::Dump()
 			for (int j = 0; j < sec[k]->Num(); j++)
 			{
 				const FSkelMeshSection &S = (*sec[k])[j];
-				printf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d] b#%d\n", j,
+				printf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
 					S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
 					S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
 			}

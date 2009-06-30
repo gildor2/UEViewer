@@ -1186,8 +1186,6 @@ struct RTriangle
 	}
 };
 
-RAW_TYPE(RTriangle)
-
 
 struct RMesh
 {
@@ -1263,6 +1261,8 @@ struct RJointState
 		return Ar << J.pos << J.rot << J.scale;
 	}
 };
+
+SIMPLE_TYPE(RJointState, float)
 
 
 struct RAnimFrame
@@ -2140,10 +2140,10 @@ struct FStaticLODModel3
 };
 
 #if A51
-struct FA51Unk1
+struct FA51Unk1						//?? FMaterialBone
 {
-	int					f0;
-	FName				f4;
+	int					f0;			//?? Bone
+	FName				f4;			//?? Param
 
 	friend FArchive& operator<<(FArchive &Ar, FA51Unk1 &V)
 	{
@@ -2174,7 +2174,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 #if A51 || MKVSDC
 	if ((Ar.IsA51 || Ar.IsMK) && Ar.ArLicenseeVer >= 0xF)
 	{
-		TArray<FA51Unk1> unkD4;
+		TArray<FA51Unk1> unkD4;		//?? MaterialBones
 		Ar << unkD4;
 	}
 #endif // A51 || MKVSDC

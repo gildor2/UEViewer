@@ -188,7 +188,7 @@ struct FPackageFileSummary
 		}
 #endif // SPLINTER_CELL
 #if RAGNAROK2
-		if (S.PackageFlags & 0x10000 && (S.FileVersion >= 0x81 && S.FileVersion < 0x88))	//?? unknown upper limit; known: 0x81
+		if (S.PackageFlags & 0x10000 && (S.FileVersion >= 0x80 && S.FileVersion < 0x88))	//?? unknown upper limit; known lower limit: 0x80
 		{
 			// encrypted Ragnarok Online archive header (data taken by archive analysis)
 			Ar.IsRagnarok2 = 1;
@@ -216,7 +216,23 @@ struct FPackageFileSummary
 		}
 		else
 		{
-			Ar << S.Guid << S.Generations;
+			Ar << S.Guid;
+#if BIOSHOCK
+			if (Ar.IsBioshock)
+			{
+				// Bioshock uses AR_INDEX for array size, but int for generations
+				int Count;
+				Ar << Count;
+				S.Generations.Empty(Count);
+				S.Generations.Add(Count);
+				for (int i = 0; i < Count; i++)
+					Ar << S.Generations[i];
+			}
+			else
+#endif // BIOSHOCK
+			{
+				Ar << S.Generations;
+			}
 		}
 #if UNREAL3
 //		if (S.FileVersion >= PACKAGE_V3)
@@ -343,6 +359,21 @@ struct FObjectExport
 			return Ar;
 		}
 #endif // PARIAH
+#if BIOSHOCK
+		if (Ar.IsBioshock)
+		{
+			int unkC, flags2, unk30;
+			Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
+			if (Ar.ArVer >= 132) Ar << unkC;			// unknown
+			Ar << E.ObjectName << E.ObjectFlags;
+			if (Ar.ArLicenseeVer >= 40) Ar << flags2;	// qword flags
+			Ar << AR_INDEX(E.SerialSize);
+			if (E.SerialSize)
+				Ar << AR_INDEX(E.SerialOffset);
+			if (Ar.ArVer >= 130) Ar << unk30;			// unknown
+			return Ar;
+		}
+#endif // BIOSHOCK
 		// generic UE1/UE2 code
 		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
 		Ar << E.ObjectName << E.ObjectFlags << AR_INDEX(E.SerialSize);
@@ -492,6 +523,13 @@ public:
 	// FArchive interface
 	virtual FArchive& operator<<(FName &N)
 	{
+#if BIOSHOCK
+		if (IsBioshock)
+		{
+			*this << AR_INDEX(N.Index) << N.Flags;
+		}
+		else
+#endif // BIOSHOCK
 #if UNREAL3
 		if (ArVer >= 145)				// PACKAGE_V3, but have version in UC2
 		{
@@ -500,7 +538,7 @@ public:
 				*this << N.Flags;
 		}
 		else
-#endif
+#endif // UNREAL3
 			*this << AR_INDEX(N.Index);
 		N.Str = GetName(N.Index);
 		return *this;
@@ -509,12 +547,18 @@ public:
 	virtual FArchive& operator<<(UObject *&Obj)
 	{
 		int index;
+#if BIOSHOCK
+		if (IsBioshock) goto compact;
+#endif
 #if UNREAL3
 		if (ArVer >= 145)				 // PACKAGE_V3, but has in UC2
 			*this << index;
 		else
-#endif
+#endif // UNREAL3
+		{
+		compact:
 			*this << AR_INDEX(index);
+		}
 		if (index < 0)
 		{
 			const FObjectImport &Imp = GetImport(-index-1);

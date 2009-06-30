@@ -34,6 +34,10 @@ BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_RUNE
 #endif
 	REGISTER_ANIM_NOTIFY_CLASSES
+#if BIOSHOCK
+	REGISTER_MATERIAL_CLASSES_BIO
+	REGISTER_MESH_CLASSES_BIO
+#endif
 #if UNREAL3
 	REGISTER_MATERIAL_CLASSES_U3
 	REGISTER_MESH_CLASSES_U3
@@ -249,6 +253,9 @@ int main(int argc, char **argv)
 #	if TRIBES3
 				", Tribes: Vengeance"
 #	endif
+#	if BIOSHOCK
+				", Bioshock"
+#	endif
 #	if RAGNAROK2
 				", Ragnarok Online 2"
 #	endif
@@ -263,7 +270,11 @@ int main(int argc, char **argv)
 #endif
 #if UNREAL3
 				"Unreal Engine 3:\n"
-				"    Unreal Tournament 3, Gears of War\n"
+				"    Unreal Tournament 3, Gears of War"
+#	if XBOX360
+				", Gears of War 2"
+#	endif
+				"\n"
 #	if MASSEFF
 				"    Mass Effect\n"
 #	endif
@@ -284,9 +295,6 @@ int main(int argc, char **argv)
 #	endif
 #	if MEDGE
 				"    Mirror's Edge\n"
-#	endif
-#	if XBOX360
-				"    Gears of War 2\n"
 #	endif
 #endif // UNREAL3
 				"\n"
@@ -439,6 +447,14 @@ int main(int argc, char **argv)
 		unguard;
 		return 0;
 	}
+
+#if BIOSHOCK
+	if (Package->IsBioshock)
+	{
+		//!! should change this code!
+		CTypeInfo::RemapProp("UShader", "Opacity", "Opacity_Bio"); //!!
+	}
+#endif // BIOSHOCK
 
 	UObject *Obj = NULL;
 	// get requested object info

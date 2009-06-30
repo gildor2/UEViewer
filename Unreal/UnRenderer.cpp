@@ -482,6 +482,58 @@ void UShader::Bind(unsigned PolyFlags)
 }
 
 
+#if BIOSHOCK
+
+//?? NOTE: Bioshock EFrameBufferBlending is used for UShader and UFinalBlend, plus it has different values
+// based on UShader and UFinalBlend Bind()
+void UFacingShader::Bind(unsigned PolyFlags)
+{
+	if (FacingDiffuse)
+		FacingDiffuse->Bind(PolyFlags);
+	else
+		BindDefaultMaterial();
+
+	// TwoSided
+	if (TwoSided)
+		glDisable(GL_CULL_FACE);
+	else
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
+	// part of UFinalBlend::Bind()
+	switch (OutputBlending)
+	{
+//	case FB_Overwrite:
+//		glBlendFunc(GL_ONE, GL_ZERO);				// src
+//		break;
+	case FB_Modulate:
+		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);	// src*dst*2
+		break;
+	case FB_AlphaBlend:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		break;
+	case FB_AlphaModulate_MightNotFogCorrectly:
+		//!!
+		break;
+	case FB_Translucent:
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+		break;
+	case FB_Darken:
+		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // dst - src
+		break;
+	case FB_Brighten:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);			// src*srcA + dst
+		break;
+	case FB_Invisible:
+		glBlendFunc(GL_ZERO, GL_ONE);				// dst
+		break;
+	}
+}
+
+#endif // BIOSHOCK
+
+
 void UCombiner::Bind(unsigned PolyFlags)
 {
 	//!! implement
@@ -784,19 +836,17 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 
 #if UC2
 
-static bool ScannedXprs = false;
-
 struct XprEntry
 {
-	char	Name[64];
-	int		DataOffset;
-	int		DataSize;
+	char				Name[64];
+	int					DataOffset;
+	int					DataSize;
 };
 
 struct XprInfo
 {
 	const CGameFileInfo *File;
-	TArray<XprEntry> Items;
+	TArray<XprEntry>	Items;
 };
 
 static TArray<XprInfo> xprFiles;
@@ -911,15 +961,16 @@ static bool ReadXprFile(const CGameFileInfo *file)
 	unguardf(("%s", file->RelativeName));
 }
 
-static void ScanXprs()
-{
-	if (ScannedXprs) return;
-	ScannedXprs = true;
-	appEnumGameFiles(ReadXprFile, "xpr");
-}
-
 static byte *FindXpr(const char *Name)
 {
+	// scan xprs
+	static bool ready = false;
+	if (!ready)
+	{
+		ready = true;
+		appEnumGameFiles(ReadXprFile, "xpr");
+	}
+	// find a file
 	for (int i = 0; i < xprFiles.Num(); i++)
 	{
 		XprInfo *Info = &xprFiles[i];
@@ -943,11 +994,154 @@ static byte *FindXpr(const char *Name)
 
 #endif // UC2
 
+#if BIOSHOCK
+
+//#define DUMP_BIO_CATALOG			1
+//#define DEBUG_BIO_BULK				1
+
+struct BioBulkCatalogItem
+{
+	FString				ObjectName;
+	FString				PackageName;
+	int					f10;				// always 0
+	int					DataOffset;
+	int					DataSize;
+	int					DataSize2;			// the same as DataSize
+	int					f20;
+
+	friend FArchive& operator<<(FArchive &Ar, BioBulkCatalogItem &S)
+	{
+		Ar << S.ObjectName << S.PackageName << S.f10 << S.DataOffset << S.DataSize << S.DataSize2 << S.f20;
+		assert(S.f10 == 0);
+		assert(S.DataSize == S.DataSize2);
+#if DUMP_BIO_CATALOG
+		printf("  %s / %s - %X %X %X %X %X\n", *S.ObjectName, *S.PackageName, S.f10, S.DataOffset, S.DataSize, S.DataSize2, S.f20);
+#endif
+		return Ar;
+	}
+};
+
+
+struct BioBulkCatalogFile
+{
+	int64				f0;
+	FString				Filename;
+	TArray<BioBulkCatalogItem> Items;
+
+	friend FArchive& operator<<(FArchive &Ar, BioBulkCatalogFile &S)
+	{
+		Ar << S.f0 << S.Filename;
+#if DUMP_BIO_CATALOG
+		printf("<<< %s >>>\n", *S.Filename);
+#endif
+		Ar << S.Items;
+		return Ar;
+	}
+};
+
+struct BioBulkCatalog
+{
+	byte				Endian;
+	int64				f4;
+	int					fC;
+	TArray<BioBulkCatalogFile> Files;
+
+	friend FArchive& operator<<(FArchive &Ar, BioBulkCatalog &S)
+	{
+		return Ar << S.Endian << S.f4 << S.fC << S.Files;
+	}
+};
+
+static BioBulkCatalog bioCatalog;
+
+static void BioReadBulkCatalog()
+{
+	guard(BioReadBulkCatalog);
+	static bool ready = false;
+	if (ready) return;
+	ready = true;
+
+	const CGameFileInfo *cat = appFindGameFile("catalog.bdc");
+	if (!cat) return;
+	FArchive *Ar = appCreateFileReader(cat);
+	// setup for reading Bioshock data
+	Ar->ArVer         = 141;
+	Ar->ArLicenseeVer = 0x38;
+	Ar->IsBioshock    = true;
+	// serialize
+	*Ar << bioCatalog;
+	// finalize
+	delete Ar;
+	unguard;
+}
+
+
+static byte *FindBioTexture(const UTexture *Tex)
+{
+	int needSize = Tex->CachedBulkDataSize & 0xFFFFFFFF;
+#if DEBUG_BIO_BULK
+	printf("Search for ... %s (size=%X)\n", Tex->Name, needSize);
+#endif
+	BioReadBulkCatalog();
+	for (int i = 0; i < bioCatalog.Files.Num(); i++)
+	{
+		const BioBulkCatalogFile &File = bioCatalog.Files[i];
+		for (int j = 0; j < File.Items.Num(); j++)
+		{
+			const BioBulkCatalogItem &Item = File.Items[j];
+			if (!strcmp(Tex->Name, Item.ObjectName))
+			{
+				if (abs(needSize - Item.DataSize) >= 0x4000)		// differs in 16k
+				{
+#if DEBUG_BIO_BULK
+					printf("... Found %s in %s with wrong BulkDataSize %X (need %X)\n", Tex->Name, *File.Filename, Item.DataSize, needSize);
+#endif
+					continue;
+				}
+#if DEBUG_BIO_BULK
+				printf("... Found %s in %s at %X size %X (%dx%d fmt=%d bpp=%g strip:%d mips:%d)\n", Tex->Name, *File.Filename, Item.DataOffset, Item.DataSize,
+					Tex->USize, Tex->VSize, Tex->Format, (float)Item.DataSize / (Tex->USize * Tex->VSize),
+					Tex->HasBeenStripped, Tex->StrippedNumMips);
+#endif
+				// found
+				byte *buf = new byte[max(Item.DataSize, needSize)];
+				const CGameFileInfo *bulk = appFindGameFile(File.Filename);
+				if (!bulk) return NULL;		// no bulk file
+				FArchive *Reader = appCreateFileReader(bulk);
+				Reader->Seek(Item.DataOffset);
+				Reader->Serialize(buf, Item.DataSize);
+				delete Reader;
+				return buf;
+			}
+		}
+	}
+#if DEBUG_BIO_BULK
+	printf("... Bulk for %s was not found\n", Tex->Name);
+#endif
+	return NULL;
+}
+
+#endif // BIOSHOCK
 
 byte *UTexture::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture::Decompress);
 	//?? combine with DecompressTexture() ?
+#if BIOSHOCK
+	if (Package && Package->IsBioshock) //?? check bStripped ?
+	{
+		BioReadBulkCatalog();
+		byte *pic = FindBioTexture(this);
+		if (pic)
+		{
+			USize = this->USize;
+			VSize = this->VSize;
+			byte *pic2 = DecompressTexture(pic, USize, VSize, Format, Name, Palette);
+			delete pic;
+			return pic2;
+		}
+	}
+#endif // BIOSHOCK
 	for (int n = 0; n < Mips.Num(); n++)
 	{
 		// find 1st mipmap with non-null data array
@@ -963,11 +1157,8 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 	if (Package && Package->ArVer >= 145)
 	{
 		// try to find texture inside XBox xpr files
-		if (!ScannedXprs)
-			ScanXprs();
 		byte *pic = FindXpr(Name);
-		if (!pic)
-			return NULL;
+		if (!pic) return NULL;
 		USize = this->USize;
 		VSize = this->VSize;
 		byte *pic2 = DecompressTexture(pic, USize, VSize, Format, Name, Palette);
@@ -1072,11 +1263,9 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 		{
 			// check for external bulk
 			//!! * -notfc cmdline switch
-			//!! * support for textures from non-cooked packages (PC)
 			//!! * material viewer: support switching mip levels (for xbox decompression testing)
-#if XBOX360
-			if (Mip.Data.BulkDataFlags & BULKDATA_NoData) continue;
-			if (!strcmp(TextureFileCacheName, "None")) continue;
+			if (Mip.Data.BulkDataFlags & BULKDATA_NoData) continue;		// mip level is stripped
+			if (!strcmp(TextureFileCacheName, "None")) continue;		// no TFC file assigned
 			//!! cache checking of tfc file(s) + cache handles (FFileReader)
 			//!! note: there can be few cache files!
 			const CGameFileInfo *tfc = appFindGameFile(TextureFileCacheName, "tfc");
@@ -1087,9 +1276,6 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 //printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
 			Bulk->SerializeChunk(*Ar);
 			delete Ar;
-#else
-			continue;
-#endif
 		}
 		USize = Mip.SizeX;
 		VSize = Mip.SizeY;

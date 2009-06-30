@@ -524,7 +524,7 @@ struct FSkinVertexStream
 			TArray<T3_BasisVector> unk2;
 			Ar << unk1 << unk2;
 		}
-#endif
+#endif // TRIBES3
 		return Ar;
 	}
 };
@@ -707,7 +707,7 @@ struct FNamedBone
  *	0			UT2003, UT2004
  *	1			Lineage2
  *	4			UE2Runtime, Harry Potter and the Prisoner of Azkaban
- *	6			Tribes3
+ *	6			Tribes3, Bioshock
  *	1000		SplinterCell
  *	2000		SplinterCell2
  */
@@ -1208,6 +1208,9 @@ struct FStaticLODModel
 #if UNREAL3
 	void RestoreMesh3(const class USkeletalMesh &Mesh, const class FStaticLODModel3 &Lod, const struct FSkeletalMeshLODInfo &Info);	//?? forward declarations for classes
 #endif
+#if BIOSHOCK
+	void RestoreMeshBio(const USkeletalMesh &Mesh, const struct FStaticLODModelBio &Lod);
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel &M)
 	{
@@ -1364,6 +1367,9 @@ public:
 #if UNREAL3
 	TArray<FSkeletalMeshLODInfo> LODInfo;	//?? move outside
 #endif
+#if BIOSHOCK
+	TArray<UObject*>		havokObjects;	// wrappers for Havok objects used by this mesh; not used by Bioshock engine (precaching?)
+#endif
 
 	void UpgradeFaces();
 	void UpgradeMesh();
@@ -1376,6 +1382,10 @@ public:
 #endif
 #if UNREAL3
 	void SerializeSkelMesh3(FArchive &Ar);
+#endif
+#if BIOSHOCK
+	void SerializeBioshockMesh(FArchive &Ar);
+	void PostLoadBioshockMesh();
 #endif
 
 #if UNREAL3
@@ -1411,6 +1421,13 @@ public:
 		if (Ar.ArVer >= PACKAGE_V3)
 		{
 			SerializeSkelMesh3(Ar);
+			return;
+		}
+#endif
+#if BIOSHOCK
+		if (Ar.IsBioshock)
+		{
+			SerializeBioshockMesh(Ar);
 			return;
 		}
 #endif
@@ -1541,6 +1558,17 @@ public:
 
 		unguard;
 	}
+#if BIOSHOCK
+	virtual void PostLoad()
+	{
+#if 0
+		if (Package->IsBioshock)
+#else
+		if (havokObjects.Num())			//?? ... UnPackage is not ready here ...
+#endif
+			PostLoadBioshockMesh();		// should be called after loading of all used objects
+	}
+#endif
 };
 
 
@@ -1560,6 +1588,118 @@ public:
 };
 
 #endif // RUNE
+
+
+#if BIOSHOCK
+
+struct FBioshockUnk6
+{
+	FName					f0, f8, f10, f18;
+	FVector					f20;
+	FVector					f2C;
+	float					f38, f3C;
+	FVector					f40;
+	int						f4C, f50, f54;
+	int						f58, f5C, f60;
+	int						f64, f68, f6C;
+
+	friend FArchive& operator<<(FArchive &Ar, FBioshockUnk6 &S)
+	{
+		TRIBES_HDR(Ar, 0);
+		Ar << S.f0 << S.f8 << S.f10 << S.f20 << S.f2C << S.f38 << S.f3C;
+		Ar << S.f40 << S.f4C << S.f50 << S.f54 << S.f58 << S.f5C << S.f60;
+		Ar << S.f64 << S.f68 << S.f6C;
+		if (t3_hdrSV >= 2)
+			Ar << S.f18;
+		return Ar;
+	}
+};
+
+#if 0
+class USharedSkeletonDataMetadata : public UObject
+{
+	DECLARE_CLASS(USharedSkeletonDataMetadata, UObject);
+public:
+	int						f44, f48;
+	TArray<float>			f88;
+	int						f94, f98, f9C;
+	float					fA0, fA4, fA8, fAC, fB0, fB4;
+	TArray<FBioshockUnk6>	fB8;
+	float					fC4, fC8;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(USharedSkeletonDataMetadata::Serialize);
+
+		Super::Serialize(Ar);
+		Ar << f88;
+		if (Ar.ArLicenseeVer < 34) return;
+		TRIBES_HDR(Ar, 0);
+		Ar << f94 << f98 << f9C;
+		if (t3_hdrSV >= 2)
+			Ar << fA0 << fA4 << fA8 << fAC << fB0 << fB4;
+		if (t3_hdrSV >= 3)
+			Ar << fB8;
+		if (t3_hdrSV >= 4)
+		{
+			Ar << f44;
+			if (t3_hdrSV < 8)
+			{
+				int tmp1, tmp2;
+				Ar << tmp1 << tmp2;
+			}
+			Ar << f48 << fC4 << fC8;
+		}
+/*
+		//!!
+		int i;
+		printf("f88[]=%d f94=%d %d %d\n"
+			   "fA0=%g %g %g %g %g %g\n"
+			   "fB8[]=%d\n",
+			   f88.Num(), f94, f98, f9C,
+			   fA0, fA4, fA8, fAC, fB0, fB4,
+			   fB8.Num());
+		for (i = 0; i < fB8.Num(); i++)
+		{
+			const FBioshockUnk6 &S = fB8[i];
+			printf("  %d: %s %s %s %s\n"
+				   "    {%g %g %g} {%g %g %g}\n"
+				   "    %g %g\n"
+				   "    {%g %g %g} {%X %X %X}\n"
+				   "    {%X %X %X} {%X %X %X}\n",
+				   i, *S.f0, *S.f8, *S.f10, *S.f18,
+				   FVECTOR_ARG(S.f2C), S.f38, S.f3C,
+				   FVECTOR_ARG(S.f40), S.f4C, S.f50, S.f54,
+				   S.f58, S.f5C, S.f60, S.f64, S.f68, S.f6C);
+		}
+*/
+		Ar.Seek(Ar.GetStopper());
+
+		unguard;
+	}
+};
+#endif // 0
+
+class UAnimationPackageWrapper : public UObject
+{
+	DECLARE_CLASS(UAnimationPackageWrapper, UObject);
+public:
+	TArray<byte>			HavokData;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UAnimationPackageWrapper::Serialize);
+		Super::Serialize(Ar);
+		TRIBES_HDR(Ar, 0);
+		Ar << HavokData;
+		Process();
+		unguard;
+	}
+
+	void Process();
+};
+
+#endif // BIOSHOCK
 
 
 #if UNREAL3
@@ -1705,7 +1845,7 @@ public:
 
 	virtual void PostLoad()
 	{
-		ConvertAnims();		//!! should be called after loading of all used objects !
+		ConvertAnims();		// should be called after loading of all used objects
 	}
 };
 
@@ -1719,11 +1859,11 @@ public:
 struct FStaticMeshSection
 {
 	int						f4;				// always 0 ??
-	short					FirstIndex;		// first index
-	short					FirstVertex;	// first used vertex
-	short					LastVertex;		// last used vertex
-	short					fE;				// ALMOST always equals to f10
-	short					NumFaces;		// number of faces in section
+	word					FirstIndex;		// first index
+	word					FirstVertex;	// first used vertex
+	word					LastVertex;		// last used vertex
+	word					fE;				// ALMOST always equals to f10
+	word					NumFaces;		// number of faces in section
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshSection &S)
 	{
@@ -1736,8 +1876,8 @@ struct FStaticMeshSection
 
 struct FStaticMeshVertex
 {
-	FVector					Pos;			//??
-	FVector					Normal;			//??
+	FVector					Pos;
+	FVector					Normal;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertex &V)
 	{
@@ -1751,6 +1891,71 @@ struct FStaticMeshVertex
 };
 
 SIMPLE_TYPE(FStaticMeshVertex, float)		//?? check each version
+
+#if BIOSHOCK
+
+struct FStaticMeshVertexBio
+{
+	FVector					Pos;
+	unsigned				Normal[3];		// Bioshock has different normal format (dword{00XXYYZZ} x 3)
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio &V)
+	{
+		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+	}
+
+	operator FStaticMeshVertex() const
+	{
+		FStaticMeshVertex r;
+		r.Pos = Pos;
+		union PackedNorm
+		{
+			unsigned I;
+			byte     C[4];
+		};
+		PackedNorm N;
+		N.I = Normal[2];		//?? use other indices too?
+		r.Normal.X = N.C[0] / 128.0f - 1;
+		r.Normal.Y = N.C[1] / 128.0f - 1;
+		r.Normal.Z = N.C[2] / 128.0f - 1;
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FStaticMeshVertexBio, int)
+
+#endif // BIOSHOCK
+
+struct FStaticMeshVertexStream
+{
+	TArray<FStaticMeshVertex> Vert;
+	int						Revision;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexStream &S)
+	{
+#if BIOSHOCK
+		if (Ar.IsBioshock)
+		{
+			TArray<FStaticMeshVertexBio> BioVerts;
+			Ar << BioVerts;
+			CopyArray(S.Vert, BioVerts);
+			return Ar;
+		}
+#endif
+#if TRIBES3
+		TRIBES_HDR(Ar, 0xD);
+#endif
+		Ar << S.Vert << S.Revision;
+#if TRIBES3
+		if (Ar.IsTribes3 && t3_hdrSV >= 1)
+		{
+			TArray<T3_BasisVector> unk1C;
+			Ar << unk1C;
+		}
+#endif // TRIBES3
+		return Ar;
+	}
+};
 
 struct FRawColorStream
 {
@@ -1784,6 +1989,10 @@ struct FStaticMeshUVStream
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream &S)
 	{
+#if BIOSHOCK
+		if (Ar.IsBioshock)
+			return Ar << S.Data << S.f10;
+#endif
 		return Ar << S.Data << S.f10 << S.f1C;
 	}
 };
@@ -1919,10 +2128,9 @@ class UStaticMesh : public UPrimitive
 public:
 	TArray<FStaticMeshMaterial> Materials;
 	TArray<FStaticMeshSection>  Sections;
-	TArray<FStaticMeshVertex>   Verts;
-	int						f7C;
+	FStaticMeshVertexStream	VertexStream;
 	FRawColorStream			ColorStream1;	// for Verts
-	FRawColorStream			ColorStream2;	// size = f7C
+	FRawColorStream			ColorStream2;
 	TArray<FStaticMeshUVStream> UVStream;
 	FRawIndexBuffer			IndexStream1;
 	FRawIndexBuffer			IndexStream2;
@@ -1951,6 +2159,16 @@ public:
 #if LINEAGE2
 		PROP_DROP(bMakeTwoSideMesh)
 #endif
+#if BIOSHOCK
+		PROP_DROP(HavokCollisionTypeStatic)
+		PROP_DROP(HavokCollisionTypeDynamic)
+		PROP_DROP(UseSimpleVisionCollision)
+		PROP_DROP(UseSimpleFootIKCollision)
+		PROP_DROP(NeverCollide)
+		PROP_DROP(SortShape)
+		PROP_DROP(LightMapCoordinateIndex)
+		PROP_DROP(LightMapScale)
+#endif // BIOSHOCK
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -1972,9 +2190,21 @@ public:
 		}
 
 		Super::Serialize(Ar);
+#if TRIBES3
+		TRIBES_HDR(Ar, 3);
+#endif
 		Ar << Sections;
 		Ar << BoundingBox;			// UPrimitive field, serialized twice ...
-		Ar << Verts << f7C << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
+#if BIOSHOCK
+		if (Ar.IsBioshock)
+		{
+			Ar << VertexStream << UVStream << IndexStream1;
+			// also: t3_hdrSV < 2 => IndexStream2
+			Ar.Seek(Ar.GetStopper());
+			return;
+		}
+#endif // BIOSHOCK
+		Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
 
 #if 1
 		// UT2 and UE2Runtime has very different collision structures
@@ -2042,6 +2272,10 @@ public:
 
 #define REGISTER_MESH_CLASSES_RUNE	\
 	REGISTER_CLASS(USkelModel)
+
+#define REGISTER_MESH_CLASSES_BIO	\
+	/*REGISTER_CLASS(USharedSkeletonDataMetadata)*/ \
+	REGISTER_CLASS(UAnimationPackageWrapper)
 
 #define REGISTER_MESH_CLASSES_U3	\
 	REGISTER_CLASS(FRawAnimSequenceTrack) \

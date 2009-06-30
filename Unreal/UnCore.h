@@ -163,6 +163,9 @@ public:
 #if RAGNAROK2
 	int		IsRagnarok2:1;
 #endif
+#if BIOSHOCK
+	int		IsBioshock:1;
+#endif
 	// UE3 games
 #if A51
 	int		IsA51:1;
@@ -215,6 +218,9 @@ public:
 #endif
 #if RAGNAROK2
 	,	IsRagnarok2(0)
+#endif
+#if BIOSHOCK
+	,	IsBioshock(0)
 #endif
 #if A51
 	,	IsA51(0)
@@ -319,6 +325,11 @@ inline FArchive& operator<<(FArchive &Ar, int &B)
 	Ar.ByteOrderSerialize(&B, 4);
 	return Ar;
 }
+inline FArchive& operator<<(FArchive &Ar, int64 &B)
+{
+	Ar.ByteOrderSerialize(&B, 8);
+	return Ar;
+}
 inline FArchive& operator<<(FArchive &Ar, unsigned &B)
 {
 	Ar.ByteOrderSerialize(&B, 4);
@@ -353,6 +364,10 @@ public:
 			appError("Unable to open file %s", Filename);
 		IsLoading = loading;
 		ArPos     = 0;
+		const char *s = strrchr(Filename, '/');
+		if (!s)     s = strrchr(Filename, '\\');
+		if (s) s++; else s = Filename;
+		appStrncpyz(ShortName, s, ARRAY_COUNT(ShortName));
 		unguardf(("%s", Filename));
 	}
 
@@ -400,6 +415,7 @@ public:
 	virtual void Serialize(void *data, int size)
 	{
 		guard(FFileReader::Serialize);
+		if (size == 0) return;
 		if (ArStopper > 0 && ArPos + size > ArStopper)
 			appError("Serializing behind stopper");
 
@@ -414,12 +430,13 @@ public:
 		GSerializeBytes += size;
 #endif
 		if (res != 1)
-			appError("Unable to serialize data");
-		unguard;
+			appError("Unable to serialize %d bytes at pos=%d", ArPos, size);
+		unguardf(("File=%s", ShortName));
 	}
 
 protected:
 	FILE	*f;
+	char	ShortName[128];
 };
 
 
@@ -549,10 +566,14 @@ struct FBox
 
 	friend FArchive& operator<<(FArchive &Ar, FBox &Box)
 	{
+#if BIOSHOCK
+		if (Ar.IsBioshock) goto standard;	//!! special path for UC2, not for other games!
+#endif
 #if UC2
 		if (Ar.ArVer >= 146 && Ar.ArVer < PACKAGE_V3)
 			return Ar << Box.Min << Box.Max;
 #endif
+	standard:
 		return Ar << Box.Min << Box.Max << Box.IsValid;
 	}
 };
@@ -924,6 +945,20 @@ template<class T> class TLazyArray : public TArray<T>
 		int SkipPos = 0;								// ignored
 		if (Ar.ArVer > 61)
 			Ar << SkipPos;
+#if BIOSHOCK
+		//?? separate this code to cpp, because UE2 has a lot of TLazyArray<> ...
+		if (Ar.IsBioshock && Ar.ArVer >= 131)
+		{
+			int f10, f8;
+			Ar << f10 << f8;
+//			printf("bio: pos=%08X skip=%08X f10=%08X f8=%08X\n", Ar.Tell(), SkipPos, f10, f8);
+			if (SkipPos < Ar.Tell())
+			{
+//				appNotify("Bioshock: wrong SkipPos in array at %X", Ar.Tell());
+				SkipPos = 0;		// have a few places with such bug ...
+			}
+		}
+#endif // BIOSHOCK
 		Ar << (TArray<T>&)A;
 		assert(SkipPos == 0 || Ar.Tell() == SkipPos);	// check position
 		return Ar;
@@ -1197,7 +1232,7 @@ struct FWordBulkData : public FByteBulkData
 #define COMPRESS_LZO		2
 #define COMPRESS_LZX		4
 
-void appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
+int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 
 
 #endif // UNREAL3
@@ -1216,16 +1251,22 @@ extern FArchive *GDummySave;
 
 #if TRIBES3
 // macro to skip Tribes3 FHeader structure
-#define TRIBES_HDR(Ar,Ver)			\
-	int t3_hdrV = 0, t3_hdrSV = 0;	\
-	if (Ar.IsTribes3 && Ar.ArLicenseeVer >= Ver) \
-	{								\
-		int check;					\
-		Ar << check;				\
-		assert(check == 3);			\
-		Ar << t3_hdrV << t3_hdrSV;	\
+// check==3 -- Tribes3
+// check==4 -- Bioshock
+#define TRIBES_HDR(Ar,Ver)							\
+	int t3_hdrV = 0, t3_hdrSV = 0;					\
+	if ((Ar.IsTribes3 || Ar.IsBioshock) && Ar.ArLicenseeVer >= Ver)	\
+	{												\
+		int check;									\
+		Ar << check;								\
+		if (check == 3)								\
+			Ar << t3_hdrV << t3_hdrSV;				\
+		else if (check == 4)						\
+			Ar << t3_hdrSV;							\
+		else										\
+			appError("T3:check=%X (Pos=%X)", check, Ar.Tell()); \
 	}
-#endif
+#endif // TRIBES3
 
 
 #endif // __UNCORE_H__

@@ -93,6 +93,7 @@ template<>    struct CompileTimeError<true> {};
 #	pragma intrinsic(memcpy, memset, memcmp, abs, fabs)
 	// allow nested inline expansions
 #	pragma inline_depth(8)
+typedef __int64				int64;
 #elif __GNUC__
 #	define NORETURN			__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
@@ -104,6 +105,7 @@ template<>    struct CompileTimeError<true> {};
 #	define stricmp			strcasecmp
 #	define strnicmp			strncasecmp
 #	define GCC_PACK			__attribute__((__packed__))
+typedef unsigned long long	int64;
 #else
 #	error "Unsupported compiler"
 #endif

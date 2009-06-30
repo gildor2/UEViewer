@@ -32,15 +32,15 @@ void CStatMeshViewer::Dump()
 
 	printf(
 		"\nStaticMesh info:\n================\n"
-		"Version=%d  Trialgnes # %d Verts # %d\n"
+		"Version=%d  Trialgnes # %d Verts # %d (rev=%d)\n"
 		"Colors1 # %d  Colors2 # %d  Indices1 # %d  Indices2 # %d\n"
-		"f7C=%d  f124=%d  f128=%d  f12C=%d\n"
+		"f124=%d  f128=%d  f12C=%d\n"
 		"f108=%s  f16C=%s\n"
 		"f150 # %d  f15C=%08X\n",
-		Mesh->Version, Mesh->Faces.Num(), Mesh->Verts.Num(),
+		Mesh->Version, Mesh->Faces.Num(), Mesh->VertexStream.Vert.Num(), Mesh->VertexStream.Revision,
 		Mesh->ColorStream1.Color.Num(), Mesh->ColorStream2.Color.Num(),
 		Mesh->IndexStream1.Indices.Num(), Mesh->IndexStream2.Indices.Num(),
-		Mesh->f7C, Mesh->f124, Mesh->f128, Mesh->f12C,
+		Mesh->f124, Mesh->f128, Mesh->f12C,
 		Mesh->f108 ? Mesh->f108->Name : "NULL", Mesh->f16C ? Mesh->f16C->Name : "NULL",
 		Mesh->f150.Num(), Mesh->f15C
 	);
@@ -81,7 +81,7 @@ void CStatMeshViewer::Draw2D()
 				 S_GREEN"Tris    : "S_WHITE"%d\n"
 				 S_GREEN"Sections: "S_WHITE"%d\n"
 				 S_GREEN"UV Sets : "S_WHITE"%d",
-				 Mesh->Verts.Num(), Mesh->IndexStream1.Indices.Num() / 3, Mesh->Sections.Num(), Mesh->UVStream.Num());
+				 Mesh->VertexStream.Vert.Num(), Mesh->IndexStream1.Indices.Num() / 3, Mesh->Sections.Num(), Mesh->UVStream.Num());
 
 	// code similar to CLodMeshViewer::Draw2D(), but using different fields
 	if (Inst->bColorMaterials)

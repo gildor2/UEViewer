@@ -277,15 +277,18 @@ if (i == 32 || i == 34)
 	delete VertInfCount;
 
 	// check bones tree
-	//!! should be done in USkeletalMesh
-	int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
-	int numIndices = 0;
-	guard(VerifySkeleton);
-	CheckBoneTree(Mesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
-	assert(numIndices == NumBones);
-	unguard;
-	for (i = 0; i < numIndices; i++)
-		BoneData[i].SubtreeSize = treeSizes[i];	// remember subtree size
+	if (NumBones)
+	{
+		//!! should be done in USkeletalMesh
+		guard(VerifySkeleton);
+		int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
+		int numIndices = 0;
+		CheckBoneTree(Mesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
+		assert(numIndices == NumBones);
+		for (i = 0; i < numIndices; i++)
+			BoneData[i].SubtreeSize = treeSizes[i];	// remember subtree size
+		unguard;
+	}
 
 	ClearSkelAnims();
 	PlayAnim(NULL);
@@ -776,6 +779,8 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 	const USkeletalMesh  *Mesh = GetMesh();
 	const UMeshAnimation *Anim = Mesh->Animation;
 
+	if (!Mesh->RefSkeleton.Num()) return;	// just in case
+
 	// prepare bone-to-channel map
 	//?? optimize: update when animation changed only
 	for (int i = 0; i < Mesh->RefSkeleton.Num(); i++)
@@ -1174,6 +1179,14 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 	int i;
 
 	const USkeletalMesh *Mesh = GetMesh();
+
+#if 0
+	glBegin(GL_POINTS);
+	for (i = 0; i < Mesh->Points.Num(); i++)
+		glVertex3fv(&Mesh->Points[i].X);
+	glEnd();
+	return;
+#endif
 
 	if (Mesh->VertInfluences.Num())		// condition is just in case
 		TransformMesh(Mesh->VertInfluences.Num(), &Mesh->VertInfluences[0], Mesh->Points.Num(), &Mesh->Points[0], RefNormals);

@@ -145,6 +145,32 @@ struct FLineageShaderProperty
 
 #endif // LINEAGE2
 
+#if BIOSHOCK
+
+enum EMaskChannel
+{
+	MC_A,
+	MC_R,
+	MC_G,
+	MC_B
+};
+
+class UMaterial;
+
+struct FMaskMaterial
+{
+	DECLARE_STRUCT(FMaskMaterial);
+	UMaterial		*Material;
+	EMaskChannel	Channel;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Material)
+		PROP_ENUM(Channel)
+	END_PROP_TABLE
+};
+
+#endif // BIOSHOCK
+
 
 class UMaterial : public UUnrealMaterial	// real base is UObject
 {
@@ -153,7 +179,7 @@ public:
 	UMaterial		*FallbackMaterial;
 	UMaterial		*DefaultMaterial;
 	byte			SurfaceType;			// enum ESurfaceType: wood, metal etc
-	int				MaterialType;			// same as SurfaceType ?
+//	int				MaterialType;			// int for UE2, but byte for EXTEEL
 #if SPLINTER_CELL
 	// Splinter Cell extra fields
 	bool			bUseTextureAsHeat;
@@ -168,11 +194,17 @@ public:
 		PROP_OBJ(FallbackMaterial)
 		PROP_OBJ(DefaultMaterial)
 		PROP_ENUM(SurfaceType)
-		PROP_INT(MaterialType)
+//		PROP_INT(MaterialType)
+		PROP_DROP(MaterialType)
 #if SPLINTER_CELL
 		PROP_BOOL(bUseTextureAsHeat)
 		PROP_OBJ(HeatMaterial)
-#endif
+#endif // SPLINTER_CELL
+#if BIOSHOCK
+		PROP_DROP(MaterialVisualType)
+		PROP_DROP(Subtitle)
+		PROP_DROP(AcceptProjectors)
+#endif // BIOSHOCK
 	END_PROP_TABLE
 
 #if LINEAGE2
@@ -336,6 +368,9 @@ public:
 		PROP_INT(VSize)
 		PROP_INT(UClamp)
 		PROP_INT(VClamp)
+#if BIOSHOCK
+		PROP_DROP(Type)
+#endif
 	END_PROP_TABLE
 };
 
@@ -384,13 +419,14 @@ struct FMipmap
 	{
 #if TRIBES3
 		TRIBES_HDR(Ar, 0x1A);
-		if (t3_hdrSV >= 1)
+		if (t3_hdrSV == 1)
 		{
 			TLazyArray<byte> SkipArray;
 			Ar << SkipArray;
 		}
 #endif // TRIBES3
-		return Ar << M.DataArray << M.USize << M.VSize << M.UBits << M.VBits;
+		Ar << M.DataArray << M.USize << M.VSize << M.UBits << M.VBits;
+		return Ar;
 	}
 };
 
@@ -429,6 +465,11 @@ public:
 	ETextureFormat	CompFormat;			// UT1, SplinterCell, Tribes3
 	// UE1 fields
 	byte			bHasComp;
+#if BIOSHOCK
+	int64			CachedBulkDataSize;
+	bool			HasBeenStripped;
+	byte			StrippedNumMips;
+#endif
 
 #if RENDERING
 	// rendering implementation fields
@@ -449,6 +490,11 @@ public:
 	{
 		guard(UTexture::Serialize);
 		Super::Serialize(Ar);
+#if BIOSHOCK
+		TRIBES_HDR(Ar, 0x2E);
+		if (Ar.IsBioshock && t3_hdrSV >= 1)
+			Ar << CachedBulkDataSize;
+#endif // BIOSHOCK
 		Ar << Mips;
 		if (Ar.ArVer < PACKAGE_V2)
 		{
@@ -463,6 +509,7 @@ public:
 #if EXTEEL
 		if (Ar.IsExteel)
 		{
+			// note: this property is serialized as UObject's property too
 			byte MaterialType;			// enum GFMaterialType
 			Ar << MaterialType;
 		}
@@ -492,6 +539,20 @@ public:
 		PROP_FLOAT(MaxFrameRate)
 		PROP_ENUM(CompFormat)
 		PROP_BOOL(bHasComp)
+#if BIOSHOCK
+		PROP_BOOL(HasBeenStripped)
+		PROP_BYTE(StrippedNumMips)
+		PROP_DROP(ResourceCategory)
+		PROP_DROP(ConsoleDropMips)
+		PROP_DROP(bStreamable)
+		PROP_DROP(CachedBulkDataSize)	//?? serialized twice?
+		PROP_DROP(BestTextureInstanceWeight)
+		PROP_DROP(SourcePath)
+		PROP_DROP(Keywords)
+		PROP_DROP(LastModifiedTime_LoInt)
+		PROP_DROP(LastModifiedTime_HiInt)
+		PROP_DROP(LastModifiedByUser)
+#endif // BIOSHOCK
 	END_PROP_TABLE
 
 #if RENDERING
@@ -548,6 +609,16 @@ public:
 	bool			AlphaTest;
 	byte			AlphaRef;
 #endif // LINEAGE2
+#if BIOSHOCK
+	FMaskMaterial	Opacity_Bio;
+	FMaskMaterial	HeightMap;
+	FMaskMaterial	SpecularMask;
+	FMaskMaterial	GlossinessMask;
+	FMaskMaterial	ReflectionMask;
+	FMaskMaterial	EmissiveMask;
+	FMaskMaterial	SubsurfaceMask;
+	FMaskMaterial	ClipMask;
+#endif // BIOSHOCK
 
 	UShader()
 	:	ModulateStaticLighting2X(true)
@@ -575,8 +646,55 @@ public:
 		PROP_BOOL(ZWrite)
 		PROP_BOOL(AlphaTest)
 		PROP_BYTE(AlphaRef)
-#endif
+#endif // LINEAGE2
+#if BIOSHOCK
+		PROP_STRUC(Opacity_Bio,    FMaskMaterial)
+		PROP_STRUC(HeightMap,      FMaskMaterial)
+		PROP_STRUC(SpecularMask,   FMaskMaterial)
+		PROP_STRUC(GlossinessMask, FMaskMaterial)
+		PROP_STRUC(ReflectionMask, FMaskMaterial)
+		PROP_STRUC(EmissiveMask,   FMaskMaterial)
+		PROP_STRUC(SubsurfaceMask, FMaskMaterial)
+		PROP_STRUC(ClipMask,       FMaskMaterial)
+		PROP_DROP(NormalMap)		//?? Tribes too, use it
+		PROP_DROP(DiffuseColor)
+		PROP_DROP(Emissive)
+		PROP_DROP(EmissiveBrightness)
+		PROP_DROP(EmissiveColor)
+		PROP_DROP(Glossiness)
+		PROP_DROP(ReflectionBrightness)
+		PROP_DROP(SpecularColor)
+		PROP_DROP(SpecularBrightness)
+		PROP_DROP(SpecularCubeMapBrightness)
+		PROP_DROP(SpecularColorMap)
+		PROP_DROP(UseSpecularCubemaps)
+		PROP_DROP(HeightMap)
+		PROP_DROP(HeightMapStrength)
+		PROP_DROP(Masked)			//??
+		PROP_DROP(MaterialVisualType)
+		PROP_DROP(DiffuseTextureAnimator)
+		PROP_DROP(DiffuseColorAnimator)
+		PROP_DROP(OpacityTextureAnimator)
+		PROP_DROP(SelfIllumTextureAnimator)
+		PROP_DROP(SelfIllumColorAnimator)
+		PROP_DROP(Subsurface)
+		PROP_DROP(SubsurfaceColor2x)
+		PROP_DROP(DistortionStrength)
+		PROP_DROP(ForceTransparentSorting)
+		PROP_DROP(MaxAlphaClipValue)
+		PROP_DROP(MinAlphaClipValue)
+#endif // BIOSHOCK
 	END_PROP_TABLE
+
+#if BIOSHOCK
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UShader::Serialize);
+		Super::Serialize(Ar);
+		TRIBES_HDR(Ar, 0x29);
+		unguard;
+	}
+#endif
 
 	BIND;
 };
@@ -594,6 +712,7 @@ public:
 };
 
 
+//?? NOTE: Bioshock EFrameBufferBlending is used for UShader and UFinalBlend, plus it has different values
 enum EFrameBufferBlending
 {
 	FB_Overwrite,
@@ -992,6 +1111,106 @@ public:
 };
 
 
+#if BIOSHOCK
+
+class UFacingShader : public URenderedMaterial
+{
+	DECLARE_CLASS(UFacingShader, URenderedMaterial);
+public:
+	UMaterial		*EdgeDiffuse;
+	UMaterial		*FacingDiffuse;
+	FMaskMaterial	EdgeOpacity;
+	FMaskMaterial	FacingOpacity;
+	float			EdgeOpacityScale;
+	float			FacingOpacityScale;
+	UMaterial		*NormalMap;
+	FColor			EdgeDiffuseColor;
+	FColor			FacingDiffuseColor;
+	FColor			EdgeSpecularColor;
+	FColor			FacingSpecularColor;
+	FMaskMaterial	FacingSpecularMask;
+	UMaterial		*FacingSpecularColorMap;
+	FMaskMaterial	FacingGlossinessMask;
+	FMaskMaterial	EdgeSpecularMask;
+	UMaterial		*EdgeSpecularColorMap;
+	FMaskMaterial	EdgeGlossinessMask;
+	UMaterial		*EdgeEmissive;
+	UMaterial		*FacingEmissive;
+	FMaskMaterial	EdgeEmissiveMask;
+	FMaskMaterial	FacingEmissiveMask;
+	float			EdgeEmissiveBrightness;
+	float			FacingEmissiveBrightness;
+	FColor			EdgeEmissiveColor;
+	FColor			FacingEmissiveColor;
+	EFrameBufferBlending OutputBlending;
+	bool			Masked;
+	bool			TwoSided;
+	FMaskMaterial	SubsurfaceMask;
+	FMaskMaterial	NoiseMask;
+
+	UFacingShader()
+	//?? unknown default properties
+	{}
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(EdgeDiffuse)
+		PROP_OBJ(FacingDiffuse)
+		PROP_STRUC(EdgeOpacity, FMaskMaterial)
+		PROP_STRUC(FacingOpacity, FMaskMaterial)
+		PROP_FLOAT(EdgeOpacityScale)
+		PROP_FLOAT(FacingOpacityScale)
+		PROP_OBJ(NormalMap)
+		PROP_COLOR(EdgeDiffuseColor)
+		PROP_COLOR(FacingDiffuseColor)
+		PROP_COLOR(EdgeSpecularColor)
+		PROP_COLOR(FacingSpecularColor)
+		PROP_STRUC(FacingSpecularMask, FMaskMaterial)
+		PROP_OBJ(FacingSpecularColorMap)
+		PROP_STRUC(FacingGlossinessMask, FMaskMaterial)
+		PROP_STRUC(EdgeSpecularMask, FMaskMaterial)
+		PROP_OBJ(EdgeSpecularColorMap)
+		PROP_STRUC(EdgeGlossinessMask, FMaskMaterial)
+		PROP_OBJ(EdgeEmissive)
+		PROP_OBJ(FacingEmissive)
+		PROP_STRUC(EdgeEmissiveMask, FMaskMaterial)
+		PROP_STRUC(FacingEmissiveMask, FMaskMaterial)
+		PROP_FLOAT(EdgeEmissiveBrightness)
+		PROP_FLOAT(FacingEmissiveBrightness)
+		PROP_COLOR(EdgeEmissiveColor)
+		PROP_COLOR(FacingEmissiveColor)
+		PROP_ENUM2(OutputBlending, EFrameBufferBlending)
+		PROP_BOOL(Masked)
+		PROP_BOOL(TwoSided)
+		PROP_STRUC(SubsurfaceMask, FMaskMaterial)
+		PROP_STRUC(NoiseMask, FMaskMaterial)
+		PROP_DROP(EdgeDiffuseTextureAnimator)
+		PROP_DROP(FacingDiffuseTextureAnimator)
+		PROP_DROP(EdgeDiffuseColorAnimator)
+		PROP_DROP(FacingDiffuseColorAnimator)
+		PROP_DROP(EdgeOpacityTextureAnimator)
+		PROP_DROP(FacingOpacityTextureAnimator)
+		PROP_DROP(BlendTextureAnimator)
+		PROP_DROP(NormalTextureAnimator)
+		PROP_DROP(EdgeSelfIllumColorAnimator)
+		PROP_DROP(FacingSelfIllumColorAnimator)
+		PROP_DROP(FacingSpecularAnimator)
+		PROP_DROP(EdgeSpecularAnimator)
+		PROP_DROP(EdgeGlossiness)
+		PROP_DROP(FacingGlossiness)
+		PROP_DROP(EdgeSpecularBrightness)
+		PROP_DROP(FacingSpecularBrightness)
+		PROP_DROP(Subsurface)
+		PROP_DROP(SubsurfaceColor2x)
+		PROP_DROP(ForceTransparentSorting)
+		PROP_DROP(Hardness)
+	END_PROP_TABLE
+
+	BIND;
+};
+
+#endif // BIOSHOCK
+
+
 #if UNREAL3
 
 /*-----------------------------------------------------------------------------
@@ -1386,6 +1605,10 @@ public:
 	REGISTER_CLASS(UTexPanner)			\
 	REGISTER_CLASS(UTexRotator)			\
 	REGISTER_CLASS(UTexScaler)
+
+#define REGISTER_MATERIAL_CLASSES_BIO	\
+	REGISTER_CLASS(FMaskMaterial)		\
+	REGISTER_CLASS(UFacingShader)
 
 #define REGISTER_MATERIAL_CLASSES_U3	\
 	REGISTER_CLASS_ALIAS(UMaterial3, UMaterial) \

@@ -28,7 +28,6 @@
 				InternalConstructor				\
 			);									\
 			return &type;						\
-			return StaticGetTypeinfo();			\
 		}
 
 //!! can easily derive one structure from another
@@ -84,6 +83,7 @@ struct CTypeInfo
 	const CPropInfo *FindProperty(const char *Name) const;
 	void SerializeProps(FArchive &Ar, void *ObjectData) const;
 	void DumpProps(void *Data) const;
+	static void RemapProp(const char *Class, const char *OldName, const char *NewName);
 };
 
 
@@ -106,6 +106,7 @@ struct CNullType
 
 #define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(((ThisClass*)NULL)->Field) / sizeof(Type) },
 #define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
+#define PROP_STRUC(Field,Type)	_PROP_BASE(Field, Type)	//?? == _PROP_BASE
 #define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
 
 

@@ -20,6 +20,7 @@ Unreal Engine 2.5:
   Harry Potter and the Prisoner of Azkaban
 Modified Unreal Engine 2.5
   Tribes: Vengeance
+  Bioshock
   Exteel
 Unreal Engine 3:
   Unreal Tournament 3
@@ -45,6 +46,7 @@ Using "-noanim" option (unsupported animation format):
   BlackSite: Area 51
   Mortal Kombat vs. DC Universe
 Unsupported animations (without umodel crash):
+  Bioshock (animations are inside Havok data structures)
   Mass Effect
   Mirror's Edge
   X-Men Origins: Wolverine
@@ -83,6 +85,27 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+30.06.2009
+- Bioshock: implemented support for FacingShader class and hi-res textures
+
+29.06.2009
+- Bioshock: implemented SkeletalMesh support
+
+26.06.2009
+- Bioshock: implemented parsing of Havok data structures
+
+10.06.2009
+- Bioshock: implemented quick support for materials
+
+09.06.2009
+- Bioshock: implemented static mesh support
+
+08.06.2009
+- Tribes: Vengeance: implemented static mesh support
+
+06.06.2009
+- Bioshock: implemented package support
+
 29.05.2009
 - improved UE3 material rendering (better diffuse texture detection)
 - implemented Army of Two SkeletalMesh support

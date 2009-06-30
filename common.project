@@ -37,6 +37,10 @@ INCLUDES += . $R/Core $R/Unreal $R/libs/include
 	INCLUDES += $R/libs/includewin32
 !endif
 
+# smaller zlib
+DEFINES =			\
+	DYNAMIC_CRC_TABLE	\
+	BUILDFIXED
 
 # libraries
 DDS_LIBS = {

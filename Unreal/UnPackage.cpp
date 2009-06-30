@@ -155,7 +155,23 @@ public:
 		{
 			// serialize compressed chunk header
 			Reader->Seek(Chunk->CompressedOffset);
-			*Reader << ChunkHeader;
+#if BIOSHOCK
+			if (IsBioshock)
+			{
+				// read block size
+				int CompressedSize;
+				*Reader << CompressedSize;
+				// generate ChunkHeader
+				ChunkHeader.Blocks.Empty(1);
+				FCompressedChunkBlock *Block = new (ChunkHeader.Blocks) FCompressedChunkBlock;
+				Block->UncompressedSize = 32768;
+				Block->CompressedSize   = CompressedSize;
+			}
+			else
+#endif // BIOSHOCK
+			{
+				*Reader << ChunkHeader;
+			}
 			ChunkDataPos = Reader->Tell();
 			CurrentChunk = Chunk;
 		}
@@ -306,6 +322,32 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #endif
 	PKG_LOG(("Names: %d Exports: %d Imports: %d\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
+#if BIOSHOCK
+	if (IsBioshock)
+	{
+		// read compression info
+		int NumChunks, i;
+		TArray<FCompressedChunk> Chunks;
+		*this << NumChunks;
+		Chunks.Empty(NumChunks);
+		int UncompOffset = Tell() - 4;		//?? test "-4"
+		for (i = 0; i < NumChunks; i++)
+		{
+			int Offset;
+			*this << Offset;
+			FCompressedChunk *Chunk = new (Chunks) FCompressedChunk;
+			Chunk->UncompressedOffset = UncompOffset;
+			Chunk->UncompressedSize   = 32768;
+			Chunk->CompressedOffset   = Offset;
+			Chunk->CompressedSize     = 0;			//?? not used
+			UncompOffset             += 32768;
+		}
+		// replace Loader for reading compressed Bioshock archives
+		Loader = new FUE3ArchiveReader(Loader, COMPRESS_ZLIB, Chunks);
+		Loader->IsBioshock = true;		// use different structures
+	}
+#endif // BIOSHOCK
+
 #if UNREAL3
 	if (ArVer >= PACKAGE_V3 && Summary.CompressionFlags)
 	{
@@ -352,7 +394,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				int tmp;
 				*this << tmp;
 			}
-#endif
+#endif // PARIAH
 			else
 			{
 #if 0
@@ -376,8 +418,12 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		#if WHEELMAN
 				if (IsWheelman) goto done;	// no flags
 		#endif
+		#if BIOSHOCK
+				if (IsBioshock) goto qword_flags;
+		#endif
 				if (ArVer >= PACKAGE_V3)
 				{
+				qword_flags:
 					// object flags are 64-bit in UE3, skip additional 32 bits
 					int unk;
 					*this << unk;

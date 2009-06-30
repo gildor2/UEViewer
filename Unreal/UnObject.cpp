@@ -87,7 +87,7 @@ void UObject::EndLoad()
 				Package->GetStopper() - Package->Tell());
 		LoadedObjects.AddItem(Obj);
 
-		unguardf(("%s, pos=%X", Obj->Name, Package->Tell()));
+		unguardf(("%s'%s.%s', pos=%X, ver=%d/%d", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer));
 	}
 	// postload objects
 	int i;
@@ -107,19 +107,24 @@ void UObject::EndLoad()
 	Properties support
 -----------------------------------------------------------------------------*/
 
+//?? add argument "Count" and use it for array<> serialization
+//?? note: keep old code for TArray<FVector> etc - it is faster (used in UE3)
 static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *StrucName)
 {
 	guard(SerializeStruc);
 #define STRUC_TYPE(name)				\
 	if (!strcmp(StrucName, #name))		\
 	{									\
-		Ar << ((F##name*)Data)[Index];	\
+		Ar << ((name*)Data)[Index];		\
 		return true;					\
 	}
-	STRUC_TYPE(Vector)
-	STRUC_TYPE(Rotator)
-	STRUC_TYPE(Color)
-	return false;
+	STRUC_TYPE(FVector)
+	STRUC_TYPE(FRotator)
+	STRUC_TYPE(FColor)
+	const CTypeInfo *ItemType = FindStructType(StrucName+1);
+	if (!ItemType) return false;
+	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
+	return true;
 	unguardf(("%s", StrucName));
 }
 
@@ -219,6 +224,7 @@ struct FPropertyTag
 		assert(Ar.IsLoading);		// saving is not supported
 
 #if UC2
+		//!! special path for UC2
 		if (Ar.ArVer >= 148 && Ar.ArVer < PACKAGE_V3)
 		{
 			assert(Ar.IsLoading);
@@ -538,10 +544,21 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		case NAME_StructProperty:
 			{
 				if (strcmp(Prop->TypeName+1, *Tag.StrucName))
-					appError("Struc property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, *Tag.StrucName);
-				if (SerializeStruc(Ar, value, Tag.ArrayIndex, Tag.StrucName))
+				{
+					appNotify("Struc property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, *Tag.StrucName);
+					Ar.Seek(StopPos);
+				}
+				else if (SerializeStruc(Ar, value, Tag.ArrayIndex, Prop->TypeName))
 				{
 					PROP_DBG("(complex)", 0);
+					int Pos = Ar.Tell();
+					if (Pos > StopPos)
+					{
+#if DEBUG_PROPS
+						appNotify("%s.%s: bad size (%d byte less) for struct property", Name, *Tag.Name, Pos - StopPos);
+#endif
+						StopPos = Pos;
+					}
 				}
 				else
 				{
@@ -671,12 +688,33 @@ bool CTypeInfo::IsA(const char *TypeName) const
 }
 
 
+struct PropPatch
+{
+	const char *ClassName;
+	const char *OldName;
+	const char *NewName;
+};
+
+static TArray<PropPatch> Patches;
+
 const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 {
 	guard(CTypeInfo::FindProperty);
+	int i;
+	// check for remap
+	for (i = 0; i < Patches.Num(); i++)
+	{
+		const PropPatch &p = Patches[i];
+		if (!strcmp(p.ClassName, this->Name) && !strcmp(p.OldName, Name))
+		{
+			Name = p.NewName;
+			break;
+		}
+	}
+	// find property
 	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
 	{
-		for (int i = 0; i < Type->NumProps; i++)
+		for (i = 0; i < Type->NumProps; i++)
 			if (!(strcmp(Type->Props[i].Name, Name)))
 				return Type->Props + i;
 	}
@@ -748,6 +786,15 @@ void CTypeInfo::DumpProps(void *Data) const
 				printf("\n");
 		}
 	}
+}
+
+
+void CTypeInfo::RemapProp(const char *ClassName, const char *OldName, const char *NewName) // static
+{
+	PropPatch *p = new (Patches) PropPatch;
+	p->ClassName = ClassName;
+	p->OldName   = OldName;
+	p->NewName   = NewName;
 }
 
 

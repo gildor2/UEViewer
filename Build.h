@@ -31,6 +31,7 @@
 
 // requires UNREAL3
 #define XBOX360			1		// XBox360 resources
+#define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Enable extended pattern matching (for (a|b|c)); see bash manpage, "Pattern matching".
+shopt -s extglob
+
 #------------------------------------------------------------------------------
 #	Game tools
 #------------------------------------------------------------------------------
@@ -49,11 +52,13 @@ function rund()   { run1 "data" $*;  }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
 function l2()     { run1 "$L2" $*;   }
+function bio()    { run1 "$BIO" $*; }
 
 rm umodel.exe	#?? win32 only
 ./build.sh
 
 # Check directories
+#?? should check dirs when specific game has been requested (not all games everytime)
 CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
 CheckDir UT1 c:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament
 CheckDir UT2 c:/games/unreal~1/ut2004 c:/games/unreal/ut2004
@@ -62,6 +67,7 @@ CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2"
 CheckDir L2 "C:/!umodel-data/Lineage2"
+CheckDir BIO "C:/GAMES/BioShock" "G:/BioShock"
 
 #------------------------------------------------------------------------------
 
@@ -76,8 +82,12 @@ if [ $# -gt 0 ]; then
 	fi
 	declare -a args
 	while [ $# -gt 0 ]; do
-		value=${1//\\/\/}			# replace backslashes with forward slashes
+		value=${1//\\//}			# replace backslashes with forward slashes
+#??		if [[ "$value" == @(* *) ]]; then
+#??			value="\"$value\""
+#??		fi
 		args[${#args[@]}]="$value"	# add value to array
+#??		echo "val=$value" #!!
 		shift
 	done
 	eval $cmd ${args[*]}			# execute command
@@ -89,11 +99,12 @@ fi
 # no arguments
 
 # select path here
-case "" in
+case "bio" in
 
 "")
+
 	# Army of Two
-	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
+#	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
 	# MK vs DC
 #	run1 C:/!umodel-data/.possible/MKvsDC_X360 -noanim -meshes CHAR_Batman
 	# A51
@@ -263,6 +274,31 @@ case "" in
 #------------------------------------------------------------------------------
 "tribes3")
 	run1 "C:/GAMES/Tribes - Vengeance/Content/Art" Vehicles
+	;;
+
+#------------------------------------------------------------------------------
+#	Bioshock
+#------------------------------------------------------------------------------
+"bio")
+	# Bioshock
+#	bio -list core
+#!!	bio -nomesh 0-Lighthouse #GraniteColorScumbleTight_DIF
+#!!	bio -noanim -nostat -notex 0-Lighthouse PustuleBirth_Mesh
+	bio ShockGame WP_PistolMesh
+	bio 0-Lighthouse ProtectorRosie SkeletalMesh
+#	bio 1-Medical.bsm Agg_BabyJane
+#!!	bio -notex -noanim -nostat 1-Medical.bsm Agg_Doctor_Mesh
+#!!	bio -nomesh -notex 5-Ryan.bsm
+	#!! LazyArray erors:
+#	bio 1-Medical.bsm ChemThrow_Pickup_Kero_Diffuse
+#	bio 1-Medical.bsm ChemThrow_Pickup_IonGel_Diffuse
+	#!! SkeletalMesh errors
+#	bio 1-Welcome PlaneCrash_Mesh
+#	bio 5-Hephaestus LavaFlowSwitch_MESH
+	#!! Bad skeleton
+#	bio 3-Arcadia CatMESH
+	#!! Crash
+#	bio 0-Lighthouse lighthouse_tunnel
 	;;
 
 #------------------------------------------------------------------------------

@@ -33,8 +33,8 @@ void CStatMeshInstance::Draw()
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glEnableClientState(GL_NORMAL_ARRAY);
 
-		glVertexPointer(3, GL_FLOAT, sizeof(FStaticMeshVertex), &Mesh->Verts[0].Pos.X);
-		glNormalPointer(GL_FLOAT, sizeof(FStaticMeshVertex), &Mesh->Verts[0].Normal.X);
+		glVertexPointer(3, GL_FLOAT, sizeof(FStaticMeshVertex), &Mesh->VertexStream.Vert[0].Pos.X);
+		glNormalPointer(GL_FLOAT, sizeof(FStaticMeshVertex), &Mesh->VertexStream.Vert[0].Normal.X);
 		glTexCoordPointer(2, GL_FLOAT, 0, &Mesh->UVStream[0].Data[0].U);
 		glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Mesh->IndexStream1.Indices[Sec.FirstIndex]);
 //		glDrawElements(GL_LINES, Mesh->IndexStream2.Indices.Num(), GL_UNSIGNED_SHORT, &Mesh->IndexStream2.Indices[0]);
@@ -52,11 +52,11 @@ void CStatMeshInstance::Draw()
 	{
 		glBegin(GL_LINES);
 		glColor3f(0.5, 1, 0);
-		for (i = 0; i < Mesh->Verts.Num(); i++)
+		for (i = 0; i < Mesh->VertexStream.Vert.Num(); i++)
 		{
-			glVertex3fv(&Mesh->Verts[i].Pos.X);
+			glVertex3fv(&Mesh->VertexStream.Vert[i].Pos.X);
 			CVec3 tmp;
-			VectorMA((CVec3&)Mesh->Verts[i].Pos, 2, (CVec3&)Mesh->Verts[i].Normal, tmp);
+			VectorMA((CVec3&)Mesh->VertexStream.Vert[i].Pos, 2, (CVec3&)Mesh->VertexStream.Vert[i].Normal, tmp);
 			glVertex3fv(tmp.v);
 		}
 		glEnd();

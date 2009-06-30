@@ -16,7 +16,7 @@
 void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
 	CVec3 &DstPos, CQuat &DstQuat);
 
-// function is similar to part of CSkelMeshInstance::SetMesh() and Rune mesh loaded
+// function is similar to part of CSkelMeshInstance::SetMesh() and Rune mesh loader
 static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<FMeshBone> &Bones)
 {
 	guard(BuildSkeleton);
