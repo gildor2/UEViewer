@@ -337,6 +337,10 @@ void UObject::Serialize(FArchive &Ar)
 
 	const CTypeInfo *Type = GetTypeinfo();
 	assert(Type);
+
+	if (Type->IsA("Class"))		// no properties for UClass
+		return;
+
 	Type->SerializeProps(Ar, this);
 
 	unguard;

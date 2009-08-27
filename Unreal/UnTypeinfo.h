@@ -41,9 +41,9 @@ public:
 	{
 		guard(UField::Serialize);
 		assert(Ar.IsLoading);
-		if (strcmp(GetClassName(), "Class") != 0)
-			Super::Serialize(Ar);
+		Super::Serialize(Ar);
 		Ar << SuperField << Next;
+//		printf("super: %s next: %s\n", SuperField ? SuperField->Name : "-", Next ? Next->Name : "-");
 		unguard;
 	}
 };
@@ -119,6 +119,9 @@ class UStruct : public UField
 	DECLARE_CLASS(UStruct, UField);
 public:
 	UTextBuffer		*ScriptText;
+#if UNREAL3
+	UTextBuffer		*CppText;
+#endif
 	UField			*Children;
 	FName			FriendlyName;
 	int				TextPos;
@@ -132,20 +135,28 @@ public:
 	{
 		guard(UStruct::Serialize);
 		Super::Serialize(Ar);
-		Ar << ScriptText << Children << FriendlyName;
+		Ar << ScriptText << Children;
+#if UNREAL3
+		if (Ar.ArVer >= PACKAGE_V3)
+			Ar << CppText;
+#endif
+//		printf("%s: cpp:%s scr:%s child:%s\n", Name, CppText ? CppText->Name : "-", ScriptText ? ScriptText->Name : "-", Children ? Children->Name : "-");
+		if (Ar.ArVer < PACKAGE_V3)
+			Ar << FriendlyName;	//?? UT2 ? or UE2 ?
 #if UT2
 		if (Ar.IsUT2 && Ar.ArLicenseeVer >= 25)	//?? other games too ?
 			Ar << f60;
 #endif
 		Ar << Line << TextPos;
+
 		assert(Ar.IsLoading);
 		int ScriptSize;
 		Ar << ScriptSize;
 		if (ScriptSize)
 		{
+			printf("script: %d, rest: %d\n", ScriptSize, Ar.GetStopper() - Ar.Tell());
 			Script.Empty(ScriptSize);
 			Script.Add(ScriptSize);
-			printf("script: %d, rest: %d\n", ScriptSize, Ar.GetStopper() - Ar.Tell());
 			Ar.Serialize(&Script[0], ScriptSize);
 		}
 //		Ar.Seek(Ar.Tell() + ScriptSize);	// skip scripts
@@ -155,6 +166,21 @@ public:
 	}
 };
 
+#if UNREAL3
+
+class UScriptStruct : public UStruct
+{
+	DECLARE_CLASS(UScriptStruct, UStruct);
+public:
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		// has properties here (struct defaults?)
+		Ar.Seek(Ar.GetStopper());
+	}
+};
+
+#endif // UNREAL3
 
 class UState : public UStruct
 {
@@ -196,20 +222,39 @@ class UProperty : public UField
 public:
 	int				ArrayDim;
 	unsigned		PropertyFlags;
+#if UNREAL3
+	unsigned		PropertyFlags2;	// uint64
+#endif
 	FName			Category;
 	word			f48;
 	FString			f64;
+#if UNREAL3
+	UObject			*unk60;			// UEnum, which constant is used to specify ArrayDim
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UProperty::Serialize);
 		Super::Serialize(Ar);
-		Ar << ArrayDim << PropertyFlags << Category;
+		Ar << ArrayDim << PropertyFlags;
+#if UNREAL3
+		if (Ar.ArVer >= PACKAGE_V3)
+			Ar << PropertyFlags2;
+#endif
+		Ar << Category;
+#if UNREAL3
+		if (Ar.ArVer >= PACKAGE_V3)
+			Ar << unk60;
+#endif
 		if (PropertyFlags & 0x20)
 			Ar << f48;
-		if (PropertyFlags & 0x2000000)
-			Ar << f64;
-//		printf("prop %s [%d] %X (%s)\n", Name, ArrayDim, PropertyFlags, *Category);
+		if (Ar.ArVer < PACKAGE_V3)
+		{
+			//?? UT2 only ?
+			if (PropertyFlags & 0x2000000)
+				Ar << f64;
+		}
+//		printf("... prop %s [%d] %X:%X (%s)\n", Name, ArrayDim, PropertyFlags, PropertyFlags2, *Category);
 		unguard;
 	}
 };
@@ -371,6 +416,7 @@ public:
 	{
 		guard(UStructProperty::Serialize);
 		Super::Serialize(Ar);
+printf("Struct(%s) rest: %X\n", Name, Ar.GetStopper() - Ar.Tell());	//!!!
 		Ar << Struct;
 		unguard;
 	}
@@ -403,3 +449,6 @@ class UPointerProperty : public UProperty
 	REGISTER_CLASS(UMapProperty)		\
 	REGISTER_CLASS(UStructProperty)		\
 	REGISTER_CLASS(UPointerProperty)
+
+#define REGISTER_TYPEINFO_CLASSES_U3	\
+	REGISTER_CLASS(UScriptStruct)

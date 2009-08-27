@@ -19,6 +19,7 @@
 
 // requires UNREAL3
 #define XBOX360			1
+#define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
 #define MASSEFF			1
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1

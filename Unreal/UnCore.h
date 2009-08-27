@@ -191,6 +191,12 @@ public:
 #if HUXLEY
 	int		IsHuxley:1;
 #endif
+#if TUROK
+	int		IsTurok:1;
+#endif
+#if XMEN
+	int		IsXMen:1;
+#endif
 
 	FArchive()
 	:	ArPos(0)
@@ -245,6 +251,12 @@ public:
 #endif
 #if HUXLEY
 	,	IsHuxley(0)
+#endif
+#if TUROK
+	,	IsTurok(0)
+#endif
+#if XMEN
+	,	IsXMen(0)
 #endif
 	{}
 
@@ -763,10 +775,13 @@ protected:
 	int		DataCount;
 	int		MaxCount;
 
+	// serializers
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 	FArchive& SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 	FArchive& SerializeSimple(FArchive &Ar, int NumFields, int FieldSize);
 };
+
+FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 
 // NOTE: this container cannot hold objects, required constructor/destructor
 // (at least, Add/Insert/Remove functions are not supported, but can serialize
@@ -936,33 +951,19 @@ template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 // Purpose in UE: array with can me loaded asynchronously (when serializing
 // it 1st time only disk position is remembered, and later array can be
 // read from file when needed)
+
 template<class T> class TLazyArray : public TArray<T>
 {
+	// Helper function to reduce TLazyArray<>::operator<<() code size.
+	// Used as C-style wrapper around TArray<>::operator<<().
+	static FArchive& SerializeArray(FArchive &Ar, void *Array)
+	{
+		return Ar << *(TArray<T>*)Array;
+	}
+
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
-		guard(TLazyArray<<);
-		assert(Ar.IsLoading);
-		int SkipPos = 0;								// ignored
-		if (Ar.ArVer > 61)
-			Ar << SkipPos;
-#if BIOSHOCK
-		//?? separate this code to cpp, because UE2 has a lot of TLazyArray<> ...
-		if (Ar.IsBioshock && Ar.ArVer >= 131)
-		{
-			int f10, f8;
-			Ar << f10 << f8;
-//			printf("bio: pos=%08X skip=%08X f10=%08X f8=%08X\n", Ar.Tell(), SkipPos, f10, f8);
-			if (SkipPos < Ar.Tell())
-			{
-//				appNotify("Bioshock: wrong SkipPos in array at %X", Ar.Tell());
-				SkipPos = 0;		// have a few places with such bug ...
-			}
-		}
-#endif // BIOSHOCK
-		Ar << (TArray<T>&)A;
-		assert(SkipPos == 0 || Ar.Tell() == SkipPos);	// check position
-		return Ar;
-		unguard;
+		return SerializeLazyArray(Ar, A, SerializeArray);
 	}
 };
 

@@ -36,6 +36,7 @@ Modified Unreal Engine 3:
   Huxley
   Rise of the Argonauts
   X-Men Origins: Wolverine
+  Nurien
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,9 +48,6 @@ Using "-noanim" option (unsupported animation format):
   Mortal Kombat vs. DC Universe
 Unsupported animations (without umodel crash):
   Bioshock (animations are inside Havok data structures)
-  Mass Effect
-  Mirror's Edge
-  X-Men Origins: Wolverine
   Rise of the Argonauts
 
 Project home page and forum:
@@ -85,6 +83,19 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+27.08.2009
+- implemented Mass Effect animation support
+
+26.08.2009
+- implemented Mortal Online package support
+- implemented Mirror's Edge animation support
+
+03.08.2009
+- implemented X-Men Origins: Wolverine animations support
+
+27.07.2009
+- implemented Nurien support
+
 30.06.2009
 - Bioshock: implemented support for FacingShader class and hi-res textures
 

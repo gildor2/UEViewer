@@ -42,6 +42,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_MATERIAL_CLASSES_U3
 	REGISTER_MESH_CLASSES_U3
 #endif
+#if MASSEFF
+	REGISTER_MESH_CLASSES_MASSEFF
+#endif
 END_CLASS_TABLE
 	// enumerations
 	REGISTER_MATERIAL_ENUMS
@@ -278,6 +281,9 @@ int main(int argc, char **argv)
 #	if MASSEFF
 				"    Mass Effect\n"
 #	endif
+#	if TUROK
+				"    Turok\n"
+#	endif
 #	if A51
 				"    BlackSite: Area 51\n"
 #	endif
@@ -295,6 +301,12 @@ int main(int argc, char **argv)
 #	endif
 #	if MEDGE
 				"    Mirror's Edge\n"
+#	endif
+#	if XMEN
+				"    X-Men Origins: Wolverine\n"
+#	endif
+#	if NURIEN
+				"    Nurien\n"
 #	endif
 #endif // UNREAL3
 				"\n"

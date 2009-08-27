@@ -2582,6 +2582,17 @@ void UAnimSet::ConvertAnims()
 
 	int i;
 
+#if MASSEFF
+	UBioAnimSetData *BioData = NULL;
+	if (Package->IsMassEffect && !TrackBoneNames.Num() && Sequences.Num())
+	{
+		// Mass Effect has separated TrackBoneNames from UAnimSet to UBioAnimSetData
+		BioData = Sequences[0]->m_pBioAnimSetData;
+		if (BioData)
+			CopyArray(TrackBoneNames, BioData->TrackBoneNames);
+	}
+#endif
+
 	RefBones.Empty(TrackBoneNames.Num());
 	for (i = 0; i < TrackBoneNames.Num(); i++)
 	{
@@ -2603,19 +2614,26 @@ void UAnimSet::ConvertAnims()
 			printf("WARNING: %s: no sequence %d\n", Name, i);
 			continue;
 		}
+#if MASSEFF
+		if (Seq->m_pBioAnimSetData != BioData)
+		{
+			appNotify("Mass Effect AnimSequence %s/%s has different BioAnimSetData object, removing track",
+				Name, *Seq->SequenceName);
+			continue;
+		}
+#endif // MASSEFF
 		// some checks
 		int offsetsPerBone = 4;
 #if TLR
 		if (Package->IsTLR) offsetsPerBone = 6;
 #endif
-		if (NumTracks * offsetsPerBone != Seq->CompressedTrackOffsets.Num())
+#if XMEN
+		if (Package->IsXMen) offsetsPerBone = 6;		// has additional CutInfo array
+#endif
+		if (Seq->CompressedTrackOffsets.Num() != NumTracks * offsetsPerBone)
 		{
-			//!! Solutions: (when not enough CompressedTrackOffsets)
-			//!!	1) fill missing "bad" track with some constant
-			//!!	2) remove "bad" track
-			//!!	3) remove extra bones from all sequences
-			appNotify("AnimSequence %s/%s has wrong CompressedTrackOffsets size (%d != %d), removing track",
-				Name, *Seq->SequenceName, Seq->CompressedTrackOffsets.Num(), NumTracks * 4);
+			appNotify("AnimSequence %s/%s has wrong CompressedTrackOffsets size (has %d, expected %d), removing track",
+				Name, *Seq->SequenceName, Seq->CompressedTrackOffsets.Num(), NumTracks * offsetsPerBone);
 			continue;
 		}
 

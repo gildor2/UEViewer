@@ -17,7 +17,7 @@ function CheckDir()
 			dir="/media/c/${dir:3}"
 		fi
 		if [ -d "$dir" ]; then
-			eval $varname="$dir"
+			eval $varname="\"$dir\""
 			return
 		fi
 		shift
@@ -52,7 +52,8 @@ function rund()   { run1 "data" $*;  }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
 function l2()     { run1 "$L2" $*;   }
-function bio()    { run1 "$BIO" $*; }
+function bio()    { run1 "$BIO" $*;  }
+function mass()   { run1 "$MASS" $*; }
 
 rm umodel.exe	#?? win32 only
 ./build.sh
@@ -68,6 +69,7 @@ CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2"
 CheckDir L2 "C:/!umodel-data/Lineage2"
 CheckDir BIO "C:/GAMES/BioShock" "G:/BioShock"
+CheckDir MASS "C:/GAMES/Mass Effect/BioGame/CookedPC"
 
 #------------------------------------------------------------------------------
 

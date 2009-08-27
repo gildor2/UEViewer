@@ -103,6 +103,9 @@ struct FPackageFileSummary
 
 		// read tag and version
 		Ar << S.Tag;
+#if NURIEN
+		if (S.Tag == 0xA94E6C81) goto tag_ok;
+#endif
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{
 			if (S.Tag != PACKAGE_FILE_TAG_REV)
@@ -110,6 +113,7 @@ struct FPackageFileSummary
 			Ar.ReverseBytes = true;
 			S.Tag = PACKAGE_FILE_TAG;
 		}
+	tag_ok:
 		int Version;
 		Ar << Version;
 #if UNREAL3
@@ -216,6 +220,13 @@ struct FPackageFileSummary
 		}
 		else
 		{
+#if UNREAL3
+			if (Ar.ArVer >= 584)	//?? Mortal Online or just a new engine ?
+			{
+				int unk38;
+				Ar << unk38;
+			}
+#endif
 			Ar << S.Guid;
 #if BIOSHOCK
 			if (Ar.IsBioshock)

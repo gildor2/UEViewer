@@ -33,12 +33,15 @@
 #define XBOX360			1		// XBox360 resources
 #define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
 #define A51				1		// Blacksite: Area 51
-#define WHEELMAN		1
+#define WHEELMAN		1		//?? incomplete
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define ARMYOF2			1		// Army of Two
 #define MASSEFF			1		// Mass Effect
 #define MEDGE			1		// Mirror's Edge
 #define TLR				1		// The Last Remnant
+#define NURIEN			1
+//#define TUROK			1		incomplete??
+#define XMEN			1		// XMen: Wolverine
 ///#define HUXLEY			1
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 

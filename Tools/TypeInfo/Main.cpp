@@ -3,6 +3,8 @@
 #include "UnPackage.h"
 #include "UnTypeinfo.h"
 
+//!! NOTE: UE3 has comments for properties, stored in package.UMetaData'MetaData'
+
 
 /*-----------------------------------------------------------------------------
 	Table of known Unreal classes
@@ -13,6 +15,9 @@ static void RegisterUnrealClasses()
 	// classes and structures
 BEGIN_CLASS_TABLE
 	REGISTER_TYPEINFO_CLASSES
+#if UNREAL3
+	REGISTER_TYPEINFO_CLASSES_U3
+#endif
 END_CLASS_TABLE
 }
 
@@ -64,12 +69,13 @@ static void DumpProperty(FArchive &Ar, const UProperty *Prop, const char *Type, 
 		Ar.Printf(")");
 	}
 #define FLAG(v,name)	if (Prop->PropertyFlags & v) Ar.Printf(" "#name);
-	FLAG(0x1000, native)
-	FLAG(2, const)
-	FLAG(0x20000, editconst)
-	FLAG(0x2000, transient)		//?? sometimes may be "private"
-	FLAG(0x800000, noexport)
-	FLAG(0x4000, config)
+	FLAG(0x0001000, native    )
+	FLAG(0x0000002, const     )
+	FLAG(0x0020000, editconst )
+	FLAG(0x4000000, editinline)
+	FLAG(0x0002000, transient )		//?? sometimes may be "private"
+	FLAG(0x0800000, noexport  )
+	FLAG(0x0004000, config    )
 #undef FLAG
 	Ar.Printf(" %s %s", Type, Prop->Name);
 	if (Prop->ArrayDim > 1)
@@ -84,6 +90,7 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 	const UField *Next = NULL;
 	for (const UField *F = Struct->Children; F; F = Next)
 	{
+//		printf("field: %s (%s)\n", F->Name, F->GetClassName());
 		Next = F->Next;
 		Ar.Printf("\n");
 		const char *ClassName = F->GetClassName();
@@ -102,13 +109,26 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 		DUMP(UEnum);
 		DUMP(UConst);
 		DUMP(UStruct);
+#if UNREAL3
+		DUMP(UScriptStruct);	// as UStruct
+#endif
 		// properties
-		assert(F->IsA("Property"));
+		if (!F->IsA("Property"))
+		{
+			appNotify("DumpProps for %s'%s' (%s): object is not a Property", F->GetClassName(), F->Name, Struct->Name);
+			continue;
+		}
+
 		bool isArray = false;
 		if (IS(UArrayProperty))
 		{
 			const UArrayProperty *Arr = static_cast<const UArrayProperty*>(F);
 			F  = Arr->Inner;
+			if (!F)
+			{
+				appNotify("ArrayProperty %s.%s has no inner field", Struct->Name, Arr->Name);
+				continue;
+			}
 			ClassName = F->GetClassName();
 			isArray = true;
 		}
@@ -117,6 +137,10 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 		{
 			CVT(UByteProperty);
 			TypeName = (Prop->Enum) ? Prop->Enum->Name : "byte";		//?? #IMPORTS#
+		}
+		else if (IS(UMapProperty))
+		{
+			TypeName = "map<>";		//!! implement
 		}
 		else if (IS(UIntProperty))
 			TypeName = "int";
@@ -158,7 +182,7 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 #undef DUMP
 	}
 
-	unguardf(("Struct=%s", *Struct->Name));
+	unguardf(("Struct=%s", Struct->Name));
 }
 
 void DumpClass(const UClass *Class)
@@ -229,6 +253,11 @@ int main(int argc, char **argv)
 
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);
+	// setup root directory
+	if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
+		appSetRootDirectory2(argPkgName);
+	else
+		appSetRootDirectory(".");
 	// load package
 	UnPackage *Package;
 	if (strchr(argPkgName, '.'))

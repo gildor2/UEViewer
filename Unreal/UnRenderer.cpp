@@ -1254,6 +1254,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture2D::Decompress);
 
+	bool tfcChecked = false;
 	for (int n = 0; n < Mips.Num(); n++)
 	{
 		// find 1st mipmap with non-null data array
@@ -1266,10 +1267,17 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			//!! * material viewer: support switching mip levels (for xbox decompression testing)
 			if (Mip.Data.BulkDataFlags & BULKDATA_NoData) continue;		// mip level is stripped
 			if (!strcmp(TextureFileCacheName, "None")) continue;		// no TFC file assigned
+			if (tfcChecked) continue;									// already checked for previous mip levels
 			//!! cache checking of tfc file(s) + cache handles (FFileReader)
-			//!! note: there can be few cache files!
+			//!! note #1: there can be few cache files!
+			//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
+			tfcChecked = true;
 			const CGameFileInfo *tfc = appFindGameFile(TextureFileCacheName, "tfc");
-			if (!tfc) continue;
+			if (!tfc)
+			{
+				printf("Decompressing %s: %s.tfc is missing\n", Name, *TextureFileCacheName);
+				continue;
+			}
 			FArchive *Ar = appCreateFileReader(tfc);
 			Ar->ReverseBytes = Package->ReverseBytes;
 			FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast

@@ -631,6 +631,32 @@ FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 }
 
 
+FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*))
+{
+	guard(TLazyArray<<);
+	assert(Ar.IsLoading);
+	int SkipPos = 0;								// ignored
+	if (Ar.ArVer > 61)
+		Ar << SkipPos;
+#if BIOSHOCK
+	if (Ar.IsBioshock && Ar.ArVer >= 131)
+	{
+		int f10, f8;
+		Ar << f10 << f8;
+//		printf("bio: pos=%08X skip=%08X f10=%08X f8=%08X\n", Ar.Tell(), SkipPos, f10, f8);
+		if (SkipPos < Ar.Tell())
+		{
+//			appNotify("Bioshock: wrong SkipPos in array at %X", Ar.Tell());
+			SkipPos = 0;		// have a few places with such bug ...
+		}
+	}
+#endif // BIOSHOCK
+	Serializer(Ar, &Array);
+	return Ar;
+	unguard;
+}
+
+
 /*-----------------------------------------------------------------------------
 	FArchive methods
 -----------------------------------------------------------------------------*/
@@ -842,6 +868,15 @@ void FArchive::DetectGame()
 	IsHuxley = (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
 			   (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
 			   (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22));
+#endif
+#if TUROK
+	IsTurok = (ArVer == 374 && ArLicenseeVer == 16) ||
+			  (ArVer == 375 && ArLicenseeVer == 19) ||
+			  (ArVer == 392 && ArLicenseeVer == 23) ||
+			  (ArVer == 393 && (ArLicenseeVer >= 27 && ArLicenseeVer <= 61));
+#endif
+#if XMEN
+	IsXMen = (ArVer == 568 && ArLicenseeVer == 101);
 #endif
 }
 

@@ -1716,6 +1716,11 @@ struct FRawAnimSequenceTrack
 		PROP_ARRAY(RotKeys, FQuat)
 		PROP_ARRAY(KeyTimes, float)
 	END_PROP_TABLE
+
+	friend FArchive& operator<<(FArchive &Ar, FRawAnimSequenceTrack &T)
+	{
+		return Ar << T.PosKeys << T.RotKeys << T.KeyTimes;
+	}
 };
 
 enum AnimationCompressionFormat
@@ -1750,6 +1755,28 @@ _ENUM(AnimationKeyFormat)
 	_E(AKF_VariableKeyLerp)
 };
 
+
+#if MASSEFF
+// Bioware has separated some common UAnimSequence settings
+
+class UBioAnimSetData : public UObject
+{
+	DECLARE_CLASS(UBioAnimSetData, UObject);
+public:
+	bool					bAnimRotationOnly;
+	TArray<FName>			TrackBoneNames;
+	TArray<FName>			UseTranslationBoneNames;
+
+	BEGIN_PROP_TABLE
+		PROP_BOOL(bAnimRotationOnly)
+		PROP_ARRAY(TrackBoneNames, FName)
+		PROP_ARRAY(UseTranslationBoneNames, FName)
+	END_PROP_TABLE
+};
+
+#endif // MASSEFF
+
+
 class UAnimSequence : public UObject
 {
 	DECLARE_CLASS(UAnimSequence, UObject);
@@ -1766,6 +1793,9 @@ public:
 	AnimationKeyFormat		KeyEncodingFormat;				// GoW2+
 	TArray<int>				CompressedTrackOffsets;
 	TArray<byte>			CompressedByteStream;
+#if MASSEFF
+	UBioAnimSetData			*m_pBioAnimSetData;
+#endif
 
 	UAnimSequence()
 	:	RateScale(1.0f)
@@ -1785,6 +1815,9 @@ public:
 		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
 		PROP_ARRAY(CompressedTrackOffsets, int)
+#if MASSEFF
+		PROP_OBJ(m_pBioAnimSetData)
+#endif
 		// unsupported
 		PROP_DROP(Notifies)
 		PROP_DROP(CompressionScheme)
@@ -1803,6 +1836,13 @@ public:
 		guard(UAnimSequence::Serialize);
 		assert(Ar.ArVer >= 372);		// older version is not yet ready
 		Super::Serialize(Ar);
+#if TUROK
+		if (Ar.IsTurok)
+		{
+			Ar << RawAnimData;
+			return;
+		}
+#endif // TUROK
 		Ar << CompressedByteStream;
 		unguard;
 	}
@@ -1817,6 +1857,9 @@ public:
 	TArray<UAnimSequence*>	Sequences;
 	TArray<FName>			UseTranslationBoneNames;
 	FName					PreviewSkelMeshName;
+#if MASSEFF
+	UBioAnimSetData			*m_pBioAnimSetData;
+#endif
 
 	UAnimSet()
 	:	bAnimRotationOnly(true)
@@ -1830,6 +1873,9 @@ public:
 		PROP_ARRAY(Sequences, UObject*)
 		PROP_ARRAY(UseTranslationBoneNames, FName)
 		PROP_NAME(PreviewSkelMeshName)
+#if MASSEFF
+		PROP_OBJ(m_pBioAnimSetData)
+#endif
 		//!! unsupported
 		PROP_DROP(ForceMeshTranslationBoneNames)
 	END_PROP_TABLE
@@ -2277,11 +2323,17 @@ public:
 	/*REGISTER_CLASS(USharedSkeletonDataMetadata)*/ \
 	REGISTER_CLASS(UAnimationPackageWrapper)
 
+#define REGISTER_MESH_CLASSES_MASSEFF \
+	REGISTER_CLASS(UBioAnimSetData)
+
+// UTdAnimSet - Mirror's Edge, derived from UAnimSet
 #define REGISTER_MESH_CLASSES_U3	\
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS(UAnimSequence)	\
-	REGISTER_CLASS(UAnimSet)
+	REGISTER_CLASS(UAnimSet)		\
+	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet)
+
 
 #define REGISTER_MESH_ENUMS_U3		\
 	REGISTER_ENUM(AnimationCompressionFormat) \
