@@ -982,12 +982,12 @@ inline void SkipLazyArray(FArchive &Ar)
 
 #if UNREAL3
 
-// NOTE: real class name is unknown; other suitable names: TCookedArray
+// NOTE: real class name is unknown; other suitable names: TCookedArray, TPodArray.
 // Purpose in UE: array, which file contents exactly the same as in-memory
 // contents. Whole array can be read using single read call. Package
 // engine version should equals to game engine version, otherwise per-element
 // reading will be performed (as usual in TArray)
-// There is no reading optimizationperformed here (in umodel)
+// There is no reading optimization performed here (in umodel)
 template<class T> class TRawArray : public TArray<T>
 {
 	friend FArchive& operator<<(FArchive &Ar, TRawArray &A)
@@ -1005,6 +1005,8 @@ template<class T> class TRawArray : public TArray<T>
 //			assert(ElementSize == sizeof(T));
 			int SavePos = Ar.Tell();
 			Ar << (TArray<T>&)A;
+//			printf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, A.Num(), ElementSize,
+//				float(Ar.Tell() - SavePos - 4) / A.Num(), Ar.Tell());
 			assert(Ar.Tell() == SavePos + 4 + A.Num() * ElementSize);	// check position
 			return Ar;
 		}

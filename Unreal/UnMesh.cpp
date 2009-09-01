@@ -1936,9 +1936,9 @@ struct FEdge3
 
 SIMPLE_TYPE(FEdge3, int)
 
+// Structure holding normals and bone influeces
 struct FGPUVert3Common
 {
-	FVector				Pos;
 	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
 	byte				BoneIndex[4];
 	byte				BoneWeight[4];
@@ -1946,7 +1946,7 @@ struct FGPUVert3Common
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Common &V)
 	{
 		int i;
-		Ar << V.Pos << V.Normal[0] << V.Normal[1];
+		Ar << V.Normal[0] << V.Normal[1];
 		if (Ar.ArVer < 494)
 			Ar << V.Normal[2];
 		for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
@@ -1963,17 +1963,23 @@ struct FGPUVert3Common
  */
 struct FGPUVert3Half : FGPUVert3Common
 {
+	FVector				Pos;
 	word				U, V;			//?? create class float16 ?
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Half &V)
 	{
-		Ar << *((FGPUVert3Common*)&V) << V.U << V.V;
+		if (Ar.ArVer < 592)
+			Ar << V.Pos << *((FGPUVert3Common*)&V);
+		else
+			Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		Ar << V.U << V.V;
 		return Ar;
 	}
 };
 
 struct FGPUVert3Float : FGPUVert3Common
 {
+	FVector				Pos;
 	float				U, V;
 
 	FGPUVert3Float &operator=(const FSmoothVertex3 &S)
@@ -1991,23 +1997,70 @@ struct FGPUVert3Float : FGPUVert3Common
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Float &V)
 	{
-		Ar << *((FGPUVert3Common*)&V) << V.U << V.V;
+		if (Ar.ArVer < 592)
+			Ar << V.Pos << *((FGPUVert3Common*)&V);
+		else
+			Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		Ar << V.U << V.V;
+		return Ar;
+	}
+};
+
+struct FVectorIntervalFixed32
+{
+	int					Value;
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed32 &V)
+	{
+		return Ar << V.Value;
+	}
+};
+
+struct FGPUVert3PackedFloat : FGPUVert3Common
+{
+	FVectorIntervalFixed32 Pos;
+	float				U, V;
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedFloat &V)
+	{
+		Ar << *((FGPUVert3Common*)&V) << V.Pos << V.U << V.V;
+		return Ar;
+	}
+};
+
+struct FGPUVert3PackedHalf : FGPUVert3Common
+{
+	FVectorIntervalFixed32 Pos;
+	word				U, V;			//?? create class float16 ?
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedHalf &V)
+	{
+		Ar << *((FGPUVert3Common*)&V) << V.Pos << V.U << V.V;
 		return Ar;
 	}
 };
 
 struct FGPUSkin3
 {
-	int							bUseFullPrecisionUVs;	// 0 = half, 1 = float; copy of corresponding USkeletalMesh field
-	TRawArray<FGPUVert3Half>	VertsHalf;				// only one of these vertex sets are used
-	TRawArray<FGPUVert3Float>	VertsFloat;
+	int							bUseFullPrecisionUVs;		// 0 = half, 1 = float; copy of corresponding USkeletalMesh field
+	// compressed position data
+	int							bUseFullPrecisionPosition;	// 0 = packed FVector (32-bit), 1 = FVector (96-bit)
+	FVector						MeshOrigin;
+	FVector						MeshExtension;
+	// vertex sets
+	TRawArray<FGPUVert3Half>		VertsHalf;				// only one of these vertex sets are used
+	TRawArray<FGPUVert3Float>		VertsFloat;
+	TRawArray<FGPUVert3PackedFloat>	VertsHalfPacked;		//?? unused
+	TRawArray<FGPUVert3PackedHalf>	VertsFloatPacked;		//?? unused
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUSkin3 &S)
 	{
 		guard(FSkinData3<<);
+
 	#if HUXLEY
 		if (Ar.IsHuxley) goto old_version;
 	#endif
+
 	#if ARMYOF2
 		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 74)
 		{
@@ -2031,13 +2084,24 @@ struct FGPUSkin3
 			S.bUseFullPrecisionUVs = true;
 			return Ar;
 		}
+
 		// new version
+		// serialize type information
 	#if MEDGE
 		int NumUVSets = 1;
 		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 0xF)
 			Ar << NumUVSets;
 	#endif // MEDGE
 		Ar << S.bUseFullPrecisionUVs;
+		S.bUseFullPrecisionPosition = true;
+		if (Ar.ArVer >= 592)
+			Ar << S.bUseFullPrecisionPosition << S.MeshOrigin << S.MeshExtension;
+
+		//?? UE3 ignored this - forced bUseFullPrecisionPosition in FGPUSkin3 serializer ?
+//		printf("data: %d %d\n", S.bUseFullPrecisionUVs, S.bUseFullPrecisionPosition);
+		S.bUseFullPrecisionPosition = true;
+
+		// serialize vertex array
 		if (!S.bUseFullPrecisionUVs)
 		{
 	#if MEDGE
@@ -2046,8 +2110,11 @@ struct FGPUSkin3
 				SkipRawArray(Ar, 0x20 + (NumUVSets - 1) * 4);
 				return Ar;
 			}
-	#endif
-			Ar << S.VertsHalf;
+	#endif // MEDGE
+			if (S.bUseFullPrecisionPosition)
+				Ar << S.VertsHalf;
+			else
+				Ar << S.VertsHalfPacked;
 		}
 		else
 		{
@@ -2057,9 +2124,13 @@ struct FGPUSkin3
 				SkipRawArray(Ar, 0x24 + (NumUVSets - 1) * 8);
 				return Ar;
 			}
-	#endif
-			Ar << S.VertsFloat;
+	#endif // MEDGE
+			if (S.bUseFullPrecisionPosition)
+				Ar << S.VertsFloat;
+			else
+				Ar << S.VertsFloatPacked;
 		}
+
 		return Ar;
 		unguard;
 	}
@@ -2282,15 +2353,33 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 
 			for (Vert = C.FirstVertex; Vert < LastVertex; Vert++)
 			{
-				const FGPUVert3Common &V = (!S.bUseFullPrecisionUVs)
-					? *(FGPUVert3Common*)&S.VertsHalf[Vert]
-					: *(FGPUVert3Common*)&S.VertsFloat[Vert];
+				const FGPUVert3Common *V;
+				FVector VPos;
+				float VU, VV;
+				//!! have not seen packed position meshes, check FGPUSkin3 serializer for details
+				assert(S.bUseFullPrecisionPosition);
+				if (!S.bUseFullPrecisionUVs)
+				{
+					const FGPUVert3Half &V0 = S.VertsHalf[Vert];
+					V    = &V0;
+					VPos = V0.Pos;
+					VU   = half2float(V0.U);
+					VV   = half2float(V0.V);
+				}
+				else
+				{
+					const FGPUVert3Float &V0 = S.VertsFloat[Vert];
+					V    = &V0;
+					VPos = V0.Pos;
+					VU   = V0.U;
+					VV   = V0.V;
+				}
 				// find the same point in previous items
 #if 0
 				int PointIndex = INDEX_NONE;
 				for (j = 0; j < Points.Num(); j++)
 				{
-					if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
+					if (Points[j] == VPos && CompareCompNormals(PointNormals[j], V->Normal[0]))
 					{
 						PointIndex = j;
 						break;
@@ -2300,23 +2389,23 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				int PointIndex = -1;	// start with 0, see below
 				while (true)
 				{
-					PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
+					PointIndex = Points.FindItem(VPos, PointIndex + 1);
 					if (PointIndex == INDEX_NONE) break;
-					if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
+					if (CompareCompNormals(PointNormals[PointIndex], V->Normal[0])) break;
 				}
 #endif
 				if (PointIndex == INDEX_NONE)
 				{
 					// point was not found - create it
 					PointIndex = Points.Add();
-					Points[PointIndex] = V.Pos;
-					PointNormals.AddItem(V.Normal[0]);
+					Points[PointIndex] = VPos;
+					PointNormals.AddItem(V->Normal[0]);
 					// add influences
 //					int TotalWeight = 0;
 					for (int i = 0; i < 4; i++)
 					{
-						int BoneIndex  = V.BoneIndex[i];
-						int BoneWeight = V.BoneWeight[i];
+						int BoneIndex  = V->BoneIndex[i];
+						int BoneWeight = V->BoneWeight[i];
 						if (BoneWeight == 0) continue;
 						FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
 						Inf->PointIndex = PointIndex;
@@ -2329,18 +2418,8 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				// create wedge
 				FMeshWedge *W = new(Wedges) FMeshWedge;
 				W->iVertex = PointIndex;
-				if (!S.bUseFullPrecisionUVs)
-				{
-					const FGPUVert3Half &V1 = *(const FGPUVert3Half*)&V;
-					W->TexUV.U = half2float(V1.U);
-					W->TexUV.V = half2float(V1.V);
-				}
-				else
-				{
-					const FGPUVert3Float &V1 = *(const FGPUVert3Float*)&V;
-					W->TexUV.U = V1.U;
-					W->TexUV.V = V1.V;
-				}
+				W->TexUV.U = VU;
+				W->TexUV.V = VV;
 			}
 			unguard;
 

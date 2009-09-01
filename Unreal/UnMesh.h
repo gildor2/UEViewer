@@ -1712,13 +1712,25 @@ struct FRawAnimSequenceTrack
 	TArray<float>			KeyTimes;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(PosKeys, FVector)
-		PROP_ARRAY(RotKeys, FQuat)
+		PROP_ARRAY(PosKeys,  FVector)
+		PROP_ARRAY(RotKeys,  FQuat)
 		PROP_ARRAY(KeyTimes, float)
 	END_PROP_TABLE
 
 	friend FArchive& operator<<(FArchive &Ar, FRawAnimSequenceTrack &T)
 	{
+		if (Ar.ArVer >= 577)
+		{
+			// new UE3 version has replaced TArray<> with TRawArray
+			TRawArray<FVector> Pos;
+			TRawArray<FQuat>   Rot;
+			TRawArray<float>   Time;
+			Ar << Pos << Rot << Time;
+			CopyArray(T.PosKeys, Pos);
+			CopyArray(T.RotKeys, Rot);
+			CopyArray(T.KeyTimes, Time);
+			return Ar;
+		}
 		return Ar << T.PosKeys << T.RotKeys << T.KeyTimes;
 	}
 };
@@ -1836,6 +1848,8 @@ public:
 		guard(UAnimSequence::Serialize);
 		assert(Ar.ArVer >= 372);		// older version is not yet ready
 		Super::Serialize(Ar);
+		if (Ar.ArVer >= 577)
+			Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
 #if TUROK
 		if (Ar.IsTurok)
 		{

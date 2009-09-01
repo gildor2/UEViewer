@@ -1363,6 +1363,7 @@ public:
 	ETextureAddress	AddressX;
 	ETextureAddress	AddressY;
 	FName			TextureFileCacheName;
+	FGuid			TextureFileCacheGuid;
 
 #if RENDERING
 	// rendering implementation fields
@@ -1417,10 +1418,7 @@ public:
 		}
 #endif // HUXLEY
 		if (Ar.ArVer >= 567)
-		{
-			int fE0, fE4, fE8, fEC;
-			Ar << fE0 << fE4 << fE8 << fEC;
-		}
+			Ar << TextureFileCacheGuid;
 		unguard;
 	}
 

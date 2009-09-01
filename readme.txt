@@ -26,6 +26,7 @@ Unreal Engine 3:
   Unreal Tournament 3
   Gears of War (XBox360 and PC)
   Gears of War 2 (XBox360)
+  Mortal Online
 Modified Unreal Engine 3:
   The Last Remnant
   Mass Effect
@@ -83,6 +84,9 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+01.09.2009
+- implemented new UE3 SkeletalMesh and Animation support (tested with Mortal Online)
+
 27.08.2009
 - implemented Mass Effect animation support
 
