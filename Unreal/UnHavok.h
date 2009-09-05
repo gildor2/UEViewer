@@ -1,3 +1,6 @@
+#ifndef __UNHAVOK_H__
+#define __UNHAVOK_H__
+
 /*-----------------------------------------------------------------------------
 	Basic types
 	Source/Common/Base/Types/hkBaseTypes.h
@@ -427,3 +430,6 @@ public:
 
 void FixupHavokPackfile(const char *Name, void *PackData);
 void GetHavokPackfileContents(const void *PackData, void **Object, const char **ClassName);
+
+
+#endif // __UNHAVOK_H__

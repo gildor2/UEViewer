@@ -878,6 +878,9 @@ void FArchive::DetectGame()
 #if XMEN
 	IsXMen = (ArVer == 568 && ArLicenseeVer == 101);
 #endif
+#if BATMAN
+	IsBatman = (ArVer == 576 && ArLicenseeVer == 21);
+#endif
 }
 
 

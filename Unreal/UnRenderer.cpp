@@ -1254,7 +1254,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture2D::Decompress);
 
-	bool tfcChecked = false;
+	bool bulkChecked = false;
 	for (int n = 0; n < Mips.Num(); n++)
 	{
 		// find 1st mipmap with non-null data array
@@ -1262,23 +1262,56 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 		const FTexture2DMipMap &Mip = Mips[n];
 		if (!Mip.Data.BulkData)
 		{
+			//?? Separate this function ?
 			// check for external bulk
 			//!! * -notfc cmdline switch
 			//!! * material viewer: support switching mip levels (for xbox decompression testing)
 			if (Mip.Data.BulkDataFlags & BULKDATA_NoData) continue;		// mip level is stripped
-			if (!strcmp(TextureFileCacheName, "None")) continue;		// no TFC file assigned
-			if (tfcChecked) continue;									// already checked for previous mip levels
-			//!! cache checking of tfc file(s) + cache handles (FFileReader)
-			//!! note #1: there can be few cache files!
-			//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
-			tfcChecked = true;
-			const CGameFileInfo *tfc = appFindGameFile(TextureFileCacheName, "tfc");
-			if (!tfc)
+			if (!(Mip.Data.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue;
+			// some optimization in a case of missing bulk file
+			if (bulkChecked) continue;									// already checked for previous mip levels
+			bulkChecked = true;
+			// Here: data is either in TFC file or in other package
+			const char *bulkFileName = NULL, *bulkFileExt = NULL;
+			if (strcmp(TextureFileCacheName, "None") != 0)
 			{
-				printf("Decompressing %s: %s.tfc is missing\n", Name, *TextureFileCacheName);
+				// TFC file is assigned
+				//!! cache checking of tfc file(s) + cache handles (FFileReader)
+				//!! note #1: there can be few cache files!
+				//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
+				bulkFileName = TextureFileCacheName;
+				bulkFileExt  = "tfc";
+			}
+			else
+			{
+				// data is inside another package
+				//!! copy-paste from UnPackage::CreateExport(), should separate function
+				// find outermost package
+				int PackageIndex = this->PackageIndex;	//?? ugly ...
+				if (PackageIndex)
+				{
+					while (true)
+					{
+						const FObjectExport &Exp2 = Package->GetExport(PackageIndex - 1);
+						if (!Exp2.PackageIndex) break;
+						PackageIndex = Exp2.PackageIndex;
+					}
+					const FObjectExport &Exp2 = Package->GetExport(PackageIndex - 1);
+					assert(Exp2.ExportFlags & EF_ForcedExport);
+					bulkFileName = Exp2.ObjectName;
+					bulkFileExt  = NULL;		// find package file
+				}
+			}
+			if (!bulkFileName) continue;		// just in case
+
+			const CGameFileInfo *bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+			if (!bulkFile)
+			{
+				printf("Decompressing %s: %s.%s is missing\n", Name, bulkFileName, bulkFileExt ? bulkFileExt : "*");
 				continue;
 			}
-			FArchive *Ar = appCreateFileReader(tfc);
+			FArchive *Ar = appCreateFileReader(bulkFile);
+			printf("Reading %s mip level %d (%dx%d) from %s\n", Name, n, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
 			Ar->ReverseBytes = Package->ReverseBytes;
 			FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
 //printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
@@ -1310,6 +1343,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
 
 #if XBOX360
+		//?? separate this function
 		int bytesPerBlock, blockSizeX, blockSizeY, align;
 		switch (intFormat)
 		{

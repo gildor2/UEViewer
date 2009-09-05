@@ -1260,6 +1260,9 @@ public:
 #if A51
 		PROP_DROP(LODBiasWindows)
 #endif // A51
+#if BATMAN
+		PROP_DROP(ForceOldCompression)
+#endif // BATMAN
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)

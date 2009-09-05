@@ -197,6 +197,9 @@ public:
 #if XMEN
 	int		IsXMen:1;
 #endif
+#if BATMAN
+	int		IsBatman:1;
+#endif
 
 	FArchive()
 	:	ArPos(0)
@@ -257,6 +260,9 @@ public:
 #endif
 #if XMEN
 	,	IsXMen(0)
+#endif
+#if BATMAN
+	,	IsBatman(0)
 #endif
 	{}
 

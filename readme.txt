@@ -27,6 +27,8 @@ Unreal Engine 3:
   Gears of War (XBox360 and PC)
   Gears of War 2 (XBox360)
   Mortal Online
+  Section 8
+
 Modified Unreal Engine 3:
   The Last Remnant
   Mass Effect
@@ -45,16 +47,19 @@ Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
   Unreal Championship 2: The Liandri Conflict (UE2X)
-  BlackSite: Area 51
+  BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
 Unsupported animations (without umodel crash):
-  Bioshock (animations are inside Havok data structures)
+  Bioshock (uses Havok animation system)
   Rise of the Argonauts
 
-Project home page and forum:
+Project home page, usage documentation and forum:
 http://www.gildor.org/en/projects/umodel
 or Russian page:
 http://www.gildor.org/projects/umodel
+
+Detailed title compatibility list (by Esr911) can be located here:
+http://www.gildor.org/projects/umodel/compat
 
 Please support project by making a donation here:
 http://www.gildor.org/en/donate
@@ -73,10 +78,14 @@ data. Also, "hierarchy" section does not contain real skeleton hierarchy,
 because Unreal Engine uses hierarchy from mesh, not from animations. Some md5
 viewers/importers does require md5anim hierarchy, some - does not.
 
+There is a 3DS Max md5mesh/md5anim importer script available on umodel forum:
+http://www.gildor.org/smf/index.php?topic=87.0
+This script was originally created by der_ton, but was updated by me (Gildor).
+
 
 Notes about StaticMesh support.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- StaticMesh class is supported for a few game titles only, use "-nostat"
+- StaticMesh class is supported for a few UE2 game titles only, use "-nostat"
   command line switch when you are trying to load package from some game title,
   but umodel is crashed on StaticMesh loading
 - StaticMesh export is not implemented
@@ -84,6 +93,9 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+03.09.2009
+- implemented full support for UE3 forced exports (loading from another packages)
+
 01.09.2009
 - implemented new UE3 SkeletalMesh and Animation support (tested with Mortal Online)
 

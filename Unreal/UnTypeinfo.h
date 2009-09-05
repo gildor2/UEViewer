@@ -254,6 +254,11 @@ public:
 			if (PropertyFlags & 0x2000000)
 				Ar << f64;
 		}
+#if A51
+		//?? Area 51: if Flags2 & 0x80000000 -> serialize "FString f64"
+		if (Ar.IsA51 && (PropertyFlags2 & 0x80000000))
+			Ar << f64;
+#endif // A51
 //		printf("... prop %s [%d] %X:%X (%s)\n", Name, ArrayDim, PropertyFlags, PropertyFlags2, *Category);
 		unguard;
 	}

@@ -29,6 +29,7 @@ MAIN = \
 	./obj/umodel-win32/UnCore.obj \
 	./obj/umodel-win32/UnHavok.obj \
 	./obj/umodel-win32/UnMesh.obj \
+	./obj/umodel-win32/UnMesh3.obj \
 	./obj/umodel-win32/UnMeshBioshock.obj \
 	./obj/umodel-win32/UnObject.obj \
 	./obj/umodel-win32/UnPackage.obj \
@@ -266,12 +267,16 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 ./obj/umodel-win32/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh.obj" Unreal/UnMesh.cpp
+
+./obj/umodel-win32/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh3.obj" Unreal/UnMesh3.cpp
 
 DEPENDS = \
 	Build.h \

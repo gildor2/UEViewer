@@ -305,6 +305,9 @@ int main(int argc, char **argv)
 #	if XMEN
 				"    X-Men Origins: Wolverine\n"
 #	endif
+#	if BATMAN
+				"    Batman: Arkham Asylum\n"
+#	endif
 #	if NURIEN
 				"    Nurien\n"
 #	endif
