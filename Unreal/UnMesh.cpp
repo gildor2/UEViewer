@@ -1007,6 +1007,8 @@ struct FSCellUnk1
 	}
 };
 
+SIMPLE_TYPE(FSCellUnk1, int)
+
 struct FSCellUnk2
 {
 	int				f0, f4, f8, fC, f10;
@@ -1038,6 +1040,8 @@ struct FSCellUnk4a
 		return Ar << S.f0 << S.fC << S.f18;
 	}
 };
+
+SIMPLE_TYPE(FSCellUnk4a, float)
 
 struct FSCellUnk4
 {
@@ -1598,6 +1602,8 @@ void FStaticLODModel::RestoreLineageMesh()
 	Points.Empty(NumWedges);			// really, should be a smaller count
 	VertInfluences.Empty(NumWedges);	// min count = NumVerts
 	Faces.Empty((SmoothIndices.Indices.Num() + RigidIndices.Indices.Num()) / 3);
+	TArray<FVector> PointNormals;
+	PointNormals.Empty(NumWedges);
 
 	// remap bones and build faces
 	TArray<const FSkelMeshSection*> WedgeSection;
@@ -1644,29 +1650,27 @@ void FStaticLODModel::RestoreLineageMesh()
 	unguard;
 
 	// process wedges
-	TArray<int> PointMap;
-	PointMap.Empty(NumWedges);
+
 	// convert LineageWedges (smooth sections)
 	guard(BuildSmoothWedges);
 	for (i = 0; i < LineageWedges.Num(); i++)
 	{
 		const FLineageWedge &LW = LineageWedges[i];
+		FVector VPos = LW.Point;
 		// find the same point in previous items
-		int PointIndex = INDEX_NONE;
-		for (j = 0; j < i; j++)
+		int PointIndex = -1;
+		while (true)
 		{
-			const FLineageWedge &LW1 = LineageWedges[j];
-			if (LW.Point == LW1.Point && LW.Normal == LW1.Normal)
-			{
-				PointIndex = PointMap[j];
-				break;
-			}
+			PointIndex = Points.FindItem(VPos, PointIndex + 1);
+			if (PointIndex == INDEX_NONE) break;
+			if (PointNormals[PointIndex] == LW.Normal) break;
 		}
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
 			PointIndex = Points.Add();
 			Points[PointIndex] = LW.Point;
+			PointNormals.AddItem(LW.Normal);
 			// build influences
 			const FSkelMeshSection *ms = WedgeSection[i];
 			assert(ms);
@@ -1681,7 +1685,6 @@ void FStaticLODModel::RestoreLineageMesh()
 				Inf->PointIndex = PointIndex;
 			}
 		}
-		PointMap.AddItem(PointIndex);
 		// create wedge
 		FMeshWedge *W = new (Wedges) FMeshWedge;
 		W->iVertex = PointIndex;
@@ -1693,22 +1696,21 @@ void FStaticLODModel::RestoreLineageMesh()
 	for (i = 0; i < VertexStream.Verts.Num(); i++)
 	{
 		const FAnimMeshVertex &LW = VertexStream.Verts[i];
+		FVector VPos = LW.Pos;
 		// find the same point in previous items
-		int PointIndex = INDEX_NONE;
-		for (j = 0; j < i; j++)
+		int PointIndex = -1;
+		while (true)
 		{
-			const FAnimMeshVertex &LW1 = VertexStream.Verts[j];
-			if (LW.Pos == LW1.Pos && LW.Norm == LW1.Norm)
-			{
-				PointIndex = PointMap[j];
-				break;
-			}
+			PointIndex = Points.FindItem(VPos, PointIndex + 1);
+			if (PointIndex == INDEX_NONE) break;
+			if (LW.Norm == PointNormals[PointIndex]) break;
 		}
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
 			PointIndex = Points.Add();
 			Points[PointIndex] = LW.Pos;
+			PointNormals.AddItem(LW.Norm);
 			// build influences
 			const FSkelMeshSection *ms = WedgeSection[i];
 			assert(ms);
@@ -1717,7 +1719,6 @@ void FStaticLODModel::RestoreLineageMesh()
 			Inf->BoneIndex  = /*VertexStream.Revision; //??*/ ms->BoneIndex; //-- equals 0 in Lineage2 ...
 			Inf->PointIndex = PointIndex;
 		}
-		PointMap.AddItem(PointIndex);
 		// create wedge
 		FMeshWedge *W = new (Wedges) FMeshWedge;
 		W->iVertex = PointIndex;

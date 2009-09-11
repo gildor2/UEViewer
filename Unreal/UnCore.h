@@ -524,10 +524,23 @@ struct FVector
 	}
 };
 
-inline bool operator==(const FVector &V1, const FVector &V2)
+#if 1
+
+FORCEINLINE bool operator==(const FVector &V1, const FVector &V2)
 {
 	return V1.X == V2.X && V1.Y == V2.Y && V1.Z == V2.Z;
 }
+
+#else
+
+FORCEINLINE bool operator==(const FVector &V1, const FVector &V2)
+{
+	const int* p1 = (int*)&V1;
+	const int* p2 = (int*)&V2;
+	return ( (p1[0] ^ p2[0]) | (p1[1] ^ p2[1]) | (p1[2] ^ p2[2]) ) == 0;
+}
+
+#endif
 
 
 struct FRotator
@@ -674,6 +687,10 @@ struct FColor
 // Default typeinfo
 template<class T> struct TTypeInfo
 {
+	//?? note: some fields were added for TArray serializer, but currently
+	//?? we have made a specialized serializers for simple and raw types
+	//?? in SIMPLE_TYPE and RAW_TYPE macros, so these fields are no more
+	//?? used
 	enum { FieldSize = sizeof(T) };
 	enum { NumFields = 1         };
 	enum { IsSimpleType = 0      };
@@ -695,11 +712,16 @@ template<> struct TTypeInfo<Type>			\
 template<> inline void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
 {											\
 	Dst.RawCopy(Src, sizeof(Type));			\
+}											\
+inline FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
+{											\
+	staticAssert(sizeof(Type) == TTypeInfo<Type>::NumFields * TTypeInfo<Type>::FieldSize, \
+		Error_In_TypeInfo);					\
+	return A.SerializeSimple(Ar, TTypeInfo<Type>::NumFields, TTypeInfo<Type>::FieldSize); \
 }
 
 
 // Declare type, which memory layout is the same as disk layout
-//!! NOTE: not used now
 #define RAW_TYPE(Type)						\
 template<> struct TTypeInfo<Type>			\
 {											\
@@ -711,6 +733,10 @@ template<> struct TTypeInfo<Type>			\
 template<> inline void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
 {											\
 	Dst.RawCopy(Src, sizeof(Type));			\
+}											\
+inline FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
+{											\
+	return A.SerializeRaw(Ar, TArray<Type>::SerializeItem, sizeof(Type)); \
 }
 
 
@@ -776,6 +802,10 @@ public:
 
 	void RawCopy(const FArray &Src, int elementSize);
 
+	// serializers
+	FArchive& SerializeSimple(FArchive &Ar, int NumFields, int FieldSize);
+	FArchive& SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
+
 protected:
 	void	*DataPtr;
 	int		DataCount;
@@ -783,8 +813,6 @@ protected:
 
 	// serializers
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
-	FArchive& SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
-	FArchive& SerializeSimple(FArchive &Ar, int NumFields, int FieldSize);
 };
 
 FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
@@ -856,8 +884,14 @@ public:
 	int AddItem(const T& item)
 	{
 		int index = Add();
-		(*this)[index] = item;
+		Item(index) = item;
 		return index;
+	}
+
+	T& AddItem()
+	{
+		int index = Add();
+		return Item(index);
 	}
 
 	int FindItem(const T& item, int startIndex = 0)
@@ -897,7 +931,7 @@ public:
 	template<class T2> friend FArchive& operator<<(FArchive &Ar, TArray<T2> &A);
 #endif
 
-protected:
+//?? -- cannot compile with VC7: protected:
 	// serializer helper; used from 'operator<<(FArchive, TArray<>)' only
 	static void SerializeItem(FArchive &Ar, void *item)
 	{
@@ -915,6 +949,15 @@ private:
 	{
 		return this;
 	}
+	// fast version of operator[] without assertions (may be used in safe code)
+	FORCEINLINE T& Item(int index)
+	{
+		return *((T*)DataPtr + index);
+	}
+	FORCEINLINE const T& Item(int index) const
+	{
+		return *((T*)DataPtr + index);
+	}
 };
 
 
@@ -923,22 +966,9 @@ private:
 // template class
 template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 {
+	// erase previous data before loading in a case of non-POD data
 	if (Ar.IsLoading)
-		A.Empty();				// erase previous data before loading
-	// support simple types
-	if (TTypeInfo<T>::IsSimpleType)
-	{
-		staticAssert(sizeof(T) == TTypeInfo<T>::NumFields * TTypeInfo<T>::FieldSize,
-			Error_In_TypeInfo);
-		//?? note: SerializeSimple() can reverse bytes on loading only, saving should
-		//?? be done using generic serializer, or SerializeSimple should be
-		//?? extended for this
-		return A.SerializeSimple(Ar, TTypeInfo<T>::NumFields, TTypeInfo<T>::FieldSize);
-	}
-	// support raw types
-	if (TTypeInfo<T>::IsRawType)
-		return A.SerializeRaw(Ar, TArray<T>::SerializeItem, sizeof(T));
-	// generic serializer
+		A.Empty();
 	return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
 }
 
@@ -946,8 +976,7 @@ template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
 	guard(TArray::operator new);
 	assert(size == sizeof(T));
-	int index = Array.Add(1);
-	return &Array[index];
+	return &Array.AddItem();
 	unguard;
 }
 
@@ -1060,19 +1089,19 @@ template<typename T1, typename T2> void CopyArray(TArray<T1> &Dst, const TArray<
 
 
 // Declare fundamental types
-SIMPLE_TYPE(byte, byte)
-SIMPLE_TYPE(char, char)
-SIMPLE_TYPE(short, short)
-SIMPLE_TYPE(word, word)
-SIMPLE_TYPE(int, int)
+SIMPLE_TYPE(byte,     byte)
+SIMPLE_TYPE(char,     char)
+SIMPLE_TYPE(short,    short)
+SIMPLE_TYPE(word,     word)
+SIMPLE_TYPE(int,      int)
 SIMPLE_TYPE(unsigned, unsigned)
-SIMPLE_TYPE(float, float)
+SIMPLE_TYPE(float,    float)
 
 // Aggregates
 SIMPLE_TYPE(FVector, float)
 SIMPLE_TYPE(FQuat,   float)
 SIMPLE_TYPE(FCoords, float)
-RAW_TYPE(FColor)
+SIMPLE_TYPE(FColor,  byte)
 
 
 /*-----------------------------------------------------------------------------

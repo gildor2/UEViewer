@@ -39,6 +39,8 @@ Modified Unreal Engine 3:
   Huxley
   Rise of the Argonauts
   X-Men Origins: Wolverine
+  Damnation
+  Batman: Arkham Asylum
   Nurien
 
 List of games with limited support:
@@ -93,11 +95,19 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+11.09.2009
+- implementer Batman: Arkham Asylum animation support
+
+10.09.2009
+- implemented Batman: Arkham Asylum SkeletalMesh support
+- added code to avoid "... unread bytes" when loading Texture2D from unknown UE3 games
+  (now Damnation is fully supported)
+
 03.09.2009
 - implemented full support for UE3 forced exports (loading from another packages)
 
 01.09.2009
-- implemented new UE3 SkeletalMesh and Animation support (tested with Mortal Online)
+- implemented new UE3 SkeletalMesh and animation support (tested with Mortal Online)
 
 27.08.2009
 - implemented Mass Effect animation support

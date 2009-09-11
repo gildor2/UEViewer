@@ -108,4 +108,68 @@ struct FQuatIntervalFixed32NoW
 SIMPLE_TYPE(FQuatIntervalFixed32NoW, unsigned)
 
 
+#if BATMAN
+
+// This is a variant of FQuatFixed48NoW developer for Batman: Arkham Asylum. It's destination
+// is to store quaternion with a better precision than FQuatFixed48NoW, but there was a logical
+// error: FQuatFixed48NoW's precision is 1/32768, but FQuatFixed48Max's precision is only 1/23170 !
+struct FQuatFixed48Max
+{
+	word			data[3];				// layout: V2[15] : V1[15] : V0[15] : S[2]
+
+	inline operator FQuat() const
+	{
+		unsigned tmp;
+		tmp = (data[1] << 16) | data[0];
+		int S = tmp & 3;								// bits [0..1]
+		int L = (tmp >> 2) & 0x7FFF;					// bits [2..16]
+		tmp = (data[2] << 16) | data[1];
+		int M = (tmp >> 1) & 0x7FFF;					// bits [17..31]
+		int H = (tmp >> 16) & 0x7FFF;					// bits [32..46]
+		// bit 47 is unused ...
+
+		static const float shift = 0.70710678118f;		// sqrt(0.5)
+		static const float scale = 1.41421356237f;		// sqrt(0.5)*2
+		float l = (L - 0.5f) / 32767 * scale - shift;
+		float m = (M - 0.5f) / 32767 * scale - shift;
+		float h = (H - 0.5f) / 32767 * scale - shift;
+		float a = sqrt(1.0f - (l*l + m*m + h*h));
+		// "l", "m", "h" are serialized values, in a range -shift .. +shift
+		// if we will remove one of maximal values ("a"), other values will be smaller
+		// that "a"; if "a" is 1, all other values are 0; when "a" becomes smaller,
+		// other values may grow; maximal value of "other" equals to "a" when
+		// 2 quaternion components equals to "a" and 2 other is 0; so, maximal
+		// stored value can be computed from equation "a*a + a*a + 0 + 0 = 1", so
+		// maximal value is sqrt(1/2) ...
+		// "a" is computed value, up to 1
+
+		FQuat r;
+		switch (S)			// choose where to place "a"
+		{
+		case 0:
+			r.Set(a, l, m, h);
+			break;
+		case 1:
+			r.Set(l, a, m, h);
+			break;
+		case 2:
+			r.Set(l, m, a, h);
+			break;
+		default: // 3
+			r.Set(l, m, h, a);
+		}
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatFixed48Max &Q)
+	{
+		return Ar << Q.data[0] << Q.data[1] << Q.data[2];
+	}
+};
+
+SIMPLE_TYPE(FQuatFixed48Max, word)
+
+#endif // BATMAN
+
+
 #endif // __UNMESHTYPES_H__

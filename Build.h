@@ -42,7 +42,7 @@
 #define NURIEN			1
 //#define TUROK			1		incomplete??
 #define XMEN			1		// XMen: Wolverine
-//#define BATMAN			1	incomplete??	// Batman: Arkham Asylum
+#define BATMAN			1		// Batman: Arkham Asylum
 ///#define HUXLEY			1
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 

@@ -1413,15 +1413,19 @@ public:
 		}
 #endif // MASSEFF
 #if HUXLEY
-		if (Ar.IsHuxley)
-		{
-			// don't need this ...
-			Ar.Seek(Ar.GetStopper());
-			return;
-		}
-#endif // HUXLEY
+		if (Ar.IsHuxley) goto skip_rest_quiet;
+#endif
 		if (Ar.ArVer >= 567)
 			Ar << TextureFileCacheGuid;
+
+		// some hack to support more games ...
+		if (Ar.Tell() < Ar.GetStopper())
+		{
+			printf("UTexture2D %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+		skip_rest_quiet:
+			Ar.Seek(Ar.GetStopper());
+		}
+
 		unguard;
 	}
 
@@ -1531,6 +1535,8 @@ public:
 		PROP_DROP(EditorCompounds)
 		PROP_DROP(bUsesDistortion)
 		PROP_DROP(bUsesSceneColor)
+		PROP_DROP(bUsedWithMorphTargets)
+		PROP_DROP(bAllowFog)
 #if MEDGE
 		PROP_DROP(BakerBleedBounceAmount)
 		PROP_DROP(BakerAlpha)

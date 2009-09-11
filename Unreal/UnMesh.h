@@ -247,6 +247,8 @@ struct FLineageUnk2
 	}
 };
 
+SIMPLE_TYPE(FLineageUnk2, int)
+
 
 struct FLineageUnk3
 {
@@ -1045,6 +1047,8 @@ struct FRag2FSkinGPUVertex
 	}
 };
 
+SIMPLE_TYPE(FRag2FSkinGPUVertex, float)
+
 struct FRag2FSkinGPUVertexStream
 {
 	int				f14, f18, f1C;
@@ -1403,6 +1407,10 @@ public:
 #	if MEDGE
 		PROP_DROP(NumUVSets)
 #	endif
+#	if BATMAN
+		PROP_DROP(SkeletonName)
+		PROP_DROP(Stretches)
+#	endif // BATMAN
 	END_PROP_TABLE
 #endif // UNREAL3
 
@@ -1743,6 +1751,9 @@ enum AnimationCompressionFormat
 	ACF_IntervalFixed32NoW,
 	ACF_Fixed32NoW,
 	ACF_Float32NoW,
+#if BATMAN
+	ACF_Fixed48Max,
+#endif
 };
 
 _ENUM(AnimationCompressionFormat)
@@ -1753,6 +1764,9 @@ _ENUM(AnimationCompressionFormat)
 	_E(ACF_IntervalFixed32NoW),
 	_E(ACF_Fixed32NoW),
 	_E(ACF_Float32NoW),
+#if BATMAN
+	_E(ACF_Fixed48Max),
+#endif
 };
 
 enum AnimationKeyFormat
@@ -1840,7 +1854,49 @@ public:
 #if TLR
 		PROP_DROP(ActionID)
 		PROP_DROP(m_ExtraData)
-#endif
+#endif // TLR
+#if BATMAN
+		PROP_DROP(FramesPerSecond)
+		PROP_DROP(MeetingPointBeginRotationEnabled)
+		PROP_DROP(MeetingPointEndRotationEnabled)
+		PROP_DROP(MeetingPointBeginTranslationEnabled)
+		PROP_DROP(MeetingPointEndTranslationEnabled)
+		PROP_DROP(MeetingPointBeginRotation)
+		PROP_DROP(MeetingPointEndRotation)
+		PROP_DROP(MeetingPointBeginTranslation)
+		PROP_DROP(MeetingPointEndTranslation)
+		PROP_DROP(ReferencePoint)
+		PROP_DROP(ReferencePointYaw)
+		PROP_DROP(ReferenceOptions)
+		PROP_DROP(CollisionOptions)
+		PROP_DROP(BlendInPoint)
+		PROP_DROP(BlendInDuration)
+		PROP_DROP(BlendOutPoint)
+		PROP_DROP(BlendOutDuration)
+		PROP_DROP(ClippedStartPoint)
+		PROP_DROP(ClippedEndPoint)
+		PROP_DROP(CanCancelBeforeHerePoint)
+		PROP_DROP(CanCancelAfterHerePoint)
+		PROP_DROP(CanCorrectAfterHerePoint)
+		PROP_DROP(ForwardYawOutPoint)
+		PROP_DROP(ForwardYawStartOffset)
+		PROP_DROP(ForwardYawEndOffset)
+		PROP_DROP(FloorHeightInPoint)
+		PROP_DROP(FloorHeightOutPoint)
+		PROP_DROP(FloorHeightStartOffset)
+		PROP_DROP(FloorHeightEndOffset)
+		PROP_DROP(CollisionOptionsOutPoint)
+		PROP_DROP(LinearCentre)
+		PROP_DROP(LinearSpan)
+		PROP_DROP(AllowCheekyBlendIn)
+		PROP_DROP(AllowCheekyBlendOut)
+		PROP_DROP(DisableProportionalMotionDuringBlendOut)
+		PROP_DROP(bUseSimpleRootMotionXY)
+		PROP_DROP(bUseSimpleFloorHeight)
+		PROP_DROP(bUseSimpleForwardYaw)
+		PROP_DROP(ClipRootMotionOutPoint)
+		PROP_DROP(ProportionalMotionDistanceCap)
+#endif // BATMAN
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -1892,6 +1948,9 @@ public:
 #endif
 		//!! unsupported
 		PROP_DROP(ForceMeshTranslationBoneNames)
+#if BATMAN
+		PROP_DROP(SkeletonName)
+#endif
 	END_PROP_TABLE
 
 	void ConvertAnims();

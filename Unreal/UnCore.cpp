@@ -110,6 +110,9 @@ static const char *PackageExtensions[] =
 #if UNREAL3
 	, "upk", "ut3", "xxx"
 #endif
+#if BATMAN
+	, "umap"
+#endif
 };
 
 #if UNREAL3 || UC2
@@ -597,6 +600,10 @@ FArchive& FArray::SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*
 FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 {
 	guard(TArray::SerializeSimple);
+
+	//?? note: SerializeSimple() can reverse bytes on loading only, saving should
+	//?? be done using generic serializer, or SerializeSimple should be
+	//?? extended for this
 
 	// serialize data count
 #if UNREAL3

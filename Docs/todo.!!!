@@ -1,4 +1,3 @@
-!! UC2: make Ar.IsUC2() instead of version checking
 !! UC2: load animations, textures
 
 Notify.log:
@@ -38,6 +37,7 @@ GENMAKE:
           /PkgScan
           ...
     * if so, can remove '-check', '-pkginfo' etc from umodel
+    * (partially?) done in pkgtool
 
 ! UE1 UTexture has AnimNext field
 ! UMaterialSequence (check 2K4Menus package)
@@ -50,9 +50,8 @@ GENMAKE:
     ! check this un UnrealEd
     * To fix: should create Moves.BoneIndices[], fill with 'i' and mark 0x1000-flags bones with -1
       ! check PSA generation too (will be buggy) -- require RefPose bones, but no in UMeshAnimation ...
-  ! check all meshes, find FlexTracks
-  - have unknown texture type (see BitmapMaterial.uc: have compressed normalmaps)
-  - packages: not classical directory structure
+  - have unknown texture type (see BitmapMaterial.uc: have compressed normalmaps) -- in some other
+    games too
   - crash (assert) when switching mesh LOD levels
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
 
@@ -81,14 +80,12 @@ Exporting:
 - TextBuffer export (separate tool?)
   - will require to get defaultproperties from "Class'Name'.properties" (object with name=ClassName and
     class name="")
-- option to enable paths when exporting objects (will create directory for each group)
 
 Loading:
-- add profiling for loading
 - ensure "whole package" loaded using locks (load all top-level objects, then subobjects)
 - periodically sort object list before serialization
 - profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
-- try to load from CD (slow random access)
+- testing: try to load from CD (slow random access)
 
 - try to compile with MinGW
 - move new Math3D parts to Quake2 core (more code to move ?)

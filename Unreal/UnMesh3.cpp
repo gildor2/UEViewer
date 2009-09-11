@@ -158,6 +158,8 @@ struct FEdge3
 	}
 };
 
+SIMPLE_TYPE(FEdge3, int)
+
 #if BATMAN
 struct FEdge3Bat
 {
@@ -169,9 +171,11 @@ struct FEdge3Bat
 		return Ar << V.iVertex[0] << V.iVertex[1] << V.iFace[0] << V.iFace[1];
 	}
 };
+
+SIMPLE_TYPE(FEdge3Bat, short)
+
 #endif // BATMAN
 
-SIMPLE_TYPE(FEdge3, int)
 
 // Structure holding normals and bone influeces
 struct FGPUVert3Common
@@ -425,7 +429,7 @@ struct FStaticLODModel3
 #if BATMAN
 		if (Ar.IsBatman && Ar.ArLicenseeVer >= 5)
 		{
-			FEdge3Bat tmpEdges;		// Batman code
+			TArray<FEdge3Bat> tmpEdges;		// Batman code
 			Ar << tmpEdges;
 		}
 		else
@@ -629,8 +633,10 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				const FGPUVert3Common *V;
 				FVector VPos;
 				float VU, VV;
-				//!! have not seen packed position meshes, check FGPUSkin3 serializer for details
+
+				//!! have not seen meshes with packed positions, check FGPUSkin3 serializer for details
 				assert(S.bUseFullPrecisionPosition);
+
 				if (!S.bUseFullPrecisionUVs)
 				{
 					const FGPUVert3Half &V0 = S.VertsHalf[Vert];
@@ -648,17 +654,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 					VV   = V0.V;
 				}
 				// find the same point in previous items
-#if 0
-				int PointIndex = INDEX_NONE;
-				for (j = 0; j < Points.Num(); j++)
-				{
-					if (Points[j] == VPos && CompareCompNormals(PointNormals[j], V->Normal[0]))
-					{
-						PointIndex = j;
-						break;
-					}
-				}
-#else
 				int PointIndex = -1;	// start with 0, see below
 				while (true)
 				{
@@ -666,7 +661,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 					if (PointIndex == INDEX_NONE) break;
 					if (CompareCompNormals(PointNormals[PointIndex], V->Normal[0])) break;
 				}
-#endif
 				if (PointIndex == INDEX_NONE)
 				{
 					// point was not found - create it
@@ -696,7 +690,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 			}
 			unguard;
 
-			continue;		// process other chunks
+			continue;		// process other chunks (not from CPU mesh)
 		}
 
 		// get information from base (CPU) mesh
@@ -705,17 +699,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 		{
 			const FRigidVertex3 &V = C.RigidVerts[Vert];
 			// find the same point in previous items
-#if 0
-			int PointIndex = INDEX_NONE;
-			for (j = 0; j < Points.Num(); j++)
-			{
-				if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
-				{
-					PointIndex = j;
-					break;
-				}
-			}
-#else
 			int PointIndex = -1;	// start with 0, see below
 			while (true)
 			{
@@ -723,7 +706,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				if (PointIndex == INDEX_NONE) break;
 				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
 			}
-#endif
 			if (PointIndex == INDEX_NONE)
 			{
 				// point was not found - create it
@@ -749,17 +731,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 		{
 			const FSmoothVertex3 &V = C.SmoothVerts[Vert];
 			// find the same point in previous items
-#if 0
-			int PointIndex = INDEX_NONE;
-			for (j = 0; j < Points.Num(); j++)	//!! should compare influences too !
-			{
-				if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
-				{
-					PointIndex = j;
-					break;
-				}
-			}
-#else
 			int PointIndex = -1;	// start with 0, see below
 			while (true)
 			{
@@ -768,7 +739,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
 				//?? should compare influences too !
 			}
-#endif
 			if (PointIndex == INDEX_NONE)
 			{
 				// point was not found - create it
@@ -1094,6 +1064,14 @@ void UAnimSet::ConvertAnims()
 //if (++execed < 10) {
 //printf("q: %X : (%d %d %d)  (%g %g %g %g)\n", GET_DWORD(*q), q->X-1023, q->Y-1023, q->Z-511, FQUAT_ARG(qq));
 //}
+#if BATMAN
+					else if (Seq->RotationCompressionFormat == ACF_Fixed48Max)
+					{
+						FQuatFixed48Max q;
+						Reader << q;
+						A->KeyQuat.AddItem(q);
+					}
+#endif // BATMAN
 					else
 						appError("Unknown compression method: %d", Seq->RotationCompressionFormat);
 				}

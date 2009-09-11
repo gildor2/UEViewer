@@ -332,17 +332,6 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 	{
 		const FRigidVertexBio &V = Lod.RigidVerts[Vert];
 		// find the same point in previous items
-#if 0
-		int PointIndex = INDEX_NONE;
-		for (j = 0; j < Points.Num(); j++)
-		{
-			if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
-			{
-				PointIndex = j;
-				break;
-			}
-		}
-#else
 		int PointIndex = -1;	// start with 0, see below
 		while (true)
 		{
@@ -350,7 +339,6 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 			if (PointIndex == INDEX_NONE) break;
 			if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
 		}
-#endif
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
@@ -376,17 +364,6 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 	{
 		const FSmoothVertexBio &V = Lod.SmoothVerts[Vert];
 		// find the same point in previous items
-#if 0
-		int PointIndex = INDEX_NONE;
-		for (j = 0; j < Points.Num(); j++)	//!! should compare influences too !
-		{
-			if (Points[j] == V.Pos && CompareCompNormals(PointNormals[j], V.Normal[0]))
-			{
-				PointIndex = j;
-				break;
-			}
-		}
-#else
 		int PointIndex = -1;	// start with 0, see below
 		while (true)
 		{
@@ -395,7 +372,6 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 			if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
 			//?? should compare influences too !
 		}
-#endif
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
