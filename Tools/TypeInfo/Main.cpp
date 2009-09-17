@@ -127,9 +127,11 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 			if (!F)
 			{
 				appNotify("ArrayProperty %s.%s has no inner field", Struct->Name, Arr->Name);
+				DumpProperty(Ar, Arr, "array<unknown>", Struct->Name);
 				continue;
 			}
-			ClassName = F->GetClassName();
+			else
+				ClassName = F->GetClassName();
 			isArray = true;
 		}
 		const char *TypeName = NULL;

@@ -176,6 +176,9 @@ public:
 #if MKVSDC
 	int		IsMK:1;
 #endif
+#if STRANGLE
+	int		IsStrangle:1;
+#endif
 #if ARMYOF2
 	int		IsArmyOf2:1;
 #endif
@@ -199,6 +202,9 @@ public:
 #endif
 #if BATMAN
 	int		IsBatman:1;
+#endif
+#if CRIMECRAFT
+	int		IsCrimeCraft:1;
 #endif
 
 	FArchive()
@@ -240,6 +246,9 @@ public:
 #if MKVSDC
 	,	IsMK(0)
 #endif
+#if STRANGLE
+	,	IsStrangle(0)
+#endif
 #if ARMYOF2
 	,	IsArmyOf2(0)
 #endif
@@ -263,6 +272,9 @@ public:
 #endif
 #if BATMAN
 	,	IsBatman(0)
+#endif
+#if CRIMECRAFT
+	,	IsCrimeCraft(0)
 #endif
 	{}
 
@@ -816,6 +828,9 @@ protected:
 };
 
 FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
+#if UNREAL3
+FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
+#endif
 
 // NOTE: this container cannot hold objects, required constructor/destructor
 // (at least, Add/Insert/Remove functions are not supported, but can serialize
@@ -1025,29 +1040,16 @@ inline void SkipLazyArray(FArchive &Ar)
 // There is no reading optimization performed here (in umodel)
 template<class T> class TRawArray : public TArray<T>
 {
+	// Helper function to reduce TLazyArray<>::operator<<() code size.
+	// Used as C-style wrapper around TArray<>::operator<<().
+	static FArchive& SerializeArray(FArchive &Ar, void *Array)
+	{
+		return Ar << *(TArray<T>*)Array;
+	}
+
 	friend FArchive& operator<<(FArchive &Ar, TRawArray &A)
 	{
-		guard(TRawArray<<);
-		assert(Ar.IsLoading);
-#if A51
-		if (Ar.IsA51 && Ar.ArVer >= 376) goto new_ver;					// partially upgraded old engine
-#endif // A51
-		if (Ar.ArVer >= 453)
-		{
-		new_ver:
-			int ElementSize;
-			Ar << ElementSize;
-//			assert(ElementSize == sizeof(T));
-			int SavePos = Ar.Tell();
-			Ar << (TArray<T>&)A;
-//			printf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, A.Num(), ElementSize,
-//				float(Ar.Tell() - SavePos - 4) / A.Num(), Ar.Tell());
-			assert(Ar.Tell() == SavePos + 4 + A.Num() * ElementSize);	// check position
-			return Ar;
-		}
-		// old version: no ElementSize property
-		return Ar << (TArray<T>&)A;
-		unguard;
+		return SerializeRawArray(Ar, A, SerializeArray);
 	}
 };
 

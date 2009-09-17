@@ -24,11 +24,10 @@ Modified Unreal Engine 2.5
   Exteel
 Unreal Engine 3:
   Unreal Tournament 3
-  Gears of War (XBox360 and PC)
+  Gears of War
   Gears of War 2 (XBox360)
   Mortal Online
   Section 8
-
 Modified Unreal Engine 3:
   The Last Remnant
   Mass Effect
@@ -41,7 +40,9 @@ Modified Unreal Engine 3:
   X-Men Origins: Wolverine
   Damnation
   Batman: Arkham Asylum
+  Crime Craft
   Nurien
+  Stranglehold
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,6 +52,7 @@ Using "-noanim" option (unsupported animation format):
   Unreal Championship 2: The Liandri Conflict (UE2X)
   BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
+  Stranglehold
 Unsupported animations (without umodel crash):
   Bioshock (uses Havok animation system)
   Rise of the Argonauts
@@ -95,6 +97,15 @@ Notes about StaticMesh support.
 
 Changes:
 ~~~~~~~~
+17.09.2009
+- implemented Stranglehold SkeletalMesh support
+
+15.09.2009
+- implemented Stranglehold package support
+
+14.09.2009
+- implemented Crime Craft SkeletalMesh support
+
 11.09.2009
 - implementer Batman: Arkham Asylum animation support
 

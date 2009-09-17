@@ -663,6 +663,37 @@ FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 	unguard;
 }
 
+#if UNREAL3
+
+FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*))
+{
+	guard(TRawArray<<);
+	assert(Ar.IsLoading);
+#if A51
+	if (Ar.IsA51 && Ar.ArVer >= 376) goto new_ver;		// partially upgraded old engine
+#endif // A51
+#if STRANGLE
+	if (Ar.IsStrangle) goto new_ver;					// also check package's MidwayTag ("WOO ") and MidwayVer (>= 369)
+#endif
+	if (Ar.ArVer >= 453)
+	{
+	new_ver:
+		int ElementSize;
+		Ar << ElementSize;
+		int SavePos = Ar.Tell();
+		Serializer(Ar, &Array);
+//		printf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, Array.Num(), ElementSize,
+//				float(Ar.Tell() - SavePos - 4) / Array.Num(), Ar.Tell());
+		assert(Ar.Tell() == SavePos + 4 + Array.Num() * ElementSize);	// check position
+		return Ar;
+	}
+	// old version: no ElementSize property
+	Serializer(Ar, &Array);
+	return Ar;
+	unguard;
+}
+
+#endif // UNREAL3
 
 /*-----------------------------------------------------------------------------
 	FArchive methods
@@ -859,6 +890,9 @@ void FArchive::DetectGame()
 #if MKVSDC
 	IsMK = (ArVer == 402 && ArLicenseeVer == 30);									//!! has extra tag
 #endif
+#if STRANGLE
+	IsStrangle = (ArVer == 375 && ArLicenseeVer == 25);								//!! has extra tag
+#endif
 #if ARMYOF2
 	IsArmyOf2 = (ArVer == 445 && ArLicenseeVer == 79);
 #endif
@@ -887,6 +921,9 @@ void FArchive::DetectGame()
 #endif
 #if BATMAN
 	IsBatman = (ArVer == 576 && ArLicenseeVer == 21);
+#endif
+#if CRIMECRAFT
+	IsCrimeCraft = (ArVer == 576 && ArLicenseeVer == 5);
 #endif
 }
 

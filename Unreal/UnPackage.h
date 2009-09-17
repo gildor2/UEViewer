@@ -148,12 +148,15 @@ struct FPackageFileSummary
 			else
 				S.HeadersSize = 0;
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
-	#if A51 || WHEELMAN || MKVSDC					//?? special define ?
+	#if A51 || WHEELMAN || MKVSDC || STRANGLE					//?? special define ?
 			int midwayVer = 0;
-			if ((Ar.IsA51 || Ar.IsWheelman || Ar.IsMK) && S.LicenseeVersion >= 2)	//?? Wheelman not checked
+			if ((Ar.IsA51 || Ar.IsWheelman || Ar.IsMK || Ar.IsStrangle) && S.LicenseeVersion >= 2)	//?? Wheelman not checked
 			{
-				int Tag;							// Tag == "A52 ", "MK8 " or "WMAN"
+				int Tag;							// Tag == "A52 ", "MK8 ", "WMAN", "WOO " (Stranglehold)
+				int unk10;
 				Ar << Tag << midwayVer;
+				if (Ar.IsStrangle && midwayVer >= 256)
+					Ar << unk10;
 			}
 	#endif // MIDWAY
 			if (S.FileVersion >= 269)
@@ -179,6 +182,13 @@ struct FPackageFileSummary
 			Ar << unk3C;
 		}
 	#endif // WHEELMAN
+	#if STRANGLE
+		if (Ar.IsStrangle && S.FileVersion >= 375)
+		{
+			int unk40;
+			Ar << unk40;
+		}
+	#endif // STRANGLE
 		if (S.FileVersion >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
 #endif // UNREAL3

@@ -50,6 +50,20 @@ struct FRigidVertex3
 
 	friend FArchive& operator<<(FArchive &Ar, FRigidVertex3 &V)
 	{
+#if CRIMECRAFT
+		if (Ar.IsCrimeCraft)
+		{
+			// uses FVector4 for position and 4 UV sets
+			int pad;
+			Ar << V.Pos;
+			if (Ar.ArLicenseeVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float));		// FVector4 ?
+			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+			Ar << V.U << V.V;
+			if (Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + sizeof(float) * 6);	// 4 UV sets
+			Ar << V.BoneIndex;
+			return Ar;
+		}
+#endif // CRIMECRAFT
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
@@ -61,6 +75,13 @@ struct FRigidVertex3
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
+#if MKVSDC || STRANGLE
+		if ((Ar.IsMK && Ar.ArLicenseeVer >= 11) || Ar.IsStrangle) // Stranglehold check MidwayVer >= 17
+		{
+			float U1, V1;
+			Ar << U1 << V1;
+		}
+#endif // MKVSDC
 		Ar << V.BoneIndex;
 		return Ar;
 	}
@@ -77,6 +98,20 @@ struct FSmoothVertex3
 	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
 	{
 		int i;
+
+#if CRIMECRAFT
+		if (Ar.IsCrimeCraft)
+		{
+			// uses FVector4 for position and 4 UV sets
+			int pad;
+			Ar << V.Pos;
+			if (Ar.ArLicenseeVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float));		// FVector4 ?
+			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+			Ar << V.U << V.V;
+			if (Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + sizeof(float) * 6);	// 4 UV sets
+			goto influences;
+		}
+#endif // CRIMECRAFT
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
@@ -87,13 +122,14 @@ struct FSmoothVertex3
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
-#if MKVSDC
-		if (Ar.IsMK && Ar.ArLicenseeVer >= 11)
+#if MKVSDC || STRANGLE
+		if ((Ar.IsMK && Ar.ArLicenseeVer >= 11) || Ar.IsStrangle) // Stranglehold check MidwayVer >= 17
 		{
 			float U1, V1;
 			Ar << U1 << V1;
 		}
 #endif // MKVSDC
+	influences:
 		if (Ar.ArVer >= 333)
 		{
 			for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
@@ -190,6 +226,9 @@ struct FGPUVert3Common
 		Ar << V.Normal[0] << V.Normal[1];
 		if (Ar.ArVer < 494)
 			Ar << V.Normal[2];
+#if CRIMECRAFT
+		if (Ar.IsCrimeCraft && Ar.ArVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float)); // pad ?
+#endif
 		for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
 		for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
 		return Ar;
@@ -214,6 +253,9 @@ struct FGPUVert3Half : FGPUVert3Common
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
+#if CRIMECRAFT
+		if (Ar.IsCrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(word)); // 4 UV sets
+#endif
 		return Ar;
 	}
 };
@@ -243,6 +285,9 @@ struct FGPUVert3Float : FGPUVert3Common
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
+#if CRIMECRAFT
+		if (Ar.IsCrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(float)); // 4 UV sets
+#endif
 		return Ar;
 	}
 };
@@ -437,6 +482,17 @@ struct FStaticLODModel3
 		{
 			Ar << Lod.Edges;
 		}
+#if STRANGLE
+		if (Ar.IsStrangle)
+		{
+			// also check MidwayTag == "WOO " and MidwayVer >= 346
+			// f24 has been moved to the end
+			Lod.BulkData.Serialize(Ar);
+			Ar << Lod.GPUSkin;
+			Ar << Lod.f24;
+			return Ar;
+		}
+#endif // STRANGLE
 		Ar << Lod.f24;
 		Lod.BulkData.Serialize(Ar);
 #if ARMYOF2
@@ -519,13 +575,20 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 #endif // BATMAN
 	Ar << Materials1 << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
-#if A51 || MKVSDC
-	if ((Ar.IsA51 || Ar.IsMK) && Ar.ArLicenseeVer >= 0xF)
+#if A51 || MKVSDC || STRANGLE
+	if ((Ar.IsA51 || Ar.IsMK || Ar.IsStrangle) && Ar.ArLicenseeVer >= 0xF)
 	{
 		TArray<FMaterialBone> MaterialBones;
 		Ar << MaterialBones;
 	}
 #endif // A51 || MKVSDC
+#if CRIMECRAFT
+	if (Ar.IsCrimeCraft && Ar.ArLicenseeVer >= 5)
+	{
+		byte unk8C;
+		Ar << unk8C;
+	}
+#endif
 	Ar << Lods;
 #if 0
 	//!! also: NameIndexMap (ArVer >= 296), PerPolyKDOPs (ArVer >= 435)

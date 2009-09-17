@@ -290,6 +290,9 @@ int main(int argc, char **argv)
 #	if MKVSDC
 				"    Mortal Kombat vs. DC Universe\n"
 #	endif
+#	if STRANGLE
+				"    Stranglehold\n"
+#	endif
 #	if ARMYOF2
 				"    Army of Two\n"
 #	endif
@@ -307,6 +310,9 @@ int main(int argc, char **argv)
 #	endif
 #	if BATMAN
 				"    Batman: Arkham Asylum\n"
+#	endif
+#	if CRIMECRAFT
+				"    Crime Craft\n"
 #	endif
 #	if NURIEN
 				"    Nurien\n"

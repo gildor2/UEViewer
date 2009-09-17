@@ -32,9 +32,6 @@
 // requires UNREAL3
 #define XBOX360			1		// XBox360 resources
 #define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
-#define A51				1		// Blacksite: Area 51
-#define WHEELMAN		1		//?? incomplete
-#define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define ARMYOF2			1		// Army of Two
 #define MASSEFF			1		// Mass Effect
 #define MEDGE			1		// Mirror's Edge
@@ -43,8 +40,15 @@
 //#define TUROK			1		incomplete??
 #define XMEN			1		// XMen: Wolverine
 #define BATMAN			1		// Batman: Arkham Asylum
+#define CRIMECRAFT		1		// Crime Craft
 ///#define HUXLEY			1
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
+
+// Midway UE3 games -- make common define ??
+#define A51				1		// Blacksite: Area 51
+#define WHEELMAN		1		//?? incomplete
+#define MKVSDC			1		// Mortal Kombat vs. DC Universe
+#define STRANGLE		1		// Stranglehold
 
 // some private games
 #if PRIVATE_BUILD

@@ -665,11 +665,24 @@ static void Display()
 {
 	// clear screen buffer
 #if FUNNY_BACKGROUND
+	glDisable(GL_BLEND);
+	glDisable(GL_ALPHA_TEST);
+	Set2Dmode();
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glDepthRange(1, 1);
+	glBegin(GL_QUADS);
+	glColor4f(CLEAR_COLOR);
+	glVertex2f(0, 0);
+	glVertex2f(winWidth, 0);
+	glColor4f(CLEAR_COLOR2);
+	glVertex2f(winWidth, winHeight);
+	glVertex2f(0, winHeight);
+	glEnd();
+	glDepthRange(0, 1);
+#else
 	glClearColor(CLEAR_COLOR);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-#else
-	glClear(GL_DEPTH_BUFFER_BIT);
-#endif
+#endif // FUNNY_BACKGROUND
 
 	// 3D drawings
 	BuildMatrices();
@@ -722,18 +735,6 @@ static void Display()
 
 	// 2D drawings
 	Set2Dmode();
-#if FUNNY_BACKGROUND
-	glDepthRange(1, 1);
-	glBegin(GL_QUADS);
-	glColor4f(CLEAR_COLOR);
-	glVertex2f(0, 0);
-	glVertex2f(winWidth, 0);
-	glColor4f(CLEAR_COLOR2);
-	glVertex2f(winWidth, winHeight);
-	glVertex2f(0, winHeight);
-	glEnd();
-	glDepthRange(0, 1);
-#endif // FUNNY_BACKGROUND
 
 	// display help when needed
 	if (isHelpVisible)

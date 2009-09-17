@@ -1404,6 +1404,8 @@ public:
 		PROP_DROP(BoundsPreviewAsset)
 		PROP_DROP(PerPolyCollisionBones)
 		PROP_DROP(AddToParentPerPolyCollisionBone)
+		PROP_DROP(bUseSimpleLineCollision)
+		PROP_DROP(bUseSimpleBoxCollision)
 #	if MEDGE
 		PROP_DROP(NumUVSets)
 #	endif
