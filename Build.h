@@ -36,7 +36,6 @@
 #define MASSEFF			1		// Mass Effect
 #define MEDGE			1		// Mirror's Edge
 #define TLR				1		// The Last Remnant
-#define NURIEN			1
 //#define TUROK			1		incomplete??
 #define XMEN			1		// XMen: Wolverine
 #define BATMAN			1		// Batman: Arkham Asylum
@@ -49,6 +48,8 @@
 #define WHEELMAN		1		//?? incomplete
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define STRANGLE		1		// Stranglehold
+
+#define SPECIAL_TAGS	1		// Killing Floor, Nurien
 
 // some private games
 #if PRIVATE_BUILD

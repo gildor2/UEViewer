@@ -6,6 +6,7 @@ extern bool GExportScripts;
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);
 void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar);
+void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar);
 // MD5Mesh
 void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar);
 void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar);

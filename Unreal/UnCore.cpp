@@ -113,6 +113,10 @@ static const char *PackageExtensions[] =
 #if BATMAN
 	, "umap"
 #endif
+	// other games with no special code
+	, "lm"			// Landmass
+	, "s8m"			// Section 8 map
+	, "ccpk"		// Crime Craft character package
 };
 
 #if UNREAL3 || UC2

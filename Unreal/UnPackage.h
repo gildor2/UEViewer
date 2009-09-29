@@ -103,9 +103,11 @@ struct FPackageFileSummary
 
 		// read tag and version
 		Ar << S.Tag;
-#if NURIEN
-		if (S.Tag == 0xA94E6C81) goto tag_ok;
-#endif
+#if SPECIAL_TAGS
+		if (S.Tag == 0xA94E6C81) goto tag_ok;		// Nurien
+		if (S.Tag == 0x9E2A83C2) goto tag_ok;		// Killing Floor
+#endif // SPECIAL_TAGS
+
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{
 			if (S.Tag != PACKAGE_FILE_TAG_REV)

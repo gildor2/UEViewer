@@ -224,6 +224,7 @@ int main(int argc, char **argv)
 				"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
 				"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
 				"    VertMesh        exported as Unreal 3d file\n"
+				"    StaticMesh      exported as ActorX psk file with no skeleton\n"
 				"    Texture         exported in tga format\n"
 				"\n"
 				//?? separate option for this list?
@@ -264,6 +265,9 @@ int main(int argc, char **argv)
 #	endif
 #	if EXTEEL
 				", Exteel"
+#	endif
+#	if SPECIAL_TAGS
+				", Killing Floor"
 #	endif
 				"\n"
 #endif // UNREAL25
@@ -314,7 +318,7 @@ int main(int argc, char **argv)
 #	if CRIMECRAFT
 				"    Crime Craft\n"
 #	endif
-#	if NURIEN
+#	if SPECIAL_TAGS
 				"    Nurien\n"
 #	endif
 #endif // UNREAL3
@@ -406,6 +410,7 @@ int main(int argc, char **argv)
 		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
 	}
 	EXPORTER("VertMesh",      NULL,  Export3D );				// will generate 2 files
+	EXPORTER("StaticMesh",    "psk", ExportPsk2);
 	EXPORTER("Texture",       "tga", ExportTga);
 #if UNREAL3
 	EXPORTER("Texture2D",     "tga", ExportTga);

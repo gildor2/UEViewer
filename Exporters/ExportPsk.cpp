@@ -249,3 +249,109 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	}
 	assert(keysCount == 0);
 }
+
+
+void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
+{
+	// using 'static' here to avoid zero-filling unused fields
+	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
+	int i;
+
+	int numSections = Mesh->Sections.Num();
+	int numVerts    = Mesh->VertexStream.Vert.Num();
+	int numIndices  = Mesh->IndexStream1.Indices.Num();
+	int numFaces    = numIndices / 3;
+
+	SAVE_CHUNK(MainHdr, "ACTRHEAD");
+
+	//?? should find common points ? (weld)
+	PtsHdr.DataCount = numVerts;
+	PtsHdr.DataSize  = sizeof(FVector);
+	SAVE_CHUNK(PtsHdr, "PNTS0000");
+	for (i = 0; i < numVerts; i++)
+	{
+		FVector V = Mesh->VertexStream.Vert[i].Pos;
+#if MIRROR_MESH
+		V.Y = -V.Y;
+#endif
+		Ar << V;
+	}
+
+	TArray<int> WedgeMat;
+	WedgeMat.Empty(numVerts);
+	WedgeMat.Add(numVerts);
+	for (i = 0; i < numSections; i++)
+	{
+		const FStaticMeshSection &Sec = Mesh->Sections[i];
+		for (int j = 0; j < Sec.NumFaces * 3; j++)
+		{
+			int idx = Mesh->IndexStream1.Indices[j + Sec.FirstIndex];
+			WedgeMat[idx] = i;
+		}
+	}
+
+
+	WedgHdr.DataCount = numVerts;
+	WedgHdr.DataSize  = sizeof(VVertex);
+	SAVE_CHUNK(WedgHdr, "VTXW0000");
+	for (i = 0; i < numVerts; i++)
+	{
+		VVertex W;
+		const FStaticMeshVertex &S = Mesh->VertexStream.Vert[i];
+		const FStaticMeshUV    &UV = Mesh->UVStream[0].Data[i];
+		W.PointIndex = i;
+		W.U          = UV.U;
+		W.V          = UV.V;
+		W.MatIndex   = WedgeMat[i];
+		W.Reserved   = 0;
+		W.Pad        = 0;
+		Ar << W;
+	}
+
+	FacesHdr.DataCount = numFaces;
+	FacesHdr.DataSize  = sizeof(VTriangle);
+	SAVE_CHUNK(FacesHdr, "FACE0000");
+	for (i = 0; i < numSections; i++)
+	{
+		const FStaticMeshSection &Sec = Mesh->Sections[i];
+		for (int j = 0; j < Sec.NumFaces; j++)
+		{
+			VTriangle T;
+			for (int k = 0; k < 3; k++)
+			{
+				int idx = Mesh->IndexStream1.Indices[Sec.FirstIndex + j * 3 + k];
+				T.WedgeIndex[k] = idx;
+			}
+			T.MatIndex        = i;
+			T.AuxMatIndex     = 0;
+			T.SmoothingGroups = 0;
+#if MIRROR_MESH
+			Exchange(T.WedgeIndex[0], T.WedgeIndex[1]);
+#endif
+			Ar << T;
+		}
+	}
+
+	MatrHdr.DataCount = numSections;
+	MatrHdr.DataSize  = sizeof(VMaterial);
+	SAVE_CHUNK(MatrHdr, "MATT0000");
+	for (i = 0; i < numSections; i++)
+	{
+		VMaterial M;
+		memset(&M, 0, sizeof(M));
+		const UObject *Tex = Mesh->Materials[i].Material;
+		if (Tex)
+			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
+		else
+			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
+		Ar << M;
+	}
+
+	BoneHdr.DataCount = 0;		// dummy ...
+	BoneHdr.DataSize  = sizeof(VBone);
+	SAVE_CHUNK(BoneHdr, "REFSKELT");
+
+	InfHdr.DataCount = 0;		// dummy
+	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
+	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
+}
