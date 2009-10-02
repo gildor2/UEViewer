@@ -60,8 +60,6 @@ GENMAKE:
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
 
-! use my GL_Bind tool to dynamically link to OpenGL (allows extension loading)
-
 ! packages have tree-like structure of objects, should use whole tree to map export->import (use
   package's "package" field recursively; note: depth can be any)
   * load proper package

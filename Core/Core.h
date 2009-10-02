@@ -17,6 +17,9 @@
 #	ifndef APIENTRY
 #		define APIENTRY __stdcall
 #	endif
+#	ifndef WINAPI
+#		define WINAPI   __stdcall
+#	endif
 #	ifndef WINGDIAPI
 #		define WINGDIAPI
 		typedef unsigned		HDC;
@@ -36,6 +39,13 @@
 #endif
 
 #	include <GL/gl.h>
+
+#	define USE_SDL			1
+#	define NO_GL_LOG		1
+#	include "GLBind.h"
+	bool	QGL_Init(const char *libName);
+	void	QGL_Shutdown();
+	void	QGL_InitExtensions();
 #endif
 
 #define VECTOR_ARG(name)	name[0],name[1],name[2]

@@ -44,6 +44,7 @@ MAIN = \
 	./obj/umodel-win32/StatMeshInstance.obj \
 	./obj/umodel-win32/VertMeshInstance.obj \
 	./obj/umodel-win32/Core.obj \
+	./obj/umodel-win32/GLBind.obj \
 	./obj/umodel-win32/GlWindow.obj \
 	./obj/umodel-win32/Math3D.obj \
 	./obj/umodel-win32/TextContainer.obj \
@@ -74,6 +75,17 @@ OPT_MAIN = -O1 -EHsc -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unre
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
+	Core/GLBindImpl.h \
+	Core/Math3D.h
+
+./obj/umodel-win32/GLBind.obj : Core/GLBind.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/GLBind.obj" Core/GLBind.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/GLBind.h \
 	Core/GlFont.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
@@ -85,6 +97,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	Exporters/Exporters.h \
@@ -103,6 +116,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
@@ -132,6 +146,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
@@ -147,6 +162,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
@@ -163,6 +179,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
@@ -177,6 +194,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h
 
 ./obj/umodel-win32/Core.obj : Core/Core.cpp $(DEPENDS)
@@ -188,6 +206,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/TextContainer.h
 
@@ -197,6 +216,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Exporters/Exporters.h \
 	Exporters/Psk.h \
@@ -212,6 +232,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Exporters/Exporters.h \
 	Unreal/UnCore.h \
@@ -229,6 +250,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
@@ -246,6 +268,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnHavok.h \
@@ -263,6 +286,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -281,6 +305,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -292,6 +317,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
@@ -306,6 +332,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	libs/include/lzo/lzo1x.h \

@@ -235,11 +235,28 @@ static void DrawChar(char c, int color, int textX, int textY)
 
 //-----------------------------------------------------------------------------
 // called when window resized
-static void OnResize(int w, int h)
+static void ResizeWindow(int w, int h)
 {
+	guard(ResizeWindow);
+
 	winWidth  = w;
 	winHeight = h;
 	SDL_SetVideoMode(winWidth, winHeight, 24, SDL_OPENGL|SDL_RESIZABLE);
+
+	static bool loaded = false;
+	if (!loaded)
+	{
+		loaded = true;
+		// Init our GL binder
+		// Do it only once?
+		if (!QGL_Init("(SDL)"))	// no library name required
+		{
+			appError("Unable to bind to OpenGL");
+			return;
+		}
+		QGL_InitExtensions();
+	}
+
 	LoadFont();
 	// init gl
 	glDisable(GL_BLEND);
@@ -251,6 +268,8 @@ static void OnResize(int w, int h)
 //	glShadeModel(GL_SMOOTH);
 //	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	Set2Dmode();
+
+	unguard;
 }
 
 
@@ -440,6 +459,8 @@ void BuildMatrices()
 
 static void Init(const char *caption)
 {
+	guard(SDL.Init);
+
 	// init SDL
 	if (SDL_Init(SDL_INIT_VIDEO) == -1)
 		appError("Failed to initialize SDL");
@@ -451,7 +472,9 @@ static void Init(const char *caption)
 //	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
 	SDL_WM_SetCaption(caption, caption);
-	OnResize(winWidth, winHeight);
+	ResizeWindow(winWidth, winHeight);
+
+	unguard;
 }
 
 static void Shutdown()
@@ -822,7 +845,7 @@ void VisualizerLoop(const char *caption)
 				OnKeyboard(evt.key.keysym.sym, evt.key.keysym.mod);
 				break;
 			case SDL_VIDEORESIZE:
-				OnResize(evt.resize.w, evt.resize.h);
+				ResizeWindow(evt.resize.w, evt.resize.h);
 				break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
