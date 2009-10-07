@@ -101,10 +101,10 @@ fi
 # no arguments
 
 # select path here
-case "bio" in
+case "" in
 
 "")
-
+	ut2 HumanMaleA MercMaleD
 	# Army of Two
 #	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
 	# MK vs DC

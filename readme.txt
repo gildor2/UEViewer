@@ -113,6 +113,10 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+07.10.2009
+- implemented OpenGL 2.0 shader support; can be disabled/enabled on-fly with
+  Ctrl+G key (switch to fixed pipeline and back)
+
 29.09.2009
 - implemented StaticMesh export (psk format)
 

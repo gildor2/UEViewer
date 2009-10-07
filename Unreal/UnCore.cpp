@@ -1135,12 +1135,13 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 	FCompressedChunkHeader ChunkHeader;
 	Ar << ChunkHeader;
 	// prepare buffer for reading compressed data
-	byte *ReadBuffer = (byte*)appMalloc(ChunkHeader.BlockSize * 2);	// BlockSize is size of uncompressed data
+	int BufferSize = ChunkHeader.BlockSize * 16;
+	byte *ReadBuffer = (byte*)appMalloc(BufferSize);	// BlockSize is size of uncompressed data
 	// read and decompress data
 	for (int BlockIndex = 0; BlockIndex < ChunkHeader.Blocks.Num(); BlockIndex++)
 	{
 		const FCompressedChunkBlock *Block = &ChunkHeader.Blocks[BlockIndex];
-		assert(ChunkHeader.BlockSize * 2 >= Block->CompressedSize);
+		assert(Block->CompressedSize <= BufferSize);
 		assert(Block->UncompressedSize <= Size);
 		Ar.Serialize(ReadBuffer, Block->CompressedSize);
 		appDecompress(ReadBuffer, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);

@@ -119,7 +119,11 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 		memset(&M, 0, sizeof(M));
 		const UObject *Tex = NULL;
 		if (i < Mesh->Materials.Num())
-			Tex = Mesh->Textures[Mesh->Materials[i].TextureIndex];
+		{
+			int texIdx = Mesh->Materials[i].TextureIndex;
+			if (texIdx < Mesh->Textures.Num())
+				Tex = Mesh->Textures[texIdx];
+		}
 		if (Tex)
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
 		else

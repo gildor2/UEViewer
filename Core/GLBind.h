@@ -11,7 +11,6 @@ struct GL_t
 	void	(APIENTRY * Color3f) (GLfloat red, GLfloat green, GLfloat blue);
 	void	(APIENTRY * Color3fv) (const GLfloat *v);
 	void	(APIENTRY * Color4f) (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-	void	(APIENTRY * Color4ubv) (const GLubyte *v);
 	void	(APIENTRY * ColorPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 	void	(APIENTRY * CullFace) (GLenum mode);
 	void	(APIENTRY * DeleteTextures) (GLsizei n, const GLuint *textures);
@@ -24,12 +23,7 @@ struct GL_t
 	void	(APIENTRY * Enable) (GLenum cap);
 	void	(APIENTRY * EnableClientState) (GLenum array);
 	void	(APIENTRY * End) ();
-	void	(APIENTRY * Finish) ();
-	void	(APIENTRY * Fogf) (GLenum pname, GLfloat param);
-	void	(APIENTRY * Fogfv) (GLenum pname, const GLfloat *params);
 	GLenum	(APIENTRY * GetError) ();
-	void	(APIENTRY * GetIntegerv) (GLenum pname, GLint *params);
-	void	(APIENTRY * GetLightfv) (GLenum light, GLenum pname, GLfloat *params);
 	const GLubyte *	(APIENTRY * GetString) (GLenum name);
 	GLboolean	(APIENTRY * IsTexture) (GLuint texture);
 	void	(APIENTRY * LightModeli) (GLenum pname, GLint param);
@@ -44,22 +38,14 @@ struct GL_t
 	void	(APIENTRY * NormalPointer) (GLenum type, GLsizei stride, const GLvoid *pointer);
 	void	(APIENTRY * Ortho) (GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar);
 	void	(APIENTRY * PolygonMode) (GLenum face, GLenum mode);
-	void	(APIENTRY * PolygonOffset) (GLfloat factor, GLfloat units);
-	void	(APIENTRY * PopMatrix) ();
-	void	(APIENTRY * PushMatrix) ();
 	void	(APIENTRY * ReadPixels) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 	void	(APIENTRY * Rotatef) (GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
 	void	(APIENTRY * Scissor) (GLint x, GLint y, GLsizei width, GLsizei height);
 	void	(APIENTRY * ShadeModel) (GLenum mode);
 	void	(APIENTRY * TexCoord2f) (GLfloat s, GLfloat t);
 	void	(APIENTRY * TexCoordPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
-	void	(APIENTRY * TexEnvf) (GLenum target, GLenum pname, GLfloat param);
-	void	(APIENTRY * TexEnvfv) (GLenum target, GLenum pname, const GLfloat *params);
-	void	(APIENTRY * TexEnvi) (GLenum target, GLenum pname, GLenum param);
 	void	(APIENTRY * TexImage2D) (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 	void	(APIENTRY * TexParameteri) (GLenum target, GLenum pname, GLint param);
-	void	(APIENTRY * TexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
-	void	(APIENTRY * Translatef) (GLfloat x, GLfloat y, GLfloat z);
 	void	(APIENTRY * Vertex2f) (GLfloat x, GLfloat y);
 	void	(APIENTRY * Vertex3f) (GLfloat x, GLfloat y, GLfloat z);
 	void	(APIENTRY * Vertex3fv) (const GLfloat *v);
@@ -71,6 +57,22 @@ struct GL_t
 
 #endif
 
+	void	(APIENTRY * AttachShader) (GLuint, GLuint);
+	void	(APIENTRY * CompileShader) (GLuint);
+	GLuint	(APIENTRY * CreateProgram) (void);
+	GLuint	(APIENTRY * CreateShader) (GLenum);
+	void	(APIENTRY * DeleteProgram) (GLuint);
+	void	(APIENTRY * DeleteShader) (GLuint);
+	void	(APIENTRY * DetachShader) (GLuint, GLuint);
+	void	(APIENTRY * GetProgramiv) (GLuint, GLenum, GLint *);
+	void	(APIENTRY * GetProgramInfoLog) (GLuint, GLsizei, GLsizei *, GLchar *);
+	void	(APIENTRY * GetShaderiv) (GLuint, GLenum, GLint *);
+	void	(APIENTRY * GetShaderInfoLog) (GLuint, GLsizei, GLsizei *, GLchar *);
+	GLint	(APIENTRY * GetUniformLocation) (GLuint, const GLchar *);
+	void	(APIENTRY * LinkProgram) (GLuint);
+	void	(APIENTRY * ShaderSource) (GLuint, GLsizei, const GLchar* *, const GLint *);
+	void	(APIENTRY * UseProgram) (GLuint);
+	void	(APIENTRY * Uniform1i) (GLint, GLint);
 
 #if _WIN32
 
@@ -93,7 +95,6 @@ extern GL_t GL;
 #define glColor3f	GL.Color3f
 #define glColor3fv	GL.Color3fv
 #define glColor4f	GL.Color4f
-#define glColor4ubv	GL.Color4ubv
 #define glColorPointer	GL.ColorPointer
 #define glCullFace	GL.CullFace
 #define glDeleteTextures	GL.DeleteTextures
@@ -106,12 +107,7 @@ extern GL_t GL;
 #define glEnable	GL.Enable
 #define glEnableClientState	GL.EnableClientState
 #define glEnd	GL.End
-#define glFinish	GL.Finish
-#define glFogf	GL.Fogf
-#define glFogfv	GL.Fogfv
 #define glGetError	GL.GetError
-#define glGetIntegerv	GL.GetIntegerv
-#define glGetLightfv	GL.GetLightfv
 #define glGetString	GL.GetString
 #define glIsTexture	GL.IsTexture
 #define glLightModeli	GL.LightModeli
@@ -126,22 +122,14 @@ extern GL_t GL;
 #define glNormalPointer	GL.NormalPointer
 #define glOrtho	GL.Ortho
 #define glPolygonMode	GL.PolygonMode
-#define glPolygonOffset	GL.PolygonOffset
-#define glPopMatrix	GL.PopMatrix
-#define glPushMatrix	GL.PushMatrix
 #define glReadPixels	GL.ReadPixels
 #define glRotatef	GL.Rotatef
 #define glScissor	GL.Scissor
 #define glShadeModel	GL.ShadeModel
 #define glTexCoord2f	GL.TexCoord2f
 #define glTexCoordPointer	GL.TexCoordPointer
-#define glTexEnvf	GL.TexEnvf
-#define glTexEnvfv	GL.TexEnvfv
-#define glTexEnvi	GL.TexEnvi
 #define glTexImage2D	GL.TexImage2D
 #define glTexParameteri	GL.TexParameteri
-#define glTexSubImage2D	GL.TexSubImage2D
-#define glTranslatef	GL.Translatef
 #define glVertex2f	GL.Vertex2f
 #define glVertex3f	GL.Vertex3f
 #define glVertex3fv	GL.Vertex3fv
@@ -153,6 +141,22 @@ extern GL_t GL;
 
 #endif
 
+#define glAttachShader	GL.AttachShader
+#define glCompileShader	GL.CompileShader
+#define glCreateProgram	GL.CreateProgram
+#define glCreateShader	GL.CreateShader
+#define glDeleteProgram	GL.DeleteProgram
+#define glDeleteShader	GL.DeleteShader
+#define glDetachShader	GL.DetachShader
+#define glGetProgramiv	GL.GetProgramiv
+#define glGetProgramInfoLog	GL.GetProgramInfoLog
+#define glGetShaderiv	GL.GetShaderiv
+#define glGetShaderInfoLog	GL.GetShaderInfoLog
+#define glGetUniformLocation	GL.GetUniformLocation
+#define glLinkProgram	GL.LinkProgram
+#define glShaderSource	GL.ShaderSource
+#define glUseProgram	GL.UseProgram
+#define glUniform1i	GL.Uniform1i
 
 #if _WIN32
 
@@ -163,6 +167,7 @@ extern GL_t GL;
 
 
 
+#define QGL_2_0	(1 << 0)
 
 #if _WIN32
 

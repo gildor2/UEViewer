@@ -92,11 +92,23 @@ public:
 		return NULL;
 	}
 #if RENDERING
+	UUnrealMaterial()
+	: DrawTimestamp(0)
+	, VsObj(0)
+	, PsObj(0)
+	, PrObj(0)
+	{}
 	virtual void Bind(unsigned PolyFlags)
 	{}
-	virtual void Release()
-	{}
-#endif
+	virtual void Release();
+
+protected:
+	// rendering implementation fields
+	int				DrawTimestamp;			// timestamp for object validation
+	GLuint			VsObj;					// vertex shader
+	GLuint			PsObj;					// pixel shader
+	GLuint			PrObj;					// program object
+#endif // RENDERING
 };
 
 

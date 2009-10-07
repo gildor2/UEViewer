@@ -6,7 +6,7 @@
 -----------------------------------------------------------------------------*/
 
 //?? move outside
-UMaterial *BindDefaultMaterial();
+void BindDefaultMaterial(bool White = false);
 
 inline void SetAxis(const FRotator &Rot, CAxis &Axis)
 {
@@ -51,7 +51,7 @@ public:
 		}
 		else
 		{
-			glDisable(GL_TEXTURE_2D);
+			BindDefaultMaterial(true);
 			glDisable(GL_CULL_FACE);
 			int color = Index + 1;
 			if (color > 7) color = 7;

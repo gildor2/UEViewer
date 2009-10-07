@@ -219,7 +219,11 @@ if (i == 32 || i == 34)
 		// mesh header
 		const UObject *Tex = NULL;
 		if (m < Mesh->Materials.Num())
-			Tex = Mesh->Textures[Mesh->Materials[m].TextureIndex];
+		{
+			int texIdx = Mesh->Materials[m].TextureIndex;
+			if (texIdx < Mesh->Textures.Num())
+				Tex = Mesh->Textures[texIdx];
+		}
 
 		if (Tex)
 		{

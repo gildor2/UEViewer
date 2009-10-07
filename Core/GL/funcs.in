@@ -1,3 +1,7 @@
+//-----------------------------------------------------------------------------
+//  OpenGL 1.1
+//-----------------------------------------------------------------------------
+
 //void Accum(GLenum op, GLfloat value);
 void AlphaFunc(GLenum func, GLclampf ref) ARGS
 //GLboolean AreTexturesResident(GLsizei n, const GLuint *textures, GLboolean *residences);
@@ -42,7 +46,7 @@ void Color4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) ARGS
 //void Color4s(GLshort red, GLshort green, GLshort blue, GLshort alpha);
 //void Color4sv(const GLshort *v);
 //void Color4ub(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha) ARGS
-void Color4ubv(const GLubyte *v);
+//void Color4ubv(const GLubyte *v);
 //void Color4ui(GLuint red, GLuint green, GLuint blue, GLuint alpha);
 //void Color4uiv(const GLuint *v);
 //void Color4us(GLushort red, GLushort green, GLushort blue, GLushort alpha);
@@ -87,10 +91,10 @@ void End();
 //void EvalPoint1(GLint i);
 //void EvalPoint2(GLint i, GLint j);
 //void FeedbackBuffer(GLsizei size, GLenum type, GLfloat *buffer);
-void Finish();
+//void Finish();
 //void Flush();
-void Fogf(GLenum pname, GLfloat param) ARGS
-void Fogfv(GLenum pname, const GLfloat *params) ARGS
+//void Fogf(GLenum pname, GLfloat param) ARGS
+//void Fogfv(GLenum pname, const GLfloat *params) ARGS
 //void Fogi(GLenum pname, GLint param);
 //void Fogiv(GLenum pname, const GLint *params);
 //void FrontFace(GLenum mode);
@@ -102,8 +106,8 @@ void Fogfv(GLenum pname, const GLfloat *params) ARGS
 //void GetDoublev(GLenum pname, GLdouble *params);
 GLenum GetError() NOLOG
 //void GetFloatv(GLenum pname, GLfloat *params);
-void GetIntegerv(GLenum pname, GLint *params);
-void GetLightfv(GLenum light, GLenum pname, GLfloat *params);
+//void GetIntegerv(GLenum pname, GLint *params);
+//void GetLightfv(GLenum light, GLenum pname, GLfloat *params);
 //void GetLightiv(GLenum light, GLenum pname, GLint *params);
 //void GetMapdv(GLenum target, GLenum query, GLdouble *v);
 //void GetMapfv(GLenum target, GLenum query, GLfloat *v);
@@ -199,16 +203,16 @@ void Ortho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdoubl
 //void PixelZoom(GLfloat xfactor, GLfloat yfactor);
 //void PointSize(GLfloat size);
 void PolygonMode(GLenum face, GLenum mode) ARGS
-void PolygonOffset(GLfloat factor, GLfloat units) ARGS
+//void PolygonOffset(GLfloat factor, GLfloat units) ARGS
 //void PolygonStipple(const GLubyte *mask);
 //void PopAttrib();
 //void PopClientAttrib();
-void PopMatrix();
+//void PopMatrix();
 //void PopName();
 //void PrioritizeTextures(GLsizei n, const GLuint *textures, const GLclampf *priorities);
 //void PushAttrib(GLbitfield mask);
 //void PushClientAttrib(GLbitfield mask);
-void PushMatrix();
+//void PushMatrix();
 //void PushName(GLuint name);
 //void RasterPos2d(GLdouble x, GLdouble y);
 //void RasterPos2dv(const GLdouble *v);
@@ -288,9 +292,9 @@ void TexCoord2f(GLfloat s, GLfloat t) ARGS
 //void TexCoord4s(GLshort s, GLshort t, GLshort r, GLshort q);
 //void TexCoord4sv(const GLshort *v);
 void TexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer) ARGS
-void TexEnvf(GLenum target, GLenum pname, GLfloat param) ARGS
-void TexEnvfv(GLenum target, GLenum pname, const GLfloat *params) ARGS
-void TexEnvi(GLenum target, GLenum pname, GLenum param) ARGS	// really, param is GLint, but ...
+//void TexEnvf(GLenum target, GLenum pname, GLfloat param) ARGS
+//void TexEnvfv(GLenum target, GLenum pname, const GLfloat *params) ARGS
+//void TexEnvi(GLenum target, GLenum pname, GLenum param) ARGS	// really, param is GLint, but ...
 //void TexEnviv(GLenum target, GLenum pname, const GLint *params);
 //void TexGend(GLenum coord, GLenum pname, GLdouble param);
 //void TexGendv(GLenum coord, GLenum pname, const GLdouble *params);
@@ -305,9 +309,9 @@ void TexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width
 void TexParameteri(GLenum target, GLenum pname, GLint param) ARGS
 //void TexParameteriv(GLenum target, GLenum pname, const GLint *params);
 //void TexSubImage1D(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
-void TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels) ARGS
+//void TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels) ARGS
 //void Translated(GLdouble x, GLdouble y, GLdouble z) ARGS
-void Translatef(GLfloat x, GLfloat y, GLfloat z) ARGS
+//void Translatef(GLfloat x, GLfloat y, GLfloat z) ARGS
 //void Vertex2d(GLdouble x, GLdouble y);
 //void Vertex2dv(const GLdouble *v);
 void Vertex2f(GLfloat x, GLfloat y) ARGS
@@ -334,6 +338,7 @@ void Vertex3fv(const GLfloat *v);
 //void Vertex4sv(const GLshort *v);
 void VertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer) ARGS
 void Viewport(GLint x, GLint y, GLsizei width, GLsizei height) ARGS
+
 
 #platform win32
 
@@ -362,6 +367,123 @@ void Viewport(GLint x, GLint y, GLsizei width, GLsizei height) ARGS
 //BOOL wglSwapLayerBuffers(HDC hdc, UINT fuPlanes);
 
 #extensions
+
+//-----------------------------------------------------------------------------
+//  OpenGL 1.3
+//-----------------------------------------------------------------------------
+
+//#name 1.3
+
+//!! Hide unneeded functions
+
+//void ActiveTexture(GLenum);
+//void ClientActiveTexture(GLenum);
+
+//-----------------------------------------------------------------------------
+//  OpenGL 2.0
+//-----------------------------------------------------------------------------
+
+#name 2.0
+
+//!! Hide unneeded functions
+
+//void BlendEquationSeparate(GLenum, GLenum);
+//void DrawBuffers(GLsizei, const GLenum *);
+//void StencilOpSeparate(GLenum, GLenum, GLenum, GLenum);
+//void StencilFuncSeparate(GLenum, GLenum, GLint, GLuint);
+//void StencilMaskSeparate(GLenum, GLuint);
+void AttachShader(GLuint, GLuint);
+//void BindAttribLocation(GLuint, GLuint, const GLchar *);
+void CompileShader(GLuint);
+GLuint CreateProgram(void);
+GLuint CreateShader(GLenum);
+void DeleteProgram(GLuint);
+void DeleteShader(GLuint);
+void DetachShader(GLuint, GLuint);
+//void DisableVertexAttribArray(GLuint);
+//void EnableVertexAttribArray(GLuint);
+//void GetActiveAttrib(GLuint, GLuint, GLsizei, GLsizei *, GLint *, GLenum *, GLchar *);
+//void GetActiveUniform(GLuint, GLuint, GLsizei, GLsizei *, GLint *, GLenum *, GLchar *);
+//void GetAttachedShaders(GLuint, GLsizei, GLsizei *, GLuint *);
+//GLint GetAttribLocation(GLuint, const GLchar *);
+void GetProgramiv(GLuint, GLenum, GLint *);
+void GetProgramInfoLog(GLuint, GLsizei, GLsizei *, GLchar *);
+void GetShaderiv(GLuint, GLenum, GLint *);
+void GetShaderInfoLog(GLuint, GLsizei, GLsizei *, GLchar *);
+//void GetShaderSource(GLuint, GLsizei, GLsizei *, GLchar *);
+GLint GetUniformLocation(GLuint, const GLchar *);
+//void GetUniformfv(GLuint, GLint, GLfloat *);
+//void GetUniformiv(GLuint, GLint, GLint *);
+//void GetVertexAttribdv(GLuint, GLenum, GLdouble *);
+//void GetVertexAttribfv(GLuint, GLenum, GLfloat *);
+//void GetVertexAttribiv(GLuint, GLenum, GLint *);
+//void GetVertexAttribPointerv(GLuint, GLenum, GLvoid* *);
+//GLboolean IsProgram(GLuint);
+//GLboolean IsShader(GLuint);
+void LinkProgram(GLuint);
+void ShaderSource(GLuint, GLsizei, const GLchar* *, const GLint *);
+void UseProgram(GLuint);
+//void Uniform1f(GLint, GLfloat);
+//void Uniform2f(GLint, GLfloat, GLfloat);
+//void Uniform3f(GLint, GLfloat, GLfloat, GLfloat);
+//void Uniform4f(GLint, GLfloat, GLfloat, GLfloat, GLfloat);
+void Uniform1i(GLint, GLint);
+//void Uniform2i(GLint, GLint, GLint);
+//void Uniform3i(GLint, GLint, GLint, GLint);
+//void Uniform4i(GLint, GLint, GLint, GLint, GLint);
+//void Uniform1fv(GLint, GLsizei, const GLfloat *);
+//void Uniform2fv(GLint, GLsizei, const GLfloat *);
+//void Uniform3fv(GLint, GLsizei, const GLfloat *);
+//void Uniform4fv(GLint, GLsizei, const GLfloat *);
+//void Uniform1iv(GLint, GLsizei, const GLint *);
+//void Uniform2iv(GLint, GLsizei, const GLint *);
+//void Uniform3iv(GLint, GLsizei, const GLint *);
+//void Uniform4iv(GLint, GLsizei, const GLint *);
+//void UniformMatrix2fv(GLint, GLsizei, GLboolean, const GLfloat *);
+//void UniformMatrix3fv(GLint, GLsizei, GLboolean, const GLfloat *);
+//void UniformMatrix4fv(GLint, GLsizei, GLboolean, const GLfloat *);
+//void ValidateProgram(GLuint);
+//void VertexAttrib1d(GLuint, GLdouble);
+//void VertexAttrib1dv(GLuint, const GLdouble *);
+//void VertexAttrib1f(GLuint, GLfloat);
+//void VertexAttrib1fv(GLuint, const GLfloat *);
+//void VertexAttrib1s(GLuint, GLshort);
+//void VertexAttrib1sv(GLuint, const GLshort *);
+//void VertexAttrib2d(GLuint, GLdouble, GLdouble);
+//void VertexAttrib2dv(GLuint, const GLdouble *);
+//void VertexAttrib2f(GLuint, GLfloat, GLfloat);
+//void VertexAttrib2fv(GLuint, const GLfloat *);
+//void VertexAttrib2s(GLuint, GLshort, GLshort);
+//void VertexAttrib2sv(GLuint, const GLshort *);
+//void VertexAttrib3d(GLuint, GLdouble, GLdouble, GLdouble);
+//void VertexAttrib3dv(GLuint, const GLdouble *);
+//void VertexAttrib3f(GLuint, GLfloat, GLfloat, GLfloat);
+//void VertexAttrib3fv(GLuint, const GLfloat *);
+//void VertexAttrib3s(GLuint, GLshort, GLshort, GLshort);
+//void VertexAttrib3sv(GLuint, const GLshort *);
+//void VertexAttrib4Nbv(GLuint, const GLbyte *);
+//void VertexAttrib4Niv(GLuint, const GLint *);
+//void VertexAttrib4Nsv(GLuint, const GLshort *);
+//void VertexAttrib4Nub(GLuint, GLubyte, GLubyte, GLubyte, GLubyte);
+//void VertexAttrib4Nubv(GLuint, const GLubyte *);
+//void VertexAttrib4Nuiv(GLuint, const GLuint *);
+//void VertexAttrib4Nusv(GLuint, const GLushort *);
+//void VertexAttrib4bv(GLuint, const GLbyte *);
+//void VertexAttrib4d(GLuint, GLdouble, GLdouble, GLdouble, GLdouble);
+//void VertexAttrib4dv(GLuint, const GLdouble *);
+//void VertexAttrib4f(GLuint, GLfloat, GLfloat, GLfloat, GLfloat);
+//void VertexAttrib4fv(GLuint, const GLfloat *);
+//void VertexAttrib4iv(GLuint, const GLint *);
+//void VertexAttrib4s(GLuint, GLshort, GLshort, GLshort, GLshort);
+//void VertexAttrib4sv(GLuint, const GLshort *);
+//void VertexAttrib4ubv(GLuint, const GLubyte *);
+//void VertexAttrib4uiv(GLuint, const GLuint *);
+//void VertexAttrib4usv(GLuint, const GLushort *);
+//void VertexAttribPointer(GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid *);
+
+//-----------------------------------------------------------------------------
+//  Extensions
+//-----------------------------------------------------------------------------
 
 #platform win32
 #platform linux

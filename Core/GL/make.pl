@@ -297,7 +297,12 @@ sub EmitExtensionHDR {
 
 	$num = $numExtensions[$platform] - 1;		# position = count - 1
 	$num += $numExtensions[0] if $platform;
-	printf (HDR "#define Q%s\t(1 << %d)\n", uc($extName), $num);
+	my $name = $extName;
+	if ($name =~ /^[0-9]+.*/) {					# OpenGL version instead of extension name
+		$name = "GL_".$name;
+		$name =~ s/\./_/g;
+	}
+	printf (HDR "#define Q%s\t(1 << %d)\n", uc($name), $num);
 }
 
 sub EmitExtensionCODE {
@@ -390,7 +395,7 @@ sub Parse {
 
 	while (getline())
 	{
-		my ($cmd, undef, $cmda) = $line =~ /^\# \s* (\w+) (\s+ (\w+ (\s+ \w+)*)\s?)? $/x;
+		my ($cmd, undef, $cmda) = $line =~ /^\# \s* (\w+) (\s+ ([\w\.]+ (\s+ [\w\.]+)*)\s?)? $/x;
 
 		#.............. our "preprocessor" ...............
 		if ($cmd eq "platform") {

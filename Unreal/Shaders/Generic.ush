@@ -1,0 +1,72 @@
+/**
+ * Simple per-pixel lighting shader
+ */
+
+//#define VS_LIGHT	1
+#define SPECULAR	1
+
+#ifndef TEXTURING
+#define TEXTURING	1
+#endif
+
+// Variables passed from vertex to fragment shader
+varying vec4 diffuse, ambient;
+varying vec3 normal, halfVector;
+#if VS_LIGHT
+varying vec3 lightDir;
+#else
+varying vec3 position;
+#endif
+
+// Parameters
+#if TEXTURING
+uniform sampler2D tex;
+#endif
+
+
+void VertexShaderMain()
+{
+	// vectors
+	normal   = gl_NormalMatrix * gl_Normal;
+#if VS_LIGHT
+	lightDir = normalize(vec3(gl_LightSource[0].position));
+#else
+	position = gl_Vertex.xyz;
+#endif
+	halfVector = normalize(gl_LightSource[0].halfVector.xyz);
+	// light parameters
+	diffuse = gl_FrontMaterial.diffuse * gl_LightSource[0].diffuse;
+	ambient = gl_FrontMaterial.ambient * gl_LightSource[0].ambient + gl_LightModel.ambient * gl_FrontMaterial.ambient;
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	gl_Position    = ftransform();
+}
+
+
+void PixelShaderMain()
+{
+#if !VS_LIGHT
+	vec3 lightDir = gl_LightSource[0].position.xyz - position;
+#endif
+	lightDir = normalize(lightDir);
+
+	vec3 n = normalize(normal);
+	float NdotL = max(dot(n, lightDir), 0.0);
+	// ambient + diffuse
+	vec4 color = (ambient + diffuse * NdotL);
+#if TEXTURING
+	vec4 texColor = texture2D(tex, gl_TexCoord[0].st);
+	color *= texColor;
+#endif
+#if SPECULAR
+	// specular
+	vec3 halfV = normalize(halfVector);
+	float NdotHV = max(dot(n, halfV), 0.0);
+	color += gl_FrontMaterial.specular * gl_LightSource[0].specular * pow(NdotHV, gl_FrontMaterial.shininess);
+#endif
+
+#if NORMALMAP
+	gl_FragColor = vec4(n, 1.0);	// show normalmap
+#else
+	gl_FragColor = color;
+#endif
+}

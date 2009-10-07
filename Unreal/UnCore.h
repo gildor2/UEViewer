@@ -2,6 +2,11 @@
 #define __UNCORE_H__
 
 
+#if RENDERING
+#	include "CoreGL.h"		//?? for materials only
+#endif
+
+
 // forward declarations
 class FArchive;
 class UObject;

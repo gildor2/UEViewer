@@ -14,11 +14,13 @@
 
 #include "GlWindow.h"
 
+#include "Shaders.h"
 
 #define MAX_IMG_SIZE		4096
 #define DEFAULT_TEX_NUM		2			// note: glIsTexture(0) will always return GL_FALSE
 #define RESERVED_TEXTURES	32
 
+#define USE_GLSL			1			//?? move to Build.h ?
 
 /*-----------------------------------------------------------------------------
 	Mipmapping and resampling
@@ -238,8 +240,192 @@ static void Upload(int handle, const void *pic, int width, int height, bool doMi
 	Unreal materials support
 -----------------------------------------------------------------------------*/
 
-UMaterial *BindDefaultMaterial()
+void UUnrealMaterial::Release()
 {
+#if USE_GLSL
+	if (GL_IsValidObject(PrObj, DrawTimestamp) && GL_SUPPORT(QGL_2_0))
+	{
+		glDetachShader(PrObj, VsObj);
+		glDetachShader(PrObj, PsObj);
+		glDeleteShader(VsObj);
+		glDeleteShader(PsObj);
+		glDeleteProgram(PrObj);
+	}
+	PrObj = VsObj = PsObj = 0;
+#endif // USE_GLSL
+	DrawTimestamp = 0;
+}
+
+
+static GLint lastTexNum = RESERVED_TEXTURES;	//!! use glGenTextures() instead
+
+#if USE_GLSL
+
+static void PrintShaderInfoLog(GLuint obj)
+{
+	int infologLength = 0;
+	glGetShaderiv(obj, GL_INFO_LOG_LENGTH, &infologLength);
+
+	if (infologLength > 0)
+	{
+		char *infoLog = (char *)malloc(infologLength);
+		int charsWritten  = 0;
+		glGetShaderInfoLog(obj, infologLength, &charsWritten, infoLog);
+		printf("%s\n",infoLog);
+		free(infoLog);
+    }
+}
+
+static void PrintProgramInfoLog(GLuint obj)
+{
+	int infologLength = 0;
+	glGetProgramiv(obj, GL_INFO_LOG_LENGTH, &infologLength);
+
+	if (infologLength > 0)
+	{
+		char *infoLog = (char *)malloc(infologLength);
+		int charsWritten  = 0;
+		glGetProgramInfoLog(obj, infologLength, &charsWritten, infoLog);
+		printf("%s\n",infoLog);
+		free(infoLog);
+	}
+}
+
+static void CompileShader(GLuint shader, const char *src, const char *defines, bool isFragShader)
+{
+	guard(CompileShader);
+
+	const char *name = src;
+	src = strchr(src, 0) + 1;
+
+	// prepare source
+	char buffer[16384];
+	int srcLen = strlen(src);
+	int defLen = defines ? strlen(defines) : 0;
+	assert(defLen + srcLen + 512 < ARRAY_COUNT(buffer));
+
+	char *dst = buffer;
+	if (defines)
+	{
+		memcpy(dst, defines, defLen);
+		dst += defLen;
+		// append "#line 0" to keep correct line numbering
+		strcpy(dst, "\n#line 0\n");
+		dst = strchr(dst, 0);
+	}
+
+	memcpy(dst, src, srcLen);
+	dst += srcLen;
+
+	appSprintf(dst, ARRAY_COUNT(buffer) - srcLen,
+		"\nvoid main() { %s(); }\n",
+		isFragShader ? "PixelShaderMain" : "VertexShaderMain"
+	);
+
+	// compile
+	const char *pBuffer = buffer;
+	glShaderSource(shader, 1, &pBuffer, NULL);
+	glCompileShader(shader);
+
+	// check compilation status
+	int status;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		printf("ERROR in %s shader \"%s\":\n", isFragShader ? "fragment" : "vertex", name);
+		PrintShaderInfoLog(shader);
+		exit(1);		//??
+	}
+
+	unguard;
+}
+
+
+// Note: src format is "ShaderName" "\0" "ShaderText"
+void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src, const char *defines = NULL)
+{
+	guard(GL_MakeShader);
+
+	int status;
+	// shaders
+	VsObj = glCreateShader(GL_VERTEX_SHADER);
+	PsObj = glCreateShader(GL_FRAGMENT_SHADER);
+	CompileShader(VsObj, src, defines, false);
+	CompileShader(PsObj, src, defines, true);
+	// program
+	PrObj = glCreateProgram();
+	glAttachShader(PrObj, VsObj);
+	glAttachShader(PrObj, PsObj);
+	glLinkProgram(PrObj);
+	glGetProgramiv(PrObj, GL_LINK_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		printf("ERROR in program \"%s\":\n", src);
+		PrintProgramInfoLog(PrObj);
+		exit(1);
+	}
+
+	unguard;
+}
+
+
+struct CShader
+{
+	int		Timestamp;
+	GLuint	VsObj;
+	GLuint	PsObj;
+	GLuint	PrObj;
+};
+
+
+enum GenericShaderType
+{
+	GS_Textured,
+	GS_White,
+	GS_NormalMap,
+	GS_Count
+};
+
+
+void GL_UseGenericShader(GenericShaderType type)
+{
+	guard(GL_UseGenericShader);
+
+	assert(type >= 0 && type < GS_Count);
+
+	static CShader shaders[GS_Count];
+	static const char* defines[GS_Count] =
+	{
+		NULL,							// GS_Textured
+		"#define TEXTURING 0",			// GS_White
+		"#define NORMALMAP 1"			// GS_NormalMap
+	};
+
+	CShader &Sh = shaders[type];
+	if (!GL_IsValidObject(Sh.PrObj, Sh.Timestamp))
+		GL_MakeShader(Sh.VsObj, Sh.PsObj, Sh.PrObj, Generic_ush, defines[type]);
+	glUseProgram(Sh.PrObj);
+
+	GL_TouchObject(Sh.Timestamp);
+
+	unguard;
+}
+
+
+#endif // USE_GLSL
+
+
+void BindDefaultMaterial(bool White = false)
+{
+	if (White)
+	{
+		glDisable(GL_TEXTURE_2D);
+#if USE_GLSL
+		if (GL_SUPPORT(QGL_2_0)) GL_UseGenericShader(GS_White);
+#endif
+		return;
+	}
+
 	static UTexture *Mat = NULL;
 	if (!Mat)
 	{
@@ -271,16 +457,22 @@ UMaterial *BindDefaultMaterial()
 #undef TEX_SIZE
 	}
 	Mat->Bind(0);
-	return Mat;
 }
 
 
-static GLint lastTexNum = RESERVED_TEXTURES;
-
-//!! note: unloading textures is not supported now
 void UTexture::Bind(unsigned PolyFlags)
 {
 	guard(UTexture::Bind);
+
+#if USE_GLSL
+	if (GL_SUPPORT(QGL_2_0))
+	{
+		GL_UseGenericShader(GS_Textured);
+		GLuint tex = glGetUniformLocation(PrObj, "tex");
+		glUniform1i(tex, 0);
+	}
+#endif // USE_GLSL
+
 	glEnable(GL_TEXTURE_2D);
 	// bTwoSided
 	if (bTwoSided || (PolyFlags & PF_TwoSided))
@@ -324,17 +516,9 @@ void UTexture::Bind(unsigned PolyFlags)
 		glDisable(GL_BLEND);
 	}
 	// uploading ...
-	bool upload = false;
-	if (!TexNum)
-	{
-		TexNum = ++lastTexNum;
-		upload = true;
-	}
-	else if (!glIsTexture(TexNum))
-	{
-		// surface lost (window resized etc), should re-upload texture
-		upload = true;
-	}
+	if (!TexNum) TexNum = ++lastTexNum;		// create handle
+	bool upload = !GL_TouchObject(DrawTimestamp);
+
 	if (upload)
 	{
 		// upload texture
@@ -360,7 +544,9 @@ void UTexture::Bind(unsigned PolyFlags)
 
 void UTexture::Release()
 {
-	glDeleteTextures(1, &TexNum);
+	if (GL_IsValidObject(TexNum, DrawTimestamp))
+		glDeleteTextures(1, &TexNum);
+	Super::Release();
 }
 
 
@@ -654,20 +840,21 @@ void UTexture2D::Bind(unsigned PolyFlags)
 {
 	guard(UTexture2D::Bind);
 
+#if USE_GLSL
+	if (GL_SUPPORT(QGL_2_0))
+	{
+		GL_UseGenericShader(GS_Textured);
+		GLuint tex = glGetUniformLocation(PrObj, "tex");
+		glUniform1i(tex, 0);
+	}
+#endif // USE_GLSL
+
 	glEnable(GL_TEXTURE_2D);
 
 	// uploading ...
-	bool upload = false;
-	if (!TexNum)
-	{
-		TexNum = ++lastTexNum;
-		upload = true;
-	}
-	else if (!glIsTexture(TexNum))
-	{
-		// surface lost (window resized etc), should re-upload texture
-		upload = true;
-	}
+	if (!TexNum) TexNum = ++lastTexNum;		// create handle
+	bool upload = !GL_TouchObject(DrawTimestamp);
+
 	if (upload)
 	{
 		// upload texture
@@ -692,7 +879,9 @@ void UTexture2D::Bind(unsigned PolyFlags)
 
 void UTexture2D::Release()
 {
-	glDeleteTextures(1, &TexNum);
+	if (GL_IsValidObject(TexNum, DrawTimestamp))
+		glDeleteTextures(1, &TexNum);
+	Super::Release();
 }
 
 

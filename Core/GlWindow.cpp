@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "TextContainer.h"
 #include "GlWindow.h"
+#include "CoreGL.h"
 
 // font
 #include "GlFont.h"
@@ -34,6 +35,9 @@ enum
 static int lightingMode = LIGHTING_SPECULAR;
 
 #endif
+
+int GCurrentFrame = 1;
+int GContextFrame = 0;
 
 
 //-----------------------------------------------------------------------------
@@ -114,6 +118,7 @@ static void Set2Dmode()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glDisable(GL_CULL_FACE);
+	if (GL_SUPPORT(QGL_2_0)) glUseProgram(0);	//?? disable shading
 }
 
 
@@ -255,6 +260,13 @@ static void ResizeWindow(int w, int h)
 			return;
 		}
 		QGL_InitExtensions();
+	}
+
+	if (!glIsTexture(FONT_TEX_NUM))
+	{
+		// possibly context was recreated ...
+		GContextFrame = GCurrentFrame + 1;
+		GCurrentFrame += 2;
 	}
 
 	LoadFont();
@@ -686,6 +698,8 @@ void DrawText3D(const CVec3 &pos, const char *text, ...)
 
 static void Display()
 {
+	GCurrentFrame++;
+
 	// clear screen buffer
 #if FUNNY_BACKGROUND
 	glDisable(GL_BLEND);
@@ -712,7 +726,7 @@ static void Display()
 	Set3Dmode();
 
 	// enable lighting
-	static const float lightPos[4]      = {100, 200, 100, 0};
+	static const float lightPos[4]      = {100, 200, 200, 0};
 	static const float lightAmbient[4]  = {0.3, 0.3, 0.4, 1};
 	static const float specIntens[4]    = {0.7, 0.7, 0.5, 0};
 	static const float black[4]         = {0,   0,   0,   0};
@@ -813,6 +827,13 @@ static void OnKeyboard(unsigned key, unsigned mod)
 		if (++lightingMode == LIGHTING_LAST) lightingMode = 0;
 		break;
 #endif
+	case 'g'|KEY_CTRL:
+		{
+			// enable/disable extensions
+			static unsigned extensionMask = 0;
+			Exchange(gl_config.extensionMask, extensionMask);
+		}
+		break;
 #if DUMP_TEXTS
 	case 'd'|KEY_CTRL:
 		dumpTexts = true;

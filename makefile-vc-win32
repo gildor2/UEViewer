@@ -75,6 +75,7 @@ OPT_MAIN = -O1 -EHsc -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unre
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/GLBindImpl.h \
 	Core/Math3D.h
@@ -85,6 +86,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/GlFont.h \
 	Core/GlWindow.h \
@@ -97,6 +99,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
@@ -116,6 +119,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
@@ -146,6 +150,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
@@ -162,6 +167,24 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Unreal/Shaders.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	libs/ddslib.h
+
+./obj/umodel-win32/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnRenderer.obj" Unreal/UnRenderer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
@@ -179,43 +202,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	libs/ddslib.h
-
-./obj/umodel-win32/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnRenderer.obj" Unreal/UnRenderer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/GLBind.h \
-	Core/Math3D.h
-
-./obj/umodel-win32/Core.obj : Core/Core.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Core.obj" Core/Core.cpp
-
-./obj/umodel-win32/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Math3D.obj" Core/Math3D.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/TextContainer.h
-
-./obj/umodel-win32/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/TextContainer.obj" Core/TextContainer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Exporters/Exporters.h \
@@ -232,6 +219,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Exporters/Exporters.h \
@@ -250,6 +238,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
@@ -268,6 +257,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
@@ -286,6 +276,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
@@ -305,6 +296,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
@@ -317,6 +309,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
@@ -332,6 +325,7 @@ DEPENDS = \
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
+	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
@@ -345,6 +339,26 @@ DEPENDS = \
 
 ./obj/umodel-win32/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnCore.obj" Unreal/UnCore.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h
+
+./obj/umodel-win32/Core.obj : Core/Core.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Core.obj" Core/Core.cpp
+
+./obj/umodel-win32/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Math3D.obj" Core/Math3D.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Core/TextContainer.h
+
+./obj/umodel-win32/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/TextContainer.obj" Core/TextContainer.cpp
 
 DEPENDS = \
 	libs/ddslib.h

@@ -15,6 +15,11 @@ makefile="makefile-$PLATFORM"
 # [ $makefile -ot $project ] &&
 $root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 
+# build shaders
+cd "Unreal/Shaders"
+./make.pl
+cd "../.."
+
 # build
 case "$PLATFORM" in
 	"vc-win32")

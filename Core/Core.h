@@ -12,40 +12,6 @@
 
 #if RENDERING
 #	include <SDL/SDL.h>		//?? move outside
-
-#if _WIN32
-#	ifndef APIENTRY
-#		define APIENTRY __stdcall
-#	endif
-#	ifndef WINAPI
-#		define WINAPI   __stdcall
-#	endif
-#	ifndef WINGDIAPI
-#		define WINGDIAPI
-		typedef unsigned		HDC;
-		typedef unsigned		HGLRC;
-		typedef const char *	LPCSTR;
-		typedef int				BOOL;
-		typedef unsigned char	BYTE;
-		typedef unsigned short	WORD;
-		typedef unsigned int	UINT;
-		typedef int (APIENTRY *PROC)();
-		typedef void PIXELFORMATDESCRIPTOR;		// structure
-		typedef PIXELFORMATDESCRIPTOR * LPPIXELFORMATDESCRIPTOR;
-#	endif // WINGDIAPI
-#	ifndef CONST
-#		define CONST const
-#	endif
-#endif
-
-#	include <GL/gl.h>
-
-#	define USE_SDL			1
-#	define NO_GL_LOG		1
-#	include "GLBind.h"
-	bool	QGL_Init(const char *libName);
-	void	QGL_Shutdown();
-	void	QGL_InitExtensions();
 #endif
 
 #define VECTOR_ARG(name)	name[0],name[1],name[2]

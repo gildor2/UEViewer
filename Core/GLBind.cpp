@@ -1,4 +1,5 @@
 #include "Core.h"
+#include "CoreGL.h"
 
 #define appPrintf		printf
 #define appWPrintf		appNotify
@@ -21,14 +22,7 @@ struct glDummy_t {
 };
 #define GlFunc(struc,index)		reinterpret_cast<glDummy_t&>(struc).funcs[index]
 
-struct
-{
-	unsigned	extensionMask;
-	unsigned	disabledExt;
-	unsigned	ignoredExt;
-	const char *extensions;
-	const char *extensions2;
-} gl_config;
+gl_config_t gl_config;
 
 
 #if !NO_GL_LOG
@@ -174,6 +168,9 @@ void QGL_InitExtensions()
 	unsigned notFoundExt = 0;
 	gl_config.disabledExt = gl_config.ignoredExt = 0;
 	gl_config.extensions = ext1 = (char*)glGetString(GL_EXTENSIONS);
+	const char *ver = (const char*)glGetString(GL_VERSION);
+	float glVersion = atof(ver);
+//	printf("GL version: %f\n", glVersion);
 
 	ext2 = NULL;
 #if _WIN32 && !USE_SDL
@@ -190,7 +187,13 @@ void QGL_InitExtensions()
 	for (i = 0, ext = extInfo; i < NUM_EXTENSIONS; i++, ext++)
 	{
 		bool enable = false;
-		if (ExtensionSupported(ext, ext1, ext2))
+		if (ext->names[0] >= '0' && ext->names[0] <= '9')
+		{
+			float extVersion = atof(ext->names);
+			enable = (glVersion >= extVersion-0.0001f);	// FP precision fix ...
+			ext->name = ext->names;
+		}
+		else if (ExtensionSupported(ext, ext1, ext2))
 		{
 //			if (!ext->cvar || Cvar_VariableInt(ext->cvar))
 			{
