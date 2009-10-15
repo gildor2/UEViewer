@@ -9,7 +9,9 @@
 // debugging
 //#define CHECK_INFLUENCES		1
 //#define SHOW_INFLUENCES		1
+#define SHOW_TANGENTS			1
 //#define SHOW_ANIM				1
+#define SHOW_BONE_UPDATES		1
 
 
 struct CMeshBoneData
@@ -32,6 +34,25 @@ struct CMeshBoneData
 };
 
 
+#define NUM_INFLUENCES			4
+
+struct CMeshWedge
+{
+	CVec3		Pos;
+	CVec3		Normal, Tangent, Binormal;
+	float		U, V;
+	int			Bone[NUM_INFLUENCES];	// Bone < 0 - end of list
+	float		Weight[NUM_INFLUENCES];
+};
+
+
+struct CSkinVert
+{
+	CVec3		Pos;
+	CVec3		Normal, Tangent, Binormal;
+};
+
+
 #define ANIM_UNASSIGNED			-2
 #define MAX_MESHBONES			512
 
@@ -45,9 +66,8 @@ CSkelMeshInstance::~CSkelMeshInstance()
 	if (BoneData)
 	{
 		delete BoneData;
-		delete MeshVerts;
-		delete MeshNormals;
-		delete RefNormals;
+		delete Wedges;
+		delete Skinned;
 	}
 	if (InfColors) delete InfColors;
 }
@@ -110,43 +130,206 @@ static int CheckBoneTree(const TArray<FMeshBone> &Bones, int Index,
 }
 
 
-static void BuildNormals(const USkeletalMesh *Mesh, CVec3 *Normals)
+static void BuildWedges(
+	CMeshWedge *Wedges,
+	int MaxWedges,			// passed for validation only
+	const TArray<FVector> &MeshPoints,
+	const TArray<FMeshWedge> &MeshWedges,
+	const TArray<FVertInfluences> &VertInfluences)
 {
-	int i;
-	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	guard(BuildWedges);
+
+	struct CVertInfo
 	{
-		const VTriangle &Face = Mesh->Triangles[i];
-		// get vertex indices
-		int i1 = Mesh->Wedges[Face.WedgeIndex[0]].iVertex;
-		int i2 = Mesh->Wedges[Face.WedgeIndex[1]].iVertex;
-		int i3 = Mesh->Wedges[Face.WedgeIndex[2]].iVertex;
+		int		NumInfs;		// may be higher than NUM_INFLUENCES
+		int		Bone[NUM_INFLUENCES];
+		float	Weight[NUM_INFLUENCES];
+	};
+
+	int i, j;
+
+	assert(MeshWedges.Num() <= MaxWedges);	// MaxWedges is a size of Wedges[] array
+
+	CVertInfo *Verts = new CVertInfo[MeshPoints.Num()];
+	memset(Verts, 0, MeshPoints.Num() * sizeof(CVertInfo));
+
+	// collect influences per vertex
+	for (i = 0; i < VertInfluences.Num(); i++)
+	{
+		const FVertInfluences &Inf  = VertInfluences[i];
+		CVertInfo &V = Verts[Inf.PointIndex];
+		int NumInfs = V.NumInfs++;
+		int idx = NumInfs;
+		if (NumInfs >= NUM_INFLUENCES)
+		{
+			// overflow
+			// find smallest weight smaller than current
+			float w = Inf.Weight;
+			idx = -1;
+			for (j = 0; j < NUM_INFLUENCES; j++)
+			{
+				if (V.Weight[j] < w)
+				{
+					w = V.Weight[j];
+					idx = j;
+					// continue - may be other weight will be even smaller
+				}
+			}
+			if (idx < 0) continue;	// this weight is smaller than other
+		}
+		// add influence
+		V.Bone[idx]   = Inf.BoneIndex;
+		V.Weight[idx] = Inf.Weight;
+	}
+
+	// normalize influences
+	for (i = 0; i < MeshPoints.Num(); i++)
+	{
+		CVertInfo &V = Verts[i];
+		if (V.NumInfs <= NUM_INFLUENCES) continue;	// no normalization is required
+		float s = 0;
+		for (j = 0; j < NUM_INFLUENCES; j++)		// count sum
+			s += V.Weight[j];
+		s = 1.0f / s;
+		for (j = 0; j < NUM_INFLUENCES; j++)		// adjust weights
+			V.Weight[j] *= s;
+	}
+
+	// create wedges
+	for (i = 0; i < MeshWedges.Num(); i++)
+	{
+		const FMeshWedge &SW = MeshWedges[i];
+		CMeshWedge       &DW = Wedges[i];
+		DW.Pos = (CVec3&)MeshPoints[SW.iVertex];
+		DW.U   = SW.TexUV.U;
+		DW.V   = SW.TexUV.V;
+		// DW.Normal and DW.Tangent are unset
+		// setup Bone[] and Weight[]
+		const CVertInfo &V = Verts[SW.iVertex];
+		for (j = 0; j < V.NumInfs; j++)
+		{
+			DW.Bone[j]   = V.Bone[j];
+			DW.Weight[j] = V.Weight[j];
+		}
+		for (/* continue */; j < NUM_INFLUENCES; j++)	// place end marker and zero weight
+		{
+			DW.Bone[j]   = -1;
+			DW.Weight[j] = 0.0f;
+		}
+	}
+
+	delete Verts;
+
+	unguard;
+}
+
+
+static void BuildNormals(CMeshWedge *Wedges, int NumPoints, const TArray<FMeshWedge> &MeshWedges, const TArray<VTriangle> &MeshFaces)
+{
+	guard(BuildNormals);
+
+	CVec3 *tmpNorm;
+	tmpNorm = new CVec3[NumPoints];
+
+	// 1st pass - build notmals
+	int i, j;
+	for (i = 0; i < MeshFaces.Num(); i++)
+	{
+		const VTriangle &Face = MeshFaces[i];
+		const CMeshWedge *W[3];
+		for (j = 0; j < 3; j++) W[j] = &Wedges[Face.WedgeIndex[j]];
+
 		// compute edges
-		const CVec3 &V1 = (CVec3&)Mesh->Points[i1];
-		const CVec3 &V2 = (CVec3&)Mesh->Points[i2];
-		const CVec3 &V3 = (CVec3&)Mesh->Points[i3];
-		CVec3 D1, D2, D3;
-		VectorSubtract(V2, V1, D1);
-		VectorSubtract(V3, V2, D2);
-		VectorSubtract(V1, V3, D3);
+		CVec3 D[3];				// 0->1, 1->2, 2->0
+		VectorSubtract(W[1]->Pos, W[0]->Pos, D[0]);
+		VectorSubtract(W[2]->Pos, W[1]->Pos, D[1]);
+		VectorSubtract(W[0]->Pos, W[2]->Pos, D[2]);
 		// compute normal
 		CVec3 norm;
-		cross(D2, D1, norm);
+		cross(D[1], D[0], norm);
 		norm.Normalize();
 		// compute angles
-		D1.Normalize();
-		D2.Normalize();
-		D3.Normalize();
-		float angle1 = acos(-dot(D1, D3));
-		float angle2 = acos(-dot(D1, D2));
-		float angle3 = acos(-dot(D2, D3));
+		for (j = 0; j < 3; j++) D[j].Normalize();
+		float angle[3];
+		angle[0] = acos(-dot(D[0], D[2]));
+		angle[1] = acos(-dot(D[0], D[1]));
+		angle[2] = acos(-dot(D[1], D[2]));
 		// add normals for triangle verts
-		VectorMA(Normals[i1], angle1, norm);
-		VectorMA(Normals[i2], angle2, norm);
-		VectorMA(Normals[i3], angle3, norm);
+		for (j = 0; j < 3; j++)
+			VectorMA(tmpNorm[MeshWedges[Face.WedgeIndex[j]].iVertex], angle[j], norm);
 	}
-	// normalize normals
-	for (i = 0; i < Mesh->Points.Num(); i++)
-		Normals[i].Normalize();
+
+	// normalize normals ...
+	for (i = 0; i < NumPoints; i++)
+		tmpNorm[i].Normalize();
+
+	// ... then place normals to Wedges
+	for (i = 0; i < MeshWedges.Num(); i++)
+	{
+		const FMeshWedge &SW = MeshWedges[i];
+		CMeshWedge       &DW = Wedges[i];
+		DW.Normal = tmpNorm[SW.iVertex];
+	}
+
+	// 2nd pass - build tangents
+	for (i = 0; i < MeshFaces.Num(); i++)
+	{
+		const VTriangle &Face = MeshFaces[i];
+		CMeshWedge *W[3];
+		for (j = 0; j < 3; j++) W[j] = &Wedges[Face.WedgeIndex[j]];
+
+		// compute tangent
+		CVec3 tang;
+		if (W[2]->V == W[0]->V)
+		{
+			// W[0] -> W[2] -- axis for tangent
+			VectorSubtract(W[2]->Pos, W[0]->Pos, tang);
+		}
+		else
+		{
+			float pos = (W[1]->V - W[0]->V) / (W[2]->V - W[0]->V);	// fraction, where W[1] is placed betwen W[0] and W[2] (may be < 0 or > 1)
+			CVec3 tmp;
+			Lerp(W[0]->Pos, W[2]->Pos, pos, tmp);
+			VectorSubtract(tmp, W[1]->Pos, tang);
+			// tang.V == W[1].V; but tang.U may be greater or smaller than W[1].U
+			// we should make tang to look in side of growing U
+			float tU = Lerp(W[0]->U, W[2]->U, pos);
+			if (tU < W[1]->U) tang.Negate();
+		}
+		// now, tang is on triangle plane
+		// now we should place tangent orthogonal to normal, then normalize vector
+		float binormalScale = 1.0f;
+		for (j = 0; j < 3; j++)
+		{
+			CMeshWedge &DW = *W[j];
+			const CVec3 &norm = DW.Normal;
+			float pos = dot(norm, tang);
+			CVec3 tang2;
+			VectorMA(tang, -pos, norm, tang2);
+			tang2.Normalize();
+			DW.Tangent = tang2;
+			cross(DW.Normal, DW.Tangent, tang2);
+			tang2.Normalize();
+			if (j == 0)		// do this only once for triangle
+			{
+				// check binormal sign
+				// find two points with different V
+				const CMeshWedge &W1 = *W[0];
+				const CMeshWedge &W2 = (W[1]->V != W1.V) ? *W[1] : *W[2];
+				// check projections of these points to binormal
+				float p1 = dot(W1.Pos, tang2);
+				float p2 = dot(W2.Pos, tang2);
+				if ((p1 - p2) * (W1.V - W2.V) < 0)
+					binormalScale = -1.0f;
+			}
+			tang2.Scale(binormalScale);
+			DW.Binormal = tang2;
+		}
+	}
+
+	delete tmpNorm;
+
+	unguard;
 }
 
 
@@ -157,27 +340,28 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 	CLodMeshInstance::SetMesh(LodMesh);
 	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(LodMesh);
 
-	int NumBones = Mesh->RefSkeleton.Num();
-	int NumVerts = Mesh->Points.Num();
+	int NumBones  = Mesh->RefSkeleton.Num();
+	int NumVerts  = Mesh->Points.Num();
+	int NumWedges = Mesh->Wedges.Num();
 	const UMeshAnimation *Anim = Mesh->Animation;
 
 	// allocate some arrays
 	if (BoneData)
 	{
 		delete BoneData;
-		delete MeshVerts;
-		delete MeshNormals;
-		delete RefNormals;
+		delete Wedges;
+		delete Skinned;
 	}
 	if (InfColors)
 	{
 		delete InfColors;
 		InfColors = NULL;
 	}
-	BoneData    = new CMeshBoneData[NumBones];
-	MeshVerts   = new CVec3        [NumVerts];
-	MeshNormals = new CVec3        [NumVerts];
-	RefNormals  = new CVec3        [NumVerts];
+	BoneData = new CMeshBoneData[NumBones];
+	Wedges   = new CMeshWedge   [NumWedges];
+	Skinned  = new CSkinVert    [NumWedges];
+
+	LastLodNum = -2;
 
 	int i;
 	CMeshBoneData *data;
@@ -238,8 +422,8 @@ if (i == 32 || i == 34)
 		data->Scale = 1.0f;			// default bone scale
 	}
 
-	BuildNormals(Mesh, RefNormals);
-
+#if 0
+	-- done in BuildWedges()
 	// normalize VertInfluences: sum of all influences may be != 1
 	// (possible situation, see SkaarjAnims/Skaarj2, SkaarjAnims/Skaarj_Skel, XanRobots/XanF02)
 	//!! should be done in USkeletalMesh
@@ -254,14 +438,14 @@ if (i == 32 || i == 34)
 		VertSumWeights[PointIndex] += Inf.Weight;
 		VertInfCount  [PointIndex]++;
 	}
-#if 0
+/*
 	// notify about wrong weights
 	for (i = 0; i < NumVerts; i++)
 	{
 		if (fabs(VertSumWeights[i] - 1.0f) < 0.01f) continue;
 		appNotify("Vert[%d] weight sum=%g (%d weights)", i, VertSumWeights[i], VertInfCount[i]);
 	}
-#endif
+*/
 	// normalize weights
 	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
 	{
@@ -275,6 +459,7 @@ if (i == 32 || i == 34)
 
 	delete VertSumWeights;
 	delete VertInfCount;
+#endif
 
 	// check bones tree
 	if (NumBones)
@@ -582,7 +767,9 @@ void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Lo
 }
 
 
-static int BoneUpdateCounts[MAX_MESHBONES];	//!! remove later
+#if SHOW_BONE_UPDATES
+static int BoneUpdateCounts[MAX_MESHBONES];
+#endif
 
 void CSkelMeshInstance::UpdateSkeleton()
 {
@@ -595,7 +782,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 	assert(MaxAnimChannel < MAX_SKELANIMCHANNELS);
 	int Stage;
 	CAnimChan *Chn;
-	memset(BoneUpdateCounts, 0, sizeof(BoneUpdateCounts)); //!! remove later
+#if SHOW_BONE_UPDATES
+	memset(BoneUpdateCounts, 0, sizeof(BoneUpdateCounts));
+#endif
 	for (Stage = 0, Chn = Channels; Stage <= MaxAnimChannel; Stage++, Chn++)
 	{
 		if (Stage > 0 && (Chn->AnimIndex1 == ANIM_UNASSIGNED || Chn->BlendAlpha <= 0))
@@ -651,7 +840,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 				// get bone position from track
 				if (!Motion2 || Chn->SecondaryBlend != 1.0f)
 				{
-					BoneUpdateCounts[i]++;		//!! remove later
+#if SHOW_BONE_UPDATES
+					BoneUpdateCounts[i]++;
+#endif
 					GetBonePosition(Motion1->AnimTracks[BoneIndex], Chn->Time, AnimSeq1->NumFrames,
 						Chn->Looped, BP, BO);
 //const char *bname = *Mesh->RefSkeleton[i].Name;
@@ -670,7 +861,9 @@ if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
 				{
 					CVec3 BP2;
 					CQuat BO2;
-					BoneUpdateCounts[i]++;		//!! remove later
+#if SHOW_BONE_UPDATES
+					BoneUpdateCounts[i]++;
+#endif
 					GetBonePosition(Motion2->AnimTracks[BoneIndex], Time2, AnimSeq2->NumFrames,
 						Chn->Looped, BP2, BO2);
 					if (Chn->SecondaryBlend == 1.0f)
@@ -1006,7 +1199,8 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 
 	const USkeletalMesh *Mesh = GetMesh();
 
-	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_LIGHTING);
+	BindDefaultMaterial(true);
 	glLineWidth(3);
 	glEnable(GL_LINE_SMOOTH);
 
@@ -1021,10 +1215,10 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 		if (i > 0)
 		{
 //			Color.Set(1,1,0.3);
-			//!! REMOVE LATER:
+#if SHOW_BONE_UPDATES
 			int t = BoneUpdateCounts[i];
 			Color.Set(t & 1, (t >> 1) & 1, (t >> 2) & 1);
-			//!! ^^^^^^^^^^^^^
+#endif
 			v1 = BoneData[B.ParentIndex].Coords.origin;
 		}
 		else
@@ -1062,7 +1256,7 @@ void CSkelMeshInstance::DrawAttachments()
 	const USkeletalMesh *Mesh = GetMesh();
 	if (!Mesh->AttachAliases.Num()) return;
 
-	glDisable(GL_TEXTURE_2D);
+	BindDefaultMaterial(true);
 
 	glBegin(GL_LINES);
 	for (int i = 0; i < Mesh->AttachAliases.Num(); i++)
@@ -1101,16 +1295,16 @@ void CSkelMeshInstance::DrawAttachments()
 }
 
 
-void CSkelMeshInstance::TransformMesh(int NumInfs, const FVertInfluences *Infs, int NumVerts, const FVector *Verts, const CVec3 *Norms)
+// Software skinning
+void CSkelMeshInstance::TransformMesh(CMeshWedge *Wedges, int NumWedges)
 {
 	guard(CSkelMeshInstance::TransformMesh);
 	//?? try other tech: compute weighted sum of matrices, and then
 	//?? transform vector (+ normal ?; note: normals requires normalized
 	//?? transformations ?? (or normalization guaranteed by sum(weights)==1?))
-	memset(MeshVerts,   0, sizeof(CVec3) * NumVerts);
-	if (Norms)
-		memset(MeshNormals, 0, sizeof(CVec3) * NumVerts);
+	memset(Skinned, 0, sizeof(CSkinVert) * NumWedges);
 #if CHECK_INFLUENCES
+	#error "will not function now - verts are converted to wedges"
 	float *infAccum = new float[NumVerts];
 	memset(infAccum, 0, sizeof(float) * NumVerts);
 #endif
@@ -1128,34 +1322,46 @@ void CSkelMeshInstance::TransformMesh(int NumInfs, const FVertInfluences *Infs, 
 	}
 #endif
 
-	for (int i = 0; i < NumInfs; i++)
+	for (int i = 0; i < NumWedges; i++)
 	{
-		const FVertInfluences &Inf  = Infs[i];
-		const CMeshBoneData   &data = BoneData[Inf.BoneIndex];
-		int PointIndex = Inf.PointIndex;
-		CVec3 tmp;
-		// transform vertex
-		data.Transform.UnTransformPoint((CVec3&)Verts[PointIndex], tmp);
-		VectorMA(MeshVerts[PointIndex], Inf.Weight, tmp);
-		// transform normal
-		if (Norms)
+		const CMeshWedge &W = Wedges[i];
+		CSkinVert        &D = Skinned[i];
+		for (int j = 0; j < NUM_INFLUENCES; j++)
 		{
-			data.Transform.axis.UnTransformVector(Norms[PointIndex], tmp);
-			VectorMA(MeshNormals[PointIndex], Inf.Weight, tmp);
-		}
+			int iBone = W.Bone[j];
+			if (iBone < 0) break;
+			float Weight = W.Weight[j];
+
+			const CMeshBoneData &data = BoneData[iBone];
+			CVec3 tmp;
+			// transform vertex
+			data.Transform.UnTransformPoint(W.Pos, tmp);
+			VectorMA(D.Pos, Weight, tmp);
+			// transform normal
+			data.Transform.axis.UnTransformVector(W.Normal, tmp);
+			VectorMA(D.Normal, Weight, tmp);
+			// transform tangent
+			data.Transform.axis.UnTransformVector(W.Tangent, tmp);
+			VectorMA(D.Tangent, Weight, tmp);
+			// transform binormal
+			data.Transform.axis.UnTransformVector(W.Binormal, tmp);
+			VectorMA(D.Binormal, Weight, tmp);
 #if CHECK_INFLUENCES
-		if (Inf.Weight <= 0 || Inf.Weight > 1)
-			DrawTextLeft("point[%d] have bad inf = %g", PointIndex, Inf.Weight);
-		infAccum[PointIndex] += Inf.Weight;
+			#error adapt
+			if (Inf.Weight <= 0 || Inf.Weight > 1)
+				DrawTextLeft("point[%d] have bad inf = %g", PointIndex, Inf.Weight);
+			infAccum[PointIndex] += Inf.Weight;
 #endif
 #if 0
-		//!!
-		if (vertUsed[PointIndex])
-			DrawTextLeft("%d: v[%g %g %g] b[%d] w[%g]", PointIndex, FVECTOR_ARG(Verts[PointIndex]), Inf.BoneIndex, Inf.Weight);
-		else
-			MeshVerts[PointIndex].Set(0, 0, 0);
+			//!!
+			if (vertUsed[PointIndex])
+				DrawTextLeft("%d: v[%g %g %g] b[%d] w[%g]", PointIndex, FVECTOR_ARG(Verts[PointIndex]), Inf.BoneIndex, Inf.Weight);
+			else
+				MeshVerts[PointIndex].Set(0, 0, 0);
 #endif
+		}
 	}
+
 #if 0
 	//!!
 	DrawTextLeft("--------");
@@ -1164,6 +1370,7 @@ void CSkelMeshInstance::TransformMesh(int NumInfs, const FVertInfluences *Infs, 
 			DrawTextLeft("%5d: %7.2f %7.2f %7.2f", j, VECTOR_ARG(MeshVerts[j]));
 #endif
 #if CHECK_INFLUENCES
+	#error adapt
 	for (int j = 0; j < NumVerts; j++)
 		if (infAccum[j] < 0.9999f || infAccum[j] > 1.0001f)
 			DrawTextLeft("point[%d] have bad inf sum = %g", j, infAccum[j]);
@@ -1188,17 +1395,21 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 	return;
 #endif
 
-	if (Mesh->VertInfluences.Num())		// condition is just in case
-		TransformMesh(Mesh->VertInfluences.Num(), &Mesh->VertInfluences[0], Mesh->Points.Num(), &Mesh->Points[0], RefNormals);
+	TransformMesh(Wedges, Mesh->Wedges.Num());
 
 	glEnable(GL_LIGHTING);
-	int lastMatIndex = -1;	//!! implement same glBegin/glEnd/glBindTexture optimizations for VertMesh
-	glBegin(GL_TRIANGLES);
+
 	if (!ShowInfluences)
 	{
 		// draw normal mesh
+		int lastMatIndex = -1;
+		GLint tangent = -1, binormal = -1;
+		const CShader *Sh = NULL;
+
+		glBegin(GL_TRIANGLES);
 		for (i = 0; i < Mesh->Triangles.Num(); i++)
 		{
+			//!! can build index array and use GL vertex arrays for drawing
 			const VTriangle &Face = Mesh->Triangles[i];
 			if (Face.MatIndex != lastMatIndex)
 			{
@@ -1206,16 +1417,31 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 				glEnd();					// stop drawing sequence
 				SetMaterial(Face.MatIndex);
 				lastMatIndex = Face.MatIndex;
+				//!! BUMP
+				Sh = GCurrentShader;
+				if (Sh)
+				{
+					tangent  = Sh->GetAttrib("tangent");
+					binormal = Sh->GetAttrib("binormal");
+				}
+				else
+					tangent = binormal = -1;
+				//!! ^^^^
 				glBegin(GL_TRIANGLES);		// restart drawing sequence
 			}
 			for (int j = 0; j < 3; j++)
 			{
-				const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
-				glTexCoord2f(W.TexUV.U, W.TexUV.V);
-				glNormal3fv(MeshNormals[W.iVertex].v);
-				glVertex3fv(MeshVerts[W.iVertex].v);
+				int iWedge = Face.WedgeIndex[j];
+				const CMeshWedge &W = Wedges[iWedge];
+				const CSkinVert  &V = Skinned[iWedge];
+				glTexCoord2f(W.U, W.V);
+				glNormal3fv(V.Normal.v);
+				if (tangent  >= 0) Sh->SetAttrib(tangent,  V.Tangent );	//!! BUMP
+				if (binormal >= 0) Sh->SetAttrib(binormal, V.Binormal);	//!! BUMP
+				glVertex3fv(V.Pos.v);
 			}
 		}
+		glEnd();
 	}
 	else
 	{
@@ -1224,36 +1450,45 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 			BuildInfColors();
 		assert(InfColors);
 
-		glDisable(GL_TEXTURE_2D);
+		BindDefaultMaterial(true);
+
+		glBegin(GL_TRIANGLES);
 		for (i = 0; i < Mesh->Triangles.Num(); i++)
 		{
 			const VTriangle &Face = Mesh->Triangles[i];
 			for (int j = 0; j < 3; j++)
 			{
-				const FMeshWedge &W = Mesh->Wedges[Face.WedgeIndex[j]];
-				glNormal3fv(MeshNormals[W.iVertex].v);
-				glColor3fv(InfColors[W.iVertex].v);
-				glVertex3fv(MeshVerts[W.iVertex].v);
+				int iWedge = Face.WedgeIndex[j];
+				const CSkinVert &V = Skinned[iWedge];
+				glColor3fv(InfColors[iWedge].v);
+				glNormal3fv(Skinned[iWedge].Normal.v);
+				glVertex3fv(V.Pos.v);
 			}
 		}
+		glEnd();
 	}
-	glEnd();
-	glDisable(GL_TEXTURE_2D);
+
 	glDisable(GL_LIGHTING);
+	BindDefaultMaterial(true);
 
 #if SHOW_INFLUENCES
 	glBegin(GL_LINES);
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
+	for (i = 0; i < Mesh->Wedges.Num(); i++)
 	{
-		const FVertInfluences &Inf = Mesh->VertInfluences[i];
-		int iBone = Inf.BoneIndex;
-		const FMeshBone       &B   = Mesh->RefSkeleton[iBone];
-		const CCoords         &BC  = BoneData[iBone].Coords;
-		CVec3 Color;
-		GetBoneInfColor(iBone, Color);
-		glColor3fv(Color.v);
-		glVertex3fv(MeshVerts[Inf.PointIndex].v);
-		glVertex3fv(BC.origin.v);
+		const CMeshWedge &W = Wedges[i];
+//		const FVertInfluences &Inf = Mesh->VertInfluences[i];
+		for (int j = 0; j < NUM_INFLUENCES; j++)
+		{
+			int iBone = W.Bone[j];
+			if (iBone < 0) break;
+			const FMeshBone &B   = Mesh->RefSkeleton[iBone];
+			const CCoords   &BC  = BoneData[iBone].Coords;
+			CVec3 Color;
+			GetBoneInfColor(iBone, Color);
+			glColor3fv(Color.v);
+			glVertex3fv(Skinned[i].Pos.v);
+			glVertex3fv(BC.origin.v);
+		}
 	}
 	glEnd();
 #endif // SHOW_INFLUENCES
@@ -1262,14 +1497,34 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 	if (ShowNormals)
 	{
 		glBegin(GL_LINES);
-		glColor3f(0.5, 1, 0);
-		for (i = 0; i < Mesh->Points.Num(); i++)
+		glColor3f(0.5f, 1, 0);
+		for (i = 0; i < Mesh->Wedges.Num(); i++)
 		{
-			glVertex3fv(MeshVerts[i].v);
+			glVertex3fv(Skinned[i].Pos.v);
 			CVec3 tmp;
-			VectorMA(MeshVerts[i], 2, MeshNormals[i], tmp);
+			VectorMA(Skinned[i].Pos, 1, Skinned[i].Normal, tmp);
 			glVertex3fv(tmp.v);
 		}
+#if SHOW_TANGENTS
+		glColor3f(0, 0.5f, 1);
+		for (i = 0; i < Mesh->Wedges.Num(); i++)
+		{
+			const CVec3 &v = Skinned[i].Pos;
+			glVertex3fv(v.v);
+			CVec3 tmp;
+			VectorMA(v, 1, Skinned[i].Tangent, tmp);
+			glVertex3fv(tmp.v);
+		}
+		glColor3f(1, 0, 0.5f);
+		for (i = 0; i < Mesh->Wedges.Num(); i++)
+		{
+			const CVec3 &v = Skinned[i].Pos;
+			glVertex3fv(v.v);
+			CVec3 tmp;
+			VectorMA(v, 1, Skinned[i].Binormal, tmp);
+			glVertex3fv(tmp.v);
+		}
+#endif // SHOW_TANGENTS
 		glEnd();
 	}
 
@@ -1282,13 +1537,13 @@ void CSkelMeshInstance::DrawLodSkeletalMesh(const FStaticLODModel *lod)
 	guard(CSkelMeshInstance::DrawLodSkeletalMesh);
 	int i, sec;
 
-	//!! Algorithm: similar to DrawBaseSkeletalMesh(): prepare MeshVerts array
-	//!! using lod->Points and lod->VertInfluences; should build normals!
 	//!! For Lineage should use FLineageWedge structure - it's enough; better -
 	//!! - restore Points, Wedges and VertInfluences arrays using 'unk2'
 	//!! (problem: should share verts between wedges); also restore mesh by lod#0
 
-	TransformMesh(lod->VertInfluences.Num(), &lod->VertInfluences[0], lod->Points.Num(), &lod->Points[0], NULL);
+	TransformMesh(Wedges, lod->Wedges.Num());
+
+	glEnable(GL_LIGHTING);
 
 /*	// skinning stream
 	for (i = 0; i < lod->SkinningData.Num(); i++)
@@ -1319,10 +1574,12 @@ void CSkelMeshInstance::DrawLodSkeletalMesh(const FStaticLODModel *lod)
 //			assert(F.MaterialIndex == ms.MaterialIndex);
 			for (int j = 0; j < 3; j++)
 			{
-				const FMeshWedge &W = lod->Wedges[F.iWedge[j]];
-				glTexCoord2f(W.TexUV.U, W.TexUV.V);
-//				glVertex3fv(&lod->SkinPoints[W.iVertex].Point.X);
-				glVertex3fv(MeshVerts[W.iVertex].v);
+				int iWedge = F.iWedge[j];
+				const CMeshWedge &W = Wedges[iWedge];
+				const CSkinVert  &V = Skinned[iWedge];
+				glTexCoord2f(W.U, W.V);
+				glNormal3fv(V.Normal.v);
+				glVertex3fv(V.Pos.v);
 			}
 		}
 #else
@@ -1351,10 +1608,12 @@ void CSkelMeshInstance::DrawLodSkeletalMesh(const FStaticLODModel *lod)
 			for (int j = 0; j < 3; j++)
 			{
 //				const FMeshWedge &W = lod->Wedges[F.iWedge[j]];
-				const FMeshWedge &W = lod->Wedges[lod->RigidIndices.Indices[(ms.FirstFace + i) * 3 + j]];
-				glTexCoord2f(W.TexUV.U, W.TexUV.V);
-//				glVertex3fv(&lod->Points[W.iVertex].X);
-				glVertex3fv(MeshVerts[W.iVertex].v);
+				int iWedge = lod->RigidIndices.Indices[(ms.FirstFace + i) * 3 + j];
+				const CMeshWedge &W = Wedges[iWedge];
+				const CSkinVert  &V = Skinned[iWedge];
+				glTexCoord2f(W.U, W.V);
+				glNormal3fv(V.Normal.v);
+				glVertex3fv(V.Pos.v);
 			}
 		}
 #else
@@ -1367,6 +1626,7 @@ void CSkelMeshInstance::DrawLodSkeletalMesh(const FStaticLODModel *lod)
 #endif
 		glEnd();
 	}
+
 	unguard;
 }
 
@@ -1383,6 +1643,24 @@ void CSkelMeshInstance::Draw()
 	// show mesh
 	if (ShowSkel != 2)
 	{
+		if (LodNum != LastLodNum)
+		{
+			if (LodNum < 0)
+			{
+				BuildWedges(Wedges, Mesh->Wedges.Num(), Mesh->Points, Mesh->Wedges, Mesh->VertInfluences);
+				BuildNormals(Wedges, Mesh->Points.Num(), Mesh->Wedges, Mesh->Triangles);
+			}
+			else
+			{
+				const FStaticLODModel &Lod = Mesh->LODModels[LodNum];
+				BuildWedges(Wedges, Mesh->Wedges.Num(), Lod.Points, Lod.Wedges, Lod.VertInfluences);
+				TArray<VTriangle> Faces;
+				CopyArray(Faces, Lod.Faces);
+				BuildNormals(Wedges, Lod.Points.Num(), Lod.Wedges, Faces);
+			}
+			LastLodNum = LodNum;
+		}
+
 		if (LodNum < 0)
 			DrawBaseSkeletalMesh(bShowNormals);
 		else
@@ -1403,7 +1681,7 @@ void CSkelMeshInstance::BuildInfColors()
 
 	const USkeletalMesh *Mesh = GetMesh();
 	if (InfColors) delete InfColors;
-	InfColors = new CVec3[Mesh->Points.Num()];
+	InfColors = new CVec3[Mesh->Wedges.Num()];
 
 	// get colors for bones
 	int NumBones = Mesh->RefSkeleton.Num();
@@ -1412,10 +1690,14 @@ void CSkelMeshInstance::BuildInfColors()
 		GetBoneInfColor(i, BoneColors[i]);
 
 	// process influences
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
+	for (i = 0; i < Mesh->Wedges.Num(); i++)
 	{
-		const FVertInfluences &Inf = Mesh->VertInfluences[i];
-		VectorMA(InfColors[Inf.PointIndex], Inf.Weight, BoneColors[Inf.BoneIndex]);
+		const CMeshWedge &W = Wedges[i];
+		for (int j = 0; j < NUM_INFLUENCES; j++)
+		{
+			if (W.Bone[j] < 0) break;
+			VectorMA(InfColors[i], W.Weight[j], BoneColors[W.Bone[j]]);
+		}
 	}
 
 	unguard;

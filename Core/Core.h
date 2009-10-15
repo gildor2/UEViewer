@@ -134,6 +134,7 @@ void appFree(void *ptr);
 void appSetNotifyHeader(const char *fmt, ...);
 void appNotify(char *fmt, ...);
 
+const char *va(const char *format, ...);
 int appSprintf(char *dest, int size, const char *fmt, ...);
 void appStrncpyz(char *dst, const char *src, int count);
 void appStrncpylwr(char *dst, const char *src, int count);

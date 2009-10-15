@@ -5,9 +5,6 @@
 	Basic CMeshInstance class
 -----------------------------------------------------------------------------*/
 
-//?? move outside
-void BindDefaultMaterial(bool White = false);
-
 inline void SetAxis(const FRotator &Rot, CAxis &Axis)
 {
 	CVec3 angles;
@@ -237,10 +234,11 @@ public:
 
 	CSkelMeshInstance()
 	:	LodNum(-1)
+	,	LastLodNum(-2)				// differs from LodNum and from all other values
 	,	MaxAnimChannel(-1)
 	,	BoneData(NULL)
-	,	MeshVerts(NULL)
-	,	MeshNormals(NULL)
+	,	Wedges(NULL)
+	,	Skinned(NULL)
 	,	InfColors(NULL)
 	,	ShowSkel(0)
 	,	ShowLabels(false)
@@ -320,10 +318,10 @@ public:
 protected:
 	// mesh data
 	struct CMeshBoneData *BoneData;
-	CVec3		*MeshVerts;			// soft-skinned vertices
-	CVec3		*MeshNormals;		// soft-skinned normals
-	CVec3		*RefNormals;		// normals for main mesh in bind pose
+	struct CMeshWedge    *Wedges;	// bindpose
+	struct CSkinVert     *Skinned;	// soft-skinned vertices
 	CVec3		*InfColors;			// debug: color-by-influence for vertices
+	int			LastLodNum;			// used to detect requirement to rebuild Wedges[]
 	// animation state
 	CAnimChan	Channels[MAX_SKELANIMCHANNELS];
 	int			MaxAnimChannel;
@@ -342,7 +340,7 @@ protected:
 		assert(StageIndex >= 0 && StageIndex < MAX_SKELANIMCHANNELS);
 		return Channels[StageIndex];
 	}
-	void TransformMesh(int NumInfs, const FVertInfluences *Infs, int NumVerts, const FVector *Verts, const CVec3 *Norms);
+	void TransformMesh(CMeshWedge *Wedges, int NumWedges);
 	int FindBone(const char *BoneName) const;
 	int FindAnim(const char *AnimName) const;
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);

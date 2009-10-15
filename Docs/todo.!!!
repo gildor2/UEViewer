@@ -1,5 +1,9 @@
 !! UC2: load animations, textures
 
+Shaders: when trying to change/compile shader between glBegin/glEnd, GL will not do anything.
+Should check glGetError() and assert? (or make function GL_CheckError() - will appError(code)
+if code != 0)
+
 Notify.log:
 - add "-nolog" switch to disable it
 ? place notify.log into directory of umodel.exe

@@ -101,6 +101,10 @@ void CVertMeshInstance::Draw()
 		}
 
 		// draw mesh
+		//!! NOTE: very unoptimal drawing - should minimize state changes:
+		//!! 1. use SetMaterial() as less as possible (when material is changed only)
+		//!! 2. place glBegin/glEnd outsize of loop
+		//!! 3. show normals is separate loop (will require to store morphed verts/normals somewhere)
 		SetMaterial(F.MaterialIndex);
 		glEnable(GL_LIGHTING);
 		glBegin(GL_TRIANGLES);
@@ -115,7 +119,7 @@ void CVertMeshInstance::Draw()
 		if (bShowNormals)
 		{
 			glDisable(GL_LIGHTING);
-			glDisable(GL_TEXTURE_2D);
+			BindDefaultMaterial(true);
 			// draw normals
 			glBegin(GL_LINES);
 			glColor3f(1, 0.5, 0);
@@ -131,8 +135,8 @@ void CVertMeshInstance::Draw()
 			glColor3f(1, 1, 1);
 		}
 	}
-	glDisable(GL_TEXTURE_2D);
 	glEnd();
+	BindDefaultMaterial(true);
 
 	unguard;
 }

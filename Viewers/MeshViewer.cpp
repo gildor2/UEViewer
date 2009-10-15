@@ -17,7 +17,7 @@ void CMeshViewer::Draw3D()
 	assert(Inst);
 
 	// draw axis
-	glDisable(GL_TEXTURE_2D);
+	BindDefaultMaterial(true);
 	glBegin(GL_LINES);
 	for (int i = 0; i < 3; i++)
 	{
@@ -37,7 +37,7 @@ void CMeshViewer::Draw3D()
 
 	// restore draw state
 	glColor3f(1, 1, 1);
-	glDisable(GL_TEXTURE_2D);
+	BindDefaultMaterial(true);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	unguard;

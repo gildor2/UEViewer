@@ -1,0 +1,110 @@
+/**
+ * Per-pixel lighting shader with normalmap support
+ */
+
+//#define SHOW_BUMP		1
+//#define NORMALMAP		1
+
+#ifndef SPECULAR
+#define SPECULAR		1
+#endif
+
+#ifndef TEXTURING
+#define TEXTURING		1
+#endif
+
+// Variables passed from vertex to fragment shader
+varying vec4 diffuse, ambient, specular;
+varying vec3 tangentLightDir, tangentEye;
+
+
+attribute vec3 tangent;
+attribute vec3 binormal;
+
+
+// Parameters
+uniform sampler2D diffTex;
+uniform sampler2D normTex;
+
+//uniform bool useLighting;		// when set to "false", use vertex color only
+
+
+vec3 ToTangent(vec3 source, vec3 t, vec3 b, vec3 n)
+{
+	vec3 v;
+	v.x = dot(source, t);
+	v.y = dot(source, b);
+	v.z = dot(source, n);
+	return v;
+}
+
+
+void VertexShaderMain()
+{
+	// light parameters
+//	if (useLighting)
+	{
+		//!! strange bug: when displaying skeletal mesh in <I> mode, colors are corresponds to
+		//!! fixed-function drawing; but when displaying in <M> mode, colors are different (darker, saturated?)
+		diffuse  = gl_FrontMaterial.diffuse  *  gl_LightSource[0].diffuse * gl_Color;
+		ambient  = gl_FrontMaterial.ambient  * (gl_LightSource[0].ambient + gl_LightModel.ambient) * gl_Color;
+		specular = gl_FrontMaterial.specular *  gl_LightSource[0].specular;
+	}
+/*	else
+	{
+		diffuse  = vec4(0.0, 0.0, 0.0, 0.0);
+		ambient  = gl_Color;
+		specular = vec4(0.0, 0.0, 0.0, 0.0);
+	} */
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	gl_Position    = ftransform();
+
+	vec3 t = normalize(gl_NormalMatrix * tangent  );
+	vec3 b = normalize(gl_NormalMatrix * binormal );
+	vec3 n = normalize(gl_NormalMatrix * gl_Normal);
+
+	// note: gl_LightSource.position is already transformed to eye-space
+	vec3 eyePos          = gl_NormalMatrix * gl_Vertex.xyz;			// position of vertex in eye space
+	vec3 eyeLightPos     = gl_LightSource[0].position.xyz;			// direction to light in eye space
+	vec3 tangentPos      = ToTangent(eyePos, t, b, n);
+	vec3 tangentLightPos = ToTangent(eyeLightPos, t, b, n);
+	tangentLightDir = tangentLightPos - tangentPos;
+	tangentEye      = normalize(ToTangent(vec3(0, 0, 1.0), t, b, n));
+}
+
+
+void PixelShaderMain()
+{
+	vec3 normal    = (texture2D(normTex, gl_TexCoord[0].st).xyz) * 2.0 - 1.0;
+
+	vec3 nLightDir = normalize(tangentLightDir);
+	vec3 n         = normalize(normal);
+	float NdotL = max(dot(n, nLightDir), 0.0);
+	// ambient + diffuse
+	vec4 color = ambient + diffuse * NdotL;
+
+#if TEXTURING
+	vec4 texColor = texture2D(diffTex, gl_TexCoord[0].st);
+	color *= texColor;
+#endif
+
+#if SHOW_BUMP
+	color = vec4(0.1, 0.1, 0.1, 1.0);
+#endif
+
+#if SPECULAR
+	// specular
+	// per-pixel half vector: average between direction from pixel to
+	// light and from pixel to viewer
+	vec3 halfVector = nLightDir + tangentEye;
+	vec3 halfV      = normalize(halfVector);
+	float NdotHV    = max(dot(n, halfV), 0.0);
+	color += pow(NdotHV, gl_FrontMaterial.shininess) * specular;
+#endif // SPECULAR
+
+#if NORMALMAP
+	gl_FragColor = vec4(n, 1.0);	// show normalmap
+#else
+	gl_FragColor = color;
+#endif
+}

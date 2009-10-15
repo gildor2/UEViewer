@@ -113,6 +113,12 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+13.10.2009
+- renderer: implemented normalmap (bumpmap) support for UE3 materials
+
+11.10.2009
+- remade skeletal mesh drawing; now LODs supports lighting
+
 07.10.2009
 - implemented OpenGL 2.0 shader support; can be disabled/enabled on-fly with
   Ctrl+G key (switch to fixed pipeline and back)

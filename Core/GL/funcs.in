@@ -145,7 +145,7 @@ const GLubyte * GetString(GLenum name);
 //void Indexubv(const GLubyte *c);
 //void InitNames();
 //void InterleavedArrays(GLenum format, GLsizei stride, const GLvoid *pointer);
-//GLboolean IsEnabled(GLenum cap);
+GLboolean IsEnabled(GLenum cap);
 //GLboolean IsList(GLuint list);
 GLboolean IsTexture(GLuint texture);
 //void LightModelf(GLenum pname, GLfloat param);
@@ -372,12 +372,10 @@ void Viewport(GLint x, GLint y, GLsizei width, GLsizei height) ARGS
 //  OpenGL 1.3
 //-----------------------------------------------------------------------------
 
-//#name 1.3
+#name 1.3
 
-//!! Hide unneeded functions
-
-//void ActiveTexture(GLenum);
-//void ClientActiveTexture(GLenum);
+void ActiveTexture(GLenum unit) ARGS
+//void ClientActiveTexture(GLenum unit) ARGS
 
 //-----------------------------------------------------------------------------
 //  OpenGL 2.0
@@ -385,33 +383,31 @@ void Viewport(GLint x, GLint y, GLsizei width, GLsizei height) ARGS
 
 #name 2.0
 
-//!! Hide unneeded functions
-
 //void BlendEquationSeparate(GLenum, GLenum);
 //void DrawBuffers(GLsizei, const GLenum *);
 //void StencilOpSeparate(GLenum, GLenum, GLenum, GLenum);
 //void StencilFuncSeparate(GLenum, GLenum, GLint, GLuint);
 //void StencilMaskSeparate(GLenum, GLuint);
-void AttachShader(GLuint, GLuint);
+void AttachShader(GLuint program, GLuint shader) ARGS
 //void BindAttribLocation(GLuint, GLuint, const GLchar *);
-void CompileShader(GLuint);
-GLuint CreateProgram(void);
-GLuint CreateShader(GLenum);
-void DeleteProgram(GLuint);
-void DeleteShader(GLuint);
-void DetachShader(GLuint, GLuint);
-//void DisableVertexAttribArray(GLuint);
-//void EnableVertexAttribArray(GLuint);
+void CompileShader(GLuint obj) ARGS
+GLuint CreateProgram() ARGS
+GLuint CreateShader(GLenum shaderType) ARGS
+void DeleteProgram(GLuint obj) ARGS
+void DeleteShader(GLuint obj) ARGS
+void DetachShader(GLuint program, GLuint shader) ARGS
+void DisableVertexAttribArray(GLuint index) ARGS
+void EnableVertexAttribArray(GLuint index) ARGS
 //void GetActiveAttrib(GLuint, GLuint, GLsizei, GLsizei *, GLint *, GLenum *, GLchar *);
 //void GetActiveUniform(GLuint, GLuint, GLsizei, GLsizei *, GLint *, GLenum *, GLchar *);
 //void GetAttachedShaders(GLuint, GLsizei, GLsizei *, GLuint *);
-//GLint GetAttribLocation(GLuint, const GLchar *);
-void GetProgramiv(GLuint, GLenum, GLint *);
-void GetProgramInfoLog(GLuint, GLsizei, GLsizei *, GLchar *);
-void GetShaderiv(GLuint, GLenum, GLint *);
-void GetShaderInfoLog(GLuint, GLsizei, GLsizei *, GLchar *);
+GLint GetAttribLocation(GLuint obj, const GLchar *name) ARGS
+void GetProgramiv(GLuint obj, GLenum pname, GLint *v) ARGS
+void GetProgramInfoLog(GLuint obj, GLsizei maxLength, GLsizei *size, GLchar *infoLog);
+void GetShaderiv(GLuint obj, GLenum pname, GLint *v) ARGS
+void GetShaderInfoLog(GLuint obj, GLsizei maxLength, GLsizei *size, GLchar *infoLog);
 //void GetShaderSource(GLuint, GLsizei, GLsizei *, GLchar *);
-GLint GetUniformLocation(GLuint, const GLchar *);
+GLint GetUniformLocation(GLuint obj, const GLchar *name) ARGS
 //void GetUniformfv(GLuint, GLint, GLfloat *);
 //void GetUniformiv(GLuint, GLint, GLint *);
 //void GetVertexAttribdv(GLuint, GLenum, GLdouble *);
@@ -420,14 +416,14 @@ GLint GetUniformLocation(GLuint, const GLchar *);
 //void GetVertexAttribPointerv(GLuint, GLenum, GLvoid* *);
 //GLboolean IsProgram(GLuint);
 //GLboolean IsShader(GLuint);
-void LinkProgram(GLuint);
-void ShaderSource(GLuint, GLsizei, const GLchar* *, const GLint *);
-void UseProgram(GLuint);
+void LinkProgram(GLuint obj) ARGS
+void ShaderSource(GLuint obj, GLsizei size, const GLchar** src, const GLint *length) ARGS
+void UseProgram(GLuint obj) ARGS
 //void Uniform1f(GLint, GLfloat);
 //void Uniform2f(GLint, GLfloat, GLfloat);
 //void Uniform3f(GLint, GLfloat, GLfloat, GLfloat);
 //void Uniform4f(GLint, GLfloat, GLfloat, GLfloat, GLfloat);
-void Uniform1i(GLint, GLint);
+void Uniform1i(GLint index, GLint value) ARGS
 //void Uniform2i(GLint, GLint, GLint);
 //void Uniform3i(GLint, GLint, GLint, GLint);
 //void Uniform4i(GLint, GLint, GLint, GLint, GLint);
@@ -458,7 +454,7 @@ void Uniform1i(GLint, GLint);
 //void VertexAttrib3d(GLuint, GLdouble, GLdouble, GLdouble);
 //void VertexAttrib3dv(GLuint, const GLdouble *);
 //void VertexAttrib3f(GLuint, GLfloat, GLfloat, GLfloat);
-//void VertexAttrib3fv(GLuint, const GLfloat *);
+void VertexAttrib3fv(GLuint index, const GLfloat *v);
 //void VertexAttrib3s(GLuint, GLshort, GLshort, GLshort);
 //void VertexAttrib3sv(GLuint, const GLshort *);
 //void VertexAttrib4Nbv(GLuint, const GLbyte *);
@@ -479,7 +475,7 @@ void Uniform1i(GLint, GLint);
 //void VertexAttrib4ubv(GLuint, const GLubyte *);
 //void VertexAttrib4uiv(GLuint, const GLuint *);
 //void VertexAttrib4usv(GLuint, const GLushort *);
-//void VertexAttribPointer(GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid *);
+void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer) ARGS
 
 //-----------------------------------------------------------------------------
 //  Extensions

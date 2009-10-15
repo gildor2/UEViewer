@@ -104,7 +104,8 @@ fi
 case "" in
 
 "")
-	ut2 HumanMaleA MercMaleD
+#	ut2 HumanMaleA MercMaleD
+	ut3 CH_AnimHuman
 	# Army of Two
 #	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
 	# MK vs DC

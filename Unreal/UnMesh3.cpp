@@ -606,10 +606,10 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	for (i = 0; i < Lods.Num(); i++)
 		LODModels[i].RestoreMesh3(*this, Lods[i], LODInfo[i]);
 
-	//!! Optimize search for PointIndex in RestoreMesh3()
-	/*!!
+	/*
+	 *	Optimized search for PointIndex in RestoreMesh3()
 	 *	Profile results (GoW2 package): total time = 7.8s, partial:
-	 *	load = 1.5s, GPU lods -> CPU = 5.5s, restore mesh = 0.7s
+	 *	  load = 1.5s, GPU lods -> CPU = 5.5s, restore mesh = 0.7s
 	 *	Loading w/o seraching for good PointIndex = 1.6s, with search = 7.7s (not depends on restore mesh!)
 	 *	With disabled CompareCompNormals() = 6.3s
 	 *	New version (find PointIndex using TArray::FindItem()) = 4.4s

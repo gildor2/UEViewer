@@ -39,14 +39,54 @@ void CMaterialViewer::ShowHelp()
 
 void CMaterialViewer::Draw3D()
 {
-	glColor4f(1, 1, 1, 1);
+	static const CVec3 origin = { -150, 100, 100 };
+//	static const CVec3 origin = { -150, 50, 50 };
+	CVec3 lightPosV;
+	viewAxis.UnTransformVector(origin, lightPosV);
+
+#if 0
+	// show light source
+	glDisable(GL_LIGHTING);
+	BindDefaultMaterial(true);
+	glBegin(GL_LINES);
+	glColor3f(1, 0, 0);
+	CVec3 tmp;
+	tmp = lightPosV;
+	tmp[0] -= 20; glVertex3fv(tmp.v); tmp[0] += 40; glVertex3fv(tmp.v);
+	tmp = lightPosV;
+	tmp[1] -= 20; glVertex3fv(tmp.v); tmp[1] += 40; glVertex3fv(tmp.v);
+	tmp = lightPosV;
+	tmp[2] -= 20; glVertex3fv(tmp.v); tmp[2] += 40; glVertex3fv(tmp.v);
+	glEnd();
+#endif
+
+	glColor3f(1, 1, 1);
+	glEnable(GL_LIGHTING);	//?? disable for simple textures
+	float lightPos[4];
+	lightPos[0] = lightPosV[0];
+	lightPos[1] = lightPosV[1];
+	lightPos[2] = lightPosV[2];
+	lightPos[3] = 0;
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+//	glMaterialf(GL_FRONT, GL_SHININESS, 20);
+
 	// bind material
 	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
 	Mat->Bind(0);
-	// and draw box
-	static const CVec3 box[] =
+	//!! BUMP
+	GLint aTangent = -1, aBinormal = -1;
+	bool hasTangent = false;
+	const CShader *Sh = GCurrentShader;
+	if (Sh)
 	{
+		aTangent   = Sh->GetAttrib("tangent");
+		aBinormal  = Sh->GetAttrib("binormal");
+		hasTangent = true;
+	}
+
+	// and draw box ...
 #define A 100
+// vertex
 #define V000 {-A, -A, -A}
 #define V001 {-A, -A,  A}
 #define V010 {-A,  A, -A}
@@ -55,6 +95,15 @@ void CMaterialViewer::Draw3D()
 #define V101 { A, -A,  A}
 #define V110 { A,  A, -A}
 #define V111 { A,  A,  A}
+// normal
+#define NM00 {-1, 0, 0 }
+#define NP00 { 1, 0, 0 }
+#define N0M0 { 0,-1, 0 }
+#define N0P0 { 0, 1, 0 }
+#define N00M { 0, 0,-1 }
+#define N00P { 0, 0, 1 }
+	static const CVec3 box[] =
+	{
 		V001, V000, V010, V011,		// near   (x=0)
 		V111, V110,	V100, V101,		// far    (x=1)
 		V101, V100, V000, V001,		// left   (y=0)
@@ -62,6 +111,33 @@ void CMaterialViewer::Draw3D()
 		V010, V000, V100, V110,		// bottom (z=0)
 		V001, V011, V111, V101,		// top    (z=1)
 #undef A
+	};
+	static const CVec3 normal[] =
+	{
+		NM00, NM00, NM00, NM00,
+		NP00, NP00, NP00, NP00,
+		N0M0, N0M0, N0M0, N0M0,
+		N0P0, N0P0, N0P0, N0P0,
+		N00M, N00M, N00M, N00M,
+		N00P, N00P, N00P, N00P
+	};
+	static const CVec3 tangent[] =
+	{
+		N0P0, N0P0, N0P0, N0P0,
+		N0M0, N0M0, N0M0, N0M0,
+		NM00, NM00, NM00, NM00,
+		NP00, NP00, NP00, NP00,
+		NP00, NP00, NP00, NP00,
+		NM00, NM00, NM00, NM00
+	};
+	static const CVec3 binormal[] =
+	{
+		N00P, N00P, N00P, N00P,
+		N00M, N00M, N00M, N00M,
+		N00M, N00M, N00M, N00M,
+		N00P, N00P, N00P, N00P,
+		N0M0, N0M0, N0M0, N0M0,
+		N0P0, N0P0, N0P0, N0P0
 	};
 	static const float tex[][2] =
 	{
@@ -84,13 +160,48 @@ void CMaterialViewer::Draw3D()
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	if (hasTangent)
+	{
+		glEnableVertexAttribArray(aTangent);
+		glEnableVertexAttribArray(aBinormal);
+	}
+
 	glVertexPointer(3, GL_FLOAT, sizeof(CVec3), box);
+	glNormalPointer(GL_FLOAT, sizeof(CVec3), normal);
 	glTexCoordPointer(2, GL_FLOAT, 0, tex);
+	if (hasTangent)
+	{
+		glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CVec3), tangent);
+		glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CVec3), binormal);
+	}
+
 	glDrawElements(GL_QUADS, ARRAY_COUNT(inds), GL_UNSIGNED_INT, inds);
+
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	if (hasTangent)
+	{
+		glDisableVertexAttribArray(aTangent);
+		glDisableVertexAttribArray(aBinormal);
+	}
 
-	glDisable(GL_TEXTURE_2D);
+	BindDefaultMaterial(true);
+
+#if 0
+	glBegin(GL_LINES);
+	glColor3f(0.2, 0.2, 1);
+	for (int i = 0; i < ARRAY_COUNT(box); i++)
+	{
+		glVertex3fv(box[i].v);
+		CVec3 tmp;
+		VectorMA(box[i], 20, normal[i], tmp);
+		glVertex3fv(tmp.v);
+	}
+	glEnd();
+	glColor3f(1, 1, 1);
+#endif
 }
 
 

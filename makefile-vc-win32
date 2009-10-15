@@ -44,6 +44,7 @@ MAIN = \
 	./obj/umodel-win32/StatMeshInstance.obj \
 	./obj/umodel-win32/VertMeshInstance.obj \
 	./obj/umodel-win32/Core.obj \
+	./obj/umodel-win32/CoreGL.obj \
 	./obj/umodel-win32/GLBind.obj \
 	./obj/umodel-win32/GlWindow.obj \
 	./obj/umodel-win32/Math3D.obj \
@@ -198,6 +199,16 @@ DEPENDS = \
 
 ./obj/umodel-win32/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MaterialViewer.obj" Viewers/MaterialViewer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h
+
+./obj/umodel-win32/CoreGL.obj : Core/CoreGL.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/CoreGL.obj" Core/CoreGL.cpp
 
 DEPENDS = \
 	Build.h \

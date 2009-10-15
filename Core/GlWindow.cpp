@@ -76,7 +76,7 @@ static float viewDist   = DEFAULT_DIST;
 static CVec3 viewOrigin = { -DEFAULT_DIST, 0, 0 };
 static CVec3 rotOrigin  = {0, 0, 0};
 static CVec3 viewOffset = {0, 0, 0};
-static CAxis viewAxis;				// generated from angles
+       CAxis viewAxis;				// generated from angles
 
 // view params (const)
 static float zNear = 1;//??4;		// near clipping plane -- should auto-adjust
@@ -118,7 +118,9 @@ static void Set2Dmode()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glDisable(GL_CULL_FACE);
-	if (GL_SUPPORT(QGL_2_0)) glUseProgram(0);	//?? disable shading
+	//?? disable shading
+	BindDefaultMaterial(true);
+	if (GL_SUPPORT(QGL_2_0)) glUseProgram(0);
 }
 
 
@@ -267,9 +269,9 @@ static void ResizeWindow(int w, int h)
 		// possibly context was recreated ...
 		GContextFrame = GCurrentFrame + 1;
 		GCurrentFrame += 2;
+		LoadFont();
 	}
 
-	LoadFont();
 	// init gl
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA_TEST);
@@ -726,11 +728,11 @@ static void Display()
 	Set3Dmode();
 
 	// enable lighting
-	static const float lightPos[4]      = {100, 200, 200, 0};
-	static const float lightAmbient[4]  = {0.3, 0.3, 0.4, 1};
-	static const float specIntens[4]    = {0.7, 0.7, 0.5, 0};
-	static const float black[4]         = {0,   0,   0,   0};
-	static const float white[4]         = {1,   1,   1,   0};
+	static const float lightPos[4]      = {100, 200, 200,  0};
+	static const float lightAmbient[4]  = {0.1, 0.1, 0.15, 1};
+	static const float specIntens[4]    = {0.7, 0.7, 0.5,  0};
+	static const float black[4]         = {0,   0,   0,    0};
+	static const float white[4]         = {1,   1,   1,    0};
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_NORMALIZE);		// allow non-normalized normal arrays
@@ -753,14 +755,14 @@ static void Display()
 	}
 	if (lightingMode == LIGHTING_SPECULAR)
 	{
-		// GL_EXT_separate_specular_color
-		glLightModeli(0x81F8/*GL_LIGHT_MODEL_COLOR_CONTROL*/, 0x81FA/*GL_SEPARATE_SPECULAR_COLOR*/);
+		// Use GL_EXT_separate_specular_color without check (in worst case GL error code will be set)
+		glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 	}
 	else
 	{
 		glMaterialfv(GL_FRONT, GL_SPECULAR, black);
 	}
-#endif
+#endif // LIGHTING_MODES
 
 	// draw scene
 	AppDrawFrame();

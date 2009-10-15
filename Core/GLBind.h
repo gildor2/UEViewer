@@ -25,6 +25,7 @@ struct GL_t
 	void	(APIENTRY * End) ();
 	GLenum	(APIENTRY * GetError) ();
 	const GLubyte *	(APIENTRY * GetString) (GLenum name);
+	GLboolean	(APIENTRY * IsEnabled) (GLenum cap);
 	GLboolean	(APIENTRY * IsTexture) (GLuint texture);
 	void	(APIENTRY * LightModeli) (GLenum pname, GLint param);
 	void	(APIENTRY * Lightfv) (GLenum light, GLenum pname, const GLfloat *params);
@@ -57,22 +58,28 @@ struct GL_t
 
 #endif
 
-	void	(APIENTRY * AttachShader) (GLuint, GLuint);
-	void	(APIENTRY * CompileShader) (GLuint);
-	GLuint	(APIENTRY * CreateProgram) (void);
-	GLuint	(APIENTRY * CreateShader) (GLenum);
-	void	(APIENTRY * DeleteProgram) (GLuint);
-	void	(APIENTRY * DeleteShader) (GLuint);
-	void	(APIENTRY * DetachShader) (GLuint, GLuint);
-	void	(APIENTRY * GetProgramiv) (GLuint, GLenum, GLint *);
-	void	(APIENTRY * GetProgramInfoLog) (GLuint, GLsizei, GLsizei *, GLchar *);
-	void	(APIENTRY * GetShaderiv) (GLuint, GLenum, GLint *);
-	void	(APIENTRY * GetShaderInfoLog) (GLuint, GLsizei, GLsizei *, GLchar *);
-	GLint	(APIENTRY * GetUniformLocation) (GLuint, const GLchar *);
-	void	(APIENTRY * LinkProgram) (GLuint);
-	void	(APIENTRY * ShaderSource) (GLuint, GLsizei, const GLchar* *, const GLint *);
-	void	(APIENTRY * UseProgram) (GLuint);
-	void	(APIENTRY * Uniform1i) (GLint, GLint);
+	void	(APIENTRY * ActiveTexture) (GLenum unit);
+	void	(APIENTRY * AttachShader) (GLuint program, GLuint shader);
+	void	(APIENTRY * CompileShader) (GLuint obj);
+	GLuint	(APIENTRY * CreateProgram) ();
+	GLuint	(APIENTRY * CreateShader) (GLenum shaderType);
+	void	(APIENTRY * DeleteProgram) (GLuint obj);
+	void	(APIENTRY * DeleteShader) (GLuint obj);
+	void	(APIENTRY * DetachShader) (GLuint program, GLuint shader);
+	void	(APIENTRY * DisableVertexAttribArray) (GLuint index);
+	void	(APIENTRY * EnableVertexAttribArray) (GLuint index);
+	GLint	(APIENTRY * GetAttribLocation) (GLuint obj, const GLchar *name);
+	void	(APIENTRY * GetProgramiv) (GLuint obj, GLenum pname, GLint *v);
+	void	(APIENTRY * GetProgramInfoLog) (GLuint obj, GLsizei maxLength, GLsizei *size, GLchar *infoLog);
+	void	(APIENTRY * GetShaderiv) (GLuint obj, GLenum pname, GLint *v);
+	void	(APIENTRY * GetShaderInfoLog) (GLuint obj, GLsizei maxLength, GLsizei *size, GLchar *infoLog);
+	GLint	(APIENTRY * GetUniformLocation) (GLuint obj, const GLchar *name);
+	void	(APIENTRY * LinkProgram) (GLuint obj);
+	void	(APIENTRY * ShaderSource) (GLuint obj, GLsizei size, const GLchar** src, const GLint *length);
+	void	(APIENTRY * UseProgram) (GLuint obj);
+	void	(APIENTRY * Uniform1i) (GLint index, GLint value);
+	void	(APIENTRY * VertexAttrib3fv) (GLuint index, const GLfloat *v);
+	void	(APIENTRY * VertexAttribPointer) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 
 #if _WIN32
 
@@ -109,6 +116,7 @@ extern GL_t GL;
 #define glEnd	GL.End
 #define glGetError	GL.GetError
 #define glGetString	GL.GetString
+#define glIsEnabled	GL.IsEnabled
 #define glIsTexture	GL.IsTexture
 #define glLightModeli	GL.LightModeli
 #define glLightfv	GL.Lightfv
@@ -141,6 +149,7 @@ extern GL_t GL;
 
 #endif
 
+#define glActiveTexture	GL.ActiveTexture
 #define glAttachShader	GL.AttachShader
 #define glCompileShader	GL.CompileShader
 #define glCreateProgram	GL.CreateProgram
@@ -148,6 +157,9 @@ extern GL_t GL;
 #define glDeleteProgram	GL.DeleteProgram
 #define glDeleteShader	GL.DeleteShader
 #define glDetachShader	GL.DetachShader
+#define glDisableVertexAttribArray	GL.DisableVertexAttribArray
+#define glEnableVertexAttribArray	GL.EnableVertexAttribArray
+#define glGetAttribLocation	GL.GetAttribLocation
 #define glGetProgramiv	GL.GetProgramiv
 #define glGetProgramInfoLog	GL.GetProgramInfoLog
 #define glGetShaderiv	GL.GetShaderiv
@@ -157,6 +169,8 @@ extern GL_t GL;
 #define glShaderSource	GL.ShaderSource
 #define glUseProgram	GL.UseProgram
 #define glUniform1i	GL.Uniform1i
+#define glVertexAttrib3fv	GL.VertexAttrib3fv
+#define glVertexAttribPointer	GL.VertexAttribPointer
 
 #if _WIN32
 
@@ -167,7 +181,8 @@ extern GL_t GL;
 
 
 
-#define QGL_2_0	(1 << 0)
+#define QGL_1_3	(1 << 0)
+#define QGL_2_0	(1 << 1)
 
 #if _WIN32
 

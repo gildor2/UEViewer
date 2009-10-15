@@ -154,6 +154,49 @@ void appFree(void *ptr)
 	Miscellaneous
 -----------------------------------------------------------------------------*/
 
+#define VA_GOODSIZE		512
+#define VA_BUFSIZE		2048
+
+// name of this function is a short form of "VarArgs"
+const char *va(const char *format, ...)
+{
+//	guardSlow(va);
+
+	static char buf[VA_BUFSIZE];
+	static int bufPos = 0;
+	// wrap buffer
+	if (bufPos >= VA_BUFSIZE - VA_GOODSIZE) bufPos = 0;
+
+	va_list argptr;
+	va_start(argptr, format);
+
+	// print
+	char *str = buf + bufPos;
+	int len = vsnprintf(str, VA_BUFSIZE - bufPos, format, argptr);
+	if (len < 0 && bufPos > 0)
+	{
+		// buffer overflow - try again with printing to buffer start
+		bufPos = 0;
+		str = buf;
+		len = vsnprintf(buf, VA_BUFSIZE, format, argptr);
+	}
+
+	va_end(argptr);
+
+	if (len < 0)					// not enough buffer space
+	{
+		const char suffix[] = " ... (overflow)";		// it is better, than return empty string
+		memcpy(buf + VA_BUFSIZE - sizeof(suffix), suffix, sizeof(suffix));
+		return str;
+	}
+
+	bufPos += len + 1;
+	return str;
+
+//	unguardSlow;
+}
+
+
 int appSprintf(char *dest, int size, const char *fmt, ...)
 {
 	va_list	argptr;

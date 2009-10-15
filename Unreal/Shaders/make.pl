@@ -16,9 +16,13 @@ sub getline {
 		# remove traling and leading spaces
 		$line =~ s/^[\s\t]+//;
 		$line =~ s/[\s\t]+$//;
+		# remove cosmetic whitespaces
+		$line =~ s/[\s\t]*([=*+\-,()])[\s\t]*/$1/g;
+		$line =~ s/[\s\t][\s\t]+/\ /g;
 		# replace escape chars
 		$line =~ s/\t/\\t/g;
 		$line =~ s/\"/\\\"/g;
+		# add "\n"
 		$line .= "\\n";
 		return 1;
 	}
@@ -78,7 +82,7 @@ if (!-f $OUT) {
 
 for $f (@filelist)
 {
-	if ($f =~ /.*\.($EXTS)/) {
+	if ($f =~ /.*\.($EXTS)$/) {
 		my $ShaderTime = FileTime($f);
 		if ($ShaderTime > $OutTime) {
 			print STDERR "$f is updated, rebuilding $OUT ...\n";
@@ -101,7 +105,7 @@ EOF
 ;
 
 for $f (@filelist) {
-	if ($f =~ /.*\.($EXTS)/) {
+	if ($f =~ /.*\.($EXTS)$/) {
 		process($f);
 	}
 }

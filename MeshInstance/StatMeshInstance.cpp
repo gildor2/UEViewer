@@ -45,7 +45,7 @@ void CStatMeshInstance::Draw()
 #endif
 	}
 	glDisable(GL_LIGHTING);
-	glDisable(GL_TEXTURE_2D);
+	BindDefaultMaterial(true);
 
 	// draw mesh normals
 	if (bShowNormals)

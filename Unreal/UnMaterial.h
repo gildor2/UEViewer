@@ -93,10 +93,7 @@ public:
 	}
 #if RENDERING
 	UUnrealMaterial()
-	: DrawTimestamp(0)
-	, VsObj(0)
-	, PsObj(0)
-	, PrObj(0)
+	:	DrawTimestamp(0)
 	{}
 	virtual void Bind(unsigned PolyFlags)
 	{}
@@ -104,10 +101,9 @@ public:
 
 protected:
 	// rendering implementation fields
+	CShader			GLShader;
 	int				DrawTimestamp;			// timestamp for object validation
-	GLuint			VsObj;					// vertex shader
-	GLuint			PsObj;					// pixel shader
-	GLuint			PrObj;					// program object
+		//?? may be use GLShader.DrawTimestamp only ?
 #endif // RENDERING
 };
 

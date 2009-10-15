@@ -20,7 +20,6 @@
 #define DEFAULT_TEX_NUM		2			// note: glIsTexture(0) will always return GL_FALSE
 #define RESERVED_TEXTURES	32
 
-#define USE_GLSL			1			//?? move to Build.h ?
 
 /*-----------------------------------------------------------------------------
 	Mipmapping and resampling
@@ -240,154 +239,7 @@ static void Upload(int handle, const void *pic, int width, int height, bool doMi
 	Unreal materials support
 -----------------------------------------------------------------------------*/
 
-void UUnrealMaterial::Release()
-{
-#if USE_GLSL
-	if (GL_IsValidObject(PrObj, DrawTimestamp) && GL_SUPPORT(QGL_2_0))
-	{
-		glDetachShader(PrObj, VsObj);
-		glDetachShader(PrObj, PsObj);
-		glDeleteShader(VsObj);
-		glDeleteShader(PsObj);
-		glDeleteProgram(PrObj);
-	}
-	PrObj = VsObj = PsObj = 0;
-#endif // USE_GLSL
-	DrawTimestamp = 0;
-}
-
-
-static GLint lastTexNum = RESERVED_TEXTURES;	//!! use glGenTextures() instead
-
-#if USE_GLSL
-
-static void PrintShaderInfoLog(GLuint obj)
-{
-	int infologLength = 0;
-	glGetShaderiv(obj, GL_INFO_LOG_LENGTH, &infologLength);
-
-	if (infologLength > 0)
-	{
-		char *infoLog = (char *)malloc(infologLength);
-		int charsWritten  = 0;
-		glGetShaderInfoLog(obj, infologLength, &charsWritten, infoLog);
-		printf("%s\n",infoLog);
-		free(infoLog);
-    }
-}
-
-static void PrintProgramInfoLog(GLuint obj)
-{
-	int infologLength = 0;
-	glGetProgramiv(obj, GL_INFO_LOG_LENGTH, &infologLength);
-
-	if (infologLength > 0)
-	{
-		char *infoLog = (char *)malloc(infologLength);
-		int charsWritten  = 0;
-		glGetProgramInfoLog(obj, infologLength, &charsWritten, infoLog);
-		printf("%s\n",infoLog);
-		free(infoLog);
-	}
-}
-
-static void CompileShader(GLuint shader, const char *src, const char *defines, bool isFragShader)
-{
-	guard(CompileShader);
-
-	const char *name = src;
-	src = strchr(src, 0) + 1;
-
-	// prepare source
-	char buffer[16384];
-	int srcLen = strlen(src);
-	int defLen = defines ? strlen(defines) : 0;
-	assert(defLen + srcLen + 512 < ARRAY_COUNT(buffer));
-
-	char *dst = buffer;
-	if (defines)
-	{
-		memcpy(dst, defines, defLen);
-		dst += defLen;
-		// append "#line 0" to keep correct line numbering
-		strcpy(dst, "\n#line 0\n");
-		dst = strchr(dst, 0);
-	}
-
-	memcpy(dst, src, srcLen);
-	dst += srcLen;
-
-	appSprintf(dst, ARRAY_COUNT(buffer) - srcLen,
-		"\nvoid main() { %s(); }\n",
-		isFragShader ? "PixelShaderMain" : "VertexShaderMain"
-	);
-
-	// compile
-	const char *pBuffer = buffer;
-	glShaderSource(shader, 1, &pBuffer, NULL);
-	glCompileShader(shader);
-
-	// check compilation status
-	int status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if (status != GL_TRUE)
-	{
-		printf("ERROR in %s shader \"%s\":\n", isFragShader ? "fragment" : "vertex", name);
-		PrintShaderInfoLog(shader);
-		exit(1);		//??
-	}
-
-	unguard;
-}
-
-
-// Note: src format is "ShaderName" "\0" "ShaderText"
-void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src, const char *defines = NULL)
-{
-	guard(GL_MakeShader);
-
-	int status;
-	// shaders
-	VsObj = glCreateShader(GL_VERTEX_SHADER);
-	PsObj = glCreateShader(GL_FRAGMENT_SHADER);
-	CompileShader(VsObj, src, defines, false);
-	CompileShader(PsObj, src, defines, true);
-	// program
-	PrObj = glCreateProgram();
-	glAttachShader(PrObj, VsObj);
-	glAttachShader(PrObj, PsObj);
-	glLinkProgram(PrObj);
-	glGetProgramiv(PrObj, GL_LINK_STATUS, &status);
-	if (status != GL_TRUE)
-	{
-		printf("ERROR in program \"%s\":\n", src);
-		PrintProgramInfoLog(PrObj);
-		exit(1);
-	}
-
-	unguard;
-}
-
-
-struct CShader
-{
-	int		Timestamp;
-	GLuint	VsObj;
-	GLuint	PsObj;
-	GLuint	PrObj;
-};
-
-
-enum GenericShaderType
-{
-	GS_Textured,
-	GS_White,
-	GS_NormalMap,
-	GS_Count
-};
-
-
-void GL_UseGenericShader(GenericShaderType type)
+const CShader &GL_UseGenericShader(GenericShaderType type)
 {
 	guard(GL_UseGenericShader);
 
@@ -402,21 +254,57 @@ void GL_UseGenericShader(GenericShaderType type)
 	};
 
 	CShader &Sh = shaders[type];
-	if (!GL_IsValidObject(Sh.PrObj, Sh.Timestamp))
-		GL_MakeShader(Sh.VsObj, Sh.PsObj, Sh.PrObj, Generic_ush, defines[type]);
-	glUseProgram(Sh.PrObj);
+	if (!Sh.IsValid()) Sh.Make(Generic_ush, defines[type]);
+	Sh.Use();
+	Sh.SetUniform("useLighting", glIsEnabled(GL_LIGHTING));
+	return Sh;
 
-	GL_TouchObject(Sh.Timestamp);
+	unguardf(("type=%d", type));
+}
+
+
+const CShader &GL_NormalmapShader()
+{
+	guard(GL_NormalmapShader);
+
+	static CShader shader;
+	if (!shader.IsValid()) shader.Make(Normal_ush, NULL);
+	shader.Use();
+	shader.SetUniform("diffTex", 0);	//?? not here
+	shader.SetUniform("normTex", 1);	//?? ...
+	return shader;
 
 	unguard;
 }
 
 
-#endif // USE_GLSL
-
-
-void BindDefaultMaterial(bool White = false)
+void UUnrealMaterial::Release()
 {
+#if USE_GLSL
+	GLShader.Release();
+#endif
+	DrawTimestamp = 0;
+}
+
+
+static GLint lastTexNum = RESERVED_TEXTURES;	//!! use glGenTextures() instead
+
+
+void BindDefaultMaterial(bool White)
+{
+	if (GL_SUPPORT(QGL_1_3))
+	{
+		// disable all texture units except 0
+		int numTexUnits = 1;
+		glGetIntegerv(GL_MAX_TEXTURE_UNITS, &numTexUnits);
+		for (int i = 1; i < numTexUnits; i++)
+		{
+			glActiveTexture(GL_TEXTURE0 + i);
+			glDisable(GL_TEXTURE_2D);
+		}
+		glActiveTexture(GL_TEXTURE0);
+	}
+
 	if (White)
 	{
 		glDisable(GL_TEXTURE_2D);
@@ -467,9 +355,8 @@ void UTexture::Bind(unsigned PolyFlags)
 #if USE_GLSL
 	if (GL_SUPPORT(QGL_2_0))
 	{
-		GL_UseGenericShader(GS_Textured);
-		GLuint tex = glGetUniformLocation(PrObj, "tex");
-		glUniform1i(tex, 0);
+		const CShader &sh = GL_UseGenericShader(GS_Textured);
+		sh.SetUniform("tex", 0);
 	}
 #endif // USE_GLSL
 
@@ -746,14 +633,21 @@ void UMaterial3::Bind(unsigned PolyFlags)
 {
 	guard(UMaterial3::Bind);
 
-	UTexture3 *Diffuse = NULL;
-	int DiffWeight = 0;
+	UTexture3 *Diffuse = NULL, *Normal = NULL;
+	int DiffWeight = 0, NormWeight = 0;
 #define DIFFUSE(check,weight)			\
 	if (check && weight > DiffWeight)	\
 	{									\
-	/*	DrawTextLeft("%d > %d = %s", weight, DiffWeight, Tex->Name); */ \
+	/*	DrawTextLeft("D: %d > %d = %s", weight, DiffWeight, Tex->Name); */ \
 		Diffuse    = Tex;				\
 		DiffWeight = weight;			\
+	}
+#define NORMAL(check,weight)			\
+	if (check && weight > NormWeight)	\
+	{									\
+	/*	DrawTextLeft("N: %d > %d = %s", weight, NormWeight, Tex->Name); */ \
+		Normal     = Tex;				\
+		NormWeight = weight;			\
 	}
 	for (int i = 0; i < ReferencedTextures.Num(); i++)
 	{
@@ -765,6 +659,7 @@ void UMaterial3::Bind(unsigned PolyFlags)
 		//!! - may implement with tables + macros
 		//!! - catch normalmap, specular and emissive textures
 		DIFFUSE(appStristr(Name, "diff"), 100)
+		NORMAL (appStristr(Name, "norm"), 100)
 		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80)
 		DIFFUSE(!stricmp(Name + len - 2, "_D"), 10)
 #if 0
@@ -782,55 +677,64 @@ void UMaterial3::Bind(unsigned PolyFlags)
 		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
 	}
 
-	if (Diffuse)
+	if (!Diffuse)
 	{
-		glDisable(GL_ALPHA_TEST);
-		glDisable(GL_BLEND);
+		BindDefaultMaterial();
+		return;
+	}
 
-		Diffuse->Bind(PolyFlags);
-		// TwoSided
-		if (TwoSided)
-			glDisable(GL_CULL_FACE);
-		else
+	glDisable(GL_ALPHA_TEST);
+	glDisable(GL_BLEND);
+
+	Diffuse->Bind(PolyFlags);
+	if (Normal && GL_SUPPORT(QGL_2_0))	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
+	{
+		glActiveTexture(GL_TEXTURE0 + 1);
+		Normal->Bind(PolyFlags);
+		glActiveTexture(GL_TEXTURE0);
+		const CShader &Sh = GL_NormalmapShader();
+	}
+
+	// TwoSided
+	if (TwoSided)
+		glDisable(GL_CULL_FACE);
+	else
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
+	// alpha mask
+	if (bIsMasked)
+	{
+		glEnable(GL_BLEND);
+//		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glAlphaFunc(GL_GREATER, 0.0f);
+		glEnable(GL_ALPHA_TEST);
+	}
+	if (BlendMode == BLEND_Opaque)
+		glDisable(GL_BLEND);
+	else
+	{
+		glEnable(GL_BLEND);
+		switch (BlendMode)
 		{
-			glEnable(GL_CULL_FACE);
-			glCullFace(GL_BACK);
-		}
-		// alpha mask
-		if (bIsMasked)
-		{
-			glEnable(GL_BLEND);
-//			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glAlphaFunc(GL_GREATER, 0.0f);
-			glEnable(GL_ALPHA_TEST);
-		}
-		if (BlendMode == BLEND_Opaque)
+		case BLEND_Masked:
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
+			break;
+		case BLEND_Translucent:
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; no lighting
+			break;
+		case BLEND_Additive:
+			glBlendFunc(GL_ONE, GL_ONE);
+			break;
+		case BLEND_Modulate:
+			glBlendFunc(GL_DST_COLOR, GL_ZERO);
+			break;
+		default:
 			glDisable(GL_BLEND);
-		else
-		{
-			glEnable(GL_BLEND);
-			switch (BlendMode)
-			{
-			case BLEND_Masked:
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
-				break;
-			case BLEND_Translucent:
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; no lighting
-				break;
-			case BLEND_Additive:
-				glBlendFunc(GL_ONE, GL_ONE);
-				break;
-			case BLEND_Modulate:
-				glBlendFunc(GL_DST_COLOR, GL_ZERO);
-				break;
-			default:
-				glDisable(GL_BLEND);
-				DrawTextLeft("Unknown BlendMode %d", BlendMode);
-			}
+			DrawTextLeft("Unknown BlendMode %d", BlendMode);
 		}
 	}
-	else
-		BindDefaultMaterial();
 
 	unguardf(("%s", Name));
 }
@@ -843,9 +747,8 @@ void UTexture2D::Bind(unsigned PolyFlags)
 #if USE_GLSL
 	if (GL_SUPPORT(QGL_2_0))
 	{
-		GL_UseGenericShader(GS_Textured);
-		GLuint tex = glGetUniformLocation(PrObj, "tex");
-		glUniform1i(tex, 0);
+		const CShader &sh = GL_UseGenericShader(GS_Textured);
+		sh.SetUniform("tex", 0);
 	}
 #endif // USE_GLSL
 
@@ -887,28 +790,46 @@ void UTexture2D::Release()
 
 void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
 {
+	guard(UMaterialInstanceConstant::Bind);
+
 	if (!TextureParameterValues.Num())
 	{
 		Super::Bind(PolyFlags);
 		return;
 	}
 
-	UTexture3 *Diffuse = NULL;
+	UTexture3 *Diffuse = NULL, *Normal = NULL;
 	for (int i = 0; i < TextureParameterValues.Num(); i++)
 	{
 		const FTextureParameterValue &P = TextureParameterValues[i];
 		const char *p = P.ParameterName;
 		if (appStristr(p, "diff"))
 			Diffuse = P.ParameterValue;
+		else if (appStristr(p, "norm"))
+			Normal = P.ParameterValue;
 	}
 
 	if (!Diffuse && TextureParameterValues.Num() == 1 && !ReferencedTextures.Num())
 		Diffuse = TextureParameterValues[0].ParameterValue;
 
 	if (Diffuse)
+	{
 		Diffuse->Bind(PolyFlags);
+		//!!! copy-paste from UMaterial3 code
+#if 1
+		if (Normal && GL_SUPPORT(QGL_2_0))	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
+		{
+			glActiveTexture(GL_TEXTURE0 + 1);
+			Normal->Bind(PolyFlags);
+			glActiveTexture(GL_TEXTURE0);
+			const CShader &Sh = GL_NormalmapShader();
+		}
+#endif
+	}
 	else
 		Super::Bind(PolyFlags);
+
+	unguard;
 }
 
 #endif // UNREAL3
@@ -936,6 +857,21 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 	guard(DecompressTexture);
 	int size = width * height * 4;
 	byte *dst = new byte [size];
+
+#if 0
+	// visualize UV map
+	memset(dst, 0xFF, size);
+	byte *d = dst;
+	for (int i = 0; i < width * height; i++, d += 4)
+	{
+		int x = i % width;
+		int y = i / width;
+		d[0] = d[1] = d[2] = 0;
+		if (x % 16 == 0) d[0] = 255;	// red
+		if (y % 16 == 0) d[1] = 255;	// green
+	}
+	return dst;
+#endif
 
 	// process non-dxt formats here
 	switch (SrcFormat)
@@ -1486,9 +1422,12 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 						PackageIndex = Exp2.PackageIndex;
 					}
 					const FObjectExport &Exp2 = Package->GetExport(PackageIndex - 1);
-					assert(Exp2.ExportFlags & EF_ForcedExport);
-					bulkFileName = Exp2.ObjectName;
-					bulkFileExt  = NULL;		// find package file
+					if (Exp2.ExportFlags & EF_ForcedExport)
+					{
+						bulkFileName = Exp2.ObjectName;
+						bulkFileExt  = NULL;		// find package file
+//						printf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
+					}
 				}
 			}
 			if (!bulkFileName) continue;		// just in case

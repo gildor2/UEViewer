@@ -5,27 +5,6 @@
 #include "Core.h"
 
 /*-----------------------------------------------------------------------------
-	Timestamps
------------------------------------------------------------------------------*/
-
-extern int GCurrentFrame;		// current rendering frame number
-extern int GContextFrame;		// frame number when GL context was (re)created
-
-inline bool GL_IsValidObject(unsigned handle, int timestamp)
-{
-	if (!handle) return false;
-	return timestamp >= GContextFrame;
-}
-
-inline bool GL_TouchObject(int &timestamp)
-{
-	bool result = timestamp >= GContextFrame;
-	timestamp = GCurrentFrame;
-	return result;
-}
-
-
-/*-----------------------------------------------------------------------------
 	Control functions
 -----------------------------------------------------------------------------*/
 
@@ -41,7 +20,8 @@ void ResetView();
 
 
 // viewport params
-extern bool vpInvertXAxis;
+extern bool  vpInvertXAxis;
+extern CAxis viewAxis;
 
 
 /*-----------------------------------------------------------------------------

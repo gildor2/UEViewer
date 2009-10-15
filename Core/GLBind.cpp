@@ -25,7 +25,8 @@ struct glDummy_t {
 gl_config_t gl_config;
 
 
-#if !NO_GL_LOG
+#define DISABLE_LOG 0
+#if !NO_GL_LOG && DISABLE_LOG
 static COutputDeviceFile *LogFile;
 #endif
 
@@ -335,6 +336,10 @@ void QGL_InitExtensions()
 
 #endif // NUM_EXTENSIONS
 
+#if !NO_GL_LOG
+	GL = logFuncs;		//!! LOGGING
+#endif
+
 	unguard;
 }
 
@@ -406,7 +411,7 @@ void QGL_PrintExtensionsString(const char *label, const char *str, const char *m
 	Logging OpenGL function calls
 -----------------------------------------------------------------------------*/
 
-#if !NO_GL_LOG
+#if !NO_GL_LOG && DISABLE_LOG
 
 void QGL_EnableLogging(bool enable)
 {
