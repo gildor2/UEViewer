@@ -4,6 +4,7 @@
 $EXTS = "vert|frag|ush";
 $OUT  = "../Shaders.h";
 
+$inComment = 0;
 
 sub getline {
 	while ($line = <IN>)
@@ -12,13 +13,33 @@ sub getline {
 		$line =~ s/\r//;
 		$line =~ s/\n//;
 		# remove comments
+		if ($inComment)
+		{
+			if ($line =~ /.*\*\//)		# close comment
+			{
+				$line =~ s/^.*\*\///;
+				$inComment = 0;			# ... and continue parsing here
+			}
+			else
+			{
+				$line = "\\n";			# continue comment
+				return 1;
+			}
+		}
+		$line =~ s/\/\*.*\*\///g;		# remove /* ... */ in a single line
+		if ($line =~ /\/\*/)
+		{
+			$inComment = 1;				# open comment
+			$line =~ s/\/\*.*$//;		# ... and continue parsing to remove extra spaces etc
+		}
+#		$line =~ s/\/\*.*$//;
 		$line =~ s/\s*\/\/.*//;
 		# remove traling and leading spaces
 		$line =~ s/^[\s\t]+//;
 		$line =~ s/[\s\t]+$//;
 		# remove cosmetic whitespaces
-		$line =~ s/[\s\t]*([=*+\-,()])[\s\t]*/$1/g;
-		$line =~ s/[\s\t][\s\t]+/\ /g;
+		$line =~ s/[\s\t]*([=*+\-,(){}#])[\s\t]*/$1/g;
+		$line =~ s/[\s\t]+/\ /g;
 		# replace escape chars
 		$line =~ s/\t/\\t/g;
 		$line =~ s/\"/\\\"/g;

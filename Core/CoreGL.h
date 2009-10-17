@@ -83,7 +83,8 @@ inline bool GL_TouchObject(int &timestamp)
 #if USE_GLSL
 
 // Note: src format is "ShaderName" "\0" "ShaderText"
-void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src, const char *defines = NULL);
+//?? should be "const char **subst" ?
+void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src, const char *defines = NULL, const char **subst = NULL);
 
 extern const class CShader *GCurrentShader;		//?? change
 
@@ -118,9 +119,9 @@ public:
 	{
 		return GL_IsValidObject(PrObj, Timestamp);
 	}
-	inline void Make(const char *src, const char *defines = NULL)
+	inline void Make(const char *src, const char *defines = NULL, const char **subst = NULL)
 	{
-		GL_MakeShader(VsObj, PsObj, PrObj, src, defines);
+		GL_MakeShader(VsObj, PsObj, PrObj, src, defines, subst);
 	}
 	inline GLuint Use()
 	{

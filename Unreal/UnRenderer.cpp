@@ -263,15 +263,101 @@ const CShader &GL_UseGenericShader(GenericShaderType type)
 }
 
 
-const CShader &GL_NormalmapShader()
+//?? can export this structure to allow exporter getting material parameters
+struct CMaterialParams
+{
+	CMaterialParams()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
+	UTexture3	*Diffuse;		//?? support UTexture too
+	UTexture3	*Normal;
+	UTexture3	*Specular;
+	UTexture3	*SpecPower;
+	UTexture3	*Opacity;
+};
+
+
+#if 0
+#define DBG(x)		DrawTextLeft x
+#else
+#define DBG(x)
+#endif
+
+const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 {
 	guard(GL_NormalmapShader);
 
-	static CShader shader;
-	if (!shader.IsValid()) shader.Make(Normal_ush, NULL);
+	const char *subst[10];
+
+	enum
+	{
+		I_Diffuse = 0,
+		I_Normal,
+		I_Specular,
+		I_SpecularPower,
+		I_Opacity,
+	};
+
+	DBG(("--------"));
+
+	// diffuse
+	glActiveTexture(GL_TEXTURE0);
+	if (Params.Diffuse)
+	{
+		DBG(("Diffuse  : %s", Params.Diffuse->Name));
+		Params.Diffuse->Bind(0);
+	}
+	else
+		BindDefaultMaterial();
+	// normal
+	if (Params.Normal)	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
+	{
+		DBG(("Normal   : %s", Params.Normal->Name));
+		glActiveTexture(GL_TEXTURE0 + I_Normal);
+		Params.Normal->Bind(0);
+	}
+	// specular
+	if (Params.Specular)
+	{
+		DBG(("Specular : %s", Params.Specular->Name));
+		glActiveTexture(GL_TEXTURE0 + I_Specular);
+		Params.Specular->Bind(0);
+	}
+	// specular power
+	if (Params.SpecPower)
+	{
+		DBG(("SpecPower: %s", Params.SpecPower->Name));
+		glActiveTexture(GL_TEXTURE0 + I_SpecularPower);
+		Params.SpecPower->Bind(0);
+	}
+	// opacity mask
+	if (Params.Opacity)
+	{
+		DBG(("Opacity  : %s", Params.Opacity->Name));
+		glActiveTexture(GL_TEXTURE0 + I_Opacity);
+		Params.Opacity->Bind(0);
+	}
+	// add specular to shader; may be, when missing - use vec3(0.0) ?
+	subst[0] = Params.Normal    ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"            : "vec3(0.0, 0.0, 1.0)";
+	subst[1] = Params.Specular  ? "texture2D(specTex, TexCoord).rgb * vec3(specular) * 1.5" : "vec3(0.0)"; //"vec3(specular)";
+	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";	//!! note: scale by const, should get from params
+	subst[3] = Params.Opacity   ? "texture2D(opacTex, TexCoord).g" : "1.0";
+	// finalize paramerers and make shader
+	subst[4] = NULL;
+
+	glActiveTexture(GL_TEXTURE0);
+
+
+	if (!shader.IsValid()) shader.Make(Normal_ush, NULL, subst);
 	shader.Use();
-	shader.SetUniform("diffTex", 0);	//?? not here
-	shader.SetUniform("normTex", 1);	//?? ...
+
+	shader.SetUniform("diffTex",  I_Diffuse);
+	shader.SetUniform("normTex",  I_Normal);
+	shader.SetUniform("specTex",  I_Specular);
+	shader.SetUniform("spPowTex", I_SpecularPower);
+	shader.SetUniform("opacTex",  I_Opacity);
 	return shader;
 
 	unguard;
@@ -361,6 +447,7 @@ void UTexture::Bind(unsigned PolyFlags)
 #endif // USE_GLSL
 
 	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_DEPTH_TEST);
 	// bTwoSided
 	if (bTwoSided || (PolyFlags & PF_TwoSided))
 		glDisable(GL_CULL_FACE);
@@ -445,6 +532,7 @@ void UFinalBlend::Bind(unsigned PolyFlags)
 		return;
 	}
 	Material->Bind(PolyFlags);
+	glEnable(GL_DEPTH_TEST);
 	// override material settings
 	// TwoSided
 	if (TwoSided || (PolyFlags & PF_TwoSided))
@@ -510,6 +598,7 @@ void UShader::Bind(unsigned PolyFlags)
 
 	// and then override properties
 
+	glEnable(GL_DEPTH_TEST);
 	// TwoSided
 	if (TwoSided)
 		glDisable(GL_CULL_FACE);
@@ -566,6 +655,7 @@ void UFacingShader::Bind(unsigned PolyFlags)
 	else
 		BindDefaultMaterial();
 
+	glEnable(GL_DEPTH_TEST);
 	// TwoSided
 	if (TwoSided)
 		glDisable(GL_CULL_FACE);
@@ -633,66 +723,35 @@ void UMaterial3::Bind(unsigned PolyFlags)
 {
 	guard(UMaterial3::Bind);
 
-	UTexture3 *Diffuse = NULL, *Normal = NULL;
-	int DiffWeight = 0, NormWeight = 0;
-#define DIFFUSE(check,weight)			\
-	if (check && weight > DiffWeight)	\
-	{									\
-	/*	DrawTextLeft("D: %d > %d = %s", weight, DiffWeight, Tex->Name); */ \
-		Diffuse    = Tex;				\
-		DiffWeight = weight;			\
-	}
-#define NORMAL(check,weight)			\
-	if (check && weight > NormWeight)	\
-	{									\
-	/*	DrawTextLeft("N: %d > %d = %s", weight, NormWeight, Tex->Name); */ \
-		Normal     = Tex;				\
-		NormWeight = weight;			\
-	}
-	for (int i = 0; i < ReferencedTextures.Num(); i++)
-	{
-		UTexture3 *Tex = ReferencedTextures[i];
-		if (!Tex) continue;
-		const char *Name = Tex->Name;
-		int len = strlen(Name);
-		//!! - separate code (common for UMaterial3 + UMaterialInstanceConstant)
-		//!! - may implement with tables + macros
-		//!! - catch normalmap, specular and emissive textures
-		DIFFUSE(appStristr(Name, "diff"), 100)
-		NORMAL (appStristr(Name, "norm"), 100)
-		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80)
-		DIFFUSE(!stricmp(Name + len - 2, "_D"), 10)
-#if 0
-		if (!stricmp(Name + len - 3, "_DI"))		// The Last Remnant ...
-			Diffuse = Tex;
-		if (!strnicmp(Name + len - 4, "_DI", 3))	// The Last Remnant ...
-			Diffuse = Tex;
-		if (appStristr(Name, "_Diffuse"))
-			Diffuse = Tex;
-#else
-		DIFFUSE(appStristr(Name, "_DI"), 20)
-		DIFFUSE(appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
-		DIFFUSE(appStristr(Name, "_D" ), 2)
-#endif
-		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
-	}
+	CMaterialParams Params;
+	GetParams(Params);
+	Bind(Params, GLShader);
 
-	if (!Diffuse)
-	{
-		BindDefaultMaterial();
-		return;
-	}
+	unguard;
+}
+
+
+//!! NOTE: when using this function sharing of shader between MaterialInstanceConstant's is impossible
+//!! (shader may differs because of different texture sets - some available, some - not)
+void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
+{
+	guard(UMaterial3::Bind(params));
 
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
 
-	Diffuse->Bind(PolyFlags);
-	if (Normal && GL_SUPPORT(QGL_2_0))	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
+#if USE_GLSL
+	if (GL_SUPPORT(QGL_2_0))
 	{
-		glActiveTexture(GL_TEXTURE0 + 1);
-		Normal->Bind(PolyFlags);
-		glActiveTexture(GL_TEXTURE0);
-		const CShader &Sh = GL_NormalmapShader();
+		GL_NormalmapShader(Shader, Params);
+	}
+	else
+#endif // USE_GLSL
+	{
+		if (Params.Diffuse)
+			Params.Diffuse->Bind(0);
+		else
+			BindDefaultMaterial();
 	}
 
 	// TwoSided
@@ -703,24 +762,29 @@ void UMaterial3::Bind(unsigned PolyFlags)
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
+	// depth test
+	if (bDisableDepthTest)
+		glDisable(GL_DEPTH_TEST);
+	else
+		glEnable(GL_DEPTH_TEST);
 	// alpha mask
 	if (bIsMasked)
 	{
 		glEnable(GL_BLEND);
 //		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glAlphaFunc(GL_GREATER, 0.0f);
+		glAlphaFunc(GL_GREATER, OpacityMaskClipValue);
 		glEnable(GL_ALPHA_TEST);
 	}
-	if (BlendMode == BLEND_Opaque)
+	if (BlendMode == BLEND_Opaque || BlendMode == BLEND_Masked)
 		glDisable(GL_BLEND);
 	else
 	{
 		glEnable(GL_BLEND);
 		switch (BlendMode)
 		{
-		case BLEND_Masked:
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
-			break;
+//		case BLEND_Masked:
+//			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
+//			break;
 		case BLEND_Translucent:
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; no lighting
 			break;
@@ -737,6 +801,61 @@ void UMaterial3::Bind(unsigned PolyFlags)
 	}
 
 	unguardf(("%s", Name));
+}
+
+
+void UMaterial3::GetParams(CMaterialParams &Params)
+{
+	int DiffWeight = 0, NormWeight = 0, OpWeight = 0;
+#define DIFFUSE(check,weight)			\
+	if (check && weight > DiffWeight)	\
+	{									\
+	/*	DrawTextLeft("D: %d > %d = %s", weight, DiffWeight, Tex->Name); */ \
+		Params.Diffuse = Tex;			\
+		DiffWeight = weight;			\
+	}
+#define NORMAL(check,weight)			\
+	if (check && weight > NormWeight)	\
+	{									\
+	/*	DrawTextLeft("N: %d > %d = %s", weight, NormWeight, Tex->Name); */ \
+		Params.Normal = Tex;			\
+		NormWeight = weight;			\
+	}
+#define OPACITY(check,weight)			\
+	if (check && weight > OpWeight)		\
+	{									\
+	/*	DrawTextLeft("O: %d > %d = %s", weight, OpWeight, Tex->Name); */ \
+		Params.Opacity = Tex;			\
+		OpWeight = weight;				\
+	}
+	for (int i = 0; i < ReferencedTextures.Num(); i++)
+	{
+		UTexture3 *Tex = ReferencedTextures[i];
+		if (!Tex) continue;
+		const char *Name = Tex->Name;
+		int len = strlen(Name);
+		//!! - separate code (common for UMaterial3 + UMaterialInstanceConstant)
+		//!! - may implement with tables + macros
+		//!! - catch normalmap, specular and emissive textures
+		DIFFUSE(appStristr(Name, "diff"), 100)
+		NORMAL (appStristr(Name, "norm"), 100)
+		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80)
+		DIFFUSE(!stricmp(Name + len - 2, "_D"), 10)
+		OPACITY(appStristr(Name, "_OM"), 20);
+#if 0
+		if (!stricmp(Name + len - 3, "_DI"))		// The Last Remnant ...
+			Diffuse = Tex;
+		if (!strnicmp(Name + len - 4, "_DI", 3))	// The Last Remnant ...
+			Diffuse = Tex;
+		if (appStristr(Name, "_Diffuse"))
+			Diffuse = Tex;
+#else
+		DIFFUSE(appStristr(Name, "_DI"), 20)
+		DIFFUSE(appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
+		DIFFUSE(appStristr(Name, "_D" ), 2)
+#endif
+		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
+	}
 }
 
 
@@ -792,45 +911,47 @@ void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
 {
 	guard(UMaterialInstanceConstant::Bind);
 
-	if (!TextureParameterValues.Num())
-	{
-		Super::Bind(PolyFlags);
-		return;
-	}
+	CMaterialParams Params;
+	GetParams(Params);
 
-	UTexture3 *Diffuse = NULL, *Normal = NULL;
+	if (Parent)
+		Parent->Bind(Params, GLShader);
+	else
+		BindDefaultMaterial();
+
+	unguard;
+}
+
+
+void UMaterialInstanceConstant::GetParams(CMaterialParams &Params)
+{
+	// get params from linked UMaterial3
+	if (Parent) Parent->GetParams(Params);
+
+	// get local parameters
+	bool normalSet = false;
 	for (int i = 0; i < TextureParameterValues.Num(); i++)
 	{
 		const FTextureParameterValue &P = TextureParameterValues[i];
 		const char *p = P.ParameterName;
 		if (appStristr(p, "diff"))
-			Diffuse = P.ParameterValue;
-		else if (appStristr(p, "norm"))
-			Normal = P.ParameterValue;
-	}
-
-	if (!Diffuse && TextureParameterValues.Num() == 1 && !ReferencedTextures.Num())
-		Diffuse = TextureParameterValues[0].ParameterValue;
-
-	if (Diffuse)
-	{
-		Diffuse->Bind(PolyFlags);
-		//!!! copy-paste from UMaterial3 code
-#if 1
-		if (Normal && GL_SUPPORT(QGL_2_0))	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
+			Params.Diffuse = P.ParameterValue;
+		else if (appStristr(p, "norm") && !appStristr(p, "fx") && !normalSet)	// no NormalFX
 		{
-			glActiveTexture(GL_TEXTURE0 + 1);
-			Normal->Bind(PolyFlags);
-			glActiveTexture(GL_TEXTURE0);
-			const CShader &Sh = GL_NormalmapShader();
+			Params.Normal = P.ParameterValue;
+			normalSet = true;
 		}
-#endif
+		else if (appStristr(p, "specpow"))
+			Params.SpecPower = P.ParameterValue;
+		else if (appStristr(p, "spec"))
+			Params.Specular = P.ParameterValue;
 	}
-	else
-		Super::Bind(PolyFlags);
 
-	unguard;
+	// try to get diffuse texture when nothing found
+	if (!Params.Diffuse && TextureParameterValues.Num() == 1 && !ReferencedTextures.Num())
+		Params.Diffuse = TextureParameterValues[0].ParameterValue;
 }
+
 
 #endif // UNREAL3
 

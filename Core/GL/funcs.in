@@ -106,7 +106,7 @@ void End();
 //void GetDoublev(GLenum pname, GLdouble *params);
 GLenum GetError() NOLOG
 //void GetFloatv(GLenum pname, GLfloat *params);
-//void GetIntegerv(GLenum pname, GLint *params);
+void GetIntegerv(GLenum pname, GLint *params);
 //void GetLightfv(GLenum light, GLenum pname, GLfloat *params);
 //void GetLightiv(GLenum light, GLenum pname, GLint *params);
 //void GetMapdv(GLenum target, GLenum query, GLdouble *v);

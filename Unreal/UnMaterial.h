@@ -82,6 +82,7 @@ UE3 MATERIALS TREE:
 #	define BIND
 #endif
 
+struct CMaterialParams;	//?? move outside
 
 class UUnrealMaterial : public UObject		// no such class in Unreal Engine, needed as common base for UE1/UE2/UE3
 {
@@ -98,6 +99,8 @@ public:
 	virtual void Bind(unsigned PolyFlags)
 	{}
 	virtual void Release();
+	virtual void GetParams(CMaterialParams &Params)
+	{}
 
 protected:
 	// rendering implementation fields
@@ -1479,7 +1482,12 @@ public:
 	bool			bDisableDepthTest;
 	bool			bIsMasked;
 	EBlendMode		BlendMode;
+	float			OpacityMaskClipValue;
 	TArray<UTexture3*> ReferencedTextures;
+
+	UMaterial3()
+	:	OpacityMaskClipValue(0.333f)		//?? check
+	{}
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -1493,6 +1501,7 @@ public:
 		PROP_BOOL(bIsMasked)
 		PROP_ARRAY(ReferencedTextures, UObject*)
 		PROP_ENUM2(BlendMode, EBlendMode)
+		PROP_FLOAT(OpacityMaskClipValue)
 		// MaterialInterface fields
 		PROP_DROP(PreviewMesh)
 		//!! should be used (main material inputs in UE3 material editor)
@@ -1511,7 +1520,6 @@ public:
 		// drop other props
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(PhysicalMaterial)
-		PROP_DROP(OpacityMaskClipValue)
 		PROP_DROP(LightingModel)			//!! use it (EMaterialLightingModel)
 		// usage
 		PROP_DROP(bUsedAsLightFunction)
@@ -1554,10 +1562,14 @@ public:
 #endif
 	END_PROP_TABLE
 
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	void Bind(CMaterialParams &Params, CShader &Shader);
+	virtual void GetParams(CMaterialParams &Params);
+#endif
 };
 
-class UMaterialInstance : public UMaterial3
+class UMaterialInstance : public UMaterial3	//?? really not derived from UMaterial3 !
 {
 	DECLARE_CLASS(UMaterialInstance, UMaterial3)
 public:
@@ -1601,7 +1613,10 @@ public:
 		PROP_DROP(VectorParameterValues)
 	END_PROP_TABLE
 
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	virtual void GetParams(CMaterialParams &Params);
+#endif
 };
 
 #endif // UNREAL3

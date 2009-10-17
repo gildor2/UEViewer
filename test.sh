@@ -152,7 +152,7 @@ case "" in
 #!!	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
 #!!	run data/HumanMale.upk
 #	gow COG_MarcusFenix #Cine_COG_MarcusFenix
-#	ut3 DM-Deck
+#	ut3 DM-Deck	#!! CRASH !!
 #	ut2 HumanMaleA MercMaleD
 #	l2 LineageNPCs2 Pumpkin_Head_man_m00
 #	ut2 ONSVehicles-A RV

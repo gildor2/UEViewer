@@ -23,7 +23,7 @@ OPTIMIZE   = size
 	OPTIONS   += -fno-stack-protector	# this will remove GLIBC_2.4 dependency
 	OPTIONS   += {
 		# disable some warnings
-		-Wno-invalid-offsetof
+		-Wno-invalid-offsetof		#?? this flag is for C++ only, not for C
 	}
 !endif
 

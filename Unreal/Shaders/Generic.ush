@@ -1,27 +1,25 @@
-/**
- * Simple per-pixel lighting shader
- */
+/******************************************************************************
+ *	Simple per-pixel lighting shader
+ *****************************************************************************/
 
-#ifndef SPECULAR
-#define SPECULAR		1
-#endif
+#define SPECULAR
 
 #ifndef TEXTURING
-#define TEXTURING		1
+#define TEXTURING	1
 #endif
 
-//#define PIXEL_LIGHT_DIR	1
-#define PIXEL_HALF_VEC	1
+//#define PIXEL_LIGHT_DIR
+#define PIXEL_HALF_VEC
 
 // Variables passed from vertex to fragment shader
 varying vec4 diffuse, ambient, specular;
 varying vec3 normal;
-#if !PIXEL_LIGHT_DIR
+#ifndef PIXEL_LIGHT_DIR
 varying vec3 lightDir;
 #else
 varying vec3 position
 #endif
-#if !PIXEL_HALF_VEC
+#ifndef PIXEL_HALF_VEC
 varying vec3 halfVector;
 #endif
 
@@ -35,17 +33,17 @@ uniform bool useLighting;		// when set to "false", use vertex color only
 
 void VertexShaderMain()
 {
-#if !PIXEL_LIGHT_DIR			// otherwise - varying
+#ifndef PIXEL_LIGHT_DIR			// otherwise - varying
 	vec3 position;
 #endif
 	// vectors
 	normal     = normalize(gl_NormalMatrix * gl_Normal);		// eye-space
 	position   = gl_NormalMatrix * gl_Vertex.xyz;				// eye-space
 	// note: gl_LightSource.position is already transformed to eye-space
-#if !PIXEL_LIGHT_DIR
+#ifndef PIXEL_LIGHT_DIR
 	lightDir   = gl_LightSource[0].position.xyz - position;
 #endif
-#if !PIXEL_HALF_VEC
+#ifndef PIXEL_HALF_VEC
 	halfVector = gl_LightSource[0].halfVector.xyz; // per-vertex ... bad
 #endif
 	// light parameters
@@ -71,7 +69,7 @@ void VertexShaderMain()
 
 void PixelShaderMain()
 {
-#if PIXEL_LIGHT_DIR
+#ifdef PIXEL_LIGHT_DIR
 	vec3 lightDir  = gl_LightSource[0].position.xyz - position;	// do it per pixel
 #endif
 	vec3 nLightDir = normalize(lightDir);
@@ -85,11 +83,11 @@ void PixelShaderMain()
 	color *= texColor;
 #endif // TEXTURING
 
-#if SPECULAR
+#ifdef SPECULAR
 	// specular
 	// per-pixel half vector: average between direction from pixel to
 	// light and from pixel to viewer
-#if PIXEL_HALF_VEC
+#ifdef PIXEL_HALF_VEC
 	vec3 halfVector = nLightDir + vec3(0, 0, 1);
 #endif
 	vec3 halfV      = normalize(halfVector);
@@ -97,7 +95,7 @@ void PixelShaderMain()
 	color += pow(NdotHV, gl_FrontMaterial.shininess) * specular;
 #endif // SPECULAR
 
-#if NORMALMAP
+#ifdef NORMALMAP
 	gl_FragColor = vec4(n, 1.0);	// show normalmap
 #else
 	gl_FragColor = color;

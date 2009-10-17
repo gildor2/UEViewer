@@ -58,6 +58,13 @@ Unsupported animations (without umodel crash):
   Rise of the Argonauts
 
 
+System requirements:
+~~~~~~~~~~~~~~~~~~~~
+Windows or Linux operating system
+OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
+SDL 1.2 (for Linux only, windows distribution included sdl.dll)
+
+
 Additional information:
 ~~~~~~~~~~~~~~~~~~~~~~~
 Project author:
@@ -75,8 +82,16 @@ Please support project by making a donation here:
 http://www.gildor.org/en/donate
 
 
-For command line information run 'umodel' without arguments.
-Keyboard: press <H> for help, <ESC> for exit.
+Some usage information:
+~~~~~~~~~~~~~~~~~~~~~~~
+For command line options run 'umodel' without arguments.
+
+Keyboard:
+H          full keyboard help
+ESC        exit umodel
+PgUp/UpDn  browse all objects
+Ctrl+L     switch lighting modes
+Ctrl+G     toggle OpenGL 2.0 / OpenGL 1.1 renderer
 
 
 Notes about psk/psa export.
@@ -113,6 +128,13 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+16.10.2009
+- renderer: implemented specular and opacity map support
+
+15.10.2009
+- integrated GLSL Validator to check compatibility with GLSL standard
+- improved compatibility with 3DLabs (and ATI) GLSL
+
 13.10.2009
 - renderer: implemented normalmap (bumpmap) support for UE3 materials
 

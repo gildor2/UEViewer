@@ -24,6 +24,7 @@ struct GL_t
 	void	(APIENTRY * EnableClientState) (GLenum array);
 	void	(APIENTRY * End) ();
 	GLenum	(APIENTRY * GetError) ();
+	void	(APIENTRY * GetIntegerv) (GLenum pname, GLint *params);
 	const GLubyte *	(APIENTRY * GetString) (GLenum name);
 	GLboolean	(APIENTRY * IsEnabled) (GLenum cap);
 	GLboolean	(APIENTRY * IsTexture) (GLuint texture);
@@ -115,6 +116,7 @@ extern GL_t GL;
 #define glEnableClientState	GL.EnableClientState
 #define glEnd	GL.End
 #define glGetError	GL.GetError
+#define glGetIntegerv	GL.GetIntegerv
 #define glGetString	GL.GetString
 #define glIsEnabled	GL.IsEnabled
 #define glIsTexture	GL.IsTexture

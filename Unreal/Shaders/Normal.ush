@@ -1,17 +1,16 @@
-/**
- * Per-pixel lighting shader with normalmap support
- */
+/******************************************************************************
+ *	Per-pixel lighting shader with normalmap support
+ *****************************************************************************/
 
-//#define SHOW_BUMP		1
-//#define NORMALMAP		1
+//#define SHOW_BUMP
+//#define NORMALMAP
 
-#ifndef SPECULAR
-#define SPECULAR		1
-#endif
+#define SPECULAR
 
 #ifndef TEXTURING
-#define TEXTURING		1
+#define TEXTURING	1
 #endif
+
 
 // Variables passed from vertex to fragment shader
 varying vec4 diffuse, ambient, specular;
@@ -25,6 +24,9 @@ attribute vec3 binormal;
 // Parameters
 uniform sampler2D diffTex;
 uniform sampler2D normTex;
+uniform sampler2D specTex;
+uniform sampler2D spPowTex;
+uniform sampler2D opacTex;
 
 //uniform bool useLighting;		// when set to "false", use vertex color only
 
@@ -69,40 +71,78 @@ void VertexShaderMain()
 	vec3 tangentPos      = ToTangent(eyePos, t, b, n);
 	vec3 tangentLightPos = ToTangent(eyeLightPos, t, b, n);
 	tangentLightDir = tangentLightPos - tangentPos;
-	tangentEye      = normalize(ToTangent(vec3(0, 0, 1.0), t, b, n));
+	tangentEye      = normalize(ToTangent(vec3(0.0, 0.0, 1.0), t, b, n));
+}
+
+
+vec4 GetMaterialDiffuseColor(vec2 TexCoord)
+{
+	return texture2D(diffTex, TexCoord);
+}
+
+
+vec3 GetMaterialNormal(vec2 TexCoord)
+{
+#if 0
+	return vec3(0.0, 0.0, 1.0);
+#else
+	return %s;
+#endif
+}
+
+
+vec3 GetMaterialSpecularColor(vec2 TexCoord)
+{
+	return %s;
+}
+
+
+float GetMaterialSpecularPower(vec2 TexCoord)
+{
+	return %s;
+}
+
+
+float GetMaterialOpacity(vec2 TexCoord)
+{
+	return %s;
 }
 
 
 void PixelShaderMain()
 {
-	vec3 normal    = (texture2D(normTex, gl_TexCoord[0].st).xyz) * 2.0 - 1.0;
+	vec2 TexCoord = gl_TexCoord[0].st;
+
+	vec3 normal    = GetMaterialNormal(TexCoord);
 
 	vec3 nLightDir = normalize(tangentLightDir);
 	vec3 n         = normalize(normal);
-	float NdotL = max(dot(n, nLightDir), 0.0);
 	// ambient + diffuse
-	vec4 color = ambient + diffuse * NdotL;
+	float NdotL    = max(dot(n, nLightDir), 0.0);
+	vec4 color     = ambient + diffuse * NdotL;
 
 #if TEXTURING
-	vec4 texColor = texture2D(diffTex, gl_TexCoord[0].st);
+	vec4 texColor = GetMaterialDiffuseColor(TexCoord);
 	color *= texColor;
 #endif
 
-#if SHOW_BUMP
+#ifdef SHOW_BUMP
 	color = vec4(0.1, 0.1, 0.1, 1.0);
 #endif
 
-#if SPECULAR
+#ifdef SPECULAR
 	// specular
 	// per-pixel half vector: average between direction from pixel to
 	// light and from pixel to viewer
 	vec3 halfVector = nLightDir + tangentEye;
 	vec3 halfV      = normalize(halfVector);
 	float NdotHV    = max(dot(n, halfV), 0.0);
-	color += pow(NdotHV, gl_FrontMaterial.shininess) * specular;
+	color.rgb += pow(NdotHV, GetMaterialSpecularPower(TexCoord)) * GetMaterialSpecularColor(TexCoord);
 #endif // SPECULAR
 
-#if NORMALMAP
+	color.a *= GetMaterialOpacity(TexCoord);
+
+#ifdef NORMALMAP
 	gl_FragColor = vec4(n, 1.0);	// show normalmap
 #else
 	gl_FragColor = color;

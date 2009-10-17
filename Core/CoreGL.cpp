@@ -1,5 +1,22 @@
+//#define VALIDATE_SHADERS	1
+//#define DUMP_SHADERS		1
+
+#define GLSLANG_DLL			"glslang.dll"
+
+
+#if VALIDATE_SHADERS
+#	if _WIN32
+#		include <windows.h>
+#		include <glslang/Public/ShaderLang.h>
+#	else
+#		undef VALIDATE_SHADERS
+#	endif
+#endif
+
+
 #include "Core.h"
 #include "CoreGL.h"
+
 
 void GL_CheckError()
 {
@@ -10,6 +27,273 @@ void GL_CheckError()
 
 
 #if USE_GLSL
+
+
+/*-----------------------------------------------------------------------------
+	Code to refine shader code for generic GLSL compiler compatibility
+	(ATI, 3DLabs, may be others)
+-----------------------------------------------------------------------------*/
+
+static char *FindTokenEnd(char *token)
+{
+	while (true)
+	{
+		char c = tolower(*token);
+		if (c == 0) return token;
+		if ((c < 'a' || c > 'z') &&
+			(c < '0' || c > '9') &&
+			c != '_')
+			return token;
+		token++;
+	}
+}
+
+
+static char *SkipToken(char *token)
+{
+	token = FindTokenEnd(token);
+	// skip spaces
+	while (true)
+	{
+		char c = *token;
+		if (c == 0) return token;
+		if (c != ' ' && c != '\t' && c != '\n') break;
+		token++;
+	}
+	return token;
+}
+
+static bool CheckToken(char *token, const char *cmp)
+{
+	const char *end = FindTokenEnd(token);
+	int len = end - token;
+	if (len != strlen(cmp)) return false;
+	return memcmp(token, cmp, len) == 0;
+}
+
+// remove vertex shader specific code from pixel shader and vice versa
+static void RefineShader(char *buffer, bool isFragShader)
+{
+	guard(RefineShader);
+
+	char *dst = buffer;
+
+	int ifLevel    = 0;
+	int braceLevel = 0;
+	const char *dropFunc = isFragShader ? "VertexShaderMain" : "PixelShaderMain";
+
+	while (*buffer)
+	{
+		if (*buffer == '#')
+		{
+			// preprocessor
+			if (!strncmp(buffer+1, "if", 2))
+				ifLevel++;
+			else if (!strncmp(buffer+1, "endif", 5))
+				ifLevel--;
+			goto copy_line;
+		}
+//		if (ifLevel) goto copy_line;		// keep code inside preprocessor blocks ??
+		// skip "attribute" declarations in fragment shader
+		if (isFragShader && CheckToken(buffer, "attribute")) goto skip_c_line;
+		if (!ifLevel)
+		{
+			if (CheckToken(buffer, dropFunc)) goto skip_c_block;
+			char *nextTok = SkipToken(buffer);
+			if (nextTok && CheckToken(nextTok, dropFunc)) goto skip_c_block;
+		}
+		goto copy_line;
+
+	copy_line:		// copy until end of line
+		while (*buffer)
+		{
+			char c = *buffer++;
+			*dst++ = c;
+			if (c == '\n' || c == 0) break;
+			if (c == '{') braceLevel++;
+			if (c == '}') braceLevel--;
+		}
+		continue;
+
+	skip_line:		// skip until end of line
+		buffer = strchr(buffer, '\n');
+		if (!buffer) break;
+		buffer++;
+		*dst++ = '\n';
+		continue;
+
+	skip_c_line:	// skip until C line delimiter (;)
+		while (true)
+		{
+			char c = *buffer++;
+			if (c == ';')
+				goto next;
+			else if (c == '\n')		// keep line count
+			{
+				*dst++ = '\n';
+				continue;
+			}
+			else if (c == 0)
+			{
+				buffer--;			// keep pointer to NULL char
+				break;
+			}
+		}
+		continue;
+
+	skip_c_block:	// skip {...} construction
+		while (true)
+		{
+			char c = *buffer++;
+			if (c == '}')
+			{
+				if (--braceLevel == 0) break;
+			}
+			else if (c == '{')
+				braceLevel++;
+			else if (c == '\n')		// keep line count
+			{
+				*dst++ = '\n';
+				continue;
+			}
+			else if (c == 0)
+			{
+				buffer--;			// keep pointer to NULL char
+				break;
+			}
+		}
+		continue;
+
+	next:
+		continue;
+	}
+	*dst = 0;
+
+	unguard;
+}
+
+
+/*-----------------------------------------------------------------------------
+	Validate GLSL code with generic GLSL compiler
+-----------------------------------------------------------------------------*/
+
+#if VALIDATE_SHADERS
+
+static HMODULE glslangDll     = NULL;
+static bool    glslangMissing = false;
+
+
+struct ShFuncs
+{
+	int	(*ShInitialize) ();
+	void (*ShDestruct) (ShHandle);
+	const char* (*ShGetInfoLog) (const ShHandle);
+	ShHandle (*ShConstructCompiler) (const EShLanguage, int debugOptions);
+	int (*ShCompile) (const ShHandle, const char* const shaderStrings[], const int numStrings,
+		const EShOptimizationLevel, const TBuiltInResource *resources, int debugOptions);
+};
+static ShFuncs SH;
+
+typedef void (APIENTRY * dummyFunc_t) ();
+struct ShDummy_t {
+	dummyFunc_t funcs[1];
+};
+#define ShFunc(struc,index)		reinterpret_cast<ShDummy_t&>(struc).funcs[index]
+
+static const char *ShNames[] =
+{
+	"ShInitialize",
+	"ShDestruct",
+	"ShGetInfoLog",
+	"ShConstructCompiler",
+	"ShCompile"
+};
+
+
+static bool LoadGlslang()
+{
+	guard(LoadGlslang);
+
+	if (glslangDll || glslangMissing)
+		return glslangDll != NULL;
+
+	glslangDll = LoadLibrary(GLSLANG_DLL);
+	if (!glslangDll)
+	{
+		printf("%s is not found\n", GLSLANG_DLL);
+		glslangMissing = true;
+		return false;
+	}
+
+	for (int i = 0; i < ARRAY_COUNT(ShNames); i++)
+	{
+		dummyFunc_t func = (dummyFunc_t) (GetProcAddress(glslangDll, ShNames[i]));
+		ShFunc(SH, i) = func;
+		if (!func)
+		{
+			appNotify("%s: missing import %s", GLSLANG_DLL, ShNames[i]);
+			glslangMissing = true;
+			FreeLibrary(glslangDll);
+			glslangDll = NULL;
+			return false;
+		}
+	}
+
+	return true;
+
+	unguard;
+}
+
+
+static void GlslangValidate(const char *name, const char *source, bool isFragShader)
+{
+	guard(GlslangValidate);
+
+	if (!LoadGlslang()) return;
+
+	EShLanguage language = isFragShader ? EShLangFragment : EShLangVertex;
+	SH.ShInitialize();
+	ShHandle compiler = SH.ShConstructCompiler(language, 0);
+	if (!compiler)
+	{
+		appNotify("Unable to construct GLSL compiler");
+		glslangMissing = true;
+		return;
+	}
+	static const TBuiltInResource resources =
+	{
+		32,		// maxLights
+		6,		// maxClipPlanes
+		32,		// maxTextureUnits
+		32,		// maxTextureCoords
+		64,		// maxVertexAttribs
+		4096,	// maxVertexUniformComponents
+		64,		// maxVaryingFloats
+		32,		// maxVertexTextureImageUnits
+		32,		// maxCombinedTextureImageUnits
+		32,		// maxTextureImageUnits
+		4096,	// maxFragmentUniformComponents
+		32		// maxDrawBuffers
+	};
+	if (!SH.ShCompile(compiler, &source, 1, EShOptNone, &resources, EDebugOpNone))
+	{
+		appNotify("Error in %s shader %s:\n%s\n",
+			isFragShader ? "fragment" : "vertex", name,
+			SH.ShGetInfoLog(compiler));
+//		exit(0);
+	}
+	SH.ShDestruct(compiler);
+
+	unguard;
+}
+
+
+#endif // VALIDATE_SHADERS
+
+
+/*-----------------------------------------------------------------------------
+	Shader core functions
+-----------------------------------------------------------------------------*/
 
 const CShader *GCurrentShader = NULL;		//?? change
 
@@ -60,11 +344,48 @@ static void CheckProgram(GLuint obj, const char *name)
 }
 
 
-static void CompileShader(GLuint shader, const char *src, const char *defines, bool isFragShader)
+static int SubstParams(char *dst, const char *src, const char **subst)
+{
+	guard(SubstParams);
+
+	char *d = dst;
+	int substIndex = 0;
+	while (true)
+	{
+		char c = *src++;
+		if (c == 0) break;		// end of text
+		if (c != '%')
+		{
+			*d++ = c;
+			continue;
+		}
+		// here: % char
+		c = *src++;
+		assert(c == 's');		// only %s is supported
+		if (!subst)
+			appError("Found %%s but no subst passed");
+		const char *sub = subst[substIndex++];
+		if (!sub)
+			appError("Wrong subst count");
+		strcpy(d, sub);
+		d = strchr(d, 0);
+		//?? count lines, make "#line 0 <substIndex>" before and "#line <lineNum-1>" after
+	}
+	if (subst && subst[substIndex] != NULL)
+		appError("Wrong subst count");
+	*d = 0;
+	return d - dst;
+
+	unguard;
+}
+
+
+static void CompileShader(GLuint shader, const char *src, const char *defines, const char **subst, bool isFragShader)
 {
 	guard(CompileShader);
 
 	const char *name = src;
+	const char *type = isFragShader ? "fragment" : "vertex";
 	src = strchr(src, 0) + 1;
 
 	// prepare source
@@ -78,23 +399,33 @@ static void CompileShader(GLuint shader, const char *src, const char *defines, b
 	{
 		memcpy(dst, defines, defLen);
 		dst += defLen;
-		if (!isFragShader)	//?? do we need this ?
-		{
-			strcpy(dst, "\n#define VERTEX_SHADER 1\n");
-			dst = strchr(dst, 0);
-		}
-		// append "#line 0" to keep correct line numbering
-		strcpy(dst, "\n#line 0\n");
-		dst = strchr(dst, 0);
 	}
+//	strcpy(dst, isFragShader ? "\n#define PixelShaderMain main\n" : "\n#define VertexShaderMain main\n");
+//	dst = strchr(dst, 0);
+	// append "#line 0" to keep correct line numbering
+	strcpy(dst, "\n#line 0\n");
+	dst = strchr(dst, 0);
 
+#if 0
 	memcpy(dst, src, srcLen);
 	dst += srcLen;
+#else
+	dst += SubstParams(dst, src, subst);
+#endif
 
-	appSprintf(dst, ARRAY_COUNT(buffer) - srcLen,
+	appSprintf(dst, ARRAY_COUNT(buffer) - (dst - buffer),
 		"\nvoid main() { %s(); }\n",
 		isFragShader ? "PixelShaderMain" : "VertexShaderMain"
 	);
+#if DUMP_SHADERS
+	FILE *f = fopen(va("%s.orig.%s", name, type), "w");
+	if (f) { fprintf(f, "%s", buffer); fclose(f); }
+#endif
+	RefineShader(buffer, isFragShader);
+#if DUMP_SHADERS
+	f = fopen(va("%s.refined.%s", name, type), "w");
+	if (f) { fprintf(f, "%s", buffer); fclose(f); }
+#endif
 
 	// compile
 	const char *pBuffer = buffer;
@@ -102,14 +433,17 @@ static void CompileShader(GLuint shader, const char *src, const char *defines, b
 	glCompileShader(shader);
 
 	// validate
-	CheckShader(shader, isFragShader ? "fragment" : "vertex", name);
+#if VALIDATE_SHADERS
+	GlslangValidate(name, buffer, isFragShader);
+#endif
+	CheckShader(shader, type, name);
 
 	unguard;
 }
 
 
 // Note: src format is "ShaderName" "\0" "ShaderText"
-void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src, const char *defines)
+void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src, const char *defines, const char **subst)
 {
 	guard(GL_MakeShader);
 
@@ -119,8 +453,8 @@ void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src,
 	PrObj = glCreateProgram();
 	if (!VsObj || !PsObj || !PrObj) appError("Unable to create shaders");
 	// shaders
-	CompileShader(VsObj, src, defines, false);
-	CompileShader(PsObj, src, defines, true);
+	CompileShader(VsObj, src, defines, subst, false);
+	CompileShader(PsObj, src, defines, subst, true);
 	// program
 	glAttachShader(PrObj, VsObj);
 	glAttachShader(PrObj, PsObj);
