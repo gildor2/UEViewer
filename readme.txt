@@ -84,7 +84,10 @@ http://www.gildor.org/en/donate
 
 Some usage information:
 ~~~~~~~~~~~~~~~~~~~~~~~
-For command line options run 'umodel' without arguments.
+This is a console application, there is no GUI.
+For the list of command line options run 'umodel' without arguments.
+Note: if you will launch program from Windows explorer etc, you will get a console
+window with a help message, but this windoww will immediately disappear.
 
 Keyboard:
 H          full keyboard help
@@ -128,6 +131,10 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+17.10.2009
+- renderer: implemented support for material light emission
+- implemented UE3 material export (*.mat file, custom format)
+
 16.10.2009
 - renderer: implemented specular and opacity map support
 

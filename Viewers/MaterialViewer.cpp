@@ -246,8 +246,10 @@ void CMaterialViewer::Draw2D()
 
 CMaterialViewer::~CMaterialViewer()
 {
+	guard(CMaterialViewer::~);
 	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
 	Mat->Release();
+	unguard;
 }
 
 

@@ -1,6 +1,8 @@
 #ifndef __UNMESHTYPES_H__
 #define __UNMESHTYPES_H__
 
+//?? renale file, because it holds only different compressed quaternion
+//?? types (may be, it will hold later a compressed position too)
 
 /*-----------------------------------------------------------------------------
 	Different compressed quaternion types

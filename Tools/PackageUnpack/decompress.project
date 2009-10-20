@@ -1,0 +1,17 @@
+# perl highlighting
+
+R   = ../..
+PRJ = decompress
+!include ../../common.project
+
+sources(MAIN) = {
+	Main.cpp
+	$R/Unreal/UnCore.cpp
+	$R/Unreal/UnObject.cpp
+	$R/Unreal/UnPackage.cpp
+	$R/Core/*.cpp
+	# UE3 support
+	$UE3_LIBS
+}
+
+target(executable, $PRJ, MAIN, MAIN)

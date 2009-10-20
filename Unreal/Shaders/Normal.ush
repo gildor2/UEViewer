@@ -27,6 +27,7 @@ uniform sampler2D normTex;
 uniform sampler2D specTex;
 uniform sampler2D spPowTex;
 uniform sampler2D opacTex;
+uniform sampler2D emisTex;
 
 //uniform bool useLighting;		// when set to "false", use vertex color only
 
@@ -46,11 +47,10 @@ void VertexShaderMain()
 	// light parameters
 //	if (useLighting)
 	{
-		//!! strange bug: when displaying skeletal mesh in <I> mode, colors are corresponds to
-		//!! fixed-function drawing; but when displaying in <M> mode, colors are different (darker, saturated?)
-		diffuse  = gl_FrontMaterial.diffuse  *  gl_LightSource[0].diffuse * gl_Color;
-		ambient  = gl_FrontMaterial.ambient  * (gl_LightSource[0].ambient + gl_LightModel.ambient) * gl_Color;
-		specular = gl_FrontMaterial.specular *  gl_LightSource[0].specular;
+		// gl_FrontMaterial.diffuse and gl_FrontMaterial.ambient are premultiplied by gl_Color (see docs/glsl.txt)
+		diffuse  = /*gl_FrontMaterial.diffuse * */ gl_Color * gl_LightSource[0].diffuse;
+		ambient  = /*gl_FrontMaterial.ambient * */ gl_Color * (gl_LightSource[0].ambient + gl_LightModel.ambient);
+		specular = gl_FrontMaterial.specular * gl_LightSource[0].specular;
 	}
 /*	else
 	{
@@ -80,7 +80,6 @@ vec4 GetMaterialDiffuseColor(vec2 TexCoord)
 	return texture2D(diffTex, TexCoord);
 }
 
-
 vec3 GetMaterialNormal(vec2 TexCoord)
 {
 #if 0
@@ -90,20 +89,22 @@ vec3 GetMaterialNormal(vec2 TexCoord)
 #endif
 }
 
-
 vec3 GetMaterialSpecularColor(vec2 TexCoord)
 {
 	return %s;
 }
-
 
 float GetMaterialSpecularPower(vec2 TexCoord)
 {
 	return %s;
 }
 
-
 float GetMaterialOpacity(vec2 TexCoord)
+{
+	return %s;
+}
+
+vec3 GetMaterialEmissive(vec2 TexCoord)
 {
 	return %s;
 }
@@ -140,7 +141,10 @@ void PixelShaderMain()
 	color.rgb += pow(NdotHV, GetMaterialSpecularPower(TexCoord)) * GetMaterialSpecularColor(TexCoord);
 #endif // SPECULAR
 
-	color.a *= GetMaterialOpacity(TexCoord);
+#ifndef SHOW_BUMP
+	color.rgb += GetMaterialEmissive(TexCoord);
+#endif
+	color.a   *= GetMaterialOpacity(TexCoord);
 
 #ifdef NORMALMAP
 	gl_FragColor = vec4(n, 1.0);	// show normalmap

@@ -140,6 +140,7 @@ public:
 	int		ArVer;
 	int		ArLicenseeVer;
 	bool	ReverseBytes;
+
 protected:
 	int		ArPos;
 	int		ArStopper;
@@ -319,6 +320,11 @@ public:
 		return Tell() == GetStopper();
 	}
 
+	virtual int GetFileSize() const
+	{
+		return 0;
+	}
+
 	virtual FArchive& operator<<(FName &N)
 	{
 		return *this;
@@ -469,6 +475,13 @@ public:
 		unguardf(("File=%s", ShortName));
 	}
 
+	virtual int GetFileSize() const
+	{
+		int pos  = ftell(f); fseek(f, 0, SEEK_END);
+		int size = ftell(f); fseek(f, pos, SEEK_SET);
+		return size;
+	}
+
 protected:
 	FILE	*f;
 	char	ShortName[128];
@@ -509,6 +522,11 @@ public:
 		memcpy(data, DataPtr + ArPos, size);
 		ArPos += size;
 		unguard;
+	}
+
+	virtual int GetFileSize() const
+	{
+		return DataSize;
 	}
 
 protected:

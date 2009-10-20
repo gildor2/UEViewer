@@ -10,6 +10,10 @@
 
  Revision History:
 
+	18.09.2009 v1.05
+	- implemented materal loading
+	- fixing duplicate bone names
+
 	29.09.2009 v1.04
 	- implemented support for loading non-skeletal (static) meshes
 
@@ -48,8 +52,6 @@ TODO:
 -------------------------------------------------------------------------------
 --	Global variables
 -------------------------------------------------------------------------------
-
-version="1.03"
 
 global g_seeThru
 global g_skelOnly
@@ -226,6 +228,28 @@ fn FindFirstChild boneArray boneIndex =
 		)
 	)
 	return undefined
+)
+
+
+fn FixBoneNames boneArray =
+(
+	-- Find and correct duplicate names
+	for i = 1 to (boneArray.count-1) do
+	(
+		local n = boneArray[i].Name
+		local dupCount = 1
+		for j = (i+1) to boneArray.count do
+		(
+			local n2 = boneArray[j].Name
+			if n == n2 then
+			(
+				dupCount += 1
+				n2 = n + "_" + (dupCount as string)
+				format "Duplicate bone name \"%\", renamed to \"%\"\n" n n2
+				boneArray[j].Name = n2
+			)
+		)
+	)
 )
 
 
@@ -460,6 +484,70 @@ fn ReadVQuatAnimKey bstream =
 
 
 -------------------------------------------------------------------------------
+--	Loading materials
+-------------------------------------------------------------------------------
+
+fn ImportMaterial matName texDir =
+(
+	local subMat = standardMaterial name:matName
+
+	local texFilename
+	local foundTex
+
+	-- try to file material file
+	texFilename = matName + ".mat"
+	foundTex = FindFile texDir texFilename recurse:g_texRecurse
+	if foundTex != undefined then
+	(
+		texFilename = foundTex
+		format "Loading material %\n" texFilename
+		local matFile = openFile texFilename
+		while eof matFile == false do
+		(
+			local line = readline matFile
+			local tok = filterString line " ="
+--			format "[%] = [%]\n" tok[1] tok[2]
+			local parm = tok[1]
+			local file = tok[2]
+			foundTex = FindFile texDir (file + ".tga") recurse:g_texRecurse
+			if foundTex == undefined then continue
+			local bitmap = bitmapTexture name:foundTex fileName:foundTex
+			if parm == "Diffuse"   then subMat.diffuseMap = bitmap
+			if parm == "Normal"    then ( subMat.bumpMap = bitmap; subMat.bumpMapAmount = 100; )	-- amount is set to 30 by default
+			if parm == "Specular"  then subMat.specularMap = bitmap
+			if parm == "SpecPower" then subMat.specularLevelMap = bitmap
+			if parm == "Opacity"   then subMat.opacityMap = bitmap
+			if parm == "Emissive"  then subMat.selfIllumMap = bitmap
+		)
+		close matFile
+		return subMat
+	)
+	-- no material file found, try simple texture
+	-- get texture filename
+	texFilename = matName + ".tga"
+	foundTex = FindFile texDir texFilename recurse:g_texRecurse
+	if foundTex != undefined then
+	(
+		texFilename = foundTex
+	)
+	else
+	(
+		if g_texMissAction == 2 then			-- ask
+		(
+			local check = getOpenFileName caption:("Get texture for material " + matName) \
+				types:"TGA files (*.tga)|*.tga|All (*.*)|*.*|" filename:texFilename
+			if check != undefined then texFilename = check
+		)
+	)
+	if not doesFileExist texFilename then format "Unable to find texture %\n" texFilename
+	-- continue setup
+	local bitmap = bitmapTexture name:texFilename fileName:texFilename
+	subMat.diffuseMap = bitmap
+	-- return
+	subMat
+)
+
+-------------------------------------------------------------------------------
 --	Loading PSK file
 -------------------------------------------------------------------------------
 
@@ -517,6 +605,7 @@ fn ImportPskFile filename skelOnly:false =
 			Bones[i] = ReadVBone file
 --			format "Bone[%] = %\n" (i-1) Bones[i].Name
 		)
+		FixBoneNames Bones
 
 		-- Weights --
 		hdr = LOAD_CHUNK file "RAWWEIGHTS"
@@ -636,35 +725,16 @@ fn ImportPskFile filename skelOnly:false =
 	newMat = multiMaterial numsubs:numMaterials
 	for i = 1 to numMaterials do
 	(
-		subMat = standardMaterial name:Materials[i].MaterialName
-		subMat.diffuseMap = bitmapTexture name:Materials[i].MaterialName
-		-- get texture filename
-		local texFilename = Materials[i].MaterialName + ".tga"
-		local foundTex
+		local texDir
 		if g_texDir != "" then
 		(
-			foundTex = FindFile g_texDir texFilename recurse:g_texRecurse
+			texDir = g_texDir
 		)
 		else
 		(
-			foundTex = FindFile (getFilenamePath filename) texFilename recurse:g_texRecurse
+			texDir = getFilenamePath filename
 		)
-		if foundTex != undefined then
-		(
-			texFilename = foundTex
-		)
-		else
-		(
-			if g_texMissAction == 2 then			-- ask
-			(
-				local check = getOpenFileName caption:("Get texture for material " + Materials[i].MaterialName) \
-					types:"TGA files (*.tga)|*.tga|All (*.*)|*.*|" filename:texFilename
-				if check != undefined then texFilename = check
-			)
-		)
-		if not doesFileExist texFilename then format "Unable to find texture %\n" texFilename
-		-- continue setup
-		subMat.diffuseMap.fileName = texFilename 	-- testing: apply textures immediately
+		local subMat = ImportMaterial Materials[i].MaterialName texDir
 		newMat.materialList[i] = subMat
 		showTextureMap subMat subMat.diffuseMap true
 --		format "Material[%] = %\n" i Materials[i].MaterialName
@@ -956,7 +1026,7 @@ fn LoadAnimation index =
 rollout axImportRollout "Actor X Importer"
 (
 	-- copyright label
-	label Lbl1 "Version 1.04"
+	label Lbl1 "Version 1.05"
 	label Lbl2 "\xA9 2009 Konstantin Nosov (Gildor)"
 	label Lbl3 "http://www.gildor.org/"
 
@@ -1030,9 +1100,9 @@ rollout axSettingsRollout "Settings"
 	spinner SpnBoneSize  "Bone size"  range:[0.1,10,g_boneSize]     type:#float scale:0.1  align:#left  across:2
 	spinner SpnMeshScale "Mesh scale" range:[0.01,1000,g_meshScale] type:#float scale:0.01 align:#right
 
-	group "Textures"
+	group "Materials"
 	(
-		edittext EdTexPath     "Path to textures" text:g_texDir width:180 across:2
+		edittext EdTexPath     "Path to materials" text:g_texDir width:180 across:2
 		button   BtnBrowseTex  "..."     align:#right height:16
 		checkbox ChkTexRecurse "Recurse" checked:g_texRecurse
 		label    LblMissingTex "On missing texture:" across:2

@@ -1,6 +1,9 @@
 #include "Core.h"
 #include "CoreGL.h"
 
+
+#if RENDERING
+
 #define appPrintf		printf
 #define appWPrintf		appNotify
 #define Com_DPrintf		if (1) {} else printf		//??
@@ -455,3 +458,5 @@ void QGL_LogMessage(const char *text)
 
 
 //} // namespace
+
+#endif // RENDERING

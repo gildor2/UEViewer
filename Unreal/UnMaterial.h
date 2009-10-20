@@ -82,7 +82,29 @@ UE3 MATERIALS TREE:
 #	define BIND
 #endif
 
-struct CMaterialParams;	//?? move outside
+class UUnrealMaterial;
+
+struct CMaterialParams
+{
+	CMaterialParams()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+	bool IsNull() const
+	{
+#define C(x) ((size_t)x)
+		return (C(Diffuse) | C(Normal) | C(Specular) | C(SpecPower) | C(Opacity) | C(Emissive)) == 0;
+#undef C
+	}
+
+	UUnrealMaterial *Diffuse;
+	UUnrealMaterial *Normal;
+	UUnrealMaterial *Specular;
+	UUnrealMaterial *SpecPower;
+	UUnrealMaterial *Opacity;
+	UUnrealMaterial *Emissive;
+};
+
 
 class UUnrealMaterial : public UObject		// no such class in Unreal Engine, needed as common base for UE1/UE2/UE3
 {
@@ -99,7 +121,7 @@ public:
 	virtual void Bind(unsigned PolyFlags)
 	{}
 	virtual void Release();
-	virtual void GetParams(CMaterialParams &Params)
+	virtual void GetParams(CMaterialParams &Params) const
 	{}
 
 protected:
@@ -1565,7 +1587,7 @@ public:
 #if RENDERING
 	virtual void Bind(unsigned PolyFlags);
 	void Bind(CMaterialParams &Params, CShader &Shader);
-	virtual void GetParams(CMaterialParams &Params);
+	virtual void GetParams(CMaterialParams &Params) const;
 #endif
 };
 
@@ -1615,7 +1637,7 @@ public:
 
 #if RENDERING
 	virtual void Bind(unsigned PolyFlags);
-	virtual void GetParams(CMaterialParams &Params);
+	virtual void GetParams(CMaterialParams &Params) const;
 #endif
 };
 

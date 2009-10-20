@@ -104,8 +104,9 @@ fi
 case "" in
 
 "")
+	run1 C:/!umodel-data/MirrorsEdge CH_TKY_Crim_Fixer.upk SK_TKY_Crim_Fixer
 #	ut2 HumanMaleA MercMaleD
-	ut3 CH_AnimHuman
+#	ut3 CH_AnimHuman
 	# Army of Two
 #	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
 	# MK vs DC

@@ -23,6 +23,7 @@ MAIN : umodel.exe
 MAIN = \
 	./obj/umodel-win32/Main.obj \
 	./obj/umodel-win32/Export3D.obj \
+	./obj/umodel-win32/ExportMaterial.obj \
 	./obj/umodel-win32/ExportMd5.obj \
 	./obj/umodel-win32/ExportPsk.obj \
 	./obj/umodel-win32/ExportTga.obj \
@@ -316,6 +317,20 @@ DEPENDS = \
 
 ./obj/umodel-win32/ExportTga.obj : Exporters/ExportTga.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportTga.obj" Exporters/ExportTga.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+./obj/umodel-win32/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportMaterial.obj" Exporters/ExportMaterial.cpp
 
 DEPENDS = \
 	Build.h \

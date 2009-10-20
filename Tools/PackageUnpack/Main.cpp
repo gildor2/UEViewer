@@ -1,0 +1,215 @@
+#include "Core.h"
+#include "UnrealClasses.h"
+#include "UnPackage.h"
+
+#define MAKE_DIRS		1
+
+/*-----------------------------------------------------------------------------
+	Main function
+-----------------------------------------------------------------------------*/
+
+int main(int argc, char **argv)
+{
+#if DO_GUARD
+	try {
+#endif
+
+	guard(Main);
+
+	// display usage
+	if (argc < 2)
+	{
+	help:
+		printf(	"Unreal package decompressor\n"
+				"Usage: decompress <package filename>\n"
+		);
+		exit(0);
+	}
+
+	// parse command line
+//	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
+	int arg = 1;
+/*	for (arg = 1; arg < argc; arg++)
+	{
+		if (argv[arg][0] == '-')
+		{
+			const char *opt = argv[arg]+1;
+			if (!stricmp(opt, "dump"))
+			{
+			}
+			else if (!stricmp(opt, "check"))
+			{
+			}
+			else
+				goto help;
+		}
+		else
+		{
+			break;
+		}
+	} */
+	const char *argPkgName = argv[arg];
+	if (!argPkgName) goto help;
+
+	// setup NotifyInfo to describe package only
+	appSetNotifyHeader(argPkgName);
+	// load package
+	UnPackage *Package;
+	if (strchr(argPkgName, '.'))
+		Package = new UnPackage(argPkgName);
+	else
+		Package = UnPackage::LoadPackage(argPkgName);
+	if (!Package)
+	{
+		printf("ERROR: Unable to find/load package %s\n", argPkgName);
+		exit(1);
+	}
+
+	guard(ProcessPackage);
+	// extract package name, create directory for it
+	char PkgName[256];
+	const char *s = strrchr(argPkgName, '/');
+	if (!s) s = strrchr(argPkgName, '\\');			// WARNING: not processing mixed '/' and '\'
+	if (s) s++; else s = argPkgName;
+	appStrncpyz(PkgName, s, ARRAY_COUNT(PkgName));
+
+	char OutFile[256];
+	appSprintf(ARRAY_ARG(OutFile), "unpacked/%s", PkgName);
+	appMakeDirectoryForFile(OutFile);
+
+	const FPackageFileSummary &Summary = Package->Summary;
+	int uncompressedSize = Package->GetFileSize();
+	if (uncompressedSize == 0) appError("GetFileSize for %s returned 0", argPkgName);
+	printf("%s: uncompressed size %d\n", argPkgName, uncompressedSize);
+
+	byte *buffer = new byte[uncompressedSize];
+	FILE *out = fopen(OutFile, "wb");
+
+	/*!! Notes:
+	 *	- GOW1 (XBox360 core.u is not decompressed
+	 *	- Bioshock core.u is not decompressed (because it has non-full compression, but
+	 *	  CompressionFlags are 0) -- should place compressed chunks to Package.Summary
+	 */
+	if (Summary.CompressionFlags)
+	{
+		// compressed package, but header is not compressed
+
+		// read header (raw)
+		int compressedStart   = Summary.CompressedChunks[0].CompressedOffset;
+		int uncompressedStart = Summary.CompressedChunks[0].UncompressedOffset;
+		FILE *h = fopen(Package->Filename, "rb");
+		fread(buffer, compressedStart, 1, h);
+		fclose(h);
+
+		FMemReader mem(buffer, compressedStart);
+		mem.ReverseBytes = Package->ReverseBytes;
+		int pos;
+		bool found;
+
+		// find package flags
+		found = false;
+		for (pos = 8; pos < 32; pos++)
+		{
+			mem.Seek(pos);
+			int tmp;
+			mem << tmp;
+			if (tmp != Summary.PackageGroup.Num()) continue;
+			mem.Seek(pos);
+			FString tmp2;
+			mem << tmp2;
+			if (strcmp(tmp2, *Summary.PackageGroup) != 0) continue;
+			int flagsPos = mem.Tell();
+			mem << tmp;
+			if (tmp != Summary.PackageFlags) continue;
+			int *p = (int*)(buffer + flagsPos);
+			*p &= (!Package->ReverseBytes) ? ~0x2000000 : ~0x2;	// remove PKG_Compressed flag
+			found = true;
+			break;
+		}
+		if (!found) appError("Unable to find package flags");
+
+		// find compression info in a header
+		for (pos = 32; pos < compressedStart - Summary.CompressedChunks.Num() * 16; pos++)
+		{
+			mem.Seek(pos);
+			int tmpCompressionFlags, tmpNumChunks;
+			mem << tmpCompressionFlags << tmpNumChunks;
+			if (tmpCompressionFlags != Summary.CompressionFlags || tmpNumChunks != Summary.CompressedChunks.Num())
+				continue;
+			// validate table
+			bool valid = true;
+			for (int i = 0; i < Summary.CompressedChunks.Num(); i++)
+			{
+				FCompressedChunk RC;
+				const FCompressedChunk &C = Summary.CompressedChunks[i];
+				mem << RC;
+				if (C.UncompressedOffset != RC.UncompressedOffset ||
+					C.UncompressedSize   != RC.UncompressedSize   ||
+					C.CompressedOffset   != RC.CompressedOffset   ||
+					C.CompressedSize     != RC.CompressedSize)
+				{
+					valid = false;
+					break;
+				}
+			}
+			if (!valid) continue;
+			found = true;
+			break;
+		}
+		if (!found) appError("Unable to find compression table");
+//		printf("TABLE at %X\n", pos);
+
+		// remove compression table
+		int* p = (int*)(buffer + pos);
+		p[0] = p[1] = 0;
+		int cut = Summary.CompressedChunks.Num() * 16;
+		int dstPos = pos + 8;	// skip CompressionFlags and CompressedChunks.Num
+		int srcPos = pos + 8 + cut;	// skip CompressedChunks
+		memcpy(buffer + dstPos, buffer + srcPos, compressedStart - srcPos);
+
+		if (compressedStart - cut != uncompressedStart)
+			appNotify("WARNING: wrong size of %s: differs in %d bytes", argPkgName, compressedStart - cut - uncompressedStart);
+
+		// read package data
+		Package->Seek(uncompressedStart);
+		Package->Serialize(buffer + uncompressedStart, uncompressedSize - uncompressedStart);
+	}
+	else
+	{
+		// uncompressed package or fully compressed package
+		guard(LoadFullyCompressedPackage);
+
+		Package->Seek(0);
+		Package->Serialize(buffer, uncompressedSize);
+
+		unguard;
+	}
+
+	// write file
+	if (fwrite(buffer, uncompressedSize, 1, out) != 1) appError("Write failed");
+
+	// cleanup
+	delete buffer;
+	fclose(out);
+
+	unguard;
+
+	unguard;
+
+#if DO_GUARD
+	} catch (...) {
+		if (GErrorHistory[0])
+		{
+//			printf("ERROR: %s\n", GErrorHistory);
+			appNotify("ERROR: %s\n", GErrorHistory);
+		}
+		else
+		{
+//			printf("Unknown error\n");
+			appNotify("Unknown error\n");
+		}
+		exit(1);
+	}
+#endif
+	return 0;
+}

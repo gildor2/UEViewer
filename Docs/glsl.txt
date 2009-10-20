@@ -1,0 +1,11 @@
+Common:
+- gl_FrontMaterial diffuse and ambient are premultiplied by glColor() value when GL_COLOR_MATERIAL is enabled.
+  But this will work with glColor() calls only, not with glColorPointer(). When lighting poly with color poinyers,
+  gl_FrontMaterial will be colorized by glColor() value (that's because gl_FrontMaterial is uniform, not attribute).
+
+ATI:
+- cannot handle "#if <undefined>", should use "#ifdef <...>" (that's GLSL standard). But NVidia handles "#if ..."
+  correctly.
+- problems with nested "#if..." constructions
+- cannot compile shader when it has (write) access to a variable from other shader type; example: compiling vertex
+  shader will be failed when there is a line with "gl_FragColor = ...", even when that line will never be executed.

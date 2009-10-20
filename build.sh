@@ -10,15 +10,19 @@ PLATFORM="vc-win32"
 [ "$project" ] || project="umodel"		# setup default prohect name
 [ "$root" ] || root="."
 makefile="makefile-$PLATFORM"
+[ "$render" ] || render=1
 
 # update makefile when needed
 # [ $makefile -ot $project ] &&
 $root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 
-# build shaders
-cd "Unreal/Shaders"
-./make.pl
-cd "../.."
+if [ $render -eq 1 ]; then
+	# build shaders
+	#?? move to makefile
+	cd "Unreal/Shaders"
+	./make.pl
+	cd "../.."
+fi
 
 # build
 case "$PLATFORM" in

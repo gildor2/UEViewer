@@ -621,6 +621,10 @@ public:
 	{
 		return Loader->GetStopper();
 	}
+	virtual int GetFileSize() const
+	{
+		return Loader->GetFileSize();
+	}
 
 private:
 	static TArray<UnPackage*> PackageMap;

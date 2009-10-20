@@ -14,6 +14,8 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar);
 void Export3D (const UVertMesh *Mesh, FArchive &Ar);
 // TGA
 void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar);
+// UUnrealMaterial
+void ExportMaterial(const UUnrealMaterial *Mat);
 
 // service functions
 //?? place implementation to cpp?

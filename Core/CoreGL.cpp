@@ -18,6 +18,9 @@
 #include "CoreGL.h"
 
 
+#if RENDERING
+
+
 void GL_CheckError()
 {
 	GLenum err = glGetError();
@@ -468,3 +471,5 @@ void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src,
 
 
 #endif // USE_GLSL
+
+#endif // RENDERING

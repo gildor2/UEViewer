@@ -225,6 +225,8 @@ if (i == 32 || i == 34)
 				Tex = Mesh->Textures[texIdx];
 		}
 
+		if (Tex && Tex->IsA("UnrealMaterial")) ExportMaterial((const UUnrealMaterial*)Tex);
+
 		if (Tex)
 		{
 			Ar.Printf(

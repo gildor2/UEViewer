@@ -42,9 +42,13 @@ public:
 	{
 		Reader->Seek(Pos + ArPosOffset);
 	}
-	virtual int  Tell() const
+	virtual int Tell() const
 	{
 		return Reader->Tell() - ArPosOffset;
+	}
+	virtual int GetFileSize() const
+	{
+		return Reader->GetFileSize() - ArPosOffset;
 	}
 	virtual void SetStopper(int Pos)
 	{
@@ -217,9 +221,16 @@ public:
 	{
 		Position = Pos;
 	}
-	virtual int  Tell() const
+	virtual int Tell() const
 	{
 		return Position;
+	}
+	virtual int GetFileSize() const
+	{
+		guard(FUE3ArchiveReader::GetFileSize);
+		const FCompressedChunk &Chunk = CompressedChunks[CompressedChunks.Num() - 1];
+		return Chunk.UncompressedOffset + Chunk.UncompressedSize;
+		unguard;
 	}
 	virtual void SetStopper(int Pos)
 	{
@@ -272,7 +283,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	}
 	else
 		Seek(0);	// seek back to header
-#endif
+#endif // LINEAGE2 || EXTEEL
 
 #if UNREAL3
 	// code for fully compressed packages support
@@ -306,7 +317,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		fullyCompressed = true;
 		unguard;
 	}
-#endif
+#endif // UNREAL3
 
 	// read summary
 	*this << Summary;

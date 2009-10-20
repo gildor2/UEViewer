@@ -1,6 +1,6 @@
 #!/bin/bash
 
-project="pkgtool"
+project="decompress"
 root="../.."
 render=0
 source $root/build.sh

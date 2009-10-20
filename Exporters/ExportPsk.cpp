@@ -42,7 +42,6 @@ static void ExportScript(const USkeletalMesh *Mesh, FArchive &Ar)
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 {
 	// export script file
-	char filename[64];
 	if (GExportScripts)
 	{
 		char filename[256];
@@ -125,7 +124,10 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 				Tex = Mesh->Textures[texIdx];
 		}
 		if (Tex)
+		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
+			if (Tex->IsA("UnrealMaterial")) ExportMaterial((const UUnrealMaterial*)Tex);
+		}
 		else
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
 		Ar << M;

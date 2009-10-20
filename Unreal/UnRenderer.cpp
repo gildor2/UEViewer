@@ -263,22 +263,6 @@ const CShader &GL_UseGenericShader(GenericShaderType type)
 }
 
 
-//?? can export this structure to allow exporter getting material parameters
-struct CMaterialParams
-{
-	CMaterialParams()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-
-	UTexture3	*Diffuse;		//?? support UTexture too
-	UTexture3	*Normal;
-	UTexture3	*Specular;
-	UTexture3	*SpecPower;
-	UTexture3	*Opacity;
-};
-
-
 #if 0
 #define DBG(x)		DrawTextLeft x
 #else
@@ -298,12 +282,13 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		I_Specular,
 		I_SpecularPower,
 		I_Opacity,
+		I_Emissive
 	};
 
 	DBG(("--------"));
 
 	// diffuse
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE0);	// used for BindDefaultMaterial() too
 	if (Params.Diffuse)
 	{
 		DBG(("Diffuse  : %s", Params.Diffuse->Name));
@@ -339,13 +324,21 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		glActiveTexture(GL_TEXTURE0 + I_Opacity);
 		Params.Opacity->Bind(0);
 	}
-	// add specular to shader; may be, when missing - use vec3(0.0) ?
+	// emission
+	if (Params.Emissive)
+	{
+		DBG(("Emissive : %s", Params.Emissive->Name));
+		glActiveTexture(GL_TEXTURE0 + I_Emissive);
+		Params.Emissive->Bind(0);
+	}
+	//!! NOTE: Specular and SpecPower are scaled by const to improve visual; should be scaled by parameters from material
 	subst[0] = Params.Normal    ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"            : "vec3(0.0, 0.0, 1.0)";
 	subst[1] = Params.Specular  ? "texture2D(specTex, TexCoord).rgb * vec3(specular) * 1.5" : "vec3(0.0)"; //"vec3(specular)";
-	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";	//!! note: scale by const, should get from params
+	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";
 	subst[3] = Params.Opacity   ? "texture2D(opacTex, TexCoord).g" : "1.0";
+	subst[4] = Params.Emissive  ? "vec3(texture2D(emisTex, TexCoord).g)" : "vec3(0.0)"; // not scaled, because sometimes looks ugly ...
 	// finalize paramerers and make shader
-	subst[4] = NULL;
+	subst[5] = NULL;
 
 	glActiveTexture(GL_TEXTURE0);
 
@@ -358,6 +351,7 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	shader.SetUniform("specTex",  I_Specular);
 	shader.SetUniform("spPowTex", I_SpecularPower);
 	shader.SetUniform("opacTex",  I_Opacity);
+	shader.SetUniform("emisTex",  I_Emissive);
 	return shader;
 
 	unguard;
@@ -366,10 +360,12 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 
 void UUnrealMaterial::Release()
 {
+	guard(UUnrealMaterial::Release);
 #if USE_GLSL
 	GLShader.Release();
 #endif
 	DrawTimestamp = 0;
+	unguard;
 }
 
 
@@ -518,9 +514,11 @@ void UTexture::Bind(unsigned PolyFlags)
 
 void UTexture::Release()
 {
+	guard(UTexture::Release);
 	if (GL_IsValidObject(TexNum, DrawTimestamp))
 		glDeleteTextures(1, &TexNum);
 	Super::Release();
+	unguard;
 }
 
 
@@ -775,6 +773,9 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 		glAlphaFunc(GL_GREATER, OpacityMaskClipValue);
 		glEnable(GL_ALPHA_TEST);
 	}
+//??	glDepthMask(BlendMode == BLEND_Translucent ? GL_FALSE : GL_TRUE); -- may be, BLEND_Masked too
+//?? -- should draw translucent surfaces AFTER opaque, otherwise translucent surface will
+//??	be erased ...
 	if (BlendMode == BLEND_Opaque || BlendMode == BLEND_Masked)
 		glDisable(GL_BLEND);
 	else
@@ -804,9 +805,9 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 }
 
 
-void UMaterial3::GetParams(CMaterialParams &Params)
+void UMaterial3::GetParams(CMaterialParams &Params) const
 {
-	int DiffWeight = 0, NormWeight = 0, OpWeight = 0;
+	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0;
 #define DIFFUSE(check,weight)			\
 	if (check && weight > DiffWeight)	\
 	{									\
@@ -821,12 +822,33 @@ void UMaterial3::GetParams(CMaterialParams &Params)
 		Params.Normal = Tex;			\
 		NormWeight = weight;			\
 	}
+#define SPECULAR(check,weight)			\
+	if (check && weight > SpecWeight)	\
+	{									\
+	/*	DrawTextLeft("S: %d > %d = %s", weight, SpecWeight, Tex->Name); */ \
+		Params.Specular = Tex;			\
+		SpecWeight = weight;			\
+	}
+#define SPECPOW(check,weight)			\
+	if (check && weight > SpecPowWeight)\
+	{									\
+	/*	DrawTextLeft("SP: %d > %d = %s", weight, SpecPowWeight, Tex->Name); */ \
+		Params.SpecPower = Tex;			\
+		SpecPowWeight = weight;			\
+	}
 #define OPACITY(check,weight)			\
 	if (check && weight > OpWeight)		\
 	{									\
 	/*	DrawTextLeft("O: %d > %d = %s", weight, OpWeight, Tex->Name); */ \
 		Params.Opacity = Tex;			\
 		OpWeight = weight;				\
+	}
+#define EMISSIVE(check,weight)			\
+	if (check && weight > EmWeight)		\
+	{									\
+	/*	DrawTextLeft("E: %d > %d = %s", weight, EmWeight, Tex->Name); */ \
+		Params.Emissive = Tex;			\
+		EmWeight = weight;				\
 	}
 	for (int i = 0; i < ReferencedTextures.Num(); i++)
 	{
@@ -837,10 +859,11 @@ void UMaterial3::GetParams(CMaterialParams &Params)
 		//!! - separate code (common for UMaterial3 + UMaterialInstanceConstant)
 		//!! - may implement with tables + macros
 		//!! - catch normalmap, specular and emissive textures
-		DIFFUSE(appStristr(Name, "diff"), 100)
-		NORMAL (appStristr(Name, "norm"), 100)
-		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80)
-		DIFFUSE(!stricmp(Name + len - 2, "_D"), 10)
+		if (appStristr(Name, "noise")) continue;
+		DIFFUSE(appStristr(Name, "diff"), 100);
+		NORMAL (appStristr(Name, "norm"), 100);
+		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80);
+		DIFFUSE(!stricmp(Name + len - 2, "_D"), 10);
 		OPACITY(appStristr(Name, "_OM"), 20);
 #if 0
 		if (!stricmp(Name + len - 3, "_DI"))		// The Last Remnant ...
@@ -849,11 +872,21 @@ void UMaterial3::GetParams(CMaterialParams &Params)
 			Diffuse = Tex;
 		if (appStristr(Name, "_Diffuse"))
 			Diffuse = Tex;
-#else
-		DIFFUSE(appStristr(Name, "_DI"), 20)
-		DIFFUSE(appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
-		DIFFUSE(appStristr(Name, "_D" ), 2)
 #endif
+		DIFFUSE (appStristr(Name, "_DI"), 20)
+		DIFFUSE (appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
+		DIFFUSE (appStristr(Name, "_D" ), 2)
+		NORMAL  (!stricmp(Name + len - 2, "_N"), 20);
+		SPECULAR(!stricmp(Name + len - 2, "_S"), 20);
+		SPECPOW (!stricmp(Name + len - 3, "_SP"), 20);
+		EMISSIVE(!stricmp(Name + len - 2, "_E"), 20);
+		OPACITY (!stricmp(Name + len - 2, "_A"), 20);
+		OPACITY (!stricmp(Name + len - 5, "_Mask"), 10);
+
+		NORMAL  (appStristr(Name, "Norm"), 80);
+		EMISSIVE(appStristr(Name, "Emis"), 80);
+		SPECULAR(appStristr(Name, "Specular"), 80);
+
 		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
 	}
 }
@@ -901,9 +934,11 @@ void UTexture2D::Bind(unsigned PolyFlags)
 
 void UTexture2D::Release()
 {
+	guard(UTexture2D::Release);
 	if (GL_IsValidObject(TexNum, DrawTimestamp))
 		glDeleteTextures(1, &TexNum);
 	Super::Release();
+	unguard;
 }
 
 
@@ -923,7 +958,7 @@ void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
 }
 
 
-void UMaterialInstanceConstant::GetParams(CMaterialParams &Params)
+void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 {
 	// get params from linked UMaterial3
 	if (Parent) Parent->GetParams(Params);
@@ -945,6 +980,8 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params)
 			Params.SpecPower = P.ParameterValue;
 		else if (appStristr(p, "spec"))
 			Params.Specular = P.ParameterValue;
+		else if (appStristr(p, "emiss"))
+			Params.Emissive = P.ParameterValue;
 	}
 
 	// try to get diffuse texture when nothing found

@@ -40,6 +40,12 @@ int GCurrentFrame = 1;
 int GContextFrame = 0;
 
 
+inline void InvalidateContext()
+{
+	GContextFrame = GCurrentFrame + 1;
+	GCurrentFrame += 2;
+}
+
 //-----------------------------------------------------------------------------
 // Some constants
 //-----------------------------------------------------------------------------
@@ -267,8 +273,7 @@ static void ResizeWindow(int w, int h)
 	if (!glIsTexture(FONT_TEX_NUM))
 	{
 		// possibly context was recreated ...
-		GContextFrame = GCurrentFrame + 1;
-		GCurrentFrame += 2;
+		InvalidateContext();
 		LoadFont();
 	}
 
@@ -493,7 +498,10 @@ static void Init(const char *caption)
 
 static void Shutdown()
 {
+	guard(Shutdown);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+	InvalidateContext();
+	unguard;
 }
 
 
@@ -734,34 +742,31 @@ static void Display()
 	static const float black[4]         = {0,   0,   0,    0};
 	static const float white[4]         = {1,   1,   1,    0};
 	glEnable(GL_COLOR_MATERIAL);
+//	glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_NORMALIZE);		// allow non-normalized normal arrays
 //	glEnable(GL_LIGHTING);
+	// light parameters
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE,  white);
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  lightAmbient);
-//	glLightfv(GL_LIGHT0, GL_SPECULAR, specIntens);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, white);
+	// material parameters
+	glMaterialfv(GL_FRONT, GL_DIFFUSE,  white);
+	glMaterialfv(GL_FRONT, GL_AMBIENT,  white);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, specIntens);
-	glMaterialf(GL_FRONT, GL_SHININESS, 20);
+	glMaterialf (GL_FRONT, GL_SHININESS, 20);
+	// Use GL_EXT_separate_specular_color without check (in worst case GL error code will be set)
+	glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 #if LIGHTING_MODES
 	if (lightingMode == LIGHTING_NONE)
 	{
-		// disable diffuse
+		// disable diffuse and saturate ambient
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, black);
 		glLightfv(GL_LIGHT0, GL_AMBIENT, white);
 	}
-	else
-	{
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
-	}
-	if (lightingMode == LIGHTING_SPECULAR)
-	{
-		// Use GL_EXT_separate_specular_color without check (in worst case GL error code will be set)
-		glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
-	}
-	else
-	{
+	if (lightingMode != LIGHTING_SPECULAR)
 		glMaterialfv(GL_FRONT, GL_SPECULAR, black);
-	}
 #endif // LIGHTING_MODES
 
 	// draw scene
@@ -853,6 +858,8 @@ static void OnKeyboard(unsigned key, unsigned mod)
 
 void VisualizerLoop(const char *caption)
 {
+	guard(VisualizerLoop);
+
 	Init(caption);
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 	ResetView();
@@ -886,6 +893,8 @@ void VisualizerLoop(const char *caption)
 	}
 	// shutdown
 	Shutdown();
+
+	unguard;
 }
 
 #endif // RENDERING

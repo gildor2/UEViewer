@@ -292,6 +292,7 @@ struct FGPUVert3Float : FGPUVert3Common
 	}
 };
 
+//?? move to UnMeshTypes.h ?
 struct FVectorIntervalFixed32
 {
 	int					Value;

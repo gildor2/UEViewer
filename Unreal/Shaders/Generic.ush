@@ -49,11 +49,10 @@ void VertexShaderMain()
 	// light parameters
 	if (useLighting)
 	{
-		//!! strange bug: when displaying skeletal mesh in <I> mode, colors are corresponds to
-		//!! fixed-function drawing; but when displaying in <M> mode, colors are different (darker, saturated?)
-		diffuse  = gl_FrontMaterial.diffuse  *  gl_LightSource[0].diffuse * gl_Color;
-		ambient  = gl_FrontMaterial.ambient  * (gl_LightSource[0].ambient + gl_LightModel.ambient);// * gl_Color;
-		specular = gl_FrontMaterial.specular *  gl_LightSource[0].specular;
+		// gl_FrontMaterial.diffuse and gl_FrontMaterial.ambient are premultiplied by gl_Color (see docs/glsl.txt)
+		diffuse  = /*gl_FrontMaterial.diffuse * */ gl_Color * gl_LightSource[0].diffuse;
+		ambient  = /*gl_FrontMaterial.ambient * */ gl_Color * (gl_LightSource[0].ambient + gl_LightModel.ambient);
+		specular = gl_FrontMaterial.specular * gl_LightSource[0].specular;
 	}
 	else
 	{
@@ -63,7 +62,6 @@ void VertexShaderMain()
 	}
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 	gl_Position    = ftransform();
-
 }
 
 
