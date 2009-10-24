@@ -23,6 +23,7 @@ struct GL_t
 	void	(APIENTRY * Enable) (GLenum cap);
 	void	(APIENTRY * EnableClientState) (GLenum array);
 	void	(APIENTRY * End) ();
+	void	(APIENTRY * Finish) ();
 	GLenum	(APIENTRY * GetError) ();
 	void	(APIENTRY * GetIntegerv) (GLenum pname, GLint *params);
 	const GLubyte *	(APIENTRY * GetString) (GLenum name);
@@ -115,6 +116,7 @@ extern GL_t GL;
 #define glEnable	GL.Enable
 #define glEnableClientState	GL.EnableClientState
 #define glEnd	GL.End
+#define glFinish	GL.Finish
 #define glGetError	GL.GetError
 #define glGetIntegerv	GL.GetIntegerv
 #define glGetString	GL.GetString

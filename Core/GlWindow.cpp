@@ -55,6 +55,8 @@ inline void InvalidateContext()
 #define MAX_DIST				2048
 #define CLEAR_COLOR				0.3, 0.4, 0.6, 1
 #define CLEAR_COLOR2			0.2, 0.4, 0.3, 1
+//#define CLEAR_COLOR				0.5, 0.6, 0.7, 1
+//#define CLEAR_COLOR2			0.22, 0.2, 0.18, 1
 
 #define FONT_TEX_NUM			1
 
@@ -289,6 +291,12 @@ static void ResizeWindow(int w, int h)
 	Set2Dmode();
 
 	unguard;
+}
+
+void GetWindowSize(int &x, int &y)
+{
+	x = winWidth;
+	y = winHeight;
 }
 
 

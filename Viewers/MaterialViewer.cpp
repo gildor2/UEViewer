@@ -510,6 +510,7 @@ static void OutlineMaterial(UObject *Obj, int indent)
 	MAT_END
 
 	MAT_BEGIN(UMaterialInstanceConstant)
+		PROP(Parent)
 		for (int i = 0; i < Mat->TextureParameterValues.Num(); i++)
 		{
 			const FTextureParameterValue &P = Mat->TextureParameterValues[i];

@@ -81,7 +81,7 @@ typedef __int64				int64;
 #	define stricmp			strcasecmp
 #	define strnicmp			strncasecmp
 #	define GCC_PACK			__attribute__((__packed__))
-typedef unsigned long long	int64;
+typedef signed long long	int64;
 #else
 #	error "Unsupported compiler"
 #endif

@@ -18,6 +18,7 @@ void SetDistScale(float scale);
 void SetViewOffset(const CVec3 &offset);
 void ResetView();
 
+void GetWindowSize(int &x, int &y);
 
 // viewport params
 extern bool  vpInvertXAxis;

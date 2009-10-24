@@ -90,18 +90,27 @@ public:
 		BaseTransformScaled.origin = (CVec3&)Mesh->MeshOrigin;
 	}
 
-	void SetMaterial(int Index)
+	UMaterial *GetMaterial(int Index, int *PolyFlags = NULL)
 	{
-		guard(CLodMeshInstance::SetMaterial);
-		int TexIndex = 1000000, PolyFlags = 0;
+		guard(CLodMeshInstance::GetMaterial);
+		int TexIndex = 1000000;
+		if (PolyFlags) *PolyFlags = 0;
 		if (Index < pMesh->Materials.Num())
 		{
 			const FMeshMaterial &M = pMesh->Materials[Index];
 			TexIndex  = M.TextureIndex;
-			PolyFlags = M.PolyFlags;
+			if (PolyFlags) *PolyFlags = M.PolyFlags;
 		}
 		// it is possible, that Textures array is empty (mesh textured by script)
-		UMaterial *Mat = (TexIndex < pMesh->Textures.Num()) ? pMesh->Textures[TexIndex] : NULL;
+		return (TexIndex < pMesh->Textures.Num()) ? pMesh->Textures[TexIndex] : NULL;
+		unguard;
+	}
+
+	void SetMaterial(int Index)
+	{
+		guard(CLodMeshInstance::SetMaterial);
+		int PolyFlags;
+		UMaterial *Mat = GetMaterial(Index, &PolyFlags);
 		CMeshInstance::SetMaterial(Mat, Index, PolyFlags);
 		unguard;
 	}
@@ -239,6 +248,10 @@ public:
 	,	BoneData(NULL)
 	,	Wedges(NULL)
 	,	Skinned(NULL)
+	,	NumWedges(0)
+	,	Sections(NULL)
+	,	NumSections(0)
+	,	Indices(NULL)
 	,	InfColors(NULL)
 	,	ShowSkel(0)
 	,	ShowLabels(false)
@@ -257,8 +270,7 @@ public:
 	void DumpBones();
 	void DrawSkeleton(bool ShowLabels);
 	void DrawAttachments();
-	void DrawBaseSkeletalMesh(bool ShowNormals);
-	void DrawLodSkeletalMesh(const FStaticLODModel *lod);
+	void DrawMesh();
 
 	// skeleton configuration
 	void SetBoneScale(const char *BoneName, float scale = 1.0f);
@@ -320,6 +332,10 @@ protected:
 	struct CMeshBoneData *BoneData;
 	struct CMeshWedge    *Wedges;	// bindpose
 	struct CSkinVert     *Skinned;	// soft-skinned vertices
+	int					 NumWedges;	// used size of Wedges and Skinned arrays (maximal size is Mesh.NumWedges)
+	struct CSkinSection  *Sections;
+	int					 NumSections;
+	int					 *Indices;	// index array
 	CVec3		*InfColors;			// debug: color-by-influence for vertices
 	int			LastLodNum;			// used to detect requirement to rebuild Wedges[]
 	// animation state
@@ -340,7 +356,7 @@ protected:
 		assert(StageIndex >= 0 && StageIndex < MAX_SKELANIMCHANNELS);
 		return Channels[StageIndex];
 	}
-	void TransformMesh(CMeshWedge *Wedges, int NumWedges);
+	void TransformMesh();
 	int FindBone(const char *BoneName) const;
 	int FindAnim(const char *AnimName) const;
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);

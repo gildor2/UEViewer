@@ -42,11 +42,21 @@ DEFINES =			\
 	DYNAMIC_CRC_TABLE	\
 	BUILDFIXED
 
+
 # libraries
 DDS_LIBS = {
 	# ... dds decompression
 	$R/libs/ddslib.c
 }
+
+
+NV_LIBS = {
+	$R/libs/nvtt/nvcore/*.cpp
+	$R/libs/nvtt/nvimage/*.cpp
+#	$R/libs/nvtt/nvmath/*.cpp
+}
+INCLUDES += $R/libs/nvtt
+
 
 UE3_LIBS = {
 	# ... lzo for compressed UE3 packages

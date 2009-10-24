@@ -12,7 +12,8 @@ sources(MAIN) = {
 	MeshInstance/*.cpp
 	Core/*.cpp
 	# libraries
-	$DDS_LIBS
+	$DDS_LIBS	#!! remove
+	$NV_LIBS
 	$UE3_LIBS
 }
 

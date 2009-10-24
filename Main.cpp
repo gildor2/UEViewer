@@ -688,6 +688,25 @@ public:
 
 #endif
 
+
+static void TakeScreenshot(const char *ObjectName)
+{
+	char filename[256];
+	appSprintf(ARRAY_ARG(filename), "Screenshots/%s.tga", ObjectName);
+	printf("Writting screenshot %s\n", filename);
+	appMakeDirectoryForFile(filename);
+	FFileReader Ar(filename, false);
+	int width, height;
+	GetWindowSize(width, height);
+
+	byte *pic = new byte [width * height * 4];
+	glFinish();
+	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pic);
+	WriteTGA(Ar, width, height, pic);
+	delete pic;
+}
+
+
 void AppKeyEvent(int key)
 {
 	guard(AppKeyEvent);
@@ -741,6 +760,12 @@ void AppKeyEvent(int key)
 		//!! export here
 	}
 #endif
+	if (key == ('s'|KEY_CTRL))
+	{
+		UObject *Obj = UObject::GObjObjects[ObjIndex];
+		TakeScreenshot(Obj->Name);
+		return;
+	}
 	Viewer->ProcessKey(key);
 	unguard;
 }
@@ -756,6 +781,7 @@ void AppDisplayTexts(bool helpVisible)
 #if 0
 		DrawTextLeft("Ctrl+X      export object");
 #endif
+		DrawTextLeft("Ctrl+S      take screenshot");
 		Viewer->ShowHelp();
 		DrawTextLeft("-----\n");		// divider
 	}

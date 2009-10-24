@@ -104,7 +104,18 @@ fi
 case "" in
 
 "")
-	run1 C:/!umodel-data/MirrorsEdge CH_TKY_Crim_Fixer.upk SK_TKY_Crim_Fixer
+	# Mass Effect
+	# bug: MatInstConst -> MatInstConst -> Mat => loose transparency
+#	rund BIOG_HMF_HED_PROMorph_R.upk HMF_HED_PROLash_Mat_1a
+	rund BIOG_HMF_HED_PROMorph_R.upk #HMF_HED_PROCustom_Military_Norm
+
+	# Bioshosk
+#	bio 0-Lighthouse.bsm MetalVents_NormalMap
+#	bio 0-Lighthouse.bsm WallTech_NormalMap
+#	bio 0-Lighthouse.bsm ripple_normalmap
+#	bio 0-Lighthouse.bsm Rock_NormalMap
+
+#	run1 C:/!umodel-data/MirrorsEdge CH_TKY_Crim_Fixer.upk SK_TKY_Crim_Fixer
 #	ut2 HumanMaleA MercMaleD
 #	ut3 CH_AnimHuman
 	# Army of Two

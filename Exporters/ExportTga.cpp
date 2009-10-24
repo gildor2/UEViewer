@@ -31,31 +31,13 @@ struct GCC_PACK tgaHdr_t
 #endif
 
 
-void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar)
+//?? place this function outside (cannot place to Core - using FArchive)
+
+void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 {
-	guard(ExportTga);
+	guard(WriteTGA);
 
 	int		i;
-
-	int width, height;
-	byte *pic = Tex->Decompress(width, height);
-	if (!pic)
-	{
-		appNotify("WARNING: texture %s has no valid mipmaps", Tex->Name);
-		return;		//?? should erase file ?
-	}
-
-#if TGA_SAVE_BOTTOMLEFT
-	// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
-	// it simply ignores orientation flags)
-	for (i = 0; i < height / 2; i++)
-	{
-		byte *p1 = pic + width * 4 * i;
-		byte *p2 = pic + width * 4 * (height - i - 1);
-		for (int j = 0; j < width * 4; j++)
-			Exchange(p1[j], p2[j]);
-	}
-#endif
 
 	byte *src;
 	int size = width * height;
@@ -188,6 +170,37 @@ void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar)
 #endif
 
 	appFree(packed);
+
+	unguard;
+}
+
+
+void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar)
+{
+	guard(ExportTga);
+
+	int width, height;
+	byte *pic = Tex->Decompress(width, height);
+	if (!pic)
+	{
+		appNotify("WARNING: texture %s has no valid mipmaps", Tex->Name);
+		return;		//?? should erase file ?
+	}
+
+#if TGA_SAVE_BOTTOMLEFT
+	// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
+	// it simply ignores orientation flags)
+	for (int i = 0; i < height / 2; i++)
+	{
+		byte *p1 = pic + width * 4 * i;
+		byte *p2 = pic + width * 4 * (height - i - 1);
+		for (int j = 0; j < width * 4; j++)
+			Exchange(p1[j], p2[j]);
+	}
+#endif
+
+	WriteTGA(Ar, width, height, pic);
+	delete pic;
 
 	unguard;
 }

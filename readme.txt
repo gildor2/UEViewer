@@ -90,11 +90,13 @@ Note: if you will launch program from Windows explorer etc, you will get a conso
 window with a help message, but this windoww will immediately disappear.
 
 Keyboard:
-H          full keyboard help
-ESC        exit umodel
-PgUp/UpDn  browse all objects
-Ctrl+L     switch lighting modes
-Ctrl+G     toggle OpenGL 2.0 / OpenGL 1.1 renderer
+H                full keyboard help
+ESC              exit umodel
+PgUp/UpDn        browse loaded objects
+Ctrl+S           take screenshot
+Ctrl+PgUp/PgDn   scroll onscreen texts
+Ctrl+L           switch lighting modes
+Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
 
 
 Notes about psk/psa export.
@@ -131,6 +133,16 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+23.10.2009
+- implemented Tribes: Vengeance, Bioshock and Mass Effect compressed normalmap support
+  (DXT5n and 3Dc/ATI2 texture compressions)
+- Ctrl+S will take screenshot into file Screenshots/ObjectName.tga
+
+21.10.2009
+- fixed translucent surface drawing (not erased by opaque surfaces)
+- skeletal mesh LOD model drawing now have full features (show normals, influences
+  etc)
+
 17.10.2009
 - renderer: implemented support for material light emission
 - implemented UE3 material export (*.mat file, custom format)

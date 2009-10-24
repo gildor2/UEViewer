@@ -91,7 +91,7 @@ void End();
 //void EvalPoint1(GLint i);
 //void EvalPoint2(GLint i, GLint j);
 //void FeedbackBuffer(GLsizei size, GLenum type, GLfloat *buffer);
-//void Finish();
+void Finish();
 //void Flush();
 //void Fogf(GLenum pname, GLfloat param) ARGS
 //void Fogfv(GLenum pname, const GLfloat *params) ARGS

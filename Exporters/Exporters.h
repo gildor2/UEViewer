@@ -43,4 +43,6 @@ struct UniqueNameList
 	}
 };
 
+void WriteTGA(FArchive &Ar, int width, int height, byte *pic);
+
 #endif // __EXPORT_H__

@@ -1406,6 +1406,8 @@ public:
 		PROP_DROP(AddToParentPerPolyCollisionBone)
 		PROP_DROP(bUseSimpleLineCollision)
 		PROP_DROP(bUseSimpleBoxCollision)
+		PROP_DROP(LODBiasPS3)
+		PROP_DROP(LODBiasXbox360)
 #	if MEDGE
 		PROP_DROP(NumUVSets)
 #	endif

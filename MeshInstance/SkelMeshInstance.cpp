@@ -13,6 +13,7 @@
 //#define SHOW_ANIM				1
 #define SHOW_BONE_UPDATES		1
 
+#define SORT_BY_OPACITY			1
 
 struct CMeshBoneData
 {
@@ -53,8 +54,17 @@ struct CSkinVert
 };
 
 
+struct CSkinSection
+{
+//	int			MaterialIndex; -- should use index from Sections[] array
+	int			FirstIndex;
+	int			NumFaces;
+};
+
+
 #define ANIM_UNASSIGNED			-2
 #define MAX_MESHBONES			512
+#define MAX_MESHMATERIALS		256
 
 
 /*-----------------------------------------------------------------------------
@@ -68,6 +78,8 @@ CSkelMeshInstance::~CSkelMeshInstance()
 		delete BoneData;
 		delete Wedges;
 		delete Skinned;
+		delete Sections;
+		delete Indices;
 	}
 	if (InfColors) delete InfColors;
 }
@@ -333,17 +345,147 @@ static void BuildNormals(CMeshWedge *Wedges, int NumPoints, const TArray<FMeshWe
 }
 
 
+// Build indices for base mesh
+void BuildIndices(CSkinSection *Sections, int NumSections, const TArray<VTriangle> &MeshFaces, int *Indices)
+{
+	guard(BuildIndices);
+
+	memset(Sections, 0, NumSections * sizeof(CSkinSection));
+
+	int i;
+
+	for (int pass = 0; pass < 2; pass++)
+	{
+		int NumIndices = 0;
+		for (i = 0; i < NumSections; i++)
+		{
+			if (pass == 1)
+			{
+				int SecIndices = Sections[i].NumFaces * 3;
+				Sections[i].FirstIndex = NumIndices;
+				NumIndices += SecIndices;
+			}
+			Sections[i].NumFaces = 0;
+		}
+
+		for (i = 0; i < MeshFaces.Num(); i++)
+		{
+			const VTriangle &Face = MeshFaces[i];
+			int MatIndex          = Face.MatIndex;
+			CSkinSection    &Sec  = Sections[MatIndex];
+			assert(MatIndex < NumSections);
+
+			if (pass == 1)	// on 1st pass count NumFaces, on 2nd pass fill indices
+			{
+				int *idx = Indices + Sec.FirstIndex + Sec.NumFaces * 3;
+				for (int j = 0; j < 3; j++)
+					*idx++ = Face.WedgeIndex[j];
+			}
+
+			Sec.NumFaces++;
+		}
+	}
+
+	unguard;
+}
+
+
+// Build indices for LOD mesh
+static void BuildIndicesLod(CSkinSection *Sections, int NumSections, const FStaticLODModel *lod, int *Indices)
+{
+	guard(BuildIndicesLod);
+
+	memset(Sections, 0, NumSections * sizeof(CSkinSection));
+
+	int i;
+
+	for (int pass = 0; pass < 2; pass++)
+	{
+		int NumIndices = 0;
+		for (i = 0; i < NumSections; i++)
+		{
+			if (pass == 1)
+			{
+				int SecIndices = Sections[i].NumFaces * 3;
+				Sections[i].FirstIndex = NumIndices;
+				NumIndices += SecIndices;
+			}
+			Sections[i].NumFaces = 0;
+		}
+
+		int s;
+
+		// smooth sections (influence count >= 2)
+		for (s = 0; s < lod->SmoothSections.Num(); s++)
+		{
+			const FSkelMeshSection &ms = lod->SmoothSections[s];
+			int MatIndex       = ms.MaterialIndex;
+			CSkinSection &Sec  = Sections[MatIndex];
+			assert(MatIndex < NumSections);
+
+			if (pass == 1)
+			{
+				int *idx = Indices + Sec.FirstIndex + Sec.NumFaces * 3;
+				for (i = 0; i < ms.NumFaces; i++)
+				{
+					const FMeshFace &F = lod->Faces[ms.FirstFace + i];
+					//?? ignore F.MaterialIndex - may be any
+//					assert(F.MaterialIndex == ms.MaterialIndex);
+					for (int j = 0; j < 3; j++)
+						*idx++ = F.iWedge[j];
+				}
+			}
+
+			Sec.NumFaces += ms.NumFaces;
+		}
+		// rigid sections (influence count == 1)
+		for (s = 0; s < lod->RigidSections.Num(); s++)
+		{
+			const FSkelMeshSection &ms = lod->RigidSections[s];
+			int MatIndex       = ms.MaterialIndex;
+			CSkinSection &Sec  = Sections[MatIndex];
+			assert(MatIndex < NumSections);
+
+			if (pass == 1)
+			{
+				int *idx = Indices + Sec.FirstIndex + Sec.NumFaces * 3;
+				for (i = 0; i < ms.NumFaces; i++)
+				{
+					for (int j = 0; j < 3; j++)
+						*idx++ = lod->RigidIndices.Indices[(ms.FirstFace + i) * 3 + j];
+				}
+			}
+
+			Sec.NumFaces += ms.NumFaces;
+		}
+	}
+
+	unguard;
+}
+
+
 void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 {
 	guard(CSkelMeshInstance::SetMesh);
+
+	int i;
 
 	CLodMeshInstance::SetMesh(LodMesh);
 	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(LodMesh);
 
 	int NumBones  = Mesh->RefSkeleton.Num();
 	int NumVerts  = Mesh->Points.Num();
-	int NumWedges = Mesh->Wedges.Num();
+	NumWedges = Mesh->Wedges.Num();
 	const UMeshAnimation *Anim = Mesh->Animation;
+
+	// count materials (may ge greater than Mesh->Materials.Num())
+	NumSections = Mesh->Materials.Num() - 1;
+	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	{
+		int m = Mesh->Triangles[i].MatIndex;
+		if (m > NumSections) NumSections = m;
+	}
+	NumSections++;		// before this, NumMaterials = max index of used material
 
 	// allocate some arrays
 	if (BoneData)
@@ -351,6 +493,8 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 		delete BoneData;
 		delete Wedges;
 		delete Skinned;
+		delete Sections;
+		delete Indices;
 	}
 	if (InfColors)
 	{
@@ -360,10 +504,11 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 	BoneData = new CMeshBoneData[NumBones];
 	Wedges   = new CMeshWedge   [NumWedges];
 	Skinned  = new CSkinVert    [NumWedges];
+	Sections = new CSkinSection [NumSections];
+	Indices  = new int          [Mesh->Triangles.Num() * 3];
 
 	LastLodNum = -2;
 
-	int i;
 	CMeshBoneData *data;
 	for (i = 0, data = BoneData; i < NumBones; i++, data++)
 	{
@@ -1296,7 +1441,7 @@ void CSkelMeshInstance::DrawAttachments()
 
 
 // Software skinning
-void CSkelMeshInstance::TransformMesh(CMeshWedge *Wedges, int NumWedges)
+void CSkelMeshInstance::TransformMesh()
 {
 	guard(CSkelMeshInstance::TransformMesh);
 	//?? try other tech: compute weighted sum of matrices, and then
@@ -1380,14 +1525,13 @@ void CSkelMeshInstance::TransformMesh(CMeshWedge *Wedges, int NumWedges)
 }
 
 
-void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
+void CSkelMeshInstance::DrawMesh()
 {
-	guard(CSkelMeshInstance::DrawBaseSkeletalMesh);
+	guard(CSkelMeshInstance::DrawMesh);
 	int i;
 
-	const USkeletalMesh *Mesh = GetMesh();
-
 #if 0
+	const USkeletalMesh *Mesh = GetMesh();
 	glBegin(GL_POINTS);
 	for (i = 0; i < Mesh->Points.Num(); i++)
 		glVertex3fv(&Mesh->Points[i].X);
@@ -1395,85 +1539,100 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 	return;
 #endif
 
-	TransformMesh(Wedges, Mesh->Wedges.Num());
+	TransformMesh();
 
 	glEnable(GL_LIGHTING);
 
-	if (!ShowInfluences)
-	{
-		// draw normal mesh
-		int lastMatIndex = -1;
-		GLint tangent = -1, binormal = -1;
-		const CShader *Sh = NULL;
+	// draw normal mesh
 
-		glBegin(GL_TRIANGLES);
-		for (i = 0; i < Mesh->Triangles.Num(); i++)
-		{
-			//!! can build index array and use GL vertex arrays for drawing
-			const VTriangle &Face = Mesh->Triangles[i];
-			if (Face.MatIndex != lastMatIndex)
-			{
-				// change active material
-				glEnd();					// stop drawing sequence
-				SetMaterial(Face.MatIndex);
-				lastMatIndex = Face.MatIndex;
-				//!! BUMP
-				Sh = GCurrentShader;
-				if (Sh)
-				{
-					tangent  = Sh->GetAttrib("tangent");
-					binormal = Sh->GetAttrib("binormal");
-				}
-				else
-					tangent = binormal = -1;
-				//!! ^^^^
-				glBegin(GL_TRIANGLES);		// restart drawing sequence
-			}
-			for (int j = 0; j < 3; j++)
-			{
-				int iWedge = Face.WedgeIndex[j];
-				const CMeshWedge &W = Wedges[iWedge];
-				const CSkinVert  &V = Skinned[iWedge];
-				glTexCoord2f(W.U, W.V);
-				glNormal3fv(V.Normal.v);
-				if (tangent  >= 0) Sh->SetAttrib(tangent,  V.Tangent );	//!! BUMP
-				if (binormal >= 0) Sh->SetAttrib(binormal, V.Binormal);	//!! BUMP
-				glVertex3fv(V.Pos.v);
-			}
-		}
-		glEnd();
-	}
-	else
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Pos);
+	glNormalPointer(GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Normal);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(CMeshWedge), &Wedges[0].U);
+
+	if (ShowInfluences)
 	{
-		// draw influences
-		if (!InfColors)
-			BuildInfColors();
+		// in this mode mesh is displayed colorized instead of textured
+		if (!InfColors) BuildInfColors();
 		assert(InfColors);
-
+		glEnableClientState(GL_COLOR_ARRAY);
+		glColorPointer(3, GL_FLOAT, 0, InfColors);
 		BindDefaultMaterial(true);
-
-		glBegin(GL_TRIANGLES);
-		for (i = 0; i < Mesh->Triangles.Num(); i++)
-		{
-			const VTriangle &Face = Mesh->Triangles[i];
-			for (int j = 0; j < 3; j++)
-			{
-				int iWedge = Face.WedgeIndex[j];
-				const CSkinVert &V = Skinned[iWedge];
-				glColor3fv(InfColors[iWedge].v);
-				glNormal3fv(Skinned[iWedge].Normal.v);
-				glVertex3fv(V.Pos.v);
-			}
-		}
-		glEnd();
 	}
+
+#if SORT_BY_OPACITY
+	// sort sections by material opacity
+	int SectionMap[MAX_MESHMATERIALS];
+	int secPlace = 0;
+	for (int opacity = 0; opacity < 2; opacity++)
+	{
+		for (i = 0; i < NumSections; i++)
+		{
+			UMaterial *Mat = GetMaterial(i);
+			int op = 0;			// sort value
+			if (Mat && Mat->IsTranslucent()) op = 1;
+			if (op == opacity) SectionMap[secPlace++] = i;
+		}
+	}
+	assert(secPlace == NumSections);
+#endif // SORT_BY_OPACITY
+
+	for (i = 0; i < NumSections; i++)
+	{
+#if SORT_BY_OPACITY
+		int MaterialIndex = SectionMap[i];
+#else
+		int MaterialIndex = i;
+#endif
+		const CSkinSection &Sec = Sections[MaterialIndex];
+		if (!Sec.NumFaces) continue;
+		// select material
+		if (!ShowInfluences)
+			SetMaterial(MaterialIndex);
+		// check tangent space
+		GLint aTangent = -1, aBinormal = -1;
+		bool hasTangent = false;
+		const CShader *Sh = GCurrentShader;
+		if (Sh)
+		{
+			aTangent   = Sh->GetAttrib("tangent");
+			aBinormal  = Sh->GetAttrib("binormal");
+			hasTangent = (aTangent >= 0 && aBinormal >= 0);
+		}
+		if (hasTangent)
+		{
+			glEnableVertexAttribArray(aTangent);
+			glEnableVertexAttribArray(aBinormal);
+			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Tangent);
+			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Binormal);
+		}
+		// draw
+		glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_INT, Indices + Sec.FirstIndex);
+		// disable tangents
+		if (hasTangent)
+		{
+			glDisableVertexAttribArray(aTangent);
+			glDisableVertexAttribArray(aBinormal);
+		}
+	}
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+
+	// display debug information
 
 	glDisable(GL_LIGHTING);
 	BindDefaultMaterial(true);
 
 #if SHOW_INFLUENCES
+	const USkeletalMesh *Mesh = GetMesh();
 	glBegin(GL_LINES);
-	for (i = 0; i < Mesh->Wedges.Num(); i++)
+	for (i = 0; i < NumWedges; i++)
 	{
 		const CMeshWedge &W = Wedges[i];
 //		const FVertInfluences &Inf = Mesh->VertInfluences[i];
@@ -1494,11 +1653,12 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 #endif // SHOW_INFLUENCES
 
 	// draw mesh normals
-	if (ShowNormals)
+
+	if (bShowNormals)
 	{
 		glBegin(GL_LINES);
 		glColor3f(0.5f, 1, 0);
-		for (i = 0; i < Mesh->Wedges.Num(); i++)
+		for (i = 0; i < NumWedges; i++)
 		{
 			glVertex3fv(Skinned[i].Pos.v);
 			CVec3 tmp;
@@ -1507,7 +1667,7 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 		}
 #if SHOW_TANGENTS
 		glColor3f(0, 0.5f, 1);
-		for (i = 0; i < Mesh->Wedges.Num(); i++)
+		for (i = 0; i < NumWedges; i++)
 		{
 			const CVec3 &v = Skinned[i].Pos;
 			glVertex3fv(v.v);
@@ -1516,7 +1676,7 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 			glVertex3fv(tmp.v);
 		}
 		glColor3f(1, 0, 0.5f);
-		for (i = 0; i < Mesh->Wedges.Num(); i++)
+		for (i = 0; i < NumWedges; i++)
 		{
 			const CVec3 &v = Skinned[i].Pos;
 			glVertex3fv(v.v);
@@ -1532,142 +1692,53 @@ void CSkelMeshInstance::DrawBaseSkeletalMesh(bool ShowNormals)
 }
 
 
-void CSkelMeshInstance::DrawLodSkeletalMesh(const FStaticLODModel *lod)
-{
-	guard(CSkelMeshInstance::DrawLodSkeletalMesh);
-	int i, sec;
-
-	//!! For Lineage should use FLineageWedge structure - it's enough; better -
-	//!! - restore Points, Wedges and VertInfluences arrays using 'unk2'
-	//!! (problem: should share verts between wedges); also restore mesh by lod#0
-
-	TransformMesh(Wedges, lod->Wedges.Num());
-
-	glEnable(GL_LIGHTING);
-
-/*	// skinning stream
-	for (i = 0; i < lod->SkinningData.Num(); i++)
-	{
-		int n = lod->SkinningData[i];
-		float &f = (float&)n;
-		DrawTextRight("%4d : %08X : %10.3f", i, n, f);
-	}
-	// influences
-	for (i = 0; i < lod->VertInfluences.Num(); i++)
-	{
-		const FVertInfluences &I = lod->VertInfluences[i];
-		DrawTextLeft("b%4d : p%4d : %7.3f", I.BoneIndex, I.PointIndex, I.Weight);
-	}
-*/
-
-	// smooth sections (influence count >= 2)
-	for (sec = 0; sec < lod->SmoothSections.Num(); sec++)
-	{
-		const FSkelMeshSection &ms = lod->SmoothSections[sec];
-		SetMaterial(ms.MaterialIndex);
-		glBegin(GL_TRIANGLES);
-#if 1
-		for (i = 0; i < ms.NumFaces; i++)
-		{
-			const FMeshFace &F = lod->Faces[ms.FirstFace + i];
-			//?? ignore F.MaterialIndex - may be any
-//			assert(F.MaterialIndex == ms.MaterialIndex);
-			for (int j = 0; j < 3; j++)
-			{
-				int iWedge = F.iWedge[j];
-				const CMeshWedge &W = Wedges[iWedge];
-				const CSkinVert  &V = Skinned[iWedge];
-				glTexCoord2f(W.U, W.V);
-				glNormal3fv(V.Normal.v);
-				glVertex3fv(V.Pos.v);
-			}
-		}
-#else
-		for (i = 0; i < ms.NumFaces; i++)
-		{
-			for (int j = 0; j < 3; j++)
-			{
-				const FMeshWedge &W = lod->Wedges[lod->SmoothIndices.Indices[(ms.FirstFace + i) * 3 + j]];
-				glTexCoord2f(W.TexUV.U, W.TexUV.V);
-				glVertex3fv(&lod->SkinPoints[W.iVertex].Point.X);
-			}
-		}
-#endif
-		glEnd();
-	}
-	// rigid sections (influence count == 1)
-	for (sec = 0; sec < lod->RigidSections.Num(); sec++)
-	{
-		const FSkelMeshSection &ms = lod->RigidSections[sec];
-		SetMaterial(ms.MaterialIndex);
-		glBegin(GL_TRIANGLES);
-#if 1
-		for (i = 0; i < ms.NumFaces; i++)
-		{
-//			const FMeshFace &F = lod->Faces[ms.FirstFace + i];
-			for (int j = 0; j < 3; j++)
-			{
-//				const FMeshWedge &W = lod->Wedges[F.iWedge[j]];
-				int iWedge = lod->RigidIndices.Indices[(ms.FirstFace + i) * 3 + j];
-				const CMeshWedge &W = Wedges[iWedge];
-				const CSkinVert  &V = Skinned[iWedge];
-				glTexCoord2f(W.U, W.V);
-				glNormal3fv(V.Normal.v);
-				glVertex3fv(V.Pos.v);
-			}
-		}
-#else
-		for (i = ms.MinStreamIndex; i < ms.MinStreamIndex + ms.NumStreamIndices; i++)
-		{
-			const FAnimMeshVertex &V = lod->VertexStream.Verts[lod->RigidIndices.Indices[i]];
-			glTexCoord2f(V.Tex.U, V.Tex.V);
-			glVertex3fv(&V.Pos.X);
-		}
-#endif
-		glEnd();
-	}
-
-	unguard;
-}
-
-
 void CSkelMeshInstance::Draw()
 {
 	guard(CSkelMeshInstance::Draw);
 
 	const USkeletalMesh *Mesh = GetMesh();
 
+	//?? move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
 	// show skeleton
-	if (ShowSkel)			//?? move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
+	if (ShowSkel)
 		DrawSkeleton(ShowLabels);
-	// show mesh
-	if (ShowSkel != 2)
-	{
-		if (LodNum != LastLodNum)
-		{
-			if (LodNum < 0)
-			{
-				BuildWedges(Wedges, Mesh->Wedges.Num(), Mesh->Points, Mesh->Wedges, Mesh->VertInfluences);
-				BuildNormals(Wedges, Mesh->Points.Num(), Mesh->Wedges, Mesh->Triangles);
-			}
-			else
-			{
-				const FStaticLODModel &Lod = Mesh->LODModels[LodNum];
-				BuildWedges(Wedges, Mesh->Wedges.Num(), Lod.Points, Lod.Wedges, Lod.VertInfluences);
-				TArray<VTriangle> Faces;
-				CopyArray(Faces, Lod.Faces);
-				BuildNormals(Wedges, Lod.Points.Num(), Lod.Wedges, Faces);
-			}
-			LastLodNum = LodNum;
-		}
-
-		if (LodNum < 0)
-			DrawBaseSkeletalMesh(bShowNormals);
-		else
-			DrawLodSkeletalMesh(&Mesh->LODModels[LodNum]);
-	}
 	if (ShowAttach)
 		DrawAttachments();
+	if (ShowSkel == 2) return;		// show skeleton only
+
+	// show mesh
+
+	if (LodNum != LastLodNum)
+	{
+		// LOD has been changed
+
+		if (InfColors)
+		{
+			delete InfColors;
+			InfColors = NULL;
+		}
+		// rebuild local mesh
+		if (LodNum < 0)
+		{
+			NumWedges = Mesh->Wedges.Num();
+			BuildWedges(Wedges, Mesh->Wedges.Num(), Mesh->Points, Mesh->Wedges, Mesh->VertInfluences);
+			BuildNormals(Wedges, Mesh->Points.Num(), Mesh->Wedges, Mesh->Triangles);
+			BuildIndices(Sections, NumSections, Mesh->Triangles, Indices);
+		}
+		else
+		{
+			const FStaticLODModel &Lod = Mesh->LODModels[LodNum];
+			NumWedges = Lod.Wedges.Num();
+			BuildWedges(Wedges, Mesh->Wedges.Num(), Lod.Points, Lod.Wedges, Lod.VertInfluences);
+			TArray<VTriangle> Faces;
+			CopyArray(Faces, Lod.Faces);
+			BuildNormals(Wedges, Lod.Points.Num(), Lod.Wedges, Faces);
+			BuildIndicesLod(Sections, NumSections, &Lod, Indices);
+		}
+		LastLodNum = LodNum;
+	}
+
+	DrawMesh();
 
 	unguard;
 }
@@ -1679,9 +1750,9 @@ void CSkelMeshInstance::BuildInfColors()
 
 	int i;
 
-	const USkeletalMesh *Mesh = GetMesh();
+	const USkeletalMesh *Mesh = GetMesh();	// for skeleton only
 	if (InfColors) delete InfColors;
-	InfColors = new CVec3[Mesh->Wedges.Num()];
+	InfColors = new CVec3[NumWedges];
 
 	// get colors for bones
 	int NumBones = Mesh->RefSkeleton.Num();
@@ -1690,7 +1761,7 @@ void CSkelMeshInstance::BuildInfColors()
 		GetBoneInfColor(i, BoneColors[i]);
 
 	// process influences
-	for (i = 0; i < Mesh->Wedges.Num(); i++)
+	for (i = 0; i < NumWedges; i++)
 	{
 		const CMeshWedge &W = Wedges[i];
 		for (int j = 0; j < NUM_INFLUENCES; j++)

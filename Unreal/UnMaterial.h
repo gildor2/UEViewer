@@ -118,11 +118,18 @@ public:
 	UUnrealMaterial()
 	:	DrawTimestamp(0)
 	{}
-	virtual void Bind(unsigned PolyFlags)
+	virtual void Bind(unsigned PolyFlags)		// PolyFlags used for UE1 only
+	{}
+	// bind material with "Params" and compile shader into "Shader"
+	virtual void Bind(CMaterialParams &Params, CShader &Shader)
 	{}
 	virtual void Release();
 	virtual void GetParams(CMaterialParams &Params) const
 	{}
+	virtual bool IsTranslucent() const
+	{
+		return false;
+	}
 
 protected:
 	// rendering implementation fields
@@ -350,7 +357,11 @@ enum ETextureFormat
 	TEXF_DXT5,
 	TEXF_L8,			// 8-bit grayscale
 	TEXF_G16,			// 16-bit grayscale (terrain heightmaps)
-	TEXF_RRRGGGBBB
+	TEXF_RRRGGGBBB,
+	// Tribes texture formats
+	TEXF_CxV8U8,
+	TEXF_DXT5N,			// Note: in Bioshock this value has name 3DC, but really DXT5N is used
+	TEXF_3DC,			// names: 3Dc, ATI2, BC5
 };
 
 _ENUM(ETextureFormat)
@@ -366,7 +377,11 @@ _ENUM(ETextureFormat)
 	_E(TEXF_DXT5),
 	_E(TEXF_L8),
 	_E(TEXF_G16),
-	_E(TEXF_RRRGGGBBB)
+	_E(TEXF_RRRGGGBBB),
+	// Tribes texture formats
+	_E(TEXF_CxV8U8),
+	_E(TEXF_DXT5N),
+	_E(TEXF_3DC),
 };
 
 enum ETexClampMode
@@ -527,6 +542,8 @@ public:
 		TRIBES_HDR(Ar, 0x2E);
 		if (Ar.IsBioshock && t3_hdrSV >= 1)
 			Ar << CachedBulkDataSize;
+		if (Ar.IsBioshock && Format == 12)	// remap format; note: Bioshock used 3DC name, but real format is DXT5N
+			Format = TEXF_DXT5N;
 #endif // BIOSHOCK
 		Ar << Mips;
 		if (Ar.ArVer < PACKAGE_V2)
@@ -591,7 +608,8 @@ public:
 #if RENDERING
 	virtual void Bind(unsigned PolyFlags);
 	virtual void Release();
-#endif
+	virtual bool IsTranslucent() const;
+#endif // RENDERING
 };
 
 
@@ -729,7 +747,10 @@ public:
 	}
 #endif
 
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	virtual bool IsTranslucent() const;
+#endif
 };
 
 
@@ -742,6 +763,12 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Material)
 	END_PROP_TABLE
+#if RENDERING
+	virtual bool IsTranslucent() const
+	{
+		return Material ? Material->IsTranslucent() : false;
+	}
+#endif
 };
 
 
@@ -812,7 +839,10 @@ public:
 #endif
 	END_PROP_TABLE
 
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	virtual bool IsTranslucent() const;
+#endif
 };
 
 
@@ -886,7 +916,13 @@ public:
 		PROP_BOOL(Modulate4X)
 	END_PROP_TABLE
 
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	virtual bool IsTranslucent() const
+	{
+		return false;
+	}
+#endif
 };
 
 
@@ -1238,7 +1274,10 @@ public:
 		PROP_DROP(Hardness)
 	END_PROP_TABLE
 
-	BIND;
+#if RENDERING
+	virtual void Bind(unsigned PolyFlags);
+	virtual bool IsTranslucent() const;
+#endif
 };
 
 #endif // BIOSHOCK
@@ -1327,7 +1366,11 @@ enum EPixelFormat
 	PF_G32R32F,
 	PF_A2B10G10R10,
 	PF_A16B16G16R16,
-	PF_D24
+	PF_D24,
+#if MASSEFF
+	PF_NormalMap_LQ,
+	PF_NormalMap_HQ,
+#endif
 };
 
 _ENUM(EPixelFormat)
@@ -1352,7 +1395,11 @@ _ENUM(EPixelFormat)
 	_E(PF_G32R32F),
 	_E(PF_A2B10G10R10),
 	_E(PF_A16B16G16R16),
-	_E(PF_D24)
+	_E(PF_D24),
+#if MASSEFF
+	_E(PF_NormalMap_LQ),
+	_E(PF_NormalMap_HQ),
+#endif
 };
 
 enum ETextureFilter
@@ -1496,9 +1543,26 @@ enum EMaterialLightingModel
 	MLM_Custom
 };
 
-class UMaterial3 : public UUnrealMaterial
+
+class UMaterialInterface : public UUnrealMaterial
 {
-	DECLARE_CLASS(UMaterial3, UUnrealMaterial)
+	DECLARE_CLASS(UMaterialInterface, UUnrealMaterial)
+public:
+	BEGIN_PROP_TABLE
+		PROP_DROP(PreviewMesh)
+	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		Ar.Seek(Ar.GetStopper());			//?? drop native data
+	}
+};
+
+
+class UMaterial3 : public UMaterialInterface
+{
+	DECLARE_CLASS(UMaterial3, UMaterialInterface)
 public:
 	bool			TwoSided;
 	bool			bDisableDepthTest;
@@ -1509,13 +1573,8 @@ public:
 
 	UMaterial3()
 	:	OpacityMaskClipValue(0.333f)		//?? check
+	,	BlendMode(BLEND_Opaque)
 	{}
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		Super::Serialize(Ar);
-		Ar.Seek(Ar.GetStopper());			//?? drop native data
-	}
 
 	BEGIN_PROP_TABLE
 		PROP_BOOL(TwoSided)
@@ -1524,8 +1583,6 @@ public:
 		PROP_ARRAY(ReferencedTextures, UObject*)
 		PROP_ENUM2(BlendMode, EBlendMode)
 		PROP_FLOAT(OpacityMaskClipValue)
-		// MaterialInterface fields
-		PROP_DROP(PreviewMesh)
 		//!! should be used (main material inputs in UE3 material editor)
 		PROP_DROP(DiffuseColor)
 		PROP_DROP(DiffusePower)				// GoW2
@@ -1586,22 +1643,23 @@ public:
 
 #if RENDERING
 	virtual void Bind(unsigned PolyFlags);
-	void Bind(CMaterialParams &Params, CShader &Shader);
+	virtual void Bind(CMaterialParams &Params, CShader &Shader);
 	virtual void GetParams(CMaterialParams &Params) const;
+	virtual bool IsTranslucent() const;
 #endif
 };
 
-class UMaterialInstance : public UMaterial3	//?? really not derived from UMaterial3 !
+class UMaterialInstance : public UMaterialInterface
 {
-	DECLARE_CLASS(UMaterialInstance, UMaterial3)
+	DECLARE_CLASS(UMaterialInstance, UMaterialInterface)
 public:
-	UMaterial3		*Parent;			//?? use it
+	UUnrealMaterial	*Parent;			// UMaterialInterface*
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Parent)
-//		PROP_DROP(PhysMaterial) -- duplicate ?
+		PROP_DROP(PhysMaterial)
 		PROP_DROP(bHasStaticPermutationResource)
-//		PROP_DROP(ReferencedTextures) -- duplicate ?
+		PROP_DROP(ReferencedTextures)	// this is a textures from Parent plus own overrided textures
 	END_PROP_TABLE
 };
 
@@ -1637,11 +1695,20 @@ public:
 
 #if RENDERING
 	virtual void Bind(unsigned PolyFlags);
+	virtual void Bind(CMaterialParams &Params, CShader &Shader);
 	virtual void GetParams(CMaterialParams &Params) const;
+	virtual bool IsTranslucent() const
+	{
+		return Parent ? Parent->IsTranslucent() : false;
+	}
 #endif
 };
 
 #endif // UNREAL3
+
+
+byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
+	const char *Name, UPalette *Palette);
 
 
 #define REGISTER_MATERIAL_CLASSES		\

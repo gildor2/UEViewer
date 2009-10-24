@@ -146,6 +146,9 @@ void PixelShaderMain()
 #endif
 	color.a   *= GetMaterialOpacity(TexCoord);
 
+//	color.rgb += pow(1.0 - dot(n, tangentEye), 3.5) * vec3(1.0);	// Fresnel
+//	color.rgb = pow(dot(n, tangentEye), 3.5) * vec3(1.0);
+
 #ifdef NORMALMAP
 	gl_FragColor = vec4(n, 1.0);	// show normalmap
 #else

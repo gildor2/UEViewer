@@ -4,11 +4,11 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
-#include "libs/ddslib.h"				// texture decompression
 
 #if UC2
 #	include "UnPackage.h"				// just for ArVer ...
 #endif
+
 
 #if RENDERING
 
@@ -20,6 +20,8 @@
 #define DEFAULT_TEX_NUM		2			// note: glIsTexture(0) will always return GL_FALSE
 #define RESERVED_TEXTURES	32
 
+
+//#define SHOW_SHADER_PARAMS	1
 
 /*-----------------------------------------------------------------------------
 	Mipmapping and resampling
@@ -263,7 +265,7 @@ const CShader &GL_UseGenericShader(GenericShaderType type)
 }
 
 
-#if 0
+#if SHOW_SHADER_PARAMS
 #define DBG(x)		DrawTextLeft x
 #else
 #define DBG(x)
@@ -334,9 +336,9 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	//!! NOTE: Specular and SpecPower are scaled by const to improve visual; should be scaled by parameters from material
 	subst[0] = Params.Normal    ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"            : "vec3(0.0, 0.0, 1.0)";
 	subst[1] = Params.Specular  ? "texture2D(specTex, TexCoord).rgb * vec3(specular) * 1.5" : "vec3(0.0)"; //"vec3(specular)";
-	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";
-	subst[3] = Params.Opacity   ? "texture2D(opacTex, TexCoord).g" : "1.0";
-	subst[4] = Params.Emissive  ? "vec3(texture2D(emisTex, TexCoord).g)" : "vec3(0.0)"; // not scaled, because sometimes looks ugly ...
+	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0"           : "gl_FrontMaterial.shininess";
+	subst[3] = Params.Opacity   ? "texture2D(opacTex, TexCoord).g"                          : "1.0";
+	subst[4] = Params.Emissive  ? "vec3(texture2D(emisTex, TexCoord).g)"                    : "vec3(0.0)"; // not scaled, because sometimes looks ugly ...
 	// finalize paramerers and make shader
 	subst[5] = NULL;
 
@@ -371,9 +373,10 @@ void UUnrealMaterial::Release()
 
 static GLint lastTexNum = RESERVED_TEXTURES;	//!! use glGenTextures() instead
 
-
 void BindDefaultMaterial(bool White)
 {
+	glDepthMask(GL_TRUE);		//?? place into other places too
+
 	if (GL_SUPPORT(QGL_1_3))
 	{
 		// disable all texture units except 0
@@ -461,7 +464,7 @@ void UTexture::Bind(unsigned PolyFlags)
 	else if (bAlphaTexture || (PolyFlags & (PF_Masked|PF_TwoSided)))
 	{
 		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.0f);
+		glAlphaFunc(GL_GREATER, 0.1f);
 	}
 	// blending
 	// partially taken from UT/OpenGLDrv
@@ -509,6 +512,12 @@ void UTexture::Bind(unsigned PolyFlags)
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
 	unguardf(("%s", Name));
+}
+
+
+bool UTexture::IsTranslucent() const
+{
+	return bAlphaTexture || bMasked;
 }
 
 
@@ -584,6 +593,12 @@ void UFinalBlend::Bind(unsigned PolyFlags)
 }
 
 
+bool UFinalBlend::IsTranslucent() const
+{
+	return (FrameBufferBlending != FB_Overwrite) || AlphaTest;
+}
+
+
 void UShader::Bind(unsigned PolyFlags)
 {
 	// UShader is UE2, which have PolyFlags deprecated
@@ -641,6 +656,12 @@ void UShader::Bind(unsigned PolyFlags)
 	}
 }
 
+bool UShader::IsTranslucent() const
+{
+	return (OutputBlending != OB_Normal);
+}
+
+
 
 #if BIOSHOCK
 
@@ -692,6 +713,11 @@ void UFacingShader::Bind(unsigned PolyFlags)
 	}
 }
 
+bool UFacingShader::IsTranslucent() const
+{
+	return OutputBlending != FB_Overwrite;
+}
+
 #endif // BIOSHOCK
 
 
@@ -738,6 +764,13 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
 
+	if (!Params.Diffuse)
+	{
+		//?? may be, use diffuse color + other params
+		BindDefaultMaterial();
+		return;
+	}
+
 #if USE_GLSL
 	if (GL_SUPPORT(QGL_2_0))
 	{
@@ -746,7 +779,7 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 	else
 #endif // USE_GLSL
 	{
-		if (Params.Diffuse)
+		if (Params.Diffuse)	//?? already checked above
 			Params.Diffuse->Bind(0);
 		else
 			BindDefaultMaterial();
@@ -773,7 +806,7 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 		glAlphaFunc(GL_GREATER, OpacityMaskClipValue);
 		glEnable(GL_ALPHA_TEST);
 	}
-//??	glDepthMask(BlendMode == BLEND_Translucent ? GL_FALSE : GL_TRUE); -- may be, BLEND_Masked too
+	glDepthMask(BlendMode == BLEND_Translucent ? GL_FALSE : GL_TRUE); // may be, BLEND_Masked too
 //?? -- should draw translucent surfaces AFTER opaque, otherwise translucent surface will
 //??	be erased ...
 	if (BlendMode == BLEND_Opaque || BlendMode == BLEND_Masked)
@@ -787,6 +820,7 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 //			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
 //			break;
 		case BLEND_Translucent:
+//			glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);	//?? should use opacity channel; no lighting
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; no lighting
 			break;
 		case BLEND_Additive:
@@ -802,6 +836,12 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 	}
 
 	unguardf(("%s", Name));
+}
+
+
+bool UMaterial3::IsTranslucent() const
+{
+	return BlendMode != BLEND_Opaque;
 }
 
 
@@ -863,7 +903,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		DIFFUSE(appStristr(Name, "diff"), 100);
 		NORMAL (appStristr(Name, "norm"), 100);
 		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80);
-		DIFFUSE(!stricmp(Name + len - 2, "_D"), 10);
+		DIFFUSE(!stricmp(Name + len - 2, "_D"), 20);
 		OPACITY(appStristr(Name, "_OM"), 20);
 #if 0
 		if (!stricmp(Name + len - 3, "_DI"))		// The Last Remnant ...
@@ -875,7 +915,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 #endif
 		DIFFUSE (appStristr(Name, "_DI"), 20)
 		DIFFUSE (appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
-		DIFFUSE (appStristr(Name, "_D" ), 2)
+		DIFFUSE (appStristr(Name, "_D" ), 11)
 		NORMAL  (!stricmp(Name + len - 2, "_N"), 20);
 		SPECULAR(!stricmp(Name + len - 2, "_S"), 20);
 		SPECPOW (!stricmp(Name + len - 3, "_SP"), 20);
@@ -886,6 +926,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		NORMAL  (appStristr(Name, "Norm"), 80);
 		EMISSIVE(appStristr(Name, "Emis"), 80);
 		SPECULAR(appStristr(Name, "Specular"), 80);
+		OPACITY (appStristr(Name, "Opac"),  80);
 
 		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
 	}
@@ -907,7 +948,7 @@ void UTexture2D::Bind(unsigned PolyFlags)
 	glEnable(GL_TEXTURE_2D);
 
 	// uploading ...
-	if (!TexNum) TexNum = ++lastTexNum;		// create handle
+	if (!TexNum) TexNum = ++lastTexNum;				// create handle
 	bool upload = !GL_TouchObject(DrawTimestamp);
 
 	if (upload)
@@ -923,7 +964,7 @@ void UTexture2D::Bind(unsigned PolyFlags)
 		else
 		{
 			appNotify("WARNING: texture %s has no valid mipmaps", Name);
-			TexNum = DEFAULT_TEX_NUM;		// "default texture"
+			TexNum = DEFAULT_TEX_NUM;				// "default texture"
 		}
 	}
 	// bind texture
@@ -958,6 +999,12 @@ void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
 }
 
 
+void UMaterialInstanceConstant::Bind(CMaterialParams &Params, CShader &Shader)
+{
+	if (Parent) Parent->Bind(Params, Shader);
+}
+
+
 void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 {
 	// get params from linked UMaterial3
@@ -968,6 +1015,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	for (int i = 0; i < TextureParameterValues.Num(); i++)
 	{
 		const FTextureParameterValue &P = TextureParameterValues[i];
+//		if (!P.ParameterValue) continue;
 		const char *p = P.ParameterName;
 		if (appStristr(p, "diff"))
 			Params.Diffuse = P.ParameterValue;
@@ -985,7 +1033,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	}
 
 	// try to get diffuse texture when nothing found
-	if (!Params.Diffuse && TextureParameterValues.Num() == 1 && !ReferencedTextures.Num())
+	if (!Params.Diffuse && TextureParameterValues.Num() == 1)
 		Params.Diffuse = TextureParameterValues[0].ParameterValue;
 }
 
@@ -994,127 +1042,6 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 
 
 #endif // RENDERING
-
-//?? move this part to UnMaterial.cpp
-
-// replaces random 'alpha=0' color with black
-static void PostProcessAlpha(byte *pic, int width, int height)
-{
-	for (int pixelCount = width * height; pixelCount > 0; pixelCount--, pic += 4)
-	{
-		if (pic[3] != 0)	// not completely transparent
-			continue;
-		pic[0] = pic[1] = pic[2] = 0;
-	}
-}
-
-
-static byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
-	const char *Name, UPalette *Palette)
-{
-	guard(DecompressTexture);
-	int size = width * height * 4;
-	byte *dst = new byte [size];
-
-#if 0
-	// visualize UV map
-	memset(dst, 0xFF, size);
-	byte *d = dst;
-	for (int i = 0; i < width * height; i++, d += 4)
-	{
-		int x = i % width;
-		int y = i / width;
-		d[0] = d[1] = d[2] = 0;
-		if (x % 16 == 0) d[0] = 255;	// red
-		if (y % 16 == 0) d[1] = 255;	// green
-	}
-	return dst;
-#endif
-
-	// process non-dxt formats here
-	switch (SrcFormat)
-	{
-	case TEXF_P8:
-		{
-			if (!Palette)
-			{
-				appNotify("DecompressTexture: TEXF_P8 with NULL palette");
-				memset(dst, 0xFF, size);
-				return dst;
-			}
-			byte *d = dst;
-			for (int i = 0; i < width * height; i++)
-			{
-				const FColor &c = Palette->Colors[Data[i]];
-				*d++ = c.R;
-				*d++ = c.G;
-				*d++ = c.B;
-				*d++ = c.A;
-			}
-		}
-		return dst;
-	case TEXF_RGBA8:
-		{
-			const byte *s = Data;
-			byte *d = dst;
-			for (int i = 0; i < width * height; i++)
-			{
-				// BGRA -> RGBA
-				*d++ = s[2];
-				*d++ = s[1];
-				*d++ = s[0];
-				*d++ = s[3];
-				s += 4;
-			}
-		}
-		return dst;
-	case TEXF_L8:
-		{
-			const byte *s = Data;
-			byte *d = dst;
-			for (int i = 0; i < width * height; i++)
-			{
-				byte b = *s++;
-				*d++ = b;
-				*d++ = b;
-				*d++ = b;
-				*d++ = 255;
-			}
-		}
-		return dst;
-	}
-
-	// setup for DDSLib
-	ddsBuffer_t dds;
-	memcpy(dds.magic, "DDS ", 4);
-	dds.size   = 124;
-	dds.width  = width;
-	dds.height = height;
-	dds.data   = const_cast<byte*>(Data);
-	switch (SrcFormat)
-	{
-	case TEXF_DXT1:
-		dds.pixelFormat.fourCC = BYTES4('D','X','T','1');
-		break;
-	case TEXF_DXT3:
-		dds.pixelFormat.fourCC = BYTES4('D','X','T','3');
-		break;
-	case TEXF_DXT5:
-		dds.pixelFormat.fourCC = BYTES4('D','X','T','5');
-		break;
-	default:
-		appNotify("%s: unknown texture format %d \n", Name, SrcFormat);
-		memset(dst, 0xFF, size);
-		return dst;
-	}
-	if (DDSDecompress(&dds, dst) != 0)
-		appError("Error in DDSDecompress");
-	if (SrcFormat == TEXF_DXT1)
-		PostProcessAlpha(dst, width, height);
-
-	return dst;
-	unguardf(("fmt=%d", SrcFormat));
-}
 
 
 #if UC2
@@ -1619,6 +1546,12 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			intFormat = TEXF_DXT5;
 		else if (Format == PF_G8)
 			intFormat = TEXF_L8;
+#if MASSEFF
+//??		else if (Format == PF_NormapMap_LQ)
+//??			intFormat = TEXF_3DC;
+		else if (Format == PF_NormalMap_HQ)
+			intFormat = TEXF_3DC;
+#endif
 		else
 		{
 			appNotify("Unknown texture format: %s (%d)", FmtName, Format);
