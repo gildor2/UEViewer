@@ -38,18 +38,23 @@ byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat 
 	byte *dst = new byte [size];
 
 #if 0
-	// visualize UV map
-	memset(dst, 0xFF, size);
-	byte *d = dst;
-	for (int i = 0; i < width * height; i++, d += 4)
 	{
-		int x = i % width;
-		int y = i / width;
-		d[0] = d[1] = d[2] = 0;
-		if (x % 16 == 0) d[0] = 255;	// red
-		if (y % 16 == 0) d[1] = 255;	// green
+		// visualize UV map
+		memset(dst, 0xFF, size);
+		byte *d = dst;
+		for (int i = 0; i < width * height; i++, d += 4)
+		{
+			int x = i % width;
+			int y = i / width;
+			d[0] = d[1] = d[2] = 0;
+			int x0 = x % 16;
+			int y0 = y % 16;
+			if (x0 == 0)			d[0] = 255;	// red - binormal axis
+			else if (y0 == 0)		d[2] = 255;	// blue - tangent axis
+			else if (x0 + y0 < 7)	d[1] = 128;	// gark green
+		}
+		return dst;
 	}
-	return dst;
 #endif
 
 	// process non-dxt formats here

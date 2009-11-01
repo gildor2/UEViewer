@@ -76,11 +76,6 @@ UE3 MATERIALS TREE:
 				MaterialInstanceTimeVarying
 */
 
-#if RENDERING
-#	define BIND		virtual void Bind(unsigned PolyFlags)
-#else
-#	define BIND
-#endif
 
 class UUnrealMaterial;
 
@@ -97,12 +92,16 @@ struct CMaterialParams
 #undef C
 	}
 
+	// textures
 	UUnrealMaterial *Diffuse;
 	UUnrealMaterial *Normal;
 	UUnrealMaterial *Specular;
 	UUnrealMaterial *SpecPower;
 	UUnrealMaterial *Opacity;
 	UUnrealMaterial *Emissive;
+	// tweaks
+	bool SpecularFromAlpha;
+	bool OpacityFromAlpha;
 };
 
 
@@ -118,11 +117,12 @@ public:
 	UUnrealMaterial()
 	:	DrawTimestamp(0)
 	{}
-	virtual void Bind(unsigned PolyFlags)		// PolyFlags used for UE1 only
+
+	void SetMaterial(unsigned PolyFlags = 0);	// main function to use outside
+
+	virtual void Bind()							// non-empty for textures only
 	{}
-	// bind material with "Params" and compile shader into "Shader"
-	virtual void Bind(CMaterialParams &Params, CShader &Shader)
-	{}
+	virtual void SetupGL(unsigned PolyFlags);	// PolyFlags used for UE1 only
 	virtual void Release();
 	virtual void GetParams(CMaterialParams &Params) const
 	{}
@@ -606,7 +606,9 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
+	virtual void Bind();
+	virtual void GetParams(CMaterialParams &Params) const;
+	virtual void SetupGL(unsigned PolyFlags);
 	virtual void Release();
 	virtual bool IsTranslucent() const;
 #endif // RENDERING
@@ -641,6 +643,9 @@ class UShader : public URenderedMaterial
 	DECLARE_CLASS(UShader, URenderedMaterial);
 public:
 	UMaterial		*Diffuse;
+#if BIOSHOCK
+	UMaterial		*NormalMap;
+#endif
 	UMaterial		*Opacity;
 	UMaterial		*Specular;
 	UMaterial		*SpecularityMask;
@@ -679,6 +684,9 @@ public:
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Diffuse)
+#if BIOSHOCK
+		PROP_OBJ(NormalMap)
+#endif
 		PROP_OBJ(Opacity)
 		PROP_OBJ(Specular)
 		PROP_OBJ(SpecularityMask)
@@ -707,9 +715,10 @@ public:
 		PROP_STRUC(EmissiveMask,   FMaskMaterial)
 		PROP_STRUC(SubsurfaceMask, FMaskMaterial)
 		PROP_STRUC(ClipMask,       FMaskMaterial)
-		PROP_DROP(NormalMap)		//?? Tribes too, use it
-		PROP_DROP(DiffuseColor)
+
 		PROP_DROP(Emissive)
+
+		PROP_DROP(DiffuseColor)
 		PROP_DROP(EmissiveBrightness)
 		PROP_DROP(EmissiveColor)
 		PROP_DROP(Glossiness)
@@ -748,8 +757,9 @@ public:
 #endif
 
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
+	virtual void SetupGL(unsigned PolyFlags);
 	virtual bool IsTranslucent() const;
+	virtual void GetParams(CMaterialParams &Params) const;
 #endif
 };
 
@@ -764,10 +774,12 @@ public:
 		PROP_OBJ(Material)
 	END_PROP_TABLE
 #if RENDERING
+	virtual void SetupGL(unsigned PolyFlags);
 	virtual bool IsTranslucent() const
 	{
 		return Material ? Material->IsTranslucent() : false;
 	}
+	virtual void GetParams(CMaterialParams &Params) const;
 #endif
 };
 
@@ -840,7 +852,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
+	virtual void SetupGL(unsigned PolyFlags);
 	virtual bool IsTranslucent() const;
 #endif
 };
@@ -917,7 +929,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
+	virtual void GetParams(CMaterialParams &Params) const;
 	virtual bool IsTranslucent() const
 	{
 		return false;
@@ -994,8 +1006,6 @@ public:
 		PROP_ENUM2(TexCoordCount, ETexCoordCount)
 		PROP_BOOL(TexCoordProjected)
 	END_PROP_TABLE
-
-	BIND;
 };
 
 
@@ -1275,8 +1285,9 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
+	virtual void SetupGL(unsigned PolyFlags);
 	virtual bool IsTranslucent() const;
+	virtual void GetParams(CMaterialParams &Params) const;
 #endif
 };
 
@@ -1511,7 +1522,8 @@ public:
 
 	virtual byte *Decompress(int &USize, int &VSize) const;
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
+	virtual void Bind();
+	virtual void GetParams(CMaterialParams &Params) const;
 	virtual void Release();
 #endif
 };
@@ -1642,8 +1654,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
-	virtual void Bind(CMaterialParams &Params, CShader &Shader);
+	virtual void SetupGL(unsigned PolyFlags);
 	virtual void GetParams(CMaterialParams &Params) const;
 	virtual bool IsTranslucent() const;
 #endif
@@ -1694,8 +1705,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind(unsigned PolyFlags);
-	virtual void Bind(CMaterialParams &Params, CShader &Shader);
+	virtual void SetupGL(unsigned PolyFlags);
 	virtual void GetParams(CMaterialParams &Params) const;
 	virtual bool IsTranslucent() const
 	{

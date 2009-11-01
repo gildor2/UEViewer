@@ -61,9 +61,9 @@ rm umodel.exe	#?? win32 only
 # Check directories
 #?? should check dirs when specific game has been requested (not all games everytime)
 CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
-CheckDir UT1 c:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament
-CheckDir UT2 c:/games/unreal~1/ut2004 c:/games/unreal/ut2004
-CheckDir UT3 c:/games/ut3/UTGame/CookedPC
+CheckDir UT1 c:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament e:/games/unreal~1/UnrealTournament
+CheckDir UT2 c:/games/unreal~1/ut2004 c:/games/unreal/ut2004 e:/games/unreal~1/ut2004
+CheckDir UT3 c:/games/ut3/UTGame/CookedPC e:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2"
@@ -104,10 +104,22 @@ fi
 case "" in
 
 "")
+	# Materials
+#	ut2 AS_Vehicles_M.ukx minigun_turret
+#	ut2 StreamAnims.ukx Dropship
+#	ut2 StreamAnims.ukx victim3
+#	ut2 AS_VehiclesFull_M.ukx SpaceFighter_Skaarj SkeletalMesh
+#	ut2 AS_VehiclesFull_M.ukx ASTurret_MotherShip2 SkeletalMesh
+#	ut2 ONSVehicles-A.ukx PRVchassis SkeletalMesh
+#	ut2 ONSVehicles-A.ukx AttackCraft SkeletalMesh
+
+	#!! BAD INFLUENCES
+#	ut2 -meshes XanRobots.ukx	# note: no errors on LOD models
+
 	# Mass Effect
 	# bug: MatInstConst -> MatInstConst -> Mat => loose transparency
 #	rund BIOG_HMF_HED_PROMorph_R.upk HMF_HED_PROLash_Mat_1a
-	rund BIOG_HMF_HED_PROMorph_R.upk #HMF_HED_PROCustom_Military_Norm
+#	rund BIOG_HMF_HED_PROMorph_R.upk #HMF_HED_PROCustom_Military_Norm
 
 	# Bioshosk
 #	bio 0-Lighthouse.bsm MetalVents_NormalMap

@@ -479,7 +479,7 @@ SIMPLE_TYPE(FAnimMeshVertex, float)
 
 struct FRawIndexBuffer
 {
-	TArray<short>	Indices;
+	TArray<word>	Indices;
 //	int64			CacheId;
 	int				Revision;
 

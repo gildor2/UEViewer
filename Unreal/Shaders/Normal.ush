@@ -91,7 +91,11 @@ vec3 GetMaterialNormal(vec2 TexCoord)
 
 vec3 GetMaterialSpecularColor(vec2 TexCoord)
 {
+#ifndef SHOW_BUMP
 	return %s;
+#else
+	return vec3(1.0);
+#endif
 }
 
 float GetMaterialSpecularPower(vec2 TexCoord)

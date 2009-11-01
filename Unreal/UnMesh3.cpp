@@ -10,7 +10,7 @@ struct FSkelMeshSection3
 	short				MaterialIndex;
 	short				unk1;
 	int					FirstIndex;
-	short				NumTriangles;
+	word				NumTriangles;
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
 	{
@@ -20,7 +20,7 @@ struct FSkelMeshSection3
 
 struct FIndexBuffer3
 {
-	TRawArray<short>	Indices;
+	TRawArray<word>		Indices;
 
 	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
 	{
@@ -199,8 +199,8 @@ SIMPLE_TYPE(FEdge3, int)
 #if BATMAN
 struct FEdge3Bat
 {
-	short				iVertex[2];
-	short				iFace[2];
+	word				iVertex[2];
+	word				iFace[2];
 
 	friend FArchive& operator<<(FArchive &Ar, FEdge3Bat &V)
 	{
@@ -208,7 +208,7 @@ struct FEdge3Bat
 	}
 };
 
-SIMPLE_TYPE(FEdge3Bat, short)
+SIMPLE_TYPE(FEdge3Bat, word)
 
 #endif // BATMAN
 
@@ -454,7 +454,7 @@ struct FStaticLODModel3
 	FIndexBuffer3		IndexBuffer;
 	TArray<short>		UsedBones;		// bones, value = [0, NumBones-1]
 	TArray<byte>		f24;			// count = NumBones, value = [0, NumBones-1]; note: BoneIndex is 'short', not 'byte' ...
-	TArray<short>		f68;			// indices, value = [0, NumVertices-1]
+	TArray<word>		f68;			// indices, value = [0, NumVertices-1]
 	TArray<byte>		f74;			// count = NumTriangles
 	int					f80;
 	int					NumVertices;

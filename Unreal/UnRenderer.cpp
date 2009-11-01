@@ -294,7 +294,7 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	if (Params.Diffuse)
 	{
 		DBG(("Diffuse  : %s", Params.Diffuse->Name));
-		Params.Diffuse->Bind(0);
+		Params.Diffuse->Bind();
 	}
 	else
 		BindDefaultMaterial();
@@ -303,42 +303,54 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	{
 		DBG(("Normal   : %s", Params.Normal->Name));
 		glActiveTexture(GL_TEXTURE0 + I_Normal);
-		Params.Normal->Bind(0);
+		Params.Normal->Bind();
 	}
 	// specular
 	if (Params.Specular)
 	{
 		DBG(("Specular : %s", Params.Specular->Name));
 		glActiveTexture(GL_TEXTURE0 + I_Specular);
-		Params.Specular->Bind(0);
+		Params.Specular->Bind();
 	}
 	// specular power
 	if (Params.SpecPower)
 	{
 		DBG(("SpecPower: %s", Params.SpecPower->Name));
 		glActiveTexture(GL_TEXTURE0 + I_SpecularPower);
-		Params.SpecPower->Bind(0);
+		Params.SpecPower->Bind();
 	}
 	// opacity mask
 	if (Params.Opacity)
 	{
 		DBG(("Opacity  : %s", Params.Opacity->Name));
 		glActiveTexture(GL_TEXTURE0 + I_Opacity);
-		Params.Opacity->Bind(0);
+		Params.Opacity->Bind();
 	}
 	// emission
 	if (Params.Emissive)
 	{
 		DBG(("Emissive : %s", Params.Emissive->Name));
 		glActiveTexture(GL_TEXTURE0 + I_Emissive);
-		Params.Emissive->Bind(0);
+		Params.Emissive->Bind();
 	}
+
+	const char *specularExpr = "vec3(0.0)"; //?? vec3(specular)
+	if (Params.Specular)
+	{
+		specularExpr = va("texture2D(specTex, TexCoord).%s * vec3(specular) * 1.5", !Params.SpecularFromAlpha ? "rgb" : "a");
+	}
+	const char *opacityExpr = "1.0";
+	if (Params.Opacity)
+	{
+		opacityExpr = va("texture2D(opacTex, TexCoord).%s", !Params.OpacityFromAlpha ? "g" : "a");
+	}
+
 	//!! NOTE: Specular and SpecPower are scaled by const to improve visual; should be scaled by parameters from material
-	subst[0] = Params.Normal    ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"            : "vec3(0.0, 0.0, 1.0)";
-	subst[1] = Params.Specular  ? "texture2D(specTex, TexCoord).rgb * vec3(specular) * 1.5" : "vec3(0.0)"; //"vec3(specular)";
-	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0"           : "gl_FrontMaterial.shininess";
-	subst[3] = Params.Opacity   ? "texture2D(opacTex, TexCoord).g"                          : "1.0";
-	subst[4] = Params.Emissive  ? "vec3(texture2D(emisTex, TexCoord).g)"                    : "vec3(0.0)"; // not scaled, because sometimes looks ugly ...
+	subst[0] = Params.Normal    ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"  : "vec3(0.0, 0.0, 1.0)";
+	subst[1] = specularExpr;
+	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";
+	subst[3] = opacityExpr;	//?? Params.Opacity   ? "texture2D(opacTex, TexCoord).g"                : "1.0";
+	subst[4] = Params.Emissive  ? "vec3(texture2D(emisTex, TexCoord).g)"          : "vec3(0.0)"; // not scaled, because sometimes looks ugly ...
 	// finalize paramerers and make shader
 	subst[5] = NULL;
 
@@ -371,6 +383,56 @@ void UUnrealMaterial::Release()
 }
 
 
+void UUnrealMaterial::SetMaterial(unsigned PolyFlags)
+{
+	guard(UUnrealMaterial::SetMaterial);
+
+	SetupGL(PolyFlags);
+
+	CMaterialParams Params;
+	GetParams(Params);
+
+	if (!Params.Diffuse)	//?? !Params.IsNull()
+	{
+		//?? may be, use diffuse color + other params
+		BindDefaultMaterial();
+		return;
+	}
+
+#if USE_GLSL
+	if (GL_SUPPORT(QGL_2_0))
+	{
+		if (Params.Diffuse == this)
+		{
+			// simple texture
+			Params.Diffuse->Bind();
+			GL_UseGenericShader(GS_Textured);
+		}
+		else
+		{
+			GL_NormalmapShader(GLShader, Params);
+		}
+	}
+	else
+#endif // USE_GLSL
+	{
+		if (Params.Diffuse)	//?? already checked above
+			Params.Diffuse->Bind();
+		else
+			BindDefaultMaterial();
+	}
+
+	unguardf(("%s", Name));
+}
+
+
+void UUnrealMaterial::SetupGL(unsigned PolyFlags)
+{
+	glDisable(GL_BLEND);
+	glDisable(GL_ALPHA_TEST);
+}
+
+
 static GLint lastTexNum = RESERVED_TEXTURES;	//!! use glGenTextures() instead
 
 void BindDefaultMaterial(bool White)
@@ -390,12 +452,13 @@ void BindDefaultMaterial(bool White)
 		glActiveTexture(GL_TEXTURE0);
 	}
 
+#if USE_GLSL
+	if (GL_SUPPORT(QGL_2_0)) GL_UseGenericShader(White ? GS_White : GS_Textured);
+#endif
+
 	if (White)
 	{
 		glDisable(GL_TEXTURE_2D);
-#if USE_GLSL
-		if (GL_SUPPORT(QGL_2_0)) GL_UseGenericShader(GS_White);
-#endif
 		return;
 	}
 
@@ -429,21 +492,13 @@ void BindDefaultMaterial(bool White)
 		}
 #undef TEX_SIZE
 	}
-	Mat->Bind(0);
+	Mat->Bind();
 }
 
 
-void UTexture::Bind(unsigned PolyFlags)
+void UTexture::SetupGL(unsigned PolyFlags)
 {
-	guard(UTexture::Bind);
-
-#if USE_GLSL
-	if (GL_SUPPORT(QGL_2_0))
-	{
-		const CShader &sh = GL_UseGenericShader(GS_Textured);
-		sh.SetUniform("tex", 0);
-	}
-#endif // USE_GLSL
+	guard(UTexture::SetupGL);
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
@@ -478,7 +533,7 @@ void UTexture::Bind(unsigned PolyFlags)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 	}
-	else if (bAlphaTexture || bMasked || (PolyFlags & (PF_Masked|PF_TwoSided)))
+	else if (bAlphaTexture || bMasked || (PolyFlags & (PF_Masked/*|PF_TwoSided*/)))
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -488,8 +543,18 @@ void UTexture::Bind(unsigned PolyFlags)
 		glDisable(GL_ALPHA_TEST);
 		glDisable(GL_BLEND);
 	}
-	// uploading ...
-	if (!TexNum) TexNum = ++lastTexNum;		// create handle
+
+	unguard;
+}
+
+
+void UTexture::Bind()
+{
+	guard(UTexture::Bind);
+
+	glEnable(GL_TEXTURE_2D);
+
+	if (!TexNum) TexNum = ++lastTexNum;				// create handle
 	bool upload = !GL_TouchObject(DrawTimestamp);
 
 	if (upload)
@@ -499,19 +564,25 @@ void UTexture::Bind(unsigned PolyFlags)
 		byte *pic = Decompress(USize, VSize);
 		if (pic)
 		{
-			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1,
-				UClampMode == TC_Clamp, VClampMode == TC_Clamp);
+			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
 			delete pic;
 		}
 		else
 		{
 			appNotify("WARNING: texture %s has no valid mipmaps", Name);
-			TexNum = DEFAULT_TEX_NUM;		// "default texture"
+			TexNum = DEFAULT_TEX_NUM;				// "default texture"
 		}
 	}
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
-	unguardf(("%s", Name));
+
+	unguard;
+}
+
+
+void UTexture::GetParams(CMaterialParams &Params) const
+{
+	Params.Diffuse = (UUnrealMaterial*)this;
 }
 
 
@@ -531,14 +602,26 @@ void UTexture::Release()
 }
 
 
-void UFinalBlend::Bind(unsigned PolyFlags)
+void UModifier::SetupGL(unsigned PolyFlags)
 {
-	if (!Material)
-	{
-		BindDefaultMaterial();
-		return;
-	}
-	Material->Bind(PolyFlags);
+	guard(UModifier::SetupGL);
+	if (Material) Material->SetupGL(PolyFlags);
+	unguard;
+}
+
+void UModifier::GetParams(CMaterialParams &Params) const
+{
+	guard(UModifier::GetParams);
+	if (Material)
+		Material->GetParams(Params);
+	unguard;
+}
+
+
+void UFinalBlend::SetupGL(unsigned PolyFlags)
+{
+	guard(UFinalBlend::SetupGL);
+
 	glEnable(GL_DEPTH_TEST);
 	// override material settings
 	// TwoSided
@@ -590,6 +673,8 @@ void UFinalBlend::Bind(unsigned PolyFlags)
 		break;
 	}
 	//!! ZWrite, ZTest
+
+	unguard;
 }
 
 
@@ -599,17 +684,9 @@ bool UFinalBlend::IsTranslucent() const
 }
 
 
-void UShader::Bind(unsigned PolyFlags)
+void UShader::SetupGL(unsigned PolyFlags)
 {
-	// UShader is UE2, which have PolyFlags deprecated
-	//!!
-	// bind material first
-	if (Diffuse)
-		Diffuse->Bind(PolyFlags);
-	else
-		BindDefaultMaterial();
-
-	// and then override properties
+	guard(UShader::SetupGL);
 
 	glEnable(GL_DEPTH_TEST);
 	// TwoSided
@@ -624,15 +701,15 @@ void UShader::Bind(unsigned PolyFlags)
 	glDisable(GL_ALPHA_TEST);
 
 	// blending
-	if (OutputBlending == OB_Normal)
+	if (OutputBlending == OB_Normal && !Opacity)
 		glDisable(GL_BLEND);
 	else
 		glEnable(GL_BLEND);
 	switch (OutputBlending)
 	{
-//	case OB_Normal:
-//		glBlendFunc(GL_ONE, GL_ZERO);				// src
-//		break;
+	case OB_Normal:
+		if (Opacity) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		break;
 	case OB_Masked:
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glAlphaFunc(GL_GREATER, 0.0f);
@@ -654,7 +731,41 @@ void UShader::Bind(unsigned PolyFlags)
 		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // dst - src
 		break;
 	}
+
+	unguard;
 }
+
+
+void UShader::GetParams(CMaterialParams &Params) const
+{
+	if (Diffuse)
+	{
+		Diffuse->GetParams(Params);
+	}
+#if BIOSHOCK
+	if (NormalMap)
+	{
+		CMaterialParams Params2;
+		NormalMap->GetParams(Params2);
+		Params.Normal = Params2.Diffuse;
+	}
+#endif
+	if (SpecularityMask)
+	{
+		CMaterialParams Params2;
+		SpecularityMask->GetParams(Params2);
+		Params.Specular          = Params2.Diffuse;
+		Params.SpecularFromAlpha = true;
+	}
+	if (Opacity)
+	{
+		CMaterialParams Params2;
+		Opacity->GetParams(Params2);
+		Params.Opacity          = Params2.Diffuse;
+		Params.OpacityFromAlpha = true;
+	}
+}
+
 
 bool UShader::IsTranslucent() const
 {
@@ -667,12 +778,9 @@ bool UShader::IsTranslucent() const
 
 //?? NOTE: Bioshock EFrameBufferBlending is used for UShader and UFinalBlend, plus it has different values
 // based on UShader and UFinalBlend Bind()
-void UFacingShader::Bind(unsigned PolyFlags)
+void UFacingShader::SetupGL(unsigned PolyFlags)
 {
-	if (FacingDiffuse)
-		FacingDiffuse->Bind(PolyFlags);
-	else
-		BindDefaultMaterial();
+	guard(UFacingShader::SetupGL);
 
 	glEnable(GL_DEPTH_TEST);
 	// TwoSided
@@ -683,7 +791,7 @@ void UFacingShader::Bind(unsigned PolyFlags)
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
-	// part of UFinalBlend::Bind()
+	// part of UFinalBlend::SetupGL()
 	switch (OutputBlending)
 	{
 //	case FB_Overwrite:
@@ -711,7 +819,39 @@ void UFacingShader::Bind(unsigned PolyFlags)
 		glBlendFunc(GL_ZERO, GL_ONE);				// dst
 		break;
 	}
+
+	unguard;
 }
+
+
+void UFacingShader::GetParams(CMaterialParams &Params) const
+{
+	if (FacingDiffuse)
+	{
+		CMaterialParams Params2;
+		FacingDiffuse->GetParams(Params2);
+		Params.Diffuse = Params2.Diffuse;
+	}
+	if (NormalMap)
+	{
+		CMaterialParams Params2;
+		NormalMap->GetParams(Params2);
+		Params.Normal = Params2.Diffuse;
+	}
+	if (FacingSpecularColorMap)
+	{
+		CMaterialParams Params2;
+		FacingSpecularColorMap->GetParams(Params2);
+		Params.Specular = Params2.Diffuse;
+	}
+	if (FacingEmissive)
+	{
+		CMaterialParams Params2;
+		FacingEmissive->GetParams(Params2);
+		Params.Emissive = Params2.Diffuse;
+	}
+}
+
 
 bool UFacingShader::IsTranslucent() const
 {
@@ -721,69 +861,80 @@ bool UFacingShader::IsTranslucent() const
 #endif // BIOSHOCK
 
 
-void UCombiner::Bind(unsigned PolyFlags)
+void UCombiner::GetParams(CMaterialParams &Params) const
 {
-	//!! implement
-//	if (Material1)
-//		Material1->Bind(PolyFlags);
-//	else
-		BindDefaultMaterial();
-}
+	CMaterialParams Params2;
 
+	switch (CombineOperation)
+	{
+	case CO_Use_Color_From_Material1:
+		if (Material1) Material1->GetParams(Params2);
+		break;
+	case CO_Use_Color_From_Material2:
+		if (Material2) Material2->GetParams(Params2);
+		break;
+	case CO_Multiply:
+	case CO_Add:
+	case CO_Subtract:
+	case CO_AlphaBlend_With_Mask:
+	case CO_Add_With_Mask_Modulation:
+		if (Material1 && Material2)
+		{
+			if (Material2->IsA("TexEnvMap"))
+			{
+				// special case: Material1 is a UTexEnvMap
+				Material1->GetParams(Params2);
+				Params.Specular = Params2.Diffuse;
+				Params.SpecularFromAlpha = true;
+			}
+			else if (Material1->IsA("TexEnvMap"))
+			{
+				// special case: Material1 is a UTexEnvMap
+				Material2->GetParams(Params2);
+				Params.Specular = Params2.Diffuse;
+				Params.SpecularFromAlpha = true;
+			}
+			else
+			{
+				// no specular; heuristic: usually Material2 contains more significant texture
+				Material2->GetParams(Params2);
+				if (!Params2.Diffuse) Material1->GetParams(Params2);	// fallback
+			}
+		}
+		else if (Material1)
+			Material1->GetParams(Params2);
+		else if (Material2)
+			Material2->GetParams(Params2);
+		break;
+	case CO_Use_Color_From_Mask:
+		if (Mask) Mask->GetParams(Params2);
+		break;
+	}
+	Params.Diffuse = Params2.Diffuse;
 
-void UTexModifier::Bind(unsigned PolyFlags)
-{
-	//!! implement (in derived classes?)
-	if (Material)
-		Material->Bind(PolyFlags);
-	else
-		BindDefaultMaterial();
+	// cannot implement masking right now: UE3 uses color, but UE2 - alpha
+/*	switch (AlphaOperation)
+	{
+	case AO_Use_Mask:
+	case AO_Multiply:
+	case AO_Add:
+	case AO_Use_Alpha_From_Material1:
+	case AO_Use_Alpha_From_Material2:
+	} */
 }
 
 
 #if UNREAL3
 
-void UMaterial3::Bind(unsigned PolyFlags)
-{
-	guard(UMaterial3::Bind);
-
-	CMaterialParams Params;
-	GetParams(Params);
-	Bind(Params, GLShader);
-
-	unguard;
-}
-
-
 //!! NOTE: when using this function sharing of shader between MaterialInstanceConstant's is impossible
 //!! (shader may differs because of different texture sets - some available, some - not)
-void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
+
+void UMaterial3::SetupGL(unsigned PolyFlags)
 {
-	guard(UMaterial3::Bind(params));
+	guard(UMaterial3::SetupGL);
 
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
-
-	if (!Params.Diffuse)
-	{
-		//?? may be, use diffuse color + other params
-		BindDefaultMaterial();
-		return;
-	}
-
-#if USE_GLSL
-	if (GL_SUPPORT(QGL_2_0))
-	{
-		GL_NormalmapShader(Shader, Params);
-	}
-	else
-#endif // USE_GLSL
-	{
-		if (Params.Diffuse)	//?? already checked above
-			Params.Diffuse->Bind(0);
-		else
-			BindDefaultMaterial();
-	}
 
 	// TwoSided
 	if (TwoSided)
@@ -806,9 +957,9 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 		glAlphaFunc(GL_GREATER, OpacityMaskClipValue);
 		glEnable(GL_ALPHA_TEST);
 	}
+
 	glDepthMask(BlendMode == BLEND_Translucent ? GL_FALSE : GL_TRUE); // may be, BLEND_Masked too
-//?? -- should draw translucent surfaces AFTER opaque, otherwise translucent surface will
-//??	be erased ...
+
 	if (BlendMode == BLEND_Opaque || BlendMode == BLEND_Masked)
 		glDisable(GL_BLEND);
 	else
@@ -835,7 +986,7 @@ void UMaterial3::Bind(CMaterialParams &Params, CShader &Shader)
 		}
 	}
 
-	unguardf(("%s", Name));
+	unguard;
 }
 
 
@@ -933,21 +1084,12 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 }
 
 
-void UTexture2D::Bind(unsigned PolyFlags)
+void UTexture2D::Bind()
 {
 	guard(UTexture2D::Bind);
 
-#if USE_GLSL
-	if (GL_SUPPORT(QGL_2_0))
-	{
-		const CShader &sh = GL_UseGenericShader(GS_Textured);
-		sh.SetUniform("tex", 0);
-	}
-#endif // USE_GLSL
-
 	glEnable(GL_TEXTURE_2D);
 
-	// uploading ...
 	if (!TexNum) TexNum = ++lastTexNum;				// create handle
 	bool upload = !GL_TouchObject(DrawTimestamp);
 
@@ -969,7 +1111,14 @@ void UTexture2D::Bind(unsigned PolyFlags)
 	}
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
-	unguardf(("%s", Name));
+
+	unguard;
+}
+
+
+void UTexture2D::GetParams(CMaterialParams &Params) const
+{
+	Params.Diffuse = (UUnrealMaterial*)this;
 }
 
 
@@ -983,25 +1132,10 @@ void UTexture2D::Release()
 }
 
 
-void UMaterialInstanceConstant::Bind(unsigned PolyFlags)
+void UMaterialInstanceConstant::SetupGL(unsigned PolyFlags)
 {
-	guard(UMaterialInstanceConstant::Bind);
-
-	CMaterialParams Params;
-	GetParams(Params);
-
-	if (Parent)
-		Parent->Bind(Params, GLShader);
-	else
-		BindDefaultMaterial();
-
-	unguard;
-}
-
-
-void UMaterialInstanceConstant::Bind(CMaterialParams &Params, CShader &Shader)
-{
-	if (Parent) Parent->Bind(Params, Shader);
+	// redirect to Parent until UMaterial3
+	if (Parent) Parent->SetupGL(PolyFlags);
 }
 
 

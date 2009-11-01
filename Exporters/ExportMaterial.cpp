@@ -12,7 +12,7 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 
 	CMaterialParams Params;
 	Mat->GetParams(Params);
-	if (Params.IsNull()) return;
+	if (Params.IsNull() || Params.Diffuse == Mat) return;	// empty/unknown material, or material itself is a texture
 
 	char filename[256];
 	appSprintf(ARRAY_ARG(filename), "%s/%s/%s.mat", Mat->Package->Name, Mat->GetClassName(), Mat->Name);

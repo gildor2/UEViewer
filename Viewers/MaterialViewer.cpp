@@ -72,8 +72,8 @@ void CMaterialViewer::Draw3D()
 
 	// bind material
 	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
-	Mat->Bind(0);
-	//!! BUMP
+	Mat->SetMaterial();
+
 	GLint aTangent = -1, aBinormal = -1;
 	bool hasTangent = false;
 	const CShader *Sh = GCurrentShader;
@@ -477,6 +477,7 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		PROP(ModulateSpecular2X)
 		// materials
 		PROP(Diffuse)
+		PROP(NormalMap)
 		PROP(Opacity)
 		PROP(Specular)
 		PROP(SpecularityMask)

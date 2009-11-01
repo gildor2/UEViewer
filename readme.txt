@@ -133,6 +133,16 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+28.10.2009
+- filtering output spam from ATI GLSL compiler
+- UE2 renderer: improved complex material support (Shader, Combiner)
+
+27.10.2009
+- completely rewritten UE2 renderer:
+  - support normalmaps for Trives: Vengeance and Bioshock meshes
+  - support specular mask
+  - export UE2 materials
+
 23.10.2009
 - implemented Tribes: Vengeance, Bioshock and Mass Effect compressed normalmap support
   (DXT5n and 3Dc/ATI2 texture compressions)

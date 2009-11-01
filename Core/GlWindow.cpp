@@ -744,7 +744,7 @@ static void Display()
 	Set3Dmode();
 
 	// enable lighting
-	static const float lightPos[4]      = {100, 200, 200,  0};
+	static const float lightPos[4]      = {1000, 2000, 2000, 0};
 	static const float lightAmbient[4]  = {0.1, 0.1, 0.15, 1};
 	static const float specIntens[4]    = {0.7, 0.7, 0.5,  0};
 	static const float black[4]         = {0,   0,   0,    0};

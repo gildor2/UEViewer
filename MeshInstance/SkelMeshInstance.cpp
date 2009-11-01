@@ -296,6 +296,8 @@ static void BuildNormals(CMeshWedge *Wedges, int NumPoints, const TArray<FMeshWe
 		{
 			// W[0] -> W[2] -- axis for tangent
 			VectorSubtract(W[2]->Pos, W[0]->Pos, tang);
+			// we should make tang to look in side of growing U
+			if (W[2]->U < W[0]->U) tang.Negate();
 		}
 		else
 		{

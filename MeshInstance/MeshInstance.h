@@ -42,7 +42,7 @@ public:
 		if (!bColorMaterials)
 		{
 			if (Mat)
-				Mat->Bind(PolyFlags);
+				Mat->SetMaterial(PolyFlags);
 			else
 				BindDefaultMaterial();
 		}

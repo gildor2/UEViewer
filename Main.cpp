@@ -693,6 +693,16 @@ static void TakeScreenshot(const char *ObjectName)
 {
 	char filename[256];
 	appSprintf(ARRAY_ARG(filename), "Screenshots/%s.tga", ObjectName);
+	int retry = 1;
+	while (true)
+	{
+		FILE *f = fopen(filename, "r");
+		if (!f) break;
+		fclose(f);
+		// if file exists, append index
+		retry++;
+		appSprintf(ARRAY_ARG(filename), "Screenshots/%s_%02d.tga", ObjectName, retry);
+	}
 	printf("Writting screenshot %s\n", filename);
 	appMakeDirectoryForFile(filename);
 	FFileReader Ar(filename, false);

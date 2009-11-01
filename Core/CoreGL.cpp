@@ -1,5 +1,6 @@
 //#define VALIDATE_SHADERS	1
 //#define DUMP_SHADERS		1
+#define FILTER_ATI_GLSL		1			// ATI drivers has messages even when no errors/warnings in GLSL shaders
 
 #define GLSLANG_DLL			"glslang.dll"
 
@@ -315,8 +316,19 @@ static void CheckShader(GLuint obj, const char *type, const char *name)
 	GLint charsWritten = 0;
 	glGetShaderInfoLog(obj, infologLength, &charsWritten, infoLog);
 
+#if FILTER_ATI_GLSL
+	if (status)
+	{
+		static const char *checks[] = {
+			"shader was successfully compiled"
+		};
+		for (int i = 0; i < ARRAY_COUNT(checks); i++)
+			if (appStristr(infoLog, checks[i])) return;
+	}
+#endif // FILTER_ATI_GLSL
+
 	printf("%s: %s shader %s:\n", (status == GL_TRUE) ? "WARNING" : "ERROR", type, name);
-	printf("%s\n",infoLog);
+	printf("%s\n", infoLog);
 
 	delete infoLog;
 
@@ -338,8 +350,19 @@ static void CheckProgram(GLuint obj, const char *name)
 	GLint charsWritten = 0;
 	glGetProgramInfoLog(obj, infologLength, &charsWritten, infoLog);
 
+#if FILTER_ATI_GLSL
+	if (status)
+	{
+		static const char *checks[] = {
+			"Fragment shader(s) linked, vertex shader(s) linked"
+		};
+		for (int i = 0; i < ARRAY_COUNT(checks); i++)
+			if (appStristr(infoLog, checks[i])) return;
+	}
+#endif // FILTER_ATI_GLSL
+
 	printf("%s: program %s:\n", (status == GL_TRUE) ? "WARNING" : "ERROR", name);
-	printf("%s\n",infoLog);
+	printf("%s\n", infoLog);
 
 	delete infoLog;
 
