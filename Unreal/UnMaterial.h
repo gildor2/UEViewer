@@ -1336,6 +1336,7 @@ public:
 		PROP_DROP(LODBias)
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
+		PROP_DROP(LightingGuid)
 #if HUXLEY
 		PROP_DROP(SourceArtWidth)
 		PROP_DROP(SourceArtHeight)
@@ -1485,6 +1486,8 @@ public:
 		// drop unneeded props
 		PROP_DROP(bGlobalForceMipLevelsToBeResident)
 		PROP_DROP(MipTailBaseIdx)
+		PROP_DROP(OriginalSizeX)
+		PROP_DROP(OriginalSizeY)
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -1495,7 +1498,13 @@ public:
 		{
 			Ar << SizeX << SizeY << (byte&)Format;
 		}
+#if BORDERLANDS
+		if (Ar.IsBorderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
+#endif
 		Ar << Mips;
+#if BORDERLANDS
+		if (Ar.IsBorderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
+#endif
 #if MASSEFF
 		if (Ar.IsMassEffect && Ar.ArLicenseeVer >= 65)
 		{
@@ -1562,6 +1571,7 @@ class UMaterialInterface : public UUnrealMaterial
 public:
 	BEGIN_PROP_TABLE
 		PROP_DROP(PreviewMesh)
+		PROP_DROP(LightingGuid)
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -1644,6 +1654,7 @@ public:
 		PROP_DROP(bUsesSceneColor)
 		PROP_DROP(bUsedWithMorphTargets)
 		PROP_DROP(bAllowFog)
+		PROP_DROP(ReferencedTextureGuids)
 #if MEDGE
 		PROP_DROP(BakerBleedBounceAmount)
 		PROP_DROP(BakerAlpha)
@@ -1671,6 +1682,8 @@ public:
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(bHasStaticPermutationResource)
 		PROP_DROP(ReferencedTextures)	// this is a textures from Parent plus own overrided textures
+		PROP_DROP(ReferencedTextureGuids)
+		PROP_DROP(ParentLightingGuid)
 	END_PROP_TABLE
 };
 

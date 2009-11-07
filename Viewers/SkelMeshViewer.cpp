@@ -5,6 +5,9 @@
 #include "../MeshInstance/MeshInstance.h"
 
 
+#define TEST_ANIMS			1
+
+
 CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 :	CLodMeshViewer(Mesh)
 {
@@ -276,6 +279,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 		MeshInst->DumpBones();
 		break;
 
+#if TEST_ANIMS
 	//!! testing, remove later
 	case 'y':
 		if (Alpha >= 0)
@@ -315,6 +319,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 		MeshInst->LoopAnim("AssSmack", 1, 0, 4);
 		MeshInst->SetBlendParams(4, 1.0f, "Bip01 L UpperArm");
 		break;
+#endif // TEST_ANIMS
 
 	case 'a'|KEY_CTRL:
 		{
@@ -348,6 +353,16 @@ void CSkelMeshViewer::ProcessKey(int key)
 					break;
 				}
 			}
+		}
+		break;
+
+	case 't'|KEY_CTRL:
+		{
+			CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
+			SkelInst->SetMesh(MeshInst->pMesh);
+			TagMesh(SkelInst);
+			//!! note: TagMesh() may reject tagging
+			//!! also, there is no way to remove tagging
 		}
 		break;
 

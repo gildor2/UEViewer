@@ -318,6 +318,9 @@ int main(int argc, char **argv)
 #	if CRIMECRAFT
 				"    Crime Craft\n"
 #	endif
+#	if BORDERLANDS
+				"    Borderlands\n"
+#	endif
 #	if SPECIAL_TAGS
 				"    Nurien\n"
 #	endif

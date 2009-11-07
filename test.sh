@@ -85,11 +85,11 @@ if [ $# -gt 0 ]; then
 	declare -a args
 	while [ $# -gt 0 ]; do
 		value=${1//\\//}			# replace backslashes with forward slashes
-#??		if [[ "$value" == @(* *) ]]; then
-#??			value="\"$value\""
-#??		fi
+#		if [[ "$value" == @(* *) ]]; then
+#			value="\"$value\""
+#		fi
+		echo "[$1] -> [$value]"
 		args[${#args[@]}]="$value"	# add value to array
-#??		echo "val=$value" #!!
 		shift
 	done
 	eval $cmd ${args[*]}			# execute command

@@ -2,8 +2,8 @@
  *	Per-pixel lighting shader with normalmap support
  *****************************************************************************/
 
-//#define SHOW_BUMP
-//#define NORMALMAP
+//#define SHOW_BUMP			// show specular only
+//#define NORMALMAP			// show mesh using single light from viewer; no texuring, specular from everything
 
 #define SPECULAR
 
@@ -29,8 +29,6 @@ uniform sampler2D spPowTex;
 uniform sampler2D opacTex;
 uniform sampler2D emisTex;
 
-//uniform bool useLighting;		// when set to "false", use vertex color only
-
 
 vec3 ToTangent(vec3 source, vec3 t, vec3 b, vec3 n)
 {
@@ -45,19 +43,12 @@ vec3 ToTangent(vec3 source, vec3 t, vec3 b, vec3 n)
 void VertexShaderMain()
 {
 	// light parameters
-//	if (useLighting)
-	{
-		// gl_FrontMaterial.diffuse and gl_FrontMaterial.ambient are premultiplied by gl_Color (see docs/glsl.txt)
-		diffuse  = /*gl_FrontMaterial.diffuse * */ gl_Color * gl_LightSource[0].diffuse;
-		ambient  = /*gl_FrontMaterial.ambient * */ gl_Color * (gl_LightSource[0].ambient + gl_LightModel.ambient);
-		specular = gl_FrontMaterial.specular * gl_LightSource[0].specular;
-	}
-/*	else
-	{
-		diffuse  = vec4(0.0, 0.0, 0.0, 0.0);
-		ambient  = gl_Color;
-		specular = vec4(0.0, 0.0, 0.0, 0.0);
-	} */
+
+	// gl_FrontMaterial.diffuse and gl_FrontMaterial.ambient are premultiplied by gl_Color (see docs/glsl.txt)
+	diffuse  = /*gl_FrontMaterial.diffuse * */ gl_Color * gl_LightSource[0].diffuse;
+	ambient  = /*gl_FrontMaterial.ambient * */ gl_Color * (gl_LightSource[0].ambient + gl_LightModel.ambient);
+	specular = gl_FrontMaterial.specular * gl_LightSource[0].specular;
+
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 	gl_Position    = ftransform();
 
@@ -127,8 +118,7 @@ void PixelShaderMain()
 	vec4 color     = ambient + diffuse * NdotL;
 
 #if TEXTURING
-	vec4 texColor = GetMaterialDiffuseColor(TexCoord);
-	color *= texColor;
+	color *= GetMaterialDiffuseColor(TexCoord);
 #endif
 
 #ifdef SHOW_BUMP
@@ -151,11 +141,9 @@ void PixelShaderMain()
 	color.a   *= GetMaterialOpacity(TexCoord);
 
 //	color.rgb += pow(1.0 - dot(n, tangentEye), 3.5) * vec3(1.0);	// Fresnel
-//	color.rgb = pow(dot(n, tangentEye), 3.5) * vec3(1.0);
-
 #ifdef NORMALMAP
-	gl_FragColor = vec4(n, 1.0);	// show normalmap
-#else
-	gl_FragColor = color;
+	color.rgb = pow(dot(n, tangentEye), 3.5) * vec3(1.0);
 #endif
+
+	gl_FragColor = color;
 }

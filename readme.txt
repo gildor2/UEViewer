@@ -26,6 +26,7 @@ Unreal Engine 3:
   Unreal Tournament 3
   Gears of War
   Gears of War 2 (XBox360)
+  UDK
   Mortal Online
   Section 8
 Modified Unreal Engine 3:
@@ -43,6 +44,7 @@ Modified Unreal Engine 3:
   Crime Craft
   Nurien
   Stranglehold
+  Borderlands
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -53,6 +55,7 @@ Using "-noanim" option (unsupported animation format):
   BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
   Stranglehold
+  Borderlands
 Unsupported animations (without umodel crash):
   Bioshock (uses Havok animation system)
   Rise of the Argonauts
@@ -133,13 +136,19 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+06.11.2009
+- implemented UDK support
+
+03.11.2009
+- implemented Borderlands Texture2D and SkeletalMesh support
+
 28.10.2009
 - filtering output spam from ATI GLSL compiler
 - UE2 renderer: improved complex material support (Shader, Combiner)
 
 27.10.2009
 - completely rewritten UE2 renderer:
-  - support normalmaps for Trives: Vengeance and Bioshock meshes
+  - support normalmaps for Tribes: Vengeance and Bioshock meshes
   - support specular mask
   - export UE2 materials
 

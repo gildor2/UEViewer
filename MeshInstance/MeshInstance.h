@@ -41,6 +41,7 @@ public:
 		guard(CMeshInstance::SetMaterial);
 		if (!bColorMaterials)
 		{
+			glColor3f(1, 1, 1);
 			if (Mat)
 				Mat->SetMaterial(PolyFlags);
 			else

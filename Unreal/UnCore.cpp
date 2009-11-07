@@ -929,6 +929,9 @@ void FArchive::DetectGame()
 #if CRIMECRAFT
 	IsCrimeCraft = (ArVer == 576 && ArLicenseeVer == 5);
 #endif
+#if BORDERLANDS
+	IsBorderlands = (ArVer == 584 && ArLicenseeVer == 57);
+#endif
 }
 
 

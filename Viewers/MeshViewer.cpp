@@ -35,11 +35,6 @@ void CMeshViewer::Draw3D()
 	glPolygonMode(GL_FRONT_AND_BACK, Inst->bWireframe ? GL_LINE : GL_FILL);	//?? bWireframe is inside Inst, but used here only ?
 	Inst->Draw();
 
-	// restore draw state
-	glColor3f(1, 1, 1);
-	BindDefaultMaterial(true);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
 	unguard;
 }
 

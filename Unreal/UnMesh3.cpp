@@ -11,10 +11,13 @@ struct FSkelMeshSection3
 	short				unk1;
 	int					FirstIndex;
 	word				NumTriangles;
+	byte				unk2;
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
 	{
-		return Ar << S.MaterialIndex << S.unk1 << S.FirstIndex << S.NumTriangles;
+		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex << S.NumTriangles;
+		if (Ar.ArVer >= 599) Ar << S.unk2;
+		return Ar;
 	}
 };
 
@@ -386,6 +389,7 @@ struct FGPUSkin3
 			Ar << S.bUseFullPrecisionPosition << S.MeshOrigin << S.MeshExtension;
 
 		//?? UE3 ignored this - forced bUseFullPrecisionPosition in FGPUSkin3 serializer ?
+		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
 //		printf("data: %d %d\n", S.bUseFullPrecisionUVs, S.bUseFullPrecisionPosition);
 		S.bUseFullPrecisionPosition = true;
 
@@ -437,13 +441,29 @@ struct FMesh3Unk1
 
 SIMPLE_TYPE(FMesh3Unk1, int)
 
+struct FMesh3Unk3
+{
+	int					f0;
+	int					f4;
+	TArray<word>		f8;
+
+	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk3 &S)
+	{
+		Ar << S.f0 << S.f4 << S.f8;
+		return Ar;
+	}
+};
+
 struct FMesh3Unk2
 {
 	TArray<FMesh3Unk1>	f0;
+	TArray<FMesh3Unk3>	fC;				//?? SparseArray or Map
 
 	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk2 &S)
 	{
-		return Ar << S.f0;
+		Ar << S.f0;
+		if (Ar.ArVer >= 609) Ar << S.fC;
+		return Ar;
 	}
 };
 
@@ -471,6 +491,16 @@ struct FStaticLODModel3
 		Ar << Lod.Sections << Lod.IndexBuffer;
 		if (Ar.ArVer < 297)
 			Ar << tmp1;
+
+#if BORDERLANDS
+		if (Ar.IsBorderlands)
+		{
+			// refined field set
+			Ar << Lod.UsedBones << Lod.Chunks << Lod.f80 << Lod.NumVertices;
+			goto part2;
+		}
+#endif // BORDERLANDS
+
 		Ar << Lod.f68 << Lod.UsedBones << Lod.f74 << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 #if BATMAN
 		if (Ar.IsBatman && Ar.ArLicenseeVer >= 5)
@@ -483,6 +513,7 @@ struct FStaticLODModel3
 		{
 			Ar << Lod.Edges;
 		}
+
 #if STRANGLE
 		if (Ar.IsStrangle)
 		{
@@ -494,6 +525,8 @@ struct FStaticLODModel3
 			return Ar;
 		}
 #endif // STRANGLE
+
+	part2:
 		Ar << Lod.f24;
 		Lod.BulkData.Serialize(Ar);
 #if ARMYOF2
@@ -841,7 +874,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
 	{
 		const FSkelMeshSection3 &S = Lod.Sections[Sec];
-		if (S.unk1 != Sec) appNotify("Sec=%d unk1=%d", Sec, S.unk1);	//??
+//		if (S.unk1 != Sec) appNotify("Mesh %s: Sec=%d unk1=%d", Mesh.Name, Sec, S.unk1);	//??
 
 		FSkelMeshSection *Dst = new (SmoothSections) FSkelMeshSection;
 		int MaterialIndex = S.MaterialIndex;
@@ -926,7 +959,7 @@ void UAnimSet::ConvertAnims()
 		if (BioData)
 			CopyArray(TrackBoneNames, BioData->TrackBoneNames);
 	}
-#endif
+#endif // MASSEFF
 
 	RefBones.Empty(TrackBoneNames.Num());
 	for (i = 0; i < TrackBoneNames.Num(); i++)
@@ -1022,8 +1055,8 @@ void UAnimSet::ConvertAnims()
 				ScaleOffset  = Seq->CompressedTrackOffsets[offsetIndex+4];
 				ScaleKeys    = Seq->CompressedTrackOffsets[offsetIndex+5];
 			}
-#endif
-//			printf("[%d] :  %d[%d]  %d[%d]  %d[%d]\n", TransOffset, TransKeys, RotOffset, RotKeys, ScaleOffset, ScaleKeys);
+#endif // TLR
+//			printf("[%d:%d:%d] :  %d[%d]  %d[%d]  %d[%d]\n", j, Seq->RotationCompressionFormat, Seq->TranslationCompressionFormat, TransOffset, TransKeys, RotOffset, RotKeys, ScaleOffset, ScaleKeys);
 
 			A->KeyPos.Empty(TransKeys);
 			A->KeyQuat.Empty(RotKeys);
@@ -1043,13 +1076,30 @@ void UAnimSet::ConvertAnims()
 					appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before TransTrack", Name, *Seq->SequenceName, j, hole);
 ///					findHoles = false;
 				}
-#endif
+#endif // FIND_HOLES
 				Reader.Seek(TransOffset);
 				for (k = 0; k < TransKeys; k++)
 				{
-					FVector vec;
-					Reader << vec;
-					A->KeyPos.AddItem(vec);
+					if (Seq->TranslationCompressionFormat == ACF_None)
+					{
+						FVector vec;
+						Reader << vec;
+						A->KeyPos.AddItem(vec);
+					}
+#if BORDERLANDS
+					else if (Seq->TranslationCompressionFormat == ACF_Delta48NoW)
+					{
+						short v[3];
+						Reader << v[0] << v[1] << v[2];
+						FVector vec;
+						vec.X = v[0];
+						vec.Y = v[1];
+						vec.Z = v[2];
+						A->KeyPos.AddItem(vec);
+					}
+#endif // BORDERLANDS
+					else
+						appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
 				}
 				// align to 4 bytes
 				Reader.Seek(Align(Reader.Tell(), 4));
@@ -1074,7 +1124,7 @@ void UAnimSet::ConvertAnims()
 					Name, *Seq->SequenceName, j, hole, Seq->KeyEncodingFormat);
 ///				findHoles = false;
 			}
-#endif
+#endif // FIND_HOLES
 			// read rotation keys
 			Reader.Seek(RotOffset);
 			if (RotKeys == 1)
@@ -1137,7 +1187,7 @@ void UAnimSet::ConvertAnims()
 					}
 #endif // BATMAN
 					else
-						appError("Unknown compression method: %d", Seq->RotationCompressionFormat);
+						appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
 				}
 				// align to 4 bytes
 				Reader.Seek(Align(Reader.Tell(), 4));
@@ -1151,13 +1201,13 @@ void UAnimSet::ConvertAnims()
 				Reader.Seek(ScaleOffset + ScaleKeys * 12);
 				Reader.Seek(Align(Reader.Tell(), 4));
 			}
-#endif
+#endif // TLR
 #if DEBUG_DECOMPRESS
 //			printf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
 //				Seq->NumFrames, A->KeyPos.Num(), A->KeyQuat.Num(), *Seq->KeyEncodingFormat);
 			printf("    [%d]: %d - %d + %d - %d (%d/%d)\n", j,
 				TransOffset, TransEnd, RotOffset, Reader.Tell(), TransKeys, RotKeys);
-#endif
+#endif // DEBUG_DECOMPRESS
 		}
 	}
 

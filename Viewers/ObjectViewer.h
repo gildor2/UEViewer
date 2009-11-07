@@ -3,6 +3,7 @@
 
 
 class CMeshInstance;
+class CLodMeshInstance;
 class CVertMeshInstance;
 class CSkelMeshInstance;
 
@@ -118,6 +119,7 @@ public:
 	unsigned		CurrentTime;
 
 	CLodMeshViewer(ULodMesh *Mesh);
+	static void TagMesh(CLodMeshInstance *NewInst);
 
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);

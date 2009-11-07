@@ -212,6 +212,7 @@ struct FPropertyTag
 	int			ArrayIndex;
 	int			DataSize;
 	int			BoolValue;
+	FName		EnumName;			// UE3 ver >= 633
 
 	bool IsValid()
 	{
@@ -257,6 +258,8 @@ struct FPropertyTag
 				Ar << Tag.StrucName;
 			if (Tag.Type == NAME_BoolProperty)
 				Ar << Tag.BoolValue;
+			if (Tag.Type == NAME_ByteProperty && Ar.ArVer >= 633)
+				Ar << Tag.EnumName;
 			return Ar;
 		}
 #endif // UNREAL3

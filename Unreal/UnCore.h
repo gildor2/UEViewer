@@ -212,6 +212,9 @@ public:
 #if CRIMECRAFT
 	int		IsCrimeCraft:1;
 #endif
+#if BORDERLANDS
+	int		IsBorderlands:1;
+#endif
 
 	FArchive()
 	:	ArPos(0)
@@ -281,6 +284,9 @@ public:
 #endif
 #if CRIMECRAFT
 	,	IsCrimeCraft(0)
+#endif
+#if BORDERLANDS
+	,	IsBorderlands(0)
 #endif
 	{}
 

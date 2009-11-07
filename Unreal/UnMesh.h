@@ -1336,6 +1336,7 @@ struct FSkeletalMeshLODInfo
 		PROP_FLOAT(LODHysteresis)
 		PROP_ARRAY(LODMaterialMap, int)
 		PROP_ARRAY(bEnableShadowCasting, bool)
+		PROP_DROP(TriangleSorting)
 	END_PROP_TABLE
 };
 #endif
@@ -1758,6 +1759,10 @@ enum AnimationCompressionFormat
 #if BATMAN
 	ACF_Fixed48Max,
 #endif
+#if BORDERLANDS
+	ACF_Delta40NoW,
+	ACF_Delta48NoW,
+#endif
 };
 
 _ENUM(AnimationCompressionFormat)
@@ -1770,6 +1775,10 @@ _ENUM(AnimationCompressionFormat)
 	_E(ACF_Float32NoW),
 #if BATMAN
 	_E(ACF_Fixed48Max),
+#endif
+#if BORDERLANDS
+	_E(ACF_Delta40NoW),
+	_E(ACF_Delta48NoW),
 #endif
 };
 

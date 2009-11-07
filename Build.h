@@ -40,6 +40,7 @@
 #define XMEN			1		// XMen: Wolverine
 #define BATMAN			1		// Batman: Arkham Asylum
 #define CRIMECRAFT		1		// Crime Craft
+#define BORDERLANDS		1		// Borderlands
 ///#define HUXLEY			1
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 

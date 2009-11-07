@@ -785,6 +785,10 @@ static void Display()
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
 
+	// restore draw state
+	BindDefaultMaterial(true);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 	// 2D drawings
 	Set2Dmode();
 

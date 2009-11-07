@@ -170,6 +170,10 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 			CVT(UStructProperty);
 			TypeName = (Prop->Struct) ? Prop->Struct->Name : "struct";	//?? #IMPORTS#
 		}
+		else if (IS(UComponentProperty))
+		{
+			TypeName = "component";	//???
+		}
 		// other: UDelegateProperty, UInterfaceProperty
 		if (!TypeName) appError("Unknown type %s for field %s", ClassName, F->Name);
 		char FullType[256];

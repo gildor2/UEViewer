@@ -89,6 +89,9 @@ struct FPackageFileSummary
 	int			HeadersSize;		// used by UE3 for precaching name table
 	FString		PackageGroup;		// "None" or directory name
 	int			DependsOffset;		// number of items = ExportCount
+	int			f38;
+	int			f3C;
+	int			f40;
 	int			EngineVersion;
 	int			CookerVersion;
 	int			CompressionFlags;
@@ -193,6 +196,8 @@ struct FPackageFileSummary
 	#endif // STRANGLE
 		if (S.FileVersion >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
+		if (S.FileVersion >= 623)
+			Ar << S.f38 << S.f3C << S.f40;
 #endif // UNREAL3
 #if SPLINTER_CELL
 		if (Ar.IsSplinterCell)
@@ -233,7 +238,7 @@ struct FPackageFileSummary
 		else
 		{
 #if UNREAL3
-			if (Ar.ArVer >= 584)	//?? Mortal Online or just a new engine ?
+			if (Ar.ArVer >= 584)
 			{
 				int unk38;
 				Ar << unk38;

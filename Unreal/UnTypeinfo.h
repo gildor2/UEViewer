@@ -149,6 +149,10 @@ public:
 #endif
 		Ar << Line << TextPos;
 
+#if BORDERLANDS
+		if (Ar.IsBorderlands) Exchange((UObject*&)ScriptText, (UObject*&)Children);	//?? strange ...
+#endif
+
 		assert(Ar.IsLoading);
 		int ScriptSize;
 		Ar << ScriptSize;
@@ -246,6 +250,13 @@ public:
 		if (Ar.ArVer >= PACKAGE_V3)
 			Ar << unk60;
 #endif
+#if BORDERLANDS
+		if (Ar.IsBorderlands && Ar.ArLicenseeVer >= 2)
+		{
+			UObject *unk84, *unk88;
+			Ar << unk84 << unk88;
+		}
+#endif // BORDERLANDS
 		if (PropertyFlags & 0x20)
 			Ar << f48;
 		if (Ar.ArVer < PACKAGE_V3)
@@ -428,6 +439,26 @@ printf("Struct(%s) rest: %X\n", Name, Ar.GetStopper() - Ar.Tell());	//!!!
 };
 
 
+#if UNREAL3
+
+class UComponentProperty : public UProperty
+{
+	DECLARE_CLASS(UComponentProperty, UProperty);
+public:
+	UObject			*SomeName;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UComponentProperty::Serialize);
+		Super::Serialize(Ar);
+		Ar << SomeName;
+		unguard;
+	}
+};
+
+#endif // UNREAL3
+
+
 // UT2-specific?
 class UPointerProperty : public UProperty
 {
@@ -456,4 +487,5 @@ class UPointerProperty : public UProperty
 	REGISTER_CLASS(UPointerProperty)
 
 #define REGISTER_TYPEINFO_CLASSES_U3	\
-	REGISTER_CLASS(UScriptStruct)
+	REGISTER_CLASS(UScriptStruct)		\
+	REGISTER_CLASS(UComponentProperty)

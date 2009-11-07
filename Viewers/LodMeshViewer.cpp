@@ -4,6 +4,10 @@
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
 
+
+static TArray<CLodMeshInstance*> Meshes;
+
+
 CLodMeshViewer::CLodMeshViewer(ULodMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	AnimIndex(-1)
@@ -83,11 +87,23 @@ void CLodMeshViewer::Dump()
 }
 
 
+void CLodMeshViewer::TagMesh(CLodMeshInstance *NewInst)
+{
+	for (int i = 0; i < Meshes.Num(); i++)
+		if (Meshes[i]->pMesh == NewInst->pMesh)
+			return;	// already tagged
+	Meshes.AddItem(NewInst);
+}
+
+
 void CLodMeshViewer::Draw2D()
 {
 	guard(CLodMeshViewer::Draw2D);
 
 	CMeshViewer::Draw2D();
+
+	for (int i = 0; i < Meshes.Num(); i++)
+		DrawTextLeft("%d: %s", i, Meshes[i]->pMesh->Name);
 
 	const char *AnimName;
 	float Frame, NumFrames, Rate;
@@ -153,6 +169,13 @@ void CLodMeshViewer::Draw3D()
 	LodInst->UpdateAnimation(TimeDelta);
 
 	CMeshViewer::Draw3D();
+	for (int i = 0; i < Meshes.Num(); i++)
+	{
+		CLodMeshInstance *mesh = Meshes[i];
+		if (mesh->pMesh == LodInst->pMesh) continue;	// no duplicates
+		mesh->UpdateAnimation(TimeDelta);
+		mesh->Draw();
+	}
 
 	unguard;
 }
@@ -170,8 +193,10 @@ void CLodMeshViewer::ShowHelp()
 
 void CLodMeshViewer::ProcessKey(int key)
 {
+	int i;
+
 	CLodMeshInstance *LodInst = static_cast<CLodMeshInstance*>(Inst);
-	int NumAnims = LodInst->GetAnimCount();
+	int NumAnims = LodInst->GetAnimCount();	//?? use Meshes[] instead ...
 
 	const char *AnimName;
 	float		Frame;
@@ -198,6 +223,8 @@ void CLodMeshViewer::ProcessKey(int key)
 			// note: AnimIndex changed now
 			AnimName = LodInst->GetAnimName(AnimIndex);
 			LodInst->TweenAnim(AnimName, 0.25);	// change animation with tweening
+			for (i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->TweenAnim(AnimName, 0.25);
 		}
 		break;
 
@@ -218,15 +245,25 @@ void CLodMeshViewer::ProcessKey(int key)
 				Frame = 0;
 		}
 		LodInst->FreezeAnimAt(Frame);
+		for (i = 0; i < Meshes.Num(); i++)
+			Meshes[i]->FreezeAnimAt(Frame);
 		break;
 
 	case ' ':
 		if (AnimIndex >= 0)
+		{
 			LodInst->PlayAnim(AnimName);
+			for (i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->PlayAnim(AnimName);
+		}
 		break;
 	case 'x':
 		if (AnimIndex >= 0)
+		{
 			LodInst->LoopAnim(AnimName);
+			for (i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->LoopAnim(AnimName);
+		}
 		break;
 #if 0
 	//!! REMOVE
