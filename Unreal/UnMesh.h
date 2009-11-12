@@ -1337,6 +1337,9 @@ struct FSkeletalMeshLODInfo
 		PROP_ARRAY(LODMaterialMap, int)
 		PROP_ARRAY(bEnableShadowCasting, bool)
 		PROP_DROP(TriangleSorting)
+#if MCARTA
+		PROP_DROP(LODMaterialDrawOrder)
+#endif
 	END_PROP_TABLE
 };
 #endif
@@ -1734,15 +1737,8 @@ struct FRawAnimSequenceTrack
 	{
 		if (Ar.ArVer >= 577)
 		{
-			// new UE3 version has replaced TArray<> with TRawArray
-			TRawArray<FVector> Pos;
-			TRawArray<FQuat>   Rot;
-			TRawArray<float>   Time;
-			Ar << Pos << Rot << Time;
-			CopyArray(T.PosKeys, Pos);
-			CopyArray(T.RotKeys, Rot);
-			CopyArray(T.KeyTimes, Time);
-			return Ar;
+			// newer UE3 version has replaced serializer for this structure
+			return Ar << RAW_ARRAY(T.PosKeys) << RAW_ARRAY(T.RotKeys) << RAW_ARRAY(T.KeyTimes);
 		}
 		return Ar << T.PosKeys << T.RotKeys << T.KeyTimes;
 	}

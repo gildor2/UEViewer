@@ -39,6 +39,7 @@ Modified Unreal Engine 3:
   Huxley
   Rise of the Argonauts
   X-Men Origins: Wolverine
+  Magna Carta 2 (XBox360)
   Damnation
   Batman: Arkham Asylum
   Crime Craft
@@ -136,6 +137,9 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+12.11.2009
+- implemented Magna Carta 2 support
+
 06.11.2009
 - implemented UDK support
 

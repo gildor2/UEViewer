@@ -38,6 +38,7 @@
 #define TLR				1		// The Last Remnant
 //#define TUROK			1		incomplete??
 #define XMEN			1		// XMen: Wolverine
+#define MCARTA			1		// Magna Carta 2
 #define BATMAN			1		// Batman: Arkham Asylum
 #define CRIMECRAFT		1		// Crime Craft
 #define BORDERLANDS		1		// Borderlands

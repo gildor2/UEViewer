@@ -1073,6 +1073,11 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		EMISSIVE(!stricmp(Name + len - 2, "_E"), 20);
 		OPACITY (!stricmp(Name + len - 2, "_A"), 20);
 		OPACITY (!stricmp(Name + len - 5, "_Mask"), 10);
+		// Magna Catra 2
+		DIFFUSE (!strnicmp(Name, "df_", 3), 20);
+		SPECULAR(!strnicmp(Name, "sp_", 3), 20);
+//		OPACITY (!strnicmp(Name, "op_", 3), 20);
+		NORMAL  (!strnicmp(Name, "no_", 3), 20);
 
 		NORMAL  (appStristr(Name, "Norm"), 80);
 		EMISSIVE(appStristr(Name, "Emis"), 80);

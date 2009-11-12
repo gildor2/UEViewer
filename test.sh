@@ -88,7 +88,7 @@ if [ $# -gt 0 ]; then
 #		if [[ "$value" == @(* *) ]]; then
 #			value="\"$value\""
 #		fi
-		echo "[$1] -> [$value]"
+#		echo "[$1] -> [$value]"
 		args[${#args[@]}]="$value"	# add value to array
 		shift
 	done

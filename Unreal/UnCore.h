@@ -206,6 +206,9 @@ public:
 #if XMEN
 	int		IsXMen:1;
 #endif
+#if MCARTA
+	int		IsMCarta:1;
+#endif
 #if BATMAN
 	int		IsBatman:1;
 #endif
@@ -278,6 +281,9 @@ public:
 #endif
 #if XMEN
 	,	IsXMen(0)
+#endif
+#if MCARTA
+	,	IsMCarta(0)
 #endif
 #if BATMAN
 	,	IsBatman(0)
@@ -1067,8 +1073,9 @@ inline void SkipLazyArray(FArchive &Ar)
 // engine version should equals to game engine version, otherwise per-element
 // reading will be performed (as usual in TArray)
 // There is no reading optimization performed here (in umodel)
-template<class T> class TRawArray : public TArray<T>
+template<class T> class TRawArray : protected TArray<T>
 {
+public:
 	// Helper function to reduce TLazyArray<>::operator<<() code size.
 	// Used as C-style wrapper around TArray<>::operator<<().
 	static FArchive& SerializeArray(FArchive &Ar, void *Array)
@@ -1080,8 +1087,13 @@ template<class T> class TRawArray : public TArray<T>
 	{
 		return SerializeRawArray(Ar, A, SerializeArray);
 	}
-};
 
+protected:
+	// disallow direct creation of TRawArray, this is a helper class with a
+	// different serializer
+	TRawArray()
+	{}
+};
 
 inline void SkipRawArray(FArchive &Ar, int Size)
 {
@@ -1102,6 +1114,14 @@ inline void SkipRawArray(FArchive &Ar, int Size)
 	}
 	unguard;
 }
+
+// helper function for RAW_ARRAY macro
+template<class T> inline TRawArray<T>& ToRawArray(TArray<T> &Arr)
+{
+	return (TRawArray<T>&)Arr;
+}
+
+#define RAW_ARRAY(Arr)		ToRawArray(Arr)
 
 #endif // UNREAL3
 

@@ -923,6 +923,9 @@ void FArchive::DetectGame()
 #if XMEN
 	IsXMen = (ArVer == 568 && ArLicenseeVer == 101);
 #endif
+#if MCARTA
+	IsMCarta = (ArVer == 446 && ArLicenseeVer == 25);
+#endif
 #if BATMAN
 	IsBatman = (ArVer == 576 && ArLicenseeVer == 21);
 #endif
@@ -1205,6 +1208,14 @@ void FByteBulkData::Serialize(FArchive &Ar)
 			return;								//?? what to do with BulkData ?
 	}
 
+#if MCARTA
+	if (Ar.IsMCarta && (BulkDataFlags & 0x40))
+	{
+		// this game has different compression flags
+		BulkDataFlags &= ~0x40;
+		BulkDataFlags |= BULKDATA_CompressedLzx;
+	}
+#endif // MCARTA
 //	printf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n", Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)

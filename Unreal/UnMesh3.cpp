@@ -16,6 +16,13 @@ struct FSkelMeshSection3
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
 	{
 		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex << S.NumTriangles;
+#if MCARTA
+		if (Ar.IsMCarta && Ar.ArLicenseeVer >= 20)
+		{
+			int fC;
+			Ar << fC;
+		}
+#endif // MCARTA
 		if (Ar.ArVer >= 599) Ar << S.unk2;
 		return Ar;
 	}
@@ -23,11 +30,11 @@ struct FSkelMeshSection3
 
 struct FIndexBuffer3
 {
-	TRawArray<word>		Indices;
+	TArray<word>		Indices;
 
 	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
 	{
-		return Ar << I.Indices;
+		return Ar << RAW_ARRAY(I.Indices);
 	}
 };
 
@@ -85,6 +92,13 @@ struct FRigidVertex3
 			Ar << U1 << V1;
 		}
 #endif // MKVSDC
+#if MCARTA
+		if (Ar.IsMCarta && Ar.ArLicenseeVer >= 5)
+		{
+			int f20;
+			Ar << f20;
+		}
+#endif // MCARTA
 		Ar << V.BoneIndex;
 		return Ar;
 	}
@@ -143,6 +157,13 @@ struct FSmoothVertex3
 			for (i = 0; i < 4; i++)
 				Ar << V.BoneIndex[i] << V.BoneWeight[i];
 		}
+#if MCARTA
+		if (Ar.IsMCarta && Ar.ArLicenseeVer >= 5)
+		{
+			int f28;
+			Ar << f28;
+		}
+#endif // MCARTA
 		return Ar;
 	}
 };
@@ -175,8 +196,8 @@ struct FSkinChunk3
 #if ARMYOF2
 		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
-			TRawArray<FMeshUV> extraUV;
-			Ar << extraUV;
+			TArray<FMeshUV> extraUV;
+			Ar << RAW_ARRAY(extraUV);
 		}
 #endif // ARMYOF2
 		if (Ar.ArVer >= 362)
@@ -338,10 +359,10 @@ struct FGPUSkin3
 	FVector						MeshOrigin;
 	FVector						MeshExtension;
 	// vertex sets
-	TRawArray<FGPUVert3Half>		VertsHalf;				// only one of these vertex sets are used
-	TRawArray<FGPUVert3Float>		VertsFloat;
-	TRawArray<FGPUVert3PackedFloat>	VertsHalfPacked;		//?? unused
-	TRawArray<FGPUVert3PackedHalf>	VertsFloatPacked;		//?? unused
+	TArray<FGPUVert3Half>		VertsHalf;					// only one of these vertex sets are used
+	TArray<FGPUVert3Float>		VertsFloat;
+	TArray<FGPUVert3PackedFloat> VertsHalfPacked;		//?? unused
+	TArray<FGPUVert3PackedHalf>	VertsFloatPacked;		//?? unused
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUSkin3 &S)
 	{
@@ -367,8 +388,8 @@ struct FGPUSkin3
 		{
 		old_version:
 			// old version - FSmoothVertex3 array
-			TRawArray<FSmoothVertex3> Verts;
-			Ar << Verts;
+			TArray<FSmoothVertex3> Verts;
+			Ar << RAW_ARRAY(Verts);
 			// convert verts
 			CopyArray(S.VertsFloat, Verts);
 			S.bUseFullPrecisionUVs      = true;
@@ -404,9 +425,9 @@ struct FGPUSkin3
 			}
 	#endif // MEDGE
 			if (S.bUseFullPrecisionPosition)
-				Ar << S.VertsHalf;
+				Ar << RAW_ARRAY(S.VertsHalf);
 			else
-				Ar << S.VertsHalfPacked;
+				Ar << RAW_ARRAY(S.VertsHalfPacked);
 		}
 		else
 		{
@@ -418,9 +439,9 @@ struct FGPUSkin3
 			}
 	#endif // MEDGE
 			if (S.bUseFullPrecisionPosition)
-				Ar << S.VertsFloat;
+				Ar << RAW_ARRAY(S.VertsFloat);
 			else
-				Ar << S.VertsFloatPacked;
+				Ar << RAW_ARRAY(S.VertsFloatPacked);
 		}
 
 		return Ar;
@@ -533,8 +554,8 @@ struct FStaticLODModel3
 		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
 			int unk84;
-			TRawArray<FMeshUV> extraUV;
-			Ar << unk84 << extraUV;
+			TArray<FMeshUV> extraUV;
+			Ar << unk84 << RAW_ARRAY(extraUV);
 		}
 #endif // ARMYOF2
 		if (Ar.ArVer >= 333)
