@@ -160,7 +160,7 @@ public:
 			// serialize compressed chunk header
 			Reader->Seek(Chunk->CompressedOffset);
 #if BIOSHOCK
-			if (IsBioshock)
+			if (Game == GAME_Bioshock)
 			{
 				// read block size
 				int CompressedSize;
@@ -272,11 +272,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		*this << b;
 		// for Ver111 XorKey==0xAC for Lineage or ==0x42 for Exteel, for Ver121 computed from filename
 		byte XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
-	#if LINEAGE2
-		IsLineage2  = 1;
-	#endif
-	#if EXTEEL
-		IsExteel    = 1;
+	#if LINEAGE2 || EXTEEL
+		Game = GAME_Lineage2;	// may be changed by DetectGame()
 	#endif
 		// replace Loader
 		Loader = new FFileReaderLineage(Loader, XorKey);
@@ -326,7 +323,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	ArLicenseeVer = Summary.LicenseeVersion;
 	PKG_LOG(("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion));
 #if UNREAL3
-	if (ArVer >= PACKAGE_V3)
+	if (Game >= GAME_UE3)
 		PKG_LOG(("Engine: %d ", Summary.EngineVersion));
 	if (fullyCompressed)
 		PKG_LOG(("[FullComp] "));
@@ -334,7 +331,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	PKG_LOG(("Names: %d Exports: %d Imports: %d\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
 
 #if BIOSHOCK
-	if (IsBioshock)
+	if (Game == GAME_Bioshock)
 	{
 		// read compression info
 		int NumChunks, i;
@@ -355,12 +352,12 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		}
 		// replace Loader for reading compressed Bioshock archives
 		Loader = new FUE3ArchiveReader(Loader, COMPRESS_ZLIB, Chunks);
-		Loader->IsBioshock = true;		// use different structures
+		Loader->Game = Game;
 	}
 #endif // BIOSHOCK
 
 #if UNREAL3
-	if (ArVer >= PACKAGE_V3 && Summary.CompressionFlags)
+	if (Game >= GAME_UE3 && Summary.CompressionFlags)
 	{
 		if (fullyCompressed) appError("Fully compressed package %s has additional compression table", filename);
 		// replace Loader with special reader for compressed UE3 archives
@@ -394,7 +391,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				*this << tmp;
 			}
 #if PARIAH
-			else if (IsPariah && ((ArLicenseeVer & 0x3F) >= 0x1C))
+			else if (Game == GAME_Pariah && ((ArLicenseeVer & 0x3F) >= 0x1C))
 			{
 				// used word + char[] instead of FString
 				word len;
@@ -427,12 +424,12 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				*this << tmp;
 	#if UNREAL3
 		#if WHEELMAN
-				if (IsWheelman) goto done;	// no flags
+				if (Game == GAME_Wheelman) goto done;	// no flags
 		#endif
 		#if BIOSHOCK
-				if (IsBioshock) goto qword_flags;
+				if (Game == GAME_Bioshock) goto qword_flags;
 		#endif
-				if (ArVer >= PACKAGE_V3)
+				if (Game >= GAME_UE3)
 				{
 				qword_flags:
 					// object flags are 64-bit in UE3, skip additional 32 bits
@@ -554,19 +551,19 @@ UObject* UnPackage::CreateExport(int index)
 		return NULL;
 	}
 #if UNREAL3
-	if (ArVer >= PACKAGE_V3 && (Exp.ExportFlags & EF_ForcedExport)) // ExportFlags appeared in ArVer=247
+	if (Game >= GAME_UE3 && (Exp.ExportFlags & EF_ForcedExport)) // ExportFlags appeared in ArVer=247
 	{
 		// find outermost package
-		int PackageIndex = Exp.PackageIndex;
-		if (PackageIndex)
+		if (Exp.PackageIndex)
 		{
+			int PackageIndex = Exp.PackageIndex - 1;			// subtract 1, because 0 = no parent
 			while (true)
 			{
-				const FObjectExport &Exp2 = GetExport(PackageIndex - 1);
+				const FObjectExport &Exp2 = GetExport(PackageIndex);
 				if (!Exp2.PackageIndex) break;
-				PackageIndex = Exp2.PackageIndex;
+				PackageIndex = Exp2.PackageIndex - 1;			// subtract 1 ...
 			}
-			const FObjectExport &Exp2 = GetExport(PackageIndex - 1);
+			const FObjectExport &Exp2 = GetExport(PackageIndex);
 			assert(Exp2.ExportFlags & EF_ForcedExport);
 			const char *PackageName = Exp2.ObjectName;
 			printf("Forced export: %s'%s.%s'\n", ClassName, PackageName, *Exp.ObjectName);

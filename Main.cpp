@@ -481,7 +481,7 @@ int main(int argc, char **argv)
 	}
 
 #if BIOSHOCK
-	if (Package->IsBioshock)
+	if (Package->Game == GAME_Bioshock)
 	{
 		//!! should change this code!
 		CTypeInfo::RemapProp("UShader", "Opacity", "Opacity_Bio"); //!!

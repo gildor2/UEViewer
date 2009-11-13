@@ -1416,7 +1416,7 @@ static void BioReadBulkCatalog()
 	// setup for reading Bioshock data
 	Ar->ArVer         = 141;
 	Ar->ArLicenseeVer = 0x38;
-	Ar->IsBioshock    = true;
+	Ar->Game          = GAME_Bioshock;
 	// serialize
 	*Ar << bioCatalog;
 	// finalize
@@ -1477,7 +1477,7 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 	guard(UTexture::Decompress);
 	//?? combine with DecompressTexture() ?
 #if BIOSHOCK
-	if (Package && Package->IsBioshock) //?? check bStripped ?
+	if (Package && Package->Game == GAME_Bioshock) //?? check bStripped ?
 	{
 		BioReadBulkCatalog();
 		byte *pic = FindBioTexture(this);
@@ -1636,25 +1636,25 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 				// data is inside another package
 				//!! copy-paste from UnPackage::CreateExport(), should separate function
 				// find outermost package
-				int PackageIndex = this->PackageIndex;	//?? ugly ...
-				if (PackageIndex)
+				if (this->PackageIndex)
 				{
+					int PackageIndex = this->PackageIndex;		// export entry for this object (UTexture2D)
 					while (true)
 					{
-						const FObjectExport &Exp2 = Package->GetExport(PackageIndex - 1);
-						if (!Exp2.PackageIndex) break;
-						PackageIndex = Exp2.PackageIndex;
+						const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
+						if (!Exp2.PackageIndex) break;			// get parent (UPackage)
+						PackageIndex = Exp2.PackageIndex - 1;	// subtract 1 from package index
 					}
-					const FObjectExport &Exp2 = Package->GetExport(PackageIndex - 1);
+					const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
 					if (Exp2.ExportFlags & EF_ForcedExport)
 					{
 						bulkFileName = Exp2.ObjectName;
-						bulkFileExt  = NULL;		// find package file
+						bulkFileExt  = NULL;					// find package file
 //						printf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
 					}
 				}
 			}
-			if (!bulkFileName) continue;		// just in case
+			if (!bulkFileName) continue;						// just in case
 
 			const CGameFileInfo *bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
 			if (!bulkFile)
@@ -1796,7 +1796,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 	// no valid mipmaps
 	return NULL;
 
-	unguard;
+	unguardf(("Tex=%s", Name));
 }
 
 #endif // UNREAL3

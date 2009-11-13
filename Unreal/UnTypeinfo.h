@@ -137,20 +137,20 @@ public:
 		Super::Serialize(Ar);
 		Ar << ScriptText << Children;
 #if UNREAL3
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.Game >= GAME_UE3)
 			Ar << CppText;
 #endif
 //		printf("%s: cpp:%s scr:%s child:%s\n", Name, CppText ? CppText->Name : "-", ScriptText ? ScriptText->Name : "-", Children ? Children->Name : "-");
-		if (Ar.ArVer < PACKAGE_V3)
+		if (Ar.Game < GAME_UE3)
 			Ar << FriendlyName;	//?? UT2 ? or UE2 ?
 #if UT2
-		if (Ar.IsUT2 && Ar.ArLicenseeVer >= 25)	//?? other games too ?
+		if (Ar.Game == GAME_UT2 && Ar.ArLicenseeVer >= 25)	//?? other games too ?
 			Ar << f60;
 #endif
 		Ar << Line << TextPos;
 
 #if BORDERLANDS
-		if (Ar.IsBorderlands) Exchange((UObject*&)ScriptText, (UObject*&)Children);	//?? strange ...
+		if (Ar.Game == GAME_Borderlands) Exchange((UObject*&)ScriptText, (UObject*&)Children);	//?? strange ...
 #endif
 
 		assert(Ar.IsLoading);
@@ -242,16 +242,16 @@ public:
 		Super::Serialize(Ar);
 		Ar << ArrayDim << PropertyFlags;
 #if UNREAL3
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.Game >= GAME_UE3)
 			Ar << PropertyFlags2;
 #endif
 		Ar << Category;
 #if UNREAL3
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.Game >= GAME_UE3)
 			Ar << unk60;
 #endif
 #if BORDERLANDS
-		if (Ar.IsBorderlands && Ar.ArLicenseeVer >= 2)
+		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 2)
 		{
 			UObject *unk84, *unk88;
 			Ar << unk84 << unk88;
@@ -259,7 +259,7 @@ public:
 #endif // BORDERLANDS
 		if (PropertyFlags & 0x20)
 			Ar << f48;
-		if (Ar.ArVer < PACKAGE_V3)
+		if (Ar.Game < GAME_UE3)
 		{
 			//?? UT2 only ?
 			if (PropertyFlags & 0x2000000)
@@ -267,7 +267,7 @@ public:
 		}
 #if A51
 		//?? Area 51: if Flags2 & 0x80000000 -> serialize "FString f64"
-		if (Ar.IsA51 && (PropertyFlags2 & 0x80000000))
+		if (Ar.Game == GAME_A51 && (PropertyFlags2 & 0x80000000))
 			Ar << f64;
 #endif // A51
 //		printf("... prop %s [%d] %X:%X (%s)\n", Name, ArrayDim, PropertyFlags, PropertyFlags2, *Category);

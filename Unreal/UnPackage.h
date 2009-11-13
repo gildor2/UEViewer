@@ -134,7 +134,7 @@ struct FPackageFileSummary
 		Ar.DetectGame();
 		// read other fields
 #if HUXLEY
-		if (Ar.IsHuxley && Ar.ArLicenseeVer >= 8)
+		if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 8)
 		{
 			int skip;
 			Ar << skip;								// 0xFEFEFEFE
@@ -153,14 +153,14 @@ struct FPackageFileSummary
 			else
 				S.HeadersSize = 0;
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
-	#if A51 || WHEELMAN || MKVSDC || STRANGLE					//?? special define ?
+	#if A51 || WHEELMAN || MKVSDC || STRANGLE							//?? special define ?
 			int midwayVer = 0;
-			if ((Ar.IsA51 || Ar.IsWheelman || Ar.IsMK || Ar.IsStrangle) && S.LicenseeVersion >= 2)	//?? Wheelman not checked
+			if (Ar.GameMask(GAME_MIDWAY3) && S.LicenseeVersion >= 2)	//?? Wheelman not checked
 			{
 				int Tag;							// Tag == "A52 ", "MK8 ", "WMAN", "WOO " (Stranglehold)
 				int unk10;
 				Ar << Tag << midwayVer;
-				if (Ar.IsStrangle && midwayVer >= 256)
+				if (Ar.Game == GAME_Strangle && midwayVer >= 256)
 					Ar << unk10;
 			}
 	#endif // MIDWAY
@@ -171,7 +171,7 @@ struct FPackageFileSummary
 		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
 #if UNREAL3
 	#if MKVSDC
-		if (Ar.IsMK)
+		if (Ar.Game == GAME_MK)
 		{
 			int unk3C, unk40;
 			if (midwayVer >= 16)
@@ -181,14 +181,14 @@ struct FPackageFileSummary
 		}
 	#endif // MKVSDC
 	#if WHEELMAN
-		if (Ar.IsWheelman && midwayVer >= 23)
+		if (Ar.Game == GAME_Wheelman && midwayVer >= 23)
 		{
 			int unk3C;
 			Ar << unk3C;
 		}
 	#endif // WHEELMAN
 	#if STRANGLE
-		if (Ar.IsStrangle && S.FileVersion >= 375)
+		if (Ar.Game == GAME_Strangle && S.FileVersion >= 375)
 		{
 			int unk40;
 			Ar << unk40;
@@ -200,7 +200,7 @@ struct FPackageFileSummary
 			Ar << S.f38 << S.f3C << S.f40;
 #endif // UNREAL3
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell)
+		if (Ar.Game == GAME_SplinterCell)
 		{
 			int tmp1;
 			FString tmp2;
@@ -212,7 +212,7 @@ struct FPackageFileSummary
 		if (S.PackageFlags & 0x10000 && (S.FileVersion >= 0x80 && S.FileVersion < 0x88))	//?? unknown upper limit; known lower limit: 0x80
 		{
 			// encrypted Ragnarok Online archive header (data taken by archive analysis)
-			Ar.IsRagnarok2 = 1;
+			Ar.Game = GAME_Ragnarok2;
 			S.NameCount    ^= 0xD97790C7 ^ 0x1C;
 			S.NameOffset   ^= 0xF208FB9F ^ 0x40;
 			S.ExportCount  ^= 0xEBBDE077 ^ 0x04;
@@ -246,7 +246,7 @@ struct FPackageFileSummary
 #endif
 			Ar << S.Guid;
 #if BIOSHOCK
-			if (Ar.IsBioshock)
+			if (Ar.Game == GAME_Bioshock)
 			{
 				// Bioshock uses AR_INDEX for array size, but int for generations
 				int Count;
@@ -271,7 +271,7 @@ struct FPackageFileSummary
 				Ar << S.CookerVersion;
 	#if MASSEFF
 			// ... MassEffect has some additional structure here ...
-			if (Ar.IsMassEffect)
+			if (Ar.Game == GAME_MassEffect)
 			{
 				int unk1, unk2, unk3[2], unk4[2];
 				if (Ar.ArLicenseeVer >= 16) Ar << unk1;					// random value
@@ -292,7 +292,7 @@ struct FPackageFileSummary
 //			if (S.FileVersion >= 516)
 //				Ar << some array ... (U3unk70)
 			// ... MassEffect has additional field here ...
-			// if (Ar.IsMassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
+			// if (Ar.Game == GAME_MassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
 //		}
 //		printf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
 //		printf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
@@ -331,14 +331,14 @@ struct FObjectExport
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E)
 	{
 #if UNREAL3
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.Game >= GAME_UE3)
 		{
 			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex;
 			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize;
 			if (E.SerialSize || Ar.ArVer >= 249)
 				Ar << E.SerialOffset;
 #	if HUXLEY
-			if (Ar.IsHuxley && Ar.ArLicenseeVer >= 22)
+			if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 22)
 			{
 				int unk24;
 				Ar << unk24;
@@ -356,7 +356,7 @@ struct FObjectExport
 		}
 #endif // UNREAL3
 #if UC2
-		if (Ar.ArVer >= 145) // && < PACKAGE_V3
+		if (Ar.ArVer >= 145) // && < PACKAGE_V3 ? Game >= GAME_UE2X -- UE3 too
 		{
 			Ar << E.ClassIndex << E.SuperIndex;
 			if (Ar.ArVer >= 150)
@@ -378,7 +378,7 @@ struct FObjectExport
 		}
 #endif // UC2
 #if PARIAH
-		if (Ar.IsPariah)
+		if (Ar.Game == GAME_Pariah)
 		{
 			Ar << E.ObjectName << AR_INDEX(E.SuperIndex) << E.PackageIndex << E.ObjectFlags;
 			Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SerialSize);
@@ -388,7 +388,7 @@ struct FObjectExport
 		}
 #endif // PARIAH
 #if BIOSHOCK
-		if (Ar.IsBioshock)
+		if (Ar.Game == GAME_Bioshock)
 		{
 			int unkC, flags2, unk30;
 			Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
@@ -431,7 +431,7 @@ struct FObjectImport
 		}
 #endif // UC2
 #if PARIAH
-		if (Ar.IsPariah)
+		if (Ar.Game == GAME_Pariah)
 			return Ar << I.PackageIndex << I.ObjectName << I.ClassPackage << I.ClassName;
 #endif
 		return Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
@@ -552,7 +552,7 @@ public:
 	virtual FArchive& operator<<(FName &N)
 	{
 #if BIOSHOCK
-		if (IsBioshock)
+		if (Game == GAME_Bioshock)
 		{
 			*this << AR_INDEX(N.Index) << N.Flags;
 		}
@@ -562,7 +562,7 @@ public:
 		if (ArVer >= 145)				// PACKAGE_V3, but have version in UC2
 		{
 			*this << N.Index;
-			if (ArVer >= PACKAGE_V3)
+			if (Game >= GAME_UE3)
 				*this << N.Flags;
 		}
 		else
@@ -576,7 +576,7 @@ public:
 	{
 		int index;
 #if BIOSHOCK
-		if (IsBioshock) goto compact;
+		if (Game == GAME_Bioshock) goto compact;
 #endif
 #if UNREAL3
 		if (ArVer >= 145)				 // PACKAGE_V3, but has in UC2

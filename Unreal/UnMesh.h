@@ -220,7 +220,7 @@ struct FMeshAnimNotify
 		guard(FMeshAnimNotify<<);
 		Ar << N.Time << N.Function;
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell)
+		if (Ar.Game == GAME_SplinterCell)
 		{
 			FName Obj;
 			Ar << Obj;						// instead of UObject*
@@ -302,17 +302,17 @@ struct FMeshAnimSeq
 		guard(FMeshAnimSeq<<);
 #if TRIBES3
 		TRIBES_HDR(Ar, 0x17);
-		if (Ar.IsTribes3 && t3_hdrV == 1)
+		if (Ar.Game == GAME_Tribes3 && t3_hdrV == 1)
 		{
 			int unk;
 			Ar << unk;
 		}
-#endif
+#endif // TRIBES3
 		if (Ar.ArVer >= 115)
 			Ar << A.f28;
 		Ar << A.Name;
 #if UNREAL1
-		if (Ar.ArVer < PACKAGE_V2)
+		if (Ar.GameMask(GAME_UE1))
 		{
 			// UE1 support
 			assert(Ar.IsLoading);
@@ -322,20 +322,20 @@ struct FMeshAnimSeq
 				A.Groups.AddItem(tmpGroup);
 		}
 		else
-#endif
+#endif // UNREAL1
 		{
 			Ar << A.Groups;					// array of groups
 		}
 		Ar << A.StartFrame << A.NumFrames << A.Notifys << A.Rate;
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell)
+		if (Ar.Game == GAME_SplinterCell)
 		{
 			byte unk;
 			Ar << unk;
 		}
-#endif
+#endif // SPLINTER_CELL
 #if LINEAGE2
-		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 1)
+		if (Ar.Game == GAME_Lineage2 && Ar.ArLicenseeVer >= 1)
 		{
 			int				f2C, f30, f34, f3C, f40;
 			UObject			*f38;
@@ -347,7 +347,7 @@ struct FMeshAnimSeq
 			if (Ar.ArLicenseeVer >= 0x19) Ar << f40;
 			if (Ar.ArLicenseeVer >= 0x1A) Ar << f44;
 		}
-#endif
+#endif // LINEAGE2
 		return Ar;
 		unguard;
 	}
@@ -439,12 +439,12 @@ public:
 			Ar << SkinTesselationFactor;
 		}
 #if LINEAGE2
-		if (Version >= 5 && Ar.IsLineage2)
+		if (Version >= 5 && Ar.Game == GAME_Lineage2)
 		{
 			int unk;
 			Ar << unk;
 		}
-#endif
+#endif // LINEAGE2
 
 		unguard;
 	}
@@ -501,7 +501,7 @@ struct T3_BasisVector
 		return Ar << V.v1 << V.v2;
 	}
 };
-#endif
+#endif // TRIBES3
 
 struct FSkinVertexStream
 {
@@ -520,7 +520,7 @@ struct FSkinVertexStream
 #endif
 		Ar << S.Revision << S.f18 << S.f1C << S.Verts;
 #if TRIBES3
-		if (Ar.IsTribes3 && t3_hdrSV >= 1)
+		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 1)
 		{
 			int unk1;
 			TArray<T3_BasisVector> unk2;
@@ -576,13 +576,13 @@ public:
 		guard(UVertMesh::Serialize);
 
 #if UNREAL1
-		if (Ar.ArVer < PACKAGE_V2)
+		if (Ar.GameMask(GAME_UE1))
 		{
 			SerializeVertMesh1(Ar);
 			RotOrigin.Roll = -RotOrigin.Roll;	//??
 			return;
 		}
-#endif
+#endif // UNREAL1
 
 		Super::Serialize(Ar);
 		RotOrigin.Roll = -RotOrigin.Roll;		//??
@@ -621,7 +621,7 @@ struct AnalogTrack
 	{
 		guard(AnalogTrack<<);
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell && Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
+		if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
 		{
 			A.SerializeSCell(Ar);
 			return Ar;
@@ -660,7 +660,7 @@ struct MotionChunk
 		guard(MotionChunk<<);
 		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell)				// possibly M.Flags != 0, skip FlexTrack serializer
+		if (Ar.Game == GAME_SplinterCell)	// possibly M.Flags != 0, skip FlexTrack serializer
 			return Ar;
 #endif
 #if UNREAL25
@@ -668,7 +668,7 @@ struct MotionChunk
 			SerializeFlexTracks(Ar, M);
 #endif
 #if TRIBES3
-		if (Ar.IsTribes3)
+		if (Ar.Game == GAME_Tribes3)
 			FixTribesMotionChunk(M);
 #endif
 		return Ar;
@@ -739,24 +739,24 @@ public:
 	{
 		guard(UMeshAnimation.Serialize);
 		Super::Serialize(Ar);
-		if (Ar.ArVer >= PACKAGE_V2)
+		if (Ar.Game >= GAME_UE2)
 			Ar << Version;					// no such field in UE1
 #if LINEAGE2
 		Ar << RefBones;
-		if (!Ar.IsLineage2)
+		if (Ar.Game != GAME_Lineage2)
 			Ar << Moves;
 		else
 			SerializeLineageMoves(Ar);
 		Ar << AnimSeqs;
 #else
 		Ar << RefBones << Moves << AnimSeqs;
-#endif
+#endif // LINEAGE2
 #if SPLINTER_CELL
-		if (Ar.IsSplinterCell)
+		if (Ar.Game == GAME_SplinterCell)
 			SerializeSCell(Ar);
 #endif
 #if UNREAL1
-		if (Ar.ArVer < PACKAGE_V2) Upgrade();		// UE1 code
+		if (Ar.GameMask(GAME_UE1)) Upgrade();		// UE1 code
 #endif
 		unguard;
 	}
@@ -879,7 +879,7 @@ struct FSkelBoneSphere
 		{
 			B.bBlockKarma = B.bBlockNonZeroExtent = B.bBlockZeroExtent = 1;
 		}
-		if (Ar.IsUT2)
+		if (Ar.Game == GAME_UT2)
 		{
 			if (Ar.ArVer > 123) Ar << B.bBlockKarma;
 			if (Ar.ArVer > 124)	Ar << B.bBlockZeroExtent << B.bBlockNonZeroExtent;
@@ -910,7 +910,7 @@ struct FSkelBoneBox
 		{
 			B.bBlockKarma = B.bBlockNonZeroExtent = B.bBlockZeroExtent = 1;
 		}
-		if (Ar.IsUT2)
+		if (Ar.Game == GAME_UT2)
 		{
 			if (Ar.ArVer > 123) Ar << B.bBlockKarma;
 			if (Ar.ArVer > 124) Ar << B.bBlockZeroExtent << B.bBlockNonZeroExtent;
@@ -996,12 +996,12 @@ struct FSkelMeshSection
 		Ar << S.MaterialIndex << S.MinStreamIndex << S.MinWedgeIndex << S.MaxWedgeIndex << S.NumStreamIndices;
 		Ar << S.BoneIndex << S.fE << S.FirstFace << S.NumFaces;
 #if LINEAGE2
-		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 0x1C)
+		if (Ar.Game == GAME_Lineage2 && Ar.ArLicenseeVer >= 0x1C)
 		{
 			// bone map (local bone index -> mesh bone index)
 			Ar << S.LineageBoneMap;
 		}
-#endif
+#endif // LINEAGE2
 		return Ar;
 	}
 };
@@ -1230,7 +1230,7 @@ struct FStaticLODModel
 		Ar << M.LODDistanceFactor << M.LODHysteresis << M.NumSharedVerts;
 		Ar << M.LODMaxInfluences << M.f114 << M.f118;
 #if TRIBES3
-		if (Ar.IsTribes3 && t3_hdrSV >= 1)
+		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 1)
 		{
 			TLazyArray<T3_BasisVector> unk1;
 			TArray<T3_BasisVector> unk2;
@@ -1238,7 +1238,7 @@ struct FStaticLODModel
 		}
 #endif // TRIBES3
 #if LINEAGE2
-		if (Ar.IsLineage2 && Ar.ArLicenseeVer >= 0x1C)
+		if (Ar.Game == GAME_Lineage2 && Ar.ArLicenseeVer >= 0x1C)
 		{
 			int UseNewWedges;
 			Ar << UseNewWedges << M.LineageWedges;
@@ -1246,7 +1246,7 @@ struct FStaticLODModel
 		}
 #endif // LINEAGE2
 #if RAGNAROK2
-		if (Ar.IsRagnarok2 && Ar.ArVer >= 128)
+		if (Ar.Game == GAME_Ragnarok2 && Ar.ArVer >= 128)
 		{
 			int tmp;
 			FRawIndexBuffer unk2;
@@ -1427,21 +1427,21 @@ public:
 		guard(USkeletalMesh::Serialize);
 
 #if UNREAL1
-		if (Ar.ArVer < PACKAGE_V2)
+		if (Ar.GameMask(GAME_UE1))
 		{
 			SerializeSkelMesh1(Ar);
 			return;
 		}
 #endif
 #if UNREAL3
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.Game >= GAME_UE3)
 		{
 			SerializeSkelMesh3(Ar);
 			return;
 		}
 #endif
 #if BIOSHOCK
-		if (Ar.IsBioshock)
+		if (Ar.Game == GAME_Bioshock)
 		{
 			SerializeBioshockMesh(Ar);
 			return;
@@ -1458,7 +1458,7 @@ public:
 		if (Version <= 1)
 		{
 #if SPLINTER_CELL
-			if (Ar.IsSplinterCell)
+			if (Ar.Game == GAME_SplinterCell)
 			{
 				SerializeSCell(Ar);
 			}
@@ -1487,7 +1487,7 @@ public:
 		}
 
 #if TRIBES3
-		if (Ar.IsTribes3 && t3_hdrSV >= 3)
+		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 3)
 		{
 	#if 0
 			// it looks like format of following data was chenged sinse
@@ -1517,7 +1517,7 @@ public:
 #endif // UC2
 
 #if LINEAGE2
-		if (Ar.IsLineage2)
+		if (Ar.Game == GAME_Lineage2)
 		{
 			int unk1, unk3, unk4;
 			TArray<float> unk2;
@@ -1532,7 +1532,7 @@ public:
 			RecreateMeshFromLOD();
 			return;
 		}
-#endif
+#endif // LINEAGE2
 
 		if (Ar.ArVer >= 120)
 		{
@@ -1540,7 +1540,7 @@ public:
 		}
 
 #if UT2
-		if (Ar.IsUT2)
+		if (Ar.Game == GAME_UT2)
 		{
 			// UT2004 has branched version of UE2, which is slightly different
 			// in comparison with generic UE2, which is used in all other UE2 games.
@@ -1559,7 +1559,7 @@ public:
 			Ar << f32C;
 
 #if RAGNAROK2
-		if (Ar.IsRagnarok2 && Ar.ArVer >= 131)
+		if (Ar.Game == GAME_Ragnarok2 && Ar.ArVer >= 131)
 		{
 			float unk1, unk2;
 			Ar << unk1 << unk2;
@@ -1578,7 +1578,7 @@ public:
 	virtual void PostLoad()
 	{
 #if 0
-		if (Package->IsBioshock)
+		if (Package->Game == GAME_Bioshock)
 #else
 		if (havokObjects.Num())			//?? ... UnPackage is not ready here ...
 #endif
@@ -2062,7 +2062,7 @@ struct FStaticMeshVertexStream
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexStream &S)
 	{
 #if BIOSHOCK
-		if (Ar.IsBioshock)
+		if (Ar.Game == GAME_Bioshock)
 		{
 			TArray<FStaticMeshVertexBio> BioVerts;
 			Ar << BioVerts;
@@ -2075,7 +2075,7 @@ struct FStaticMeshVertexStream
 #endif
 		Ar << S.Vert << S.Revision;
 #if TRIBES3
-		if (Ar.IsTribes3 && t3_hdrSV >= 1)
+		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 1)
 		{
 			TArray<T3_BasisVector> unk1C;
 			Ar << unk1C;
@@ -2118,7 +2118,7 @@ struct FStaticMeshUVStream
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream &S)
 	{
 #if BIOSHOCK
-		if (Ar.IsBioshock)
+		if (Ar.Game == GAME_Bioshock)
 			return Ar << S.Data << S.f10;
 #endif
 		return Ar << S.Data << S.f10 << S.f1C;
@@ -2303,7 +2303,7 @@ public:
 	{
 		guard(UStaticMesh::Serialize);
 
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.Game >= GAME_UE3)
 		{
 			//!! not yet supported
 			Ar.Seek(Ar.GetStopper());
@@ -2324,7 +2324,7 @@ public:
 		Ar << Sections;
 		Ar << BoundingBox;			// UPrimitive field, serialized twice ...
 #if BIOSHOCK
-		if (Ar.IsBioshock)
+		if (Ar.Game == GAME_Bioshock)
 		{
 			Ar << VertexStream << UVStream << IndexStream1;
 			// also: t3_hdrSV < 2 => IndexStream2
@@ -2359,7 +2359,7 @@ public:
 		Ar << Version;
 
 #if UT2
-		if (Ar.IsUT2)
+		if (Ar.Game == GAME_UT2)
 		{
 			//?? check for generic UE2
 			if (Ar.ArLicenseeVer == 22)

@@ -252,7 +252,7 @@ public:
 	{
 		guard(UMaterial::Serialize);
 		Super::Serialize(Ar);
-		if (Ar.IsLineage2)
+		if (Ar.Game == GAME_Lineage2)
 		{
 			guard(SerializeLineage2Material);
 			//?? separate to cpp
@@ -540,13 +540,13 @@ public:
 		Super::Serialize(Ar);
 #if BIOSHOCK
 		TRIBES_HDR(Ar, 0x2E);
-		if (Ar.IsBioshock && t3_hdrSV >= 1)
+		if (Ar.Game == GAME_Bioshock && t3_hdrSV >= 1)
 			Ar << CachedBulkDataSize;
-		if (Ar.IsBioshock && Format == 12)	// remap format; note: Bioshock used 3DC name, but real format is DXT5N
+		if (Ar.Game == GAME_Bioshock && Format == 12)	// remap format; note: Bioshock used 3DC name, but real format is DXT5N
 			Format = TEXF_DXT5N;
 #endif // BIOSHOCK
 		Ar << Mips;
-		if (Ar.ArVer < PACKAGE_V2)
+		if (Ar.GameMask(GAME_UE1))
 		{
 			// UE1
 			bMasked = false;			// ignored by UE1, used surface.PolyFlags instead (but UE2 ignores PolyFlags ...)
@@ -557,7 +557,7 @@ public:
 			}
 		}
 #if EXTEEL
-		if (Ar.IsExteel)
+		if (Ar.Game == GAME_Exteel)
 		{
 			// note: this property is serialized as UObject's property too
 			byte MaterialType;			// enum GFMaterialType
@@ -1499,21 +1499,21 @@ public:
 			Ar << SizeX << SizeY << (byte&)Format;
 		}
 #if BORDERLANDS
-		if (Ar.IsBorderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
+		if (Ar.Game == GAME_Borderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
 #endif
 		Ar << Mips;
 #if BORDERLANDS
-		if (Ar.IsBorderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
+		if (Ar.Game == GAME_Borderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
 #endif
 #if MASSEFF
-		if (Ar.IsMassEffect && Ar.ArLicenseeVer >= 65)
+		if (Ar.Game == GAME_MassEffect && Ar.ArLicenseeVer >= 65)
 		{
 			int unkFC;
 			Ar << unkFC;
 		}
 #endif // MASSEFF
 #if HUXLEY
-		if (Ar.IsHuxley) goto skip_rest_quiet;
+		if (Ar.Game == GAME_Huxley) goto skip_rest_quiet;
 #endif
 		if (Ar.ArVer >= 567)
 			Ar << TextureFileCacheGuid;

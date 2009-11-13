@@ -17,7 +17,7 @@ struct FSkelMeshSection3
 	{
 		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex << S.NumTriangles;
 #if MCARTA
-		if (Ar.IsMCarta && Ar.ArLicenseeVer >= 20)
+		if (Ar.Game == GAME_MagnaCarta && Ar.ArLicenseeVer >= 20)
 		{
 			int fC;
 			Ar << fC;
@@ -61,7 +61,7 @@ struct FRigidVertex3
 	friend FArchive& operator<<(FArchive &Ar, FRigidVertex3 &V)
 	{
 #if CRIMECRAFT
-		if (Ar.IsCrimeCraft)
+		if (Ar.Game == GAME_CrimeCraft)
 		{
 			// uses FVector4 for position and 4 UV sets
 			int pad;
@@ -79,21 +79,21 @@ struct FRigidVertex3
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
 		Ar << V.U << V.V;
 #if MEDGE
-		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 13)
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13)
 		{
 			float U1, V1, U2, V2;
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
 #if MKVSDC || STRANGLE
-		if ((Ar.IsMK && Ar.ArLicenseeVer >= 11) || Ar.IsStrangle) // Stranglehold check MidwayVer >= 17
+		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle) // Stranglehold check MidwayVer >= 17
 		{
 			float U1, V1;
 			Ar << U1 << V1;
 		}
 #endif // MKVSDC
 #if MCARTA
-		if (Ar.IsMCarta && Ar.ArLicenseeVer >= 5)
+		if (Ar.Game == GAME_MagnaCarta && Ar.ArLicenseeVer >= 5)
 		{
 			int f20;
 			Ar << f20;
@@ -117,7 +117,7 @@ struct FSmoothVertex3
 		int i;
 
 #if CRIMECRAFT
-		if (Ar.IsCrimeCraft)
+		if (Ar.Game == GAME_CrimeCraft)
 		{
 			// uses FVector4 for position and 4 UV sets
 			int pad;
@@ -133,14 +133,14 @@ struct FSmoothVertex3
 		// data meaning)
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
 #if MEDGE
-		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 13)
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13)
 		{
 			float U1, V1, U2, V2;
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
 #if MKVSDC || STRANGLE
-		if ((Ar.IsMK && Ar.ArLicenseeVer >= 11) || Ar.IsStrangle) // Stranglehold check MidwayVer >= 17
+		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle) // Stranglehold check MidwayVer >= 17
 		{
 			float U1, V1;
 			Ar << U1 << V1;
@@ -158,7 +158,7 @@ struct FSmoothVertex3
 				Ar << V.BoneIndex[i] << V.BoneWeight[i];
 		}
 #if MCARTA
-		if (Ar.IsMCarta && Ar.ArLicenseeVer >= 5)
+		if (Ar.Game == GAME_MagnaCarta && Ar.ArLicenseeVer >= 5)
 		{
 			int f28;
 			Ar << f28;
@@ -194,7 +194,7 @@ struct FSkinChunk3
 			V.NumSmoothVerts = V.SmoothVerts.Num();
 		}
 #if ARMYOF2
-		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 7)
+		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
 			TArray<FMeshUV> extraUV;
 			Ar << RAW_ARRAY(extraUV);
@@ -251,7 +251,7 @@ struct FGPUVert3Common
 		if (Ar.ArVer < 494)
 			Ar << V.Normal[2];
 #if CRIMECRAFT
-		if (Ar.IsCrimeCraft && Ar.ArVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float)); // pad ?
+		if (Ar.Game == GAME_CrimeCraft && Ar.ArVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float)); // pad ?
 #endif
 		for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
 		for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
@@ -278,7 +278,7 @@ struct FGPUVert3Half : FGPUVert3Common
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
 #if CRIMECRAFT
-		if (Ar.IsCrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(word)); // 4 UV sets
+		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(word)); // 4 UV sets
 #endif
 		return Ar;
 	}
@@ -310,7 +310,7 @@ struct FGPUVert3Float : FGPUVert3Common
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
 #if CRIMECRAFT
-		if (Ar.IsCrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(float)); // 4 UV sets
+		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(float)); // 4 UV sets
 #endif
 		return Ar;
 	}
@@ -369,11 +369,11 @@ struct FGPUSkin3
 		guard(FSkinData3<<);
 
 	#if HUXLEY
-		if (Ar.IsHuxley) goto old_version;
+		if (Ar.Game == GAME_Huxley) goto old_version;
 	#endif
 
 	#if ARMYOF2
-		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 74)
+		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 74)
 		{
 			int UseNewFormat;
 			Ar << UseNewFormat;
@@ -401,7 +401,7 @@ struct FGPUSkin3
 		// serialize type information
 	#if MEDGE
 		int NumUVSets = 1;
-		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 0xF)
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF)
 			Ar << NumUVSets;
 	#endif // MEDGE
 		Ar << S.bUseFullPrecisionUVs;
@@ -514,7 +514,7 @@ struct FStaticLODModel3
 			Ar << tmp1;
 
 #if BORDERLANDS
-		if (Ar.IsBorderlands)
+		if (Ar.Game == GAME_Borderlands)
 		{
 			// refined field set
 			Ar << Lod.UsedBones << Lod.Chunks << Lod.f80 << Lod.NumVertices;
@@ -524,7 +524,7 @@ struct FStaticLODModel3
 
 		Ar << Lod.f68 << Lod.UsedBones << Lod.f74 << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 #if BATMAN
-		if (Ar.IsBatman && Ar.ArLicenseeVer >= 5)
+		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 5)
 		{
 			TArray<FEdge3Bat> tmpEdges;		// Batman code
 			Ar << tmpEdges;
@@ -536,7 +536,7 @@ struct FStaticLODModel3
 		}
 
 #if STRANGLE
-		if (Ar.IsStrangle)
+		if (Ar.Game == GAME_Strangle)
 		{
 			// also check MidwayTag == "WOO " and MidwayVer >= 346
 			// f24 has been moved to the end
@@ -551,7 +551,7 @@ struct FStaticLODModel3
 		Ar << Lod.f24;
 		Lod.BulkData.Serialize(Ar);
 #if ARMYOF2
-		if (Ar.IsArmyOf2 && Ar.ArLicenseeVer >= 7)
+		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
 			int unk84;
 			TArray<FMeshUV> extraUV;
@@ -561,7 +561,7 @@ struct FStaticLODModel3
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
 #if MEDGE
-		if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 0xF)
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF)
 			return Ar;
 #endif // MEDGE
 		if (Ar.ArVer >= 534)		// post-UT3 code
@@ -613,7 +613,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	TArray<FStaticLODModel3> Lods;
 
 #if MEDGE
-	if (Ar.IsMirrorEdge && Ar.ArLicenseeVer >= 0xF)
+	if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF)
 	{
 		int unk264;
 		Ar << unk264;
@@ -621,7 +621,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 #endif // MEDGE
 	Ar << Bounds;
 #if BATMAN
-	if (Ar.IsBatman && Ar.ArLicenseeVer >= 0x0F)
+	if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 0x0F)
 	{
 		float ConservativeBounds;
 		TArray<FBoneBounds> PerBoneBounds;
@@ -631,14 +631,15 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	Ar << Materials1 << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
 #if A51 || MKVSDC || STRANGLE
-	if ((Ar.IsA51 || Ar.IsMK || Ar.IsStrangle) && Ar.ArLicenseeVer >= 0xF)
+	//?? check GAME_Wheelman
+	if (Ar.GameMask(GAME_MIDWAY3) && Ar.ArLicenseeVer >= 0xF)
 	{
 		TArray<FMaterialBone> MaterialBones;
 		Ar << MaterialBones;
 	}
-#endif // A51 || MKVSDC
+#endif // A51 || MKVSDC || STRANGLE
 #if CRIMECRAFT
-	if (Ar.IsCrimeCraft && Ar.ArLicenseeVer >= 5)
+	if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 5)
 	{
 		byte unk8C;
 		Ar << unk8C;
@@ -973,7 +974,7 @@ void UAnimSet::ConvertAnims()
 
 #if MASSEFF
 	UBioAnimSetData *BioData = NULL;
-	if (Package->IsMassEffect && !TrackBoneNames.Num() && Sequences.Num())
+	if (Package->Game == GAME_MassEffect && !TrackBoneNames.Num() && Sequences.Num())
 	{
 		// Mass Effect has separated TrackBoneNames from UAnimSet to UBioAnimSetData
 		BioData = Sequences[0]->m_pBioAnimSetData;
@@ -1014,10 +1015,10 @@ void UAnimSet::ConvertAnims()
 		// some checks
 		int offsetsPerBone = 4;
 #if TLR
-		if (Package->IsTLR) offsetsPerBone = 6;
+		if (Package->Game == GAME_TLR) offsetsPerBone = 6;
 #endif
 #if XMEN
-		if (Package->IsXMen) offsetsPerBone = 6;		// has additional CutInfo array
+		if (Package->Game == GAME_XMen) offsetsPerBone = 6;		// has additional CutInfo array
 #endif
 		if (Seq->CompressedTrackOffsets.Num() != NumTracks * offsetsPerBone)
 		{
@@ -1071,7 +1072,7 @@ void UAnimSet::ConvertAnims()
 			int RotKeys     = Seq->CompressedTrackOffsets[offsetIndex+3];
 #if TLR
 			int ScaleOffset = 0, ScaleKeys = 0;
-			if (Package->IsTLR)
+			if (Package->Game == GAME_TLR)
 			{
 				ScaleOffset  = Seq->CompressedTrackOffsets[offsetIndex+4];
 				ScaleKeys    = Seq->CompressedTrackOffsets[offsetIndex+5];

@@ -650,7 +650,7 @@ FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 	if (Ar.ArVer > 61)
 		Ar << SkipPos;
 #if BIOSHOCK
-	if (Ar.IsBioshock && Ar.ArVer >= 131)
+	if (Ar.Game == GAME_Bioshock && Ar.ArVer >= 131)
 	{
 		int f10, f8;
 		Ar << f10 << f8;
@@ -674,10 +674,10 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 	guard(TRawArray<<);
 	assert(Ar.IsLoading);
 #if A51
-	if (Ar.IsA51 && Ar.ArVer >= 376) goto new_ver;		// partially upgraded old engine
+	if (Ar.Game == GAME_A51 && Ar.ArVer >= 376) goto new_ver;	// partially upgraded old engine
 #endif // A51
 #if STRANGLE
-	if (Ar.IsStrangle) goto new_ver;					// also check package's MidwayTag ("WOO ") and MidwayVer (>= 369)
+	if (Ar.Game == GAME_Strangle) goto new_ver;					// also check package's MidwayTag ("WOO ") and MidwayVer (>= 369)
 #endif
 	if (Ar.ArVer >= 453)
 	{
@@ -806,7 +806,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	// loading
 	int len, i;
 #if BIOSHOCK
-	if (Ar.IsBioshock)
+	if (Ar.Game == GAME_Bioshock)
 	{
 		Ar << AR_INDEX(len);
 		len = -len;
@@ -851,90 +851,134 @@ void FArchive::DetectGame()
 	//?? should change this, if will implement command line switch to force mode
 	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
 
+	//?? remove #if ... #endif guards - detect game even when its support is disabled
+
+	staticAssert(GAME_UNKNOWN == 0, GAME_UNKNOWN_value_not_0);	// needed in order "Game += GAME_Name" to work
+
+	// check for already detected game
+#if LINEAGE2 || EXTEEL
+	if (Game == GAME_Lineage2)
+	{
+		if (ArLicenseeVer >= 1000)	// lineage LicenseeVer < 1000, exteel >= 1000
+			Game = GAME_Exteel;
+		return;
+	}
+#endif
+	if (Game != GAME_UNKNOWN)		// may be GAME_Ragnarok2
+		return;
+
+	// here Game == GAME_UNKNOWN
+
 	/*-----------------------------------------------------------------------
 	 * UE2 games
 	 *-----------------------------------------------------------------------*/
 #if UT2
-	IsUT2 = ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
-			((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D);
+	if ( ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
+		 ((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D) )
+		Game += GAME_UT2;
 #endif
 #if PARIAH
-	IsPariah = (ArVer == 119 && ArLicenseeVer == 0x9127);
+	if (ArVer == 119 && ArLicenseeVer == 0x9127)
+		Game += GAME_Pariah;
 #endif
 #if SPLINTER_CELL
-	IsSplinterCell = (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
-					 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C));
+	if ( (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
+		 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C)) )
+		Game += GAME_SplinterCell;
 #endif
 #if TRIBES3
-	IsTribes3 = ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
-				((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
-				((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17));
-#endif
-#if LINEAGE2
-	if (IsLineage2 && (ArLicenseeVer >= 1000))	// lineage LicenseeVer < 1000
-		IsLineage2 = 0;
-#endif
-#if EXTEEL
-	if (IsExteel && (ArLicenseeVer < 1000))		// exteel LicenseeVer >= 1000
-		IsExteel = 0;
+	if ( ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
+		 ((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
+		 ((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17)) )
+		Game += GAME_Tribes3;
 #endif
 #if BIOSHOCK
-	IsBioshock = (ArVer == 141 && ArLicenseeVer == 56);
+	if (ArVer == 141 && ArLicenseeVer == 56)
+		Game += GAME_Bioshock;
 #endif
 
 	/*-----------------------------------------------------------------------
 	 * UE3 games
 	 *-----------------------------------------------------------------------*/
 #if A51
-	IsA51 = (ArVer == 377 && ArLicenseeVer == 25);									//!! has extra tag
+	if (ArVer == 377 && ArLicenseeVer == 25)										//!! has extra tag
+		Game += GAME_A51;
 #endif
 #if WHEELMAN
-	IsWheelman = (ArVer == 390 && ArLicenseeVer == 32);								//!! has extra tag
+	if (ArVer == 390 && ArLicenseeVer == 32)										//!! has extra tag
+		Game += GAME_Wheelman;
 #endif
 #if MKVSDC
-	IsMK = (ArVer == 402 && ArLicenseeVer == 30);									//!! has extra tag
+	if (ArVer == 402 && ArLicenseeVer == 30)										//!! has extra tag
+		Game += GAME_MK;
 #endif
 #if STRANGLE
-	IsStrangle = (ArVer == 375 && ArLicenseeVer == 25);								//!! has extra tag
+	if (ArVer == 375 && ArLicenseeVer == 25)										//!! has extra tag
+		Game += GAME_Strangle;
 #endif
 #if ARMYOF2
-	IsArmyOf2 = (ArVer == 445 && ArLicenseeVer == 79);
+	if (ArVer == 445 && ArLicenseeVer == 79)
+		Game += GAME_ArmyOf2;
 #endif
 #if MASSEFF
-	IsMassEffect = (ArVer == 491 && ArLicenseeVer == 0x3F0);
+	if (ArVer == 491 && ArLicenseeVer == 0x3F0)
+		Game += GAME_MassEffect;
 #endif
 #if MEDGE
-	IsMirrorEdge = (ArVer == 536 && ArLicenseeVer == 0x2B);
+	if (ArVer == 536 && ArLicenseeVer == 0x2B)
+		Game += GAME_MirrorEdge;
 #endif
 #if TLR
-	IsTLR = (ArVer == 507 && ArLicenseeVer == 11);
+	if (ArVer == 507 && ArLicenseeVer == 11)
+		Game += GAME_TLR;
 #endif
 #if HUXLEY
-	IsHuxley = (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
-			   (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
-			   (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22));
+	if ( (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
+		 (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
+		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22)) )
+		Game += GAME_Huxley;
 #endif
 #if TUROK
-	IsTurok = (ArVer == 374 && ArLicenseeVer == 16) ||
-			  (ArVer == 375 && ArLicenseeVer == 19) ||
-			  (ArVer == 392 && ArLicenseeVer == 23) ||
-			  (ArVer == 393 && (ArLicenseeVer >= 27 && ArLicenseeVer <= 61));
+	if ( (ArVer == 374 && ArLicenseeVer == 16) ||
+		 (ArVer == 375 && ArLicenseeVer == 19) ||
+		 (ArVer == 392 && ArLicenseeVer == 23) ||
+		 (ArVer == 393 && (ArLicenseeVer >= 27 && ArLicenseeVer <= 61)) )
+		Game += GAME_Turok;
 #endif
 #if XMEN
-	IsXMen = (ArVer == 568 && ArLicenseeVer == 101);
+	if (ArVer == 568 && ArLicenseeVer == 101)
+		Game += GAME_XMen;
 #endif
 #if MCARTA
-	IsMCarta = (ArVer == 446 && ArLicenseeVer == 25);
+	if (ArVer == 446 && ArLicenseeVer == 25)
+		Game += GAME_MagnaCarta;
 #endif
 #if BATMAN
-	IsBatman = (ArVer == 576 && ArLicenseeVer == 21);
+	if (ArVer == 576 && ArLicenseeVer == 21)
+		Game += GAME_Batman;
 #endif
 #if CRIMECRAFT
-	IsCrimeCraft = (ArVer == 576 && ArLicenseeVer == 5);
+	if (ArVer == 576 && ArLicenseeVer == 5)
+		Game += GAME_CrimeCraft;
 #endif
 #if BORDERLANDS
-	IsBorderlands = (ArVer == 584 && ArLicenseeVer == 57);
+	if (ArVer == 584 && ArLicenseeVer == 57)
+		Game += GAME_Borderlands;
 #endif
+
+	if (Game >= GAME_LAST)
+		appNotify("DetectGame() detected a few titles: Ver=%d, LicVer=%d", ArVer, ArLicenseeVer);
+
+	if (Game == GAME_UNKNOWN)
+	{
+		// generic or unknown engine
+		if (ArVer < PACKAGE_V2)
+			Game = GAME_UE1;
+		else if (ArVer < PACKAGE_V3)
+			Game = GAME_UE2;
+		else
+			Game = GAME_UE3;
+	}
 }
 
 
@@ -1209,7 +1253,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	}
 
 #if MCARTA
-	if (Ar.IsMCarta && (BulkDataFlags & 0x40))
+	if (Ar.Game == GAME_MagnaCarta && (BulkDataFlags & 0x40))
 	{
 		// this game has different compression flags
 		BulkDataFlags &= ~0x40;

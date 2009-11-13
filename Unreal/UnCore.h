@@ -133,6 +133,52 @@ public:
 	FArchive class
 -----------------------------------------------------------------------------*/
 
+
+enum EGame
+{
+	GAME_UNKNOWN   = 0,			// should be 0
+
+	GAME_UE1       = 0x10100,
+
+	GAME_UE2       = 0x10200,
+		GAME_UT2,
+		GAME_Pariah,
+		GAME_SplinterCell,
+		GAME_Lineage2,
+		GAME_Exteel,
+		GAME_Ragnarok2,
+
+	GAME_VENGEANCE = 0x10600,	// variant of UE2
+		GAME_Tribes3,
+		GAME_Bioshock,
+
+	GAME_UE2X      = 0x10800,
+
+	GAME_UE3       = 0x11000,
+		GAME_MassEffect,
+		GAME_MirrorEdge,
+		GAME_TLR,
+		GAME_Huxley,
+		GAME_Turok,
+		GAME_XMen,
+		GAME_MagnaCarta,
+		GAME_ArmyOf2,
+		GAME_CrimeCraft,
+		GAME_Batman,
+		GAME_Borderlands,
+
+	GAME_MIDWAY3   = 0x11800,	// variant of UE3
+		GAME_A51,
+		GAME_Wheelman,
+		GAME_MK,
+		GAME_Strangle,
+
+	// unused constant, larger than any other GAME_...; main
+	// property: GAME_ANY1 + GAME_ANY_2 > GAME_LAST (used in DetectGame())
+	GAME_LAST      = 0x18000
+};
+
+
 class FArchive
 {
 public:
@@ -147,77 +193,7 @@ protected:
 
 public:
 	// game-specific flags
-	// UE2 games
-#if UT2
-	int		IsUT2:1;
-#endif
-#if PARIAH
-	int		IsPariah:1;
-#endif
-#if SPLINTER_CELL
-	int		IsSplinterCell:1;
-#endif
-#if TRIBES3
-	int		IsTribes3:1;
-#endif
-#if LINEAGE2
-	int		IsLineage2:1;
-#endif
-#if EXTEEL
-	int		IsExteel:1;
-#endif
-#if RAGNAROK2
-	int		IsRagnarok2:1;
-#endif
-#if BIOSHOCK
-	int		IsBioshock:1;
-#endif
-	// UE3 games
-#if A51
-	int		IsA51:1;
-#endif
-#if WHEELMAN
-	int		IsWheelman:1;
-#endif
-#if MKVSDC
-	int		IsMK:1;
-#endif
-#if STRANGLE
-	int		IsStrangle:1;
-#endif
-#if ARMYOF2
-	int		IsArmyOf2:1;
-#endif
-#if MASSEFF
-	int		IsMassEffect:1;
-#endif
-#if MEDGE
-	int		IsMirrorEdge:1;
-#endif
-#if TLR
-	int		IsTLR:1;
-#endif
-#if HUXLEY
-	int		IsHuxley:1;
-#endif
-#if TUROK
-	int		IsTurok:1;
-#endif
-#if XMEN
-	int		IsXMen:1;
-#endif
-#if MCARTA
-	int		IsMCarta:1;
-#endif
-#if BATMAN
-	int		IsBatman:1;
-#endif
-#if CRIMECRAFT
-	int		IsCrimeCraft:1;
-#endif
-#if BORDERLANDS
-	int		IsBorderlands:1;
-#endif
+	int		Game;				// EGame
 
 	FArchive()
 	:	ArPos(0)
@@ -225,81 +201,17 @@ public:
 	,	ArVer(99999)			//?? something large
 	,	ArLicenseeVer(0)
 	,	ReverseBytes(false)
-#if UT2
-	,	IsUT2(0)
-#endif
-#if PARIAH
-	,	IsPariah(0)
-#endif
-#if SPLINTER_CELL
-	,	IsSplinterCell(0)
-#endif
-#if TRIBES3
-	,	IsTribes3(0)
-#endif
-#if LINEAGE2
-	,	IsLineage2(0)
-#endif
-#if EXTEEL
-	,	IsExteel(0)
-#endif
-#if RAGNAROK2
-	,	IsRagnarok2(0)
-#endif
-#if BIOSHOCK
-	,	IsBioshock(0)
-#endif
-#if A51
-	,	IsA51(0)
-#endif
-#if WHEELMAN
-	,	IsWheelman(0)
-#endif
-#if MKVSDC
-	,	IsMK(0)
-#endif
-#if STRANGLE
-	,	IsStrangle(0)
-#endif
-#if ARMYOF2
-	,	IsArmyOf2(0)
-#endif
-#if MASSEFF
-	,	IsMassEffect(0)
-#endif
-#if MEDGE
-	,	IsMirrorEdge(0)
-#endif
-#if TLR
-	,	IsTLR(0)
-#endif
-#if HUXLEY
-	,	IsHuxley(0)
-#endif
-#if TUROK
-	,	IsTurok(0)
-#endif
-#if XMEN
-	,	IsXMen(0)
-#endif
-#if MCARTA
-	,	IsMCarta(0)
-#endif
-#if BATMAN
-	,	IsBatman(0)
-#endif
-#if CRIMECRAFT
-	,	IsCrimeCraft(0)
-#endif
-#if BORDERLANDS
-	,	IsBorderlands(0)
-#endif
+	,	Game(GAME_UNKNOWN)
 	{}
 
 	virtual ~FArchive()
 	{}
 
 	void DetectGame();
+	inline bool GameMask(EGame Mask) const
+	{
+		return (Game & Mask) == Mask;
+	}
 
 	virtual void Seek(int Pos) = 0;
 	virtual bool IsEof() const
@@ -483,7 +395,7 @@ public:
 		GSerializeBytes += size;
 #endif
 		if (res != 1)
-			appError("Unable to serialize %d bytes at pos=%d", ArPos, size);
+			appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
 		unguardf(("File=%s", ShortName));
 	}
 
@@ -645,7 +557,7 @@ struct FBox
 	friend FArchive& operator<<(FArchive &Ar, FBox &Box)
 	{
 #if BIOSHOCK
-		if (Ar.IsBioshock) goto standard;	//!! special path for UC2, not for other games!
+		if (Ar.Game == GAME_Bioshock) goto standard;	//!! special path for UC2, not for other games!
 #endif
 #if UC2
 		if (Ar.ArVer >= 146 && Ar.ArVer < PACKAGE_V3)
@@ -1344,7 +1256,7 @@ extern FArchive *GDummySave;
 // check==4 -- Bioshock
 #define TRIBES_HDR(Ar,Ver)							\
 	int t3_hdrV = 0, t3_hdrSV = 0;					\
-	if ((Ar.IsTribes3 || Ar.IsBioshock) && Ar.ArLicenseeVer >= Ver)	\
+	if (Ar.GameMask(GAME_VENGEANCE) && Ar.ArLicenseeVer >= Ver) \
 	{												\
 		int check;									\
 		Ar << check;								\

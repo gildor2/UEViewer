@@ -87,7 +87,7 @@ void UObject::EndLoad()
 				Package->GetStopper() - Package->Tell());
 		LoadedObjects.AddItem(Obj);
 
-		unguardf(("%s'%s.%s', pos=%X, ver=%d/%d", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer));
+		unguardf(("%s'%s.%s', pos=%X, ver=%d/%d, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer, Package->Game));
 	}
 	// postload objects
 	int i;
@@ -249,7 +249,7 @@ struct FPropertyTag
 			return Ar;
 
 #if UNREAL3
-		if (Ar.ArVer >= PACKAGE_V3)
+		if (Ar.Game >= GAME_UE3)
 		{
 			FName PropType;
 			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
