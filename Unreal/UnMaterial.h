@@ -546,7 +546,7 @@ public:
 			Format = TEXF_DXT5N;
 #endif // BIOSHOCK
 		Ar << Mips;
-		if (Ar.GameMask(GAME_UE1))
+		if (Ar.Engine() == GAME_UE1)
 		{
 			// UE1
 			bMasked = false;			// ignored by UE1, used surface.PolyFlags instead (but UE2 ignores PolyFlags ...)

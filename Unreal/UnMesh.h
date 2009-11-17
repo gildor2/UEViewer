@@ -312,7 +312,7 @@ struct FMeshAnimSeq
 			Ar << A.f28;
 		Ar << A.Name;
 #if UNREAL1
-		if (Ar.GameMask(GAME_UE1))
+		if (Ar.Engine() == GAME_UE1)
 		{
 			// UE1 support
 			assert(Ar.IsLoading);
@@ -576,7 +576,7 @@ public:
 		guard(UVertMesh::Serialize);
 
 #if UNREAL1
-		if (Ar.GameMask(GAME_UE1))
+		if (Ar.Engine() == GAME_UE1)
 		{
 			SerializeVertMesh1(Ar);
 			RotOrigin.Roll = -RotOrigin.Roll;	//??
@@ -756,7 +756,7 @@ public:
 			SerializeSCell(Ar);
 #endif
 #if UNREAL1
-		if (Ar.GameMask(GAME_UE1)) Upgrade();		// UE1 code
+		if (Ar.Engine() == GAME_UE1) Upgrade();		// UE1 code
 #endif
 		unguard;
 	}
@@ -1405,6 +1405,8 @@ public:
 		PROP_DROP(SkelMirrorTable)
 		PROP_DROP(FaceFXAsset)
 		PROP_DROP(bDisableSkeletalAnimationLOD)
+		PROP_DROP(bForceCPUSkinning)
+		PROP_DROP(bUsePackedPosition)
 		PROP_DROP(BoundsPreviewAsset)
 		PROP_DROP(PerPolyCollisionBones)
 		PROP_DROP(AddToParentPerPolyCollisionBone)
@@ -1412,6 +1414,18 @@ public:
 		PROP_DROP(bUseSimpleBoxCollision)
 		PROP_DROP(LODBiasPS3)
 		PROP_DROP(LODBiasXbox360)
+		PROP_DROP(ClothToGraphicsVertMap)
+		PROP_DROP(ClothWeldingMap)
+		PROP_DROP(ClothWeldingDomain)
+		PROP_DROP(ClothWeldedIndices)
+		PROP_DROP(NumFreeClothVerts)
+		PROP_DROP(ClothIndexBuffer)
+		PROP_DROP(ClothBones)
+		PROP_DROP(bEnableClothPressure)
+		PROP_DROP(bEnableClothDamping)
+		PROP_DROP(ClothStretchStiffness)
+		PROP_DROP(ClothDensity)
+		PROP_DROP(ClothFriction)
 #	if MEDGE
 		PROP_DROP(NumUVSets)
 #	endif
@@ -1427,7 +1441,7 @@ public:
 		guard(USkeletalMesh::Serialize);
 
 #if UNREAL1
-		if (Ar.GameMask(GAME_UE1))
+		if (Ar.Engine() == GAME_UE1)
 		{
 			SerializeSkelMesh1(Ar);
 			return;
@@ -1738,7 +1752,10 @@ struct FRawAnimSequenceTrack
 		if (Ar.ArVer >= 577)
 		{
 			// newer UE3 version has replaced serializer for this structure
-			return Ar << RAW_ARRAY(T.PosKeys) << RAW_ARRAY(T.RotKeys) << RAW_ARRAY(T.KeyTimes);
+			Ar << RAW_ARRAY(T.PosKeys) << RAW_ARRAY(T.RotKeys);
+			// newer version will not serialize times
+			if (Ar.ArVer < 604) Ar << RAW_ARRAY(T.KeyTimes);
+			return Ar;
 		}
 		return Ar << T.PosKeys << T.RotKeys << T.KeyTimes;
 	}

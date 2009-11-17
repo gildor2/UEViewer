@@ -560,9 +560,11 @@ struct FStaticLODModel3
 #endif // ARMYOF2
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
+#if BLOODONSAND
+		if (Ar.Game == GAME_50Cent) return Ar;	// new ArVer, but old engine
+#endif
 #if MEDGE
-		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF)
-			return Ar;
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF) return Ar;	// new ArVer, but old engine
 #endif // MEDGE
 		if (Ar.ArVer >= 534)		// post-UT3 code
 			Ar << Lod.fC4;
@@ -628,11 +630,19 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		Ar << ConservativeBounds << PerBoneBounds;
 	}
 #endif // BATMAN
-	Ar << Materials1 << MeshOrigin << RotOrigin;
+	Ar << Materials1;
+#if BLOODONSAND
+	if (Ar.Game == GAME_50Cent && Ar.ArLicenseeVer >= 65)
+	{
+		TArray<UObject*> OnFireMaterials; // name is not checked
+		Ar << OnFireMaterials;
+	}
+#endif
+	Ar << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
 #if A51 || MKVSDC || STRANGLE
 	//?? check GAME_Wheelman
-	if (Ar.GameMask(GAME_MIDWAY3) && Ar.ArLicenseeVer >= 0xF)
+	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 0xF)
 	{
 		TArray<FMaterialBone> MaterialBones;
 		Ar << MaterialBones;
@@ -1059,9 +1069,17 @@ void UAnimSet::ConvertAnims()
 				assert(Seq->RawAnimData.Num() == NumTracks);
 				CopyArray(A->KeyPos,  Seq->RawAnimData[j].PosKeys);
 				CopyArray(A->KeyQuat, Seq->RawAnimData[j].RotKeys);
-				CopyArray(A->KeyTime, Seq->RawAnimData[j].KeyTimes);
-				for (int kk = 0; kk < A->KeyTime.Num(); kk++)
-					A->KeyTime[kk] *= Dst->Rate;
+				CopyArray(A->KeyTime, Seq->RawAnimData[j].KeyTimes);	// may be empty
+				int k;
+/*				if (!A->KeyTime.Num())
+				{
+					int numKeys = max(A->KeyPos.Num(), A->KeyQuat.Num());
+					A->KeyTime.Empty(numKeys);
+					for (k = 0; k < numKeys; k++)
+						A->KeyTime.AddItem(k);
+				} */
+				for (k = 0; k < A->KeyTime.Num(); k++)	//??
+					A->KeyTime[k] *= Dst->Rate;
 				continue;
 			}
 

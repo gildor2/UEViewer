@@ -43,6 +43,7 @@ Modified Unreal Engine 3:
   Damnation
   Batman: Arkham Asylum
   Crime Craft
+  50 Cent: Blood on the Sand (XBox360)
   Nurien
   Stranglehold
   Borderlands
@@ -55,6 +56,7 @@ Using "-noanim" option (unsupported animation format):
   Unreal Championship 2: The Liandri Conflict (UE2X)
   BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
+  Army of Two
   Stranglehold
   Borderlands
 Unsupported animations (without umodel crash):
@@ -137,6 +139,9 @@ skeleton and contains only one UV set.
 
 Changes:
 ~~~~~~~~
+17.11.2009
+- implemented 50 Cent: Blood on the Sand support
+
 12.11.2009
 - implemented Magna Carta 2 support
 

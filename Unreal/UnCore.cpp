@@ -344,8 +344,10 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	appStrncpyz(buf, Filename, ARRAY_COUNT(buf));
 
 	// validate name
-	assert(strchr(Filename, '/') == NULL);
-	assert(strchr(Filename, '\\') == NULL);
+	if (strchr(Filename, '/') || strchr(Filename, '\\'))
+	{
+		appError("appFindGameFile: file has path");
+	}
 
 	if (Ext)
 	{
@@ -388,6 +390,32 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	return info;
 
 	unguardf(("name=%s ext=%s", Filename, Ext));
+}
+
+
+const char *appSkipRootDir(const char *Filename)
+{
+	if (!RootDirectory[0]) return Filename;
+
+	const char *str1 = RootDirectory;
+	const char *str2 = Filename;
+	while (true)
+	{
+		char c1 = *str1++;
+		char c2 = *str2++;
+		// normalize names for easier checking
+		if (c1 == '\\') c1 = '/';
+		if (c2 == '\\') c2 = '/';
+		if (!c1)
+		{
+			// root directory name is fully scanned
+			if (c2 == '/') return str2;
+			// else - something like this: root="dirname/name2", file="dirname/name2extrachars"
+			return Filename;			// not in root
+		}
+		if (!c2) return Filename;		// Filename is shorter than RootDirectory
+		if (c1 != c2) return Filename;	// different names
+	}
 }
 
 
@@ -868,6 +896,8 @@ void FArchive::DetectGame()
 		return;
 
 	// here Game == GAME_UNKNOWN
+	int check = 0;					// number of detected games; should be 0 or 1, otherwise autodetect is failed
+#define SET(game)	{ Game = game; check++; }
 
 	/*-----------------------------------------------------------------------
 	 * UE2 games
@@ -875,99 +905,93 @@ void FArchive::DetectGame()
 #if UT2
 	if ( ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
 		 ((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D) )
-		Game += GAME_UT2;
+		SET(GAME_UT2);
 #endif
 #if PARIAH
 	if (ArVer == 119 && ArLicenseeVer == 0x9127)
-		Game += GAME_Pariah;
+		SET(GAME_Pariah);
 #endif
 #if SPLINTER_CELL
 	if ( (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
 		 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C)) )
-		Game += GAME_SplinterCell;
+		SET(GAME_SplinterCell);
 #endif
 #if TRIBES3
 	if ( ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
 		 ((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
 		 ((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17)) )
-		Game += GAME_Tribes3;
+		SET(GAME_Tribes3);
 #endif
 #if BIOSHOCK
 	if (ArVer == 141 && ArLicenseeVer == 56)
-		Game += GAME_Bioshock;
+		SET(GAME_Bioshock);
 #endif
 
 	/*-----------------------------------------------------------------------
 	 * UE3 games
 	 *-----------------------------------------------------------------------*/
+	// most UE3 games has single version for all packages
+	// here is a list of such games, sorted by version
+#if STRANGLE
+	if (ArVer == 375 && ArLicenseeVer == 25)	SET(GAME_Strangle);	//!! has extra tag
+#endif
 #if A51
-	if (ArVer == 377 && ArLicenseeVer == 25)										//!! has extra tag
-		Game += GAME_A51;
+	if (ArVer == 377 && ArLicenseeVer == 25)	SET(GAME_A51);		//!! has extra tag
 #endif
 #if WHEELMAN
-	if (ArVer == 390 && ArLicenseeVer == 32)										//!! has extra tag
-		Game += GAME_Wheelman;
+	if (ArVer == 390 && ArLicenseeVer == 32)	SET(GAME_Wheelman);	//!! has extra tag
 #endif
 #if MKVSDC
-	if (ArVer == 402 && ArLicenseeVer == 30)										//!! has extra tag
-		Game += GAME_MK;
-#endif
-#if STRANGLE
-	if (ArVer == 375 && ArLicenseeVer == 25)										//!! has extra tag
-		Game += GAME_Strangle;
+	if (ArVer == 402 && ArLicenseeVer == 30)	SET(GAME_MK);		//!! has extra tag
 #endif
 #if ARMYOF2
-	if (ArVer == 445 && ArLicenseeVer == 79)
-		Game += GAME_ArmyOf2;
+	if (ArVer == 445 && ArLicenseeVer == 79)	SET(GAME_ArmyOf2);
+#endif
+#if MCARTA
+	if (ArVer == 446 && ArLicenseeVer == 25)	SET(GAME_MagnaCarta);
 #endif
 #if MASSEFF
-	if (ArVer == 491 && ArLicenseeVer == 0x3F0)
-		Game += GAME_MassEffect;
-#endif
-#if MEDGE
-	if (ArVer == 536 && ArLicenseeVer == 0x2B)
-		Game += GAME_MirrorEdge;
+	if (ArVer == 491 && ArLicenseeVer == 0x3F0)	SET(GAME_MassEffect);
 #endif
 #if TLR
-	if (ArVer == 507 && ArLicenseeVer == 11)
-		Game += GAME_TLR;
+	if (ArVer == 507 && ArLicenseeVer == 11)	SET(GAME_TLR);
 #endif
-#if HUXLEY
-	if ( (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
-		 (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
-		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22)) )
-		Game += GAME_Huxley;
+#if MEDGE
+	if (ArVer == 536 && ArLicenseeVer == 43)	SET(GAME_MirrorEdge);
 #endif
+#if BLOODONSAND
+	if (ArVer == 538 && ArLicenseeVer == 73)	SET(GAME_50Cent);
+#endif
+#if XMEN
+	if (ArVer == 568 && ArLicenseeVer == 101)	SET(GAME_XMen);
+#endif
+#if CRIMECRAFT
+	if (ArVer == 576 && ArLicenseeVer == 5)		SET(GAME_CrimeCraft);
+#endif
+#if BATMAN
+	if (ArVer == 576 && ArLicenseeVer == 21)	SET(GAME_Batman);
+#endif
+#if BORDERLANDS
+	if (ArVer == 584 && ArLicenseeVer == 57)	SET(GAME_Borderlands);
+#endif
+
+	// UE3 games with the various versions of files
 #if TUROK
 	if ( (ArVer == 374 && ArLicenseeVer == 16) ||
 		 (ArVer == 375 && ArLicenseeVer == 19) ||
 		 (ArVer == 392 && ArLicenseeVer == 23) ||
 		 (ArVer == 393 && (ArLicenseeVer >= 27 && ArLicenseeVer <= 61)) )
-		Game += GAME_Turok;
+		SET(GAME_Turok);
 #endif
-#if XMEN
-	if (ArVer == 568 && ArLicenseeVer == 101)
-		Game += GAME_XMen;
-#endif
-#if MCARTA
-	if (ArVer == 446 && ArLicenseeVer == 25)
-		Game += GAME_MagnaCarta;
-#endif
-#if BATMAN
-	if (ArVer == 576 && ArLicenseeVer == 21)
-		Game += GAME_Batman;
-#endif
-#if CRIMECRAFT
-	if (ArVer == 576 && ArLicenseeVer == 5)
-		Game += GAME_CrimeCraft;
-#endif
-#if BORDERLANDS
-	if (ArVer == 584 && ArLicenseeVer == 57)
-		Game += GAME_Borderlands;
+#if HUXLEY
+	if ( (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
+		 (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
+		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22)) )
+		SET(GAME_Huxley);
 #endif
 
-	if (Game >= GAME_LAST)
-		appNotify("DetectGame() detected a few titles: Ver=%d, LicVer=%d", ArVer, ArLicenseeVer);
+	if (check > 1)
+		appNotify("DetectGame detected a few titles (%d): Ver=%d, LicVer=%d", check, ArVer, ArLicenseeVer);
 
 	if (Game == GAME_UNKNOWN)
 	{
@@ -979,6 +1003,7 @@ void FArchive::DetectGame()
 		else
 			Game = GAME_UE3;
 	}
+#undef SET
 }
 
 

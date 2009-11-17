@@ -155,7 +155,7 @@ struct FPackageFileSummary
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
 	#if A51 || WHEELMAN || MKVSDC || STRANGLE							//?? special define ?
 			int midwayVer = 0;
-			if (Ar.GameMask(GAME_MIDWAY3) && S.LicenseeVersion >= 2)	//?? Wheelman not checked
+			if (Ar.Engine() == GAME_MIDWAY3 && S.LicenseeVersion >= 2)	//?? Wheelman not checked
 			{
 				int Tag;							// Tag == "A52 ", "MK8 ", "WMAN", "WOO " (Stranglehold)
 				int unk10;

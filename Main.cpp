@@ -321,6 +321,9 @@ int main(int argc, char **argv)
 #	if CRIMECRAFT
 				"    Crime Craft\n"
 #	endif
+#	if BLOODONSAND
+				"    50 Cent: Blood on the Sand\n"
+#	endif
 #	if BORDERLANDS
 				"    Borderlands\n"
 #	endif
@@ -449,14 +452,14 @@ int main(int argc, char **argv)
 	{
 		// has path in filename
 		if (!hasRootDir) appSetRootDirectory2(argPkgName);
-		Package = new UnPackage(argPkgName);
 	}
 	else
 	{
 		// no path in filename
 		if (!hasRootDir) appSetRootDirectory(".");		// scan for packages
-		Package = UnPackage::LoadPackage(argPkgName);
 	}
+
+	Package = UnPackage::LoadPackage(argPkgName);
 	if (!Package)
 	{
 		printf("Unable to find/load package %s\n", argPkgName);

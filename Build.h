@@ -41,6 +41,7 @@
 #define MCARTA			1		// Magna Carta 2
 #define BATMAN			1		// Batman: Arkham Asylum
 #define CRIMECRAFT		1		// Crime Craft
+#define BLOODONSAND		1		// 50 Cent: Blood on the Sand
 #define BORDERLANDS		1		// Borderlands
 ///#define HUXLEY			1
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
@@ -51,7 +52,7 @@
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define STRANGLE		1		// Stranglehold
 
-#define SPECIAL_TAGS	1		// Killing Floor, Nurien
+#define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG: Killing Floor, Nurien
 
 // some private games
 #if PRIVATE_BUILD

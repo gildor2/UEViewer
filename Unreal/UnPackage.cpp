@@ -257,7 +257,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	Loader = (Ar) ? Ar : new FFileReader(filename);
 	IsLoading = true;
 
-	appStrncpyz(Filename, filename, ARRAY_COUNT(Filename));
+	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
 
 #if LINEAGE2 || EXTEEL
 	int checkDword;
@@ -649,18 +649,40 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 {
 	guard(UnPackage::LoadPackage);
 
+	const char *LocalName = appSkipRootDir(Name);
+
 	int i;
 	// check in loaded packages list
 	for (i = 0; i < PackageMap.Num(); i++)
-		if (!stricmp(Name, PackageMap[i]->Name))
+		if (!stricmp(LocalName, PackageMap[i]->Name))
 			return PackageMap[i];
-	// check missing packages
+	// check in missing package names
+	// note: it is not much faster than appFindGameFile(), but at least
+	// this check will allow to print "missing package" warning only once
 	for (i = 0; i < MissingPackages.Num(); i++)
-		if (!stricmp(Name, MissingPackages[i]))
+		if (!stricmp(LocalName, MissingPackages[i]))
 			return NULL;
 
-	if (const CGameFileInfo *info = appFindGameFile(Name))
+	if (/*??(LocalName == Name) &&*/ (strchr(LocalName, '/') || strchr(LocalName, '\\')))
+	{
+		//?? trying to load package outside of game directory
+		// or package contains path - appFindGameFile() will fail
+		return new UnPackage(Name);
+	}
+
+	if (const CGameFileInfo *info = appFindGameFile(LocalName))
+	{
+		// Check in loaded packages again, but use info->RelativeName to compare
+		// (package.Filename is set from info->RelativeName, see below).
+		// This is done to prevent loading the same package twice when this function
+		// is called with a different filename qualifiers: "path/package.ext",
+		// "package.ext", "package"
+		for (i = 0; i < PackageMap.Num(); i++)
+			if (!stricmp(info->RelativeName, PackageMap[i]->Filename))
+				return PackageMap[i];
+		// package is not found, load it
 		return new UnPackage(info->RelativeName, appCreateFileReader(info));
+	}
 	// package is missing
 	printf("WARNING: package %s was not found\n", Name);
 	MissingPackages.AddItem(strdup(Name));

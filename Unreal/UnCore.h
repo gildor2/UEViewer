@@ -78,6 +78,7 @@ struct CGameFileInfo
 // Ext = NULL -> use any package extension
 // Filename can contain extension, but should not contain path
 const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NULL);
+const char *appSkipRootDir(const char *Filename);
 FArchive *appCreateFileReader(const CGameFileInfo *info);
 void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext = NULL);
 
@@ -138,9 +139,9 @@ enum EGame
 {
 	GAME_UNKNOWN   = 0,			// should be 0
 
-	GAME_UE1       = 0x10100,
+	GAME_UE1       = 0x0100,
 
-	GAME_UE2       = 0x10200,
+	GAME_UE2       = 0x0200,
 		GAME_UT2,
 		GAME_Pariah,
 		GAME_SplinterCell,
@@ -148,13 +149,13 @@ enum EGame
 		GAME_Exteel,
 		GAME_Ragnarok2,
 
-	GAME_VENGEANCE = 0x10600,	// variant of UE2
+	GAME_VENGEANCE = 0x0600,	// variant of UE2
 		GAME_Tribes3,
 		GAME_Bioshock,
 
-	GAME_UE2X      = 0x10800,
+	GAME_UE2X      = 0x0800,
 
-	GAME_UE3       = 0x11000,
+	GAME_UE3       = 0x1000,
 		GAME_MassEffect,
 		GAME_MirrorEdge,
 		GAME_TLR,
@@ -164,18 +165,17 @@ enum EGame
 		GAME_MagnaCarta,
 		GAME_ArmyOf2,
 		GAME_CrimeCraft,
+		GAME_50Cent,
 		GAME_Batman,
 		GAME_Borderlands,
 
-	GAME_MIDWAY3   = 0x11800,	// variant of UE3
+	GAME_MIDWAY3   = 0x1800,	// variant of UE3
 		GAME_A51,
 		GAME_Wheelman,
 		GAME_MK,
 		GAME_Strangle,
 
-	// unused constant, larger than any other GAME_...; main
-	// property: GAME_ANY1 + GAME_ANY_2 > GAME_LAST (used in DetectGame())
-	GAME_LAST      = 0x18000
+	GAME_ENGINE    = 0xFF00		// mask for game engine
 };
 
 
@@ -208,9 +208,9 @@ public:
 	{}
 
 	void DetectGame();
-	inline bool GameMask(EGame Mask) const
+	inline int Engine() const
 	{
-		return (Game & Mask) == Mask;
+		return (Game & GAME_ENGINE);
 	}
 
 	virtual void Seek(int Pos) = 0;
@@ -1256,7 +1256,7 @@ extern FArchive *GDummySave;
 // check==4 -- Bioshock
 #define TRIBES_HDR(Ar,Ver)							\
 	int t3_hdrV = 0, t3_hdrSV = 0;					\
-	if (Ar.GameMask(GAME_VENGEANCE) && Ar.ArLicenseeVer >= Ver) \
+	if (Ar.Engine() == GAME_VENGEANCE && Ar.ArLicenseeVer >= Ver) \
 	{												\
 		int check;									\
 		Ar << check;								\
