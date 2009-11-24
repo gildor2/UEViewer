@@ -321,6 +321,12 @@ int main(int argc, char **argv)
 #	if CRIMECRAFT
 				"    Crime Craft\n"
 #	endif
+#	if AVA
+				"    AVA Online\n"
+#	endif
+#	if FRONTLINES
+				"    Frontlines: Fuel of War\n"
+#	endif
 #	if BLOODONSAND
 				"    50 Cent: Blood on the Sand\n"
 #	endif

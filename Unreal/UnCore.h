@@ -92,17 +92,31 @@ class FName
 public:
 	int			Index;
 #if UNREAL3
-	int			Flags;
+	int			ExtraIndex;
 #endif
 	const char	*Str;
+	bool		NameGenerated;
 
 	FName()
 	:	Index(0)
 	,	Str(NULL)
 #if UNREAL3
-	,	Flags(0)
+	,	ExtraIndex(0)
+	,	NameGenerated(false)
 #endif
 	{}
+
+	~FName()
+	{
+		if (NameGenerated) free((void*)Str);
+	}
+
+	void AppendIndex()
+	{
+		if (NameGenerated || !ExtraIndex) return;
+		NameGenerated = true;
+		Str = strdup(va("%s_%d", Str, ExtraIndex-1));
+	}
 
 	inline const char *operator*() const
 	{
@@ -148,12 +162,14 @@ enum EGame
 		GAME_Lineage2,
 		GAME_Exteel,
 		GAME_Ragnarok2,
+		GAME_RepCommando,
 
 	GAME_VENGEANCE = 0x0600,	// variant of UE2
 		GAME_Tribes3,
 		GAME_Bioshock,
 
 	GAME_UE2X      = 0x0800,
+		GAME_UC2,
 
 	GAME_UE3       = 0x1000,
 		GAME_MassEffect,
@@ -166,6 +182,8 @@ enum EGame
 		GAME_ArmyOf2,
 		GAME_CrimeCraft,
 		GAME_50Cent,
+		GAME_AVA,
+		GAME_Frontlines,
 		GAME_Batman,
 		GAME_Borderlands,
 
@@ -556,14 +574,10 @@ struct FBox
 
 	friend FArchive& operator<<(FArchive &Ar, FBox &Box)
 	{
-#if BIOSHOCK
-		if (Ar.Game == GAME_Bioshock) goto standard;	//!! special path for UC2, not for other games!
-#endif
 #if UC2
-		if (Ar.ArVer >= 146 && Ar.ArVer < PACKAGE_V3)
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 146)
 			return Ar << Box.Min << Box.Max;
-#endif
-	standard:
+#endif // UC2
 		return Ar << Box.Min << Box.Max << Box.IsValid;
 	}
 };

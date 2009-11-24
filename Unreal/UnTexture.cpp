@@ -79,6 +79,21 @@ byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat 
 			}
 		}
 		return dst;
+	case TEXF_RGB8:
+		{
+			const byte *s = Data;
+			byte *d = dst;
+			for (int i = 0; i < width * height; i++)
+			{
+				// BGRA -> RGBA
+				*d++ = s[2];
+				*d++ = s[1];
+				*d++ = s[0];
+				*d++ = 255;
+				s += 3;
+			}
+		}
+		return dst;
 	case TEXF_RGBA8:
 		{
 			const byte *s = Data;
@@ -105,6 +120,29 @@ byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat 
 				*d++ = b;
 				*d++ = b;
 				*d++ = 255;
+			}
+		}
+		return dst;
+	case TEXF_CxV8U8:
+		{
+			//!! not checked (Republic Commando possibly has textures of such type)
+			const byte *s = Data;
+			byte *d = dst;
+			for (int i = 0; i < width * height; i++)
+			{
+				byte u = *s++;
+				byte v = *s++;
+				d[1] = u;
+				d[2] = v;
+#if 0
+				float uf = (u - 128.0f) / 128.0f;
+				float vf = (v - 128.0f) / 128.0f;
+				d[0] = (1 - uf * uf - vf * vf) * 128 + 128;
+#else
+				d[0] = 0;
+#endif
+				d[3] = 255;
+				d += 4;
 			}
 		}
 		return dst;

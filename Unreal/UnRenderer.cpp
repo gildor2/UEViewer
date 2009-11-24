@@ -1067,6 +1067,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		DIFFUSE (appStristr(Name, "_DI"), 20)
 		DIFFUSE (appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
 		DIFFUSE (appStristr(Name, "_D" ), 11)
+		DIFFUSE (!stricmp(Name + len - 2, "_C"), 10);
 		NORMAL  (!stricmp(Name + len - 2, "_N"), 20);
 		SPECULAR(!stricmp(Name + len - 2, "_S"), 20);
 		SPECPOW (!stricmp(Name + len - 3, "_SP"), 20);
@@ -1491,6 +1492,21 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 		}
 	}
 #endif // BIOSHOCK
+#if UC2
+	if (Package && Package->Engine() == GAME_UE2X)
+	{
+		// try to find texture inside XBox xpr files
+		byte *pic = FindXpr(Name);
+		if (pic)
+		{
+			USize = this->USize;
+			VSize = this->VSize;
+			byte *pic2 = DecompressTexture(pic, USize, VSize, Format, Name, Palette);
+			delete pic;
+			return pic2;
+		}
+	}
+#endif // UC2
 	for (int n = 0; n < Mips.Num(); n++)
 	{
 		// find 1st mipmap with non-null data array
@@ -1502,19 +1518,6 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 		VSize = Mip.VSize;
 		return DecompressTexture(&Mip.DataArray[0], USize, VSize, Format, Name, Palette);
 	}
-#if UC2
-	if (Package && Package->ArVer >= 145)
-	{
-		// try to find texture inside XBox xpr files
-		byte *pic = FindXpr(Name);
-		if (!pic) return NULL;
-		USize = this->USize;
-		VSize = this->VSize;
-		byte *pic2 = DecompressTexture(pic, USize, VSize, Format, Name, Palette);
-		delete pic;
-		return pic2;
-	}
-#endif // UC2
 	// no valid mipmaps
 	return NULL;
 	unguard;

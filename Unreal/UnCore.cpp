@@ -211,8 +211,8 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 //	printf("Scan %s\n", dir);
 #if _WIN32
 	appSprintf(ARRAY_ARG(Path), "%s/*.*", dir);
-	_finddata_t found;
-	long hFind = _findfirst(Path, &found);
+	_finddatai64_t found;
+	long hFind = _findfirsti64(Path, &found);
 	if (hFind == -1) return true;
 	do
 	{
@@ -228,7 +228,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		}
 		else
 			res = RegisterGameFile(Path);
-	} while (res && _findnext(hFind, &found) != -1);
+	} while (res && _findnexti64(hFind, &found) != -1);
 	_findclose(hFind);
 #else
 	DIR *find = opendir(dir);
@@ -552,9 +552,12 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 	// 2) when saving : data is not modified by this function
 
 	// serialize data count
+#if UC2
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
+	else
+#endif
 #if UNREAL3
-	if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
-		Ar << DataCount;
+	if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
 	else
 #endif
 		Ar << AR_INDEX(DataCount);
@@ -604,9 +607,12 @@ FArchive& FArray::SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*
 		return Serialize(Ar, Serializer, elementSize);
 
 	// serialize data count
+#if UC2
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
+	else
+#endif
 #if UNREAL3
-	if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
-		Ar << DataCount;
+	if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
 	else
 #endif
 		Ar << AR_INDEX(DataCount);
@@ -638,9 +644,12 @@ FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 	//?? extended for this
 
 	// serialize data count
+#if UC2
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
+	else
+#endif
 #if UNREAL3
-	if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
-		Ar << DataCount;
+	if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
 	else
 #endif
 		Ar << AR_INDEX(DataCount);
@@ -707,6 +716,9 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 #if STRANGLE
 	if (Ar.Game == GAME_Strangle) goto new_ver;					// also check package's MidwayTag ("WOO ") and MidwayVer (>= 369)
 #endif
+#if AVA
+	if (Ar.Game == GAME_AVA && Ar.ArVer >= 436) goto new_ver;
+#endif
 	if (Ar.ArVer >= 453)
 	{
 	new_ver:
@@ -767,8 +779,7 @@ void FArchive::Printf(const char *fmt, ...)
 FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 {
 #if UNREAL3
-	if (Ar.ArVer >= PACKAGE_V3)
-		appError("FCompactIndex is missing in UE3");
+	if (Ar.ArVer >= PACKAGE_V3) appError("FCompactIndex is missing in UE3");
 #endif
 	if (Ar.IsLoading)
 	{
@@ -833,19 +844,22 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	}
 	// loading
 	int len, i;
+#if UC2
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << len;
+	else
+#endif
 #if BIOSHOCK
 	if (Ar.Game == GAME_Bioshock)
 	{
-		Ar << AR_INDEX(len);
+		Ar << AR_INDEX(len);	// Bioshock serialized positive number, but it's string is always unicode
 		len = -len;
-		goto unicode;
 	}
-#endif // BIOSHOCK
-#if UNREAL3
-	if (Ar.ArVer >= 145)		// PACKAGE_V3 ? found exact version in UC2
-		Ar << len;
 	else
-#endif // UNREAL3
+#endif
+#if UNREAL3
+	if (Ar.Engine() >= GAME_UE3) Ar << len;
+	else
+#endif
 		Ar << AR_INDEX(len);
 	S.Empty((len >= 0) ? len : -len);
 	if (!len)
@@ -858,7 +872,6 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	}
 	else
 	{
-	unicode:
 		// UNICODE string
 		for (i = 0; i < -len; i++)
 		{
@@ -916,6 +929,12 @@ void FArchive::DetectGame()
 		 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C)) )
 		SET(GAME_SplinterCell);
 #endif
+#if SWRC
+	if ( ArLicenseeVer == 1 && (
+		(ArVer >= 133 && ArVer <= 148) || (ArVer >= 154 && ArVer <= 159)
+		) )
+		SET(GAME_RepCommando);
+#endif
 #if TRIBES3
 	if ( ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
 		 ((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
@@ -925,6 +944,10 @@ void FArchive::DetectGame()
 #if BIOSHOCK
 	if (ArVer == 141 && ArLicenseeVer == 56)
 		SET(GAME_Bioshock);
+#endif
+#if UC2
+	if (ArVer == 151 && (ArLicenseeVer == 0 || ArLicenseeVer == 1))
+		SET(GAME_UC2);
 #endif
 
 	/*-----------------------------------------------------------------------
@@ -944,11 +967,17 @@ void FArchive::DetectGame()
 #if MKVSDC
 	if (ArVer == 402 && ArLicenseeVer == 30)	SET(GAME_MK);		//!! has extra tag
 #endif
+#if FRONTLINES
+	if (ArVer == 433 && ArLicenseeVer == 52)	SET(GAME_Frontlines);
+#endif
 #if ARMYOF2
 	if (ArVer == 445 && ArLicenseeVer == 79)	SET(GAME_ArmyOf2);
 #endif
 #if MCARTA
 	if (ArVer == 446 && ArLicenseeVer == 25)	SET(GAME_MagnaCarta);
+#endif
+#if AVA
+	if (ArVer == 451 && (ArLicenseeVer >= 52 || ArLicenseeVer <= 53)) SET(GAME_AVA);
 #endif
 #if MASSEFF
 	if (ArVer == 491 && ArLicenseeVer == 0x3F0)	SET(GAME_MassEffect);

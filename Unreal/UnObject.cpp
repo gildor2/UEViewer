@@ -225,8 +225,7 @@ struct FPropertyTag
 		assert(Ar.IsLoading);		// saving is not supported
 
 #if UC2
-		//!! special path for UC2
-		if (Ar.ArVer >= 148 && Ar.ArVer < PACKAGE_V3)
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 148)
 		{
 			assert(Ar.IsLoading);
 			byte UseObject;
@@ -243,6 +242,19 @@ struct FPropertyTag
 			}
 		}
 #endif // UC2
+
+#if WHEELMAN
+		if (Ar.Game == GAME_Wheelman /* && MidwayVer >= 11 */)
+		{
+			FName PropType;
+			int unk1C;
+			Ar << PropType << Tag.Name << Tag.StrucName << Tag.DataSize << unk1C << Tag.BoolValue << Tag.ArrayIndex;
+			Tag.Type = MapTypeName(PropType);
+			// has special situation: PropType="None", Name="SerializedGroup", StrucName=Name of 1st serialized field,
+			// DataSize = size of UObject block; possible, unk1C = offset of 1st serialized field
+			return Ar;
+		}
+#endif // WHEELMAN
 
 		Ar << Tag.Name;
 		if (!strcmp(Tag.Name, "None"))
@@ -334,6 +346,13 @@ void UObject::Serialize(FArchive &Ar)
 #endif
 
 #if UNREAL3
+#	if WHEELMAN
+	if (Ar.Game == GAME_Wheelman && Ar.ArVer >= 385)
+	{
+		// nothing - skip NetIndex
+	}
+	else
+#	endif // WHEELMAN
 	if (Ar.ArVer >= 322)
 		Ar << NetIndex;
 #endif
@@ -496,12 +515,15 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				{
 					// read data count
 					int DataCount;
-#if UNREAL3
-					if (Ar.ArVer >= 145) // PACKAGE_V3; UC2 ??
-						Ar << DataCount;
+#if UC2
+					if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
 					else
 #endif
-						Ar << AR_INDEX(DataCount);	//?? check - AR_INDEX or not
+#if UNREAL3
+					if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
+					else
+#endif
+						Ar << AR_INDEX(DataCount);
 					//!! note: some structures should be serialized using SerializeStruc() (FVector etc)
 					// find data typeinfo
 					const CTypeInfo *ItemType = FindStructType(Prop->TypeName + 1);	//?? skip 'F' in name

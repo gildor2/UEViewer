@@ -43,6 +43,8 @@ Modified Unreal Engine 3:
   Damnation
   Batman: Arkham Asylum
   Crime Craft
+  AVA Online
+  Frontlines: Fuel of War
   50 Cent: Blood on the Sand (XBox360)
   Nurien
   Stranglehold
@@ -107,7 +109,7 @@ Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
 
 Notes about psk/psa export.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-There is a 3ds Max importer script created by me:
+There is a 3ds Max importer script (Actor X Importer) created by me:
 http://www.gildor.org/projects/unactorx
 Its announcements thread is here:
 http://www.gildor.org/smf/index.php/topic,228.0.html
@@ -137,8 +139,28 @@ export, but umodel uses it for StaticMesh too. Exported mesh will not have
 skeleton and contains only one UV set.
 
 
+Notes about material export.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Materials are exported in a custom format. File extension is ".mat". At the
+current moment, this format is supported by my Actor X Importer plugin only.
+Unreal Engine materials are very complex, it's hard to separate a few channels
+(diffuse, specular, bump etc) from it. Umodel tries to do this using some
+heuristics. Umodel will never export full materials (GLSL script etc). Do not
+expect much from this.
+
+
 Changes:
 ~~~~~~~~
+23.11.2009
+- implemented Frontlines: Fuel of War support
+
+21.11.2009
+- implemented Wheelman package support
+
+20.11.2009
+- implemented Star Wars: Republic Commando package support
+- implemented AVA Online package and SkeletalMesh support
+
 17.11.2009
 - implemented 50 Cent: Blood on the Sand support
 

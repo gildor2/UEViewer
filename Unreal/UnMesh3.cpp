@@ -85,8 +85,9 @@ struct FRigidVertex3
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
-#if MKVSDC || STRANGLE
-		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle) // Stranglehold check MidwayVer >= 17
+#if MKVSDC || STRANGLE || FRONTLINES
+		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
+			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3))
 		{
 			float U1, V1;
 			Ar << U1 << V1;
@@ -139,8 +140,9 @@ struct FSmoothVertex3
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
-#if MKVSDC || STRANGLE
-		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle) // Stranglehold check MidwayVer >= 17
+#if MKVSDC || STRANGLE || FRONTLINES
+		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
+			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3))
 		{
 			float U1, V1;
 			Ar << U1 << V1;
@@ -248,16 +250,22 @@ struct FGPUVert3Common
 	{
 		int i;
 		Ar << V.Normal[0] << V.Normal[1];
+#if AVA
+		if (Ar.Game == GAME_AVA) goto infs;
+#endif
 		if (Ar.ArVer < 494)
 			Ar << V.Normal[2];
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft && Ar.ArVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float)); // pad ?
 #endif
+	infs:
 		for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
 		for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
 		return Ar;
 	}
 };
+
+static int GNumGPUUVSets = 1;
 
 /*
  * Half = Float16
@@ -277,9 +285,7 @@ struct FGPUVert3Half : FGPUVert3Common
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
-#if CRIMECRAFT
-		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(word)); // 4 UV sets
-#endif
+		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(word));	// for some game titles
 		return Ar;
 	}
 };
@@ -309,9 +315,7 @@ struct FGPUVert3Float : FGPUVert3Common
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
-#if CRIMECRAFT
-		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + 6 * sizeof(float)); // 4 UV sets
-#endif
+		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(float));	// for some game titles
 		return Ar;
 	}
 };
@@ -368,9 +372,33 @@ struct FGPUSkin3
 	{
 		guard(FSkinData3<<);
 
+		if (Ar.IsLoading) S.bUseFullPrecisionPosition = true;
+
 	#if HUXLEY
 		if (Ar.Game == GAME_Huxley) goto old_version;
 	#endif
+	#if AVA
+		if (Ar.Game == GAME_AVA)
+		{
+			// different ArVer to check
+			if (Ar.ArVer < 441) goto old_version;
+			else				goto new_version;
+		}
+	#endif // AVA
+	#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines)
+		{
+			if (Ar.ArLicenseeVer < 11)	goto old_version;
+			{
+				S.bUseFullPrecisionUVs = true;
+				int NumUVSets, VertexSize, NumVerts;
+				Ar << NumUVSets << VertexSize << NumVerts;
+				GNumGPUUVSets = NumUVSets;
+				Ar << RAW_ARRAY(S.VertsFloat); // serialized as ordinary array anyway
+				return Ar;
+			}
+		}
+	#endif // FRONTLINES
 
 	#if ARMYOF2
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 74)
@@ -392,12 +420,12 @@ struct FGPUSkin3
 			Ar << RAW_ARRAY(Verts);
 			// convert verts
 			CopyArray(S.VertsFloat, Verts);
-			S.bUseFullPrecisionUVs      = true;
-			S.bUseFullPrecisionPosition = true;
+			S.bUseFullPrecisionUVs = true;
 			return Ar;
 		}
 
 		// new version
+	new_version:
 		// serialize type information
 	#if MEDGE
 		int NumUVSets = 1;
@@ -405,7 +433,6 @@ struct FGPUSkin3
 			Ar << NumUVSets;
 	#endif // MEDGE
 		Ar << S.bUseFullPrecisionUVs;
-		S.bUseFullPrecisionPosition = true;
 		if (Ar.ArVer >= 592)
 			Ar << S.bUseFullPrecisionPosition << S.MeshOrigin << S.MeshExtension;
 
@@ -413,6 +440,11 @@ struct FGPUSkin3
 		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
 //		printf("data: %d %d\n", S.bUseFullPrecisionUVs, S.bUseFullPrecisionPosition);
 		S.bUseFullPrecisionPosition = true;
+
+		GNumGPUUVSets = 1;
+	#if CRIMECRAFT
+		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) GNumGPUUVSets = 4;
+	#endif
 
 		// serialize vertex array
 		if (!S.bUseFullPrecisionUVs)
@@ -523,6 +555,15 @@ struct FStaticLODModel3
 #endif // BORDERLANDS
 
 		Ar << Lod.f68 << Lod.UsedBones << Lod.f74 << Lod.Chunks << Lod.f80 << Lod.NumVertices;
+
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 11)
+		{
+			int unk84;
+			Ar << unk84;	// default is 1
+		}
+#endif
+
 #if BATMAN
 		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 5)
 		{

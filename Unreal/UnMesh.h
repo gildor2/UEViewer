@@ -363,6 +363,7 @@ struct FMeshAnimSeq
  *	2	Postal 2			same as UT
  *	4	UT2003, UT2004
  *	5	Lineage2, UC2		different extensions
+ *	8	Republic Commando
  */
 
 class ULodMesh : public UPrimitive
@@ -439,12 +440,19 @@ public:
 			Ar << SkinTesselationFactor;
 		}
 #if LINEAGE2
-		if (Version >= 5 && Ar.Game == GAME_Lineage2)
+		if (Ar.Game == GAME_Lineage2 && Version >= 5)
 		{
 			int unk;
 			Ar << unk;
 		}
 #endif // LINEAGE2
+#if SWRC
+		if (Ar.Game == GAME_RepCommando && Version >= 7)
+		{
+			int unkD4, unkD8, unkDC, unkE0;
+			Ar << unkD4 << unkD8 << unkDC << unkE0;
+		}
+#endif // SWRC
 
 		unguard;
 	}
@@ -692,7 +700,7 @@ struct FNamedBone
 	{
 		Ar << F.Name << F.Flags << F.ParentIndex;
 #if UC2
-		if (Ar.ArVer >= 145) // IsUC2()
+		if (Ar.Engine() == GAME_UE2X)
 		{
 			FVector unused1;				// strange code: serialized into stack and dropped
 			byte    unused2;
@@ -1260,7 +1268,7 @@ struct FStaticLODModel
 		}
 #endif // RAGNAROK2
 #if UC2
-		if (Ar.ArVer >= 145) //?? IsUC2
+		if (Ar.Engine() == GAME_UE2X)
 		{
 			if (Ar.ArVer >= 136)
 			{
@@ -1337,6 +1345,10 @@ struct FSkeletalMeshLODInfo
 		PROP_ARRAY(LODMaterialMap, int)
 		PROP_ARRAY(bEnableShadowCasting, bool)
 		PROP_DROP(TriangleSorting)
+#if FRONTLINES
+		PROP_DROP(bExcludeFromConsoles)
+		PROP_DROP(bCanRemoveForLowDetail)
+#endif
 #if MCARTA
 		PROP_DROP(LODMaterialDrawOrder)
 #endif
@@ -1490,7 +1502,7 @@ public:
 		else
 		{
 #if UC2
-			if (Ar.ArVer >= 136)
+			if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 136)
 			{
 				int f338;
 				Ar << f338;
@@ -1523,7 +1535,7 @@ public:
 		}
 #endif // TRIBES3
 #if UC2
-		if (Ar.ArVer >= 145) // IsUC2
+		if (Ar.Engine() == GAME_UE2X)
 		{
 			Ar.Seek(Ar.GetStopper());
 			return;
@@ -1944,6 +1956,20 @@ public:
 	}
 };
 
+#if FRONTLINES
+// native map<name, object>
+struct FFrontlinesHashSeq
+{
+	FName          Name;
+	UAnimSequence *Seq;
+
+	friend FArchive &operator<<(FArchive &Ar, FFrontlinesHashSeq &S)
+	{
+		return Ar << S.Name << S.Seq;
+	}
+};
+#endif // FRONTLINES
+
 class UAnimSet : public UMeshAnimation // real parent is UObject
 {
 	DECLARE_CLASS(UAnimSet, UMeshAnimation);
@@ -1985,6 +2011,20 @@ public:
 	{
 		guard(UAnimSet::Serialize);
 		UObject::Serialize(Ar);
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 40)
+		{
+			guard(SerializeFrontlinesAnimSet);
+			TArray<FFrontlinesHashSeq> HashSequences;
+			Ar << HashSequences;
+			// fill Sequences from HashSequences
+			assert(Sequences.Num() == 0);
+			Sequences.Empty(HashSequences.Num());
+			for (int i = 0; i < HashSequences.Num(); i++) Sequences.AddItem(HashSequences[i].Seq);
+			return;
+			unguard;
+		}
+#endif // FRONTLINES
 		unguard;
 	}
 

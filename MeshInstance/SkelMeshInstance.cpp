@@ -996,7 +996,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 //CQuat BOO = BO;
 //if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
 #if SHOW_ANIM
-if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
+//if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
 					DrawTextLeft("Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
 						*Mesh->RefSkeleton[i].Name, VECTOR_ARG(BP), QUAT_ARG(BO));
 //if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
@@ -1031,6 +1031,10 @@ if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
 				const FMeshBone &B = Mesh->RefSkeleton[i];
 				BP = (CVec3&)B.BonePos.Position;
 				BO = (CQuat&)B.BonePos.Orientation;
+#if SHOW_ANIM
+				DrawTextLeft(S_YELLOW"Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
+					*Mesh->RefSkeleton[i].Name, VECTOR_ARG(BP), QUAT_ARG(BO));
+#endif
 			}
 			if (!i) BO.Conjugate();
 

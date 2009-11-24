@@ -9,11 +9,30 @@ OPTIMIZE   = size
 
 #PDB        = 1
 
+OLDCRT     = 0
+
 !if "$PLATFORM" ne "win32"
 	# linux/cygwin + GCC
 	STDLIBS   = stdc++ GL
 	!if "$PLATFORM" ne "cygwin"
 		STDLIBS += dl	# dlopen() and friends
+	!endif
+!endif
+
+!if "$COMPILER" eq "VisualC"
+	!if "$OLDCRT" eq "1"
+		WDKCRT = "c:/!msvcrt"
+		LINKFLAGS = {
+			-nodefaultlib:libcmt.lib
+			$WDKCRT/lib/Win32/msvcrt.lib
+			$WDKCRT/lib/Win32/wdk_msvcrt_win2000.obj
+			$WDKCRT/lib/Win32/oldnames.lib
+		}
+		#?? try compile w/o wdk_msvcrt_win2000.obj
+		#?? GPF when starting with this msvcrt.dll ... try to use different CRT headers (currently used from VC, needs from WDK)?
+		#?? needs to specify path to WDK CRT files (add "OLDCRT" option?)
+		#?? Also note: makefiles with WDKCRT dependency will not be compatible with standard VC installations
+		#?? Can try to add wdk_msvcrt_win2000.obj and oldnames.lib into msvcrt.lib
 	!endif
 !endif
 

@@ -419,6 +419,19 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				NameTable[i] = new char[name.Num()];
 				strcpy(NameTable[i], *name);
 #endif
+	#if AVA
+				if (Game == GAME_AVA)
+				{
+					// strange code - package contains some bytes:
+					// V(0) = len ^ 0x3E
+					// V(i) = V(i-1) + 0x48 ^ 0xE1
+					// Number of bytes = (len ^ 7) & 0xF
+					int skip = name.Num();
+					if (skip > 0) skip--;				// Num() included null terminating char
+					skip = (skip ^ 7) & 0xF;
+					Seek(Tell() + skip);
+				}
+	#endif
 				// skip object flags
 				int tmp;
 				*this << tmp;
@@ -504,7 +517,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
 	PackageMap.AddItem(this);
 
-	unguardf(("%s", filename));
+	unguardf(("%s, game=%X", filename, Game));
 }
 
 
@@ -577,7 +590,8 @@ UObject* UnPackage::CreateExport(int index)
 	Obj->PackageIndex = index;
 	Obj->Name         = Exp.ObjectName;
 	// add object to GObjLoaded for later serialization
-	UObject::GObjLoaded.AddItem(Obj);
+	if (strncmp(Exp.ObjectName, "Default__", 9) != 0)	// default properties are not supported -- this is a clean UObject format
+		UObject::GObjLoaded.AddItem(Obj);
 
 	UObject::EndLoad();
 	return Obj;

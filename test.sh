@@ -68,7 +68,7 @@ CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2"
 CheckDir L2 "C:/!umodel-data/Lineage2"
-CheckDir BIO "C:/GAMES/BioShock" "G:/BioShock"
+CheckDir BIO "C:/GAMES/BioShock" "E:/GAMES/BioShock"
 CheckDir MASS "C:/GAMES/Mass Effect/BioGame/CookedPC"
 
 #------------------------------------------------------------------------------

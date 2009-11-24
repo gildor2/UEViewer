@@ -16,6 +16,7 @@
 //#define PARIAH			1		// not supported, because of major serializer incompatibility
 #define SPLINTER_CELL	1
 #define LINEAGE2		1
+#define SWRC			1		// Star Wars: Republic Commando
 
 // requires UNREAL1
 #define DEUS_EX			1
@@ -41,6 +42,8 @@
 #define MCARTA			1		// Magna Carta 2
 #define BATMAN			1		// Batman: Arkham Asylum
 #define CRIMECRAFT		1		// Crime Craft
+#define AVA				1		// AVA Online
+#define FRONTLINES		1		// Frontlines: Fuel of War
 #define BLOODONSAND		1		// 50 Cent: Blood on the Sand
 #define BORDERLANDS		1		// Borderlands
 ///#define HUXLEY			1

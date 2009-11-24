@@ -19,7 +19,7 @@ Tribes3 (*.pkg)		0		63,78
 Lineage2		1C-25		7B
 
 Bioshock		38		8D(141)
-Unreal Championship 2	1		97(151)
+Unreal Championship 2	0,1		97(151)
 
 
 UNREAL ENGINE 3:

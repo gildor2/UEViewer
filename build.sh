@@ -6,7 +6,7 @@ PLATFORM="vc-win32"
 #?? check this, when cross-compile under wine
 [ "$OSTYPE" == "linux-gnu" ] && PLATFORM="linux"
 
-#export vc_ver=7
+#export vc_ver=9
 [ "$project" ] || project="umodel"		# setup default prohect name
 [ "$root" ] || root="."
 makefile="makefile-$PLATFORM"
@@ -14,6 +14,7 @@ makefile="makefile-$PLATFORM"
 
 # update makefile when needed
 # [ $makefile -ot $project ] &&
+#?? add vc_ver here
 $root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 
 if [ $render -eq 1 ]; then

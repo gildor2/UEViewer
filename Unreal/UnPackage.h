@@ -333,6 +333,25 @@ struct FObjectExport
 #if UNREAL3
 		if (Ar.Game >= GAME_UE3)
 		{
+#	if WHEELMAN
+			if (Ar.Game == GAME_Wheelman)
+			{
+				// Wheelman has special code for quick serialization of FObjectExport struc
+				// using a single Serialize(&S, 0x64) call
+				// Ar.MidwayVer >= 22; when < 22 => standard version w/o ObjectFlags
+				int tmp1, tmp2, tmp3;
+				Ar << tmp1;	// 0 or 1
+				Ar << E.ObjectName << E.PackageIndex << E.ClassIndex << E.SuperIndex << E.Archetype;
+				Ar << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize << E.SerialOffset;
+				Ar << tmp2; // zero ?
+				Ar << tmp3; // -1 ?
+				Ar.Seek(Ar.Tell() + 0x14);	// skip raw version of ComponentMap
+				Ar << E.ExportFlags;
+				Ar.Seek(Ar.Tell() + 0xC); // skip raw version of NetObjectCount
+				Ar << E.Guid;
+				return Ar;
+			}
+#	endif // WHEELMAN
 			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex;
 			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize;
 			if (E.SerialSize || Ar.ArVer >= 249)
@@ -343,20 +362,17 @@ struct FObjectExport
 				int unk24;
 				Ar << unk24;
 			}
-#	endif
-			if (Ar.ArVer < 543)
-				Ar << E.ComponentMap;
-			if (Ar.ArVer >= 247)
-				Ar << E.ExportFlags;
-			if (Ar.ArVer >= 322)
-				Ar << E.NetObjectCount << E.Guid;
-			if (Ar.ArVer >= 475)
-				Ar << E.U3unk6C;
+#	endif // HUXLEY
+		tail:
+			if (Ar.ArVer < 543)  Ar << E.ComponentMap;
+			if (Ar.ArVer >= 247) Ar << E.ExportFlags;
+			if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;
+			if (Ar.ArVer >= 475) Ar << E.U3unk6C;
 			return Ar;
 		}
 #endif // UNREAL3
 #if UC2
-		if (Ar.ArVer >= 145) // && < PACKAGE_V3 ? Game >= GAME_UE2X -- UE3 too
+		if (Ar.Engine() == GAME_UE2X)
 		{
 			Ar << E.ClassIndex << E.SuperIndex;
 			if (Ar.ArVer >= 150)
@@ -402,6 +418,16 @@ struct FObjectExport
 			return Ar;
 		}
 #endif // BIOSHOCK
+#if SWRC
+		if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 151)
+		{
+			int unk0C;
+			Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
+			if (Ar.ArVer >= 159) Ar << AR_INDEX(unk0C);
+			Ar << E.ObjectName << E.ObjectFlags << E.SerialSize << E.SerialOffset;
+			return Ar;
+		}
+#endif // SWRC
 		// generic UE1/UE2 code
 		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
 		Ar << E.ObjectName << E.ObjectFlags << AR_INDEX(E.SerialSize);
@@ -422,7 +448,7 @@ struct FObjectImport
 	friend FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 	{
 #if UC2
-		if (Ar.ArVer >= 150 && Ar.ArVer < PACKAGE_V3)	// UC2 ??
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 150)
 		{
 			short idx = I.PackageIndex;
 			Ar << I.ClassPackage << I.ClassName << idx << I.ObjectName;
@@ -553,40 +579,45 @@ public:
 	{
 #if BIOSHOCK
 		if (Game == GAME_Bioshock)
-		{
-			*this << AR_INDEX(N.Index) << N.Flags;
-		}
+			*this << AR_INDEX(N.Index) << N.ExtraIndex;
 		else
 #endif // BIOSHOCK
+#if UC2
+		if (Engine() == GAME_UE2X && ArVer >= 145)
+			*this << N.Index;
+		else
+#endif // UC2
 #if UNREAL3
-		if (ArVer >= 145)				// PACKAGE_V3, but have version in UC2
+		if (Engine() >= GAME_UE3)
 		{
 			*this << N.Index;
-			if (Game >= GAME_UE3)
-				*this << N.Flags;
+			if (ArVer >= 343) *this << N.ExtraIndex;
 		}
 		else
 #endif // UNREAL3
 			*this << AR_INDEX(N.Index);
 		N.Str = GetName(N.Index);
+#if UNREAL3
+		N.AppendIndex();
+#endif
 		return *this;
 	}
 
 	virtual FArchive& operator<<(UObject *&Obj)
 	{
 		int index;
-#if BIOSHOCK
-		if (Game == GAME_Bioshock) goto compact;
+#if UC2
+		if (Engine() == GAME_UE2X && ArVer >= 145)
+			*this << index;
+		else
 #endif
 #if UNREAL3
-		if (ArVer >= 145)				 // PACKAGE_V3, but has in UC2
+		if (Engine() >= GAME_UE3)
 			*this << index;
 		else
 #endif // UNREAL3
-		{
-		compact:
 			*this << AR_INDEX(index);
-		}
+
 		if (index < 0)
 		{
 			const FObjectImport &Imp = GetImport(-index-1);

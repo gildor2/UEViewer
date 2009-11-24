@@ -545,6 +545,12 @@ public:
 		if (Ar.Game == GAME_Bioshock && Format == 12)	// remap format; note: Bioshock used 3DC name, but real format is DXT5N
 			Format = TEXF_DXT5N;
 #endif // BIOSHOCK
+#if SWRC
+		if (Ar.Game == GAME_RepCommando)
+		{
+			if (Format == 14) Format = TEXF_CxV8U8;		//?? not verified
+		}
+#endif // SWRC
 		Ar << Mips;
 		if (Ar.Engine() == GAME_UE1)
 		{
@@ -1351,8 +1357,11 @@ public:
 
 	virtual void Serialize(FArchive &Ar)
 	{
+		guard(UTexture3::Serialize);
 		Super::Serialize(Ar);
+		if (Ar.IsStopper()) return;	// support for Default__Texture
 		SourceArt.Serialize(Ar);
+		unguard;
 	}
 };
 
@@ -1488,12 +1497,18 @@ public:
 		PROP_DROP(MipTailBaseIdx)
 		PROP_DROP(OriginalSizeX)
 		PROP_DROP(OriginalSizeY)
+#if FRONTLINES
+		PROP_DROP(NumMips)
+		PROP_DROP(SourceDataSizeX)
+		PROP_DROP(SourceDataSizeY)
+#endif // FRONTLINES
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UTexture2D::Serialize);
 		Super::Serialize(Ar);
+		if (Ar.IsStopper()) return;	// support for Default__Texture
 		if (Ar.ArVer < 297)
 		{
 			Ar << SizeX << SizeY << (byte&)Format;

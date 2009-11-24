@@ -75,6 +75,7 @@ per-target:
 	LIBS		= list of used libraries (exact name, will not search in paths)
 	IMPLIB		= filename				set filename of import library for "dynamic" target type; if not specified -
 										- will not be created
+	LINKFLAGS	= options				compiler-dependent command line options for linker
 
 at a time of registration of source files
 	DEFINES		= define1[=1] [define2 define3 ...]
@@ -1068,6 +1069,7 @@ sub RememberTarget {
 	}
 	SetTargetOption ($n, "LIBS", 1, $LibFileExt);
 	SetTargetOption ($n, "LIBRARIES");
+	SetTargetOption ($n, "LINKFLAGS");
 	# some options will be cleared after checking
 	SetTargetOption ($n, "CONSOLE",   1);
 	SetTargetOption ($n, "IMAGEBASE", 1);
@@ -1119,6 +1121,8 @@ sub FlushTargetText {
 		$line .= " -map:\"$shortOutName.map\"" if GetTargetOption ($n, "MAPFILES") eq "1";
 		$line .= " -debug -pdb:\"$shortOutName.pdb\" -pdbtype:sept -opt:ref -opt:icf" if GetTargetOption ($n, "PDB") eq "1";
 		$line .= " \$($objListName)";
+		my $linkflags = GetTargetOption ($n, "LINKFLAGS");
+		$line .= " $linkflags" if ($linkflags ne "");
 		if (GetTargetOption ($n, "CONSOLE") eq "1") {
 			$line .= " -subsystem:console";
 		} else {
