@@ -100,7 +100,7 @@ void Finish();
 //void FrontFace(GLenum mode);
 //void Frustum(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble zNear, GLdouble zFar) ARGS
 //GLuint GenLists(GLsizei range);
-//void GenTextures(GLsizei n, GLuint *textures);
+void GenTextures(GLsizei n, GLuint *textures);
 //void GetBooleanv(GLenum pname, GLboolean *params);
 //void GetClipPlane(GLenum plane, GLdouble *equation);
 //void GetDoublev(GLenum pname, GLdouble *params);
@@ -480,6 +480,25 @@ void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normal
 //-----------------------------------------------------------------------------
 //  Extensions
 //-----------------------------------------------------------------------------
+
+#name GL_EXT_framebuffer_object
+GLboolean IsRenderbufferEXT(GLuint renderbuffer) ARGS
+void BindRenderbufferEXT(GLenum target, GLuint renderbuffer) ARGS
+void DeleteRenderbuffersEXT(GLsizei n, const GLuint *renderbuffers) ARGS
+void GenRenderbuffersEXT(GLsizei n, GLuint *renderbuffers) ARGS
+void RenderbufferStorageEXT(GLenum target, GLenum internalformat, GLsizei width, GLsizei height) ARGS
+void GetRenderbufferParameterivEXT(GLenum target, GLenum pname, GLint *params) ARGS
+GLboolean IsFramebufferEXT(GLuint framebuffer) ARGS
+void BindFramebufferEXT(GLenum target, GLuint framebuffer) ARGS
+void DeleteFramebuffersEXT(GLsizei n, const GLuint *framebuffers) ARGS
+void GenFramebuffersEXT(GLsizei n, GLuint *framebuffers) ARGS
+GLenum CheckFramebufferStatusEXT(GLenum target) ARGS
+void FramebufferTexture1DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) ARGS
+void FramebufferTexture2DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) ARGS
+void FramebufferTexture3DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset) ARGS
+void FramebufferRenderbufferEXT(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer) ARGS
+void GetFramebufferAttachmentParameterivEXT(GLenum target, GLenum attachment, GLenum pname, GLint *params) ARGS
+void GenerateMipmapEXT(GLenum target) ARGS
 
 #platform win32
 #platform linux

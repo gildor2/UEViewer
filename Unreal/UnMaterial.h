@@ -134,7 +134,7 @@ public:
 protected:
 	// rendering implementation fields
 	CShader			GLShader;
-	int				DrawTimestamp;			// timestamp for object validation
+	int				DrawTimestamp;				// timestamp for object validation
 		//?? may be use GLShader.DrawTimestamp only ?
 #endif // RENDERING
 };
@@ -1359,7 +1359,6 @@ public:
 	{
 		guard(UTexture3::Serialize);
 		Super::Serialize(Ar);
-		if (Ar.IsStopper()) return;	// support for Default__Texture
 		SourceArt.Serialize(Ar);
 		unguard;
 	}
@@ -1508,7 +1507,6 @@ public:
 	{
 		guard(UTexture2D::Serialize);
 		Super::Serialize(Ar);
-		if (Ar.IsStopper()) return;	// support for Default__Texture
 		if (Ar.ArVer < 297)
 		{
 			Ar << SizeX << SizeY << (byte&)Format;

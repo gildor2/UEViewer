@@ -10,10 +10,14 @@
 #define TEXT_SCROLL_LINES		(CHAR_HEIGHT/2)
 
 
-#define LIGHTING_MODES			1
-#define DUMP_TEXTS				1
-#define FUNNY_BACKGROUND		1
+#define LIGHTING_MODES			1		// allow switching scene lighting modes with Ctrl+L
+#define DUMP_TEXTS				1		// allow Ctrl+D to dump all onscreen texts to a log
+#define FUNNY_BACKGROUND		1		// draw gradient background
+#define SMART_RESIZE			1		// redraw window contents while resizing window
 
+#if !_WIN32
+#undef SMART_RESIZE						// not compatible with Linux (has ugly effects and program hung)
+#endif
 
 #if RENDERING
 
@@ -34,7 +38,7 @@ enum
 
 static int lightingMode = LIGHTING_SPECULAR;
 
-#endif
+#endif // LIGHTING_MODES
 
 int GCurrentFrame = 1;
 int GContextFrame = 0;
@@ -57,8 +61,6 @@ inline void InvalidateContext()
 #define CLEAR_COLOR2			0.2, 0.4, 0.3, 1
 //#define CLEAR_COLOR				0.5, 0.6, 0.7, 1
 //#define CLEAR_COLOR2			0.22, 0.2, 0.18, 1
-
-#define FONT_TEX_NUM			1
 
 
 //-----------------------------------------------------------------------------
@@ -172,6 +174,8 @@ void SetViewOffset(const CVec3 &offset)
 // Text output
 //-----------------------------------------------------------------------------
 
+static GLuint	FontTexNum = 0;
+
 static void LoadFont()
 {
 	// decompress font texture
@@ -190,7 +194,8 @@ static void LoadFont()
 		}
 	}
 	// upload it
-	glBindTexture(GL_TEXTURE_2D, FONT_TEX_NUM);
+	glGenTextures(1, &FontTexNum);
+	glBindTexture(GL_TEXTURE_2D, FontTexNum);
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, TEX_WIDTH, TEX_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -272,7 +277,7 @@ static void ResizeWindow(int w, int h)
 		QGL_InitExtensions();
 	}
 
-	if (!glIsTexture(FONT_TEX_NUM))
+	if (!glIsTexture(FontTexNum))
 	{
 		// possibly context was recreated ...
 		InvalidateContext();
@@ -610,7 +615,7 @@ void FlushTexts()
 {
 	// setup GL
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, FONT_TEX_NUM);
+	glBindTexture(GL_TEXTURE_2D, FontTexNum);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_ALPHA_TEST);
@@ -868,12 +873,30 @@ static void OnKeyboard(unsigned key, unsigned mod)
 // Main function
 //-----------------------------------------------------------------------------
 
+#if SMART_RESIZE
+static int OnEvent(const SDL_Event *evt)
+{
+	// Solution is from this topic:
+	// http://www.gamedev.net/community/forums/topic.asp?topic_id=428022
+	if (evt->type == SDL_VIDEORESIZE)
+	{
+		ResizeWindow(evt->resize.w, evt->resize.h);
+		Display();
+		return 0;	// drop this event (already handled)
+	}
+	return 1;		// add event to queue
+}
+#endif // SMART_RESIZE
+
 void VisualizerLoop(const char *caption)
 {
 	guard(VisualizerLoop);
 
 	Init(caption);
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+#if SMART_RESIZE
+	SDL_SetEventFilter(&OnEvent);
+#endif
 	ResetView();
 	// main loop
 	SDL_Event evt;
@@ -886,9 +909,11 @@ void VisualizerLoop(const char *caption)
 			case SDL_KEYDOWN:
 				OnKeyboard(evt.key.keysym.sym, evt.key.keysym.mod);
 				break;
+#if !SMART_RESIZE
 			case SDL_VIDEORESIZE:
 				ResizeWindow(evt.resize.w, evt.resize.h);
 				break;
+#endif
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
 				OnMouseButton(evt.type, evt.button.button);

@@ -1,8 +1,25 @@
-!! UC2: load animations
+StaticMesh:
+- build tangent space
+- UE3 support
 
 Shaders: when trying to change/compile shader between glBegin/glEnd, GL will not do anything.
 Should check glGetError() and assert? (or make function GL_CheckError() - will appError(code)
 if code != 0)
+
+FArchive:
+? ArVer, ArLicenseeVer -> Ver(), LicenseeVer() + hide these fields
+- function to copy settings from one archive to another (version, game, endian etc)
+
+Settings.ini (different name ?)
+- background color
+- do not use GL2
+- disable bloom (if one)
+- disable notify.log
+? disable log at all
+- extra (default) command line switches
+- disable viewing of axis in 3D
+- default lighting mode
+- initial window size
 
 Notify.log:
 - add "-nolog" switch to disable it
@@ -10,12 +27,6 @@ Notify.log:
 - add current date/time, some umodel info (version) and cmdline in a case of crash
 
 ForcedExport handling: should use this information for UE3 package loading:
-- loading:
-  1) do not load such objects
-  2) load such objects from another package
-     a) use metadata from another package - ignore local FBulkData structure
-     b) use local metadata + external bulk (simply load compressed/uncompressed data block)
-  *) done for GOW2 textures
 - prevent export/listing of such resources (or list with "forced" flag?)
 
 FONTGEN
@@ -28,7 +39,7 @@ FONTGEN
 GENMAKE:
 - "OPTIONS" -> CFLAGS + CPPFLAGS (check, how OPTIONS is currently used), and use separate vars
   for compiling C++ and C code
-  - have one C++ option for ddslib.c - compiler show warning
+  - have one C++ option for ddslib.c - GCC compiler show warning
 
 ? tool to collect full statistics about all available packages: supply "-path", umodel will recurse
   all directories and try to load all files with known extensions (load 'summary' only); after that,
@@ -41,25 +52,27 @@ GENMAKE:
           /PkgScan
           ...
     * if so, can remove '-check', '-pkginfo' etc from umodel
-    * (partially?) done in pkgtool
+    * now: (partially?) done in pkgtool
 
 ! UE1 UTexture has AnimNext field
-! UMaterialSequence (check 2K4Menus package)
+! implement UMaterialSequence (check 2K4Menus package)
 ? key to toggle fullscreen with desktop resolution (no way to implement using SDL only?)
   - X.org has SDL_WM_ToggleFullScreen(), and can use USER32 code for Win32
 - key to toggle debug text and 3D lines (good for screenshots)
+
+?? UC2:
+  - load animations
 
 ?? TRIBES3:
   ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)
     ! check this un UnrealEd
     * To fix: should create Moves.BoneIndices[], fill with 'i' and mark 0x1000-flags bones with -1
       ! check PSA generation too (will be buggy) -- require RefPose bones, but no in UMeshAnimation ...
-  - have unknown texture type (see BitmapMaterial.uc: have compressed normalmaps) -- in some other
-    games too
-  - crash (assert) when switching mesh LOD levels
+  - skeletal mesh mesh LOD levels - has visual bugs on most LOD meshes
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
 
 ? when exporting mesh, can create .uc with sockets too (if possible)
+  - requires conversion FCoords -> FVector+FRotator
 ! when cannot load some material type, or file is absent - sould at least give ability to list this
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
@@ -78,8 +91,8 @@ GENMAKE:
   - add 2 global lists: complete objects and objects, required serialization; use
     bool flag to check, which list holds object
 
-Exporting:
-- TextBuffer export (separate tool?)
+Exporting (typeinfo tool?):
+- TextBuffer export
   - will require to get defaultproperties from "Class'Name'.properties" (object with name=ClassName and
     class name="")
 
@@ -89,17 +102,10 @@ Loading:
 - profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
 - testing: try to load from CD (slow random access)
 
+
 - try to compile with MinGW
 - move new Math3D parts to Quake2 core (more code to move ?)
-
-
-REST TO IMPLEMENT:
-~~~~~~~~~~~~~~~~~~
-- VertexMesh:
-  ? tweening
-  ? LOD support
-- SkeletalMesh:
-  ? hardware skinning (but: Lineage2 has meshes with more than 256 bones)
+- add 3rd party library names/links/licenses to readme.txt
 
 
 NOTES:

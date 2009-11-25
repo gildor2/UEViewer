@@ -24,6 +24,7 @@ struct GL_t
 	void	(APIENTRY * EnableClientState) (GLenum array);
 	void	(APIENTRY * End) ();
 	void	(APIENTRY * Finish) ();
+	void	(APIENTRY * GenTextures) (GLsizei n, GLuint *textures);
 	GLenum	(APIENTRY * GetError) ();
 	void	(APIENTRY * GetIntegerv) (GLenum pname, GLint *params);
 	const GLubyte *	(APIENTRY * GetString) (GLenum name);
@@ -82,6 +83,23 @@ struct GL_t
 	void	(APIENTRY * Uniform1i) (GLint index, GLint value);
 	void	(APIENTRY * VertexAttrib3fv) (GLuint index, const GLfloat *v);
 	void	(APIENTRY * VertexAttribPointer) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
+	GLboolean	(APIENTRY * IsRenderbufferEXT) (GLuint renderbuffer);
+	void	(APIENTRY * BindRenderbufferEXT) (GLenum target, GLuint renderbuffer);
+	void	(APIENTRY * DeleteRenderbuffersEXT) (GLsizei n, const GLuint *renderbuffers);
+	void	(APIENTRY * GenRenderbuffersEXT) (GLsizei n, GLuint *renderbuffers);
+	void	(APIENTRY * RenderbufferStorageEXT) (GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+	void	(APIENTRY * GetRenderbufferParameterivEXT) (GLenum target, GLenum pname, GLint *params);
+	GLboolean	(APIENTRY * IsFramebufferEXT) (GLuint framebuffer);
+	void	(APIENTRY * BindFramebufferEXT) (GLenum target, GLuint framebuffer);
+	void	(APIENTRY * DeleteFramebuffersEXT) (GLsizei n, const GLuint *framebuffers);
+	void	(APIENTRY * GenFramebuffersEXT) (GLsizei n, GLuint *framebuffers);
+	GLenum	(APIENTRY * CheckFramebufferStatusEXT) (GLenum target);
+	void	(APIENTRY * FramebufferTexture1DEXT) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+	void	(APIENTRY * FramebufferTexture2DEXT) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+	void	(APIENTRY * FramebufferTexture3DEXT) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
+	void	(APIENTRY * FramebufferRenderbufferEXT) (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+	void	(APIENTRY * GetFramebufferAttachmentParameterivEXT) (GLenum target, GLenum attachment, GLenum pname, GLint *params);
+	void	(APIENTRY * GenerateMipmapEXT) (GLenum target);
 
 #if _WIN32
 
@@ -117,6 +135,7 @@ extern GL_t GL;
 #define glEnableClientState	GL.EnableClientState
 #define glEnd	GL.End
 #define glFinish	GL.Finish
+#define glGenTextures	GL.GenTextures
 #define glGetError	GL.GetError
 #define glGetIntegerv	GL.GetIntegerv
 #define glGetString	GL.GetString
@@ -175,6 +194,23 @@ extern GL_t GL;
 #define glUniform1i	GL.Uniform1i
 #define glVertexAttrib3fv	GL.VertexAttrib3fv
 #define glVertexAttribPointer	GL.VertexAttribPointer
+#define glIsRenderbufferEXT	GL.IsRenderbufferEXT
+#define glBindRenderbufferEXT	GL.BindRenderbufferEXT
+#define glDeleteRenderbuffersEXT	GL.DeleteRenderbuffersEXT
+#define glGenRenderbuffersEXT	GL.GenRenderbuffersEXT
+#define glRenderbufferStorageEXT	GL.RenderbufferStorageEXT
+#define glGetRenderbufferParameterivEXT	GL.GetRenderbufferParameterivEXT
+#define glIsFramebufferEXT	GL.IsFramebufferEXT
+#define glBindFramebufferEXT	GL.BindFramebufferEXT
+#define glDeleteFramebuffersEXT	GL.DeleteFramebuffersEXT
+#define glGenFramebuffersEXT	GL.GenFramebuffersEXT
+#define glCheckFramebufferStatusEXT	GL.CheckFramebufferStatusEXT
+#define glFramebufferTexture1DEXT	GL.FramebufferTexture1DEXT
+#define glFramebufferTexture2DEXT	GL.FramebufferTexture2DEXT
+#define glFramebufferTexture3DEXT	GL.FramebufferTexture3DEXT
+#define glFramebufferRenderbufferEXT	GL.FramebufferRenderbufferEXT
+#define glGetFramebufferAttachmentParameterivEXT	GL.GetFramebufferAttachmentParameterivEXT
+#define glGenerateMipmapEXT	GL.GenerateMipmapEXT
 
 #if _WIN32
 
@@ -187,6 +223,7 @@ extern GL_t GL;
 
 #define QGL_1_3	(1 << 0)
 #define QGL_2_0	(1 << 1)
+#define QGL_EXT_FRAMEBUFFER_OBJECT	(1 << 2)
 
 #if _WIN32
 

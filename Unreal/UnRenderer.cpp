@@ -17,9 +17,9 @@
 #include "Shaders.h"
 
 #define MAX_IMG_SIZE		4096
-#define DEFAULT_TEX_NUM		2			// note: glIsTexture(0) will always return GL_FALSE
-#define RESERVED_TEXTURES	32
 
+
+static GLuint DefaultTexNum = 0;
 
 //#define SHOW_SHADER_PARAMS	1
 
@@ -433,8 +433,6 @@ void UUnrealMaterial::SetupGL(unsigned PolyFlags)
 }
 
 
-static GLint lastTexNum = RESERVED_TEXTURES;	//!! use glGenTextures() instead
-
 void BindDefaultMaterial(bool White)
 {
 	glDepthMask(GL_TRUE);		//?? place into other places too
@@ -554,12 +552,12 @@ void UTexture::Bind()
 
 	glEnable(GL_TEXTURE_2D);
 
-	if (!TexNum) TexNum = ++lastTexNum;				// create handle
 	bool upload = !GL_TouchObject(DrawTimestamp);
 
 	if (upload)
 	{
 		// upload texture
+		glGenTextures(1, &TexNum);
 		int USize, VSize;
 		byte *pic = Decompress(USize, VSize);
 		if (pic)
@@ -570,7 +568,9 @@ void UTexture::Bind()
 		else
 		{
 			appNotify("WARNING: texture %s has no valid mipmaps", Name);
-			TexNum = DEFAULT_TEX_NUM;				// "default texture"
+			//?? note: not working (no access to generated default texture!!)
+			//?? also should glDeleteTextures(1, &TexNum) - generated but not used?
+			TexNum = DefaultTexNum;					// "default texture"
 		}
 	}
 	// bind texture
@@ -1096,12 +1096,12 @@ void UTexture2D::Bind()
 
 	glEnable(GL_TEXTURE_2D);
 
-	if (!TexNum) TexNum = ++lastTexNum;				// create handle
 	bool upload = !GL_TouchObject(DrawTimestamp);
 
 	if (upload)
 	{
 		// upload texture
+		glGenTextures(1, &TexNum);
 		int USize, VSize;
 		byte *pic = Decompress(USize, VSize);
 		if (pic)
@@ -1112,7 +1112,7 @@ void UTexture2D::Bind()
 		else
 		{
 			appNotify("WARNING: texture %s has no valid mipmaps", Name);
-			TexNum = DEFAULT_TEX_NUM;				// "default texture"
+			TexNum = DefaultTexNum;					// "default texture"; not working (see UTexture::Bind())
 		}
 	}
 	// bind texture

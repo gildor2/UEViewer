@@ -363,7 +363,6 @@ struct FObjectExport
 				Ar << unk24;
 			}
 #	endif // HUXLEY
-		tail:
 			if (Ar.ArVer < 543)  Ar << E.ComponentMap;
 			if (Ar.ArVer >= 247) Ar << E.ExportFlags;
 			if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;

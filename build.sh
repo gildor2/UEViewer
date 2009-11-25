@@ -7,10 +7,12 @@ PLATFORM="vc-win32"
 [ "$OSTYPE" == "linux-gnu" ] && PLATFORM="linux"
 
 #export vc_ver=9
+
 [ "$project" ] || project="umodel"		# setup default prohect name
-[ "$root" ] || root="."
+[ "$root"    ] || root="."
+[ "$render"  ] || render=1
+
 makefile="makefile-$PLATFORM"
-[ "$render" ] || render=1
 
 # update makefile when needed
 # [ $makefile -ot $project ] &&

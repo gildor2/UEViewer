@@ -21,18 +21,24 @@ OLDCRT     = 0
 
 !if "$COMPILER" eq "VisualC"
 	!if "$OLDCRT" eq "1"
+		OPTIONS += {
+			-GS-	# disable security checks
+		}
 		WDKCRT = "c:/!msvcrt"
 		LINKFLAGS = {
-			-nodefaultlib:libcmt.lib
+			-nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib
+			-manifest:no
 			$WDKCRT/lib/Win32/msvcrt.lib
-			$WDKCRT/lib/Win32/wdk_msvcrt_win2000.obj
-			$WDKCRT/lib/Win32/oldnames.lib
+			$WDKCRT/lib/Win32/wdk_msvcrt_win2000.obj	# required - has different mainCRTStartup
+#			$WDKCRT/lib/Win32/wdk_oldnames.lib		# not required
 		}
-		#?? try compile w/o wdk_msvcrt_win2000.obj
-		#?? GPF when starting with this msvcrt.dll ... try to use different CRT headers (currently used from VC, needs from WDK)?
+		# GPF when starting exe linked with "oldnames.lib" (not "wdk_oldnames.lib") -- incorrect call of stricmp()
+		# (generated "call dword ptr ds:[400000]" instead of "call ds:__imp___stricmp")
 		#?? needs to specify path to WDK CRT files (add "OLDCRT" option?)
 		#?? Also note: makefiles with WDKCRT dependency will not be compatible with standard VC installations
 		#?? Can try to add wdk_msvcrt_win2000.obj and oldnames.lib into msvcrt.lib
+		#?? Has a lot of kernel32.dll function calls from __security_init_cookie() - this function is called from mainCRTStartup()
+		#?? and cannot be overrided (unless use own version of this function) -- check "VC9/crt/src/crtexe.c"
 	!endif
 !endif
 

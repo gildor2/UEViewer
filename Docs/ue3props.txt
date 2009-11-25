@@ -1,6 +1,4 @@
 NOTES:
-* UObject has unknown dword at start
-- possibly, unknown int value after 'prop size' is an array index
 - ByteProperty stored as enumeration value ?
 
 1st dword: UObject::NetIndex
