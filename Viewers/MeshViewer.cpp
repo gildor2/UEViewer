@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 
+#if RENDERING
+
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
 
@@ -68,3 +70,5 @@ void CMeshViewer::ProcessKey(int key)
 		CObjectViewer::ProcessKey(key);
 	}
 }
+
+#endif // RENDERING

@@ -880,6 +880,8 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 			S.AddItem(c & 255);		//!! incorrect ...
 		}
 	}
+	if (S[abs(len)-1] != 0)
+		appError("Serialized FString is not null-terminated");
 	return Ar;
 
 	unguard;

@@ -1,5 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
+
+#if RENDERING
+
 #include "MeshInstance.h"
 
 
@@ -240,3 +243,5 @@ void CVertMeshInstance::UpdateAnimation(float TimeDelta)
 		}
 	}
 }
+
+#endif // RENDERING

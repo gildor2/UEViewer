@@ -1,8 +1,9 @@
 #include "Core.h"
-
 #include "UnrealClasses.h"
-#include "MeshInstance.h"
 
+#if RENDERING
+
+#include "MeshInstance.h"
 #include "GlWindow.h"
 
 
@@ -720,6 +721,8 @@ void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 	Skeletal animation itself
 -----------------------------------------------------------------------------*/
 
+#endif //?? RENDERING -- close temporarily
+
 #define MAX_LINEAR_KEYS		4
 
 static int FindTimeKey(const TArray<float> &KeyTime, float Frame)
@@ -789,7 +792,7 @@ static void GetKeyParams(const TArray<float> &KeyTime, float Frame, float NumFra
 
 
 // not 'static', because used in ExportPsa()
-//?? place function(s) into UMeshAnimation
+//?? place function(s) into UMeshAnimation and remove extra #if RENDERING/#endif
 void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
 	CVec3 &DstPos, CQuat &DstQuat)
 {
@@ -913,6 +916,8 @@ void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Lo
 	unguard;
 }
 
+
+#if RENDERING //?? open again
 
 #if SHOW_BONE_UPDATES
 static int BoneUpdateCounts[MAX_MESHBONES];
@@ -1779,3 +1784,5 @@ void CSkelMeshInstance::BuildInfColors()
 
 	unguard;
 }
+
+#endif // RENDERING

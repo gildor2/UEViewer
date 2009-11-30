@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 
+#if RENDERING
+
 #include "ObjectViewer.h"
 
 
@@ -529,3 +531,5 @@ static void OutlineMaterial(UObject *Obj, int indent)
 
 	unguard;
 }
+
+#endif // RENDERING

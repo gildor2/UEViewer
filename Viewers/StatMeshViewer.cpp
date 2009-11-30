@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 
+#if RENDERING
+
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
 
@@ -101,3 +103,5 @@ void CStatMeshViewer::Draw2D()
 		DrawTextLeft("");
 	}
 }
+
+#endif // RENDERING

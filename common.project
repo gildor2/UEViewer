@@ -20,10 +20,24 @@ OLDCRT     = 0
 !endif
 
 !if "$COMPILER" eq "VisualC"
+	CPP_EXCEPT = 0		# used with WIN32_USE_SEH in Core.h
 	!if "$OLDCRT" eq "1"
-		OPTIONS += {
-			-GS-	# disable security checks
+		# options for crtexe2.c
+		#?? place building of this obj separately, use compiled obj file here
+		INCLUDES = $R/libs/oldcrt $R/libs/oldcrt/PlatformSDK
+		OBJDIR   = $R/obj/oldcrt
+		DEFINES  = CRTDLL _CRTBLD
+		#??
+		OPTIONS  = {
+			-GS-	# disable buffer security checks (VC8+, on by default)
+			-GR-	# disable C++ RTTI (on by default in VC8+) - make switch for genmake??
 		}
+		# add crtexe2.c to project
+		sources(MAIN) = $R/libs/oldcrt/crtexe2.c
+		INCLUDES =	# reset INCLUDES
+		DEFINES  =	# reset DEFINES
+		# options for project
+		OPTIONS += -GS- -GR- #?? common for VC8+
 		WDKCRT = "c:/!msvcrt"
 		LINKFLAGS = {
 			-nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib
@@ -32,13 +46,6 @@ OLDCRT     = 0
 			$WDKCRT/lib/Win32/wdk_msvcrt_win2000.obj	# required - has different mainCRTStartup
 #			$WDKCRT/lib/Win32/wdk_oldnames.lib		# not required
 		}
-		# GPF when starting exe linked with "oldnames.lib" (not "wdk_oldnames.lib") -- incorrect call of stricmp()
-		# (generated "call dword ptr ds:[400000]" instead of "call ds:__imp___stricmp")
-		#?? needs to specify path to WDK CRT files (add "OLDCRT" option?)
-		#?? Also note: makefiles with WDKCRT dependency will not be compatible with standard VC installations
-		#?? Can try to add wdk_msvcrt_win2000.obj and oldnames.lib into msvcrt.lib
-		#?? Has a lot of kernel32.dll function calls from __security_init_cookie() - this function is called from mainCRTStartup()
-		#?? and cannot be overrided (unless use own version of this function) -- check "VC9/crt/src/crtexe.c"
 	!endif
 !endif
 
@@ -63,7 +70,7 @@ INCLUDES += . $R/Core $R/Unreal $R/libs/include
 !endif
 
 # smaller zlib
-DEFINES =			\
+DEFINES +=			\
 	DYNAMIC_CRC_TABLE	\
 	BUILDFIXED
 

@@ -1,12 +1,4 @@
-#include "Core.h"
-#include "UnCore.h"
-#include "UnObject.h"
-#include "UnMaterial.h"
-
-
 #define USE_NVIMAGE			1
-//#define PROFILE_DDS			1
-
 
 #if !USE_NVIMAGE
 #	include "libs/ddslib.h"				// texture decompression
@@ -16,6 +8,18 @@
 #	include <nvimage/DirectDrawSurface.h>
 #	undef __FUNC__						// conflicted with our guard macros
 #endif // USE_NVIMAGE
+
+
+#include "Core.h"
+#include "UnCore.h"
+#include "UnObject.h"
+#include "UnMaterial.h"
+
+#if UC2
+#	include "UnPackage.h"				// just for ArVer ...
+#endif
+
+//#define PROFILE_DDS			1
 
 
 // replaces random 'alpha=0' color with black
@@ -30,7 +34,7 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 }
 
 
-byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
+static byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
 	const char *Name, UPalette *Palette)
 {
 	guard(DecompressTexture);
@@ -226,3 +230,631 @@ byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat 
 	return dst;
 	unguardf(("fmt=%d", SrcFormat));
 }
+
+
+/*-----------------------------------------------------------------------------
+	UTexture::Decompress (UE2)
+-----------------------------------------------------------------------------*/
+
+#if UC2
+
+struct XprEntry
+{
+	char				Name[64];
+	int					DataOffset;
+	int					DataSize;
+};
+
+struct XprInfo
+{
+	const CGameFileInfo *File;
+	TArray<XprEntry>	Items;
+};
+
+static TArray<XprInfo> xprFiles;
+
+static bool ReadXprFile(const CGameFileInfo *file)
+{
+	guard(ReadXprFile);
+	FArchive *Ar = appCreateFileReader(file);
+
+	int Tag, FileLen, DataStart, DataCount;
+	*Ar << Tag << FileLen << DataStart << DataCount;
+	if (Tag != BYTES4('X','P','R','1'))
+	{
+//		printf("Unknown XPR tag in %s\n", file->RelativeName);
+		delete Ar;
+		return true;
+	}
+	if (FileLen <= DataStart)
+	{
+//		printf("Unsupported XPR layout in %s\n", file->RelativeName);
+		delete Ar;
+		return true;
+	}
+
+	XprInfo *Info = new(xprFiles) XprInfo;
+	Info->File = file;
+	// read filelist
+	int i;
+	for (i = 0; i < DataCount; i++)
+	{
+		int NameOffset, DataOffset;
+		*Ar << NameOffset << DataOffset;
+		int savePos = Ar->Tell();
+		Ar->Seek(NameOffset + 12);
+		// read name
+		char c, buf[256];
+		int n = 0;
+		while (true)
+		{
+			*Ar << c;
+			if (n < ARRAY_COUNT(buf))
+				buf[n++] = c;
+			if (!c) break;
+		}
+		buf[ARRAY_COUNT(buf)-1] = 0;			// just in case
+		// create item
+		XprEntry *Entry = new(Info->Items) XprEntry;
+		appStrncpyz(Entry->Name, buf, ARRAY_COUNT(Entry->Name));
+		Entry->DataOffset = DataOffset + 12;	// will be overriden later
+		// seek back
+		Ar->Seek(savePos);
+	}
+	// read file data
+	Ar->Seek(Info->Items[0].DataOffset);
+	TArray<int> data;
+	while (true)
+	{
+		int v;
+		*Ar << v;
+		if (v == -1) break;						// end marker, 0xFFFFFFFF
+		data.AddItem(v);
+	}
+//	assert(data.Num() && data.Num() % DataCount == 0);
+	int dataSize = data.Num() / DataCount;
+	if (data.Num() % DataCount != 0 || dataSize > 5)
+	{
+//		printf("Unsupported XPR layout in %s\n", file->RelativeName);
+		xprFiles.Remove(xprFiles.Num()-1);
+		delete Ar;
+		return true;
+	}
+	for (i = 0; i < DataCount; i++)
+	{
+		int idx = i * dataSize;
+		XprEntry *Entry = &Info->Items[i];
+		int start;
+		switch (dataSize)
+		{
+		case 2:
+			start = data[idx+1];
+			break;
+		case 4:
+			start = data[idx+3];
+			break;
+		case 5:
+			start = data[idx+1];
+			break;
+		default:
+			appNotify("Unknown XPR layout of %s: %d dwords", file->RelativeName, dataSize);
+			xprFiles.Remove(xprFiles.Num()-1);
+			delete Ar;
+			return true;
+		}
+		Entry->DataOffset = DataStart + start;
+	}
+//	printf("Scanned %s, %d files\n", Filename, DataCount);
+	for (i = 0; i < DataCount; i++)
+	{
+		XprEntry *Entry = &Info->Items[i];
+		int nextOffset;
+		if (i < DataCount-1)
+			nextOffset = Info->Items[i+1].DataOffset;
+		else
+			nextOffset = FileLen;
+		Entry->DataSize = nextOffset - Entry->DataOffset;
+//		printf("%s -> %X + %X\n", Entry->Name, Entry->DataOffset, Entry->DataSize);
+	}
+
+	delete Ar;
+	return true;
+
+	unguardf(("%s", file->RelativeName));
+}
+
+static byte *FindXpr(const char *Name)
+{
+	// scan xprs
+	static bool ready = false;
+	if (!ready)
+	{
+		ready = true;
+		appEnumGameFiles(ReadXprFile, "xpr");
+	}
+	// find a file
+	for (int i = 0; i < xprFiles.Num(); i++)
+	{
+		XprInfo *Info = &xprFiles[i];
+		for (int j = 0; j < Info->Items.Num(); j++)
+		{
+			XprEntry *File = &Info->Items[j];
+			if (strcmp(File->Name, Name) == 0)
+			{
+				// found
+				byte *buf = new byte[File->DataSize];
+				FArchive *Reader = appCreateFileReader(Info->File);
+				Reader->Seek(File->DataOffset);
+				Reader->Serialize(buf, File->DataSize);
+				delete Reader;
+				return buf;
+			}
+		}
+	}
+	return NULL;
+}
+
+#endif // UC2
+
+#if BIOSHOCK
+
+//#define DUMP_BIO_CATALOG			1
+//#define DEBUG_BIO_BULK				1
+
+struct BioBulkCatalogItem
+{
+	FString				ObjectName;
+	FString				PackageName;
+	int					f10;				// always 0
+	int					DataOffset;
+	int					DataSize;
+	int					DataSize2;			// the same as DataSize
+	int					f20;
+
+	friend FArchive& operator<<(FArchive &Ar, BioBulkCatalogItem &S)
+	{
+		Ar << S.ObjectName << S.PackageName << S.f10 << S.DataOffset << S.DataSize << S.DataSize2 << S.f20;
+		assert(S.f10 == 0);
+		assert(S.DataSize == S.DataSize2);
+#if DUMP_BIO_CATALOG
+		printf("  %s / %s - %X %X %X %X %X\n", *S.ObjectName, *S.PackageName, S.f10, S.DataOffset, S.DataSize, S.DataSize2, S.f20);
+#endif
+		return Ar;
+	}
+};
+
+
+struct BioBulkCatalogFile
+{
+	int64				f0;
+	FString				Filename;
+	TArray<BioBulkCatalogItem> Items;
+
+	friend FArchive& operator<<(FArchive &Ar, BioBulkCatalogFile &S)
+	{
+		Ar << S.f0 << S.Filename;
+#if DUMP_BIO_CATALOG
+		printf("<<< %s >>>\n", *S.Filename);
+#endif
+		Ar << S.Items;
+		return Ar;
+	}
+};
+
+struct BioBulkCatalog
+{
+	byte				Endian;
+	int64				f4;
+	int					fC;
+	TArray<BioBulkCatalogFile> Files;
+
+	friend FArchive& operator<<(FArchive &Ar, BioBulkCatalog &S)
+	{
+		return Ar << S.Endian << S.f4 << S.fC << S.Files;
+	}
+};
+
+static BioBulkCatalog bioCatalog;
+
+static void BioReadBulkCatalog()
+{
+	guard(BioReadBulkCatalog);
+	static bool ready = false;
+	if (ready) return;
+	ready = true;
+
+	const CGameFileInfo *cat = appFindGameFile("catalog.bdc");
+	if (!cat) return;
+	FArchive *Ar = appCreateFileReader(cat);
+	// setup for reading Bioshock data
+	Ar->ArVer         = 141;
+	Ar->ArLicenseeVer = 0x38;
+	Ar->Game          = GAME_Bioshock;
+	// serialize
+	*Ar << bioCatalog;
+	// finalize
+	delete Ar;
+	unguard;
+}
+
+
+static byte *FindBioTexture(const UTexture *Tex)
+{
+	int needSize = Tex->CachedBulkDataSize & 0xFFFFFFFF;
+#if DEBUG_BIO_BULK
+	printf("Search for ... %s (size=%X)\n", Tex->Name, needSize);
+#endif
+	BioReadBulkCatalog();
+	for (int i = 0; i < bioCatalog.Files.Num(); i++)
+	{
+		const BioBulkCatalogFile &File = bioCatalog.Files[i];
+		for (int j = 0; j < File.Items.Num(); j++)
+		{
+			const BioBulkCatalogItem &Item = File.Items[j];
+			if (!strcmp(Tex->Name, Item.ObjectName))
+			{
+				if (abs(needSize - Item.DataSize) >= 0x4000)		// differs in 16k
+				{
+#if DEBUG_BIO_BULK
+					printf("... Found %s in %s with wrong BulkDataSize %X (need %X)\n", Tex->Name, *File.Filename, Item.DataSize, needSize);
+#endif
+					continue;
+				}
+#if DEBUG_BIO_BULK
+				printf("... Found %s in %s at %X size %X (%dx%d fmt=%d bpp=%g strip:%d mips:%d)\n", Tex->Name, *File.Filename, Item.DataOffset, Item.DataSize,
+					Tex->USize, Tex->VSize, Tex->Format, (float)Item.DataSize / (Tex->USize * Tex->VSize),
+					Tex->HasBeenStripped, Tex->StrippedNumMips);
+#endif
+				// found
+				byte *buf = new byte[max(Item.DataSize, needSize)];
+				const CGameFileInfo *bulk = appFindGameFile(File.Filename);
+				if (!bulk) return NULL;		// no bulk file
+				FArchive *Reader = appCreateFileReader(bulk);
+				Reader->Seek(Item.DataOffset);
+				Reader->Serialize(buf, Item.DataSize);
+				delete Reader;
+				return buf;
+			}
+		}
+	}
+#if DEBUG_BIO_BULK
+	printf("... Bulk for %s was not found\n", Tex->Name);
+#endif
+	return NULL;
+}
+
+#endif // BIOSHOCK
+
+byte *UTexture::Decompress(int &USize, int &VSize) const
+{
+	guard(UTexture::Decompress);
+#if BIOSHOCK
+	if (Package && Package->Game == GAME_Bioshock) //?? check bStripped ?
+	{
+		BioReadBulkCatalog();
+		byte *pic = FindBioTexture(this);
+		if (pic)
+		{
+			USize = this->USize;
+			VSize = this->VSize;
+			byte *pic2 = DecompressTexture(pic, USize, VSize, Format, Name, Palette);
+			delete pic;
+			return pic2;
+		}
+	}
+#endif // BIOSHOCK
+#if UC2
+	if (Package && Package->Engine() == GAME_UE2X)
+	{
+		// try to find texture inside XBox xpr files
+		byte *pic = FindXpr(Name);
+		if (pic)
+		{
+			USize = this->USize;
+			VSize = this->VSize;
+			byte *pic2 = DecompressTexture(pic, USize, VSize, Format, Name, Palette);
+			delete pic;
+			return pic2;
+		}
+	}
+#endif // UC2
+	for (int n = 0; n < Mips.Num(); n++)
+	{
+		// find 1st mipmap with non-null data array
+		// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
+		const FMipmap &Mip = Mips[n];
+		if (!Mip.DataArray.Num())
+			continue;
+		USize = Mip.USize;
+		VSize = Mip.VSize;
+		return DecompressTexture(&Mip.DataArray[0], USize, VSize, Format, Name, Palette);
+	}
+	// no valid mipmaps
+	return NULL;
+	unguard;
+}
+
+
+#if UNREAL3
+
+/*-----------------------------------------------------------------------------
+	UTexture2D::Decompress (UE3)
+-----------------------------------------------------------------------------*/
+
+#if XBOX360
+
+inline int appLog2(int n)
+{
+	int r;
+	for (r = -1; n; n >>= 1, r++)
+	{ /*empty*/ }
+	return r;
+}
+
+// Input:
+//		x/y		coordinate of block
+//		width	width of image in blocks
+//		logBpb	log2(bytesPerBlock)
+// Reference:
+//		XGAddress2DTiledOffset() from XDK
+static unsigned GetTiledOffset(int x, int y, int width, int logBpb)
+{
+	assert(width <= 8192);
+	assert(x < width);
+
+	int alignedWidth = Align(width, 32);
+	// top bits of coordinates
+	int macro  = ((x >> 5) + (y >> 5) * (alignedWidth >> 5)) << (logBpb + 7);
+	// lower bits of coordinates (result is 6-bit value)
+	int micro  = ((x & 7) + ((y & 0xE) << 2)) << logBpb;
+	// mix micro/macro + add few remaining x/y bits
+	int offset = macro + ((micro & ~0xF) << 1) + (micro & 0xF) + ((y & 1) << 4);
+	// mix bits again
+	return (((offset & ~0x1FF) << 3) +					// upper bits (offset bits [*-9])
+			((y & 16) << 7) +							// next 1 bit
+			((offset & 0x1C0) << 2) +					// next 3 bits (offset bits [8-6])
+			(((((y & 8) >> 2) + (x >> 3)) & 3) << 6) +	// next 2 bits
+			(offset & 0x3F)								// lower 6 bits (offset bits [5-0])
+			) >> logBpb;
+}
+
+static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+{
+	guard(UntileXbox360Texture);
+
+	int blockWidth  = width  / blockSizeX;
+	int blockHeight = height / blockSizeY;
+	int logBpp      = appLog2(bytesPerBlock);
+	for (int y = 0; y < blockHeight; y++)
+	{
+		for (int x = 0; x < blockWidth; x++)
+		{
+			int swzAddr = GetTiledOffset(x, y, blockWidth, logBpp);
+			assert(swzAddr < blockWidth * blockHeight);
+			int sy = swzAddr / blockWidth;
+			int sx = swzAddr % blockWidth;
+			assert(sx >= 0 && sx < blockWidth);
+			assert(sy >= 0 && sy < blockHeight);
+			for (int y1 = 0; y1 < blockSizeY; y1++)
+			{
+				for (int x1 = 0; x1 < blockSizeX; x1++)
+				{
+					int x2 = (x * blockSizeX) + x1;
+					int y2 = (y * blockSizeY) + y1;
+					int x3 = (sx * blockSizeX) + x1;
+					int y3 = (sy * blockSizeY) + y1;
+					assert(x2 >= 0 && x2 < width);
+					assert(x3 >= 0 && x3 < width);
+					assert(y2 >= 0 && y2 < height);
+					assert(y3 >= 0 && y3 < height);
+					dst[y2 * width + x2] = src[y3 * width + x3];
+				}
+			}
+		}
+	}
+	unguard;
+}
+
+#endif // XBOX360
+
+byte *UTexture2D::Decompress(int &USize, int &VSize) const
+{
+	guard(UTexture2D::Decompress);
+
+	bool bulkChecked = false;
+	for (int n = 0; n < Mips.Num(); n++)
+	{
+		// find 1st mipmap with non-null data array
+		// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
+		const FTexture2DMipMap &Mip = Mips[n];
+		if (!Mip.Data.BulkData)
+		{
+			//?? Separate this function ?
+			// check for external bulk
+			//!! * -notfc cmdline switch
+			//!! * material viewer: support switching mip levels (for xbox decompression testing)
+			if (Mip.Data.BulkDataFlags & BULKDATA_NoData) continue;		// mip level is stripped
+			if (!(Mip.Data.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue;
+			// some optimization in a case of missing bulk file
+			if (bulkChecked) continue;									// already checked for previous mip levels
+			bulkChecked = true;
+			// Here: data is either in TFC file or in other package
+			const char *bulkFileName = NULL, *bulkFileExt = NULL;
+			if (strcmp(TextureFileCacheName, "None") != 0)
+			{
+				// TFC file is assigned
+				//!! cache checking of tfc file(s) + cache handles (FFileReader)
+				//!! note #1: there can be few cache files!
+				//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
+				bulkFileName = TextureFileCacheName;
+				bulkFileExt  = "tfc";
+			}
+			else
+			{
+				// data is inside another package
+				//!! copy-paste from UnPackage::CreateExport(), should separate function
+				// find outermost package
+				if (this->PackageIndex)
+				{
+					int PackageIndex = this->PackageIndex;		// export entry for this object (UTexture2D)
+					while (true)
+					{
+						const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
+						if (!Exp2.PackageIndex) break;			// get parent (UPackage)
+						PackageIndex = Exp2.PackageIndex - 1;	// subtract 1 from package index
+					}
+					const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
+					if (Exp2.ExportFlags & EF_ForcedExport)
+					{
+						bulkFileName = Exp2.ObjectName;
+						bulkFileExt  = NULL;					// find package file
+//						printf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
+					}
+				}
+			}
+			if (!bulkFileName) continue;						// just in case
+
+			const CGameFileInfo *bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+			if (!bulkFile)
+			{
+				printf("Decompressing %s: %s.%s is missing\n", Name, bulkFileName, bulkFileExt ? bulkFileExt : "*");
+				continue;
+			}
+			FArchive *Ar = appCreateFileReader(bulkFile);
+			printf("Reading %s mip level %d (%dx%d) from %s\n", Name, n, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
+			Ar->ReverseBytes = Package->ReverseBytes;
+			FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
+//printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
+			Bulk->SerializeChunk(*Ar);
+			delete Ar;
+		}
+		USize = Mip.SizeX;
+		VSize = Mip.SizeY;
+		ETextureFormat intFormat;
+		const char *FmtName = EnumToName("EPixelFormat", Format);
+		if (!FmtName) FmtName = "???";
+		if (Format == PF_A8R8G8B8)
+			intFormat = TEXF_RGBA8;
+		else if (Format == PF_DXT1)
+			intFormat = TEXF_DXT1;
+		else if (Format == PF_DXT3)
+			intFormat = TEXF_DXT3;
+		else if (Format == PF_DXT5)
+			intFormat = TEXF_DXT5;
+		else if (Format == PF_G8)
+			intFormat = TEXF_L8;
+#if MASSEFF
+//??		else if (Format == PF_NormapMap_LQ)
+//??			intFormat = TEXF_3DC;
+		else if (Format == PF_NormalMap_HQ)
+			intFormat = TEXF_3DC;
+#endif
+		else
+		{
+			appNotify("Unknown texture format: %s (%d)", FmtName, Format);
+			return NULL;
+		}
+
+		if (!Package->ReverseBytes)	//?? another way to detect xbox package
+			return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
+
+#if XBOX360
+		//?? separate this function
+		int bytesPerBlock, blockSizeX, blockSizeY, align;
+		switch (intFormat)
+		{
+		case TEXF_DXT1:
+			bytesPerBlock = 8;
+			blockSizeX = blockSizeY = 4;
+			align = 128;
+			break;
+		case TEXF_DXT3:
+		case TEXF_DXT5:
+			bytesPerBlock = 16;
+			blockSizeX = blockSizeY = 4;
+			align = 128;
+			break;
+		case TEXF_L8:
+			bytesPerBlock = 1;
+			blockSizeX = blockSizeY = 1;
+			align = 64;
+			break;
+		case TEXF_RGBA8:
+			bytesPerBlock = 4;
+			blockSizeX = blockSizeY = 1;
+			align = 32;
+			break;
+		default:
+			appNotify("TextureFormatParameters: unknown texture format %s (%d)", FmtName, Format);
+			return NULL;
+		}
+		int USize1 = USize, VSize1 = VSize;
+		if (align)
+		{
+			USize1 = Align(USize, align);
+			VSize1 = Align(VSize, align);
+		}
+		int BulkSize = Mip.Data.ElementCount * Mip.Data.GetElementSize();
+//		printf("fmt=%s  bulk=%d  w=%d  h=%d\n", *Format, BulkSize, USize, VSize);
+		if (BulkSize / bytesPerBlock * blockSizeX * blockSizeY != USize1 * VSize1)
+		{
+			appNotify("%s'%s': bytesPerBlock: got %g, need %d", GetClassName(), Name,
+				(float)BulkSize / (USize1 * VSize1) * blockSizeX * blockSizeY,
+				bytesPerBlock);
+			return NULL;
+		}
+		// decompress texture ...
+		byte *pic;
+		if (bytesPerBlock > 1)
+		{
+			// reverse byte order (16-bit integers)
+			byte *buf2 = new byte[BulkSize];
+			byte *p  = Mip.Data.BulkData;
+			byte *p2 = buf2;
+			for (int i = 0; i < BulkSize; i += 2, p += 2, p2 += 2)	//?? use ReverseBytes() from UnCore (but: inplace)
+			{
+				p2[0] = p[1];
+				p2[1] = p[0];
+			}
+			// decompress texture
+			pic = DecompressTexture(buf2, USize1, VSize1, intFormat, Name, NULL);
+			// delete reordered buffer
+			delete buf2;
+		}
+		else
+		{
+			// 1 byte per block, no byte reordering
+			pic = DecompressTexture(Mip.Data.BulkData, USize1, VSize1, intFormat, Name, NULL);
+		}
+		// untile texture
+		byte *pic2 = new byte[USize1 * VSize1 * 4];
+		UntileXbox360Texture((unsigned*)pic, (unsigned*)pic2, USize1, VSize1, blockSizeX, blockSizeY, bytesPerBlock);
+		delete pic;
+		// shrink texture buffer (remove U alignment)
+		if (USize != USize1)
+		{
+			guard(ShrinkTexture);
+			int line1 = USize  * 4;
+			int line2 = USize1 * 4;
+			byte *p1 = pic2;
+			byte *p2 = pic2;
+			for (int y = 0; y < VSize; y++)
+			{
+				memcpy(p2, p1, line1);
+				p2 += line1;
+				p1 += line2;
+			}
+			unguard;
+		}
+		return pic2;
+#else  // XBOX360
+		appError("Compiled without XBox360 support");
+#endif // XBOX360
+	}
+	// no valid mipmaps
+	return NULL;
+
+	unguardf(("Tex=%s", Name));
+}
+
+#endif // UNREAL3

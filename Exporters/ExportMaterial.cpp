@@ -8,6 +8,8 @@
 
 void ExportMaterial(const UUnrealMaterial *Mat)
 {
+#if RENDERING				// requires UUnrealMaterial::GetParams()
+
 	if (!Mat) return;
 
 	CMaterialParams Params;
@@ -26,4 +28,6 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	PROC(SpecPower);
 	PROC(Opacity);
 	PROC(Emissive);
+
+#endif // RENDERING
 }

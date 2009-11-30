@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 
+#if RENDERING
+
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
 
@@ -372,3 +374,5 @@ void CSkelMeshViewer::ProcessKey(int key)
 
 	unguard;
 }
+
+#endif // RENDERING

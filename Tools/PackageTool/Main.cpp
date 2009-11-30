@@ -65,7 +65,7 @@ static bool ScanPackage(const CGameFileInfo *file)
 int main(int argc, char **argv)
 {
 #if DO_GUARD
-	try {
+	TRY {
 #endif
 
 	guard(Main);
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	unguard;
 
 #if DO_GUARD
-	} catch (...) {
+	} CATCH {
 		if (GErrorHistory[0])
 		{
 //			printf("ERROR: %s\n", GErrorHistory);

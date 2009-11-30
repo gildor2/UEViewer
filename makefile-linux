@@ -191,8 +191,7 @@ DEPENDS_6 = \
 	Unreal/Shaders.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
 ./obj/umodel-unix/UnRenderer.o : Unreal/UnRenderer.cpp $(DEPENDS_6)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnRenderer.o Unreal/UnRenderer.cpp
@@ -355,6 +354,7 @@ DEPENDS_16 = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
 	libs/ddslib.h
 
 ./obj/umodel-unix/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_16)

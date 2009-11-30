@@ -436,22 +436,22 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				int tmp;
 				*this << tmp;
 	#if UNREAL3
-		#if WHEELMAN
-				if (Game == GAME_Wheelman) goto done;	// no flags
-		#endif
 		#if BIOSHOCK
 				if (Game == GAME_Bioshock) goto qword_flags;
 		#endif
 				if (Game >= GAME_UE3)
 				{
+		#if WHEELMAN
+					if (Game == GAME_Wheelman) goto no_flags;
+		#endif
 				qword_flags:
 					// object flags are 64-bit in UE3, skip additional 32 bits
 					int unk;
 					*this << unk;
+				no_flags: ;
 				}
 	#endif // UNREAL3
 			}
-		done: ;
 //			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 		}
 	}

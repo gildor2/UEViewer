@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 
+#if RENDERING
+
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
 
@@ -285,3 +287,5 @@ void CLodMeshViewer::ProcessKey(int key)
 		CMeshViewer::ProcessKey(key);
 	}
 }
+
+#endif // RENDERING

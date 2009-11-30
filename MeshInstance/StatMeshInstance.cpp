@@ -1,5 +1,7 @@
 #include "Core.h"
 
+#if RENDERING
+
 #include "UnrealClasses.h"
 #include "MeshInstance.h"
 
@@ -64,3 +66,5 @@ void CStatMeshInstance::Draw()
 
 	unguard;
 }
+
+#endif // RENDERING

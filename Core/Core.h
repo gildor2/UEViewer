@@ -69,6 +69,7 @@ template<>    struct CompileTimeError<true> {};
 #	pragma intrinsic(memcpy, memset, memcmp, abs, fabs)
 	// allow nested inline expansions
 #	pragma inline_depth(8)
+#	define WIN32_USE_SEH	1
 typedef __int64				int64;
 #elif __GNUC__
 #	define NORETURN			__attribute__((noreturn))
@@ -169,6 +170,8 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 
 #if DO_GUARD
 
+#if !WIN32_USE_SEH
+
 // C++excpetion-based guard/unguard system
 #define guard(func)						\
 	{									\
@@ -188,8 +191,39 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 		}								\
 	}
 
+#define TRY				try
+#define CATCH			catch (...)
 #define	THROW_AGAIN		throw
 #define THROW			throw 1
+
+#else
+
+#define EXCEPT_FILTER	1					// 1==EXCEPTION_EXECUTE_HANDLER; may use win32ExceptFilter2()
+
+#define guard(func)						\
+	{									\
+		static const char __FUNC__[] = #func; \
+		__try {
+
+#define unguard							\
+		} __except (EXCEPT_FILTER) {	\
+			appUnwindThrow(__FUNC__);	\
+		}								\
+	}
+
+#define unguardf(msg)					\
+		} __except (EXCEPT_FILTER) {	\
+			appUnwindPrefix(__FUNC__);	\
+			appUnwindThrow msg;			\
+		}								\
+	}
+
+#define TRY				__try
+#define CATCH			__except(1)			// 1==EXCEPTION_EXECUTE_HANDLER
+#define THROW_AGAIN		throw
+#define THROW			throw 1
+
+#endif
 
 void appUnwindPrefix(const char *fmt);		// not vararg (will display function name for unguardf only)
 NORETURN void appUnwindThrow(const char *fmt, ...);
@@ -205,7 +239,16 @@ extern char GErrorHistory[2048];
 #endif // DO_GUARD
 
 
-#define appMilliseconds()		SDL_GetTicks()
+#if RENDERING
+#	define appMilliseconds()		SDL_GetTicks()
+#else
+#	ifndef WINAPI		// detect <windows.h>
+	extern "C" {
+		int __stdcall GetTickCount();
+	}
+#	endif
+#	define appMilliseconds()		GetTickCount()
+#endif // RENDERING
 
 #if PROFILE
 extern int GNumAllocs;

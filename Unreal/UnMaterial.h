@@ -1743,10 +1743,6 @@ public:
 #endif // UNREAL3
 
 
-byte *DecompressTexture(const byte *Data, int width, int height, ETextureFormat SrcFormat,
-	const char *Name, UPalette *Palette);
-
-
 #define REGISTER_MATERIAL_CLASSES		\
 	REGISTER_CLASS(UConstantColor)		\
 	REGISTER_CLASS(UBitmapMaterial)		\

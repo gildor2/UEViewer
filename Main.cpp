@@ -175,7 +175,7 @@ static bool ExportObject(UObject *Obj)
 int main(int argc, char **argv)
 {
 #if DO_GUARD
-	try {
+	TRY {
 #endif
 
 	guard(Main);
@@ -371,8 +371,10 @@ int main(int argc, char **argv)
 				view  = false;
 				exprt = true;
 			}
+#if RENDERING
 			else if (!stricmp(opt, "meshes"))
 				meshOnly = true;
+#endif
 			else if (!stricmp(opt, "all"))
 				exprtAll = true;
 			else if (!stricmp(opt, "md5"))
@@ -603,7 +605,7 @@ int main(int argc, char **argv)
 	unguard;
 
 #if DO_GUARD
-	} catch (...) {
+	} CATCH {
 		if (GErrorHistory[0])
 		{
 //			printf("ERROR: %s\n", GErrorHistory);
