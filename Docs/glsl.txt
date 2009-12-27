@@ -9,3 +9,4 @@ ATI:
 - problems with nested "#if..." constructions
 - cannot compile shader when it has (write) access to a variable from other shader type; example: compiling vertex
   shader will be failed when there is a line with "gl_FragColor = ...", even when that line will never be executed.
+- cannot handle "#define WEIGHT (W1+W2+W3...)" - will try to compile macro as it has arguments

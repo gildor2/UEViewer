@@ -1343,6 +1343,9 @@ public:
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
 		PROP_DROP(LightingGuid)
+		PROP_DROP(AdjustRGBCurve)			// UDK
+		PROP_DROP(AdjustSaturation)			// UDK
+		PROP_DROP(AdjustBrightnessCurve)	// UDK
 #if HUXLEY
 		PROP_DROP(SourceArtWidth)
 		PROP_DROP(SourceArtHeight)
@@ -1652,6 +1655,7 @@ public:
 		PROP_DROP(bUsedWithInstancedMeshParticles)
 		PROP_DROP(bUsedWithDecals)			// GoW2
 		PROP_DROP(bUsedWithFracturedMeshes)	// GoW2
+		PROP_DROP(bUsedWithFluidSurfaces)	// GoW2
 		// other
 		PROP_DROP(Wireframe)
 		PROP_DROP(bIsFallbackMaterial)

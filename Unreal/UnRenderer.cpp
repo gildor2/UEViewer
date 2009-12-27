@@ -14,13 +14,15 @@
 #define MAX_IMG_SIZE		4096
 
 
-static GLuint DefaultTexNum = 0;
+static GLuint DefaultTexNum = 0;		//?? bad code ... should move default texture to CoreGL ?
 
 //#define SHOW_SHADER_PARAMS	1
 
 /*-----------------------------------------------------------------------------
 	Mipmapping and resampling
 -----------------------------------------------------------------------------*/
+
+//?? move to CoreGL
 
 static void ResampleTexture(unsigned* in, int inwidth, int inheight, unsigned* out, int outwidth, int outheight)
 {
@@ -152,6 +154,8 @@ static void MipMap(byte* in, int width, int height)
 /*-----------------------------------------------------------------------------
 	Uploading textures
 -----------------------------------------------------------------------------*/
+
+//?? move to CoreGL
 
 static void GetImageDimensions(int width, int height, int* scaledWidth, int* scaledHeight)
 {
@@ -345,7 +349,7 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	subst[1] = specularExpr;
 	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";
 	subst[3] = opacityExpr;	//?? Params.Opacity   ? "texture2D(opacTex, TexCoord).g"                : "1.0";
-	subst[4] = Params.Emissive  ? "vec3(texture2D(emisTex, TexCoord).g)"          : "vec3(0.0)"; // not scaled, because sometimes looks ugly ...
+	subst[4] = Params.Emissive  ? "vec3(0.5,0.5,1.0) * texture2D(emisTex, TexCoord).g * 2.0" : "vec3(0.0)"; //?? not scaled, because sometimes looks ugly ...
 	// finalize paramerers and make shader
 	subst[5] = NULL;
 
@@ -474,7 +478,7 @@ void BindDefaultMaterial(bool White)
 			for (int y = 0; y < TEX_SIZE; y++)
 			{
 				static const byte colors[4][4] = {
-					{255,128,0}, {0,192,192}, {255,64,64}, {64,255,64}
+					{192,64,64,255}, {32,32,255,255}, {32,255,32,255}, {32,192,192,255}	// BGRA
 				};
 				byte *p = pic + y * TEX_SIZE * 4 + x * 4;
 				int i1 = x < TEX_SIZE / 2;
@@ -486,6 +490,7 @@ void BindDefaultMaterial(bool White)
 #undef TEX_SIZE
 	}
 	Mat->Bind();
+	DefaultTexNum = Mat->TexNum;
 }
 
 
@@ -565,7 +570,8 @@ void UTexture::Bind()
 			appNotify("WARNING: texture %s has no valid mipmaps", Name);
 			//?? note: not working (no access to generated default texture!!)
 			//?? also should glDeleteTextures(1, &TexNum) - generated but not used?
-			TexNum = DefaultTexNum;					// "default texture"
+			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
+			TexNum = DefaultTexNum;						// "default texture"
 		}
 	}
 	// bind texture
@@ -590,7 +596,7 @@ bool UTexture::IsTranslucent() const
 void UTexture::Release()
 {
 	guard(UTexture::Release);
-	if (GL_IsValidObject(TexNum, DrawTimestamp))
+	if (GL_IsValidObject(TexNum, DrawTimestamp) && TexNum != DefaultTexNum)
 		glDeleteTextures(1, &TexNum);
 	Super::Release();
 	unguard;
@@ -1107,7 +1113,8 @@ void UTexture2D::Bind()
 		else
 		{
 			appNotify("WARNING: texture %s has no valid mipmaps", Name);
-			TexNum = DefaultTexNum;					// "default texture"; not working (see UTexture::Bind())
+			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
+			TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
 		}
 	}
 	// bind texture

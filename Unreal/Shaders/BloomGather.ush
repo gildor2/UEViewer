@@ -1,0 +1,95 @@
+// Bloom test shader
+
+uniform sampler2D tex;
+
+void VertexShaderMain()
+{
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	gl_Position    = ftransform();
+}
+
+#define half			float
+#define half3			vec3
+#define saturate(x)		clamp(x, 0.0, 1.0)
+
+/** Computes a pixel's luminance for bloom */
+half ComputeLuminanceForBloom( half3 InSceneColor )
+{
+	// Compute the luminance for this pixel
+	half TotalLuminance;
+	// Compute luminance as the maximum of RGB.  This is a bit more intuitive for artists as they know
+	// that any pixel with either of the RGB channels above 1.0 will begin to bloom.
+	TotalLuminance = max( InSceneColor.r, max( InSceneColor.g, InSceneColor.b ) );
+	return TotalLuminance;
+}
+
+
+
+/** Computes bloomed amount for the specified scene color */
+half ComputeBloomAmount( half3 InSceneColor, half InLuminance )
+{
+	// How bright a pixel must be (luminance) before it begins to bloom
+	// NOTE: We could make this artist-configurable
+	half BloomThreshold = 1.0;
+
+	// Size of the bloom "ramp".  This value specifies the amount of light beyond the bloom threshold required
+	// before a pixel's bloom will be 100% of the original color.
+	// NOTE: Any value above 0.8 looks pretty good here (and 1.0 is often fastest), but a value of 2.0 here
+	//	     minimizes artifacts: the bloom ramp-up will closely match the linear ascent of additive color
+	half BloomRampSize = 2.0;
+
+	// Figure out how much luminance is beyond the bloom threshold.  Note that this value could be negative but
+	// we handle that in the next step.
+	half BloomLuminance = InLuminance - BloomThreshold;
+
+	// Note that we clamp the bloom amount between 0.0 and 1.0, but pixels beyond our bloom ramp will still
+	// bloom brighter because we'll use 100% of the original scene color as bloom
+	half BloomAmount = saturate( BloomLuminance / BloomRampSize );
+
+	return BloomAmount;
+}
+
+
+
+/** Computes bloomed amount for the specified scene color */
+half ComputeBloomAmount( half3 InSceneColor )
+{
+	// Compute the luminance for this pixel
+	half TotalLuminance = ComputeLuminanceForBloom( InSceneColor );
+
+	return ComputeBloomAmount( InSceneColor, TotalLuminance );
+}
+
+
+
+/** Computes bloomed color for the specified scene color */
+half3 ComputeBloomColor( half3 InSceneColor, half InLuminance )
+{
+	// Multiply with the scene color to get the final bloom amount
+	return InSceneColor * ComputeBloomAmount( InSceneColor, InLuminance );
+}
+
+
+/** Computes bloomed color for the specified scene color */
+half3 ComputeBloomColor( half3 InSceneColor )
+{
+	// Multiply with the scene color to get the final bloom amount
+	return InSceneColor * ComputeBloomAmount( InSceneColor );
+}
+
+
+void PixelShaderMain()
+{
+	vec3 c;
+	vec2 TexCoord = gl_TexCoord[0].st;
+	c = texture2D(tex, TexCoord).rgb;
+#if 1
+	float m = max(c.r, c.g);	//?? use ComputeLuminanceForBloom()
+	m = max(m, c.b);
+	if (m < 1.0) c = vec3(0.0);	//?? use ComputeBloomAmount()
+	c *= 0.5;
+#else
+	c = (c - vec3(1.0)) * 20.0;
+#endif
+	gl_FragColor = vec4(c, 1.0);
+}

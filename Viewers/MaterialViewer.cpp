@@ -83,7 +83,7 @@ void CMaterialViewer::Draw3D()
 	{
 		aTangent   = Sh->GetAttrib("tangent");
 		aBinormal  = Sh->GetAttrib("binormal");
-		hasTangent = true;
+		hasTangent = (aTangent >= 0 && aBinormal >= 0);
 	}
 
 	// and draw box ...

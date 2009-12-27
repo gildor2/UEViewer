@@ -726,8 +726,11 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 		Ar << ElementSize;
 		int SavePos = Ar.Tell();
 		Serializer(Ar, &Array);
-//		printf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, Array.Num(), ElementSize,
-//				float(Ar.Tell() - SavePos - 4) / Array.Num(), Ar.Tell());
+#if 0
+		printf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, Array.Num(), ElementSize,
+				Array.Num() ? float(Ar.Tell() - SavePos - 4) / Array.Num() : 0,
+				Ar.Tell());
+#endif
 		assert(Ar.Tell() == SavePos + 4 + Array.Num() * ElementSize);	// check position
 		return Ar;
 	}
@@ -922,6 +925,10 @@ void FArchive::DetectGame()
 		 ((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D) )
 		SET(GAME_UT2);
 #endif
+#if LOCO
+	if ((ArVer >= 131 && ArVer <= 134) && ArLicenseeVer == 29)
+		SET(GAME_Loco);
+#endif
 #if PARIAH
 	if (ArVer == 119 && ArLicenseeVer == 0x9127)
 		SET(GAME_Pariah);
@@ -1003,7 +1010,7 @@ void FArchive::DetectGame()
 	if (ArVer == 576 && ArLicenseeVer == 21)	SET(GAME_Batman);
 #endif
 #if BORDERLANDS
-	if (ArVer == 584 && ArLicenseeVer == 57)	SET(GAME_Borderlands);
+	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands);
 #endif
 
 	// UE3 games with the various versions of files
@@ -1261,9 +1268,9 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 }
 
 
-void FByteBulkData::Serialize(FArchive &Ar)
+void FByteBulkData::SerializeHeader(FArchive &Ar)
 {
-	guard(FByteBulkData::Serialize);
+	guard(FByteBulkData::SerializeHeader);
 
 	if (Ar.ArVer < 266)
 	{
@@ -1318,6 +1325,16 @@ void FByteBulkData::Serialize(FArchive &Ar)
 #endif // MCARTA
 //	printf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n", Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 
+	unguard;
+}
+
+
+void FByteBulkData::Serialize(FArchive &Ar)
+{
+	guard(FByteBulkData::Serialize);
+
+	SerializeHeader(Ar);
+
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
 	{
 //		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
@@ -1342,6 +1359,25 @@ void FByteBulkData::Serialize(FArchive &Ar)
 
 	assert(BulkDataOffsetInFile == Ar.Tell());
 	SerializeChunk(Ar);
+
+	unguard;
+}
+
+
+void FByteBulkData::Skip(FArchive &Ar)
+{
+	guard(FByteBulkData::Skip);
+
+	// we cannot simply skip data, because:
+	// 1) it may me compressed
+	// 2) ElementSize is variable and not stored in archive
+
+	SerializeHeader(Ar);
+	if (BulkDataOffsetInFile == Ar.Tell())
+	{
+		// really should check flags here, but checking position is simpler
+		Ar.Seek(Ar.Tell() + BulkDataSizeOnDisk);
+	}
 
 	unguard;
 }

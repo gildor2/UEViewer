@@ -163,6 +163,7 @@ enum EGame
 		GAME_Exteel,
 		GAME_Ragnarok2,
 		GAME_RepCommando,
+		GAME_Loco,
 
 	GAME_VENGEANCE = 0x0600,	// variant of UE2
 		GAME_Tribes3,
@@ -1230,8 +1231,12 @@ struct FByteBulkData //?? separate FUntypedBulkData
 		return 1;
 	}
 
-	void Serialize(FArchive &Ar);
+	// support functions
+	void SerializeHeader(FArchive &Ar);
 	void SerializeChunk(FArchive &Ar);
+	// main functions
+	void Serialize(FArchive &Ar);
+	void Skip(FArchive &Ar);
 };
 
 struct FWordBulkData : public FByteBulkData

@@ -217,6 +217,7 @@ EOF
 			}
 			print (CODE ");\n");
 			print (CODE "\tGLenum err = lib.GetError();\n\tif (err) $log\"ERROR: %X in %s\\n\", err, \"$funcname\");\n");
+#			print (CODE "\telse $log\"%s\\n\", \"", $funcname, "\");\n");
 			print (CODE "\treturn ret;\n") if !$void;
 			print (CODE "}\n");
 			return;

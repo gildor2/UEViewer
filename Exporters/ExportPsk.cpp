@@ -347,7 +347,10 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 		memset(&M, 0, sizeof(M));
 		const UObject *Tex = Mesh->Materials[i].Material;
 		if (Tex)
+		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
+			if (Tex->IsA("UnrealMaterial")) ExportMaterial((const UUnrealMaterial*)Tex);
+		}
 		else
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
 		Ar << M;

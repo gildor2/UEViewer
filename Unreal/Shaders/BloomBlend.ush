@@ -1,0 +1,23 @@
+// Bloom test shader
+
+uniform sampler2D BlurTex;
+uniform sampler2D OrigTex;
+
+void VertexShaderMain()
+{
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	gl_Position    = ftransform();
+}
+
+void PixelShaderMain()
+{
+	vec2 TexCoord = gl_TexCoord[0].st;
+	vec3 Blur = texture2D(BlurTex, TexCoord).rgb;
+	vec3 Orig = texture2D(OrigTex, TexCoord).rgb;
+//	gl_FragColor = vec4(Blur * 1.0 + Orig * 1.0, 1.0);		//?? different formula
+//	gl_FragColor = vec4(Blur * -9.0 + Orig * 10.0, 1.0);	// interesting effect (sharp image) ...
+//	gl_FragColor = vec4(Blur * 0.5 + Orig * 0.5, 1.0);
+	gl_FragColor = vec4(Blur + Orig, 1.0);					// combine both with weights = 1
+//	gl_FragColor = vec4(Blur * 1.0, 1.0);					// blur only
+//	gl_FragColor = vec4(Orig, 1.0);							// unblurred image only
+}

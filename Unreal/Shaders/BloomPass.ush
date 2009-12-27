@@ -1,0 +1,61 @@
+// Bloom test shader
+
+uniform sampler2D Tex;
+uniform vec2      Step;
+
+void VertexShaderMain()
+{
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	gl_Position    = ftransform();
+}
+
+/*
+ *	Using idea from this page:
+ *	http://prideout.net/bloom/index.php
+ *	Single sample (texture2D call) will take 2 texels with different weights: weights are
+ *	controlled by OF# and W# parameters
+ *
+ *	When OF# is 0.5, 1.5, .... N.5 - neighbour texels are taken with identical weights,
+ *	when OF# is 0.0, 1.0, 2.0 ... N.0 - only single texel is sampled.
+ */
+
+/*
+// All points has the same weight
+#define W0		1.0
+#define W1		2.0
+#define W2		2.0
+#define W3		2.0
+
+#define OF1		1.5
+#define OF2		3.5
+#define OF3		5.5
+*/
+
+// Gauss-like distribution
+#define W0		6.0
+#define W1		10.8
+#define W2		6.4
+#define W3		2.2
+
+#define OF1		1.47
+#define OF2		3.35
+#define OF3		5.32
+
+
+#define W_SUM	W0+2.0*(W1+W2+W3)
+
+void PixelShaderMain()
+{
+	vec4 c;
+	vec2 TexCoord = gl_TexCoord[0].st;
+	c  = texture2D(Tex, TexCoord             ) * W0;
+	c += texture2D(Tex, TexCoord - Step * OF1) * W1;
+	c += texture2D(Tex, TexCoord + Step * OF1) * W1;
+	c += texture2D(Tex, TexCoord - Step * OF2) * W2;
+	c += texture2D(Tex, TexCoord + Step * OF2) * W2;
+	c += texture2D(Tex, TexCoord - Step * OF3) * W3;
+	c += texture2D(Tex, TexCoord + Step * OF3) * W3;
+	c *= 1.0 / (W_SUM);	//?? ATI bug: cannot put define W_SUM ( ... ) - compiler ignored spaces after W_SUM
+
+	gl_FragColor = c;
+}

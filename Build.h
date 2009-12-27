@@ -17,6 +17,7 @@
 #define SPLINTER_CELL	1
 #define LINEAGE2		1
 #define SWRC			1		// Star Wars: Republic Commando
+#define LOCO			1		// Land of Chaos Online
 
 // requires UNREAL1
 #define DEUS_EX			1

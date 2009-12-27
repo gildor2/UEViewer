@@ -15,6 +15,7 @@ Modified Unreal Engine 2:
   Splinter Cell 1,2
   Rainbow 6: Raven Shield
   Lineage 2 Gracia
+  Land of Chaos Online (LOCO)
 Unreal Engine 2.5:
   UE2Runtime
   Harry Potter and the Prisoner of Azkaban
@@ -131,9 +132,6 @@ This script was originally created by der_ton, but was updated by me.
 
 Notes about StaticMesh support.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-StaticMesh class is supported for a few UE2 game titles only, use "-nostat"
-command line switch when you are trying to load package from some game title,
-but umodel is crashed on StaticMesh loading.
 StaticMesh export made into psk format. This format is designed for SkeletalMesh
 export, but umodel uses it for StaticMesh too. Exported mesh will not have
 skeleton and contains only one UV set.
@@ -151,6 +149,18 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+27.12.2009
+- implemented support for UE3 StaticMesh (versions from GoW1_XBox360 to UDK)
+
+15.12.2009
+- implemented Land of Chaos Online (LOCO) support
+
+11.12.2009
+- updated Borderlands support for DLC
+
+06.12.2009
+- implemented bloom rendering effect
+
 23.11.2009
 - implemented Frontlines: Fuel of War support
 

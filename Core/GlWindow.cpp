@@ -14,6 +14,7 @@
 #define DUMP_TEXTS				1		// allow Ctrl+D to dump all onscreen texts to a log
 #define FUNNY_BACKGROUND		1		// draw gradient background
 #define SMART_RESIZE			1		// redraw window contents while resizing window
+#define USE_BLOOM				1
 
 #if !_WIN32
 #undef SMART_RESIZE						// not compatible with Linux (has ugly effects and program hung)
@@ -115,16 +116,26 @@ bool   vpInvertXAxis = false;
 // Switch 2D/3D rendering mode
 //-----------------------------------------------------------------------------
 
-static void Set2Dmode()
+static void Set2Dmode(bool force = false)
 {
-	if (is2Dmode) return;
+	// force changes in viewport
+	//!! bad looking code
+	int width = winWidth, height = winHeight;
+	if (GCurrentFramebuffer)
+	{
+		width  = GCurrentFramebuffer->Width();
+		height = GCurrentFramebuffer->Height();
+	}
+	glViewport(0, 0, width, height);
+	glScissor (0, 0, width, height);
+//	DrawTextRight("Set2DMode: %d,%d", width, height);
+
+	if (is2Dmode && !force) return;
 	is2Dmode = true;
 
-	glViewport(0, 0, winWidth, winHeight);
-	glScissor(0, 0, winWidth, winHeight);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0, winWidth, winHeight, 0, 0, 1);
+	glOrtho(0, width, height, 0, 0, 1);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glDisable(GL_CULL_FACE);
@@ -136,6 +147,18 @@ static void Set2Dmode()
 
 static void Set3Dmode()
 {
+	// force changes in viewport
+	//!! bad looking code
+	int width = winWidth, height = winHeight;
+	if (GCurrentFramebuffer)
+	{
+		width  = GCurrentFramebuffer->Width();
+		height = GCurrentFramebuffer->Height();
+	}
+	glViewport(0, 0, width, height);
+	glScissor (0, 0, width, height);
+	//?? note: part above is a common code
+
 	if (!is2Dmode) return;
 	is2Dmode = false;
 
@@ -143,8 +166,6 @@ static void Set3Dmode()
 	glLoadMatrixf(&projectionMatrix[0][0]);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(&modelMatrix[0][0]);
-	glViewport(0, 0, winWidth, winHeight);
-	glScissor(0, 0, winWidth, winHeight);
 	glEnable(GL_CULL_FACE);
 //	glCullFace(GL_FRONT);
 }
@@ -241,13 +262,13 @@ static void DrawChar(char c, int color, int textX, int textY)
 		// s=1 -> shadow, s=0 -> char
 		glColor3fv(s ? colorTable[0] : colorTable[color]);
 		glTexCoord2f(s0, t0);
-		glVertex3f(x1+s, y1+s, 0);
+		glVertex2f(x1+s, y1+s);
 		glTexCoord2f(s1, t0);
-		glVertex3f(x2+s, y1+s, 0);
+		glVertex2f(x2+s, y1+s);
 		glTexCoord2f(s1, t1);
-		glVertex3f(x2+s, y2+s, 0);
+		glVertex2f(x2+s, y2+s);
 		glTexCoord2f(s0, t1);
-		glVertex3f(x1+s, y2+s, 0);
+		glVertex2f(x1+s, y2+s);
 	}
 
 	glEnd();
@@ -716,20 +737,91 @@ void DrawText3D(const CVec3 &pos, const char *text, ...)
 
 
 //-----------------------------------------------------------------------------
-// Hook functions
+// Bloom implementation
 //-----------------------------------------------------------------------------
 
-static void Display()
-{
-	GCurrentFrame++;
+#if USE_BLOOM
 
+#include "../Unreal/Shaders.h"				//?? bad place to include
+
+static void PostEffectPrepare(CFramebuffer &FBO)
+{
+	guard(PostEffectPrepare);
+	FBO.SetSize(winWidth, winHeight);
+	FBO.Use();
+	unguard;
+}
+
+static void BloomScene(CFramebuffer &FBO)
+{
+	guard(BloomScene);
+
+	Set2Dmode();
+	glDisable(GL_BLEND);
+
+	int width  = FBO.Width() / 2;
+	int height = FBO.Height() / 2;
+
+	static CFramebuffer FB[2];
+	FB[0].SetSize(width, height);
+	FB[1].SetSize(width, height);
+
+	static CShader BloomGatherShader, BloomPassShader, BloomBlendShader;
+	if (!BloomGatherShader.IsValid()) BloomGatherShader.Make(BloomGather_ush);
+	if (!BloomPassShader.IsValid())   BloomPassShader.Make(BloomPass_ush);
+	if (!BloomBlendShader.IsValid())  BloomBlendShader.Make(BloomBlend_ush);
+
+	// get overbright color
+	//?? function: FB1 -> FB2: FB2.Use(), FB1.Flush()
+	FB[0].Use();
+	BloomGatherShader.Use();
+	FBO.Flush();
+
+	// proform horizontal blurring
+	FB[1].Use();
+	BloomPassShader.Use();
+	BloomPassShader.SetUniform("Tex", 0);
+	BloomPassShader.SetUniform("Step", 1.0f / width, 0.0f);
+	FB[0].Flush();
+
+	// proform vertical blurring
+	FB[0].Use();
+	BloomPassShader.SetUniform("Step", 0.0f, 1.0f / height);
+	FB[1].Flush();
+
+	// final blend
+	CFramebuffer::Unset();
+	Set2Dmode(true);					//?? do it automatically in CFramebuffer::Unset() ?
+//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	BloomBlendShader.Use();
+	BloomBlendShader.SetUniform("BlurTex", 0);
+	BloomBlendShader.SetUniform("OrigTex", 1);
+
+	glActiveTexture(GL_TEXTURE1);
+	FBO.BindTexture();					// original screen -> TMU1
+	glActiveTexture(GL_TEXTURE0);
+	FB[0].Flush();						// render with bloom component as TMU0
+
+	CShader::Unset();
+	BindDefaultMaterial();
+	unguard;
+}
+
+#endif // USE_BLOOM
+
+//-----------------------------------------------------------------------------
+// "Hook" functions
+//-----------------------------------------------------------------------------
+
+static void DrawBackground()
+{
 	// clear screen buffer
 #if FUNNY_BACKGROUND
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA_TEST);
+	glDisable(GL_TEXTURE_2D);
 	Set2Dmode();
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glDepthRange(1, 1);
 	glBegin(GL_QUADS);
 	glColor4f(CLEAR_COLOR);
 	glVertex2f(0, 0);
@@ -738,11 +830,26 @@ static void Display()
 	glVertex2f(winWidth, winHeight);
 	glVertex2f(0, winHeight);
 	glEnd();
-	glDepthRange(0, 1);
+	glClear(GL_DEPTH_BUFFER_BIT);
 #else
 	glClearColor(CLEAR_COLOR);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #endif // FUNNY_BACKGROUND
+}
+
+static void Display()
+{
+	guard(Display);
+
+	GCurrentFrame++;
+
+#if USE_BLOOM
+	bool useBloom = ( GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) == (QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) );
+	static CFramebuffer FBO(true, GL_SUPPORT(QGL_ARB_TEXTURE_FLOAT));
+	if (useBloom) PostEffectPrepare(FBO);
+#endif // USE_BLOOM
+
+	DrawBackground();
 
 	// 3D drawings
 	BuildMatrices();
@@ -785,14 +892,18 @@ static void Display()
 	// draw scene
 	AppDrawFrame();
 
+	// restore draw state
+	BindDefaultMaterial(true);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 	// disable lighting
 	glColor3f(1, 1, 1);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
 
-	// restore draw state
-	BindDefaultMaterial(true);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+#if USE_BLOOM
+	if (useBloom) BloomScene(FBO);
+#endif // USE_BLOOM
 
 	// 2D drawings
 	Set2Dmode();
@@ -812,6 +923,8 @@ static void Display()
 	FlushTexts();
 
 	SDL_GL_SwapBuffers();
+
+	unguard;
 }
 
 
@@ -855,6 +968,8 @@ static void OnKeyboard(unsigned key, unsigned mod)
 		{
 			// enable/disable extensions
 			static unsigned extensionMask = 0;
+			BindDefaultMaterial(true);
+			if (GL_SUPPORT(QGL_2_0)) glUseProgram(0);
 			Exchange(gl_config.extensionMask, extensionMask);
 		}
 		break;

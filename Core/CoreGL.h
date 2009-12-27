@@ -52,11 +52,11 @@ extern gl_config_t gl_config;
 #define GL_SUPPORT(ext)	(gl_config.extensionMask & (ext))
 
 
-void GL_CheckError();
+void GL_CheckError(const char *msg = NULL);
 
 
 /*-----------------------------------------------------------------------------
-	Timestamps
+	Timestamp
 -----------------------------------------------------------------------------*/
 
 extern int GCurrentFrame;		// current rendering frame number
@@ -123,6 +123,7 @@ public:
 	{
 		GL_MakeShader(VsObj, PsObj, PrObj, src, defines, subst);
 	}
+
 	inline GLuint Use()
 	{
 		glUseProgram(PrObj);
@@ -130,12 +131,28 @@ public:
 		GCurrentShader = this;
 		return PrObj;
 	}
+	static void Unset();
+
 	// uniform assignment
 	inline bool SetUniform(const char *name, int value) const
 	{
 		GLint u = glGetUniformLocation(PrObj, name);
 		if (u == -1) return false;
 		glUniform1i(u, value);
+		return true;
+	}
+	inline bool SetUniform(const char *name, float value) const
+	{
+		GLint u = glGetUniformLocation(PrObj, name);
+		if (u == -1) return false;
+		glUniform1f(u, value);
+		return true;
+	}
+	inline bool SetUniform(const char *name, float value1, float value2) const
+	{
+		GLint u = glGetUniformLocation(PrObj, name);
+		if (u == -1) return false;
+		glUniform2f(u, value1, value2);
 		return true;
 	}
 	// attributes
@@ -171,5 +188,73 @@ enum GenericShaderType
 void BindDefaultMaterial(bool White = false);
 const CShader &GL_UseGenericShader(GenericShaderType type);
 
+
+/*-----------------------------------------------------------------------------
+	Frame Buffer Object
+-----------------------------------------------------------------------------*/
+
+extern const class CFramebuffer *GCurrentFramebuffer;		//?? change
+
+class CFramebuffer
+{
+public:
+	CFramebuffer(bool UseDepth = false, bool useFp = false)
+	:	FBObj(0)
+	,	ColorTex(0)
+	,	DepthRenderbuffer(0)
+	,	width(0)
+	,	height(0)
+	,	Timestamp(0)
+	,	hasDepth(UseDepth)
+	,	fpFormat(useFp)
+	{}
+
+	void SetSize(int winWidth, int winHeight);
+	void Release();
+
+	inline bool IsValid() const
+	{
+		return GL_IsValidObject(FBObj, Timestamp);
+	}
+	inline int Width() const
+	{
+		return width;
+	}
+	inline int Height() const
+	{
+		return height;
+	}
+
+	inline void Use()
+	{
+		if (!IsValid()) SetSize(width, height); // refresh
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, FBObj);
+		GL_CheckError("BindFramebuffer");
+		GCurrentFramebuffer = this;
+		SetViewport();
+	}
+	static void Unset();
+
+	void SetViewport() const
+	{
+		glViewport(0, 0, width, height);
+		glScissor (0, 0, width, height);
+	}
+
+	inline void BindTexture() const
+	{
+		glBindTexture(GL_TEXTURE_2D, ColorTex);
+	}
+	void Flush();
+
+protected:
+	int			Timestamp;
+	GLuint		FBObj;
+	GLuint		ColorTex;
+	GLuint		DepthRenderbuffer;
+	int			width, height;
+	bool		hasDepth;
+	bool		fpFormat;
+};
 
 #endif // USE_GLSL

@@ -5,6 +5,10 @@
 
 #if UNREAL3
 
+/*-----------------------------------------------------------------------------
+	USkeletalMesh
+-----------------------------------------------------------------------------*/
+
 struct FSkelMeshSection3
 {
 	short				MaterialIndex;
@@ -34,7 +38,10 @@ struct FIndexBuffer3
 
 	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
 	{
-		return Ar << RAW_ARRAY(I.Indices);
+		int unk;						// Revision?
+		Ar << RAW_ARRAY(I.Indices);
+		if (Ar.ArVer < 297) Ar << unk;
+		return Ar;
 	}
 };
 
@@ -295,7 +302,7 @@ struct FGPUVert3Float : FGPUVert3Common
 	FVector				Pos;
 	float				U, V;
 
-	FGPUVert3Float &operator=(const FSmoothVertex3 &S)
+	FGPUVert3Float& operator=(const FSmoothVertex3 &S)
 	{
 		Pos = S.Pos;
 		U   = S.U;
@@ -542,8 +549,6 @@ struct FStaticLODModel3
 
 		int tmp1;
 		Ar << Lod.Sections << Lod.IndexBuffer;
-		if (Ar.ArVer < 297)
-			Ar << tmp1;
 
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands)
@@ -976,6 +981,10 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 }
 
 
+/*-----------------------------------------------------------------------------
+	UAnimSet
+-----------------------------------------------------------------------------*/
+
 // following defines will help finding new undocumented compression schemes
 #define FIND_HOLES			1
 //#define DEBUG_DECOMPRESS	1
@@ -1291,6 +1300,424 @@ void UAnimSet::ConvertAnims()
 #endif // DEBUG_DECOMPRESS
 		}
 	}
+
+	unguard;
+}
+
+/*-----------------------------------------------------------------------------
+	UStaticMesh
+-----------------------------------------------------------------------------*/
+
+struct FStaticMeshSection3
+{
+	UMaterial			*Mat;
+	int					f10;		//?? bUseSimple...Collision
+	int					f14;		//?? ...
+	int					bEnableShadowCasting;
+	int					FirstIndex;
+	int					NumFaces;
+	int					f24;
+	int					f28;
+	int					Index;		//?? index of section
+	TArray<FMesh3Unk1>	f30;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshSection3 &S)
+	{
+		guard(FStaticMeshSection3<<);
+		Ar << S.Mat << S.f10 << S.f14;
+		if (Ar.ArVer >= 473) Ar << S.bEnableShadowCasting;
+		Ar << S.FirstIndex << S.NumFaces << S.f24 << S.f28;
+		if (Ar.ArVer >= 492) Ar << S.Index;		//?? real version is unknown! No field in GOW1_PC (490), has in UT3 (512)
+		if (Ar.ArVer >= 514) Ar << S.f30;
+		if (Ar.ArVer >= 618)
+		{
+			byte unk;
+			Ar << unk;
+			assert(unk == 0);
+		}
+		return Ar;
+		unguard;
+	}
+};
+
+struct FStaticMeshVertexStream3
+{
+	int					VertexSize;		// 0xC
+	int					NumVerts;		// == Verts.Num()
+	TArray<FVector>		Verts;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexStream3 &S)
+	{
+		return Ar << S.VertexSize << S.NumVerts << RAW_ARRAY(S.Verts);
+	}
+};
+
+
+static int  GNumStaticUVSets   = 1;
+static bool GUseStaticFloatUVs = true;
+
+struct FStaticMeshUVItem3
+{
+	FVector				Pos;			// old version (< 472)
+	int					Normal[3];		// FVector as 4 bytes
+	int					f10;			//?? VertexColor?
+	float				U, V;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVItem3 &V)
+	{
+		if (Ar.ArVer < 472)
+		{
+			// old version has position embedded into UVStream (this is not an UVStream, this is a single stream for everything)
+			int unk10;					// pad or color ?
+			Ar << V.Pos << unk10;
+		}
+		Ar << V.Normal[0] << V.Normal[1];
+		if (Ar.ArVer < 477)
+			Ar << V.Normal[2];
+		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
+			Ar << V.f10;				// starting from 615 made as separate stream
+		if (GUseStaticFloatUVs)
+		{
+			Ar << V.U << V.V;
+		}
+		else
+		{
+			// read in half format and convert to float
+			word U0, V0;
+			Ar << U0 << V0;
+			V.U = half2float(U0);
+			V.V = half2float(V0);
+		}
+		// skip extra UV sets
+		int UVSize = GUseStaticFloatUVs ? sizeof(float) : sizeof(short);
+		if (GNumStaticUVSets > 1) Ar.Seek(Ar.Tell() + (GNumStaticUVSets - 1) * 2 * UVSize);
+		return Ar;
+	}
+};
+
+struct FStaticMeshUVStream3
+{
+	int					NumTexCoords;
+	int					ItemSize;
+	int					NumVerts;
+	int					bUseFullPrecisionUVs;
+	TArray<FStaticMeshUVItem3> UV;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream3 &S)
+	{
+		Ar << S.NumTexCoords << S.ItemSize << S.NumVerts;
+		if (Ar.ArVer >= 474)
+			Ar << S.bUseFullPrecisionUVs;
+		else
+			S.bUseFullPrecisionUVs = true;
+		// prepare for UV serialization
+		GNumStaticUVSets   = S.NumTexCoords;
+		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
+		Ar << RAW_ARRAY(S.UV);
+		return Ar;
+	}
+};
+
+struct FStaticMeshColorStream3
+{
+	int					ItemSize;
+	int					NumVerts;
+	TArray<int>			Colors;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshColorStream3 &S)
+	{
+		return Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Colors);
+	}
+};
+
+struct FStaticMeshVertex3Old			// ArVer < 333
+{
+	FVector				Pos;
+	int					Normal[3];		// packed vector
+
+	operator FVector() const
+	{
+		return Pos;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertex3Old &V)
+	{
+		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+	}
+};
+
+struct FStaticMeshUVStream3Old			// ArVer < 364
+{
+	TArray<FStaticMeshUV> Data;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream3Old &S)
+	{
+		int unk;						// Revision?
+		Ar << S.Data;					// used RAW_ARRAY, but RAW_ARRAY is newer than this version
+		if (Ar.ArVer < 297) Ar << unk;
+		return Ar;
+	}
+};
+
+struct FStaticMeshLODModel
+{
+	FByteBulkData		BulkData;		// ElementSize = 0xFC for UT3 and 0x170 for UDK ... it's simpler to skip it
+	TArray<FStaticMeshSection3> Sections;
+	FStaticMeshVertexStream3 VertexStream;
+	FStaticMeshUVStream3     UVStream;
+	FStaticMeshColorStream3  ColorStream;	//??
+	FIndexBuffer3		Indices;
+	FIndexBuffer3		Indices2;		//?? wireframe?
+	int					f80;
+	TArray<FEdge3>		Edges;			//??
+	TArray<byte>		fEC;			//?? flags for faces?
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshLODModel &Lod)
+	{
+		guard(FStaticMeshLODModel<<);
+
+		Lod.BulkData.Skip(Ar);
+		Ar << Lod.Sections;
+#if 0
+		printf("%d sections\n", Lod.Sections.Num());
+		for (int i = 0; i < Lod.Sections.Num(); i++)
+		{
+			FStaticMeshSection3 &S = Lod.Sections[i];
+			printf("Mat: %s\n", S.Mat ? S.Mat->Name : "?");
+			printf("  %d %d sh=%d i0=%d NF=%d %d %d idx=%d\n", S.f10, S.f14, S.bEnableShadowCasting, S.FirstIndex, S.NumFaces, S.f24, S.f28, S.Index);
+		}
+#endif
+		// serialize vertex and uv streams
+		if (Ar.ArVer >= 472)
+		{
+			Ar << Lod.VertexStream;
+			Ar << Lod.UVStream;
+			// unknown data in UDK
+			if (Ar.ArVer >= 615)
+			{
+				// platform-dependent color stream?
+#if 0
+				FStaticMeshColorStream3 f58;
+				Ar << f58;
+#else
+				// serialize metadata only, no data array
+				int x1, x2;
+				Ar << x1 << x2;
+#endif
+			}
+			Ar << Lod.ColorStream;
+			Ar << Lod.f80;
+		}
+		else if (Ar.ArVer >= 466)
+		{
+			Ar << Lod.VertexStream;
+			Ar << Lod.UVStream;
+			Ar << Lod.f80;
+		}
+		else if (Ar.ArVer >= 364)
+		{
+			Ar << Lod.UVStream;
+			Ar << Lod.f80;
+			// create VertexStream
+			int NumVerts = Lod.UVStream.UV.Num();
+			Lod.VertexStream.Verts.Empty(NumVerts);
+			Lod.VertexStream.NumVerts = NumVerts;
+			for (int i = 0; i < NumVerts; i++)
+				Lod.VertexStream.Verts.AddItem(Lod.UVStream.UV[i].Pos);
+		}
+		else
+		{
+			// serialize vertex stream
+			appNotify("StaticMesh: untested code! (ArVer=%d)", Ar.ArVer);
+			if (Ar.ArVer >= 333)
+			{
+				TArray<FQuat> Verts;
+				TArray<int>   Normals;	// compressed
+				Ar << Verts << Normals;	// really used RAW_ARRAY, but it is too new for this code
+			}
+			else
+			{
+				// oldest version
+				TArray<FStaticMeshVertex3Old> Verts;
+				Ar << Verts;
+			}
+			// serialize UVStream
+			TArray<FStaticMeshUVStream3Old> UVStream;
+			Ar << UVStream;
+			//!! convert data!
+			//!! note: this code will crash in RestoreMesh3() because of empty data
+		}
+		Ar << Lod.Indices << Lod.Indices2;
+		Ar << RAW_ARRAY(Lod.Edges);
+		Ar << Lod.fEC;
+
+		return Ar;
+
+		unguard;
+	}
+};
+
+struct FStaticMeshUnk1
+{
+	FVector				v1;
+	FVector				v2;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk1 &V)
+	{
+		return Ar << V.v1 << V.v2;
+	}
+};
+
+struct FStaticMeshUnk2
+{
+	FStaticMeshUnk1		f0;
+	int					f18;
+	short				f1C;
+	short				f1E;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk2 &V)
+	{
+		Ar << V.f0 << V.f18;
+		if (Ar.ArVer >= 468)
+			Ar << V.f1C << V.f1E;	// short
+		else
+		{
+			// old version
+			assert(Ar.IsLoading);
+			int tmp1C, tmp1E;
+			Ar << tmp1C << tmp1E;
+			V.f1C = tmp1C;
+			V.f1E = tmp1E;
+		}
+		return Ar;
+	}
+};
+
+struct FStaticMeshUnk3
+{
+	short				f0, f2, f4, f6;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk3 &V)
+	{
+		if (Ar.ArVer >= 468)
+			Ar << V.f0 << V.f2 << V.f4 << V.f6;
+		else
+		{
+			assert(Ar.IsLoading);
+			int tmp0, tmp2, tmp4, tmp6;
+			Ar << tmp0 << tmp2 << tmp4 << tmp6;
+			V.f0 = tmp0;
+			V.f2 = tmp2;
+			V.f4 = tmp4;
+			V.f6 = tmp6;
+		}
+		return Ar;
+	}
+};
+
+/*struct FStaticMeshUnk4
+{
+	TArray<UObject*>	f0;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk4 &V)
+	{
+		return Ar << V.f0;
+	}
+};*/
+
+void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
+{
+	guard(UStaticMesh::SerializeStatMesh3);
+
+	UObject::Serialize(Ar);			// no UPrimitive ...
+
+	FBoxSphereBounds	Bounds;
+	UObject				*BodySetup;	// URB_BodySetup
+	int					Version;	// GOW1_PC: 15, UT3: 16, UDK: 18
+	TArray<FStaticMeshLODModel> Lods;
+//	TArray<FStaticMeshUnk4> f48;
+	//?? kDOP ?
+	TArray<FStaticMeshUnk2> f74;
+	TArray<FStaticMeshUnk3> f80;
+
+	Ar << Bounds << BodySetup;
+	if (Ar.ArVer < 315)
+	{
+		UObject *unk;
+		Ar << unk;
+	}
+	//?? kDOP ?
+	Ar << RAW_ARRAY(f74) << RAW_ARRAY(f80);
+	Ar << Version;
+//	printf("f74=%d f80=%d\n", f74.Num(), f80.Num());
+//	printf("ver: %d\n", Version);
+	if (Version >= 17 && Ar.ArVer < 593)
+	{
+		TArray<FName> unk;			// some text properties; ContentTags ? (switched from binary to properties)
+		Ar << unk;
+	}
+	Ar << Lods;
+
+//	Ar << f48;
+
+	//??
+	Ar.Seek(Ar.GetStopper());
+	if (!Lods.Num()) return;
+
+	RestoreMesh3(Lods[0]);
+
+	// setup missing properties
+	BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
+	VectorSubtract((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Min);
+	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Max);
+
+	unguard;
+}
+
+void UStaticMesh::RestoreMesh3(const FStaticMeshLODModel &Lod)
+{
+	guard(UStaticMesh::RestoreMesh3);
+
+	int i;
+
+	// materials and sections
+	int NumSections = Lod.Sections.Num();
+	Sections.Empty(NumSections);
+	Materials.Empty(NumSections);
+	for (i = 0; i < NumSections; i++)
+	{
+		// source
+		const FStaticMeshSection3 &Sec = Lod.Sections[i];
+		// destination
+		FStaticMeshMaterial *DM = new (Materials) FStaticMeshMaterial;
+		FStaticMeshSection  *DS = new (Sections)  FStaticMeshSection;
+		DM->Material   = Sec.Mat;
+		DS->FirstIndex = Sec.FirstIndex;
+		DS->NumFaces   = Sec.NumFaces;
+	}
+
+	// vertices and UVs
+	int NumVerts = Lod.VertexStream.NumVerts;
+	assert(Lod.UVStream.NumVerts == NumVerts);
+	VertexStream.Vert.Empty(NumVerts);
+	FStaticMeshUVStream *UVS = new (UVStream) FStaticMeshUVStream;
+	UVS->Data.Empty(NumVerts);
+	for (i = 0; i < NumVerts; i++)
+	{
+		// source
+		const FStaticMeshUVItem3 &SUV = Lod.UVStream.UV[i];
+		// destination
+		FStaticMeshUV    *UV = new (UVS->Data) FStaticMeshUV;
+		FStaticMeshVertex *V = new (VertexStream.Vert) FStaticMeshVertex;
+		V->Pos = Lod.VertexStream.Verts[i];
+		UV->U = SUV.U;
+		UV->V = SUV.V;
+	}
+	//!! should generate normals
+	//?? also has ColorStream
+
+	// indices
+	CopyArray(IndexStream1.Indices, Lod.Indices.Indices);
 
 	unguard;
 }

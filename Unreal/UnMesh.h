@@ -167,7 +167,7 @@ struct FMeshTri
 	unsigned		PolyFlags;				// Surface flags.
 	int				TextureIndex;			// Source texture index.
 
-	friend FArchive& operator<<(FArchive& Ar, FMeshTri &T)
+	friend FArchive& operator<<(FArchive &Ar, FMeshTri &T)
 	{
 		Ar << T.iVertex[0] << T.iVertex[1] << T.iVertex[2];
 		Ar << T.Tex[0] << T.Tex[1] << T.Tex[2];
@@ -310,6 +310,13 @@ struct FMeshAnimSeq
 #endif // TRIBES3
 		if (Ar.ArVer >= 115)
 			Ar << A.f28;
+#if LOCO
+		if (Ar.Game == GAME_Loco && Ar.ArVer >= 130)
+		{
+			int unk2C;
+			Ar << unk2C;
+		}
+#endif // LOCO
 		Ar << A.Name;
 #if UNREAL1
 		if (Ar.Engine() == GAME_UE1)
@@ -354,6 +361,38 @@ struct FMeshAnimSeq
 };
 
 
+#if LOCO
+
+struct FLocoUnk1
+{
+	FName		f0;
+	int			f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FLocoUnk1 &V)
+	{
+		return Ar << V.f0 << V.f4;
+	}
+};
+
+struct FLocoUnk2
+{
+	FString		f0;
+	FName		f1;
+	FVector		f2;
+	FRotator	f3;
+	int			f4, f5;
+	float		f6;
+	FVector		f7;
+	int			f8, f9;
+
+	friend FArchive& operator<<(FArchive &Ar, FLocoUnk2 &V)
+	{
+		return Ar << V.f0 << V.f1 << V.f2 << V.f3 << V.f4 << V.f5 << V.f6 << V.f7 << V.f8 << V.f9;
+	}
+};
+
+#endif // LOCO
+
 // Base class for UVertMesh and USkeletalMesh; in Unreal Engine it is derived from
 // abstract class UMesh (which is derived from UPrimitive)
 
@@ -363,7 +402,7 @@ struct FMeshAnimSeq
  *	2	Postal 2			same as UT
  *	4	UT2003, UT2004
  *	5	Lineage2, UC2		different extensions
- *	8	Republic Commando
+ *	8	Republic Commando, Loco
  */
 
 class ULodMesh : public UPrimitive
@@ -416,7 +455,20 @@ public:
 			Ar << tmp;
 		}
 
-		Ar << Textures << MeshScale << MeshOrigin << RotOrigin;
+		Ar << Textures;
+#if LOCO
+		if (Ar.Game == GAME_Loco)
+		{
+			int               unk7C;
+			TArray<FName>     unk80;
+			TArray<FLocoUnk2> unk8C;
+			TArray<FLocoUnk1> unk98;
+			if (Version >= 5) Ar << unk98;
+			if (Version >= 6) Ar << unk80;
+			if (Version >= 7) Ar << unk8C << unk7C;
+		}
+#endif // LOCO
+		Ar << MeshScale << MeshOrigin << RotOrigin;
 
 		if (Version <= 1)
 		{
@@ -1267,6 +1319,22 @@ struct FStaticLODModel
 			Ar << unk2 << unk3 << unk4;
 		}
 #endif // RAGNAROK2
+#if LOCO
+		if (Ar.Game == GAME_Loco)
+		{
+			// tangent space ?
+			if (Ar.ArVer >= 133)
+			{
+				TArray<FQuat> unk1; // really not FQuat
+				Ar << unk1;
+			}
+			else if (Ar.ArVer == 132)
+			{
+				TArray<FVector> unk2, unk3;
+				Ar << unk2 << unk3;
+			}
+		}
+#endif // LOCO
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{
@@ -1564,6 +1632,15 @@ public:
 		{
 			Ar << AuthKey;
 		}
+
+#if LOCO
+		if (Ar.Game == GAME_Loco)
+		{
+			// Loco codepath is similar to UT2004, but sometimes has different version switches
+			Ar.Seek(Ar.GetStopper());
+			return;
+		}
+#endif // LOCO
 
 #if UT2
 		if (Ar.Game == GAME_UT2)
@@ -1963,7 +2040,7 @@ struct FFrontlinesHashSeq
 	FName          Name;
 	UAnimSequence *Seq;
 
-	friend FArchive &operator<<(FArchive &Ar, FFrontlinesHashSeq &S)
+	friend FArchive& operator<<(FArchive &Ar, FFrontlinesHashSeq &S)
 	{
 		return Ar << S.Name << S.Seq;
 	}
@@ -2341,6 +2418,9 @@ public:
 		PROP_BOOL(UseSimpleBoxCollision)
 		PROP_BOOL(UseSimpleKarmaCollision)
 		PROP_BOOL(UseVertexColor)
+		PROP_DROP(BodySetup)
+		PROP_DROP(LightMapResolution)
+		PROP_DROP(ContentTags)
 #if LINEAGE2
 		PROP_DROP(bMakeTwoSideMesh)
 #endif
@@ -2356,16 +2436,22 @@ public:
 #endif // BIOSHOCK
 	END_PROP_TABLE
 
+#if UNREAL3
+	void SerializeStatMesh3(FArchive &Ar);
+	void RestoreMesh3(const struct FStaticMeshLODModel &Lod);
+#endif
+
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UStaticMesh::Serialize);
 
+#if UNREAL3
 		if (Ar.Game >= GAME_UE3)
 		{
-			//!! not yet supported
-			Ar.Seek(Ar.GetStopper());
+			SerializeStatMesh3(Ar);
 			return;
 		}
+#endif
 
 		if (Ar.ArVer < 112)
 		{

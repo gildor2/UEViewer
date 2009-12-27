@@ -17,16 +17,17 @@
 
 #include "Core.h"
 #include "CoreGL.h"
+//#include "GlWindow.h"		// for DrawTextRight()
 
 
 #if RENDERING
 
 
-void GL_CheckError()
+void GL_CheckError(const char *msg)
 {
 	GLenum err = glGetError();
 	if (!err) return;
-	appError("OpenGL error %X", err);
+	appError("%s error %X", msg ? msg : "OpenGL", err);
 }
 
 
@@ -425,12 +426,10 @@ static void CompileShader(GLuint shader, const char *src, const char *defines, c
 	{
 		memcpy(dst, defines, defLen);
 		dst += defLen;
+		// append "#line 0" to keep correct line numbering
+		strcpy(dst, "\n#line 0\n");
+		dst = strchr(dst, 0);
 	}
-//	strcpy(dst, isFragShader ? "\n#define PixelShaderMain main\n" : "\n#define VertexShaderMain main\n");
-//	dst = strchr(dst, 0);
-	// append "#line 0" to keep correct line numbering
-	strcpy(dst, "\n#line 0\n");
-	dst = strchr(dst, 0);
 
 #if 0
 	memcpy(dst, src, srcLen);
@@ -493,6 +492,123 @@ void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src,
 }
 
 
+void CShader::Unset()
+{
+	GCurrentShader = 0;
+	glUseProgram(0);
+}
+
 #endif // USE_GLSL
+
+
+/*-----------------------------------------------------------------------------
+	CFramebuffer
+-----------------------------------------------------------------------------*/
+
+const CFramebuffer *GCurrentFramebuffer = NULL;		//?? change
+
+void CFramebuffer::Release()
+{
+	if (GL_IsValidObject(ColorTex, Timestamp))
+		glDeleteTextures(1, &ColorTex);
+	if (GL_IsValidObject(DepthRenderbuffer, Timestamp))
+		glDeleteRenderbuffersEXT(1, &DepthRenderbuffer);
+	if (GL_IsValidObject(FBObj, Timestamp))
+		glDeleteFramebuffersEXT(1, &FBObj);
+	ColorTex = DepthRenderbuffer = FBObj = 0;
+}
+
+void CFramebuffer::SetSize(int winWidth, int winHeight)
+{
+	guard(CFramebuffer::SetSize);
+
+	if (IsValid() && winWidth == width && winHeight == height) return;
+	width  = winWidth;
+	height = winHeight;
+
+	Release();
+
+	// create color texture
+	glGenTextures(1, &ColorTex);
+	glBindTexture(GL_TEXTURE_2D, ColorTex);
+	GLenum internalFormat = fpFormat ? GL_RGBA16F_ARB : GL_RGBA8;
+	GLenum type           = fpFormat ? GL_HALF_FLOAT_ARB : GL_UNSIGNED_BYTE;
+	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGBA, type, NULL);
+	GL_CheckError("TexImage");
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// create depth renderbuffer
+	if (hasDepth)
+	{
+		glGenRenderbuffersEXT(1, &DepthRenderbuffer);
+		glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, DepthRenderbuffer);
+		glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, width, height);
+		GL_CheckError("RenderBufferStorage");
+	}
+
+	// create frame buffer object
+	glGenFramebuffersEXT(1, &FBObj);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, FBObj);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, ColorTex, 0);
+	GL_CheckError("FrameBufferTexture");
+	if (hasDepth)
+	{
+		glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, DepthRenderbuffer);
+		GL_CheckError("SetRenderbuffer");
+	}
+
+	// check frame buffer status
+	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+	switch (status)
+	{
+	case GL_FRAMEBUFFER_COMPLETE_EXT:
+		break;		// ok
+	default:
+		appError("FBO failed: error=%X", status); //?? disable FBO and continue working?
+		break;
+	}
+
+	// done ...
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	GL_TouchObject(Timestamp);
+
+	unguardf(("size=%dx%d", winWidth, winHeight));
+}
+
+
+void CFramebuffer::Flush()
+{
+	glEnable(GL_TEXTURE_2D);
+	BindTexture();
+
+	// setup viewport as (0,1)-(0,1)
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0, 1, 0, 1, 0, 1);
+
+	//?? can use vertex arrays here
+	//?? note: texture coords are identical to vertex2f
+	glBegin(GL_QUADS);
+	glTexCoord2f(0, 1); glVertex2f(0, 1);
+	glTexCoord2f(1, 1); glVertex2f(1, 1);
+	glTexCoord2f(1, 0); glVertex2f(1, 0);
+	glTexCoord2f(0, 0); glVertex2f(0, 0);
+	glEnd();
+
+	glPopMatrix();
+
+//	DrawTextRight("Flush: %d,%d", winWidth, winHeight);
+}
+
+
+void CFramebuffer::Unset()
+{
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	GCurrentFramebuffer = NULL;
+}
 
 #endif // RENDERING

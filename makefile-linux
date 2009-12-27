@@ -108,7 +108,8 @@ DEPENDS_2 = \
 	Core/GlFont.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
-	Core/TextContainer.h
+	Core/TextContainer.h \
+	Unreal/Shaders.h
 
 ./obj/umodel-unix/GlWindow.o : Core/GlWindow.cpp $(DEPENDS_2)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/GlWindow.o Core/GlWindow.cpp

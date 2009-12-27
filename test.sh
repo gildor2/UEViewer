@@ -61,8 +61,8 @@ rm umodel.exe	#?? win32 only
 # Check directories
 #?? should check dirs when specific game has been requested (not all games everytime)
 CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
-CheckDir UT1 c:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament e:/games/unreal~1/UnrealTournament
-CheckDir UT2 c:/games/unreal~1/ut2004 c:/games/unreal/ut2004 e:/games/unreal~1/ut2004
+CheckDir UT1 e:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament e:/games/unreal~1/UnrealTournament
+CheckDir UT2 e:/games/unreal~1/ut2004 c:/games/unreal/ut2004
 CheckDir UT3 c:/games/ut3/UTGame/CookedPC e:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
@@ -129,7 +129,10 @@ case "" in
 
 #	run1 C:/!umodel-data/MirrorsEdge CH_TKY_Crim_Fixer.upk SK_TKY_Crim_Fixer
 #	ut2 HumanMaleA MercMaleD
-#	ut3 CH_AnimHuman
+#	ut3 -meshes CH_AnimHuman
+#	ut3 VH_Goliath.upk S_VH_Goliath_FuelCan01b
+	ut3 GP_Conquest SM_Processing_Plant
+	ut3 GP_Onslaught S_GP_Ons_Powernode_Spawn
 	# Army of Two
 #	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
 	# MK vs DC
@@ -173,7 +176,6 @@ case "" in
 #	ut3 -meshes CH_TwinSouls_Cine #SK_CH_TwinSouls_Crowd_01
 #	run data/ut3/CH_AnimHuman.upk
 #	run data/ut3/VH_Fury.upk K_VH_Fury #MI_VH_Fury_Blue
-#!!	run -path=C:/GAMES/UT3/UTGame/CookedPC/Characters CH_AnimHuman
 #!!	run data/HumanMale.upk
 #	gow COG_MarcusFenix #Cine_COG_MarcusFenix
 #	ut3 DM-Deck	#!! CRASH !!

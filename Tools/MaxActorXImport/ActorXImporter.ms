@@ -10,6 +10,12 @@
 
  Revision History:
 
+	12.12.2009 v1.06
+	- fixed merging meshes on a single skeleton when previously loaded mesh is not in bind
+	  pose
+	- improved compatibility with Epic's Actor X Exporter (dropping trailing spaces from
+	  bone names)
+
 	18.09.2009 v1.05
 	- implemented materal loading
 	- fixing duplicate bone names
@@ -190,11 +196,18 @@ if (g_axImporterInited != true) then
 fn ReadFixedString bstream fixedLen =
 (
 	local str = ""
+	local length = 0
+	local finished = false
 	for i = 1 to fixedLen do
 	(
-		str += bit.intAsChar (ReadByte bstream #unsigned)
+		local c = ReadByte bstream #unsigned
+		if c == 0 then finished = true	-- end of line char
+		if finished then continue		-- has end of line before - skip remaining chars
+		-- not "finished" string
+		str += bit.intAsChar(c)			-- append a character
+		if c != 32 then length = i		-- position of last non-space char
 	)
-	str
+	substring str 1 length				-- return first "length" chars
 )
 
 fn ReadFVector bstream =
@@ -683,6 +696,11 @@ fn ImportPskFile filename skelOnly:false =
 				newBone.parent = MaxBones[bn.ParentIndex + 1]
 			)
 		)
+		else
+		(
+			-- bone already exists
+			newBone.transform = bn.Matrix
+		)
 		MaxBones[i] = newBone
 	)
 
@@ -723,6 +741,7 @@ fn ImportPskFile filename skelOnly:false =
 		setFaceMatId newMesh i (tri.MatIndex+1)
 	)
 	newMat = multiMaterial numsubs:numMaterials
+	if g_skelOnly then numMaterials = 0		-- do not load materials for this option
 	for i = 1 to numMaterials do
 	(
 		local texDir
@@ -1026,7 +1045,7 @@ fn LoadAnimation index =
 rollout axImportRollout "Actor X Importer"
 (
 	-- copyright label
-	label Lbl1 "Version 1.05"
+	label Lbl1 "Version 1.06"
 	label Lbl2 "\xA9 2009 Konstantin Nosov (Gildor)"
 	label Lbl3 "http://www.gildor.org/"
 

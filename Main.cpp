@@ -251,6 +251,9 @@ int main(int argc, char **argv)
 #if LINEAGE2
 				"    Lineage 2 Gracia\n"
 #endif
+#if LOCO
+				"    Land of Chaos Online\n"
+#endif
 //				"Unreal Engine 2.5:\n"
 #if UNREAL25
 				"    UE2Runtime, Harry Potter and the Prisoner of Azkaban"
@@ -426,11 +429,11 @@ int main(int argc, char **argv)
 		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
 		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
 	}
-	EXPORTER("VertMesh",      NULL,  Export3D );				// will generate 2 files
+	EXPORTER("VertMesh",      NULL,  Export3D  );				// will generate 2 files
 	EXPORTER("StaticMesh",    "psk", ExportPsk2);
-	EXPORTER("Texture",       "tga", ExportTga);
+	EXPORTER("Texture",       "tga", ExportTga );
 #if UNREAL3
-	EXPORTER("Texture2D",     "tga", ExportTga);
+	EXPORTER("Texture2D",     "tga", ExportTga );
 #endif
 
 	// prepare classes

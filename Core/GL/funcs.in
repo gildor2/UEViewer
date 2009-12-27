@@ -207,12 +207,12 @@ void PolygonMode(GLenum face, GLenum mode) ARGS
 //void PolygonStipple(const GLubyte *mask);
 //void PopAttrib();
 //void PopClientAttrib();
-//void PopMatrix();
+void PopMatrix();
 //void PopName();
 //void PrioritizeTextures(GLsizei n, const GLuint *textures, const GLclampf *priorities);
 //void PushAttrib(GLbitfield mask);
 //void PushClientAttrib(GLbitfield mask);
-//void PushMatrix();
+void PushMatrix();
 //void PushName(GLuint name);
 //void RasterPos2d(GLdouble x, GLdouble y);
 //void RasterPos2dv(const GLdouble *v);
@@ -419,8 +419,8 @@ GLint GetUniformLocation(GLuint obj, const GLchar *name) ARGS
 void LinkProgram(GLuint obj) ARGS
 void ShaderSource(GLuint obj, GLsizei size, const GLchar** src, const GLint *length) ARGS
 void UseProgram(GLuint obj) ARGS
-//void Uniform1f(GLint, GLfloat);
-//void Uniform2f(GLint, GLfloat, GLfloat);
+void Uniform1f(GLint, GLfloat);
+void Uniform2f(GLint, GLfloat, GLfloat);
 //void Uniform3f(GLint, GLfloat, GLfloat, GLfloat);
 //void Uniform4f(GLint, GLfloat, GLfloat, GLfloat, GLfloat);
 void Uniform1i(GLint index, GLint value) ARGS
@@ -482,23 +482,25 @@ void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normal
 //-----------------------------------------------------------------------------
 
 #name GL_EXT_framebuffer_object
-GLboolean IsRenderbufferEXT(GLuint renderbuffer) ARGS
+//GLboolean IsRenderbufferEXT(GLuint renderbuffer) ARGS
 void BindRenderbufferEXT(GLenum target, GLuint renderbuffer) ARGS
 void DeleteRenderbuffersEXT(GLsizei n, const GLuint *renderbuffers) ARGS
 void GenRenderbuffersEXT(GLsizei n, GLuint *renderbuffers) ARGS
 void RenderbufferStorageEXT(GLenum target, GLenum internalformat, GLsizei width, GLsizei height) ARGS
-void GetRenderbufferParameterivEXT(GLenum target, GLenum pname, GLint *params) ARGS
-GLboolean IsFramebufferEXT(GLuint framebuffer) ARGS
+//void GetRenderbufferParameterivEXT(GLenum target, GLenum pname, GLint *params) ARGS
+//GLboolean IsFramebufferEXT(GLuint framebuffer) ARGS
 void BindFramebufferEXT(GLenum target, GLuint framebuffer) ARGS
 void DeleteFramebuffersEXT(GLsizei n, const GLuint *framebuffers) ARGS
 void GenFramebuffersEXT(GLsizei n, GLuint *framebuffers) ARGS
 GLenum CheckFramebufferStatusEXT(GLenum target) ARGS
-void FramebufferTexture1DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) ARGS
+//void FramebufferTexture1DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) ARGS
 void FramebufferTexture2DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) ARGS
-void FramebufferTexture3DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset) ARGS
+//void FramebufferTexture3DEXT(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset) ARGS
 void FramebufferRenderbufferEXT(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer) ARGS
-void GetFramebufferAttachmentParameterivEXT(GLenum target, GLenum attachment, GLenum pname, GLint *params) ARGS
+//void GetFramebufferAttachmentParameterivEXT(GLenum target, GLenum attachment, GLenum pname, GLint *params) ARGS
 void GenerateMipmapEXT(GLenum target) ARGS
+
+#name GL_ARB_texture_float
 
 #platform win32
 #platform linux
