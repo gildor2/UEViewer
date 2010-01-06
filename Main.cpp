@@ -542,7 +542,7 @@ int main(int argc, char **argv)
 				printf("Package \"%s\" has no supported objects\n", argPkgName);
 				exit(1);
 			}
-			Obj = UObject::GObjObjects[1];
+			Obj = UObject::GObjObjects[0];
 		}
 		unguard;
 	}

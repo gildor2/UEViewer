@@ -373,18 +373,23 @@ protected:
 class CStatMeshInstance : public CMeshInstance
 {
 public:
-	UStaticMesh *pMesh;
-
 	CStatMeshInstance()
 	:	pMesh(NULL)
+	,	Tangents(NULL)
 	{}
+	virtual ~CStatMeshInstance();
 
 	void SetMesh(UStaticMesh *Mesh)
 	{
 		pMesh = Mesh;
 	}
+	void BuildTangents();
 
 	virtual void Draw();
+
+protected:
+	UStaticMesh *pMesh;
+	struct CTangent *Tangents;
 };
 
 

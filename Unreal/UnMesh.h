@@ -862,7 +862,7 @@ struct FMeshBone
 	{
 		Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
 #if UNREAL3
-		if (Ar.ArVer >= 515 && Ar.ArVer != 522)	//?? note: 522 check is in Mirror's Edge, no in GoW2
+		if (Ar.ArVer >= 515)
 		{
 			int unk44;						// byte[4] ? default is 0xFF x 4
 			Ar << unk44;
@@ -2154,12 +2154,35 @@ struct FStaticMeshVertex
 
 SIMPLE_TYPE(FStaticMeshVertex, float)		//?? check each version
 
+#if UNREAL3
+// used in Bioshock and in UE3
+struct FPackedNormal
+{
+	int						Data;
+
+	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
+	{
+		return Ar << N.Data;
+	}
+
+	operator FVector() const
+	{
+		// "x / 127.5 - 1" comes from Common.usf, TangentBias() macro
+		FVector r;
+		r.X = ( Data        & 0xFF) / 127.5f - 1;
+		r.Y = ((Data >> 8 ) & 0xFF) / 127.5f - 1;
+		r.Z = ((Data >> 16) & 0xFF) / 127.5f - 1;
+		return r;
+	}
+};
+#endif // UNREAL3
+
 #if BIOSHOCK
 
 struct FStaticMeshVertexBio
 {
 	FVector					Pos;
-	unsigned				Normal[3];		// Bioshock has different normal format (dword{00XXYYZZ} x 3)
+	FPackedNormal			Normal[3];
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio &V)
 	{
@@ -2169,17 +2192,8 @@ struct FStaticMeshVertexBio
 	operator FStaticMeshVertex() const
 	{
 		FStaticMeshVertex r;
-		r.Pos = Pos;
-		union PackedNorm
-		{
-			unsigned I;
-			byte     C[4];
-		};
-		PackedNorm N;
-		N.I = Normal[2];		//?? use other indices too?
-		r.Normal.X = N.C[0] / 128.0f - 1;
-		r.Normal.Y = N.C[1] / 128.0f - 1;
-		r.Normal.Z = N.C[2] / 128.0f - 1;
+		r.Pos    = Pos;
+		r.Normal = Normal[2];
 		return r;
 	}
 };
@@ -2417,10 +2431,13 @@ public:
 		PROP_BOOL(UseSimpleLineCollision)
 		PROP_BOOL(UseSimpleBoxCollision)
 		PROP_BOOL(UseSimpleKarmaCollision)
+		PROP_DROP(UseSimpleRigidBodyCollision)
 		PROP_BOOL(UseVertexColor)
 		PROP_DROP(BodySetup)
 		PROP_DROP(LightMapResolution)
 		PROP_DROP(ContentTags)
+		PROP_DROP(LODDistanceRatio)
+		PROP_DROP(UseFullPrecisionUVs)
 #if LINEAGE2
 		PROP_DROP(bMakeTwoSideMesh)
 #endif
@@ -2434,6 +2451,10 @@ public:
 		PROP_DROP(LightMapCoordinateIndex)
 		PROP_DROP(LightMapScale)
 #endif // BIOSHOCK
+#if BATMAN
+		PROP_DROP(SourceFilePath)
+		PROP_DROP(SourceFileTimestamp)
+#endif
 	END_PROP_TABLE
 
 #if UNREAL3

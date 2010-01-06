@@ -149,6 +149,22 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+05.01.2010
+- remade lighting for StaticMesh objects with normalmap support
+- using better normals for UE3 SkeletalMesh
+
+30.12.2009
+- implemented StaticMesh support for the following games:
+  - Mortal Kombat vs. DC Universe
+  - BlackSite: Area 51
+  - Borderlands
+
+29.12.2009
+- implemented StaticMesh support for the following games:
+  - Batman: Arkham Asylum
+  - Mass Effect
+  - The Last Remnant
+
 27.12.2009
 - implemented support for UE3 StaticMesh (versions from GoW1_XBox360 to UDK)
 
@@ -237,7 +253,7 @@ Changes:
 - implemented Crime Craft SkeletalMesh support
 
 11.09.2009
-- implementer Batman: Arkham Asylum animation support
+- implemented Batman: Arkham Asylum animation support
 
 10.09.2009
 - implemented Batman: Arkham Asylum SkeletalMesh support

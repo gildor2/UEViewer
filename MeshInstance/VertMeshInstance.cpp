@@ -138,7 +138,6 @@ void CVertMeshInstance::Draw()
 			glColor3f(1, 1, 1);
 		}
 	}
-	glEnd();
 	BindDefaultMaterial(true);
 
 	unguard;

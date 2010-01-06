@@ -45,8 +45,10 @@ struct FIndexBuffer3
 	}
 };
 
-static bool CompareCompNormals(int Normal1, int Normal2)
+static bool CompareCompNormals(const FPackedNormal &N1, const FPackedNormal &N2)
 {
+	int Normal1 = N1.Data;
+	int Normal2 = N2.Data;
 	for (int i = 0; i < 3; i++)
 	{
 		char b1 = Normal1 & 0xFF;
@@ -61,7 +63,7 @@ static bool CompareCompNormals(int Normal1, int Normal2)
 struct FRigidVertex3
 {
 	FVector				Pos;
-	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	FPackedNormal		Normal[3];
 	float				U, V;
 	byte				BoneIndex;
 
@@ -115,7 +117,7 @@ struct FRigidVertex3
 struct FSmoothVertex3
 {
 	FVector				Pos;
-	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	FPackedNormal		Normal[3];
 	float				U, V;
 	byte				BoneIndex[4];
 	byte				BoneWeight[4];
@@ -223,49 +225,46 @@ struct FEdge3
 
 	friend FArchive& operator<<(FArchive &Ar, FEdge3 &V)
 	{
-		return Ar << V.iVertex[0] << V.iVertex[1] << V.iFace[0] << V.iFace[1];
-	}
-};
-
-SIMPLE_TYPE(FEdge3, int)
-
 #if BATMAN
-struct FEdge3Bat
-{
-	word				iVertex[2];
-	word				iFace[2];
-
-	friend FArchive& operator<<(FArchive &Ar, FEdge3Bat &V)
-	{
+		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 5)
+		{
+			short iVertex[2], iFace[2];
+			Ar << iVertex[0] << iVertex[1] << iFace[0] << iFace[1];
+			V.iVertex[0] = iVertex[0];
+			V.iVertex[1] = iVertex[1];
+			V.iFace[0]   = iFace[0];
+			V.iFace[1]   = iFace[1];
+			return Ar;
+		}
+#endif // BATMAN
 		return Ar << V.iVertex[0] << V.iVertex[1] << V.iFace[0] << V.iFace[1];
 	}
 };
-
-SIMPLE_TYPE(FEdge3Bat, word)
-
-#endif // BATMAN
 
 
 // Structure holding normals and bone influeces
 struct FGPUVert3Common
 {
-	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	FPackedNormal		Normal[3];
 	byte				BoneIndex[4];
 	byte				BoneWeight[4];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Common &V)
 	{
-		int i;
-		Ar << V.Normal[0] << V.Normal[1];
 #if AVA
-		if (Ar.Game == GAME_AVA) goto infs;
+		if (Ar.Game == GAME_AVA) goto new_ver;
 #endif
 		if (Ar.ArVer < 494)
-			Ar << V.Normal[2];
+			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		else
+		{
+		new_ver:
+			Ar << V.Normal[0] << V.Normal[2];
+		}
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft && Ar.ArVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float)); // pad ?
 #endif
-	infs:
+		int i;
 		for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
 		for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
 		return Ar;
@@ -395,15 +394,14 @@ struct FGPUSkin3
 	#if FRONTLINES
 		if (Ar.Game == GAME_Frontlines)
 		{
-			if (Ar.ArLicenseeVer < 11)	goto old_version;
-			{
-				S.bUseFullPrecisionUVs = true;
-				int NumUVSets, VertexSize, NumVerts;
-				Ar << NumUVSets << VertexSize << NumVerts;
-				GNumGPUUVSets = NumUVSets;
-				Ar << RAW_ARRAY(S.VertsFloat); // serialized as ordinary array anyway
-				return Ar;
-			}
+			if (Ar.ArLicenseeVer < 11)
+				goto old_version;
+			S.bUseFullPrecisionUVs = true;
+			int NumUVSets, VertexSize, NumVerts;
+			Ar << NumUVSets << VertexSize << NumVerts;
+			GNumGPUUVSets = NumUVSets;
+			Ar << RAW_ARRAY(S.VertsFloat);	// serialized as ordinary array anyway
+			return Ar;
 		}
 	#endif // FRONTLINES
 
@@ -569,17 +567,7 @@ struct FStaticLODModel3
 		}
 #endif
 
-#if BATMAN
-		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 5)
-		{
-			TArray<FEdge3Bat> tmpEdges;		// Batman code
-			Ar << tmpEdges;
-		}
-		else
-#endif // BATMAN
-		{
-			Ar << Lod.Edges;
-		}
+		Ar << Lod.Edges;
 
 #if STRANGLE
 		if (Ar.Game == GAME_Strangle)
@@ -780,7 +768,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 	guard(FStaticLODModel::RestoreMesh3);
 
 	// prepare arrays
-	TArray<int> PointNormals;
+	TArray<FPackedNormal> PointNormals;
 	Points.Empty        (Lod.NumVertices);
 	PointNormals.Empty  (Lod.NumVertices);
 	Wedges.Empty        (Lod.NumVertices);
@@ -834,14 +822,14 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				{
 					PointIndex = Points.FindItem(VPos, PointIndex + 1);
 					if (PointIndex == INDEX_NONE) break;
-					if (CompareCompNormals(PointNormals[PointIndex], V->Normal[0])) break;
+					if (CompareCompNormals(PointNormals[PointIndex], V->Normal[2])) break;
 				}
 				if (PointIndex == INDEX_NONE)
 				{
 					// point was not found - create it
 					PointIndex = Points.Add();
 					Points[PointIndex] = VPos;
-					PointNormals.AddItem(V->Normal[0]);
+					PointNormals.AddItem(V->Normal[2]);
 					// add influences
 //					int TotalWeight = 0;
 					for (int i = 0; i < 4; i++)
@@ -879,14 +867,14 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 			{
 				PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
 				if (PointIndex == INDEX_NONE) break;
-				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
+				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[2])) break;
 			}
 			if (PointIndex == INDEX_NONE)
 			{
 				// point was not found - create it
 				PointIndex = Points.Add();
 				Points[PointIndex] = V.Pos;
-				PointNormals.AddItem(V.Normal[0]);
+				PointNormals.AddItem(V.Normal[2]);
 				// add influence
 				FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
 				Inf->PointIndex = PointIndex;
@@ -911,7 +899,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 			{
 				PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
 				if (PointIndex == INDEX_NONE) break;
-				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[0])) break;
+				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[2])) break;
 				//?? should compare influences too !
 			}
 			if (PointIndex == INDEX_NONE)
@@ -919,7 +907,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				// point was not found - create it
 				PointIndex = Points.Add();
 				Points[PointIndex] = V.Pos;
-				PointNormals.AddItem(V.Normal[0]);
+				PointNormals.AddItem(V.Normal[2]);
 				// add influences
 				for (int i = 0; i < 4; i++)
 				{
@@ -1327,6 +1315,10 @@ struct FStaticMeshSection3
 		Ar << S.Mat << S.f10 << S.f14;
 		if (Ar.ArVer >= 473) Ar << S.bEnableShadowCasting;
 		Ar << S.FirstIndex << S.NumFaces << S.f24 << S.f28;
+#if MASSEFF
+		if (Ar.Game == GAME_MassEffect && Ar.ArVer >= 485)
+			return Ar << S.Index;				//?? other name?
+#endif // MASSEFF
 		if (Ar.ArVer >= 492) Ar << S.Index;		//?? real version is unknown! No field in GOW1_PC (490), has in UT3 (512)
 		if (Ar.ArVer >= 514) Ar << S.f30;
 		if (Ar.ArVer >= 618)
@@ -1348,7 +1340,16 @@ struct FStaticMeshVertexStream3
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexStream3 &S)
 	{
-		return Ar << S.VertexSize << S.NumVerts << RAW_ARRAY(S.Verts);
+		Ar << S.VertexSize << S.NumVerts;
+#if BATMAN
+		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 0x11)
+		{
+			int unk18;					// default is 1
+			Ar << unk18;
+		}
+#endif
+		Ar << RAW_ARRAY(S.Verts);
+		return Ar;
 	}
 };
 
@@ -1359,21 +1360,35 @@ static bool GUseStaticFloatUVs = true;
 struct FStaticMeshUVItem3
 {
 	FVector				Pos;			// old version (< 472)
-	int					Normal[3];		// FVector as 4 bytes
+	FPackedNormal		Normal[3];
 	int					f10;			//?? VertexColor?
 	float				U, V;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVItem3 &V)
 	{
+#if MKVSDC
+		if (Ar.Game == GAME_MK)
+		{
+			int unk;
+			Ar << unk;
+			goto new_ver;
+		}
+#endif // MKVSDC
+#if A51
+		if (Ar.Game == GAME_A51)
+			goto new_ver;
+#endif
 		if (Ar.ArVer < 472)
 		{
 			// old version has position embedded into UVStream (this is not an UVStream, this is a single stream for everything)
 			int unk10;					// pad or color ?
 			Ar << V.Pos << unk10;
 		}
-		Ar << V.Normal[0] << V.Normal[1];
+	new_ver:
 		if (Ar.ArVer < 477)
-			Ar << V.Normal[2];
+			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		else
+			Ar << V.Normal[0] << V.Normal[2];
 		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
 			Ar << V.f10;				// starting from 615 made as separate stream
 		if (GUseStaticFloatUVs)
@@ -1410,6 +1425,14 @@ struct FStaticMeshUVStream3
 			Ar << S.bUseFullPrecisionUVs;
 		else
 			S.bUseFullPrecisionUVs = true;
+#if MKVSDC
+		if (Ar.Game == GAME_MK)
+			S.bUseFullPrecisionUVs = false;
+#endif
+#if A51
+		if (Ar.Game == GAME_A51 && Ar.ArLicenseeVer >= 22) // or MidwayVer ?
+			Ar << S.bUseFullPrecisionUVs;
+#endif
 		// prepare for UV serialization
 		GNumStaticUVSets   = S.NumTexCoords;
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
@@ -1433,7 +1456,7 @@ struct FStaticMeshColorStream3
 struct FStaticMeshVertex3Old			// ArVer < 333
 {
 	FVector				Pos;
-	int					Normal[3];		// packed vector
+	FPackedNormal		Normal[3];		// packed vector
 
 	operator FVector() const
 	{
@@ -1477,6 +1500,13 @@ struct FStaticMeshLODModel
 		guard(FStaticMeshLODModel<<);
 
 		Lod.BulkData.Skip(Ar);
+#if TLR
+		if (Ar.Game == GAME_TLR && Ar.ArLicenseeVer >= 2)
+		{
+			FByteBulkData unk128;
+			unk128.Skip(Ar);
+		}
+#endif // TLR
 		Ar << Lod.Sections;
 #if 0
 		printf("%d sections\n", Lod.Sections.Num());
@@ -1488,8 +1518,49 @@ struct FStaticMeshLODModel
 		}
 #endif
 		// serialize vertex and uv streams
+#if MKVSDC
+		if (Ar.Game == GAME_MK)
+		{
+			// partially upgraded: using UV format
+			//   int color + int normal[3] + short uv[2][NumTexCoords]
+			Ar << Lod.VertexStream;
+			Ar << Lod.UVStream;
+			Ar << Lod.f80;
+			// note: usually (or always?) UVStream has 2 times more items than VertexStream
+			// we should duplicate vertices
+			int n1 = Lod.VertexStream.Verts.Num();
+			int n2 = Lod.UVStream.UV.Num();
+			if (n1 * 2 == n2)
+			{
+				printf("Duplicating MK StaticMesh verts\n");
+				Lod.VertexStream.Verts.Add(n1);
+				for (int i = 0; i < n1; i++)
+					Lod.VertexStream.Verts[i+n1] = Lod.VertexStream.Verts[i];
+			}
+		}
+		else
+#endif // MKVSDC
+#if A51
+		if (Ar.Game == GAME_A51)
+			goto new_ver;
+		else
+#endif
+#if BORDERLANDS
+		if (Ar.Game == GAME_Borderlands)
+		{
+			// refined field set
+			Ar << Lod.VertexStream;
+			Ar << Lod.UVStream;
+			Ar << Lod.f80;
+			Ar << Lod.Indices;
+			// note: no fEC (smoothing groups?)
+			return Ar;
+		}
+		else
+#endif // BORDERLANDS
 		if (Ar.ArVer >= 472)
 		{
+		new_ver:
 			Ar << Lod.VertexStream;
 			Ar << Lod.UVStream;
 			// unknown data in UDK
@@ -1521,7 +1592,7 @@ struct FStaticMeshLODModel
 			// create VertexStream
 			int NumVerts = Lod.UVStream.UV.Num();
 			Lod.VertexStream.Verts.Empty(NumVerts);
-			Lod.VertexStream.NumVerts = NumVerts;
+//			Lod.VertexStream.NumVerts = NumVerts;
 			for (int i = 0; i < NumVerts; i++)
 				Lod.VertexStream.Verts.AddItem(Lod.UVStream.UV[i].Pos);
 		}
@@ -1578,8 +1649,15 @@ struct FStaticMeshUnk2
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk2 &V)
 	{
 		Ar << V.f0 << V.f18;
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
+			goto new_ver;
+#endif
 		if (Ar.ArVer >= 468)
+		{
+		new_ver:
 			Ar << V.f1C << V.f1E;	// short
+		}
 		else
 		{
 			// old version
@@ -1599,8 +1677,15 @@ struct FStaticMeshUnk3
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk3 &V)
 	{
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
+			goto new_ver;
+#endif
 		if (Ar.ArVer >= 468)
+		{
+		new_ver:
 			Ar << V.f0 << V.f2 << V.f4 << V.f6;
+		}
 		else
 		{
 			assert(Ar.IsLoading);
@@ -1697,7 +1782,7 @@ void UStaticMesh::RestoreMesh3(const FStaticMeshLODModel &Lod)
 	}
 
 	// vertices and UVs
-	int NumVerts = Lod.VertexStream.NumVerts;
+	int NumVerts = Lod.VertexStream.Verts.Num();
 	assert(Lod.UVStream.NumVerts == NumVerts);
 	VertexStream.Vert.Empty(NumVerts);
 	FStaticMeshUVStream *UVS = new (UVStream) FStaticMeshUVStream;
@@ -1712,8 +1797,9 @@ void UStaticMesh::RestoreMesh3(const FStaticMeshLODModel &Lod)
 		V->Pos = Lod.VertexStream.Verts[i];
 		UV->U = SUV.U;
 		UV->V = SUV.V;
+		// normal
+		V->Normal = SUV.Normal[2];
 	}
-	//!! should generate normals
 	//?? also has ColorStream
 
 	// indices

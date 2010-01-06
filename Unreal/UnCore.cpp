@@ -110,6 +110,12 @@ static const char *PackageExtensions[] =
 #if UNREAL3
 	, "upk", "ut3", "xxx"
 #endif
+#if MASSEFF
+	, "sfm"
+#endif
+#if TLR
+	, "tlr"
+#endif
 #if BATMAN
 	, "umap"
 #endif

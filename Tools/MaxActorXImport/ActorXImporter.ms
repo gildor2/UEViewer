@@ -10,6 +10,10 @@
 
  Revision History:
 
+	??.??.???? v1.07
+	- added "Load confirmation" setting to display message box after completion of operation
+	- added "Reposition existing bones" option
+
 	12.12.2009 v1.06
 	- fixed merging meshes on a single skeleton when previously loaded mesh is not in bind
 	  pose
@@ -70,7 +74,9 @@ global g_texDir
 global g_texRecurse
 global g_texMissAction
 global g_boneSize
+global g_reposBones
 global g_meshScale
+global g_loadConfirm
 global Anims
 
 
@@ -92,7 +98,9 @@ fn DefaultSettings =
 	g_texRecurse = false
 	g_texMissAction = 1
 	g_boneSize   = 0.5
+	g_reposBones = true
 	g_meshScale  = 1.0
+	g_loadConfirm = false
 )
 
 
@@ -133,16 +141,23 @@ fn DoSetting name var =
 	local default = execute var							-- value has the same type as var
 	if g_isLoading then
 	(
-		-- loading value
-		tmp_v = getINISetting configFile "Main" name	-- get from ini as string
-		if tmp_v != "" then
+		try
 		(
-			local type = classOf default
---			format "reading % (%) = %\n" var type tmp_v
-			if (not isKindOf default String) then
-				execute (var + "=tmp_v as " + (type as string))
-			else
-				execute (var + "=tmp_v")				-- no conversion
+			-- loading value
+			tmp_v = getINISetting configFile "Main" name	-- get from ini as string
+			if tmp_v != "" then
+			(
+				local type = classOf default
+--				format "reading % (%) = %\n" var type tmp_v
+				if (not isKindOf default String) then
+					execute (var + "=tmp_v as " + (type as string))
+				else
+					execute (var + "=tmp_v")				-- no conversion
+			)
+		)
+		catch
+		(
+			format "Reading %: %\n" name (getCurrentException())
 		)
 	)
 	else
@@ -173,7 +188,9 @@ fn SerializeSettings isLoading =
 	DoSetting "SeeThru"       "g_seeThru"
 	DoSetting "SkelOnly"      "g_skelOnly"
 	DoSetting "BoneSize"      "g_boneSize"
+	DoSetting "ReposBones"    "g_reposBones"
 	DoSetting "MeshScale"     "g_meshScale"
+	DoSetting "LoadConfirm"   "g_loadConfirm"
 )
 
 
@@ -630,7 +647,7 @@ fn ImportPskFile filename skelOnly:false =
 	(
 		fclose file
 		messageBox ("Error loading file " + filename)
-		format "FATAL ERROR: %\n" getCurrentException()
+		format "FATAL ERROR: %\n" (getCurrentException())
 		return undefined
 	)
 
@@ -699,7 +716,7 @@ fn ImportPskFile filename skelOnly:false =
 		else
 		(
 			-- bone already exists
-			newBone.transform = bn.Matrix
+			if g_reposBones then newBone.transform = bn.Matrix
 		)
 		MaxBones[i] = newBone
 	)
@@ -781,9 +798,14 @@ fn ImportPskFile filename skelOnly:false =
 	if skelOnly then
 	(
 		delete newMesh		-- non-optimal way, may skip mesh creation
+		if g_loadConfirm then messageBox "Mesh Sucessfully Loaded"
 		return undefined
 	)
-	if numBones <= 0 then return undefined
+	if numBones <= 0 then
+	(
+		if g_loadConfirm then messageBox "Mesh Sucessfully Loaded"
+		return undefined
+	)
 
 --	redrawViews()
 
@@ -865,6 +887,7 @@ fn ImportPskFile filename skelOnly:false =
 	)
 	enableSceneRedraw()
 --	progressEnd()
+	if g_loadConfirm then messageBox "Mesh Sucessfully Loaded"
 
 	gc()
 )
@@ -1027,6 +1050,8 @@ fn ImportPsaFile filename trackNum all:false =
 	if g_playAnim then playAnimation immediateReturn:true
 
 	gc()
+
+	if g_loadConfirm then messageBox "Animation Sucessfully Loaded"
 )
 
 
@@ -1045,7 +1070,7 @@ fn LoadAnimation index =
 rollout axImportRollout "Actor X Importer"
 (
 	-- copyright label
-	label Lbl1 "Version 1.06"
+	label Lbl1 "Version 1.07"
 	label Lbl2 "\xA9 2009 Konstantin Nosov (Gildor)"
 	label Lbl3 "http://www.gildor.org/"
 
@@ -1071,9 +1096,10 @@ rollout axImportRollout "Actor X Importer"
 
 	on BtnImportPsk pressed do
 	(
-		MeshFileName = getOpenFileName types:"Actor X Mesh (*.psk)|*.psk|All (*.*)|*.*|" filename:g_lastDir1
-		if MeshFileName != undefined then
+		local filename = getOpenFileName types:"Actor X Mesh (*.psk)|*.psk|All (*.*)|*.*|" filename:g_lastDir1
+		if filename != undefined then
 		(
+			MeshFileName = filename
 			g_lastDir1 = getFilenamePath MeshFileName
 			if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
 		)
@@ -1081,13 +1107,17 @@ rollout axImportRollout "Actor X Importer"
 
 	on BtnImportPsa pressed do
 	(
-		AnimFileName = getOpenFileName types:"Actor X Animation (*.psa)|*.psa|All (*.*)|*.*|" filename:g_lastDir2
+		local filename = getOpenFileName types:"Actor X Animation (*.psa)|*.psa|All (*.*)|*.*|" filename:g_lastDir2
 
-		if AnimFileName != undefined then
+		if filename != undefined then
 		(
+			AnimFileName = filename
 			g_lastDir2 = getFilenamePath AnimFileName
-			if DoesFileExist AnimFileName then ImportPsaFile AnimFileName -1
-			LstAnims.items = for a in Anims collect (a.Name + " [" + (a.NumRawFrames as string) + "]")
+			if DoesFileExist AnimFileName then
+			(
+				ImportPsaFile AnimFileName -1
+				LstAnims.items = for a in Anims collect (a.Name + " [" + (a.NumRawFrames as string) + "]")
+			)
 		)
 	)
 
@@ -1118,6 +1148,8 @@ rollout axSettingsRollout "Settings"
 (
 	spinner SpnBoneSize  "Bone size"  range:[0.1,10,g_boneSize]     type:#float scale:0.1  align:#left  across:2
 	spinner SpnMeshScale "Mesh scale" range:[0.01,1000,g_meshScale] type:#float scale:0.01 align:#right
+	checkbox ChkRepBones "Reposition existing bones" checked:g_reposBones
+	checkbox ChkLoadConf "Load confirmation" checked:g_loadConfirm
 
 	group "Materials"
 	(
@@ -1134,7 +1166,9 @@ rollout axSettingsRollout "Settings"
 
 	on SpnBoneSize  changed val do g_boneSize  = val
 	on SpnMeshScale changed val do g_meshScale = val
-	on ChkTexRecurse changed state do g_texRecurse = state
+	on ChkRepBones   changed state do g_reposBones    = state
+	on ChkLoadConf   changed state do g_loadConfirm   = state
+	on ChkTexRecurse changed state do g_texRecurse    = state
 	on RadMissingTex changed state do g_texMissAction = state
 
 	on EdTexPath    changed val do g_texDir = val

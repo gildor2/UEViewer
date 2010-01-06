@@ -61,14 +61,14 @@ rm umodel.exe	#?? win32 only
 # Check directories
 #?? should check dirs when specific game has been requested (not all games everytime)
 CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
-CheckDir UT1 e:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament e:/games/unreal~1/UnrealTournament
-CheckDir UT2 e:/games/unreal~1/ut2004 c:/games/unreal/ut2004
-CheckDir UT3 c:/games/ut3/UTGame/CookedPC e:/games/ut3/UTGame/CookedPC
+CheckDir UT1 {c,e}:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament
+CheckDir UT2 {c,e}:/games/unreal~1/ut2004 c:/games/unreal/ut2004
+CheckDir UT3 {c,e}:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2"
 CheckDir L2 "C:/!umodel-data/Lineage2"
-CheckDir BIO "C:/GAMES/BioShock" "E:/GAMES/BioShock"
+CheckDir BIO {c,e}:/GAMES/BioShock
 CheckDir MASS "C:/GAMES/Mass Effect/BioGame/CookedPC"
 
 #------------------------------------------------------------------------------
@@ -131,7 +131,7 @@ case "" in
 #	ut2 HumanMaleA MercMaleD
 #	ut3 -meshes CH_AnimHuman
 #	ut3 VH_Goliath.upk S_VH_Goliath_FuelCan01b
-	ut3 GP_Conquest SM_Processing_Plant
+#	ut3 GP_Conquest SM_Processing_Plant
 	ut3 GP_Onslaught S_GP_Ons_Powernode_Spawn
 	# Army of Two
 #	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx

@@ -138,7 +138,7 @@ void PixelShaderMain()
 #ifndef SHOW_BUMP
 	color.rgb += GetMaterialEmissive(TexCoord);
 #endif
-	color.a   *= GetMaterialOpacity(TexCoord);
+	color.a = GetMaterialOpacity(TexCoord);
 
 //	color.rgb += pow(1.0 - dot(n, tangentEye), 3.5) * vec3(1.0);	// Fresnel
 #ifdef NORMALMAP
