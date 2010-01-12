@@ -1545,6 +1545,8 @@ public:
 		unguard;
 	}
 
+	bool LoadBulkTexture(int MipIndex) const;
+	byte *DecompressXBox360(const FByteBulkData &Bulk, ETextureFormat intFormat, int USize, int VSize) const;
 	virtual byte *Decompress(int &USize, int &VSize) const;
 #if RENDERING
 	virtual void Bind();

@@ -843,7 +843,17 @@ struct VJointPos
 	{
 #if UNREAL3
 		if (Ar.ArVer >= 224)
-			return Ar << P.Orientation << P.Position;
+		{
+			Ar << P.Orientation << P.Position;
+#if ARMYOF2
+			if (Ar.Game == GAME_ArmyOf2 && Ar.ArVer >= 481)
+			{
+				int pad;
+				Ar << pad;
+			}
+#endif
+			return Ar;
+		}
 #endif
 		return Ar << P.Orientation << P.Position << P.Length << P.Size;
 	}
@@ -861,13 +871,20 @@ struct FMeshBone
 	friend FArchive& operator<<(FArchive &Ar, FMeshBone &B)
 	{
 		Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
+#if ARMYOF2
+		if (Ar.Game == GAME_ArmyOf2 && Ar.ArVer >= 459)
+		{
+			int unk3C;						// FColor?
+			Ar << unk3C;
+		}
+#endif // ARMYOF2
 #if UNREAL3
 		if (Ar.ArVer >= 515)
 		{
 			int unk44;						// byte[4] ? default is 0xFF x 4
 			Ar << unk44;
 		}
-#endif
+#endif // UNREAL3
 		return Ar;
 	}
 };

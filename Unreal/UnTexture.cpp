@@ -657,6 +657,179 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 
 #endif // XBOX360
 
+
+byte *UTexture2D::DecompressXBox360(const FByteBulkData &Bulk, ETextureFormat intFormat, int USize, int VSize) const
+{
+	guard(UTexture2D::DecompressXBox360);
+
+#if XBOX360
+	//?? separate this function
+	int bytesPerBlock, blockSizeX, blockSizeY, align;
+	switch (intFormat)
+	{
+	case TEXF_DXT1:
+		bytesPerBlock = 8;
+		blockSizeX = blockSizeY = 4;
+		align = 128;
+		break;
+	case TEXF_DXT3:
+	case TEXF_DXT5:
+		bytesPerBlock = 16;
+		blockSizeX = blockSizeY = 4;
+		align = 128;
+		break;
+	case TEXF_L8:
+		bytesPerBlock = 1;
+		blockSizeX = blockSizeY = 1;
+		align = 64;
+		break;
+	case TEXF_RGBA8:
+		bytesPerBlock = 4;
+		blockSizeX = blockSizeY = 1;
+		align = 32;
+		break;
+	default:
+		{
+			const char *FmtName = EnumToName("EPixelFormat", Format);
+			if (!FmtName) FmtName = "???";
+			appNotify("TextureFormatParameters: unknown texture format %s (%d)", FmtName, Format);
+			return NULL;
+		}
+	}
+	int USize1 = USize, VSize1 = VSize;
+	if (align)
+	{
+		USize1 = Align(USize, align);
+		VSize1 = Align(VSize, align);
+	}
+	int BulkSize = Bulk.ElementCount * Bulk.GetElementSize();
+//	printf("fmt=%s  bulk=%d  w=%d  h=%d\n", *Format, BulkSize, USize, VSize);
+	if (BulkSize / bytesPerBlock * blockSizeX * blockSizeY != USize1 * VSize1)
+	{
+		appNotify("%s'%s': bytesPerBlock: got %g, need %d", GetClassName(), Name,
+			(float)BulkSize / (USize1 * VSize1) * blockSizeX * blockSizeY,
+			bytesPerBlock);
+		return NULL;
+	}
+	// decompress texture ...
+	byte *pic;
+	if (bytesPerBlock > 1)
+	{
+		// reverse byte order (16-bit integers)
+		byte *buf2 = new byte[BulkSize];
+		byte *p  = Bulk.BulkData;
+		byte *p2 = buf2;
+		for (int i = 0; i < BulkSize; i += 2, p += 2, p2 += 2)	//?? use ReverseBytes() from UnCore (but: inplace)
+		{
+			p2[0] = p[1];
+			p2[1] = p[0];
+		}
+		// decompress texture
+		pic = DecompressTexture(buf2, USize1, VSize1, intFormat, Name, NULL);
+		// delete reordered buffer
+		delete buf2;
+	}
+	else
+	{
+		// 1 byte per block, no byte reordering
+		pic = DecompressTexture(Bulk.BulkData, USize1, VSize1, intFormat, Name, NULL);
+	}
+	// untile texture
+	byte *pic2 = new byte[USize1 * VSize1 * 4];
+	UntileXbox360Texture((unsigned*)pic, (unsigned*)pic2, USize1, VSize1, blockSizeX, blockSizeY, bytesPerBlock);
+	delete pic;
+	// shrink texture buffer (remove U alignment)
+	if (USize != USize1)
+	{
+		guard(ShrinkTexture);
+		int line1 = USize  * 4;
+		int line2 = USize1 * 4;
+		byte *p1 = pic2;
+		byte *p2 = pic2;
+		for (int y = 0; y < VSize; y++)
+		{
+			memcpy(p2, p1, line1);
+			p2 += line1;
+			p1 += line2;
+		}
+		unguard;
+	}
+	return pic2;
+#else  // XBOX360
+	appError("Compiled without XBox360 support");
+#endif // XBOX360
+
+	unguard;
+}
+
+
+bool UTexture2D::LoadBulkTexture(int MipIndex) const
+{
+	const CGameFileInfo *bulkFile = NULL;
+
+	guard(UTexture2D::LoadBulkTexture);
+
+	const FTexture2DMipMap &Mip = Mips[MipIndex];
+
+	// Here: data is either in TFC file or in other package
+	const char *bulkFileName = NULL, *bulkFileExt = NULL;
+	if (strcmp(TextureFileCacheName, "None") != 0)
+	{
+		// TFC file is assigned
+		//!! cache checking of tfc file(s) + cache handles (FFileReader)
+		//!! note #1: there can be few cache files!
+		//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
+		bulkFileName = TextureFileCacheName;
+		bulkFileExt  = "tfc";
+		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+		if (!bulkFile)
+			bulkFile = appFindGameFile(bulkFileName, "xxx");	// sometimes tfc has xxx extension
+	}
+	else
+	{
+		// data is inside another package
+		//!! copy-paste from UnPackage::CreateExport(), should separate function
+		// find outermost package
+		if (this->PackageIndex)
+		{
+			int PackageIndex = this->PackageIndex;		// export entry for this object (UTexture2D)
+			while (true)
+			{
+				const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
+				if (!Exp2.PackageIndex) break;			// get parent (UPackage)
+				PackageIndex = Exp2.PackageIndex - 1;	// subtract 1 from package index
+			}
+			const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
+			if (Exp2.ExportFlags & EF_ForcedExport)
+			{
+				bulkFileName = Exp2.ObjectName;
+				bulkFileExt  = NULL;					// find package file
+//				printf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
+			}
+		}
+		if (!bulkFileName) return false;					// just in case
+		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+	}
+
+	if (!bulkFile)
+	{
+		printf("Decompressing %s: %s.%s is missing\n", Name, bulkFileName, bulkFileExt ? bulkFileExt : "*");
+		return false;
+	}
+
+	printf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
+	FArchive *Ar = appCreateFileReader(bulkFile);
+	Ar->ReverseBytes = Package->ReverseBytes;
+	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
+//	printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
+	Bulk->SerializeChunk(*Ar);
+	delete Ar;
+	return true;
+
+	unguardf(("File=%s", bulkFile ? bulkFile->RelativeName : "none"));
+}
+
+
 byte *UTexture2D::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture2D::Decompress);
@@ -678,61 +851,11 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			// some optimization in a case of missing bulk file
 			if (bulkChecked) continue;									// already checked for previous mip levels
 			bulkChecked = true;
-			// Here: data is either in TFC file or in other package
-			const char *bulkFileName = NULL, *bulkFileExt = NULL;
-			if (strcmp(TextureFileCacheName, "None") != 0)
-			{
-				// TFC file is assigned
-				//!! cache checking of tfc file(s) + cache handles (FFileReader)
-				//!! note #1: there can be few cache files!
-				//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
-				bulkFileName = TextureFileCacheName;
-				bulkFileExt  = "tfc";
-			}
-			else
-			{
-				// data is inside another package
-				//!! copy-paste from UnPackage::CreateExport(), should separate function
-				// find outermost package
-				if (this->PackageIndex)
-				{
-					int PackageIndex = this->PackageIndex;		// export entry for this object (UTexture2D)
-					while (true)
-					{
-						const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
-						if (!Exp2.PackageIndex) break;			// get parent (UPackage)
-						PackageIndex = Exp2.PackageIndex - 1;	// subtract 1 from package index
-					}
-					const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
-					if (Exp2.ExportFlags & EF_ForcedExport)
-					{
-						bulkFileName = Exp2.ObjectName;
-						bulkFileExt  = NULL;					// find package file
-//						printf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
-					}
-				}
-			}
-			if (!bulkFileName) continue;						// just in case
-
-			const CGameFileInfo *bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
-			if (!bulkFile)
-			{
-				printf("Decompressing %s: %s.%s is missing\n", Name, bulkFileName, bulkFileExt ? bulkFileExt : "*");
-				continue;
-			}
-			FArchive *Ar = appCreateFileReader(bulkFile);
-			printf("Reading %s mip level %d (%dx%d) from %s\n", Name, n, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
-			Ar->ReverseBytes = Package->ReverseBytes;
-			FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
-//printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
-			Bulk->SerializeChunk(*Ar);
-			delete Ar;
+			if (!LoadBulkTexture(n)) continue;
 		}
 		USize = Mip.SizeX;
 		VSize = Mip.SizeY;
 		ETextureFormat intFormat;
-		const char *FmtName = EnumToName("EPixelFormat", Format);
-		if (!FmtName) FmtName = "???";
 		if (Format == PF_A8R8G8B8)
 			intFormat = TEXF_RGBA8;
 		else if (Format == PF_DXT1)
@@ -751,105 +874,15 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 #endif
 		else
 		{
+			const char *FmtName = EnumToName("EPixelFormat", Format);
+			if (!FmtName) FmtName = "???";
 			appNotify("Unknown texture format: %s (%d)", FmtName, Format);
 			return NULL;
 		}
 
 		if (!Package->ReverseBytes)	//?? another way to detect xbox package
 			return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
-
-#if XBOX360
-		//?? separate this function
-		int bytesPerBlock, blockSizeX, blockSizeY, align;
-		switch (intFormat)
-		{
-		case TEXF_DXT1:
-			bytesPerBlock = 8;
-			blockSizeX = blockSizeY = 4;
-			align = 128;
-			break;
-		case TEXF_DXT3:
-		case TEXF_DXT5:
-			bytesPerBlock = 16;
-			blockSizeX = blockSizeY = 4;
-			align = 128;
-			break;
-		case TEXF_L8:
-			bytesPerBlock = 1;
-			blockSizeX = blockSizeY = 1;
-			align = 64;
-			break;
-		case TEXF_RGBA8:
-			bytesPerBlock = 4;
-			blockSizeX = blockSizeY = 1;
-			align = 32;
-			break;
-		default:
-			appNotify("TextureFormatParameters: unknown texture format %s (%d)", FmtName, Format);
-			return NULL;
-		}
-		int USize1 = USize, VSize1 = VSize;
-		if (align)
-		{
-			USize1 = Align(USize, align);
-			VSize1 = Align(VSize, align);
-		}
-		int BulkSize = Mip.Data.ElementCount * Mip.Data.GetElementSize();
-//		printf("fmt=%s  bulk=%d  w=%d  h=%d\n", *Format, BulkSize, USize, VSize);
-		if (BulkSize / bytesPerBlock * blockSizeX * blockSizeY != USize1 * VSize1)
-		{
-			appNotify("%s'%s': bytesPerBlock: got %g, need %d", GetClassName(), Name,
-				(float)BulkSize / (USize1 * VSize1) * blockSizeX * blockSizeY,
-				bytesPerBlock);
-			return NULL;
-		}
-		// decompress texture ...
-		byte *pic;
-		if (bytesPerBlock > 1)
-		{
-			// reverse byte order (16-bit integers)
-			byte *buf2 = new byte[BulkSize];
-			byte *p  = Mip.Data.BulkData;
-			byte *p2 = buf2;
-			for (int i = 0; i < BulkSize; i += 2, p += 2, p2 += 2)	//?? use ReverseBytes() from UnCore (but: inplace)
-			{
-				p2[0] = p[1];
-				p2[1] = p[0];
-			}
-			// decompress texture
-			pic = DecompressTexture(buf2, USize1, VSize1, intFormat, Name, NULL);
-			// delete reordered buffer
-			delete buf2;
-		}
-		else
-		{
-			// 1 byte per block, no byte reordering
-			pic = DecompressTexture(Mip.Data.BulkData, USize1, VSize1, intFormat, Name, NULL);
-		}
-		// untile texture
-		byte *pic2 = new byte[USize1 * VSize1 * 4];
-		UntileXbox360Texture((unsigned*)pic, (unsigned*)pic2, USize1, VSize1, blockSizeX, blockSizeY, bytesPerBlock);
-		delete pic;
-		// shrink texture buffer (remove U alignment)
-		if (USize != USize1)
-		{
-			guard(ShrinkTexture);
-			int line1 = USize  * 4;
-			int line2 = USize1 * 4;
-			byte *p1 = pic2;
-			byte *p2 = pic2;
-			for (int y = 0; y < VSize; y++)
-			{
-				memcpy(p2, p1, line1);
-				p2 += line1;
-				p1 += line2;
-			}
-			unguard;
-		}
-		return pic2;
-#else  // XBOX360
-		appError("Compiled without XBox360 support");
-#endif // XBOX360
+		return DecompressXBox360(Mip.Data, intFormat, USize, VSize);
 	}
 	// no valid mipmaps
 	return NULL;

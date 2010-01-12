@@ -203,7 +203,7 @@ struct FPackageFileSummary
 		if (Ar.Game == GAME_SplinterCell)
 		{
 			int tmp1;
-			FString tmp2;
+			TArray<byte> tmp2;
 			Ar << tmp1;								// 0xFF0ADDE
 			Ar << tmp2;
 		}
@@ -366,6 +366,9 @@ struct FObjectExport
 			if (Ar.ArVer < 543)  Ar << E.ComponentMap;
 			if (Ar.ArVer >= 247) Ar << E.ExportFlags;
 			if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;
+#if ARMYOF2
+			if (Ar.Game == GAME_ArmyOf2) return Ar;
+#endif
 			if (Ar.ArVer >= 475) Ar << E.U3unk6C;
 			return Ar;
 		}

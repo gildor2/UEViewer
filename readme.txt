@@ -149,6 +149,9 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+11.01.2010
+- implemented Army of Two: the 40th Day package and SkeletalMesh support
+
 05.01.2010
 - remade lighting for StaticMesh objects with normalmap support
 - using better normals for UE3 SkeletalMesh

@@ -985,9 +985,6 @@ void FArchive::DetectGame()
 #if FRONTLINES
 	if (ArVer == 433 && ArLicenseeVer == 52)	SET(GAME_Frontlines);
 #endif
-#if ARMYOF2
-	if (ArVer == 445 && ArLicenseeVer == 79)	SET(GAME_ArmyOf2);
-#endif
 #if MCARTA
 	if (ArVer == 446 && ArLicenseeVer == 25)	SET(GAME_MagnaCarta);
 #endif
@@ -1032,6 +1029,11 @@ void FArchive::DetectGame()
 		 (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
 		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22)) )
 		SET(GAME_Huxley);
+#endif
+#if ARMYOF2
+	if ( (ArVer == 445 && ArLicenseeVer == 79) ||		// Army of Two
+		 (ArVer == 482 && ArLicenseeVer == 222) )		// Army of Two: the 40th Day
+		SET(GAME_ArmyOf2);
 #endif
 
 	if (check > 1)

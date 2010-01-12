@@ -132,9 +132,10 @@ case "" in
 #	ut3 -meshes CH_AnimHuman
 #	ut3 VH_Goliath.upk S_VH_Goliath_FuelCan01b
 #	ut3 GP_Conquest SM_Processing_Plant
-	ut3 GP_Onslaught S_GP_Ons_Powernode_Spawn
+#	ut3 GP_Onslaught S_GP_Ons_Powernode_Spawn
 	# Army of Two
 #	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
+	run1 data/ArmyOfTwoThe40ThDay -nostat 03_map_penhippos_VFX.xxx
 	# MK vs DC
 #	run1 C:/!umodel-data/.possible/MKvsDC_X360 -noanim -meshes CHAR_Batman
 	# A51

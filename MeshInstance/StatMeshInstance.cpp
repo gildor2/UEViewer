@@ -7,6 +7,11 @@
 
 
 #define SHOW_TANGENTS			1
+#define SORT_BY_OPACITY			1
+
+
+#define MAX_MESHMATERIALS		256
+
 
 struct CTangent
 {
@@ -27,12 +32,37 @@ void CStatMeshInstance::Draw()
 
 	if (!Tangents) BuildTangents();
 
+	const UStaticMesh* Mesh = pMesh;
+	int NumSections = Mesh->Sections.Num();
+
+	// copy of CSkelMeshInstance::Draw sorting code
+#if SORT_BY_OPACITY
+	// sort sections by material opacity
+	int SectionMap[MAX_MESHMATERIALS];
+	int secPlace = 0;
+	for (int opacity = 0; opacity < 2; opacity++)
+	{
+		for (i = 0; i < NumSections; i++)
+		{
+			UMaterial *Mat = Mesh->Materials[i].Material;
+			int op = 0;			// sort value
+			if (Mat && Mat->IsTranslucent()) op = 1;
+			if (op == opacity) SectionMap[secPlace++] = i;
+		}
+	}
+	assert(secPlace == NumSections);
+#endif // SORT_BY_OPACITY
+
 	// draw mesh
 	glEnable(GL_LIGHTING);
-	const UStaticMesh* Mesh = pMesh;
 	for (i = 0; i < Mesh->Sections.Num(); i++)
 	{
-		SetMaterial(Mesh->Materials[i].Material, i, 0);
+#if SORT_BY_OPACITY
+		int MaterialIndex = SectionMap[i];
+#else
+		int MaterialIndex = i;
+#endif
+		SetMaterial(Mesh->Materials[MaterialIndex].Material, MaterialIndex, 0);
 
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;
@@ -52,7 +82,7 @@ void CStatMeshInstance::Draw()
 			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CTangent), &Tangents[0].Binormal);
 		}
 
-		const FStaticMeshSection &Sec = Mesh->Sections[i];
+		const FStaticMeshSection &Sec = Mesh->Sections[MaterialIndex];
 
 #if 0
 		glBegin(GL_TRIANGLES);
