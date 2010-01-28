@@ -264,6 +264,13 @@ public:
 			if (PropertyFlags & 0x2000000)
 				Ar << f64;
 		}
+#if TNA_IMPACT
+		if (Ar.Game == GAME_TNA && PropertyFlags2 & 0x20)
+		{
+			word unk58;
+			Ar << unk58;
+		}
+#endif // TNA_IMPACT
 #if A51
 		//?? Area 51: if Flags2 & 0x80000000 -> serialize "FString f64"
 		if (Ar.Game == GAME_A51 && (PropertyFlags2 & 0x80000000))

@@ -174,4 +174,52 @@ SIMPLE_TYPE(FQuatFixed48Max, word)
 #endif // BATMAN
 
 
+#if MASSEFF
+
+// similar to FQuatFixed48Max
+struct FQuatBioFixed48
+{
+	word			data[3];
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		static const float shift = 0.70710678118f;		// sqrt(0.5)
+		static const float scale = 1.41421356237f;		// sqrt(0.5)*2
+		float x = (data[0] & 0x7FFF) / 32767.0f * scale - shift;
+		float y = (data[1] & 0x7FFF) / 32767.0f * scale - shift;
+		float z = (data[2] & 0x7FFF) / 32767.0f * scale - shift;
+		float w = 1.0f - (x*x + y*y + z*z);
+		if (w >= 0.0f)
+			w = sqrt(w);
+		else
+			w = 0.0f;
+		int s = ((data[0] >> 14) & 2) | ((data[1] >> 15) & 1);
+		switch (s)
+		{
+		case 0:
+			r.Set(w, x, y, z);
+			break;
+		case 1:
+			r.Set(x, w, y, z);
+			break;
+		case 2:
+			r.Set(x, y, w, z);
+			break;
+		default: // 3
+			r.Set(x, y, z, w);
+		}
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatBioFixed48 &Q)
+	{
+		return Ar << Q.data[0] << Q.data[1] << Q.data[2];
+	}
+};
+
+SIMPLE_TYPE(FQuatBioFixed48, word)
+
+#endif // MASSEFF
+
 #endif // __UNMESHTYPES_H__

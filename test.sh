@@ -120,6 +120,7 @@ case "" in
 	# bug: MatInstConst -> MatInstConst -> Mat => loose transparency
 #	rund BIOG_HMF_HED_PROMorph_R.upk HMF_HED_PROLash_Mat_1a
 #	rund BIOG_HMF_HED_PROMorph_R.upk #HMF_HED_PROCustom_Military_Norm
+	run1 data/MassEffect2 -meshes BioP_Char.pcc
 
 	# Bioshosk
 #	bio 0-Lighthouse.bsm MetalVents_NormalMap
@@ -135,7 +136,7 @@ case "" in
 #	ut3 GP_Onslaught S_GP_Ons_Powernode_Spawn
 	# Army of Two
 #	run1 C:/!umodel-data/.possible/ArmyOfTwo_X360 -noanim -meshes AO2MPPlayerChar1_SF.xxx
-	run1 data/ArmyOfTwoThe40ThDay -nostat 03_map_penhippos_VFX.xxx
+#	run1 data/ArmyOfTwoThe40ThDay -nostat 03_map_penhippos_VFX.xxx
 	# MK vs DC
 #	run1 C:/!umodel-data/.possible/MKvsDC_X360 -noanim -meshes CHAR_Batman
 	# A51

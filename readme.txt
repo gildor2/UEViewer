@@ -35,6 +35,7 @@ Modified Unreal Engine 3:
   Mass Effect
   BlackSite: Area 51
   Mortal Kombat vs. DC Universe (XBox360)
+  TNA iMPACT! (XBox360)
   Army of Two (XBox360)
   Mirror's Edge
   Huxley
@@ -50,6 +51,7 @@ Modified Unreal Engine 3:
   Nurien
   Stranglehold
   Borderlands
+  Dark Void
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,6 +137,7 @@ Notes about StaticMesh support.
 StaticMesh export made into psk format. This format is designed for SkeletalMesh
 export, but umodel uses it for StaticMesh too. Exported mesh will not have
 skeleton and contains only one UV set.
+Resulting psk files are cannot be imported directly into UnrealEd.
 
 
 Notes about material export.
@@ -149,6 +152,15 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+24.01.2010
+- implemented TNA iMPACT! package support
+
+23.01.2010
+- implemented Mass Effect 2 support
+
+20.01.2010
+- implemented Dark Void support (except StaticMesh)
+
 11.01.2010
 - implemented Army of Two: the 40th Day package and SkeletalMesh support
 

@@ -21,6 +21,7 @@
 // requires UNREAL3
 #define XBOX360			1
 #define BIOSHOCK		1
+#define ARMYOF2			1		// Army of Two
 #define MASSEFF			1
 #define HUXLEY			1
 #define AVA				1
@@ -29,3 +30,4 @@
 #define WHEELMAN		1
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define STRANGLE		1		// Stranglehold
+#define TNA_IMPACT		1		// TNA iMPACT!

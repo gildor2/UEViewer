@@ -286,7 +286,7 @@ int main(int argc, char **argv)
 #	endif
 				"\n"
 #	if MASSEFF
-				"    Mass Effect\n"
+				"    Mass Effect, Mass Effect 2\n"
 #	endif
 #	if TUROK
 				"    Turok\n"
@@ -296,6 +296,9 @@ int main(int argc, char **argv)
 #	endif
 #	if MKVSDC
 				"    Mortal Kombat vs. DC Universe\n"
+#	endif
+#	if TNA_IMPACT
+				"    TNA iMPACT!\n"
 #	endif
 #	if STRANGLE
 				"    Stranglehold\n"
@@ -335,6 +338,9 @@ int main(int argc, char **argv)
 #	endif
 #	if BORDERLANDS
 				"    Borderlands\n"
+#	endif
+#	if DARKVOID
+				"    Dark Void\n"
 #	endif
 #	if SPECIAL_TAGS
 				"    Nurien\n"

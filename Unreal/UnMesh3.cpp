@@ -671,7 +671,14 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		TArray<UObject*> OnFireMaterials; // name is not checked
 		Ar << OnFireMaterials;
 	}
-#endif
+#endif // BLOODONSAND
+#if DARKVOID
+	if (Ar.Game == GAME_DarkVoid && Ar.ArLicenseeVer >= 61)
+	{
+		TArray<UObject*> AlternateMaterials;
+		Ar << AlternateMaterials;
+	}
+#endif // DARKVOID
 	Ar << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
 #if A51 || MKVSDC || STRANGLE
@@ -1022,7 +1029,7 @@ void UAnimSet::ConvertAnims()
 
 #if MASSEFF
 	UBioAnimSetData *BioData = NULL;
-	if (Package->Game == GAME_MassEffect && !TrackBoneNames.Num() && Sequences.Num())
+	if ((Package->Game == GAME_MassEffect || Package->Game == GAME_MassEffect2) && !TrackBoneNames.Num() && Sequences.Num())
 	{
 		// Mass Effect has separated TrackBoneNames from UAnimSet to UBioAnimSetData
 		BioData = Sequences[0]->m_pBioAnimSetData;
@@ -1164,7 +1171,10 @@ void UAnimSet::ConvertAnims()
 						Reader << vec;
 						A->KeyPos.AddItem(vec);
 					}
-#if BORDERLANDS
+/*!!#if BORDERLANDS
+					//!! not implemented
+					// should serialize 9 floats before keys, then short[3] keys
+					// number of keys may be 1 less then specified (?)
 					else if (Seq->TranslationCompressionFormat == ACF_Delta48NoW)
 					{
 						short v[3];
@@ -1175,7 +1185,7 @@ void UAnimSet::ConvertAnims()
 						vec.Z = v[2];
 						A->KeyPos.AddItem(vec);
 					}
-#endif // BORDERLANDS
+#endif // BORDERLANDS */
 					else
 						appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
 				}
@@ -1264,6 +1274,28 @@ void UAnimSet::ConvertAnims()
 						A->KeyQuat.AddItem(q);
 					}
 #endif // BATMAN
+#if MASSEFF
+					// Mass Effect 2 animation compression
+					else if (Seq->RotationCompressionFormat == ACF_BioFixed48)
+					{
+						FQuatBioFixed48 q;
+						Reader << q;
+						A->KeyQuat.AddItem(q);
+					}
+#endif // MASSEFF
+/*!!#if BORDERLANDS
+					//!! not implemented
+					// should serialize 4 floats before keys, then short[3] keys
+					// number of keys may be 1 less then specified (?)
+					else if (Seq->RotationCompressionFormat == ACF_Delta48NoW)
+					{
+						short v[3];
+						Reader << v[0] << v[1] << v[2];
+						FQuat q;
+						q.Set(0, 0, 0, 1);
+						A->KeyQuat.AddItem(q);
+					}
+#endif // BORDERLANDS */
 					else
 						appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
 				}
@@ -1724,6 +1756,15 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 	//?? kDOP ?
 	TArray<FStaticMeshUnk2> f74;
 	TArray<FStaticMeshUnk3> f80;
+
+#if DARKVOID
+	if (Ar.Game == GAME_DarkVoid)
+	{
+		int unk180, unk18C, unk198;
+		if (Ar.ArLicenseeVer >= 5) Ar << unk180 << unk18C;
+		if (Ar.ArLicenseeVer >= 6) Ar << unk198;
+	}
+#endif // DARKVOID
 
 	Ar << Bounds << BodySetup;
 	if (Ar.ArVer < 315)

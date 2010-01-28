@@ -102,7 +102,11 @@ int main(int argc, char **argv)
 		fclose(h);
 
 		FMemReader mem(buffer, compressedStart);
-		mem.ReverseBytes = Package->ReverseBytes;
+		mem.ReverseBytes  = Package->ReverseBytes;
+		mem.ArVer         = Package->ArVer;
+		mem.ArLicenseeVer = Package->ArLicenseeVer;
+		mem.Game          = Package->Game;
+
 		int pos;
 		bool found;
 

@@ -108,16 +108,14 @@ static const char *PackageExtensions[] =
 	, "bsm"
 #endif
 #if UNREAL3
-	, "upk", "ut3", "xxx"
+	, "upk", "ut3", "xxx", "umap"
 #endif
 #if MASSEFF
-	, "sfm"
+	, "sfm"			// Mass Effect
+	, "pcc"			// Mass Effect 2
 #endif
 #if TLR
 	, "tlr"
-#endif
-#if BATMAN
-	, "umap"
 #endif
 	// other games with no special code
 	, "lm"			// Landmass
@@ -976,6 +974,9 @@ void FArchive::DetectGame()
 #if A51
 	if (ArVer == 377 && ArLicenseeVer == 25)	SET(GAME_A51);		//!! has extra tag
 #endif
+#if TNA_IMPACT
+	if (ArVer == 380 && ArLicenseeVer == 35)	SET(GAME_TNA);		//!! has extra tag
+#endif
 #if WHEELMAN
 	if (ArVer == 390 && ArLicenseeVer == 32)	SET(GAME_Wheelman);	//!! has extra tag
 #endif
@@ -993,6 +994,7 @@ void FArchive::DetectGame()
 #endif
 #if MASSEFF
 	if (ArVer == 491 && ArLicenseeVer == 0x3F0)	SET(GAME_MassEffect);
+	if (ArVer == 512 && ArLicenseeVer == 130)	SET(GAME_MassEffect2);
 #endif
 #if TLR
 	if (ArVer == 507 && ArLicenseeVer == 11)	SET(GAME_TLR);
@@ -1012,8 +1014,11 @@ void FArchive::DetectGame()
 #if BATMAN
 	if (ArVer == 576 && ArLicenseeVer == 21)	SET(GAME_Batman);
 #endif
+#if DARKVOID
+	if (ArVer == 576 && (ArLicenseeVer == 61 || ArLicenseeVer == 66)) SET(GAME_DarkVoid); // demo and release
+#endif
 #if BORDERLANDS
-	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands);
+	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands); // release and update
 #endif
 
 	// UE3 games with the various versions of files

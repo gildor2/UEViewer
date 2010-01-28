@@ -47,6 +47,7 @@
 #define FRONTLINES		1		// Frontlines: Fuel of War
 #define BLOODONSAND		1		// 50 Cent: Blood on the Sand
 #define BORDERLANDS		1		// Borderlands
+#define DARKVOID		1		// Dark Void
 ///#define HUXLEY			1
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
@@ -55,6 +56,7 @@
 #define WHEELMAN		1		//?? incomplete
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define STRANGLE		1		// Stranglehold
+#define TNA_IMPACT		1		// TNA iMPACT!
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG: Killing Floor, Nurien
 

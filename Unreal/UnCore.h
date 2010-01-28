@@ -174,6 +174,7 @@ enum EGame
 
 	GAME_UE3       = 0x1000,
 		GAME_MassEffect,
+		GAME_MassEffect2,
 		GAME_MirrorEdge,
 		GAME_TLR,
 		GAME_Huxley,
@@ -187,12 +188,14 @@ enum EGame
 		GAME_Frontlines,
 		GAME_Batman,
 		GAME_Borderlands,
+		GAME_DarkVoid,
 
 	GAME_MIDWAY3   = 0x1800,	// variant of UE3
 		GAME_A51,
 		GAME_Wheelman,
 		GAME_MK,
 		GAME_Strangle,
+		GAME_TNA,
 
 	GAME_ENGINE    = 0xFF00		// mask for game engine
 };
@@ -1205,7 +1208,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 struct FByteBulkData //?? separate FUntypedBulkData
 {
-	int		BulkDataFlags;				// 0x12 -> compressed
+	int		BulkDataFlags;				// BULKDATA_...
 	int		ElementCount;				// number of array elements
 	int		BulkDataOffsetInFile;		// position in file, points to BulkData
 	int		BulkDataSizeOnDisk;			// size of bulk data on disk

@@ -4,6 +4,9 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 
+
+//#define WHOLE_PKG_COMPRESS_TYPE		COMPRESS_LZO		// for Midway's games ...
+
 /*-----------------------------------------------------------------------------
 	Lineage2 file reader
 -----------------------------------------------------------------------------*/
@@ -310,7 +313,11 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Chunk->CompressedOffset   = 0;
 		Chunk->CompressedSize     = H.CompressedSize;
 		Loader->ReverseBytes = ReverseBytes;				//?? low-level loader; possibly, do it in FUE3ArchiveReader()
+#ifdef WHOLE_PKG_COMPRESS_TYPE
+		Loader = new FUE3ArchiveReader(Loader, WHOLE_PKG_COMPRESS_TYPE, Chunks);
+#else
 		Loader = new FUE3ArchiveReader(Loader, ReverseBytes ? COMPRESS_LZX : COMPRESS_ZLIB, Chunks);
+#endif
 		fullyCompressed = true;
 		unguard;
 	}
@@ -442,13 +449,16 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				if (Game >= GAME_UE3)
 				{
 		#if WHEELMAN
-					if (Game == GAME_Wheelman) goto no_flags;
+					if (Game == GAME_Wheelman) goto word_flags;
+		#endif
+		#if MASSEFF
+					if (Game == GAME_MassEffect2 && ArLicenseeVer >= 102) goto word_flags;
 		#endif
 				qword_flags:
 					// object flags are 64-bit in UE3, skip additional 32 bits
 					int unk;
 					*this << unk;
-				no_flags: ;
+				word_flags: ;
 				}
 	#endif // UNREAL3
 			}

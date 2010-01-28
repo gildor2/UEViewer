@@ -1882,6 +1882,9 @@ enum AnimationCompressionFormat
 	ACF_Delta40NoW,
 	ACF_Delta48NoW,
 #endif
+#if MASSEFF
+	ACF_BioFixed48,											// Mass Effect 2
+#endif
 };
 
 _ENUM(AnimationCompressionFormat)
@@ -1898,6 +1901,9 @@ _ENUM(AnimationCompressionFormat)
 #if BORDERLANDS
 	_E(ACF_Delta40NoW),
 	_E(ACF_Delta48NoW),
+#endif
+#if MASSEFF
+	_E(ACF_BioFixed48),
 #endif
 };
 
@@ -2036,6 +2042,15 @@ public:
 		guard(UAnimSequence::Serialize);
 		assert(Ar.ArVer >= 372);		// older version is not yet ready
 		Super::Serialize(Ar);
+#if MASSEFF
+		if (Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110)
+		{
+			guard(SerializeMassEffect2);
+			FByteBulkData RawAnimationBulkData;
+			RawAnimationBulkData.Serialize(Ar);
+			unguard;
+		}
+#endif // MASSEFF
 		if (Ar.ArVer >= 577)
 			Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
 #if TUROK

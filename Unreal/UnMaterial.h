@@ -1454,6 +1454,13 @@ struct FTexture2DMipMap
 	friend FArchive& operator<<(FArchive &Ar, FTexture2DMipMap &Mip)
 	{
 		Mip.Data.Serialize(Ar);
+#if DARKVOID
+		if (Ar.Game == GAME_DarkVoid)
+		{
+			FByteBulkData DataX360Gamma;
+			DataX360Gamma.Serialize(Ar);
+		}
+#endif // DARKVOID
 		return Ar << Mip.SizeX << Mip.SizeY;
 	}
 };
@@ -1504,6 +1511,9 @@ public:
 		PROP_DROP(SourceDataSizeX)
 		PROP_DROP(SourceDataSizeY)
 #endif // FRONTLINES
+#if MASSEFF
+		PROP_DROP(TFCFileGuid)
+#endif
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -1590,6 +1600,9 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_DROP(PreviewMesh)
 		PROP_DROP(LightingGuid)
+#if MASSEFF
+		PROP_DROP(m_Guid)
+#endif
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -1681,6 +1694,10 @@ public:
 #if TLR
 		PROP_DROP(VFXShaderType)
 #endif
+#if MASSEFF
+		PROP_DROP(bUsedWithLightEnvironments)
+		PROP_DROP(AllowsEffectsMaterials)
+#endif // MASSEFF
 	END_PROP_TABLE
 
 #if RENDERING

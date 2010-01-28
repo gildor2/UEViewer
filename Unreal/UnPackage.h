@@ -153,11 +153,11 @@ struct FPackageFileSummary
 			else
 				S.HeadersSize = 0;
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
-	#if A51 || WHEELMAN || MKVSDC || STRANGLE							//?? special define ?
+	#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT				//?? special define ?
 			int midwayVer = 0;
 			if (Ar.Engine() == GAME_MIDWAY3 && S.LicenseeVersion >= 2)	//?? Wheelman not checked
 			{
-				int Tag;							// Tag == "A52 ", "MK8 ", "WMAN", "WOO " (Stranglehold)
+				int Tag;							// Tag == "A52 ", "MK8 ", "WMAN", "WOO " (Stranglehold), "EPIC" or "TNA "
 				int unk10;
 				Ar << Tag << midwayVer;
 				if (Ar.Game == GAME_Strangle && midwayVer >= 256)
@@ -271,12 +271,12 @@ struct FPackageFileSummary
 				Ar << S.CookerVersion;
 	#if MASSEFF
 			// ... MassEffect has some additional structure here ...
-			if (Ar.Game == GAME_MassEffect)
+			if (Ar.Game == GAME_MassEffect || Ar.Game == GAME_MassEffect2)
 			{
 				int unk1, unk2, unk3[2], unk4[2];
 				if (Ar.ArLicenseeVer >= 16) Ar << unk1;					// random value
 				if (Ar.ArLicenseeVer >= 32) Ar << unk2;					// unknown
-				if (Ar.ArLicenseeVer >= 35)
+				if (Ar.ArLicenseeVer >= 35 && Ar.Game != GAME_MassEffect2) // MassEffect2 has upper version limit: 113
 				{
 					TArray<FStringArrayMap> unk5;
 					Ar << unk5;

@@ -78,7 +78,8 @@ void PixelShaderMain()
 
 #if TEXTURING
 	vec4 texColor = texture2D(tex, gl_TexCoord[0].st);
-	color *= texColor;
+	color.rgb *= texColor.rgb;
+	color.a   =  texColor.a;
 #endif // TEXTURING
 
 #ifdef SPECULAR
@@ -90,7 +91,7 @@ void PixelShaderMain()
 #endif
 	vec3 halfV      = normalize(halfVector);
 	float NdotHV    = max(dot(n, halfV), 0.0);
-	color += pow(NdotHV, gl_FrontMaterial.shininess) * specular;
+	color.rgb += pow(NdotHV, gl_FrontMaterial.shininess) * specular.rgb;
 #endif // SPECULAR
 
 #ifdef NORMALMAP
