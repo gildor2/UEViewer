@@ -60,7 +60,8 @@ GENMAKE:
 - key to toggle debug text and 3D lines (good for screenshots)
 
 ?? UC2:
-  - load animations
+  - external animations (from xpr)
+  - export animations without bone translation
 
 ?? TRIBES3:
   ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)

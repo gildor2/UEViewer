@@ -443,6 +443,7 @@ public:
 	,	DataSize(size)
 	{
 		IsLoading = true;
+		ArStopper = size;
 	}
 
 	virtual void Seek(int Pos)
@@ -1006,7 +1007,7 @@ inline void SkipLazyArray(FArchive &Ar)
 template<class T> class TRawArray : protected TArray<T>
 {
 public:
-	// Helper function to reduce TLazyArray<>::operator<<() code size.
+	// Helper function to reduce TRawArray<>::operator<<() code size.
 	// Used as C-style wrapper around TArray<>::operator<<().
 	static FArchive& SerializeArray(FArchive &Ar, void *Array)
 	{
@@ -1176,14 +1177,16 @@ struct FCompressedChunkHeader
 		H.BlockSize = 0x20000;
 		H.Blocks.Empty((H.UncompressedSize + 0x20000 - 1) / 0x20000);	// optimized for block size 0x20000
 		int CompSize = 0, UncompSize = 0;
-		while (CompSize < H.CompressedSize)
+		while (CompSize < H.CompressedSize && UncompSize < H.UncompressedSize)
 		{
 			FCompressedChunkBlock *Block = new (H.Blocks) FCompressedChunkBlock;
 			Ar << *Block;
 			CompSize   += Block->CompressedSize;
 			UncompSize += Block->UncompressedSize;
 		}
-		assert(CompSize == H.CompressedSize && UncompSize == H.UncompressedSize);
+		// check header; seen one package where sum(Block.CompressedSize) < H.CompressedSize,
+		// but UncompressedSize is exact
+		assert(/*CompSize == H.CompressedSize &&*/ UncompSize == H.UncompressedSize);
 		if (H.Blocks.Num() > 1)
 			H.BlockSize = H.Blocks[0].UncompressedSize;
 #endif

@@ -608,13 +608,13 @@ void UMeshAnimation::SerializeSCell(FArchive &Ar)
 void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 {
 	guard(UMeshAnimation::SerializeLineageMoves);
-	assert(Ar.IsLoading);
 	if (Ar.ArVer < 123 || Ar.ArLicenseeVer < 0x19)
 	{
 		// standard UE2 format
 		Ar << Moves;
 		return;
 	}
+	assert(Ar.IsLoading);
 	int pos, count;						// pos = global skip pos, count = data count
 	Ar << pos << AR_INDEX(count);
 	Moves.Empty(count);
@@ -633,30 +633,97 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 #endif // LINEAGE2
 
 
+#if UC2
+
+// special array type ...
+//!! document purpose of this class in UE2X
+template<class T> class TRawArrayUC2 : public TArray<T>
+{
+public:
+	void Serialize(FArchive &DataAr, FArchive &CountAr)
+	{
+		guard(TRawArrayUC2<<);
+
+		assert(DataAr.IsLoading && CountAr.IsLoading);
+		// serialize memory size from "CountAr"
+		int DataSize;
+		CountAr << DataSize;
+		assert(DataSize % sizeof(T) == 0);
+		// setup array
+		DataCount = DataSize / sizeof(T);
+		DataPtr   = (DataCount) ? appMalloc(sizeof(T) * DataCount) : NULL;
+		MaxCount  = DataCount;
+		// serialize items from "DataAr"
+		for (int i = 0; i < DataCount; i++)
+			DataAr << *((T*)DataPtr + i);
+
+		unguard;
+	}
+};
+
+// helper function for RAW_ARRAY macro
+template<class T> inline TRawArrayUC2<T>& ToRawArrayUC2(TArray<T> &Arr)
+{
+	return (TRawArrayUC2<T>&)Arr;
+}
+
+#define RAW_ARRAY_UC2(Arr)		ToRawArrayUC2(Arr)
+
+
+#endif // UC2
+
+
 #if UNREAL25
 
 //?? possibly, use FlexTrack directly in SkelMeshInstance - can derive AnalogTrack from FlexTrackBase
 //?? and implement GetBonePosition() as its virtual method ...
 struct FlexTrackBase
 {
+	virtual ~FlexTrackBase()
+	{}
 	virtual void Serialize(FArchive &Ar) = 0;
+#if UC2
+	virtual void Serialize2(FArchive &Ar, FArchive &Ar2)
+	{
+		appError("FlexTrack::Serialize2() is not implemented");
+	}
+#endif // UC2
 	virtual void Decompress(AnalogTrack &T) = 0;
 };
 
 struct FlexTrackStatic : public FlexTrackBase
 {
 	FQuatFloat96NoW		KeyQuat;
-	FVector				KeyPos;
+	TArray<FVector>		KeyPos;
 
 	virtual void Serialize(FArchive &Ar)
 	{
-		Ar << KeyQuat << KeyPos;
+		Ar << KeyQuat;
+#if UC2
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 130)
+			Ar << KeyPos;
+		else
+#endif // UC2
+		{
+			FVector pos;
+			Ar << pos;
+			KeyPos.AddItem(pos);
+		}
 	}
+#if UC2
+	virtual void Serialize2(FArchive &Ar, FArchive &Ar2)
+	{
+		int Count;
+		Ar2 << Count; assert(Count == 12);
+		Ar << KeyQuat;
+		RAW_ARRAY_UC2(KeyPos).Serialize(Ar, Ar2);
+	}
+#endif // UC2
 
 	virtual void Decompress(AnalogTrack &T)
 	{
 		T.KeyQuat.AddItem(KeyQuat);
-		T.KeyPos.AddItem(KeyPos);
+		CopyArray(T.KeyPos, KeyPos);
 	}
 };
 
@@ -670,6 +737,14 @@ struct FlexTrack48 : public FlexTrackBase
 	{
 		Ar << KeyQuat << KeyPos << KeyTime;
 	}
+#if UC2
+	virtual void Serialize2(FArchive &Ar, FArchive &Ar2)
+	{
+		RAW_ARRAY_UC2(KeyQuat).Serialize(Ar, Ar2);
+		RAW_ARRAY_UC2(KeyPos).Serialize(Ar, Ar2);
+		RAW_ARRAY_UC2(KeyTime).Serialize(Ar, Ar2);
+	}
+#endif // UC2
 
 	virtual void Decompress(AnalogTrack &T)
 	{
@@ -699,12 +774,151 @@ struct FlexTrack48RotOnly : public FlexTrackBase
 	}
 };
 
+#if UC2
 
-// serialize TArray<FlexTrack>
+// Animation without translation (translation is from bind pose)
+struct FlexTrack5 : public FlexTrackBase
+{
+	TArray<FQuatFixed48NoW>	KeyQuat;
+	TArray<short>		KeyTime;
+
+	virtual void Serialize(FArchive &Ar)
+	{}
+
+	virtual void Serialize2(FArchive &Ar, FArchive &Ar2)
+	{
+		RAW_ARRAY_UC2(KeyQuat).Serialize(Ar, Ar2);
+		RAW_ARRAY_UC2(KeyTime).Serialize(Ar, Ar2);
+	}
+
+	virtual void Decompress(AnalogTrack &T)
+	{
+		CopyArray(T.KeyQuat, KeyQuat);
+		CopyArray(T.KeyTime, KeyTime);
+	}
+};
+
+// static pose with packed quaternion
+struct FlexTrack6 : public FlexTrackBase
+{
+	FQuatFixed48NoW		KeyQuat;
+	FVector				KeyPos;
+
+	virtual void Serialize(FArchive &Ar)
+	{}
+
+	virtual void Serialize2(FArchive &Ar, FArchive &Ar2)
+	{
+		int Count;
+		Ar2 << Count; assert(Count == 6);
+		Ar << KeyQuat;
+		Ar2 << Count; assert(Count == 12);
+		Ar << KeyPos;
+	}
+
+	virtual void Decompress(AnalogTrack &T)
+	{
+		T.KeyQuat.AddItem(KeyQuat);
+		T.KeyPos.AddItem(KeyPos);
+	}
+};
+
+// static pose without translation
+struct FlexTrack7 : public FlexTrackBase
+{
+	FQuatFixed48NoW		KeyQuat;
+
+	virtual void Serialize(FArchive &Ar)
+	{}
+
+	virtual void Serialize2(FArchive &Ar, FArchive &Ar2)
+	{
+		int Count;
+		Ar2 << Count;
+		assert(Count == 6);
+		Ar << KeyQuat;
+	}
+
+	virtual void Decompress(AnalogTrack &T)
+	{
+		T.KeyQuat.AddItem(KeyQuat);
+	}
+};
+
+#endif // UC2
+
+
+FlexTrackBase *CreateFlexTrack(int TrackType)
+{
+	switch (TrackType)
+	{
+	case 0:
+		return NULL;		// no track for this bone (bone should be in a bind pose)
+
+	case 1:
+		return new FlexTrackStatic;
+
+//	case 2:
+//		// This type uses structure with TArray<FVector>, TArray<FQuatFloat96NoW> and TArray<short>.
+//		// It's Footprint() method returns 0, GetRotPos() does nothing, but serializer is working.
+//		appError("Unsupported FlexTrack type=2");
+
+	case 3:
+		return new FlexTrack48;
+
+	case 4:
+		return new FlexTrack48RotOnly;
+
+#if UC2
+	case 5:
+		return new FlexTrack5;
+
+	case 6:
+		return new FlexTrack6;
+
+	case 7:
+		return new FlexTrack7;
+#endif // UC2
+
+	default:
+		appError("Unknown FlexTrack type=%d", TrackType);
+	}
+	return NULL;
+}
+
+struct FlexTrackBasePtr
+{
+	FlexTrackBase* Track;
+
+	~FlexTrackBasePtr()
+	{
+		if (Track) delete Track;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FlexTrackBasePtr &T)
+	{
+		guard(SerializeFlexTrack);
+		int TrackType;
+		Ar << TrackType;
+#if UC2
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 130 && TrackType == 4) TrackType = 3;	// replaced type: FlexTrack48RotOnly -> FlexTrack48
+#endif
+		T.Track = CreateFlexTrack(TrackType);
+#if UC2
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 147) return Ar;
+#endif
+		if (T.Track) T.Track->Serialize(Ar);
+		return Ar;
+		unguard;
+	}
+};
+
+// serialize TArray<FlexTrackBasePtr>
 void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 {
 	guard(SerializeFlexTracks);
 
+#if 0
 	int numTracks;
 	Ar << AR_INDEX(numTracks);
 	if (!numTracks) return;
@@ -717,28 +931,7 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 	{
 		int trackType;
 		Ar << trackType;
-		FlexTrackBase *track = NULL;
-
-		switch (trackType)
-		{
-		case 1:
-			track = new FlexTrackStatic;
-			break;
-
-		case 2:
-			// This type uses structure with TArray<FVector>, TArray<FQuatFloat96NoW> and TArray<short>.
-			// It's Footprint() method returns 0, GetRotPos() does nothing, but serializer is working.
-			appError("Unsupported FlexTrack type=2");
-			break;
-
-		case 3:
-			track = new FlexTrack48;
-			break;
-
-		case 4:
-			track = new FlexTrack48RotOnly;
-			break;
-		}
+		FlexTrackBase *track = CreateFlexTrack(trackType);
 		if (track)
 		{
 			track->Serialize(Ar);
@@ -748,6 +941,16 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 		else
 			appError("no track!");	//?? possibly, mask tracks
 	}
+#else
+	//!! Test this code
+	TArray<FlexTrackBasePtr> FT;
+	Ar << FT;
+	int numTracks = FT.Num();
+	M.AnimTracks.Empty(numTracks);
+	M.AnimTracks.Add(numTracks);
+	for (int i = 0; i < numTracks; i++)
+		FT[i].Track->Decompress(M.AnimTracks[i]);
+#endif
 
 	unguard;
 }
@@ -781,6 +984,130 @@ void FixTribesMotionChunk(MotionChunk &M)
 }
 
 #endif // TRIBES3
+
+
+#if UC2
+
+struct MotionChunkUC2 : public MotionChunk
+{
+	TArray<FlexTrackBasePtr> FlexTracks;
+
+	friend FArchive& operator<<(FArchive &Ar, MotionChunkUC2 &M)
+	{
+		//?? note: can merge this structure into MotionChunk (will require FlexTrack declarations in h-file)
+		guard(MotionChunkUC2<<);
+		assert(Ar.ArVer >= 147);
+		// start is the same, but arrays are serialized in a different way
+		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags;
+		if (Ar.ArVer < 149) Ar << M.BoneIndices;
+		Ar << M.AnimTracks << M.RootTrack;
+		if (M.Flags >= 3)
+			Ar << M.FlexTracks;
+		assert(M.AnimTracks.Num() == 0 || M.FlexTracks.Num() == 0); // only one kind of tracks at a time
+		assert(M.Flags != 3);				// Version == 3 has TLazyArray<FlexTrack2>
+
+		return Ar;
+		unguard;
+	}
+};
+
+
+bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
+{
+	guard(UMeshAnimation::SerializeUE2XMoves);
+	if (Ar.ArVer < 147)
+	{
+		// standard UE2 format
+		Ar << Moves;
+		return true;
+	}
+	assert(Ar.IsLoading);
+
+	// read FByteBuffer
+	byte *BufferData = NULL;
+	int DataSize;
+	int DataFlag;
+	Ar << DataSize;
+	DataFlag = 0;
+	if (Ar.ArLicenseeVer == 1)
+		Ar << DataFlag;
+#if 0
+	assert(DataFlag == 0);
+#else
+	if (DataFlag != 0)
+	{
+		appNotify("External animations in %s", Name);	//!! animation is stored in XPR file!
+		return false;
+	}
+#endif
+	if (!DataFlag && DataSize)
+	{
+		BufferData = (byte*)appMalloc(DataSize);
+		Ar.Serialize(BufferData, DataSize);
+	}
+//	printf("--- DATA: %d (REST=%d) F=%d\n", DataSize, Ar.GetStopper() - Ar.Tell(), DataFlag);//!!!
+	TArray<MotionChunkUC2> Moves2;
+	Ar << Moves2;
+
+	FMemReader Reader(BufferData, DataSize);
+
+	// serialize Moves2 and copy Moves2 to Moves
+	int numMoves = Moves2.Num();
+	Moves.Empty(numMoves);
+	Moves.Add(numMoves);
+	for (int mi = 0; mi < numMoves; mi++)
+	{
+		MotionChunkUC2 &M = Moves2[mi];
+		MotionChunk &DM = Moves[mi];
+
+		// serialize AnimTracks
+		int numATracks = M.AnimTracks.Num();
+		if (numATracks)
+		{
+			DM.AnimTracks.Add(numATracks);
+			for (int ti = 0; ti < numATracks; ti++)
+			{
+				AnalogTrack &A = DM.AnimTracks[ti];
+				RAW_ARRAY_UC2(A.KeyQuat).Serialize(Reader, Ar);
+				RAW_ARRAY_UC2(A.KeyPos).Serialize(Reader, Ar);
+				RAW_ARRAY_UC2(A.KeyTime).Serialize(Reader, Ar);
+			}
+		}
+		// "serialize" RootTrack
+		int i1, i2, i3;
+		Ar << i1 << i2 << i3;				// KeyQuat, KeyPos and KeyTime
+		assert(i1 == 0 && i2 == 0 && i3 == 0);
+		// serialize FlexTracks
+		int numFTracks = M.FlexTracks.Num();
+		if (numFTracks)
+		{
+			DM.BoneIndices.Add(numFTracks);
+			DM.AnimTracks.Add(numFTracks);
+			for (int ti = 0; ti < numFTracks; ti++)
+			{
+				FlexTrackBase *Track = M.FlexTracks[ti].Track;
+				if (Track)
+				{
+//printf("%d/%d\n", ti, numTracks);//!!
+					Track->Serialize2(Reader, Ar);
+					Track->Decompress(DM.AnimTracks[ti]);
+				}
+				DM.BoneIndices[ti] = Track ? ti : INDEX_NONE;
+			}
+		}
+	}
+	assert(Reader.GetStopper() == Reader.Tell());
+//	printf("--- DONE (%d unread) ---\n", Reader.GetStopper() - Reader.Tell());//!!!
+
+	// cleanup
+	if (BufferData) appFree(BufferData);
+
+	return true;
+
+	unguard;
+}
+
+#endif // UC2
 
 
 #if UNREAL1

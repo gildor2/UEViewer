@@ -210,7 +210,9 @@ public:
 			BufferSize = Block->UncompressedSize;
 		}
 		// decompress data
+		guard(DecompressBlock);
 		appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
+		unguardf(("block=%X+%X", ChunkData, Block->CompressedSize));
 		// setup BufferStart/BufferEnd
 		BufferStart = ChunkPosition;
 		BufferEnd   = ChunkPosition + Block->UncompressedSize;

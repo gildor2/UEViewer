@@ -1351,6 +1351,10 @@ struct FStaticMeshSection3
 		if (Ar.Game == GAME_MassEffect && Ar.ArVer >= 485)
 			return Ar << S.Index;				//?? other name?
 #endif // MASSEFF
+#if HUXLEY
+		if (Ar.Game == GAME_Huxley && Ar.ArVer >= 485)
+			return Ar << S.Index;				//?? other name?
+#endif // HUXLEY
 		if (Ar.ArVer >= 492) Ar << S.Index;		//?? real version is unknown! No field in GOW1_PC (490), has in UT3 (512)
 		if (Ar.ArVer >= 514) Ar << S.f30;
 		if (Ar.ArVer >= 618)
@@ -1530,6 +1534,16 @@ struct FStaticMeshLODModel
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshLODModel &Lod)
 	{
 		guard(FStaticMeshLODModel<<);
+
+#if HUXLEY
+		if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 14)
+		{
+			// Huxley has different IndirectArray layout: each item
+			// has stored data size before data itself
+			int DataSize;
+			Ar << DataSize;
+		}
+#endif // HUXLEY
 
 		Lod.BulkData.Skip(Ar);
 #if TLR

@@ -149,6 +149,7 @@ int main(int argc, char **argv)
 		appSprintf(dst, ARRAY_COUNT(buf2) - (dst - buf2), "%s.%s", *Exp.ObjectName, ClassName);
 		appMakeDirectoryForFile(buf2);
 #endif
+		guard(WriteFile);
 		FILE *f2 = fopen(buf2, "wb");
 		if (!f2)
 		{
@@ -165,6 +166,7 @@ int main(int argc, char **argv)
 		// cleanup
 		delete data;
 		fclose(f2);
+		unguardf(("file=%s", buf2));
 		// notification
 		printf("Done: %d/%d ...\r", idx, Package->Summary.ExportCount);
 	}

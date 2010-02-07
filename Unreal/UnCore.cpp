@@ -955,7 +955,7 @@ void FArchive::DetectGame()
 		SET(GAME_Tribes3);
 #endif
 #if BIOSHOCK
-	if (ArVer == 141 && ArLicenseeVer == 56)
+	if (ArVer == 141 && (ArLicenseeVer == 56 || ArLicenseeVer == 57)) //?? Bioshock and Bioshock 2
 		SET(GAME_Bioshock);
 #endif
 #if UC2

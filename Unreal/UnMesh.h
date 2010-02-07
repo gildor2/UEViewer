@@ -218,6 +218,10 @@ struct FMeshAnimNotify
 	friend FArchive& operator<<(FArchive &Ar, FMeshAnimNotify &N)
 	{
 		guard(FMeshAnimNotify<<);
+#if UC2
+		if (Ar.Engine() == GAME_UE2X && Ar.ArLicenseeVer == 1)
+			return Ar << N.Time << N.NotifyObj;
+#endif
 		Ar << N.Time << N.Function;
 #if SPLINTER_CELL
 		if (Ar.Game == GAME_SplinterCell)
@@ -662,6 +666,8 @@ public:
 	UMeshAnimation class
 -----------------------------------------------------------------------------*/
 
+// Additions: KeyPos array may be empty - in that case bone will be rotated only, no translation will be performed
+
 struct AnalogTrack
 {
 	unsigned		Flags;					// reserved
@@ -687,6 +693,13 @@ struct AnalogTrack
 			return Ar;
 		}
 #endif // SPLINTER_CELL
+#if UC2
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 147)
+		{
+			Ar << A.Flags; // other data serialized in a different way
+			return Ar;
+		}
+#endif // UC2
 		return Ar << A.Flags << A.KeyQuat << A.KeyPos << A.KeyTime;
 		unguard;
 	}
@@ -768,7 +781,7 @@ struct FNamedBone
  * Possible versions:
  *	0			UT2003, UT2004
  *	1			Lineage2
- *	4			UE2Runtime, Harry Potter and the Prisoner of Azkaban
+ *	4			UE2Runtime, UC2, Harry Potter and the Prisoner of Azkaban
  *	6			Tribes3, Bioshock
  *	1000		SplinterCell
  *	2000		SplinterCell2
@@ -794,6 +807,9 @@ public:
 	// serialize TRoughArray<MotionChunk> into TArray<MotionChunk>
 	void SerializeLineageMoves(FArchive &Ar);
 #endif
+#if UC2
+	bool SerializeUE2XMoves(FArchive &Ar);
+#endif
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -801,16 +817,26 @@ public:
 		Super::Serialize(Ar);
 		if (Ar.Game >= GAME_UE2)
 			Ar << Version;					// no such field in UE1
-#if LINEAGE2
 		Ar << RefBones;
-		if (Ar.Game != GAME_Lineage2)
-			Ar << Moves;
-		else
+#if LINEAGE2
+		if (Ar.Game == GAME_Lineage2)
 			SerializeLineageMoves(Ar);
-		Ar << AnimSeqs;
-#else
-		Ar << RefBones << Moves << AnimSeqs;
+		else
 #endif // LINEAGE2
+#if UC2
+		if (Ar.Engine() == GAME_UE2X)
+		{
+			if (!SerializeUE2XMoves(Ar))
+			{
+				// avoid crash
+				Ar.Seek(Ar.GetStopper());
+				return;
+			}
+		}
+		else
+#endif // UC2
+			Ar << Moves;
+		Ar << AnimSeqs;
 #if SPLINTER_CELL
 		if (Ar.Game == GAME_SplinterCell)
 			SerializeSCell(Ar);

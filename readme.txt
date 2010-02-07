@@ -19,10 +19,12 @@ Modified Unreal Engine 2:
 Unreal Engine 2.5:
   UE2Runtime
   Harry Potter and the Prisoner of Azkaban
-Modified Unreal Engine 2.5
+Modified Unreal Engine 2.5:
   Tribes: Vengeance
   Bioshock
   Exteel
+Unreal Engine 2X:
+  Unreal Championship 2: The Liandri Conflict
 Unreal Engine 3:
   Unreal Tournament 3
   Gears of War
@@ -58,7 +60,6 @@ List of games with limited support:
 Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
-  Unreal Championship 2: The Liandri Conflict (UE2X)
   BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
   Army of Two
@@ -152,6 +153,12 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+07.02.2010
+- implemented support for Unreal Championship 2 animations
+
+29.01.2010
+- implemented Huxley StaticMesh support
+
 24.01.2010
 - implemented TNA iMPACT! package support
 
@@ -456,7 +463,7 @@ Changes:
 - fixed bug in UE3 package decompression code
 
 23.01.2009
-- implemented loading of texture mips from xpr files (for Unreal Championship)
+- implemented loading of texture mips from xpr files (for Unreal Championship 2)
 
 18.01.2009
 - implemented support for Unreal Championship 2 skeletal models

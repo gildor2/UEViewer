@@ -66,7 +66,7 @@ CheckDir UT2 {c,e}:/games/unreal~1/ut2004 c:/games/unreal/ut2004
 CheckDir UT3 {c,e}:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
-CheckDir UC2 "C:/!umodel-data/UnrealChampionship2"
+CheckDir UC2 "C:/!umodel-data/UnrealChampionship2" data/UnrealChampionship2
 CheckDir L2 "C:/!umodel-data/Lineage2"
 CheckDir BIO {c,e}:/GAMES/BioShock
 CheckDir MASS "C:/GAMES/Mass Effect/BioGame/CookedPC"
@@ -101,7 +101,7 @@ fi
 # no arguments
 
 # select path here
-case "" in
+case "uc2" in
 
 "")
 	# Materials
@@ -120,7 +120,7 @@ case "" in
 	# bug: MatInstConst -> MatInstConst -> Mat => loose transparency
 #	rund BIOG_HMF_HED_PROMorph_R.upk HMF_HED_PROLash_Mat_1a
 #	rund BIOG_HMF_HED_PROMorph_R.upk #HMF_HED_PROCustom_Military_Norm
-	run1 data/MassEffect2 -meshes BioP_Char.pcc
+#	run1 data/MassEffect2 -meshes BioP_Char.pcc
 
 	# Bioshosk
 #	bio 0-Lighthouse.bsm MetalVents_NormalMap
@@ -231,7 +231,8 @@ case "" in
 #	Unreal Championship
 #------------------------------------------------------------------------------
 "uc2")
-	uc2 -noanim T_CharacterSkins
+#	uc2 -noanim T_CharacterSkins
+	uc2 K_Male.ukx
 	;;
 
 #------------------------------------------------------------------------------
