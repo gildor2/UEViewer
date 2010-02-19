@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 				", Tribes: Vengeance"
 #	endif
 #	if BIOSHOCK
-				", Bioshock"
+				", Bioshock, Bioshock 2"
 #	endif
 #	if RAGNAROK2
 				", Ragnarok Online 2"

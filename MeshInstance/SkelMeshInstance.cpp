@@ -1488,6 +1488,7 @@ void CSkelMeshInstance::TransformMesh()
 		{
 			int iBone = W.Bone[j];
 			if (iBone < 0) break;
+			assert(iBone < static_cast<const USkeletalMesh*>(pMesh)->RefSkeleton.Num());	// validate bone index
 			float Weight = W.Weight[j];
 
 			const CMeshBoneData &data = BoneData[iBone];

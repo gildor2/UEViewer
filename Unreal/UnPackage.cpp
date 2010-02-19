@@ -172,7 +172,9 @@ public:
 				ChunkHeader.Blocks.Empty(1);
 				FCompressedChunkBlock *Block = new (ChunkHeader.Blocks) FCompressedChunkBlock;
 				Block->UncompressedSize = 32768;
-				Block->CompressedSize   = CompressedSize;
+				if (ArLicenseeVer >= 57)		//?? Bioshock 2; no version code found
+					*Reader << Block->UncompressedSize;
+				Block->CompressedSize = CompressedSize;
 			}
 			else
 #endif // BIOSHOCK
@@ -361,7 +363,9 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		}
 		// replace Loader for reading compressed Bioshock archives
 		Loader = new FUE3ArchiveReader(Loader, COMPRESS_ZLIB, Chunks);
-		Loader->Game = Game;
+		Loader->Game          = Game;
+		Loader->ArVer         = ArVer;
+		Loader->ArLicenseeVer = ArLicenseeVer;
 	}
 #endif // BIOSHOCK
 

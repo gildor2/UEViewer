@@ -639,6 +639,13 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 //!! document purpose of this class in UE2X
 template<class T> class TRawArrayUC2 : public TArray<T>
 {
+	// We require "using TArray<T>::*" for gcc 3.4+ compilation
+	// http://gcc.gnu.org/gcc-3.4/changes.html
+	// - look for "unqualified names"
+	// - "temp.dep/3" section of the C++ standard [ISO/IEC 14882:2003]
+	using TArray<T>::DataPtr;
+	using TArray<T>::DataCount;
+	using TArray<T>::MaxCount;
 public:
 	void Serialize(FArchive &DataAr, FArchive &CountAr)
 	{

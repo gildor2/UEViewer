@@ -443,7 +443,7 @@ struct BioBulkCatalogFile
 
 struct BioBulkCatalog
 {
-	byte				Endian;
+	byte				Endian;	//?? or Platform: 0=PC, 1=XBox360, 2=PS3?
 	int64				f4;
 	int					fC;
 	TArray<BioBulkCatalogFile> Files;

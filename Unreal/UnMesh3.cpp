@@ -751,7 +751,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 }
 
 
-static float half2float(word h)
+float half2float(word h)
 {
 	union
 	{

@@ -21,7 +21,7 @@ Unreal Engine 2.5:
   Harry Potter and the Prisoner of Azkaban
 Modified Unreal Engine 2.5:
   Tribes: Vengeance
-  Bioshock
+  Bioshock, Bioshock 2
   Exteel
 Unreal Engine 2X:
   Unreal Championship 2: The Liandri Conflict
@@ -66,7 +66,7 @@ Using "-noanim" option (unsupported animation format):
   Stranglehold
   Borderlands
 Unsupported animations (without umodel crash):
-  Bioshock (uses Havok animation system)
+  Bioshock, Bioshock 2 (uses Havok animation system)
   Rise of the Argonauts
 
 
@@ -153,6 +153,15 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+18.02.2010
+- implemented Bioshock 2 SkeletalMesh and StaticMesh support
+
+15.02.2010
+- implemented Bioshock 2 package support
+
+08.02.2010
+- added Mass Effect (1) for XBox 360 support (updated autodetection code)
+
 07.02.2010
 - implemented support for Unreal Championship 2 animations
 

@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 #include "UnHavok.h"
+#include "UnMeshTypes.h"		// half2float()
 
 
 #if BIOSHOCK
@@ -28,6 +29,14 @@ struct hkSkeleton
 	hkInt32					m_numReferencePose;
 };
 
+struct hkaSkeleton5 : hkSkeleton		// hkaSkeleton
+{
+	char					**m_floatSlots;
+	hkInt32					m_numFloatSlots;
+	struct hkaSkeletonLocalFrameOnBone* m_localFrames;
+	hkInt32					m_numLocalFrames;
+};
+
 // classes without implementation
 class hkRagdollInstance;
 class hkSkeletonMapper;
@@ -41,6 +50,20 @@ struct ap4AnimationPackageRoot
 	hkSkeletonMapper		*m_lowToHighBoneSkeletonMapper;
 	ap4AnimationPackageAnimation *m_animations;
 	hkInt32					m_numAnimations;
+};
+
+class hkaRagdollInstance;
+class hkaSkeletonMapper;
+class ap5AnimationPackageGroup;
+
+struct ap5AnimationPackageRoot
+{
+	hkaSkeleton5			*m_highBoneSkeleton;
+	hkaRagdollInstance		*m_masterRagdollInstance;
+	hkaSkeletonMapper		*m_highToLowBoneSkeletonMapper;
+	hkaSkeletonMapper		*m_lowToHighBoneSkeletonMapper;
+	ap5AnimationPackageGroup *m_animationGroups;
+	hkInt32					m_numM_animationGroups;
 };
 
 
@@ -117,16 +140,43 @@ struct FSmoothVertex3
 
 	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
 	{
-		int i;
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
-		for (i = 0; i < 4; i++)
+		for (int i = 0; i < 4; i++)
 			Ar << V.BoneIndex[i] << V.BoneWeight[i];
 		return Ar;
 	}
 };
 #endif
+
+// Bioshock 2 replacement of FSmoothVertex and FRigidVertex
+struct FSkelVertexBio2
+{
+	FVector				Pos;
+	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	short				U, V;			// half
+	int					Pad;
+
+	friend FArchive& operator<<(FArchive &Ar, FSkelVertexBio2 &V)
+	{
+		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V << V.Pad;
+		return Ar;
+	}
+};
+
+struct FSkelInfluenceBio2
+{
+	byte				BoneIndex[4];
+	byte				BoneWeight[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FSkelInfluenceBio2 &V)
+	{
+		for (int i = 0; i < 4; i++)
+			Ar << V.BoneIndex[i] << V.BoneWeight[i];
+		return Ar;
+	}
+};
 
 struct FBioshockUnk1
 {
@@ -232,6 +282,34 @@ struct FBioshockUnk5
 	}
 };
 
+struct FBioshockUnk7					// Bioshock 2
+{
+	int					Version;		// 2
+	int					Size;
+	int					Flags;
+
+	friend FArchive& operator<<(FArchive &Ar, FBioshockUnk7 &S)
+	{
+		assert(Ar.IsLoading);
+		Ar << S.Version << S.Size << S.Flags;
+#if 0
+		byte *Buffer = new byte[S.Size];
+		Ar.Serialize(Buffer, S.Size);
+		char Name[256];
+		static int N = 0;
+		appSprintf(ARRAY_ARG(Name), "data_%d.bin", N++);
+		FILE *f = fopen(Name, "wb");
+		assert(f);
+		fwrite(Buffer, S.Size, 1, f);
+		fclose(f);
+		delete Buffer;
+#else
+		Ar.Seek(Ar.Tell() + S.Size);
+#endif
+		return Ar;
+	}
+};
+
 struct FMeshNormalBio
 {
 	FVector				Normal[3];
@@ -269,7 +347,41 @@ struct FStaticLODModelBio
 		guard(FStaticLODModelBio<<);
 		TRIBES_HDR(Ar, 0);
 		Ar << Lod.Sections << Lod.Bones << Lod.IndexBuffer;
-		Ar << Lod.SmoothVerts << Lod.RigidVerts;
+		if (t3_hdrSV < 4)
+		{
+			// Bioshock 1
+			Ar << Lod.SmoothVerts << Lod.RigidVerts;
+		}
+		else
+		{
+			// Bioshock 2
+			int NumRigidVerts;
+			TArray<FSkelVertexBio2> Verts;
+			TArray<FSkelInfluenceBio2> Infs;
+			// serialize
+			Ar << NumRigidVerts << Verts << Infs;
+			// convert to old version
+			int NumVerts = Verts.Num();
+			Lod.SmoothVerts.Empty(NumVerts);
+			Lod.SmoothVerts.Add(NumVerts);
+			for (int i = 0; i < NumVerts; i++)
+			{
+				const FSkelVertexBio2 &V1    = Verts[i];
+				const FSkelInfluenceBio2 &V2 = Infs[i];
+				FSmoothVertexBio &V = Lod.SmoothVerts[i];
+				V.Pos = V1.Pos;
+				V.Normal[0] = V1.Normal[0];
+				V.Normal[1] = V1.Normal[1];
+				V.Normal[2] = V1.Normal[2];
+				V.U = half2float(V1.U);
+				V.V = half2float(V1.V);
+				for (int j = 0; j < 4; j++)
+				{
+					V.BoneIndex[j]  = V2.BoneIndex[j];
+					V.BoneWeight[j] = V2.BoneWeight[j];
+				}
+			}
+		}
 		Ar << Lod.f64 << Lod.f68 << Lod.f6C << Lod.f70 << Lod.f74 << Lod.f78;
 		if (t3_hdrSV >= 1)
 			Ar << Lod.f7C;						// default = -1.0f
@@ -460,12 +572,13 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 	TArray<FBioshockUnk5>	f11C;			// count = num bones or 0
 	TArray<UObject*>		f128;			// TArray<UModel*>, count = num bones or 0
 	TArray<FVector>			f134;			// count = num bones or 0
+	TArray<FName>			f14C;
 	UObject					*HkMeshProxy;	// UHkMeshProxy* - Havok data
 	TArray<FName>			drop1;
 
 	Ar << Textures << MeshScale << MeshOrigin << RotOrigin;
 	Ar << unk90 << unk94 << unk98 << unk9C;
-	Ar << RefSkeleton << SkeletalDepth << Animation << AttachAliases << AttachBoneNames << AttachCoords;
+	Ar << RefSkeleton << Animation << SkeletalDepth << AttachAliases << AttachBoneNames << AttachCoords;
 	Ar << bioLODModels;
 	Ar << fCC;
 	Ar << Points << Wedges << Triangles << VertInfluences;
@@ -475,11 +588,34 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 	SkipLazyArray(Ar);	// FMeshFace	f254
 	SkipLazyArray(Ar);	// FMeshWedge	f234
 	SkipLazyArray(Ar);	// short		f274
+
+	if (t3_hdrSV >= 6 && Ar.ArLicenseeVer != 57) // not Bioshock 2 MP
+	{
+		// Bioshock 2
+		FBioshockUnk7 f2A4;
+		TArray<int> f2B0;
+		Ar << f2A4 << f2B0;
+	}
+
 	Ar << f68 << f104 << f110 << f128 << f11C;
 	Ar << HkMeshProxy;
+
+	if (Ar.ArLicenseeVer == 57) // Bioshock 2 MP
+	{
+		byte unk2;
+		Ar << unk2;
+		assert(unk2 == 0);
+	}
 	if (t3_hdrSV <= 5) Ar << drop1;
 	if (t3_hdrSV >= 4) Ar << havokObjects;
 	if (t3_hdrSV >= 5) Ar << f134;
+	// Bioshock 2
+	if (t3_hdrSV >= 7) Ar << f14C;
+	if (Ar.ArLicenseeVer == 57)	// Bioshock 2 MP; not verified code!
+	{
+		TArray<float> unk;
+		Ar << unk;
+	}
 
 	// convert LODs
 	int i;
@@ -541,25 +677,52 @@ void USkeletalMesh::PostLoadBioshockMesh()
 	}
 	assert(AW);
 
-	ap4AnimationPackageRoot *Object;
+	void *pObject;
 	const char *ClassName;
-	GetHavokPackfileContents(&AW->HavokData[0], (void**)&Object, &ClassName);
-	assert(!strcmp(ClassName, "ap4AnimationPackageRoot"));
-
-	// convert skeleton
-	const hkSkeleton *Skel = Object->m_highBoneSkeleton;
-//	assert(RefSkeleton.Num() == 0);
-	RefSkeleton.Add(Skel->m_numBones);
-	for (i = 0; i < Skel->m_numBones; i++)
+	GetHavokPackfileContents(&AW->HavokData[0], &pObject, &ClassName);
+	if (!strcmp(ClassName, "ap4AnimationPackageRoot"))
 	{
-		FMeshBone &B = RefSkeleton[i];
-		B.Name.Str    = Skel->m_bones[i]->m_name;				//?? hack: FName assignment
-		B.ParentIndex = max(Skel->m_parentIndices[i], 0);
-		const hkQsTransform &t = Skel->m_referencePose[i];
-		B.BonePos.Orientation = (FQuat&)   t.m_rotation;
-		B.BonePos.Position    = (FVector&) t.m_translation;
-		B.BonePos.Orientation.W *= -1;
-//		if (!i) ((CQuat&)B.BonePos.Orientation).Conjugate();	//??
+		// Bioshock 1
+		ap4AnimationPackageRoot *Object = (ap4AnimationPackageRoot*)pObject;
+		// convert skeleton
+		const hkSkeleton *Skel = Object->m_highBoneSkeleton;
+//		assert(RefSkeleton.Num() == 0);
+		RefSkeleton.Add(Skel->m_numBones);
+		for (i = 0; i < Skel->m_numBones; i++)
+		{
+			FMeshBone &B = RefSkeleton[i];
+			B.Name.Str    = Skel->m_bones[i]->m_name;				//?? hack: FName assignment
+			B.ParentIndex = max(Skel->m_parentIndices[i], 0);
+			const hkQsTransform &t = Skel->m_referencePose[i];
+			B.BonePos.Orientation = (FQuat&)   t.m_rotation;
+			B.BonePos.Position    = (FVector&) t.m_translation;
+			B.BonePos.Orientation.W *= -1;
+//			if (!i) ((CQuat&)B.BonePos.Orientation).Conjugate();	-- not needed for Bioshock 1
+		}
+	}
+	else if (!strcmp(ClassName, "ap5AnimationPackageRoot"))
+	{
+		// Bioshock 2
+		ap5AnimationPackageRoot *Object = (ap5AnimationPackageRoot*)pObject;
+		// convert skeleton
+		const hkaSkeleton5 *Skel = Object->m_highBoneSkeleton;
+//		assert(RefSkeleton.Num() == 0);
+		RefSkeleton.Add(Skel->m_numBones);
+		for (i = 0; i < Skel->m_numBones; i++)
+		{
+			FMeshBone &B = RefSkeleton[i];
+			B.Name.Str    = Skel->m_bones[i]->m_name;				//?? hack: FName assignment
+			B.ParentIndex = max(Skel->m_parentIndices[i], 0);
+			const hkQsTransform &t = Skel->m_referencePose[i];
+			B.BonePos.Orientation = (FQuat&)   t.m_rotation;
+			B.BonePos.Position    = (FVector&) t.m_translation;
+			B.BonePos.Orientation.W *= -1;
+			if (!i) ((CQuat&)B.BonePos.Orientation).Conjugate();	// needed for Bioshock 2
+		}
+	}
+	else
+	{
+		appError("Unknown Havok class: %s", ClassName);
 	}
 
 	unguard;

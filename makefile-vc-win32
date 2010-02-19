@@ -290,14 +290,28 @@ DEPENDS = \
 	Unreal/UnHavok.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+./obj/umodel-win32/UnMeshBioshock.obj : Unreal/UnMeshBioshock.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMeshBioshock.obj" Unreal/UnMeshBioshock.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnHavok.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
 ./obj/umodel-win32/UnHavok.obj : Unreal/UnHavok.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnHavok.obj" Unreal/UnHavok.cpp
-
-./obj/umodel-win32/UnMeshBioshock.obj : Unreal/UnMeshBioshock.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMeshBioshock.obj" Unreal/UnMeshBioshock.cpp
 
 DEPENDS = \
 	Build.h \

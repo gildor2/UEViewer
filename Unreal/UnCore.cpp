@@ -955,7 +955,8 @@ void FArchive::DetectGame()
 		SET(GAME_Tribes3);
 #endif
 #if BIOSHOCK
-	if (ArVer == 141 && (ArLicenseeVer == 56 || ArLicenseeVer == 57)) //?? Bioshock and Bioshock 2
+	if ( (ArVer == 141 && (ArLicenseeVer == 56 || ArLicenseeVer == 57)) || //?? Bioshock and Bioshock 2
+		 (ArVer == 143 && ArLicenseeVer == 59) )					// Bioshock 2 multiplayer?
 		SET(GAME_Bioshock);
 #endif
 #if UC2
@@ -992,10 +993,6 @@ void FArchive::DetectGame()
 #if AVA
 	if (ArVer == 451 && (ArLicenseeVer >= 52 || ArLicenseeVer <= 53)) SET(GAME_AVA);
 #endif
-#if MASSEFF
-	if (ArVer == 491 && ArLicenseeVer == 0x3F0)	SET(GAME_MassEffect);
-	if (ArVer == 512 && ArLicenseeVer == 130)	SET(GAME_MassEffect2);
-#endif
 #if TLR
 	if (ArVer == 507 && ArLicenseeVer == 11)	SET(GAME_TLR);
 #endif
@@ -1028,6 +1025,12 @@ void FArchive::DetectGame()
 		 (ArVer == 392 && ArLicenseeVer == 23) ||
 		 (ArVer == 393 && (ArLicenseeVer >= 27 && ArLicenseeVer <= 61)) )
 		SET(GAME_Turok);
+#endif
+#if MASSEFF
+	if ((ArVer == 391 && ArLicenseeVer == 92) ||		// XBox 360 version
+		(ArVer == 491 && ArLicenseeVer == 0x3F0))		// PC version
+		SET(GAME_MassEffect);
+	if (ArVer == 512 && ArLicenseeVer == 130)	SET(GAME_MassEffect2);
 #endif
 #if HUXLEY
 	if ( (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag

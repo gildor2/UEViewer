@@ -127,13 +127,13 @@ template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*
 	qsort(array, count, sizeof(T), (int (*)(const void*, const void*)) cmpFunc);
 }
 
-void appError(char *fmt, ...);
+void appError(const char *fmt, ...);
 void* appMalloc(int size);
 void appFree(void *ptr);
 
 // log some interesting information
 void appSetNotifyHeader(const char *fmt, ...);
-void appNotify(char *fmt, ...);
+void appNotify(const char *fmt, ...);
 
 const char *va(const char *format, ...);
 int appSprintf(char *dest, int size, const char *fmt, ...);

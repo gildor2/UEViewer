@@ -4,7 +4,7 @@ PLATFORM="vc-win32"
 
 # force PLATFORM=linux under Linux OS
 #?? check this, when cross-compile under wine
-[ "$OSTYPE" == "linux-gnu" ] && PLATFORM="linux"
+[ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
 
 #export vc_ver=9
 

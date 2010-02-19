@@ -6,6 +6,9 @@
 
 //#define DUMP_TYPEINFO	1
 
+// Dump-only structures
+//#define NEW_HAVOK		1	-- can make as "#if" in UnHavok.h instead of using OffsetPointer()
+
 
 #if DUMP_TYPEINFO
 
@@ -21,9 +24,9 @@ static void DumpClass(const hkClass *Class)
 	if (Class->m_parent) printf(" : %s", Class->m_parent->m_name);
 	printf("\n{\n");
 	// enums
+	const hkClassEnum *Enum = Class->m_declaredEnums;
 	for (i = 0; i < Class->m_numDeclaredEnums; i++)
 	{
-		const hkClassEnum *Enum = Class->m_declaredEnums + i;
 		printf("\tenum %s\n\t{\n", Enum->m_name);
 		for (int j = 0; j < Enum->m_numItems; j++)
 		{
@@ -31,8 +34,13 @@ static void DumpClass(const hkClass *Class)
 			printf("\t\t%s = %d,\n", Item->m_name, Item->m_value);
 		}
 		printf("\t};\n\n");
+		Enum++;
+#if NEW_HAVOK
+		Enum = OffsetPointer(Enum, 8);
+#endif
 	}
 	// contents
+	const hkClassMember *Mem = Class->m_declaredMembers;
 	for (i = 0; i < Class->m_numDeclaredMembers; i++)
 	{
 		static const char *TypeTable[] = {
@@ -45,7 +53,6 @@ static void DumpClass(const hkClass *Class)
 			"hkUlong", "hkFlags"
 		};
 		assert(ARRAY_COUNT(TypeTable) == hkClassMember::TYPE_MAX);
-		const hkClassMember *Mem = Class->m_declaredMembers + i;
 
 		// dump internal information
 		printf("\t// offset=%d type=%s", Mem->m_offset, TypeTable[Mem->m_type.m_storage]);
@@ -97,6 +104,11 @@ static void DumpClass(const hkClass *Class)
 			// create m_numVariableName field with uppercased 1st char
 			printf("\thkInt32 m_num%c%s;\n", toupper(Mem->m_name[0]), Mem->m_name+1);
 		}
+
+		Mem++;
+#if NEW_HAVOK
+		Mem = OffsetPointer(Mem, 4);
+#endif
 	}
 	// footer
 	printf("};\n\n");

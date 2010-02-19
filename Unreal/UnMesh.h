@@ -31,6 +31,9 @@ UE3 CLASS TREE:
 
 -----------------------------------------------------------------------------*/
 
+//?? declare separately? place to UnCore?
+float half2float(word h);
+
 
 /*-----------------------------------------------------------------------------
 	UPrimitive class
@@ -1180,11 +1183,11 @@ struct FRag2Unk1
 
 #if UC2
 
-struct FUC2Vector1
+struct FUC2Vector
 {
 	short			X, Y, Z;
 
-	friend FArchive& operator<<(FArchive &Ar, FUC2Vector1 &V)
+	friend FArchive& operator<<(FArchive &Ar, FUC2Vector &V)
 	{
 		if (Ar.ArLicenseeVer == 1)
 			return Ar << V.X << V.Y << V.Z;
@@ -1194,13 +1197,13 @@ struct FUC2Vector1
 	}
 };
 
-struct FUC2Vector2
+struct FUC2Normal
 {
 	int				X:11;
 	int				Y:10;
 	int				Z:11;
 
-	friend FArchive& operator<<(FArchive &Ar, FUC2Vector2 &V)
+	friend FArchive& operator<<(FArchive &Ar, FUC2Normal &V)
 	{
 		if (Ar.ArLicenseeVer == 1)
 			return Ar << GET_DWORD(V);
@@ -1227,13 +1230,13 @@ struct FUC2Int
 
 struct FUC2Unk3
 {
-	FUC2Vector1		f0;
-	FUC2Vector2		f6;
+	FUC2Vector		Pos;
+	FUC2Normal		Normal;
 	FUC2Int			fA, fC;
 
 	friend FArchive& operator<<(FArchive &Ar, FUC2Unk3 &S)
 	{
-		Ar << S.f0 << S.f6 << S.fA << S.fC;
+		Ar << S.Pos << S.Normal << S.fA << S.fC;
 		if (Ar.ArLicenseeVer == 1)
 		{
 			byte b[8];
@@ -1383,8 +1386,8 @@ struct FStaticLODModel
 		{
 			if (Ar.ArVer >= 136)
 			{
-				FVector f17C, f188, f194;
-				Ar << f17C << f188 << f194;
+				FVector f17C, VectorScale, VectorBase;
+				Ar << f17C << VectorScale << VectorBase;
 			}
 			if (Ar.ArVer >= 127)
 			{
@@ -2258,7 +2261,59 @@ struct FStaticMeshVertexBio
 
 SIMPLE_TYPE(FStaticMeshVertexBio, int)
 
+struct FStaticMeshVertexBio2
+{
+	short					Pos[4];
+	FPackedNormal			Normal[3];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio2 &V)
+	{
+		return Ar << V.Pos[0] << V.Pos[1] << V.Pos[2] << V.Pos[3] << V.Normal[0] << V.Normal[1] << V.Normal[2];
+	}
+
+	operator FStaticMeshVertex() const
+	{
+		FStaticMeshVertex r;
+		r.Pos.X  = half2float(Pos[0]);
+		r.Pos.Y  = half2float(Pos[1]);
+		r.Pos.Z  = half2float(Pos[2]);
+		r.Normal = Normal[2];
+		return r;
+	}
+};
+
+RAW_TYPE(FStaticMeshVertexBio2)
+
 #endif // BIOSHOCK
+
+#if UC2
+
+static FVector GUC2VectorScale, GUC2VectorBase;
+
+struct FStaticMeshVertexUC2
+{
+	FUC2Vector				Pos;
+	FUC2Normal				Normal;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexUC2 &V)
+	{
+		return Ar << V.Pos << V.Normal;
+	}
+
+	operator FStaticMeshVertex() const
+	{
+		FStaticMeshVertex r;
+		r.Pos.X = Pos.X / 32767.0f / GUC2VectorScale.X + GUC2VectorBase.X;
+		r.Pos.Y = Pos.Y / 32767.0f / GUC2VectorScale.Y + GUC2VectorBase.Y;
+		r.Pos.Z = Pos.Z / 32767.0f / GUC2VectorScale.Z + GUC2VectorBase.Z;
+		r.Normal.Set(0, 0, 0);		//?? decode
+		return r;
+	}
+};
+
+RAW_TYPE(FStaticMeshVertexUC2)
+
+#endif // UC2
 
 struct FStaticMeshVertexStream
 {
@@ -2267,15 +2322,20 @@ struct FStaticMeshVertexStream
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexStream &S)
 	{
-#if BIOSHOCK
-		if (Ar.Game == GAME_Bioshock)
+#if UC2
+		if (Ar.Engine() == GAME_UE2X)
 		{
-			TArray<FStaticMeshVertexBio> BioVerts;
-			Ar << BioVerts;
-			CopyArray(S.Vert, BioVerts);
-			return Ar;
+			TArray<FStaticMeshVertexUC2> UC2Verts;
+			int Flag;
+			Ar << Flag;
+			if (!Flag)
+			{
+				Ar << UC2Verts;
+				CopyArray(S.Vert, UC2Verts);
+			}
+			return Ar << S.Revision;
 		}
-#endif
+#endif // UC2
 #if TRIBES3
 		TRIBES_HDR(Ar, 0xD);
 #endif
@@ -2298,6 +2358,15 @@ struct FRawColorStream
 
 	friend FArchive& operator<<(FArchive &Ar, FRawColorStream &S)
 	{
+#if UC2
+		if (Ar.Engine() == GAME_UE2X)
+		{
+			int Flag;
+			Ar << Flag;
+			if (!Flag) Ar << S.Color;
+			return Ar << S.Revision;
+		}
+#endif // UC2
 		return Ar << S.Color << S.Revision;
 	}
 };
@@ -2315,6 +2384,33 @@ struct FStaticMeshUV
 
 SIMPLE_TYPE(FStaticMeshUV, float)
 
+
+#if BIOSHOCK
+struct FStaticMeshUVBio2
+{
+	short					U;
+	short					V;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVBio2 &V)
+	{
+		Ar << V.U << V.V;
+		return Ar;
+	}
+
+	operator FStaticMeshUV() const
+	{
+		FStaticMeshUV r;
+		r.U = half2float(U);
+		r.V = half2float(V);
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FStaticMeshUVBio2, short)
+
+#endif // BIOSHOCK
+
+
 struct FStaticMeshUVStream
 {
 	TArray<FStaticMeshUV>	Data;
@@ -2325,8 +2421,31 @@ struct FStaticMeshUVStream
 	{
 #if BIOSHOCK
 		if (Ar.Game == GAME_Bioshock)
-			return Ar << S.Data << S.f10;
-#endif
+		{
+			if (Ar.ArLicenseeVer < 59)
+			{
+				// Bioshock 1 & Bioshock 2 MP
+				Ar << S.Data;
+			}
+			else
+			{
+				// Bioshock 2 SP; real version detection code is unknown
+				TArray<FStaticMeshUVBio2> UV;
+				Ar << UV;
+				CopyArray(S.Data, UV);
+			}
+			return Ar << S.f10;
+		}
+#endif // BIOSHOCK
+#if UC2
+		if (Ar.Engine() == GAME_UE2X)
+		{
+			int Flag;
+			Ar << Flag;
+			if (!Flag) Ar << S.Data;
+			return Ar << S.f10 << S.f1C;
+		}
+#endif // UC2
 		return Ar << S.Data << S.f10 << S.f1C;
 	}
 };
@@ -2548,12 +2667,51 @@ public:
 #if BIOSHOCK
 		if (Ar.Game == GAME_Bioshock)
 		{
-			Ar << VertexStream << UVStream << IndexStream1;
+			// serialize VertexStream
+			if (t3_hdrSV < 9)
+			{
+				// Bioshock 1
+				TArray<FStaticMeshVertexBio> BioVerts;
+				Ar << BioVerts;
+				CopyArray(VertexStream.Vert, BioVerts);
+			}
+			else
+			{
+				// Bioshock 2
+				TArray<FStaticMeshVertexBio2> BioVerts2;
+				Ar << BioVerts2;
+				CopyArray(VertexStream.Vert, BioVerts2);
+			}
+			Ar << UVStream << IndexStream1;
 			// also: t3_hdrSV < 2 => IndexStream2
 			Ar.Seek(Ar.GetStopper());
 			return;
 		}
 #endif // BIOSHOCK
+#if UC2
+		if (Ar.Engine() == GAME_UE2X)
+		{
+			FVector f120, VectorScale, VectorBase;	// defaults: vec(1.0), Scale=vec(1.0), Base=vec(0.0)
+			float   f154, f158, f15C, f160;
+			if (Ar.ArVer >= 135)
+			{
+				Ar << f120 << VectorScale << f154 << f158 << f15C << f160;
+				if (Ar.ArVer >= 137) Ar << VectorBase;
+			}
+			GUC2VectorScale = VectorScale;
+			GUC2VectorBase  = VectorBase;
+			Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1;
+			if (Ar.ArLicenseeVer != 1) Ar << IndexStream2;
+			//!!!!!
+			printf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
+				UVStream[0].Data.Num(), IndexStream1.Indices.Num());
+			Ar << f108;
+
+			// skip collision information
+			Ar.Seek(Ar.GetStopper());
+			return;
+		}
+#endif // UC2
 		Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
 
 #if 1

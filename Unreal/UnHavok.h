@@ -263,7 +263,7 @@ public:
 	int					m_numItems;
 //	class hkCustomAttributes* m_attributes; //+serialized(false)
 //	Flags				m_flags;
-	//?? Bioshock: hkCustomAttributes and Flags not serialized?
+	// Bioshock 1: hkCustomAttributes and Flags not serialized, Bioshock 2: serialized
 };
 
 
@@ -373,7 +373,8 @@ public:
 	Flags				m_flags;			// Pointers:optional, voidstar, rawdata. Enums:sizeinbytes.
 	hkUint16			m_offset;			// Address offset from start of struct.
 //	const hkCustomAttributes* m_attributes;	//+serialized(false)
-	//?? Bioshock: hkCustomAttributes not serialized?
+	// Bioshock 1: hkCustomAttributes not serialized
+	// Bioshock 2: hkCustomAttributes are serialized
 };
 
 
