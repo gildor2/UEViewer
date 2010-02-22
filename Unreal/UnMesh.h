@@ -2187,12 +2187,15 @@ struct FStaticMeshSection
 	word					LastVertex;		// last used vertex
 	word					fE;				// ALMOST always equals to f10
 	word					NumFaces;		// number of faces in section
+	// Note: UE2X uses "NumFaces" as "LastIndex"
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshSection &S)
 	{
 		guard(FStaticMeshSection<<);
 		assert(Ar.ArVer >= 112);
-		return Ar << S.f4 << S.FirstIndex << S.FirstVertex << S.LastVertex << S.fE << S.NumFaces;
+		Ar << S.f4 << S.FirstIndex << S.FirstVertex << S.LastVertex << S.fE << S.NumFaces;
+//printf("... f4=%d FirstIndex=%d FirstVertex=%d LastVertex=%d fE=%d NumFaces=%d\n", S.f4, S.FirstIndex, S.FirstVertex, S.LastVertex, S.fE, S.NumFaces); //!!!
+		return Ar;
 		unguard;
 	}
 };
@@ -2634,6 +2637,9 @@ public:
 #endif
 	END_PROP_TABLE
 
+#if UC2
+	void LoadExternalUC2Data();
+#endif
 #if UNREAL3
 	void SerializeStatMesh3(FArchive &Ar);
 	void RestoreMesh3(const struct FStaticMeshLODModel &Lod);
@@ -2658,6 +2664,10 @@ public:
 			return;
 		}
 
+		//!! copy common part inside BIOSHOCK and UC2 code paths
+		//!! separate BIOSHOCK and UC2 code paths to cpps
+		//!! separate specific data type declarations into cpps
+		//!! UC2 code: can integrate LoadExternalUC2Data() into serializer
 		Super::Serialize(Ar);
 #if TRIBES3
 		TRIBES_HDR(Ar, 3);
@@ -2692,7 +2702,7 @@ public:
 		if (Ar.Engine() == GAME_UE2X)
 		{
 			FVector f120, VectorScale, VectorBase;	// defaults: vec(1.0), Scale=vec(1.0), Base=vec(0.0)
-			float   f154, f158, f15C, f160;
+			int     f154, f158, f15C, f160;
 			if (Ar.ArVer >= 135)
 			{
 				Ar << f120 << VectorScale << f154 << f158 << f15C << f160;
@@ -2703,9 +2713,11 @@ public:
 			Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1;
 			if (Ar.ArLicenseeVer != 1) Ar << IndexStream2;
 			//!!!!!
-			printf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
-				UVStream[0].Data.Num(), IndexStream1.Indices.Num());
+//			printf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
+//				UVStream.Num() ? UVStream[0].Data.Num() : -1, IndexStream1.Indices.Num());
 			Ar << f108;
+
+			LoadExternalUC2Data();
 
 			// skip collision information
 			Ar.Seek(Ar.GetStopper());

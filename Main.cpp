@@ -342,6 +342,9 @@ int main(int argc, char **argv)
 #	if DARKVOID
 				"    Dark Void\n"
 #	endif
+#	if LEGENDARY
+				"    Legendary: Pandora's Box\n"
+#	endif
 #	if SPECIAL_TAGS
 				"    Nurien\n"
 #	endif

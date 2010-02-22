@@ -10,9 +10,10 @@
 
  Revision History:
 
-	??.??.???? v1.07
+	20.02.2010 v1.07
 	- added "Load confirmation" setting to display message box after completion of operation
 	- added "Reposition existing bones" option
+	- fixed error when loading .mat files with missing textures
 
 	12.12.2009 v1.06
 	- fixed merging meshes on a single skeleton when previously loaded mesh is not in bind
@@ -772,7 +773,7 @@ fn ImportPskFile filename skelOnly:false =
 		)
 		local subMat = ImportMaterial Materials[i].MaterialName texDir
 		newMat.materialList[i] = subMat
-		showTextureMap subMat subMat.diffuseMap true
+		showTextureMap subMat true
 --		format "Material[%] = %\n" i Materials[i].MaterialName
 	)
 	newMesh.material = newMat

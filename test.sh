@@ -233,7 +233,8 @@ case "uc2" in
 "uc2")
 #	uc2 -noanim T_CharacterSkins
 #	uc2 K_Male.ukx
-	uc2 S_NK_Architecture.usx
+#	uc2 S_NK_Architecture.usx
+	uc2 S_FX.usx
 	;;
 
 #------------------------------------------------------------------------------

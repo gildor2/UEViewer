@@ -638,6 +638,34 @@ struct FBoneBounds
 };
 #endif // BATMAN
 
+#if LEGENDARY
+
+struct FSPAITag2
+{
+	UObject				*f0;
+	int					f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FSPAITag2 &S)
+	{
+		Ar << S.f0;
+		if (Ar.ArLicenseeVer < 10)
+		{
+			byte f4;
+			Ar << f4;
+			S.f4 = f4;
+			return Ar;
+		}
+		int f4[9];		// serialize each bit of S.f4 as separate dword
+		Ar << f4[0] << f4[1] << f4[2] << f4[3] << f4[4] << f4[5];
+		if (Ar.ArLicenseeVer >= 23) Ar << f4[6];
+		if (Ar.ArLicenseeVer >= 31) Ar << f4[7];
+		if (Ar.ArLicenseeVer >= 34) Ar << f4[8];
+		return Ar;
+	}
+};
+
+#endif // LEGENDARY
+
 void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 {
 	guard(USkeletalMesh::SerializeSkelMesh3);
@@ -694,6 +722,13 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	{
 		byte unk8C;
 		Ar << unk8C;
+	}
+#endif
+#if LEGENDARY
+	if (Ar.Game == GAME_Legendary && Ar.ArLicenseeVer >= 9)
+	{
+		TArray<FSPAITag2> OATStags2;
+		Ar << OATStags2;
 	}
 #endif
 	Ar << Lods;

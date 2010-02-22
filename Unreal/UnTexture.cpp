@@ -20,7 +20,7 @@
 #endif
 
 //#define PROFILE_DDS			1
-
+//#define XPR_DEBUG			1
 
 // replaces random 'alpha=0' color with black
 static void PostProcessAlpha(byte *pic, int width, int height)
@@ -249,6 +249,7 @@ struct XprInfo
 {
 	const CGameFileInfo *File;
 	TArray<XprEntry>	Items;
+	int					DataStart;
 };
 
 static TArray<XprInfo> xprFiles;
@@ -256,25 +257,27 @@ static TArray<XprInfo> xprFiles;
 static bool ReadXprFile(const CGameFileInfo *file)
 {
 	guard(ReadXprFile);
+
 	FArchive *Ar = appCreateFileReader(file);
 
 	int Tag, FileLen, DataStart, DataCount;
 	*Ar << Tag << FileLen << DataStart << DataCount;
+	//?? "XPR0" - xpr variant with a single object (texture) inside
 	if (Tag != BYTES4('X','P','R','1'))
 	{
-//		printf("Unknown XPR tag in %s\n", file->RelativeName);
+#if XPR_DEBUG
+		printf("Unknown XPR tag in %s\n", file->RelativeName);
+#endif
 		delete Ar;
 		return true;
 	}
-	if (FileLen <= DataStart)
-	{
-//		printf("Unsupported XPR layout in %s\n", file->RelativeName);
-		delete Ar;
-		return true;
-	}
+#if XPR_DEBUG
+	printf("Scanning %s ...\n", file->RelativeName);
+#endif
 
 	XprInfo *Info = new(xprFiles) XprInfo;
-	Info->File = file;
+	Info->File      = file;
+	Info->DataStart = DataStart;
 	// read filelist
 	int i;
 	for (i = 0; i < DataCount; i++)
@@ -297,65 +300,91 @@ static bool ReadXprFile(const CGameFileInfo *file)
 		// create item
 		XprEntry *Entry = new(Info->Items) XprEntry;
 		appStrncpyz(Entry->Name, buf, ARRAY_COUNT(Entry->Name));
-		Entry->DataOffset = DataOffset + 12;	// will be overriden later
+		Entry->DataOffset = DataOffset + 12;
+		assert(Entry->DataOffset < DataStart);
 		// seek back
 		Ar->Seek(savePos);
-	}
-	// read file data
-	Ar->Seek(Info->Items[0].DataOffset);
-	TArray<int> data;
-	while (true)
-	{
-		int v;
-		*Ar << v;
-		if (v == -1) break;						// end marker, 0xFFFFFFFF
-		data.AddItem(v);
-	}
-//	assert(data.Num() && data.Num() % DataCount == 0);
-	int dataSize = data.Num() / DataCount;
-	if (data.Num() % DataCount != 0 || dataSize > 5)
-	{
-//		printf("Unsupported XPR layout in %s\n", file->RelativeName);
-		xprFiles.Remove(xprFiles.Num()-1);
-		delete Ar;
-		return true;
-	}
-	for (i = 0; i < DataCount; i++)
-	{
-		int idx = i * dataSize;
-		XprEntry *Entry = &Info->Items[i];
-		int start;
-		switch (dataSize)
+		// setup size of previous item
+		if (i >= 1)
 		{
-		case 2:
-			start = data[idx+1];
-			break;
-		case 4:
-			start = data[idx+3];
-			break;
-		case 5:
-			start = data[idx+1];
-			break;
-		default:
-			appNotify("Unknown XPR layout of %s: %d dwords", file->RelativeName, dataSize);
-			xprFiles.Remove(xprFiles.Num()-1);
-			delete Ar;
-			return true;
+			XprEntry *PrevEntry = &Info->Items[i - 1];
+			PrevEntry->DataSize = Entry->DataOffset - PrevEntry->DataOffset;
 		}
-		Entry->DataOffset = DataStart + start;
+		// setup size of the last item
+		if (i == DataCount - 1)
+			Entry->DataSize = DataStart - Entry->DataOffset;
 	}
-//	printf("Scanned %s, %d files\n", Filename, DataCount);
+	// scan data
+	// data block is either embedded in this block or followed after DataStart position
 	for (i = 0; i < DataCount; i++)
 	{
 		XprEntry *Entry = &Info->Items[i];
-		int nextOffset;
-		if (i < DataCount-1)
-			nextOffset = Info->Items[i+1].DataOffset;
-		else
-			nextOffset = FileLen;
-		Entry->DataSize = nextOffset - Entry->DataOffset;
-//		printf("%s -> %X + %X\n", Entry->Name, Entry->DataOffset, Entry->DataSize);
+#if XPR_DEBUG
+//		printf("  %08X [%08X]  %s\n", Entry->DataOffset, Entry->DataSize, Entry->Name);
+#endif
+		Ar->Seek(Entry->DataOffset);
+		int id;
+		*Ar << id;
+		switch (id)
+		{
+		case 0x80020001:
+			// header is 4 dwords + immediately followed data
+			Entry->DataOffset += 4 * 4;
+			Entry->DataSize   -= 4 * 4;
+			break;
+
+		case 0x00040001:
+			// header is 5 dwords + external data
+			{
+				int pos;
+				*Ar << pos;
+				Entry->DataOffset = DataStart + pos;
+			}
+			break;
+
+		case 0x00020001:
+			// header is 4 dwords + external data
+			{
+				int d1, d2, pos;
+				*Ar << d1 << d2 << pos;
+				Entry->DataOffset = DataStart + pos;
+			}
+			break;
+
+		default:
+			// header is 2 dwords - offset and size + external data
+			{
+				int pos;
+				*Ar << pos;
+				Entry->DataOffset = DataStart + pos;
+			}
+			break;
+		}
 	}
+	// setup sizes of blocks placed after DataStart (not embedded into file list)
+	for (i = 0; i < DataCount; i++)
+	{
+		XprEntry *Entry = &Info->Items[i];
+		if (Entry->DataOffset < DataStart) continue; // embedded data
+		// Entry points to a data block placed after DataStart position
+		// we should find a next block
+		int NextPos = FileLen;
+		for (int j = i + 1; j < DataCount; j++)
+		{
+			XprEntry *NextEntry = &Info->Items[j];
+			if (NextEntry->DataOffset < DataStart) continue; // embedded data
+			NextPos = NextEntry->DataOffset;
+			break;
+		}
+		Entry->DataSize = NextPos - Entry->DataOffset;
+	}
+#if XPR_DEBUG
+	for (i = 0; i < DataCount; i++)
+	{
+		XprEntry *Entry = &Info->Items[i];
+		printf("  %3d %08X [%08X] .. %08X  %s\n", i, Entry->DataOffset, Entry->DataSize, Entry->DataOffset + Entry->DataSize, Entry->Name);
+	}
+#endif
 
 	delete Ar;
 	return true;
@@ -363,7 +392,8 @@ static bool ReadXprFile(const CGameFileInfo *file)
 	unguardf(("%s", file->RelativeName));
 }
 
-static byte *FindXpr(const char *Name)
+
+byte *FindXprData(const char *Name, int *DataSize)
 {
 	// scan xprs
 	static bool ready = false;
@@ -382,15 +412,19 @@ static byte *FindXpr(const char *Name)
 			if (strcmp(File->Name, Name) == 0)
 			{
 				// found
-				byte *buf = new byte[File->DataSize];
+				printf("Loading stream %s from %s (%d bytes)\n", Name, Info->File->RelativeName, File->DataSize);
 				FArchive *Reader = appCreateFileReader(Info->File);
 				Reader->Seek(File->DataOffset);
+				byte *buf = new byte[File->DataSize];
 				Reader->Serialize(buf, File->DataSize);
 				delete Reader;
+				if (DataSize) *DataSize = File->DataSize;
 				return buf;
 			}
 		}
 	}
+	printf("WARNING: external stream %s was not found\n", Name);
+	if (DataSize) *DataSize = 0;
 	return NULL;
 }
 
@@ -547,7 +581,7 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 	if (Package && Package->Engine() == GAME_UE2X)
 	{
 		// try to find texture inside XBox xpr files
-		byte *pic = FindXpr(Name);
+		byte *pic = FindXprData(Name, NULL);
 		if (pic)
 		{
 			USize = this->USize;

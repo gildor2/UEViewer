@@ -635,6 +635,9 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 
 #if UC2
 
+//?? move from UnTexture.cpp to UnCore.cpp?
+byte *FindXprData(const char *Name, int *DataSize);
+
 // special array type ...
 //!! document purpose of this class in UE2X
 template<class T> class TRawArrayUC2 : public TArray<T>
@@ -1043,8 +1046,18 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 #else
 	if (DataFlag != 0)
 	{
-		appNotify("External animations in %s", Name);	//!! animation is stored in XPR file!
-		return false;
+		guard(GetExternalAnim);
+		// animation is stored in xpr file
+		int Size;
+		BufferData = FindXprData(va("%s_anim", Name), &Size);
+		if (!BufferData)
+		{
+			appNotify("Missing external animations for %s", Name);
+			return false;
+		}
+		assert(DataSize <= Size);
+		printf("Loading external animation for %s\n", Name);
+		unguard;
 	}
 #endif
 	if (!DataFlag && DataSize)
@@ -2065,3 +2078,85 @@ void FStaticLODModel::RestoreLineageMesh()
 
 
 #endif // LINEAGE2
+
+
+/*-----------------------------------------------------------------------------
+	UStaticMesh class
+-----------------------------------------------------------------------------*/
+
+#if UC2
+
+void UStaticMesh::LoadExternalUC2Data()
+{
+	guard(UStaticMesh::LoadExternalUC2Data);
+
+	int i, Size;
+	void *Data;
+
+	//?? S.NumFaces is used as NumIndices, but it is not a multiply of 3
+	//?? (sometimes is is N*3, sometimes = N*3+1, sometimes - N*3+2 ...)
+	//?? May be UC2 uses triangle strips instead of trangles?
+	assert(IndexStream1.Indices.Num() == 0);	//???
+/*	int NumIndices = 0;
+	for (i = 0; i < Sections.Num(); i++)
+	{
+		FStaticMeshSection &S = Sections[i];
+		int idx = S.FirstIndex + S.NumFaces;
+	} */
+	/*
+		FindXprData will return block in following format:
+			dword	unk
+			dword	itemSize (6 for index stream = 3 verts * sizeof(short))
+					(or unknown meanung in a case of trangle strips)
+			dword	unk
+			data[]
+			dword*5	unk (may be include padding?)
+	*/
+
+	for (i = 0; i < Sections.Num(); i++)
+	{
+		FStaticMeshSection &S = Sections[i];
+		Data = FindXprData(va("%s_%d_pb", Name, i), &Size);
+		if (!Data)
+		{
+			appNotify("Missing external index stream for mesh %s", Name);
+			return;
+		}
+		//!! use
+//		printf("...[%d] f4=%d FirstIndex=%d FirstVertex=%d LastVertex=%d fE=%d NumFaces=%d\n", i, S.f4, S.FirstIndex, S.FirstVertex, S.LastVertex, S.fE, S.NumFaces);
+		appFree(Data);
+	}
+
+	if (!VertexStream.Vert.Num())
+	{
+		Data = FindXprData(va("%s_VS", Name), &Size);
+		if (!Data)
+		{
+			appNotify("Missing external vertex stream for mesh %s", Name);
+			return;
+		}
+		//!! use
+		appFree(Data);
+	}
+
+	// other streams:
+	//	ColorStream1 = CS
+	//	ColorStream2 = AS
+
+	for (i = 0; i < UVStream.Num(); i++)
+	{
+		if (UVStream[i].Data.Num()) continue;
+		Data = FindXprData(va("%s_UV%d", Name, i), &Size);
+		if (!Data)
+		{
+			appNotify("Missing external UV stream for mesh %s", Name);
+			return;
+		}
+		//!! use
+		appFree(Data);
+	}
+
+	unguard;
+}
+
+#endif // UC2

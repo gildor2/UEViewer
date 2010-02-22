@@ -153,6 +153,12 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+23.02.2010
+- implemented Legendary: Pandora's Box SkeletalMesh support
+
+21.02.2010
+- implemented support for loading external Unreal Championship 2 animations
+
 18.02.2010
 - implemented Bioshock 2 SkeletalMesh and StaticMesh support
 

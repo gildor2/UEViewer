@@ -189,6 +189,7 @@ enum EGame
 		GAME_Batman,
 		GAME_Borderlands,
 		GAME_DarkVoid,
+		GAME_Legendary,
 
 	GAME_MIDWAY3   = 0x1800,	// variant of UE3
 		GAME_A51,

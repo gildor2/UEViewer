@@ -34,6 +34,7 @@ void CStatMeshInstance::Draw()
 
 	const UStaticMesh* Mesh = pMesh;
 	int NumSections = Mesh->Sections.Num();
+	if (!NumSections || !Mesh->VertexStream.Vert.Num()) return;
 
 	// copy of CSkelMeshInstance::Draw sorting code
 #if SORT_BY_OPACITY

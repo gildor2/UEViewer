@@ -117,6 +117,9 @@ static const char *PackageExtensions[] =
 #if TLR
 	, "tlr"
 #endif
+#if LEGENDARY
+	, "ppk"
+#endif
 	// other games with no special code
 	, "lm"			// Landmass
 	, "s8m"			// Section 8 map
@@ -1001,6 +1004,9 @@ void FArchive::DetectGame()
 #endif
 #if BLOODONSAND
 	if (ArVer == 538 && ArLicenseeVer == 73)	SET(GAME_50Cent);
+#endif
+#if LEGENDARY
+	if (ArVer == 567 && ArLicenseeVer == 39)	SET(GAME_Legendary);
 #endif
 #if XMEN
 	if (ArVer == 568 && ArLicenseeVer == 101)	SET(GAME_XMen);

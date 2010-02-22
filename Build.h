@@ -25,7 +25,7 @@
 
 // requires UNREAL25
 #define TRIBES3			1
-///#define RAGNAROK2		1
+#define RAGNAROK2		1
 #define EXTEEL			1
 
 // UE2X
@@ -48,7 +48,8 @@
 #define BLOODONSAND		1		// 50 Cent: Blood on the Sand
 #define BORDERLANDS		1		// Borderlands
 #define DARKVOID		1		// Dark Void
-///#define HUXLEY			1
+#define HUXLEY			1
+#define LEGENDARY		1		// Legendary: Pandora's Box
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??
@@ -62,6 +63,5 @@
 
 // some private games
 #if PRIVATE_BUILD
-#	define RAGNAROK2	1
-#	define HUXLEY		1
+//-- none
 #endif
