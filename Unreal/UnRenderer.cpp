@@ -739,6 +739,8 @@ void UShader::SetupGL(unsigned PolyFlags)
 
 void UShader::GetParams(CMaterialParams &Params) const
 {
+	guard(UShader::GetParams);
+
 	if (Diffuse)
 	{
 		Diffuse->GetParams(Params);
@@ -746,6 +748,7 @@ void UShader::GetParams(CMaterialParams &Params) const
 #if BIOSHOCK
 	if (NormalMap)
 	{
+		if ((UShader*)this == NormalMap) return;	// recurse; Bioshock has such data ...
 		CMaterialParams Params2;
 		NormalMap->GetParams(Params2);
 		Params.Normal = Params2.Diffuse;
@@ -765,6 +768,8 @@ void UShader::GetParams(CMaterialParams &Params) const
 		Params.Opacity          = Params2.Diffuse;
 		Params.OpacityFromAlpha = true;
 	}
+
+	unguardf(("%s", Name));
 }
 
 
@@ -827,6 +832,8 @@ void UFacingShader::SetupGL(unsigned PolyFlags)
 
 void UFacingShader::GetParams(CMaterialParams &Params) const
 {
+	guard(UFacingShader::GetParams);
+
 	if (FacingDiffuse)
 	{
 		CMaterialParams Params2;
@@ -851,6 +858,8 @@ void UFacingShader::GetParams(CMaterialParams &Params) const
 		FacingEmissive->GetParams(Params2);
 		Params.Emissive = Params2.Diffuse;
 	}
+
+	unguard;
 }
 
 
@@ -864,6 +873,8 @@ bool UFacingShader::IsTranslucent() const
 
 void UCombiner::GetParams(CMaterialParams &Params) const
 {
+	guard(UCombiner::GetParams);
+
 	CMaterialParams Params2;
 
 	switch (CombineOperation)
@@ -922,6 +933,8 @@ void UCombiner::GetParams(CMaterialParams &Params) const
 	case AO_Use_Alpha_From_Material1:
 	case AO_Use_Alpha_From_Material2:
 	} */
+
+	unguard;
 }
 
 
@@ -999,6 +1012,8 @@ bool UMaterial3::IsTranslucent() const
 
 void UMaterial3::GetParams(CMaterialParams &Params) const
 {
+	guard(UMaterial3::GetParams);
+
 	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0;
 #define DIFFUSE(check,weight)			\
 	if (check && weight > DiffWeight)	\
@@ -1089,6 +1104,8 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 
 		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
 	}
+
+	unguard;
 }
 
 
@@ -1150,6 +1167,8 @@ void UMaterialInstanceConstant::SetupGL(unsigned PolyFlags)
 
 void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 {
+	guard(UMaterialInstanceConstant::GetParams);
+
 	// get params from linked UMaterial3
 	if (Parent) Parent->GetParams(Params);
 
@@ -1178,6 +1197,8 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	// try to get diffuse texture when nothing found
 	if (!Params.Diffuse && TextureParameterValues.Num() == 1)
 		Params.Diffuse = TextureParameterValues[0].ParameterValue;
+
+	unguard;
 }
 
 

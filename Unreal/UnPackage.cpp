@@ -179,7 +179,19 @@ public:
 			else
 #endif // BIOSHOCK
 			{
-				*Reader << ChunkHeader;
+				if (Chunk->CompressedSize != Chunk->UncompressedSize)
+					*Reader << ChunkHeader;
+				else
+				{
+					// have seen such block in Borderlands: chunk has CompressedSize==UncompressedSize
+					// and has no compression
+					//!! verify UE3 code for this !!
+					ChunkHeader.BlockSize = 0;	// mark as uncompressed (checked below)
+					ChunkHeader.CompressedSize = ChunkHeader.UncompressedSize = Chunk->UncompressedSize;
+					ChunkHeader.Blocks.Empty(1);
+					FCompressedChunkBlock *Block = new (ChunkHeader.Blocks) FCompressedChunkBlock;
+					Block->UncompressedSize = Block->CompressedSize = Chunk->UncompressedSize;
+				}
 			}
 			ChunkDataPos = Reader->Tell();
 			CurrentChunk = Chunk;
@@ -213,7 +225,14 @@ public:
 		}
 		// decompress data
 		guard(DecompressBlock);
-		appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
+		if (ChunkHeader.BlockSize)	// my own mark
+			appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
+		else
+		{
+			// no compression
+			assert(Block->CompressedSize == Block->UncompressedSize);
+			memcpy(Buffer, CompressedBlock, Block->CompressedSize);
+		}
 		unguardf(("block=%X+%X", ChunkData, Block->CompressedSize));
 		// setup BufferStart/BufferEnd
 		BufferStart = ChunkPosition;
@@ -418,6 +437,17 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #endif // PARIAH
 			else
 			{
+#if R6VEGAS
+				if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
+				{
+					byte len;
+					*this << len;
+					NameTable[i] = new char[len + 1];
+					Serialize(NameTable[i], len);
+					goto done;
+				}
+#endif // R6VEGAS
+
 #if 0
 				// FString, but less allocations ...
 				int len;
@@ -444,7 +474,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					skip = (skip ^ 7) & 0xF;
 					Seek(Tell() + skip);
 				}
-	#endif
+	#endif // AVA
 				// skip object flags
 				int tmp;
 				*this << tmp;
@@ -454,6 +484,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		#endif
 				if (Game >= GAME_UE3)
 				{
+					if (ArVer < 195) goto word_flags;
 		#if WHEELMAN
 					if (Game == GAME_Wheelman) goto word_flags;
 		#endif
@@ -468,6 +499,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				}
 	#endif // UNREAL3
 			}
+		done: ;
 //			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 		}
 	}

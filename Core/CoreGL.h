@@ -194,6 +194,7 @@ const CShader &GL_UseGenericShader(GenericShaderType type);
 -----------------------------------------------------------------------------*/
 
 extern const class CFramebuffer *GCurrentFramebuffer;		//?? change
+extern bool GDisableFBO;
 
 class CFramebuffer
 {
@@ -225,14 +226,7 @@ public:
 		return height;
 	}
 
-	inline void Use()
-	{
-		if (!IsValid()) SetSize(width, height); // refresh
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, FBObj);
-		GL_CheckError("BindFramebuffer");
-		GCurrentFramebuffer = this;
-		SetViewport();
-	}
+	void Use();
 	static void Unset();
 
 	void SetViewport() const

@@ -16,6 +16,7 @@ Modified Unreal Engine 2:
   Rainbow 6: Raven Shield
   Lineage 2 Gracia
   Land of Chaos Online (LOCO)
+  Star Wars: Republic Commando
 Unreal Engine 2.5:
   UE2Runtime
   Harry Potter and the Prisoner of Azkaban
@@ -33,6 +34,7 @@ Unreal Engine 3:
   Mortal Online
   Section 8
 Modified Unreal Engine 3:
+  Rainbow 6: Vegas 2
   The Last Remnant
   Mass Effect
   BlackSite: Area 51
@@ -52,6 +54,7 @@ Modified Unreal Engine 3:
   50 Cent: Blood on the Sand (XBox360)
   Nurien
   Stranglehold
+  Legendary: Pandora's Box
   Borderlands
   Dark Void
 
@@ -60,6 +63,8 @@ List of games with limited support:
 Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
+  Star Wars: Republic Commando
+  Rainbow 6: Vegas 2
   BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
   Army of Two
@@ -153,6 +158,25 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+11.03.2010
+- implemented attachment socket support for UE3 SkeletalMesh
+- umodel usage page: changed appearance of list of supported game titles
+- fixed annoying "WARNING: Unknown class 'Package' for object ..."
+
+10.03.2010
+- added new SkeletalMesh exporter option "-lods" - allows to export lower mesh LODS
+  as well as basic mesh
+
+09.03.2010
+- implemented support for Rainbow 6: Vegas 2 packages
+- implemented support for oldest UE3 Texture2D, SkeletalMesh and StaticMesh formats
+
+08.03.2010
+- implemented Star Wars: Republic Commando SkeletalMesh and StaticMesh support
+
+04.03.2010
+- some fixes in Bioshock-specific code
+
 23.02.2010
 - implemented Legendary: Pandora's Box SkeletalMesh support
 

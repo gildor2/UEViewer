@@ -89,6 +89,7 @@ static int ObjIndex = 0;
 #define MAX_EXPORTERS		16
 
 bool GExportScripts = false;
+bool GExportLods    = false;
 
 typedef void (*ExporterFunc_t)(UObject*, FArchive&);
 
@@ -169,6 +170,224 @@ static bool ExportObject(UObject *Obj)
 
 
 /*-----------------------------------------------------------------------------
+	Usage information
+-----------------------------------------------------------------------------*/
+
+static void PrintGameList(const char *EngineName, const char **List, int Count)
+{
+	if (!Count) return;
+	printf("\n%s:", EngineName);
+	int pos = 10000;
+#define LINEFEED 80
+	for (int i = 0; i < Count; i++)
+	{
+		int len = strlen(List[i]);
+		bool needComma = (i < Count - 1);
+		if (needComma) len += 2;
+		if (pos >= LINEFEED - len)
+		{
+			printf("\n  ");
+			pos = 2;
+		}
+		printf("%s%s", List[i], needComma ? ", " : "");
+		pos += len;
+	}
+	printf("\n");
+}
+
+
+static void Usage()
+{
+	printf(	"Unreal model viewer / exporter\n"
+			"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
+			"\n"
+			"    <package>       name of package to load, without file extension\n"
+			"    <object>        name of object to load\n"
+			"    <class>         class of object to load (useful, when trying to load\n"
+			"                    object with ambiguous name)\n"
+			"\n"
+			"Commands:\n"
+			"    (default)       visualize object; when <object> not specified, will load\n"
+			"                    whole package\n"
+			"    -list           list contents of package\n"
+			"    -export         export specified object or whole package\n"
+			"\n"
+			"Developer commands:\n"
+			"    -dump           dump object information to console\n"
+			"    -check          check some assumptions, no other actions performed\n"
+			"    -pkginfo        load package and display its information\n"
+			"\n"
+			"Options:\n"
+			"    -path=PATH      path to game installation directory; if not specified,\n"
+			"                    program will search for packages in current directory\n"
+			"    -meshes         view meshes only\n"
+			"\n"
+			"Compatibility options:\n"
+			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
+			"                    unsupported data format\n"
+			"    -noanim         disable loading of MeshAnimation classes\n"
+			"    -nostat         disable loading of StaticMesh class\n"
+			"    -notex          disable loading of Material classes\n"
+			"\n"
+			"Export options:\n"
+			"    -all            export all linked objects too\n"
+			"    -uc             create unreal script when possible\n"
+			"    -md5            use md5mesh/md5anim format for skeletal mesh export\n"
+			"    -lods           export lower LOD levels as well\n"
+			"\n"
+			"Supported resources for export:\n"
+			"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
+			"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
+			"    VertMesh        exported as Unreal 3d file\n"
+			"    StaticMesh      exported as ActorX psk file with no skeleton\n"
+			"    Texture         exported in tga format\n"
+			"\n"
+			//?? separate option for this list?
+			//?? this list looks ugly ... apply some formatting?
+			"List of supported games:\n"
+	);
+
+#if UNREAL1
+	static const char *UE1Games[] = {
+		"Unreal 1", "Unreal Tournament 1 (UT99)", "The Wheel of Time",
+	#if DEUS_EX
+		"DeusEx",
+	#endif
+	#if RUNE
+		"Rune",
+	#endif
+	};
+	PrintGameList("Unreal Engine 1", ARRAY_ARG(UE1Games));
+#endif // UNREAL1
+
+	static const char *UE2Games[] = {
+#if UT2
+		"Unreal Tournament 2003,2004",
+#endif
+#if SPLINTER_CELL
+		"Splinter Cell 1,2",
+#endif
+#if LINEAGE2
+		"Lineage 2",
+#endif
+#if LOCO
+		"Land of Chaos Online (LOCO)",
+#endif
+#if SWRC
+		"Star Wars: Republic Commando",
+#endif
+#if UNREAL25
+		"UE2Runtime, Harry Potter and the Prisoner of Azkaban",
+#	if TRIBES3
+		"Tribes: Vengeance",
+#	endif
+#	if BIOSHOCK
+		"Bioshock", "Bioshock 2",
+#	endif
+#	if RAGNAROK2
+		"Ragnarok Online 2",
+#	endif
+#	if EXTEEL
+		"Exteel",
+#	endif
+#	if SPECIAL_TAGS
+		"Killing Floor",
+#	endif
+#endif // UNREAL25
+	};
+	PrintGameList("Unreal Engine 2", ARRAY_ARG(UE2Games));
+
+#if UC2
+	static const char *UE2XGames[] = {
+		"Unreal Championship 2: The Liandri Conflict"
+	};
+	PrintGameList("Unreal Engine 2X", ARRAY_ARG(UE2XGames));
+#endif
+
+#if UNREAL3
+	static const char *UE3Games[] = {
+		"Unreal Tournament 3", "Gears of War",
+#	if XBOX360
+		"Gears of War 2",
+#	endif
+#	if R6VEGAS
+		"Rainbow 6: Vegas 2",
+#	endif
+#	if MASSEFF
+		"Mass Effect", "Mass Effect 2",
+#	endif
+#	if TUROK
+		"Turok",
+#	endif
+#	if A51
+		"BlackSite: Area 51",
+#	endif
+#	if MKVSDC
+		"Mortal Kombat vs. DC Universe",
+#	endif
+#	if TNA_IMPACT
+		"TNA iMPACT!",
+#	endif
+#	if STRANGLE
+		"Stranglehold",
+#	endif
+#	if ARMYOF2
+		"Army of Two",
+#	endif
+#	if HUXLEY
+		"Huxley",
+#	endif
+#	if TLR
+		"The Last Remnant",
+#	endif
+#	if MEDGE
+		"Mirror's Edge",
+#	endif
+#	if XMEN
+		"X-Men Origins: Wolverine",
+#	endif
+#	if MCARTA
+		"Magna Carta 2",
+#	endif
+#	if BATMAN
+		"Batman: Arkham Asylum",
+#	endif
+#	if CRIMECRAFT
+		"Crime Craft",
+#	endif
+#	if AVA
+		"AVA Online",
+#	endif
+#	if FRONTLINES
+		"Frontlines: Fuel of War",
+#	endif
+#	if BLOODONSAND
+		"50 Cent: Blood on the Sand",
+#	endif
+#	if BORDERLANDS
+		"Borderlands",
+#	endif
+#	if DARKVOID
+		"Dark Void",
+#	endif
+#	if LEGENDARY
+		"Legendary: Pandora's Box",
+#	endif
+#	if SPECIAL_TAGS
+		"Nurien",
+#	endif
+	};
+	PrintGameList("Unreal Engine 3", ARRAY_ARG(UE3Games));
+#endif // UNREAL3
+
+	printf( "\n"
+			"For details and updates please visit " HOMEPAGE "\n"
+	);
+	exit(0);
+}
+
+
+/*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
 
@@ -181,179 +400,7 @@ int main(int argc, char **argv)
 	guard(Main);
 
 	// display usage
-	if (argc < 2)
-	{
-	help:
-		printf(	"Unreal model viewer / exporter\n"
-				"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
-				"\n"
-				"    <package>       name of package to load, without file extension\n"
-				"    <object>        name of object to load\n"
-				"    <class>         class of object to load (useful, when trying to load\n"
-				"                    object with ambiguous name)\n"
-				"\n"
-				"Commands:\n"
-				"    (default)       visualize object; when <object> not specified, will load\n"
-				"                    whole package\n"
-				"    -list           list contents of package\n"
-				"    -export         export specified object or whole package\n"
-				"\n"
-				"Developer commands:\n"
-				"    -dump           dump object information to console\n"
-				"    -check          check some assumptions, no other actions performed\n"
-				"    -pkginfo        load package and display its information\n"
-				"\n"
-				"Options:\n"
-				"    -path=PATH      path to game installation directory; if not specified,\n"
-				"                    program will search for packages in current directory\n"
-				"    -meshes         view meshes only\n"
-				"\n"
-				"Compatibility options:\n"
-				"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
-				"                    unsupported data format\n"
-				"    -noanim         disable loading of MeshAnimation classes\n"
-				"    -nostat         disable loading of StaticMesh class\n"
-				"    -notex          disable loading of Material classes\n"
-				"\n"
-				"Export options:\n"
-				"    -all            export all linked objects too\n"
-				"    -uc             create unreal script when possible\n"
-				"    -md5            use md5mesh/md5anim format for skeletal mesh export\n"
-				"\n"
-				"Supported resources for export:\n"
-				"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
-				"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
-				"    VertMesh        exported as Unreal 3d file\n"
-				"    StaticMesh      exported as ActorX psk file with no skeleton\n"
-				"    Texture         exported in tga format\n"
-				"\n"
-				//?? separate option for this list?
-				//?? this list looks ugly ... apply some formatting?
-				"List of supported games:\n"
-#if UNREAL1
-				"Unreal Engine 1:\n"
-				"    Unreal 1, Unreal Tournament 1, The Wheel of Time"
-	#if DEUS_EX
-				", DeusEx"
-	#endif
-	#if RUNE
-				", Rune"
-	#endif
-				"\n"
-#endif // UNREAL1
-				"Unreal Engine 2:\n"
-#if UT2
-				"    Unreal Tournament 2003,2004\n"
-#endif
-#if SPLINTER_CELL
-				"    Splinter Cell 1,2\n"
-#endif
-#if LINEAGE2
-				"    Lineage 2 Gracia\n"
-#endif
-#if LOCO
-				"    Land of Chaos Online\n"
-#endif
-//				"Unreal Engine 2.5:\n"
-#if UNREAL25
-				"    UE2Runtime, Harry Potter and the Prisoner of Azkaban"
-#	if TRIBES3
-				", Tribes: Vengeance"
-#	endif
-#	if BIOSHOCK
-				", Bioshock, Bioshock 2"
-#	endif
-#	if RAGNAROK2
-				", Ragnarok Online 2"
-#	endif
-#	if EXTEEL
-				", Exteel"
-#	endif
-#	if SPECIAL_TAGS
-				", Killing Floor"
-#	endif
-				"\n"
-#endif // UNREAL25
-#if UC2
-				"Unreal Engine 2X:\n"
-				"    Unreal Championship 2: The Liandri Conflict\n"
-#endif
-#if UNREAL3
-				"Unreal Engine 3:\n"
-				"    Unreal Tournament 3, Gears of War"
-#	if XBOX360
-				", Gears of War 2"
-#	endif
-				"\n"
-#	if MASSEFF
-				"    Mass Effect, Mass Effect 2\n"
-#	endif
-#	if TUROK
-				"    Turok\n"
-#	endif
-#	if A51
-				"    BlackSite: Area 51\n"
-#	endif
-#	if MKVSDC
-				"    Mortal Kombat vs. DC Universe\n"
-#	endif
-#	if TNA_IMPACT
-				"    TNA iMPACT!\n"
-#	endif
-#	if STRANGLE
-				"    Stranglehold\n"
-#	endif
-#	if ARMYOF2
-				"    Army of Two\n"
-#	endif
-#	if HUXLEY
-				"    Huxley\n"
-#	endif
-#	if TLR
-				"    The Last Remnant\n"
-#	endif
-#	if MEDGE
-				"    Mirror's Edge\n"
-#	endif
-#	if XMEN
-				"    X-Men Origins: Wolverine\n"
-#	endif
-#	if MCARTA
-				"    Magna Carta 2\n"
-#	endif
-#	if BATMAN
-				"    Batman: Arkham Asylum\n"
-#	endif
-#	if CRIMECRAFT
-				"    Crime Craft\n"
-#	endif
-#	if AVA
-				"    AVA Online\n"
-#	endif
-#	if FRONTLINES
-				"    Frontlines: Fuel of War\n"
-#	endif
-#	if BLOODONSAND
-				"    50 Cent: Blood on the Sand\n"
-#	endif
-#	if BORDERLANDS
-				"    Borderlands\n"
-#	endif
-#	if DARKVOID
-				"    Dark Void\n"
-#	endif
-#	if LEGENDARY
-				"    Legendary: Pandora's Box\n"
-#	endif
-#	if SPECIAL_TAGS
-				"    Nurien\n"
-#	endif
-#endif // UNREAL3
-				"\n"
-				"For details and updates please visit " HOMEPAGE "\n"
-		);
-		exit(0);
-	}
+	if (argc < 2) Usage();
 
 	// parse command line
 	bool dump = false, view = true, exprt = false, md5 = false, exprtAll = false, listOnly = false,
@@ -391,6 +438,8 @@ int main(int argc, char **argv)
 				exprtAll = true;
 			else if (!stricmp(opt, "md5"))
 				md5 = true;
+			else if (!stricmp(opt, "lods"))
+				GExportLods = true;
 			else if (!stricmp(opt, "uc"))
 				GExportScripts = true;
 			else if (!stricmp(opt, "pkginfo"))
@@ -411,7 +460,7 @@ int main(int argc, char **argv)
 				hasRootDir = true;
 			}
 			else
-				goto help;
+				Usage();
 		}
 		else
 		{
@@ -419,7 +468,7 @@ int main(int argc, char **argv)
 		}
 	}
 	const char *argPkgName   = argv[arg];
-	if (!argPkgName) goto help;
+	if (!argPkgName) Usage();
 	const char *argObjName   = NULL;
 	const char *argClassName = NULL;
 	if (arg < argc-1)
@@ -515,7 +564,7 @@ int main(int argc, char **argv)
 	// get requested object info
 	if (argObjName)
 	{
-		int idx = Package->FindExport(argObjName, argClassName);
+		int idx = Package->FindExport(argObjName, argClassName, true);
 		if (idx == INDEX_NONE)
 		{
 			printf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
@@ -617,7 +666,7 @@ int main(int argc, char **argv)
 	unguard;
 
 #if DO_GUARD
-	} CATCH {
+	} CATCH_CRASH {
 		if (GErrorHistory[0])
 		{
 //			printf("ERROR: %s\n", GErrorHistory);

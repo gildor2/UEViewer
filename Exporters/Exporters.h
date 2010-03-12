@@ -2,6 +2,7 @@
 #define __EXPORT_H__
 
 extern bool GExportScripts;
+extern bool GExportLods;
 
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);

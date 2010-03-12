@@ -2,6 +2,7 @@
 #include "UnrealClasses.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"				// for checking game type
+#include "UnMathTools.h"			// for FRotator to FCoords
 
 #if UNREAL3
 
@@ -19,6 +20,18 @@ struct FSkelMeshSection3
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
 	{
+		if (Ar.ArVer < 215)
+		{
+			// UE2 fields
+			short FirstIndex;
+			short unk1, unk2, unk3, unk4, unk5, unk6, unk7;
+			TArray<short> unk8;
+			Ar << S.MaterialIndex << FirstIndex << unk1 << unk2 << unk3 << unk4 << unk5 << unk6 << S.NumTriangles;
+			Ar << unk8;
+			S.FirstIndex = FirstIndex;
+			S.unk1 = 0;
+			return Ar;
+		}
 		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex << S.NumTriangles;
 #if MCARTA
 		if (Ar.Game == GAME_MagnaCarta && Ar.ArLicenseeVer >= 20)
@@ -86,6 +99,16 @@ struct FRigidVertex3
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+#if R6VEGAS
+		if (Ar.Game == GAME_R6Vegas2 && Ar.ArLicenseeVer >= 63)
+		{
+			short hU, hV;
+			Ar << hU << hV;
+			V.U = half2float(hU);
+			V.V = half2float(hV);
+			goto influences;
+		}
+#endif // R6VEGAS
 		Ar << V.U << V.V;
 #if MEDGE
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13)
@@ -109,6 +132,7 @@ struct FRigidVertex3
 			Ar << f20;
 		}
 #endif // MCARTA
+	influences:
 		Ar << V.BoneIndex;
 		return Ar;
 	}
@@ -141,7 +165,18 @@ struct FSmoothVertex3
 #endif // CRIMECRAFT
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
+		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+#if R6VEGAS
+		if (Ar.Game == GAME_R6Vegas2 && Ar.ArLicenseeVer >= 63)
+		{
+			short hU, hV;
+			Ar << hU << hV;
+			V.U = half2float(hU);
+			V.V = half2float(hV);
+			goto influences;
+		}
+#endif // R6VEGAS
+		Ar << V.U << V.V;
 #if MEDGE
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13)
 		{
@@ -525,6 +560,24 @@ struct FMesh3Unk2
 	}
 };
 
+#if R6VEGAS
+
+struct FMesh3R6Unk1
+{
+	byte				f[6];
+
+	friend FArchive& operator<<(FArchive &Ar, FMesh3R6Unk1 &S)
+	{
+		Ar << S.f[0] << S.f[1] << S.f[2] << S.f[3] << S.f[4];
+		if (Ar.ArLicenseeVer >= 47) Ar << S.f[5];
+		return Ar;
+	}
+};
+
+#endif // R6VEGAS
+
+// Version references: 180..240 - Rainbow 6: Vegas 2
+// Other: GOW PC
 struct FStaticLODModel3
 {
 	TArray<FSkelMeshSection3> Sections;
@@ -548,6 +601,14 @@ struct FStaticLODModel3
 		int tmp1;
 		Ar << Lod.Sections << Lod.IndexBuffer;
 
+		if (Ar.ArVer < 215)
+		{
+			TArray<FRigidVertex3>  RigidVerts;
+			TArray<FSmoothVertex3> SmoothVerts;
+			Ar << RigidVerts << SmoothVerts;
+			appNotify("SkeletalMesh: untested code! (ArVer=%d)", Ar.ArVer);
+		}
+
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands)
 		{
@@ -557,7 +618,11 @@ struct FStaticLODModel3
 		}
 #endif // BORDERLANDS
 
-		Ar << Lod.f68 << Lod.UsedBones << Lod.f74 << Lod.Chunks << Lod.f80 << Lod.NumVertices;
+		Ar << Lod.f68 << Lod.UsedBones << Lod.f74;
+		if (Ar.ArVer >= 215)
+		{
+			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
+		}
 
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 11)
@@ -568,6 +633,15 @@ struct FStaticLODModel3
 #endif
 
 		Ar << Lod.Edges;
+		if (Ar.ArVer < 202)
+		{
+			// old version
+			TLazyArray<FVertInfluences> Influences;
+			TLazyArray<FMeshWedge>      Wedges;
+			TLazyArray<FMeshFace>       Faces;
+			TLazyArray<FVector>         Points;
+			Ar << Influences << Wedges << Faces << Points;
+		}
 
 #if STRANGLE
 		if (Ar.Game == GAME_Strangle)
@@ -582,8 +656,24 @@ struct FStaticLODModel3
 #endif // STRANGLE
 
 	part2:
-		Ar << Lod.f24;
-		Lod.BulkData.Serialize(Ar);
+		if (Ar.ArVer >= 207)
+		{
+			Ar << Lod.f24;
+		}
+		else
+		{
+			TArray<short> f24_a;
+			Ar << f24_a;
+		}
+		if (Ar.ArVer >= 221)
+			Lod.BulkData.Serialize(Ar);
+#if R6VEGAS
+		if (Ar.Game == GAME_R6Vegas2 && Ar.ArLicenseeVer >= 46)
+		{
+			TArray<FMesh3R6Unk1> unkA0;
+			Ar << unkA0;
+		}
+#endif // R6VEGAS
 #if ARMYOF2
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
@@ -684,6 +774,11 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	}
 #endif // MEDGE
 	Ar << Bounds;
+	if (Ar.ArVer < 180)
+	{
+		UObject *unk;
+		Ar << unk;
+	}
 #if BATMAN
 	if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 0x0F)
 	{
@@ -781,6 +876,36 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Max);
 
 	unguard;
+
+	unguard;
+}
+
+
+void USkeletalMesh::PostLoadMesh3()
+{
+	guard(USkeletalMesh::PostLoadMesh3);
+
+	// sockets
+	int NumSockets = Sockets.Num();
+	if (NumSockets)
+	{
+		AttachAliases.Empty(NumSockets);
+		AttachAliases.Add(NumSockets);
+		AttachBoneNames.Empty(NumSockets);
+		AttachBoneNames.Add(NumSockets);
+		AttachCoords.Empty(NumSockets);
+		AttachCoords.Add(NumSockets);
+		for (int i = 0; i < NumSockets; i++)
+		{
+			USkeletalMeshSocket *S = Sockets[i];
+			if (!S) continue;
+			AttachAliases[i]       = S->SocketName;
+			AttachBoneNames[i]     = S->BoneName;
+			CCoords &C = (CCoords&)AttachCoords[i];
+			C.origin = (CVec3&)S->RelativeLocation;
+			SetAxis(S->RelativeRotation, C.axis);
+		}
+	}
 
 	unguard;
 }
@@ -1679,24 +1804,42 @@ struct FStaticMeshLODModel
 		}
 		else
 		{
-			// serialize vertex stream
-			appNotify("StaticMesh: untested code! (ArVer=%d)", Ar.ArVer);
+			TArray<FStaticMeshUVStream3Old> UVStream;
 			if (Ar.ArVer >= 333)
 			{
+				appNotify("StaticMesh: untested code! (ArVer=%d)", Ar.ArVer);
 				TArray<FQuat> Verts;
 				TArray<int>   Normals;	// compressed
-				Ar << Verts << Normals;	// really used RAW_ARRAY, but it is too new for this code
+				Ar << Verts << Normals << UVStream;	// really used RAW_ARRAY, but it is too new for this code
+				//!! convert
 			}
 			else
 			{
 				// oldest version
 				TArray<FStaticMeshVertex3Old> Verts;
-				Ar << Verts;
+				Ar << Verts << UVStream;
+				// convert vertex stream
+				int i;
+				int NumVerts = Verts.Num();
+//				int numUVs   = UVStream.Num();
+				Lod.VertexStream.Verts.Empty(NumVerts);
+				Lod.VertexStream.Verts.Add(NumVerts);
+				Lod.UVStream.UV.Empty();
+				Lod.UVStream.UV.Add(NumVerts);
+				Lod.UVStream.NumVerts = NumVerts;
+				// resize UV streams
+				for (i = 0; i < NumVerts; i++)
+				{
+					FStaticMeshVertex3Old &V = Verts[i];
+					FStaticMeshUV       &SUV = UVStream[0].Data[i];
+					FVector              &DV = Lod.VertexStream.Verts[i];
+					FStaticMeshUVItem3   &UV = Lod.UVStream.UV[i];
+					DV           = V.Pos;
+					UV.Normal[2] = V.Normal[2];
+					UV.U = SUV.U;
+					UV.V = SUV.V;
+				}
 			}
-			// serialize UVStream
-			TArray<FStaticMeshUVStream3Old> UVStream;
-			Ar << UVStream;
-			//!! convert data!
 			//!! note: this code will crash in RestoreMesh3() because of empty data
 		}
 		Ar << Lod.Indices << Lod.Indices2;

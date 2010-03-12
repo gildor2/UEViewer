@@ -25,12 +25,16 @@
 // replaces random 'alpha=0' color with black
 static void PostProcessAlpha(byte *pic, int width, int height)
 {
+	guard(PostProcessAlpha);
+
 	for (int pixelCount = width * height; pixelCount > 0; pixelCount--, pic += 4)
 	{
 		if (pic[3] != 0)	// not completely transparent
 			continue;
 		pic[0] = pic[1] = pic[2] = 0;
 	}
+
+	unguard;
 }
 
 
@@ -38,6 +42,7 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 	const char *Name, UPalette *Palette)
 {
 	guard(DecompressTexture);
+
 	int size = width * height * 4;
 	byte *dst = new byte [size];
 
@@ -189,11 +194,15 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 	dds.width  = width;
 	dds.height = height;
 	dds.data   = const_cast<byte*>(Data);
+	guard(DDSDecompress);
 	if (DDSDecompress(&dds, dst) != 0)
 		appError("Error in DDSDecompress");
+	unguard;
 
 #else // USE_NVIMAGE
 
+	nv::Image image;
+	guard(nv::DecompressDDS);
 	nv::DDSHeader header;
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
 	header.setWidth(width);
@@ -202,8 +211,8 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 	nv::MemoryInputStream input(Data, width * height * 4);	//!! size is incorrect, it is greater than should be
 
 	nv::DirectDrawSurface dds(header, &input);
-	nv::Image image;
 	dds.mipmap(&image, 0, 0);
+	unguard;
 
 	byte *s = (byte*)image.pixels();
 	byte *d = dst;
@@ -498,7 +507,11 @@ static void BioReadBulkCatalog()
 	ready = true;
 
 	const CGameFileInfo *cat = appFindGameFile("catalog.bdc");
-	if (!cat) return;
+	if (!cat)
+	{
+		printf("WARNING: catalog.bdc is not found\n");
+		return;
+	}
 	FArchive *Ar = appCreateFileReader(cat);
 	// setup for reading Bioshock data
 	Ar->ArVer         = 141;
@@ -540,11 +553,18 @@ static byte *FindBioTexture(const UTexture *Tex)
 					Tex->HasBeenStripped, Tex->StrippedNumMips);
 #endif
 				// found
-				byte *buf = new byte[max(Item.DataSize, needSize)];
-				const CGameFileInfo *bulk = appFindGameFile(File.Filename);
-				if (!bulk) return NULL;		// no bulk file
-				FArchive *Reader = appCreateFileReader(bulk);
+				const CGameFileInfo *bulkFile = appFindGameFile(File.Filename);
+				if (!bulkFile)
+				{
+					// no bulk file
+					printf("Decompressing %s: %s is missing\n", Tex->Name, *File.Filename);
+					return NULL;
+				}
+
+				printf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, bulkFile->RelativeName);
+				FArchive *Reader = appCreateFileReader(bulkFile);
 				Reader->Seek(Item.DataOffset);
+				byte *buf = new byte[max(Item.DataSize, needSize)];
 				Reader->Serialize(buf, Item.DataSize);
 				delete Reader;
 				return buf;
@@ -563,7 +583,7 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 {
 	guard(UTexture::Decompress);
 #if BIOSHOCK
-	if (Package && Package->Game == GAME_Bioshock) //?? check bStripped ?
+	if (Package && Package->Game == GAME_Bioshock && CachedBulkDataSize) //?? check bStripped ?
 	{
 		BioReadBulkCatalog();
 		byte *pic = FindBioTexture(this);

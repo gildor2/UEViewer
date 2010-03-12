@@ -21,6 +21,7 @@ int main(int argc, char **argv)
 	{
 	help:
 		printf(	"Unreal package decompressor\n"
+				"http://www.gildor.org/\n"
 				"Usage: decompress <package filename>\n"
 		);
 		exit(0);

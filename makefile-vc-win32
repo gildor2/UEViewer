@@ -144,6 +144,7 @@ DEPENDS = \
 	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
@@ -175,6 +176,7 @@ DEPENDS = \
 	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
@@ -270,6 +272,7 @@ DEPENDS = \
 	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
@@ -321,6 +324,24 @@ DEPENDS = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+./obj/umodel-win32/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh3.obj" Unreal/UnMesh3.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
@@ -329,9 +350,6 @@ DEPENDS = \
 
 ./obj/umodel-win32/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh.obj" Unreal/UnMesh.cpp
-
-./obj/umodel-win32/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh3.obj" Unreal/UnMesh3.cpp
 
 DEPENDS = \
 	Build.h \

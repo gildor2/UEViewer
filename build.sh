@@ -14,11 +14,7 @@ PLATFORM="vc-win32"
 
 makefile="makefile-$PLATFORM"
 
-# update makefile when needed
-# [ $makefile -ot $project ] &&
-#?? add vc_ver here
-$root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
-
+# build shader includes before call to genmake
 if [ $render -eq 1 ]; then
 	# build shaders
 	#?? move to makefile
@@ -26,6 +22,11 @@ if [ $render -eq 1 ]; then
 	./make.pl
 	cd "../.."
 fi
+
+# update makefile when needed
+# [ $makefile -ot $project ] &&
+#?? add vc_ver here
+$root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 
 # build
 case "$PLATFORM" in

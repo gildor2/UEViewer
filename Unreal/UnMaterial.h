@@ -1522,7 +1522,9 @@ public:
 		Super::Serialize(Ar);
 		if (Ar.ArVer < 297)
 		{
-			Ar << SizeX << SizeY << (byte&)Format;
+			int Format2;
+			Ar << SizeX << SizeY << Format2;
+			Format = (EPixelFormat)Format2;		// int -> byte (enum)
 		}
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands) Ar.Seek(Ar.Tell() + 16);	// some hash

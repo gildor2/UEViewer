@@ -133,6 +133,14 @@ struct FPackageFileSummary
 		// detect game
 		Ar.DetectGame();
 		// read other fields
+#if R6VEGAS
+		if (Ar.Game == GAME_R6Vegas2)
+		{
+			int unk8, unkC;
+			if (Ar.ArLicenseeVer >= 48) Ar << unk8;
+			if (Ar.ArLicenseeVer >= 49) Ar << unkC;
+		}
+#endif // R6VEGAS
 #if HUXLEY
 		if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 8)
 		{
@@ -352,8 +360,11 @@ struct FObjectExport
 				return Ar;
 			}
 #	endif // WHEELMAN
-			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex;
-			Ar << E.ObjectName << E.Archetype << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize;
+			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
+			if (Ar.ArVer >= 220) Ar << E.Archetype;
+			Ar << E.ObjectFlags;
+			if (Ar.ArVer >= 195) Ar << E.ObjectFlags2;	// qword flags after version 195
+			Ar << E.SerialSize;
 			if (E.SerialSize || Ar.ArVer >= 249)
 				Ar << E.SerialOffset;
 #	if HUXLEY
@@ -557,7 +568,7 @@ public:
 		}
 	}
 
-	int FindExport(const char *name, const char *className = NULL)
+	int FindExport(const char *name, const char *className = NULL, bool ignorePackage = false)
 	{
 		for (int i = 0; i < Summary.ExportCount; i++)
 		{
@@ -566,7 +577,10 @@ public:
 			if (strcmp(Exp.ObjectName, name) != 0)
 				continue;
 			// if class name specified - compare it too
-			if (className && strcmp(GetObjectName(Exp.ClassIndex), className) != 0)
+			const char *foundClassName = GetObjectName(Exp.ClassIndex);
+			if (className && strcmp(foundClassName, className) != 0)
+				continue;
+			if (!className && ignorePackage && strcmp(foundClassName, "Package") == 0)
 				continue;
 			return i;
 		}
@@ -579,9 +593,17 @@ public:
 	// FArchive interface
 	virtual FArchive& operator<<(FName &N)
 	{
+		guard(UnPackage::SerializeFName);
+
+		assert(IsLoading);
 #if BIOSHOCK
 		if (Game == GAME_Bioshock)
+		{
 			*this << AR_INDEX(N.Index) << N.ExtraIndex;
+			N.Str = GetName(N.Index);
+			N.AppendIndexBio();
+			return *this;
+		}
 		else
 #endif // BIOSHOCK
 #if UC2
@@ -593,6 +615,13 @@ public:
 		if (Engine() >= GAME_UE3)
 		{
 			*this << N.Index;
+	#if R6VEGAS
+			if (Game == GAME_R6Vegas2)
+			{
+				N.ExtraIndex = N.Index >> 19;
+				N.Index &= 0x7FFFF;
+			}
+	#endif // R6VEGAS
 			if (ArVer >= 343) *this << N.ExtraIndex;
 		}
 		else
@@ -603,10 +632,15 @@ public:
 		N.AppendIndex();
 #endif
 		return *this;
+
+		unguard;
 	}
 
 	virtual FArchive& operator<<(UObject *&Obj)
 	{
+		guard(UnPackage::SerializeUObject);
+
+		assert(IsLoading);
 		int index;
 #if UC2
 		if (Engine() == GAME_UE2X && ArVer >= 145)
@@ -637,6 +671,8 @@ public:
 			Obj = NULL;
 		}
 		return *this;
+
+		unguard;
 	}
 
 	virtual void Serialize(void *data, int size)

@@ -1,20 +1,11 @@
 #ifndef __MESHINSTANCE_H__
 #define __MESHINSTANCE_H__
 
+#include "UnMathTools.h"
+
 /*-----------------------------------------------------------------------------
 	Basic CMeshInstance class
 -----------------------------------------------------------------------------*/
-
-inline void SetAxis(const FRotator &Rot, CAxis &Axis)
-{
-	CVec3 angles;
-	//?? check: swapped pitch and roll ?
-	angles[YAW]   = -Rot.Yaw   / 32768.0f * 180;
-	angles[ROLL]  = -Rot.Pitch / 32768.0f * 180;
-	angles[PITCH] = -Rot.Roll  / 32768.0f * 180;
-	Axis.FromEuler(angles);
-}
-
 
 class CMeshInstance
 {

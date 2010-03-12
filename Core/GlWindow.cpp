@@ -845,6 +845,7 @@ static void Display()
 
 #if USE_BLOOM
 	bool useBloom = ( GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) == (QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) );
+	if (GDisableFBO) useBloom = false;
 	static CFramebuffer FBO(true, GL_SUPPORT(QGL_ARB_TEXTURE_FLOAT));
 	if (useBloom) PostEffectPrepare(FBO);
 #endif // USE_BLOOM

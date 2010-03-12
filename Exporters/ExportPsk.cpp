@@ -39,16 +39,10 @@ static void ExportScript(const USkeletalMesh *Mesh, FArchive &Ar)
 }
 
 
-void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
+static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
 {
-	// export script file
-	if (GExportScripts)
-	{
-		char filename[256];
-		appSprintf(ARRAY_ARG(filename), "%s/%s/%s.uc", Mesh->Package->Name, Mesh->GetClassName(), Mesh->Name);
-		FFileReader Ar1(filename, false);
-		ExportScript(Mesh, Ar1);
-	}
+	guard(ExportPsk0);
+
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
 	int i;
@@ -166,6 +160,42 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 		I.PointIndex = S.PointIndex;
 		I.BoneIndex  = S.BoneIndex;
 		Ar << I;
+	}
+
+	unguard;
+}
+
+
+void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
+{
+	// export script file
+	if (GExportScripts)
+	{
+		char filename[256];
+		appSprintf(ARRAY_ARG(filename), "%s/%s/%s.uc", Mesh->Package->Name, Mesh->GetClassName(), Mesh->Name);
+		FFileReader Ar1(filename, false);
+		ExportScript(Mesh, Ar1);
+	}
+
+	guard(BaseMesh);
+	ExportPsk0(Mesh, Ar);
+	unguard;
+
+	if (GExportLods)
+	{
+		for (int Lod = 1; Lod < Mesh->LODModels.Num(); Lod++)
+		{
+			guard(Lod);
+			char filename[256];
+			appSprintf(ARRAY_ARG(filename), "%s/%s/%s_Lod%d.psk", Mesh->Package->Name, Mesh->GetClassName(), Mesh->Name, Lod);
+			FFileReader Ar2(filename, false);
+			Ar2.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
+			// copy Lod to mesh and export it
+			USkeletalMesh *Mesh2 = const_cast<USkeletalMesh*>(Mesh);	// can also create new USkeletalMesh and restore LOD to it
+			Mesh2->RecreateMeshFromLOD(Lod, true);
+			ExportPsk0(Mesh2, Ar2);
+			unguardf(("%d", Lod));
+		}
 	}
 }
 

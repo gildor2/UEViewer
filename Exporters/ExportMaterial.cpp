@@ -8,6 +8,8 @@
 
 void ExportMaterial(const UUnrealMaterial *Mat)
 {
+	guard(ExportMaterial);
+
 #if RENDERING				// requires UUnrealMaterial::GetParams()
 
 	if (!Mat) return;
@@ -30,4 +32,6 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	PROC(Emissive);
 
 #endif // RENDERING
+
+	unguardf(("%s'%s'", Mat->GetClassName(), Mat->Name));
 }

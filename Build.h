@@ -39,6 +39,7 @@
 #define MEDGE			1		// Mirror's Edge
 #define TLR				1		// The Last Remnant
 //#define TUROK			1		incomplete??
+#define R6VEGAS			1		// Rainbow 6 Vegas 2
 #define XMEN			1		// XMen: Wolverine
 #define MCARTA			1		// Magna Carta 2
 #define BATMAN			1		// Batman: Arkham Asylum

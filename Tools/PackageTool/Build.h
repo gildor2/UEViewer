@@ -20,3 +20,4 @@
 #define BIOSHOCK		1
 #define MASSEFF			1
 #define TLR				1
+#define R6VEGAS			1

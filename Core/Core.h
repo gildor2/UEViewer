@@ -193,12 +193,14 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 
 #define TRY				try
 #define CATCH			catch (...)
+#define CATCH_CRASH		catch (...)
 #define	THROW_AGAIN		throw
 #define THROW			throw 1
 
 #else
 
-#define EXCEPT_FILTER	1					// 1==EXCEPTION_EXECUTE_HANDLER; may use win32ExceptFilter2()
+unsigned win32ExceptFilter2();
+#define EXCEPT_FILTER	win32ExceptFilter2() // may use 1==EXCEPTION_EXECUTE_HANDLER or win32ExceptFilter2()
 
 #define guard(func)						\
 	{									\
@@ -220,6 +222,7 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 
 #define TRY				__try
 #define CATCH			__except(1)			// 1==EXCEPTION_EXECUTE_HANDLER
+#define CATCH_CRASH		__except(EXCEPT_FILTER)
 #define THROW_AGAIN		throw
 #define THROW			throw 1
 
@@ -244,7 +247,7 @@ extern char GErrorHistory[2048];
 #else
 #	ifndef WINAPI		// detect <windows.h>
 	extern "C" {
-		int __stdcall GetTickCount();
+		__declspec(dllimport) unsigned long __stdcall GetTickCount();
 	}
 #	endif
 #	define appMilliseconds()		GetTickCount()

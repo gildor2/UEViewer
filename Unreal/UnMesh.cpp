@@ -1224,13 +1224,14 @@ void USkeletalMesh::UpgradeMesh()
 }
 
 
-void USkeletalMesh::RecreateMeshFromLOD()
+void USkeletalMesh::RecreateMeshFromLOD(int LodIndex, bool Force)
 {
 	guard(USkeletalMesh::RecreateMeshFromLOD);
-	if (Wedges.Num() || !LODModels.Num()) return;		// nothing to do
-	printf("Restoring mesh from LOD ...\n");
+	if (Wedges.Num() && !Force) return;					// nothing to do
+	if (LODModels.Num() <= LodIndex) return;			// no such LOD mesh
+	printf("Restoring mesh from LOD %d ...\n", LodIndex);
 
-	FStaticLODModel &Lod = LODModels[0];
+	FStaticLODModel &Lod = LODModels[LodIndex];
 
 	CopyArray(Wedges, Lod.Wedges);
 	CopyArray(Points, Lod.Points);

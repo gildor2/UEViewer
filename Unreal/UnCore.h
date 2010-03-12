@@ -118,6 +118,15 @@ public:
 		Str = strdup(va("%s_%d", Str, ExtraIndex-1));
 	}
 
+#if BIOSHOCK
+	void AppendIndexBio()
+	{
+		if (NameGenerated || !ExtraIndex) return;
+		NameGenerated = true;
+		Str = strdup(va("%s%d", Str, ExtraIndex-1));	// without "_" char
+	}
+#endif // BIOSHOCK
+
 	inline const char *operator*() const
 	{
 		return Str;
@@ -175,6 +184,7 @@ enum EGame
 	GAME_UE3       = 0x1000,
 		GAME_MassEffect,
 		GAME_MassEffect2,
+		GAME_R6Vegas2,
 		GAME_MirrorEdge,
 		GAME_TLR,
 		GAME_Huxley,
@@ -1192,7 +1202,7 @@ struct FCompressedChunkHeader
 			H.BlockSize = H.Blocks[0].UncompressedSize;
 #endif
 		return Ar;
-		unguard;
+		unguardf(("pos=%X", Ar.Tell()));
 	}
 };
 

@@ -118,7 +118,10 @@ static const char *PackageExtensions[] =
 	, "tlr"
 #endif
 #if LEGENDARY
-	, "ppk"
+	, "ppk", "pda"	// Legendary: Pandora's Box
+#endif
+#if R6VEGAS
+	, "uppc"		// Rainbow 6 Vegas 2
 #endif
 	// other games with no special code
 	, "lm"			// Landmass
@@ -972,6 +975,9 @@ void FArchive::DetectGame()
 	 *-----------------------------------------------------------------------*/
 	// most UE3 games has single version for all packages
 	// here is a list of such games, sorted by version
+#if R6VEGAS
+	if (ArVer == 241 && ArLicenseeVer == 71)	SET(GAME_R6Vegas2);
+#endif
 #if STRANGLE
 	if (ArVer == 375 && ArLicenseeVer == 25)	SET(GAME_Strangle);	//!! has extra tag
 #endif
@@ -1041,7 +1047,7 @@ void FArchive::DetectGame()
 #if HUXLEY
 	if ( (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
 		 (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
-		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 22)) )
+		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 23)) )
 		SET(GAME_Huxley);
 #endif
 #if ARMYOF2
@@ -1298,6 +1304,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 	{
 		guard(OldBulkFormat);
 		// old bulk format - evolution of TLazyArray
+		// very old version: serialized EndPosition and ElementCount - exactly as TLazyArray
 		assert(Ar.IsLoading);
 
 		BulkDataFlags = 4;					// unknown

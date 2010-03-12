@@ -3,6 +3,7 @@
 #include "UnPackage.h"
 
 #define MAKE_DIRS		1
+//#define DISABLE_WRITE	1		// for quick testing of extraction
 
 /*-----------------------------------------------------------------------------
 	Main function
@@ -21,6 +22,7 @@ int main(int argc, char **argv)
 	{
 	help:
 		printf(	"Unreal package extractor\n"
+				"http://www.gildor.org/\n"
 				"Usage: extract <package filename>\n"
 		);
 		exit(0);
@@ -147,9 +149,14 @@ int main(int argc, char **argv)
 		char *dst = strchr(buf2, 0);
 		//!! use UniqueNameList for names
 		appSprintf(dst, ARRAY_COUNT(buf2) - (dst - buf2), "%s.%s", *Exp.ObjectName, ClassName);
-		appMakeDirectoryForFile(buf2);
 #endif
 		guard(WriteFile);
+		// read data
+		byte *data = new byte[Exp.SerialSize];
+		Package->Seek(Exp.SerialOffset);
+		Package->Serialize(data, Exp.SerialSize);
+#if !DISABLE_WRITE
+		appMakeDirectoryForFile(buf2);
 		FILE *f2 = fopen(buf2, "wb");
 		if (!f2)
 		{
@@ -157,15 +164,12 @@ int main(int argc, char **argv)
 			printf("%d/%d: unable to create file %s\n", idx, Package->Summary.ExportCount, buf2);
 			continue;
 		}
-		// read data
-		byte *data = new byte[Exp.SerialSize];
-		Package->Seek(Exp.SerialOffset);
-		Package->Serialize(data, Exp.SerialSize);
 		// write data
 		fwrite(data, Exp.SerialSize, 1, f2);
+		fclose(f2);
+#endif // !DISABLE_WRITE
 		// cleanup
 		delete data;
-		fclose(f2);
 		unguardf(("file=%s", buf2));
 		// notification
 		printf("Done: %d/%d ...\r", idx, Package->Summary.ExportCount);

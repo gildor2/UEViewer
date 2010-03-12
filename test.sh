@@ -101,9 +101,12 @@ fi
 # no arguments
 
 # select path here
-case "uc2" in
+case "" in
 
 "")
+	# SWRC
+#	run1 data/RepublicCommando -noanim BactaDispensers.ukx
+	run1 data/RepublicCommando -noanim Vehicles.ukx
 	# Materials
 #	ut2 AS_Vehicles_M.ukx minigun_turret
 #	ut2 StreamAnims.ukx Dropship

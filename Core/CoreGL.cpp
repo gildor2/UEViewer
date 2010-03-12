@@ -506,6 +506,21 @@ void CShader::Unset()
 -----------------------------------------------------------------------------*/
 
 const CFramebuffer *GCurrentFramebuffer = NULL;		//?? change
+bool GDisableFBO = false;
+
+void CFramebuffer::Use()
+{
+	guard(CFramebuffer::Use);
+
+	if (GDisableFBO) return;
+	if (!IsValid()) SetSize(width, height); // refresh
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, FBObj);
+	GL_CheckError("BindFramebuffer");
+	GCurrentFramebuffer = this;
+	SetViewport();
+
+	unguard;
+}
 
 void CFramebuffer::Release()
 {
@@ -523,6 +538,7 @@ void CFramebuffer::SetSize(int winWidth, int winHeight)
 	guard(CFramebuffer::SetSize);
 
 	if (IsValid() && winWidth == width && winHeight == height) return;
+	if (GDisableFBO) return;
 	width  = winWidth;
 	height = winHeight;
 
@@ -567,8 +583,9 @@ void CFramebuffer::SetSize(int winWidth, int winHeight)
 	case GL_FRAMEBUFFER_COMPLETE_EXT:
 		break;		// ok
 	default:
-		appError("FBO failed: error=%X", status); //?? disable FBO and continue working?
-		break;
+		appNotify("OpenGL error: FBO error=%X. Framebuffers are disabled", status);
+		GDisableFBO = true;
+		return;
 	}
 
 	// done ...

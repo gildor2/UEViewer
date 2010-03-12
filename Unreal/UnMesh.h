@@ -1,11 +1,6 @@
 #ifndef __UNMESH_H__
 #define __UNMESH_H__
 
-//?? either remove this line or make analogous lines for other targets
-#if DEUS_EX && !UNREAL1
-#	error DEUS_EX requires UNREAL1
-#endif
-
 /*-----------------------------------------------------------------------------
 UE1 CLASS TREE:
 ~~~~~~~~~~~~~~~
@@ -23,11 +18,13 @@ UE2 CLASS TREE:
 			ULodMesh
 				USkeletalMesh
 				UVertMesh
+		UStaticMesh
 
 UE3 CLASS TREE:
 ~~~~~~~~~~~~~~~
 	UObject
 		USkeletalMesh
+		UStaticMesh
 
 -----------------------------------------------------------------------------*/
 
@@ -1329,6 +1326,13 @@ struct FStaticLODModel
 #if TRIBES3
 		TRIBES_HDR(Ar, 9);
 #endif
+#if SWRC
+		if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 146)
+		{
+			int unk0;
+			Ar << unk0;
+		}
+#endif // SWRC
 		Ar << M.SkinningData << M.SkinPoints << M.NumDynWedges;
 		Ar << M.SmoothSections << M.RigidSections << M.SmoothIndices << M.RigidIndices;
 		Ar << M.VertexStream;
@@ -1444,7 +1448,39 @@ struct FT3Unk1
 
 #endif // TRIBES3
 
+#if SWRC
+
+struct FAttachSocketSWRC
+{
+	FName		Alias;
+	FName		BoneName;
+	FMatrix		Matrix;
+
+	friend FArchive& operator<<(FArchive &Ar, FAttachSocketSWRC &S)
+	{
+		return Ar << S.Alias << S.BoneName << S.Matrix;
+	}
+};
+
+struct FMeshAnimLinkSWRC
+{
+	int			Flags;
+	UMeshAnimation *Anim;
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshAnimLinkSWRC &S)
+	{
+		if (Ar.ArVer >= 151)
+			Ar << S.Flags;
+		else
+			S.Flags = 1;
+		return Ar << S.Anim;
+	}
+};
+
+#endif // SWRC
+
 #if UNREAL3
+
 struct FSkeletalMeshLODInfo
 {
 	DECLARE_STRUCT(FSkeletalMeshLODInfo);
@@ -1468,7 +1504,36 @@ struct FSkeletalMeshLODInfo
 #endif
 	END_PROP_TABLE
 };
-#endif
+
+class USkeletalMeshSocket : public UObject
+{
+	DECLARE_CLASS(USkeletalMeshSocket, UObject);
+public:
+	FName					SocketName;
+	FName					BoneName;
+	FVector					RelativeLocation;
+	FRotator				RelativeRotation;
+	FVector					RelativeScale;
+
+	USkeletalMeshSocket()
+	{
+		SocketName.Str = "None";
+		BoneName.Str = "None";
+		RelativeLocation.Set(0, 0, 0);
+		RelativeRotation.Set(0, 0, 0);
+		RelativeScale.Set(1, 1, 1);
+	}
+	BEGIN_PROP_TABLE
+		PROP_NAME(SocketName)
+		PROP_NAME(BoneName)
+		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR(RelativeRotation)
+		PROP_VECTOR(RelativeScale)
+	END_PROP_TABLE
+};
+
+#endif // UNREAL3
+
 
 class USkeletalMesh : public ULodMesh
 {
@@ -1499,7 +1564,9 @@ public:
 	UObject*				CollisionMesh;	// UStaticMesh*
 	UObject*				KarmaProps;		// UKMeshProps*
 #if UNREAL3
-	TArray<FSkeletalMeshLODInfo> LODInfo;	//?? move outside
+	//?? move outside
+	TArray<FSkeletalMeshLODInfo> LODInfo;
+	TArray<USkeletalMeshSocket*> Sockets;
 #endif
 #if BIOSHOCK
 	TArray<UObject*>		havokObjects;	// wrappers for Havok objects used by this mesh; not used by Bioshock engine (precaching?)
@@ -1507,7 +1574,7 @@ public:
 
 	void UpgradeFaces();
 	void UpgradeMesh();
-	void RecreateMeshFromLOD();
+	void RecreateMeshFromLOD(int LodIndex = 0, bool Force = false);
 #if UNREAL1
 	void SerializeSkelMesh1(FArchive &Ar);
 #endif
@@ -1516,6 +1583,7 @@ public:
 #endif
 #if UNREAL3
 	void SerializeSkelMesh3(FArchive &Ar);
+	void PostLoadMesh3();
 #endif
 #if BIOSHOCK
 	void SerializeBioshockMesh(FArchive &Ar);
@@ -1526,7 +1594,7 @@ public:
 	//!! separate class for UE3 !
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
-		PROP_DROP(Sockets)
+		PROP_ARRAY(Sockets, UObject*)
 		PROP_DROP(SkelMeshGUID)
 		PROP_DROP(SkelMirrorTable)
 		PROP_DROP(FaceFXAsset)
@@ -1592,9 +1660,38 @@ public:
 #if TRIBES3
 		TRIBES_HDR(Ar, 4);
 #endif
-		Ar << Points2 << RefSkeleton << Animation;
+		Ar << Points2 << RefSkeleton;
+#if SWRC
+		if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 142)
+		{
+			for (int i = 0; i < RefSkeleton.Num(); i++)
+			{
+				FMeshBone &B = RefSkeleton[i];
+				B.BonePos.Orientation.X *= -1;
+				B.BonePos.Orientation.Y *= -1;
+				B.BonePos.Orientation.Z *= -1;
+			}
+		}
+		if (Ar.Game == GAME_RepCommando && Version >= 5)
+		{
+			TArray<FMeshAnimLinkSWRC> Anims;
+			Ar << Anims;
+		}
+		else
+#endif // SWRC
+			Ar << Animation;
 		Ar << SkeletalDepth << WeightIndices << BoneInfluences;
-		Ar << AttachAliases << AttachBoneNames << AttachCoords;
+#if SWRC
+		if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 140)
+		{
+			TArray<FAttachSocketSWRC> Sockets;
+			Ar << Sockets;	//?? convert
+		}
+		else
+#endif // SWRC
+		{
+			Ar << AttachAliases << AttachBoneNames << AttachCoords;
+		}
 		if (Version <= 1)
 		{
 #if SPLINTER_CELL
@@ -1622,6 +1719,18 @@ public:
 				Ar << f338;
 			}
 #endif // UC2
+#if SWRC
+			if (Ar.Game == GAME_RepCommando)
+			{
+				int f1C4;
+				if (Version >= 6) Ar << f1C4;
+				Ar << LODModels;
+				if (Version < 5) Ar << f224;
+				Ar << Points << Wedges << Triangles << VertInfluences;
+				Ar << CollapseWedge << f1C8;
+				goto skip_remaining;
+			}
+#endif // SWRC
 			Ar << LODModels << f224 << Points << Wedges << Triangles << VertInfluences;
 			Ar << CollapseWedge << f1C8;
 		}
@@ -1644,17 +1753,12 @@ public:
 			SkipLazyArray(Ar);
 	#endif
 			// nothing interesting below ...
-			Ar.Seek(Ar.GetStopper());
-			return;
+			goto skip_remaining;
 		}
 #endif // TRIBES3
 #if UC2
-		if (Ar.Engine() == GAME_UE2X)
-		{
-			Ar.Seek(Ar.GetStopper());
-			return;
-		}
-#endif // UC2
+		if (Ar.Engine() == GAME_UE2X) goto skip_remaining;
+#endif
 
 #if LINEAGE2
 		if (Ar.Game == GAME_Lineage2)
@@ -1680,13 +1784,8 @@ public:
 		}
 
 #if LOCO
-		if (Ar.Game == GAME_Loco)
-		{
-			// Loco codepath is similar to UT2004, but sometimes has different version switches
-			Ar.Seek(Ar.GetStopper());
-			return;
-		}
-#endif // LOCO
+		if (Ar.Game == GAME_Loco) goto skip_remaining;	// Loco codepath is similar to UT2004, but sometimes has different version switches
+#endif
 
 #if UT2
 		if (Ar.Game == GAME_UT2)
@@ -1718,22 +1817,26 @@ public:
 		if (Ar.ArLicenseeVer && (Ar.Tell() != Ar.GetStopper()))
 		{
 			appNotify("Serializing SkeletalMesh'%s' of unknown game: %d unreal bytes", Name, Ar.GetStopper() - Ar.Tell());
+		skip_remaining:
 			Ar.Seek(Ar.GetStopper());
 		}
 
 		unguard;
 	}
-#if BIOSHOCK
 	virtual void PostLoad()
 	{
-#if 0
+#if BIOSHOCK
+	#if 0
 		if (Package->Game == GAME_Bioshock)
-#else
+	#else
 		if (havokObjects.Num())			//?? ... UnPackage is not ready here ...
-#endif
+	#endif
 			PostLoadBioshockMesh();		// should be called after loading of all used objects
-	}
+#endif // BIOSHOCK
+#if UNREAL3
+		PostLoadMesh3();
 #endif
+	}
 };
 
 
@@ -2238,6 +2341,15 @@ struct FPackedNormal
 		r.Z = ((Data >> 16) & 0xFF) / 127.5f - 1;
 		return r;
 	}
+
+	FPackedNormal &operator=(const FVector &V)
+	{
+		Data = int((V.X + 1) * 255)
+			+ (int((V.Y + 1) * 255) << 8)
+			+ (int((V.Z + 1) * 255) << 16);
+		return *this;
+	}
+
 };
 #endif // UNREAL3
 
@@ -2660,6 +2772,7 @@ public:
 		if (Ar.ArVer < 112)
 		{
 			appNotify("StaticMesh of old version %d/%d has been found", Ar.ArVer, Ar.ArLicenseeVer);
+		skip_remaining:
 			Ar.Seek(Ar.GetStopper());
 			return;
 		}
@@ -2694,8 +2807,7 @@ public:
 			}
 			Ar << UVStream << IndexStream1;
 			// also: t3_hdrSV < 2 => IndexStream2
-			Ar.Seek(Ar.GetStopper());
-			return;
+			goto skip_remaining;
 		}
 #endif // BIOSHOCK
 #if UC2
@@ -2720,17 +2832,26 @@ public:
 			LoadExternalUC2Data();
 
 			// skip collision information
-			Ar.Seek(Ar.GetStopper());
-			return;
+			goto skip_remaining;
 		}
 #endif // UC2
+#if SWRC
+		if (Ar.Game == GAME_RepCommando)
+		{
+			int f164, f160;
+			Ar << VertexStream;
+			if (Ar.ArVer >= 155) Ar << f164;
+			if (Ar.ArVer >= 149) Ar << f160;
+			Ar << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
+			goto skip_remaining;
+		}
+#endif // SWRC
 		Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
 
 #if 1
 		// UT2 and UE2Runtime has very different collision structures
 		// We don't need it, so don't bother serializing it
-		Ar.Seek(Ar.GetStopper());
-		return;
+		goto skip_remaining;
 #else
 		if (Ar.ArVer < 126)
 		{
@@ -2803,6 +2924,7 @@ public:
 // UTdAnimSet - Mirror's Edge, derived from UAnimSet
 #define REGISTER_MESH_CLASSES_U3	\
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
+	REGISTER_CLASS(USkeletalMeshSocket) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)		\
