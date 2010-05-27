@@ -1,3 +1,6 @@
+#ifndef __UNTYPEINFO_H__
+#define __UNTYPEINFO_H__
+
 /*-----------------------------------------------------------------------------
 	Unreal Engine Typeinfo
 -----------------------------------------------------------------------------*/
@@ -495,3 +498,5 @@ class UPointerProperty : public UProperty
 #define REGISTER_TYPEINFO_CLASSES_U3	\
 	REGISTER_CLASS(UScriptStruct)		\
 	REGISTER_CLASS(UComponentProperty)
+
+#endif // __UNTYPEINFO_H__

@@ -110,6 +110,35 @@ struct FQuatIntervalFixed32NoW
 SIMPLE_TYPE(FQuatIntervalFixed32NoW, unsigned)
 
 
+struct FQuatFloat32NoW
+{
+	unsigned		data;
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		r.X = r.Y = r.Z = 0;
+
+		int _X = data >> 21;			// 11 bits
+		int _Y = (data >> 10) & 0x7FF;	// 11 bits
+		int _Z = data & 0x3FF;			// 10 bits
+
+		*(unsigned*)&r.X = ((((_X >> 7) & 7) + 123) << 23) | ((_X & 0x7F | 32 * (_X & 0xFFFFFC00)) << 16);
+		*(unsigned*)&r.Y = ((((_Y >> 7) & 7) + 123) << 23) | ((_Y & 0x7F | 32 * (_Y & 0xFFFFFC00)) << 16);
+		*(unsigned*)&r.Z = ((((_Z >> 6) & 7) + 123) << 23) | ((_Z & 0x3F | 32 * (_Z & 0xFFFFFE00)) << 17);
+
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatFloat32NoW &Q)
+	{
+		return Ar << Q.data;
+	}
+};
+
+
 #if BATMAN
 
 // This is a variant of FQuatFixed48NoW developer for Batman: Arkham Asylum. It's destination

@@ -1520,6 +1520,13 @@ public:
 	{
 		guard(UTexture2D::Serialize);
 		Super::Serialize(Ar);
+#if TERA
+		if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 3)
+		{
+			FString SourceFilePath; // field from UTexture
+			Ar << SourceFilePath;
+		}
+#endif // TERA
 		if (Ar.ArVer < 297)
 		{
 			int Format2;
@@ -1545,6 +1552,11 @@ public:
 #endif
 		if (Ar.ArVer >= 567)
 			Ar << TextureFileCacheGuid;
+		if (Ar.ArVer >= 674)
+		{
+			TArray<FTexture2DMipMap> CachedPVRTCMips;
+			Ar << CachedPVRTCMips;
+		}
 
 		// some hack to support more games ...
 		if (Ar.Tell() < Ar.GetStopper())
@@ -1558,7 +1570,9 @@ public:
 	}
 
 	bool LoadBulkTexture(int MipIndex) const;
+#if XBOX360
 	byte *DecompressXBox360(const FByteBulkData &Bulk, ETextureFormat intFormat, int USize, int VSize) const;
+#endif
 	virtual byte *Decompress(int &USize, int &VSize) const;
 #if RENDERING
 	virtual void Bind();

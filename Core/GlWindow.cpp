@@ -816,6 +816,7 @@ static void BloomScene(CFramebuffer &FBO)
 
 static void DrawBackground()
 {
+	if (GL_SUPPORT(QGL_2_0)) CShader::Unset();
 	// clear screen buffer
 #if FUNNY_BACKGROUND
 	glDisable(GL_BLEND);

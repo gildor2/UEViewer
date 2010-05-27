@@ -269,7 +269,12 @@ struct FPropertyTag
 			if (Tag.Type == NAME_StructProperty)
 				Ar << Tag.StrucName;
 			if (Tag.Type == NAME_BoolProperty)
-				Ar << Tag.BoolValue;
+			{
+				if (Ar.ArVer < 673)
+					Ar << Tag.BoolValue;			// int
+				else
+					Ar << (byte&)Tag.BoolValue;		// byte
+			}
 			if (Tag.Type == NAME_ByteProperty && Ar.ArVer >= 633)
 				Ar << Tag.EnumName;
 			return Ar;

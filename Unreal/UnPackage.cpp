@@ -104,7 +104,7 @@ public:
 	{
 		guard(FUE3ArchiveReader::FUE3ArchiveReader);
 		CopyArray(CompressedChunks, Chunks);
-		ReverseBytes = File->ReverseBytes;
+		SetupFrom(*File);
 		assert(CompressionFlags);
 		assert(CompressedChunks.Num());
 		unguard;
@@ -186,7 +186,7 @@ public:
 					// have seen such block in Borderlands: chunk has CompressedSize==UncompressedSize
 					// and has no compression
 					//!! verify UE3 code for this !!
-					ChunkHeader.BlockSize = 0;	// mark as uncompressed (checked below)
+					ChunkHeader.BlockSize = -1;	// mark as uncompressed (checked below)
 					ChunkHeader.CompressedSize = ChunkHeader.UncompressedSize = Chunk->UncompressedSize;
 					ChunkHeader.Blocks.Empty(1);
 					FCompressedChunkBlock *Block = new (ChunkHeader.Blocks) FCompressedChunkBlock;
@@ -225,7 +225,7 @@ public:
 		}
 		// decompress data
 		guard(DecompressBlock);
-		if (ChunkHeader.BlockSize)	// my own mark
+		if (ChunkHeader.BlockSize != -1)	// my own mark
 			appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
 		else
 		{
@@ -315,7 +315,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	int checkDword1, checkDword2;
 	*this << checkDword1;
 	if (checkDword1 == PACKAGE_FILE_TAG_REV)
+	{
 		ReverseBytes = true;
+		if (!GDisableXBox360) Platform = PLATFORM_XBOX360;
+	}
 	*this << checkDword2;
 	Loader->Seek(0);
 	if (checkDword2 == PACKAGE_FILE_TAG || checkDword2 == 0x20000)
@@ -335,11 +338,11 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Chunk->UncompressedSize   = H.UncompressedSize;
 		Chunk->CompressedOffset   = 0;
 		Chunk->CompressedSize     = H.CompressedSize;
-		Loader->ReverseBytes = ReverseBytes;				//?? low-level loader; possibly, do it in FUE3ArchiveReader()
+		Loader->SetupFrom(*this);				//?? low-level loader; possibly, do it in FUE3ArchiveReader()
 #ifdef WHOLE_PKG_COMPRESS_TYPE
 		Loader = new FUE3ArchiveReader(Loader, WHOLE_PKG_COMPRESS_TYPE, Chunks);
 #else
-		Loader = new FUE3ArchiveReader(Loader, ReverseBytes ? COMPRESS_LZX : COMPRESS_ZLIB, Chunks);
+		Loader = new FUE3ArchiveReader(Loader, (Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_ZLIB, Chunks);
 #endif
 		fullyCompressed = true;
 		unguard;
@@ -348,9 +351,9 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 
 	// read summary
 	*this << Summary;
-	Loader->ReverseBytes = ReverseBytes;					//!! should implement as virtual function
 	ArVer         = Summary.FileVersion;
 	ArLicenseeVer = Summary.LicenseeVersion;
+	Loader->SetupFrom(*this);
 	PKG_LOG(("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion));
 #if UNREAL3
 	if (Game >= GAME_UE3)
@@ -358,7 +361,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	if (fullyCompressed)
 		PKG_LOG(("[FullComp] "));
 #endif
-	PKG_LOG(("Names: %d Exports: %d Imports: %d\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount));
+	PKG_LOG(("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game));
 
 #if BIOSHOCK
 	if (Game == GAME_Bioshock)
@@ -382,9 +385,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		}
 		// replace Loader for reading compressed Bioshock archives
 		Loader = new FUE3ArchiveReader(Loader, COMPRESS_ZLIB, Chunks);
-		Loader->Game          = Game;
-		Loader->ArVer         = ArVer;
-		Loader->ArLicenseeVer = ArLicenseeVer;
+		Loader->SetupFrom(*this);
 	}
 #endif // BIOSHOCK
 
@@ -405,6 +406,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		NameTable = new char*[Summary.NameCount];
 		for (int i = 0; i < Summary.NameCount; i++)
 		{
+			guard(Name);
 			if (Summary.FileVersion < 64)
 			{
 				char buf[256];
@@ -501,6 +503,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 			}
 		done: ;
 //			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
+			unguardf(("%d", i));
 		}
 	}
 	unguard;

@@ -359,6 +359,16 @@ struct FMeshAnimSeq
 			if (Ar.ArLicenseeVer >= 0x1A) Ar << f44;
 		}
 #endif // LINEAGE2
+#if SWRC
+		if (Ar.Game == GAME_RepCommando)
+		{
+			int f18;
+			byte f20;
+			float f1C, f30;
+			Ar << f18 << f1C << f20;
+			if (Ar.ArVer >= 144) Ar << f30;	// default = 1.0f
+		}
+#endif // SWRC
 		return Ar;
 		unguard;
 	}
@@ -682,6 +692,9 @@ struct AnalogTrack
 #if SPLINTER_CELL
 	void SerializeSCell(FArchive &Ar);
 #endif
+#if SWRC
+	void SerializeSWRC(FArchive &Ar);
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
 	{
@@ -693,6 +706,13 @@ struct AnalogTrack
 			return Ar;
 		}
 #endif // SPLINTER_CELL
+#if SWRC
+		if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 141)
+		{
+			A.SerializeSWRC(Ar);
+			return Ar;
+		}
+#endif // SWRC
 #if UC2
 		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 147)
 		{
@@ -732,8 +752,9 @@ struct MotionChunk
 	{
 		guard(MotionChunk<<);
 		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
-#if SPLINTER_CELL
-		if (Ar.Game == GAME_SplinterCell)	// possibly M.Flags != 0, skip FlexTrack serializer
+#if SPLINTER_CELL || LINEAGE2
+		// possibly M.Flags != 0, skip FlexTrack serializer
+		if (Ar.Game == GAME_SplinterCell || Ar.Game == GAME_Lineage2)
 			return Ar;
 #endif
 #if UNREAL25
@@ -807,6 +828,9 @@ public:
 	// serialize TRoughArray<MotionChunk> into TArray<MotionChunk>
 	void SerializeLineageMoves(FArchive &Ar);
 #endif
+#if SWRC
+	void SerializeSWRCAnims(FArchive &Ar);
+#endif
 #if UC2
 	bool SerializeUE2XMoves(FArchive &Ar);
 #endif
@@ -818,11 +842,13 @@ public:
 		if (Ar.Game >= GAME_UE2)
 			Ar << Version;					// no such field in UE1
 		Ar << RefBones;
-#if LINEAGE2
-		if (Ar.Game == GAME_Lineage2)
-			SerializeLineageMoves(Ar);
-		else
-#endif // LINEAGE2
+#if SWRC
+		if (Ar.Game == GAME_RepCommando)
+		{
+			SerializeSWRCAnims(Ar);
+			return;
+		}
+#endif // SWRC
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{
@@ -835,6 +861,11 @@ public:
 		}
 		else
 #endif // UC2
+#if LINEAGE2
+		if (Ar.Game == GAME_Lineage2)
+			SerializeLineageMoves(Ar);
+		else
+#endif // LINEAGE2
 			Ar << Moves;
 		Ar << AnimSeqs;
 #if SPLINTER_CELL
@@ -1178,6 +1209,49 @@ struct FRag2Unk1
 #endif // RAGNAROK2
 
 
+#if BATTLE_TERR
+
+struct FBTUnk1
+{
+	FVector			f0;
+	FVector			f1;
+
+	friend FArchive& operator<<(FArchive &Ar, FBTUnk1 &S)
+	{
+		return Ar << S.f0 << S.f1;
+	}
+};
+
+SIMPLE_TYPE(FBTUnk1, float)
+
+struct FBTUnk2
+{
+	int				f0;
+	int				f1;
+
+	friend FArchive& operator<<(FArchive &Ar, FBTUnk2 &S)
+	{
+		return Ar << S.f0 << S.f1;
+	}
+};
+
+SIMPLE_TYPE(FBTUnk2, int)
+
+struct FBTUnk3
+{
+	float			f[8];
+
+	friend FArchive& operator<<(FArchive &Ar, FBTUnk3 &S)
+	{
+		return Ar << S.f[0] << S.f[1] << S.f[2] << S.f[3] << S.f[4] << S.f[5] << S.f[6] << S.f[7];
+	}
+};
+
+SIMPLE_TYPE(FBTUnk3, float)
+
+#endif // BATTLE_TERR
+
+
 #if UC2
 
 struct FUC2Vector
@@ -1385,6 +1459,29 @@ struct FStaticLODModel
 			}
 		}
 #endif // LOCO
+#if BATTLE_TERR
+		if (Ar.Game == GAME_BattleTerr)
+		{
+			if (Ar.ArLicenseeVer >= 31 || Ar.ArLicenseeVer == 1)
+			{
+				TArray<FBTUnk1> fA8;
+				int     fBC;
+				Ar << fA8 << fBC;
+			}
+			if (Ar.ArLicenseeVer >= 35 || Ar.ArLicenseeVer == 1)
+			{
+				TArray<FBTUnk2> f98;
+				Ar << f98;
+			}
+			if (Ar.ArLicenseeVer >= 36 || Ar.ArLicenseeVer == 1)
+			{
+				FSkinVertexStream fCC;
+				TArray<FBTUnk3> fFC;
+				int     f110, f120, f124;
+				Ar << fCC << fFC << f110 << f120 << f124;
+			}
+		}
+#endif // BATTLE_TERR
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{
@@ -1676,6 +1773,7 @@ public:
 		{
 			TArray<FMeshAnimLinkSWRC> Anims;
 			Ar << Anims;
+			if (Anims.Num() >= 1) Animation = Anims[0].Anim;
 		}
 		else
 #endif // SWRC
@@ -1756,6 +1854,9 @@ public:
 			goto skip_remaining;
 		}
 #endif // TRIBES3
+#if BATTLE_TERR
+		if (Ar.Game == GAME_BattleTerr) goto skip_remaining;
+#endif
 #if UC2
 		if (Ar.Engine() == GAME_UE2X) goto skip_remaining;
 #endif

@@ -80,7 +80,7 @@ struct FMeshVertConnect
 	int				NumVertTriangles;
 	int				TriangleListOffset;
 
-	friend FArchive &operator<<(FArchive &Ar, FMeshVertConnect &C)
+	friend FArchive& operator<<(FArchive &Ar, FMeshVertConnect &C)
 	{
 		return Ar << C.NumVertTriangles << C.TriangleListOffset;
 	}
@@ -631,6 +631,164 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 }
 
 #endif // LINEAGE2
+
+
+#if SWRC
+
+struct FVectorShort
+{
+	short					X, Y, Z;
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorShort &V)
+	{
+		return Ar << V.X << V.Y << V.Z;
+	}
+
+	FVector ToFVector(float Scale) const
+	{
+		FVector r;
+		float s = Scale / 32767.0f;
+		r.X = X * s;
+		r.Y = Y * s;
+		r.Z = Z * s;
+		return r;
+	}
+
+	FQuat ToFQuatOld() const							// for version older than 151
+	{
+		static const float s = 0.000095876726845745f;	// pi/32767
+		float X2 = X * s;
+		float Y2 = Y * s;
+		float Z2 = Z * s;
+		float tmp = sqrt(X2*X2 + Y2*Y2 + Z2*Z2);
+		if (tmp > 0)
+		{
+			float scale = sin(tmp / 2) / tmp;			// strange code ...
+			X2 *= scale;
+			Y2 *= scale;
+			Z2 *= scale;
+		}
+		float W2 = 1.0f - (X2*X2 + Y2*Y2 + Z2*Z2);
+		if (W2 < 0) W2 = 0;
+		else W2 = sqrt(W2);
+		FQuat r;
+		r.Set(X2, Y2, Z2, W2);
+		return r;
+	}
+
+	FQuat ToFQuat() const
+	{
+		static const float s = 0.70710678118f / 32767;	// short -> range(sqrt(2))
+		float A = short(X & 0xFFFE) * s;
+		float B = short(Y & 0xFFFE) * s;
+		float C = short(Z & 0xFFFE) * s;
+		float D = sqrt(1.0f - (A*A + B*B + C*C));
+		if (Z & 1) D = -D;
+		FQuat r;
+		if (Y & 1)
+		{
+			if (X & 1)	r.Set(D, A, B, C);
+			else		r.Set(C, D, A, B);
+		}
+		else
+		{
+			if (X & 1)	r.Set(B, C, D, A);
+			else		r.Set(A, B, C, D);
+		}
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FVectorShort, short)
+
+
+void AnalogTrack::SerializeSWRC(FArchive &Ar)
+{
+	guard(AnalogTrack::SerializeSWRC);
+
+	float					PosScale;
+	TArray<FVectorShort>	PosTrack;		// scaled by PosScale
+	TArray<FVectorShort>	RotTrack;
+	TArray<byte>			TimeTrack;		// frame duration
+
+	Ar << PosScale << PosTrack << RotTrack << TimeTrack;
+
+	// unpack data
+
+	// time track
+	int NumKeys, i;
+	NumKeys = TimeTrack.Num();
+	KeyTime.Empty(NumKeys);
+	KeyTime.Add(NumKeys);
+	int Time = 0;
+	for (i = 0; i < NumKeys; i++)
+	{
+		KeyTime[i] = Time;
+		Time += TimeTrack[i];
+	}
+
+	// rotation track
+	NumKeys = RotTrack.Num();
+	KeyQuat.Empty(NumKeys);
+	KeyQuat.Add(NumKeys);
+	for (i = 0; i < NumKeys; i++)
+	{
+		FQuat Q;
+		if (Ar.ArVer >= 151) Q = RotTrack[i].ToFQuat();
+		else				 Q = RotTrack[i].ToFQuatOld();
+		// note: FMeshBone rotation is mirrored for ArVer >= 142
+		Q.X *= -1;
+		Q.Y *= -1;
+		Q.Z *= -1;
+		KeyQuat[i] = Q;
+	}
+
+	// translation track
+	NumKeys = PosTrack.Num();
+	KeyPos.Empty(NumKeys);
+	KeyPos.Add(NumKeys);
+	for (i = 0; i < NumKeys; i++)
+		KeyPos[i] = PosTrack[i].ToFVector(PosScale);
+
+	unguard;
+}
+
+
+void UMeshAnimation::SerializeSWRCAnims(FArchive &Ar)
+{
+	guard(UMeshAnimation::SerializeSWRCAnims);
+
+	// serialize TArray<FSkelAnimSeq>
+	// FSkelAnimSeq is a combined (and modified) FMeshAnimSeq and MotionChunk
+	// count
+	int NumAnims;
+	Ar << AR_INDEX(NumAnims);		// TArray.Num
+	// prepare arrays
+	Moves.Empty(NumAnims);
+	Moves.Add(NumAnims);
+	AnimSeqs.Empty(NumAnims);
+	AnimSeqs.Add(NumAnims);
+	// serialize items
+	for (int i = 0; i < NumAnims; i++)
+	{
+		// serialize
+		int						f50;
+		int						f54;
+		int						f58;
+		guard(FSkelAnimSeq<<);
+		Ar << AnimSeqs[i];
+		int drop;
+		if (Ar.ArVer < 143) Ar << drop;
+		Ar << f50 << f54;
+		if (Ar.ArVer >= 143) Ar << f58;
+		Ar << Moves[i].AnimTracks;
+		unguard;
+	}
+
+	unguard;
+}
+
+#endif // SWRC
 
 
 #if UC2

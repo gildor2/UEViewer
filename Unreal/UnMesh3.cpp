@@ -53,7 +53,7 @@ struct FIndexBuffer3
 	{
 		int unk;						// Revision?
 		Ar << RAW_ARRAY(I.Indices);
-		if (Ar.ArVer < 297) Ar << unk;
+		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
 		return Ar;
 	}
 };
@@ -618,7 +618,9 @@ struct FStaticLODModel3
 		}
 #endif // BORDERLANDS
 
-		Ar << Lod.f68 << Lod.UsedBones << Lod.f74;
+		if (Ar.ArVer < 686) Ar << Lod.f68;
+		Ar << Lod.UsedBones;
+		if (Ar.ArVer < 686) Ar << Lod.f74;
 		if (Ar.ArVer >= 215)
 		{
 			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
@@ -632,7 +634,7 @@ struct FStaticLODModel3
 		}
 #endif
 
-		Ar << Lod.Edges;
+		if (Ar.ArVer < 686) Ar << Lod.Edges;
 		if (Ar.ArVer < 202)
 		{
 			// old version
@@ -1235,7 +1237,7 @@ void UAnimSet::ConvertAnims()
 #if XMEN
 		if (Package->Game == GAME_XMen) offsetsPerBone = 6;		// has additional CutInfo array
 #endif
-		if (Seq->CompressedTrackOffsets.Num() != NumTracks * offsetsPerBone)
+		if (Seq->CompressedTrackOffsets.Num() != NumTracks * offsetsPerBone && !Seq->RawAnimData.Num())
 		{
 			appNotify("AnimSequence %s/%s has wrong CompressedTrackOffsets size (has %d, expected %d), removing track",
 				Name, *Seq->SequenceName, Seq->CompressedTrackOffsets.Num(), NumTracks * offsetsPerBone);
@@ -1258,7 +1260,7 @@ void UAnimSet::ConvertAnims()
 		M->AnimTracks.Empty(NumTracks);
 
 		FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
-		Reader.ReverseBytes = Package->ReverseBytes;
+		Reader.SetupFrom(*Package);
 		bool hasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
 
 		int offsetIndex = 0;
@@ -1419,13 +1421,12 @@ void UAnimSet::ConvertAnims()
 						Reader << q;
 						A->KeyQuat.AddItem(q.ToQuat(Mins, Ranges));
 					}
-					//!! other: ACF_Float32NoW
-//FQuat qq = Seq->RawAnimData[j].RotKeys[k];
-//KeyQuat.AddItem(qq);
-//static int execed = 0;
-//if (++execed < 10) {
-//printf("q: %X : (%d %d %d)  (%g %g %g %g)\n", GET_DWORD(*q), q->X-1023, q->Y-1023, q->Z-511, FQUAT_ARG(qq));
-//}
+					else if (Seq->RotationCompressionFormat == ACF_Float32NoW)
+					{
+						FQuatFloat32NoW q;
+						Reader << q;
+						A->KeyQuat.AddItem(q);
+					}
 #if BATMAN
 					else if (Seq->RotationCompressionFormat == ACF_Fixed48Max)
 					{
@@ -1543,7 +1544,19 @@ struct FStaticMeshVertexStream3
 			int unk18;					// default is 1
 			Ar << unk18;
 		}
-#endif
+#endif // BATMAN
+#if AVA
+		if (Ar.Game == GAME_AVA && Ar.ArVer >= 442)
+		{
+			int presence;
+			Ar << presence;
+			if (!presence)
+			{
+				appNotify("AVA: StaticMesh without vertex stream");
+				return Ar;
+			}
+		}
+#endif // AVA
 		Ar << RAW_ARRAY(S.Verts);
 		return Ar;
 	}
@@ -1562,6 +1575,8 @@ struct FStaticMeshUVItem3
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVItem3 &V)
 	{
+		guard(FStaticMeshUVItem3<<);
+
 #if MKVSDC
 		if (Ar.Game == GAME_MK)
 		{
@@ -1574,6 +1589,14 @@ struct FStaticMeshUVItem3
 		if (Ar.Game == GAME_A51)
 			goto new_ver;
 #endif
+#if AVA
+		if (Ar.Game == GAME_AVA)
+		{
+			assert(Ar.ArVer >= 441);
+			Ar << V.Normal[0] << V.Normal[2] << V.f10;
+			goto uvs;
+		}
+#endif // AVA
 		if (Ar.ArVer < 472)
 		{
 			// old version has position embedded into UVStream (this is not an UVStream, this is a single stream for everything)
@@ -1587,6 +1610,7 @@ struct FStaticMeshUVItem3
 			Ar << V.Normal[0] << V.Normal[2];
 		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
 			Ar << V.f10;				// starting from 615 made as separate stream
+	uvs:
 		if (GUseStaticFloatUVs)
 		{
 			Ar << V.U << V.V;
@@ -1603,6 +1627,8 @@ struct FStaticMeshUVItem3
 		int UVSize = GUseStaticFloatUVs ? sizeof(float) : sizeof(short);
 		if (GNumStaticUVSets > 1) Ar.Seek(Ar.Tell() + (GNumStaticUVSets - 1) * 2 * UVSize);
 		return Ar;
+
+		unguard;
 	}
 };
 
@@ -1617,10 +1643,15 @@ struct FStaticMeshUVStream3
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream3 &S)
 	{
 		Ar << S.NumTexCoords << S.ItemSize << S.NumVerts;
+		S.bUseFullPrecisionUVs = true;
+#if AVA
+		if (Ar.Game == GAME_AVA && Ar.ArVer >= 441) goto new_ver;
+#endif
 		if (Ar.ArVer >= 474)
+		{
+		new_ver:
 			Ar << S.bUseFullPrecisionUVs;
-		else
-			S.bUseFullPrecisionUVs = true;
+		}
 #if MKVSDC
 		if (Ar.Game == GAME_MK)
 			S.bUseFullPrecisionUVs = false;
@@ -1724,32 +1755,11 @@ struct FStaticMeshLODModel
 		}
 #endif
 		// serialize vertex and uv streams
-#if MKVSDC
-		if (Ar.Game == GAME_MK)
-		{
-			// partially upgraded: using UV format
-			//   int color + int normal[3] + short uv[2][NumTexCoords]
-			Ar << Lod.VertexStream;
-			Ar << Lod.UVStream;
-			Ar << Lod.f80;
-			// note: usually (or always?) UVStream has 2 times more items than VertexStream
-			// we should duplicate vertices
-			int n1 = Lod.VertexStream.Verts.Num();
-			int n2 = Lod.UVStream.UV.Num();
-			if (n1 * 2 == n2)
-			{
-				printf("Duplicating MK StaticMesh verts\n");
-				Lod.VertexStream.Verts.Add(n1);
-				for (int i = 0; i < n1; i++)
-					Lod.VertexStream.Verts[i+n1] = Lod.VertexStream.Verts[i];
-			}
-		}
-		else
-#endif // MKVSDC
 #if A51
-		if (Ar.Game == GAME_A51)
-			goto new_ver;
-		else
+		if (Ar.Game == GAME_A51) goto new_ver;
+#endif
+#if MKVSDC || AVA
+		if (Ar.Game == GAME_MK || Ar.Game == GAME_AVA) goto ver_3;
 #endif
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands)
@@ -1762,7 +1772,6 @@ struct FStaticMeshLODModel
 			// note: no fEC (smoothing groups?)
 			return Ar;
 		}
-		else
 #endif // BORDERLANDS
 		if (Ar.ArVer >= 472)
 		{
@@ -1772,27 +1781,41 @@ struct FStaticMeshLODModel
 			// unknown data in UDK
 			if (Ar.ArVer >= 615)
 			{
-				// platform-dependent color stream?
-#if 0
-				FStaticMeshColorStream3 f58;
-				Ar << f58;
-#else
-				// serialize metadata only, no data array
-				int x1, x2;
-				Ar << x1 << x2;
-#endif
+				// new color stream: difference is that data array is not serialized when NumVerts is 0
+				int ColorItemSize, ColorNumVerts;
+				Ar << ColorItemSize << ColorNumVerts;
+				TArray<int> ColorData;
+				if (ColorNumVerts) Ar << RAW_ARRAY(ColorData);
 			}
-			Ar << Lod.ColorStream;
+			if (Ar.ArVer < 686) Ar << Lod.ColorStream;
 			Ar << Lod.f80;
 		}
 		else if (Ar.ArVer >= 466)
 		{
+		ver_3:
 			Ar << Lod.VertexStream;
 			Ar << Lod.UVStream;
 			Ar << Lod.f80;
+#if MKVSDC || AVA
+			if (Ar.Game == GAME_MK || Ar.Game == GAME_AVA)
+			{
+				// note: sometimes UVStream has 2 times more items than VertexStream
+				// we should duplicate vertices
+				int n1 = Lod.VertexStream.Verts.Num();
+				int n2 = Lod.UVStream.UV.Num();
+				if (n1 * 2 == n2)
+				{
+					printf("Duplicating MK StaticMesh verts\n");
+					Lod.VertexStream.Verts.Add(n1);
+					for (int i = 0; i < n1; i++)
+						Lod.VertexStream.Verts[i+n1] = Lod.VertexStream.Verts[i];
+				}
+			}
+#endif // MKVSDC || AVA
 		}
 		else if (Ar.ArVer >= 364)
 		{
+		// ver_2:
 			Ar << Lod.UVStream;
 			Ar << Lod.f80;
 			// create VertexStream
@@ -1804,6 +1827,7 @@ struct FStaticMeshLODModel
 		}
 		else
 		{
+		// ver_1:
 			TArray<FStaticMeshUVStream3Old> UVStream;
 			if (Ar.ArVer >= 333)
 			{
@@ -1843,8 +1867,33 @@ struct FStaticMeshLODModel
 			//!! note: this code will crash in RestoreMesh3() because of empty data
 		}
 		Ar << Lod.Indices << Lod.Indices2;
-		Ar << RAW_ARRAY(Lod.Edges);
-		Ar << Lod.fEC;
+		if (Ar.ArVer < 686)
+		{
+			Ar << RAW_ARRAY(Lod.Edges);
+			Ar << Lod.fEC;
+		}
+#if AVA
+		if (Ar.Game == GAME_AVA)
+		{
+			if (Ar.ArLicenseeVer >= 2)
+			{
+				int fFC, f100;
+				Ar << fFC << f100;
+			}
+			if (Ar.ArLicenseeVer >= 4)
+			{
+				FByteBulkData f104, f134, f164, f194, f1C4, f1F4, f224, f254;
+				f104.Skip(Ar);
+				f134.Skip(Ar);
+				f164.Skip(Ar);
+				f194.Skip(Ar);
+				f1C4.Skip(Ar);
+				f1F4.Skip(Ar);
+				f224.Skip(Ar);
+				f254.Skip(Ar);
+			}
+		}
+#endif // AVA
 
 		return Ar;
 
@@ -1957,6 +2006,13 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 		if (Ar.ArLicenseeVer >= 6) Ar << unk198;
 	}
 #endif // DARKVOID
+#if TERA
+	if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 3)
+	{
+		FString SourceFileName;
+		Ar << SourceFileName;
+	}
+#endif // TERA
 
 	Ar << Bounds << BodySetup;
 	if (Ar.ArVer < 315)

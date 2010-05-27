@@ -44,6 +44,9 @@
 #endif // UNREAL3
 
 
+bool GDisableXBox360 = false;
+
+
 #if PROFILE
 
 int GNumSerialize = 0;
@@ -101,6 +104,9 @@ static const char *PackageExtensions[] =
 #if RUNE
 	, "ums"
 #endif
+#if BATTLE_TERR
+	, "bsx", "btx", "bkx"
+#endif
 #if TRIBES3
 	, "pkg"
 #endif
@@ -122,6 +128,9 @@ static const char *PackageExtensions[] =
 #endif
 #if R6VEGAS
 	, "uppc"		// Rainbow 6 Vegas 2
+#endif
+#if TERA
+	, "gpk"			// TERA: Exiled Realms of Arborea
 #endif
 	// other games with no special code
 	, "lm"			// Landmass
@@ -875,8 +884,16 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 #endif
 		Ar << AR_INDEX(len);
 	S.Empty((len >= 0) ? len : -len);
+
 	if (!len)
+	{
+		// empty FString
+		// original UE has array count == 0 and special handling when converting FString
+		// to char*
+		S.AddItem(0);
 		return Ar;
+	}
+
 	if (len > 0)
 	{
 		// ANSI string
@@ -1011,8 +1028,14 @@ void FArchive::DetectGame()
 #if BLOODONSAND
 	if (ArVer == 538 && ArLicenseeVer == 73)	SET(GAME_50Cent);
 #endif
+#if APB
+	if (ArVer == 547 && ArLicenseeVer == 31)	SET(GAME_APB);
+#endif
 #if LEGENDARY
 	if (ArVer == 567 && ArLicenseeVer == 39)	SET(GAME_Legendary);
+#endif
+#if TERA
+	if (ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) SET(GAME_Tera);
 #endif
 #if XMEN
 	if (ArVer == 568 && ArLicenseeVer == 101)	SET(GAME_XMen);
@@ -1052,7 +1075,8 @@ void FArchive::DetectGame()
 #endif
 #if ARMYOF2
 	if ( (ArVer == 445 && ArLicenseeVer == 79) ||		// Army of Two
-		 (ArVer == 482 && ArLicenseeVer == 222) )		// Army of Two: the 40th Day
+		 (ArVer == 482 && ArLicenseeVer == 222)  ||		// Army of Two: the 40th Day
+		 (ArVer == 483 && ArLicenseeVer == 4317) )		// ...
 		SET(GAME_ArmyOf2);
 #endif
 

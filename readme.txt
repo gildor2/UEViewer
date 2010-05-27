@@ -16,6 +16,7 @@ Modified Unreal Engine 2:
   Rainbow 6: Raven Shield
   Lineage 2 Gracia
   Land of Chaos Online (LOCO)
+  Battle Territory Online
   Star Wars: Republic Commando
 Unreal Engine 2.5:
   UE2Runtime
@@ -57,13 +58,13 @@ Modified Unreal Engine 3:
   Legendary: Pandora's Box
   Borderlands
   Dark Void
+  TERA: The Exiled Realm of Arborea
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
-  Star Wars: Republic Commando
   Rainbow 6: Vegas 2
   BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
@@ -158,6 +159,32 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+05.05.2010
+- implemented support for TERA: The Exiled Realm of Arborea
+
+03.05.2010
+- updated UDK support for April 2010 version
+
+24.04.2010
+- updated Army of Two: the 40th Day detection code
+
+17.04.2010
+- updated UDK support up to March 2010 version
+
+14.04.2010
+- added "-noxbox" switch which can be used to disable XBox 360 texture decryption
+  (may be useful to load ps3 packages)
+- implemented support for UE3 animation compression "method #5"
+
+12.04.2010
+- implemented AVA Online StaticMesh support
+
+03.04.2010
+- implemented Battle Territory Online support
+
+23.03.2010
+- implemented Star Wars: Republic Commando animation support
+
 11.03.2010
 - implemented attachment socket support for UE3 SkeletalMesh
 - umodel usage page: changed appearance of list of supported game titles

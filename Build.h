@@ -18,6 +18,7 @@
 #define LINEAGE2		1
 #define SWRC			1		// Star Wars: Republic Commando
 #define LOCO			1		// Land of Chaos Online
+#define BATTLE_TERR		1		// Battle Territory Online
 
 // requires UNREAL1
 #define DEUS_EX			1
@@ -51,6 +52,8 @@
 #define DARKVOID		1		// Dark Void
 #define HUXLEY			1
 #define LEGENDARY		1		// Legendary: Pandora's Box
+#define TERA			1		// TERA: The Exiled Realm of Arborea
+#define APB				1		// All Points Bulletin
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

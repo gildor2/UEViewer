@@ -14,10 +14,8 @@
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnMaterial.h"
+#include "UnPackage.h"
 
-#if UC2
-#	include "UnPackage.h"				// just for ArVer ...
-#endif
 
 //#define PROFILE_DDS			1
 //#define XPR_DEBUG			1
@@ -709,14 +707,11 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 	unguard;
 }
 
-#endif // XBOX360
-
 
 byte *UTexture2D::DecompressXBox360(const FByteBulkData &Bulk, ETextureFormat intFormat, int USize, int VSize) const
 {
 	guard(UTexture2D::DecompressXBox360);
 
-#if XBOX360
 	//?? separate this function
 	int bytesPerBlock, blockSizeX, blockSizeY, align;
 	switch (intFormat)
@@ -809,12 +804,11 @@ byte *UTexture2D::DecompressXBox360(const FByteBulkData &Bulk, ETextureFormat in
 		unguard;
 	}
 	return pic2;
-#else  // XBOX360
-	appError("Compiled without XBox360 support");
-#endif // XBOX360
 
 	unguard;
 }
+
+#endif // XBOX360
 
 
 bool UTexture2D::LoadBulkTexture(int MipIndex) const
@@ -873,7 +867,7 @@ bool UTexture2D::LoadBulkTexture(int MipIndex) const
 
 	printf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
 	FArchive *Ar = appCreateFileReader(bulkFile);
-	Ar->ReverseBytes = Package->ReverseBytes;
+	Ar->SetupFrom(*Package);
 	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
 //	printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
 	Bulk->SerializeChunk(*Ar);
@@ -934,9 +928,11 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			return NULL;
 		}
 
-		if (!Package->ReverseBytes)	//?? another way to detect xbox package
-			return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
-		return DecompressXBox360(Mip.Data, intFormat, USize, VSize);
+#if XBOX360
+		if (Package->Platform == PLATFORM_XBOX360)
+			return DecompressXBox360(Mip.Data, intFormat, USize, VSize);
+#endif
+		return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
 	}
 	// no valid mipmaps
 	return NULL;

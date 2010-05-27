@@ -10,6 +10,12 @@
 
  Revision History:
 
+	24.04.2010 v1.09
+	- applying normalmap using correct technique (previously was a bumpmap)
+
+	14.04.2010 v1.08
+	- fixed loading of psk files with root bone parent set to -1 (usually it is 0)
+
 	20.02.2010 v1.07
 	- added "Load confirmation" setting to display message box after completion of operation
 	- added "Reposition existing bones" option
@@ -57,7 +63,6 @@
 TODO:
 - Menu item for plugin
 - try to not use setBoneEnable false ...
-- progressbar for mesh and animation loading
 */
 
 -------------------------------------------------------------------------------
@@ -543,12 +548,20 @@ fn ImportMaterial matName texDir =
 			foundTex = FindFile texDir (file + ".tga") recurse:g_texRecurse
 			if foundTex == undefined then continue
 			local bitmap = bitmapTexture name:foundTex fileName:foundTex
-			if parm == "Diffuse"   then subMat.diffuseMap = bitmap
-			if parm == "Normal"    then ( subMat.bumpMap = bitmap; subMat.bumpMapAmount = 100; )	-- amount is set to 30 by default
-			if parm == "Specular"  then subMat.specularMap = bitmap
-			if parm == "SpecPower" then subMat.specularLevelMap = bitmap
-			if parm == "Opacity"   then subMat.opacityMap = bitmap
-			if parm == "Emissive"  then subMat.selfIllumMap = bitmap
+			if parm == "Normal" then
+			(
+				local normalMap = normal_bump name:foundTex normal_map:bitmap
+				subMat.bumpMap = normalMap
+				subMat.bumpMapAmount = 100		-- amount is set to 30 by default
+			)
+			else
+			(
+				if parm == "Diffuse"   then subMat.diffuseMap = bitmap
+				if parm == "Specular"  then subMat.specularMap = bitmap
+				if parm == "SpecPower" then subMat.specularLevelMap = bitmap
+				if parm == "Opacity"   then subMat.opacityMap = bitmap
+				if parm == "Emissive"  then subMat.selfIllumMap = bitmap
+			)
 		)
 		close matFile
 		return subMat
@@ -704,7 +717,7 @@ fn ImportPskFile filename skelOnly:false =
 			newBone.pos.controller      = TCB_position ()
 			newBone.rotation.controller = TCB_rotation ()	-- required for correct animation
 			-- setup parent
-			if (i > 0) then
+			if (i > 1) then
 			(
 				if (bn.ParentIndex >= i) then
 				(
@@ -1071,8 +1084,8 @@ fn LoadAnimation index =
 rollout axImportRollout "Actor X Importer"
 (
 	-- copyright label
-	label Lbl1 "Version 1.07"
-	label Lbl2 "\xA9 2009 Konstantin Nosov (Gildor)"
+	label Lbl1 "Version 1.09"
+	label Lbl2 "\xA9 2009,2010 Konstantin Nosov (Gildor)"
 	label Lbl3 "http://www.gildor.org/"
 
 	Group "Mesh Import"

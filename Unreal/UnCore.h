@@ -173,6 +173,7 @@ enum EGame
 		GAME_Ragnarok2,
 		GAME_RepCommando,
 		GAME_Loco,
+		GAME_BattleTerr,
 
 	GAME_VENGEANCE = 0x0600,	// variant of UE2
 		GAME_Tribes3,
@@ -200,6 +201,8 @@ enum EGame
 		GAME_Borderlands,
 		GAME_DarkVoid,
 		GAME_Legendary,
+		GAME_Tera,
+		GAME_APB,
 
 	GAME_MIDWAY3   = 0x1800,	// variant of UE3
 		GAME_A51,
@@ -209,6 +212,12 @@ enum EGame
 		GAME_TNA,
 
 	GAME_ENGINE    = 0xFF00		// mask for game engine
+};
+
+enum EPlatform
+{
+	PLATFORM_PC,
+	PLATFORM_XBOX360
 };
 
 
@@ -227,6 +236,7 @@ protected:
 public:
 	// game-specific flags
 	int		Game;				// EGame
+	int		Platform;			// EPlatform
 
 	FArchive()
 	:	ArPos(0)
@@ -235,6 +245,7 @@ public:
 	,	ArLicenseeVer(0)
 	,	ReverseBytes(false)
 	,	Game(GAME_UNKNOWN)
+	,	Platform(PLATFORM_PC)
 	{}
 
 	virtual ~FArchive()
@@ -244,6 +255,15 @@ public:
 	inline int Engine() const
 	{
 		return (Game & GAME_ENGINE);
+	}
+
+	void SetupFrom(const FArchive &Other)
+	{
+		ArVer         = Other.ArVer;
+		ArLicenseeVer = Other.ArLicenseeVer;
+		ReverseBytes  = Other.ReverseBytes;
+		Game          = Other.Game;
+		Platform      = Other.Platform;
 	}
 
 	virtual void Seek(int Pos) = 0;
@@ -1280,6 +1300,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 -----------------------------------------------------------------------------*/
 
 extern FArchive *GDummySave;
+extern bool      GDisableXBox360;
 
 
 /*-----------------------------------------------------------------------------

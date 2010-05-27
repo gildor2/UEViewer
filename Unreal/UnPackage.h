@@ -110,6 +110,13 @@ struct FPackageFileSummary
 		if (S.Tag == 0xA94E6C81) goto tag_ok;		// Nurien
 		if (S.Tag == 0x9E2A83C2) goto tag_ok;		// Killing Floor
 #endif // SPECIAL_TAGS
+#if BATTLE_TERR
+		if (S.Tag == 0xA1B2C93F)
+		{
+			Ar.Game = GAME_BattleTerr;
+			goto tag_ok;		// Battle Territory Online
+		}
+#endif
 
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{
@@ -176,7 +183,17 @@ struct FPackageFileSummary
 				Ar << S.PackageGroup;
 //		}
 #endif // UNREAL3
-		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
+#if APB
+		if (Ar.Game == GAME_APB)
+		{
+			int unk2C;
+			float unk30[5];
+			if (Ar.ArLicenseeVer >= 29) Ar << unk2C;
+			if (Ar.ArLicenseeVer >= 28) Ar << unk30[0] << unk30[1] << unk30[2] << unk30[3] << unk30[4];
+		}
+#endif // APB
+		Ar << S.ImportCount << S.ImportOffset;
 #if UNREAL3
 	#if MKVSDC
 		if (Ar.Game == GAME_MK)
@@ -202,6 +219,10 @@ struct FPackageFileSummary
 			Ar << unk40;
 		}
 	#endif // STRANGLE
+	#if TERA
+		// de-obfuscate NameCount for Tera
+		if (Ar.Game == GAME_Tera && (S.PackageFlags & 8)) S.NameCount -= S.NameOffset;
+	#endif
 		if (S.FileVersion >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
 		if (S.FileVersion >= 623)

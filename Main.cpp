@@ -228,6 +228,7 @@ static void Usage()
 			"    -noanim         disable loading of MeshAnimation classes\n"
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
+			"    -noxbox         disable XBox 360 code\n"	//?? change this!
 			"\n"
 			"Export options:\n"
 			"    -all            export all linked objects too\n"
@@ -272,6 +273,9 @@ static void Usage()
 #endif
 #if LOCO
 		"Land of Chaos Online (LOCO)",
+#endif
+#if BATTLE_TERR
+		"Battle Territory Online",
 #endif
 #if SWRC
 		"Star Wars: Republic Commando",
@@ -373,6 +377,9 @@ static void Usage()
 #	if LEGENDARY
 		"Legendary: Pandora's Box",
 #	endif
+#	if TERA
+		"TERA: The Exiled Realm of Arborea",
+#	endif
 #	if SPECIAL_TAGS
 		"Nurien",
 #	endif
@@ -454,6 +461,8 @@ int main(int argc, char **argv)
 				noAnim = true;
 			else if (!stricmp(opt, "notex"))
 				noTex = true;
+			else if (!stricmp(opt, "noxbox"))
+				GDisableXBox360 = true;
 			else if (!strnicmp(opt, "path=", 5))
 			{
 				appSetRootDirectory(opt+5);

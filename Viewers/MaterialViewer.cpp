@@ -479,7 +479,9 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		PROP(ModulateSpecular2X)
 		// materials
 		PROP(Diffuse)
+#if BIOSHOCK
 		PROP(NormalMap)
+#endif
 		PROP(Opacity)
 		PROP(Specular)
 		PROP(SpecularityMask)
