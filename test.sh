@@ -65,7 +65,7 @@ CheckDir UT1 {c,e}:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTourna
 CheckDir UT2 {c,e}:/games/unreal~1/ut2004 c:/games/unreal/ut2004
 CheckDir UT3 {c,e}:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
-CheckDir GOW2 c:/1/GOW2/CookedXenon "C:/!umodel-data/GearsOfWar2_X360"
+CheckDir GOW2 "C:/!umodel-data/GearsOfWar2_X360" data/3X/GearsOfWar2_X360
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2" data/UnrealChampionship2
 CheckDir L2 "C:/!umodel-data/Lineage2"
 CheckDir BIO {c,e}:/GAMES/BioShock
@@ -104,9 +104,11 @@ fi
 case "" in
 
 "")
+	# Transformers
+	run1 "data/3/Transformers War for Cybertron" -meshes A1_IAC_DecoPlaza_Design_m.xxx
 	# SWRC
 #	run1 data/RepublicCommando -noanim BactaDispensers.ukx
-	run1 data/RepublicCommando -noanim Vehicles.ukx
+#	run1 data/RepublicCommando -noanim Vehicles.ukx
 	# Materials
 #	ut2 AS_Vehicles_M.ukx minigun_turret
 #	ut2 StreamAnims.ukx Dropship

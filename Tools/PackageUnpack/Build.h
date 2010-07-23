@@ -29,3 +29,6 @@
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
 #define TERA			1
+#define APB				1
+#define ALPHA_PR		1
+#define TRANSFORMERS	1

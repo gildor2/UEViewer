@@ -221,8 +221,9 @@ void CSkelMeshViewer::Draw2D()
 	{
 		DrawTextLeft(S_GREEN"LOD  : "S_WHITE"base mesh\n"
 					 S_GREEN"Verts: "S_WHITE"%d (%d wedges)\n"
-					 S_GREEN"Tris : "S_WHITE"%d",
-					 Mesh->Points.Num(), Mesh->Wedges.Num(), Mesh->Triangles.Num());
+					 S_GREEN"Tris : "S_WHITE"%d\n"
+					 S_GREEN"Bones: "S_WHITE"%d",
+					 Mesh->Points.Num(), Mesh->Wedges.Num(), Mesh->Triangles.Num(), Mesh->RefSkeleton.Num());
 	}
 	else
 	{
@@ -230,9 +231,11 @@ void CSkelMeshViewer::Draw2D()
 		int NumFaces = (Lod->SmoothIndices.Indices.Num() + Lod->RigidIndices.Indices.Num()) / 3;
 		DrawTextLeft(S_GREEN"LOD  : "S_WHITE"%d/%d\n"
 					 S_GREEN"Verts: "S_WHITE"%d (%d wedges)\n"
-					 S_GREEN"Tris : "S_WHITE"%d",
+					 S_GREEN"Tris : "S_WHITE"%d\n"
+					 S_GREEN"Bones: "S_WHITE"%d",
 					 MeshInst->LodNum+1, Mesh->LODModels.Num(),
-					 Lod->Points.Num(), Lod->Wedges.Num(), NumFaces);
+					 Lod->Points.Num(), Lod->Wedges.Num(), NumFaces,
+					 Mesh->RefSkeleton.Num());
 	}
 }
 

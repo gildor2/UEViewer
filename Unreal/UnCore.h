@@ -174,6 +174,7 @@ enum EGame
 		GAME_RepCommando,
 		GAME_Loco,
 		GAME_BattleTerr,
+		GAME_UC1,				// note: not UE2X
 
 	GAME_VENGEANCE = 0x0600,	// variant of UE2
 		GAME_Tribes3,
@@ -199,10 +200,13 @@ enum EGame
 		GAME_Frontlines,
 		GAME_Batman,
 		GAME_Borderlands,
+		GAME_AA3,
 		GAME_DarkVoid,
 		GAME_Legendary,
 		GAME_Tera,
 		GAME_APB,
+		GAME_AlphaProtocol,
+		GAME_Transformers,
 
 	GAME_MIDWAY3   = 0x1800,	// variant of UE3
 		GAME_A51,

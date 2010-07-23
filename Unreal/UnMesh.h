@@ -56,9 +56,15 @@ public:
 
 struct FBoxSphereBounds
 {
+	DECLARE_STRUCT(FBoxSphereBounds);
 	FVector			Origin;
 	FVector			BoxExtent;
 	float			SphereRadius;
+	BEGIN_PROP_TABLE
+		PROP_VECTOR(Origin)
+		PROP_VECTOR(BoxExtent)
+		PROP_FLOAT(SphereRadius)
+	END_PROP_TABLE
 
 	friend FArchive& operator<<(FArchive &Ar, FBoxSphereBounds &B)
 	{
@@ -695,6 +701,9 @@ struct AnalogTrack
 #if SWRC
 	void SerializeSWRC(FArchive &Ar);
 #endif
+#if UC1
+	void SerializeUC1(FArchive &Ar);
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
 	{
@@ -713,6 +722,13 @@ struct AnalogTrack
 			return Ar;
 		}
 #endif // SWRC
+#if UC1
+		if (Ar.Game == GAME_UC1 && Ar.ArLicenseeVer >= 28)
+		{
+			A.SerializeUC1(Ar);
+			return Ar;
+		}
+#endif
 #if UC2
 		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 147)
 		{
@@ -2118,6 +2134,9 @@ enum AnimationCompressionFormat
 #if MASSEFF
 	ACF_BioFixed48,											// Mass Effect 2
 #endif
+#if TRANSFORMERS
+	ACF_IntervalFixed48NoW,
+#endif
 };
 
 _ENUM(AnimationCompressionFormat)
@@ -2137,6 +2156,9 @@ _ENUM(AnimationCompressionFormat)
 #endif
 #if MASSEFF
 	_E(ACF_BioFixed48),
+#endif
+#if TRANSFORMERS
+	_E(ACF_IntervalFixed48NoW),
 #endif
 };
 
@@ -2268,6 +2290,11 @@ public:
 		PROP_DROP(ClipRootMotionOutPoint)
 		PROP_DROP(ProportionalMotionDistanceCap)
 #endif // BATMAN
+#if TRANSFORMERS
+		PROP_DROP(TranslationScale)		//?? use it?
+		PROP_DROP(bWasUsed)
+		PROP_DROP(LoopOffsetTime)
+#endif // TRANSFORMERS
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -2818,6 +2845,9 @@ public:
 	bool					UseSimpleBoxCollision;
 	bool					UseSimpleKarmaCollision;
 	bool					UseVertexColor;
+#if TRANSFORMERS
+	FBoxSphereBounds		Bounds;		// Transformers has described StaticMesh.uc and serialized Bounds as property
+#endif
 
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Materials, FStaticMeshMaterial)
@@ -2847,6 +2877,9 @@ public:
 #if BATMAN
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
+#endif
+#if TRANSFORMERS
+		PROP_STRUC(Bounds, FBoxSphereBounds)
 #endif
 	END_PROP_TABLE
 
@@ -3027,6 +3060,7 @@ public:
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
 	REGISTER_CLASS(USkeletalMeshSocket) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
+	REGISTER_CLASS(FBoxSphereBounds) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)		\
 	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet)

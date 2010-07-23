@@ -424,9 +424,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				int tmp;
 				*this << tmp;
 			}
-#if PARIAH
-			else if (Game == GAME_Pariah && ((ArLicenseeVer & 0x3F) >= 0x1C))
+#if UC1 || PARIAH
+			else if (Game == GAME_UC1 && ArLicenseeVer >= 28)
 			{
+			uc1_name:
 				// used word + char[] instead of FString
 				word len;
 				*this << len;
@@ -436,7 +437,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				int tmp;
 				*this << tmp;
 			}
-#endif // PARIAH
+	#if PARIAH
+			else if (Game == GAME_Pariah && ((ArLicenseeVer & 0x3F) >= 28)) goto uc1_name;
+	#endif
+#endif // UC1 || PARIAH
 			else
 			{
 #if R6VEGAS

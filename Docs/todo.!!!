@@ -5,13 +5,16 @@ Shaders: when trying to change/compile shader between glBegin/glEnd, GL will not
 Should check glGetError() and assert? (or make function GL_CheckError() - will appError(code)
 if code != 0)
 
+- psk export: REFINE_SKEL: may be sometimes it is useful to keep full skeleton (for attachments etc)
+  - so, make REFINE_SKEL a command line options
+  - may be compute number of used bones on mesh loading (not on export)
+
 FArchive:
 ? ArVer, ArLicenseeVer -> Ver(), LicenseeVer() + hide these fields
-- function to copy settings from one archive to another (version, game, endian etc)
 
-Settings.ini (different name ?)
-- background color
-- do not use GL2
+Settings.ini (umodel.cfg, different name ?)
+- background (gradient) color
+- disable GL2
 - disable bloom (if one)
 - disable notify.log
 ? disable log at all
@@ -19,6 +22,8 @@ Settings.ini (different name ?)
 - disable viewing of axis in 3D
 - default lighting mode
 - initial window size
+- custom package extensions
+- custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
 
 Notify.log:
 - add "-nolog" switch to disable it
@@ -97,10 +102,11 @@ Exporting (typeinfo tool?):
     class name="")
 
 Loading:
-- ensure "whole package" loaded using locks (load all top-level objects, then subobjects)
+? (don't understand it now): ensure "whole package" loaded using locks (load all top-level objects, then
+  subobjects)
 - periodically sort object list before serialization
-- profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
-- testing: try to load from CD (slow random access)
+  - profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
+  - testing: try to load from CD (slow random access)
 
 
 - try to compile with MinGW

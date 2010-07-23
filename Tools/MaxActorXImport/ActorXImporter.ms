@@ -10,6 +10,10 @@
 
  Revision History:
 
+	23.07.2010 v1.10
+	- implemented extended Actor X format (pskx and psax) support
+	- "tools" rollout with options to restore mesh bindpose and remove animations
+
 	24.04.2010 v1.09
 	- applying normalmap using correct technique (previously was a bumpmap)
 
@@ -84,6 +88,7 @@ global g_reposBones
 global g_meshScale
 global g_loadConfirm
 global Anims
+global MeshBones
 
 
 -------------------------------------------------------------------------------
@@ -599,11 +604,13 @@ fn ImportPskFile filename skelOnly:false =
 (
 	set coordsys world
 
+	local OldMeshBones = MeshBones
+
 	local Verts     = #()
 	local Wedges    = #()
 	local Tris      = #()
 	local Materials = #()
-	local Bones     = #()
+		  MeshBones = #()		-- global for access to bind pose from outside
 	local Infs      = #()
 
 	--------- Read the file ---------
@@ -643,13 +650,13 @@ fn ImportPskFile filename skelOnly:false =
 		-- Bones --
 		hdr = LOAD_CHUNK file "REFSKELT"
 		numBones = hdr.DataCount
-		if numBones > 0 then Bones[numBones] = VBone () -- preallocate
+		if numBones > 0 then MeshBones[numBones] = VBone () -- preallocate
 		for i = 1 to numBones do
 		(
-			Bones[i] = ReadVBone file
---			format "Bone[%] = %\n" (i-1) Bones[i].Name
+			MeshBones[i] = ReadVBone file
+--			format "Bone[%] = %\n" (i-1) MeshBones[i].Name
 		)
-		FixBoneNames Bones
+		FixBoneNames MeshBones
 
 		-- Weights --
 		hdr = LOAD_CHUNK file "RAWWEIGHTS"
@@ -675,7 +682,7 @@ fn ImportPskFile filename skelOnly:false =
 	MaxBones = #()
 	for i = 1 to numBones do
 	(
-		bn = Bones[i]
+		bn = MeshBones[i]
 		-- build bone matrix
 		q = bn.Orientation
 		if (i == 1) then q = conjugate q
@@ -684,7 +691,7 @@ fn ImportPskFile filename skelOnly:false =
 		-- transform from parent bone coordinate space to world space
 		if (i > 1) then
 		(
-			bn.Matrix = mat * Bones[bn.ParentIndex + 1].Matrix
+			bn.Matrix = mat * MeshBones[bn.ParentIndex + 1].Matrix
 		)
 		else
 		(
@@ -692,7 +699,7 @@ fn ImportPskFile filename skelOnly:false =
 		)
 
 		-- get bone length (just for visual appearance)
-		childBone = FindFirstChild Bones i
+		childBone = FindFirstChild MeshBones i
 		if (childBone != undefined) then
 		(
 			len = (length childBone.Position) * g_meshScale
@@ -833,7 +840,7 @@ fn ImportPskFile filename skelOnly:false =
 		v1 = Infs[i]
 		v2 = Infs[i+1]
 		if (v1.PointIndex == v2.PointIndex) and (v1.BoneIndex == v2.BoneIndex) then
-			format "Point % has multiple weights for bone %\n" v1.PointIndex Bones[v2.BoneIndex].Name
+			format "Point % has multiple weights for bone %\n" v1.PointIndex MeshBones[v2.BoneIndex].Name
 	) */
 
 	-- build vertex to influence map
@@ -872,7 +879,7 @@ fn ImportPskFile filename skelOnly:false =
 			for i = 1 to numInfs do
 			(
 				v = Infs[start + i - 1]
---				format "Inf %(%) % : %\n" wedge vert Bones[v.BoneIndex+1].Name v.Weight
+--				format "Inf %(%) % : %\n" wedge vert MeshBones[v.BoneIndex+1].Name v.Weight
 				skinOps.SetVertexWeights skinMod wedge (v.BoneIndex+1) v.Weight
 			) */
 
@@ -901,6 +908,36 @@ fn ImportPskFile filename skelOnly:false =
 	)
 	enableSceneRedraw()
 --	progressEnd()
+
+	-- combine with old skeleton for correct work of combined meshes
+	format "... processing % OldMeshBones\n" OldMeshBones.count
+	for i = 1 to OldMeshBones.count do
+	(
+		boneName = OldMeshBones[i].Name
+		found = false
+		-- find bone in MeshBones
+		for j = 1 to MeshBones.count do
+		(
+			if MeshBones[j].Name == boneName then
+			(
+--				format "..... found in MeshBones"
+				found = true
+				exit
+			)
+		)
+		if not found then
+		(
+			-- bone already exists in MeshBones array
+			-- find bone in Max scene
+			if getNodeByName boneName exact:true ignoreCase:false != undefined then
+			(
+				-- bone still exists in Max scene, should add it to MeshBones array
+				MeshBones[MeshBones.count+1] = OldMeshBones[i]
+--				format "... restored bone from old mesh: %\n" boneName
+			)
+		)
+	)
+
 	if g_loadConfirm then messageBox "Mesh Sucessfully Loaded"
 
 	gc()
@@ -931,13 +968,13 @@ fn ImportPsaFile filename trackNum all:false =
 		-- Bone links --
 		hdr = LOAD_CHUNK file "BONENAMES"
 		numBones = hdr.DataCount
-		Bones[numBones] = VBone ()		-- preallocate
+		if numBones > 0 then Bones[numBones] = VBone ()				-- preallocate
 		for i = 1 to numBones do Bones[i] = ReadVBone file
 
 		-- Animation sequence info --
 		hdr = LOAD_CHUNK file "ANIMINFO"
 		numAnims = hdr.DataCount
-		Anims[numAnims] = AnimInfoBinary ()	-- preallocate
+		if numAnims > 0 then Anims[numAnims] = AnimInfoBinary ()	-- preallocate
 		for i = 1 to numAnims do Anims[i] = ReadAnimInfoBinary file
 
 		if trackNum < 0 then
@@ -949,6 +986,8 @@ fn ImportPsaFile filename trackNum all:false =
 
 		-- Key data --
 		hdr = LOAD_CHUNK file "ANIMKEYS"
+		posAfterAnims = (ftell file) + hdr.DataCount * hdr.DataSize
+
 		if all then trackNum = 1
 		if trackNum > 1 then
 		(
@@ -958,7 +997,7 @@ fn ImportPsaFile filename trackNum all:false =
 		)
 		track     = Anims[trackNum]
 		numFrames = track.NumRawFrames
-		if all then numFrames = hdr.DataCount / Bones.Count
+		if all then numFrames = hdr.DataCount / Bones.count
 	)
 	catch
 	(
@@ -970,11 +1009,23 @@ fn ImportPsaFile filename trackNum all:false =
 	)
 
 	-- find bones
-	MaxBones = #()
+	MaxBones     = #()
+	MeshBoneLink = #()
 	for i = 1 to numBones do
 	(
-		MaxBones[i] = getNodeByName Bones[i].Name exact:true ignoreCase:false
-		if MaxBones[i] == undefined then format "WARNING: cannot find the bone %\n" Bones[i].Name
+		boneName = Bones[i].Name
+		MaxBones[i] = getNodeByName boneName exact:true ignoreCase:false
+		MeshBoneLink[i] = undefined
+		for j = 1 to MeshBones.count do
+		(
+			if MeshBones[j].Name == boneName then
+			(
+				MeshBoneLink[i] = MeshBones[j]
+				exit
+			)
+		)
+		if MaxBones[i]     == undefined then format "WARNING: cannot find scene bone %\n" boneName
+		if MeshBoneLink[i] == undefined then format "WARNING: cannot find mesh bone %\n" boneName
 	)
 
 	set coordsys world
@@ -982,37 +1033,77 @@ fn ImportPsaFile filename trackNum all:false =
 
 	stopAnimation()
 
+	-- extended format (psax)
+	local AnimFlags = #()
+	animKeysPos = ftell file
+	try
+	(
+		fseek file 0 #seek_end				-- compute file size
+		fileSize = ftell file
+		if fileSize > posAfterAnims then	-- has extra space after ANIMKEYS chunk
+		(
+			-- flags
+			fseek file posAfterAnims #seek_set
+			hdr = LOAD_CHUNK file "ANIMFLAGS"
+			numFlags = hdr.DataCount
+			AnimFlags[numFlags] = 0			-- preallocate
+			for i = 1 to numFlags do AnimFlags[i] = ReadByte file
+		)
+	)
+	catch
+	(
+		format "WARNING: not an extended psa file format\n"
+    )
+	fseek file animKeysPos #seek_set
+
 	format "Loading track % (%), % keys\n" trackNum Anims[trackNum].Name (numFrames * Bones.count)
 	firstFrame = #()
+	firstFlag  = (trackNum - 1) * numBones + 1
+	flagCount  = AnimFlags.count
 	animate on
 	(
 		progressStart "Loading animation ..."
 		for i = 1 to numFrames do
 		(
 			at time (startframe + i - 1)
-			for b = 1 to Bones.count do
 			(
-				-- get key
-				k = ReadVQuatAnimKey file			-- read key from file
-				bone = MaxBones[b]
-				p = k.Position * g_meshScale
-				q = k.Orientation
-				if (b == 1) then q = conjugate q
-				-- build matrix
-				mat = (q as matrix3)
-				mat.row4 = p
-				-- modify bone
-				if bone == undefined then continue	-- missing bone
-				if bone.parent != undefined then
+				flagIndex = firstFlag
+				for b = 1 to Bones.count do
 				(
-					bone.transform = mat * bone.parent.transform
+					-- get bone from MeshBones
+					MeshBone = MeshBoneLink[b]
+					-- get animation flags
+					flag = 0
+					if (flagIndex < flagCount) and (MeshBone != undefined) then flag = AnimFlags[flagIndex]
+					flagIndex = flagIndex + 1
+					-- get key
+					k = ReadVQuatAnimKey file			-- read key from file
+					bone = MaxBones[b]
+					if (bit.and flag 1) == 0 then		-- PSAX_FLAG_NO_TRANSLATION
+						p = k.Position * g_meshScale
+					else
+						p = MeshBone.Position
+					if (bit.and flag 2) == 0 then		-- PSAX_FLAG_NO_ROTATION
+						q = k.Orientation
+					else
+						q = MeshBone.Orientation
+					if (b == 1) then q = conjugate q
+					-- build matrix
+					mat = (q as matrix3)
+					mat.row4 = p
+					-- modify bone
+					if bone == undefined then continue	-- missing bone
+					if bone.parent != undefined then
+					(
+						bone.transform = mat * bone.parent.transform
+					)
+					else
+					(
+						bone.transform = mat
+					)
+					-- remember 1st frame
+					if (i == 1) then firstFrame[b] = bone.transform
 				)
-				else
-				(
-					bone.transform = mat
-				)
-				-- remember 1st frame
-				if (i == 1) then firstFrame[b] = bone.transform
 			)
 			-- progress bar
 			progressUpdate (100.0 * i / numFrames)
@@ -1036,6 +1127,8 @@ fn ImportPsaFile filename trackNum all:false =
 		)
 		progressEnd()
 	)
+
+	-- finish loading
 	fclose file
 
 	sliderTime = 1
@@ -1070,6 +1163,42 @@ fn ImportPsaFile filename trackNum all:false =
 
 
 -------------------------------------------------------------------------------
+--	Tools
+-------------------------------------------------------------------------------
+
+fn RestoreBindpose =
+(
+	try
+	(
+		-- find bones
+		numBones = MeshBones.count-1
+		MaxBones = #()
+		for i = 1 to numBones do
+		(
+			MaxBones[i] = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
+			if MaxBones[i] == undefined then
+				format "WARNING: cannot find the bone %\n" MeshBones[i].Name
+			else
+				MaxBones[i].transform = MeshBones[i].Matrix
+		)
+
+		set coordsys world
+	)
+	catch
+	(
+		format "ERROR!\n"
+	)
+)
+
+
+fn RemoveAnimation =
+(
+	stopAnimation()
+	animationRange = interval 0 1
+)
+
+
+-------------------------------------------------------------------------------
 --	User interface
 -------------------------------------------------------------------------------
 
@@ -1084,7 +1213,7 @@ fn LoadAnimation index =
 rollout axImportRollout "Actor X Importer"
 (
 	-- copyright label
-	label Lbl1 "Version 1.09"
+	label Lbl1 "Version 1.10"
 	label Lbl2 "\xA9 2009,2010 Konstantin Nosov (Gildor)"
 	label Lbl3 "http://www.gildor.org/"
 
@@ -1110,7 +1239,7 @@ rollout axImportRollout "Actor X Importer"
 
 	on BtnImportPsk pressed do
 	(
-		local filename = getOpenFileName types:"Actor X Mesh (*.psk)|*.psk|All (*.*)|*.*|" filename:g_lastDir1
+		local filename = getOpenFileName types:"Actor X Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
 		if filename != undefined then
 		(
 			MeshFileName = filename
@@ -1121,7 +1250,7 @@ rollout axImportRollout "Actor X Importer"
 
 	on BtnImportPsa pressed do
 	(
-		local filename = getOpenFileName types:"Actor X Animation (*.psa)|*.psa|All (*.*)|*.*|" filename:g_lastDir2
+		local filename = getOpenFileName types:"Actor X Animation (*.psa,*.psax)|*.psa;*.psax|All (*.*)|*.*|" filename:g_lastDir2
 
 		if filename != undefined then
 		(
@@ -1154,6 +1283,23 @@ rollout axImportRollout "Actor X Importer"
 	on axImportRollout close do
 	(
 		SerializeSettings false
+	)
+)
+
+
+rollout axToolsRollout "Tools"
+(
+	button BtnRestoreBindpose "Restore BindPose" across:2
+	button BtnRemoveAnimation "Remove animation"
+
+	on BtnRestoreBindpose pressed do
+	(
+		RestoreBindpose()
+	)
+
+	on BtnRemoveAnimation pressed do
+	(
+		RemoveAnimation()
 	)
 )
 
@@ -1211,4 +1357,5 @@ axImportFloater = newRolloutFloater "Actor X Import" 250 550 30 100 	-- create n
 
 -- add controls
 addRollout axImportRollout   axImportFloater
+addRollout axToolsRollout    axImportFloater
 addRollout axSettingsRollout axImportFloater

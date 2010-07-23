@@ -1362,6 +1362,20 @@ public:
 	{
 		guard(UTexture3::Serialize);
 		Super::Serialize(Ar);
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers) return;	// SourceArt is moved to separate class
+#endif
+#if APB
+		if (Ar.Game == GAME_APB)
+		{
+			// APB has source art stored in separate bulk
+			// here are 2 headers: 1 for SourceArt and 1 for TIndirectArray<BulkData> MipSourceArt
+			// we can skip these blocks by skipping headers
+			// each header is a magic 0x5D0E7707 + position in package
+			Ar.Seek(Ar.Tell() + 8 * 2);
+			return;
+		}
+#endif // APB
 		SourceArt.Serialize(Ar);
 		unguard;
 	}

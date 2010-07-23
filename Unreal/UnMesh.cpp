@@ -635,11 +635,11 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 
 #if SWRC
 
-struct FVectorShort
+struct FVectorShortSWRC
 {
 	short					X, Y, Z;
 
-	friend FArchive& operator<<(FArchive &Ar, FVectorShort &V)
+	friend FArchive& operator<<(FArchive &Ar, FVectorShortSWRC &V)
 	{
 		return Ar << V.X << V.Y << V.Z;
 	}
@@ -699,17 +699,17 @@ struct FVectorShort
 	}
 };
 
-SIMPLE_TYPE(FVectorShort, short)
+SIMPLE_TYPE(FVectorShortSWRC, short)
 
 
 void AnalogTrack::SerializeSWRC(FArchive &Ar)
 {
 	guard(AnalogTrack::SerializeSWRC);
 
-	float					PosScale;
-	TArray<FVectorShort>	PosTrack;		// scaled by PosScale
-	TArray<FVectorShort>	RotTrack;
-	TArray<byte>			TimeTrack;		// frame duration
+	float					 PosScale;
+	TArray<FVectorShortSWRC> PosTrack;		// scaled by PosScale
+	TArray<FVectorShortSWRC> RotTrack;
+	TArray<byte>			 TimeTrack;		// frame duration
 
 	Ar << PosScale << PosTrack << RotTrack << TimeTrack;
 
@@ -789,6 +789,68 @@ void UMeshAnimation::SerializeSWRCAnims(FArchive &Ar)
 }
 
 #endif // SWRC
+
+
+#if UC1
+
+struct FVectorShortUC1
+{
+	short					X, Y, Z;
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorShortUC1 &V)
+	{
+		return Ar << V.X << V.Y << V.Z;
+	}
+
+	operator FVector() const
+	{
+		FVector r;
+		float s = 1.0f / 100.0f;
+		r.X = X * s;
+		r.Y = Y * s;
+		r.Z = Z * s;
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FVectorShortUC1, short)
+
+struct FQuatShortUC1
+{
+	short					X, Y, Z, W;
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatShortUC1 &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z << Q.W;
+	}
+
+	operator FQuat() const
+	{
+		FQuat r;
+		float s = 1.0f / 16383.0f;
+		r.X = X * s;
+		r.Y = Y * s;
+		r.Z = Z * s;
+		r.W = W * s;
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FQuatShortUC1, short)
+
+
+void AnalogTrack::SerializeUC1(FArchive &Ar)
+{
+	guard(AnalogTrack::SerializeUC1);
+	TArray<FQuatShortUC1>   PackedKeyQuat;
+	TArray<FVectorShortUC1> PackedKeyPos;
+	Ar << Flags << PackedKeyQuat << PackedKeyPos << KeyTime;
+	CopyArray(KeyQuat, PackedKeyQuat);
+	CopyArray(KeyPos, PackedKeyPos);
+	unguard;
+}
+
+#endif // UC1
 
 
 #if UC2
@@ -1223,7 +1285,6 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 		BufferData = (byte*)appMalloc(DataSize);
 		Ar.Serialize(BufferData, DataSize);
 	}
-//	printf("--- DATA: %d (REST=%d) F=%d\n", DataSize, Ar.GetStopper() - Ar.Tell(), DataFlag);//!!!
 	TArray<MotionChunkUC2> Moves2;
 	Ar << Moves2;
 
@@ -1266,7 +1327,6 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 				FlexTrackBase *Track = M.FlexTracks[ti].Track;
 				if (Track)
 				{
-//printf("%d/%d\n", ti, numTracks);//!!
 					Track->Serialize2(Reader, Ar);
 					Track->Decompress(DM.AnimTracks[ti]);
 				}
@@ -1275,7 +1335,6 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 		}
 	}
 	assert(Reader.GetStopper() == Reader.Tell());
-//	printf("--- DONE (%d unread) ---\n", Reader.GetStopper() - Reader.Tell());//!!!
 
 	// cleanup
 	if (BufferData) appFree(BufferData);

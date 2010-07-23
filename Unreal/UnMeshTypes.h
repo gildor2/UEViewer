@@ -252,4 +252,60 @@ SIMPLE_TYPE(FQuatBioFixed48, word)
 #endif // MASSEFF
 
 
+#if TRANSFORMERS
+
+// mix of FQuatFixed48NoW and FQuatIntervalFixed32NoW
+struct FQuatIntervalFixed48NoW
+{
+	word			X, Y, Z;
+
+	FQuat ToQuat(const FVector &Mins, const FVector &Ranges) const
+	{
+		FQuat r;
+		r.X = (X - 32767) / 32767.0f * Ranges.X + Mins.X;
+		r.Y = (Y - 32767) / 32767.0f * Ranges.Y + Mins.Y;
+		r.Z = (Z - 32767) / 32767.0f * Ranges.Z + Mins.Z;
+		// check FQuatFloat96NoW ...
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatIntervalFixed48NoW &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z;
+	}
+};
+
+SIMPLE_TYPE(FQuatIntervalFixed48NoW, word)
+
+
+//	unsigned		Z:10, Y:11, X:11;
+//		r.X = (X / 1023.0f - 1.0f) * Ranges.X + Mins.X;
+//		r.Y = (Y / 1023.0f - 1.0f) * Ranges.Y + Mins.Y;
+//		r.Z = (Z / 511.0f  - 1.0f) * Ranges.Z + Mins.Z;
+struct FPackedVectorTrans
+{
+	unsigned		Z:11, Y:10, X:11;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = (X / 1023.0f - 1.0f) * Ranges.X + Mins.X;
+		r.Y = (Y / 511.0f  - 1.0f) * Ranges.Y + Mins.Y;
+		r.Z = (Z / 1023.0f - 1.0f) * Ranges.Z + Mins.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FPackedVectorTrans &Q)
+	{
+		return Ar << GET_DWORD(Q);
+	}
+};
+
+SIMPLE_TYPE(FPackedVectorTrans, unsigned)
+
+#endif // TRANSFORMERS
+
+
 #endif // __UNMESHTYPES_H__

@@ -3,6 +3,7 @@
 
 extern bool GExportScripts;
 extern bool GExportLods;
+extern bool GExtendedPsk;
 
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);

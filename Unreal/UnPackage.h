@@ -160,6 +160,13 @@ struct FPackageFileSummary
 			}
 		}
 #endif // HUXLEY
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55)
+		{
+			int unk8;								// always 0x4BF1EB6B?
+			Ar << unk8;
+		}
+#endif // TRANSFORMERS
 #if UNREAL3
 //		if (S.FileVersion >= PACKAGE_V3)
 //		{
@@ -334,7 +341,7 @@ struct FPackageFileSummary
 
 #if UNREAL3
 #define EF_ForcedExport		1
-// other values: 2
+// other noticed values: 2
 #endif
 
 struct FObjectExport
@@ -362,6 +369,14 @@ struct FObjectExport
 #if UNREAL3
 		if (Ar.Game >= GAME_UE3)
 		{
+#	if AA3
+			int AA3Obfuscator = 0;
+			if (Ar.Game == GAME_AA3)
+			{
+				//!! if (Package->Summary.PackageFlags & 0x200000)
+				Ar << AA3Obfuscator;	// random value
+			}
+#	endif // AA3
 #	if WHEELMAN
 			if (Ar.Game == GAME_Wheelman)
 			{
@@ -395,13 +410,42 @@ struct FObjectExport
 				Ar << unk24;
 			}
 #	endif // HUXLEY
+#	if ALPHA_PR
+			if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 53) goto ue3_export_flags;	// no ComponentMap
+#	endif
+#	if TRANSFORMERS
+			if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 37) goto ue3_export_flags;	// no ComponentMap
+#	endif
 			if (Ar.ArVer < 543)  Ar << E.ComponentMap;
+		ue3_export_flags:
 			if (Ar.ArVer >= 247) Ar << E.ExportFlags;
+#	if TRANSFORMERS
+			if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 116)
+			{
+				// version prior 116
+				bool someFlag;
+				Ar << someFlag;
+				if (!someFlag) return Ar;
+				// else - continue serialization of remaining fields
+			}
+#	endif // TRANSFORMERS
 			if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;
-#if ARMYOF2
+#	if ARMYOF2
 			if (Ar.Game == GAME_ArmyOf2) return Ar;
-#endif
+#	endif
 			if (Ar.ArVer >= 475) Ar << E.U3unk6C;
+#	if AA3
+			if (Ar.Game == GAME_AA3)
+			{
+				// deobfuscate data
+				E.ClassIndex   ^= AA3Obfuscator;
+				E.SuperIndex   ^= AA3Obfuscator;
+				E.PackageIndex ^= AA3Obfuscator;
+				E.Archetype    ^= AA3Obfuscator;
+				E.SerialSize   ^= AA3Obfuscator;
+				E.SerialOffset ^= AA3Obfuscator;
+			}
+#	endif // AA3
 			return Ar;
 		}
 #endif // UNREAL3

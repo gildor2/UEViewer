@@ -30,6 +30,7 @@
 #define EXTEEL			1
 
 // UE2X
+#define UC1				1
 #define UC2				1
 
 // requires UNREAL3
@@ -51,9 +52,12 @@
 #define BORDERLANDS		1		// Borderlands
 #define DARKVOID		1		// Dark Void
 #define HUXLEY			1
+//#define AA3				1		// America's Army 3
 #define LEGENDARY		1		// Legendary: Pandora's Box
 #define TERA			1		// TERA: The Exiled Realm of Arborea
 #define APB				1		// All Points Bulletin
+#define ALPHA_PR		1		// Alpha Protocol
+#define TRANSFORMERS	1		// Transformers: War for Cybertron
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

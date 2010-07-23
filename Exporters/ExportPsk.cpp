@@ -13,7 +13,11 @@
 // PSK uses right-hand coordinates, but unreal uses left-hand.
 // When importing PSK into UnrealEd, it mirrors model.
 // Here we performing reverse transformation.
-#define MIRROR_MESH			1
+#define MIRROR_MESH				1
+
+#define REFINE_SKEL				1
+#define MAX_MESHBONES			512
+
 
 void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
 	CVec3 &DstPos, CQuat &DstQuat);
@@ -127,17 +131,70 @@ static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
 		Ar << M;
 	}
 
+#if REFINE_SKEL
+	assert(Mesh->RefSkeleton.Num() <= MAX_MESHBONES);
+	bool usedBones[MAX_MESHBONES];
+	memset(usedBones, 0, sizeof(usedBones));
+	// walk all influences
+	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
+	{
+		VRawBoneInfluence I;
+		const FVertInfluences &S = Mesh->VertInfluences[i];
+		usedBones[S.BoneIndex] = true;
+	}
+	// mark bone parents
+	usedBones[0] = true;							// mark root explicitly
+	for (i = 1; i < Mesh->RefSkeleton.Num(); i++)	// skip root bone
+	{
+		if (!usedBones[i]) continue;
+		int parent = i;
+		while (true)
+		{
+			parent = Mesh->RefSkeleton[parent].ParentIndex;
+			if (parent <= 0) break;
+			usedBones[parent] = true;
+		}
+	}
+	// create bone remap table
+	int CurBone = 0;
+	int BoneMap[MAX_MESHBONES];
+	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
+	{
+		if (!usedBones[i]) continue;
+		BoneMap[i] = CurBone++;
+	}
+	if (CurBone < Mesh->RefSkeleton.Num())
+		printf("... reduced skeleton from %d bones to %d\n", Mesh->RefSkeleton.Num(), CurBone);
+#endif // REFINE_SKEL
+
+#if !REFINE_SKEL
 	BoneHdr.DataCount = Mesh->RefSkeleton.Num();
+#else
+	BoneHdr.DataCount = CurBone;
+#endif
 	BoneHdr.DataSize  = sizeof(VBone);
 	SAVE_CHUNK(BoneHdr, "REFSKELT");
 	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
 	{
+#if REFINE_SKEL
+		if (!usedBones[i]) continue;
+#endif
 		VBone B;
 		memset(&B, 0, sizeof(B));
 		const FMeshBone &S = Mesh->RefSkeleton[i];
 		strcpy(B.Name, S.Name);
+#if !REFINE_SKEL
 		B.NumChildren = S.NumChildren;
 		B.ParentIndex = S.ParentIndex;
+#else
+		// compute actual NumChildren (may be changed because of refined skeleton)
+		int NumChildren = 0;
+		for (int j = 1; j < Mesh->RefSkeleton.Num(); j++)
+			if (usedBones[j] && Mesh->RefSkeleton[j].ParentIndex == i)
+				NumChildren++;
+		B.NumChildren = NumChildren;
+		B.ParentIndex = S.ParentIndex > 0 ? BoneMap[S.ParentIndex] : 0;
+#endif // REFINE_SKEL
 		B.BonePos     = S.BonePos;
 
 #if MIRROR_MESH
@@ -158,7 +215,11 @@ static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
 		const FVertInfluences &S = Mesh->VertInfluences[i];
 		I.Weight     = S.Weight;
 		I.PointIndex = S.PointIndex;
+#if !REFINE_SKEL
 		I.BoneIndex  = S.BoneIndex;
+#else
+		I.BoneIndex  = BoneMap[S.BoneIndex];
+#endif // REFINE_SKEL
 		Ar << I;
 	}
 
@@ -268,7 +329,16 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 				VQuatAnimKey K;
 				CVec3 BP;
 				CQuat BO;
-				GetBonePosition(M.AnimTracks[b], t, S.NumFrames, false, BP, BO);
+				if (M.BoneIndices.Num() <= b || M.BoneIndices[b] != INDEX_NONE)
+				{
+					GetBonePosition(M.AnimTracks[b], t, S.NumFrames, false, BP, BO);
+				}
+				else
+				{
+					// should be handled by ANIMFLAGS section
+					BP.Set(0, 0, 0);
+					BO.Set(0, 0, 0, 1);
+				}
 				K.Position    = (FVector&) BP;
 				K.Orientation = (FQuat&)   BO;
 				K.Time        = 1;
@@ -284,6 +354,31 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 		}
 	}
 	assert(keysCount == 0);
+
+	if (!GExtendedPsk) return;			// done
+
+	// export extra animation information
+	static VChunkHeader FlagHdr;
+	int numFlags = numAnims * numBones;
+	FlagHdr.DataCount = numFlags;
+	FlagHdr.DataSize  = sizeof(byte);
+	SAVE_CHUNK(FlagHdr, "ANIMFLAGS");
+	for (i = 0; i < numAnims; i++)
+	{
+		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
+		const MotionChunk  &M = Anim->Moves[i];
+		for (int b = 0; b < numBones; b++)
+		{
+			byte flag = 0;
+			if (M.BoneIndices[b] == INDEX_NONE)
+				flag |= PSAX_FLAG_NO_TRANSLATION | PSAX_FLAG_NO_ROTATION;
+			else if (M.AnimTracks[b].KeyPos.Num() == 0)
+				flag |= PSAX_FLAG_NO_TRANSLATION;
+			Ar << flag;
+			numFlags--;
+		}
+	}
+	assert(numFlags == 0);
 }
 
 

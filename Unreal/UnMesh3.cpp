@@ -117,9 +117,10 @@ struct FRigidVertex3
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
-#if MKVSDC || STRANGLE || FRONTLINES
+#if MKVSDC || STRANGLE || FRONTLINES || TRANSFORMERS
 		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
-			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3))
+			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3) ||
+			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
 		{
 			float U1, V1;
 			Ar << U1 << V1;
@@ -184,9 +185,10 @@ struct FSmoothVertex3
 			Ar << U1 << V1 << U2 << V2;
 		}
 #endif // MEDGE
-#if MKVSDC || STRANGLE || FRONTLINES
+#if MKVSDC || STRANGLE || FRONTLINES || TRANSFORMERS
 		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
-			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3))
+			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3) ||
+			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
 		{
 			float U1, V1;
 			Ar << U1 << V1;
@@ -248,6 +250,13 @@ struct FSkinChunk3
 #endif // ARMYOF2
 		if (Ar.ArVer >= 362)
 			Ar << V.MaxInfluences;
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55)
+		{
+			int NumTexCoords;
+			Ar << NumTexCoords;
+		}
+#endif // TRANSFORMERS
 		return Ar;
 		unguard;
 	}
@@ -414,6 +423,7 @@ struct FGPUSkin3
 		guard(FSkinData3<<);
 
 		if (Ar.IsLoading) S.bUseFullPrecisionPosition = true;
+		GNumGPUUVSets = 1;
 
 	#if HUXLEY
 		if (Ar.Game == GAME_Huxley) goto old_version;
@@ -469,9 +479,17 @@ struct FGPUSkin3
 		// serialize type information
 	#if MEDGE
 		int NumUVSets = 1;
-		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF)
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15)
 			Ar << NumUVSets;
 	#endif // MEDGE
+	#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55)
+		{
+			int NumUVSets;
+			Ar << NumUVSets;
+			GNumGPUUVSets = NumUVSets;	// 1 or 2
+		}
+	#endif // TRANSFORMERS
 		Ar << S.bUseFullPrecisionUVs;
 		if (Ar.ArVer >= 592)
 			Ar << S.bUseFullPrecisionPosition << S.MeshOrigin << S.MeshExtension;
@@ -481,7 +499,6 @@ struct FGPUSkin3
 //		printf("data: %d %d\n", S.bUseFullPrecisionUVs, S.bUseFullPrecisionPosition);
 		S.bUseFullPrecisionPosition = true;
 
-		GNumGPUUVSets = 1;
 	#if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) GNumGPUUVSets = 4;
 	#endif
@@ -576,6 +593,25 @@ struct FMesh3R6Unk1
 
 #endif // R6VEGAS
 
+#if TRANSFORMERS
+
+struct FTRMeshUnkStream
+{
+	int					ItemSize;
+	int					NumVerts;
+	TArray<int>			Data;
+
+	friend FArchive& operator<<(FArchive &Ar, FTRMeshUnkStream &S)
+	{
+		Ar << S.ItemSize << S.NumVerts;
+		if (S.ItemSize && S.NumVerts)
+			Ar << RAW_ARRAY(S.Data);
+		return Ar;
+	}
+};
+
+#endif // TRANSFORMERS
+
 // Version references: 180..240 - Rainbow 6: Vegas 2
 // Other: GOW PC
 struct FStaticLODModel3
@@ -598,7 +634,6 @@ struct FStaticLODModel3
 	{
 		guard(FStaticLODModel3<<);
 
-		int tmp1;
 		Ar << Lod.Sections << Lod.IndexBuffer;
 
 		if (Ar.ArVer < 215)
@@ -635,6 +670,7 @@ struct FStaticLODModel3
 #endif
 
 		if (Ar.ArVer < 686) Ar << Lod.Edges;
+
 		if (Ar.ArVer < 202)
 		{
 			// old version
@@ -667,8 +703,17 @@ struct FStaticLODModel3
 			TArray<short> f24_a;
 			Ar << f24_a;
 		}
+#if APB
+		if (Ar.Game == GAME_APB)
+		{
+			// skip APB bulk; for details check UTexture3::Serialize()
+			Ar.Seek(Ar.Tell() + 8);
+			goto after_bulk;
+		}
+#endif // APB
 		if (Ar.ArVer >= 221)
 			Lod.BulkData.Serialize(Ar);
+	after_bulk:
 #if R6VEGAS
 		if (Ar.Game == GAME_R6Vegas2 && Ar.ArLicenseeVer >= 46)
 		{
@@ -690,8 +735,15 @@ struct FStaticLODModel3
 		if (Ar.Game == GAME_50Cent) return Ar;	// new ArVer, but old engine
 #endif
 #if MEDGE
-		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF) return Ar;	// new ArVer, but old engine
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15) return Ar;	// new ArVer, but old engine
 #endif // MEDGE
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 73)
+		{
+			FTRMeshUnkStream unkStream;
+			Ar << unkStream;
+		}
+#endif // TRANSFORMERS
 		if (Ar.ArVer >= 534)		// post-UT3 code
 			Ar << Lod.fC4;
 //		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num()); -- mostly equals (failed in CH_TwinSouls_Cine.upk)
@@ -769,7 +821,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	TArray<FStaticLODModel3> Lods;
 
 #if MEDGE
-	if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 0xF)
+	if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15)
 	{
 		int unk264;
 		Ar << unk264;
@@ -804,6 +856,13 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		Ar << AlternateMaterials;
 	}
 #endif // DARKVOID
+#if ALPHA_PR
+	if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 26)
+	{
+		TArray<int> SectionDepthBias;
+		Ar << SectionDepthBias;
+	}
+#endif // ALPHA_PR
 	Ar << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
 #if A51 || MKVSDC || STRANGLE
@@ -1221,6 +1280,16 @@ void UAnimSet::ConvertAnims()
 			printf("WARNING: %s: no sequence %d\n", Name, i);
 			continue;
 		}
+#if DEBUG_DECOMPRESS
+	for (i = 0; i < Seq->CompressedTrackOffsets.Num(); i += 4)
+	{
+		int TransOffset = Seq->CompressedTrackOffsets[i  ];
+		int TransKeys   = Seq->CompressedTrackOffsets[i+1];
+		int RotOffset   = Seq->CompressedTrackOffsets[i+2];
+		int RotKeys     = Seq->CompressedTrackOffsets[i+3];
+		printf("[%d] = %d+%d ; %d+%d\n", i/4, TransOffset, TransKeys, RotOffset, RotKeys);
+	}
+#endif
 #if MASSEFF
 		if (Seq->m_pBioAnimSetData != BioData)
 		{
@@ -1325,6 +1394,35 @@ void UAnimSet::ConvertAnims()
 				}
 #endif // FIND_HOLES
 				Reader.Seek(TransOffset);
+
+#if TRANSFORMERS
+				if (Package->Game == GAME_Transformers && TransKeys >= 4)
+				{
+					assert(Package->ArLicenseeVer >= 100);
+					FVector v1, v2;
+					Reader << v1.X;
+					if (v1.X != -1)
+					{
+						Reader << v1.Y << v1.Z << v2;
+//						printf("  trans: %g %g %g -- %g %g %g\n", FVECTOR_ARG(v1), FVECTOR_ARG(v2));
+						for (k = 0; k < TransKeys; k++)
+						{
+#if 0
+							unsigned int pos;
+							Reader << pos;
+							printf("  %08X\n", pos);
+//!!						A->KeyPos.AddItem(vec); -- decode!
+#else
+							FPackedVectorTrans pos;
+							Reader << pos;
+							A->KeyPos.AddItem(pos.ToVector(v1, v2));
+#endif
+						}
+						goto trans_keys_done;
+					}
+				}
+#endif // TRANSFORMERS
+
 				for (k = 0; k < TransKeys; k++)
 				{
 					if (Seq->TranslationCompressionFormat == ACF_None)
@@ -1351,6 +1449,8 @@ void UAnimSet::ConvertAnims()
 					else
 						appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
 				}
+
+			trans_keys_done:
 				// align to 4 bytes
 				Reader.Seek(Align(Reader.Tell(), 4));
 				if (hasTimeTracks)
@@ -1388,6 +1488,14 @@ void UAnimSet::ConvertAnims()
 				// read mins/ranges
 				FVector Mins, Ranges;
 				Reader << Mins << Ranges;
+#if TRANSFORMERS
+				if (Package->Game == GAME_Transformers)
+				{
+					FQuat Unk;
+					Reader << Unk;
+//					printf("  rot   %g %g %g %g\n", FQUAT_ARG(Unk));
+				}
+#endif // TRANSFORMERS
 
 				for (k = 0; k < RotKeys; k++)
 				{
@@ -1457,9 +1565,19 @@ void UAnimSet::ConvertAnims()
 						A->KeyQuat.AddItem(q);
 					}
 #endif // BORDERLANDS */
+#if TRANSFORMERS
+					else if (Seq->RotationCompressionFormat == ACF_IntervalFixed48NoW)
+					{
+						FQuatIntervalFixed48NoW q;
+						Reader << q;
+						A->KeyQuat.AddItem(q.ToQuat(Mins, Ranges));
+					}
+#endif // TRANSFORMERS
 					else
 						appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
 				}
+
+			rot_keys_done:
 				// align to 4 bytes
 				Reader.Seek(Align(Reader.Tell(), 4));
 				if (hasTimeTracks)
@@ -1489,6 +1607,24 @@ void UAnimSet::ConvertAnims()
 	UStaticMesh
 -----------------------------------------------------------------------------*/
 
+#if TRANSFORMERS
+
+struct FTRStaticMeshSectionUnk
+{
+	int					f0;
+	int					f4;
+
+	friend FArchive& operator<<(FArchive &Ar, FTRStaticMeshSectionUnk &S)
+	{
+		return Ar << S.f0 << S.f4;
+	}
+};
+
+SIMPLE_TYPE(FTRStaticMeshSectionUnk, int)
+
+#endif // TRANSFORMERS
+
+
 struct FStaticMeshSection3
 {
 	UMaterial			*Mat;
@@ -1517,7 +1653,28 @@ struct FStaticMeshSection3
 			return Ar << S.Index;				//?? other name?
 #endif // HUXLEY
 		if (Ar.ArVer >= 492) Ar << S.Index;		//?? real version is unknown! No field in GOW1_PC (490), has in UT3 (512)
+#if ALPHA_PR
+		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 13)
+		{
+			int unk30, unk34;
+			Ar << unk30 << unk34;
+		}
+#endif // ALPHA_PR
 		if (Ar.ArVer >= 514) Ar << S.f30;
+#if ALPHA_PR
+		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 39)
+		{
+			int unk38;
+			Ar << unk38;
+		}
+#endif // ALPHA_PR
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 49)
+		{
+			TArray<FTRStaticMeshSectionUnk> f30;
+			Ar << f30;
+		}
+#endif // TRANSFORMERS
 		if (Ar.ArVer >= 618)
 		{
 			byte unk;
@@ -1597,6 +1754,7 @@ struct FStaticMeshUVItem3
 			goto uvs;
 		}
 #endif // AVA
+
 		if (Ar.ArVer < 472)
 		{
 			// old version has position embedded into UVStream (this is not an UVStream, this is a single stream for everything)
@@ -1608,6 +1766,9 @@ struct FStaticMeshUVItem3
 			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 		else
 			Ar << V.Normal[0] << V.Normal[2];
+#if APB
+		if (Ar.Game == GAME_APB && Ar.ArLicenseeVer >= 12) goto uvs;
+#endif
 		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
 			Ar << V.f10;				// starting from 615 made as separate stream
 	uvs:
@@ -1736,7 +1897,17 @@ struct FStaticMeshLODModel
 		}
 #endif // HUXLEY
 
+#if APB
+		if (Ar.Game == GAME_APB)
+		{
+			// skip bulk; check UTexture3::Serialize() for details
+			Ar.Seek(Ar.Tell() + 8);
+			goto after_bulk;
+		}
+#endif // APB
 		Lod.BulkData.Skip(Ar);
+	after_bulk:
+
 #if TLR
 		if (Ar.Game == GAME_TLR && Ar.ArLicenseeVer >= 2)
 		{
@@ -1778,6 +1949,13 @@ struct FStaticMeshLODModel
 		new_ver:
 			Ar << Lod.VertexStream;
 			Ar << Lod.UVStream;
+#if TRANSFORMERS
+			if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 71)
+			{
+				FTRMeshUnkStream unkStream;
+				Ar << unkStream;
+			}
+#endif // TRANSFORMERS
 			// unknown data in UDK
 			if (Ar.ArVer >= 615)
 			{
@@ -1866,12 +2044,42 @@ struct FStaticMeshLODModel
 			}
 			//!! note: this code will crash in RestoreMesh3() because of empty data
 		}
-		Ar << Lod.Indices << Lod.Indices2;
+		Ar << Lod.Indices;
+#if APB
+		if (Ar.Game == GAME_APB)
+		{
+			// serialized FIndexBuffer3 guarded by APB bulk seeker (check UTexture3::Serialize() for details)
+			Ar.Seek(Ar.Tell() + 8);
+			goto after_indices;				// do not need this data
+		}
+#endif // APB
+		Ar << Lod.Indices2;
+	after_indices:
+
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 58)
+		{
+			int unkD8;
+			Ar << unkD8;
+		}
+#endif // TRANSFORMERS
+
 		if (Ar.ArVer < 686)
 		{
 			Ar << RAW_ARRAY(Lod.Edges);
 			Ar << Lod.fEC;
 		}
+#if ALPHA_PR
+		if (Ar.Game == GAME_AlphaProtocol)
+		{
+			assert(Ar.ArLicenseeVer > 8);	// ArLicenseeVer = [1..7] has custom code
+			if (Ar.ArLicenseeVer >= 4)
+			{
+				TArray<int> unk128;
+				Ar << RAW_ARRAY(unk128);
+			}
+		}
+#endif // ALPHA_PR
 #if AVA
 		if (Ar.Game == GAME_AVA)
 		{
@@ -1912,14 +2120,14 @@ struct FStaticMeshUnk1
 	}
 };
 
-struct FStaticMeshUnk2
+struct FkDOPNode3
 {
 	FStaticMeshUnk1		f0;
 	int					f18;
 	short				f1C;
 	short				f1E;
 
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk2 &V)
+	friend FArchive& operator<<(FArchive &Ar, FkDOPNode3 &V)
 	{
 		Ar << V.f0 << V.f18;
 #if FRONTLINES
@@ -1944,11 +2152,11 @@ struct FStaticMeshUnk2
 	}
 };
 
-struct FStaticMeshUnk3
+struct FkDOPTriangle3
 {
 	short				f0, f2, f4, f6;
 
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk3 &V)
+	friend FArchive& operator<<(FArchive &Ar, FkDOPTriangle3 &V)
 	{
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
@@ -1987,16 +2195,17 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 {
 	guard(UStaticMesh::SerializeStatMesh3);
 
-	UObject::Serialize(Ar);			// no UPrimitive ...
+	UObject::Serialize(Ar);					// no UPrimitive ...
 
+	// NOTE: UStaticMesh is not mirrored by script with exception of Transformers game
 	FBoxSphereBounds	Bounds;
-	UObject				*BodySetup;	// URB_BodySetup
-	int					Version;	// GOW1_PC: 15, UT3: 16, UDK: 18
+	UObject				*BodySetup;			// URB_BodySetup
+	int					InternalVersion;	// GOW1_PC: 15, UT3: 16, UDK: 18-...
 	TArray<FStaticMeshLODModel> Lods;
 //	TArray<FStaticMeshUnk4> f48;
-	//?? kDOP ?
-	TArray<FStaticMeshUnk2> f74;
-	TArray<FStaticMeshUnk3> f80;
+	// kDOP tree
+	TArray<FkDOPNode3>     kDOPNodes;
+	TArray<FkDOPTriangle3> kDOPTriangles;
 
 #if DARKVOID
 	if (Ar.Game == GAME_DarkVoid)
@@ -2013,6 +2222,15 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 		Ar << SourceFileName;
 	}
 #endif // TERA
+#if TRANSFORMERS
+	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 50)
+	{
+		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles) << Lods;
+		// Bounds serialized as property (see UStaticMesh in h-file)
+		Bounds = this->Bounds;
+		goto done;
+	}
+#endif // TRANSFORMERS
 
 	Ar << Bounds << BodySetup;
 	if (Ar.ArVer < 315)
@@ -2020,12 +2238,12 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 		UObject *unk;
 		Ar << unk;
 	}
-	//?? kDOP ?
-	Ar << RAW_ARRAY(f74) << RAW_ARRAY(f80);
-	Ar << Version;
-//	printf("f74=%d f80=%d\n", f74.Num(), f80.Num());
-//	printf("ver: %d\n", Version);
-	if (Version >= 17 && Ar.ArVer < 593)
+	// kDOP tree
+	Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles);
+	Ar << InternalVersion;
+//	printf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
+//	printf("ver: %d\n", InternalVersion);
+	if (InternalVersion >= 17 && Ar.ArVer < 593)
 	{
 		TArray<FName> unk;			// some text properties; ContentTags ? (switched from binary to properties)
 		Ar << unk;
@@ -2034,7 +2252,8 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 
 //	Ar << f48;
 
-	//??
+done:
+	// ignore remaining part
 	Ar.Seek(Ar.GetStopper());
 	if (!Lods.Num()) return;
 

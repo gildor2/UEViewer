@@ -29,3 +29,5 @@
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
+#define APB				1
+#define TRANSFORMERS	1

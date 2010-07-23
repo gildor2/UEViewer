@@ -18,6 +18,7 @@ Modified Unreal Engine 2:
   Land of Chaos Online (LOCO)
   Battle Territory Online
   Star Wars: Republic Commando
+  Unreal Championship
 Unreal Engine 2.5:
   UE2Runtime
   Harry Potter and the Prisoner of Azkaban
@@ -59,6 +60,9 @@ Modified Unreal Engine 3:
   Borderlands
   Dark Void
   TERA: The Exiled Realm of Arborea
+  Alpha Protocol
+  All Points Bulletin (APB)
+  Transformers: War for Cybertron
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,6 +75,7 @@ Using "-noanim" option (unsupported animation format):
   Army of Two
   Stranglehold
   Borderlands
+  Transformers: War for Cybertron
 Unsupported animations (without umodel crash):
   Bioshock, Bioshock 2 (uses Havok animation system)
   Rise of the Argonauts
@@ -96,6 +101,9 @@ http://www.gildor.org/projects/umodel
 Detailed title compatibility list (by Esr911) can be located here:
 http://www.gildor.org/projects/umodel/compat
 
+Some tutorials available here:
+http://www.gildor.org/projects/umodel/tutorials
+
 Please support project by making a donation here:
 http://www.gildor.org/en/donate
 
@@ -111,7 +119,7 @@ Keyboard:
 H                full keyboard help
 ESC              exit umodel
 PgUp/UpDn        browse loaded objects
-Ctrl+S           take screenshot
+Ctrl+S           take screenshot into file Screenshots/ObjectName.tga
 Ctrl+PgUp/PgDn   scroll onscreen texts
 Ctrl+L           switch lighting modes
 Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
@@ -141,10 +149,11 @@ This script was originally created by der_ton, but was updated by me.
 
 Notes about StaticMesh support.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-StaticMesh export made into psk format. This format is designed for SkeletalMesh
+StaticMesh export made into pskx format. This format is designed for SkeletalMesh
 export, but umodel uses it for StaticMesh too. Exported mesh will not have
 skeleton and contains only one UV set.
-Resulting psk files are cannot be imported directly into UnrealEd.
+Resulting pskx files are cannot be imported directly into UnrealEd (that's why
+their extension is pskx).
 
 
 Notes about material export.
@@ -159,6 +168,35 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+23.07.2010
+- implemented pskx/psax mesh and animation export - activated by "-pskx" command
+  line switch; pskx and psax formats are supported by Actor X Importer 1.10 and
+  higher
+
+14.07.2010
+- skeletal mesh LODs will have reduced skeleton (removing unused bones)
+
+02.07.2010
+- implemented Transformers: War for Cybertron SkeletalMesh support
+
+30.06.2010
+- implemented Transformers: War for Cybertron StaticMesh support
+
+25.06.2010
+- implemented Transformers: War for Cybertron package and texture support
+
+24.06.2010
+- implemented Unreal Championship 1 package and animation support
+
+19.06.2010
+- implemented APB SkeletalMesh and StaticMesh support
+
+29.05.2010
+- implemented APB package and Texture2D support
+
+28.05.2010
+- implemented Alpha Protocol support
+
 05.05.2010
 - implemented support for TERA: The Exiled Realm of Arborea
 

@@ -90,6 +90,7 @@ static int ObjIndex = 0;
 
 bool GExportScripts = false;
 bool GExportLods    = false;
+bool GExtendedPsk   = false;
 
 typedef void (*ExporterFunc_t)(UObject*, FArchive&);
 
@@ -233,7 +234,8 @@ static void Usage()
 			"Export options:\n"
 			"    -all            export all linked objects too\n"
 			"    -uc             create unreal script when possible\n"
-			"    -md5            use md5mesh/md5anim format for skeletal mesh export\n"
+			"    -pskx           use pskx/psax format for skeletal mesh\n"
+			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -lods           export lower LOD levels as well\n"
 			"\n"
 			"Supported resources for export:\n"
@@ -264,6 +266,9 @@ static void Usage()
 	static const char *UE2Games[] = {
 #if UT2
 		"Unreal Tournament 2003,2004",
+#endif
+#if UC1
+		"Unreal Championship",
 #endif
 #if SPLINTER_CELL
 		"Splinter Cell 1,2",
@@ -380,6 +385,15 @@ static void Usage()
 #	if TERA
 		"TERA: The Exiled Realm of Arborea",
 #	endif
+#	if ALPHA_PR
+		"Alpha Protocol",
+#	endif
+#	if APB
+		"All Points Bulletin",
+#	endif
+#	if TRANSFORMERS
+		"Transformers: War for Cybertron",
+#	endif
 #	if SPECIAL_TAGS
 		"Nurien",
 #	endif
@@ -443,6 +457,8 @@ int main(int argc, char **argv)
 #endif
 			else if (!stricmp(opt, "all"))
 				exprtAll = true;
+			else if (!stricmp(opt, "pskx"))
+				GExtendedPsk = true;
 			else if (!stricmp(opt, "md5"))
 				md5 = true;
 			else if (!stricmp(opt, "lods"))
@@ -486,21 +502,26 @@ int main(int argc, char **argv)
 		argClassName = argv[arg+2];
 
 	// register exporters
-	if (!md5)
+	if (!md5 && !GExtendedPsk)
 	{
-		EXPORTER("SkeletalMesh",  "psk", ExportPsk);
-		EXPORTER("MeshAnimation", "psa", ExportPsa);
+		EXPORTER("SkeletalMesh",  "psk",     ExportPsk);
+		EXPORTER("MeshAnimation", "psa",     ExportPsa);
+	}
+	else if (!md5) // && GExtendedPsk
+	{
+		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk);
+		EXPORTER("MeshAnimation", "psax",    ExportPsa);
 	}
 	else
 	{
 		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
 		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
 	}
-	EXPORTER("VertMesh",      NULL,  Export3D  );				// will generate 2 files
-	EXPORTER("StaticMesh",    "psk", ExportPsk2);
-	EXPORTER("Texture",       "tga", ExportTga );
+	EXPORTER("VertMesh",      NULL,   Export3D  );				// will generate 2 files
+	EXPORTER("StaticMesh",    "pskx", ExportPsk2);
+	EXPORTER("Texture",       "tga",  ExportTga );
 #if UNREAL3
-	EXPORTER("Texture2D",     "tga", ExportTga );
+	EXPORTER("Texture2D",     "tga",  ExportTga );
 #endif
 
 	// prepare classes
@@ -514,7 +535,11 @@ int main(int argc, char **argv)
 		UnregisterClass("AnimSequence");
 		UnregisterClass("AnimNotify", true);
 	}
-	if (noMesh) UnregisterClass("SkeletalMesh",   true);
+	if (noMesh)
+	{
+		UnregisterClass("SkeletalMesh", true);
+		UnregisterClass("SkeletalMeshSocket", true);
+	}
 	if (noStat) UnregisterClass("StaticMesh",     true);
 	if (noTex)  UnregisterClass("UnrealMaterial", true);
 

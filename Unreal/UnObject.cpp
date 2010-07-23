@@ -395,6 +395,9 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		{
 			if (!Prop)
 				appNotify("WARNING: %s \"%s::%s\" was not found", GetTypeName(Tag.Type), Name, *Tag.Name);
+#if DEBUG_PROPS
+			printf("  (skipping %s)\n", *Tag.Name);
+#endif
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
@@ -567,11 +570,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						StopPos = Pos;
 					}
 #endif // 1 -- fix
-
-#if DEBUG_PROPS
-					printf("  }\n");
-#endif
 				}
+#if DEBUG_PROPS
+				printf("  } // count=%d\n", Arr->Num());
+#endif
 			}
 			break;
 

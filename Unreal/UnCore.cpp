@@ -44,6 +44,10 @@
 #endif // UNREAL3
 
 
+//#define DEBUG_BULK			1
+//#define DEBUG_RAW_ARRAY		1
+
+
 bool GDisableXBox360 = false;
 
 
@@ -131,6 +135,9 @@ static const char *PackageExtensions[] =
 #endif
 #if TERA
 	, "gpk"			// TERA: Exiled Realms of Arborea
+#endif
+#if APB
+	, "apb"			// All Points Bulletin
 #endif
 	// other games with no special code
 	, "lm"			// Landmass
@@ -745,7 +752,7 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 		Ar << ElementSize;
 		int SavePos = Ar.Tell();
 		Serializer(Ar, &Array);
-#if 0
+#if DEBUG_RAW_ARRAY
 		printf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, Array.Num(), ElementSize,
 				Array.Num() ? float(Ar.Tell() - SavePos - 4) / Array.Num() : 0,
 				Ar.Tell());
@@ -947,18 +954,29 @@ void FArchive::DetectGame()
 	/*-----------------------------------------------------------------------
 	 * UE2 games
 	 *-----------------------------------------------------------------------*/
+	// Digital Extremes games
 #if UT2
-	if ( ((ArVer >= 117 && ArVer <= 120) && (ArLicenseeVer >= 0x19 && ArLicenseeVer <= 0x1C)) ||
-		 ((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 0x1D) )
+	if ( ((ArVer >= 117 && ArVer <= 119) && (ArLicenseeVer >= 25 && ArLicenseeVer <= 27)) ||
+		  (ArVer == 120 && (ArLicenseeVer == 27 || ArLicenseeVer == 28)) ||
+		 ((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 29) )
 		SET(GAME_UT2);
-#endif
-#if LOCO
-	if ((ArVer >= 131 && ArVer <= 134) && ArLicenseeVer == 29)
-		SET(GAME_Loco);
 #endif
 #if PARIAH
 	if (ArVer == 119 && ArLicenseeVer == 0x9127)
 		SET(GAME_Pariah);
+#endif
+#if UC1
+	if (ArVer == 119 && (ArLicenseeVer == 28 || ArLicenseeVer == 30))
+		SET(GAME_UC1);
+#endif
+#if UC2
+	if (ArVer == 151 && (ArLicenseeVer == 0 || ArLicenseeVer == 1))
+		SET(GAME_UC2);
+#endif
+
+#if LOCO
+	if ((ArVer >= 131 && ArVer <= 134) && ArLicenseeVer == 29)
+		SET(GAME_Loco);
 #endif
 #if SPLINTER_CELL
 	if ( (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
@@ -981,10 +999,6 @@ void FArchive::DetectGame()
 	if ( (ArVer == 141 && (ArLicenseeVer == 56 || ArLicenseeVer == 57)) || //?? Bioshock and Bioshock 2
 		 (ArVer == 143 && ArLicenseeVer == 59) )					// Bioshock 2 multiplayer?
 		SET(GAME_Bioshock);
-#endif
-#if UC2
-	if (ArVer == 151 && (ArLicenseeVer == 0 || ArLicenseeVer == 1))
-		SET(GAME_UC2);
 #endif
 
 	/*-----------------------------------------------------------------------
@@ -1022,17 +1036,26 @@ void FArchive::DetectGame()
 #if TLR
 	if (ArVer == 507 && ArLicenseeVer == 11)	SET(GAME_TLR);
 #endif
+#if TRANSFORMERS
+	if (ArVer == 511 && ArLicenseeVer == 145)	SET(GAME_Transformers);
+#endif
 #if MEDGE
 	if (ArVer == 536 && ArLicenseeVer == 43)	SET(GAME_MirrorEdge);
 #endif
 #if BLOODONSAND
 	if (ArVer == 538 && ArLicenseeVer == 73)	SET(GAME_50Cent);
 #endif
+#if ALPHA_PR
+	if (ArVer == 539 && ArLicenseeVer == 91)	SET(GAME_AlphaProtocol);
+#endif
 #if APB
 	if (ArVer == 547 && ArLicenseeVer == 31)	SET(GAME_APB);
 #endif
 #if LEGENDARY
 	if (ArVer == 567 && ArLicenseeVer == 39)	SET(GAME_Legendary);
+#endif
+#if AA3
+	if (ArVer == 568 && ArLicenseeVer == 0)		SET(GAME_AA3);	//!! LicenseeVer == 0 ! bad!
 #endif
 #if TERA
 	if (ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) SET(GAME_Tera);
@@ -1364,19 +1387,33 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		Ar << BulkDataFlags << ElementCount;
 		assert(Ar.IsLoading);
 		Ar << BulkDataSizeOnDisk << BulkDataOffsetInFile;
-		if (BulkDataFlags & BULKDATA_NoData)	// skip serializing
-			return;								//?? what to do with BulkData ?
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 128)
+		{
+			int BulkDataKey;
+			Ar << BulkDataKey;
+		}
+#endif // TRANSFORMERS
 	}
 
 #if MCARTA
-	if (Ar.Game == GAME_MagnaCarta && (BulkDataFlags & 0x40))
+	if (Ar.Game == GAME_MagnaCarta && (BulkDataFlags & 0x40))	// different flags
 	{
-		// this game has different compression flags
 		BulkDataFlags &= ~0x40;
 		BulkDataFlags |= BULKDATA_CompressedLzx;
 	}
 #endif // MCARTA
-//	printf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n", Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+#if APB
+	if (Ar.Game == GAME_APB && (BulkDataFlags & 0x100))			// different flags
+	{
+		BulkDataFlags &= ~0x100;
+		BulkDataFlags |= BULKDATA_SeparateData;
+	}
+#endif // APB
+#if DEBUG_BULK
+	printf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n",
+		Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+#endif
 
 	unguard;
 }
@@ -1390,8 +1427,18 @@ void FByteBulkData::Serialize(FArchive &Ar)
 
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
 	{
-//		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+#if DEBUG_BULK
+		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+#endif
 		return;
+	}
+
+	if (BulkDataFlags & BULKDATA_NoData)	// skip serializing
+	{
+#if DEBUG_BULK
+		printf("bulk in separate file\n");
+#endif
+		return;								//?? what to do with BulkData ?
 	}
 
 	if (BulkDataFlags & BULKDATA_SeparateData)
