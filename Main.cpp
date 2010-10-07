@@ -147,9 +147,8 @@ static bool ExportObject(UObject *Obj)
 
 			if (Info.FileExt)
 			{
-				char filename[256];
-				appSprintf(ARRAY_ARG(filename), "%s/%s/%s.%s", Obj->Package->Name, ClassName, Obj->Name, Info.FileExt);
-				appMakeDirectoryForFile(filename);
+				char filename[512];
+				appSprintf(ARRAY_ARG(filename), "%s/%s.%s", GetExportPath(Obj), Obj->Name, Info.FileExt);
 				FFileReader Ar(filename, false);
 				Ar.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
 				Info.Func(Obj, Ar);
@@ -171,31 +170,263 @@ static bool ExportObject(UObject *Obj)
 
 
 /*-----------------------------------------------------------------------------
-	Usage information
+	List of supported games
 -----------------------------------------------------------------------------*/
 
-static void PrintGameList(const char *EngineName, const char **List, int Count)
+struct GameInfo
 {
-	if (!Count) return;
-	printf("\n%s:", EngineName);
-	int pos = 10000;
+	const char *Name;
+	const char *Switch;
+	int			Enum;
+};
+
+#define G1(name)		{ name, NULL, GAME_UE1 }
+#define G2(name)		{ name, NULL, GAME_UE2 }
+#define G3(name)		{ name, NULL, GAME_UE3 }
+#define G(name,s,e)		{ name, #s,   e        }
+
+
+static GameInfo games[] = {
+	// Unreal Engine 1
+#if UNREAL1
+		G1("Unreal 1"),
+		G1("Unreal Tournament 1 (UT99)"),
+		G1("The Wheel of Time"),
+	#if DEUS_EX
+		G1("DeusEx"),
+	#endif
+	#if RUNE
+		G1("Rune"),
+	#endif
+#endif // UNREAL1
+
+	// Unreal Engine 2
+#if UT2
+		G("Unreal Tournament 2003,2004", ut2, GAME_UT2),
+#endif
+#if UC1
+		G("Unreal Championship", uc1, GAME_UC1),
+#endif
+#if SPLINTER_CELL
+		G("Splinter Cell 1,2", scell, GAME_SplinterCell),
+#endif
+#if LINEAGE2
+		G("Lineage 2", l2, GAME_Lineage2),
+#endif
+#if LOCO
+		G("Land of Chaos Online (LOCO)", loco, GAME_Loco),
+#endif
+#if BATTLE_TERR
+		G("Battle Territory Online", bterr, GAME_BattleTerr),
+#endif
+#if SWRC
+		G("Star Wars: Republic Commando", swrc, GAME_RepCommando),
+#endif
+#if UNREAL25
+		G2("UE2Runtime"),
+#	if TRIBES3
+		G("Tribes: Vengeance", t3, GAME_Tribes3),
+#	endif
+#	if SWAT4
+		G("SWAT 4", swat4, GAME_Swat4),
+#	endif
+#	if BIOSHOCK
+		G("Bioshock, Bioshock 2", bio, GAME_Bioshock),
+#	endif
+#	if RAGNAROK2
+		G("Ragnarok Online 2", rag2, GAME_Ragnarok2),
+#	endif
+#	if EXTEEL
+		G("Exteel", extl, GAME_Exteel),
+#	endif
+#	if SPECIAL_TAGS
+		G2("Killing Floor"),
+#	endif
+#endif // UNREAL25
+
+	// Unreal Engine 2X
+#if UC2
+		G("Unreal Championship 2: The Liandri Conflict", uc2, GAME_UC2),
+#endif
+
+	// Unreal Engine 3
+#if UNREAL3
+		G3("Unreal Tournament 3"),
+		G3("Gears of War"),
+#	if XBOX360
+		G3("Gears of War 2"),
+#	endif
+#	if R6VEGAS
+		G("Rainbow 6: Vegas 2", r6v2, GAME_R6Vegas2),
+#	endif
+#	if MASSEFF
+		G("Mass Effect", mass, GAME_MassEffect),
+		G("Mass Effect 2", mass2, GAME_MassEffect2),
+#	endif
+#	if TUROK
+		G("Turok", turok, GAME_Turok),
+#	endif
+#	if A51
+		G("BlackSite: Area 51", a51, GAME_A51),
+#	endif
+#	if MKVSDC
+		G("Mortal Kombat vs. DC Universe", mkvsdc, GAME_MK),
+#	endif
+#	if TNA_IMPACT
+		G("TNA iMPACT!", tna, GAME_TNA),
+#	endif
+#	if STRANGLE
+		G("Stranglehold", strang, GAME_Strangle),
+#	endif
+#	if ARMYOF2
+		G("Army of Two", ao2, GAME_ArmyOf2),
+#	endif
+#	if HUXLEY
+		G("Huxley", huxley, GAME_Huxley),
+#	endif
+#	if TLR
+		G("The Last Remnant", tlr, GAME_TLR),
+#	endif
+#	if MEDGE
+		G("Mirror's Edge", medge, GAME_MirrorEdge),
+#	endif
+#	if XMEN
+		G("X-Men Origins: Wolverine", xmen, GAME_XMen),
+#	endif
+#	if MCARTA
+		G("Magna Carta 2", mcarta, GAME_MagnaCarta),
+#	endif
+#	if BATMAN
+		G("Batman: Arkham Asylum", batman, GAME_Batman),
+#	endif
+#	if CRIMECRAFT
+		G("Crime Craft", crime, GAME_CrimeCraft),
+#	endif
+#	if AVA
+		G("AVA Online", ava, GAME_AVA),
+#	endif
+#	if FRONTLINES
+		G("Frontlines: Fuel of War", frontl, GAME_Frontlines),
+#	endif
+#	if BLOODONSAND
+		G("50 Cent: Blood on the Sand", 50cent, GAME_50Cent),
+#	endif
+#	if BORDERLANDS
+		G("Borderlands", border, GAME_Borderlands),
+#	endif
+#	if DARKVOID
+		G("Dark Void", darkv, GAME_DarkVoid),
+#	endif
+#	if LEGENDARY
+		G("Legendary: Pandora's Box", leg, GAME_Legendary),
+#	endif
+#	if TERA
+		G("TERA: The Exiled Realm of Arborea", tera, GAME_Tera),
+#	endif
+#	if ALPHA_PR
+		G("Alpha Protocol", alpha, GAME_AlphaProtocol),
+#	endif
+#	if APB
+		G("All Points Bulletin", apb, GAME_APB),
+#	endif
+#	if TRANSFORMERS
+		G("Transformers: War for Cybertron", trans, GAME_Transformers),
+#	endif
+#	if AA3
+		G("America's Army 3", aa3, GAME_AA3),
+#	endif
+#	if MORTALONLINE
+		G("Mortal Online", mo, GAME_MortalOnline),
+#	endif
+#	if ENSLAVED
+		G("Enslaved: Odyssey to the West", ens, GAME_Enslaved),
+#	endif
+#	if SPECIAL_TAGS
+		G3("Nurien"),
+#	endif
+#endif // UNREAL3
+};
+
+static const char *GetEngineName(int Game)
+{
+	Game &= GAME_ENGINE;
+
+	switch (Game)
+	{
+	case GAME_UE1:
+		return "Unreal Engine 1";
+	case GAME_UE2:
+	case GAME_VENGEANCE:
+		return "Unreal Engine 2";
+	case GAME_UE2X:
+		return "Unreal Engine 2X";
+	case GAME_UE3:
+	case GAME_MIDWAY3:
+		return "Unreal Engine 3";
+	}
+	return "Unknown UE";
+}
+
+
+static void PrintGameList(bool tags = false)
+{
+	const char *oldTitle = NULL;
+	int pos = 0;
 #define LINEFEED 80
+
+	int Count = ARRAY_COUNT(games);
+	bool out = false;
 	for (int i = 0; i < Count; i++)
 	{
-		int len = strlen(List[i]);
-		bool needComma = (i < Count - 1);
+		const GameInfo &info = games[i];
+		if (tags && !info.Switch) continue;
+		// engine title
+		const char *title = GetEngineName(info.Enum);
+		if (title != oldTitle)
+		{
+			printf("%s%s:", out ? "\n\n" : "", title);
+			pos = LINEFEED;
+		}
+		oldTitle = title;
+		out = true;
+		// game info
+		if (tags)
+		{
+			printf("\n %8s  %s", info.Switch ? info.Switch : "", info.Name);
+			continue;
+		}
+		// simple game list
+		const char *name = info.Name;
+		int len = strlen(name);
+		bool needComma = (i < Count - 1) && (GetEngineName(games[i+1].Enum) == title);
 		if (needComma) len += 2;
 		if (pos >= LINEFEED - len)
 		{
 			printf("\n  ");
 			pos = 2;
 		}
-		printf("%s%s", List[i], needComma ? ", " : "");
+		printf("%s%s", name, needComma ? ", " : "");
 		pos += len;
 	}
 	printf("\n");
 }
 
+
+static int FindGameTag(const char *name)
+{
+	for (int i = 0; i < ARRAY_COUNT(games); i++)
+	{
+		const char *key = games[i].Switch;
+		if (!key) continue;
+		if (!stricmp(key, name)) return games[i].Enum;
+	}
+	return -1;
+}
+
+
+/*-----------------------------------------------------------------------------
+	Usage information
+-----------------------------------------------------------------------------*/
 
 static void Usage()
 {
@@ -208,10 +439,11 @@ static void Usage()
 			"                    object with ambiguous name)\n"
 			"\n"
 			"Commands:\n"
-			"    (default)       visualize object; when <object> not specified, will load\n"
-			"                    whole package\n"
+			"    -view           (default) visualize object; when <object> is not specified,\n"
+			"                    will load whole package\n"
 			"    -list           list contents of package\n"
 			"    -export         export specified object or whole package\n"
+			"    -taglist        list of tags to override game autodetection\n"
 			"\n"
 			"Developer commands:\n"
 			"    -dump           dump object information to console\n"
@@ -221,6 +453,7 @@ static void Usage()
 			"Options:\n"
 			"    -path=PATH      path to game installation directory; if not specified,\n"
 			"                    program will search for packages in current directory\n"
+			"    -game=tag       override game autodetection (see -taglist for variants)\n"
 			"    -meshes         view meshes only\n"
 			"\n"
 			"Compatibility options:\n"
@@ -232,6 +465,7 @@ static void Usage()
 			"    -noxbox         disable XBox 360 code\n"	//?? change this!
 			"\n"
 			"Export options:\n"
+			"    -out=PATH       export everything into PATH instead of current directory\n"
 			"    -all            export all linked objects too\n"
 			"    -uc             create unreal script when possible\n"
 			"    -pskx           use pskx/psax format for skeletal mesh\n"
@@ -245,161 +479,10 @@ static void Usage()
 			"    StaticMesh      exported as ActorX psk file with no skeleton\n"
 			"    Texture         exported in tga format\n"
 			"\n"
-			//?? separate option for this list?
-			//?? this list looks ugly ... apply some formatting?
 			"List of supported games:\n"
 	);
 
-#if UNREAL1
-	static const char *UE1Games[] = {
-		"Unreal 1", "Unreal Tournament 1 (UT99)", "The Wheel of Time",
-	#if DEUS_EX
-		"DeusEx",
-	#endif
-	#if RUNE
-		"Rune",
-	#endif
-	};
-	PrintGameList("Unreal Engine 1", ARRAY_ARG(UE1Games));
-#endif // UNREAL1
-
-	static const char *UE2Games[] = {
-#if UT2
-		"Unreal Tournament 2003,2004",
-#endif
-#if UC1
-		"Unreal Championship",
-#endif
-#if SPLINTER_CELL
-		"Splinter Cell 1,2",
-#endif
-#if LINEAGE2
-		"Lineage 2",
-#endif
-#if LOCO
-		"Land of Chaos Online (LOCO)",
-#endif
-#if BATTLE_TERR
-		"Battle Territory Online",
-#endif
-#if SWRC
-		"Star Wars: Republic Commando",
-#endif
-#if UNREAL25
-		"UE2Runtime, Harry Potter and the Prisoner of Azkaban",
-#	if TRIBES3
-		"Tribes: Vengeance",
-#	endif
-#	if BIOSHOCK
-		"Bioshock", "Bioshock 2",
-#	endif
-#	if RAGNAROK2
-		"Ragnarok Online 2",
-#	endif
-#	if EXTEEL
-		"Exteel",
-#	endif
-#	if SPECIAL_TAGS
-		"Killing Floor",
-#	endif
-#endif // UNREAL25
-	};
-	PrintGameList("Unreal Engine 2", ARRAY_ARG(UE2Games));
-
-#if UC2
-	static const char *UE2XGames[] = {
-		"Unreal Championship 2: The Liandri Conflict"
-	};
-	PrintGameList("Unreal Engine 2X", ARRAY_ARG(UE2XGames));
-#endif
-
-#if UNREAL3
-	static const char *UE3Games[] = {
-		"Unreal Tournament 3", "Gears of War",
-#	if XBOX360
-		"Gears of War 2",
-#	endif
-#	if R6VEGAS
-		"Rainbow 6: Vegas 2",
-#	endif
-#	if MASSEFF
-		"Mass Effect", "Mass Effect 2",
-#	endif
-#	if TUROK
-		"Turok",
-#	endif
-#	if A51
-		"BlackSite: Area 51",
-#	endif
-#	if MKVSDC
-		"Mortal Kombat vs. DC Universe",
-#	endif
-#	if TNA_IMPACT
-		"TNA iMPACT!",
-#	endif
-#	if STRANGLE
-		"Stranglehold",
-#	endif
-#	if ARMYOF2
-		"Army of Two",
-#	endif
-#	if HUXLEY
-		"Huxley",
-#	endif
-#	if TLR
-		"The Last Remnant",
-#	endif
-#	if MEDGE
-		"Mirror's Edge",
-#	endif
-#	if XMEN
-		"X-Men Origins: Wolverine",
-#	endif
-#	if MCARTA
-		"Magna Carta 2",
-#	endif
-#	if BATMAN
-		"Batman: Arkham Asylum",
-#	endif
-#	if CRIMECRAFT
-		"Crime Craft",
-#	endif
-#	if AVA
-		"AVA Online",
-#	endif
-#	if FRONTLINES
-		"Frontlines: Fuel of War",
-#	endif
-#	if BLOODONSAND
-		"50 Cent: Blood on the Sand",
-#	endif
-#	if BORDERLANDS
-		"Borderlands",
-#	endif
-#	if DARKVOID
-		"Dark Void",
-#	endif
-#	if LEGENDARY
-		"Legendary: Pandora's Box",
-#	endif
-#	if TERA
-		"TERA: The Exiled Realm of Arborea",
-#	endif
-#	if ALPHA_PR
-		"Alpha Protocol",
-#	endif
-#	if APB
-		"All Points Bulletin",
-#	endif
-#	if TRANSFORMERS
-		"Transformers: War for Cybertron",
-#	endif
-#	if SPECIAL_TAGS
-		"Nurien",
-#	endif
-	};
-	PrintGameList("Unreal Engine 3", ARRAY_ARG(UE3Games));
-#endif // UNREAL3
+	PrintGameList();
 
 	printf( "\n"
 			"For details and updates please visit " HOMEPAGE "\n"
@@ -411,6 +494,29 @@ static void Usage()
 /*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
+
+struct OptionInfo
+{
+	const char	*name;
+	byte		*variable;
+	byte		value;
+};
+
+static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
+{
+	for (int i = 0; i < Count; i++)
+	{
+		const OptionInfo& c = Info[i];
+		if (stricmp(c.name, Option) != 0) continue;
+		*c.variable = c.value;
+		return true;
+	}
+	return false;
+}
+
+#define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
+#define OPT_VALUE(name,var,value)		{ name, &var,        value },
+
 
 int main(int argc, char **argv)
 {
@@ -424,65 +530,71 @@ int main(int argc, char **argv)
 	if (argc < 2) Usage();
 
 	// parse command line
-	bool dump = false, view = true, exprt = false, md5 = false, exprtAll = false, listOnly = false,
-		 noMesh = false, noStat = false, noAnim = false, noTex = false,
-		 pkgInfo = false, hasRootDir = false;
+	enum
+	{
+		CMD_View,
+		CMD_Dump,
+		CMD_Check,
+		CMD_PkgInfo,
+		CMD_List,
+		CMD_Export,
+		CMD_TagList
+	};
+	static byte mainCmd = CMD_View;
+	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
+		 noTex = false, hasRootDir = false;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
 		if (argv[arg][0] == '-')
 		{
 			const char *opt = argv[arg]+1;
-			if (!stricmp(opt, "dump"))
+			// simple options
+			static const OptionInfo options[] =
 			{
-				dump  = true;
-				view  = false;
-				exprt = false;
-			}
-			else if (!stricmp(opt, "check"))
-			{
-				dump  = false;
-				view  = false;
-				exprt = false;
-			}
-			else if (!stricmp(opt, "export"))
-			{
-				dump  = false;
-				view  = false;
-				exprt = true;
-			}
+				OPT_VALUE("view",    mainCmd, CMD_View)
+				OPT_VALUE("dump",    mainCmd, CMD_Dump)
+				OPT_VALUE("check",   mainCmd, CMD_Check)
+				OPT_VALUE("export",  mainCmd, CMD_Export)
+				OPT_VALUE("taglist", mainCmd, CMD_TagList)
+				OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
+				OPT_VALUE("list",    mainCmd, CMD_List)
 #if RENDERING
-			else if (!stricmp(opt, "meshes"))
-				meshOnly = true;
+				OPT_BOOL ("meshes",  meshOnly)
 #endif
-			else if (!stricmp(opt, "all"))
-				exprtAll = true;
-			else if (!stricmp(opt, "pskx"))
-				GExtendedPsk = true;
-			else if (!stricmp(opt, "md5"))
-				md5 = true;
-			else if (!stricmp(opt, "lods"))
-				GExportLods = true;
-			else if (!stricmp(opt, "uc"))
-				GExportScripts = true;
-			else if (!stricmp(opt, "pkginfo"))
-				pkgInfo = true;
-			else if (!stricmp(opt, "list"))
-				listOnly = true;
-			else if (!stricmp(opt, "nomesh"))
-				noMesh = true;
-			else if (!stricmp(opt, "nostat"))
-				noStat = true;
-			else if (!stricmp(opt, "noanim"))
-				noAnim = true;
-			else if (!stricmp(opt, "notex"))
-				noTex = true;
-			else if (!stricmp(opt, "noxbox"))
-				GDisableXBox360 = true;
-			else if (!strnicmp(opt, "path=", 5))
+				OPT_BOOL ("all",     exprtAll)
+				OPT_BOOL ("pskx",    GExtendedPsk)
+				OPT_BOOL ("md5",     md5)
+				OPT_BOOL ("lods",    GExportLods)
+				OPT_BOOL ("uc",      GExportScripts)
+				OPT_BOOL ("nomesh",  noMesh)
+				OPT_BOOL ("nostat",  noStat)
+				OPT_BOOL ("noanim",  noAnim)
+				OPT_BOOL ("notex",   noTex)
+				OPT_BOOL ("noxbox",  GDisableXBox360)
+			};
+			if (ProcessOption(ARRAY_ARG(options), opt))
+				continue;
+			// more complex options
+			if (!strnicmp(opt, "path=", 5))
 			{
 				appSetRootDirectory(opt+5);
 				hasRootDir = true;
+			}
+			else if (!strnicmp(opt, "out=", 4))
+			{
+				appSetBaseExportDirectory(opt+4);
+			}
+			else if (!strnicmp(opt, "game=", 5))
+			{
+				int tag = FindGameTag(opt+5);
+				if (tag == -1)
+				{
+					printf("ERROR: unknown game tag \"%s\".", opt+5);
+					PrintGameList(true);
+					exit(0);
+				}
+				GForceGame = tag;
 			}
 			else
 				Usage();
@@ -492,6 +604,13 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
+
+	if (mainCmd == CMD_TagList)
+	{
+		PrintGameList(true);
+		return 0;
+	}
+
 	const char *argPkgName   = argv[arg];
 	if (!argPkgName) Usage();
 	const char *argObjName   = NULL;
@@ -569,10 +688,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (pkgInfo)
+	if (mainCmd == CMD_PkgInfo)
 		return 0;
 
-	if (listOnly)
+	if (mainCmd == CMD_List)
 	{
 		guard(List);
 		// dump package exports table
@@ -651,11 +770,11 @@ int main(int argc, char **argv)
 	Viewer->Test();
 #	endif
 
-	if (dump)
+	if (mainCmd == CMD_Dump)
 		Viewer->Dump();					// dump info to console
 #endif // RENDERING
 
-	if (exprt)
+	if (mainCmd == CMD_Export)
 	{
 		appSetNotifyHeader(NULL);
 		printf("Exporting objects ...\n");
@@ -663,25 +782,24 @@ int main(int argc, char **argv)
 		bool oneObjectOnly = (argObjName != NULL && !exprtAll);
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
-			Obj = UObject::GObjObjects[idx];
-			if (!exprtAll && Obj->Package != Package)	// refine object by package
+			UObject* ExpObj = UObject::GObjObjects[idx];
+			if (!exprtAll && ExpObj->Package != Package)	// refine object by package
 				continue;
-			if (ExportObject(Obj))
+			if (ExportObject(ExpObj))
 			{
-				printf("Exported %s %s\n", Obj->GetClassName(), Obj->Name);
+				printf("Exported %s %s\n", ExpObj->GetClassName(), ExpObj->Name);
 			}
-			else
+			else if (argObjName && ExpObj == Obj)
 			{
-				printf("%sExport object %s: unsupported type %s\n",
-					(oneObjectOnly) ? "ERROR: " : "",
-					Obj->Name, Obj->GetClassName());
+				// display warning message only when failed to export object, specified from command line
+				printf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
 			}
 			if (oneObjectOnly) break;
 		}
 	}
 
 #if RENDERING
-	if (view)
+	if (mainCmd == CMD_View)
 	{
 		// show object
 		vpInvertXAxis = true;

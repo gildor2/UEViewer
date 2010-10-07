@@ -1,9 +1,19 @@
 #ifndef __EXPORT_H__
 #define __EXPORT_H__
 
+void appSetBaseExportDirectory(const char *Dir);
+
 extern bool GExportScripts;
 extern bool GExportLods;
 extern bool GExtendedPsk;
+
+// forwards
+class UObject;
+class USkeletalMesh;
+class UMeshAnimation;
+class UStaticMesh;
+class UVertMesh;
+class UUnrealMaterial;
 
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);
@@ -46,5 +56,7 @@ struct UniqueNameList
 };
 
 void WriteTGA(FArchive &Ar, int width, int height, byte *pic);
+const char* GetExportPath(const UObject *Obj);
+
 
 #endif // __EXPORT_H__

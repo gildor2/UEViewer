@@ -5,6 +5,104 @@
 #define MAKE_DIRS		1
 //#define DISABLE_WRITE	1		// for quick testing of extraction
 
+#define HOMEPAGE		"http://www.gildor.org/"
+
+
+/*-----------------------------------------------------------------------------
+	Service functions
+-----------------------------------------------------------------------------*/
+
+static void GetFullExportNameBase(const FObjectExport &Exp, UnPackage *Package, char *buf, int bufSize, char delim = '.')
+{
+	int PackageIndices[256];
+	int NestLevel = 0;
+	int PackageIndex = Exp.PackageIndex;
+	// gather nest packages
+	while (PackageIndex)
+	{
+		PackageIndices[NestLevel++] = PackageIndex;
+		assert(NestLevel < ARRAY_COUNT(PackageIndices));
+		//!! duplicated code
+		if (PackageIndex < 0)
+		{
+			const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+		}
+		else
+		{
+			// possible for UE3 forced exports
+			const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+		}
+	}
+	// collect packages in reverse order (from root to object)
+	*buf = 0;
+	for (int i = NestLevel-1; i >= 0; i--)
+	{
+		int PackageIndex = PackageIndices[i];
+		const char *PackageName = NULL;
+		//!! duplicate code
+		if (PackageIndex < 0)
+		{
+			const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
+			PackageName = Rec.ObjectName;
+		}
+		else
+		{
+			// possible for UE3 forced exports
+			const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
+			PackageName = Rec.ObjectName;
+		}
+		char *dst = strchr(buf, 0);
+		appSprintf(dst, bufSize - (dst - buf), "%s%c", PackageName, delim);
+	}
+	// append object name
+	char *dst = strchr(buf, 0);
+	appSprintf(dst, bufSize - (dst - buf), "%s", *Exp.ObjectName);
+}
+
+
+static void GetFullExportFileName(const FObjectExport &Exp, UnPackage *Package, char *buf, int bufSize)
+{
+	// get full path
+	GetFullExportNameBase(Exp, Package, buf, bufSize, '/');
+	// and append class name as file extension
+	char *dst = strchr(buf, 0);
+	const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
+	appSprintf(dst, bufSize - (dst - buf), ".%s", ClassName);
+}
+
+
+static void GetFullExportName(const FObjectExport &Exp, UnPackage *Package, char *buf, int bufSize)
+{
+	// put class name
+	const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
+	appSprintf(buf, bufSize, "%s'", ClassName);
+	// get full path
+	char *dst = strchr(buf, 0);
+	GetFullExportNameBase(Exp, Package, dst, bufSize - (dst - buf));
+	// append "'"
+	dst = strchr(buf, 0);
+	appSprintf(dst, bufSize - (dst - buf), "'");
+}
+
+
+static TArray<FString> filters;
+
+static bool FilterClass(const char *ClassName)	//?? check logic: filter = pass or reject
+{
+	if (!filters.Num()) return true;
+
+	bool filter = false;
+	for (int fidx = 0; fidx < filters.Num(); fidx++)
+	{
+		if (!stricmp(filters[fidx], ClassName))
+			return true;
+	}
+	return false;
+}
+
+
 /*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
@@ -22,25 +120,42 @@ int main(int argc, char **argv)
 	{
 	help:
 		printf(	"Unreal package extractor\n"
-				"http://www.gildor.org/\n"
-				"Usage: extract <package filename>\n"
+				"Usage: extract [command] [options] <package filename>\n"
+				"\n"
+				"Commands:\n"
+				"    -extract           (default) extract package\n"
+				"    -list              list contents of package\n"
+				"\n"
+				"Options:\n"
+				"    -filter=<value>    add filter for output types\n"
+				"\n"
+				"For details and updates please visit " HOMEPAGE "\n"
 		);
 		exit(0);
 	}
 
 	// parse command line
-//	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
+	enum
+	{
+		CMD_Extract,
+		CMD_List
+	};
+
+	static byte mainCmd = CMD_Extract;
+
 	int arg = 1;
-/*	for (arg = 1; arg < argc; arg++)
+	for (arg = 1; arg < argc; arg++)
 	{
 		if (argv[arg][0] == '-')
 		{
 			const char *opt = argv[arg]+1;
-			if (!stricmp(opt, "dump"))
+			if (!stricmp(opt, "extract"))
+				mainCmd = CMD_Extract;
+			else if (!stricmp(opt, "list"))
+				mainCmd = CMD_List;
+			else if (!strnicmp(opt, "filter=", 7))
 			{
-			}
-			else if (!stricmp(opt, "check"))
-			{
+				FString* S = new (filters) FString(opt+7);
 			}
 			else
 				goto help;
@@ -49,7 +164,7 @@ int main(int argc, char **argv)
 		{
 			break;
 		}
-	} */
+	}
 	const char *argPkgName = argv[arg];
 	if (!argPkgName) goto help;
 
@@ -68,6 +183,23 @@ int main(int argc, char **argv)
 	}
 
 	guard(ProcessPackage);
+
+	int idx;
+
+	if (mainCmd == CMD_List)
+	{
+		for (idx = 0; idx < Package->Summary.ExportCount; idx++)
+		{
+			FObjectExport &Exp = Package->ExportTable[idx];
+			const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
+			if (!FilterClass(ClassName)) continue;
+			char objName[256];
+			GetFullExportName(Exp, Package, ARRAY_ARG(objName));
+			printf("%5d  %s\n", idx, objName);
+		}
+		return 0;
+	}
+
 	// extract package name, create directory for it
 	char PkgName[256];
 	const char *s = strrchr(argPkgName, '/');
@@ -80,7 +212,6 @@ int main(int argc, char **argv)
 	// extract objects and write export table
 	FILE *f;
 	char buf2[1024];
-	int idx;
 	guard(ExtractObjects);
 	appSprintf(ARRAY_ARG(buf2), "%s/ExportTable.txt", PkgName);
 	f = fopen(buf2, "w");
@@ -88,8 +219,9 @@ int main(int argc, char **argv)
 	for (idx = 0; idx < Package->Summary.ExportCount; idx++)
 	{
 		FObjectExport &Exp = Package->ExportTable[idx];
-		// prepare file
 		const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
+		if (!FilterClass(ClassName)) continue;
+		// prepare file
 #if !MAKE_DIRS
 		char buf3[256];
 		buf3[0] = 0;
@@ -101,60 +233,20 @@ int main(int argc, char **argv)
 		fprintf(f, "%d = %s'%s%s'\n", idx, ClassName, buf3, *Exp.ObjectName);
 		appSprintf(ARRAY_ARG(buf2), "%s/%s%s.%s", buf, buf3, *Exp.ObjectName, ClassName);
 #else
-		int PackageIndices[256];
-		int NestLevel = 0;
-		int PackageIndex = Exp.PackageIndex;
-		// gather nest packages
-		while (PackageIndex)
-		{
-			PackageIndices[NestLevel++] = PackageIndex;
-			assert(NestLevel < ARRAY_COUNT(PackageIndices));
-			//!! duplicated code
-			if (PackageIndex < 0)
-			{
-				const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
-				PackageIndex = Rec.PackageIndex;
-			}
-			else
-			{
-				// possible for UE3 forced exports
-				const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
-				PackageIndex = Rec.PackageIndex;
-			}
-		}
-		// collect packages in reverse order (from root to object)
-		fprintf(f, "%d = %s'", idx, ClassName);
-		appSprintf(ARRAY_ARG(buf2), "%s/", PkgName);
-		for (int i = NestLevel-1; i >= 0; i--)
-		{
-			int PackageIndex = PackageIndices[i];
-			const char *PackageName = NULL;
-			//!! duplicate code
-			if (PackageIndex < 0)
-			{
-				const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
-				PackageName = Rec.ObjectName;
-			}
-			else
-			{
-				// possible for UE3 forced exports
-				const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
-				PackageName = Rec.ObjectName;
-			}
-			fprintf(f, "%s.", PackageName);
-			char *dst = strchr(buf2, 0);
-			appSprintf(dst, ARRAY_COUNT(buf2) - (dst - buf2), "%s/", PackageName);
-		}
-		fprintf(f, "%s'\n",  *Exp.ObjectName);
-		char *dst = strchr(buf2, 0);
-		//!! use UniqueNameList for names
-		appSprintf(dst, ARRAY_COUNT(buf2) - (dst - buf2), "%s.%s", *Exp.ObjectName, ClassName);
+		char objName[256];
+		GetFullExportName(Exp, Package, ARRAY_ARG(objName));
+		fprintf(f, "%d = %s\n", idx, objName);
+		GetFullExportFileName(Exp, Package, ARRAY_ARG(objName));
+		appSprintf(ARRAY_ARG(buf2), "%s/%s", PkgName, objName);
 #endif
 		guard(WriteFile);
 		// read data
 		byte *data = new byte[Exp.SerialSize];
-		Package->Seek(Exp.SerialOffset);
-		Package->Serialize(data, Exp.SerialSize);
+		if (Exp.SerialSize)
+		{
+			Package->Seek(Exp.SerialOffset);
+			Package->Serialize(data, Exp.SerialSize);
+		}
 #if !DISABLE_WRITE
 		appMakeDirectoryForFile(buf2);
 		FILE *f2 = fopen(buf2, "wb");

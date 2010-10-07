@@ -67,6 +67,241 @@ public:
 
 
 /*-----------------------------------------------------------------------------
+	LEAD Engine archive file reader
+-----------------------------------------------------------------------------*/
+
+#if LEAD
+
+#define LEAD_FILE_TAG				0x4B435045		// 'EPCK'
+
+// Archive flags
+#define LEAD_PKG_COMPRESS_ZLIB		0x01			// use ZLib compression
+#define LEAD_PKG_COMPRESS_XMEM		0x02			// use XBox 360 LZX compression
+#define LEAD_PKG_CHECK_CRC			0x30			// really this is 2 separate flags
+#define LEAD_PKG_COMPRESS_TABLES	0x80			// archive page table is compressed
+
+
+struct FLeadArcPage
+{
+	int						CompressedPos;
+	int						CompressedSize;
+	byte					Flags;					// LEAD_PKG_...
+	unsigned				CompressedCrc;
+	unsigned				UncompressedCrc;
+};
+
+
+class FLeadArchiveReader : public FArchive
+{
+public:
+	FArchive				*Reader;
+	// compression parameters
+	int						BufferSize;
+	int						FileSize;
+	int						DirectoryOffset;
+	byte					Flags;					// LEAD_PKG_...
+	TArray<FLeadArcPage>	Pages;
+	// own file positions, overriding FArchive's one (because parent class is
+	// used for compressed data)
+	int						Stopper;
+	int						Position;
+	// decompression buffer
+	byte					*Buffer;
+	int						BufferStart;
+	int						BufferEnd;
+
+	FLeadArchiveReader(FArchive *File)
+	:	Reader(File)
+	,	Buffer(NULL)
+	,	BufferStart(0)
+	,	BufferEnd(0)
+	{
+		guard(FLeadArchiveReader::FLeadArchiveReader);
+		SetupFrom(*File);
+		ReadArchiveHeaders();
+
+printf(">>>\n");
+byte* mem = new byte[FileSize];
+Serialize(mem, FileSize);
+FILE* f = fopen("c:\\test.upk", "wb");
+fwrite(mem, FileSize, 1, f);
+fclose(f);
+printf("<<<\n");
+
+		unguard;
+	}
+
+	~FLeadArchiveReader()
+	{
+		if (Buffer) delete Buffer;
+		if (Reader) delete Reader;
+	}
+
+	void ReadArchiveHeaders()
+	{
+		guard(FLeadArchiveReader::ReadArchiveHeaders);
+		*Reader << BufferSize << FileSize << DirectoryOffset << Flags;
+		int DataStart = Reader->Tell();
+		printf("buf=%X file=%X dir=%X F=%X\n", BufferSize, FileSize, DirectoryOffset, Flags);
+		if (Flags & LEAD_PKG_COMPRESS_TABLES)
+		{
+			int DataSkip, TableSizeUncompr, TableSizeCompr;
+			*Reader << DataSkip << TableSizeUncompr << TableSizeCompr;
+			byte* PageTableUncompr = new byte[TableSizeUncompr];
+			printf("compr tables: skip=%X uncompTblSize=%X compSize=%X\n", DataSkip, TableSizeUncompr, TableSizeCompr);
+			if (TableSizeCompr)
+			{
+				byte* PageTableCompr = new byte[TableSizeCompr];
+				Reader->Serialize(PageTableCompr, TableSizeCompr);
+				int len = appDecompress(PageTableCompr, TableSizeCompr, PageTableUncompr, TableSizeUncompr, COMPRESS_ZLIB);
+				assert(len == TableSizeUncompr);
+				delete PageTableCompr;
+			}
+			else
+			{
+				appNotify("#2: LEAD package with uncompressed tables");	//!! UNTESTED
+				Reader->Serialize(PageTableUncompr, TableSizeUncompr);
+			}
+			FMemReader Mem(PageTableUncompr, TableSizeUncompr);
+			Mem.SetupFrom(*Reader);
+			ReadPageTable(Mem, DataStart + DataSkip + 12);
+			assert(Mem.Tell() == TableSizeUncompr);
+			delete PageTableUncompr;
+		}
+		else
+		{
+			appNotify("#1: LEAD package with uncompressed tables");	//!! UNTESTED
+			Reader->Seek(DirectoryOffset - 4);
+			ReadPageTable(*Reader, DataStart);
+		}
+		unguard;
+	}
+
+	void ReadPageTable(FArchive& Ar, int DataOffset)
+	{
+		guard(FLeadArchiveReader::ReadPageTable);
+		int NumPages = (FileSize + BufferSize - 1) / BufferSize;
+		Pages.Add(NumPages);
+		int Remaining = FileSize;
+		int NumPages2;
+		Ar << AR_INDEX(NumPages2);	// unused
+		for (int i = 0; i < NumPages; i++)
+		{
+			FLeadArcPage& P = Pages[i];
+			P.CompressedPos = DataOffset;
+			Ar << AR_INDEX(P.CompressedSize) << P.Flags;
+			if (P.Flags & LEAD_PKG_CHECK_CRC)
+			{
+				Ar << P.CompressedCrc << P.UncompressedCrc;
+			}
+			if (!P.CompressedSize)
+				P.CompressedSize = min(Remaining, BufferSize);	// size of uncompressed page
+			// advance pointers
+			DataOffset += P.CompressedSize;
+			Remaining  -= BufferSize;
+		}
+		unguard;
+	}
+
+	// this function is taken from FUE3ArchiveReader
+	virtual void Serialize(void *data, int size)
+	{
+		guard(FLeadArchiveReader::Serialize);
+
+		if (Stopper > 0 && Position + size > Stopper)
+			appError("Serializing behind stopper");
+
+		while (true)
+		{
+			// check for valid buffer
+			if (Position >= BufferStart && Position < BufferEnd)
+			{
+				int ToCopy = BufferEnd - Position;						// available size
+				if (ToCopy > size) ToCopy = size;						// shrink by required size
+				memcpy(data, Buffer + Position - BufferStart, ToCopy);	// copy data
+				// advance pointers/counters
+				Position += ToCopy;
+				size     -= ToCopy;
+				data     = OffsetPointer(data, ToCopy);
+				if (!size) return;										// copied enough
+			}
+			// here: data/size points outside of loaded Buffer
+			PrepareBuffer(Position);
+			assert(Position >= BufferStart && Position < BufferEnd);	// validate PrepareBuffer()
+		}
+
+		unguard;
+	}
+
+	void PrepareBuffer(int Pos)
+	{
+		guard(FLeadArchiveReader::PrepareBuffer);
+
+		int Page = Pos / BufferSize;
+		assert(Page >= 0 && Page < Pages.Num());
+		const FLeadArcPage& P = Pages[Page];
+		if (!Buffer) Buffer = new byte[BufferSize];
+
+		// read page
+		Reader->Seek(P.CompressedPos);
+		int DstSize = (Page < Pages.Num() - 1) ? BufferSize : FileSize % BufferSize;
+		int SrcSize = P.CompressedSize;
+		if (!SrcSize) SrcSize = DstSize;
+
+		byte* CompressedBuffer = new byte[SrcSize];
+		Reader->Serialize(CompressedBuffer, SrcSize);
+
+		if (!P.Flags)
+		{
+			assert(SrcSize <= BufferSize);
+			memcpy(Buffer, CompressedBuffer, SrcSize);
+		}
+		else
+		{
+			assert(SrcSize == P.CompressedSize);
+			assert(P.Flags & (LEAD_PKG_COMPRESS_ZLIB | LEAD_PKG_COMPRESS_XMEM));
+			appDecompress(
+				CompressedBuffer, SrcSize, Buffer, DstSize,
+				(P.Flags & LEAD_PKG_COMPRESS_ZLIB) ? COMPRESS_ZLIB : COMPRESS_LZX
+			);
+		}
+
+		delete CompressedBuffer;
+
+		BufferStart = Page * BufferSize;
+		BufferEnd   = BufferStart + BufferSize;
+
+		unguard;
+	}
+
+	// position controller
+	virtual void Seek(int Pos)
+	{
+		Position = Pos;
+	}
+	virtual int Tell() const
+	{
+		return Position;
+	}
+	virtual int GetFileSize() const
+	{
+		return FileSize;
+	}
+	virtual void SetStopper(int Pos)
+	{
+		Stopper = Pos;
+	}
+	virtual int  GetStopper() const
+	{
+		return Stopper;
+	}
+};
+
+
+#endif // LEAD
+
+
+/*-----------------------------------------------------------------------------
 	UE3 compressed file reader
 -----------------------------------------------------------------------------*/
 
@@ -285,9 +520,11 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 
 	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
 
-#if LINEAGE2 || EXTEEL
+#if LINEAGE2 || EXTEEL || LEAD
 	int checkDword;
 	*this << checkDword;
+
+	#if LINEAGE2 || EXTEEL
 	if (checkDword == ('L' | ('i' << 16)))	// unicode string "Lineage2Ver111"
 	{
 		// this is a Lineage2 package
@@ -298,13 +535,21 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		*this << b;
 		// for Ver111 XorKey==0xAC for Lineage or ==0x42 for Exteel, for Ver121 computed from filename
 		byte XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
-	#if LINEAGE2 || EXTEEL
 		Game = GAME_Lineage2;	// may be changed by DetectGame()
-	#endif
 		// replace Loader
 		Loader = new FFileReaderLineage(Loader, XorKey);
 	}
 	else
+	#endif
+	#if LEAD
+	if (checkDword == LEAD_FILE_TAG)
+	{
+		Game = GAME_LEAD;
+		// replace Loader
+		Loader = new FLeadArchiveReader(Loader);
+	}
+	else
+	#endif
 		Seek(0);	// seek back to header
 #endif // LINEAGE2 || EXTEEL
 

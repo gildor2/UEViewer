@@ -3,7 +3,8 @@
 
 #include "UnObject.h"
 #include "UnMaterial.h"
-#include "UnPackage.h"		// for Package->Name
+
+#include "Exporters.h"						// for GetExportPath()
 
 
 void ExportMaterial(const UUnrealMaterial *Mat)
@@ -18,9 +19,8 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	Mat->GetParams(Params);
 	if (Params.IsNull() || Params.Diffuse == Mat) return;	// empty/unknown material, or material itself is a texture
 
-	char filename[256];
-	appSprintf(ARRAY_ARG(filename), "%s/%s/%s.mat", Mat->Package->Name, Mat->GetClassName(), Mat->Name);
-	appMakeDirectoryForFile(filename);
+	char filename[512];
+	appSprintf(ARRAY_ARG(filename), "%s/%s.mat", GetExportPath(Mat), Mat->Name);
 	FFileReader Ar(filename, false);
 
 #define PROC(Arg)		if (Params.Arg) Ar.Printf(#Arg"=%s\n", Params.Arg->Name);

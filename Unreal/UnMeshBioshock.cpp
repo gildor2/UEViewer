@@ -2,10 +2,12 @@
 #include "UnrealClasses.h"
 #include "UnHavok.h"
 #include "UnMeshTypes.h"		// half2float()
+#include "UnPackage.h"			// to get "Platform"
 
 
 #if BIOSHOCK
 
+#define XBOX_HACK	1			// disable XBox360 Havok parsing (endian problems)
 
 /*-----------------------------------------------------------------------------
 	Bioshock Havok structures
@@ -658,7 +660,7 @@ void USkeletalMesh::PostLoadBioshockMesh()
 
 	if (RefSkeleton.Num())
 	{
-		appNotify("Bioshock mesh %s has RefSkeleton!", Name);
+//		appNotify("Bioshock mesh %s has RefSkeleton!", Name);
 		return;
 	}
 
@@ -732,6 +734,9 @@ void USkeletalMesh::PostLoadBioshockMesh()
 void UAnimationPackageWrapper::Process()
 {
 	guard(UAnimationPackageWrapper::Process);
+#if XBOX_HACK
+	if (Package->Platform == PLATFORM_XBOX360) return;
+#endif
 	FixupHavokPackfile(Name, &HavokData[0]);
 #if 0
 	//?? testing

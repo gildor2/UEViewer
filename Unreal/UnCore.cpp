@@ -49,6 +49,7 @@
 
 
 bool GDisableXBox360 = false;
+int  GForceGame      = 0;
 
 
 #if PROFILE
@@ -116,6 +117,9 @@ static const char *PackageExtensions[] =
 #endif
 #if BIOSHOCK
 	, "bsm"
+#endif
+#if LEAD
+	, "ass", "umd"
 #endif
 #if UNREAL3
 	, "upk", "ut3", "xxx", "umap"
@@ -569,6 +573,8 @@ void FArray::RawCopy(const FArray &Src, int elementSize)
 
 FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize)
 {
+	int i = 0;
+
 	guard(TArray::Serialize);
 
 //-- if (Ar.IsLoading) Empty();	-- cleanup is done in TArray serializer (do not need
@@ -597,13 +603,12 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 		MaxCount = DataCount;
 	}
 	// perform serialization itself
-	int i;
 	void *ptr;
 	for (i = 0, ptr = DataPtr; i < DataCount; i++, ptr = OffsetPointer(ptr, elementSize))
 		Serializer(Ar, ptr);
 	return Ar;
 
-	unguard;
+	unguardf(("%d/%d", i, DataCount));
 }
 
 
@@ -808,7 +813,7 @@ void FArchive::Printf(const char *fmt, ...)
 FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 {
 #if UNREAL3
-	if (Ar.ArVer >= PACKAGE_V3) appError("FCompactIndex is missing in UE3");
+	if (Ar.Engine() >= GAME_UE3) appError("FCompactIndex is missing in UE3");
 #endif
 	if (Ar.IsLoading)
 	{
@@ -859,6 +864,14 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 		}
 	}
 	return Ar;
+}
+
+
+FString::FString(const char* src)
+{
+	int len = strlen(src) + 1;
+	Add(len);
+	memcpy(DataPtr, src, len);
 }
 
 
@@ -927,13 +940,17 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 
 void FArchive::DetectGame()
 {
+	if (GForceGame)
+	{
+		Game = GForceGame;
+		return;
+	}
+
 	// different game platforms autodetection
 	//?? should change this, if will implement command line switch to force mode
 	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
 
 	//?? remove #if ... #endif guards - detect game even when its support is disabled
-
-	staticAssert(GAME_UNKNOWN == 0, GAME_UNKNOWN_value_not_0);	// needed in order "Game += GAME_Name" to work
 
 	// check for already detected game
 #if LINEAGE2 || EXTEEL
@@ -1054,9 +1071,9 @@ void FArchive::DetectGame()
 #if LEGENDARY
 	if (ArVer == 567 && ArLicenseeVer == 39)	SET(GAME_Legendary);
 #endif
-#if AA3
-	if (ArVer == 568 && ArLicenseeVer == 0)		SET(GAME_AA3);	//!! LicenseeVer == 0 ! bad!
-#endif
+//#if AA3
+//	if (ArVer == 568 && ArLicenseeVer == 0)		SET(GAME_AA3);	//!! LicenseeVer == 0 ! bad!
+//#endif
 #if TERA
 	if (ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) SET(GAME_Tera);
 #endif
@@ -1074,6 +1091,12 @@ void FArchive::DetectGame()
 #endif
 #if BORDERLANDS
 	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands); // release and update
+#endif
+#if ENSLAVED
+	if (ArVer == 673 && ArLicenseeVer == 2)		SET(GAME_Enslaved);
+#endif
+#if MORTALONLINE
+	if (ArVer == 678 && ArLicenseeVer == 32771) SET(GAME_MortalOnline);
 #endif
 
 	// UE3 games with the various versions of files

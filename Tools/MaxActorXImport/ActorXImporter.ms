@@ -10,6 +10,9 @@
 
  Revision History:
 
+	09.09.2010 v1.11
+	- added "reorient bones" option
+
 	23.07.2010 v1.10
 	- implemented extended Actor X format (pskx and psax) support
 	- "tools" rollout with options to restore mesh bindpose and remove animations
@@ -87,6 +90,7 @@ global g_boneSize
 global g_reposBones
 global g_meshScale
 global g_loadConfirm
+global g_reorientBones
 global Anims
 global MeshBones
 
@@ -112,6 +116,7 @@ fn DefaultSettings =
 	g_reposBones = true
 	g_meshScale  = 1.0
 	g_loadConfirm = false
+	g_reorientBones = false
 )
 
 
@@ -202,6 +207,7 @@ fn SerializeSettings isLoading =
 	DoSetting "ReposBones"    "g_reposBones"
 	DoSetting "MeshScale"     "g_meshScale"
 	DoSetting "LoadConfirm"   "g_loadConfirm"
+	DoSetting "ReorientBones" "g_reorientBones"
 )
 
 
@@ -211,7 +217,8 @@ if (g_axImporterInited != true) then
 	-- initialize plugin
 	g_axImporterInited = true
 	heapSize += 33554432	-- 32 Mb; speedup most tasks
-	Anims = #()
+	Anims     = #()
+	MeshBones = #()
 	DefaultSettings()
 	SerializeSettings true
 )
@@ -713,10 +720,22 @@ fn ImportPskFile filename skelOnly:false =
 		newBone = getNodeByName bn.Name exact:true ignoreCase:false
 		if (newBone == undefined) then
 		(
-			newBone = bonesys.createbone	\
-				  bn.Matrix.row4	\
-				  (bn.Matrix.row4 + len * (normalize bn.Matrix.row1)) \
-				  (normalize bn.Matrix.row3)
+			if (g_reorientBones == false or childBone == undefined) then
+			(
+				newBone = bonesys.createbone	\
+					  bn.Matrix.row4			\
+					  (bn.Matrix.row4 + len * (normalize bn.Matrix.row1)) \
+					  (normalize bn.Matrix.row3)
+			)
+			else
+			(
+				-- get world position of the child bone
+				local childPos = childBone.Position * bn.Matrix * g_meshScale
+				newBone = bonesys.createbone	\
+					  bn.Matrix.row4			\
+					  childPos					\
+					  bn.Matrix.row3
+			)
 			newBone.name   = bn.Name
 			newBone.width  = g_boneSize
 			newBone.height = g_boneSize
@@ -1060,6 +1079,7 @@ fn ImportPsaFile filename trackNum all:false =
 	firstFrame = #()
 	firstFlag  = (trackNum - 1) * numBones + 1
 	flagCount  = AnimFlags.count
+
 	animate on
 	(
 		progressStart "Loading animation ..."
@@ -1213,9 +1233,11 @@ fn LoadAnimation index =
 rollout axImportRollout "Actor X Importer"
 (
 	-- copyright label
-	label Lbl1 "Version 1.10"
-	label Lbl2 "\xA9 2009,2010 Konstantin Nosov (Gildor)"
-	label Lbl3 "http://www.gildor.org/"
+	label     Lbl1 "Version 1.11"
+	label     Lbl2 "\xA9 2009,2010 Konstantin Nosov (Gildor)"
+	hyperlink Lbl3 "http://www.gildor.org/" \
+					address:"http://www.gildor.org/projects/unactorx" align:#center \
+					color:black hovercolor:blue visitedcolor:black
 
 	Group "Mesh Import"
 	(
@@ -1309,7 +1331,6 @@ rollout axSettingsRollout "Settings"
 	spinner SpnBoneSize  "Bone size"  range:[0.1,10,g_boneSize]     type:#float scale:0.1  align:#left  across:2
 	spinner SpnMeshScale "Mesh scale" range:[0.01,1000,g_meshScale] type:#float scale:0.01 align:#right
 	checkbox ChkRepBones "Reposition existing bones" checked:g_reposBones
-	checkbox ChkLoadConf "Load confirmation" checked:g_loadConfirm
 
 	group "Materials"
 	(
@@ -1320,6 +1341,14 @@ rollout axSettingsRollout "Settings"
 		radiobuttons RadMissingTex labels:#("do nothing", "ask") default:g_texMissAction align:#left columns:1
 	)
 
+	group "Advanced"
+	(
+		label Lbl1                "WARNING: do not modify these settings"
+		label Lbl2                "unless you know what you are doing!"
+		checkbox ChkLoadConf      "Load confirmation" checked:g_loadConfirm
+		checkbox ChkReoriendBones "Reorient bones" checked:g_reorientBones
+	)
+
 	button BtnReset "Reset to defaults"
 
 	-- event handlers
@@ -1327,9 +1356,10 @@ rollout axSettingsRollout "Settings"
 	on SpnBoneSize  changed val do g_boneSize  = val
 	on SpnMeshScale changed val do g_meshScale = val
 	on ChkRepBones   changed state do g_reposBones    = state
-	on ChkLoadConf   changed state do g_loadConfirm   = state
 	on ChkTexRecurse changed state do g_texRecurse    = state
 	on RadMissingTex changed state do g_texMissAction = state
+	on ChkLoadConf   changed state do g_loadConfirm   = state
+	on ChkReoriendBones changed state do g_reorientBones = state
 
 	on EdTexPath    changed val do g_texDir = val
 	on BtnBrowseTex pressed do

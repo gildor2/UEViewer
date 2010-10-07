@@ -79,9 +79,12 @@ struct FRigidVertex3
 	FPackedNormal		Normal[3];
 	float				U, V;
 	byte				BoneIndex;
+	int					Color;
 
 	friend FArchive& operator<<(FArchive &Ar, FRigidVertex3 &V)
 	{
+		int NumUVSets;
+
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft)
 		{
@@ -109,23 +112,24 @@ struct FRigidVertex3
 			goto influences;
 		}
 #endif // R6VEGAS
-		Ar << V.U << V.V;
+
+		// UVs
+		NumUVSets = 1;
+		if (Ar.ArVer >= 709) NumUVSets = 4;
 #if MEDGE
-		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13)
-		{
-			float U1, V1, U2, V2;
-			Ar << U1 << V1 << U2 << V2;
-		}
-#endif // MEDGE
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
+#endif
 #if MKVSDC || STRANGLE || FRONTLINES || TRANSFORMERS
 		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
 			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3) ||
 			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
-		{
-			float U1, V1;
-			Ar << U1 << V1;
-		}
-#endif // MKVSDC
+			NumUVSets = 2;
+#endif
+		Ar << V.U << V.V;
+		if (NumUVSets > 1) Ar.Seek(Ar.Tell() + sizeof(float) * 2 * (NumUVSets - 1));
+
+		if (Ar.ArVer >= 710) Ar << V.Color;	// default 0xFFFFFFFF
+
 #if MCARTA
 		if (Ar.Game == GAME_MagnaCarta && Ar.ArLicenseeVer >= 5)
 		{
@@ -146,10 +150,11 @@ struct FSmoothVertex3
 	float				U, V;
 	byte				BoneIndex[4];
 	byte				BoneWeight[4];
+	int					Color;
 
 	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
 	{
-		int i;
+		int i, NumUVSets;
 
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft)
@@ -177,23 +182,24 @@ struct FSmoothVertex3
 			goto influences;
 		}
 #endif // R6VEGAS
-		Ar << V.U << V.V;
+
+		// UVs
+		NumUVSets = 1;
+		if (Ar.ArVer >= 709) NumUVSets = 4;
 #if MEDGE
-		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13)
-		{
-			float U1, V1, U2, V2;
-			Ar << U1 << V1 << U2 << V2;
-		}
-#endif // MEDGE
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
+#endif
 #if MKVSDC || STRANGLE || FRONTLINES || TRANSFORMERS
 		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
 			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3) ||
 			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
-		{
-			float U1, V1;
-			Ar << U1 << V1;
-		}
-#endif // MKVSDC
+			NumUVSets = 2;
+#endif
+		Ar << V.U << V.V;
+		if (NumUVSets > 1) Ar.Seek(Ar.Tell() + sizeof(float) * 2 * (NumUVSets - 1));
+
+		if (Ar.ArVer >= 710) Ar << V.Color;	// default 0xFFFFFFFF
+
 	influences:
 		if (Ar.ArVer >= 333)
 		{
@@ -371,13 +377,23 @@ struct FGPUVert3Float : FGPUVert3Common
 };
 
 //?? move to UnMeshTypes.h ?
+//?? checked with Enslaved only
 struct FVectorIntervalFixed32
 {
-	int					Value;
+	int X:11; int Y:11; int Z:10;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = (X / 1023.0f) * Ranges.X + Mins.X;
+		r.Y = (Y / 1023.0f) * Ranges.Y + Mins.Y;
+		r.Z = (Z / 511.0f)  * Ranges.Z + Mins.Z;
+		return r;
+	}
 
 	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed32 &V)
 	{
-		return Ar << V.Value;
+		return Ar << GET_DWORD(V);
 	}
 };
 
@@ -407,23 +423,24 @@ struct FGPUVert3PackedHalf : FGPUVert3Common
 
 struct FGPUSkin3
 {
+	int							NumUVSets;
 	int							bUseFullPrecisionUVs;		// 0 = half, 1 = float; copy of corresponding USkeletalMesh field
 	// compressed position data
-	int							bUseFullPrecisionPosition;	// 0 = packed FVector (32-bit), 1 = FVector (96-bit)
+	int							bUsePackedPosition;			// 1 = packed FVector (32-bit), 0 = FVector (96-bit)
 	FVector						MeshOrigin;
 	FVector						MeshExtension;
 	// vertex sets
 	TArray<FGPUVert3Half>		VertsHalf;					// only one of these vertex sets are used
 	TArray<FGPUVert3Float>		VertsFloat;
-	TArray<FGPUVert3PackedFloat> VertsHalfPacked;		//?? unused
-	TArray<FGPUVert3PackedHalf>	VertsFloatPacked;		//?? unused
+	TArray<FGPUVert3PackedHalf> VertsHalfPacked;
+	TArray<FGPUVert3PackedFloat> VertsFloatPacked;
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUSkin3 &S)
 	{
-		guard(FSkinData3<<);
+		guard(FGPUSkin3<<);
 
-		if (Ar.IsLoading) S.bUseFullPrecisionPosition = true;
-		GNumGPUUVSets = 1;
+		if (Ar.IsLoading) S.bUsePackedPosition = false;
+		S.NumUVSets = GNumGPUUVSets = 1;
 
 	#if HUXLEY
 		if (Ar.Game == GAME_Huxley) goto old_version;
@@ -442,9 +459,9 @@ struct FGPUSkin3
 			if (Ar.ArLicenseeVer < 11)
 				goto old_version;
 			S.bUseFullPrecisionUVs = true;
-			int NumUVSets, VertexSize, NumVerts;
-			Ar << NumUVSets << VertexSize << NumVerts;
-			GNumGPUUVSets = NumUVSets;
+			int VertexSize, NumVerts;
+			Ar << S.NumUVSets << VertexSize << NumVerts;
+			GNumGPUUVSets = S.NumUVSets;
 			Ar << RAW_ARRAY(S.VertsFloat);	// serialized as ordinary array anyway
 			return Ar;
 		}
@@ -478,42 +495,49 @@ struct FGPUSkin3
 	new_version:
 		// serialize type information
 	#if MEDGE
-		int NumUVSets = 1;
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15)
-			Ar << NumUVSets;
+		{
+			Ar << S.NumUVSets;
+			GNumGPUUVSets = 1;			// serialized in a different way - as separate stream
+		}
 	#endif // MEDGE
 	#if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55)
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55) goto get_UV_count; // 1 or 2
+	#endif
+		if (Ar.ArVer >= 709)
 		{
-			int NumUVSets;
-			Ar << NumUVSets;
-			GNumGPUUVSets = NumUVSets;	// 1 or 2
+		get_UV_count:
+			Ar << S.NumUVSets;
+			GNumGPUUVSets = S.NumUVSets;
 		}
-	#endif // TRANSFORMERS
 		Ar << S.bUseFullPrecisionUVs;
 		if (Ar.ArVer >= 592)
-			Ar << S.bUseFullPrecisionPosition << S.MeshOrigin << S.MeshExtension;
+			Ar << S.bUsePackedPosition << S.MeshExtension << S.MeshOrigin;
 
-		//?? UE3 ignored this - forced bUseFullPrecisionPosition in FGPUSkin3 serializer ?
+		//?? UE3 ignored this - forced !bUsePackedPosition in FGPUSkin3 serializer ?
 		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
-//		printf("data: %d %d\n", S.bUseFullPrecisionUVs, S.bUseFullPrecisionPosition);
-		S.bUseFullPrecisionPosition = true;
+		//?? working bUsePackedPosition was found in Enslaved only
+//		printf("data: %d %d (%g %g %g)+(%g %g %g)\n", S.bUseFullPrecisionUVs, S.bUsePackedPosition, FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
+#if ENSLAVED
+		if (Ar.Game != GAME_Enslaved)
+#endif
+			S.bUsePackedPosition = false;		// not used in games (see comment above)
 
 	#if CRIMECRAFT
-		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) GNumGPUUVSets = 4;
+		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) S.NumUVSets = GNumGPUUVSets = 4;
 	#endif
 
 		// serialize vertex array
 		if (!S.bUseFullPrecisionUVs)
 		{
 	#if MEDGE
-			if (NumUVSets > 1)
+			if (S.NumUVSets > 1)
 			{
-				SkipRawArray(Ar, 0x20 + (NumUVSets - 1) * 4);
+				SkipRawArray(Ar, 0x20 + (S.NumUVSets - 1) * 4);
 				return Ar;
 			}
 	#endif // MEDGE
-			if (S.bUseFullPrecisionPosition)
+			if (!S.bUsePackedPosition)
 				Ar << RAW_ARRAY(S.VertsHalf);
 			else
 				Ar << RAW_ARRAY(S.VertsHalfPacked);
@@ -521,13 +545,13 @@ struct FGPUSkin3
 		else
 		{
 	#if MEDGE
-			if (NumUVSets > 1)
+			if (S.NumUVSets > 1)
 			{
-				SkipRawArray(Ar, 0x24 + (NumUVSets - 1) * 8);
+				SkipRawArray(Ar, 0x24 + (S.NumUVSets - 1) * 8);
 				return Ar;
 			}
 	#endif // MEDGE
-			if (S.bUseFullPrecisionPosition)
+			if (!S.bUsePackedPosition)
 				Ar << RAW_ARRAY(S.VertsFloat);
 			else
 				Ar << RAW_ARRAY(S.VertsFloatPacked);
@@ -629,6 +653,7 @@ struct FStaticLODModel3
 	FWordBulkData		BulkData;		// ElementCount = NumVertices
 	FGPUSkin3			GPUSkin;
 	TArray<FMesh3Unk2>	fC4;			// unknown, has in GoW2
+	int					f6C;			// unknown, default 1
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel3 &Lod)
 	{
@@ -729,6 +754,8 @@ struct FStaticLODModel3
 			Ar << unk84 << RAW_ARRAY(extraUV);
 		}
 #endif // ARMYOF2
+		if (Ar.ArVer >= 709)
+			Ar << Lod.f6C;
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
 #if BLOODONSAND
@@ -744,6 +771,13 @@ struct FStaticLODModel3
 			Ar << unkStream;
 		}
 #endif // TRANSFORMERS
+		if (Ar.ArVer >= 710)
+		{
+			//!! if Mesh.bHasVertexColors -> serialize extra stream
+			//!! serialize: RAW_ARRAY<int>
+			//!! problem: cannot access USkeletalMesh property from nested structure
+			//?? store global "UObject* GSerializedObject"?
+		}
 		if (Ar.ArVer >= 534)		// post-UT3 code
 			Ar << Lod.fC4;
 //		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num()); -- mostly equals (failed in CH_TwinSouls_Cine.upk)
@@ -1026,23 +1060,45 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				float VU, VV;
 
 				//!! have not seen meshes with packed positions, check FGPUSkin3 serializer for details
-				assert(S.bUseFullPrecisionPosition);
+//				assert(!S.bUsePackedPosition);
 
 				if (!S.bUseFullPrecisionUVs)
 				{
-					const FGPUVert3Half &V0 = S.VertsHalf[Vert];
-					V    = &V0;
-					VPos = V0.Pos;
-					VU   = half2float(V0.U);
-					VV   = half2float(V0.V);
+					if (!S.bUsePackedPosition)
+					{
+						const FGPUVert3Half &V0 = S.VertsHalf[Vert];
+						V    = &V0;
+						VPos = V0.Pos;
+						VU   = half2float(V0.U);
+						VV   = half2float(V0.V);
+					}
+					else
+					{
+						const FGPUVert3PackedHalf &V0 = S.VertsHalfPacked[Vert];
+						V    = &V0;
+						VPos = V0.Pos.ToVector(S.MeshOrigin, S.MeshExtension);
+						VU   = half2float(V0.U);
+						VV   = half2float(V0.V);
+					}
 				}
 				else
 				{
-					const FGPUVert3Float &V0 = S.VertsFloat[Vert];
-					V    = &V0;
-					VPos = V0.Pos;
-					VU   = V0.U;
-					VV   = V0.V;
+					if (!S.bUsePackedPosition)
+					{
+						const FGPUVert3Float &V0 = S.VertsFloat[Vert];
+						V    = &V0;
+						VPos = V0.Pos;
+						VU   = V0.U;
+						VV   = V0.V;
+					}
+					else
+					{
+						const FGPUVert3PackedFloat &V0 = S.VertsFloatPacked[Vert];
+						V    = &V0;
+						VPos = V0.Pos.ToVector(S.MeshOrigin, S.MeshExtension);
+						VU   = V0.U;
+						VV   = V0.V;
+					}
 				}
 				// find the same point in previous items
 				int PointIndex = -1;	// start with 0, see below
@@ -2116,6 +2172,15 @@ struct FStaticMeshUnk1
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk1 &V)
 	{
+#if ENSLAVED
+		if (Ar.Game == GAME_Enslaved)
+		{
+			// compressed structure
+			short v1[3], v2[3];
+			Ar << v1[0] << v1[1] << v1[2] << v2[0] << v2[1] << v2[2];
+			return Ar;
+		}
+#endif // ENSLAVED
 		return Ar << V.v1 << V.v2;
 	}
 };
@@ -2129,6 +2194,17 @@ struct FkDOPNode3
 
 	friend FArchive& operator<<(FArchive &Ar, FkDOPNode3 &V)
 	{
+#if ENSLAVED
+		if (Ar.Game == GAME_Enslaved)
+		{
+			// all data compressed
+			byte  fC, fD;
+			short fE;
+			Ar << V.f0;		// compressed
+			Ar << fC << fD << fE;
+			return Ar;
+		}
+#endif // ENSLAVED
 		Ar << V.f0 << V.f18;
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)

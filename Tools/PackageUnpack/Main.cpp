@@ -2,7 +2,6 @@
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 
-#define MAKE_DIRS		1
 
 /*-----------------------------------------------------------------------------
 	Main function

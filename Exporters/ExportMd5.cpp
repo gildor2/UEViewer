@@ -4,9 +4,9 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMesh.h"
-#include "UnPackage.h"						// for Package->Name
 
-#include "Exporters.h"						// for UniqueNameList
+#include "Exporters.h"						// for GetExportPath()
+
 
 // MD5 uses right-hand coordinates, but unreal uses left-hand.
 // When importing PSK into UnrealEd, it mirrors model.
@@ -306,8 +306,8 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 
 	int numBones = Anim->RefBones.Num();
 
-	char basename[256];
-	appSprintf(ARRAY_ARG(basename), "%s/%s/%s", Anim->Package->Name, Anim->GetClassName(), Anim->Name);
+	char basename[512];
+	appSprintf(ARRAY_ARG(basename), "%s/%s", GetExportPath(Anim), Anim->Name);
 	appMakeDirectory(basename);
 
 	for (int AnimIndex = 0; AnimIndex < Anim->AnimSeqs.Num(); AnimIndex++)
@@ -316,7 +316,7 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 		const FMeshAnimSeq &S = Anim->AnimSeqs[AnimIndex];
 		const MotionChunk  &M = Anim->Moves[AnimIndex];
 
-		char FileName[256];
+		char FileName[512];
 		appSprintf(ARRAY_ARG(FileName), "%s/%s.md5anim", basename, *S.Name);
 
 		FFileReader Ar(FileName, false);

@@ -162,9 +162,9 @@ enum EGame
 {
 	GAME_UNKNOWN   = 0,			// should be 0
 
-	GAME_UE1       = 0x0100,
+	GAME_UE1       = 0x1000,
 
-	GAME_UE2       = 0x0200,
+	GAME_UE2       = 0x2000,
 		GAME_UT2,
 		GAME_Pariah,
 		GAME_SplinterCell,
@@ -176,14 +176,17 @@ enum EGame
 		GAME_BattleTerr,
 		GAME_UC1,				// note: not UE2X
 
-	GAME_VENGEANCE = 0x0600,	// variant of UE2
+	GAME_VENGEANCE = 0x2100,	// variant of UE2
 		GAME_Tribes3,
+		GAME_Swat4,				// not autodetected, overlaps with Tribes3
 		GAME_Bioshock,
 
-	GAME_UE2X      = 0x0800,
+	GAME_LEAD      = 0x2200,
+
+	GAME_UE2X      = 0x4000,
 		GAME_UC2,
 
-	GAME_UE3       = 0x1000,
+	GAME_UE3       = 0x8000,
 		GAME_MassEffect,
 		GAME_MassEffect2,
 		GAME_R6Vegas2,
@@ -207,8 +210,10 @@ enum EGame
 		GAME_APB,
 		GAME_AlphaProtocol,
 		GAME_Transformers,
+		GAME_MortalOnline,
+		GAME_Enslaved,
 
-	GAME_MIDWAY3   = 0x1800,	// variant of UE3
+	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
 		GAME_Wheelman,
 		GAME_MK,
@@ -859,13 +864,25 @@ public:
 	// data accessors
 	T& operator[](int index)
 	{
+#if DO_GUARD_MAX
+		guardfunc;
+#else
+		guard(TArray[]);
+#endif
 		assert(index >= 0 && index < DataCount);
 		return *((T*)DataPtr + index);
+		unguardf(("%d/%d", index, DataCount));
 	}
 	const T& operator[](int index) const
 	{
+#if DO_GUARD_MAX
+		guardfunc;
+#else
+		guard(TArray[]);
+#endif
 		assert(index >= 0 && index < DataCount);
 		return *((T*)DataPtr + index);
+		unguardf(("%d/%d", index, DataCount));
 	}
 
 	int Add(int count = 1)
@@ -982,10 +999,16 @@ private:
 // template class
 template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
 {
+#if DO_GUARD_MAX
+	guardfunc;
+#endif
 	// erase previous data before loading in a case of non-POD data
 	if (Ar.IsLoading)
 		A.Empty();
 	return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
+#if DO_GUARD_MAX
+	unguard;
+#endif
 }
 
 template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
@@ -1014,7 +1037,13 @@ template<class T> class TLazyArray : public TArray<T>
 
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
+#if DO_GUARD_MAX
+		guardfunc;
+#endif
 		return SerializeLazyArray(Ar, A, SerializeArray);
+#if DO_GUARD_MAX
+		unguard;
+#endif
 	}
 };
 
@@ -1051,7 +1080,13 @@ public:
 
 	friend FArchive& operator<<(FArchive &Ar, TRawArray &A)
 	{
+#if DO_GUARD_MAX
+		guardfunc;
+#endif
 		return SerializeRawArray(Ar, A, SerializeArray);
+#if DO_GUARD_MAX
+		unguard;
+#endif
 	}
 
 protected:
@@ -1128,6 +1163,10 @@ SIMPLE_TYPE(FColor,  byte)
 class FString : public TArray<char>
 {
 public:
+	FString()
+	{}
+	FString(const char* src);
+
 	inline const char *operator*() const
 	{
 		return (char*)DataPtr;
@@ -1305,6 +1344,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 extern FArchive *GDummySave;
 extern bool      GDisableXBox360;
+extern int       GForceGame;
 
 
 /*-----------------------------------------------------------------------------

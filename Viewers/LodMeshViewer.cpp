@@ -24,7 +24,9 @@ CLodMeshViewer::CLodMeshViewer(ULodMesh *Mesh)
 	offset.Set(0, 0, z);
 	SetViewOffset(offset);
 	// automatically scale view distance depending on model size
-	SetDistScale(Mesh->MeshScale.X * Mesh->BoundingSphere.R / 150);
+	float Radius = Mesh->BoundingSphere.R;
+	if (Radius < 10) Radius = 10;
+	SetDistScale(Mesh->MeshScale.X * Radius / 150);
 }
 
 

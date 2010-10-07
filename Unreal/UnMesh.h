@@ -311,11 +311,14 @@ struct FMeshAnimSeq
 	{
 		guard(FMeshAnimSeq<<);
 #if TRIBES3
-		TRIBES_HDR(Ar, 0x17);
-		if (Ar.Game == GAME_Tribes3 && t3_hdrV == 1)
+		if (Ar.Game == GAME_Tribes3)
 		{
-			int unk;
-			Ar << unk;
+			TRIBES_HDR(Ar, 0x17);
+		 	if (t3_hdrV == 1)
+			{
+				int unk;
+				Ar << unk;
+			}
 		}
 #endif // TRIBES3
 		if (Ar.ArVer >= 115)
@@ -600,7 +603,7 @@ struct FSkinVertexStream
 #endif
 		Ar << S.Revision << S.f18 << S.f1C << S.Verts;
 #if TRIBES3
-		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 1)
+		if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 1)
 		{
 			int unk1;
 			TArray<T3_BasisVector> unk2;
@@ -778,7 +781,7 @@ struct MotionChunk
 			SerializeFlexTracks(Ar, M);
 #endif
 #if TRIBES3
-		if (Ar.Game == GAME_Tribes3)
+		if (Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4)
 			FixTribesMotionChunk(M);
 #endif
 		return Ar;
@@ -1430,7 +1433,7 @@ struct FStaticLODModel
 		Ar << M.LODDistanceFactor << M.LODHysteresis << M.NumSharedVerts;
 		Ar << M.LODMaxInfluences << M.f114 << M.f118;
 #if TRIBES3
-		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 1)
+		if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 1)
 		{
 			TLazyArray<T3_BasisVector> unk1;
 			TArray<T3_BasisVector> unk2;
@@ -1850,7 +1853,7 @@ public:
 		}
 
 #if TRIBES3
-		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 3)
+		if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 3)
 		{
 	#if 0
 			// it looks like format of following data was chenged sinse
@@ -2584,7 +2587,7 @@ struct FStaticMeshVertexStream
 #endif
 		Ar << S.Vert << S.Revision;
 #if TRIBES3
-		if (Ar.Game == GAME_Tribes3 && t3_hdrSV >= 1)
+		if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 1)
 		{
 			TArray<T3_BasisVector> unk1C;
 			Ar << unk1C;

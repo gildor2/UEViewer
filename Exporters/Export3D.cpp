@@ -4,7 +4,6 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMesh.h"
-#include "UnPackage.h"		// for Package->Name
 
 #include "Exporters.h"
 
@@ -160,11 +159,10 @@ void Export3D(const UVertMesh *Mesh, FArchive &Ar)
 {
 	guard(Export3D);
 
-	char basename[256];
-	appSprintf(ARRAY_ARG(basename), "%s/%s/%s", Mesh->Package->Name, Mesh->GetClassName(), Mesh->Name);
-	appMakeDirectoryForFile(basename);
+	char basename[512];
+	appSprintf(ARRAY_ARG(basename), "%s/%s", GetExportPath(Mesh), Mesh->Name);
 
-	char filename[64];
+	char filename[512];
 	// export script file
 	if (GExportScripts)
 	{

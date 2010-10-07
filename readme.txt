@@ -24,6 +24,7 @@ Unreal Engine 2.5:
   Harry Potter and the Prisoner of Azkaban
 Modified Unreal Engine 2.5:
   Tribes: Vengeance
+  SWAT 4
   Bioshock, Bioshock 2
   Exteel
 Unreal Engine 2X:
@@ -63,6 +64,7 @@ Modified Unreal Engine 3:
   Alpha Protocol
   All Points Bulletin (APB)
   Transformers: War for Cybertron
+  Enslaved: Odyssey to the West (XBox360)
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -168,6 +170,36 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+06.10.2010
+- added "-out=directory" option to specify place where to export data (otherwise export
+  will be made into the current directory)
+
+04.10.2010
+- implemented Enslaved: Odyssey to the West StaticMesh support
+
+03.10.2010
+- improved XBox360 Bioshock support:
+  - disabled Havok parsing for XBox360 version of Bioshock (prevent umodel from crash)
+  - implemented support for XBox360 version of Bioshock textures
+
+01.10.2010
+- implemented Enslaved: Odyssey to the West SkeletalMesh support
+
+30.09.2010
+- updated Mortal Online support
+
+16.08.2010
+- suppressed useless message "WARNING: Export object ...: unsupported type ..."
+
+30.07.2010
+- updated UDK support for July 2010 version
+
+27.07.2010
+- implemented game autodetection override with "-game=tag" switch, list of possible
+  game tags can be obtained with "-taglist" option
+- implemented SWAT 4 support (use "-game=swat4")
+
+
 23.07.2010
 - implemented pskx/psax mesh and animation export - activated by "-pskx" command
   line switch; pskx and psax formats are supported by Actor X Importer 1.10 and

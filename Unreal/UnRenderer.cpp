@@ -1086,6 +1086,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		DIFFUSE (appStristr(Name, "_D" ), 11)
 		DIFFUSE (!stricmp(Name + len - 2, "_C"), 10);
 		NORMAL  (!stricmp(Name + len - 2, "_N"), 20);
+		NORMAL  (!stricmp(Name + len - 3, "_NM"), 20);
 		SPECULAR(!stricmp(Name + len - 2, "_S"), 20);
 		SPECPOW (!stricmp(Name + len - 3, "_SP"), 20);
 		EMISSIVE(!stricmp(Name + len - 2, "_E"), 20);

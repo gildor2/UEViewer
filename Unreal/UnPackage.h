@@ -167,6 +167,13 @@ struct FPackageFileSummary
 			Ar << unk8;
 		}
 #endif // TRANSFORMERS
+#if MORTALONLINE
+		if (Ar.Game == GAME_MortalOnline && Ar.ArLicenseeVer >= 1)
+		{
+			int unk8;
+			Ar << unk8;								// always 0?
+		}
+#endif
 #if UNREAL3
 //		if (S.FileVersion >= PACKAGE_V3)
 //		{

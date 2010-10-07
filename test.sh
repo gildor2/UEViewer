@@ -3,6 +3,8 @@
 # Enable extended pattern matching (for (a|b|c)); see bash manpage, "Pattern matching".
 shopt -s extglob
 
+exe=umodel.exe		#?? win32 only
+
 #------------------------------------------------------------------------------
 #	Game tools
 #------------------------------------------------------------------------------
@@ -33,7 +35,7 @@ function run1()							# with path
 	fi
 	shift
 	echo "Starting umodel -path=\"$path\" $@"
-	./umodel -path="$path" $@
+	./$exe -path="$path" $@
 }
 
 function run()    { run1 "." $@;     }	# without path
@@ -55,15 +57,15 @@ function l2()     { run1 "$L2" $*;   }
 function bio()    { run1 "$BIO" $*;  }
 function mass()   { run1 "$MASS" $*; }
 
-rm umodel.exe	#?? win32 only
+rm $exe
 ./build.sh
 
 # Check directories
 #?? should check dirs when specific game has been requested (not all games everytime)
-CheckDir U1 c:/games/unreal~1/UnrealGold c:/games/unreal/UnrealGold
-CheckDir UT1 {c,e}:/games/unreal~1/UnrealTournament c:/games/unreal/UnrealTournament
-CheckDir UT2 {c,e}:/games/unreal~1/ut2004 c:/games/unreal/ut2004
-CheckDir UT3 {c,e}:/games/ut3/UTGame/CookedPC
+CheckDir U1  {c,d,e}:/games/{unreal,unreal~1}/UnrealGold
+CheckDir UT1 {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament
+CheckDir UT2 {c,d,e}:/games/{unreal,unreal~1}/ut2004
+CheckDir UT3 {c,d,e}:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 "C:/!umodel-data/GearsOfWar2_X360" data/3X/GearsOfWar2_X360
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2" data/UnrealChampionship2
@@ -104,8 +106,10 @@ fi
 case "" in
 
 "")
+	run1 data/3i/EpicCitadel CastleMap.xxx T_FX_Flare_02
+#!!	run1 "data/.possible/Splinter Cell Conviction" Conviction.umd
 	# Transformers
-	run1 "data/3/Transformers War for Cybertron" -meshes A1_IAC_DecoPlaza_Design_m.xxx
+#	run1 "data/3/Transformers War for Cybertron" -meshes A1_IAC_DecoPlaza_Design_m.xxx
 	# SWRC
 #	run1 data/RepublicCommando -noanim BactaDispensers.ukx
 #	run1 data/RepublicCommando -noanim Vehicles.ukx

@@ -1176,6 +1176,7 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 	TArray<FlexTrackBasePtr> FT;
 	Ar << FT;
 	int numTracks = FT.Num();
+	if (!numTracks) return;
 	M.AnimTracks.Empty(numTracks);
 	M.AnimTracks.Add(numTracks);
 	for (int i = 0; i < numTracks; i++)

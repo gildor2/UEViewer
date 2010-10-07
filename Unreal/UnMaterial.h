@@ -517,6 +517,7 @@ public:
 	int64			CachedBulkDataSize;
 	bool			HasBeenStripped;
 	byte			StrippedNumMips;
+	bool			bBaked;
 #endif
 
 #if RENDERING
@@ -598,6 +599,7 @@ public:
 #if BIOSHOCK
 		PROP_BOOL(HasBeenStripped)
 		PROP_BYTE(StrippedNumMips)
+		PROP_BOOL(bBaked)
 		PROP_DROP(ResourceCategory)
 		PROP_DROP(ConsoleDropMips)
 		PROP_DROP(bStreamable)
@@ -1584,9 +1586,6 @@ public:
 	}
 
 	bool LoadBulkTexture(int MipIndex) const;
-#if XBOX360
-	byte *DecompressXBox360(const FByteBulkData &Bulk, ETextureFormat intFormat, int USize, int VSize) const;
-#endif
 	virtual byte *Decompress(int &USize, int &VSize) const;
 #if RENDERING
 	virtual void Bind();

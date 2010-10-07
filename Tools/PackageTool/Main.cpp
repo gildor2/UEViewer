@@ -11,6 +11,7 @@ struct FileInfo
 	int		Ver;
 	int		LicVer;
 	int		Count;
+	char	FileName[512];
 };
 
 static int InfoCmp(const FileInfo *p1, const FileInfo *p2)
@@ -28,7 +29,7 @@ static bool ScanPackage(const CGameFileInfo *file)
 
 	FArchive *Ar = appCreateFileReader(file);
 
-	int Tag, FileVer;
+	unsigned Tag, FileVer;
 	*Ar << Tag;
 	if (Tag == PACKAGE_FILE_TAG_REV)
 		Ar->ReverseBytes = true;
@@ -40,6 +41,7 @@ static bool ScanPackage(const CGameFileInfo *file)
 	Info.Ver    = FileVer & 0xFFFF;
 	Info.LicVer = FileVer >> 16;
 	Info.Count  = 0;
+	strcpy(Info.FileName, file->RelativeName);
 //	printf("%s - %d/%d\n", file->RelativeName, Info.Ver, Info.LicVer);
 	int Index = INDEX_NONE;
 	for (int i = 0; i < PkgInfo.Num(); i++)
@@ -53,7 +55,17 @@ static bool ScanPackage(const CGameFileInfo *file)
 	}
 	if (Index == INDEX_NONE)
 		Index = PkgInfo.AddItem(Info);
+	// update info
 	PkgInfo[Index].Count++;
+	// combine filename
+	char *s = PkgInfo[Index].FileName;
+	char *d = Info.FileName;
+	while (*s == *d && *s != 0)
+	{
+		s++;
+		d++;
+	}
+	*s = 0;
 
 	delete Ar;
 	return true;
@@ -113,12 +125,13 @@ int main(int argc, char **argv)
 
 	PkgInfo.Sort(InfoCmp);
 	printf("Version summary:\n"
-		   "%-9s  %-9s  %s\n", "Ver", "LicVer", "Count");
+		   "%-9s  %-9s  %s   %s\n", "Ver", "LicVer", "Count", "Filename");
 	for (int i = 0; i < PkgInfo.Num(); i++)
 	{
 		const FileInfo &Info = PkgInfo[i];
-		printf("%3d (%3X)  %3d (%3X)  %d\n",
-			Info.Ver, Info.Ver, Info.LicVer, Info.LicVer, Info.Count);
+		printf("%3d (%3X)  %3d (%3X)  %4d    %s%s\n",
+			Info.Ver, Info.Ver, Info.LicVer, Info.LicVer, Info.Count, Info.FileName,
+			Info.Count > 1 && Info.FileName[0] ? "..." : "");
 	}
 
 	unguard;

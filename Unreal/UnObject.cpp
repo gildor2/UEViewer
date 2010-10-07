@@ -655,7 +655,7 @@ void UnregisterClass(const char *Name, bool WholeTree)
 		if (!strcmp(GClasses[i].Name, Name) ||
 			(WholeTree && (GClasses[i].TypeInfo()->IsA(Name))))
 		{
-			printf("Unregistered %s\n", GClasses[i].Name);
+//			printf("Unregistered %s\n", GClasses[i].Name);
 			// class was found
 			if (i == GClassCount-1)
 			{

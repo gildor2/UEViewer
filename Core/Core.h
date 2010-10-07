@@ -168,6 +168,8 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 }
 
 
+//!! GCC: use __PRETTY_FUNCTION__ instead of __FUNCSIG__
+
 #if DO_GUARD
 
 #if !WIN32_USE_SEH
@@ -175,8 +177,20 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 // C++excpetion-based guard/unguard system
 #define guard(func)						\
 	{									\
-		static const char __FUNC__[] = #func; \
+		static const char *__FUNC__ = #func; \
 		try {
+
+#if DO_GUARD_MAX
+#define guardfunc						\
+	{									\
+		static const char *__FUNC__ = __FUNCSIG__; \
+		try {
+#else
+#define guardfunc						\
+	{									\
+		static const char *__FUNC__ = __FUNCTION__; \
+		try {
+#endif
 
 #define unguard							\
 		} catch (...) {					\
@@ -204,8 +218,20 @@ unsigned win32ExceptFilter2();
 
 #define guard(func)						\
 	{									\
-		static const char __FUNC__[] = #func; \
+		static const char *__FUNC__ = #func; \
 		__try {
+
+#if DO_GUARD_MAX
+#define guardfunc						\
+	{									\
+		static const char *__FUNC__ = __FUNCSIG__; \
+		__try {
+#else
+#define guardfunc						\
+	{									\
+		static const char *__FUNC__ = __FUNCTION__; \
+		__try {
+#endif
 
 #define unguard							\
 		} __except (EXCEPT_FILTER) {	\
@@ -236,6 +262,7 @@ extern char GErrorHistory[2048];
 #else  // DO_GUARD
 
 #define guard(func)		{
+#define guardfunc		{
 #define unguard			}
 #define unguardf(msg)	}
 

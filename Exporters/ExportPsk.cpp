@@ -4,7 +4,6 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMesh.h"
-#include "UnPackage.h"		// for Package->Name
 
 #include "Psk.h"
 #include "Exporters.h"
@@ -15,7 +14,7 @@
 // Here we performing reverse transformation.
 #define MIRROR_MESH				1
 
-#define REFINE_SKEL				1
+//#define REFINE_SKEL				1
 #define MAX_MESHBONES			512
 
 
@@ -232,8 +231,8 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 	// export script file
 	if (GExportScripts)
 	{
-		char filename[256];
-		appSprintf(ARRAY_ARG(filename), "%s/%s/%s.uc", Mesh->Package->Name, Mesh->GetClassName(), Mesh->Name);
+		char filename[512];
+		appSprintf(ARRAY_ARG(filename), "%s/%s.uc", GetExportPath(Mesh), Mesh->Name);
 		FFileReader Ar1(filename, false);
 		ExportScript(Mesh, Ar1);
 	}
@@ -247,8 +246,8 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 		for (int Lod = 1; Lod < Mesh->LODModels.Num(); Lod++)
 		{
 			guard(Lod);
-			char filename[256];
-			appSprintf(ARRAY_ARG(filename), "%s/%s/%s_Lod%d.psk", Mesh->Package->Name, Mesh->GetClassName(), Mesh->Name, Lod);
+			char filename[512];
+			appSprintf(ARRAY_ARG(filename), "%s/%s_Lod%d.psk", GetExportPath(Mesh), Mesh->Name, Lod);
 			FFileReader Ar2(filename, false);
 			Ar2.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
 			// copy Lod to mesh and export it
@@ -370,7 +369,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 		for (int b = 0; b < numBones; b++)
 		{
 			byte flag = 0;
-			if (M.BoneIndices[b] == INDEX_NONE)
+			if (b < M.BoneIndices.Num() && M.BoneIndices[b] == INDEX_NONE)
 				flag |= PSAX_FLAG_NO_TRANSLATION | PSAX_FLAG_NO_ROTATION;
 			else if (M.AnimTracks[b].KeyPos.Num() == 0)
 				flag |= PSAX_FLAG_NO_TRANSLATION;

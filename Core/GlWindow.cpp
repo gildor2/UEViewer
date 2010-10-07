@@ -897,6 +897,7 @@ static void Display()
 	// restore draw state
 	BindDefaultMaterial(true);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDisable(GL_ALPHA_TEST);
 
 	// disable lighting
 	glColor3f(1, 1, 1);
