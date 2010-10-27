@@ -3,7 +3,7 @@ Works with VC7,8,9. But VC7-compiled program has bugs (at least one: no on-scree
 Issues:
 * GPF when starting exe linked with "oldnames.lib" (not "wdk_oldnames.lib") -- incorrect call of stricmp():
   compiler were generated "call dword ptr ds:[400000]" instead of "call ds:__imp___stricmp"
-- makefiles with WDKCRT dependency will not be compatible with standard VC installations
+- makefiles with WDKCRT dependency will not be compatible (not compiled) using standard VC installations
   - try to add wdk_msvcrt_win2000.obj and oldnames.lib into msvcrt.lib
 - Has a lot of kernel32.dll function calls from __security_init_cookie() - this function is called from
   mainCRTStartup() and cannot be overrided (unless use own version of this function)

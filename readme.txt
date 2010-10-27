@@ -65,6 +65,7 @@ Modified Unreal Engine 3:
   All Points Bulletin (APB)
   Transformers: War for Cybertron
   Enslaved: Odyssey to the West (XBox360)
+  Medal of Honor 2010
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,7 +116,7 @@ Some usage information:
 This is a console application, there is no GUI.
 For the list of command line options run 'umodel' without arguments.
 Note: if you will launch program from Windows explorer etc, you will get a console
-window with a help message, but this windoww will immediately disappear.
+window with a help message, but this window will immediately disappear.
 
 Keyboard:
 H                full keyboard help
@@ -146,6 +147,8 @@ viewers/importers does require md5anim hierarchy, some - does not.
 
 There is a 3ds Max md5mesh/md5anim importer script available on umodel forum:
 http://www.gildor.org/smf/index.php?topic=87.0
+or here
+http://www.gildor.org/downloads
 This script was originally created by der_ton, but was updated by me.
 
 
@@ -170,6 +173,18 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+24.10.2010
+- updated Land of Chaos Online (LOCO) support
+
+22.10.2010
+- implemented support for the latest UE3 materials
+
+15.10.2010
+- fixed bug reading UE3 SkeletalMesh with multiple UV sets
+
+11.10.2010
+- implemented Medal of Honor 2010 support
+
 06.10.2010
 - added "-out=directory" option to specify place where to export data (otherwise export
   will be made into the current directory)

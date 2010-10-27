@@ -36,3 +36,4 @@ each short is 0,1,2)
 
 I was not found any UTX, which uses *_pb textures
 Used from Engine.u/LevelInfo.PrecacheMap.Function
+  (pb contains external data for animations and meshes)

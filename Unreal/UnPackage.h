@@ -45,33 +45,7 @@ struct FCompressedChunk
 
 RAW_TYPE(FCompressedChunk)
 
-struct FComponentMapPair
-{
-	FName		Name;
-	int			Value;
-
-	friend FArchive& operator<<(FArchive &Ar, FComponentMapPair &P)
-	{
-		return Ar << P.Name << P.Value;
-	}
-};
-
 #endif // UNREAL3
-
-#if MASSEFF
-
-struct FStringArrayMap // unknown name; TMap<FString, TArray<FString> > ?
-{
-	FString			Key;
-	TArray<FString> Value;
-
-	friend FArchive& operator<<(FArchive &Ar, FStringArrayMap &P)
-	{
-		return Ar << P.Key << P.Value;
-	}
-};
-
-#endif // MASSEFF
 
 
 struct FPackageFileSummary
@@ -116,7 +90,14 @@ struct FPackageFileSummary
 			Ar.Game = GAME_BattleTerr;
 			goto tag_ok;		// Battle Territory Online
 		}
-#endif
+#endif // BATTLE_TERR
+#if LOCO
+		if (S.Tag == 0xD58C3147)
+		{
+			Ar.Game = GAME_Loco;
+			goto tag_ok;		// Land of Chaos Online
+		}
+#endif // LOCO
 
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{
@@ -321,7 +302,7 @@ struct FPackageFileSummary
 				if (Ar.ArLicenseeVer >= 32) Ar << unk2;					// unknown
 				if (Ar.ArLicenseeVer >= 35 && Ar.Game != GAME_MassEffect2) // MassEffect2 has upper version limit: 113
 				{
-					TArray<FStringArrayMap> unk5;
+					TMap<FString, TArray<FString> > unk5;
 					Ar << unk5;
 				}
 				if (Ar.ArLicenseeVer >= 37) Ar << unk3[0] << unk3[1];	// 2 ints: 1, 0
@@ -365,7 +346,7 @@ struct FObjectExport
 	unsigned	ObjectFlags2;				// really, 'int64 ObjectFlags'
 	int			Archetype;
 	unsigned	ExportFlags;				// EF_* flags
-	TArray<FComponentMapPair> ComponentMap;	// TMap<FName, int>
+	TMap<FName, int> ComponentMap;
 	TArray<int>	NetObjectCount;				// generations
 	FGuid		Guid;
 	int			U3unk6C;

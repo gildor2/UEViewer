@@ -1,6 +1,7 @@
 #!/bin/bash
 
 PLATFORM="vc-win32"
+#PLATFORM="mingw32"
 
 # force PLATFORM=linux under Linux OS
 #?? check this, when cross-compile under wine
@@ -32,6 +33,10 @@ $root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 case "$PLATFORM" in
 	"vc-win32")
 		vc32tools --make $makefile
+		;;
+	"mingw32"|"cygwin")
+		PATH=/bin:/usr/bin:$PATH		# configure paths for Cygwin
+		gccfilt make -f $makefile
 		;;
 	"linux")
 		make -f $makefile

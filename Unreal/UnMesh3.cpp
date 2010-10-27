@@ -377,7 +377,7 @@ struct FGPUVert3Float : FGPUVert3Common
 };
 
 //?? move to UnMeshTypes.h ?
-//?? checked with Enslaved only
+//?? checked with Enslaved and MOH2010
 struct FVectorIntervalFixed32
 {
 	int X:11; int Y:11; int Z:10;
@@ -514,14 +514,18 @@ struct FGPUSkin3
 		if (Ar.ArVer >= 592)
 			Ar << S.bUsePackedPosition << S.MeshExtension << S.MeshOrigin;
 
+		bool AllowPackedPosition = false;
+	#if ENSLAVED
+		if (Ar.Game == GAME_Enslaved)	AllowPackedPosition = true;
+	#endif
+	#if MOH2010
+		if (Ar.Game == GAME_MOH2010)	AllowPackedPosition = true;
+	#endif
 		//?? UE3 ignored this - forced !bUsePackedPosition in FGPUSkin3 serializer ?
 		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
-		//?? working bUsePackedPosition was found in Enslaved only
+		//?? working bUsePackedPosition was found in Enslaved and MOH2010 only
 //		printf("data: %d %d (%g %g %g)+(%g %g %g)\n", S.bUseFullPrecisionUVs, S.bUsePackedPosition, FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
-#if ENSLAVED
-		if (Ar.Game != GAME_Enslaved)
-#endif
-			S.bUsePackedPosition = false;		// not used in games (see comment above)
+		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
 	#if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) S.NumUVSets = GNumGPUUVSets = 4;
@@ -530,13 +534,6 @@ struct FGPUSkin3
 		// serialize vertex array
 		if (!S.bUseFullPrecisionUVs)
 		{
-	#if MEDGE
-			if (S.NumUVSets > 1)
-			{
-				SkipRawArray(Ar, 0x20 + (S.NumUVSets - 1) * 4);
-				return Ar;
-			}
-	#endif // MEDGE
 			if (!S.bUsePackedPosition)
 				Ar << RAW_ARRAY(S.VertsHalf);
 			else
@@ -544,13 +541,6 @@ struct FGPUSkin3
 		}
 		else
 		{
-	#if MEDGE
-			if (S.NumUVSets > 1)
-			{
-				SkipRawArray(Ar, 0x24 + (S.NumUVSets - 1) * 8);
-				return Ar;
-			}
-	#endif // MEDGE
 			if (!S.bUsePackedPosition)
 				Ar << RAW_ARRAY(S.VertsFloat);
 			else
@@ -756,8 +746,24 @@ struct FStaticLODModel3
 #endif // ARMYOF2
 		if (Ar.ArVer >= 709)
 			Ar << Lod.f6C;
+#if MOH2010
+		int RealArVer = Ar.ArVer;
+		if (Ar.Game == GAME_MOH2010)
+		{
+			Ar.ArVer = 592;			// partially upgraded engine, change version (for easier coding)
+			if (Ar.ArLicenseeVer >= 42)
+				Ar << Lod.fC4;		// original code: this field is serialized after GPU Skin
+		}
+#endif
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
+#if MOH2010
+		if (Ar.Game == GAME_MOH2010)
+		{
+			Ar.ArVer = RealArVer;	// restore version
+			if (Ar.ArLicenseeVer >= 42) return Ar;
+		}
+#endif
 #if BLOODONSAND
 		if (Ar.Game == GAME_50Cent) return Ar;	// new ArVer, but old engine
 #endif
@@ -1042,6 +1048,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 	{
 		int Vert, j;
 		const FSkinChunk3 &C = Lod.Chunks[Chunk];
+		const FGPUSkin3   &S = Lod.GPUSkin;
 
 		// when base mesh vertices are missing - try to get information from GPU skin
 		if ((C.NumRigidVerts != C.RigidVerts.Num() && C.RigidVerts.Num() == 0) ||
@@ -1050,7 +1057,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 			guard(GPUVerts);
 			if (!Chunk) printf("Restoring LOD verts from GPU skin\n", Mesh.Name);
 
-			const FGPUSkin3 &S = Lod.GPUSkin;
 			int LastVertex = C.FirstVertex + C.NumRigidVerts + C.NumSmoothVerts;
 
 			for (Vert = C.FirstVertex; Vert < LastVertex; Vert++)
@@ -1058,9 +1064,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				const FGPUVert3Common *V;
 				FVector VPos;
 				float VU, VV;
-
-				//!! have not seen meshes with packed positions, check FGPUSkin3 serializer for details
-//				assert(!S.bUsePackedPosition);
 
 				if (!S.bUseFullPrecisionUVs)
 				{
@@ -1135,7 +1138,9 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 				W->TexUV.U = VU;
 				W->TexUV.V = VV;
 			}
-			unguard;
+			unguardf(("vh=%d vf=%d ph=%d pf=%d [%d+%d+%d]",
+				S.VertsHalf.Num(), S.VertsFloat.Num(), S.VertsHalfPacked.Num(), S.VertsFloatPacked.Num(),
+                C.FirstVertex, C.NumRigidVerts, C.NumSmoothVerts));
 
 			continue;		// process other chunks (not from CPU mesh)
 		}
@@ -1445,7 +1450,8 @@ void UAnimSet::ConvertAnims()
 				int hole = TransOffset - Reader.Tell();
 				if (findHoles && hole/** && abs(hole) > 4*/)	//?? should not be holes at all
 				{
-					appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before TransTrack", Name, *Seq->SequenceName, j, hole);
+					appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before TransTrack (KeyFormat=%d/%d)",
+						Name, *Seq->SequenceName, j, hole, Seq->KeyEncodingFormat, Seq->TranslationCompressionFormat);
 ///					findHoles = false;
 				}
 #endif // FIND_HOLES
@@ -1526,8 +1532,8 @@ void UAnimSet::ConvertAnims()
 			int hole = RotOffset - Reader.Tell();
 			if (findHoles && hole/** && abs(hole) > 4*/)	//?? should not be holes at all
 			{
-				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack (KeyFormat=%d)",
-					Name, *Seq->SequenceName, j, hole, Seq->KeyEncodingFormat);
+				appNotify("AnimSet:%s Seq:%s [%d] hole (%d) before RotTrack (KeyFormat=%d/%d)",
+					Name, *Seq->SequenceName, j, hole, Seq->KeyEncodingFormat, Seq->RotationCompressionFormat);
 ///				findHoles = false;
 			}
 #endif // FIND_HOLES
@@ -1543,7 +1549,11 @@ void UAnimSet::ConvertAnims()
 			{
 				// read mins/ranges
 				FVector Mins, Ranges;
-				Reader << Mins << Ranges;
+				if (Seq->RotationCompressionFormat == ACF_IntervalFixed32NoW || Package->ArVer < 761)
+				{
+					// starting with version 761 Mins/Ranges are read only when needed - i.e. for ACF_IntervalFixed32NoW
+					Reader << Mins << Ranges;
+				}
 #if TRANSFORMERS
 				if (Package->Game == GAME_Transformers)
 				{
@@ -1680,6 +1690,27 @@ SIMPLE_TYPE(FTRStaticMeshSectionUnk, int)
 
 #endif // TRANSFORMERS
 
+#if MOH2010
+
+struct FMOHStaticMeshSectionUnk
+{
+	TArray<int>			f4;
+	TArray<int>			f10;
+	TArray<short>		f1C;
+	TArray<short>		f28;
+	TArray<short>		f34;
+	TArray<short>		f40;
+	TArray<short>		f4C;
+	TArray<short>		f58;
+
+	friend FArchive& operator<<(FArchive &Ar, FMOHStaticMeshSectionUnk &S)
+	{
+		return Ar << S.f4 << S.f10 << S.f1C << S.f28 << S.f34 << S.f40 << S.f4C << S.f58;
+	}
+};
+
+#endif // MOH2010
+
 
 struct FStaticMeshSection3
 {
@@ -1731,6 +1762,15 @@ struct FStaticMeshSection3
 			Ar << f30;
 		}
 #endif // TRANSFORMERS
+#if MOH2010
+		if (Ar.Game == GAME_MOH2010 && Ar.ArVer >= 575)
+		{
+			byte flag;
+			FMOHStaticMeshSectionUnk unk3C;
+			Ar << flag;
+			if (flag) Ar << unk3C;
+		}
+#endif // MOH2010
 		if (Ar.ArVer >= 618)
 		{
 			byte unk;
@@ -1770,6 +1810,13 @@ struct FStaticMeshVertexStream3
 			}
 		}
 #endif // AVA
+#if MOH2010
+		if (Ar.Game == GAME_MOH2010 && Ar.ArLicenseeVer >= 58)
+		{
+			int unk28;
+			Ar << unk28;
+		}
+#endif // MOH2010
 		Ar << RAW_ARRAY(S.Verts);
 		return Ar;
 	}
@@ -1825,6 +1872,9 @@ struct FStaticMeshUVItem3
 #if APB
 		if (Ar.Game == GAME_APB && Ar.ArLicenseeVer >= 12) goto uvs;
 #endif
+#if MOH2010
+		if (Ar.Game == GAME_MOH2010 && Ar.ArLicenseeVer >= 58) goto uvs;
+#endif
 		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
 			Ar << V.f10;				// starting from 615 made as separate stream
 	uvs:
@@ -1877,6 +1927,13 @@ struct FStaticMeshUVStream3
 		if (Ar.Game == GAME_A51 && Ar.ArLicenseeVer >= 22) // or MidwayVer ?
 			Ar << S.bUseFullPrecisionUVs;
 #endif
+#if MOH2010
+		if (Ar.Game == GAME_MOH2010 && Ar.ArLicenseeVer >= 58)
+		{
+			int unk30;
+			Ar << unk30;
+		}
+#endif // MOH2010
 		// prepare for UV serialization
 		GNumStaticUVSets   = S.NumTexCoords;
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
@@ -2012,9 +2069,13 @@ struct FStaticMeshLODModel
 				Ar << unkStream;
 			}
 #endif // TRANSFORMERS
+#if MOH2010
+			if (Ar.Game == GAME_MOH2010 && Ar.ArLicenseeVer >= 55) goto color_stream;
+#endif
 			// unknown data in UDK
 			if (Ar.ArVer >= 615)
 			{
+			color_stream:
 				// new color stream: difference is that data array is not serialized when NumVerts is 0
 				int ColorItemSize, ColorNumVerts;
 				Ar << ColorItemSize << ColorNumVerts;

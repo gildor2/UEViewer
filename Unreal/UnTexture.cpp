@@ -671,6 +671,19 @@ struct BioBulkCatalogFile
 		printf("<<< %s >>>\n", *S.Filename);
 #endif
 		Ar << S.Items;
+#if DEBUG_BIO_BULK
+		int minS2 = 99999999, maxS2 = -99999999, min20 = 99999999, max20 = -99999999;
+		for (int i = 0; i < S.Items.Num(); i++)
+		{
+			int n1 = S.Items[i].DataSize2;
+			if (n1 < minS2) minS2 = n1;
+			if (n1 > maxS2) maxS2 = n1;
+			int n2 = S.Items[i].f20;
+			if (n2 < min20) min20 = n1;
+			if (n2 > max20) max20 = n1;
+		}
+		printf("DS2=%X..%X  f20=%X..%X", minS2, maxS2, min20, max20);
+#endif // DEBUG_BIO_BULK
 		return Ar;
 	}
 };

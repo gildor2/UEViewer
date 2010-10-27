@@ -63,6 +63,7 @@
 #define TRANSFORMERS	1		// Transformers: War for Cybertron
 #define MORTALONLINE	1		// Mortal Online
 #define ENSLAVED		1
+#define MOH2010			1		// Medal of Honor 2010 (Singleplayer)
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

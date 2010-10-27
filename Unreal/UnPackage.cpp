@@ -654,7 +654,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 			guard(Name);
 			if (Summary.FileVersion < 64)
 			{
-				char buf[256];
+				char buf[1024];
 				int len;
 				for (len = 0; len < ARRAY_COUNT(buf); len++)
 				{

@@ -1633,12 +1633,6 @@ public:
 		PROP_DROP(m_Guid)
 #endif
 	END_PROP_TABLE
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		Super::Serialize(Ar);
-		Ar.Seek(Ar.GetStopper());			//?? drop native data
-	}
 };
 
 
@@ -1729,6 +1723,29 @@ public:
 #endif // MASSEFF
 	END_PROP_TABLE
 
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		if (Ar.ArVer >= 656)
+		{
+			guard(SerializeFMaterialResource);
+			// Starting with version 656 UE3 has deprecated ReferencedTextures array.
+			// This array is serialized inside FMaterialResource which is not needed
+			// for us in other case.
+			// FMaterialResource serialization is below
+			TArray<FString>			f10;
+			TMap<UObject*, int>		f1C;
+			int						f58;
+			FGuid					f60;
+			int						f80;
+			Ar << f10 << f1C << f58 << f60 << f80;
+			if (Ar.ArVer >= 656) Ar << ReferencedTextures;	// that is ...
+			// other fields are not interesting ...
+			unguard;
+		}
+		Ar.Seek(Ar.GetStopper());			//?? drop native data
+	}
+
 #if RENDERING
 	virtual void SetupGL(unsigned PolyFlags);
 	virtual void GetParams(CMaterialParams &Params) const;
@@ -1750,6 +1767,12 @@ public:
 		PROP_DROP(ReferencedTextureGuids)
 		PROP_DROP(ParentLightingGuid)
 	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		Ar.Seek(Ar.GetStopper());			//?? drop native data
+	}
 };
 
 struct FTextureParameterValue

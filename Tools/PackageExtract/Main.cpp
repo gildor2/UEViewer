@@ -128,6 +128,7 @@ int main(int argc, char **argv)
 				"\n"
 				"Options:\n"
 				"    -filter=<value>    add filter for output types\n"
+				"    -out=PATH          extract everything into PATH instead of the current directory\n"
 				"\n"
 				"For details and updates please visit " HOMEPAGE "\n"
 		);
@@ -142,6 +143,8 @@ int main(int argc, char **argv)
 	};
 
 	static byte mainCmd = CMD_Extract;
+	char BaseDir[256];
+	strcpy(BaseDir, ".");
 
 	int arg = 1;
 	for (arg = 1; arg < argc; arg++)
@@ -156,6 +159,10 @@ int main(int argc, char **argv)
 			else if (!strnicmp(opt, "filter=", 7))
 			{
 				FString* S = new (filters) FString(opt+7);
+			}
+			else if (!strnicmp(opt, "out=", 4))
+			{
+				strcpy(BaseDir, opt+4);
 			}
 			else
 				goto help;
@@ -208,12 +215,12 @@ int main(int argc, char **argv)
 	appStrncpyz(PkgName, s, ARRAY_COUNT(PkgName));
 	char *s2 = strchr(PkgName, '.');
 	if (s2) *s2 = 0;
-	appMakeDirectory(PkgName);
 	// extract objects and write export table
 	FILE *f;
 	char buf2[1024];
 	guard(ExtractObjects);
-	appSprintf(ARRAY_ARG(buf2), "%s/ExportTable.txt", PkgName);
+	appSprintf(ARRAY_ARG(buf2), "%s/%s/ExportTable.txt", BaseDir, PkgName);
+	appMakeDirectoryForFile(buf2);
 	f = fopen(buf2, "w");
 	assert(f);
 	for (idx = 0; idx < Package->Summary.ExportCount; idx++)
@@ -231,13 +238,13 @@ int main(int argc, char **argv)
 			appSprintf(ARRAY_ARG(buf3), "%s.", Outer);
 		}
 		fprintf(f, "%d = %s'%s%s'\n", idx, ClassName, buf3, *Exp.ObjectName);
-		appSprintf(ARRAY_ARG(buf2), "%s/%s%s.%s", buf, buf3, *Exp.ObjectName, ClassName);
+		appSprintf(ARRAY_ARG(buf2), "%s/%s/%s%s.%s", BaseDir, buf, buf3, *Exp.ObjectName, ClassName);
 #else
 		char objName[256];
 		GetFullExportName(Exp, Package, ARRAY_ARG(objName));
 		fprintf(f, "%d = %s\n", idx, objName);
 		GetFullExportFileName(Exp, Package, ARRAY_ARG(objName));
-		appSprintf(ARRAY_ARG(buf2), "%s/%s", PkgName, objName);
+		appSprintf(ARRAY_ARG(buf2), "%s/%s/%s", BaseDir, PkgName, objName);
 #endif
 		guard(WriteFile);
 		// read data
@@ -271,7 +278,7 @@ int main(int argc, char **argv)
 	unguard;
 	// write name table
 	guard(WriteNameTable);
-	appSprintf(ARRAY_ARG(buf2), "%s/NameTable.txt", PkgName);
+	appSprintf(ARRAY_ARG(buf2), "%s/%s/NameTable.txt", BaseDir, PkgName);
 	f = fopen(buf2, "w");
 	assert(f);
 	for (idx = 0; idx < Package->Summary.NameCount; idx++)
@@ -280,7 +287,7 @@ int main(int argc, char **argv)
 	unguard;
 	// write import table
 	guard(WriteImportTable);
-	appSprintf(ARRAY_ARG(buf2), "%s/ImportTable.txt", PkgName);
+	appSprintf(ARRAY_ARG(buf2), "%s/%s/ImportTable.txt", BaseDir, PkgName);
 	f = fopen(buf2, "w");
 	assert(f);
 	for (idx = 0; idx < Package->Summary.ImportCount; idx++)

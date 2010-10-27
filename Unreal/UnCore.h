@@ -212,6 +212,7 @@ enum EGame
 		GAME_Transformers,
 		GAME_MortalOnline,
 		GAME_Enslaved,
+		GAME_MOH2010,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -1155,6 +1156,32 @@ SIMPLE_TYPE(FQuat,   float)
 SIMPLE_TYPE(FCoords, float)
 SIMPLE_TYPE(FColor,  byte)
 
+
+/*-----------------------------------------------------------------------------
+	TMap template
+-----------------------------------------------------------------------------*/
+
+template<class TK, class TV> struct TMapPair
+{
+	TK		Key;
+	TV		Value;
+
+	friend FArchive& operator<<(FArchive &Ar, TMapPair &V);
+};
+
+template<class TK, class TV> FArchive& operator<<(FArchive &Ar, TMapPair<TK, TV> &V)
+{
+	return Ar << V.Key << V.Value;
+}
+
+template<class TK, class TV> class TMap : public TArray<TMapPair<TK, TV> >
+{
+public:
+	friend FArchive& operator<<(FArchive &Ar, TMap &Map)
+	{
+		return Ar << (TArray<TMapPair<TK, TV> >&)Map;
+	}
+};
 
 /*-----------------------------------------------------------------------------
 	FString

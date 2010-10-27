@@ -2314,6 +2314,9 @@ public:
 			unguard;
 		}
 #endif // MASSEFF
+#if MOH2010
+		if (Ar.Game == GAME_MOH2010) goto old_code;
+#endif
 		if (Ar.ArVer >= 577)
 			Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
 #if TUROK
@@ -2323,6 +2326,7 @@ public:
 			return;
 		}
 #endif // TUROK
+	old_code:
 		Ar << CompressedByteStream;
 		unguard;
 	}

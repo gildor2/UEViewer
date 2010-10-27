@@ -9,10 +9,6 @@ Shaders: when trying to change/compile shader between glBegin/glEnd, GL will not
 Should check glGetError() and assert? (or make function GL_CheckError() - will appError(code)
 if code != 0)
 
-- psk export: REFINE_SKEL: may be sometimes it is useful to keep full skeleton (for attachments etc)
-  - so, make REFINE_SKEL a command line options
-  - may be compute number of used bones on mesh loading (not on export)
-
 FArchive:
 ? ArVer, ArLicenseeVer -> Ver(), LicenseeVer() + hide these fields
 
@@ -49,35 +45,18 @@ GENMAKE:
   for compiling C++ and C code
   - have one C++ option for ddslib.c - GCC compiler show warning
 
-? tool to collect full statistics about all available packages: supply "-path", umodel will recurse
-  all directories and try to load all files with known extensions (load 'summary' only); after that,
-  program will sort all files by package version and display statistics: 'count', 'ver', 'lic_ver'
-  (can be useful for updating 'packages.txt')
-    ! best idea - place this into 'Samples' or 'Tools' as separate program, which uses my 'Core' and
-    'Unreal' libs; possibly - place 'umodel' into similar directory too:
-       /Apps
-          /Umodel
-          /PkgScan
-          ...
-    * if so, can remove '-check', '-pkginfo' etc from umodel
-    * now: (partially?) done in pkgtool
-
 ! UE1 UTexture has AnimNext field
 ! implement UMaterialSequence (check 2K4Menus package)
 ? key to toggle fullscreen with desktop resolution (no way to implement using SDL only?)
   - X.org has SDL_WM_ToggleFullScreen(), and can use USER32 code for Win32
 - key to toggle debug text and 3D lines (good for screenshots)
 
-?? UC2:
-  - external animations (from xpr)
-  - export animations without bone translation
-
-?? TRIBES3:
+?? (check, possibly fixed) TRIBES3:
   ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)
     ! check this un UnrealEd
     * To fix: should create Moves.BoneIndices[], fill with 'i' and mark 0x1000-flags bones with -1
       ! check PSA generation too (will be buggy) -- require RefPose bones, but no in UMeshAnimation ...
-  - skeletal mesh mesh LOD levels - has visual bugs on most LOD meshes
+  - skeletal mesh LOD levels - has visual bugs on most LOD meshes
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
 
 ? when exporting mesh, can create .uc with sockets too (if possible)
@@ -99,21 +78,16 @@ GENMAKE:
     2) add assert before serialization: should not be already loaded (bool flag for UObject)
   - add 2 global lists: complete objects and objects, required serialization; use
     bool flag to check, which list holds object
+  - periodically sort object list before serialization
+    - profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
+    - testing: try to load from CD (slow random access)
 
 Exporting (typeinfo tool?):
 - TextBuffer export
   - will require to get defaultproperties from "Class'Name'.properties" (object with name=ClassName and
     class name="")
 
-Loading:
-? (don't understand it now): ensure "whole package" loaded using locks (load all top-level objects, then
-  subobjects)
-- periodically sort object list before serialization
-  - profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
-  - testing: try to load from CD (slow random access)
-
-
-- try to compile with MinGW
+- try to compile with MinGW (checked GCC4 from cygwin, 7.10.2010 - gcc4 has no "-mno-cygwin" switch)
 - move new Math3D parts to Quake2 core (more code to move ?)
 - add 3rd party library names/links/licenses to readme.txt
 

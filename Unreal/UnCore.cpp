@@ -1053,9 +1053,6 @@ void FArchive::DetectGame()
 #if TLR
 	if (ArVer == 507 && ArLicenseeVer == 11)	SET(GAME_TLR);
 #endif
-#if TRANSFORMERS
-	if (ArVer == 511 && ArLicenseeVer == 145)	SET(GAME_Transformers);
-#endif
 #if MEDGE
 	if (ArVer == 536 && ArLicenseeVer == 43)	SET(GAME_MirrorEdge);
 #endif
@@ -1088,6 +1085,9 @@ void FArchive::DetectGame()
 #endif
 #if DARKVOID
 	if (ArVer == 576 && (ArLicenseeVer == 61 || ArLicenseeVer == 66)) SET(GAME_DarkVoid); // demo and release
+#endif
+#if MOH2010
+	if (ArVer == 581 && ArLicenseeVer == 58)	SET(GAME_MOH2010);
 #endif
 #if BORDERLANDS
 	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands); // release and update
@@ -1124,6 +1124,11 @@ void FArchive::DetectGame()
 		 (ArVer == 482 && ArLicenseeVer == 222)  ||		// Army of Two: the 40th Day
 		 (ArVer == 483 && ArLicenseeVer == 4317) )		// ...
 		SET(GAME_ArmyOf2);
+#endif
+#if TRANSFORMERS
+	if ((ArVer == 511 && ArLicenseeVer == 145) ||		// PC version
+		(ArVer == 511 && ArLicenseeVer == 144))			// PS3 and XBox 360 version
+		SET(GAME_Transformers);
 #endif
 
 	if (check > 1)

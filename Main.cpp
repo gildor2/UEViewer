@@ -341,6 +341,9 @@ static GameInfo games[] = {
 #	if ENSLAVED
 		G("Enslaved: Odyssey to the West", ens, GAME_Enslaved),
 #	endif
+#	if MOH2010
+		G("Medal of Honor 2010", moh2010, GAME_MOH2010),
+#	endif
 #	if SPECIAL_TAGS
 		G3("Nurien"),
 #	endif
@@ -465,7 +468,7 @@ static void Usage()
 			"    -noxbox         disable XBox 360 code\n"	//?? change this!
 			"\n"
 			"Export options:\n"
-			"    -out=PATH       export everything into PATH instead of current directory\n"
+			"    -out=PATH       export everything into PATH instead of the current directory\n"
 			"    -all            export all linked objects too\n"
 			"    -uc             create unreal script when possible\n"
 			"    -pskx           use pskx/psax format for skeletal mesh\n"
