@@ -479,7 +479,6 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 	int NumBones  = Mesh->RefSkeleton.Num();
 	int NumVerts  = Mesh->Points.Num();
 	NumWedges = Mesh->Wedges.Num();
-	const UMeshAnimation *Anim = Mesh->Animation;
 
 	// count materials (may ge greater than Mesh->Materials.Num())
 	NumSections = Mesh->Materials.Num() - 1;
@@ -519,17 +518,8 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 		// NOTE: assumed, that parent bones goes first
 		assert(B.ParentIndex <= i);
 
-		// find reference bone in animation track
+		// reset animation bone map (will be set by SetAnim())
 		data->BoneMap = INDEX_NONE;
-		if (Anim)
-		{
-			for (int j = 0; j < Anim->RefBones.Num(); j++)
-				if (!stricmp(B.Name, Anim->RefBones[j].Name))
-				{
-					data->BoneMap = j;
-					break;
-				}
-		}
 
 		// compute reference bone coords
 		CVec3 BP;
@@ -623,10 +613,41 @@ if (i == 32 || i == 34)
 		unguard;
 	}
 
-	ClearSkelAnims();
-	PlayAnim(NULL);
+	SetAnim(Mesh->Animation);
 
 	unguard;
+}
+
+
+void CSkelMeshInstance::SetAnim(const UMeshAnimation *Anim)
+{
+	if (!pMesh) return;		// mesh is not set yet
+	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(pMesh);
+
+	Animation = Anim;
+
+	int i;
+	CMeshBoneData *data;
+	for (i = 0, data = BoneData; i < Mesh->RefSkeleton.Num(); i++, data++)
+	{
+		const FMeshBone &B = Mesh->RefSkeleton[i];
+
+		// find reference bone in animation track
+		data->BoneMap = INDEX_NONE;		// in a case when bone has no corresponding animation track
+		if (Animation)
+		{
+			for (int j = 0; j < Animation->RefBones.Num(); j++)
+				if (!stricmp(B.Name, Animation->RefBones[j].Name))
+				{
+					data->BoneMap = j;
+					break;
+				}
+		}
+
+	}
+
+	ClearSkelAnims();
+	PlayAnim(NULL);
 }
 
 
@@ -698,12 +719,10 @@ int CSkelMeshInstance::FindBone(const char *BoneName) const
 
 int CSkelMeshInstance::FindAnim(const char *AnimName) const
 {
-	const USkeletalMesh *Mesh  = GetMesh();
-	const UMeshAnimation *Anim = Mesh->Animation;
-	if (!Anim || !AnimName)
+	if (!Animation || !AnimName)
 		return INDEX_NONE;
-	for (int i = 0; i < Anim->AnimSeqs.Num(); i++)
-		if (!strcmp(Anim->AnimSeqs[i].Name, AnimName))
+	for (int i = 0; i < Animation->AnimSeqs.Num(); i++)
+		if (!strcmp(Animation->AnimSeqs[i].Name, AnimName))
 			return i;
 	return INDEX_NONE;
 }
@@ -929,7 +948,6 @@ void CSkelMeshInstance::UpdateSkeleton()
 	guard(CSkelMeshInstance::UpdateSkeleton);
 
 	const USkeletalMesh  *Mesh = GetMesh();
-	const UMeshAnimation *Anim = Mesh->Animation;
 
 	// process all animation channels
 	assert(MaxAnimChannel < MAX_SKELANIMCHANNELS);
@@ -948,12 +966,12 @@ void CSkelMeshInstance::UpdateSkeleton()
 		float Time2;
 		if (Chn->AnimIndex1 >= 0)		// not INDEX_NONE or ANIM_UNASSIGNED
 		{
-			Motion1  = &Anim->Moves   [Chn->AnimIndex1];
-			AnimSeq1 = &Anim->AnimSeqs[Chn->AnimIndex1];
+			Motion1  = &Animation->Moves   [Chn->AnimIndex1];
+			AnimSeq1 = &Animation->AnimSeqs[Chn->AnimIndex1];
 			if (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
 			{
-				Motion2  = &Anim->Moves   [Chn->AnimIndex2];
-				AnimSeq2 = &Anim->AnimSeqs[Chn->AnimIndex2];
+				Motion2  = &Animation->Moves   [Chn->AnimIndex2];
+				AnimSeq2 = &Animation->AnimSeqs[Chn->AnimIndex2];
 				// compute time for secondary channel; always in sync with primary channel
 				Time2 = Chn->Time / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
 			}
@@ -1128,7 +1146,6 @@ if (i == 32 || i == 34)
 void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 {
 	const USkeletalMesh  *Mesh = GetMesh();
-	const UMeshAnimation *Anim = Mesh->Animation;
 
 	if (!Mesh->RefSkeleton.Num()) return;	// just in case
 
@@ -1161,9 +1178,9 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 		if (!Chn->TweenTime && Chn->AnimIndex1 >= 0)
 		{
 			// update animation time
-			const FMeshAnimSeq *Seq1 = &Anim->AnimSeqs[Chn->AnimIndex1];
+			const FMeshAnimSeq *Seq1 = &Animation->AnimSeqs[Chn->AnimIndex1];
 			const FMeshAnimSeq *Seq2 = (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
-				? &Anim->AnimSeqs[Chn->AnimIndex2]
+				? &Animation->AnimSeqs[Chn->AnimIndex2]
 				: NULL;
 
 			float Rate1 = Chn->Rate * Seq1->Rate;
@@ -1319,10 +1336,8 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 {
 	guard(CSkelMeshInstance::GetAnimParams);
 
-	const USkeletalMesh  *Mesh = GetMesh();
-	const UMeshAnimation *Anim = Mesh->Animation;
 	const CAnimChan      &Chn  = GetStage(Channel);
-	if (!Anim || Chn.AnimIndex1 < 0 || Channel > MaxAnimChannel)
+	if (!Animation || Chn.AnimIndex1 < 0 || Channel > MaxAnimChannel)
 	{
 		AnimName  = "None";
 		Frame     = 0;
@@ -1330,7 +1345,7 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 		Rate      = 0;
 		return;
 	}
-	const FMeshAnimSeq &AnimSeq = Anim->AnimSeqs[Chn.AnimIndex1];
+	const FMeshAnimSeq &AnimSeq = Animation->AnimSeqs[Chn.AnimIndex1];
 	AnimName  = AnimSeq.Name;
 	Frame     = Chn.Time;
 	NumFrames = AnimSeq.NumFrames;

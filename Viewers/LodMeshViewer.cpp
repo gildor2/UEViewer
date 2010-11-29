@@ -7,7 +7,7 @@
 #include "../MeshInstance/MeshInstance.h"
 
 
-static TArray<CLodMeshInstance*> Meshes;
+TArray<CLodMeshInstance*> CLodMeshViewer::Meshes;
 
 
 CLodMeshViewer::CLodMeshViewer(ULodMesh *Mesh)
@@ -95,7 +95,11 @@ void CLodMeshViewer::TagMesh(CLodMeshInstance *NewInst)
 {
 	for (int i = 0; i < Meshes.Num(); i++)
 		if (Meshes[i]->pMesh == NewInst->pMesh)
-			return;	// already tagged
+		{
+			// already tagged, remove
+			Meshes.Remove(i);
+			return;
+		}
 	Meshes.AddItem(NewInst);
 }
 

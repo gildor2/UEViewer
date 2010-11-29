@@ -10,8 +10,9 @@ void VertexShaderMain()
 }
 
 /*
- *	Using idea from this page:
+ *	Using idea from this pages:
  *	http://prideout.net/bloom/index.php
+ *	http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
  *	Single sample (texture2D call) will take 2 texels with different weights: weights are
  *	controlled by OF# and W# parameters
  *

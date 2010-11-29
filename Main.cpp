@@ -344,6 +344,9 @@ static GameInfo games[] = {
 #	if MOH2010
 		G("Medal of Honor 2010", moh2010, GAME_MOH2010),
 #	endif
+#	if BERKANIX
+		G("Berkanix", berk, GAME_Berkanix),
+#	endif
 #	if SPECIAL_TAGS
 		G3("Nurien"),
 #	endif
@@ -457,6 +460,7 @@ static void Usage()
 			"    -path=PATH      path to game installation directory; if not specified,\n"
 			"                    program will search for packages in current directory\n"
 			"    -game=tag       override game autodetection (see -taglist for variants)\n"
+			"    -pkg=package    load extra package (in addition to <package>\n"
 			"    -meshes         view meshes only\n"
 			"\n"
 			"Compatibility options:\n"
@@ -546,6 +550,7 @@ int main(int argc, char **argv)
 	static byte mainCmd = CMD_View;
 	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
 		 noTex = false, hasRootDir = false;
+	TArray<const char*> extraPackages;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
@@ -598,6 +603,11 @@ int main(int argc, char **argv)
 					exit(0);
 				}
 				GForceGame = tag;
+			}
+			else if (!strnicmp(opt, "pkg=", 4))
+			{
+				const char *pkg = opt+4;
+				extraPackages.AddItem(pkg);
 			}
 			else
 				Usage();
@@ -687,7 +697,7 @@ int main(int argc, char **argv)
 	Package = UnPackage::LoadPackage(argPkgName);
 	if (!Package)
 	{
-		printf("Unable to find/load package %s\n", argPkgName);
+		printf("ERROR: unable to find/load package %s\n", argPkgName);
 		exit(1);
 	}
 
@@ -757,6 +767,22 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			Obj = UObject::GObjObjects[0];
+		}
+		// load additional packages
+		for (int i = 0; i < extraPackages.Num(); i++)
+		{
+			UnPackage *Package2 = UnPackage::LoadPackage(extraPackages[i]);
+			if (!Package)
+			{
+				printf("WARNING: unable to find/load package %s\n", argPkgName);
+				continue;
+			}
+			// create exports (the same code as above)
+			for (int idx = 0; idx < Package2->Summary.ExportCount; idx++)
+			{
+				if (IsKnownClass(Package2->GetObjectName(Package2->GetExport(idx).ClassIndex)))
+					Package2->CreateExport(idx);
+			}
 		}
 		unguard;
 	}

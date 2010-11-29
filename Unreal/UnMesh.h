@@ -2127,6 +2127,7 @@ enum AnimationCompressionFormat
 	ACF_IntervalFixed32NoW,
 	ACF_Fixed32NoW,
 	ACF_Float32NoW,
+	ACF_Identity,
 #if BATMAN
 	ACF_Fixed48Max,
 #endif
@@ -2150,6 +2151,7 @@ _ENUM(AnimationCompressionFormat)
 	_E(ACF_IntervalFixed32NoW),
 	_E(ACF_Fixed32NoW),
 	_E(ACF_Float32NoW),
+	_E(ACF_Identity),
 #if BATMAN
 	_E(ACF_Fixed48Max),
 #endif
@@ -2168,13 +2170,15 @@ _ENUM(AnimationCompressionFormat)
 enum AnimationKeyFormat
 {
 	AKF_ConstantKeyLerp,									// animation keys are placed on evenly-spaced intervals
-	AKF_VariableKeyLerp										// animation keys have explicit key times
+	AKF_VariableKeyLerp,									// animation keys have explicit key times
+	AKF_PerTrackCompression,
 };
 
 _ENUM(AnimationKeyFormat)
 {
 	_E(AKF_ConstantKeyLerp),
-	_E(AKF_VariableKeyLerp)
+	_E(AKF_VariableKeyLerp),
+	_E(AKF_PerTrackCompression),
 };
 
 

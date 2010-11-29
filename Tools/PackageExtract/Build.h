@@ -36,3 +36,4 @@
 #define ALPHA_PR		1
 //#define AA3				1		// America's Army
 #define TRANSFORMERS	1
+#define BERKANIX		1

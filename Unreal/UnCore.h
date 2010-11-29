@@ -213,6 +213,7 @@ enum EGame
 		GAME_MortalOnline,
 		GAME_Enslaved,
 		GAME_MOH2010,
+		GAME_Berkanix,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -445,7 +446,7 @@ public:
 		guard(FFileReader::Serialize);
 		if (size == 0) return;
 		if (ArStopper > 0 && ArPos + size > ArStopper)
-			appError("Serializing behind stopper");
+			appError("Serializing behind stopper (%d+%d > %d)", ArPos, size, ArStopper);
 
 		int res;
 		if (IsLoading)
@@ -504,7 +505,7 @@ public:
 	{
 		guard(FMemReader::Serialize);
 		if (ArStopper > 0 && ArPos + size > ArStopper)
-			appError("Serializing behind stopper");
+			appError("Serializing behind stopper (%d+%d > %d)", ArPos, size, ArStopper);
 		if (ArPos + size > DataSize)
 			appError("Serializing behind end of buffer");
 		memcpy(data, DataPtr + ArPos, size);
@@ -1263,6 +1264,12 @@ struct FCompressedChunkHeader
 		Ar << H.Tag;
 		if (H.Tag == PACKAGE_FILE_TAG_REV)
 			Ar.ReverseBytes = !Ar.ReverseBytes;
+#if BERKANIX
+		else if (Ar.Game == GAME_Berkanix && H.Tag == 0xF2BAC156)
+		{
+			// do nothing, correct tag
+		}
+#endif // BERKANIX
 		else
 			assert(H.Tag == PACKAGE_FILE_TAG);
 		Ar << H.BlockSize << H.CompressedSize << H.UncompressedSize;

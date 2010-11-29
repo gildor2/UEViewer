@@ -184,6 +184,11 @@ public:
 
 	virtual void UpdateAnimation(float TimeDelta);
 
+	const UVertMesh *GetMesh() const
+	{
+		return static_cast<const UVertMesh*>(pMesh);
+	}
+
 protected:
 	// animation state
 	int			AnimIndex;			// current animation sequence
@@ -191,10 +196,6 @@ protected:
 	float		AnimRate;			// animation rate, frames per seconds
 	bool		AnimLooped;
 
-	const UVertMesh *GetMesh() const
-	{
-		return static_cast<const UVertMesh*>(pMesh);
-	}
 	int FindAnim(const char *AnimName) const;
 	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 };
@@ -237,6 +238,7 @@ public:
 	:	LodNum(-1)
 	,	LastLodNum(-2)				// differs from LodNum and from all other values
 	,	MaxAnimChannel(-1)
+	,	Animation(NULL)
 	,	BoneData(NULL)
 	,	Wedges(NULL)
 	,	Skinned(NULL)
@@ -254,6 +256,7 @@ public:
 	}
 
 	virtual void SetMesh(const ULodMesh *Mesh);
+	void SetAnim(const UMeshAnimation *Anim);
 	virtual ~CSkelMeshInstance();
 	void ClearSkelAnims();
 //??	void StopAnimating(bool ClearAllButBase);
@@ -303,23 +306,32 @@ public:
 	// animation enumeration
 	virtual int GetAnimCount() const
 	{
-		const USkeletalMesh *Mesh = GetMesh();
-		if (!Mesh->Animation) return 0;
-		return Mesh->Animation->AnimSeqs.Num();
+		if (!Animation) return 0;
+		return Animation->AnimSeqs.Num();
 	}
 	virtual const char *GetAnimName(int Index) const
 	{
 		guard(CSkelMeshInstance::GetAnimName);
 		if (Index < 0) return "None";
-		const USkeletalMesh *Mesh = GetMesh();
-		assert(Mesh->Animation);
-		return Mesh->Animation->AnimSeqs[Index].Name;
+		assert(Animation);
+		return Animation->AnimSeqs[Index].Name;
 		unguard;
 	}
 
 	virtual void UpdateAnimation(float TimeDelta);
 
+	const USkeletalMesh *GetMesh() const
+	{
+		return static_cast<const USkeletalMesh*>(pMesh);
+	}
+
+	const UMeshAnimation *GetAnim() const
+	{
+		return Animation;
+	}
+
 protected:
+	const UMeshAnimation *Animation;
 	// mesh data
 	struct CMeshBoneData *BoneData;
 	struct CMeshWedge    *Wedges;	// bindpose
@@ -334,10 +346,6 @@ protected:
 	CAnimChan	Channels[MAX_SKELANIMCHANNELS];
 	int			MaxAnimChannel;
 
-	const USkeletalMesh *GetMesh() const
-	{
-		return static_cast<const USkeletalMesh*>(pMesh);
-	}
 	CAnimChan &GetStage(int StageIndex)
 	{
 		assert(StageIndex >= 0 && StageIndex < MAX_SKELANIMCHANNELS);

@@ -127,6 +127,8 @@ public:
 	TEST_OBJECT;
 	virtual void Draw2D();
 	virtual void Draw3D();
+
+	static TArray<CLodMeshInstance*> Meshes;	// for displaying multipart meshes
 };
 
 

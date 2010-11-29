@@ -59,6 +59,29 @@ struct FQuatFixed48NoW
 SIMPLE_TYPE(FQuatFixed48NoW, word)
 
 
+struct FVectorFixed48
+{
+	word			X, Y, Z;
+
+	inline operator FVector() const
+	{
+		FVector r;
+		static const float scale = 128.0f / 32767.0f;
+		r.X = (X - 32767) * scale;
+		r.Y = (Y - 32767) * scale;
+		r.Z = (Z - 32767) * scale;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorFixed48 &V)
+	{
+		return Ar << V.X << V.Y << V.Z;
+	}
+};
+
+SIMPLE_TYPE(FVectorFixed48, word)
+
+
 // normalized quaternion with 11/11/10-bit fixed point fields
 struct FQuatFixed32NoW
 {
@@ -108,6 +131,28 @@ struct FQuatIntervalFixed32NoW
 };
 
 SIMPLE_TYPE(FQuatIntervalFixed32NoW, unsigned)
+
+
+struct FVectorIntervalFixed32
+{
+	unsigned		X:10, Y:11, Z:11;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = (X / 511.0f  - 1.0f) * Ranges.X + Mins.X;
+		r.Y = (Y / 1023.0f - 1.0f) * Ranges.Y + Mins.Y;
+		r.Z = (Z / 1023.0f - 1.0f) * Ranges.Z + Mins.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed32 &V)
+	{
+		return Ar << GET_DWORD(V);
+	}
+};
+
+SIMPLE_TYPE(FVectorIntervalFixed32, unsigned)
 
 
 struct FQuatFloat32NoW

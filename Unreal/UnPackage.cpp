@@ -209,7 +209,7 @@ printf("<<<\n");
 		guard(FLeadArchiveReader::Serialize);
 
 		if (Stopper > 0 && Position + size > Stopper)
-			appError("Serializing behind stopper");
+			appError("Serializing behind stopper (%d+%d > %d)", Position, size, Stopper);
 
 		while (true)
 		{
@@ -356,7 +356,7 @@ public:
 		guard(FUE3ArchiveReader::Serialize);
 
 		if (Stopper > 0 && Position + size > Stopper)
-			appError("Serializing behind stopper");
+			appError("Serializing behind stopper (%d+%d > %d)", Position, size, Stopper);
 
 		while (true)
 		{

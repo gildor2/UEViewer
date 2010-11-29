@@ -62,7 +62,7 @@ platform specification:
 global:
 	CPP_EXCEPT	= 1 == undef | 0		when 0 -- C++ exceptions system disabled
 	MAPFILES	= 1 | 0 == undef
-	PDB			= 1 | 0 == undef (VisualC only)
+	PDB			= 1 | 2 | 0 == undef	1 = link-level, 2 = compile-level, 0 = off (VisualC only)
 	STDLIBS		= list of used libraries (for "GNU Make" will append "lib" and will search in paths)
 	LIBRARIES   = path(s) to additional library files
 	LIBC		= static | shared == undef
@@ -516,10 +516,11 @@ sub EmitCompilerDefs {
 # array of output directories
 @outdirs = ();
 
-# usage: GetSrcOption (opt_name)
+# usage: GetSrcOption (opt_name[, default])
 sub GetSrcOption {
 	my $opt = $vars{$_[0]};
 	return $opt if defined($opt);
+	return $_[1] if defined $_[1];
 	return "";
 }
 
@@ -568,16 +569,21 @@ sub AddObjectList {
 			} else {
 				WarningOnce ("unknown CPP_EXCEPT option: [$opt]");
 			}
+			# debugging
+			$opt = GetSrcOption("PDB", 0);
+			if ($opt >= 2) {
+				$options .= " -Zi -Fd\"$objdir\"";		# enable debugging information; note: no final slash, so pdb will be names as objdir
+			}
 		} elsif ($COMPILER eq "GnuC") {		#!! GnuC - compiler options
 			my $opt = GetSrcOption ("WARNLEVEL");
 			# warning level: GnuC can disable warnings or enable all warnings
 			if ($opt ne "") {
 				if ($opt eq "0") {
-					$options .= " -w";				# disable warnings
+					$options .= " -w";					# disable warnings
 				} elsif ($opt eq "1") {
-					$options .= " -Wall -Wextra";	# max warning level
+					$options .= " -Wall -Wextra";		# max warning level
 				} else { #if ($opt eq "2")
-					$options .= " -Wall";			# all & !extra ...
+					$options .= " -Wall";				# all & !extra ...
 				}
 			}
 			# optimization strategy
@@ -1060,7 +1066,6 @@ sub RememberTarget {
 	}
 	# remember options
 	SetTargetOption ($n, "MAPFILES");
-	SetTargetOption ($n, "PDB");
 	if ($COMPILER eq "VisualC") {
 		SetTargetOption ($n, "STDLIBS", 0, $LibFileExt);
 	} else {
@@ -1119,7 +1124,7 @@ sub FlushTargetText {
 		$line .= " $libs" if $libs ne "";
 		$line .= " -base:0x$baseaddr" if $baseaddr ne "";
 		$line .= " -map:\"$shortOutName.map\"" if GetTargetOption ($n, "MAPFILES") eq "1";
-		$line .= " -debug -pdb:\"$shortOutName.pdb\" -pdbtype:sept -opt:ref -opt:icf" if GetTargetOption ($n, "PDB") eq "1";
+		$line .= " -debug -pdb:\"$shortOutName.pdb\" -pdbtype:sept -opt:ref -opt:icf" if GetSrcOption("PDB", 0) >= 1;
 		$line .= " \$($objListName)";
 		my $linkflags = GetTargetOption ($n, "LINKFLAGS");
 		$line .= " $linkflags" if ($linkflags ne "");

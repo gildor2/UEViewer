@@ -1070,7 +1070,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		DIFFUSE(appStristr(Name, "diff"), 100);
 		NORMAL (appStristr(Name, "norm"), 100);
 		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80);
-		DIFFUSE (appStristr(Name, "_Tex"), 60)
+		DIFFUSE(appStristr(Name, "_Tex"), 60);
 		DIFFUSE(!stricmp(Name + len - 2, "_D"), 20);
 		OPACITY(appStristr(Name, "_OM"), 20);
 #if 0

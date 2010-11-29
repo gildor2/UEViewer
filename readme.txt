@@ -66,6 +66,7 @@ Modified Unreal Engine 3:
   Transformers: War for Cybertron
   Enslaved: Odyssey to the West (XBox360)
   Medal of Honor 2010
+  Berkanix
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -173,11 +174,26 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+29.11.2010
+- implemented support for the recent UE3 animations (September 2010+ UDK)
+
+26.11.2010
+- updated UDK support for November 2010 version
+
+16.11.2010
+- implemented Berkanix support
+
+07.11.2010
+- improved multipart mesh display: Ctrl+T will tag/untag mesh, supports animations for
+  all parts
+- added "-pkg=<package>" option to load extra package (may be useful when animation is
+  placed separately from mesh)
+
 24.10.2010
 - updated Land of Chaos Online (LOCO) support
 
 22.10.2010
-- implemented support for the latest UE3 materials
+- implemented support for the recent UE3 materials
 
 15.10.2010
 - fixed bug reading UE3 SkeletalMesh with multiple UV sets

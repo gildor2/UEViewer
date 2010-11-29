@@ -98,6 +98,14 @@ struct FPackageFileSummary
 			goto tag_ok;		// Land of Chaos Online
 		}
 #endif // LOCO
+#if BERKANIX
+		if (S.Tag == 0xF2BAC156)
+		{
+			//?? check later: probably this game has only a custom package tag
+			Ar.Game = GAME_Berkanix;
+			goto tag_ok;
+		}
+#endif // BERKANIX
 
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{

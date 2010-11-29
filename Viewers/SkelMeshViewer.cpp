@@ -249,7 +249,8 @@ void CSkelMeshViewer::ShowHelp()
 				 "I           show influences\n"
 				 "A           show attach sockets\n"
 				 "Ctrl+B      dump skeleton to console\n"
-				 "Ctrl+A      cycle mesh animation sets");
+				 "Ctrl+A      cycle mesh animation sets\n"
+				 "Ctrl+T      tag/untag mesh\n");
 }
 
 
@@ -328,7 +329,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 
 	case 'a'|KEY_CTRL:
 		{
-			UMeshAnimation *Anim = Mesh->Animation;
+			const UMeshAnimation *Anim = MeshInst->GetAnim();
 			// find next animation set (code is similar to PAGEDOWN handler)
 			int looped = 0;
 			int ObjIndex = -1;
@@ -342,7 +343,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 					looped++;
 					if (looped > 1) break;				// no other objects
 				}
-				UObject *Obj = UObject::GObjObjects[ObjIndex];
+				const UObject *Obj = UObject::GObjObjects[ObjIndex];
 				if (Obj == Anim)
 				{
 					if (found) break;					// loop detected
@@ -351,8 +352,18 @@ void CSkelMeshViewer::ProcessKey(int key)
 				}
 				if (found && Obj->IsA("MeshAnimation"))
 				{
-					Mesh->Animation = static_cast<UMeshAnimation*>(Obj);
-					MeshInst->SetMesh(Mesh);			// will rebind mesh to new animation set
+					// found desired animation set
+					const UMeshAnimation* Anim = static_cast<const UMeshAnimation*>(Obj);
+					MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
+					for (int i = 0; i < Meshes.Num(); i++)
+					{
+						CLodMeshInstance* Inst = Meshes[i];
+						if (Inst->pMesh->IsA("SkeletalMesh"))
+						{
+							CSkelMeshInstance *SkelInst = static_cast<CSkelMeshInstance*>(Inst);
+							SkelInst->SetAnim(Anim);
+						}
+					}
 					AnimIndex = -1;
 					printf("Bound %s'%s' to %s'%s'\n", Mesh->GetClassName(), Mesh->Name, Obj->GetClassName(), Obj->Name);
 					break;
