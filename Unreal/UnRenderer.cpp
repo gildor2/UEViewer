@@ -1014,6 +1014,13 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 {
 	guard(UMaterial3::GetParams);
 
+#if IPHONE
+	//?? these parameters are common for UMaterial3 and UMaterialInstanceConstant (UMaterialInterface)
+	if (FlattenedTexture)  Params.Diffuse = FlattenedTexture;
+	if (MobileBaseTexture) Params.Diffuse = MobileBaseTexture;
+	if (MobileNormalTexture) Params.Normal = MobileNormalTexture;
+#endif // IPHONE
+
 	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0;
 #define DIFFUSE(check,weight)			\
 	if (check && weight > DiffWeight)	\

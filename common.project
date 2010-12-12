@@ -99,3 +99,8 @@ UE3_LIBS = {
 	# ... lzx for compresses XBox360 UE3 packages
 	$R/libs/mspack/lzxd.c
 }
+
+IOS_LIBS = {
+	$R/libs/PowerVR/*.cpp
+}
+INCLUDES += $R/libs/PowerVR

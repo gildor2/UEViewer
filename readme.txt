@@ -33,6 +33,7 @@ Unreal Engine 3:
   Unreal Tournament 3
   Gears of War
   Gears of War 2 (XBox360)
+  Infinity Blade (iPhone)
   UDK
   Mortal Online
   Section 8
@@ -175,6 +176,9 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+12.12.2010
+- implemented iOS (iPhone/iPad) texture support, activated with "-ios" switch
+
 09.12.2010
 - updated support for recent versions of the XBox360 UE3
 - updated TERA: The Exiled Realm of Arborea support

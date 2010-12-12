@@ -15,6 +15,7 @@ sources(MAIN) = {
 	$DDS_LIBS	#!! remove
 	$NV_LIBS
 	$UE3_LIBS
+	$IOS_LIBS
 }
 
 target(executable, $PRJ, MAIN, MAIN)

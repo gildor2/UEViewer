@@ -362,6 +362,10 @@ enum ETextureFormat
 	TEXF_CxV8U8,
 	TEXF_DXT5N,			// Note: in Bioshock this value has name 3DC, but really DXT5N is used
 	TEXF_3DC,			// names: 3Dc, ATI2, BC5
+#if IPHONE
+	TEXF_PVRTC2,
+	TEXF_PVRTC4,
+#endif
 };
 
 _ENUM(ETextureFormat)
@@ -382,6 +386,10 @@ _ENUM(ETextureFormat)
 	_E(TEXF_CxV8U8),
 	_E(TEXF_DXT5N),
 	_E(TEXF_3DC),
+#if IPHONE
+	_E(TEXF_PVRTC2),
+	_E(TEXF_PVRTC4),
+#endif
 };
 
 enum ETexClampMode
@@ -1493,6 +1501,7 @@ public:
 	ETextureAddress	AddressY;
 	FName			TextureFileCacheName;
 	FGuid			TextureFileCacheGuid;
+	bool			bForcePVRTC4;		// iPhone
 
 #if RENDERING
 	// rendering implementation fields
@@ -1505,6 +1514,7 @@ public:
 	,	Format(PF_Unknown)
 	,	AddressX(TA_Wrap)
 	,	AddressY(TA_Wrap)
+	,	bForcePVRTC4(false)
 	{
 		TextureFileCacheName.Str = "None";
 	}
@@ -1522,6 +1532,7 @@ public:
 		PROP_DROP(MipTailBaseIdx)
 		PROP_DROP(OriginalSizeX)
 		PROP_DROP(OriginalSizeY)
+		PROP_BOOL(bForcePVRTC4)
 #if FRONTLINES
 		PROP_DROP(NumMips)
 		PROP_DROP(SourceDataSizeX)
@@ -1626,9 +1637,18 @@ class UMaterialInterface : public UUnrealMaterial
 {
 	DECLARE_CLASS(UMaterialInterface, UUnrealMaterial)
 public:
+	// Mobile
+	UTexture3		*FlattenedTexture;
+	UTexture3		*MobileBaseTexture;
+	UTexture3		*MobileNormalTexture;
+
 	BEGIN_PROP_TABLE
 		PROP_DROP(PreviewMesh)
 		PROP_DROP(LightingGuid)
+		// Mobile
+		PROP_OBJ(FlattenedTexture)
+		PROP_OBJ(MobileBaseTexture)
+		PROP_OBJ(MobileNormalTexture)
 #if MASSEFF
 		PROP_DROP(m_Guid)
 #endif

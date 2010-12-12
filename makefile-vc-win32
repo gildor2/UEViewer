@@ -66,7 +66,8 @@ MAIN = \
 	./obj/umodel-win32/inflate.obj \
 	./obj/umodel-win32/inftrees.obj \
 	./obj/umodel-win32/uncompr.obj \
-	./obj/umodel-win32/lzxd.obj
+	./obj/umodel-win32/lzxd.obj \
+	./obj/umodel-win32/PVRTDecompress.obj
 
 MAIN_DIRS = \
 	./obj/umodel-win32
@@ -79,7 +80,7 @@ umodel.exe : $(MAIN_DIRS) $(MAIN)
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -O1 -EHs- -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt
+OPT_MAIN = -O1 -EHs- -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt -I ./libs/PowerVR
 
 ./obj/umodel-win32/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -460,6 +461,14 @@ DEPENDS = \
 
 ./obj/umodel-win32/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/TextContainer.obj" Core/TextContainer.cpp
+
+DEPENDS = \
+	libs/PowerVR/PVRTDecompress.h \
+	libs/PowerVR/PVRTGlobal.h \
+	libs/PowerVR/PVRTTexture.h
+
+./obj/umodel-win32/PVRTDecompress.obj : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/PVRTDecompress.obj" ./libs/PowerVR/PVRTDecompress.cpp
 
 DEPENDS = \
 	libs/ddslib.h

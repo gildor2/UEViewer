@@ -17,6 +17,10 @@
 #include "UnPackage.h"
 
 
+#if IPHONE
+#	include <PVRTDecompress.h>
+#endif
+
 //#define PROFILE_DDS			1
 //#define XPR_DEBUG			1
 
@@ -157,6 +161,18 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 			}
 		}
 		return dst;
+#if IPHONE
+	case TEXF_PVRTC2:
+	case TEXF_PVRTC4:
+	#if PROFILE_DDS
+		appResetProfiler();
+	#endif
+		PVRTDecompressPVRTC(Data, SrcFormat == TEXF_PVRTC2, width, height, dst);
+	#if PROFILE_DDS
+		appPrintProfiler();
+	#endif
+		return dst;
+#endif // IPHONE
 	}
 
 	unsigned fourCC;
@@ -995,6 +1011,16 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			appNotify("Unknown texture format: %s (%d)", FmtName, Format);
 			return NULL;
 		}
+
+#if IPHONE
+		if (Package->Platform == PLATFORM_IOS)
+		{
+			if (intFormat == TEXF_DXT1)
+				intFormat = bForcePVRTC4 ? TEXF_PVRTC4 : TEXF_PVRTC2;
+			if (intFormat == TEXF_DXT5)
+				intFormat = TEXF_PVRTC4;
+		}
+#endif // IPHONE
 
 #if XBOX360
 		if (Package->Platform == PLATFORM_XBOX360)

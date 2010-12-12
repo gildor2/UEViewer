@@ -256,6 +256,9 @@ static GameInfo games[] = {
 #	if XBOX360
 		G3("Gears of War 2"),
 #	endif
+#	if IPHONE
+		G3("Infinity Blade"),
+#	endif
 #	if R6VEGAS
 		G("Rainbow 6: Vegas 2", r6v2, GAME_R6Vegas2),
 #	endif
@@ -475,6 +478,7 @@ static void Usage()
 			"\n"
 			"Platform selection:\n"
 			"    -ps3            override platform autodetection to PS3\n"
+			"    -ios            set platform to iOS (iPhone/iPad)\n"
 			"\n"
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
@@ -585,6 +589,7 @@ int main(int argc, char **argv)
 				OPT_BOOL ("noanim",  noAnim)
 				OPT_BOOL ("notex",   noTex)
 				OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
+				OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
 			};
 			if (ProcessOption(ARRAY_ARG(options), opt))
 				continue;
