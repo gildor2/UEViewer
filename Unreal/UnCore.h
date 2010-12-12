@@ -55,7 +55,7 @@ extern int GSerializeBytes;
 void appResetProfiler();
 void appPrintProfiler();
 
-#define PROFILE_POINT(Label)	appPrintProfiler(); appResetProfiler(); printf("PROFILE: " #Label "\n");
+#define PROFILE_POINT(Label)	appPrintProfiler(); printf("PROFILE: " #Label "\n");
 
 #endif
 
@@ -214,6 +214,7 @@ enum EGame
 		GAME_Enslaved,
 		GAME_MOH2010,
 		GAME_Berkanix,
+		GAME_DOH,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -227,8 +228,10 @@ enum EGame
 
 enum EPlatform
 {
+	PLATFORM_UNKNOWN = 0,
 	PLATFORM_PC,
-	PLATFORM_XBOX360
+	PLATFORM_XBOX360,
+	PLATFORM_PS3
 };
 
 
@@ -1195,6 +1198,8 @@ public:
 	{}
 	FString(const char* src);
 
+	char* Detach();		// use FString as allocated char*, FString became empty
+
 	inline const char *operator*() const
 	{
 		return (char*)DataPtr;
@@ -1377,8 +1382,8 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 -----------------------------------------------------------------------------*/
 
 extern FArchive *GDummySave;
-extern bool      GDisableXBox360;
 extern int       GForceGame;
+extern byte      GForcePlatform;
 
 
 /*-----------------------------------------------------------------------------

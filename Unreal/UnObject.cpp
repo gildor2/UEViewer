@@ -60,6 +60,9 @@ void UObject::EndLoad()
 		return;
 	}
 
+//#if PROFILE_LOADING
+//	appPrintProfiler();
+//#endif
 	guard(UObject::EndLoad);
 	// process GObjLoaded array
 	// NOTE: while loading one array element, array may grow!

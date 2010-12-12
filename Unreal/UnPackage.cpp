@@ -562,7 +562,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	if (checkDword1 == PACKAGE_FILE_TAG_REV)
 	{
 		ReverseBytes = true;
-		if (!GDisableXBox360) Platform = PLATFORM_XBOX360;
+		Platform     = PLATFORM_XBOX360;
 	}
 	*this << checkDword2;
 	Loader->Seek(0);
@@ -596,8 +596,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 
 	// read summary
 	*this << Summary;
-	ArVer         = Summary.FileVersion;
-	ArLicenseeVer = Summary.LicenseeVersion;
+//	ArVer         = Summary.FileVersion; -- already set by FPackageFileSummary serializer; plus, it may be overrided by DetectGame()
+//	ArLicenseeVer = Summary.LicenseeVersion;
 	Loader->SetupFrom(*this);
 	PKG_LOG(("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion));
 #if UNREAL3
@@ -710,8 +710,12 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				// Lineage sometimes uses Unicode strings ...
 				FString name;
 				*this << name;
+	#if 0
 				NameTable[i] = new char[name.Num()];
 				strcpy(NameTable[i], *name);
+	#else
+				NameTable[i] = name.Detach();
+	#endif
 #endif
 	#if AVA
 				if (Game == GAME_AVA)

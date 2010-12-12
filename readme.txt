@@ -67,6 +67,7 @@ Modified Unreal Engine 3:
   Enslaved: Odyssey to the West (XBox360)
   Medal of Honor 2010
   Berkanix
+  Destroy All Humans! Path of the Furon
 
 List of games with limited support:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -174,8 +175,14 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+09.12.2010
+- updated support for recent versions of the XBox360 UE3
+- updated TERA: The Exiled Realm of Arborea support
+- "-noxbox" has been replaced with "-ps3" switch
+
 29.11.2010
 - implemented support for the recent UE3 animations (September 2010+ UDK)
+- implemented support for the Destroy All Humans! Path of the Furon
 
 26.11.2010
 - updated UDK support for November 2010 version

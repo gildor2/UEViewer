@@ -281,6 +281,9 @@ static GameInfo games[] = {
 #	if ARMYOF2
 		G("Army of Two", ao2, GAME_ArmyOf2),
 #	endif
+#	if DOH
+		G("Destroy All Humans", doh, GAME_DOH),
+#	endif
 #	if HUXLEY
 		G("Huxley", huxley, GAME_Huxley),
 #	endif
@@ -469,7 +472,9 @@ static void Usage()
 			"    -noanim         disable loading of MeshAnimation classes\n"
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
-			"    -noxbox         disable XBox 360 code\n"	//?? change this!
+			"\n"
+			"Platform selection:\n"
+			"    -ps3            override platform autodetection to PS3\n"
 			"\n"
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
@@ -579,7 +584,7 @@ int main(int argc, char **argv)
 				OPT_BOOL ("nostat",  noStat)
 				OPT_BOOL ("noanim",  noAnim)
 				OPT_BOOL ("notex",   noTex)
-				OPT_BOOL ("noxbox",  GDisableXBox360)
+				OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
 			};
 			if (ProcessOption(ARRAY_ARG(options), opt))
 				continue;

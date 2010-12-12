@@ -2321,8 +2321,14 @@ public:
 #if MOH2010
 		if (Ar.Game == GAME_MOH2010) goto old_code;
 #endif
+#if TERA
+		if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overriden ArVer, so compare by ArLicenseeVer ...
+#endif
 		if (Ar.ArVer >= 577)
+		{
+		new_code:
 			Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
+		}
 #if TUROK
 		if (Ar.IsTurok)
 		{

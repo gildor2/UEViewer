@@ -164,16 +164,16 @@ struct FPackageFileSummary
 		}
 #endif
 #if UNREAL3
-//		if (S.FileVersion >= PACKAGE_V3)
+//		if (Ar.ArVer >= PACKAGE_V3)
 //		{
-			if (S.FileVersion >= 249)
+			if (Ar.ArVer >= 249)
 				Ar << S.HeadersSize;
 			else
 				S.HeadersSize = 0;
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
 	#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT				//?? special define ?
 			int midwayVer = 0;
-			if (Ar.Engine() == GAME_MIDWAY3 && S.LicenseeVersion >= 2)	//?? Wheelman not checked
+			if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 2)	//?? Wheelman not checked
 			{
 				int Tag;							// Tag == "A52 ", "MK8 ", "WMAN", "WOO " (Stranglehold), "EPIC" or "TNA "
 				int unk10;
@@ -182,7 +182,7 @@ struct FPackageFileSummary
 					Ar << unk10;
 			}
 	#endif // MIDWAY
-			if (S.FileVersion >= 269)
+			if (Ar.ArVer >= 269)
 				Ar << S.PackageGroup;
 //		}
 #endif // UNREAL3
@@ -216,7 +216,7 @@ struct FPackageFileSummary
 		}
 	#endif // WHEELMAN
 	#if STRANGLE
-		if (Ar.Game == GAME_Strangle && S.FileVersion >= 375)
+		if (Ar.Game == GAME_Strangle && Ar.ArVer >= 375)
 		{
 			int unk40;
 			Ar << unk40;
@@ -226,9 +226,9 @@ struct FPackageFileSummary
 		// de-obfuscate NameCount for Tera
 		if (Ar.Game == GAME_Tera && (S.PackageFlags & 8)) S.NameCount -= S.NameOffset;
 	#endif
-		if (S.FileVersion >= 415) // PACKAGE_V3
+		if (Ar.ArVer >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
-		if (S.FileVersion >= 623)
+		if (Ar.ArVer >= 623)
 			Ar << S.f38 << S.f3C << S.f40;
 #endif // UNREAL3
 #if SPLINTER_CELL
@@ -241,7 +241,7 @@ struct FPackageFileSummary
 		}
 #endif // SPLINTER_CELL
 #if RAGNAROK2
-		if (S.PackageFlags & 0x10000 && (S.FileVersion >= 0x80 && S.FileVersion < 0x88))	//?? unknown upper limit; known lower limit: 0x80
+		if (S.PackageFlags & 0x10000 && (Ar.ArVer >= 0x80 && Ar.ArVer < 0x88))	//?? unknown upper limit; known lower limit: 0x80
 		{
 			// encrypted Ragnarok Online archive header (data taken by archive analysis)
 			Ar.Game = GAME_Ragnarok2;
@@ -254,7 +254,7 @@ struct FPackageFileSummary
 			return Ar;								// other data is useless for us, and they are encrypted too
 		}
 #endif // RAGNAROK2
-		if (S.FileVersion < 68)
+		if (Ar.ArVer < 68)
 		{
 			int HeritageCount, HeritageOffset;
 			Ar << HeritageCount << HeritageOffset;	// not used
@@ -295,11 +295,11 @@ struct FPackageFileSummary
 			}
 		}
 #if UNREAL3
-//		if (S.FileVersion >= PACKAGE_V3)
+//		if (Ar.ArVer >= PACKAGE_V3)
 //		{
-			if (S.FileVersion >= 245)
+			if (Ar.ArVer >= 245)
 				Ar << S.EngineVersion;
-			if (S.FileVersion >= 277)
+			if (Ar.ArVer >= 277)
 				Ar << S.CookerVersion;
 	#if MASSEFF
 			// ... MassEffect has some additional structure here ...
@@ -317,11 +317,11 @@ struct FPackageFileSummary
 				if (Ar.ArLicenseeVer >= 39) Ar << unk4[0] << unk4[1];	// 2 ints: -1, -1
 			}
 	#endif // MASSEFF
-			if (S.FileVersion >= 334)
+			if (Ar.ArVer >= 334)
 				Ar << S.CompressionFlags << S.CompressedChunks;
-			if (S.FileVersion >= 482)
+			if (Ar.ArVer >= 482)
 				Ar << S.U3unk60;
-//			if (S.FileVersion >= 516)
+//			if (Ar.ArVer >= 516)
 //				Ar << some array ... (U3unk70)
 			// ... MassEffect has additional field here ...
 			// if (Ar.Game == GAME_MassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int

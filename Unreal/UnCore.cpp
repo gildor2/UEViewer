@@ -48,8 +48,8 @@
 //#define DEBUG_RAW_ARRAY		1
 
 
-bool GDisableXBox360 = false;
-int  GForceGame      = 0;
+int  GForceGame     = GAME_UNKNOWN;
+byte GForcePlatform = PLATFORM_UNKNOWN;
 
 
 #if PROFILE
@@ -70,7 +70,7 @@ void appPrintProfiler()
 	if (ProfileStartTime == -1) return;
 	printf("Loaded in %.2g sec, %d allocs, %.2f MBytes serialized in %d calls.\n",
 		(appMilliseconds() - ProfileStartTime) / 1000.0f, GNumAllocs, GSerializeBytes / (1024.0f * 1024.0f), GNumSerialize);
-	ProfileStartTime = -1;
+	appResetProfiler();
 }
 
 #endif // PROFILE
@@ -750,6 +750,9 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 #if AVA
 	if (Ar.Game == GAME_AVA && Ar.ArVer >= 436) goto new_ver;
 #endif
+#if DOH
+	if (Ar.Game == GAME_DOH) goto old_ver;
+#endif
 	if (Ar.ArVer >= 453)
 	{
 	new_ver:
@@ -765,6 +768,7 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 		assert(Ar.Tell() == SavePos + 4 + Array.Num() * ElementSize);	// check position
 		return Ar;
 	}
+old_ver:
 	// old version: no ElementSize property
 	Serializer(Ar, &Array);
 	return Ar;
@@ -875,6 +879,16 @@ FString::FString(const char* src)
 }
 
 
+char* FString::Detach()
+{
+	char* data = (char*)DataPtr;
+	DataPtr   = NULL;
+	DataCount = 0;
+	MaxCount  = 0;
+	return data;
+}
+
+
 FArchive& operator<<(FArchive &Ar, FString &S)
 {
 	guard(FString<<);
@@ -940,9 +954,16 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 
 void FArchive::DetectGame()
 {
-	if (GForceGame)
+	if (GForcePlatform != PLATFORM_UNKNOWN)
+		Platform = GForcePlatform;
+
+	if (GForceGame != GAME_UNKNOWN)
 	{
 		Game = GForceGame;
+#if TERA
+	#define OVERRIDE_TERA_VER		568
+		if (Game == GAME_Tera) ArVer = OVERRIDE_TERA_VER; // override file version
+#endif
 		return;
 	}
 
@@ -1050,6 +1071,9 @@ void FArchive::DetectGame()
 #if AVA
 	if (ArVer == 451 && (ArLicenseeVer >= 52 || ArLicenseeVer <= 53)) SET(GAME_AVA);
 #endif
+#if DOH
+	if (ArVer == 455 && ArLicenseeVer == 90)	SET(GAME_DOH);
+#endif
 #if TLR
 	if (ArVer == 507 && ArLicenseeVer == 11)	SET(GAME_TLR);
 #endif
@@ -1071,9 +1095,6 @@ void FArchive::DetectGame()
 //#if AA3
 //	if (ArVer == 568 && ArLicenseeVer == 0)		SET(GAME_AA3);	//!! LicenseeVer == 0 ! bad!
 //#endif
-#if TERA
-	if (ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) SET(GAME_Tera);
-#endif
 #if XMEN
 	if (ArVer == 568 && ArLicenseeVer == 101)	SET(GAME_XMen);
 #endif
@@ -1129,6 +1150,14 @@ void FArchive::DetectGame()
 	if ((ArVer == 511 && ArLicenseeVer == 145) ||		// PC version
 		(ArVer == 511 && ArLicenseeVer == 144))			// PS3 and XBox 360 version
 		SET(GAME_Transformers);
+#endif
+#if TERA
+	if ((ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) ||
+		(ArVer == 610 && ArLicenseeVer == 13))
+	{
+		SET(GAME_Tera);
+		ArVer = OVERRIDE_TERA_VER;
+	}
 #endif
 
 	if (check > 1)

@@ -377,7 +377,7 @@ struct FGPUVert3Float : FGPUVert3Common
 };
 
 //?? move to UnMeshTypes.h ?
-//?? checked with Enslaved and MOH2010
+//?? checked with Enslaved (XBox360) and MOH2010 (PC)
 //?? similar to FVectorIntervalFixed32 used in animation, but has different X/Y/Z bit count
 struct FVectorIntervalFixed32GPU
 {
@@ -516,15 +516,14 @@ struct FGPUSkin3
 			Ar << S.bUsePackedPosition << S.MeshExtension << S.MeshOrigin;
 
 		bool AllowPackedPosition = false;
-	#if ENSLAVED
-		if (Ar.Game == GAME_Enslaved)	AllowPackedPosition = true;
-	#endif
+		if (Ar.Platform == PLATFORM_XBOX360 || Ar.Platform == PLATFORM_PS3) AllowPackedPosition = true;
 	#if MOH2010
-		if (Ar.Game == GAME_MOH2010)	AllowPackedPosition = true;
+		if (Ar.Game == GAME_MOH2010) AllowPackedPosition = true;
 	#endif
 		//?? UE3 ignored this - forced !bUsePackedPosition in FGPUSkin3 serializer ?
 		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
-		//?? working bUsePackedPosition was found in Enslaved and MOH2010 only
+		//?? working bUsePackedPosition was found in all XBox360 games and in MOH2010 (PC) only
+		//?? + TRON Evolution (PS3)
 //		printf("data: %d %d (%g %g %g)+(%g %g %g)\n", S.bUseFullPrecisionUVs, S.bUsePackedPosition, FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
@@ -2630,7 +2629,23 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 		Ar << kdop1 << RAW_ARRAY(kdop2);
 	}
 	Ar << RAW_ARRAY(kDOPTriangles);
+#if DOH
+	if (Ar.Game == GAME_DOH && Ar.ArLicenseeVer >= 73)
+	{
+		{	// for lame VC6 ...
+		FVector			unk18;		// extra computed kDOP field
+		TArray<FVector>	unkA0;
+		int				unk74;
+		Ar << unk18;
+		Ar << InternalVersion;		// has InternalVersion = 0x2000F
+		Ar << unkA0 << unk74 << Lods;
+		}	// ...
+		goto done;
+	}
+#endif // DOH
+
 	Ar << InternalVersion;
+
 //	printf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
 //	printf("ver: %d\n", InternalVersion);
 	if (InternalVersion >= 17 && Ar.ArVer < 593)
@@ -2656,6 +2671,7 @@ done:
 
 	unguard;
 }
+
 
 void UStaticMesh::RestoreMesh3(const FStaticMeshLODModel &Lod)
 {

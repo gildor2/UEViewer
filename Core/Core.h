@@ -33,7 +33,7 @@
 		appError("assertion failed: %s\n", #x); \
 	}
 
-// helper declararion
+// helper declaration
 template<int> struct CompileTimeError;
 template<>    struct CompileTimeError<true> {};
 

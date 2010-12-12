@@ -39,6 +39,7 @@
 // requires UNREAL3
 #define XBOX360			1		// XBox360 resources
 #define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
+#define DOH				1		// Destroy All Humans
 #define ARMYOF2			1		// Army of Two
 #define MASSEFF			1		// Mass Effect
 #define MEDGE			1		// Mirror's Edge
