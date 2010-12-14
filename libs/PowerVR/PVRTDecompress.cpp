@@ -26,6 +26,9 @@
 #include "PVRTDecompress.h"
 #include "PVRTTexture.h"
 
+#undef assert
+#define assert(x)
+
 /*****************************************************************************
  * defines and consts
  *****************************************************************************/
@@ -103,6 +106,7 @@ void PVRTDecompressPVRTC(const void *pCompressedData,
              	1, 2, 4, 8, ... etc.
 				Returns FALSE for zero.
 *************************************************************************/
+#if 0
 int util_number_is_power_2( unsigned  input )
 {
   unsigned minus1;
@@ -112,6 +116,12 @@ int util_number_is_power_2( unsigned  input )
   minus1 = input - 1;
   return ( (input | minus1) == (input ^ minus1) ) ? 1 : 0;
 }
+#else
+inline bool util_number_is_power_2( unsigned input )
+{
+  return ( input & (input - 1) ) == 0;
+}
+#endif
 
 
 /*!***********************************************************************
@@ -309,6 +319,7 @@ static void InterpolateColours(const int ColourP[4],
 
 	int tmp1, tmp2;
 
+#if 0
 	int P[4], Q[4], R[4], S[4];
 
 	// Copy the colours
@@ -319,6 +330,12 @@ static void InterpolateColours(const int ColourP[4],
 		R[k] = ColourR[k];
 		S[k] = ColourS[k];
 	}
+#else
+	#define P ColourP
+	#define Q ColourQ
+	#define R ColourR
+	#define S ColourS
+#endif
 
 	// put the x and y values into the right range
 	v = (y & 0x3) | ((~y & 0x2) << 1);
@@ -351,25 +368,26 @@ static void InterpolateColours(const int ColourP[4],
 
 		Result[k] = tmp1;
 	}
+#undef P
+#undef Q
+#undef R
+#undef S
 
 	// Lop off the appropriate number of bits to get us to 8 bit precision
 	if(Do2bitMode)
 	{
 		// do RGB
-		for(k = 0; k < 3; k++)
-		{
-			Result[k] >>= 2;
-		}
-
+		Result[0] >>= 2;
+		Result[1] >>= 2;
+		Result[2] >>= 2;
 		Result[3] >>= 1;
 	}
 	else
 	{
 		// do RGB  (A is ok)
-		for(k = 0; k < 3; k++)
-		{
-			Result[k] >>= 1;
-		}
+		Result[0] >>= 1;
+		Result[1] >>= 1;
+		Result[2] >>= 1;
 	}
 
 	// sanity check
@@ -617,97 +635,93 @@ static void Decompress(AMTC_BLOCK_STRUCT *pCompressedData,
 
 		Note that this is a hideously inefficient way to do this!
 	*/
-	for(y = 0; y < YDim; y++)
+	/// Compiler comparison: VC6=0.81s, VC7=0.9s, VC8=0.74, VC9=0.79
+	for(BlkY = 0; BlkY < BlkYDim; BlkY++)
 	{
-		for(x = 0; x < XDim; x++)
+		BlkYp1 = LIMIT_COORD(BlkY+1, BlkYDim, AssumeImageTiles);
+
+		for(BlkX = 0; BlkX < BlkXDim; BlkX++)
 		{
-			// map this pixel to the top left neighbourhood of blocks
-			BlkX = (x - XBlockSize/2);
-			BlkY = (y - BLK_Y_SIZE/2);
-
-			BlkX = LIMIT_COORD(BlkX, XDim, AssumeImageTiles);
-			BlkY = LIMIT_COORD(BlkY, YDim, AssumeImageTiles);
-
-
-			BlkX /= XBlockSize;
-			BlkY /= BLK_Y_SIZE;
-
-			// compute the positions of the other 3 blocks
 			BlkXp1 = LIMIT_COORD(BlkX+1, BlkXDim, AssumeImageTiles);
-			BlkYp1 = LIMIT_COORD(BlkY+1, BlkYDim, AssumeImageTiles);
 
 			// Map to block memory locations
-			pBlocks[0][0] = pCompressedData +TwiddleUV(BlkYDim, BlkXDim, BlkY, BlkX);
-			pBlocks[0][1] = pCompressedData +TwiddleUV(BlkYDim, BlkXDim, BlkY, BlkXp1);
-			pBlocks[1][0] = pCompressedData +TwiddleUV(BlkYDim, BlkXDim, BlkYp1, BlkX);
-			pBlocks[1][1] = pCompressedData +TwiddleUV(BlkYDim, BlkXDim, BlkYp1, BlkXp1);
+			// compute the positions of the other 3 blocks
 
-			/*
-				extract the colours and the modulation information IF the previous values
-				have changed.
-			*/
-			if(memcmp(pPrevious, pBlocks, 4*sizeof(void*)) != 0)
+			if (BlkX > 0)
 			{
-				StartY = 0;
-				for(i = 0; i < 2; i++)
+				pBlocks[0][0] = pBlocks[0][1];
+				pBlocks[1][0] = pBlocks[1][1];
+				Colours5554[0][0] = Colours5554[0][1];
+				Colours5554[1][0] = Colours5554[1][1];
+			}
+			else
+			{
+				pBlocks[0][0] = pCompressedData + TwiddleUV(BlkYDim, BlkXDim, BlkY,   BlkX);
+				pBlocks[1][0] = pCompressedData + TwiddleUV(BlkYDim, BlkXDim, BlkYp1, BlkX);
+				Unpack5554Colour(pBlocks[0][0], Colours5554[0][0].Reps);
+				Unpack5554Colour(pBlocks[1][0], Colours5554[1][0].Reps);
+			}
+
+			pBlocks[0][1] = pCompressedData + TwiddleUV(BlkYDim, BlkXDim, BlkY,   BlkXp1);
+			pBlocks[1][1] = pCompressedData + TwiddleUV(BlkYDim, BlkXDim, BlkYp1, BlkXp1);
+			Unpack5554Colour(pBlocks[0][1], Colours5554[0][1].Reps);
+			Unpack5554Colour(pBlocks[1][1], Colours5554[1][1].Reps);
+
+			UnpackModulations(pBlocks[0][0], Do2bitMode, ModulationVals, ModulationModes, 0,          0);
+			UnpackModulations(pBlocks[1][0], Do2bitMode, ModulationVals, ModulationModes, 0,          BLK_Y_SIZE);
+			UnpackModulations(pBlocks[0][1], Do2bitMode, ModulationVals, ModulationModes, XBlockSize, 0);
+			UnpackModulations(pBlocks[1][1], Do2bitMode, ModulationVals, ModulationModes, XBlockSize, BLK_Y_SIZE);
+
+			y = BlkY * BLK_Y_SIZE + BLK_Y_SIZE/2;
+			for(int dy = 0; dy < BLK_Y_SIZE; dy++, y++)
+			{
+				y = LIMIT_COORD(y, YDim, AssumeImageTiles);
+
+				x = BlkX * XBlockSize + XBlockSize/2;
+				for(int dx = 0; dx < XBlockSize; dx++, x++)
 				{
-					StartX = 0;
-					for(j = 0; j < 2; j++)
+					x = LIMIT_COORD(x, XDim, AssumeImageTiles);
+
+					// decompress the pixel.  First compute the interpolated A and B signals
+					/// InterpolateColours: 0.4s
+					InterpolateColours(Colours5554[0][0].Reps[0],
+									   Colours5554[0][1].Reps[0],
+									   Colours5554[1][0].Reps[0],
+									   Colours5554[1][1].Reps[0],
+									   Do2bitMode, x, y,
+									   ASig);
+
+					InterpolateColours(Colours5554[0][0].Reps[1],
+									   Colours5554[0][1].Reps[1],
+									   Colours5554[1][0].Reps[1],
+									   Colours5554[1][1].Reps[1],
+									   Do2bitMode, x, y,
+									   BSig);
+
+					/// GetModulationValue: 0.1s
+					GetModulationValue(x,y, Do2bitMode, (const int (*)[16])ModulationVals, (const int (*)[16])ModulationModes,
+									   &Mod, &DoPT);
+
+					// compute the modulated colour
+					for(i = 0; i < 4; i++)
 					{
-						Unpack5554Colour(pBlocks[i][j], Colours5554[i][j].Reps);
-
-						UnpackModulations(pBlocks[i][j],
-										  Do2bitMode,
-										  ModulationVals,
-										  ModulationModes,
-										  StartX, StartY);
-
-						StartX += XBlockSize;
+						Result[i] = ASig[i] * 8 + Mod * (BSig[i] - ASig[i]);
+						Result[i] >>= 3;
 					}
 
-					StartY += BLK_Y_SIZE;
-				}
+					if(DoPT)
+						Result[3] = 0;
 
-				// make a copy of the new pointers
-				memcpy(pPrevious, pBlocks, 4*sizeof(void*));
-			}
-
-			// decompress the pixel.  First compute the interpolated A and B signals
-			InterpolateColours(Colours5554[0][0].Reps[0],
-							   Colours5554[0][1].Reps[0],
-							   Colours5554[1][0].Reps[0],
-							   Colours5554[1][1].Reps[0],
-							   Do2bitMode, x, y,
-							   ASig);
-
-			InterpolateColours(Colours5554[0][0].Reps[1],
-							   Colours5554[0][1].Reps[1],
-							   Colours5554[1][0].Reps[1],
-							   Colours5554[1][1].Reps[1],
-							   Do2bitMode, x, y,
-							   BSig);
-
-			GetModulationValue(x,y, Do2bitMode, (const int (*)[16])ModulationVals, (const int (*)[16])ModulationModes,
-							   &Mod, &DoPT);
-
-			// compute the modulated colour
-			for(i = 0; i < 4; i++)
-			{
-				Result[i] = ASig[i] * 8 + Mod * (BSig[i] - ASig[i]);
-				Result[i] >>= 3;
-			}
-
-			if(DoPT)
-				Result[3] = 0;
-
-			// Store the result in the output image
-			uPosition = (x+y*XDim)<<2;
-			pResultImage[uPosition+0] = (U8)Result[0];
-			pResultImage[uPosition+1] = (U8)Result[1];
-			pResultImage[uPosition+2] = (U8)Result[2];
-			pResultImage[uPosition+3] = (U8)Result[3];
-		}
-	}
+					// Store the result in the output image
+					uPosition = (x+y*XDim)<<2;
+					pResultImage[uPosition+0] = (U8)Result[0];
+					pResultImage[uPosition+1] = (U8)Result[1];
+					pResultImage[uPosition+2] = (U8)Result[2];
+					pResultImage[uPosition+3] = (U8)Result[3];
+				} // dx
+			} // dy
+		} // BlkX
+	} // BlkY
 }
 
 /****************************

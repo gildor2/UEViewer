@@ -43,6 +43,7 @@ Modified Unreal Engine 3:
   Mass Effect
   BlackSite: Area 51
   Mortal Kombat vs. DC Universe (XBox360)
+  Turok
   TNA iMPACT! (XBox360)
   Army of Two (XBox360)
   Mirror's Edge
@@ -176,6 +177,13 @@ expect much from this.
 
 Changes:
 ~~~~~~~~
+14.12.2010
+- implemented support for Turok animations and StaticMesh
+
+13.12.2010
+- optimized PVRTC decompression code - works 3.5 times faster
+- implemented UE3/iOS material specularity
+
 12.12.2010
 - implemented iOS (iPhone/iPad) texture support, activated with "-ios" switch
 

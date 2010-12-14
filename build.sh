@@ -26,7 +26,6 @@ fi
 
 # update makefile when needed
 # [ $makefile -ot $project ] &&
-#?? add vc_ver here
 $root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 
 # build

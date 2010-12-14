@@ -99,9 +99,13 @@ struct CMaterialParams
 	UUnrealMaterial *SpecPower;
 	UUnrealMaterial *Opacity;
 	UUnrealMaterial *Emissive;
+	// mobile
+	bool			bUseMobileSpecular;
+	float			MobileSpecularPower;
+	int				MobileSpecularMask;		// EMobileSpecularMask
 	// tweaks
-	bool SpecularFromAlpha;
-	bool OpacityFromAlpha;
+	bool			SpecularFromAlpha;
+	bool			OpacityFromAlpha;
 };
 
 
@@ -1623,13 +1627,35 @@ _ENUM(EBlendMode)
 	_E(BLEND_Modulate)
 };
 
-enum EMaterialLightingModel
+enum EMaterialLightingModel	// unused now
 {
 	MLM_Phong,
 	MLM_NonDirectional,
 	MLM_Unlit,
 	MLM_SHPRT,
 	MLM_Custom
+};
+
+enum EMobileSpecularMask
+{
+	MSM_Constant,
+	MSM_Luminance,
+	MSM_DiffuseRed,
+	MSM_DiffuseGreen,
+	MSM_DiffuseBlue,
+	MSM_DiffuseAlpha,
+	MSM_MaskTextureRGB
+};
+
+_ENUM(EMobileSpecularMask)
+{
+	_E(MSM_Constant),
+	_E(MSM_Luminance),
+	_E(MSM_DiffuseRed),
+	_E(MSM_DiffuseGreen),
+	_E(MSM_DiffuseBlue),
+	_E(MSM_DiffuseAlpha),
+	_E(MSM_MaskTextureRGB)
 };
 
 
@@ -1641,6 +1667,15 @@ public:
 	UTexture3		*FlattenedTexture;
 	UTexture3		*MobileBaseTexture;
 	UTexture3		*MobileNormalTexture;
+	bool			bUseMobileSpecular;
+	float			MobileSpecularPower;
+	EMobileSpecularMask MobileSpecularMask;
+	UTexture3		*MobileMaskTexture;
+
+	UMaterialInterface()
+	:	MobileSpecularPower(16)
+//	,	MobileSpecularMask(MSM_Constant)
+	{}
 
 	BEGIN_PROP_TABLE
 		PROP_DROP(PreviewMesh)
@@ -1649,10 +1684,21 @@ public:
 		PROP_OBJ(FlattenedTexture)
 		PROP_OBJ(MobileBaseTexture)
 		PROP_OBJ(MobileNormalTexture)
+		PROP_DROP(bMobileAllowFog)
+		PROP_BOOL(bUseMobileSpecular)
+		PROP_DROP(MobileSpecularColor)
+		PROP_DROP(bUseMobilePixelSpecular)
+		PROP_FLOAT(MobileSpecularPower)
+		PROP_ENUM2(MobileSpecularMask, EMobileSpecularMask)
+		PROP_OBJ(MobileMaskTexture)
 #if MASSEFF
 		PROP_DROP(m_Guid)
 #endif
 	END_PROP_TABLE
+
+#if RENDERING
+	virtual void GetParams(CMaterialParams &Params) const;
+#endif
 };
 
 
@@ -1879,6 +1925,7 @@ public:
 #define REGISTER_MATERIAL_ENUMS_U3		\
 	REGISTER_ENUM(EPixelFormat)			\
 	REGISTER_ENUM(ETextureAddress)		\
-	REGISTER_ENUM(EBlendMode)
+	REGISTER_ENUM(EBlendMode)			\
+	REGISTER_ENUM(EMobileSpecularMask)
 
 #endif // __UNMATERIAL_H__

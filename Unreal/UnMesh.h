@@ -1611,6 +1611,7 @@ struct FSkeletalMeshLODInfo
 		PROP_ARRAY(LODMaterialMap, int)
 		PROP_ARRAY(bEnableShadowCasting, bool)
 		PROP_DROP(TriangleSorting)
+		PROP_DROP(TriangleSortSettings)
 #if FRONTLINES
 		PROP_DROP(bExcludeFromConsoles)
 		PROP_DROP(bCanRemoveForLowDetail)
@@ -1736,6 +1737,7 @@ public:
 		PROP_DROP(ClothStretchStiffness)
 		PROP_DROP(ClothDensity)
 		PROP_DROP(ClothFriction)
+		PROP_DROP(ClothTearFactor)
 #	if MEDGE
 		PROP_DROP(NumUVSets)
 #	endif
@@ -2182,6 +2184,38 @@ _ENUM(AnimationKeyFormat)
 };
 
 
+#if TUROK
+
+struct FBulkKeyframeDataEntry
+{
+	DECLARE_STRUCT(FBulkKeyframeDataEntry);
+	int						mStartKeyFrame;
+	int						mEndKeyFrame;
+	int						mBulkDataBlock;
+	int						mUncompressedDataOffset;
+
+	BEGIN_PROP_TABLE
+		PROP_INT(mStartKeyFrame)
+		PROP_INT(mEndKeyFrame)
+		PROP_INT(mBulkDataBlock)
+		PROP_INT(mUncompressedDataOffset)
+	END_PROP_TABLE
+};
+
+struct FBulkDataBlock
+{
+	DECLARE_STRUCT(FBulkDataBlock);
+	int						mUncompressedDataSize;
+	TArray<byte>			mBulkData;		// uses native serializer
+
+	BEGIN_PROP_TABLE
+		PROP_INT(mUncompressedDataSize)
+	END_PROP_TABLE
+};
+
+#endif // TUROK
+
+
 #if MASSEFF
 // Bioware has separated some common UAnimSequence settings
 
@@ -2219,6 +2253,9 @@ public:
 	AnimationKeyFormat		KeyEncodingFormat;				// GoW2+
 	TArray<int>				CompressedTrackOffsets;
 	TArray<byte>			CompressedByteStream;
+#if TUROK
+	TArray<FBulkKeyframeDataEntry> KeyFrameData;
+#endif
 #if MASSEFF
 	UBioAnimSetData			*m_pBioAnimSetData;
 #endif
@@ -2241,6 +2278,9 @@ public:
 		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
 		PROP_ARRAY(CompressedTrackOffsets, int)
+#if TUROK
+		PROP_ARRAY(KeyFrameData, FBulkKeyframeDataEntry)
+#endif
 #if MASSEFF
 		PROP_OBJ(m_pBioAnimSetData)
 #endif
@@ -2251,6 +2291,8 @@ public:
 		//!! additive animations
 		PROP_DROP(bIsAdditive)
 		PROP_DROP(AdditiveRefName)
+		//!! curves
+		PROP_DROP(CurveData)
 #if TLR
 		PROP_DROP(ActionID)
 		PROP_DROP(m_ExtraData)
@@ -2309,6 +2351,9 @@ public:
 		guard(UAnimSequence::Serialize);
 		assert(Ar.ArVer >= 372);		// older version is not yet ready
 		Super::Serialize(Ar);
+#if TUROK
+		if (Ar.Game == GAME_Turok) return;
+#endif
 #if MASSEFF
 		if (Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110)
 		{
@@ -2329,13 +2374,6 @@ public:
 		new_code:
 			Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
 		}
-#if TUROK
-		if (Ar.IsTurok)
-		{
-			Ar << RawAnimData;
-			return;
-		}
-#endif // TUROK
 	old_code:
 		Ar << CompressedByteStream;
 		unguard;
@@ -2364,7 +2402,14 @@ public:
 	TArray<FName>			TrackBoneNames;
 	TArray<UAnimSequence*>	Sequences;
 	TArray<FName>			UseTranslationBoneNames;
+	TArray<FName>			ForceMeshTranslationBoneNames;
 	FName					PreviewSkelMeshName;
+#if TUROK
+	TArray<FBulkDataBlock>	BulkDataBlocks;
+	int						KeyFrameSize;
+	int						RotationChannels;
+	int						TranslationChannels;
+#endif // TUROK
 #if MASSEFF
 	UBioAnimSetData			*m_pBioAnimSetData;
 #endif
@@ -2380,12 +2425,17 @@ public:
 		PROP_ARRAY(TrackBoneNames, FName)
 		PROP_ARRAY(Sequences, UObject*)
 		PROP_ARRAY(UseTranslationBoneNames, FName)
+		PROP_ARRAY(ForceMeshTranslationBoneNames, FName)
 		PROP_NAME(PreviewSkelMeshName)
+#if TUROK
+		PROP_ARRAY(BulkDataBlocks, FBulkDataBlock)
+		PROP_INT(KeyFrameSize)
+		PROP_INT(RotationChannels)
+		PROP_INT(TranslationChannels)
+#endif // TUROK
 #if MASSEFF
 		PROP_OBJ(m_pBioAnimSetData)
 #endif
-		//!! unsupported
-		PROP_DROP(ForceMeshTranslationBoneNames)
 #if BATMAN
 		PROP_DROP(SkeletonName)
 #endif
@@ -2397,6 +2447,16 @@ public:
 	{
 		guard(UAnimSet::Serialize);
 		UObject::Serialize(Ar);
+#if TUROK
+		if (Ar.Game == GAME_Turok)
+		{
+			// native part of structure
+			//?? can simple skip to the end of file - these data are not used
+			for (int i = 0; i < BulkDataBlocks.Num(); i++)
+				Ar << BulkDataBlocks[i].mBulkData;
+			return;
+		}
+#endif // TUROK
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 40)
 		{
@@ -3068,6 +3128,10 @@ public:
 #define REGISTER_MESH_CLASSES_BIO	\
 	/*REGISTER_CLASS(USharedSkeletonDataMetadata)*/ \
 	REGISTER_CLASS(UAnimationPackageWrapper)
+
+#define REGISTER_MESH_CLASSES_TUROK \
+	REGISTER_CLASS(FBulkKeyframeDataEntry) \
+	REGISTER_CLASS(FBulkDataBlock)
 
 #define REGISTER_MESH_CLASSES_MASSEFF \
 	REGISTER_CLASS(UBioAnimSetData)

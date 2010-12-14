@@ -1955,6 +1955,13 @@ struct FStaticMeshSection3
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshSection3 &S)
 	{
 		guard(FStaticMeshSection3<<);
+#if TUROK
+		if (Ar.Game == GAME_Turok && Ar.ArLicenseeVer >= 57)
+		{
+			// no S.Mat
+			return Ar << S.f10 << S.f14 << S.FirstIndex << S.NumFaces << S.f24 << S.f28;
+		}
+#endif // TUROK
 		Ar << S.Mat << S.f10 << S.f14;
 		if (Ar.ArVer >= 473) Ar << S.bEnableShadowCasting;
 		Ar << S.FirstIndex << S.NumFaces << S.f24 << S.f28;
@@ -2138,6 +2145,15 @@ struct FStaticMeshUVStream3
 	{
 		Ar << S.NumTexCoords << S.ItemSize << S.NumVerts;
 		S.bUseFullPrecisionUVs = true;
+#if TUROK
+		if (Ar.Game == GAME_Turok && Ar.ArLicenseeVer >= 59)
+		{
+			int HalfPrecision, unk28;
+			Ar << HalfPrecision << unk28;
+			S.bUseFullPrecisionUVs = !HalfPrecision;
+			assert(S.bUseFullPrecisionUVs);
+		}
+#endif // TUROK
 #if AVA
 		if (Ar.Game == GAME_AVA && Ar.ArVer >= 441) goto new_ver;
 #endif
@@ -2612,6 +2628,13 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 #endif // TRANSFORMERS
 
 	Ar << Bounds << BodySetup;
+#if TUROK
+	if (Ar.Game == GAME_Turok && Ar.ArLicenseeVer >= 59)
+	{
+		int unkFC, unk100;
+		Ar << unkFC << unk100;
+	}
+#endif // TUROK
 	if (Ar.ArVer < 315)
 	{
 		UObject *unk;
@@ -2646,8 +2669,11 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 
 	Ar << InternalVersion;
 
-//	printf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
-//	printf("ver: %d\n", InternalVersion);
+#if 0
+	printf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
+	printf("ver: %d\n", InternalVersion);
+#endif
+
 	if (InternalVersion >= 17 && Ar.ArVer < 593)
 	{
 		TArray<FName> unk;			// some text properties; ContentTags ? (switched from binary to properties)

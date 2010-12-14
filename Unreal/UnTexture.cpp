@@ -255,7 +255,7 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 		PostProcessAlpha(dst, width, height);
 
 	return dst;
-	unguardf(("fmt=%d", SrcFormat));
+	unguardf(("fmt=%s(%d)", EnumToName("ETextureFormat", SrcFormat), SrcFormat));
 }
 
 
@@ -339,7 +339,7 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 
 
 static byte *DecompressXBox360(const byte* TexData, int DataSize, ETextureFormat intFormat, int USize, int VSize,
-	const char* Name, const char*& Error, int Game)
+	const char* Name, char*& Error, int Game)
 {
 	guard(DecompressXBox360);
 

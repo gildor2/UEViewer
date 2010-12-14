@@ -42,6 +42,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_MATERIAL_CLASSES_U3
 	REGISTER_MESH_CLASSES_U3
 #endif
+#if TUROK
+	REGISTER_MESH_CLASSES_TUROK
+#endif
 #if MASSEFF
 	REGISTER_MESH_CLASSES_MASSEFF
 #endif
@@ -274,6 +277,9 @@ static GameInfo games[] = {
 #	endif
 #	if MKVSDC
 		G("Mortal Kombat vs. DC Universe", mkvsdc, GAME_MK),
+#	endif
+#	if TUROK
+		G("Turok", turok, GAME_Turok),
 #	endif
 #	if TNA_IMPACT
 		G("TNA iMPACT!", tna, GAME_TNA),

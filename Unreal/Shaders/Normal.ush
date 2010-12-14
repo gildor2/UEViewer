@@ -140,7 +140,7 @@ void PixelShaderMain()
 #endif
 	color.a = GetMaterialOpacity(TexCoord);
 
-//	color.rgb += pow(1.0 - dot(n, tangentEye), 3.5) * vec3(1.0);	// Fresnel
+//	color.rgb += pow(1.0 - dot(n, tangentEye), 3.5) * vec3(0.5);	// Fresnel
 #ifdef NORMALMAP
 	color.rgb = pow(dot(n, tangentEye), 3.5) * vec3(1.0);
 #endif

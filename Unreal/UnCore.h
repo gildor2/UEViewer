@@ -1171,13 +1171,20 @@ template<class TK, class TV> struct TMapPair
 	TK		Key;
 	TV		Value;
 
-	friend FArchive& operator<<(FArchive &Ar, TMapPair &V);
+#if _MSC_VER != 1200		// not for VC6
+	friend FArchive& operator<<(FArchive &Ar, TMapPair &V)
+	{
+		return Ar << V.Key << V.Value;
+	}
+#endif
 };
 
+#if _MSC_VER == 1200		// for VC6
 template<class TK, class TV> FArchive& operator<<(FArchive &Ar, TMapPair<TK, TV> &V)
 {
 	return Ar << V.Key << V.Value;
 }
+#endif
 
 template<class TK, class TV> class TMap : public TArray<TMapPair<TK, TV> >
 {

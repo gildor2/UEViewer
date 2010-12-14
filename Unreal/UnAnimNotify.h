@@ -19,9 +19,17 @@ class UAnimNotify_Script : public UAnimNotify
 	DECLARE_CLASS(UAnimNotify_Script, UAnimNotify);
 public:
 	FName			NotifyName;
+#if UNREAL3
+	FName			NotifyTickName;
+	FName			NotifyEndName;
+#endif
 
 	BEGIN_PROP_TABLE
 		PROP_NAME(NotifyName)
+#if UNREAL3
+		PROP_NAME(NotifyTickName)
+		PROP_NAME(NotifyEndName)
+#endif
 	END_PROP_TABLE
 };
 
@@ -130,6 +138,8 @@ public:
 		PROP_DROP(bFollowActor)
 		PROP_DROP(BoneName)
 		PROP_DROP(bIgnoreIfActorHidden)
+		PROP_DROP(VolumeMultiplier)
+		PROP_DROP(PitchMultiplier)
 #endif
 	END_PROP_TABLE
 };

@@ -49,6 +49,7 @@ function ut2()    { run1 "$UT2" $*;  }
 function ut3()    { run1 "$UT3" $*;  }
 function gow()    { run1 "$GOW" $*;  }
 function gow2()   { run1 "$GOW2" $*; }
+function ib()     { run1 "$IB" -ios $*; }
 function uc2()    { run1 "$UC2" $*;  }
 function rund()   { run1 "data" $*;  }
 function scell()  { run1 "data/SplinterCell" $*;  }
@@ -68,6 +69,7 @@ CheckDir UT2 {c,d,e}:/games/{unreal,unreal~1}/ut2004
 CheckDir UT3 {c,d,e}:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 "C:/!umodel-data/GearsOfWar2_X360" data/3X/GearsOfWar2_X360
+CheckDir IB data/3i/InfinityBlade
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2" data/UnrealChampionship2
 CheckDir L2 "C:/!umodel-data/Lineage2"
 CheckDir BIO {c,e}:/GAMES/BioShock
@@ -107,7 +109,7 @@ case "" in
 
 "")
 #	run1 data/3i/EpicCitadel -ios CastleMap.xxx T_FX_Flare_02
-	run1 data/3i/InfinityBlade -ios -nomesh -noanim BOSS_10ft_SnS_Thane_SF.xxx
+	ib BOSS_10ft_SnS_Thane_SF.xxx
 #!!	run1 "data/.possible/Splinter Cell Conviction" Conviction.umd
 	# Transformers
 #	run1 "data/3/Transformers War for Cybertron" -meshes A1_IAC_DecoPlaza_Design_m.xxx

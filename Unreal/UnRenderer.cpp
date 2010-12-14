@@ -348,10 +348,26 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	subst[0] = Params.Normal    ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"  : "vec3(0.0, 0.0, 1.0)";
 	subst[1] = specularExpr;
 	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";
-	subst[3] = opacityExpr;	//?? Params.Opacity   ? "texture2D(opacTex, TexCoord).g"                : "1.0";
+	subst[3] = opacityExpr;
 	subst[4] = Params.Emissive  ? "vec3(0.5,0.5,1.0) * texture2D(emisTex, TexCoord).g * 2.0" : "vec3(0.0)"; //?? not scaled, because sometimes looks ugly ...
 	// finalize paramerers and make shader
 	subst[5] = NULL;
+
+	if (Params.bUseMobileSpecular)
+	{
+		static const char* mobileSpecExpr[] = {				// EMobileSpecularMask values
+			"vec3(1.0)",									// MSM_Constant
+			"texture2D(diffTex, TexCoord).rgb * 2.0",		// MSM_Luminance
+			"texture2D(diffTex, TexCoord).r * vec3(2.0)",	// MSM_DiffuseRed
+			"texture2D(diffTex, TexCoord).g * vec3(2.0)",	// MSM_DiffuseGreen
+			"texture2D(diffTex, TexCoord).b * vec3(2.0)",	// MSM_DiffuseBlue
+			"texture2D(diffTex, TexCoord).a * vec3(2.0)",	// MSM_DiffuseAlpha
+			"texture2D(opacTex, TexCoord).rgb * 2.0"		// MSM_MaskTextureRGB
+		};
+//??		check presence of textures used in a shader ?
+		subst[1] = mobileSpecExpr[Params.MobileSpecularMask];
+		subst[2] = va("%f * 1.0", Params.MobileSpecularPower);	//??
+	}
 
 	glActiveTexture(GL_TEXTURE0);
 
@@ -940,6 +956,22 @@ void UCombiner::GetParams(CMaterialParams &Params) const
 
 #if UNREAL3
 
+
+void UMaterialInterface::GetParams(CMaterialParams &Params) const
+{
+#if IPHONE
+	//?? these parameters are common for UMaterial3 and UMaterialInstanceConstant (UMaterialInterface)
+	if (FlattenedTexture)		Params.Diffuse = FlattenedTexture;
+	if (MobileBaseTexture)		Params.Diffuse = MobileBaseTexture;
+	if (MobileNormalTexture)	Params.Normal  = MobileNormalTexture;
+	if (MobileMaskTexture)		Params.Opacity = MobileMaskTexture;
+	Params.bUseMobileSpecular  = bUseMobileSpecular;
+	Params.MobileSpecularPower = MobileSpecularPower;
+	Params.MobileSpecularMask  = MobileSpecularMask;
+#endif // IPHONE
+}
+
+
 //!! NOTE: when using this function sharing of shader between MaterialInstanceConstant's is impossible
 //!! (shader may differs because of different texture sets - some available, some - not)
 
@@ -1014,12 +1046,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 {
 	guard(UMaterial3::GetParams);
 
-#if IPHONE
-	//?? these parameters are common for UMaterial3 and UMaterialInstanceConstant (UMaterialInterface)
-	if (FlattenedTexture)  Params.Diffuse = FlattenedTexture;
-	if (MobileBaseTexture) Params.Diffuse = MobileBaseTexture;
-	if (MobileNormalTexture) Params.Normal = MobileNormalTexture;
-#endif // IPHONE
+	Super::GetParams(Params);
 
 	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0;
 #define DIFFUSE(check,weight)			\
@@ -1179,6 +1206,8 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 
 	// get params from linked UMaterial3
 	if (Parent) Parent->GetParams(Params);
+
+	Super::GetParams(Params);
 
 	// get local parameters
 	bool normalSet = false;

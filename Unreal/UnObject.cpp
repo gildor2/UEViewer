@@ -440,24 +440,23 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			{
 				// modern UE3 enum saved as FName
 				assert(Tag.DataSize == 8);
+				FName EnumValue;
+				Ar << EnumValue;
 				if (Prop->TypeName[0] == '#')
 				{
-					FName tmpName;
-					Ar << tmpName;
-					int tmpInt = NameToEnum(Prop->TypeName+1, *tmpName);
+					int tmpInt = NameToEnum(Prop->TypeName+1, *EnumValue);
 					if (tmpInt == ENUM_UNKNOWN)
-						appNotify("unknown member %s of enum %s", *tmpName, Prop->TypeName+1);
+						appNotify("unknown member %s of enum %s", *EnumValue, Prop->TypeName+1);
 					assert(tmpInt >= 0 && tmpInt <= 255);
 					*value = tmpInt;
+					PROP_DBG("%s", *EnumValue);
 				}
 				else
 				{
-					// this property is not marked using PROP_ENUM2
+					// error: this property is not marked using PROP_ENUM2
 					TYPE("byte");
-					FName EnumValue;
-					Ar << EnumValue;
-					//!! map string -> byte
 					appNotify("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
+//					PROP_DBG("%s", PROP(byte));
 				}
 			}
 			else
@@ -468,8 +467,8 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 					TYPE("byte");
 				}
 				Ar << PROP(byte);
+				PROP_DBG("%d", PROP(byte));
 			}
-			PROP_DBG("%d", PROP(byte));
 			break;
 
 		case NAME_IntProperty:
