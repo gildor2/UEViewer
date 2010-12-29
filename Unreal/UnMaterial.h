@@ -451,6 +451,13 @@ public:
 		// (see UOpenGLRenderDevice::SetTexture())
 		// Note: UT2 does not use paletted textures, but HP3 does ...
 		Colors[0].A = 0;
+#if UNDYING
+		if (Ar.Game == GAME_Undying)
+		{
+			int unk;
+			Ar << unk;
+		}
+#endif // UNDYING
 		unguard;
 	}
 };
@@ -1581,6 +1588,9 @@ public:
 #if HUXLEY
 		if (Ar.Game == GAME_Huxley) goto skip_rest_quiet;
 #endif
+#if DCU_ONLINE
+		if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0x1700) return;
+#endif
 		if (Ar.ArVer >= 567)
 			Ar << TextureFileCacheGuid;
 		if (Ar.ArVer >= 674)
@@ -1608,6 +1618,19 @@ public:
 	virtual void Release();
 #endif
 };
+
+
+class ULightMapTexture2D : public UTexture2D
+{
+	DECLARE_CLASS(ULightMapTexture2D, UTexture2D)
+public:
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		Ar.Seek(Ar.GetStopper());
+	}
+};
+
 
 enum EBlendMode
 {
@@ -1905,6 +1928,7 @@ public:
 #define REGISTER_MATERIAL_CLASSES_U3	\
 	REGISTER_CLASS_ALIAS(UMaterial3, UMaterial) \
 	REGISTER_CLASS(UTexture2D)			\
+	REGISTER_CLASS(ULightMapTexture2D)	\
 	REGISTER_CLASS(FTextureParameterValue) \
 	REGISTER_CLASS(UMaterialInstanceConstant)
 

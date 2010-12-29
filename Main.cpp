@@ -192,6 +192,7 @@ struct GameInfo
 static GameInfo games[] = {
 	// Unreal Engine 1
 #if UNREAL1
+		G("Unreal Engine 1", ue1, GAME_UE1),
 		G1("Unreal 1"),
 		G1("Unreal Tournament 1 (UT99)"),
 		G1("The Wheel of Time"),
@@ -201,9 +202,13 @@ static GameInfo games[] = {
 	#if RUNE
 		G1("Rune"),
 	#endif
+	#if UNDYING
+		G("Undying", undying, GAME_Undying),
+	#endif
 #endif // UNREAL1
 
 	// Unreal Engine 2
+		G("Unreal Engine 2", ue2, GAME_UE2),
 #if UT2
 		G("Unreal Tournament 2003,2004", ut2, GAME_UT2),
 #endif
@@ -254,6 +259,7 @@ static GameInfo games[] = {
 
 	// Unreal Engine 3
 #if UNREAL3
+		G("Unreal Engine 3", ue3, GAME_UE3),
 		G3("Unreal Tournament 3"),
 		G3("Gears of War"),
 #	if XBOX360
@@ -280,6 +286,9 @@ static GameInfo games[] = {
 #	endif
 #	if TUROK
 		G("Turok", turok, GAME_Turok),
+#	endif
+#	if FURY
+		G("Fury", fury, GAME_Fury),
 #	endif
 #	if TNA_IMPACT
 		G("TNA iMPACT!", tna, GAME_TNA),
@@ -472,8 +481,7 @@ static void Usage()
 			"    -path=PATH      path to game installation directory; if not specified,\n"
 			"                    program will search for packages in current directory\n"
 			"    -game=tag       override game autodetection (see -taglist for variants)\n"
-			"    -pkg=package    load extra package (in addition to <package>\n"
-			"    -meshes         view meshes only\n"
+			"    -pkg=package    load extra package (in addition to <package>)\n"
 			"\n"
 			"Compatibility options:\n"
 			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
@@ -486,6 +494,9 @@ static void Usage()
 			"    -ps3            override platform autodetection to PS3\n"
 			"    -ios            set platform to iOS (iPhone/iPad)\n"
 			"\n"
+			"Viewer options:\n"
+			"    -meshes         view meshes only\n"
+ 			"\n"
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
 			"    -all            export all linked objects too\n"
@@ -640,14 +651,17 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	const char *argPkgName   = argv[arg];
+	if (arg >= argc) Usage();									// no space for package name
+
+	const char *argPkgName   = argv[arg++];
 	if (!argPkgName) Usage();
 	const char *argObjName   = NULL;
 	const char *argClassName = NULL;
-	if (arg < argc-1)
-		argObjName   = argv[arg+1];
-	if (arg < argc-2)
-		argClassName = argv[arg+2];
+	if (arg < argc)
+		argObjName   = argv[arg++];
+	if (arg < argc)
+		argClassName = argv[arg++];
+	if (arg != argc) Usage();									// extera argument found
 
 	// register exporters
 	if (!md5 && !GExtendedPsk)
@@ -746,18 +760,27 @@ int main(int argc, char **argv)
 	// get requested object info
 	if (argObjName)
 	{
-		int idx = Package->FindExport(argObjName, argClassName, true);
-		if (idx == INDEX_NONE)
+		// load specific object(s)
+		int found = 0;
+		int idx = -1;
+		while (true)
+		{
+			idx = Package->FindExport(argObjName, argClassName, idx + 1);
+			if (idx == INDEX_NONE) break;
+			found++;
+
+			const char *className = Package->GetObjectName(Package->ExportTable[idx].ClassIndex);
+			// setup NotifyInfo to describe object
+			appSetNotifyHeader("%s:  %s'%s'", argPkgName, className, argObjName);
+			// create object from package
+			Obj = Package->CreateExport(idx);
+		}
+		if (!found)
 		{
 			printf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
 			exit(1);
 		}
-		const char *className = Package->GetObjectName(Package->ExportTable[idx].ClassIndex);
-
-		// setup NotifyInfo to describe object
-		appSetNotifyHeader("%s:  %s'%s'", argPkgName, className, argObjName);
-		// create object from package
-		Obj = Package->CreateExport(idx);
+		printf("Found %d objects with a name \"%s\"\n", found, argObjName);
 	}
 	else
 	{
@@ -790,7 +813,7 @@ int main(int argc, char **argv)
 			UnPackage *Package2 = UnPackage::LoadPackage(extraPackages[i]);
 			if (!Package)
 			{
-				printf("WARNING: unable to find/load package %s\n", argPkgName);
+				printf("WARNING: unable to find/load package %s\n", extraPackages[i]);
 				continue;
 			}
 			// create exports (the same code as above)

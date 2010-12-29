@@ -1216,7 +1216,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		const FTextureParameterValue &P = TextureParameterValues[i];
 //		if (!P.ParameterValue) continue;
 		const char *p = P.ParameterName;
-		if (appStristr(p, "diff") || appStristr(p, "color"))
+		if (appStristr(p, "dif") || appStristr(p, "color"))
 			Params.Diffuse = P.ParameterValue;
 		else if (appStristr(p, "norm") && !appStristr(p, "fx") && !normalSet)	// no NormalFX
 		{

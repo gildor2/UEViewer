@@ -765,7 +765,8 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 				Array.Num() ? float(Ar.Tell() - SavePos - 4) / Array.Num() : 0,
 				Ar.Tell());
 #endif
-		assert(Ar.Tell() == SavePos + 4 + Array.Num() * ElementSize);	// check position
+		if (Ar.Tell() != SavePos + 4 + Array.Num() * ElementSize)	// check position
+			appError("RawArray item size mismatch: expected %d, got %d\n", ElementSize, (Ar.Tell() - SavePos) / Array.Num());
 		return Ar;
 	}
 old_ver:
@@ -1017,8 +1018,8 @@ void FArchive::DetectGame()
 		SET(GAME_Loco);
 #endif
 #if SPLINTER_CELL
-	if ( (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||
-		 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C)) )
+	if ( (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||		// Splinter Cell 1
+		 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C)) )		// Splinter Cell 2
 		SET(GAME_SplinterCell);
 #endif
 #if SWRC
@@ -1061,6 +1062,9 @@ void FArchive::DetectGame()
 #endif
 #if MKVSDC
 	if (ArVer == 402 && ArLicenseeVer == 30)	SET(GAME_MK);		//!! has extra tag
+#endif
+#if FURY
+	if (ArVer == 407 && (ArLicenseeVer == 26 || ArLicenseeVer == 36)) SET(GAME_Fury);
 #endif
 #if FRONTLINES
 	if (ArVer == 433 && ArLicenseeVer == 52)	SET(GAME_Frontlines);
@@ -1112,6 +1116,9 @@ void FArchive::DetectGame()
 #endif
 #if BORDERLANDS
 	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands); // release and update
+#endif
+#if DCU_ONLINE
+	if (ArVer == 648 && ArLicenseeVer == 6405)	SET(GAME_DCUniverse);
 #endif
 #if ENSLAVED
 	if (ArVer == 673 && ArLicenseeVer == 2)		SET(GAME_Enslaved);

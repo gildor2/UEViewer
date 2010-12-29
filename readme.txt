@@ -1,8 +1,8 @@
 UMODEL
 Unreal Model Viewer
 
-List of supported games:
-~~~~~~~~~~~~~~~~~~~~~~~~
+List of supported games
+~~~~~~~~~~~~~~~~~~~~~~~
 Unreal Engine 1:
   Unreal 1, Unreal Tournament 1
   The Wheel of Time
@@ -44,6 +44,7 @@ Modified Unreal Engine 3:
   BlackSite: Area 51
   Mortal Kombat vs. DC Universe (XBox360)
   Turok
+  Fury
   TNA iMPACT! (XBox360)
   Army of Two (XBox360)
   Mirror's Edge
@@ -70,9 +71,10 @@ Modified Unreal Engine 3:
   Medal of Honor 2010
   Berkanix
   Destroy All Humans! Path of the Furon
+  DC Universe Online
 
-List of games with limited support:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+List of games with limited support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
@@ -88,15 +90,15 @@ Unsupported animations (without umodel crash):
   Rise of the Argonauts
 
 
-System requirements:
-~~~~~~~~~~~~~~~~~~~~
+System requirements
+~~~~~~~~~~~~~~~~~~~
 Windows or Linux operating system
 OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
 SDL 1.2 (for Linux only, windows distribution included sdl.dll)
 
 
-Additional information:
-~~~~~~~~~~~~~~~~~~~~~~~
+Additional information
+~~~~~~~~~~~~~~~~~~~~~~
 Project author:
 Konstantin Nosov (aka Gildor)
 
@@ -104,6 +106,9 @@ Project home page, usage documentation and forum:
 http://www.gildor.org/en/projects/umodel
 or Russian page:
 http://www.gildor.org/projects/umodel
+
+Umodel usage FAQ:
+http://www.gildor.org/smf/index.php/topic,660.0.html
 
 Detailed title compatibility list (by Esr911) can be located here:
 http://www.gildor.org/projects/umodel/compat
@@ -115,8 +120,8 @@ Please support project by making a donation here:
 http://www.gildor.org/en/donate
 
 
-Some usage information:
-~~~~~~~~~~~~~~~~~~~~~~~
+Some usage information
+~~~~~~~~~~~~~~~~~~~~~~
 This is a console application, there is no GUI.
 For the list of command line options run 'umodel' without arguments.
 Note: if you will launch program from Windows explorer etc, you will get a console
@@ -132,16 +137,16 @@ Ctrl+L           switch lighting modes
 Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
 
 
-Notes about psk/psa export.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notes about psk/psa export
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 There is a 3ds Max importer script (Actor X Importer) created by me:
 http://www.gildor.org/projects/unactorx
 Its announcements thread is here:
 http://www.gildor.org/smf/index.php/topic,228.0.html
 
 
-Notes about md5mesh/md5anim export.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notes about md5mesh/md5anim export
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 To use these exporters you should add "-md5" key to a command line options.
 MeshAnimation/AnimSet objects are exported as multiple md5anim files (one
 file per animation track). "bounds" section in md5anim is filled with dummy
@@ -156,8 +161,8 @@ http://www.gildor.org/downloads
 This script was originally created by der_ton, but was updated by me.
 
 
-Notes about StaticMesh support.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notes about StaticMesh support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 StaticMesh export made into pskx format. This format is designed for SkeletalMesh
 export, but umodel uses it for StaticMesh too. Exported mesh will not have
 skeleton and contains only one UV set.
@@ -165,8 +170,8 @@ Resulting pskx files are cannot be imported directly into UnrealEd (that's why
 their extension is pskx).
 
 
-Notes about material export.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notes about material export
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Materials are exported in a custom format. File extension is ".mat". At the
 current moment, this format is supported by my Actor X Importer plugin only.
 Unreal Engine materials are very complex, it's hard to separate a few channels
@@ -175,8 +180,24 @@ heuristics. Umodel will never export full materials (GLSL script etc). Do not
 expect much from this.
 
 
-Changes:
-~~~~~~~~
+Changes
+~~~~~~~
+29.12.2010
+- implemented Fury support
+
+27.12.2010
+- implemented DC Universe Online support
+
+21.12.2010
+- Splinter Cell 4 (Double Agent) SkeletalMesh support is implemented (requires "-game=scell")
+- implemented support for Undying textures (requires "-game=undying")
+
+16.12.2010
+- implemented support for LightMapTexture2D objects
+- command line "umodel <package> <object>" will now find all objects with the name
+  <object> (not only the first one)
+- implemented support for Splinter Cell 3 and 4 packages (requires -game=scell)
+
 14.12.2010
 - implemented support for Turok animations and StaticMesh
 

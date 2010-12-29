@@ -166,6 +166,7 @@ SIMPLE_TYPE(FMeshFace, word)
 
 
 // temp structure, skipped while mesh loading; used by UE1 UMesh only
+// note: UE2 uses FMeshUV (float, not byte)
 struct FMeshTri
 {
 	word			iVertex[3];				// Vertex indices.
@@ -471,7 +472,7 @@ public:
 
 		Ar << Version << VertexCount << Verts;
 
-		if (Version <= 1)
+		if (Version <= 1 || Ar.Game == GAME_SplinterCell)
 		{
 			// skip FMeshTri section
 			TArray<FMeshTri> tmp;
@@ -479,6 +480,13 @@ public:
 		}
 
 		Ar << Textures;
+#if SPLINTER_CELL
+		if (Ar.Game == GAME_SplinterCell && Version >= 3)
+		{
+			TArray<UObject*> unk80;
+			Ar << unk80;
+		}
+#endif // SPLINTER_CELL
 #if LOCO
 		if (Ar.Game == GAME_Loco)
 		{
@@ -493,7 +501,7 @@ public:
 #endif // LOCO
 		Ar << MeshScale << MeshOrigin << RotOrigin;
 
-		if (Version <= 1)
+		if (Version <= 1 || Ar.Game == GAME_SplinterCell)
 		{
 			// skip 2nd obsolete section
 			TArray<word> tmp;
@@ -502,6 +510,10 @@ public:
 
 		Ar << FaceLevel << Faces << CollapseWedgeThus << Wedges << Materials;
 		Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
+
+#if SPLINTER_CELL
+		if (Ar.Game == GAME_SplinterCell) return;
+#endif
 
 		if (Version >= 3)
 		{
@@ -1775,6 +1787,13 @@ public:
 #endif
 
 		Super::Serialize(Ar);
+#if SPLINTER_CELL
+		if (Ar.Game == GAME_SplinterCell)
+		{
+			SerializeSCell(Ar);
+			return;
+		}
+#endif // SPLINTER_CELL
 #if TRIBES3
 		TRIBES_HDR(Ar, 4);
 #endif
@@ -1813,19 +1832,10 @@ public:
 		}
 		if (Version <= 1)
 		{
-#if SPLINTER_CELL
-			if (Ar.Game == GAME_SplinterCell)
-			{
-				SerializeSCell(Ar);
-			}
-			else
-#endif
-			{
-//				appNotify("SkeletalMesh of version %d\n", Version);
-				TArray<FLODMeshSection> tmp1, tmp2;
-				TArray<word> tmp3;
-				Ar << tmp1 << tmp2 << tmp3;
-			}
+//			appNotify("SkeletalMesh of version %d\n", Version);
+			TArray<FLODMeshSection> tmp1, tmp2;
+			TArray<word> tmp3;
+			Ar << tmp1 << tmp2 << tmp3;
 			// copy and convert data from old mesh format
 			UpgradeMesh();
 		}

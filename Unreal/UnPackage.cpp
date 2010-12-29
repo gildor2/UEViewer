@@ -123,7 +123,7 @@ public:
 printf(">>>\n");
 byte* mem = new byte[FileSize];
 Serialize(mem, FileSize);
-FILE* f = fopen("c:\\test.upk", "wb");
+FILE* f = fopen(".\\test.upk", "wb");
 fwrite(mem, FileSize, 1, f);
 fclose(f);
 printf("<<<\n");
@@ -388,10 +388,24 @@ public:
 		for (int ChunkIndex = 0; ChunkIndex < CompressedChunks.Num(); ChunkIndex++)
 		{
 			Chunk = &CompressedChunks[ChunkIndex];
-			if (Pos >= Chunk->UncompressedOffset && Pos < Chunk->UncompressedOffset + Chunk->UncompressedSize)
+			if (Pos < Chunk->UncompressedOffset + Chunk->UncompressedSize)
 				break;
 		}
-		assert(Chunk); // should be found
+		assert(Chunk); // should be at least 1 chunk in CompressedChunks
+
+		// DC Universe has uncompressed package headers but compressed remaining package part
+		if (Pos < Chunk->UncompressedOffset)
+		{
+			if (Buffer) delete Buffer;
+			int Size = Chunk->CompressedOffset;
+			Buffer      = new byte[Size];
+			BufferSize  = Size;
+			BufferStart = 0;
+			BufferEnd   = Size;
+			Reader->Seek(0);
+			Reader->Serialize(Buffer, Size);
+			return;
+		}
 
 		if (Chunk != CurrentChunk)
 		{
@@ -688,6 +702,31 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #endif // UC1 || PARIAH
 			else
 			{
+#if SPLINTER_CELL
+				if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
+				{
+					byte len;
+					int flags;
+					*this << len;
+					NameTable[i] = new char[len + 1];
+					Serialize(NameTable[i], len + 1);
+					*this << flags;
+					goto done;
+				}
+#endif // SPLINTER_CELL
+#if DCU_ONLINE
+				if (Game == GAME_DCUniverse)		// no version checking
+				{
+					int len;
+					*this << len;
+					assert(len > 0 && len < 0x3FF);	// requires extra code
+					NameTable[i] = new char[len + 1];
+					Serialize(NameTable[i], len);
+					int f1, f2;						// flags (cannot goto flags - prohibited by VC6)
+					*this << f1 << f2;
+					goto done;
+				}
+#endif // DCU_ONLINE
 #if R6VEGAS
 				if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
 				{
@@ -710,13 +749,6 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				// Lineage sometimes uses Unicode strings ...
 				FString name;
 				*this << name;
-	#if 0
-				NameTable[i] = new char[name.Num()];
-				strcpy(NameTable[i], *name);
-	#else
-				NameTable[i] = name.Detach();
-	#endif
-#endif
 	#if AVA
 				if (Game == GAME_AVA)
 				{
@@ -730,6 +762,13 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					Seek(Tell() + skip);
 				}
 	#endif // AVA
+	#if 0
+				NameTable[i] = new char[name.Num()];
+				strcpy(NameTable[i], *name);
+	#else
+				NameTable[i] = name.Detach();
+	#endif
+#endif
 				// skip object flags
 				int tmp;
 				*this << tmp;
@@ -791,6 +830,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	unguard;
 
 #if UNREAL3
+	if (Game == GAME_DCUniverse) goto no_depends;	// has non-standard checks
 	if (Summary.FileVersion >= 415) // PACKAGE_V3
 	{
 		guard(ReadDependsTable);
@@ -808,6 +848,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		}
 		unguard;
 	}
+no_depends: ;
 #endif // UNREAL3
 
 	// add self to package map
@@ -894,7 +935,7 @@ UObject* UnPackage::CreateExport(int index)
 	Obj->PackageIndex = index;
 	Obj->Name         = Exp.ObjectName;
 	// add object to GObjLoaded for later serialization
-	if (strncmp(Exp.ObjectName, "Default__", 9) != 0)	// default properties are not supported -- this is a clean UObject format
+	if (strnicmp(Exp.ObjectName, "Default__", 9) != 0)	// default properties are not supported -- this is a clean UObject format
 		UObject::GObjLoaded.AddItem(Obj);
 
 	UObject::EndLoad();

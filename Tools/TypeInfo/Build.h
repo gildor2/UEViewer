@@ -31,3 +31,4 @@
 #define TNA_IMPACT		1		// TNA iMPACT!
 #define APB				1
 #define TRANSFORMERS	1
+#define DCU_ONLINE		1		// DC Universe Online

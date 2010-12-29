@@ -649,6 +649,15 @@ struct FStaticLODModel3
 	{
 		guard(FStaticLODModel3<<);
 
+#if FURY
+		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 8)
+		{
+			// TLazyArray-like file pointer
+			int EndArPos;
+			Ar << EndArPos;
+		}
+#endif // FURY
+
 		Ar << Lod.Sections << Lod.IndexBuffer;
 
 		if (Ar.ArVer < 215)
@@ -755,6 +764,13 @@ struct FStaticLODModel3
 				Ar << Lod.fC4;		// original code: this field is serialized after GPU Skin
 		}
 #endif
+#if FURY
+		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 34)
+		{
+			int gpuSkinUnk;
+			Ar << gpuSkinUnk;
+		}
+#endif // FURY
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
 #if MOH2010
@@ -806,6 +822,19 @@ struct FMaterialBone
 	}
 };
 #endif // A51
+
+#if FURY
+struct FSkeletalMeshLODInfoExtra
+{
+	int					IsForGemini;	// bool
+	int					IsForTaurus;	// bool
+
+	friend FArchive& operator<<(FArchive &Ar, FSkeletalMeshLODInfoExtra &V)
+	{
+		return Ar << V.IsForGemini << V.IsForTaurus;
+	}
+};
+#endif // FURY
 
 #if BATMAN
 struct FBoneBounds
@@ -867,6 +896,20 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		Ar << unk264;
 	}
 #endif // MEDGE
+#if FURY
+	if (Ar.Game == GAME_Fury)
+	{
+		int b1, b2, b3, b4;		// bools, serialized as ints; LoadForGemini, LoadForTaurus, IsSceneryMesh, IsPlayerMesh
+		TArray<FSkeletalMeshLODInfoExtra> LODInfoExtra;
+		if (Ar.ArLicenseeVer >= 14) Ar << b1 << b2;
+		if (Ar.ArLicenseeVer >= 8)
+		{
+			Ar << b3;
+			Ar << LODInfoExtra;
+		}
+		if (Ar.ArLicenseeVer >= 15) Ar << b4;
+	}
+#endif // FURY
 	Ar << Bounds;
 	if (Ar.ArVer < 180)
 	{
@@ -2098,6 +2141,13 @@ struct FStaticMeshUVItem3
 			int unk10;					// pad or color ?
 			Ar << V.Pos << unk10;
 		}
+#if FURY
+		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 7)
+		{
+			int fC;
+			Ar << fC;					// really should be serialized before unk10 above (it's FColor)
+		}
+#endif // FURY
 	new_ver:
 		if (Ar.ArVer < 477)
 			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
@@ -2177,6 +2227,13 @@ struct FStaticMeshUVStream3
 			Ar << unk30;
 		}
 #endif // MOH2010
+#if FURY
+		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 34)
+		{
+			int unused;			// useless stack variable, always 0
+			Ar << unused;
+		}
+#endif // FURY
 		// prepare for UV serialization
 		GNumStaticUVSets   = S.NumTexCoords;
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
@@ -2243,6 +2300,14 @@ struct FStaticMeshLODModel
 	{
 		guard(FStaticMeshLODModel<<);
 
+#if FURY
+		if (Ar.Game == GAME_Fury)
+		{
+			int EndArPos, unkD0;
+			if (Ar.ArLicenseeVer >= 8)	Ar << EndArPos;			// TLazyArray-like file pointer
+			if (Ar.ArLicenseeVer >= 18)	Ar << unkD0;
+		}
+#endif // FURY
 #if HUXLEY
 		if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 14)
 		{
@@ -2509,6 +2574,10 @@ struct FkDOPNode3
 			return Ar;
 		}
 #endif // ENSLAVED
+#if DCU_ONLINE
+		if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0xA00)
+			return Ar << V.f18 << V.f1C << V.f1E;	// no f0 field - global for all nodes
+#endif // DCU_ONLINE
 		Ar << V.f0 << V.f18;
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
@@ -2553,6 +2622,10 @@ struct FkDOPTriangle3
 
 	friend FArchive& operator<<(FArchive &Ar, FkDOPTriangle3 &V)
 	{
+#if FURY
+		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 25)
+			goto new_ver;
+#endif
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
 			goto new_ver;
@@ -2586,6 +2659,26 @@ struct FkDOPTriangle3
 	}
 };*/
 
+#if FURY
+
+struct FFuryStaticMeshUnk	// in other ganes this structure serialized after LOD models, in Fury - before
+{
+	int					unk0;
+	int					fC, f10, f14;
+	TArray<short>		f18;				// old version uses TArray<int>, new - TArray<short>, but there is no code selection
+											// (array size in old version is always 0?)
+
+	friend FArchive& operator<<(FArchive &Ar, FFuryStaticMeshUnk &S)
+	{
+		if (Ar.ArVer < 297) Ar << S.unk0;	// Version? (like in FIndexBuffer3)
+		if (Ar.ArLicenseeVer >= 4)			// Fury-specific
+			Ar << S.fC << S.f10 << S.f14 << S.f18;
+		return Ar;
+	}
+};
+
+#endif // FURY
+
 void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 {
 	guard(UStaticMesh::SerializeStatMesh3);
@@ -2602,6 +2695,13 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 	TArray<FkDOPNode3>     kDOPNodes;
 	TArray<FkDOPTriangle3> kDOPTriangles;
 
+#if FURY
+	if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 14)
+	{
+		int unk3C, unk40;
+		Ar << unk3C << unk40;
+	}
+#endif // FURY
 #if DARKVOID
 	if (Ar.Game == GAME_DarkVoid)
 	{
@@ -2651,7 +2751,21 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 		TArray<FkDOPNode3A> kdop2;
 		Ar << kdop1 << RAW_ARRAY(kdop2);
 	}
+#if FURY
+	if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 32)
+	{
+		int kDopUnk;
+		Ar << kDopUnk;
+	}
+#endif // FURY
 	Ar << RAW_ARRAY(kDOPTriangles);
+#if DCU_ONLINE
+	if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0xA00)
+	{
+		FStaticMeshUnk1 unk;
+		Ar << unk;
+	}
+#endif // DCU_ONLINE
 #if DOH
 	if (Ar.Game == GAME_DOH && Ar.ArLicenseeVer >= 73)
 	{
@@ -2674,11 +2788,24 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 	printf("ver: %d\n", InternalVersion);
 #endif
 
+#if FURY
+	if (Ar.Game == GAME_Fury)
+	{
+		int unk1, unk2;
+		TArray<FFuryStaticMeshUnk> unk50;
+		if (Ar.ArLicenseeVer >= 34) Ar << unk1;
+		if (Ar.ArLicenseeVer >= 33) Ar << unk2;
+		if (Ar.ArLicenseeVer >= 8)  Ar << unk50;
+		InternalVersion = 16;		// uses InternalVersion=18
+	}
+#endif // FURY
+
 	if (InternalVersion >= 17 && Ar.ArVer < 593)
 	{
 		TArray<FName> unk;			// some text properties; ContentTags ? (switched from binary to properties)
 		Ar << unk;
 	}
+
 	Ar << Lods;
 
 //	Ar << f48;

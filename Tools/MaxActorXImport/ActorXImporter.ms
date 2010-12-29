@@ -10,6 +10,17 @@
 
  Revision History:
 
+	29.12.2010 v1.14
+	- added "Batch export" tool
+
+	22.12.2010 v1.13
+	- mesh rotation formula is now identical to used in UnrealEd
+	- added "Clear scene" tool
+
+	15.12.2010 v1.12
+	- added mesh rotation settings
+	- added protection from errors appeared when updating this script while 3ds Max is running
+
 	09.09.2010 v1.11
 	- added "reorient bones" option
 
@@ -72,6 +83,8 @@ TODO:
 - try to not use setBoneEnable false ...
 */
 
+global AX_IMPORTER_VERSION = 14
+
 -------------------------------------------------------------------------------
 --	Global variables
 -------------------------------------------------------------------------------
@@ -88,6 +101,9 @@ global g_texRecurse
 global g_texMissAction
 global g_boneSize
 global g_reposBones
+global g_rotY
+global g_rotP
+global g_rotR
 global g_meshScale
 global g_loadConfirm
 global g_reorientBones
@@ -114,6 +130,9 @@ fn DefaultSettings =
 	g_texMissAction = 1
 	g_boneSize   = 0.5
 	g_reposBones = true
+	g_rotY       = 0
+	g_rotP       = 0
+	g_rotR       = 0
 	g_meshScale  = 1.0
 	g_loadConfirm = false
 	g_reorientBones = false
@@ -161,7 +180,7 @@ fn DoSetting name var =
 		(
 			-- loading value
 			tmp_v = getINISetting configFile "Main" name	-- get from ini as string
-			if tmp_v != "" then
+			if (tmp_v != "") and (tmp_v != "undefined") then
 			(
 				local type = classOf default
 --				format "reading % (%) = %\n" var type tmp_v
@@ -205,6 +224,9 @@ fn SerializeSettings isLoading =
 	DoSetting "SkelOnly"      "g_skelOnly"
 	DoSetting "BoneSize"      "g_boneSize"
 	DoSetting "ReposBones"    "g_reposBones"
+	DoSetting "MeshYaw"       "g_rotY"
+	DoSetting "MeshPitch"     "g_rotP"
+	DoSetting "MeshRoll"      "g_rotR"
 	DoSetting "MeshScale"     "g_meshScale"
 	DoSetting "LoadConfirm"   "g_loadConfirm"
 	DoSetting "ReorientBones" "g_reorientBones"
@@ -212,17 +234,28 @@ fn SerializeSettings isLoading =
 
 
 global g_axImporterInited
+global g_axImporterVersion
 if (g_axImporterInited != true) then
 (
 	-- initialize plugin
 	g_axImporterInited = true
-	heapSize += 33554432	-- 32 Mb; speedup most tasks
+	g_axImporterVersion = AX_IMPORTER_VERSION
+	heapSize += 33554432	-- 32 Mb; will speedup most tasks
 	Anims     = #()
 	MeshBones = #()
 	DefaultSettings()
-	SerializeSettings true
+	SerializeSettings(true)
 )
 
+
+if (g_axImporterVersion != AX_IMPORTER_VERSION) then
+(
+	format "Actor X Importer were updated while 3ds Max is running.\nReloading config settings.\n"
+	--?? used twice, make a separate function ?
+	g_axImporterVersion = AX_IMPORTER_VERSION
+	DefaultSettings()
+	SerializeSettings(true)
+)
 
 -------------------------------------------------------------------------------
 --	Service functions
@@ -317,6 +350,12 @@ fn FindFile path filename recurse:false =
 	return undefined
 )
 
+
+fn GetRotationMatrix =
+(
+	local angles = eulerAngles g_rotR -g_rotP -g_rotY
+	return angles as matrix3
+)
 
 -------------------------------------------------------------------------------
 --	Actor X data structures
@@ -687,6 +726,7 @@ fn ImportPskFile filename skelOnly:false =
 
 	-- generate skeleton
 	MaxBones = #()
+	local rotMatrix = matrix3 1
 	for i = 1 to numBones do
 	(
 		bn = MeshBones[i]
@@ -928,6 +968,12 @@ fn ImportPskFile filename skelOnly:false =
 	enableSceneRedraw()
 --	progressEnd()
 
+	-- apply mesh rotation
+	if numBones >= 1 then
+	(
+		MaxBones[1].transform = MaxBones[1].transform * GetRotationMatrix()
+	)
+
 	-- combine with old skeleton for correct work of combined meshes
 	format "... processing % OldMeshBones\n" OldMeshBones.count
 	for i = 1 to OldMeshBones.count do
@@ -1124,6 +1170,8 @@ fn ImportPsaFile filename trackNum all:false =
 					-- remember 1st frame
 					if (i == 1) then firstFrame[b] = bone.transform
 				)
+				-- rotate animation
+				MaxBones[1].transform = MaxBones[1].transform * GetRotationMatrix()
 			)
 			-- progress bar
 			progressUpdate (100.0 * i / numFrames)
@@ -1186,20 +1234,29 @@ fn ImportPsaFile filename trackNum all:false =
 --	Tools
 -------------------------------------------------------------------------------
 
+fn RemoveAnimation =
+(
+	stopAnimation()
+	animationRange = interval 0 1
+)
+
+
 fn RestoreBindpose =
 (
+	RemoveAnimation()
+
 	try
 	(
+		local rotMatrix = GetRotationMatrix()
+		-- note: should rotate every bone because we are not applying parent's rotation here
 		-- find bones
-		numBones = MeshBones.count-1
-		MaxBones = #()
-		for i = 1 to numBones do
+		for i = 1 to MeshBones.count do
 		(
-			MaxBones[i] = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
-			if MaxBones[i] == undefined then
+			local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
+			if Bone == undefined then
 				format "WARNING: cannot find the bone %\n" MeshBones[i].Name
 			else
-				MaxBones[i].transform = MeshBones[i].Matrix
+				Bone.transform = MeshBones[i].Matrix * rotMatrix
 		)
 
 		set coordsys world
@@ -1211,10 +1268,10 @@ fn RestoreBindpose =
 )
 
 
-fn RemoveAnimation =
+fn ClearMaxScene =
 (
-	stopAnimation()
-	animationRange = interval 0 1
+	max select all
+	if $ != undefined then delete $
 )
 
 
@@ -1233,7 +1290,7 @@ fn LoadAnimation index =
 rollout axImportRollout "Actor X Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.11"
+	label     Lbl1 "Version 1.14"
 	label     Lbl2 "\xA9 2009,2010 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -1311,18 +1368,15 @@ rollout axImportRollout "Actor X Importer"
 
 rollout axToolsRollout "Tools"
 (
-	button BtnRestoreBindpose "Restore BindPose" across:2
-	button BtnRemoveAnimation "Remove animation"
+	button BtnRestoreBindpose "Restore BindPose" width:180
+	button BtnRemoveAnimation "Remove animation" width:180
+	button BtnClearScene      "Clear scene"      width:180
+	button BtnBatchExport     "Batch export"     width:180
 
-	on BtnRestoreBindpose pressed do
-	(
-		RestoreBindpose()
-	)
-
-	on BtnRemoveAnimation pressed do
-	(
-		RemoveAnimation()
-	)
+	on BtnRestoreBindpose pressed do RestoreBindpose()
+	on BtnRemoveAnimation pressed do RemoveAnimation()
+	on BtnClearScene      pressed do ClearMaxScene()
+	on BtnBatchExport     pressed do fileIn "export_fbx.ms"
 )
 
 
@@ -1331,6 +1385,16 @@ rollout axSettingsRollout "Settings"
 	spinner SpnBoneSize  "Bone size"  range:[0.1,10,g_boneSize]     type:#float scale:0.1  align:#left  across:2
 	spinner SpnMeshScale "Mesh scale" range:[0.01,1000,g_meshScale] type:#float scale:0.01 align:#right
 	checkbox ChkRepBones "Reposition existing bones" checked:g_reposBones
+
+	group "Mesh rotation"
+	(
+		spinner  SpnRY "Yaw"   range:[-180,180,g_rotY] type:#integer scale:90 fieldwidth:35 align:#left across:3
+		spinner  SpnRP "Pitch" range:[-180,180,g_rotP] type:#integer scale:90 fieldwidth:35
+		spinner  SpnRR "Roll"  range:[-180,180,g_rotR] type:#integer scale:90 fieldwidth:35 align:#right
+		button   BtnRotMaya    "Maya" across:3
+		button   BtnRotReset   "Reset"
+		button   BtnRotApply   "Apply"
+	)
 
 	group "Materials"
 	(
@@ -1352,6 +1416,25 @@ rollout axSettingsRollout "Settings"
 	button BtnReset "Reset to defaults"
 
 	-- event handlers
+
+	on SpnRY changed val do g_rotY = val
+	on SpnRP changed val do g_rotP = val
+	on SpnRR changed val do g_rotR = val
+	on BtnRotMaya pressed do
+	(
+		g_rotY = SpnRY.value = -90
+		g_rotP = SpnRP.value =   0
+		g_rotR = SpnRR.value =  90
+		RestoreBindpose()
+	)
+	on BtnRotReset pressed do
+	(
+		g_rotY = SpnRY.value = 0
+		g_rotP = SpnRP.value = 0
+		g_rotR = SpnRR.value = 0
+		RestoreBindpose()
+	)
+	on BtnRotApply pressed do RestoreBindpose()
 
 	on SpnBoneSize  changed val do g_boneSize  = val
 	on SpnMeshScale changed val do g_meshScale = val

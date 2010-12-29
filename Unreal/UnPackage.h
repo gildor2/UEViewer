@@ -129,6 +129,13 @@ struct FPackageFileSummary
 		// detect game
 		Ar.DetectGame();
 		// read other fields
+#if SPLINTER_CELL
+		if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 83)
+		{
+			int unk8;
+			Ar << unk8;
+		}
+#endif // SPLINTER_CELL
 #if R6VEGAS
 		if (Ar.Game == GAME_R6Vegas2)
 		{
@@ -275,7 +282,7 @@ struct FPackageFileSummary
 				int unk38;
 				Ar << unk38;
 			}
-#endif
+#endif // UNREAL3
 			Ar << S.Guid;
 #if BIOSHOCK
 			if (Ar.Game == GAME_Bioshock)
@@ -326,9 +333,11 @@ struct FPackageFileSummary
 			// ... MassEffect has additional field here ...
 			// if (Ar.Game == GAME_MassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
 //		}
-//		printf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
-//		printf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
-//		printf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
+	#if 0
+		printf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
+		printf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
+		printf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
+	#endif
 #endif // UNREAL3
 		return Ar;
 		unguardf(("Ver=%d/%d", S.FileVersion, S.LicenseeVersion));
@@ -629,9 +638,9 @@ public:
 		}
 	}
 
-	int FindExport(const char *name, const char *className = NULL, bool ignorePackage = false)
+	int FindExport(const char *name, const char *className = NULL, int firstIndex = 0)
 	{
-		for (int i = 0; i < Summary.ExportCount; i++)
+		for (int i = firstIndex; i < Summary.ExportCount; i++)
 		{
 			const FObjectExport &Exp = ExportTable[i];
 			// compare object name
@@ -640,8 +649,6 @@ public:
 			// if class name specified - compare it too
 			const char *foundClassName = GetObjectName(Exp.ClassIndex);
 			if (className && strcmp(foundClassName, className) != 0)
-				continue;
-			if (!className && ignorePackage && strcmp(foundClassName, "Package") == 0)
 				continue;
 			return i;
 		}
@@ -694,7 +701,7 @@ public:
 #endif
 		return *this;
 
-		unguard;
+		unguardf(("pos=%08X", Tell()));
 	}
 
 	virtual FArchive& operator<<(UObject *&Obj)

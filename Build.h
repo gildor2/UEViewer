@@ -24,6 +24,7 @@
 // requires UNREAL1
 #define DEUS_EX			1
 #define RUNE			1
+#define UNDYING			1
 
 // requires UNREAL25
 #define TRIBES3			1
@@ -48,6 +49,7 @@
 #define TUROK			1
 #define R6VEGAS			1		// Rainbow 6 Vegas 2
 #define XMEN			1		// XMen: Wolverine
+#define FURY			1
 #define MCARTA			1		// Magna Carta 2
 #define BATMAN			1		// Batman: Arkham Asylum
 #define CRIMECRAFT		1		// Crime Craft
@@ -67,6 +69,7 @@
 #define ENSLAVED		1
 #define MOH2010			1		// Medal of Honor 2010 (Singleplayer)
 #define BERKANIX		1
+#define DCU_ONLINE		1		// DC Universe Online
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

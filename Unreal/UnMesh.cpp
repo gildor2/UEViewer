@@ -1659,13 +1659,32 @@ struct FSCellUnk4
 
 void USkeletalMesh::SerializeSCell(FArchive &Ar)
 {
-	TArray<FSCellUnk1> tmp1;
+	if (Version >= 2) Ar << Version;		// interesting code
+	Ar << Points2;
+	if (Ar.ArLicenseeVer >= 48)
+	{
+		TArray<FVector> unk;
+		Ar << unk;
+	}
+	Ar << RefSkeleton;
+	Ar << Animation;
+	if (Ar.ArLicenseeVer >= 155)
+	{
+		TArray<UObject*> unk218;
+		Ar << unk218;
+	}
+	Ar << SkeletalDepth << WeightIndices << BoneInfluences;
+	Ar << AttachAliases << AttachBoneNames << AttachCoords;
+	Ar.Seek(Ar.GetStopper());
+	UpgradeMesh();
+
+/*	TArray<FSCellUnk1> tmp1;
 	TArray<FSCellUnk2> tmp2;
 	TArray<FSCellUnk3> tmp3;
 	TArray<FLODMeshSection> tmp4, tmp5;
 	TArray<word> tmp6;
 	FSCellUnk4 complex;
-	Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex;
+	Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex; */
 }
 
 #endif // SPLINTER_CELL

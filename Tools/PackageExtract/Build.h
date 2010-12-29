@@ -28,6 +28,7 @@
 
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1
+#define FURY			1
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
@@ -37,3 +38,4 @@
 //#define AA3				1		// America's Army
 #define TRANSFORMERS	1
 #define BERKANIX		1
+#define DCU_ONLINE		1		// DC Universe Online

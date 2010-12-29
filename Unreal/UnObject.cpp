@@ -219,7 +219,7 @@ struct FPropertyTag
 
 	bool IsValid()
 	{
-		return strcmp(Name, "None") != 0;
+		return stricmp(Name, "None") != 0;
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FPropertyTag &Tag)
@@ -260,7 +260,7 @@ struct FPropertyTag
 #endif // WHEELMAN
 
 		Ar << Tag.Name;
-		if (!strcmp(Tag.Name, "None"))
+		if (!stricmp(Tag.Name, "None"))
 			return Ar;
 
 #if UNREAL3
@@ -889,7 +889,7 @@ int NameToEnum(const char *EnumName, const char *Value)
 	for (int i = 0; i < Info->NumValues; i++)
 	{
 		const enumToStr &V = Info->Values[i];
-		if (!strcmp(V.name, Value))
+		if (!stricmp(V.name, Value))
 			return V.value;
 	}
 	return ENUM_UNKNOWN;				// no such value

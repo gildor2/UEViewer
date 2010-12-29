@@ -163,6 +163,7 @@ enum EGame
 	GAME_UNKNOWN   = 0,			// should be 0
 
 	GAME_UE1       = 0x1000,
+		GAME_Undying,
 
 	GAME_UE2       = 0x2000,
 		GAME_UT2,
@@ -194,6 +195,7 @@ enum EGame
 		GAME_TLR,
 		GAME_Huxley,
 		GAME_Turok,
+		GAME_Fury,
 		GAME_XMen,
 		GAME_MagnaCarta,
 		GAME_ArmyOf2,
@@ -215,6 +217,7 @@ enum EGame
 		GAME_MOH2010,
 		GAME_Berkanix,
 		GAME_DOH,
+		GAME_DCUniverse,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -421,7 +424,7 @@ public:
 		fseek(f, Pos, SEEK_SET);
 		ArPos = ftell(f);
 		assert(Pos == ArPos);
-		unguard;
+		unguardf(("File=%s, pos=%d", ShortName, Pos));
 	}
 
 	virtual bool IsEof() const
@@ -457,13 +460,13 @@ public:
 			res = fread(data, size, 1, f);
 		else
 			res = fwrite(data, size, 1, f);
+		if (res != 1)
+			appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
 		ArPos += size;
 #if PROFILE
 		GNumSerialize++;
 		GSerializeBytes += size;
 #endif
-		if (res != 1)
-			appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
 		unguardf(("File=%s", ShortName));
 	}
 
@@ -1240,7 +1243,15 @@ public:
 
 	friend FArchive& operator<<(FArchive &Ar, FGuid &G)
 	{
-		return Ar << G.A << G.B << G.C << G.D;
+		Ar << G.A << G.B << G.C << G.D;
+#if FURY
+		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 24)
+		{
+			int guid5;
+			Ar << guid5;
+		}
+#endif // FURY
+		return Ar;
 	}
 };
 
