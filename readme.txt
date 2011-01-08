@@ -182,6 +182,9 @@ expect much from this.
 
 Changes
 ~~~~~~~
+30.12.2010
+- updated TERA: The Exiled Realm of Arborea autodetection
+
 29.12.2010
 - implemented Fury support
 

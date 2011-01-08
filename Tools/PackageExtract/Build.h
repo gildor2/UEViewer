@@ -36,6 +36,7 @@
 #define APB				1
 #define ALPHA_PR		1
 //#define AA3				1		// America's Army
-#define TRANSFORMERS	1
+#define TRANSFORMERS	1		// Transformers: War for Cybertron
+#define MORTALONLINE	1		// Mortal Online
 #define BERKANIX		1
 #define DCU_ONLINE		1		// DC Universe Online

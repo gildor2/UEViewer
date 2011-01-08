@@ -1160,7 +1160,7 @@ void FArchive::DetectGame()
 #endif
 #if TERA
 	if ((ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) ||
-		(ArVer == 610 && ArLicenseeVer == 13))
+		(ArVer == 610 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 14)))
 	{
 		SET(GAME_Tera);
 		ArVer = OVERRIDE_TERA_VER;

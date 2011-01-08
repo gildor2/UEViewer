@@ -1,6 +1,6 @@
 /*
 
- Actor X batch converter for 3ds Max
+ ActorX batch converter for 3ds Max
 
  Created:	December 15 2010
 
@@ -18,8 +18,7 @@
 
 
 /* TODO
-	- options to save ase or max file
-	- save settings to the Actor X Importer ini (using its API)
+	- save settings to the ActorX Importer ini (using its API)
 */
 
 global g_axImporterInited
@@ -43,12 +42,12 @@ fn VerifyAXI =
 (
 	if (g_axImporterInited != true) then
 	(
-		messageBox "Actor X Importer is not loaded!"
+		messageBox "ActorX Importer is not loaded!"
 		return false
 	)
 	if (AX_IMPORTER_VERSION < 13) then
 	(
-		messageBox "Your Actor X Importer is too old, please upgrade!"
+		messageBox "Your ActorX Importer is too old, please upgrade!"
 		return false
 	)
 	return true
@@ -153,7 +152,7 @@ fn ExportFbxAnim =
 
 	SetupFBX()
 
-	-- configure Actor X Importer
+	-- configure ActorX Importer
 	local playAnim = g_playAnim	-- save
 	g_playAnim = false
 
@@ -213,11 +212,11 @@ fn ExportFbxMeshes path recurse =
 
 
 -- UI
-rollout fbxExportRollout "Actor X Batch Export"
+rollout fbxExportRollout "ActorX Batch Export"
 (
 	-- copyright label
 	label     Lbl1 "Version 1.01"
-	label     Lbl2 "\xA9 2010 Konstantin Nosov (Gildor)"
+	label     Lbl2 "\xA9 2010,2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black

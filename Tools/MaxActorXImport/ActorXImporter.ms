@@ -1,6 +1,6 @@
 /*
 
- Actor X mesh (psk) and animation (psa) importer for 3ds Max
+ ActorX mesh (psk) and animation (psa) importer for 3ds Max
 
  Created:	September 18 2009
 
@@ -9,6 +9,10 @@
  Web page:	http://www.gildor.org/projects/unactorx
 
  Revision History:
+
+	01.01.2011 v1.15
+	- workaround for loading animation with the root bone name different than mesh root bone
+	- removed "Load confirmation" setting (not needed anymore because of functional "batch export")
 
 	29.12.2010 v1.14
 	- added "Batch export" tool
@@ -25,7 +29,7 @@
 	- added "reorient bones" option
 
 	23.07.2010 v1.10
-	- implemented extended Actor X format (pskx and psax) support
+	- implemented extended ActorX format (pskx and psax) support
 	- "tools" rollout with options to restore mesh bindpose and remove animations
 
 	24.04.2010 v1.09
@@ -42,7 +46,7 @@
 	12.12.2009 v1.06
 	- fixed merging meshes on a single skeleton when previously loaded mesh is not in bind
 	  pose
-	- improved compatibility with Epic's Actor X Exporter (dropping trailing spaces from
+	- improved compatibility with Epic's ActorX Exporter (dropping trailing spaces from
 	  bone names)
 
 	18.09.2009 v1.05
@@ -83,7 +87,7 @@ TODO:
 - try to not use setBoneEnable false ...
 */
 
-global AX_IMPORTER_VERSION = 14
+global AX_IMPORTER_VERSION = 15
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -105,7 +109,6 @@ global g_rotY
 global g_rotP
 global g_rotR
 global g_meshScale
-global g_loadConfirm
 global g_reorientBones
 global Anims
 global MeshBones
@@ -134,7 +137,6 @@ fn DefaultSettings =
 	g_rotP       = 0
 	g_rotR       = 0
 	g_meshScale  = 1.0
-	g_loadConfirm = false
 	g_reorientBones = false
 )
 
@@ -228,7 +230,6 @@ fn SerializeSettings isLoading =
 	DoSetting "MeshPitch"     "g_rotP"
 	DoSetting "MeshRoll"      "g_rotR"
 	DoSetting "MeshScale"     "g_meshScale"
-	DoSetting "LoadConfirm"   "g_loadConfirm"
 	DoSetting "ReorientBones" "g_reorientBones"
 )
 
@@ -250,7 +251,7 @@ if (g_axImporterInited != true) then
 
 if (g_axImporterVersion != AX_IMPORTER_VERSION) then
 (
-	format "Actor X Importer were updated while 3ds Max is running.\nReloading config settings.\n"
+	format "ActorX Importer were updated while 3ds Max is running.\nReloading config settings.\n"
 	--?? used twice, make a separate function ?
 	g_axImporterVersion = AX_IMPORTER_VERSION
 	DefaultSettings()
@@ -358,7 +359,7 @@ fn GetRotationMatrix =
 )
 
 -------------------------------------------------------------------------------
---	Actor X data structures
+--	ActorX data structures
 -------------------------------------------------------------------------------
 
 struct VChunkHeader
@@ -878,12 +879,10 @@ fn ImportPskFile filename skelOnly:false =
 	if skelOnly then
 	(
 		delete newMesh		-- non-optimal way, may skip mesh creation
-		if g_loadConfirm then messageBox "Mesh Sucessfully Loaded"
 		return undefined
 	)
 	if numBones <= 0 then
 	(
-		if g_loadConfirm then messageBox "Mesh Sucessfully Loaded"
 		return undefined
 	)
 
@@ -1003,8 +1002,6 @@ fn ImportPskFile filename skelOnly:false =
 		)
 	)
 
-	if g_loadConfirm then messageBox "Mesh Sucessfully Loaded"
-
 	gc()
 )
 
@@ -1073,6 +1070,12 @@ fn ImportPsaFile filename trackNum all:false =
 		return undefined
 	)
 
+	if numBones < 1 then
+	(
+		format "Animations has no bones\n"
+		return undefined
+	)
+
 	-- find bones
 	MaxBones     = #()
 	MeshBoneLink = #()
@@ -1091,6 +1094,12 @@ fn ImportPsaFile filename trackNum all:false =
 		)
 		if MaxBones[i]     == undefined then format "WARNING: cannot find scene bone %\n" boneName
 		if MeshBoneLink[i] == undefined then format "WARNING: cannot find mesh bone %\n" boneName
+	)
+
+	-- verify for found root bone
+	if MaxBones[1] == undefined then
+	(
+		messageBox ("WARNING: Unable to find root bone \"" + Bones[1].Name + "\"\nAnimation may appear incorrectly!")
 	)
 
 	set coordsys world
@@ -1171,7 +1180,10 @@ fn ImportPsaFile filename trackNum all:false =
 					if (i == 1) then firstFrame[b] = bone.transform
 				)
 				-- rotate animation
-				MaxBones[1].transform = MaxBones[1].transform * GetRotationMatrix()
+				if MaxBones[1] != undefined then
+				(
+					MaxBones[1].transform = MaxBones[1].transform * GetRotationMatrix()
+				)
 			)
 			-- progress bar
 			progressUpdate (100.0 * i / numFrames)
@@ -1225,8 +1237,6 @@ fn ImportPsaFile filename trackNum all:false =
 	if g_playAnim then playAnimation immediateReturn:true
 
 	gc()
-
-	if g_loadConfirm then messageBox "Animation Sucessfully Loaded"
 )
 
 
@@ -1287,11 +1297,11 @@ fn LoadAnimation index =
 	if (index > 0) and (index <= Anims.count) then ImportPsaFile AnimFileName index
 )
 
-rollout axImportRollout "Actor X Importer"
+rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.14"
-	label     Lbl2 "\xA9 2009,2010 Konstantin Nosov (Gildor)"
+	label     Lbl1 "Version 1.15"
+	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black
@@ -1318,7 +1328,7 @@ rollout axImportRollout "Actor X Importer"
 
 	on BtnImportPsk pressed do
 	(
-		local filename = getOpenFileName types:"Actor X Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
+		local filename = getOpenFileName types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
 		if filename != undefined then
 		(
 			MeshFileName = filename
@@ -1329,7 +1339,7 @@ rollout axImportRollout "Actor X Importer"
 
 	on BtnImportPsa pressed do
 	(
-		local filename = getOpenFileName types:"Actor X Animation (*.psa,*.psax)|*.psa;*.psax|All (*.*)|*.*|" filename:g_lastDir2
+		local filename = getOpenFileName types:"ActorX Animation (*.psa,*.psax)|*.psa;*.psax|All (*.*)|*.*|" filename:g_lastDir2
 
 		if filename != undefined then
 		(
@@ -1409,7 +1419,6 @@ rollout axSettingsRollout "Settings"
 	(
 		label Lbl1                "WARNING: do not modify these settings"
 		label Lbl2                "unless you know what you are doing!"
-		checkbox ChkLoadConf      "Load confirmation" checked:g_loadConfirm
 		checkbox ChkReoriendBones "Reorient bones" checked:g_reorientBones
 	)
 
@@ -1441,7 +1450,6 @@ rollout axSettingsRollout "Settings"
 	on ChkRepBones   changed state do g_reposBones    = state
 	on ChkTexRecurse changed state do g_texRecurse    = state
 	on RadMissingTex changed state do g_texMissAction = state
-	on ChkLoadConf   changed state do g_loadConfirm   = state
 	on ChkReoriendBones changed state do g_reorientBones = state
 
 	on EdTexPath    changed val do g_texDir = val
@@ -1466,7 +1474,7 @@ rollout axSettingsRollout "Settings"
 
 -- Create plugin window
 if axImportFloater != undefined do closeRolloutFloater axImportFloater	-- close old window if visible
-axImportFloater = newRolloutFloater "Actor X Import" 250 550 30 100 	-- create new window
+axImportFloater = newRolloutFloater "ActorX Import" 250 550 30 100		-- create a new window
 
 -- add controls
 addRollout axImportRollout   axImportFloater
