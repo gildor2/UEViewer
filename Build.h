@@ -40,6 +40,8 @@
 // requires UNREAL3
 #define XBOX360			1		// XBox360 support
 #define IPHONE			1		// iPhone/iPad support
+
+#define ENDWAR			1		// EndWar
 #define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
 #define DOH				1		// Destroy All Humans
 #define ARMYOF2			1		// Army of Two

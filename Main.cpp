@@ -268,6 +268,9 @@ static GameInfo games[] = {
 #	if IPHONE
 		G3("Infinity Blade"),
 #	endif
+#	if ENDWAR
+		G("EndWar", endwar, GAME_EndWar),
+#	endif
 #	if R6VEGAS
 		G("Rainbow 6: Vegas 2", r6v2, GAME_R6Vegas2),
 #	endif
@@ -423,6 +426,7 @@ static void PrintGameList(bool tags = false)
 			continue;
 		}
 		// simple game list
+		if (!(info.Enum & ~GAME_ENGINE) && info.Switch) continue;	// skip simple GAME_UEn
 		const char *name = info.Name;
 		int len = strlen(name);
 		bool needComma = (i < Count - 1) && (GetEngineName(games[i+1].Enum) == title);

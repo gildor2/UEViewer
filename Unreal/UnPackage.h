@@ -110,7 +110,7 @@ struct FPackageFileSummary
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{
 			if (S.Tag != PACKAGE_FILE_TAG_REV)
-				appError("Wrong tag in package");
+				appError("Wrong tag in package: %08X", S.Tag);
 			Ar.ReverseBytes = true;
 			S.Tag = PACKAGE_FILE_TAG;
 		}
@@ -128,6 +128,7 @@ struct FPackageFileSummary
 		Ar.ArLicenseeVer = S.LicenseeVersion;
 		// detect game
 		Ar.DetectGame();
+		Ar.OverrideVersion();
 		// read other fields
 #if SPLINTER_CELL
 		if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 83)

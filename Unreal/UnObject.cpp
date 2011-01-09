@@ -588,7 +588,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				}
 				else if (SerializeStruc(Ar, value, Tag.ArrayIndex, Prop->TypeName))
 				{
-					PROP_DBG("(complex)", 0);
+					PROP_DBG("(struct:%s)", *Tag.StrucName);
 					int Pos = Ar.Tell();
 					if (Pos > StopPos)
 					{

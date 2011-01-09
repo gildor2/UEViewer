@@ -110,7 +110,8 @@ static const char *PackageExtensions[] =
 	, "ums"
 #endif
 #if BATTLE_TERR
-	, "bsx", "btx", "bkx"
+	, "bsx", "btx", "bkx"		// older version
+	, "ebsx", "ebtx", "ebkx"	// newer version, with encryption
 #endif
 #if TRIBES3
 	, "pkg"
@@ -961,10 +962,6 @@ void FArchive::DetectGame()
 	if (GForceGame != GAME_UNKNOWN)
 	{
 		Game = GForceGame;
-#if TERA
-	#define OVERRIDE_TERA_VER		568
-		if (Game == GAME_Tera) ArVer = OVERRIDE_TERA_VER; // override file version
-#endif
 		return;
 	}
 
@@ -1048,6 +1045,9 @@ void FArchive::DetectGame()
 #if R6VEGAS
 	if (ArVer == 241 && ArLicenseeVer == 71)	SET(GAME_R6Vegas2);
 #endif
+//#if ENDWAR
+//	if (ArVer == 329 && ArLicenseeVer == 0)		SET(GAME_EndWar);	// LicenseeVer == 0
+//#endif
 #if STRANGLE
 	if (ArVer == 375 && ArLicenseeVer == 25)	SET(GAME_Strangle);	//!! has extra tag
 #endif
@@ -1161,10 +1161,7 @@ void FArchive::DetectGame()
 #if TERA
 	if ((ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) ||
 		(ArVer == 610 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 14)))
-	{
 		SET(GAME_Tera);
-		ArVer = OVERRIDE_TERA_VER;
-	}
 #endif
 
 	if (check > 1)
@@ -1181,6 +1178,22 @@ void FArchive::DetectGame()
 			Game = GAME_UE3;
 	}
 #undef SET
+}
+
+
+#define OVERRIDE_ENDWAR_VER		224
+#define OVERRIDE_TERA_VER		568
+
+void FArchive::OverrideVersion()
+{
+	int OldVer = ArVer;
+#if ENDWAR
+	if (Game == GAME_EndWar)	ArVer = OVERRIDE_ENDWAR_VER;
+#endif
+#if TERA
+	if (Game == GAME_Tera)		ArVer = OVERRIDE_TERA_VER;
+#endif
+	if (ArVer != OldVer) printf("Overrided version %d -> %d\n", OldVer, ArVer);
 }
 
 

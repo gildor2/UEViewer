@@ -67,6 +67,65 @@ public:
 
 
 /*-----------------------------------------------------------------------------
+	Battle Territory Online
+-----------------------------------------------------------------------------*/
+
+#if BATTLE_TERR
+
+class FFileReaderBattleTerr : public FArchive
+{
+public:
+	FArchive	*Reader;
+
+	FFileReaderBattleTerr(FArchive *File)
+	:	Reader(File)
+	{
+	}
+
+	virtual void Serialize(void *data, int size)
+	{
+		Reader->Serialize(data, size);
+
+		int i;
+		byte *p;
+		for (i = 0, p = (byte*)data; i < size; i++, p++)
+		{
+			byte b = *p;
+			int shift;
+			byte v;
+			for (shift = 1, v = b & (b - 1); v; v = v & (v - 1))
+				shift++;
+			b = (b | (b << 8)) << shift >> 8;		// simulate cyclic shift left (ROL)
+			*p = b;
+		}
+	}
+
+	virtual void Seek(int Pos)
+	{
+		Reader->Seek(Pos);
+	}
+	virtual int Tell() const
+	{
+		return Reader->Tell();
+	}
+	virtual int GetFileSize() const
+	{
+		return Reader->GetFileSize();
+	}
+	virtual void SetStopper(int Pos)
+	{
+		Reader->SetStopper(Pos);
+	}
+	virtual int  GetStopper() const
+	{
+		return Reader->GetStopper();
+	}
+};
+
+#endif // BATTLE_TERR
+
+
+/*-----------------------------------------------------------------------------
 	LEAD Engine archive file reader
 -----------------------------------------------------------------------------*/
 
@@ -534,7 +593,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 
 	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
 
-#if LINEAGE2 || EXTEEL || LEAD
+#if LINEAGE2 || EXTEEL || BATTLE_TERR || LEAD
 	int checkDword;
 	*this << checkDword;
 
@@ -554,7 +613,15 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Loader = new FFileReaderLineage(Loader, XorKey);
 	}
 	else
-	#endif
+	#endif // LINEAGE2 || EXTEEL
+	#if BATTLE_TERR
+	if (checkDword == 0x342B9CFC)
+	{
+		Game = GAME_BattleTerr;
+		// replace Loader
+		Loader = new FFileReaderBattleTerr(Loader);
+	}
+	#endif // BATTLE_TERR
 	#if LEAD
 	if (checkDword == LEAD_FILE_TAG)
 	{
@@ -563,9 +630,9 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Loader = new FLeadArchiveReader(Loader);
 	}
 	else
-	#endif
+	#endif // LEAD
 		Seek(0);	// seek back to header
-#endif // LINEAGE2 || EXTEEL
+#endif // complex
 
 #if UNREAL3
 	// code for fully compressed packages support

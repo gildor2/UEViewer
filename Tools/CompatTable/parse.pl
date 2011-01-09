@@ -117,26 +117,28 @@ EOF
 
 
 sub tableFooter {
+    my $supported = $partSupp + $fullSupp;
 	print OUT <<EOF
   <tr><td colspan="8">&nbsp;</td></tr>
   <tr>
-    <td colspan="8"><table width="549" border="0" align="center">
+    <td colspan="8"><table width="680" border="0" align="center">
       <tr>
-        <td width="539" style="border-style: none; font-size: 8px;"><div align="left">
-          <p>&nbsp</p>
+        <td style="border-style: none; font-size: 8px;"><div align="left">
           <p><span class="detailbold">Year:</span> <span class="detailtxt">By clicking on the year for an entry, it will take you to the thread on the form that talks about this game.</span></p>
           <p><span class="detailbold">Title:</span> <span class="detailtxt">By clicking on the title of a game, it will take you to the Wikipedia information for that game. If the Wikipedia does not exist it will take you to their website or other press release.</span></p>
           <!--p><span class="detailbold">Engine:</span> <span class="detailtxt">By clicking on the engine, it will open a new page and display any issues that may be present with this game.</span></p-->
           <p><span class="detailbold">Developer:</span> <span class="detailtxt">By clicking on Developer for an entry it will take you to the Wikipedia information for that developer. If the Wikipedia does not exist it will take you to their website or other press other related information.</span></p>
-          <p>&nbsp;</p>
         </div></td>
       </tr>
     </table></td>
   </tr>
-  <tr bgcolor="#808080">
-    <td colspan="8"><div align="center"></div>
-    <div align="center"></div>      <div align="center"></div>      <div align="center"></div>
-    Table Maintained by <a href="http://www.gildor.org/smf/index.php?action=profile;u=39" target="_blank">ESR911</a> and <a href="http://www.gildor.org/">Gildor</a></td>
+  <tr bgcolor="#60C060">
+    <td colspan="5">
+      Total games: ${supported} supported (${fullSupp} fully), ${notSupp} unsupported
+    </td>
+    <td colspan="3">
+      Table Maintained by <a href="http://www.gildor.org/smf/index.php?action=profile;u=39" target="_blank">ESR911</a> and <a href="http://www.gildor.org/">Gildor</a>
+    </td>
   </tr>
 </table>
 EOF
@@ -258,11 +260,11 @@ EOF
 		}
 
 		if ($url1 ne "") {
-			print OUT "   <td><div align=\"left\"><a href=\"$url1\">$game</a></div></td>\n";
+			print OUT "    <td><div align=\"left\"><a href=\"$url1\">$game</a></div></td>\n";
 		} else {
-			print OUT "   <td><div align=\"left\">$game</div></td>\n";
+			print OUT "    <td><div align=\"left\">$game</div></td>\n";
 		}
-		printf OUT "    <td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>\n", yesno($c1), yesno($c2), yesno($c3), yesno($c4), $ver;
+		printf OUT    "    <td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>\n", yesno($c1), yesno($c2), yesno($c3), yesno($c4), $ver;
 		my $compUrl = $compUrls{$company};
 		if (defined($compUrl)) {
 			print OUT "    <td><div align=\"left\"><a href=\"$compUrl\" target=\"_blank\">$company</a></div></td>\n"

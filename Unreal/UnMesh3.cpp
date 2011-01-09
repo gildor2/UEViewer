@@ -27,7 +27,7 @@ struct FSkelMeshSection3
 			short unk1, unk2, unk3, unk4, unk5, unk6, unk7;
 			TArray<short> unk8;
 			Ar << S.MaterialIndex << FirstIndex << unk1 << unk2 << unk3 << unk4 << unk5 << unk6 << S.NumTriangles;
-			Ar << unk8;
+			if (Ar.ArVer < 202) Ar << unk8;	// ArVer<202 -- from EndWar
 			S.FirstIndex = FirstIndex;
 			S.unk1 = 0;
 			return Ar;
@@ -85,6 +85,14 @@ struct FRigidVertex3
 	{
 		int NumUVSets;
 
+#if ENDWAR
+		if (Ar.Game == GAME_EndWar)
+		{
+			// End War uses 4-component FVector, but here it is 3-component
+			Ar << V.Pos.X << V.Pos.Y << V.Pos.Z;
+			goto normals;
+		}
+#endif // ENDWAR
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft)
 		{
@@ -101,7 +109,9 @@ struct FRigidVertex3
 #endif // CRIMECRAFT
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		Ar << V.Pos;
+	normals:
+		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 #if R6VEGAS
 		if (Ar.Game == GAME_R6Vegas2 && Ar.ArLicenseeVer >= 63)
 		{
@@ -156,6 +166,14 @@ struct FSmoothVertex3
 	{
 		int i, NumUVSets;
 
+#if ENDWAR
+		if (Ar.Game == GAME_EndWar)
+		{
+			// End War uses 4-component FVector, but here it is 3-component
+			Ar << V.Pos.X << V.Pos.Y << V.Pos.Z;
+			goto normals;
+		}
+#endif // ENDWAR
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft)
 		{
@@ -171,7 +189,9 @@ struct FSmoothVertex3
 #endif // CRIMECRAFT
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		Ar << V.Pos;
+	normals:
+		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 #if R6VEGAS
 		if (Ar.Game == GAME_R6Vegas2 && Ar.ArLicenseeVer >= 63)
 		{
@@ -664,18 +684,18 @@ struct FStaticLODModel3
 		{
 			TArray<FRigidVertex3>  RigidVerts;
 			TArray<FSmoothVertex3> SmoothVerts;
-			Ar << RigidVerts << SmoothVerts;
+			Ar << SmoothVerts << RigidVerts;
 			appNotify("SkeletalMesh: untested code! (ArVer=%d)", Ar.ArVer);
 		}
 
-#if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands)
+#if ENDWAR || BORDERLANDS
+		if (Ar.Game == GAME_EndWar || Ar.Game == GAME_Borderlands)
 		{
 			// refined field set
 			Ar << Lod.UsedBones << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 			goto part2;
 		}
-#endif // BORDERLANDS
+#endif // ENDWAR || BORDERLANDS
 
 		if (Ar.ArVer < 686) Ar << Lod.f68;
 		Ar << Lod.UsedBones;
@@ -2326,7 +2346,9 @@ struct FStaticMeshLODModel
 			goto after_bulk;
 		}
 #endif // APB
-		Lod.BulkData.Skip(Ar);
+		if (Ar.ArVer >= 218)
+			Lod.BulkData.Skip(Ar);
+
 	after_bulk:
 
 #if TLR
@@ -2470,6 +2492,9 @@ struct FStaticMeshLODModel
 			//!! note: this code will crash in RestoreMesh3() because of empty data
 		}
 		Ar << Lod.Indices;
+#if ENDWAR
+		if (Ar.Game == GAME_EndWar) goto after_indices;	// single Indices buffer since version 262
+#endif
 #if APB
 		if (Ar.Game == GAME_APB)
 		{
@@ -2583,7 +2608,7 @@ struct FkDOPNode3
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
 			goto new_ver;
 #endif
-		if (Ar.ArVer >= 468)
+		if ((Ar.ArVer < 209) || (Ar.ArVer >= 468))
 		{
 		new_ver:
 			Ar << V.f1C << V.f1E;	// short
@@ -2630,7 +2655,7 @@ struct FkDOPTriangle3
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
 			goto new_ver;
 #endif
-		if (Ar.ArVer >= 468)
+		if ((Ar.ArVer < 209) || (Ar.ArVer >= 468))
 		{
 		new_ver:
 			Ar << V.f0 << V.f2 << V.f4 << V.f6;
@@ -2740,6 +2765,9 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 		UObject *unk;
 		Ar << unk;
 	}
+#if ENDWAR
+	if (Ar.Game == GAME_EndWar) goto version;	// no kDOP since version 306
+#endif // ENDWAR
 	// kDOP tree
 	if (Ar.ArVer < 770)
 	{
@@ -2781,6 +2809,7 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 	}
 #endif // DOH
 
+version:
 	Ar << InternalVersion;
 
 #if 0

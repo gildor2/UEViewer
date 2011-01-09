@@ -188,6 +188,7 @@ enum EGame
 		GAME_UC2,
 
 	GAME_UE3       = 0x8000,
+		GAME_EndWar,
 		GAME_MassEffect,
 		GAME_MassEffect2,
 		GAME_R6Vegas2,
@@ -270,6 +271,8 @@ public:
 	{}
 
 	void DetectGame();
+	void OverrideVersion();
+
 	inline int Engine() const
 	{
 		return (Game & GAME_ENGINE);
@@ -551,7 +554,11 @@ struct FVector
 
 	friend FArchive& operator<<(FArchive &Ar, FVector &V)
 	{
-		return Ar << V.X << V.Y << V.Z;
+		Ar << V.X << V.Y << V.Z;
+#if ENDWAR
+		if (Ar.Game == GAME_EndWar) Ar.Seek(Ar.Tell() + 4);	// skip W, at ArVer >= 290
+#endif
+		return Ar;
 	}
 };
 

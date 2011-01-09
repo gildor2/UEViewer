@@ -533,6 +533,13 @@ public:
 			Ar << unk;
 		}
 #endif // LINEAGE2
+#if BATTLE_TERR
+		if (Ar.Game == GAME_BattleTerr && Version >= 5)
+		{
+			TArray<int> unk;
+			Ar << unk;
+		}
+#endif // BATTLE_TERR
 #if SWRC
 		if (Ar.Game == GAME_RepCommando && Version >= 7)
 		{
@@ -932,6 +939,14 @@ struct VJointPos
 #if UNREAL3
 		if (Ar.ArVer >= 224)
 		{
+#if ENDWAR
+			if (Ar.Game == GAME_EndWar)
+			{
+				// End War has W in FVector, but VJointPos will not serialize W for Position since ArVer 295
+				Ar << P.Orientation << P.Position.X << P.Position.Y << P.Position.Z;
+				return Ar;
+			}
+#endif // ENDWAR
 			Ar << P.Orientation << P.Position;
 #if ARMYOF2
 			if (Ar.Game == GAME_ArmyOf2 && Ar.ArVer >= 481)
@@ -939,7 +954,7 @@ struct VJointPos
 				int pad;
 				Ar << pad;
 			}
-#endif
+#endif // ARMYOF2
 			return Ar;
 		}
 #endif

@@ -1,5 +1,7 @@
 UMODEL
 Unreal Model Viewer
+(c) Konstantin Nosov (Gildor), 2007-2011
+
 
 List of supported games
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,12 +74,14 @@ Modified Unreal Engine 3:
   Berkanix
   Destroy All Humans! Path of the Furon
   DC Universe Online
+  EndWar
 
 List of games with limited support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Using "-noanim" option (unsupported animation format):
   Harry Potter (UE1)
   Devastation
+  EndWar
   Rainbow 6: Vegas 2
   BlackSite: Area 51 (uses Havok animation system)
   Mortal Kombat vs. DC Universe
@@ -99,9 +103,6 @@ SDL 1.2 (for Linux only, windows distribution included sdl.dll)
 
 Additional information
 ~~~~~~~~~~~~~~~~~~~~~~
-Project author:
-Konstantin Nosov (aka Gildor)
-
 Project home page, usage documentation and forum:
 http://www.gildor.org/en/projects/umodel
 or Russian page:
@@ -110,7 +111,7 @@ http://www.gildor.org/projects/umodel
 Umodel usage FAQ:
 http://www.gildor.org/smf/index.php/topic,660.0.html
 
-Detailed title compatibility list (by Esr911) can be located here:
+Detailed title compatibility list can be located here:
 http://www.gildor.org/projects/umodel/compat
 
 Some tutorials available here:
@@ -129,7 +130,7 @@ window with a help message, but this window will immediately disappear.
 
 Keyboard:
 H                full keyboard help
-ESC              exit umodel
+ESC              exit from umodel
 PgUp/UpDn        browse loaded objects
 Ctrl+S           take screenshot into file Screenshots/ObjectName.tga
 Ctrl+PgUp/PgDn   scroll onscreen texts
@@ -163,25 +164,32 @@ This script was originally created by der_ton, but was updated by me.
 
 Notes about StaticMesh support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-StaticMesh export made into pskx format. This format is designed for SkeletalMesh
+StaticMesh export made into psk format. This format is designed for SkeletalMesh
 export, but umodel uses it for StaticMesh too. Exported mesh will not have
 skeleton and contains only one UV set.
-Resulting pskx files are cannot be imported directly into UnrealEd (that's why
-their extension is pskx).
+Resulting psk files are cannot be imported directly into UnrealEd (that's why
+their extension were changed to pskx).
 
 
 Notes about material export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Materials are exported in a custom format. File extension is ".mat". At the
-current moment, this format is supported by my Actor X Importer plugin only.
+current moment, this format is supported by my ActorX Importer plugin only.
 Unreal Engine materials are very complex, it's hard to separate a few channels
-(diffuse, specular, bump etc) from it. Umodel tries to do this using some
+(diffuse, specular, bump etc) from it. Umodel tries to do this by using some
 heuristics. Umodel will never export full materials (GLSL script etc). Do not
-expect much from this.
+expect too much from this.
 
 
 Changes
 ~~~~~~~
+09.01.2011
+- updated Battle Territory Online support
+
+08.01.2011
+- implemented EndWar package, texture, skeletal and static mesh support (requires
+  "-game=endwar")
+
 30.12.2010
 - updated TERA: The Exiled Realm of Arborea autodetection
 
