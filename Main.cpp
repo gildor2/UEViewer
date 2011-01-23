@@ -354,6 +354,7 @@ static GameInfo games[] = {
 		G("All Points Bulletin", apb, GAME_APB),
 #	endif
 #	if TRANSFORMERS
+		G("The Bourne Conspiracy",           trans, GAME_Transformers),
 		G("Transformers: War for Cybertron", trans, GAME_Transformers),
 #	endif
 #	if AA3

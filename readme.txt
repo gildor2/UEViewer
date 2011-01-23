@@ -69,6 +69,7 @@ Modified Unreal Engine 3:
   Alpha Protocol
   All Points Bulletin (APB)
   Transformers: War for Cybertron
+  The Bourne Conspiracy (XBox360)
   Enslaved: Odyssey to the West (XBox360)
   Medal of Honor 2010
   Berkanix
@@ -183,6 +184,9 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+10.01.2011
+- implemented support for The Bourne Conspiracy (everything but animations)
+
 09.01.2011
 - updated Battle Territory Online support
 

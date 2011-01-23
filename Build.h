@@ -66,7 +66,7 @@
 #define TERA			1		// TERA: The Exiled Realm of Arborea
 #define APB				1		// All Points Bulletin
 #define ALPHA_PR		1		// Alpha Protocol
-#define TRANSFORMERS	1		// Transformers: War for Cybertron
+#define TRANSFORMERS	1		// Transformers: War for Cybertron and The Bourne Conspiracy
 #define MORTALONLINE	1		// Mortal Online
 #define ENSLAVED		1
 #define MOH2010			1		// Medal of Honor 2010 (Singleplayer)

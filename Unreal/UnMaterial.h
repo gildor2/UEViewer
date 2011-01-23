@@ -1384,7 +1384,8 @@ public:
 		guard(UTexture3::Serialize);
 		Super::Serialize(Ar);
 #if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers) return;	// SourceArt is moved to separate class
+		// Transformers: SourceArt is moved to separate class; but The Bourne Conspiracy has it (real ArLicenseeVer is unknown)
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 100) return;
 #endif
 #if APB
 		if (Ar.Game == GAME_APB)

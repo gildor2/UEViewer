@@ -1155,7 +1155,8 @@ void FArchive::DetectGame()
 #endif
 #if TRANSFORMERS
 	if ((ArVer == 511 && ArLicenseeVer == 145) ||		// PC version
-		(ArVer == 511 && ArLicenseeVer == 144))			// PS3 and XBox 360 version
+		(ArVer == 511 && ArLicenseeVer == 144) ||		// PS3 and XBox 360 version
+		(ArVer == 511 && ArLicenseeVer == 39))			// The Bourne Conspiracy
 		SET(GAME_Transformers);
 #endif
 #if TERA

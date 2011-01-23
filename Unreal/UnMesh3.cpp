@@ -2828,6 +2828,9 @@ version:
 		InternalVersion = 16;		// uses InternalVersion=18
 	}
 #endif // FURY
+#if TRANSFORMERS
+	if (Ar.Game == GAME_Transformers) goto lods;	// The Bourne Conspiracy has InternalVersion=17
+#endif
 
 	if (InternalVersion >= 17 && Ar.ArVer < 593)
 	{
@@ -2835,6 +2838,7 @@ version:
 		Ar << unk;
 	}
 
+lods:
 	Ar << Lods;
 
 //	Ar << f48;

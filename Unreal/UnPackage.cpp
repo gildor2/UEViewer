@@ -144,9 +144,62 @@ struct FLeadArcPage
 {
 	int						CompressedPos;
 	int						CompressedSize;
-	byte					Flags;					// LEAD_PKG_...
+	byte					Flags;					// LEAD_PKG_COMPRESS_...
 	unsigned				CompressedCrc;
 	unsigned				UncompressedCrc;
+};
+
+
+struct FLeadDirEntry
+{
+	int						id;						// file identifier (hash of filename?)
+	// the following data are originally packed as separate structure
+	FString					ShortFilename;			// short filename
+	FString					Filename;				// full filename with path
+	int						FileSize;
+
+	friend FArchive& operator<<(FArchive &Ar, FLeadDirEntry &D)
+	{
+		return Ar << D.id << D.ShortFilename << D.Filename << AR_INDEX(D.FileSize);
+	}
+};
+
+
+struct FLeadArcChunk								// file chunk
+{
+	int						OriginalOffset;			// offset in original file
+	int						PackedOffset;			// position in uncompressed UMD (excluding aligned archive directory size!! align=0x20000)
+	int						ChunkSize;				// length of the data
+
+	friend FArchive& operator<<(FArchive &Ar, FLeadArcChunk &C)
+	{
+		return Ar << AR_INDEX(C.OriginalOffset) << AR_INDEX(C.PackedOffset) << AR_INDEX(C.ChunkSize);
+	}
+};
+
+
+struct FLeadArcChunkList
+{
+	int						id;						// file identifier
+	TArray<FLeadArcChunk>	chunks;
+
+	friend FArchive& operator<<(FArchive &Ar, FLeadArcChunkList& L)
+	{
+		return Ar << L.id << L.chunks;
+	}
+};
+
+
+struct FLeadArcHdr
+{
+	FString					id;						// package tag
+	TArray<FLeadDirEntry>	dir;					// file list
+	TArray<FLeadArcChunkList> chunkList;			// file chunk list
+
+	friend FArchive& operator<<(FArchive &Ar, FLeadArcHdr &H)
+	{
+		return Ar << H.id << H.dir << H.chunkList;
+	}
 };
 
 
@@ -179,13 +232,53 @@ public:
 		SetupFrom(*File);
 		ReadArchiveHeaders();
 
-printf(">>>\n");
+		ArVer = 128;		// something UE2
+		IsLoading = true;
+/*printf("Extracting ...\n");
+byte* mem2 = new byte[FileSize];
+Serialize(mem2, FileSize);
+//for (int ii = 0; ii < FileSize; ii++) mem2[ii] ^= 0xB7;
+FILE* f2 = fopen(".\\test.umod", "wb");
+fwrite(mem2, FileSize, 1, f2);
+fclose(f2);
+printf("Extraction done.\n");
+exit(0);*/
+
+		FLeadArcHdr hdr;
+		*(FArchive*)this << hdr;
+		int DataStart = Align(Tell(), 0x20000);		//?? BlockSize
+		printf("DataStart: %08X\n", DataStart);
+
+		int i;
+		printf("ID: %s\n", *hdr.id);
+		for (i = 0; i < hdr.dir.Num(); i++)
+		{
+			const FLeadDirEntry& dir = hdr.dir[i];
+			printf("[%d] %08X - (%s) %s / %d (%08X)\n", i, dir.id, *dir.ShortFilename, *dir.Filename, dir.FileSize, dir.FileSize);
+		}
+		for (i = 0; i < hdr.chunkList.Num(); i++)
+		{
+			const FLeadArcChunkList& list = hdr.chunkList[i];
+			printf("[%d] %08X (%d)\n", i, list.id, list.chunks.Num());
+			for (int j = 0; j < list.chunks.Num(); j++)
+			{
+				const FLeadArcChunk &chunk = list.chunks[j];
+				printf("       %08X  %08X  %08X\n", chunk.OriginalOffset, chunk.PackedOffset, chunk.ChunkSize);
+			}
+		}
+
+		Seek(0);
+
+printf("Extracting ...\n");
 byte* mem = new byte[FileSize];
 Serialize(mem, FileSize);
-FILE* f = fopen(".\\test.upk", "wb");
+for (i = DataStart; i < FileSize; i++) mem[i] ^= 0xB7;
+FILE* f = fopen(".\\test.umod", "wb");
 fwrite(mem, FileSize, 1, f);
+delete mem;
 fclose(f);
-printf("<<<\n");
+printf("Extraction done.\n");
+exit(0);
 
 		unguard;
 	}
@@ -218,12 +311,11 @@ printf("<<<\n");
 			}
 			else
 			{
-				appNotify("#2: LEAD package with uncompressed tables");	//!! UNTESTED
 				Reader->Serialize(PageTableUncompr, TableSizeUncompr);
 			}
 			FMemReader Mem(PageTableUncompr, TableSizeUncompr);
 			Mem.SetupFrom(*Reader);
-			ReadPageTable(Mem, DataStart + DataSkip + 12);
+			ReadPageTable(Mem, DataStart + DataSkip + 12, (Flags & LEAD_PKG_CHECK_CRC));
 			assert(Mem.Tell() == TableSizeUncompr);
 			delete PageTableUncompr;
 		}
@@ -231,12 +323,12 @@ printf("<<<\n");
 		{
 			appNotify("#1: LEAD package with uncompressed tables");	//!! UNTESTED
 			Reader->Seek(DirectoryOffset - 4);
-			ReadPageTable(*Reader, DataStart);
+			ReadPageTable(*Reader, DataStart, (Flags & LEAD_PKG_CHECK_CRC));
 		}
 		unguard;
 	}
 
-	void ReadPageTable(FArchive& Ar, int DataOffset)
+	void ReadPageTable(FArchive& Ar, int DataOffset, bool checkCrc)
 	{
 		guard(FLeadArchiveReader::ReadPageTable);
 		int NumPages = (FileSize + BufferSize - 1) / BufferSize;
@@ -244,12 +336,13 @@ printf("<<<\n");
 		int Remaining = FileSize;
 		int NumPages2;
 		Ar << AR_INDEX(NumPages2);	// unused
+		assert(NumPages == NumPages2);
 		for (int i = 0; i < NumPages; i++)
 		{
 			FLeadArcPage& P = Pages[i];
 			P.CompressedPos = DataOffset;
 			Ar << AR_INDEX(P.CompressedSize) << P.Flags;
-			if (P.Flags & LEAD_PKG_CHECK_CRC)
+			if (checkCrc)
 			{
 				Ar << P.CompressedCrc << P.UncompressedCrc;
 			}
