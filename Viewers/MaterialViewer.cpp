@@ -231,8 +231,9 @@ void CMaterialViewer::Draw2D()
 		const char *fmt = EnumToName("EPixelFormat", Tex->Format);
 		DrawTextLeft(S_GREEN"Width  :"S_WHITE" %d\n"
 					 S_GREEN"Height :"S_WHITE" %d\n"
-					 S_GREEN"Format :"S_WHITE" %s",
-					 Tex->SizeX, Tex->SizeY, fmt ? fmt : "???");
+					 S_GREEN"Format :"S_WHITE" %s\n"
+					 S_GREEN"TFCName:"S_WHITE" %s",
+					 Tex->SizeX, Tex->SizeY, fmt ? fmt : "???", *Tex->TextureFileCacheName);
 	}
 #endif // UNREAL3
 

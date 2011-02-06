@@ -123,7 +123,7 @@ static const char *PackageExtensions[] =
 	, "ass", "umd"
 #endif
 #if UNREAL3
-	, "upk", "ut3", "xxx", "umap"
+	, "upk", "ut3", "xxx", "umap", "udk"
 #endif
 #if MASSEFF
 	, "sfm"			// Mass Effect
@@ -1069,6 +1069,9 @@ void FArchive::DetectGame()
 #if FRONTLINES
 	if (ArVer == 433 && ArLicenseeVer == 52)	SET(GAME_Frontlines);
 #endif
+#if UNDERTOW
+//	if (ArVer == 435 && ArLicenseeVer == 0)		SET(GAME_Undertow);	// LicenseeVer==0!
+#endif
 #if MCARTA
 	if (ArVer == 446 && ArLicenseeVer == 25)	SET(GAME_MagnaCarta);
 #endif
@@ -1117,6 +1120,9 @@ void FArchive::DetectGame()
 #if BORDERLANDS
 	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands); // release and update
 #endif
+#if SINGULARITY
+	if (ArVer == 584 && ArLicenseeVer == 126)	SET(GAME_Singularity);
+#endif
 #if DCU_ONLINE
 	if (ArVer == 648 && ArLicenseeVer == 6405)	SET(GAME_DCUniverse);
 #endif
@@ -1125,6 +1131,9 @@ void FArchive::DetectGame()
 #endif
 #if MORTALONLINE
 	if (ArVer == 678 && ArLicenseeVer == 32771) SET(GAME_MortalOnline);
+#endif
+#if BULLETSTORM
+	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
 #endif
 
 	// UE3 games with the various versions of files

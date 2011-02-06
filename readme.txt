@@ -1,5 +1,4 @@
-UMODEL
-Unreal Model Viewer
+UMODEL (UE Viewer)
 (c) Konstantin Nosov (Gildor), 2007-2011
 
 
@@ -76,6 +75,8 @@ Modified Unreal Engine 3:
   Destroy All Humans! Path of the Furon
   DC Universe Online
   EndWar
+  Undertow (XBox360)
+  Singularity
 
 List of games with limited support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -141,7 +142,7 @@ Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
 
 Notes about psk/psa export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-There is a 3ds Max importer script (Actor X Importer) created by me:
+There is a 3ds Max importer script (ActorX Importer) created by me:
 http://www.gildor.org/projects/unactorx
 Its announcements thread is here:
 http://www.gildor.org/smf/index.php/topic,228.0.html
@@ -184,6 +185,27 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+06.02.2011
+- implemented Singularity StaticMesh support
+
+05.02.2011
+- added switches to override compression method of the fully compressed packages:
+  -lzo, -zlib, -lzx
+- implemented Undertow support; requires "-game=undertow -lzo" switches
+
+02.02.2011
+- fixed Mirror's Edge compatibility issue
+
+29.01.2011
+- added U8V8 and BC5 texture format support
+- improved rendering of some UE3 materials
+
+28.01.2011
+- updated support for the latest UE3 SkeletalMesh
+
+26.01.2011
+- implemented Bulletstorm support
+
 10.01.2011
 - implemented support for The Bourne Conspiracy (everything but animations)
 
@@ -288,7 +310,7 @@ Changes
 
 23.07.2010
 - implemented pskx/psax mesh and animation export - activated by "-pskx" command
-  line switch; pskx and psax formats are supported by Actor X Importer 1.10 and
+  line switch; pskx and psax formats are supported by ActorX Importer 1.10 and
   higher
 
 14.07.2010

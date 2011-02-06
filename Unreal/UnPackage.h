@@ -39,7 +39,18 @@ struct FCompressedChunk
 
 	friend FArchive& operator<<(FArchive &Ar, FCompressedChunk &C)
 	{
-		return Ar << C.UncompressedOffset << C.UncompressedSize << C.CompressedOffset << C.CompressedSize;
+		guard(FCompressedChunk<<);
+		Ar << C.UncompressedOffset << C.UncompressedSize << C.CompressedOffset << C.CompressedSize;
+#if BULLETSTORM
+		if (Ar.Game == GAME_Bulletstorm && Ar.ArLicenseeVer >= 21)
+		{
+			int unk10;			// unused?
+			Ar << unk10;
+			assert(unk10 == 1);
+		}
+#endif // BULLETSTORM
+		return Ar;
+		unguard;
 	}
 };
 
@@ -436,6 +447,9 @@ struct FObjectExport
 			}
 #	endif // TRANSFORMERS
 			if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;
+#	if UNDERTOW
+			if (Ar.Game == GAME_Undertow && Ar.ArVer >= 431) Ar << E.U3unk6C;	// partially upgraded?
+#	endif
 #	if ARMYOF2
 			if (Ar.Game == GAME_ArmyOf2) return Ar;
 #	endif

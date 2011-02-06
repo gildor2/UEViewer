@@ -5,7 +5,8 @@
 #include "UnPackage.h"
 
 
-//#define WHOLE_PKG_COMPRESS_TYPE		COMPRESS_LZO		// for Midway's games ...
+byte GForceCompMethod = 0;		// COMPRESS_...
+
 
 /*-----------------------------------------------------------------------------
 	Lineage2 file reader
@@ -758,11 +759,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Chunk->CompressedOffset   = 0;
 		Chunk->CompressedSize     = H.CompressedSize;
 		Loader->SetupFrom(*this);				//?? low-level loader; possibly, do it in FUE3ArchiveReader()
-#ifdef WHOLE_PKG_COMPRESS_TYPE
-		Loader = new FUE3ArchiveReader(Loader, WHOLE_PKG_COMPRESS_TYPE, Chunks);
-#else
-		Loader = new FUE3ArchiveReader(Loader, (Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_ZLIB, Chunks);
-#endif
+		byte CompMethod = GForceCompMethod;
+		if (!CompMethod)
+			CompMethod = (Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_ZLIB;
+		Loader = new FUE3ArchiveReader(Loader, CompMethod, Chunks);
 		fullyCompressed = true;
 		unguard;
 	}

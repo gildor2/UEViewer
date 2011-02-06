@@ -1119,11 +1119,14 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		DIFFUSE (appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
 		DIFFUSE (appStristr(Name, "_D" ), 11)
 		DIFFUSE (!stricmp(Name + len - 2, "_C"), 10);
+		DIFFUSE (!stricmp(Name + len - 3, "_CM"), 12);
 		NORMAL  (!stricmp(Name + len - 2, "_N"), 20);
 		NORMAL  (!stricmp(Name + len - 3, "_NM"), 20);
 		SPECULAR(!stricmp(Name + len - 2, "_S"), 20);
 		SPECPOW (!stricmp(Name + len - 3, "_SP"), 20);
+		SPECPOW (!stricmp(Name + len - 3, "_SM"), 20);
 		EMISSIVE(!stricmp(Name + len - 2, "_E"), 20);
+		EMISSIVE(!stricmp(Name + len - 3, "_EM"), 21);
 		OPACITY (!stricmp(Name + len - 2, "_A"), 20);
 		OPACITY (!stricmp(Name + len - 5, "_Mask"), 10);
 		// Magna Catra 2
@@ -1211,24 +1214,20 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 
 	// get local parameters
 	bool normalSet = false;
+	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0;
+
 	for (int i = 0; i < TextureParameterValues.Num(); i++)
 	{
 		const FTextureParameterValue &P = TextureParameterValues[i];
-//		if (!P.ParameterValue) continue;
-		const char *p = P.ParameterName;
-		if (appStristr(p, "dif") || appStristr(p, "color"))
-			Params.Diffuse = P.ParameterValue;
-		else if (appStristr(p, "norm") && !appStristr(p, "fx") && !normalSet)	// no NormalFX
-		{
-			Params.Normal = P.ParameterValue;
-			normalSet = true;
-		}
-		else if (appStristr(p, "specpow"))
-			Params.SpecPower = P.ParameterValue;
-		else if (appStristr(p, "spec"))
-			Params.Specular = P.ParameterValue;
-		else if (appStristr(p, "emiss"))
-			Params.Emissive = P.ParameterValue;
+		const char *Name = P.ParameterName;
+		UTexture3  *Tex  = P.ParameterValue;
+		if (!Tex) continue;
+		DIFFUSE (appStristr(Name, "dif"), 100);
+		DIFFUSE (appStristr(Name, "color"), 80);
+		NORMAL  (appStristr(Name, "norm") && !appStristr(Name, "fx"), 100);
+		SPECPOW (appStristr(Name, "specpow"), 100);
+		SPECULAR(appStristr(Name, "spec"), 100);
+		EMISSIVE(appStristr(Name, "emiss"), 100);
 	}
 
 	// try to get diffuse texture when nothing found

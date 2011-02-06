@@ -219,6 +219,9 @@ enum EGame
 		GAME_Berkanix,
 		GAME_DOH,
 		GAME_DCUniverse,
+		GAME_Bulletstorm,
+		GAME_Undertow,
+		GAME_Singularity,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -1410,6 +1413,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 extern FArchive *GDummySave;
 extern int       GForceGame;
 extern byte      GForcePlatform;
+extern byte      GForceCompMethod;
 
 
 /*-----------------------------------------------------------------------------

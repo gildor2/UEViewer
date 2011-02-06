@@ -248,26 +248,27 @@ EOF
 				$url2 = $lines[4];
 			}
 		}
+		$newWindow = " target=\"_blank\"";
 		if ($color ne "") {
 			print OUT "  <tr bgcolor=\"$color\">\n";
 		} else {
 			print OUT "  <tr>\n";
 		}
 		if ($url2 ne "") {
-			print OUT "    <td><a href=\"$url2\" target=\"_blank\">$year</a></td>\n";
+			print OUT "    <td><a href=\"$url2\"${newWindow}>$year</a></td>\n";
 		} else {
 			print OUT "    <td>$year</td>\n";
 		}
 
 		if ($url1 ne "") {
-			print OUT "    <td><div align=\"left\"><a href=\"$url1\">$game</a></div></td>\n";
+			print OUT "    <td><div align=\"left\"><a href=\"$url1\"${newWindow}>$game</a></div></td>\n";
 		} else {
 			print OUT "    <td><div align=\"left\">$game</div></td>\n";
 		}
 		printf OUT    "    <td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>\n", yesno($c1), yesno($c2), yesno($c3), yesno($c4), $ver;
 		my $compUrl = $compUrls{$company};
 		if (defined($compUrl)) {
-			print OUT "    <td><div align=\"left\"><a href=\"$compUrl\" target=\"_blank\">$company</a></div></td>\n"
+			print OUT "    <td><div align=\"left\"><a href=\"$compUrl\"${newWindow}>$company</a></div></td>\n"
 		} else {
 			print OUT "    <td><div align=\"left\">$company</div></td>\n"
 		}

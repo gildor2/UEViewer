@@ -516,12 +516,8 @@ struct FGPUSkin3
 	new_version:
 		// serialize type information
 	#if MEDGE
-		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15)
-		{
-			Ar << S.NumUVSets;
-			GNumGPUUVSets = 1;			// serialized in a different way - as separate stream
-		}
-	#endif // MEDGE
+		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15) goto get_UV_count;
+	#endif
 	#if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55) goto get_UV_count; // 1 or 2
 	#endif
@@ -602,11 +598,18 @@ struct FMesh3Unk2
 {
 	TArray<FMesh3Unk1>	f0;
 	TArray<FMesh3Unk3>	fC;				//?? SparseArray or Map
+	TArray<FSkelMeshSection> Sections;
+	TArray<FSkinChunk3>	Chunks;
+	TArray<byte>		f80;
+	byte				f8C;			// default = 0
 
 	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk2 &S)
 	{
 		Ar << S.f0;
 		if (Ar.ArVer >= 609) Ar << S.fC;
+		if (Ar.ArVer >= 700) Ar << S.Sections << S.Chunks;
+		if (Ar.ArVer >= 708) Ar << S.f80;
+		if (Ar.ArVer >= 715) Ar << S.f8C;
 		return Ar;
 	}
 };
@@ -1507,7 +1510,7 @@ void UAnimSet::ConvertAnims()
 			}
 
 			FVector Mins, Ranges;	// common ...
-			static const FVector nullVec;
+			static const FVector nullVec  = { 0, 0, 0 };
 			static const FQuat   nullQuat = { 0, 0, 0, 1 };
 
 // position
@@ -2179,6 +2182,9 @@ struct FStaticMeshUVItem3
 #if MOH2010
 		if (Ar.Game == GAME_MOH2010 && Ar.ArLicenseeVer >= 58) goto uvs;
 #endif
+#if UNDERTOW
+		if (Ar.Game == GAME_Undertow) goto uvs;
+#endif
 		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
 			Ar << V.f10;				// starting from 615 made as separate stream
 	uvs:
@@ -2214,6 +2220,7 @@ struct FStaticMeshUVStream3
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream3 &S)
 	{
 		Ar << S.NumTexCoords << S.ItemSize << S.NumVerts;
+//		printf("TC:%d IS:%d NV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts);
 		S.bUseFullPrecisionUVs = true;
 #if TUROK
 		if (Ar.Game == GAME_Turok && Ar.ArLicenseeVer >= 59)
@@ -2768,6 +2775,21 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 #if ENDWAR
 	if (Ar.Game == GAME_EndWar) goto version;	// no kDOP since version 306
 #endif // ENDWAR
+#if SINGULARITY
+	if (Ar.Game == GAME_Singularity)
+	{
+		// serialize kDOP tree
+		assert(Ar.ArLicenseeVer >= 112);
+		// old serialization code
+		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles);
+		// new serialization code
+		// bug in Singularity serialization code: serialized the same things twice!
+		goto ver_770;
+	}
+#endif // SINGULARITY
+#if BULLETSTORM
+	if (Ar.Game == GAME_Bulletstorm && Ar.ArVer >= 739) goto ver_770;
+#endif
 	// kDOP tree
 	if (Ar.ArVer < 770)
 	{
@@ -2775,6 +2797,7 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 	}
 	else
 	{
+	ver_770:
 		FStaticMeshUnk1 kdop1;
 		TArray<FkDOPNode3A> kdop2;
 		Ar << kdop1 << RAW_ARRAY(kdop2);

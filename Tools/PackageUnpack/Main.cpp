@@ -164,6 +164,10 @@ int main(int argc, char **argv)
 		int* p = (int*)(buffer + pos);
 		p[0] = p[1] = 0;
 		int cut = Summary.CompressedChunks.Num() * 16;
+#if BULLETSTORM
+		if (Package->Game == GAME_Bulletstorm)
+			cut = Summary.CompressedChunks.Num() * 20;
+#endif
 		int dstPos = pos + 8;	// skip CompressionFlags and CompressedChunks.Num
 		int srcPos = pos + 8 + cut;	// skip CompressedChunks
 		memcpy(buffer + dstPos, buffer + srcPos, compressedStart - srcPos);

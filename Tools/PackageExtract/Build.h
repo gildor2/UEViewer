@@ -40,3 +40,4 @@
 #define MORTALONLINE	1		// Mortal Online
 #define BERKANIX		1
 #define DCU_ONLINE		1		// DC Universe Online
+#define BULLETSTORM		1

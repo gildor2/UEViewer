@@ -141,21 +141,23 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 	case TEXF_CxV8U8:
 		{
 			//!! not checked (Republic Commando possibly has textures of such type)
+			//!! Midnight Night Combat (UE3) uses it
+			//!!!! import any normalmap into UDK twice and set one of them to U8V8
 			const byte *s = Data;
 			byte *d = dst;
 			for (int i = 0; i < width * height; i++)
 			{
 				byte u = *s++;
 				byte v = *s++;
-				d[1] = u;
-				d[2] = v;
-#if 0
-				float uf = (u - 128.0f) / 128.0f;
-				float vf = (v - 128.0f) / 128.0f;
-				d[0] = (1 - uf * uf - vf * vf) * 128 + 128;
-#else
-				d[0] = 0;
-#endif
+				d[0] = u - 128;
+				d[1] = v - 128;
+				float uf = u / 255.0f * 2 - 1;
+				float vf = v / 255.0f * 2 - 1;
+				float t  = 1.0f - uf * uf - vf * vf;
+				if (t >= 0)
+					d[2] = 255 - 255 * sqrt(t);
+				else
+					d[2] = 255;
 				d[3] = 255;
 				d += 4;
 			}
@@ -905,7 +907,7 @@ bool UTexture2D::LoadBulkTexture(int MipIndex) const
 
 	// Here: data is either in TFC file or in other package
 	const char *bulkFileName = NULL, *bulkFileExt = NULL;
-	if (strcmp(TextureFileCacheName, "None") != 0)
+	if (stricmp(TextureFileCacheName, "None") != 0)
 	{
 		// TFC file is assigned
 		//!! cache checking of tfc file(s) + cache handles (FFileReader)
@@ -998,6 +1000,10 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			intFormat = TEXF_DXT5;
 		else if (Format == PF_G8)
 			intFormat = TEXF_L8;
+		else if (Format == PF_V8U8)
+			intFormat = TEXF_CxV8U8;
+		else if (Format == PF_BC5)
+			intFormat = TEXF_3DC;
 #if MASSEFF
 //??		else if (Format == PF_NormapMap_LQ)
 //??			intFormat = TEXF_3DC;

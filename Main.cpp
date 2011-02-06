@@ -7,7 +7,7 @@
 #include "Exporters/Exporters.h"
 
 
-#define APP_CAPTION		"Unreal Model Viewer"
+#define APP_CAPTION		"UE Viewer"
 #define HOMEPAGE		"http://www.gildor.org/en/projects/umodel"
 
 
@@ -268,6 +268,9 @@ static GameInfo games[] = {
 #	if IPHONE
 		G3("Infinity Blade"),
 #	endif
+#	if BULLETSTORM
+		G("Bulletstorm", bs, GAME_Bulletstorm),
+#	endif
 #	if ENDWAR
 		G("EndWar", endwar, GAME_EndWar),
 #	endif
@@ -372,6 +375,12 @@ static GameInfo games[] = {
 #	if BERKANIX
 		G("Berkanix", berk, GAME_Berkanix),
 #	endif
+#	if UNDERTOW
+		G("Undertow", undertow, GAME_Undertow),
+#	endif
+#	if SINGULARITY
+		G("Singularity", sing, GAME_Singularity),
+#	endif
 #	if SPECIAL_TAGS
 		G3("Nurien"),
 #	endif
@@ -462,7 +471,7 @@ static int FindGameTag(const char *name)
 
 static void Usage()
 {
-	printf(	"Unreal model viewer / exporter\n"
+	printf(	"UE viewer / exporter\n"
 			"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
 			"\n"
 			"    <package>       name of package to load, without file extension\n"
@@ -494,6 +503,7 @@ static void Usage()
 			"    -noanim         disable loading of MeshAnimation classes\n"
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
+			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
 			"\n"
 			"Platform selection:\n"
 			"    -ps3            override platform autodetection to PS3\n"
@@ -606,12 +616,18 @@ int main(int argc, char **argv)
 				OPT_BOOL ("md5",     md5)
 				OPT_BOOL ("lods",    GExportLods)
 				OPT_BOOL ("uc",      GExportScripts)
+				// disable classes
 				OPT_BOOL ("nomesh",  noMesh)
 				OPT_BOOL ("nostat",  noStat)
 				OPT_BOOL ("noanim",  noAnim)
 				OPT_BOOL ("notex",   noTex)
+				// platform
 				OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
 				OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
+				// compression
+				OPT_VALUE("lzo",     GForceCompMethod, COMPRESS_LZO )	//!! add these options to the "extract" and "decompress"
+				OPT_VALUE("zlib",    GForceCompMethod, COMPRESS_ZLIB)
+				OPT_VALUE("lzx",     GForceCompMethod, COMPRESS_LZX )
 			};
 			if (ProcessOption(ARRAY_ARG(options), opt))
 				continue;
