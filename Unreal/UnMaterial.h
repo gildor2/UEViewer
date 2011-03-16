@@ -1525,6 +1525,7 @@ public:
 	ETextureAddress	AddressY;
 	FName			TextureFileCacheName;
 	FGuid			TextureFileCacheGuid;
+	int				MipTailBaseIdx;
 	bool			bForcePVRTC4;		// iPhone
 
 #if RENDERING
@@ -1551,9 +1552,9 @@ public:
 		PROP_ENUM2(AddressX, ETextureAddress)
 		PROP_ENUM2(AddressY, ETextureAddress)
 		PROP_NAME(TextureFileCacheName)
+		PROP_INT(MipTailBaseIdx)
 		// drop unneeded props
 		PROP_DROP(bGlobalForceMipLevelsToBeResident)
-		PROP_DROP(MipTailBaseIdx)
 		PROP_DROP(OriginalSizeX)
 		PROP_DROP(OriginalSizeY)
 		PROP_BOOL(bForcePVRTC4)

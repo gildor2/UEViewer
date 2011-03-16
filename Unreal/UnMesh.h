@@ -1711,6 +1711,7 @@ public:
 	//?? move outside
 	TArray<FSkeletalMeshLODInfo> LODInfo;
 	TArray<USkeletalMeshSocket*> Sockets;
+	bool					bHasVertexColors;
 #endif
 #if BIOSHOCK
 	TArray<UObject*>		havokObjects;	// wrappers for Havok objects used by this mesh; not used by Bioshock engine (precaching?)
@@ -1739,6 +1740,7 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
 		PROP_ARRAY(Sockets, UObject*)
+		PROP_BOOL(bHasVertexColors)
 		PROP_DROP(SkelMeshGUID)
 		PROP_DROP(SkelMirrorTable)
 		PROP_DROP(FaceFXAsset)
@@ -1765,6 +1767,8 @@ public:
 		PROP_DROP(ClothDensity)
 		PROP_DROP(ClothFriction)
 		PROP_DROP(ClothTearFactor)
+		PROP_DROP(SourceFilePath)
+		PROP_DROP(SourceFileTimestamp)
 #	if MEDGE
 		PROP_DROP(NumUVSets)
 #	endif
@@ -1773,6 +1777,12 @@ public:
 		PROP_DROP(Stretches)
 #	endif // BATMAN
 	END_PROP_TABLE
+#endif // UNREAL3
+
+#if UNREAL3
+	USkeletalMesh()
+	:	bHasVertexColors(false)
+	{}
 #endif // UNREAL3
 
 	virtual void Serialize(FArchive &Ar)

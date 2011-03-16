@@ -27,6 +27,7 @@ MAIN = \
 	./obj/umodel-win32/ExportMaterial.obj \
 	./obj/umodel-win32/ExportMd5.obj \
 	./obj/umodel-win32/ExportPsk.obj \
+	./obj/umodel-win32/ExportSound.obj \
 	./obj/umodel-win32/ExportTga.obj \
 	./obj/umodel-win32/UnCore.obj \
 	./obj/umodel-win32/UnHavok.obj \
@@ -130,6 +131,7 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
+	Unreal/UnSound.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
@@ -196,7 +198,8 @@ DEPENDS = \
 	Unreal/Shaders.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
 
 ./obj/umodel-win32/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnRenderer.obj" Unreal/UnRenderer.cpp
@@ -290,6 +293,21 @@ DEPENDS = \
 
 ./obj/umodel-win32/Exporters.obj : Exporters/Exporters.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Exporters.obj" Exporters/Exporters.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnSound.h
+
+./obj/umodel-win32/ExportSound.obj : Exporters/ExportSound.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportSound.obj" Exporters/ExportSound.cpp
 
 DEPENDS = \
 	Build.h \

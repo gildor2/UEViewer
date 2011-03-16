@@ -2,6 +2,7 @@
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 #include "UnAnimNotify.h"
+#include "UnSound.h"
 
 #include "Viewers/ObjectViewer.h"
 #include "Exporters/Exporters.h"
@@ -55,6 +56,17 @@ END_CLASS_TABLE
 	REGISTER_MATERIAL_ENUMS_U3
 	REGISTER_MESH_ENUMS_U3
 #endif
+}
+
+
+static void RegisterUnrealSoundClasses()
+{
+BEGIN_CLASS_TABLE
+	REGISTER_SOUND_CLASSES
+#if UNREAL3
+	REGISTER_SOUND_CLASSES_UE3
+#endif
+END_CLASS_TABLE
 }
 
 
@@ -503,6 +515,7 @@ static void Usage()
 			"    -noanim         disable loading of MeshAnimation classes\n"
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
+			"    -sounds         allow export of sounds\n"
 			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
 			"\n"
 			"Platform selection:\n"
@@ -526,6 +539,7 @@ static void Usage()
 			"    VertMesh        exported as Unreal 3d file\n"
 			"    StaticMesh      exported as ActorX psk file with no skeleton\n"
 			"    Texture         exported in tga format\n"
+			"    Sounds          file extension depends on object contents\n"
 			"\n"
 			"List of supported games:\n"
 	);
@@ -590,7 +604,7 @@ int main(int argc, char **argv)
 	};
 	static byte mainCmd = CMD_View;
 	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
-		 noTex = false, hasRootDir = false;
+		 noTex = false, regSounds = false, hasRootDir = false;
 	TArray<const char*> extraPackages;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
@@ -621,6 +635,7 @@ int main(int argc, char **argv)
 				OPT_BOOL ("nostat",  noStat)
 				OPT_BOOL ("noanim",  noAnim)
 				OPT_BOOL ("notex",   noTex)
+				OPT_BOOL ("sounds",  regSounds)
 				// platform
 				OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
 				OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
@@ -703,14 +718,17 @@ int main(int argc, char **argv)
 	EXPORTER("VertMesh",      NULL,   Export3D  );				// will generate 2 files
 	EXPORTER("StaticMesh",    "pskx", ExportPsk2);
 	EXPORTER("Texture",       "tga",  ExportTga );
+	EXPORTER("Sound",         NULL,   ExportSound);
 #if UNREAL3
 	EXPORTER("Texture2D",     "tga",  ExportTga );
+	EXPORTER("SoundNodeWave", NULL,   ExportSoundNodeWave);
 #endif
 
 	// prepare classes
 	//?? NOTE: can register classes after loading package: in this case we can know engine version (1/2/3)
 	//?? and register appropriate classes only (for example, separate UKeletalMesh classes for UE2/UE3)
 	RegisterUnrealClasses();
+	if (regSounds) RegisterUnrealSoundClasses();
 	// remove some class loaders when requisted by command line
 	if (noAnim)
 	{
@@ -865,15 +883,20 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_Export)
 	{
-		appSetNotifyHeader(NULL);
 		printf("Exporting objects ...\n");
 		// export object(s), if possible
 		bool oneObjectOnly = (argObjName != NULL && !exprtAll);
+		UnPackage* notifyPackage = NULL;
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			UObject* ExpObj = UObject::GObjObjects[idx];
 			if (!exprtAll && ExpObj->Package != Package)	// refine object by package
 				continue;
+			if (notifyPackage != ExpObj->Package)
+			{
+				notifyPackage = ExpObj->Package;
+				appSetNotifyHeader(notifyPackage->Filename);
+			}
 			if (ExportObject(ExpObj))
 			{
 				printf("Exported %s %s\n", ExpObj->GetClassName(), ExpObj->Name);

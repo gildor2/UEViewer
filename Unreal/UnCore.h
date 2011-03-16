@@ -1395,6 +1395,14 @@ struct FWordBulkData : public FByteBulkData
 	}
 };
 
+struct FIntBulkData : public FByteBulkData
+{
+	virtual int GetElementSize() const
+	{
+		return 4;
+	}
+};
+
 // UE3 compression flags
 #define COMPRESS_ZLIB		1
 #define COMPRESS_LZO		2

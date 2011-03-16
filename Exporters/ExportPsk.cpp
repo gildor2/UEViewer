@@ -317,6 +317,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	KeyHdr.DataCount = keysCount;
 	KeyHdr.DataSize  = sizeof(VQuatAnimKey);
 	SAVE_CHUNK(KeyHdr, "ANIMKEYS");
+	bool requirePsax = false;
 	for (i = 0; i < numAnims; i++)
 	{
 		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
@@ -349,12 +350,22 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 
 				Ar << K;
 				keysCount--;
+
+				// check for user error
+				if ((b < M.BoneIndices.Num() && M.BoneIndices[b] == INDEX_NONE) ||
+					(M.AnimTracks[b].KeyPos.Num() == 0) ||
+					(M.AnimTracks[b].KeyQuat.Num() == 0))
+					requirePsax = true;
 			}
 		}
 	}
 	assert(keysCount == 0);
 
-	if (!GExtendedPsk) return;			// done
+	if (!GExtendedPsk)
+	{
+		if (requirePsax) appNotify("Exporting %s'%s': psax is recommended", Anim->GetClassName(), Anim->Name);
+		return;
+	}
 
 	// export extra animation information
 	static VChunkHeader FlagHdr;
@@ -373,6 +384,8 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 				flag |= PSAX_FLAG_NO_TRANSLATION | PSAX_FLAG_NO_ROTATION;
 			else if (M.AnimTracks[b].KeyPos.Num() == 0)
 				flag |= PSAX_FLAG_NO_TRANSLATION;
+			else if (M.AnimTracks[b].KeyQuat.Num() == 0)
+				flag |= PSAX_FLAG_NO_ROTATION;
 			Ar << flag;
 			numFlags--;
 		}

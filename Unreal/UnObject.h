@@ -246,6 +246,7 @@ public:
 	static int				GObjBeginLoadCount;
 	static TArray<UObject*>	GObjLoaded;
 	static TArray<UObject*> GObjObjects;
+	static UObject			*GLoadingObj;
 
 	static void BeginLoad();
 	static void EndLoad();

@@ -15,7 +15,7 @@ struct FSkelMeshSection3
 	short				MaterialIndex;
 	short				unk1;
 	int					FirstIndex;
-	word				NumTriangles;
+	int					NumTriangles;
 	byte				unk2;
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
@@ -32,7 +32,19 @@ struct FSkelMeshSection3
 			S.unk1 = 0;
 			return Ar;
 		}
-		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex << S.NumTriangles;
+		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex;
+		if (Ar.ArVer < 806)
+		{
+			// NumTriangles is short
+			short NumTriangles;
+			Ar << NumTriangles;
+			S.NumTriangles = NumTriangles;
+		}
+		else
+		{
+			// NumTriangles is int
+			Ar << S.NumTriangles;
+		}
 #if MCARTA
 		if (Ar.Game == GAME_MagnaCarta && Ar.ArLicenseeVer >= 20)
 		{
@@ -55,6 +67,31 @@ struct FIndexBuffer3
 		Ar << RAW_ARRAY(I.Indices);
 		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
 		return Ar;
+	}
+};
+
+struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - has ability to store int indices
+{
+	TArray<word>		Indices;
+
+	friend FArchive& operator<<(FArchive &Ar, FSkelIndexBuffer3 &I)
+	{
+		guard(FSkelIndexBuffer3<<);
+
+		if (Ar.ArVer >= 806)
+		{
+			int		f0;
+			byte	ItemSize;
+			Ar << f0 << ItemSize;
+			assert(ItemSize == 2);
+		}
+		Ar << RAW_ARRAY(I.Indices);		//!! should use TArray<int> if ItemSize != 2 -- this will require updating UE2 code (Face.iWedge) too!
+		int unk;
+		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
+
+		return Ar;
+
+		unguard;
 	}
 };
 
@@ -655,7 +692,7 @@ struct FStaticLODModel3
 {
 	TArray<FSkelMeshSection3> Sections;
 	TArray<FSkinChunk3>	Chunks;
-	FIndexBuffer3		IndexBuffer;
+	FSkelIndexBuffer3	IndexBuffer;
 	TArray<short>		UsedBones;		// bones, value = [0, NumBones-1]
 	TArray<byte>		f24;			// count = NumBones, value = [0, NumBones-1]; note: BoneIndex is 'short', not 'byte' ...
 	TArray<word>		f68;			// indices, value = [0, NumVertices-1]
@@ -664,9 +701,11 @@ struct FStaticLODModel3
 	int					NumVertices;
 	TArray<FEdge3>		Edges;			// links 2 vertices and 2 faces (triangles)
 	FWordBulkData		BulkData;		// ElementCount = NumVertices
+	FIntBulkData		BulkData2;		// used instead of BulkData since version 806, indices?
 	FGPUSkin3			GPUSkin;
 	TArray<FMesh3Unk2>	fC4;			// unknown, has in GoW2
 	int					f6C;			// unknown, default 1
+	TArray<int>			VertexColor;	// since version 710
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel3 &Lod)
 	{
@@ -759,7 +798,12 @@ struct FStaticLODModel3
 		}
 #endif // APB
 		if (Ar.ArVer >= 221)
-			Lod.BulkData.Serialize(Ar);
+		{
+			if (Ar.ArVer < 806)
+				Lod.BulkData.Serialize(Ar);		// Bulk of word
+			else
+				Lod.BulkData2.Serialize(Ar);	// Bulk of int
+		}
 	after_bulk:
 #if R6VEGAS
 		if (Ar.Game == GAME_R6Vegas2 && Ar.ArLicenseeVer >= 46)
@@ -786,7 +830,7 @@ struct FStaticLODModel3
 			if (Ar.ArLicenseeVer >= 42)
 				Ar << Lod.fC4;		// original code: this field is serialized after GPU Skin
 		}
-#endif
+#endif // MOH2010
 #if FURY
 		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 34)
 		{
@@ -818,10 +862,13 @@ struct FStaticLODModel3
 #endif // TRANSFORMERS
 		if (Ar.ArVer >= 710)
 		{
-			//!! if Mesh.bHasVertexColors -> serialize extra stream
-			//!! serialize: RAW_ARRAY<int>
-			//!! problem: cannot access USkeletalMesh property from nested structure
-			//?? store global "UObject* GSerializedObject"?
+			USkeletalMesh *LoadingMesh = (USkeletalMesh*)UObject::GLoadingObj;
+			assert(LoadingMesh);
+			if (LoadingMesh->bHasVertexColors)
+			{
+				Ar << RAW_ARRAY(Lod.VertexColor);
+				printf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
+			}
 		}
 		if (Ar.ArVer >= 534)		// post-UT3 code
 			Ar << Lod.fC4;
@@ -1735,6 +1782,7 @@ void UAnimSet::ConvertAnims()
 
 				unguard;
 				continue;
+				// end of AKF_PerTrackCompression block ...
 			}
 
 			// read animations
@@ -1851,8 +1899,8 @@ void UAnimSet::ConvertAnims()
 			}
 			else
 			{
-				A->KeyPos.AddItem(nullVec);
-				appNotify("No translation keys!");
+//				A->KeyPos.AddItem(nullVec);
+//				appNotify("No translation keys!");
 			}
 
 #if DEBUG_DECOMPRESS
@@ -1870,6 +1918,8 @@ void UAnimSet::ConvertAnims()
 			// read rotation keys
 			Reader.Seek(RotOffset);
 			AnimationCompressionFormat RotationCompressionFormat = Seq->RotationCompressionFormat;
+			if (RotKeys <= 0)
+				goto rot_keys_done;
 			if (RotKeys == 1)
 			{
 				RotationCompressionFormat = ACF_Float96NoW;	// single key is stored without compression

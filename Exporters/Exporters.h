@@ -14,6 +14,8 @@ class UMeshAnimation;
 class UStaticMesh;
 class UVertMesh;
 class UUnrealMaterial;
+class USound;
+class USoundNodeWave;
 
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);
@@ -28,6 +30,9 @@ void Export3D (const UVertMesh *Mesh, FArchive &Ar);
 void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar);
 // UUnrealMaterial
 void ExportMaterial(const UUnrealMaterial *Mat);
+// sound
+void ExportSound(const USound *Snd, FArchive &Ar);
+void ExportSoundNodeWave(const USoundNodeWave *Snd, FArchive &Ar);
 
 // service functions
 //?? place implementation to cpp?

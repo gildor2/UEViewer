@@ -820,9 +820,8 @@ void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Lo
 	// fast case: 1 frame only
 	if (A.KeyTime.Num() == 1 || NumFrames == 1 || Frame == 0)
 	{
-		if (A.KeyPos.Num())
-			DstPos  = (CVec3&)A.KeyPos[0];
-		DstQuat = (CQuat&)A.KeyQuat[0];
+		if (A.KeyPos.Num())  DstPos  = (CVec3&)A.KeyPos[0];
+		if (A.KeyQuat.Num()) DstQuat = (CQuat&)A.KeyQuat[0];
 		return;
 	}
 
@@ -925,12 +924,12 @@ void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Lo
 	// get position
 	if (posF > 0)
 		Lerp((CVec3&)A.KeyPos[posX], (CVec3&)A.KeyPos[posY], posF, DstPos);
-	else if (NumPosKeys)
+	else if (NumPosKeys)		// do not change DstPos when no keys
 		DstPos = (CVec3&)A.KeyPos[posX];
 	// get orientation
 	if (rotF > 0)
 		Slerp((CQuat&)A.KeyQuat[rotX], (CQuat&)A.KeyQuat[rotY], rotF, DstQuat);
-	else
+	else if (NumRotKeys)		// do not change DstQuat when no keys
 		DstQuat = (CQuat&)A.KeyQuat[rotX];
 
 	unguard;
@@ -1014,7 +1013,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 #if SHOW_BONE_UPDATES
 					BoneUpdateCounts[i]++;
 #endif
-					BP = (CVec3&)Mesh->RefSkeleton[i].BonePos.Position;	// default position - from bind pose
+					const VJointPos &JP = Mesh->RefSkeleton[i].BonePos;
+					BP = (CVec3&)JP.Position;		// default position - from bind pose
+					BO = (CQuat&)JP.Orientation;	// ...
 					GetBonePosition(Motion1->AnimTracks[BoneIndex], Chn->Time, AnimSeq1->NumFrames,
 						Chn->Looped, BP, BO);
 //const char *bname = *Mesh->RefSkeleton[i].Name;

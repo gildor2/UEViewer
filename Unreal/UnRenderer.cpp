@@ -4,6 +4,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
+#include "UnPackage.h"					// for accessing Game field
 
 #if RENDERING
 
@@ -1115,16 +1116,27 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		if (appStristr(Name, "_Diffuse"))
 			Diffuse = Tex;
 #endif
-		DIFFUSE (appStristr(Name, "_DI"), 20)
-		DIFFUSE (appStristr(Name, "_MA"), 10)		// The Last Remnant; low priority
-		DIFFUSE (appStristr(Name, "_D" ), 11)
+		DIFFUSE (appStristr(Name, "_DI"), 20);
+		DIFFUSE (appStristr(Name, "_MA"), 8 );		// The Last Remnant; low priority
+		DIFFUSE (appStristr(Name, "_D" ), 11);
 		DIFFUSE (!stricmp(Name + len - 2, "_C"), 10);
 		DIFFUSE (!stricmp(Name + len - 3, "_CM"), 12);
 		NORMAL  (!stricmp(Name + len - 2, "_N"), 20);
 		NORMAL  (!stricmp(Name + len - 3, "_NM"), 20);
+		NORMAL  (appStristr(Name, "_N"), 9);
+#if BULLETSTORM
+		if (Package->Game == GAME_Bulletstorm)
+		{
+			DIFFUSE (appStristr(Name, "_C"), 12);
+			NORMAL(appStristr(Name, "_TS"), 5);
+			SPECULAR(appStristr(Name, "_S"), 5);
+		}
+#endif // BULLETSTORM
 		SPECULAR(!stricmp(Name + len - 2, "_S"), 20);
+		SPECULAR(appStristr(Name, "_S_"), 15);
 		SPECPOW (!stricmp(Name + len - 3, "_SP"), 20);
 		SPECPOW (!stricmp(Name + len - 3, "_SM"), 20);
+		SPECPOW (appStristr(Name, "_SP"), 9);
 		EMISSIVE(!stricmp(Name + len - 2, "_E"), 20);
 		EMISSIVE(!stricmp(Name + len - 3, "_EM"), 21);
 		OPACITY (!stricmp(Name + len - 2, "_A"), 20);

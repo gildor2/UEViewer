@@ -42,6 +42,7 @@ UObject::~UObject()
 int              UObject::GObjBeginLoadCount = 0;
 TArray<UObject*> UObject::GObjLoaded;
 TArray<UObject*> UObject::GObjObjects;
+UObject         *UObject::GLoadingObj = NULL;
 
 
 void UObject::BeginLoad()
@@ -79,7 +80,9 @@ void UObject::EndLoad()
 #if PROFILE_LOADING
 		appResetProfiler();
 #endif
+		GLoadingObj = Obj;
 		Obj->Serialize(*Package);
+		GLoadingObj = NULL;
 #if PROFILE_LOADING
 		appPrintProfiler();
 #endif
@@ -364,6 +367,10 @@ void UObject::Serialize(FArchive &Ar)
 	if (Ar.ArVer >= 322)
 		Ar << NetIndex;
 #endif
+#if DCU_ONLINE
+	if (Ar.Game == GAME_DCUniverse && NetIndex != -1)
+		Ar.Seek(Ar.Tell() + 28);		// does help in some (not all) situations
+#endif // DCU_ONLINE
 
 	const CTypeInfo *Type = GetTypeinfo();
 	assert(Type);
@@ -397,7 +404,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
 			if (!Prop)
-				appNotify("WARNING: %s \"%s::%s\" was not found", GetTypeName(Tag.Type), Name, *Tag.Name);
+				printf("WARNING: %s \"%s::%s\" was not found\n", GetTypeName(Tag.Type), Name, *Tag.Name);
 #if DEBUG_PROPS
 			printf("  (skipping %s)\n", *Tag.Name);
 #endif
@@ -639,14 +646,17 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 	RTTI support
 -----------------------------------------------------------------------------*/
 
-static CClassInfo* GClasses    = NULL;
-static int         GClassCount = 0;
+#define MAX_CLASSES		256
+
+static CClassInfo GClasses[MAX_CLASSES];
+static int        GClassCount = 0;
 
 void RegisterClasses(CClassInfo *Table, int Count)
 {
-	assert(GClasses == NULL);		// no multiple tables
-	GClasses    = Table;
-	GClassCount = Count;
+	if (Count <= 0) return;
+	assert(GClassCount + Count < ARRAY_COUNT(GClasses));
+	memcpy(GClasses + GClassCount, Table, Count * sizeof(GClasses[0]));
+	GClassCount += Count;
 }
 
 

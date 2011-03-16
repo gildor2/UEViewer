@@ -83,6 +83,8 @@
 
 /*
 TODO:
+! support SCALEKEYS psa chunk (at least ignore it)
+  - currently error message will appear, may be ignored
 - Menu item for plugin
 - try to not use setBoneEnable false ...
 */

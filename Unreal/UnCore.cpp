@@ -97,8 +97,8 @@ extern "C" void zcfree(int opaque, void *ptr)
 	Game file system
 -----------------------------------------------------------------------------*/
 
-#define MAX_GAME_FILES			8192
-#define MAX_FOREIGN_FILES		16384
+#define MAX_GAME_FILES			32768		// DC Universe Online has more than 20k upk files
+#define MAX_FOREIGN_FILES		32768
 
 static char RootDirectory[256];
 
@@ -123,7 +123,7 @@ static const char *PackageExtensions[] =
 	, "ass", "umd"
 #endif
 #if UNREAL3
-	, "upk", "ut3", "xxx", "umap", "udk"
+	, "upk", "ut3", "xxx", "umap", "udk", "map"
 #endif
 #if MASSEFF
 	, "sfm"			// Mass Effect
@@ -136,7 +136,7 @@ static const char *PackageExtensions[] =
 	, "ppk", "pda"	// Legendary: Pandora's Box
 #endif
 #if R6VEGAS
-	, "uppc"		// Rainbow 6 Vegas 2
+	, "uppc", "rmpc"// Rainbow 6 Vegas 2
 #endif
 #if TERA
 	, "gpk"			// TERA: Exiled Realms of Arborea
@@ -354,7 +354,7 @@ void appSetRootDirectory2(const char *filename)
 				}
 		}
 		if (detected) break;
-		if (strstr(s, "Cooked") || strstr(s, "Content"))
+		if (appStristr(s, "Cooked") || appStristr(s, "Content"))
 		{
 			s[-1] = '/';	// put it back
 			detected = true;

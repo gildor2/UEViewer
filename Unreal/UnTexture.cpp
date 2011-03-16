@@ -140,9 +140,6 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 		return dst;
 	case TEXF_CxV8U8:
 		{
-			//!! not checked (Republic Commando possibly has textures of such type)
-			//!! Midnight Night Combat (UE3) uses it
-			//!!!! import any normalmap into UDK twice and set one of them to U8V8
 			const byte *s = Data;
 			byte *d = dst;
 			for (int i = 0; i < width * height; i++)
@@ -155,7 +152,7 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 				float vf = v / 255.0f * 2 - 1;
 				float t  = 1.0f - uf * uf - vf * vf;
 				if (t >= 0)
-					d[2] = 255 - 255 * sqrt(t);
+					d[2] = 255 - 255 * appFloor(sqrt(t));
 				else
 					d[2] = 255;
 				d[3] = 255;

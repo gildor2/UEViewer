@@ -129,6 +129,7 @@ int main(int argc, char **argv)
 				"Options:\n"
 				"    -filter=<value>    add filter for output types\n"
 				"    -out=PATH          extract everything into PATH instead of the current directory\n"
+				"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
 				"\n"
 				"For details and updates please visit " HOMEPAGE "\n"
 		);
@@ -164,6 +165,12 @@ int main(int argc, char **argv)
 			{
 				strcpy(BaseDir, opt+4);
 			}
+			else if (!stricmp(opt, "lzo"))
+				GForceCompMethod = COMPRESS_LZO;
+			else if (!stricmp(opt, "zlib"))
+				GForceCompMethod = COMPRESS_ZLIB;
+			else if (!stricmp(opt, "lzx"))
+				GForceCompMethod = COMPRESS_LZX;
 			else
 				goto help;
 		}

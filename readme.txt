@@ -185,8 +185,22 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+12.03.2011
+- implemented Enslaved PS3 support
+
+11.03.2011
+- updated support for the March 2011 UDK
+
+24.02.2011
+- fixed compatibility with some Bulletstorm animations
+- animation exporter will warn user about requirement of the psax format when needed
+
+09.02.2011
+- implemented UE1 and UE2 sound support
+
 06.02.2011
 - implemented Singularity StaticMesh support
+- implemented UE3 audio (SoundNodeWave) export, activated with "-sounds" option
 
 05.02.2011
 - added switches to override compression method of the fully compressed packages:

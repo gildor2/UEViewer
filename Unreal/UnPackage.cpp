@@ -737,11 +737,12 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	if (checkDword1 == PACKAGE_FILE_TAG_REV)
 	{
 		ReverseBytes = true;
-		Platform     = PLATFORM_XBOX360;
+		if (GForcePlatform == PLATFORM_UNKNOWN)
+			Platform = PLATFORM_XBOX360;			// default platform for "ReverseBytes" mode is PLATFORM_XBOX360
 	}
 	*this << checkDword2;
 	Loader->Seek(0);
-	if (checkDword2 == PACKAGE_FILE_TAG || checkDword2 == 0x20000)
+	if (checkDword2 == PACKAGE_FILE_TAG || checkDword2 == 0x20000 || checkDword2 == 0x10000)	// seen 0x10000 in Enslaved PS3
 	{
 		//!! NOTES:
 		//!! 1)	GOW1/X360 byte-order logic is failed with Core.u and Ungine.u: package header is little-endian,
@@ -983,8 +984,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		for (int i = 0; i < Summary.ExportCount; i++, Exp++)
 		{
 			*this << *Exp;
-//			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X\n", i, GetObjectName(Exp->ClassIndex),
-//				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize));
+//			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
+//				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype));
 		}
 	}
 	unguard;

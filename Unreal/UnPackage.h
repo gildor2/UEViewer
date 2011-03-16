@@ -54,7 +54,7 @@ struct FCompressedChunk
 	}
 };
 
-RAW_TYPE(FCompressedChunk)
+//RAW_TYPE(FCompressedChunk) -- Bulletstorm has modifications in this structure
 
 #endif // UNREAL3
 
