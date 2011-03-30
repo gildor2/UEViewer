@@ -35,6 +35,43 @@ UObject::~UObject()
 }
 
 
+void UObject::GetFullName(char *Dst, int DstSize) const
+{
+	guard(UObject::GetFullName);
+
+#if 0
+	// this version will require Outer field in UObject
+	// note: some textures should have outer = UnPackage
+	int Len = 0;
+	if (Outer)
+	{
+		// recursion
+		Outer->GetFullName(Dst, DstSize);
+		Len = strlen(Dst);
+		// append delimiter
+		assert(Len < DstSize - 1);
+		Dst[Len++] = '.';
+	}
+	// append object name
+	int NameLen = strlen(Name);
+	assert(Len + NameLen < DstSize - 1);
+	memcpy(Dst + Len, Name, NameLen + 1);	// this will include trailing zero
+#else
+	assert(Package);
+	const FObjectExport &Exp = Package->GetExport(PackageIndex);
+	if (!Exp.PackageIndex)
+	{
+		// no Outer - use the package name for this
+		appSprintf(Dst, DstSize, "%s.%s", Package->Name, Name);
+		return;
+	}
+	Package->GetFullExportName(Exp, Dst, DstSize);
+#endif
+
+	unguard;
+}
+
+
 /*-----------------------------------------------------------------------------
 	UObject loading from package
 -----------------------------------------------------------------------------*/
@@ -127,6 +164,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	STRUC_TYPE(FVector)
 	STRUC_TYPE(FRotator)
 	STRUC_TYPE(FColor)
+	STRUC_TYPE(FLinearColor)
 	const CTypeInfo *ItemType = FindStructType(StrucName+1);
 	if (!ItemType) return false;
 	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);

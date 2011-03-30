@@ -377,6 +377,7 @@ static int SubstParams(char *dst, const char *src, const char **subst)
 
 	char *d = dst;
 	int substIndex = 0;
+	int lineNum = 1;
 	while (true)
 	{
 		char c = *src++;
@@ -384,6 +385,7 @@ static int SubstParams(char *dst, const char *src, const char **subst)
 		if (c != '%')
 		{
 			*d++ = c;
+			if (c == '\n') lineNum++;
 			continue;
 		}
 		// here: % char
@@ -394,9 +396,13 @@ static int SubstParams(char *dst, const char *src, const char **subst)
 		const char *sub = subst[substIndex++];
 		if (!sub)
 			appError("Wrong subst count");
+#if 1
+		appSprintf(d, 16384 /*!!*/, "\n#line 0 %d\n%s\n#line %d 0\n", substIndex, sub, lineNum-1);
+//		printf("subst %d at line %d\n", substIndex, lineNum);
+#else
 		strcpy(d, sub);
+#endif
 		d = strchr(d, 0);
-		//?? count lines, make "#line 0 <substIndex>" before and "#line <lineNum-1>" after
 	}
 	if (subst && subst[substIndex] != NULL)
 		appError("Wrong subst count");

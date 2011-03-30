@@ -56,7 +56,7 @@
 #define BATMAN			1		// Batman: Arkham Asylum
 #define CRIMECRAFT		1		// Crime Craft
 #define AVA				1		// AVA Online
-#define FRONTLINES		1		// Frontlines: Fuel of War
+#define FRONTLINES		1		// Frontlines: Fuel of War and Homefront
 #define BLOODONSAND		1		// 50 Cent: Blood on the Sand
 #define BORDERLANDS		1		// Borderlands
 #define DARKVOID		1		// Dark Void
@@ -75,6 +75,7 @@
 #define BULLETSTORM		1
 #define UNDERTOW		1
 #define SINGULARITY		1
+#define TRON			1		// TRON: Evolution
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

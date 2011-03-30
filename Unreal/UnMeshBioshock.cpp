@@ -75,7 +75,6 @@ struct ap5AnimationPackageRoot
 
 //!! NOTE: Bioshock uses EXACTLY the same rigid/smooth vertex data as older UE3.
 //!! Should separate vertex declarations into h-file and use here
-#if 1
 struct FRigidVertexBio	//?? same layout as FRigidVertex3
 {
 	FVector				Pos;
@@ -91,28 +90,7 @@ struct FRigidVertexBio	//?? same layout as FRigidVertex3
 		return Ar;
 	}
 };
-#else
-#define FRigidVertex3 FRigidVertexBio
-struct FRigidVertex3
-{
-	FVector				Pos;
-	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
-	float				U, V;
-	byte				BoneIndex;
 
-	friend FArchive& operator<<(FArchive &Ar, FRigidVertex3 &V)
-	{
-		// note: version prior 477 have different normal/tangent format (same layout, but different
-		// data meaning)
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
-		Ar << V.U << V.V;
-		Ar << V.BoneIndex;
-		return Ar;
-	}
-};
-#endif
-
-#if 1
 struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
 {
 	FVector				Pos;
@@ -130,27 +108,6 @@ struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
 		return Ar;
 	}
 };
-#else
-#define FSmoothVertex3 FSmoothVertexBio
-struct FSmoothVertex3
-{
-	FVector				Pos;
-	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
-	float				U, V;
-	byte				BoneIndex[4];
-	byte				BoneWeight[4];
-
-	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
-	{
-		// note: version prior 477 have different normal/tangent format (same layout, but different
-		// data meaning)
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
-		for (int i = 0; i < 4; i++)
-			Ar << V.BoneIndex[i] << V.BoneWeight[i];
-		return Ar;
-	}
-};
-#endif
 
 // Bioshock 2 replacement of FSmoothVertex and FRigidVertex
 struct FSkelVertexBio2

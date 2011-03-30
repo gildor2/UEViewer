@@ -112,7 +112,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	int								tmpOldFrameVerts;
 
 	// get real class name
-	FObjectExport &Exp = Package->GetExport(PackageIndex);
+	const FObjectExport &Exp = Package->GetExport(PackageIndex);
 	const char *realClassName = Package->GetObjectName(Exp.ClassIndex);
 	// here: realClassName may be "LodMesh" or "Mesh"
 

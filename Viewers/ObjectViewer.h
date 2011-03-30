@@ -115,10 +115,11 @@ class CLodMeshViewer : public CMeshViewer
 {
 public:
 	int				AnimIndex;
-
 	unsigned		CurrentTime;
 
 	CLodMeshViewer(ULodMesh *Mesh);
+	void Initialize();
+
 	static void TagMesh(CLodMeshInstance *NewInst);
 
 	virtual void ShowHelp();

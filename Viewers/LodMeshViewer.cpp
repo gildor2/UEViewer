@@ -7,6 +7,8 @@
 #include "../MeshInstance/MeshInstance.h"
 
 
+//#define SHOW_BOUNDS		1
+
 TArray<CLodMeshInstance*> CLodMeshViewer::Meshes;
 
 
@@ -14,19 +16,40 @@ CLodMeshViewer::CLodMeshViewer(ULodMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	AnimIndex(-1)
 ,	CurrentTime(appMilliseconds())
+{}
+
+
+void CLodMeshViewer::Initialize()
 {
+	CLodMeshInstance *LodInst = static_cast<CLodMeshInstance*>(Inst);
+	const ULodMesh *Mesh = LodInst->pMesh;
 	// compute model center by Z-axis (vertical)
 	CVec3 offset;
-	float z = (Mesh->BoundingBox.Max.Z + Mesh->BoundingBox.Min.Z) / 2;
+	const FBox &B = Mesh->BoundingBox;
+#if 1
+	VectorAdd((CVec3&)B.Min, (CVec3&)B.Max, offset);
+	offset.Scale(0.5f);
+	LodInst->BaseTransformScaled.TransformPointSlow(offset, offset);
+#else
 	// scale/translate origin
+	float z = (B.Max.Z + B.Min.Z) / 2;
 	z = (z - Mesh->MeshOrigin.Z) * Mesh->MeshScale.Z;	//!! bad formula
-	// offset view
 	offset.Set(0, 0, z);
+#endif
+	offset[2] += Mesh->BoundingSphere.R / 20;			// offset a bit up
+	// offset view
 	SetViewOffset(offset);
 	// automatically scale view distance depending on model size
 	float Radius = Mesh->BoundingSphere.R;
 	if (Radius < 10) Radius = 10;
 	SetDistScale(Mesh->MeshScale.X * Radius / 150);
+#if SHOW_BOUNDS
+	printf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
+	printf("Bounds.max = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Max));
+	printf("Origin     = %g %g %g\n", FVECTOR_ARG(Mesh->MeshOrigin));
+	printf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
+	printf("Offset     = %g %g %g\n", VECTOR_ARG(offset));
+#endif // SHOW_BOUNDS
 }
 
 
@@ -177,7 +200,41 @@ void CLodMeshViewer::Draw3D()
 	LodInst->UpdateAnimation(TimeDelta);
 
 	CMeshViewer::Draw3D();
-	for (int i = 0; i < Meshes.Num(); i++)
+
+	int i;
+
+#if SHOW_BOUNDS
+	//?? separate function for drawing wireframe Box
+	BindDefaultMaterial(true);
+	glBegin(GL_LINES);
+	CVec3 verts[8];
+	static const int inds[] =
+	{
+		0,1, 2,3, 0,2, 1,3,
+		4,5, 6,7, 4,6, 5,7,
+		0,4, 1,5, 2,6, 3,7
+	};
+	const FBox &B = LodInst->pMesh->BoundingBox;
+	for (i = 0; i < 8; i++)
+	{
+		CVec3 &v = verts[i];
+		v[0] = (i & 1) ? B.Min.X : B.Max.X;
+		v[1] = (i & 2) ? B.Min.Y : B.Max.Y;
+		v[2] = (i & 4) ? B.Min.Z : B.Max.Z;
+		LodInst->BaseTransformScaled.TransformPointSlow(v, v);
+	}
+	// can use glDrawElements(), but this will require more GL setup
+	glColor3f(0.5,0.5,1);
+	for (i = 0; i < ARRAY_COUNT(inds) / 2; i++)
+	{
+		glVertex3fv(verts[inds[i*2  ]].v);
+		glVertex3fv(verts[inds[i*2+1]].v);
+	}
+	glEnd();
+	glColor3f(1, 1, 1);
+#endif // SHOW_BOUNDS
+
+	for (i = 0; i < Meshes.Num(); i++)
 	{
 		CLodMeshInstance *mesh = Meshes[i];
 		if (mesh->pMesh == LodInst->pMesh) continue;	// no duplicates

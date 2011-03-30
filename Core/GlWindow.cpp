@@ -58,9 +58,11 @@ inline void InvalidateContext()
 #define DEFAULT_DIST			256
 #define MIN_DIST				25
 #define MAX_DIST				2048
-#define CLEAR_COLOR				0.3, 0.4, 0.6, 1
-#define CLEAR_COLOR2			0.2, 0.4, 0.3, 1
-//#define CLEAR_COLOR				0.5, 0.6, 0.7, 1
+#define CLEAR_COLOR				0.05, 0.05, 0.05, 1
+#define CLEAR_COLOR2			0.2, 0.2, 0.2, 1
+//#define CLEAR_COLOR			0.3, 0.4, 0.6, 1
+//#define CLEAR_COLOR2			0.2, 0.4, 0.3, 1
+//#define CLEAR_COLOR			0.5, 0.6, 0.7, 1
 //#define CLEAR_COLOR2			0.22, 0.2, 0.18, 1
 
 
@@ -636,6 +638,7 @@ void FlushTexts()
 {
 	// setup GL
 	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 	glBindTexture(GL_TEXTURE_2D, FontTexNum);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -822,6 +825,7 @@ static void DrawBackground()
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 	Set2Dmode();
 	glBegin(GL_QUADS);
 	glColor4f(CLEAR_COLOR);

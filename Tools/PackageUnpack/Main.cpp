@@ -2,6 +2,9 @@
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 
+#define DEF_UNP_DIR		"unpacked"
+#define HOMEPAGE		"http://www.gildor.org/"
+
 
 /*-----------------------------------------------------------------------------
 	Main function
@@ -19,27 +22,38 @@ int main(int argc, char **argv)
 	if (argc < 2)
 	{
 	help:
-		printf(	"Unreal package decompressor\n"
-				"http://www.gildor.org/\n"
-				"Usage: decompress <package filename>\n"
+		printf(	"Unreal Engine package decompressor\n"
+				"Usage: decompress [options] <package filename>\n"
+				"\n"
+				"Options:\n"
+				"    -out=PATH          extract everything into PATH, default is \"" DEF_UNP_DIR "\"\n"
+				"    -lzo|lzx|zlib      force compression method for fully-compressed packages\n"
+				"\n"
+				"For details and updates please visit " HOMEPAGE "\n"
 		);
 		exit(0);
 	}
 
 	// parse command line
-//	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
+	char BaseDir[256];
+	strcpy(BaseDir, DEF_UNP_DIR);
+
 	int arg = 1;
-/*	for (arg = 1; arg < argc; arg++)
+	for (arg = 1; arg < argc; arg++)
 	{
 		if (argv[arg][0] == '-')
 		{
 			const char *opt = argv[arg]+1;
-			if (!stricmp(opt, "dump"))
+			if (!strnicmp(opt, "out=", 4))
 			{
+				strcpy(BaseDir, opt+4);
 			}
-			else if (!stricmp(opt, "check"))
-			{
-			}
+			else if (!stricmp(opt, "lzo"))
+				GForceCompMethod = COMPRESS_LZO;
+			else if (!stricmp(opt, "zlib"))
+				GForceCompMethod = COMPRESS_ZLIB;
+			else if (!stricmp(opt, "lzx"))
+				GForceCompMethod = COMPRESS_LZX;
 			else
 				goto help;
 		}
@@ -47,7 +61,7 @@ int main(int argc, char **argv)
 		{
 			break;
 		}
-	} */
+	}
 	const char *argPkgName = argv[arg];
 	if (!argPkgName) goto help;
 
@@ -74,7 +88,7 @@ int main(int argc, char **argv)
 	appStrncpyz(PkgName, s, ARRAY_COUNT(PkgName));
 
 	char OutFile[256];
-	appSprintf(ARRAY_ARG(OutFile), "unpacked/%s", PkgName);
+	appSprintf(ARRAY_ARG(OutFile), "%s/%s", BaseDir, PkgName);
 	appMakeDirectoryForFile(OutFile);
 
 	const FPackageFileSummary &Summary = Package->Summary;

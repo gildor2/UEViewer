@@ -35,8 +35,8 @@ struct FSkelMeshSection3
 		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex;
 		if (Ar.ArVer < 806)
 		{
-			// NumTriangles is short
-			short NumTriangles;
+			// NumTriangles is unsigned short
+			word NumTriangles;
 			Ar << NumTriangles;
 			S.NumTriangles = NumTriangles;
 		}
@@ -166,12 +166,24 @@ struct FRigidVertex3
 #if MEDGE
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
 #endif
-#if MKVSDC || STRANGLE || FRONTLINES || TRANSFORMERS
+#if MKVSDC || STRANGLE || TRANSFORMERS
 		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
-			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3) ||
 			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
 			NumUVSets = 2;
 #endif
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines)
+		{
+			if (Ar.ArLicenseeVer >= 3 && Ar.ArLicenseeVer <= 52)	// Frontlines (the code in Homefront uses different version comparison!)
+				NumUVSets = 2;
+			else if (Ar.ArLicenseeVer > 52)
+			{
+				byte Num;
+				Ar << Num;
+				NumUVSets = Num;
+			}
+		}
+#endif // FRONTLINES
 		Ar << V.U << V.V;
 		if (NumUVSets > 1) Ar.Seek(Ar.Tell() + sizeof(float) * 2 * (NumUVSets - 1));
 
@@ -186,6 +198,13 @@ struct FRigidVertex3
 #endif // MCARTA
 	influences:
 		Ar << V.BoneIndex;
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 88)
+		{
+			int unk24;
+			Ar << unk24;
+		}
+#endif // FRONTLINES
 		return Ar;
 	}
 };
@@ -246,16 +265,36 @@ struct FSmoothVertex3
 #if MEDGE
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
 #endif
-#if MKVSDC || STRANGLE || FRONTLINES || TRANSFORMERS
+#if MKVSDC || STRANGLE || TRANSFORMERS
 		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
-			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 3) ||
 			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
 			NumUVSets = 2;
 #endif
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines)
+		{
+			if (Ar.ArLicenseeVer >= 3 && Ar.ArLicenseeVer <= 52)	// Frontlines (the code in Homefront uses different version comparison!)
+				NumUVSets = 2;
+			else if (Ar.ArLicenseeVer > 52)
+			{
+				byte Num;
+				Ar << Num;
+				NumUVSets = Num;
+			}
+		}
+#endif // FRONTLINES
 		Ar << V.U << V.V;
 		if (NumUVSets > 1) Ar.Seek(Ar.Tell() + sizeof(float) * 2 * (NumUVSets - 1));
 
 		if (Ar.ArVer >= 710) Ar << V.Color;	// default 0xFFFFFFFF
+
+#if FRONTLINES
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 88)
+		{
+			int unk24;
+			Ar << unk24;
+		}
+#endif // FRONTLINES
 
 	influences:
 		if (Ar.ArVer >= 333)
@@ -368,8 +407,10 @@ struct FGPUVert3Common
 		new_ver:
 			Ar << V.Normal[0] << V.Normal[2];
 		}
-#if CRIMECRAFT
-		if (Ar.Game == GAME_CrimeCraft && Ar.ArVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float)); // pad ?
+#if CRIMECRAFT || FRONTLINES
+		if ((Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 1) ||
+			(Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 88))
+			Ar.Seek(Ar.Tell() + sizeof(float)); // pad or vertex color?
 #endif
 		int i;
 		for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
@@ -498,6 +539,7 @@ struct FGPUSkin3
 		guard(FGPUSkin3<<);
 
 		if (Ar.IsLoading) S.bUsePackedPosition = false;
+		bool AllowPackedPosition = false;
 		S.NumUVSets = GNumGPUUVSets = 1;
 
 	#if HUXLEY
@@ -516,12 +558,14 @@ struct FGPUSkin3
 		{
 			if (Ar.ArLicenseeVer < 11)
 				goto old_version;
-			S.bUseFullPrecisionUVs = true;
+			if (Ar.ArVer < 493 )
+				S.bUseFullPrecisionUVs = true;
+			else
+				Ar << S.bUseFullPrecisionUVs;
 			int VertexSize, NumVerts;
 			Ar << S.NumUVSets << VertexSize << NumVerts;
 			GNumGPUUVSets = S.NumUVSets;
-			Ar << RAW_ARRAY(S.VertsFloat);	// serialized as ordinary array anyway
-			return Ar;
+			goto serialize_verts;
 		}
 	#endif // FRONTLINES
 
@@ -568,7 +612,6 @@ struct FGPUSkin3
 		if (Ar.ArVer >= 592)
 			Ar << S.bUsePackedPosition << S.MeshExtension << S.MeshOrigin;
 
-		bool AllowPackedPosition = false;
 		if (Ar.Platform == PLATFORM_XBOX360 || Ar.Platform == PLATFORM_PS3) AllowPackedPosition = true;
 	#if MOH2010
 		if (Ar.Game == GAME_MOH2010) AllowPackedPosition = true;
@@ -584,6 +627,7 @@ struct FGPUSkin3
 		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) S.NumUVSets = GNumGPUUVSets = 4;
 	#endif
 
+	serialize_verts:
 		// serialize vertex array
 		if (!S.bUseFullPrecisionUVs)
 		{
@@ -952,6 +996,14 @@ struct FSPAITag2
 void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 {
 	guard(USkeletalMesh::SerializeSkelMesh3);
+
+#if FRONTLINES
+	if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 88)
+	{
+		int unk320;					// default 1
+		Ar << unk320;
+	}
+#endif // FRONTLINES
 
 	UObject::Serialize(Ar);			// no UPrimitive ...
 

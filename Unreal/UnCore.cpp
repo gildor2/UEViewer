@@ -323,6 +323,11 @@ static const char *KnownDirs[] =
 	"Textures"
 };
 
+#if UNREAL3
+const char *GStartupPackage = "startup_xxx";
+#endif
+
+
 void appSetRootDirectory2(const char *filename)
 {
 	char buf[256], buf2[256];
@@ -396,11 +401,32 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 		}
 	}
 
-	CGameFileInfo *info = NULL;
+#if UNREAL3
+	bool findStartupPackage = (strcmp(Filename, GStartupPackage) == 0);
+#endif
+
 	int nameLen = strlen(buf);
+	CGameFileInfo *info = NULL;
 	for (int i = 0; i < NumGameFiles; i++)
 	{
 		CGameFileInfo *info2 = GameFiles[i];
+#if UNREAL3
+		// check for startup package
+		// possible variants:
+		// - startup
+		if (findStartupPackage)
+		{
+			if (strnicmp(info2->ShortFilename, "startup", 7) != 0)
+				continue;
+			if (info2->ShortFilename[7] == '.')
+				return info2;							// "startup.upk" (DCUO, may be others too)
+			if (strnicmp(info2->ShortFilename+7, "_int.", 5) == 0)
+				return info2;							// "startup_int.upk"
+			if (info2->ShortFilename[7] == '_')
+				info = info2;							// non-int locale, lower priority - use if when other is not detected
+			continue;
+		}
+#endif // UNREAL3
 		// verify filename
 		if (strnicmp(info2->ShortFilename, buf, nameLen) != 0) continue;
 		if (info2->ShortFilename[nameLen] != '.') continue;
@@ -415,8 +441,7 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 			if (!info2->IsPackage) continue;
 		}
 		// file was found
-		info = info2;
-		break;
+		return info2;
 	}
 	return info;
 
@@ -1066,9 +1091,6 @@ void FArchive::DetectGame()
 #if FURY
 	if (ArVer == 407 && (ArLicenseeVer == 26 || ArLicenseeVer == 36)) SET(GAME_Fury);
 #endif
-#if FRONTLINES
-	if (ArVer == 433 && ArLicenseeVer == 52)	SET(GAME_Frontlines);
-#endif
 #if UNDERTOW
 //	if (ArVer == 435 && ArLicenseeVer == 0)		SET(GAME_Undertow);	// LicenseeVer==0!
 #endif
@@ -1123,6 +1145,9 @@ void FArchive::DetectGame()
 #if SINGULARITY
 	if (ArVer == 584 && ArLicenseeVer == 126)	SET(GAME_Singularity);
 #endif
+#if TRON
+	if (ArVer == 648 && ArLicenseeVer == 3)		SET(GAME_Tron);
+#endif
 #if DCU_ONLINE
 	if (ArVer == 648 && ArLicenseeVer == 6405)	SET(GAME_DCUniverse);
 #endif
@@ -1155,6 +1180,11 @@ void FArchive::DetectGame()
 		 (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
 		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 23)) )
 		SET(GAME_Huxley);
+#endif
+#if FRONTLINES
+	if ((ArVer == 433 && ArLicenseeVer == 52) ||		// Frontlines: Fuel of War
+		(ArVer == 576 && ArLicenseeVer == 100))			// Homefront
+		SET(GAME_Frontlines);
 #endif
 #if ARMYOF2
 	if ( (ArVer == 445 && ArLicenseeVer == 79) ||		// Army of Two

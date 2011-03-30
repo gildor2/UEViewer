@@ -13,6 +13,7 @@ CVertMeshViewer::CVertMeshViewer(UVertMesh *Mesh)
 	CVertMeshInstance *VertInst = new CVertMeshInstance();
 	VertInst->SetMesh(Mesh);
 	Inst = VertInst;
+	Initialize();
 }
 
 

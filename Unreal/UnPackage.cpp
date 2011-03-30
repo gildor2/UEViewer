@@ -1053,6 +1053,78 @@ UnPackage::~UnPackage()
 	Loading particular import or export package entry
 -----------------------------------------------------------------------------*/
 
+int UnPackage::FindExport(const char *name, const char *className, int firstIndex) const
+{
+	for (int i = firstIndex; i < Summary.ExportCount; i++)
+	{
+		const FObjectExport &Exp = ExportTable[i];
+		// compare object name
+		if (strcmp(Exp.ObjectName, name) != 0)
+			continue;
+		// if class name specified - compare it too
+		const char *foundClassName = GetObjectName(Exp.ClassIndex);
+		if (className && strcmp(foundClassName, className) != 0)
+			continue;
+		return i;
+	}
+	return INDEX_NONE;
+}
+
+
+bool UnPackage::CompareObjectPaths(int PackageIndex, UnPackage *RefPackage, int RefPackageIndex) const
+{
+	guard(UnPackage::CompareObjectPaths);
+
+/*	printf("Compare %s.%s [%d] with %s.%s [%d]\n",
+		Name, GetObjectName(PackageIndex), PackageIndex,
+		RefPackage->Name, RefPackage->GetObjectName(RefPackageIndex), RefPackageIndex
+	); */
+
+	while (PackageIndex || RefPackageIndex)
+	{
+		const char *PackageName, *RefPackageName;
+
+		if (PackageIndex < 0)
+		{
+			const FObjectImport &Rec = GetImport(-PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+		}
+		else if (PackageIndex > 0)
+		{
+			// possible for UE3 forced exports
+			const FObjectExport &Rec = GetExport(PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+		}
+		else
+			PackageName  = Name;
+
+		if (RefPackageIndex < 0)
+		{
+			const FObjectImport &Rec = RefPackage->GetImport(-RefPackageIndex-1);
+			RefPackageIndex = Rec.PackageIndex;
+			RefPackageName  = Rec.ObjectName;
+		}
+		else if (RefPackageIndex > 0)
+		{
+			// possible for UE3 forced exports
+			const FObjectExport &Rec = RefPackage->GetExport(RefPackageIndex-1);
+			RefPackageIndex = Rec.PackageIndex;
+			RefPackageName  = Rec.ObjectName;
+		}
+		else
+			RefPackageName  = RefPackage->Name;
+//		printf("%20s -- %20s\n", PackageName, RefPackageName);
+		if (stricmp(RefPackageName, PackageName) != 0) return false;
+	}
+
+	return true;
+
+	unguard;
+}
+
+
 UObject* UnPackage::CreateExport(int index)
 {
 	guard(UnPackage::CreateExport);
@@ -1112,8 +1184,51 @@ UObject* UnPackage::CreateImport(int index)
 
 	const FObjectImport &Imp = GetImport(index);
 
-	// find root package
-	int PackageIndex = Imp.PackageIndex;
+	// load package
+	const char *PackageName = GetObjectPackageName(Imp.PackageIndex);
+	UnPackage *Package = LoadPackage(PackageName);
+
+	bool isStartupPackage = false;
+#if UNREAL3
+	// try to find import in startup package
+	if (!Package)
+	{
+		Package = LoadPackage(GStartupPackage);
+		isStartupPackage = true;
+	}
+#endif
+
+	if (!Package)
+	{
+//		printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
+		return NULL;
+	}
+	// find object in loaded package export table
+	int ObjIndex = -1;
+	while (true)
+	{
+		ObjIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName, ObjIndex + 1);
+		if (ObjIndex == INDEX_NONE) break;		// not found
+		if (Package->CompareObjectPaths(ObjIndex+1, this, -1-index)) break;	// found
+	}
+	if (ObjIndex == INDEX_NONE)
+	{
+		if (!isStartupPackage)
+			printf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
+		return NULL;
+	}
+	// create object
+	return Package->CreateExport(ObjIndex);
+
+	unguardf(("%s:%d", Filename, index));
+}
+
+
+// get outermost package name
+const char *UnPackage::GetObjectPackageName(int PackageIndex) const
+{
+	guard(UnPackage::GetObjectPackageName);
+
 	const char *PackageName = NULL;
 	while (PackageIndex)
 	{
@@ -1125,36 +1240,61 @@ UObject* UnPackage::CreateImport(int index)
 		}
 		else
 		{
-#if UNREAL3
 			// possible for UE3 forced exports
 			const FObjectExport &Rec = GetExport(PackageIndex-1);
 			PackageIndex = Rec.PackageIndex;
 			PackageName  = Rec.ObjectName;
-#else
-			appError("Wrong package index: %d", PackageIndex);
-#endif // UNREAL3
 		}
 	}
-	// load package
-	UnPackage *Package = LoadPackage(PackageName);
+	return PackageName;
 
-	if (!Package)
-	{
-//		printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
-		return NULL;
-	}
-	//!! use full object path
-	// find object in loaded package export table
-	int NewIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName);
-	if (NewIndex == INDEX_NONE)
-	{
-		printf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
-		return NULL;
-	}
-	// create object
-	return Package->CreateExport(NewIndex);
+	unguard;
+}
 
-	unguardf(("%s:%d", Filename, index));
+
+// get full object path in a form
+// "OutermostPackage.Package1...PackageN.ObjectName"
+void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSize)
+{
+	guard(UnPackage::GetFullExportNameBase);
+
+	const char *PackageNames[256];
+	int NestLevel = 0;
+
+	// get object name
+	const char *PackageName = Exp.ObjectName;
+	PackageNames[NestLevel++] = PackageName;
+
+	// gather nested package names (object parents)
+	int PackageIndex = Exp.PackageIndex;
+	while (PackageIndex)
+	{
+		assert(NestLevel < ARRAY_COUNT(PackageNames));
+		if (PackageIndex < 0)
+		{
+			const FObjectImport &Rec = GetImport(-PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+		}
+		else
+		{
+			// possible for UE3 forced exports
+			const FObjectExport &Rec = GetExport(PackageIndex-1);
+			PackageIndex = Rec.PackageIndex;
+			PackageName  = Rec.ObjectName;
+		}
+		PackageNames[NestLevel++] = PackageName;
+	}
+	// concatenate package names in reverse order (from root to object)
+	*buf = 0;
+	for (int i = NestLevel-1; i >= 0; i--)
+	{
+		const char *PackageName = PackageNames[i];
+		char *dst = strchr(buf, 0);
+		appSprintf(dst, bufSize - (dst - buf), "%s%s", PackageName, i > 0 ? "." : "");
+	}
+
+	unguard;
 }
 
 

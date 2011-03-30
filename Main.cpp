@@ -14,7 +14,8 @@
 
 #if RENDERING
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
-static bool meshOnly = false;
+static bool showMeshes = false;
+static bool showMaterials = false;
 #endif
 
 
@@ -48,6 +49,9 @@ BEGIN_CLASS_TABLE
 #endif
 #if MASSEFF
 	REGISTER_MESH_CLASSES_MASSEFF
+#endif
+#if DCU_ONLINE
+	REGISTER_MATERIAL_CLASSES_DCUO
 #endif
 END_CLASS_TABLE
 	// enumerations
@@ -346,6 +350,7 @@ static GameInfo games[] = {
 #	endif
 #	if FRONTLINES
 		G("Frontlines: Fuel of War", frontl, GAME_Frontlines),
+		G("Homefront",               frontl, GAME_Frontlines),
 #	endif
 #	if BLOODONSAND
 		G("50 Cent: Blood on the Sand", 50cent, GAME_50Cent),
@@ -524,6 +529,7 @@ static void Usage()
 			"\n"
 			"Viewer options:\n"
 			"    -meshes         view meshes only\n"
+			"    -materials      view materials only (excluding textures)\n"
  			"\n"
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
@@ -623,7 +629,8 @@ int main(int argc, char **argv)
 				OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
 				OPT_VALUE("list",    mainCmd, CMD_List)
 #if RENDERING
-				OPT_BOOL ("meshes",  meshOnly)
+				OPT_BOOL ("meshes",    showMeshes)
+				OPT_BOOL ("materials", showMaterials)
 #endif
 				OPT_BOOL ("all",     exprtAll)
 				OPT_BOOL ("pskx",    GExtendedPsk)
@@ -871,7 +878,11 @@ int main(int argc, char **argv)
 #endif
 
 #if RENDERING
-	CreateVisualizer(Obj);
+	if (!CreateVisualizer(Obj))
+	{
+		printf("Package \"%s\" has no objects to display\n", argPkgName);
+		return 0;
+	}
 	// print mesh info
 #	if TEST_FILES
 	Viewer->Test();
@@ -957,23 +968,35 @@ int main(int argc, char **argv)
 static bool CreateVisualizer(UObject *Obj, bool test)
 {
 	guard(CreateVisualizer);
+
+	if (!test && Viewer)
+	{
+		if (Viewer->Object == Obj) return true;	// object is not changed
+		delete Viewer;
+	}
+
 	if (!test)
 		appSetNotifyHeader("%s:  %s'%s'", Obj->Package->Filename, Obj->GetClassName(), Obj->Name);
 	// create viewer class
-#define CLASS_VIEWER(UClass, CViewer)	\
-	if (Obj->IsA(#UClass + 1))			\
-	{									\
-		if (!test)						\
-			Viewer = new CViewer(static_cast<UClass*>(Obj)); \
-		return true;					\
+#define CLASS_VIEWER(UClass, CViewer, extraCheck)	\
+	if (Obj->IsA(#UClass + 1))						\
+	{												\
+		UClass *Obj2 = static_cast<UClass*>(Obj); 	\
+		if (!(extraCheck)) return false;			\
+		if (!test) Viewer = new CViewer(Obj2);		\
+		return true;								\
 	}
 	// create viewer for known class
-	CLASS_VIEWER(UVertMesh,       CVertMeshViewer);
-	CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer);
-	CLASS_VIEWER(UStaticMesh,     CStatMeshViewer);
-	if (!meshOnly)
+	bool showAll = !(showMeshes || showMaterials);
+	if (showMeshes || showAll)
 	{
-		CLASS_VIEWER(UUnrealMaterial, CMaterialViewer);
+		CLASS_VIEWER(UVertMesh,       CVertMeshViewer, true);
+		CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer, true);
+		CLASS_VIEWER(UStaticMesh,     CStatMeshViewer, true);
+	}
+	if (showMaterials || showAll)
+	{
+		CLASS_VIEWER(UUnrealMaterial, CMaterialViewer, !showMaterials || !Obj2->IsTexture());
 	}
 	// fallback for unknown class
 	if (!test)
@@ -1094,7 +1117,6 @@ void AppKeyEvent(int key)
 				break;
 		}
 		// change visualizer
-		delete Viewer;
 		CreateVisualizer(Obj);
 		return;
 	}

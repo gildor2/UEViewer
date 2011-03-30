@@ -16,6 +16,7 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
 	Inst = SkelInst;
+	Initialize();
 #if 0
 	CSkelMeshInstance* Inst2 = (CSkelMeshInstance*)Inst;
 	Inst2->SetBoneScale("Bip01 Pelvis", 1.4);

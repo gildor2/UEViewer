@@ -603,14 +603,9 @@ public:
 	void SetupReader(int ExportIndex)
 	{
 		guard(UnPackage::SetupReader);
-
-		if (ExportIndex < 0 || ExportIndex >= Summary.ExportCount)
-			appError("Package \"%s\": wrong export index %d", Filename, ExportIndex);
-		const FObjectExport &Exp = ExportTable[ExportIndex];
-		// setup FArchive
+		const FObjectExport &Exp = GetExport(ExportIndex);
 		SetStopper(Exp.SerialOffset + Exp.SerialSize);
 		Seek(Exp.SerialOffset);
-
 		unguard;
 	}
 
@@ -621,57 +616,55 @@ public:
 		return NameTable[index];
 	}
 
-	const FObjectImport& GetImport(int index)
+	const FObjectImport& GetImport(int index) const
 	{
 		if (index < 0 || index >= Summary.ImportCount)
 			appError("Package \"%s\": wrong import index %d", Filename, index);
 		return ImportTable[index];
 	}
 
-	FObjectExport& GetExport(int index) // not 'const'
+	FObjectExport& GetExport(int index)
 	{
 		if (index < 0 || index >= Summary.ExportCount)
 			appError("Package \"%s\": wrong export index %d", Filename, index);
 		return ExportTable[index];
 	}
 
-	const char* GetObjectName(int i)	//?? GetExportClassName()
+	// "const" version of the above function
+	const FObjectExport& GetExport(int index) const
 	{
-		if (i < 0)
+		if (index < 0 || index >= Summary.ExportCount)
+			appError("Package \"%s\": wrong export index %d", Filename, index);
+		return ExportTable[index];
+	}
+
+	const char* GetObjectName(int PackageIndex) const	//?? GetExportClassName()
+	{
+		if (PackageIndex < 0)
 		{
 			//?? should point to 'Class' object
-			return GetImport(-i-1).ObjectName;
+			return GetImport(-PackageIndex-1).ObjectName;
 		}
-		else if (i > 0)
+		else if (PackageIndex > 0)
 		{
 			//?? should point to 'Class' object
-			return GetExport(i-1).ObjectName;
+			return GetExport(PackageIndex-1).ObjectName;
 		}
-		else // i == 0
+		else // PackageIndex == 0
 		{
 			return "Class";
 		}
 	}
 
-	int FindExport(const char *name, const char *className = NULL, int firstIndex = 0)
-	{
-		for (int i = firstIndex; i < Summary.ExportCount; i++)
-		{
-			const FObjectExport &Exp = ExportTable[i];
-			// compare object name
-			if (strcmp(Exp.ObjectName, name) != 0)
-				continue;
-			// if class name specified - compare it too
-			const char *foundClassName = GetObjectName(Exp.ClassIndex);
-			if (className && strcmp(foundClassName, className) != 0)
-				continue;
-			return i;
-		}
-		return INDEX_NONE;
-	}
+	int FindExport(const char *name, const char *className = NULL, int firstIndex = 0) const;
+	bool CompareObjectPaths(int PackageIndex, UnPackage *RefPackage, int RefPackageIndex) const;
 
 	UObject* CreateExport(int index);
 	UObject* CreateImport(int index);
+
+	const char *GetObjectPackageName(int PackageIndex) const;
+	// get object name including all outers (class name is not included)
+	void GetFullExportName(const FObjectExport &Exp, char *buf, int bufSize);	// not 'const' because uses non-const functions
 
 	// FArchive interface
 	virtual FArchive& operator<<(FName &N)
@@ -739,13 +732,13 @@ public:
 
 		if (index < 0)
 		{
-			const FObjectImport &Imp = GetImport(-index-1);
+//			const FObjectImport &Imp = GetImport(-index-1);
 //			printf("PKG: Import[%s,%d] OBJ=%s CLS=%s\n", GetObjectName(Imp.PackageIndex), index, *Imp.ObjectName, *Imp.ClassName);
 			Obj = CreateImport(-index-1);
 		}
 		else if (index > 0)
 		{
-			const FObjectExport &Exp = GetExport(index-1);
+//			const FObjectExport &Exp = GetExport(index-1);
 //			printf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
 			Obj = CreateExport(index-1);
 		}

@@ -1,6 +1,6 @@
 Common:
 - gl_FrontMaterial diffuse and ambient are premultiplied by glColor() value when GL_COLOR_MATERIAL is enabled.
-  But this will work with glColor() calls only, not with glColorPointer(). When lighting poly with color poinyers,
+  But this will work with glColor() calls only, not with glColorPointer(). When lighting poly with color pointers,
   gl_FrontMaterial will be colorized by glColor() value (that's because gl_FrontMaterial is uniform, not attribute).
 
 ATI:

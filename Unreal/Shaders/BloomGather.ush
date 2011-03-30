@@ -14,13 +14,13 @@ void PixelShaderMain()
 	vec3 c;
 	vec2 TexCoord = gl_TexCoord[0].st;
 	c = texture2D(tex, TexCoord).rgb;
-#if 1
 	float m = max(c.r, c.g);
 	m = max(m, c.b);
-	if (m < 1.0) c = vec3(0.0);
+#if 0
+	if (m <= 1.0) m = 0.0;//c = vec3(0.0);
 	c *= 0.5;
 #else
-	c = (c - vec3(1.0)) * 20.0;
+	m = max(m - 1.0, 0.0);	// note: it looks like alpha in FP-tagret is always limited by 1.0, so scale it in "BloomBlend" shader
 #endif
-	gl_FragColor = vec4(c, 1.0);
+	gl_FragColor = vec4(c, m);
 }

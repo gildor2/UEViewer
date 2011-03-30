@@ -180,9 +180,9 @@ static void GetImageDimensions(int width, int height, int* scaledWidth, int* sca
 }
 
 
-static void Upload(int handle, const void *pic, int width, int height, bool doMipmap, bool clampS, bool clampT)
+static void UploadTex(int target, const void *pic, int width, int height, bool doMipmap)
 {
-	guard(Upload);
+	guard(UploadTex);
 
 	/*----- Calculate internal dimensions of the new texture --------*/
 	int scaledWidth, scaledHeight;
@@ -201,15 +201,8 @@ static void Upload(int handle, const void *pic, int width, int height, bool doMi
 	format = (alpha ? 4 : 3);
 
 	/*------------------ Upload the image ---------------------------*/
-	glBindTexture(GL_TEXTURE_2D, handle);
-	glTexImage2D(GL_TEXTURE_2D, 0, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledPic);
-	if (!doMipmap)
-	{
-		// setup min/max filter
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-	else
+	glTexImage2D(target, 0, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledPic);
+	if (doMipmap)
 	{
 		int miplevel = 0;
 		while (scaledWidth > 1 || scaledHeight > 1)
@@ -220,18 +213,51 @@ static void Upload(int handle, const void *pic, int width, int height, bool doMi
 			scaledHeight >>= 1;
 			if (scaledWidth < 1)  scaledWidth  = 1;
 			if (scaledHeight < 1) scaledHeight = 1;
-			glTexImage2D(GL_TEXTURE_2D, miplevel, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledPic);
+			glTexImage2D(target, miplevel, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledPic);
 		}
-		// setup min/max filter
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);	// trilinear filter
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
+	delete scaledPic;
+
+	unguard;
+}
+
+
+static void Upload2D(const void *pic, int width, int height, bool doMipmap, bool clampS, bool clampT)
+{
+	guard(Upload2D);
+
+	UploadTex(GL_TEXTURE_2D, pic, width, height, doMipmap);
+
+	// setup min/max filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, doMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);	// trilinear filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	// setup wrap flags
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clampS ? GL_CLAMP : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clampT ? GL_CLAMP : GL_REPEAT);
 
-	delete scaledPic;
+	unguard;
+}
+
+
+static void UploadCube(const void *pic, int width, int height, bool doMipmap, int side)
+{
+	guard(UploadCube);
+
+	UploadTex(GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, pic, width, height, doMipmap);
+
+	if (side == 5)
+	{
+		// the last one
+
+		// setup min/max filter
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_MIN_FILTER, doMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);	// trilinear filter
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		// setup wrap flags
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
 
 	unguard;
 }
@@ -276,6 +302,8 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	guard(GL_NormalmapShader);
 
 	const char *subst[10];
+	char  defines[512];
+	defines[0] = 0;
 
 	enum
 	{
@@ -284,20 +312,37 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		I_Specular,
 		I_SpecularPower,
 		I_Opacity,
-		I_Emissive
+		I_Emissive,
+		I_Cube,
+		I_Mask,
 	};
 
-	DBG(("--------"));
+	static const char *maskChannel[] =
+	{
+		"0.0",									// TC_NONE - bad, should not be used
+		"texture2D(maskTex, TexCoord).r",		// TC_R
+		"texture2D(maskTex, TexCoord).g",		// TC_G
+		"texture2D(maskTex, TexCoord).b",		// TC_B
+		"texture2D(maskTex, TexCoord).a",		// TC_A
+		"(1.0-texture2D(maskTex, TexCoord).a)",	// TC_MA
+	};
+
+#define ADD_DEFINE(name)	appStrcatn(ARRAY_ARG(defines), "#define "name"\n")
 
 	// diffuse
 	glActiveTexture(GL_TEXTURE0);	// used for BindDefaultMaterial() too
 	if (Params.Diffuse)
 	{
 		DBG(("Diffuse  : %s", Params.Diffuse->Name));
+		ADD_DEFINE("DIFFUSE 1");
 		Params.Diffuse->Bind();
 	}
-	else
+	else if (!Params.Normal && !Params.Cube)
+	{
 		BindDefaultMaterial();
+		ADD_DEFINE("DIFFUSE 1");
+	}
+
 	// normal
 	if (Params.Normal)	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
 	{
@@ -305,54 +350,105 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		glActiveTexture(GL_TEXTURE0 + I_Normal);
 		Params.Normal->Bind();
 	}
+
 	// specular
+	const char *specularExpr = "vec3(0.0)"; //?? vec3(specular)
 	if (Params.Specular)
 	{
 		DBG(("Specular : %s", Params.Specular->Name));
+		specularExpr = va("texture2D(specTex, TexCoord).%s * vec3(specular) * 1.5", !Params.SpecularFromAlpha ? "rgb" : "a");
 		glActiveTexture(GL_TEXTURE0 + I_Specular);
 		Params.Specular->Bind();
 	}
 	// specular power
+	const char *specPowerExpr = "gl_FrontMaterial.shininess";
 	if (Params.SpecPower)
 	{
 		DBG(("SpecPower: %s", Params.SpecPower->Name));
+		specPowerExpr = "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0";
 		glActiveTexture(GL_TEXTURE0 + I_SpecularPower);
 		Params.SpecPower->Bind();
 	}
+
 	// opacity mask
+	const char *opacityExpr = "1.0";
 	if (Params.Opacity)
 	{
 		DBG(("Opacity  : %s", Params.Opacity->Name));
+		opacityExpr = va("texture2D(opacTex, TexCoord).%s", !Params.OpacityFromAlpha ? "g" : "a");
 		glActiveTexture(GL_TEXTURE0 + I_Opacity);
 		Params.Opacity->Bind();
 	}
+	else if (Params.Diffuse)
+	{
+		DBG(("Opacity from diffuse"));
+		opacityExpr = va("texture2D(diffTex, TexCoord).a");
+	}
+
 	// emission
+	const char *emissExpr = "vec3(0.0)";
 	if (Params.Emissive)
 	{
 		DBG(("Emissive : %s", Params.Emissive->Name));
+		emissExpr = va("vec3(%g,%g,%g) * texture2D(emisTex, TexCoord).g * 2.0",
+			Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B
+		);
+		ADD_DEFINE("EMISSIVE 1");
 		glActiveTexture(GL_TEXTURE0 + I_Emissive);
 		Params.Emissive->Bind();
 	}
 
-	const char *specularExpr = "vec3(0.0)"; //?? vec3(specular)
-	if (Params.Specular)
+	// cubemap
+	const char *cubeExpr = "vec3(0.0)";
+	const char *cubeMaskExpr = "1.0";
+	if (Params.Cube)
 	{
-		specularExpr = va("texture2D(specTex, TexCoord).%s * vec3(specular) * 1.5", !Params.SpecularFromAlpha ? "rgb" : "a");
+		DBG(("Cubemap  : %s", Params.Cube->Name));
+		cubeExpr = "textureCube(cubeTex, TexCoord).rgb";
+		ADD_DEFINE("CUBE 1");
+		glActiveTexture(GL_TEXTURE0 + I_Cube);
+		Params.Cube->Bind();
+		if (Params.Emissive)
+		{
+			// use emissive as cubemap mask
+			cubeMaskExpr = "texture2D(emisTex, TexCoord).g";
+			emissExpr = "vec3(0.0)";
+		}
 	}
-	const char *opacityExpr = "1.0";
-	if (Params.Opacity)
+
+	// mask
+	if (Params.Mask)
 	{
-		opacityExpr = va("texture2D(opacTex, TexCoord).%s", !Params.OpacityFromAlpha ? "g" : "a");
+		DBG(("Mask     : %s", Params.Mask->Name));
+		glActiveTexture(GL_TEXTURE0 + I_Mask);
+		Params.Mask->Bind();
+		// channels
+		if (Params.EmissiveChannel)
+		{
+			emissExpr = va("vec3(%g,%g,%g) * %s * 2.0",
+				Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B,
+				maskChannel[Params.EmissiveChannel]
+			);
+			ADD_DEFINE("EMISSIVE 1");
+		}
+		if (Params.SpecularMaskChannel)
+			specularExpr = va("vec3(%g)", maskChannel[Params.SpecularMaskChannel]);
+		if (Params.SpecularMaskChannel)
+			specPowerExpr = va("%s * 100.0 + 5.0", maskChannel[Params.SpecularPowerChannel]);
+		if (Params.CubemapMaskChannel)
+			cubeMaskExpr = maskChannel[Params.CubemapMaskChannel];
 	}
 
 	//!! NOTE: Specular and SpecPower are scaled by const to improve visual; should be scaled by parameters from material
-	subst[0] = Params.Normal    ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"  : "vec3(0.0, 0.0, 1.0)";
+	subst[0] = Params.Normal ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"  : "vec3(0.0, 0.0, 1.0)";
 	subst[1] = specularExpr;
-	subst[2] = Params.SpecPower ? "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0" : "gl_FrontMaterial.shininess";
+	subst[2] = specPowerExpr;
 	subst[3] = opacityExpr;
-	subst[4] = Params.Emissive  ? "vec3(0.5,0.5,1.0) * texture2D(emisTex, TexCoord).g * 2.0" : "vec3(0.0)"; //?? not scaled, because sometimes looks ugly ...
+	subst[4] = emissExpr;
+	subst[5] = cubeExpr;
+	subst[6] = cubeMaskExpr;
 	// finalize paramerers and make shader
-	subst[5] = NULL;
+	subst[7] = NULL;
 
 	if (Params.bUseMobileSpecular)
 	{
@@ -372,8 +468,8 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 
 	glActiveTexture(GL_TEXTURE0);
 
-
-	if (!shader.IsValid()) shader.Make(Normal_ush, NULL, subst);
+	//?? should check IsValid before preparing params above (they're needed only once)
+	if (!shader.IsValid()) shader.Make(Normal_ush, defines, subst);
 	shader.Use();
 
 	shader.SetUniform("diffTex",  I_Diffuse);
@@ -382,6 +478,8 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	shader.SetUniform("spPowTex", I_SpecularPower);
 	shader.SetUniform("opacTex",  I_Opacity);
 	shader.SetUniform("emisTex",  I_Emissive);
+	shader.SetUniform("cubeTex",  I_Cube);
+	shader.SetUniform("maskTex",  I_Mask);
 	return shader;
 
 	unguard;
@@ -408,7 +506,7 @@ void UUnrealMaterial::SetMaterial(unsigned PolyFlags)
 	CMaterialParams Params;
 	GetParams(Params);
 
-	if (!Params.Diffuse)	//?? !Params.IsNull()
+	if (Params.IsNull())
 	{
 		//?? may be, use diffuse color + other params
 		BindDefaultMaterial();
@@ -426,6 +524,7 @@ void UUnrealMaterial::SetMaterial(unsigned PolyFlags)
 		}
 		else
 		{
+			DBG((S_BLUE"---- %s %s ----", GetClassName(), Name));
 			GL_NormalmapShader(GLShader, Params);
 		}
 	}
@@ -462,6 +561,7 @@ void BindDefaultMaterial(bool White)
 		{
 			glActiveTexture(GL_TEXTURE0 + i);
 			glDisable(GL_TEXTURE_2D);
+			glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 		}
 		glActiveTexture(GL_TEXTURE0);
 	}
@@ -473,6 +573,7 @@ void BindDefaultMaterial(bool White)
 	if (White)
 	{
 		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 		return;
 	}
 
@@ -516,6 +617,8 @@ void UTexture::SetupGL(unsigned PolyFlags)
 	guard(UTexture::SetupGL);
 
 	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
+
 	glEnable(GL_DEPTH_TEST);
 	// bTwoSided
 	if (bTwoSided || (PolyFlags & PF_TwoSided))
@@ -568,6 +671,7 @@ void UTexture::Bind()
 	guard(UTexture::Bind);
 
 	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 
 	bool upload = !GL_TouchObject(DrawTimestamp);
 
@@ -579,12 +683,13 @@ void UTexture::Bind()
 		byte *pic = Decompress(USize, VSize);
 		if (pic)
 		{
-			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
+			glBindTexture(GL_TEXTURE_2D, TexNum);
+			Upload2D(pic, USize, VSize, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
 			delete pic;
 		}
 		else
 		{
-			appNotify("WARNING: texture %s has no valid mipmaps", Name);
+			printf("WARNING: texture %s has no valid mipmaps\n", Name);
 			//?? note: not working (no access to generated default texture!!)
 			//?? also should glDeleteTextures(1, &TexNum) - generated but not used?
 			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
@@ -1049,7 +1154,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 
 	Super::GetParams(Params);
 
-	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0;
+	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0, CubeWeight = 0;
 #define DIFFUSE(check,weight)			\
 	if (check && weight > DiffWeight)	\
 	{									\
@@ -1092,6 +1197,27 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		Params.Emissive = Tex;			\
 		EmWeight = weight;				\
 	}
+#define CUBEMAP(check,weight)			\
+	if (check && weight > CubeWeight)	\
+	{									\
+	/*	DrawTextLeft("CUB: %d > %d = %s", weight, CubeWeight, Tex->Name); */ \
+		Params.Cube = Tex;				\
+		CubeWeight = weight;			\
+	}
+#define BAKEDMASK(check,weight)			\
+	if (check && weight > MaskWeight)	\
+	{									\
+	/*	DrawTextLeft("MASK: %d > %d = %s", weight, MaskWeight, Tex->Name); */ \
+		Params.Mask = Tex;				\
+		MaskWeight = weight;			\
+	}
+#define EMISSIVE_COLOR(check,weight)	\
+	if (check && weight > EmcWeight)	\
+	{									\
+	/*	DrawTextLeft("EC: %d > %d = %g %g %g", weight, EmcWeight, FCOLOR_ARG(Color)); */ \
+		Params.EmissiveColor = Color;	\
+		EmcWeight = weight;				\
+	}
 	for (int i = 0; i < ReferencedTextures.Num(); i++)
 	{
 		UTexture3 *Tex = ReferencedTextures[i];
@@ -1102,12 +1228,14 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		//!! - may implement with tables + macros
 		//!! - catch normalmap, specular and emissive textures
 		if (appStristr(Name, "noise")) continue;
+
 		DIFFUSE(appStristr(Name, "diff"), 100);
 		NORMAL (appStristr(Name, "norm"), 100);
 		DIFFUSE(!stricmp(Name + len - 4, "_Tex"), 80);
 		DIFFUSE(appStristr(Name, "_Tex"), 60);
 		DIFFUSE(!stricmp(Name + len - 2, "_D"), 20);
 		OPACITY(appStristr(Name, "_OM"), 20);
+//		CUBEMAP(appStristr(Name, "cubemap"), 100); -- bad
 #if 0
 		if (!stricmp(Name + len - 3, "_DI"))		// The Last Remnant ...
 			Diffuse = Tex;
@@ -1117,7 +1245,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 			Diffuse = Tex;
 #endif
 		DIFFUSE (appStristr(Name, "_DI"), 20);
-		DIFFUSE (appStristr(Name, "_MA"), 8 );		// The Last Remnant; low priority
+//		DIFFUSE (appStristr(Name, "_MA"), 8 );		// The Last Remnant; low priority
 		DIFFUSE (appStristr(Name, "_D" ), 11);
 		DIFFUSE (!stricmp(Name + len - 2, "_C"), 10);
 		DIFFUSE (!stricmp(Name + len - 3, "_CM"), 12);
@@ -1140,7 +1268,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		EMISSIVE(!stricmp(Name + len - 2, "_E"), 20);
 		EMISSIVE(!stricmp(Name + len - 3, "_EM"), 21);
 		OPACITY (!stricmp(Name + len - 2, "_A"), 20);
-		OPACITY (!stricmp(Name + len - 5, "_Mask"), 10);
+//		OPACITY (!stricmp(Name + len - 5, "_Mask"), 10);
 		// Magna Catra 2
 		DIFFUSE (!strnicmp(Name, "df_", 3), 20);
 		SPECULAR(!strnicmp(Name, "sp_", 3), 20);
@@ -1152,8 +1280,13 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		SPECULAR(appStristr(Name, "Specular"), 80);
 		OPACITY (appStristr(Name, "Opac"),  80);
 
-		DIFFUSE(i == 0, 1)							// 1st texture as lowest weight
+		DIFFUSE(i == 0, 1);							// 1st texture as lowest weight
+//		CUBEMAP(Tex->IsTextureCube(), 1);			// any cubemap
 	}
+	// do not allow normal map became a diffuse
+	if ( (Params.Diffuse == Params.Normal && DiffWeight < NormWeight) ||
+		 (Params.Diffuse && Params.Diffuse->IsTextureCube()) )
+		Params.Diffuse = NULL;
 
 	unguard;
 }
@@ -1164,6 +1297,7 @@ void UTexture2D::Bind()
 	guard(UTexture2D::Bind);
 
 	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 
 	bool upload = !GL_TouchObject(DrawTimestamp);
 
@@ -1175,12 +1309,13 @@ void UTexture2D::Bind()
 		byte *pic = Decompress(USize, VSize);
 		if (pic)
 		{
-			Upload(TexNum, pic, USize, VSize, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
+			glBindTexture(GL_TEXTURE_2D, TexNum);
+			Upload2D(pic, USize, VSize, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
 			delete pic;
 		}
 		else
 		{
-			appNotify("WARNING: texture %s has no valid mipmaps", Name);
+			printf("WARNING: texture %s has no valid mipmaps\n", Name);
 			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
 			TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
 		}
@@ -1208,6 +1343,93 @@ void UTexture2D::Release()
 }
 
 
+void UTextureCube::Bind()
+{
+	guard(UTextureCube::Bind);
+
+	glEnable(GL_TEXTURE_CUBE_MAP_ARB);
+
+	bool upload = !GL_TouchObject(DrawTimestamp);
+
+	if (upload)
+	{
+		// upload texture
+		glGenTextures(1, &TexNum);
+		glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+		for (int side = 0; side < 6; side++)
+		{
+			//?? can validate USize/VSize to be identical for all sides, plus - the same "doMipmap" value
+			UTexture2D *Tex = NULL;
+			switch (side)
+			{
+			case 0:
+				Tex = FacePosX;
+				break;
+			case 1:
+				Tex = FaceNegX;
+				break;
+			case 2:
+				Tex = FacePosY;
+				break;
+			case 3:
+				Tex = FaceNegY;
+				break;
+			case 4:
+				Tex = FacePosZ;
+				break;
+			case 5:
+				Tex = FaceNegZ;
+				break;
+			}
+			int USize, VSize;
+			byte *pic = Tex->Decompress(USize, VSize);
+#if 0
+byte *pic2 = pic;
+for (int i = 0; i < USize * VSize; i++)
+{
+*pic2++ = (side & 1) * 255;
+*pic2++ = (side & 2) * 255;
+*pic2++ = (side & 4) * 255;
+*pic2++ = 255;
+}
+#endif
+			if (pic)
+			{
+				UploadCube(pic, USize, VSize, Tex->Mips.Num() > 1, side);
+				delete pic;
+			}
+			else
+			{
+				printf("WARNING: texture %s has no valid mipmaps\n", Name);
+				if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
+				TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
+				//?? warning: DefaultTexNum is 2D texture, we need some default cubemap!
+			}
+		}
+	}
+	// bind texture
+	glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+
+	unguard;
+}
+
+
+void UTextureCube::GetParams(CMaterialParams &Params) const
+{
+	Params.Cube = (UUnrealMaterial*)this;
+}
+
+
+void UTextureCube::Release()
+{
+	guard(UTextureCube::Release);
+	if (GL_IsValidObject(TexNum, DrawTimestamp))
+		glDeleteTextures(1, &TexNum);
+	Super::Release();
+	unguard;
+}
+
+
 void UMaterialInstanceConstant::SetupGL(unsigned PolyFlags)
 {
 	// redirect to Parent until UMaterial3
@@ -1226,21 +1448,63 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 
 	// get local parameters
 	bool normalSet = false;
-	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0;
+	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0, EmcWeight = 0, CubeWeight = 0, MaskWeight = 0;
 
-	for (int i = 0; i < TextureParameterValues.Num(); i++)
+	int i;
+	for (i = 0; i < TextureParameterValues.Num(); i++)
 	{
 		const FTextureParameterValue &P = TextureParameterValues[i];
 		const char *Name = P.ParameterName;
 		UTexture3  *Tex  = P.ParameterValue;
 		if (!Tex) continue;
+
 		DIFFUSE (appStristr(Name, "dif"), 100);
 		DIFFUSE (appStristr(Name, "color"), 80);
 		NORMAL  (appStristr(Name, "norm") && !appStristr(Name, "fx"), 100);
 		SPECPOW (appStristr(Name, "specpow"), 100);
 		SPECULAR(appStristr(Name, "spec"), 100);
 		EMISSIVE(appStristr(Name, "emiss"), 100);
+		CUBEMAP (appStristr(Name, "cube"), 100);
+		CUBEMAP (appStristr(Name, "refl"), 90);
+//??		OPACITY (appStristr(Name, "mask"), 100);
+//??		Params.OpacityFromAlpha = true;
+#if TRON
+		if (Package->Game == GAME_Tron)
+		{
+			SPECPOW (appStristr(Name, "SPPW"), 100);
+			EMISSIVE(appStristr(Name, "Emss"), 100);
+			BAKEDMASK(appStristr(Name, "Mask"), 100);
+		}
+#endif // TRON
 	}
+	for (i = 0; i < VectorParameterValues.Num(); i++)
+	{
+		const FVectorParameterValue &P = VectorParameterValues[i];
+		const char *Name = P.ParameterName;
+		const FLinearColor &Color = P.ParameterValue;
+		EMISSIVE_COLOR(appStristr(Name, "Emissive"), 100);
+#if TRON
+		if (Package->Game == GAME_Tron)
+		{
+			EMISSIVE_COLOR(appStristr(Name, "PipingColour"), 90);
+		}
+#endif
+	}
+
+#if TRON
+	if (Package->Game == GAME_Tron)
+	{
+		if (Params.Mask && Params.SpecPower && Params.Emissive)
+			Params.Mask = NULL;		// some different meaning for this texture
+		if (Params.Mask)
+		{
+			Params.EmissiveChannel      = TC_MA;
+			Params.SpecularMaskChannel  = TC_G;
+			Params.SpecularPowerChannel = TC_B;
+			Params.CubemapMaskChannel   = TC_R;
+		}
+	}
+#endif // TRON
 
 	// try to get diffuse texture when nothing found
 	if (!Params.Diffuse && TextureParameterValues.Num() == 1)

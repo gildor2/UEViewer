@@ -77,6 +77,21 @@ UE3 MATERIALS TREE:
 */
 
 
+/*-----------------------------------------------------------------------------
+	Internal base material class
+-----------------------------------------------------------------------------*/
+
+enum ETextureCannel
+{
+	TC_NONE = 0,
+	TC_R,
+	TC_G,
+	TC_B,
+	TC_A,
+	TC_MA					// 1-Alpha
+};
+
+
 class UUnrealMaterial;
 
 struct CMaterialParams
@@ -84,11 +99,12 @@ struct CMaterialParams
 	CMaterialParams()
 	{
 		memset(this, 0, sizeof(*this));
+		EmissiveColor.Set(0.5f, 0.5f, 1.0f, 1);		// light-blue color
 	}
 	bool IsNull() const
 	{
 #define C(x) ((size_t)x)
-		return (C(Diffuse) | C(Normal) | C(Specular) | C(SpecPower) | C(Opacity) | C(Emissive)) == 0;
+		return (C(Diffuse) | C(Normal) | C(Specular) | C(SpecPower) | C(Opacity) | C(Emissive) | C(Cube)) == 0;
 #undef C
 	}
 
@@ -99,6 +115,15 @@ struct CMaterialParams
 	UUnrealMaterial *SpecPower;
 	UUnrealMaterial *Opacity;
 	UUnrealMaterial *Emissive;
+	UUnrealMaterial *Cube;
+	UUnrealMaterial	*Mask;					// multiple mask textures baked into a single one
+	// channels
+	ETextureCannel	EmissiveChannel;
+	ETextureCannel	SpecularMaskChannel;
+	ETextureCannel	SpecularPowerChannel;
+	ETextureCannel	CubemapMaskChannel;
+	// colors
+	FLinearColor	EmissiveColor;
 	// mobile
 	bool			bUseMobileSpecular;
 	float			MobileSpecularPower;
@@ -131,6 +156,14 @@ public:
 	virtual void GetParams(CMaterialParams &Params) const
 	{}
 	virtual bool IsTranslucent() const
+	{
+		return false;
+	}
+	virtual bool IsTexture() const
+	{
+		return false;
+	}
+	virtual bool IsTextureCube() const
 	{
 		return false;
 	}
@@ -432,6 +465,13 @@ public:
 		PROP_DROP(Type)
 #endif
 	END_PROP_TABLE
+
+#if RENDERING
+	virtual bool IsTexture() const
+	{
+		return true;
+	}
+#endif // RENDERING
 };
 
 
@@ -800,6 +840,7 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Material)
 	END_PROP_TABLE
+
 #if RENDERING
 	virtual void SetupGL(unsigned PolyFlags);
 	virtual bool IsTranslucent() const
@@ -1401,6 +1442,13 @@ public:
 		SourceArt.Serialize(Ar);
 		unguard;
 	}
+
+#if RENDERING
+	virtual bool IsTexture() const
+	{
+		return true;
+	}
+#endif // RENDERING
 };
 
 enum EPixelFormat
@@ -1646,6 +1694,43 @@ public:
 };
 
 
+class UTextureCube : public UTexture3
+{
+	DECLARE_CLASS(UTextureCube, UTexture3)
+public:
+	UTexture2D		*FacePosX;
+	UTexture2D		*FaceNegX;
+	UTexture2D		*FacePosY;
+	UTexture2D		*FaceNegY;
+	UTexture2D		*FacePosZ;
+	UTexture2D		*FaceNegZ;
+
+#if RENDERING
+	// rendering implementation fields
+	GLuint			TexNum;
+#endif
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(FacePosX)
+		PROP_OBJ(FaceNegX)
+		PROP_OBJ(FacePosY)
+		PROP_OBJ(FaceNegY)
+		PROP_OBJ(FacePosZ)
+		PROP_OBJ(FaceNegZ)
+	END_PROP_TABLE
+
+#if RENDERING
+	virtual void Bind();
+	virtual void GetParams(CMaterialParams &Params) const;
+	virtual void Release();
+	virtual bool IsTextureCube() const
+	{
+		return true;
+	}
+#endif // RENDERING
+};
+
+
 enum EBlendMode
 {
 	BLEND_Opaque,
@@ -1878,6 +1963,22 @@ public:
 	}
 };
 
+
+struct FScalarParameterValue
+{
+	DECLARE_STRUCT(FScalarParameterValue)
+
+	FName			ParameterName;
+	float			ParameterValue;
+//	FGuid			ExpressionGUID;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(ParameterName)
+		PROP_FLOAT(ParameterValue)
+		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+	END_PROP_TABLE
+};
+
 struct FTextureParameterValue
 {
 	DECLARE_STRUCT(FTextureParameterValue)
@@ -1893,19 +1994,34 @@ struct FTextureParameterValue
 	END_PROP_TABLE
 };
 
+struct FVectorParameterValue
+{
+	DECLARE_STRUCT(FVectorParameterValue)
+
+	FName			ParameterName;
+	FLinearColor	ParameterValue;
+//	FGuid			ExpressionGUID;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(ParameterName)
+		PROP_STRUC(ParameterValue, FLinearColor)
+		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+	END_PROP_TABLE
+};
+
 class UMaterialInstanceConstant : public UMaterialInstance
 {
 	DECLARE_CLASS(UMaterialInstanceConstant, UMaterialInstance)
 public:
-	TArray<FTextureParameterValue> TextureParameterValues;
+	TArray<FScalarParameterValue>	ScalarParameterValues;
+	TArray<FTextureParameterValue>	TextureParameterValues;
+	TArray<FVectorParameterValue>	VectorParameterValues;
 
 	BEGIN_PROP_TABLE
+		PROP_ARRAY(ScalarParameterValues,  FScalarParameterValue )
 		PROP_ARRAY(TextureParameterValues, FTextureParameterValue)
-		// drop other props
+		PROP_ARRAY(VectorParameterValues,  FVectorParameterValue )
 		PROP_DROP(FontParameterValues)
-		PROP_DROP(ScalarParameterValues)
-//		PROP_DROP(TextureParameterValues)	//!! use it
-		PROP_DROP(VectorParameterValues)
 	END_PROP_TABLE
 
 #if RENDERING
@@ -1917,6 +2033,55 @@ public:
 	}
 #endif
 };
+
+
+#if DCU_ONLINE
+
+struct UIStreamingTexture_Info_DCU
+{
+	unsigned		Hash;				// real texture has no hash, it is a Map<int,UIStreamingTexture_Info>
+	int				nWidth;
+	int				nHeight;
+	int				BulkDataFlags;
+	int				ElementCount;
+	int				BulkDataOffsetInFile;
+	int				BulkDataSizeOnDisk;
+	int				Format;
+	byte			bSRGB;
+	FName			TextureFileCacheName;
+
+	friend FArchive& operator<<(FArchive &Ar, UIStreamingTexture_Info_DCU &S)
+	{
+		Ar << S.Hash;					// serialize it in the structure
+		return Ar << S.nWidth << S.nHeight << S.BulkDataFlags << S.ElementCount << S.BulkDataOffsetInFile
+				  << S.BulkDataSizeOnDisk << S.Format << S.bSRGB << S.TextureFileCacheName;
+	}
+};
+
+//?? non-functional class, remove it later
+class UUIStreamingTextures : public UObject
+{
+	DECLARE_CLASS(UUIStreamingTextures, UObject);
+public:
+	TArray<UIStreamingTexture_Info_DCU> TextureHashToInfo;
+
+	// generated data
+	TArray<UTexture2D*>		Textures;
+	TArray<char*>			Names;
+	virtual ~UUIStreamingTextures();
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UUIStreamingTextures::Serialize);
+		Super::Serialize(Ar);
+		Ar << TextureHashToInfo;
+		unguard;
+	}
+
+	virtual void PostLoad();
+};
+
+#endif // DCU_ONLINE
 
 #endif // UNREAL3
 
@@ -1943,9 +2108,14 @@ public:
 	REGISTER_CLASS_ALIAS(UMaterial3, UMaterial) \
 	REGISTER_CLASS(UTexture2D)			\
 	REGISTER_CLASS(ULightMapTexture2D)	\
+	REGISTER_CLASS(UTextureCube)		\
+	REGISTER_CLASS(FScalarParameterValue)  \
 	REGISTER_CLASS(FTextureParameterValue) \
+	REGISTER_CLASS(FVectorParameterValue)  \
 	REGISTER_CLASS(UMaterialInstanceConstant)
 
+#define REGISTER_MATERIAL_CLASSES_DCUO	\
+	REGISTER_CLASS(UUIStreamingTextures)
 
 #define REGISTER_MATERIAL_ENUMS			\
 	REGISTER_ENUM(ETextureFormat)		\

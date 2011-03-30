@@ -18,6 +18,7 @@ CStatMeshViewer::CStatMeshViewer(UStaticMesh *Mesh)
 	offset[0] = (Mesh->BoundingBox.Max.X + Mesh->BoundingBox.Min.X) / 2;
 	offset[1] = (Mesh->BoundingBox.Max.Y + Mesh->BoundingBox.Min.Y) / 2;
 	offset[2] = (Mesh->BoundingBox.Max.Z + Mesh->BoundingBox.Min.Z) / 2;
+	offset[2] += Mesh->BoundingSphere.R / 20;		// offset a bit up
 	SetViewOffset(offset);
 	// automatically scale view distance depending on model size
 	SetDistScale(Mesh->BoundingSphere.R / 150);

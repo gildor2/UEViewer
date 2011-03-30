@@ -2,19 +2,36 @@
  *	Per-pixel lighting shader with normalmap support
  *****************************************************************************/
 
+#version 120				//?? move to cpp - it should be specified before any other directive
+
 //#define SHOW_BUMP			// show specular only
 //#define NORMALMAP			// show mesh using single light from viewer; no texuring, specular from everything
 
 #define SPECULAR
 
-#ifndef TEXTURING
-#define TEXTURING	1
+#ifndef DIFFUSE
+#define DIFFUSE		0
 #endif
 
+#ifndef CUBE
+#define CUBE		0
+#endif
+
+#if SHOW_BUMP
+#undef EMISSIVE
+#endif
+
+#ifndef EMISSIVE
+#define EMISSIVE	0
+#endif
 
 // Variables passed from vertex to fragment shader
 varying vec4 diffuse, ambient, specular;
 varying vec3 tangentLightDir, tangentEye;
+#if CUBE
+varying mat3 tangentToWorld;
+#endif
+varying vec3 tmp;
 
 
 attribute vec3 tangent;
@@ -22,14 +39,19 @@ attribute vec3 binormal;
 
 
 // Parameters
-uniform sampler2D diffTex;
-uniform sampler2D normTex;
-uniform sampler2D specTex;
-uniform sampler2D spPowTex;
-uniform sampler2D opacTex;
-uniform sampler2D emisTex;
+uniform sampler2D	diffTex;
+uniform sampler2D	normTex;
+uniform sampler2D	specTex;
+uniform sampler2D	spPowTex;
+uniform sampler2D	opacTex;
+uniform sampler2D	emisTex;
+uniform samplerCube	cubeTex;
+uniform sampler2D	maskTex;
 
 
+#define NEW
+
+#ifndef NEW
 vec3 ToTangent(vec3 source, vec3 t, vec3 b, vec3 n)
 {
 	vec3 v;
@@ -38,7 +60,7 @@ vec3 ToTangent(vec3 source, vec3 t, vec3 b, vec3 n)
 	v.z = dot(source, n);
 	return v;
 }
-
+#endif // NEW
 
 void VertexShaderMain()
 {
@@ -52,24 +74,38 @@ void VertexShaderMain()
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 	gl_Position    = ftransform();
 
-	vec3 t = normalize(gl_NormalMatrix * tangent  );
-	vec3 b = normalize(gl_NormalMatrix * binormal );
-	vec3 n = normalize(gl_NormalMatrix * gl_Normal);
+	// get TBN in screen-space coordinate system
+#ifndef NEW
+	vec3 t = (gl_ModelViewMatrix * vec4(tangent,   0.0)).xyz;
+	vec3 b = (gl_ModelViewMatrix * vec4(binormal,  0.0)).xyz;
+	vec3 n = (gl_ModelViewMatrix * vec4(gl_Normal, 0.0)).xyz;
+#else
+	// this code may not work when TBN or ModelView is not normalized
+	mat3 tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(tangent, binormal, gl_Normal));
+#endif
 
 	// note: gl_LightSource.position is already transformed to eye-space
-	vec3 eyePos          = gl_NormalMatrix * gl_Vertex.xyz;			// position of vertex in eye space
-	vec3 eyeLightPos     = gl_LightSource[0].position.xyz;			// direction to light in eye space
-	vec3 tangentPos      = ToTangent(eyePos, t, b, n);
-	vec3 tangentLightPos = ToTangent(eyeLightPos, t, b, n);
-	tangentLightDir = tangentLightPos - tangentPos;
-	tangentEye      = normalize(ToTangent(vec3(0.0, 0.0, 1.0), t, b, n));
+	vec3 eyeVertexPos = (gl_ModelViewMatrix * gl_Vertex).xyz;		// vertex position in eye space
+	vec3 eyeLightPos  = gl_LightSource[0].position.xyz;				// direction to light in eye space
+#ifndef NEW
+	tangentLightDir = normalize(ToTangent(eyeLightPos - eyeVertexPos, t, b, n));
+	tangentEye      = normalize(ToTangent(-eyeVertexPos, t, b, n));	// eye is (0,0,0), so direction to eye = -vertex
+#else
+	tangentLightDir = normalize(tbn * (eyeLightPos - eyeVertexPos));
+	tangentEye      = normalize(tbn * -eyeVertexPos);				// eye is (0,0,0), so direction to eye = -vertex
+#endif
+#if CUBE
+	tangentToWorld = transpose(tbn);	//!! will not work when tbn is not normalized
+#endif
 }
 
 
+#if DIFFUSE
 vec4 GetMaterialDiffuseColor(vec2 TexCoord)
 {
 	return texture2D(diffTex, TexCoord);
 }
+#endif // DIFFUSE
 
 vec3 GetMaterialNormal(vec2 TexCoord)
 {
@@ -99,7 +135,19 @@ float GetMaterialOpacity(vec2 TexCoord)
 	return %s;
 }
 
+#if EMISSIVE
 vec3 GetMaterialEmissive(vec2 TexCoord)
+{
+	return %s;
+}
+#endif // EMISSIVE
+
+vec3 GetMaterialCubemap(vec3 TexCoord)
+{
+	return %s;
+}
+
+float GetCubemapMask(vec2 TexCoord)
 {
 	return %s;
 }
@@ -107,18 +155,18 @@ vec3 GetMaterialEmissive(vec2 TexCoord)
 
 void PixelShaderMain()
 {
-	vec2 TexCoord = gl_TexCoord[0].st;
+	vec2 TexCoord  = gl_TexCoord[0].st;
 
-	vec3 normal    = GetMaterialNormal(TexCoord);
-
+	vec3 normal    = normalize(GetMaterialNormal(TexCoord));
 	vec3 nLightDir = normalize(tangentLightDir);
-	vec3 n         = normalize(normal);
 	// ambient + diffuse
-	float NdotL    = max(dot(n, nLightDir), 0.0);
+	float NdotL    = max(dot(normal, nLightDir), 0.0);
 	vec4 color     = ambient + diffuse * NdotL;
 
-#if TEXTURING
-	color *= GetMaterialDiffuseColor(TexCoord);
+#if DIFFUSE
+	vec4 diffuse   = GetMaterialDiffuseColor(TexCoord);
+	color *= diffuse;
+//!!	color *= GetMaterialDiffuseColor(TexCoord); -- strange bug when used with cubemaps - cubemap will be wrong
 #endif
 
 #ifdef SHOW_BUMP
@@ -131,18 +179,30 @@ void PixelShaderMain()
 	// light and from pixel to viewer
 	vec3 halfVector = nLightDir + tangentEye;
 	vec3 halfV      = normalize(halfVector);
-	float NdotHV    = max(dot(n, halfV), 0.0);
+	float NdotHV    = max(dot(normal, halfV), 0.0);
 	color.rgb += pow(NdotHV, GetMaterialSpecularPower(TexCoord)) * GetMaterialSpecularColor(TexCoord);
 #endif // SPECULAR
 
-#ifndef SHOW_BUMP
+#if CUBE && !DIFFUSE
+	color = vec4(0.0, 0.0, 0.0, 1.0);
+#endif
+
+#if CUBE
+	vec3 reflectVec = tangentToWorld * reflect(tangentEye, normal);
+	vec3 reflectColor = GetMaterialCubemap(-reflectVec.xzy);
+	color.rgb += reflectColor * GetCubemapMask(TexCoord);
+#endif
+
+#if EMISSIVE
 	color.rgb += GetMaterialEmissive(TexCoord);
 #endif
+
+//!!color.rgb = texture2D(maskTex, TexCoord).aaa;
 	color.a = GetMaterialOpacity(TexCoord);
 
 //	color.rgb += pow(1.0 - dot(n, tangentEye), 3.5) * vec3(0.5);	// Fresnel
 #ifdef NORMALMAP
-	color.rgb = pow(dot(n, tangentEye), 3.5) * vec3(1.0);
+	color.rgb = pow(dot(normal, tangentEye), 3.5) * vec3(1.0);
 #endif
 
 	gl_FragColor = color;

@@ -57,6 +57,7 @@ function scell2() { run1 "data/SplinterCell2" $*; }
 function l2()     { run1 "$L2" $*;   }
 function bio()    { run1 "$BIO" $*;  }
 function mass()   { run1 "$MASS" $*; }
+function dcu()    { run1 "$DCU" $*;  }
 
 rm $exe
 ./build.sh
@@ -74,6 +75,7 @@ CheckDir UC2 "C:/!umodel-data/UnrealChampionship2" data/UnrealChampionship2
 CheckDir L2 "C:/!umodel-data/Lineage2"
 CheckDir BIO {c,e}:/GAMES/BioShock
 CheckDir MASS "C:/GAMES/Mass Effect/BioGame/CookedPC"
+CheckDir DCU "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC"
 
 #------------------------------------------------------------------------------
 

@@ -9,16 +9,20 @@ void VertexShaderMain()
 	gl_Position    = ftransform();
 }
 
+#define BLOOM_SCALE		4.0
+
 void PixelShaderMain()
 {
 	vec2 TexCoord = gl_TexCoord[0].st;
-	vec3 Blur = texture2D(BlurTex, TexCoord).rgb;
+	vec4 Blur = texture2D(BlurTex, TexCoord);
 	vec3 Orig = texture2D(OrigTex, TexCoord).rgb;
 	vec4 c;
+//	c = vec4(vec3(Blur.a) * BLOOM_SCALE, 1.0);	// show Blur.a
 //	c = vec4(Blur * 1.0 + Orig * 1.0, 1.0);		//?? different formula
 //	c = vec4(Blur * -9.0 + Orig * 10.0, 1.0);	// interesting effect (sharp image) ...
 //	c = vec4(Blur * 0.5 + Orig * 0.5, 1.0);
-	c = vec4(Blur + Orig, 1.0);					// combine both with weights = 1
+//	c = vec4(Blur + Orig, 1.0);					// combine both with weights = 1
+	c = vec4(Orig + Blur.rgb * Blur.a * BLOOM_SCALE, 1.0);
 //	c = vec4(Blur * 1.0, 1.0);					// blur only
 //	c = vec4(Orig, 1.0);						// unblurred image only
 	gl_FragColor = c;

@@ -384,8 +384,9 @@ static byte *DecompressXBox360(const byte* TexData, int DataSize, ETextureFormat
 	float bpp = (float)DataSize / (USize1 * VSize1) * blockSizeX * blockSizeY;
 
 #if BIOSHOCK
+	// some verification
 	float rate = bpp / bytesPerBlock;
-	if (Game == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing mipmaps into this buffer
+	if (Game == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
 		bpp = bytesPerBlock;
 #endif // BIOSHOCK
 
@@ -894,6 +895,213 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 	UTexture2D::Decompress (UE3)
 -----------------------------------------------------------------------------*/
 
+#if DCU_ONLINE
+
+// string hashing
+static unsigned GCRCTable[256];
+
+static void BuildCRCTable()
+{
+	assert(!GCRCTable[0]);
+    for (int i = 0; i < 256; i++)
+	{
+		unsigned hash = i << 24;
+		for (int j = 0; j < 8; j++)
+		{
+			if (hash & 0x80000000)
+				hash = (hash << 1) ^ 0x04C11DB7;
+			else
+				hash <<= 1;
+		}
+		GCRCTable[i] = hash;
+	}
+}
+
+static unsigned appStrihash(const char *str)
+{
+	if (!GCRCTable[0]) BuildCRCTable();
+
+	unsigned Hash = 0;
+	while (*str)
+	{
+		byte B = toupper(*str++);
+		Hash   = ((Hash >> 8) & 0x00FFFFFF) ^ GCRCTable[(Hash ^ B) & 0x000000FF];
+		B      = 0;		// simulate unicode
+		Hash   = ((Hash >> 8) & 0x00FFFFFF) ^ GCRCTable[(Hash ^ B) & 0x000000FF];
+	}
+	return Hash;
+}
+
+// UTextureFileCacheRemap class
+
+struct FTfcRemapEntry_DCU
+{
+	unsigned		Hash;
+	int				Offset;
+	FString			CollisionString;
+
+	friend FArchive& operator<<(FArchive &Ar, FTfcRemapEntry_DCU &R)
+	{
+		guard(FTfcRemapEntry_DCU<<);
+		Ar << R.Hash << R.Offset << R.CollisionString;
+		if (R.CollisionString.Num() > 1) appNotify("HASH COLLISION: %s\n", *R.CollisionString);	//!!
+		return Ar;
+		unguard;
+	}
+};
+
+class UTextureFileCacheRemap : public UObject
+{
+	DECLARE_CLASS(UTextureFileCacheRemap, UObject);
+public:
+	TArray<FTfcRemapEntry_DCU> TextureHashToRemapOffset;	// really - TMultiMap<unsigned, TFC_Remap_Info>
+
+	void Serialize(FArchive &Ar)
+	{
+		guard(UTextureFileCacheRemap::Serialize);
+
+		Super::Serialize(Ar);
+		Ar << TextureHashToRemapOffset;
+
+		unguard;
+	}
+};
+
+
+// Main worker function
+static int GetRealTextureOffset_DCU_2(unsigned Hash, const char *TFCName)
+{
+	guard(GetRealTextureOffset_DCU_2);
+
+	static bool classRegistered = false;
+	if (!classRegistered)
+	{
+		BEGIN_CLASS_TABLE
+			REGISTER_CLASS(UTextureFileCacheRemap)
+		END_CLASS_TABLE
+		classRegistered = true;
+	}
+
+	// code to load object TextureFileCacheRemap from the package <TFC_NAME>_Remap
+
+	// load a package
+	char PkgName[256];
+	appSprintf(ARRAY_ARG(PkgName), "%s_Remap", TFCName);
+	UnPackage *Package = UnPackage::LoadPackage(PkgName);
+	if (!Package)
+	{
+		printf("Package %s was not found\n", PkgName);
+		return -1;
+	}
+	// find object ...
+	int mapExportIdx = Package->FindExport("TextureFileCacheRemap", "TextureFileCacheRemap");
+	if (mapExportIdx == INDEX_NONE)
+	{
+		printf("ERROR: unable to find export \"TextureFileCacheRemap\" in package %s\n", PkgName);
+		return -1;
+	}
+	// ... and load it
+	const UTextureFileCacheRemap *Remap = static_cast<UTextureFileCacheRemap*>(Package->CreateExport(mapExportIdx));
+	assert(Remap);
+	int Offset = -1;
+	for (int i = 0; i < Remap->TextureHashToRemapOffset.Num(); i++)
+	{
+		const FTfcRemapEntry_DCU &E = Remap->TextureHashToRemapOffset[i];
+		if (E.Hash == Hash)
+		{
+			Offset = E.Offset;
+			break;
+		}
+	}
+	return Offset;
+
+	unguardf(("TFC=%s Hash=%08X", TFCName, Hash));
+}
+
+
+static int GetRealTextureOffset_DCU(const UTexture2D *Obj)
+{
+	guard(GetRealTextureOffset_DCU);
+
+	char ObjName[256];
+	Obj->GetFullName(ARRAY_ARG(ObjName));
+	unsigned Hash = appStrihash(ObjName);
+	const char *TFCName = Obj->TextureFileCacheName;
+	return GetRealTextureOffset_DCU_2(Hash, TFCName);
+
+	unguardf(("%s.%s", Obj->Package->Name, Obj->Name));
+}
+
+
+UUIStreamingTextures::~UUIStreamingTextures()
+{
+	// free generated data
+	int i;
+	for (i = 0; i < Textures.Num(); i++)
+		delete Textures[i];
+	for (i = 0; i < Names.Num(); i++)
+		free(Names[i]);				// allocated with strdup()
+}
+
+
+void UUIStreamingTextures::PostLoad()
+{
+	guard(UUIStreamingTextures::PostLoad);
+
+	assert(Package->Game == GAME_DCUniverse);
+	// code is similar to Rune's USkelModel::Serialize()
+	printf("Creating %d UI textures ...\n", TextureHashToInfo.Num());
+	for (int i = 0; i < TextureHashToInfo.Num(); i++)
+	{
+		// create new UTexture2D
+		const UIStreamingTexture_Info_DCU &S = TextureHashToInfo[i];
+		UTexture2D *Tex = static_cast<UTexture2D*>(CreateClass("Texture2D"));
+		char nameBuf[256];
+		appSprintf(ARRAY_ARG(nameBuf), "UITexture_%08X", S.Hash);
+		char *name = strdup(nameBuf);
+		Textures.AddItem(Tex);
+		Names.AddItem(name);
+		// setup UOnject
+		Tex->Name         = name;
+		Tex->Package      = Package;
+		Tex->PackageIndex = INDEX_NONE;		// not really exported
+		Tex->TextureFileCacheName = S.TextureFileCacheName;
+		Tex->Format       = (EPixelFormat)S.Format;
+		Tex->SizeX        = S.nWidth;
+		Tex->SizeY        = S.nHeight;
+//		Tex->SRGB         = S.bSRGB;
+		// create mipmap
+		FTexture2DMipMap *Mip = new (Tex->Mips) FTexture2DMipMap;
+		Mip->SizeX        = S.nWidth;
+		Mip->SizeY        = S.nHeight;
+		Mip->Data.BulkDataFlags        = S.BulkDataFlags;
+		Mip->Data.ElementCount         = S.ElementCount;
+		Mip->Data.BulkDataSizeOnDisk   = S.BulkDataSizeOnDisk;
+		Mip->Data.BulkDataOffsetInFile = S.BulkDataOffsetInFile;
+		// find TFC remap
+		if (Mip->Data.BulkDataOffsetInFile < 0)
+		{
+			int Offset = GetRealTextureOffset_DCU_2(S.Hash, S.TextureFileCacheName);
+			if (Offset < 0)
+				Mip->Data.BulkDataFlags = BULKDATA_NoData;
+			else
+				Mip->Data.BulkDataOffsetInFile = Offset - Mip->Data.BulkDataOffsetInFile - 1;
+			printf("OFFS: %X\n", Mip->Data.BulkDataOffsetInFile);
+		}
+#if 1
+		printf("%d: %s  {%08X} %dx%d %s [%08X + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
+			S.nWidth, S.nHeight, EnumToName("EPixelFormat", Tex->Format),
+			S.BulkDataOffsetInFile, S.BulkDataSizeOnDisk
+		);
+#endif
+	}
+	printf("... done\n");
+
+	unguard;
+}
+
+#endif // DCU_ONLINE
+
 bool UTexture2D::LoadBulkTexture(int MipIndex) const
 {
 	const CGameFileInfo *bulkFile = NULL;
@@ -952,6 +1160,15 @@ bool UTexture2D::LoadBulkTexture(int MipIndex) const
 	FArchive *Ar = appCreateFileReader(bulkFile);
 	Ar->SetupFrom(*Package);
 	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
+#if DCU_ONLINE
+	if (Package->Game == GAME_DCUniverse && Bulk->BulkDataOffsetInFile < 0)
+	{
+		int Offset = GetRealTextureOffset_DCU(this);
+		if (Offset < 0) return false;
+		Bulk->BulkDataOffsetInFile = Offset - Bulk->BulkDataOffsetInFile - 1;
+//		printf("OFFS: %X\n", Bulk->BulkDataOffsetInFile);
+	}
+#endif // DCU_ONLINE
 //	printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
 	Bulk->SerializeChunk(*Ar);
 	delete Ar;
@@ -1002,11 +1219,11 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 		else if (Format == PF_BC5)
 			intFormat = TEXF_3DC;
 #if MASSEFF
-//??		else if (Format == PF_NormapMap_LQ)
+//??		else if (Format == PF_NormapMap_LQ) -- seems not used
 //??			intFormat = TEXF_3DC;
 		else if (Format == PF_NormalMap_HQ)
 			intFormat = TEXF_3DC;
-#endif
+#endif // MASSEFF
 		else
 		{
 			const char *FmtName = EnumToName("EPixelFormat", Format);
@@ -1025,29 +1242,55 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 		}
 #endif // IPHONE
 
-#if XBOX360
-		if (Package->Platform == PLATFORM_XBOX360)
+		byte* ret = NULL;
+		switch (Package->Platform)
 		{
-			const FByteBulkData &Bulk = Mip.Data;
-			int DataSize = Bulk.ElementCount * Bulk.GetElementSize();
-//			printf("fmt=%s  bulk=%d  w=%d  h=%d\n", EnumToName("EPixelFormat", Format), DataSize, USize, VSize);
-			char* Error;
-			byte* ret = DecompressXBox360(Bulk.BulkData, DataSize, intFormat, USize, VSize, Name, Error, Package->Game);
-			if (!ret)
+#if XBOX360
+		case PLATFORM_XBOX360:
 			{
-				const char *FmtName = EnumToName("EPixelFormat", Format);
-				if (!FmtName) FmtName = "???";
-				appNotify("ERROR UTexture2D::DecompressXBox360: %s'%s' (%s=%d): %s",
-					GetClassName(), Name,
-					FmtName, Format,
-					Error
-				);
+				const FByteBulkData &Bulk = Mip.Data;
+				int DataSize = Bulk.ElementCount * Bulk.GetElementSize();
+//				printf("fmt=%s  bulk=%d  w=%d  h=%d\n", EnumToName("EPixelFormat", Format), DataSize, USize, VSize);
+				char* Error;
+				ret = DecompressXBox360(Bulk.BulkData, DataSize, intFormat, USize, VSize, Name, Error, Package->Game);
+				if (!ret)
+				{
+					const char *FmtName = EnumToName("EPixelFormat", Format);
+					if (!FmtName) FmtName = "???";
+					appNotify("ERROR UTexture2D::DecompressXBox360: %s'%s' (%s=%d): %s",
+						GetClassName(), Name,
+						FmtName, Format,
+						Error
+					);
+				}
 			}
-			return ret;
-		}
+			break;
 #endif // XBOX360
-		return DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
-	}
+		default:
+			ret = DecompressTexture(Mip.Data.BulkData, USize, VSize, intFormat, Name, NULL);
+			break;
+		}
+		if (!ret) return NULL;			// failed to decompress, nothing to check more
+
+#if 0
+		// check for possible texture modification using UnpackMin/UnpackMax
+		if (UnpackMin[0] == 0 && UnpackMin[1] == 0 && UnpackMin[1] == 0)
+			return ret;					// simple texture
+
+		// possibly a normalmap - unpacks to -1..+1 range
+		unsigned Xor = 0;
+		int i;
+		for (i = 0; i < 4; i++)
+			if (UnpackMin[i] > UnpackMax[i])
+				Xor |= 0xFF << (i * 8);	// "N xor 255 = 255 - N" (for byte N)
+		// original texture is BGRA, our is RGBA
+		if (!Xor) return ret;			// do not require processing
+		unsigned *upic = (unsigned*)ret;
+		for (i = 0; i < USize * VSize; i++, upic++)
+			*upic = *upic ^ Xor;
+#endif
+		return ret;
+	} // enf of mipmap iteration
 	// no valid mipmaps
 	return NULL;
 

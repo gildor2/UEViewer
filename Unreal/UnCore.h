@@ -83,6 +83,11 @@ FArchive *appCreateFileReader(const CGameFileInfo *info);
 void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext = NULL);
 
 
+#if UNREAL3
+extern const char *GStartupPackage;
+#endif
+
+
 /*-----------------------------------------------------------------------------
 	FName class
 -----------------------------------------------------------------------------*/
@@ -222,6 +227,7 @@ enum EGame
 		GAME_Bulletstorm,
 		GAME_Undertow,
 		GAME_Singularity,
+		GAME_Tron,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -711,6 +717,23 @@ struct FColor
 	:	R(r), G(g), B(b), A(a)
 	{}
 	friend FArchive& operator<<(FArchive &Ar, FColor &C)
+	{
+		return Ar << C.R << C.G << C.B << C.A;
+	}
+};
+
+
+// UNREAL3
+struct FLinearColor
+{
+	float	R, G, B, A;
+
+	void Set(float _R, float _G, float _B, float _A)
+	{
+		R = _R; G = _G; B = _B; A = _A;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FLinearColor &C)
 	{
 		return Ar << C.R << C.G << C.B << C.A;
 	}

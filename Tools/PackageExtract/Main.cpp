@@ -12,62 +12,16 @@
 	Service functions
 -----------------------------------------------------------------------------*/
 
-static void GetFullExportNameBase(const FObjectExport &Exp, UnPackage *Package, char *buf, int bufSize, char delim = '.')
-{
-	int PackageIndices[256];
-	int NestLevel = 0;
-	int PackageIndex = Exp.PackageIndex;
-	// gather nest packages
-	while (PackageIndex)
-	{
-		PackageIndices[NestLevel++] = PackageIndex;
-		assert(NestLevel < ARRAY_COUNT(PackageIndices));
-		//!! duplicated code
-		if (PackageIndex < 0)
-		{
-			const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
-			PackageIndex = Rec.PackageIndex;
-		}
-		else
-		{
-			// possible for UE3 forced exports
-			const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
-			PackageIndex = Rec.PackageIndex;
-		}
-	}
-	// collect packages in reverse order (from root to object)
-	*buf = 0;
-	for (int i = NestLevel-1; i >= 0; i--)
-	{
-		int PackageIndex = PackageIndices[i];
-		const char *PackageName = NULL;
-		//!! duplicate code
-		if (PackageIndex < 0)
-		{
-			const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
-			PackageName = Rec.ObjectName;
-		}
-		else
-		{
-			// possible for UE3 forced exports
-			const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
-			PackageName = Rec.ObjectName;
-		}
-		char *dst = strchr(buf, 0);
-		appSprintf(dst, bufSize - (dst - buf), "%s%c", PackageName, delim);
-	}
-	// append object name
-	char *dst = strchr(buf, 0);
-	appSprintf(dst, bufSize - (dst - buf), "%s", *Exp.ObjectName);
-}
-
-
 static void GetFullExportFileName(const FObjectExport &Exp, UnPackage *Package, char *buf, int bufSize)
 {
 	// get full path
-	GetFullExportNameBase(Exp, Package, buf, bufSize, '/');
+	Package->GetFullExportName(Exp, buf, bufSize);
+	char *dst;
+	// replace '.' with '/' and find the string end
+	for (dst = buf; *dst; dst++)
+		if (*dst == '.') *dst = '/';
 	// and append class name as file extension
-	char *dst = strchr(buf, 0);
+	assert(*dst == 0);
 	const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
 	appSprintf(dst, bufSize - (dst - buf), ".%s", ClassName);
 }
@@ -80,7 +34,7 @@ static void GetFullExportName(const FObjectExport &Exp, UnPackage *Package, char
 	appSprintf(buf, bufSize, "%s'", ClassName);
 	// get full path
 	char *dst = strchr(buf, 0);
-	GetFullExportNameBase(Exp, Package, dst, bufSize - (dst - buf));
+	Package->GetFullExportName(Exp, dst, bufSize - (dst - buf));
 	// append "'"
 	dst = strchr(buf, 0);
 	appSprintf(dst, bufSize - (dst - buf), "'");
@@ -119,7 +73,7 @@ int main(int argc, char **argv)
 	if (argc < 2)
 	{
 	help:
-		printf(	"Unreal package extractor\n"
+		printf(	"Unreal Engine package extractor\n"
 				"Usage: extract [command] [options] <package filename>\n"
 				"\n"
 				"Commands:\n"
@@ -129,7 +83,7 @@ int main(int argc, char **argv)
 				"Options:\n"
 				"    -filter=<value>    add filter for output types\n"
 				"    -out=PATH          extract everything into PATH instead of the current directory\n"
-				"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
+				"    -lzo|lzx|zlib      force compression method for fully-compressed packages\n"
 				"\n"
 				"For details and updates please visit " HOMEPAGE "\n"
 		);
@@ -300,27 +254,7 @@ int main(int argc, char **argv)
 	for (idx = 0; idx < Package->Summary.ImportCount; idx++)
 	{
 		const FObjectImport &Imp = Package->GetImport(idx);
-		// find root package
-		//!! code from UnPackage.cpp, should generalize
-		int PackageIndex = Imp.PackageIndex;
-		const char *PackageName = NULL;
-		//!! duplicated code
-		while (PackageIndex)
-		{
-			if (PackageIndex < 0)
-			{
-				const FObjectImport &Rec = Package->GetImport(-PackageIndex-1);
-				PackageIndex = Rec.PackageIndex;
-				PackageName  = Rec.ObjectName;
-			}
-			else
-			{
-				// possible for UE3 forced exports
-				const FObjectExport &Rec = Package->GetExport(PackageIndex-1);
-				PackageIndex = Rec.PackageIndex;
-				PackageName  = Rec.ObjectName;
-			}
-		}
+		const char *PackageName = Package->GetObjectPackageName(Imp.PackageIndex);
 		if (PackageName)
 			fprintf(f, "%d = %s'%s.%s'\n", idx, *Imp.ClassName, PackageName, *Imp.ObjectName);
 		else

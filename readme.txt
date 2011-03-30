@@ -58,6 +58,7 @@ Modified Unreal Engine 3:
   Crime Craft
   AVA Online
   Frontlines: Fuel of War
+  Homefront
   50 Cent: Blood on the Sand (XBox360)
   Nurien
   Stranglehold
@@ -185,6 +186,22 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+27.03.2011
+- implemented looking for resources in "startup_xxx" package
+
+26.03.2011
+- added "-materials" switch to exclude textures from viewing
+
+25.03.2011
+- improved UE material emissive rendering
+- implemented UE3 cubemap (TextureCube) support
+- improved mesh positioning in a viewer
+- changed viewport background color
+
+17.03.2011
+- implemented DC Universe Online TFC texture support
+- implemented Homefront support (StaticMesh is not supported)
+
 12.03.2011
 - implemented Enslaved PS3 support
 

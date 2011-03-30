@@ -241,6 +241,8 @@ public:
 		return StaticGetTypeinfo();
 	}
 
+	void GetFullName(char *Dst, int DstSize) const;
+
 //private: -- not private to allow object browser ...
 	// static data and methods
 	static int				GObjBeginLoadCount;
