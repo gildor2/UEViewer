@@ -3,7 +3,7 @@
 
 //#cmakedefine HAVE_UNISTD_H
 #ifndef HAVE_STDARG_H
-#define HAVE_STDARG_H
+#define HAVE_STDARG_H 1
 #endif
 //#cmakedefine HAVE_SIGNAL_H
 //#cmakedefine HAVE_EXECINFO_H

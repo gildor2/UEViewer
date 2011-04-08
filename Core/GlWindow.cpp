@@ -26,6 +26,10 @@
 #pragma comment(lib, "opengl32.lib")
 #endif
 
+#if SDL_VERSION_ATLEAST(1,3,0)
+#define NEW_SDL					1
+#endif
+
 
 #if LIGHTING_MODES
 
@@ -112,7 +116,6 @@ bool   vpInvertXAxis = false;
 //-----------------------------------------------------------------------------
 // Viewport support
 //-----------------------------------------------------------------------------
-
 
 //-----------------------------------------------------------------------------
 // Switch 2D/3D rendering mode
@@ -277,6 +280,13 @@ static void DrawChar(char c, int color, int textX, int textY)
 }
 
 //-----------------------------------------------------------------------------
+
+#if NEW_SDL
+static SDL_Window		*sdlWindow;
+static SDL_GLContext	sdlContext;
+static bool				isFullscreen = false;
+#endif // NEW_SDL
+
 // called when window resized
 static void ResizeWindow(int w, int h)
 {
@@ -284,7 +294,11 @@ static void ResizeWindow(int w, int h)
 
 	winWidth  = w;
 	winHeight = h;
+#if NEW_SDL
+	SDL_SetWindowSize(sdlWindow, winWidth, winHeight);
+#else
 	SDL_SetVideoMode(winWidth, winHeight, 24, SDL_OPENGL|SDL_RESIZABLE);
+#endif
 
 	static bool loaded = false;
 	if (!loaded)
@@ -328,13 +342,45 @@ void GetWindowSize(int &x, int &y)
 }
 
 
+#if NEW_SDL
+
+static void ToggleFullscreen()
+{
+	isFullscreen = !isFullscreen;
+
+	if (isFullscreen)
+	{
+		// get desktop display mode
+		SDL_DisplayMode desktopMode;
+		if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplay(sdlWindow), &desktopMode) != 0)
+		{
+			printf("ERROR: unable to get desktop display mode\n");
+			isFullscreen = false;
+			return;
+		}
+		// and apply it to the window
+		SDL_SetWindowDisplayMode(sdlWindow, &desktopMode);
+	}
+	SDL_SetWindowFullscreen(sdlWindow, (SDL_bool)isFullscreen);
+}
+
+#endif // NEW_SDL
+
+
 //-----------------------------------------------------------------------------
 // Mouse control
 //-----------------------------------------------------------------------------
 
-#if !_WIN32
-static int dropMouseMotion = 0;
-#endif
+static int mousePosX, mousePosY;
+
+inline void CenterMouseInWindow()
+{
+#if NEW_SDL
+	SDL_WarpMouseInWindow(sdlWindow, winWidth / 2, winHeight / 2);
+#else
+	SDL_WarpMouse(winWidth / 2, winHeight / 2);
+#endif // NEW_SDL
+}
 
 static void OnMouseButton(int type, int button)
 {
@@ -346,39 +392,42 @@ static void OnMouseButton(int type, int button)
 	else
 		mouseButtons &= ~mask;
 	// show/hide cursor
+	// NOTE: SDL 1.2 SDL_WM_GrabInput will keep mouse pointer in center of the window, but
+	// this functionality were removed in SDL 1.3; also, Linux version of 1.2 grab has some
+	// bugs. So I've decided to implement this by myself. Forks for SDL 1.2 and 1.3 without
+	// bugs on Linux.
 	if (!prevButtons && mouseButtons)
 	{
 		SDL_ShowCursor(0);
-		SDL_WM_GrabInput(SDL_GRAB_ON);
-#if !_WIN32
-		// in linux, when calling SDL_ShowCursor(0), SDL will produce unnecessary mouse
-		// motion event, which will cause major scene rotation if not removed; here
-		// we will remove this event
-		dropMouseMotion = 2;
+#if NEW_SDL
+		SDL_SetWindowGrab(sdlWindow, SDL_TRUE);
 #endif
+		SDL_GetMouseState(&mousePosX, &mousePosY);
+		CenterMouseInWindow();
 	}
 	else if (prevButtons && !mouseButtons)
 	{
 		SDL_ShowCursor(1);
-		SDL_WM_GrabInput(SDL_GRAB_OFF);
+#if NEW_SDL
+		SDL_SetWindowGrab(sdlWindow, SDL_FALSE);
+		SDL_WarpMouseInWindow(sdlWindow, mousePosX, mousePosY);
+#else
+		SDL_WarpMouse(mousePosX, mousePosY);
+#endif
 	}
 }
 
 
-static void OnMouseMove(int dx, int dy)
+static void OnMouseMove()
 {
 	if (!mouseButtons) return;
 
-#if !_WIN32
-	if (dropMouseMotion > 0)
-	{
-		dropMouseMotion--;
-		return;
-	}
-#endif
+	int mx, my;
+	SDL_GetMouseState(&mx, &my);
+	CenterMouseInWindow();
 
-	float xDelta = (float)dx / winWidth;
-	float yDelta = (float)dy / winHeight;
+	float xDelta = (float)(mx - winWidth / 2) / winWidth;
+	float yDelta = (float)(my - winHeight / 2) / winHeight;
 	if (vpInvertXAxis)
 		xDelta = -xDelta;
 
@@ -526,7 +575,18 @@ static void Init(const char *caption)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 //	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
+#if NEW_SDL
+	sdlWindow = SDL_CreateWindow(caption,
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, winWidth, winHeight,
+		SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
+	if (!sdlWindow) appError("Failed to create SDL window");
+	sdlContext = SDL_GL_CreateContext(sdlWindow);
+	SDL_GL_SetSwapInterval(1);			// allow waiting for vsync to reduce CPU usage
+#else
 	SDL_WM_SetCaption(caption, caption);
+#endif
+
+	// initialize GL
 	ResizeWindow(winWidth, winHeight);
 
 	unguard;
@@ -921,6 +981,9 @@ static void Display()
 		DrawTextLeft(S_RED"Help:\n-----\n"S_WHITE
 					"Esc         exit\n"
 					"H           toggle help\n"
+#if NEW_SDL
+					"Alt+Enter   toggle fullscreen\n"
+#endif
 					"LeftMouse   rotate view\n"
 					"RightMouse  zoom view\n"
 					"MiddleMouse move camera\n"
@@ -929,7 +992,11 @@ static void Display()
 	AppDisplayTexts(isHelpVisible);
 	FlushTexts();
 
+#if NEW_SDL
+	SDL_GL_SwapWindow(sdlWindow);
+#else
 	SDL_GL_SwapBuffers();
+#endif
 
 	unguard;
 }
@@ -953,6 +1020,11 @@ static void OnKeyboard(unsigned key, unsigned mod)
 	case SDLK_ESCAPE:
 		RequestingQuit = true;
 		break;
+#if NEW_SDL
+	case SDLK_RETURN|KEY_ALT:
+		ToggleFullscreen();
+		break;
+#endif
 	case 'h':
 		isHelpVisible = !isHelpVisible;
 		break;
@@ -996,6 +1068,22 @@ static void OnKeyboard(unsigned key, unsigned mod)
 //-----------------------------------------------------------------------------
 
 #if SMART_RESIZE
+
+	#if NEW_SDL
+
+static int OnEvent(void *userdata, SDL_Event *evt)
+{
+	if (evt->type == SDL_WINDOWEVENT && evt->window.event == SDL_WINDOWEVENT_RESIZED)
+	{
+		ResizeWindow(evt->window.data1, evt->window.data2);
+		Display();
+		return 0;	// drop this event (already handled)
+	}
+	return 1;		// add event to queue
+}
+
+	#else // NEW_SDL
+
 static int OnEvent(const SDL_Event *evt)
 {
 	// Solution is from this topic:
@@ -1008,7 +1096,11 @@ static int OnEvent(const SDL_Event *evt)
 	}
 	return 1;		// add event to queue
 }
+
+	#endif // NEW_SDL
+
 #endif // SMART_RESIZE
+
 
 void VisualizerLoop(const char *caption)
 {
@@ -1017,11 +1109,16 @@ void VisualizerLoop(const char *caption)
 	Init(caption);
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 #if SMART_RESIZE
+	#if NEW_SDL
+	SDL_SetEventFilter(&OnEvent, NULL);
+	#else
 	SDL_SetEventFilter(&OnEvent);
-#endif
+	#endif
+#endif // SMART_RESIZE
 	ResetView();
 	// main loop
 	SDL_Event evt;
+	bool disableUpdate = false;
 	while (!RequestingQuit)
 	{
 		while (SDL_PollEvent(&evt))
@@ -1031,24 +1128,46 @@ void VisualizerLoop(const char *caption)
 			case SDL_KEYDOWN:
 				OnKeyboard(evt.key.keysym.sym, evt.key.keysym.mod);
 				break;
-#if !SMART_RESIZE
+#if NEW_SDL
+			case SDL_WINDOWEVENT:
+				switch (evt.window.event)
+				{
+				case SDL_WINDOWEVENT_MINIMIZED:
+					disableUpdate = true;
+					break;
+				case SDL_WINDOWEVENT_RESTORED:
+					disableUpdate = false;
+					break;
+	#if !SMART_RESIZE
+				case SDL_WINDOWEVENT_RESIZED:
+					ResizeWindow(evt.window.data1, evt.window.data2);
+					break;
+	#endif // SMART_RESIZE
+				}
+				break;
+#else // NEW_SDL
+	#if !SMART_RESIZE
 			case SDL_VIDEORESIZE:
 				ResizeWindow(evt.resize.w, evt.resize.h);
 				break;
-#endif
+	#endif // SMART_RESIZE
+#endif // NEW_SDL
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
 				OnMouseButton(evt.type, evt.button.button);
 				break;
 			case SDL_MOUSEMOTION:
-				OnMouseMove(evt.motion.xrel, evt.motion.yrel);
+				OnMouseMove();
 				break;
 			case SDL_QUIT:
 				RequestingQuit = true;
 				break;
 			}
 		}
-		Display();
+		if (!disableUpdate)
+			Display();
+		else
+			SDL_Delay(100);
 	}
 	// shutdown
 	Shutdown();

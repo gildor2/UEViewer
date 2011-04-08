@@ -4,6 +4,7 @@
 shopt -s extglob
 
 exe=umodel.exe		#?? win32 only
+[ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && exe="umodel"
 
 #------------------------------------------------------------------------------
 #	Game tools

@@ -187,6 +187,11 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+08.04.2011
+- win32 version has upgraded to use SDL 1.3 and got some improvements:
+  - Alt+Enter will toggle fullscreen mode
+  - minimized umodel will no more waste CPU time
+
 06.04.2011
 - added ScaleForm SwfMovie export (gfx files), activated with "-3rdparty"
 - added FaceFXAsset and FaceFXAnimSet export (fxa files), activated with "-3rdparty"

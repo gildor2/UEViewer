@@ -428,6 +428,7 @@ static void OutlineMaterial(UObject *Obj, int indent)
 {
 	guard(OutlineMaterial);
 	assert(Obj);
+	int i;
 
 	InitProps(indent == 0);
 	int oldIndent = textIndent;
@@ -519,21 +520,21 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		PROP(Parent)
 		// texture
 		if (Mat->TextureParameterValues.Num()) Outline(S_YELLOW"Texture parameters:");
-		for (int i = 0; i < Mat->TextureParameterValues.Num(); i++)
+		for (i = 0; i < Mat->TextureParameterValues.Num(); i++)
 		{
 			const FTextureParameterValue &P = Mat->TextureParameterValues[i];
 			Outline("%s = %s", *P.ParameterName, P.ParameterValue ? P.ParameterValue->Name : "NULL");
 		}
 		// scalar
 		if (Mat->ScalarParameterValues.Num()) Outline(S_YELLOW"Scalar parameters");
-		for (int i = 0; i < Mat->ScalarParameterValues.Num(); i++)
+		for (i = 0; i < Mat->ScalarParameterValues.Num(); i++)
 		{
 			const FScalarParameterValue &P = Mat->ScalarParameterValues[i];
 			Outline("%s = %g", *P.ParameterName, P.ParameterValue);
 		}
 		// vector
 		if (Mat->VectorParameterValues.Num()) Outline(S_YELLOW"Vector parameters");
-		for (int i = 0; i < Mat->VectorParameterValues.Num(); i++)
+		for (i = 0; i < Mat->VectorParameterValues.Num(); i++)
 		{
 			const FVectorParameterValue &P = Mat->VectorParameterValues[i];
 			Outline("%s = %g %g %g %g", *P.ParameterName, FCOLOR_ARG(P.ParameterValue));

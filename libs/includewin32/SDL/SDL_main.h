@@ -1,6 +1,6 @@
 /*
     SDL - Simple DirectMedia Layer
-    Copyright (C) 1997-2006 Sam Lantinga
+    Copyright (C) 1997-2011 Sam Lantinga
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -25,12 +25,17 @@
 
 #include "SDL_stdinc.h"
 
-/* Redefine main() on Win32 and MacOS so that it is called by winmain.c */
+/**
+ *  \file SDL_main.h
+ *  
+ *  Redefine main() on some platforms so that it is called by SDL.
+ */
 
-#if defined(__WIN32__) || \
-    (defined(__MWERKS__) && !defined(__BEOS__)) || \
-    defined(__MACOS__) || defined(__MACOSX__) || \
-    defined(__SYMBIAN32__) || defined(QWS)
+#if defined(__WIN32__) || defined(__IPHONEOS__) || defined(__ANDROID__)
+#ifndef SDL_MAIN_HANDLED
+#define SDL_MAIN_NEEDED
+#endif
+#endif
 
 #ifdef __cplusplus
 #define C_LINKAGE	"C"
@@ -38,61 +43,57 @@
 #define C_LINKAGE
 #endif /* __cplusplus */
 
-/* The application's main() function must be called with C linkage,
-   and should be declared like this:
-#ifdef __cplusplus
-extern "C"
-#endif
-	int main(int argc, char *argv[])
-	{
-	}
+/**
+ *  \file SDL_main.h
+ *
+ *  The application's main() function must be called with C linkage,
+ *  and should be declared like this:
+ *  \code
+ *  #ifdef __cplusplus
+ *  extern "C"
+ *  #endif
+ *  int main(int argc, char *argv[])
+ *  {
+ *  }
+ *  \endcode
  */
-#define main	SDL_main
 
-/* The prototype for the application's main() function */
+#ifdef SDL_MAIN_NEEDED
+#define main	SDL_main
+#endif
+
+/**
+ *  The prototype for the application's main() function
+ */
 extern C_LINKAGE int SDL_main(int argc, char *argv[]);
 
 
-/* From the SDL library code -- needed for registering the app on Win32 */
+#include "begin_code.h"
+#ifdef __cplusplus
+/* *INDENT-OFF* */
+extern "C" {
+/* *INDENT-ON* */
+#endif
+
 #ifdef __WIN32__
 
-#include "begin_code.h"
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* This should be called from your WinMain() function, if any */
-extern DECLSPEC void SDLCALL SDL_SetModuleHandle(void *hInst);
-/* This can also be called, but is no longer necessary */
-extern DECLSPEC int SDLCALL SDL_RegisterApp(char *name, Uint32 style, void *hInst);
-/* This can also be called, but is no longer necessary (SDL_Quit calls it) */
+/**
+ *  This can be called to set the application class at startup
+ */
+extern DECLSPEC int SDLCALL SDL_RegisterApp(char *name, Uint32 style,
+                                            void *hInst);
 extern DECLSPEC void SDLCALL SDL_UnregisterApp(void);
+
+#endif /* __WIN32__ */
+
+
 #ifdef __cplusplus
+/* *INDENT-OFF* */
 }
+/* *INDENT-ON* */
 #endif
 #include "close_code.h"
-#endif
-
-/* From the SDL library code -- needed for registering QuickDraw on MacOS */
-#if defined(__MACOS__)
-
-#include "begin_code.h"
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Forward declaration so we don't need to include QuickDraw.h */
-struct QDGlobals;
-
-/* This should be called from your main() function, if any */
-extern DECLSPEC void SDLCALL SDL_InitQuickDraw(struct QDGlobals *the_qd);
-
-#ifdef __cplusplus
-}
-#endif
-#include "close_code.h"
-#endif
-
-#endif /* Need to redefine main()? */
 
 #endif /* _SDL_main_h */
+
+/* vi: set ts=4 sw=4 expandtab: */
