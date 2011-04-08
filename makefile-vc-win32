@@ -29,6 +29,7 @@ MAIN = \
 	./obj/umodel-win32/ExportPsk.obj \
 	./obj/umodel-win32/ExportSound.obj \
 	./obj/umodel-win32/ExportTga.obj \
+	./obj/umodel-win32/ExportThirdParty.obj \
 	./obj/umodel-win32/UnCore.obj \
 	./obj/umodel-win32/UnHavok.obj \
 	./obj/umodel-win32/UnMesh.obj \
@@ -132,6 +133,7 @@ DEPENDS = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnSound.h \
+	Unreal/UnThirdParty.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
@@ -308,6 +310,20 @@ DEPENDS = \
 
 ./obj/umodel-win32/ExportSound.obj : Exporters/ExportSound.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportSound.obj" Exporters/ExportSound.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnThirdParty.h
+
+./obj/umodel-win32/ExportThirdParty.obj : Exporters/ExportThirdParty.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportThirdParty.obj" Exporters/ExportThirdParty.cpp
 
 DEPENDS = \
 	Build.h \

@@ -31,6 +31,8 @@ struct GCC_PACK tgaHdr_t
 #endif
 
 
+bool GNoTgaCompress = false;
+
 //?? place this function outside (cannot place to Core - using FArchive)
 
 void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
@@ -64,6 +66,9 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 	bool rle = false;
 
 	bool useCompression = true;
+	if (GNoTgaCompress)
+		threshold = dst;									// will break compression loop immediately
+
 	for (i = 0; i < size; i++)
 	{
 		if (dst >= threshold)								// when compressed is too large, same uncompressed

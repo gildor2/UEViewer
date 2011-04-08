@@ -4,6 +4,8 @@
 
 #define GLSLANG_DLL			"glslang.dll"
 
+#define FORCE_GLSL_VERSION	"120"		//?? use it instead of placing "#version ..." into shaders
+
 
 #if VALIDATE_SHADERS
 #	if _WIN32
@@ -328,8 +330,10 @@ static void CheckShader(GLuint obj, const char *type, const char *name)
 	}
 #endif // FILTER_ATI_GLSL
 
-	printf("%s: %s shader %s:\n", (status == GL_TRUE) ? "WARNING" : "ERROR", type, name);
-	printf("%s\n", infoLog);
+	if (status)
+		printf("WARNING: %s shader %s:\n%s\n", type, name, infoLog);
+	else
+		appNotify("ERROR: %s shader %s:\n%s", type, name, infoLog);
 
 	delete infoLog;
 
@@ -428,6 +432,12 @@ static void CompileShader(GLuint shader, const char *src, const char *defines, c
 	assert(defLen + srcLen + 512 < ARRAY_COUNT(buffer));
 
 	char *dst = buffer;
+
+#ifdef FORCE_GLSL_VERSION
+	strcpy(dst, "#version " FORCE_GLSL_VERSION "\n");
+	dst = strchr(dst, 0);
+#endif // FORCE_GLSL_VERSION
+
 	if (defines)
 	{
 		memcpy(dst, defines, defLen);

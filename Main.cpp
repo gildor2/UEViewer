@@ -2,7 +2,9 @@
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 #include "UnAnimNotify.h"
+
 #include "UnSound.h"
+#include "UnThirdParty.h"
 
 #include "Viewers/ObjectViewer.h"
 #include "Exporters/Exporters.h"
@@ -71,6 +73,16 @@ BEGIN_CLASS_TABLE
 	REGISTER_SOUND_CLASSES_UE3
 #endif
 END_CLASS_TABLE
+}
+
+
+static void RegisterUnreal3rdPartyClasses()
+{
+#if UNREAL3
+BEGIN_CLASS_TABLE
+	REGISTER_SWF_CLASSES
+END_CLASS_TABLE
+#endif
 }
 
 
@@ -245,6 +257,9 @@ static GameInfo games[] = {
 #endif
 #if SWRC
 		G("Star Wars: Republic Commando", swrc, GAME_RepCommando),
+#endif
+#if XIII
+		G("XIII", xiii, GAME_XIII),
 #endif
 #if UNREAL25
 		G2("UE2Runtime"),
@@ -521,6 +536,7 @@ static void Usage()
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
 			"    -sounds         allow export of sounds\n"
+			"    -3rdparty       allow 3rd party asset export (ScaleForm)\n"
 			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
 			"\n"
 			"Platform selection:\n"
@@ -538,6 +554,7 @@ static void Usage()
 			"    -pskx           use pskx/psax format for skeletal mesh\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -lods           export lower LOD levels as well\n"
+			"    -notgacomp      disable TGA compression\n"
 			"\n"
 			"Supported resources for export:\n"
 			"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
@@ -546,6 +563,8 @@ static void Usage()
 			"    StaticMesh      exported as ActorX psk file with no skeleton\n"
 			"    Texture         exported in tga format\n"
 			"    Sounds          file extension depends on object contents\n"
+			"    ScaleForm       gfx\n"
+			"    FaceFX          fxa\n"
 			"\n"
 			"List of supported games:\n"
 	);
@@ -610,7 +629,7 @@ int main(int argc, char **argv)
 	};
 	static byte mainCmd = CMD_View;
 	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
-		 noTex = false, regSounds = false, hasRootDir = false;
+		 noTex = false, regSounds = false, reg3rdparty = false, hasRootDir = false;
 	TArray<const char*> extraPackages;
 	int arg;
 	for (arg = 1; arg < argc; arg++)
@@ -643,6 +662,8 @@ int main(int argc, char **argv)
 				OPT_BOOL ("noanim",  noAnim)
 				OPT_BOOL ("notex",   noTex)
 				OPT_BOOL ("sounds",  regSounds)
+				OPT_BOOL ("notgacomp", GNoTgaCompress)
+				OPT_BOOL ("3rdparty", reg3rdparty)
 				// platform
 				OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
 				OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
@@ -729,13 +750,17 @@ int main(int argc, char **argv)
 #if UNREAL3
 	EXPORTER("Texture2D",     "tga",  ExportTga );
 	EXPORTER("SoundNodeWave", NULL,   ExportSoundNodeWave);
-#endif
+	EXPORTER("SwfMovie",      "gfx",  ExportGfx );
+	EXPORTER("FaceFXAnimSet", "fxa",  ExportFaceFXAnimSet);
+	EXPORTER("FaceFXAsset",   "fxa",  ExportFaceFXAsset  );
+#endif // UNREAL3
 
 	// prepare classes
 	//?? NOTE: can register classes after loading package: in this case we can know engine version (1/2/3)
 	//?? and register appropriate classes only (for example, separate UKeletalMesh classes for UE2/UE3)
 	RegisterUnrealClasses();
 	if (regSounds) RegisterUnrealSoundClasses();
+	if (reg3rdparty) RegisterUnreal3rdPartyClasses();
 	// remove some class loaders when requisted by command line
 	if (noAnim)
 	{
@@ -877,21 +902,6 @@ int main(int argc, char **argv)
 	appPrintProfiler();
 #endif
 
-#if RENDERING
-	if (!CreateVisualizer(Obj))
-	{
-		printf("Package \"%s\" has no objects to display\n", argPkgName);
-		return 0;
-	}
-	// print mesh info
-#	if TEST_FILES
-	Viewer->Test();
-#	endif
-
-	if (mainCmd == CMD_Dump)
-		Viewer->Dump();					// dump info to console
-#endif // RENDERING
-
 	if (mainCmd == CMD_Export)
 	{
 		printf("Exporting objects ...\n");
@@ -922,6 +932,19 @@ int main(int argc, char **argv)
 	}
 
 #if RENDERING
+	if (!CreateVisualizer(Obj))
+	{
+		printf("Package \"%s\" has no objects to display\n", argPkgName);
+		return 0;
+	}
+	// print mesh info
+#	if TEST_FILES
+	Viewer->Test();
+#	endif
+
+	if (mainCmd == CMD_Dump)
+		Viewer->Dump();					// dump info to console
+
 	if (mainCmd == CMD_View)
 	{
 		// show object

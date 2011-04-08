@@ -6,6 +6,7 @@ void appSetBaseExportDirectory(const char *Dir);
 extern bool GExportScripts;
 extern bool GExportLods;
 extern bool GExtendedPsk;
+extern bool GNoTgaCompress;
 
 // forwards
 class UObject;
@@ -16,6 +17,9 @@ class UVertMesh;
 class UUnrealMaterial;
 class USound;
 class USoundNodeWave;
+class USwfMovie;
+class UFaceFXAnimSet;
+class UFaceFXAsset;
 
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);
@@ -33,6 +37,10 @@ void ExportMaterial(const UUnrealMaterial *Mat);
 // sound
 void ExportSound(const USound *Snd, FArchive &Ar);
 void ExportSoundNodeWave(const USoundNodeWave *Snd, FArchive &Ar);
+// third party
+void ExportGfx(const USwfMovie *Swf, FArchive &Ar);
+void ExportFaceFXAnimSet(const UFaceFXAnimSet *Fx, FArchive &Ar);
+void ExportFaceFXAsset(const UFaceFXAsset *Fx, FArchive &Ar);
 
 // service functions
 //?? place implementation to cpp?

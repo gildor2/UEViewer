@@ -181,6 +181,7 @@ enum EGame
 		GAME_Loco,
 		GAME_BattleTerr,
 		GAME_UC1,				// note: not UE2X
+		GAME_XIII,
 
 	GAME_VENGEANCE = 0x2100,	// variant of UE2
 		GAME_Tribes3,

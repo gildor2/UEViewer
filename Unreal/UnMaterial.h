@@ -622,6 +622,23 @@ public:
 				Ar << CompMips;
 			}
 		}
+#if XIII
+		if (Ar.Game == GAME_XIII)
+		{
+			if (Ar.ArLicenseeVer >= 42)
+			{
+				// serialize palette
+				if (Format == TEXF_P8 || Format == 13)	// 13 == TEXF_P4
+				{
+					assert(!Palette);
+					Palette = new UPalette;
+					Ar << Palette->Colors;
+				}
+			}
+			if (Ar.ArLicenseeVer >= 55)
+				Ar.Seek(Ar.Tell() + 3);
+		}
+#endif // XIII
 #if EXTEEL
 		if (Ar.Game == GAME_Exteel)
 		{
@@ -655,6 +672,9 @@ public:
 		PROP_FLOAT(MaxFrameRate)
 		PROP_ENUM(CompFormat)
 		PROP_BOOL(bHasComp)
+#if XIII
+		PROP_DROP(HitSound)
+#endif
 #if BIOSHOCK
 		PROP_BOOL(HasBeenStripped)
 		PROP_BYTE(StrippedNumMips)

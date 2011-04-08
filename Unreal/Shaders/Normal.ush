@@ -2,8 +2,6 @@
  *	Per-pixel lighting shader with normalmap support
  *****************************************************************************/
 
-#version 120				//?? move to cpp - it should be specified before any other directive
-
 //#define SHOW_BUMP			// show specular only
 //#define NORMALMAP			// show mesh using single light from viewer; no texuring, specular from everything
 
@@ -17,13 +15,18 @@
 #define CUBE		0
 #endif
 
-#if SHOW_BUMP
+#ifdef SHOW_BUMP
 #undef EMISSIVE
 #endif
 
 #ifndef EMISSIVE
 #define EMISSIVE	0
 #endif
+
+/*
+#undef CUBE
+#define CUBE 1
+*/
 
 // Variables passed from vertex to fragment shader
 varying vec4 diffuse, ambient, specular;
@@ -196,6 +199,14 @@ void PixelShaderMain()
 #if EMISSIVE
 	color.rgb += GetMaterialEmissive(TexCoord);
 #endif
+
+/*	//!!
+	vec3 tmp = tangentToWorld * reflect(tangentEye, vec3(1.0, 0.0, 0.0));
+//	vec3 tmp = tangentToWorld * tangentEye;
+//	color.rgb = tmp * 0.5 + vec3(0.5);
+	color.r = 0;
+	color.g = 0;
+	color.b = tmp.y * 5.0 + 0.5; */
 
 //!!color.rgb = texture2D(maskTex, TexCoord).aaa;
 	color.a = GetMaterialOpacity(TexCoord);

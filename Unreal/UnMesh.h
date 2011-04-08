@@ -48,6 +48,14 @@ public:
 		guard(UPrimitive::Serialize);
 		Super::Serialize(Ar);
 		Ar << BoundingBox << BoundingSphere;
+#if XIII
+		if (Ar.Game == GAME_XIII && Ar.ArLicenseeVer >= 19)
+		{
+			byte	unk1[4];
+			float	unk2;
+			Ar << unk1[0] << unk1[1] << unk1[2] << unk1[3] << unk2;
+		}
+#endif // XIII
 		unguard;
 	}
 };
@@ -170,11 +178,28 @@ SIMPLE_TYPE(FMeshFace, word)
 struct FMeshTri
 {
 	word			iVertex[3];				// Vertex indices.
-	FMeshUV1		Tex[3];					// Texture UV coordinates.
+	FMeshUV1		Tex[3];					// Texture UV coordinates (byte[2]).
 	unsigned		PolyFlags;				// Surface flags.
 	int				TextureIndex;			// Source texture index.
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshTri &T)
+	{
+		Ar << T.iVertex[0] << T.iVertex[1] << T.iVertex[2];
+		Ar << T.Tex[0] << T.Tex[1] << T.Tex[2];
+		Ar << T.PolyFlags << T.TextureIndex;
+		return Ar;
+	}
+};
+
+// the same as FMeshTri, but used float UV
+struct FMeshTri2
+{
+	word			iVertex[3];				// Vertex indices.
+	FMeshUV			Tex[3];					// Texture UV coordinates (float[2]).
+	unsigned		PolyFlags;				// Surface flags.
+	int				TextureIndex;			// Source texture index.
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshTri2 &T)
 	{
 		Ar << T.iVertex[0] << T.iVertex[1] << T.iVertex[2];
 		Ar << T.Tex[0] << T.Tex[1] << T.Tex[2];
@@ -474,8 +499,8 @@ public:
 
 		if (Version <= 1 || Ar.Game == GAME_SplinterCell)
 		{
-			// skip FMeshTri section
-			TArray<FMeshTri> tmp;
+			// skip FMeshTri2 section
+			TArray<FMeshTri2> tmp;
 			Ar << tmp;
 		}
 
@@ -973,6 +998,10 @@ struct FMeshBone
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshBone &B)
 	{
+#if XIII
+		if (Ar.Game == GAME_XIII && Ar.ArLicenseeVer > 26)					// real version is unknown; beta = old code, retail = new code
+			return Ar << B.Name << B.Flags << B.BonePos << B.ParentIndex;	// no NumChildren
+#endif // XIII
 		Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
 #if ARMYOF2
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArVer >= 459)
@@ -1963,13 +1992,16 @@ public:
 		if (Ar.ArVer >= 125)
 			Ar << f32C;
 
+#if XIII
+		if (Ar.Game == GAME_XIII) goto skip_remaining;
+#endif
 #if RAGNAROK2
 		if (Ar.Game == GAME_Ragnarok2 && Ar.ArVer >= 131)
 		{
 			float unk1, unk2;
 			Ar << unk1 << unk2;
 		}
-#endif
+#endif // RAGNAROK2
 
 		if (Ar.ArLicenseeVer && (Ar.Tell() != Ar.GetStopper()))
 		{

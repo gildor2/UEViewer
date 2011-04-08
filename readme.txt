@@ -14,6 +14,7 @@ Unreal Engine 2:
   Postal 2
 Modified Unreal Engine 2:
   Splinter Cell 1,2
+  XIII
   Rainbow 6: Raven Shield
   Lineage 2 Gracia
   Land of Chaos Online (LOCO)
@@ -186,6 +187,16 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+06.04.2011
+- added ScaleForm SwfMovie export (gfx files), activated with "-3rdparty"
+- added FaceFXAsset and FaceFXAnimSet export (fxa files), activated with "-3rdparty"
+- added "-notgacomp" option to disable exported TGA image compression (required for
+  playback of extracted gfx files using ScaleForm FxMediaPlayer)
+- implemented XIII SkeletalMesh and texture support
+
+02.04.2011
+- fixed problems with ATI OpenGL drivers
+
 27.03.2011
 - implemented looking for resources in "startup_xxx" package
 

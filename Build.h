@@ -20,6 +20,7 @@
 #define SWRC			1		// Star Wars: Republic Commando
 #define LOCO			1		// Land of Chaos Online
 #define BATTLE_TERR		1		// Battle Territory Online
+#define XIII			1
 
 // requires UNREAL1
 #define DEUS_EX			1
