@@ -5,6 +5,8 @@
 
 //!! NOTE: UE3 has comments for properties, stored in package.UMetaData'MetaData'
 
+#define HOMEPAGE		"http://www.gildor.org/"
+
 
 /*-----------------------------------------------------------------------------
 	Table of known Unreal classes
@@ -17,6 +19,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_TYPEINFO_CLASSES
 #if UNREAL3
 	REGISTER_TYPEINFO_CLASSES_U3
+#endif
+#if MKVSDC
+	REGISTER_TYPEINFO_CLASSES_MK
 #endif
 END_CLASS_TABLE
 }
@@ -174,6 +179,13 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 		{
 			TypeName = "component";	//???
 		}
+#if MKVSDC
+		else if (IS(UNativeTypeProperty))
+		{
+			CVT(UNativeTypeProperty);
+			TypeName = Prop->TypeName;
+		}
+#endif // MKVSDC
 		// other: UDelegateProperty, UInterfaceProperty
 		if (!TypeName) appError("Unknown type %s for field %s", ClassName, F->Name);
 		char FullType[256];
@@ -225,26 +237,30 @@ int main(int argc, char **argv)
 	if (argc < 2)
 	{
 	help:
-		printf(	"Unreal package extractor\n"
-				"Usage: extract <package filename>\n"
+		printf(	"Unreal typeinfo dumper\n"
+				"Usage: typeinfo [options] <package filename>\n"
+				"\n"
+				"Options:\n"
+				"    -lzo|lzx|zlib      force compression method for fully-compressed packages\n"
+				"\n"
+				"For details and updates please visit " HOMEPAGE "\n"
 		);
 		exit(0);
 	}
 
 	// parse command line
-//	bool dump = false, view = true, exprt = false, listOnly = false, noAnim = false, pkgInfo = false;
 	int arg = 1;
-/*	for (arg = 1; arg < argc; arg++)
+	for (arg = 1; arg < argc; arg++)
 	{
 		if (argv[arg][0] == '-')
 		{
 			const char *opt = argv[arg]+1;
-			if (!stricmp(opt, "dump"))
-			{
-			}
-			else if (!stricmp(opt, "check"))
-			{
-			}
+			if (!stricmp(opt, "lzo"))
+				GForceCompMethod = COMPRESS_LZO;
+			else if (!stricmp(opt, "zlib"))
+				GForceCompMethod = COMPRESS_ZLIB;
+			else if (!stricmp(opt, "lzx"))
+				GForceCompMethod = COMPRESS_LZX;
 			else
 				goto help;
 		}
@@ -252,7 +268,7 @@ int main(int argc, char **argv)
 		{
 			break;
 		}
-	} */
+	}
 	const char *argPkgName = argv[arg];
 	if (!argPkgName) goto help;
 	RegisterUnrealClasses();

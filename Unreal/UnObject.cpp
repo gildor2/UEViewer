@@ -395,20 +395,21 @@ void UObject::Serialize(FArchive &Ar)
 #endif
 
 #if UNREAL3
-#	if WHEELMAN
-	if (Ar.Game == GAME_Wheelman && Ar.ArVer >= 385)
-	{
-		// nothing - skip NetIndex
-	}
-	else
-#	endif // WHEELMAN
+
+#	if WHEELMAN || MKVSDC
+	if ( (Ar.Game == GAME_Wheelman && Ar.ArVer >= 385) ||
+		 (Ar.Game == GAME_MK && Ar.ArVer >= 446) )
+		goto no_net_index;
+#	endif
 	if (Ar.ArVer >= 322)
 		Ar << NetIndex;
-#endif
-#if DCU_ONLINE
+no_net_index:
+#	if DCU_ONLINE
 	if (Ar.Game == GAME_DCUniverse && NetIndex != -1)
 		Ar.Seek(Ar.Tell() + 28);		// does help in some (not all) situations
-#endif // DCU_ONLINE
+#	endif
+
+#endif // UNREAL3
 
 	const CTypeInfo *Type = GetTypeinfo();
 	assert(Type);

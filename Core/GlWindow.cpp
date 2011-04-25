@@ -15,6 +15,7 @@
 #define FUNNY_BACKGROUND		1		// draw gradient background
 #define SMART_RESIZE			1		// redraw window contents while resizing window
 #define USE_BLOOM				1
+//#define SHOW_FPS				1
 
 #if !_WIN32
 #undef SMART_RESIZE						// not compatible with Linux (has ugly effects and program hung)
@@ -907,6 +908,14 @@ static void Display()
 	guard(Display);
 
 	GCurrentFrame++;
+
+#if SHOW_FPS
+	static unsigned lastFrameTime = 0;
+	unsigned currentTime = appMilliseconds();
+	if (lastFrameTime)
+		DrawTextRight(S_YELLOW"FPS: %3.0f", 1000.0f / (currentTime - lastFrameTime));
+	lastFrameTime = currentTime;
+#endif // SHOW_FPS
 
 #if USE_BLOOM
 	bool useBloom = ( GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) == (QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) );

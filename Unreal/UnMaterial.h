@@ -1656,6 +1656,13 @@ public:
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
 #endif
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 31)	//?? may be MidwayVer ?
+		{
+			FByteBulkData CustomMipSourceArt;
+			CustomMipSourceArt.Skip(Ar);
+		}
+#endif // MKVSDC
 		Ar << Mips;
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
@@ -1738,6 +1745,18 @@ public:
 		PROP_OBJ(FacePosZ)
 		PROP_OBJ(FaceNegZ)
 	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 108)
+		{
+			// has TArray<FTexture2DMipMap>
+			Ar.Seek(Ar.GetStopper());
+		}
+#endif // TRANSFORMERS
+	}
 
 #if RENDERING
 	virtual void Bind();

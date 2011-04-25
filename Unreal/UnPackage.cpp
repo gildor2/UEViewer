@@ -991,8 +991,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	unguard;
 
 #if UNREAL3
-	if (Game == GAME_DCUniverse) goto no_depends;	// has non-standard checks
-	if (Summary.FileVersion >= 415) // PACKAGE_V3
+	if (Game == GAME_DCUniverse) goto no_depends;				// has non-standard checks
+	if (Summary.FileVersion >= 415 && Summary.DependsOffset)	// some games are patrially upgraded: ArVer >= 415, but no depends table
 	{
 		guard(ReadDependsTable);
 		Seek(Summary.DependsOffset);

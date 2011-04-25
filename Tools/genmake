@@ -572,7 +572,7 @@ sub AddObjectList {
 			# debugging
 			$opt = GetSrcOption("PDB", 0);
 			if ($opt >= 2) {
-				$options .= " -Zi -Fd\"$objdir\"";		# enable debugging information; note: no final slash, so pdb will be names as objdir
+				$options .= " -Zi -Fd\"$objdir/\"";	# enable debugging information; note: no final slash, so pdb will be names as objdir
 			}
 		} elsif ($COMPILER eq "GnuC") {		#!! GnuC - compiler options
 			my $opt = GetSrcOption ("WARNLEVEL");

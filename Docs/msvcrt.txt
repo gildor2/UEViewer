@@ -19,5 +19,8 @@ http://kobyk.wordpress.com/2007/07/20/dynamically-linking-with-msvcrtdll-using-v
 http://nn1234.wordpress.com/2008/04/11/vc-90-msvcrtdll-windows-95/
 http://www.pidgin.im/pipermail/devel/2008-August/006634.html
 
+http://code.google.com/p/xchat-wdk/
+  collection of solutions from the links above, plus files; possibly will be updated later too
+
 Files:
 http://ossbuild.googlecode.com/svn/trunk/Shared/SDKs/MSVCRT/

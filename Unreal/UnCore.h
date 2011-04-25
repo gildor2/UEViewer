@@ -544,6 +544,22 @@ protected:
 };
 
 
+// research helper
+#define DUMP_ARC_BYTES(Ar, NumBytes)					\
+	{													\
+		for (int i = 0; i < NumBytes; i++)				\
+		{												\
+			if (Ar.IsStopper() || Ar.IsEof()) break;	\
+			if (!(i & 31)) printf("\n%06X :", i);		\
+			if (!(i & 3)) printf(" ");					\
+			byte b;										\
+			Ar << b;									\
+			printf(" %02X", b);							\
+		}												\
+		printf("\n");									\
+		Ar.Seek(Ar.Tell() - NumBytes);					\
+	}
+
 /*-----------------------------------------------------------------------------
 	Math classes
 -----------------------------------------------------------------------------*/

@@ -70,6 +70,7 @@ struct FIndexBuffer3
 	}
 };
 
+// real name (from Android version): FRawStaticIndexBuffer
 struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - has ability to store int indices
 {
 	TArray<word>		Indices;
@@ -318,6 +319,19 @@ struct FSmoothVertex3
 	}
 };
 
+#if MKVSDC
+struct FMesh3Unk4_MK
+{
+	word				data[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk4_MK &S)
+	{
+		return Ar << S.data[0] << S.data[1] << S.data[2] << S.data[3];
+	}
+};
+#endif // MKVSDC
+
+// real name: FSkelMeshChunk
 struct FSkinChunk3
 {
 	int					FirstVertex;
@@ -331,7 +345,15 @@ struct FSkinChunk3
 	friend FArchive& operator<<(FArchive &Ar, FSkinChunk3 &V)
 	{
 		guard(FSkinChunk3<<);
-		Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts << V.Bones;
+		Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts;
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 459)
+		{
+			TArray<FMesh3Unk4_MK> unk1C, unk28;
+			Ar << unk1C << unk28;
+		}
+#endif // MKVSDC
+		Ar << V.Bones;
 		if (Ar.ArVer >= 333)
 		{
 			Ar << V.NumRigidVerts << V.NumSmoothVerts;
@@ -439,7 +461,7 @@ struct FGPUVert3Half : FGPUVert3Common
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
-		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(word));	// for some game titles
+		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(word));
 		return Ar;
 	}
 };
@@ -469,7 +491,7 @@ struct FGPUVert3Float : FGPUVert3Common
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
 		Ar << V.U << V.V;
-		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(float));	// for some game titles
+		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(float));
 		return Ar;
 	}
 };
@@ -496,18 +518,6 @@ struct FVectorIntervalFixed32GPU
 	}
 };
 
-struct FGPUVert3PackedFloat : FGPUVert3Common
-{
-	FVectorIntervalFixed32GPU Pos;
-	float				U, V;
-
-	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedFloat &V)
-	{
-		Ar << *((FGPUVert3Common*)&V) << V.Pos << V.U << V.V;
-		return Ar;
-	}
-};
-
 struct FGPUVert3PackedHalf : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
@@ -516,10 +526,25 @@ struct FGPUVert3PackedHalf : FGPUVert3Common
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedHalf &V)
 	{
 		Ar << *((FGPUVert3Common*)&V) << V.Pos << V.U << V.V;
+		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(word));
 		return Ar;
 	}
 };
 
+struct FGPUVert3PackedFloat : FGPUVert3Common
+{
+	FVectorIntervalFixed32GPU Pos;
+	float				U, V;
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedFloat &V)
+	{
+		Ar << *((FGPUVert3Common*)&V) << V.Pos << V.U << V.V;
+		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(float));
+		return Ar;
+	}
+};
+
+// real name: FSkeletalMeshVertexBuffer
 struct FGPUSkin3
 {
 	int							NumUVSets;
@@ -616,11 +641,15 @@ struct FGPUSkin3
 	#if MOH2010
 		if (Ar.Game == GAME_MOH2010) AllowPackedPosition = true;
 	#endif
-		//?? UE3 ignored this - forced !bUsePackedPosition in FGPUSkin3 serializer ?
+		//?? UE3 PC version ignored bUsePackedPosition - forced !bUsePackedPosition in FGPUSkin3 serializer.
 		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
 		//?? working bUsePackedPosition was found in all XBox360 games and in MOH2010 (PC) only
 		//?? + TRON Evolution (PS3)
-//		printf("data: %d %d (%g %g %g)+(%g %g %g)\n", S.bUseFullPrecisionUVs, S.bUsePackedPosition, FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
+#if 0
+		printf("data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
+			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
+			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
+#endif
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
 	#if CRIMECRAFT
@@ -649,6 +678,7 @@ struct FGPUSkin3
 	}
 };
 
+// real name: FVertexInfluence
 struct FMesh3Unk1
 {
 	int					f0;
@@ -675,23 +705,51 @@ struct FMesh3Unk3
 	}
 };
 
-struct FMesh3Unk2
+struct FMesh3Unk3A
+{
+	int					f0;
+	int					f4;
+	TArray<int>			f8;
+
+	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk3A &S)
+	{
+		Ar << S.f0 << S.f4 << S.f8;
+		return Ar;
+	}
+};
+
+struct FSkeletalMeshVertexInfluences
 {
 	TArray<FMesh3Unk1>	f0;
-	TArray<FMesh3Unk3>	fC;				//?? SparseArray or Map
-	TArray<FSkelMeshSection> Sections;
+	TArray<FMesh3Unk3>	fC;				//?? Map
+	TArray<FMesh3Unk3A>	fCA;
+	TArray<FSkelMeshSection3> Sections;
 	TArray<FSkinChunk3>	Chunks;
 	TArray<byte>		f80;
 	byte				f8C;			// default = 0
 
-	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk2 &S)
+	friend FArchive& operator<<(FArchive &Ar, FSkeletalMeshVertexInfluences &S)
 	{
+		guard(FSkeletalMeshVertexInfluences<<);
 		Ar << S.f0;
-		if (Ar.ArVer >= 609) Ar << S.fC;
+		if (Ar.ArVer >= 609)
+		{
+			if (Ar.ArVer >= 808)
+			{
+				Ar << S.fCA;
+			}
+			else
+			{
+				byte unk1;
+				if (Ar.ArVer >= 806) Ar << unk1;
+				Ar << S.fC;
+			}
+		}
 		if (Ar.ArVer >= 700) Ar << S.Sections << S.Chunks;
 		if (Ar.ArVer >= 708) Ar << S.f80;
 		if (Ar.ArVer >= 715) Ar << S.f8C;
 		return Ar;
+		unguard;
 	}
 };
 
@@ -747,7 +805,7 @@ struct FStaticLODModel3
 	FWordBulkData		BulkData;		// ElementCount = NumVertices
 	FIntBulkData		BulkData2;		// used instead of BulkData since version 806, indices?
 	FGPUSkin3			GPUSkin;
-	TArray<FMesh3Unk2>	fC4;			// unknown, has in GoW2
+	TArray<FSkeletalMeshVertexInfluences> fC4;	// GoW2+ engine
 	int					f6C;			// unknown, default 1
 	TArray<int>			VertexColor;	// since version 710
 
@@ -764,7 +822,24 @@ struct FStaticLODModel3
 		}
 #endif // FURY
 
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 472 && Ar.Platform == PLATFORM_PS3)
+		{
+			// this platform has no IndexBuffer
+			Ar << Lod.Sections;
+			goto part1;
+		}
+#endif // MKVSDC
+
 		Ar << Lod.Sections << Lod.IndexBuffer;
+#if 0
+		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
+		{
+			FSkelMeshSection3 &S = Lod.Sections[i1];
+			printf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles);
+		}
+		printf("Indices: %d\n", Lod.IndexBuffer.Indices.Num());
+#endif
 
 		if (Ar.ArVer < 215)
 		{
@@ -783,6 +858,7 @@ struct FStaticLODModel3
 		}
 #endif // ENDWAR || BORDERLANDS
 
+	part1:
 		if (Ar.ArVer < 686) Ar << Lod.f68;
 		Ar << Lod.UsedBones;
 		if (Ar.ArVer < 686) Ar << Lod.f74;
@@ -841,6 +917,16 @@ struct FStaticLODModel3
 			goto after_bulk;
 		}
 #endif // APB
+		/*!! PS3 MK:
+			- no Bulk here
+			- int NumSections (equals to Sections.Num())
+			- int 2 or 4
+			- 4 x int unknown
+			- int SomeSize
+			- byte[SomeSize]
+			- word SomeSize (same as above)
+			- ...
+		*/
 		if (Ar.ArVer >= 221)
 		{
 			if (Ar.ArVer < 806)
@@ -884,6 +970,13 @@ struct FStaticLODModel3
 #endif // FURY
 		if (Ar.ArVer >= 333)
 			Ar << Lod.GPUSkin;
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 459)
+		{
+			TArray<FMesh3Unk4_MK> unkA8;
+			Ar << unkA8;
+		}
+#endif // MKVSDC
 #if MOH2010
 		if (Ar.Game == GAME_MOH2010)
 		{
@@ -924,7 +1017,8 @@ struct FStaticLODModel3
 	}
 };
 
-#if A51
+#if A51 || MKVSDC || STRANGLE
+
 struct FMaterialBone
 {
 	int					Bone;
@@ -935,7 +1029,53 @@ struct FMaterialBone
 		return Ar << V.Bone << V.Param;
 	}
 };
-#endif // A51
+
+struct FSubSkeleton_MK
+{
+	FName				Name;
+	int					BoneSet[8];			// FBoneSet
+
+	friend FArchive& operator<<(FArchive &Ar, FSubSkeleton_MK &S)
+	{
+		Ar << S.Name;
+		for (int i = 0; i < ARRAY_COUNT(S.BoneSet); i++) Ar << S.BoneSet[i];
+		return Ar;
+	}
+};
+
+struct FBoneMirrorInfo_MK
+{
+	int					SourceIndex;
+	byte				BoneFlipAxis;		// EAxis
+
+	friend FArchive& operator<<(FArchive &Ar, FBoneMirrorInfo_MK &M)
+	{
+		return Ar << M.SourceIndex << M.BoneFlipAxis;
+	}
+};
+
+struct FReferenceSkeleton_MK
+{
+	TArray<VJointPos>	RefPose;
+	TArray<short>		Parentage;
+	TArray<FName>		BoneNames;
+	TArray<FSubSkeleton_MK> SubSkeletons;
+	TArray<FName>		UpperBoneNames;
+	TArray<FBoneMirrorInfo_MK> SkelMirrorTable;
+	byte				SkelMirrorAxis;		// EAxis
+	byte				SkelMirrorFlipAxis;	// EAxis
+
+	friend FArchive& operator<<(FArchive &Ar, FReferenceSkeleton_MK &S)
+	{
+		Ar << S.RefPose << S.Parentage << S.BoneNames;
+		Ar << S.SubSkeletons;				// MidwayVer >= 56
+		Ar << S.UpperBoneNames;				// MidwayVer >= 57
+		Ar << S.SkelMirrorTable << S.SkelMirrorAxis << S.SkelMirrorFlipAxis;
+		return Ar;
+	}
+};
+
+#endif // MIDWAY ...
 
 #if FURY
 struct FSkeletalMeshLODInfoExtra
@@ -1050,7 +1190,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 #if BLOODONSAND
 	if (Ar.Game == GAME_50Cent && Ar.ArLicenseeVer >= 65)
 	{
-		TArray<UObject*> OnFireMaterials; // name is not checked
+		TArray<UObject*> OnFireMaterials;		// name is not checked
 		Ar << OnFireMaterials;
 	}
 #endif // BLOODONSAND
@@ -1068,12 +1208,36 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 		Ar << SectionDepthBias;
 	}
 #endif // ALPHA_PR
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 472)	// real version is unknown
+	{
+		FReferenceSkeleton_MK Skel;
+		Ar << Skel << SkeletalDepth;
+		MeshOrigin.Set(0, 0, 0);				// not serialized
+		RotOrigin.Set(0, 0, 0);
+		// convert skeleton
+		int NumBones = Skel.RefPose.Num();
+		assert(NumBones == Skel.Parentage.Num());
+		assert(NumBones == Skel.BoneNames.Num());
+		RefSkeleton.Add(NumBones);
+		for (int i = 0; i < NumBones; i++)
+		{
+			FMeshBone &B = RefSkeleton[i];
+			B.Name        = Skel.BoneNames[i];
+			B.BonePos     = Skel.RefPose[i];
+			B.ParentIndex = Skel.Parentage[i];
+//			printf("BONE: [%d] %s -> %d\n", i, *B.Name, B.ParentIndex);
+		}
+		goto material_bones;
+	}
+#endif // MKVSDC
 	Ar << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
 #if A51 || MKVSDC || STRANGLE
 	//?? check GAME_Wheelman
 	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 0xF)
 	{
+	material_bones:
 		TArray<FMaterialBone> MaterialBones;
 		Ar << MaterialBones;
 	}
@@ -1468,6 +1632,31 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 }
 
 
+#if TRANSFORMERS
+
+static FQuat TransMidifyQuat(const FQuat &q, const FQuat &m)
+{
+	FQuat r;
+	float x  = q.X, y  = q.Y, z  = q.Z, w  = q.W;
+	float sx = m.X, sy = m.Y, sz = m.Z, sw = m.W;
+
+	float VAR_A = (sy-sz)*(z-y);
+	float VAR_B = (sz+sy)*(w-x);
+	float VAR_C = (sw-sx)*(z+y);
+	float VAR_D = (sw+sz)*(w-y) + (sw-sz)*(w+y) + (sx+sy)*(x+z);
+	float xmm0  = ( (sw+sz)*(w-y) + (sw-sz)*(w+y) + (sx+sy)*(x+z) + (sx-sy)*(z-sy) ) / 2;
+
+	r.X =  (sx+sw)*(x+w) + xmm0 - VAR_D;
+	r.Y = -(sw+sz)*(w-y) + xmm0 + VAR_B;
+	r.Z = -(sw-sz)*(w+y) + xmm0 + VAR_C;
+	r.W = -(sx+sy)*(x+z) + xmm0 + VAR_A;
+
+	return r;
+}
+
+#endif // TRANSFORMERS
+
+
 void UAnimSet::ConvertAnims()
 {
 	guard(UAnimSet::ConvertAnims);
@@ -1837,6 +2026,8 @@ void UAnimSet::ConvertAnims()
 				// end of AKF_PerTrackCompression block ...
 			}
 
+			// non-AKF_PerTrackCompression block
+
 			// read animations
 			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
 			int TransKeys   = Seq->CompressedTrackOffsets[offsetIndex+1];
@@ -1882,33 +2073,33 @@ void UAnimSet::ConvertAnims()
 					assert(Package->ArVer >= 761);
 					Reader << Mins << Ranges;
 				}
+#if BORDERLANDS
+				FVector Base;
+				if (Package->Game == GAME_Borderlands && (TranslationCompressionFormat == ACF_Delta40NoW || TranslationCompressionFormat == ACF_Delta48NoW))
+				{
+					Reader << Mins << Ranges << Base;
+				}
+#endif // BORDERLANDS
 
 #if TRANSFORMERS
 				if (Package->Game == GAME_Transformers && TransKeys >= 4)
 				{
 					assert(Package->ArLicenseeVer >= 100);
-					FVector v1, v2;
-					Reader << v1.X;
-					if (v1.X != -1)
+					FVector Scale, Offset;
+					Reader << Scale.X;
+					if (Scale.X != -1)
 					{
-						Reader << v1.Y << v1.Z << v2;
-//						printf("  trans: %g %g %g -- %g %g %g\n", FVECTOR_ARG(v1), FVECTOR_ARG(v2));
+						Reader << Scale.Y << Scale.Z << Offset;
+//						printf("  trans: %g %g %g -- %g %g %g\n", FVECTOR_ARG(Offset), FVECTOR_ARG(Scale));
 						for (k = 0; k < TransKeys; k++)
 						{
-	#if 0
-							unsigned int pos;
-							Reader << pos;
-							printf("  %08X\n", pos);
-//!!						A->KeyPos.AddItem(vec); -- decode!
-	#else
 							FPackedVectorTrans pos;
 							Reader << pos;
-							A->KeyPos.AddItem(pos.ToVector(v1, v2));
-	#endif
+							A->KeyPos.AddItem(pos.ToVector(Offset, Scale));
 						}
 						goto trans_keys_done;
-					}
-				}
+					} // else - original code with 4-byte overhead
+				} // else - original code for uncompressed vector
 #endif // TRANSFORMERS
 
 				for (k = 0; k < TransKeys; k++)
@@ -1922,22 +2113,24 @@ void UAnimSet::ConvertAnims()
 					case ACF_Identity:
 						A->KeyPos.AddItem(nullVec);
 						break;
-/*!!#if BORDERLANDS
-					//!! not implemented
-					// should serialize 9 floats before keys, then short[3] keys
-					// number of keys may be 1 less then specified (?)
+#if BORDERLANDS
 					case ACF_Delta48NoW:
 						{
-							short v[3];
-							Reader << v[0] << v[1] << v[2];
-							FVector vec;
-							vec.X = v[0];
-							vec.Y = v[1];
-							vec.Z = v[2];
-							A->KeyPos.AddItem(vec);
+							if (k == 0)
+							{
+								// "Base" works as 1st key
+								A->KeyPos.AddItem(Base);
+								continue;
+							}
+							FVectorDelta48NoW V;
+							Reader << V;
+							FVector V2;
+							V2 = V.ToVector(Mins, Ranges, Base);
+							Base = V2;			// for delta
+							A->KeyPos.AddItem(V2);
 						}
 						break;
-#endif // BORDERLANDS */
+#endif // BORDERLANDS
 					default:
 						appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
 					}
@@ -1981,13 +2174,17 @@ void UAnimSet::ConvertAnims()
 				// starting with version 761 Mins/Ranges are read only when needed - i.e. for ACF_IntervalFixed32NoW
 				Reader << Mins << Ranges;
 			}
-#if TRANSFORMERS
-			if (Package->Game == GAME_Transformers)
+#if BORDERLANDS
+			FQuat Base;
+			if (Package->Game == GAME_Borderlands && (RotationCompressionFormat == ACF_Delta40NoW || RotationCompressionFormat == ACF_Delta48NoW))
 			{
-				FQuat Unk;
-				Reader << Unk;
-//				printf("  rot   %g %g %g %g\n", FQUAT_ARG(Unk));
+				Reader << Base;			// in addition to Mins and Ranges
 			}
+#endif // BORDERLANDS
+#if TRANSFORMERS
+			FQuat TransQuatMod;
+			if (Package->Game == GAME_Transformers && RotKeys >= 2)
+				Reader << TransQuatMod;
 #endif // TRANSFORMERS
 
 			for (k = 0; k < RotKeys; k++)
@@ -2009,26 +2206,33 @@ void UAnimSet::ConvertAnims()
 #if MASSEFF
 				TR (ACF_BioFixed48, FQuatBioFixed48)	// Mass Effect 2 animation compression
 #endif
-/*!!#if BORDERLANDS
-				//!! not implemented
-				// should serialize 4 floats before keys, then short[3] keys
-				// number of keys may be 1 less then specified (?)
+#if BORDERLANDS
 				case ACF_Delta48NoW:
 					{
-						short v[3];
-						Reader << v[0] << v[1] << v[2];
-						FQuat q;
-						q.Set(0, 0, 0, 1);
-						A->KeyQuat.AddItem(q);
+						if (k == 0)
+						{
+							// "Base" works as 1st key
+							A->KeyQuat.AddItem(Base);
+							continue;
+						}
+						FQuatDelta48NoW Q;
+						Reader << Q;
+						FQuat Q2;
+						Q2 = Q.ToQuat(Mins, Ranges, Base);
+						Base = Q2;			// for delta
+						A->KeyQuat.AddItem(Q2);
 					}
 					break;
-#endif // BORDERLANDS */
+#endif // BORDERLANDS
 #if TRANSFORMERS
 				case ACF_IntervalFixed48NoW:
 					{
 						FQuatIntervalFixed48NoW q;
+						FQuat q2;
 						Reader << q;
-						A->KeyQuat.AddItem(q.ToQuat(Mins, Ranges));
+						q2 = q.ToQuat(Mins, Ranges);
+						q2 = TransMidifyQuat(q2, TransQuatMod);
+						A->KeyQuat.AddItem(q2);
 					}
 					break;
 #endif // TRANSFORMERS
@@ -2149,6 +2353,13 @@ struct FStaticMeshSection3
 			Ar << unk30 << unk34;
 		}
 #endif // ALPHA_PR
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 409)
+		{
+			TArray<FEdge3> unk28;				// TArray<int[4]>
+			Ar << unk28;
+		}
+#endif // MKVSDC
 		if (Ar.ArVer >= 514) Ar << S.f30;
 #if ALPHA_PR
 		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 39)
@@ -2242,6 +2453,7 @@ struct FStaticMeshUVItem3
 #if MKVSDC
 		if (Ar.Game == GAME_MK)
 		{
+			if (Ar.ArVer >= 472) goto uvs;	// normals are stored in FStaticMeshNormalStream_MK
 			int unk;
 			Ar << unk;
 			goto new_ver;
@@ -2412,6 +2624,32 @@ struct FStaticMeshUVStream3Old			// ArVer < 364
 	}
 };
 
+#if MKVSDC
+
+struct FStaticMeshNormal_MK
+{
+	FPackedNormal		Normal[3];		// packed vector
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshNormal_MK &V)
+	{
+		return Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+	}
+};
+
+struct FStaticMeshNormalStream_MK
+{
+	int					ItemSize;
+	int					NumVerts;
+	TArray<FStaticMeshNormal_MK> Normals;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshNormalStream_MK &S)
+	{
+		return Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Normals);
+	}
+};
+
+#endif // MKVSDC
+
 struct FStaticMeshLODModel
 {
 	FByteBulkData		BulkData;		// ElementSize = 0xFC for UT3 and 0x170 for UDK ... it's simpler to skip it
@@ -2527,12 +2765,31 @@ struct FStaticMeshLODModel
 		else if (Ar.ArVer >= 466)
 		{
 		ver_3:
+#if MKVSDC
+			if (Ar.Game == GAME_MK && Ar.ArVer >= 472) // MK9; real version: MidwayVer >= 36
+			{
+				FStaticMeshNormalStream_MK NormalStream;
+				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream << Lod.f80;
+				// copy NormalStream into UVStream
+				assert(Lod.UVStream.UV.Num() == NormalStream.Normals.Num());
+				for (int i = 0; i < Lod.UVStream.UV.Num(); i++)
+				{
+					FStaticMeshUVItem3  &UV = Lod.UVStream.UV[i];
+					FStaticMeshNormal_MK &N = NormalStream.Normals[i];
+					UV.Normal[0] = N.Normal[0];
+					UV.Normal[1] = N.Normal[1];
+					UV.Normal[2] = N.Normal[2];
+				}
+				goto duplicate_verts;
+			}
+#endif // MKVSDC
 			Ar << Lod.VertexStream;
 			Ar << Lod.UVStream;
 			Ar << Lod.f80;
 #if MKVSDC || AVA
 			if (Ar.Game == GAME_MK || Ar.Game == GAME_AVA)
 			{
+			duplicate_verts:
 				// note: sometimes UVStream has 2 times more items than VertexStream
 				// we should duplicate vertices
 				int n1 = Lod.VertexStream.Verts.Num();
@@ -2717,6 +2974,9 @@ struct FkDOPNode3
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
 			goto new_ver;
 #endif
+#if MKVSDC
+		if (Ar.Game == GAME_MK) goto old_ver;
+#endif
 		if ((Ar.ArVer < 209) || (Ar.ArVer >= 468))
 		{
 		new_ver:
@@ -2724,6 +2984,7 @@ struct FkDOPNode3
 		}
 		else
 		{
+		old_ver:
 			// old version
 			assert(Ar.IsLoading);
 			int tmp1C, tmp1E;
@@ -2764,6 +3025,9 @@ struct FkDOPTriangle3
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
 			goto new_ver;
 #endif
+#if MKVSDC
+		if (Ar.Game == GAME_MK) goto old_ver;
+#endif
 		if ((Ar.ArVer < 209) || (Ar.ArVer >= 468))
 		{
 		new_ver:
@@ -2771,6 +3035,7 @@ struct FkDOPTriangle3
 		}
 		else
 		{
+		old_ver:
 			assert(Ar.IsLoading);
 			int tmp0, tmp2, tmp4, tmp6;
 			Ar << tmp0 << tmp2 << tmp4 << tmp6;

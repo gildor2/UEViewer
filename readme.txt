@@ -45,6 +45,7 @@ Modified Unreal Engine 3:
   Mass Effect
   BlackSite: Area 51
   Mortal Kombat vs. DC Universe (XBox360)
+  Mortal Kombat (XBox360)
   Turok
   Fury
   TNA iMPACT! (XBox360)
@@ -88,14 +89,13 @@ Using "-noanim" option (unsupported animation format):
   EndWar
   Rainbow 6: Vegas 2
   BlackSite: Area 51 (uses Havok animation system)
-  Mortal Kombat vs. DC Universe
+  Mortal Kombat vs. DC Universe, Mortal Kombat
   Army of Two
   Stranglehold
-  Borderlands
-  Transformers: War for Cybertron
 Unsupported animations (without umodel crash):
   Bioshock, Bioshock 2 (uses Havok animation system)
   Rise of the Argonauts
+  Transformers: War for Cybertron
 
 
 System requirements
@@ -187,6 +187,17 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+24.04.2011
+- fixed bugs in recent UE3 SkeletalMesh code (GOW3 beta support fixed)
+
+21.04.2011
+- implemented Mortal Kombat (2011) support; animations are not supported, PS3 SkeletalMesh
+  is not supported
+- implemented Borderlands animation support
+
+12.04.2011
+- fixed crash in exporter when exported object has unicode name
+
 08.04.2011
 - win32 version has upgraded to use SDL 1.3 and got some improvements:
   - Alt+Enter will toggle fullscreen mode

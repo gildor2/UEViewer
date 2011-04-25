@@ -82,7 +82,7 @@
 // Midway UE3 games -- make common define ??
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1		//?? incomplete
-#define MKVSDC			1		// Mortal Kombat vs. DC Universe
+#define MKVSDC			1		// Mortal Kombat vs. DC Universe, Mortal Kombat
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
 

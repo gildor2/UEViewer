@@ -1421,7 +1421,7 @@ rollout axSettingsRollout "Settings"
 	(
 		label Lbl1                "WARNING: do not modify these settings"
 		label Lbl2                "unless you know what you are doing!"
-		checkbox ChkReoriendBones "Reorient bones" checked:g_reorientBones
+		checkbox ChkReorientBones "Reorient bones" checked:g_reorientBones
 	)
 
 	button BtnReset "Reset to defaults"
@@ -1447,12 +1447,12 @@ rollout axSettingsRollout "Settings"
 	)
 	on BtnRotApply pressed do RestoreBindpose()
 
-	on SpnBoneSize  changed val do g_boneSize  = val
-	on SpnMeshScale changed val do g_meshScale = val
+	on SpnBoneSize   changed val   do g_boneSize      = val
+	on SpnMeshScale  changed val   do g_meshScale     = val
 	on ChkRepBones   changed state do g_reposBones    = state
 	on ChkTexRecurse changed state do g_texRecurse    = state
 	on RadMissingTex changed state do g_texMissAction = state
-	on ChkReoriendBones changed state do g_reorientBones = state
+	on ChkReorientBones changed state do g_reorientBones = state
 
 	on EdTexPath    changed val do g_texDir = val
 	on BtnBrowseTex pressed do

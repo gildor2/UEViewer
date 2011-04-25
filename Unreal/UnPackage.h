@@ -194,7 +194,7 @@ struct FPackageFileSummary
 			int midwayVer = 0;
 			if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 2)	//?? Wheelman not checked
 			{
-				int Tag;							// Tag == "A52 ", "MK8 ", "WMAN", "WOO " (Stranglehold), "EPIC" or "TNA "
+				int Tag;							// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC" or "TNA "
 				int unk10;
 				Ar << Tag << midwayVer;
 				if (Ar.Game == GAME_Strangle && midwayVer >= 256)
@@ -225,6 +225,15 @@ struct FPackageFileSummary
 				Ar << unk3C;
 			if (Ar.ArVer >= 391)
 				Ar << unk40;
+			if (Ar.ArVer >= 472)
+			{
+				// Mortal Kombat:
+				// - no DependsOffset
+				// - no generations (since version 446)
+				Ar << S.Guid;
+				S.DependsOffset = 0;
+				goto extra_versions;
+			}
 		}
 	#endif // MKVSDC
 	#if WHEELMAN
@@ -316,6 +325,7 @@ struct FPackageFileSummary
 #if UNREAL3
 //		if (Ar.ArVer >= PACKAGE_V3)
 //		{
+		extra_versions:
 			if (Ar.ArVer >= 245)
 				Ar << S.EngineVersion;
 			if (Ar.ArVer >= 277)
@@ -446,6 +456,13 @@ struct FObjectExport
 				// else - continue serialization of remaining fields
 			}
 #	endif // TRANSFORMERS
+#	if MKVSDC
+			if (Ar.Game == GAME_MK && Ar.ArVer >= 446)
+			{
+				// removed generations (NetObjectCount)
+				return Ar << E.Guid;
+			}
+#	endif // MKVSDC
 			if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;
 #	if UNDERTOW
 			if (Ar.Game == GAME_Undertow && Ar.ArVer >= 431) Ar << E.U3unk6C;	// partially upgraded?

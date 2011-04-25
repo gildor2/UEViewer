@@ -1347,6 +1347,12 @@ void UTextureCube::Bind()
 {
 	guard(UTextureCube::Bind);
 
+	if (!GL_SUPPORT(QGL_2_0) || !FacePosX || !FacePosY || !FacePosZ || !FaceNegX || !FaceNegY || !FaceNegZ)
+	{
+		BindDefaultMaterial();
+		return;
+	}
+
 	glEnable(GL_TEXTURE_CUBE_MAP_ARB);
 
 	bool upload = !GL_TouchObject(DrawTimestamp);

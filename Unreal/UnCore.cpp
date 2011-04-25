@@ -779,6 +779,9 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 #if DOH
 	if (Ar.Game == GAME_DOH) goto old_ver;
 #endif
+#if MKVSDC
+	if (Ar.Game == GAME_MK) goto old_ver;
+#endif
 	if (Ar.ArVer >= 453)
 	{
 	new_ver:
@@ -968,7 +971,8 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		{
 			short c;
 			Ar << c;
-			S.AddItem(c & 255);		//!! incorrect ...
+			if (c & 0xFF00) c = '$';	//!! incorrect ...
+			S.AddItem(c & 255);			//!! incorrect ...
 		}
 	}
 	if (S[abs(len)-1] != 0)
@@ -1085,9 +1089,6 @@ void FArchive::DetectGame()
 #if WHEELMAN
 	if (ArVer == 390 && ArLicenseeVer == 32)	SET(GAME_Wheelman);	//!! has extra tag
 #endif
-#if MKVSDC
-	if (ArVer == 402 && ArLicenseeVer == 30)	SET(GAME_MK);		//!! has extra tag
-#endif
 #if FURY
 	if (ArVer == 407 && (ArLicenseeVer == 26 || ArLicenseeVer == 36)) SET(GAME_Fury);
 #endif
@@ -1173,7 +1174,13 @@ void FArchive::DetectGame()
 	if ((ArVer == 391 && ArLicenseeVer == 92) ||		// XBox 360 version
 		(ArVer == 491 && ArLicenseeVer == 0x3F0))		// PC version
 		SET(GAME_MassEffect);
-	if (ArVer == 512 && ArLicenseeVer == 130)	SET(GAME_MassEffect2);
+	if (ArVer == 512 && ArLicenseeVer == 130)
+		SET(GAME_MassEffect2);
+#endif
+#if MKVSDC
+	if ( (ArVer == 402 && ArLicenseeVer == 30) ||		//!! has extra tag
+		 (ArVer == 472 && ArLicenseeVer == 46) )
+		SET(GAME_MK);
 #endif
 #if HUXLEY
 	if ( (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
@@ -1182,20 +1189,20 @@ void FArchive::DetectGame()
 		SET(GAME_Huxley);
 #endif
 #if FRONTLINES
-	if ((ArVer == 433 && ArLicenseeVer == 52) ||		// Frontlines: Fuel of War
-		(ArVer == 576 && ArLicenseeVer == 100))			// Homefront
+	if ( (ArVer == 433 && ArLicenseeVer == 52) ||		// Frontlines: Fuel of War
+		 (ArVer == 576 && ArLicenseeVer == 100) )		// Homefront
 		SET(GAME_Frontlines);
 #endif
 #if ARMYOF2
-	if ( (ArVer == 445 && ArLicenseeVer == 79) ||		// Army of Two
-		 (ArVer == 482 && ArLicenseeVer == 222)  ||		// Army of Two: the 40th Day
+	if ( (ArVer == 445 && ArLicenseeVer == 79)  ||		// Army of Two
+		 (ArVer == 482 && ArLicenseeVer == 222) ||		// Army of Two: the 40th Day
 		 (ArVer == 483 && ArLicenseeVer == 4317) )		// ...
 		SET(GAME_ArmyOf2);
 #endif
 #if TRANSFORMERS
-	if ((ArVer == 511 && ArLicenseeVer == 145) ||		// PC version
-		(ArVer == 511 && ArLicenseeVer == 144) ||		// PS3 and XBox 360 version
-		(ArVer == 511 && ArLicenseeVer == 39))			// The Bourne Conspiracy
+	if ( (ArVer == 511 && ArLicenseeVer == 145) ||		// PC version
+		 (ArVer == 511 && ArLicenseeVer == 144) ||		// PS3 and XBox 360 version
+		 (ArVer == 511 && ArLicenseeVer == 39) )		// The Bourne Conspiracy
 		SET(GAME_Transformers);
 #endif
 #if TERA
@@ -1471,7 +1478,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		// very old version: serialized EndPosition and ElementCount - exactly as TLazyArray
 		assert(Ar.IsLoading);
 
-		BulkDataFlags = 4;					// unknown
+		BulkDataFlags = 4;						// unknown
 		BulkDataSizeOnDisk = INDEX_NONE;
 		int EndPosition;
 		Ar << EndPosition;

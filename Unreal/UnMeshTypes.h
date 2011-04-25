@@ -8,6 +8,11 @@
 	Different compressed quaternion types
 -----------------------------------------------------------------------------*/
 
+// really have data, when W*W == -0.0f, and sqrt(wSq) was returned -INF
+#define RESTORE_QUAT_W(r)									\
+		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);	\
+		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+
 
 struct FQuatFloat96NoW
 {
@@ -19,8 +24,7 @@ struct FQuatFloat96NoW
 		r.X = X;
 		r.Y = Y;
 		r.Z = Z;
-		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
-		r.W = (wSq > 0) ? sqrt(wSq) : 0;	// really have data, when wSq == -0.0f, and sqrt(wSq) was returned -INF
+		RESTORE_QUAT_W(r);
 		return r;
 	}
 
@@ -44,9 +48,7 @@ struct FQuatFixed48NoW
 		r.X = (X - 32767) / 32767.0f;
 		r.Y = (Y - 32767) / 32767.0f;
 		r.Z = (Z - 32767) / 32767.0f;
-		// check FQuatFloat96NoW ...
-		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
-		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		RESTORE_QUAT_W(r);
 		return r;
 	}
 
@@ -93,9 +95,7 @@ struct FQuatFixed32NoW
 		r.X = X / 1023.0f - 1.0f;
 		r.Y = Y / 1023.0f - 1.0f;
 		r.Z = Z / 511.0f  - 1.0f;
-		// check FQuatFloat96NoW ...
-		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
-		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		RESTORE_QUAT_W(r);
 		return r;
 	}
 
@@ -118,9 +118,7 @@ struct FQuatIntervalFixed32NoW
 		r.X = (X / 1023.0f - 1.0f) * Ranges.X + Mins.X;
 		r.Y = (Y / 1023.0f - 1.0f) * Ranges.Y + Mins.Y;
 		r.Z = (Z / 511.0f  - 1.0f) * Ranges.Z + Mins.Z;
-		// check FQuatFloat96NoW ...
-		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
-		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		RESTORE_QUAT_W(r);
 		return r;
 	}
 
@@ -172,8 +170,7 @@ struct FQuatFloat32NoW
 		*(unsigned*)&r.Y = ((((_Y >> 7) & 7) + 123) << 23) | ((_Y & 0x7F | 32 * (_Y & 0xFFFFFC00)) << 16);
 		*(unsigned*)&r.Z = ((((_Z >> 6) & 7) + 123) << 23) | ((_Z & 0x3F | 32 * (_Z & 0xFFFFFE00)) << 17);
 
-		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
-		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		RESTORE_QUAT_W(r);
 		return r;
 	}
 
@@ -310,9 +307,7 @@ struct FQuatIntervalFixed48NoW
 		r.X = (X - 32767) / 32767.0f * Ranges.X + Mins.X;
 		r.Y = (Y - 32767) / 32767.0f * Ranges.Y + Mins.Y;
 		r.Z = (Z - 32767) / 32767.0f * Ranges.Z + Mins.Z;
-		// check FQuatFloat96NoW ...
-		float wSq = 1.0f - (r.X*r.X + r.Y*r.Y + r.Z*r.Z);
-		r.W = (wSq > 0) ? sqrt(wSq) : 0;
+		RESTORE_QUAT_W(r);
 		return r;
 	}
 
@@ -325,10 +320,6 @@ struct FQuatIntervalFixed48NoW
 SIMPLE_TYPE(FQuatIntervalFixed48NoW, word)
 
 
-//	unsigned		Z:10, Y:11, X:11;
-//		r.X = (X / 1023.0f - 1.0f) * Ranges.X + Mins.X;
-//		r.Y = (Y / 1023.0f - 1.0f) * Ranges.Y + Mins.Y;
-//		r.Z = (Z / 511.0f  - 1.0f) * Ranges.Z + Mins.Z;
 struct FPackedVectorTrans
 {
 	unsigned		Z:11, Y:10, X:11;
@@ -336,9 +327,9 @@ struct FPackedVectorTrans
 	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
 	{
 		FVector r;
-		r.X = (X / 1023.0f - 1.0f) * Ranges.X + Mins.X;
-		r.Y = (Y / 511.0f  - 1.0f) * Ranges.Y + Mins.Y;
-		r.Z = (Z / 1023.0f - 1.0f) * Ranges.Z + Mins.Z;
+		r.X = X / 2047.0f * Ranges.X + Mins.X;
+		r.Y = Y / 1023.0f * Ranges.Y + Mins.Y;
+		r.Z = Z / 2047.0f * Ranges.Z + Mins.Z;
 		return r;
 	}
 
@@ -351,6 +342,52 @@ struct FPackedVectorTrans
 SIMPLE_TYPE(FPackedVectorTrans, unsigned)
 
 #endif // TRANSFORMERS
+
+
+#if BORDERLANDS
+
+struct FQuatDelta48NoW
+{
+	word			X, Y, Z;
+
+	FQuat ToQuat(const FVector &Mins, const FVector &Ranges, const FQuat &Base) const
+	{
+		FQuat r;
+		int Sign = Z >> 15;
+		r.X = X / 65535.0f * Ranges.X + Mins.X + Base.X;
+		r.Y = Y / 65535.0f * Ranges.Y + Mins.Y + Base.Y;
+		r.Z = (Z & 0x7FFF) / 32767.0f * Ranges.Z + Mins.Z + Base.Z;
+		RESTORE_QUAT_W(r);
+		if (Sign) r.W = -r.W;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatDelta48NoW &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z;
+	}
+};
+
+struct FVectorDelta48NoW
+{
+	word			X, Y, Z;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges, const FVector &Base) const
+	{
+		FVector r;
+		r.X = X / 65535.0f * Ranges.X + Mins.X + Base.X;
+		r.Y = Y / 65535.0f * Ranges.Y + Mins.Y + Base.Y;
+		r.Z = Z / 65535.0f * Ranges.Z + Mins.Z + Base.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorDelta48NoW &V)
+	{
+		return Ar << V.X << V.Y << V.Z;
+	}
+};
+
+#endif // BORDERLANDS
 
 
 #endif // __UNMESHTYPES_H__

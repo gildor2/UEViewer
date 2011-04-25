@@ -50,6 +50,7 @@ function ut2()    { run1 "$UT2" $*;  }
 function ut3()    { run1 "$UT3" $*;  }
 function gow()    { run1 "$GOW" $*;  }
 function gow2()   { run1 "$GOW2" $*; }
+function gow3()   { run1 "$GOW3" $*; }
 function ib()     { run1 "$IB" -ios $*; }
 function uc2()    { run1 "$UC2" $*;  }
 function rund()   { run1 "data" $*;  }
@@ -70,7 +71,8 @@ CheckDir UT1 {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament
 CheckDir UT2 {c,d,e}:/games/{unreal,unreal~1}/ut2004
 CheckDir UT3 {c,d,e}:/games/ut3/UTGame/CookedPC
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
-CheckDir GOW2 "C:/!umodel-data/GearsOfWar2_X360" data/3X/GearsOfWar2_X360
+CheckDir GOW2 data/3X/GearsOfWar2_X360
+CheckDir GOW3 data/3X/GOW3_beta_X360
 CheckDir IB data/3i/InfinityBlade
 CheckDir UC2 "C:/!umodel-data/UnrealChampionship2" data/UnrealChampionship2
 CheckDir L2 "C:/!umodel-data/Lineage2"

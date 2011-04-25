@@ -27,7 +27,9 @@ MAIN = \
 	./obj/umodel-unix/ExportMaterial.o \
 	./obj/umodel-unix/ExportMd5.o \
 	./obj/umodel-unix/ExportPsk.o \
+	./obj/umodel-unix/ExportSound.o \
 	./obj/umodel-unix/ExportTga.o \
+	./obj/umodel-unix/ExportThirdParty.o \
 	./obj/umodel-unix/UnCore.o \
 	./obj/umodel-unix/UnHavok.o \
 	./obj/umodel-unix/UnMesh.o \
@@ -130,6 +132,8 @@ DEPENDS_3 = \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
+	Unreal/UnSound.h \
+	Unreal/UnThirdParty.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
@@ -196,7 +200,8 @@ DEPENDS_6 = \
 	Unreal/Shaders.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
 
 ./obj/umodel-unix/UnRenderer.o : Unreal/UnRenderer.cpp $(DEPENDS_6)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnRenderer.o Unreal/UnRenderer.cpp
@@ -297,6 +302,35 @@ DEPENDS_13 = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnSound.h
+
+./obj/umodel-unix/ExportSound.o : Exporters/ExportSound.cpp $(DEPENDS_13)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportSound.o Exporters/ExportSound.cpp
+
+DEPENDS_14 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnThirdParty.h
+
+./obj/umodel-unix/ExportThirdParty.o : Exporters/ExportThirdParty.cpp $(DEPENDS_14)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportThirdParty.o Exporters/ExportThirdParty.cpp
+
+DEPENDS_15 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -305,45 +339,11 @@ DEPENDS_13 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/StatMeshInstance.o : MeshInstance/StatMeshInstance.cpp $(DEPENDS_13)
+./obj/umodel-unix/StatMeshInstance.o : MeshInstance/StatMeshInstance.cpp $(DEPENDS_15)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/StatMeshInstance.o MeshInstance/StatMeshInstance.cpp
 
-./obj/umodel-unix/VertMeshInstance.o : MeshInstance/VertMeshInstance.cpp $(DEPENDS_13)
+./obj/umodel-unix/VertMeshInstance.o : MeshInstance/VertMeshInstance.cpp $(DEPENDS_15)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/VertMeshInstance.o MeshInstance/VertMeshInstance.cpp
-
-DEPENDS_14 = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnHavok.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMeshTypes.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-unix/UnMeshBioshock.o : Unreal/UnMeshBioshock.cpp $(DEPENDS_14)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMeshBioshock.o Unreal/UnMeshBioshock.cpp
-
-DEPENDS_15 = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnHavok.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-unix/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_15)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnHavok.o Unreal/UnHavok.cpp
 
 DEPENDS_16 = \
 	Build.h \
@@ -352,16 +352,16 @@ DEPENDS_16 = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
+	Unreal/UnHavok.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/UnMesh3.o : Unreal/UnMesh3.cpp $(DEPENDS_16)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh3.o Unreal/UnMesh3.cpp
+./obj/umodel-unix/UnMeshBioshock.o : Unreal/UnMeshBioshock.cpp $(DEPENDS_16)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMeshBioshock.o Unreal/UnMeshBioshock.cpp
 
 DEPENDS_17 = \
 	Build.h \
@@ -370,15 +370,14 @@ DEPENDS_17 = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
+	Unreal/UnHavok.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
-	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/UnMesh.o : Unreal/UnMesh.cpp $(DEPENDS_17)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh.o Unreal/UnMesh.cpp
+./obj/umodel-unix/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_17)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnHavok.o Unreal/UnHavok.cpp
 
 DEPENDS_18 = \
 	Build.h \
@@ -388,12 +387,47 @@ DEPENDS_18 = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_18)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
+./obj/umodel-unix/UnMesh3.o : Unreal/UnMesh3.cpp $(DEPENDS_18)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh3.o Unreal/UnMesh3.cpp
 
 DEPENDS_19 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+./obj/umodel-unix/UnMesh.o : Unreal/UnMesh.cpp $(DEPENDS_19)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh.o Unreal/UnMesh.cpp
+
+DEPENDS_20 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h
+
+./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_20)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
+
+DEPENDS_21 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -405,10 +439,10 @@ DEPENDS_19 = \
 	Unreal/UnPackage.h \
 	libs/ddslib.h
 
-./obj/umodel-unix/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_19)
+./obj/umodel-unix/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_21)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnTexture.o Unreal/UnTexture.cpp
 
-DEPENDS_20 = \
+DEPENDS_22 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -418,13 +452,13 @@ DEPENDS_20 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-./obj/umodel-unix/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_20)
+./obj/umodel-unix/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_22)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnObject.o Unreal/UnObject.cpp
 
-./obj/umodel-unix/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_20)
+./obj/umodel-unix/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_22)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnPackage.o Unreal/UnPackage.cpp
 
-DEPENDS_21 = \
+DEPENDS_23 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -439,44 +473,44 @@ DEPENDS_21 = \
 	libs/include/zlib/zconf.h \
 	libs/include/zlib/zlib.h
 
-./obj/umodel-unix/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_21)
+./obj/umodel-unix/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_23)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnCore.o Unreal/UnCore.cpp
 
-DEPENDS_22 = \
+DEPENDS_24 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h
 
-./obj/umodel-unix/Core.o : Core/Core.cpp $(DEPENDS_22)
+./obj/umodel-unix/Core.o : Core/Core.cpp $(DEPENDS_24)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Core.o Core/Core.cpp
 
-./obj/umodel-unix/Math3D.o : Core/Math3D.cpp $(DEPENDS_22)
+./obj/umodel-unix/Math3D.o : Core/Math3D.cpp $(DEPENDS_24)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Math3D.o Core/Math3D.cpp
 
-DEPENDS_23 = \
+DEPENDS_25 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
 	Core/TextContainer.h
 
-./obj/umodel-unix/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_23)
+./obj/umodel-unix/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_25)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/TextContainer.o Core/TextContainer.cpp
 
-DEPENDS_24 = \
+DEPENDS_26 = \
 	libs/PowerVR/PVRTDecompress.h \
 	libs/PowerVR/PVRTGlobal.h \
 	libs/PowerVR/PVRTTexture.h
 
-./obj/umodel-unix/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_24)
+./obj/umodel-unix/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_26)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/PVRTDecompress.o ./libs/PowerVR/PVRTDecompress.cpp
 
-DEPENDS_25 = \
+DEPENDS_27 = \
 	libs/ddslib.h
 
-./obj/umodel-unix/ddslib.o : ./libs/ddslib.c $(DEPENDS_25)
+./obj/umodel-unix/ddslib.o : ./libs/ddslib.c $(DEPENDS_27)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ddslib.o ./libs/ddslib.c
 
-DEPENDS_26 = \
+DEPENDS_28 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
@@ -488,10 +522,10 @@ DEPENDS_26 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_26)
+./obj/umodel-unix/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_28)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
-DEPENDS_27 = \
+DEPENDS_29 = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/lzo/lzo_conf.h \
@@ -500,39 +534,39 @@ DEPENDS_27 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_27)
+./obj/umodel-unix/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_29)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo_init.o ./libs/lzo/lzo_init.c
 
-DEPENDS_28 = \
+DEPENDS_30 = \
 	libs/mspack/system.h
 
-./obj/umodel-unix/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_28)
+./obj/umodel-unix/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_30)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzxd.o ./libs/mspack/lzxd.c
 
-DEPENDS_29 = \
+DEPENDS_31 = \
 	libs/nvtt/nvcore/Debug.h \
 	libs/nvtt/nvcore/Memory.h
 
-./obj/umodel-unix/Memory.o : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS_29)
+./obj/umodel-unix/Memory.o : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS_31)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Memory.o ./libs/nvtt/nvcore/Memory.cpp
 
-DEPENDS_30 = \
+DEPENDS_32 = \
 	libs/nvtt/nvimage/BlockDXT.h \
 	libs/nvtt/nvimage/ColorBlock.h
 
-./obj/umodel-unix/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_30)
+./obj/umodel-unix/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_32)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
-DEPENDS_31 = \
+DEPENDS_33 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_31)
+./obj/umodel-unix/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_33)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_32 = \
+DEPENDS_34 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -541,10 +575,10 @@ DEPENDS_32 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_32)
+./obj/umodel-unix/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_34)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_33 = \
+DEPENDS_35 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -552,26 +586,26 @@ DEPENDS_33 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_33)
+./obj/umodel-unix/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_35)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_34 = \
+DEPENDS_36 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_34)
+./obj/umodel-unix/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_36)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_35 = \
+DEPENDS_37 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-./obj/umodel-unix/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_35)
+./obj/umodel-unix/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_37)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/adler32.o ./libs/zlib/adler32.c
 
-./obj/umodel-unix/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_35)
+./obj/umodel-unix/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_37)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

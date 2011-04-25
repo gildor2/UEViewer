@@ -1079,6 +1079,8 @@ void UUIStreamingTextures::PostLoad()
 		Mip->Data.BulkDataSizeOnDisk   = S.BulkDataSizeOnDisk;
 		Mip->Data.BulkDataOffsetInFile = S.BulkDataOffsetInFile;
 		// find TFC remap
+//		unsigned Hash = appStrihash("UIICONS101_I1.dds");	//??
+//		printf("Hash: %08X\n", Hash);
 		if (Mip->Data.BulkDataOffsetInFile < 0)
 		{
 			int Offset = GetRealTextureOffset_DCU_2(S.Hash, S.TextureFileCacheName);

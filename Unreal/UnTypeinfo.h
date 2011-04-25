@@ -137,6 +137,13 @@ public:
 	{
 		guard(UStruct::Serialize);
 		Super::Serialize(Ar);
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 472)
+		{
+			Ar << Children;
+			return;				//!! remaining data will be dropped anyway
+		}
+#endif // MKVSDC
 		Ar << ScriptText << Children;
 #if UNREAL3
 		if (Ar.Game >= GAME_UE3)
@@ -247,6 +254,9 @@ public:
 		if (Ar.Game >= GAME_UE3)
 			Ar << PropertyFlags2;
 #endif
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 472) goto skip_1;
+#endif
 		Ar << Category;
 #if UNREAL3
 		if (Ar.Game >= GAME_UE3)
@@ -259,6 +269,7 @@ public:
 			Ar << unk84 << unk88;
 		}
 #endif // BORDERLANDS
+	skip_1:
 		if (PropertyFlags & 0x20)
 			Ar << f48;
 		if (Ar.Game < GAME_UE3)
@@ -468,6 +479,26 @@ public:
 #endif // UNREAL3
 
 
+#if MKVSDC
+
+class UNativeTypeProperty : public UProperty
+{
+	DECLARE_CLASS(UNativeTypeProperty, UProperty);
+public:
+	FName			TypeName;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UNativeTypeProperty::Serialize);
+		Super::Serialize(Ar);
+		Ar << TypeName;
+		unguard;
+	}
+};
+
+#endif // MKVSDC
+
+
 // UT2-specific?
 class UPointerProperty : public UProperty
 {
@@ -498,5 +529,9 @@ class UPointerProperty : public UProperty
 #define REGISTER_TYPEINFO_CLASSES_U3	\
 	REGISTER_CLASS(UScriptStruct)		\
 	REGISTER_CLASS(UComponentProperty)
+
+#define REGISTER_TYPEINFO_CLASSES_MK	\
+	REGISTER_CLASS(UNativeTypeProperty)	\
+	REGISTER_CLASS_ALIAS(UByteProperty, UResourceProperty)
 
 #endif // __UNTYPEINFO_H__

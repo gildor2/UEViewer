@@ -319,7 +319,8 @@ static GameInfo games[] = {
 		G("BlackSite: Area 51", a51, GAME_A51),
 #	endif
 #	if MKVSDC
-		G("Mortal Kombat vs. DC Universe", mkvsdc, GAME_MK),
+		G("Mortal Kombat vs. DC Universe", mk, GAME_MK),
+		G("Mortal Kombat", mk, GAME_MK),
 #	endif
 #	if TUROK
 		G("Turok", turok, GAME_Turok),
@@ -929,6 +930,7 @@ int main(int argc, char **argv)
 			}
 			if (oneObjectOnly) break;
 		}
+		return 0;
 	}
 
 #if RENDERING
