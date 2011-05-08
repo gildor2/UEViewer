@@ -73,6 +73,7 @@ Modified Unreal Engine 3:
   Transformers: War for Cybertron
   The Bourne Conspiracy (XBox360)
   Enslaved: Odyssey to the West (XBox360)
+  Medal of Honor: Airborne
   Medal of Honor 2010
   Berkanix
   Destroy All Humans! Path of the Furon
@@ -187,6 +188,13 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+07.05.2011
+- implemented Medal of Honor: Airborne StaticMesh support
+
+27.04.2011
+- implemented Blade & Soul beta support
+- limited renderer FPS to reduce CPU usage
+
 24.04.2011
 - fixed bugs in recent UE3 SkeletalMesh code (GOW3 beta support fixed)
 

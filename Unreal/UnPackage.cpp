@@ -899,15 +899,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				}
 #endif // R6VEGAS
 
-#if 0
-				// FString, but less allocations ...
-				int len;
-				*this << AR_INDEX(len);
-				char *s = NameTable[i] = new char[len];
-				while (len-- > 0)
-					*this << *s++;
-#else
-				// Lineage sometimes uses Unicode strings ...
+				// Korean games sometimes uses Unicode strings ...
 				FString name;
 				*this << name;
 	#if AVA
@@ -929,7 +921,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	#else
 				NameTable[i] = name.Detach();
 	#endif
-#endif
+
 				// skip object flags
 				int tmp;
 				*this << tmp;
@@ -1191,12 +1183,12 @@ UObject* UnPackage::CreateImport(int index)
 	bool isStartupPackage = false;
 #if UNREAL3
 	// try to find import in startup package
-	if (!Package)
+	if (!Package && Engine() >= GAME_UE3)
 	{
 		Package = LoadPackage(GStartupPackage);
 		isStartupPackage = true;
 	}
-#endif
+#endif // UNREAL3
 
 	if (!Package)
 	{

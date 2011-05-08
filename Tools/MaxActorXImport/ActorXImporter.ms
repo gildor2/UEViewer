@@ -10,6 +10,9 @@
 
  Revision History:
 
+	03.05.2011 v1.16
+	- improved animation cleanup
+
 	01.01.2011 v1.15
 	- workaround for loading animation with the root bone name different than mesh root bone
 	- removed "Load confirmation" setting (not needed anymore because of functional "batch export")
@@ -646,6 +649,56 @@ fn ImportMaterial matName texDir =
 )
 
 -------------------------------------------------------------------------------
+--	MAX helpers
+-------------------------------------------------------------------------------
+
+fn RemoveAnimation =
+(
+	stopAnimation()
+	for i = 1 to MeshBones.count do
+	(
+		local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
+		if Bone != undefined then deleteKeys Bone #allKeys
+	)
+	animationRange = interval 0 1
+)
+
+
+fn RestoreBindpose =
+(
+	RemoveAnimation()
+
+	try
+	(
+		local rotMatrix = GetRotationMatrix()
+		-- note: should rotate every bone because we are not applying parent's rotation here
+		-- find bones
+		for i = 1 to MeshBones.count do
+		(
+			local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
+			if Bone == undefined then
+				format "WARNING: cannot find the bone %\n" MeshBones[i].Name
+			else
+				Bone.transform = MeshBones[i].Matrix * rotMatrix
+		)
+
+		set coordsys world
+	)
+	catch
+	(
+		format "ERROR!\n"
+	)
+)
+
+
+fn ClearMaxScene =
+(
+	max select all
+	if $ != undefined then delete $
+)
+
+
+-------------------------------------------------------------------------------
 --	Loading PSK file
 -------------------------------------------------------------------------------
 
@@ -1107,7 +1160,7 @@ fn ImportPsaFile filename trackNum all:false =
 	set coordsys world
 	startframe = 0	-- can modify layer ...
 
-	stopAnimation()
+	RemoveAnimation()
 
 	-- extended format (psax)
 	local AnimFlags = #()
@@ -1129,7 +1182,7 @@ fn ImportPsaFile filename trackNum all:false =
 	catch
 	(
 		format "WARNING: not an extended psa file format\n"
-    )
+	)
 	fseek file animKeysPos #seek_set
 
 	format "Loading track % (%), % keys\n" trackNum Anims[trackNum].Name (numFrames * Bones.count)
@@ -1243,51 +1296,6 @@ fn ImportPsaFile filename trackNum all:false =
 
 
 -------------------------------------------------------------------------------
---	Tools
--------------------------------------------------------------------------------
-
-fn RemoveAnimation =
-(
-	stopAnimation()
-	animationRange = interval 0 1
-)
-
-
-fn RestoreBindpose =
-(
-	RemoveAnimation()
-
-	try
-	(
-		local rotMatrix = GetRotationMatrix()
-		-- note: should rotate every bone because we are not applying parent's rotation here
-		-- find bones
-		for i = 1 to MeshBones.count do
-		(
-			local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
-			if Bone == undefined then
-				format "WARNING: cannot find the bone %\n" MeshBones[i].Name
-			else
-				Bone.transform = MeshBones[i].Matrix * rotMatrix
-		)
-
-		set coordsys world
-	)
-	catch
-	(
-		format "ERROR!\n"
-	)
-)
-
-
-fn ClearMaxScene =
-(
-	max select all
-	if $ != undefined then delete $
-)
-
-
--------------------------------------------------------------------------------
 --	User interface
 -------------------------------------------------------------------------------
 
@@ -1302,7 +1310,7 @@ fn LoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.15"
+	label     Lbl1 "Version 1.16"
 	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -1447,8 +1455,8 @@ rollout axSettingsRollout "Settings"
 	)
 	on BtnRotApply pressed do RestoreBindpose()
 
-	on SpnBoneSize   changed val   do g_boneSize      = val
-	on SpnMeshScale  changed val   do g_meshScale     = val
+	on SpnBoneSize  changed val do g_boneSize  = val
+	on SpnMeshScale changed val do g_meshScale = val
 	on ChkRepBones   changed state do g_reposBones    = state
 	on ChkTexRecurse changed state do g_texRecurse    = state
 	on RadMissingTex changed state do g_texMissAction = state

@@ -383,6 +383,9 @@ static GameInfo games[] = {
 #	if TERA
 		G("TERA: The Exiled Realm of Arborea", tera, GAME_Tera),
 #	endif
+#	if BLADENSOUL
+		G("Blade & Soul", bns, GAME_BladeNSoul),
+#	endif
 #	if ALPHA_PR
 		G("Alpha Protocol", alpha, GAME_AlphaProtocol),
 #	endif
@@ -401,6 +404,9 @@ static GameInfo games[] = {
 #	endif
 #	if ENSLAVED
 		G("Enslaved: Odyssey to the West", ens, GAME_Enslaved),
+#	endif
+#	if MOHA
+		G("Medal of Honor: Airborne", moha, GAME_MOHA),
 #	endif
 #	if MOH2010
 		G("Medal of Honor 2010", moh2010, GAME_MOH2010),

@@ -16,6 +16,7 @@
 #define SMART_RESIZE			1		// redraw window contents while resizing window
 #define USE_BLOOM				1
 //#define SHOW_FPS				1
+#define LIMIT_FPS				1
 
 #if !_WIN32
 #undef SMART_RESIZE						// not compatible with Linux (has ugly effects and program hung)
@@ -582,7 +583,11 @@ static void Init(const char *caption)
 		SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
 	if (!sdlWindow) appError("Failed to create SDL window");
 	sdlContext = SDL_GL_CreateContext(sdlWindow);
+	#if LIMIT_FPS
+	SDL_GL_SetSwapInterval(0);			// FPS will be limited by Sleep()
+	#else
 	SDL_GL_SetSwapInterval(1);			// allow waiting for vsync to reduce CPU usage
+	#endif
 #else
 	SDL_WM_SetCaption(caption, caption);
 #endif
@@ -1116,6 +1121,13 @@ void VisualizerLoop(const char *caption)
 	guard(VisualizerLoop);
 
 	Init(caption);
+#if NEW_SDL && LIMIT_FPS
+	// get display refresh rate
+	SDL_DisplayMode desktopMode;
+	int frameTime = 0;
+	if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplay(sdlWindow), &desktopMode) == 0)
+		frameTime = 1000 / desktopMode.refresh_rate;
+#endif // NEW_SDL && LIMIT_FPS
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 #if SMART_RESIZE
 	#if NEW_SDL
@@ -1174,9 +1186,28 @@ void VisualizerLoop(const char *caption)
 			}
 		}
 		if (!disableUpdate)
-			Display();
+		{
+#if NEW_SDL && LIMIT_FPS
+			unsigned time = SDL_GetTicks();
+			Display();			// draw the scene
+			int renderTime = SDL_GetTicks() - time;
+			// ensure refresh rate
+			static unsigned lastTime = 0;
+			if (lastTime && frameTime)
+			{
+				int delay = frameTime - renderTime;
+				if (delay < 0) delay = 0;
+				SDL_Delay(delay);
+			}
+			lastTime = time;
+#else
+			Display();			// draw the scene
+#endif // NEW_SDL && LIMIT_FPS
+		}
 		else
+		{
 			SDL_Delay(100);
+		}
 	}
 	// shutdown
 	Shutdown();

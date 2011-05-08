@@ -65,11 +65,13 @@
 #define AA3				1		// America's Army 3
 #define LEGENDARY		1		// Legendary: Pandora's Box
 #define TERA			1		// TERA: The Exiled Realm of Arborea
+#define BLADENSOUL		1		// Blade & Soul
 #define APB				1		// All Points Bulletin
 #define ALPHA_PR		1		// Alpha Protocol
 #define TRANSFORMERS	1		// Transformers: War for Cybertron and The Bourne Conspiracy
 #define MORTALONLINE	1		// Mortal Online
 #define ENSLAVED		1
+#define MOHA			1		// Medal of Honor: Airborne
 #define MOH2010			1		// Medal of Honor 2010 (Singleplayer)
 #define BERKANIX		1
 #define DCU_ONLINE		1		// DC Universe Online

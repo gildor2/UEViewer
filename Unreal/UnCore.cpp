@@ -975,6 +975,12 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 			S.AddItem(c & 255);			//!! incorrect ...
 		}
 	}
+	for (i = 0; i < S.Num(); i++)
+	{
+		char c = S[i];
+		if (c >= 1 && c < ' ')
+			S[i] = '$';
+	}
 	if (S[abs(len)-1] != 0)
 		appError("Serialized FString is not null-terminated");
 	return Ar;
@@ -1091,6 +1097,9 @@ void FArchive::DetectGame()
 #endif
 #if FURY
 	if (ArVer == 407 && (ArLicenseeVer == 26 || ArLicenseeVer == 36)) SET(GAME_Fury);
+#endif
+#if MOHA
+	if (ArVer == 421 && ArLicenseeVer == 11)	SET(GAME_MOHA);
 #endif
 #if UNDERTOW
 //	if (ArVer == 435 && ArLicenseeVer == 0)		SET(GAME_Undertow);	// LicenseeVer==0!
@@ -1385,6 +1394,20 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 {
 	guard(appDecompress);
 
+#if BLADENSOUL
+	if (GForceGame == GAME_BladeNSoul && Flags == COMPRESS_LZO_ENC)	// note: GForceGame is required (to not pass 'Game' here)
+	{
+		if (CompressedSize >= 32)
+		{
+			static const char *key = "qiffjdlerdoqymvketdcl0er2subioxq";
+			for (int i = 0; i < CompressedSize; i++)
+				CompressedBuffer[i] ^= key[i % 32];
+		}
+		// overide compression
+		Flags = COMPRESS_LZO;
+	}
+#endif // BLADENSOUL
+
 	if (Flags == COMPRESS_LZO)
 	{
 		int r;
@@ -1396,7 +1419,8 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
 		return newLen;
 	}
-	else if (Flags == COMPRESS_ZLIB)
+
+	if (Flags == COMPRESS_ZLIB)
 	{
 #if 0
 		appError("appDecompress: Zlib compression is not supported");
@@ -1408,7 +1432,8 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		return newLen;
 #endif
 	}
-	else if (Flags == COMPRESS_LZX)
+
+	if (Flags == COMPRESS_LZX)
 	{
 #if XBOX360
 #	if !USE_XDK
@@ -1430,8 +1455,8 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		appError("appDecompress: LZX compression is not supported");
 #endif // XBOX360
 	}
-	else
-		appError("appDecompress: unknown compression flags: %d", Flags);
+
+	appError("appDecompress: unknown compression flags: %d", Flags);
 	return 0;
 
 	unguard;
@@ -1631,6 +1656,12 @@ void FByteBulkData::SerializeChunk(FArchive &Ar)
 		if (BulkDataFlags & BULKDATA_CompressedLzx)  flags = COMPRESS_LZX;
 		appReadCompressedChunk(Ar, BulkData, DataSize, flags);
 	}
+#if BLADENSOUL
+	else if (Ar.Game == GAME_BladeNSoul && (BulkDataFlags & BULKDATA_CompressedLzoEncr))
+	{
+		appReadCompressedChunk(Ar, BulkData, DataSize, COMPRESS_LZO_ENC);
+	}
+#endif
 	else
 	{
 		// uncompressed block

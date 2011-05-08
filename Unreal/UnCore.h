@@ -216,11 +216,13 @@ enum EGame
 		GAME_DarkVoid,
 		GAME_Legendary,
 		GAME_Tera,
+		GAME_BladeNSoul,
 		GAME_APB,
 		GAME_AlphaProtocol,
 		GAME_Transformers,
 		GAME_MortalOnline,
 		GAME_Enslaved,
+		GAME_MOHA,
 		GAME_MOH2010,
 		GAME_Berkanix,
 		GAME_DOH,
@@ -1391,6 +1393,10 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 #define BULKDATA_SeparateData			0x40		// unknown name - bulk stored in a different place in the same file
 #define BULKDATA_CompressedLzx			0x80		// unknown name
 
+#if BLADENSOUL
+#define BULKDATA_CompressedLzoEncr		0x100		// encrypted LZO
+#endif
+
 struct FByteBulkData //?? separate FUntypedBulkData
 {
 	int		BulkDataFlags;				// BULKDATA_...
@@ -1447,6 +1453,10 @@ struct FIntBulkData : public FByteBulkData
 #define COMPRESS_ZLIB		1
 #define COMPRESS_LZO		2
 #define COMPRESS_LZX		4
+
+#if BLADENSOUL
+#define COMPRESS_LZO_ENC	8						// encrypted LZO
+#endif
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 

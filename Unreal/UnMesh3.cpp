@@ -4,6 +4,10 @@
 #include "UnPackage.h"				// for checking game type
 #include "UnMathTools.h"			// for FRotator to FCoords
 
+
+//#define DEBUG_STATICMESH		1
+
+
 #if UNREAL3
 
 /*-----------------------------------------------------------------------------
@@ -52,7 +56,14 @@ struct FSkelMeshSection3
 			Ar << fC;
 		}
 #endif // MCARTA
-		if (Ar.ArVer >= 599) Ar << S.unk2;
+#if BLADENSOUL
+		if (Ar.Game == GAME_BladeNSoul && Ar.ArVer >= 571) goto new_ver;
+#endif
+		if (Ar.ArVer >= 599)
+		{
+		new_ver:
+			Ar << S.unk2;
+		}
 		return Ar;
 	}
 };
@@ -2403,6 +2414,8 @@ struct FStaticMeshVertexStream3
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexStream3 &S)
 	{
+		guard(FStaticMeshVertexStream3<<);
+
 		Ar << S.VertexSize << S.NumVerts;
 #if BATMAN
 		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 0x11)
@@ -2432,6 +2445,8 @@ struct FStaticMeshVertexStream3
 #endif // MOH2010
 		Ar << RAW_ARRAY(S.Verts);
 		return Ar;
+
+		unguard;
 	}
 };
 
@@ -2533,8 +2548,9 @@ struct FStaticMeshUVStream3
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream3 &S)
 	{
+		guard(FStaticMeshUVStream3<<);
+
 		Ar << S.NumTexCoords << S.ItemSize << S.NumVerts;
-//		printf("TC:%d IS:%d NV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts);
 		S.bUseFullPrecisionUVs = true;
 #if TUROK
 		if (Ar.Game == GAME_Turok && Ar.ArLicenseeVer >= 59)
@@ -2548,11 +2564,17 @@ struct FStaticMeshUVStream3
 #if AVA
 		if (Ar.Game == GAME_AVA && Ar.ArVer >= 441) goto new_ver;
 #endif
+#if MOHA
+		if (Ar.Game == GAME_MOHA && Ar.ArVer >= 421) goto new_ver;
+#endif
 		if (Ar.ArVer >= 474)
 		{
 		new_ver:
 			Ar << S.bUseFullPrecisionUVs;
 		}
+#if DEBUG_STATICMESH
+		printf("TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
+#endif
 #if MKVSDC
 		if (Ar.Game == GAME_MK)
 			S.bUseFullPrecisionUVs = false;
@@ -2580,6 +2602,8 @@ struct FStaticMeshUVStream3
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
 		Ar << RAW_ARRAY(S.UV);
 		return Ar;
+
+		unguard;
 	}
 };
 
@@ -2591,7 +2615,9 @@ struct FStaticMeshColorStream3
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshColorStream3 &S)
 	{
+		guard(FStaticMeshColorStream3<<);
 		return Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Colors);
+		unguard;
 	}
 };
 
@@ -2617,10 +2643,12 @@ struct FStaticMeshUVStream3Old			// ArVer < 364
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream3Old &S)
 	{
+		guard(FStaticMeshUVStream3Old<<);
 		int unk;						// Revision?
 		Ar << S.Data;					// used RAW_ARRAY, but RAW_ARRAY is newer than this version
 		if (Ar.ArVer < 297) Ar << unk;
 		return Ar;
+		unguard;
 	}
 };
 
@@ -2706,7 +2734,7 @@ struct FStaticMeshLODModel
 		}
 #endif // TLR
 		Ar << Lod.Sections;
-#if 0
+#if DEBUG_STATICMESH
 		printf("%d sections\n", Lod.Sections.Num());
 		for (int i = 0; i < Lod.Sections.Num(); i++)
 		{
@@ -2714,7 +2742,7 @@ struct FStaticMeshLODModel
 			printf("Mat: %s\n", S.Mat ? S.Mat->Name : "?");
 			printf("  %d %d sh=%d i0=%d NF=%d %d %d idx=%d\n", S.f10, S.f14, S.bEnableShadowCasting, S.FirstIndex, S.NumFaces, S.f24, S.f28, S.Index);
 		}
-#endif
+#endif // DEBUG_STATICMESH
 		// serialize vertex and uv streams
 #if A51
 		if (Ar.Game == GAME_A51) goto new_ver;
@@ -2748,6 +2776,9 @@ struct FStaticMeshLODModel
 #endif // TRANSFORMERS
 #if MOH2010
 			if (Ar.Game == GAME_MOH2010 && Ar.ArLicenseeVer >= 55) goto color_stream;
+#endif
+#if BLADENSOUL
+			if (Ar.Game == GAME_BladeNSoul && Ar.ArVer >= 572) goto color_stream;
 #endif
 			// unknown data in UDK
 			if (Ar.ArVer >= 615)
@@ -2971,8 +3002,10 @@ struct FkDOPNode3
 #endif // DCU_ONLINE
 		Ar << V.f0 << V.f18;
 #if FRONTLINES
-		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
-			goto new_ver;
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7) goto new_ver;
+#endif
+#if MOHA
+		if (Ar.Game == GAME_MOHA && Ar.ArLicenseeVer >= 8) goto new_ver;
 #endif
 #if MKVSDC
 		if (Ar.Game == GAME_MK) goto old_ver;
@@ -3018,12 +3051,13 @@ struct FkDOPTriangle3
 	friend FArchive& operator<<(FArchive &Ar, FkDOPTriangle3 &V)
 	{
 #if FURY
-		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 25)
-			goto new_ver;
+		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 25) goto new_ver;
 #endif
 #if FRONTLINES
-		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7)
-			goto new_ver;
+		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7) goto new_ver;
+#endif
+#if MOHA
+		if (Ar.Game == GAME_MOHA && Ar.ArLicenseeVer >= 8) goto new_ver;
 #endif
 #if MKVSDC
 		if (Ar.Game == GAME_MK) goto old_ver;
@@ -3202,7 +3236,7 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 version:
 	Ar << InternalVersion;
 
-#if 0
+#if DEBUG_STATICMESH
 	printf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
 	printf("ver: %d\n", InternalVersion);
 #endif
