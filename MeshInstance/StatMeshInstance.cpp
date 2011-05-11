@@ -45,7 +45,7 @@ void CStatMeshInstance::Draw()
 	{
 		for (i = 0; i < NumSections; i++)
 		{
-			UMaterial *Mat = Mesh->Materials[i].Material;
+			UUnrealMaterial *Mat = MATERIAL_CAST(Mesh->Materials[i].Material);
 			int op = 0;			// sort value
 			if (Mat && Mat->IsTranslucent()) op = 1;
 			if (op == opacity) SectionMap[secPlace++] = i;
@@ -63,7 +63,7 @@ void CStatMeshInstance::Draw()
 #else
 		int MaterialIndex = i;
 #endif
-		SetMaterial(Mesh->Materials[MaterialIndex].Material, MaterialIndex, 0);
+		SetMaterial(MATERIAL_CAST(Mesh->Materials[MaterialIndex].Material), MaterialIndex, 0);
 
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;

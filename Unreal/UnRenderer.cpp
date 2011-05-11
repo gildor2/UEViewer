@@ -6,6 +6,9 @@
 
 #include "UnPackage.h"					// for accessing Game field
 
+#include "UnMaterial2.h"			//!! wrong engine dependency
+#include "UnMaterial3.h"			//!! wrong engine dependency
+
 #if RENDERING
 
 #include "GlWindow.h"

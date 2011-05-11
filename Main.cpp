@@ -3,6 +3,9 @@
 #include "UnPackage.h"
 #include "UnAnimNotify.h"
 
+#include "UnMaterial2.h"
+#include "UnMaterial3.h"
+
 #include "UnSound.h"
 #include "UnThirdParty.h"
 

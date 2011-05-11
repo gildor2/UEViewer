@@ -32,6 +32,9 @@ UE3 CLASS TREE:
 float half2float(word h);
 
 
+class UMaterial;
+
+
 /*-----------------------------------------------------------------------------
 	UPrimitive class
 -----------------------------------------------------------------------------*/
@@ -490,92 +493,7 @@ public:
 	// version 4 fields
 	float				SkinTesselationFactor; // LOD.SkinTesselationFactor
 
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(ULodMesh::Serialize);
-		Super::Serialize(Ar);
-
-		Ar << Version << VertexCount << Verts;
-
-		if (Version <= 1 || Ar.Game == GAME_SplinterCell)
-		{
-			// skip FMeshTri2 section
-			TArray<FMeshTri2> tmp;
-			Ar << tmp;
-		}
-
-		Ar << Textures;
-#if SPLINTER_CELL
-		if (Ar.Game == GAME_SplinterCell && Version >= 3)
-		{
-			TArray<UObject*> unk80;
-			Ar << unk80;
-		}
-#endif // SPLINTER_CELL
-#if LOCO
-		if (Ar.Game == GAME_Loco)
-		{
-			int               unk7C;
-			TArray<FName>     unk80;
-			TArray<FLocoUnk2> unk8C;
-			TArray<FLocoUnk1> unk98;
-			if (Version >= 5) Ar << unk98;
-			if (Version >= 6) Ar << unk80;
-			if (Version >= 7) Ar << unk8C << unk7C;
-		}
-#endif // LOCO
-		Ar << MeshScale << MeshOrigin << RotOrigin;
-
-		if (Version <= 1 || Ar.Game == GAME_SplinterCell)
-		{
-			// skip 2nd obsolete section
-			TArray<word> tmp;
-			Ar << tmp;
-		}
-
-		Ar << FaceLevel << Faces << CollapseWedgeThus << Wedges << Materials;
-		Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
-
-#if SPLINTER_CELL
-		if (Ar.Game == GAME_SplinterCell) return;
-#endif
-
-		if (Version >= 3)
-		{
-			Ar << HasImpostor << SpriteMaterial;
-			Ar << ImpLocation << ImpRotation << ImpScale << ImpColor;
-			Ar << ImpSpaceMode << ImpDrawMode << ImpLightMode;
-		}
-
-		if (Version >= 4)
-		{
-			Ar << SkinTesselationFactor;
-		}
-#if LINEAGE2
-		if (Ar.Game == GAME_Lineage2 && Version >= 5)
-		{
-			int unk;
-			Ar << unk;
-		}
-#endif // LINEAGE2
-#if BATTLE_TERR
-		if (Ar.Game == GAME_BattleTerr && Version >= 5)
-		{
-			TArray<int> unk;
-			Ar << unk;
-		}
-#endif // BATTLE_TERR
-#if SWRC
-		if (Ar.Game == GAME_RepCommando && Version >= 7)
-		{
-			int unkD4, unkD8, unkDC, unkE0;
-			Ar << unkD4 << unkD8 << unkDC << unkE0;
-		}
-#endif // SWRC
-
-		unguard;
-	}
-
+	virtual void Serialize(FArchive &Ar);
 #if UNREAL1
 	void SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, TArray<FBox> &BoundingBoxes,
 		TArray<FSphere> &BoundingSpheres, int &FrameCount);
@@ -694,34 +612,11 @@ public:
 	int						StreamVersion;	// unused
 
 	void BuildNormals();
+
+	virtual void Serialize(FArchive &Ar);
 #if UNREAL1
 	void SerializeVertMesh1(FArchive &Ar);
 #endif
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(UVertMesh::Serialize);
-
-#if UNREAL1
-		if (Ar.Engine() == GAME_UE1)
-		{
-			SerializeVertMesh1(Ar);
-			RotOrigin.Roll = -RotOrigin.Roll;	//??
-			return;
-		}
-#endif // UNREAL1
-
-		Super::Serialize(Ar);
-		RotOrigin.Roll = -RotOrigin.Roll;		//??
-
-		Ar << AnimMeshVerts << StreamVersion; // FAnimMeshVertexStream: may skip this (simply seek archive)
-		Ar << Verts2 << f150;
-		Ar << AnimSeqs << Normals;
-		Ar << VertexCount << FrameCount;
-		Ar << BoundingBoxes << BoundingSpheres;
-
-		unguard;
-	}
 };
 
 
@@ -2049,30 +1944,6 @@ public:
 
 #if BIOSHOCK
 
-struct FBioshockUnk6
-{
-	FName					f0, f8, f10, f18;
-	FVector					f20;
-	FVector					f2C;
-	float					f38, f3C;
-	FVector					f40;
-	int						f4C, f50, f54;
-	int						f58, f5C, f60;
-	int						f64, f68, f6C;
-
-	friend FArchive& operator<<(FArchive &Ar, FBioshockUnk6 &S)
-	{
-		TRIBES_HDR(Ar, 0);
-		Ar << S.f0 << S.f8 << S.f10 << S.f20 << S.f2C << S.f38 << S.f3C;
-		Ar << S.f40 << S.f4C << S.f50 << S.f54 << S.f58 << S.f5C << S.f60;
-		Ar << S.f64 << S.f68 << S.f6C;
-		if (t3_hdrSV >= 2)
-			Ar << S.f18;
-		return Ar;
-	}
-};
-
-
 class UAnimationPackageWrapper : public UObject
 {
 	DECLARE_CLASS(UAnimationPackageWrapper, UObject);
@@ -2561,54 +2432,6 @@ struct FPackedNormal
 };
 #endif // UNREAL3
 
-#if BIOSHOCK
-
-struct FStaticMeshVertexBio
-{
-	FVector					Pos;
-	FPackedNormal			Normal[3];
-
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio &V)
-	{
-		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
-	}
-
-	operator FStaticMeshVertex() const
-	{
-		FStaticMeshVertex r;
-		r.Pos    = Pos;
-		r.Normal = Normal[2];
-		return r;
-	}
-};
-
-SIMPLE_TYPE(FStaticMeshVertexBio, int)
-
-struct FStaticMeshVertexBio2
-{
-	short					Pos[4];
-	FPackedNormal			Normal[3];
-
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio2 &V)
-	{
-		return Ar << V.Pos[0] << V.Pos[1] << V.Pos[2] << V.Pos[3] << V.Normal[0] << V.Normal[1] << V.Normal[2];
-	}
-
-	operator FStaticMeshVertex() const
-	{
-		FStaticMeshVertex r;
-		r.Pos.X  = half2float(Pos[0]);
-		r.Pos.Y  = half2float(Pos[1]);
-		r.Pos.Z  = half2float(Pos[2]);
-		r.Normal = Normal[2];
-		return r;
-	}
-};
-
-RAW_TYPE(FStaticMeshVertexBio2)
-
-#endif // BIOSHOCK
-
 #if UC2
 
 static FVector GUC2VectorScale, GUC2VectorBase;
@@ -2966,6 +2789,9 @@ public:
 #if UC2
 	void LoadExternalUC2Data();
 #endif
+#if BIOSHOCK
+	void SerializeBioshockMesh(FArchive &Ar);
+#endif
 #if UNREAL3
 	void SerializeStatMesh3(FArchive &Ar);
 	void RestoreMesh3(const struct FStaticMeshLODModel &Lod);
@@ -2981,7 +2807,14 @@ public:
 			SerializeStatMesh3(Ar);
 			return;
 		}
-#endif
+#endif // UNREAL3
+#if BIOSHOCK
+		if (Ar.Game == GAME_Bioshock)
+		{
+			SerializeBioshockMesh(Ar);
+			return;
+		}
+#endif // BIOSHOCK
 
 		if (Ar.ArVer < 112)
 		{
@@ -3001,29 +2834,6 @@ public:
 #endif
 		Ar << Sections;
 		Ar << BoundingBox;			// UPrimitive field, serialized twice ...
-#if BIOSHOCK
-		if (Ar.Game == GAME_Bioshock)
-		{
-			// serialize VertexStream
-			if (t3_hdrSV < 9)
-			{
-				// Bioshock 1
-				TArray<FStaticMeshVertexBio> BioVerts;
-				Ar << BioVerts;
-				CopyArray(VertexStream.Vert, BioVerts);
-			}
-			else
-			{
-				// Bioshock 2
-				TArray<FStaticMeshVertexBio2> BioVerts2;
-				Ar << BioVerts2;
-				CopyArray(VertexStream.Vert, BioVerts2);
-			}
-			Ar << UVStream << IndexStream1;
-			// also: t3_hdrSV < 2 => IndexStream2
-			goto skip_remaining;
-		}
-#endif // BIOSHOCK
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{

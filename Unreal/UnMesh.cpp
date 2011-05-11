@@ -3,6 +3,8 @@
 #include "UnMeshTypes.h"
 #include "UnPackage.h"			// for loading texures by name (Rune) and checking real class name
 
+#include "UnMaterial2.h"
+
 
 /*-----------------------------------------------------------------------------
 	ULodMesh class and common data structures
@@ -42,7 +44,94 @@ struct FMeshVertDeus
 
 SIMPLE_TYPE(FMeshVertDeus, unsigned)
 
+#endif // DEUS_EX
+
+
+void ULodMesh::Serialize(FArchive &Ar)
+{
+	guard(ULodMesh::Serialize);
+	Super::Serialize(Ar);
+
+	Ar << Version << VertexCount << Verts;
+
+	if (Version <= 1 || Ar.Game == GAME_SplinterCell)
+	{
+		// skip FMeshTri2 section
+		TArray<FMeshTri2> tmp;
+		Ar << tmp;
+	}
+
+	Ar << Textures;
+#if SPLINTER_CELL
+	if (Ar.Game == GAME_SplinterCell && Version >= 3)
+	{
+		TArray<UObject*> unk80;
+		Ar << unk80;
+	}
+#endif // SPLINTER_CELL
+#if LOCO
+	if (Ar.Game == GAME_Loco)
+	{
+		int               unk7C;
+		TArray<FName>     unk80;
+		TArray<FLocoUnk2> unk8C;
+		TArray<FLocoUnk1> unk98;
+		if (Version >= 5) Ar << unk98;
+		if (Version >= 6) Ar << unk80;
+		if (Version >= 7) Ar << unk8C << unk7C;
+	}
+#endif // LOCO
+	Ar << MeshScale << MeshOrigin << RotOrigin;
+
+	if (Version <= 1 || Ar.Game == GAME_SplinterCell)
+	{
+		// skip 2nd obsolete section
+		TArray<word> tmp;
+		Ar << tmp;
+	}
+
+	Ar << FaceLevel << Faces << CollapseWedgeThus << Wedges << Materials;
+	Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
+
+#if SPLINTER_CELL
+	if (Ar.Game == GAME_SplinterCell) return;
 #endif
+
+	if (Version >= 3)
+	{
+		Ar << HasImpostor << SpriteMaterial;
+		Ar << ImpLocation << ImpRotation << ImpScale << ImpColor;
+		Ar << ImpSpaceMode << ImpDrawMode << ImpLightMode;
+	}
+
+	if (Version >= 4)
+	{
+		Ar << SkinTesselationFactor;
+	}
+#if LINEAGE2
+	if (Ar.Game == GAME_Lineage2 && Version >= 5)
+	{
+		int unk;
+		Ar << unk;
+	}
+#endif // LINEAGE2
+#if BATTLE_TERR
+	if (Ar.Game == GAME_BattleTerr && Version >= 5)
+	{
+		TArray<int> unk;
+		Ar << unk;
+	}
+#endif // BATTLE_TERR
+#if SWRC
+	if (Ar.Game == GAME_RepCommando && Version >= 7)
+	{
+		int unkD4, unkD8, unkDC, unkE0;
+		Ar << unkD4 << unkD8 << unkDC << unkE0;
+	}
+#endif // SWRC
+
+	unguard;
+}
 
 
 #if UNREAL1
@@ -337,6 +426,33 @@ void UVertMesh::BuildNormals()
 		DN.Z = appRound(SN[2] * 511 + 512);
 	}
 }
+
+
+void UVertMesh::Serialize(FArchive &Ar)
+{
+	guard(UVertMesh::Serialize);
+
+#if UNREAL1
+	if (Ar.Engine() == GAME_UE1)
+	{
+		SerializeVertMesh1(Ar);
+		RotOrigin.Roll = -RotOrigin.Roll;	//??
+		return;
+	}
+#endif // UNREAL1
+
+	Super::Serialize(Ar);
+	RotOrigin.Roll = -RotOrigin.Roll;		//??
+
+	Ar << AnimMeshVerts << StreamVersion; // FAnimMeshVertexStream: may skip this (simply seek archive)
+	Ar << Verts2 << f150;
+	Ar << AnimSeqs << Normals;
+	Ar << VertexCount << FrameCount;
+	Ar << BoundingBoxes << BoundingSpheres;
+
+	unguard;
+}
+
 
 #if UNREAL1
 

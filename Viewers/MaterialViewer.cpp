@@ -3,6 +3,9 @@
 
 #if RENDERING
 
+#include "UnMaterial2.h"
+#include "UnMaterial3.h"
+
 #include "ObjectViewer.h"
 
 

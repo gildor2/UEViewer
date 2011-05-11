@@ -4,6 +4,8 @@
 #include "UnPackage.h"				// for checking game type
 #include "UnMathTools.h"			// for FRotator to FCoords
 
+#include "UnMaterial3.h"
+
 
 //#define DEBUG_STATICMESH		1
 
@@ -1158,9 +1160,9 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 
 	UObject::Serialize(Ar);			// no UPrimitive ...
 
-	FBoxSphereBounds	Bounds;
-	TArray<UMaterial*>	Materials1;	// MaterialInterface*
-	TArray<FStaticLODModel3> Lods;
+	FBoxSphereBounds			Bounds;
+	TArray<UMaterialInterface*>	Materials1;
+	TArray<FStaticLODModel3>	Lods;
 
 #if MEDGE
 	if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15)
@@ -1306,7 +1308,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	Materials.Add(Materials1.Num());
 	for (i = 0; i < Materials.Num(); i++)
 	{
-		Textures[i] = Materials1[i];
+		Textures[i] = MATERIAL_CAST2(Materials1[i]);
 		Materials[i].TextureIndex = i;
 	}
 
@@ -2324,7 +2326,7 @@ struct FMOHStaticMeshSectionUnk
 
 struct FStaticMeshSection3
 {
-	UMaterial			*Mat;
+	UMaterialInterface	*Mat;
 	int					f10;		//?? bUseSimple...Collision
 	int					f14;		//?? ...
 	int					bEnableShadowCasting;
@@ -3300,7 +3302,7 @@ void UStaticMesh::RestoreMesh3(const FStaticMeshLODModel &Lod)
 		// destination
 		FStaticMeshMaterial *DM = new (Materials) FStaticMeshMaterial;
 		FStaticMeshSection  *DS = new (Sections)  FStaticMeshSection;
-		DM->Material   = Sec.Mat;
+		DM->Material   = MATERIAL_CAST2(Sec.Mat);
 		DS->FirstIndex = Sec.FirstIndex;
 		DS->NumFaces   = Sec.NumFaces;
 	}

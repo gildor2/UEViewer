@@ -113,17 +113,17 @@ static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
 	{
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
-		const UObject *Tex = NULL;
+		const UUnrealMaterial *Tex = NULL;
 		if (i < Mesh->Materials.Num())
 		{
 			int texIdx = Mesh->Materials[i].TextureIndex;
 			if (texIdx < Mesh->Textures.Num())
-				Tex = Mesh->Textures[texIdx];
+				Tex = MATERIAL_CAST(Mesh->Textures[texIdx]);
 		}
 		if (Tex)
 		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
-			if (Tex->IsA("UnrealMaterial")) ExportMaterial((const UUnrealMaterial*)Tex);
+			if (Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
 		}
 		else
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
@@ -482,11 +482,11 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 	{
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
-		const UObject *Tex = Mesh->Materials[i].Material;
+		const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Materials[i].Material);
 		if (Tex)
 		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
-			if (Tex->IsA("UnrealMaterial")) ExportMaterial((const UUnrealMaterial*)Tex);
+			if (Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
 		}
 		else
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);

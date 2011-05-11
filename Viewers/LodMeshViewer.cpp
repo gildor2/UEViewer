@@ -92,14 +92,14 @@ void CLodMeshViewer::Dump()
 		Mesh->Faces.Num(),
 		Mesh->CollapseWedgeThus.Num(),
 		Mesh->Wedges.Num(),
-		Mesh->HasImpostor ? "true" : "false", Mesh->SpriteMaterial ? Mesh->SpriteMaterial->Name : "none",
+		Mesh->HasImpostor ? "true" : "false", Mesh->SpriteMaterial ? MATERIAL_CAST(Mesh->SpriteMaterial)->Name : "none",
 		Mesh->SkinTesselationFactor
 	);
 	int i;
 	printf("Textures: %d\n", Mesh->Textures.Num());
 	for (i = 0; i < Mesh->Textures.Num(); i++)
 	{
-		const UMaterial *Tex = Mesh->Textures[i];
+		const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
 		if (Tex)
 			printf("  %d: %s (%s)\n", i, Tex->Name, Tex->GetClassName());
 		else
@@ -171,7 +171,7 @@ void CLodMeshViewer::Draw2D()
 		DrawTextLeft(S_GREEN"Textures: %d", Mesh->Textures.Num());
 		for (int i = 0; i < Mesh->Textures.Num(); i++)
 		{
-			const UMaterial *Tex = Mesh->Textures[i];
+			const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
 			int color = i < 7 ? i + 1 : 7;
 			if (Tex)
 				DrawTextLeft("^%d  %d: %s (%s)", color, i, Tex->Name, Tex->GetClassName());

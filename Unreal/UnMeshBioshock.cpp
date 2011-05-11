@@ -1,8 +1,9 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 #include "UnHavok.h"
-#include "UnMeshTypes.h"		// half2float()
 #include "UnPackage.h"			// to get "Platform"
+
+#include "UnMaterial2.h"		//!! engine dependency
 
 
 #if BIOSHOCK
@@ -713,5 +714,86 @@ void UAnimationPackageWrapper::Process()
 	unguard;
 }
 
+
+struct FStaticMeshVertexBio
+{
+	FVector					Pos;
+	FPackedNormal			Normal[3];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio &V)
+	{
+		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+	}
+
+	operator FStaticMeshVertex() const
+	{
+		FStaticMeshVertex r;
+		r.Pos    = Pos;
+		r.Normal = Normal[2];
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FStaticMeshVertexBio, int)
+
+struct FStaticMeshVertexBio2
+{
+	short					Pos[4];
+	FPackedNormal			Normal[3];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio2 &V)
+	{
+		return Ar << V.Pos[0] << V.Pos[1] << V.Pos[2] << V.Pos[3] << V.Normal[0] << V.Normal[1] << V.Normal[2];
+	}
+
+	operator FStaticMeshVertex() const
+	{
+		FStaticMeshVertex r;
+		r.Pos.X  = half2float(Pos[0]);
+		r.Pos.Y  = half2float(Pos[1]);
+		r.Pos.Z  = half2float(Pos[2]);
+		r.Normal = Normal[2];
+		return r;
+	}
+};
+
+RAW_TYPE(FStaticMeshVertexBio2)
+
+
+void UStaticMesh::SerializeBioshockMesh(FArchive &Ar)
+{
+	guard(UStaticMesh::SerializeBioshockMesh);
+
+	Super::Serialize(Ar);
+	TRIBES_HDR(Ar, 3);
+	Ar << Sections;
+	Ar << BoundingBox;			// UPrimitive field, serialized twice ...
+
+	// serialize VertexStream
+	if (t3_hdrSV < 9)
+	{
+		// Bioshock 1
+		TArray<FStaticMeshVertexBio> BioVerts;
+		Ar << BioVerts;
+		CopyArray(VertexStream.Vert, BioVerts);
+	}
+	else
+	{
+		// Bioshock 2
+		TArray<FStaticMeshVertexBio2> BioVerts2;
+		Ar << BioVerts2;
+		CopyArray(VertexStream.Vert, BioVerts2);
+	}
+	// serialize UVStream
+	Ar << UVStream;
+	// serialize IndexStream
+	Ar << IndexStream1;
+	// also: t3_hdrSV < 2 => IndexStream2
+
+	// skip remaining data
+	Ar.Seek(Ar.GetStopper());
+
+	unguard;
+}
 
 #endif // BIOSHOCK

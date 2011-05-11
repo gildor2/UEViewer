@@ -27,7 +27,7 @@ public:
 	virtual ~CMeshInstance()
 	{}
 
-	void SetMaterial(UMaterial *Mat, int Index, int PolyFlags)
+	void SetMaterial(UUnrealMaterial *Mat, int Index, int PolyFlags)
 	{
 		guard(CMeshInstance::SetMaterial);
 		if (!bColorMaterials)
@@ -82,7 +82,7 @@ public:
 		BaseTransformScaled.origin = (CVec3&)Mesh->MeshOrigin;
 	}
 
-	UMaterial *GetMaterial(int Index, int *PolyFlags = NULL)
+	UUnrealMaterial *GetMaterial(int Index, int *PolyFlags = NULL)
 	{
 		guard(CLodMeshInstance::GetMaterial);
 		int TexIndex = 1000000;
@@ -94,7 +94,7 @@ public:
 			if (PolyFlags) *PolyFlags = M.PolyFlags;
 		}
 		// it is possible, that Textures array is empty (mesh textured by script)
-		return (TexIndex < pMesh->Textures.Num()) ? pMesh->Textures[TexIndex] : NULL;
+		return (TexIndex < pMesh->Textures.Num()) ? MATERIAL_CAST(pMesh->Textures[TexIndex]) : NULL;
 		unguard;
 	}
 
@@ -102,7 +102,7 @@ public:
 	{
 		guard(CLodMeshInstance::SetMaterial);
 		int PolyFlags;
-		UMaterial *Mat = GetMaterial(Index, &PolyFlags);
+		UUnrealMaterial *Mat = GetMaterial(Index, &PolyFlags);
 		CMeshInstance::SetMaterial(Mat, Index, PolyFlags);
 		unguard;
 	}

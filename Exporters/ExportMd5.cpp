@@ -217,15 +217,15 @@ if (i == 32 || i == 34)
 		}
 
 		// mesh header
-		const UObject *Tex = NULL;
+		const UUnrealMaterial *Tex = NULL;
 		if (m < Mesh->Materials.Num())
 		{
 			int texIdx = Mesh->Materials[m].TextureIndex;
 			if (texIdx < Mesh->Textures.Num())
-				Tex = Mesh->Textures[texIdx];
+				Tex = MATERIAL_CAST(Mesh->Textures[texIdx]);
 		}
 
-		if (Tex && Tex->IsA("UnrealMaterial")) ExportMaterial((const UUnrealMaterial*)Tex);
+		if (Tex && Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
 
 		if (Tex)
 		{

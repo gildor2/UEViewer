@@ -1601,7 +1601,7 @@ void CSkelMeshInstance::DrawMesh()
 	{
 		for (i = 0; i < NumSections; i++)
 		{
-			UMaterial *Mat = GetMaterial(i);
+			UUnrealMaterial *Mat = GetMaterial(i);
 			int op = 0;			// sort value
 			if (Mat && Mat->IsTranslucent()) op = 1;
 			if (op == opacity) SectionMap[secPlace++] = i;

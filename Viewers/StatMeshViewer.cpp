@@ -67,8 +67,9 @@ void CStatMeshViewer::Dump()
 	for (i = 0; i < Mesh->Materials.Num(); i++)
 	{
 		const FStaticMeshMaterial &Mat = Mesh->Materials[i];
-		if (Mat.Material)
-			printf("  %d: %s'%s'\n", i, Mat.Material->GetClassName(), Mat.Material->Name);
+		UUnrealMaterial *Tex = MATERIAL_CAST(Mat.Material);
+		if (Tex)
+			printf("  %d: %s'%s'\n", i, Tex->GetClassName(), Tex->Name);
 		else
 			printf("  %d: NULL\n", i);
 	}
@@ -93,7 +94,7 @@ void CStatMeshViewer::Draw2D()
 		DrawTextLeft(S_GREEN"Textures: %d", Mesh->Materials.Num());
 		for (int i = 0; i < Mesh->Materials.Num(); i++)
 		{
-			const UMaterial *Tex = Mesh->Materials[i].Material;
+			const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Materials[i].Material);
 			int color = i < 7 ? i + 1 : 7;
 			if (Tex)
 				DrawTextLeft("^%d  %d: %s (%s)", color, i, Tex->Name, Tex->GetClassName());

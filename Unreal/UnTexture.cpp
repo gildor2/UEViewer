@@ -16,6 +16,9 @@
 #include "UnMaterial.h"
 #include "UnPackage.h"
 
+#include "UnMaterial2.h"
+#include "UnMaterial3.h"
+
 
 #if IPHONE
 #	include <PVRTDecompress.h>
