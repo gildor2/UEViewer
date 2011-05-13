@@ -7,7 +7,7 @@ PLATFORM="vc-win32"
 #?? check this, when cross-compile under wine
 [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
 
-#export vc_ver=9
+export vc_ver=9
 
 [ "$project" ] || project="umodel"		# setup default prohect name
 [ "$root"    ] || root="."

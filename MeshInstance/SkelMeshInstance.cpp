@@ -6,6 +6,18 @@
 #include "MeshInstance.h"
 #include "GlWindow.h"
 
+#define USE_SSE					1
+
+#if USE_SSE
+#include "MathSSE.h"
+
+typedef CVec4			CVecT;
+
+#else
+
+typedef CVec3			CVecT;
+
+#endif
 
 // debugging
 //#define CHECK_INFLUENCES		1
@@ -13,6 +25,7 @@
 #define SHOW_TANGENTS			1
 //#define SHOW_ANIM				1
 #define SHOW_BONE_UPDATES		1
+//#define PROFILE_MESH			1
 
 #define SORT_BY_OPACITY			1
 
@@ -30,6 +43,9 @@ struct CMeshBoneData
 	// current pose
 	CCoords		Coords;				// current coordinates of bone, model-space
 	CCoords		Transform;			// used to transform vertex from reference pose to current pose
+#if USE_SSE
+	CCoords4	Transform4;			// SSE version
+#endif
 	// data for tweening; bone-space
 	CVec3		Pos;				// current position of bone
 	CQuat		Quat;				// current orientation quaternion
@@ -40,8 +56,8 @@ struct CMeshBoneData
 
 struct CMeshWedge
 {
-	CVec3		Pos;
-	CVec3		Normal, Tangent, Binormal;
+	CVecT		Pos;
+	CVecT		Normal, Tangent, Binormal;
 	float		U, V;
 	int			Bone[NUM_INFLUENCES];	// Bone < 0 - end of list
 	float		Weight[NUM_INFLUENCES];
@@ -50,8 +66,8 @@ struct CMeshWedge
 
 struct CSkinVert
 {
-	CVec3		Pos;
-	CVec3		Normal, Tangent, Binormal;
+	CVecT		Pos;
+	CVecT		Normal, Tangent, Binormal;
 };
 
 
@@ -74,14 +90,7 @@ struct CSkinSection
 
 CSkelMeshInstance::~CSkelMeshInstance()
 {
-	if (BoneData)
-	{
-		delete BoneData;
-		delete Wedges;
-		delete Skinned;
-		delete Sections;
-		delete Indices;
-	}
+	if (DataBlock) delete DataBlock;
 	if (InfColors) delete InfColors;
 }
 
@@ -292,7 +301,7 @@ static void BuildNormals(CMeshWedge *Wedges, int NumPoints, const TArray<FMeshWe
 		for (j = 0; j < 3; j++) W[j] = &Wedges[Face.WedgeIndex[j]];
 
 		// compute tangent
-		CVec3 tang;
+		CVecT tang;
 		if (W[2]->V == W[0]->V)
 		{
 			// W[0] -> W[2] -- axis for tangent
@@ -303,7 +312,7 @@ static void BuildNormals(CMeshWedge *Wedges, int NumPoints, const TArray<FMeshWe
 		else
 		{
 			float pos = (W[1]->V - W[0]->V) / (W[2]->V - W[0]->V);	// fraction, where W[1] is placed betwen W[0] and W[2] (may be < 0 or > 1)
-			CVec3 tmp;
+			CVecT tmp;
 			Lerp(W[0]->Pos, W[2]->Pos, pos, tmp);
 			VectorSubtract(tmp, W[1]->Pos, tang);
 			// tang.V == W[1].V; but tang.U may be greater or smaller than W[1].U
@@ -317,9 +326,9 @@ static void BuildNormals(CMeshWedge *Wedges, int NumPoints, const TArray<FMeshWe
 		for (j = 0; j < 3; j++)
 		{
 			CMeshWedge &DW = *W[j];
-			const CVec3 &norm = DW.Normal;
+			const CVecT &norm = DW.Normal;
 			float pos = dot(norm, tang);
-			CVec3 tang2;
+			CVecT tang2;
 			VectorMA(tang, -pos, norm, tang2);
 			tang2.Normalize();
 			DW.Tangent = tang2;
@@ -489,25 +498,25 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 	}
 	NumSections++;		// before this, NumMaterials = max index of used material
 
-	// allocate some arrays
-	if (BoneData)
-	{
-		delete BoneData;
-		delete Wedges;
-		delete Skinned;
-		delete Sections;
-		delete Indices;
-	}
+	// free old data
+	if (DataBlock) delete DataBlock;
 	if (InfColors)
 	{
 		delete InfColors;
 		InfColors = NULL;
 	}
-	BoneData = new CMeshBoneData[NumBones];
-	Wedges   = new CMeshWedge   [NumWedges];
-	Skinned  = new CSkinVert    [NumWedges];
-	Sections = new CSkinSection [NumSections];
-	Indices  = new int          [Mesh->Triangles.Num() * 3];
+	// allocate some arrays in a single block
+	int DataSize = sizeof(CMeshBoneData) * NumBones +
+				   sizeof(CMeshWedge) * NumWedges +
+				   sizeof(CSkinVert) * NumWedges +
+				   sizeof(CSkinSection) * NumSections +
+				   sizeof(int) * Mesh->Triangles.Num() * 3;
+	DataBlock = new byte[DataSize + 15];	// for 16-byte alignment
+	BoneData  = (CMeshBoneData*) Align(DataBlock, 16);
+	Wedges    = (CMeshWedge*)   (BoneData + NumBones);
+	Skinned   = (CSkinVert*)    (Wedges   + NumWedges);
+	Sections  = (CSkinSection*) (Skinned  + NumWedges);
+	Indices   = (int*)          (Sections + NumSections);
 
 	LastLodNum = -2;
 
@@ -1115,6 +1124,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 		// compute transformation of world-space model vertices from reference
 		// pose to desired pose
 		BC.UnTransformCoords(data->RefCoordsInv, data->Transform);
+#if USE_SSE
+		data->Transform4.Set(data->Transform);
+#endif
 #if 0
 //!!
 if (i == 32 || i == 34)
@@ -1473,6 +1485,13 @@ void CSkelMeshInstance::DrawAttachments()
 void CSkelMeshInstance::TransformMesh()
 {
 	guard(CSkelMeshInstance::TransformMesh);
+
+#if USE_SSE
+	staticAssert((sizeof(CMeshBoneData) & 15) == 0, CMeshBoneData_not_mul16);
+	staticAssert((sizeof(CMeshWedge) & 15) == 0, CMeshWedge_not_mul16);
+	staticAssert((sizeof(CSkinVert) & 15) == 0, CSkinVert_not_mul16);
+#endif // USE_SSE
+
 	//?? try other tech: compute weighted sum of matrices, and then
 	//?? transform vector (+ normal ?; note: normals requires normalized
 	//?? transformations ?? (or normalization guaranteed by sum(weights)==1?))
@@ -1505,9 +1524,10 @@ void CSkelMeshInstance::TransformMesh()
 			int iBone = W.Bone[j];
 			if (iBone < 0) break;
 			assert(iBone < static_cast<const USkeletalMesh*>(pMesh)->RefSkeleton.Num());	// validate bone index
-			float Weight = W.Weight[j];
 
 			const CMeshBoneData &data = BoneData[iBone];
+#if !USE_SSE
+			float Weight = W.Weight[j];
 			CVec3 tmp;
 			// transform vertex
 			data.Transform.UnTransformPoint(W.Pos, tmp);
@@ -1521,6 +1541,51 @@ void CSkelMeshInstance::TransformMesh()
 			// transform binormal
 			data.Transform.axis.UnTransformVector(W.Binormal, tmp);
 			VectorMA(D.Binormal, Weight, tmp);
+#else
+			__m128 x1, x2, x3, x4, x5, x6, x7, x8;
+			x1 = data.Transform4.mm[0];				// bone transform
+			x2 = data.Transform4.mm[1];
+			x3 = data.Transform4.mm[2];
+			x4 = data.Transform4.mm[3];
+			x5 = _mm_load1_ps(&W.Weight[j]);		// Weight
+			x1 = _mm_mul_ps(x1, x5);				// prescale transform with weight (this will free 1 XMM register)
+			x2 = _mm_mul_ps(x2, x5);
+			x3 = _mm_mul_ps(x3, x5);
+			x4 = _mm_mul_ps(x4, x5);
+
+#define TRANSFORM_POS(value)													\
+			x5 = W.value.mm;													\
+			x8 = x4;								/* Coords.origin */			\
+			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
+			x7 = _mm_mul_ps(x1, x6);											\
+			x8 = _mm_add_ps(x8, x7);											\
+			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
+			x7 = _mm_mul_ps(x2, x6);											\
+			x8 = _mm_add_ps(x8, x7);											\
+			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(2,2,2,2));	/* Z */			\
+			x7 = _mm_mul_ps(x3, x6);											\
+			x8 = _mm_add_ps(x8, x7);											\
+			D.value.mm = _mm_add_ps(D.value.mm, x8);
+
+// version of code above, but without Transform.origin use
+#define TRANSFORM_NORMAL(value)													\
+			x5 = W.value.mm;													\
+			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
+			x8 = _mm_mul_ps(x1, x6);											\
+			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
+			x7 = _mm_mul_ps(x2, x6);											\
+			x8 = _mm_add_ps(x8, x7);											\
+			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(2,2,2,2));	/* Z */			\
+			x7 = _mm_mul_ps(x3, x6);											\
+			x8 = _mm_add_ps(x8, x7);											\
+			D.value.mm = _mm_add_ps(D.value.mm, x8);
+
+			TRANSFORM_POS(Pos);
+			TRANSFORM_NORMAL(Normal);
+			TRANSFORM_NORMAL(Tangent);
+			TRANSFORM_NORMAL(Binormal);
+#endif // USE_SSE
+
 #if CHECK_INFLUENCES
 			#error adapt
 			if (Inf.Weight <= 0 || Inf.Weight > 1)
@@ -1551,6 +1616,7 @@ void CSkelMeshInstance::TransformMesh()
 			DrawTextLeft("point[%d] have bad inf sum = %g", j, infAccum[j]);
 	delete infAccum;
 #endif
+
 	unguard;
 }
 
@@ -1569,7 +1635,13 @@ void CSkelMeshInstance::DrawMesh()
 	return;
 #endif
 
+#if PROFILE_MESH
+	int timeBeforeTransform = appMilliseconds();
+#endif
 	TransformMesh();
+#if PROFILE_MESH
+	int timeAfterTransform = appMilliseconds();
+#endif
 
 	glEnable(GL_LIGHTING);
 
@@ -1699,24 +1771,35 @@ void CSkelMeshInstance::DrawMesh()
 		glColor3f(0, 0.5f, 1);
 		for (i = 0; i < NumWedges; i++)
 		{
-			const CVec3 &v = Skinned[i].Pos;
+			const CVecT &v = Skinned[i].Pos;
 			glVertex3fv(v.v);
-			CVec3 tmp;
+			CVecT tmp;
 			VectorMA(v, 1, Skinned[i].Tangent, tmp);
 			glVertex3fv(tmp.v);
 		}
 		glColor3f(1, 0, 0.5f);
 		for (i = 0; i < NumWedges; i++)
 		{
-			const CVec3 &v = Skinned[i].Pos;
+			const CVecT &v = Skinned[i].Pos;
 			glVertex3fv(v.v);
-			CVec3 tmp;
+			CVecT tmp;
 			VectorMA(v, 1, Skinned[i].Binormal, tmp);
 			glVertex3fv(tmp.v);
 		}
 #endif // SHOW_TANGENTS
 		glEnd();
 	}
+
+#if PROFILE_MESH
+	int timeAfterDraw = appMilliseconds();
+	DrawTextRight(
+		"Mesh:\n"
+		"skinning:  %3d ms\n"
+		"rendering: %3d ms\n",
+		timeAfterTransform - timeBeforeTransform,
+		timeAfterDraw - timeAfterTransform
+	);
+#endif // PROFILE_MESH
 
 	unguard;
 }

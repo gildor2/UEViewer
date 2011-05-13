@@ -239,6 +239,7 @@ public:
 	,	LastLodNum(-2)				// differs from LodNum and from all other values
 	,	MaxAnimChannel(-1)
 	,	Animation(NULL)
+	,	DataBlock(NULL)
 	,	BoneData(NULL)
 	,	Wedges(NULL)
 	,	Skinned(NULL)
@@ -333,6 +334,7 @@ public:
 protected:
 	const UMeshAnimation *Animation;
 	// mesh data
+	byte				 *DataBlock;// all following data is resided here
 	struct CMeshBoneData *BoneData;
 	struct CMeshWedge    *Wedges;	// bindpose
 	struct CSkinVert     *Skinned;	// soft-skinned vertices

@@ -9,7 +9,7 @@ OPTIMIZE   = size
 
 #PDB        = 1
 
-OLDCRT     = 0
+OLDCRT     = 1
 
 !if "$PLATFORM" ne "win32"
 	# linux/cygwin + GCC
@@ -51,7 +51,8 @@ OLDCRT     = 0
 
 !if "$COMPILER" eq "GnuC"
 	LIBC      = shared
-	OPTIONS   =  -fno-strict-aliasing	# required for our uint_cast()-based FP hacks
+	OPTIONS   = -msse					# enable SSE instructions
+	OPTIONS   += -fno-strict-aliasing	# required for our uint_cast()-based FP hacks
 	OPTIONS   += -fno-stack-protector	# this will remove GLIBC_2.4 dependency
 	OPTIONS   += {
 		# disable some warnings

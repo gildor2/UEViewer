@@ -188,6 +188,9 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+13.05.2011
+- software skinning code were remade using SSE instructions, works 3 times faster now
+
 07.05.2011
 - implemented Medal of Honor: Airborne StaticMesh support
 

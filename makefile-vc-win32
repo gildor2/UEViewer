@@ -21,6 +21,7 @@ MAIN : umodel.exe
 #------------------------------------------------------------------------------
 
 MAIN = \
+	./obj/oldcrt/crtexe2.obj \
 	./obj/umodel-win32/Main.obj \
 	./obj/umodel-win32/Export3D.obj \
 	./obj/umodel-win32/Exporters.obj \
@@ -72,17 +73,18 @@ MAIN = \
 	./obj/umodel-win32/PVRTDecompress.obj
 
 MAIN_DIRS = \
+	./obj/oldcrt \
 	./obj/umodel-win32
 
 umodel.exe : $(MAIN_DIRS) $(MAIN)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs -libpath:./libs/xbox SDL.lib SDLmain.lib $(MAIN) -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs -libpath:./libs/xbox SDL.lib SDLmain.lib $(MAIN) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no "c:/!msvcrt"/lib/Win32/msvcrt.lib "c:/!msvcrt"/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -O1 -EHs- -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt -I ./libs/PowerVR
+OPT_MAIN = -GS- -GR- -GS- -GR- -O1 -EHs- -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt -I ./libs/PowerVR
 
 ./obj/umodel-win32/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -92,6 +94,11 @@ OPT_MAIN = -O1 -EHs- -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unre
 
 ./obj/umodel-win32/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Image.obj" ./libs/nvtt/nvimage/Image.cpp
+
+OPT_MAIN_2 = -GS- -GR- -O1 -EHs- -D CRTDLL -D _CRTBLD -I ./libs/oldcrt -I ./libs/oldcrt/PlatformSDK
+
+./obj/oldcrt/crtexe2.obj : ./libs/oldcrt/crtexe2.c
+	$(CPP) -MD $(OPT_MAIN_2) -Fo"./obj/oldcrt/crtexe2.obj" ./libs/oldcrt/crtexe2.c
 
 DEPENDS = \
 	Build.h \
@@ -117,6 +124,25 @@ DEPENDS = \
 
 ./obj/umodel-win32/GlWindow.obj : Core/GlWindow.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/GlWindow.obj" Core/GlWindow.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+./obj/umodel-win32/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS = \
 	Build.h \
@@ -173,24 +199,6 @@ DEPENDS = \
 
 ./obj/umodel-win32/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-win32/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS = \
 	Build.h \
@@ -621,6 +629,9 @@ DEPENDS = \
 #------------------------------------------------------------------------------
 #	creating output directories
 #------------------------------------------------------------------------------
+
+./obj/oldcrt:
+	if not exist "./obj/oldcrt" mkdir "./obj/oldcrt"
 
 ./obj/umodel-win32:
 	if not exist "./obj/umodel-win32" mkdir "./obj/umodel-win32"

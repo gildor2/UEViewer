@@ -82,7 +82,7 @@ umodel : $(MAIN_DIRS) $(MAIN)
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR
+OPT_MAIN = -msse -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR
 
 ./obj/umodel-unix/ColorBlock.o : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ColorBlock.o ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -125,20 +125,17 @@ DEPENDS_3 = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
-	Exporters/Exporters.h \
-	Unreal/UnAnimNotify.h \
+	Core/MathSSE.h \
+	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnSound.h \
-	Unreal/UnThirdParty.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
+	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/Main.o : Main.cpp $(DEPENDS_3)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Main.o Main.cpp
+./obj/umodel-unix/SkelMeshInstance.o : MeshInstance/SkelMeshInstance.cpp $(DEPENDS_3)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/SkelMeshInstance.o MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS_4 = \
 	Build.h \
@@ -147,30 +144,22 @@ DEPENDS_4 = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
+	Exporters/Exporters.h \
+	Unreal/UnAnimNotify.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
+	Unreal/UnSound.h \
+	Unreal/UnThirdParty.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-./obj/umodel-unix/LodMeshViewer.o : Viewers/LodMeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/LodMeshViewer.o Viewers/LodMeshViewer.cpp
-
-./obj/umodel-unix/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/MeshViewer.o Viewers/MeshViewer.cpp
-
-./obj/umodel-unix/SkelMeshViewer.o : Viewers/SkelMeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/SkelMeshViewer.o Viewers/SkelMeshViewer.cpp
-
-./obj/umodel-unix/StatMeshViewer.o : Viewers/StatMeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/StatMeshViewer.o Viewers/StatMeshViewer.cpp
-
-./obj/umodel-unix/VertMeshViewer.o : Viewers/VertMeshViewer.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/VertMeshViewer.o Viewers/VertMeshViewer.cpp
+./obj/umodel-unix/Main.o : Main.cpp $(DEPENDS_4)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Main.o Main.cpp
 
 DEPENDS_5 = \
 	Build.h \
@@ -185,10 +174,24 @@ DEPENDS_5 = \
 	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
 
-./obj/umodel-unix/SkelMeshInstance.o : MeshInstance/SkelMeshInstance.cpp $(DEPENDS_5)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/SkelMeshInstance.o MeshInstance/SkelMeshInstance.cpp
+./obj/umodel-unix/LodMeshViewer.o : Viewers/LodMeshViewer.cpp $(DEPENDS_5)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/LodMeshViewer.o Viewers/LodMeshViewer.cpp
+
+./obj/umodel-unix/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_5)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/MeshViewer.o Viewers/MeshViewer.cpp
+
+./obj/umodel-unix/SkelMeshViewer.o : Viewers/SkelMeshViewer.cpp $(DEPENDS_5)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/SkelMeshViewer.o Viewers/SkelMeshViewer.cpp
+
+./obj/umodel-unix/StatMeshViewer.o : Viewers/StatMeshViewer.cpp $(DEPENDS_5)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/StatMeshViewer.o Viewers/StatMeshViewer.cpp
+
+./obj/umodel-unix/VertMeshViewer.o : Viewers/VertMeshViewer.cpp $(DEPENDS_5)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/VertMeshViewer.o Viewers/VertMeshViewer.cpp
 
 DEPENDS_6 = \
 	Build.h \
@@ -200,6 +203,8 @@ DEPENDS_6 = \
 	Unreal/Shaders.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
@@ -215,6 +220,8 @@ DEPENDS_7 = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
@@ -354,8 +361,8 @@ DEPENDS_16 = \
 	Unreal/UnCore.h \
 	Unreal/UnHavok.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
 	Unreal/UnMesh.h \
-	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
@@ -387,15 +394,14 @@ DEPENDS_18 = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMeshTypes.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h
+	libs/ddslib.h
 
-./obj/umodel-unix/UnMesh3.o : Unreal/UnMesh3.cpp $(DEPENDS_18)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh3.o Unreal/UnMesh3.cpp
+./obj/umodel-unix/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_18)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnTexture.o Unreal/UnTexture.cpp
 
 DEPENDS_19 = \
 	Build.h \
@@ -405,6 +411,7 @@ DEPENDS_19 = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
 	Unreal/UnMesh.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
@@ -422,10 +429,16 @@ DEPENDS_20 = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
+	Unreal/UnMaterial3.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
 
-./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_20)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
+./obj/umodel-unix/UnMesh3.o : Unreal/UnMesh3.cpp $(DEPENDS_20)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnMesh3.o Unreal/UnMesh3.cpp
 
 DEPENDS_21 = \
 	Build.h \
@@ -435,12 +448,10 @@ DEPENDS_21 = \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	libs/ddslib.h
+	Unreal/UnObject.h
 
-./obj/umodel-unix/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_21)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnTexture.o Unreal/UnTexture.cpp
+./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_21)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
 
 DEPENDS_22 = \
 	Build.h \

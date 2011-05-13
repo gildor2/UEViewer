@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
 
 #include "Build.h"
@@ -28,6 +29,7 @@
 #define BYTES4(a,b,c,d)	((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
 
 
+#undef assert
 #define assert(x)	\
 	if (!(x))		\
 	{				\
