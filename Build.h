@@ -68,7 +68,7 @@
 #define BLADENSOUL		1		// Blade & Soul
 #define APB				1		// All Points Bulletin
 #define ALPHA_PR		1		// Alpha Protocol
-#define TRANSFORMERS	1		// Transformers: War for Cybertron and The Bourne Conspiracy
+#define TRANSFORMERS	1		// Transformers: War for Cybertron, The Bourne Conspiracy, Transformers: Dark of the Moon
 #define MORTALONLINE	1		// Mortal Online
 #define ENSLAVED		1
 #define MOHA			1		// Medal of Honor: Airborne
@@ -79,6 +79,10 @@
 #define UNDERTOW		1
 #define SINGULARITY		1
 #define TRON			1		// TRON: Evolution
+#define NURIEN			1
+#define HUNTED			1		// Hunted: The Demon's Forge
+#define DND				1		// Dungeons & Dragons: Daggerdale
+#define SHADOWS_DAMNED	1		// Shadows of the Damned
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??
@@ -88,7 +92,7 @@
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
 
-#define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG: Killing Floor, Nurien
+#define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG: Killing Floor
 
 // some private games
 #if PRIVATE_BUILD

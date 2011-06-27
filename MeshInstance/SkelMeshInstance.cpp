@@ -20,7 +20,6 @@ typedef CVec3			CVecT;
 #endif
 
 // debugging
-//#define CHECK_INFLUENCES		1
 //#define SHOW_INFLUENCES		1
 #define SHOW_TANGENTS			1
 //#define SHOW_ANIM				1
@@ -568,45 +567,6 @@ if (i == 32 || i == 34)
 		// initialize skeleton configuration
 		data->Scale = 1.0f;			// default bone scale
 	}
-
-#if 0
-	-- done in BuildWedges()
-	// normalize VertInfluences: sum of all influences may be != 1
-	// (possible situation, see SkaarjAnims/Skaarj2, SkaarjAnims/Skaarj_Skel, XanRobots/XanF02)
-	//!! should be done in USkeletalMesh
-	float *VertSumWeights = new float[NumVerts];	// zeroed
-	int   *VertInfCount   = new int  [NumVerts];	// zeroed
-	// count sum of weights for all verts
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
-	{
-		const FVertInfluences &Inf = Mesh->VertInfluences[i];
-		int PointIndex = Inf.PointIndex;
-		assert(PointIndex < NumVerts);
-		VertSumWeights[PointIndex] += Inf.Weight;
-		VertInfCount  [PointIndex]++;
-	}
-/*
-	// notify about wrong weights
-	for (i = 0; i < NumVerts; i++)
-	{
-		if (fabs(VertSumWeights[i] - 1.0f) < 0.01f) continue;
-		appNotify("Vert[%d] weight sum=%g (%d weights)", i, VertSumWeights[i], VertInfCount[i]);
-	}
-*/
-	// normalize weights
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
-	{
-		FVertInfluences &Inf = const_cast<USkeletalMesh*>(Mesh)->VertInfluences[i]; // to avoid const_cast, implement in mesh
-		int PointIndex = Inf.PointIndex;
-		float sum = VertSumWeights[PointIndex];
-		if (fabs(sum - 1.0f) < 0.01f) continue;
-		assert(sum > 0.01f);	// no division by zero
-		Inf.Weight = Inf.Weight / sum;
-	}
-
-	delete VertSumWeights;
-	delete VertInfCount;
-#endif
 
 	// check bones tree
 	if (NumBones)
@@ -1375,7 +1335,13 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 static void GetBoneInfColor(int BoneIndex, CVec3 &Color)
 {
 	static float table[] = {0.1f, 0.4f, 0.7f, 1.0f};
+#if 0
 	Color.Set(table[BoneIndex & 3], table[(BoneIndex >> 2) & 3], table[(BoneIndex >> 4) & 3]);
+#else
+	#define C(x)	( (x) & 1 ) | ( ((x) >> 2) & 2 )
+	Color.Set(table[C(BoneIndex)], table[C(BoneIndex >> 1)], table[C(BoneIndex >> 2)]);
+	#undef C
+#endif
 }
 
 
@@ -1496,30 +1462,33 @@ void CSkelMeshInstance::TransformMesh()
 	//?? transform vector (+ normal ?; note: normals requires normalized
 	//?? transformations ?? (or normalization guaranteed by sum(weights)==1?))
 	memset(Skinned, 0, sizeof(CSkinVert) * NumWedges);
-#if CHECK_INFLUENCES
-	#error "will not function now - verts are converted to wedges"
-	float *infAccum = new float[NumVerts];
-	memset(infAccum, 0, sizeof(float) * NumVerts);
-#endif
-
-#if 0
-	//!!
-	bool vertUsed[32768];
-	memset(&vertUsed, 0, sizeof(vertUsed));
-	int j;
-	for (j = 0; j < NumInfs; j++)
-	{
-		int idx = Infs[j].PointIndex;
-		if (Infs[j].BoneIndex == 34 && (Verts[idx].X < -27) && (Verts[idx].X > -28))
-			vertUsed[idx] = true;
-	}
-#endif
 
 	for (int i = 0; i < NumWedges; i++)
 	{
 		const CMeshWedge &W = Wedges[i];
 		CSkinVert        &D = Skinned[i];
-		for (int j = 0; j < NUM_INFLUENCES; j++)
+
+		// compute weighted transform from all influences
+		// take a 1st influence
+#if !USE_SSE
+		CCoords transform;
+		transform = BoneData[W.Bone[0]].Transform;
+		transform.Scale(W.Weight[0]);
+#else
+		const CCoords4 &transform = BoneData[W.Bone[0]].Transform4;
+		__m128 x1, x2, x3, x4, x5, x6, x7, x8;
+		x1 = transform.mm[0];					// bone transform
+		x2 = transform.mm[1];
+		x3 = transform.mm[2];
+		x4 = transform.mm[3];
+		x5 = _mm_load1_ps(&W.Weight[0]);		// Weight
+		x1 = _mm_mul_ps(x1, x5);				// Transform * Weight
+		x2 = _mm_mul_ps(x2, x5);
+		x3 = _mm_mul_ps(x3, x5);
+		x4 = _mm_mul_ps(x4, x5);
+#endif // USE_SSE
+		// add remaining influences
+		for (int j = 1; j < NUM_INFLUENCES; j++)
 		{
 			int iBone = W.Bone[j];
 			if (iBone < 0) break;
@@ -1527,95 +1496,64 @@ void CSkelMeshInstance::TransformMesh()
 
 			const CMeshBoneData &data = BoneData[iBone];
 #if !USE_SSE
-			float Weight = W.Weight[j];
-			CVec3 tmp;
-			// transform vertex
-			data.Transform.UnTransformPoint(W.Pos, tmp);
-			VectorMA(D.Pos, Weight, tmp);
-			// transform normal
-			data.Transform.axis.UnTransformVector(W.Normal, tmp);
-			VectorMA(D.Normal, Weight, tmp);
-			// transform tangent
-			data.Transform.axis.UnTransformVector(W.Tangent, tmp);
-			VectorMA(D.Tangent, Weight, tmp);
-			// transform binormal
-			data.Transform.axis.UnTransformVector(W.Binormal, tmp);
-			VectorMA(D.Binormal, Weight, tmp);
+			CoordsMA(transform, W.Weight[j], data.Transform);
 #else
-			__m128 x1, x2, x3, x4, x5, x6, x7, x8;
-			x1 = data.Transform4.mm[0];				// bone transform
-			x2 = data.Transform4.mm[1];
-			x3 = data.Transform4.mm[2];
-			x4 = data.Transform4.mm[3];
-			x5 = _mm_load1_ps(&W.Weight[j]);		// Weight
-			x1 = _mm_mul_ps(x1, x5);				// prescale transform with weight (this will free 1 XMM register)
-			x2 = _mm_mul_ps(x2, x5);
-			x3 = _mm_mul_ps(x3, x5);
-			x4 = _mm_mul_ps(x4, x5);
+			x5 = _mm_load1_ps(&W.Weight[j]);	// Weight
+			// x1..x4 += data.Transform * Weight
+			x6 = _mm_mul_ps(data.Transform4.mm[0], x5);
+			x1 = _mm_add_ps(x1, x6);
+			x6 = _mm_mul_ps(data.Transform4.mm[1], x5);
+			x2 = _mm_add_ps(x2, x6);
+			x6 = _mm_mul_ps(data.Transform4.mm[2], x5);
+			x3 = _mm_add_ps(x3, x6);
+			x6 = _mm_mul_ps(data.Transform4.mm[3], x5);
+			x4 = _mm_add_ps(x4, x6);
+#endif // USE_SSE
+		}
 
-#define TRANSFORM_POS(value)													\
-			x5 = W.value.mm;													\
-			x8 = x4;								/* Coords.origin */			\
-			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
-			x7 = _mm_mul_ps(x1, x6);											\
-			x8 = _mm_add_ps(x8, x7);											\
-			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
-			x7 = _mm_mul_ps(x2, x6);											\
-			x8 = _mm_add_ps(x8, x7);											\
-			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(2,2,2,2));	/* Z */			\
-			x7 = _mm_mul_ps(x3, x6);											\
-			x8 = _mm_add_ps(x8, x7);											\
-			D.value.mm = _mm_add_ps(D.value.mm, x8);
+#if !USE_SSE
+		// transform vertex
+		transform.UnTransformPoint(W.Pos, D.Pos);
+		// transform normal
+		transform.axis.UnTransformVector(W.Normal, D.Normal);
+		// transform tangent
+		transform.axis.UnTransformVector(W.Tangent, D.Tangent);
+		// transform binormal
+		transform.axis.UnTransformVector(W.Binormal, D.Binormal);
+#else
+		// at this point we have x1..x4 = transform matrix
+
+#define TRANSFORM_POS(value)												\
+		x5 = W.value.mm;													\
+		x8 = x4;								/* Coords.origin */			\
+		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
+		x7 = _mm_mul_ps(x1, x6);											\
+		x8 = _mm_add_ps(x8, x7);											\
+		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
+		x7 = _mm_mul_ps(x2, x6);											\
+		x8 = _mm_add_ps(x8, x7);											\
+		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(2,2,2,2));	/* Z */			\
+		x7 = _mm_mul_ps(x3, x6);											\
+		D.value.mm = _mm_add_ps(x8, x7);
 
 // version of code above, but without Transform.origin use
-#define TRANSFORM_NORMAL(value)													\
-			x5 = W.value.mm;													\
-			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
-			x8 = _mm_mul_ps(x1, x6);											\
-			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
-			x7 = _mm_mul_ps(x2, x6);											\
-			x8 = _mm_add_ps(x8, x7);											\
-			x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(2,2,2,2));	/* Z */			\
-			x7 = _mm_mul_ps(x3, x6);											\
-			x8 = _mm_add_ps(x8, x7);											\
-			D.value.mm = _mm_add_ps(D.value.mm, x8);
+#define TRANSFORM_NORMAL(value)												\
+		x5 = W.value.mm;													\
+		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
+		x8 = _mm_mul_ps(x1, x6);											\
+		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
+		x7 = _mm_mul_ps(x2, x6);											\
+		x8 = _mm_add_ps(x8, x7);											\
+		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(2,2,2,2));	/* Z */			\
+		x7 = _mm_mul_ps(x3, x6);											\
+		D.value.mm = _mm_add_ps(x8, x7);
 
-			TRANSFORM_POS(Pos);
-			TRANSFORM_NORMAL(Normal);
-			TRANSFORM_NORMAL(Tangent);
-			TRANSFORM_NORMAL(Binormal);
+		TRANSFORM_POS(Pos);
+		TRANSFORM_NORMAL(Normal);
+		TRANSFORM_NORMAL(Tangent);
+		TRANSFORM_NORMAL(Binormal);
 #endif // USE_SSE
-
-#if CHECK_INFLUENCES
-			#error adapt
-			if (Inf.Weight <= 0 || Inf.Weight > 1)
-				DrawTextLeft("point[%d] have bad inf = %g", PointIndex, Inf.Weight);
-			infAccum[PointIndex] += Inf.Weight;
-#endif
-#if 0
-			//!!
-			if (vertUsed[PointIndex])
-				DrawTextLeft("%d: v[%g %g %g] b[%d] w[%g]", PointIndex, FVECTOR_ARG(Verts[PointIndex]), Inf.BoneIndex, Inf.Weight);
-			else
-				MeshVerts[PointIndex].Set(0, 0, 0);
-#endif
-		}
 	}
-
-#if 0
-	//!!
-	DrawTextLeft("--------");
-	for (j = 0; j < NumVerts; j++)
-		if (vertUsed[j])
-			DrawTextLeft("%5d: %7.2f %7.2f %7.2f", j, VECTOR_ARG(MeshVerts[j]));
-#endif
-#if CHECK_INFLUENCES
-	#error adapt
-	for (int j = 0; j < NumVerts; j++)
-		if (infAccum[j] < 0.9999f || infAccum[j] > 1.0001f)
-			DrawTextLeft("point[%d] have bad inf sum = %g", j, infAccum[j]);
-	delete infAccum;
-#endif
 
 	unguard;
 }

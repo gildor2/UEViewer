@@ -126,18 +126,14 @@ sub tableFooter {
         <td style="border-style: none; font-size: 8px;"><div align="left">
           <p><span class="detailbold">Year:</span> <span class="detailtxt">By clicking on the year for an entry, it will take you to the thread on the form that talks about this game.</span></p>
           <p><span class="detailbold">Title:</span> <span class="detailtxt">By clicking on the title of a game, it will take you to the Wikipedia information for that game. If the Wikipedia does not exist it will take you to their website or other press release.</span></p>
-          <!--p><span class="detailbold">Engine:</span> <span class="detailtxt">By clicking on the engine, it will open a new page and display any issues that may be present with this game.</span></p-->
           <p><span class="detailbold">Developer:</span> <span class="detailtxt">By clicking on Developer for an entry it will take you to the Wikipedia information for that developer. If the Wikipedia does not exist it will take you to their website or other press other related information.</span></p>
         </div></td>
       </tr>
     </table></td>
   </tr>
   <tr bgcolor="#60C060">
-    <td colspan="5">
+    <td colspan="8">
       Total games: ${supported} supported (${fullSupp} fully), ${notSupp} unsupported
-    </td>
-    <td colspan="3">
-      Table Maintained by <a href="http://www.gildor.org/smf/index.php?action=profile;u=39" target="_blank">ESR911</a> and <a href="http://www.gildor.org/">Gildor</a>
     </td>
   </tr>
 </table>

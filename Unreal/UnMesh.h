@@ -905,6 +905,9 @@ struct FMeshBone
 			Ar << unk3C;
 		}
 #endif // ARMYOF2
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers) return Ar; // version 537, but really not upgraded
+#endif
 #if UNREAL3
 		if (Ar.ArVer >= 515)
 		{

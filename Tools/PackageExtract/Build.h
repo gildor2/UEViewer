@@ -10,6 +10,7 @@
 #define SPLINTER_CELL	1
 #define LINEAGE2		1
 #define SWRC			1
+#define BATTLE_TERR		1		// Battle Territory Online
 
 // requires UNREAL25
 #define TRIBES3			1
@@ -41,3 +42,4 @@
 #define BERKANIX		1
 #define DCU_ONLINE		1		// DC Universe Online
 #define BULLETSTORM		1
+#define NURIEN			1

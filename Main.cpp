@@ -398,6 +398,7 @@ static GameInfo games[] = {
 #	if TRANSFORMERS
 		G("The Bourne Conspiracy",           trans, GAME_Transformers),
 		G("Transformers: War for Cybertron", trans, GAME_Transformers),
+		G("Transformers: Dark of the Moon",  trans, GAME_Transformers),
 #	endif
 #	if AA3
 		G("America's Army 3", aa3, GAME_AA3),
@@ -423,8 +424,17 @@ static GameInfo games[] = {
 #	if SINGULARITY
 		G("Singularity", sing, GAME_Singularity),
 #	endif
-#	if SPECIAL_TAGS
+#	if NURIEN
 		G3("Nurien"),
+#	endif
+#	if HUNTED
+		G("Hunted: The Demon's Forge", hunt, GAME_Hunted),
+#	endif
+#	if DND
+		G("Dungeons & Dragons: Daggerdale", dnd, GAME_DND),
+#	endif
+#	if SHADOWS_DAMNED
+		G("Shadows of the Damned", shad, GAME_ShadowsDamned),
 #	endif
 #endif // UNREAL3
 };

@@ -231,6 +231,9 @@ enum EGame
 		GAME_Undertow,
 		GAME_Singularity,
 		GAME_Tron,
+		GAME_Hunted,
+		GAME_DND,
+		GAME_ShadowsDamned,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -497,6 +500,38 @@ protected:
 	char	ShortName[128];
 };
 
+
+class FReaderWrapper : public FArchive
+{
+public:
+	FArchive	*Reader;
+	int			ArPosOffset;
+
+	FReaderWrapper(FArchive *File, int Offset = 0)
+	:	Reader(File)
+	,	ArPosOffset(Offset)
+	{}
+	virtual void Seek(int Pos)
+	{
+		Reader->Seek(Pos + ArPosOffset);
+	}
+	virtual int Tell() const
+	{
+		return Reader->Tell() - ArPosOffset;
+	}
+	virtual int GetFileSize() const
+	{
+		return Reader->GetFileSize() - ArPosOffset;
+	}
+	virtual void SetStopper(int Pos)
+	{
+		Reader->SetStopper(Pos + ArPosOffset);
+	}
+	virtual int GetStopper() const
+	{
+		return Reader->GetStopper() - ArPosOffset;
+	}
+};
 
 
 class FMemReader : public FArchive

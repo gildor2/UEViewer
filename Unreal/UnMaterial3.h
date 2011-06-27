@@ -397,12 +397,17 @@ public:
 	{
 		Super::Serialize(Ar);
 #if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 108)
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 108) goto skip_rest_quiet; // has TArray<FTexture2DMipMap>
+#endif
+
+		// some hack to support more games ...
+		if (Ar.Tell() < Ar.GetStopper())
 		{
-			// has TArray<FTexture2DMipMap>
+			printf("UTextureCube %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+		skip_rest_quiet:
 			Ar.Seek(Ar.GetStopper());
 		}
-#endif // TRANSFORMERS
+
 	}
 
 #if RENDERING

@@ -7,6 +7,7 @@
 #include "UnMaterial3.h"
 
 
+//#define DEBUG_SKELMESH		1
 //#define DEBUG_STATICMESH		1
 
 
@@ -576,6 +577,9 @@ struct FGPUSkin3
 	{
 		guard(FGPUSkin3<<);
 
+	#if DEBUG_SKELMESH
+		printf("Reading GPU skin\n");
+	#endif
 		if (Ar.IsLoading) S.bUsePackedPosition = false;
 		bool AllowPackedPosition = false;
 		S.NumUVSets = GNumGPUUVSets = 1;
@@ -658,7 +662,7 @@ struct FGPUSkin3
 		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
 		//?? working bUsePackedPosition was found in all XBox360 games and in MOH2010 (PC) only
 		//?? + TRON Evolution (PS3)
-#if 0
+#if DEBUG_SKELMESH
 		printf("data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
 			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
@@ -788,7 +792,7 @@ struct FTRMeshUnkStream
 {
 	int					ItemSize;
 	int					NumVerts;
-	TArray<int>			Data;
+	TArray<int>			Data;			// TArray<FPackedNormal>
 
 	friend FArchive& operator<<(FArchive &Ar, FTRMeshUnkStream &S)
 	{
@@ -845,7 +849,7 @@ struct FStaticLODModel3
 #endif // MKVSDC
 
 		Ar << Lod.Sections << Lod.IndexBuffer;
-#if 0
+#if DEBUG_SKELMESH
 		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
 		{
 			FSkelMeshSection3 &S = Lod.Sections[i1];
@@ -871,14 +875,32 @@ struct FStaticLODModel3
 		}
 #endif // ENDWAR || BORDERLANDS
 
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArVer >= 536)
+		{
+			// Transformers: Dark of the Moon
+			// refined field set + byte bone indices
+			assert(Ar.ArLicenseeVer >= 152);		// has mixed version comparisons - ArVer >= 536 and ArLicenseeVer >= 152
+			TArray<byte> UsedBones2;
+			Ar << UsedBones2;
+			CopyArray(Lod.UsedBones, UsedBones2);	// byte -> int
+			Ar << Lod.Chunks << Lod.NumVertices;
+			goto part2;
+		}
+#endif // TRANSFORMERS
+
 	part1:
 		if (Ar.ArVer < 686) Ar << Lod.f68;
 		Ar << Lod.UsedBones;
 		if (Ar.ArVer < 686) Ar << Lod.f74;
 		if (Ar.ArVer >= 215)
 		{
+		chunks:
 			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 		}
+#if DEBUG_SKELMESH
+		printf("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
+#endif
 
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 11)
@@ -1008,6 +1030,7 @@ struct FStaticLODModel3
 		{
 			FTRMeshUnkStream unkStream;
 			Ar << unkStream;
+			return Ar;
 		}
 #endif // TRANSFORMERS
 		if (Ar.ArVer >= 710)
@@ -1246,6 +1269,9 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 #endif // MKVSDC
 	Ar << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
+#if DEBUG_SKELMESH
+	printf("RefSkeleton: %d bones, %d depth\n", RefSkeleton.Num(), SkeletalDepth);
+#endif
 #if A51 || MKVSDC || STRANGLE
 	//?? check GAME_Wheelman
 	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 0xF)
@@ -2184,8 +2210,12 @@ void UAnimSet::ConvertAnims()
 			}
 			else if (RotationCompressionFormat == ACF_IntervalFixed32NoW || Package->ArVer < 761)
 			{
+#if SHADOWS_DAMNED
+				if (Package->Game == GAME_ShadowsDamned) goto skip_ranges;
+#endif
 				// starting with version 761 Mins/Ranges are read only when needed - i.e. for ACF_IntervalFixed32NoW
 				Reader << Mins << Ranges;
+			skip_ranges: ;
 			}
 #if BORDERLANDS
 			FQuat Base;
@@ -2332,8 +2362,8 @@ struct FStaticMeshSection3
 	int					bEnableShadowCasting;
 	int					FirstIndex;
 	int					NumFaces;
-	int					f24;
-	int					f28;
+	int					f24;		//?? first used vertex
+	int					f28;		//?? last used vertex
 	int					Index;		//?? index of section
 	TArray<FMesh3Unk1>	f30;
 
@@ -2373,6 +2403,14 @@ struct FStaticMeshSection3
 			Ar << unk28;
 		}
 #endif // MKVSDC
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 49)
+		{
+			TArray<FTRStaticMeshSectionUnk> f30;
+			Ar << f30;
+			return Ar;
+		}
+#endif // TRANSFORMERS
 		if (Ar.ArVer >= 514) Ar << S.f30;
 #if ALPHA_PR
 		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 39)
@@ -2381,13 +2419,6 @@ struct FStaticMeshSection3
 			Ar << unk38;
 		}
 #endif // ALPHA_PR
-#if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 49)
-		{
-			TArray<FTRStaticMeshSectionUnk> f30;
-			Ar << f30;
-		}
-#endif // TRANSFORMERS
 #if MOH2010
 		if (Ar.Game == GAME_MOH2010 && Ar.ArVer >= 575)
 		{
@@ -2445,6 +2476,16 @@ struct FStaticMeshVertexStream3
 			Ar << unk28;
 		}
 #endif // MOH2010
+#if SHADOWS_DAMNED
+		if (Ar.Game == GAME_ShadowsDamned && Ar.ArLicenseeVer >= 26)
+		{
+			int unk28;
+			Ar << unk28;
+		}
+#endif // SHADOWS_DAMNED
+#if DEBUG_STATICMESH
+		printf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
+#endif
 		Ar << RAW_ARRAY(S.Verts);
 		return Ar;
 
@@ -2575,7 +2616,7 @@ struct FStaticMeshUVStream3
 			Ar << S.bUseFullPrecisionUVs;
 		}
 #if DEBUG_STATICMESH
-		printf("TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
+		printf("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
 #endif
 #if MKVSDC
 		if (Ar.Game == GAME_MK)
@@ -2599,6 +2640,13 @@ struct FStaticMeshUVStream3
 			Ar << unused;
 		}
 #endif // FURY
+#if SHADOWS_DAMNED
+		if (Ar.Game == GAME_ShadowsDamned && Ar.ArLicenseeVer >= 22)
+		{
+			int unk30;
+			Ar << unk30;
+		}
+#endif // SHADOWS_DAMNED
 		// prepare for UV serialization
 		GNumStaticUVSets   = S.NumTexCoords;
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
@@ -2619,6 +2667,23 @@ struct FStaticMeshColorStream3
 	{
 		guard(FStaticMeshColorStream3<<);
 		return Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Colors);
+		unguard;
+	}
+};
+
+// new color stream: difference is that data array is not serialized when NumVerts is 0
+struct FStaticMeshColorStream3New		// ArVer >= 615
+{
+	int					ItemSize;
+	int					NumVerts;
+	TArray<int>			Colors;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshColorStream3New &S)
+	{
+		guard(FStaticMeshColorStream3New<<);
+		Ar << S.ItemSize << S.NumVerts;
+		if (S.NumVerts) Ar << RAW_ARRAY(S.Colors);
+		return Ar;
 		unguard;
 	}
 };
@@ -2684,9 +2749,10 @@ struct FStaticMeshLODModel
 {
 	FByteBulkData		BulkData;		// ElementSize = 0xFC for UT3 and 0x170 for UDK ... it's simpler to skip it
 	TArray<FStaticMeshSection3> Sections;
-	FStaticMeshVertexStream3 VertexStream;
-	FStaticMeshUVStream3     UVStream;
-	FStaticMeshColorStream3  ColorStream;	//??
+	FStaticMeshVertexStream3    VertexStream;
+	FStaticMeshUVStream3        UVStream;
+	FStaticMeshColorStream3     ColorStream;	//??
+	FStaticMeshColorStream3New  ColorStream2;	//??
 	FIndexBuffer3		Indices;
 	FIndexBuffer3		Indices2;		//?? wireframe?
 	int					f80;
@@ -2697,6 +2763,9 @@ struct FStaticMeshLODModel
 	{
 		guard(FStaticMeshLODModel<<);
 
+#if DEBUG_STATICMESH
+		printf("Serialize UStaticMesh LOD\n");
+#endif
 #if FURY
 		if (Ar.Game == GAME_Fury)
 		{
@@ -2752,6 +2821,7 @@ struct FStaticMeshLODModel
 #if MKVSDC || AVA
 		if (Ar.Game == GAME_MK || Ar.Game == GAME_AVA) goto ver_3;
 #endif
+
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands)
 		{
@@ -2764,18 +2834,33 @@ struct FStaticMeshLODModel
 			return Ar;
 		}
 #endif // BORDERLANDS
+
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers)
+		{
+			// code is similar to original code (ArVer >= 472) but has different versioning and a few new fields
+			FTRMeshUnkStream unkStream;		// normals?
+			int unkD8;						// part of Indices2
+			Ar << Lod.VertexStream << Lod.UVStream;
+			if (Ar.ArVer >= 536) Ar << Lod.ColorStream2;
+			if (Ar.ArLicenseeVer >= 71) Ar << unkStream;
+			if (Ar.ArVer < 536) Ar << Lod.ColorStream;
+			Ar << Lod.f80 << Lod.Indices << Lod.Indices2;
+			if (Ar.ArLicenseeVer >= 58) Ar << unkD8;
+			if (Ar.ArVer < 536)
+			{
+				Ar << RAW_ARRAY(Lod.Edges);
+				Ar << Lod.fEC;
+			}
+			return Ar;
+		}
+#endif // TRANSFORMERS
+
 		if (Ar.ArVer >= 472)
 		{
 		new_ver:
 			Ar << Lod.VertexStream;
 			Ar << Lod.UVStream;
-#if TRANSFORMERS
-			if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 71)
-			{
-				FTRMeshUnkStream unkStream;
-				Ar << unkStream;
-			}
-#endif // TRANSFORMERS
 #if MOH2010
 			if (Ar.Game == GAME_MOH2010 && Ar.ArLicenseeVer >= 55) goto color_stream;
 #endif
@@ -2786,11 +2871,7 @@ struct FStaticMeshLODModel
 			if (Ar.ArVer >= 615)
 			{
 			color_stream:
-				// new color stream: difference is that data array is not serialized when NumVerts is 0
-				int ColorItemSize, ColorNumVerts;
-				Ar << ColorItemSize << ColorNumVerts;
-				TArray<int> ColorData;
-				if (ColorNumVerts) Ar << RAW_ARRAY(ColorData);
+				Ar << Lod.ColorStream2;
 			}
 			if (Ar.ArVer < 686) Ar << Lod.ColorStream;
 			Ar << Lod.f80;
@@ -2890,6 +2971,7 @@ struct FStaticMeshLODModel
 			}
 			//!! note: this code will crash in RestoreMesh3() because of empty data
 		}
+	indices:
 		Ar << Lod.Indices;
 #if ENDWAR
 		if (Ar.Game == GAME_EndWar) goto after_indices;	// single Indices buffer since version 262
@@ -2904,14 +2986,6 @@ struct FStaticMeshLODModel
 #endif // APB
 		Ar << Lod.Indices2;
 	after_indices:
-
-#if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 58)
-		{
-			int unkD8;
-			Ar << unkD8;
-		}
-#endif // TRANSFORMERS
 
 		if (Ar.ArVer < 686)
 		{
@@ -3118,7 +3192,7 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 {
 	guard(UStaticMesh::SerializeStatMesh3);
 
-	UObject::Serialize(Ar);					// no UPrimitive ...
+	UObject::Serialize(Ar);					// no UPrimitive in UE3 ...
 
 	// NOTE: UStaticMesh is not mirrored by script with exception of Transformers game
 	FBoxSphereBounds	Bounds;
@@ -3223,14 +3297,12 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 #if DOH
 	if (Ar.Game == GAME_DOH && Ar.ArLicenseeVer >= 73)
 	{
-		{	// for lame VC6 ...
 		FVector			unk18;		// extra computed kDOP field
 		TArray<FVector>	unkA0;
 		int				unk74;
 		Ar << unk18;
 		Ar << InternalVersion;		// has InternalVersion = 0x2000F
 		Ar << unkA0 << unk74 << Lods;
-		}	// ...
 		goto done;
 	}
 #endif // DOH
@@ -3263,6 +3335,13 @@ version:
 		TArray<FName> unk;			// some text properties; ContentTags ? (switched from binary to properties)
 		Ar << unk;
 	}
+#if SHADOWS_DAMNED
+	if (Ar.Game == GAME_ShadowsDamned && Ar.ArLicenseeVer >= 26)
+	{
+		int unk134;
+		Ar << unk134;
+	}
+#endif // SHADOWS_DAMNED
 
 lods:
 	Ar << Lods;

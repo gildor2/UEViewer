@@ -16,16 +16,14 @@ byte GForceCompMethod = 0;		// COMPRESS_...
 
 #define LINEAGE_HEADER_SIZE		28
 
-class FFileReaderLineage : public FArchive
+class FFileReaderLineage : public FReaderWrapper
 {
 public:
-	FArchive	*Reader;
 	int			ArPosOffset;
 	byte		XorKey;
 
 	FFileReaderLineage(FArchive *File, int Key)
-	:	Reader(File)
-	,	ArPosOffset(LINEAGE_HEADER_SIZE)
+	:	FReaderWrapper(File, LINEAGE_HEADER_SIZE)
 	,	XorKey(Key)
 	{
 		Seek(0);		// skip header
@@ -42,26 +40,6 @@ public:
 				*p ^= XorKey;
 		}
 	}
-	virtual void Seek(int Pos)
-	{
-		Reader->Seek(Pos + ArPosOffset);
-	}
-	virtual int Tell() const
-	{
-		return Reader->Tell() - ArPosOffset;
-	}
-	virtual int GetFileSize() const
-	{
-		return Reader->GetFileSize() - ArPosOffset;
-	}
-	virtual void SetStopper(int Pos)
-	{
-		Reader->SetStopper(Pos + ArPosOffset);
-	}
-	virtual int  GetStopper() const
-	{
-		return Reader->GetStopper() - ArPosOffset;
-	}
 };
 
 #endif // LINEAGE2 || EXTEEL
@@ -73,15 +51,12 @@ public:
 
 #if BATTLE_TERR
 
-class FFileReaderBattleTerr : public FArchive
+class FFileReaderBattleTerr : public FReaderWrapper
 {
 public:
-	FArchive	*Reader;
-
 	FFileReaderBattleTerr(FArchive *File)
-	:	Reader(File)
-	{
-	}
+	:	FReaderWrapper(File)
+	{}
 
 	virtual void Serialize(void *data, int size)
 	{
@@ -100,31 +75,50 @@ public:
 			*p = b;
 		}
 	}
-
-	virtual void Seek(int Pos)
-	{
-		Reader->Seek(Pos);
-	}
-	virtual int Tell() const
-	{
-		return Reader->Tell();
-	}
-	virtual int GetFileSize() const
-	{
-		return Reader->GetFileSize();
-	}
-	virtual void SetStopper(int Pos)
-	{
-		Reader->SetStopper(Pos);
-	}
-	virtual int  GetStopper() const
-	{
-		return Reader->GetStopper();
-	}
 };
 
 #endif // BATTLE_TERR
 
+
+/*-----------------------------------------------------------------------------
+	Nurien
+-----------------------------------------------------------------------------*/
+
+#if NURIEN
+
+class FFileReaderNurien : public FReaderWrapper
+{
+public:
+	int			Threshold;
+
+	FFileReaderNurien(FArchive *File)
+	:	FReaderWrapper(File)
+	,	Threshold(0x7FFFFFFF)
+	{}
+
+	virtual void Serialize(void *data, int size)
+	{
+		int Pos = Reader->Tell();
+		Reader->Serialize(data, size);
+
+		// only first Threshold bytes are compressed (package headers)
+		if (Pos >= Threshold) return;
+
+		int i;
+		byte *p;
+		static const byte key[] = {
+			0xFE, 0xF2, 0x35, 0x2E, 0x12, 0xFF, 0x47, 0x8A,
+			0xE1, 0x2D, 0x53, 0xE2, 0x21, 0xA3, 0x74, 0xA8
+		};
+		for (i = 0, p = (byte*)data; i < size; i++, p++, Pos++)
+		{
+			if (Pos >= Threshold) return;
+			*p ^= key[Pos & 0xF];
+		}
+	}
+};
+
+#endif // NURIEN
 
 /*-----------------------------------------------------------------------------
 	LEAD Engine archive file reader
@@ -716,6 +710,15 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Loader = new FFileReaderBattleTerr(Loader);
 	}
 	#endif // BATTLE_TERR
+	#if NURIEN
+	bool isNurien = false;
+	if (checkDword == 0xB01F713F)
+	{
+		isNurien = true;
+		// replace loader
+		Loader = new FFileReaderNurien(Loader);
+	}
+	#endif // NURIEN
 	#if LEAD
 	if (checkDword == LEAD_FILE_TAG)
 	{
@@ -816,7 +819,15 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		// replace Loader with special reader for compressed UE3 archives
 		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, Summary.CompressedChunks);
 	}
-#endif
+#endif // UNREAL3
+#if NURIEN
+	if (isNurien)
+	{
+		// cast back to FFileReaderNurien
+		FFileReaderNurien *NurienReader = (FFileReaderNurien*)Loader;
+		NurienReader->Threshold = Summary.HeadersSize;
+	}
+#endif // NURIEN
 
 	// read name table
 	guard(ReadNameTable);
@@ -1015,7 +1026,7 @@ no_depends: ;
 	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
 	PackageMap.AddItem(this);
 
-	unguardf(("%s, game=%X", filename, Game));
+	unguardf(("%s, ver=%d/%d, game=%X", filename, ArVer, ArLicenseeVer, Game));
 }
 
 

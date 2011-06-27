@@ -92,9 +92,11 @@ struct FPackageFileSummary
 		// read tag and version
 		Ar << S.Tag;
 #if SPECIAL_TAGS
-		if (S.Tag == 0xA94E6C81) goto tag_ok;		// Nurien
 		if (S.Tag == 0x9E2A83C2) goto tag_ok;		// Killing Floor
 #endif // SPECIAL_TAGS
+#if NURIEN
+		if (S.Tag == 0xA94E6C81) goto tag_ok;		// Nurien
+#endif
 #if BATTLE_TERR
 		if (S.Tag == 0xA1B2C93F)
 		{
@@ -298,8 +300,12 @@ struct FPackageFileSummary
 		else
 		{
 #if UNREAL3
+	#if TRANSFORMERS
+			if (Ar.Game == GAME_Transformers && Ar.ArVer >= 535) goto read_unk38;
+	#endif
 			if (Ar.ArVer >= 584)
 			{
+			read_unk38:
 				int unk38;
 				Ar << unk38;
 			}

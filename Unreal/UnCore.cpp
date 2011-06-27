@@ -1167,6 +1167,9 @@ void FArchive::DetectGame()
 #if MORTALONLINE
 	if (ArVer == 678 && ArLicenseeVer == 32771) SET(GAME_MortalOnline);
 #endif
+#if SHADOWS_DAMNED
+	if (ArVer == 706 && ArLicenseeVer == 28)	SET(GAME_ShadowsDamned);
+#endif
 #if BULLETSTORM
 	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
 #endif
@@ -1209,9 +1212,10 @@ void FArchive::DetectGame()
 		SET(GAME_ArmyOf2);
 #endif
 #if TRANSFORMERS
-	if ( (ArVer == 511 && ArLicenseeVer == 145) ||		// PC version
-		 (ArVer == 511 && ArLicenseeVer == 144) ||		// PS3 and XBox 360 version
-		 (ArVer == 511 && ArLicenseeVer == 39) )		// The Bourne Conspiracy
+	if ( (ArVer == 511 && ArLicenseeVer == 39 ) ||		// The Bourne Conspiracy
+		 (ArVer == 511 && ArLicenseeVer == 145) ||		// Transformers - PC version
+		 (ArVer == 511 && ArLicenseeVer == 144) ||		// Transformers - PS3 and XBox 360 version
+		 (ArVer == 537 && ArLicenseeVer == 174) )		// Transformers: Dark of the Moon
 		SET(GAME_Transformers);
 #endif
 #if TERA
@@ -1239,6 +1243,8 @@ void FArchive::DetectGame()
 
 #define OVERRIDE_ENDWAR_VER		224
 #define OVERRIDE_TERA_VER		568
+#define OVERRIDE_HUNTED_VER		708			// real version is 709, which is incorrect
+#define OVERRIDE_DND_VER		673			// real version is 674
 
 void FArchive::OverrideVersion()
 {
@@ -1248,6 +1254,12 @@ void FArchive::OverrideVersion()
 #endif
 #if TERA
 	if (Game == GAME_Tera)		ArVer = OVERRIDE_TERA_VER;
+#endif
+#if HUNTED
+	if (Game == GAME_Hunted)	ArVer = OVERRIDE_HUNTED_VER;
+#endif
+#if DND
+	if (Game == GAME_DND)		ArVer = OVERRIDE_DND_VER;
 #endif
 	if (ArVer != OldVer) printf("Overrided version %d -> %d\n", OldVer, ArVer);
 }
@@ -1408,6 +1420,16 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	}
 #endif // BLADENSOUL
 
+#if 1
+		//?? Alice: Madness Returns only?
+		if (CompressedSize == UncompressedSize)
+		{
+			// CompressedSize == UncompressedSize -> no compression
+			memcpy(UncompressedBuffer, CompressedBuffer, UncompressedSize);
+			return UncompressedSize;
+		}
+#endif
+
 	if (Flags == COMPRESS_LZO)
 	{
 		int r;
@@ -1459,7 +1481,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	appError("appDecompress: unknown compression flags: %d", Flags);
 	return 0;
 
-	unguard;
+	unguardf(("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, Flags));
 }
 
 

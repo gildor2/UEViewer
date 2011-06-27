@@ -242,6 +242,15 @@ void InvertCoordsSlow(const CCoords &S, CCoords &D)
 }
 
 
+void CoordsMA(CCoords &a, float scale, const CCoords &b)
+{
+	VectorMA(a.axis[0], scale, b.axis[0]);
+	VectorMA(a.axis[1], scale, b.axis[1]);
+	VectorMA(a.axis[2], scale, b.axis[2]);
+	VectorMA(a.origin,  scale, b.origin );
+}
+
+
 /*-----------------------------------------------------------------------------
 	Angle math
 -----------------------------------------------------------------------------*/

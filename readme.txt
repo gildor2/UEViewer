@@ -71,6 +71,7 @@ Modified Unreal Engine 3:
   Alpha Protocol
   All Points Bulletin (APB)
   Transformers: War for Cybertron
+  Transformers: Dark of the Moon
   The Bourne Conspiracy (XBox360)
   Enslaved: Odyssey to the West (XBox360)
   Medal of Honor: Airborne
@@ -81,6 +82,9 @@ Modified Unreal Engine 3:
   EndWar
   Undertow (XBox360)
   Singularity
+  Hunted: The Demon's Forge
+  Dungeons & Dragons: Daggerdale
+  Shadows of the Damned
 
 List of games with limited support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -102,6 +106,7 @@ Unsupported animations (without umodel crash):
 System requirements
 ~~~~~~~~~~~~~~~~~~~
 Windows or Linux operating system
+x86-compatible CPU with SSE support
 OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
 SDL 1.2 (for Linux only, windows distribution included sdl.dll)
 
@@ -188,8 +193,26 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+27.06.2011
+- implemented Transformers: Dark of the Moon support
+
+24.06.2011
+- implemented Shadows of the Damned support
+
+17.06.2011
+- fixed Alice: Madness Returns compatibility issue
+
+01.06.2011
+- implemented Dungeons & Dragons: Daggerdale support; "-game=dnd" is required
+
+31.05.2011
+- implemented Hunted: The Demon's Forge support; "-game=hunt" is required
+
+19.05.2011
+- updated Nurien support
+
 13.05.2011
-- software skinning code were remade using SSE instructions, works 3 times faster now
+- software skinning code were remade using SSE instructions, works 4 times faster now
 
 07.05.2011
 - implemented Medal of Honor: Airborne StaticMesh support
@@ -302,7 +325,7 @@ Changes
 - implemented support for LightMapTexture2D objects
 - command line "umodel <package> <object>" will now find all objects with the name
   <object> (not only the first one)
-- implemented support for Splinter Cell 3 and 4 packages (requires -game=scell)
+- implemented support for Splinter Cell 3 and 4 packages (requires "-game=scell")
 
 14.12.2010
 - implemented support for Turok animations and StaticMesh

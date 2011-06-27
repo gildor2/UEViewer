@@ -164,7 +164,10 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	STRUC_TYPE(FVector)
 	STRUC_TYPE(FRotator)
 	STRUC_TYPE(FColor)
-	STRUC_TYPE(FLinearColor)
+	if (Ar.ArVer >= 300)	// real version is unknown; native FLinearColor serializer does not work with EndWar
+	{
+		STRUC_TYPE(FLinearColor)
+	}
 	const CTypeInfo *ItemType = FindStructType(StrucName+1);
 	if (!ItemType) return false;
 	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
