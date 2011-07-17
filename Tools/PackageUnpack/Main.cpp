@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	char BaseDir[256];
 	strcpy(BaseDir, DEF_UNP_DIR);
 
-	int arg = 1;
+	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
 		if (argv[arg][0] == '-')

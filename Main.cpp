@@ -249,6 +249,9 @@ static GameInfo games[] = {
 #if SPLINTER_CELL
 		G("Splinter Cell 1,2", scell, GAME_SplinterCell),
 #endif
+#if LEAD
+		G("Splinter Cell: Conviction", scconv, GAME_SplinterCellConv),
+#endif
 #if LINEAGE2
 		G("Lineage 2", l2, GAME_Lineage2),
 #endif

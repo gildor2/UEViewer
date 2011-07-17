@@ -207,7 +207,15 @@ struct FPackageFileSummary
 				Ar << S.PackageGroup;
 //		}
 #endif // UNREAL3
-		Ar << S.PackageFlags << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
+		Ar << S.PackageFlags;
+#if LEAD
+		if (Ar.Game == GAME_SplinterCellConv)
+		{
+			int unk10;
+			Ar << unk10;		// some flags?
+		}
+#endif // LEAD
+		Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
 #if APB
 		if (Ar.Game == GAME_APB)
 		{
@@ -218,6 +226,18 @@ struct FPackageFileSummary
 		}
 #endif // APB
 		Ar << S.ImportCount << S.ImportOffset;
+#if LEAD
+		if (Ar.Game == GAME_SplinterCellConv && Ar.ArLicenseeVer >= 48)
+		{
+			// this game has additional name table for some packages
+			int ExtraNameCount, ExtraNameOffset;
+			int unkC;
+			Ar << ExtraNameCount << ExtraNameOffset;
+			if (ExtraNameOffset < S.ImportOffset) ExtraNameCount = 0;
+			if (Ar.ArLicenseeVer >= 85) Ar << unkC;
+			goto generations;	// skip Guid
+		}
+#endif // LEAD
 #if UNREAL3
 	#if MKVSDC
 		if (Ar.Game == GAME_MK)
@@ -286,6 +306,7 @@ struct FPackageFileSummary
 #endif // RAGNAROK2
 		if (Ar.ArVer < 68)
 		{
+			// old generations code
 			int HeritageCount, HeritageOffset;
 			Ar << HeritageCount << HeritageOffset;	// not used
 			if (Ar.IsLoading)
@@ -311,22 +332,15 @@ struct FPackageFileSummary
 			}
 #endif // UNREAL3
 			Ar << S.Guid;
-#if BIOSHOCK
-			if (Ar.Game == GAME_Bioshock)
-			{
-				// Bioshock uses AR_INDEX for array size, but int for generations
-				int Count;
-				Ar << Count;
-				S.Generations.Empty(Count);
-				S.Generations.Add(Count);
-				for (int i = 0; i < Count; i++)
-					Ar << S.Generations[i];
-			}
-			else
-#endif // BIOSHOCK
-			{
-				Ar << S.Generations;
-			}
+			// current generations code
+		generations:
+			// always used int for generation count (even for UE1-2)
+			int Count;
+			Ar << Count;
+			S.Generations.Empty(Count);
+			S.Generations.Add(Count);
+			for (int i = 0; i < Count; i++)
+				Ar << S.Generations[i];
 		}
 #if UNREAL3
 //		if (Ar.ArVer >= PACKAGE_V3)
@@ -710,9 +724,15 @@ public:
 			*this << N.Index;
 		else
 #endif // UC2
+#if LEAD
+		if (Game == GAME_SplinterCellConv && ArVer >= 64)
+			goto ubisoft_name;
+		else
+#endif // LEAD
 #if UNREAL3
 		if (Engine() >= GAME_UE3)
 		{
+		ubisoft_name:
 			*this << N.Index;
 	#if R6VEGAS
 			if (Game == GAME_R6Vegas2)

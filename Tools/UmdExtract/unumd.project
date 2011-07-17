@@ -1,0 +1,18 @@
+# perl highlighting
+
+R   = ../..
+PRJ = unumd
+!include ../../common.project
+
+sources(MAIN) = {
+	Main.cpp
+	$R/Unreal/UnCore.cpp
+	$R/Unreal/UnPackage.cpp
+	$R/Unreal/UnObject.cpp
+	$R/Unreal/UnUbisoft.cpp
+	$R/Core/*.cpp
+	# UE3 support
+	$UE3_LIBS
+}
+
+target(executable, $PRJ, MAIN, MAIN)

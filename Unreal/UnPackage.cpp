@@ -69,9 +69,9 @@ public:
 			byte b = *p;
 			int shift;
 			byte v;
-			for (shift = 1, v = b & (b - 1); v; v = v & (v - 1))
+			for (shift = 1, v = b & (b - 1); v; v = v & (v - 1))	// shift = number of identity bits in 'v' (but b=0 -> shift=1)
 				shift++;
-			b = (b | (b << 8)) << shift >> 8;		// simulate cyclic shift left (ROL)
+			b = (b | (b << 8)) << shift >> 8;						// simulate cyclic shift left (ROL)
 			*p = b;
 		}
 	}
@@ -119,333 +119,6 @@ public:
 };
 
 #endif // NURIEN
-
-/*-----------------------------------------------------------------------------
-	LEAD Engine archive file reader
------------------------------------------------------------------------------*/
-
-#if LEAD
-
-#define LEAD_FILE_TAG				0x4B435045		// 'EPCK'
-
-// Archive flags
-#define LEAD_PKG_COMPRESS_ZLIB		0x01			// use ZLib compression
-#define LEAD_PKG_COMPRESS_XMEM		0x02			// use XBox 360 LZX compression
-#define LEAD_PKG_CHECK_CRC			0x30			// really this is 2 separate flags
-#define LEAD_PKG_COMPRESS_TABLES	0x80			// archive page table is compressed
-
-
-struct FLeadArcPage
-{
-	int						CompressedPos;
-	int						CompressedSize;
-	byte					Flags;					// LEAD_PKG_COMPRESS_...
-	unsigned				CompressedCrc;
-	unsigned				UncompressedCrc;
-};
-
-
-struct FLeadDirEntry
-{
-	int						id;						// file identifier (hash of filename?)
-	// the following data are originally packed as separate structure
-	FString					ShortFilename;			// short filename
-	FString					Filename;				// full filename with path
-	int						FileSize;
-
-	friend FArchive& operator<<(FArchive &Ar, FLeadDirEntry &D)
-	{
-		return Ar << D.id << D.ShortFilename << D.Filename << AR_INDEX(D.FileSize);
-	}
-};
-
-
-struct FLeadArcChunk								// file chunk
-{
-	int						OriginalOffset;			// offset in original file
-	int						PackedOffset;			// position in uncompressed UMD (excluding aligned archive directory size!! align=0x20000)
-	int						ChunkSize;				// length of the data
-
-	friend FArchive& operator<<(FArchive &Ar, FLeadArcChunk &C)
-	{
-		return Ar << AR_INDEX(C.OriginalOffset) << AR_INDEX(C.PackedOffset) << AR_INDEX(C.ChunkSize);
-	}
-};
-
-
-struct FLeadArcChunkList
-{
-	int						id;						// file identifier
-	TArray<FLeadArcChunk>	chunks;
-
-	friend FArchive& operator<<(FArchive &Ar, FLeadArcChunkList& L)
-	{
-		return Ar << L.id << L.chunks;
-	}
-};
-
-
-struct FLeadArcHdr
-{
-	FString					id;						// package tag
-	TArray<FLeadDirEntry>	dir;					// file list
-	TArray<FLeadArcChunkList> chunkList;			// file chunk list
-
-	friend FArchive& operator<<(FArchive &Ar, FLeadArcHdr &H)
-	{
-		return Ar << H.id << H.dir << H.chunkList;
-	}
-};
-
-
-class FLeadArchiveReader : public FArchive
-{
-public:
-	FArchive				*Reader;
-	// compression parameters
-	int						BufferSize;
-	int						FileSize;
-	int						DirectoryOffset;
-	byte					Flags;					// LEAD_PKG_...
-	TArray<FLeadArcPage>	Pages;
-	// own file positions, overriding FArchive's one (because parent class is
-	// used for compressed data)
-	int						Stopper;
-	int						Position;
-	// decompression buffer
-	byte					*Buffer;
-	int						BufferStart;
-	int						BufferEnd;
-
-	FLeadArchiveReader(FArchive *File)
-	:	Reader(File)
-	,	Buffer(NULL)
-	,	BufferStart(0)
-	,	BufferEnd(0)
-	{
-		guard(FLeadArchiveReader::FLeadArchiveReader);
-		SetupFrom(*File);
-		ReadArchiveHeaders();
-
-		ArVer = 128;		// something UE2
-		IsLoading = true;
-/*printf("Extracting ...\n");
-byte* mem2 = new byte[FileSize];
-Serialize(mem2, FileSize);
-//for (int ii = 0; ii < FileSize; ii++) mem2[ii] ^= 0xB7;
-FILE* f2 = fopen(".\\test.umod", "wb");
-fwrite(mem2, FileSize, 1, f2);
-fclose(f2);
-printf("Extraction done.\n");
-exit(0);*/
-
-		FLeadArcHdr hdr;
-		*(FArchive*)this << hdr;
-		int DataStart = Align(Tell(), 0x20000);		//?? BlockSize
-		printf("DataStart: %08X\n", DataStart);
-
-		int i;
-		printf("ID: %s\n", *hdr.id);
-		for (i = 0; i < hdr.dir.Num(); i++)
-		{
-			const FLeadDirEntry& dir = hdr.dir[i];
-			printf("[%d] %08X - (%s) %s / %d (%08X)\n", i, dir.id, *dir.ShortFilename, *dir.Filename, dir.FileSize, dir.FileSize);
-		}
-		for (i = 0; i < hdr.chunkList.Num(); i++)
-		{
-			const FLeadArcChunkList& list = hdr.chunkList[i];
-			printf("[%d] %08X (%d)\n", i, list.id, list.chunks.Num());
-			for (int j = 0; j < list.chunks.Num(); j++)
-			{
-				const FLeadArcChunk &chunk = list.chunks[j];
-				printf("       %08X  %08X  %08X\n", chunk.OriginalOffset, chunk.PackedOffset, chunk.ChunkSize);
-			}
-		}
-
-		Seek(0);
-
-printf("Extracting ...\n");
-byte* mem = new byte[FileSize];
-Serialize(mem, FileSize);
-for (i = DataStart; i < FileSize; i++) mem[i] ^= 0xB7;
-FILE* f = fopen(".\\test.umod", "wb");
-fwrite(mem, FileSize, 1, f);
-delete mem;
-fclose(f);
-printf("Extraction done.\n");
-exit(0);
-
-		unguard;
-	}
-
-	~FLeadArchiveReader()
-	{
-		if (Buffer) delete Buffer;
-		if (Reader) delete Reader;
-	}
-
-	void ReadArchiveHeaders()
-	{
-		guard(FLeadArchiveReader::ReadArchiveHeaders);
-		*Reader << BufferSize << FileSize << DirectoryOffset << Flags;
-		int DataStart = Reader->Tell();
-		printf("buf=%X file=%X dir=%X F=%X\n", BufferSize, FileSize, DirectoryOffset, Flags);
-		if (Flags & LEAD_PKG_COMPRESS_TABLES)
-		{
-			int DataSkip, TableSizeUncompr, TableSizeCompr;
-			*Reader << DataSkip << TableSizeUncompr << TableSizeCompr;
-			byte* PageTableUncompr = new byte[TableSizeUncompr];
-			printf("compr tables: skip=%X uncompTblSize=%X compSize=%X\n", DataSkip, TableSizeUncompr, TableSizeCompr);
-			if (TableSizeCompr)
-			{
-				byte* PageTableCompr = new byte[TableSizeCompr];
-				Reader->Serialize(PageTableCompr, TableSizeCompr);
-				int len = appDecompress(PageTableCompr, TableSizeCompr, PageTableUncompr, TableSizeUncompr, COMPRESS_ZLIB);
-				assert(len == TableSizeUncompr);
-				delete PageTableCompr;
-			}
-			else
-			{
-				Reader->Serialize(PageTableUncompr, TableSizeUncompr);
-			}
-			FMemReader Mem(PageTableUncompr, TableSizeUncompr);
-			Mem.SetupFrom(*Reader);
-			ReadPageTable(Mem, DataStart + DataSkip + 12, (Flags & LEAD_PKG_CHECK_CRC));
-			assert(Mem.Tell() == TableSizeUncompr);
-			delete PageTableUncompr;
-		}
-		else
-		{
-			appNotify("#1: LEAD package with uncompressed tables");	//!! UNTESTED
-			Reader->Seek(DirectoryOffset - 4);
-			ReadPageTable(*Reader, DataStart, (Flags & LEAD_PKG_CHECK_CRC));
-		}
-		unguard;
-	}
-
-	void ReadPageTable(FArchive& Ar, int DataOffset, bool checkCrc)
-	{
-		guard(FLeadArchiveReader::ReadPageTable);
-		int NumPages = (FileSize + BufferSize - 1) / BufferSize;
-		Pages.Add(NumPages);
-		int Remaining = FileSize;
-		int NumPages2;
-		Ar << AR_INDEX(NumPages2);	// unused
-		assert(NumPages == NumPages2);
-		for (int i = 0; i < NumPages; i++)
-		{
-			FLeadArcPage& P = Pages[i];
-			P.CompressedPos = DataOffset;
-			Ar << AR_INDEX(P.CompressedSize) << P.Flags;
-			if (checkCrc)
-			{
-				Ar << P.CompressedCrc << P.UncompressedCrc;
-			}
-			if (!P.CompressedSize)
-				P.CompressedSize = min(Remaining, BufferSize);	// size of uncompressed page
-			// advance pointers
-			DataOffset += P.CompressedSize;
-			Remaining  -= BufferSize;
-		}
-		unguard;
-	}
-
-	// this function is taken from FUE3ArchiveReader
-	virtual void Serialize(void *data, int size)
-	{
-		guard(FLeadArchiveReader::Serialize);
-
-		if (Stopper > 0 && Position + size > Stopper)
-			appError("Serializing behind stopper (%d+%d > %d)", Position, size, Stopper);
-
-		while (true)
-		{
-			// check for valid buffer
-			if (Position >= BufferStart && Position < BufferEnd)
-			{
-				int ToCopy = BufferEnd - Position;						// available size
-				if (ToCopy > size) ToCopy = size;						// shrink by required size
-				memcpy(data, Buffer + Position - BufferStart, ToCopy);	// copy data
-				// advance pointers/counters
-				Position += ToCopy;
-				size     -= ToCopy;
-				data     = OffsetPointer(data, ToCopy);
-				if (!size) return;										// copied enough
-			}
-			// here: data/size points outside of loaded Buffer
-			PrepareBuffer(Position);
-			assert(Position >= BufferStart && Position < BufferEnd);	// validate PrepareBuffer()
-		}
-
-		unguard;
-	}
-
-	void PrepareBuffer(int Pos)
-	{
-		guard(FLeadArchiveReader::PrepareBuffer);
-
-		int Page = Pos / BufferSize;
-		assert(Page >= 0 && Page < Pages.Num());
-		const FLeadArcPage& P = Pages[Page];
-		if (!Buffer) Buffer = new byte[BufferSize];
-
-		// read page
-		Reader->Seek(P.CompressedPos);
-		int DstSize = (Page < Pages.Num() - 1) ? BufferSize : FileSize % BufferSize;
-		int SrcSize = P.CompressedSize;
-		if (!SrcSize) SrcSize = DstSize;
-
-		byte* CompressedBuffer = new byte[SrcSize];
-		Reader->Serialize(CompressedBuffer, SrcSize);
-
-		if (!P.Flags)
-		{
-			assert(SrcSize <= BufferSize);
-			memcpy(Buffer, CompressedBuffer, SrcSize);
-		}
-		else
-		{
-			assert(SrcSize == P.CompressedSize);
-			assert(P.Flags & (LEAD_PKG_COMPRESS_ZLIB | LEAD_PKG_COMPRESS_XMEM));
-			appDecompress(
-				CompressedBuffer, SrcSize, Buffer, DstSize,
-				(P.Flags & LEAD_PKG_COMPRESS_ZLIB) ? COMPRESS_ZLIB : COMPRESS_LZX
-			);
-		}
-
-		delete CompressedBuffer;
-
-		BufferStart = Page * BufferSize;
-		BufferEnd   = BufferStart + BufferSize;
-
-		unguard;
-	}
-
-	// position controller
-	virtual void Seek(int Pos)
-	{
-		Position = Pos;
-	}
-	virtual int Tell() const
-	{
-		return Position;
-	}
-	virtual int GetFileSize() const
-	{
-		return FileSize;
-	}
-	virtual void SetStopper(int Pos)
-	{
-		Stopper = Pos;
-	}
-	virtual int  GetStopper() const
-	{
-		return Stopper;
-	}
-};
-
-
-#endif // LEAD
 
 
 /*-----------------------------------------------------------------------------
@@ -711,24 +384,14 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	}
 	#endif // BATTLE_TERR
 	#if NURIEN
-	bool isNurien = false;
+	FFileReaderNurien *NurienReader = NULL;
 	if (checkDword == 0xB01F713F)
 	{
-		isNurien = true;
 		// replace loader
-		Loader = new FFileReaderNurien(Loader);
+		Loader = NurienReader = new FFileReaderNurien(Loader);
 	}
 	#endif // NURIEN
-	#if LEAD
-	if (checkDword == LEAD_FILE_TAG)
-	{
-		Game = GAME_LEAD;
-		// replace Loader
-		Loader = new FLeadArchiveReader(Loader);
-	}
-	else
-	#endif // LEAD
-		Seek(0);	// seek back to header
+	Seek(0);	// seek back to header
 #endif // complex
 
 #if UNREAL3
@@ -794,7 +457,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		TArray<FCompressedChunk> Chunks;
 		*this << NumChunks;
 		Chunks.Empty(NumChunks);
-		int UncompOffset = Tell() - 4;		//?? test "-4"
+		int UncompOffset = Tell() - 4;
 		for (i = 0; i < NumChunks; i++)
 		{
 			int Offset;
@@ -821,13 +484,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	}
 #endif // UNREAL3
 #if NURIEN
-	if (isNurien)
-	{
-		// cast back to FFileReaderNurien
-		FFileReaderNurien *NurienReader = (FFileReaderNurien*)Loader;
-		NurienReader->Threshold = Summary.HeadersSize;
-	}
-#endif // NURIEN
+	if (NurienReader) NurienReader->Threshold = Summary.HeadersSize;
+#endif
 
 	// read name table
 	guard(ReadNameTable);
@@ -886,6 +544,16 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					goto done;
 				}
 #endif // SPLINTER_CELL
+#if LEAD
+				if (Game == GAME_SplinterCellConv && ArVer >= 68)
+				{
+					int len;
+					*this << AR_INDEX(len);
+					NameTable[i] = new char[len + 1];
+					Serialize(NameTable[i], len);
+					goto done;
+				}
+#endif // LEAD
 #if DCU_ONLINE
 				if (Game == GAME_DCUniverse)		// no version checking
 				{

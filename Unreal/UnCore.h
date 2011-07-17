@@ -98,9 +98,9 @@ public:
 	int			Index;
 #if UNREAL3
 	int			ExtraIndex;
+	bool		NameGenerated;
 #endif
 	const char	*Str;
-	bool		NameGenerated;
 
 	FName()
 	:	Index(0)
@@ -113,15 +113,19 @@ public:
 
 	~FName()
 	{
+#if UNREAL3
 		if (NameGenerated) free((void*)Str);
+#endif
 	}
 
+#if UNREAL3
 	void AppendIndex()
 	{
 		if (NameGenerated || !ExtraIndex) return;
 		NameGenerated = true;
 		Str = strdup(va("%s_%d", Str, ExtraIndex-1));
 	}
+#endif // UNREAL3
 
 #if BIOSHOCK
 	void AppendIndexBio()
@@ -174,6 +178,7 @@ enum EGame
 		GAME_UT2,
 		GAME_Pariah,
 		GAME_SplinterCell,
+		GAME_SplinterCellConv,
 		GAME_Lineage2,
 		GAME_Exteel,
 		GAME_Ragnarok2,
@@ -511,6 +516,10 @@ public:
 	:	Reader(File)
 	,	ArPosOffset(Offset)
 	{}
+	virtual ~FReaderWrapper()
+	{
+		delete Reader;
+	}
 	virtual void Seek(int Pos)
 	{
 		Reader->Seek(Pos + ArPosOffset);

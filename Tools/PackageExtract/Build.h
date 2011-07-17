@@ -16,6 +16,7 @@
 #define TRIBES3			1
 //#define RAGNAROK2		1
 #define EXTEEL			1
+#define LEAD			1		// Splinter Cell: Conviction
 
 #define UC2				1
 

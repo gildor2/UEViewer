@@ -40,6 +40,7 @@ MAIN = \
 	./obj/umodel-win32/UnPackage.obj \
 	./obj/umodel-win32/UnRenderer.obj \
 	./obj/umodel-win32/UnTexture.obj \
+	./obj/umodel-win32/UnUbisoft.obj \
 	./obj/umodel-win32/LodMeshViewer.obj \
 	./obj/umodel-win32/MaterialViewer.obj \
 	./obj/umodel-win32/MeshViewer.obj \
@@ -475,6 +476,9 @@ DEPENDS = \
 
 ./obj/umodel-win32/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnPackage.obj" Unreal/UnPackage.cpp
+
+./obj/umodel-win32/UnUbisoft.obj : Unreal/UnUbisoft.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnUbisoft.obj" Unreal/UnUbisoft.cpp
 
 DEPENDS = \
 	Build.h \

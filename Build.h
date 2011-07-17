@@ -32,7 +32,7 @@
 #define SWAT4			1
 #define RAGNAROK2		1
 #define EXTEEL			1
-//!!#define LEAD			1		// UbiSoft LEAD Engine (Splinter Cell: Conviction)
+#define LEAD			1		// UbiSoft LEAD Engine (Splinter Cell: Conviction)
 
 // UE2X
 #define UC1				1

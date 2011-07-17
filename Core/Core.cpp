@@ -277,6 +277,22 @@ const char *appStristr(const char *s1, const char *s2)
 	return s1 + (s - buf1);
 }
 
+static void NormalizeFilename(char *filename)
+{
+	char *src = filename;
+	char *dst = filename;
+	char prev = 0;
+	while (true)
+	{
+		char c = *src++;
+		if (c == '\\') c = '/';
+		if (c == '/' && prev == '/') continue; // squeeze multiple slashes
+		*dst++ = prev = c;
+		if (!c) break;
+	}
+}
+
+
 #if _WIN32
 
 void appMakeDirectory(const char *dirname)
@@ -286,6 +302,8 @@ void appMakeDirectory(const char *dirname)
 	// so - we will create "a", then "a/b", then "a/b/c"
 	char Name[256];
 	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
+	NormalizeFilename(Name);
+
 	for (char *s = Name; /* empty */ ; s++)
 	{
 		char c = *s;
@@ -309,6 +327,8 @@ void appMakeDirectory(const char *dirname)
 	// so - we will create "a", then "a/b", then "a/b/c"
 	char Name[256];
 	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
+	NormalizeFilename(Name);
+
 	for (char *s = Name; /* empty */ ; s++)
 	{
 		char c = *s;
@@ -329,6 +349,8 @@ void appMakeDirectoryForFile(const char *filename)
 {
 	char Name[256];
 	appStrncpyz(Name, filename, ARRAY_COUNT(Name));
+	NormalizeFilename(Name);
+
 	char *s = strrchr(Name, '/');
 	if (s)
 	{

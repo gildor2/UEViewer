@@ -1,3 +1,5 @@
+- check VertMesh export: export ut2004/SkaarjPack_rc, compare *.3d and *.uc files with UT2004 source
+
 StaticMesh:
 - build tangent space
 

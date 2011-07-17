@@ -2873,7 +2873,7 @@ struct FStaticMeshLODModel
 			color_stream:
 				Ar << Lod.ColorStream2;
 			}
-			if (Ar.ArVer < 686) Ar << Lod.ColorStream;
+			if (Ar.ArVer < 686) Ar << Lod.ColorStream;	//?? probably this is not a color stream - the same version is used to remove "edges"
 			Ar << Lod.f80;
 		}
 		else if (Ar.ArVer >= 466)
