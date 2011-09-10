@@ -338,7 +338,7 @@ public:
 		// some hack to support more games ...
 		if (Ar.Tell() < Ar.GetStopper())
 		{
-			printf("UTexture2D %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+			appPrintf("UTexture2D %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
 		skip_rest_quiet:
 			Ar.Seek(Ar.GetStopper());
 		}
@@ -403,7 +403,7 @@ public:
 		// some hack to support more games ...
 		if (Ar.Tell() < Ar.GetStopper())
 		{
-			printf("UTextureCube %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+			appPrintf("UTextureCube %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
 		skip_rest_quiet:
 			Ar.Seek(Ar.GetStopper());
 		}

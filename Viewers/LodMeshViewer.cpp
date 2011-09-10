@@ -44,11 +44,11 @@ void CLodMeshViewer::Initialize()
 	if (Radius < 10) Radius = 10;
 	SetDistScale(Mesh->MeshScale.X * Radius / 150);
 #if SHOW_BOUNDS
-	printf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
-	printf("Bounds.max = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Max));
-	printf("Origin     = %g %g %g\n", FVECTOR_ARG(Mesh->MeshOrigin));
-	printf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
-	printf("Offset     = %g %g %g\n", VECTOR_ARG(offset));
+	appPrintf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
+	appPrintf("Bounds.max = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Max));
+	appPrintf("Origin     = %g %g %g\n", FVECTOR_ARG(Mesh->MeshOrigin));
+	appPrintf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
+	appPrintf("Offset     = %g %g %g\n", VECTOR_ARG(offset));
 #endif // SHOW_BOUNDS
 }
 
@@ -68,7 +68,7 @@ void CLodMeshViewer::Dump()
 {
 	CObjectViewer::Dump();
 	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
-	printf(
+	appPrintf(
 		"\nLodMesh info:\n=============\n"
 		"version        %d\n"
 		"VertexCount    %d\n"
@@ -96,20 +96,20 @@ void CLodMeshViewer::Dump()
 		Mesh->SkinTesselationFactor
 	);
 	int i;
-	printf("Textures: %d\n", Mesh->Textures.Num());
+	appPrintf("Textures: %d\n", Mesh->Textures.Num());
 	for (i = 0; i < Mesh->Textures.Num(); i++)
 	{
 		const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
 		if (Tex)
-			printf("  %d: %s (%s)\n", i, Tex->Name, Tex->GetClassName());
+			appPrintf("  %d: %s (%s)\n", i, Tex->Name, Tex->GetClassName());
 		else
-			printf("  %d: null\n", i);
+			appPrintf("  %d: null\n", i);
 	}
-	printf("Materials: %d\n", Mesh->Materials.Num());
+	appPrintf("Materials: %d\n", Mesh->Materials.Num());
 	for (i = 0; i < Mesh->Materials.Num(); i++)
 	{
 		const FMeshMaterial &Mat = Mesh->Materials[i];
-		printf("  %d: tex=%d  flags=%08X\n", i, Mat.TextureIndex, Mat.PolyFlags);
+		appPrintf("  %d: tex=%d  flags=%08X\n", i, Mat.TextureIndex, Mat.PolyFlags);
 	}
 }
 

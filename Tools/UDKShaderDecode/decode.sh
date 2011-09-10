@@ -1,7 +1,8 @@
 #!/bin/bash
 
-#srcDir=E:/UDK/Engine/Shaders/Binaries
-srcDir=E:/Projects/WarShipBattle/Engine/Shaders/Binaries
+#srcDir=E:/UDK/UDK-2011-06/Engine/Shaders/Binaries
+#srcDir=E:/Projects/WarShipBattle/Engine/Shaders/Binaries
+srcDir=binaries
 dstDir=decoded
 
 mkdir $dstDir

@@ -16,8 +16,9 @@ public:
 
 		Super::Serialize(Ar);
 		Ar << f5C;
-#if UT2
-		if (Ar.Game == GAME_UT2 && Ar.ArLicenseeVer >= 2) Ar << f2C;
+#if UT2 || BATTLE_TERR
+		if ((Ar.Game == GAME_UT2 || Ar.Game == GAME_BattleTerr) && Ar.ArLicenseeVer >= 2)
+			Ar << f2C;
 #endif
 		Ar << RawData;
 
@@ -47,7 +48,7 @@ public:
 		CompressedXbox360Data.Serialize(Ar);
 		CompressedPS3Data.Serialize(Ar);
 #if 0
-		printf("Sound: raw(%d) pc(%d) xbox(%d) ps3(%d)\n",
+		appPrintf("Sound: raw(%d) pc(%d) xbox(%d) ps3(%d)\n",
 			RawData.ElementCount,
 			CompressedPCData.ElementCount,
 			CompressedXbox360Data.ElementCount,

@@ -33,7 +33,7 @@ void CStatMeshViewer::Dump()
 
 	const UStaticMesh* Mesh = static_cast<UStaticMesh*>(Object);
 
-	printf(
+	appPrintf(
 		"\nStaticMesh info:\n================\n"
 		"Version=%d  Trialgnes # %d Verts # %d (rev=%d)\n"
 		"Colors1 # %d  Colors2 # %d  Indices1 # %d  Indices2 # %d\n"
@@ -48,30 +48,30 @@ void CStatMeshViewer::Dump()
 		Mesh->f150.Num(), Mesh->f15C
 	);
 
-	printf("UV Streams: %d\n", Mesh->UVStream.Num());
+	appPrintf("UV Streams: %d\n", Mesh->UVStream.Num());
 	for (i = 0; i < Mesh->UVStream.Num(); i++)
 	{
 		const FStaticMeshUVStream &S = Mesh->UVStream[i];
-		printf("  %d: [%d] %d %d\n", i, S.Data.Num(), S.f10, S.f1C);
+		appPrintf("  %d: [%d] %d %d\n", i, S.Data.Num(), S.f10, S.f1C);
 	}
 
-	printf("Sections: %d\n", Mesh->Sections.Num());
+	appPrintf("Sections: %d\n", Mesh->Sections.Num());
 	for (i = 0; i < Mesh->Sections.Num(); i++)
 	{
 		const FStaticMeshSection &Sec = Mesh->Sections[i];
-		printf("  %d: %d idx0=%d v=[%d %d] f=%d %d\n", i, Sec.f4,
+		appPrintf("  %d: %d idx0=%d v=[%d %d] f=%d %d\n", i, Sec.f4,
 			Sec.FirstIndex, Sec.FirstVertex, Sec.LastVertex, Sec.NumFaces, Sec.fE);
 	}
 
-	printf("Materials: %d\n", Mesh->Materials.Num());
+	appPrintf("Materials: %d\n", Mesh->Materials.Num());
 	for (i = 0; i < Mesh->Materials.Num(); i++)
 	{
 		const FStaticMeshMaterial &Mat = Mesh->Materials[i];
 		UUnrealMaterial *Tex = MATERIAL_CAST(Mat.Material);
 		if (Tex)
-			printf("  %d: %s'%s'\n", i, Tex->GetClassName(), Tex->Name);
+			appPrintf("  %d: %s'%s'\n", i, Tex->GetClassName(), Tex->Name);
 		else
-			printf("  %d: NULL\n", i);
+			appPrintf("  %d: NULL\n", i);
 	}
 }
 

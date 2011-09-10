@@ -632,13 +632,13 @@ void CSkelMeshInstance::DumpBones()
 	{
 		const FMeshBone &B = Mesh->RefSkeleton[i];
 		int parent = B.ParentIndex;
-		printf("bone#%2d (parent %2d); tree size: %2d   ", i, parent, treeSizes[i]);
+		appPrintf("bone#%2d (parent %2d); tree size: %2d   ", i, parent, treeSizes[i]);
 #if 1
 		for (int j = 0; j < depth[i]; j++)
 		{
 	#if 0
 			// simple picture
-			printf("|  ");
+			appPrintf("|  ");
 	#else
 			// graph-like picture
 			bool found = false;
@@ -651,21 +651,21 @@ void CSkelMeshInstance::DumpBones()
 		#if _WIN32
 			// pseudographics
 			if (j == depth[i]-1)
-				printf(found ? "\xC3\xC4\xC4" : "\xC0\xC4\xC4");	// [+--] : [\--]
+				appPrintf(found ? "\xC3\xC4\xC4" : "\xC0\xC4\xC4");	// [+--] : [\--]
 			else
-                printf(found ? "\xB3  " : "   ");					// [|  ] : [   ]
+                appPrintf(found ? "\xB3  " : "   ");				// [|  ] : [   ]
 		#else
 			// ASCII
 			if (j == depth[i]-1)
-				printf(found ? "+--" : "\\--");
+				appPrintf(found ? "+--" : "\\--");
 			else
-				printf(found ? "|  " : "   ");
+				appPrintf(found ? "|  " : "   ");
         #endif
 	#endif
 		}
-		printf("%s\n", *B.Name);
+		appPrintf("%s\n", *B.Name);
 #else
-		printf("%s {%g %g %g} {%g %g %g %g}\n", *B.Name, FVECTOR_ARG(B.BonePos.Position), FQUAT_ARG(B.BonePos.Orientation));
+		appPrintf("%s {%g %g %g} {%g %g %g %g}\n", *B.Name, FVECTOR_ARG(B.BonePos.Position), FQUAT_ARG(B.BonePos.Orientation));
 #endif
 	}
 #endif

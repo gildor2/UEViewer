@@ -674,7 +674,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 /*			if (Dep->Objects.Num())
 			{
 				const FObjectExport &Exp = ExportTable[i];
-				printf("Depends for %s'%s' = %d\n", GetObjectName(Exp.ClassIndex),
+				appPrintf("Depends for %s'%s' = %d\n", GetObjectName(Exp.ClassIndex),
 					*Exp.ObjectName, Dep->Objects[i]);
 			} */
 		}
@@ -746,7 +746,7 @@ bool UnPackage::CompareObjectPaths(int PackageIndex, UnPackage *RefPackage, int 
 {
 	guard(UnPackage::CompareObjectPaths);
 
-/*	printf("Compare %s.%s [%d] with %s.%s [%d]\n",
+/*	appPrintf("Compare %s.%s [%d] with %s.%s [%d]\n",
 		Name, GetObjectName(PackageIndex), PackageIndex,
 		RefPackage->Name, RefPackage->GetObjectName(RefPackageIndex), RefPackageIndex
 	); */
@@ -786,7 +786,7 @@ bool UnPackage::CompareObjectPaths(int PackageIndex, UnPackage *RefPackage, int 
 		}
 		else
 			RefPackageName  = RefPackage->Name;
-//		printf("%20s -- %20s\n", PackageName, RefPackageName);
+//		appPrintf("%20s -- %20s\n", PackageName, RefPackageName);
 		if (stricmp(RefPackageName, PackageName) != 0) return false;
 	}
 
@@ -809,7 +809,7 @@ UObject* UnPackage::CreateExport(int index)
 	UObject *Obj = Exp.Object = CreateClass(ClassName);
 	if (!Obj)
 	{
-		printf("WARNING: Unknown class \"%s\" for object \"%s\"\n", ClassName, *Exp.ObjectName);
+		appPrintf("WARNING: Unknown class \"%s\" for object \"%s\"\n", ClassName, *Exp.ObjectName);
 		return NULL;
 	}
 #if UNREAL3
@@ -828,7 +828,7 @@ UObject* UnPackage::CreateExport(int index)
 			const FObjectExport &Exp2 = GetExport(PackageIndex);
 			assert(Exp2.ExportFlags & EF_ForcedExport);
 			const char *PackageName = Exp2.ObjectName;
-			printf("Forced export: %s'%s.%s'\n", ClassName, PackageName, *Exp.ObjectName);
+			appPrintf("Forced export: %s'%s.%s'\n", ClassName, PackageName, *Exp.ObjectName);
 		}
 	}
 #endif // UNREAL3
@@ -871,7 +871,7 @@ UObject* UnPackage::CreateImport(int index)
 
 	if (!Package)
 	{
-//		printf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
+//		appPrintf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
 		return NULL;
 	}
 	// find object in loaded package export table
@@ -885,7 +885,7 @@ UObject* UnPackage::CreateImport(int index)
 	if (ObjIndex == INDEX_NONE)
 	{
 		if (!isStartupPackage)
-			printf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
+			appPrintf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
 		return NULL;
 	}
 	// create object
@@ -1015,7 +1015,7 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 		return new UnPackage(info->RelativeName, appCreateFileReader(info));
 	}
 	// package is missing
-	printf("WARNING: package %s was not found\n", Name);
+	appPrintf("WARNING: package %s was not found\n", Name);
 	MissingPackages.AddItem(strdup(Name));
 	return NULL;
 

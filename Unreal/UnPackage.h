@@ -3,7 +3,7 @@
 
 
 #if 1
-#	define PKG_LOG(x)		printf x
+#	define PKG_LOG(x)		appPrintf x
 #else
 #	define PKG_LOG(x)
 #endif
@@ -337,6 +337,13 @@ struct FPackageFileSummary
 			// always used int for generation count (even for UE1-2)
 			int Count;
 			Ar << Count;
+#if APB
+			if (Ar.Game == GAME_APB && Ar.ArLicenseeVer >= 32)
+			{
+				FGuid Guid2;
+				Ar << Guid2;
+			}
+#endif // APB
 			S.Generations.Empty(Count);
 			S.Generations.Add(Count);
 			for (int i = 0; i < Count; i++)
@@ -376,9 +383,9 @@ struct FPackageFileSummary
 			// if (Ar.Game == GAME_MassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
 //		}
 	#if 0
-		printf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
-		printf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
-		printf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
+		appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
+		appPrintf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
+		appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
 	#endif
 #endif // UNREAL3
 		return Ar;
@@ -776,13 +783,13 @@ public:
 		if (index < 0)
 		{
 //			const FObjectImport &Imp = GetImport(-index-1);
-//			printf("PKG: Import[%s,%d] OBJ=%s CLS=%s\n", GetObjectName(Imp.PackageIndex), index, *Imp.ObjectName, *Imp.ClassName);
+//			appPrintf("PKG: Import[%s,%d] OBJ=%s CLS=%s\n", GetObjectName(Imp.PackageIndex), index, *Imp.ObjectName, *Imp.ClassName);
 			Obj = CreateImport(-index-1);
 		}
 		else if (index > 0)
 		{
 //			const FObjectExport &Exp = GetExport(index-1);
-//			printf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
+//			appPrintf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
 			Obj = CreateExport(index-1);
 		}
 		else // index == 0

@@ -229,7 +229,7 @@ public:
 	void Use();
 	static void Unset();
 
-	void SetViewport() const
+	inline void SetViewport() const
 	{
 		glViewport(0, 0, width, height);
 		glScissor (0, 0, width, height);

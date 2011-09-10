@@ -4,9 +4,8 @@
 
 #if RENDERING
 
-#define appPrintf		printf
 #define appWPrintf		appNotify
-#define Com_DPrintf		if (1) {} else printf		//??
+#define Com_DPrintf		if (1) {} else appPrintf		//??
 
 
 //namespace OpenGLDrv {
@@ -174,7 +173,7 @@ void QGL_InitExtensions()
 	gl_config.extensions = ext1 = (char*)glGetString(GL_EXTENSIONS);
 	const char *ver = (const char*)glGetString(GL_VERSION);
 	float glVersion = atof(ver);
-//	printf("GL version: %f\n", glVersion);
+//	appPrintf("GL version: %f\n", glVersion);
 
 	ext2 = NULL;
 #if _WIN32 && !USE_SDL

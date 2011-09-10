@@ -485,13 +485,13 @@ static bool ReadXprFile(const CGameFileInfo *file)
 	if (Tag != BYTES4('X','P','R','1'))
 	{
 #if XPR_DEBUG
-		printf("Unknown XPR tag in %s\n", file->RelativeName);
+		appPrintf("Unknown XPR tag in %s\n", file->RelativeName);
 #endif
 		delete Ar;
 		return true;
 	}
 #if XPR_DEBUG
-	printf("Scanning %s ...\n", file->RelativeName);
+	appPrintf("Scanning %s ...\n", file->RelativeName);
 #endif
 
 	XprInfo *Info = new(xprFiles) XprInfo;
@@ -539,7 +539,7 @@ static bool ReadXprFile(const CGameFileInfo *file)
 	{
 		XprEntry *Entry = &Info->Items[i];
 #if XPR_DEBUG
-//		printf("  %08X [%08X]  %s\n", Entry->DataOffset, Entry->DataSize, Entry->Name);
+//		appPrintf("  %08X [%08X]  %s\n", Entry->DataOffset, Entry->DataSize, Entry->Name);
 #endif
 		Ar->Seek(Entry->DataOffset);
 		int id;
@@ -601,7 +601,7 @@ static bool ReadXprFile(const CGameFileInfo *file)
 	for (i = 0; i < DataCount; i++)
 	{
 		XprEntry *Entry = &Info->Items[i];
-		printf("  %3d %08X [%08X] .. %08X  %s\n", i, Entry->DataOffset, Entry->DataSize, Entry->DataOffset + Entry->DataSize, Entry->Name);
+		appPrintf("  %3d %08X [%08X] .. %08X  %s\n", i, Entry->DataOffset, Entry->DataSize, Entry->DataOffset + Entry->DataSize, Entry->Name);
 	}
 #endif
 
@@ -631,7 +631,7 @@ byte *FindXprData(const char *Name, int *DataSize)
 			if (strcmp(File->Name, Name) == 0)
 			{
 				// found
-				printf("Loading stream %s from %s (%d bytes)\n", Name, Info->File->RelativeName, File->DataSize);
+				appPrintf("Loading stream %s from %s (%d bytes)\n", Name, Info->File->RelativeName, File->DataSize);
 				FArchive *Reader = appCreateFileReader(Info->File);
 				Reader->Seek(File->DataOffset);
 				byte *buf = new byte[File->DataSize];
@@ -642,7 +642,7 @@ byte *FindXprData(const char *Name, int *DataSize)
 			}
 		}
 	}
-	printf("WARNING: external stream %s was not found\n", Name);
+	appPrintf("WARNING: external stream %s was not found\n", Name);
 	if (DataSize) *DataSize = 0;
 	return NULL;
 }
@@ -670,7 +670,7 @@ struct BioBulkCatalogItem
 		assert(S.f10 == 0);
 //		assert(S.DataSize == S.DataSize2);	-- the same on PC, but not the same on XBox360
 #if DUMP_BIO_CATALOG
-		printf("  %s / %s - %08X:%08X %X %X %X\n", *S.ObjectName, *S.PackageName, S.f10, S.DataOffset, S.DataSize, S.DataSize2, S.f20);
+		appPrintf("  %s / %s - %08X:%08X %X %X %X\n", *S.ObjectName, *S.PackageName, S.f10, S.DataOffset, S.DataSize, S.DataSize2, S.f20);
 #endif
 		return Ar;
 	}
@@ -687,7 +687,7 @@ struct BioBulkCatalogFile
 	{
 		Ar << S.f0 << S.Filename;
 #if DUMP_BIO_CATALOG
-		printf("<<< %s >>>\n", *S.Filename);
+		appPrintf("<<< %s >>>\n", *S.Filename);
 #endif
 		Ar << S.Items;
 #if DEBUG_BIO_BULK
@@ -701,7 +701,7 @@ struct BioBulkCatalogFile
 			if (n2 < min20) min20 = n1;
 			if (n2 > max20) max20 = n1;
 		}
-		printf("DS2=%X..%X  f20=%X..%X", minS2, maxS2, min20, max20);
+		appPrintf("DS2=%X..%X  f20=%X..%X", minS2, maxS2, min20, max20);
 #endif // DEBUG_BIO_BULK
 		return Ar;
 	}
@@ -734,7 +734,7 @@ static bool BioReadBulkCatalogFile(const CGameFileInfo *file)
 	Ar->ArLicenseeVer = 0x38;
 	Ar->Game          = GAME_Bioshock;
 	// serialize
-	printf("Reading %s\n", file->RelativeName);
+	appPrintf("Reading %s\n", file->RelativeName);
 	BioBulkCatalog *cat = new (bioCatalog) BioBulkCatalog;
 	*Ar << *cat;
 	// finalize
@@ -750,14 +750,14 @@ static void BioReadBulkCatalog()
 	if (ready) return;
 	ready = true;
 	appEnumGameFiles(BioReadBulkCatalogFile, "bdc");
-	if (!bioCatalog.Num()) printf("WARNING: no *.bdc files found\n");
+	if (!bioCatalog.Num()) appPrintf("WARNING: no *.bdc files found\n");
 }
 
 static byte *FindBioTexture(const UTexture *Tex)
 {
 	int needSize = Tex->CachedBulkDataSize & 0xFFFFFFFF;
 #if DEBUG_BIO_BULK
-	printf("Search for ... %s (size=%X)\n", Tex->Name, needSize);
+	appPrintf("Search for ... %s (size=%X)\n", Tex->Name, needSize);
 #endif
 	BioReadBulkCatalog();
 	for (int i = 0; i < bioCatalog.Num(); i++)
@@ -774,12 +774,12 @@ static byte *FindBioTexture(const UTexture *Tex)
 				if (abs(needSize - Item.DataSize) > 0x4000)		// differs in 16k
 				{
 #if DEBUG_BIO_BULK
-					printf("... Found %s in %s with wrong BulkDataSize %X (need %X)\n", Tex->Name, *File.Filename, Item.DataSize, needSize);
+					appPrintf("... Found %s in %s with wrong BulkDataSize %X (need %X)\n", Tex->Name, *File.Filename, Item.DataSize, needSize);
 #endif
 					continue;
 				}
 #if DEBUG_BIO_BULK
-				printf("... Found %s in %s at %X size %X (%dx%d fmt=%d bpp=%g strip:%d mips:%d)\n", Tex->Name, *File.Filename, Item.DataOffset, Item.DataSize,
+				appPrintf("... Found %s in %s at %X size %X (%dx%d fmt=%d bpp=%g strip:%d mips:%d)\n", Tex->Name, *File.Filename, Item.DataOffset, Item.DataSize,
 					Tex->USize, Tex->VSize, Tex->Format, (float)Item.DataSize / (Tex->USize * Tex->VSize),
 					Tex->HasBeenStripped, Tex->StrippedNumMips);
 #endif
@@ -788,11 +788,11 @@ static byte *FindBioTexture(const UTexture *Tex)
 				if (!bulkFile)
 				{
 					// no bulk file
-					printf("Decompressing %s: %s is missing\n", Tex->Name, *File.Filename);
+					appPrintf("Decompressing %s: %s is missing\n", Tex->Name, *File.Filename);
 					return NULL;
 				}
 
-				printf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, bulkFile->RelativeName);
+				appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, bulkFile->RelativeName);
 				FArchive *Reader = appCreateFileReader(bulkFile);
 				Reader->Seek(Item.DataOffset);
 				byte *buf = new byte[max(Item.DataSize, needSize)];
@@ -804,7 +804,7 @@ static byte *FindBioTexture(const UTexture *Tex)
 	}
 	}
 #if DEBUG_BIO_BULK
-	printf("... Bulk for %s was not found\n", Tex->Name);
+	appPrintf("... Bulk for %s was not found\n", Tex->Name);
 #endif
 	return NULL;
 }
@@ -865,7 +865,7 @@ byte *UTexture::Decompress(int &USize, int &VSize) const
 #if BIOSHOCK && XBOX360
 		if (Package && Package->Game == GAME_Bioshock && Package->Platform == PLATFORM_XBOX360)
 		{
-//			printf("fmt=%s  bulk=%d  w=%d  h=%d\n", EnumToName("EPixelFormat", Format), DataSize, USize, VSize);
+//			appPrintf("fmt=%s  bulk=%d  w=%d  h=%d\n", EnumToName("EPixelFormat", Format), DataSize, USize, VSize);
 			char* Error;
 			pic2 = DecompressXBox360(pic, DataSize, Format, USize, VSize, Name, Error, Package->Game);
 			if (!pic2)
@@ -993,14 +993,14 @@ static int GetRealTextureOffset_DCU_2(unsigned Hash, const char *TFCName)
 	UnPackage *Package = UnPackage::LoadPackage(PkgName);
 	if (!Package)
 	{
-		printf("Package %s was not found\n", PkgName);
+		appPrintf("Package %s was not found\n", PkgName);
 		return -1;
 	}
 	// find object ...
 	int mapExportIdx = Package->FindExport("TextureFileCacheRemap", "TextureFileCacheRemap");
 	if (mapExportIdx == INDEX_NONE)
 	{
-		printf("ERROR: unable to find export \"TextureFileCacheRemap\" in package %s\n", PkgName);
+		appPrintf("ERROR: unable to find export \"TextureFileCacheRemap\" in package %s\n", PkgName);
 		return -1;
 	}
 	// ... and load it
@@ -1053,7 +1053,7 @@ void UUIStreamingTextures::PostLoad()
 
 	assert(Package->Game == GAME_DCUniverse);
 	// code is similar to Rune's USkelModel::Serialize()
-	printf("Creating %d UI textures ...\n", TextureHashToInfo.Num());
+	appPrintf("Creating %d UI textures ...\n", TextureHashToInfo.Num());
 	for (int i = 0; i < TextureHashToInfo.Num(); i++)
 	{
 		// create new UTexture2D
@@ -1083,7 +1083,7 @@ void UUIStreamingTextures::PostLoad()
 		Mip->Data.BulkDataOffsetInFile = S.BulkDataOffsetInFile;
 		// find TFC remap
 //		unsigned Hash = appStrihash("UIICONS101_I1.dds");	//??
-//		printf("Hash: %08X\n", Hash);
+//		appPrintf("Hash: %08X\n", Hash);
 		if (Mip->Data.BulkDataOffsetInFile < 0)
 		{
 			int Offset = GetRealTextureOffset_DCU_2(S.Hash, S.TextureFileCacheName);
@@ -1091,16 +1091,16 @@ void UUIStreamingTextures::PostLoad()
 				Mip->Data.BulkDataFlags = BULKDATA_NoData;
 			else
 				Mip->Data.BulkDataOffsetInFile = Offset - Mip->Data.BulkDataOffsetInFile - 1;
-			printf("OFFS: %X\n", Mip->Data.BulkDataOffsetInFile);
+			appPrintf("OFFS: %X\n", Mip->Data.BulkDataOffsetInFile);
 		}
 #if 1
-		printf("%d: %s  {%08X} %dx%d %s [%08X + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
+		appPrintf("%d: %s  {%08X} %dx%d %s [%08X + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
 			S.nWidth, S.nHeight, EnumToName("EPixelFormat", Tex->Format),
 			S.BulkDataOffsetInFile, S.BulkDataSizeOnDisk
 		);
 #endif
 	}
-	printf("... done\n");
+	appPrintf("... done\n");
 
 	unguard;
 }
@@ -1148,7 +1148,7 @@ bool UTexture2D::LoadBulkTexture(int MipIndex) const
 			{
 				bulkFileName = Exp2.ObjectName;
 				bulkFileExt  = NULL;					// find package file
-//				printf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
+//				appPrintf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
 			}
 		}
 		if (!bulkFileName) return false;					// just in case
@@ -1157,11 +1157,11 @@ bool UTexture2D::LoadBulkTexture(int MipIndex) const
 
 	if (!bulkFile)
 	{
-		printf("Decompressing %s: %s.%s is missing\n", Name, bulkFileName, bulkFileExt ? bulkFileExt : "*");
+		appPrintf("Decompressing %s: %s.%s is missing\n", Name, bulkFileName, bulkFileExt ? bulkFileExt : "*");
 		return false;
 	}
 
-	printf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
+	appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
 	FArchive *Ar = appCreateFileReader(bulkFile);
 	Ar->SetupFrom(*Package);
 	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
@@ -1171,10 +1171,10 @@ bool UTexture2D::LoadBulkTexture(int MipIndex) const
 		int Offset = GetRealTextureOffset_DCU(this);
 		if (Offset < 0) return false;
 		Bulk->BulkDataOffsetInFile = Offset - Bulk->BulkDataOffsetInFile - 1;
-//		printf("OFFS: %X\n", Bulk->BulkDataOffsetInFile);
+//		appPrintf("OFFS: %X\n", Bulk->BulkDataOffsetInFile);
 	}
 #endif // DCU_ONLINE
-//	printf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
+//	appPrintf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
 	Bulk->SerializeChunk(*Ar);
 	delete Ar;
 	return true;
@@ -1255,7 +1255,7 @@ byte *UTexture2D::Decompress(int &USize, int &VSize) const
 			{
 				const FByteBulkData &Bulk = Mip.Data;
 				int DataSize = Bulk.ElementCount * Bulk.GetElementSize();
-//				printf("fmt=%s  bulk=%d  w=%d  h=%d\n", EnumToName("EPixelFormat", Format), DataSize, USize, VSize);
+//				appPrintf("fmt=%s  bulk=%d  w=%d  h=%d\n", EnumToName("EPixelFormat", Format), DataSize, USize, VSize);
 				char* Error;
 				ret = DecompressXBox360(Bulk.BulkData, DataSize, intFormat, USize, VSize, Name, Error, Package->Game);
 				if (!ret)

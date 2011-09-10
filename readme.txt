@@ -193,6 +193,15 @@ expect too much from this.
 
 Changes
 ~~~~~~~
+13.08.2011
+- implemented Battle Territory Online sound support
+
+08.08.2011
+- implemented APB: Reloaded package support
+
+21.07.2011
+- updated support for the June 2011 UDK
+
 27.06.2011
 - implemented Transformers: Dark of the Moon support
 

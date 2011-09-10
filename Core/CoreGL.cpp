@@ -227,7 +227,7 @@ static bool LoadGlslang()
 	glslangDll = LoadLibrary(GLSLANG_DLL);
 	if (!glslangDll)
 	{
-		printf("%s is not found\n", GLSLANG_DLL);
+		appPrintf("%s is not found\n", GLSLANG_DLL);
 		glslangMissing = true;
 		return false;
 	}
@@ -331,7 +331,7 @@ static void CheckShader(GLuint obj, const char *type, const char *name)
 #endif // FILTER_ATI_GLSL
 
 	if (status)
-		printf("WARNING: %s shader %s:\n%s\n", type, name, infoLog);
+		appPrintf("WARNING: %s shader %s:\n%s\n", type, name, infoLog);
 	else
 		appNotify("ERROR: %s shader %s:\n%s", type, name, infoLog);
 
@@ -359,15 +359,16 @@ static void CheckProgram(GLuint obj, const char *name)
 	if (status)
 	{
 		static const char *checks[] = {
-			"Fragment shader(s) linked, vertex shader(s) linked"
+			"fragment shader(s) linked",
+			"vertex shader(s) linked",
 		};
 		for (int i = 0; i < ARRAY_COUNT(checks); i++)
 			if (appStristr(infoLog, checks[i])) return;
 	}
 #endif // FILTER_ATI_GLSL
 
-	printf("%s: program %s:\n", (status == GL_TRUE) ? "WARNING" : "ERROR", name);
-	printf("%s\n", infoLog);
+	appPrintf("%s: program %s:\n", (status == GL_TRUE) ? "WARNING" : "ERROR", name);
+	appPrintf("%s\n", infoLog);
 
 	delete infoLog;
 
@@ -402,7 +403,7 @@ static int SubstParams(char *dst, const char *src, const char **subst)
 			appError("Wrong subst count");
 #if 1
 		appSprintf(d, 16384 /*!!*/, "\n#line 0 %d\n%s\n#line %d 0\n", substIndex, sub, lineNum-1);
-//		printf("subst %d at line %d\n", substIndex, lineNum);
+//		appPrintf("subst %d at line %d\n", substIndex, lineNum);
 #else
 		strcpy(d, sub);
 #endif

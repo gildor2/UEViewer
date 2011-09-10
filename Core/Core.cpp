@@ -12,6 +12,20 @@
 #include <float.h>					// for _clearfp()
 #endif // WIN32_USE_SEH
 
+
+void appPrintf(const char *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	char buf[4096];
+	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
+	va_end(argptr);
+	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
+
+	fwrite(buf, len, 1, stdout);
+}
+
+
 /*-----------------------------------------------------------------------------
 	Simple error/notofication functions
 -----------------------------------------------------------------------------*/
@@ -35,7 +49,7 @@ void appError(const char *fmt, ...)
 	appStrcatn(ARRAY_ARG(GErrorHistory), "\n");
 	THROW;
 #else
-	printf("Fatal Error: %s\n", buf);
+	fprintf(stderr, "Fatal Error: %s\n", buf);
 	exit(1);
 #endif
 }
@@ -76,8 +90,8 @@ void appNotify(const char *fmt, ...)
 	}
 	// print to console
 	if (NotifyBuf[0])
-		printf("******** %s ********\n", NotifyBuf);
-	printf("*** %s\n", buf);
+		fprintf(stderr, "******** %s ********\n", NotifyBuf);
+	fprintf(stderr, "*** %s\n", buf);
 	// clean notify header
 	NotifyBuf[0] = 0;
 }
@@ -214,7 +228,7 @@ int appSprintf(char *dest, int size, const char *fmt, ...)
 	int len = vsnprintf(dest, size, fmt, argptr);
 	va_end(argptr);
 	if (len < 0 || len >= size - 1)
-		printf("appSprintf: overflow of %d\n", size);
+		appPrintf("appSprintf: overflow of %d\n", size);
 
 	return len;
 }

@@ -163,7 +163,7 @@ static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
 		BoneMap[i] = CurBone++;
 	}
 	if (CurBone < Mesh->RefSkeleton.Num())
-		printf("... reduced skeleton from %d bones to %d\n", Mesh->RefSkeleton.Num(), CurBone);
+		appPrintf("... reduced skeleton from %d bones to %d\n", Mesh->RefSkeleton.Num(), CurBone);
 #endif // REFINE_SKEL
 
 #if !REFINE_SKEL

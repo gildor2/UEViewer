@@ -14,7 +14,7 @@
 
 UObject::~UObject()
 {
-//	printf("deleting %s\n", Name);
+//	appPrintf("deleting %s\n", Name);
 	// remove self from GObjObjects
 	for (int i = 0; i < GObjObjects.Num(); i++)
 		if (GObjObjects[i] == this)
@@ -113,7 +113,7 @@ void UObject::EndLoad()
 		UnPackage *Package = Obj->Package;
 		guard(LoadObject);
 		Package->SetupReader(Obj->PackageIndex);
-		printf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
+		appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
 #if PROFILE_LOADING
 		appResetProfiler();
 #endif
@@ -446,9 +446,9 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
 			if (!Prop)
-				printf("WARNING: %s \"%s::%s\" was not found\n", GetTypeName(Tag.Type), Name, *Tag.Name);
+				appPrintf("WARNING: %s \"%s::%s\" was not found\n", GetTypeName(Tag.Type), Name, *Tag.Name);
 #if DEBUG_PROPS
-			printf("  (skipping %s)\n", *Tag.Name);
+			appPrintf("  (skipping %s)\n", *Tag.Name);
 #endif
 			// skip property data
 			Ar.Seek(StopPos);
@@ -475,7 +475,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 #if DEBUG_PROPS
 #	define PROP_DBG(fmt, value) \
-		printf("  %s[%d] = " fmt "\n", *Tag.Name, Tag.ArrayIndex, value);
+		appPrintf("  %s[%d] = " fmt "\n", *Tag.Name, Tag.ArrayIndex, value);
 #else
 #	define PROP_DBG(fmt, value)
 #endif
@@ -557,7 +557,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		case NAME_ArrayProperty:
 			{
 #if DEBUG_PROPS
-				printf("  %s[] = {\n", *Tag.Name);
+				appPrintf("  %s[] = {\n", *Tag.Name);
 #endif
 				FArray *Arr = (FArray*)value;
 #define SIMPLE_ARRAY_TYPE(type) \
@@ -597,7 +597,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
 					{
 #if DEBUG_PROPS
-						printf("Item[%d]:\n", i);
+						appPrintf("Item[%d]:\n", i);
 #endif
 						ItemType->Constructor(item);		// fill default properties
 						ItemType->SerializeProps(Ar, item);
@@ -624,7 +624,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #endif // 1 -- fix
 				}
 #if DEBUG_PROPS
-				printf("  } // count=%d\n", Arr->Num());
+				appPrintf("  } // count=%d\n", Arr->Num());
 #endif
 			}
 			break;
@@ -710,7 +710,7 @@ void UnregisterClass(const char *Name, bool WholeTree)
 		if (!strcmp(GClasses[i].Name, Name) ||
 			(WholeTree && (GClasses[i].TypeInfo()->IsA(Name))))
 		{
-//			printf("Unregistered %s\n", GClasses[i].Name);
+//			appPrintf("Unregistered %s\n", GClasses[i].Name);
 			// class was found
 			if (i == GClassCount-1)
 			{
@@ -819,33 +819,33 @@ void CTypeInfo::DumpProps(void *Data) const
 	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
 	{
 		if (!Type->NumProps) continue;
-		printf("%s properties:\n", Type->Name);
+		appPrintf("%s properties:\n", Type->Name);
 		for (int PropIndex = 0; PropIndex < Type->NumProps; PropIndex++)
 		{
 			const CPropInfo *Prop = Type->Props + PropIndex;
 			if (!Prop->TypeName)
 			{
-//				printf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
+//				appPrintf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
 				continue;
 			}
-			printf("  %3d: %s %s",
+			appPrintf("  %3d: %s %s",
 				PropIndex,
 				(Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName+1,	// skip enum marker
 				Prop->Name);
 			if (Prop->Count > 1)
-				printf("[%d] = { ", Prop->Count);
+				appPrintf("[%d] = { ", Prop->Count);
 			else
-				printf(" = ");
+				appPrintf(" = ");
 
 			byte *value = (byte*)Data + Prop->Offset;
 
 			//?? can support TArray props here (Prop->Count == -1)
 			for (int ArrayIndex = 0; ArrayIndex < Prop->Count; ArrayIndex++)
 			{
-				if (ArrayIndex > 0) printf(", ");
+				if (ArrayIndex > 0) appPrintf(", ");
 #define IS(name)  strcmp(Prop->TypeName, #name) == 0
 #define PROCESS(type, format, value) \
-				if (IS(type)) { printf(format, value); }
+				if (IS(type)) { appPrintf(format, value); }
 				PROCESS(byte,     "%d", PROP(byte));
 				PROCESS(int,      "%d", PROP(int));
 				PROCESS(bool,     "%s", PROP(bool) ? "true" : "false");
@@ -855,9 +855,9 @@ void CTypeInfo::DumpProps(void *Data) const
 				{
 					UObject *obj = PROP(UObject*);
 					if (obj)
-						printf("%s'%s'", obj->GetClassName(), obj->Name);
+						appPrintf("%s'%s'", obj->GetClassName(), obj->Name);
 					else
-						printf("Null");
+						appPrintf("Null");
 				}
 #else
 				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
@@ -867,14 +867,14 @@ void CTypeInfo::DumpProps(void *Data) const
 				{
 					// enum value
 					const char *v = EnumToName(Prop->TypeName+1, *value);		// skip enum marker
-					printf("%s (%d)", v ? v : "<unknown>", *value);
+					appPrintf("%s (%d)", v ? v : "<unknown>", *value);
 				}
 			}
 
 			if (Prop->Count > 1)
-				printf(" }\n");
+				appPrintf(" }\n");
 			else
-				printf("\n");
+				appPrintf("\n");
 		}
 	}
 }

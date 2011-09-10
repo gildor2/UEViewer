@@ -2379,7 +2379,7 @@ struct FStaticMeshSection
 		guard(FStaticMeshSection<<);
 		assert(Ar.ArVer >= 112);
 		Ar << S.f4 << S.FirstIndex << S.FirstVertex << S.LastVertex << S.fE << S.NumFaces;
-//printf("... f4=%d FirstIndex=%d FirstVertex=%d LastVertex=%d fE=%d NumFaces=%d\n", S.f4, S.FirstIndex, S.FirstVertex, S.LastVertex, S.fE, S.NumFaces); //!!!
+//		appPrintf("... f4=%d FirstIndex=%d FirstVertex=%d LastVertex=%d fE=%d NumFaces=%d\n", S.f4, S.FirstIndex, S.FirstVertex, S.LastVertex, S.fE, S.NumFaces); //!!!
 		return Ar;
 		unguard;
 	}
@@ -2852,7 +2852,7 @@ public:
 			Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1;
 			if (Ar.ArLicenseeVer != 1) Ar << IndexStream2;
 			//!!!!!
-//			printf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
+//			appPrintf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
 //				UVStream.Num() ? UVStream[0].Data.Num() : -1, IndexStream1.Indices.Num());
 			Ar << f108;
 

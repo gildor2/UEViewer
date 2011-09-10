@@ -120,6 +120,7 @@ void ULodMesh::Serialize(FArchive &Ar)
 	{
 		TArray<int> unk;
 		Ar << unk;
+		if (Ar.ArVer >= 134) Ar.Seek(Ar.Tell()+1);	//?????? did not found in disassembly
 	}
 #endif // BATTLE_TERR
 #if SWRC
@@ -260,7 +261,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 		if (maxCoord > 511)
 		{
 			float scale = 511.0f / maxCoord;
-			printf("Scaling DeusEx VertMech by factor %g\n", scale);
+			appPrintf("Scaling DeusEx VertMech by factor %g\n", scale);
 			MeshScale.Scale(1 / scale);
 			MeshOrigin.Scale(scale);
 			BoundingBox.Min.Scale(scale);
@@ -296,7 +297,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 		CopyArray(Wedges, tmpWedges);			// FMeshWedge1 -> FMeshWedge
 		for (int i = 0; i < Wedges.Num(); i++)	// remap wedges (skip SpecialVerts)
 			Wedges[i].iVertex += tmpSpecialVerts;
-		printf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
+		appPrintf("spec faces: %d  verts: %d\n", tmpSpecialFaces.Num(), tmpSpecialVerts);
 		// remap animation vertices, if needed
 		if (tmpRemapAnimVerts.Num())
 		{
@@ -1393,7 +1394,7 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 			return false;
 		}
 		assert(DataSize <= Size);
-		printf("Loading external animation for %s\n", Name);
+		appPrintf("Loading external animation for %s\n", Name);
 		unguard;
 	}
 #endif
@@ -1563,7 +1564,7 @@ void USkeletalMesh::RecreateMeshFromLOD(int LodIndex, bool Force)
 	guard(USkeletalMesh::RecreateMeshFromLOD);
 	if (Wedges.Num() && !Force) return;					// nothing to do
 	if (LODModels.Num() <= LodIndex) return;			// no such LOD mesh
-	printf("Restoring mesh from LOD %d ...\n", LodIndex);
+	appPrintf("Restoring mesh from LOD %d ...\n", LodIndex);
 
 	FStaticLODModel &Lod = LODModels[LodIndex];
 
@@ -2238,7 +2239,7 @@ void USkelModel::Serialize(FArchive &Ar)
 			int texExportIdx = Package->FindExport(texName);
 			if (texExportIdx == INDEX_NONE)
 			{
-				printf("ERROR: unable to find export \"%s\" for mesh \"%s\" (%d)\n",
+				appPrintf("ERROR: unable to find export \"%s\" for mesh \"%s\" (%d)\n",
 					texName, Name, modelIdx);
 				continue;
 			}
@@ -2286,7 +2287,7 @@ void FStaticLODModel::RestoreLineageMesh()
 	guard(FStaticLODModel::RestoreLineageMesh);
 
 	if (Wedges.Num()) return;			// nothing to restore
-	printf("Converting Lineage2 LODModel to standard LODModel ...\n");
+	appPrintf("Converting Lineage2 LODModel to standard LODModel ...\n");
 	if (SmoothSections.Num() && RigidSections.Num())
 		appNotify("have smooth & rigid sections");
 
@@ -2477,7 +2478,7 @@ void UStaticMesh::LoadExternalUC2Data()
 			return;
 		}
 		//!! use
-//		printf("...[%d] f4=%d FirstIndex=%d FirstVertex=%d LastVertex=%d fE=%d NumFaces=%d\n", i, S.f4, S.FirstIndex, S.FirstVertex, S.LastVertex, S.fE, S.NumFaces);
+//		appPrintf("...[%d] f4=%d FirstIndex=%d FirstVertex=%d LastVertex=%d fE=%d NumFaces=%d\n", i, S.f4, S.FirstIndex, S.FirstVertex, S.LastVertex, S.fE, S.NumFaces);
 		appFree(Data);
 	}
 

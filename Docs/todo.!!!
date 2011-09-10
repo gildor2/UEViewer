@@ -1,7 +1,12 @@
-- check VertMesh export: export ut2004/SkaarjPack_rc, compare *.3d and *.uc files with UT2004 source
+Logging:
+- appNotify, appPrintf: make with GLog->Printf or GWarn->Printf ? (to allow overriding)
+- Notify.log:
+  - add "-nolog" switch to disable it
+  ? place notify.log into directory of umodel.exe
+  - add current date/time, some umodel info (version) and cmdline in a case of crash
 
-StaticMesh:
-- build tangent space
+
+- check VertMesh export: export ut2004/SkaarjPack_rc, compare *.3d and *.uc files with UT2004 source
 
 Extract.exe:
 ? add "-zip" option: convert package to uncompressed zip file
@@ -14,26 +19,26 @@ if code != 0)
 FArchive:
 ? ArVer, ArLicenseeVer -> Ver(), LicenseeVer() + hide these fields
 
-Settings.ini (umodel.cfg, different name ?)
-- background (gradient) color
-- disable GL2
-- disable bloom (if one)
-- disable notify.log
-? disable log at all
-- extra (default) command line switches
-- disable viewing of axis in 3D
-- default lighting mode
-- initial window size
-- custom package extensions
-- custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
-
-Notify.log:
-- add "-nolog" switch to disable it
-? place notify.log into directory of umodel.exe
-- add current date/time, some umodel info (version) and cmdline in a case of crash
+GUI-relative:
+- Settings.ini (umodel.cfg, different name ?)
+  - background (gradient) color
+  - disable GL2
+  - disable bloom (if one)
+  - disable notify.log
+  ? disable log at all
+  - extra (default) command line switches
+  - disable viewing of axis in 3D
+  - default lighting mode
+  - initial window size
+  - custom package extensions
+  - custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
+- key to toggle debug text and 3D lines (good for screenshots)
 
 ForcedExport handling: should use this information for UE3 package loading:
 - prevent export/listing of such resources (or list with "forced" flag?)
+
+- MeshViewer: should not place camera more near than bbox mins/maxs [0..2]
+- use lzop to compress shader texts (call from make.pl)
 
 FONTGEN
 ! BUG: '&' displayed as '_' (WinAPI feature)
@@ -49,9 +54,6 @@ GENMAKE:
 
 ! UE1 UTexture has AnimNext field
 ! implement UMaterialSequence (check 2K4Menus package)
-? key to toggle fullscreen with desktop resolution (no way to implement using SDL only?)
-  - X.org has SDL_WM_ToggleFullScreen(), and can use USER32 code for Win32
-- key to toggle debug text and 3D lines (good for screenshots)
 
 ?? (check, possibly fixed) TRIBES3:
   ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)
@@ -67,10 +69,6 @@ GENMAKE:
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
 
-! packages have tree-like structure of objects, should use whole tree to map export->import (use
-  package's "package" field recursively; note: depth can be any)
-  * load proper package
-  - use object with the same path (problem: how to pass object path to search?)
 ? change alternative skin (team color for UT2) - in separate tool, "uplayer" - player model viewer
   (UT, UT2004, Lineage2, later - UT3)
 

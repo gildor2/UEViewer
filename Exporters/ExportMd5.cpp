@@ -125,7 +125,7 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 		else
 		{
 			appSprintf(ARRAY_ARG(BoneName), "%s_%d", *B.Name, BoneSuffix);
-			printf("duplicate bone %s, renamed to %s\n", *B.Name, BoneName);
+			appPrintf("duplicate bone %s, renamed to %s\n", *B.Name, BoneName);
 		}
 
 		Ar.Printf(

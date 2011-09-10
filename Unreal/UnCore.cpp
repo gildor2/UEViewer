@@ -68,7 +68,7 @@ void appResetProfiler()
 void appPrintProfiler()
 {
 	if (ProfileStartTime == -1) return;
-	printf("Loaded in %.2g sec, %d allocs, %.2f MBytes serialized in %d calls.\n",
+	appPrintf("Loaded in %.2g sec, %d allocs, %.2f MBytes serialized in %d calls.\n",
 		(appMilliseconds() - ProfileStartTime) / 1000.0f, GNumAllocs, GSerializeBytes / (1024.0f * 1024.0f), GNumSerialize);
 	appResetProfiler();
 }
@@ -110,8 +110,8 @@ static const char *PackageExtensions[] =
 	, "ums"
 #endif
 #if BATTLE_TERR
-	, "bsx", "btx", "bkx"		// older version
-	, "ebsx", "ebtx", "ebkx"	// newer version, with encryption
+	, "bsx", "btx", "bkx"				// older version
+	, "ebsx", "ebtx", "ebkx", "ebax"	// newer version, with encryption
 #endif
 #if TRIBES3
 	, "pkg"
@@ -295,7 +295,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	guard(appSetRootDirectory);
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
-	printf("Found %d game files (%d skipped)\n", NumGameFiles, NumForeignFiles);
+	appPrintf("Found %d game files (%d skipped)\n", NumGameFiles, NumForeignFiles);
 	unguardf(("dir=%s", dir));
 }
 
@@ -367,7 +367,7 @@ void appSetRootDirectory2(const char *filename)
 		}
 	}
 	const char *root = (detected) ? buf : buf2;
-	printf("Detected game root %s%s\n", root, (detected == false) ? " (no recurse)" : "");
+	appPrintf("Detected game root %s%s\n", root, (detected == false) ? " (no recurse)" : "");
 	appSetRootDirectory(root, detected);
 }
 
@@ -790,7 +790,7 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 		int SavePos = Ar.Tell();
 		Serializer(Ar, &Array);
 #if DEBUG_RAW_ARRAY
-		printf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, Array.Num(), ElementSize,
+		appPrintf("savePos=%d count=%d elemSize=%d (real=%g) tell=%d\n", SavePos + 4, Array.Num(), ElementSize,
 				Array.Num() ? float(Ar.Tell() - SavePos - 4) / Array.Num() : 0,
 				Ar.Tell());
 #endif
@@ -1126,7 +1126,7 @@ void FArchive::DetectGame()
 	if (ArVer == 539 && ArLicenseeVer == 91)	SET(GAME_AlphaProtocol);
 #endif
 #if APB
-	if (ArVer == 547 && ArLicenseeVer == 31)	SET(GAME_APB);
+	if (ArVer == 547 && (ArLicenseeVer == 31 || ArLicenseeVer == 32)) SET(GAME_APB);
 #endif
 #if LEGENDARY
 	if (ArVer == 567 && ArLicenseeVer == 39)	SET(GAME_Legendary);
@@ -1261,7 +1261,7 @@ void FArchive::OverrideVersion()
 #if DND
 	if (Game == GAME_DND)		ArVer = OVERRIDE_DND_VER;
 #endif
-	if (ArVer != OldVer) printf("Overrided version %d -> %d\n", OldVer, ArVer);
+	if (ArVer != OldVer) appPrintf("Overrided version %d -> %d\n", OldVer, ArVer);
 }
 
 
@@ -1582,7 +1582,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 	}
 #endif // APB
 #if DEBUG_BULK
-	printf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n",
+	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n",
 		Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 #endif
 
@@ -1599,7 +1599,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
 	{
 #if DEBUG_BULK
-		printf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+		appPrintf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 #endif
 		return;
 	}
@@ -1607,7 +1607,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	if (BulkDataFlags & BULKDATA_NoData)	// skip serializing
 	{
 #if DEBUG_BULK
-		printf("bulk in separate file\n");
+		appPrintf("bulk in separate file\n");
 #endif
 		return;								//?? what to do with BulkData ?
 	}

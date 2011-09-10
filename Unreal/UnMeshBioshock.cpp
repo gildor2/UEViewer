@@ -185,7 +185,7 @@ struct FBioshockUnk3
 			if (t3_hdrSV >= 1)
 				Ar << S.f1C;
 		}
-//		printf("... UNK3 name: %s pos: %g %g %g f14: %d f18: %d\n", *S.Name, FVECTOR_ARG(S.Pos), S.f14, S.f18);
+//		appPrintf("... UNK3 name: %s pos: %g %g %g f14: %d f18: %d\n", *S.Name, FVECTOR_ARG(S.Pos), S.f14, S.f18);
 		return Ar;
 		unguard;
 	}
@@ -210,7 +210,7 @@ struct FBioshockUnk4
 			if (t3_hdrSV >= 1)
 				Ar << S.Material;
 		}
-//		printf("... UNK4 name: %s pos: %g %g %g f14: %g %g %g f20: %d Mat: %s\n", *S.Name, FVECTOR_ARG(S.Pos), FVECTOR_ARG(S.f14),
+//		appPrintf("... UNK4 name: %s pos: %g %g %g f14: %g %g %g f20: %d Mat: %s\n", *S.Name, FVECTOR_ARG(S.Pos), FVECTOR_ARG(S.f14),
 //			S.f20, S.Material ? S.Material->Name : "null");
 		return Ar;
 		unguard;
@@ -236,7 +236,7 @@ struct FBioshockUnk5
 			if (t3_hdrSV >= 1)
 				Ar << S.f1C;
 		}
-//		printf("... UNK5 name: %s pos: %g %g %g f18: %d\n", *S.Name, FVECTOR_ARG(S.Pos), S.f18);
+//		appPrintf("... UNK5 name: %s pos: %g %g %g f18: %d\n", *S.Name, FVECTOR_ARG(S.Pos), S.f18);
 		return Ar;
 		unguard;
 	}
@@ -349,17 +349,17 @@ struct FStaticLODModelBio
 			Ar << Lod.f58;
 		Ar << Lod.VertInfluences << Lod.Wedges << Lod.Faces << Lod.Points << Lod.Normals;
 #if 0
-		printf("sm:%d rig:%d idx:%d bones:%d 58:%d 64:%g 68:%g 6C:%d 70:%d 74:%d 78:%d\n",
+		appPrintf("sm:%d rig:%d idx:%d bones:%d 58:%d 64:%g 68:%g 6C:%d 70:%d 74:%d 78:%d\n",
 			Lod.SmoothVerts.Num(), Lod.RigidVerts.Num(), Lod.IndexBuffer.Indices.Num(), Lod.Bones.Num(), Lod.f58.Num(),
 			Lod.f64, Lod.f68, Lod.f6C, Lod.f70, Lod.f74, Lod.f78);
-		printf("inf:%d wedg:%d fac:%d pts:%d norm:%d\n", Lod.VertInfluences.Num(), Lod.Wedges.Num(), Lod.Faces.Num(), Lod.Points.Num(), Lod.Normals.Num());
+		appPrintf("inf:%d wedg:%d fac:%d pts:%d norm:%d\n", Lod.VertInfluences.Num(), Lod.Wedges.Num(), Lod.Faces.Num(), Lod.Points.Num(), Lod.Normals.Num());
 		int j;
 //		for (j = 0; j < Lod.Bones.Num(); j++)
-//			printf("Bones[%d] = %d\n", j, Lod.Bones[j]);
+//			appPrintf("Bones[%d] = %d\n", j, Lod.Bones[j]);
 		for (j = 0; j < Lod.Sections.Num(); j++)
 		{
 			const FSkelMeshSection &S = Lod.Sections[j];
-			printf("... SEC[%d]:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
+			appPrintf("... SEC[%d]:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
 				S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
 				S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
 		}
@@ -451,7 +451,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 			Points[PointIndex] = V.Pos;
 			PointNormals.AddItem(V.Normal[0]);
 			// add influences
-//			printf("point[%d]: %d/%d  %d/%d  %d/%d  %d/%d\n", PointIndex, V.BoneIndex[0], V.BoneWeight[0],
+//			appPrintf("point[%d]: %d/%d  %d/%d  %d/%d  %d/%d\n", PointIndex, V.BoneIndex[0], V.BoneWeight[0],
 //				V.BoneIndex[1], V.BoneWeight[1], V.BoneIndex[2], V.BoneWeight[2], V.BoneIndex[3], V.BoneWeight[3]);
 			for (int i = 0; i < 4; i++)
 			{
@@ -487,7 +487,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 		Dst->MaterialIndex = MaterialIndex;
 		Dst->FirstFace     = Faces.Num();
 		Dst->NumFaces      = S.NumFaces;
-//		printf("3a : %d/%d+%d faces, %d indices\n", S.FirstFace, Dst->FirstFace, S.NumFaces, Lod.IndexBuffer.Indices.Num());
+//		appPrintf("3a : %d/%d+%d faces, %d indices\n", S.FirstFace, Dst->FirstFace, S.NumFaces, Lod.IndexBuffer.Indices.Num());
 		int Index = S.FirstFace * 3; //?? Dst->FirstFace * 3;
 #if 1
 		//?? Bug in few Bioshock meshes: not enough indices (usually 12 indices = 4 faces)
@@ -593,19 +593,19 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 	RecreateMeshFromLOD();
 
 #if 0
-printf("u104:%d u110:%d u128:%d u11C:%d dr1:%d dr2:%d f134:%d\n", f104.Num(), f110.Num(), f128.Num(), f11C.Num(), drop1.Num(), havokObjects.Num(), f134.Num());
-for (i=0;i<drop1.Num();i++)printf("drop[%d]=%s\n",i,*drop1[i]);
+appPrintf("u104:%d u110:%d u128:%d u11C:%d dr1:%d dr2:%d f134:%d\n", f104.Num(), f110.Num(), f128.Num(), f11C.Num(), drop1.Num(), havokObjects.Num(), f134.Num());
+for (i=0;i<drop1.Num();i++)appPrintf("drop[%d]=%s\n",i,*drop1[i]);
 for (int j = 0; j < 10; j++)
 {
 for (i = 0; i < 16; i++)
 {
 byte b; Ar << b;
-printf("  %02X",b);
+appPrintf("  %02X",b);
 }
-printf("\n");
+appPrintf("\n");
 }
-printf("skel: %d (depth=%d)\n", RefSkeleton.Num(), SkeletalDepth);
-for (i = 0; i < RefSkeleton.Num(); i++) printf("%d: %s\n", i, *RefSkeleton[i].Name);
+appPrintf("skel: %d (depth=%d)\n", RefSkeleton.Num(), SkeletalDepth);
+for (i = 0; i < RefSkeleton.Num(); i++) appPrintf("%d: %s\n", i, *RefSkeleton[i].Name);
 #endif
 
 	unguard;
@@ -703,12 +703,12 @@ void UAnimationPackageWrapper::Process()
 	GetHavokPackfileContents(&HavokData[0], (void**)&Object, &ClassName);
 	assert(!strcmp(ClassName, "ap4AnimationPackageRoot"));
 	const hkSkeleton *Skel = Object->m_highBoneSkeleton;
-	printf("skel=%s\n", Skel->m_name);
+	appPrintf("skel=%s\n", Skel->m_name);
 	for (int i = 0; i < Skel->m_numBones; i++)
 	{
-		printf("[%d] %s (parent=%d)\n", i, Skel->m_bones[i]->m_name, Skel->m_parentIndices[i]);
+		appPrintf("[%d] %s (parent=%d)\n", i, Skel->m_bones[i]->m_name, Skel->m_parentIndices[i]);
 		hkQsTransform &t = Skel->m_referencePose[i];
-		printf("   {%g %g %g} - {%g %g %g %g} / {%g %g %g}\n", FVECTOR_ARG(t.m_translation), FQUAT_ARG(t.m_rotation), FVECTOR_ARG(t.m_scale));
+		appPrintf("   {%g %g %g} - {%g %g %g %g} / {%g %g %g}\n", FVECTOR_ARG(t.m_translation), FQUAT_ARG(t.m_rotation), FVECTOR_ARG(t.m_scale));
 	}
 #endif
 	unguard;

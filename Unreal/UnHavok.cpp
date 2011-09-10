@@ -19,21 +19,21 @@ static void DumpClass(const hkClass *Class)
 	int i;
 
 	// header
-	printf("// sizeof=%d\n", Class->m_objectSize);
-	printf("struct %s", Class->m_name);
-	if (Class->m_parent) printf(" : %s", Class->m_parent->m_name);
-	printf("\n{\n");
+	appPrintf("// sizeof=%d\n", Class->m_objectSize);
+	appPrintf("struct %s", Class->m_name);
+	if (Class->m_parent) appPrintf(" : %s", Class->m_parent->m_name);
+	appPrintf("\n{\n");
 	// enums
 	const hkClassEnum *Enum = Class->m_declaredEnums;
 	for (i = 0; i < Class->m_numDeclaredEnums; i++)
 	{
-		printf("\tenum %s\n\t{\n", Enum->m_name);
+		appPrintf("\tenum %s\n\t{\n", Enum->m_name);
 		for (int j = 0; j < Enum->m_numItems; j++)
 		{
 			const hkClassEnum::Item *Item = Enum->m_items + j;
-			printf("\t\t%s = %d,\n", Item->m_name, Item->m_value);
+			appPrintf("\t\t%s = %d,\n", Item->m_name, Item->m_value);
 		}
-		printf("\t};\n\n");
+		appPrintf("\t};\n\n");
 		Enum++;
 #if NEW_HAVOK
 		Enum = OffsetPointer(Enum, 8);
@@ -55,14 +55,14 @@ static void DumpClass(const hkClass *Class)
 		assert(ARRAY_COUNT(TypeTable) == hkClassMember::TYPE_MAX);
 
 		// dump internal information
-		printf("\t// offset=%d type=%s", Mem->m_offset, TypeTable[Mem->m_type.m_storage]);
+		appPrintf("\t// offset=%d type=%s", Mem->m_offset, TypeTable[Mem->m_type.m_storage]);
 		if (Mem->m_subtype.m_storage != hkClassMember::TYPE_VOID)
-			printf("/%s", TypeTable[Mem->m_subtype.m_storage]);
+			appPrintf("/%s", TypeTable[Mem->m_subtype.m_storage]);
 		if (Mem->m_class)
-			printf(" class=%s", Mem->m_class->m_name);
+			appPrintf(" class=%s", Mem->m_class->m_name);
 		if (Mem->m_flags.m_storage)
-			printf(" flags=%X", Mem->m_flags.m_storage);
-		printf("\n");
+			appPrintf(" flags=%X", Mem->m_flags.m_storage);
+		appPrintf("\n");
 
 		int TypeId = Mem->m_type.m_storage;
 		const char *Ptr = "**" + 2;				// points to null char
@@ -95,14 +95,14 @@ static void DumpClass(const hkClass *Class)
 			appSprintf(ARRAY_ARG(ArrayName), "hkArray<%s>", Mem->m_class->m_name);
 			Type = ArrayName;
 		}
-		printf("\t%s%s m_%s", Type, Ptr, Mem->m_name);
-		if (Mem->m_cArraySize) printf("[%d]", Mem->m_cArraySize);
-		printf(";\n");
+		appPrintf("\t%s%s m_%s", Type, Ptr, Mem->m_name);
+		if (Mem->m_cArraySize) appPrintf("[%d]", Mem->m_cArraySize);
+		appPrintf(";\n");
 		// array types may have extra fields
 		if (Mem->m_type.m_storage == hkClassMember::TYPE_SIMPLEARRAY)
 		{
 			// create m_numVariableName field with uppercased 1st char
-			printf("\thkInt32 m_num%c%s;\n", toupper(Mem->m_name[0]), Mem->m_name+1);
+			appPrintf("\thkInt32 m_num%c%s;\n", toupper(Mem->m_name[0]), Mem->m_name+1);
 		}
 
 		Mem++;
@@ -111,7 +111,7 @@ static void DumpClass(const hkClass *Class)
 #endif
 	}
 	// footer
-	printf("};\n\n");
+	appPrintf("};\n\n");
 
 	unguard;
 }
@@ -127,7 +127,7 @@ void FixupHavokPackfile(const char *Name, void *PackData)
 
 	byte *PackStart = (byte*)PackData;
 	hkPackfileHeader *Hdr = (hkPackfileHeader*)PackStart;
-//	printf("Magic: %X %X Ver: %d (%s)\n", Hdr->m_magic[0], Hdr->m_magic[1], Hdr->m_fileVersion, Hdr->m_contentsVersion);
+//	appPrintf("Magic: %X %X Ver: %d (%s)\n", Hdr->m_magic[0], Hdr->m_magic[1], Hdr->m_fileVersion, Hdr->m_contentsVersion);
 
 	// relocate all sections
 	hkPackfileSectionHeader *Sections = (hkPackfileSectionHeader*)(Hdr + 1);
@@ -135,14 +135,14 @@ void FixupHavokPackfile(const char *Name, void *PackData)
 	{
 		hkPackfileSectionHeader *Sec = Sections + i;
 		byte *SectionStart = PackStart + Sec->m_absoluteDataStart;
-//		printf("Sec[%d] = %s (%X)\n", i, Sec->m_sectionTag, Sec->m_absoluteDataStart);
+//		appPrintf("Sec[%d] = %s (%X)\n", i, Sec->m_sectionTag, Sec->m_absoluteDataStart);
 		// process local fixups
 		for (LocalFixup *LF = (LocalFixup*)(SectionStart + Sec->m_localFixupsOffset);
 			 LF < (LocalFixup*)(SectionStart + Sec->m_globalFixupsOffset);
 			 LF++)
 		{
 			if (LF->fromOffset == 0xFFFFFFFF) continue;		// padding
-//			printf("Lfix: %X -> %X\n", LF->fromOffset, LF->toOffset);
+//			appPrintf("Lfix: %X -> %X\n", LF->fromOffset, LF->toOffset);
 			// fixup
 			*(byte**)(SectionStart + LF->fromOffset) = SectionStart + LF->toOffset;
 		}
@@ -152,7 +152,7 @@ void FixupHavokPackfile(const char *Name, void *PackData)
 			 GF++)
 		{
 			if (GF->fromOffset == 0xFFFFFFFF) continue;		// padding
-//			printf("Gfix: %X -> %X / %X\n", GF->fromOffset, GF->toSec, GF->toOffset);
+//			appPrintf("Gfix: %X -> %X / %X\n", GF->fromOffset, GF->toSec, GF->toOffset);
 			// fixup
 			byte *SectionStart2 = PackStart + Sections[GF->toSec].m_absoluteDataStart;
 			*(byte**)(SectionStart + GF->fromOffset) = SectionStart2 + GF->toOffset;
@@ -164,10 +164,10 @@ void FixupHavokPackfile(const char *Name, void *PackData)
 			 VF++)
 		{
 			if (VF->fromOffset == 0xFFFFFFFF) continue;		// padding
-//			printf("Vfix: %X -> %X / %X\n", VF->fromOffset, VF->toSec, VF->toOffset);
+//			appPrintf("Vfix: %X -> %X / %X\n", VF->fromOffset, VF->toSec, VF->toOffset);
 			// fixup
 			const char *ClassName = (char*)PackStart + Sections[VF->toSec].m_absoluteDataStart + VF->toOffset;
-//			printf("Vfix: %X -> %s\n", VF->fromOffset, ClassName);
+//			appPrintf("Vfix: %X -> %s\n", VF->fromOffset, ClassName);
 //			*(byte**)(SectionStart + VF->fromOffset) = SectionStart2 + VF->toOffset;
 			if (!strcmp(ClassName, "hkClass"))
 				DumpClass((hkClass*)(SectionStart + VF->fromOffset));

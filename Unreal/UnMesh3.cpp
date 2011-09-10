@@ -578,7 +578,7 @@ struct FGPUSkin3
 		guard(FGPUSkin3<<);
 
 	#if DEBUG_SKELMESH
-		printf("Reading GPU skin\n");
+		appPrintf("Reading GPU skin\n");
 	#endif
 		if (Ar.IsLoading) S.bUsePackedPosition = false;
 		bool AllowPackedPosition = false;
@@ -663,7 +663,7 @@ struct FGPUSkin3
 		//?? working bUsePackedPosition was found in all XBox360 games and in MOH2010 (PC) only
 		//?? + TRON Evolution (PS3)
 #if DEBUG_SKELMESH
-		printf("data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
+		appPrintf("data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
 			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
 #endif
@@ -853,9 +853,9 @@ struct FStaticLODModel3
 		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
 		{
 			FSkelMeshSection3 &S = Lod.Sections[i1];
-			printf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles);
+			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles);
 		}
-		printf("Indices: %d\n", Lod.IndexBuffer.Indices.Num());
+		appPrintf("Indices: %d\n", Lod.IndexBuffer.Indices.Num());
 #endif
 
 		if (Ar.ArVer < 215)
@@ -899,7 +899,7 @@ struct FStaticLODModel3
 			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 		}
 #if DEBUG_SKELMESH
-		printf("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
+		appPrintf("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
 #endif
 
 #if FRONTLINES
@@ -1040,7 +1040,7 @@ struct FStaticLODModel3
 			if (LoadingMesh->bHasVertexColors)
 			{
 				Ar << RAW_ARRAY(Lod.VertexColor);
-				printf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
+				appPrintf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
 			}
 		}
 		if (Ar.ArVer >= 534)		// post-UT3 code
@@ -1262,7 +1262,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 			B.Name        = Skel.BoneNames[i];
 			B.BonePos     = Skel.RefPose[i];
 			B.ParentIndex = Skel.Parentage[i];
-//			printf("BONE: [%d] %s -> %d\n", i, *B.Name, B.ParentIndex);
+//			appPrintf("BONE: [%d] %s -> %d\n", i, *B.Name, B.ParentIndex);
 		}
 		goto material_bones;
 	}
@@ -1270,7 +1270,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	Ar << MeshOrigin << RotOrigin;
 	Ar << RefSkeleton << SkeletalDepth;
 #if DEBUG_SKELMESH
-	printf("RefSkeleton: %d bones, %d depth\n", RefSkeleton.Num(), SkeletalDepth);
+	appPrintf("RefSkeleton: %d bones, %d depth\n", RefSkeleton.Num(), SkeletalDepth);
 #endif
 #if A51 || MKVSDC || STRANGLE
 	//?? check GAME_Wheelman
@@ -1423,7 +1423,7 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 			(C.NumSmoothVerts != C.SmoothVerts.Num() && C.SmoothVerts.Num() == 0))
 		{
 			guard(GPUVerts);
-			if (!Chunk) printf("Restoring LOD verts from GPU skin\n", Mesh.Name);
+			if (!Chunk) appPrintf("Restoring LOD verts from GPU skin\n", Mesh.Name);
 
 			int LastVertex = C.FirstVertex + C.NumRigidVerts + C.NumSmoothVerts;
 
@@ -1639,7 +1639,7 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 	guard(ReadTimeArray);
 	if (NumKeys <= 1) return;
 
-//	printf("  pos=%4X keys (max=%X)[ ", Ar.Tell(), NumFrames);
+//	appPrintf("  pos=%4X keys (max=%X)[ ", Ar.Tell(), NumFrames);
 	if (NumFrames < 256)
 	{
 		for (int k = 0; k < NumKeys; k++)
@@ -1647,8 +1647,8 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 			byte v;
 			Ar << v;
 			Times.AddItem(v);
-//			if (k < 4 || k > NumKeys - 5) printf(" %02X ", v);
-//			else if (k == 4) printf("...");
+//			if (k < 4 || k > NumKeys - 5) appPrintf(" %02X ", v);
+//			else if (k == 4) appPrintf("...");
 		}
 	}
 	else
@@ -1658,11 +1658,11 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 			word v;
 			Ar << v;
 			Times.AddItem(v);
-//			if (k < 4 || k > NumKeys - 5) printf(" %04X ", v);
-//			else if (k == 4) printf("...");
+//			if (k < 4 || k > NumKeys - 5) appPrintf(" %04X ", v);
+//			else if (k == 4) appPrintf("...");
 		}
 	}
-//	printf(" ]\n");
+//	appPrintf(" ]\n");
 
 	// align to 4 bytes
 	Ar.Seek(Align(Ar.Tell(), 4));
@@ -1683,7 +1683,7 @@ static FQuat TransMidifyQuat(const FQuat &q, const FQuat &m)
 	float VAR_B = (sz+sy)*(w-x);
 	float VAR_C = (sw-sx)*(z+y);
 	float VAR_D = (sw+sz)*(w-y) + (sw-sz)*(w+y) + (sx+sy)*(x+z);
-	float xmm0  = ( (sw+sz)*(w-y) + (sw-sz)*(w+y) + (sx+sy)*(x+z) + (sx-sy)*(z-sy) ) / 2;
+	float xmm0  = ( VAR_D + (sx-sy)*(z-x) ) / 2;
 
 	r.X =  (sx+sw)*(x+w) + xmm0 - VAR_D;
 	r.Y = -(sw+sz)*(w-y) + xmm0 + VAR_B;
@@ -1731,11 +1731,11 @@ void UAnimSet::ConvertAnims()
 		const UAnimSequence *Seq = Sequences[i];
 		if (!Seq)
 		{
-			printf("WARNING: %s: no sequence %d\n", Name, i);
+			appPrintf("WARNING: %s: no sequence %d\n", Name, i);
 			continue;
 		}
 #if DEBUG_DECOMPRESS
-		printf("Sequence: %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
+		appPrintf("Sequence: %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
 			   "          trans %s, rot %s, key %s\n",
 			NumTracks, Seq->CompressedTrackOffsets.Num(), Seq->CompressedTrackOffsets.Num() / (float)NumTracks,
 			Seq->NumFrames,
@@ -1752,7 +1752,7 @@ void UAnimSet::ConvertAnims()
 				int TransKeys   = Seq->CompressedTrackOffsets[i2+1];
 				int RotOffset   = Seq->CompressedTrackOffsets[i2+2];
 				int RotKeys     = Seq->CompressedTrackOffsets[i2+3];
-				printf("    [%d] = trans %d[%d] rot %d[%d] - %s\n", i2/4,
+				appPrintf("    [%d] = trans %d[%d] rot %d[%d] - %s\n", i2/4,
 					TransOffset, TransKeys, RotOffset, RotKeys, *TrackBoneNames[i2/4]
 				);
 				i2 += 4;
@@ -1761,7 +1761,7 @@ void UAnimSet::ConvertAnims()
 			{
 				int TransOffset = Seq->CompressedTrackOffsets[i2  ];
 				int RotOffset   = Seq->CompressedTrackOffsets[i2+1];
-				printf("    [%d] = trans %d rot %d - %s\n", i2/2,
+				appPrintf("    [%d] = trans %d rot %d - %s\n", i2/2,
 					TransOffset, RotOffset, *TrackBoneNames[i2/2]
 				);
 				i2 += 2;
@@ -1905,7 +1905,7 @@ void UAnimSet::ConvertAnims()
 				{
 					A->KeyPos.AddItem(nullVec);
 #if DEBUG_DECOMPRESS
-					printf("    [%d] no translation data\n", j);
+					appPrintf("    [%d] no translation data\n", j);
 #endif
 				}
 				else
@@ -1916,7 +1916,7 @@ void UAnimSet::ConvertAnims()
 					A->KeyPos.Empty(NumKeys);
 					if (hasTimeTracks) A->KeyPosTime.Empty(NumKeys);
 #if DEBUG_DECOMPRESS
-					printf("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
+					appPrintf("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
 					);
 #endif
@@ -1987,7 +1987,7 @@ void UAnimSet::ConvertAnims()
 				{
 					A->KeyQuat.AddItem(nullQuat);
 #if DEBUG_DECOMPRESS
-					printf("    [%d] no rotation data\n", j);
+					appPrintf("    [%d] no rotation data\n", j);
 #endif
 				}
 				else
@@ -1998,7 +1998,7 @@ void UAnimSet::ConvertAnims()
 					A->KeyQuat.Empty(NumKeys);
 					if (hasTimeTracks) A->KeyQuatTime.Empty(NumKeys);
 #if DEBUG_DECOMPRESS
-					printf("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
+					appPrintf("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
 					);
 #endif
@@ -2080,7 +2080,7 @@ void UAnimSet::ConvertAnims()
 				ScaleKeys    = Seq->CompressedTrackOffsets[offsetIndex+5];
 			}
 #endif // TLR
-//			printf("[%d:%d:%d] :  %d[%d]  %d[%d]  %d[%d]\n", j, Seq->RotationCompressionFormat, Seq->TranslationCompressionFormat, TransOffset, TransKeys, RotOffset, RotKeys, ScaleOffset, ScaleKeys);
+//			appPrintf("[%d:%d:%d] :  %d[%d]  %d[%d]  %d[%d]\n", j, Seq->RotationCompressionFormat, Seq->TranslationCompressionFormat, TransOffset, TransKeys, RotOffset, RotKeys, ScaleOffset, ScaleKeys);
 
 			A->KeyPos.Empty(TransKeys);
 			A->KeyQuat.Empty(RotKeys);
@@ -2129,7 +2129,7 @@ void UAnimSet::ConvertAnims()
 					if (Scale.X != -1)
 					{
 						Reader << Scale.Y << Scale.Z << Offset;
-//						printf("  trans: %g %g %g -- %g %g %g\n", FVECTOR_ARG(Offset), FVECTOR_ARG(Scale));
+//						appPrintf("  trans: %g %g %g -- %g %g %g\n", FVECTOR_ARG(Offset), FVECTOR_ARG(Scale));
 						for (k = 0; k < TransKeys; k++)
 						{
 							FPackedVectorTrans pos;
@@ -2300,9 +2300,9 @@ void UAnimSet::ConvertAnims()
 #endif // TLR
 
 #if DEBUG_DECOMPRESS
-//			printf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
+//			appPrintf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
 //				Seq->NumFrames, A->KeyPos.Num(), A->KeyQuat.Num(), *Seq->KeyEncodingFormat);
-			printf("  ->[%d]: t %d .. %d + r %d .. %d (%d/%d keys)\n", j,
+			appPrintf("  ->[%d]: t %d .. %d + r %d .. %d (%d/%d keys)\n", j,
 				TransOffset, TransEnd, RotOffset, Reader.Tell(), TransKeys, RotKeys);
 #endif // DEBUG_DECOMPRESS
 		}
@@ -2484,7 +2484,7 @@ struct FStaticMeshVertexStream3
 		}
 #endif // SHADOWS_DAMNED
 #if DEBUG_STATICMESH
-		printf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
+		appPrintf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
 #endif
 		Ar << RAW_ARRAY(S.Verts);
 		return Ar;
@@ -2616,7 +2616,7 @@ struct FStaticMeshUVStream3
 			Ar << S.bUseFullPrecisionUVs;
 		}
 #if DEBUG_STATICMESH
-		printf("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
+		appPrintf("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
 #endif
 #if MKVSDC
 		if (Ar.Game == GAME_MK)
@@ -2764,7 +2764,7 @@ struct FStaticMeshLODModel
 		guard(FStaticMeshLODModel<<);
 
 #if DEBUG_STATICMESH
-		printf("Serialize UStaticMesh LOD\n");
+		appPrintf("Serialize UStaticMesh LOD\n");
 #endif
 #if FURY
 		if (Ar.Game == GAME_Fury)
@@ -2806,12 +2806,12 @@ struct FStaticMeshLODModel
 #endif // TLR
 		Ar << Lod.Sections;
 #if DEBUG_STATICMESH
-		printf("%d sections\n", Lod.Sections.Num());
+		appPrintf("%d sections\n", Lod.Sections.Num());
 		for (int i = 0; i < Lod.Sections.Num(); i++)
 		{
 			FStaticMeshSection3 &S = Lod.Sections[i];
-			printf("Mat: %s\n", S.Mat ? S.Mat->Name : "?");
-			printf("  %d %d sh=%d i0=%d NF=%d %d %d idx=%d\n", S.f10, S.f14, S.bEnableShadowCasting, S.FirstIndex, S.NumFaces, S.f24, S.f28, S.Index);
+			appPrintf("Mat: %s\n", S.Mat ? S.Mat->Name : "?");
+			appPrintf("  %d %d sh=%d i0=%d NF=%d %d %d idx=%d\n", S.f10, S.f14, S.bEnableShadowCasting, S.FirstIndex, S.NumFaces, S.f24, S.f28, S.Index);
 		}
 #endif // DEBUG_STATICMESH
 		// serialize vertex and uv streams
@@ -2910,7 +2910,7 @@ struct FStaticMeshLODModel
 				int n2 = Lod.UVStream.UV.Num();
 				if (n1 * 2 == n2)
 				{
-					printf("Duplicating MK StaticMesh verts\n");
+					appPrintf("Duplicating MK StaticMesh verts\n");
 					Lod.VertexStream.Verts.Add(n1);
 					for (int i = 0; i < n1; i++)
 						Lod.VertexStream.Verts[i+n1] = Lod.VertexStream.Verts[i];
@@ -3188,6 +3188,19 @@ struct FFuryStaticMeshUnk	// in other ganes this structure serialized after LOD 
 
 #endif // FURY
 
+
+struct FStaticMeshUnk5
+{
+	int					f0;
+	byte				f4[3];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk5 &S)
+	{
+		return Ar << S.f0 << S.f4[0] << S.f4[1] << S.f4[2];
+	}
+};
+
+
 void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 {
 	guard(UStaticMesh::SerializeStatMesh3);
@@ -3311,8 +3324,8 @@ version:
 	Ar << InternalVersion;
 
 #if DEBUG_STATICMESH
-	printf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
-	printf("ver: %d\n", InternalVersion);
+	appPrintf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
+	appPrintf("ver: %d\n", InternalVersion);
 #endif
 
 #if FURY
@@ -3334,6 +3347,26 @@ version:
 	{
 		TArray<FName> unk;			// some text properties; ContentTags ? (switched from binary to properties)
 		Ar << unk;
+	}
+	if (Ar.ArVer >= 823)
+	{
+		guard(SerializeExtraLOD);
+
+		int unkFlag;
+		FStaticMeshLODModel unkLod;
+		Ar << unkFlag;
+		if (unkFlag)
+		{
+			appPrintf("has extra LOD model\n");
+			Ar << unkLod;
+		}
+
+		assert(Ar.ArVer >= 829);	// Ver >= 823 && < 829 has extra TArray<int>
+		TArray<FStaticMeshUnk5> f178;
+		int f74;
+		Ar << f178 << f74;
+
+		unguard;
 	}
 #if SHADOWS_DAMNED
 	if (Ar.Game == GAME_ShadowsDamned && Ar.ArLicenseeVer >= 26)

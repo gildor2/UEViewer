@@ -127,7 +127,7 @@ void CSkelMeshViewer::Dump()
 	CLodMeshViewer::Dump();
 
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
-	printf(
+	appPrintf(
 		"\nSkelMesh info:\n==============\n"
 		"Bones  # %4d  Points    # %4d  Points2  # %4d\n"
 		"Wedges # %4d  Triangles # %4d\n"
@@ -159,9 +159,9 @@ void CSkelMeshViewer::Dump()
 
 	for (i = 0; i < Mesh->LODModels.Num(); i++)
 	{
-		printf("model # %d\n", i);
+		appPrintf("model # %d\n", i);
 		const FStaticLODModel &lod = Mesh->LODModels[i];
-		printf(
+		appPrintf(
 			"  SkinningData=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
 			"  DistanceFactor=%g  Hysteresis=%g  SharedVerts=%d  MaxInfluences=%d  114=%d  118=%d\n"
 			"  smoothInds=%d  rigidInds=%d  vertStream.Size=%d\n",
@@ -182,7 +182,7 @@ void CSkelMeshViewer::Dump()
 			if (x < i0) i0 = x;
 			if (x > i1) i1 = x;
 		}
-		printf("  smoothIndices: [%d .. %d]\n", i0, i1);
+		appPrintf("  smoothIndices: [%d .. %d]\n", i0, i1);
 		i0 = 99999999; i1 = -99999999;
 		for (j = 0; j < lod.RigidIndices.Indices.Num(); j++)
 		{
@@ -190,7 +190,7 @@ void CSkelMeshViewer::Dump()
 			if (x < i0) i0 = x;
 			if (x > i1) i1 = x;
 		}
-		printf("  rigidIndices:  [%d .. %d]\n", i0, i1);
+		appPrintf("  rigidIndices:  [%d .. %d]\n", i0, i1);
 
 		const TArray<FSkelMeshSection> *sec[2];
 		sec[0] = &lod.SmoothSections;
@@ -198,11 +198,11 @@ void CSkelMeshViewer::Dump()
 		static const char *secNames[] = { "smooth", "rigid" };
 		for (int k = 0; k < 2; k++)
 		{
-			printf("  %s sections: %d\n", secNames[k], sec[k]->Num());
+			appPrintf("  %s sections: %d\n", secNames[k], sec[k]->Num());
 			for (int j = 0; j < sec[k]->Num(); j++)
 			{
 				const FSkelMeshSection &S = (*sec[k])[j];
-				printf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
+				appPrintf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
 					S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
 					S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
 			}
@@ -366,7 +366,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 						}
 					}
 					AnimIndex = -1;
-					printf("Bound %s'%s' to %s'%s'\n", Mesh->GetClassName(), Mesh->Name, Obj->GetClassName(), Obj->Name);
+					appPrintf("Bound %s'%s' to %s'%s'\n", Mesh->GetClassName(), Mesh->Name, Obj->GetClassName(), Obj->Name);
 					break;
 				}
 			}

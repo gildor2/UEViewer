@@ -39,8 +39,8 @@ public:
 
 	virtual void Dump()
 	{
-		printf("\nObject info:\n============\n");
-		printf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
+		appPrintf("\nObject info:\n============\n");
+		appPrintf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
 		Object->GetTypeinfo()->DumpProps(Object);
 	}
 #if TEST_FILES
@@ -200,7 +200,7 @@ public:
 			if (array[i] > max) max = array[i];		\
 		}											\
 		if (array.Num())							\
-			printf(#array": [%d .. %d]\n", min, max); \
+			appPrintf(#array": [%d .. %d]\n", min, max); \
 	}
 
 #define TEST_ARRAY2(array,field)					\
@@ -212,7 +212,7 @@ public:
 			if (array[i].field > max) max = array[i].field; \
 		}											\
 		if (array.Num())							\
-			printf(#array"."#field": [%d .. %d]\n", min, max); \
+			appPrintf(#array"."#field": [%d .. %d]\n", min, max); \
 	}
 
 #endif

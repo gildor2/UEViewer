@@ -13,7 +13,7 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 	// check for enough place for header
 	if (DataSize < 16)
 	{
-		printf("... empty sound %s ?\n", Obj->Name);
+		appPrintf("... empty sound %s ?\n", Obj->Name);
 		return;
 	}
 

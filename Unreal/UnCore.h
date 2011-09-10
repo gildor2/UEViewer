@@ -55,7 +55,7 @@ extern int GSerializeBytes;
 void appResetProfiler();
 void appPrintProfiler();
 
-#define PROFILE_POINT(Label)	appPrintProfiler(); printf("PROFILE: " #Label "\n");
+#define PROFILE_POINT(Label)	appPrintProfiler(); appPrintf("PROFILE: " #Label "\n");
 
 #endif
 
@@ -467,7 +467,7 @@ public:
 	{
 		int tmp;
 		*this << AR_INDEX(tmp);
-		printf("Object: %d\n", tmp);
+		appPrintf("Object: %d\n", tmp);
 		return *this;
 	}
 
@@ -596,13 +596,13 @@ protected:
 		for (int i = 0; i < NumBytes; i++)				\
 		{												\
 			if (Ar.IsStopper() || Ar.IsEof()) break;	\
-			if (!(i & 31)) printf("\n%06X :", i);		\
-			if (!(i & 3)) printf(" ");					\
+			if (!(i & 31)) appPrintf("\n%06X :", i);	\
+			if (!(i & 3)) appPrintf(" ");				\
 			byte b;										\
 			Ar << b;									\
-			printf(" %02X", b);							\
+			appPrintf(" %02X", b);						\
 		}												\
-		printf("\n");									\
+		appPrintf("\n");								\
 		Ar.Seek(Ar.Tell() - NumBytes);					\
 	}
 

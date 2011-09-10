@@ -49,7 +49,7 @@ void CVertMeshViewer::Dump()
 	CLodMeshViewer::Dump();
 
 	const UVertMesh *Mesh = static_cast<UVertMesh*>(Object);
-	printf(
+	appPrintf(
 		"\nVertMesh info:\n==============\n"
 		"Verts # %d  Normals # %d\n"
 		"f150 #         %d\n"

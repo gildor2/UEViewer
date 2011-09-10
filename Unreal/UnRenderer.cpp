@@ -692,7 +692,7 @@ void UTexture::Bind()
 		}
 		else
 		{
-			printf("WARNING: texture %s has no valid mipmaps\n", Name);
+			appPrintf("WARNING: texture %s has no valid mipmaps\n", Name);
 			//?? note: not working (no access to generated default texture!!)
 			//?? also should glDeleteTextures(1, &TexNum) - generated but not used?
 			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
@@ -1318,7 +1318,7 @@ void UTexture2D::Bind()
 		}
 		else
 		{
-			printf("WARNING: texture %s has no valid mipmaps\n", Name);
+			appPrintf("WARNING: texture %s has no valid mipmaps\n", Name);
 			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
 			TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
 		}
@@ -1409,7 +1409,7 @@ for (int i = 0; i < USize * VSize; i++)
 			}
 			else
 			{
-				printf("WARNING: texture %s has no valid mipmaps\n", Name);
+				appPrintf("WARNING: texture %s has no valid mipmaps\n", Name);
 				if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
 				TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
 				//?? warning: DefaultTexNum is 2D texture, we need some default cubemap!

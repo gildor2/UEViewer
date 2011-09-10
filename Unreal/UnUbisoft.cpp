@@ -74,13 +74,13 @@ public:
 		guard(FLeadArchiveReader::ReadArchiveHeaders);
 		*Reader << BufferSize << FileSize << DirectoryOffset << Flags;
 		int DataStart = Reader->Tell();
-		printf("buf=%X file=%X dir=%X F=%X\n", BufferSize, FileSize, DirectoryOffset, Flags);
+		appPrintf("buf=%X file=%X dir=%X F=%X\n", BufferSize, FileSize, DirectoryOffset, Flags);
 		if (Flags & LEAD_PKG_COMPRESS_TABLES)
 		{
 			int DataSkip, TableSizeUncompr, TableSizeCompr;
 			*Reader << DataSkip << TableSizeUncompr << TableSizeCompr;
 			byte* PageTableUncompr = new byte[TableSizeUncompr];
-			printf("compr tables: skip=%X uncompTblSize=%X compSize=%X\n", DataSkip, TableSizeUncompr, TableSizeCompr);
+			appPrintf("compr tables: skip=%X uncompTblSize=%X compSize=%X\n", DataSkip, TableSizeUncompr, TableSizeCompr);
 			if (TableSizeCompr)
 			{
 				byte* PageTableCompr = new byte[TableSizeCompr];
@@ -301,22 +301,22 @@ public:
 	void PrintHeaders()
 	{
 		//!! dump embedded data
-		printf("DataStart: %08X\n", DataStart);
+		appPrintf("DataStart: %08X\n", DataStart);
 		int i;
-		printf("ID: %s\n", *Hdr.id);
+		appPrintf("ID: %s\n", *Hdr.id);
 		for (i = 0; i < Hdr.dir.Num(); i++)
 		{
 			const FLeadDirEntry& Dir = Hdr.dir[i];
-			printf("[%d] %08X - (%s) %s / %d (%08X)\n", i, Dir.id, *Dir.ShortFilename, *Dir.Filename, Dir.FileSize, Dir.FileSize);
+			appPrintf("[%d] %08X - (%s) %s / %d (%08X)\n", i, Dir.id, *Dir.ShortFilename, *Dir.Filename, Dir.FileSize, Dir.FileSize);
 		}
 		for (i = 0; i < Hdr.chunkList.Num(); i++)
 		{
 			const FLeadArcChunkList& List = Hdr.chunkList[i];
-			printf("[%d] %08X (%d)\n", i, List.id, List.chunks.Num());
+			appPrintf("[%d] %08X (%d)\n", i, List.id, List.chunks.Num());
 			for (int j = 0; j < List.chunks.Num(); j++)
 			{
 				const FLeadArcChunk &Chunk = List.chunks[j];
-				printf("       %08X  %08X  %08X\n", Chunk.OriginalOffset, Chunk.PackedOffset, Chunk.ChunkSize);
+				appPrintf("       %08X  %08X  %08X\n", Chunk.OriginalOffset, Chunk.PackedOffset, Chunk.ChunkSize);
 			}
 		}
 	}
@@ -324,7 +324,7 @@ public:
 	// test function
 	void SaveEmbeddedFile()
 	{
-		printf("Extracting ...\n");
+		appPrintf("Extracting ...\n");
 		byte* mem = new byte[FileSize];
 		Seek(0);
 		Serialize(mem, FileSize);
@@ -334,7 +334,7 @@ public:
 		fwrite(mem, FileSize, 1, f);
 		delete mem;
 		fclose(f);
-		printf("Extraction done.\n");
+		appPrintf("Extraction done.\n");
 	}
 
 
@@ -380,7 +380,7 @@ public:
 //				PrintHeaders();
 				appError("Chunk #%d: unable to find file for id %08X", i, List.id);
 			}
-			printf("... %s\n", FileName);
+			appPrintf("... %s\n", FileName);
 
 			// open a file
 			char FullFileName[512];
@@ -390,7 +390,7 @@ public:
 			if (!f) f = fopen(FullFileName, "wb");				// open for writting
 			if (!f)
 			{
-				printf("ERROR: unable to open file \"%s\"\n", FullFileName);
+				appPrintf("ERROR: unable to open file \"%s\"\n", FullFileName);
 				continue;
 			}
 
@@ -400,7 +400,7 @@ public:
 			{
 				const FLeadArcChunk &Chunk = List.chunks[j];
 				fseek(f, Chunk.OriginalOffset, SEEK_SET);
-//				printf("PackedOffset=%08X  ChunkSize=%08X  FileSize=%08X  DataStart=%08X\n", Chunk.PackedOffset, Chunk.ChunkSize, FileSize, DataStart);
+//				appPrintf("PackedOffset=%08X  ChunkSize=%08X  FileSize=%08X  DataStart=%08X\n", Chunk.PackedOffset, Chunk.ChunkSize, FileSize, DataStart);
 				assert(Chunk.PackedOffset + Chunk.ChunkSize <= FileSize - DataStart + ALLOW_EXTRA_BYTES);
 				fwrite(Data + Chunk.PackedOffset, Chunk.ChunkSize, 1, f);
 			}

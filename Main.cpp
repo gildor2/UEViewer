@@ -173,7 +173,7 @@ static bool ExportObject(UObject *Obj)
 			if (uniqieIdx >= 2)
 			{
 				appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqieIdx);
-				printf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
+				appPrintf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
 				//?? HACK: temporary replace object name with unique one
 				OriginalName = Obj->Name;
 				Obj->Name    = uniqueName;
@@ -479,7 +479,7 @@ static void PrintGameList(bool tags = false)
 		const char *title = GetEngineName(info.Enum);
 		if (title != oldTitle)
 		{
-			printf("%s%s:", out ? "\n\n" : "", title);
+			appPrintf("%s%s:", out ? "\n\n" : "", title);
 			pos = LINEFEED;
 		}
 		oldTitle = title;
@@ -487,7 +487,7 @@ static void PrintGameList(bool tags = false)
 		// game info
 		if (tags)
 		{
-			printf("\n %8s  %s", info.Switch ? info.Switch : "", info.Name);
+			appPrintf("\n %8s  %s", info.Switch ? info.Switch : "", info.Name);
 			continue;
 		}
 		// simple game list
@@ -498,13 +498,13 @@ static void PrintGameList(bool tags = false)
 		if (needComma) len += 2;
 		if (pos >= LINEFEED - len)
 		{
-			printf("\n  ");
+			appPrintf("\n  ");
 			pos = 2;
 		}
-		printf("%s%s", name, needComma ? ", " : "");
+		appPrintf("%s%s", name, needComma ? ", " : "");
 		pos += len;
 	}
-	printf("\n");
+	appPrintf("\n");
 }
 
 
@@ -526,7 +526,8 @@ static int FindGameTag(const char *name)
 
 static void Usage()
 {
-	printf(	"UE viewer / exporter\n"
+	appPrintf(
+			"UE viewer / exporter\n"
 			"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
 			"\n"
 			"    <package>       name of package to load, without file extension\n"
@@ -594,7 +595,8 @@ static void Usage()
 
 	PrintGameList();
 
-	printf( "\n"
+	appPrintf(
+			"\n"
 			"For details and updates please visit " HOMEPAGE "\n"
 	);
 	exit(0);
@@ -712,7 +714,7 @@ int main(int argc, char **argv)
 				int tag = FindGameTag(opt+5);
 				if (tag == -1)
 				{
-					printf("ERROR: unknown game tag \"%s\".", opt+5);
+					appPrintf("ERROR: unknown game tag \"%s\".", opt+5);
 					PrintGameList(true);
 					exit(0);
 				}
@@ -821,7 +823,7 @@ int main(int argc, char **argv)
 	Package = UnPackage::LoadPackage(argPkgName);
 	if (!Package)
 	{
-		printf("ERROR: unable to find/load package %s\n", argPkgName);
+		appPrintf("ERROR: unable to find/load package %s\n", argPkgName);
 		exit(1);
 	}
 
@@ -835,8 +837,7 @@ int main(int argc, char **argv)
 		for (int i = 0; i < Package->Summary.ExportCount; i++)
 		{
 			const FObjectExport &Exp = Package->ExportTable[i];
-//			printf("%d %s %s\n", i, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
-			printf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
 		}
 		unguard;
 		return 0;
@@ -871,10 +872,10 @@ int main(int argc, char **argv)
 		}
 		if (!found)
 		{
-			printf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
+			appPrintf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
 			exit(1);
 		}
-		printf("Found %d objects with a name \"%s\"\n", found, argObjName);
+		appPrintf("Found %d objects with a name \"%s\"\n", found, argObjName);
 	}
 	else
 	{
@@ -896,7 +897,7 @@ int main(int argc, char **argv)
 		{
 			if (!UObject::GObjObjects.Num())
 			{
-				printf("Package \"%s\" has no supported objects\n", argPkgName);
+				appPrintf("Package \"%s\" has no supported objects\n", argPkgName);
 				exit(1);
 			}
 			Obj = UObject::GObjObjects[0];
@@ -907,7 +908,7 @@ int main(int argc, char **argv)
 			UnPackage *Package2 = UnPackage::LoadPackage(extraPackages[i]);
 			if (!Package)
 			{
-				printf("WARNING: unable to find/load package %s\n", extraPackages[i]);
+				appPrintf("WARNING: unable to find/load package %s\n", extraPackages[i]);
 				continue;
 			}
 			// create exports (the same code as above)
@@ -927,7 +928,7 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_Export)
 	{
-		printf("Exporting objects ...\n");
+		appPrintf("Exporting objects ...\n");
 		// export object(s), if possible
 		bool oneObjectOnly = (argObjName != NULL && !exprtAll);
 		UnPackage* notifyPackage = NULL;
@@ -943,12 +944,12 @@ int main(int argc, char **argv)
 			}
 			if (ExportObject(ExpObj))
 			{
-				printf("Exported %s %s\n", ExpObj->GetClassName(), ExpObj->Name);
+				appPrintf("Exported %s %s\n", ExpObj->GetClassName(), ExpObj->Name);
 			}
 			else if (argObjName && ExpObj == Obj)
 			{
 				// display warning message only when failed to export object, specified from command line
-				printf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
+				appPrintf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
 			}
 			if (oneObjectOnly) break;
 		}
@@ -958,7 +959,7 @@ int main(int argc, char **argv)
 #if RENDERING
 	if (!CreateVisualizer(Obj))
 	{
-		printf("Package \"%s\" has no objects to display\n", argPkgName);
+		appPrintf("Package \"%s\" has no objects to display\n", argPkgName);
 		return 0;
 	}
 	// print mesh info
@@ -991,12 +992,12 @@ int main(int argc, char **argv)
 	} CATCH_CRASH {
 		if (GErrorHistory[0])
 		{
-//			printf("ERROR: %s\n", GErrorHistory);
+//			appPrintf("ERROR: %s\n", GErrorHistory);
 			appNotify("ERROR: %s\n", GErrorHistory);
 		}
 		else
 		{
-//			printf("Unknown error\n");
+//			appPrintf("Unknown error\n");
 			appNotify("Unknown error\n");
 		}
 		exit(1);
@@ -1115,7 +1116,7 @@ static void TakeScreenshot(const char *ObjectName)
 		retry++;
 		appSprintf(ARRAY_ARG(filename), "Screenshots/%s_%02d.tga", ObjectName, retry);
 	}
-	printf("Writting screenshot %s\n", filename);
+	appPrintf("Writting screenshot %s\n", filename);
 	appMakeDirectoryForFile(filename);
 	FFileReader Ar(filename, false);
 	int width, height;

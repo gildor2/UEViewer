@@ -45,7 +45,7 @@ public:
 		assert(Ar.IsLoading);
 		Super::Serialize(Ar);
 		Ar << SuperField << Next;
-//		printf("super: %s next: %s\n", SuperField ? SuperField->Name : "-", Next ? Next->Name : "-");
+//		appPrintf("super: %s next: %s\n", SuperField ? SuperField->Name : "-", Next ? Next->Name : "-");
 		unguard;
 	}
 };
@@ -149,7 +149,7 @@ public:
 		if (Ar.Game >= GAME_UE3)
 			Ar << CppText;
 #endif
-//		printf("%s: cpp:%s scr:%s child:%s\n", Name, CppText ? CppText->Name : "-", ScriptText ? ScriptText->Name : "-", Children ? Children->Name : "-");
+//		appPrintf("%s: cpp:%s scr:%s child:%s\n", Name, CppText ? CppText->Name : "-", ScriptText ? ScriptText->Name : "-", Children ? Children->Name : "-");
 		if (Ar.Game < GAME_UE3)
 			Ar << FriendlyName;	//?? UT2 ? or UE2 ?
 #if UT2
@@ -167,7 +167,7 @@ public:
 		Ar << ScriptSize;
 		if (ScriptSize)
 		{
-			printf("script: %d, rest: %d\n", ScriptSize, Ar.GetStopper() - Ar.Tell());
+			appPrintf("script: %d, rest: %d\n", ScriptSize, Ar.GetStopper() - Ar.Tell());
 			Script.Empty(ScriptSize);
 			Script.Add(ScriptSize);
 			Ar.Serialize(&Script[0], ScriptSize);
@@ -290,7 +290,7 @@ public:
 		if (Ar.Game == GAME_A51 && (PropertyFlags2 & 0x80000000))
 			Ar << f64;
 #endif // A51
-//		printf("... prop %s [%d] %X:%X (%s)\n", Name, ArrayDim, PropertyFlags, PropertyFlags2, *Category);
+//		appPrintf("... prop %s [%d] %X:%X (%s)\n", Name, ArrayDim, PropertyFlags, PropertyFlags2, *Category);
 		unguard;
 	}
 };
@@ -452,7 +452,7 @@ public:
 	{
 		guard(UStructProperty::Serialize);
 		Super::Serialize(Ar);
-printf("Struct(%s) rest: %X\n", Name, Ar.GetStopper() - Ar.Tell());	//!!!
+appPrintf("Struct(%s) rest: %X\n", Name, Ar.GetStopper() - Ar.Tell());	//!!!
 		Ar << Struct;
 		unguard;
 	}

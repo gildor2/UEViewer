@@ -188,7 +188,7 @@ void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar)
 	byte *pic = Tex->Decompress(width, height);
 	if (!pic)
 	{
-		printf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
+		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
 		return;		//?? should erase file ?
 	}
 

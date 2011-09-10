@@ -356,7 +356,7 @@ static void ToggleFullscreen()
 		SDL_DisplayMode desktopMode;
 		if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplay(sdlWindow), &desktopMode) != 0)
 		{
-			printf("ERROR: unable to get desktop display mode\n");
+			appPrintf("ERROR: unable to get desktop display mode\n");
 			isFullscreen = false;
 			return;
 		}
