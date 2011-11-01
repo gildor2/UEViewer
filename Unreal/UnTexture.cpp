@@ -1027,7 +1027,7 @@ static int GetRealTextureOffset_DCU(const UTexture2D *Obj)
 	guard(GetRealTextureOffset_DCU);
 
 	char ObjName[256];
-	Obj->GetFullName(ARRAY_ARG(ObjName));
+	Obj->GetFullName(ARRAY_ARG(ObjName), true, true, true);
 	unsigned Hash = appStrihash(ObjName);
 	const char *TFCName = Obj->TextureFileCacheName;
 	return GetRealTextureOffset_DCU_2(Hash, TFCName);

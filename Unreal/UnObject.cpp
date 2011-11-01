@@ -7,6 +7,9 @@
 //#define DEBUG_PROPS			1
 //#define PROFILE_LOADING		1
 
+#define DUMP_SHOW_PROP_INDEX	0
+#define DUMP_SHOW_PROP_TYPE		0
+
 
 /*-----------------------------------------------------------------------------
 	UObject class
@@ -35,40 +38,38 @@ UObject::~UObject()
 }
 
 
-void UObject::GetFullName(char *Dst, int DstSize) const
+const char *UObject::GetRealClassName() const
 {
-	guard(UObject::GetFullName);
-
-#if 0
-	// this version will require Outer field in UObject
-	// note: some textures should have outer = UnPackage
-	int Len = 0;
-	if (Outer)
-	{
-		// recursion
-		Outer->GetFullName(Dst, DstSize);
-		Len = strlen(Dst);
-		// append delimiter
-		assert(Len < DstSize - 1);
-		Dst[Len++] = '.';
-	}
-	// append object name
-	int NameLen = strlen(Name);
-	assert(Len + NameLen < DstSize - 1);
-	memcpy(Dst + Len, Name, NameLen + 1);	// this will include trailing zero
-#else
-	assert(Package);
+	if (!Package) return GetClassName();
 	const FObjectExport &Exp = Package->GetExport(PackageIndex);
-	if (!Exp.PackageIndex)
+	return Package->GetObjectName(Exp.ClassIndex);
+}
+
+
+const char *UObject::GetUncookedPackageName() const
+{
+	if (!Package) return "None";
+	return Package->GetUncookedPackageName(PackageIndex);
+}
+
+
+// Package.Group.Object
+void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool IncludeCookedPackageName, bool ForcePackageName) const
+{
+	if (!Package)
 	{
-		// no Outer - use the package name for this
-		appSprintf(Dst, DstSize, "%s.%s", Package->Name, Name);
+		buf[0] = 0;
 		return;
 	}
-	Package->GetFullExportName(Exp, Dst, DstSize);
-#endif
-
-	unguard;
+	const FObjectExport &Exp = Package->GetExport(PackageIndex);
+	if (!Exp.PackageIndex && ForcePackageName)
+	{
+		// no Outer - use the package name for this
+		assert(IncludeObjectName);	//!! IncludeObjectName is ignored here!
+		appSprintf(buf, bufSize, "%s.%s", Package->Name, Name);
+		return;
+	}
+	Package->GetFullExportName(Exp, buf, bufSize, IncludeObjectName, IncludeCookedPackageName);
 }
 
 
@@ -814,12 +815,21 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 }
 
 
-void CTypeInfo::DumpProps(void *Data) const
+static void PrintIndent(int Value, bool HasIndex = false)
+{
+#if DUMP_SHOW_PROP_INDEX
+	if (!HasIndex) appPrintf("  .....");	// skip "[NNN]"
+#endif
+	for (int i = 0; i <= Value; i++)
+		appPrintf("    ");
+}
+
+void CTypeInfo::DumpProps(void *Data, int Indent) const
 {
 	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
 	{
 		if (!Type->NumProps) continue;
-		appPrintf("%s properties:\n", Type->Name);
+		if (!Indent) appPrintf("%s properties:\n", Type->Name);
 		for (int PropIndex = 0; PropIndex < Type->NumProps; PropIndex++)
 		{
 			const CPropInfo *Prop = Type->Props + PropIndex;
@@ -828,21 +838,67 @@ void CTypeInfo::DumpProps(void *Data) const
 //				appPrintf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
 				continue;
 			}
-			appPrintf("  %3d: %s %s",
-				PropIndex,
-				(Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName+1,	// skip enum marker
-				Prop->Name);
-			if (Prop->Count > 1)
-				appPrintf("[%d] = { ", Prop->Count);
-			else
-				appPrintf(" = ");
+#if DUMP_SHOW_PROP_INDEX
+			appPrintf("  [%3d]", PropIndex);
+			PrintIndent(Indent, true);
+#else
+			PrintIndent(Indent);
+#endif
+#if DUMP_SHOW_PROP_TYPE
+			appPrintf("%s ", (Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName+1);	// skip enum marker
+#endif
+			appPrintf("%s", Prop->Name);
 
 			byte *value = (byte*)Data + Prop->Offset;
+			int PropCount = Prop->Count;
 
-			//?? can support TArray props here (Prop->Count == -1)
-			for (int ArrayIndex = 0; ArrayIndex < Prop->Count; ArrayIndex++)
+			bool IsArray = (PropCount > 1) || (PropCount == -1);
+			if (PropCount == -1)
 			{
-				if (ArrayIndex > 0) appPrintf(", ");
+				// TArray<> value
+				FArray *Arr = (FArray*)value;
+				value     = (byte*)Arr->GetData();
+				PropCount = Arr->Num();
+			}
+
+			// find structure type
+			//!! this skips 1st char, so CStruct and FStruct are collided!
+			const CTypeInfo *StrucType = FindClassType(Prop->TypeName+1);
+			bool IsStruc = (StrucType != NULL);
+
+			// formatting of property start
+			if (IsArray)
+			{
+				appPrintf("[%d] =", PropCount);
+				if (!PropCount)
+				{
+					appPrintf(" {}\n");
+					continue;
+				}
+				// first item
+				if (!IsStruc)
+				{
+					appPrintf(" { ");
+				}
+				else
+				{
+					appPrintf("\n");
+					PrintIndent(Indent); appPrintf("{");
+				}
+			}
+			else
+			{
+				appPrintf(" = ");
+			}
+
+			// dump item(s)
+			for (int ArrayIndex = 0; ArrayIndex < PropCount; ArrayIndex++)
+			{
+				// note: ArrayIndex is used inside PROP macro
+
+				// print separator between array items
+				if (ArrayIndex > 0 && !IsStruc) appPrintf(", ");
+
 #define IS(name)  strcmp(Prop->TypeName, #name) == 0
 #define PROCESS(type, format, value) \
 				if (IS(type)) { appPrintf(format, value); }
@@ -855,7 +911,11 @@ void CTypeInfo::DumpProps(void *Data) const
 				{
 					UObject *obj = PROP(UObject*);
 					if (obj)
-						appPrintf("%s'%s'", obj->GetClassName(), obj->Name);
+					{
+						char ObjName[256];
+						obj->GetFullName(ARRAY_ARG(ObjName));
+						appPrintf("%s'%s'", obj->GetClassName(), ObjName);
+					}
 					else
 						appPrintf("Null");
 				}
@@ -869,12 +929,38 @@ void CTypeInfo::DumpProps(void *Data) const
 					const char *v = EnumToName(Prop->TypeName+1, *value);		// skip enum marker
 					appPrintf("%s (%d)", v ? v : "<unknown>", *value);
 				}
+				if (IsStruc)
+				{
+					// this is a structure type
+					int NestIndent = (IsArray) ? Indent+1 : Indent;
+					if (ArrayIndex == 0) appPrintf("\n");
+					if (IsArray)
+					{
+						PrintIndent(NestIndent);
+						appPrintf("%s[%d] =\n", Prop->Name, ArrayIndex);
+					}
+					PrintIndent(NestIndent); appPrintf("{\n");
+					StrucType->DumpProps(value + ArrayIndex * StrucType->SizeOf, NestIndent+1);
+					PrintIndent(NestIndent); appPrintf("}\n");
+				}
 			}
 
-			if (Prop->Count > 1)
-				appPrintf(" }\n");
+			// formatting of property end
+			if (IsArray)
+			{
+				if (!IsStruc)
+				{
+					appPrintf(" }\n");		// no indent
+				}
+				else
+				{
+					PrintIndent(Indent); appPrintf("}\n");	// indent
+				}
+			}
 			else
+			{
 				appPrintf("\n");
+			}
 		}
 	}
 }

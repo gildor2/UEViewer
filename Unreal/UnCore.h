@@ -938,6 +938,11 @@ protected:
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 };
 
+#if DECLARE_VIEWER_PROPS
+#define ARRAY_COUNT_FIELD_OFFSET	( sizeof(void*) )
+#endif
+
+
 FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 #if UNREAL3
 FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));

@@ -4,6 +4,13 @@
 #if RENDERING
 
 #include "MeshInstance.h"
+#include "UnMesh.h"
+
+
+FORCEINLINE const UVertMesh *CVertMeshInstance::GetMesh() const
+{
+	return static_cast<const UVertMesh*>(pMesh);
+}
 
 
 int CVertMeshInstance::FindAnim(const char *AnimName) const
@@ -15,6 +22,22 @@ int CVertMeshInstance::FindAnim(const char *AnimName) const
 		if (!strcmp(Mesh->AnimSeqs[i].Name, AnimName))
 			return i;
 	return INDEX_NONE;
+}
+
+
+int CVertMeshInstance::GetAnimCount() const
+{
+	const UVertMesh *Mesh = GetMesh();
+	return Mesh->AnimSeqs.Num();
+}
+
+
+const char *CVertMeshInstance::GetAnimName(int Index) const
+{
+	guard(CVertMeshInstance::GetAnimName);
+	if (Index < 0) return "None";
+	return GetMesh()->AnimSeqs[Index].Name;
+	unguard;
 }
 
 

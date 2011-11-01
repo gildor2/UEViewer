@@ -51,7 +51,9 @@ extern gl_config_t gl_config;
 
 #define GL_SUPPORT(ext)	(gl_config.extensionMask & (ext))
 
+extern bool GUseGLSL;
 
+void GL_CheckGLSL();
 void GL_CheckError(const char *msg = NULL);
 
 
@@ -106,7 +108,7 @@ public:
 	}
 	void Release()
 	{
-		if (!IsValid() || !GL_SUPPORT(QGL_2_0)) return;
+		if (!IsValid() || !GUseGLSL) return;
 		glDetachShader(PrObj, VsObj);
 		glDetachShader(PrObj, PsObj);
 		glDeleteShader(VsObj);

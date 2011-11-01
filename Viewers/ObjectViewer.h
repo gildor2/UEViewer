@@ -1,11 +1,12 @@
 #include "GlWindow.h"
-#include "UnPackage.h"			// for CObjectViewer::Draw2D()
 
 
 class CMeshInstance;
 class CLodMeshInstance;
 class CVertMeshInstance;
 class CSkelMeshInstance;
+
+class CStaticMesh;
 
 
 #define TEST_FILES		1		// comment line to disable some notifications
@@ -27,22 +28,12 @@ class CObjectViewer
 public:
 	UObject*	Object;
 
-	CObjectViewer(UObject *Obj)
-	:	Object(Obj)
-	{
-		SetDistScale(1);
-		ResetView();
-		SetViewOffset(nullVec3);
-	}
+	CObjectViewer(UObject *Obj);
 	virtual ~CObjectViewer()
 	{}
 
-	virtual void Dump()
-	{
-		appPrintf("\nObject info:\n============\n");
-		appPrintf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
-		Object->GetTypeinfo()->DumpProps(Object);
-	}
+	virtual void Dump();
+
 #if TEST_FILES
 	virtual void Test()
 	{}
@@ -51,13 +42,7 @@ public:
 	virtual void ShowHelp()
 	{}
 
-	virtual void Draw2D()
-	{
-		DrawTextLeft(S_GREEN"Package:"S_WHITE" %s\n"
-					 S_GREEN"Class  :"S_WHITE" %s\n"
-					 S_GREEN"Object :"S_WHITE" %s\n",
-					 Object->Package->Filename, Object->GetClassName(), Object->Name);
-	}
+	virtual void Draw2D();
 
 	virtual void Draw3D()
 	{}
@@ -169,9 +154,14 @@ public:
 class CStatMeshViewer : public CMeshViewer
 {
 public:
-	CStatMeshViewer(UStaticMesh *Mesh);
+	CStatMeshViewer(CStaticMesh *Mesh);
+	virtual void ShowHelp();
 	virtual void Dump();
 	virtual void Draw2D();
+	virtual void ProcessKey(int key);
+
+private:
+	CStaticMesh		*Mesh;
 };
 
 

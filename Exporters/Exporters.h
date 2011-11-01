@@ -5,8 +5,10 @@ void appSetBaseExportDirectory(const char *Dir);
 
 extern bool GExportScripts;
 extern bool GExportLods;
-extern bool GExtendedPsk;
+extern bool GExportPskx;
 extern bool GNoTgaCompress;
+extern bool GUncook;
+extern bool GUseGroups;
 
 // forwards
 class UObject;
@@ -24,7 +26,7 @@ class UFaceFXAsset;
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);
 void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar);
-void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar);
+void ExportStaticMesh(const UStaticMesh *Mesh, FArchive &Ar);
 // MD5Mesh
 void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar);
 void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar);

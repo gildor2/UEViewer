@@ -116,10 +116,6 @@ bool   vpInvertXAxis = false;
 
 
 //-----------------------------------------------------------------------------
-// Viewport support
-//-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
 // Switch 2D/3D rendering mode
 //-----------------------------------------------------------------------------
 
@@ -148,7 +144,7 @@ static void Set2Dmode(bool force = false)
 	glDisable(GL_CULL_FACE);
 	//?? disable shading
 	BindDefaultMaterial(true);
-	if (GL_SUPPORT(QGL_2_0)) glUseProgram(0);
+	if (GUseGLSL) glUseProgram(0);
 }
 
 
@@ -314,6 +310,7 @@ static void ResizeWindow(int w, int h)
 			return;
 		}
 		QGL_InitExtensions();
+		GL_CheckGLSL();
 	}
 
 	if (!glIsTexture(FontTexNum))
@@ -885,7 +882,7 @@ static void BloomScene(CFramebuffer &FBO)
 
 static void DrawBackground()
 {
-	if (GL_SUPPORT(QGL_2_0)) CShader::Unset();
+	if (GUseGLSL) CShader::Unset();
 	// clear screen buffer
 #if FUNNY_BACKGROUND
 	glDisable(GL_BLEND);
@@ -923,8 +920,7 @@ static void Display()
 #endif // SHOW_FPS
 
 #if USE_BLOOM
-	bool useBloom = ( GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) == (QGL_EXT_FRAMEBUFFER_OBJECT|QGL_2_0) );
-	if (GDisableFBO) useBloom = false;
+	bool useBloom = (GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT) && GUseGLSL && !GDisableFBO);
 	static CFramebuffer FBO(true, GL_SUPPORT(QGL_ARB_TEXTURE_FLOAT));
 	if (useBloom) PostEffectPrepare(FBO);
 #endif // USE_BLOOM
@@ -1059,11 +1055,13 @@ static void OnKeyboard(unsigned key, unsigned mod)
 #endif
 	case 'g'|KEY_CTRL:
 		{
-			// enable/disable extensions
+			// enable/disable extensions and GLSL
 			static unsigned extensionMask = 0;
+			static bool     StoreUseGLSL  = false;
 			BindDefaultMaterial(true);
-			if (GL_SUPPORT(QGL_2_0)) glUseProgram(0);
+			if (GUseGLSL) glUseProgram(0);
 			Exchange(gl_config.extensionMask, extensionMask);
+			Exchange(StoreUseGLSL, GUseGLSL);
 		}
 		break;
 #if DUMP_TEXTS

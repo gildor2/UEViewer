@@ -343,7 +343,7 @@ void appSetRootDirectory2(const char *filename)
 	strcpy(buf2, buf);
 	// analyze path
 	bool detected = false;
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 8; i++)
 	{
 		// find deepest directory name
 		s = strrchr(buf, '/');

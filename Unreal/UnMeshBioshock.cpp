@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "UnrealClasses.h"
+#include "UnMesh.h"
 #include "UnHavok.h"
 #include "UnPackage.h"			// to get "Platform"
 
@@ -792,6 +793,8 @@ void UStaticMesh::SerializeBioshockMesh(FArchive &Ar)
 
 	// skip remaining data
 	Ar.Seek(Ar.GetStopper());
+
+	ConvertMesh2();
 
 	unguard;
 }

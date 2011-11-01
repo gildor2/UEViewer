@@ -708,7 +708,8 @@ public:
 
 	const char *GetObjectPackageName(int PackageIndex) const;
 	// get object name including all outers (class name is not included)
-	void GetFullExportName(const FObjectExport &Exp, char *buf, int bufSize);	// not 'const' because uses non-const functions
+	void GetFullExportName(const FObjectExport &Exp, char *buf, int bufSize, bool IncludeObjectName = true, bool IncludeCookedPackageName = true) const;
+	const char *GetUncookedPackageName(int PackageIndex) const;
 
 	// FArchive interface
 	virtual FArchive& operator<<(FName &N)

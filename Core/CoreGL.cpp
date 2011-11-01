@@ -1,10 +1,10 @@
 //#define VALIDATE_SHADERS	1
 //#define DUMP_SHADERS		1
-#define FILTER_ATI_GLSL		1			// ATI drivers has messages even when no errors/warnings in GLSL shaders
+#define FILTER_GLSL_SPAM	1			// ATI and Intel drivers has messages even when no errors/warnings in GLSL shaders
 
 #define GLSLANG_DLL			"glslang.dll"
 
-#define FORCE_GLSL_VERSION	"120"		//?? use it instead of placing "#version ..." into shaders
+#define FORCE_GLSL_VERSION	120
 
 
 #if VALIDATE_SHADERS
@@ -23,6 +23,34 @@
 
 
 #if RENDERING
+
+
+bool GUseGLSL;
+
+
+void GL_CheckGLSL()
+{
+	GUseGLSL = false;
+
+	if (!GL_SUPPORT(QGL_2_0)) return;
+
+#ifdef FORCE_GLSL_VERSION
+	char *Version = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+	if (!Version) return;
+
+	int VerMajor = atoi(Version);
+	int VerMinor = 0;
+	if (char *s = strchr(Version, '.'))
+	{
+		VerMinor = atoi(s+1);
+	}
+	int CombinedVer = VerMajor * 100 + VerMinor;
+//	printf("GL: %s (%d:%d) -- %d %d\n", Version, VerMajor, VerMinor, CombinedVer, FORCE_GLSL_VERSION);
+	if (CombinedVer < FORCE_GLSL_VERSION) return;	// GLSL version is too low
+#endif // FORCE_GLSL_VERSION
+
+	GUseGLSL = true;
+}
 
 
 void GL_CheckError(const char *msg)
@@ -319,16 +347,17 @@ static void CheckShader(GLuint obj, const char *type, const char *name)
 	GLint charsWritten = 0;
 	glGetShaderInfoLog(obj, infologLength, &charsWritten, infoLog);
 
-#if FILTER_ATI_GLSL
+#if FILTER_GLSL_SPAM
 	if (status)
 	{
 		static const char *checks[] = {
-			"shader was successfully compiled"
+			"shader was successfully compiled",		// ATI
+			"no errors"								// Intel
 		};
 		for (int i = 0; i < ARRAY_COUNT(checks); i++)
 			if (appStristr(infoLog, checks[i])) return;
 	}
-#endif // FILTER_ATI_GLSL
+#endif // FILTER_GLSL_SPAM
 
 	if (status)
 		appPrintf("WARNING: %s shader %s:\n%s\n", type, name, infoLog);
@@ -355,17 +384,18 @@ static void CheckProgram(GLuint obj, const char *name)
 	GLint charsWritten = 0;
 	glGetProgramInfoLog(obj, infologLength, &charsWritten, infoLog);
 
-#if FILTER_ATI_GLSL
+#if FILTER_GLSL_SPAM
 	if (status)
 	{
 		static const char *checks[] = {
-			"fragment shader(s) linked",
-			"vertex shader(s) linked",
+			"fragment shader(s) linked",			// ATI
+			"vertex shader(s) linked",				// ATI
+			"no errors"								// Intel
 		};
 		for (int i = 0; i < ARRAY_COUNT(checks); i++)
 			if (appStristr(infoLog, checks[i])) return;
 	}
-#endif // FILTER_ATI_GLSL
+#endif // FILTER_GLSL_SPAM
 
 	appPrintf("%s: program %s:\n", (status == GL_TRUE) ? "WARNING" : "ERROR", name);
 	appPrintf("%s\n", infoLog);
@@ -435,7 +465,7 @@ static void CompileShader(GLuint shader, const char *src, const char *defines, c
 	char *dst = buffer;
 
 #ifdef FORCE_GLSL_VERSION
-	strcpy(dst, "#version " FORCE_GLSL_VERSION "\n");
+	strcpy(dst, "#version " STR(FORCE_GLSL_VERSION) "\n");
 	dst = strchr(dst, 0);
 #endif // FORCE_GLSL_VERSION
 

@@ -6,8 +6,8 @@
 
 #include "UnPackage.h"					// for accessing Game field
 
-#include "UnMaterial2.h"			//!! wrong engine dependency
-#include "UnMaterial3.h"			//!! wrong engine dependency
+#include "UnMaterial2.h"				//!! wrong engine dependency
+#include "UnMaterial3.h"				//!! wrong engine dependency
 
 #if RENDERING
 
@@ -517,7 +517,7 @@ void UUnrealMaterial::SetMaterial(unsigned PolyFlags)
 	}
 
 #if USE_GLSL
-	if (GL_SUPPORT(QGL_2_0))
+	if (GUseGLSL)
 	{
 		if (Params.Diffuse == this)
 		{
@@ -553,6 +553,8 @@ void UUnrealMaterial::SetupGL(unsigned PolyFlags)
 
 void BindDefaultMaterial(bool White)
 {
+	guard(BindDefaultMaterial);
+
 	glDepthMask(GL_TRUE);		//?? place into other places too
 
 	if (GL_SUPPORT(QGL_1_3))
@@ -570,7 +572,7 @@ void BindDefaultMaterial(bool White)
 	}
 
 #if USE_GLSL
-	if (GL_SUPPORT(QGL_2_0)) GL_UseGenericShader(White ? GS_White : GS_Textured);
+	if (GUseGLSL) GL_UseGenericShader(White ? GS_White : GS_Textured);
 #endif
 
 	if (White)
@@ -612,6 +614,8 @@ void BindDefaultMaterial(bool White)
 	}
 	Mat->Bind();
 	DefaultTexNum = Mat->TexNum;
+
+	unguard;
 }
 
 
@@ -1350,7 +1354,7 @@ void UTextureCube::Bind()
 {
 	guard(UTextureCube::Bind);
 
-	if (!GL_SUPPORT(QGL_2_0) || !FacePosX || !FacePosY || !FacePosZ || !FaceNegX || !FaceNegY || !FaceNegZ)
+	if (!GUseGLSL || !FacePosX || !FacePosY || !FacePosZ || !FaceNegX || !FaceNegY || !FaceNegZ)
 	{
 		BindDefaultMaterial();
 		return;

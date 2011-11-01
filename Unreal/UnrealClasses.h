@@ -1,4 +1,8 @@
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnMaterial.h"
-#include "UnMesh.h"
+
+class ULodMesh;
+class UVertMesh;
+class USkeletalMesh;
+class UStaticMesh;

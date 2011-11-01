@@ -5,6 +5,7 @@
 
 #include "UnMaterial2.h"
 #include "UnMaterial3.h"
+#include "UnMesh.h"
 
 #include "UnSound.h"
 #include "UnThirdParty.h"
@@ -12,6 +13,9 @@
 #include "Viewers/ObjectViewer.h"
 #include "Exporters/Exporters.h"
 
+#if DECLARE_VIEWER_PROPS
+#include "StaticMesh.h"
+#endif
 
 #define APP_CAPTION		"UE Viewer"
 #define HOMEPAGE		"http://www.gildor.org/en/projects/umodel"
@@ -32,6 +36,7 @@ static void RegisterUnrealClasses()
 {
 	// classes and structures
 BEGIN_CLASS_TABLE
+
 	REGISTER_MATERIAL_CLASSES
 	REGISTER_MESH_CLASSES
 #if UNREAL1
@@ -58,6 +63,11 @@ BEGIN_CLASS_TABLE
 #if DCU_ONLINE
 	REGISTER_MATERIAL_CLASSES_DCUO
 #endif
+
+#if DECLARE_VIEWER_PROPS
+	REGISTER_STATICMESH_VCLASSES
+#endif // DECLARE_VIEWER_PROPS
+
 END_CLASS_TABLE
 	// enumerations
 	REGISTER_MATERIAL_ENUMS
@@ -124,7 +134,7 @@ static int ObjIndex = 0;
 
 bool GExportScripts = false;
 bool GExportLods    = false;
-bool GExtendedPsk   = false;
+bool GExportPskx    = false;
 
 typedef void (*ExporterFunc_t)(UObject*, FArchive&);
 
@@ -164,10 +174,11 @@ static bool ExportObject(UObject *Obj)
 		const CExporterInfo &Info = exporters[i];
 		if (Obj->IsA(Info.ClassName))
 		{
-			const char *ClassName = Obj->GetClassName();
+			const char *ExportPath = GetExportPath(Obj);
+			const char *ClassName  = Obj->GetClassName();
 			// get name uniqie index
 			char uniqueName[256];
-			appSprintf(ARRAY_ARG(uniqueName), "%s.%s", Obj->Name, ClassName);
+			appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
 			int uniqieIdx = ExportedNames.RegisterName(uniqueName);
 			const char *OriginalName = NULL;
 			if (uniqieIdx >= 2)
@@ -182,7 +193,7 @@ static bool ExportObject(UObject *Obj)
 			if (Info.FileExt)
 			{
 				char filename[512];
-				appSprintf(ARRAY_ARG(filename), "%s/%s.%s", GetExportPath(Obj), Obj->Name, Info.FileExt);
+				appSprintf(ARRAY_ARG(filename), "%s/%s.%s", ExportPath, Obj->Name, Info.FileExt);
 				FFileReader Ar(filename, false);
 				Ar.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
 				Info.Func(Obj, Ar);
@@ -301,6 +312,7 @@ static GameInfo games[] = {
 		G3("Gears of War"),
 #	if XBOX360
 		G3("Gears of War 2"),
+		G3("Gears of War 3"),
 #	endif
 #	if IPHONE
 		G3("Infinity Blade"),
@@ -317,9 +329,6 @@ static GameInfo games[] = {
 #	if MASSEFF
 		G("Mass Effect", mass, GAME_MassEffect),
 		G("Mass Effect 2", mass2, GAME_MassEffect2),
-#	endif
-#	if TUROK
-		G("Turok", turok, GAME_Turok),
 #	endif
 #	if A51
 		G("BlackSite: Area 51", a51, GAME_A51),
@@ -574,21 +583,24 @@ static void Usage()
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
 			"    -all            export all linked objects too\n"
+			"    -uncook         use original package name as a base export directory\n"
+			"    -groups         use group names instead of class names for directories\n"
 			"    -uc             create unreal script when possible\n"
 			"    -pskx           use pskx/psax format for skeletal mesh\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
-			"    -lods           export lower LOD levels as well\n"
+			"    -lods           export all available mesh LOD levels\n"
 			"    -notgacomp      disable TGA compression\n"
 			"\n"
 			"Supported resources for export:\n"
 			"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
 			"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
 			"    VertMesh        exported as Unreal 3d file\n"
-			"    StaticMesh      exported as ActorX psk file with no skeleton\n"
+			"    StaticMesh      exported as psk file with no skeleton (pskx)\n"
 			"    Texture         exported in tga format\n"
 			"    Sounds          file extension depends on object contents\n"
 			"    ScaleForm       gfx\n"
 			"    FaceFX          fxa\n"
+			"    Sound           exported \"as is\"\n"
 			"\n"
 			"List of supported games:\n"
 	);
@@ -677,7 +689,9 @@ int main(int argc, char **argv)
 				OPT_BOOL ("materials", showMaterials)
 #endif
 				OPT_BOOL ("all",     exprtAll)
-				OPT_BOOL ("pskx",    GExtendedPsk)
+				OPT_BOOL ("uncook",  GUncook)
+				OPT_BOOL ("groups",  GUseGroups)
+				OPT_BOOL ("pskx",    GExportPskx)
 				OPT_BOOL ("md5",     md5)
 				OPT_BOOL ("lods",    GExportLods)
 				OPT_BOOL ("uc",      GExportScripts)
@@ -753,12 +767,12 @@ int main(int argc, char **argv)
 	if (arg != argc) Usage();									// extera argument found
 
 	// register exporters
-	if (!md5 && !GExtendedPsk)
+	if (!md5 && !GExportPskx)
 	{
 		EXPORTER("SkeletalMesh",  "psk",     ExportPsk);
 		EXPORTER("MeshAnimation", "psa",     ExportPsa);
 	}
-	else if (!md5) // && GExtendedPsk
+	else if (!md5) // && GExportPskx
 	{
 		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk);
 		EXPORTER("MeshAnimation", "psax",    ExportPsa);
@@ -769,7 +783,7 @@ int main(int argc, char **argv)
 		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
 	}
 	EXPORTER("VertMesh",      NULL,   Export3D  );				// will generate 2 files
-	EXPORTER("StaticMesh",    "pskx", ExportPsk2);
+	EXPORTER("StaticMesh",    "pskx", ExportStaticMesh);
 	EXPORTER("Texture",       "tga",  ExportTga );
 	EXPORTER("Sound",         NULL,   ExportSound);
 #if UNREAL3
@@ -1034,13 +1048,20 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 		if (!test) Viewer = new CViewer(Obj2);		\
 		return true;								\
 	}
+#define MESH_VIEWER(UClass, CViewer)				\
+	if (Obj->IsA(#UClass + 1))						\
+	{												\
+		UClass *Obj2 = static_cast<UClass*>(Obj); 	\
+		if (!test) Viewer = new CViewer(Obj2->ConvertedMesh); \
+		return true;								\
+	}
 	// create viewer for known class
 	bool showAll = !(showMeshes || showMaterials);
 	if (showMeshes || showAll)
 	{
 		CLASS_VIEWER(UVertMesh,       CVertMeshViewer, true);
 		CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer, true);
-		CLASS_VIEWER(UStaticMesh,     CStatMeshViewer, true);
+		MESH_VIEWER (UStaticMesh,     CStatMeshViewer      );
 	}
 	if (showMaterials || showAll)
 	{

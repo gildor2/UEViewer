@@ -32,7 +32,11 @@
 
 //!! can easily derive one structure from another
 #define DECLARE_STRUCT(Class)					\
-		DECLARE_BASE(Class, CNullType)
+		DECLARE_BASE(Class, CNullType)			\
+		const CTypeInfo *GetTypeinfo() const	\
+		{										\
+			return StaticGetTypeinfo();			\
+		}										\
 
 //?? can replace virtual GetClassName() with GetTypeinfo()->Name
 #define DECLARE_CLASS(Class,Base)				\
@@ -82,7 +86,7 @@ struct CTypeInfo
 	bool IsA(const char *TypeName) const;
 	const CPropInfo *FindProperty(const char *Name) const;
 	void SerializeProps(FArchive &Ar, void *ObjectData) const;
-	void DumpProps(void *Data) const;
+	void DumpProps(void *Data, int Indent = 0) const;
 	static void RemapProp(const char *Class, const char *OldName, const char *NewName);
 };
 
@@ -139,6 +143,10 @@ struct CNullType
 		numProps = ARRAY_COUNT(props);			\
 		return props;							\
 	}
+
+#if DECLARE_VIEWER_PROPS
+#define VPROP_ARRAY_COUNT(Field,Name)	{ #Name, "int", FIELD2OFS(ThisClass, Field) + ARRAY_COUNT_FIELD_OFFSET, 1 },
+#endif // DECLARE_VIEWER_PROPS
 
 
 struct CClassInfo
@@ -201,7 +209,6 @@ int NameToEnum(const char *EnumName, const char *Value);
 
 class UObject
 {
-	friend class UnPackage;
 	DECLARE_BASE(UObject, CNullType)
 
 public:
@@ -229,6 +236,9 @@ public:
 	{
 		return GetTypeinfo()->Name + 1;
 	}
+	const char *GetRealClassName() const;		// class name from the package export table
+	const char *GetUncookedPackageName() const;
+	void GetFullName(char *buf, int bufSize, bool IncludeObjectName = true, bool IncludeCookedPackageName = true, bool ForcePackageName = false) const;
 
 	enum { PropLevel = 0 };
 	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps)
@@ -240,8 +250,6 @@ public:
 	{
 		return StaticGetTypeinfo();
 	}
-
-	void GetFullName(char *Dst, int DstSize) const;
 
 //private: -- not private to allow object browser ...
 	// static data and methods

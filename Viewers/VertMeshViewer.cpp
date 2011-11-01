@@ -5,6 +5,7 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
+#include "UnMesh.h"
 
 
 CVertMeshViewer::CVertMeshViewer(UVertMesh *Mesh)

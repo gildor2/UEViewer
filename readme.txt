@@ -2,105 +2,8 @@ UMODEL (UE Viewer)
 (c) Konstantin Nosov (Gildor), 2007-2011
 
 
-List of supported games
-~~~~~~~~~~~~~~~~~~~~~~~
-Unreal Engine 1:
-  Unreal 1, Unreal Tournament 1
-  The Wheel of Time
-Modified Unreal Engine 1:
-  DeusEx, Rune
-Unreal Engine 2:
-  Unreal Tournament 2003/2004
-  Postal 2
-Modified Unreal Engine 2:
-  Splinter Cell 1,2
-  XIII
-  Rainbow 6: Raven Shield
-  Lineage 2 Gracia
-  Land of Chaos Online (LOCO)
-  Battle Territory Online
-  Star Wars: Republic Commando
-  Unreal Championship
-Unreal Engine 2.5:
-  UE2Runtime
-  Harry Potter and the Prisoner of Azkaban
-Modified Unreal Engine 2.5:
-  Tribes: Vengeance
-  SWAT 4
-  Bioshock, Bioshock 2
-  Exteel
-Unreal Engine 2X:
-  Unreal Championship 2: The Liandri Conflict
-Unreal Engine 3:
-  Unreal Tournament 3
-  Gears of War
-  Gears of War 2 (XBox360)
-  Infinity Blade (iPhone)
-  UDK
-  Mortal Online
-  Section 8
-Modified Unreal Engine 3:
-  Rainbow 6: Vegas 2
-  The Last Remnant
-  Mass Effect
-  BlackSite: Area 51
-  Mortal Kombat vs. DC Universe (XBox360)
-  Mortal Kombat (XBox360)
-  Turok
-  Fury
-  TNA iMPACT! (XBox360)
-  Army of Two (XBox360)
-  Mirror's Edge
-  Huxley
-  Rise of the Argonauts
-  X-Men Origins: Wolverine
-  Magna Carta 2 (XBox360)
-  Damnation
-  Batman: Arkham Asylum
-  Crime Craft
-  AVA Online
-  Frontlines: Fuel of War
-  Homefront
-  50 Cent: Blood on the Sand (XBox360)
-  Nurien
-  Stranglehold
-  Legendary: Pandora's Box
-  Borderlands
-  Dark Void
-  TERA: The Exiled Realm of Arborea
-  Alpha Protocol
-  All Points Bulletin (APB)
-  Transformers: War for Cybertron
-  Transformers: Dark of the Moon
-  The Bourne Conspiracy (XBox360)
-  Enslaved: Odyssey to the West (XBox360)
-  Medal of Honor: Airborne
-  Medal of Honor 2010
-  Berkanix
-  Destroy All Humans! Path of the Furon
-  DC Universe Online
-  EndWar
-  Undertow (XBox360)
-  Singularity
-  Hunted: The Demon's Forge
-  Dungeons & Dragons: Daggerdale
-  Shadows of the Damned
-
-List of games with limited support
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Using "-noanim" option (unsupported animation format):
-  Harry Potter (UE1)
-  Devastation
-  EndWar
-  Rainbow 6: Vegas 2
-  BlackSite: Area 51 (uses Havok animation system)
-  Mortal Kombat vs. DC Universe, Mortal Kombat
-  Army of Two
-  Stranglehold
-Unsupported animations (without umodel crash):
-  Bioshock, Bioshock 2 (uses Havok animation system)
-  Rise of the Argonauts
-  Transformers: War for Cybertron
+Please support the development by making a donation here:
+http://www.gildor.org/en/donate
 
 
 System requirements
@@ -111,24 +14,29 @@ OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
 SDL 1.2 (for Linux only, windows distribution included sdl.dll)
 
 
-Additional information
-~~~~~~~~~~~~~~~~~~~~~~
-Project home page, usage documentation and forum:
+List of supported games
+~~~~~~~~~~~~~~~~~~~~~~~
+Supported all Unreal engine versions (1-3). The list of supported games consists of
+more than 100 game titles, it is not reasonable to include it here. Some game titles
+has limited support or not supported at all. Detailed information can be found here:
+http://www.gildor.org/projects/umodel/compat
+
+
+Web resources
+~~~~~~~~~~~~~
+Umodel home page and forum:
 http://www.gildor.org/en/projects/umodel
 or Russian page:
 http://www.gildor.org/projects/umodel
 
-Umodel usage FAQ:
-http://www.gildor.org/smf/index.php/topic,660.0.html
-
-Detailed title compatibility list can be located here:
-http://www.gildor.org/projects/umodel/compat
+Umodel FAQ:
+http://www.gildor.org/projects/umodel/faq
 
 Some tutorials available here:
 http://www.gildor.org/projects/umodel/tutorials
 
-Please support project by making a donation here:
-http://www.gildor.org/en/donate
+Other documentation:
+http://www.gildor.org/smf/index.php/board,9.0.html
 
 
 Some usage information
@@ -191,8 +99,52 @@ heuristics. Umodel will never export full materials (GLSL script etc). Do not
 expect too much from this.
 
 
+Used third-party libraries
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+zlib
+  (c) Jean-loup Gailly and Mark Adler
+  http://zlib.net/
+
+lzo
+  (c) Markus F.X.J. Oberhumer
+  http://www.oberhumer.com/opensource/lzo/
+
+libmspack
+  (c) Stuart Caie
+  http://www.cabextract.org.uk/libmspack/
+
+NVIDIA Texture Tools
+  (c) NVIDIA
+  http://code.google.com/p/nvidia-texture-tools/
+
+PVRTexLib Library
+  (c) Imagination Technologies Limited
+  http://www.imgtec.com/powervr/insider/
+
+
 Changes
 ~~~~~~~
+??.11.2011
+- major rewritting of StaticMesh subsystem
+  - implemented visualization and export of LODs ("-lods" switch is now working for
+    StaticMesh too)
+  - using tangents from UE3 mesh instead of calculating them
+
+21.10.2011
+- implemented support for more than 64k indices (more than 22k triangles) for UE3 StaticMesh
+
+25.09.2011
+- added new exporter options "-uncook" and "-groups"
+
+24.09.2011
+- implemented APB: Reloaded skeletal mesh support
+
+19.09.2011
+- updated support for the August 2011 UDK
+
+15.09.2011
+- no more errors with old GLSL systems
+
 13.08.2011
 - implemented Battle Territory Online sound support
 

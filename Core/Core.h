@@ -20,6 +20,10 @@
 #define ARRAY_ARG(array)	array, sizeof(array)/sizeof(array[0])
 #define ARRAY_COUNT(array)	(sizeof(array)/sizeof(array[0]))
 
+// use "STR(any_value)" to convert it to string (may be float value)
+#define STR2(s) #s
+#define STR(s) STR2(s)
+
 //?? move to UnCore.h ?
 #define FVECTOR_ARG(v)		v.X, v.Y, v.Z
 #define FQUAT_ARG(v)		v.X, v.Y, v.Z, v.W

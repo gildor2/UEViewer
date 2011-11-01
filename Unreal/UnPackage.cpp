@@ -730,11 +730,11 @@ int UnPackage::FindExport(const char *name, const char *className, int firstInde
 	{
 		const FObjectExport &Exp = ExportTable[i];
 		// compare object name
-		if (strcmp(Exp.ObjectName, name) != 0)
+		if (stricmp(Exp.ObjectName, name) != 0)
 			continue;
 		// if class name specified - compare it too
 		const char *foundClassName = GetObjectName(Exp.ClassIndex);
-		if (className && strcmp(foundClassName, className) != 0)
+		if (className && stricmp(foundClassName, className) != 0)
 			continue;
 		return i;
 	}
@@ -896,6 +896,7 @@ UObject* UnPackage::CreateImport(int index)
 
 
 // get outermost package name
+//?? this function is not correct, it is used in package exporter tool only
 const char *UnPackage::GetObjectPackageName(int PackageIndex) const
 {
 	guard(UnPackage::GetObjectPackageName);
@@ -925,16 +926,20 @@ const char *UnPackage::GetObjectPackageName(int PackageIndex) const
 
 // get full object path in a form
 // "OutermostPackage.Package1...PackageN.ObjectName"
-void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSize)
+void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSize, bool IncludeObjectName, bool IncludeCookedPackageName) const
 {
 	guard(UnPackage::GetFullExportNameBase);
 
 	const char *PackageNames[256];
+	const char *PackageName;
 	int NestLevel = 0;
 
 	// get object name
-	const char *PackageName = Exp.ObjectName;
-	PackageNames[NestLevel++] = PackageName;
+	if (IncludeObjectName)
+	{
+		PackageName = Exp.ObjectName;
+		PackageNames[NestLevel++] = PackageName;
+	}
 
 	// gather nested package names (object parents)
 	int PackageIndex = Exp.PackageIndex;
@@ -953,6 +958,8 @@ void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSi
 			const FObjectExport &Rec = GetExport(PackageIndex-1);
 			PackageIndex = Rec.PackageIndex;
 			PackageName  = Rec.ObjectName;
+			if (PackageIndex == 0 && (Rec.ExportFlags && EF_ForcedExport) && !IncludeCookedPackageName)
+				break;		// do not add cooked package name
 		}
 		PackageNames[NestLevel++] = PackageName;
 	}
@@ -966,6 +973,30 @@ void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSi
 	}
 
 	unguard;
+}
+
+
+const char *UnPackage::GetUncookedPackageName(int PackageIndex) const
+{
+#if UNREAL3
+	if (PackageIndex)
+	{
+		const FObjectExport &Exp = GetExport(PackageIndex);
+		if (Game >= GAME_UE3 && (Exp.ExportFlags & EF_ForcedExport))
+		{
+			// find outermost package
+			while (true)
+			{
+				const FObjectExport &Exp2 = GetExport(PackageIndex);
+				if (!Exp2.PackageIndex) break;			// get parent (UPackage)
+				PackageIndex = Exp2.PackageIndex - 1;	// subtract 1 from package index
+			}
+			const FObjectExport &Exp2 = GetExport(PackageIndex);
+			return *Exp2.ObjectName;
+		}
+	}
+#endif // UNREAL3
+	return Name;
 }
 
 

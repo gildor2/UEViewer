@@ -8,6 +8,8 @@
 #include "Psk.h"
 #include "Exporters.h"
 
+#include "StaticMesh.h"
+
 
 // PSK uses right-hand coordinates, but unreal uses left-hand.
 // When importing PSK into UnrealEd, it mirrors model.
@@ -361,7 +363,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	}
 	assert(keysCount == 0);
 
-	if (!GExtendedPsk)
+	if (!GExportPskx)
 	{
 		if (requirePsax) appNotify("Exporting %s'%s': psax is recommended", Anim->GetClassName(), Anim->Name);
 		return;
@@ -394,15 +396,15 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 }
 
 
-void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
+static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 {
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
 	int i;
 
-	int numSections = Mesh->Sections.Num();
-	int numVerts    = Mesh->VertexStream.Vert.Num();
-	int numIndices  = Mesh->IndexStream1.Indices.Num();
+	int numSections = Lod.Sections.Num();
+	int numVerts    = Lod.Verts.Num();
+	int numIndices  = Lod.Indices.Num();
 	int numFaces    = numIndices / 3;
 
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
@@ -413,7 +415,7 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 	SAVE_CHUNK(PtsHdr, "PNTS0000");
 	for (i = 0; i < numVerts; i++)
 	{
-		FVector V = Mesh->VertexStream.Vert[i].Pos;
+		FVector V = (FVector&)Lod.Verts[i].Position;
 #if MIRROR_MESH
 		V.Y = -V.Y;
 #endif
@@ -423,12 +425,13 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 	TArray<int> WedgeMat;
 	WedgeMat.Empty(numVerts);
 	WedgeMat.Add(numVerts);
+	CIndexBuffer::IndexAccessor_t Index = Lod.Indices.GetAccessor();
 	for (i = 0; i < numSections; i++)
 	{
-		const FStaticMeshSection &Sec = Mesh->Sections[i];
+		const CStaticMeshSection &Sec = Lod.Sections[i];
 		for (int j = 0; j < Sec.NumFaces * 3; j++)
 		{
-			int idx = Mesh->IndexStream1.Indices[j + Sec.FirstIndex];
+			int idx = Index(Lod.Indices, j + Sec.FirstIndex);
 			WedgeMat[idx] = i;
 		}
 	}
@@ -440,11 +443,10 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 	for (i = 0; i < numVerts; i++)
 	{
 		VVertex W;
-		const FStaticMeshVertex &S = Mesh->VertexStream.Vert[i];
-		const FStaticMeshUV    &UV = Mesh->UVStream[0].Data[i];
+		const CStaticMeshVertex &S = Lod.Verts[i];
 		W.PointIndex = i;
-		W.U          = UV.U;
-		W.V          = UV.V;
+		W.U          = S.UV[0].U;
+		W.V          = S.UV[0].V;
 		W.MatIndex   = WedgeMat[i];
 		W.Reserved   = 0;
 		W.Pad        = 0;
@@ -456,13 +458,13 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 	SAVE_CHUNK(FacesHdr, "FACE0000");
 	for (i = 0; i < numSections; i++)
 	{
-		const FStaticMeshSection &Sec = Mesh->Sections[i];
+		const CStaticMeshSection &Sec = Lod.Sections[i];
 		for (int j = 0; j < Sec.NumFaces; j++)
 		{
 			VTriangle T;
 			for (int k = 0; k < 3; k++)
 			{
-				int idx = Mesh->IndexStream1.Indices[Sec.FirstIndex + j * 3 + k];
+				int idx = Index(Lod.Indices, Sec.FirstIndex + j * 3 + k);
 				T.WedgeIndex[k] = idx;
 			}
 			T.MatIndex        = i;
@@ -482,7 +484,7 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 	{
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
-		const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Materials[i].Material);
+		const UUnrealMaterial *Tex = Lod.Sections[i].Material;
 		if (Tex)
 		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
@@ -500,4 +502,35 @@ void ExportPsk2(const UStaticMesh *Mesh, FArchive &Ar)
 	InfHdr.DataCount = 0;		// dummy
 	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
+}
+
+
+void ExportStaticMesh(const UStaticMesh *Mesh, FArchive &Ar)
+{
+	assert(Mesh->ConvertedMesh);
+	const CStaticMesh *Mesh2 = Mesh->ConvertedMesh;
+
+	if (!Mesh2->Lods.Num())
+	{
+		appNotify("Mesh %s has 0 lods", Mesh->Name);
+		return;
+	}
+
+	guard(Lod0);
+	ExportStaticMeshLod(Mesh2->Lods[0], Ar);
+	unguard;
+
+	if (GExportLods)
+	{
+		for (int Lod = 1; Lod < Mesh2->Lods.Num(); Lod++)
+		{
+			guard(Lod);
+			char filename[512];
+			appSprintf(ARRAY_ARG(filename), "%s/%s_Lod%d.pskx", GetExportPath(Mesh), Mesh->Name, Lod);
+			FFileReader Ar2(filename, false);
+			Ar2.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
+			ExportStaticMeshLod(Mesh2->Lods[Lod], Ar2);
+			unguardf(("%d", Lod));
+		}
+	}
 }

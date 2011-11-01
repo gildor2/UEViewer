@@ -1,9 +1,5 @@
 #!/usr/bin/perl -w
 
-#?? TODO:
-#?? - add game totals at the end of table
-#?? - separate UE1-3 to files
-
 
 $embed_css = 1;
 $OUT = "table.html";

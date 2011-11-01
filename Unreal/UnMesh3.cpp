@@ -1,11 +1,13 @@
 #include "Core.h"
 #include "UnrealClasses.h"
+#include "UnMesh.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"				// for checking game type
 #include "UnMathTools.h"			// for FRotator to FCoords
 
 #include "UnMaterial3.h"
 
+#include "StaticMesh.h"
 
 //#define DEBUG_SKELMESH		1
 //#define DEBUG_STATICMESH		1
@@ -395,6 +397,10 @@ struct FSkinChunk3
 			Ar << NumTexCoords;
 		}
 #endif // TRANSFORMERS
+#if DEBUG_SKELMESH
+		appPrintf("Chunk: FirstVert=%d RigidVerts=%d (%d) SmoothVerts=%d (%d)\n",
+			V.FirstVertex, V.RigidVerts.Num(), V.NumRigidVerts, V.SmoothVerts.Num(), V.NumSmoothVerts);
+#endif
 		return Ar;
 		unguard;
 	}
@@ -663,7 +669,7 @@ struct FGPUSkin3
 		//?? working bUsePackedPosition was found in all XBox360 games and in MOH2010 (PC) only
 		//?? + TRON Evolution (PS3)
 #if DEBUG_SKELMESH
-		appPrintf("data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
+		appPrintf("... data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
 			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
 #endif
@@ -689,6 +695,10 @@ struct FGPUSkin3
 			else
 				Ar << RAW_ARRAY(S.VertsFloatPacked);
 		}
+#if DEBUG_SKELMESH
+		appPrintf("... verts: Half[%d] HalfPacked[%d] Float[%d] FloatPacked[%d]\n",
+			S.VertsHalf.Num(), S.VertsHalfPacked.Num(), S.VertsFloat.Num(), S.VertsFloatPacked.Num());
+#endif
 
 		return Ar;
 		unguard;
@@ -1429,6 +1439,14 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 
 			for (Vert = C.FirstVertex; Vert < LastVertex; Vert++)
 			{
+				//?? some GOW3 meshes has 2 or more chunks with starting index 0
+				// Mesh from GPUSkin should be processed in following way:
+				// - create wedges for each GPU vertex (NumWedges == GPUSkin.NumVerts)
+				//   - each wedge should be linked to bones, bone list is inside chunk (each chunk
+				//     uses no more than 256 bones)
+				// - process all sections (number of sections == number of chunks?)
+				if (Vert < Wedges.Num()) continue;
+
 				const FGPUVert3Common *V;
 				FVector VPos;
 				float VU, VV;
@@ -1594,6 +1612,9 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 		NumTriangles += Lod.Sections[Sec].NumTriangles;
 	Faces.Empty(NumTriangles);
 	// create faces
+#if DEBUG_SKELMESH
+	printf("-> idx=%d wed=%d rig=%d smooth=%d\n", Lod.IndexBuffer.Indices.Num(), Wedges.Num(), 0, 0);
+#endif
 	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
 	{
 		const FSkelMeshSection3 &S = Lod.Sections[Sec];
@@ -1601,12 +1622,23 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 
 		FSkelMeshSection *Dst = new (SmoothSections) FSkelMeshSection;
 		int MaterialIndex = S.MaterialIndex;
-		if (Info.LODMaterialMap.Num())
+		if (MaterialIndex >= 0 && MaterialIndex < Info.LODMaterialMap.Num())
 			MaterialIndex = Info.LODMaterialMap[MaterialIndex];
 		Dst->MaterialIndex = MaterialIndex;
 		Dst->FirstFace     = Faces.Num();
 		Dst->NumFaces      = S.NumTriangles;
 
+#if DEBUG_SKELMESH
+		printf("[%d] -> %d %d\n", Sec, S.FirstIndex, S.NumTriangles*3);
+		int b1 = 999999; int b2 = -999999;
+		for (int jj = 0; jj < S.NumTriangles*3; jj++)
+		{
+			int ii = Lod.IndexBuffer.Indices[S.FirstIndex+jj];
+			if (ii < b1) b1 = ii;
+			if (ii > b2) b2 = ii;
+		}
+		printf("      %d .. %d\n", b1, b2);
+#endif // DEBUG_SKELMESH
 		int Index = S.FirstIndex;
 		for (int i = 0; i < S.NumTriangles; i++)
 		{
@@ -1617,8 +1649,6 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 			Face->iWedge[2] = Lod.IndexBuffer.Indices[Index++];
 		}
 	}
-
-	//!! recreate SmoothSections and RigidSections
 
 	unguard;
 
@@ -3026,6 +3056,14 @@ struct FStaticMeshLODModel
 		}
 #endif // AVA
 
+		if (Ar.ArVer >= 841)
+		{
+			FIndexBuffer3 Indices3;
+			Ar << Indices3;
+			if (Indices3.Indices.Num())
+				appPrintf("LOD has extra index buffer (%d items)\n", Indices3.Indices.Num());
+		}
+
 		return Ar;
 
 		unguard;
@@ -3361,10 +3399,18 @@ version:
 			Ar << unkLod;
 		}
 
-		assert(Ar.ArVer >= 829);	// Ver >= 823 && < 829 has extra TArray<int>
-		TArray<FStaticMeshUnk5> f178;
+		if (Ar.ArVer < 829)
+		{
+			TArray<int> unk;
+			Ar << unk;
+		}
+		else
+		{
+			TArray<FStaticMeshUnk5> f178;
+			Ar << f178;
+		}
 		int f74;
-		Ar << f178 << f74;
+		Ar << f74;
 
 		unguard;
 	}
@@ -3386,62 +3432,112 @@ done:
 	Ar.Seek(Ar.GetStopper());
 	if (!Lods.Num()) return;
 
-	RestoreMesh3(Lods[0]);
-
 	// setup missing properties
 	BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
 	VectorSubtract((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Min);
 	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Max);
 
+	/*!!----------------------------------------------------------------
+	NEW MESH FORMAT
+
+	Stages:
+	* convert UE3 mesh on loading (here, below)
+	* visualize this mesh in CStaticMeshViewer/CStaticMeshInstance
+	* show mesh LODs in viewer
+	* show triangle counts in "colorize mesh materials" mode, show materials by LOD
+	* export CStaticMesh
+	* export LODs
+	* support UE2 mesh
+	* remove UE3->UE2 conversion code (disabled now)
+	* pass CStaticMesh to CStatMeshViewer instead of USkeletalMesh
+	* display mesh properties, add typeinfo to CStaticMesh/CStaticMeshSection
+	  * remove old CStatMeshViewer::Dump code
+	* cleanup #includes
+	  * MeshInstance.h has included "UnMesh.h" for CLodMeshInstance::SetMesh() and CLodMeshInstance::GetMaterial(),
+	    should move this into separate cpp
+	* cleanup all USE_NEW_STATIC_MESH=0 places
+	? compute bounds from actual geometry, improve initial positioning of mesh in CStatMeshViewer
+	=== after commit ==
+	- separate UE2 and UE3 UStaticMesh classes, make separate header for UE3 meshes
+	  ? register UE2 and UE3 classes separately, depending on engine version
+	- UE3: support loading of more than 1 UV set - find GNumStaticUVSets, data is simply skipped now
+	- export: support 4 UV sets
+
+	------------------------------------------------------------------*/
+	guard(NewMeshFormat);
+
+	CStaticMesh *Mesh = new CStaticMesh(this);
+	ConvertedMesh = Mesh;
+	Mesh->BoundingBox    = BoundingBox;		//!! UE2
+	Mesh->BoundingSphere = BoundingSphere;	//!! UE2
+
+	Mesh->Lods.Empty(Lods.Num());
+	for (int lod = 0; lod < Lods.Num(); lod++)
+	{
+		guard(ConvertLod);
+
+		const FStaticMeshLODModel &SrcLod = Lods[lod];
+		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
+
+		int NumTexCoords = SrcLod.UVStream.NumTexCoords;
+		int NumVerts     = SrcLod.VertexStream.Verts.Num();
+
+		Lod->NumTexCoords = NumTexCoords;
+		Lod->HasTangents  = true;
+
+		// sections
+		Lod->Sections.Add(SrcLod.Sections.Num());
+		for (int i = 0; i < SrcLod.Sections.Num(); i++)
+		{
+			CStaticMeshSection &Dst = Lod->Sections[i];
+			const FStaticMeshSection3 &Src = SrcLod.Sections[i];
+			Dst.Material   = Src.Mat;
+			Dst.FirstIndex = Src.FirstIndex;
+			Dst.NumFaces   = Src.NumFaces;
+		}
+
+		// vertices
+		Lod->Verts.Add(NumVerts);
+		for (int i = 0; i < NumVerts; i++)
+		{
+			const FStaticMeshUVItem3 &SUV = SrcLod.UVStream.UV[i];
+			CStaticMeshVertex &V = Lod->Verts[i];
+
+			V.Position = (CVec3&)SrcLod.VertexStream.Verts[i];
+			for (int j = 0; j < 1 /*!!NumTexCoords*/; j++)			//!! should serialize all TexCoords in order to enable this code
+			{
+				V.UV[j].U = SUV.U;									//!! SUV[j]
+				V.UV[j].V = SUV.V;									//!! SUV[j]
+				// tangents: convert to FVector (unpack) then cast to CVec3
+				FVector Tangent = SUV.Normal[0];					//!! SUV[j]
+				FVector Normal  = SUV.Normal[2];					//!! SUV[j]
+				V.UV[j].Tangent = (CVec3&)Tangent;
+				V.UV[j].Normal  = (CVec3&)Normal;
+				if (SUV.Normal[1].Data == 0)
+				{
+					cross(V.UV[j].Normal, V.UV[j].Tangent, V.UV[j].Binormal);
+					// LocalVertexFactory.usf, VertexFactoryGetTangentBasis() (static mesh)
+					// GpuSkinVertexFactory.usf, SkinTangents() (skeletal mesh)
+					if (SUV.Normal[2].GetW() == -1)
+						V.UV[j].Binormal.Negate();
+				}
+				else
+				{
+					FVector Binormal = SUV.Normal[1];				//!! SUV[j]
+					V.UV[j].Binormal  = (CVec3&)Binormal;
+				}
+			}
+			//!! also has ColorStream
+		}
+
+		// indices
+		CopyArray(Lod->Indices.Indices16, SrcLod.Indices.Indices);	//!! 16-bit only; place to CStaticMesh cpp
+
+		unguardf(("lod=%d", lod));
+	}
+
 	unguard;
-}
-
-
-void UStaticMesh::RestoreMesh3(const FStaticMeshLODModel &Lod)
-{
-	guard(UStaticMesh::RestoreMesh3);
-
-	int i;
-
-	// materials and sections
-	int NumSections = Lod.Sections.Num();
-	Sections.Empty(NumSections);
-	Materials.Empty(NumSections);
-	for (i = 0; i < NumSections; i++)
-	{
-		// source
-		const FStaticMeshSection3 &Sec = Lod.Sections[i];
-		// destination
-		FStaticMeshMaterial *DM = new (Materials) FStaticMeshMaterial;
-		FStaticMeshSection  *DS = new (Sections)  FStaticMeshSection;
-		DM->Material   = MATERIAL_CAST2(Sec.Mat);
-		DS->FirstIndex = Sec.FirstIndex;
-		DS->NumFaces   = Sec.NumFaces;
-	}
-
-	// vertices and UVs
-	int NumVerts = Lod.VertexStream.Verts.Num();
-	assert(Lod.UVStream.NumVerts == NumVerts);
-	VertexStream.Vert.Empty(NumVerts);
-	FStaticMeshUVStream *UVS = new (UVStream) FStaticMeshUVStream;
-	UVS->Data.Empty(NumVerts);
-	for (i = 0; i < NumVerts; i++)
-	{
-		// source
-		const FStaticMeshUVItem3 &SUV = Lod.UVStream.UV[i];
-		// destination
-		FStaticMeshUV    *UV = new (UVS->Data) FStaticMeshUV;
-		FStaticMeshVertex *V = new (VertexStream.Vert) FStaticMeshVertex;
-		V->Pos = Lod.VertexStream.Verts[i];
-		UV->U = SUV.U;
-		UV->V = SUV.V;
-		// normal
-		V->Normal = SUV.Normal[2];
-	}
-	//?? also has ColorStream
-
-	// indices
-	CopyArray(IndexStream1.Indices, Lod.Indices.Indices);
+	//!!----------------------------------------------------------------
 
 	unguard;
 }

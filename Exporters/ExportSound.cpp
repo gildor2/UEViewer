@@ -2,7 +2,6 @@
 #include "UnCore.h"
 
 #include "UnObject.h"
-#include "UnPackage.h"		// for Package->Name
 #include "UnSound.h"
 
 #include "Exporters.h"

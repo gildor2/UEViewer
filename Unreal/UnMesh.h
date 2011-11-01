@@ -31,8 +31,9 @@ UE3 CLASS TREE:
 //?? declare separately? place to UnCore?
 float half2float(word h);
 
-
 class UMaterial;
+
+class CStaticMesh;	//?? move declaration outside
 
 
 /*-----------------------------------------------------------------------------
@@ -2407,7 +2408,7 @@ SIMPLE_TYPE(FStaticMeshVertex, float)		//?? check each version
 // used in Bioshock and in UE3
 struct FPackedNormal
 {
-	int						Data;
+	unsigned				Data;
 
 	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
 	{
@@ -2432,6 +2433,10 @@ struct FPackedNormal
 		return *this;
 	}
 
+	float GetW() const
+	{
+		return (Data >> 24) / 127.5 - 1;
+	}
 };
 #endif // UNREAL3
 
@@ -2755,6 +2760,8 @@ public:
 	FBoxSphereBounds		Bounds;		// Transformers has described StaticMesh.uc and serialized Bounds as property
 #endif
 
+	CStaticMesh				*ConvertedMesh;
+
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Materials, FStaticMeshMaterial)
 		PROP_BOOL(UseSimpleLineCollision)
@@ -2789,15 +2796,17 @@ public:
 #endif
 	END_PROP_TABLE
 
+	virtual ~UStaticMesh();
+
 #if UC2
 	void LoadExternalUC2Data();
 #endif
 #if BIOSHOCK
 	void SerializeBioshockMesh(FArchive &Ar);
 #endif
+	void ConvertMesh2();
 #if UNREAL3
 	void SerializeStatMesh3(FArchive &Ar);
-	void RestoreMesh3(const struct FStaticMeshLODModel &Lod);
 #endif
 
 	virtual void Serialize(FArchive &Ar)
@@ -2824,6 +2833,7 @@ public:
 			appNotify("StaticMesh of old version %d/%d has been found", Ar.ArVer, Ar.ArLicenseeVer);
 		skip_remaining:
 			Ar.Seek(Ar.GetStopper());
+			ConvertMesh2();
 			return;
 		}
 
@@ -2916,6 +2926,8 @@ public:
 #endif // UT2
 #endif // 0
 
+		ConvertMesh2();
+
 		unguard;
 	}
 };
@@ -2953,6 +2965,7 @@ public:
 	REGISTER_CLASS(UBioAnimSetData)
 
 // UTdAnimSet - Mirror's Edge, derived from UAnimSet
+// UGolemSkeletalMesh - APB: Reloaded, derived from USkeletalMesh
 #define REGISTER_MESH_CLASSES_U3	\
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
 	REGISTER_CLASS(USkeletalMeshSocket) \
@@ -2960,7 +2973,8 @@ public:
 	REGISTER_CLASS(FBoxSphereBounds) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)		\
-	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet)
+	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet) \
+	REGISTER_CLASS_ALIAS(USkeletalMesh, UGolemSkeletalMesh)
 
 
 #define REGISTER_MESH_ENUMS_U3		\

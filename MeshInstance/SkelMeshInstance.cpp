@@ -4,6 +4,8 @@
 #if RENDERING
 
 #include "MeshInstance.h"
+#include "UnMesh.h"
+
 #include "GlWindow.h"
 
 #define USE_SSE					1
@@ -25,8 +27,14 @@ typedef CVec3			CVecT;
 //#define SHOW_ANIM				1
 #define SHOW_BONE_UPDATES		1
 //#define PROFILE_MESH			1
+//#define TICK_SECTIONS			1
 
 #define SORT_BY_OPACITY			1
+
+#if TICK_SECTIONS
+#undef SORT_BY_OPACITY				// to not obfuscate section indices
+#endif
+
 
 struct CMeshBoneData
 {
@@ -81,6 +89,33 @@ struct CSkinSection
 #define ANIM_UNASSIGNED			-2
 #define MAX_MESHBONES			512
 #define MAX_MESHMATERIALS		256
+
+
+/*-----------------------------------------------------------------------------
+	Interface
+-----------------------------------------------------------------------------*/
+
+int CSkelMeshInstance::GetAnimCount() const
+{
+	if (!Animation) return 0;
+	return Animation->AnimSeqs.Num();
+}
+
+
+const char *CSkelMeshInstance::GetAnimName(int Index) const
+{
+	guard(CSkelMeshInstance::GetAnimName);
+	if (Index < 0) return "None";
+	assert(Animation);
+	return Animation->AnimSeqs[Index].Name;
+	unguard;
+}
+
+
+FORCEINLINE const USkeletalMesh *CSkelMeshInstance::GetMesh() const
+{
+	return static_cast<const USkeletalMesh*>(pMesh);
+}
 
 
 /*-----------------------------------------------------------------------------
@@ -1620,8 +1655,16 @@ void CSkelMeshInstance::DrawMesh()
 	assert(secPlace == NumSections);
 #endif // SORT_BY_OPACITY
 
+#if TICK_SECTIONS
+	int ShowSection = (appMilliseconds() / 2000) % NumSections;
+	DrawTextLeft(S_RED"Show section: %d (%d faces)", ShowSection, Sections[ShowSection].NumFaces);
+#endif
+
 	for (i = 0; i < NumSections; i++)
 	{
+#if TICK_SECTIONS
+		if (i != ShowSection) continue;
+#endif
 #if SORT_BY_OPACITY
 		int MaterialIndex = SectionMap[i];
 #else

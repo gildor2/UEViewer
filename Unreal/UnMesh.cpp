@@ -1,9 +1,11 @@
 #include "Core.h"
 #include "UnrealClasses.h"
+#include "UnMesh.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"			// for loading texures by name (Rune) and checking real class name
 
 #include "UnMaterial2.h"
+#include "StaticMesh.h"
 
 
 /*-----------------------------------------------------------------------------
@@ -201,9 +203,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 	TArray<word>					tmpRemapAnimVerts;
 	int								tmpOldFrameVerts;
 
-	// get real class name
-	const FObjectExport &Exp = Package->GetExport(PackageIndex);
-	const char *realClassName = Package->GetObjectName(Exp.ClassIndex);
+	const char *realClassName = GetRealClassName();
 	// here: realClassName may be "LodMesh" or "Mesh"
 
 	// UPrimitive
@@ -2439,6 +2439,11 @@ void FStaticLODModel::RestoreLineageMesh()
 	UStaticMesh class
 -----------------------------------------------------------------------------*/
 
+UStaticMesh::~UStaticMesh()
+{
+	delete ConvertedMesh;
+}
+
 #if UC2
 
 void UStaticMesh::LoadExternalUC2Data()
@@ -2515,3 +2520,55 @@ void UStaticMesh::LoadExternalUC2Data()
 }
 
 #endif // UC2
+
+
+void UStaticMesh::ConvertMesh2()
+{
+	guard(UStaticMesh::ConvertMesh2);
+
+	CStaticMesh *Mesh = new CStaticMesh(this);
+	ConvertedMesh = Mesh;
+	Mesh->BoundingBox    = BoundingBox;
+	Mesh->BoundingSphere = BoundingSphere;
+
+	CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
+	Lod->HasTangents = false;
+
+	// convert sections
+	Lod->Sections.Add(Sections.Num());
+	for (int i = 0; i < Sections.Num(); i++)
+	{
+		CStaticMeshSection &Dst = Lod->Sections[i];
+		const FStaticMeshSection &Src = Sections[i];
+		Dst.Material   = Materials[i].Material;
+		Dst.FirstIndex = Src.FirstIndex;
+		Dst.NumFaces   = Src.NumFaces;
+	}
+
+	// convert vertices
+	int NumVerts = VertexStream.Vert.Num();
+	int NumTexCoords = UVStream.Num();
+	if (NumTexCoords > NUM_STATIC_MESH_UV_SETS)
+		NumTexCoords = NUM_STATIC_MESH_UV_SETS;
+	Lod->NumTexCoords = NumTexCoords;
+
+	Lod->Verts.Add(NumVerts);
+	for (int i = 0; i < NumVerts; i++)
+	{
+		CStaticMeshVertex &V = Lod->Verts[i];
+		const FStaticMeshVertex &SV = VertexStream.Vert[i];
+		V.Position = (CVec3&)SV.Pos;
+		for (int j = 0; j < NumTexCoords; j++)
+		{
+			const FStaticMeshUV &SUV = UVStream[j].Data[i];
+			V.UV[j].Normal = (CVec3&)SV.Normal;
+			V.UV[j].U      = SUV.U;
+			V.UV[j].V      = SUV.V;
+		}
+	}
+
+	// copy indices
+	CopyArray(Lod->Indices.Indices16, IndexStream1.Indices);
+
+	unguard;
+}

@@ -5,6 +5,9 @@ Logging:
   ? place notify.log into directory of umodel.exe
   - add current date/time, some umodel info (version) and cmdline in a case of crash
 
+- add options to force loading startup package(s) with non-standard names (see GOW2)
+  - may be use -pkg=... and find forced objects in all loaded packages instead of current package +
+    single statup package
 
 - check VertMesh export: export ut2004/SkaarjPack_rc, compare *.3d and *.uc files with UT2004 source
 
@@ -69,9 +72,6 @@ GENMAKE:
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
 
-? change alternative skin (team color for UT2) - in separate tool, "uplayer" - player model viewer
-  (UT, UT2004, Lineage2, later - UT3)
-
 ! UObject:
   - EndLoad():
     1) sort by package/offset; priority for CURRENT package
@@ -89,7 +89,6 @@ Exporting (typeinfo tool?):
 
 - try to compile with MinGW (checked GCC4 from cygwin, 7.10.2010 - gcc4 has no "-mno-cygwin" switch)
 - move new Math3D parts to Quake2 core (more code to move ?)
-- add 3rd party library names/links/licenses to readme.txt
 
 
 NOTES:

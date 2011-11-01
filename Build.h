@@ -2,6 +2,7 @@
 //#define DO_GUARD_MAX	1
 #define RENDERING		1
 #define PROFILE			1
+#define DECLARE_VIEWER_PROPS	1
 
 //#define PRIVATE_BUILD	1
 

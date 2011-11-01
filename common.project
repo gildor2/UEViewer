@@ -37,26 +37,26 @@ OLDCRT     = 1
 		INCLUDES =	# reset INCLUDES
 		DEFINES  =	# reset DEFINES
 		# options for project
-		OPTIONS += -GS- -GR- #?? common for VC8+
+		OPTIONS = -GS- -GR- #?? common for VC8+
 		WDKCRT = "c:/!msvcrt"
 		LINKFLAGS = {
 			-nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib
 			-manifest:no
 			$WDKCRT/lib/Win32/msvcrt.lib
 			$WDKCRT/lib/Win32/wdk_msvcrt_win2000.obj	# required - has different mainCRTStartup
-#			$WDKCRT/lib/Win32/wdk_oldnames.lib		# not required
+#			$WDKCRT/lib/Win32/wdk_oldnames.lib			# not required
 		}
 	!endif
 !endif
 
 !if "$COMPILER" eq "GnuC"
 	LIBC      = shared
-	OPTIONS   = -msse					# enable SSE instructions
-	OPTIONS   += -fno-strict-aliasing	# required for our uint_cast()-based FP hacks
-	OPTIONS   += -fno-stack-protector	# this will remove GLIBC_2.4 dependency
+	OPTIONS   = -msse									# enable SSE instructions
+	OPTIONS   += -fno-strict-aliasing					# required for our uint_cast()-based FP hacks
+	OPTIONS   += -fno-stack-protector					# this will remove GLIBC_2.4 dependency
 	OPTIONS   += {
 		# disable some warnings
-		-Wno-invalid-offsetof		#?? this flag is for C++ only, not for C
+		-Wno-invalid-offsetof							#?? this flag is for C++ only, not for C
 	}
 !endif
 
@@ -71,7 +71,7 @@ INCLUDES += . $R/Core $R/Unreal $R/libs/include
 !endif
 
 # smaller zlib
-DEFINES +=			\
+DEFINES +=				\
 	DYNAMIC_CRC_TABLE	\
 	BUILDFIXED
 
