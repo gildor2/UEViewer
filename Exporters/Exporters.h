@@ -14,7 +14,6 @@ extern bool GUseGroups;
 class UObject;
 class USkeletalMesh;
 class UMeshAnimation;
-class UStaticMesh;
 class UVertMesh;
 class UUnrealMaterial;
 class USound;
@@ -23,10 +22,12 @@ class USwfMovie;
 class UFaceFXAnimSet;
 class UFaceFXAsset;
 
+class CStaticMesh;
+
 // ActorX
 void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar);
 void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar);
-void ExportStaticMesh(const UStaticMesh *Mesh, FArchive &Ar);
+void ExportStaticMesh(const CStaticMesh *Mesh, FArchive &Ar);
 // MD5Mesh
 void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar);
 void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar);

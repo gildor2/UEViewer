@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 #include "UnMesh.h"
+#include "UnMesh2.h"
+#include "UnMeshTypes.h"		// for FPackedNormal
 #include "UnHavok.h"
 #include "UnPackage.h"			// to get "Platform"
 

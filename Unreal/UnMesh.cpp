@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 #include "UnMesh.h"
+#include "UnMesh2.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"			// for loading texures by name (Rune) and checking real class name
 
@@ -2560,7 +2561,7 @@ void UStaticMesh::ConvertMesh2()
 		V.Position = (CVec3&)SV.Pos;
 		for (int j = 0; j < NumTexCoords; j++)
 		{
-			const FStaticMeshUV &SUV = UVStream[j].Data[i];
+			const FMeshUVFloat &SUV = UVStream[j].Data[i];
 			V.UV[j].Normal = (CVec3&)SV.Normal;
 			V.UV[j].U      = SUV.U;
 			V.UV[j].V      = SUV.V;

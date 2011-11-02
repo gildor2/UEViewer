@@ -5,7 +5,10 @@
 
 #include "UnMaterial2.h"
 #include "UnMaterial3.h"
+
 #include "UnMesh.h"
+#include "UnMesh2.h"
+#include "UnMesh3.h"
 
 #include "UnSound.h"
 #include "UnThirdParty.h"
@@ -32,7 +35,7 @@ static bool showMaterials = false;
 	Table of known Unreal classes
 -----------------------------------------------------------------------------*/
 
-static void RegisterUnrealClasses()
+static void RegisterCommonUnrealClasses()
 {
 	// classes and structures
 BEGIN_CLASS_TABLE
@@ -51,8 +54,7 @@ BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_BIO
 #endif
 #if UNREAL3
-	REGISTER_MATERIAL_CLASSES_U3
-	REGISTER_MESH_CLASSES_U3
+	REGISTER_MATERIAL_CLASSES_U3		//!! needed for Bioshock 2 too
 #endif
 #if TUROK
 	REGISTER_MESH_CLASSES_TUROK
@@ -76,6 +78,27 @@ END_CLASS_TABLE
 	REGISTER_MESH_ENUMS_U3
 #endif
 }
+
+
+static void RegisterUnrealClasses2()
+{
+BEGIN_CLASS_TABLE
+	REGISTER_MESH_CLASSES_U2
+END_CLASS_TABLE
+}
+
+#if UNREAL3
+
+static void RegisterUnrealClasses3()
+{
+BEGIN_CLASS_TABLE
+	REGISTER_MATERIAL_CLASSES_U3
+	REGISTER_MESH_CLASSES_U3
+	REGISTER_MESH_CLASSES_U3_A	//!! remove after refactoring
+END_CLASS_TABLE
+}
+
+#endif // UNREAL3
 
 
 static void RegisterUnrealSoundClasses()
@@ -211,6 +234,20 @@ static bool ExportObject(UObject *Obj)
 	return false;
 
 	unguardf(("%s'%s'", Obj->GetClassName(), Obj->Name));
+}
+
+
+// wrappers
+static void ExportStaticMesh2(const UStaticMesh *Mesh, FArchive &Ar)
+{
+	assert(Mesh->ConvertedMesh);
+	ExportStaticMesh(Mesh->ConvertedMesh, Ar);
+}
+
+static void ExportStaticMesh3(const UStaticMesh3 *Mesh, FArchive &Ar)
+{
+	assert(Mesh->ConvertedMesh);
+	ExportStaticMesh(Mesh->ConvertedMesh, Ar);
 }
 
 
@@ -766,54 +803,7 @@ int main(int argc, char **argv)
 		argClassName = argv[arg++];
 	if (arg != argc) Usage();									// extera argument found
 
-	// register exporters
-	if (!md5 && !GExportPskx)
-	{
-		EXPORTER("SkeletalMesh",  "psk",     ExportPsk);
-		EXPORTER("MeshAnimation", "psa",     ExportPsa);
-	}
-	else if (!md5) // && GExportPskx
-	{
-		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk);
-		EXPORTER("MeshAnimation", "psax",    ExportPsa);
-	}
-	else
-	{
-		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
-		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
-	}
-	EXPORTER("VertMesh",      NULL,   Export3D  );				// will generate 2 files
-	EXPORTER("StaticMesh",    "pskx", ExportStaticMesh);
-	EXPORTER("Texture",       "tga",  ExportTga );
-	EXPORTER("Sound",         NULL,   ExportSound);
-#if UNREAL3
-	EXPORTER("Texture2D",     "tga",  ExportTga );
-	EXPORTER("SoundNodeWave", NULL,   ExportSoundNodeWave);
-	EXPORTER("SwfMovie",      "gfx",  ExportGfx );
-	EXPORTER("FaceFXAnimSet", "fxa",  ExportFaceFXAnimSet);
-	EXPORTER("FaceFXAsset",   "fxa",  ExportFaceFXAsset  );
-#endif // UNREAL3
-
-	// prepare classes
-	//?? NOTE: can register classes after loading package: in this case we can know engine version (1/2/3)
-	//?? and register appropriate classes only (for example, separate UKeletalMesh classes for UE2/UE3)
-	RegisterUnrealClasses();
-	if (regSounds) RegisterUnrealSoundClasses();
-	if (reg3rdparty) RegisterUnreal3rdPartyClasses();
-	// remove some class loaders when requisted by command line
-	if (noAnim)
-	{
-		UnregisterClass("MeshAnimation", true);
-		UnregisterClass("AnimSequence");
-		UnregisterClass("AnimNotify", true);
-	}
-	if (noMesh)
-	{
-		UnregisterClass("SkeletalMesh", true);
-		UnregisterClass("SkeletalMeshSocket", true);
-	}
-	if (noStat) UnregisterClass("StaticMesh",     true);
-	if (noTex)  UnregisterClass("UnrealMaterial", true);
+	// load the package
 
 #if PROFILE
 	appResetProfiler();
@@ -840,6 +830,60 @@ int main(int argc, char **argv)
 		appPrintf("ERROR: unable to find/load package %s\n", argPkgName);
 		exit(1);
 	}
+
+	// register exporters
+	if (!md5 && !GExportPskx)
+	{
+		EXPORTER("SkeletalMesh",  "psk",     ExportPsk);
+		EXPORTER("MeshAnimation", "psa",     ExportPsa);
+	}
+	else if (!md5) // && GExportPskx
+	{
+		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk);
+		EXPORTER("MeshAnimation", "psax",    ExportPsa);
+	}
+	else
+	{
+		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
+		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
+	}
+	EXPORTER("VertMesh",      NULL,   Export3D  );				// will generate 2 files
+	EXPORTER("StaticMesh",    "pskx", ExportStaticMesh2);
+	EXPORTER("Texture",       "tga",  ExportTga );
+	EXPORTER("Sound",         NULL,   ExportSound);
+#if UNREAL3
+	EXPORTER("StaticMesh3",   "pskx", ExportStaticMesh3);
+	EXPORTER("Texture2D",     "tga",  ExportTga );
+	EXPORTER("SoundNodeWave", NULL,   ExportSoundNodeWave);
+	EXPORTER("SwfMovie",      "gfx",  ExportGfx );
+	EXPORTER("FaceFXAnimSet", "fxa",  ExportFaceFXAnimSet);
+	EXPORTER("FaceFXAsset",   "fxa",  ExportFaceFXAsset  );
+#endif // UNREAL3
+
+	// prepare classes
+	// note: we are registering classes after loading package: in this case we can know engine version (1/2/3)
+	RegisterCommonUnrealClasses();
+	if (Package->Game < GAME_UE3)
+		RegisterUnrealClasses2();
+	else
+		RegisterUnrealClasses3();
+	if (regSounds)   RegisterUnrealSoundClasses();
+	if (reg3rdparty) RegisterUnreal3rdPartyClasses();
+
+	// remove some class loaders when requisted by command line
+	if (noAnim)
+	{
+		UnregisterClass("MeshAnimation", true);
+		UnregisterClass("AnimSequence");
+		UnregisterClass("AnimNotify", true);
+	}
+	if (noMesh)
+	{
+		UnregisterClass("SkeletalMesh", true);
+		UnregisterClass("SkeletalMeshSocket", true);
+	}
+	if (noStat) UnregisterClass("StaticMesh",     true);
+	if (noTex)  UnregisterClass("UnrealMaterial", true);
 
 	if (mainCmd == CMD_PkgInfo)
 		return 0;
@@ -1062,6 +1106,9 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 		CLASS_VIEWER(UVertMesh,       CVertMeshViewer, true);
 		CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer, true);
 		MESH_VIEWER (UStaticMesh,     CStatMeshViewer      );
+#if UNREAL3
+		MESH_VIEWER (UStaticMesh3,    CStatMeshViewer      );
+#endif
 	}
 	if (showMaterials || showAll)
 	{

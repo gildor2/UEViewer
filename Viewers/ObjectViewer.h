@@ -148,7 +148,7 @@ public:
 
 
 /*-----------------------------------------------------------------------------
-	Static mesh viewer (UStaticMesh)
+	Static mesh viewer (CStaticMesh)
 -----------------------------------------------------------------------------*/
 
 class CStatMeshViewer : public CMeshViewer

@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnrealClasses.h"
-#include "UnMesh.h"
+#include "UnMesh.h"					//?? remove later
+#include "UnMesh3.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"				// for checking game type
 #include "UnMathTools.h"			// for FRotator to FCoords
@@ -384,7 +385,7 @@ struct FSkinChunk3
 #if ARMYOF2
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
-			TArray<FMeshUV> extraUV;
+			TArray<FMeshUVFloat> extraUV;
 			Ar << RAW_ARRAY(extraUV);
 		}
 #endif // ARMYOF2
@@ -991,7 +992,7 @@ struct FStaticLODModel3
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
 			int unk84;
-			TArray<FMeshUV> extraUV;
+			TArray<FMeshUVFloat> extraUV;
 			Ar << unk84 << RAW_ARRAY(extraUV);
 		}
 #endif // ARMYOF2
@@ -2345,6 +2346,11 @@ void UAnimSet::ConvertAnims()
 	UStaticMesh
 -----------------------------------------------------------------------------*/
 
+UStaticMesh3::~UStaticMesh3()
+{
+	delete ConvertedMesh;
+}
+
 #if TRANSFORMERS
 
 struct FTRStaticMeshSectionUnk
@@ -2736,7 +2742,7 @@ struct FStaticMeshVertex3Old			// ArVer < 333
 
 struct FStaticMeshUVStream3Old			// ArVer < 364
 {
-	TArray<FStaticMeshUV> Data;
+	TArray<FMeshUVFloat> Data;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVStream3Old &S)
 	{
@@ -2990,7 +2996,7 @@ struct FStaticMeshLODModel
 				for (i = 0; i < NumVerts; i++)
 				{
 					FStaticMeshVertex3Old &V = Verts[i];
-					FStaticMeshUV       &SUV = UVStream[0].Data[i];
+					FMeshUVFloat        &SUV = UVStream[0].Data[i];
 					FVector              &DV = Lod.VertexStream.Verts[i];
 					FStaticMeshUVItem3   &UV = Lod.UVStream.UV[i];
 					DV           = V.Pos;
@@ -3239,14 +3245,15 @@ struct FStaticMeshUnk5
 };
 
 
-void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
+void UStaticMesh3::Serialize(FArchive &Ar)
 {
-	guard(UStaticMesh::SerializeStatMesh3);
+	guard(UStaticMesh3::Serialize);
 
-	UObject::Serialize(Ar);					// no UPrimitive in UE3 ...
+	Super::Serialize(Ar);
 
-	// NOTE: UStaticMesh is not mirrored by script with exception of Transformers game
-	FBoxSphereBounds	Bounds;
+	// NOTE: UStaticMesh is not mirrored by script with exception of Transformers game, so most
+	// field names are unknown
+
 	UObject				*BodySetup;			// URB_BodySetup
 	int					InternalVersion;	// GOW1_PC: 15, UT3: 16, UDK: 18-...
 	TArray<FStaticMeshLODModel> Lods;
@@ -3281,8 +3288,7 @@ void UStaticMesh::SerializeStatMesh3(FArchive &Ar)
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 50)
 	{
 		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles) << Lods;
-		// Bounds serialized as property (see UStaticMesh in h-file)
-		Bounds = this->Bounds;
+		// note: Bounds is serialized as property (see UStaticMesh in h-file)
 		goto done;
 	}
 #endif // TRANSFORMERS
@@ -3430,46 +3436,30 @@ lods:
 done:
 	// ignore remaining part
 	Ar.Seek(Ar.GetStopper());
-	if (!Lods.Num()) return;
-
-	// setup missing properties
-	BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
-	VectorSubtract((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Min);
-	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Max);
 
 	/*!!----------------------------------------------------------------
 	NEW MESH FORMAT
 
 	Stages:
-	* convert UE3 mesh on loading (here, below)
-	* visualize this mesh in CStaticMeshViewer/CStaticMeshInstance
-	* show mesh LODs in viewer
-	* show triangle counts in "colorize mesh materials" mode, show materials by LOD
-	* export CStaticMesh
-	* export LODs
-	* support UE2 mesh
-	* remove UE3->UE2 conversion code (disabled now)
-	* pass CStaticMesh to CStatMeshViewer instead of USkeletalMesh
-	* display mesh properties, add typeinfo to CStaticMesh/CStaticMeshSection
-	  * remove old CStatMeshViewer::Dump code
-	* cleanup #includes
-	  * MeshInstance.h has included "UnMesh.h" for CLodMeshInstance::SetMesh() and CLodMeshInstance::GetMaterial(),
-	    should move this into separate cpp
-	* cleanup all USE_NEW_STATIC_MESH=0 places
-	? compute bounds from actual geometry, improve initial positioning of mesh in CStatMeshViewer
-	=== after commit ==
 	- separate UE2 and UE3 UStaticMesh classes, make separate header for UE3 meshes
-	  ? register UE2 and UE3 classes separately, depending on engine version
+	  * register UE2 and UE3 classes separately, depending on engine version
+	  - verify UE2/UE3 property lists (check UnMesh.h with blame)
+	  - move parts of this cpp to UnMesh3.h
 	- UE3: support loading of more than 1 UV set - find GNumStaticUVSets, data is simply skipped now
+	- add key to switch UV sets in viewer (map default material when using non-first UV set)
 	- export: support 4 UV sets
+	? compute bounds from actual geometry, improve initial positioning of mesh in CStatMeshViewer
 
 	------------------------------------------------------------------*/
 	guard(NewMeshFormat);
 
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
-	Mesh->BoundingBox    = BoundingBox;		//!! UE2
-	Mesh->BoundingSphere = BoundingSphere;	//!! UE2
+
+	// convert bounds
+	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
+	VectorSubtract((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)Mesh->BoundingBox.Min);
+	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)Mesh->BoundingBox.Max);
 
 	Mesh->Lods.Empty(Lods.Num());
 	for (int lod = 0; lod < Lods.Num(); lod++)

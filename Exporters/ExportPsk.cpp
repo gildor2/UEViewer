@@ -3,7 +3,7 @@
 
 #include "UnObject.h"
 #include "UnMaterial.h"
-#include "UnMesh.h"
+#include "UnMesh.h"			//?? remove later (when remove USkeletalMesh dependency)
 
 #include "Psk.h"
 #include "Exporters.h"
@@ -505,31 +505,29 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 }
 
 
-void ExportStaticMesh(const UStaticMesh *Mesh, FArchive &Ar)
+void ExportStaticMesh(const CStaticMesh *Mesh, FArchive &Ar)
 {
-	assert(Mesh->ConvertedMesh);
-	const CStaticMesh *Mesh2 = Mesh->ConvertedMesh;
-
-	if (!Mesh2->Lods.Num())
+	UObject *OriginalMesh = Mesh->OriginalMesh;
+	if (!Mesh->Lods.Num())
 	{
-		appNotify("Mesh %s has 0 lods", Mesh->Name);
+		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);
 		return;
 	}
 
 	guard(Lod0);
-	ExportStaticMeshLod(Mesh2->Lods[0], Ar);
+	ExportStaticMeshLod(Mesh->Lods[0], Ar);
 	unguard;
 
 	if (GExportLods)
 	{
-		for (int Lod = 1; Lod < Mesh2->Lods.Num(); Lod++)
+		for (int Lod = 1; Lod < Mesh->Lods.Num(); Lod++)
 		{
 			guard(Lod);
 			char filename[512];
-			appSprintf(ARRAY_ARG(filename), "%s/%s_Lod%d.pskx", GetExportPath(Mesh), Mesh->Name, Lod);
+			appSprintf(ARRAY_ARG(filename), "%s/%s_Lod%d.pskx", GetExportPath(OriginalMesh), OriginalMesh->Name, Lod);
 			FFileReader Ar2(filename, false);
 			Ar2.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
-			ExportStaticMeshLod(Mesh2->Lods[Lod], Ar2);
+			ExportStaticMeshLod(Mesh->Lods[Lod], Ar2);
 			unguardf(("%d", Lod));
 		}
 	}
