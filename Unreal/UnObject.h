@@ -81,7 +81,7 @@ struct CTypeInfo
 	{}
 	inline bool IsClass() const
 	{
-		return Name[0] != 'F';		// UE structure type names are started with 'F'
+		return (Name[0] == 'U') || (Name[0] == 'A');	// UE structure type names are started with 'F', classes with 'U' or 'A'
 	}
 	bool IsA(const char *TypeName) const;
 	const CPropInfo *FindProperty(const char *Name) const;
@@ -167,16 +167,20 @@ FORCEINLINE const CTypeInfo *FindStructType(const char *Name)
 }
 
 UObject *CreateClass(const char *Name);
-bool IsKnownClass(const char *Name);
+
+FORCEINLINE bool IsKnownClass(const char *Name)
+{
+	return (FindClassType(Name) != NULL);
+}
 
 
 #define BEGIN_CLASS_TABLE						\
 	{											\
 		static CClassInfo Table[] = {
 #define REGISTER_CLASS(Class)					\
-			{ #Class+1, Class::StaticGetTypeinfo },
+			{ #Class, Class::StaticGetTypeinfo },
 #define REGISTER_CLASS_ALIAS(Class,ClassName)	\
-			{ #ClassName+1, Class::StaticGetTypeinfo },
+			{ #ClassName, Class::StaticGetTypeinfo },
 #define END_CLASS_TABLE							\
 		};										\
 		RegisterClasses(ARRAY_ARG(Table));		\

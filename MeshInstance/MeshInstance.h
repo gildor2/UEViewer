@@ -297,6 +297,7 @@ public:
 	CStatMeshInstance()
 	:	pMesh(NULL)
 	,	LodNum(0)
+	,	UVIndex(0)
 	{}
 
 	void SetMesh(CStaticMesh *Mesh)
@@ -308,6 +309,7 @@ public:
 
 	// mesh state
 	int			LodNum;
+	int			UVIndex;
 
 protected:
 	CStaticMesh *pMesh;

@@ -156,6 +156,8 @@ DEPENDS_4 = \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMaterial3.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnSound.h \
@@ -430,6 +432,7 @@ DEPENDS_20 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
@@ -450,6 +453,7 @@ DEPENDS_21 = \
 	Unreal/UnMaterial3.h \
 	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
@@ -482,6 +486,8 @@ DEPENDS_23 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h

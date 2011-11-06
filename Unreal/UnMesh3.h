@@ -428,33 +428,67 @@ public:
 	UStaticMesh
 -----------------------------------------------------------------------------*/
 
-//!! move other properties here
+// forwards (structures are declared in cpp)
+struct FStaticMeshLODModel;
+struct FkDOPNode3;
+struct FkDOPTriangle3;
+
+/*struct FStaticMeshUnk4
+{
+	TArray<UObject*>	f0;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk4 &V)
+	{
+		return Ar << V.f0;
+	}
+};*/
+
+
 class UStaticMesh3 : public UObject
 {
 	DECLARE_CLASS(UStaticMesh3, UObject);
 public:
-	bool					UseVertexColor;
+	// NOTE: UStaticMesh is not mirrored by script with exception of Transformers game, so most
+	// field names are unknown
+	int						InternalVersion;	// GOW1_PC: 15, UT3: 16, UDK: 18-...
+	UObject					*BodySetup;			// URB_BodySetup
+	TArray<FStaticMeshLODModel> Lods;
+	// kDOP tree
+	TArray<FkDOPNode3>		kDOPNodes;
+	TArray<FkDOPTriangle3>	kDOPTriangles;
+//	TArray<FStaticMeshUnk4>	f48;
+
+	bool					UseSimpleLineCollision;
+	bool					UseSimpleBoxCollision;
+	bool					UseSimpleRigidBodyCollision;
+	bool					UseFullPrecisionUVs;
 #if TRANSFORMERS
-	FBoxSphereBounds		Bounds;		// Transformers has described StaticMesh.uc and serialized Bounds as property
+	FBoxSphereBounds		Bounds;				// Transformers has described StaticMesh.uc and serialized Bounds as property
 #endif
 
 	CStaticMesh				*ConvertedMesh;
 
 	BEGIN_PROP_TABLE
-		PROP_BOOL(UseVertexColor)
+		PROP_OBJ(BodySetup)						// this property is serialized twice - in UObject and in UStaticMesh
+		PROP_BOOL(UseSimpleLineCollision)
+		PROP_BOOL(UseSimpleBoxCollision)
+		PROP_BOOL(UseSimpleRigidBodyCollision)
+		PROP_BOOL(UseFullPrecisionUVs)
 #if TRANSFORMERS
 		PROP_STRUC(Bounds, FBoxSphereBounds)
 #endif
-		PROP_DROP(BodySetup)			//?? Serialize() has BodySetup too - is it serialized twice?
+		PROP_DROP(LODDistanceRatio)
 		PROP_DROP(LightMapResolution)
+		PROP_DROP(LightMapCoordinateIndex)
 		PROP_DROP(ContentTags)
-		PROP_DROP(UseFullPrecisionUVs)
-#if BATMAN
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
-#endif
+#if DECLARE_VIEWER_PROPS
+		PROP_INT(InternalVersion)
+#endif // DECLARE_VIEWER_PROPS
 	END_PROP_TABLE
 
+	UStaticMesh3();
 	virtual ~UStaticMesh3();
 
 	virtual void Serialize(FArchive &Ar);

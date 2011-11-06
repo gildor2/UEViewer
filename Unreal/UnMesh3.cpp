@@ -1310,7 +1310,7 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 #if 0
 	//!! also: NameIndexMap (ArVer >= 296), PerPolyKDOPs (ArVer >= 435)
 #else
-	Ar.Seek(Ar.GetStopper());
+	DROP_REMAINING_DATA(Ar);
 #endif
 
 	guard(ConvertMesh);
@@ -1391,6 +1391,7 @@ void USkeletalMesh::PostLoadMesh3()
 }
 
 
+//?? move outside?
 float half2float(word h)
 {
 	union
@@ -2346,6 +2347,11 @@ void UAnimSet::ConvertAnims()
 	UStaticMesh
 -----------------------------------------------------------------------------*/
 
+// Implement constructor in cpp to avoid inlining (it's large enough).
+// It's useful to declare TArray<> structures as forward declarations in header file.
+UStaticMesh3::UStaticMesh3()
+{}
+
 UStaticMesh3::~UStaticMesh3()
 {
 	delete ConvertedMesh;
@@ -2424,7 +2430,7 @@ struct FStaticMeshSection3
 		if (Ar.Game == GAME_Huxley && Ar.ArVer >= 485)
 			return Ar << S.Index;				//?? other name?
 #endif // HUXLEY
-		if (Ar.ArVer >= 492) Ar << S.Index;		//?? real version is unknown! No field in GOW1_PC (490), has in UT3 (512)
+		if (Ar.ArVer >= 492) Ar << S.Index;		//?? real version is unknown! This field is missing in GOW1_PC (490), but present in UT3 (512)
 #if ALPHA_PR
 		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 13)
 		{
@@ -2538,7 +2544,7 @@ struct FStaticMeshUVItem3
 	FVector				Pos;			// old version (< 472)
 	FPackedNormal		Normal[3];
 	int					f10;			//?? VertexColor?
-	float				U, V;
+	FMeshUVFloat		UV[NUM_STATIC_MESH_UV_SETS];
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVItem3 &V)
 	{
@@ -2598,19 +2604,19 @@ struct FStaticMeshUVItem3
 	uvs:
 		if (GUseStaticFloatUVs)
 		{
-			Ar << V.U << V.V;
+			for (int i = 0; i < GNumStaticUVSets; i++)
+				Ar << V.UV[i];
 		}
 		else
 		{
-			// read in half format and convert to float
-			word U0, V0;
-			Ar << U0 << V0;
-			V.U = half2float(U0);
-			V.V = half2float(V0);
+			for (int i = 0; i < GNumStaticUVSets; i++)
+			{
+				// read in half format and convert to float
+				FMeshUVHalf UVHalf;
+				Ar << UVHalf;
+				V.UV[i] = UVHalf;		// convert
+			}
 		}
-		// skip extra UV sets
-		int UVSize = GUseStaticFloatUVs ? sizeof(float) : sizeof(short);
-		if (GNumStaticUVSets > 1) Ar.Seek(Ar.Tell() + (GNumStaticUVSets - 1) * 2 * UVSize);
 		return Ar;
 
 		unguard;
@@ -2684,6 +2690,8 @@ struct FStaticMeshUVStream3
 		}
 #endif // SHADOWS_DAMNED
 		// prepare for UV serialization
+		if (S.NumTexCoords > NUM_STATIC_MESH_UV_SETS)
+			appError("StaticMesh has %d UV sets", S.NumTexCoords);
 		GNumStaticUVSets   = S.NumTexCoords;
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
 		Ar << RAW_ARRAY(S.UV);
@@ -2740,7 +2748,7 @@ struct FStaticMeshVertex3Old			// ArVer < 333
 	}
 };
 
-struct FStaticMeshUVStream3Old			// ArVer < 364
+struct FStaticMeshUVStream3Old			// ArVer < 364; corresponds to UE2 StaticMesh?
 {
 	TArray<FMeshUVFloat> Data;
 
@@ -2790,7 +2798,7 @@ struct FStaticMeshLODModel
 	FStaticMeshColorStream3     ColorStream;	//??
 	FStaticMeshColorStream3New  ColorStream2;	//??
 	FIndexBuffer3		Indices;
-	FIndexBuffer3		Indices2;		//?? wireframe?
+	FIndexBuffer3		Indices2;		// wireframe
 	int					f80;
 	TArray<FEdge3>		Edges;			//??
 	TArray<byte>		fEC;			//?? flags for faces?
@@ -2985,27 +2993,31 @@ struct FStaticMeshLODModel
 				Ar << Verts << UVStream;
 				// convert vertex stream
 				int i;
-				int NumVerts = Verts.Num();
-//				int numUVs   = UVStream.Num();
+				int NumVerts     = Verts.Num();
+				int NumTexCoords = UVStream.Num();
+				if (NumTexCoords > NUM_STATIC_MESH_UV_SETS)
+				{
+					appNotify("StaticMesh has %d UV sets", NumTexCoords);
+					NumTexCoords = NUM_STATIC_MESH_UV_SETS;
+				}
 				Lod.VertexStream.Verts.Empty(NumVerts);
 				Lod.VertexStream.Verts.Add(NumVerts);
 				Lod.UVStream.UV.Empty();
 				Lod.UVStream.UV.Add(NumVerts);
-				Lod.UVStream.NumVerts = NumVerts;
+				Lod.UVStream.NumVerts     = NumVerts;
+				Lod.UVStream.NumTexCoords = NumTexCoords;
 				// resize UV streams
 				for (i = 0; i < NumVerts; i++)
 				{
 					FStaticMeshVertex3Old &V = Verts[i];
-					FMeshUVFloat        &SUV = UVStream[0].Data[i];
 					FVector              &DV = Lod.VertexStream.Verts[i];
 					FStaticMeshUVItem3   &UV = Lod.UVStream.UV[i];
 					DV           = V.Pos;
 					UV.Normal[2] = V.Normal[2];
-					UV.U = SUV.U;
-					UV.V = SUV.V;
+					for (int j = 0; j < NumTexCoords; j++)
+						UV.UV[j] = UVStream[j].Data[i];
 				}
 			}
-			//!! note: this code will crash in RestoreMesh3() because of empty data
 		}
 	indices:
 		Ar << Lod.Indices;
@@ -3076,12 +3088,12 @@ struct FStaticMeshLODModel
 	}
 };
 
-struct FStaticMeshUnk1
+struct FkDOPBounds		// bounds for compressed (quantized) kDOP node
 {
 	FVector				v1;
 	FVector				v2;
 
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk1 &V)
+	friend FArchive& operator<<(FArchive &Ar, FkDOPBounds &V)
 	{
 #if ENSLAVED
 		if (Ar.Game == GAME_Enslaved)
@@ -3098,7 +3110,7 @@ struct FStaticMeshUnk1
 
 struct FkDOPNode3
 {
-	FStaticMeshUnk1		f0;
+	FkDOPBounds			Bounds;
 	int					f18;
 	short				f1C;
 	short				f1E;
@@ -3111,16 +3123,16 @@ struct FkDOPNode3
 			// all data compressed
 			byte  fC, fD;
 			short fE;
-			Ar << V.f0;		// compressed
+			Ar << V.Bounds;		// compressed
 			Ar << fC << fD << fE;
 			return Ar;
 		}
 #endif // ENSLAVED
 #if DCU_ONLINE
 		if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0xA00)
-			return Ar << V.f18 << V.f1C << V.f1E;	// no f0 field - global for all nodes
+			return Ar << V.f18 << V.f1C << V.f1E;	// no Bounds field - global for all nodes
 #endif // DCU_ONLINE
-		Ar << V.f0 << V.f18;
+		Ar << V.Bounds << V.f18;
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 7) goto new_ver;
 #endif
@@ -3149,19 +3161,19 @@ struct FkDOPNode3
 	}
 };
 
-struct FkDOPNode3A	// starting from version 770
+struct FkDOPNode3New	// starting from version 770
 {
-	byte				f0[3];
-	byte				f1[3];
+	byte				mins[3];
+	byte				maxs[3];
 
-	friend FArchive& operator<<(FArchive &Ar, FkDOPNode3A &V)
+	friend FArchive& operator<<(FArchive &Ar, FkDOPNode3New &V)
 	{
-		Ar << V.f0[0] << V.f0[1] << V.f0[2] << V.f1[0] << V.f1[1] << V.f1[2];
+		Ar << V.mins[0] << V.mins[1] << V.mins[2] << V.maxs[0] << V.maxs[1] << V.maxs[2];
 		return Ar;
 	}
 };
 
-SIMPLE_TYPE(FkDOPNode3A, byte)
+SIMPLE_TYPE(FkDOPNode3New, byte)
 
 
 struct FkDOPTriangle3
@@ -3202,15 +3214,6 @@ struct FkDOPTriangle3
 	}
 };
 
-/*struct FStaticMeshUnk4
-{
-	TArray<UObject*>	f0;
-
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUnk4 &V)
-	{
-		return Ar << V.f0;
-	}
-};*/
 
 #if FURY
 
@@ -3250,17 +3253,6 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 	guard(UStaticMesh3::Serialize);
 
 	Super::Serialize(Ar);
-
-	// NOTE: UStaticMesh is not mirrored by script with exception of Transformers game, so most
-	// field names are unknown
-
-	UObject				*BodySetup;			// URB_BodySetup
-	int					InternalVersion;	// GOW1_PC: 15, UT3: 16, UDK: 18-...
-	TArray<FStaticMeshLODModel> Lods;
-//	TArray<FStaticMeshUnk4> f48;
-	// kDOP tree
-	TArray<FkDOPNode3>     kDOPNodes;
-	TArray<FkDOPTriangle3> kDOPTriangles;
 
 #if FURY
 	if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 14)
@@ -3332,9 +3324,9 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 	else
 	{
 	ver_770:
-		FStaticMeshUnk1 kdop1;
-		TArray<FkDOPNode3A> kdop2;
-		Ar << kdop1 << RAW_ARRAY(kdop2);
+		FkDOPBounds Bounds;
+		TArray<FkDOPNode3New> Nodes;
+		Ar << Bounds << RAW_ARRAY(Nodes);
 	}
 #if FURY
 	if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 32)
@@ -3347,8 +3339,9 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 #if DCU_ONLINE
 	if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0xA00)
 	{
-		FStaticMeshUnk1 unk;
-		Ar << unk;
+		// this game stored kDOP bounds only once
+		FkDOPBounds Bounds;
+		Ar << Bounds;
 	}
 #endif // DCU_ONLINE
 #if DOH
@@ -3434,24 +3427,21 @@ lods:
 //	Ar << f48;
 
 done:
-	// ignore remaining part
-	Ar.Seek(Ar.GetStopper());
+	DROP_REMAINING_DATA(Ar);
 
 	/*!!----------------------------------------------------------------
 	NEW MESH FORMAT
 
 	Stages:
-	- separate UE2 and UE3 UStaticMesh classes, make separate header for UE3 meshes
-	  * register UE2 and UE3 classes separately, depending on engine version
-	  - verify UE2/UE3 property lists (check UnMesh.h with blame)
-	  - move parts of this cpp to UnMesh3.h
-	- UE3: support loading of more than 1 UV set - find GNumStaticUVSets, data is simply skipped now
-	- add key to switch UV sets in viewer (map default material when using non-first UV set)
-	- export: support 4 UV sets
+	* UE3: support loading of more than 1 UV set - find GNumStaticUVSets, data is simply skipped now
+	* add key to switch UV sets in viewer (map default material when using non-first UV set)
+	* export: support 4 UV sets
 	? compute bounds from actual geometry, improve initial positioning of mesh in CStatMeshViewer
-
 	------------------------------------------------------------------*/
-	guard(NewMeshFormat);
+
+	// convert UStaticMesh3 to CStaticMesh
+
+	guard(ConvertMesh);
 
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
@@ -3473,7 +3463,9 @@ done:
 		int NumVerts     = SrcLod.VertexStream.Verts.Num();
 
 		Lod->NumTexCoords = NumTexCoords;
-		Lod->HasTangents  = true;
+		Lod->HasTangents  = (Ar.ArVer >= 364);				//?? check; FStaticMeshUVStream3 is used since this version
+		if (NumTexCoords > NUM_STATIC_MESH_UV_SETS)
+			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		// sections
 		Lod->Sections.Add(SrcLod.Sections.Num());
@@ -3494,29 +3486,32 @@ done:
 			CStaticMeshVertex &V = Lod->Verts[i];
 
 			V.Position = (CVec3&)SrcLod.VertexStream.Verts[i];
-			for (int j = 0; j < 1 /*!!NumTexCoords*/; j++)			//!! should serialize all TexCoords in order to enable this code
+			// tangents: convert to FVector (unpack) then cast to CVec3
+			FVector Tangent = SUV.Normal[0];
+			FVector Normal  = SUV.Normal[2];
+			V.Tangent = (CVec3&)Tangent;
+			V.Normal  = (CVec3&)Normal;
+			if (SUV.Normal[1].Data == 0)
 			{
-				V.UV[j].U = SUV.U;									//!! SUV[j]
-				V.UV[j].V = SUV.V;									//!! SUV[j]
-				// tangents: convert to FVector (unpack) then cast to CVec3
-				FVector Tangent = SUV.Normal[0];					//!! SUV[j]
-				FVector Normal  = SUV.Normal[2];					//!! SUV[j]
-				V.UV[j].Tangent = (CVec3&)Tangent;
-				V.UV[j].Normal  = (CVec3&)Normal;
-				if (SUV.Normal[1].Data == 0)
-				{
-					cross(V.UV[j].Normal, V.UV[j].Tangent, V.UV[j].Binormal);
-					// LocalVertexFactory.usf, VertexFactoryGetTangentBasis() (static mesh)
-					// GpuSkinVertexFactory.usf, SkinTangents() (skeletal mesh)
-					if (SUV.Normal[2].GetW() == -1)
-						V.UV[j].Binormal.Negate();
-				}
-				else
-				{
-					FVector Binormal = SUV.Normal[1];				//!! SUV[j]
-					V.UV[j].Binormal  = (CVec3&)Binormal;
-				}
+				cross(V.Normal, V.Tangent, V.Binormal);
+				// LocalVertexFactory.usf, VertexFactoryGetTangentBasis() (static mesh)
+				// GpuSkinVertexFactory.usf, SkinTangents() (skeletal mesh)
+				if (SUV.Normal[2].GetW() == -1)
+					V.Binormal.Negate();
 			}
+			else
+			{
+				FVector Binormal = SUV.Normal[1];
+				V.Binormal = (CVec3&)Binormal;
+			}
+			// copy UV
+			staticAssert((sizeof(CStaticMeshUV) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
+#if 0
+			for (int j = 0; j < NumTexCoords; j++)
+				V.UV[j] = (CStaticMeshUV&/SUV.UV[j];
+#else
+			memcpy(V.UV, SUV.UV, sizeof(V.UV));
+#endif
 			//!! also has ColorStream
 		}
 
@@ -3526,8 +3521,7 @@ done:
 		unguardf(("lod=%d", lod));
 	}
 
-	unguard;
-	//!!----------------------------------------------------------------
+	unguard;	// ConvertMesh
 
 	unguard;
 }

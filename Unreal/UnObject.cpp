@@ -6,6 +6,7 @@
 
 //#define DEBUG_PROPS			1
 //#define PROFILE_LOADING		1
+//#define DEBUG_TYPES				1
 
 #define DUMP_SHOW_PROP_INDEX	0
 #define DUMP_SHOW_PROP_TYPE		0
@@ -169,7 +170,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	{
 		STRUC_TYPE(FLinearColor)
 	}
-	const CTypeInfo *ItemType = FindStructType(StrucName+1);
+	const CTypeInfo *ItemType = FindStructType(StrucName);
 	if (!ItemType) return false;
 	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
 	return true;
@@ -587,7 +588,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						Ar << AR_INDEX(DataCount);
 					//!! note: some structures should be serialized using SerializeStruc() (FVector etc)
 					// find data typeinfo
-					const CTypeInfo *ItemType = FindStructType(Prop->TypeName + 1);	//?? skip 'F' in name
+					const CTypeInfo *ItemType = FindStructType(Prop->TypeName);
 					if (!ItemType)
 						appError("Unknown structure type %s", Prop->TypeName);
 					// prepare array
@@ -701,6 +702,11 @@ void RegisterClasses(CClassInfo *Table, int Count)
 	assert(GClassCount + Count < ARRAY_COUNT(GClasses));
 	memcpy(GClasses + GClassCount, Table, Count * sizeof(GClasses[0]));
 	GClassCount += Count;
+#if DEBUG_TYPES
+	appPrintf("*** Register: %d classes ***\n", Count);
+	for (int i = GClassCount - Count; i < GClassCount; i++)
+		appPrintf("[%d]:%s\n", i, GClasses[i].TypeInfo()->Name);
+#endif
 }
 
 
@@ -708,10 +714,12 @@ void RegisterClasses(CClassInfo *Table, int Count)
 void UnregisterClass(const char *Name, bool WholeTree)
 {
 	for (int i = 0; i < GClassCount; i++)
-		if (!strcmp(GClasses[i].Name, Name) ||
+		if (!strcmp(GClasses[i].Name + 1, Name) ||
 			(WholeTree && (GClasses[i].TypeInfo()->IsA(Name))))
 		{
-//			appPrintf("Unregistered %s\n", GClasses[i].Name);
+#if DEBUG_TYPES
+			appPrintf("Unregister %s\n", GClasses[i].Name);
+#endif
 			// class was found
 			if (i == GClassCount-1)
 			{
@@ -728,15 +736,33 @@ void UnregisterClass(const char *Name, bool WholeTree)
 
 const CTypeInfo *FindClassType(const char *Name, bool ClassType)
 {
+#if DEBUG_TYPES
+	appPrintf("--- find %s %s ... ", ClassType ? "class" : "struct", Name);
+#endif
 	guard(CreateClass);
 	for (int i = 0; i < GClassCount; i++)
-		if (!strcmp(GClasses[i].Name, Name))
+	{
+		// skip 1st char only for ClassType==true?
+		if (ClassType)
 		{
-			if (!GClasses[i].TypeInfo) appError("No typeinfo for class");
-			const CTypeInfo *Type = GClasses[i].TypeInfo();
-			if (Type->IsClass() != ClassType) continue;
-			return Type;
+			if (strcmp(GClasses[i].Name + 1, Name) != 0) continue;
 		}
+		else
+		{
+			if (strcmp(GClasses[i].Name, Name) != 0) continue;
+		}
+
+		if (!GClasses[i].TypeInfo) appError("No typeinfo for class");
+		const CTypeInfo *Type = GClasses[i].TypeInfo();
+		if (Type->IsClass() != ClassType) continue;
+#if DEBUG_TYPES
+		appPrintf("ok %s\n", Type->Name);
+#endif
+		return Type;
+	}
+#if DEBUG_TYPES
+	appPrintf("failed!\n");
+#endif
 	return NULL;
 	unguardf(("%s", Name));
 }
@@ -759,15 +785,6 @@ UObject *CreateClass(const char *Name)
 	return Obj;
 
 	unguardf(("%s", Name));
-}
-
-
-bool IsKnownClass(const char *Name)
-{
-	for (int i = 0; i < GClassCount; i++)
-		if (!strcmp(GClasses[i].Name, Name))
-			return true;
-	return false;
 }
 
 
@@ -862,8 +879,7 @@ void CTypeInfo::DumpProps(void *Data, int Indent) const
 			}
 
 			// find structure type
-			//!! this skips 1st char, so CStruct and FStruct are collided!
-			const CTypeInfo *StrucType = FindClassType(Prop->TypeName+1);
+			const CTypeInfo *StrucType = FindStructType(Prop->TypeName);
 			bool IsStruc = (StrucType != NULL);
 
 			// formatting of property start
@@ -957,7 +973,7 @@ void CTypeInfo::DumpProps(void *Data, int Indent) const
 					PrintIndent(Indent); appPrintf("}\n");	// indent
 				}
 			}
-			else
+			else if (!IsStruc)
 			{
 				appPrintf("\n");
 			}

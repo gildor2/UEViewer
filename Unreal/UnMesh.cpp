@@ -1793,7 +1793,7 @@ void USkeletalMesh::SerializeSCell(FArchive &Ar)
 	}
 	Ar << SkeletalDepth << WeightIndices << BoneInfluences;
 	Ar << AttachAliases << AttachBoneNames << AttachCoords;
-	Ar.Seek(Ar.GetStopper());
+	DROP_REMAINING_DATA(Ar);
 	UpgradeMesh();
 
 /*	TArray<FSCellUnk1> tmp1;
@@ -2550,7 +2550,10 @@ void UStaticMesh::ConvertMesh2()
 	int NumVerts = VertexStream.Vert.Num();
 	int NumTexCoords = UVStream.Num();
 	if (NumTexCoords > NUM_STATIC_MESH_UV_SETS)
+	{
+		appNotify("StaticMesh has %d UV sets", NumTexCoords);
 		NumTexCoords = NUM_STATIC_MESH_UV_SETS;
+	}
 	Lod->NumTexCoords = NumTexCoords;
 
 	Lod->Verts.Add(NumVerts);
@@ -2559,10 +2562,10 @@ void UStaticMesh::ConvertMesh2()
 		CStaticMeshVertex &V = Lod->Verts[i];
 		const FStaticMeshVertex &SV = VertexStream.Vert[i];
 		V.Position = (CVec3&)SV.Pos;
+		V.Normal   = (CVec3&)SV.Normal;
 		for (int j = 0; j < NumTexCoords; j++)
 		{
 			const FMeshUVFloat &SUV = UVStream[j].Data[i];
-			V.UV[j].Normal = (CVec3&)SV.Normal;
 			V.UV[j].U      = SUV.U;
 			V.UV[j].V      = SUV.V;
 		}

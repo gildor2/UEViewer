@@ -124,6 +124,29 @@ struct FMeshUV1
 SIMPLE_TYPE(FMeshUV1, byte)
 
 
+struct FMeshUVHalf
+{
+	short			U;
+	short			V;
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshUVHalf &V)
+	{
+		Ar << V.U << V.V;
+		return Ar;
+	}
+
+	operator FMeshUVFloat() const
+	{
+		FMeshUVFloat r;
+		r.U = half2float(U);
+		r.V = half2float(V);
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FMeshUVHalf, word)
+
+
 // LOD-style triangular polygon in a mesh, which references three textured vertices.
 struct FMeshFace
 {
@@ -777,8 +800,8 @@ public:
 		{
 			if (!SerializeUE2XMoves(Ar))
 			{
-				// avoid crash
-				Ar.Seek(Ar.GetStopper());
+				// avoid assert
+				DROP_REMAINING_DATA(Ar);
 				return;
 			}
 		}
@@ -1870,7 +1893,7 @@ public:
 		{
 			appNotify("Serializing SkeletalMesh'%s' of unknown game: %d unreal bytes", Name, Ar.GetStopper() - Ar.Tell());
 		skip_remaining:
-			Ar.Seek(Ar.GetStopper());
+			DROP_REMAINING_DATA(Ar);
 		}
 
 		unguard;

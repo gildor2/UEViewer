@@ -20,6 +20,7 @@
 #define MAX_MESHBONES			512
 
 
+//!! remove after refactoring
 void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
 	CVec3 &DstPos, CQuat &DstQuat);
 
@@ -363,6 +364,9 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	}
 	assert(keysCount == 0);
 
+	//!! get rid of psax format, store additional flags in text file (AnimSetName.psa.config)
+	//!! also could remove -pskx command line option
+	//!! note: should use pskx format for mesh - remove psax only
 	if (!GExportPskx)
 	{
 		if (requirePsax) appNotify("Exporting %s'%s': psax is recommended", Anim->GetClassName(), Anim->Name);
@@ -399,7 +403,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 {
 	// using 'static' here to avoid zero-filling unused fields
-	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
+	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr, UVHdr;
 	int i;
 
 	int numSections = Lod.Sections.Num();
@@ -502,6 +506,22 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	InfHdr.DataCount = 0;		// dummy
 	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
+
+	// pskx extension
+	for (int j = 1; j < Lod.NumTexCoords; j++)
+	{
+		UVHdr.DataCount = numVerts;
+		UVHdr.DataSize  = sizeof(VMeshUV);
+		SAVE_CHUNK(WedgHdr, "EXTRAUV0");
+		for (i = 0; i < numVerts; i++)
+		{
+			VMeshUV UV;
+			const CStaticMeshVertex &S = Lod.Verts[i];
+			UV.U = S.UV[j].U;
+			UV.V = S.UV[j].V;
+			Ar << UV;
+		}
+	}
 }
 
 

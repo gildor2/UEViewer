@@ -34,6 +34,10 @@ void DrawTextRight(const char *text, ...);
 void DrawText3D(const CVec3 &pos, const char *text, ...);
 void FlushTexts();
 
+// called from AppDisplayTexts() callback
+#define KEY_HELP_TAB	11
+void DrawKeyHelp(const char *Key, const char *Help);
+
 
 /*-----------------------------------------------------------------------------
 	Keyboard

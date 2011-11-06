@@ -590,6 +590,10 @@ protected:
 };
 
 
+// drop remaining object data (until stopper)
+#define DROP_REMAINING_DATA(Ar)							\
+	Ar.Seek(Ar.GetStopper());
+
 // research helper
 #define DUMP_ARC_BYTES(Ar, NumBytes)					\
 	{													\

@@ -92,7 +92,7 @@ public:
 	{
 		guard(UFunction::Serialize);
 		Super::Serialize(Ar);
-		Ar.Seek(Ar.GetStopper());	//!!
+		DROP_REMAINING_DATA(Ar);	//!!
 		unguard;
 	}
 };
@@ -174,7 +174,7 @@ public:
 		}
 //		Ar.Seek(Ar.Tell() + ScriptSize);	// skip scripts
 //		//?? following code: loop of UStruct::SerializeExpr(int &,FArchive &)
-//		Ar.Seek(Ar.GetStopper());
+//		DROP_REMAINING_DATA(Ar);
 		unguard;
 	}
 };
@@ -189,7 +189,7 @@ public:
 	{
 		Super::Serialize(Ar);
 		// has properties here (struct defaults?)
-		Ar.Seek(Ar.GetStopper());
+		DROP_REMAINING_DATA(Ar);
 	}
 };
 
@@ -223,7 +223,7 @@ public:
 		guard(UClass::Serialize);
 		Super::Serialize(Ar);
 		//!! UStruct will drop remaining data
-		Ar.Seek(Ar.GetStopper());
+		DROP_REMAINING_DATA(Ar);
 		unguard;
 	}
 };

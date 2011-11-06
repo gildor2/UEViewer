@@ -31,6 +31,7 @@ CStatMeshViewer::CStatMeshViewer(CStaticMesh *Mesh0)
 void CStatMeshViewer::Dump()
 {
 	CMeshViewer::Dump();
+	appPrintf("\n");
 	Mesh->GetTypeinfo()->DumpProps(Mesh);
 }
 
@@ -45,9 +46,10 @@ void CStatMeshViewer::Draw2D()
 	DrawTextLeft(S_GREEN"LOD     : "S_WHITE"%d/%d\n"
 				 S_GREEN"Verts   : "S_WHITE"%d\n"
 				 S_GREEN"Tris    : "S_WHITE"%d\n"
-				 S_GREEN"UV Sets : "S_WHITE"%d",
+				 S_GREEN"UV Sets : "S_WHITE"%d/%d",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
-				 Lod.Verts.Num(), Lod.Indices.Num() / 3, Lod.NumTexCoords);
+				 Lod.Verts.Num(), Lod.Indices.Num() / 3,
+				 MeshInst->UVIndex+1, Lod.NumTexCoords);
 
 	// code similar to CLodMeshViewer::Draw2D(), but using different fields
 	DrawTextLeft(S_GREEN"Sections: "S_WHITE"%d", Lod.Sections.Num());
@@ -72,7 +74,8 @@ void CStatMeshViewer::Draw2D()
 void CStatMeshViewer::ShowHelp()
 {
 	CMeshViewer::ShowHelp();
-	DrawTextLeft("L           cycle mesh LODs\n");
+	DrawKeyHelp("L", "cycle mesh LODs");
+	DrawKeyHelp("U", "cycle UV sets");
 }
 
 
@@ -87,6 +90,10 @@ void CStatMeshViewer::ProcessKey(int key)
 	case 'l':
 		if (++MeshInst->LodNum >= Mesh->Lods.Num())
 			MeshInst->LodNum = 0;
+		break;
+	case 'u':
+		if (++MeshInst->UVIndex >= Mesh->Lods[MeshInst->LodNum].NumTexCoords)
+			MeshInst->UVIndex = 0;
 		break;
 	default:
 		CMeshViewer::ProcessKey(key);

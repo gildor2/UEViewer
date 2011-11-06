@@ -67,9 +67,6 @@ struct CStaticMeshSection
 
 struct CStaticMeshUV
 {
-	CVec3					Normal;
-	CVec3					Tangent;
-	CVec3					Binormal;
 	float					U, V;
 };
 
@@ -77,8 +74,10 @@ struct CStaticMeshUV
 struct CStaticMeshVertex
 {
 	CVec3					Position;
+	CVec3					Normal;
+	CVec3					Tangent;
+	CVec3					Binormal;
 	CStaticMeshUV			UV[NUM_STATIC_MESH_UV_SETS];
-	//?? do not store extra UV when not needed - each vertex is 11*4+3 ints, or 192 bytes!
 };
 
 

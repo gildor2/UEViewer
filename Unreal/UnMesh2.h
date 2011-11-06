@@ -143,32 +143,6 @@ struct FRawColorStream
 };
 
 
-#if BIOSHOCK
-struct FStaticMeshUVBio2
-{
-	short					U;
-	short					V;
-
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVBio2 &V)
-	{
-		Ar << V.U << V.V;
-		return Ar;
-	}
-
-	operator FMeshUVFloat() const
-	{
-		FMeshUVFloat r;
-		r.U = half2float(U);
-		r.V = half2float(V);
-		return r;
-	}
-};
-
-SIMPLE_TYPE(FStaticMeshUVBio2, short)
-
-#endif // BIOSHOCK
-
-
 struct FStaticMeshUVStream
 {
 	TArray<FMeshUVFloat>	Data;
@@ -188,7 +162,7 @@ struct FStaticMeshUVStream
 			else
 			{
 				// Bioshock 2 SP; real version detection code is unknown
-				TArray<FStaticMeshUVBio2> UV;
+				TArray<FMeshUVHalf> UV;
 				Ar << UV;
 				CopyArray(S.Data, UV);
 			}
@@ -348,17 +322,18 @@ public:
 	TArray<FkDOPNode>		kDOPNodes;
 	TArray<FkDOPCollisionTriangle> kDOPCollisionFaces;
 	TLazyArray<FStaticMeshTriangle> Faces;
-	UObject					*f108;
+	UObject					*f108;			//?? collision?
 	int						f124;			//?? FRotator?
 	int						f128;
 	int						f12C;
-	int						Version;		// set to 11 when saving mesh
+	int						InternalVersion;		// set to 11 when saving mesh
 	TArray<float>			f150;
 	int						f15C;
 	UObject					*f16C;
 	bool					UseSimpleLineCollision;
 	bool					UseSimpleBoxCollision;
 	bool					UseSimpleKarmaCollision;
+	bool					UseVertexColor;
 
 	CStaticMesh				*ConvertedMesh;
 
@@ -367,9 +342,7 @@ public:
 		PROP_BOOL(UseSimpleLineCollision)
 		PROP_BOOL(UseSimpleBoxCollision)
 		PROP_BOOL(UseSimpleKarmaCollision)
-		PROP_DROP(UseSimpleRigidBodyCollision)
-		PROP_DROP(BodySetup)				//?? UE3 only
-		PROP_DROP(LODDistanceRatio)
+		PROP_BOOL(UseVertexColor)
 #if LINEAGE2
 		PROP_DROP(bMakeTwoSideMesh)
 #endif
@@ -383,6 +356,9 @@ public:
 		PROP_DROP(LightMapCoordinateIndex)
 		PROP_DROP(LightMapScale)
 #endif // BIOSHOCK
+#if DECLARE_VIEWER_PROPS
+		PROP_INT(InternalVersion)
+#endif // DECLARE_VIEWER_PROPS
 	END_PROP_TABLE
 
 	virtual ~UStaticMesh();
@@ -413,7 +389,7 @@ public:
 		{
 			appNotify("StaticMesh of old version %d/%d has been found", Ar.ArVer, Ar.ArLicenseeVer);
 		skip_remaining:
-			Ar.Seek(Ar.GetStopper());
+			DROP_REMAINING_DATA(Ar);
 			ConvertMesh2();
 			return;
 		}
@@ -487,7 +463,7 @@ public:
 			Ar << f124 << f128 << f12C;
 
 		Ar << Faces;					// can skip this array
-		Ar << Version;
+		Ar << InternalVersion;
 
 #if UT2
 		if (Ar.Game == GAME_UT2)

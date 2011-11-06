@@ -42,7 +42,7 @@ public:
 		Super::Serialize(Ar);
 		Ar << RawFaceFXAnimSetBytes;
 		// the next is RawFaceFXMiniSessionBytes
-		Ar.Seek(Ar.GetStopper());
+		DROP_REMAINING_DATA(Ar);
 		unguard;
 	}
 };
@@ -60,7 +60,7 @@ public:
 		Super::Serialize(Ar);
 		Ar << RawFaceFXActorBytes;
 		// the next is RawFaceFXSessionBytes
-		Ar.Seek(Ar.GetStopper());
+		DROP_REMAINING_DATA(Ar);
 		unguard;
 	}
 };

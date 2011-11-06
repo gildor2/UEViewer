@@ -38,7 +38,7 @@ void CMaterialViewer::ProcessKey(int key)
 void CMaterialViewer::ShowHelp()
 {
 	CObjectViewer::ShowHelp();
-	DrawTextLeft("M           show material graph");
+	DrawKeyHelp("M", "show material graph");
 }
 
 

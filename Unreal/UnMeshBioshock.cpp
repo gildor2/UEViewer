@@ -793,8 +793,7 @@ void UStaticMesh::SerializeBioshockMesh(FArchive &Ar)
 	Ar << IndexStream1;
 	// also: t3_hdrSV < 2 => IndexStream2
 
-	// skip remaining data
-	Ar.Seek(Ar.GetStopper());
+	DROP_REMAINING_DATA(Ar);
 
 	ConvertMesh2();
 

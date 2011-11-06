@@ -988,16 +988,16 @@ static void Display()
 	// display help when needed
 	if (isHelpVisible)
 	{
-		DrawTextLeft(S_RED"Help:\n-----\n"S_WHITE
-					"Esc         exit\n"
-					"H           toggle help\n"
+		DrawTextLeft(S_RED"Keyboard:\n~~~~~~~~~");
+		DrawKeyHelp("Esc",         "exit");
+		DrawKeyHelp("H",           "toggle help");
 #if NEW_SDL
-					"Alt+Enter   toggle fullscreen\n"
+		DrawKeyHelp("Alt+Enter",   "toggle fullscreen");
 #endif
-					"LeftMouse   rotate view\n"
-					"RightMouse  zoom view\n"
-					"MiddleMouse move camera\n"
-					"R           reset view");
+		DrawKeyHelp("LeftMouse",   "rotate view");
+		DrawKeyHelp("RightMouse",  "zoom view");
+		DrawKeyHelp("MiddleMouse", "move camera");
+		DrawKeyHelp("R",           "reset view");
 	}
 	AppDisplayTexts(isHelpVisible);
 	FlushTexts();
@@ -1009,6 +1009,12 @@ static void Display()
 #endif
 
 	unguard;
+}
+
+
+void DrawKeyHelp(const char *Key, const char *Help)
+{
+	DrawTextLeft(S_YELLOW"%-"STR(KEY_HELP_TAB)"s "S_WHITE"%s", Key, Help);
 }
 
 

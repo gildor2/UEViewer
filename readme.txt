@@ -124,11 +124,15 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
-??.11.2011
-- major rewritting of StaticMesh subsystem
-  - implemented visualization and export of LODs ("-lods" switch is now working for
-    StaticMesh too)
+06.11.2011
+- major rewritting of the StaticMesh subsystem
+  - implemented UE3 LOD support:
+    - LODs are exported when "-lods" switch is passed to the command line
+    - LODs can be switched in the viewer with 'L' key
   - using tangents from UE3 mesh instead of calculating them
+  - implemented loading of all UV sets instead of only the first one, can switch them in the
+    viewer with 'U' key
+  - implemented export of all UV sets
 
 21.10.2011
 - implemented support for more than 64k indices (more than 22k triangles) for UE3 StaticMesh
@@ -557,7 +561,7 @@ Changes
 
 07.10.2009
 - implemented OpenGL 2.0 shader support; can be disabled/enabled on-fly with
-  Ctrl+G key (switch to fixed pipeline and back)
+  'Ctrl+G' key (switch to fixed pipeline and back)
 
 29.09.2009
 - implemented StaticMesh export (psk format)
@@ -675,7 +679,7 @@ Changes
 - improved stability of loading bad UE3 animation tracks (GOW1 Geist_Reaver)
 
 08.04.2009
-- implemented bone influence visualization for SkeletalMesh (activated with key I)
+- implemented bone influence visualization for SkeletalMesh (activated with key 'I')
 
 07.04.2009
 - fixed texture mapping for UE3 SkeletalMesh LODs
@@ -720,7 +724,7 @@ Changes
   case of unsupported data format
 
 26.02.2009
-- Ctrl+A key will switch animations sets for current skeletal mesh
+- 'Ctrl+A' key will switch animations sets for current skeletal mesh
 - implemented support for loading XBox360 packages
 
 25.02.2009
@@ -790,7 +794,7 @@ Changes
   and ambient only; switched by Ctrl+L
 
 26.11.2008
-- implemented attachment socket visualization for skeletal mesh (key A)
+- implemented attachment socket visualization for skeletal mesh (key 'A')
 
 25.11.2008
 - additional fix for Lineage LOD models
@@ -873,7 +877,7 @@ Changes
   image viewer/editor software
 
 15.06.2008
-- skeleton dump has been moved to Ctrl+B key (previously was automatically
+- skeleton dump has been moved to 'Ctrl+B' key (previously was automatically
   made on mesh selection)
 - fixed crash when handling broken object imports (import object from package,
   which does not hold it)

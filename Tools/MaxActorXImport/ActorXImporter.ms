@@ -10,6 +10,10 @@
 
  Revision History:
 
+	06.11.2011 v1.17
+	- eliminated error messages when loading psk or psa file with unknown section name (SCALEKEYS etc)
+	- implemented support for pskx with 2 or more UV channels
+
 	03.05.2011 v1.16
 	- improved animation cleanup
 
@@ -86,13 +90,11 @@
 
 /*
 TODO:
-! support SCALEKEYS psa chunk (at least ignore it)
-  - currently error message will appear, may be ignored
 - Menu item for plugin
 - try to not use setBoneEnable false ...
 */
 
-global AX_IMPORTER_VERSION = 15
+global AX_IMPORTER_VERSION = 17
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -267,6 +269,25 @@ if (g_axImporterVersion != AX_IMPORTER_VERSION) then
 --	Service functions
 -------------------------------------------------------------------------------
 
+fn ErrorMessage text =
+(
+	local msg = ("ERROR: " + text + "\n")
+	format "%\n" msg
+	messageBox msg
+	throw msg
+)
+
+
+fn IsEndOfFile bstream =
+(
+	local savePos = ftell bstream
+	fseek bstream 0 #seek_end			-- compute file size
+	local fileSize = ftell bstream
+	fseek bstream savePos #seek_set
+	return (savePos >= fileSize)
+)
+
+
 fn ReadFixedString bstream fixedLen =
 (
 	local str = ""
@@ -282,6 +303,14 @@ fn ReadFixedString bstream fixedLen =
 		if c != 32 then length = i		-- position of last non-space char
 	)
 	substring str 1 length				-- return first "length" chars
+)
+
+fn ReadVector2 bstream =
+(
+	local v = [ 0, 0 ]
+	v.x = ReadFloat bstream
+	v.y = ReadFloat bstream
+	v
 )
 
 fn ReadFVector bstream =
@@ -385,20 +414,6 @@ fn ReadChunkHeader bstream =
 --	format "Read chunk header: %\n" hdr
 	hdr
 )
-
-fn LOAD_CHUNK bstream name =
-(
-	hdr = ReadChunkHeader bstream
-	if (hdr.ChunkID != name) then
-	(
-		local msg = ("ERROR: bad chunk header: \"" + name + "\" expected but \"" + hdr.ChunkID + "\" found\n")
-		format "%\n" msg
-		messageBox msg
-		throw msg
-	)
-	hdr
-)
-
 
 struct VVertex
 (
@@ -717,59 +732,111 @@ fn ImportPskFile filename skelOnly:false =
 
 	--------- Read the file ---------
 
+	local numVerts      = 0
+	local numWedges     = 0
+	local numTris       = 0
+	local numMaterials  = 0
+	local numBones      = 0
+	local numInfluences = 0
+	local numTexCoords  = 1
+
+	local extraUV = #()
+
 	try
 	(
 		file = fopen filename "rb"
 		if file == undefined then return undefined
 
-		-- Header --
-		hdr = LOAD_CHUNK file "ACTRHEAD"
-
-		-- Points --
-		hdr = LOAD_CHUNK file "PNTS0000"
-		numVerts = hdr.DataCount;
-		Verts[numVerts] = [ 0, 0, 0 ]		-- preallocate
-		for i = 1 to numVerts do Verts[i] = ReadFVector file
-
-		-- Wedges --
-		hdr = LOAD_CHUNK file "VTXW0000"
-		numWedges = hdr.DataCount
-		Wedges[numWedges] = VVertex ()		-- preallocate
-		for i = 1 to numWedges do Wedges[i] = ReadVVertex file
-
-		-- Faces --
-		hdr = LOAD_CHUNK file "FACE0000"
-		numTris = hdr.DataCount
-		Tris[numTris] = VTriangle ()		-- preallocate
-		for i = 1 to numTris do Tris[i] = ReadVTriangle file
-
-		-- Materials --
-		hdr = LOAD_CHUNK file "MATT0000"
-		numMaterials = hdr.DataCount
-		Materials[numMaterials] = VMaterial ()	-- preallocate
-		for i = 1 to numMaterials do Materials[i] = ReadVMaterial file
-
-		-- Bones --
-		hdr = LOAD_CHUNK file "REFSKELT"
-		numBones = hdr.DataCount
-		if numBones > 0 then MeshBones[numBones] = VBone () -- preallocate
-		for i = 1 to numBones do
+		-- First header --
+		hdr = ReadChunkHeader file
+		if (hdr.ChunkID != "ACTRHEAD") then
 		(
-			MeshBones[i] = ReadVBone file
---			format "Bone[%] = %\n" (i-1) MeshBones[i].Name
+			ErrorMessage("Bad chunk header: \"" + hdr.ChunkID + "\"")
 		)
-		FixBoneNames MeshBones
 
-		-- Weights --
-		hdr = LOAD_CHUNK file "RAWWEIGHTS"
-		numInfluences = hdr.DataCount
-		if numInfluences > 0 then Infs[numInfluences] = VRawBoneInfluence () -- preallocate
-		for i = 1 to numInfluences do Infs[i] = ReadVRawBoneInfluence file
+		while not IsEndOfFile(file) do
+		(
+			hdr = ReadChunkHeader file
+			case hdr.ChunkID of
+			(
+			-- Points --
+			"PNTS0000":
+				(
+					numVerts = hdr.DataCount
+					Verts[numVerts] = [ 0, 0, 0 ]		-- preallocate
+					for i = 1 to numVerts do Verts[i] = ReadFVector file
+				)
+
+			-- Wedges --
+			"VTXW0000":
+				(
+					numWedges = hdr.DataCount
+					Wedges[numWedges] = VVertex ()		-- preallocate
+					for i = 1 to numWedges do Wedges[i] = ReadVVertex file
+				)
+
+			-- Faces --
+			"FACE0000":
+				(
+					numTris = hdr.DataCount
+					Tris[numTris] = VTriangle ()		-- preallocate
+					for i = 1 to numTris do Tris[i] = ReadVTriangle file
+				)
+
+			-- Materials --
+			"MATT0000":
+				(
+					numMaterials = hdr.DataCount
+					Materials[numMaterials] = VMaterial ()	-- preallocate
+					for i = 1 to numMaterials do Materials[i] = ReadVMaterial file
+				)
+
+			-- Bones --
+			"REFSKELT":
+				(
+					numBones = hdr.DataCount
+					if numBones > 0 then MeshBones[numBones] = VBone () -- preallocate
+					for i = 1 to numBones do
+					(
+						MeshBones[i] = ReadVBone file
+--							format "Bone[%] = %\n" (i-1) MeshBones[i].Name
+					)
+					FixBoneNames MeshBones
+				)
+
+			-- Weights --
+			"RAWWEIGHTS":
+				(
+					numInfluences = hdr.DataCount
+					if numInfluences > 0 then Infs[numInfluences] = VRawBoneInfluence () -- preallocate
+					for i = 1 to numInfluences do Infs[i] = ReadVRawBoneInfluence file
+				)
+
+			-- pskx additional UV set
+			"EXTRAUV0":
+				(
+					numUVVerts = hdr.DataCount
+					if (numUVVerts != numWedges) then ErrorMessage("Bad vertex count for extra UV set")
+					local UV = #()
+					UV[numUVVerts] = [ 0, 0 ]
+					for i = 1 to numUVVerts do UV[i] = ReadVector2 file
+					extraUV[numTexCoords] = UV
+					numTexCoords = numTexCoords + 1
+				)
+
+			default:
+				(
+					-- skip unknown chunk
+					format("Unknown chunk header: \"%\"\n" hdr.ChunkID)
+					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
+				)
+			)
+		)
 	)
 	catch
 	(
 		fclose file
-		messageBox ("Error loading file " + filename)
+		messageBox("Error loading file " + filename)
 		format "FATAL ERROR: %\n" (getCurrentException())
 		return undefined
 	)
@@ -877,22 +944,44 @@ fn ImportPskFile filename skelOnly:false =
 	newMesh = mesh vertices:MaxVerts faces:MaxFaces name:(getFilenameFile filename)
 	-- texturing
 	newMesh.xray = g_seeThru
+	meshop.setNumMaps newMesh (numTexCoords+1)	-- 0 is vertex color, 1+ are textures
 	meshop.setMapSupport newMesh 1 true			-- enable texturemap channel
 	meshop.setNumMapVerts newMesh 1 numWedges	-- set number of texture vertices
 	for i = 1 to numWedges do
 	(
+		-- set texture coordinates
 		w = Wedges[i]
 		meshop.setMapVert newMesh 1 i [ w.U, 1-w.V, 1-w.V ]	-- V coordinate is flipped
 	)
 	for i = 1 to numTris do
 	(
+		-- setup face vertices and material
 		tri = Tris[i]
-		w0 = tri.Wedge0
-		w1 = tri.Wedge1
-		w2 = tri.Wedge2
-		meshop.setMapFace newMesh 1 i [ w1+1, w0+1, w2+1 ]
+		meshop.setMapFace newMesh 1 i [ tri.Wedge1+1, tri.Wedge0+1, tri.Wedge2+1 ]
 		setFaceMatId newMesh i (tri.MatIndex+1)
 	)
+	-- extra UV sets (code is similar to above!)
+	for j = 2 to numTexCoords do
+	(
+		format "Loading UV set #% ...\n" j
+		uvSet = extraUV[j-1]						-- extraUV does not holds 1st UV set
+		meshop.setMapSupport newMesh j true			-- enable texturemap channel
+		meshop.setNumMapVerts newMesh j numWedges	-- set number of texture vertices
+		for i = 1 to numWedges do
+		(
+			-- set texture coordinates
+			uv = uvSet[i]
+			meshop.setMapVert newMesh j i [ uv.x, 1-uv.y, 1-uv.y ]	-- V coordinate is flipped
+		)
+		for i = 1 to numTris do
+		(
+			-- setup face vertices and material
+			tri = Tris[i]
+			meshop.setMapFace newMesh j i [ tri.Wedge1+1, tri.Wedge0+1, tri.Wedge2+1 ]
+			setFaceMatId newMesh j (tri.MatIndex+1)
+		)
+	)
+
 	newMat = multiMaterial numsubs:numMaterials
 	if g_skelOnly then numMaterials = 0		-- do not load materials for this option
 	for i = 1 to numMaterials do
@@ -1067,10 +1156,14 @@ fn ImportPskFile filename skelOnly:false =
 
 fn ImportPsaFile filename trackNum all:false =
 (
-	local Bones = #()
-	      Anims = #()
-	local numBones
-	local numAnims
+	local Bones     = #()
+	      Anims     = #()
+	local AnimFlags = #()
+
+	local numBones  = 0
+	local numAnims  = 0
+
+	local keyPos = 0
 
 	--------- Read the file ---------
 
@@ -1079,42 +1172,73 @@ fn ImportPsaFile filename trackNum all:false =
 		file = fopen filename "rb"
 		if file == undefined then return undefined
 
-		-- Header --
-		hdr = LOAD_CHUNK file "ANIMHEAD"
-
-		-- Bone links --
-		hdr = LOAD_CHUNK file "BONENAMES"
-		numBones = hdr.DataCount
-		if numBones > 0 then Bones[numBones] = VBone ()				-- preallocate
-		for i = 1 to numBones do Bones[i] = ReadVBone file
-
-		-- Animation sequence info --
-		hdr = LOAD_CHUNK file "ANIMINFO"
-		numAnims = hdr.DataCount
-		if numAnims > 0 then Anims[numAnims] = AnimInfoBinary ()	-- preallocate
-		for i = 1 to numAnims do Anims[i] = ReadAnimInfoBinary file
-
-		if trackNum < 0 then
+		-- First header --
+		hdr = ReadChunkHeader file
+		if (hdr.ChunkID != "ANIMHEAD") then
 		(
-			-- information only
-			fclose file
-			return undefined
+			ErrorMessage("Bad chunk header: \"" + hdr.ChunkID + "\"")
 		)
 
-		-- Key data --
-		hdr = LOAD_CHUNK file "ANIMKEYS"
-		posAfterAnims = (ftell file) + hdr.DataCount * hdr.DataSize
-
-		if all then trackNum = 1
-		if trackNum > 1 then
+		while not IsEndOfFile(file) do
 		(
-			keyIndex = 0
-			for i = 1 to trackNum - 1 do keyIndex += Anims[i].NumRawFrames * numBones
-			fseek file (keyIndex * 32) #seek_cur	-- skip
+			hdr = ReadChunkHeader file
+			case hdr.ChunkID of
+			(
+			-- Bone links --
+			"BONENAMES":
+				(
+					numBones = hdr.DataCount
+					if numBones > 0 then Bones[numBones] = VBone ()		-- preallocate
+					for i = 1 to numBones do Bones[i] = ReadVBone file
+				)
+
+			-- Animation sequence info --
+			"ANIMINFO":
+				(
+					numAnims = hdr.DataCount
+					if numAnims > 0 then Anims[numAnims] = AnimInfoBinary ()	-- preallocate
+					for i = 1 to numAnims do Anims[i] = ReadAnimInfoBinary file
+
+					if trackNum < 0 then
+					(
+						-- information only
+						fclose file
+						return undefined
+					)
+				)
+
+			-- Key data --
+			"ANIMKEYS":
+				(
+					-- determine chunk of the file to load later
+					if all then trackNum = 1
+					keyPos = ftell file
+					for i = 1 to trackNum - 1 do
+						keyPos += Anims[i].NumRawFrames * numBones * 32
+					if all then
+						numFrames = hdr.DataCount / Bones.count
+					else
+						numFrames = Anims[trackNum].NumRawFrames
+					-- skip this chunk
+					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
+				)
+
+			--!! psax format: flags
+			"ANIMFLAGS":
+				(
+					numFlags = hdr.DataCount
+					AnimFlags[numFlags] = 0		-- preallocate
+					for i = 1 to numFlags do AnimFlags[i] = ReadByte file
+				)
+
+			default:
+				(
+					-- skip unknown chunk
+					format("Unknown chunk header: \"" + hdr.ChunkID + "\"\n")
+					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
+				)
+			)
 		)
-		track     = Anims[trackNum]
-		numFrames = track.NumRawFrames
-		if all then numFrames = hdr.DataCount / Bones.count
 	)
 	catch
 	(
@@ -1131,7 +1255,13 @@ fn ImportPsaFile filename trackNum all:false =
 		return undefined
 	)
 
-	-- find bones
+	if keyPos == 0 then
+	(
+		format "No ANIMKEYS chunk were found\n"
+		return undefined
+	)
+
+	-- find existing scene bones
 	MaxBones     = #()
 	MeshBoneLink = #()
 	for i = 1 to numBones do
@@ -1162,33 +1292,11 @@ fn ImportPsaFile filename trackNum all:false =
 
 	RemoveAnimation()
 
-	-- extended format (psax)
-	local AnimFlags = #()
-	animKeysPos = ftell file
-	try
-	(
-		fseek file 0 #seek_end				-- compute file size
-		fileSize = ftell file
-		if fileSize > posAfterAnims then	-- has extra space after ANIMKEYS chunk
-		(
-			-- flags
-			fseek file posAfterAnims #seek_set
-			hdr = LOAD_CHUNK file "ANIMFLAGS"
-			numFlags = hdr.DataCount
-			AnimFlags[numFlags] = 0			-- preallocate
-			for i = 1 to numFlags do AnimFlags[i] = ReadByte file
-		)
-	)
-	catch
-	(
-		format "WARNING: not an extended psa file format\n"
-	)
-	fseek file animKeysPos #seek_set
-
 	format "Loading track % (%), % keys\n" trackNum Anims[trackNum].Name (numFrames * Bones.count)
 	firstFrame = #()
 	firstFlag  = (trackNum - 1) * numBones + 1
 	flagCount  = AnimFlags.count
+	fseek file keyPos #seek_set							-- seek to animation keys
 
 	animate on
 	(
@@ -1310,7 +1418,7 @@ fn LoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.16"
+	label     Lbl1 "Version 1.17"
 	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \

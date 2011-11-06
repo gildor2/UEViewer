@@ -44,9 +44,9 @@ void CMeshViewer::Draw3D()
 void CMeshViewer::ShowHelp()
 {
 	CObjectViewer::ShowHelp();
-	DrawTextLeft("N           show normals\n"
-				 "W           toggle wireframe\n"
-				 "M           colorize materials\n");
+	DrawKeyHelp("N", "show normals");
+	DrawKeyHelp("W", "toggle wireframe");
+	DrawKeyHelp("M", "colorize materials");
 }
 
 

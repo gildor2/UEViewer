@@ -340,7 +340,7 @@ public:
 		{
 			appPrintf("UTexture2D %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
 		skip_rest_quiet:
-			Ar.Seek(Ar.GetStopper());
+			DROP_REMAINING_DATA(Ar);
 		}
 
 		unguard;
@@ -363,7 +363,7 @@ public:
 	virtual void Serialize(FArchive &Ar)
 	{
 		Super::Serialize(Ar);
-		Ar.Seek(Ar.GetStopper());
+		DROP_REMAINING_DATA(Ar);
 	}
 };
 
@@ -405,7 +405,7 @@ public:
 		{
 			appPrintf("UTextureCube %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
 		skip_rest_quiet:
-			Ar.Seek(Ar.GetStopper());
+			DROP_REMAINING_DATA(Ar);
 		}
 
 	}
@@ -622,7 +622,7 @@ public:
 			// other fields are not interesting ...
 			unguard;
 		}
-		Ar.Seek(Ar.GetStopper());			//?? drop native data
+		DROP_REMAINING_DATA(Ar);			//?? drop native data
 	}
 
 #if RENDERING
@@ -636,13 +636,13 @@ class UMaterialInstance : public UMaterialInterface
 {
 	DECLARE_CLASS(UMaterialInstance, UMaterialInterface)
 public:
-	UUnrealMaterial	*Parent;			// UMaterialInterface*
+	UUnrealMaterial	*Parent;				// UMaterialInterface*
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Parent)
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(bHasStaticPermutationResource)
-		PROP_DROP(ReferencedTextures)	// this is a textures from Parent plus own overrided textures
+		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overrided textures
 		PROP_DROP(ReferencedTextureGuids)
 		PROP_DROP(ParentLightingGuid)
 	END_PROP_TABLE
@@ -650,7 +650,7 @@ public:
 	virtual void Serialize(FArchive &Ar)
 	{
 		Super::Serialize(Ar);
-		Ar.Seek(Ar.GetStopper());			//?? drop native data
+		DROP_REMAINING_DATA(Ar);			//?? drop native data
 	}
 };
 

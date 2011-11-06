@@ -67,7 +67,7 @@ void CLodMeshViewer::Test()
 
 void CLodMeshViewer::Dump()
 {
-	CObjectViewer::Dump();
+	CMeshViewer::Dump();
 	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
 	appPrintf(
 		"\nLodMesh info:\n=============\n"
@@ -249,11 +249,11 @@ void CLodMeshViewer::Draw3D()
 
 void CLodMeshViewer::ShowHelp()
 {
-	CObjectViewer::ShowHelp();
-	DrawTextLeft("[]          prev/next animation\n"
-				 "<>          prev/next frame\n"
-				 "Space       play animation\n"
-				 "X           play looped animation");
+	CMeshViewer::ShowHelp();
+	DrawKeyHelp("[]",    "prev/next animation");
+	DrawKeyHelp("<>",    "prev/next frame");
+	DrawKeyHelp("Space", "play animation");
+	DrawKeyHelp("X",     "play looped animation");
 }
 
 

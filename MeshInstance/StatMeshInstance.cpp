@@ -53,7 +53,10 @@ void CStatMeshInstance::Draw()
 #else
 		int MaterialIndex = i;
 #endif
-		SetMaterial(Mesh.Sections[MaterialIndex].Material, MaterialIndex, 0);
+		if (UVIndex == 0)
+			SetMaterial(Mesh.Sections[MaterialIndex].Material, MaterialIndex, 0);
+		else
+			BindDefaultMaterial();
 
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;
@@ -69,8 +72,8 @@ void CStatMeshInstance::Draw()
 		{
 			glEnableVertexAttribArray(aTangent);
 			glEnableVertexAttribArray(aBinormal);
-			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[0].Tangent);
-			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[0].Binormal);
+			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Tangent);
+			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Binormal);
 		}
 
 		glEnableClientState(GL_VERTEX_ARRAY);
@@ -78,8 +81,8 @@ void CStatMeshInstance::Draw()
 		glEnableClientState(GL_NORMAL_ARRAY);
 
 		glVertexPointer(3, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Position);
-		glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[0].Normal);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[0].U);
+		glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
+		glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
 		//?? place this code into CIndexBuffer?
 		const CStaticMeshSection &Sec = Mesh.Sections[MaterialIndex];
 		if (Mesh.Indices.Is32Bit())
@@ -111,7 +114,7 @@ void CStatMeshInstance::Draw()
 		{
 			glVertex3fv(Mesh.Verts[i].Position.v);
 			CVec3 tmp;
-			VectorMA(Mesh.Verts[i].Position, 2, Mesh.Verts[i].UV[0].Normal, tmp);
+			VectorMA(Mesh.Verts[i].Position, 2, Mesh.Verts[i].Normal, tmp);
 			glVertex3fv(tmp.v);
 		}
 #if SHOW_TANGENTS
@@ -121,7 +124,7 @@ void CStatMeshInstance::Draw()
 			const CVec3 &v = Mesh.Verts[i].Position;
 			glVertex3fv(v.v);
 			CVec3 tmp;
-			VectorMA(v, 2, Mesh.Verts[i].UV[0].Tangent, tmp);
+			VectorMA(v, 2, Mesh.Verts[i].Tangent, tmp);
 			glVertex3fv(tmp.v);
 		}
 		glColor3f(1, 0, 0.5f);
@@ -130,7 +133,7 @@ void CStatMeshInstance::Draw()
 			const CVec3 &v = Mesh.Verts[i].Position;
 			glVertex3fv(v.v);
 			CVec3 tmp;
-			VectorMA(v, 2, Mesh.Verts[i].UV[0].Binormal, tmp);
+			VectorMA(v, 2, Mesh.Verts[i].Binormal, tmp);
 			glVertex3fv(tmp.v);
 		}
 #endif // SHOW_TANGENTS

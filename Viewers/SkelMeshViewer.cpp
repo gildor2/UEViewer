@@ -245,14 +245,14 @@ void CSkelMeshViewer::Draw2D()
 void CSkelMeshViewer::ShowHelp()
 {
 	CLodMeshViewer::ShowHelp();
-	DrawTextLeft("L           cycle mesh LODs\n"
-				 "S           show skeleton\n"
-				 "B           show bone names\n"
-				 "I           show influences\n"
-				 "A           show attach sockets\n"
-				 "Ctrl+B      dump skeleton to console\n"
-				 "Ctrl+A      cycle mesh animation sets\n"
-				 "Ctrl+T      tag/untag mesh\n");
+	DrawKeyHelp("L",      "cycle mesh LODs");
+	DrawKeyHelp("S",      "show skeleton");
+	DrawKeyHelp("B",      "show bone names");
+	DrawKeyHelp("I",      "show influences");
+	DrawKeyHelp("A",      "show attach sockets");
+	DrawKeyHelp("Ctrl+B", "dump skeleton to console");
+	DrawKeyHelp("Ctrl+A", "cycle mesh animation sets");
+	DrawKeyHelp("Ctrl+T", "tag/untag mesh");
 }
 
 

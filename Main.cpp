@@ -92,7 +92,7 @@ END_CLASS_TABLE
 static void RegisterUnrealClasses3()
 {
 BEGIN_CLASS_TABLE
-	REGISTER_MATERIAL_CLASSES_U3
+//	REGISTER_MATERIAL_CLASSES_U3 -- registered for Bioshock in RegisterCommonUnrealClasses()
 	REGISTER_MESH_CLASSES_U3
 	REGISTER_MESH_CLASSES_U3_A	//!! remove after refactoring
 END_CLASS_TABLE
@@ -835,12 +835,12 @@ int main(int argc, char **argv)
 	if (!md5 && !GExportPskx)
 	{
 		EXPORTER("SkeletalMesh",  "psk",     ExportPsk);
-		EXPORTER("MeshAnimation", "psa",     ExportPsa);
+		EXPORTER("MeshAnimation", "psa",     ExportPsa);		//!! always use psa
 	}
 	else if (!md5) // && GExportPskx
 	{
 		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk);
-		EXPORTER("MeshAnimation", "psax",    ExportPsa);
+		EXPORTER("MeshAnimation", "psax",    ExportPsa);		//!! remove this
 	}
 	else
 	{
@@ -1266,12 +1266,12 @@ void AppDisplayTexts(bool helpVisible)
 	guard(AppDisplayTexts);
 	if (helpVisible)
 	{
-		DrawTextLeft("PgUp/PgDn   browse objects");
-		DrawTextLeft("D           dump info");
+		DrawKeyHelp("PgUp/PgDn", "browse objects");
+		DrawKeyHelp("D",         "dump info");
 #if 0
-		DrawTextLeft("Ctrl+X      export object");
+		DrawKeyHelp("Ctrl+X",    "export object");
 #endif
-		DrawTextLeft("Ctrl+S      take screenshot");
+		DrawKeyHelp("Ctrl+S",    "take screenshot");
 		Viewer->ShowHelp();
 		DrawTextLeft("-----\n");		// divider
 	}

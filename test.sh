@@ -113,7 +113,7 @@ fi
 case "" in
 
 "")
-	gow2 -noanim -meshes -nomesh -dump geargameannex_SF.xxx flamethrower_helmet
+	gow2 -noanim -meshes -nomesh geargameannex_SF.xxx
 #	run1 data/3i/EpicCitadel -ios CastleMap.xxx T_FX_Flare_02
 #	run1 data/2/BattleTerritoryOnline/new2/AnimPackages WP_SMG_P90_NEWPACKAGE.ebkx P90
 #	ib BOSS_10ft_SnS_Thane_SF.xxx

@@ -58,13 +58,13 @@ void CStaticMeshLod::BuildTangents()
 		for (j = 0; j < 3; j++)
 		{
 			CStaticMeshVertex &DW = *V[j];
-			const CVec3 &norm = DW.UV[0].Normal;
+			const CVec3 &norm = DW.Normal;
 			float pos = dot(norm, tang);
 			CVec3 tang2;
 			VectorMA(tang, -pos, norm, tang2);
 			tang2.Normalize();
-			DW.UV[0].Tangent = tang2;
-			cross(DW.UV[0].Normal, DW.UV[0].Tangent, tang2);
+			DW.Tangent = tang2;
+			cross(DW.Normal, DW.Tangent, tang2);
 			tang2.Normalize();
 			if (j == 0)		// do this only once for triangle
 			{
@@ -79,7 +79,7 @@ void CStaticMeshLod::BuildTangents()
 					binormalScale = -1.0f;
 			}
 			tang2.Scale(binormalScale);
-			DW.UV[0].Binormal = tang2;
+			DW.Binormal = tang2;
 		}
 	}
 
