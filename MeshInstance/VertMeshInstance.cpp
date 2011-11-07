@@ -6,6 +6,8 @@
 #include "MeshInstance.h"
 #include "UnMesh.h"
 
+#include "TypeConvert.h"
+
 
 FORCEINLINE const UVertMesh *CVertMeshInstance::GetMesh() const
 {
@@ -82,7 +84,7 @@ void CVertMeshInstance::Draw()
 
 	float backLerp = 1 - frac;
 	CVec3 Scale1, Scale2;
-	Scale1 = Scale2 = (CVec3&)Mesh->MeshScale;
+	Scale1 = Scale2 = CVT(Mesh->MeshScale);
 	Scale1.Scale(backLerp);
 	Scale2.Scale(frac);
 

@@ -6,15 +6,15 @@
 #include "UnMesh.h"
 
 #include "Exporters.h"						// for GetExportPath()
+#include "TypeConvert.h"
 
+#include "SkeletalMesh.h"
 
 // MD5 uses right-hand coordinates, but unreal uses left-hand.
 // When importing PSK into UnrealEd, it mirrors model.
 // Here we performing reverse transformation.
 #define MIRROR_MESH			1
 
-void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
-	CVec3 &DstPos, CQuat &DstQuat);
 
 // function is similar to part of CSkelMeshInstance::SetMesh() and Rune mesh loader
 static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<FMeshBone> &Bones)
@@ -33,8 +33,8 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<FMeshBone> &Bone
 		CVec3 BP;
 		CQuat BO;
 		// get default pose
-		BP = (CVec3&)B.BonePos.Position;
-		BO = (CQuat&)B.BonePos.Orientation;
+		BP = CVT(B.BonePos.Position);
+		BO = CVT(B.BonePos.Orientation);
 #if MIRROR_MESH
 		BP[1] *= -1;							// y
 		BO.y  *= -1;
@@ -89,7 +89,7 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 
 	Ar.Printf(
 		"MD5Version 10\n"
-		"commandline \"Created with Unreal Model Viewer\"\n"
+		"commandline \"Created with UE Viewer\"\n"
 		"\n"
 		"numJoints %d\n"
 		"numMeshes %d\n"
@@ -277,7 +277,7 @@ if (i == 32 || i == 34)
 			{
 				const FVertInfluences &I = Mesh->VertInfluences[Weights[i].InfIndex[j]];
 				CVec3 v;
-				v = (CVec3&)Mesh->Points[I.PointIndex];
+				v = CVT(Mesh->Points[I.PointIndex]);
 #if MIRROR_MESH
 				v[1] *= -1;						// y
 #endif
@@ -300,21 +300,21 @@ if (i == 32 || i == 34)
 }
 
 
-void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
+void ExportMd5Anim(const CAnimSet *Anim, FArchive &Ar)
 {
 	guard(ExportMd5Anim);
 
-	int numBones = Anim->RefBones.Num();
+	int numBones = Anim->TrackBoneNames.Num();
+	UObject *OriginalAnim = Anim->OriginalAnim;
 
 	char basename[512];
-	appSprintf(ARRAY_ARG(basename), "%s/%s", GetExportPath(Anim), Anim->Name);
+	appSprintf(ARRAY_ARG(basename), "%s/%s", GetExportPath(OriginalAnim), OriginalAnim->Name);
 	appMakeDirectory(basename);
 
-	for (int AnimIndex = 0; AnimIndex < Anim->AnimSeqs.Num(); AnimIndex++)
+	for (int AnimIndex = 0; AnimIndex < Anim->Sequences.Num(); AnimIndex++)
 	{
 		int i;
-		const FMeshAnimSeq &S = Anim->AnimSeqs[AnimIndex];
-		const MotionChunk  &M = Anim->Moves[AnimIndex];
+		const CAnimSequence &S = Anim->Sequences[AnimIndex];
 
 		char FileName[512];
 		appSprintf(ARRAY_ARG(FileName), "%s/%s.md5anim", basename, *S.Name);
@@ -323,7 +323,7 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 
 		Ar.Printf(
 			"MD5Version 10\n"
-			"commandline \"Created with Unreal Model Viewer\"\n"
+			"commandline \"Created with UE Viewer\"\n"
 			"\n"
 			"numFrames %d\n"
 			"numJoints %d\n"
@@ -340,8 +340,8 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 		Ar.Printf("hierarchy {\n");
 		for (i = 0; i < numBones; i++)
 		{
-			const FNamedBone &B = Anim->RefBones[i];
-			Ar.Printf("\t\"%s\" %d %d %d\n", *B.Name, (i == 0) ? -1 : B.ParentIndex, 63, i * 6);
+			Ar.Printf("\t\"%s\" %d %d %d\n", *Anim->TrackBoneNames[i], (i == 0) ? -1 : 0, 63, i * 6);
+				// ParentIndex is unknown for UAnimSet, so always write "0"
 				// here: 6 is number of components per frame, 63 = (1<<6)-1 -- flags "all components are used"
 		}
 
@@ -367,7 +367,7 @@ void ExportMd5Anim(const UMeshAnimation *Anim, FArchive &Ar)
 			{
 				CVec3 BP;
 				CQuat BO;
-				GetBonePosition(M.AnimTracks[b], t, S.NumFrames, false, BP, BO);
+				S.Tracks[b].GetBonePosition(t, S.NumFrames, false, BP, BO);
 				if (!b) BO.Conjugate();			// root bone
 #if MIRROR_MESH
 				BO.y  *= -1;

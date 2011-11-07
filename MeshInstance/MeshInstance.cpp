@@ -2,6 +2,7 @@
 #include "UnrealClasses.h"
 #include "UnMesh.h"
 #include "MeshInstance.h"
+#include "TypeConvert.h"
 
 
 void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index, int PolyFlags)
@@ -43,7 +44,7 @@ void CLodMeshInstance::SetMesh(const ULodMesh *Mesh)
 	tmp[1] = 1.0f / Mesh->MeshScale.Y;
 	tmp[2] = 1.0f / Mesh->MeshScale.Z;
 	BaseTransformScaled.axis.PrescaleSource(tmp);
-	BaseTransformScaled.origin = (CVec3&)Mesh->MeshOrigin;
+	BaseTransformScaled.origin = CVT(Mesh->MeshOrigin);
 }
 
 UUnrealMaterial *CLodMeshInstance::GetMaterial(int Index, int *PolyFlags)

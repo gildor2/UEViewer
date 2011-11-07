@@ -8,6 +8,7 @@
 #include "Psk.h"
 #include "Exporters.h"
 
+#include "SkeletalMesh.h"
 #include "StaticMesh.h"
 
 
@@ -18,11 +19,6 @@
 
 //#define REFINE_SKEL				1
 #define MAX_MESHBONES			512
-
-
-//!! remove after refactoring
-void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
-	CVec3 &DstPos, CQuat &DstQuat);
 
 
 static void ExportScript(const USkeletalMesh *Mesh, FArchive &Ar)
@@ -263,14 +259,16 @@ void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
 }
 
 
-void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
+void ExportPsa(const CAnimSet *Anim, FArchive &Ar)
 {
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, BoneHdr, AnimHdr, KeyHdr;
 	int i;
 
-	int numBones = Anim->RefBones.Num();
-	int numAnims = Anim->AnimSeqs.Num();
+	UObject *OriginalAnim = Anim->OriginalAnim;
+
+	int numBones = Anim->TrackBoneNames.Num();
+	int numAnims = Anim->Sequences.Num();
 
 	SAVE_CHUNK(MainHdr, "ANIMHEAD");
 
@@ -281,12 +279,11 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	{
 		FNamedBoneBinary B;
 		memset(&B, 0, sizeof(B));
-		const FNamedBone &S = Anim->RefBones[i];
-		strcpy(B.Name, *S.Name);
-		B.Flags       = S.Flags;		// reserved, but copy ...
-		B.NumChildren = 0;				// unknown here
-		B.ParentIndex = S.ParentIndex;
-//		B.BonePos     =					// unknown here
+		strcpy(B.Name, *Anim->TrackBoneNames[i]);
+		B.Flags       = 0;						// reserved
+		B.NumChildren = 0;						// unknown here
+		B.ParentIndex = (i > 0) ? 0 : -1;		// unknown for UAnimSet
+//		B.BonePos     =							// unknown here
 		Ar << B;
 	}
 
@@ -298,9 +295,9 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	{
 		AnimInfoBinary A;
 		memset(&A, 0, sizeof(A));
-		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
+		const CAnimSequence &S = Anim->Sequences[i];
 		strcpy(A.Name,  *S.Name);
-		strcpy(A.Group, S.Groups.Num() ? *S.Groups[0] : "None");
+		strcpy(A.Group, /*??S.Groups.Num() ? *S.Groups[0] :*/ "None");
 		A.TotalBones          = numBones;
 		A.RootInclude         = 0;				// unused
 		A.KeyCompressionStyle = 0;				// reserved
@@ -323,8 +320,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	bool requirePsax = false;
 	for (i = 0; i < numAnims; i++)
 	{
-		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
-		const MotionChunk  &M = Anim->Moves[i];
+		const CAnimSequence &S = Anim->Sequences[i];
 		for (int t = 0; t < S.NumFrames; t++)
 		{
 			for (int b = 0; b < numBones; b++)
@@ -332,16 +328,11 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 				VQuatAnimKey K;
 				CVec3 BP;
 				CQuat BO;
-				if (M.BoneIndices.Num() <= b || M.BoneIndices[b] != INDEX_NONE)
-				{
-					GetBonePosition(M.AnimTracks[b], t, S.NumFrames, false, BP, BO);
-				}
-				else
-				{
-					// should be handled by ANIMFLAGS section
-					BP.Set(0, 0, 0);
-					BO.Set(0, 0, 0, 1);
-				}
+
+				BP.Set(0, 0, 0);			// GetBonePosition() will not alter BP and BO when animation tracks are not exists
+				BO.Set(0, 0, 0, 1);
+				S.Tracks[b].GetBonePosition(t, S.NumFrames, false, BP, BO);
+
 				K.Position    = (FVector&) BP;
 				K.Orientation = (FQuat&)   BO;
 				K.Time        = 1;
@@ -355,9 +346,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 				keysCount--;
 
 				// check for user error
-				if ((b < M.BoneIndices.Num() && M.BoneIndices[b] == INDEX_NONE) ||
-					(M.AnimTracks[b].KeyPos.Num() == 0) ||
-					(M.AnimTracks[b].KeyQuat.Num() == 0))
+				if ((S.Tracks[b].KeyPos.Num() == 0) || (S.Tracks[b].KeyQuat.Num() == 0))
 					requirePsax = true;
 			}
 		}
@@ -369,7 +358,7 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	//!! note: should use pskx format for mesh - remove psax only
 	if (!GExportPskx)
 	{
-		if (requirePsax) appNotify("Exporting %s'%s': psax is recommended", Anim->GetClassName(), Anim->Name);
+		if (requirePsax) appNotify("Exporting %s'%s': psax is recommended", OriginalAnim->GetClassName(), OriginalAnim->Name);
 		return;
 	}
 
@@ -381,16 +370,13 @@ void ExportPsa(const UMeshAnimation *Anim, FArchive &Ar)
 	SAVE_CHUNK(FlagHdr, "ANIMFLAGS");
 	for (i = 0; i < numAnims; i++)
 	{
-		const FMeshAnimSeq &S = Anim->AnimSeqs[i];
-		const MotionChunk  &M = Anim->Moves[i];
+		const CAnimSequence &S = Anim->Sequences[i];
 		for (int b = 0; b < numBones; b++)
 		{
 			byte flag = 0;
-			if (b < M.BoneIndices.Num() && M.BoneIndices[b] == INDEX_NONE)
-				flag |= PSAX_FLAG_NO_TRANSLATION | PSAX_FLAG_NO_ROTATION;
-			else if (M.AnimTracks[b].KeyPos.Num() == 0)
+			if (S.Tracks[b].KeyPos.Num() == 0)
 				flag |= PSAX_FLAG_NO_TRANSLATION;
-			else if (M.AnimTracks[b].KeyQuat.Num() == 0)
+			if (S.Tracks[b].KeyQuat.Num() == 0)
 				flag |= PSAX_FLAG_NO_ROTATION;
 			Ar << flag;
 			numFlags--;

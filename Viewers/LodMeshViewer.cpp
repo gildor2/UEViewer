@@ -6,6 +6,7 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
+#include "TypeConvert.h"
 
 
 //#define SHOW_BOUNDS		1
@@ -28,7 +29,7 @@ void CLodMeshViewer::Initialize()
 	CVec3 offset;
 	const FBox &B = Mesh->BoundingBox;
 #if 1
-	VectorAdd((CVec3&)B.Min, (CVec3&)B.Max, offset);
+	VectorAdd(CVT(B.Min), CVT(B.Max), offset);
 	offset.Scale(0.5f);
 	LodInst->BaseTransformScaled.TransformPointSlow(offset, offset);
 #else

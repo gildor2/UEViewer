@@ -84,6 +84,7 @@ static void RegisterUnrealClasses2()
 {
 BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U2
+	REGISTER_MESH_CLASSES_U1_A
 END_CLASS_TABLE
 }
 
@@ -116,7 +117,7 @@ static void RegisterUnreal3rdPartyClasses()
 {
 #if UNREAL3
 BEGIN_CLASS_TABLE
-	REGISTER_SWF_CLASSES
+	REGISTER_3RDP_CLASSES
 END_CLASS_TABLE
 #endif
 }
@@ -248,6 +249,30 @@ static void ExportStaticMesh3(const UStaticMesh3 *Mesh, FArchive &Ar)
 {
 	assert(Mesh->ConvertedMesh);
 	ExportStaticMesh(Mesh->ConvertedMesh, Ar);
+}
+
+static void ExportMeshAnimation(const UMeshAnimation *Anim, FArchive &Ar)
+{
+	assert(Anim->ConvertedAnim);
+	ExportPsa(Anim->ConvertedAnim, Ar);
+}
+
+static void ExportAnimSet(const UAnimSet *Anim, FArchive &Ar)
+{
+	assert(Anim->ConvertedAnim);
+	ExportPsa(Anim->ConvertedAnim, Ar);
+}
+
+static void ExportMd5Anim2(const UMeshAnimation *Anim, FArchive &Ar)
+{
+	assert(Anim->ConvertedAnim);
+	ExportMd5Anim(Anim->ConvertedAnim, Ar);
+}
+
+static void ExportMd5Anim3(const UAnimSet *Anim, FArchive &Ar)
+{
+	assert(Anim->ConvertedAnim);
+	ExportMd5Anim(Anim->ConvertedAnim, Ar);
 }
 
 
@@ -834,18 +859,27 @@ int main(int argc, char **argv)
 	// register exporters
 	if (!md5 && !GExportPskx)
 	{
-		EXPORTER("SkeletalMesh",  "psk",     ExportPsk);
-		EXPORTER("MeshAnimation", "psa",     ExportPsa);		//!! always use psa
+		EXPORTER("SkeletalMesh",  "psk",     ExportPsk          );
+		EXPORTER("MeshAnimation", "psa",     ExportMeshAnimation);		//!! always use psa
+#if UNREAL3
+		EXPORTER("AnimSet",       "psa",     ExportAnimSet      );		//!! ..
+#endif
 	}
 	else if (!md5) // && GExportPskx
 	{
-		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk);
-		EXPORTER("MeshAnimation", "psax",    ExportPsa);		//!! remove this
+		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk          );
+		EXPORTER("MeshAnimation", "psax",    ExportMeshAnimation);		//!! remove this
+#if UNREAL3
+		EXPORTER("AnimSet",       "psax",    ExportAnimSet      );		//!! ..
+#endif
 	}
 	else
 	{
 		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
-		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim);	// separate file for each animation track
+		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim2);	// separate file for each animation track
+#if UNREAL3
+		EXPORTER("AnimSet",       NULL,      ExportMd5Anim3);	// ...
+#endif
 	}
 	EXPORTER("VertMesh",      NULL,   Export3D  );				// will generate 2 files
 	EXPORTER("StaticMesh",    "pskx", ExportStaticMesh2);

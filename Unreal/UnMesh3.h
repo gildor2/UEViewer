@@ -230,6 +230,7 @@ public:
 		PROP_DROP(Notifies)
 		PROP_DROP(CompressionScheme)
 		PROP_DROP(bDoNotOverrideCompression)
+		PROP_DROP(CompressCommandletVersion)
 		//!! additive animations
 		PROP_DROP(bIsAdditive)
 		PROP_DROP(AdditiveRefName)
@@ -336,9 +337,9 @@ struct FFrontlinesHashSeq
 };
 #endif // FRONTLINES
 
-class UAnimSet : public UMeshAnimation // real parent is UObject
+class UAnimSet : public UObject
 {
-	DECLARE_CLASS(UAnimSet, UMeshAnimation);
+	DECLARE_CLASS(UAnimSet, UObject);
 public:
 	bool					bAnimRotationOnly;
 	TArray<FName>			TrackBoneNames;
@@ -356,11 +357,14 @@ public:
 	UBioAnimSetData			*m_pBioAnimSetData;
 #endif
 
+	CAnimSet				*ConvertedAnim;
+
 	UAnimSet()
 	:	bAnimRotationOnly(true)
 	{
 		PreviewSkelMeshName.Str = "None";
 	}
+	virtual ~UAnimSet();
 
 	BEGIN_PROP_TABLE
 		PROP_BOOL(bAnimRotationOnly)

@@ -6,7 +6,10 @@
 #include "MeshInstance.h"
 #include "UnMesh.h"
 
+#include "SkeletalMesh.h"
+
 #include "GlWindow.h"
+#include "TypeConvert.h"
 
 #define USE_SSE					1
 
@@ -98,7 +101,7 @@ struct CSkinSection
 int CSkelMeshInstance::GetAnimCount() const
 {
 	if (!Animation) return 0;
-	return Animation->AnimSeqs.Num();
+	return Animation->Sequences.Num();
 }
 
 
@@ -107,7 +110,7 @@ const char *CSkelMeshInstance::GetAnimName(int Index) const
 	guard(CSkelMeshInstance::GetAnimName);
 	if (Index < 0) return "None";
 	assert(Animation);
-	return Animation->AnimSeqs[Index].Name;
+	return Animation->Sequences[Index].Name;
 	unguard;
 }
 
@@ -256,7 +259,7 @@ static void BuildWedges(
 	{
 		const FMeshWedge &SW = MeshWedges[i];
 		CMeshWedge       &DW = Wedges[i];
-		DW.Pos = (CVec3&)MeshPoints[SW.iVertex];
+		DW.Pos = CVT(MeshPoints[SW.iVertex]);
 		DW.U   = SW.TexUV.U;
 		DW.V   = SW.TexUV.V;
 		// DW.Normal and DW.Tangent are unset
@@ -568,8 +571,8 @@ void CSkelMeshInstance::SetMesh(const ULodMesh *LodMesh)
 		CVec3 BP;
 		CQuat BO;
 		// get default pose
-		BP = (CVec3&)B.BonePos.Position;
-		BO = (CQuat&)B.BonePos.Orientation;
+		BP = CVT(B.BonePos.Position);
+		BO = CVT(B.BonePos.Orientation);
 		if (!i) BO.Conjugate();
 
 		CCoords &BC = data->RefCoords;
@@ -617,13 +620,13 @@ if (i == 32 || i == 34)
 		unguard;
 	}
 
-	SetAnim(Mesh->Animation);
+	PlayAnim(NULL);
 
 	unguard;
 }
 
 
-void CSkelMeshInstance::SetAnim(const UMeshAnimation *Anim)
+void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 {
 	if (!pMesh) return;		// mesh is not set yet
 	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(pMesh);
@@ -640,14 +643,13 @@ void CSkelMeshInstance::SetAnim(const UMeshAnimation *Anim)
 		data->BoneMap = INDEX_NONE;		// in a case when bone has no corresponding animation track
 		if (Animation)
 		{
-			for (int j = 0; j < Animation->RefBones.Num(); j++)
-				if (!stricmp(B.Name, Animation->RefBones[j].Name))
+			for (int j = 0; j < Animation->TrackBoneNames.Num(); j++)
+				if (!stricmp(B.Name, Animation->TrackBoneNames[j]))
 				{
 					data->BoneMap = j;
 					break;
 				}
 		}
-
 	}
 
 	ClearSkelAnims();
@@ -725,8 +727,8 @@ int CSkelMeshInstance::FindAnim(const char *AnimName) const
 {
 	if (!Animation || !AnimName)
 		return INDEX_NONE;
-	for (int i = 0; i < Animation->AnimSeqs.Num(); i++)
-		if (!strcmp(Animation->AnimSeqs[i].Name, AnimName))
+	for (int i = 0; i < Animation->Sequences.Num(); i++)
+		if (!strcmp(Animation->Sequences[i].Name, AnimName))
 			return i;
 	return INDEX_NONE;
 }
@@ -743,204 +745,6 @@ void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 /*-----------------------------------------------------------------------------
 	Skeletal animation itself
 -----------------------------------------------------------------------------*/
-
-#endif //?? RENDERING -- close temporarily
-
-#define MAX_LINEAR_KEYS		4
-
-static int FindTimeKey(const TArray<float> &KeyTime, float Frame)
-{
-	guard(FindTimeKey);
-
-	// find index in time key array
-	int NumKeys = KeyTime.Num();
-	// *** binary search ***
-	int Low = 0, High = NumKeys-1;
-	while (Low + MAX_LINEAR_KEYS < High)
-	{
-		int Mid = (Low + High) / 2;
-		if (Frame < KeyTime[Mid])
-			High = Mid-1;
-		else
-			Low = Mid;
-	}
-	// *** linear search ***
-	int i;
-	for (i = Low; i <= High; i++)
-	{
-		float CurrKeyTime = KeyTime[i];
-		if (Frame == CurrKeyTime)
-			return i;		// exact key
-		if (Frame < CurrKeyTime)
-			return (i > 0) ? i - 1 : 0;	// previous key
-	}
-	if (i > High)
-		i = High;
-	return i;
-
-	unguard;
-}
-
-
-// In:  KeyTime, Frame, NumFrames, Loop
-// Out: X - previous key index, Y - next key index, F - fraction between keys
-static void GetKeyParams(const TArray<float> &KeyTime, float Frame, float NumFrames, bool Loop, int &X, int &Y, float &F)
-{
-	guard(GetKeyParams);
-	X = FindTimeKey(KeyTime, Frame);
-	Y = X + 1;
-	int NumTimeKeys = KeyTime.Num();
-	if (Y >= NumTimeKeys)
-	{
-		if (!Loop)
-		{
-			// clamp animation
-			Y = NumTimeKeys - 1;
-			assert(X == Y);
-			F = 0;
-		}
-		else
-		{
-			// loop animation
-			Y = 0;
-			F = (Frame - KeyTime[X]) / (NumFrames - KeyTime[X]);
-		}
-	}
-	else
-	{
-		F = (Frame - KeyTime[X]) / (KeyTime[Y] - KeyTime[X]);
-	}
-	unguard;
-}
-
-
-// not 'static', because used in ExportPsa()
-//?? place function(s) into UMeshAnimation and remove extra #if RENDERING/#endif
-void GetBonePosition(const AnalogTrack &A, float Frame, float NumFrames, bool Loop,
-	CVec3 &DstPos, CQuat &DstQuat)
-{
-	guard(GetBonePosition);
-
-	// fast case: 1 frame only
-	if (A.KeyTime.Num() == 1 || NumFrames == 1 || Frame == 0)
-	{
-		if (A.KeyPos.Num())  DstPos  = (CVec3&)A.KeyPos[0];
-		if (A.KeyQuat.Num()) DstQuat = (CQuat&)A.KeyQuat[0];
-		return;
-	}
-
-	// data for lerping
-	int posX, rotX;			// index of previous frame
-	int posY, rotY;			// index of next frame
-	float posF, rotF;		// fraction between X and Y for lerping
-
-	int NumTimeKeys = A.KeyTime.Num();
-	int NumPosKeys  = A.KeyPos.Num();
-	int NumRotKeys  = A.KeyQuat.Num();
-
-	if (NumTimeKeys)
-	{
-		// here: KeyPos and KeyQuat sizes either equals to 1 or equals to KeyTime size
-		assert(NumPosKeys <= 1 || NumPosKeys == NumTimeKeys);
-		assert(NumRotKeys == 1 || NumRotKeys == NumTimeKeys);
-
-		GetKeyParams(A.KeyTime, Frame, NumFrames, Loop, posX, posY, posF);
-		rotX = posX;
-		rotY = posY;
-		rotF = posF;
-
-		if (NumPosKeys <= 1)
-		{
-			posX = posY = 0;
-			posF = 0;
-		}
-		if (NumRotKeys == 1)
-		{
-			rotX = rotY = 0;
-			rotF = 0;
-		}
-	}
-	else
-	{
-		// empty KeyTime array - keys are evenly spaced on a time line
-		// note: KeyPos and KeyQuat sizes can be different
-#if UNREAL3
-		if (A.KeyPosTime.Num())
-		{
-			GetKeyParams(A.KeyPosTime, Frame, NumFrames, Loop, posX, posY, posF);
-		}
-		else
-#endif
-		if (NumPosKeys > 1)
-		{
-			float Position = Frame / NumFrames * NumPosKeys;
-			posX = appFloor(Position);
-			posF = Position - posX;
-			posY = posX + 1;
-			if (posY >= NumPosKeys)
-			{
-				if (!Loop)
-				{
-					posY = NumPosKeys - 1;
-					posF = 0;
-				}
-				else
-					posY = 0;
-			}
-		}
-		else
-		{
-			posX = posY = 0;
-			posF = 0;
-		}
-
-#if UNREAL3
-		if (A.KeyQuatTime.Num())
-		{
-			GetKeyParams(A.KeyQuatTime, Frame, NumFrames, Loop, rotX, rotY, rotF);
-		}
-		else
-#endif
-		if (NumRotKeys > 1)
-		{
-			float Position = Frame / NumFrames * NumRotKeys;
-			rotX = appFloor(Position);
-			rotF = Position - rotX;
-			rotY = rotX + 1;
-			if (rotY >= NumRotKeys)
-			{
-				if (!Loop)
-				{
-					rotY = NumRotKeys - 1;
-					rotF = 0;
-				}
-				else
-					rotY = 0;
-			}
-		}
-		else
-		{
-			rotX = rotY = 0;
-			rotF = 0;
-		}
-	}
-
-	// get position
-	if (posF > 0)
-		Lerp((CVec3&)A.KeyPos[posX], (CVec3&)A.KeyPos[posY], posF, DstPos);
-	else if (NumPosKeys)		// do not change DstPos when no keys
-		DstPos = (CVec3&)A.KeyPos[posX];
-	// get orientation
-	if (rotF > 0)
-		Slerp((CQuat&)A.KeyQuat[rotX], (CQuat&)A.KeyQuat[rotY], rotF, DstQuat);
-	else if (NumRotKeys)		// do not change DstQuat when no keys
-		DstQuat = (CQuat&)A.KeyQuat[rotX];
-
-	unguard;
-}
-
-
-#if RENDERING //?? open again
 
 #if SHOW_BONE_UPDATES
 static int BoneUpdateCounts[MAX_MESHBONES];
@@ -964,17 +768,15 @@ void CSkelMeshInstance::UpdateSkeleton()
 		if (Stage > 0 && (Chn->AnimIndex1 == ANIM_UNASSIGNED || Chn->BlendAlpha <= 0))
 			continue;
 
-		const MotionChunk  *Motion1  = NULL, *Motion2  = NULL;
-		const FMeshAnimSeq *AnimSeq1 = NULL, *AnimSeq2 = NULL;
+		const CAnimSequence *AnimSeq1 = NULL;
+		const CAnimSequence *AnimSeq2 = NULL;
 		float Time2;
 		if (Chn->AnimIndex1 >= 0)		// not INDEX_NONE or ANIM_UNASSIGNED
 		{
-			Motion1  = &Animation->Moves   [Chn->AnimIndex1];
-			AnimSeq1 = &Animation->AnimSeqs[Chn->AnimIndex1];
+			AnimSeq1 = &Animation->Sequences[Chn->AnimIndex1];
 			if (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
 			{
-				Motion2  = &Animation->Moves   [Chn->AnimIndex2];
-				AnimSeq2 = &Animation->AnimSeqs[Chn->AnimIndex2];
+				AnimSeq2 = &Animation->Sequences[Chn->AnimIndex2];
 				// compute time for secondary channel; always in sync with primary channel
 				Time2 = Chn->Time / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
 			}
@@ -1003,25 +805,19 @@ void CSkelMeshInstance::UpdateSkeleton()
 
 			CVec3 BP;
 			CQuat BO;
+			const VJointPos &JP = Mesh->RefSkeleton[i].BonePos;
+			BP = CVT(JP.Position);			// default position - from bind pose
+			BO = CVT(JP.Orientation);		// ...
+
 			int BoneIndex = data->BoneMap;
-			// check for disabled bone (required for Tribes3)
-			if (Motion1 && Motion1->BoneIndices.Num() && BoneIndex != INDEX_NONE &&
-				Motion1->BoneIndices[BoneIndex] == INDEX_NONE)
-				BoneIndex = INDEX_NONE;		// will use RefSkeleton for this bone
+
 			// compute bone orientation
-			if (Motion1 && BoneIndex != INDEX_NONE)
+			if (AnimSeq1 && BoneIndex != INDEX_NONE)
 			{
 				// get bone position from track
-				if (!Motion2 || Chn->SecondaryBlend != 1.0f)
+				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
 				{
-#if SHOW_BONE_UPDATES
-					BoneUpdateCounts[i]++;
-#endif
-					const VJointPos &JP = Mesh->RefSkeleton[i].BonePos;
-					BP = (CVec3&)JP.Position;		// default position - from bind pose
-					BO = (CQuat&)JP.Orientation;	// ...
-					GetBonePosition(Motion1->AnimTracks[BoneIndex], Chn->Time, AnimSeq1->NumFrames,
-						Chn->Looped, BP, BO);
+					AnimSeq1->Tracks[BoneIndex].GetBonePosition(Chn->Time, AnimSeq1->NumFrames, Chn->Looped, BP, BO);
 //const char *bname = *Mesh->RefSkeleton[i].Name;
 //CQuat BOO = BO;
 //if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
@@ -1032,17 +828,18 @@ void CSkelMeshInstance::UpdateSkeleton()
 //if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
 #endif
 //BO.Normalize();
-				}
-				// blend secondary animation
-				if (Motion2)
-				{
-					CVec3 BP2;
-					CQuat BO2;
 #if SHOW_BONE_UPDATES
 					BoneUpdateCounts[i]++;
 #endif
-					GetBonePosition(Motion2->AnimTracks[BoneIndex], Time2, AnimSeq2->NumFrames,
-						Chn->Looped, BP2, BO2);
+				}
+				// blend secondary animation
+				if (AnimSeq2)
+				{
+					CVec3 BP2;
+					CQuat BO2;
+					BP2 = CVT(JP.Position);		// default position - from bind pose
+					BO2 = CVT(JP.Orientation);	// ...
+					AnimSeq2->Tracks[BoneIndex].GetBonePosition(Time2, AnimSeq2->NumFrames, Chn->Looped, BP2, BO2);
 					if (Chn->SecondaryBlend == 1.0f)
 					{
 						BO = BO2;
@@ -1053,14 +850,16 @@ void CSkelMeshInstance::UpdateSkeleton()
 						Lerp (BP, BP2, Chn->SecondaryBlend, BP);
 						Slerp(BO, BO2, Chn->SecondaryBlend, BO);
 					}
+#if SHOW_BONE_UPDATES
+					BoneUpdateCounts[i]++;
+#endif
 				}
 			}
 			else
 			{
 				// get default bone position
-				const FMeshBone &B = Mesh->RefSkeleton[i];
-				BP = (CVec3&)B.BonePos.Position;
-				BO = (CQuat&)B.BonePos.Orientation;
+//				BP = CVT(JP.Position); -- already set above
+//				BO = CVT(JP.Orientation);
 #if SHOW_ANIM
 				DrawTextLeft(S_YELLOW"Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
 					*Mesh->RefSkeleton[i].Name, VECTOR_ARG(BP), QUAT_ARG(BO));
@@ -1186,9 +985,9 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 		if (!Chn->TweenTime && Chn->AnimIndex1 >= 0)
 		{
 			// update animation time
-			const FMeshAnimSeq *Seq1 = &Animation->AnimSeqs[Chn->AnimIndex1];
-			const FMeshAnimSeq *Seq2 = (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
-				? &Animation->AnimSeqs[Chn->AnimIndex2]
+			const CAnimSequence *Seq1 = &Animation->Sequences[Chn->AnimIndex1];
+			const CAnimSequence *Seq2 = (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
+				? &Animation->Sequences[Chn->AnimIndex2]
 				: NULL;
 
 			float Rate1 = Chn->Rate * Seq1->Rate;
@@ -1353,11 +1152,11 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 		Rate      = 0;
 		return;
 	}
-	const FMeshAnimSeq &AnimSeq = Animation->AnimSeqs[Chn.AnimIndex1];
-	AnimName  = AnimSeq.Name;
+	const CAnimSequence &Seq = Animation->Sequences[Chn.AnimIndex1];
+	AnimName  = Seq.Name;
 	Frame     = Chn.Time;
-	NumFrames = AnimSeq.NumFrames;
-	Rate      = AnimSeq.Rate * Chn.Rate;
+	NumFrames = Seq.NumFrames;
+	Rate      = Seq.Rate * Chn.Rate;
 
 	unguard;
 }

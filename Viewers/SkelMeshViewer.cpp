@@ -5,7 +5,11 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
-#include "UnMesh.h"
+
+#include "UnMesh.h"			//??
+#include "UnMesh2.h"		// for UMeshAnimation
+#include "UnMesh3.h"		// for UAnimSet
+#include "SkeletalMesh.h"
 
 
 #define TEST_ANIMS			1
@@ -16,6 +20,8 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
+	if (Mesh->Animation)		//?? UE2 only
+		SkelInst->SetAnim(Mesh->Animation->ConvertedAnim);
 	Inst = SkelInst;
 	Initialize();
 #if 0
@@ -95,28 +101,6 @@ void CSkelMeshViewer::Test()
 						appNotify("rigid sec[%d,%d]: fE=%d", i, j, S.fE);
 				}
 			}
-		}
-	}
-
-	if (Mesh->Animation)
-	{
-		UMeshAnimation *Anim = Mesh->Animation;
-#ifndef SPLINTER_CELL
-		if (Anim->Version) appNotify("Anim.Version = %d", Anim->Version);
-#endif
-		if (Anim->Moves.Num() != Anim->AnimSeqs.Num())
-			appNotify("Moves.Num=%d  !=  AnimSeqs.Num=%d", Anim->Moves.Num(), Anim->AnimSeqs.Num());
-		for (i = 0; i < Anim->AnimSeqs.Num(); i++)
-		{
-			const FMeshAnimSeq &S = Anim->AnimSeqs[i];
-			if (S.StartFrame != 0) appNotify("Anim[%d=%s]: StartFrame=%d", i, *S.Name, S.StartFrame);
-		}
-		for (i = 0; i < Anim->Moves.Num(); i++)
-		{
-			const MotionChunk &M = Anim->Moves[i];
-			for (int j = 0; j < M.BoneIndices.Num(); j++)
-				if (M.BoneIndices[j] != j && M.BoneIndices[j] != INDEX_NONE)
-					appNotify("anim[%d]: idx %d != %d", i, j, M.BoneIndices[j]);
 		}
 	}
 }
@@ -331,11 +315,11 @@ void CSkelMeshViewer::ProcessKey(int key)
 
 	case 'a'|KEY_CTRL:
 		{
-			const UMeshAnimation *Anim = MeshInst->GetAnim();
+			const CAnimSet *PrevAnim = MeshInst->GetAnim();
 			// find next animation set (code is similar to PAGEDOWN handler)
 			int looped = 0;
 			int ObjIndex = -1;
-			bool found = (Anim == NULL);				// NULL -> any
+			bool found = (PrevAnim == NULL);			// whether previous AnimSet was found; NULL -> any
 			while (true)
 			{
 				ObjIndex++;
@@ -346,16 +330,24 @@ void CSkelMeshViewer::ProcessKey(int key)
 					if (looped > 1) break;				// no other objects
 				}
 				const UObject *Obj = UObject::GObjObjects[ObjIndex];
-				if (Obj == Anim)
+				const CAnimSet *Anim = NULL;
+				if (Obj->IsA("MeshAnimation"))			// UE1,UE2
+					Anim = static_cast<const UMeshAnimation*>(Obj)->ConvertedAnim;
+				else if (Obj->IsA("AnimSet"))			// UE3
+					Anim = static_cast<const UAnimSet*>(Obj)->ConvertedAnim;
+				else
+					continue;
+
+				if (Anim == PrevAnim)
 				{
 					if (found) break;					// loop detected
 					found = true;
 					continue;
 				}
-				if (found && Obj->IsA("MeshAnimation"))
+
+				if (found && Anim)
 				{
 					// found desired animation set
-					const UMeshAnimation* Anim = static_cast<const UMeshAnimation*>(Obj);
 					MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
 					for (int i = 0; i < Meshes.Num(); i++)
 					{

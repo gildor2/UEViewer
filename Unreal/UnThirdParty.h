@@ -66,16 +66,15 @@ public:
 };
 
 
-#endif // UNREAL3
-
-
 // UGFxMovieInfo is DC Universe Online USwfMovie analogue
 
-#define REGISTER_SWF_CLASSES		\
+#define REGISTER_3RDP_CLASSES		\
 	REGISTER_CLASS(USwfMovie)		\
 	REGISTER_CLASS_ALIAS(USwfMovie, UGFxMovieInfo) \
 	REGISTER_CLASS(UFaceFXAnimSet)	\
 	REGISTER_CLASS(UFaceFXAsset)
 
+
+#endif // UNREAL3
 
 #endif // __UNTHIRDPARTY_H__

@@ -7,8 +7,8 @@
 class UVertMesh;
 class ULodMesh;
 class USkeletalMesh;
-class UMeshAnimation;
 
+class CAnimSet;
 class CStaticMesh;
 
 
@@ -191,7 +191,7 @@ public:
 	}
 
 	virtual void SetMesh(const ULodMesh *Mesh);
-	void SetAnim(const UMeshAnimation *Anim);
+	void SetAnim(const CAnimSet *Anim);
 	virtual ~CSkelMeshInstance();
 	void ClearSkelAnims();
 //??	void StopAnimating(bool ClearAllButBase);
@@ -243,13 +243,13 @@ public:
 	virtual const char *GetAnimName(int Index) const;
 	virtual void UpdateAnimation(float TimeDelta);
 
-	const UMeshAnimation *GetAnim() const
+	const CAnimSet *GetAnim() const
 	{
 		return Animation;
 	}
 
 protected:
-	const UMeshAnimation *Animation;
+	const CAnimSet		 *Animation;
 	// mesh data
 	byte				 *DataBlock;// all following data is resided here
 	struct CMeshBoneData *BoneData;

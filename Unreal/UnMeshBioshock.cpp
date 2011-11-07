@@ -8,6 +8,7 @@
 
 #include "UnMaterial2.h"		//!! engine dependency
 
+#include "TypeConvert.h"		//?? for CQuat.Conjugate() only?
 
 #if BIOSHOCK
 
@@ -660,7 +661,7 @@ void USkeletalMesh::PostLoadBioshockMesh()
 			B.BonePos.Orientation = (FQuat&)   t.m_rotation;
 			B.BonePos.Position    = (FVector&) t.m_translation;
 			B.BonePos.Orientation.W *= -1;
-//			if (!i) ((CQuat&)B.BonePos.Orientation).Conjugate();	-- not needed for Bioshock 1
+//			if (!i) (CVT(B.BonePos.Orientation)).Conjugate();	-- not needed for Bioshock 1
 		}
 	}
 	else if (!strcmp(ClassName, "ap5AnimationPackageRoot"))
@@ -680,7 +681,7 @@ void USkeletalMesh::PostLoadBioshockMesh()
 			B.BonePos.Orientation = (FQuat&)   t.m_rotation;
 			B.BonePos.Position    = (FVector&) t.m_translation;
 			B.BonePos.Orientation.W *= -1;
-			if (!i) ((CQuat&)B.BonePos.Orientation).Conjugate();	// needed for Bioshock 2
+			if (!i) (CVT(B.BonePos.Orientation)).Conjugate();	// needed for Bioshock 2
 		}
 	}
 	else

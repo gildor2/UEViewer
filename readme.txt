@@ -70,7 +70,7 @@ To use these exporters you should add "-md5" key to a command line options.
 MeshAnimation/AnimSet objects are exported as multiple md5anim files (one
 file per animation track). "bounds" section in md5anim is filled with dummy
 data. Also, "hierarchy" section does not contain real skeleton hierarchy,
-because Unreal Engine uses hierarchy from mesh, not from animations. Some md5
+because Unreal engine uses hierarchy from mesh, not from animations. Some md5
 viewers/importers does require md5anim hierarchy, some - does not.
 
 There is a 3ds Max md5mesh/md5anim importer script available on umodel forum:
@@ -93,7 +93,7 @@ Notes about material export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Materials are exported in a custom format. File extension is ".mat". At the
 current moment, this format is supported by my ActorX Importer plugin only.
-Unreal Engine materials are very complex, it's hard to separate a few channels
+Unreal engine materials are very complex, it's hard to separate a few channels
 (diffuse, specular, bump etc) from it. Umodel tries to do this by using some
 heuristics. Umodel will never export full materials (GLSL script etc). Do not
 expect too much from this.
@@ -851,7 +851,7 @@ Changes
 - implemented Tribes: Vengeance support
 
 09.10.2008
-- implemented support for Unreal Engine 1 UMesh class
+- implemented support for Unreal engine 1 UMesh class
 - improved UE1 LodMesh support
 
 08.10.2008

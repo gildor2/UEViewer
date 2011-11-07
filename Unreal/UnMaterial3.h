@@ -774,8 +774,6 @@ public:
 
 #endif // DCU_ONLINE
 
-#endif // UNREAL3
-
 
 #define REGISTER_MATERIAL_CLASSES_U3	\
 	REGISTER_CLASS_ALIAS(UMaterial3, UMaterial) \
@@ -795,5 +793,8 @@ public:
 	REGISTER_ENUM(ETextureAddress)		\
 	REGISTER_ENUM(EBlendMode)			\
 	REGISTER_ENUM(EMobileSpecularMask)
+
+
+#endif // UNREAL3
 
 #endif // __UNMATERIAL3_H__

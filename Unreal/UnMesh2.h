@@ -15,6 +15,230 @@ UE2 CLASS TREE:
 -----------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------
+	UMeshAnimation class
+-----------------------------------------------------------------------------*/
+
+// Additions: KeyPos array may be empty - in that case bone will be rotated only, no translation will be performed
+
+struct AnalogTrack
+{
+	unsigned		Flags;					// reserved
+	TArray<FQuat>	KeyQuat;				// Orientation key track (count = 1 or KeyTime.Count)
+	TArray<FVector>	KeyPos;					// Position key track (count = 1 or KeyTime.Count)
+	TArray<float>	KeyTime;				// For each key, time when next key takes effect (measured from start of track)
+
+#if SPLINTER_CELL
+	void SerializeSCell(FArchive &Ar);
+#endif
+#if SWRC
+	void SerializeSWRC(FArchive &Ar);
+#endif
+#if UC1
+	void SerializeUC1(FArchive &Ar);
+#endif
+
+	friend FArchive& operator<<(FArchive &Ar, AnalogTrack &A)
+	{
+		guard(AnalogTrack<<);
+#if SPLINTER_CELL
+		if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
+		{
+			A.SerializeSCell(Ar);
+			return Ar;
+		}
+#endif // SPLINTER_CELL
+#if SWRC
+		if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 141)
+		{
+			A.SerializeSWRC(Ar);
+			return Ar;
+		}
+#endif // SWRC
+#if UC1
+		if (Ar.Game == GAME_UC1 && Ar.ArLicenseeVer >= 28)
+		{
+			A.SerializeUC1(Ar);
+			return Ar;
+		}
+#endif
+#if UC2
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 147)
+		{
+			Ar << A.Flags; // other data serialized in a different way
+			return Ar;
+		}
+#endif // UC2
+		return Ar << A.Flags << A.KeyQuat << A.KeyPos << A.KeyTime;
+		unguard;
+	}
+};
+
+
+#if UNREAL25
+void SerializeFlexTracks(FArchive &Ar, struct MotionChunk &M);
+#endif
+#if TRIBES3
+void FixTribesMotionChunk(struct MotionChunk &M);
+#endif
+
+// Individual animation; subgroup of bones with compressed animation.
+// Note: SplinterCell uses MotionChunkFixedPoint and MotionChunkFloat structures
+struct MotionChunk
+{
+	FVector					RootSpeed3D;	// Net 3d speed.
+	float					TrackTime;		// Total time (Same for each track.)
+	int						StartBone;		// If we're a partial-hierarchy-movement, this is the lowest bone.
+	unsigned				Flags;			// Reserved; equals to UMeshAnimation.Version in UE2.5
+
+	TArray<int>				BoneIndices;	// Refbones number of Bone indices (-1 or valid one) to fast-find tracks for a particular bone.
+	// Frame-less, compressed animation tracks. NumBones times NumAnims tracks in total
+	TArray<AnalogTrack>		AnimTracks;		// Compressed key tracks (one for each bone)
+	AnalogTrack				RootTrack;		// May or may not be used; actual traverse-a-scene root tracks for use
+	// with cutscenes / special physics modes, in addition to the regular skeletal root track.
+
+	friend FArchive& operator<<(FArchive &Ar, MotionChunk &M)
+	{
+		guard(MotionChunk<<);
+		Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+#if SPLINTER_CELL || LINEAGE2
+		// possibly M.Flags != 0, skip FlexTrack serializer
+		if (Ar.Game == GAME_SplinterCell || Ar.Game == GAME_Lineage2)
+			return Ar;
+#endif
+#if UNREAL25
+		if (M.Flags >= 3)
+			SerializeFlexTracks(Ar, M);		//!! make a method
+#endif
+#if TRIBES3
+		if (Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4)
+			FixTribesMotionChunk(M);		//!! make a method
+#endif
+		return Ar;
+		unguard;
+	}
+};
+
+
+// Named bone for the animating skeleton data.
+// Note: bone set may slightly differ in USkeletalMesh and UMeshAnimation objects (missing bones, different order)
+// - should compute a map from one bone set to another; skeleton hierarchy should be taken from mesh (may differ
+// too)
+struct FNamedBone
+{
+	FName			Name;					// Bone's name (== single 32-bit index to name)
+	unsigned		Flags;					// reserved
+	int				ParentIndex;			// same meaning as FMeshBone.ParentIndex; when drawing model, should
+											// use bone info from mesh, not from animation (may be different)
+
+	friend FArchive& operator<<(FArchive &Ar, FNamedBone &F)
+	{
+		Ar << F.Name << F.Flags << F.ParentIndex;
+#if UC2
+		if (Ar.Engine() == GAME_UE2X)
+		{
+			FVector unused1;				// strange code: serialized into stack and dropped
+			byte    unused2;
+			if (Ar.ArVer >= 130) Ar << unused1;
+			if (Ar.ArVer >= 132) Ar << unused2;
+		}
+#endif // UC2
+		return Ar;
+	}
+};
+
+/*
+ * Possible versions:
+ *	0			UT2003, UT2004
+ *	1			Lineage2
+ *	4			UE2Runtime, UC2, Harry Potter and the Prisoner of Azkaban
+ *	6			Tribes3, Bioshock
+ *	1000		SplinterCell
+ *	2000		SplinterCell2
+ */
+
+class UMeshAnimation : public UObject
+{
+	DECLARE_CLASS(UMeshAnimation, UObject);
+public:
+	int						Version;		// always zero?
+	TArray<FNamedBone>		RefBones;
+	TArray<MotionChunk>		Moves;
+	TArray<FMeshAnimSeq>	AnimSeqs;
+
+	CAnimSet				*ConvertedAnim;
+
+	virtual ~UMeshAnimation();
+
+#if SPLINTER_CELL
+	void SerializeSCell(FArchive &Ar);
+#endif
+#if UNREAL1
+	void Upgrade();
+#endif
+
+#if LINEAGE2
+	// serialize TRoughArray<MotionChunk> into TArray<MotionChunk>
+	void SerializeLineageMoves(FArchive &Ar);
+#endif
+#if SWRC
+	void SerializeSWRCAnims(FArchive &Ar);
+#endif
+#if UC2
+	bool SerializeUE2XMoves(FArchive &Ar);
+#endif
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UMeshAnimation.Serialize);
+		Super::Serialize(Ar);
+		if (Ar.Game >= GAME_UE2)
+			Ar << Version;					// no such field in UE1
+		Ar << RefBones;
+#if SWRC
+		if (Ar.Game == GAME_RepCommando)
+		{
+			SerializeSWRCAnims(Ar);
+			ConvertAnims();
+			return;
+		}
+#endif // SWRC
+#if UC2
+		if (Ar.Engine() == GAME_UE2X)
+		{
+			if (!SerializeUE2XMoves(Ar))
+			{
+				// avoid assert
+				DROP_REMAINING_DATA(Ar);
+				ConvertAnims();
+				return;
+			}
+		}
+		else
+#endif // UC2
+#if LINEAGE2
+		if (Ar.Game == GAME_Lineage2)
+			SerializeLineageMoves(Ar);
+		else
+#endif // LINEAGE2
+			Ar << Moves;
+		Ar << AnimSeqs;
+#if SPLINTER_CELL
+		if (Ar.Game == GAME_SplinterCell)
+			SerializeSCell(Ar);
+#endif
+#if UNREAL1
+		if (Ar.Engine() == GAME_UE1) Upgrade();		// UE1 code
+#endif
+		ConvertAnims();
+
+		unguard;
+	}
+
+	void ConvertAnims();
+};
+
+
+/*-----------------------------------------------------------------------------
 	UStaticMesh class
 -----------------------------------------------------------------------------*/
 
@@ -490,8 +714,46 @@ public:
 };
 
 
+/*-----------------------------------------------------------------------------
+	Other games
+-----------------------------------------------------------------------------*/
+
+#if BIOSHOCK
+
+class UAnimationPackageWrapper : public UObject
+{
+	DECLARE_CLASS(UAnimationPackageWrapper, UObject);
+public:
+	TArray<byte>			HavokData;
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		guard(UAnimationPackageWrapper::Serialize);
+		Super::Serialize(Ar);
+		TRIBES_HDR(Ar, 0);
+		Ar << HavokData;
+		Process();
+		unguard;
+	}
+
+	void Process();
+};
+
+#endif // BIOSHOCK
+
+
+
+#define REGISTER_MESH_CLASSES_U1	\
+	REGISTER_CLASS_ALIAS(UMeshAnimation, UAnimation)
+
 #define REGISTER_MESH_CLASSES_U2	\
-	REGISTER_CLASS(UStaticMesh)	\
+	REGISTER_CLASS(UMeshAnimation)	\
+	REGISTER_CLASS(UStaticMesh)		\
 	REGISTER_CLASS(FStaticMeshMaterial)
+
+#define REGISTER_MESH_CLASSES_BIO	\
+	/*REGISTER_CLASS(USharedSkeletonDataMetadata)*/ \
+	REGISTER_CLASS(UAnimationPackageWrapper)
+
 
 #endif // __UNMESH2_H__

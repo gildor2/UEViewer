@@ -6,7 +6,10 @@
 #include "UnPackage.h"			// for loading texures by name (Rune) and checking real class name
 
 #include "UnMaterial2.h"
+
+#include "SkeletalMesh.h"
 #include "StaticMesh.h"
+#include "TypeConvert.h"
 
 
 /*-----------------------------------------------------------------------------
@@ -475,6 +478,57 @@ void UVertMesh::SerializeVertMesh1(FArchive &Ar)
 /*-----------------------------------------------------------------------------
 	UMeshAnimation class
 -----------------------------------------------------------------------------*/
+
+UMeshAnimation::~UMeshAnimation()
+{
+	delete ConvertedAnim;
+}
+
+
+void UMeshAnimation::ConvertAnims()
+{
+	guard(UMeshAnimation::ConvertAnims);
+
+	int i, j;
+
+	CAnimSet *AnimSet = new CAnimSet(this);
+	ConvertedAnim = AnimSet;
+
+	// TrackBoneNames
+	int numBones = RefBones.Num();
+	AnimSet->TrackBoneNames.Add(numBones);
+	for (i = 0; i < numBones; i++)
+		AnimSet->TrackBoneNames[i] = RefBones[i].Name;
+
+	// Sequences
+	int numSeqs = AnimSeqs.Num();
+	AnimSet->Sequences.Add(numSeqs);
+	for (i = 0; i < numSeqs; i++)
+	{
+		CAnimSequence &S = AnimSet->Sequences[i];
+		const FMeshAnimSeq &Src = AnimSeqs[i];
+		const MotionChunk  &M   = Moves[i];
+
+		// attributes
+		S.Name      = Src.Name;
+		S.NumFrames = Src.NumFrames;
+		S.Rate      = Src.Rate;
+
+		// S.Tracks
+		S.Tracks.Add(numBones);
+		for (j = 0; j < numBones; j++)
+		{
+			CAnimTrack &T = S.Tracks[j];
+			const AnalogTrack &A = M.AnimTracks[j];
+			CopyArray(T.KeyPos,  CVT(A.KeyPos));
+			CopyArray(T.KeyQuat, CVT(A.KeyQuat));
+			CopyArray(T.KeyTime, A.KeyTime);
+		}
+	}
+
+	unguard;
+}
+
 
 #if SPLINTER_CELL
 
@@ -1023,8 +1077,6 @@ template<class T> inline TRawArrayUC2<T>& ToRawArrayUC2(TArray<T> &Arr)
 
 #if UNREAL25
 
-//?? possibly, use FlexTrack directly in SkelMeshInstance - can derive AnalogTrack from FlexTrackBase
-//?? and implement GetBonePosition() as its virtual method ...
 struct FlexTrackBase
 {
 	virtual ~FlexTrackBase()
@@ -1316,18 +1368,11 @@ void FixTribesMotionChunk(MotionChunk &M)
 		AnalogTrack &A = M.AnimTracks[i];
 		if (A.Flags & 0x1000)
 		{
-			if (!M.BoneIndices.Num())
-			{
-				// create BoneIndices
-				M.BoneIndices.Empty(numBones);
-				for (int j = 0; j < numBones; j++)
-					M.BoneIndices.AddItem(j);
-			}
 			// bone overrided by Impersonator LipSinc
-//			A.KeyQuat.Empty();
-//			A.KeyPos.Empty();
-//			A.KeyTime.Empty();
-			M.BoneIndices[i] = INDEX_NONE;
+			// remove translation and rotation tracks (they are not correct anyway)
+			A.KeyQuat.Empty();
+			A.KeyPos.Empty();
+			A.KeyTime.Empty();
 		}
 	}
 }
@@ -1439,7 +1484,6 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 		int numFTracks = M.FlexTracks.Num();
 		if (numFTracks)
 		{
-			DM.BoneIndices.Add(numFTracks);
 			DM.AnimTracks.Add(numFTracks);
 			for (int ti = 0; ti < numFTracks; ti++)
 			{
@@ -1449,7 +1493,7 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 					Track->Serialize2(Reader, Ar);
 					Track->Decompress(DM.AnimTracks[ti]);
 				}
-				DM.BoneIndices[ti] = Track ? ti : INDEX_NONE;
+//				else -- keep empty track, will be ignored by animation system
 			}
 		}
 	}
@@ -1500,6 +1544,238 @@ void UMeshAnimation::Upgrade()
 /*-----------------------------------------------------------------------------
 	USkeletalMesh class
 -----------------------------------------------------------------------------*/
+
+#if SWRC
+
+struct FAttachSocketSWRC
+{
+	FName		Alias;
+	FName		BoneName;
+	FMatrix		Matrix;
+
+	friend FArchive& operator<<(FArchive &Ar, FAttachSocketSWRC &S)
+	{
+		return Ar << S.Alias << S.BoneName << S.Matrix;
+	}
+};
+
+struct FMeshAnimLinkSWRC
+{
+	int			Flags;
+	UMeshAnimation *Anim;
+
+	friend FArchive& operator<<(FArchive &Ar, FMeshAnimLinkSWRC &S)
+	{
+		if (Ar.ArVer >= 151)
+			Ar << S.Flags;
+		else
+			S.Flags = 1;
+		return Ar << S.Anim;
+	}
+};
+
+#endif // SWRC
+
+
+void USkeletalMesh::Serialize(FArchive &Ar)
+{
+	guard(USkeletalMesh::Serialize);
+
+#if UNREAL1
+	if (Ar.Engine() == GAME_UE1)
+	{
+		SerializeSkelMesh1(Ar);
+		return;
+	}
+#endif
+#if UNREAL3
+	if (Ar.Game >= GAME_UE3)
+	{
+		SerializeSkelMesh3(Ar);
+		return;
+	}
+#endif
+#if BIOSHOCK
+	if (Ar.Game == GAME_Bioshock)
+	{
+		SerializeBioshockMesh(Ar);
+		return;
+	}
+#endif
+
+	Super::Serialize(Ar);
+#if SPLINTER_CELL
+	if (Ar.Game == GAME_SplinterCell)
+	{
+		SerializeSCell(Ar);
+		return;
+	}
+#endif // SPLINTER_CELL
+#if TRIBES3
+	TRIBES_HDR(Ar, 4);
+#endif
+	Ar << Points2 << RefSkeleton;
+#if SWRC
+	if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 142)
+	{
+		for (int i = 0; i < RefSkeleton.Num(); i++)
+		{
+			FMeshBone &B = RefSkeleton[i];
+			B.BonePos.Orientation.X *= -1;
+			B.BonePos.Orientation.Y *= -1;
+			B.BonePos.Orientation.Z *= -1;
+		}
+	}
+	if (Ar.Game == GAME_RepCommando && Version >= 5)
+	{
+		TArray<FMeshAnimLinkSWRC> Anims;
+		Ar << Anims;
+		if (Anims.Num() >= 1) Animation = Anims[0].Anim;
+	}
+	else
+#endif // SWRC
+		Ar << Animation;
+	Ar << SkeletalDepth << WeightIndices << BoneInfluences;
+#if SWRC
+	if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 140)
+	{
+		TArray<FAttachSocketSWRC> Sockets;
+		Ar << Sockets;	//?? convert
+	}
+	else
+#endif // SWRC
+	{
+		Ar << AttachAliases << AttachBoneNames << AttachCoords;
+	}
+	if (Version <= 1)
+	{
+//		appNotify("SkeletalMesh of version %d\n", Version);
+		TArray<FLODMeshSection> tmp1, tmp2;
+		TArray<word> tmp3;
+		Ar << tmp1 << tmp2 << tmp3;
+		// copy and convert data from old mesh format
+		UpgradeMesh();
+	}
+	else
+	{
+#if UC2
+		if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 136)
+		{
+			int f338;
+			Ar << f338;
+		}
+#endif // UC2
+#if SWRC
+		if (Ar.Game == GAME_RepCommando)
+		{
+			int f1C4;
+			if (Version >= 6) Ar << f1C4;
+			Ar << LODModels;
+			if (Version < 5) Ar << f224;
+			Ar << Points << Wedges << Triangles << VertInfluences;
+			Ar << CollapseWedge << f1C8;
+			goto skip_remaining;
+		}
+#endif // SWRC
+		Ar << LODModels << f224 << Points << Wedges << Triangles << VertInfluences;
+		Ar << CollapseWedge << f1C8;
+	}
+
+#if TRIBES3
+	if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 3)
+	{
+	#if 0
+		// it looks like format of following data was chenged sinse
+		// data was prepared, and game executeble does not load these
+		// LazyArrays (otherwise error should occur) -- so we are
+		// simply skipping these arrays
+		TLazyArray<FT3Unk1>    unk1;
+		TLazyArray<FMeshWedge> unk2;
+		TLazyArray<word>       unk3;
+		Ar << unk1 << unk2 << unk3;
+	#else
+		SkipLazyArray(Ar);
+		SkipLazyArray(Ar);
+		SkipLazyArray(Ar);
+	#endif
+		// nothing interesting below ...
+		goto skip_remaining;
+	}
+#endif // TRIBES3
+#if BATTLE_TERR
+	if (Ar.Game == GAME_BattleTerr) goto skip_remaining;
+#endif
+#if UC2
+	if (Ar.Engine() == GAME_UE2X) goto skip_remaining;
+#endif
+
+#if LINEAGE2
+	if (Ar.Game == GAME_Lineage2)
+	{
+		int unk1, unk3, unk4;
+		TArray<float> unk2;
+		if (Ar.ArVer >= 118 && Ar.ArLicenseeVer >= 3)
+			Ar << unk1;
+		if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x12)
+			Ar << unk2;
+		if (Ar.ArVer >= 120)
+			Ar << unk3;		// AuthKey ?
+		if (Ar.ArLicenseeVer >= 0x23)
+			Ar << unk4;
+		RecreateMeshFromLOD();
+		return;
+	}
+#endif // LINEAGE2
+
+	if (Ar.ArVer >= 120)
+	{
+		Ar << AuthKey;
+	}
+
+#if LOCO
+	if (Ar.Game == GAME_Loco) goto skip_remaining;	// Loco codepath is similar to UT2004, but sometimes has different version switches
+#endif
+
+#if UT2
+	if (Ar.Game == GAME_UT2)
+	{
+		// UT2004 has branched version of UE2, which is slightly different
+		// in comparison with generic UE2, which is used in all other UE2 games.
+		if (Ar.ArVer >= 122)
+			Ar << KarmaProps << BoundingSpheres << BoundingBoxes << f32C;
+		if (Ar.ArVer >= 127)
+			Ar << CollisionMesh;
+		return;
+	}
+#endif // UT2
+
+	// generic UE2 code
+	if (Ar.ArVer >= 124)
+		Ar << KarmaProps << BoundingSpheres << BoundingBoxes;
+	if (Ar.ArVer >= 125)
+		Ar << f32C;
+
+#if XIII
+	if (Ar.Game == GAME_XIII) goto skip_remaining;
+#endif
+#if RAGNAROK2
+	if (Ar.Game == GAME_Ragnarok2 && Ar.ArVer >= 131)
+	{
+		float unk1, unk2;
+		Ar << unk1 << unk2;
+	}
+#endif // RAGNAROK2
+
+	if (Ar.ArLicenseeVer && (Ar.Tell() != Ar.GetStopper()))
+	{
+		appNotify("Serializing SkeletalMesh'%s' of unknown game: %d unreal bytes", Name, Ar.GetStopper() - Ar.Tell());
+	skip_remaining:
+		DROP_REMAINING_DATA(Ar);
+	}
+
+	unguard;
+}
+
 
 void USkeletalMesh::UpgradeFaces()
 {
@@ -1997,9 +2273,6 @@ static void ConvertRuneAnimations(UMeshAnimation &Anim, const TArray<RJoint> &Bo
 		MotionChunk *M = new(Anim.Moves) MotionChunk;
 		M->TrackTime  = SS.NumFrames;
 		// dummy bone remap
-		M->BoneIndices.Empty(numBones);
-		for (j = 0; j < numBones; j++)
-			M->BoneIndices.AddItem(j);
 		M->AnimTracks.Empty(numBones);
 		// convert animation data
 		const byte *data = &SS.animdata[0];
@@ -2072,8 +2345,8 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<RJoint> &Bones, 
 		CVec3 BP;
 		CQuat BO;
 		// get default pose
-		BP = (CVec3&)A.KeyPos[0];
-		BO = (CQuat&)A.KeyQuat[0];
+		BP = CVT(A.KeyPos[0]);
+		BO = CVT(A.KeyQuat[0]);
 		if (!i) BO.Conjugate();
 
 		BC.origin = BP;
@@ -2121,7 +2394,7 @@ void USkelModel::Serialize(FArchive &Ar)
 	for (modelIdx = 0; modelIdx < meshes.Num(); modelIdx++)
 	{
 		// create new USkeletalMesh
-		USkeletalMesh *sm = static_cast<USkeletalMesh*>(CreateClass("SkeletalMesh"));
+		USkeletalMesh *sm = static_cast<USkeletalMesh*>(CreateClass("SkeletalMesh"));	//?? new USkeletalMesh ?
 		char nameBuf[256];
 		appSprintf(ARRAY_ARG(nameBuf), "%s_%d", Name, modelIdx);
 		char *name = strdup(nameBuf);
@@ -2133,7 +2406,7 @@ void USkelModel::Serialize(FArchive &Ar)
 		sm->PackageIndex = INDEX_NONE;		// not really exported
 	}
 	// create animation
-	Anim = static_cast<UMeshAnimation*>(CreateClass("MeshAnimation"));
+	Anim = static_cast<UMeshAnimation*>(CreateClass("MeshAnimation"));	//?? new UMeshAnimation ?
 	Anim->Name         = Name;
 	Anim->Package      = Package;
 	Anim->PackageIndex = INDEX_NONE;		// not really exported
@@ -2177,7 +2450,7 @@ void USkelModel::Serialize(FArchive &Ar)
 			const RVertex &v1 = src.verts[i];
 			FVector *V = new(sm->Points) FVector;
 			// transform point from local bone space to model space
-			BoneCoords[v1.joint1].UnTransformPoint((CVec3&)v1.point1, (CVec3&)*V);
+			BoneCoords[v1.joint1].UnTransformPoint(CVT(v1.point1), CVT(*V));
 		}
 		// copy triangles and create wedges
 		// here we create 3 wedges for each triangle.
@@ -2253,10 +2526,10 @@ void USkelModel::Serialize(FArchive &Ar)
 		const RAnimFrame &F = frames[0];
 		assert(strcmp(AnimSeqs[0].Name, "baseframe") == 0 && AnimSeqs[0].StartFrame == 0);
 		CVec3 mins, maxs;
-		sm->BoundingBox    = F.bounds;
-		mins = (CVec3&)F.bounds.Min;
-		maxs = (CVec3&)F.bounds.Max;
-		CVec3 &center = (CVec3&)sm->BoundingSphere;
+		sm->BoundingBox = F.bounds;
+		mins = CVT(F.bounds.Min);
+		maxs = CVT(F.bounds.Max);
+		CVec3 &center = CVT(sm->BoundingSphere);
 		for (i = 0; i < 3; i++)
 			center[i] = (mins[i] + maxs[i]) / 2;
 		sm->BoundingSphere.R = VectorDistance(center, mins);
@@ -2561,8 +2834,8 @@ void UStaticMesh::ConvertMesh2()
 	{
 		CStaticMeshVertex &V = Lod->Verts[i];
 		const FStaticMeshVertex &SV = VertexStream.Vert[i];
-		V.Position = (CVec3&)SV.Pos;
-		V.Normal   = (CVec3&)SV.Normal;
+		V.Position = CVT(SV.Pos);
+		V.Normal   = CVT(SV.Normal);
 		for (int j = 0; j < NumTexCoords; j++)
 		{
 			const FMeshUVFloat &SUV = UVStream[j].Data[i];

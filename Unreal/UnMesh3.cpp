@@ -8,7 +8,9 @@
 
 #include "UnMaterial3.h"
 
+#include "SkeletalMesh.h"
 #include "StaticMesh.h"
+#include "TypeConvert.h"
 
 //#define DEBUG_SKELMESH		1
 //#define DEBUG_STATICMESH		1
@@ -1352,8 +1354,8 @@ void USkeletalMesh::SerializeSkelMesh3(FArchive &Ar)
 	// setup missing properties
 	MeshScale.Set(1, 1, 1);
 	BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
-	VectorSubtract((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Min);
-	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)BoundingBox.Max);
+	VectorSubtract(CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(BoundingBox.Min));
+	VectorAdd     (CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(BoundingBox.Max));
 
 	unguard;
 
@@ -1382,7 +1384,7 @@ void USkeletalMesh::PostLoadMesh3()
 			AttachAliases[i]       = S->SocketName;
 			AttachBoneNames[i]     = S->BoneName;
 			CCoords &C = (CCoords&)AttachCoords[i];
-			C.origin = (CVec3&)S->RelativeLocation;
+			C.origin = CVT(S->RelativeLocation);
 			SetAxis(S->RelativeRotation, C.axis);
 		}
 	}
@@ -1662,6 +1664,12 @@ void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODMo
 	UAnimSet
 -----------------------------------------------------------------------------*/
 
+UAnimSet::~UAnimSet()
+{
+	delete ConvertedAnim;
+}
+
+
 // following defines will help finding new undocumented compression schemes
 #define FIND_HOLES			1
 //#define DEBUG_DECOMPRESS	1
@@ -1734,6 +1742,9 @@ void UAnimSet::ConvertAnims()
 
 	int i;
 
+	CAnimSet *AnimSet = new CAnimSet(this);
+	ConvertedAnim = AnimSet;
+
 #if MASSEFF
 	UBioAnimSetData *BioData = NULL;
 	if ((Package->Game == GAME_MassEffect || Package->Game == GAME_MassEffect2) && !TrackBoneNames.Num() && Sequences.Num())
@@ -1745,13 +1756,7 @@ void UAnimSet::ConvertAnims()
 	}
 #endif // MASSEFF
 
-	RefBones.Empty(TrackBoneNames.Num());
-	for (i = 0; i < TrackBoneNames.Num(); i++)
-	{
-		FNamedBone *Bone = new (RefBones) FNamedBone;
-		Bone->Name = TrackBoneNames[i];
-		// Flags, ParentIndex unused
-	}
+	CopyArray(AnimSet->TrackBoneNames, TrackBoneNames);
 
 #if FIND_HOLES
 	bool findHoles = true;
@@ -1825,16 +1830,14 @@ void UAnimSet::ConvertAnims()
 			continue;
 		}
 
-		// create FMeshAnimSeq
-		FMeshAnimSeq *Dst = new (AnimSeqs) FMeshAnimSeq;
+		// create CAnimSequence
+		CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
 		Dst->Name      = Seq->SequenceName;
 		Dst->NumFrames = Seq->NumFrames;
 		Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
-		// create MotionChunk
-		MotionChunk *M = new (Moves) MotionChunk;
 
 		// bone tracks ...
-		M->AnimTracks.Empty(NumTracks);
+		Dst->Tracks.Empty(NumTracks);
 
 		FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
 		Reader.SetupFrom(*Package);
@@ -1844,7 +1847,7 @@ void UAnimSet::ConvertAnims()
 		int offsetIndex = 0;
 		for (int j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
 		{
-			AnalogTrack *A = new (M->AnimTracks) AnalogTrack;
+			CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
 
 			int k;
 
@@ -1852,8 +1855,8 @@ void UAnimSet::ConvertAnims()
 			{
 				// using RawAnimData array
 				assert(Seq->RawAnimData.Num() == NumTracks);
-				CopyArray(A->KeyPos,  Seq->RawAnimData[j].PosKeys);
-				CopyArray(A->KeyQuat, Seq->RawAnimData[j].RotKeys);
+				CopyArray(A->KeyPos,  CVT(Seq->RawAnimData[j].PosKeys));
+				CopyArray(A->KeyQuat, CVT(Seq->RawAnimData[j].RotKeys));
 				CopyArray(A->KeyTime, Seq->RawAnimData[j].KeyTimes);	// may be empty
 				int k;
 /*				if (!A->KeyTime.Num())
@@ -1869,8 +1872,8 @@ void UAnimSet::ConvertAnims()
 			}
 
 			FVector Mins, Ranges;	// common ...
-			static const FVector nullVec  = { 0, 0, 0 };
-			static const FQuat   nullQuat = { 0, 0, 0, 1 };
+			static const CVec3 nullVec  = { 0, 0, 0 };
+			static const CQuat nullQuat = { 0, 0, 0, 1 };
 
 // position
 #define TP(Enum, VecType)						\
@@ -1878,7 +1881,7 @@ void UAnimSet::ConvertAnims()
 					{							\
 						VecType v;				\
 						Reader << v;			\
-						A->KeyPos.AddItem(v);	\
+						A->KeyPos.AddItem(CVT(v)); \
 					}							\
 					break;
 // position ranged
@@ -1887,7 +1890,8 @@ void UAnimSet::ConvertAnims()
 					{							\
 						VecType v;				\
 						Reader << v;			\
-						A->KeyPos.AddItem(v.ToVector(Mins, Ranges)); \
+						FVector v2 = v.ToVector(Mins, Ranges); \
+						A->KeyPos.AddItem(CVT(v2)); \
 					}							\
 					break;
 // rotation
@@ -1896,7 +1900,7 @@ void UAnimSet::ConvertAnims()
 					{							\
 						QuatType q;				\
 						Reader << q;			\
-						A->KeyQuat.AddItem(q);	\
+						A->KeyQuat.AddItem(CVT(q)); \
 					}							\
 					break;
 // rotation ranged
@@ -1905,7 +1909,8 @@ void UAnimSet::ConvertAnims()
 					{							\
 						QuatType q;				\
 						Reader << q;			\
-						A->KeyQuat.AddItem(q.ToQuat(Mins, Ranges));	\
+						FQuat q2 = q.ToQuat(Mins, Ranges); \
+						A->KeyQuat.AddItem(CVT(q2));	\
 					}							\
 					break;
 
@@ -1980,7 +1985,7 @@ void UAnimSet::ConvertAnims()
 								{
 									Reader << v;
 								}
-								A->KeyPos.AddItem(v);
+								A->KeyPos.AddItem(CVT(v));
 							}
 							break;
 						TPR(ACF_IntervalFixed32NoW, FVectorIntervalFixed32)
@@ -1996,7 +2001,7 @@ void UAnimSet::ConvertAnims()
 								v2.X *= scale;
 								v2.Y *= scale;
 								v2.Z *= scale;
-								A->KeyPos.AddItem(v2);
+								A->KeyPos.AddItem(CVT(v2));
 							}
 							break;
 						case ACF_Identity:
@@ -2062,7 +2067,8 @@ void UAnimSet::ConvertAnims()
 								{
 									Reader << q;
 								}
-								A->KeyQuat.AddItem(q);
+								FQuat q2 = q;				// convert
+								A->KeyQuat.AddItem(CVT(q2));
 							}
 							break;
 						case ACF_Fixed48NoW:
@@ -2072,7 +2078,8 @@ void UAnimSet::ConvertAnims()
 								if (ComponentMask & 1) Reader << q.X;
 								if (ComponentMask & 2) Reader << q.Y;
 								if (ComponentMask & 4) Reader << q.Z;
-								A->KeyQuat.AddItem(q);
+								FQuat q2 = q;				// convert
+								A->KeyQuat.AddItem(CVT(q2));
 							}
 							break;
 						TR (ACF_Fixed32NoW, FQuatFixed32NoW)
@@ -2166,7 +2173,8 @@ void UAnimSet::ConvertAnims()
 						{
 							FPackedVectorTrans pos;
 							Reader << pos;
-							A->KeyPos.AddItem(pos.ToVector(Offset, Scale));
+							FVector pos2 = pos.ToVector(Offset, Scale); // convert
+							A->KeyPos.AddItem(CVT(pos2));
 						}
 						goto trans_keys_done;
 					} // else - original code with 4-byte overhead
@@ -2190,7 +2198,7 @@ void UAnimSet::ConvertAnims()
 							if (k == 0)
 							{
 								// "Base" works as 1st key
-								A->KeyPos.AddItem(Base);
+								A->KeyPos.AddItem(CVT(Base));
 								continue;
 							}
 							FVectorDelta48NoW V;
@@ -2198,7 +2206,7 @@ void UAnimSet::ConvertAnims()
 							FVector V2;
 							V2 = V.ToVector(Mins, Ranges, Base);
 							Base = V2;			// for delta
-							A->KeyPos.AddItem(V2);
+							A->KeyPos.AddItem(CVT(V2));
 						}
 						break;
 #endif // BORDERLANDS
@@ -2287,15 +2295,15 @@ void UAnimSet::ConvertAnims()
 						if (k == 0)
 						{
 							// "Base" works as 1st key
-							A->KeyQuat.AddItem(Base);
+							A->KeyQuat.AddItem(CVT(Base));
 							continue;
 						}
-						FQuatDelta48NoW Q;
-						Reader << Q;
-						FQuat Q2;
-						Q2 = Q.ToQuat(Mins, Ranges, Base);
-						Base = Q2;			// for delta
-						A->KeyQuat.AddItem(Q2);
+						FQuatDelta48NoW q;
+						Reader << q;
+						FQuat q2;
+						q2 = q.ToQuat(Mins, Ranges, Base);
+						Base = q2;			// for delta
+						A->KeyQuat.AddItem(CVT(q2));
 					}
 					break;
 #endif // BORDERLANDS
@@ -2307,7 +2315,7 @@ void UAnimSet::ConvertAnims()
 						Reader << q;
 						q2 = q.ToQuat(Mins, Ranges);
 						q2 = TransMidifyQuat(q2, TransQuatMod);
-						A->KeyQuat.AddItem(q2);
+						A->KeyQuat.AddItem(CVT(q2));
 					}
 					break;
 #endif // TRANSFORMERS
@@ -3429,16 +3437,6 @@ lods:
 done:
 	DROP_REMAINING_DATA(Ar);
 
-	/*!!----------------------------------------------------------------
-	NEW MESH FORMAT
-
-	Stages:
-	* UE3: support loading of more than 1 UV set - find GNumStaticUVSets, data is simply skipped now
-	* add key to switch UV sets in viewer (map default material when using non-first UV set)
-	* export: support 4 UV sets
-	? compute bounds from actual geometry, improve initial positioning of mesh in CStatMeshViewer
-	------------------------------------------------------------------*/
-
 	// convert UStaticMesh3 to CStaticMesh
 
 	guard(ConvertMesh);
@@ -3448,8 +3446,8 @@ done:
 
 	// convert bounds
 	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
-	VectorSubtract((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)Mesh->BoundingBox.Min);
-	VectorAdd     ((CVec3&)Bounds.Origin, (CVec3&)Bounds.BoxExtent, (CVec3&)Mesh->BoundingBox.Max);
+	VectorSubtract(CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Min));
+	VectorAdd     (CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Max));
 
 	Mesh->Lods.Empty(Lods.Num());
 	for (int lod = 0; lod < Lods.Num(); lod++)
@@ -3485,12 +3483,12 @@ done:
 			const FStaticMeshUVItem3 &SUV = SrcLod.UVStream.UV[i];
 			CStaticMeshVertex &V = Lod->Verts[i];
 
-			V.Position = (CVec3&)SrcLod.VertexStream.Verts[i];
+			V.Position = CVT(SrcLod.VertexStream.Verts[i]);
 			// tangents: convert to FVector (unpack) then cast to CVec3
 			FVector Tangent = SUV.Normal[0];
 			FVector Normal  = SUV.Normal[2];
-			V.Tangent = (CVec3&)Tangent;
-			V.Normal  = (CVec3&)Normal;
+			V.Tangent = CVT(Tangent);
+			V.Normal  = CVT(Normal);
 			if (SUV.Normal[1].Data == 0)
 			{
 				cross(V.Normal, V.Tangent, V.Binormal);
@@ -3502,7 +3500,7 @@ done:
 			else
 			{
 				FVector Binormal = SUV.Normal[1];
-				V.Binormal = (CVec3&)Binormal;
+				V.Binormal = CVT(Binormal);
 			}
 			// copy UV
 			staticAssert((sizeof(CStaticMeshUV) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
