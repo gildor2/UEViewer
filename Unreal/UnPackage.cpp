@@ -978,8 +978,10 @@ void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSi
 
 const char *UnPackage::GetUncookedPackageName(int PackageIndex) const
 {
+	guard(UnPackage::GetUncookedPackageName);
+
 #if UNREAL3
-	if (PackageIndex)
+	if (PackageIndex != INDEX_NONE)
 	{
 		const FObjectExport &Exp = GetExport(PackageIndex);
 		if (Game >= GAME_UE3 && (Exp.ExportFlags & EF_ForcedExport))
@@ -997,6 +999,8 @@ const char *UnPackage::GetUncookedPackageName(int PackageIndex) const
 	}
 #endif // UNREAL3
 	return Name;
+
+	unguard;
 }
 
 

@@ -2411,6 +2411,7 @@ void USkelModel::Serialize(FArchive &Ar)
 	Anim->Package      = Package;
 	Anim->PackageIndex = INDEX_NONE;		// not really exported
 	ConvertRuneAnimations(*Anim, joints, AnimSeqs);
+	Anim->ConvertAnims();					//?? second conversion
 	// get baseframe
 	assert(strcmp(Anim->AnimSeqs[0].Name, "baseframe") == 0);
 	const TArray<AnalogTrack> &BaseAnim = Anim->Moves[0].AnimTracks;

@@ -218,7 +218,7 @@ class UObject
 public:
 	// internal storage
 	UnPackage		*Package;
-	int				PackageIndex;	// index in package export table
+	int				PackageIndex;	// index in package export table; INDEX_NONE for non-packaged (transient) object
 	const char		*Name;
 #if UNREAL3
 	int				NetIndex;

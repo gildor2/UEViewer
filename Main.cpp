@@ -648,7 +648,7 @@ static void Usage()
 			"    -uncook         use original package name as a base export directory\n"
 			"    -groups         use group names instead of class names for directories\n"
 			"    -uc             create unreal script when possible\n"
-			"    -pskx           use pskx/psax format for skeletal mesh\n"
+			"    -pskx           use pskx format for skeletal mesh\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -lods           export all available mesh LOD levels\n"
 			"    -notgacomp      disable TGA compression\n"
@@ -857,20 +857,12 @@ int main(int argc, char **argv)
 	}
 
 	// register exporters
-	if (!md5 && !GExportPskx)
+	if (!md5)
 	{
-		EXPORTER("SkeletalMesh",  "psk",     ExportPsk          );
-		EXPORTER("MeshAnimation", "psa",     ExportMeshAnimation);		//!! always use psa
+		EXPORTER("SkeletalMesh", GExportPskx ? "pskx" : "psk", ExportPsk);
+		EXPORTER("MeshAnimation", "psa",     ExportMeshAnimation);
 #if UNREAL3
-		EXPORTER("AnimSet",       "psa",     ExportAnimSet      );		//!! ..
-#endif
-	}
-	else if (!md5) // && GExportPskx
-	{
-		EXPORTER("SkeletalMesh",  "pskx",    ExportPsk          );
-		EXPORTER("MeshAnimation", "psax",    ExportMeshAnimation);		//!! remove this
-#if UNREAL3
-		EXPORTER("AnimSet",       "psax",    ExportAnimSet      );		//!! ..
+		EXPORTER("AnimSet",       "psa",     ExportAnimSet      );
 #endif
 	}
 	else

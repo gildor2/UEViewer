@@ -136,11 +136,16 @@ public:
 	}
 #endif // BIOSHOCK
 
-	inline const char *operator*() const
+	inline bool operator==(FName& Other) const
+	{
+		return (Str == Other.Str) || (stricmp(Str, Other.Str) == 0);
+	}
+
+	FORCEINLINE const char *operator*() const
 	{
 		return Str;
 	}
-	inline operator const char*() const
+	FORCEINLINE operator const char*() const
 	{
 		return Str;
 	}

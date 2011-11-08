@@ -5,6 +5,7 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
+#include "UnMathTools.h"
 
 #include "StaticMesh.h"
 
@@ -13,9 +14,12 @@ CStatMeshViewer::CStatMeshViewer(CStaticMesh *Mesh0)
 :	CMeshViewer(Mesh0->OriginalMesh)
 ,	Mesh(Mesh0)
 {
+	guard(CStatMeshViewer::CStatMeshViewer);
+
 	CStatMeshInstance *StatInst = new CStatMeshInstance();
 	StatInst->SetMesh(Mesh);
 	Inst = StatInst;
+#if 0
 	// compute model center
 	CVec3 offset;
 	offset[0] = (Mesh->BoundingBox.Max.X + Mesh->BoundingBox.Min.X) / 2;
@@ -25,6 +29,15 @@ CStatMeshViewer::CStatMeshViewer(CStaticMesh *Mesh0)
 	SetViewOffset(offset);
 	// automatically scale view distance depending on model size
 	SetDistScale(Mesh->BoundingSphere.R / 150);
+#else
+	//?? if Lods.Count > 0 && Lods[0].Verts.Num() > 0
+	CVec3 Mins, Maxs;
+	const CStaticMeshLod &Lod = Mesh0->Lods[0];
+	ComputeBounds(&Lod.Verts[0].Position, Lod.Verts.Num(), sizeof(CStaticMeshVertex), Mins, Maxs);
+	InitViewerPosition(Mins, Maxs);
+#endif
+
+	unguard;
 }
 
 

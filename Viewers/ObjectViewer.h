@@ -88,6 +88,8 @@ public:
 	{}
 	virtual ~CMeshViewer();
 
+	void InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs);	//?? bounds?
+
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
 //	virtual void Dump();
@@ -103,7 +105,7 @@ public:
 	unsigned		CurrentTime;
 
 	CLodMeshViewer(ULodMesh *Mesh);
-	void Initialize();
+	void Initialize();		//?? remove this?
 
 	static void TagMesh(CLodMeshInstance *NewInst);
 

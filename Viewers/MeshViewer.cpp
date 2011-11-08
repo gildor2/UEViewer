@@ -13,6 +13,20 @@ CMeshViewer::~CMeshViewer()
 }
 
 
+void CMeshViewer::InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs)
+{
+	CVec3 tmp, Center;
+	VectorAdd(Maxs, Mins, tmp);
+	VectorScale(tmp, 0.5f, Center);
+	VectorSubtract(Maxs, Center, tmp);
+	float radius = tmp.GetLength();
+
+	SetViewOffset(Center);
+	SetDistScale((radius + 10) / 200);
+	MoveCamera(20, 20);
+}
+
+
 void CMeshViewer::Draw3D()
 {
 	guard(CMeshViewer::Draw3D);

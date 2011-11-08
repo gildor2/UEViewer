@@ -39,6 +39,12 @@ function run1()							# with path
 	./$exe -path="$path" $@
 }
 
+function run0()
+{
+	echo "Starting umodel $@"
+	./$exe $@
+}
+
 function run()    { run1 "." $@;     }	# without path
 
 # all following functions are called as "-func" argument
@@ -82,14 +88,26 @@ CheckDir DCU "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC"
 
 #------------------------------------------------------------------------------
 
+# find whether -path= is used or not
+path=0
+for arg in $*; do
+	case $arg in
+	-path=*)
+		path=1
+		;;
+	esac
+done
+
 if [ $# -gt 0 ]; then
 	# started with arguments
 	# extract command from "--cmd" argument
 	if [ "${1:0:2}" == "--" ]; then
 		cmd=${1:2}
 		shift
+	elif [ $path == 0 ]; then
+		cmd=ut2						# no command and/or path were specified, run "ut2"
 	else
-		cmd=ut2						# default command; may be "run" ??
+		cmd=run0
 	fi
 	declare -a args
 	while [ $# -gt 0 ]; do

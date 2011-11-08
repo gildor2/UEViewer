@@ -184,12 +184,4 @@ struct VQuatAnimKey
 };
 
 
-/******************************************************************************
- *	PSAX extended information
- *****************************************************************************/
-
-#define PSAX_FLAG_NO_TRANSLATION	1
-#define PSAX_FLAG_NO_ROTATION		2
-
-
 #endif // __PSK_H__

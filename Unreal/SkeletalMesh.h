@@ -26,34 +26,15 @@
 
 /*!!
 	CAnimSet conversion stages:
-
-	* convert CSkelMeshInstance
-	* move GetBonePosition to CAnimSet (CAnimSequence?), cleanup forward declarations of this function
-	* convert psa/md5anim exporter
-
-	VERIFY:
-	* UE2:
-	  * Ctrl+A
-	  * animation
-	  ? export md5/psa (try to load somewhere)
-	* UE3:
-	  * Ctrl+A
-	  * animation
-	  ? export md5/psa (try to load somewhere)
-	* Tribes
-	  - check animation (face); try to disable FixTribesMotionChunk() and check again
-	* verify automatic animation assignment for UE2 mesh
-	* verify animation blending
-	- verify UE2/UE3+psa/md5anim exporters
-
-	* convert UE2 UMeshAnimation
-	  - ensure Tribes, UC2, Rune and UE1 are converted properly
-	* move UMeshAnimation part from UnMesh.h to UnMesh2.h
-	- support AnimRotationOnly etc in viewer and exporter
-	  - verify in ActorX Importer
 	- replace psax exporter with psa + text config file
 	  - update ActorX Importer to support this
 	- cleanup UnMesh.h header usage (not a time for this, require mesh refactoring?)
+
+	VERIFY:
+	* UE2:
+	  ? export md5/psa (try to load somewhere)
+	* UE3:
+	  ? export md5/psa (try to load somewhere)
 */
 
 
@@ -74,23 +55,40 @@ struct CAnimTrack
 
 struct CAnimSequence
 {
-	FName					Name;				// sequence's name
+	FName					Name;					// sequence's name
 	int						NumFrames;
 	float					Rate;
-	TArray<CAnimTrack>		Tracks;				// for each CAnimSet.TrackBoneNames
+	TArray<CAnimTrack>		Tracks;					// for each CAnimSet.TrackBoneNames
 };
 
 
 class CAnimSet
 {
 public:
-	UObject					*OriginalAnim;		//?? make common for all mesh classes
+	UObject					*OriginalAnim;			//?? make common for all mesh classes
 	TArray<FName>			TrackBoneNames;
 	TArray<CAnimSequence>	Sequences;
+
+	bool					AnimRotationOnly;
+	TArray<bool>			UseAnimTranslation;		// per bone; used with AnimRotationOnly mode
+	TArray<bool>			ForceMeshTranslation;	// pre bone; used regardless of AnimRotationOnly
 
 	CAnimSet(UObject *Original)
 	:	OriginalAnim(Original)
 	{}
+
+	bool ShouldAnimateTranslation(int BoneIndex) const
+	{
+		if (BoneIndex == 0)							// root bone is always fully animated
+			return true;
+		if (ForceMeshTranslation.Num() && ForceMeshTranslation[BoneIndex])
+			return false;
+		if (!AnimRotationOnly)
+			return true;
+		if (UseAnimTranslation.Num() && UseAnimTranslation[BoneIndex])
+			return true;
+		return false;
+	}
 };
 
 

@@ -1,8 +1,6 @@
 #ifndef __MESHINSTANCE_H__
 #define __MESHINSTANCE_H__
 
-#include "UnMathTools.h"
-
 // forwards
 class UVertMesh;
 class ULodMesh;

@@ -41,7 +41,7 @@ UObject::~UObject()
 
 const char *UObject::GetRealClassName() const
 {
-	if (!Package) return GetClassName();
+	if (!Package || (PackageIndex == INDEX_NONE)) return GetClassName();
 	const FObjectExport &Exp = Package->GetExport(PackageIndex);
 	return Package->GetObjectName(Exp.ClassIndex);
 }

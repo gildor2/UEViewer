@@ -124,6 +124,13 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+08.11.2011
+- animation system were rewritten
+  - implemented support for UE3 rotation-only tracks
+  - removed export into psax format - now everything is saved into psa format, additional
+    atttributes are stored in the text configuration file near the psa file
+- improved positioning of the mesh in viewer
+
 06.11.2011
 - major rewritting of the StaticMesh subsystem
   - implemented UE3 LOD support:

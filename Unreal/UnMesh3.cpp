@@ -1740,7 +1740,7 @@ void UAnimSet::ConvertAnims()
 {
 	guard(UAnimSet::ConvertAnims);
 
-	int i;
+	int i, j;
 
 	CAnimSet *AnimSet = new CAnimSet(this);
 	ConvertedAnim = AnimSet;
@@ -1762,6 +1762,28 @@ void UAnimSet::ConvertAnims()
 	bool findHoles = true;
 #endif
 	int NumTracks = TrackBoneNames.Num();
+
+	AnimSet->AnimRotationOnly = bAnimRotationOnly;
+	if (UseTranslationBoneNames.Num())
+	{
+		AnimSet->UseAnimTranslation.Add(NumTracks);
+		for (i = 0; i < UseTranslationBoneNames.Num(); i++)
+		{
+			for (j = 0; j < TrackBoneNames.Num(); j++)
+				if (UseTranslationBoneNames[i] == TrackBoneNames[j])
+					AnimSet->UseAnimTranslation[j] = true;
+		}
+	}
+	if (ForceMeshTranslationBoneNames.Num())
+	{
+		AnimSet->ForceMeshTranslation.Add(NumTracks);
+		for (i = 0; i < ForceMeshTranslationBoneNames.Num(); i++)
+		{
+			for (j = 0; j < TrackBoneNames.Num(); j++)
+				if (ForceMeshTranslationBoneNames[i] == TrackBoneNames[j])
+					AnimSet->ForceMeshTranslation[j] = true;
+		}
+	}
 
 	for (i = 0; i < Sequences.Num(); i++)
 	{
@@ -1845,7 +1867,7 @@ void UAnimSet::ConvertAnims()
 		bool hasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
 
 		int offsetIndex = 0;
-		for (int j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
+		for (j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
 		{
 			CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
 

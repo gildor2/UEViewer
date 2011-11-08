@@ -10,6 +10,9 @@
 
  Revision History:
 
+	??.11.2011 v1.18
+	- ???
+
 	06.11.2011 v1.17
 	- eliminated error messages when loading psk or psa file with unknown section name (SCALEKEYS etc)
 	- implemented support for pskx with 2 or more UV channels
@@ -94,7 +97,7 @@ TODO:
 - try to not use setBoneEnable false ...
 */
 
-global AX_IMPORTER_VERSION = 17
+global AX_IMPORTER_VERSION = 18
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -1154,11 +1157,154 @@ fn ImportPskFile filename skelOnly:false =
 --	Loading PSA file
 -------------------------------------------------------------------------------
 
+fn FindPsaTrackIndex Anims Name =
+(
+	for i = 1 to Anims.count do
+	(
+		if Anims[i].Name == Name then return i
+	)
+	return -1
+)
+
+fn FindPsaBoneIndex Bones Name =
+(
+	for i = 1 to Bones.count do
+	(
+		if Bones[i].Name == Name then return i
+	)
+	return -1
+)
+
+fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
+(
+	local cfgFile = openFile filename
+	if cfgFile == undefined then return undefined
+
+	local mode = 0
+
+	-- allocate and initialize UseTranslation array
+	UseTranslation[Bones.count] = true			-- preallocate
+	for i = 1 to Bones.count do UseTranslation[i] = true
+
+	while eof cfgFile == false do
+	(
+		local line = readline cfgFile
+		case line of
+		(
+		"": continue
+
+		"[AnimSet]":
+			(
+				mode = 1
+				continue
+			)
+
+		"[UseTranslationBoneNames]":
+			(
+				mode = 2
+				continue
+			)
+
+		"[ForceMeshTranslationBoneNames]":
+			(
+				mode = 3
+				continue
+			)
+
+		"[RemoveTracks]":
+			(
+				mode = 4
+				-- allocate AnimFlags array, usually not required (currently used for UC2 animations only)
+				local numKeys = Anims.count * Bones.count
+				AnimFlags[numKeys] = 0		-- preallocate
+				for i = 1 to numKeys do AnimFlags[i] = 0
+				continue
+			)
+
+		default:
+			(
+				case mode of
+				(
+				0:
+					(
+						ErrorMessage "unexpected %" line
+					)
+
+				-- AnimSet
+				1:
+					(
+						--!! ugly parsing ... but no other params yet
+						if line == "bAnimRotationOnly=1" then
+						(
+							for i = 1 to Bones.count do UseTranslation[i] = false
+						)
+						else if line == "bAnimRotationOnly=0" then
+						(
+							-- already set to true
+						)
+						else
+						(
+							ErrorMessage "unexpected AnimSet instruction \"%\"" line
+						)
+					)
+
+				-- UseTranslationBoneNames - use translation from animation, useful with bAnimRotationOnly=true only
+				2:
+					(
+						local BoneIndex = FindPsaBoneIndex Bones line
+						if BoneIndex > 0 then
+						(
+							UseTranslation[BoneIndex] = true
+						)
+						else
+						(
+							format "WARNING: UseTranslationBoneNames has specified unknown bone \"%\"\n" line
+						)
+					)
+
+				-- ForceMeshTranslationBoneNames - use translation from mesh
+				3:
+					(
+						local BoneIndex = FindPsaBoneIndex Bones line
+						if BoneIndex > 0 then
+						(
+							UseTranslation[BoneIndex] = false
+						)
+						else
+						(
+							format "WARNING: ForceMeshTranslationBoneNames has specified unknown bone \"%\"\n" line
+						)
+					)
+
+				-- RemoveTracks
+				4:
+					(
+						--!! implement
+--		local tok = filterString line " ="
+--		format "[%] = [%]\n" tok[1] tok[2]
+--		local parm = tok[1]
+--		local file = tok[2]
+					)
+
+				default:
+					ErrorMessage "unexpected config error"
+				)
+			)
+		)
+	)
+	close cfgFile
+
+	UseTranslation[1] = true		-- root bone is always translated
+)
+
+
 fn ImportPsaFile filename trackNum all:false =
 (
 	local Bones     = #()
 	      Anims     = #()
-	local AnimFlags = #()
+
+	local UseTranslation = #()
+	local AnimFlags      = #()
 
 	local numBones  = 0
 	local numAnims  = 0
@@ -1223,14 +1369,6 @@ fn ImportPsaFile filename trackNum all:false =
 					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
 				)
 
-			--!! psax format: flags
-			"ANIMFLAGS":
-				(
-					numFlags = hdr.DataCount
-					AnimFlags[numFlags] = 0		-- preallocate
-					for i = 1 to numFlags do AnimFlags[i] = ReadByte file
-				)
-
 			default:
 				(
 					-- skip unknown chunk
@@ -1292,11 +1430,24 @@ fn ImportPsaFile filename trackNum all:false =
 
 	RemoveAnimation()
 
+	LoadPsaConfig ( (getFilenamePath filename) + (getFilenameFile filename) + ".config" ) Anims Bones UseTranslation AnimFlags
+
+/*
+	format "[% trans % flags]\n" UseTranslation.count AnimFlags.count	--!!!
+	for i = 1 to UseTranslation.count do
+	(
+		if UseTranslation[i] then format "trans: % %\n" i Bones[i].Name
+	)
+*/
+
 	format "Loading track % (%), % keys\n" trackNum Anims[trackNum].Name (numFrames * Bones.count)
 	firstFrame = #()
 	firstFlag  = (trackNum - 1) * numBones + 1
 	flagCount  = AnimFlags.count
 	fseek file keyPos #seek_set							-- seek to animation keys
+
+	--!! add options:
+	--!! - disable bAnimRotationOnly
 
 	animate on
 	(
@@ -1317,14 +1468,19 @@ fn ImportPsaFile filename trackNum all:false =
 					-- get key
 					k = ReadVQuatAnimKey file			-- read key from file
 					bone = MaxBones[b]
-					if (bit.and flag 1) == 0 then		-- PSAX_FLAG_NO_TRANSLATION
-						p = k.Position * g_meshScale
+
+					if (bit.and flag 1) != 0 then		-- PSAX_FLAG_NO_TRANSLATION
+						p = MeshBone.Position			-- translation from the mesh
+					else if (UseTranslation.count > 0) and not UseTranslation[b] and (MeshBone != undefined) then
+						p = MeshBone.Position			-- translation from the mesh
 					else
-						p = MeshBone.Position
-					if (bit.and flag 2) == 0 then		-- PSAX_FLAG_NO_ROTATION
-						q = k.Orientation
+						p = k.Position * g_meshScale	-- translation from animation
+
+					if (bit.and flag 2) != 0 then		-- PSAX_FLAG_NO_ROTATION
+						q = MeshBone.Orientation		-- from mesh
 					else
-						q = MeshBone.Orientation
+						q = k.Orientation				-- from animation
+
 					if (b == 1) then q = conjugate q
 					-- build matrix
 					mat = (q as matrix3)
@@ -1418,7 +1574,7 @@ fn LoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.17"
+	label     Lbl1 "Version 1.18"
 	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \

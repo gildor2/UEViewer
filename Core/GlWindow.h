@@ -14,6 +14,7 @@ void AppKeyEvent(int key);
 void AppDisplayTexts(bool helpVisible);
 
 
+void MoveCamera(float YawDelta, float PitchDelta, float DistDelta = 0, float PanX = 0, float PanY = 0);
 void SetDistScale(float scale);
 void SetViewOffset(const CVec3 &offset);
 void ResetView();

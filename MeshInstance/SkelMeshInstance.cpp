@@ -854,6 +854,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 					BoneUpdateCounts[i]++;
 #endif
 				}
+				// process AnimRotationOnly
+				if (!Animation->ShouldAnimateTranslation(BoneIndex))
+					BP = CVT(JP.Position);
 			}
 			else
 			{

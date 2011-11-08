@@ -91,7 +91,7 @@ static float modelMatrix[4][4];
 
 // view state
 static CVec3 viewAngles;
-static float viewDist   = DEFAULT_DIST;
+static float viewDist   = 0;
 static CVec3 viewOrigin = { -DEFAULT_DIST, 0, 0 };
 static CVec3 rotOrigin  = {0, 0, 0};
 static CVec3 viewOffset = {0, 0, 0};
@@ -430,28 +430,49 @@ static void OnMouseMove()
 	if (vpInvertXAxis)
 		xDelta = -xDelta;
 
+	float YawDelta = 0, PitchDelta = 0, DistDelta = 0, PanX = 0, PanY = 0;
+
 	if (mouseButtons & SDL_BUTTON(SDL_BUTTON_LEFT))
 	{
 		// rotate camera
-		viewAngles[YAW]   -= xDelta * 360;
-		viewAngles[PITCH] += yDelta * 360;
-		// bound angles
-		viewAngles[YAW]   = fmod(viewAngles[YAW], 360);
-		viewAngles[PITCH] = bound(viewAngles[PITCH], -90, 90);
+		YawDelta   = -xDelta * 360;
+		PitchDelta =  yDelta * 360;
 	}
 	if (mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT))
 	{
 		// change distance to object
-		viewDist += yDelta * 400 * distScale;
+		DistDelta = yDelta * 400 * distScale;
 	}
-	CAxis axis;
-	axis.FromEuler(viewAngles);
 	if (mouseButtons & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 	{
 		// pan camera
-		VectorMA(rotOrigin, xDelta * viewDist * 2, axis[1]);
-		VectorMA(rotOrigin, yDelta * viewDist * 2, axis[2]);
+		PanX = xDelta * viewDist * 2;
+		PanY = yDelta * viewDist * 2;
 	}
+	MoveCamera(YawDelta, PitchDelta, DistDelta, PanX, PanY);
+}
+
+
+void MoveCamera(float YawDelta, float PitchDelta, float DistDelta, float PanX, float PanY)
+{
+	// rotate camera
+	viewAngles[YAW]   += YawDelta;
+	viewAngles[PITCH] += PitchDelta;
+	// bound angles
+	viewAngles[YAW]   = fmod(viewAngles[YAW], 360);
+	viewAngles[PITCH] = bound(viewAngles[PITCH], -90, 90);
+
+	// change distance to object
+	viewDist += DistDelta * 400 * distScale;
+
+	CAxis axis;
+	axis.FromEuler(viewAngles);
+
+	// pan camera
+	VectorMA(rotOrigin, PanX, axis[1]);
+	VectorMA(rotOrigin, PanY, axis[2]);
+
+	// recompute viewOrigin
 	viewDist = bound(viewDist, MIN_DIST * distScale, MAX_DIST * distScale);
 	VectorScale(axis[0], -viewDist, viewOrigin);
 	viewOrigin.Add(rotOrigin);
@@ -462,7 +483,7 @@ static void OnMouseMove()
 //-------------------------------------------------------------------------
 // Building modelview and projection matrices
 //-------------------------------------------------------------------------
-void BuildMatrices()
+static void BuildMatrices()
 {
 	// view angles -> view axis
 	Euler2Vecs(viewAngles, &viewAxis[0], &viewAxis[1], &viewAxis[2]);
@@ -1140,7 +1161,8 @@ void VisualizerLoop(const char *caption)
 	SDL_SetEventFilter(&OnEvent);
 	#endif
 #endif // SMART_RESIZE
-	ResetView();
+	if (viewDist == 0)
+		ResetView();			// may be initialized before VisualizerLoop call
 	// main loop
 	SDL_Event evt;
 	bool disableUpdate = false;

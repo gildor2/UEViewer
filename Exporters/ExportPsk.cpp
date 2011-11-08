@@ -317,7 +317,7 @@ void ExportPsa(const CAnimSet *Anim, FArchive &Ar)
 	KeyHdr.DataCount = keysCount;
 	KeyHdr.DataSize  = sizeof(VQuatAnimKey);
 	SAVE_CHUNK(KeyHdr, "ANIMKEYS");
-	bool requirePsax = false;
+	bool requireConfig = false;
 	for (i = 0; i < numAnims; i++)
 	{
 		const CAnimSequence &S = Anim->Sequences[i];
@@ -347,42 +347,58 @@ void ExportPsa(const CAnimSet *Anim, FArchive &Ar)
 
 				// check for user error
 				if ((S.Tracks[b].KeyPos.Num() == 0) || (S.Tracks[b].KeyQuat.Num() == 0))
-					requirePsax = true;
+					requireConfig = true;
 			}
 		}
 	}
 	assert(keysCount == 0);
 
-	//!! get rid of psax format, store additional flags in text file (AnimSetName.psa.config)
-	//!! also could remove -pskx command line option
-	//!! note: should use pskx format for mesh - remove psax only
-	if (!GExportPskx)
-	{
-		if (requirePsax) appNotify("Exporting %s'%s': psax is recommended", OriginalAnim->GetClassName(), OriginalAnim->Name);
-		return;
-	}
+	// generate configuration file with extended attributes
+	if (!Anim->AnimRotationOnly && !Anim->UseAnimTranslation.Num() && !Anim->ForceMeshTranslation.Num() && !requireConfig)
+		return;		// nothing to write
 
-	// export extra animation information
-	static VChunkHeader FlagHdr;
-	int numFlags = numAnims * numBones;
-	FlagHdr.DataCount = numFlags;
-	FlagHdr.DataSize  = sizeof(byte);
-	SAVE_CHUNK(FlagHdr, "ANIMFLAGS");
-	for (i = 0; i < numAnims; i++)
+	char filename[512];
+	appSprintf(ARRAY_ARG(filename), "%s/%s.config", GetExportPath(OriginalAnim), OriginalAnim->Name);
+	FFileReader Ar1(filename, false);
+
+	// we are using UE3 property names here
+
+	// AnimRotationOnly
+	Ar1.Printf("[AnimSet]\nbAnimRotationOnly=%d\n", Anim->AnimRotationOnly);
+	// UseTranslationBoneNames
+	Ar1.Printf("\n[UseTranslationBoneNames]\n");
+	for (i = 0; i < Anim->UseAnimTranslation.Num(); i++)
+		if (Anim->UseAnimTranslation[i])
+			Ar1.Printf("%s\n", *Anim->TrackBoneNames[i]);
+	// ForceMeshTranslationBoneNames
+	Ar1.Printf("\n[ForceMeshTranslationBoneNames]\n");
+	for (i = 0; i < Anim->ForceMeshTranslation.Num(); i++)
+		if (Anim->ForceMeshTranslation[i])
+			Ar1.Printf("%s\n", *Anim->TrackBoneNames[i]);
+
+	if (requireConfig)
 	{
-		const CAnimSequence &S = Anim->Sequences[i];
-		for (int b = 0; b < numBones; b++)
+		// has removed tracks inside the sequence
+		// currently used for Unreal Championship 2 only
+		Ar1.Printf("\n[RemoveTracks]\n");
+		for (i = 0; i < numAnims; i++)
 		{
-			byte flag = 0;
-			if (S.Tracks[b].KeyPos.Num() == 0)
-				flag |= PSAX_FLAG_NO_TRANSLATION;
-			if (S.Tracks[b].KeyQuat.Num() == 0)
-				flag |= PSAX_FLAG_NO_ROTATION;
-			Ar << flag;
-			numFlags--;
+			const CAnimSequence &S = Anim->Sequences[i];
+			for (int b = 0; b < numBones; b++)
+			{
+#define FLAG_NO_TRANSLATION		1
+#define FLAG_NO_ROTATION		2
+				static const char *FlagInfo[] = { "", "trans", "rot", "all" };
+				int flag = 0;
+				if (S.Tracks[b].KeyPos.Num() == 0)
+					flag |= FLAG_NO_TRANSLATION;
+				if (S.Tracks[b].KeyQuat.Num() == 0)
+					flag |= FLAG_NO_ROTATION;
+				if (flag)
+					Ar1.Printf("%s.%d=%s\n", *S.Name, b, FlagInfo[flag]);
+			}
 		}
 	}
-	assert(numFlags == 0);
 }
 
 

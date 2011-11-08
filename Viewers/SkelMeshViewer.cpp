@@ -5,6 +5,8 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
+#include "UnMathTools.h"
+#include "TypeConvert.h"
 
 #include "UnMesh.h"			//??
 #include "UnMesh2.h"		// for UMeshAnimation
@@ -23,7 +25,16 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 	if (Mesh->Animation)		//?? UE2 only
 		SkelInst->SetAnim(Mesh->Animation->ConvertedAnim);
 	Inst = SkelInst;
+#if 0
 	Initialize();
+#else
+	//?? same code for UVertMesh
+	CVec3 Mins, Maxs;
+	ComputeBounds(&CVT(Mesh->Points[0]), Mesh->Points.Num(), sizeof(FVector), Mins, Maxs);
+	SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
+	SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
+	InitViewerPosition(Mins, Maxs);
+#endif
 #if 0
 	CSkelMeshInstance* Inst2 = (CSkelMeshInstance*)Inst;
 	Inst2->SetBoneScale("Bip01 Pelvis", 1.4);
