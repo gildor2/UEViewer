@@ -7,7 +7,7 @@
 #include "Exporters.h"						// for GetExportPath()
 
 
-void ExportMaterial(const UUnrealMaterial *Mat)
+void ExportMaterial(const UUnrealMaterial *Mat, FArchive &DummyAr)
 {
 	guard(ExportMaterial);
 
@@ -23,7 +23,13 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	appSprintf(ARRAY_ARG(filename), "%s/%s.mat", GetExportPath(Mat), Mat->Name);
 	FFileReader Ar(filename, false);
 
-#define PROC(Arg)		if (Params.Arg) Ar.Printf(#Arg"=%s\n", Params.Arg->Name);
+#define PROC(Arg)	\
+	if (Params.Arg) \
+	{				\
+		Ar.Printf(#Arg"=%s\n", Params.Arg->Name); \
+		ExportObject(Params.Arg); \
+	}
+
 	PROC(Diffuse);
 	PROC(Normal);
 	PROC(Specular);

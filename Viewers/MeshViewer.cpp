@@ -22,7 +22,7 @@ void CMeshViewer::InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs)
 	float radius = tmp.GetLength();
 
 	SetViewOffset(Center);
-	SetDistScale((radius + 10) / 200);
+	SetDistScale((radius + 10) / 230);
 	MoveCamera(20, 20);
 }
 

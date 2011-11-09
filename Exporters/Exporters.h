@@ -1,8 +1,27 @@
 #ifndef __EXPORT_H__
 #define __EXPORT_H__
 
-void appSetBaseExportDirectory(const char *Dir);
 
+// registration
+typedef void (*ExporterFunc_t)(const UObject*, FArchive&);
+
+void RegisterExporter(const char *ClassName, const char *FileExt, ExporterFunc_t Func);
+
+// wrapper to avoid typecasts to ExporterFunc_t
+// T should be an UObject-derived class
+template<class T>
+FORCEINLINE void RegisterExporter(const char *ClassName, const char *FileExt, void (*Func)(const T*, FArchive&))
+{
+	RegisterExporter(ClassName, FileExt, (ExporterFunc_t)Func);
+}
+
+bool ExportObject(const UObject *Obj);
+
+// path
+void appSetBaseExportDirectory(const char *Dir);
+const char* GetExportPath(const UObject *Obj);
+
+// configuration
 extern bool GExportScripts;
 extern bool GExportLods;
 extern bool GExportPskx;
@@ -36,7 +55,7 @@ void Export3D (const UVertMesh *Mesh, FArchive &Ar);
 // TGA
 void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar);
 // UUnrealMaterial
-void ExportMaterial(const UUnrealMaterial *Mat);
+void ExportMaterial(const UUnrealMaterial *Mat, FArchive &Ar = *GDummySave);
 // sound
 void ExportSound(const USound *Snd, FArchive &Ar);
 void ExportSoundNodeWave(const USoundNodeWave *Snd, FArchive &Ar);
@@ -72,7 +91,6 @@ struct UniqueNameList
 };
 
 void WriteTGA(FArchive &Ar, int width, int height, byte *pic);
-const char* GetExportPath(const UObject *Obj);
 
 
 #endif // __EXPORT_H__

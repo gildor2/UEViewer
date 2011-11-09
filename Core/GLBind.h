@@ -27,6 +27,7 @@ struct GL_t
 	void	(APIENTRY * GenTextures) (GLsizei n, GLuint *textures);
 	GLenum	(APIENTRY * GetError) ();
 	void	(APIENTRY * GetIntegerv) (GLenum pname, GLint *params);
+	void	(APIENTRY * GetMaterialfv) (GLenum face, GLenum pname, GLfloat *params);
 	const GLubyte *	(APIENTRY * GetString) (GLenum name);
 	GLboolean	(APIENTRY * IsEnabled) (GLenum cap);
 	GLboolean	(APIENTRY * IsTexture) (GLuint texture);
@@ -136,6 +137,7 @@ extern GL_t GL;
 #define glGenTextures	GL.GenTextures
 #define glGetError	GL.GetError
 #define glGetIntegerv	GL.GetIntegerv
+#define glGetMaterialfv	GL.GetMaterialfv
 #define glGetString	GL.GetString
 #define glIsEnabled	GL.IsEnabled
 #define glIsTexture	GL.IsTexture

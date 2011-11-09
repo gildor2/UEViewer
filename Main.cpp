@@ -154,90 +154,6 @@ static int ObjIndex = 0;
 	Exporters
 -----------------------------------------------------------------------------*/
 
-#define MAX_EXPORTERS		16
-
-bool GExportScripts = false;
-bool GExportLods    = false;
-bool GExportPskx    = false;
-
-typedef void (*ExporterFunc_t)(UObject*, FArchive&);
-
-struct CExporterInfo
-{
-	const char		*ClassName;
-	const char		*FileExt;
-	ExporterFunc_t	Func;
-};
-
-static CExporterInfo exporters[MAX_EXPORTERS];
-static int numExporters = 0;
-
-static void RegisterExporter(const char *ClassName, const char *FileExt, ExporterFunc_t Func)
-{
-	guard(RegisterExporter);
-	assert(numExporters < MAX_EXPORTERS);
-	CExporterInfo &Info = exporters[numExporters];
-	Info.ClassName = ClassName;
-	Info.FileExt   = FileExt;
-	Info.Func      = Func;
-	numExporters++;
-	unguard;
-}
-
-#define EXPORTER(class,ext,func)		RegisterExporter(class, ext, (ExporterFunc_t)func)
-
-
-static bool ExportObject(UObject *Obj)
-{
-	guard(ExportObject);
-
-	static UniqueNameList ExportedNames;
-
-	for (int i = 0; i < numExporters; i++)
-	{
-		const CExporterInfo &Info = exporters[i];
-		if (Obj->IsA(Info.ClassName))
-		{
-			const char *ExportPath = GetExportPath(Obj);
-			const char *ClassName  = Obj->GetClassName();
-			// get name uniqie index
-			char uniqueName[256];
-			appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
-			int uniqieIdx = ExportedNames.RegisterName(uniqueName);
-			const char *OriginalName = NULL;
-			if (uniqieIdx >= 2)
-			{
-				appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqieIdx);
-				appPrintf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
-				//?? HACK: temporary replace object name with unique one
-				OriginalName = Obj->Name;
-				Obj->Name    = uniqueName;
-			}
-
-			if (Info.FileExt)
-			{
-				char filename[512];
-				appSprintf(ARRAY_ARG(filename), "%s/%s.%s", ExportPath, Obj->Name, Info.FileExt);
-				FFileReader Ar(filename, false);
-				Ar.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
-				Info.Func(Obj, Ar);
-			}
-			else
-			{
-				Info.Func(Obj, *GDummySave);
-			}
-
-			//?? restore object name
-			if (OriginalName) Obj->Name = OriginalName;
-			return true;
-		}
-	}
-	return false;
-
-	unguardf(("%s'%s'", Obj->GetClassName(), Obj->Name));
-}
-
-
 // wrappers
 static void ExportStaticMesh2(const UStaticMesh *Mesh, FArchive &Ar)
 {
@@ -859,32 +775,33 @@ int main(int argc, char **argv)
 	// register exporters
 	if (!md5)
 	{
-		EXPORTER("SkeletalMesh", GExportPskx ? "pskx" : "psk", ExportPsk);
-		EXPORTER("MeshAnimation", "psa",     ExportMeshAnimation);
+		RegisterExporter("SkeletalMesh", GExportPskx ? "pskx" : "psk", ExportPsk);
+		RegisterExporter("MeshAnimation", "psa",     ExportMeshAnimation);
 #if UNREAL3
-		EXPORTER("AnimSet",       "psa",     ExportAnimSet      );
+		RegisterExporter("AnimSet",       "psa",     ExportAnimSet      );
 #endif
 	}
 	else
 	{
-		EXPORTER("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
-		EXPORTER("MeshAnimation", NULL,      ExportMd5Anim2);	// separate file for each animation track
+		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
+		RegisterExporter("MeshAnimation", NULL,      ExportMd5Anim2);	// separate file for each animation track
 #if UNREAL3
-		EXPORTER("AnimSet",       NULL,      ExportMd5Anim3);	// ...
+		RegisterExporter("AnimSet",       NULL,      ExportMd5Anim3);	// ...
 #endif
 	}
-	EXPORTER("VertMesh",      NULL,   Export3D  );				// will generate 2 files
-	EXPORTER("StaticMesh",    "pskx", ExportStaticMesh2);
-	EXPORTER("Texture",       "tga",  ExportTga );
-	EXPORTER("Sound",         NULL,   ExportSound);
+	RegisterExporter("VertMesh",      NULL,   Export3D  );				// will generate 2 files
+	RegisterExporter("StaticMesh",    "pskx", ExportStaticMesh2);
+	RegisterExporter("Texture",       "tga",  ExportTga );
+	RegisterExporter("Sound",         NULL,   ExportSound);
 #if UNREAL3
-	EXPORTER("StaticMesh3",   "pskx", ExportStaticMesh3);
-	EXPORTER("Texture2D",     "tga",  ExportTga );
-	EXPORTER("SoundNodeWave", NULL,   ExportSoundNodeWave);
-	EXPORTER("SwfMovie",      "gfx",  ExportGfx );
-	EXPORTER("FaceFXAnimSet", "fxa",  ExportFaceFXAnimSet);
-	EXPORTER("FaceFXAsset",   "fxa",  ExportFaceFXAsset  );
+	RegisterExporter("StaticMesh3",   "pskx", ExportStaticMesh3);
+	RegisterExporter("Texture2D",     "tga",  ExportTga );
+	RegisterExporter("SoundNodeWave", NULL,   ExportSoundNodeWave);
+	RegisterExporter("SwfMovie",      "gfx",  ExportGfx );
+	RegisterExporter("FaceFXAnimSet", "fxa",  ExportFaceFXAnimSet);
+	RegisterExporter("FaceFXAsset",   "fxa",  ExportFaceFXAsset  );
 #endif // UNREAL3
+	RegisterExporter("UnrealMaterial", NULL,  ExportMaterial);			// register this after Texture/Texture2D exporters
 
 	// prepare classes
 	// note: we are registering classes after loading package: in this case we can know engine version (1/2/3)
@@ -1026,11 +943,8 @@ int main(int argc, char **argv)
 				notifyPackage = ExpObj->Package;
 				appSetNotifyHeader(notifyPackage->Filename);
 			}
-			if (ExportObject(ExpObj))
-			{
-				appPrintf("Exported %s %s\n", ExpObj->GetClassName(), ExpObj->Name);
-			}
-			else if (argObjName && ExpObj == Obj)
+			bool done = ExportObject(ExpObj);
+			if (!done && argObjName && (ExpObj == Obj))
 			{
 				// display warning message only when failed to export object, specified from command line
 				appPrintf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
@@ -1158,43 +1072,6 @@ void AppDrawFrame()
 	unguard;
 }
 
-#if 0
-
-class FArchiveGetDepends : public FArchive
-{
-public:
-	TArray<UObject*>	Depends;
-
-	FArchiveGetDepends(UObject *Object)
-	{
-		IsLoading = false;
-		Depends.AddItem(Object);
-		Object->Serialize(*this);
-	}
-
-	virtual void Seek(int Pos)
-	{}
-	virtual void Serialize(void *data, int size)
-	{}
-	virtual FArchive& operator<<(UObject *&Obj)
-	{
-		guard(FArchiveGetDepends::operator<<(UObject*));
-//		printf("? Obj: %s'%s'\n", Obj->GetClassName(), Obj->Name);
-		if (Depends.FindItem(Obj) == INDEX_NONE)
-		{
-//			printf("... new, parsing\n");
-			Depends.AddItem(Obj);
-			Obj->Serialize(*this);
-//			printf("... end parsing\n");
-		}
-//		else printf("... found\n");
-		return *this;
-		unguard;
-	}
-};
-
-#endif
-
 
 static void TakeScreenshot(const char *ObjectName)
 {
@@ -1262,20 +1139,6 @@ void AppKeyEvent(int key)
 		CreateVisualizer(Obj);
 		return;
 	}
-	if (key == 'd')
-	{
-		Viewer->Dump();
-		return;
-	}
-#if 0
-	//!! disabled: Object.Serialize(SomeArchive) requires UObject writting properties capability
-	if (key == ('x'|KEY_CTRL))
-	{
-		assert(Viewer->Object);
-		FArchiveGetDepends Deps(Viewer->Object);
-		//!! export here
-	}
-#endif
 	if (key == ('s'|KEY_CTRL))
 	{
 		UObject *Obj = UObject::GObjObjects[ObjIndex];
@@ -1293,10 +1156,6 @@ void AppDisplayTexts(bool helpVisible)
 	if (helpVisible)
 	{
 		DrawKeyHelp("PgUp/PgDn", "browse objects");
-		DrawKeyHelp("D",         "dump info");
-#if 0
-		DrawKeyHelp("Ctrl+X",    "export object");
-#endif
 		DrawKeyHelp("Ctrl+S",    "take screenshot");
 		Viewer->ShowHelp();
 		DrawTextLeft("-----\n");		// divider

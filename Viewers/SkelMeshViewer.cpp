@@ -13,6 +13,8 @@
 #include "UnMesh3.h"		// for UAnimSet
 #include "SkeletalMesh.h"
 
+#include "Exporters/Exporters.h"
+
 
 #define TEST_ANIMS			1
 
@@ -28,22 +30,28 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 #if 0
 	Initialize();
 #else
-	//?? same code for UVertMesh
+	// compute bounds for the current mesh
 	CVec3 Mins, Maxs;
 	ComputeBounds(&CVT(Mesh->Points[0]), Mesh->Points.Num(), sizeof(FVector), Mins, Maxs);
 	SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
 	SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
+	// extend bounds with additional meshes
+	for (int i = 0; i < Meshes.Num(); i++)
+	{
+		CLodMeshInstance* Inst = Meshes[i];
+		if ((Inst->pMesh != SkelInst->pMesh) && Inst->pMesh->IsA("SkeletalMesh"))
+		{
+			CSkelMeshInstance *SkelInst2 = static_cast<CSkelMeshInstance*>(Inst);
+			const USkeletalMesh *Mesh2 = static_cast<const USkeletalMesh*>(SkelInst2->pMesh);
+			// the same code for SkelInst2
+			CVec3 Bounds2[2];
+			ComputeBounds(&CVT(Mesh2->Points[0]), Mesh2->Points.Num(), sizeof(FVector), Bounds2[0], Bounds2[1]);
+			SkelInst2->BaseTransformScaled.TransformPointSlow(Bounds2[0], Bounds2[0]);
+			SkelInst2->BaseTransformScaled.TransformPointSlow(Bounds2[1], Bounds2[1]);
+			ComputeBounds(Bounds2, 2, sizeof(CVec3), Mins, Maxs, true);	// include Bounds2 into Mins/Maxs
+		}
+	}
 	InitViewerPosition(Mins, Maxs);
-#endif
-#if 0
-	CSkelMeshInstance* Inst2 = (CSkelMeshInstance*)Inst;
-	Inst2->SetBoneScale("Bip01 Pelvis", 1.4);
-//	Inst2->SetBoneScale("Bip01 Spine1", 2);
-	Inst2->SetBoneScale("Bip01 Head", 0.8);
-	Inst2->SetBoneScale("Bip01 L UpperArm", 1.2);
-	Inst2->SetBoneScale("Bip01 R UpperArm", 1.2);
-	Inst2->SetBoneScale("Bip01 R Thigh", 0.4);
-	Inst2->SetBoneScale("Bip01 L Thigh", 0.4);
 #endif
 }
 
@@ -204,6 +212,15 @@ void CSkelMeshViewer::Dump()
 			}
 		}
 	}
+}
+
+
+void CSkelMeshViewer::Export()
+{
+	CLodMeshViewer::Export();
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+	const CAnimSet *Anim = MeshInst->GetAnim();
+	if (Anim) ExportObject(Anim->OriginalAnim);
 }
 
 
@@ -382,8 +399,6 @@ void CSkelMeshViewer::ProcessKey(int key)
 			CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 			SkelInst->SetMesh(MeshInst->pMesh);
 			TagMesh(SkelInst);
-			//!! note: TagMesh() may reject tagging
-			//!! also, there is no way to remove tagging
 		}
 		break;
 

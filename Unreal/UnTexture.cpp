@@ -141,7 +141,7 @@ static byte *DecompressTexture(const byte *Data, int width, int height, ETexture
 			}
 		}
 		return dst;
-	case TEXF_CxV8U8:
+	case TEXF_CxV8U8:		//!! bad for Tribes
 		{
 			const byte *s = Data;
 			byte *d = dst;

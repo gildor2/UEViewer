@@ -14,18 +14,22 @@ inline void SetAxis(const FRotator &Rot, CAxis &Axis)
 
 //?? not inline
 //?? pass CBox, place function into Core/Math32.h
-inline void ComputeBounds(const CVec3 *Data, int NumVerts, int Stride, CVec3 &Mins, CVec3 &Maxs)
+inline void ComputeBounds(const CVec3 *Data, int NumVerts, int Stride, CVec3 &Mins, CVec3 &Maxs, bool UpdateBounds = false)
 {
 	if (!NumVerts)
 		return;
 
-	Mins = Maxs = *Data;
-	NumVerts--;
+	if (!UpdateBounds)
+	{
+		Mins = Maxs = *Data;
+		Data = OffsetPointer(Data, Stride);
+		NumVerts--;
+	}
 
 	while (NumVerts--)
 	{
-		Data = OffsetPointer(Data, Stride);
 		CVec3 v = *Data;
+		Data = OffsetPointer(Data, Stride);
 		if (v[0] < Mins[0]) Mins[0] = v[0];
 		if (v[0] > Maxs[0]) Maxs[0] = v[0];
 		if (v[1] < Mins[1]) Mins[1] = v[1];

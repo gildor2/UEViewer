@@ -8,19 +8,35 @@
 #include "../MeshInstance/MeshInstance.h"
 #include "TypeConvert.h"
 
+#include "Exporters/Exporters.h"
+
 
 //#define SHOW_BOUNDS		1
+#define HIGHLIGHT_CURRENT	1
+
+#define HIGHLIGHT_DURATION	500
+#define HIGHLIGHT_STRENGTH	4.0f
 
 TArray<CLodMeshInstance*> CLodMeshViewer::Meshes;
 
+
+#if HIGHLIGHT_CURRENT
+static unsigned ViewerCreateTime;
+#endif
 
 CLodMeshViewer::CLodMeshViewer(ULodMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	AnimIndex(-1)
 ,	CurrentTime(appMilliseconds())
-{}
+{
+#if HIGHLIGHT_CURRENT
+	ViewerCreateTime = CurrentTime;
+#endif
+}
 
 
+//?? used for CVertMeshViewer only - UVertMesh uses packed FMeshVert which cannot be processed
+//?? by ComputeBounds() directly, so rely on the mesh bounds
 void CLodMeshViewer::Initialize()
 {
 	CLodMeshInstance *LodInst = static_cast<CLodMeshInstance*>(Inst);
@@ -116,6 +132,19 @@ void CLodMeshViewer::Dump()
 }
 
 
+void CLodMeshViewer::Export()
+{
+	CMeshViewer::Export();
+	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
+	assert(Mesh);
+	for (int i = 0; i < Mesh->Textures.Num(); i++)
+	{
+		const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
+		ExportObject(Tex);
+	}
+}
+
+
 void CLodMeshViewer::TagMesh(CLodMeshInstance *NewInst)
 {
 	for (int i = 0; i < Meshes.Num(); i++)
@@ -135,36 +164,18 @@ void CLodMeshViewer::Draw2D()
 
 	CMeshViewer::Draw2D();
 
+	CLodMeshInstance *LodInst = static_cast<CLodMeshInstance*>(Inst);
+
 	for (int i = 0; i < Meshes.Num(); i++)
-		DrawTextLeft("%d: %s", i, Meshes[i]->pMesh->Name);
+		DrawTextLeft("%s%d: %s", (Meshes[i]->pMesh == LodInst->pMesh) ? S_RED : S_WHITE, i, Meshes[i]->pMesh->Name);
 
 	const char *AnimName;
 	float Frame, NumFrames, Rate;
-	CLodMeshInstance *LodInst = static_cast<CLodMeshInstance*>(Inst);
 	LodInst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
 
 	DrawTextLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g%s",
 		AnimIndex+1, LodInst->GetAnimCount(), AnimName, Rate, NumFrames,
 		LodInst->IsTweening() ? " [tweening]" : "");
-#if 0 //UNREAL3
-	//!! REMOVE LATER
-	if (Inst->pMesh->IsA("SkeletalMesh") && AnimIndex >= 0)
-	{
-		const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(LodInst->pMesh);
-		if (Mesh->Animation && Mesh->Animation->IsA("AnimSet"))
-		{
-			const UAnimSet *Anim = static_cast<const UAnimSet*>(Mesh->Animation);
-			const UAnimSequence *Seq = Anim->Sequences[AnimIndex];
-			DrawTextLeft("Anim: %s  Comp: %s", *Seq->SequenceName, *Seq->RotationCompressionFormat);
-			for (int i = 0; i < Anim->TrackBoneNames.Num(); i++)
-			{
-				int TransKeys = Seq->CompressedTrackOffsets[i*4+1];
-				int RotKeys   = Seq->CompressedTrackOffsets[i*4+3];
-				DrawTextLeft("  Bone: %-15s PosKeys: %3d RotKeys: %3d", *Anim->TrackBoneNames[i], TransKeys, RotKeys);
-			}
-		}
-	}
-#endif
 	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
 
 	if (Inst->bColorMaterials)
@@ -201,7 +212,38 @@ void CLodMeshViewer::Draw3D()
 	CurrentTime = time;
 	LodInst->UpdateAnimation(TimeDelta);
 
+#if HIGHLIGHT_CURRENT
+	float lightAmbient[4];
+	float boost = 0;
+	float hightlightTime = time - ViewerCreateTime;
+
+	if (Meshes.Num() && hightlightTime < HIGHLIGHT_DURATION)
+	{
+		if (hightlightTime > HIGHLIGHT_DURATION / 2)
+			hightlightTime = HIGHLIGHT_DURATION - hightlightTime;	// fade
+		boost = HIGHLIGHT_STRENGTH * hightlightTime / (HIGHLIGHT_DURATION / 2);
+
+		glGetMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
+		lightAmbient[0] += boost;
+		lightAmbient[1] += boost;
+		lightAmbient[2] += boost;
+		glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+		glMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
+	}
+#endif // HIGHLIGHT_CURRENT
+
 	CMeshViewer::Draw3D();
+
+#if HIGHLIGHT_CURRENT
+	if (boost > 0)
+	{
+		lightAmbient[0] -= boost;
+		lightAmbient[1] -= boost;
+		lightAmbient[2] -= boost;
+		glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+		glMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
+	}
+#endif // HIGHLIGHT_CURRENT
 
 	int i;
 
@@ -239,7 +281,7 @@ void CLodMeshViewer::Draw3D()
 	for (i = 0; i < Meshes.Num(); i++)
 	{
 		CLodMeshInstance *mesh = Meshes[i];
-		if (mesh->pMesh == LodInst->pMesh) continue;	// no duplicates
+		if (mesh->pMesh == LodInst->pMesh) continue;	// avoid duplicates
 		mesh->UpdateAnimation(TimeDelta);
 		mesh->Draw();
 	}

@@ -34,7 +34,8 @@ GUI-relative:
   - default lighting mode
   - initial window size
   - custom package extensions
-  - custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
+  ? custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
+    (already has -uncook and -groups -- is anything else needed?)
 - key to toggle debug text and 3D lines (good for screenshots)
 
 ForcedExport handling: should use this information for UE3 package loading:

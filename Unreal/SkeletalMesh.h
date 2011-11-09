@@ -2,39 +2,30 @@
 #define __SKELETALMESH_H__
 
 
-/*!!
-	Data exclusion:
+/*-----------------------------------------------------------------------------
+	CAnimSet class, common for UMeshAnimation (UE2) and UAnimSet (UE3)
+-----------------------------------------------------------------------------*/
+
+/*
+	Animation data exclusion in favour of bind pose:
 	- Tribes
-	  - uses MotionChunk.BoneIndices to exclude animation of particular bone in specific animation
-	    * exclude individual CAnimTrack for one CAnimSequence
-	    * can do this by empty KeyQuat and KeyPos
-	    ! BoneIndices is set by MY CODE only depending on flags value (see FixTribesMotionChunk()), originally it is not
-	      used at all
+	  - uses AnalogTrack.Flags to completely exclude animation of particular bone in specific animation
 	- UC2
-	  - may have empty AnalogTrack.KeyPos or AnalogTrack.KeyQuat, in this case use value from BindPose
-	    * exclude KeyQuat and/or KeyPos from CAnimTrack for one CAnimSequence
+	  - has empty KeyPos and/or KeyQuat arrays
 	- UE3
 	  - control from UAnimSet for all sequences by bAnimRotationOnly and UseTranslationBoneNames/ForceMeshTranslationBoneNames
+	  - done for whole animation set at once, not per-track
 	  - rotation is always taken from the animation
 	  - root bone is always uses translation from the animation
 	  - other bones uses translation from BindPose when
 	    (bAnimRotationOnly && UseTranslationBoneNames[Bone]) || ForceMeshTranslationBoneNames[Bone]
 	    * ForceMeshTranslationBoneNames tracks are removed from UAnimSequence (has single invalid translation key)
-	* so, we require 2 kinds of track exclusion: removal of the per-track arrays, and removal of the per-sequence tracks
+	  - UAnimSequence is always has at least one key for excluded bone (there is no empty arrays)
 */
 
 
 /*!!
-	CAnimSet conversion stages:
-	- replace psax exporter with psa + text config file
-	  - update ActorX Importer to support this
-	- cleanup UnMesh.h header usage (not a time for this, require mesh refactoring?)
-
-	VERIFY:
-	* UE2:
-	  ? export md5/psa (try to load somewhere)
-	* UE3:
-	  ? export md5/psa (try to load somewhere)
+	- try to make code for [RemoveTracks] loading in .ms (probably will not work from the 1st try, but ...)
 */
 
 

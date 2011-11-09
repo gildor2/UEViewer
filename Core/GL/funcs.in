@@ -112,7 +112,7 @@ void GetIntegerv(GLenum pname, GLint *params);
 //void GetMapdv(GLenum target, GLenum query, GLdouble *v);
 //void GetMapfv(GLenum target, GLenum query, GLfloat *v);
 //void GetMapiv(GLenum target, GLenum query, GLint *v);
-//void GetMaterialfv(GLenum face, GLenum pname, GLfloat *params);
+void GetMaterialfv(GLenum face, GLenum pname, GLfloat *params);
 //void GetMaterialiv(GLenum face, GLenum pname, GLint *params);
 //void GetPixelMapfv(GLenum map, GLfloat *values);
 //void GetPixelMapuiv(GLenum map, GLuint *values);

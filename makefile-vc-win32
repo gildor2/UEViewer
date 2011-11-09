@@ -158,6 +158,50 @@ DEPENDS = \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	Exporters/Exporters.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+./obj/umodel-win32/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+./obj/umodel-win32/LodMeshViewer.obj : Viewers/LodMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/LodMeshViewer.obj" Viewers/LodMeshViewer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
 	Unreal/StaticMesh.h \
 	Unreal/UnAnimNotify.h \
 	Unreal/UnCore.h \
@@ -184,21 +228,16 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/TypeConvert.h \
+	Exporters/Exporters.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnMesh3.h \
 	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-./obj/umodel-win32/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
+./obj/umodel-win32/ObjectViewer.obj : Viewers/ObjectViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ObjectViewer.obj" Viewers/ObjectViewer.cpp
 
 DEPENDS = \
 	Build.h \
@@ -218,25 +257,6 @@ DEPENDS = \
 
 ./obj/umodel-win32/StatMeshViewer.obj : Viewers/StatMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StatMeshViewer.obj" Viewers/StatMeshViewer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/TypeConvert.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
-
-./obj/umodel-win32/LodMeshViewer.obj : Viewers/LodMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/LodMeshViewer.obj" Viewers/LodMeshViewer.cpp
 
 DEPENDS = \
 	Build.h \
@@ -308,23 +328,6 @@ DEPENDS = \
 
 ./obj/umodel-win32/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MaterialViewer.obj" Viewers/MaterialViewer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
-
-./obj/umodel-win32/ObjectViewer.obj : Viewers/ObjectViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ObjectViewer.obj" Viewers/ObjectViewer.cpp
 
 DEPENDS = \
 	Build.h \

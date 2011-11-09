@@ -54,6 +54,7 @@ Ctrl+S           take screenshot into file Screenshots/ObjectName.tga
 Ctrl+PgUp/PgDn   scroll onscreen texts
 Ctrl+L           switch lighting modes
 Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
+Ctrl+X           export all objects from the current scene
 
 
 Notes about psk/psa export
@@ -124,6 +125,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+09.11.2011
+- highlighting current mesh in a viewer in multipart mesh rendering mode
+- taking into account bounds of all meshes of multipart mesh when positioning camera
+- Ctrl+X in a viewer will export all objects which are currently shown on the scene
+
 08.11.2011
 - animation system were rewritten
   - implemented support for UE3 rotation-only tracks

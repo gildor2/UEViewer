@@ -463,7 +463,7 @@ void MoveCamera(float YawDelta, float PitchDelta, float DistDelta, float PanX, f
 	viewAngles[PITCH] = bound(viewAngles[PITCH], -90, 90);
 
 	// change distance to object
-	viewDist += DistDelta * 400 * distScale;
+	viewDist += DistDelta;
 
 	CAxis axis;
 	axis.FromEuler(viewAngles);

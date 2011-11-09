@@ -10,8 +10,9 @@
 
  Revision History:
 
-	??.11.2011 v1.18
-	- ???
+	09.11.2011 v1.18
+	- implemented support for animation tracks without translation keys
+	- reading extended psa information from the .config file, removed psax ANIMFLAGS section support
 
 	06.11.2011 v1.17
 	- eliminated error messages when loading psk or psa file with unknown section name (SCALEKEYS etc)
@@ -97,6 +98,7 @@ TODO:
 - try to not use setBoneEnable false ...
 */
 
+-- constant used to detect ActorX Importer updates during single 3ds Max session
 global AX_IMPORTER_VERSION = 18
 
 -------------------------------------------------------------------------------
@@ -163,27 +165,27 @@ if getSourceFileName != undefined then	-- checking Max version (Max9+) ...
 )
 
 
-fn GetSetting name default =
+fn axGetSetting name default =	--?? unused
 (
 	local ret = getINISetting configFile "Main" name
 	if ret == "" then ret = (default as string)
 	ret
 )
 
-fn SetSetting name value =
+fn axSetSetting name value =	--?? unused
 (
 	setINISetting configFile "Main" name (value as string)
 )
 
 
-fn GetSettingBool  name default = (GetSetting name default) as BooleanClass
-fn GetSettingFloat name default = (GetSetting name default) as float
+fn GetSettingBool  name default = (axGetSetting name default) as BooleanClass	--?? unused
+fn GetSettingFloat name default = (axGetSetting name default) as float			--?? unused
 
 
-tmp_v  = undefined		-- global variable, helper for DoSetting() (required for execute() ...)
-g_isLoading = true		-- DoSetting() mode
+tmp_v = undefined		-- global variable, helper for axDoSetting() (required for execute() ...)
+g_isLoading = true		-- axDoSetting() mode
 
-fn DoSetting name var =
+fn axDoSetting name var =
 (
 	local default = execute var							-- value has the same type as var
 	if g_isLoading then
@@ -224,23 +226,23 @@ fn SerializeSettings isLoading =
 	)
 	g_isLoading = isLoading
 	-- read/write settings
-	DoSetting "LastUsedDir"   "g_lastDir1"
-	DoSetting "LastUsedDir2"  "g_lastDir2"
-	DoSetting "TexturesDir"   "g_texDir"
-	DoSetting "TexRecurse"    "g_texRecurse"
-	DoSetting "TexMissAction" "g_texMissAction"
-	DoSetting "AutoPlayAnim"  "g_playAnim"
-	DoSetting "UpdateTime"    "g_updateTime"
-	DoSetting "FixLoopAnim"   "g_fixLooping"
-	DoSetting "SeeThru"       "g_seeThru"
-	DoSetting "SkelOnly"      "g_skelOnly"
-	DoSetting "BoneSize"      "g_boneSize"
-	DoSetting "ReposBones"    "g_reposBones"
-	DoSetting "MeshYaw"       "g_rotY"
-	DoSetting "MeshPitch"     "g_rotP"
-	DoSetting "MeshRoll"      "g_rotR"
-	DoSetting "MeshScale"     "g_meshScale"
-	DoSetting "ReorientBones" "g_reorientBones"
+	axDoSetting "LastUsedDir"   "g_lastDir1"
+	axDoSetting "LastUsedDir2"  "g_lastDir2"
+	axDoSetting "TexturesDir"   "g_texDir"
+	axDoSetting "TexRecurse"    "g_texRecurse"
+	axDoSetting "TexMissAction" "g_texMissAction"
+	axDoSetting "AutoPlayAnim"  "g_playAnim"
+	axDoSetting "UpdateTime"    "g_updateTime"
+	axDoSetting "FixLoopAnim"   "g_fixLooping"
+	axDoSetting "SeeThru"       "g_seeThru"
+	axDoSetting "SkelOnly"      "g_skelOnly"
+	axDoSetting "BoneSize"      "g_boneSize"
+	axDoSetting "ReposBones"    "g_reposBones"
+	axDoSetting "MeshYaw"       "g_rotY"
+	axDoSetting "MeshPitch"     "g_rotP"
+	axDoSetting "MeshRoll"      "g_rotR"
+	axDoSetting "MeshScale"     "g_meshScale"
+	axDoSetting "ReorientBones" "g_reorientBones"
 )
 
 
@@ -394,6 +396,7 @@ fn GetRotationMatrix =
 	local angles = eulerAngles g_rotR -g_rotP -g_rotY
 	return angles as matrix3
 )
+
 
 -------------------------------------------------------------------------------
 --	ActorX data structures
@@ -675,7 +678,7 @@ fn RemoveAnimation =
 	stopAnimation()
 	for i = 1 to MeshBones.count do
 	(
-		local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
+		local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:true
 		if Bone != undefined then deleteKeys Bone #allKeys
 	)
 	animationRange = interval 0 1
@@ -693,7 +696,7 @@ fn RestoreBindpose =
 		-- find bones
 		for i = 1 to MeshBones.count do
 		(
-			local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:false
+			local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:true
 			if Bone == undefined then
 				format "WARNING: cannot find the bone %\n" MeshBones[i].Name
 			else
@@ -883,7 +886,7 @@ fn ImportPskFile filename skelOnly:false =
 		)
 		if len < 4 then len = 4
 		-- create Max bone
-		newBone = getNodeByName bn.Name exact:true ignoreCase:false
+		newBone = getNodeByName bn.Name exact:true ignoreCase:true
 		if (newBone == undefined) then
 		(
 			if (g_reorientBones == false or childBone == undefined) then
@@ -1140,7 +1143,7 @@ fn ImportPskFile filename skelOnly:false =
 		(
 			-- bone already exists in MeshBones array
 			-- find bone in Max scene
-			if getNodeByName boneName exact:true ignoreCase:false != undefined then
+			if getNodeByName boneName exact:true ignoreCase:true != undefined then
 			(
 				-- bone still exists in Max scene, should add it to MeshBones array
 				MeshBones[MeshBones.count+1] = OldMeshBones[i]
@@ -1225,14 +1228,12 @@ fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
 			(
 				case mode of
 				(
-				0:
-					(
-						ErrorMessage "unexpected %" line
+				0:	(
+						ErrorMessage("unexpected \"" + line + "\"")
 					)
 
 				-- AnimSet
-				1:
-					(
+				1:	(
 						--!! ugly parsing ... but no other params yet
 						if line == "bAnimRotationOnly=1" then
 						(
@@ -1244,13 +1245,12 @@ fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
 						)
 						else
 						(
-							ErrorMessage "unexpected AnimSet instruction \"%\"" line
+							ErrorMessage("unexpected AnimSet instruction \"" + line + "\"")
 						)
 					)
 
 				-- UseTranslationBoneNames - use translation from animation, useful with bAnimRotationOnly=true only
-				2:
-					(
+				2:	(
 						local BoneIndex = FindPsaBoneIndex Bones line
 						if BoneIndex > 0 then
 						(
@@ -1263,8 +1263,7 @@ fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
 					)
 
 				-- ForceMeshTranslationBoneNames - use translation from mesh
-				3:
-					(
+				3:	(
 						local BoneIndex = FindPsaBoneIndex Bones line
 						if BoneIndex > 0 then
 						(
@@ -1277,17 +1276,36 @@ fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
 					)
 
 				-- RemoveTracks
-				4:
-					(
-						--!! implement
---		local tok = filterString line " ="
---		format "[%] = [%]\n" tok[1] tok[2]
---		local parm = tok[1]
---		local file = tok[2]
+				4:	(
+						-- line is in format "SequenceName.BoneIndex=[trans|rot|all]"
+						local tok1 = filterString line " ="			-- [1] = SequenceName.BoneIndex, [2] = Flags
+						local tok2 = filterString tok1[1] "."		-- [1] = SequenceName, [2] = BoneIndex
+						local SeqName    = tok2[1]
+						local BoneIdxStr = tok2[2]
+						local Flag       = tok1[2]
+						local SeqIdx = FindPsaTrackIndex Anims SeqName		--?? can cache this value
+						if SeqIdx <= 0 then ErrorMessage("Animation \"" + SeqName + "\" does not exists")
+						FlagIndex = (SeqIdx - 1) * Bones.count + (BoneIdxStr as integer) + 1
+						if Flag == "trans" then
+						(
+							AnimFlags[FlagIndex] = 1	-- NO_TRANSLATION
+						)
+						else if Flag == "rot" then
+						(
+							AnimFlags[FlagIndex] = 2	-- NO_ROTATION
+						)
+						else if Flag == "all" then
+						(
+							AnimFlags[FlagIndex] = 3	-- NO_TRANSLATION | NO_ROTATION
+						)
+						else
+						(
+							ErrorMessage("unknown RemoveTracks flag \"" + Flag + "\"")
+						)
 					)
 
 				default:
-					ErrorMessage "unexpected config error"
+					ErrorMessage("unexpected config error")
 				)
 			)
 		)
@@ -1404,8 +1422,8 @@ fn ImportPsaFile filename trackNum all:false =
 	MeshBoneLink = #()
 	for i = 1 to numBones do
 	(
-		boneName = Bones[i].Name
-		MaxBones[i] = getNodeByName boneName exact:true ignoreCase:false
+		boneName        = Bones[i].Name
+		MaxBones[i]     = getNodeByName boneName exact:true ignoreCase:true
 		MeshBoneLink[i] = undefined
 		for j = 1 to MeshBones.count do
 		(
@@ -1415,8 +1433,10 @@ fn ImportPsaFile filename trackNum all:false =
 				exit
 			)
 		)
-		if MaxBones[i]     == undefined then format "WARNING: cannot find scene bone %\n" boneName
-		if MeshBoneLink[i] == undefined then format "WARNING: cannot find mesh bone %\n" boneName
+		if (MaxBones[i] == undefined) or (MeshBoneLink[i] == undefined) then
+		(
+			format "WARNING: cannot find bone %\n" boneName
+		)
 	)
 
 	-- verify for found root bone
@@ -1433,7 +1453,7 @@ fn ImportPsaFile filename trackNum all:false =
 	LoadPsaConfig ( (getFilenamePath filename) + (getFilenameFile filename) + ".config" ) Anims Bones UseTranslation AnimFlags
 
 /*
-	format "[% trans % flags]\n" UseTranslation.count AnimFlags.count	--!!!
+	format "[% trans % flags]\n" UseTranslation.count AnimFlags.count
 	for i = 1 to UseTranslation.count do
 	(
 		if UseTranslation[i] then format "trans: % %\n" i Bones[i].Name
@@ -1459,24 +1479,26 @@ fn ImportPsaFile filename trackNum all:false =
 				flagIndex = firstFlag
 				for b = 1 to Bones.count do
 				(
-					-- get bone from MeshBones
-					MeshBone = MeshBoneLink[b]
-					-- get animation flags
-					flag = 0
-					if (flagIndex < flagCount) and (MeshBone != undefined) then flag = AnimFlags[flagIndex]
-					flagIndex = flagIndex + 1
 					-- get key
 					k = ReadVQuatAnimKey file			-- read key from file
-					bone = MaxBones[b]
+					-- get bones
+					bone     = MaxBones[b]				-- scene bone to transform
+					MeshBone = MeshBoneLink[b]			-- for BindPose transform
+					-- get animation flags
+					flag = 0
+					if flagIndex < flagCount then flag = AnimFlags[flagIndex]
+					flagIndex = flagIndex + 1
+					-- when either scene or mesh bone is missing , skip everything (key is already read)
+					if (bone == undefined) or (MeshBone == undefined) then continue
 
-					if (bit.and flag 1) != 0 then		-- PSAX_FLAG_NO_TRANSLATION
+					if (bit.and flag 1) != 0 then		-- NO_TRANSLATION
 						p = MeshBone.Position			-- translation from the mesh
-					else if (UseTranslation.count > 0) and not UseTranslation[b] and (MeshBone != undefined) then
+					else if (UseTranslation.count > 0) and not UseTranslation[b] then
 						p = MeshBone.Position			-- translation from the mesh
 					else
 						p = k.Position * g_meshScale	-- translation from animation
 
-					if (bit.and flag 2) != 0 then		-- PSAX_FLAG_NO_ROTATION
+					if (bit.and flag 2) != 0 then		-- NO_ROTATION
 						q = MeshBone.Orientation		-- from mesh
 					else
 						q = k.Orientation				-- from animation
@@ -1486,7 +1508,6 @@ fn ImportPsaFile filename trackNum all:false =
 					mat = (q as matrix3)
 					mat.row4 = p
 					-- modify bone
-					if bone == undefined then continue	-- missing bone
 					if bone.parent != undefined then
 					(
 						bone.transform = mat * bone.parent.transform
@@ -1566,7 +1587,7 @@ fn ImportPsaFile filename trackNum all:false =
 global MeshFileName
 global AnimFileName
 
-fn LoadAnimation index =
+fn axLoadAnimation index =
 (
 	if (index > 0) and (index <= Anims.count) then ImportPsaFile AnimFileName index
 )
@@ -1613,7 +1634,7 @@ rollout axImportRollout "ActorX Importer"
 
 	on BtnImportPsa pressed do
 	(
-		local filename = getOpenFileName types:"ActorX Animation (*.psa,*.psax)|*.psa;*.psax|All (*.*)|*.*|" filename:g_lastDir2
+		local filename = getOpenFileName types:"ActorX Animation (*.psa)|*.psa|All (*.*)|*.*|" filename:g_lastDir2
 
 		if filename != undefined then
 		(
@@ -1627,9 +1648,9 @@ rollout axImportRollout "ActorX Importer"
 		)
 	)
 
-	on BtnImportTrk pressed       do LoadAnimation LstAnims.selection
+	on BtnImportTrk pressed       do axLoadAnimation LstAnims.selection
 	on BtnImportAll pressed       do ImportPsaFile AnimFileName 1 all:true
-	on LstAnims doubleClicked sel do LoadAnimation sel
+	on LstAnims doubleClicked sel do axLoadAnimation sel
 
 	on ChkSeeThru    changed state do g_seeThru    = state
 	on ChkSkelOnly   changed state do g_skelOnly   = state

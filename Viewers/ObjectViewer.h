@@ -39,14 +39,12 @@ public:
 	{}
 #endif
 
-	virtual void ShowHelp()
-	{}
-
+	virtual void Export();
+	virtual void ShowHelp();
 	virtual void Draw2D();
+	virtual void ProcessKey(int key);
 
 	virtual void Draw3D()
-	{}
-	virtual void ProcessKey(int key)
 	{}
 };
 
@@ -112,6 +110,7 @@ public:
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
 	virtual void Dump();
+	virtual void Export();
 	TEST_OBJECT;
 	virtual void Draw2D();
 	virtual void Draw3D();
@@ -143,6 +142,7 @@ public:
 	CSkelMeshViewer(USkeletalMesh *Mesh);
 	virtual void ShowHelp();
 	virtual void Dump();
+	virtual void Export();
 	TEST_OBJECT;
 	virtual void Draw2D();
 	virtual void ProcessKey(int key);

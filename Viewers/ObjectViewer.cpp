@@ -6,6 +6,8 @@
 #include "ObjectViewer.h"
 #include "UnPackage.h"			// for CObjectViewer::Draw2D()
 
+#include "Exporters/Exporters.h"
+
 
 CObjectViewer::CObjectViewer(UObject *Obj)
 :	Object(Obj)
@@ -21,6 +23,33 @@ void CObjectViewer::Dump()
 	appPrintf("\nObject info:\n============\n");
 	appPrintf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
 	Object->GetTypeinfo()->DumpProps(Object);
+}
+
+
+void CObjectViewer::Export()
+{
+	ExportObject(Object);
+}
+
+
+void CObjectViewer::ProcessKey(int key)
+{
+	switch (key)
+	{
+	case 'x'|KEY_CTRL:
+		Export();
+		break;
+	case 'd':
+		Dump();
+		break;
+	}
+}
+
+
+void CObjectViewer::ShowHelp()
+{
+	DrawKeyHelp("D",      "dump info");
+	DrawKeyHelp("Ctrl+X", "export object");
 }
 
 
