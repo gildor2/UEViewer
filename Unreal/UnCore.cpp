@@ -546,7 +546,7 @@ void FArray::Insert(int index, int count, int elementSize)
 #if PROFILE
 		GNumAllocs++;
 #endif
-		DataPtr = realloc(DataPtr, MaxCount * elementSize);	//?? appRealloc
+		DataPtr = appRealloc(DataPtr, MaxCount * elementSize);
 		// zero added memory
 		memset(
 			(byte*)DataPtr + prevCount * elementSize,

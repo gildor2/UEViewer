@@ -137,7 +137,8 @@ template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*
 void appPrintf(const char *fmt, ...);
 
 void appError(const char *fmt, ...);
-void* appMalloc(int size);
+void* appMalloc(int size, int alignment = 8);
+void* appRealloc(void *ptr, int newSize);
 void appFree(void *ptr);
 
 // log some interesting information

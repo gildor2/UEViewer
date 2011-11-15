@@ -33,7 +33,7 @@ CStatMeshViewer::CStatMeshViewer(CStaticMesh *Mesh0)
 	//?? if Lods.Count > 0 && Lods[0].Verts.Num() > 0
 	CVec3 Mins, Maxs;
 	const CStaticMeshLod &Lod = Mesh0->Lods[0];
-	ComputeBounds(&Lod.Verts[0].Position, Lod.Verts.Num(), sizeof(CStaticMeshVertex), Mins, Maxs);
+	ComputeBounds(&Lod.Verts[0].Position, Lod.NumVerts, sizeof(CStaticMeshVertex), Mins, Maxs);
 	InitViewerPosition(Mins, Maxs);
 #endif
 
@@ -61,7 +61,7 @@ void CStatMeshViewer::Draw2D()
 				 S_GREEN"Tris    : "S_WHITE"%d\n"
 				 S_GREEN"UV Sets : "S_WHITE"%d/%d",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
-				 Lod.Verts.Num(), Lod.Indices.Num() / 3,
+				 Lod.NumVerts, Lod.Indices.Num() / 3,
 				 MeshInst->UVIndex+1, Lod.NumTexCoords);
 
 	// code similar to CLodMeshViewer::Draw2D(), but using different fields

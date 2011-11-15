@@ -1581,17 +1581,12 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 {
 	guard(USkeletalMesh::Serialize);
 
+	assert(Ar.Game < GAME_UE3);
+
 #if UNREAL1
 	if (Ar.Engine() == GAME_UE1)
 	{
 		SerializeSkelMesh1(Ar);
-		return;
-	}
-#endif
-#if UNREAL3
-	if (Ar.Game >= GAME_UE3)
-	{
-		SerializeSkelMesh3(Ar);
 		return;
 	}
 #endif
@@ -1774,6 +1769,15 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 	}
 
 	unguard;
+}
+
+
+void USkeletalMesh::PostLoad()
+{
+#if BIOSHOCK
+	if (Package->Game == GAME_Bioshock)
+		PostLoadBioshockMesh();		// should be called after loading of all used objects
+#endif // BIOSHOCK
 }
 
 
@@ -2823,14 +2827,14 @@ void UStaticMesh::ConvertMesh2()
 	// convert vertices
 	int NumVerts = VertexStream.Vert.Num();
 	int NumTexCoords = UVStream.Num();
-	if (NumTexCoords > NUM_STATIC_MESH_UV_SETS)
+	if (NumTexCoords > NUM_MESH_UV_SETS)
 	{
 		appNotify("StaticMesh has %d UV sets", NumTexCoords);
-		NumTexCoords = NUM_STATIC_MESH_UV_SETS;
+		NumTexCoords = NUM_MESH_UV_SETS;
 	}
 	Lod->NumTexCoords = NumTexCoords;
 
-	Lod->Verts.Add(NumVerts);
+	Lod->AllocateVerts(NumVerts);
 	for (int i = 0; i < NumVerts; i++)
 	{
 		CStaticMeshVertex &V = Lod->Verts[i];

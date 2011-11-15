@@ -10,8 +10,14 @@ UE3 CLASS TREE:
 	UObject
 		USkeletalMesh
 		UStaticMesh
+		UAnimSequence
+		UAnimSet
 
 -----------------------------------------------------------------------------*/
+
+// forwards
+class UMaterialInterface;
+
 
 struct FBoxSphereBounds
 {
@@ -29,6 +35,134 @@ struct FBoxSphereBounds
 	{
 		return Ar << B.Origin << B.BoxExtent << B.SphereRadius;
 	}
+};
+
+
+/*-----------------------------------------------------------------------------
+	USkeletalMesh
+-----------------------------------------------------------------------------*/
+
+// forwards (structures are declared in cpp)
+struct FStaticLODModel3;
+
+
+struct FSkeletalMeshLODInfo
+{
+	DECLARE_STRUCT(FSkeletalMeshLODInfo);
+	float					DisplayFactor;
+	float					LODHysteresis;
+	TArray<int>				LODMaterialMap;
+	TArray<bool>			bEnableShadowCasting;
+
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(DisplayFactor)
+		PROP_FLOAT(LODHysteresis)
+		PROP_ARRAY(LODMaterialMap, int)
+		PROP_ARRAY(bEnableShadowCasting, bool)
+		PROP_DROP(TriangleSorting)
+		PROP_DROP(TriangleSortSettings)
+#if FRONTLINES
+		PROP_DROP(bExcludeFromConsoles)
+		PROP_DROP(bCanRemoveForLowDetail)
+#endif
+#if MCARTA
+		PROP_DROP(LODMaterialDrawOrder)
+#endif
+	END_PROP_TABLE
+};
+
+
+class USkeletalMeshSocket : public UObject
+{
+	DECLARE_CLASS(USkeletalMeshSocket, UObject);
+public:
+	FName					SocketName;
+	FName					BoneName;
+	FVector					RelativeLocation;
+	FRotator				RelativeRotation;
+	FVector					RelativeScale;
+
+	USkeletalMeshSocket()
+	{
+		SocketName.Str = "None";
+		BoneName.Str = "None";
+		RelativeLocation.Set(0, 0, 0);
+		RelativeRotation.Set(0, 0, 0);
+		RelativeScale.Set(1, 1, 1);
+	}
+	BEGIN_PROP_TABLE
+		PROP_NAME(SocketName)
+		PROP_NAME(BoneName)
+		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR(RelativeRotation)
+		PROP_VECTOR(RelativeScale)
+	END_PROP_TABLE
+};
+
+
+class USkeletalMesh3 : public UObject
+{
+	DECLARE_CLASS(USkeletalMesh3, UObject);
+public:
+	FBoxSphereBounds		Bounds;
+	TArray<FSkeletalMeshLODInfo> LODInfo;
+	TArray<USkeletalMeshSocket*> Sockets;
+	FVector					MeshOrigin;
+	FRotator				RotOrigin;
+	TArray<FMeshBone>		RefSkeleton;
+	int						SkeletalDepth;
+	bool					bHasVertexColors;
+	TArray<UMaterialInterface*> Materials;
+	TArray<FStaticLODModel3> LODModels;
+
+	CSkeletalMesh			*ConvertedMesh;
+
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
+		PROP_ARRAY(Sockets, UObject*)
+		PROP_BOOL(bHasVertexColors)
+		PROP_DROP(SkelMeshGUID)
+		PROP_DROP(SkelMirrorTable)
+		PROP_DROP(FaceFXAsset)
+		PROP_DROP(bDisableSkeletalAnimationLOD)
+		PROP_DROP(bForceCPUSkinning)
+		PROP_DROP(bUsePackedPosition)
+		PROP_DROP(BoundsPreviewAsset)
+		PROP_DROP(PerPolyCollisionBones)
+		PROP_DROP(AddToParentPerPolyCollisionBone)
+		PROP_DROP(bUseSimpleLineCollision)
+		PROP_DROP(bUseSimpleBoxCollision)
+		PROP_DROP(LODBiasPS3)
+		PROP_DROP(LODBiasXbox360)
+		PROP_DROP(ClothToGraphicsVertMap)
+		PROP_DROP(ClothWeldingMap)
+		PROP_DROP(ClothWeldingDomain)
+		PROP_DROP(ClothWeldedIndices)
+		PROP_DROP(NumFreeClothVerts)
+		PROP_DROP(ClothIndexBuffer)
+		PROP_DROP(ClothBones)
+		PROP_DROP(bEnableClothPressure)
+		PROP_DROP(bEnableClothDamping)
+		PROP_DROP(ClothStretchStiffness)
+		PROP_DROP(ClothDensity)
+		PROP_DROP(ClothFriction)
+		PROP_DROP(ClothTearFactor)
+		PROP_DROP(SourceFilePath)
+		PROP_DROP(SourceFileTimestamp)
+#	if MEDGE
+		PROP_DROP(NumUVSets)
+#	endif
+#	if BATMAN
+		PROP_DROP(SkeletonName)
+		PROP_DROP(Stretches)
+#	endif // BATMAN
+	END_PROP_TABLE
+
+	USkeletalMesh3();
+	virtual ~USkeletalMesh3();
+
+	virtual void Serialize(FArchive &Ar);
+	virtual void PostLoad();			// used to reconstruct sockets
 };
 
 
@@ -454,6 +588,7 @@ class UStaticMesh3 : public UObject
 public:
 	// NOTE: UStaticMesh is not mirrored by script with exception of Transformers game, so most
 	// field names are unknown
+	FBoxSphereBounds		Bounds;
 	int						InternalVersion;	// GOW1_PC: 15, UT3: 16, UDK: 18-...
 	UObject					*BodySetup;			// URB_BodySetup
 	TArray<FStaticMeshLODModel> Lods;
@@ -466,9 +601,6 @@ public:
 	bool					UseSimpleBoxCollision;
 	bool					UseSimpleRigidBodyCollision;
 	bool					UseFullPrecisionUVs;
-#if TRANSFORMERS
-	FBoxSphereBounds		Bounds;				// Transformers has described StaticMesh.uc and serialized Bounds as property
-#endif
 
 	CStaticMesh				*ConvertedMesh;
 
@@ -479,7 +611,7 @@ public:
 		PROP_BOOL(UseSimpleRigidBodyCollision)
 		PROP_BOOL(UseFullPrecisionUVs)
 #if TRANSFORMERS
-		PROP_STRUC(Bounds, FBoxSphereBounds)
+		PROP_STRUC(Bounds, FBoxSphereBounds)	// Transformers has described StaticMesh.uc and serialized Bounds as property
 #endif
 		PROP_DROP(LODDistanceRatio)
 		PROP_DROP(LightMapResolution)
@@ -506,13 +638,18 @@ public:
 #define REGISTER_MESH_CLASSES_MASSEFF \
 	REGISTER_CLASS(UBioAnimSetData)
 
+// UGolemSkeletalMesh - APB: Reloaded, derived from USkeletalMesh
 // UTdAnimSet - Mirror's Edge, derived from UAnimSet
 #define REGISTER_MESH_CLASSES_U3	\
+	REGISTER_CLASS(USkeletalMeshSocket) \
+	REGISTER_CLASS(FSkeletalMeshLODInfo) \
+	REGISTER_CLASS_ALIAS(USkeletalMesh, UGolemSkeletalMesh) \
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
 	REGISTER_CLASS(FBoxSphereBounds) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)		\
 	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet) \
+	REGISTER_CLASS_ALIAS(USkeletalMesh3, USkeletalMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh3, UStaticMesh)
 
 #define REGISTER_MESH_ENUMS_U3		\

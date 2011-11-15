@@ -17,6 +17,7 @@
 #include "Exporters/Exporters.h"
 
 #if DECLARE_VIEWER_PROPS
+#include "SkeletalMesh.h"
 #include "StaticMesh.h"
 #endif
 
@@ -41,13 +42,6 @@ static void RegisterCommonUnrealClasses()
 BEGIN_CLASS_TABLE
 
 	REGISTER_MATERIAL_CLASSES
-	REGISTER_MESH_CLASSES
-#if UNREAL1
-	REGISTER_MESH_CLASSES_U1
-#endif
-#if RUNE
-	REGISTER_MESH_CLASSES_RUNE
-#endif
 	REGISTER_ANIM_NOTIFY_CLASSES
 #if BIOSHOCK
 	REGISTER_MATERIAL_CLASSES_BIO
@@ -56,17 +50,9 @@ BEGIN_CLASS_TABLE
 #if UNREAL3
 	REGISTER_MATERIAL_CLASSES_U3		//!! needed for Bioshock 2 too
 #endif
-#if TUROK
-	REGISTER_MESH_CLASSES_TUROK
-#endif
-#if MASSEFF
-	REGISTER_MESH_CLASSES_MASSEFF
-#endif
-#if DCU_ONLINE
-	REGISTER_MATERIAL_CLASSES_DCUO
-#endif
 
 #if DECLARE_VIEWER_PROPS
+	REGISTER_SKELMESH_VCLASSES
 	REGISTER_STATICMESH_VCLASSES
 #endif // DECLARE_VIEWER_PROPS
 
@@ -84,7 +70,14 @@ static void RegisterUnrealClasses2()
 {
 BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U2
+	REGISTER_MESH_CLASSES_U2_A
+#if UNREAL1
+	REGISTER_MESH_CLASSES_U1
 	REGISTER_MESH_CLASSES_U1_A
+#endif
+#if RUNE
+	REGISTER_MESH_CLASSES_RUNE
+#endif
 END_CLASS_TABLE
 }
 
@@ -95,7 +88,15 @@ static void RegisterUnrealClasses3()
 BEGIN_CLASS_TABLE
 //	REGISTER_MATERIAL_CLASSES_U3 -- registered for Bioshock in RegisterCommonUnrealClasses()
 	REGISTER_MESH_CLASSES_U3
-	REGISTER_MESH_CLASSES_U3_A	//!! remove after refactoring
+#if TUROK
+	REGISTER_MESH_CLASSES_TUROK
+#endif
+#if MASSEFF
+	REGISTER_MESH_CLASSES_MASSEFF
+#endif
+#if DCU_ONLINE
+	REGISTER_MATERIAL_CLASSES_DCUO
+#endif
 END_CLASS_TABLE
 }
 
@@ -155,6 +156,30 @@ static int ObjIndex = 0;
 -----------------------------------------------------------------------------*/
 
 // wrappers
+/*!!static void ExportPsk2(const USkeletalMesh *Mesh, FArchive &Ar)
+{
+	assert(Mesh->ConvertedMesh);
+	ExportPsk(Mesh->ConvertedMesh, Ar);
+}
+
+static void ExportPsk3(const USkeletalMesh3 *Mesh, FArchive &Ar)
+{
+	assert(Mesh->ConvertedMesh);
+	ExportPsk(Mesh->ConvertedMesh, Ar);
+}
+
+static void ExportMd5Mesh2(const USkeletalMesh *Mesh, FArchive &Ar)
+{
+	assert(Mesh->ConvertedMesh);
+	ExportMd5Mesh(Mesh->ConvertedMesh, Ar);
+}
+
+static void ExportMd5Mesh3(const USkeletalMesh3 *Mesh, FArchive &Ar)
+{
+	assert(Mesh->ConvertedMesh);
+	ExportMd5Mesh(Mesh->ConvertedMesh, Ar);
+}*/
+
 static void ExportStaticMesh2(const UStaticMesh *Mesh, FArchive &Ar)
 {
 	assert(Mesh->ConvertedMesh);
@@ -775,17 +800,19 @@ int main(int argc, char **argv)
 	// register exporters
 	if (!md5)
 	{
-		RegisterExporter("SkeletalMesh", GExportPskx ? "pskx" : "psk", ExportPsk);
+//!!		RegisterExporter("SkeletalMesh", GExportPskx ? "pskx" : "psk", ExportPsk2);
 		RegisterExporter("MeshAnimation", "psa",     ExportMeshAnimation);
 #if UNREAL3
+//!!		RegisterExporter("SkeletalMesh3", GExportPskx ? "pskx" : "psk", ExportPsk3);
 		RegisterExporter("AnimSet",       "psa",     ExportAnimSet      );
 #endif
 	}
 	else
 	{
-		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh);
+//!!		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh2);
 		RegisterExporter("MeshAnimation", NULL,      ExportMd5Anim2);	// separate file for each animation track
 #if UNREAL3
+//!!		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh3);
 		RegisterExporter("AnimSet",       NULL,      ExportMd5Anim3);	// ...
 #endif
 	}
@@ -1044,9 +1071,10 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	if (showMeshes || showAll)
 	{
 		CLASS_VIEWER(UVertMesh,       CVertMeshViewer, true);
-		CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer, true);
+		CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer, true);	//!! MESH_VIEWER too
 		MESH_VIEWER (UStaticMesh,     CStatMeshViewer      );
 #if UNREAL3
+//!!		MESH_VIEWER (USkeletalMesh3,  CSkelMeshViewer      )
 		MESH_VIEWER (UStaticMesh3,    CStatMeshViewer      );
 #endif
 	}
@@ -1061,7 +1089,7 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	}
 	return false;
 #undef CLASS_VIEWER
-	unguard;
+	unguardf(("%s'%s'", Obj->GetClassName(), Obj->Name));
 }
 
 

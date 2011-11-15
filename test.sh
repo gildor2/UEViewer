@@ -10,12 +10,19 @@ exe=umodel.exe		#?? win32 only
 #	Game tools
 #------------------------------------------------------------------------------
 
+#checkedDirs=""
+
 function CheckDir()
 {
 	varname=$1
 	shift
 	while [ $# -gt 0 ]; do
 		dir=$1
+#		if [ -z "$checkedDirs" ]; then
+#			checkedDirs=$dir
+#		else
+#			checkedDirs="$checkedDirs, $dir"
+#		fi
 		if [ "$OSTYPE" == "linux-gnu" ]; then
 			dir="/media/c/${dir:3}"
 		fi
@@ -31,7 +38,7 @@ function run1()							# with path
 {
 	path=$1
 	if ! [ "$path" ]; then
-		echo "ERROR: game path was not found"
+		echo "ERROR: game path was not found" # (checked: $checkedDirs)"
 		exit
 	fi
 	shift
@@ -66,6 +73,7 @@ function l2()     { run1 "$L2" $*;   }
 function bio()    { run1 "$BIO" $*;  }
 function mass()   { run1 "$MASS" $*; }
 function dcu()    { run1 "$DCU" $*;  }
+function alice()  { run1 "$ALICE" $*; }
 
 rm $exe
 ./build.sh
@@ -74,8 +82,8 @@ rm $exe
 #?? should check dirs when specific game has been requested (not all games everytime)
 CheckDir U1  {c,d,e}:/games/{unreal,unreal~1}/UnrealGold
 CheckDir UT1 {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament
-CheckDir UT2 {c,d,e}:/games/{unreal,unreal~1}/ut2004
-CheckDir UT3 {c,d,e}:/games/ut3/UTGame/CookedPC
+CheckDir UT2 {c,d,e}:/games/{unreal,unreal~1}/ut2004 data/2/UT2004
+CheckDir UT3 {c,d,e}:/games/ut3/UTGame/CookedPC data/3/UT3
 CheckDir GOW "C:/!umodel-data/GearsOfWar"
 CheckDir GOW2 data/3X/GearsOfWar2_X360
 CheckDir GOW3 data/3X/GOW3_beta_X360
@@ -85,6 +93,7 @@ CheckDir L2 "C:/!umodel-data/Lineage2"
 CheckDir BIO {c,e}:/GAMES/BioShock
 CheckDir MASS "C:/GAMES/Mass Effect/BioGame/CookedPC"
 CheckDir DCU "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC"
+CheckDir ALICE "E:/GAMES/Alice Madness Returns/Alice2/AliceGame/CookedPC"
 
 #------------------------------------------------------------------------------
 

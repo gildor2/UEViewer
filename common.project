@@ -7,7 +7,7 @@ LIBC       = shared
 CONSOLE    = 1
 OPTIMIZE   = size
 
-#PDB        = 1
+#PDB        = 2
 
 OLDCRT     = 1
 

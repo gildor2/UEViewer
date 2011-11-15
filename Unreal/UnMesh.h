@@ -17,9 +17,11 @@ UE1 CLASS TREE:
 float half2float(word h);
 
 class UMaterial;
+class USkeletalMesh;
 class UMeshAnimation;
 
 //?? move these declarations outside
+class CSkeletalMesh;
 class CAnimSet;
 class CStaticMesh;
 
@@ -1136,9 +1138,6 @@ struct FStaticLODModel
 
 	void RestoreLineageMesh();
 #endif
-#if UNREAL3
-	void RestoreMesh3(const class USkeletalMesh &Mesh, const class FStaticLODModel3 &Lod, const struct FSkeletalMeshLODInfo &Info);	//?? forward declarations for classes
-#endif
 #if BIOSHOCK
 	void RestoreMeshBio(const USkeletalMesh &Mesh, const struct FStaticLODModelBio &Lod);
 #endif
@@ -1295,63 +1294,6 @@ struct FT3Unk1
 
 #endif // TRIBES3
 
-#if UNREAL3
-
-struct FSkeletalMeshLODInfo
-{
-	DECLARE_STRUCT(FSkeletalMeshLODInfo);
-	float					DisplayFactor;
-	float					LODHysteresis;
-	TArray<int>				LODMaterialMap;
-	TArray<bool>			bEnableShadowCasting;
-
-	BEGIN_PROP_TABLE
-		PROP_FLOAT(DisplayFactor)
-		PROP_FLOAT(LODHysteresis)
-		PROP_ARRAY(LODMaterialMap, int)
-		PROP_ARRAY(bEnableShadowCasting, bool)
-		PROP_DROP(TriangleSorting)
-		PROP_DROP(TriangleSortSettings)
-#if FRONTLINES
-		PROP_DROP(bExcludeFromConsoles)
-		PROP_DROP(bCanRemoveForLowDetail)
-#endif
-#if MCARTA
-		PROP_DROP(LODMaterialDrawOrder)
-#endif
-	END_PROP_TABLE
-};
-
-class USkeletalMeshSocket : public UObject
-{
-	DECLARE_CLASS(USkeletalMeshSocket, UObject);
-public:
-	FName					SocketName;
-	FName					BoneName;
-	FVector					RelativeLocation;
-	FRotator				RelativeRotation;
-	FVector					RelativeScale;
-
-	USkeletalMeshSocket()
-	{
-		SocketName.Str = "None";
-		BoneName.Str = "None";
-		RelativeLocation.Set(0, 0, 0);
-		RelativeRotation.Set(0, 0, 0);
-		RelativeScale.Set(1, 1, 1);
-	}
-	BEGIN_PROP_TABLE
-		PROP_NAME(SocketName)
-		PROP_NAME(BoneName)
-		PROP_VECTOR(RelativeLocation)
-		PROP_ROTATOR(RelativeRotation)
-		PROP_VECTOR(RelativeScale)
-	END_PROP_TABLE
-};
-
-#endif // UNREAL3
-
-
 class USkeletalMesh : public ULodMesh
 {
 	DECLARE_CLASS(USkeletalMesh, ULodMesh);
@@ -1380,15 +1322,11 @@ public:
 	TArray<UObject*>		f32C;			// TArray<UModel*>; collision models??
 	UObject*				CollisionMesh;	// UStaticMesh*
 	UObject*				KarmaProps;		// UKMeshProps*
-#if UNREAL3
-	//?? move outside
-	TArray<FSkeletalMeshLODInfo> LODInfo;
-	TArray<USkeletalMeshSocket*> Sockets;
-	bool					bHasVertexColors;
-#endif
 #if BIOSHOCK
 	TArray<UObject*>		havokObjects;	// wrappers for Havok objects used by this mesh; not used by Bioshock engine (precaching?)
 #endif
+
+//!!	CSkeletalMesh			*ConvertedMesh;	!! needs constructor + destructor with delete ConvertedMesh
 
 	void UpgradeFaces();
 	void UpgradeMesh();
@@ -1399,81 +1337,13 @@ public:
 #if SPLINTER_CELL
 	void SerializeSCell(FArchive &Ar);
 #endif
-#if UNREAL3
-	void SerializeSkelMesh3(FArchive &Ar);
-	void PostLoadMesh3();
-#endif
 #if BIOSHOCK
 	void SerializeBioshockMesh(FArchive &Ar);
 	void PostLoadBioshockMesh();
 #endif
 
-#if UNREAL3
-	//!! separate class for UE3 !
-	BEGIN_PROP_TABLE
-		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
-		PROP_ARRAY(Sockets, UObject*)
-		PROP_BOOL(bHasVertexColors)
-		PROP_DROP(SkelMeshGUID)
-		PROP_DROP(SkelMirrorTable)
-		PROP_DROP(FaceFXAsset)
-		PROP_DROP(bDisableSkeletalAnimationLOD)
-		PROP_DROP(bForceCPUSkinning)
-		PROP_DROP(bUsePackedPosition)
-		PROP_DROP(BoundsPreviewAsset)
-		PROP_DROP(PerPolyCollisionBones)
-		PROP_DROP(AddToParentPerPolyCollisionBone)
-		PROP_DROP(bUseSimpleLineCollision)
-		PROP_DROP(bUseSimpleBoxCollision)
-		PROP_DROP(LODBiasPS3)
-		PROP_DROP(LODBiasXbox360)
-		PROP_DROP(ClothToGraphicsVertMap)
-		PROP_DROP(ClothWeldingMap)
-		PROP_DROP(ClothWeldingDomain)
-		PROP_DROP(ClothWeldedIndices)
-		PROP_DROP(NumFreeClothVerts)
-		PROP_DROP(ClothIndexBuffer)
-		PROP_DROP(ClothBones)
-		PROP_DROP(bEnableClothPressure)
-		PROP_DROP(bEnableClothDamping)
-		PROP_DROP(ClothStretchStiffness)
-		PROP_DROP(ClothDensity)
-		PROP_DROP(ClothFriction)
-		PROP_DROP(ClothTearFactor)
-		PROP_DROP(SourceFilePath)
-		PROP_DROP(SourceFileTimestamp)
-#	if MEDGE
-		PROP_DROP(NumUVSets)
-#	endif
-#	if BATMAN
-		PROP_DROP(SkeletonName)
-		PROP_DROP(Stretches)
-#	endif // BATMAN
-	END_PROP_TABLE
-#endif // UNREAL3
-
-#if UNREAL3
-	USkeletalMesh()
-	:	bHasVertexColors(false)
-	{}
-#endif // UNREAL3
-
 	virtual void Serialize(FArchive &Ar);
-
-	virtual void PostLoad()
-	{
-#if BIOSHOCK
-	#if 0
-		if (Package->Game == GAME_Bioshock)
-	#else
-		if (havokObjects.Num())			//?? ... UnPackage is not ready here ...
-	#endif
-			PostLoadBioshockMesh();		// should be called after loading of all used objects
-#endif // BIOSHOCK
-#if UNREAL3
-		PostLoadMesh3();
-#endif
-	}
+	virtual void PostLoad();
 };
 
 
@@ -1499,8 +1369,10 @@ public:
 	Class registration
 -----------------------------------------------------------------------------*/
 
+//?? this h file should not have REGISTER_XXX macros
+
 //?? remove this macro (contents should go to REGISTER_MESH_CLASSES_U2)
-#define REGISTER_MESH_CLASSES		\
+#define REGISTER_MESH_CLASSES_U2_A	\
 	REGISTER_CLASS(USkeletalMesh)	\
 	REGISTER_CLASS(UVertMesh)
 
@@ -1511,12 +1383,6 @@ public:
 
 #define REGISTER_MESH_CLASSES_RUNE	\
 	REGISTER_CLASS(USkelModel)
-
-// UGolemSkeletalMesh - APB: Reloaded, derived from USkeletalMesh
-#define REGISTER_MESH_CLASSES_U3_A	\
-	REGISTER_CLASS(USkeletalMeshSocket) \
-	REGISTER_CLASS(FSkeletalMeshLODInfo) \
-	REGISTER_CLASS_ALIAS(USkeletalMesh, UGolemSkeletalMesh)
 
 
 #endif // __UNMESH_H__

@@ -14,10 +14,20 @@ inline void SetAxis(const FRotator &Rot, CAxis &Axis)
 
 //?? not inline
 //?? pass CBox, place function into Core/Math32.h
-inline void ComputeBounds(const CVec3 *Data, int NumVerts, int Stride, CVec3 &Mins, CVec3 &Maxs, bool UpdateBounds = false)
+//?? T = CVec3 or CVec4; CVec4 cound be SSE-optimized! make vmin(V1,V2) and vmax() functions for CVec3 and CVec4
+//?? Another solution: use CVec3 only, cast CVec4 to CVec3 and pass correct Stride here - it would work
+template<class T>
+inline void ComputeBounds(const T *Data, int NumVerts, int Stride, CVec3 &Mins, CVec3 &Maxs, bool UpdateBounds = false)
 {
 	if (!NumVerts)
+	{
+		if (!UpdateBounds)
+		{
+			Mins.Set(0, 0, 0);
+			Maxs.Set(0, 0, 0);
+		}
 		return;
+	}
 
 	if (!UpdateBounds)
 	{
@@ -28,7 +38,7 @@ inline void ComputeBounds(const CVec3 *Data, int NumVerts, int Stride, CVec3 &Mi
 
 	while (NumVerts--)
 	{
-		CVec3 v = *Data;
+		T v = *Data;
 		Data = OffsetPointer(Data, Stride);
 		if (v[0] < Mins[0]) Mins[0] = v[0];
 		if (v[0] > Maxs[0]) Maxs[0] = v[0];

@@ -18,9 +18,24 @@
 
 #define TEST_ANIMS			1
 
+//#define SHOW_BOUNDS		1
+#define HIGHLIGHT_CURRENT	1
+
+#define HIGHLIGHT_DURATION	500
+#define HIGHLIGHT_STRENGTH	4.0f
+
+
+#if HIGHLIGHT_CURRENT
+static unsigned ViewerCreateTime;
+#endif
+
+TArray<CSkelMeshInstance*> CSkelMeshViewer::Meshes;
+
 
 CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
-:	CLodMeshViewer(Mesh)
+:	CMeshViewer(Mesh)
+,	AnimIndex(-1)
+,	CurrentTime(appMilliseconds())
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
@@ -32,13 +47,21 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 #else
 	// compute bounds for the current mesh
 	CVec3 Mins, Maxs;
-	ComputeBounds(&CVT(Mesh->Points[0]), Mesh->Points.Num(), sizeof(FVector), Mins, Maxs);
-	SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
-	SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
+	if (Mesh->Points.Num())	//!! can remove this verification when Points will be pointer, not TArray<>
+	{
+		ComputeBounds(&CVT(Mesh->Points[0]), Mesh->Points.Num(), sizeof(FVector), Mins, Maxs);
+		SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
+		SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
+	}
+	else
+	{
+		Mins.Set(-1, -1, -1);
+		Maxs.Set( 1,  1,  1);
+	}
 	// extend bounds with additional meshes
 	for (int i = 0; i < Meshes.Num(); i++)
 	{
-		CLodMeshInstance* Inst = Meshes[i];
+		CSkelMeshInstance* Inst = Meshes[i];
 		if ((Inst->pMesh != SkelInst->pMesh) && Inst->pMesh->IsA("SkeletalMesh"))
 		{
 			CSkelMeshInstance *SkelInst2 = static_cast<CSkelMeshInstance*>(Inst);
@@ -53,6 +76,18 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 	}
 	InitViewerPosition(Mins, Maxs);
 #endif
+
+#if HIGHLIGHT_CURRENT
+	ViewerCreateTime = CurrentTime;
+#endif
+
+#if SHOW_BOUNDS
+	appPrintf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
+	appPrintf("Bounds.max = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Max));
+	appPrintf("Origin     = %g %g %g\n", FVECTOR_ARG(Mesh->MeshOrigin));
+	appPrintf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
+	appPrintf("Offset     = %g %g %g\n", VECTOR_ARG(offset));
+#endif // SHOW_BOUNDS
 }
 
 
@@ -61,7 +96,7 @@ void CSkelMeshViewer::Test()
 {
 	int i;
 
-	CLodMeshViewer::Test();
+	CMeshViewer::Test();
 
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 
@@ -128,7 +163,7 @@ void CSkelMeshViewer::Test()
 
 void CSkelMeshViewer::Dump()
 {
-	CLodMeshViewer::Dump();
+	CMeshViewer::Dump();
 
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	appPrintf(
@@ -217,16 +252,38 @@ void CSkelMeshViewer::Dump()
 
 void CSkelMeshViewer::Export()
 {
-	CLodMeshViewer::Export();
+	CMeshViewer::Export();
+
+	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+	assert(Mesh);
+	for (int i = 0; i < Mesh->Textures.Num(); i++)
+	{
+		const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
+		ExportObject(Tex);
+	}
+
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CAnimSet *Anim = MeshInst->GetAnim();
 	if (Anim) ExportObject(Anim->OriginalAnim);
 }
 
 
+void CSkelMeshViewer::TagMesh(CSkelMeshInstance *NewInst)
+{
+	for (int i = 0; i < Meshes.Num(); i++)
+		if (Meshes[i]->pMesh == NewInst->pMesh)
+		{
+			// already tagged, remove
+			Meshes.Remove(i);
+			return;
+		}
+	Meshes.AddItem(NewInst);
+}
+
+
 void CSkelMeshViewer::Draw2D()
 {
-	CLodMeshViewer::Draw2D();
+	CMeshViewer::Draw2D();
 
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
@@ -251,12 +308,144 @@ void CSkelMeshViewer::Draw2D()
 					 Lod->Points.Num(), Lod->Wedges.Num(), Lod->Faces.Num(),
 					 Mesh->RefSkeleton.Num());
 	}
+
+	const CAnimSet *AnimSet = MeshInst->GetAnim();
+	DrawTextLeft("\n"S_GREEN"AnimSet: "S_WHITE"%s", AnimSet ? AnimSet->OriginalAnim->Name : "None");
+	if (AnimSet)
+	{
+		static const char *OnOffNames[]       = { "OFF", "ON" };
+		static const char *AnimRotModeNames[] = { "AnimSet", "enabled", "disabled" }; // EAnimRotationOnly
+		DrawTextLeft(S_GREEN"Translation:"S_WHITE" AnimRotOnly %s (%s)\nUseAnimBones: %d ForceMeshBones: %d",
+			OnOffNames[AnimSet->AnimRotationOnly], AnimRotModeNames[MeshInst->RotationMode],
+			AnimSet->UseAnimTranslation.Num(), AnimSet->ForceMeshTranslation.Num()
+		);
+	}
+
+	for (int i = 0; i < Meshes.Num(); i++)
+		DrawTextLeft("%s%d: %s", (Meshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, Meshes[i]->pMesh->Name);
+
+	const char *AnimName;
+	float Frame, NumFrames, Rate;
+	MeshInst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
+
+	DrawTextLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g%s",
+		AnimIndex+1, MeshInst->GetAnimCount(), AnimName, Rate, NumFrames,
+		MeshInst->IsTweening() ? " [tweening]" : "");
+	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
+
+	if (Inst->bColorMaterials)
+	{
+		const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+		DrawTextLeft(S_GREEN"Textures: %d", Mesh->Textures.Num());
+		for (int i = 0; i < Mesh->Textures.Num(); i++)
+		{
+			const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
+			int color = i < 7 ? i + 1 : 7;
+			if (Tex)
+				DrawTextLeft("^%d  %d: %s (%s)", color, i, Tex->Name, Tex->GetClassName());
+			else
+				DrawTextLeft("^%d  %d: null", color, i);
+
+		}
+		DrawTextLeft("");
+	}
+}
+
+
+void CSkelMeshViewer::Draw3D()
+{
+	guard(CSkelMeshViewer::Draw3D);
+	assert(Inst);
+
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+
+	// tick animations
+	unsigned time = appMilliseconds();
+	float TimeDelta = (time - CurrentTime) / 1000.0f;
+	CurrentTime = time;
+	MeshInst->UpdateAnimation(TimeDelta);
+
+#if HIGHLIGHT_CURRENT
+	float lightAmbient[4];
+	float boost = 0;
+	float hightlightTime = time - ViewerCreateTime;
+
+	if (Meshes.Num() && hightlightTime < HIGHLIGHT_DURATION)
+	{
+		if (hightlightTime > HIGHLIGHT_DURATION / 2)
+			hightlightTime = HIGHLIGHT_DURATION - hightlightTime;	// fade
+		boost = HIGHLIGHT_STRENGTH * hightlightTime / (HIGHLIGHT_DURATION / 2);
+
+		glGetMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
+		lightAmbient[0] += boost;
+		lightAmbient[1] += boost;
+		lightAmbient[2] += boost;
+		glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+		glMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
+	}
+#endif // HIGHLIGHT_CURRENT
+
+	CMeshViewer::Draw3D();
+
+#if HIGHLIGHT_CURRENT
+	if (boost > 0)
+	{
+		lightAmbient[0] -= boost;
+		lightAmbient[1] -= boost;
+		lightAmbient[2] -= boost;
+		glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+		glMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
+	}
+#endif // HIGHLIGHT_CURRENT
+
+	int i;
+
+#if SHOW_BOUNDS
+	//?? separate function for drawing wireframe Box
+	BindDefaultMaterial(true);
+	glBegin(GL_LINES);
+	CVec3 verts[8];
+	static const int inds[] =
+	{
+		0,1, 2,3, 0,2, 1,3,
+		4,5, 6,7, 4,6, 5,7,
+		0,4, 1,5, 2,6, 3,7
+	};
+	const FBox &B = MeshInst->pMesh->BoundingBox;
+	for (i = 0; i < 8; i++)
+	{
+		CVec3 &v = verts[i];
+		v[0] = (i & 1) ? B.Min.X : B.Max.X;
+		v[1] = (i & 2) ? B.Min.Y : B.Max.Y;
+		v[2] = (i & 4) ? B.Min.Z : B.Max.Z;
+		MeshInst->BaseTransformScaled.TransformPointSlow(v, v);
+	}
+	// can use glDrawElements(), but this will require more GL setup
+	glColor3f(0.5,0.5,1);
+	for (i = 0; i < ARRAY_COUNT(inds) / 2; i++)
+	{
+		glVertex3fv(verts[inds[i*2  ]].v);
+		glVertex3fv(verts[inds[i*2+1]].v);
+	}
+	glEnd();
+	glColor3f(1, 1, 1);
+#endif // SHOW_BOUNDS
+
+	for (i = 0; i < Meshes.Num(); i++)
+	{
+		CSkelMeshInstance *mesh = Meshes[i];
+		if (mesh->pMesh == MeshInst->pMesh) continue;	// avoid duplicates
+		mesh->UpdateAnimation(TimeDelta);
+		mesh->Draw();
+	}
+
+	unguard;
 }
 
 
 void CSkelMeshViewer::ShowHelp()
 {
-	CLodMeshViewer::ShowHelp();
+	CMeshViewer::ShowHelp();
 	DrawKeyHelp("L",      "cycle mesh LODs");
 	DrawKeyHelp("S",      "show skeleton");
 	DrawKeyHelp("B",      "show bone names");
@@ -264,6 +453,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("A",      "show attach sockets");
 	DrawKeyHelp("Ctrl+B", "dump skeleton to console");
 	DrawKeyHelp("Ctrl+A", "cycle mesh animation sets");
+	DrawKeyHelp("Ctrl+R", "toggle animation translaton mode");
 	DrawKeyHelp("Ctrl+T", "tag/untag mesh");
 }
 
@@ -272,12 +462,82 @@ void CSkelMeshViewer::ProcessKey(int key)
 {
 	guard(CSkelMeshViewer::ProcessKey);
 	static float Alpha = -1.0f; //!!!!
+	int i;
 
 	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+	int NumAnims = MeshInst->GetAnimCount();	//?? use Meshes[] instead ...
+
+	const char *AnimName;
+	float		Frame;
+	float		NumFrames;
+	float		Rate;
+	MeshInst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
 
 	switch (key)
 	{
+	// animation control
+	case '[':
+	case ']':
+		if (NumAnims)
+		{
+			if (key == '[')
+			{
+				if (--AnimIndex < -1)
+					AnimIndex = NumAnims - 1;
+			}
+			else
+			{
+				if (++AnimIndex >= NumAnims)
+					AnimIndex = -1;
+			}
+			// note: AnimIndex changed now
+			AnimName = MeshInst->GetAnimName(AnimIndex);
+			MeshInst->TweenAnim(AnimName, 0.25);	// change animation with tweening
+			for (i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->TweenAnim(AnimName, 0.25);
+		}
+		break;
+
+	case ',':		// '<'
+	case '.':		// '>'
+		if (key == ',')
+		{
+			Frame -= 0.2f;
+			if (Frame < 0)
+				Frame = 0;
+		}
+		else
+		{
+			Frame += 0.2f;
+			if (Frame > NumFrames - 1)
+				Frame = NumFrames - 1;
+			if (Frame < 0)
+				Frame = 0;
+		}
+		MeshInst->FreezeAnimAt(Frame);
+		for (i = 0; i < Meshes.Num(); i++)
+			Meshes[i]->FreezeAnimAt(Frame);
+		break;
+
+	case ' ':
+		if (AnimIndex >= 0)
+		{
+			MeshInst->PlayAnim(AnimName);
+			for (i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->PlayAnim(AnimName);
+		}
+		break;
+	case 'x':
+		if (AnimIndex >= 0)
+		{
+			MeshInst->LoopAnim(AnimName);
+			for (i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->LoopAnim(AnimName);
+		}
+		break;
+
+	// mesh debug output
 	case 'l':
 		if (++MeshInst->LodNum >= Mesh->LODModels.Num())
 			MeshInst->LodNum = -1;
@@ -379,7 +639,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 					MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
 					for (int i = 0; i < Meshes.Num(); i++)
 					{
-						CLodMeshInstance* Inst = Meshes[i];
+						CSkelMeshInstance* Inst = Meshes[i];
 						if (Inst->pMesh->IsA("SkeletalMesh"))
 						{
 							CSkelMeshInstance *SkelInst = static_cast<CSkelMeshInstance*>(Inst);
@@ -402,8 +662,16 @@ void CSkelMeshViewer::ProcessKey(int key)
 		}
 		break;
 
+	case 'r'|KEY_CTRL:
+		{
+			int mode = MeshInst->RotationMode + 1;
+			if (mode > EARO_ForceDisabled) mode = 0;
+			MeshInst->RotationMode = (EAnimRotationOnly)mode;
+		}
+		break;
+
 	default:
-		CLodMeshViewer::ProcessKey(key);
+		CMeshViewer::ProcessKey(key);
 	}
 
 	unguard;

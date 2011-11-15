@@ -409,7 +409,7 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	int i;
 
 	int numSections = Lod.Sections.Num();
-	int numVerts    = Lod.Verts.Num();
+	int numVerts    = Lod.NumVerts;
 	int numIndices  = Lod.Indices.Num();
 	int numFaces    = numIndices / 3;
 

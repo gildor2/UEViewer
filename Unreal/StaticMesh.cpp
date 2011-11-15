@@ -11,8 +11,6 @@ void CStaticMeshLod::BuildTangents()
 
 	if (HasTangents) return;
 
-	int NumVerts = Verts.Num();
-
 	int i, j;
 
 	CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
@@ -26,7 +24,7 @@ void CStaticMeshLod::BuildTangents()
 		}
 
 		// compute tangent
-		CVec3 tang;
+		CVecT tang;
 		float U0 = V[0]->UV[0].U;
 		float V0 = V[0]->UV[0].V;
 		float U1 = V[1]->UV[0].U;
@@ -44,7 +42,7 @@ void CStaticMeshLod::BuildTangents()
 		else
 		{
 			float pos = (V1 - V0) / (V2 - V0);			// fraction, where W[1] is placed betwen W[0] and W[2] (may be < 0 or > 1)
-			CVec3 tmp;
+			CVecT tmp;
 			Lerp(V[0]->Position, V[2]->Position, pos, tmp);
 			VectorSubtract(tmp, V[1]->Position, tang);
 			// tang.V == W[1].V; but tang.U may be greater or smaller than W[1].U
@@ -58,9 +56,9 @@ void CStaticMeshLod::BuildTangents()
 		for (j = 0; j < 3; j++)
 		{
 			CStaticMeshVertex &DW = *V[j];
-			const CVec3 &norm = DW.Normal;
+			const CVecT &norm = DW.Normal;
 			float pos = dot(norm, tang);
-			CVec3 tang2;
+			CVecT tang2;
 			VectorMA(tang, -pos, norm, tang2);
 			tang2.Normalize();
 			DW.Tangent = tang2;

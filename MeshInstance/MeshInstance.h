@@ -9,6 +9,8 @@ class USkeletalMesh;
 class CAnimSet;
 class CStaticMesh;
 
+enum EAnimRotationOnly;
+
 
 /*-----------------------------------------------------------------------------
 	Basic CMeshInstance class
@@ -39,84 +41,54 @@ public:
 };
 
 
-class CLodMeshInstance : public CMeshInstance
-{
-public:
-	// linked data
-	const ULodMesh	*pMesh;
-
-	CLodMeshInstance()
-	:	pMesh(NULL)
-	{}
-
-	virtual void SetMesh(const ULodMesh *Mesh);
-	UUnrealMaterial *GetMaterial(int Index, int *PolyFlags = NULL);
-	void SetMaterial(int Index);
-	virtual void UpdateAnimation(float TimeDelta) = 0;
-
-	// animation control
-	void PlayAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
-	{
-		PlayAnimInternal(AnimName, Rate, TweenTime, Channel, false);
-	}
-	void LoopAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
-	{
-		PlayAnimInternal(AnimName, Rate, TweenTime, Channel, true);
-	}
-	void TweenAnim(const char *AnimName, float TweenTime, int Channel = 0)
-	{
-		PlayAnimInternal(AnimName, 0, TweenTime, Channel, false);
-	}
-
-	virtual void AnimStopLooping(int Channel = 0) = 0;
-	virtual void FreezeAnimAt(float Time, int Channel = 0) = 0;
-
-	// animation state
-	virtual void GetAnimParams(int Channel, const char *&AnimName,
-		float &Frame, float &NumFrames, float &Rate) const = 0;
-	virtual bool IsTweening(int Channel = 0) = 0;
-
-	// animation enumeration
-	virtual int GetAnimCount() const = 0;
-	virtual const char *GetAnimName(int Index) const = 0;
-
-protected:
-	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped) = 0;
-};
-
-
 /*-----------------------------------------------------------------------------
 	CVertMeshInstance class
 -----------------------------------------------------------------------------*/
 
-class CVertMeshInstance : public CLodMeshInstance
+class CVertMeshInstance : public CMeshInstance
 {
 public:
+	// linked data
+	const UVertMesh	*pMesh;
+
 	CVertMeshInstance()
 	:	AnimIndex(-1)
 	,	AnimTime(0)
 	{}
+
+	void SetMesh(const UVertMesh *Mesh);
+	UUnrealMaterial *GetMaterial(int Index, int *PolyFlags = NULL);
+	void SetMaterial(int Index);
+
 	virtual void Draw();
 
 	// animation control
-	virtual void AnimStopLooping(int Channel)
+	void PlayAnim(const char *AnimName, float Rate = 1)
+	{
+		PlayAnimInternal(AnimName, Rate, false);
+	}
+	void LoopAnim(const char *AnimName, float Rate = 1)
+	{
+		PlayAnimInternal(AnimName, Rate, true);
+	}
+	void TweenAnim(const char *AnimName)
+	{
+		PlayAnimInternal(AnimName, 0, false);
+	}
+
+	void AnimStopLooping()
 	{
 		AnimLooped = false;
 	}
-	virtual void FreezeAnimAt(float Time, int Channel);
+	void FreezeAnimAt(float Time);
 
 	// animation state
-	virtual void GetAnimParams(int Channel, const char *&AnimName,
-		float &Frame, float &NumFrames, float &Rate) const;
-	virtual bool IsTweening(int Channel)
-	{
-		return false;
-	}
+	void GetAnimParams(const char *&AnimName, float &Frame, float &NumFrames, float &Rate) const;
 
 	// animation enumeration
-	virtual int GetAnimCount() const;
-	virtual const char *GetAnimName(int Index) const;
-	virtual void UpdateAnimation(float TimeDelta);
+	int GetAnimCount() const;
+	const char *GetAnimName(int Index) const;
+	void UpdateAnimation(float TimeDelta);
 
 protected:
 	// animation state
@@ -126,10 +98,7 @@ protected:
 	bool		AnimLooped;
 
 	int FindAnim(const char *AnimName) const;
-	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
-
-private:
-	const UVertMesh *GetMesh() const;
+	void PlayAnimInternal(const char *AnimName, float Rate, bool Looped);
 };
 
 
@@ -141,7 +110,7 @@ private:
 
 struct FVertInfluences;
 
-class CSkelMeshInstance : public CLodMeshInstance
+class CSkelMeshInstance : public CMeshInstance
 {
 	struct CAnimChan
 	{
@@ -158,39 +127,24 @@ class CSkelMeshInstance : public CLodMeshInstance
 	};
 
 public:
+	// linked data
+	const USkeletalMesh	*pMesh;
+
 	// mesh state
 	int			LodNum;
+	EAnimRotationOnly RotationMode;		// EAnimRotationOnly
 	// debugging
 	int			ShowSkel;			// 0 - mesh, 1 - mesh+skel, 2 - skel only
 	bool		ShowInfluences;
 	bool		ShowLabels;
 	bool		ShowAttach;
 
-	CSkelMeshInstance()
-	:	LodNum(-1)
-	,	LastLodNum(-2)				// differs from LodNum and from all other values
-	,	MaxAnimChannel(-1)
-	,	Animation(NULL)
-	,	DataBlock(NULL)
-	,	BoneData(NULL)
-	,	Wedges(NULL)
-	,	Skinned(NULL)
-	,	NumWedges(0)
-	,	Sections(NULL)
-	,	NumSections(0)
-	,	Indices(NULL)
-	,	InfColors(NULL)
-	,	ShowSkel(0)
-	,	ShowLabels(false)
-	,	ShowAttach(false)
-	,	ShowInfluences(false)
-	{
-		ClearSkelAnims();
-	}
-
-	virtual void SetMesh(const ULodMesh *Mesh);
-	void SetAnim(const CAnimSet *Anim);
+	CSkelMeshInstance();
 	virtual ~CSkelMeshInstance();
+
+	void SetMesh(const USkeletalMesh *Mesh);
+	void SetAnim(const CAnimSet *Anim);
+
 	void ClearSkelAnims();
 //??	void StopAnimating(bool ClearAllButBase);
 	virtual void Draw();
@@ -205,8 +159,20 @@ public:
 	//!! SetBone[Direction|Location|Rotation]()
 
 	// animation control
-	virtual void AnimStopLooping(int Channel);
-	virtual void FreezeAnimAt(float Time, int Channel = 0);
+	void PlayAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
+	{
+		PlayAnimInternal(AnimName, Rate, TweenTime, Channel, false);
+	}
+	void LoopAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
+	{
+		PlayAnimInternal(AnimName, Rate, TweenTime, Channel, true);
+	}
+	void TweenAnim(const char *AnimName, float TweenTime, int Channel = 0)
+	{
+		PlayAnimInternal(AnimName, 0, TweenTime, Channel, false);
+	}
+	void AnimStopLooping(int Channel);
+	void FreezeAnimAt(float Time, int Channel = 0);
 
 	// animation state
 
@@ -214,14 +180,14 @@ public:
 	// Frame     = 0..NumFrames
 	// NumFrames = animation length, frames
 	// Rate      = frames per seconds
-	virtual void GetAnimParams(int Channel, const char *&AnimName,
+	void GetAnimParams(int Channel, const char *&AnimName,
 		float &Frame, float &NumFrames, float &Rate) const;
 
 	bool HasAnim(const char *AnimName) const
 	{
 		return FindAnim(AnimName) != INDEX_NONE;
 	}
-	virtual bool IsTweening(int Channel)
+	bool IsTweening(int Channel = 0)
 	{
 		return GetStage(Channel).TweenTime > 0;
 	}
@@ -237,24 +203,27 @@ public:
 	//??	- replace 1st anim with 2nd, and clear 2nd
 
 	// animation enumeration
-	virtual int GetAnimCount() const;
-	virtual const char *GetAnimName(int Index) const;
-	virtual void UpdateAnimation(float TimeDelta);
+	int GetAnimCount() const;
+	const char *GetAnimName(int Index) const;
+	void UpdateAnimation(float TimeDelta);
 
 	const CAnimSet *GetAnim() const
 	{
 		return Animation;
 	}
 
+	UUnrealMaterial *GetMaterial(int Index, int *PolyFlags = NULL);
+	void SetMaterial(int Index);
+
 protected:
 	const CAnimSet		 *Animation;
 	// mesh data
-	byte				 *DataBlock;// all following data is resided here
+	void				 *DataBlock;// all following data is resided here
 	struct CMeshBoneData *BoneData;
-	struct CMeshWedge    *Wedges;	// bindpose
+	struct CSkelMeshVertex *Verts;	// bindpose
 	struct CSkinVert     *Skinned;	// soft-skinned vertices
 	int					 NumWedges;	// used size of Wedges and Skinned arrays (maximal size is Mesh.NumWedges)
-	struct CSkinSection  *Sections;
+	struct CSkelMeshSection *Sections;
 	int					 NumSections;
 	int					 *Indices;	// index array
 	CVec3		*InfColors;			// debug: color-by-influence for vertices
@@ -276,12 +245,9 @@ protected:
 	void TransformMesh();
 	int FindBone(const char *BoneName) const;
 	int FindAnim(const char *AnimName) const;
-	virtual void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
+	void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 	void UpdateSkeleton();
 	void BuildInfColors();
-
-private:
-	const USkeletalMesh *GetMesh() const;
 };
 
 

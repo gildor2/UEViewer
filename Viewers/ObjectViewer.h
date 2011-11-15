@@ -2,7 +2,6 @@
 
 
 class CMeshInstance;
-class CLodMeshInstance;
 class CVertMeshInstance;
 class CSkelMeshInstance;
 
@@ -96,16 +95,17 @@ public:
 };
 
 
-class CLodMeshViewer : public CMeshViewer
+/*-----------------------------------------------------------------------------
+	Vertex mesh viewer (UVertMesh)
+-----------------------------------------------------------------------------*/
+
+class CVertMeshViewer : public CMeshViewer
 {
 public:
 	int				AnimIndex;
 	unsigned		CurrentTime;
 
-	CLodMeshViewer(ULodMesh *Mesh);
-	void Initialize();		//?? remove this?
-
-	static void TagMesh(CLodMeshInstance *NewInst);
+	CVertMeshViewer(UVertMesh *Mesh);
 
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
@@ -114,21 +114,6 @@ public:
 	TEST_OBJECT;
 	virtual void Draw2D();
 	virtual void Draw3D();
-
-	static TArray<CLodMeshInstance*> Meshes;	// for displaying multipart meshes
-};
-
-
-/*-----------------------------------------------------------------------------
-	Vertex mesh viewer (UVertMesh)
------------------------------------------------------------------------------*/
-
-class CVertMeshViewer : public CLodMeshViewer
-{
-public:
-	CVertMeshViewer(UVertMesh *Mesh);
-	virtual void Dump();
-	TEST_OBJECT;
 };
 
 
@@ -136,16 +121,25 @@ public:
 	Skeletal mesh viewer (USkeletalMesh)
 -----------------------------------------------------------------------------*/
 
-class CSkelMeshViewer : public CLodMeshViewer
+class CSkelMeshViewer : public CMeshViewer
 {
 public:
+	int				AnimIndex;
+	unsigned		CurrentTime;
+
 	CSkelMeshViewer(USkeletalMesh *Mesh);
+
+	static void TagMesh(CSkelMeshInstance *NewInst);
+
 	virtual void ShowHelp();
 	virtual void Dump();
 	virtual void Export();
 	TEST_OBJECT;
 	virtual void Draw2D();
+	virtual void Draw3D();
 	virtual void ProcessKey(int key);
+
+	static TArray<CSkelMeshInstance*> Meshes;	// for displaying multipart meshes
 };
 
 

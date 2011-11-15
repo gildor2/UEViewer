@@ -125,6 +125,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+13.11.2011
+- fixed AnimRotationOnly for Mass Effect
+- displaying animation translation mode on the screen
+- controlling translation mode with 'Ctrl+R' key
+
 09.11.2011
 - highlighting current mesh in a viewer in multipart mesh rendering mode
 - taking into account bounds of all meshes of multipart mesh when positioning camera

@@ -22,7 +22,7 @@ void CStatMeshInstance::Draw()
 
 	/*const*/ CStaticMeshLod& Mesh = pMesh->Lods[LodNum];	//?? not 'const' because of BuildTangents(); change this?
 	int NumSections = Mesh.Sections.Num();
-	if (!NumSections || !Mesh.Verts.Num()) return;
+	if (!NumSections || !Mesh.NumVerts) return;
 
 	if (!Mesh.HasTangents) Mesh.BuildTangents();
 
@@ -107,7 +107,7 @@ void CStatMeshInstance::Draw()
 	// draw mesh normals
 	if (bShowNormals)
 	{
-		int NumVerts = Mesh.Verts.Num();
+		int NumVerts = Mesh.NumVerts;
 		glBegin(GL_LINES);
 		glColor3f(0.5, 1, 0);
 		for (i = 0; i < NumVerts; i++)

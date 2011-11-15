@@ -84,13 +84,13 @@ struct FRigidVertexBio	//?? same layout as FRigidVertex3
 {
 	FVector				Pos;
 	int					Normal[3];
-	float				U, V;
+	FMeshUVFloat		UV;
 	byte				BoneIndex;
 
 	friend FArchive& operator<<(FArchive &Ar, FRigidVertexBio &V)
 	{
 		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
-		Ar << V.U << V.V;
+		Ar << V.UV;
 		Ar << V.BoneIndex;
 		return Ar;
 	}
@@ -100,14 +100,14 @@ struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
 {
 	FVector				Pos;
 	int					Normal[3];
-	float				U, V;
+	FMeshUVFloat		UV;
 	byte				BoneIndex[4];
 	byte				BoneWeight[4];
 
 	friend FArchive& operator<<(FArchive &Ar, FSmoothVertexBio &V)
 	{
 		int i;
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V;
+		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.UV;
 		for (i = 0; i < 4; i++)
 			Ar << V.BoneIndex[i] << V.BoneWeight[i];
 		return Ar;
@@ -119,12 +119,12 @@ struct FSkelVertexBio2
 {
 	FVector				Pos;
 	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
-	short				U, V;			// half
+	FMeshUVHalf			UV;
 	int					Pad;
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelVertexBio2 &V)
 	{
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.U << V.V << V.Pad;
+		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.UV << V.Pad;
 		return Ar;
 	}
 };
@@ -337,8 +337,7 @@ struct FStaticLODModelBio
 				V.Normal[0] = V1.Normal[0];
 				V.Normal[1] = V1.Normal[1];
 				V.Normal[2] = V1.Normal[2];
-				V.U = half2float(V1.U);
-				V.V = half2float(V1.V);
+				V.UV = V1.UV;		// convert
 				for (int j = 0; j < 4; j++)
 				{
 					V.BoneIndex[j]  = V2.BoneIndex[j];
@@ -388,6 +387,7 @@ static bool CompareCompNormals(int Normal1, int Normal2)
 }
 
 // partially based on FStaticLODModel::RestoreMesh3()
+//!! convert directly to CSkeletalMesh
 void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLODModelBio &Lod)
 {
 	guard(FStaticLODModel::RestoreMeshBio);
@@ -430,8 +430,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 		// create wedge
 		FMeshWedge *W = new(Wedges) FMeshWedge;
 		W->iVertex = PointIndex;
-		W->TexUV.U = V.U;
-		W->TexUV.V = V.V;
+		W->TexUV   = V.UV;
 	}
 	unguard;
 
@@ -471,8 +470,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 		// create wedge
 		FMeshWedge *W = new(Wedges) FMeshWedge;
 		W->iVertex = PointIndex;
-		W->TexUV.U = V.U;
-		W->TexUV.V = V.V;
+		W->TexUV   = V.UV;
 	}
 	unguard;
 

@@ -43,7 +43,6 @@ MAIN = \
 	./obj/umodel-win32/UnRenderer.obj \
 	./obj/umodel-win32/UnTexture.obj \
 	./obj/umodel-win32/UnUbisoft.obj \
-	./obj/umodel-win32/LodMeshViewer.obj \
 	./obj/umodel-win32/MaterialViewer.obj \
 	./obj/umodel-win32/MeshViewer.obj \
 	./obj/umodel-win32/ObjectViewer.obj \
@@ -138,27 +137,9 @@ DEPENDS = \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	Core/MathSSE.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/TypeConvert.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-win32/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
@@ -181,27 +162,10 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
+	Core/MathSSE.h \
 	Exporters/Exporters.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/TypeConvert.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
-
-./obj/umodel-win32/LodMeshViewer.obj : Viewers/LodMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/LodMeshViewer.obj" Viewers/LodMeshViewer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Exporters/Exporters.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
 	Unreal/UnAnimNotify.h \
 	Unreal/UnCore.h \
@@ -228,16 +192,20 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
-	Exporters/Exporters.h \
+	Core/MathSSE.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
+	Unreal/UnrealClasses.h
 
-./obj/umodel-win32/ObjectViewer.obj : Viewers/ObjectViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ObjectViewer.obj" Viewers/ObjectViewer.cpp
+./obj/umodel-win32/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS = \
 	Build.h \
@@ -246,7 +214,9 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
+	Core/MathSSE.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/MeshCommon.h \
 	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -265,7 +235,9 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
+	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
@@ -275,6 +247,24 @@ DEPENDS = \
 
 ./obj/umodel-win32/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+./obj/umodel-win32/ObjectViewer.obj : Viewers/ObjectViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ObjectViewer.obj" Viewers/ObjectViewer.cpp
 
 DEPENDS = \
 	Build.h \
@@ -345,8 +335,10 @@ DEPENDS = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
+	Core/MathSSE.h \
 	Exporters/Exporters.h \
 	Exporters/Psk.h \
+	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
@@ -363,7 +355,9 @@ DEPENDS = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
+	Core/MathSSE.h \
 	Exporters/Exporters.h \
+	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
@@ -373,6 +367,103 @@ DEPENDS = \
 
 ./obj/umodel-win32/ExportMd5.obj : Exporters/ExportMd5.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportMd5.obj" Exporters/ExportMd5.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/MeshCommon.h \
+	Unreal/StaticMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+./obj/umodel-win32/StatMeshInstance.obj : MeshInstance/StatMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StatMeshInstance.obj" MeshInstance/StatMeshInstance.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+./obj/umodel-win32/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh.obj" Unreal/UnMesh.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+./obj/umodel-win32/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh3.obj" Unreal/UnMesh3.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h
+
+./obj/umodel-win32/SkeletalMesh.obj : Unreal/SkeletalMesh.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkeletalMesh.obj" Unreal/SkeletalMesh.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Unreal/MeshCommon.h \
+	Unreal/StaticMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h
+
+./obj/umodel-win32/StaticMesh.obj : Unreal/StaticMesh.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StaticMesh.obj" Unreal/StaticMesh.cpp
 
 DEPENDS = \
 	Build.h \
@@ -452,43 +543,10 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
-	Unreal/StaticMesh.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-win32/StatMeshInstance.obj : MeshInstance/StatMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StatMeshInstance.obj" MeshInstance/StatMeshInstance.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-win32/MeshInstance.obj : MeshInstance/MeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MeshInstance.obj" MeshInstance/MeshInstance.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/TypeConvert.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
@@ -502,69 +560,14 @@ DEPENDS = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/StaticMesh.h \
-	Unreal/TypeConvert.h \
+	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMaterial2.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-./obj/umodel-win32/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh.obj" Unreal/UnMesh.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/StaticMesh.h \
-	Unreal/TypeConvert.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMaterial3.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh3.h \
-	Unreal/UnMeshTypes.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnrealClasses.h
-
-./obj/umodel-win32/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/UnMesh3.obj" Unreal/UnMesh3.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/UnCore.h
-
-./obj/umodel-win32/SkeletalMesh.obj : Unreal/SkeletalMesh.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/SkeletalMesh.obj" Unreal/SkeletalMesh.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Unreal/StaticMesh.h \
-	Unreal/UnCore.h \
-	Unreal/UnObject.h
-
-./obj/umodel-win32/StaticMesh.obj : Unreal/StaticMesh.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StaticMesh.obj" Unreal/StaticMesh.cpp
+./obj/umodel-win32/MeshInstance.obj : MeshInstance/MeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MeshInstance.obj" MeshInstance/MeshInstance.cpp
 
 DEPENDS = \
 	Build.h \

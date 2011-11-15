@@ -149,27 +149,82 @@ void appUnwindThrow(const char *fmt, ...)
 int GNumAllocs = 0;
 #endif
 
-void *appMalloc(int size)
+#define BLOCK_MAGIC		0xAE
+
+struct CBlockHeader
+{
+	byte			magic;
+	byte			offset:4;
+	byte			align :4;
+	int				blockSize;
+};
+
+
+void *appMalloc(int size, int alignment)
 {
 	guard(appMalloc);
 	assert(size >= 0 && size < (256<<20));	// upper limit to allocation is 256Mb
-	void *data = malloc(size);
-	if (!data)
+	assert(alignment > 1 && alignment <= 16 && ((alignment & (alignment - 1)) == 0));
+	void *block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
+	if (!block)
 		appError("Failed to allocate %d bytes", size);
+	void *ptr = Align(OffsetPointer(block, sizeof(CBlockHeader)), alignment);
 	if (size > 0)
-		memset(data, 0, size);
+		memset(ptr, 0, size);
+	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
+	byte offset = (byte*)ptr - (byte*)block;
+	hdr->magic     = BLOCK_MAGIC;
+	hdr->offset    = offset - 1;
+	hdr->align     = alignment - 1;
+	hdr->blockSize = size;
 #if PROFILE
 	GNumAllocs++;
 #endif
-	return data;
+	return ptr;
 	unguardf(("size=%d", size));
 }
 
+void* appRealloc(void *ptr, int newSize)
+{
+	guard(appRealloc);
+
+	// special case
+	if (!ptr) return appMalloc(newSize);
+
+	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
+
+	int offset = hdr->offset + 1;
+	void *block = OffsetPointer(ptr, -offset);
+
+	assert(hdr->magic == BLOCK_MAGIC);
+	hdr->magic--;		// modify to any value
+
+	int alignment = hdr->align + 1;
+	int oldSize   = hdr->blockSize;
+	void *newData = appMalloc(newSize, alignment);
+
+	memcpy(newData, ptr, min(newSize, oldSize));
+
+	free(block);
+
+	return newData;
+
+	unguard;
+}
 
 void appFree(void *ptr)
 {
 	guard(appFree);
-	free(ptr);
+	assert(ptr);
+	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
+
+	int offset = hdr->offset + 1;
+	void *block = OffsetPointer(ptr, -offset);
+
+	assert(hdr->magic == BLOCK_MAGIC);
+	hdr->magic--;		// modify to any value
+
+	free(block);
 	unguard;
 }
 

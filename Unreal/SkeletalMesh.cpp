@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "UnCore.h"
+#include "UnObject.h"		// for typeinfo
 #include "SkeletalMesh.h"
 
 

@@ -8,6 +8,16 @@ struct CVec4
 		float		v[4];
 	};
 
+	// access to data
+	inline float& operator[](int index)
+	{
+		return v[index];
+	}
+	inline const float& operator[](int index) const
+	{
+		return v[index];
+	}
+
 	FORCEINLINE void Set(const CVec3 &src)
 	{
 		* (CVec3*)this = src;
@@ -18,6 +28,14 @@ struct CVec4
 	{
 		Set(src);
 		return *this;
+	}
+
+	FORCEINLINE operator CVec3() const
+	{
+		// NOTE: uses temporary stack variable, use ToVec3() whenever possible
+		CVec3 r;
+		r.Set(v[0], v[1], v[2]);
+		return r;
 	}
 
 	FORCEINLINE CVec3& ToVec3()

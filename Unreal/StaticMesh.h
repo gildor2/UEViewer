@@ -1,52 +1,11 @@
 #ifndef __STATICMESH_H__
 #define __STATICMESH_H__
 
-
-// forwards
-class UUnrealMaterial;
-
-
-//?? common structures
-
-struct CIndexBuffer
-{
-	typedef int (*IndexAccessor_t)(const CIndexBuffer&, int);
-
-	TArray<word>			Indices16;			// used when mesh has less than 64k indices
-	TArray<unsigned>		Indices32;			// used when mesh has more than 64k indices
-
-	FORCEINLINE bool Is32Bit() const
-	{
-		return (Indices32.Num() != 0);
-	}
-
-	int Num() const
-	{
-		return Is32Bit() ? Indices32.Num() : Indices16.Num();
-	}
-
-	IndexAccessor_t GetAccessor() const
-	{
-		return Is32Bit() ? GetIndex32 : GetIndex16;
-	}
-
-private:
-	static int GetIndex16(const CIndexBuffer &Buf, int Index)
-	{
-		return Buf.Indices16[Index];
-	}
-	static int GetIndex32(const CIndexBuffer &Buf, int Index)
-	{
-		return Buf.Indices32[Index];
-	}
-};
-
+#include "MeshCommon.h"
 
 /*-----------------------------------------------------------------------------
 	Local StaticMesh class, encapsulated all UE versions
 -----------------------------------------------------------------------------*/
-
-#define NUM_STATIC_MESH_UV_SETS		4
 
 struct CStaticMeshSection
 {
@@ -65,19 +24,9 @@ struct CStaticMeshSection
 };
 
 
-struct CStaticMeshUV
+struct CStaticMeshVertex : public CMeshVertex
 {
-	float					U, V;
-};
-
-
-struct CStaticMeshVertex
-{
-	CVec3					Position;
-	CVec3					Normal;
-	CVec3					Tangent;
-	CVec3					Binormal;
-	CStaticMeshUV			UV[NUM_STATIC_MESH_UV_SETS];
+	// everything is from the CMeshVertex
 };
 
 
@@ -88,16 +37,31 @@ struct CStaticMeshLod
 	bool					HasTangents;
 	// geometry
 	TArray<CStaticMeshSection> Sections;
-	TArray<CStaticMeshVertex>  Verts;
+	CStaticMeshVertex		*Verts;
+	int						NumVerts;
 	CIndexBuffer			Indices;
 
+	~CStaticMeshLod()
+	{
+		if (Verts) appFree(Verts);
+	}
+
 	void BuildTangents();
+
+	void AllocateVerts(int Count)
+	{
+		guard(CStaticMeshLod::AllocateVerts);
+		assert(Verts == NULL);
+		Verts    = (CStaticMeshVertex*)appMalloc(sizeof(CStaticMeshVertex) * Count, 16);		// alignment for SSE
+		NumVerts = Count;
+		unguard;
+	}
 
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMeshLod)
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Sections, CStaticMeshSection)
-		VPROP_ARRAY_COUNT(Verts, VertexCount)
+		PROP_INT(NumVerts)
 		VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
 		PROP_INT(NumTexCoords)
 	END_PROP_TABLE
