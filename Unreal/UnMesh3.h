@@ -156,6 +156,9 @@ public:
 		PROP_DROP(SkeletonName)
 		PROP_DROP(Stretches)
 #	endif // BATMAN
+#if DECLARE_VIEWER_PROPS
+		PROP_ARRAY(Materials, UObject*)
+#endif // DECLARE_VIEWER_PROPS
 	END_PROP_TABLE
 
 	USkeletalMesh3();

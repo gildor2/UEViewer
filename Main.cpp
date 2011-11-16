@@ -844,12 +844,13 @@ int main(int argc, char **argv)
 	if (noAnim)
 	{
 		UnregisterClass("MeshAnimation", true);
-		UnregisterClass("AnimSequence");
-		UnregisterClass("AnimNotify", true);
+		UnregisterClass("AnimSet",       true);
+		UnregisterClass("AnimSequence",  true);
+		UnregisterClass("AnimNotify",    true);
 	}
 	if (noMesh)
 	{
-		UnregisterClass("SkeletalMesh", true);
+		UnregisterClass("SkeletalMesh",       true);
 		UnregisterClass("SkeletalMeshSocket", true);
 	}
 	if (noStat) UnregisterClass("StaticMesh",     true);
@@ -1071,10 +1072,10 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	if (showMeshes || showAll)
 	{
 		CLASS_VIEWER(UVertMesh,       CVertMeshViewer, true);
-		CLASS_VIEWER(USkeletalMesh,   CSkelMeshViewer, true);	//!! MESH_VIEWER too
+		MESH_VIEWER (USkeletalMesh,   CSkelMeshViewer      );
 		MESH_VIEWER (UStaticMesh,     CStatMeshViewer      );
 #if UNREAL3
-//!!		MESH_VIEWER (USkeletalMesh3,  CSkelMeshViewer      )
+		MESH_VIEWER (USkeletalMesh3,  CSkelMeshViewer      );
 		MESH_VIEWER (UStaticMesh3,    CStatMeshViewer      );
 #endif
 	}

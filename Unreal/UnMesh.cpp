@@ -1545,6 +1545,18 @@ void UMeshAnimation::Upgrade()
 	USkeletalMesh class
 -----------------------------------------------------------------------------*/
 
+// Implement constructor in cpp to avoid inlining (it's large enough).
+// It's useful to declare TArray<> structures as forward declarations in header file.
+USkeletalMesh::USkeletalMesh()
+{}
+
+
+USkeletalMesh::~USkeletalMesh()
+{
+	delete ConvertedMesh;
+}
+
+
 #if SWRC
 
 struct FAttachSocketSWRC

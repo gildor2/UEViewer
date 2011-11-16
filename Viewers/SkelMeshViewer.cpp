@@ -6,10 +6,9 @@
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
 #include "UnMathTools.h"
-#include "TypeConvert.h"
 
 #include "UnMesh.h"			//??
-#include "UnMesh2.h"		// for UMeshAnimation
+#include "UnMesh2.h"		// for UE2 USkeletalMesh and UMeshAnimation
 #include "UnMesh3.h"		// for UAnimSet
 #include "SkeletalMesh.h"
 
@@ -32,45 +31,44 @@ static unsigned ViewerCreateTime;
 TArray<CSkelMeshInstance*> CSkelMeshViewer::Meshes;
 
 
-CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
-:	CMeshViewer(Mesh)
+CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
+:	CMeshViewer(Mesh0->OriginalMesh)
+,	Mesh(Mesh0)
 ,	AnimIndex(-1)
 ,	CurrentTime(appMilliseconds())
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
-	if (Mesh->Animation)		//?? UE2 only
-		SkelInst->SetAnim(Mesh->Animation->ConvertedAnim);
+	if (Mesh->OriginalMesh->IsA("SkeletalMesh"))	// UE2 class
+	{
+		const USkeletalMesh *OriginalMesh = static_cast<USkeletalMesh*>(Mesh->OriginalMesh);
+		if (OriginalMesh->Animation)
+			SkelInst->SetAnim(OriginalMesh->Animation->ConvertedAnim);
+	}
 	Inst = SkelInst;
 #if 0
 	Initialize();
 #else
 	// compute bounds for the current mesh
 	CVec3 Mins, Maxs;
-	if (Mesh->Points.Num())	//!! can remove this verification when Points will be pointer, not TArray<>
-	{
-		ComputeBounds(&CVT(Mesh->Points[0]), Mesh->Points.Num(), sizeof(FVector), Mins, Maxs);
-		SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
-		SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
-	}
-	else
-	{
-		Mins.Set(-1, -1, -1);
-		Maxs.Set( 1,  1,  1);
-	}
+	const CSkelMeshLod &Lod = Mesh0->Lods[0];
+	ComputeBounds(&Lod.Verts[0].Position, Lod.NumVerts, sizeof(CSkelMeshVertex), Mins, Maxs);
+	// ... transform bounds
+	SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
+	SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
 	// extend bounds with additional meshes
 	for (int i = 0; i < Meshes.Num(); i++)
 	{
 		CSkelMeshInstance* Inst = Meshes[i];
-		if ((Inst->pMesh != SkelInst->pMesh) && Inst->pMesh->IsA("SkeletalMesh"))
+		if (Inst->pMesh != SkelInst->pMesh)
 		{
-			CSkelMeshInstance *SkelInst2 = static_cast<CSkelMeshInstance*>(Inst);
-			const USkeletalMesh *Mesh2 = static_cast<const USkeletalMesh*>(SkelInst2->pMesh);
-			// the same code for SkelInst2
+			const CSkeletalMesh *Mesh2 = Inst->pMesh;
+			// the same code for Inst
 			CVec3 Bounds2[2];
-			ComputeBounds(&CVT(Mesh2->Points[0]), Mesh2->Points.Num(), sizeof(FVector), Bounds2[0], Bounds2[1]);
-			SkelInst2->BaseTransformScaled.TransformPointSlow(Bounds2[0], Bounds2[0]);
-			SkelInst2->BaseTransformScaled.TransformPointSlow(Bounds2[1], Bounds2[1]);
+			const CSkelMeshLod &Lod2 = Mesh2->Lods[0];
+			ComputeBounds(&Lod2.Verts[0].Position, Lod2.NumVerts, sizeof(CSkelMeshVertex), Bounds2[0], Bounds2[1]);
+			Inst->BaseTransformScaled.TransformPointSlow(Bounds2[0], Bounds2[0]);
+			Inst->BaseTransformScaled.TransformPointSlow(Bounds2[1], Bounds2[1]);
 			ComputeBounds(Bounds2, 2, sizeof(CVec3), Mins, Maxs, true);	// include Bounds2 into Mins/Maxs
 		}
 	}
@@ -91,81 +89,13 @@ CSkelMeshViewer::CSkelMeshViewer(USkeletalMesh *Mesh)
 }
 
 
-#if TEST_FILES
-void CSkelMeshViewer::Test()
-{
-	int i;
-
-	CMeshViewer::Test();
-
-	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
-
-	// ULodMesh fields
-	if (Mesh->Version > 1)
-	{
-		VERIFY_NULL(Faces.Num());
-	}
-	VERIFY_NULL(Verts.Num());
-
-	int NumBones = Mesh->RefSkeleton.Num();
-//	TEST_ARRAY(Mesh->CollapseWedge);
-//	TEST_ARRAY(Mesh->f1C8);
-	VERIFY(AttachBoneNames.Num(), AttachAliases.Num());
-	VERIFY(AttachBoneNames.Num(), AttachCoords.Num());
-	if (Mesh->Version > 1)
-	{
-		VERIFY_NULL(WeightIndices.Num());
-		VERIFY_NULL(BoneInfluences.Num());
-	}
-//	VERIFY_NOT_NULL(VertInfluences.Num());
-//	VERIFY_NOT_NULL(Wedges.Num());
-
-	for (i = 0; i < Mesh->LODModels.Num(); i++)
-	{
-		const FStaticLODModel &lod = Mesh->LODModels[i];
-//?? (not always)	if (lod.NumDynWedges != lod.Wedges.Num()) appNotify("lod[%d]: NumDynWedges!=wedges.Num()", i);
-//		if (lod.SkinPoints.Num() != lod.Points.Num() && lod.RigidSections.Num() == 0)
-//			appNotify("[%d] skinPoints: %d", i,	lod.SkinPoints.Num());
-//		if (lod.SmoothIndices.Indices.Num() + lod.RigidIndices.Indices.Num() != lod.Faces.Num() * 3)
-//			appNotify("[%d] strange indices count", i);
-//		if ((lod.f0.Num() != 0 || lod.NumDynWedges != 0) &&
-//			(lod.f0.Num() != lod.NumDynWedges * 3 + 1)) appNotify("f0=%d  NumDynWedges=%d",lod.f0.Num(), lod.NumDynWedges);
-//		if ((lod.SkinningData.Num() == 0) != (lod.NumDynWedges == 0))
-//			appNotify("SkinningData=%d  NumDynWedges=%d",lod.SkinningData.Num(), lod.NumDynWedges);
-// (may be empty)	if (lod.VertexStream.Verts.Num() != lod.Wedges.Num()) appNotify("lod%d: bad VertexStream size", i);
-//		if (lod.f114 || lod.f118) appNotify("[%d]: f114=%d, f118=%d", lod.f114, lod.f118);
-
-		const TArray<FSkelMeshSection> *sec[2];
-		sec[0] = &lod.SmoothSections;
-		sec[1] = &lod.RigidSections;
-		for (int k = 0; k < 2; k++)
-		{
-			for (int j = 0; j < sec[k]->Num(); j++)
-			{
-				const FSkelMeshSection &S = (*sec[k])[j];
-				if (k == 1) // rigid sections
-				{
-					if (S.BoneIndex >= NumBones)
-						appNotify("rigid sec[%d,%d]: bad bone link (%d >= %d)", i, j, S.BoneIndex, NumBones);
-					if (S.MinStreamIndex + S.NumStreamIndices > lod.RigidIndices.Indices.Num())
-						appNotify("rigid sec[%d,%d]: out of index buffer", i, j);
-					if (S.NumFaces * 3 != S.NumStreamIndices)
-						appNotify("rigid sec[%d,%d]: f8!=NumFaces*3", i, j);
-					if (S.fE != 0)
-						appNotify("rigid sec[%d,%d]: fE=%d", i, j, S.fE);
-				}
-			}
-		}
-	}
-}
-#endif
-
-
 void CSkelMeshViewer::Dump()
 {
 	CMeshViewer::Dump();
+	appPrintf("\n");
+	Mesh->GetTypeinfo()->DumpProps(Mesh);
 
-	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+/*
 	appPrintf(
 		"\nSkelMesh info:\n==============\n"
 		"Bones  # %4d  Points    # %4d  Points2  # %4d\n"
@@ -246,14 +176,14 @@ void CSkelMeshViewer::Dump()
 					S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
 			}
 		}
-	}
+	} */
 }
 
 
 void CSkelMeshViewer::Export()
 {
 	CMeshViewer::Export();
-
+/*
 	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	assert(Mesh);
 	for (int i = 0; i < Mesh->Textures.Num(); i++)
@@ -264,7 +194,7 @@ void CSkelMeshViewer::Export()
 
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CAnimSet *Anim = MeshInst->GetAnim();
-	if (Anim) ExportObject(Anim->OriginalAnim);
+	if (Anim) ExportObject(Anim->OriginalAnim); */
 }
 
 
@@ -285,28 +215,27 @@ void CSkelMeshViewer::Draw2D()
 {
 	CMeshViewer::Draw2D();
 
-	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+	//USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
-	if (MeshInst->LodNum < 0)
+	DrawTextLeft(S_GREEN"LOD    : "S_WHITE"%d/%d\n"
+				 S_GREEN"Verts  : "S_WHITE"%d\n"
+				 S_GREEN"Tris   : "S_WHITE"%d\n"
+				 S_GREEN"UV Set : "S_WHITE"%d/%d\n"
+				 S_GREEN"Bones  : "S_WHITE"%d",
+				 MeshInst->LodNum+1, Mesh->Lods.Num(),
+				 Lod.NumVerts, Lod.Indices.Num() / 3,
+				 MeshInst->UVIndex+1, Lod.NumTexCoords,
+				 Mesh->RefSkeleton.Num());
+	//!! show MaxInfluences etc
+
+	if (Inst->bColorMaterials)
 	{
-		DrawTextLeft(S_GREEN"LOD  : "S_WHITE"base mesh\n"
-					 S_GREEN"Verts: "S_WHITE"%d (%d wedges)\n"
-					 S_GREEN"Tris : "S_WHITE"%d\n"
-					 S_GREEN"Bones: "S_WHITE"%d",
-					 Mesh->Points.Num(), Mesh->Wedges.Num(), Mesh->Triangles.Num(),
-					 Mesh->RefSkeleton.Num());
-	}
-	else
-	{
-		const FStaticLODModel *Lod = &Mesh->LODModels[MeshInst->LodNum];
-		DrawTextLeft(S_GREEN"LOD  : "S_WHITE"%d/%d\n"
-					 S_GREEN"Verts: "S_WHITE"%d (%d wedges)\n"
-					 S_GREEN"Tris : "S_WHITE"%d\n"
-					 S_GREEN"Bones: "S_WHITE"%d",
-					 MeshInst->LodNum+1, Mesh->LODModels.Num(),
-					 Lod->Points.Num(), Lod->Wedges.Num(), Lod->Faces.Num(),
-					 Mesh->RefSkeleton.Num());
+		//const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
+		for (int i = 0; i < Lod.Sections.Num(); i++)
+			PrintMaterialInfo(i, Lod.Sections[i].Material, Lod.Sections[i].NumFaces);
+		DrawTextLeft("");
 	}
 
 	const CAnimSet *AnimSet = MeshInst->GetAnim();
@@ -322,7 +251,7 @@ void CSkelMeshViewer::Draw2D()
 	}
 
 	for (int i = 0; i < Meshes.Num(); i++)
-		DrawTextLeft("%s%d: %s", (Meshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, Meshes[i]->pMesh->Name);
+		DrawTextLeft("%s%d: %s", (Meshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, Meshes[i]->pMesh->OriginalMesh->Name);
 
 	const char *AnimName;
 	float Frame, NumFrames, Rate;
@@ -332,23 +261,6 @@ void CSkelMeshViewer::Draw2D()
 		AnimIndex+1, MeshInst->GetAnimCount(), AnimName, Rate, NumFrames,
 		MeshInst->IsTweening() ? " [tweening]" : "");
 	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
-
-	if (Inst->bColorMaterials)
-	{
-		const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
-		DrawTextLeft(S_GREEN"Textures: %d", Mesh->Textures.Num());
-		for (int i = 0; i < Mesh->Textures.Num(); i++)
-		{
-			const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
-			int color = i < 7 ? i + 1 : 7;
-			if (Tex)
-				DrawTextLeft("^%d  %d: %s (%s)", color, i, Tex->Name, Tex->GetClassName());
-			else
-				DrawTextLeft("^%d  %d: null", color, i);
-
-		}
-		DrawTextLeft("");
-	}
 }
 
 
@@ -464,7 +376,6 @@ void CSkelMeshViewer::ProcessKey(int key)
 	static float Alpha = -1.0f; //!!!!
 	int i;
 
-	USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	int NumAnims = MeshInst->GetAnimCount();	//?? use Meshes[] instead ...
 
@@ -539,8 +450,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 
 	// mesh debug output
 	case 'l':
-		if (++MeshInst->LodNum >= Mesh->LODModels.Num())
-			MeshInst->LodNum = -1;
+		if (++MeshInst->LodNum >= Mesh->Lods.Num())
+			MeshInst->LodNum = 0;
 		break;
 	case 's':
 		if (++MeshInst->ShowSkel > 2)
@@ -638,16 +549,9 @@ void CSkelMeshViewer::ProcessKey(int key)
 					// found desired animation set
 					MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
 					for (int i = 0; i < Meshes.Num(); i++)
-					{
-						CSkelMeshInstance* Inst = Meshes[i];
-						if (Inst->pMesh->IsA("SkeletalMesh"))
-						{
-							CSkelMeshInstance *SkelInst = static_cast<CSkelMeshInstance*>(Inst);
-							SkelInst->SetAnim(Anim);
-						}
-					}
+						Meshes[i]->SetAnim(Anim);
 					AnimIndex = -1;
-					appPrintf("Bound %s'%s' to %s'%s'\n", Mesh->GetClassName(), Mesh->Name, Obj->GetClassName(), Obj->Name);
+					appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
 					break;
 				}
 			}

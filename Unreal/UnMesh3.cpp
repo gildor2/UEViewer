@@ -655,7 +655,7 @@ struct FGPUSkin3
 	TArray<FGPUVert3PackedHalf> VertsHalfPacked;
 	TArray<FGPUVert3PackedFloat> VertsFloatPacked;
 
-	inline bool GetVertexCount() const
+	inline int GetVertexCount() const
 	{
 		if (VertsHalf.Num()) return VertsHalf.Num();
 		if (VertsFloat.Num()) return VertsFloat.Num();
@@ -948,10 +948,10 @@ struct FStaticLODModel3
 		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
 		{
 			FSkelMeshSection3 &S = Lod.Sections[i1];
-			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles);
+			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d Unk=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles, S.unk1);
 		}
 		appPrintf("Indices: %d\n", Lod.IndexBuffer.Indices.Num());
-#endif
+#endif // DEBUG_SKELMESH
 
 		if (Ar.ArVer < 215)
 		{
@@ -1512,16 +1512,19 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 				UnpackNormals(V->Normal, *D);
 				// convert influences
 //				int TotalWeight = 0;
+				int i2 = 0;
 				for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
 				{
 					int BoneIndex  = V->BoneIndex[i];
 					int BoneWeight = V->BoneWeight[i];
-					if (BoneWeight == 0) continue;
-					D->Weight[i] = BoneWeight / 255.0f;
-					D->Bone[i]   = C->Bones[BoneIndex];
+					if (BoneWeight == 0) continue;				// skip this influence (but do not stop the loop!)
+					D->Weight[i2] = BoneWeight / 255.0f;
+					D->Bone[i2]   = C->Bones[BoneIndex];
+					i2++;
 //					TotalWeight += BoneWeight;
 				}
 //				assert(TotalWeight = 255);
+				if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 			}
 			else
 			{
@@ -1549,16 +1552,19 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 					UnpackNormals(V0.Normal, *D);
 					// influences
 //					int TotalWeight = 0;
+					int i2 = 0;
 					for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
 					{
 						int BoneIndex  = V0.BoneIndex[i];
 						int BoneWeight = V0.BoneWeight[i];
 						if (BoneWeight == 0) continue;
-						D->Weight[i] = BoneWeight / 255.0f;
-						D->Bone[i]   = C->Bones[BoneIndex];
+						D->Weight[i2] = BoneWeight / 255.0f;
+						D->Bone[i2]   = C->Bones[BoneIndex];
+						i2++;
 //						TotalWeight += BoneWeight;
 					}
 //					assert(TotalWeight = 255);
+					if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 					SUV = &V0.UV;
 				}
 				// UV
@@ -1592,69 +1598,8 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 
 		unguard;	// ProcessSections
 
-		//!! BUILD LOD
-		/*
-			Source data:
-			- FSkeletalMeshLODInfo used for material remap
-			- chunks -- bone map, may have vertex data (for ver<333 or when package is not cooked), limited by bone count
-			- sections -- material map, range of indices
-			- GPU skin -- available since version 333, always filled
-			  - has 4 variants of vertex data: (packed+unpacked) x (UV+position)
-			- chunk.RigidVerts + chunk.SmoothVerts -- should be used for meshed older than version 333
-			- index buffer -- always available
-
-			NOTE: chunk may have FirstVertex set to incorrect value (for recent UE3 versions), which overlaps with the
-			previous chunk (FirstVertex=0 for a few chunks).
-
-			Destination:
-			- vertex array (not limited to bone count because of soft skinning)
-			- index buffer (simply copy)
-			- sections
-
-			When GPU skin is available:
-			- copy all verts
-			- copy all indices
-			- convert chunks+sections - ??
-
-			When GPU skin is NOT available:
-			- copy vertices from chunks
-			- everything else - like for GPU skin?
-		*/
-
-		/*!!
-		if (GPUSkin.NotEmpty())
-		{
-			1. copy verts from GPU skin
-			S.bUseFullPrecisionUVs, S.bUsePackedPosition -> VertsHalf, VertsHalfPacked, VertsFloat, VertsFloatPacked
-			get 3 values:
-			- unpacked position
-			- unpacked UV[4] ??? (or FMeshUVFloat* / FMeshUVHalf*)
-			- FGPUVert3Common
-			2. process chunks and fill CSkelMeshVertex.Bone
-		}
-		else
-		{
-			copy verts from chunks, single format (rigid/smooth)
-		}
-		CreateSections()
-		*/
-
-
 		unguardf(("lod=%d", lod)); // ConvertLod
 	}
-
-	/*
-	 *	Optimized search for PointIndex in RestoreMesh3()
-	 *	Profile results (GoW2 package): total time = 7.8s, partial:
-	 *	  load = 1.5s, GPU lods -> CPU = 5.5s, restore mesh = 0.7s
-	 *	Loading w/o seraching for good PointIndex = 1.6s, with search = 7.7s (not depends on restore mesh!)
-	 *	With disabled CompareCompNormals() = 6.3s
-	 *	New version (find PointIndex using TArray::FindItem()) = 4.4s
-	 */
-	//?? keep comment? ^^^
-	//?? BUT do we use point search for CSkeletalMesh - we have no Points separated from the Wedges
-	// convert LOD 0 to mesh
-//	RecreateMeshFromLOD();
 
 	// copy skeleton
 	guard(ProcessSkeleton);
@@ -1704,256 +1649,6 @@ void USkeletalMesh3::PostLoad()
 
 	unguard;
 }
-
-#if 0
-
-void FStaticLODModel::RestoreMesh3(const USkeletalMesh &Mesh, const FStaticLODModel3 &Lod, const FSkeletalMeshLODInfo &Info)
-{
-	guard(FStaticLODModel::RestoreMesh3);
-
-	// prepare arrays
-	TArray<FPackedNormal> PointNormals;
-	Points.Empty        (Lod.NumVertices);
-	PointNormals.Empty  (Lod.NumVertices);
-	Wedges.Empty        (Lod.NumVertices);
-	VertInfluences.Empty(Lod.NumVertices * NUM_INFLUENCES_UE3);
-
-	// create wedges, vertices and influences
-	guard(ProcessChunks);
-	for (int Chunk = 0; Chunk < Lod.Chunks.Num(); Chunk++)
-	{
-		int Vert, j;
-		const FSkinChunk3 &C = Lod.Chunks[Chunk];
-		const FGPUSkin3   &S = Lod.GPUSkin;
-
-		// when base mesh vertices are missing - try to get information from GPU skin
-		if ((C.NumRigidVerts != C.RigidVerts.Num() && C.RigidVerts.Num() == 0) ||
-			(C.NumSmoothVerts != C.SmoothVerts.Num() && C.SmoothVerts.Num() == 0))
-		{
-			guard(GPUVerts);
-			if (!Chunk) appPrintf("Restoring LOD verts from GPU skin\n", Mesh.Name);
-
-			int LastVertex = C.FirstVertex + C.NumRigidVerts + C.NumSmoothVerts;
-
-			for (Vert = C.FirstVertex; Vert < LastVertex; Vert++)
-			{
-				//?? some GOW3 meshes has 2 or more chunks with starting index 0
-				// Mesh from GPUSkin should be processed in following way:
-				// - create wedges for each GPU vertex (NumWedges == GPUSkin.NumVerts)
-				//   - each wedge should be linked to bones, bone list is inside chunk (each chunk
-				//     uses no more than 256 bones)
-				// - process all sections (number of sections == number of chunks?)
-				if (Vert < Wedges.Num()) continue;
-
-				const FGPUVert3Common *V;
-				FVector VPos;
-				float VU, VV;
-
-				if (!S.bUseFullPrecisionUVs)
-				{
-					if (!S.bUsePackedPosition)
-					{
-						const FGPUVert3Half &V0 = S.VertsHalf[Vert];
-						V    = &V0;
-						VPos = V0.Pos;
-						VU   = half2float(V0.U);
-						VV   = half2float(V0.V);
-					}
-					else
-					{
-						const FGPUVert3PackedHalf &V0 = S.VertsHalfPacked[Vert];
-						V    = &V0;
-						VPos = V0.Pos.ToVector(S.MeshOrigin, S.MeshExtension);
-						VU   = half2float(V0.U);
-						VV   = half2float(V0.V);
-					}
-				}
-				else
-				{
-					if (!S.bUsePackedPosition)
-					{
-						const FGPUVert3Float &V0 = S.VertsFloat[Vert];
-						V    = &V0;
-						VPos = V0.Pos;
-						VU   = V0.U;
-						VV   = V0.V;
-					}
-					else
-					{
-						const FGPUVert3PackedFloat &V0 = S.VertsFloatPacked[Vert];
-						V    = &V0;
-						VPos = V0.Pos.ToVector(S.MeshOrigin, S.MeshExtension);
-						VU   = V0.U;
-						VV   = V0.V;
-					}
-				}
-				// find the same point in previous items
-				int PointIndex = -1;	// start with 0, see below
-				while (true)
-				{
-					PointIndex = Points.FindItem(VPos, PointIndex + 1);
-					if (PointIndex == INDEX_NONE) break;
-					if (CompareCompNormals(PointNormals[PointIndex], V->Normal[2])) break;
-				}
-				if (PointIndex == INDEX_NONE)
-				{
-					// point was not found - create it
-					PointIndex = Points.Add();
-					Points[PointIndex] = VPos;
-					PointNormals.AddItem(V->Normal[2]);
-					// add influences
-//					int TotalWeight = 0;
-					for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
-					{
-						int BoneIndex  = V->BoneIndex[i];
-						int BoneWeight = V->BoneWeight[i];
-						if (BoneWeight == 0) continue;
-						FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
-						Inf->PointIndex = PointIndex;
-						Inf->Weight     = BoneWeight / 255.0f;
-						Inf->BoneIndex  = C.Bones[BoneIndex];
-//						TotalWeight += BoneWeight;
-					}
-//					assert(TotalWeight = 255);
-				}
-				// create wedge
-				FMeshWedge *W = new(Wedges) FMeshWedge;
-				W->iVertex = PointIndex;
-				W->TexUV.U = VU;
-				W->TexUV.V = VV;
-			}
-			unguardf(("vh=%d vf=%d ph=%d pf=%d [%d+%d+%d]",
-				S.VertsHalf.Num(), S.VertsFloat.Num(), S.VertsHalfPacked.Num(), S.VertsFloatPacked.Num(),
-                C.FirstVertex, C.NumRigidVerts, C.NumSmoothVerts));
-
-			continue;		// process other chunks (not from CPU mesh)
-		}
-
-		// get information from base (CPU) mesh
-		guard(RigidVerts);
-		for (Vert = 0; Vert < C.NumRigidVerts; Vert++)
-		{
-			const FRigidVertex3 &V = C.RigidVerts[Vert];
-			// find the same point in previous items
-			int PointIndex = -1;	// start with 0, see below
-			while (true)
-			{
-				PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
-				if (PointIndex == INDEX_NONE) break;
-				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[2])) break;
-			}
-			if (PointIndex == INDEX_NONE)
-			{
-				// point was not found - create it
-				PointIndex = Points.Add();
-				Points[PointIndex] = V.Pos;
-				PointNormals.AddItem(V.Normal[2]);
-				// add influence
-				FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
-				Inf->PointIndex = PointIndex;
-				Inf->Weight     = 1.0f;
-				Inf->BoneIndex  = C.Bones[V.BoneIndex];
-			}
-			// create wedge
-			FMeshWedge *W = new(Wedges) FMeshWedge;
-			W->iVertex = PointIndex;
-			W->TexUV.U = V.U;
-			W->TexUV.V = V.V;
-		}
-		unguard;
-
-		guard(SmoothVerts);
-		for (Vert = 0; Vert < C.NumSmoothVerts; Vert++)
-		{
-			const FSmoothVertex3 &V = C.SmoothVerts[Vert];
-			// find the same point in previous items
-			int PointIndex = -1;	// start with 0, see below
-			while (true)
-			{
-				PointIndex = Points.FindItem(V.Pos, PointIndex + 1);
-				if (PointIndex == INDEX_NONE) break;
-				if (CompareCompNormals(PointNormals[PointIndex], V.Normal[2])) break;
-				//?? should compare influences too !
-			}
-			if (PointIndex == INDEX_NONE)
-			{
-				// point was not found - create it
-				PointIndex = Points.Add();
-				Points[PointIndex] = V.Pos;
-				PointNormals.AddItem(V.Normal[2]);
-				// add influences
-				for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
-				{
-					int BoneIndex  = V.BoneIndex[i];
-					int BoneWeight = V.BoneWeight[i];
-					if (BoneWeight == 0) continue;
-					FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
-					Inf->PointIndex = PointIndex;
-					Inf->Weight     = BoneWeight / 255.0f;
-					Inf->BoneIndex  = C.Bones[BoneIndex];
-				}
-			}
-			// create wedge
-			FMeshWedge *W = new(Wedges) FMeshWedge;
-			W->iVertex = PointIndex;
-			W->TexUV.U = V.U;
-			W->TexUV.V = V.V;
-		}
-		unguard;
-	}
-	unguard;
-
-	// count triangles (speed optimization for TArray allocations)
-	int NumTriangles = 0;
-	int Sec;
-	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
-		NumTriangles += Lod.Sections[Sec].NumTriangles;
-	Faces.Empty(NumTriangles);
-	// create faces
-#if DEBUG_SKELMESH
-	printf("-> idx=%d wed=%d rig=%d smooth=%d\n", Lod.IndexBuffer.Indices.Num(), Wedges.Num(), 0, 0);
-#endif
-	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
-	{
-		const FSkelMeshSection3 &S = Lod.Sections[Sec];
-//		if (S.unk1 != Sec) appNotify("Mesh %s: Sec=%d unk1=%d", Mesh.Name, Sec, S.unk1);	//??
-
-		FSkelMeshSection *Dst = new (SmoothSections) FSkelMeshSection;
-		int MaterialIndex = S.MaterialIndex;
-		if (MaterialIndex >= 0 && MaterialIndex < Info.LODMaterialMap.Num())
-			MaterialIndex = Info.LODMaterialMap[MaterialIndex];
-		Dst->MaterialIndex = MaterialIndex;
-		Dst->FirstFace     = Faces.Num();
-		Dst->NumFaces      = S.NumTriangles;
-
-#if DEBUG_SKELMESH
-		printf("[%d] -> %d %d\n", Sec, S.FirstIndex, S.NumTriangles*3);
-		int b1 = 999999; int b2 = -999999;
-		for (int jj = 0; jj < S.NumTriangles*3; jj++)
-		{
-			int ii = Lod.IndexBuffer.Indices[S.FirstIndex+jj];
-			if (ii < b1) b1 = ii;
-			if (ii > b2) b2 = ii;
-		}
-		printf("      %d .. %d\n", b1, b2);
-#endif // DEBUG_SKELMESH
-		int Index = S.FirstIndex;
-		for (int i = 0; i < S.NumTriangles; i++)
-		{
-			FMeshFace *Face = new (Faces) FMeshFace;
-			Face->MaterialIndex = MaterialIndex;
-			Face->iWedge[0] = Lod.IndexBuffer.Indices[Index++];
-			Face->iWedge[1] = Lod.IndexBuffer.Indices[Index++];
-			Face->iWedge[2] = Lod.IndexBuffer.Indices[Index++];
-		}
-	}
-
-	unguard;
-
-	return;
-}
-
-#endif // 0 -- RestoreMesh3()
 
 
 /*-----------------------------------------------------------------------------

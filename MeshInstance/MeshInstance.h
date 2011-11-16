@@ -3,9 +3,8 @@
 
 // forwards
 class UVertMesh;
-class ULodMesh;
-class USkeletalMesh;
 
+class CSkeletalMesh;
 class CAnimSet;
 class CStaticMesh;
 
@@ -128,10 +127,11 @@ class CSkelMeshInstance : public CMeshInstance
 
 public:
 	// linked data
-	const USkeletalMesh	*pMesh;
+	CSkeletalMesh	*pMesh;
 
 	// mesh state
 	int			LodNum;
+	int			UVIndex;
 	EAnimRotationOnly RotationMode;		// EAnimRotationOnly
 	// debugging
 	int			ShowSkel;			// 0 - mesh, 1 - mesh+skel, 2 - skel only
@@ -142,7 +142,7 @@ public:
 	CSkelMeshInstance();
 	virtual ~CSkelMeshInstance();
 
-	void SetMesh(const USkeletalMesh *Mesh);
+	void SetMesh(CSkeletalMesh *Mesh);	// not 'const *mesh' because can call BuildTangents()
 	void SetAnim(const CAnimSet *Anim);
 
 	void ClearSkelAnims();
@@ -212,20 +212,12 @@ public:
 		return Animation;
 	}
 
-	UUnrealMaterial *GetMaterial(int Index, int *PolyFlags = NULL);
-	void SetMaterial(int Index);
-
 protected:
 	const CAnimSet		 *Animation;
 	// mesh data
-	void				 *DataBlock;// all following data is resided here
+	void				 *DataBlock;// all following data is resided here, aligned to 16 bytes
 	struct CMeshBoneData *BoneData;
-	struct CSkelMeshVertex *Verts;	// bindpose
 	struct CSkinVert     *Skinned;	// soft-skinned vertices
-	int					 NumWedges;	// used size of Wedges and Skinned arrays (maximal size is Mesh.NumWedges)
-	struct CSkelMeshSection *Sections;
-	int					 NumSections;
-	int					 *Indices;	// index array
 	CVec3		*InfColors;			// debug: color-by-influence for vertices
 	int			LastLodNum;			// used to detect requirement to rebuild Wedges[]
 	// animation state
@@ -264,6 +256,7 @@ public:
 	,	UVIndex(0)
 	{}
 
+	// not 'const *mesh' because can call BuildTangents()
 	void SetMesh(CStaticMesh *Mesh)
 	{
 		pMesh = Mesh;

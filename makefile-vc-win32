@@ -141,7 +141,6 @@ DEPENDS = \
 	MeshInstance/MeshInstance.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
-	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMathTools.h \
@@ -196,11 +195,9 @@ DEPENDS = \
 	MeshInstance/MeshInstance.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
-	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 

@@ -85,4 +85,15 @@ void CMeshViewer::ProcessKey(int key)
 	}
 }
 
+
+void CMeshViewer::PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces)
+{
+	int color = Index < 7 ? Index + 1 : 7;
+	if (Material)
+		DrawTextLeft("^%d  %d: %s (%s), %d tris", color, Index, Material->Name, Material->GetClassName(), NumFaces);
+	else
+		DrawTextLeft("^%d  %d: null, %d tris", color, Index, NumFaces);
+}
+
+
 #endif // RENDERING

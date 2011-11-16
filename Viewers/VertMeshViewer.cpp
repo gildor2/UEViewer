@@ -175,17 +175,8 @@ void CVertMeshViewer::Draw2D()
 	if (Inst->bColorMaterials)
 	{
 		const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
-		DrawTextLeft(S_GREEN"Textures: %d", Mesh->Textures.Num());
 		for (int i = 0; i < Mesh->Textures.Num(); i++)
-		{
-			const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
-			int color = i < 7 ? i + 1 : 7;
-			if (Tex)
-				DrawTextLeft("^%d  %d: %s (%s)", color, i, Tex->Name, Tex->GetClassName());
-			else
-				DrawTextLeft("^%d  %d: null", color, i);
-
-		}
+			PrintMaterialInfo(i, MATERIAL_CAST(Mesh->Textures[i]), 0);
 		DrawTextLeft("");
 	}
 

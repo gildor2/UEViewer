@@ -1,8 +1,7 @@
 #include "Core.h"
+#include "UnrealClasses.h"
 
 #if RENDERING
-
-#include "UnrealClasses.h"
 
 #include "StaticMesh.h"
 #include "MeshInstance.h"
@@ -53,10 +52,8 @@ void CStatMeshInstance::Draw()
 #else
 		int MaterialIndex = i;
 #endif
-		if (UVIndex == 0)
-			SetMaterial(Mesh.Sections[MaterialIndex].Material, MaterialIndex, 0);
-		else
-			BindDefaultMaterial();
+		const CStaticMeshSection &Sec = Mesh.Sections[MaterialIndex];
+		SetMaterial(Sec.Material, MaterialIndex, 0);
 
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;
@@ -84,7 +81,6 @@ void CStatMeshInstance::Draw()
 		glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
 		glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
 		//?? place this code into CIndexBuffer?
-		const CStaticMeshSection &Sec = Mesh.Sections[MaterialIndex];
 		if (Mesh.Indices.Is32Bit())
 			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_INT, &Mesh.Indices.Indices32[Sec.FirstIndex]);
 		else

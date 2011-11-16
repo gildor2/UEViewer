@@ -1326,7 +1326,10 @@ public:
 	TArray<UObject*>		havokObjects;	// wrappers for Havok objects used by this mesh; not used by Bioshock engine (precaching?)
 #endif
 
-//!!	CSkeletalMesh			*ConvertedMesh;	!! needs constructor + destructor with delete ConvertedMesh
+	CSkeletalMesh			*ConvertedMesh;
+
+	USkeletalMesh();
+	virtual ~USkeletalMesh();
 
 	void UpgradeFaces();
 	void UpgradeMesh();

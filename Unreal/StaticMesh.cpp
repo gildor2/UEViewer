@@ -4,10 +4,10 @@
 #include "StaticMesh.h"
 
 
-// code of this function is similar to BuildNormals() from SkelMeshInstance.cpp
+//!! code of this function is similar to BuildNormals() from SkelMeshInstance.cpp
 void CStaticMeshLod::BuildTangents()
 {
-	guard(CStaticMesh::BuildTangents);
+	guard(CStaticMeshLod::BuildTangents);
 
 	if (HasTangents) return;
 

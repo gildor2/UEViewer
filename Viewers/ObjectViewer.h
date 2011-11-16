@@ -5,17 +5,11 @@ class CMeshInstance;
 class CVertMeshInstance;
 class CSkelMeshInstance;
 
+class CSkeletalMesh;
 class CStaticMesh;
 
 
 #define TEST_FILES		1		// comment line to disable some notifications
-
-
-#if TEST_FILES
-#	define TEST_OBJECT	virtual void Test()
-#else
-#	define TEST_OBJECT
-#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -85,13 +79,13 @@ public:
 	{}
 	virtual ~CMeshViewer();
 
-	void InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs);	//?? bounds?
+	void InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs);	//?? CBox Bounds?
 
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
-//	virtual void Dump();
-//	virtual void Draw2D();
 	virtual void Draw3D();
+
+	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
 };
 
 
@@ -111,7 +105,9 @@ public:
 	virtual void ProcessKey(int key);
 	virtual void Dump();
 	virtual void Export();
-	TEST_OBJECT;
+#if TEST_FILES
+	virtual void Test();
+#endif
 	virtual void Draw2D();
 	virtual void Draw3D();
 };
@@ -127,19 +123,21 @@ public:
 	int				AnimIndex;
 	unsigned		CurrentTime;
 
-	CSkelMeshViewer(USkeletalMesh *Mesh);
+	CSkelMeshViewer(CSkeletalMesh *Mesh);
 
 	static void TagMesh(CSkelMeshInstance *NewInst);
 
 	virtual void ShowHelp();
 	virtual void Dump();
 	virtual void Export();
-	TEST_OBJECT;
 	virtual void Draw2D();
 	virtual void Draw3D();
 	virtual void ProcessKey(int key);
 
 	static TArray<CSkelMeshInstance*> Meshes;	// for displaying multipart meshes
+
+private:
+	CSkeletalMesh	*Mesh;
 };
 
 

@@ -3,14 +3,12 @@
 
 #if RENDERING
 
-#include "MeshInstance.h"
-#include "UnMesh.h"				//?? should be removed
-
 #include "SkeletalMesh.h"
+#include "MeshInstance.h"
 
 #include "GlWindow.h"
 #include "UnMathTools.h"
-#include "TypeConvert.h"		//?? used to get CVec3/CQuat from FMeshBone
+
 
 // debugging
 //#define SHOW_INFLUENCES		1
@@ -59,7 +57,7 @@ struct CSkinVert
 
 
 #define ANIM_UNASSIGNED			-2
-#define MAX_MESHBONES			512
+#define MAX_MESHBONES			2048
 #define MAX_MESHMATERIALS		256
 
 
@@ -84,50 +82,20 @@ const char *CSkelMeshInstance::GetAnimName(int Index) const
 }
 
 
-UUnrealMaterial *CSkelMeshInstance::GetMaterial(int Index, int *PolyFlags)
-{
-	guard(CSkelMeshInstance::GetMaterial);
-	int TexIndex = 1000000;
-	if (PolyFlags) *PolyFlags = 0;
-	if (Index < pMesh->Materials.Num())
-	{
-		const FMeshMaterial &M = pMesh->Materials[Index];
-		TexIndex  = M.TextureIndex;
-		if (PolyFlags) *PolyFlags = M.PolyFlags;
-	}
-	// it is possible, that Textures array is empty (mesh textured by script)
-	return (TexIndex < pMesh->Textures.Num()) ? MATERIAL_CAST(pMesh->Textures[TexIndex]) : NULL;
-	unguard;
-}
-
-void CSkelMeshInstance::SetMaterial(int Index)
-{
-	guard(CSkelMeshInstance::SetMaterial);
-	int PolyFlags;
-	UUnrealMaterial *Mat = GetMaterial(Index, &PolyFlags);
-	CMeshInstance::SetMaterial(Mat, Index, PolyFlags);
-	unguard;
-}
-
-
 /*-----------------------------------------------------------------------------
 	Create/destroy
 -----------------------------------------------------------------------------*/
 
 CSkelMeshInstance::CSkelMeshInstance()
-:	LodNum(-1)
+:	LodNum(0)
+,	UVIndex(0)
 ,	RotationMode(EARO_AnimSet)
 ,	LastLodNum(-2)				// differs from LodNum and from all other values
 ,	MaxAnimChannel(-1)
 ,	Animation(NULL)
 ,	DataBlock(NULL)
 ,	BoneData(NULL)
-,	Verts(NULL)
 ,	Skinned(NULL)
-,	NumWedges(0)
-,	Sections(NULL)
-,	NumSections(0)
-,	Indices(NULL)
 ,	InfColors(NULL)
 ,	ShowSkel(0)
 ,	ShowLabels(false)
@@ -176,7 +144,7 @@ void CSkelMeshInstance::ClearSkelAnims()
  *	- compute subtree sizes ('Sizes' array)
  *	- compute bone hierarchy depth ('Depth' array, for debugging only)
  */
-static int CheckBoneTree(const TArray<FMeshBone> &Bones, int Index,
+static int CheckBoneTree(const TArray<CSkelMeshBone> &Bones, int Index,
 	int *Sizes, int *Depth, int &numIndices, int maxIndices)
 {
 	assert(numIndices < maxIndices);
@@ -201,7 +169,7 @@ static int CheckBoneTree(const TArray<FMeshBone> &Bones, int Index,
 	return treeSize + 1;
 }
 
-
+#if 0
 static void BuildWedges(
 	CSkelMeshVertex *Wedges,
 	int MaxWedges,			// passed for validation only
@@ -538,8 +506,10 @@ static void BuildIndicesLod(CSkelMeshSection *Sections, int NumSections, const F
 	unguard;
 }
 
+#endif //!! 0 -- removed code
 
-void CSkelMeshInstance::SetMesh(const USkeletalMesh *Mesh)
+
+void CSkelMeshInstance::SetMesh(CSkeletalMesh *Mesh)
 {
 	guard(CSkelMeshInstance::SetMesh);
 
@@ -549,33 +519,24 @@ void CSkelMeshInstance::SetMesh(const USkeletalMesh *Mesh)
 
 	// orientation
 
-	SetAxis(Mesh->RotOrigin, BaseTransform.axis);
-	BaseTransform.origin[0] = Mesh->MeshOrigin.X * Mesh->MeshScale.X;
-	BaseTransform.origin[1] = Mesh->MeshOrigin.Y * Mesh->MeshScale.Y;
-	BaseTransform.origin[2] = Mesh->MeshOrigin.Z * Mesh->MeshScale.Z;
+	SetAxis(pMesh->RotOrigin, BaseTransform.axis);
+	BaseTransform.origin[0] = pMesh->MeshOrigin[0] * pMesh->MeshScale[0];
+	BaseTransform.origin[1] = pMesh->MeshOrigin[1] * pMesh->MeshScale[1];
+	BaseTransform.origin[2] = pMesh->MeshOrigin[2] * pMesh->MeshScale[2];
 
 	BaseTransformScaled.axis = BaseTransform.axis;
 	CVec3 tmp;
-	tmp[0] = 1.0f / Mesh->MeshScale.X;
-	tmp[1] = 1.0f / Mesh->MeshScale.Y;
-	tmp[2] = 1.0f / Mesh->MeshScale.Z;
+	tmp[0] = 1.0f / pMesh->MeshScale[0];
+	tmp[1] = 1.0f / pMesh->MeshScale[1];
+	tmp[2] = 1.0f / pMesh->MeshScale[2];
 	BaseTransformScaled.axis.PrescaleSource(tmp);
-	BaseTransformScaled.origin = CVT(Mesh->MeshOrigin);
+	BaseTransformScaled.origin = Mesh->MeshOrigin;
 
-	// skeleton
-
-	int NumBones  = Mesh->RefSkeleton.Num();
-	int NumVerts  = Mesh->Points.Num();
-	NumWedges = Mesh->Wedges.Num();
-
-	// count materials (may ge greater than Mesh->Materials.Num())
-	NumSections = Mesh->Materials.Num() - 1;
-	for (i = 0; i < Mesh->Triangles.Num(); i++)
-	{
-		int m = Mesh->Triangles[i].MatIndex;
-		if (m > NumSections) NumSections = m;
-	}
-	NumSections++;		// before this, NumMaterials = max index of used material
+	int NumBones = pMesh->RefSkeleton.Num();
+	int NumVerts = 0;
+	for (i = 0; i < pMesh->Lods.Num(); i++)
+		if (pMesh->Lods[i].NumVerts > NumVerts)
+			NumVerts = pMesh->Lods[i].NumVerts;
 
 	// free old data
 	if (DataBlock) appFree(DataBlock);
@@ -584,25 +545,18 @@ void CSkelMeshInstance::SetMesh(const USkeletalMesh *Mesh)
 		delete InfColors;
 		InfColors = NULL;
 	}
-	// allocate some arrays in a single block
-	int DataSize = sizeof(CMeshBoneData) * NumBones +
-				   sizeof(CSkelMeshVertex) * NumWedges +		//!! outside
-				   sizeof(CSkinVert) * NumWedges +
-				   sizeof(CSkelMeshSection) * NumSections +		//!! outside
-				   sizeof(int) * Mesh->Triangles.Num() * 3;		//!! outside
+	// allocate data arrays in a single block
+	int DataSize = sizeof(CMeshBoneData) * NumBones + sizeof(CSkinVert) * NumVerts;
 	DataBlock = appMalloc(DataSize, 16);
 	BoneData  = (CMeshBoneData*)DataBlock;
-	Verts     = (CSkelMeshVertex*) (BoneData + NumBones);
-	Skinned   = (CSkinVert*)    (Verts    + NumWedges);
-	Sections  = (CSkelMeshSection*) (Skinned  + NumWedges);
-	Indices   = (int*)          (Sections + NumSections);
+	Skinned   = (CSkinVert*)(BoneData + NumBones);
 
 	LastLodNum = -2;
 
 	CMeshBoneData *data;
 	for (i = 0, data = BoneData; i < NumBones; i++, data++)
 	{
-		const FMeshBone &B = Mesh->RefSkeleton[i];
+		const CSkelMeshBone &B = Mesh->RefSkeleton[i];
 		// NOTE: assumed, that parent bones goes first
 		assert(B.ParentIndex <= i);
 
@@ -613,8 +567,8 @@ void CSkelMeshInstance::SetMesh(const USkeletalMesh *Mesh)
 		CVec3 BP;
 		CQuat BO;
 		// get default pose
-		BP = CVT(B.BonePos.Position);
-		BO = CVT(B.BonePos.Orientation);
+		BP = B.Position;
+		BO = B.Orientation;
 		if (!i) BO.Conjugate();
 
 		CCoords &BC = data->RefCoords;
@@ -651,7 +605,7 @@ if (i == 32 || i == 34)
 	// check bones tree
 	if (NumBones)
 	{
-		//!! should be done in USkeletalMesh
+		//!! should be done in CSkeletalMesh
 		guard(VerifySkeleton);
 		int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
 		int numIndices = 0;
@@ -671,15 +625,14 @@ if (i == 32 || i == 34)
 void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 {
 	if (!pMesh) return;		// mesh is not set yet
-	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(pMesh);
 
 	Animation = Anim;
 
 	int i;
 	CMeshBoneData *data;
-	for (i = 0, data = BoneData; i < Mesh->RefSkeleton.Num(); i++, data++)
+	for (i = 0, data = BoneData; i < pMesh->RefSkeleton.Num(); i++, data++)
 	{
-		const FMeshBone &B = Mesh->RefSkeleton[i];
+		const CSkelMeshBone &B = pMesh->RefSkeleton[i];
 
 		// find reference bone in animation track
 		data->BoneMap = INDEX_NONE;		// in a case when bone has no corresponding animation track
@@ -702,14 +655,13 @@ void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 void CSkelMeshInstance::DumpBones()
 {
 #if 1
-	const USkeletalMesh *Mesh = static_cast<const USkeletalMesh*>(pMesh);
 	int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
 	int numIndices = 0;
-	CheckBoneTree(Mesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
+	CheckBoneTree(pMesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
 	//?? dump tree; separate function (requires depth information)
 	for (int i = 0; i < numIndices; i++)
 	{
-		const FMeshBone &B = Mesh->RefSkeleton[i];
+		const CSkelMeshBone &B = pMesh->RefSkeleton[i];
 		int parent = B.ParentIndex;
 		appPrintf("bone#%2d (parent %2d); tree size: %2d   ", i, parent, treeSizes[i]);
 #if 1
@@ -844,9 +796,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 
 			CVec3 BP;
 			CQuat BO;
-			const VJointPos &JP = pMesh->RefSkeleton[i].BonePos;
-			BP = CVT(JP.Position);			// default position - from bind pose
-			BO = CVT(JP.Orientation);		// ...
+			const CSkelMeshBone &Bone = pMesh->RefSkeleton[i];
+			BP = Bone.Position;					// default position - from bind pose
+			BO = Bone.Orientation;				// ...
 
 			int BoneIndex = data->BoneMap;
 
@@ -857,13 +809,13 @@ void CSkelMeshInstance::UpdateSkeleton()
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
 				{
 					AnimSeq1->Tracks[BoneIndex].GetBonePosition(Chn->Time, AnimSeq1->NumFrames, Chn->Looped, BP, BO);
-//const char *bname = *pMesh->RefSkeleton[i].Name;
+//const char *bname = *Bone.Name;
 //CQuat BOO = BO;
 //if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
 #if SHOW_ANIM
 //if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
 					DrawTextLeft("Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-						*pMesh->RefSkeleton[i].Name, VECTOR_ARG(BP), QUAT_ARG(BO));
+						*Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
 //if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
 #endif
 //BO.Normalize();
@@ -876,8 +828,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 				{
 					CVec3 BP2;
 					CQuat BO2;
-					BP2 = CVT(JP.Position);		// default position - from bind pose
-					BO2 = CVT(JP.Orientation);	// ...
+					BP2 = Bone.Position;		// default position - from bind pose
+					BO2 = Bone.Orientation;		// ...
 					AnimSeq2->Tracks[BoneIndex].GetBonePosition(Time2, AnimSeq2->NumFrames, Chn->Looped, BP2, BO2);
 					if (Chn->SecondaryBlend == 1.0f)
 					{
@@ -895,16 +847,16 @@ void CSkelMeshInstance::UpdateSkeleton()
 				}
 				// process AnimRotationOnly
 				if (!Animation->ShouldAnimateTranslation(BoneIndex, RotationMode))
-					BP = CVT(JP.Position);
+					BP = Bone.Position;
 			}
 			else
 			{
 				// get default bone position
-//				BP = CVT(JP.Position); -- already set above
-//				BO = CVT(JP.Orientation);
+//				BP = Bone.Position; -- already set above
+//				BO = Bone.Orientation;
 #if SHOW_ANIM
 				DrawTextLeft(S_YELLOW"Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-					*pMesh->RefSkeleton[i].Name, VECTOR_ARG(BP), QUAT_ARG(BO));
+					*Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
 #endif
 			}
 			if (!i) BO.Conjugate();
@@ -1231,8 +1183,8 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 	glBegin(GL_LINES);
 	for (int i = 0; i < pMesh->RefSkeleton.Num(); i++)
 	{
-		const FMeshBone &B  = pMesh->RefSkeleton[i];
-		const CCoords   &BC = BoneData[i].Coords;
+		const CSkelMeshBone &B  = pMesh->RefSkeleton[i];
+		const CCoords       &BC = BoneData[i].Coords;
 
 		CVec3 v1;
 		CVec3 Color;
@@ -1277,19 +1229,20 @@ void CSkelMeshInstance::DrawAttachments()
 {
 	guard(CSkelMeshInstance::DrawAttachments);
 
-	if (!pMesh->AttachAliases.Num()) return;
+	if (!pMesh->Sockets.Num()) return;
 
 	BindDefaultMaterial(true);
 
 	glBegin(GL_LINES);
-	for (int i = 0; i < pMesh->AttachAliases.Num(); i++)
+	for (int i = 0; i < pMesh->Sockets.Num(); i++)
 	{
-		const char *BoneName = pMesh->AttachBoneNames[i];
+		const CSkelMeshSocket &S = pMesh->Sockets[i];
+		const char *BoneName = S.Bone;
 		int BoneIndex = FindBone(BoneName);
 		if (BoneIndex == INDEX_NONE) continue;		// should not happen
 
 		CCoords AC;
-		BoneData[BoneIndex].Coords.UnTransformCoords(CVT(pMesh->AttachCoords[i]), AC);
+		BoneData[BoneIndex].Coords.UnTransformCoords(S.Transform, AC);
 
 		for (int j = 0; j < 3; j++)
 		{
@@ -1309,7 +1262,7 @@ void CSkelMeshInstance::DrawAttachments()
 		CVec3 labelOrigin;
 		static const CVec3 origin0 = { 4, 4, 4 };
 		AC.UnTransformPoint(origin0, labelOrigin);
-		DrawText3D(labelOrigin, S_GREEN"%s\n(%s)", *pMesh->AttachAliases[i], BoneName);
+		DrawText3D(labelOrigin, S_GREEN"%s\n(%s)", *S.Name, BoneName);
 	}
 	glColor3f(1,1,1);
 	glEnd();
@@ -1323,36 +1276,33 @@ void CSkelMeshInstance::TransformMesh()
 {
 	guard(CSkelMeshInstance::TransformMesh);
 
-#if USE_SSE
-	staticAssert((sizeof(CMeshBoneData) & 15) == 0, CMeshBoneData_not_mul16);
-	staticAssert((sizeof(CSkelMeshVertex) & 15) == 0, CSkelMeshVertex_not_mul16);
-	staticAssert((sizeof(CSkinVert) & 15) == 0, CSkinVert_not_mul16);
-#endif // USE_SSE
+	const CSkelMeshLod& Mesh = pMesh->Lods[LodNum];
+	int NumVerts = Mesh.NumVerts;
 
 	//?? try other tech: compute weighted sum of matrices, and then
 	//?? transform vector (+ normal ?; note: normals requires normalized
 	//?? transformations ?? (or normalization guaranteed by sum(weights)==1?))
-	memset(Skinned, 0, sizeof(CSkinVert) * NumWedges);
+	memset(Skinned, 0, sizeof(CSkinVert) * NumVerts);
 
-	for (int i = 0; i < NumWedges; i++)
+	for (int i = 0; i < NumVerts; i++)
 	{
-		const CSkelMeshVertex &W = Verts[i];
+		const CSkelMeshVertex &V = Mesh.Verts[i];
 		CSkinVert             &D = Skinned[i];
 
 		// compute weighted transform from all influences
 		// take a 1st influence
 #if !USE_SSE
 		CCoords transform;
-		transform = BoneData[W.Bone[0]].Transform;
-		transform.Scale(W.Weight[0]);
+		transform = BoneData[V.Bone[0]].Transform;
+		transform.Scale(V.Weight[0]);
 #else
-		const CCoords4 &transform = BoneData[W.Bone[0]].Transform4;
+		const CCoords4 &transform = BoneData[V.Bone[0]].Transform4;
 		__m128 x1, x2, x3, x4, x5, x6, x7, x8;
 		x1 = transform.mm[0];					// bone transform
 		x2 = transform.mm[1];
 		x3 = transform.mm[2];
 		x4 = transform.mm[3];
-		x5 = _mm_load1_ps(&W.Weight[0]);		// Weight
+		x5 = _mm_load1_ps(&V.Weight[0]);		// Weight
 		x1 = _mm_mul_ps(x1, x5);				// Transform * Weight
 		x2 = _mm_mul_ps(x2, x5);
 		x3 = _mm_mul_ps(x3, x5);
@@ -1361,15 +1311,15 @@ void CSkelMeshInstance::TransformMesh()
 		// add remaining influences
 		for (int j = 1; j < NUM_INFLUENCES; j++)
 		{
-			int iBone = W.Bone[j];
+			int iBone = V.Bone[j];
 			if (iBone < 0) break;
-			assert(iBone < static_cast<const USkeletalMesh*>(pMesh)->RefSkeleton.Num());	// validate bone index
+			assert(iBone < pMesh->RefSkeleton.Num());	// validate bone index
 
 			const CMeshBoneData &data = BoneData[iBone];
 #if !USE_SSE
-			CoordsMA(transform, W.Weight[j], data.Transform);
+			CoordsMA(transform, V.Weight[j], data.Transform);
 #else
-			x5 = _mm_load1_ps(&W.Weight[j]);	// Weight
+			x5 = _mm_load1_ps(&V.Weight[j]);	// Weight
 			// x1..x4 += data.Transform * Weight
 			x6 = _mm_mul_ps(data.Transform4.mm[0], x5);
 			x1 = _mm_add_ps(x1, x6);
@@ -1384,18 +1334,18 @@ void CSkelMeshInstance::TransformMesh()
 
 #if !USE_SSE
 		// transform vertex
-		transform.UnTransformPoint(W.Pos, D.Pos);
+		transform.UnTransformPoint(V.Pos, D.Pos);
 		// transform normal
-		transform.axis.UnTransformVector(W.Normal, D.Normal);
+		transform.axis.UnTransformVector(V.Normal, D.Normal);
 		// transform tangent
-		transform.axis.UnTransformVector(W.Tangent, D.Tangent);
+		transform.axis.UnTransformVector(V.Tangent, D.Tangent);
 		// transform binormal
-		transform.axis.UnTransformVector(W.Binormal, D.Binormal);
+		transform.axis.UnTransformVector(V.Binormal, D.Binormal);
 #else
 		// at this point we have x1..x4 = transform matrix
 
 #define TRANSFORM_POS(value)												\
-		x5 = W.value.mm;													\
+		x5 = V.value.mm;													\
 		x8 = x4;								/* Coords.origin */			\
 		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
 		x7 = _mm_mul_ps(x1, x6);											\
@@ -1409,7 +1359,7 @@ void CSkelMeshInstance::TransformMesh()
 
 // version of code above, but without Transform.origin use
 #define TRANSFORM_NORMAL(value)												\
-		x5 = W.value.mm;													\
+		x5 = V.value.mm;													\
 		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
 		x8 = _mm_mul_ps(x1, x6);											\
 		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
@@ -1435,11 +1385,21 @@ void CSkelMeshInstance::DrawMesh()
 	guard(CSkelMeshInstance::DrawMesh);
 	int i;
 
+	/*const*/ CSkelMeshLod& Mesh = pMesh->Lods[LodNum];	//?? not 'const' because of BuildTangents(); change this?
+	int NumSections = Mesh.Sections.Num();
+	int NumVerts    = Mesh.NumVerts;
+	if (!NumSections || !NumVerts) return;
+
+	if (!Mesh.HasTangents) Mesh.BuildTangents();
+
 #if 0
-	const USkeletalMesh *Mesh = GetMesh();
+	TransformMesh();
 	glBegin(GL_POINTS);
-	for (i = 0; i < Mesh->Points.Num(); i++)
-		glVertex3fv(&Mesh->Points[i].X);
+	for (i = 0; i < Mesh.NumVerts; i++)
+	{
+//		glVertex3fv(Mesh.Verts[i].Position.v);
+		glVertex3fv(Skinned[i].Position.v);
+	}
 	glEnd();
 	return;
 #endif
@@ -1462,7 +1422,7 @@ void CSkelMeshInstance::DrawMesh()
 
 	glVertexPointer(3, GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Position);
 	glNormalPointer(GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Normal);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(CSkelMeshVertex), &Verts[0].UV[0].U);	//!! UV[UVIndex]
+	glTexCoordPointer(2, GL_FLOAT, sizeof(CSkelMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
 
 	if (ShowInfluences)
 	{
@@ -1482,7 +1442,7 @@ void CSkelMeshInstance::DrawMesh()
 	{
 		for (i = 0; i < NumSections; i++)
 		{
-			UUnrealMaterial *Mat = GetMaterial(i);
+			UUnrealMaterial *Mat = Mesh.Sections[i].Material;
 			int op = 0;			// sort value
 			if (Mat && Mat->IsTranslucent()) op = 1;
 			if (op == opacity) SectionMap[secPlace++] = i;
@@ -1506,11 +1466,11 @@ void CSkelMeshInstance::DrawMesh()
 #else
 		int MaterialIndex = i;
 #endif
-		const CSkelMeshSection &Sec = Sections[MaterialIndex];
+		const CSkelMeshSection &Sec = Mesh.Sections[MaterialIndex];
 		if (!Sec.NumFaces) continue;
 		// select material
 		if (!ShowInfluences)
-			SetMaterial(MaterialIndex);
+			SetMaterial(Sec.Material, MaterialIndex, Sec.PolyFlags);	//!! use HAS_POLY_FLAGS define
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;
 		bool hasTangent = false;
@@ -1529,7 +1489,12 @@ void CSkelMeshInstance::DrawMesh()
 			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Binormal);
 		}
 		// draw
-		glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_INT, Indices + Sec.FirstIndex);
+		//?? place this code into CIndexBuffer?
+		//?? (the same code is in CStatMeshInstance)
+		if (Mesh.Indices.Is32Bit())
+			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_INT, &Mesh.Indices.Indices32[Sec.FirstIndex]);
+		else
+			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Mesh.Indices.Indices16[Sec.FirstIndex]);
 		// disable tangents
 		if (hasTangent)
 		{
@@ -1549,16 +1514,16 @@ void CSkelMeshInstance::DrawMesh()
 	BindDefaultMaterial(true);
 
 #if SHOW_INFLUENCES
-	const USkeletalMesh *Mesh = GetMesh();
 	glBegin(GL_LINES);
-	for (i = 0; i < NumWedges; i++)
+	for (i = 0; i < NumVerts; i++)
 	{
-		const CSkelMeshVertex &W = Verts[i];
+		const CSkelMeshVertex &V = Mesh.Verts[i];
 //		const FVertInfluences &Inf = Mesh->VertInfluences[i];
 		for (int j = 0; j < NUM_INFLUENCES; j++)
 		{
-			int iBone = W.Bone[j];
+			int iBone = V.Bone[j];
 			if (iBone < 0) break;
+			// ... below is not updated
 			const FMeshBone &B   = Mesh->RefSkeleton[iBone];
 			const CCoords   &BC  = BoneData[iBone].Coords;
 			CVec3 Color;
@@ -1577,7 +1542,7 @@ void CSkelMeshInstance::DrawMesh()
 	{
 		glBegin(GL_LINES);
 		glColor3f(0.5f, 1, 0);
-		for (i = 0; i < NumWedges; i++)
+		for (i = 0; i < NumVerts; i++)
 		{
 			glVertex3fv(Skinned[i].Position.v);
 			CVec3 tmp;
@@ -1586,7 +1551,7 @@ void CSkelMeshInstance::DrawMesh()
 		}
 #if SHOW_TANGENTS
 		glColor3f(0, 0.5f, 1);
-		for (i = 0; i < NumWedges; i++)
+		for (i = 0; i < NumVerts; i++)
 		{
 			const CVecT &v = Skinned[i].Position;
 			glVertex3fv(v.v);
@@ -1595,7 +1560,7 @@ void CSkelMeshInstance::DrawMesh()
 			glVertex3fv(tmp.v);
 		}
 		glColor3f(1, 0, 0.5f);
-		for (i = 0; i < NumWedges; i++)
+		for (i = 0; i < NumVerts; i++)
 		{
 			const CVecT &v = Skinned[i].Position;
 			glVertex3fv(v.v);
@@ -1646,7 +1611,7 @@ void CSkelMeshInstance::Draw()
 			InfColors = NULL;
 		}
 		// rebuild local mesh
-		if (LodNum < 0)
+/*		if (LodNum < 0)
 		{
 			NumWedges = pMesh->Wedges.Num();
 			BuildWedges(Verts, pMesh->Wedges.Num(), pMesh->Points, pMesh->Wedges, pMesh->VertInfluences);
@@ -1662,7 +1627,7 @@ void CSkelMeshInstance::Draw()
 			CopyArray(Faces, Lod.Faces);
 			BuildNormals(Verts, Lod.Points.Num(), Lod.Wedges, Faces);
 			BuildIndicesLod(Sections, NumSections, &Lod, Indices);
-		}
+		} */
 		LastLodNum = LodNum;
 	}
 
@@ -1678,8 +1643,10 @@ void CSkelMeshInstance::BuildInfColors()
 
 	int i;
 
+	const CSkelMeshLod &Lod = pMesh->Lods[LodNum];
+
 	if (InfColors) delete InfColors;
-	InfColors = new CVec3[NumWedges];
+	InfColors = new CVec3[Lod.NumVerts];
 
 	// get colors for bones
 	int NumBones = pMesh->RefSkeleton.Num();
@@ -1688,13 +1655,13 @@ void CSkelMeshInstance::BuildInfColors()
 		GetBoneInfColor(i, BoneColors[i]);
 
 	// process influences
-	for (i = 0; i < NumWedges; i++)
+	for (i = 0; i < Lod.NumVerts; i++)
 	{
-		const CSkelMeshVertex &W = Verts[i];
+		const CSkelMeshVertex &V = Lod.Verts[i];
 		for (int j = 0; j < NUM_INFLUENCES; j++)
 		{
-			if (W.Bone[j] < 0) break;
-			VectorMA(InfColors[i], W.Weight[j], BoneColors[W.Bone[j]]);
+			if (V.Bone[j] < 0) break;
+			VectorMA(InfColors[i], V.Weight[j], BoneColors[V.Bone[j]]);
 		}
 	}
 

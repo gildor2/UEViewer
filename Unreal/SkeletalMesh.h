@@ -35,32 +35,44 @@ SKELETALMESH CONVERSION STAGES:
   * move most properties from UE3 cpp serializer to the class (like were done for UStaticMesh3)
 * convert UE3 SkeletalMesh to CSkeletalMesh
 
-- use CSkeletalMesh in CSkelMeshInstance
+* use CSkeletalMesh in CSkelMeshInstance
   * separate CSkelMeshViewer from CLodMeshViewer, parent will be CMeshViewer
   * separate CSkelMeshInstance from CLodMeshInstance
   * combine CLodMeshViewer and CVertMeshViewer
-  - use CSkeletalMesh in CSkelMeshViewer
+  * use CSkeletalMesh in CSkelMeshViewer
     * needs to duplicate some methods in both MeshInstance and MeshViewer: LOD->(Skel+Vert)
-    - enable CSkeletalMesh in main.cpp, remove old viewer code
-  - cleanup MeshInstance/MeshViewer interfaces, cleanup "virtual" modifiers
+    * enable CSkeletalMesh in main.cpp, remove old viewer code
+  * cleanup MeshInstance/MeshViewer interfaces, cleanup "virtual" modifiers
+  * reimplement CSkelMeshViewer::Draw2D() (no 'base mesh' etc)
+  * check commented code in SkelMeshViewer.cpp
+  * verify Gears3 meshes - had some problems before (overlapping vertex indices)
+    * find old umodel build which had problems, find problematic meshes, or place appNotify() or assert()
+      * "bad" umodel is r135, mesh is in data\3X\GOW3_b2\GearGame.xxx
+      for chunks when "Chunk[Index>0].FirstVertex > 0"
+    * verify these meshes with new umodel
 
-- verify code for reading verts from chunks: UE3/UDK CH_AnimHuman has non-cooked meshes with these vertices
-- verify mesh sockets
+* verify code for reading verts from chunks: UE3/UDK CH_AnimHuman has non-cooked meshes with these vertices
+* verify mesh sockets
 
 ! make common code for BuildNormals, make common CMeshBaseVertex (== CStaticMeshVertex ?)
     * require CStaticMeshVertex to use CVecT instead of CVec3, rename to CMeshVertex[Base?] and move to MeshCommon.h
     * changes from CVec3 to CVecT will require aligned allocator
 
-- use normals from UE3 USkeletalMesh
-  - verify HasNormals/HasTangents to work
+* use normals from UE3 USkeletalMesh
+- verify HasNormals/HasTangents to work for UE2 and UE3
+- verify: some meshes had ugly normals before (usually female faces - GOW2, TRON)
 
 - update exporter to use CSkeletalMesh, no new functionality yet
   ! currently main.cpp has functions to call exporter, but they are disabled to allow compilation
+  - CSkelMeshViewer::Export() should be updated too, verify Ctrl+X key
+
 - convert UE2 mesh to CSkeletalMesh
 
 - load all UV sets for UE3 skeletal mesh
 - toggle UV sets in viewer (verify with Mirror's Edge?)
-  - use textured mesh for both static and skeletal meshes when displaying UVSet > 0; untextured mesh is useless
+  - add key handler + help to CSkelMeshViewer
+  * use textured mesh for both static and skeletal meshes when displaying UVSet > 0; untextured mesh is useless
+  * already supported UVIndex in CSkelMeshInstance
 - export all UV sets for pskx
   - can make common function for StaticMesh and SkeletalMesh - pass ( Verts[0].UV[0] + sizeof(Vertex) )
 
@@ -75,20 +87,14 @@ SKELETALMESH CONVERSION STAGES:
       - in this case can clean UnObject.h include from some files
   - gather statistics for LODs:
     - number of vertex influences (1-4)
-    - number of used bones -- to exclude hair, fingers etc
+    - number of really used bones -- to exclude hair, fingers etc -- display as "Bones: N/M"
 
 - move ULodMesh and UVertMesh to UnMesh2.h
 ? separate UnMesh.cpp to Common+UE2 or UE1+UE2 (check what's better)
 - cleanup UnMesh.h and TypeConvert.h includes
 - cleanup TODOs
-- cleanup UnMesh3.cpp - has some old commented code around serializers
+* cleanup UnMesh3.cpp - has some old commented code around serializers
 - cleanup SkelMeshInstance code for conversion UE2->old_CSkeletalMesh
-
-! verify Gears3 meshes - had some problems before (overlapping vertex indices)
-  - find old umodel build which had problems, find problematic meshes, or place appNotify() or assert()
-    * "bad" umodel is r135, mesh is in data\3X\GOW3_b2\GearGame.xxx
-    for chunks when "Chunk[Index>0].FirstVertex > 0"
-  - verify these meshes with new umodel
 
 - place animation information somewhere in the bottom of the screen (needs DrawTextLeftBottom or use DrawTextPos() with use of GetWindowSize() ?)
 
@@ -165,7 +171,7 @@ struct CSkelMeshLod
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CSkelMeshLod)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Sections, CStaticMeshSection)
+		PROP_ARRAY(Sections, CSkelMeshSection)
 		PROP_INT(NumVerts)
 		VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
 		PROP_INT(NumTexCoords)
