@@ -3,13 +3,12 @@
 
 #include "UnObject.h"
 #include "UnMaterial.h"
-#include "UnMesh.h"			//?? remove later (when remove USkeletalMesh dependency)
-
-#include "Psk.h"
-#include "Exporters.h"
 
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
+
+#include "Psk.h"
+#include "Exporters.h"
 
 
 // PSK uses right-hand coordinates, but unreal uses left-hand.
@@ -17,108 +16,130 @@
 // Here we performing reverse transformation.
 #define MIRROR_MESH				1
 
-//#define REFINE_SKEL				1
 #define MAX_MESHBONES			512
 
+/*??
 
-static void ExportScript(const USkeletalMesh *Mesh, FArchive &Ar)
+- ExportSkeletalMeshLod() and ExportStaticMeshLod() has a lot of common code, difference is only
+  use of CSkelMeshSomething vs CStaticMeshSomething, can use a pointer to variable (Section.Material),
+  Stride and NumSections for this; the same for vertices
+- may weld vertices when write PNTS0000 chunk
+
+*/
+
+static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 {
+	assert(Mesh->OriginalMesh);
+	const char *MeshName = Mesh->OriginalMesh->Name;
+
 	// mesh info
 	Ar.Printf(
 		"class %s extends Actor;\n\n"
 		"#exec MESH MODELIMPORT MESH=%s MODELFILE=%s.psk\n"
 		"#exec MESH ORIGIN      MESH=%s X=%g Y=%g Z=%g YAW=%d PITCH=%d ROLL=%d\n",
-		Mesh->Name,
-		Mesh->Name, Mesh->Name,
-		Mesh->Name, FVECTOR_ARG(Mesh->MeshOrigin),
+		MeshName,
+		MeshName, MeshName,
+		MeshName, VECTOR_ARG(Mesh->MeshOrigin),
 			Mesh->RotOrigin.Yaw >> 8, Mesh->RotOrigin.Pitch >> 8, Mesh->RotOrigin.Roll >> 8
 	);
 	// mesh scale
 	Ar.Printf(
 		"#exec MESH SCALE       MESH=%s X=%g Y=%g Z=%g\n\n",
-		Mesh->Name, FVECTOR_ARG(Mesh->MeshScale)
+		MeshName, VECTOR_ARG(Mesh->MeshScale)
 	);
 }
 
 
-static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
+static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod &Lod, FArchive &Ar)
 {
-	guard(ExportPsk0);
+	guard(ExportSkeletalMeshLod);
 
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
-	int i;
+	int i, j;
+
+	int numSections = Lod.Sections.Num();
+	int numVerts    = Lod.NumVerts;
+	int numIndices  = Lod.Indices.Num();
+	int numFaces    = numIndices / 3;
+	int numBones    = Mesh.RefSkeleton.Num();
 
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
-	PtsHdr.DataCount = Mesh->Points.Num();
+	PtsHdr.DataCount = numVerts;
 	PtsHdr.DataSize  = sizeof(FVector);
 	SAVE_CHUNK(PtsHdr, "PNTS0000");
-	for (i = 0; i < Mesh->Points.Num(); i++)
+	for (i = 0; i < numVerts; i++)
 	{
-		FVector V = Mesh->Points[i];
+		FVector V = (FVector&)Lod.Verts[i].Position;
 #if MIRROR_MESH
 		V.Y = -V.Y;
 #endif
 		Ar << V;
 	}
 
-	int NumMaterials = Mesh->Materials.Num();	// count USED materials
 	TArray<int> WedgeMat;
-	WedgeMat.Empty(Mesh->Wedges.Num());
-	WedgeMat.Add(Mesh->Wedges.Num());
-	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	WedgeMat.Empty(numVerts);
+	WedgeMat.Add(numVerts);
+	CIndexBuffer::IndexAccessor_t Index = Lod.Indices.GetAccessor();
+	for (i = 0; i < numSections; i++)
 	{
-		const VTriangle &T = Mesh->Triangles[i];
-		int Mat = T.MatIndex;
-		WedgeMat[T.WedgeIndex[0]] = Mat;
-		WedgeMat[T.WedgeIndex[1]] = Mat;
-		WedgeMat[T.WedgeIndex[2]] = Mat;
-		if (Mat >= NumMaterials) NumMaterials = Mat + 1;
+		const CSkelMeshSection &Sec = Lod.Sections[i];
+		for (int j = 0; j < Sec.NumFaces * 3; j++)
+		{
+			int idx = Index(Lod.Indices, j + Sec.FirstIndex);
+			WedgeMat[idx] = i;
+		}
 	}
 
-	WedgHdr.DataCount = Mesh->Wedges.Num();
+	WedgHdr.DataCount = numVerts;
 	WedgHdr.DataSize  = sizeof(VVertex);
 	SAVE_CHUNK(WedgHdr, "VTXW0000");
-	for (i = 0; i < Mesh->Wedges.Num(); i++)
+	for (i = 0; i < numVerts; i++)
 	{
 		VVertex W;
-		const FMeshWedge &S = Mesh->Wedges[i];
-		W.PointIndex = S.iVertex;
-		W.U          = S.TexUV.U;
-		W.V          = S.TexUV.V;
+		const CSkelMeshVertex &S = Lod.Verts[i];
+		W.PointIndex = i;
+		W.U          = S.UV[0].U;
+		W.V          = S.UV[0].V;
 		W.MatIndex   = WedgeMat[i];
 		W.Reserved   = 0;
 		W.Pad        = 0;
 		Ar << W;
 	}
 
-	FacesHdr.DataCount = Mesh->Triangles.Num();
-	FacesHdr.DataSize  = sizeof(VTriangle);
+	FacesHdr.DataCount = numFaces;
+	FacesHdr.DataSize  = sizeof(VTriangle16);
 	SAVE_CHUNK(FacesHdr, "FACE0000");
-	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	for (i = 0; i < numSections; i++)
 	{
-		VTriangle T = Mesh->Triangles[i];
+		const CSkelMeshSection &Sec = Lod.Sections[i];
+		for (int j = 0; j < Sec.NumFaces; j++)
+		{
+			VTriangle16 T;
+			for (int k = 0; k < 3; k++)
+			{
+				int idx = Index(Lod.Indices, Sec.FirstIndex + j * 3 + k);
+				T.WedgeIndex[k] = idx;
+			}
+			T.MatIndex        = i;
+			T.AuxMatIndex     = 0;
+			T.SmoothingGroups = 0;
 #if MIRROR_MESH
-		Exchange(T.WedgeIndex[0], T.WedgeIndex[1]);
+			Exchange(T.WedgeIndex[0], T.WedgeIndex[1]);
 #endif
-		Ar << T;
+			Ar << T;
+		}
 	}
 
-	MatrHdr.DataCount = NumMaterials;
+	MatrHdr.DataCount = numSections;
 	MatrHdr.DataSize  = sizeof(VMaterial);
 	SAVE_CHUNK(MatrHdr, "MATT0000");
-	for (i = 0; i < NumMaterials; i++)
+	for (i = 0; i < Lod.Sections.Num(); i++)
 	{
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
-		const UUnrealMaterial *Tex = NULL;
-		if (i < Mesh->Materials.Num())
-		{
-			int texIdx = Mesh->Materials[i].TextureIndex;
-			if (texIdx < Mesh->Textures.Num())
-				Tex = MATERIAL_CAST(Mesh->Textures[texIdx]);
-		}
+		const UUnrealMaterial *Tex = Lod.Sections[i].Material;
 		if (Tex)
 		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
@@ -129,71 +150,24 @@ static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
 		Ar << M;
 	}
 
-#if REFINE_SKEL
-	assert(Mesh->RefSkeleton.Num() <= MAX_MESHBONES);
-	bool usedBones[MAX_MESHBONES];
-	memset(usedBones, 0, sizeof(usedBones));
-	// walk all influences
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
-	{
-		VRawBoneInfluence I;
-		const FVertInfluences &S = Mesh->VertInfluences[i];
-		usedBones[S.BoneIndex] = true;
-	}
-	// mark bone parents
-	usedBones[0] = true;							// mark root explicitly
-	for (i = 1; i < Mesh->RefSkeleton.Num(); i++)	// skip root bone
-	{
-		if (!usedBones[i]) continue;
-		int parent = i;
-		while (true)
-		{
-			parent = Mesh->RefSkeleton[parent].ParentIndex;
-			if (parent <= 0) break;
-			usedBones[parent] = true;
-		}
-	}
-	// create bone remap table
-	int CurBone = 0;
-	int BoneMap[MAX_MESHBONES];
-	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
-	{
-		if (!usedBones[i]) continue;
-		BoneMap[i] = CurBone++;
-	}
-	if (CurBone < Mesh->RefSkeleton.Num())
-		appPrintf("... reduced skeleton from %d bones to %d\n", Mesh->RefSkeleton.Num(), CurBone);
-#endif // REFINE_SKEL
-
-#if !REFINE_SKEL
-	BoneHdr.DataCount = Mesh->RefSkeleton.Num();
-#else
-	BoneHdr.DataCount = CurBone;
-#endif
+	BoneHdr.DataCount = numBones;
 	BoneHdr.DataSize  = sizeof(VBone);
 	SAVE_CHUNK(BoneHdr, "REFSKELT");
-	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
+	for (i = 0; i < numBones; i++)
 	{
-#if REFINE_SKEL
-		if (!usedBones[i]) continue;
-#endif
 		VBone B;
 		memset(&B, 0, sizeof(B));
-		const FMeshBone &S = Mesh->RefSkeleton[i];
+		const CSkelMeshBone &S = Mesh.RefSkeleton[i];
 		strcpy(B.Name, S.Name);
-#if !REFINE_SKEL
-		B.NumChildren = S.NumChildren;
-		B.ParentIndex = S.ParentIndex;
-#else
-		// compute actual NumChildren (may be changed because of refined skeleton)
+		// count NumChildren
 		int NumChildren = 0;
-		for (int j = 1; j < Mesh->RefSkeleton.Num(); j++)
-			if (usedBones[j] && Mesh->RefSkeleton[j].ParentIndex == i)
+		for (j = 0; j < numBones; j++)
+			if ((j != i) && (Mesh.RefSkeleton[j].ParentIndex == i))
 				NumChildren++;
 		B.NumChildren = NumChildren;
-		B.ParentIndex = S.ParentIndex > 0 ? BoneMap[S.ParentIndex] : 0;
-#endif // REFINE_SKEL
-		B.BonePos     = S.BonePos;
+		B.ParentIndex = S.ParentIndex;
+		B.BonePos.Position    = (FVector&) S.Position;
+		B.BonePos.Orientation = (FQuat&)   S.Orientation;
 
 #if MIRROR_MESH
 		B.BonePos.Orientation.Y *= -1;
@@ -204,57 +178,74 @@ static void ExportPsk0(const USkeletalMesh *Mesh, FArchive &Ar)
 		Ar << B;
 	}
 
-	InfHdr.DataCount = Mesh->VertInfluences.Num();
+	// count influences
+	int NumInfluences = 0;
+	for (i = 0; i < numVerts; i++)
+	{
+		const CSkelMeshVertex &V = Lod.Verts[i];
+		for (j = 0; j < NUM_INFLUENCES; j++)
+		{
+			if (V.Bone[j] < 0) break;
+			NumInfluences++;
+		}
+	}
+	// write influences
+	InfHdr.DataCount = NumInfluences;
 	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
+	for (i = 0; i < numVerts; i++)
 	{
-		VRawBoneInfluence I;
-		const FVertInfluences &S = Mesh->VertInfluences[i];
-		I.Weight     = S.Weight;
-		I.PointIndex = S.PointIndex;
-#if !REFINE_SKEL
-		I.BoneIndex  = S.BoneIndex;
-#else
-		I.BoneIndex  = BoneMap[S.BoneIndex];
-#endif // REFINE_SKEL
-		Ar << I;
+		const CSkelMeshVertex &V = Lod.Verts[i];
+		for (j = 0; j < NUM_INFLUENCES; j++)
+		{
+			if (V.Bone[j] < 0) break;
+			NumInfluences--;				// just for verification
+
+			VRawBoneInfluence I;
+			I.Weight     = V.Weight[j];
+			I.BoneIndex  = V.Bone[j];
+			I.PointIndex = i;				//?? remap
+			Ar << I;
+		}
 	}
+	assert(NumInfluences == 0);
 
 	unguard;
 }
 
 
-void ExportPsk(const USkeletalMesh *Mesh, FArchive &Ar)
+void ExportPsk(const CSkeletalMesh *Mesh, FArchive &Ar)
 {
+	UObject *OriginalMesh = Mesh->OriginalMesh;
+	if (!Mesh->Lods.Num())
+	{
+		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);
+		return;
+	}
+
 	// export script file
 	if (GExportScripts)
 	{
 		char filename[512];
-		appSprintf(ARRAY_ARG(filename), "%s/%s.uc", GetExportPath(Mesh), Mesh->Name);
+		appSprintf(ARRAY_ARG(filename), "%s/%s.uc", GetExportPath(OriginalMesh), OriginalMesh->Name);
 		FFileReader Ar1(filename, false);
 		ExportScript(Mesh, Ar1);
 	}
 
-	guard(BaseMesh);
-	ExportPsk0(Mesh, Ar);
-	unguard;
-
-	if (GExportLods)
+	int MaxLod = (GExportLods) ? Mesh->Lods.Num() : 1;
+	for (int Lod = 0; Lod < MaxLod; Lod++)
 	{
-		for (int Lod = 1; Lod < Mesh->LODModels.Num(); Lod++)
-		{
-			guard(Lod);
-			char filename[512];
-			appSprintf(ARRAY_ARG(filename), "%s/%s_Lod%d.psk", GetExportPath(Mesh), Mesh->Name, Lod);
-			FFileReader Ar2(filename, false);
-			Ar2.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
-			// copy Lod to mesh and export it
-			USkeletalMesh *Mesh2 = const_cast<USkeletalMesh*>(Mesh);	// can also create new USkeletalMesh and restore LOD to it
-			Mesh2->RecreateMeshFromLOD(Lod, true);
-			ExportPsk0(Mesh2, Ar2);
-			unguardf(("%d", Lod));
-		}
+		guard(Lod);
+		char filename[512];
+		const char *Ext = (GExportPskx) ? "pskx" : "psk";
+		if (Lod == 0)
+			appSprintf(ARRAY_ARG(filename), "%s/%s.%s", GetExportPath(OriginalMesh), OriginalMesh->Name, Ext);
+		else
+			appSprintf(ARRAY_ARG(filename), "%s/%s_Lod%d.%s", GetExportPath(OriginalMesh), OriginalMesh->Name, Lod, Ext);
+		FFileReader Ar2(filename, false);
+		Ar2.ArVer = 128;			// less than UE3 version; not required anymore (were required for VJointPos before)
+		ExportSkeletalMeshLod(*Mesh, Mesh->Lods[Lod], Ar2);
+		unguardf(("%d", Lod));
 	}
 }
 
@@ -415,7 +406,6 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
-	//?? should find common points ? (weld)
 	PtsHdr.DataCount = numVerts;
 	PtsHdr.DataSize  = sizeof(FVector);
 	SAVE_CHUNK(PtsHdr, "PNTS0000");
@@ -442,7 +432,6 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 		}
 	}
 
-
 	WedgHdr.DataCount = numVerts;
 	WedgHdr.DataSize  = sizeof(VVertex);
 	SAVE_CHUNK(WedgHdr, "VTXW0000");
@@ -460,14 +449,14 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	}
 
 	FacesHdr.DataCount = numFaces;
-	FacesHdr.DataSize  = sizeof(VTriangle);
+	FacesHdr.DataSize  = sizeof(VTriangle16);
 	SAVE_CHUNK(FacesHdr, "FACE0000");
 	for (i = 0; i < numSections; i++)
 	{
 		const CStaticMeshSection &Sec = Lod.Sections[i];
 		for (int j = 0; j < Sec.NumFaces; j++)
 		{
-			VTriangle T;
+			VTriangle16 T;
 			for (int k = 0; k < 3; k++)
 			{
 				int idx = Index(Lod.Indices, Sec.FirstIndex + j * 3 + k);
@@ -548,7 +537,7 @@ void ExportStaticMesh(const CStaticMesh *Mesh, FArchive &Ar)
 			char filename[512];
 			appSprintf(ARRAY_ARG(filename), "%s/%s_Lod%d.pskx", GetExportPath(OriginalMesh), OriginalMesh->Name, Lod);
 			FFileReader Ar2(filename, false);
-			Ar2.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
+			Ar2.ArVer = 128;			// less than UE3 version; not required anymore (were required for VJointPos before)
 			ExportStaticMeshLod(Mesh->Lods[Lod], Ar2);
 			unguardf(("%d", Lod));
 		}

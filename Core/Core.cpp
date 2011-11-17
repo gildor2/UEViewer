@@ -13,6 +13,16 @@
 #endif // WIN32_USE_SEH
 
 
+static FILE *GLogFile = NULL;
+
+void appOpenLogFile(const char *filename)
+{
+	GLogFile = fopen(filename, "a");
+	if (!GLogFile)
+		appPrintf("Unable to open log \"%s\"\n", filename);
+}
+
+
 void appPrintf(const char *fmt, ...)
 {
 	va_list	argptr;
@@ -23,6 +33,7 @@ void appPrintf(const char *fmt, ...)
 	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
 
 	fwrite(buf, len, 1, stdout);
+	if (GLogFile) fwrite(buf, len, 1, GLogFile);
 }
 
 
@@ -50,6 +61,7 @@ void appError(const char *fmt, ...)
 	THROW;
 #else
 	fprintf(stderr, "Fatal Error: %s\n", buf);
+	if (GLogFile) fprintf("Fatal Error: %s\n", buf);
 	exit(1);
 #endif
 }

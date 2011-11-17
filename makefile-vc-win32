@@ -340,7 +340,6 @@ DEPENDS = \
 	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
 	Unreal/UnObject.h
 
 ./obj/umodel-win32/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
@@ -356,10 +355,8 @@ DEPENDS = \
 	Exporters/Exporters.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
-	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
 	Unreal/UnObject.h
 
 ./obj/umodel-win32/ExportMd5.obj : Exporters/ExportMd5.cpp $(DEPENDS)

@@ -156,7 +156,7 @@ static int ObjIndex = 0;
 -----------------------------------------------------------------------------*/
 
 // wrappers
-/*!!static void ExportPsk2(const USkeletalMesh *Mesh, FArchive &Ar)
+static void ExportPsk2(const USkeletalMesh *Mesh, FArchive &Ar)
 {
 	assert(Mesh->ConvertedMesh);
 	ExportPsk(Mesh->ConvertedMesh, Ar);
@@ -178,7 +178,7 @@ static void ExportMd5Mesh3(const USkeletalMesh3 *Mesh, FArchive &Ar)
 {
 	assert(Mesh->ConvertedMesh);
 	ExportMd5Mesh(Mesh->ConvertedMesh, Ar);
-}*/
+}
 
 static void ExportStaticMesh2(const UStaticMesh *Mesh, FArchive &Ar)
 {
@@ -555,6 +555,7 @@ static void Usage()
 			"    -taglist        list of tags to override game autodetection\n"
 			"\n"
 			"Developer commands:\n"
+			"    -log=file       write log to the specified file\n"
 			"    -dump           dump object information to console\n"
 			"    -check          check some assumptions, no other actions performed\n"
 			"    -pkginfo        load package and display its information\n"
@@ -717,7 +718,11 @@ int main(int argc, char **argv)
 			if (ProcessOption(ARRAY_ARG(options), opt))
 				continue;
 			// more complex options
-			if (!strnicmp(opt, "path=", 5))
+			if (!strnicmp(opt, "log=", 4))
+			{
+				appOpenLogFile(opt+4);
+			}
+			else if (!strnicmp(opt, "path=", 5))
 			{
 				appSetRootDirectory(opt+5);
 				hasRootDir = true;
@@ -743,7 +748,10 @@ int main(int argc, char **argv)
 				extraPackages.AddItem(pkg);
 			}
 			else
+			{
+				appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);
 				Usage();
+			}
 		}
 		else
 		{
@@ -757,17 +765,26 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (arg >= argc) Usage();									// no space for package name
+	if (arg >= argc)
+	{
+	bad_pkg_name:
+		appPrintf("COMMAND LINE ERROR: package name is not specified\n");
+		Usage();
+	}
 
 	const char *argPkgName   = argv[arg++];
-	if (!argPkgName) Usage();
+	if (!argPkgName) goto bad_pkg_name;
 	const char *argObjName   = NULL;
 	const char *argClassName = NULL;
 	if (arg < argc)
 		argObjName   = argv[arg++];
 	if (arg < argc)
 		argClassName = argv[arg++];
-	if (arg != argc) Usage();									// extera argument found
+	if (arg != argc)
+	{
+		appPrintf("COMMAND LINE ERROR: too much arguments\n");
+		Usage();
+	}
 
 	// load the package
 
@@ -800,19 +817,19 @@ int main(int argc, char **argv)
 	// register exporters
 	if (!md5)
 	{
-//!!		RegisterExporter("SkeletalMesh", GExportPskx ? "pskx" : "psk", ExportPsk2);
-		RegisterExporter("MeshAnimation", "psa",     ExportMeshAnimation);
+		RegisterExporter("SkeletalMesh",  NULL,  ExportPsk2);
+		RegisterExporter("MeshAnimation", "psa", ExportMeshAnimation);
 #if UNREAL3
-//!!		RegisterExporter("SkeletalMesh3", GExportPskx ? "pskx" : "psk", ExportPsk3);
-		RegisterExporter("AnimSet",       "psa",     ExportAnimSet      );
+		RegisterExporter("SkeletalMesh3", NULL,  ExportPsk3);
+		RegisterExporter("AnimSet",       "psa", ExportAnimSet);
 #endif
 	}
 	else
 	{
-//!!		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh2);
+		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh2);
 		RegisterExporter("MeshAnimation", NULL,      ExportMd5Anim2);	// separate file for each animation track
 #if UNREAL3
-//!!		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh3);
+		RegisterExporter("SkeletalMesh3", "md5mesh", ExportMd5Mesh3);
 		RegisterExporter("AnimSet",       NULL,      ExportMd5Anim3);	// ...
 #endif
 	}

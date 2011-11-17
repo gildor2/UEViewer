@@ -38,6 +38,8 @@ struct VChunkHeader
  *	PSK file format structures
  *****************************************************************************/
 
+// NOTE: VJointPos and VTriangle were duplicated here to remove UnMesh.h and archive version dependency
+
 struct VVertex
 {
 	int				PointIndex;				// short, padded to int
@@ -51,6 +53,24 @@ struct VVertex
 		Ar << V.PointIndex << V.U << V.V << V.MatIndex << V.Reserved << V.Pad;
 		if (Ar.IsLoading)
 			V.PointIndex &= 0xFFFF;			// clamp padding bytes
+		return Ar;
+	}
+};
+
+
+// Textured triangle.
+// This is a copy of UnMesh.h VTriangle
+struct VTriangle16
+{
+	word			WedgeIndex[3];			// Point to three vertices in the vertex list.
+	byte			MatIndex;				// Materials can be anything.
+	byte			AuxMatIndex;			// Second material (unused).
+	unsigned		SmoothingGroups;		// 32-bit flag for smoothing groups.
+
+	friend FArchive& operator<<(FArchive &Ar, VTriangle16 &T)
+	{
+		Ar << T.WedgeIndex[0] << T.WedgeIndex[1] << T.WedgeIndex[2];
+		Ar << T.MatIndex << T.AuxMatIndex << T.SmoothingGroups;
 		return Ar;
 	}
 };
@@ -75,13 +95,29 @@ struct VMaterial
 };
 
 
+// A bone: an orientation, and a position, all relative to their parent.
+// This is a copy of UnMesh.h VJointPos with removed UE3 serializing code
+struct VJointPosPsk
+{
+	FQuat			Orientation;
+	FVector			Position;
+	float			Length;
+	FVector			Size;
+
+	friend FArchive& operator<<(FArchive &Ar, VJointPosPsk &P)
+	{
+		return Ar << P.Orientation << P.Position << P.Length << P.Size;
+	}
+};
+
+
 struct VBone
 {
 	char			Name[64];
 	unsigned		Flags;
 	int				NumChildren;
 	int				ParentIndex;			// 0 if this is the root bone.
-	VJointPos		BonePos;
+	VJointPosPsk	BonePos;
 
 	friend FArchive& operator<<(FArchive &Ar, VBone &B)
 	{
@@ -131,7 +167,7 @@ struct FNamedBoneBinary
 	unsigned		Flags;					// reserved
 	int				NumChildren;
 	int				ParentIndex;			// 0/NULL if this is the root bone.
-	VJointPos		BonePos;
+	VJointPosPsk	BonePos;
 
 	friend FArchive& operator<<(FArchive &Ar, FNamedBoneBinary &B)
 	{

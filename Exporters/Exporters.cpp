@@ -61,7 +61,8 @@ bool ExportObject(const UObject *Obj)
 		const CExporterInfo &Info = exporters[i];
 		if (Obj->IsA(Info.ClassName))
 		{
-			const char *ExportPath = GetExportPath(Obj);
+			char ExportPath[1024];
+			strcpy(ExportPath, GetExportPath(Obj));
 			const char *ClassName  = Obj->GetClassName();
 			// check for duplicate name
 			// get name uniqie index
@@ -93,7 +94,7 @@ bool ExportObject(const UObject *Obj)
 
 			//?? restore object name
 			if (OriginalName) const_cast<UObject*>(Obj)->Name = OriginalName;
-			appPrintf("Exported %s %s\n", Obj->GetClassName(), Obj->Name);
+			appPrintf("Exported %s %s to %s\n", Obj->GetClassName(), Obj->Name, ExportPath);
 			return true;
 		}
 	}

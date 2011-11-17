@@ -125,6 +125,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+17.11.2011
+- added option "-log=filename" to write whole umodel output to the specified file
+
 13.11.2011
 - fixed AnimRotationOnly for Mass Effect
 - displaying animation translation mode on the screen

@@ -134,6 +134,7 @@ template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*
 	qsort(array, count, sizeof(T), (int (*)(const void*, const void*)) cmpFunc);
 }
 
+void appOpenLogFile(const char *filename);
 void appPrintf(const char *fmt, ...);
 
 void appError(const char *fmt, ...);

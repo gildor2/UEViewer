@@ -3,12 +3,11 @@
 
 #include "UnObject.h"
 #include "UnMaterial.h"
-#include "UnMesh.h"
-
-#include "Exporters.h"						// for GetExportPath()
-#include "TypeConvert.h"
 
 #include "SkeletalMesh.h"
+
+#include "Exporters.h"						// for GetExportPath()
+
 
 // MD5 uses right-hand coordinates, but unreal uses left-hand.
 // When importing PSK into UnrealEd, it mirrors model.
@@ -17,7 +16,7 @@
 
 
 // function is similar to part of CSkelMeshInstance::SetMesh() and Rune mesh loader
-static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<FMeshBone> &Bones)
+static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<CSkelMeshBone> &Bones)
 {
 	guard(BuildSkeleton);
 
@@ -27,14 +26,14 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<FMeshBone> &Bone
 
 	for (int i = 0; i < numBones; i++)
 	{
-		const FMeshBone &B = Bones[i];
+		const CSkelMeshBone &B = Bones[i];
 		CCoords &BC = Coords[i];
 		// compute reference bone coords
 		CVec3 BP;
 		CQuat BO;
 		// get default pose
-		BP = CVT(B.BonePos.Position);
-		BO = CVT(B.BonePos.Orientation);
+		BP = B.Position;
+		BO = B.Orientation;
 #if MIRROR_MESH
 		BP[1] *= -1;							// y
 		BO.y  *= -1;
@@ -68,24 +67,31 @@ if (i == 32)
 	unguard;
 }
 
-struct VertInfluences
+struct VertInfluence
 {
-	TArray<int> InfIndex;
+	int		Vert;
+	int		Bone;
+	float	Weight;
 };
 
-void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
+struct VertInfluences
+{
+	TArray<VertInfluence> Inf;
+};
+
+void ExportMd5Mesh(const CSkeletalMesh *Mesh, FArchive &Ar)
 {
 	guard(ExportMd5Mesh);
 
 	int i;
 
-	int NumMaterials = Mesh->Materials.Num();	// count USED materials
-	for (i = 0; i < Mesh->Triangles.Num(); i++)
+	UObject *OriginalMesh = Mesh->OriginalMesh;
+	if (!Mesh->Lods.Num())
 	{
-		const VTriangle &T = Mesh->Triangles[i];
-		int Mat = T.MatIndex;
-		if (Mat >= NumMaterials) NumMaterials = Mat + 1;
+		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);
+		return;
 	}
+	const CSkelMeshLod &Lod = Mesh->Lods[0];
 
 	Ar.Printf(
 		"MD5Version 10\n"
@@ -95,7 +101,7 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 		"numMeshes %d\n"
 		"\n",
 		Mesh->RefSkeleton.Num(),
-		NumMaterials
+		Lod.Sections.Num()
 	);
 
 	// compute skeleton
@@ -104,10 +110,9 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 
 	// write joints
 	Ar.Printf("joints {\n");
-	UniqueNameList UsedBones;
 	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
 	{
-		const FMeshBone &B = Mesh->RefSkeleton[i];
+		const CSkelMeshBone &B = Mesh->RefSkeleton[i];
 
 		const CCoords &BC = BoneCoords[i];
 		CVec3 BP;
@@ -116,21 +121,9 @@ void ExportMd5Mesh(const USkeletalMesh *Mesh, FArchive &Ar)
 		BO.FromAxis(BC.axis);
 		if (BO.w < 0) BO.Negate();				// W-component of quaternion will be removed ...
 
-		int BoneSuffix = UsedBones.RegisterName(*B.Name);
-		char BoneName[256];
-		if (BoneSuffix < 2)
-		{
-			appStrncpyz(BoneName, *B.Name, ARRAY_COUNT(BoneName));
-		}
-		else
-		{
-			appSprintf(ARRAY_ARG(BoneName), "%s_%d", *B.Name, BoneSuffix);
-			appPrintf("duplicate bone %s, renamed to %s\n", *B.Name, BoneName);
-		}
-
 		Ar.Printf(
 			"\t\"%s\"\t%d ( %f %f %f ) ( %.10f %.10f %.10f )\n",
-			BoneName, (i == 0) ? -1 : B.ParentIndex,
+			*B.Name, (i == 0) ? -1 : B.ParentIndex,
 			VECTOR_ARG(BP),
 			BO.x, BO.y, BO.z
 		);
@@ -164,69 +157,62 @@ if (i == 32 || i == 34)
 
 	// collect weights information
 	TArray<VertInfluences> Weights;				// Point -> Influences
-	Weights.Add(Mesh->Points.Num());
-	for (i = 0; i < Mesh->VertInfluences.Num(); i++)
+	Weights.Add(Lod.NumVerts);
+	for (i = 0; i < Lod.NumVerts; i++)
 	{
-		const FVertInfluences &I = Mesh->VertInfluences[i];
-		Weights[I.PointIndex].InfIndex.AddItem(i);
+		const CSkelMeshVertex &V = Lod.Verts[i];
+		for (int j = 0; j < NUM_INFLUENCES; j++)
+		{
+			if (V.Bone[j] < 0) break;
+			VertInfluence *I = new (Weights[i].Inf) VertInfluence;
+			I->Bone   = V.Bone[j];
+			I->Weight = V.Weight[j];
+		}
 	}
 
+	int numIndices  = Lod.Indices.Num();
+	int numFaces    = numIndices / 3;
+	CIndexBuffer::IndexAccessor_t Index = Lod.Indices.GetAccessor();
+
 	// write meshes
-	for (int m = 0; m < NumMaterials; m++)
+	// we are using some terms here:
+	// - "mesh vertex" is a vertex in Lod.Verts[] array, global for whole mesh
+	// - "surcace vertex" is a vertex from the mesh stripped to only one (current) section
+	for (int m = 0; m < Lod.Sections.Num(); m++)
 	{
-		TArray<int>  MeshTris;					// surface triangle -> mesh face
-		TArray<int>  MeshVerts;					// surface vertex -> mesh wedge
-		TArray<bool> UsedVerts;					// mesh wedge -> surface: used of not
-		TArray<int>  BackWedge;					// mesh wedge -> surface wedge
-		TArray<bool> UsedPoints;				// mesh point -> surface: used or not
-		TArray<int>  MeshWeights;				// mesh point -> weight index
-		MeshTris.Empty(Mesh->Triangles.Num());
-		MeshVerts.Empty(Mesh->Wedges.Num());
-		UsedVerts.Add(Mesh->Wedges.Num());
-		BackWedge.Add(Mesh->Wedges.Num());
-		UsedPoints.Add(Mesh->Points.Num());
-		MeshWeights.Add(Mesh->Wedges.Num());
+		const CSkelMeshSection &Sec = Lod.Sections[m];
+
+		TArray<int>  MeshVerts;					// surface vertex -> mesh vertex
+		TArray<int>  BackWedge;					// mesh vertex -> surface vertex
+		TArray<bool> UsedVerts;					// mesh vertex -> surface: used of not
+		TArray<int>  MeshWeights;				// mesh vertex -> weight index
+		MeshVerts.Empty(Lod.NumVerts);
+		UsedVerts.Add(Lod.NumVerts);
+		BackWedge.Add(Lod.NumVerts);
+		MeshWeights.Add(Lod.NumVerts);
 
 		// find verts and triangles for current material
-		for (i = 0; i < Mesh->Triangles.Num(); i++)
+		for (i = 0; i < Sec.NumFaces * 3; i++)
 		{
-			const VTriangle &T = Mesh->Triangles[i];
-			if (T.MatIndex != m) continue;
-			MeshTris.AddItem(i);
-			for (int j = 0; j < 3; j++)
-			{
-				// register wedge
-				int wedge = T.WedgeIndex[j];
-				if (UsedVerts[wedge]) continue;
-				UsedVerts[wedge] = true;
-				int locWedge = MeshVerts.AddItem(wedge);
-				BackWedge[wedge] = locWedge;
-				// register point
-				int point = Mesh->Wedges[wedge].iVertex;
-				if (UsedPoints[point]) continue;
-				UsedPoints[point] = true;
-			}
+			int idx = Index(Lod.Indices, i + Sec.FirstIndex);
+
+			if (UsedVerts[idx]) continue;		// vertex is already used in previous triangle
+			UsedVerts[idx] = true;
+			int locWedge = MeshVerts.AddItem(idx);
+			BackWedge[idx] = locWedge;
 		}
+
 		// find influences
 		int WeightIndex = 0;
-		for (i = 0; i < Mesh->Points.Num(); i++)
+		for (i = 0; i < Lod.NumVerts; i++)
 		{
-			if (!UsedPoints[i]) continue;
+			if (!UsedVerts[i]) continue;
 			MeshWeights[i] = WeightIndex;
-			WeightIndex += Weights[i].InfIndex.Num();
+			WeightIndex += Weights[i].Inf.Num();
 		}
 
 		// mesh header
-		const UUnrealMaterial *Tex = NULL;
-		if (m < Mesh->Materials.Num())
-		{
-			int texIdx = Mesh->Materials[m].TextureIndex;
-			if (texIdx < Mesh->Textures.Num())
-				Tex = MATERIAL_CAST(Mesh->Textures[texIdx]);
-		}
-
-		if (Tex && Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
-
+		const UUnrealMaterial *Tex = Sec.Material;
 		if (Tex)
 		{
 			Ar.Printf(
@@ -234,6 +220,7 @@ if (i == 32 || i == 34)
 				"\tshader \"%s\"\n\n",
 				Tex->Name
 			);
+			if (Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
 		}
 		else
 		{
@@ -247,45 +234,43 @@ if (i == 32 || i == 34)
 		Ar.Printf("\tnumverts %d\n", MeshVerts.Num());
 		for (i = 0; i < MeshVerts.Num(); i++)
 		{
-			const FMeshWedge &W = Mesh->Wedges[MeshVerts[i]];
-			int iPoint = W.iVertex;
+			int iPoint = MeshVerts[i];
+			const CSkelMeshVertex &V = Lod.Verts[iPoint];
 			Ar.Printf("\tvert %d ( %f %f ) %d %d\n",
-				i, W.TexUV.U, W.TexUV.V, MeshWeights[iPoint], Weights[iPoint].InfIndex.Num());
+				i, V.UV[0].U, V.UV[0].V, MeshWeights[iPoint], Weights[iPoint].Inf.Num());
 		}
 		// triangles
-		Ar.Printf("\n\tnumtris %d\n", MeshTris.Num());
-		for (i = 0; i < MeshTris.Num(); i++)
+		Ar.Printf("\n\tnumtris %d\n", Sec.NumFaces);
+		for (i = 0; i < Sec.NumFaces; i++)
 		{
-			const VTriangle &T = Mesh->Triangles[MeshTris[i]];
 			Ar.Printf("\ttri %d", i);
 #if MIRROR_MESH
 			for (int j = 2; j >= 0; j--)
 #else
 			for (int j = 0; j < 3; j++)
 #endif
-				Ar.Printf(" %d", BackWedge[T.WedgeIndex[j]]);
+				Ar.Printf(" %d", BackWedge[Index(Lod.Indices, Sec.FirstIndex + i * 3 + j)]);
 			Ar.Printf("\n");
 		}
 		// weights
 		Ar.Printf("\n\tnumweights %d\n", WeightIndex);
 		int saveWeightIndex = WeightIndex;
 		WeightIndex = 0;
-		for (i = 0; i < Mesh->Points.Num(); i++)
+		for (i = 0; i < Lod.NumVerts; i++)
 		{
-			if (!UsedPoints[i]) continue;
-			for (int j = 0; j < Weights[i].InfIndex.Num(); j++)
+			if (!UsedVerts[i]) continue;
+			for (int j = 0; j < Weights[i].Inf.Num(); j++)
 			{
-				const FVertInfluences &I = Mesh->VertInfluences[Weights[i].InfIndex[j]];
+				const VertInfluence &I = Weights[i].Inf[j];
 				CVec3 v;
-				v = CVT(Mesh->Points[I.PointIndex]);
+				v = Lod.Verts[i].Position;
 #if MIRROR_MESH
 				v[1] *= -1;						// y
 #endif
-				BoneCoords[I.BoneIndex].TransformPoint(v, v);
+				BoneCoords[I.Bone].TransformPoint(v, v);
 				Ar.Printf(
 					"\tweight %d %d %f ( %f %f %f )\n",
-					WeightIndex, I.BoneIndex, I.Weight,
-					VECTOR_ARG(v)
+					WeightIndex, I.Bone, I.Weight, VECTOR_ARG(v)
 				);
 				WeightIndex++;
 			}
