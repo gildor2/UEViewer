@@ -101,11 +101,9 @@ protected:
 #endif // RENDERING
 };
 
-//!! UE2 mesh uses UMaterial, which will not be declared
-//!! use this macro for cast to UUnrealMaterial (for easy location of all conversion places)
+//!! UE2 mesh uses UMaterial, which sometimes will be declared as 'forward declaration'.
+//!! Use this macro for cast to UUnrealMaterial (for easy location of all conversion places)
 #define MATERIAL_CAST(x)	( (UUnrealMaterial*)(x) )
-//!! this macro can be used to "downgrade" UE3 material to UE2 UMaterial
-#define MATERIAL_CAST2(x)	( (UMaterial*)      (x) )
 //!! this program requires refactoring to remove all MATERIAL_CAST macros
 
 

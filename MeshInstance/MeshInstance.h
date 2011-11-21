@@ -8,8 +8,6 @@ class CSkeletalMesh;
 class CAnimSet;
 class CStaticMesh;
 
-enum EAnimRotationOnly;
-
 
 /*-----------------------------------------------------------------------------
 	Basic CMeshInstance class
@@ -132,7 +130,7 @@ public:
 	// mesh state
 	int			LodNum;
 	int			UVIndex;
-	EAnimRotationOnly RotationMode;		// EAnimRotationOnly
+	int			RotationMode;		// EAnimRotationOnly
 	// debugging
 	int			ShowSkel;			// 0 - mesh, 1 - mesh+skel, 2 - skel only
 	bool		ShowInfluences;

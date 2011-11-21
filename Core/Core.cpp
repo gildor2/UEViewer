@@ -61,7 +61,7 @@ void appError(const char *fmt, ...)
 	THROW;
 #else
 	fprintf(stderr, "Fatal Error: %s\n", buf);
-	if (GLogFile) fprintf("Fatal Error: %s\n", buf);
+	if (GLogFile) fprintf(stderr, "Fatal Error: %s\n", buf);
 	exit(1);
 #endif
 }
@@ -445,7 +445,7 @@ void appMakeDirectoryForFile(const char *filename)
 	Win32 exception handler (SEH)
 -----------------------------------------------------------------------------*/
 
-#if WIN32_USE_SEH
+#if WIN32_USE_SEH && DO_GUARD
 
 long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 {

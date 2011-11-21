@@ -1,3 +1,9 @@
+Reduce code size:
+- combine parts of ExportPsk/ExportStaticMesh for common sections
+- combine parts of SkeletalMesh.cpp and StaticMesh.cpp for building normals/tangents
+- use a) pointer to data field + stride
+      b) template function
+
 Logging:
 - appNotify, appPrintf: make with GLog->Printf or GWarn->Printf ? (to allow overriding)
 - Notify.log:

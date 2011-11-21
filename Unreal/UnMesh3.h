@@ -15,6 +15,8 @@ UE3 CLASS TREE:
 
 -----------------------------------------------------------------------------*/
 
+#include "UnMesh.h"			// common types
+
 // forwards
 class UMaterialInterface;
 

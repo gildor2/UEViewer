@@ -1,6 +1,5 @@
 #include "Core.h"
 #include "UnrealClasses.h"
-#include "UnMesh.h"
 #include "UnMesh2.h"
 #include "UnMeshTypes.h"		// for FPackedNormal
 #include "UnHavok.h"
@@ -591,9 +590,6 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 	for (i = 0; i < Materials.Num(); i++)
 		Materials[i].TextureIndex = i;
 
-	// convert LOD 0 to mesh
-	RecreateMeshFromLOD();
-
 #if 0
 appPrintf("u104:%d u110:%d u128:%d u11C:%d dr1:%d dr2:%d f134:%d\n", f104.Num(), f110.Num(), f128.Num(), f11C.Num(), drop1.Num(), havokObjects.Num(), f134.Num());
 for (i=0;i<drop1.Num();i++)appPrintf("drop[%d]=%s\n",i,*drop1[i]);
@@ -621,6 +617,8 @@ void USkeletalMesh::PostLoadBioshockMesh()
 	if (RefSkeleton.Num())
 	{
 //		appNotify("Bioshock mesh %s has RefSkeleton!", Name);
+		// do the conversion after skeleton loading
+		ConvertMesh();
 		return;
 	}
 
@@ -686,6 +684,9 @@ void USkeletalMesh::PostLoadBioshockMesh()
 	{
 		appError("Unknown Havok class: %s", ClassName);
 	}
+
+	// do the conversion after skeleton loading
+	ConvertMesh();
 
 	unguard;
 }
@@ -794,7 +795,7 @@ void UStaticMesh::SerializeBioshockMesh(FArchive &Ar)
 
 	DROP_REMAINING_DATA(Ar);
 
-	ConvertMesh2();
+	ConvertMesh();
 
 	unguard;
 }

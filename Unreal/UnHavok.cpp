@@ -182,11 +182,13 @@ void FixupHavokPackfile(const char *Name, void *PackData)
 
 void GetHavokPackfileContents(const void *PackData, void **Object, const char **ClassName)
 {
+	guard(GetHavokPackfileContents);
 	byte *PackStart = (byte*)PackData;
 	hkPackfileHeader *Hdr = (hkPackfileHeader*)PackStart;
 	hkPackfileSectionHeader *Sections = (hkPackfileSectionHeader*)(Hdr + 1);
 	*Object    = (char*)PackStart + Sections[Hdr->m_contentsSectionIndex         ].m_absoluteDataStart + Hdr->m_contentsSectionOffset;
 	*ClassName = (char*)PackStart + Sections[Hdr->m_contentsClassNameSectionIndex].m_absoluteDataStart + Hdr->m_contentsClassNameSectionOffset;
+	unguard;
 }
 
 

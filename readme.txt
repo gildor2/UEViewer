@@ -125,6 +125,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+21.11.2011
+- major rewritting of SkeletalMesh subsystem; implemented support for multiple UV sets,
+  which can be switched in viewer by 'U' key and exported to psk when "-pskx" option is
+  supplied
+
 17.11.2011
 - added option "-log=filename" to write whole umodel output to the specified file
 

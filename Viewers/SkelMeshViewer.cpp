@@ -7,7 +7,6 @@
 #include "../MeshInstance/MeshInstance.h"
 #include "UnMathTools.h"
 
-#include "UnMesh.h"			//??
 #include "UnMesh2.h"		// for UE2 USkeletalMesh and UMeshAnimation
 #include "UnMesh3.h"		// for UAnimSet
 #include "SkeletalMesh.h"
@@ -183,18 +182,10 @@ void CSkelMeshViewer::Dump()
 void CSkelMeshViewer::Export()
 {
 	CMeshViewer::Export();
-/*
-	const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
-	assert(Mesh);
-	for (int i = 0; i < Mesh->Textures.Num(); i++)
-	{
-		const UUnrealMaterial *Tex = MATERIAL_CAST(Mesh->Textures[i]);
-		ExportObject(Tex);
-	}
 
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CAnimSet *Anim = MeshInst->GetAnim();
-	if (Anim) ExportObject(Anim->OriginalAnim); */
+	if (Anim) ExportObject(Anim->OriginalAnim);
 }
 
 
@@ -359,6 +350,7 @@ void CSkelMeshViewer::ShowHelp()
 {
 	CMeshViewer::ShowHelp();
 	DrawKeyHelp("L",      "cycle mesh LODs");
+	DrawKeyHelp("U",      "cycle UV sets");
 	DrawKeyHelp("S",      "show skeleton");
 	DrawKeyHelp("B",      "show bone names");
 	DrawKeyHelp("I",      "show influences");
@@ -453,6 +445,10 @@ void CSkelMeshViewer::ProcessKey(int key)
 		if (++MeshInst->LodNum >= Mesh->Lods.Num())
 			MeshInst->LodNum = 0;
 		break;
+	case 'u':
+		if (++MeshInst->UVIndex >= Mesh->Lods[MeshInst->LodNum].NumTexCoords)
+			MeshInst->UVIndex = 0;
+		break;
 	case 's':
 		if (++MeshInst->ShowSkel > 2)
 			MeshInst->ShowSkel = 0;
@@ -502,7 +498,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 		MeshInst->SetSecondaryBlend(2, Alpha);
 		break;
 
-	case 'u':
+	case 'u'|KEY_CTRL:
 		MeshInst->LoopAnim("Gesture_Taunt02", 1, 0, 1);
 		MeshInst->SetBlendParams(1, 1.0f, "Bip01 Spine1");
 		MeshInst->LoopAnim("WalkF", 1, 0, 2);

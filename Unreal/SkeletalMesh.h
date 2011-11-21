@@ -29,54 +29,31 @@ May be make dummy material class to exclude PolyFlags from meshes at all (keep t
 
 SKELETALMESH CONVERSION STAGES:
 
-* separate UE2 and UE3 USkeletalMesh
-  * move all UE3 declarations to UnMesh3.h
-  * cleanup UE2 USkeletalMesh (can add "viewer" properties)
-  * move most properties from UE3 cpp serializer to the class (like were done for UStaticMesh3)
-* convert UE3 SkeletalMesh to CSkeletalMesh
-
-* use CSkeletalMesh in CSkelMeshInstance
-  * separate CSkelMeshViewer from CLodMeshViewer, parent will be CMeshViewer
-  * separate CSkelMeshInstance from CLodMeshInstance
-  * combine CLodMeshViewer and CVertMeshViewer
-  * use CSkeletalMesh in CSkelMeshViewer
-    * needs to duplicate some methods in both MeshInstance and MeshViewer: LOD->(Skel+Vert)
-    * enable CSkeletalMesh in main.cpp, remove old viewer code
-  * cleanup MeshInstance/MeshViewer interfaces, cleanup "virtual" modifiers
-  * reimplement CSkelMeshViewer::Draw2D() (no 'base mesh' etc)
-  * check commented code in SkelMeshViewer.cpp
-  * verify Gears3 meshes - had some problems before (overlapping vertex indices)
-    * find old umodel build which had problems, find problematic meshes, or place appNotify() or assert()
-      * "bad" umodel is r135, mesh is in data\3X\GOW3_b2\GearGame.xxx
-      for chunks when "Chunk[Index>0].FirstVertex > 0"
-    * verify these meshes with new umodel
-
-* verify code for reading verts from chunks: UE3/UDK CH_AnimHuman has non-cooked meshes with these vertices
-* verify mesh sockets
-
-! make common code for BuildNormals, make common CMeshBaseVertex (== CStaticMeshVertex ?)
-    * require CStaticMeshVertex to use CVecT instead of CVec3, rename to CMeshVertex[Base?] and move to MeshCommon.h
-    * changes from CVec3 to CVecT will require aligned allocator
-
-* use normals from UE3 USkeletalMesh
-- verify HasNormals/HasTangents to work for UE2 and UE3
+Normals/tangents:
+* find shared vertices when doing CSkelMeshLod::BuildNormals()
+- make common code for BuildNormals/BuildTangents() - use CMeshVertex + Stride
+- verify BuildNormals/BuildTangents quality for UE3 meshes (compare original + generated vectors)
 - verify: some meshes had ugly normals before (usually female faces - GOW2, TRON)
+* Rune has a lot of faces with non-shared vertices
 
-- update exporter to use CSkeletalMesh, no new functionality yet
-  ! currently main.cpp has functions to call exporter, but they are disabled to allow compilation
-  - CSkelMeshViewer::Export() should be updated too, verify Ctrl+X key
-
-- convert UE2 mesh to CSkeletalMesh
-
-- load all UV sets for UE3 skeletal mesh
-- toggle UV sets in viewer (verify with Mirror's Edge?)
-  - add key handler + help to CSkelMeshViewer
-  * use textured mesh for both static and skeletal meshes when displaying UVSet > 0; untextured mesh is useless
-  * already supported UVIndex in CSkelMeshInstance
-- export all UV sets for pskx
-  - can make common function for StaticMesh and SkeletalMesh - pass ( Verts[0].UV[0] + sizeof(Vertex) )
+* convert UE2 mesh to CSkeletalMesh
+  * insert ConvertMesh() into all places with 'return' in USkeletalMesh::Serialize()
+  * convert FStaticLodModel to CSkelMeshLod
+  * USkeletalMesh.LODModels may be empty for older mesh formats, so needs a code to construct CSkelMeshLod from a few arrays
+    * verify conversion of base mesh to CSkelMeshLod by disabling Lod->Lod conversion
+- verify USkeletalMesh in games:
+  * UT2004
+  - Unreal1
+  * Bioshock
+  * Lineage2
+  * Rune
+  * Splinter Cell
 
 - support 32-bit index buffer in loader/viewer
+  - UE3 SkeletalMesh начина€ с версии 806 поддерживает 32-bit index buffer, сейчас это не сделать из-за того,
+    что UE2 mesh использует 16-bit index buffer (см. "assert(ItemSize == 2)")
+    ! экспорт идЄт в psk, там дл€ треугольников есть chunk "FACE0000", он содержит VTriangle, который хранит
+      ссылки на вершины как "word WedgeIndex", т.е. psk дл€ этого не приспособлен
 - support 32-bit indices in pskx (different section name for triangles?)
 
 - dump properties of the SkeletalMesh:
@@ -89,14 +66,14 @@ SKELETALMESH CONVERSION STAGES:
     - number of vertex influences (1-4)
     - number of really used bones -- to exclude hair, fingers etc -- display as "Bones: N/M"
 
-- move ULodMesh and UVertMesh to UnMesh2.h
-? separate UnMesh.cpp to Common+UE2 or UE1+UE2 (check what's better)
-- cleanup UnMesh.h and TypeConvert.h includes
+? split UnMesh.cpp to Common+UE2 or UE1+UE2 (check what's better)
+  - or at least rename UnMesh.cpp to UnMesh2.cpp
 - cleanup TODOs
-* cleanup UnMesh3.cpp - has some old commented code around serializers
-- cleanup SkelMeshInstance code for conversion UE2->old_CSkeletalMesh
+* cleanup SkelMeshInstance from code for conversion UE2->old_CSkeletalMesh
 
-- place animation information somewhere in the bottom of the screen (needs DrawTextLeftBottom or use DrawTextPos() with use of GetWindowSize() ?)
+- place animation information somewhere at the bottom of the screen (needs DrawTextLeftBottom or use DrawTextPos() with use of GetWindowSize() ?)
+- remove RootBone.Orientation.W *= -1 for UE3, place this code for UE2 (find all places where bone orientation is accessed!)
+  - fix (invert logic) mesh rendering and export code too
 
 */
 
@@ -157,6 +134,7 @@ struct CSkelMeshLod
 		if (Verts) appFree(Verts);
 	}
 
+	void BuildNormals();
 	void BuildTangents();
 
 	void AllocateVerts(int Count)

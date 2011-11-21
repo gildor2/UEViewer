@@ -55,7 +55,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	guard(ExportSkeletalMeshLod);
 
 	// using 'static' here to avoid zero-filling unused fields
-	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr;
+	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, BoneHdr, InfHdr, UVHdr;
 	int i, j;
 
 	int numSections = Lod.Sections.Num();
@@ -143,7 +143,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 		if (Tex)
 		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
-			if (Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
+			ExportObject(Tex);
 		}
 		else
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
@@ -210,6 +210,26 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	}
 	assert(NumInfluences == 0);
 
+	if (!GExportPskx)						// nothing more to write
+		return;
+
+	// pskx extension
+
+	for (int j = 1; j < Lod.NumTexCoords; j++)
+	{
+		UVHdr.DataCount = numVerts;
+		UVHdr.DataSize  = sizeof(VMeshUV);
+		SAVE_CHUNK(WedgHdr, "EXTRAUV0");
+		for (i = 0; i < numVerts; i++)
+		{
+			VMeshUV UV;
+			const CSkelMeshVertex &S = Lod.Verts[i];
+			UV.U = S.UV[j].U;
+			UV.V = S.UV[j].V;
+			Ar << UV;
+		}
+	}
+
 	unguard;
 }
 
@@ -230,6 +250,13 @@ void ExportPsk(const CSkeletalMesh *Mesh, FArchive &Ar)
 		appSprintf(ARRAY_ARG(filename), "%s/%s.uc", GetExportPath(OriginalMesh), OriginalMesh->Name);
 		FFileReader Ar1(filename, false);
 		ExportScript(Mesh, Ar1);
+	}
+
+	if (!GExportPskx)
+	{
+		// perform some verifications to warn user about missing -pskx option
+		int NumTexCoords = Mesh->Lods[0].NumTexCoords;
+		if (NumTexCoords > 1) appPrintf("WARNING: SkeletalMesh %s has %d TexCoords, -pskx option is adviced\n", OriginalMesh->Name, NumTexCoords);
 	}
 
 	int MaxLod = (GExportLods) ? Mesh->Lods.Num() : 1;
@@ -483,7 +510,7 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 		if (Tex)
 		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
-			if (Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
+			ExportObject(Tex);
 		}
 		else
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);

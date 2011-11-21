@@ -1,6 +1,5 @@
 #include "Core.h"
 #include "UnrealClasses.h"
-#include "UnMesh.h"
 #include "UnMesh2.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"			// for loading texures by name (Rune) and checking real class name
@@ -1729,7 +1728,7 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 			Ar << unk3;		// AuthKey ?
 		if (Ar.ArLicenseeVer >= 0x23)
 			Ar << unk4;
-		RecreateMeshFromLOD();
+		ConvertMesh();
 		return;
 	}
 #endif // LINEAGE2
@@ -1752,6 +1751,7 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 			Ar << KarmaProps << BoundingSpheres << BoundingBoxes << f32C;
 		if (Ar.ArVer >= 127)
 			Ar << CollisionMesh;
+		ConvertMesh();
 		return;
 	}
 #endif // UT2
@@ -1779,6 +1779,8 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 	skip_remaining:
 		DROP_REMAINING_DATA(Ar);
 	}
+
+	ConvertMesh();
 
 	unguard;
 }
@@ -1852,23 +1854,308 @@ void USkeletalMesh::UpgradeMesh()
 }
 
 
-void USkeletalMesh::RecreateMeshFromLOD(int LodIndex, bool Force)
+void USkeletalMesh::ConvertMesh()
 {
-	guard(USkeletalMesh::RecreateMeshFromLOD);
-	if (Wedges.Num() && !Force) return;					// nothing to do
-	if (LODModels.Num() <= LodIndex) return;			// no such LOD mesh
-	appPrintf("Restoring mesh from LOD %d ...\n", LodIndex);
+	guard(USkeletalMesh::ConvertMesh);
 
-	FStaticLODModel &Lod = LODModels[LodIndex];
+	CSkeletalMesh *Mesh = new CSkeletalMesh(this);
+	ConvertedMesh = Mesh;
+	Mesh->BoundingBox    = BoundingBox;
+	Mesh->BoundingSphere = BoundingSphere;
 
-	CopyArray(Wedges, Lod.Wedges);
-	CopyArray(Points, Lod.Points);
-	CopyArray(VertInfluences, Lod.VertInfluences);
-	CopyArray(Triangles, Lod.Faces);
-	VertexCount = Points.Num();
+	Mesh->RotOrigin  = RotOrigin;
+	Mesh->MeshScale  = CVT(MeshScale);
+	Mesh->MeshOrigin = CVT(MeshOrigin);
+
+	Mesh->Lods.Empty(LODModels.Num());
+
+	if (!LODModels.Num())
+	{
+		guard(ConvertBaseMesh);
+
+		// create CSkelMeshLod from base mesh
+		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
+		Lod->NumTexCoords = 1;
+		Lod->HasNormals   = false;
+		Lod->HasTangents  = false;
+
+		InitSections(*Lod);
+		ConvertWedges(*Lod, Points, Wedges, VertInfluences);
+		BuildIndices(*Lod);
+
+		unguard;
+	}
+
+	// convert LODs
+	for (int lod = 0; lod < LODModels.Num(); lod++)
+	{
+		guard(ConvertLod);
+
+		const FStaticLODModel &SrcLod = LODModels[lod];
+
+		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
+		Lod->NumTexCoords = 1;
+		Lod->HasNormals   = false;
+		Lod->HasTangents  = false;
+
+		InitSections(*Lod);
+		ConvertWedges(*Lod, SrcLod.Points, SrcLod.Wedges, SrcLod.VertInfluences);
+		BuildIndicesForLod(*Lod, SrcLod);
+
+		unguard;
+	}
+
+	// copy skeleton
+	guard(ProcessSkeleton);
+	Mesh->RefSkeleton.Empty(RefSkeleton.Num());
+	for (int i = 0; i < RefSkeleton.Num(); i++)
+	{
+		const FMeshBone &B = RefSkeleton[i];
+		CSkelMeshBone *Dst = new (Mesh->RefSkeleton) CSkelMeshBone;
+		Dst->Name        = B.Name;
+		Dst->ParentIndex = B.ParentIndex;
+		Dst->Position    = CVT(B.BonePos.Position);
+		Dst->Orientation = CVT(B.BonePos.Orientation);
+	}
+	unguard; // ProcessSkeleton
 
 	unguard;
 }
+
+
+void USkeletalMesh::InitSections(CSkelMeshLod &Lod)
+{
+	// allocate sections and set CSkelMeshSection.Material
+	Lod.Sections.Add(Materials.Num());
+	for (int sec = 0; sec < Materials.Num(); sec++)
+	{
+		const FMeshMaterial &M = Materials[sec];
+		CSkelMeshSection &Sec = Lod.Sections[sec];
+		int TexIndex  = M.TextureIndex;
+		Sec.Material  = (TexIndex < Textures.Num()) ? Textures[TexIndex] : NULL;
+		Sec.PolyFlags = M.PolyFlags;
+	}
+}
+
+void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &MeshPoints, const TArray<FMeshWedge> &MeshWedges, const TArray<FVertInfluences> &VertInfluences)
+{
+	guard(USkeletalMesh::ConvertWedges);
+
+	struct CVertInfo
+	{
+		int		NumInfs;		// may be higher than NUM_INFLUENCES
+		int		Bone[NUM_INFLUENCES];
+		float	Weight[NUM_INFLUENCES];
+	};
+
+	int i, j;
+
+	CVertInfo *Verts = new CVertInfo[MeshPoints.Num()];
+	memset(Verts, 0, MeshPoints.Num() * sizeof(CVertInfo));
+
+	// collect influences per vertex
+	for (i = 0; i < VertInfluences.Num(); i++)
+	{
+		const FVertInfluences &Inf  = VertInfluences[i];
+		CVertInfo &V = Verts[Inf.PointIndex];
+		int NumInfs = V.NumInfs++;
+		int idx = NumInfs;
+		if (NumInfs >= NUM_INFLUENCES)
+		{
+			// overflow
+			// find smallest weight smaller than current
+			float w = Inf.Weight;
+			idx = -1;
+			for (j = 0; j < NUM_INFLUENCES; j++)
+			{
+				if (V.Weight[j] < w)
+				{
+					w = V.Weight[j];
+					idx = j;
+					// continue - may be other weight will be even smaller
+				}
+			}
+			if (idx < 0) continue;	// this weight is smaller than other
+		}
+		// add influence
+		V.Bone[idx]   = Inf.BoneIndex;
+		V.Weight[idx] = Inf.Weight;
+	}
+
+	// normalize influences
+	for (i = 0; i < MeshPoints.Num(); i++)
+	{
+		CVertInfo &V = Verts[i];
+		if (V.NumInfs <= NUM_INFLUENCES) continue;	// no normalization is required
+		float s = 0;
+		for (j = 0; j < NUM_INFLUENCES; j++)		// count sum
+			s += V.Weight[j];
+		s = 1.0f / s;
+		for (j = 0; j < NUM_INFLUENCES; j++)		// adjust weights
+			V.Weight[j] *= s;
+	}
+
+	// create vertices
+	Lod.AllocateVerts(MeshWedges.Num());
+	for (i = 0; i < MeshWedges.Num(); i++)
+	{
+		const FMeshWedge &SW = MeshWedges[i];
+		CSkelMeshVertex  &DW = Lod.Verts[i];
+		DW.Position = CVT(MeshPoints[SW.iVertex]);
+		DW.UV[0] = CVT(SW.TexUV);
+		// DW.Normal and DW.Tangent are unset
+		// setup Bone[] and Weight[]
+		const CVertInfo &V = Verts[SW.iVertex];
+		for (j = 0; j < V.NumInfs; j++)
+		{
+			DW.Bone[j]   = V.Bone[j];
+			DW.Weight[j] = V.Weight[j];
+		}
+		for (/* continue */; j < NUM_INFLUENCES; j++)	// place end marker and zero weight
+		{
+			DW.Bone[j]   = -1;
+			DW.Weight[j] = 0.0f;
+		}
+	}
+
+	delete Verts;
+
+	unguard;
+}
+
+
+void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
+{
+	guard(USkeletalMesh::BuildIndices);
+
+	int i;
+	int NumSections = Lod.Sections.Num();
+
+	// 1st pass: count Lod.Sections[i].NumFaces
+	// 2nd pass: set Lod.Sections[i].FirstIndex, allocate and fill indices array
+	for (int pass = 0; pass < 2; pass++)
+	{
+		int NumIndices = 0;
+		for (i = 0; i < NumSections; i++)
+		{
+			CSkelMeshSection &Sec = Lod.Sections[i];
+			if (pass == 1)
+			{
+				int SecIndices = Sec.NumFaces * 3;
+				Sec.FirstIndex = NumIndices;
+				NumIndices += SecIndices;
+			}
+			Sec.NumFaces = 0;
+		}
+
+		// allocate index buffer
+		if (pass == 1)
+		{
+			Lod.Indices.Indices16.Add(NumIndices);
+		}
+
+		for (i = 0; i < Triangles.Num(); i++)
+		{
+			const VTriangle &Face = Triangles[i];
+			int MatIndex = Face.MatIndex;
+			CSkelMeshSection &Sec  = Lod.Sections[MatIndex];
+			assert(MatIndex < NumSections);
+
+			if (pass == 1)	// on 1st pass count NumFaces, on 2nd pass fill indices
+			{
+				word *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
+				for (int j = 0; j < 3; j++)
+					*idx++ = Face.WedgeIndex[j];
+			}
+
+			Sec.NumFaces++;
+		}
+	}
+
+	unguard;
+}
+
+
+void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel &SrcLod)
+{
+	guard(USkeletalMesh::BuildIndicesForLod);
+
+	int i;
+	int NumSections = Lod.Sections.Num();
+
+	// 1st pass: count Lod.Sections[i].NumFaces
+	// 2nd pass: set Lod.Sections[i].FirstIndex, allocate and fill indices array
+	for (int pass = 0; pass < 2; pass++)
+	{
+		int NumIndices = 0;
+		for (i = 0; i < NumSections; i++)
+		{
+			CSkelMeshSection &Sec = Lod.Sections[i];
+			if (pass == 1)
+			{
+				int SecIndices = Sec.NumFaces * 3;
+				Sec.FirstIndex = NumIndices;
+				NumIndices += SecIndices;
+			}
+			Sec.NumFaces = 0;
+		}
+
+		// allocate index buffer
+		if (pass == 1)
+		{
+			Lod.Indices.Indices16.Add(NumIndices);
+		}
+
+		int s;
+
+		// smooth sections (influence count >= 2)
+		for (s = 0; s < SrcLod.SmoothSections.Num(); s++)
+		{
+			const FSkelMeshSection &ms = SrcLod.SmoothSections[s];
+			int MatIndex = ms.MaterialIndex;
+			CSkelMeshSection &Sec  = Lod.Sections[MatIndex];
+			assert(MatIndex < NumSections);
+
+			if (pass == 1)
+			{
+				word *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
+				for (i = 0; i < ms.NumFaces; i++)
+				{
+					const FMeshFace &F = SrcLod.Faces[ms.FirstFace + i];
+					//?? ignore F.MaterialIndex - may be any
+//					assert(F.MaterialIndex == ms.MaterialIndex);
+					for (int j = 0; j < 3; j++)
+						*idx++ = F.iWedge[j];
+				}
+			}
+
+			Sec.NumFaces += ms.NumFaces;
+		}
+		// rigid sections (influence count == 1)
+		for (s = 0; s < SrcLod.RigidSections.Num(); s++)
+		{
+			const FSkelMeshSection &ms = SrcLod.RigidSections[s];
+			int MatIndex = ms.MaterialIndex;
+			CSkelMeshSection &Sec  = Lod.Sections[MatIndex];
+			assert(MatIndex < NumSections);
+
+			if (pass == 1)
+			{
+				word *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
+				for (i = 0; i < ms.NumFaces; i++)
+				{
+					for (int j = 0; j < 3; j++)
+						*idx++ = SrcLod.RigidIndices.Indices[(ms.FirstFace + i) * 3 + j];
+				}
+			}
+
+			Sec.NumFaces += ms.NumFaces;
+		}
+	}
+
+	unguard;
+}
+
 
 #if UNREAL1
 
@@ -1964,6 +2251,8 @@ void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 		S.BonePos.Orientation.X *= -1;
 		S.BonePos.Orientation.W *= -1;
 	}
+
+	ConvertMesh();
 
 	unguard;
 }
@@ -2087,6 +2376,8 @@ void USkeletalMesh::SerializeSCell(FArchive &Ar)
 	Ar << AttachAliases << AttachBoneNames << AttachCoords;
 	DROP_REMAINING_DATA(Ar);
 	UpgradeMesh();
+
+	ConvertMesh();
 
 /*	TArray<FSCellUnk1> tmp1;
 	TArray<FSCellUnk2> tmp2;
@@ -2550,6 +2841,9 @@ void USkelModel::Serialize(FArchive &Ar)
 		for (i = 0; i < 3; i++)
 			center[i] = (mins[i] + maxs[i]) / 2;
 		sm->BoundingSphere.R = VectorDistance(center, mins);
+
+		// create CSkeletalMesh
+		sm->ConvertMesh();
 	}
 
 	unguard;
@@ -2813,9 +3107,9 @@ void UStaticMesh::LoadExternalUC2Data()
 #endif // UC2
 
 
-void UStaticMesh::ConvertMesh2()
+void UStaticMesh::ConvertMesh()
 {
-	guard(UStaticMesh::ConvertMesh2);
+	guard(UStaticMesh::ConvertMesh);
 
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;

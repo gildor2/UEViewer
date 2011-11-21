@@ -55,7 +55,7 @@ void Export3D (const UVertMesh *Mesh, FArchive &Ar);
 // TGA
 void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar);
 // UUnrealMaterial
-void ExportMaterial(const UUnrealMaterial *Mat, FArchive &Ar = *GDummySave);
+void ExportMaterial(const UUnrealMaterial *Mat, FArchive &Ar);
 // sound
 void ExportSound(const USound *Snd, FArchive &Ar);
 void ExportSoundNodeWave(const USoundNodeWave *Snd, FArchive &Ar);

@@ -1,6 +1,5 @@
 #include "Core.h"
 #include "UnrealClasses.h"
-#include "UnMesh.h"					//?? remove later
 #include "UnMesh3.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"				// for checking game type
@@ -207,40 +206,32 @@ struct FRigidVertex3
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV;
+	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
 	byte				BoneIndex;
 	int					Color;
 
 	friend FArchive& operator<<(FArchive &Ar, FRigidVertex3 &V)
 	{
-		int NumUVSets;
+		int NumUVSets = 1;
 
 #if ENDWAR
 		if (Ar.Game == GAME_EndWar)
 		{
-			// End War uses 4-component FVector, but here it is 3-component
+			// End War uses 4-component FVector everywhere, but here it is 3-component
 			Ar << V.Pos.X << V.Pos.Y << V.Pos.Z;
 			goto normals;
 		}
 #endif // ENDWAR
+		Ar << V.Pos;
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft)
 		{
-			// uses FVector4 for position and 4 UV sets
-			int pad;
-			Ar << V.Pos;
-			if (Ar.ArLicenseeVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float));		// FVector4 ?
-			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
-			Ar << V.UV;
-			//!! use NumUVSets and combine with generic code
-			if (Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + sizeof(float) * 6);	// 4 UV sets
-			Ar << V.BoneIndex;
-			return Ar;
+			if (Ar.ArLicenseeVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float));
+			if (Ar.ArLicenseeVer >= 2) NumUVSets = 4;
 		}
 #endif // CRIMECRAFT
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
-		Ar << V.Pos;
 	normals:
 		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 #if R6VEGAS
@@ -248,13 +239,12 @@ struct FRigidVertex3
 		{
 			FMeshUVHalf hUV;
 			Ar << hUV;
-			V.UV = hUV;				// convert
+			V.UV[0] = hUV;			// convert
 			goto influences;
 		}
 #endif // R6VEGAS
 
 		// UVs
-		NumUVSets = 1;
 		if (Ar.ArVer >= 709) NumUVSets = 4;
 #if MEDGE
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
@@ -277,8 +267,9 @@ struct FRigidVertex3
 			}
 		}
 #endif // FRONTLINES
-		Ar << V.UV;
-		if (NumUVSets > 1) Ar.Seek(Ar.Tell() + sizeof(float) * 2 * (NumUVSets - 1));		//!! serialize
+		// UV
+		for (int i = 0; i < NumUVSets; i++)
+			Ar << V.UV[i];
 
 		if (Ar.ArVer >= 710) Ar << V.Color;	// default 0xFFFFFFFF
 
@@ -307,40 +298,34 @@ struct FSmoothVertex3
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV;
+	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
 	byte				BoneIndex[NUM_INFLUENCES_UE3];
 	byte				BoneWeight[NUM_INFLUENCES_UE3];
 	int					Color;
 
 	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
 	{
-		int i, NumUVSets;
+		int i;
+		int NumUVSets = 1;
 
 #if ENDWAR
 		if (Ar.Game == GAME_EndWar)
 		{
-			// End War uses 4-component FVector, but here it is 3-component
+			// End War uses 4-component FVector everywhere, but here it is 3-component
 			Ar << V.Pos.X << V.Pos.Y << V.Pos.Z;
 			goto normals;
 		}
 #endif // ENDWAR
+		Ar << V.Pos;
 #if CRIMECRAFT
 		if (Ar.Game == GAME_CrimeCraft)
 		{
-			// uses FVector4 for position and 4 UV sets
-			int pad;
-			Ar << V.Pos;
-			if (Ar.ArLicenseeVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float));		// FVector4 ?
-			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
-			Ar << V.UV;
-			//!! use NumUVSets and combine with generic code
-			if (Ar.ArLicenseeVer >= 2) Ar.Seek(Ar.Tell() + sizeof(float) * 6);	// 4 UV sets
-			goto influences;
+			if (Ar.ArLicenseeVer >= 1) Ar.Seek(Ar.Tell() + sizeof(float));
+			if (Ar.ArLicenseeVer >= 2) NumUVSets = 4;
 		}
 #endif // CRIMECRAFT
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
-		Ar << V.Pos;
 	normals:
 		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 #if R6VEGAS
@@ -348,13 +333,12 @@ struct FSmoothVertex3
 		{
 			FMeshUVHalf hUV;
 			Ar << hUV;
-			V.UV = hUV;				// convert
+			V.UV[0] = hUV;			// convert
 			goto influences;
 		}
 #endif // R6VEGAS
 
 		// UVs
-		NumUVSets = 1;
 		if (Ar.ArVer >= 709) NumUVSets = 4;
 #if MEDGE
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
@@ -377,8 +361,9 @@ struct FSmoothVertex3
 			}
 		}
 #endif // FRONTLINES
-		Ar << V.UV;
-		if (NumUVSets > 1) Ar.Seek(Ar.Tell() + sizeof(float) * 2 * (NumUVSets - 1));	//!! serialize
+		// UV
+		for (int i = 0; i < NumUVSets; i++)
+			Ar << V.UV[i];
 
 		if (Ar.ArVer >= 710) Ar << V.Color;	// default 0xFFFFFFFF
 
@@ -549,7 +534,7 @@ static int GNumGPUUVSets = 1;
 struct FGPUVert3Half : FGPUVert3Common
 {
 	FVector				Pos;
-	FMeshUVHalf			UV;
+	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Half &V)
 	{
@@ -557,8 +542,7 @@ struct FGPUVert3Half : FGPUVert3Common
 			Ar << V.Pos << *((FGPUVert3Common*)&V);
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
-		Ar << V.UV;
-		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(word));		//!! serialize
+		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
 };
@@ -566,13 +550,15 @@ struct FGPUVert3Half : FGPUVert3Common
 struct FGPUVert3Float : FGPUVert3Common
 {
 	FVector				Pos;
-	FMeshUVFloat		UV;
+	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
 
 	FGPUVert3Float& operator=(const FSmoothVertex3 &S)
 	{
+		int i;
 		Pos = S.Pos;
-		UV  = S.UV;
-		for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
+		for (i = 0; i < NUM_MESH_UV_SETS; i++)
+			UV[i] = S.UV[i];
+		for (i = 0; i < NUM_INFLUENCES_UE3; i++)
 		{
 			BoneIndex[i]  = S.BoneIndex[i];
 			BoneWeight[i] = S.BoneWeight[i];
@@ -586,8 +572,7 @@ struct FGPUVert3Float : FGPUVert3Common
 			Ar << V.Pos << *((FGPUVert3Common*)&V);
 		else
 			Ar << *((FGPUVert3Common*)&V) << V.Pos;
-		Ar << V.UV;
-		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(float));	//!! serialize
+		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
 };
@@ -617,12 +602,12 @@ struct FVectorIntervalFixed32GPU
 struct FGPUVert3PackedHalf : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
-	FMeshUVHalf			UV;
+	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedHalf &V)
 	{
-		Ar << *((FGPUVert3Common*)&V) << V.Pos << V.UV;
-		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(word));		//!! serialize
+		Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
 };
@@ -630,12 +615,12 @@ struct FGPUVert3PackedHalf : FGPUVert3Common
 struct FGPUVert3PackedFloat : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
-	FMeshUVFloat		UV;
+	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedFloat &V)
 	{
-		Ar << *((FGPUVert3Common*)&V) << V.Pos << V.UV;
-		if (GNumGPUUVSets > 1) Ar.Seek(Ar.Tell() + (GNumGPUUVSets - 1) * 2 * sizeof(float));	//!! serialize
+		Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
 };
@@ -1009,12 +994,16 @@ struct FStaticLODModel3
 
 		if (Ar.ArVer < 202)
 		{
+#if 0
 			// old version
 			TLazyArray<FVertInfluences> Influences;
 			TLazyArray<FMeshWedge>      Wedges;
 			TLazyArray<FMeshFace>       Faces;
 			TLazyArray<FVector>         Points;
 			Ar << Influences << Wedges << Faces << Points;
+#else
+			appError("Old UE3 FStaticLodModel");
+#endif
 		}
 
 #if STRANGLE
@@ -1420,8 +1409,12 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		const FStaticLODModel3 &SrcLod = LODModels[lod];
 		if (!SrcLod.Chunks.Num()) continue;
 
+		int NumTexCoords = max(SrcLod.NumUVSets, SrcLod.GPUSkin.NumUVSets);		// number of texture coordinates is serialized differently for some games
+		if (NumTexCoords > NUM_MESH_UV_SETS)
+			appError("SkeletalMesh has %d UV sets", NumTexCoords);
+
 		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
-		Lod->NumTexCoords = 1;		//!! NumTexCoords
+		Lod->NumTexCoords = NumTexCoords;
 		Lod->HasNormals   = true;
 		Lod->HasTangents  = true;
 
@@ -1470,7 +1463,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 						const FGPUVert3Half &V0 = S.VertsHalf[Vert];
 						D->Position = CVT(V0.Pos);
 						V   = &V0;
-						SUV = &V0.UV;
+						SUV = V0.UV;
 					}
 					else
 					{
@@ -1479,11 +1472,14 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 						VPos = V0.Pos.ToVector(S.MeshOrigin, S.MeshExtension);
 						D->Position = CVT(VPos);
 						V   = &V0;
-						SUV = &V0.UV;
+						SUV = V0.UV;
 					}
 					// UV
-					FMeshUVFloat fUV = *SUV;
-					D->UV[0] = CVT(fUV);		//!! NumTexCoords
+					for (int i = 0; i < NumTexCoords; i++)
+					{
+						FMeshUVFloat fUV = SUV[i];				// convert
+						D->UV[i] = CVT(fUV);
+					}
 				}
 				else
 				{
@@ -1494,7 +1490,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 						const FGPUVert3Float &V0 = S.VertsFloat[Vert];
 						V = &V0;
 						D->Position = CVT(V0.Pos);
-						SUV = &V0.UV;
+						SUV = V0.UV;
 					}
 					else
 					{
@@ -1503,10 +1499,11 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 						FVector VPos;
 						VPos = V0.Pos.ToVector(S.MeshOrigin, S.MeshExtension);
 						D->Position = CVT(VPos);
-						SUV = &V0.UV;
+						SUV = V0.UV;
 					}
 					// UV
-					D->UV[0] = CVT(*SUV);		//!! NumTexCoords
+					for (int i = 0; i < NumTexCoords; i++)
+						D->UV[i] = CVT(SUV[i]);
 				}
 				// convert Normal[3]
 				UnpackNormals(V->Normal, *D);
@@ -1541,7 +1538,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 					// single influence
 					D->Weight[0] = 1.0f;
 					D->Bone[0]   = C->Bones[V0.BoneIndex];
-					SUV = &V0.UV;
+					SUV = V0.UV;
 				}
 				else
 				{
@@ -1565,10 +1562,11 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 					}
 //					assert(TotalWeight = 255);
 					if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
-					SUV = &V0.UV;
+					SUV = V0.UV;
 				}
 				// UV
-				D->UV[0] = CVT(*SUV);		//!! NumTexCoords
+				for (int i = 0; i < NumTexCoords; i++)
+					D->UV[i] = CVT(SUV[i]);
 			}
 		}
 
@@ -2826,7 +2824,7 @@ struct FStaticMeshLODModel
 	FIndexBuffer3		Indices2;		// wireframe
 	int					f80;
 	TArray<FEdge3>		Edges;			//??
-	TArray<byte>		fEC;			//?? flags for faces?
+	TArray<byte>		fEC;			//?? flags for faces? removed simultaneously with Edges
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshLODModel &Lod)
 	{

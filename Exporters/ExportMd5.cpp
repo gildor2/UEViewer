@@ -220,7 +220,7 @@ if (i == 32 || i == 34)
 				"\tshader \"%s\"\n\n",
 				Tex->Name
 			);
-			if (Tex->IsA("UnrealMaterial")) ExportMaterial(Tex);
+			ExportObject(Tex);
 		}
 		else
 		{

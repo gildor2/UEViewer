@@ -6,7 +6,6 @@
 #include "UnMaterial2.h"
 #include "UnMaterial3.h"
 
-#include "UnMesh.h"
 #include "UnMesh2.h"
 #include "UnMesh3.h"
 
@@ -70,10 +69,8 @@ static void RegisterUnrealClasses2()
 {
 BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U2
-	REGISTER_MESH_CLASSES_U2_A
 #if UNREAL1
 	REGISTER_MESH_CLASSES_U1
-	REGISTER_MESH_CLASSES_U1_A
 #endif
 #if RUNE
 	REGISTER_MESH_CLASSES_RUNE

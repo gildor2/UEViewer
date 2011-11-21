@@ -238,6 +238,7 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
@@ -469,6 +470,7 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
 	Unreal/UnObject.h
 
 ./obj/umodel-win32/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
@@ -542,6 +544,7 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMathTools.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
