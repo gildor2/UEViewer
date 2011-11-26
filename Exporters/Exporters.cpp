@@ -8,9 +8,10 @@
 
 
 // configuration variables
-bool GExportScripts = false;
-bool GExportLods    = false;
-bool GExportPskx    = false;
+bool GExportScripts      = false;
+bool GExportLods         = false;
+bool GExportPskx         = false;
+bool GDontOverwriteFiles = false;
 
 
 /*-----------------------------------------------------------------------------
@@ -22,20 +23,18 @@ bool GExportPskx    = false;
 struct CExporterInfo
 {
 	const char		*ClassName;
-	const char		*FileExt;
 	ExporterFunc_t	Func;
 };
 
 static CExporterInfo exporters[MAX_EXPORTERS];
 static int numExporters = 0;
 
-void RegisterExporter(const char *ClassName, const char *FileExt, ExporterFunc_t Func)
+void RegisterExporter(const char *ClassName, ExporterFunc_t Func)
 {
 	guard(RegisterExporter);
 	assert(numExporters < MAX_EXPORTERS);
 	CExporterInfo &Info = exporters[numExporters];
 	Info.ClassName = ClassName;
-	Info.FileExt   = FileExt;
 	Info.Func      = Func;
 	numExporters++;
 	unguard;
@@ -79,22 +78,11 @@ bool ExportObject(const UObject *Obj)
 				const_cast<UObject*>(Obj)->Name = uniqueName;
 			}
 
-			if (Info.FileExt)
-			{
-				char filename[512];
-				appSprintf(ARRAY_ARG(filename), "%s/%s.%s", ExportPath, Obj->Name, Info.FileExt);
-				FFileReader Ar(filename, false);
-				Ar.ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
-				Info.Func(Obj, Ar);
-			}
-			else
-			{
-				Info.Func(Obj, *GDummySave);
-			}
+			appPrintf("Exporting %s %s to %s\n", Obj->GetClassName(), Obj->Name, ExportPath);
+			Info.Func(Obj);
 
 			//?? restore object name
 			if (OriginalName) const_cast<UObject*>(Obj)->Name = OriginalName;
-			appPrintf("Exported %s %s to %s\n", Obj->GetClassName(), Obj->Name, ExportPath);
 			return true;
 		}
 	}
@@ -144,6 +132,49 @@ const char* GetExportPath(const UObject *Obj)
 	static char buf[1024];
 	appSprintf(ARRAY_ARG(buf), "%s/%s%s%s", BaseExportDir, PackageName,
 		(group[0]) ? "/" : "", group);
-	appMakeDirectory(buf);
 	return buf;
+}
+
+
+FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
+{
+	guard(CreateExportArchive);
+
+	va_list	argptr;
+	va_start(argptr, fmt);
+	char fmtBuf[256];
+	int len = vsnprintf(ARRAY_ARG(fmtBuf), fmt, argptr);
+	va_end(argptr);
+	if (len < 0 || len >= sizeof(fmtBuf) - 1) return NULL;
+
+	char buffer[1024];
+	appSprintf(ARRAY_ARG(buffer), "%s/%s", GetExportPath(Obj), fmtBuf);
+
+	if (GDontOverwriteFiles)
+	{
+		// check file presence
+		FILE *f = fopen(buffer, "r");
+		if (f)
+		{
+			fclose(f);
+			return NULL;
+		}
+	}
+
+//	appPrintf("... writting %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, buffer);
+
+	appMakeDirectoryForFile(buffer);
+	FFileReader *Ar = new FFileReader(buffer, false, true);	// open file for writting, disable error when open is failed
+	if (!Ar->IsOpen())
+	{
+		appPrintf("Error opening file \"%s\" ...\n", buffer);
+		delete Ar;
+		return NULL;
+	}
+
+	Ar->ArVer = 128;			// less than UE3 version (required at least for VJointPos structure)
+
+	return Ar;
+
+	unguard;
 }

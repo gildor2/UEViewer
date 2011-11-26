@@ -30,8 +30,8 @@ MAIN = \
 	./obj/umodel-unix/ExportSound.o \
 	./obj/umodel-unix/ExportTga.o \
 	./obj/umodel-unix/ExportThirdParty.o \
+	./obj/umodel-unix/MeshCommon.o \
 	./obj/umodel-unix/SkeletalMesh.o \
-	./obj/umodel-unix/StaticMesh.o \
 	./obj/umodel-unix/UnCore.o \
 	./obj/umodel-unix/UnHavok.o \
 	./obj/umodel-unix/UnMesh.o \
@@ -54,6 +54,7 @@ MAIN = \
 	./obj/umodel-unix/VertMeshInstance.o \
 	./obj/umodel-unix/Core.o \
 	./obj/umodel-unix/CoreGL.o \
+	./obj/umodel-unix/CoreWin32.o \
 	./obj/umodel-unix/GLBind.o \
 	./obj/umodel-unix/GlWindow.o \
 	./obj/umodel-unix/Math3D.o \
@@ -446,12 +447,11 @@ DEPENDS_19 = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Unreal/MeshCommon.h \
-	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h
 
-./obj/umodel-unix/StaticMesh.o : Unreal/StaticMesh.cpp $(DEPENDS_19)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/StaticMesh.o Unreal/StaticMesh.cpp
+./obj/umodel-unix/MeshCommon.o : Unreal/MeshCommon.cpp $(DEPENDS_19)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/MeshCommon.o Unreal/MeshCommon.cpp
 
 DEPENDS_20 = \
 	Build.h \
@@ -482,6 +482,9 @@ DEPENDS_21 = \
 
 ./obj/umodel-unix/ExportMaterial.o : Exporters/ExportMaterial.cpp $(DEPENDS_21)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportMaterial.o Exporters/ExportMaterial.cpp
+
+./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_21)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
 
 DEPENDS_22 = \
 	Build.h \
@@ -619,25 +622,12 @@ DEPENDS_30 = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
 	Unreal/UnObject.h
 
-./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_30)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
-
-DEPENDS_31 = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
-	Unreal/UnObject.h
-
-./obj/umodel-unix/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_31)
+./obj/umodel-unix/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_30)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnUbisoft.o Unreal/UnUbisoft.cpp
 
-DEPENDS_32 = \
+DEPENDS_31 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -647,13 +637,13 @@ DEPENDS_32 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-./obj/umodel-unix/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_32)
+./obj/umodel-unix/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_31)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnObject.o Unreal/UnObject.cpp
 
-./obj/umodel-unix/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_32)
+./obj/umodel-unix/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_31)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnPackage.o Unreal/UnPackage.cpp
 
-DEPENDS_33 = \
+DEPENDS_32 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -668,44 +658,47 @@ DEPENDS_33 = \
 	libs/include/zlib/zconf.h \
 	libs/include/zlib/zlib.h
 
-./obj/umodel-unix/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_33)
+./obj/umodel-unix/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_32)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/UnCore.o Unreal/UnCore.cpp
 
-DEPENDS_34 = \
+DEPENDS_33 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h
 
-./obj/umodel-unix/Core.o : Core/Core.cpp $(DEPENDS_34)
+./obj/umodel-unix/Core.o : Core/Core.cpp $(DEPENDS_33)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Core.o Core/Core.cpp
 
-./obj/umodel-unix/Math3D.o : Core/Math3D.cpp $(DEPENDS_34)
+./obj/umodel-unix/CoreWin32.o : Core/CoreWin32.cpp $(DEPENDS_33)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/CoreWin32.o Core/CoreWin32.cpp
+
+./obj/umodel-unix/Math3D.o : Core/Math3D.cpp $(DEPENDS_33)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Math3D.o Core/Math3D.cpp
 
-DEPENDS_35 = \
+DEPENDS_34 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
 	Core/TextContainer.h
 
-./obj/umodel-unix/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_35)
+./obj/umodel-unix/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_34)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/TextContainer.o Core/TextContainer.cpp
 
-DEPENDS_36 = \
+DEPENDS_35 = \
 	libs/PowerVR/PVRTDecompress.h \
 	libs/PowerVR/PVRTGlobal.h \
 	libs/PowerVR/PVRTTexture.h
 
-./obj/umodel-unix/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_36)
+./obj/umodel-unix/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_35)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/PVRTDecompress.o ./libs/PowerVR/PVRTDecompress.cpp
 
-DEPENDS_37 = \
+DEPENDS_36 = \
 	libs/ddslib.h
 
-./obj/umodel-unix/ddslib.o : ./libs/ddslib.c $(DEPENDS_37)
+./obj/umodel-unix/ddslib.o : ./libs/ddslib.c $(DEPENDS_36)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ddslib.o ./libs/ddslib.c
 
-DEPENDS_38 = \
+DEPENDS_37 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
@@ -717,10 +710,10 @@ DEPENDS_38 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_38)
+./obj/umodel-unix/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_37)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
-DEPENDS_39 = \
+DEPENDS_38 = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/lzo/lzo_conf.h \
@@ -729,39 +722,39 @@ DEPENDS_39 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-./obj/umodel-unix/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_39)
+./obj/umodel-unix/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_38)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzo_init.o ./libs/lzo/lzo_init.c
 
-DEPENDS_40 = \
+DEPENDS_39 = \
 	libs/mspack/system.h
 
-./obj/umodel-unix/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_40)
+./obj/umodel-unix/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_39)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/lzxd.o ./libs/mspack/lzxd.c
 
-DEPENDS_41 = \
+DEPENDS_40 = \
 	libs/nvtt/nvcore/Debug.h \
 	libs/nvtt/nvcore/Memory.h
 
-./obj/umodel-unix/Memory.o : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS_41)
+./obj/umodel-unix/Memory.o : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS_40)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/Memory.o ./libs/nvtt/nvcore/Memory.cpp
 
-DEPENDS_42 = \
+DEPENDS_41 = \
 	libs/nvtt/nvimage/BlockDXT.h \
 	libs/nvtt/nvimage/ColorBlock.h
 
-./obj/umodel-unix/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_42)
+./obj/umodel-unix/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_41)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
-DEPENDS_43 = \
+DEPENDS_42 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_43)
+./obj/umodel-unix/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_42)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_44 = \
+DEPENDS_43 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -770,10 +763,10 @@ DEPENDS_44 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_44)
+./obj/umodel-unix/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_43)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_45 = \
+DEPENDS_44 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -781,26 +774,26 @@ DEPENDS_45 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_45)
+./obj/umodel-unix/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_44)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_46 = \
+DEPENDS_45 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-./obj/umodel-unix/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_46)
+./obj/umodel-unix/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_45)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_47 = \
+DEPENDS_46 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-./obj/umodel-unix/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_47)
+./obj/umodel-unix/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_46)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/adler32.o ./libs/zlib/adler32.c
 
-./obj/umodel-unix/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_47)
+./obj/umodel-unix/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_46)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

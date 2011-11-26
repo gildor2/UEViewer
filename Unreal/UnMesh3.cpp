@@ -1,4 +1,7 @@
 #include "Core.h"
+
+#if UNREAL3
+
 #include "UnrealClasses.h"
 #include "UnMesh3.h"
 #include "UnMeshTypes.h"
@@ -13,9 +16,6 @@
 
 //#define DEBUG_SKELMESH		1
 //#define DEBUG_STATICMESH		1
-
-
-#if UNREAL3
 
 
 //?? move outside?
@@ -164,20 +164,31 @@ struct FIndexBuffer3
 // real name (from Android version): FRawStaticIndexBuffer
 struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - has ability to store int indices
 {
-	TArray<word>		Indices;
+	TArray<word>		Indices16;
+	TArray<unsigned>	Indices32;
+
+	FORCEINLINE bool Is32Bit() const
+	{
+		return (Indices32.Num() != 0);
+	}
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelIndexBuffer3 &I)
 	{
 		guard(FSkelIndexBuffer3<<);
 
+		byte ItemSize = 2;
 		if (Ar.ArVer >= 806)
 		{
 			int		f0;
-			byte	ItemSize;
 			Ar << f0 << ItemSize;
-			assert(ItemSize == 2);
 		}
-		Ar << RAW_ARRAY(I.Indices);		//!! should use TArray<int> if ItemSize != 2 -- this will require updating UE2 code (Face.iWedge) too!
+		if (ItemSize == 2)
+			Ar << RAW_ARRAY(I.Indices16);
+		else if (ItemSize == 4)
+			Ar << RAW_ARRAY(I.Indices32);
+		else
+			appError("Unknown ItemSize %d", ItemSize);
+
 		int unk;
 		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
 
@@ -1573,7 +1584,10 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		unguard;	// ProcessVerts
 
 		// indices
-		CopyArray(Lod->Indices.Indices16, SrcLod.IndexBuffer.Indices);	//!! 16-bit only
+		if (SrcLod.IndexBuffer.Is32Bit())
+			CopyArray(Lod->Indices.Indices32, SrcLod.IndexBuffer.Indices32);
+		else
+			CopyArray(Lod->Indices.Indices16, SrcLod.IndexBuffer.Indices16);
 
 		// sections
 		guard(ProcessSections);

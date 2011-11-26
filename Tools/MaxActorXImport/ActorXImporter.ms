@@ -10,6 +10,13 @@
 
  Revision History:
 
+	26.11.2011 v1.19
+	- implemented support for loading pskx files with more than 64k vertices
+	- added option to control behaviour of animation with rotation-only tracks: you can let AnimSet
+	  to decide which bones will use animated translation, you can force to use translation from the
+	  animation (old, pre-1.18 behaviour) or force to not use animated translation at all; the option
+	  is located in "Animation import" group
+
 	09.11.2011 v1.18
 	- implemented support for animation tracks without translation keys
 	- reading extended psa information from the .config file, removed psax ANIMFLAGS section support
@@ -99,7 +106,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 18
+global AX_IMPORTER_VERSION = 19
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -109,6 +116,7 @@ global g_seeThru
 global g_skelOnly
 global g_updateTime
 global g_playAnim
+global g_animTransMode			-- 1 = from AnimSet, 2 = force mesh translation, 3 = force AnimSet translation
 global g_fixLooping
 global g_lastDir1
 global g_lastDir2
@@ -137,6 +145,7 @@ fn DefaultSettings =
 	g_skelOnly   = false
 	g_updateTime = true
 	g_playAnim   = false
+	g_animTransMode = 1
 	g_fixLooping = false
 	g_lastDir1   = ""
 	g_lastDir2   = ""
@@ -232,6 +241,7 @@ fn SerializeSettings isLoading =
 	axDoSetting "TexRecurse"    "g_texRecurse"
 	axDoSetting "TexMissAction" "g_texMissAction"
 	axDoSetting "AutoPlayAnim"  "g_playAnim"
+	axDoSetting "AnimTransMode" "g_animTransMode"
 	axDoSetting "UpdateTime"    "g_updateTime"
 	axDoSetting "FixLoopAnim"   "g_fixLooping"
 	axDoSetting "SeeThru"       "g_seeThru"
@@ -444,6 +454,17 @@ fn ReadVVertex bstream =
 	v
 )
 
+fn ReadVVertex32 bstream =
+(
+	local v = VVertex ()
+	v.PointIndex = ReadLong  bstream #unsigned			-- short -> long, no "pad"
+	v.U          = ReadFloat bstream
+	v.V          = ReadFloat bstream
+	v.MatIndex   = ReadByte  bstream #unsigned
+	v.Reserved   = ReadByte  bstream #unsigned
+	v.Pad        = ReadShort bstream #unsigned
+	v
+)
 
 struct VTriangle
 (
@@ -465,6 +486,17 @@ fn ReadVTriangle bstream =
 	v
 )
 
+fn ReadVTriangle32 bstream =
+(
+	local v = VTriangle ()
+	v.Wedge0          = ReadLong  bstream #unsigned		-- short -> long
+	v.Wedge1          = ReadLong  bstream #unsigned		-- ...
+	v.Wedge2          = ReadLong  bstream #unsigned		-- ...
+	v.MatIndex        = ReadByte  bstream #unsigned
+	v.AuxMatIndex     = ReadByte  bstream #unsigned
+	v.SmoothingGroups = ReadLong  bstream #unsigned
+	v
+)
 
 struct VMaterial
 (
@@ -778,7 +810,14 @@ fn ImportPskFile filename skelOnly:false =
 				(
 					numWedges = hdr.DataCount
 					Wedges[numWedges] = VVertex ()		-- preallocate
-					for i = 1 to numWedges do Wedges[i] = ReadVVertex file
+					if numWedges <= 65536 then
+					(
+						for i = 1 to numWedges do Wedges[i] = ReadVVertex file
+					)
+					else
+					(
+						for i = 1 to numWedges do Wedges[i] = ReadVVertex32 file
+					)
 				)
 
 			-- Faces --
@@ -787,6 +826,14 @@ fn ImportPskFile filename skelOnly:false =
 					numTris = hdr.DataCount
 					Tris[numTris] = VTriangle ()		-- preallocate
 					for i = 1 to numTris do Tris[i] = ReadVTriangle file
+				)
+
+			-- Faces32 --
+			"FACE3200":
+				(
+					numTris = hdr.DataCount
+					Tris[numTris] = VTriangle ()		-- preallocate
+					for i = 1 to numTris do Tris[i] = ReadVTriangle32 file
 				)
 
 			-- Materials --
@@ -1178,6 +1225,8 @@ fn FindPsaBoneIndex Bones Name =
 	return -1
 )
 
+-- UseTranslation[] is array of flags signalling that particular bone should use translation
+-- from the animation; when value is set to false, mesh translation will be used
 fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
 (
 	local cfgFile = openFile filename
@@ -1311,6 +1360,17 @@ fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
 		)
 	)
 	close cfgFile
+
+	case g_animTransMode of
+	(
+--	1: - use from AnimSet, do nothing here
+	2:	(
+			for i = 2 to Bones.count do UseTranslation[i] = false
+		)
+	3:	(
+			for i = 2 to Bones.count do UseTranslation[i] = true	-- old behaviour - everything will be taken from the animation
+		)
+	)
 
 	UseTranslation[1] = true		-- root bone is always translated
 )
@@ -1595,7 +1655,7 @@ fn axLoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.18"
+	label     Lbl1 "Version 1.19"
 	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -1615,6 +1675,7 @@ rollout axImportRollout "ActorX Importer"
 		checkbox ChkAnimTime   "Update animation length" checked:g_updateTime
 		checkbox ChkFixLooping "Fix loop animation" checked:g_fixLooping tooltip:"Append 1st keyframe to animation\ntrack for smooth loop"
 		checkbox ChkPlayAnim   "Play animation" checked:g_playAnim
+		dropdownlist LstTransMode "Translation mode" items:#("Use from AnimSet", "Force mesh translation", "Force AnimSet translation") selection:g_animTransMode
 		button   BtnImportTrk  "Load track" across:2
 		button   BtnImportAll  "Load all" tooltip:"Load all animations as a single track"
 	)
@@ -1657,6 +1718,7 @@ rollout axImportRollout "ActorX Importer"
 	on ChkAnimTime   changed state do g_updateTime = state
 	on ChkFixLooping changed state do g_fixLooping = state
 	on ChkPlayAnim   changed state do g_playAnim   = state
+	on LstTransMode  selected mode do g_animTransMode = mode
 
 	on axImportRollout open do
 	(

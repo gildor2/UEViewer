@@ -3,16 +3,16 @@
 
 
 // registration
-typedef void (*ExporterFunc_t)(const UObject*, FArchive&);
+typedef void (*ExporterFunc_t)(const UObject*);
 
-void RegisterExporter(const char *ClassName, const char *FileExt, ExporterFunc_t Func);
+void RegisterExporter(const char *ClassName, ExporterFunc_t Func);
 
 // wrapper to avoid typecasts to ExporterFunc_t
 // T should be an UObject-derived class
 template<class T>
-FORCEINLINE void RegisterExporter(const char *ClassName, const char *FileExt, void (*Func)(const T*, FArchive&))
+FORCEINLINE void RegisterExporter(const char *ClassName, void (*Func)(const T*))
 {
-	RegisterExporter(ClassName, FileExt, (ExporterFunc_t)Func);
+	RegisterExporter(ClassName, (ExporterFunc_t)Func);
 }
 
 bool ExportObject(const UObject *Obj);
@@ -21,6 +21,11 @@ bool ExportObject(const UObject *Obj);
 void appSetBaseExportDirectory(const char *Dir);
 const char* GetExportPath(const UObject *Obj);
 
+// Create file for saving UObject.
+// File will be placed in directory selected by GetExportPath(), name is computed from fmt+varargs.
+// Function may return NULL.
+FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...);
+
 // configuration
 extern bool GExportScripts;
 extern bool GExportLods;
@@ -28,6 +33,7 @@ extern bool GExportPskx;
 extern bool GNoTgaCompress;
 extern bool GUncook;
 extern bool GUseGroups;
+extern bool GDontOverwriteFiles;
 
 // forwards
 class UObject;
@@ -44,25 +50,25 @@ class CAnimSet;
 class CStaticMesh;
 
 // ActorX
-void ExportPsk(const CSkeletalMesh *Mesh, FArchive &Ar);
-void ExportPsa(const CAnimSet *Anim, FArchive &Ar);
-void ExportStaticMesh(const CStaticMesh *Mesh, FArchive &Ar);
+void ExportPsk(const CSkeletalMesh *Mesh);
+void ExportPsa(const CAnimSet *Anim);
+void ExportStaticMesh(const CStaticMesh *Mesh);
 // MD5Mesh
-void ExportMd5Mesh(const CSkeletalMesh *Mesh, FArchive &Ar);
-void ExportMd5Anim(const CAnimSet *Anim, FArchive &Ar);
+void ExportMd5Mesh(const CSkeletalMesh *Mesh);
+void ExportMd5Anim(const CAnimSet *Anim);
 // 3D
-void Export3D (const UVertMesh *Mesh, FArchive &Ar);
+void Export3D (const UVertMesh *Mesh);
 // TGA
-void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar);
+void ExportTga(const UUnrealMaterial *Tex);
 // UUnrealMaterial
-void ExportMaterial(const UUnrealMaterial *Mat, FArchive &Ar);
+void ExportMaterial(const UUnrealMaterial *Mat);
 // sound
-void ExportSound(const USound *Snd, FArchive &Ar);
-void ExportSoundNodeWave(const USoundNodeWave *Snd, FArchive &Ar);
+void ExportSound(const USound *Snd);
+void ExportSoundNodeWave(const USoundNodeWave *Snd);
 // third party
-void ExportGfx(const USwfMovie *Swf, FArchive &Ar);
-void ExportFaceFXAnimSet(const UFaceFXAnimSet *Fx, FArchive &Ar);
-void ExportFaceFXAsset(const UFaceFXAsset *Fx, FArchive &Ar);
+void ExportGfx(const USwfMovie *Swf);
+void ExportFaceFXAnimSet(const UFaceFXAnimSet *Fx);
+void ExportFaceFXAsset(const UFaceFXAsset *Fx);
 
 // service functions
 //?? place implementation to cpp?

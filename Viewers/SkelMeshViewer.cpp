@@ -528,8 +528,10 @@ void CSkelMeshViewer::ProcessKey(int key)
 				const CAnimSet *Anim = NULL;
 				if (Obj->IsA("MeshAnimation"))			// UE1,UE2
 					Anim = static_cast<const UMeshAnimation*>(Obj)->ConvertedAnim;
+#if UNREAL3
 				else if (Obj->IsA("AnimSet"))			// UE3
 					Anim = static_cast<const UAnimSet*>(Obj)->ConvertedAnim;
+#endif
 				else
 					continue;
 

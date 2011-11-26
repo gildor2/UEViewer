@@ -6,7 +6,7 @@
 
 #include "SkeletalMesh.h"
 
-#include "Exporters.h"						// for GetExportPath()
+#include "Exporters.h"
 
 
 // MD5 uses right-hand coordinates, but unreal uses left-hand.
@@ -79,7 +79,7 @@ struct VertInfluences
 	TArray<VertInfluence> Inf;
 };
 
-void ExportMd5Mesh(const CSkeletalMesh *Mesh, FArchive &Ar)
+void ExportMd5Mesh(const CSkeletalMesh *Mesh)
 {
 	guard(ExportMd5Mesh);
 
@@ -91,9 +91,13 @@ void ExportMd5Mesh(const CSkeletalMesh *Mesh, FArchive &Ar)
 		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);
 		return;
 	}
+
+	FArchive *Ar = CreateExportArchive(OriginalMesh, "%s.md5mesh", OriginalMesh->Name);
+	if (!Ar) return;
+
 	const CSkelMeshLod &Lod = Mesh->Lods[0];
 
-	Ar.Printf(
+	Ar->Printf(
 		"MD5Version 10\n"
 		"commandline \"Created with UE Viewer\"\n"
 		"\n"
@@ -109,7 +113,7 @@ void ExportMd5Mesh(const CSkeletalMesh *Mesh, FArchive &Ar)
 	BuildSkeleton(BoneCoords, Mesh->RefSkeleton);
 
 	// write joints
-	Ar.Printf("joints {\n");
+	Ar->Printf("joints {\n");
 	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
 	{
 		const CSkelMeshBone &B = Mesh->RefSkeleton[i];
@@ -121,7 +125,7 @@ void ExportMd5Mesh(const CSkeletalMesh *Mesh, FArchive &Ar)
 		BO.FromAxis(BC.axis);
 		if (BO.w < 0) BO.Negate();				// W-component of quaternion will be removed ...
 
-		Ar.Printf(
+		Ar->Printf(
 			"\t\"%s\"\t%d ( %f %f %f ) ( %.10f %.10f %.10f )\n",
 			*B.Name, (i == 0) ? -1 : B.ParentIndex,
 			VECTOR_ARG(BP),
@@ -153,7 +157,7 @@ if (i == 32 || i == 34)
 }
 #endif
 	}
-	Ar.Printf("}\n\n");
+	Ar->Printf("}\n\n");
 
 	// collect weights information
 	TArray<VertInfluences> Weights;				// Point -> Influences
@@ -215,7 +219,7 @@ if (i == 32 || i == 34)
 		const UUnrealMaterial *Tex = Sec.Material;
 		if (Tex)
 		{
-			Ar.Printf(
+			Ar->Printf(
 				"mesh {\n"
 				"\tshader \"%s\"\n\n",
 				Tex->Name
@@ -224,36 +228,36 @@ if (i == 32 || i == 34)
 		}
 		else
 		{
-			Ar.Printf(
+			Ar->Printf(
 				"mesh {\n"
 				"\tshader \"material_%d\"\n\n",
 				m
 			);
 		}
 		// verts
-		Ar.Printf("\tnumverts %d\n", MeshVerts.Num());
+		Ar->Printf("\tnumverts %d\n", MeshVerts.Num());
 		for (i = 0; i < MeshVerts.Num(); i++)
 		{
 			int iPoint = MeshVerts[i];
 			const CSkelMeshVertex &V = Lod.Verts[iPoint];
-			Ar.Printf("\tvert %d ( %f %f ) %d %d\n",
+			Ar->Printf("\tvert %d ( %f %f ) %d %d\n",
 				i, V.UV[0].U, V.UV[0].V, MeshWeights[iPoint], Weights[iPoint].Inf.Num());
 		}
 		// triangles
-		Ar.Printf("\n\tnumtris %d\n", Sec.NumFaces);
+		Ar->Printf("\n\tnumtris %d\n", Sec.NumFaces);
 		for (i = 0; i < Sec.NumFaces; i++)
 		{
-			Ar.Printf("\ttri %d", i);
+			Ar->Printf("\ttri %d", i);
 #if MIRROR_MESH
 			for (int j = 2; j >= 0; j--)
 #else
 			for (int j = 0; j < 3; j++)
 #endif
-				Ar.Printf(" %d", BackWedge[Index(Lod.Indices, Sec.FirstIndex + i * 3 + j)]);
-			Ar.Printf("\n");
+				Ar->Printf(" %d", BackWedge[Index(Lod.Indices, Sec.FirstIndex + i * 3 + j)]);
+			Ar->Printf("\n");
 		}
 		// weights
-		Ar.Printf("\n\tnumweights %d\n", WeightIndex);
+		Ar->Printf("\n\tnumweights %d\n", WeightIndex);
 		int saveWeightIndex = WeightIndex;
 		WeightIndex = 0;
 		for (i = 0; i < Lod.NumVerts; i++)
@@ -268,7 +272,7 @@ if (i == 32 || i == 34)
 				v[1] *= -1;						// y
 #endif
 				BoneCoords[I.Bone].TransformPoint(v, v);
-				Ar.Printf(
+				Ar->Printf(
 					"\tweight %d %d %f ( %f %f %f )\n",
 					WeightIndex, I.Bone, I.Weight, VECTOR_ARG(v)
 				);
@@ -278,35 +282,31 @@ if (i == 32 || i == 34)
 		assert(saveWeightIndex == WeightIndex);
 
 		// mesh footer
-		Ar.Printf("}\n");
+		Ar->Printf("}\n");
 	}
+
+	delete Ar;
 
 	unguard;
 }
 
 
-void ExportMd5Anim(const CAnimSet *Anim, FArchive &Ar)
+void ExportMd5Anim(const CAnimSet *Anim)
 {
 	guard(ExportMd5Anim);
 
 	int numBones = Anim->TrackBoneNames.Num();
 	UObject *OriginalAnim = Anim->OriginalAnim;
 
-	char basename[512];
-	appSprintf(ARRAY_ARG(basename), "%s/%s", GetExportPath(OriginalAnim), OriginalAnim->Name);
-	appMakeDirectory(basename);
-
 	for (int AnimIndex = 0; AnimIndex < Anim->Sequences.Num(); AnimIndex++)
 	{
 		int i;
 		const CAnimSequence &S = Anim->Sequences[AnimIndex];
 
-		char FileName[512];
-		appSprintf(ARRAY_ARG(FileName), "%s/%s.md5anim", basename, *S.Name);
+		FArchive *Ar = CreateExportArchive(OriginalAnim, "%s/%s.md5anim", OriginalAnim->Name, *S.Name);
+		if (!Ar) continue;
 
-		FFileReader Ar(FileName, false);
-
-		Ar.Printf(
+		Ar->Printf(
 			"MD5Version 10\n"
 			"commandline \"Created with UE Viewer\"\n"
 			"\n"
@@ -322,19 +322,19 @@ void ExportMd5Anim(const CAnimSet *Anim, FArchive &Ar)
 		);
 
 		// skeleton
-		Ar.Printf("hierarchy {\n");
+		Ar->Printf("hierarchy {\n");
 		for (i = 0; i < numBones; i++)
 		{
-			Ar.Printf("\t\"%s\" %d %d %d\n", *Anim->TrackBoneNames[i], (i == 0) ? -1 : 0, 63, i * 6);
+			Ar->Printf("\t\"%s\" %d %d %d\n", *Anim->TrackBoneNames[i], (i == 0) ? -1 : 0, 63, i * 6);
 				// ParentIndex is unknown for UAnimSet, so always write "0"
 				// here: 6 is number of components per frame, 63 = (1<<6)-1 -- flags "all components are used"
 		}
 
 		// bounds
-		Ar.Printf("}\n\nbounds {\n");
+		Ar->Printf("}\n\nbounds {\n");
 		for (i = 0; i < S.NumFrames; i++)
-			Ar.Printf("\t( -100 -100 -100 ) ( 100 100 100 )\n");	//!! dummy
-		Ar.Printf("}\n\n");
+			Ar->Printf("\t( -100 -100 -100 ) ( 100 100 100 )\n");	//!! dummy
+		Ar->Printf("}\n\n");
 
 		// baseframe and frames
 		for (int Frame = -1; Frame < S.NumFrames; Frame++)
@@ -342,11 +342,11 @@ void ExportMd5Anim(const CAnimSet *Anim, FArchive &Ar)
 			int t = Frame;
 			if (Frame == -1)
 			{
-				Ar.Printf("baseframe {\n");
+				Ar->Printf("baseframe {\n");
 				t = 0;
 			}
 			else
-				Ar.Printf("frame %d {\n", Frame);
+				Ar->Printf("frame %d {\n", Frame);
 
 			for (int b = 0; b < numBones; b++)
 			{
@@ -361,12 +361,14 @@ void ExportMd5Anim(const CAnimSet *Anim, FArchive &Ar)
 #endif
 				if (BO.w < 0) BO.Negate();		// W-component of quaternion will be removed ...
 				if (Frame < 0)
-					Ar.Printf("\t( %f %f %f ) ( %.10f %.10f %.10f )\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
+					Ar->Printf("\t( %f %f %f ) ( %.10f %.10f %.10f )\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
 				else
-					Ar.Printf("\t%f %f %f %.10f %.10f %.10f\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
+					Ar->Printf("\t%f %f %f %.10f %.10f %.10f\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
 			}
-			Ar.Printf("}\n\n");
+			Ar->Printf("}\n\n");
 		}
+
+		delete Ar;
 	}
 
 	unguard;

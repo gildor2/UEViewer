@@ -60,6 +60,15 @@ void appPrintProfiler();
 #endif
 
 /*-----------------------------------------------------------------------------
+	Game compatibility
+-----------------------------------------------------------------------------*/
+
+// BIOSHOCK requires UNREAL3
+#if !UNREAL3
+#undef BIOSHOCK
+#endif
+
+/*-----------------------------------------------------------------------------
 	Game directory support
 -----------------------------------------------------------------------------*/
 
@@ -171,7 +180,6 @@ public:
 	FArchive class
 -----------------------------------------------------------------------------*/
 
-
 enum EGame
 {
 	GAME_UNKNOWN   = 0,			// should be 0
@@ -221,6 +229,7 @@ enum EGame
 		GAME_AVA,
 		GAME_Frontlines,
 		GAME_Batman,
+		GAME_Batman2,
 		GAME_Borderlands,
 		GAME_AA3,
 		GAME_DarkVoid,
@@ -420,12 +429,15 @@ public:
 		ArPos     = 0;
 	}
 
-	FFileReader(const char *Filename, bool loading = true)
+	FFileReader(const char *Filename, bool loading = true, bool noOpenError = false)
 	:	f(fopen(Filename, loading ? "rb" : "wb"))
 	{
 		guard(FFileReader::FFileReader);
 		if (!f)
+		{
+			if (noOpenError) return;
 			appError("Unable to open file %s", Filename);
+		}
 		IsLoading = loading;
 		ArPos     = 0;
 		const char *s = strrchr(Filename, '/');
@@ -438,6 +450,11 @@ public:
 	virtual ~FFileReader()
 	{
 		if (f) fclose(f);
+	}
+
+	bool IsOpen() const
+	{
+		return (f != NULL);
 	}
 
 	void Setup(FILE *InFile, bool Loading)
@@ -1507,7 +1524,10 @@ struct FIntBulkData : public FByteBulkData
 	}
 };
 
-// UE3 compression flags
+#endif // UNREAL3
+
+
+// UE3 compression flags; may be used for other engines, so keep it outside of #if UNREAL3 block
 #define COMPRESS_ZLIB		1
 #define COMPRESS_LZO		2
 #define COMPRESS_LZX		4
@@ -1517,9 +1537,6 @@ struct FIntBulkData : public FByteBulkData
 #endif
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
-
-
-#endif // UNREAL3
 
 
 /*-----------------------------------------------------------------------------

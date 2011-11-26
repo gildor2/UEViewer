@@ -7,19 +7,11 @@
 	Local StaticMesh class, encapsulated all UE versions
 -----------------------------------------------------------------------------*/
 
-struct CStaticMeshSection
+struct CStaticMeshSection : public CMeshSection
 {
-	UUnrealMaterial			*Material;
-	int						FirstIndex;
-	int						NumFaces;
-
+	// everything is from the CMeshSection
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMeshSection)
-	BEGIN_PROP_TABLE
-		PROP_OBJ(Material)
-		PROP_INT(FirstIndex)
-		PROP_INT(NumFaces)
-	END_PROP_TABLE
 #endif // DECLARE_VIEWER_PROPS
 };
 
@@ -46,7 +38,12 @@ struct CStaticMeshLod
 		if (Verts) appFree(Verts);
 	}
 
-	void BuildTangents();
+	void BuildTangents()
+	{
+		if (HasTangents) return;
+		BuildTangentsCommon(Verts, sizeof(CStaticMeshVertex), Indices);
+		HasTangents = true;
+	}
 
 	void AllocateVerts(int Count)
 	{

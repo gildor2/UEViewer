@@ -4,10 +4,10 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
-#include "Exporters.h"						// for GetExportPath()
+#include "Exporters.h"
 
 
-void ExportMaterial(const UUnrealMaterial *Mat, FArchive &DummyAr)
+void ExportMaterial(const UUnrealMaterial *Mat)
 {
 	guard(ExportMaterial);
 
@@ -19,14 +19,13 @@ void ExportMaterial(const UUnrealMaterial *Mat, FArchive &DummyAr)
 	Mat->GetParams(Params);
 	if (Params.IsNull() || Params.Diffuse == Mat) return;	// empty/unknown material, or material itself is a texture
 
-	char filename[512];
-	appSprintf(ARRAY_ARG(filename), "%s/%s.mat", GetExportPath(Mat), Mat->Name);
-	FFileReader Ar(filename, false);
+	FArchive *Ar = CreateExportArchive(Mat, "%s.mat", Mat->Name);
+	if (!Ar) return;
 
 #define PROC(Arg)	\
 	if (Params.Arg) \
 	{				\
-		Ar.Printf(#Arg"=%s\n", Params.Arg->Name); \
+		Ar->Printf(#Arg"=%s\n", Params.Arg->Name); \
 		ExportObject(Params.Arg); \
 	}
 
@@ -38,6 +37,8 @@ void ExportMaterial(const UUnrealMaterial *Mat, FArchive &DummyAr)
 	PROC(Emissive);
 
 #endif // RENDERING
+
+	delete Ar;
 
 	unguardf(("%s'%s'", Mat->GetClassName(), Mat->Name));
 }

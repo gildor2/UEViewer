@@ -68,4 +68,24 @@ struct CMeshVertex
 };
 
 
+struct CMeshSection
+{
+	UUnrealMaterial			*Material;
+	int						FirstIndex;
+	int						NumFaces;
+
+#if DECLARE_VIEWER_PROPS
+	DECLARE_STRUCT(CMeshSection)
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Material)
+		PROP_INT(FirstIndex)
+		PROP_INT(NumFaces)
+	END_PROP_TABLE
+#endif // DECLARE_VIEWER_PROPS
+};
+
+
+void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, CIndexBuffer &Indices);
+
+
 #endif // __MESHCOMMON_H__

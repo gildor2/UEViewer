@@ -24,6 +24,7 @@
 #define MASSEFF			1
 #define HUXLEY			1
 
+#define BATMAN			1
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1		//?? incomplete
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe

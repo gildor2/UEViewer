@@ -452,6 +452,13 @@ struct FObjectExport
 #	endif // WHEELMAN
 			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
 			if (Ar.ArVer >= 220) Ar << E.Archetype;
+#	if BATMAN
+			if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 89)
+			{
+				int unk18;
+				Ar << unk18;
+			}
+#	endif
 			Ar << E.ObjectFlags;
 			if (Ar.ArVer >= 195) Ar << E.ObjectFlags2;	// qword flags after version 195
 			Ar << E.SerialSize;
@@ -729,18 +736,21 @@ public:
 #endif // BIOSHOCK
 #if UC2
 		if (Engine() == GAME_UE2X && ArVer >= 145)
+		{
 			*this << N.Index;
+		}
 		else
 #endif // UC2
 #if LEAD
 		if (Game == GAME_SplinterCellConv && ArVer >= 64)
-			goto ubisoft_name;
+		{
+			*this << N.Index;
+		}
 		else
 #endif // LEAD
 #if UNREAL3
 		if (Engine() >= GAME_UE3)
 		{
-		ubisoft_name:
 			*this << N.Index;
 	#if R6VEGAS
 			if (Game == GAME_R6Vegas2)

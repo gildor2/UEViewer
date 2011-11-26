@@ -89,6 +89,8 @@ typedef __int64				int64;
 #	define stricmp			strcasecmp
 #	define strnicmp			strncasecmp
 #	define GCC_PACK			__attribute__((__packed__))
+#	undef VSTIDIO_INTEGRATION
+#	undef WIN32_USE_SEH
 typedef signed long long	int64;
 #else
 #	error "Unsupported compiler"
@@ -136,6 +138,8 @@ template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*
 
 void appOpenLogFile(const char *filename);
 void appPrintf(const char *fmt, ...);
+
+extern bool GIsSwError;
 
 void appError(const char *fmt, ...);
 void* appMalloc(int size, int alignment = 8);
@@ -284,6 +288,10 @@ extern char GErrorHistory[2048];
 #define THROW			throw 1
 
 #endif // DO_GUARD
+
+#if VSTUDIO_INTEGRATION
+extern bool GUseDebugger;
+#endif
 
 
 #if RENDERING

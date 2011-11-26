@@ -23,15 +23,16 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 	else if (!memcmp(Data, "RIFF", 4))
 		ext = "wav";
 
-	char filename[512];
-	appSprintf(ARRAY_ARG(filename), "%s/%s.%s", GetExportPath(Obj), Obj->Name, ext);
-	FFileReader Ar2(filename, false);
-
-	Ar2.Serialize(Data, DataSize);
+	FArchive *Ar = CreateExportArchive(Obj, "%s.%s", Obj->Name, ext);
+	if (Ar)
+	{
+		Ar->Serialize(Data, DataSize);
+		delete Ar;
+	}
 }
 
 
-void ExportSound(const USound *Snd, FArchive &Ar)
+void ExportSound(const USound *Snd)
 {
 	SaveSound(Snd, (void*)&Snd->RawData[0], Snd->RawData.Num(), "unk");
 }
@@ -39,7 +40,7 @@ void ExportSound(const USound *Snd, FArchive &Ar)
 
 #if UNREAL3
 
-void ExportSoundNodeWave(const USoundNodeWave *Snd, FArchive &Ar)
+void ExportSoundNodeWave(const USoundNodeWave *Snd)
 {
 	// select bulk containing data
 	const FByteBulkData *bulk = NULL;

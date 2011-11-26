@@ -3,6 +3,8 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
+#include "Exporters.h"
+
 #define TGA_SAVE_BOTTOMLEFT	1
 
 
@@ -180,16 +182,22 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 }
 
 
-void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar)
+void ExportTga(const UUnrealMaterial *Tex)
 {
 	guard(ExportTga);
+
+	FArchive *Ar = CreateExportArchive(Tex, "%s.tga", Tex->Name);
+	if (!Ar) return;
 
 	int width, height;
 	byte *pic = Tex->Decompress(width, height);
 	if (!pic)
 	{
 		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
-		return;		//?? should erase file ?
+		// produce 1x1-pixel tga
+		// should erase file?
+		width = height = 1;
+		pic = new byte[4];
 	}
 
 #if TGA_SAVE_BOTTOMLEFT
@@ -204,8 +212,10 @@ void ExportTga(const UUnrealMaterial *Tex, FArchive &Ar)
 	}
 #endif
 
-	WriteTGA(Ar, width, height, pic);
+	WriteTGA(*Ar, width, height, pic);
 	delete pic;
+
+	delete Ar;
 
 	unguard;
 }

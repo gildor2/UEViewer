@@ -1,26 +1,24 @@
 #include "Core.h"
 #include "UnCore.h"
-#include "UnObject.h"		// for typeinfo
-#include "StaticMesh.h"
+#include "UnObject.h"			// for typeinfo
+#include "MeshCommon.h"
 
 
-//!! code of this function is similar to BuildNormals() from SkelMeshInstance.cpp
-void CStaticMeshLod::BuildTangents()
+// WARNING: do not access Verts[i] directly, use OffsetPointer(Verts, idx * VertexSize) only!
+void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, CIndexBuffer &Indices)
 {
-	guard(CStaticMeshLod::BuildTangents);
-
-	if (HasTangents) return;
+	guard(BuildTangentsCommon);
 
 	int i, j;
 
 	CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
 	for (i = 0; i < Indices.Num() / 3; i++)
 	{
-		CStaticMeshVertex *V[3];
+		CMeshVertex *V[3];
 		for (j = 0; j < 3; j++)
 		{
 			int idx = Index(Indices, i * 3 + j);
-			V[j] = &Verts[idx];
+			V[j] = OffsetPointer(Verts, idx * VertexSize);
 		}
 
 		// compute tangent
@@ -55,7 +53,7 @@ void CStaticMeshLod::BuildTangents()
 		float binormalScale = 1.0f;
 		for (j = 0; j < 3; j++)
 		{
-			CStaticMeshVertex &DW = *V[j];
+			CMeshVertex &DW = *V[j];
 			const CVecT &norm = DW.Normal;
 			float pos = dot(norm, tang);
 			CVecT tang2;
@@ -80,8 +78,6 @@ void CStaticMeshLod::BuildTangents()
 			DW.Binormal = tang2;
 		}
 	}
-
-	HasTangents = true;
 
 	unguard;
 }

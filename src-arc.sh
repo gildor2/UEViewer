@@ -7,7 +7,7 @@
 shopt -s extglob
 
 arc_name=source-${PWD##*/}.rar
-skip_dirs=@(./data|./bak|./obj)
+skip_dirs=@(./data|./bak|./obj|./Screenshots)
 
 arccmd="rar a -r -n@ $arc_name"
 

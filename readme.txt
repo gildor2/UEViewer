@@ -125,6 +125,24 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+26.11.2011
+- implemented support for Batman: Arkham City packages
+
+25.11.2011
+- exporter improvements:
+  - no more crashes when umodel is unable to create output file due to invalid characters etc
+  - added option "-nooverwrite" to prevent existing files from being overwritten; this may
+    be useful to speedup export process when the same object could be exported from different
+    packages
+  - umodel will save mesh with .psk extension when "-pskx" option is specified but there is
+    no format extensions required, and it will save as .pskx when it is not possible to store
+    mesh as .psk, even when "-pskx" is not specified
+  - tga: no more zero-length tga files, at least 1x1 correct tga image will be created in a
+    case of error
+
+23.11.2011
+- implemented support for SkeletalMesh with more than 64k vertices
+
 21.11.2011
 - major rewritting of SkeletalMesh subsystem; implemented support for multiple UV sets,
   which can be switched in viewer by 'U' key and exported to psk when "-pskx" option is

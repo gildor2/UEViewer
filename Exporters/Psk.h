@@ -42,7 +42,7 @@ struct VChunkHeader
 
 struct VVertex
 {
-	int				PointIndex;				// short, padded to int
+	int				PointIndex;				// short, padded to int; used as int for large meshes
 	float			U, V;
 	byte			MatIndex;
 	byte			Reserved;
@@ -152,6 +152,23 @@ struct VMeshUV
 	friend FArchive& operator<<(FArchive &Ar, VMeshUV &V)
 	{
 		return Ar << V.U << V.V;
+	}
+};
+
+
+// the same as VTriangle16 but with 32-bit vertex indices
+struct VTriangle32
+{
+	int				WedgeIndex[3];			// Point to three vertices in the vertex list.
+	byte			MatIndex;				// Materials can be anything.
+	byte			AuxMatIndex;			// Second material (unused).
+	unsigned		SmoothingGroups;		// 32-bit flag for smoothing groups.
+
+	friend FArchive& operator<<(FArchive &Ar, VTriangle32 &T)
+	{
+		Ar << T.WedgeIndex[0] << T.WedgeIndex[1] << T.WedgeIndex[2];
+		Ar << T.MatIndex << T.AuxMatIndex << T.SmoothingGroups;
+		return Ar;
 	}
 };
 

@@ -6,12 +6,6 @@
 #include <sys/stat.h>				// for mkdir()
 #endif
 
-#if WIN32_USE_SEH
-#define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
-#include <windows.h>
-#include <float.h>					// for _clearfp()
-#endif // WIN32_USE_SEH
-
 
 static FILE *GLogFile = NULL;
 
@@ -41,7 +35,7 @@ void appPrintf(const char *fmt, ...)
 	Simple error/notofication functions
 -----------------------------------------------------------------------------*/
 
-static bool GIsSwError = false;			// software-gererated error
+bool GIsSwError = false;			// software-gererated error
 
 void appError(const char *fmt, ...)
 {
@@ -439,83 +433,3 @@ void appMakeDirectoryForFile(const char *filename)
 		appMakeDirectory(Name);
 	}
 }
-
-
-/*-----------------------------------------------------------------------------
-	Win32 exception handler (SEH)
------------------------------------------------------------------------------*/
-
-#if WIN32_USE_SEH && DO_GUARD
-
-long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
-{
-	if (GIsSwError) return EXCEPTION_EXECUTE_HANDLER;		// no interest to thread context when software-generated errors
-
-	static bool dumped = false;
-	if (dumped) return EXCEPTION_EXECUTE_HANDLER;			// error will be handled only once
-	// NOTE: side effect of line above: we will not able to catch GPF-like recursive errors
-
-	// WARNING: recursive error will not be found
-	// If we will disable line above, will be dumped context for each appUnwind() entry
-	dumped = true;
-
-	// if FPU exception occured, _clearfp() is required (otherwise, exception will be re-raised again)
-	_clearfp();
-
-
-	TRY {
-		const char *excName = "Exception";
-		switch (info->ExceptionRecord->ExceptionCode)
-		{
-		case EXCEPTION_ACCESS_VIOLATION:
-			excName = "Access violation";
-			break;
-		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-			excName = "Float zero divide";
-			break;
-		case EXCEPTION_FLT_DENORMAL_OPERAND:
-			excName = "Float denormal operand";
-			break;
-		case EXCEPTION_FLT_INVALID_OPERATION:
-		case EXCEPTION_FLT_INEXACT_RESULT:
-		case EXCEPTION_FLT_OVERFLOW:
-		case EXCEPTION_FLT_STACK_CHECK:
-		case EXCEPTION_FLT_UNDERFLOW:
-			excName = "FPU exception";
-			break;
-		case EXCEPTION_INT_DIVIDE_BY_ZERO:
-			excName = "Integer zero divide";
-			break;
-		case EXCEPTION_PRIV_INSTRUCTION:
-			excName = "Priveleged instruction";
-			break;
-		case EXCEPTION_ILLEGAL_INSTRUCTION:
-			excName = "Illegal opcode";
-			break;
-		case EXCEPTION_STACK_OVERFLOW:
-			excName = "Stack overflow";
-			break;
-		}
-
-		// log error
-		CONTEXT* ctx = info->ContextRecord;
-		appSprintf(ARRAY_ARG(GErrorHistory), "%s (%08X) at %08X\n",
-			excName, info->ExceptionRecord->ExceptionCode, ctx->Eip
-		);
-	} CATCH {
-		// do nothing
-	}
-
-	return EXCEPTION_EXECUTE_HANDLER;
-}
-
-__declspec(naked) unsigned win32ExceptFilter2()
-{
-	__asm {
-		push	[ebp-0x14]
-		call	win32ExceptFilter
-		retn			// return value from win32ExceptFilter()
-	}
-}
-
-#endif // WIN32_USE_SEH

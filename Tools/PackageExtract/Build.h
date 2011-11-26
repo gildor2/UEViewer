@@ -28,6 +28,7 @@
 #define HUXLEY			1
 #define AVA				1
 
+#define BATMAN			1
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1
 #define FURY			1

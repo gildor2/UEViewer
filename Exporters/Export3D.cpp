@@ -155,29 +155,36 @@ static void ExportAnims(const UVertMesh *Mesh, FArchive &Ar)
 }
 
 
-void Export3D(const UVertMesh *Mesh, FArchive &Ar)
+void Export3D(const UVertMesh *Mesh)
 {
 	guard(Export3D);
 
-	char basename[512];
-	appSprintf(ARRAY_ARG(basename), "%s/%s", GetExportPath(Mesh), Mesh->Name);
+	FArchive *Ar;
 
-	char filename[512];
 	// export script file
 	if (GExportScripts)
 	{
-		appSprintf(ARRAY_ARG(filename), "%s.uc", basename);
-		FFileReader Ar1(filename, false);
-		ExportScript(Mesh, Ar1);
+		Ar = CreateExportArchive(Mesh, "%s.uc", Mesh->Name);
+		if (Ar)
+		{
+			ExportScript(Mesh, *Ar);
+			delete Ar;
+		}
 	}
 	// export mesh data
-	appSprintf(ARRAY_ARG(filename), "%s_d.3d", basename);
-	FFileReader Ar2(filename, false);
-	ExportMesh(Mesh, Ar2);
+	Ar = CreateExportArchive(Mesh, "%s_d.3d", Mesh->Name);
+	if (Ar)
+	{
+		ExportMesh(Mesh, *Ar);
+		delete Ar;
+	}
 	// export animation frames
-	appSprintf(ARRAY_ARG(filename), "%s_a.3d", basename);
-	FFileReader Ar3(filename, false);
-	ExportAnims(Mesh, Ar3);
+	Ar = CreateExportArchive(Mesh, "%s_a.3d", Mesh->Name);
+	if (Ar)
+	{
+		ExportAnims(Mesh, *Ar);
+		delete Ar;
+	}
 
 	unguard;
 }

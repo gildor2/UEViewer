@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Usage:
+#	test.sh [--nobuild] [--game=...] <umodel options>
+# Options:
+# --nobuild			use as 1st option to prevent from umodel rebuilding
+# --<game>			choose predefined game path
+# -path=<path>		will disable default game substitution
+#?? add --exe=<executable>, do not build when overrided (usefult for testing with older exe from svn)
+
+
 # Enable extended pattern matching (for (a|b|c)); see bash manpage, "Pattern matching".
 shopt -s extglob
 
@@ -75,8 +84,14 @@ function mass()   { run1 "$MASS" $*; }
 function dcu()    { run1 "$DCU" $*;  }
 function alice()  { run1 "$ALICE" $*; }
 
-rm $exe
-./build.sh
+# rebuild umodel when not desired opposite
+#!! WARNING: order-dependent option
+if [ "$1" == "--nobuild" ]; then
+	shift
+else
+	rm $exe
+	./build.sh
+fi
 
 # Check directories
 #?? should check dirs when specific game has been requested (not all games everytime)

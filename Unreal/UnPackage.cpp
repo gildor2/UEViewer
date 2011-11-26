@@ -322,8 +322,21 @@ public:
 	}
 	virtual int GetFileSize() const
 	{
+		// this function is meaningful for the decompressor tool
 		guard(FUE3ArchiveReader::GetFileSize);
 		const FCompressedChunk &Chunk = CompressedChunks[CompressedChunks.Num() - 1];
+#if BIOSHOCK
+		if (Game == GAME_Bioshock && ArLicenseeVer >= 57)		//?? Bioshock 2; no version code found
+		{
+			// Bioshock 2 has added "UncompressedSize" for block, so we must read it
+			int OldPos = Reader->Tell();
+			int CompressedSize, UncompressedSize;
+			Reader->Seek(Chunk.CompressedOffset);
+			*Reader << CompressedSize << UncompressedSize;
+			Reader->Seek(OldPos);	// go back
+			return Chunk.UncompressedOffset + UncompressedSize;
+		}
+#endif // BIOSHOCK
 		return Chunk.UncompressedOffset + Chunk.UncompressedSize;
 		unguard;
 	}
@@ -457,7 +470,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		TArray<FCompressedChunk> Chunks;
 		*this << NumChunks;
 		Chunks.Empty(NumChunks);
-		int UncompOffset = Tell() - 4;
+		int UncompOffset = Tell() - 4;				//?? there should be a flag signalling presence of compression structures, because of "Tell()-4"
 		for (i = 0; i < NumChunks; i++)
 		{
 			int Offset;
@@ -482,10 +495,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		// replace Loader with special reader for compressed UE3 archives
 		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, Summary.CompressedChunks);
 	}
-#endif // UNREAL3
-#if NURIEN
+	#if NURIEN
 	if (NurienReader) NurienReader->Threshold = Summary.HeadersSize;
-#endif
+	#endif
+#endif // UNREAL3
 
 	// read name table
 	guard(ReadNameTable);
@@ -958,8 +971,10 @@ void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSi
 			const FObjectExport &Rec = GetExport(PackageIndex-1);
 			PackageIndex = Rec.PackageIndex;
 			PackageName  = Rec.ObjectName;
+#if UNREAL3
 			if (PackageIndex == 0 && (Rec.ExportFlags && EF_ForcedExport) && !IncludeCookedPackageName)
 				break;		// do not add cooked package name
+#endif
 		}
 		PackageNames[NestLevel++] = PackageName;
 	}

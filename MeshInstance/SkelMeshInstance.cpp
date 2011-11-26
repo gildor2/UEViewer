@@ -995,7 +995,7 @@ void CSkelMeshInstance::TransformMesh()
 
 #if !USE_SSE
 		// transform vertex
-		transform.UnTransformPoint(V.Pos, D.Pos);
+		transform.UnTransformPoint(V.Position, D.Position);
 		// transform normal
 		transform.axis.UnTransformVector(V.Normal, D.Normal);
 		// transform tangent

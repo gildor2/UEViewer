@@ -29,32 +29,13 @@ May be make dummy material class to exclude PolyFlags from meshes at all (keep t
 
 SKELETALMESH CONVERSION STAGES:
 
-Normals/tangents:
-* find shared vertices when doing CSkelMeshLod::BuildNormals()
-- make common code for BuildNormals/BuildTangents() - use CMeshVertex + Stride
-- verify BuildNormals/BuildTangents quality for UE3 meshes (compare original + generated vectors)
-- verify: some meshes had ugly normals before (usually female faces - GOW2, TRON)
-* Rune has a lot of faces with non-shared vertices
-
-* convert UE2 mesh to CSkeletalMesh
-  * insert ConvertMesh() into all places with 'return' in USkeletalMesh::Serialize()
-  * convert FStaticLodModel to CSkelMeshLod
-  * USkeletalMesh.LODModels may be empty for older mesh formats, so needs a code to construct CSkelMeshLod from a few arrays
-    * verify conversion of base mesh to CSkelMeshLod by disabling Lod->Lod conversion
 - verify USkeletalMesh in games:
-  * UT2004
   - Unreal1
-  * Bioshock
-  * Lineage2
-  * Rune
-  * Splinter Cell
 
-- support 32-bit index buffer in loader/viewer
-  - UE3 SkeletalMesh начиная с версии 806 поддерживает 32-bit index buffer, сейчас это не сделать из-за того,
-    что UE2 mesh использует 16-bit index buffer (см. "assert(ItemSize == 2)")
-    ! экспорт идёт в psk, там для треугольников есть chunk "FACE0000", он содержит VTriangle, который хранит
-      ссылки на вершины как "word WedgeIndex", т.е. psk для этого не приспособлен
 - support 32-bit indices in pskx (different section name for triangles?)
+  ! экспорт идёт в psk, там для треугольников есть chunk "FACE0000", он содержит VTriangle, который хранит
+    ссылки на вершины как "word WedgeIndex", т.е. psk для этого не приспособлен, + word VVertex.PointIndex + pad
+- support vertex colors (for StaticMesh too!)
 
 - dump properties of the SkeletalMesh:
   - require FVector/FRotator dump (or CVec3 ?)
@@ -69,7 +50,6 @@ Normals/tangents:
 ? split UnMesh.cpp to Common+UE2 or UE1+UE2 (check what's better)
   - or at least rename UnMesh.cpp to UnMesh2.cpp
 - cleanup TODOs
-* cleanup SkelMeshInstance from code for conversion UE2->old_CSkeletalMesh
 
 - place animation information somewhere at the bottom of the screen (needs DrawTextLeftBottom or use DrawTextPos() with use of GetWindowSize() ?)
 - remove RootBone.Orientation.W *= -1 for UE3, place this code for UE2 (find all places where bone orientation is accessed!)
@@ -80,22 +60,14 @@ Normals/tangents:
 
 #define NUM_INFLUENCES				4
 
-struct CSkelMeshSection
+struct CSkelMeshSection : public CMeshSection
 {
-	UUnrealMaterial			*Material;
-	int						FirstIndex;
-	int						NumFaces;
 #if HAS_POLY_FLAGS
 	unsigned				PolyFlags;				// PF_...
 #endif
 
 #if DECLARE_VIEWER_PROPS
-	DECLARE_STRUCT(CSkelMeshSection)
-	BEGIN_PROP_TABLE
-		PROP_OBJ(Material)
-		PROP_INT(FirstIndex)
-		PROP_INT(NumFaces)
-	END_PROP_TABLE
+	DECLARE_STRUCT2(CSkelMeshSection, CMeshSection)
 #endif // DECLARE_VIEWER_PROPS
 };
 
@@ -135,7 +107,13 @@ struct CSkelMeshLod
 	}
 
 	void BuildNormals();
-	void BuildTangents();
+
+	void BuildTangents()
+	{
+		if (HasTangents) return;
+		BuildTangentsCommon(Verts, sizeof(CSkelMeshVertex), Indices);
+		HasTangents = true;
+	}
 
 	void AllocateVerts(int Count)
 	{

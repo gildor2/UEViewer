@@ -30,13 +30,19 @@
 			return &type;						\
 		}
 
-//!! can easily derive one structure from another
 #define DECLARE_STRUCT(Class)					\
 		DECLARE_BASE(Class, CNullType)			\
 		const CTypeInfo *GetTypeinfo() const	\
 		{										\
 			return StaticGetTypeinfo();			\
-		}										\
+		}
+
+#define DECLARE_STRUCT2(Class,Base)				\
+		DECLARE_BASE(Class, Base)				\
+		const CTypeInfo *GetTypeinfo() const	\
+		{										\
+			return StaticGetTypeinfo();			\
+		}
 
 //?? can replace virtual GetClassName() with GetTypeinfo()->Name
 #define DECLARE_CLASS(Class,Base)				\

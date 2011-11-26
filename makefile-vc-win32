@@ -31,8 +31,8 @@ MAIN = \
 	./obj/umodel-win32/ExportSound.obj \
 	./obj/umodel-win32/ExportTga.obj \
 	./obj/umodel-win32/ExportThirdParty.obj \
+	./obj/umodel-win32/MeshCommon.obj \
 	./obj/umodel-win32/SkeletalMesh.obj \
-	./obj/umodel-win32/StaticMesh.obj \
 	./obj/umodel-win32/UnCore.obj \
 	./obj/umodel-win32/UnHavok.obj \
 	./obj/umodel-win32/UnMesh.obj \
@@ -55,6 +55,7 @@ MAIN = \
 	./obj/umodel-win32/VertMeshInstance.obj \
 	./obj/umodel-win32/Core.obj \
 	./obj/umodel-win32/CoreGL.obj \
+	./obj/umodel-win32/CoreWin32.obj \
 	./obj/umodel-win32/GLBind.obj \
 	./obj/umodel-win32/GlWindow.obj \
 	./obj/umodel-win32/Math3D.obj \
@@ -453,12 +454,11 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Unreal/MeshCommon.h \
-	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h
 
-./obj/umodel-win32/StaticMesh.obj : Unreal/StaticMesh.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/StaticMesh.obj" Unreal/StaticMesh.cpp
+./obj/umodel-win32/MeshCommon.obj : Unreal/MeshCommon.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/MeshCommon.obj" Unreal/MeshCommon.cpp
 
 DEPENDS = \
 	Build.h \
@@ -489,6 +489,9 @@ DEPENDS = \
 
 ./obj/umodel-win32/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportMaterial.obj" Exporters/ExportMaterial.cpp
+
+./obj/umodel-win32/ExportTga.obj : Exporters/ExportTga.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportTga.obj" Exporters/ExportTga.cpp
 
 DEPENDS = \
 	Build.h \
@@ -626,19 +629,6 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
-
-./obj/umodel-win32/ExportTga.obj : Exporters/ExportTga.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportTga.obj" Exporters/ExportTga.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Unreal/UnCore.h \
 	Unreal/UnObject.h
 
 ./obj/umodel-win32/UnUbisoft.obj : Unreal/UnUbisoft.cpp $(DEPENDS)
@@ -685,6 +675,9 @@ DEPENDS = \
 
 ./obj/umodel-win32/Core.obj : Core/Core.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Core.obj" Core/Core.cpp
+
+./obj/umodel-win32/CoreWin32.obj : Core/CoreWin32.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/CoreWin32.obj" Core/CoreWin32.cpp
 
 ./obj/umodel-win32/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Math3D.obj" Core/Math3D.cpp

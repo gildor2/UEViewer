@@ -78,10 +78,10 @@ BEGIN_CLASS_TABLE
 END_CLASS_TABLE
 }
 
-#if UNREAL3
 
 static void RegisterUnrealClasses3()
 {
+#if UNREAL3
 BEGIN_CLASS_TABLE
 //	REGISTER_MATERIAL_CLASSES_U3 -- registered for Bioshock in RegisterCommonUnrealClasses()
 	REGISTER_MESH_CLASSES_U3
@@ -95,9 +95,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_MATERIAL_CLASSES_DCUO
 #endif
 END_CLASS_TABLE
+#endif // UNREAL3
 }
 
-#endif // UNREAL3
 
 
 static void RegisterUnrealSoundClasses()
@@ -153,65 +153,75 @@ static int ObjIndex = 0;
 -----------------------------------------------------------------------------*/
 
 // wrappers
-static void ExportPsk2(const USkeletalMesh *Mesh, FArchive &Ar)
+static void ExportPsk2(const USkeletalMesh *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportPsk(Mesh->ConvertedMesh, Ar);
+	ExportPsk(Mesh->ConvertedMesh);
 }
 
-static void ExportPsk3(const USkeletalMesh3 *Mesh, FArchive &Ar)
+#if UNREAL3
+static void ExportPsk3(const USkeletalMesh3 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportPsk(Mesh->ConvertedMesh, Ar);
+	ExportPsk(Mesh->ConvertedMesh);
 }
+#endif
 
-static void ExportMd5Mesh2(const USkeletalMesh *Mesh, FArchive &Ar)
+static void ExportMd5Mesh2(const USkeletalMesh *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportMd5Mesh(Mesh->ConvertedMesh, Ar);
+	ExportMd5Mesh(Mesh->ConvertedMesh);
 }
 
-static void ExportMd5Mesh3(const USkeletalMesh3 *Mesh, FArchive &Ar)
+#if UNREAL3
+static void ExportMd5Mesh3(const USkeletalMesh3 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportMd5Mesh(Mesh->ConvertedMesh, Ar);
+	ExportMd5Mesh(Mesh->ConvertedMesh);
 }
+#endif
 
-static void ExportStaticMesh2(const UStaticMesh *Mesh, FArchive &Ar)
+static void ExportStaticMesh2(const UStaticMesh *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportStaticMesh(Mesh->ConvertedMesh, Ar);
+	ExportStaticMesh(Mesh->ConvertedMesh);
 }
 
-static void ExportStaticMesh3(const UStaticMesh3 *Mesh, FArchive &Ar)
+#if UNREAL3
+static void ExportStaticMesh3(const UStaticMesh3 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportStaticMesh(Mesh->ConvertedMesh, Ar);
+	ExportStaticMesh(Mesh->ConvertedMesh);
 }
+#endif
 
-static void ExportMeshAnimation(const UMeshAnimation *Anim, FArchive &Ar)
+static void ExportMeshAnimation(const UMeshAnimation *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	ExportPsa(Anim->ConvertedAnim, Ar);
+	ExportPsa(Anim->ConvertedAnim);
 }
 
-static void ExportAnimSet(const UAnimSet *Anim, FArchive &Ar)
+#if UNREAL3
+static void ExportAnimSet(const UAnimSet *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	ExportPsa(Anim->ConvertedAnim, Ar);
+	ExportPsa(Anim->ConvertedAnim);
+}
+#endif
+
+static void ExportMd5Anim2(const UMeshAnimation *Anim)
+{
+	assert(Anim->ConvertedAnim);
+	ExportMd5Anim(Anim->ConvertedAnim);
 }
 
-static void ExportMd5Anim2(const UMeshAnimation *Anim, FArchive &Ar)
+#if UNREAL3
+static void ExportMd5Anim3(const UAnimSet *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	ExportMd5Anim(Anim->ConvertedAnim, Ar);
+	ExportMd5Anim(Anim->ConvertedAnim);
 }
-
-static void ExportMd5Anim3(const UAnimSet *Anim, FArchive &Ar)
-{
-	assert(Anim->ConvertedAnim);
-	ExportMd5Anim(Anim->ConvertedAnim, Ar);
-}
+#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -556,6 +566,9 @@ static void Usage()
 			"    -dump           dump object information to console\n"
 			"    -check          check some assumptions, no other actions performed\n"
 			"    -pkginfo        load package and display its information\n"
+#if VSTUDIO_INTEGRATION
+			"    -debug          invoke system crash handler on errors\n"
+#endif
 			"\n"
 			"Options:\n"
 			"    -path=PATH      path to game installation directory; if not specified,\n"
@@ -591,6 +604,7 @@ static void Usage()
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -lods           export all available mesh LOD levels\n"
 			"    -notgacomp      disable TGA compression\n"
+			"    -nooverwrite    prevent existing files from being overwritten (for performance)\n"
 			"\n"
 			"Supported resources for export:\n"
 			"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
@@ -685,6 +699,9 @@ int main(int argc, char **argv)
 				OPT_VALUE("taglist", mainCmd, CMD_TagList)
 				OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
 				OPT_VALUE("list",    mainCmd, CMD_List)
+#if VSTUDIO_INTEGRATION
+				OPT_BOOL ("debug",   GUseDebugger)
+#endif
 #if RENDERING
 				OPT_BOOL ("meshes",    showMeshes)
 				OPT_BOOL ("materials", showMaterials)
@@ -702,8 +719,9 @@ int main(int argc, char **argv)
 				OPT_BOOL ("noanim",  noAnim)
 				OPT_BOOL ("notex",   noTex)
 				OPT_BOOL ("sounds",  regSounds)
-				OPT_BOOL ("notgacomp", GNoTgaCompress)
 				OPT_BOOL ("3rdparty", reg3rdparty)
+				OPT_BOOL ("notgacomp", GNoTgaCompress)
+				OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
 				// platform
 				OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
 				OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
@@ -814,35 +832,35 @@ int main(int argc, char **argv)
 	// register exporters
 	if (!md5)
 	{
-		RegisterExporter("SkeletalMesh",  NULL,  ExportPsk2);
-		RegisterExporter("MeshAnimation", "psa", ExportMeshAnimation);
+		RegisterExporter("SkeletalMesh",  ExportPsk2);
+		RegisterExporter("MeshAnimation", ExportMeshAnimation);
 #if UNREAL3
-		RegisterExporter("SkeletalMesh3", NULL,  ExportPsk3);
-		RegisterExporter("AnimSet",       "psa", ExportAnimSet);
+		RegisterExporter("SkeletalMesh3", ExportPsk3);
+		RegisterExporter("AnimSet",       ExportAnimSet);
 #endif
 	}
 	else
 	{
-		RegisterExporter("SkeletalMesh",  "md5mesh", ExportMd5Mesh2);
-		RegisterExporter("MeshAnimation", NULL,      ExportMd5Anim2);	// separate file for each animation track
+		RegisterExporter("SkeletalMesh",  ExportMd5Mesh2);
+		RegisterExporter("MeshAnimation", ExportMd5Anim2);
 #if UNREAL3
-		RegisterExporter("SkeletalMesh3", "md5mesh", ExportMd5Mesh3);
-		RegisterExporter("AnimSet",       NULL,      ExportMd5Anim3);	// ...
+		RegisterExporter("SkeletalMesh3", ExportMd5Mesh3);
+		RegisterExporter("AnimSet",       ExportMd5Anim3);
 #endif
 	}
-	RegisterExporter("VertMesh",      NULL,   Export3D  );				// will generate 2 files
-	RegisterExporter("StaticMesh",    "pskx", ExportStaticMesh2);
-	RegisterExporter("Texture",       "tga",  ExportTga );
-	RegisterExporter("Sound",         NULL,   ExportSound);
+	RegisterExporter("VertMesh",      Export3D  );
+	RegisterExporter("StaticMesh",    ExportStaticMesh2);
+	RegisterExporter("Texture",       ExportTga );
+	RegisterExporter("Sound",         ExportSound);
 #if UNREAL3
-	RegisterExporter("StaticMesh3",   "pskx", ExportStaticMesh3);
-	RegisterExporter("Texture2D",     "tga",  ExportTga );
-	RegisterExporter("SoundNodeWave", NULL,   ExportSoundNodeWave);
-	RegisterExporter("SwfMovie",      "gfx",  ExportGfx );
-	RegisterExporter("FaceFXAnimSet", "fxa",  ExportFaceFXAnimSet);
-	RegisterExporter("FaceFXAsset",   "fxa",  ExportFaceFXAsset  );
+	RegisterExporter("StaticMesh3",   ExportStaticMesh3);
+	RegisterExporter("Texture2D",     ExportTga );
+	RegisterExporter("SoundNodeWave", ExportSoundNodeWave);
+	RegisterExporter("SwfMovie",      ExportGfx );
+	RegisterExporter("FaceFXAnimSet", ExportFaceFXAnimSet);
+	RegisterExporter("FaceFXAsset",   ExportFaceFXAsset  );
 #endif // UNREAL3
-	RegisterExporter("UnrealMaterial", NULL,  ExportMaterial);			// register this after Texture/Texture2D exporters
+	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters
 
 	// prepare classes
 	// note: we are registering classes after loading package: in this case we can know engine version (1/2/3)

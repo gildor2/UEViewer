@@ -10,38 +10,35 @@
 #endif
 
 // includes for package decompression
-#if UNREAL3
-#	include "lzo/lzo1x.h"
-#	include "zlib/zlib.h"
+#include "lzo/lzo1x.h"
+#include "zlib/zlib.h"
 
-#	if XBOX360
+#if XBOX360
 
-#		if !USE_XDK
+#	if !USE_XDK
 
-			extern "C"
-			{
-#			include "mspack/mspack.h"
-#			include "mspack/lzx.h"
-			}
+		extern "C"
+		{
+#		include "mspack/mspack.h"
+#		include "mspack/lzx.h"
+		}
 
-#		else // USE_XDK
+#	else // USE_XDK
 
-#			if _WIN32
-#			pragma comment(lib, "xdecompress.lib")
-			extern "C"
-			{
-				int  __stdcall XMemCreateDecompressionContext(int CodecType, const void* pCodecParams, unsigned Flags, void** pContext);
-				void __stdcall XMemDestroyDecompressionContext(void* Context);
-				int  __stdcall XMemDecompress(void* Context, void* pDestination, size_t* pDestSize, const void* pSource, size_t SrcSize);
-			}
-#			else  // _WIN32
-#				error XDK build is not supported on this platform
-#			endif // _WIN32
-#		endif // USE_XDK
+#		if _WIN32
+#		pragma comment(lib, "xdecompress.lib")
+		extern "C"
+		{
+			int  __stdcall XMemCreateDecompressionContext(int CodecType, const void* pCodecParams, unsigned Flags, void** pContext);
+			void __stdcall XMemDestroyDecompressionContext(void* Context);
+			int  __stdcall XMemDecompress(void* Context, void* pDestination, size_t* pDestSize, const void* pSource, size_t SrcSize);
+		}
+#		else  // _WIN32
+#			error XDK build is not supported on this platform
+#		endif // _WIN32
+#	endif // USE_XDK
 
-#	endif // XBOX360
-
-#endif // UNREAL3
+#endif // XBOX360
 
 
 //#define DEBUG_BULK			1
@@ -1173,6 +1170,9 @@ void FArchive::DetectGame()
 #if BULLETSTORM
 	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
 #endif
+#if BATMAN
+	if (ArVer == 805 && ArLicenseeVer == 101)	SET(GAME_Batman2);
+#endif
 
 	// UE3 games with the various versions of files
 #if TUROK
@@ -1282,8 +1282,6 @@ public:
 static CDummyArchive DummyArchive;
 FArchive *GDummySave = &DummyArchive;
 
-
-#if UNREAL3
 
 /*-----------------------------------------------------------------------------
 	Reading UE3 compressed chunks
@@ -1484,6 +1482,8 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	unguardf(("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, Flags));
 }
 
+
+#if UNREAL3
 
 // code is similar to FUE3ArchiveReader::PrepareBuffer()
 void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int CompressionFlags)
