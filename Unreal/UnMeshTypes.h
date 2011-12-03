@@ -189,6 +189,31 @@ struct FVectorIntervalFixed32
 SIMPLE_TYPE(FVectorIntervalFixed32, unsigned)
 
 
+// Similar to FVectorIntervalFixed32 used in animation, but has different X/Y/Z bit count.
+// Used for GPU skin with compressed position. It looks like original UE3 has permitted use
+// of this data type for XBox360 and PS3 builds only.
+struct FVectorIntervalFixed32GPU
+{
+	int				X:11, Y:11, Z:10;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = (X / 1023.0f) * Ranges.X + Mins.X;
+		r.Y = (Y / 1023.0f) * Ranges.Y + Mins.Y;
+		r.Z = (Z / 511.0f)  * Ranges.Z + Mins.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed32GPU &V)
+	{
+		return Ar << GET_DWORD(V);
+	}
+};
+
+SIMPLE_TYPE(FVectorIntervalFixed32GPU, unsigned)
+
+
 struct FQuatFloat32NoW
 {
 	unsigned		data;

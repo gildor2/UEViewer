@@ -40,6 +40,14 @@ struct CIndexBuffer
 		return Is32Bit() ? GetIndex32 : GetIndex16;
 	}
 
+	void Initialize(const TArray<word> *Idx16, const TArray<unsigned> *Idx32 = NULL)
+	{
+		if (Idx32 && Idx32->Num())
+			CopyArray(Indices32, *Idx32);
+		else
+			CopyArray(Indices16, *Idx16);
+	}
+
 private:
 	static int GetIndex16(const CIndexBuffer &Buf, int Index)
 	{

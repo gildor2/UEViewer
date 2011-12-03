@@ -588,28 +588,6 @@ struct FGPUVert3Float : FGPUVert3Common
 	}
 };
 
-//?? move to UnMeshTypes.h ?
-//?? checked with Enslaved (XBox360) and MOH2010 (PC)
-//?? similar to FVectorIntervalFixed32 used in animation, but has different X/Y/Z bit count
-struct FVectorIntervalFixed32GPU
-{
-	int X:11, Y:11, Z:10;
-
-	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
-	{
-		FVector r;
-		r.X = (X / 1023.0f) * Ranges.X + Mins.X;
-		r.Y = (Y / 1023.0f) * Ranges.Y + Mins.Y;
-		r.Z = (Z / 511.0f)  * Ranges.Z + Mins.Z;
-		return r;
-	}
-
-	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed32GPU &V)
-	{
-		return Ar << GET_DWORD(V);
-	}
-};
-
 struct FGPUVert3PackedHalf : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
@@ -705,7 +683,7 @@ struct FGPUSkin3
 			Ar << UseNewFormat;
 			if (UseNewFormat)
 			{
-				appError("ArmyOfTwo: new vertex format!");	//!!!
+				appError("ArmyOfTwo: new vertex format!");
 				return Ar;
 			}
 		}
@@ -745,10 +723,10 @@ struct FGPUSkin3
 	#if MOH2010
 		if (Ar.Game == GAME_MOH2010) AllowPackedPosition = true;
 	#endif
-		//?? UE3 PC version ignored bUsePackedPosition - forced !bUsePackedPosition in FGPUSkin3 serializer.
-		//?? Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position
-		//?? working bUsePackedPosition was found in all XBox360 games and in MOH2010 (PC) only
-		//?? + TRON Evolution (PS3)
+		// UE3 PC version ignored bUsePackedPosition - forced !bUsePackedPosition in FGPUSkin3 serializer.
+		// Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position.
+		// Working bUsePackedPosition version was found in all XBox360 games. For PC there is only one game -
+		// MOH2010, which uses bUsePackedPosition. PS3 also has bUsePackedPosition support (at least TRON)
 #if DEBUG_SKELMESH
 		appPrintf("... data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
 			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
@@ -829,7 +807,7 @@ struct FMesh3Unk3A
 struct FSkeletalMeshVertexInfluences
 {
 	TArray<FMesh3Unk1>	f0;
-	TArray<FMesh3Unk3>	fC;				//?? Map
+	TArray<FMesh3Unk3>	fC;				// Map or Set
 	TArray<FMesh3Unk3A>	fCA;
 	TArray<FSkelMeshSection3> Sections;
 	TArray<FSkinChunk3>	Chunks;
@@ -946,7 +924,7 @@ struct FStaticLODModel3
 			FSkelMeshSection3 &S = Lod.Sections[i1];
 			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d Unk=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles, S.unk1);
 		}
-		appPrintf("Indices: %d\n", Lod.IndexBuffer.Indices.Num());
+		appPrintf("Indices: %d (16) / %d (32)\n", Lod.IndexBuffer.Indices16.Num(), Lod.IndexBuffer.Indices32.Num());
 #endif // DEBUG_SKELMESH
 
 		if (Ar.ArVer < 215)
@@ -1142,6 +1120,11 @@ struct FStaticLODModel3
 		}
 		if (Ar.ArVer >= 534)		// post-UT3 code
 			Ar << Lod.fC4;
+		if (Ar.ArVer >= 841)		// unknown extra index buffer
+		{
+			FSkelIndexBuffer3 unk;
+			Ar << unk;
+		}
 //		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num()); -- mostly equals (failed in CH_TwinSouls_Cine.upk)
 //		assert(Lod.BulkData.ElementCount == Lod.NumVertices); -- mostly equals (failed on some GoW packages)
 		return Ar;
@@ -1308,7 +1291,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		Ar << unk;
 	}
 #if BATMAN
-	if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 0x0F)
+	if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 15)
 	{
 		float ConservativeBounds;
 		TArray<FBoneBounds> PerBoneBounds;
@@ -1584,10 +1567,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		unguard;	// ProcessVerts
 
 		// indices
-		if (SrcLod.IndexBuffer.Is32Bit())
-			CopyArray(Lod->Indices.Indices32, SrcLod.IndexBuffer.Indices32);
-		else
-			CopyArray(Lod->Indices.Indices16, SrcLod.IndexBuffer.Indices16);
+		Lod->Indices.Initialize(&SrcLod.IndexBuffer.Indices16, &SrcLod.IndexBuffer.Indices32);
 
 		// sections
 		guard(ProcessSections);
@@ -2003,7 +1983,7 @@ void UAnimSet::ConvertAnims()
 						case ACF_Float96NoW:
 							{
 								FVector v;
-								if (ComponentMask & 7)		//?? verify this in UDK
+								if (ComponentMask & 7)
 								{
 									v.Set(0, 0, 0);
 									if (ComponentMask & 1) Reader << v.X;
@@ -2012,6 +1992,7 @@ void UAnimSet::ConvertAnims()
 								}
 								else
 								{
+									// ACF_Float96NoW has a special case for ((ComponentMask & 7) == 0)
 									Reader << v;
 								}
 								A->KeyPos.AddItem(CVT(v));
@@ -2085,17 +2066,7 @@ void UAnimSet::ConvertAnims()
 						case ACF_Float96NoW:
 							{
 								FQuatFloat96NoW q;
-								if (ComponentMask & 7)		//?? verify this in UDK
-								{
-									q.X = q.Y = q.Z = 0;
-									if (ComponentMask & 1) Reader << q.X;
-									if (ComponentMask & 2) Reader << q.Y;
-									if (ComponentMask & 4) Reader << q.Z;
-								}
-								else
-								{
-									Reader << q;
-								}
+								Reader << q;
 								FQuat q2 = q;				// convert
 								A->KeyQuat.AddItem(CVT(q2));
 							}
@@ -2467,7 +2438,7 @@ struct FStaticMeshSection3
 		if (Ar.Game == GAME_Huxley && Ar.ArVer >= 485)
 			return Ar << S.Index;				//?? other name?
 #endif // HUXLEY
-		if (Ar.ArVer >= 492) Ar << S.Index;		//?? real version is unknown! This field is missing in GOW1_PC (490), but present in UT3 (512)
+		if (Ar.ArVer >= 492) Ar << S.Index;		// real version is unknown! This field is missing in GOW1_PC (490), but present in UT3 (512)
 #if ALPHA_PR
 		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 13)
 		{
@@ -2837,8 +2808,8 @@ struct FStaticMeshLODModel
 	FIndexBuffer3		Indices;
 	FIndexBuffer3		Indices2;		// wireframe
 	int					f80;
-	TArray<FEdge3>		Edges;			//??
-	TArray<byte>		fEC;			//?? flags for faces? removed simultaneously with Edges
+	TArray<FEdge3>		Edges;
+	TArray<byte>		fEC;			// flags for faces? removed simultaneously with Edges
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshLODModel &Lod)
 	{
@@ -3527,7 +3498,7 @@ done:
 		}
 
 		// indices
-		CopyArray(Lod->Indices.Indices16, SrcLod.Indices.Indices);	//!! 16-bit only; place to CStaticMesh cpp
+		Lod->Indices.Initialize(&SrcLod.Indices.Indices);			// 16-bit only
 
 		unguardf(("lod=%d", lod));
 	}

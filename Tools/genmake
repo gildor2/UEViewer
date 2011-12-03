@@ -368,9 +368,10 @@ sub getline {
 			if ($cmd eq "include") {
 				# limit nested includes (and stop infinite recursion)
 				Error ("too much nested includes") if $#includes > 16;
+				local $file = ExpandVars($args);
 				push @includes, *IN;
 				local *IN2;							# NOTE: "local", not "my"
-				open (IN2, $args) || Error ("cannot open include file \"$args\"");
+				open (IN2, $file) || Error ("cannot open include file \"$file\"");
 				*IN = *IN2;
 			} elsif ($cmd eq "undef") {
 				delete $vars{$args};

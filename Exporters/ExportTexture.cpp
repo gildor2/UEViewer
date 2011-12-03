@@ -1,9 +1,16 @@
+#include <nvcore/StdStream.h>
+#include <nvimage/Image.h>
+#include <nvimage/DirectDrawSurface.h>
+#undef __FUNC__						// conflicted with our guard macros
+
+
 #include "Core.h"
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnMaterial.h"
 
 #include "Exporters.h"
+
 
 #define TGA_SAVE_BOTTOMLEFT	1
 
@@ -34,6 +41,7 @@ struct GCC_PACK tgaHdr_t
 
 
 bool GNoTgaCompress = false;
+bool GExportDDS = false;
 
 //?? place this function outside (cannot place to Core - using FArchive)
 
@@ -182,15 +190,59 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 }
 
 
-void ExportTga(const UUnrealMaterial *Tex)
+static void WriteDDS(const CTextureData &TexData, const char *Filename)
 {
-	guard(ExportTga);
+	guard(WriteDDS);
 
-	FArchive *Ar = CreateExportArchive(Tex, "%s.tga", Tex->Name);
-	if (!Ar) return;
+	unsigned fourCC = TexData.GetFourCC();
 
+	// code from CTextureData::Decompress()
+	if (!fourCC)
+		appError("unknown texture format %d \n", TexData.Format);	// should not happen - IsDXT() should not pass execution here
+
+	nv::DDSHeader header;
+	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
+	header.setWidth(TexData.USize);
+	header.setHeight(TexData.VSize);
+//	header.setNormalFlag(TexData.Format == TPF_DXT5N || TexData.Format == TPF_3DC); -- required for decompression only
+
+	appMakeDirectoryForFile(Filename);
+	nv::StdOutputStream stream(Filename);	// using nv stream for header serialization only
+	stream << header;
+
+	stream.serialize((void*)TexData.CompressedData, TexData.DataSize);
+
+	unguard;
+}
+
+
+void ExportTexture(const UUnrealMaterial *Tex)
+{
+	guard(ExportTexture);
+
+	if (GDontOverwriteFiles)
+	{
+		if (CheckExportFilePresence(Tex, "%s.tga", Tex->Name)) return;
+		if (CheckExportFilePresence(Tex, "%s.dds", Tex->Name)) return;
+	}
+
+	byte *pic = NULL;
 	int width, height;
-	byte *pic = Tex->Decompress(width, height);
+
+	CTextureData TexData;
+	if (Tex->GetTextureData(TexData))
+	{
+		if (GExportDDS && TexData.IsDXT())
+		{
+			WriteDDS(TexData, GetExportFileName(Tex, "%s.dds", Tex->Name));
+			return;
+		}
+
+		width = TexData.USize;
+		height = TexData.VSize;
+		pic = Tex->Decompress(TexData);
+	}
+
 	if (!pic)
 	{
 		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
@@ -212,10 +264,16 @@ void ExportTga(const UUnrealMaterial *Tex)
 	}
 #endif
 
+	FArchive *Ar = CreateExportArchive(Tex, "%s.tga", Tex->Name);
+	if (!Ar)
+	{
+		delete pic;
+		return;
+	}
 	WriteTGA(*Ar, width, height, pic);
-	delete pic;
-
 	delete Ar;
+
+	delete pic;
 
 	unguard;
 }

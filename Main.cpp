@@ -603,6 +603,7 @@ static void Usage()
 			"    -pskx           use pskx format for skeletal mesh\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -lods           export all available mesh LOD levels\n"
+			"    -dds            export textures in DDS format whenever possible\n"
 			"    -notgacomp      disable TGA compression\n"
 			"    -nooverwrite    prevent existing files from being overwritten (for performance)\n"
 			"\n"
@@ -611,7 +612,7 @@ static void Usage()
 			"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
 			"    VertMesh        exported as Unreal 3d file\n"
 			"    StaticMesh      exported as psk file with no skeleton (pskx)\n"
-			"    Texture         exported in tga format\n"
+			"    Texture         exported in tga or dds format\n"
 			"    Sounds          file extension depends on object contents\n"
 			"    ScaleForm       gfx\n"
 			"    FaceFX          fxa\n"
@@ -720,6 +721,7 @@ int main(int argc, char **argv)
 				OPT_BOOL ("notex",   noTex)
 				OPT_BOOL ("sounds",  regSounds)
 				OPT_BOOL ("3rdparty", reg3rdparty)
+				OPT_BOOL ("dds",     GExportDDS)
 				OPT_BOOL ("notgacomp", GNoTgaCompress)
 				OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
 				// platform
@@ -832,10 +834,10 @@ int main(int argc, char **argv)
 	// register exporters
 	if (!md5)
 	{
-		RegisterExporter("SkeletalMesh",  ExportPsk2);
+		RegisterExporter("SkeletalMesh",  ExportPsk2   );
 		RegisterExporter("MeshAnimation", ExportMeshAnimation);
 #if UNREAL3
-		RegisterExporter("SkeletalMesh3", ExportPsk3);
+		RegisterExporter("SkeletalMesh3", ExportPsk3   );
 		RegisterExporter("AnimSet",       ExportAnimSet);
 #endif
 	}
@@ -848,15 +850,15 @@ int main(int argc, char **argv)
 		RegisterExporter("AnimSet",       ExportMd5Anim3);
 #endif
 	}
-	RegisterExporter("VertMesh",      Export3D  );
+	RegisterExporter("VertMesh",      Export3D         );
 	RegisterExporter("StaticMesh",    ExportStaticMesh2);
-	RegisterExporter("Texture",       ExportTga );
-	RegisterExporter("Sound",         ExportSound);
+	RegisterExporter("Texture",       ExportTexture    );
+	RegisterExporter("Sound",         ExportSound      );
 #if UNREAL3
-	RegisterExporter("StaticMesh3",   ExportStaticMesh3);
-	RegisterExporter("Texture2D",     ExportTga );
+	RegisterExporter("StaticMesh3",   ExportStaticMesh3  );
+	RegisterExporter("Texture2D",     ExportTexture      );
 	RegisterExporter("SoundNodeWave", ExportSoundNodeWave);
-	RegisterExporter("SwfMovie",      ExportGfx );
+	RegisterExporter("SwfMovie",      ExportGfx          );
 	RegisterExporter("FaceFXAnimSet", ExportFaceFXAnimSet);
 	RegisterExporter("FaceFXAsset",   ExportFaceFXAsset  );
 #endif // UNREAL3

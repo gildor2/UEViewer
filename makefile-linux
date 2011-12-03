@@ -28,7 +28,7 @@ MAIN = \
 	./obj/umodel-unix/ExportMd5.o \
 	./obj/umodel-unix/ExportPsk.o \
 	./obj/umodel-unix/ExportSound.o \
-	./obj/umodel-unix/ExportTga.o \
+	./obj/umodel-unix/ExportTexture.o \
 	./obj/umodel-unix/ExportThirdParty.o \
 	./obj/umodel-unix/MeshCommon.o \
 	./obj/umodel-unix/SkeletalMesh.o \
@@ -483,8 +483,8 @@ DEPENDS_21 = \
 ./obj/umodel-unix/ExportMaterial.o : Exporters/ExportMaterial.cpp $(DEPENDS_21)
 	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportMaterial.o Exporters/ExportMaterial.cpp
 
-./obj/umodel-unix/ExportTga.o : Exporters/ExportTga.cpp $(DEPENDS_21)
-	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTga.o Exporters/ExportTga.cpp
+./obj/umodel-unix/ExportTexture.o : Exporters/ExportTexture.cpp $(DEPENDS_21)
+	$(CPP) $(OPT_MAIN) -o ./obj/umodel-unix/ExportTexture.o Exporters/ExportTexture.cpp
 
 DEPENDS_22 = \
 	Build.h \

@@ -5,9 +5,8 @@
 - HP3:
   - Dimentor: uses paletted Texture with Masked=true, has pink borders when alpha changed
 
-- sometimes after relatively long time of application inactivity, program becomes inresponsible to
-  keyboard and mouse (should press Ctrl+Shift? but why even ESC does not works?)
-  ?? sticky Ctrl key ? Once I was pressed <B> and received Ctrl+B bone list ...
+SDL bug: after Alt+Tab <Alt> key becomes sticky and program will not respond to keyboard; Ctrl key
+  may become sticky too
 
 * MercFemaleB: bugs with alpha-texture on head (hear)
   - translocator: same

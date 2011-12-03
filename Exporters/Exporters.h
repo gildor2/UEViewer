@@ -21,6 +21,9 @@ bool ExportObject(const UObject *Obj);
 void appSetBaseExportDirectory(const char *Dir);
 const char* GetExportPath(const UObject *Obj);
 
+const char* GetExportFileName(const UObject *Obj, const char *fmt, ...);
+bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...);
+
 // Create file for saving UObject.
 // File will be placed in directory selected by GetExportPath(), name is computed from fmt+varargs.
 // Function may return NULL.
@@ -31,6 +34,7 @@ extern bool GExportScripts;
 extern bool GExportLods;
 extern bool GExportPskx;
 extern bool GNoTgaCompress;
+extern bool GExportDDS;
 extern bool GUncook;
 extern bool GUseGroups;
 extern bool GDontOverwriteFiles;
@@ -59,7 +63,7 @@ void ExportMd5Anim(const CAnimSet *Anim);
 // 3D
 void Export3D (const UVertMesh *Mesh);
 // TGA
-void ExportTga(const UUnrealMaterial *Tex);
+void ExportTexture(const UUnrealMaterial *Tex);
 // UUnrealMaterial
 void ExportMaterial(const UUnrealMaterial *Mat);
 // sound

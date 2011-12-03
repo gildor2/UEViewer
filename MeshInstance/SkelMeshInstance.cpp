@@ -56,7 +56,6 @@ struct CSkinVert
 };
 
 
-#define ANIM_UNASSIGNED			-2
 #define MAX_MESHBONES			2048
 #define MAX_MESHMATERIALS		256
 
@@ -118,8 +117,8 @@ void CSkelMeshInstance::ClearSkelAnims()
 	// init 1st animation channel with default pose
 	for (int i = 0; i < MAX_SKELANIMCHANNELS; i++)
 	{
-		Channels[i].AnimIndex1     = ANIM_UNASSIGNED;
-		Channels[i].AnimIndex2     = ANIM_UNASSIGNED;
+		Channels[i].Anim1          = NULL;
+		Channels[i].Anim2          = NULL;
 		Channels[i].SecondaryBlend = 0;
 		Channels[i].BlendAlpha     = 1;
 		Channels[i].RootBone       = 0;
@@ -377,14 +376,17 @@ int CSkelMeshInstance::FindBone(const char *BoneName) const
 }
 
 
-int CSkelMeshInstance::FindAnim(const char *AnimName) const
+const CAnimSequence *CSkelMeshInstance::FindAnim(const char *AnimName) const
 {
 	if (!Animation || !AnimName)
-		return INDEX_NONE;
+		return NULL;
 	for (int i = 0; i < Animation->Sequences.Num(); i++)
-		if (!strcmp(Animation->Sequences[i].Name, AnimName))
-			return i;
-	return INDEX_NONE;
+	{
+		const CAnimSequence &Seq = Animation->Sequences[i];
+		if (!stricmp(Seq.Name, AnimName))
+			return &Seq;
+	}
+	return NULL;
 }
 
 
@@ -417,18 +419,17 @@ void CSkelMeshInstance::UpdateSkeleton()
 #endif
 	for (Stage = 0, Chn = Channels; Stage <= MaxAnimChannel; Stage++, Chn++)
 	{
-		if (Stage > 0 && (Chn->AnimIndex1 == ANIM_UNASSIGNED || Chn->BlendAlpha <= 0))
+		if (Stage > 0 && (Chn->Anim1 == NULL || Chn->BlendAlpha <= 0))
 			continue;
 
-		const CAnimSequence *AnimSeq1 = NULL;
+		const CAnimSequence *AnimSeq1 = Chn->Anim1;
 		const CAnimSequence *AnimSeq2 = NULL;
 		float Time2;
-		if (Chn->AnimIndex1 >= 0)		// not INDEX_NONE or ANIM_UNASSIGNED
+		if (AnimSeq1)
 		{
-			AnimSeq1 = &Animation->Sequences[Chn->AnimIndex1];
-			if (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
+			if (Chn->Anim2 && Chn->SecondaryBlend)
 			{
-				AnimSeq2 = &Animation->Sequences[Chn->AnimIndex2];
+				AnimSeq2 = Chn->Anim2;
 				// compute time for secondary channel; always in sync with primary channel
 				Time2 = Chn->Time / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
 			}
@@ -619,7 +620,7 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 	CAnimChan *Chn;
 	for (Stage = 0, Chn = Channels; Stage <= MaxAnimChannel; Stage++, Chn++)
 	{
-		if (Stage > 0 && Chn->AnimIndex1 == ANIM_UNASSIGNED)
+		if (Stage > 0 && Chn->Anim1 == NULL)
 			continue;
 		// update tweening
 		if (Chn->TweenTime)
@@ -635,13 +636,12 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 			assert(Chn->Time == 0);
 		}
 		// note: TweenTime may be changed now, check again
-		if (!Chn->TweenTime && Chn->AnimIndex1 >= 0)
+		if (!Chn->TweenTime && Chn->Anim1)
 		{
 			// update animation time
-			const CAnimSequence *Seq1 = &Animation->Sequences[Chn->AnimIndex1];
-			const CAnimSequence *Seq2 = (Chn->AnimIndex2 >= 0 && Chn->SecondaryBlend)
-				? &Animation->Sequences[Chn->AnimIndex2]
-				: NULL;
+			const CAnimSequence *Seq1 = Chn->Anim1;
+			const CAnimSequence *Seq2 = Chn->Anim2;
+			if (!Chn->SecondaryBlend) Seq2 = NULL;
 
 			float Rate1 = Chn->Rate * Seq1->Rate;
 			if (Seq2)
@@ -696,12 +696,12 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 	if (Channel > MaxAnimChannel)
 		MaxAnimChannel = Channel;
 
-	int NewAnimIndex = FindAnim(AnimName);
-	if (NewAnimIndex == INDEX_NONE)
+	const CAnimSequence *NewAnim = FindAnim(AnimName);
+	if (!NewAnim)
 	{
 		// show default pose
-		Chn.AnimIndex1     = INDEX_NONE;
-		Chn.AnimIndex2     = INDEX_NONE;
+		Chn.Anim1          = NULL;
+		Chn.Anim2          = NULL;
 		Chn.Time           = 0;
 		Chn.Rate           = 0;
 		Chn.Looped         = false;
@@ -713,14 +713,14 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 	Chn.Rate   = Rate;
 	Chn.Looped = Looped;
 
-	if (NewAnimIndex == Chn.AnimIndex1 && Looped)
+	if (NewAnim == Chn.Anim1 && Looped)
 	{
 		// animation not changed, just set some flags (above)
 		return;
 	}
 
-	Chn.AnimIndex1     = NewAnimIndex;
-	Chn.AnimIndex2     = INDEX_NONE;
+	Chn.Anim1          = NewAnim;
+	Chn.Anim2          = NULL;
 	Chn.Time           = 0;
 	Chn.SecondaryBlend = 0;
 	Chn.TweenTime      = TweenTime;
@@ -747,36 +747,12 @@ void CSkelMeshInstance::SetBlendParams(int Channel, float BlendAlpha, const char
 }
 
 
-void CSkelMeshInstance::SetBlendAlpha(int Channel, float BlendAlpha)
-{
-	guard(CSkelMeshInstance::SetBlendAlpha);
-	GetStage(Channel).BlendAlpha = BlendAlpha;
-	unguard;
-}
-
-
 void CSkelMeshInstance::SetSecondaryAnim(int Channel, const char *AnimName)
 {
 	guard(CSkelMeshInstance::SetSecondaryAnim);
 	CAnimChan &Chn = GetStage(Channel);
-	Chn.AnimIndex2     = FindAnim(AnimName);
+	Chn.Anim2          = FindAnim(AnimName);
 	Chn.SecondaryBlend = 0;
-	unguard;
-}
-
-
-void CSkelMeshInstance::SetSecondaryBlend(int Channel, float BlendAlpha)
-{
-	guard(CSkelMeshInstance::SetSecondaryBlend);
-	GetStage(Channel).SecondaryBlend = BlendAlpha;
-	unguard;
-}
-
-
-void CSkelMeshInstance::AnimStopLooping(int Channel)
-{
-	guard(CSkelMeshInstance::AnimStopLooping);
-	GetStage(Channel).Looped = false;
 	unguard;
 }
 
@@ -791,13 +767,12 @@ void CSkelMeshInstance::FreezeAnimAt(float Time, int Channel)
 }
 
 
-void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
-	float &Frame, float &NumFrames, float &Rate) const
+void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName, float &Frame, float &NumFrames, float &Rate) const
 {
 	guard(CSkelMeshInstance::GetAnimParams);
 
-	const CAnimChan      &Chn  = GetStage(Channel);
-	if (!Animation || Chn.AnimIndex1 < 0 || Channel > MaxAnimChannel)
+	const CAnimChan &Chn  = GetStage(Channel);
+	if (!Animation || !Chn.Anim1 || Channel > MaxAnimChannel)
 	{
 		AnimName  = "None";
 		Frame     = 0;
@@ -805,11 +780,11 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName,
 		Rate      = 0;
 		return;
 	}
-	const CAnimSequence &Seq = Animation->Sequences[Chn.AnimIndex1];
-	AnimName  = Seq.Name;
+	const CAnimSequence *Seq = Chn.Anim1;
+	AnimName  = Seq->Name;
 	Frame     = Chn.Time;
-	NumFrames = Seq.NumFrames;
-	Rate      = Seq.Rate * Chn.Rate;
+	NumFrames = Seq->NumFrames;
+	Rate      = Seq->Rate * Chn.Rate;
 
 	unguard;
 }

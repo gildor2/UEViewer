@@ -32,7 +32,24 @@ extern CAxis viewAxis;
 
 void DrawTextLeft(const char *text, ...);
 void DrawTextRight(const char *text, ...);
+void DrawTextBottomLeft(const char *text, ...);
+void DrawTextBottomRight(const char *text, ...);
 void DrawText3D(const CVec3 &pos, const char *text, ...);
+
+enum ETextAnchor
+{
+	TA_TopLeft,			// DrawTextLeft
+	TA_TopRight,		// DrawTextRight
+	TA_BottomLeft,
+	TA_BottomRight,
+
+	// internally used values
+	TA_None,
+	TA_Last
+};
+
+void DrawText(ETextAnchor anchor, const char *text, ...);
+
 void FlushTexts();
 
 // called from AppDisplayTexts() callback

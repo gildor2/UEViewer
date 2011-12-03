@@ -32,9 +32,6 @@ SKELETALMESH CONVERSION STAGES:
 - verify USkeletalMesh in games:
   - Unreal1
 
-- support 32-bit indices in pskx (different section name for triangles?)
-  ! экспорт идёт в psk, там для треугольников есть chunk "FACE0000", он содержит VTriangle, который хранит
-    ссылки на вершины как "word WedgeIndex", т.е. psk для этого не приспособлен, + word VVertex.PointIndex + pad
 - support vertex colors (for StaticMesh too!)
 
 - dump properties of the SkeletalMesh:
@@ -49,9 +46,7 @@ SKELETALMESH CONVERSION STAGES:
 
 ? split UnMesh.cpp to Common+UE2 or UE1+UE2 (check what's better)
   - or at least rename UnMesh.cpp to UnMesh2.cpp
-- cleanup TODOs
 
-- place animation information somewhere at the bottom of the screen (needs DrawTextLeftBottom or use DrawTextPos() with use of GetWindowSize() ?)
 - remove RootBone.Orientation.W *= -1 for UE3, place this code for UE2 (find all places where bone orientation is accessed!)
   - fix (invert logic) mesh rendering and export code too
 

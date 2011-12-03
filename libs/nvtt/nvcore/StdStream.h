@@ -14,7 +14,7 @@ namespace nv
 inline FILE * fileOpen(const char * fileName, const char * mode)
 {
 	nvCheck(fileName != NULL);
-#if NV_CC_MSVC && _MSC_VER >= 1400
+#if NV_CC_MSVC && _MSC_VER >= 1400 && !UMODEL
 	FILE * fp;
 	if (fopen_s(&fp, fileName, mode) == 0) {
 		return fp;
@@ -33,10 +33,10 @@ class NVCORE_CLASS StdStream : public Stream
 public:
 
 	/// Ctor.
-	StdStream( FILE * fp, bool autoclose=true ) : 
+	StdStream( FILE * fp, bool autoclose=true ) :
 		m_fp(fp), m_autoclose(autoclose) { }
-	
-	/// Dtor. 
+
+	/// Dtor.
 	virtual ~StdStream()
 	{
 		if( m_fp != NULL && m_autoclose ) {
@@ -53,13 +53,13 @@ public:
 			nvDebugCheck(pos < size());
 			fseek(m_fp, pos, SEEK_SET);
 		}
-		
+
 		virtual uint tell() const
 		{
 			nvDebugCheck(m_fp != NULL);
 			return ftell(m_fp);
 		}
-		
+
 		virtual uint size() const
 		{
 			nvDebugCheck(m_fp != NULL);
@@ -69,7 +69,7 @@ public:
 			fseek(m_fp, pos, SEEK_SET);
 			return end;
 		}
-		
+
 		virtual bool isError() const
 		{
 			return m_fp == NULL || ferror( m_fp ) != 0;
@@ -80,13 +80,13 @@ public:
 			nvDebugCheck(m_fp != NULL);
 			clearerr(m_fp);
 		}
-		
+
 		virtual bool isAtEnd() const
 		{
 			nvDebugCheck(m_fp != NULL);
 			return feof( m_fp ) != 0;
 		}
-		
+
 		/// Always true.
 		virtual bool isSeekable() const { return true; }
 	//@}
@@ -123,12 +123,12 @@ public:
 			nvDebugCheck(m_fp != NULL);
 			return (uint)fwrite(data, 1, len, m_fp);
 		}
-		
+
 		virtual bool isLoading() const
 		{
 			return false;
 		}
-		
+
 		virtual bool isSaving() const
 		{
 			return true;
@@ -145,7 +145,7 @@ class NVCORE_CLASS StdInputStream : public StdStream
 public:
 
 	/// Construct stream by file name.
-	StdInputStream( const char * name ) : 
+	StdInputStream( const char * name ) :
 		StdStream(fileOpen(name, "rb")) { }
 
 	/// Construct stream by file handle.
@@ -162,12 +162,12 @@ public:
 			nvDebugCheck(m_fp != NULL);
 			return (uint)fread(data, 1, len, m_fp);
 		}
-		
+
 		virtual bool isLoading() const
 		{
 			return true;
 		}
-		
+
 		virtual bool isSaving() const
 		{
 			return false;
@@ -184,7 +184,7 @@ class NVCORE_CLASS MemoryInputStream : public Stream
 public:
 
 	/// Ctor.
-	MemoryInputStream( const uint8 * mem, uint size ) : 
+	MemoryInputStream( const uint8 * mem, uint size ) :
 		m_mem(mem), m_ptr(mem), m_size(size) { }
 
 	/** @name Stream implementation. */
@@ -197,36 +197,36 @@ public:
 
 			uint left = m_size - tell();
 			if (len > left) len = left;
-			
+
 			memcpy( data, m_ptr, len );
 			m_ptr += len;
-				
+
 			return len;
 		}
-		
+
 		virtual void seek( uint pos )
 		{
 			nvDebugCheck(!isError());
 			m_ptr = m_mem + pos;
 			nvDebugCheck(!isError());
 		}
-		
+
 		virtual uint tell() const
 		{
 			nvDebugCheck(m_ptr >= m_mem);
 			return uint(m_ptr - m_mem);
 		}
-		
+
 		virtual uint size() const
 		{
 			return m_size;
 		}
-		
+
 		virtual bool isError() const
 		{
 			return m_mem == NULL || m_ptr > m_mem + m_size || m_ptr < m_mem;
 		}
-		
+
 		virtual void clearError()
 		{
 			// Nothing to do.
@@ -236,25 +236,25 @@ public:
 		{
 			return m_ptr == m_mem + m_size;
 		}
-		
+
 		/// Always true.
 		virtual bool isSeekable() const
 		{
 			return true;
 		}
-		
+
 		virtual bool isLoading() const
 		{
 			return true;
 		}
-		
+
 		virtual bool isSaving() const
 		{
 			return false;
 		}
 	//@}
 
-	
+
 private:
 
 	const uint8 * m_mem;
@@ -272,12 +272,12 @@ public:
 
 	/// Ctor.
 	ProtectedStream( Stream & s ) : m_s(&s), m_autodelete(false)
-	{ 
+	{
 	}
 
 	/// Ctor.
-	ProtectedStream( Stream * s, bool autodelete = true ) : 
-		m_s(s), m_autodelete(autodelete) 
+	ProtectedStream( Stream * s, bool autodelete = true ) :
+		m_s(s), m_autodelete(autodelete)
 	{
 		nvDebugCheck(m_s != NULL);
 	}
@@ -297,33 +297,33 @@ public:
 		{
 			nvDebugCheck(data != NULL);
 			len = m_s->serialize( data, len );
-			
+
 			if( m_s->isError() ) {
 				throw std::exception();
 			}
 
 			return len;
 		}
-		
+
 		virtual void seek( uint pos )
 		{
 			m_s->seek( pos );
-			
+
 			if( m_s->isError() ) {
 				throw std::exception();
 			}
 		}
-		
+
 		virtual uint tell() const
 		{
 			return m_s->tell();
 		}
-		
+
 		virtual uint size() const
 		{
 			return m_s->size();
 		}
-		
+
 		virtual bool isError() const
 		{
 			return m_s->isError();
@@ -338,26 +338,26 @@ public:
 		{
 			return m_s->isAtEnd();
 		}
-		
+
 		virtual bool isSeekable() const
 		{
 			return m_s->isSeekable();
 		}
-		
+
 		virtual bool isLoading() const
 		{
 			return m_s->isLoading();
 		}
-		
+
 		virtual bool isSaving() const
 		{
 			return m_s->isSaving();
 		}
 	//@}
 
-	
+
 private:
-	
+
 	Stream * const m_s;
 	bool const m_autodelete;
 

@@ -7,7 +7,7 @@ LIBC       = shared
 CONSOLE    = 1
 OPTIMIZE   = size
 
-#PDB        = 2				#?? keep enabled, executable is almost the same, except embedded link to pdb file
+PDB        = 2				#?? keep enabled, executable is almost the same, except embedded link to pdb file
 
 OLDCRT     = 1
 
@@ -20,32 +20,11 @@ OLDCRT     = 1
 !endif
 
 !if "$COMPILER" eq "VisualC"
-	CPP_EXCEPT = 0		# used with WIN32_USE_SEH in Core.h
+	CPP_EXCEPT = 0										# used with WIN32_USE_SEH in Core.h
+	OPTIONS = -GS- -GR- 								#?? VC8+, use always?
 	!if "$OLDCRT" eq "1"
-		# options for crtexe2.c
-		#?? place building of this obj separately, use compiled obj file here
-		INCLUDES = $R/libs/oldcrt $R/libs/oldcrt/PlatformSDK
-		OBJDIR   = $R/obj/oldcrt
-		DEFINES  = CRTDLL _CRTBLD
-		#??
-		OPTIONS  = {
-			-GS-	# disable buffer security checks (VC8+, on by default)
-			-GR-	# disable C++ RTTI (on by default in VC8+) - make switch for genmake??
-		}
-		# add crtexe2.c to project
-		sources(MAIN) = $R/libs/oldcrt/crtexe2.c
-		INCLUDES =	# reset INCLUDES
-		DEFINES  =	# reset DEFINES
-		# options for project
-		OPTIONS = -GS- -GR- #?? common for VC8+
-		WDKCRT = "c:/!msvcrt"
-		LINKFLAGS = {
-			-nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib
-			-manifest:no
-			$WDKCRT/lib/Win32/msvcrt.lib
-			$WDKCRT/lib/Win32/wdk_msvcrt_win2000.obj	# required - has different mainCRTStartup
-#			$WDKCRT/lib/Win32/wdk_oldnames.lib			# not required
-		}
+		WDKCRT = $R/../Libs/msvcrt
+		!include $WDKCRT/msvcrt.project
 	!endif
 !endif
 

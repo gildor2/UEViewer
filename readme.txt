@@ -11,7 +11,7 @@ System requirements
 Windows or Linux operating system
 x86-compatible CPU with SSE support
 OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
-SDL 1.2 (for Linux only, windows distribution included sdl.dll)
+SDL 1.2 (for Linux only, windows distribution has included sdl.dll)
 
 
 List of supported games
@@ -43,14 +43,14 @@ Some usage information
 ~~~~~~~~~~~~~~~~~~~~~~
 This is a console application, there is no GUI.
 For the list of command line options run 'umodel' without arguments.
-Note: if you will launch program from Windows explorer etc, you will get a console
-window with a help message, but this window will immediately disappear.
+Note: if you will launch program from Windows explorer etc, you will get a console window
+with a help message, but this window will immediately disappear.
 
 Keyboard:
-H                full keyboard help
-ESC              exit from umodel
-PgUp/UpDn        browse loaded objects
-Ctrl+S           take screenshot into file Screenshots/ObjectName.tga
+H                show/hide full keyboard help
+ESC              exit from the umodel
+PgUp/UpDn        browse through loaded objects
+Ctrl+S           take a screenshot into the file Screenshots/ObjectName.tga
 Ctrl+PgUp/PgDn   scroll onscreen texts
 Ctrl+L           switch lighting modes
 Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
@@ -59,20 +59,26 @@ Ctrl+X           export all objects from the current scene
 
 Notes about psk/psa export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-There is a 3ds Max importer script (ActorX Importer) created by me:
+To load psk or psa into 3ds Max you'll need this script (ActorX Importer) created by me:
 http://www.gildor.org/projects/unactorx
 Its announcements thread is here:
 http://www.gildor.org/smf/index.php/topic,228.0.html
 
+Some meshes contains information which cannot fit into psk standard. In this case I've
+extended the format to hold advanced information such as extra UV sets etc. Files in this
+format has extension pskx and cannot be loaded into UnrealEd or other application with
+ActorX support. There only one tool with pskx support at the moment - ActorX Importer for
+3ds Max which was mentioned above.
+
 
 Notes about md5mesh/md5anim export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To use these exporters you should add "-md5" key to a command line options.
-MeshAnimation/AnimSet objects are exported as multiple md5anim files (one
-file per animation track). "bounds" section in md5anim is filled with dummy
-data. Also, "hierarchy" section does not contain real skeleton hierarchy,
-because Unreal engine uses hierarchy from mesh, not from animations. Some md5
-viewers/importers does require md5anim hierarchy, some - does not.
+To use these exporters you should add "-md5" option to the command line options.
+MeshAnimation and AnimSet objects are exported as multiple md5anim files (one file for
+each animation track). "bounds" section in md5anim is filled with dummy data. "hierarchy"
+section also does not contain real skeleton hierarchy, because Unreal engine uses
+hierarchy from the mesh, not from animations. Some md5 viewers/importers does require
+md5anim hierarchy, some - does not.
 
 There is a 3ds Max md5mesh/md5anim importer script available on umodel forum:
 http://www.gildor.org/smf/index.php?topic=87.0
@@ -83,21 +89,19 @@ This script was originally created by der_ton, but was updated by me.
 
 Notes about StaticMesh support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-StaticMesh export made into psk format. This format is designed for SkeletalMesh
-export, but umodel uses it for StaticMesh too. Exported mesh will not have
-skeleton and contains only one UV set.
-Resulting psk files are cannot be imported directly into UnrealEd (that's why
-their extension were changed to pskx).
+StaticMesh export is performed into psk format. This format was originally designed for
+SkeletalMesh export, but umodel uses it for StaticMesh too. Exported mesh will not have
+skeleton and vertex influences. Resulting psk files are cannot be imported directly into
+UnrealEd (that's why their extension were changed to pskx).
 
 
 Notes about material export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Materials are exported in a custom format. File extension is ".mat". At the
-current moment, this format is supported by my ActorX Importer plugin only.
-Unreal engine materials are very complex, it's hard to separate a few channels
-(diffuse, specular, bump etc) from it. Umodel tries to do this by using some
-heuristics. Umodel will never export full materials (GLSL script etc). Do not
-expect too much from this.
+Materials are exported in a custom format. File extension is ".mat". At the current moment,
+this format is supported by my ActorX Importer plugin only. Unreal engine materials are
+very complex, it's hard to separate a few channels (diffuse, specular, bump etc) from it.
+Umodel tries to do this by using some heuristics. Umodel will never export full materials
+(GLSL script etc). Do not expect too much from this.
 
 
 Used third-party libraries
@@ -125,6 +129,14 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+01.12.2011
+- implemented DDS texture export, activated with -dds option; DDS texture format is used for
+  DXT textures only
+
+29.11.2011
+- fixed recent UE3 SkeletalMesh incompatibility
+- improved layout of the animation information on the screen
+
 26.11.2011
 - implemented support for Batman: Arkham City packages
 
@@ -135,7 +147,7 @@ Changes
     be useful to speedup export process when the same object could be exported from different
     packages
   - umodel will save mesh with .psk extension when "-pskx" option is specified but there is
-    no format extensions required, and it will save as .pskx when it is not possible to store
+    no format extension required, and it will save as .pskx when it is not possible to store
     mesh as .psk, even when "-pskx" is not specified
   - tga: no more zero-length tga files, at least 1x1 correct tga image will be created in a
     case of error

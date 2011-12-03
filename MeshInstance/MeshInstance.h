@@ -6,6 +6,7 @@ class UVertMesh;
 
 class CSkeletalMesh;
 class CAnimSet;
+class CAnimSequence;
 class CStaticMesh;
 
 
@@ -111,16 +112,16 @@ class CSkelMeshInstance : public CMeshInstance
 {
 	struct CAnimChan
 	{
-		int			AnimIndex1;		// current animation sequence; -1 for default pose
-		int			AnimIndex2;		// secondary animation for blending with; -1 = not used
-		float		Time;			// current animation frame for primary animation
-		float		SecondaryBlend;	// value = 0 (use primary animation) .. 1 (use secondary animation)
-		float		BlendAlpha;		// blend with previous channels; 0 = not affected, 1 = fully affected
-		int			RootBone;		// root animation bone
-		float		Rate;			// animation rate multiplier for Anim.Rate
-		float		TweenTime;		// time to stop tweening; 0 when no tweening at all
-		float		TweenStep;		// fraction between current pose and desired pose; updated in UpdateAnimation()
-		bool		Looped;
+		const CAnimSequence	*Anim1;			// current animation sequence; NULL for default pose
+		const CAnimSequence	*Anim2;			// secondary animation for blending with; NULL = not used
+		float				Time;			// current animation frame for primary animation
+		float				SecondaryBlend;	// value = 0 (use primary animation) .. 1 (use secondary animation)
+		float				BlendAlpha;		// blend with previous channels; 0 = not affected, 1 = fully affected
+		int					RootBone;		// root animation bone
+		float				Rate;			// animation rate multiplier for Anim.Rate
+		float				TweenTime;		// time to stop tweening; 0 when no tweening at all
+		float				TweenStep;		// fraction between current pose and desired pose; updated in UpdateAnimation()
+		bool				Looped;
 	};
 
 public:
@@ -130,9 +131,9 @@ public:
 	// mesh state
 	int			LodNum;
 	int			UVIndex;
-	int			RotationMode;		// EAnimRotationOnly
+	int			RotationMode;				// EAnimRotationOnly
 	// debugging
-	int			ShowSkel;			// 0 - mesh, 1 - mesh+skel, 2 - skel only
+	int			ShowSkel;					// 0 - mesh, 1 - mesh+skel, 2 - skel only
 	bool		ShowInfluences;
 	bool		ShowLabels;
 	bool		ShowAttach;
@@ -140,7 +141,7 @@ public:
 	CSkelMeshInstance();
 	virtual ~CSkelMeshInstance();
 
-	void SetMesh(CSkeletalMesh *Mesh);	// not 'const *mesh' because can call BuildTangents()
+	void SetMesh(CSkeletalMesh *Mesh);		// not 'const *mesh' because can call BuildTangents()
 	void SetAnim(const CAnimSet *Anim);
 
 	void ClearSkelAnims();
@@ -169,21 +170,33 @@ public:
 	{
 		PlayAnimInternal(AnimName, 0, TweenTime, Channel, false);
 	}
-	void AnimStopLooping(int Channel);
+	void AnimStopLooping(int Channel)
+	{
+		GetStage(Channel).Looped = false;
+	}
 	void FreezeAnimAt(float Time, int Channel = 0);
 
 	// animation state
+
+	const CAnimSequence *GetAnim(int Channel) const
+	{
+		return GetStage(Channel).Anim1;
+	}
+
+	float GetAnimTime(int Channel) const
+	{
+		return GetStage(Channel).Time;
+	}
 
 	// get current animation information:
 	// Frame     = 0..NumFrames
 	// NumFrames = animation length, frames
 	// Rate      = frames per seconds
-	void GetAnimParams(int Channel, const char *&AnimName,
-		float &Frame, float &NumFrames, float &Rate) const;
+	void GetAnimParams(int Channel, const char *&AnimName, float &Frame, float &NumFrames, float &Rate) const;
 
 	bool HasAnim(const char *AnimName) const
 	{
-		return FindAnim(AnimName) != INDEX_NONE;
+		return FindAnim(AnimName) != NULL;
 	}
 	bool IsTweening(int Channel = 0)
 	{
@@ -192,9 +205,15 @@ public:
 
 	// animation blending
 	void SetBlendParams(int Channel, float BlendAlpha, const char *BoneName = NULL);
-	void SetBlendAlpha(int Channel, float BlendAlpha);
+	void SetBlendAlpha(int Channel, float BlendAlpha)
+	{
+		GetStage(Channel).BlendAlpha = BlendAlpha;
+	}
 	void SetSecondaryAnim(int Channel, const char *AnimName = NULL);
-	void SetSecondaryBlend(int Channel, float BlendAlpha);
+	void SetSecondaryBlend(int Channel, float BlendAlpha)
+	{
+		GetStage(Channel).SecondaryBlend = BlendAlpha;
+	}
 	//?? -	AnimBlendToAlpha() - animate BlendAlpha coefficient
 	//?? -	functions to smoothly replace current animation with another in a fixed time
 	//??	(run new anim as secondary, ramp alpha from 0 to 1, and when blend becomes 1.0f
@@ -234,7 +253,7 @@ protected:
 	}
 	void TransformMesh();
 	int FindBone(const char *BoneName) const;
-	int FindAnim(const char *AnimName) const;
+	const CAnimSequence *FindAnim(const char *AnimName) const;
 	void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 	void UpdateSkeleton();
 	void BuildInfColors();

@@ -274,10 +274,6 @@ enum ETextureFormat
 	TEXF_CxV8U8,
 	TEXF_DXT5N,			// Note: in Bioshock this value has name 3DC, but really DXT5N is used
 	TEXF_3DC,			// names: 3Dc, ATI2, BC5
-#if IPHONE
-	TEXF_PVRTC2,
-	TEXF_PVRTC4,
-#endif
 };
 
 _ENUM(ETextureFormat)
@@ -298,10 +294,6 @@ _ENUM(ETextureFormat)
 	_E(TEXF_CxV8U8),
 	_E(TEXF_DXT5N),
 	_E(TEXF_3DC),
-#if IPHONE
-	_E(TEXF_PVRTC2),
-	_E(TEXF_PVRTC4),
-#endif
 };
 
 enum ETexClampMode
@@ -468,7 +460,8 @@ public:
 	,	TexNum(0)
 #endif
 	{}
-	virtual byte *Decompress(int &USize, int &VSize) const;
+	virtual bool GetTextureData(CTextureData &TexData) const;
+	virtual byte *Decompress(const CTextureData &TexData) const;
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UTexture::Serialize);

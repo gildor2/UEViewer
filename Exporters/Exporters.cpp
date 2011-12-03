@@ -136,24 +136,67 @@ const char* GetExportPath(const UObject *Obj)
 }
 
 
+const char* GetExportFileName(const UObject *Obj, const char *fmt, va_list args)
+{
+	guard(GetExportFileName);
+
+	char fmtBuf[256];
+	int len = vsnprintf(ARRAY_ARG(fmtBuf), fmt, args);
+	if (len < 0 || len >= sizeof(fmtBuf) - 1) return NULL;
+
+	static char buffer[1024];
+	appSprintf(ARRAY_ARG(buffer), "%s/%s", GetExportPath(Obj), fmtBuf);
+	return buffer;
+
+	unguard;
+}
+
+
+const char* GetExportFileName(const UObject *Obj, const char *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	const char *filename = GetExportFileName(Obj, fmt, argptr);
+	va_end(argptr);
+
+	return filename;
+}
+
+
+bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	const char *filename = GetExportFileName(Obj, fmt, argptr);
+	va_end(argptr);
+
+	if (!filename) return false;
+
+	FILE *f = fopen(filename, "r");
+	if (f)
+	{
+		fclose(f);
+		return true;
+	}
+	return false;
+}
+
+
 FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
 {
 	guard(CreateExportArchive);
 
 	va_list	argptr;
 	va_start(argptr, fmt);
-	char fmtBuf[256];
-	int len = vsnprintf(ARRAY_ARG(fmtBuf), fmt, argptr);
+	const char *filename = GetExportFileName(Obj, fmt, argptr);
 	va_end(argptr);
-	if (len < 0 || len >= sizeof(fmtBuf) - 1) return NULL;
 
-	char buffer[1024];
-	appSprintf(ARRAY_ARG(buffer), "%s/%s", GetExportPath(Obj), fmtBuf);
+	if (!filename) return NULL;
 
 	if (GDontOverwriteFiles)
 	{
 		// check file presence
-		FILE *f = fopen(buffer, "r");
+		FILE *f = fopen(filename, "r");
 		if (f)
 		{
 			fclose(f);
@@ -161,13 +204,13 @@ FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
 		}
 	}
 
-//	appPrintf("... writting %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, buffer);
+//	appPrintf("... writting %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, filename);
 
-	appMakeDirectoryForFile(buffer);
-	FFileReader *Ar = new FFileReader(buffer, false, true);	// open file for writting, disable error when open is failed
+	appMakeDirectoryForFile(filename);
+	FFileReader *Ar = new FFileReader(filename, false, true);	// open file for writting, disable error when open is failed
 	if (!Ar->IsOpen())
 	{
-		appPrintf("Error opening file \"%s\" ...\n", buffer);
+		appPrintf("Error opening file \"%s\" ...\n", filename);
 		delete Ar;
 		return NULL;
 	}

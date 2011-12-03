@@ -630,25 +630,27 @@ static void Shutdown()
 //-----------------------------------------------------------------------------
 
 #define TOP_TEXT_POS	CHAR_HEIGHT
+#define BOTTOM_TEXT_POS	CHAR_HEIGHT
 #define LEFT_BORDER		CHAR_WIDTH
 #define RIGHT_BORDER	CHAR_WIDTH
 
 
 struct CRText : public CTextRec
 {
-	short	x, y;
+	short			x, y;
+	ETextAnchor		anchor;
 };
 
 static TTextContainer<CRText, 65536> Text;
 
-static int nextLeft_y  = TOP_TEXT_POS;
-static int nextRight_y = TOP_TEXT_POS;
-static int textOffset  = 0;
+static int nextText_y[TA_Last];
+static int textOffset = 0;
 
 
-void ClearTexts()
+static void ClearTexts()
 {
-	nextLeft_y = nextRight_y = TOP_TEXT_POS + textOffset;
+	nextText_y[TA_TopLeft] = nextText_y[TA_TopRight] = TOP_TEXT_POS + textOffset;
+	nextText_y[TA_BottomLeft] = nextText_y[TA_BottomRight] = 0;
 	Text.Clear();
 }
 
@@ -683,6 +685,11 @@ static void DrawText(const CRText *rec)
 {
 	int y = rec->y;
 	const char *text = rec->text;
+
+	if (rec->anchor == TA_BottomLeft || rec->anchor == TA_BottomRight)
+	{
+		y = y + winHeight - nextText_y[rec->anchor] - BOTTOM_TEXT_POS;
+	}
 
 	int color = 7;
 	while (true)
@@ -733,7 +740,6 @@ void FlushTexts()
 	appSetNotifyHeader("Screen texts");
 #endif
 	Text.Enumerate(DrawText);
-	nextLeft_y = nextRight_y = TOP_TEXT_POS;
 	ClearTexts();
 #if DUMP_TEXTS
 	appSetNotifyHeader(NULL);
@@ -742,53 +748,89 @@ void FlushTexts()
 }
 
 
-void DrawTextPos(int x, int y, const char *text)
+static void DrawTextPos(int x, int y, const char *text, ETextAnchor anchor = TA_None)
 {
-#if DUMP_TEXTS
-	if (dumpTexts)
-	{
-		// dump to log
-		appNotify("%s", text);
-		// hack to view all texts
-		nextLeft_y = nextRight_y = TOP_TEXT_POS;
-	}
-#endif
 	CRText *rec = Text.Add(text);
 	if (!rec) return;
-	rec->x = x;
-	rec->y = y;
+	rec->x      = x;
+	rec->y      = y;
+	rec->anchor = anchor;
 }
 
 
-#define FORMAT_BUF(fmt,buf)		\
+static void DrawTextAtAnchor(ETextAnchor anchor, const char *fmt, va_list argptr)
+{
+	guard(DrawTextAtAnchor);
+
+	assert(anchor >= 0 && anchor < TA_Last);
+
+	bool isBottom = (anchor >= TA_BottomLeft);
+	bool isLeft   = (anchor == TA_TopLeft || anchor == TA_BottomLeft);
+
+	int pos_y = nextText_y[anchor];
+
+#if DUMP_TEXTS
+	if (dumpTexts) pos_y = winHeight / 2;				// trick ...
+#endif
+
+	if (!isBottom && pos_y >= winHeight && !dumpTexts)	// out of screen
+		return;
+
+	char msg[4096];
+	vsnprintf(ARRAY_ARG(msg), fmt, argptr);
+	int w, h;
+	GetTextExtents(msg, w, h);
+
+	nextText_y[anchor] = pos_y + h;
+
+	if (!isBottom && pos_y + h <= 0 && !dumpTexts)		// out of screen
+		return;
+
+#if DUMP_TEXTS
+	if (dumpTexts)
+		appNotify("%s", msg);
+#endif
+
+	DrawTextPos(isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w, pos_y, msg, anchor);
+
+	unguard;
+}
+
+
+#define DRAW_TEXT(anchor,fmt)	\
 	va_list	argptr;				\
 	va_start(argptr, fmt);		\
-	char msg[4096];				\
-	vsnprintf(ARRAY_ARG(buf), fmt, argptr); \
+	DrawTextAtAnchor(anchor, fmt, argptr); \
 	va_end(argptr);
 
 
 void DrawTextLeft(const char *text, ...)
 {
-	int w, h;
-	if (nextLeft_y >= winHeight) return;		// out of screen
-	FORMAT_BUF(text, msg);
-	GetTextExtents(msg, w, h);
-	if (nextLeft_y + h >= 0)
-		DrawTextPos(LEFT_BORDER, nextLeft_y, msg);
-	nextLeft_y += h;
+	DRAW_TEXT(TA_TopLeft, text);
 }
 
 
 void DrawTextRight(const char *text, ...)
 {
-	int w, h;
-	if (nextRight_y >= winHeight) return;		// out of screen
-	FORMAT_BUF(text, msg);
-	GetTextExtents(msg, w, h);
-	if (nextRight_y + h >= 0)
-		DrawTextPos(winWidth - RIGHT_BORDER - w, nextRight_y, msg);
-	nextRight_y += h;
+	DRAW_TEXT(TA_TopRight, text);
+}
+
+
+void DrawTextBottomLeft(const char *text, ...)
+{
+	DRAW_TEXT(TA_BottomLeft, text);
+}
+
+
+void DrawTextBottomRight(const char *text, ...)
+{
+	DRAW_TEXT(TA_BottomRight, text);
+}
+
+
+void DrawText(ETextAnchor anchor, const char *text, ...)
+{
+	DRAW_TEXT(anchor, text);
 }
 
 
@@ -818,7 +860,13 @@ void DrawText3D(const CVec3 &pos, const char *text, ...)
 {
 	int coords[2];
 	if (!ProjectToScreen(pos, coords)) return;
-	FORMAT_BUF(text, msg);
+
+	va_list	argptr;
+	va_start(argptr, text);
+	char msg[4096];
+	vsnprintf(ARRAY_ARG(msg), text, argptr);
+	va_end(argptr);
+
 	DrawTextPos(coords[0], coords[1], msg);
 }
 
@@ -1146,6 +1194,8 @@ void VisualizerLoop(const char *caption)
 	guard(VisualizerLoop);
 
 	Init(caption);
+	ClearTexts();
+
 #if NEW_SDL && LIMIT_FPS
 	// get display refresh rate
 	SDL_DisplayMode desktopMode;

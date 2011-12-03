@@ -125,7 +125,7 @@ void ULodMesh::Serialize(FArchive &Ar)
 	{
 		TArray<int> unk;
 		Ar << unk;
-		if (Ar.ArVer >= 134) Ar.Seek(Ar.Tell()+1);	//?????? did not found in disassembly
+		if (Ar.ArVer >= 134) Ar.Seek(Ar.Tell()+1);	//?????? did not found this in disassembly yet
 	}
 #endif // BATTLE_TERR
 #if SWRC
@@ -545,7 +545,7 @@ struct FQuatComp
 		r.W = W / 32767.0f;
 		return r;
 	}
-	inline operator FVector() const			//?? for FixedPointTrack
+	inline operator FVector() const			// used for FixedPointTrack; may be separated to FVectorComp etc
 	{
 		FVector r;
 		r.X = X / 64.0f;
@@ -696,7 +696,7 @@ template<class T> struct MotionChunkCompress : public MotionChunkCompressBase
 		D.AnimTracks.Add(numAnims);
 		for (int i = 0; i < numAnims; i++)
 			AnimTracks[i].Decompress(D.AnimTracks[i]);
-		//?? do nothing with RootTrack ...
+		// RootTrack is unused ...
 		unguard;
 	}
 
@@ -1026,11 +1026,15 @@ void AnalogTrack::SerializeUC1(FArchive &Ar)
 
 #if UC2
 
-//?? move from UnTexture.cpp to UnCore.cpp?
+//?? move this function from UnTexture.cpp to UnCore.cpp?
 byte *FindXprData(const char *Name, int *DataSize);
 
-// special array type ...
-//!! document purpose of this class in UE2X
+// Special array type ...
+// This array holds data in a separate stream, these data are originally serialized with
+// a single FArchive::Serialize() call and may be placed inside any memory block
+// (multiple arrays may be stored in a single memory block) - so, this is a good memory
+// fragmentation and loading speed optimization, plus ability to place data into GPU
+// memory.
 template<class T> class TRawArrayUC2 : public TArray<T>
 {
 	// We require "using TArray<T>::*" for gcc 3.4+ compilation
@@ -1317,31 +1321,6 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 {
 	guard(SerializeFlexTracks);
 
-#if 0
-	int numTracks;
-	Ar << AR_INDEX(numTracks);
-	if (!numTracks) return;
-
-	assert(M.AnimTracks.Num() == 0);
-	M.AnimTracks.Empty(numTracks);
-	M.AnimTracks.Add(numTracks);
-
-	for (int i = 0; i < numTracks; i++)
-	{
-		int trackType;
-		Ar << trackType;
-		FlexTrackBase *track = CreateFlexTrack(trackType);
-		if (track)
-		{
-			track->Serialize(Ar);
-			track->Decompress(M.AnimTracks[i]);
-			delete track;
-		}
-		else
-			appError("no track!");	//?? possibly, mask tracks
-	}
-#else
-	//!! Test this code
 	TArray<FlexTrackBasePtr> FT;
 	Ar << FT;
 	int numTracks = FT.Num();
@@ -1350,7 +1329,6 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 	M.AnimTracks.Add(numTracks);
 	for (int i = 0; i < numTracks; i++)
 		FT[i].Track->Decompress(M.AnimTracks[i]);
-#endif
 
 	unguard;
 }
@@ -2701,7 +2679,9 @@ void USkelModel::Serialize(FArchive &Ar)
 	for (modelIdx = 0; modelIdx < meshes.Num(); modelIdx++)
 	{
 		// create new USkeletalMesh
-		USkeletalMesh *sm = static_cast<USkeletalMesh*>(CreateClass("SkeletalMesh"));	//?? new USkeletalMesh ?
+		// use "CreateClass()" instead of "new USkeletalMesh" to allow this object to be
+		// placed in GObjObjects array and be browsable in a viewer
+		USkeletalMesh *sm = static_cast<USkeletalMesh*>(CreateClass("SkeletalMesh"));
 		char nameBuf[256];
 		appSprintf(ARRAY_ARG(nameBuf), "%s_%d", Name, modelIdx);
 		char *name = strdup(nameBuf);
@@ -2713,7 +2693,7 @@ void USkelModel::Serialize(FArchive &Ar)
 		sm->PackageIndex = INDEX_NONE;		// not really exported
 	}
 	// create animation
-	Anim = static_cast<UMeshAnimation*>(CreateClass("MeshAnimation"));	//?? new UMeshAnimation ?
+	Anim = static_cast<UMeshAnimation*>(CreateClass("MeshAnimation"));
 	Anim->Name         = Name;
 	Anim->Package      = Package;
 	Anim->PackageIndex = INDEX_NONE;		// not really exported
@@ -2877,7 +2857,7 @@ void FStaticLODModel::RestoreLineageMesh()
 		appNotify("have smooth & rigid sections");
 
 	int i, j, k;
-	int NumWedges = LineageWedges.Num() + VertexStream.Verts.Num(); //??
+	int NumWedges = LineageWedges.Num() + VertexStream.Verts.Num(); // one of them is zero (ensured by assert below)
 	if (!NumWedges)
 	{
 		appNotify("Cannot restore mesh: no wedges");
@@ -3156,7 +3136,7 @@ void UStaticMesh::ConvertMesh()
 	}
 
 	// copy indices
-	CopyArray(Lod->Indices.Indices16, IndexStream1.Indices);
+	Lod->Indices.Initialize(&IndexStream1.Indices);
 
 	unguard;
 }

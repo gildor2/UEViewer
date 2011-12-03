@@ -736,10 +736,10 @@ void UnregisterClass(const char *Name, bool WholeTree)
 
 const CTypeInfo *FindClassType(const char *Name, bool ClassType)
 {
+	guard(FindClassType);
 #if DEBUG_TYPES
 	appPrintf("--- find %s %s ... ", ClassType ? "class" : "struct", Name);
 #endif
-	guard(CreateClass);
 	for (int i = 0; i < GClassCount; i++)
 	{
 		// skip 1st char only for ClassType==true?

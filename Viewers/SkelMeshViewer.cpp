@@ -70,6 +70,8 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
 			Inst->BaseTransformScaled.TransformPointSlow(Bounds2[1], Bounds2[1]);
 			ComputeBounds(Bounds2, 2, sizeof(CVec3), Mins, Maxs, true);	// include Bounds2 into Mins/Maxs
 		}
+		// reset animation for all meshes
+		Meshes[i]->TweenAnim(NULL, 0);
 	}
 	InitViewerPosition(Mins, Maxs);
 #endif
@@ -186,6 +188,9 @@ void CSkelMeshViewer::Export()
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CAnimSet *Anim = MeshInst->GetAnim();
 	if (Anim) ExportObject(Anim->OriginalAnim);
+
+	for (int i = 0; i < Meshes.Num(); i++)
+		ExportObject(Meshes[i]->pMesh->OriginalMesh);
 }
 
 
@@ -206,7 +211,6 @@ void CSkelMeshViewer::Draw2D()
 {
 	CMeshViewer::Draw2D();
 
-	//USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
@@ -223,35 +227,53 @@ void CSkelMeshViewer::Draw2D()
 
 	if (Inst->bColorMaterials)
 	{
-		//const USkeletalMesh *Mesh = static_cast<USkeletalMesh*>(Object);
 		for (int i = 0; i < Lod.Sections.Num(); i++)
 			PrintMaterialInfo(i, Lod.Sections[i].Material, Lod.Sections[i].NumFaces);
 		DrawTextLeft("");
 	}
 
-	const CAnimSet *AnimSet = MeshInst->GetAnim();
-	DrawTextLeft("\n"S_GREEN"AnimSet: "S_WHITE"%s", AnimSet ? AnimSet->OriginalAnim->Name : "None");
-	if (AnimSet)
-	{
-		static const char *OnOffNames[]       = { "OFF", "ON" };
-		static const char *AnimRotModeNames[] = { "AnimSet", "enabled", "disabled" }; // EAnimRotationOnly
-		DrawTextLeft(S_GREEN"Translation:"S_WHITE" AnimRotOnly %s (%s)\nUseAnimBones: %d ForceMeshBones: %d",
-			OnOffNames[AnimSet->AnimRotationOnly], AnimRotModeNames[MeshInst->RotationMode],
-			AnimSet->UseAnimTranslation.Num(), AnimSet->ForceMeshTranslation.Num()
-		);
-	}
-
+	// show extra meshes
 	for (int i = 0; i < Meshes.Num(); i++)
 		DrawTextLeft("%s%d: %s", (Meshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, Meshes[i]->pMesh->OriginalMesh->Name);
 
-	const char *AnimName;
-	float Frame, NumFrames, Rate;
-	MeshInst->GetAnimParams(0, AnimName, Frame, NumFrames, Rate);
+	// show animation information
+	const CAnimSet *AnimSet = MeshInst->GetAnim();
+	if (AnimSet)
+	{
+		DrawTextBottomLeft("\n"S_GREEN"AnimSet: "S_WHITE"%s", AnimSet->OriginalAnim->Name);
 
-	DrawTextLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g%s",
-		AnimIndex+1, MeshInst->GetAnimCount(), AnimName, Rate, NumFrames,
-		MeshInst->IsTweening() ? " [tweening]" : "");
-	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
+		const char *OnOffStatus = NULL;
+		switch (MeshInst->RotationMode)
+		{
+		case EARO_AnimSet:
+			OnOffStatus = (AnimSet->AnimRotationOnly) ? "on" : "off";
+			break;
+		case EARO_ForceEnabled:
+			OnOffStatus = S_RED"force on";
+			break;
+		case EARO_ForceDisabled:
+			OnOffStatus = S_RED"force off";
+			break;
+		}
+		DrawTextBottomLeft(S_GREEN"RotationOnly:"S_WHITE" %s", OnOffStatus);
+		if (AnimSet->UseAnimTranslation.Num() || AnimSet->ForceMeshTranslation.Num())
+		{
+			DrawTextBottomLeft(S_GREEN"UseAnimBones:"S_WHITE" %d "S_GREEN"ForceMeshBones:"S_WHITE" %d",
+				AnimSet->UseAnimTranslation.Num(), AnimSet->ForceMeshTranslation.Num());
+		}
+
+		const CAnimSequence *Seq = MeshInst->GetAnim(0);
+		if (Seq)
+		{
+			DrawTextBottomLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) "S_GREEN"Rate:"S_WHITE" %g "S_GREEN"Frames:"S_WHITE" %d",
+				AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames);
+			DrawTextBottomRight(S_GREEN"Time:"S_WHITE" %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
+		}
+		else
+		{
+			DrawTextBottomLeft(S_GREEN"Anim:"S_WHITE" 0/%d (none)", MeshInst->GetAnimCount());
+		}
+	}
 }
 
 
@@ -569,6 +591,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 			int mode = MeshInst->RotationMode + 1;
 			if (mode > EARO_ForceDisabled) mode = 0;
 			MeshInst->RotationMode = (EAnimRotationOnly)mode;
+			for (int i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->RotationMode = (EAnimRotationOnly)mode;
 		}
 		break;
 

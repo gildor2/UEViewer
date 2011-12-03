@@ -1,9 +1,3 @@
-Reduce code size:
-- combine parts of ExportPsk/ExportStaticMesh for common sections
-- combine parts of SkeletalMesh.cpp and StaticMesh.cpp for building normals/tangents
-- use a) pointer to data field + stride
-      b) template function
-
 Logging:
 - appNotify, appPrintf: make with GLog->Printf or GWarn->Printf ? (to allow overriding)
 - Notify.log:
@@ -47,7 +41,6 @@ GUI-relative:
 ForcedExport handling: should use this information for UE3 package loading:
 - prevent export/listing of such resources (or list with "forced" flag?)
 
-- MeshViewer: should not place camera more near than bbox mins/maxs [0..2]
 - use lzop to compress shader texts (call from make.pl)
 
 FONTGEN
@@ -72,6 +65,7 @@ GENMAKE:
       ! check PSA generation too (will be buggy) -- require RefPose bones, but no in UMeshAnimation ...
   - skeletal mesh LOD levels - has visual bugs on most LOD meshes
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
+  - bugs with U8V8 texture format
 
 ? when exporting mesh, can create .uc with sockets too (if possible)
   - requires conversion FCoords -> FVector+FRotator

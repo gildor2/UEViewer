@@ -21,7 +21,6 @@ MAIN : umodel.exe
 #------------------------------------------------------------------------------
 
 MAIN = \
-	./obj/oldcrt/crtexe2.obj \
 	./obj/umodel-win32/Main.obj \
 	./obj/umodel-win32/Export3D.obj \
 	./obj/umodel-win32/Exporters.obj \
@@ -29,7 +28,7 @@ MAIN = \
 	./obj/umodel-win32/ExportMd5.obj \
 	./obj/umodel-win32/ExportPsk.obj \
 	./obj/umodel-win32/ExportSound.obj \
-	./obj/umodel-win32/ExportTga.obj \
+	./obj/umodel-win32/ExportTexture.obj \
 	./obj/umodel-win32/ExportThirdParty.obj \
 	./obj/umodel-win32/MeshCommon.obj \
 	./obj/umodel-win32/SkeletalMesh.obj \
@@ -78,18 +77,17 @@ MAIN = \
 	./obj/umodel-win32/PVRTDecompress.obj
 
 MAIN_DIRS = \
-	./obj/oldcrt \
 	./obj/umodel-win32
 
 umodel.exe : $(MAIN_DIRS) $(MAIN)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs -libpath:./libs/xbox SDL.lib SDLmain.lib $(MAIN) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no "c:/!msvcrt"/lib/Win32/msvcrt.lib "c:/!msvcrt"/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs -libpath:./libs/xbox SDL.lib SDLmain.lib -debug -pdb:"umodel.pdb" -pdbtype:sept -opt:ref -opt:icf $(MAIN) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/startup/crtexe2.obj ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -GS- -GR- -O1 -EHs- -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt -I ./libs/PowerVR
+OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"./obj/umodel-win32/" -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt -I ./libs/PowerVR
 
 ./obj/umodel-win32/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -99,11 +97,6 @@ OPT_MAIN = -GS- -GR- -O1 -EHs- -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core
 
 ./obj/umodel-win32/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/Image.obj" ./libs/nvtt/nvimage/Image.cpp
-
-OPT_MAIN_2 = -GS- -GR- -O1 -EHs- -D CRTDLL -D _CRTBLD -I ./libs/oldcrt -I ./libs/oldcrt/PlatformSDK
-
-./obj/oldcrt/crtexe2.obj : ./libs/oldcrt/crtexe2.c
-	$(CPP) -MD $(OPT_MAIN_2) -Fo"./obj/oldcrt/crtexe2.obj" ./libs/oldcrt/crtexe2.c
 
 DEPENDS = \
 	Build.h \
@@ -490,8 +483,8 @@ DEPENDS = \
 ./obj/umodel-win32/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportMaterial.obj" Exporters/ExportMaterial.cpp
 
-./obj/umodel-win32/ExportTga.obj : Exporters/ExportTga.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportTga.obj" Exporters/ExportTga.cpp
+./obj/umodel-win32/ExportTexture.obj : Exporters/ExportTexture.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ExportTexture.obj" Exporters/ExportTexture.cpp
 
 DEPENDS = \
 	Build.h \
@@ -806,9 +799,6 @@ DEPENDS = \
 #------------------------------------------------------------------------------
 #	creating output directories
 #------------------------------------------------------------------------------
-
-./obj/oldcrt:
-	if not exist "./obj/oldcrt" mkdir "./obj/oldcrt"
 
 ./obj/umodel-win32:
 	if not exist "./obj/umodel-win32" mkdir "./obj/umodel-win32"

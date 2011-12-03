@@ -6,8 +6,8 @@
 
 #include "UnPackage.h"					// for accessing Game field
 
-#include "UnMaterial2.h"				//!! wrong engine dependency
-#include "UnMaterial3.h"				//!! wrong engine dependency
+#include "UnMaterial2.h"
+#include "UnMaterial3.h"
 
 #if RENDERING
 
@@ -225,11 +225,27 @@ static void UploadTex(int target, const void *pic, int width, int height, bool d
 }
 
 
-static void Upload2D(const void *pic, int width, int height, bool doMipmap, bool clampS, bool clampT)
+static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clampT)
 {
 	guard(Upload2D);
 
-	UploadTex(GL_TEXTURE_2D, pic, width, height, doMipmap);
+	byte *pic = NULL;
+	CTextureData TexData;
+	if (Tex->GetTextureData(TexData))
+		pic = Tex->Decompress(TexData);
+
+	if (!pic)
+	{
+		appPrintf("WARNING: %s %s has no valid mipmaps\n", Tex->GetClassName(), Tex->Name);
+		if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
+		return DefaultTexNum;						// "default texture"
+	}
+
+	GLuint TexNum;
+	glGenTextures(1, &TexNum);
+	glBindTexture(GL_TEXTURE_2D, TexNum);
+
+	UploadTex(GL_TEXTURE_2D, pic, TexData.USize, TexData.VSize, doMipmap);
 
 	// setup min/max filter
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, doMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);	// trilinear filter
@@ -239,15 +255,39 @@ static void Upload2D(const void *pic, int width, int height, bool doMipmap, bool
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clampS ? GL_CLAMP : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clampT ? GL_CLAMP : GL_REPEAT);
 
+	delete pic;
+	return TexNum;
+
 	unguard;
 }
 
 
-static void UploadCube(const void *pic, int width, int height, bool doMipmap, int side)
+static bool UploadCube(UUnrealMaterial *Tex, bool doMipmap, int side)
 {
 	guard(UploadCube);
 
-	UploadTex(GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, pic, width, height, doMipmap);
+	byte *pic = NULL;
+	CTextureData TexData;
+	if (Tex->GetTextureData(TexData))
+		pic = Tex->Decompress(TexData);
+
+	if (!pic)
+	{
+		appPrintf("WARNING: %s %s has no valid mipmaps\n", Tex->GetClassName(), Tex->Name);
+		return false;
+	}
+
+#if 0
+	byte *pic2 = pic;
+	for (int i = 0; i < USize * VSize; i++)
+	{
+		*pic2++ = (side & 1) * 255;
+		*pic2++ = (side & 2) * 255;
+		*pic2++ = (side & 4) * 255;
+		*pic2++ = 255;
+	}
+#endif
+	UploadTex(GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, pic, TexData.USize, TexData.VSize, doMipmap);
 
 	if (side == 5)
 	{
@@ -261,6 +301,9 @@ static void UploadCube(const void *pic, int width, int height, bool doMipmap, in
 		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
+
+	delete pic;
+	return true;
 
 	unguard;
 }
@@ -681,27 +724,9 @@ void UTexture::Bind()
 	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 
 	bool upload = !GL_TouchObject(DrawTimestamp);
-
 	if (upload)
 	{
-		// upload texture
-		glGenTextures(1, &TexNum);
-		int USize, VSize;
-		byte *pic = Decompress(USize, VSize);
-		if (pic)
-		{
-			glBindTexture(GL_TEXTURE_2D, TexNum);
-			Upload2D(pic, USize, VSize, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
-			delete pic;
-		}
-		else
-		{
-			appPrintf("WARNING: texture %s has no valid mipmaps\n", Name);
-			//?? note: not working (no access to generated default texture!!)
-			//?? also should glDeleteTextures(1, &TexNum) - generated but not used?
-			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
-			TexNum = DefaultTexNum;						// "default texture"
-		}
+		TexNum = Upload2D(this, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
 	}
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
@@ -1307,25 +1332,9 @@ void UTexture2D::Bind()
 	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 
 	bool upload = !GL_TouchObject(DrawTimestamp);
-
 	if (upload)
 	{
-		// upload texture
-		glGenTextures(1, &TexNum);
-		int USize, VSize;
-		byte *pic = Decompress(USize, VSize);
-		if (pic)
-		{
-			glBindTexture(GL_TEXTURE_2D, TexNum);
-			Upload2D(pic, USize, VSize, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
-			delete pic;
-		}
-		else
-		{
-			appPrintf("WARNING: texture %s has no valid mipmaps\n", Name);
-			if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
-			TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
-		}
+		TexNum = Upload2D(this, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
 	}
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
@@ -1371,7 +1380,7 @@ void UTextureCube::Bind()
 		glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
 		for (int side = 0; side < 6; side++)
 		{
-			//?? can validate USize/VSize to be identical for all sides, plus - the same "doMipmap" value
+			//?? can validate USize/VSize to be identical for all sides, plus - the same for "doMipmap" value
 			UTexture2D *Tex = NULL;
 			switch (side)
 			{
@@ -1394,28 +1403,12 @@ void UTextureCube::Bind()
 				Tex = FaceNegZ;
 				break;
 			}
-			int USize, VSize;
-			byte *pic = Tex->Decompress(USize, VSize);
-#if 0
-byte *pic2 = pic;
-for (int i = 0; i < USize * VSize; i++)
-{
-*pic2++ = (side & 1) * 255;
-*pic2++ = (side & 2) * 255;
-*pic2++ = (side & 4) * 255;
-*pic2++ = 255;
-}
-#endif
-			if (pic)
+
+			if (!UploadCube(Tex, Tex->Mips.Num() > 1, side))
 			{
-				UploadCube(pic, USize, VSize, Tex->Mips.Num() > 1, side);
-				delete pic;
-			}
-			else
-			{
-				appPrintf("WARNING: texture %s has no valid mipmaps\n", Name);
 				if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
 				TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
+				break;
 				//?? warning: DefaultTexNum is 2D texture, we need some default cubemap!
 			}
 		}

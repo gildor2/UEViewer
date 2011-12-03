@@ -10,6 +10,9 @@
 
  Revision History:
 
+	01.12.2011 v1.20
+	- implemented loading of DDS textures
+
 	26.11.2011 v1.19
 	- implemented support for loading pskx files with more than 64k vertices
 	- added option to control behaviour of animation with rotation-only tracks: you can let AnimSet
@@ -106,7 +109,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 19
+global AX_IMPORTER_VERSION = 20
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -678,8 +681,13 @@ fn ImportMaterial matName texDir =
 	)
 	-- no material file found, try simple texture
 	-- get texture filename
-	texFilename = matName + ".tga"
+	texFilename = matName + ".dds"
 	foundTex = FindFile texDir texFilename recurse:g_texRecurse
+	if foundTex == undefined then
+	(
+		texFilename = matName + ".tga"
+		foundTex = FindFile texDir texFilename recurse:g_texRecurse
+	)
 	if foundTex != undefined then
 	(
 		texFilename = foundTex
@@ -689,7 +697,7 @@ fn ImportMaterial matName texDir =
 		if g_texMissAction == 2 then			-- ask
 		(
 			local check = getOpenFileName caption:("Get texture for material " + matName) \
-				types:"TGA files (*.tga)|*.tga|All (*.*)|*.*|" filename:texFilename
+				types:"Texture files (*.tga,*.dds)|*.tga;*.dds|All (*.*)|*.*|" filename:texFilename
 			if check != undefined then texFilename = check
 		)
 	)
@@ -795,6 +803,7 @@ fn ImportPskFile filename skelOnly:false =
 		while not IsEndOfFile(file) do
 		(
 			hdr = ReadChunkHeader file
+--			format "Chunk: % (% items, % bytes/item)\n" hdr.ChunkID hdr.DataCount hdr.DataSize
 			case hdr.ChunkID of
 			(
 			-- Points --
@@ -880,7 +889,7 @@ fn ImportPskFile filename skelOnly:false =
 			default:
 				(
 					-- skip unknown chunk
-					format("Unknown chunk header: \"%\"\n" hdr.ChunkID)
+					format "Unknown chunk header: \"%\"\n" hdr.ChunkID
 					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
 				)
 			)
@@ -1450,7 +1459,7 @@ fn ImportPsaFile filename trackNum all:false =
 			default:
 				(
 					-- skip unknown chunk
-					format("Unknown chunk header: \"" + hdr.ChunkID + "\"\n")
+					format "Unknown chunk header: \"%\"\n" hdr.ChunkID
 					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
 				)
 			)
@@ -1655,7 +1664,7 @@ fn axLoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.19"
+	label     Lbl1 "Version 1.20"
 	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \

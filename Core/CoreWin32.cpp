@@ -4,6 +4,7 @@
 
 #if WIN32_USE_SEH
 #define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
+#define _WIN32_WINDOWS 0x0500		// for IsDebuggerPresent()
 #include <windows.h>
 #include <float.h>					// for _clearfp()
 #endif // WIN32_USE_SEH

@@ -1,116 +1,188 @@
 #!/bin/bash
 
-# Usage:
-#	test.sh [--nobuild] [--game=...] <umodel options>
-# Options:
-# --nobuild			use as 1st option to prevent from umodel rebuilding
-# --<game>			choose predefined game path
-# -path=<path>		will disable default game substitution
-#?? add --exe=<executable>, do not build when overrided (usefult for testing with older exe from svn)
+function usage()
+{
+	cat <<EOF
+Usage:
+    test.sh [--nobuild] [--exe=...] [--game=...] <umodel options>
 
+Options:
+    --nobuild               use as 1st option to prevent from umodel rebuilding
+    --<game>                choose predefined game path
+    --exe=<executable>      do not build when overrided (usefult for testing with older exe from svn)
+    --debug                 start with -debug option
+    --help                  display this help message
+    -path=<path>            will disable default game substitution
+EOF
+	exit
+}
 
 # Enable extended pattern matching (for (a|b|c)); see bash manpage, "Pattern matching".
 shopt -s extglob
 
-exe=umodel.exe		#?? win32 only
+exe=umodel.exe
 [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && exe="umodel"
+
+#function DBG() { echo "LOG: $*"; }
+function DBG() { return; }
 
 #------------------------------------------------------------------------------
 #	Game tools
 #------------------------------------------------------------------------------
 
-#checkedDirs=""
+foundPath=
+debugOpt=
 
 function CheckDir()
 {
-	varname=$1
-	shift
+	local checkedDirs=""
 	while [ $# -gt 0 ]; do
+		DBG "... check $1"
 		dir=$1
-#		if [ -z "$checkedDirs" ]; then
-#			checkedDirs=$dir
-#		else
-#			checkedDirs="$checkedDirs, $dir"
-#		fi
+		if [ -z "$checkedDirs" ]; then
+			checkedDirs=$dir
+		else
+			checkedDirs="$checkedDirs, $dir"
+		fi
 		if [ "$OSTYPE" == "linux-gnu" ]; then
 			dir="/media/c/${dir:3}"
 		fi
 		if [ -d "$dir" ]; then
-			eval $varname="\"$dir\""
-			return
+			foundPath=$dir
+			return			# completed
 		fi
 		shift
 	done
+	# error
+	echo "ERROR: the game was not found at ($checkedDirs)"
+	exit
 }
 
-function run1()							# with path
+function run()
 {
-	path=$1
-	if ! [ "$path" ]; then
-		echo "ERROR: game path was not found" # (checked: $checkedDirs)"
-		exit
+	if [ "$foundPath" ]; then
+		echo "Starting $exe -path="$foundPath" $@"
+		./$exe -path="$foundPath" $debugOpt $@
+	else
+		echo "Starting $exe $debugOpt $@"
+		./$exe $@
 	fi
-	shift
-	echo "Starting umodel -path=\"$path\" $@"
-	./$exe -path="$path" $@
 }
 
-function run0()
+# This function accepts game path as the 1st argument.
+# Brace expansion is performed when "{a,b,c}" is used inside. Note: when a few
+# space-separated paths are provided without a braces ("path1 path2 path3") - this
+# would not work because we cannot determine whether to split this to a few paths
+# or use as a single path with spaces.
+function run1()
 {
-	echo "Starting umodel $@"
-	./$exe $@
+	case "$1" in
+	*,*)
+		DBG "Group: $1"
+		eval CheckDir $1		# 'eval' is required in order to perform brace expansion
+		;;
+	*)
+		DBG "Single: $1"
+		CheckDir "$1"			# no 'eval' required, check single path
+		;;
+	esac
+
+	shift
+	run $*
 }
 
-function run()    { run1 "." $@;     }	# without path
 
-# all following functions are called as "-func" argument
-# example: test.sh -ut2 HumanMaleA
+# all following functions are called as "--func" argument
+# example: test.sh --ut2 HumanMaleA
 
-function u1()     { run1 "$U1" $*;   }
-function ut1()    { run1 "$UT1" $*;  }
-function ut2()    { run1 "$UT2" $*;  }
-function ut3()    { run1 "$UT3" $*;  }
-function gow()    { run1 "$GOW" $*;  }
-function gow2()   { run1 "$GOW2" $*; }
-function gow3()   { run1 "$GOW3" $*; }
-function ib()     { run1 "$IB" -ios $*; }
-function uc2()    { run1 "$UC2" $*;  }
-function rund()   { run1 "data" $*;  }
+function u1()
+{
+	CheckDir {c,d,e}:/games/{unreal,unreal~1}/UnrealGold
+	run $*
+}
+function ut1()
+{
+	CheckDir {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament
+	run $*
+}
+function ut2()
+{
+	CheckDir {c,d,e}:/games/{unreal,unreal~1}/ut2004 data/2/UT2004
+	run $*
+}
+function ut3()
+{
+	CheckDir {c,d,e}:/games/ut3/UTGame/CookedPC data/3/UT3
+	run $*
+}
+function gow()
+{
+	CheckDir "C:/!umodel-data/GearsOfWar"
+	run $*
+}
+function gow2()   { run1 "data/3X/GearsOfWar2_X360" $*;   }
+function gow3()   { run1 "data/3X/GOW3_beta_X360" $*;     }
+function ib()     { run1 "data/3i/InfinityBlade" -ios $*; }
+function uc2()    { run1 "data/UnrealChampionship2" $*;   }
+function l2()
+{
+	CheckDir "C:/!umodel-data/Lineage2"
+	run $*
+}
+function bio()
+{
+	CheckDir {c,e}:/GAMES/BioShock
+	run $*
+}
+function alice()
+{
+	CheckDir "E:/GAMES/Alice Madness Returns/Alice2/AliceGame/CookedPC"
+	run $*
+}
+function mass()   { run1 "C:/GAMES/Mass Effect/BioGame/CookedPC" $*; }
+function dcu()    { run1 "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC" $*; }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
-function l2()     { run1 "$L2" $*;   }
-function bio()    { run1 "$BIO" $*;  }
-function mass()   { run1 "$MASS" $*; }
-function dcu()    { run1 "$DCU" $*;  }
-function alice()  { run1 "$ALICE" $*; }
+function rund()   {	run1 "data" $*; }
+
+
+#------------------------------------------------------------------------------
+
+cmd=""
+nobuild=
+
+# parse our command line options
+for arg in $*; do
+	case $arg in
+	--help)
+		usage
+		;;
+	--nobuild)
+		nobuild=1
+		;;
+	--exe=*)
+		exe=${arg:6}
+		nobuild=1
+		;;
+	--debug)
+		debugOpt=-debug
+		;;
+	--*)
+		cmd=${arg:2}
+		;;
+	*)
+		DBG "other arg $arg, breaking"
+		break
+	esac
+	DBG "processed $arg"
+	shift
+done
 
 # rebuild umodel when not desired opposite
-#!! WARNING: order-dependent option
-if [ "$1" == "--nobuild" ]; then
-	shift
-else
+if [ -z "$nobuild" ]; then
 	rm $exe
 	./build.sh
 fi
-
-# Check directories
-#?? should check dirs when specific game has been requested (not all games everytime)
-CheckDir U1  {c,d,e}:/games/{unreal,unreal~1}/UnrealGold
-CheckDir UT1 {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament
-CheckDir UT2 {c,d,e}:/games/{unreal,unreal~1}/ut2004 data/2/UT2004
-CheckDir UT3 {c,d,e}:/games/ut3/UTGame/CookedPC data/3/UT3
-CheckDir GOW "C:/!umodel-data/GearsOfWar"
-CheckDir GOW2 data/3X/GearsOfWar2_X360
-CheckDir GOW3 data/3X/GOW3_beta_X360
-CheckDir IB data/3i/InfinityBlade
-CheckDir UC2 "C:/!umodel-data/UnrealChampionship2" data/UnrealChampionship2
-CheckDir L2 "C:/!umodel-data/Lineage2"
-CheckDir BIO {c,e}:/GAMES/BioShock
-CheckDir MASS "C:/GAMES/Mass Effect/BioGame/CookedPC"
-CheckDir DCU "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC"
-CheckDir ALICE "E:/GAMES/Alice Madness Returns/Alice2/AliceGame/CookedPC"
-
-#------------------------------------------------------------------------------
 
 # find whether -path= is used or not
 path=0
@@ -122,17 +194,18 @@ for arg in $*; do
 	esac
 done
 
-if [ $# -gt 0 ]; then
+# execute command
+if [ $# -gt 0 ] || [ "$cmd" ]; then
 	# started with arguments
 	# extract command from "--cmd" argument
-	if [ "${1:0:2}" == "--" ]; then
-		cmd=${1:2}
-		shift
-	elif [ $path == 0 ]; then
-		cmd=ut2						# no command and/or path were specified, run "ut2"
-	else
-		cmd=run0
+	if [ -z "$cmd" ]; then
+		if [ $path == 0 ]; then
+			cmd=ut2					# no command and/or path were specified, run "ut2"
+		else
+			cmd=run
+		fi
 	fi
+	DBG "cmd=$cmd"
 	declare -a args
 	while [ $# -gt 0 ]; do
 		value=${1//\\//}			# replace backslashes with forward slashes
