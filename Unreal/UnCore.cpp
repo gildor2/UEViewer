@@ -635,7 +635,7 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 }
 
 
-static void ReverseBytes(void *Block, int NumItems, int ItemSize)
+void appReverseBytes(void *Block, int NumItems, int ItemSize)
 {
 	byte *p1 = (byte*)Block;
 	byte *p2 = p1 + ItemSize - 1;
@@ -725,7 +725,7 @@ FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 	if (FieldSize > 1 && Ar.ReverseBytes)
 	{
 		assert(Ar.IsLoading);
-		ReverseBytes(DataPtr, DataCount * NumFields, FieldSize);
+		appReverseBytes(DataPtr, DataCount * NumFields, FieldSize);
 	}
 	return Ar;
 

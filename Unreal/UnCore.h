@@ -632,6 +632,11 @@ protected:
 		Ar.Seek(Ar.Tell() - NumBytes);					\
 	}
 
+
+// Reverse byte order for data array, inplace
+void appReverseBytes(void *Block, int NumItems, int ItemSize);
+
+
 /*-----------------------------------------------------------------------------
 	Math classes
 -----------------------------------------------------------------------------*/

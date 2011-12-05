@@ -240,7 +240,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 
 		width = TexData.USize;
 		height = TexData.VSize;
-		pic = Tex->Decompress(TexData);
+		pic = TexData.Decompress();
 	}
 
 	if (!pic)

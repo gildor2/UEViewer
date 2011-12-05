@@ -65,6 +65,7 @@ struct GL_t
 #endif
 
 	void	(APIENTRY * ActiveTexture) (GLenum unit);
+	void	(APIENTRY * CompressedTexImage2D) (GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid *data);
 	void	(APIENTRY * AttachShader) (GLuint program, GLuint shader);
 	void	(APIENTRY * CompileShader) (GLuint obj);
 	GLuint	(APIENTRY * CreateProgram) ();
@@ -175,6 +176,7 @@ extern GL_t GL;
 #endif
 
 #define glActiveTexture	GL.ActiveTexture
+#define glCompressedTexImage2D	GL.CompressedTexImage2D
 #define glAttachShader	GL.AttachShader
 #define glCompileShader	GL.CompileShader
 #define glCreateProgram	GL.CreateProgram
@@ -220,9 +222,11 @@ extern GL_t GL;
 
 
 #define QGL_1_3	(1 << 0)
-#define QGL_2_0	(1 << 1)
-#define QGL_EXT_FRAMEBUFFER_OBJECT	(1 << 2)
-#define QGL_ARB_TEXTURE_FLOAT	(1 << 3)
+#define QGL_1_4	(1 << 1)
+#define QGL_2_0	(1 << 2)
+#define QGL_EXT_TEXTURE_COMPRESSION_S3TC	(1 << 3)
+#define QGL_EXT_FRAMEBUFFER_OBJECT	(1 << 4)
+#define QGL_ARB_TEXTURE_FLOAT	(1 << 5)
 
 #if _WIN32
 

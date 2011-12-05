@@ -461,7 +461,6 @@ public:
 #endif
 	{}
 	virtual bool GetTextureData(CTextureData &TexData) const;
-	virtual byte *Decompress(const CTextureData &TexData) const;
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UTexture::Serialize);

@@ -2,16 +2,16 @@
 
 #if _WIN32
 #	define NUM_GLFUNCS	56
-#	define NUM_EXTFUNCS	35
-#	define NUM_EXTENSIONS	4
+#	define NUM_EXTFUNCS	36
+#	define NUM_EXTENSIONS	6
 #elif __linux__
 #	define NUM_GLFUNCS	56
-#	define NUM_EXTFUNCS	35
-#	define NUM_EXTENSIONS	4
+#	define NUM_EXTFUNCS	36
+#	define NUM_EXTENSIONS	6
 #else
 #	define NUM_GLFUNCS	56
-#	define NUM_EXTFUNCS	35
-#	define NUM_EXTENSIONS	4
+#	define NUM_EXTFUNCS	36
+#	define NUM_EXTENSIONS	6
 #endif
 
 
@@ -79,6 +79,7 @@ static const char *GLNames[NUM_GLFUNCS + NUM_EXTFUNCS] = {
 
 ,
 	"glActiveTexture",
+	"glCompressedTexImage2D",
 	"glAttachShader",
 	"glCompileShader",
 	"glCreateProgram",
@@ -483,6 +484,12 @@ static void APIENTRY logActiveTexture(GLenum unit)
 	lib.ActiveTexture(unit);
 }
 
+static void APIENTRY logCompressedTexImage2D(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid *data)
+{
+	printf("%s (GL_%s, %d, GL_%s, %d, %d, %d, %d, $%X)\n", "glCompressedTexImage2D", EnumName(target), level, EnumName(internalFormat), width, height, border, imageSize, (unsigned)data);
+	lib.CompressedTexImage2D(target, level, internalFormat, width, height, border, imageSize, data);
+}
+
 static void APIENTRY logAttachShader(GLuint program, GLuint shader)
 {
 	printf("%s (%d, %d)\n", "glAttachShader", program, shader);
@@ -759,6 +766,7 @@ static const GL_t logFuncs = {
 
 ,
 	logActiveTexture,
+	logCompressedTexImage2D,
 	logAttachShader,
 	logCompileShader,
 	logCreateProgram,
@@ -816,9 +824,11 @@ struct extInfo_t {
 #if NUM_EXTENSIONS
 
 static extInfo_t extInfo[NUM_EXTENSIONS] = {
-	{"1.3\0", NULL, NULL, NUM_GLFUNCS+0, 1, 0, 0},
-	{"2.0\0", NULL, NULL, NUM_GLFUNCS+1, 23, 0, 0},
-	{"GL_EXT_framebuffer_object\0", NULL, NULL, NUM_GLFUNCS+24, 11, 0, 0},
+	{"1.3\0", NULL, NULL, NUM_GLFUNCS+0, 2, 0, 0},
+	{"1.4\0", NULL, NULL, 0, 0, 0, 0},
+	{"2.0\0", NULL, NULL, NUM_GLFUNCS+2, 23, 0, 0},
+	{"GL_EXT_texture_compression_s3tc\0", NULL, NULL, 0, 0, 0, 0},
+	{"GL_EXT_framebuffer_object\0", NULL, NULL, NUM_GLFUNCS+25, 11, 0, 0},
 	{"GL_ARB_texture_float\0", NULL, NULL, 0, 0, 0, 0}
 #if _WIN32
 

@@ -86,13 +86,12 @@ unsigned CTextureData::GetFourCC() const
 bool CTextureData::IsDXT() const
 {
 	return (
-		Platform != PLATFORM_XBOX360 &&
-		CompressedData != NULL       &&
+		CompressedData != NULL &&
 		(Format == TPF_DXT1 || Format == TPF_DXT3 || Format == TPF_DXT5 || Format == TPF_DXT5N || Format == TPF_3DC) );
 }
 
 
-byte *CTextureData::Decompress(const char *Name, UPalette *Palette) const
+byte *CTextureData::Decompress()
 {
 	guard(CTextureData::Decompress);
 
@@ -226,7 +225,7 @@ byte *CTextureData::Decompress(const char *Name, UPalette *Palette) const
 	unsigned fourCC = PixelFormatInfo[Format].FourCC;
 	if (!fourCC)
 	{
-		appNotify("%s: unknown texture format %d \n", Name, Format);
+		appNotify("%s: unknown texture format %d \n", Obj->Name, Format);
 		memset(dst, 0xFF, size);
 		return dst;
 	}
@@ -333,21 +332,25 @@ static unsigned GetTiledOffset(int x, int y, int width, int logBpb)
 }
 
 // Untile decompressed texture
-static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+// This function also removes U alignment when originalWidth < tiledWidth
+static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
 {
 	guard(UntileXbox360Texture);
 
-	int blockWidth  = width  / blockSizeX;				// width of image in blocks
-	int blockHeight = height / blockSizeY;				// height of image in blocks
-	int logBpp      = appLog2(bytesPerBlock);
+	int blockWidth          = tiledWidth / blockSizeX;			// width of image in blocks
+	int originalBlockWidth  = originalWidth / blockSizeX;		// width of image in blocks
+	int blockHeight         = height / blockSizeY;				// height of image in blocks
+	int logBpp              = appLog2(bytesPerBlock);
+
+	int numImageBlocks = blockWidth * blockHeight;				// used for verification
 
 	// iterate image blocks
 	for (int y = 0; y < blockHeight; y++)
 	{
-		for (int x = 0; x < blockWidth; x++)
+		for (int x = 0; x < originalBlockWidth; x++)			// process only a part of image when originalWidth < tiledWidth
 		{
 			unsigned swzAddr = GetTiledOffset(x, y, blockWidth, logBpp);	// do once for whole block
-			assert(swzAddr < blockWidth * blockHeight);
+			assert(swzAddr < numImageBlocks);
 			int sy = swzAddr / blockWidth;
 			int sx = swzAddr % blockWidth;
 			// copy block per-pixel from [sx,sy] to [x,y]
@@ -358,8 +361,8 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 				// copy line of blockSizeX pixels
 				int x2 = x * blockSizeX;
 				int x3 = sx * blockSizeX;
-				unsigned *pDst = dst + y2 * width + x2;
-				unsigned *pSrc = src + y3 * width + x3;
+				unsigned       *pDst = dst + y2 * originalWidth + x2;
+				const unsigned *pSrc = src + y3 * tiledWidth + x3;
 				for (int x1 = 0; x1 < blockSizeX; x1++)
 					*pDst++ = *pSrc++;
 			}
@@ -369,63 +372,56 @@ static void UntileXbox360Texture(unsigned *src, unsigned *dst, int width, int he
 }
 
 // Untile compressed texture
-static void UntileXbox360TexturePacked(byte *src, byte *dst, int width, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+// This function also removes U alignment when originalWidth < tiledWidth
+static void UntileXbox360TexturePacked(const byte *src, byte *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
 {
 	guard(UntileXbox360TexturePacked);
 
-	int blockWidth  = width  / blockSizeX;				// width of image in blocks
-	int blockHeight = height / blockSizeY;				// height of image in blocks
-	int logBpp      = appLog2(bytesPerBlock);
+	int blockWidth          = tiledWidth / blockSizeX;			// width of image in blocks
+	int originalBlockWidth  = originalWidth / blockSizeX;		// width of image in blocks
+	int blockHeight         = height / blockSizeY;				// height of image in blocks
+	int logBpp              = appLog2(bytesPerBlock);
+
+	int numImageBlocks = blockWidth * blockHeight;				// used for verification
 
 	// iterate image blocks
 	for (int y = 0; y < blockHeight; y++)
 	{
-		for (int x = 0; x < blockWidth; x++)
+		for (int x = 0; x < originalBlockWidth; x++)
 		{
 			unsigned swzAddr = GetTiledOffset(x, y, blockWidth, logBpp);	// do once for whole block
-			assert(swzAddr < blockWidth * blockHeight);
+			assert(swzAddr < numImageBlocks);
 			int sy = swzAddr / blockWidth;
 			int sx = swzAddr % blockWidth;
 
-			byte *pDst = dst + (y  * blockWidth + x ) * bytesPerBlock;
-			byte *pSrc = src + (sy * blockWidth + sx) * bytesPerBlock;
+			byte       *pDst = dst + (y  * originalBlockWidth + x ) * bytesPerBlock;
+			const byte *pSrc = src + (sy * blockWidth         + sx) * bytesPerBlock;
 			memcpy(pDst, pSrc, bytesPerBlock);
 		}
 	}
 	unguard;
 }
 
-// Unalign texture; suitable for both compressed and uncompressed textures:
-// - uncompressed: pass USize/VSize in pixels, PixelSize = 4 (RGBA)
-// - compressed: pass USize/VSize in blocks, PixelSize = BytesPerBlock
-static void RemoveXbox360TexAlign(byte *pic, int USize, int USize1, int VSize, int PixelSize)
-{
-	guard(RemoveXbox360TexAlign);
-	if (USize == USize1) return;		// not required
-	// perform inplace changes
-	int line1 = USize  * PixelSize;		// unaligned line size
-	int line2 = USize1 * PixelSize;		// aligned line size
-	byte *p1 = pic;
-	byte *p2 = pic;
-	for (int y = 0; y < VSize; y++)
-	{
-		memcpy(p2, p1, line1);
-		p2 += line1;
-		p1 += line2;
-	}
-	unguard;
-}
 
-
-byte *CTextureData::DecompressXBox360(const char* Name, char*& Error, int Game) const
+void CTextureData::DecodeXBox360()
 {
-	guard(CTextureData::DecompressXBox360);
+	guard(CTextureData::DecodeXBox360);
+
+	if (!CompressedData)
+		return;
 
 	const CPixelFormatInfo &Info = PixelFormatInfo[Format];
+
+	char ErrorMessage[256];
 	if (!Info.X360Align)
 	{
-		Error = "unknown texture format";
-		return NULL;
+		strcpy(ErrorMessage, "unknown texture format");
+
+	error:
+		if (ShouldFreeData) delete CompressedData;
+		CompressedData = NULL;
+		appNotify("ERROR: DecodeXBox360 %s'%s' (%s=%d): %s", Obj->GetClassName(), Obj->Name,
+			OriginalFormatName, OriginalFormatEnum, ErrorMessage);
 	}
 
 	int bytesPerBlock = Info.BytesPerBlock;
@@ -437,111 +433,31 @@ byte *CTextureData::DecompressXBox360(const char* Name, char*& Error, int Game) 
 #if BIOSHOCK
 	// some verification
 	float rate = bpp / bytesPerBlock;
-	if (Game == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
+	if (Obj->Package->Game == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
 		bpp = bytesPerBlock;
 #endif // BIOSHOCK
 
 	if (fabs(bpp - bytesPerBlock) > 0.001f)
 	{
-		static char errBuf[256];
-		appSprintf(ARRAY_ARG(errBuf), "bytesPerBlock: got %g, need %d", bpp, bytesPerBlock);
-		Error = errBuf;
-		return NULL;
+		appSprintf(ARRAY_ARG(ErrorMessage), "bytesPerBlock: got %g, need %d", bpp, bytesPerBlock);
+		goto error;
 	}
 
-	// decompress texture ...
-	CTextureData NewTexData;
-	NewTexData = *this;
-	NewTexData.USize          = USize1;
-	NewTexData.VSize          = VSize1;
-	NewTexData.ShouldFreeData = false;
+	// untile and unalign
+	byte *buf = new byte[DataSize];
+	UntileXbox360TexturePacked(CompressedData, buf, USize1, USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
-	byte *pic;
+	// swap bytes
 	if (bytesPerBlock > 1)
-	{
-		// reverse byte order (16-bit integers)
-		byte *buf2 = new byte[DataSize];
-		const byte *p  = CompressedData;
-		byte *p2 = buf2;
-		for (int i = 0; i < DataSize; i += 2, p += 2, p2 += 2)	//?? use ReverseBytes() from UnCore.cpp (but ReverseBytes() is inplace)
-		{
-			p2[0] = p[1];
-			p2[1] = p[0];
-		}
-#if 0
-//!! TEMPORARY EXPERIMENTAL CODE
-//!! - integrate to GetTextureData()
-//!! - check for leaks, reduce allocation count
-//!! - support DDS export
-//!! - Decompress() will work without XBox360 code!
-// untile
-byte *buf3 = new byte[DataSize];
-UntileXbox360TexturePacked(buf2, buf3, USize1, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
-delete buf2;
-// unalign
-RemoveXbox360TexAlign(buf3, USize / Info.BlockSizeX, USize1 / Info.BlockSizeX, VSize / Info.BlockSizeY, Info.BytesPerBlock);
-// decompress
-NewTexData.CompressedData = buf3;
-NewTexData.USize = USize;
-NewTexData.VSize = VSize;
-buf3 = NewTexData.Decompress(Name, NULL);
-return buf3;
-#endif
+		appReverseBytes(buf, DataSize / 2, 2);
 
-		// decompress texture
-		NewTexData.CompressedData = buf2;
-		pic = NewTexData.Decompress(Name, NULL);
-		// delete reordered buffer
-		delete buf2;
-	}
-	else
-	{
-		// 1 byte per block, no byte reordering
-		pic = NewTexData.Decompress(Name, NULL);
-	}
+	// release old CompressedData
+	if (ShouldFreeData) delete CompressedData;
+	CompressedData = buf;
+	ShouldFreeData = true;			// data were allocated here ...
+	DataSize       = (USize / Info.BlockSizeX) * (VSize / Info.BlockSizeY) * Info.BytesPerBlock; // essential for exporting
 
-	// untile texture
-	//!! note: can untile COMPRESSED TEXTURE - UntileXbox360Texture() works with blocks
-	//!! this will add ability to use XBOX360 textures in DDS format too
-	/*!!
-		1) UntileXbox360Texture()
-		2) swap bytes -- really can be performed at any stage (but before Decompress()); may be inplace because
-		   we will allocate memory here anyway
-		3) remove alignment
-		- now we have PC-compatible texture
-		! this will require allocating buffer for converted CompressedData, and this buffer should be allocated by
-		  GetTextureData(), conversion should be performed there, and buffer should be freed by destructor
-		  (use ShouldFreeData=true ?)
-		  - NOTE: Bioshock has ShouldFreeData=true, plus it has X360 version, so we should release old CompressedData
-		    before replacing with new data when ShouldFreeData was TRUE earlier
-		- remove Error and Game params, pass UUnrealMaterial* (or UObject*) instead; make
-		  'char errBuf[], ... appSprintf(errBuf, msg), goto error;'
-	 */
-	byte *pic2 = new byte[USize1 * VSize1 * 4];
-	UntileXbox360Texture((unsigned*)pic, (unsigned*)pic2, USize1, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
-	delete pic;
-
-	// shrink texture buffer (remove U alignment)
-#if 0
-	if (USize != USize1)
-	{
-		guard(ShrinkTexture);
-		int line1 = USize  * 4;
-		int line2 = USize1 * 4;
-		byte *p1 = pic2;
-		byte *p2 = pic2;
-		for (int y = 0; y < VSize; y++)
-		{
-			memcpy(p2, p1, line1);
-			p2 += line1;
-			p1 += line2;
-		}
-		unguard;
-	}
-#else
-	RemoveXbox360TexAlign(pic2, USize, USize1, VSize, 4);
-#endif
-	return pic2;
+	return;		// no error
 
 	unguard;
 }
@@ -916,6 +832,8 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	TexData.Platform           = PLATFORM_PC;
 	TexData.OriginalFormatEnum = Format;
 	TexData.OriginalFormatName = EnumToName("ETextureFormat", Format);
+	TexData.Obj                = this;
+	TexData.Palette            = Palette;
 
 	// process external sources for some games
 #if BIOSHOCK
@@ -988,41 +906,15 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	}
 
 	TexData.Format = intFormat;
+
+#if BIOSHOCK && XBOX360
+	if (TexData.CompressedData && TexData.Platform == PLATFORM_XBOX360)
+		TexData.DecodeXBox360();
+#endif
+
 	return (TexData.CompressedData != NULL);
 
 	unguard;
-}
-
-
-byte *UTexture::Decompress(const CTextureData &TexData) const
-{
-	guard(UTexture::Decompress);
-
-	if (!TexData.CompressedData)
-		return NULL;
-
-	byte *pic2 = NULL;
-#if BIOSHOCK && XBOX360
-	if (TexData.Platform == PLATFORM_XBOX360)
-	{
-//		appPrintf("fmt=%s  bulk=%d  w=%d  h=%d\n", EnumToName("EPixelFormat", Format), DataSize, USize, VSize);
-		char* Error;
-		pic2 = TexData.DecompressXBox360(Name, Error, Package->Game);
-		if (!pic2)	//?? move error message to DecompressXBox360(), pass UObject* there
-		{
-			appNotify("ERROR UTexture::DecompressXBox360: %s'%s' (%s=%d): %s",
-				GetClassName(), Name,
-				TexData.OriginalFormatName, Format,
-				Error
-			);
-		}
-		return pic2;
-	}
-#endif // BIOSHOCK && XBOX360
-	pic2 = TexData.Decompress(Name, Palette);
-	return pic2;
-
-	unguardf(("Tex=%s", Name));
 }
 
 
@@ -1323,6 +1215,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 
 	TexData.OriginalFormatEnum = Format;
 	TexData.OriginalFormatName = EnumToName("ETextureFormat", Format);
+	TexData.Obj                = this;
 
 	bool bulkChecked = false;
 	for (int n = 0; n < Mips.Num(); n++)
@@ -1391,66 +1284,16 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 #endif // IPHONE
 
 	TexData.Format = intFormat;
+
+#if XBOX360
+	if (TexData.Platform == PLATFORM_XBOX360)
+		TexData.DecodeXBox360();
+#endif
+
 	return (TexData.CompressedData != NULL);
 
 	unguard;
 }
 
-
-//!! code is almost the same as for UTexture::Decompress()
-byte *UTexture2D::Decompress(const CTextureData &TexData) const
-{
-	guard(UTexture2D::Decompress);
-
-	if (!TexData.CompressedData)
-		return NULL;
-
-	byte* ret = NULL;
-	switch (TexData.Platform)
-	{
-#if XBOX360
-	case PLATFORM_XBOX360:
-		{
-//			appPrintf("fmt=%s  bulk=%d  w=%d  h=%d\n", TexData.OriginalFormatName, TexData.DataSize, TexData.USize, TexData.VSize);
-			char* Error;
-			ret = TexData.DecompressXBox360(Name, Error, Package->Game);
-			if (!ret)	//?? (see UTexture::Decompress())
-			{
-				appNotify("ERROR UTexture2D::DecompressXBox360: %s'%s' (%s=%d): %s",
-					GetClassName(), Name,
-					TexData.OriginalFormatName, Format,
-					Error
-				);
-			}
-		}
-		break;
-#endif // XBOX360
-	default:
-		ret = TexData.Decompress(Name, NULL);
-		break;
-	}
-	if (!ret) return NULL;			// failed to decompress, nothing to check more
-
-#if 0
-	// check for possible texture modification using UnpackMin/UnpackMax
-	if (UnpackMin[0] == 0 && UnpackMin[1] == 0 && UnpackMin[1] == 0)
-		return ret;					// simple texture
-
-	// possibly a normalmap - unpacks to -1..+1 range
-	unsigned Xor = 0;
-	int i;
-	for (i = 0; i < 4; i++)
-		if (UnpackMin[i] > UnpackMax[i])
-			Xor |= 0xFF << (i * 8);	// "N xor 255 = 255 - N" (for byte N)
-	// original texture is BGRA, our is RGBA
-	if (!Xor) return ret;			// do not require processing
-	unsigned *upic = (unsigned*)ret;
-	for (i = 0; i < TexData.USize * TexData.VSize; i++, upic++)
-		*upic = *upic ^ Xor;
-#endif
-	return ret;
-
-	unguardf(("Tex=%s", Name));
-}
 
 #endif // UNREAL3

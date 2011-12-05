@@ -376,6 +376,15 @@ void Viewport(GLint x, GLint y, GLsizei width, GLsizei height) ARGS
 
 void ActiveTexture(GLenum unit) ARGS
 //void ClientActiveTexture(GLenum unit) ARGS
+void CompressedTexImage2D(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid *data) ARGS
+
+//-----------------------------------------------------------------------------
+//  OpenGL 1.3
+//-----------------------------------------------------------------------------
+
+#name 1.4
+// used GL_GENERATE_MIPMAP
+
 
 //-----------------------------------------------------------------------------
 //  OpenGL 2.0
@@ -480,6 +489,8 @@ void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normal
 //-----------------------------------------------------------------------------
 //  Extensions
 //-----------------------------------------------------------------------------
+
+#name GL_EXT_texture_compression_s3tc
 
 #name GL_EXT_framebuffer_object
 //GLboolean IsRenderbufferEXT(GLuint renderbuffer) ARGS

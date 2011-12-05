@@ -94,6 +94,8 @@ struct CTextureData
 	int						Platform;
 	const char				*OriginalFormatName;	// string value from typeinfo
 	int						OriginalFormatEnum;		// ETextureFormat or EPixelFormat
+	const UObject			*Obj;					// for error reporting
+	const UPalette			*Palette;				// for TPF_P8
 
 	CTextureData()
 	{
@@ -108,9 +110,10 @@ struct CTextureData
 	unsigned GetFourCC() const;
 	bool IsDXT() const;
 
-	byte *Decompress(const char *Name, UPalette *Palette = NULL) const;
+	byte *Decompress();								// may return NULL in a case of error
+
 #if XBOX360
-	byte *DecompressXBox360(const char* Name, char*& Error, int Game) const;	// may return NULL when DataSize is not correct
+	void DecodeXBox360();
 #endif
 };
 
@@ -123,10 +126,6 @@ public:
 	virtual bool GetTextureData(CTextureData &TexData) const
 	{
 		return false;
-	}
-	virtual byte *Decompress(const CTextureData &TexData) const
-	{
-		return NULL;
 	}
 
 #if RENDERING

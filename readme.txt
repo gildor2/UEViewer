@@ -129,6 +129,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+05.12.2011
+- implemented XBox360 DDS texture export
+
 01.12.2011
 - implemented DDS texture export, activated with -dds option; DDS texture format is used for
   DXT textures only

@@ -348,7 +348,6 @@ public:
 
 	bool LoadBulkTexture(int MipIndex) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
-	virtual byte *Decompress(const CTextureData &TexData) const;
 #if RENDERING
 	virtual void Bind();
 	virtual void GetParams(CMaterialParams &Params) const;
