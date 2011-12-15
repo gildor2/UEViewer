@@ -594,6 +594,15 @@ void FArray::RawCopy(const FArray &Src, int elementSize)
 }
 
 
+void* FArray::GetItem(int index, int elementSize) const
+{
+	guard(operator[]);
+	assert(index >= 0 && index < DataCount);
+	return OffsetPointer(DataPtr, index * elementSize);
+	unguardf(("%d/%d", index, DataCount));
+}
+
+
 FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize)
 {
 	int i = 0;

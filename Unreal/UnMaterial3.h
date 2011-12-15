@@ -255,9 +255,7 @@ public:
 	,	AddressX(TA_Wrap)
 	,	AddressY(TA_Wrap)
 	,	bForcePVRTC4(false)
-	{
-		TextureFileCacheName.Str = "None";
-	}
+	{}
 #endif
 
 	BEGIN_PROP_TABLE

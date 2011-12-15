@@ -129,6 +129,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+14.12.2011
+- implemented XBox360 XMA audio export
+
 05.12.2011
 - implemented XBox360 DDS texture export
 

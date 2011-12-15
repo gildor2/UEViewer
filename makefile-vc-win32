@@ -87,7 +87,7 @@ umodel.exe : $(MAIN_DIRS) $(MAIN)
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"./obj/umodel-win32/" -D DYNAMIC_CRC_TABLE -D BUILDFIXED -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt -I ./libs/PowerVR
+OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"./obj/umodel-win32/" -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/includewin32 -I ./libs/nvtt -I ./libs/PowerVR
 
 ./obj/umodel-win32/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) -MD $(OPT_MAIN) -Fo"./obj/umodel-win32/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp

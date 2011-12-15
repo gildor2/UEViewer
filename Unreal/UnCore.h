@@ -113,7 +113,7 @@ public:
 
 	FName()
 	:	Index(0)
-	,	Str(NULL)
+	,	Str("None")
 #if UNREAL3
 	,	ExtraIndex(0)
 	,	NameGenerated(false)
@@ -368,47 +368,47 @@ public:
 };
 
 
-inline FArchive& operator<<(FArchive &Ar, bool &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, bool &B)
 {
 	Ar.Serialize(&B, 1);
 	return Ar;
 }
-inline FArchive& operator<<(FArchive &Ar, char &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, char &B)
 {
 	Ar.Serialize(&B, 1);
 	return Ar;
 }
-inline FArchive& operator<<(FArchive &Ar, byte &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, byte &B)
 {
-	Ar.ByteOrderSerialize(&B, 1);
+	Ar.Serialize(&B, 1);
 	return Ar;
 }
-inline FArchive& operator<<(FArchive &Ar, short &B)
-{
-	Ar.ByteOrderSerialize(&B, 2);
-	return Ar;
-}
-inline FArchive& operator<<(FArchive &Ar, word &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, short &B)
 {
 	Ar.ByteOrderSerialize(&B, 2);
 	return Ar;
 }
-inline FArchive& operator<<(FArchive &Ar, int &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, word &B)
+{
+	Ar.ByteOrderSerialize(&B, 2);
+	return Ar;
+}
+FORCEINLINE FArchive& operator<<(FArchive &Ar, int &B)
 {
 	Ar.ByteOrderSerialize(&B, 4);
 	return Ar;
 }
-inline FArchive& operator<<(FArchive &Ar, int64 &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, int64 &B)
 {
 	Ar.ByteOrderSerialize(&B, 8);
 	return Ar;
 }
-inline FArchive& operator<<(FArchive &Ar, unsigned &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, unsigned &B)
 {
 	Ar.ByteOrderSerialize(&B, 4);
 	return Ar;
 }
-inline FArchive& operator<<(FArchive &Ar, float &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, float &B)
 {
 	Ar.ByteOrderSerialize(&B, 4);
 	return Ar;
@@ -863,11 +863,11 @@ template<> struct TTypeInfo<Type>			\
 	enum { IsSimpleType = 1 };				\
 	enum { IsRawType = 1 };					\
 };											\
-template<> inline void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
+template<> FORCEINLINE void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
 {											\
 	Dst.RawCopy(Src, sizeof(Type));			\
 }											\
-inline FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
+FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
 {											\
 	staticAssert(sizeof(Type) == TTypeInfo<Type>::NumFields * TTypeInfo<Type>::FieldSize, \
 		Error_In_TypeInfo);					\
@@ -884,11 +884,11 @@ template<> struct TTypeInfo<Type>			\
 	enum { IsSimpleType = 0 };				\
 	enum { IsRawType = 1 };					\
 };											\
-template<> inline void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
+template<> FORCEINLINE void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
 {											\
 	Dst.RawCopy(Src, sizeof(Type));			\
 }											\
-inline FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
+FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
 {											\
 	return A.SerializeRaw(Ar, TArray<Type>::SerializeItem, sizeof(Type)); \
 }
@@ -921,6 +921,8 @@ inline FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
 
 class FArray
 {
+	friend struct CTypeInfo;
+
 public:
 	FArray()
 	:	DataCount(0)
@@ -949,11 +951,6 @@ public:
 		return DataCount;
 	}
 
-	void Empty (int count, int elementSize);
-	void Add   (int count, int elementSize);
-	void Insert(int index, int count, int elementSize);
-	void Remove(int index, int count, int elementSize);
-
 	void RawCopy(const FArray &Src, int elementSize);
 
 	// serializers
@@ -967,6 +964,13 @@ protected:
 
 	// serializers
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
+
+	void Empty (int count, int elementSize);
+	void Add   (int count, int elementSize);
+	void Insert(int index, int count, int elementSize);
+	void Remove(int index, int count, int elementSize);
+
+	void* GetItem(int index, int elementSize) const;
 };
 
 #if DECLARE_VIEWER_PROPS
@@ -978,6 +982,7 @@ FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 #if UNREAL3
 FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 #endif
+
 
 // NOTE: this container cannot hold objects, required constructor/destructor
 // (at least, Add/Insert/Remove functions are not supported, but can serialize
@@ -991,66 +996,66 @@ public:
 	~TArray()
 	{
 		// destruct all array items
-#if 0
-		T *P, *P2;
-		for (P = (T*)DataPtr, P2 = P + DataCount; P < P2; P++)
-			P->~T();
-#else
-		// this code is more compact at least for VC6 when T has no destructor
-		// (for code above, compiler will always compute P2, even when not needed)
-		for (int i = 0; i < DataCount; i++)
-			((T*)DataPtr + i)->~T();
-#endif
+		if (!IS_POD(T)) Destruct(0, DataCount);
 	}
 	// data accessors
+
+#if !DO_ASSERT
+	// version without verifications, compact
+	FORCEINLINE T& operator[](int index)
+	{
+		return *((T*)DataPtr + index);
+	}
+	FORCEINLINE const T& operator[](int index) const
+	{
+		return *((T*)DataPtr + index);
+	}
+#elif DO_GUARD_MAX
+	// version with guardfunc instead of guard
+	//?? remove this?
 	T& operator[](int index)
 	{
-#if DO_GUARD_MAX
 		guardfunc;
-#else
-		guard(TArray[]);
-#endif
 		assert(index >= 0 && index < DataCount);
 		return *((T*)DataPtr + index);
 		unguardf(("%d/%d", index, DataCount));
 	}
 	const T& operator[](int index) const
 	{
-#if DO_GUARD_MAX
 		guardfunc;
-#else
-		guard(TArray[]);
-#endif
 		assert(index >= 0 && index < DataCount);
 		return *((T*)DataPtr + index);
 		unguardf(("%d/%d", index, DataCount));
 	}
+#else // DO_ASSERT && !DO_GUARD_MAX
+	// common implementation for all types
+	FORCEINLINE T& operator[](int index)
+	{
+		return *(T*)GetItem(index, sizeof(T));
+	}
+	FORCEINLINE const T& operator[](int index) const
+	{
+		return *(T*)GetItem(index, sizeof(T));
+	}
+#endif
 
-	int Add(int count = 1)
+	FORCEINLINE int Add(int count = 1)
 	{
 		int index = DataCount;
-		FArray::Insert(index, count, sizeof(T));
-		for (int i = 0; i < count; i++)
-			new ((T*)DataPtr + index + i) T;
+		Insert(index, count);
 		return index;
 	}
 
-	void Insert(int index, int count = 1)
+	FORCEINLINE void Insert(int index, int count = 1)
 	{
 		FArray::Insert(index, count, sizeof(T));
+		if (!IS_POD(T)) Construct(index, count);
 	}
 
-	void Remove(int index, int count = 1)
+	FORCEINLINE void Remove(int index, int count = 1)
 	{
 		// destruct specified array items
-#if 0
-		T *P, *P2;
-		for (P = (T*)DataPtr + index, P2 = P + count; P < P2; P++)
-			P->~T();
-#else
-		for (int i = index; i < index + count; i++)
-			((T*)DataPtr + i)->~T();
-#endif
+		if (!IS_POD(T)) Destruct(index, count);
 		// remove items from array
 		FArray::Remove(index, count, sizeof(T));
 	}
@@ -1062,7 +1067,7 @@ public:
 		return index;
 	}
 
-	T& AddItem()
+	FORCEINLINE T& AddItem()
 	{
 		int index = Add();
 		return Item(index);
@@ -1087,13 +1092,12 @@ public:
 	FORCEINLINE void Empty(int count = 0)
 	{
 		// destruct all array items
-		for (int i = 0; i < DataCount; i++)
-			((T*)DataPtr + i)->~T();
+		if (!IS_POD(T)) Destruct(0, DataCount);
 		// remove data array (count=0) or preallocate memory (count>0)
 		FArray::Empty(count, sizeof(T));
 	}
 
-	void Sort(int (*cmpFunc)(const T*, const T*))
+	FORCEINLINE void Sort(int (*cmpFunc)(const T*, const T*))
 	{
 		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
 	}
@@ -1131,6 +1135,16 @@ private:
 	FORCEINLINE const T& Item(int index) const
 	{
 		return *((T*)DataPtr + index);
+	}
+	void Construct(int index, int count)
+	{
+		for (int i = 0; i < count; i++)
+			new ((T*)DataPtr + index + i) T;
+	}
+	void Destruct(int index, int count)
+	{
+		for (int i = 0; i < count; i++)
+			((T*)DataPtr + index + i)->~T();
 	}
 };
 

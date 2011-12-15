@@ -379,7 +379,7 @@ void ActiveTexture(GLenum unit) ARGS
 void CompressedTexImage2D(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid *data) ARGS
 
 //-----------------------------------------------------------------------------
-//  OpenGL 1.3
+//  OpenGL 1.4
 //-----------------------------------------------------------------------------
 
 #name 1.4
@@ -432,7 +432,7 @@ void Uniform1f(GLint, GLfloat);
 void Uniform2f(GLint, GLfloat, GLfloat);
 //void Uniform3f(GLint, GLfloat, GLfloat, GLfloat);
 //void Uniform4f(GLint, GLfloat, GLfloat, GLfloat, GLfloat);
-void Uniform1i(GLint index, GLint value) ARGS
+void Uniform1i(GLint, GLint) ARGS
 //void Uniform2i(GLint, GLint, GLint);
 //void Uniform3i(GLint, GLint, GLint, GLint);
 //void Uniform4i(GLint, GLint, GLint, GLint, GLint);

@@ -86,7 +86,7 @@ struct GL_t
 	void	(APIENTRY * UseProgram) (GLuint obj);
 	void	(APIENTRY * Uniform1f) (GLint, GLfloat);
 	void	(APIENTRY * Uniform2f) (GLint, GLfloat, GLfloat);
-	void	(APIENTRY * Uniform1i) (GLint index, GLint value);
+	void	(APIENTRY * Uniform1i) (GLint, GLint);
 	void	(APIENTRY * VertexAttrib3fv) (GLuint index, const GLfloat *v);
 	void	(APIENTRY * VertexAttribPointer) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 	void	(APIENTRY * BindRenderbufferEXT) (GLenum target, GLuint renderbuffer);

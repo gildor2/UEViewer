@@ -601,6 +601,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #if DEBUG_PROPS
 						appPrintf("Item[%d]:\n", i);
 #endif
+						assert(ItemType->Constructor);
 						ItemType->Constructor(item);		// fill default properties
 						ItemType->SerializeProps(Ar, item);
 					}
@@ -776,6 +777,7 @@ UObject *CreateClass(const char *Name)
 	if (!Type) return NULL;
 
 	UObject *Obj = (UObject*)appMalloc(Type->SizeOf);
+	assert(Type->Constructor);
 	Type->Constructor(Obj);
 	// NOTE: do not add object to GObjObjects in UObject constructor
 	// to allow runtime creation of objects without linked package
@@ -832,21 +834,61 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 }
 
 
-static void PrintIndent(int Value, bool HasIndex = false)
+static void PrintIndent(int Value)
 {
-#if DUMP_SHOW_PROP_INDEX
-	if (!HasIndex) appPrintf("  .....");	// skip "[NNN]"
-#endif
-	for (int i = 0; i <= Value; i++)
+	for (int i = 0; i < Value; i++)
 		appPrintf("    ");
 }
 
-void CTypeInfo::DumpProps(void *Data, int Indent) const
+
+struct CPropDump
 {
-	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
+	char				Name[64];
+	char				Value[256];
+	bool				IsArrayItem;
+	TArray<CPropDump>	Nested;				// Value should be "" when Nested[] is not empty
+
+	CPropDump()
+	{
+		memset(this, 0, sizeof(CPropDump));
+	}
+
+	void PrintTo(char *Dst, int DstSize, const char *fmt, va_list argptr)
+	{
+		char buf[512];
+		int oldLen = strlen(Dst);
+		int len = vsnprintf(Dst + oldLen, DstSize - oldLen, fmt, argptr);
+		if (len < 0 || (len + oldLen >= DstSize))
+		{
+			// overflow
+			memcpy(Dst + DstSize - 4, "...", 4);
+		}
+	}
+
+	void PrintName(const char *fmt, ...)
+	{
+		va_list	argptr;
+		va_start(argptr, fmt);
+		PrintTo(ARRAY_ARG(Name), fmt, argptr);
+		va_end(argptr);
+	}
+
+	void PrintValue(const char *fmt, ...)
+	{
+		va_list	argptr;
+		va_start(argptr, fmt);
+		PrintTo(ARRAY_ARG(Value), fmt, argptr);
+		va_end(argptr);
+	}
+};
+
+
+static void CollectProps(const CTypeInfo *Type, void *Data, CPropDump &Dump)
+{
+	for (/* empty */; Type; Type = Type->Parent)
 	{
 		if (!Type->NumProps) continue;
-		if (!Indent) appPrintf("%s properties:\n", Type->Name);
+
 		for (int PropIndex = 0; PropIndex < Type->NumProps; PropIndex++)
 		{
 			const CPropInfo *Prop = Type->Props + PropIndex;
@@ -855,16 +897,19 @@ void CTypeInfo::DumpProps(void *Data, int Indent) const
 //				appPrintf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
 				continue;
 			}
+			CPropDump *PD = new (Dump.Nested) CPropDump;
+
+			// name
+
 #if DUMP_SHOW_PROP_INDEX
-			appPrintf("  [%3d]", PropIndex);
-			PrintIndent(Indent, true);
-#else
-			PrintIndent(Indent);
+			PD->PrintName("(%d)", PropIndex);
 #endif
 #if DUMP_SHOW_PROP_TYPE
-			appPrintf("%s ", (Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName+1);	// skip enum marker
+			PD->PrintName("%s ", (Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName+1);	// skip enum marker
 #endif
-			appPrintf("%s", Prop->Name);
+			PD->PrintName("%s", Prop->Name);
+
+			// value
 
 			byte *value = (byte*)Data + Prop->Offset;
 			int PropCount = Prop->Count;
@@ -885,39 +930,31 @@ void CTypeInfo::DumpProps(void *Data, int Indent) const
 			// formatting of property start
 			if (IsArray)
 			{
-				appPrintf("[%d] =", PropCount);
+				PD->PrintName("[%d]", PropCount);
 				if (!PropCount)
 				{
-					appPrintf(" {}\n");
+					PD->PrintValue("{}");
 					continue;
 				}
-				// first item
-				if (!IsStruc)
-				{
-					appPrintf(" { ");
-				}
-				else
-				{
-					appPrintf("\n");
-					PrintIndent(Indent); appPrintf("{");
-				}
-			}
-			else
-			{
-				appPrintf(" = ");
 			}
 
 			// dump item(s)
 			for (int ArrayIndex = 0; ArrayIndex < PropCount; ArrayIndex++)
 			{
-				// note: ArrayIndex is used inside PROP macro
+				CPropDump *PD2 = PD;
+				if (IsArray)
+				{
+					// create nested CPropDump
+					PD2 = new (PD->Nested) CPropDump;
+					PD2->PrintName("%s[%d]", Prop->Name, ArrayIndex);
+					PD2->IsArrayItem = true;
+				}
 
-				// print separator between array items
-				if (ArrayIndex > 0 && !IsStruc) appPrintf(", ");
+				// note: ArrayIndex is used inside PROP macro
 
 #define IS(name)  strcmp(Prop->TypeName, #name) == 0
 #define PROCESS(type, format, value) \
-				if (IS(type)) { appPrintf(format, value); }
+				if (IS(type)) { PD2->PrintValue(format, value); }
 				PROCESS(byte,     "%d", PROP(byte));
 				PROCESS(int,      "%d", PROP(int));
 				PROCESS(bool,     "%s", PROP(bool) ? "true" : "false");
@@ -930,10 +967,10 @@ void CTypeInfo::DumpProps(void *Data, int Indent) const
 					{
 						char ObjName[256];
 						obj->GetFullName(ARRAY_ARG(ObjName));
-						appPrintf("%s'%s'", obj->GetClassName(), ObjName);
+						PD2->PrintValue("%s'%s'", obj->GetClassName(), ObjName);
 					}
 					else
-						appPrintf("Null");
+						PD2->PrintValue("None");
 				}
 #else
 				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
@@ -943,42 +980,102 @@ void CTypeInfo::DumpProps(void *Data, int Indent) const
 				{
 					// enum value
 					const char *v = EnumToName(Prop->TypeName+1, *value);		// skip enum marker
-					appPrintf("%s (%d)", v ? v : "<unknown>", *value);
+					PD2->PrintValue("%s (%d)", v ? v : "<unknown>", *value);
 				}
 				if (IsStruc)
 				{
 					// this is a structure type
-					int NestIndent = (IsArray) ? Indent+1 : Indent;
-					if (ArrayIndex == 0) appPrintf("\n");
-					if (IsArray)
-					{
-						PrintIndent(NestIndent);
-						appPrintf("%s[%d] =\n", Prop->Name, ArrayIndex);
-					}
-					PrintIndent(NestIndent); appPrintf("{\n");
-					StrucType->DumpProps(value + ArrayIndex * StrucType->SizeOf, NestIndent+1);
-					PrintIndent(NestIndent); appPrintf("}\n");
+					CollectProps(StrucType, value + ArrayIndex * StrucType->SizeOf, *PD2);
 				}
+			} // ArrayIndex loop
+		} // PropIndex loop
+	} // Type->Parent loop
+}
+
+
+static void PrintProps(const CPropDump &Dump, int Indent)
+{
+	PrintIndent(Indent);
+
+	int NumNestedProps = Dump.Nested.Num();
+	if (NumNestedProps)
+	{
+		// complex property
+		if (Dump.Name[0]) appPrintf("%s =", Dump.Name);	// root CPropDump will not have a name
+
+		bool IsSimple = true;
+		int TotalLen = 0;
+		int i;
+
+		// check whether we can display all nested properties in a single line or not
+		for (i = 0; i < NumNestedProps; i++)
+		{
+			const CPropDump &Prop = Dump.Nested[i];
+			if (Prop.Nested.Num())
+			{
+				IsSimple = false;
+				break;
+			}
+			TotalLen += strlen(Prop.Value) + 2;
+			if (!Prop.IsArrayItem)
+				TotalLen += strlen(Prop.Name);
+			if (TotalLen >= 80)
+			{
+				IsSimple = false;
+				break;
+			}
+		}
+
+		if (IsSimple)
+		{
+			// single-line value display
+			appPrintf(" { ");
+			for (i = 0; i < NumNestedProps; i++)
+			{
+				if (i) appPrintf(", ");
+				const CPropDump &Prop = Dump.Nested[i];
+				if (Prop.IsArrayItem)
+					appPrintf("%s", Prop.Value);
+				else
+					appPrintf("%s=%s", Prop.Name, Prop.Value);
+			}
+			appPrintf(" }\n");
+		}
+		else
+		{
+			// complex value display
+			appPrintf("\n");
+			if (Indent > 0)
+			{
+				PrintIndent(Indent);
+				appPrintf("{\n");
 			}
 
-			// formatting of property end
-			if (IsArray)
+			for (i = 0; i < NumNestedProps; i++)
+				PrintProps(Dump.Nested[i], Indent+1);
+
+			if (Indent > 0)
 			{
-				if (!IsStruc)
-				{
-					appPrintf(" }\n");		// no indent
-				}
-				else
-				{
-					PrintIndent(Indent); appPrintf("}\n");	// indent
-				}
-			}
-			else if (!IsStruc)
-			{
-				appPrintf("\n");
+				PrintIndent(Indent);
+				appPrintf("}\n");
 			}
 		}
 	}
+	else
+	{
+		// single property
+		if (Dump.Name[0]) appPrintf("%s = %s\n", Dump.Name, Dump.Value);
+	}
+}
+
+
+void CTypeInfo::DumpProps(void *Data) const
+{
+	guard(CTypeInfo::DumpProps);
+	CPropDump Dump;
+	CollectProps(this, Data, Dump);
+	PrintProps(Dump, 0);
+	unguard;
 }
 
 
@@ -1048,4 +1145,45 @@ int NameToEnum(const char *EnumName, const char *Value)
 			return V.value;
 	}
 	return ENUM_UNKNOWN;				// no such value
+}
+
+
+/*-----------------------------------------------------------------------------
+	Typeinfo for Core classes
+-----------------------------------------------------------------------------*/
+
+BEGIN_PROP_TABLE_EXTERNAL(FVector)
+	PROP_FLOAT(X)
+	PROP_FLOAT(Y)
+	PROP_FLOAT(Z)
+END_PROP_TABLE_EXTERNAL
+
+BEGIN_PROP_TABLE_EXTERNAL(FRotator)
+	PROP_INT(Yaw)
+	PROP_INT(Pitch)
+	PROP_INT(Roll)
+END_PROP_TABLE_EXTERNAL
+
+BEGIN_PROP_TABLE_EXTERNAL(FColor)
+	PROP_BYTE(R)
+	PROP_BYTE(G)
+	PROP_BYTE(B)
+	PROP_BYTE(A)
+END_PROP_TABLE_EXTERNAL
+
+BEGIN_PROP_TABLE_EXTERNAL(FLinearColor)
+	PROP_FLOAT(R)
+	PROP_FLOAT(G)
+	PROP_FLOAT(B)
+	PROP_FLOAT(A)
+END_PROP_TABLE_EXTERNAL
+
+void RegisterCoreClasses()
+{
+	BEGIN_CLASS_TABLE
+		REGISTER_CLASS_EXTERNAL(FVector)
+		REGISTER_CLASS_EXTERNAL(FRotator)
+		REGISTER_CLASS_EXTERNAL(FColor)
+		REGISTER_CLASS_EXTERNAL(FLinearColor)
+	END_CLASS_TABLE
 }

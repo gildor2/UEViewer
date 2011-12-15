@@ -6,6 +6,12 @@
 #include <sys/stat.h>				// for mkdir()
 #endif
 
+#if _WIN32 && VSTUDIO_INTEGRATION
+#define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
+#define _WIN32_WINDOWS 0x0500		// for IsDebuggerPresent()
+#include <windows.h>
+#endif
+
 
 static FILE *GLogFile = NULL;
 
@@ -28,6 +34,11 @@ void appPrintf(const char *fmt, ...)
 
 	fwrite(buf, len, 1, stdout);
 	if (GLogFile) fwrite(buf, len, 1, GLogFile);
+
+#if VSTUDIO_INTEGRATION
+	if (IsDebuggerPresent())
+		OutputDebugString(buf);
+#endif
 }
 
 

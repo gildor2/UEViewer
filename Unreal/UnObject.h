@@ -6,8 +6,10 @@
 	Simple RTTI
 -----------------------------------------------------------------------------*/
 
-// NOTE: DECLARE_CLASS and REGISTER_CLASS will skip 1st class name char
+//!! can separate typeinfo into different header
 
+// Comparing PropLevel with Super::PropLevel to detect whether we have property
+// table in current class or not
 #define DECLARE_BASE(Class,Base)				\
 	public:										\
 		typedef Class	ThisClass;				\
@@ -76,7 +78,7 @@ struct CTypeInfo
 	int				NumProps;
 	void (*Constructor)(void*);
 	// methods
-	inline CTypeInfo(const char *AName, const CTypeInfo *AParent, int DataSize,
+	FORCEINLINE CTypeInfo(const char *AName, const CTypeInfo *AParent, int DataSize,
 					 const CPropInfo *AProps, int PropCount, void (*AConstructor)(void*))
 	:	Name(AName)
 	,	Parent(AParent)
@@ -92,7 +94,7 @@ struct CTypeInfo
 	bool IsA(const char *TypeName) const;
 	const CPropInfo *FindProperty(const char *Name) const;
 	void SerializeProps(FArchive &Ar, void *ObjectData) const;
-	void DumpProps(void *Data, int Indent = 0) const;
+	void DumpProps(void *Data) const;
 	static void RemapProp(const char *Class, const char *OldName, const char *NewName);
 };
 
@@ -116,7 +118,7 @@ struct CNullType
 
 #define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(((ThisClass*)NULL)->Field) / sizeof(Type) },
 #define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
-#define PROP_STRUC(Field,Type)	_PROP_BASE(Field, Type)	//?? == _PROP_BASE
+#define PROP_STRUC(Field,Type)	_PROP_BASE(Field, Type)
 #define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
 
 
@@ -154,6 +156,27 @@ struct CNullType
 #define VPROP_ARRAY_COUNT(Field,Name)	{ #Name, "int", FIELD2OFS(ThisClass, Field) + ARRAY_COUNT_FIELD_OFFSET, 1 },
 #endif // DECLARE_VIEWER_PROPS
 
+// Mix of BEGIN_PROP_TABLE and DECLARE_BASE
+#define BEGIN_PROP_TABLE_EXTERNAL(Class)		\
+static const CTypeInfo* Class##_StaticGetTypeinfo() \
+{												\
+	static const char *ClassName = #Class;		\
+	typedef Class		ThisClass;				\
+	static const CPropInfo props[] =			\
+	{
+
+// Mix of END_PROP_TABLE and DECLARE_BASE
+#define END_PROP_TABLE_EXTERNAL					\
+	};											\
+	static const CTypeInfo type(				\
+		ClassName,								\
+		NULL,									\
+		sizeof(ThisClass),						\
+		props, ARRAY_COUNT(props),				\
+		NULL									\
+	);											\
+	return &type;								\
+}
 
 struct CClassInfo
 {
@@ -185,6 +208,8 @@ FORCEINLINE bool IsKnownClass(const char *Name)
 		static CClassInfo Table[] = {
 #define REGISTER_CLASS(Class)					\
 			{ #Class, Class::StaticGetTypeinfo },
+#define REGISTER_CLASS_EXTERNAL(Class)			\
+			{ #Class, Class##_StaticGetTypeinfo },
 #define REGISTER_CLASS_ALIAS(Class,ClassName)	\
 			{ #ClassName, Class::StaticGetTypeinfo },
 #define END_CLASS_TABLE							\
@@ -284,5 +309,8 @@ public:
 		appFree(Object);
 	}
 };
+
+
+void RegisterCoreClasses();
 
 #endif // __UNOBJECT_H__

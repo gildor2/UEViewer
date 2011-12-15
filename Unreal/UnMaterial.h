@@ -73,7 +73,8 @@ enum ETexturePixelFormat
 	TPF_DXT3,
 	TPF_DXT5,
 	TPF_DXT5N,
-	TPF_CxV8U8,
+	TPF_V8U8,
+	TPF_V8U8_2,			// different decoding
 	TPF_3DC,			// names: 3Dc, ATI2, BC5 (change name to standard ??)
 #if IPHONE
 	TPF_PVRTC2,

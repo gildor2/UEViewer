@@ -86,8 +86,6 @@ public:
 
 	USkeletalMeshSocket()
 	{
-		SocketName.Str = "None";
-		BoneName.Str = "None";
 		RelativeLocation.Set(0, 0, 0);
 		RelativeRotation.Set(0, 0, 0);
 		RelativeScale.Set(1, 1, 1);
@@ -334,6 +332,8 @@ public:
 	AnimationKeyFormat		KeyEncodingFormat;				// GoW2+
 	TArray<int>				CompressedTrackOffsets;
 	TArray<byte>			CompressedByteStream;
+	bool					bIsAdditive;
+	FName					AdditiveRefName;
 #if TUROK
 	TArray<FBulkKeyframeDataEntry> KeyFrameData;
 #endif
@@ -359,6 +359,8 @@ public:
 		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
 		PROP_ARRAY(CompressedTrackOffsets, int)
+		PROP_BOOL(bIsAdditive)
+		PROP_NAME(AdditiveRefName)
 #if TUROK
 		PROP_ARRAY(KeyFrameData, FBulkKeyframeDataEntry)
 #endif
@@ -370,9 +372,6 @@ public:
 		PROP_DROP(CompressionScheme)
 		PROP_DROP(bDoNotOverrideCompression)
 		PROP_DROP(CompressCommandletVersion)
-		//!! additive animations
-		PROP_DROP(bIsAdditive)
-		PROP_DROP(AdditiveRefName)
 		//!! curves
 		PROP_DROP(CurveData)
 #if TLR
@@ -500,9 +499,7 @@ public:
 
 	UAnimSet()
 	:	bAnimRotationOnly(true)
-	{
-		PreviewSkelMeshName.Str = "None";
-	}
+	{}
 	virtual ~UAnimSet();
 
 	BEGIN_PROP_TABLE

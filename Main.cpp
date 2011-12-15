@@ -20,9 +20,10 @@
 #include "StaticMesh.h"
 #endif
 
-#define APP_CAPTION		"UE Viewer"
-#define HOMEPAGE		"http://www.gildor.org/en/projects/umodel"
+#define APP_CAPTION					"UE Viewer"
+#define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
 
+//#define SHOW_HIDDEN_SWITCHES		1
 
 #if RENDERING
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
@@ -38,6 +39,7 @@ static bool showMaterials = false;
 static void RegisterCommonUnrealClasses()
 {
 	// classes and structures
+	RegisterCoreClasses();
 BEGIN_CLASS_TABLE
 
 	REGISTER_MATERIAL_CLASSES
@@ -555,7 +557,7 @@ static void Usage()
 			"                    object with ambiguous name)\n"
 			"\n"
 			"Commands:\n"
-			"    -view           (default) visualize object; when <object> is not specified,\n"
+			"    -view           (default) visualize object; when no <object> specified\n"
 			"                    will load whole package\n"
 			"    -list           list contents of package\n"
 			"    -export         export specified object or whole package\n"
@@ -566,7 +568,7 @@ static void Usage()
 			"    -dump           dump object information to console\n"
 			"    -check          check some assumptions, no other actions performed\n"
 			"    -pkginfo        load package and display its information\n"
-#if VSTUDIO_INTEGRATION
+#if VSTUDIO_INTEGRATION && SHOW_HIDDEN_SWITCHES
 			"    -debug          invoke system crash handler on errors\n"
 #endif
 			"\n"
@@ -605,7 +607,8 @@ static void Usage()
 			"    -lods           export all available mesh LOD levels\n"
 			"    -dds            export textures in DDS format whenever possible\n"
 			"    -notgacomp      disable TGA compression\n"
-			"    -nooverwrite    prevent existing files from being overwritten (for performance)\n"
+			"    -nooverwrite    prevent existing files from being overwritten (better\n"
+			"                    performance)\n"
 			"\n"
 			"Supported resources for export:\n"
 			"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
@@ -1017,6 +1020,28 @@ int main(int argc, char **argv)
 	}
 
 #if RENDERING
+	if (mainCmd == CMD_Dump)
+	{
+		// dump object(s)
+		bool oneObjectOnly = (argObjName != NULL && !exprtAll);
+		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
+		{
+			UObject* ExpObj = UObject::GObjObjects[idx];
+			if (!exprtAll && ExpObj->Package != Package)	// refine object by package
+				continue;
+
+			CreateVisualizer(ExpObj);
+			if (Viewer)
+			{
+				Viewer->Dump();								// dump info to console
+				delete Viewer;
+				Viewer = NULL;
+				if (oneObjectOnly) break;
+			}
+		}
+		return 0;
+	}
+
 	if (!CreateVisualizer(Obj))
 	{
 		appPrintf("Package \"%s\" has no objects to display\n", argPkgName);
@@ -1026,9 +1051,6 @@ int main(int argc, char **argv)
 #	if TEST_FILES
 	Viewer->Test();
 #	endif
-
-	if (mainCmd == CMD_Dump)
-		Viewer->Dump();					// dump info to console
 
 	if (mainCmd == CMD_View)
 	{

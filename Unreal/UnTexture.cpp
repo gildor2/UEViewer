@@ -53,26 +53,29 @@ struct CPixelFormatInfo
 	byte		BlockSizeX;
 	byte		BlockSizeY;
 	byte		BytesPerBlock;
-	byte		X360Align;			// 0 when unknown or not supported on XBox360
+	byte		X360AlignX;			// 0 when unknown or not supported on XBox360
+	byte		X360AlignY;
 };
+
 
 static const CPixelFormatInfo PixelFormatInfo[] =
 {
-	// FourCC					BlockSizeX	BlockSizeY	BytesPerBlock	X360Align
-	{ 0,						1,			1,			1,				0			},	// TPF_P8
-	{ 0,						1,			1,			1,				64			},	// TPF_G8
-//	{																				},	// TPF_G16
-	{ 0,						1,			1,			3,				0			},	// TPF_RGB8
-	{ 0,						1,			1,			4,				32			},	// TPF_RGBA8
-	{ BYTES4('D','X','T','1'),	4,			4,			8,				128			},	// TPF_DXT1
-	{ BYTES4('D','X','T','3'),	4,			4,			16,				128			},	// TPF_DXT3
-	{ BYTES4('D','X','T','5'),	4,			4,			16,				128			},	// TPF_DXT5
-	{ BYTES4('D','X','T','5'),	4,			4,			16,				128			},	// TPF_DXT5N
-	{ 0,						1,			1,			2,				0			},	// TPF_CxV8U8
-	{ BYTES4('A','T','I','2'),	4,			4,			16,				0			},	// TPF_3DC
+	// FourCC					BlockSizeX	BlockSizeY	BytesPerBlock	X360AlignX	X360AlignY
+	{ 0,						1,			1,			1,				0,			0		},	// TPF_P8
+	{ 0,						1,			1,			1,				64,			64		},	// TPF_G8
+//	{																						},	// TPF_G16
+	{ 0,						1,			1,			3,				0,			0,		},	// TPF_RGB8
+	{ 0,						1,			1,			4,				32,			32		},	// TPF_RGBA8
+	{ BYTES4('D','X','T','1'),	4,			4,			8,				128,		128		},	// TPF_DXT1
+	{ BYTES4('D','X','T','3'),	4,			4,			16,				128,		128		},	// TPF_DXT3
+	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128		},	// TPF_DXT5
+	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128		},	// TPF_DXT5N
+	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8
+	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8_2
+	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0		},	// TPF_3DC
 #if IPHONE
-	{ 0,						8,			4,			8,				0			},	// TPF_PVRTC2
-	{ 0,						4,			4,			8,				0			},	// TPF_PVRTC4
+	{ 0,						8,			4,			8,				0,			0		},	// TPF_PVRTC2
+	{ 0,						4,			4,			8,				0,			0		},	// TPF_PVRTC4
 #endif
 };
 
@@ -185,18 +188,20 @@ byte *CTextureData::Decompress()
 			}
 		}
 		return dst;
-	case TPF_CxV8U8:		//!! bad for Tribes
+	case TPF_V8U8:
+	case TPF_V8U8_2:
 		{
 			const byte *s = Data;
 			byte *d = dst;
+			byte offset = (Format == TPF_V8U8) ? 128 : 0;
 			for (int i = 0; i < USize * VSize; i++)
 			{
-				byte u = *s++;
-				byte v = *s++;
-				d[0] = u - 128;
-				d[1] = v - 128;
-				float uf = u / 255.0f * 2 - 1;
-				float vf = v / 255.0f * 2 - 1;
+				byte u = *s++ + offset;		// byte + byte -> byte, overflow is normal here
+				byte v = *s++ + offset;
+				d[0] = u;
+				d[1] = v;
+				float uf = (u - offset) / 255.0f * 2 - 1;
+				float vf = (v - offset) / 255.0f * 2 - 1;
 				float t  = 1.0f - uf * uf - vf * vf;
 				if (t >= 0)
 					d[2] = 255 - 255 * appFloor(sqrt(t));
@@ -413,22 +418,27 @@ void CTextureData::DecodeXBox360()
 	const CPixelFormatInfo &Info = PixelFormatInfo[Format];
 
 	char ErrorMessage[256];
-	if (!Info.X360Align)
+	if (!Info.X360AlignX)
 	{
-		strcpy(ErrorMessage, "unknown texture format");
+		strcpy(ErrorMessage, "unsupported texture format");
 
 	error:
 		if (ShouldFreeData) delete CompressedData;
 		CompressedData = NULL;
 		appNotify("ERROR: DecodeXBox360 %s'%s' (%s=%d): %s", Obj->GetClassName(), Obj->Name,
 			OriginalFormatName, OriginalFormatEnum, ErrorMessage);
+		return;
 	}
 
 	int bytesPerBlock = Info.BytesPerBlock;
-	int USize1 = Align(USize, Info.X360Align);
-	int VSize1 = Align(VSize, Info.X360Align);
+	int USize1 = Align(USize, Info.X360AlignX);
+	int VSize1 = Align(VSize, Info.X360AlignY);
+	// NOTE: 16x16 textures will not work! (needs different untiling or no untiling at all?)
 
 	float bpp = (float)DataSize / (USize1 * VSize1) * Info.BlockSizeX * Info.BlockSizeY;	// used for validation only
+
+//	appPrintf("%s'%s': %d x %d (%d x %d aligned), %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
+//		USize, VSize, USize1, VSize1, OriginalFormatName, Info.BytesPerBlock, bpp, DataSize);
 
 #if BIOSHOCK
 	// some verification
@@ -894,7 +904,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	else if (Format == TEXF_L8)
 		intFormat = TPF_G8;
 	else if (Format == TEXF_CxV8U8)
-		intFormat = TPF_CxV8U8;
+		intFormat = TPF_V8U8_2;
 	else if (Format == TEXF_DXT5N)
 		intFormat = TPF_DXT5N;
 	else if (Format == TEXF_3DC)
@@ -1214,7 +1224,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	guard(UTexture2D::GetTextureData);
 
 	TexData.OriginalFormatEnum = Format;
-	TexData.OriginalFormatName = EnumToName("ETextureFormat", Format);
+	TexData.OriginalFormatName = EnumToName("EPixelFormat", Format);
 	TexData.Obj                = this;
 
 	bool bulkChecked = false;
@@ -1258,7 +1268,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	else if (Format == PF_G8)
 		intFormat = TPF_G8;
 	else if (Format == PF_V8U8)
-		intFormat = TPF_CxV8U8;
+		intFormat = TPF_V8U8;
 	else if (Format == PF_BC5)
 		intFormat = TPF_3DC;
 #if MASSEFF

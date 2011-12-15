@@ -237,7 +237,13 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 	if (!GL_SUPPORT(QGL_1_4))
 		return false;		// cannot automatically generate mipmaps
 
-	//?? support some other formats too - for example, TPF_G8
+	//?? support some other formats too
+	// TPF_V8U8 = GL_RG8 (GL_ARB_texture_rg, GL3.0)
+	// TPF_G8   = GL_LUMINANCE
+	// Notes:
+	// - most formats are uploaded with glTexImage2D(), not with glCompressedTexImage2D()
+	// - formats has different extension requirements (not QGL_EXT_TEXTURE_COMPRESSION_S3TC)
+
 	GLenum format;
 	switch (TexData.Format)
 	{

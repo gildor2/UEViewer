@@ -33,12 +33,19 @@
 #define BYTES4(a,b,c,d)	((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
 
 
+#define DO_ASSERT			1
+
 #undef assert
+
+#if DO_ASSERT
 #define assert(x)	\
 	if (!(x))		\
 	{				\
 		appError("assertion failed: %s\n", #x); \
 	}
+#else
+#define assert(x)
+#endif // DO_ASSERT
 
 // helper declaration
 template<int> struct CompileTimeError;
@@ -71,6 +78,9 @@ template<>    struct CompileTimeError<true> {};
 #	define FORCEINLINE		__forceinline
 #	define NORETURN			__declspec(noreturn)
 #	define GCC_PACK							// VC uses #pragma pack()
+#	if _MSC_VER >= 1400
+#		define IS_POD(T)	__is_pod(T)
+#	endif
 #	pragma warning(disable : 4291)			// no matched operator delete found
 	// this functions are smaller, when in intrinsic form (and, of course, faster):
 #	pragma intrinsic(memcpy, memset, memcmp, abs, fabs)
@@ -86,6 +96,9 @@ typedef __int64				int64;
 #	else
 #		define FORCEINLINE	inline
 #	endif
+#	if (__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 4))
+#		define IS_POD(T)	__is_pod(T)
+#	endif
 #	define stricmp			strcasecmp
 #	define strnicmp			strncasecmp
 #	define GCC_PACK			__attribute__((__packed__))
@@ -100,6 +113,9 @@ typedef signed long long	int64;
 typedef unsigned char		byte;
 typedef unsigned short		word;
 
+#ifndef IS_POD
+#	define IS_POD(T)		false
+#endif
 
 #define COLOR_ESCAPE	'^'		// may be used for quick location of color-processing code
 

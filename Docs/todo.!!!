@@ -1,3 +1,5 @@
+Platform: can get platform from Cooked[...] directory name (PS3, Xenon|XBox360, IPhone)
+
 Logging:
 - appNotify, appPrintf: make with GLog->Printf or GWarn->Printf ? (to allow overriding)
 - Notify.log:
@@ -59,17 +61,14 @@ GENMAKE:
 ! implement UMaterialSequence (check 2K4Menus package)
 
 ?? (check, possibly fixed) TRIBES3:
-  ! strange bugs with face (run t.bat, switch to last animation with '[', zoom to face ...)
-    ! check this un UnrealEd
-    * To fix: should create Moves.BoneIndices[], fill with 'i' and mark 0x1000-flags bones with -1
-      ! check PSA generation too (will be buggy) -- require RefPose bones, but no in UMeshAnimation ...
   - skeletal mesh LOD levels - has visual bugs on most LOD meshes
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
   - bugs with U8V8 texture format
 
 ? when exporting mesh, can create .uc with sockets too (if possible)
   - requires conversion FCoords -> FVector+FRotator
-! when cannot load some material type, or file is absent - sould at least give ability to list this
+  ? better - create .config for skeletal mesh
+? when cannot load some material type, or file is absent - sould at least give ability to list these
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
 
@@ -89,11 +88,12 @@ Exporting (typeinfo tool?):
     class name="")
 
 - try to compile with MinGW (checked GCC4 from cygwin, 7.10.2010 - gcc4 has no "-mno-cygwin" switch)
-- move new Math3D parts to Quake2 core (more code to move ?)
+- move new Math3D parts to Quake2 core (more code to move ?), move animation system to SkelEdit (make
+  compatible)
 
 
-NOTES:
-~~~~~~
+UE2 NOTES:
+~~~~~~~~~~
 - check XGame/Classes/SpeciesType.uc + Species_*.uc -- setting many properties for
   player model
 - system/*.upl: files, containing links between meshes/skins/voices/names/portraits etc
@@ -104,8 +104,8 @@ NOTES:
   is right/forward/up
 
 
-COMPLEX MATERIALS:
-~~~~~~~~~~~~~~~~~~
+UE2 COMPLEX MATERIALS:
+~~~~~~~~~~~~~~~~~~~~~~
 - AW-2k4XP.Weapons.ShockShieldFinal
                    ShockShieldShaftFallbackFinal
 - AW-ShieldShaders.Shaders.BlueShieldFinal - has nested Combiners
@@ -127,8 +127,8 @@ COMPLEX MATERIALS:
                              DOMScreens
                              HealthPackTexS
 
-SIMPLE MODIFIERS:
-~~~~~~~~~~~~~~~~~
+UE2 SIMPLE MODIFIERS:
+~~~~~~~~~~~~~~~~~~~~~
 - check HUDContent package
 - PickupSkins.Shaders.ShieldFinal
 - ULogo.MainMenu.CornerMenuFinal (UT menu slideshow)
@@ -144,8 +144,8 @@ Notes:
   requires non-null Diffuse, otherwise 'white' will be displayed)
 
 
-COMMON MATERIAL USE TREE:
-~~~~~~~~~~~~~~~~~~~~~~~~~
+UE2 COMMON MATERIAL USE TREE:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 FinalBlend
   -> Shader
      -> Combiner(s)

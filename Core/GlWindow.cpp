@@ -22,6 +22,13 @@
 #undef SMART_RESIZE						// not compatible with Linux (has ugly effects and program hung)
 #endif
 
+// Win32+SDL bug: when window has lost the focus while some keys are pressed keys will never be released
+// unless user will press and release these keys manually (frequently happens when switching to another
+// application using Alt+Tab key - Alt key becomes "sticky")
+// This bug appears in SDL 1.3 because it has no SDL_ResetKeyboard() call when application has lost the
+// focus (SDL 1.2 has such call!)
+#define FIX_STICKY_MOD_KEYS		1
+
 #if RENDERING
 
 #if _MSC_VER
@@ -1240,6 +1247,11 @@ void VisualizerLoop(const char *caption)
 					ResizeWindow(evt.window.data1, evt.window.data2);
 					break;
 	#endif // SMART_RESIZE
+	#if FIX_STICKY_MOD_KEYS
+				case SDL_WINDOWEVENT_FOCUS_LOST:
+					SDL_SetModState(KMOD_NONE);
+					break;
+	#endif // FIX_STICKY_MOD_KEYS
 				}
 				break;
 #else // NEW_SDL

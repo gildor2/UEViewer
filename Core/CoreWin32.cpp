@@ -10,13 +10,23 @@
 #endif // WIN32_USE_SEH
 
 
-//#define USE_DBGHELP			1
-//#define DUMP_SEH			1		// for debugging SEH frames
+// Debugging options
+//#define USE_DBGHELP				1
+//#define DUMP_SEH				1		// for debugging SEH frames
+#define GET_EXTENDED_INFO		1
+//#define UNWIND_EBP_FRAMES		1
 
-// use dbghelp tools by default when VSTUDIO_INTEGRATION is set
-#if !defined(USE_DBGHELP) && defined(VSTUDIO_INTEGRATION)
-#define USE_DBGHELP			VSTUDIO_INTEGRATION
-#endif
+
+// Maximal crash analysis when VSTUDIO_INTEGRATION is set
+#if VSTUDIO_INTEGRATION
+#undef  USE_DBGHELP
+#undef  GET_EXTENDED_INFO
+#undef  UNWIND_EBP_FRAMES
+#define USE_DBGHELP				1
+#define GET_EXTENDED_INFO		1
+#define UNWIND_EBP_FRAMES		1
+#endif // VSTUDIO_INTEGRATION
+
 
 #if USE_DBGHELP
 #include <dbghelp.h>
@@ -82,9 +92,33 @@ const char *appSymbolName(address_t addr)
 	static char	buf[256];
 
 #if USE_DBGHELP
-	if (!appSymbolName(addr, ARRAY_ARG(buf)))
+	if (appSymbolName(addr, ARRAY_ARG(buf)))
+		return buf;
 #endif
-		appSprintf(ARRAY_ARG(buf), "%08X", addr);
+
+#if GET_EXTENDED_INFO
+	HMODULE hModule = NULL;
+	char moduleName[256];
+	char *s;
+
+	MEMORY_BASIC_INFORMATION mbi;
+	if (!VirtualQuery((void*)addr, &mbi, sizeof(mbi)))
+		goto simple;
+	if (!(hModule = (HMODULE)mbi.AllocationBase))
+		goto simple;
+	if (!GetModuleFileName(hModule, ARRAY_ARG(moduleName)))
+		goto simple;
+
+//	if (s = strrchr(moduleName, '.'))	// cut extension
+//		*s = 0;
+	if (s = strrchr(moduleName, '\\'))
+		strcpy(moduleName, s+1);		// remove "path\" part
+	appSprintf(ARRAY_ARG(buf), "%s+0x%X", moduleName, addr - (int)hModule);
+	return buf;
+#endif // GET_EXTENDED_INFO
+
+simple:
+	appSprintf(ARRAY_ARG(buf), "%08X", addr);
 	return buf;
 }
 
@@ -200,6 +234,43 @@ static void DropSEHFrames()
 }
 
 
+#if UNWIND_EBP_FRAMES
+void UnwindEbpFrame(const address_t *data)
+{
+	void *pStackVar = _alloca(1);		// Use _alloca() to get the current stack pointer
+	MEMORY_BASIC_INFORMATION mbi;
+	if (!VirtualQuery(pStackVar, &mbi, sizeof(mbi)))
+		return;
+
+	address_t stackStart = (address_t)mbi.BaseAddress;	// AllocationBase has wrong value here
+	address_t stackEnd   = stackStart + mbi.RegionSize;
+//	printf("MBI: BaseAddress=%08X AllocationBase=%08X RegionSize=%08X\n", mbi.BaseAddress, mbi.AllocationBase, mbi.RegionSize);
+//	printf("data=%08X var=%08X stack = [%08X .. %08X]\n", data, pStackVar, stackStart, stackEnd);
+
+	int level = 0;
+	while (true)
+	{
+		if ((address_t)data < stackStart || (address_t)data >= stackEnd)
+			break;						// not a stack pointer
+
+		address_t pNext = data[0];
+		address_t pFunc = data[1];
+
+		if (IsBadCodePtr((FARPROC)pFunc))
+			break;						// not points to code
+		const char *symbol = appSymbolName(pFunc);
+		if (!level) appPrintf("\nCall stack:\n");
+		appPrintf("    %s\n", symbol);
+		if (pNext <= (address_t)data)	// next frame is shifted in a wrong direction
+			break;
+		data = (address_t*)pNext;
+		level++;
+	}
+	if (level) appPrintf("\n\n");
+}
+#endif
+
+
 long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 {
 #if VSTUDIO_INTEGRATION
@@ -220,7 +291,7 @@ long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 	dumped = true;
 
 #if VSTUDIO_INTEGRATION
-	if (GUseDebugger)
+	if (GUseDebugger || IsDebuggerPresent())
 	{
 		SetErrorMode(0);					// without this crash will not be reported
 		SetUnhandledExceptionFilter(NULL);	// just in case
@@ -289,6 +360,9 @@ long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 		appSprintf(ARRAY_ARG(GErrorHistory), "%s (%08X) at %s\n",
 			excName, info->ExceptionRecord->ExceptionCode, appSymbolName(ctx->Eip)
 		);
+#if UNWIND_EBP_FRAMES
+		UnwindEbpFrame((address_t*) ctx->Ebp);
+#endif // UNWIND_EBP_FRAMES
 	} CATCH {
 		// do nothing
 	}

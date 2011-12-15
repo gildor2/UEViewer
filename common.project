@@ -7,7 +7,7 @@ LIBC       = shared
 CONSOLE    = 1
 OPTIMIZE   = size
 
-PDB        = 2				#?? keep enabled, executable is almost the same, except embedded link to pdb file
+PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
 
 OLDCRT     = 1
 
@@ -52,7 +52,8 @@ INCLUDES += . $R/Core $R/Unreal $R/libs/include
 # smaller zlib
 DEFINES +=				\
 	DYNAMIC_CRC_TABLE	\
-	BUILDFIXED
+	BUILDFIXED			\
+	NO_GZIP
 
 
 # libraries

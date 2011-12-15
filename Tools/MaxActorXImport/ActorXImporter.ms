@@ -10,6 +10,9 @@
 
  Revision History:
 
+	06.12.2011 v1.21
+	- fixed "translation mode" checkbox to work with psa without config file
+
 	01.12.2011 v1.20
 	- implemented loading of DDS textures
 
@@ -109,7 +112,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 20
+global AX_IMPORTER_VERSION = 21
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -1234,44 +1237,45 @@ fn FindPsaBoneIndex Bones Name =
 	return -1
 )
 
--- UseTranslation[] is array of flags signalling that particular bone should use translation
+-- UseAnimTranslation[] is array of flags signalling that particular bone should use translation
 -- from the animation; when value is set to false, mesh translation will be used
-fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
+fn LoadPsaConfig filename Anims Bones UseAnimTranslation AnimFlags =
 (
+	-- allocate and initialize UseAnimTranslation array
+	UseAnimTranslation[Bones.count] = true			-- preallocate
+	for i = 1 to Bones.count do UseAnimTranslation[i] = true
+	-- root bone is always translated, start with index 2 below
+
+	case g_animTransMode of
+	(
+--	1: - use from AnimSet, do nothing here
+	2:	(
+			for i = 2 to Bones.count do UseAnimTranslation[i] = false
+			return undefined
+		)
+	3:	(
+			for i = 2 to Bones.count do UseAnimTranslation[i] = true	-- old behaviour - everything will be taken from the animation
+			return undefined
+		)
+	)
+
+	-- read configuration file
 	local cfgFile = openFile filename
 	if cfgFile == undefined then return undefined
 
 	local mode = 0
 
-	-- allocate and initialize UseTranslation array
-	UseTranslation[Bones.count] = true			-- preallocate
-	for i = 1 to Bones.count do UseTranslation[i] = true
-
 	while eof cfgFile == false do
 	(
 		local line = readline cfgFile
+
+		-- process directove
 		case line of
 		(
-		"": continue
-
-		"[AnimSet]":
-			(
-				mode = 1
-				continue
-			)
-
-		"[UseTranslationBoneNames]":
-			(
-				mode = 2
-				continue
-			)
-
-		"[ForceMeshTranslationBoneNames]":
-			(
-				mode = 3
-				continue
-			)
-
+		"": continue		-- empty line
+		"[AnimSet]": ( mode = 1; continue )
+		"[UseTranslationBoneNames]": ( mode = 2; continue )
+		"[ForceMeshTranslationBoneNames]": ( mode = 3; continue )
 		"[RemoveTracks]":
 			(
 				mode = 4
@@ -1281,107 +1285,90 @@ fn LoadPsaConfig filename Anims Bones UseTranslation AnimFlags =
 				for i = 1 to numKeys do AnimFlags[i] = 0
 				continue
 			)
+		)
 
-		default:
-			(
-				case mode of
+		-- process ordinary line
+		case mode of
+		(
+		0:	ErrorMessage("unexpected \"" + line + "\"")
+
+		-- AnimSet
+		1:	(
+				--!! ugly parsing ... but no other params yet
+				if line == "bAnimRotationOnly=1" then
 				(
-				0:	(
-						ErrorMessage("unexpected \"" + line + "\"")
-					)
-
-				-- AnimSet
-				1:	(
-						--!! ugly parsing ... but no other params yet
-						if line == "bAnimRotationOnly=1" then
-						(
-							for i = 1 to Bones.count do UseTranslation[i] = false
-						)
-						else if line == "bAnimRotationOnly=0" then
-						(
-							-- already set to true
-						)
-						else
-						(
-							ErrorMessage("unexpected AnimSet instruction \"" + line + "\"")
-						)
-					)
-
-				-- UseTranslationBoneNames - use translation from animation, useful with bAnimRotationOnly=true only
-				2:	(
-						local BoneIndex = FindPsaBoneIndex Bones line
-						if BoneIndex > 0 then
-						(
-							UseTranslation[BoneIndex] = true
-						)
-						else
-						(
-							format "WARNING: UseTranslationBoneNames has specified unknown bone \"%\"\n" line
-						)
-					)
-
-				-- ForceMeshTranslationBoneNames - use translation from mesh
-				3:	(
-						local BoneIndex = FindPsaBoneIndex Bones line
-						if BoneIndex > 0 then
-						(
-							UseTranslation[BoneIndex] = false
-						)
-						else
-						(
-							format "WARNING: ForceMeshTranslationBoneNames has specified unknown bone \"%\"\n" line
-						)
-					)
-
-				-- RemoveTracks
-				4:	(
-						-- line is in format "SequenceName.BoneIndex=[trans|rot|all]"
-						local tok1 = filterString line " ="			-- [1] = SequenceName.BoneIndex, [2] = Flags
-						local tok2 = filterString tok1[1] "."		-- [1] = SequenceName, [2] = BoneIndex
-						local SeqName    = tok2[1]
-						local BoneIdxStr = tok2[2]
-						local Flag       = tok1[2]
-						local SeqIdx = FindPsaTrackIndex Anims SeqName		--?? can cache this value
-						if SeqIdx <= 0 then ErrorMessage("Animation \"" + SeqName + "\" does not exists")
-						FlagIndex = (SeqIdx - 1) * Bones.count + (BoneIdxStr as integer) + 1
-						if Flag == "trans" then
-						(
-							AnimFlags[FlagIndex] = 1	-- NO_TRANSLATION
-						)
-						else if Flag == "rot" then
-						(
-							AnimFlags[FlagIndex] = 2	-- NO_ROTATION
-						)
-						else if Flag == "all" then
-						(
-							AnimFlags[FlagIndex] = 3	-- NO_TRANSLATION | NO_ROTATION
-						)
-						else
-						(
-							ErrorMessage("unknown RemoveTracks flag \"" + Flag + "\"")
-						)
-					)
-
-				default:
-					ErrorMessage("unexpected config error")
+					for i = 2 to Bones.count do UseAnimTranslation[i] = false
+				)
+				else if line == "bAnimRotationOnly=0" then
+				(
+					-- already set to true
+				)
+				else
+				(
+					ErrorMessage("unexpected AnimSet instruction \"" + line + "\"")
 				)
 			)
+
+		-- UseTranslationBoneNames - use translation from animation, useful with bAnimRotationOnly=true only
+		2:	(
+				local BoneIndex = FindPsaBoneIndex Bones line
+				if BoneIndex > 0 then
+				(
+					UseAnimTranslation[BoneIndex] = true
+				)
+				else
+				(
+					format "WARNING: UseTranslationBoneNames has specified unknown bone \"%\"\n" line
+				)
+			)
+
+		-- ForceMeshTranslationBoneNames - use translation from mesh
+		3:	(
+				local BoneIndex = FindPsaBoneIndex Bones line
+				if BoneIndex > 0 then
+				(
+					UseAnimTranslation[BoneIndex] = false
+				)
+				else
+				(
+					format "WARNING: ForceMeshTranslationBoneNames has specified unknown bone \"%\"\n" line
+				)
+			)
+
+		-- RemoveTracks
+		4:	(
+				-- line is in format "SequenceName.BoneIndex=[trans|rot|all]"
+				local tok1 = filterString line " ="			-- [1] = SequenceName.BoneIndex, [2] = Flags
+				local tok2 = filterString tok1[1] "."		-- [1] = SequenceName, [2] = BoneIndex
+				local SeqName    = tok2[1]
+				local BoneIdxStr = tok2[2]
+				local Flag       = tok1[2]
+				local SeqIdx = FindPsaTrackIndex Anims SeqName		--?? can cache this value
+				if SeqIdx <= 0 then ErrorMessage("Animation \"" + SeqName + "\" does not exists")
+				FlagIndex = (SeqIdx - 1) * Bones.count + (BoneIdxStr as integer) + 1
+				if Flag == "trans" then
+				(
+					AnimFlags[FlagIndex] = 1	-- NO_TRANSLATION
+				)
+				else if Flag == "rot" then
+				(
+					AnimFlags[FlagIndex] = 2	-- NO_ROTATION
+				)
+				else if Flag == "all" then
+				(
+					AnimFlags[FlagIndex] = 3	-- NO_TRANSLATION | NO_ROTATION
+				)
+				else
+				(
+					ErrorMessage("unknown RemoveTracks flag \"" + Flag + "\"")
+				)
+			)
+
+		default:
+			ErrorMessage("unexpected config error")
 		)
 	)
 	close cfgFile
-
-	case g_animTransMode of
-	(
---	1: - use from AnimSet, do nothing here
-	2:	(
-			for i = 2 to Bones.count do UseTranslation[i] = false
-		)
-	3:	(
-			for i = 2 to Bones.count do UseTranslation[i] = true	-- old behaviour - everything will be taken from the animation
-		)
-	)
-
-	UseTranslation[1] = true		-- root bone is always translated
 )
 
 
@@ -1390,8 +1377,8 @@ fn ImportPsaFile filename trackNum all:false =
 	local Bones     = #()
 	      Anims     = #()
 
-	local UseTranslation = #()
-	local AnimFlags      = #()
+	local UseAnimTranslation = #()
+	local AnimFlags          = #()
 
 	local numBones  = 0
 	local numAnims  = 0
@@ -1519,13 +1506,13 @@ fn ImportPsaFile filename trackNum all:false =
 
 	RemoveAnimation()
 
-	LoadPsaConfig ( (getFilenamePath filename) + (getFilenameFile filename) + ".config" ) Anims Bones UseTranslation AnimFlags
+	LoadPsaConfig ( (getFilenamePath filename) + (getFilenameFile filename) + ".config" ) Anims Bones UseAnimTranslation AnimFlags
 
 /*
-	format "[% trans % flags]\n" UseTranslation.count AnimFlags.count
-	for i = 1 to UseTranslation.count do
+	format "[% trans % flags]\n" UseAnimTranslation.count AnimFlags.count
+	for i = 1 to UseAnimTranslation.count do
 	(
-		if UseTranslation[i] then format "trans: % %\n" i Bones[i].Name
+		if UseAnimTranslation[i] then format "trans: % %\n" i Bones[i].Name
 	)
 */
 
@@ -1534,9 +1521,6 @@ fn ImportPsaFile filename trackNum all:false =
 	firstFlag  = (trackNum - 1) * numBones + 1
 	flagCount  = AnimFlags.count
 	fseek file keyPos #seek_set							-- seek to animation keys
-
-	--!! add options:
-	--!! - disable bAnimRotationOnly
 
 	animate on
 	(
@@ -1562,7 +1546,7 @@ fn ImportPsaFile filename trackNum all:false =
 
 					if (bit.and flag 1) != 0 then		-- NO_TRANSLATION
 						p = MeshBone.Position			-- translation from the mesh
-					else if (UseTranslation.count > 0) and not UseTranslation[b] then
+					else if not UseAnimTranslation[b] then
 						p = MeshBone.Position			-- translation from the mesh
 					else
 						p = k.Position * g_meshScale	-- translation from animation
@@ -1664,7 +1648,7 @@ fn axLoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.20"
+	label     Lbl1 "Version 1.21"
 	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \

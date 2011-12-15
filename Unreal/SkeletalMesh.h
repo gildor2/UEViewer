@@ -35,14 +35,8 @@ SKELETALMESH CONVERSION STAGES:
 - support vertex colors (for StaticMesh too!)
 
 - dump properties of the SkeletalMesh:
-  - require FVector/FRotator dump (or CVec3 ?)
-    - can make something like "DECLARE_SEPARATE_TYPEINFO(Class)" ?
-    - can separate typeinfo into different header and include it from UnCore.h to support typeinfo for
-      UnCore math types
-      - in this case can clean UnObject.h include from some files
-  - gather statistics for LODs:
-    - number of vertex influences (1-4)
-    - number of really used bones -- to exclude hair, fingers etc -- display as "Bones: N/M"
+  - number of vertex influences (1-4)
+  - number of really used bones -- to exclude hair, fingers etc -- display as "Bones: N/M"
 
 ? split UnMesh.cpp to Common+UE2 or UE1+UE2 (check what's better)
   - or at least rename UnMesh.cpp to UnMesh2.cpp

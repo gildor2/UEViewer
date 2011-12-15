@@ -109,7 +109,7 @@ void QGL_Shutdown()
 	libGL.Free();
 	memset(&GL, 0, sizeof(GL));
 }
-#endif
+#endif // !USE_SDL
 
 
 /*-----------------------------------------------------------------------------
@@ -453,7 +453,7 @@ void QGL_LogMessage(const char *text)
 	LogFile->Printf("%s\n", text);	// output text with "\n"
 }
 
-#endif
+#endif // logging
 
 
 //} // namespace
