@@ -11,6 +11,11 @@ PDB        = 2				# keep enabled, executable is almost the same, except embedded
 
 OLDCRT     = 1
 
+
+#------------------------------------------------
+#	Compiler-specific options
+#------------------------------------------------
+
 !if "$PLATFORM" ne "win32"
 	# linux/cygwin + GCC
 	STDLIBS   = stdc++ GL
@@ -40,38 +45,40 @@ OLDCRT     = 1
 !endif
 
 
-LIBRARIES  = $R/libs $R/libs/xbox
-OBJDIR     = $R/obj/$PRJ-$PLATFORM
-STDLIBS   += SDL SDLmain
+#------------------------------------------------
+#	Third-party libraries
+#------------------------------------------------
 
-INCLUDES += . $R/Core $R/Unreal $R/libs/include
-!if "$PLATFORM" eq "win32"
-	INCLUDES += $R/libs/includewin32
-!endif
-
-# smaller zlib
-DEFINES +=				\
-	DYNAMIC_CRC_TABLE	\
-	BUILDFIXED			\
-	NO_GZIP
+OBJDIR = $R/obj/libs-$PLATFORM
 
 
-# libraries
-DDS_LIBS = {
+#?? remove this library, cannot be used anymore
+sources(DDS_LIBS) = {
 	# ... dds decompression
 	$R/libs/ddslib.c
 }
 
 
-NV_LIBS = {
+push(INCLUDES)
+INCLUDES = $R/libs/nvtt
+
+sources(NV_LIBS) = {
 	$R/libs/nvtt/nvcore/*.cpp
 	$R/libs/nvtt/nvimage/*.cpp
 #	$R/libs/nvtt/nvmath/*.cpp
 }
-INCLUDES += $R/libs/nvtt
+
+pop(INCLUDES)
 
 
-UE3_LIBS = {
+# defines for smaller zlib
+push(DEFINES)
+push(INCLUDES)
+
+DEFINES = DYNAMIC_CRC_TABLE BUILDFIXED NO_GZIP
+INCLUDES = $R/libs/include
+
+sources(UE3_LIBS) = {
 	# ... lzo for compressed UE3 packages
 	$R/libs/lzo/lzo_init.c
 	$R/libs/lzo/lzo1x_d2.c
@@ -81,7 +88,24 @@ UE3_LIBS = {
 	$R/libs/mspack/lzxd.c
 }
 
-IOS_LIBS = {
+pop(INCLUDES)
+pop(DEFINES)
+
+
+sources(IOS_LIBS) = {
 	$R/libs/PowerVR/*.cpp
 }
-INCLUDES += $R/libs/PowerVR
+
+
+#------------------------------------------------
+#	Project-specific options
+#------------------------------------------------
+
+OBJDIR     = $R/obj/$PRJ-$PLATFORM
+LIBRARIES  = $R/libs
+STDLIBS   += SDL SDLmain
+INCLUDES  += . $R/Core $R/Unreal $R/libs/include $R/libs/nvtt $R/libs/PowerVR
+
+!if "$PLATFORM" eq "win32"
+	INCLUDES += $R/libs/includewin32
+!endif

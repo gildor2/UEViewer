@@ -11,8 +11,6 @@ sources(MAIN) = {
 	$R/Unreal/UnObject.cpp
 	$R/Unreal/UnUbisoft.cpp
 	$R/Core/*.cpp
-	# UE3 support
-	$UE3_LIBS
 }
 
-target(executable, $PRJ, MAIN, MAIN)
+target(executable, $PRJ, MAIN + UE3_LIBS, MAIN)

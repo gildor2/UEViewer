@@ -11,11 +11,7 @@ sources(MAIN) = {
 	Viewers/*.cpp
 	MeshInstance/*.cpp
 	Core/*.cpp
-	# libraries
-	$DDS_LIBS	#!! remove
-	$NV_LIBS
-	$UE3_LIBS
-	$IOS_LIBS
 }
 
-target(executable, $PRJ, MAIN, MAIN)
+
+target(executable, $PRJ, MAIN + NV_LIBS + UE3_LIBS + IOS_LIBS, MAIN)

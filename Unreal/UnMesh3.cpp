@@ -567,6 +567,9 @@ struct FGPUVert3Float : FGPUVert3Common
 	{
 		int i;
 		Pos = S.Pos;
+		Normal[0] = S.Normal[0];
+		Normal[1] = S.Normal[1];
+		Normal[2] = S.Normal[2];
 		for (i = 0; i < NUM_MESH_UV_SETS; i++)
 			UV[i] = S.UV[i];
 		for (i = 0; i < NUM_INFLUENCES_UE3; i++)
@@ -694,6 +697,9 @@ struct FGPUSkin3
 			// old version - FSmoothVertex3 array
 			TArray<FSmoothVertex3> Verts;
 			Ar << RAW_ARRAY(Verts);
+#if DEBUG_SKELMESH
+			appPrintf("... %d verts in old format\n", Verts.Num());
+#endif
 			// convert verts
 			CopyArray(S.VertsFloat, Verts);
 			S.bUseFullPrecisionUVs = true;
