@@ -23,6 +23,10 @@ class USkeletalMesh;
 class UMeshAnimation;
 
 
+//?? move this function from UnTexture.cpp to UnCore.cpp?
+byte *FindXprData(const char *Name, int *DataSize);
+
+
 /*-----------------------------------------------------------------------------
 	UPrimitive class
 -----------------------------------------------------------------------------*/
@@ -360,38 +364,6 @@ struct FMeshAnimSeq
 	}
 };
 
-
-#if LOCO
-
-struct FLocoUnk1
-{
-	FName		f0;
-	int			f4;
-
-	friend FArchive& operator<<(FArchive &Ar, FLocoUnk1 &V)
-	{
-		return Ar << V.f0 << V.f4;
-	}
-};
-
-struct FLocoUnk2
-{
-	FString		f0;
-	FName		f1;
-	FVector		f2;
-	FRotator	f3;
-	int			f4, f5;
-	float		f6;
-	FVector		f7;
-	int			f8, f9;
-
-	friend FArchive& operator<<(FArchive &Ar, FLocoUnk2 &V)
-	{
-		return Ar << V.f0 << V.f1 << V.f2 << V.f3 << V.f4 << V.f5 << V.f6 << V.f7 << V.f8 << V.f9;
-	}
-};
-
-#endif // LOCO
 
 // Base class for UVertMesh and USkeletalMesh; in Unreal Engine it is derived from
 // abstract class UMesh (which is derived from UPrimitive)

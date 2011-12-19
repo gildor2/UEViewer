@@ -329,9 +329,9 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 }
 
 
-static bool UploadCube(UUnrealMaterial *Tex, bool doMipmap, int side)
+static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
 {
-	guard(UploadCube);
+	guard(UploadCubeSide);
 
 	CTextureData TexData;
 	if (!Tex->GetTextureData(TexData))
@@ -1488,7 +1488,7 @@ void UTextureCube::Bind()
 				break;
 			}
 
-			if (!UploadCube(Tex, Tex->Mips.Num() > 1, side))
+			if (!UploadCubeSide(Tex, Tex->Mips.Num() > 1, side))
 			{
 				if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
 				TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())

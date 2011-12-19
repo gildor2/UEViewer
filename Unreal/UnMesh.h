@@ -23,6 +23,9 @@ class CAnimSet;
 class CStaticMesh;
 
 
+//?? Eliminate GET_DWORD() macro - it could be compiler- and endian-dependent,
+//?? unpack "unsigned int" manually.
+//?? After that, can remove #include UnMesh.h from some places.
 #define GET_DWORD(v) (*(unsigned*)&(v))
 
 
