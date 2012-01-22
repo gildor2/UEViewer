@@ -63,8 +63,8 @@
 struct CPropInfo
 {
 	const char	   *Name;		// field name
-	const char	   *TypeName;	// name of field type; simple type names used for verification only
-	word			Offset;		// offset of field from class start
+	const char	   *TypeName;	// name of the field type
+	word			Offset;		// offset of this field from the class start
 	short			Count;		// number of array items
 };
 
@@ -160,8 +160,8 @@ struct CNullType
 #define BEGIN_PROP_TABLE_EXTERNAL(Class)		\
 static const CTypeInfo* Class##_StaticGetTypeinfo() \
 {												\
-	static const char *ClassName = #Class;		\
-	typedef Class		ThisClass;				\
+	static const char ClassName[] = #Class;		\
+	typedef Class ThisClass;					\
 	static const CPropInfo props[] =			\
 	{
 
@@ -185,7 +185,7 @@ struct CClassInfo
 };
 
 
-void RegisterClasses(CClassInfo *Table, int Count);
+void RegisterClasses(const CClassInfo *Table, int Count);
 void UnregisterClass(const char *Name, bool WholeTree = false);
 
 const CTypeInfo *FindClassType(const char *Name, bool ClassType = true);
@@ -205,7 +205,7 @@ FORCEINLINE bool IsKnownClass(const char *Name)
 
 #define BEGIN_CLASS_TABLE						\
 	{											\
-		static CClassInfo Table[] = {
+		static const CClassInfo Table[] = {
 #define REGISTER_CLASS(Class)					\
 			{ #Class, Class::StaticGetTypeinfo },
 #define REGISTER_CLASS_EXTERNAL(Class)			\

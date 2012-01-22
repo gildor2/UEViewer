@@ -228,7 +228,7 @@ public:
 		return height;
 	}
 
-	void Use();
+	void Use();				//?? rename to Bind()
 	static void Unset();
 
 	inline void SetViewport() const
@@ -241,7 +241,7 @@ public:
 	{
 		glBindTexture(GL_TEXTURE_2D, ColorTex);
 	}
-	void Flush();
+	void Flush();			//?? rename to Draw()
 
 protected:
 	int			Timestamp;

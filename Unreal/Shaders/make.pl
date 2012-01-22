@@ -56,7 +56,7 @@ sub process {
 	open(IN, $file) or die "Unable to read file $file\n";
 	my $name = $file;
 	$name =~ s/\./_/;
-	print(OUT "\n// $file\nstatic const char *${name} = \"${file}\\x00\"");
+	print(OUT "\n// $file\nstatic const char ${name}[] = \"${file}\\x00\"");
 	my $accum = "";
 	while (getline())
 	{

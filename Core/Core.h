@@ -24,12 +24,6 @@
 #define STR2(s) #s
 #define STR(s) STR2(s)
 
-//?? move to UnCore.h ?
-#define FVECTOR_ARG(v)		v.X, v.Y, v.Z
-#define FQUAT_ARG(v)		v.X, v.Y, v.Z, v.W
-#define FROTATOR_ARG(r)		r.Yaw, r.Pitch, r.Roll
-#define FCOLOR_ARG(v)		v.R, v.G, v.B, v.A
-
 #define BYTES4(a,b,c,d)	((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
 
 
@@ -203,23 +197,27 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 
 #if DO_GUARD
 
+// NOTE: using "char __FUNC__[]" instead of "char *__FUNC__" here: in 2nd case compiler
+// will generate static string and static pointer variable, but in the 1st case - only
+// static string.
+
 #if !WIN32_USE_SEH
 
 // C++excpetion-based guard/unguard system
 #define guard(func)						\
 	{									\
-		static const char *__FUNC__ = #func; \
+		static const char __FUNC__[] = #func; \
 		try {
 
 #if DO_GUARD_MAX
 #define guardfunc						\
 	{									\
-		static const char *__FUNC__ = __FUNCSIG__; \
+		static const char __FUNC__[] = __FUNCSIG__; \
 		try {
 #else
 #define guardfunc						\
 	{									\
-		static const char *__FUNC__ = __FUNCTION__; \
+		static const char __FUNC__[] = __FUNCTION__; \
 		try {
 #endif
 
@@ -249,18 +247,18 @@ unsigned win32ExceptFilter2();
 
 #define guard(func)						\
 	{									\
-		static const char *__FUNC__ = #func; \
+		static const char __FUNC__[] = #func; \
 		__try {
 
 #if DO_GUARD_MAX
 #define guardfunc						\
 	{									\
-		static const char *__FUNC__ = __FUNCSIG__; \
+		static const char __FUNC__[] = __FUNCSIG__; \
 		__try {
 #else
 #define guardfunc						\
 	{									\
-		static const char *__FUNC__ = __FUNCTION__; \
+		static const char __FUNC__[] = __FUNCTION__; \
 		__try {
 #endif
 

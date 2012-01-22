@@ -14,7 +14,6 @@
 CVertMeshViewer::CVertMeshViewer(UVertMesh *Mesh)
 :	CMeshViewer(Mesh)
 ,	AnimIndex(-1)
-,	CurrentTime(appMilliseconds())
 {
 	CVertMeshInstance *VertInst = new CVertMeshInstance();
 	VertInst->SetMesh(Mesh);
@@ -163,28 +162,40 @@ void CVertMeshViewer::Draw2D()
 	CMeshViewer::Draw2D();
 
 	CVertMeshInstance *MeshInst = static_cast<CVertMeshInstance*>(Inst);
+	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
 
+	// mesh
+	DrawTextLeft(S_GREEN"Verts  : "S_WHITE"%d\n"
+				 S_GREEN"Tris   : "S_WHITE"%d",
+				 Mesh->Wedges.Num(),
+				 Mesh->Faces.Num());
+
+	// materials
+	if (Inst->bColorMaterials)
+	{
+		for (int i = 0; i < Mesh->Materials.Num(); i++)
+		{
+			int TexIndex = Mesh->Materials[i].TextureIndex;
+			if (TexIndex >= 0 && TexIndex < Mesh->Textures.Num())
+				PrintMaterialInfo(i, MATERIAL_CAST(Mesh->Textures[TexIndex]), 0);
+		}
+		DrawTextLeft("");
+	}
+
+	// animation
 	const char *AnimName;
 	float Frame, NumFrames, Rate;
 	MeshInst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
 
-	DrawTextLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g",
+	DrawTextBottomLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g",
 		AnimIndex+1, MeshInst->GetAnimCount(), AnimName, Rate, NumFrames);
-	DrawTextLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
-
-	if (Inst->bColorMaterials)
-	{
-		const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
-		for (int i = 0; i < Mesh->Textures.Num(); i++)
-			PrintMaterialInfo(i, MATERIAL_CAST(Mesh->Textures[i]), 0);
-		DrawTextLeft("");
-	}
+	DrawTextBottomLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
 
 	unguard;
 }
 
 
-void CVertMeshViewer::Draw3D()
+void CVertMeshViewer::Draw3D(float TimeDelta)
 {
 	guard(CVertMeshViewer::Draw3D);
 	assert(Inst);
@@ -192,12 +203,9 @@ void CVertMeshViewer::Draw3D()
 	CVertMeshInstance *MeshInst = static_cast<CVertMeshInstance*>(Inst);
 
 	// tick animations
-	unsigned time = appMilliseconds();
-	float TimeDelta = (time - CurrentTime) / 1000.0f;
-	CurrentTime = time;
 	MeshInst->UpdateAnimation(TimeDelta);
 
-	CMeshViewer::Draw3D();
+	CMeshViewer::Draw3D(TimeDelta);
 
 	unguard;
 }

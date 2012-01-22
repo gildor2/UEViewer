@@ -3,11 +3,44 @@
 
 #if RENDERING
 
+#include "MeshCommon.h"				// for CMeshSection
 #include "MeshInstance.h"
 #include "UnMesh2.h"
 #include "UnMathTools.h"
 
 #include "TypeConvert.h"
+
+
+struct CVertMeshSection : public CMeshSection
+{
+	unsigned				PolyFlags;				// PF_...
+};
+
+
+CVertMeshInstance::CVertMeshInstance()
+:	AnimIndex(-1)
+,	AnimTime(0)
+,	Verts(NULL)
+,	Normals(NULL)
+,	Indices(NULL)
+{}
+
+
+CVertMeshInstance::~CVertMeshInstance()
+{
+	FreeRenderBuffers();
+}
+
+
+void CVertMeshInstance::FreeRenderBuffers()
+{
+	if (Verts) delete[] Verts;
+	if (Normals) delete[] Normals;
+	if (Indices) delete[] Indices;
+	Verts   = NULL;
+	Normals = NULL;
+	Indices = NULL;
+}
 
 
 void CVertMeshInstance::SetMesh(const UVertMesh *Mesh)
@@ -25,31 +58,52 @@ void CVertMeshInstance::SetMesh(const UVertMesh *Mesh)
 	tmp[2] = 1.0f / Mesh->MeshScale.Z;
 	BaseTransformScaled.axis.PrescaleSource(tmp);
 	BaseTransformScaled.origin = CVT(Mesh->MeshOrigin);
-}
 
-UUnrealMaterial *CVertMeshInstance::GetMaterial(int Index, int *PolyFlags)
-{
-	guard(CVertMeshInstance::GetMaterial);
-	int TexIndex = 1000000;
-	if (PolyFlags) *PolyFlags = 0;
-	if (Index < pMesh->Materials.Num())
+	FreeRenderBuffers();
+	if (!pMesh->Faces.Num()) return;
+
+	// prepare vertex and index buffers, build sections
+
+	Verts   = new CVec3[pMesh->Wedges.Num()];
+	Normals = new CVec3[pMesh->Wedges.Num()];
+	Indices = new word[pMesh->Faces.Num() * 3];
+
+	const FMeshFace *F = &pMesh->Faces[0];
+	word *pIndex = Indices;
+	int PrevMaterial = -2;
+	CVertMeshSection *Sec = NULL;
+	for (int i = 0; i < pMesh->Faces.Num(); i++, F++)
 	{
-		const FMeshMaterial &M = pMesh->Materials[Index];
-		TexIndex  = M.TextureIndex;
-		if (PolyFlags) *PolyFlags = M.PolyFlags;
-	}
-	// it is possible, that Textures array is empty (mesh textured by script)
-	return (TexIndex < pMesh->Textures.Num()) ? MATERIAL_CAST(pMesh->Textures[TexIndex]) : NULL;
-	unguard;
-}
+		if (F->MaterialIndex != PrevMaterial)
+		{
+			// get material parameters
+			int PolyFlags = 0;
+			int TexIndex = 1000000;
+			if (F->MaterialIndex < pMesh->Materials.Num())
+			{
+				const FMeshMaterial &M = pMesh->Materials[F->MaterialIndex];
+				TexIndex  = M.TextureIndex;
+				PolyFlags = M.PolyFlags;
+			}
+			// possible situation: Textures array is empty (mesh textured by script)
+			UUnrealMaterial *Mat = (TexIndex < pMesh->Textures.Num()) ? MATERIAL_CAST(pMesh->Textures[TexIndex]) : NULL;
 
-void CVertMeshInstance::SetMaterial(int Index)
-{
-	guard(CVertMeshInstance::SetMaterial);
-	int PolyFlags;
-	UUnrealMaterial *Mat = GetMaterial(Index, &PolyFlags);
-	CMeshInstance::SetMaterial(Mat, Index, PolyFlags);
-	unguard;
+			// create new section
+			Sec = new (Sections) CVertMeshSection;
+			Sec->FirstIndex = pIndex - Indices;
+			Sec->NumFaces   = 0;
+			Sec->Material   = Mat;
+			Sec->PolyFlags  = PolyFlags;
+
+			PrevMaterial = F->MaterialIndex;
+		}
+		// store indices
+		// note: skeletal mesh and vertex mesh has opposite triangle vertex order
+		*pIndex++ = F->iWedge[0];
+		*pIndex++ = F->iWedge[2];
+		*pIndex++ = F->iWedge[1];
+		Sec->NumFaces++;
+	}
 }
 
 
@@ -83,8 +137,11 @@ void CVertMeshInstance::Draw()
 {
 	guard(CVertMeshInstance::Draw);
 
+	if (!Sections.Num()) return;		// empty mesh
+
 	int i;
 
+	// get 2 frames for interpolation
 	int FrameNum1, FrameNum2;
 	float frac;
 	if (AnimIndex != INDEX_NONE)
@@ -114,91 +171,100 @@ void CVertMeshInstance::Draw()
 	int base1 = pMesh->VertexCount * FrameNum1;
 	int base2 = pMesh->VertexCount * FrameNum2;
 
-	CVec3 Vert[3];
-	CVec3 Norm[3];
-
 	float backLerp = 1 - frac;
 	CVec3 Scale1, Scale2;
 	Scale1 = Scale2 = CVT(pMesh->MeshScale);
 	Scale1.Scale(backLerp);
 	Scale2.Scale(frac);
 
-	for (i = 0; i < pMesh->Faces.Num(); i++)
+	// compute deformed mesh
+	const FMeshWedge *W = &pMesh->Wedges[0];
+	CVec3 *pVec    = Verts;
+	CVec3 *pNormal = Normals;
+	for (i = 0; i < pMesh->Wedges.Num(); i++, pVec++, pNormal++, W++)
 	{
-		int j;
-		const FMeshFace &F = pMesh->Faces[i];
-		for (j = 0; j < 3; j++)
-		{
-			const FMeshWedge &W = pMesh->Wedges[F.iWedge[j]];
-			CVec3 tmp;
+		CVec3 tmp;
 #if 0
-			// path with no frame lerp
-			// vertex
-			const FMeshVert &V = pMesh->Verts[base1 + W.iVertex];
-			tmp[0] = V.X * pMesh->MeshScale.X;
-			tmp[1] = V.Y * pMesh->MeshScale.Y;
-			tmp[2] = V.Z * pMesh->MeshScale.Z;
-			BaseTransform.TransformPoint(tmp, Vert[j]);
-			// normal
-			const FMeshNorm &N = pMesh->Normals[base1 + W.iVertex];
-			tmp[0] = (N.X - 512.0f) / 512;
-			tmp[1] = (N.Y - 512.0f) / 512;
-			tmp[2] = (N.Z - 512.0f) / 512;
-			BaseTransform.axis.TransformVector(tmp, Norm[j]);
+		// path with no frame lerp
+		// vertex
+		const FMeshVert &V = pMesh->Verts[base1 + W->iVertex];
+		tmp[0] = V.X * pMesh->MeshScale.X;
+		tmp[1] = V.Y * pMesh->MeshScale.Y;
+		tmp[2] = V.Z * pMesh->MeshScale.Z;
+		BaseTransform.TransformPoint(tmp, *pVec);
+		// normal
+		const FMeshNorm &N = pMesh->Normals[base1 + W->iVertex];
+		tmp[0] = (N.X - 512.0f) / 512;
+		tmp[1] = (N.Y - 512.0f) / 512;
+		tmp[2] = (N.Z - 512.0f) / 512;
+		BaseTransform.axis.TransformVector(tmp, *pNormal);
 #else
-			// vertex
-			const FMeshVert &V1 = pMesh->Verts[base1 + W.iVertex];
-			const FMeshVert &V2 = pMesh->Verts[base2 + W.iVertex];
-			tmp[0] = V1.X * Scale1[0] + V2.X * Scale2[0];
-			tmp[1] = V1.Y * Scale1[1] + V2.Y * Scale2[1];
-			tmp[2] = V1.Z * Scale1[2] + V2.Z * Scale2[2];
-			BaseTransform.TransformPoint(tmp, Vert[j]);
-			// normal
-			const FMeshNorm &N1 = pMesh->Normals[base1 + W.iVertex];
-			const FMeshNorm &N2 = pMesh->Normals[base2 + W.iVertex];
-			tmp[0] = (N1.X * backLerp + N2.X * frac - 512.0f) / 512;
-			tmp[1] = (N1.Y * backLerp + N2.Y * frac - 512.0f) / 512;
-			tmp[2] = (N1.Z * backLerp + N2.Z * frac - 512.0f) / 512;
-			BaseTransform.axis.TransformVector(tmp, Norm[j]);
+		// vertex
+		const FMeshVert &V1 = pMesh->Verts[base1 + W->iVertex];
+		const FMeshVert &V2 = pMesh->Verts[base2 + W->iVertex];
+		tmp[0] = V1.X * Scale1[0] + V2.X * Scale2[0];
+		tmp[1] = V1.Y * Scale1[1] + V2.Y * Scale2[1];
+		tmp[2] = V1.Z * Scale1[2] + V2.Z * Scale2[2];
+		BaseTransform.TransformPoint(tmp, *pVec);
+		// normal
+		const FMeshNorm &N1 = pMesh->Normals[base1 + W->iVertex];
+		const FMeshNorm &N2 = pMesh->Normals[base2 + W->iVertex];
+		tmp[0] = (N1.X * backLerp + N2.X * frac - 512.0f) / 512;
+		tmp[1] = (N1.Y * backLerp + N2.Y * frac - 512.0f) / 512;
+		tmp[2] = (N1.Z * backLerp + N2.Z * frac - 512.0f) / 512;
+		BaseTransform.axis.TransformVector(tmp, *pNormal);
 #endif
-		}
+	}
 
-		// draw mesh
-		//!! NOTE: very unoptimal drawing - should minimize state changes:
-		//!! 1. use SetMaterial() as less as possible (when material is changed only)
-		//!! 2. place glBegin/glEnd outsize of loop
-		//!! 3. show normals is separate loop (will require to store morphed verts/normals somewhere)
-		SetMaterial(F.MaterialIndex);
-		glEnable(GL_LIGHTING);
-		glBegin(GL_TRIANGLES);
-		for (j = 2; j >= 0; j--)	// skeletal mesh and vertex mesh has opposite triangle vertex order ??
+#if 0
+	glBegin(GL_POINTS);
+	for (i = 0; i < pMesh->Wedges.Num(); i++)
+	{
+		glVertex3fv(Verts[i].v);
+	}
+	glEnd();
+	return;
+#endif
+
+	// draw mesh
+	glEnable(GL_LIGHTING);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(CVec3), Verts);
+	glNormalPointer(GL_FLOAT, sizeof(CVec3), Normals);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(FMeshWedge), &pMesh->Wedges[0].TexUV.U);
+
+	for (i = 0; i < Sections.Num(); i++)
+	{
+		const CVertMeshSection &Sec = Sections[i];
+		SetMaterial(Sec.Material, i, Sec.PolyFlags);
+		glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Indices[Sec.FirstIndex]);
+	}
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+
+	glDisable(GL_LIGHTING);
+	BindDefaultMaterial(true);
+
+	// draw mesh normals
+	if (bShowNormals)
+	{
+		glBegin(GL_LINES);
+		glColor3f(0.5, 1, 0);
+		for (i = 0; i < pMesh->Wedges.Num(); i++)
 		{
-			const FMeshWedge &W = pMesh->Wedges[F.iWedge[j]];
-			glTexCoord2f(W.TexUV.U, W.TexUV.V);
-			glNormal3fv(Norm[j].v);
-			glVertex3fv(Vert[j].v);
+			glVertex3fv(Verts[i].v);
+			CVec3 tmp;
+			VectorMA(Verts[i], 2, Normals[i], tmp);
+			glVertex3fv(tmp.v);
 		}
 		glEnd();
-		if (bShowNormals)
-		{
-			glDisable(GL_LIGHTING);
-			BindDefaultMaterial(true);
-			// draw normals
-			glBegin(GL_LINES);
-			glColor3f(1, 0.5, 0);
-			for (j = 0; j < 3; j++)
-			{
-				glVertex3fv(Vert[j].v);
-				CVec3 tmp;
-				tmp = Vert[j];
-				VectorMA(tmp, 2, Norm[j]);
-				glVertex3fv(tmp.v);
-			}
-			glEnd();
-			glColor3f(1, 1, 1);
-		}
 	}
-	BindDefaultMaterial(true);
 
 	unguard;
 }

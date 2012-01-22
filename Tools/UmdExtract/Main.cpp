@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 	if (argc < 2)
 	{
 	help:
-		printf(	"Ubisoft Unreal Engine UMD Unpacked\n"
+		printf(	"Ubisoft Unreal Engine UMD Unpacker\n"
 				"Usage: unumd [options]\n"
 				"\n"
 				"Options:\n"

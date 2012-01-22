@@ -616,27 +616,26 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 	// 2) when saving : data is not modified by this function
 
 	// serialize data count
+	int Count = DataCount;
 #if UC2
-	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << Count;
 	else
 #endif
 #if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
+	if (Ar.Engine() >= GAME_UE3) Ar << Count;
 	else
 #endif
-		Ar << AR_INDEX(DataCount);
+		Ar << AR_INDEX(Count);
 
 	if (Ar.IsLoading)
 	{
 		// loading array items - should prepare array
-		// read data count
-		// allocate space for data
-		DataPtr  = (DataCount) ? appMalloc(elementSize * DataCount) : NULL;
-		MaxCount = DataCount;
+		Empty(Count, elementSize);
+		DataCount = Count;
 	}
 	// perform serialization itself
 	void *ptr;
-	for (i = 0, ptr = DataPtr; i < DataCount; i++, ptr = OffsetPointer(ptr, elementSize))
+	for (i = 0, ptr = DataPtr; i < Count; i++, ptr = OffsetPointer(ptr, elementSize))
 		Serializer(Ar, ptr);
 	return Ar;
 
@@ -670,28 +669,27 @@ FArchive& FArray::SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*
 		return Serialize(Ar, Serializer, elementSize);
 
 	// serialize data count
+	int Count = DataCount;
 #if UC2
-	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << Count;
 	else
 #endif
 #if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
+	if (Ar.Engine() >= GAME_UE3) Ar << Count;
 	else
 #endif
-		Ar << AR_INDEX(DataCount);
+		Ar << AR_INDEX(Count);
 
 	if (Ar.IsLoading)
 	{
 		// loading array items - should prepare array
-		// read data count
-		// allocate space for data
-		DataPtr  = (DataCount) ? appMalloc(elementSize * DataCount) : NULL;
-		MaxCount = DataCount;
+		Empty(Count, elementSize);
+		DataCount = Count;
 	}
-	if (!DataCount) return Ar;
+	if (!Count) return Ar;
 
 	// perform serialization itself
-	Ar.Serialize(DataPtr, elementSize * DataCount);
+	Ar.Serialize(DataPtr, elementSize * Count);
 	return Ar;
 
 	unguard;
@@ -707,34 +705,33 @@ FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 	//?? extended for this
 
 	// serialize data count
+	int Count = DataCount;
 #if UC2
-	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << Count;
 	else
 #endif
 #if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
+	if (Ar.Engine() >= GAME_UE3) Ar << Count;
 	else
 #endif
-		Ar << AR_INDEX(DataCount);
+		Ar << AR_INDEX(Count);
 
 	int elementSize = NumFields * FieldSize;
 	if (Ar.IsLoading)
 	{
 		// loading array items - should prepare array
-		// read data count
-		// allocate space for data
-		DataPtr  = (DataCount) ? appMalloc(elementSize * DataCount) : NULL;
-		MaxCount = DataCount;
+		Empty(Count, elementSize);
+		DataCount = Count;
 	}
-	if (!DataCount) return Ar;
+	if (!Count) return Ar;
 
 	// perform serialization itself
-	Ar.Serialize(DataPtr, elementSize * DataCount);
+	Ar.Serialize(DataPtr, elementSize * Count);
 	// reverse bytes when needed
 	if (FieldSize > 1 && Ar.ReverseBytes)
 	{
 		assert(Ar.IsLoading);
-		appReverseBytes(DataPtr, DataCount * NumFields, FieldSize);
+		appReverseBytes(DataPtr, Count * NumFields, FieldSize);
 	}
 	return Ar;
 

@@ -40,6 +40,12 @@ class UnPackage;
 #define INDEX_NONE			-1
 
 
+#define FVECTOR_ARG(v)		(v).X, (v).Y, (v).Z
+#define FQUAT_ARG(v)		(v).X, (v).Y, (v).Z, (v).W
+#define FROTATOR_ARG(r)		(r).Yaw, (r).Pitch, (r).Roll
+#define FCOLOR_ARG(v)		(v).R, (v).G, (v).B, (v).A
+
+
 // detect engine version by package
 #define PACKAGE_V2			100
 #define PACKAGE_V3			180
@@ -619,6 +625,7 @@ protected:
 // research helper
 #define DUMP_ARC_BYTES(Ar, NumBytes)					\
 	{													\
+		int OldPos = Ar.Tell();							\
 		for (int i = 0; i < NumBytes; i++)				\
 		{												\
 			if (Ar.IsStopper() || Ar.IsEof()) break;	\
@@ -629,7 +636,7 @@ protected:
 			appPrintf(" %02X", b);						\
 		}												\
 		appPrintf("\n");								\
-		Ar.Seek(Ar.Tell() - NumBytes);					\
+		Ar.Seek(OldPos);								\
 	}
 
 
@@ -841,15 +848,24 @@ struct FLinearColor
 // Default typeinfo
 template<class T> struct TTypeInfo
 {
-	//?? note: some fields were added for TArray serializer, but currently
-	//?? we have made a specialized serializers for simple and raw types
-	//?? in SIMPLE_TYPE and RAW_TYPE macros, so these fields are no more
-	//?? used
 	enum { FieldSize = sizeof(T) };
 	enum { NumFields = 1         };
-	enum { IsSimpleType = 0      };
-	enum { IsRawType = 0         };
+	enum { IsSimpleType = 0      };		// type consists of NumFields fields of integral type, sizeof(type) == FieldSize
+	enum { IsRawType = 0         };		// type memory layour is the same as archive layout
+	enum { IsPod = IS_POD(T)     };		// type has no constructor/destructor
 };
+
+
+template<class T1, class T2> struct IsSameType
+{
+	enum { Value = 0 };
+};
+
+template<class T> struct IsSameType<T,T>
+{
+	enum { Value = 1 };
+};
+
 
 // Declare type, consists from fields of the same type length
 // (e.g. from ints and floats, or from chars and bytes etc), and
@@ -862,17 +878,8 @@ template<> struct TTypeInfo<Type>			\
 	enum { NumFields = sizeof(Type) / sizeof(BaseType) }; \
 	enum { IsSimpleType = 1 };				\
 	enum { IsRawType = 1 };					\
-};											\
-template<> FORCEINLINE void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
-{											\
-	Dst.RawCopy(Src, sizeof(Type));			\
-}											\
-FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
-{											\
-	staticAssert(sizeof(Type) == TTypeInfo<Type>::NumFields * TTypeInfo<Type>::FieldSize, \
-		Error_In_TypeInfo);					\
-	return A.SerializeSimple(Ar, TTypeInfo<Type>::NumFields, TTypeInfo<Type>::FieldSize); \
-}
+	enum { IsPod = 1 };						\
+};
 
 
 // Declare type, which memory layout is the same as disk layout
@@ -883,15 +890,8 @@ template<> struct TTypeInfo<Type>			\
 	enum { NumFields = 1 };					\
 	enum { IsSimpleType = 0 };				\
 	enum { IsRawType = 1 };					\
-};											\
-template<> FORCEINLINE void CopyArray<Type>(TArray<Type> &Dst, const TArray<Type> &Src) \
-{											\
-	Dst.RawCopy(Src, sizeof(Type));			\
-}											\
-FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
-{											\
-	return A.SerializeRaw(Ar, TArray<Type>::SerializeItem, sizeof(Type)); \
-}
+	enum { IsPod = 1 };						\
+};
 
 
 // Note: SIMPLE and RAW types does not need constructors for loading
@@ -904,6 +904,23 @@ FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray<Type> &A) \
 #define SIMPLE_TYPE(x,y)
 #define RAW_TYPE(x)
 #endif
+
+
+// Declare fundamental types
+SIMPLE_TYPE(bool,     bool)
+SIMPLE_TYPE(byte,     byte)
+SIMPLE_TYPE(char,     char)
+SIMPLE_TYPE(short,    short)
+SIMPLE_TYPE(word,     word)
+SIMPLE_TYPE(int,      int)
+SIMPLE_TYPE(unsigned, unsigned)
+SIMPLE_TYPE(float,    float)
+
+// Aggregates
+SIMPLE_TYPE(FVector, float)
+SIMPLE_TYPE(FQuat,   float)
+SIMPLE_TYPE(FCoords, float)
+SIMPLE_TYPE(FColor,  byte)
 
 
 /*-----------------------------------------------------------------------------
@@ -996,7 +1013,7 @@ public:
 	~TArray()
 	{
 		// destruct all array items
-		if (!IS_POD(T)) Destruct(0, DataCount);
+		if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
 	}
 	// data accessors
 
@@ -1049,13 +1066,13 @@ public:
 	FORCEINLINE void Insert(int index, int count = 1)
 	{
 		FArray::Insert(index, count, sizeof(T));
-		if (!IS_POD(T)) Construct(index, count);
+		if (!TTypeInfo<T>::IsPod) Construct(index, count);
 	}
 
 	FORCEINLINE void Remove(int index, int count = 1)
 	{
 		// destruct specified array items
-		if (!IS_POD(T)) Destruct(index, count);
+		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
 		// remove items from array
 		FArray::Remove(index, count, sizeof(T));
 	}
@@ -1092,7 +1109,7 @@ public:
 	FORCEINLINE void Empty(int count = 0)
 	{
 		// destruct all array items
-		if (!IS_POD(T)) Destruct(0, DataCount);
+		if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
 		// remove data array (count=0) or preallocate memory (count>0)
 		FArray::Empty(count, sizeof(T));
 	}
@@ -1103,17 +1120,36 @@ public:
 	}
 
 	// serializer
-#if _MSC_VER == 1200			// VC6 bug
-	friend FArchive& operator<<(FArchive &Ar, TArray &A);
-#else
-	template<class T2> friend FArchive& operator<<(FArchive &Ar, TArray<T2> &A);
+	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray &A)
+	{
+#if DO_GUARD_MAX
+		guardfunc;
 #endif
+		// special case for SIMPLE_TYPE
+		if (TTypeInfo<T>::IsSimpleType)
+		{
+			staticAssert(sizeof(T) == TTypeInfo<T>::NumFields * TTypeInfo<T>::FieldSize, Error_In_TypeInfo);
+			return A.SerializeSimple(Ar, TTypeInfo<T>::NumFields, TTypeInfo<T>::FieldSize);
+		}
 
-//?? -- cannot compile with VC7: protected:
+		// special case for RAW_TYPE
+		if (TTypeInfo<T>::IsRawType)
+			return A.SerializeRaw(Ar, TArray<T>::SerializeItem, sizeof(T));
+
+		// generic case
+		// erase previous data before loading in a case of non-POD data
+		if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
+			A.Destruct(0, A.Num());		// do not call Empty() - data will be freed anyway in FArray::Serialize()
+		return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
+#if DO_GUARD_MAX
+		unguard;
+#endif
+	}
+
 	// serializer helper; used from 'operator<<(FArchive, TArray<>)' only
 	static void SerializeItem(FArchive &Ar, void *item)
 	{
-		if (Ar.IsLoading)
+		if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
 			new (item) T;		// construct item before reading
 		Ar << *(T*)item;		// serialize item
 	}
@@ -1149,23 +1185,6 @@ private:
 };
 
 
-
-// VC6 sometimes cannot instantiate this function, when declared inside
-// template class
-template<class T> FArchive& operator<<(FArchive &Ar, TArray<T> &A)
-{
-#if DO_GUARD_MAX
-	guardfunc;
-#endif
-	// erase previous data before loading in a case of non-POD data
-	if (Ar.IsLoading)
-		A.Empty();
-	return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
-#if DO_GUARD_MAX
-	unguard;
-#endif
-}
-
 template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
 	guard(TArray::operator new);
@@ -1190,16 +1209,19 @@ template<class T> class TLazyArray : public TArray<T>
 		return Ar << *(TArray<T>*)Array;
 	}
 
+#if DO_GUARD_MAX
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
-#if DO_GUARD_MAX
 		guardfunc;
-#endif
 		return SerializeLazyArray(Ar, A, SerializeArray);
-#if DO_GUARD_MAX
 		unguard;
-#endif
 	}
+#else
+	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TLazyArray &A)
+	{
+		return SerializeLazyArray(Ar, A, SerializeArray);
+	}
+#endif
 };
 
 
@@ -1223,6 +1245,7 @@ inline void SkipLazyArray(FArchive &Ar)
 // engine version should equals to game engine version, otherwise per-element
 // reading will be performed (as usual in TArray)
 // There is no reading optimization performed here (in umodel)
+
 template<class T> class TRawArray : protected TArray<T>
 {
 public:
@@ -1233,16 +1256,19 @@ public:
 		return Ar << *(TArray<T>*)Array;
 	}
 
+#if DO_GUARD_MAX
 	friend FArchive& operator<<(FArchive &Ar, TRawArray &A)
 	{
-#if DO_GUARD_MAX
 		guardfunc;
-#endif
 		return SerializeRawArray(Ar, A, SerializeArray);
-#if DO_GUARD_MAX
 		unguard;
-#endif
 	}
+#else
+	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TRawArray &A)
+	{
+		return SerializeRawArray(Ar, A, SerializeArray);
+	}
+#endif
 
 protected:
 	// disallow direct creation of TRawArray, this is a helper class with a
@@ -1281,34 +1307,27 @@ template<class T> inline TRawArray<T>& ToRawArray(TArray<T> &Arr)
 
 #endif // UNREAL3
 
-template<typename T1, typename T2> void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
+template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
 {
-	guard(CopyArray2);
-	Dst.Empty(Src.Num());
-	if (Src.Num())
+	if (IsSameType<T1,T2>::Value && TTypeInfo<T1>::IsPod)
 	{
-		Dst.Add(Src.Num());
-		for (int i = 0; i < Src.Num(); i++)
-			Dst[i] = Src[i];
+		Dst.RawCopy(Src, sizeof(T1));
+		return;
 	}
-	unguard;
+
+	int Count = Src.Num();
+	Dst.Empty(Count);
+	if (Count)
+	{
+		Dst.Add(Count);
+		T1 *pDst = (T1*)Dst.GetData();
+		T2 *pSrc = (T2*)Src.GetData();
+		do		// Count is > 0 here - checked above, so "do ... while" is more suitable (and more compact)
+		{
+			*pDst++ = *pSrc++;
+		} while (--Count);
+	}
 }
-
-
-// Declare fundamental types
-SIMPLE_TYPE(byte,     byte)
-SIMPLE_TYPE(char,     char)
-SIMPLE_TYPE(short,    short)
-SIMPLE_TYPE(word,     word)
-SIMPLE_TYPE(int,      int)
-SIMPLE_TYPE(unsigned, unsigned)
-SIMPLE_TYPE(float,    float)
-
-// Aggregates
-SIMPLE_TYPE(FVector, float)
-SIMPLE_TYPE(FQuat,   float)
-SIMPLE_TYPE(FCoords, float)
-SIMPLE_TYPE(FColor,  byte)
 
 
 /*-----------------------------------------------------------------------------
@@ -1320,25 +1339,17 @@ template<class TK, class TV> struct TMapPair
 	TK		Key;
 	TV		Value;
 
-#if _MSC_VER != 1200		// not for VC6
 	friend FArchive& operator<<(FArchive &Ar, TMapPair &V)
 	{
 		return Ar << V.Key << V.Value;
 	}
-#endif
 };
 
-#if _MSC_VER == 1200		// for VC6
-template<class TK, class TV> FArchive& operator<<(FArchive &Ar, TMapPair<TK, TV> &V)
-{
-	return Ar << V.Key << V.Value;
-}
-#endif
 
 template<class TK, class TV> class TMap : public TArray<TMapPair<TK, TV> >
 {
 public:
-	friend FArchive& operator<<(FArchive &Ar, TMap &Map)
+	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TMap &Map)
 	{
 		return Ar << (TArray<TMapPair<TK, TV> >&)Map;
 	}

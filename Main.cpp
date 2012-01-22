@@ -243,7 +243,7 @@ struct GameInfo
 #define G(name,s,e)		{ name, #s,   e        }
 
 
-static GameInfo games[] = {
+static const GameInfo games[] = {
 	// Unreal Engine 1
 #if UNREAL1
 		G("Unreal Engine 1", ue1, GAME_UE1),
@@ -384,6 +384,7 @@ static GameInfo games[] = {
 #	endif
 #	if BATMAN
 		G("Batman: Arkham Asylum", batman, GAME_Batman),
+		G("Batman: Arkham City", batman2, GAME_Batman2),
 #	endif
 #	if CRIMECRAFT
 		G("Crime Craft", crime, GAME_CrimeCraft),
@@ -566,11 +567,13 @@ static void Usage()
 			"Developer commands:\n"
 			"    -log=file       write log to the specified file\n"
 			"    -dump           dump object information to console\n"
-			"    -check          check some assumptions, no other actions performed\n"
 			"    -pkginfo        load package and display its information\n"
-#if VSTUDIO_INTEGRATION && SHOW_HIDDEN_SWITCHES
+#if SHOW_HIDDEN_SWITCHES
+			"    -check          check some assumptions, no other actions performed\n"
+#	if VSTUDIO_INTEGRATION
 			"    -debug          invoke system crash handler on errors\n"
-#endif
+#	endif
+#endif // SHOW_HIDDEN_SWITCHES
 			"\n"
 			"Options:\n"
 			"    -path=PATH      path to game installation directory; if not specified,\n"
@@ -687,95 +690,95 @@ int main(int argc, char **argv)
 	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
 		 noTex = false, regSounds = false, reg3rdparty = false, hasRootDir = false;
 	TArray<const char*> extraPackages;
-	int arg;
-	for (arg = 1; arg < argc; arg++)
+	TArray<const char*> params;
+	for (int arg = 1; arg < argc; arg++)
 	{
-		if (argv[arg][0] == '-')
+		const char *opt = argv[arg];
+		if (opt[0] != '-')
 		{
-			const char *opt = argv[arg]+1;
-			// simple options
-			static const OptionInfo options[] =
-			{
-				OPT_VALUE("view",    mainCmd, CMD_View)
-				OPT_VALUE("dump",    mainCmd, CMD_Dump)
-				OPT_VALUE("check",   mainCmd, CMD_Check)
-				OPT_VALUE("export",  mainCmd, CMD_Export)
-				OPT_VALUE("taglist", mainCmd, CMD_TagList)
-				OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
-				OPT_VALUE("list",    mainCmd, CMD_List)
+			params.AddItem(opt);
+			continue;
+		}
+
+		opt++;			// skip '-'
+		// simple options
+		static const OptionInfo options[] =
+		{
+			OPT_VALUE("view",    mainCmd, CMD_View)
+			OPT_VALUE("dump",    mainCmd, CMD_Dump)
+			OPT_VALUE("check",   mainCmd, CMD_Check)
+			OPT_VALUE("export",  mainCmd, CMD_Export)
+			OPT_VALUE("taglist", mainCmd, CMD_TagList)
+			OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
+			OPT_VALUE("list",    mainCmd, CMD_List)
 #if VSTUDIO_INTEGRATION
-				OPT_BOOL ("debug",   GUseDebugger)
+			OPT_BOOL ("debug",   GUseDebugger)
 #endif
 #if RENDERING
-				OPT_BOOL ("meshes",    showMeshes)
-				OPT_BOOL ("materials", showMaterials)
+			OPT_BOOL ("meshes",    showMeshes)
+			OPT_BOOL ("materials", showMaterials)
 #endif
-				OPT_BOOL ("all",     exprtAll)
-				OPT_BOOL ("uncook",  GUncook)
-				OPT_BOOL ("groups",  GUseGroups)
-				OPT_BOOL ("pskx",    GExportPskx)
-				OPT_BOOL ("md5",     md5)
-				OPT_BOOL ("lods",    GExportLods)
-				OPT_BOOL ("uc",      GExportScripts)
-				// disable classes
-				OPT_BOOL ("nomesh",  noMesh)
-				OPT_BOOL ("nostat",  noStat)
-				OPT_BOOL ("noanim",  noAnim)
-				OPT_BOOL ("notex",   noTex)
-				OPT_BOOL ("sounds",  regSounds)
-				OPT_BOOL ("3rdparty", reg3rdparty)
-				OPT_BOOL ("dds",     GExportDDS)
-				OPT_BOOL ("notgacomp", GNoTgaCompress)
-				OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
-				// platform
-				OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
-				OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
-				// compression
-				OPT_VALUE("lzo",     GForceCompMethod, COMPRESS_LZO )	//!! add these options to the "extract" and "decompress"
-				OPT_VALUE("zlib",    GForceCompMethod, COMPRESS_ZLIB)
-				OPT_VALUE("lzx",     GForceCompMethod, COMPRESS_LZX )
-			};
-			if (ProcessOption(ARRAY_ARG(options), opt))
-				continue;
-			// more complex options
-			if (!strnicmp(opt, "log=", 4))
+			OPT_BOOL ("all",     exprtAll)
+			OPT_BOOL ("uncook",  GUncook)
+			OPT_BOOL ("groups",  GUseGroups)
+			OPT_BOOL ("pskx",    GExportPskx)
+			OPT_BOOL ("md5",     md5)
+			OPT_BOOL ("lods",    GExportLods)
+			OPT_BOOL ("uc",      GExportScripts)
+			// disable classes
+			OPT_BOOL ("nomesh",  noMesh)
+			OPT_BOOL ("nostat",  noStat)
+			OPT_BOOL ("noanim",  noAnim)
+			OPT_BOOL ("notex",   noTex)
+			OPT_BOOL ("sounds",  regSounds)
+			OPT_BOOL ("3rdparty", reg3rdparty)
+			OPT_BOOL ("dds",     GExportDDS)
+			OPT_BOOL ("notgacomp", GNoTgaCompress)
+			OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
+			// platform
+			OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
+			OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
+			// compression
+			OPT_VALUE("lzo",     GForceCompMethod, COMPRESS_LZO )
+			OPT_VALUE("zlib",    GForceCompMethod, COMPRESS_ZLIB)
+			OPT_VALUE("lzx",     GForceCompMethod, COMPRESS_LZX )
+		};
+		if (ProcessOption(ARRAY_ARG(options), opt))
+			continue;
+		// more complex options
+		if (!strnicmp(opt, "log=", 4))
+		{
+			appOpenLogFile(opt+4);
+		}
+		else if (!strnicmp(opt, "path=", 5))
+		{
+			appSetRootDirectory(opt+5);
+			hasRootDir = true;
+		}
+		else if (!strnicmp(opt, "out=", 4))
+		{
+			appSetBaseExportDirectory(opt+4);
+		}
+		else if (!strnicmp(opt, "game=", 5))
+		{
+			int tag = FindGameTag(opt+5);
+			if (tag == -1)
 			{
-				appOpenLogFile(opt+4);
+				appPrintf("ERROR: unknown game tag \"%s\".", opt+5);
+				PrintGameList(true);
+				exit(0);
 			}
-			else if (!strnicmp(opt, "path=", 5))
-			{
-				appSetRootDirectory(opt+5);
-				hasRootDir = true;
-			}
-			else if (!strnicmp(opt, "out=", 4))
-			{
-				appSetBaseExportDirectory(opt+4);
-			}
-			else if (!strnicmp(opt, "game=", 5))
-			{
-				int tag = FindGameTag(opt+5);
-				if (tag == -1)
-				{
-					appPrintf("ERROR: unknown game tag \"%s\".", opt+5);
-					PrintGameList(true);
-					exit(0);
-				}
-				GForceGame = tag;
-			}
-			else if (!strnicmp(opt, "pkg=", 4))
-			{
-				const char *pkg = opt+4;
-				extraPackages.AddItem(pkg);
-			}
-			else
-			{
-				appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);
-				Usage();
-			}
+			GForceGame = tag;
+		}
+		else if (!strnicmp(opt, "pkg=", 4))
+		{
+			const char *pkg = opt+4;
+			extraPackages.AddItem(pkg);
 		}
 		else
 		{
-			break;
+			appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);
+			Usage();
 		}
 	}
 
@@ -785,26 +788,23 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (arg >= argc)
+	if (!params.Num())
 	{
 	bad_pkg_name:
 		appPrintf("COMMAND LINE ERROR: package name is not specified\n");
 		Usage();
 	}
-
-	const char *argPkgName   = argv[arg++];
-	if (!argPkgName) goto bad_pkg_name;
-	const char *argObjName   = NULL;
-	const char *argClassName = NULL;
-	if (arg < argc)
-		argObjName   = argv[arg++];
-	if (arg < argc)
-		argClassName = argv[arg++];
-	if (arg != argc)
+	if (params.Num() > 3)
 	{
 		appPrintf("COMMAND LINE ERROR: too much arguments\n");
 		Usage();
 	}
+
+	const char *argPkgName   = params[0];
+	const char *argObjName   = (params.Num() >= 2) ? params[1] : NULL;
+	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
+
+	if (!argPkgName) goto bad_pkg_name;
 
 	// load the package
 
@@ -941,7 +941,7 @@ int main(int argc, char **argv)
 			appPrintf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
 			exit(1);
 		}
-		appPrintf("Found %d objects with a name \"%s\"\n", found, argObjName);
+		appPrintf("Found %d object(s) with a name \"%s\"\n", found, argObjName);
 	}
 	else
 	{
@@ -1150,10 +1150,10 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 }
 
 
-void AppDrawFrame()
+void AppDrawFrame(float TimeDelta)
 {
 	guard(AppDrawFrame);
-	Viewer->Draw3D();
+	Viewer->Draw3D(TimeDelta);
 	unguard;
 }
 

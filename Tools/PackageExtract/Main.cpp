@@ -85,6 +85,9 @@ int main(int argc, char **argv)
 				"    -out=PATH          extract everything into PATH instead of the current directory\n"
 				"    -lzo|lzx|zlib      force compression method for fully-compressed packages\n"
 				"\n"
+				"Platform selection:\n"
+				"    -ps3               override platform autodetection to PS3\n"
+				"\n"
 				"For details and updates please visit " HOMEPAGE "\n"
 		);
 		exit(0);
@@ -125,6 +128,8 @@ int main(int argc, char **argv)
 				GForceCompMethod = COMPRESS_ZLIB;
 			else if (!stricmp(opt, "lzx"))
 				GForceCompMethod = COMPRESS_LZX;
+			else if (!stricmp(opt, "ps3"))
+				GForcePlatform = PLATFORM_PS3;
 			else
 				goto help;
 		}

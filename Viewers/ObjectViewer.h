@@ -37,7 +37,7 @@ public:
 	virtual void Draw2D();
 	virtual void ProcessKey(int key);
 
-	virtual void Draw3D()
+	virtual void Draw3D(float TimeDelta)
 	{}
 };
 
@@ -60,7 +60,7 @@ public:
 	virtual void ProcessKey(int key);
 
 	virtual void Draw2D();
-	virtual void Draw3D();
+	virtual void Draw3D(float TimeDelta);
 };
 
 
@@ -83,7 +83,7 @@ public:
 
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
-	virtual void Draw3D();
+	virtual void Draw3D(float TimeDelta);
 
 	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
 };
@@ -97,7 +97,6 @@ class CVertMeshViewer : public CMeshViewer
 {
 public:
 	int				AnimIndex;
-	unsigned		CurrentTime;
 
 	CVertMeshViewer(UVertMesh *Mesh);
 
@@ -109,7 +108,7 @@ public:
 	virtual void Test();
 #endif
 	virtual void Draw2D();
-	virtual void Draw3D();
+	virtual void Draw3D(float TimeDelta);
 };
 
 
@@ -121,7 +120,6 @@ class CSkelMeshViewer : public CMeshViewer
 {
 public:
 	int				AnimIndex;
-	unsigned		CurrentTime;
 
 	CSkelMeshViewer(CSkeletalMesh *Mesh);
 
@@ -131,7 +129,7 @@ public:
 	virtual void Dump();
 	virtual void Export();
 	virtual void Draw2D();
-	virtual void Draw3D();
+	virtual void Draw3D(float TimeDelta);
 	virtual void ProcessKey(int key);
 
 	static TArray<CSkelMeshInstance*> Meshes;	// for displaying multipart meshes

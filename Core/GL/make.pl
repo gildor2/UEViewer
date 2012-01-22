@@ -630,7 +630,7 @@ EOF
 );
 
 printf(CODE "#if %s\n\n", $constname3);
-printf(CODE "static %s_t %s[%s] = {\n", $extArrName, $extArrName, $constname3);
+printf(CODE "static %s_t %s[%s] = {\n", $extArrName, $extArrName, $constname3);		# NOTE: not 'const' because "name" field is volatile
 Parse(undef, "EmitPlatformCODE_EXT", "EmitExtensionCODE");
 print(CODE "};\n\n");
 printf(CODE "#endif // %s\n", $constname3);

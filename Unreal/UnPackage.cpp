@@ -8,6 +8,9 @@
 byte GForceCompMethod = 0;		// COMPRESS_...
 
 
+//#define DEBUG_PACKAGE		1
+
+
 /*-----------------------------------------------------------------------------
 	Lineage2 file reader
 -----------------------------------------------------------------------------*/
@@ -639,7 +642,9 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	#endif // UNREAL3
 			}
 		done: ;
-//			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
+#if DEBUG_PACKAGE
+			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
+#endif
 			unguardf(("%d", i));
 		}
 	}
@@ -654,7 +659,9 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		for (int i = 0; i < Summary.ImportCount; i++, Imp++)
 		{
 			*this << *Imp;
-//			PKG_LOG(("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName));
+#if DEBUG_PACKAGE
+			PKG_LOG(("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName));
+#endif
 		}
 	}
 	unguard;
@@ -668,8 +675,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		for (int i = 0; i < Summary.ExportCount; i++, Exp++)
 		{
 			*this << *Exp;
-//			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
-//				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype));
+#if DEBUG_PACKAGE
+			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
+				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype));
+#endif
 		}
 	}
 	unguard;

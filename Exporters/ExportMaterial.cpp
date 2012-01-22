@@ -36,9 +36,9 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	PROC(Opacity);
 	PROC(Emissive);
 
-#endif // RENDERING
-
 	delete Ar;
+
+#endif // RENDERING
 
 	unguardf(("%s'%s'", Mat->GetClassName(), Mat->Name));
 }

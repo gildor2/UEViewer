@@ -7,7 +7,9 @@
 #include "GlFont.h"
 
 #define CHARS_PER_LINE			(TEX_WIDTH/CHAR_WIDTH)
-#define TEXT_SCROLL_LINES		(CHAR_HEIGHT/2)
+#define FONT_SPACING			1
+#define TEXT_SCROLL_LINES		((CHAR_HEIGHT-FONT_SPACING)/2)
+//#define SHOW_FONT_TEX			1		// show font texture
 
 
 #define LIGHTING_MODES			1		// allow switching scene lighting modes with Ctrl+L
@@ -85,6 +87,7 @@ inline void InvalidateContext()
 
 static bool  isHelpVisible = false;
 static float frameTime;
+static unsigned lastFrameTime = 0;
 
 static bool  is2Dmode = false;
 
@@ -210,27 +213,50 @@ static GLuint	FontTexNum = 0;
 static void LoadFont()
 {
 	// decompress font texture
-	byte *pic = (byte*)malloc(TEX_WIDTH * TEX_HEIGHT * 4);
+	byte *pic = (byte*)appMalloc(TEX_WIDTH * TEX_HEIGHT * 4);
 	int i;
-	byte *p, *dst;
-	for (i = 0, p = TEX_DATA, dst = pic; i < TEX_WIDTH * TEX_HEIGHT / 8; i++, p++)
+	const byte *p;
+	byte *dst;
+
+	// unpack 4 bit-per-pixel data with RLE encoding of null bytes
+	for (p = TEX_DATA, dst = pic; p < TEX_DATA + ARRAY_COUNT(TEX_DATA); /*empty*/)
 	{
-		byte s = *p;
-		for (int bit = 0; bit < 8; bit++, dst += 4)
+		byte s = *p++;
+		if (s & 0x80)
 		{
-			dst[0] = 255;
-			dst[1] = 255;
-			dst[2] = 255;
-			dst[3] = (s & (1 << bit)) ? 255 : 0;
+			// unpack data
+			// using *17 here: 0*17=>0, 15*17=>255
+			for (int count = (s & 0x7F) + 1; count > 0; count--)
+			{
+				s = *p++;
+				dst[0] = dst[1] = dst[2] = 255; dst += 3;
+				*dst++ = (s >> 4) * 17;
+				dst[0] = dst[1] = dst[2] = 255; dst += 3;
+				*dst++ = (s & 0xF) * 17;
+			}
+		}
+		else
+		{
+			// zero bytes
+			for (int count = (s + 2) * 2; count > 0; count--)
+			{
+				dst[0] = dst[1] = dst[2] = 255; dst += 3;
+				*dst++ = 0;
+			}
 		}
 	}
+//	printf("p[%d], dst[%d] -> %g\n", p - TEX_DATA, dst - pic, float(dst - pic) / 4 / TEX_WIDTH);
+
 	// upload it
 	glGenTextures(1, &FontTexNum);
 	glBindTexture(GL_TEXTURE_2D, FontTexNum);
+	// the best whould be to use 8-bit format with A=(var) and RGB=FFFFFF, but GL_ALPHA has RGB=0;
+	// format with RGB=0 is not suitable for font shadow rendering because we must use GL_SRC_COLOR
+	// blending; that's why we're using GL_RGBA here
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, TEX_WIDTH, TEX_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	free(pic);
+	appFree(pic);
 }
 
 
@@ -256,16 +282,25 @@ static void DrawChar(char c, int color, int textX, int textY)
 
 	c -= FONT_FIRST_CHAR;
 
+	// screen coordinates
 	int x1 = textX;
 	int y1 = textY;
-	int x2 = textX + CHAR_WIDTH;
-	int y2 = textY + CHAR_HEIGHT;
+	int x2 = textX + CHAR_WIDTH - FONT_SPACING;
+	int y2 = textY + CHAR_HEIGHT - FONT_SPACING;
+
+	// texture coordinates
 	int line = c / CHARS_PER_LINE;
 	int col  = c - line * CHARS_PER_LINE;
-	float s0 = (col      * CHAR_WIDTH)  / (float)TEX_WIDTH;
-	float s1 = ((col+1)  * CHAR_WIDTH)  / (float)TEX_WIDTH;
-	float t0 = (line     * CHAR_HEIGHT) / (float)TEX_HEIGHT;
-	float t1 = ((line+1) * CHAR_HEIGHT) / (float)TEX_HEIGHT;
+
+	float s0 = col * CHAR_WIDTH;
+	float s1 = s0 + CHAR_WIDTH - FONT_SPACING;
+	float t0 = line * CHAR_HEIGHT;
+	float t1 = t0 + CHAR_HEIGHT - FONT_SPACING;
+
+	s0 /= TEX_WIDTH;
+	s1 /= TEX_WIDTH;
+	t0 /= TEX_HEIGHT;
+	t1 /= TEX_HEIGHT;
 
 	for (int s = 1; s >= 0; s--)
 	{
@@ -665,7 +700,7 @@ static void ClearTexts()
 static void GetTextExtents(const char *s, int &width, int &height)
 {
 	int x = 0, w = 0;
-	int h = CHAR_HEIGHT;
+	int h = CHAR_HEIGHT - FONT_SPACING;
 	while (char c = *s++)
 	{
 		if (c == COLOR_ESCAPE)
@@ -678,10 +713,10 @@ static void GetTextExtents(const char *s, int &width, int &height)
 		{
 			if (x > w) w = x;
 			x = 0;
-			h += CHAR_HEIGHT;
+			h += CHAR_HEIGHT - FONT_SPACING;
 			continue;
 		}
-		x += CHAR_WIDTH;
+		x += CHAR_WIDTH - FONT_SPACING;
 	}
 	width = max(x, w);
 	height = h;
@@ -719,11 +754,11 @@ static void DrawText(const CRText *rec)
 				}
 			}
 			DrawChar(c, color, x, y);
-			x += CHAR_WIDTH;
+			x += CHAR_WIDTH - FONT_SPACING;
 		}
 		if (!s) return;							// all done
 
-		y += CHAR_HEIGHT;
+		y += CHAR_HEIGHT - FONT_SPACING;
 		text = s + 1;
 	}
 }
@@ -740,8 +775,25 @@ void FlushTexts()
 	glBindTexture(GL_TEXTURE_2D, FontTexNum);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#if 0
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.5);
+#else
+	glDisable(GL_ALPHA_TEST);
+#endif
+#if SHOW_FONT_TEX
+	glColor3f(1, 1, 1);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0, 0);
+	glVertex2f(winWidth-TEX_WIDTH, 0);
+	glTexCoord2f(1, 0);
+	glVertex2f(winWidth, 0);
+	glTexCoord2f(1, 1);
+	glVertex2f(winWidth, TEX_HEIGHT);
+	glTexCoord2f(0, 1);
+	glVertex2f(winWidth-TEX_WIDTH, TEX_HEIGHT);
+	glEnd();
+#endif // SHOW_FONT_TEX
 
 #if DUMP_TEXTS
 	appSetNotifyHeader("Screen texts");
@@ -793,12 +845,27 @@ static void DrawTextAtAnchor(ETextAnchor anchor, const char *fmt, va_list argptr
 	if (!isBottom && pos_y + h <= 0 && !dumpTexts)		// out of screen
 		return;
 
+	DrawTextPos(isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w, pos_y, msg, anchor);
+
 #if DUMP_TEXTS
 	if (dumpTexts)
+	{
+		// drop color escape characters
+		char *d = msg;
+		char *s = msg;
+		while (char c = *s++)
+		{
+			if (c == COLOR_ESCAPE && *s)
+			{
+				s++;
+				continue;
+			}
+			*d++ = c;
+		}
+		*d = 0;
 		appNotify("%s", msg);
+	}
 #endif
-
-	DrawTextPos(isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w, pos_y, msg, anchor);
 
 	unguard;
 }
@@ -987,12 +1054,12 @@ static void Display()
 
 	GCurrentFrame++;
 
-#if SHOW_FPS
-	static unsigned lastFrameTime = 0;
 	unsigned currentTime = appMilliseconds();
-	if (lastFrameTime)
-		DrawTextRight(S_YELLOW"FPS: %3.0f", 1000.0f / (currentTime - lastFrameTime));
+	float TimeDelta = (currentTime - lastFrameTime) / 1000.0f;
 	lastFrameTime = currentTime;
+#if SHOW_FPS
+	if (TimeDelta > 0)
+		DrawTextRight(S_YELLOW"FPS: %3.0f", 1.0f / TimeDelta);
 #endif // SHOW_FPS
 
 #if USE_BLOOM
@@ -1042,7 +1109,7 @@ static void Display()
 #endif // LIGHTING_MODES
 
 	// draw scene
-	AppDrawFrame();
+	AppDrawFrame(TimeDelta);
 
 	// restore draw state
 	BindDefaultMaterial(true);

@@ -299,7 +299,7 @@ struct FStaticLODModelBio
 	int						f74;
 	int						f78;
 	float					f7C;
-	TLazyArray<FVertInfluences> VertInfluences;
+	TLazyArray<FVertInfluence> VertInfluences;
 	TLazyArray<FMeshWedge>	Wedges;
 	TLazyArray<FMeshFace>	Faces;
 	TLazyArray<FVector>		Points;				// all surface points
@@ -371,7 +371,6 @@ struct FStaticLODModelBio
 	}
 };
 
-//?? check same function in UnMesh.cpp
 static bool CompareCompNormals(int Normal1, int Normal2)
 {
 	for (int i = 0; i < 3; i++)
@@ -386,7 +385,7 @@ static bool CompareCompNormals(int Normal1, int Normal2)
 }
 
 // partially based on FStaticLODModel::RestoreMesh3()
-//!! convert directly to CSkeletalMesh
+//!! convert directly to CSkeletalMesh, eliminate CompareCompNormals()
 void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLODModelBio &Lod)
 {
 	guard(FStaticLODModel::RestoreMeshBio);
@@ -421,7 +420,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 			Points[PointIndex] = V.Pos;
 			PointNormals.AddItem(V.Normal[0]);
 			// add influence
-			FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
+			FVertInfluence *Inf = new(VertInfluences) FVertInfluence;
 			Inf->PointIndex = PointIndex;
 			Inf->Weight     = 1.0f;
 			Inf->BoneIndex  = Lod.Bones[V.BoneIndex];
@@ -460,7 +459,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 				int BoneIndex  = V.BoneIndex[i];
 				int BoneWeight = V.BoneWeight[i];
 				if (BoneWeight == 0) continue;
-				FVertInfluences *Inf = new(VertInfluences) FVertInfluences;
+				FVertInfluence *Inf = new(VertInfluences) FVertInfluence;
 				Inf->PointIndex = PointIndex;
 				Inf->Weight     = BoneWeight / 255.0f;
 				Inf->BoneIndex  = Lod.Bones[BoneIndex];

@@ -25,13 +25,14 @@ struct VChunkHeader
 	VChunkHeader var;			\
 	Ar << var;					\
 	if (strcmp(var.ChunkID, name) != 0) \
-		appError("LoadChunk: expecting header \"%s\", but found \"%s\"", name, var.ChunkID);
+		appError("%08X: LoadChunk: expecting header \"%s\", but found \"%s\"", Ar.Tell(), name, var.ChunkID);
 //	appPrintf("%s: type=%d / count=%d / size=%d\n", var.ChunkID, var.TypeFlag, var.DataCount, var.DataSize);
 
 #define SAVE_CHUNK(var, name)	\
 	strcpy(var.ChunkID, name);	\
 	var.TypeFlag = 1999801;		\
 	Ar << var;
+//	appPrintf("%08X: %s: type=%d / count=%d / size=%d\n", Ar.Tell(), var.ChunkID, var.TypeFlag, var.DataCount, var.DataSize);
 
 
 /******************************************************************************
@@ -157,6 +158,7 @@ struct VMeshUV
 
 
 // the same as VTriangle16 but with 32-bit vertex indices
+//!! note: this structure has different on-disk and in-memory layout and size (due to alignment)
 struct VTriangle32
 {
 	int				WedgeIndex[3];			// Point to three vertices in the vertex list.

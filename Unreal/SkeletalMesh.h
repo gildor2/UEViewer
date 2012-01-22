@@ -11,36 +11,44 @@
 
 /*
 
-May be make dummy material class to exclude PolyFlags from meshes at all (keep them in UVertMesh only)?
+May make dummy material class to exclude PolyFlags from meshes at all (keep them in UVertMesh only)?
 	class UTextureWithFlags : public UUnrealMaterial
 	{
 		UTexture	*Tex;
 		unsigned	PolyFlags;
 	}
+? PolyFlags may be used for non-texture UE2 materials too
 - create this only when PolyFlags != 0
 - make a function: CreateTextureWrapper(UTexture* Tex, unsigned PolyFlags) - will find or create wrapper
 - can remove PolyFlags from most of rendering functions! (used for UTexture and UFinalBlend)
-  ! make correct display of the wrapper material with <M> mesh mode
+  ! but should make correct display of the wrapped material with <M> mesh mode - when has wrapper, will
+    display IT instead of original material (see CMeshViewer::PrintMaterialInfo() - everything is here)
+  - will also need to change:
+    - CVertMeshInstance, but NOTE: UTextureWithFlags will be stored in CSkeletalMesh (not instance!) and
+      in CVertMeshInstance (not mesh!) - probably should generate materials in UVertMesh too
+- be sure to delete UTextureWithFlags when needed (most probably this will not happen - meshes are not
+  freeing used materials, and UTextureWithFlags will not be stored in GObjObjects array)
+  - currently we have generated following objects:
+    - Rune mesh generated set of USkeletalMesh objects + UMeshAnimation
+    - USkeletalMesh, UStaticMesh, UMeshAnimation generates CSkeletalMesh, CStaticMesh, CAnimSet objects
+      (not UObject-based)
+  - generated materials will be used in CSkeletalMesh/CStaticMesh
+  ? may be avoid freeing - all UObjects will exists until exit from application
+  - place WrapLegacyMaterial(UMaterial* Mat, int PolyFlags) to UnRenderer.cpp, make static array of
+    created wrappers to not create the same material twice
 
 */
 
 
 /*!!
 
-SKELETALMESH CONVERSION STAGES:
-
+TODO:
 - verify USkeletalMesh in games:
   - Unreal1
-
 - support vertex colors (for StaticMesh too!)
-
 - dump properties of the SkeletalMesh:
   - number of vertex influences (1-4)
   - number of really used bones -- to exclude hair, fingers etc -- display as "Bones: N/M"
-
-? split UnMesh.cpp to Common+UE2 or UE1+UE2 (check what's better)
-  - or at least rename UnMesh.cpp to UnMesh2.cpp
-
 - remove RootBone.Orientation.W *= -1 for UE3, place this code for UE2 (find all places where bone orientation is accessed!)
   - fix (invert logic) mesh rendering and export code too
 
@@ -95,7 +103,12 @@ struct CSkelMeshLod
 		if (Verts) appFree(Verts);
 	}
 
-	void BuildNormals();
+	void BuildNormals()
+	{
+		if (HasNormals) return;
+		BuildNormalsCommon(Verts, sizeof(CSkelMeshVertex), NumVerts, Indices);
+		HasNormals = true;
+	}
 
 	void BuildTangents()
 	{

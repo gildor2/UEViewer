@@ -806,7 +806,7 @@ fn ImportPskFile filename skelOnly:false =
 		while not IsEndOfFile(file) do
 		(
 			hdr = ReadChunkHeader file
---			format "Chunk: % (% items, % bytes/item)\n" hdr.ChunkID hdr.DataCount hdr.DataSize
+--			format "Chunk: % (% items, % bytes/item, pos %)\n" hdr.ChunkID hdr.DataCount hdr.DataSize (ftell file)
 			case hdr.ChunkID of
 			(
 			-- Points --
@@ -892,7 +892,7 @@ fn ImportPskFile filename skelOnly:false =
 			default:
 				(
 					-- skip unknown chunk
-					format "Unknown chunk header: \"%\"\n" hdr.ChunkID
+					format "Unknown chunk header: \"%\" at %\n" hdr.ChunkID (ftell file)
 					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
 				)
 			)
@@ -1402,6 +1402,7 @@ fn ImportPsaFile filename trackNum all:false =
 		while not IsEndOfFile(file) do
 		(
 			hdr = ReadChunkHeader file
+--			format "Chunk: % (% items, % bytes/item, pos %)\n" hdr.ChunkID hdr.DataCount hdr.DataSize (ftell file)
 			case hdr.ChunkID of
 			(
 			-- Bone links --
@@ -1446,7 +1447,7 @@ fn ImportPsaFile filename trackNum all:false =
 			default:
 				(
 					-- skip unknown chunk
-					format "Unknown chunk header: \"%\"\n" hdr.ChunkID
+					format "Unknown chunk header: \"%\" at %\n" hdr.ChunkID (ftell file)
 					fseek file (hdr.DataSize * hdr.DataCount) #seek_cur
 				)
 			)

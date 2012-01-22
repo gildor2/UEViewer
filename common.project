@@ -1,14 +1,11 @@
 # perl highlighting
 
 LIBC       = shared
-#LIBC       = static
-#OUT        = Release
 #MAPFILES   = 1
 CONSOLE    = 1
 OPTIMIZE   = size
 
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
-
 OLDCRT     = 1
 
 
@@ -26,7 +23,7 @@ OLDCRT     = 1
 
 !if "$COMPILER" eq "VisualC"
 	CPP_EXCEPT = 0										# used with WIN32_USE_SEH in Core.h
-	OPTIONS = -GS- -GR- 								#?? VC8+, use always?
+	OPTIONS = -GS- -GR- 								#?? VC8+
 	!if "$OLDCRT" eq "1"
 		WDKCRT = $R/../Libs/msvcrt
 		!include $WDKCRT/msvcrt.project
@@ -50,14 +47,6 @@ OLDCRT     = 1
 #------------------------------------------------
 
 OBJDIR = $R/obj/libs-$PLATFORM
-
-
-#?? remove this library, cannot be used anymore
-sources(DDS_LIBS) = {
-	# ... dds decompression
-	$R/libs/ddslib.c
-}
-
 
 push(INCLUDES)
 INCLUDES = $R/libs/nvtt

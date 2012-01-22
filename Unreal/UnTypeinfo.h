@@ -36,7 +36,7 @@ class UField : public UObject
 {
 	DECLARE_CLASS(UField, UObject);
 public:
-	UField			*SuperField;
+	UField			*SuperField2;
 	UField			*Next;
 
 	virtual void Serialize(FArchive &Ar)
@@ -44,7 +44,9 @@ public:
 		guard(UField::Serialize);
 		assert(Ar.IsLoading);
 		Super::Serialize(Ar);
-		Ar << SuperField << Next;
+		if (Ar.ArVer < 756)
+			Ar << SuperField2;
+		Ar << Next;
 //		appPrintf("super: %s next: %s\n", SuperField ? SuperField->Name : "-", Next ? Next->Name : "-");
 		unguard;
 	}
@@ -120,6 +122,7 @@ class UStruct : public UField
 {
 	DECLARE_CLASS(UStruct, UField);
 public:
+	UField			*SuperField;	// serialized in UField in older versions
 	UTextBuffer		*ScriptText;
 #if UNREAL3
 	UTextBuffer		*CppText;
@@ -137,6 +140,12 @@ public:
 	{
 		guard(UStruct::Serialize);
 		Super::Serialize(Ar);
+#if UNREAL3
+		if (Ar.ArVer >= 756)
+			Ar << SuperField;
+		else
+			SuperField = SuperField2;	// serialized in parent
+#endif // UNREAL3
 #if MKVSDC
 		if (Ar.Game == GAME_MK && Ar.ArVer >= 472)
 		{
@@ -269,6 +278,15 @@ public:
 			Ar << unk84 << unk88;
 		}
 #endif // BORDERLANDS
+#if BATMAN
+		if (Ar.Game == GAME_Batman2)
+		{
+			// property flags constants were changed since ArLicenseeVer >= 101, performed conversion
+			// we need correct 0x20 value only
+			bool IsNet = (PropertyFlags & 0x4000000) != 0;
+			PropertyFlags = IsNet ? 0x20 : 0;
+		}
+#endif // BATMAN
 	skip_1:
 		if (PropertyFlags & 0x20)
 			Ar << f48;

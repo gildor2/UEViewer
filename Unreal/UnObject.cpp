@@ -389,6 +389,156 @@ struct FPropertyTag
 };
 
 
+#if BATMAN
+
+struct FPropertyTagBat2
+{
+	short		Type;				// property type - used short instead of FName, 0 = end of property table
+	word		Offset;				// property offset in serialized class
+	// following fields are used when the property is serialized by name similar to original FPropertyTag
+	FName		PropertyName;
+	int			DataSize;
+	int			ArrayIndex;
+	byte		BoolValue;
+
+	friend FArchive &operator<<(FArchive &Ar, FPropertyTagBat2 &Tag)
+	{
+		Ar << Tag.Type;
+		if (!Tag.Type) return Ar;
+		Ar << Tag.Offset;
+		if (Tag.Type == NAME_IntProperty || Tag.Type == NAME_FloatProperty || Tag.Type == NAME_NameProperty || Tag.Type == NAME_VectorProperty ||
+			Tag.Type == NAME_RotatorProperty || Tag.Type == NAME_StrProperty || Tag.Type == 16 /*NAME_ObjectNCRProperty*/)
+		{
+			// property serialized by offset
+			Tag.PropertyName.Str = "None";
+			Tag.DataSize = Tag.ArrayIndex = 0;
+		}
+		else
+		{
+			// property serialized by name
+			Ar << Tag.PropertyName << Tag.DataSize << Tag.ArrayIndex;
+		}
+		if (Tag.Type == NAME_BoolProperty)
+			Ar << Tag.BoolValue;
+		return Ar;
+	}
+};
+
+
+static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &TagBat, FPropertyTag &Tag)
+{
+	struct OffsetInfo
+	{
+		const char	*Name;
+		int			Offset;
+	};
+
+#define BEGIN(type)			{ type,  0    },		// store class name as field name, offset is not used
+#define MAP(name,offs)		{ #name, offs },		// field specification
+#define END					{ NULL,  0    },		// end of class - mark with NULL name
+
+	static const OffsetInfo info[] =
+	{
+
+	BEGIN("Texture2D")
+		MAP(SizeX, 0xE0)
+		MAP(SizeY, 0xE4)
+		MAP(TextureFileCacheName, 0x104)
+//		MAP(OriginalSizeX, 0xE8)
+//		MAP(OriginalSizeY, 0xEC)
+	END
+
+	BEGIN("Material3")
+		MAP(OpacityMaskClipValue, 0x1A8)
+	END
+
+	BEGIN("MaterialInstance")
+		MAP(Parent, 0x60)
+	END
+
+	BEGIN("ScalarParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("TextureParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("VectorParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("AnimSequence")
+		MAP(SequenceName, 0x2C)
+		MAP(SequenceLength, 0x44)
+		MAP(NumFrames, 0x48)
+		MAP(RateScale, 0x4C)	//?? not checked
+	END
+
+	BEGIN("SkeletalMeshLODInfo")
+		MAP(DisplayFactor, 0)
+		MAP(LODHysteresis, 4)
+	END
+
+	BEGIN("SkeletalMeshSocket")
+		MAP(SocketName, 0x2C)
+		MAP(BoneName, 0x34)
+		MAP(RelativeLocation, 0x3C)
+		MAP(RelativeRotation, 0x48)
+		MAP(RelativeScale, 0x54)
+	END
+
+	}; // end of info[]
+
+#undef MAP
+#undef BEGIN
+#undef END
+
+	// prepare Tag
+	Tag.Type       = TagBat.Type;
+	Tag.Name.Str   = "unk";
+	Tag.DataSize   = 0;			// unset
+	Tag.ArrayIndex = 0;
+
+	// find a field
+	const OffsetInfo *p   = info;
+	const OffsetInfo *end = info + ARRAY_COUNT(info);
+
+	while (p < end)
+	{
+		// Note: StrucType could correspond to a few classes from the list about
+		// because of inheritance, so don't "break" a loop when we've scanned some class, check
+		// other classes too
+		bool OurClass = StrucType->IsA(p->Name);
+
+		while (++p < end && p->Name)
+		{
+			if (!OurClass) continue;
+
+//			appPrintf("      ... check %s\n", p->Name);
+			if (p->Offset == TagBat.Offset)
+			{
+				// found it
+				Tag.Name.Str   = p->Name;
+				Tag.Type       = TagBat.Type;
+				Tag.DataSize   = 0;			// unset
+				Tag.ArrayIndex = 0;
+				return true;
+			}
+		}
+		p++;								// skip END marker
+	}
+
+	return false;
+}
+
+
+#endif // BATMAN
+
+
 void UObject::Serialize(FArchive &Ar)
 {
 	guard(UObject::Serialize);
@@ -432,14 +582,130 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 {
 	guard(CTypeInfo::SerializeProps);
 
+#define PROP(type)		( ((type*)value)[ArrayIndex] )
+
+#if DEBUG_PROPS
+#	define PROP_DBG(fmt, value) \
+		appPrintf("  %s[%d] = " fmt "\n", *Tag.Name, Tag.ArrayIndex, value);
+#else
+#	define PROP_DBG(fmt, value)
+#endif
+
 	// property list
 	while (true)
 	{
 		FPropertyTag Tag;
+
+#if BATMAN
+		//!! try to move to separate function
+		if (Ar.Game == GAME_Batman2)
+		{
+			// Batman 2 has more compact FPropertyTag implementation which uses serialization
+			// by offset, not by name - this should work faster (in game) and use less disk space.
+			FPropertyTagBat2 TagBat;
+			Ar << TagBat;
+			if (!TagBat.Type)			// end marker
+				break;
+
+#if DEBUG_PROPS
+			const char *TypeName = "??";
+			if (TagBat.Type < 16)
+				TypeName = GetTypeName(TagBat.Type);
+			else if (TagBat.Type == 16)
+				TypeName = "ObjectNCRProperty";
+			else if (TagBat.Type == 17)
+				TypeName = "GuidProperty";
+			appPrintf("Prop: type=%d (%s) offset=0x%X size=%d propName=%s\n", TagBat.Type, TypeName, TagBat.Offset, TagBat.DataSize, *TagBat.PropertyName);
+#endif // DEBUG_PROPS
+			if (stricmp(TagBat.PropertyName, "None") != 0)
+			{
+				// Property has extra information, it should serialized as in original engine.
+				// Convert tag to the standard format.
+				Tag.Name       = TagBat.PropertyName;
+				Tag.Type       = TagBat.Type;
+				Tag.DataSize   = TagBat.DataSize;
+				Tag.ArrayIndex = TagBat.ArrayIndex;
+				Tag.BoolValue  = TagBat.BoolValue;
+				goto read_property;
+			}
+			else
+			{
+				static byte Dummy[16];
+				byte *value = Dummy;
+				const int ArrayIndex = 0; // used in PROP macro
+				if (FindPropBat2(this, TagBat, Tag))
+				{
+					const CPropInfo *Prop = FindProperty(Tag.Name);
+					if (Prop)
+						value = (byte*)ObjectData + Prop->Offset;
+				}
+
+				// offset-based ("simple property") serialization
+				switch (TagBat.Type)
+				{
+				case NAME_FloatProperty:
+					Ar << PROP(float);
+					PROP_DBG("%g", PROP(float));
+					break;
+
+				case NAME_NameProperty:
+					Ar << PROP(FName);
+					PROP_DBG("%s", *PROP(FName));
+					break;
+
+				case NAME_StrProperty:
+					{
+						//!! implement (needs inplace constructor/destructor, will not work for Dummy[])
+						FString s;
+						Ar << s;
+//						appPrintf("... value = %s\n", *s);
+					}
+					break;
+
+				case 16: // NAME_ObjectNCRProperty
+					Ar << PROP(UObject*);
+					PROP_DBG("%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
+					break;
+
+				case NAME_BoolProperty:
+					{
+						int BoolValue;
+						Ar << BoolValue;
+						PROP(bool) = (BoolValue != 0);
+						PROP_DBG("%s", BoolValue ? "true" : "false");
+					}
+					break;
+
+				case NAME_IntProperty:
+					Ar << PROP(int);
+					PROP_DBG("%d", PROP(int));
+					break;
+
+				case NAME_VectorProperty:
+					Ar << PROP(FVector);
+					PROP_DBG("%g %g %g", FVECTOR_ARG(PROP(FVector)));
+					break;
+
+				case NAME_RotatorProperty:
+					Ar << PROP(FRotator);
+					PROP_DBG("%d %d %d", FROTATOR_ARG(PROP(FRotator)));
+					break;
+
+				case 17: // NAME_GuidProperty
+					Ar << PROP(FGuid);
+					PROP_DBG("%s", "(guid)");
+					break;
+				}
+			}
+			continue;
+		}
+#endif // BATMAN
+
 		Ar << Tag;
-		if (!Tag.IsValid())
+		if (!Tag.IsValid())						// end marker
 			break;
 
+	read_property:
 		guard(ReadProperty);
 
 		int StopPos = Ar.Tell() + Tag.DataSize;	// for verification
@@ -469,18 +735,9 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				Name, Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
 		byte *value = (byte*)ObjectData + Prop->Offset;
 
-#define TYPE(name) \
+#define CHECK_TYPE(name) \
 	if (strcmp(Prop->TypeName, name)) \
 		appError("Property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, name)
-
-#define PROP(type)		( ((type*)value)[ArrayIndex] )
-
-#if DEBUG_PROPS
-#	define PROP_DBG(fmt, value) \
-		appPrintf("  %s[%d] = " fmt "\n", *Tag.Name, Tag.ArrayIndex, value);
-#else
-#	define PROP_DBG(fmt, value)
-#endif
 
 		int ArrayIndex = Tag.ArrayIndex;
 		switch (Tag.Type)
@@ -505,7 +762,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				else
 				{
 					// error: this property is not marked using PROP_ENUM2
-					TYPE("byte");
+					CHECK_TYPE("byte");
 					appNotify("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
 //					PROP_DBG("%s", PROP(byte));
 				}
@@ -515,7 +772,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			{
 				if (Prop->TypeName[0] != '#')
 				{
-					TYPE("byte");
+					CHECK_TYPE("byte");
 				}
 				Ar << PROP(byte);
 				PROP_DBG("%d", PROP(byte));
@@ -523,31 +780,31 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			break;
 
 		case NAME_IntProperty:
-			TYPE("int");
+			CHECK_TYPE("int");
 			Ar << PROP(int);
 			PROP_DBG("%d", PROP(int));
 			break;
 
 		case NAME_BoolProperty:
-			TYPE("bool");
+			CHECK_TYPE("bool");
 			PROP(bool) = Tag.BoolValue != 0;
 			PROP_DBG("%s", PROP(bool) ? "true" : "false");
 			break;
 
 		case NAME_FloatProperty:
-			TYPE("float");
+			CHECK_TYPE("float");
 			Ar << PROP(float);
 			PROP_DBG("%g", PROP(float));
 			break;
 
 		case NAME_ObjectProperty:
-			TYPE("UObject*");
+			CHECK_TYPE("UObject*");
 			Ar << PROP(UObject*);
 			PROP_DBG("%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 			break;
 
 		case NAME_NameProperty:
-			TYPE("FName");
+			CHECK_TYPE("FName");
 			Ar << PROP(FName);
 			PROP_DBG("%s", *PROP(FName));
 			break;
@@ -634,7 +891,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 		case NAME_StructProperty:
 			{
-				if (strcmp(Prop->TypeName+1, *Tag.StrucName))
+				if (stricmp(Prop->TypeName+1, *Tag.StrucName) != 0 && stricmp(*Tag.StrucName, "None") != 0) // Tag.StrucName could be unknown in Batman2
 				{
 					appNotify("Struc property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, *Tag.StrucName);
 					Ar.Seek(StopPos);
@@ -697,7 +954,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 static CClassInfo GClasses[MAX_CLASSES];
 static int        GClassCount = 0;
 
-void RegisterClasses(CClassInfo *Table, int Count)
+void RegisterClasses(const CClassInfo *Table, int Count)
 {
 	if (Count <= 0) return;
 	assert(GClassCount + Count < ARRAY_COUNT(GClasses));

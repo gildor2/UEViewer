@@ -20,7 +20,15 @@ typedef CVec3 CVecT;
 
 struct CIndexBuffer
 {
-	typedef int (*IndexAccessor_t)(const CIndexBuffer&, int);
+	struct IndexAccessor_t
+	{
+		FORCEINLINE int operator()(int Index)
+		{
+			return Function(*Buffer, Index);
+		}
+		int (*Function)(const CIndexBuffer&, int);
+		const CIndexBuffer	*Buffer;
+	};
 
 	TArray<word>			Indices16;			// used when mesh has less than 64k indices
 	TArray<unsigned>		Indices32;			// used when mesh has more than 64k indices
@@ -37,7 +45,10 @@ struct CIndexBuffer
 
 	IndexAccessor_t GetAccessor() const
 	{
-		return Is32Bit() ? GetIndex32 : GetIndex16;
+		IndexAccessor_t result;
+		result.Function = Is32Bit() ? GetIndex32 : GetIndex16;
+		result.Buffer   = this;
+		return result;
 	}
 
 	void Initialize(const TArray<word> *Idx16, const TArray<unsigned> *Idx32 = NULL)
@@ -93,7 +104,8 @@ struct CMeshSection
 };
 
 
-void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, CIndexBuffer &Indices);
+void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const CIndexBuffer &Indices);
+void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer &Indices);
 
 
 #endif // __MESHCOMMON_H__

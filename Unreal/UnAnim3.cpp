@@ -64,7 +64,7 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 
 #if TRANSFORMERS
 
-static FQuat TransMidifyQuat(const FQuat &q, const FQuat &m)
+static FQuat TransModifyQuat(const FQuat &q, const FQuat &m)
 {
 	FQuat r;
 	float x  = q.X, y  = q.Y, z  = q.Z, w  = q.W;
@@ -219,7 +219,7 @@ void UAnimSet::ConvertAnims()
 		FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
 		Reader.SetupFrom(*Package);
 
-		bool hasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
+		bool HasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
 
 		int offsetIndex = 0;
 		for (j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
@@ -235,15 +235,7 @@ void UAnimSet::ConvertAnims()
 				CopyArray(A->KeyPos,  CVT(Seq->RawAnimData[j].PosKeys));
 				CopyArray(A->KeyQuat, CVT(Seq->RawAnimData[j].RotKeys));
 				CopyArray(A->KeyTime, Seq->RawAnimData[j].KeyTimes);	// may be empty
-				int k;
-/*				if (!A->KeyTime.Num())
-				{
-					int numKeys = max(A->KeyPos.Num(), A->KeyQuat.Num());
-					A->KeyTime.Empty(numKeys);
-					for (k = 0; k < numKeys; k++)
-						A->KeyTime.AddItem(k);
-				} */
-				for (k = 0; k < A->KeyTime.Num(); k++)	//??
+				for (int k = 0; k < A->KeyTime.Num(); k++)
 					A->KeyTime[k] *= Dst->Rate;
 				continue;
 			}
@@ -310,8 +302,8 @@ void UAnimSet::ConvertAnims()
 #define DECODE_PER_TRACK_INFO(info)										\
 				KeyFormat = (AnimationCompressionFormat)(info >> 28);	\
 				ComponentMask = (info >> 24) & 0xF;						\
-				NumKeys = info & 0xFFFFFF;								\
-				hasTimeTracks = (ComponentMask & 8) != 0;
+				NumKeys       = info & 0xFFFFFF;						\
+				HasTimeTracks = (ComponentMask & 8) != 0;
 
 				guard(TransKeys);
 				// read translation keys
@@ -328,7 +320,7 @@ void UAnimSet::ConvertAnims()
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
 					A->KeyPos.Empty(NumKeys);
-					if (hasTimeTracks) A->KeyPosTime.Empty(NumKeys);
+					if (HasTimeTracks) A->KeyPosTime.Empty(NumKeys);
 #if DEBUG_DECOMPRESS
 					appPrintf("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
@@ -391,7 +383,7 @@ void UAnimSet::ConvertAnims()
 					}
 					// align to 4 bytes
 					Reader.Seek(Align(Reader.Tell(), 4));
-					if (hasTimeTracks)
+					if (HasTimeTracks)
 						ReadTimeArray(Reader, NumKeys, A->KeyPosTime, Seq->NumFrames);
 				}
 				unguard;
@@ -411,7 +403,7 @@ void UAnimSet::ConvertAnims()
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
 					A->KeyQuat.Empty(NumKeys);
-					if (hasTimeTracks) A->KeyQuatTime.Empty(NumKeys);
+					if (HasTimeTracks) A->KeyQuatTime.Empty(NumKeys);
 #if DEBUG_DECOMPRESS
 					appPrintf("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
@@ -462,7 +454,7 @@ void UAnimSet::ConvertAnims()
 					}
 					// align to 4 bytes
 					Reader.Seek(Align(Reader.Tell(), 4));
-					if (hasTimeTracks)
+					if (HasTimeTracks)
 						ReadTimeArray(Reader, NumKeys, A->KeyQuatTime, Seq->NumFrames);
 				}
 				unguard;
@@ -491,7 +483,7 @@ void UAnimSet::ConvertAnims()
 
 			A->KeyPos.Empty(TransKeys);
 			A->KeyQuat.Empty(RotKeys);
-			if (hasTimeTracks)
+			if (HasTimeTracks)
 			{
 				A->KeyPosTime.Empty(TransKeys);
 				A->KeyQuatTime.Empty(RotKeys);
@@ -586,7 +578,7 @@ void UAnimSet::ConvertAnims()
 			trans_keys_done:
 				// align to 4 bytes
 				Reader.Seek(Align(Reader.Tell(), 4));
-				if (hasTimeTracks)
+				if (HasTimeTracks)
 					ReadTimeArray(Reader, TransKeys, A->KeyPosTime, Seq->NumFrames);
 			}
 			else
@@ -682,7 +674,7 @@ void UAnimSet::ConvertAnims()
 						FQuat q2;
 						Reader << q;
 						q2 = q.ToQuat(Mins, Ranges);
-						q2 = TransMidifyQuat(q2, TransQuatMod);
+						q2 = TransModifyQuat(q2, TransQuatMod);
 						A->KeyQuat.AddItem(CVT(q2));
 					}
 					break;
@@ -695,13 +687,13 @@ void UAnimSet::ConvertAnims()
 		rot_keys_done:
 			// align to 4 bytes
 			Reader.Seek(Align(Reader.Tell(), 4));
-			if (hasTimeTracks)
+			if (HasTimeTracks)
 				ReadTimeArray(Reader, RotKeys, A->KeyQuatTime, Seq->NumFrames);
 
 #if TLR
 			if (ScaleKeys)
 			{
-				//?? no ScaleKeys support, simply drop data
+				// no ScaleKeys support, simply drop data
 				Reader.Seek(ScaleOffset + ScaleKeys * 12);
 				Reader.Seek(Align(Reader.Tell(), 4));
 			}

@@ -43,20 +43,20 @@ public:
 	CVertMeshInstance class
 -----------------------------------------------------------------------------*/
 
+struct CVertMeshSection;
+
 class CVertMeshInstance : public CMeshInstance
 {
 public:
 	// linked data
 	const UVertMesh	*pMesh;
 
-	CVertMeshInstance()
-	:	AnimIndex(-1)
-	,	AnimTime(0)
-	{}
+	CVertMeshInstance();
+	virtual ~CVertMeshInstance();
+
+	void FreeRenderBuffers();
 
 	void SetMesh(const UVertMesh *Mesh);
-	UUnrealMaterial *GetMaterial(int Index, int *PolyFlags = NULL);
-	void SetMaterial(int Index);
 
 	virtual void Draw();
 
@@ -90,10 +90,16 @@ public:
 
 protected:
 	// animation state
-	int			AnimIndex;			// current animation sequence
-	float		AnimTime;			// current animation frame
-	float		AnimRate;			// animation rate, frames per seconds
-	bool		AnimLooped;
+	int						AnimIndex;			// current animation sequence
+	float					AnimTime;			// current animation frame
+	float					AnimRate;			// animation rate, frames per seconds
+	bool					AnimLooped;
+
+	// data for rendering
+	TArray<CVertMeshSection> Sections;
+	CVec3					*Verts;				// deformed mesh, used in Draw() only
+	CVec3					*Normals;
+	word					*Indices;			// index buffer
 
 	int FindAnim(const char *AnimName) const;
 	void PlayAnimInternal(const char *AnimName, float Rate, bool Looped);
@@ -105,8 +111,6 @@ protected:
 -----------------------------------------------------------------------------*/
 
 #define MAX_SKELANIMCHANNELS	32
-
-struct FVertInfluences;
 
 class CSkelMeshInstance : public CMeshInstance
 {

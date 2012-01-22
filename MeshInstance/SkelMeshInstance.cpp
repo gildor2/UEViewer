@@ -108,7 +108,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 CSkelMeshInstance::~CSkelMeshInstance()
 {
 	if (DataBlock) appFree(DataBlock);
-	if (InfColors) delete InfColors;
+	if (InfColors) delete[] InfColors;
 }
 
 
@@ -202,7 +202,7 @@ void CSkelMeshInstance::SetMesh(CSkeletalMesh *Mesh)
 	if (DataBlock) appFree(DataBlock);
 	if (InfColors)
 	{
-		delete InfColors;
+		delete[] InfColors;
 		InfColors = NULL;
 	}
 	// allocate data arrays in a single block
@@ -915,9 +915,6 @@ void CSkelMeshInstance::TransformMesh()
 	const CSkelMeshLod& Mesh = pMesh->Lods[LodNum];
 	int NumVerts = Mesh.NumVerts;
 
-	//?? try other tech: compute weighted sum of matrices, and then
-	//?? transform vector (+ normal ?; note: normals requires normalized
-	//?? transformations ?? (or normalization guaranteed by sum(weights)==1?))
 	memset(Skinned, 0, sizeof(CSkinVert) * NumVerts);
 
 	for (int i = 0; i < NumVerts; i++)
@@ -925,7 +922,8 @@ void CSkelMeshInstance::TransformMesh()
 		const CSkelMeshVertex &V = Mesh.Verts[i];
 		CSkinVert             &D = Skinned[i];
 
-		// compute weighted transform from all influences
+		// compute weighted transform from all influenced bones
+
 		// take a 1st influence
 #if !USE_SSE
 		CCoords transform;
@@ -968,14 +966,12 @@ void CSkelMeshInstance::TransformMesh()
 #endif // USE_SSE
 		}
 
+		// perform transformation
+
 #if !USE_SSE
-		// transform vertex
 		transform.UnTransformPoint(V.Position, D.Position);
-		// transform normal
 		transform.axis.UnTransformVector(V.Normal, D.Normal);
-		// transform tangent
 		transform.axis.UnTransformVector(V.Tangent, D.Tangent);
-		// transform binormal
 		transform.axis.UnTransformVector(V.Binormal, D.Binormal);
 #else
 		// at this point we have x1..x4 = transform matrix
@@ -1049,28 +1045,6 @@ void CSkelMeshInstance::DrawMesh()
 	int timeAfterTransform = appMilliseconds();
 #endif
 
-	glEnable(GL_LIGHTING);
-
-	// draw normal mesh
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-	glVertexPointer(3, GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Position);
-	glNormalPointer(GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Normal);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(CSkelMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
-
-	if (ShowInfluences)
-	{
-		// in this mode mesh is displayed colorized instead of textured
-		if (!InfColors) BuildInfColors();
-		assert(InfColors);
-		glEnableClientState(GL_COLOR_ARRAY);
-		glColorPointer(3, GL_FLOAT, 0, InfColors);
-		BindDefaultMaterial(true);
-	}
-
 #if SORT_BY_OPACITY
 	// sort sections by material opacity
 	int SectionMap[MAX_MESHMATERIALS];
@@ -1092,6 +1066,27 @@ void CSkelMeshInstance::DrawMesh()
 	int ShowSection = (appMilliseconds() / 2000) % NumSections;
 	DrawTextLeft(S_RED"Show section: %d (%d faces)", ShowSection, Sections[ShowSection].NumFaces);
 #endif
+
+	// draw mesh
+	glEnable(GL_LIGHTING);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Position);
+	glNormalPointer(GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Normal);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(CSkelMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
+
+	if (ShowInfluences)
+	{
+		// in this mode mesh is displayed colorized instead of textured
+		if (!InfColors) BuildInfColors();
+		assert(InfColors);
+		glEnableClientState(GL_COLOR_ARRAY);
+		glColorPointer(3, GL_FLOAT, 0, InfColors);
+		BindDefaultMaterial(true);
+	}
 
 	for (i = 0; i < NumSections; i++)
 	{
@@ -1155,7 +1150,6 @@ void CSkelMeshInstance::DrawMesh()
 	for (i = 0; i < NumVerts; i++)
 	{
 		const CSkelMeshVertex &V = Mesh.Verts[i];
-//		const FVertInfluences &Inf = Mesh->VertInfluences[i];
 		for (int j = 0; j < NUM_INFLUENCES; j++)
 		{
 			int iBone = V.Bone[j];
@@ -1244,7 +1238,7 @@ void CSkelMeshInstance::Draw()
 
 		if (InfColors)
 		{
-			delete InfColors;
+			delete[] InfColors;
 			InfColors = NULL;
 		}
 		LastLodNum = LodNum;
@@ -1264,7 +1258,7 @@ void CSkelMeshInstance::BuildInfColors()
 
 	const CSkelMeshLod &Lod = pMesh->Lods[LodNum];
 
-	if (InfColors) delete InfColors;
+	if (InfColors) delete[] InfColors;
 	InfColors = new CVec3[Lod.NumVerts];
 
 	// get colors for bones

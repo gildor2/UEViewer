@@ -368,7 +368,7 @@ void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 	UpgradeFaces();
 	RotOrigin.Yaw = -RotOrigin.Yaw;
 
-	// convert VBoneInfluence and VWeightIndex to FVertInfluences
+	// convert VBoneInfluence and VWeightIndex to FVertInfluence
 	// count total influences
 	guard(Influences);
 	int numInfluences = tmpBoneWeights.Num();
@@ -383,7 +383,7 @@ void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 		for (int j = 0; j < BI.Number; j++)					// loop by vertices
 		{
 			const VBoneInfluence1 &V = tmpBoneWeights[j + BI.WeightIndex];
-			FVertInfluences &I = VertInfluences[vIndex++];
+			FVertInfluence &I = VertInfluences[vIndex++];
 			I.Weight     = V.BoneWeight / 65535.0f;
 			I.BoneIndex  = bone;
 			I.PointIndex = V.PointIndex;

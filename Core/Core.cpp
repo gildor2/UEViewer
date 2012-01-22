@@ -6,11 +6,11 @@
 #include <sys/stat.h>				// for mkdir()
 #endif
 
-#if _WIN32 && VSTUDIO_INTEGRATION
+#if VSTUDIO_INTEGRATION
 #define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
 #define _WIN32_WINDOWS 0x0500		// for IsDebuggerPresent()
 #include <windows.h>
-#endif
+#endif // VSTUDIO_INTEGRATION
 
 
 static FILE *GLogFile = NULL;
@@ -378,58 +378,32 @@ static void NormalizeFilename(char *filename)
 	}
 }
 
+void appMakeDirectory(const char *dirname)
+{
+	if (!dirname[0]) return;
+	// Win32 and Unix: there is no API to create directory chains
+	// so - we will create "a", then "a/b", then "a/b/c"
+	char Name[256];
+	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
+	NormalizeFilename(Name);
 
+	for (char *s = Name; /* empty */ ; s++)
+	{
+		char c = *s;
+		if (c != '/' && c != 0)
+			continue;
+		*s = 0;						// temporarily cut rest of path
+		// here: path delimiter or end of string
+		if (Name[0] != '.' || Name[1] != 0)		// do not create "."
 #if _WIN32
-
-void appMakeDirectory(const char *dirname)
-{
-	if (!dirname[0]) return;
-	// mkdir() and win32 CreateDirectory() does not support "a/b/c" creation,
-	// so - we will create "a", then "a/b", then "a/b/c"
-	char Name[256];
-	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
-	NormalizeFilename(Name);
-
-	for (char *s = Name; /* empty */ ; s++)
-	{
-		char c = *s;
-		if (c != '/' && c != 0)
-			continue;
-		*s = 0;						// temporarily cut rest of path
-		// here: path delimiter or end of string
-		if (Name[0] != '.' || Name[1] != 0)		// do not create "."
 			_mkdir(Name);
-		if (!c) break;				// end of string
-		*s = '/';					// restore string (c == '/')
-	}
-}
-
-#else  // _WIN32
-
-void appMakeDirectory(const char *dirname)
-{
-	if (!dirname[0]) return;
-	// mkdir() does not support "a/b/c" creation,
-	// so - we will create "a", then "a/b", then "a/b/c"
-	char Name[256];
-	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
-	NormalizeFilename(Name);
-
-	for (char *s = Name; /* empty */ ; s++)
-	{
-		char c = *s;
-		if (c != '/' && c != 0)
-			continue;
-		*s = 0;						// temporarily cut rest of path
-		// here: path delimiter or end of string
-		if (Name[0] != '.' || Name[1] != 0)		// do not create "."
+#else
 			mkdir(Name, S_IRWXU);
+#endif
 		if (!c) break;				// end of string
 		*s = '/';					// restore string (c == '/')
 	}
 }
-
-#endif // _WIN32
 
 void appMakeDirectoryForFile(const char *filename)
 {

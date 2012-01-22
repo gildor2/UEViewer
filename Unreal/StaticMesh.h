@@ -26,6 +26,7 @@ struct CStaticMeshLod
 {
 	// generic properties
 	int						NumTexCoords;
+	bool					HasNormals;
 	bool					HasTangents;
 	// geometry
 	TArray<CStaticMeshSection> Sections;
@@ -36,6 +37,13 @@ struct CStaticMeshLod
 	~CStaticMeshLod()
 	{
 		if (Verts) appFree(Verts);
+	}
+
+	void BuildNormals()
+	{
+		if (HasNormals) return;
+		BuildNormalsCommon(Verts, sizeof(CStaticMeshVertex), NumVerts, Indices);
+		HasNormals = true;
 	}
 
 	void BuildTangents()

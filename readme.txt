@@ -1,5 +1,5 @@
 UMODEL (UE Viewer)
-(c) Konstantin Nosov (Gildor), 2007-2011
+(c) Konstantin Nosov (Gildor), 2007-2012
 
 
 Please support the development by making a donation here:
@@ -129,6 +129,17 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+19.01.2012
+- implemented Batman: Arkham City support (everything but animations)
+
+11.01.2012
+- updated support for recent Battle Territory Online version
+
+10.01.2012
+- command line arguments now may be specified in any order; before that, all options had to
+  go before the package name; example: "umodel <package_name> -meshes" (did not worked
+  before)
+
 14.12.2011
 - implemented XBox360 XMA audio export
 
@@ -136,12 +147,11 @@ Changes
 - implemented XBox360 DDS texture export
 
 01.12.2011
-- implemented DDS texture export, activated with -dds option; DDS texture format is used for
-  DXT textures only
+- implemented DDS texture export, activated with -dds option (used for DXT textures only)
 
 29.11.2011
-- fixed recent UE3 SkeletalMesh incompatibility
-- improved layout of the animation information on the screen
+- fixed incompatibility with SkeletalMesh from recent UE3
+- improved on-screen layout of the animation information
 
 26.11.2011
 - implemented support for Batman: Arkham City packages

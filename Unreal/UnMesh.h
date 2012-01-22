@@ -127,6 +127,13 @@ struct FMeshBone
 		if (Ar.Game == GAME_XIII && Ar.ArLicenseeVer > 26)					// real version is unknown; beta = old code, retail = new code
 			return Ar << B.Name << B.Flags << B.BonePos << B.ParentIndex;	// no NumChildren
 #endif // XIII
+#if BATMAN
+		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 31)
+		{
+			Ar << B.BonePos << B.Name << B.ParentIndex;						// no Flags and NumChildren fields
+			goto ue3_unk;
+		}
+#endif // BATMAN
 		Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
 #if ARMYOF2
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArVer >= 459)
@@ -139,6 +146,7 @@ struct FMeshBone
 		if (Ar.Game == GAME_Transformers) return Ar; // version 537, but really not upgraded
 #endif
 #if UNREAL3
+	ue3_unk:
 		if (Ar.ArVer >= 515)
 		{
 			int unk44;						// byte[4] ? default is 0xFF x 4

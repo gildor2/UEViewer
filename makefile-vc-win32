@@ -39,11 +39,15 @@ MAIN_FILES = \
 	$(OUT_1)/ExportThirdParty.obj \
 	$(OUT_1)/MeshCommon.obj \
 	$(OUT_1)/SkeletalMesh.obj \
+	$(OUT_1)/UnAnim2.obj \
+	$(OUT_1)/UnAnim3.obj \
 	$(OUT_1)/UnCore.obj \
 	$(OUT_1)/UnHavok.obj \
-	$(OUT_1)/UnMesh.obj \
+	$(OUT_1)/UnMesh1.obj \
+	$(OUT_1)/UnMesh2.obj \
 	$(OUT_1)/UnMesh3.obj \
 	$(OUT_1)/UnMeshBioshock.obj \
+	$(OUT_1)/UnMeshRune.obj \
 	$(OUT_1)/UnObject.obj \
 	$(OUT_1)/UnPackage.obj \
 	$(OUT_1)/UnRenderer.obj \
@@ -393,6 +397,27 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/MathSSE.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/MeshCommon.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -402,13 +427,12 @@ DEPENDS = \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh2.h \
-	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMesh.obj : Unreal/UnMesh.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh.obj" Unreal/UnMesh.cpp
+$(OUT_1)/UnMesh2.obj : Unreal/UnMesh2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh2.obj" Unreal/UnMesh2.cpp
 
 DEPENDS = \
 	Build.h \
@@ -429,11 +453,53 @@ DEPENDS = \
 	Unreal/UnMesh3.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh3.obj" Unreal/UnMesh3.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnAnim2.obj : Unreal/UnAnim2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim2.obj" Unreal/UnAnim2.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnAnim3.obj : Unreal/UnAnim3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim3.obj" Unreal/UnAnim3.cpp
 
 DEPENDS = \
 	Build.h \
@@ -546,25 +612,6 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	MeshInstance/MeshInstance.h \
-	Unreal/TypeConvert.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-$(OUT_1)/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
@@ -600,6 +647,25 @@ DEPENDS = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMeshRune.obj : Unreal/UnMeshRune.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMeshRune.obj" Unreal/UnMeshRune.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
 	Unreal/UnCore.h \
 	Unreal/UnHavok.h \
 	Unreal/UnMaterial.h \
@@ -620,11 +686,27 @@ DEPENDS = \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMaterial3.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	libs/ddslib.h
+	Unreal/UnPackage.h
 
 $(OUT_1)/UnTexture.obj : Unreal/UnTexture.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture.obj" Unreal/UnTexture.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMesh1.obj : Unreal/UnMesh1.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh1.obj" Unreal/UnMesh1.cpp
 
 DEPENDS = \
 	Build.h \

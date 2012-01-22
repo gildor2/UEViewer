@@ -63,8 +63,8 @@ static void ExportCommonMeshData
 	static VChunkHeader PtsHdr, WedgHdr, FacesHdr, MatrHdr;
 	int i, j;
 
-#define VERT(n)		OffsetPointer(Verts, VertexSize * n)
-#define SECT(n)		OffsetPointer(Sections, SectionSize * n)
+#define VERT(n)		OffsetPointer(Verts, VertexSize * (n))
+#define SECT(n)		OffsetPointer(Sections, SectionSize * (n))
 
 	PtsHdr.DataCount = NumVerts;
 	PtsHdr.DataSize  = sizeof(FVector);
@@ -78,6 +78,9 @@ static void ExportCommonMeshData
 		Ar << V;
 	}
 
+	// get number of faces (some Gears3 meshes may have index buffer larger than needed)
+	// get wedge-material mapping
+	int numFaces = 0;
 	TArray<int> WedgeMat;
 	WedgeMat.Empty(NumVerts);
 	WedgeMat.Add(NumVerts);
@@ -85,9 +88,10 @@ static void ExportCommonMeshData
 	for (i = 0; i < NumSections; i++)
 	{
 		const CMeshSection &Sec = *SECT(i);
+		numFaces += Sec.NumFaces;
 		for (int j = 0; j < Sec.NumFaces * 3; j++)
 		{
-			int idx = Index(Indices, j + Sec.FirstIndex);
+			int idx = Index(j + Sec.FirstIndex);
 			WedgeMat[idx] = i;
 		}
 	}
@@ -108,9 +112,9 @@ static void ExportCommonMeshData
 		Ar << W;
 	}
 
-	if (NumVerts <= 65536)
+	if (numFaces * 3 <= 65536)
 	{
-		FacesHdr.DataCount = Indices.Num() / 3;
+		FacesHdr.DataCount = numFaces;
 		FacesHdr.DataSize  = sizeof(VTriangle16);
 		SAVE_CHUNK(FacesHdr, "FACE0000");
 		for (i = 0; i < NumSections; i++)
@@ -121,7 +125,7 @@ static void ExportCommonMeshData
 				VTriangle16 T;
 				for (int k = 0; k < 3; k++)
 				{
-					int idx = Index(Indices, Sec.FirstIndex + j * 3 + k);
+					int idx = Index(Sec.FirstIndex + j * 3 + k);
 					T.WedgeIndex[k] = idx;
 				}
 				T.MatIndex        = i;
@@ -137,8 +141,8 @@ static void ExportCommonMeshData
 	else
 	{
 		// pskx extension
-		FacesHdr.DataCount = Indices.Num() / 3;
-		FacesHdr.DataSize  = sizeof(VTriangle32);
+		FacesHdr.DataCount = numFaces;
+		FacesHdr.DataSize  = 18; // sizeof(VTriangle32) without alignment
 		SAVE_CHUNK(FacesHdr, "FACE3200");
 		for (i = 0; i < NumSections; i++)
 		{
@@ -148,7 +152,7 @@ static void ExportCommonMeshData
 				VTriangle32 T;
 				for (int k = 0; k < 3; k++)
 				{
-					int idx = Index(Indices, Sec.FirstIndex + j * 3 + k);
+					int idx = Index(Sec.FirstIndex + j * 3 + k);
 					T.WedgeIndex[k] = idx;
 				}
 				T.MatIndex        = i;
@@ -340,6 +344,8 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		guard(Lod);
 
 		const CSkelMeshLod &MeshLod = Mesh->Lods[Lod];
+		if (!MeshLod.Sections.Num()) continue;		// empty mesh
+
 		bool UsePskx = (MeshLod.Indices.Num() > 65536) || (GExportPskx && (MeshLod.NumTexCoords > 1));
 
 		char filename[512];

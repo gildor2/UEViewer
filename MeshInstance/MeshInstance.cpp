@@ -1,5 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
+
+#if RENDERING
+
 #include "MeshInstance.h"
 
 
@@ -26,3 +29,5 @@ void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index, int PolyFlags)
 	}
 	unguard;
 }
+
+#endif // RENDERING

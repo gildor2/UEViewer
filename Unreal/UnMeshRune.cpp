@@ -142,9 +142,9 @@ struct RAnimFrame
 static FQuat EulerToQuat(const FRotator &Rot)
 {
 	// signs was taken from experiments
-	float yaw   =  Rot.Yaw   / 32768.0f * M_PI;
-	float pitch = -Rot.Pitch / 32768.0f * M_PI;
-	float roll  = -Rot.Roll  / 32768.0f * M_PI;
+	float yaw   =  Rot.Yaw   * (M_PI / 32768.0f);
+	float pitch = -Rot.Pitch * (M_PI / 32768.0f);
+	float roll  = -Rot.Roll  * (M_PI / 32768.0f);
 	// derived from Doom3 idAngles::ToQuat()
 	float sz = sin(yaw / 2);
 	float cz = cos(yaw / 2);
@@ -410,14 +410,14 @@ void USkelModel::Serialize(FArchive &Ar)
 		for (i = 0; i < VertexCount; i++)
 		{
 			const RVertex &v1 = src.verts[i];
-			FVertInfluences *Inf = new(sm->VertInfluences) FVertInfluences;
+			FVertInfluence *Inf = new(sm->VertInfluences) FVertInfluence;
 			Inf->PointIndex = i;
 			Inf->BoneIndex  = v1.joint1;
 			Inf->Weight     = v1.weight1;
 			if (Inf->Weight != 1.0f)
 			{
 				// influence for 2nd bone
-				Inf = new(sm->VertInfluences) FVertInfluences;
+				Inf = new(sm->VertInfluences) FVertInfluence;
 				Inf->PointIndex = i;
 				Inf->BoneIndex  = v1.joint2;
 				Inf->Weight     = 1.0f - v1.weight1;

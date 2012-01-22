@@ -1,4 +1,6 @@
-// Bloom test shader
+/******************************************************************************
+ *	This shader blends blurred picture into the frame buffer
+ *****************************************************************************/
 
 uniform sampler2D BlurTex;
 uniform sampler2D OrigTex;

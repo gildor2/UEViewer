@@ -1,13 +1,8 @@
-#define USE_NVIMAGE			1			//!! always used in ExportTexture()
-
-#if !USE_NVIMAGE
-#	include "libs/ddslib.h"				// texture decompression
-#else
-#	include <nvcore/StdStream.h>
-#	include <nvimage/Image.h>
-#	include <nvimage/DirectDrawSurface.h>
-#	undef __FUNC__						// conflicted with our guard macros
-#endif // USE_NVIMAGE
+// nvimage includes
+#include <nvcore/StdStream.h>
+#include <nvimage/Image.h>
+#include <nvimage/DirectDrawSurface.h>
+#undef __FUNC__						// conflicted with our guard macros
 
 
 #include "Core.h"
@@ -239,23 +234,6 @@ byte *CTextureData::Decompress()
 	appResetProfiler();
 #endif
 
-#if !USE_NVIMAGE
-
-	// setup for DDSLib
-	ddsBuffer_t dds;
-	memcpy(dds.magic, "DDS ", 4);
-	dds.pixelFormat.fourCC = fourCC;
-	dds.size   = 124;
-	dds.width  = USize;
-	dds.height = VSize;
-	dds.data   = const_cast<byte*>(Data);
-	guard(DDSDecompress);
-	if (DDSDecompress(&dds, dst) != 0)
-		appError("Error in DDSDecompress");
-	unguard;
-
-#else // USE_NVIMAGE
-
 	nv::DDSHeader header;
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
 	header.setWidth(USize);
@@ -280,8 +258,6 @@ byte *CTextureData::Decompress()
 		d[2] = s[0];
 		d[3] = s[3];
 	}
-
-#endif // USE_NVIMAGE
 
 #if PROFILE_DDS
 	appPrintProfiler();

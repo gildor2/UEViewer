@@ -141,6 +141,10 @@ public:
 		PROP_DROP(VolumeMultiplier)
 		PROP_DROP(PitchMultiplier)
 #endif
+#if BATMAN
+		PROP_DROP(CharacterFilter_Enabled)
+		PROP_DROP(CharacterFilter)
+#endif
 	END_PROP_TABLE
 };
 

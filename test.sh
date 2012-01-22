@@ -102,7 +102,7 @@ function u1()
 }
 function ut1()
 {
-	CheckDir {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament
+	CheckDir {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament data/1/UT
 	run $*
 }
 function ut2()
@@ -228,7 +228,7 @@ fi
 case "" in
 
 "")
-	gow2 -noanim -meshes -nomesh geargameannex_SF.xxx
+	gow2 -meshes GearGame.xxx
 #	run1 data/3i/EpicCitadel -ios CastleMap.xxx T_FX_Flare_02
 #	run1 data/2/BattleTerritoryOnline/new2/AnimPackages WP_SMG_P90_NEWPACKAGE.ebkx P90
 #	ib BOSS_10ft_SnS_Thane_SF.xxx

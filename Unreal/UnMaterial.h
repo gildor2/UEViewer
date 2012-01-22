@@ -134,9 +134,9 @@ public:
 	:	DrawTimestamp(0)
 	{}
 
-	void SetMaterial(unsigned PolyFlags = 0);		// main function to use outside
+	void SetMaterial(unsigned PolyFlags = 0);		// main function to use from outside
 
-	virtual void Bind()								// non-empty for textures only
+	virtual void Bind()								// implemented for textures only
 	{}
 	virtual void SetupGL(unsigned PolyFlags);		// PolyFlags used for UE1 only
 	virtual void Release();

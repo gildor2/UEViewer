@@ -858,7 +858,10 @@ sub CollectFileDependencies {
 				my $inc3 = AppendFilePath ($inc, $path2);
 				next if $inc3 eq $inc2;			# file with appended path is known ...
 				if (-f $inc3) {
-					WarningOnce ("file \"$inc\" present in few places from INCLUDES=[$includes]", "many:$inc:$includes") if $found != 0;
+					if ($inc !~ /.*\.\..*/) {
+						# file has no ".." in path, warning if found in multiple places
+						WarningOnce ("file \"$inc\" were found in a few places; INCLUDES=[$includes]", "many:$inc:$includes") if $found != 0;
+					}
 					$found++;
 					$inc2 = $inc3;
 				}

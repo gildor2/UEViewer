@@ -174,6 +174,14 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 	{
 		guard(FSkelIndexBuffer3<<);
 
+#if BATMAN
+		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 45)
+		{
+			int unk34;
+			Ar << unk34;
+		}
+#endif // BATMAN
+
 		byte ItemSize = 2;
 		if (Ar.ArVer >= 806)
 		{
@@ -195,21 +203,6 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 		unguard;
 	}
 };
-
-static bool CompareCompNormals(const FPackedNormal &N1, const FPackedNormal &N2)
-{
-	int Normal1 = N1.Data;
-	int Normal2 = N2.Data;
-	for (int i = 0; i < 3; i++)
-	{
-		char b1 = Normal1 & 0xFF;
-		char b2 = Normal2 & 0xFF;
-		if (abs(b1 - b2) > 10) return false;
-		Normal1 >>= 8;
-		Normal2 >>= 8;
-	}
-	return true;
-}
 
 struct FRigidVertex3
 {
@@ -695,9 +688,9 @@ struct FGPUSkin3
 			// old version - FSmoothVertex3 array
 			TArray<FSmoothVertex3> Verts;
 			Ar << RAW_ARRAY(Verts);
-#if DEBUG_SKELMESH
+	#if DEBUG_SKELMESH
 			appPrintf("... %d verts in old format\n", Verts.Num());
-#endif
+	#endif
 			// convert verts
 			CopyArray(S.VertsFloat, Verts);
 			S.bUseFullPrecisionUVs = true;
@@ -731,11 +724,11 @@ struct FGPUSkin3
 		// Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position.
 		// Working bUsePackedPosition version was found in all XBox360 games. For PC there is only one game -
 		// MOH2010, which uses bUsePackedPosition. PS3 also has bUsePackedPosition support (at least TRON)
-#if DEBUG_SKELMESH
+	#if DEBUG_SKELMESH
 		appPrintf("... data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
 			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
-#endif
+	#endif
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
 	#if CRIMECRAFT
@@ -758,10 +751,10 @@ struct FGPUSkin3
 			else
 				Ar << RAW_ARRAY(S.VertsFloatPacked);
 		}
-#if DEBUG_SKELMESH
+	#if DEBUG_SKELMESH
 		appPrintf("... verts: Half[%d] HalfPacked[%d] Float[%d] FloatPacked[%d]\n",
 			S.VertsHalf.Num(), S.VertsHalfPacked.Num(), S.VertsFloat.Num(), S.VertsFloatPacked.Num());
-#endif
+	#endif
 
 		return Ar;
 		unguard;
@@ -821,6 +814,9 @@ struct FSkeletalMeshVertexInfluences
 	friend FArchive& operator<<(FArchive &Ar, FSkeletalMeshVertexInfluences &S)
 	{
 		guard(FSkeletalMeshVertexInfluences<<);
+#if DEBUG_SKELMESH
+		appPrintf("Extra vertex influence:\n");
+#endif
 		Ar << S.f0;
 		if (Ar.ArVer >= 609)
 		{
@@ -838,6 +834,14 @@ struct FSkeletalMeshVertexInfluences
 		if (Ar.ArVer >= 700) Ar << S.Sections << S.Chunks;
 		if (Ar.ArVer >= 708) Ar << S.f80;
 		if (Ar.ArVer >= 715) Ar << S.f8C;
+#if DEBUG_SKELMESH
+		for (int i1 = 0; i1 < S.Sections.Num(); i1++)
+		{
+			FSkelMeshSection3 &Sec = S.Sections[i1];
+			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d Unk=%d\n", i1, Sec.MaterialIndex, Sec.FirstIndex, Sec.NumTriangles, Sec.unk1);
+		}
+
+#endif // DEBUG_SKELMESH
 		return Ar;
 		unguard;
 	}
@@ -989,10 +993,10 @@ struct FStaticLODModel3
 		{
 #if 0
 			// old version
-			TLazyArray<FVertInfluences> Influences;
-			TLazyArray<FMeshWedge>      Wedges;
-			TLazyArray<FMeshFace>       Faces;
-			TLazyArray<FVector>         Points;
+			TLazyArray<FVertInfluence> Influences;
+			TLazyArray<FMeshWedge>     Wedges;
+			TLazyArray<FMeshFace>      Faces;
+			TLazyArray<FVector>        Points;
 			Ar << Influences << Wedges << Faces << Points;
 #else
 			appError("Old UE3 FStaticLodModel");
@@ -1070,7 +1074,7 @@ struct FStaticLODModel3
 		int RealArVer = Ar.ArVer;
 		if (Ar.Game == GAME_MOH2010)
 		{
-			Ar.ArVer = 592;			// partially upgraded engine, change version (for easier coding)
+			Ar.ArVer = 592;			// partially upgraded engine, override version (for easier coding)
 			if (Ar.ArLicenseeVer >= 42)
 				Ar << Lod.fC4;		// original code: this field is serialized after GPU Skin
 		}
@@ -1295,7 +1299,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		Ar << unk;
 	}
 #if BATMAN
-	if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 15)
+	if ((Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2) && Ar.ArLicenseeVer >= 15)
 	{
 		float ConservativeBounds;
 		TArray<FBoneBounds> PerBoneBounds;
@@ -1303,6 +1307,10 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	}
 #endif // BATMAN
 	Ar << Materials;
+#if DEBUG_SKELMESH
+	for (int i1 = 0; i1 < Materials.Num(); i1++)
+		appPrintf("Material[%d] = %s\n", i1, Materials[i1] ? Materials[i1]->Name : "None");
+#endif
 #if BLOODONSAND
 	if (Ar.Game == GAME_50Cent && Ar.ArLicenseeVer >= 65)
 	{
@@ -1351,7 +1359,9 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	Ar << RefSkeleton << SkeletalDepth;
 #if DEBUG_SKELMESH
 	appPrintf("RefSkeleton: %d bones, %d depth\n", RefSkeleton.Num(), SkeletalDepth);
-#endif
+	for (int i1 = 0; i1 < RefSkeleton.Num(); i1++)
+		appPrintf("  [%d] n=%s p=%d\n", i1, *RefSkeleton[i1].Name, RefSkeleton[i1].ParentIndex);
+#endif // DEBUG_SKELMESH
 #if A51 || MKVSDC || STRANGLE
 	//?? check GAME_Wheelman
 	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 0xF)
@@ -1446,8 +1456,10 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 
 			if (UseGpuSkinVerts)
 			{
-				// NOTE: chunk may have FirstVertex set to incorrect value (for recent UE3 versions), which overlaps with the
-				// previous chunk (FirstVertex=0 for a few chunks).
+				// NOTE: Gears3 has some issues:
+				// - chunk may have FirstVertex set to incorrect value (for recent UE3 versions), which overlaps with the
+				//   previous chunk (FirstVertex=0 for a few chunks)
+				// - index count may be greater than sum of all face counts * 3 from all mesh sections -- this is verified in PSK exporter
 
 				// get vertex from GPU skin
 				const FGPUVert3Common *V;		// has normal and influences, but no UV[] and position
@@ -1774,6 +1786,13 @@ struct FStaticMeshSection3
 			if (flag) Ar << unk3C;
 		}
 #endif // MOH2010
+#if BATMAN
+		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 28)
+		{
+			UObject *unk4;
+			Ar << unk4;
+		}
+#endif // BATMAN
 		if (Ar.ArVer >= 618)
 		{
 			byte unk;
@@ -1795,14 +1814,37 @@ struct FStaticMeshVertexStream3
 	{
 		guard(FStaticMeshVertexStream3<<);
 
-		Ar << S.VertexSize << S.NumVerts;
 #if BATMAN
-		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 0x11)
+		if (Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2)
 		{
+			byte VertexType = 0;		// appeared in Batman 2; 0 -> FVector, 1 -> half[3], 2 -> half[4] (not checked!)
 			int unk18;					// default is 1
-			Ar << unk18;
+			if (Ar.ArLicenseeVer >= 41)
+				Ar << VertexType;
+			Ar << S.VertexSize << S.NumVerts;
+			if (Ar.ArLicenseeVer >= 17)
+				Ar << unk18;
+	#if DEBUG_STATICMESH
+			appPrintf("Batman StaticMesh VertexStream: IS:%d NV:%d VT:%d unk:%d\n", S.VertexSize, S.NumVerts, VertexType, unk18);
+	#endif
+			switch (VertexType)
+			{
+				case 0:
+					Ar << RAW_ARRAY(S.Verts);
+					break;
+				default:
+					appError("unsupported vertex type %d", VertexType);
+			}
+			if (Ar.ArLicenseeVer >= 24)
+			{
+				TArray<FMeshUVFloat> unk28;	// unknown type, TArray<dword,dword>
+				Ar << unk28;
+			}
+			return Ar;
 		}
 #endif // BATMAN
+
+		Ar << S.VertexSize << S.NumVerts;
 #if AVA
 		if (Ar.Game == GAME_AVA && Ar.ArVer >= 442)
 		{
@@ -1840,8 +1882,9 @@ struct FStaticMeshVertexStream3
 };
 
 
-static int  GNumStaticUVSets   = 1;
-static bool GUseStaticFloatUVs = true;
+static int  GNumStaticUVSets    = 1;
+static bool GUseStaticFloatUVs  = true;
+static bool GStripStaticNormals = false;
 
 struct FStaticMeshUVItem3
 {
@@ -1875,6 +1918,8 @@ struct FStaticMeshUVItem3
 			goto uvs;
 		}
 #endif // AVA
+
+		if (GStripStaticNormals) goto uvs;
 
 		if (Ar.ArVer < 472)
 		{
@@ -1961,6 +2006,12 @@ struct FStaticMeshUVStream3
 		new_ver:
 			Ar << S.bUseFullPrecisionUVs;
 		}
+#if BATMAN
+		int HasNormals = 1;
+		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 42)
+			Ar << HasNormals;
+		GStripStaticNormals = (HasNormals == 0);
+#endif // BATMAN
 #if DEBUG_STATICMESH
 		appPrintf("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
 #endif
@@ -2324,6 +2375,13 @@ struct FStaticMeshLODModel
 			}
 		}
 	indices:
+#if BATMAN
+		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 45)
+		{
+			int unk34;		// variable in IndexBuffer, but in 1st only
+			Ar << unk34;
+		}
+#endif // BATMAN
 		Ar << Lod.Indices;
 #if ENDWAR
 		if (Ar.Game == GAME_EndWar) goto after_indices;	// single Indices buffer since version 262
@@ -2758,7 +2816,12 @@ done:
 		int NumVerts     = SrcLod.VertexStream.Verts.Num();
 
 		Lod->NumTexCoords = NumTexCoords;
+		Lod->HasNormals   = true;
 		Lod->HasTangents  = (Ar.ArVer >= 364);				//?? check; FStaticMeshUVStream3 is used since this version
+#if BATMAN
+		if (Ar.Game == GAME_Batman2 && CanStripNormalsAndTangents)
+			Lod->HasNormals = Lod->HasTangents = false;
+#endif
 		if (NumTexCoords > NUM_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", NumTexCoords);
 

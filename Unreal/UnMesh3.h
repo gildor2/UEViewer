@@ -155,6 +155,8 @@ public:
 #	if BATMAN
 		PROP_DROP(SkeletonName)
 		PROP_DROP(Stretches)
+		// Batman 2
+		PROP_DROP(ClothingTeleportRefBones)
 #	endif // BATMAN
 #if DECLARE_VIEWER_PROPS
 		PROP_ARRAY(Materials, UObject*)
@@ -419,6 +421,8 @@ public:
 		PROP_DROP(bUseSimpleForwardYaw)
 		PROP_DROP(ClipRootMotionOutPoint)
 		PROP_DROP(ProportionalMotionDistanceCap)
+		// Batman 2
+		PROP_DROP(WeaponSwitchPointEnabled)
 #endif // BATMAN
 #if TRANSFORMERS
 		PROP_DROP(TranslationScale)		//?? use it?
@@ -457,6 +461,13 @@ public:
 		}
 	old_code:
 		Ar << CompressedByteStream;
+#if BATMAN
+		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 55)
+		{
+			TArray<byte> AnimZip_Data;
+			Ar << AnimZip_Data;
+		}
+#endif // BATMAN
 		unguard;
 	}
 };
@@ -603,6 +614,11 @@ public:
 	bool					UseSimpleBoxCollision;
 	bool					UseSimpleRigidBodyCollision;
 	bool					UseFullPrecisionUVs;
+#if BATMAN
+	// Batman 2
+	bool					CanCompressPositions;
+	bool					CanStripNormalsAndTangents;
+#endif // BATMAN
 
 	CStaticMesh				*ConvertedMesh;
 
@@ -615,6 +631,10 @@ public:
 #if TRANSFORMERS
 		PROP_STRUC(Bounds, FBoxSphereBounds)	// Transformers has described StaticMesh.uc and serialized Bounds as property
 #endif
+#if BATMAN
+		PROP_BOOL(CanCompressPositions)
+		PROP_BOOL(CanStripNormalsAndTangents)
+#endif // BATMAN
 		PROP_DROP(LODDistanceRatio)
 		PROP_DROP(LightMapResolution)
 		PROP_DROP(LightMapCoordinateIndex)

@@ -19,12 +19,12 @@
 //#define SHOW_BOUNDS		1
 #define HIGHLIGHT_CURRENT	1
 
-#define HIGHLIGHT_DURATION	500
+#define HIGHLIGHT_DURATION	0.5f		// seconds
 #define HIGHLIGHT_STRENGTH	4.0f
 
 
 #if HIGHLIGHT_CURRENT
-static unsigned ViewerCreateTime;
+static float TimeSinceCreate;
 #endif
 
 TArray<CSkelMeshInstance*> CSkelMeshViewer::Meshes;
@@ -34,7 +34,6 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
 :	CMeshViewer(Mesh0->OriginalMesh)
 ,	Mesh(Mesh0)
 ,	AnimIndex(-1)
-,	CurrentTime(appMilliseconds())
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
@@ -77,7 +76,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
 #endif
 
 #if HIGHLIGHT_CURRENT
-	ViewerCreateTime = CurrentTime;
+	TimeSinceCreate = -2;		// ignore first 2 frames: 1st frame will be called after mesh changing, 2nd frame could load textures etc
 #endif
 
 #if SHOW_BOUNDS
@@ -214,6 +213,7 @@ void CSkelMeshViewer::Draw2D()
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
+	// mesh
 	DrawTextLeft(S_GREEN"LOD    : "S_WHITE"%d/%d\n"
 				 S_GREEN"Verts  : "S_WHITE"%d\n"
 				 S_GREEN"Tris   : "S_WHITE"%d\n"
@@ -225,6 +225,7 @@ void CSkelMeshViewer::Draw2D()
 				 Mesh->RefSkeleton.Num());
 	//!! show MaxInfluences etc
 
+	// materials
 	if (Inst->bColorMaterials)
 	{
 		for (int i = 0; i < Lod.Sections.Num(); i++)
@@ -277,7 +278,7 @@ void CSkelMeshViewer::Draw2D()
 }
 
 
-void CSkelMeshViewer::Draw3D()
+void CSkelMeshViewer::Draw3D(float TimeDelta)
 {
 	guard(CSkelMeshViewer::Draw3D);
 	assert(Inst);
@@ -285,21 +286,23 @@ void CSkelMeshViewer::Draw3D()
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
 	// tick animations
-	unsigned time = appMilliseconds();
-	float TimeDelta = (time - CurrentTime) / 1000.0f;
-	CurrentTime = time;
 	MeshInst->UpdateAnimation(TimeDelta);
 
 #if HIGHLIGHT_CURRENT
+	if (TimeSinceCreate < 0)
+		TimeSinceCreate += 1.0f;			// ignore this frame for highlighting
+	else
+		TimeSinceCreate += TimeDelta;
+
 	float lightAmbient[4];
 	float boost = 0;
-	float hightlightTime = time - ViewerCreateTime;
+	float highlightTime = max(TimeSinceCreate, 0);
 
-	if (Meshes.Num() && hightlightTime < HIGHLIGHT_DURATION)
+	if (Meshes.Num() && highlightTime < HIGHLIGHT_DURATION)
 	{
-		if (hightlightTime > HIGHLIGHT_DURATION / 2)
-			hightlightTime = HIGHLIGHT_DURATION - hightlightTime;	// fade
-		boost = HIGHLIGHT_STRENGTH * hightlightTime / (HIGHLIGHT_DURATION / 2);
+		if (highlightTime > HIGHLIGHT_DURATION / 2)
+			highlightTime = HIGHLIGHT_DURATION - highlightTime;	// fade
+		boost = HIGHLIGHT_STRENGTH * highlightTime / (HIGHLIGHT_DURATION / 2);
 
 		glGetMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
 		lightAmbient[0] += boost;
@@ -310,7 +313,7 @@ void CSkelMeshViewer::Draw3D()
 	}
 #endif // HIGHLIGHT_CURRENT
 
-	CMeshViewer::Draw3D();
+	CMeshViewer::Draw3D(TimeDelta);
 
 #if HIGHLIGHT_CURRENT
 	if (boost > 0)

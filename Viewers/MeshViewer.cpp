@@ -27,7 +27,7 @@ void CMeshViewer::InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs)
 }
 
 
-void CMeshViewer::Draw3D()
+void CMeshViewer::Draw3D(float TimeDelta)
 {
 	guard(CMeshViewer::Draw3D);
 	assert(Inst);

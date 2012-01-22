@@ -9,7 +9,7 @@
 -----------------------------------------------------------------------------*/
 
 void VisualizerLoop(const char *caption);
-void AppDrawFrame();
+void AppDrawFrame(float TimeDelta);
 void AppKeyEvent(int key);
 void AppDisplayTexts(bool helpVisible);
 

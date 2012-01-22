@@ -23,6 +23,7 @@ void CStatMeshInstance::Draw()
 	int NumSections = Mesh.Sections.Num();
 	if (!NumSections || !Mesh.NumVerts) return;
 
+	if (!Mesh.HasNormals)  Mesh.BuildNormals();
 	if (!Mesh.HasTangents) Mesh.BuildTangents();
 
 	// copy of CSkelMeshInstance::Draw sorting code
@@ -45,6 +46,31 @@ void CStatMeshInstance::Draw()
 
 	// draw mesh
 	glEnable(GL_LIGHTING);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Position);
+	glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
+
+	/*??
+		Can move tangent/binormal setup here too, but this will require to force shader to use fixed attribute locations
+		(use glBindAttribLocation before glLinkProgram instead of querying atttribute via glGetAtribLocation).
+		In this case:
+		- can remove GCurrentShader
+		- can eliminate hasTangent checks below and always bind attributes (when supports GL2.0)
+		- can share code between SkeletalMesh and StaticMesh:
+		  - sort sections
+		  - setup arrays; differences:
+		    - position and normals are taken from different arrays in static and skeletal meshes
+		    - ShowInfluences in SkeletalMeshInstance should disable material binding
+		  - draw sections using glDrawElements()
+		  - un-setup arrays
+		  - use VAO+VBO for rendering
+	*/
+
 	for (i = 0; i < NumSections; i++)
 	{
 #if SORT_BY_OPACITY
@@ -72,23 +98,12 @@ void CStatMeshInstance::Draw()
 			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Tangent);
 			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Binormal);
 		}
-
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glEnableClientState(GL_NORMAL_ARRAY);
-
-		glVertexPointer(3, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Position);
-		glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
+		// draw
 		//?? place this code into CIndexBuffer?
 		if (Mesh.Indices.Is32Bit())
 			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_INT, &Mesh.Indices.Indices32[Sec.FirstIndex]);
 		else
 			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Mesh.Indices.Indices16[Sec.FirstIndex]);
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_NORMAL_ARRAY);
 
 		// disable tangents
 		if (hasTangent)
@@ -97,6 +112,11 @@ void CStatMeshInstance::Draw()
 			glDisableVertexAttribArray(aBinormal);
 		}
 	}
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+
 	glDisable(GL_LIGHTING);
 	BindDefaultMaterial(true);
 

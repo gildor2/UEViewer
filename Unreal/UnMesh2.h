@@ -545,19 +545,19 @@ public:
 -----------------------------------------------------------------------------*/
 
 // similar to VRawBoneInfluence, but used 'word' instead of 'int'
-struct FVertInfluences
+struct FVertInfluence
 {
 	float			Weight;
 	word			PointIndex;
 	word			BoneIndex;
 
-	friend FArchive& operator<<(FArchive &Ar, FVertInfluences &I)
+	friend FArchive& operator<<(FArchive &Ar, FVertInfluence &I)
 	{
 		return Ar << I.Weight << I.PointIndex << I.BoneIndex;
 	}
 };
 
-RAW_TYPE(FVertInfluences)
+RAW_TYPE(FVertInfluence)
 
 
 struct VWeightIndex
@@ -957,7 +957,7 @@ struct FStaticLODModel
 	FRawIndexBuffer			SmoothIndices;
 	FRawIndexBuffer			RigidIndices;
 	FSkinVertexStream		VertexStream;		// for rigid parts
-	TLazyArray<FVertInfluences> VertInfluences;
+	TLazyArray<FVertInfluence> VertInfluences;
 	TLazyArray<FMeshWedge>	Wedges;
 	TLazyArray<FMeshFace>	Faces;
 	TLazyArray<FVector>		Points;				// all surface points
@@ -1137,7 +1137,7 @@ public:
 	TLazyArray<FVector>		Points;			// note: have ULodMesh.Verts
 	TLazyArray<FMeshWedge>	Wedges;			// note: have ULodMesh.Wedges
 	TLazyArray<VTriangle>	Triangles;
-	TLazyArray<FVertInfluences> VertInfluences;
+	TLazyArray<FVertInfluence> VertInfluences;
 	TLazyArray<word>		CollapseWedge;	// Num == Wedges.Num; used to automatically build StaticLODModels
 	TLazyArray<word>		f1C8;			// Num == Triangles.Num, element = index in Points array; not used?
 	TArray<FMeshBone>		RefSkeleton;
@@ -1168,7 +1168,7 @@ public:
 	virtual ~USkeletalMesh();
 
 	void ConvertMesh();
-	void ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &MeshPoints, const TArray<FMeshWedge> &MeshWedges, const TArray<FVertInfluences> &VertInfluences);
+	void ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &MeshPoints, const TArray<FMeshWedge> &MeshWedges, const TArray<FVertInfluence> &VertInfluences);
 	void InitSections(CSkelMeshLod &Lod);
 	void BuildIndices(CSkelMeshLod &Lod);
 	void BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel &SrcLod);

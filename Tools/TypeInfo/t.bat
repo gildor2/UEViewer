@@ -9,4 +9,4 @@ rem typeinfo.exe C:\!umodel-data\UnrealChampionship2\System\Core.u
 rem typeinfo.exe C:\!umodel-data\GearsOfWar2_X360\Core.xxx
 rem typeinfo.exe "C:\GAMES\UT3\UTGame\CookedPC\Core.u"
 rem typeinfo.exe "C:\GAMES\UT3\UTGame\CookedPC\Engine.u"
-typeinfo.exe C:\!umodel-data\GearsOfWar2_X360\Engine.xxx
+typeinfo.exe ..\..\data\3\Batman2\Engine.upk

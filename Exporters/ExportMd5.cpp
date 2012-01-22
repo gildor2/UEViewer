@@ -198,7 +198,7 @@ if (i == 32 || i == 34)
 		// find verts and triangles for current material
 		for (i = 0; i < Sec.NumFaces * 3; i++)
 		{
-			int idx = Index(Lod.Indices, i + Sec.FirstIndex);
+			int idx = Index(i + Sec.FirstIndex);
 
 			if (UsedVerts[idx]) continue;		// vertex is already used in previous triangle
 			UsedVerts[idx] = true;
@@ -253,7 +253,7 @@ if (i == 32 || i == 34)
 #else
 			for (int j = 0; j < 3; j++)
 #endif
-				Ar->Printf(" %d", BackWedge[Index(Lod.Indices, Sec.FirstIndex + i * 3 + j)]);
+				Ar->Printf(" %d", BackWedge[Index(Sec.FirstIndex + i * 3 + j)]);
 			Ar->Printf("\n");
 		}
 		// weights

@@ -233,18 +233,11 @@ template<class T> struct MotionChunkCompress : public MotionChunkCompressBase
 		unguard;
 	}
 
-#if _MSC_VER == 1200	// VC6 bugs
-	friend FArchive& operator<<(FArchive &Ar, MotionChunkCompress &M);
-#else
-	template<class T2> friend FArchive& operator<<(FArchive &Ar, MotionChunkCompress<T2> &M);
-#endif
+	friend FArchive& operator<<(FArchive &Ar, MotionChunkCompress &M)
+	{
+		return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
+	}
 };
-
-template<class T> FArchive& operator<<(FArchive &Ar, MotionChunkCompress<T> &M)
-{
-	return Ar << M.RootSpeed3D << M.TrackTime << M.StartBone << M.Flags << M.BoneIndices << M.AnimTracks << M.RootTrack;
-}
-
 
 void UMeshAnimation::SerializeSCell(FArchive &Ar)
 {
@@ -299,7 +292,7 @@ void UMeshAnimation::SerializeSCell(FArchive &Ar)
 			}
 		}
 	}
-	if (OldCompression) appNotify("OldCompression=%d", OldCompression, CompressType);//!!
+//	if (OldCompression) appNotify("OldCompression=%d", OldCompression, CompressType);
 
 	unguard;
 }
@@ -571,9 +564,9 @@ template<class T> class TRawArrayUC2 : public TArray<T>
 	// http://gcc.gnu.org/gcc-3.4/changes.html
 	// - look for "unqualified names"
 	// - "temp.dep/3" section of the C++ standard [ISO/IEC 14882:2003]
-	using TArray<T>::DataPtr;
 	using TArray<T>::DataCount;
-	using TArray<T>::MaxCount;
+	using TArray<T>::Empty;
+	using TArray<T>::GetData;
 public:
 	void Serialize(FArchive &DataAr, FArchive &CountAr)
 	{
@@ -583,14 +576,20 @@ public:
 		// serialize memory size from "CountAr"
 		int DataSize;
 		CountAr << DataSize;
-		assert(DataSize % sizeof(T) == 0);
+		// compute items count
+		int Count = DataSize / sizeof(T);
+		assert(Count * sizeof(T) == DataSize);
 		// setup array
-		DataCount = DataSize / sizeof(T);
-		DataPtr   = (DataCount) ? appMalloc(sizeof(T) * DataCount) : NULL;
-		MaxCount  = DataCount;
+		Empty(Count);
+		DataCount = Count;
 		// serialize items from "DataAr"
-		for (int i = 0; i < DataCount; i++)
-			DataAr << *((T*)DataPtr + i);
+		T* Item = (T*)GetData();
+		while (Count > 0)
+		{
+			DataAr << *Item;
+			Item++;
+			Count--;
+		}
 
 		unguard;
 	}

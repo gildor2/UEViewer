@@ -9,6 +9,8 @@
 #include "StaticMesh.h"
 #include "TypeConvert.h"
 
+//#define DEBUG_SKELMESH		1
+
 
 /*-----------------------------------------------------------------------------
 	ULodMesh class
@@ -119,7 +121,6 @@ void ULodMesh::Serialize(FArchive &Ar)
 	{
 		TArray<int> unk;
 		Ar << unk;
-		if (Ar.ArVer >= 134) Ar.Seek(Ar.Tell()+1);	//?????? did not found this in disassembly yet
 	}
 #endif // BATTLE_TERR
 #if SWRC
@@ -314,7 +315,15 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 #if TRIBES3
 	TRIBES_HDR(Ar, 4);
 #endif
-	Ar << Points2 << RefSkeleton;
+	Ar << Points2;
+#if BATTLE_TERR
+	if (Ar.Game == GAME_BattleTerr && Ar.ArVer >= 134)
+	{
+		TArray<FVector> Points3;
+		Ar << Points3;
+	}
+#endif // BATTLE_TERR
+	Ar << RefSkeleton;
 #if SWRC
 	if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 142)
 	{
@@ -377,7 +386,15 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 			goto skip_remaining;
 		}
 #endif // SWRC
-		Ar << LODModels << f224 << Points << Wedges << Triangles << VertInfluences;
+		Ar << LODModels << f224 << Points;
+#if BATTLE_TERR
+		if (Ar.Game == GAME_BattleTerr && Ar.ArVer >= 134)
+		{
+			TLazyArray<int>	unk15C;
+			Ar << unk15C;
+		}
+#endif // BATTLE_TERR
+		Ar << Wedges << Triangles << VertInfluences;
 		Ar << CollapseWedge << f1C8;
 	}
 
@@ -518,7 +535,7 @@ void USkeletalMesh::UpgradeMesh()
 	CopyArray(Points, Points2);
 	CopyArray(Wedges, Super::Wedges);
 	UpgradeFaces();
-	// convert VBoneInfluence and VWeightIndex to FVertInfluences
+	// convert VBoneInfluence and VWeightIndex to FVertInfluence
 	// count total influences
 	int numInfluences = 0;
 	for (i = 0; i < WeightIndices.Num(); i++)
@@ -536,7 +553,7 @@ void USkeletalMesh::UpgradeMesh()
 			for (int k = 0; k <= i; k++)					// enumerate all bones per vertex
 			{
 				const VBoneInfluence &BI = BoneInfluences[index++];
-				FVertInfluences &I = VertInfluences[vIndex++];
+				FVertInfluence &I = VertInfluences[vIndex++];
 				I.Weight     = BI.BoneWeight / 65535.0f;
 				I.BoneIndex  = BI.BoneIndex;
 				I.PointIndex = iVertex;
@@ -563,8 +580,23 @@ void USkeletalMesh::ConvertMesh()
 
 	Mesh->Lods.Empty(LODModels.Num());
 
+#if DEBUG_SKELMESH
+	appPrintf("  Base : Points[%d] Wedges[%d] Influences[%d] Faces[%d]\n",
+		Points.Num(), Wedges.Num(), VertInfluences.Num(), Triangles.Num()
+	);
+#endif
+
+	// some games has troubles with LOD models ...
+#if TRIBES3
+	if (Package->Game == GAME_Tribes3) goto base_mesh;
+#endif
+#if SWRC
+	if (Package->Game == GAME_RepCommando) goto base_mesh;
+#endif
+
 	if (!LODModels.Num())
 	{
+	base_mesh:
 		guard(ConvertBaseMesh);
 
 		// create CSkelMeshLod from base mesh
@@ -573,9 +605,17 @@ void USkeletalMesh::ConvertMesh()
 		Lod->HasNormals   = false;
 		Lod->HasTangents  = false;
 
-		InitSections(*Lod);
-		ConvertWedges(*Lod, Points, Wedges, VertInfluences);
-		BuildIndices(*Lod);
+		if (Points.Num() && Wedges.Num() && VertInfluences.Num())
+		{
+			InitSections(*Lod);
+			ConvertWedges(*Lod, Points, Wedges, VertInfluences);
+			BuildIndices(*Lod);
+		}
+		else
+		{
+			appPrintf("ERROR: bad base mesh\n");
+		}
+		goto skeleton;
 
 		unguard;
 	}
@@ -587,18 +627,40 @@ void USkeletalMesh::ConvertMesh()
 
 		const FStaticLODModel &SrcLod = LODModels[lod];
 
+#if DEBUG_SKELMESH
+		appPrintf("  Lod %d: Points[%d] Wedges[%d] Influences[%d] Faces[%d]  Rigid(Indices[%d] Verts[%d])  Smooth(Indices[%d] Verts[%d] Stream[%d])\n",
+			lod, SrcLod.Points.Num(), SrcLod.Wedges.Num(), SrcLod.VertInfluences.Num(), SrcLod.Faces.Num(),
+			SrcLod.RigidIndices.Indices.Num(), SrcLod.VertexStream.Verts.Num(),
+			SrcLod.SmoothIndices.Indices.Num(), SrcLod.SkinPoints.Num(), SrcLod.SkinningData.Num()
+		);
+#endif
+//		if (SrcLod.Faces.Num() == 0 && SrcLod.SmoothSections.Num() > 0)
+//			continue;
+
 		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
 		Lod->NumTexCoords = 1;
 		Lod->HasNormals   = false;
 		Lod->HasTangents  = false;
 
-		InitSections(*Lod);
-		ConvertWedges(*Lod, SrcLod.Points, SrcLod.Wedges, SrcLod.VertInfluences);
-		BuildIndicesForLod(*Lod, SrcLod);
+		if (SrcLod.Points.Num() && SrcLod.Wedges.Num() && SrcLod.VertInfluences.Num())
+		{
+			InitSections(*Lod);
+			ConvertWedges(*Lod, SrcLod.Points, SrcLod.Wedges, SrcLod.VertInfluences);
+			BuildIndicesForLod(*Lod, SrcLod);
+		}
+		else
+		{
+			if (lod == 0)
+			{
+				appPrintf("WARNING: bad LOD mesh, switching to base\n");
+				goto base_mesh;
+			}
+		}
 
 		unguard;
 	}
 
+skeleton:
 	// copy skeleton
 	guard(ProcessSkeleton);
 	Mesh->RefSkeleton.Empty(RefSkeleton.Num());
@@ -612,6 +674,17 @@ void USkeletalMesh::ConvertMesh()
 		Dst->Orientation = CVT(B.BonePos.Orientation);
 	}
 	unguard; // ProcessSkeleton
+
+	// copy sockets
+	int NumSockets = AttachAliases.Num();
+	Mesh->Sockets.Empty(NumSockets);
+	for (int i = 0; i < NumSockets; i++)
+	{
+		CSkelMeshSocket *DS = new (Mesh->Sockets) CSkelMeshSocket;
+		DS->Name      = AttachAliases[i];
+		DS->Bone      = AttachBoneNames[i];
+		DS->Transform = CVT(AttachCoords[i]);
+	}
 
 	unguard;
 }
@@ -631,7 +704,7 @@ void USkeletalMesh::InitSections(CSkelMeshLod &Lod)
 	}
 }
 
-void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &MeshPoints, const TArray<FMeshWedge> &MeshWedges, const TArray<FVertInfluences> &VertInfluences)
+void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &MeshPoints, const TArray<FMeshWedge> &MeshWedges, const TArray<FVertInfluence> &VertInfluences)
 {
 	guard(USkeletalMesh::ConvertWedges);
 
@@ -650,7 +723,7 @@ void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &Mesh
 	// collect influences per vertex
 	for (i = 0; i < VertInfluences.Num(); i++)
 	{
-		const FVertInfluences &Inf  = VertInfluences[i];
+		const FVertInfluence &Inf  = VertInfluences[i];
 		CVertInfo &V = Verts[Inf.PointIndex];
 		int NumInfs = V.NumInfs++;
 		int idx = NumInfs;
@@ -1083,7 +1156,7 @@ void FStaticLODModel::RestoreLineageMesh()
 				if (LW.Bones[j] == 255) continue;	// no bone assigned
 				float Weight = LW.Weights[j];
 				if (Weight < 0.000001f) continue;	// zero weight
-				FVertInfluences *Inf = new (VertInfluences) FVertInfluences;
+				FVertInfluence *Inf = new (VertInfluences) FVertInfluence;
 				Inf->Weight     = Weight;
 				Inf->BoneIndex  = ms->LineageBoneMap[LW.Bones[j]];
 				Inf->PointIndex = PointIndex;
@@ -1118,7 +1191,7 @@ void FStaticLODModel::RestoreLineageMesh()
 			// build influences
 			const FSkelMeshSection *ms = WedgeSection[i];
 			assert(ms);
-			FVertInfluences *Inf = new (VertInfluences) FVertInfluences;
+			FVertInfluence *Inf = new (VertInfluences) FVertInfluence;
 			Inf->Weight     = 1.0f;
 			Inf->BoneIndex  = /*VertexStream.Revision; //??*/ ms->BoneIndex; //-- equals 0 in Lineage2 ...
 			Inf->PointIndex = PointIndex;
@@ -1234,6 +1307,7 @@ void UStaticMesh::ConvertMesh()
 	Mesh->BoundingSphere = BoundingSphere;
 
 	CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
+	Lod->HasNormals  = true;
 	Lod->HasTangents = false;
 
 	// convert sections

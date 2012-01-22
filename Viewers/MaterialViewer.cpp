@@ -42,7 +42,7 @@ void CMaterialViewer::ShowHelp()
 }
 
 
-void CMaterialViewer::Draw3D()
+void CMaterialViewer::Draw3D(float TimeDelta)
 {
 	static const CVec3 origin = { -150, 100, 100 };
 //	static const CVec3 origin = { -150, 50, 50 };
