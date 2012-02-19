@@ -208,7 +208,7 @@ void DumpClass(const UClass *Class)
 	//!! NOTE: UProperty going in correct format, other UField data in reverse format
 	char Filename[256];
 	appSprintf(ARRAY_ARG(Filename), "%s/%s.uc", Class->Package->Name, Class->Name);
-	FFileReader Ar(Filename, false);
+	FFileWriter Ar(Filename);
 	Ar.Printf("class %s", Class->Name);
 	//?? note: import may be failed when placed in a different package - so, SuperField may be NULL
 	//?? when parsing Engine class, derived from Core.Object

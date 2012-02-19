@@ -13,6 +13,7 @@
 
 
 bool CMaterialViewer::ShowOutline = false;
+bool CMaterialViewer::ShowChannels = false;
 static void OutlineMaterial(UObject *Obj, int indent = 0);
 
 
@@ -28,6 +29,9 @@ void CMaterialViewer::ProcessKey(int key)
 	case 'm':
 		ShowOutline = !ShowOutline;
 		break;
+	case 'c':
+		ShowChannels = !ShowChannels;
+		break;
 	default:
 		CObjectViewer::ProcessKey(key);
 	}
@@ -39,11 +43,15 @@ void CMaterialViewer::ShowHelp()
 {
 	CObjectViewer::ShowHelp();
 	DrawKeyHelp("M", "show material graph");
+	if (IsTexture)
+		DrawKeyHelp("C", "show texture channels");
 }
 
 
 void CMaterialViewer::Draw3D(float TimeDelta)
 {
+	if (IsTexture && ShowChannels) return;
+
 	static const CVec3 origin = { -150, 100, 100 };
 //	static const CVec3 origin = { -150, 50, 50 };
 	CVec3 lightPosV;
@@ -215,6 +223,35 @@ void CMaterialViewer::Draw2D()
 	guard(CMaterialViewer::Draw2D);
 	CObjectViewer::Draw2D();
 
+	if (IsTexture && ShowChannels)
+	{
+		UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
+		Mat->SetMaterial();
+		int width, height;
+		GetWindowSize(width, height);
+		int w = min(width, height) / 2;
+		for (int i = 0; i < 4; i++)
+		{
+			int x0 =  (i       & 1) * w;
+			int y0 = ((i >> 1) & 1) * w;
+			static const CVec3 colors[4] =
+			{
+				{ 1, 1, 1 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 }	// normal, red, green, blue
+			};
+			glColor3fv(colors[i].v);
+			glBegin(GL_QUADS);
+			glTexCoord2f(0, 0);
+			glVertex2f(x0, y0);
+			glTexCoord2f(1, 0);
+			glVertex2f(x0+w, y0);
+			glTexCoord2f(1, 1);
+			glVertex2f(x0+w, y0+w);
+			glTexCoord2f(0, 1);
+			glVertex2f(x0, y0+w);
+			glEnd();
+		}
+	}
+
 	if (Object->IsA("BitmapMaterial"))
 	{
 		const UBitmapMaterial *Tex = static_cast<UBitmapMaterial*>(Object);
@@ -223,7 +260,8 @@ void CMaterialViewer::Draw2D()
 		DrawTextLeft(S_GREEN"Width  :"S_WHITE" %d\n"
 					 S_GREEN"Height :"S_WHITE" %d\n"
 					 S_GREEN"Format :"S_WHITE" %s",
-					 Tex->USize, Tex->VSize, fmt ? fmt : "???");
+					 Tex->USize, Tex->VSize,
+					 fmt ? fmt : "???");
 	}
 
 #if UNREAL3
@@ -236,7 +274,24 @@ void CMaterialViewer::Draw2D()
 					 S_GREEN"Height :"S_WHITE" %d\n"
 					 S_GREEN"Format :"S_WHITE" %s\n"
 					 S_GREEN"TFCName:"S_WHITE" %s",
-					 Tex->SizeX, Tex->SizeY, fmt ? fmt : "???", *Tex->TextureFileCacheName);
+					 Tex->SizeX, Tex->SizeY,
+					 fmt ? fmt : "???", *Tex->TextureFileCacheName);
+		// get first available mipmap
+		const FTexture2DMipMap *Mip = NULL;
+		for (int i = 0; i < Tex->Mips.Num(); i++)
+			if (Tex->Mips[i].Data.BulkData)
+			{
+				Mip = &Tex->Mips[i];
+				break;
+			}
+		int width = 0, height = 0;
+		if (Mip)
+		{
+			width  = Mip->SizeX;
+			height = Mip->SizeY;
+		}
+		if (width != Tex->SizeX || height != Tex->SizeY)
+			DrawTextLeft(S_RED"Stripped to %dx%d", width, height);
 	}
 #endif // UNREAL3
 
@@ -249,6 +304,12 @@ void CMaterialViewer::Draw2D()
 	unguard;
 }
 
+
+CMaterialViewer::CMaterialViewer(UUnrealMaterial *Material)
+:	CObjectViewer(Material)
+{
+	IsTexture = (Material->IsA("BitmapMaterial") || Material->IsA("Texture2D"));
+}
 
 CMaterialViewer::~CMaterialViewer()
 {

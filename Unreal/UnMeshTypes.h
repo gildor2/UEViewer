@@ -221,7 +221,6 @@ struct FQuatFloat32NoW
 	inline operator FQuat() const
 	{
 		FQuat r;
-		r.X = r.Y = r.Z = 0;
 
 		int _X = data >> 21;			// 11 bits
 		int _Y = (data >> 10) & 0x7FF;	// 11 bits
@@ -240,6 +239,8 @@ struct FQuatFloat32NoW
 		return Ar << Q.data;
 	}
 };
+
+SIMPLE_TYPE(FQuatFloat32NoW, unsigned)
 
 
 #if BATMAN
@@ -358,7 +359,7 @@ SIMPLE_TYPE(FQuatBioFixed48, word)
 #if TRANSFORMERS
 
 // mix of FQuatFixed48NoW and FQuatIntervalFixed32NoW
-struct FQuatIntervalFixed48NoW
+struct FQuatIntervalFixed48NoW_Trans
 {
 	word			X, Y, Z;
 
@@ -372,16 +373,16 @@ struct FQuatIntervalFixed48NoW
 		return r;
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, FQuatIntervalFixed48NoW &Q)
+	friend FArchive& operator<<(FArchive &Ar, FQuatIntervalFixed48NoW_Trans &Q)
 	{
 		return Ar << Q.X << Q.Y << Q.Z;
 	}
 };
 
-SIMPLE_TYPE(FQuatIntervalFixed48NoW, word)
+SIMPLE_TYPE(FQuatIntervalFixed48NoW_Trans, word)
 
 
-struct FPackedVectorTrans
+struct FPackedVector_Trans
 {
 	unsigned		Z:11, Y:10, X:11;
 
@@ -394,15 +395,92 @@ struct FPackedVectorTrans
 		return r;
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, FPackedVectorTrans &Q)
+	friend FArchive& operator<<(FArchive &Ar, FPackedVector_Trans &Q)
 	{
 		return Ar << GET_DWORD(Q);
 	}
 };
 
-SIMPLE_TYPE(FPackedVectorTrans, unsigned)
+SIMPLE_TYPE(FPackedVector_Trans, unsigned)
 
 #endif // TRANSFORMERS
+
+
+#if ARGONAUTS
+
+// mix of FQuatFixed48NoW and FQuatIntervalFixed32NoW
+struct FQuatIntervalFixed48NoW_Argo
+{
+	word			X, Y, Z;
+
+	FQuat ToQuat(const FVector &Mins, const FVector &Ranges) const
+	{
+		FQuat r;
+		r.X = X / 65535.0f * Ranges.X + Mins.X;
+		r.Y = Y / 65535.0f * Ranges.Y + Mins.Y;
+		r.Z = Z / 65535.0f * Ranges.Z + Mins.Z;
+		RESTORE_QUAT_W(r);
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatIntervalFixed48NoW_Argo &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z;
+	}
+};
+
+SIMPLE_TYPE(FQuatIntervalFixed48NoW_Argo, word)
+
+
+struct FQuatFixed64NoW_Argo
+{
+	uint64			V;
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+		r.X =  int(V >> 43)             * (1.0f / 0x0FFFFF) - 1.0f;	// upper 64-43=21 bits
+		r.Y = (int(V >> 22) & 0x1FFFFF) * (1.0f / 0x0FFFFF) - 1.0f;	// mid 64-21-22=21 bits
+		r.Z =  int(V        & 0x3FFFFF) * (1.0f / 0x1FFFFF) - 1.0f;	// lower 22 bits
+		RESTORE_QUAT_W(r);
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatFixed64NoW_Argo &Q)
+	{
+		return Ar << Q.V;
+	}
+};
+
+SIMPLE_TYPE(FQuatFixed64NoW_Argo, int64)
+
+
+struct FQuatFloat48NoW_Argo
+{
+	word			X, Y, Z;
+
+	inline operator FQuat() const
+	{
+		FQuat r;
+
+		*(unsigned*)&r.X = ((((X >> 10) & 0x1F) + 111) << 23) | ((X & 0x3FF | 8 * (X & 0x8000)) << 13);
+		*(unsigned*)&r.Y = ((((Y >> 10) & 0x1F) + 111) << 23) | ((Y & 0x3FF | 8 * (Y & 0x8000)) << 13);
+		*(unsigned*)&r.Z = ((((Z >> 10) & 0x1F) + 111) << 23) | ((Z & 0x3FF | 8 * (Z & 0x8000)) << 13);
+
+		RESTORE_QUAT_W(r);
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatFloat48NoW_Argo &Q)
+	{
+		return Ar << Q.X << Q.Y << Q.Z;
+	}
+};
+
+SIMPLE_TYPE(FQuatFloat48NoW_Argo, word)
+
+
+#endif // ARGONAUTS
 
 
 #if BORDERLANDS

@@ -562,7 +562,7 @@ public:
 #if RENDERING
 	virtual void Bind();
 	virtual void GetParams(CMaterialParams &Params) const;
-	virtual void SetupGL(unsigned PolyFlags);
+	virtual void SetupGL();
 	virtual void Release();
 	virtual bool IsTranslucent() const;
 #endif // RENDERING
@@ -711,7 +711,7 @@ public:
 #endif
 
 #if RENDERING
-	virtual void SetupGL(unsigned PolyFlags);
+	virtual void SetupGL();
 	virtual bool IsTranslucent() const;
 	virtual void GetParams(CMaterialParams &Params) const;
 #endif
@@ -729,7 +729,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void SetupGL(unsigned PolyFlags);
+	virtual void SetupGL();
 	virtual bool IsTranslucent() const
 	{
 		return Material ? Material->IsTranslucent() : false;
@@ -807,7 +807,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void SetupGL(unsigned PolyFlags);
+	virtual void SetupGL();
 	virtual bool IsTranslucent() const;
 #endif
 };
@@ -1240,7 +1240,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void SetupGL(unsigned PolyFlags);
+	virtual void SetupGL();
 	virtual bool IsTranslucent() const;
 	virtual void GetParams(CMaterialParams &Params) const;
 #endif

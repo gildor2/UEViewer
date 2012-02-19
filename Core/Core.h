@@ -82,6 +82,7 @@ template<>    struct CompileTimeError<true> {};
 #	pragma inline_depth(8)
 #	define WIN32_USE_SEH	1
 typedef __int64				int64;
+typedef unsigned __int64	uint64;
 #elif __GNUC__
 #	define NORETURN			__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
@@ -99,6 +100,7 @@ typedef __int64				int64;
 #	undef VSTIDIO_INTEGRATION
 #	undef WIN32_USE_SEH
 typedef signed long long	int64;
+typedef unsigned long long	uint64;
 #else
 #	error "Unsupported compiler"
 #endif

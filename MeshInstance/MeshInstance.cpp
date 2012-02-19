@@ -6,14 +6,14 @@
 #include "MeshInstance.h"
 
 
-void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index, int PolyFlags)
+void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index)
 {
 	guard(CMeshInstance::SetMaterial);
 	if (!bColorMaterials)
 	{
 		glColor3f(1, 1, 1);
 		if (Mat)
-			Mat->SetMaterial(PolyFlags);
+			Mat->SetMaterial();
 		else
 			BindDefaultMaterial();
 	}

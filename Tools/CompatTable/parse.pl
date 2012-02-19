@@ -2,8 +2,11 @@
 
 
 $embed_css = 1;
+$debug_js = 0;
 $OUT = "table.html";
 
+$JsLog = "opera.postError";				# Opera
+#$JsLog = "console.log";					# IE
 
 #------------------------------------------------------------------------------
 #	Line parser
@@ -75,28 +78,65 @@ sub styleSheet {
 	if (!$embed_css) {
 		print OUT "<link href=\"$file\" rel=\"stylesheet\" type=\"text/css\" />\n";
 	} else {
-		open(IN, $file) or die "Unable to read file $file\n";
 		print OUT <<EOF
 <style type="text/css">
 <!--
 EOF
 ;
+		open(IN, $file) or die "Unable to read file $file\n";
 		while (my $line = <IN>) {
 			print OUT $line;
 		}
+		close(IN);
 		print OUT <<EOF
 -->
 </style>
 
 EOF
 ;
-		close(IN);
 	}
 }
 
+
+sub tableSearch {
+	print OUT <<EOF
+<script type="text/javascript">
+EOF
+;
+	my ($file) = $_[0];
+	open(IN, $file) or die "Unable to read file $file\n";
+	while (my $line = <IN>) {
+		if ($debug_js) {
+			$line =~ s/DEBUG/$JsLog/g;
+		} else {
+			# remove debugging stuff
+			$line =~ s/DEBUG\(.*\);//g;
+			$line =~ s/(\s*\/\/.*)$//;
+#			$line =~ s/\s+/ /;
+			next if $line =~ /^\s*$/;
+		}
+		print OUT $line;
+	}
+	close(IN);
+	print OUT <<EOF
+</script>
+
+<div style="width:736px;">
+  <div class="filter_container">
+    <form>
+      <b>FILTER</b> <input name="filt" onkeyup="filter(this, 'compat_table', '1')" type="text" class="filter">
+    </form>
+    <p />
+  </div>
+</div>
+EOF
+;
+}
+
+
 sub tableHeader {
 	print OUT <<EOF
-<table width="736" border="1" align="left" class="config">
+<table id="compat_table" width="736" border="1" align="left" class="config">
   <tr>
     <td width="35"  class="detailbold">Year</td>
     <td width="301" class="detailbold"><div align="left">Title</div></td>
@@ -121,8 +161,8 @@ sub tableFooter {
       <tr>
         <td style="border-style: none; font-size: 8px;"><div align="left">
           <p><span class="detailbold">Year:</span> <span class="detailtxt">By clicking on the year for an entry, it will take you to the thread on the form that talks about this game.</span></p>
-          <p><span class="detailbold">Title:</span> <span class="detailtxt">By clicking on the title of a game, it will take you to the Wikipedia information for that game. If the Wikipedia does not exist it will take you to their website or other press release.</span></p>
-          <p><span class="detailbold">Developer:</span> <span class="detailtxt">By clicking on Developer for an entry it will take you to the Wikipedia information for that developer. If the Wikipedia does not exist it will take you to their website or other press other related information.</span></p>
+          <p><span class="detailbold">Title:</span> <span class="detailtxt">By clicking on the title of a game, it will take you to the Wikipedia information for that game. If the Wikipedia page does not exist it will take you to their website or other press release.</span></p>
+          <p><span class="detailbold">Developer:</span> <span class="detailtxt">By clicking on Developer for an entry it will take you to the Wikipedia information for that developer. If the Wikipedia page does not exist it will take you to their website or other related information.</span></p>
         </div></td>
       </tr>
     </table></td>
@@ -295,6 +335,7 @@ readCompanies("developers.ini");
 
 open(OUT, ">$OUT") or die "Unable to create file $OUT\n";
 styleSheet("style.css");
+tableSearch("filter.js");
 tableHeader();
 
 process("table.ini");

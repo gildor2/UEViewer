@@ -78,8 +78,8 @@ void CStatMeshInstance::Draw()
 #else
 		int MaterialIndex = i;
 #endif
-		const CStaticMeshSection &Sec = Mesh.Sections[MaterialIndex];
-		SetMaterial(Sec.Material, MaterialIndex, 0);
+		const CMeshSection &Sec = Mesh.Sections[MaterialIndex];
+		SetMaterial(Sec.Material, MaterialIndex);
 
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;

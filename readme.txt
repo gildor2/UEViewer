@@ -129,6 +129,30 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+17.02.2012
+- implemented Batman: Arkham City animation support
+
+13.02.2012
+- added option "-obj=<object>" to specify any number of objects to load
+- added option "-anim=<object>" to specify AnimSet which will be automatically attached to
+  SkeletalMesh
+
+07.02.2012
+- eliminated -pskx option requirement - extra UV sets are stored in standard ActorX 2010 format
+
+31.01.2012
+- displaying real (cooked) texture size in material viewer
+
+30.01.2012
+- umodel will try to find cooked resources in startup packages with non-standard name
+  (not "startup_int.xxx" etc) which are specified using "-pkg=..." option
+
+25.01.2012
+- implemented Brothers in Arms: Hell's Highway animation support
+
+24.01.2012
+- implemented Rise of the Argonauts and Thor: God of Thunder animation support
+
 19.01.2012
 - implemented Batman: Arkham City support (everything but animations)
 

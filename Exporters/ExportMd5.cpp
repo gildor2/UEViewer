@@ -184,7 +184,7 @@ if (i == 32 || i == 34)
 	// - "surcace vertex" is a vertex from the mesh stripped to only one (current) section
 	for (int m = 0; m < Lod.Sections.Num(); m++)
 	{
-		const CSkelMeshSection &Sec = Lod.Sections[m];
+		const CMeshSection &Sec = Lod.Sections[m];
 
 		TArray<int>  MeshVerts;					// surface vertex -> mesh vertex
 		TArray<int>  BackWedge;					// mesh vertex -> surface vertex

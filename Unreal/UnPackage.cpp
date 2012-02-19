@@ -818,6 +818,29 @@ bool UnPackage::CompareObjectPaths(int PackageIndex, UnPackage *RefPackage, int 
 }
 
 
+int UnPackage::FindExportForImport(const char *ObjectName, const char *ClassName, UnPackage *ImporterPackage, int ImporterIndex)
+{
+	guard(FindExportForImport);
+
+	int ObjIndex = -1;
+	while (true)
+	{
+		// iterate all objects with the same name and class
+		ObjIndex = FindExport(ObjectName, ClassName, ObjIndex + 1);
+		if (ObjIndex == INDEX_NONE)
+			break;				// not found
+		// a few objects in package could have the same name and class but resides in different groups,
+		// so compare full object paths for sure
+		if (CompareObjectPaths(ObjIndex+1, ImporterPackage, -1-ImporterIndex))
+			return ObjIndex;	// found
+	}
+
+	return INDEX_NONE;			// not found
+
+	unguard;
+}
+
+
 UObject* UnPackage::CreateExport(int index)
 {
 	guard(UnPackage::CreateExport);
@@ -850,7 +873,7 @@ UObject* UnPackage::CreateExport(int index)
 			const FObjectExport &Exp2 = GetExport(PackageIndex);
 			assert(Exp2.ExportFlags & EF_ForcedExport);
 			const char *PackageName = Exp2.ObjectName;
-			appPrintf("Forced export: %s'%s.%s'\n", ClassName, PackageName, *Exp.ObjectName);
+			appPrintf("Forced export (%s): %s'%s.%s'\n", Name, ClassName, PackageName, *Exp.ObjectName);
 		}
 	}
 #endif // UNREAL3
@@ -880,36 +903,57 @@ UObject* UnPackage::CreateImport(int index)
 	// load package
 	const char *PackageName = GetObjectPackageName(Imp.PackageIndex);
 	UnPackage *Package = LoadPackage(PackageName);
+	int ObjIndex = INDEX_NONE;
 
-	bool isStartupPackage = false;
+	if (Package)
+	{
+		// has package with exactly this name - so this is either UE < 3 or non-cooked UE3 export
+		ObjIndex = Package->FindExportForImport(Imp.ObjectName, Imp.ClassName, this, index);
+		if (ObjIndex == INDEX_NONE)
+		{
+			appPrintf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
+			return NULL;
+		}
+	}
 #if UNREAL3
 	// try to find import in startup package
-	if (!Package && Engine() >= GAME_UE3)
+	else if (Engine() >= GAME_UE3)
 	{
+		// check startup package
 		Package = LoadPackage(GStartupPackage);
-		isStartupPackage = true;
+		if (Package)
+			ObjIndex = Package->FindExportForImport(Imp.ObjectName, Imp.ClassName, this, index);
+		if (ObjIndex == INDEX_NONE)
+		{
+			// look in other loaded packages
+			UnPackage *SkipPackage = Package;	// Package = either startup package or NULL
+			for (int i = 0; i < PackageMap.Num(); i++)
+			{
+				Package = PackageMap[i];
+				appPrintf("check for %s in %s\n", *Imp.ObjectName, Package->Name);
+				if (Package == this || Package == SkipPackage)
+					continue;		// already checked
+				ObjIndex = Package->FindExportForImport(Imp.ObjectName, Imp.ClassName, this, index);
+				if (ObjIndex != INDEX_NONE)
+					break;			// found
+			}
+		}
+		if (ObjIndex == INDEX_NONE)
+		{
+			appPrintf("WARNING: Import(%s.%s) was not found\n", PackageName, *Imp.ObjectName);
+			return NULL;
+		}
 	}
 #endif // UNREAL3
 
+	// at this point we have either Package == NULL (not found) or Package != NULL and ObjIndex is valid
+
 	if (!Package)
 	{
-//		appPrintf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
+		appPrintf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
 		return NULL;
 	}
-	// find object in loaded package export table
-	int ObjIndex = -1;
-	while (true)
-	{
-		ObjIndex = Package->FindExport(Imp.ObjectName, Imp.ClassName, ObjIndex + 1);
-		if (ObjIndex == INDEX_NONE) break;		// not found
-		if (Package->CompareObjectPaths(ObjIndex+1, this, -1-index)) break;	// found
-	}
-	if (ObjIndex == INDEX_NONE)
-	{
-		if (!isStartupPackage)
-			appPrintf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
-		return NULL;
-	}
+
 	// create object
 	return Package->CreateExport(ObjIndex);
 
@@ -1074,7 +1118,9 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 		return new UnPackage(info->RelativeName, appCreateFileReader(info));
 	}
 	// package is missing
-	appPrintf("WARNING: package %s was not found\n", Name);
+	// do not print any warnings: missing package is a normal situation in UE3 cooked builds, so print warnings
+	// when needed at upper level
+//	appPrintf("WARNING: package %s was not found\n", Name);
 	MissingPackages.AddItem(strdup(Name));
 	return NULL;
 

@@ -39,6 +39,7 @@
 			return StaticGetTypeinfo();			\
 		}
 
+// structure derived from another structure with typeinfo
 #define DECLARE_STRUCT2(Class,Base)				\
 		DECLARE_BASE(Class, Base)				\
 		const CTypeInfo *GetTypeinfo() const	\

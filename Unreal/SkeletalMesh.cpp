@@ -5,6 +5,119 @@
 
 
 /*-----------------------------------------------------------------------------
+	CSkeletalMesh
+-----------------------------------------------------------------------------*/
+
+struct CBoneProxy
+{
+	CBoneProxy		*Parent;
+	CSkelMeshBone	*Bone;
+
+/*	bool IsChildOf(const CBoneProxy *Other) const
+	{
+		if (Other == this) return false;
+
+		int i = 0;
+		for (const CBoneProxy *Bone = Parent; Bone; Bone = Bone->Parent)
+		{
+			if (Bone == Other) return true;
+			if (++i >= MAX_MESHBONES) appError("Loop in skeleton");
+		}
+		return false;
+	} */
+};
+
+
+static CBoneProxy Bones[MAX_MESHBONES];		//!! rename or pass to SortBones()
+static CBoneProxy *SortedBones[MAX_MESHBONES];
+static int NumSortedBones;
+
+static void SortBoneArray(CBoneProxy *Parent, int NumBones)
+{
+	for (int i = 0; i < NumBones; i++)
+	{
+		CBoneProxy *Bone = &Bones[i];
+		if (Bone->Parent == Parent)
+		{
+			if (NumSortedBones >= NumBones) appError("Loop in skeleton");
+			SortedBones[NumSortedBones++] = Bone;
+			SortBoneArray(Bone, NumBones);
+		}
+	}
+}
+
+
+void CSkeletalMesh::SortBones()
+{
+	int NumBones = RefSkeleton.Num();
+	int i;
+
+	// prepare CBoneProxy array
+	for (i = 0; i < NumBones; i++)
+	{
+		Bones[i].Bone   = &RefSkeleton[i];
+		Bones[i].Parent = (i > 0) ? &Bones[RefSkeleton[i].ParentIndex] : NULL;
+		SortedBones[i]  = &Bones[i];
+	}
+
+	// sort bones
+	NumSortedBones = 1;
+	SortedBones[0] = &Bones[0];
+	SortBoneArray(&Bones[0], NumBones);
+
+	// build remap table
+	int Remap[MAX_MESHBONES];
+	int RemapBack[MAX_MESHBONES];
+	for (i = 0; i < NumBones; i++)
+	{
+		const CBoneProxy *P = SortedBones[i];
+		int OldIndex = P - Bones;
+		Remap[OldIndex] = i;
+		RemapBack[i] = OldIndex;
+//		appPrintf("%s[%d] -> [%d] %s <- %s\n", (i != OldIndex) ? "*" : "", i, OldIndex, *P->Bone->Name, P->Parent ? *P->Parent->Bone->Name : "None");
+	}
+
+	// build new RefSkeleton
+	TArray<CSkelMeshBone> NewSkeleton;
+	NewSkeleton.Empty(NumBones);
+	for (i = 0; i < NumBones; i++)
+	{
+		CSkelMeshBone *Bone = new (NewSkeleton) CSkelMeshBone;
+		*Bone = RefSkeleton[RemapBack[i]];
+		Bone->ParentIndex = Remap[Bone->ParentIndex];
+	}
+	CopyArray(RefSkeleton, NewSkeleton);
+
+	// remap bone influences
+	for (int lod = 0; lod < Lods.Num(); lod++)
+	{
+		CSkelMeshLod &L = Lods[lod];
+		CSkelMeshVertex *V = L.Verts;
+		for (i = 0; i < L.NumVerts; i++, V++)
+		{
+			for (int j = 0; j < NUM_INFLUENCES; j++)
+			{
+				int Bone = V->Bone[j];
+				if (Bone < 0) break;
+				V->Bone[j] = Remap[Bone];
+			}
+		}
+	}
+}
+
+
+int CSkeletalMesh::FindBone(const char *Name) const
+{
+	for (int i = 0; i < RefSkeleton.Num(); i++)
+	{
+		if (!stricmp(RefSkeleton[i].Name, Name))
+			return i;
+	}
+	return -1;
+}
+
+
+/*-----------------------------------------------------------------------------
 	CAnimSet
 -----------------------------------------------------------------------------*/
 
@@ -191,4 +304,14 @@ void CAnimTrack::GetBonePosition(float Frame, float NumFrames, bool Loop, CVec3 
 		DstQuat = KeyQuat[rotX];
 
 	unguard;
+}
+
+
+void CAnimTrack::CopyFrom(const CAnimTrack &Src)
+{
+	CopyArray(KeyQuat, Src.KeyQuat);
+	CopyArray(KeyPos,  Src.KeyPos );
+	CopyArray(KeyTime, Src.KeyTime);
+	CopyArray(KeyQuatTime, Src.KeyQuatTime);
+	CopyArray(KeyPosTime,  Src.KeyPosTime );
 }

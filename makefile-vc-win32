@@ -46,6 +46,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnMesh1.obj \
 	$(OUT_1)/UnMesh2.obj \
 	$(OUT_1)/UnMesh3.obj \
+	$(OUT_1)/UnMeshBatman.obj \
 	$(OUT_1)/UnMeshBioshock.obj \
 	$(OUT_1)/UnMeshRune.obj \
 	$(OUT_1)/UnObject.obj \
@@ -500,6 +501,9 @@ DEPENDS = \
 
 $(OUT_1)/UnAnim3.obj : Unreal/UnAnim3.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim3.obj" Unreal/UnAnim3.cpp
+
+$(OUT_1)/UnMeshBatman.obj : Unreal/UnMeshBatman.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMeshBatman.obj" Unreal/UnMeshBatman.cpp
 
 DEPENDS = \
 	Build.h \

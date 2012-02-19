@@ -28,6 +28,8 @@ UAnimSet::~UAnimSet()
 static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int NumFrames)
 {
 	guard(ReadTimeArray);
+
+	Times.Empty(NumKeys);
 	if (NumKeys <= 1) return;
 
 //	appPrintf("  pos=%4X keys (max=%X)[ ", Ar.Tell(), NumFrames);
@@ -60,6 +62,34 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 
 	unguard;
 }
+
+
+#if ARGONAUTS
+
+static void ReadArgonautsTimeArray(const TArray<unsigned> &SourceArray, int FirstKey, int NumKeys, TArray<float> &Times, float TimeScale)
+{
+	guard(ReadArgonautsTimeArray);
+
+	Times.Empty(NumKeys);
+	if (NumKeys <= 1) return;
+
+	TimeScale /= 65535.0f;			// 0 -> 0.0f, 65535 -> track length
+
+	for (int i = 0; i < NumKeys; i++)
+	{
+		int index = FirstKey + i;
+		unsigned v = SourceArray[index / 2];
+		if (!(index & 1))
+			v &= 0xFFFF;			// low word
+		else
+			v >>= 16;				// high word
+		Times.AddItem(v * TimeScale);
+	}
+
+	unguard;
+}
+
+#endif // ARGONAUTS
 
 
 #if TRANSFORMERS
@@ -190,6 +220,17 @@ void UAnimSet::ConvertAnims()
 			continue;
 		}
 #endif // MASSEFF
+#if BATMAN
+		if (Package->Game == GAME_Batman2 && Seq->AnimZip_Data.Num())
+		{
+			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
+			Dst->Name      = Seq->SequenceName;
+			Dst->NumFrames = Seq->NumFrames;
+			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
+			Seq->DecodeBatman2Anims(Dst, this);
+			continue;
+		}
+#endif // BATMAN
 		// some checks
 		int offsetsPerBone = 4;
 		if (Seq->KeyEncodingFormat == AKF_PerTrackCompression)
@@ -283,7 +324,9 @@ void UAnimSet::ConvertAnims()
 					}							\
 					break;
 
+			//----------------------------------------------
 			// decode AKF_PerTrackCompression data
+			//----------------------------------------------
 			if (Seq->KeyEncodingFormat == AKF_PerTrackCompression)
 			{
 				// this format uses different key storage
@@ -320,7 +363,6 @@ void UAnimSet::ConvertAnims()
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
 					A->KeyPos.Empty(NumKeys);
-					if (HasTimeTracks) A->KeyPosTime.Empty(NumKeys);
 #if DEBUG_DECOMPRESS
 					appPrintf("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
@@ -403,7 +445,6 @@ void UAnimSet::ConvertAnims()
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
 					A->KeyQuat.Empty(NumKeys);
-					if (HasTimeTracks) A->KeyQuatTime.Empty(NumKeys);
 #if DEBUG_DECOMPRESS
 					appPrintf("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
@@ -464,7 +505,9 @@ void UAnimSet::ConvertAnims()
 				// end of AKF_PerTrackCompression block ...
 			}
 
-			// non-AKF_PerTrackCompression block
+			//----------------------------------------------
+			// end of AKF_PerTrackCompression decoder
+			//----------------------------------------------
 
 			// read animations
 			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
@@ -483,11 +526,6 @@ void UAnimSet::ConvertAnims()
 
 			A->KeyPos.Empty(TransKeys);
 			A->KeyQuat.Empty(RotKeys);
-			if (HasTimeTracks)
-			{
-				A->KeyPosTime.Empty(TransKeys);
-				A->KeyQuatTime.Empty(RotKeys);
-			}
 
 			// read translation keys
 			if (TransKeys)
@@ -503,8 +541,12 @@ void UAnimSet::ConvertAnims()
 #endif // FIND_HOLES
 				Reader.Seek(TransOffset);
 				AnimationCompressionFormat TranslationCompressionFormat = Seq->TranslationCompressionFormat;
+#if ARGONAUTS
+				if (Package->Game == GAME_Argonauts) goto do_not_override_trans_format;
+#endif
 				if (TransKeys == 1)
 					TranslationCompressionFormat = ACF_None;	// single key is stored without compression
+			do_not_override_trans_format:
 				// read mins/ranges
 				if (TranslationCompressionFormat == ACF_IntervalFixed32NoW)
 				{
@@ -531,7 +573,7 @@ void UAnimSet::ConvertAnims()
 //						appPrintf("  trans: %g %g %g -- %g %g %g\n", FVECTOR_ARG(Offset), FVECTOR_ARG(Scale));
 						for (k = 0; k < TransKeys; k++)
 						{
-							FPackedVectorTrans pos;
+							FPackedVector_Trans pos;
 							Reader << pos;
 							FVector pos2 = pos.ToVector(Offset, Scale); // convert
 							A->KeyPos.AddItem(CVT(pos2));
@@ -570,6 +612,19 @@ void UAnimSet::ConvertAnims()
 						}
 						break;
 #endif // BORDERLANDS
+#if ARGONAUTS
+					case ATCF_Float16:
+						{
+							word x, y, z;
+							Reader << x << y << z;
+							FVector v;
+							v.X = half2float(x) / 2;	// Argonauts has "half" with biased exponent, so fix it with division by 2
+							v.Y = half2float(y) / 2;
+							v.Z = half2float(z) / 2;
+							A->KeyPos.AddItem(CVT(v));
+						}
+						break;
+#endif // ARGONAUTS
 					default:
 						appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
 					}
@@ -667,18 +722,35 @@ void UAnimSet::ConvertAnims()
 					}
 					break;
 #endif // BORDERLANDS
-#if TRANSFORMERS
+#if TRANSFORMERS || ARGONAUTS
 				case ACF_IntervalFixed48NoW:
+	#if TRANSFORMERS
+					if (Package->Game == GAME_Transformers)
 					{
-						FQuatIntervalFixed48NoW q;
+						FQuatIntervalFixed48NoW_Trans q;
 						FQuat q2;
 						Reader << q;
 						q2 = q.ToQuat(Mins, Ranges);
 						q2 = TransModifyQuat(q2, TransQuatMod);
 						A->KeyQuat.AddItem(CVT(q2));
 					}
+	#endif
+	#if ARGONAUTS
+					if (Package->Game == GAME_Argonauts)
+					{
+						FQuatIntervalFixed48NoW_Argo q;
+						FQuat q2;
+						Reader << q;
+						q2 = q.ToQuat(Mins, Ranges);
+						A->KeyQuat.AddItem(CVT(q2));
+					}
+	#endif // ARGONAUTS
 					break;
-#endif // TRANSFORMERS
+#endif // TRANSFORMERS || ARGONAUTS
+#if ARGONAUTS
+				TR (ACF_Fixed64NoW, FQuatFixed64NoW_Argo)
+				TR (ACF_Float48NoW, FQuatFloat48NoW_Argo)
+#endif // ARGONAUTS
 				default:
 					appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
 				}
@@ -698,6 +770,15 @@ void UAnimSet::ConvertAnims()
 				Reader.Seek(Align(Reader.Tell(), 4));
 			}
 #endif // TLR
+
+#if ARGONAUTS
+			if (Package->Game == GAME_Argonauts && Seq->CompressedTrackTimeOffsets.Num())
+			{
+				// convert time tracks
+				ReadArgonautsTimeArray(Seq->CompressedTrackTimes, Seq->CompressedTrackTimeOffsets[j*2  ], TransKeys, A->KeyPosTime,  Seq->NumFrames);
+				ReadArgonautsTimeArray(Seq->CompressedTrackTimes, Seq->CompressedTrackTimeOffsets[j*2+1], RotKeys,   A->KeyQuatTime, Seq->NumFrames);
+			}
+#endif // ARGONAUTS
 
 #if DEBUG_DECOMPRESS
 //			appPrintf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],

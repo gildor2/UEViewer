@@ -60,7 +60,7 @@ platform specification:
 		Should specify either "TARGET" or "PLATFORM"+"COMPILER"
 
 global:
-	CPP_EXCEPT	= 1 == undef | 0		when 0 -- C++ exceptions system disabled
+	CPP_EXCEPT	= 1 == undef | 0		0 = disable C++ exceptions
 	MAPFILES	= 1 | 0 == undef
 	PDB			= 1 | 2 | 0 == undef	1 = link-level, 2 = compile-level, 0 = off (VisualC only)
 	STDLIBS		= list of used libraries (for "GNU Make" will append "lib" and will search in paths)
@@ -89,7 +89,7 @@ at a time of registration of source files
 4. Commands:
 	sources(NAME) = source files		add source files to list <NAME> with flags DEFINES,INCLUDES,OBJDIR;
 										all items separated with spaces; item may be a wildcard
-	target(type, outfile, NAME[, sym])	build target with type=={executable,dynamic (dll,so), static (lib,a)}
+	target(type, outfile, NAME[, sym])	build target with type == {executable (exe), dynamic (dll/so), static (lib/a)}
 										from objects, specified in list sources(NAME); NAME may contain multiple source lists
 										separated with "+" (spaces are allowed); if sym specified, will be added symbolic
 										name for a target; may specify a few symbolic targets, separated with spaces

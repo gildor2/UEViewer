@@ -34,7 +34,7 @@ public:
 	virtual ~CMeshInstance()
 	{}
 
-	void SetMaterial(UUnrealMaterial *Mat, int Index, int PolyFlags);
+	void SetMaterial(UUnrealMaterial *Mat, int Index);
 	virtual void Draw() = 0;
 };
 
@@ -43,7 +43,7 @@ public:
 	CVertMeshInstance class
 -----------------------------------------------------------------------------*/
 
-struct CVertMeshSection;
+struct CMeshSection;
 
 class CVertMeshInstance : public CMeshInstance
 {
@@ -96,7 +96,7 @@ protected:
 	bool					AnimLooped;
 
 	// data for rendering
-	TArray<CVertMeshSection> Sections;
+	TArray<CMeshSection>	Sections;
 	CVec3					*Verts;				// deformed mesh, used in Draw() only
 	CVec3					*Normals;
 	word					*Indices;			// index buffer

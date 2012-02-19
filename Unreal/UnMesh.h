@@ -20,6 +20,7 @@ float half2float(word h);
 class CSkeletalMesh;
 struct CSkelMeshLod;
 class CAnimSet;
+struct CAnimSequence;
 class CStaticMesh;
 
 

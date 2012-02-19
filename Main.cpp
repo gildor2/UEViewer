@@ -147,6 +147,8 @@ inline bool ObjectSupported(UObject *Obj)
 
 #endif // RENDERING
 
+
+// index of the current object in UObject::GObjObjects array
 static int ObjIndex = 0;
 
 
@@ -401,6 +403,7 @@ static const GameInfo games[] = {
 #	endif
 #	if BORDERLANDS
 		G("Borderlands", border, GAME_Borderlands),
+		G("Brothers in Arms: Hell's Highway", border, GAME_Borderlands),
 #	endif
 #	if DARKVOID
 		G("Dark Void", darkv, GAME_DarkVoid),
@@ -460,6 +463,10 @@ static const GameInfo games[] = {
 #	endif
 #	if SHADOWS_DAMNED
 		G("Shadows of the Damned", shad, GAME_ShadowsDamned),
+#	endif
+#	if ARGONAUTS
+		G("Rise of the Argonauts", argo, GAME_Argonauts),
+		G("Thor: God of Thunder",  argo, GAME_Argonauts),
 #	endif
 #endif // UNREAL3
 };
@@ -580,6 +587,7 @@ static void Usage()
 			"                    program will search for packages in current directory\n"
 			"    -game=tag       override game autodetection (see -taglist for variants)\n"
 			"    -pkg=package    load extra package (in addition to <package>)\n"
+			"    -obj=object     specify object(s) to load\n"
 			"\n"
 			"Compatibility options:\n"
 			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
@@ -598,6 +606,7 @@ static void Usage()
 			"Viewer options:\n"
 			"    -meshes         view meshes only\n"
 			"    -materials      view materials only (excluding textures)\n"
+			"    -anim=<set>     specify AnimSet to automatically attach to mesh\n"
  			"\n"
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
@@ -605,7 +614,7 @@ static void Usage()
 			"    -uncook         use original package name as a base export directory\n"
 			"    -groups         use group names instead of class names for directories\n"
 			"    -uc             create unreal script when possible\n"
-			"    -pskx           use pskx format for skeletal mesh\n"
+//!!			"    -pskx           use pskx format for skeletal mesh\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -lods           export all available mesh LOD levels\n"
 			"    -dds            export textures in DDS format whenever possible\n"
@@ -689,8 +698,9 @@ int main(int argc, char **argv)
 	static byte mainCmd = CMD_View;
 	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
 		 noTex = false, regSounds = false, reg3rdparty = false, hasRootDir = false;
-	TArray<const char*> extraPackages;
+	TArray<const char*> extraPackages, objectsToLoad;
 	TArray<const char*> params;
+	const char *attachAnimName = NULL;
 	for (int arg = 1; arg < argc; arg++)
 	{
 		const char *opt = argv[arg];
@@ -721,7 +731,7 @@ int main(int argc, char **argv)
 			OPT_BOOL ("all",     exprtAll)
 			OPT_BOOL ("uncook",  GUncook)
 			OPT_BOOL ("groups",  GUseGroups)
-			OPT_BOOL ("pskx",    GExportPskx)
+			OPT_BOOL ("pskx",    GExportPskx)	//!! remove later
 			OPT_BOOL ("md5",     md5)
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
@@ -775,10 +785,21 @@ int main(int argc, char **argv)
 			const char *pkg = opt+4;
 			extraPackages.AddItem(pkg);
 		}
+		else if (!strnicmp(opt, "obj=", 4))
+		{
+			const char *obj = opt+4;
+			objectsToLoad.AddItem(obj);
+		}
+		else if (!strnicmp(opt, "anim=", 5))
+		{
+			const char *obj = opt+5;
+			objectsToLoad.AddItem(obj);
+			attachAnimName = obj;
+		}
 		else
 		{
 			appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);
-			Usage();
+			goto bad_params;
 		}
 	}
 
@@ -792,12 +813,14 @@ int main(int argc, char **argv)
 	{
 	bad_pkg_name:
 		appPrintf("COMMAND LINE ERROR: package name is not specified\n");
-		Usage();
+	bad_params:
+		appPrintf("Use \"umodel\" without arguments to show command line help\n");;
+		exit(1);
 	}
 	if (params.Num() > 3)
 	{
 		appPrintf("COMMAND LINE ERROR: too much arguments\n");
-		Usage();
+		goto bad_params;
 	}
 
 	const char *argPkgName   = params[0];
@@ -805,6 +828,12 @@ int main(int argc, char **argv)
 	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
 
 	if (!argPkgName) goto bad_pkg_name;
+
+	if (argObjName)
+	{
+		objectsToLoad.Insert(0);
+		objectsToLoad[0] = argObjName;
+	}
 
 	// load the package
 
@@ -814,8 +843,7 @@ int main(int argc, char **argv)
 
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);
-	// load package
-	UnPackage *Package;
+	// setup root directory
 	if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
 	{
 		// has path in filename
@@ -827,12 +855,15 @@ int main(int argc, char **argv)
 		if (!hasRootDir) appSetRootDirectory(".");		// scan for packages
 	}
 
-	Package = UnPackage::LoadPackage(argPkgName);
-	if (!Package)
+	// load main package
+	UnPackage *MainPackage = UnPackage::LoadPackage(argPkgName);
+	if (!MainPackage)
 	{
 		appPrintf("ERROR: unable to find/load package %s\n", argPkgName);
 		exit(1);
 	}
+
+	// initialization
 
 	// register exporters
 	if (!md5)
@@ -870,7 +901,7 @@ int main(int argc, char **argv)
 	// prepare classes
 	// note: we are registering classes after loading package: in this case we can know engine version (1/2/3)
 	RegisterCommonUnrealClasses();
-	if (Package->Game < GAME_UE3)
+	if (MainPackage->Game < GAME_UE3)
 		RegisterUnrealClasses2();
 	else
 		RegisterUnrealClasses3();
@@ -893,6 +924,8 @@ int main(int argc, char **argv)
 	if (noStat) UnregisterClass("StaticMesh",     true);
 	if (noTex)  UnregisterClass("UnrealMaterial", true);
 
+	// end of initialization
+
 	if (mainCmd == CMD_PkgInfo)
 		return 0;
 
@@ -900,93 +933,101 @@ int main(int argc, char **argv)
 	{
 		guard(List);
 		// dump package exports table
-		for (int i = 0; i < Package->Summary.ExportCount; i++)
+		for (int i = 0; i < MainPackage->Summary.ExportCount; i++)
 		{
-			const FObjectExport &Exp = Package->ExportTable[i];
-			appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			const FObjectExport &Exp = MainPackage->ExportTable[i];
+			appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, MainPackage->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
 		}
 		unguard;
 		return 0;
 	}
 
 #if BIOSHOCK
-	if (Package->Game == GAME_Bioshock)
+	if (MainPackage->Game == GAME_Bioshock)
 	{
 		//!! should change this code!
 		CTypeInfo::RemapProp("UShader", "Opacity", "Opacity_Bio"); //!!
 	}
 #endif // BIOSHOCK
 
-	UObject *Obj = NULL;
-	// get requested object info
-	if (argObjName)
+	// preload all extra packages first
+	TArray<UnPackage*> Packages;
+	Packages.AddItem(MainPackage);	// already loaded
+	for (int i = 0; i < extraPackages.Num(); i++)
 	{
-		// load specific object(s)
-		int found = 0;
-		int idx = -1;
-		while (true)
-		{
-			idx = Package->FindExport(argObjName, argClassName, idx + 1);
-			if (idx == INDEX_NONE) break;
-			found++;
+		UnPackage *Package2 = UnPackage::LoadPackage(extraPackages[i]);
+		if (!Package2)
+			appPrintf("WARNING: unable to find/load package %s\n", extraPackages[i]);
+		else
+			Packages.AddItem(Package2);
+	}
 
-			const char *className = Package->GetObjectName(Package->ExportTable[idx].ClassIndex);
-			// setup NotifyInfo to describe object
-			appSetNotifyHeader("%s:  %s'%s'", argPkgName, className, argObjName);
-			// create object from package
-			Obj = Package->CreateExport(idx);
-		}
-		if (!found)
+	TArray<UObject*> Objects;
+	// get requested object info
+	if (objectsToLoad.Num())
+	{
+		int totalFound = 0;
+		for (int objIdx = 0; objIdx < objectsToLoad.Num(); objIdx++)
 		{
-			appPrintf("Export \"%s\" was not found in package \"%s\"\n", argObjName, argPkgName);
-			exit(1);
+			const char *objName   = objectsToLoad[objIdx];
+			const char *className = (objIdx == 0) ? argClassName : NULL;
+			int found = 0;
+			for (int pkg = 0; pkg < Packages.Num(); pkg++)
+			{
+				UnPackage *Package2 = Packages[pkg];
+				// load specific object(s)
+				int idx = -1;
+				while (true)
+				{
+					idx = Package2->FindExport(objName, className, idx + 1);
+					if (idx == INDEX_NONE) break;		// not found in this package
+
+					found++;
+					totalFound++;
+					appPrintf("Export \"%s\" was found in package %s\n", objName, Package2->Name);
+
+					const char *realClassName = Package2->GetObjectName(Package2->ExportTable[idx].ClassIndex);
+					// setup NotifyInfo to describe object
+					appSetNotifyHeader("%s:  %s'%s'", Package2->Name, realClassName, objName);
+					// create object from package
+					UObject *Obj = Package2->CreateExport(idx);
+					Objects.AddItem(Obj);
+					if (objName == attachAnimName)
+						GForceAnimSet = Obj;
+				}
+				if (found) break;
+			}
+			if (!found)
+			{
+				appPrintf("Export \"%s\" was not found in specified package(s)\n", objName);
+				exit(1);
+			}
 		}
-		appPrintf("Found %d object(s) with a name \"%s\"\n", found, argObjName);
+		appPrintf("Found %d object(s)\n", totalFound);
 	}
 	else
 	{
-		guard(LoadWholePackage);
-		// load whole package
-		for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
+		// fully load all packages
+		for (int pkg = 0; pkg < Packages.Num(); pkg++)
 		{
-			if (!IsKnownClass(Package->GetObjectName(Package->GetExport(idx).ClassIndex)))
-				continue;
-			int TmpObjIdx = UObject::GObjObjects.Num();
-			UObject *TmpObj = Package->CreateExport(idx);
-			if (!Obj && ObjectSupported(TmpObj))
-			{
-				Obj = TmpObj;
-				ObjIndex = TmpObjIdx;
-			}
-		}
-		if (!Obj)
-		{
-			if (!UObject::GObjObjects.Num())
-			{
-				appPrintf("Package \"%s\" has no supported objects\n", argPkgName);
-				exit(1);
-			}
-			Obj = UObject::GObjObjects[0];
-		}
-		// load additional packages
-		for (int i = 0; i < extraPackages.Num(); i++)
-		{
-			UnPackage *Package2 = UnPackage::LoadPackage(extraPackages[i]);
-			if (!Package)
-			{
-				appPrintf("WARNING: unable to find/load package %s\n", extraPackages[i]);
-				continue;
-			}
-			// create exports (the same code as above)
+			UnPackage *Package2 = Packages[pkg];
+			guard(LoadWholePackage);
 			for (int idx = 0; idx < Package2->Summary.ExportCount; idx++)
 			{
-				if (IsKnownClass(Package2->GetObjectName(Package2->GetExport(idx).ClassIndex)))
-					Package2->CreateExport(idx);
+				if (!IsKnownClass(Package2->GetObjectName(Package2->GetExport(idx).ClassIndex)))
+					continue;
+				int TmpObjIdx = UObject::GObjObjects.Num();			// place where new object will be created
+				/*UObject *TmpObj =*/ Package2->CreateExport(idx);
 			}
+			unguardf(("%s", Package2->Name));
 		}
-		unguard;
 	}
-	if (!Obj) return 0;					// object was not created
+
+	if (!UObject::GObjObjects.Num())
+	{
+		appPrintf("Specified package(s) has no supported objects\n");
+		exit(1);
+	}
 
 #if PROFILE
 	appPrintProfiler();
@@ -996,25 +1037,29 @@ int main(int argc, char **argv)
 	{
 		appPrintf("Exporting objects ...\n");
 		// export object(s), if possible
-		bool oneObjectOnly = (argObjName != NULL && !exprtAll);
 		UnPackage* notifyPackage = NULL;
+
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			UObject* ExpObj = UObject::GObjObjects[idx];
-			if (!exprtAll && ExpObj->Package != Package)	// refine object by package
-				continue;
+			if (!exprtAll)
+			{
+				if (Packages.FindItem(ExpObj->Package) < 0)					// refine object by package
+					continue;
+				if (objectsToLoad.Num() && (Objects.FindItem(ExpObj) < 0))	// refine object by name
+					continue;
+			}
 			if (notifyPackage != ExpObj->Package)
 			{
 				notifyPackage = ExpObj->Package;
 				appSetNotifyHeader(notifyPackage->Filename);
 			}
 			bool done = ExportObject(ExpObj);
-			if (!done && argObjName && (ExpObj == Obj))
+			if (!done && Objects.Num() && (Objects.FindItem(ExpObj) >= 0))
 			{
 				// display warning message only when failed to export object, specified from command line
 				appPrintf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
 			}
-			if (oneObjectOnly) break;
 		}
 		return 0;
 	}
@@ -1023,12 +1068,16 @@ int main(int argc, char **argv)
 	if (mainCmd == CMD_Dump)
 	{
 		// dump object(s)
-		bool oneObjectOnly = (argObjName != NULL && !exprtAll);
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			UObject* ExpObj = UObject::GObjObjects[idx];
-			if (!exprtAll && ExpObj->Package != Package)	// refine object by package
-				continue;
+			if (!exprtAll)
+			{
+				if (Packages.FindItem(ExpObj->Package) < 0)					// refine object by package
+					continue;
+				if (objectsToLoad.Num() && (Objects.FindItem(ExpObj) < 0))	// refine object by name
+					continue;
+			}
 
 			CreateVisualizer(ExpObj);
 			if (Viewer)
@@ -1036,15 +1085,24 @@ int main(int argc, char **argv)
 				Viewer->Dump();								// dump info to console
 				delete Viewer;
 				Viewer = NULL;
-				if (oneObjectOnly) break;
 			}
 		}
 		return 0;
 	}
 
-	if (!CreateVisualizer(Obj))
+	// find any object to display
+	bool created = false;
+	for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
+		if (CreateVisualizer(UObject::GObjObjects[idx]))
+		{
+			ObjIndex = idx;
+			created = true;
+			break;
+		}
+
+	if (!created)
 	{
-		appPrintf("Package \"%s\" has no objects to display\n", argPkgName);
+		appPrintf("Package \"%s\" has no objects to display\n", argPkgName);	//!! list of packages
 		return 0;
 	}
 	// print mesh info
@@ -1066,7 +1124,8 @@ int main(int argc, char **argv)
 #if RENDERING
 	delete Viewer;
 #endif
-	delete Obj;
+	for (int i = 0; i < Objects.Num(); i++)
+		delete Objects[i];
 
 	unguard;
 
@@ -1174,7 +1233,7 @@ static void TakeScreenshot(const char *ObjectName)
 	}
 	appPrintf("Writting screenshot %s\n", filename);
 	appMakeDirectoryForFile(filename);
-	FFileReader Ar(filename, false);
+	FFileWriter Ar(filename);
 	int width, height;
 	GetWindowSize(width, height);
 

@@ -48,6 +48,8 @@ bool ExportObject(const UObject *Obj)
 	guard(ExportObject);
 
 	if (!Obj) return false;
+	if (strnicmp(Obj->Name, "Default__", 9) == 0)	// default properties object, nothing to export
+		return true;
 
 	static UniqueNameList ExportedNames;
 
@@ -112,7 +114,11 @@ const char* GetExportPath(const UObject *Obj)
 	if (!BaseExportDir[0])
 		appSetBaseExportDirectory(".");	// to simplify code
 
-	const char *PackageName = (GUncook) ? Obj->GetUncookedPackageName() : Obj->Package->Name;
+	const char *PackageName = "None";
+	if (Obj->Package)
+	{
+		PackageName = (GUncook) ? Obj->GetUncookedPackageName() : Obj->Package->Name;
+	}
 
 	static char group[512];
 	if (GUseGroups)
@@ -207,7 +213,7 @@ FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
 //	appPrintf("... writting %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, filename);
 
 	appMakeDirectoryForFile(filename);
-	FFileReader *Ar = new FFileReader(filename, false, true);	// open file for writting, disable error when open is failed
+	FFileWriter *Ar = new FFileWriter(filename, FRO_NoOpenError);
 	if (!Ar->IsOpen())
 	{
 		appPrintf("Error opening file \"%s\" ...\n", filename);

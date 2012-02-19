@@ -97,6 +97,7 @@ void appNotify(const char *fmt, ...)
 	va_end(argptr);
 	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
 
+	fflush(stdout);
 	// print to log file
 	if (FILE *f = fopen("notify.log", "a"))
 	{
@@ -109,6 +110,7 @@ void appNotify(const char *fmt, ...)
 	if (NotifyBuf[0])
 		fprintf(stderr, "******** %s ********\n", NotifyBuf);
 	fprintf(stderr, "*** %s\n", buf);
+	fflush(stderr);
 	// clean notify header
 	NotifyBuf[0] = 0;
 }

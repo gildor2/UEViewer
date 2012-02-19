@@ -134,11 +134,11 @@ public:
 	:	DrawTimestamp(0)
 	{}
 
-	void SetMaterial(unsigned PolyFlags = 0);		// main function to use from outside
+	void SetMaterial();								// main function to use from outside
 
 	virtual void Bind()								// implemented for textures only
 	{}
-	virtual void SetupGL(unsigned PolyFlags);		// PolyFlags used for UE1 only
+	virtual void SetupGL();
 	virtual void Release();
 	virtual void GetParams(CMaterialParams &Params) const
 	{}
@@ -162,6 +162,43 @@ protected:
 		//?? may be use GLShader.DrawTimestamp only ?
 #endif // RENDERING
 };
+
+
+class UMaterialWithPolyFlags : public UUnrealMaterial
+{
+	DECLARE_CLASS(UMaterialWithPolyFlags, UUnrealMaterial);
+public:
+	// PolyFlags support functions
+
+	virtual void SetupGL();
+
+	// Proxy functions
+
+	virtual void Release()
+	{
+		Super::Release();
+		if (Material) Material->Release();
+	}
+
+	virtual void GetParams(CMaterialParams &Params) const
+	{
+		if (Material) Material->GetParams(Params);
+	}
+
+	virtual bool IsTranslucent() const
+	{
+		return Material ? Material->IsTranslucent() : false;
+	}
+
+	static UUnrealMaterial *Create(UUnrealMaterial *OriginalMaterial, unsigned PolyFlags);
+
+protected:
+	UUnrealMaterial			*Material;
+	unsigned				PolyFlags;
+};
+
+
+
 
 //!! UE2 mesh uses UMaterial, which sometimes will be declared as 'forward declaration'.
 //!! Use this macro for cast to UUnrealMaterial (for easy location of all conversion places)

@@ -143,6 +143,11 @@ function mass()   { run1 "C:/GAMES/Mass Effect/BioGame/CookedPC" $*; }
 function dcu()    { run1 "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC" $*; }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
+function bat2()
+{
+	CheckDir "E:/GAMES/Batman Arkham City/BmGame" data/3/Batman2
+	run $*
+}
 function rund()   {	run1 "data" $*; }
 
 
@@ -228,7 +233,9 @@ fi
 case "" in
 
 "")
-	gow2 -meshes GearGame.xxx
+	bat2 -meshes -pkg=BmGame -pkg=Playable_Catwoman_SF Playable_Catwoman_Std_SF -anim=CW_Combat -obj=Catwoman_Whip_Skin
+#	run1 data/3/RiseOfTheArgonauts -meshes -pkg=Jason_Agility_AnimSet.upk Jason_Art.upk
+#	gow2 -meshes GearGame.xxx
 #	run1 data/3i/EpicCitadel -ios CastleMap.xxx T_FX_Flare_02
 #	run1 data/2/BattleTerritoryOnline/new2/AnimPackages WP_SMG_P90_NEWPACKAGE.ebkx P90
 #	ib BOSS_10ft_SnS_Thane_SF.xxx

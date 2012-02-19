@@ -56,7 +56,6 @@ struct CSkinVert
 };
 
 
-#define MAX_MESHBONES			2048
 #define MAX_MESHMATERIALS		256
 
 
@@ -126,6 +125,7 @@ void CSkelMeshInstance::ClearSkelAnims()
 }
 
 
+//!! CSkeletalMesh has SortBones() method now!
 /* Iterate bone (sub)tree and do following:
  *	- find all direct childs of bone 'Index', check sort order; bones should be
  *	  sorted in hierarchy order (1st child and its children first, other childs next)
@@ -323,7 +323,7 @@ void CSkelMeshInstance::DumpBones()
 	{
 		const CSkelMeshBone &B = pMesh->RefSkeleton[i];
 		int parent = B.ParentIndex;
-		appPrintf("bone#%2d (parent %2d); tree size: %2d   ", i, parent, treeSizes[i]);
+		appPrintf("bone#%3d (parent %3d); tree size: %3d   ", i, parent, treeSizes[i]);
 #if 1
 		for (int j = 0; j < depth[i]; j++)
 		{
@@ -476,13 +476,15 @@ void CSkelMeshInstance::UpdateSkeleton()
 //if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
 #if SHOW_ANIM
 //if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
-					DrawTextLeft("Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-						*Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
+					DrawTextLeft("%s%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
+						AnimSeq1->Tracks[BoneIndex].HasKeys() ? S_GREEN : S_BLUE,
+						i, *Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
 //if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
 #endif
 //BO.Normalize();
 #if SHOW_BONE_UPDATES
-					BoneUpdateCounts[i]++;
+					if (AnimSeq1->Tracks[BoneIndex].HasKeys())
+						BoneUpdateCounts[i]++;
 #endif
 				}
 				// blend secondary animation
@@ -517,8 +519,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 //				BP = Bone.Position; -- already set above
 //				BO = Bone.Orientation;
 #if SHOW_ANIM
-				DrawTextLeft(S_YELLOW"Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-					*Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
+				DrawTextLeft(S_YELLOW"%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
+					i, *Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
 #endif
 			}
 			if (!i) BO.Conjugate();
@@ -794,14 +796,22 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName, float 
 	Drawing
 -----------------------------------------------------------------------------*/
 
-static void GetBoneInfColor(int BoneIndex, CVec3 &Color)
+static void GetBoneInfColor(int BoneIndex, float *Color)
 {
-	static float table[] = {0.1f, 0.4f, 0.7f, 1.0f};
+	// most of this code is targetted to make maximal color combinations
+	// which are maximally different for adjancent BoneIndex values
+	static const float table[] = { 0.3f, 0.9f, 0.0f, 0.6f };
+	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };
+	BoneIndex = (BoneIndex & 0xFFF8) | table2[BoneIndex & 7];
 #if 0
-	Color.Set(table[BoneIndex & 3], table[(BoneIndex >> 2) & 3], table[(BoneIndex >> 4) & 3]);
+	Color[0] = table[BoneIndex & 3];
+	Color[1] = table[(BoneIndex >> 2) & 3];
+	Color[2] = table[(BoneIndex >> 4) & 3];
 #else
 	#define C(x)	( (x) & 1 ) | ( ((x) >> 2) & 2 )
-	Color.Set(table[C(BoneIndex)], table[C(BoneIndex >> 1)], table[C(BoneIndex >> 2)]);
+	Color[0] = table[C(BoneIndex)];
+	Color[1] = table[C(BoneIndex >> 1)];
+	Color[2] = table[C(BoneIndex >> 2)];
 	#undef C
 #endif
 }
@@ -815,6 +825,9 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 	BindDefaultMaterial(true);
 	glLineWidth(3);
 	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glBegin(GL_LINES);
 	for (int i = 0; i < pMesh->RefSkeleton.Num(); i++)
@@ -823,24 +836,27 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 		const CCoords       &BC = BoneData[i].Coords;
 
 		CVec3 v1;
-		CVec3 Color;
+		float Color[4];
+		Color[3] = 0.5f;
 		if (i > 0)
 		{
 //			Color.Set(1,1,0.3);
 #if SHOW_BONE_UPDATES
 			int t = BoneUpdateCounts[i];
-			Color.Set(t & 1, (t >> 1) & 1, (t >> 2) & 1);
+			Color[0] = t & 1;
+			Color[1] = (t >> 1) & 1;
+			Color[2] = (t >> 2) & 1;
 #endif
 			v1 = BoneData[B.ParentIndex].Coords.origin;
 		}
 		else
 		{
-			Color.Set(1,0,1);
+			Color[0] = 1; Color[1] = 0; Color[2] = 1;
 			v1.Zero();
 		}
 		if (ShowInfluences)
 			GetBoneInfColor(i, Color);
-		glColor3fv(Color.v);
+		glColor4fv(Color);
 		glVertex3fv(v1.v);
 		glVertex3fv(BC.origin.v);
 
@@ -856,7 +872,9 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 	glEnd();
 
 	glLineWidth(1);
+	glDisable(GL_BLEND);
 	glDisable(GL_LINE_SMOOTH);
+	glEnable(GL_DEPTH_TEST);
 
 	unguard;
 }
@@ -1083,9 +1101,16 @@ void CSkelMeshInstance::DrawMesh()
 		// in this mode mesh is displayed colorized instead of textured
 		if (!InfColors) BuildInfColors();
 		assert(InfColors);
+#if !SHOW_INFLUENCES
 		glEnableClientState(GL_COLOR_ARRAY);
 		glColorPointer(3, GL_FLOAT, 0, InfColors);
 		BindDefaultMaterial(true);
+#else
+		BindDefaultMaterial(true);
+		glColor4f(1, 1, 1, 0.1f);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#endif
 	}
 
 	for (i = 0; i < NumSections; i++)
@@ -1098,11 +1123,11 @@ void CSkelMeshInstance::DrawMesh()
 #else
 		int MaterialIndex = i;
 #endif
-		const CSkelMeshSection &Sec = Mesh.Sections[MaterialIndex];
+		const CMeshSection &Sec = Mesh.Sections[MaterialIndex];
 		if (!Sec.NumFaces) continue;
 		// select material
 		if (!ShowInfluences)
-			SetMaterial(Sec.Material, MaterialIndex, Sec.PolyFlags);	//!! use HAS_POLY_FLAGS define
+			SetMaterial(Sec.Material, MaterialIndex);
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;
 		bool hasTangent = false;
@@ -1146,6 +1171,9 @@ void CSkelMeshInstance::DrawMesh()
 	BindDefaultMaterial(true);
 
 #if SHOW_INFLUENCES
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_DEPTH_TEST);
 	glBegin(GL_LINES);
 	for (i = 0; i < NumVerts; i++)
 	{
@@ -1154,17 +1182,18 @@ void CSkelMeshInstance::DrawMesh()
 		{
 			int iBone = V.Bone[j];
 			if (iBone < 0) break;
-			// ... below is not updated
-			const FMeshBone &B   = Mesh->RefSkeleton[iBone];
-			const CCoords   &BC  = BoneData[iBone].Coords;
-			CVec3 Color;
+			const CCoords &BC  = BoneData[iBone].Coords;
+			float Color[4];
 			GetBoneInfColor(iBone, Color);
-			glColor3fv(Color.v);
+			Color[3] = 0.1f;
+			glColor4fv(Color);
 			glVertex3fv(Skinned[i].Position.v);
 			glVertex3fv(BC.origin.v);
 		}
 	}
 	glEnd();
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
 #endif // SHOW_INFLUENCES
 
 	// draw mesh normals
@@ -1222,16 +1251,7 @@ void CSkelMeshInstance::Draw()
 {
 	guard(CSkelMeshInstance::Draw);
 
-	//?? move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
-	// show skeleton
-	if (ShowSkel)
-		DrawSkeleton(ShowLabels);
-	if (ShowAttach)
-		DrawAttachments();
-	if (ShowSkel == 2) return;		// show skeleton only
-
 	// show mesh
-
 	if (LodNum != LastLodNum)
 	{
 		// LOD has been changed
@@ -1244,7 +1264,15 @@ void CSkelMeshInstance::Draw()
 		LastLodNum = LodNum;
 	}
 
-	DrawMesh();
+	if (ShowSkel != 2)				// not "show skeleton only" mode
+		DrawMesh();
+
+	//?? move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
+	// show skeleton
+	if (ShowSkel)
+		DrawSkeleton(ShowLabels);
+	if (ShowAttach)
+		DrawAttachments();
 
 	unguard;
 }
@@ -1265,7 +1293,7 @@ void CSkelMeshInstance::BuildInfColors()
 	int NumBones = pMesh->RefSkeleton.Num();
 	CVec3 BoneColors[MAX_MESHBONES];
 	for (i = 0; i < NumBones; i++)
-		GetBoneInfColor(i, BoneColors[i]);
+		GetBoneInfColor(i, BoneColors[i].v);
 
 	// process influences
 	for (i = 0; i < Lod.NumVerts; i++)

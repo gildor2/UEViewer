@@ -562,7 +562,7 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 			ADD_DEFINE("EMISSIVE 1");
 		}
 		if (Params.SpecularMaskChannel)
-			specularExpr = va("vec3(%g)", maskChannel[Params.SpecularMaskChannel]);
+			specularExpr = va("vec3(%s)", maskChannel[Params.SpecularMaskChannel]);
 		if (Params.SpecularMaskChannel)
 			specPowerExpr = va("%s * 100.0 + 5.0", maskChannel[Params.SpecularPowerChannel]);
 		if (Params.CubemapMaskChannel)
@@ -627,11 +627,11 @@ void UUnrealMaterial::Release()
 }
 
 
-void UUnrealMaterial::SetMaterial(unsigned PolyFlags)
+void UUnrealMaterial::SetMaterial()
 {
 	guard(UUnrealMaterial::SetMaterial);
 
-	SetupGL(PolyFlags);
+	SetupGL();
 
 	CMaterialParams Params;
 	GetParams(Params);
@@ -671,10 +671,62 @@ void UUnrealMaterial::SetMaterial(unsigned PolyFlags)
 }
 
 
-void UUnrealMaterial::SetupGL(unsigned PolyFlags)
+void UUnrealMaterial::SetupGL()
 {
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA_TEST);
+}
+
+
+void UMaterialWithPolyFlags::SetupGL()
+{
+	Super::SetupGL();
+	if (Material) Material->SetupGL();
+
+	// twosided material
+	if (PolyFlags & PF_TwoSided)
+		glDisable(GL_CULL_FACE);
+
+	// handle blending
+	if (PolyFlags & PF_Translucent)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+	}
+	else if (PolyFlags & PF_Modulated)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+	}
+	else if (PolyFlags & (PF_Masked/*|PF_TwoSided*/))
+	{
+		glEnable(GL_BLEND);
+		glEnable(GL_ALPHA_TEST);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glAlphaFunc(GL_GREATER, 0.1f);
+	}
+}
+
+
+static TArray<UMaterialWithPolyFlags*> WrappedMaterials;
+
+UUnrealMaterial *UMaterialWithPolyFlags::Create(UUnrealMaterial *OriginalMaterial, unsigned PolyFlags)
+{
+	if (PolyFlags == 0) return OriginalMaterial;	// no wrapping required
+	for (int i = 0; i < WrappedMaterials.Num(); i++)
+	{
+		UMaterialWithPolyFlags *WM = WrappedMaterials[i];
+		if (WM->Material == OriginalMaterial && WM->PolyFlags == PolyFlags)
+			return WM;
+	}
+	// material is not yet wrapped, wrap it
+	UMaterialWithPolyFlags *WM = new UMaterialWithPolyFlags;
+	WM->Name      = (OriginalMaterial) ? OriginalMaterial->Name : "None";
+	WM->Material  = OriginalMaterial;
+	WM->PolyFlags = PolyFlags;
+	WrappedMaterials.AddItem(WM);
+//	appNotify("WRAP: %s %X", OriginalMaterial ? OriginalMaterial->Name : "NULL", PolyFlags);
+	return WM;
 }
 
 
@@ -746,7 +798,7 @@ void BindDefaultMaterial(bool White)
 }
 
 
-void UTexture::SetupGL(unsigned PolyFlags)
+void UTexture::SetupGL()
 {
 	guard(UTexture::SetupGL);
 
@@ -755,8 +807,10 @@ void UTexture::SetupGL(unsigned PolyFlags)
 
 	glEnable(GL_DEPTH_TEST);
 	// bTwoSided
-	if (bTwoSided || (PolyFlags & PF_TwoSided))
+	if (bTwoSided)
+	{
 		glDisable(GL_CULL_FACE);
+	}
 	else
 	{
 		glEnable(GL_CULL_FACE);
@@ -768,24 +822,14 @@ void UTexture::SetupGL(unsigned PolyFlags)
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.8f);
 	}
-	else if (bAlphaTexture || (PolyFlags & (PF_Masked|PF_TwoSided)))
+	else if (bAlphaTexture)
 	{
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.1f);
 	}
 	// blending
 	// partially taken from UT/OpenGLDrv
-	if (PolyFlags & PF_Translucent)				// UE1
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
-	}
-	else if (PolyFlags & PF_Modulated)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-	}
-	else if (bAlphaTexture || bMasked || (PolyFlags & (PF_Masked/*|PF_TwoSided*/)))
+	if (bAlphaTexture || bMasked)
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -841,10 +885,10 @@ void UTexture::Release()
 }
 
 
-void UModifier::SetupGL(unsigned PolyFlags)
+void UModifier::SetupGL()
 {
 	guard(UModifier::SetupGL);
-	if (Material) Material->SetupGL(PolyFlags);
+	if (Material) Material->SetupGL();
 	unguard;
 }
 
@@ -857,28 +901,32 @@ void UModifier::GetParams(CMaterialParams &Params) const
 }
 
 
-void UFinalBlend::SetupGL(unsigned PolyFlags)
+void UFinalBlend::SetupGL()
 {
 	guard(UFinalBlend::SetupGL);
 
 	glEnable(GL_DEPTH_TEST);
 	// override material settings
 	// TwoSided
-	if (TwoSided || (PolyFlags & PF_TwoSided))
+	if (TwoSided)
+	{
 		glDisable(GL_CULL_FACE);
+	}
 	else
 	{
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
 	// AlphaTest
-	if (AlphaTest || (PolyFlags & PF_Masked))
+	if (AlphaTest)
 	{
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, AlphaRef / 255.0f);
 	}
 	else
+	{
 		glDisable(GL_ALPHA_TEST);
+	}
 	// FrameBufferBlending
 	if (FrameBufferBlending == FB_Overwrite)
 		glDisable(GL_BLEND);
@@ -923,7 +971,7 @@ bool UFinalBlend::IsTranslucent() const
 }
 
 
-void UShader::SetupGL(unsigned PolyFlags)
+void UShader::SetupGL()
 {
 	guard(UShader::SetupGL);
 
@@ -1022,7 +1070,7 @@ bool UShader::IsTranslucent() const
 
 //?? NOTE: Bioshock EFrameBufferBlending is used for UShader and UFinalBlend, plus it has different values
 // based on UShader and UFinalBlend Bind()
-void UFacingShader::SetupGL(unsigned PolyFlags)
+void UFacingShader::SetupGL()
 {
 	guard(UFacingShader::SetupGL);
 
@@ -1197,7 +1245,7 @@ void UMaterialInterface::GetParams(CMaterialParams &Params) const
 //!! NOTE: when using this function sharing of shader between MaterialInstanceConstant's is impossible
 //!! (shader may differs because of different texture sets - some available, some - not)
 
-void UMaterial3::SetupGL(unsigned PolyFlags)
+void UMaterial3::SetupGL()
 {
 	guard(UMaterial3::SetupGL);
 
@@ -1384,7 +1432,10 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		EMISSIVE(!stricmp(Name + len - 2, "_E"), 20);
 		EMISSIVE(!stricmp(Name + len - 3, "_EM"), 21);
 		OPACITY (!stricmp(Name + len - 2, "_A"), 20);
-//		OPACITY (!stricmp(Name + len - 5, "_Mask"), 10);
+		if (bIsMasked)
+		{
+			OPACITY (!stricmp(Name + len - 5, "_Mask"), 2);
+		}
 		// Magna Catra 2
 		DIFFUSE (!strnicmp(Name, "df_", 3), 20);
 		SPECULAR(!strnicmp(Name, "sp_", 3), 20);
@@ -1520,10 +1571,10 @@ void UTextureCube::Release()
 }
 
 
-void UMaterialInstanceConstant::SetupGL(unsigned PolyFlags)
+void UMaterialInstanceConstant::SetupGL()
 {
 	// redirect to Parent until UMaterial3
-	if (Parent) Parent->SetupGL(PolyFlags);
+	if (Parent) Parent->SetupGL();
 }
 
 
@@ -1556,6 +1607,8 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		EMISSIVE(appStristr(Name, "emiss"), 100);
 		CUBEMAP (appStristr(Name, "cube"), 100);
 		CUBEMAP (appStristr(Name, "refl"), 90);
+		OPACITY (appStristr(Name, "opac"), 90);
+		OPACITY (appStristr(Name, "trans"), 80);
 //??		OPACITY (appStristr(Name, "mask"), 100);
 //??		Params.OpacityFromAlpha = true;
 #if TRON
@@ -1566,6 +1619,13 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 			BAKEDMASK(appStristr(Name, "Mask"), 100);
 		}
 #endif // TRON
+#if BATMAN
+		if (Package->Game == GAME_Batman2)
+		{
+			BAKEDMASK(!stricmp(Name, "Material_Attributes"), 100);
+			EMISSIVE (appStristr(Name, "Reflection_Mask"), 100);
+		}
+#endif // BATMAN
 	}
 	for (i = 0; i < VectorParameterValues.Num(); i++)
 	{
@@ -1595,6 +1655,18 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		}
 	}
 #endif // TRON
+
+#if BATMAN
+	if (Package->Game == GAME_Batman2)
+	{
+		if (Params.Mask)
+		{
+			Params.SpecularMaskChannel  = TC_R;
+			Params.SpecularPowerChannel = TC_G;
+			// TC_B = skin mask
+		}
+	}
+#endif // BATMAN
 
 	// try to get diffuse texture when nothing found
 	if (!Params.Diffuse && TextureParameterValues.Num() == 1)

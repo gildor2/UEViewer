@@ -114,6 +114,11 @@ public:
 	bool					bHasVertexColors;
 	TArray<UMaterialInterface*> Materials;
 	TArray<FStaticLODModel3> LODModels;
+#if BATMAN
+	// Batman 2
+	bool					EnableTwistBoneFixers;
+	bool					EnableClavicleFixer;
+#endif // BATMAN
 
 	CSkeletalMesh			*ConvertedMesh;
 
@@ -156,6 +161,8 @@ public:
 		PROP_DROP(SkeletonName)
 		PROP_DROP(Stretches)
 		// Batman 2
+		PROP_BOOL(EnableTwistBoneFixers)
+		PROP_BOOL(EnableClavicleFixer)
 		PROP_DROP(ClothingTeleportRefBones)
 #	endif // BATMAN
 #if DECLARE_VIEWER_PROPS
@@ -168,6 +175,9 @@ public:
 
 	virtual void Serialize(FArchive &Ar);
 	virtual void PostLoad();			// used to reconstruct sockets
+#if BATMAN
+	void FixBatman2Skeleton();
+#endif
 };
 
 
@@ -221,8 +231,13 @@ enum AnimationCompressionFormat
 #if MASSEFF
 	ACF_BioFixed48,											// Mass Effect 2
 #endif
-#if TRANSFORMERS
-	ACF_IntervalFixed48NoW,
+#if ARGONAUTS
+	ACF_Float48NoW,
+	ACF_Fixed64NoW,
+	ATCF_Float16,											// half[3]; used for translation compression (originally came from different enum)
+#endif
+#if TRANSFORMERS || ARGONAUTS
+	ACF_IntervalFixed48NoW,									// 2 games has such quaternion type, and it is different!
 #endif
 };
 
@@ -245,7 +260,12 @@ _ENUM(AnimationCompressionFormat)
 #if MASSEFF
 	_E(ACF_BioFixed48),
 #endif
-#if TRANSFORMERS
+#if ARGONAUTS
+	_E(ACF_Float48NoW),
+	_E(ACF_Fixed64NoW),
+	_E(ATCF_Float16),
+#endif
+#if TRANSFORMERS || ARGONAUTS
 	_E(ACF_IntervalFixed48NoW),
 #endif
 };
@@ -318,6 +338,8 @@ public:
 #endif // MASSEFF
 
 
+class UAnimSet;
+
 class UAnimSequence : public UObject
 {
 	DECLARE_CLASS(UAnimSequence, UObject);
@@ -341,6 +363,13 @@ public:
 #endif
 #if MASSEFF
 	UBioAnimSetData			*m_pBioAnimSetData;
+#endif
+#if ARGONAUTS
+	TArray<unsigned>		CompressedTrackTimes;			// used as TArray<word>
+	TArray<int>				CompressedTrackTimeOffsets;
+#endif
+#if BATMAN
+	TArray<byte>			AnimZip_Data;
 #endif
 
 	UAnimSequence()
@@ -368,6 +397,10 @@ public:
 #endif
 #if MASSEFF
 		PROP_OBJ(m_pBioAnimSetData)
+#endif
+#if ARGONAUTS
+		PROP_ARRAY(CompressedTrackTimeOffsets, int)
+		PROP_DROP(CompressedTrackSizes)
 #endif
 		// unsupported
 		PROP_DROP(Notifies)
@@ -461,15 +494,31 @@ public:
 		}
 	old_code:
 		Ar << CompressedByteStream;
+#if ARGONAUTS
+		if (Ar.Game == GAME_Argonauts && Ar.ArLicenseeVer >= 30)
+		{
+			Ar << CompressedTrackTimes;
+			if (Ar.ReverseBytes)
+			{
+				// CompressedTrackTimes is originally serialized as array of words, should swap low and high words
+				for (int i = 0; i < CompressedTrackTimes.Num(); i++)
+				{
+					unsigned v = CompressedTrackTimes[i];
+					CompressedTrackTimes[i] = ((v & 0xFFFF) << 16) | ((v >> 16) & 0xFFFF);
+				}
+			}
+		}
+#endif // ARGONAUTS
 #if BATMAN
 		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 55)
-		{
-			TArray<byte> AnimZip_Data;
 			Ar << AnimZip_Data;
-		}
 #endif // BATMAN
 		unguard;
 	}
+
+#if BATMAN
+	void DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) const;
+#endif
 };
 
 #if FRONTLINES

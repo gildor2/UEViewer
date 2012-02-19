@@ -1125,6 +1125,9 @@ void FArchive::DetectGame()
 #if BLOODONSAND
 	if (ArVer == 538 && ArLicenseeVer == 73)	SET(GAME_50Cent);
 #endif
+#if ARGONAUTS
+	if (ArVer == 539 && (ArLicenseeVer == 43 || ArLicenseeVer == 47)) SET(GAME_Argonauts);	// Rise of the Argonauts, Thor: God of Thunder
+#endif
 #if ALPHA_PR
 	if (ArVer == 539 && ArLicenseeVer == 91)	SET(GAME_AlphaProtocol);
 #endif
@@ -1151,9 +1154,6 @@ void FArchive::DetectGame()
 #endif
 #if MOH2010
 	if (ArVer == 581 && ArLicenseeVer == 58)	SET(GAME_MOH2010);
-#endif
-#if BORDERLANDS
-	if (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) SET(GAME_Borderlands); // release and update
 #endif
 #if SINGULARITY
 	if (ArVer == 584 && ArLicenseeVer == 126)	SET(GAME_Singularity);
@@ -1223,6 +1223,11 @@ void FArchive::DetectGame()
 		 (ArVer == 511 && ArLicenseeVer == 144) ||		// Transformers - PS3 and XBox 360 version
 		 (ArVer == 537 && ArLicenseeVer == 174) )		// Transformers: Dark of the Moon
 		SET(GAME_Transformers);
+#endif
+#if BORDERLANDS
+	if ( (ArVer == 512 && ArLicenseeVer == 35) ||		// Brothers in Arms: Hell's Highway
+		 (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) ) // Borderlands: release and update
+		SET(GAME_Borderlands);
 #endif
 #if TERA
 	if ((ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) ||

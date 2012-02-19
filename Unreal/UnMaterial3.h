@@ -624,7 +624,7 @@ public:
 	}
 
 #if RENDERING
-	virtual void SetupGL(unsigned PolyFlags);
+	virtual void SetupGL();
 	virtual void GetParams(CMaterialParams &Params) const;
 	virtual bool IsTranslucent() const;
 #endif
@@ -714,7 +714,7 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void SetupGL(unsigned PolyFlags);
+	virtual void SetupGL();
 	virtual void GetParams(CMaterialParams &Params) const;
 	virtual bool IsTranslucent() const
 	{

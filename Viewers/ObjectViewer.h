@@ -49,11 +49,11 @@ public:
 class CMaterialViewer : public CObjectViewer
 {
 public:
+	bool			IsTexture;
 	static bool		ShowOutline;
+	static bool		ShowChannels;
 
-	CMaterialViewer(UUnrealMaterial *Material)
-	:	CObjectViewer(Material)
-	{}
+	CMaterialViewer(UUnrealMaterial *Material);
 	virtual ~CMaterialViewer();
 
 	virtual void ShowHelp();
@@ -115,6 +115,8 @@ public:
 /*-----------------------------------------------------------------------------
 	Skeletal mesh viewer (USkeletalMesh)
 -----------------------------------------------------------------------------*/
+
+extern UObject *GForceAnimSet;
 
 class CSkelMeshViewer : public CMeshViewer
 {

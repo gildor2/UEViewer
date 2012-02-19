@@ -10,6 +10,15 @@
 
  Revision History:
 
+	18.02.2012 v1.24
+	- fixed parsing psa config file with spaces in track names
+
+	07.02.2012 v1.23
+	- support for extra UV sets stored in standard psk format (ActorX 2010)
+
+	23.01.2012 v1.22
+	- fixed automatic loading of DDS textures for materials
+
 	06.12.2011 v1.21
 	- fixed "translation mode" checkbox to work with psa without config file
 
@@ -107,12 +116,15 @@
 
 /*
 TODO:
-- Menu item for plugin
+- menu item for plugin
 - try to not use setBoneEnable false ...
+- option to create separate materials, not submaterials
+- do not create material when it is already exists - but how to find whether I need to get loaded material
+  or create a new one?
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 21
+global AX_IMPORTER_VERSION = 24
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -144,7 +156,7 @@ global MeshBones
 --	Default settings
 -------------------------------------------------------------------------------
 
-fn DefaultSettings =
+fn axDefaultSettings =
 (
 	-- defaults settings
 	g_seeThru    = false
@@ -178,23 +190,6 @@ if getSourceFileName != undefined then	-- checking Max version (Max9+) ...
 	local s = getSourceFileName()
 	configFile = (getFilenamePath s) + (getFilenameFile s) + ".ini"
 )
-
-
-fn axGetSetting name default =	--?? unused
-(
-	local ret = getINISetting configFile "Main" name
-	if ret == "" then ret = (default as string)
-	ret
-)
-
-fn axSetSetting name value =	--?? unused
-(
-	setINISetting configFile "Main" name (value as string)
-)
-
-
-fn GetSettingBool  name default = (axGetSetting name default) as BooleanClass	--?? unused
-fn GetSettingFloat name default = (axGetSetting name default) as float			--?? unused
 
 
 tmp_v = undefined		-- global variable, helper for axDoSetting() (required for execute() ...)
@@ -232,7 +227,7 @@ fn axDoSetting name var =
 )
 
 
-fn SerializeSettings isLoading =
+fn axSerializeSettings isLoading =
 (
 	if isLoading then
 	(
@@ -272,8 +267,8 @@ if (g_axImporterInited != true) then
 	heapSize += 33554432	-- 32 Mb; will speedup most tasks
 	Anims     = #()
 	MeshBones = #()
-	DefaultSettings()
-	SerializeSettings(true)
+	axDefaultSettings()
+	axSerializeSettings(true)
 )
 
 
@@ -282,8 +277,8 @@ if (g_axImporterVersion != AX_IMPORTER_VERSION) then
 	format "ActorX Importer were updated while 3ds Max is running.\nReloading config settings.\n"
 	--?? used twice, make a separate function ?
 	g_axImporterVersion = AX_IMPORTER_VERSION
-	DefaultSettings()
-	SerializeSettings(true)
+	axDefaultSettings()
+	axSerializeSettings(true)
 )
 
 -------------------------------------------------------------------------------
@@ -296,6 +291,12 @@ fn ErrorMessage text =
 	format "%\n" msg
 	messageBox msg
 	throw msg
+)
+
+
+fn TrimSpaces text =
+(
+	trimLeft(trimRight(text))
 )
 
 
@@ -354,7 +355,7 @@ fn ReadFQuat bstream =
 )
 
 -- Function used to determine bone length
-fn FindFirstChild boneArray boneIndex =
+fn axFindFirstChild boneArray boneIndex =
 (
 	for i = 1 to boneArray.count do
 	(
@@ -368,7 +369,7 @@ fn FindFirstChild boneArray boneIndex =
 )
 
 
-fn FixBoneNames boneArray =
+fn axFixBoneNames boneArray =
 (
 	-- Find and correct duplicate names
 	for i = 1 to (boneArray.count-1) do
@@ -390,7 +391,7 @@ fn FixBoneNames boneArray =
 )
 
 
-fn FindFile path filename recurse:false =
+fn axFindFile path filename recurse:false =
 (
 	local check = path + "\\" + filename
 	if doesFileExist check then return check
@@ -399,7 +400,7 @@ fn FindFile path filename recurse:false =
 		local dirs = getDirectories (path + "/*")
 		for dir in dirs do
 		(
-			local ret = FindFile dir filename recurse:true
+			local ret = axFindFile dir filename recurse:true
 			if ret != undefined then return ret
 		)
 	)
@@ -407,7 +408,7 @@ fn FindFile path filename recurse:false =
 )
 
 
-fn GetRotationMatrix =
+fn axGetRotationMatrix =
 (
 	local angles = eulerAngles g_rotR -g_rotP -g_rotY
 	return angles as matrix3
@@ -639,7 +640,19 @@ fn ReadVQuatAnimKey bstream =
 --	Loading materials
 -------------------------------------------------------------------------------
 
-fn ImportMaterial matName texDir =
+fn axFindTexture texDir baseName =
+(
+	-- DDS
+	foundTex = axFindFile texDir (baseName + ".dds") recurse:g_texRecurse
+	if foundTex != undefined then return foundTex
+	-- TGA
+	foundTex = axFindFile texDir (baseName + ".tga") recurse:g_texRecurse
+--	if foundTex != undefined then return foundTex
+	-- other formats?
+	return foundTex
+)
+
+fn axImportMaterial matName texDir =
 (
 	local subMat = standardMaterial name:matName
 
@@ -648,7 +661,7 @@ fn ImportMaterial matName texDir =
 
 	-- try to file material file
 	texFilename = matName + ".mat"
-	foundTex = FindFile texDir texFilename recurse:g_texRecurse
+	foundTex = axFindFile texDir texFilename recurse:g_texRecurse
 	if foundTex != undefined then
 	(
 		texFilename = foundTex
@@ -661,7 +674,7 @@ fn ImportMaterial matName texDir =
 --			format "[%] = [%]\n" tok[1] tok[2]
 			local parm = tok[1]
 			local file = tok[2]
-			foundTex = FindFile texDir (file + ".tga") recurse:g_texRecurse
+			foundTex = axFindTexture texDir file
 			if foundTex == undefined then continue
 			local bitmap = bitmapTexture name:foundTex fileName:foundTex
 			if parm == "Normal" then
@@ -684,13 +697,8 @@ fn ImportMaterial matName texDir =
 	)
 	-- no material file found, try simple texture
 	-- get texture filename
-	texFilename = matName + ".dds"
-	foundTex = FindFile texDir texFilename recurse:g_texRecurse
-	if foundTex == undefined then
-	(
-		texFilename = matName + ".tga"
-		foundTex = FindFile texDir texFilename recurse:g_texRecurse
-	)
+	texFilename = matName
+	foundTex = axFindTexture texDir matName
 	if foundTex != undefined then
 	(
 		texFilename = foundTex
@@ -705,7 +713,7 @@ fn ImportMaterial matName texDir =
 		)
 	)
 	if not doesFileExist texFilename then format "Unable to find texture %\n" texFilename
-	-- continue setup
+	-- continue setup (even in a case of error)
 	local bitmap = bitmapTexture name:texFilename fileName:texFilename
 	subMat.diffuseMap = bitmap
 	-- return
@@ -734,7 +742,7 @@ fn RestoreBindpose =
 
 	try
 	(
-		local rotMatrix = GetRotationMatrix()
+		local rotMatrix = axGetRotationMatrix()
 		-- note: should rotate every bone because we are not applying parent's rotation here
 		-- find bones
 		for i = 1 to MeshBones.count do
@@ -806,8 +814,13 @@ fn ImportPskFile filename skelOnly:false =
 		while not IsEndOfFile(file) do
 		(
 			hdr = ReadChunkHeader file
+			local chunkID = hdr.ChunkID
+			-- check for extra UV set from latest ActorX exporter
+			-- note: data has the same format as pskx extension, so the same loading code is used
+			if (chunkID == "EXTRAUVS0") or (chunkID == "EXTRAUVS1") or (chunkID == "EXTRAUVS2") then
+				chunkID = "EXTRAUV0";
 --			format "Chunk: % (% items, % bytes/item, pos %)\n" hdr.ChunkID hdr.DataCount hdr.DataSize (ftell file)
-			case hdr.ChunkID of
+			case chunkID of
 			(
 			-- Points --
 			"PNTS0000":
@@ -866,7 +879,7 @@ fn ImportPskFile filename skelOnly:false =
 						MeshBones[i] = ReadVBone file
 --							format "Bone[%] = %\n" (i-1) MeshBones[i].Name
 					)
-					FixBoneNames MeshBones
+					axFixBoneNames MeshBones
 				)
 
 			-- Weights --
@@ -877,7 +890,7 @@ fn ImportPskFile filename skelOnly:false =
 					for i = 1 to numInfluences do Infs[i] = ReadVRawBoneInfluence file
 				)
 
-			-- pskx additional UV set
+			-- additional UV set
 			"EXTRAUV0":
 				(
 					numUVVerts = hdr.DataCount
@@ -934,7 +947,7 @@ fn ImportPskFile filename skelOnly:false =
 		)
 
 		-- get bone length (just for visual appearance)
-		childBone = FindFirstChild MeshBones i
+		childBone = axFindFirstChild MeshBones i
 		if (childBone != undefined) then
 		(
 			len = (length childBone.Position) * g_meshScale
@@ -1060,7 +1073,7 @@ fn ImportPskFile filename skelOnly:false =
 		(
 			texDir = getFilenamePath filename
 		)
-		local subMat = ImportMaterial Materials[i].MaterialName texDir
+		local subMat = axImportMaterial Materials[i].MaterialName texDir
 		newMat.materialList[i] = subMat
 		showTextureMap subMat true
 --		format "Material[%] = %\n" i Materials[i].MaterialName
@@ -1179,7 +1192,7 @@ fn ImportPskFile filename skelOnly:false =
 	-- apply mesh rotation
 	if numBones >= 1 then
 	(
-		MaxBones[1].transform = MaxBones[1].transform * GetRotationMatrix()
+		MaxBones[1].transform = MaxBones[1].transform * axGetRotationMatrix()
 	)
 
 	-- combine with old skeleton for correct work of combined meshes
@@ -1338,13 +1351,13 @@ fn LoadPsaConfig filename Anims Bones UseAnimTranslation AnimFlags =
 		-- RemoveTracks
 		4:	(
 				-- line is in format "SequenceName.BoneIndex=[trans|rot|all]"
-				local tok1 = filterString line " ="			-- [1] = SequenceName.BoneIndex, [2] = Flags
+				local tok1 = filterString line "="			-- [1] = SequenceName.BoneIndex, [2] = Flags
 				local tok2 = filterString tok1[1] "."		-- [1] = SequenceName, [2] = BoneIndex
-				local SeqName    = tok2[1]
-				local BoneIdxStr = tok2[2]
-				local Flag       = tok1[2]
+				local SeqName    = TrimSpaces(tok2[1])
+				local BoneIdxStr = TrimSpaces(tok2[2])
+				local Flag       = TrimSpaces(tok1[2])
 				local SeqIdx = FindPsaTrackIndex Anims SeqName		--?? can cache this value
-				if SeqIdx <= 0 then ErrorMessage("Animation \"" + SeqName + "\" does not exists")
+				if SeqIdx <= 0 then ErrorMessage("Animation \"" + SeqName + "\" does not exists" + "\nline:" + line)
 				FlagIndex = (SeqIdx - 1) * Bones.count + (BoneIdxStr as integer) + 1
 				if Flag == "trans" then
 				(
@@ -1576,7 +1589,7 @@ fn ImportPsaFile filename trackNum all:false =
 				-- rotate animation
 				if MaxBones[1] != undefined then
 				(
-					MaxBones[1].transform = MaxBones[1].transform * GetRotationMatrix()
+					MaxBones[1].transform = MaxBones[1].transform * axGetRotationMatrix()
 				)
 			)
 			-- progress bar
@@ -1649,8 +1662,8 @@ fn axLoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.21"
-	label     Lbl2 "\xA9 2009-2011 Konstantin Nosov (Gildor)"
+	label     Lbl1 "Version 1.24"
+	label     Lbl2 "\xA9 2009-2012 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black
@@ -1722,7 +1735,7 @@ rollout axImportRollout "ActorX Importer"
 
 	on axImportRollout close do
 	(
-		SerializeSettings false
+		axSerializeSettings false
 	)
 )
 
@@ -1817,7 +1830,7 @@ rollout axSettingsRollout "Settings"
 	on BtnReset pressed do
 	(
 		if configFile != undefined then deleteFile configFile
-		DefaultSettings()
+		axDefaultSettings()
 		--?? find a way to reset GUI controls too
 	)
 )

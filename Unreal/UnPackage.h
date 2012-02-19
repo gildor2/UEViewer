@@ -708,6 +708,7 @@ public:
 	}
 
 	int FindExport(const char *name, const char *className = NULL, int firstIndex = 0) const;
+	int FindExportForImport(const char *ObjectName, const char *ClassName, UnPackage *ImporterPackage, int ImporterIndex);
 	bool CompareObjectPaths(int PackageIndex, UnPackage *RefPackage, int RefPackageIndex) const;
 
 	UObject* CreateExport(int index);

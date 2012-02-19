@@ -28,6 +28,19 @@ static float TimeSinceCreate;
 #endif
 
 TArray<CSkelMeshInstance*> CSkelMeshViewer::Meshes;
+UObject *GForceAnimSet = NULL;
+
+
+static CAnimSet *GetAnimSet(const UObject *Obj)
+{
+	if (Obj->IsA("MeshAnimation"))		// UE1,UE2
+		return static_cast<const UMeshAnimation*>(Obj)->ConvertedAnim;
+#if UNREAL3
+	if (Obj->IsA("AnimSet"))			// UE3
+		return static_cast<const UAnimSet*>(Obj)->ConvertedAnim;
+#endif
+	return NULL;
+}
 
 
 CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
@@ -37,16 +50,24 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
-	if (Mesh->OriginalMesh->IsA("SkeletalMesh"))	// UE2 class
+	if (GForceAnimSet)
+	{
+		CAnimSet *AttachAnim = GetAnimSet(GForceAnimSet);
+		if (!AttachAnim)
+		{
+			appPrintf("WARNING: specified wrong AnimSet (%s class) object to attach\n", GForceAnimSet->GetClassName());
+			GForceAnimSet = NULL;
+		}
+		if (AttachAnim)
+			SkelInst->SetAnim(AttachAnim);
+	}
+	else if (Mesh->OriginalMesh->IsA("SkeletalMesh"))	// UE2 class
 	{
 		const USkeletalMesh *OriginalMesh = static_cast<USkeletalMesh*>(Mesh->OriginalMesh);
 		if (OriginalMesh->Animation)
 			SkelInst->SetAnim(OriginalMesh->Animation->ConvertedAnim);
 	}
 	Inst = SkelInst;
-#if 0
-	Initialize();
-#else
 	// compute bounds for the current mesh
 	CVec3 Mins, Maxs;
 	const CSkelMeshLod &Lod = Mesh0->Lods[0];
@@ -73,7 +94,6 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
 		Meshes[i]->TweenAnim(NULL, 0);
 	}
 	InitViewerPosition(Mins, Maxs);
-#endif
 
 #if HIGHLIGHT_CURRENT
 	TimeSinceCreate = -2;		// ignore first 2 frames: 1st frame will be called after mesh changing, 2nd frame could load textures etc
@@ -550,15 +570,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 					if (looped > 1) break;				// no other objects
 				}
 				const UObject *Obj = UObject::GObjObjects[ObjIndex];
-				const CAnimSet *Anim = NULL;
-				if (Obj->IsA("MeshAnimation"))			// UE1,UE2
-					Anim = static_cast<const UMeshAnimation*>(Obj)->ConvertedAnim;
-#if UNREAL3
-				else if (Obj->IsA("AnimSet"))			// UE3
-					Anim = static_cast<const UAnimSet*>(Obj)->ConvertedAnim;
-#endif
-				else
-					continue;
+				const CAnimSet *Anim = GetAnimSet(Obj);
+				if (!Anim) continue;
 
 				if (Anim == PrevAnim)
 				{

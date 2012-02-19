@@ -16,8 +16,6 @@
 // Here we performing reverse transformation.
 #define MIRROR_MESH				1
 
-#define MAX_MESHBONES			512
-
 /*??
 
 - may weld vertices when write PNTS0000 chunk
@@ -53,8 +51,8 @@ static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 static void ExportCommonMeshData
 (
 	FArchive &Ar,
-	const CMeshSection *Sections, int NumSections, int SectionSize,
-	const CMeshVertex  *Verts,    int NumVerts,    int VertexSize,
+	const CMeshSection *Sections, int NumSections,
+	const CMeshVertex  *Verts,    int NumVerts, int VertexSize,
 	const CIndexBuffer &Indices
 )
 {
@@ -64,7 +62,7 @@ static void ExportCommonMeshData
 	int i, j;
 
 #define VERT(n)		OffsetPointer(Verts, VertexSize * (n))
-#define SECT(n)		OffsetPointer(Sections, SectionSize * (n))
+#define SECT(n)		(Sections + n)
 
 	PtsHdr.DataCount = NumVerts;
 	PtsHdr.DataSize  = sizeof(FVector);
@@ -174,6 +172,8 @@ static void ExportCommonMeshData
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
 		const UUnrealMaterial *Tex = SECT(i)->Material;
+		//!! this will not handle (UMaterialWithPolyFlags->Material==NULL) correctly - will make MaterialName=="None"
+		//!! (the same valid for md5mesh export)
 		if (Tex)
 		{
 			appStrncpyz(M.MaterialName, Tex->Name, ARRAY_COUNT(M.MaterialName));
@@ -203,7 +203,9 @@ static void ExportExtraUV
 
 	for (int j = 1; j < NumTexCoords; j++)
 	{
-		SAVE_CHUNK(UVHdr, "EXTRAUV0");
+		char chunkName[32];
+		appSprintf(ARRAY_ARG(chunkName), "EXTRAUVS%d", j-1);
+		SAVE_CHUNK(UVHdr, chunkName);
 		for (int i = 0; i < NumVerts; i++)
 		{
 			VMeshUV UV;
@@ -234,7 +236,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	ExportCommonMeshData
 	(
 		Ar,
-		&Lod.Sections[0], Lod.Sections.Num(), sizeof(CSkelMeshSection),
+		&Lod.Sections[0], Lod.Sections.Num(),
 		Lod.Verts, Lod.NumVerts, sizeof(CSkelMeshVertex),
 		Lod.Indices
 	);
@@ -299,13 +301,13 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	}
 	assert(NumInfluences == 0);
 
-	if (!GExportPskx)						// nothing more to write
+	ExportExtraUV(Ar, Lod.Verts, Lod.NumVerts, sizeof(Lod.Verts[0]), Lod.NumTexCoords);
+
+/*	if (!GExportPskx)						// nothing more to write
 		return;
 
 	// pskx extension
-
-	ExportExtraUV(Ar, Lod.Verts, Lod.NumVerts, sizeof(Lod.Verts[0]), Lod.NumTexCoords);
-
+*/
 	unguard;
 }
 
@@ -331,12 +333,12 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		}
 	}
 
-	if (!GExportPskx)
+/*	if (!GExportPskx)
 	{
 		// perform some verifications to warn user about missing -pskx option
 		int NumTexCoords = Mesh->Lods[0].NumTexCoords;
 		if (NumTexCoords > 1) appPrintf("WARNING: SkeletalMesh %s has %d TexCoords, -pskx option is adviced\n", OriginalMesh->Name, NumTexCoords);
-	}
+	} */
 
 	int MaxLod = (GExportLods) ? Mesh->Lods.Num() : 1;
 	for (int Lod = 0; Lod < MaxLod; Lod++)
@@ -346,7 +348,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		const CSkelMeshLod &MeshLod = Mesh->Lods[Lod];
 		if (!MeshLod.Sections.Num()) continue;		// empty mesh
 
-		bool UsePskx = (MeshLod.Indices.Num() > 65536) || (GExportPskx && (MeshLod.NumTexCoords > 1));
+		bool UsePskx = (MeshLod.Indices.Num() > 65536) /* || (GExportPskx && (MeshLod.NumTexCoords > 1)) */;
 
 		char filename[512];
 		const char *Ext = (UsePskx) ? "pskx" : "psk";
@@ -532,7 +534,7 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	ExportCommonMeshData
 	(
 		Ar,
-		&Lod.Sections[0], Lod.Sections.Num(), sizeof(CStaticMeshSection),
+		&Lod.Sections[0], Lod.Sections.Num(),
 		Lod.Verts, Lod.NumVerts, sizeof(CStaticMeshVertex),
 		Lod.Indices
 	);
@@ -545,7 +547,6 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
 
-	// pskx extension
 	ExportExtraUV(Ar, Lod.Verts, Lod.NumVerts, sizeof(Lod.Verts[0]), Lod.NumTexCoords);
 }
 

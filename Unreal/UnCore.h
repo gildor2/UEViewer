@@ -151,6 +151,21 @@ public:
 	}
 #endif // BIOSHOCK
 
+	inline FName& operator=(const FName &Other)
+	{
+		Index = Other.Index;
+		Str   = Other.Str;
+#if UNREAL3
+		NameGenerated = Other.NameGenerated;
+		if (Other.NameGenerated)
+		{
+			// should duplicate generated names to avoid crash in destructor
+			Str = strdup(Other.Str);
+		}
+#endif // UNREAL3
+		return *this;
+	}
+
 	inline bool operator==(FName& Other) const
 	{
 		return (Str == Other.Str) || (stricmp(Str, Other.Str) == 0);
@@ -259,6 +274,7 @@ enum EGame
 		GAME_Hunted,
 		GAME_DND,
 		GAME_ShadowsDamned,
+		GAME_Argonauts,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -404,14 +420,19 @@ FORCEINLINE FArchive& operator<<(FArchive &Ar, int &B)
 	Ar.ByteOrderSerialize(&B, 4);
 	return Ar;
 }
+FORCEINLINE FArchive& operator<<(FArchive &Ar, unsigned &B)
+{
+	Ar.ByteOrderSerialize(&B, 4);
+	return Ar;
+}
 FORCEINLINE FArchive& operator<<(FArchive &Ar, int64 &B)
 {
 	Ar.ByteOrderSerialize(&B, 8);
 	return Ar;
 }
-FORCEINLINE FArchive& operator<<(FArchive &Ar, unsigned &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, uint64 &B)
 {
-	Ar.ByteOrderSerialize(&B, 4);
+	Ar.ByteOrderSerialize(&B, 8);
 	return Ar;
 }
 FORCEINLINE FArchive& operator<<(FArchive &Ar, float &B)
@@ -421,57 +442,40 @@ FORCEINLINE FArchive& operator<<(FArchive &Ar, float &B)
 }
 
 
-class FFileReader : public FArchive
+enum EFileReaderOptions
+{
+	FRO_NoOpenError = 1,
+};
+
+
+class FFileArchive : public FArchive
 {
 public:
-	FFileReader()
-	:	f(NULL)
-	{}
-
-	FFileReader(FILE *InFile)
-	:	f(InFile)
+	FFileArchive(const char *Filename, unsigned InOptions)
 	{
-		IsLoading = true;
-		ArPos     = 0;
-	}
+		ArPos   = 0;
+		Options = InOptions;
 
-	FFileReader(const char *Filename, bool loading = true, bool noOpenError = false)
-	:	f(fopen(Filename, loading ? "rb" : "wb"))
-	{
-		guard(FFileReader::FFileReader);
-		if (!f)
-		{
-			if (noOpenError) return;
-			appError("Unable to open file %s", Filename);
-		}
-		IsLoading = loading;
-		ArPos     = 0;
 		const char *s = strrchr(Filename, '/');
 		if (!s)     s = strrchr(Filename, '\\');
 		if (s) s++; else s = Filename;
 		appStrncpyz(ShortName, s, ARRAY_COUNT(ShortName));
-		unguardf(("%s", Filename));
 	}
 
-	virtual ~FFileReader()
+	virtual ~FFileArchive()
 	{
 		if (f) fclose(f);
 	}
 
 	bool IsOpen() const
 	{
+		// this function is useful only for FRO_NoOpenError mode
 		return (f != NULL);
-	}
-
-	void Setup(FILE *InFile, bool Loading)
-	{
-		f         = InFile;
-		IsLoading = Loading;
 	}
 
 	virtual void Seek(int Pos)
 	{
-		guard(FFileReader::Seek);
+		guard(FFileArchive::Seek);
 		fseek(f, Pos, SEEK_SET);
 		ArPos = ftell(f);
 		assert(Pos == ArPos);
@@ -499,6 +503,45 @@ public:
 		return *this;
 	}
 
+	virtual int GetFileSize() const
+	{
+		int pos  = ftell(f); fseek(f, 0, SEEK_END);
+		int size = ftell(f); fseek(f, pos, SEEK_SET);
+		return size;
+	}
+
+protected:
+	FILE		*f;
+	unsigned	Options;
+	char		ShortName[128];
+
+	virtual bool Open(const char *Filename) = 0;
+
+	bool OpenFile(const char *Filename, const char *Mode)
+	{
+		guard(FFileArchive::Open);
+		f = fopen(Filename, Mode);
+		if (f) return true;			// success
+		if (!(Options & FRO_NoOpenError))
+			appError("Unable to open file %s", Filename);
+		return false;
+		unguard;
+	}
+};
+
+
+class FFileReader : public FFileArchive
+{
+public:
+	FFileReader(const char *Filename, unsigned InOptions = 0)
+	:	FFileArchive(Filename, Options)
+	{
+		guard(FFileReader::FFileReader);
+		IsLoading = true;
+		Open(Filename);
+		unguardf(("%s", Filename));
+	}
+
 	virtual void Serialize(void *data, int size)
 	{
 		guard(FFileReader::Serialize);
@@ -506,11 +549,7 @@ public:
 		if (ArStopper > 0 && ArPos + size > ArStopper)
 			appError("Serializing behind stopper (%d+%d > %d)", ArPos, size, ArStopper);
 
-		int res;
-		if (IsLoading)
-			res = fread(data, size, 1, f);
-		else
-			res = fwrite(data, size, 1, f);
+		int res = fread(data, size, 1, f);
 		if (res != 1)
 			appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
 		ArPos += size;
@@ -521,16 +560,46 @@ public:
 		unguardf(("File=%s", ShortName));
 	}
 
-	virtual int GetFileSize() const
+protected:
+	virtual bool Open(const char *Filename)
 	{
-		int pos  = ftell(f); fseek(f, 0, SEEK_END);
-		int size = ftell(f); fseek(f, pos, SEEK_SET);
-		return size;
+		return OpenFile(Filename, "rb");
+	}
+};
+
+
+class FFileWriter : public FFileArchive
+{
+public:
+	FFileWriter(const char *Filename, unsigned Options = 0)
+	:	FFileArchive(Filename, Options)
+	{
+		guard(FFileWriter::FFileWriter);
+		IsLoading = false;
+		Open(Filename);
+		unguardf(("%s", Filename));
 	}
 
-protected:
-	FILE	*f;
-	char	ShortName[128];
+	virtual void Serialize(void *data, int size)
+	{
+		guard(FFileWriter::Serialize);
+		if (size == 0) return;
+
+		int res = fwrite(data, size, 1, f);
+		if (res != 1)
+			appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
+		ArPos += size;
+#if PROFILE
+		GNumSerialize++;
+		GSerializeBytes += size;
+#endif
+		unguardf(("File=%s", ShortName));
+	}
+
+	virtual bool Open(const char *Filename)
+	{
+		return OpenFile(Filename, "wb");
+	}
 };
 
 
@@ -915,6 +984,8 @@ SIMPLE_TYPE(word,     word)
 SIMPLE_TYPE(int,      int)
 SIMPLE_TYPE(unsigned, unsigned)
 SIMPLE_TYPE(float,    float)
+SIMPLE_TYPE(int64,    int64)
+SIMPLE_TYPE(uint64,   uint64)
 
 // Aggregates
 SIMPLE_TYPE(FVector, float)
@@ -1387,16 +1458,8 @@ public:
 
 class FGuid
 {
-//!!	DECLARE_STRUCT(FGuid) -- require include UnObject.h before this; possibly - separate typeinfo and UObject headers
 public:
 	unsigned	A, B, C, D;
-
-/*	BEGIN_PROP_TABLE
-		PROP_INT(A)
-		PROP_INT(B)
-		PROP_INT(C)
-		PROP_INT(D)
-	END_PROP_TABLE */
 
 	friend FArchive& operator<<(FArchive &Ar, FGuid &G)
 	{

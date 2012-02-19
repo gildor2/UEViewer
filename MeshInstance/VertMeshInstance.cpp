@@ -11,12 +11,6 @@
 #include "TypeConvert.h"
 
 
-struct CVertMeshSection : public CMeshSection
-{
-	unsigned				PolyFlags;				// PF_...
-};
-
-
 CVertMeshInstance::CVertMeshInstance()
 :	AnimIndex(-1)
 ,	AnimTime(0)
@@ -71,7 +65,7 @@ void CVertMeshInstance::SetMesh(const UVertMesh *Mesh)
 	const FMeshFace *F = &pMesh->Faces[0];
 	word *pIndex = Indices;
 	int PrevMaterial = -2;
-	CVertMeshSection *Sec = NULL;
+	CMeshSection *Sec = NULL;
 	for (int i = 0; i < pMesh->Faces.Num(); i++, F++)
 	{
 		if (F->MaterialIndex != PrevMaterial)
@@ -89,11 +83,10 @@ void CVertMeshInstance::SetMesh(const UVertMesh *Mesh)
 			UUnrealMaterial *Mat = (TexIndex < pMesh->Textures.Num()) ? MATERIAL_CAST(pMesh->Textures[TexIndex]) : NULL;
 
 			// create new section
-			Sec = new (Sections) CVertMeshSection;
+			Sec = new (Sections) CMeshSection;
 			Sec->FirstIndex = pIndex - Indices;
 			Sec->NumFaces   = 0;
-			Sec->Material   = Mat;
-			Sec->PolyFlags  = PolyFlags;
+			Sec->Material   = UMaterialWithPolyFlags::Create(Mat, PolyFlags);
 
 			PrevMaterial = F->MaterialIndex;
 		}
@@ -239,8 +232,8 @@ void CVertMeshInstance::Draw()
 
 	for (i = 0; i < Sections.Num(); i++)
 	{
-		const CVertMeshSection &Sec = Sections[i];
-		SetMaterial(Sec.Material, i, Sec.PolyFlags);
+		const CMeshSection &Sec = Sections[i];
+		SetMaterial(Sec.Material, i);
 		glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Indices[Sec.FirstIndex]);
 	}
 

@@ -32,7 +32,7 @@ FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...);
 // configuration
 extern bool GExportScripts;
 extern bool GExportLods;
-extern bool GExportPskx;
+extern bool GExportPskx;		//!! obsolete
 extern bool GNoTgaCompress;
 extern bool GExportDDS;
 extern bool GUncook;

@@ -30,8 +30,7 @@ float half2float(word h)
 	int mant =  h        & 0x000003FF;
 
 	exp  = exp + (127 - 15);
-	mant = mant << 13;
-	f.df = (sign << 31) | (exp << 23) | mant;
+	f.df = (sign << 31) | (exp << 23) | (mant << 13);
 	return f.f;
 }
 
@@ -83,6 +82,10 @@ static void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 // It's useful to declare TArray<> structures as forward declarations in header file.
 USkeletalMesh3::USkeletalMesh3()
 :	bHasVertexColors(false)
+#if BATMAN
+,	EnableTwistBoneFixers(true)
+,	EnableClavicleFixer(true)
+#endif
 {}
 
 
@@ -1594,7 +1597,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		for (int Sec = 0; Sec < SrcLod.Sections.Num(); Sec++)
 		{
 			const FSkelMeshSection3 &S = SrcLod.Sections[Sec];
-			CSkelMeshSection *Dst = new (Lod->Sections) CSkelMeshSection;
+			CMeshSection *Dst = new (Lod->Sections) CMeshSection;
 
 			int MaterialIndex = S.MaterialIndex;
 			if (MaterialIndex >= 0 && MaterialIndex < Info.LODMaterialMap.Num())
@@ -1627,6 +1630,11 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	unguard; // ProcessSkeleton
 
 	unguard; // ConvertMesh
+
+#if BATMAN
+	if (Ar.Game == GAME_Batman2)
+		FixBatman2Skeleton();
+#endif
 
 	unguard;
 }
@@ -2829,7 +2837,7 @@ done:
 		Lod->Sections.Add(SrcLod.Sections.Num());
 		for (int i = 0; i < SrcLod.Sections.Num(); i++)
 		{
-			CStaticMeshSection &Dst = Lod->Sections[i];
+			CMeshSection &Dst = Lod->Sections[i];
 			const FStaticMeshSection3 &Src = SrcLod.Sections[i];
 			Dst.Material   = Src.Mat;
 			Dst.FirstIndex = Src.FirstIndex;

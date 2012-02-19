@@ -386,7 +386,25 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 			goto skip_remaining;
 		}
 #endif // SWRC
-		Ar << LODModels << f224 << Points;
+#if 0
+		// Shui Hu Q Zhuan 2 Online
+		if (Ar.ArVer == 126 && Ar.ArLicenseeVer == 1)
+		{
+			// skip LOD models
+			int Num;
+			Ar << AR_INDEX(Num);
+			for (int i = 0; i < Num; i++)
+			{
+				int Pos;
+				Ar << Pos;
+				Ar.Seek(Ar.Tell() + Pos - 4);
+			}
+			goto after_lods;
+		}
+#endif
+		Ar << LODModels;
+	after_lods:
+		Ar << f224 << Points;
 #if BATTLE_TERR
 		if (Ar.Game == GAME_BattleTerr && Ar.ArVer >= 134)
 		{
@@ -486,7 +504,7 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 
 	if (Ar.ArLicenseeVer && (Ar.Tell() != Ar.GetStopper()))
 	{
-		appNotify("Serializing SkeletalMesh'%s' of unknown game: %d unreal bytes", Name, Ar.GetStopper() - Ar.Tell());
+		appPrintf("Serializing SkeletalMesh'%s' of unknown game: %d unreal bytes\n", Name, Ar.GetStopper() - Ar.Tell());
 	skip_remaining:
 		DROP_REMAINING_DATA(Ar);
 	}
@@ -692,15 +710,15 @@ skeleton:
 
 void USkeletalMesh::InitSections(CSkelMeshLod &Lod)
 {
-	// allocate sections and set CSkelMeshSection.Material
+	// allocate sections and set CMeshSection.Material
 	Lod.Sections.Add(Materials.Num());
 	for (int sec = 0; sec < Materials.Num(); sec++)
 	{
 		const FMeshMaterial &M = Materials[sec];
-		CSkelMeshSection &Sec = Lod.Sections[sec];
+		CMeshSection &Sec = Lod.Sections[sec];
 		int TexIndex  = M.TextureIndex;
-		Sec.Material  = (TexIndex < Textures.Num()) ? Textures[TexIndex] : NULL;
-		Sec.PolyFlags = M.PolyFlags;
+		UUnrealMaterial *Mat = (TexIndex < Textures.Num()) ? Textures[TexIndex] : NULL;
+		Sec.Material = UMaterialWithPolyFlags::Create(Mat, M.PolyFlags);
 	}
 }
 
@@ -805,7 +823,7 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 		int NumIndices = 0;
 		for (i = 0; i < NumSections; i++)
 		{
-			CSkelMeshSection &Sec = Lod.Sections[i];
+			CMeshSection &Sec = Lod.Sections[i];
 			if (pass == 1)
 			{
 				int SecIndices = Sec.NumFaces * 3;
@@ -825,7 +843,7 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 		{
 			const VTriangle &Face = Triangles[i];
 			int MatIndex = Face.MatIndex;
-			CSkelMeshSection &Sec  = Lod.Sections[MatIndex];
+			CMeshSection &Sec  = Lod.Sections[MatIndex];
 			assert(MatIndex < NumSections);
 
 			if (pass == 1)	// on 1st pass count NumFaces, on 2nd pass fill indices
@@ -857,7 +875,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		int NumIndices = 0;
 		for (i = 0; i < NumSections; i++)
 		{
-			CSkelMeshSection &Sec = Lod.Sections[i];
+			CMeshSection &Sec = Lod.Sections[i];
 			if (pass == 1)
 			{
 				int SecIndices = Sec.NumFaces * 3;
@@ -880,7 +898,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		{
 			const FSkelMeshSection &ms = SrcLod.SmoothSections[s];
 			int MatIndex = ms.MaterialIndex;
-			CSkelMeshSection &Sec  = Lod.Sections[MatIndex];
+			CMeshSection &Sec  = Lod.Sections[MatIndex];
 			assert(MatIndex < NumSections);
 
 			if (pass == 1)
@@ -903,7 +921,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		{
 			const FSkelMeshSection &ms = SrcLod.RigidSections[s];
 			int MatIndex = ms.MaterialIndex;
-			CSkelMeshSection &Sec  = Lod.Sections[MatIndex];
+			CMeshSection &Sec  = Lod.Sections[MatIndex];
 			assert(MatIndex < NumSections);
 
 			if (pass == 1)
@@ -1314,7 +1332,7 @@ void UStaticMesh::ConvertMesh()
 	Lod->Sections.Add(Sections.Num());
 	for (int i = 0; i < Sections.Num(); i++)
 	{
-		CStaticMeshSection &Dst = Lod->Sections[i];
+		CMeshSection &Dst = Lod->Sections[i];
 		const FStaticMeshSection &Src = Sections[i];
 		Dst.Material   = Materials[i].Material;
 		Dst.FirstIndex = Src.FirstIndex;

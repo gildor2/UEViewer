@@ -61,7 +61,7 @@
 #define AVA				1		// AVA Online
 #define FRONTLINES		1		// Frontlines: Fuel of War and Homefront
 #define BLOODONSAND		1		// 50 Cent: Blood on the Sand
-#define BORDERLANDS		1		// Borderlands
+#define BORDERLANDS		1		// Borderlands, Brothers in Arms: Hell's Highway
 #define DARKVOID		1		// Dark Void
 #define HUXLEY			1
 #define AA3				1		// America's Army 3
@@ -85,6 +85,7 @@
 #define HUNTED			1		// Hunted: The Demon's Forge
 #define DND				1		// Dungeons & Dragons: Daggerdale
 #define SHADOWS_DAMNED	1		// Shadows of the Damned
+#define ARGONAUTS		1		// Rise of the Argonauts, Thor: God of Thunder
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

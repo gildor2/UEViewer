@@ -7,15 +7,6 @@
 	Local StaticMesh class, encapsulated all UE versions
 -----------------------------------------------------------------------------*/
 
-struct CStaticMeshSection : public CMeshSection
-{
-	// everything is from the CMeshSection
-#if DECLARE_VIEWER_PROPS
-	DECLARE_STRUCT(CStaticMeshSection)
-#endif // DECLARE_VIEWER_PROPS
-};
-
-
 struct CStaticMeshVertex : public CMeshVertex
 {
 	// everything is from the CMeshVertex
@@ -29,7 +20,7 @@ struct CStaticMeshLod
 	bool					HasNormals;
 	bool					HasTangents;
 	// geometry
-	TArray<CStaticMeshSection> Sections;
+	TArray<CMeshSection>	Sections;
 	CStaticMeshVertex		*Verts;
 	int						NumVerts;
 	CIndexBuffer			Indices;
@@ -65,7 +56,7 @@ struct CStaticMeshLod
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMeshLod)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Sections, CStaticMeshSection)
+		PROP_ARRAY(Sections, CMeshSection)
 		PROP_INT(NumVerts)
 		VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
 		PROP_INT(NumTexCoords)
@@ -100,7 +91,6 @@ private:
 
 
 #define REGISTER_STATICMESH_VCLASSES \
-	REGISTER_CLASS(CStaticMeshSection) \
 	REGISTER_CLASS(CStaticMeshLod)
 
 

@@ -7,67 +7,27 @@
 	Local SkeletalMesh class, encapsulated all UE versions
 -----------------------------------------------------------------------------*/
 
-#define HAS_POLY_FLAGS			1			// mandatory for UE1, rarely (or never?) used in UE2
-
-/*
-
-May make dummy material class to exclude PolyFlags from meshes at all (keep them in UVertMesh only)?
-	class UTextureWithFlags : public UUnrealMaterial
-	{
-		UTexture	*Tex;
-		unsigned	PolyFlags;
-	}
-? PolyFlags may be used for non-texture UE2 materials too
-- create this only when PolyFlags != 0
-- make a function: CreateTextureWrapper(UTexture* Tex, unsigned PolyFlags) - will find or create wrapper
-- can remove PolyFlags from most of rendering functions! (used for UTexture and UFinalBlend)
-  ! but should make correct display of the wrapped material with <M> mesh mode - when has wrapper, will
-    display IT instead of original material (see CMeshViewer::PrintMaterialInfo() - everything is here)
-  - will also need to change:
-    - CVertMeshInstance, but NOTE: UTextureWithFlags will be stored in CSkeletalMesh (not instance!) and
-      in CVertMeshInstance (not mesh!) - probably should generate materials in UVertMesh too
-- be sure to delete UTextureWithFlags when needed (most probably this will not happen - meshes are not
-  freeing used materials, and UTextureWithFlags will not be stored in GObjObjects array)
-  - currently we have generated following objects:
-    - Rune mesh generated set of USkeletalMesh objects + UMeshAnimation
-    - USkeletalMesh, UStaticMesh, UMeshAnimation generates CSkeletalMesh, CStaticMesh, CAnimSet objects
-      (not UObject-based)
-  - generated materials will be used in CSkeletalMesh/CStaticMesh
-  ? may be avoid freeing - all UObjects will exists until exit from application
-  - place WrapLegacyMaterial(UMaterial* Mat, int PolyFlags) to UnRenderer.cpp, make static array of
-    created wrappers to not create the same material twice
-
-*/
-
-
 /*!!
 
 TODO:
-- verify USkeletalMesh in games:
-  - Unreal1
 - support vertex colors (for StaticMesh too!)
 - dump properties of the SkeletalMesh:
   - number of vertex influences (1-4)
   - number of really used bones -- to exclude hair, fingers etc -- display as "Bones: N/M"
 - remove RootBone.Orientation.W *= -1 for UE3, place this code for UE2 (find all places where bone orientation is accessed!)
   - fix (invert logic) mesh rendering and export code too
+- UMaterialWithPolyFlags: should make correct display of the wrapped material with <M> mesh mode - when has
+  wrapper, will display IT instead of original material (see CMeshViewer::PrintMaterialInfo() - everything is here)
+  - will also need to change:
+    - CVertMeshInstance, but NOTE: UTextureWithFlags will be stored in CSkeletalMesh (not instance!) and
+      in CVertMeshInstance (not mesh!) - probably should generate materials in UVertMesh too
+    - Dump() functions for meshes
 
 */
 
 
+#define MAX_MESHBONES				2048
 #define NUM_INFLUENCES				4
-
-struct CSkelMeshSection : public CMeshSection
-{
-#if HAS_POLY_FLAGS
-	unsigned				PolyFlags;				// PF_...
-#endif
-
-#if DECLARE_VIEWER_PROPS
-	DECLARE_STRUCT2(CSkelMeshSection, CMeshSection)
-#endif // DECLARE_VIEWER_PROPS
-};
-
 
 struct CSkelMeshVertex : public CMeshVertex
 {
@@ -93,7 +53,7 @@ struct CSkelMeshLod
 	bool					HasNormals;
 	bool					HasTangents;
 	// geometry
-	TArray<CSkelMeshSection> Sections;
+	TArray<CMeshSection>	Sections;
 	CSkelMeshVertex			*Verts;
 	int						NumVerts;
 	CIndexBuffer			Indices;
@@ -129,7 +89,7 @@ struct CSkelMeshLod
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CSkelMeshLod)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Sections, CSkelMeshSection)
+		PROP_ARRAY(Sections, CMeshSection)
 		PROP_INT(NumVerts)
 		VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
 		PROP_INT(NumTexCoords)
@@ -162,6 +122,9 @@ public:
 	CSkeletalMesh(UObject *Original)
 	:	OriginalMesh(Original)
 	{}
+
+	void SortBones();
+	int FindBone(const char *Name) const;
 
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CSkeletalMesh)
@@ -214,6 +177,11 @@ struct CAnimTrack
 
 	// DstPos and DstQuat will not be changed when KeyPos and KeyQuat are empty
 	void GetBonePosition(float Frame, float NumFrames, bool Loop, CVec3 &DstPos, CQuat &DstQuat) const;
+	inline bool HasKeys() const
+	{
+		return (KeyQuat.Num() + KeyPos.Num()) > 0;
+	}
+	void CopyFrom(const CAnimTrack &Src);
 };
 
 
@@ -274,7 +242,7 @@ public:
 
 
 #define REGISTER_SKELMESH_VCLASSES \
-	REGISTER_CLASS(CSkelMeshSection) \
+	REGISTER_CLASS(CMeshSection) \
 	REGISTER_CLASS(CSkelMeshLod)
 
 
