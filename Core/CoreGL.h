@@ -204,7 +204,7 @@ public:
 	CFramebuffer(bool UseDepth = false, bool useFp = false)
 	:	FBObj(0)
 	,	ColorTex(0)
-	,	DepthRenderbuffer(0)
+	,	DepthTex(0)
 	,	width(0)
 	,	height(0)
 	,	Timestamp(0)
@@ -241,13 +241,18 @@ public:
 	{
 		glBindTexture(GL_TEXTURE_2D, ColorTex);
 	}
+	inline void BindDepthTexture() const
+	{
+		glBindTexture(GL_TEXTURE_2D, DepthTex);
+	}
+
 	void Flush();			//?? rename to Draw()
 
 protected:
 	int			Timestamp;
 	GLuint		FBObj;
 	GLuint		ColorTex;
-	GLuint		DepthRenderbuffer;
+	GLuint		DepthTex;
 	int			width, height;
 	bool		hasDepth;
 	bool		fpFormat;

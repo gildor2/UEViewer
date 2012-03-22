@@ -10,6 +10,8 @@
 #include "Psk.h"
 #include "Exporters.h"
 
+#include "UnMathTools.h"		// ComputeBounds
+
 
 // PSK uses right-hand coordinates, but unreal uses left-hand.
 // When importing PSK into UnrealEd, it mirrors model.
@@ -18,7 +20,6 @@
 
 /*??
 
-- may weld vertices when write PNTS0000 chunk
 - ActorX + UDK has support for vertex colors and extra UV sets - make umodel compatible with this
 
 */
@@ -48,12 +49,103 @@ static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 
 // Common code for psk format, shared between CSkeletalMesh and CStaticMesh
 
+#define VERT(n)		OffsetPointer(Verts, VertexSize * (n))
+
+
+#define USE_HASHING	1
+
+// structure which helps to share vertices between wedges
+struct CVertexShare
+{
+	TArray<CVec3>	Points;
+	TArray<CVec3>	Normals;
+	TArray<int>		WedgeToVert;
+	TArray<int>		VertToWedge;
+	int				WedgeIndex;
+
+#if USE_HASHING
+	// hashing
+	CVec3			Mins, Maxs;
+	CVec3			Extents;
+	int				Hash[1024];
+	TArray<int>		HashNext;
+#endif // USE_HASHING
+
+	void Prepare(const CMeshVertex *Verts, int NumVerts, int VertexSize)
+	{
+		WedgeIndex = 0;
+		Points.Empty(NumVerts);
+		Normals.Empty(NumVerts);
+		WedgeToVert.Empty(NumVerts);
+		VertToWedge.Empty(NumVerts);
+		VertToWedge.Add(NumVerts);
+#if USE_HASHING
+		// compute bounds for better hashing
+		ComputeBounds(&Verts->Position, NumVerts, VertexSize, Mins, Maxs);
+		VectorSubtract(Maxs, Mins, Extents);
+		Extents[0] += 1; Extents[1] += 1; Extents[2] += 1; // avoid zero divide
+		HashNext.Empty(NumVerts);
+		HashNext.Add(NumVerts);
+		// initialize Hash and HashNext with -1
+		memset(Hash, -1, sizeof(Hash));
+		for (int i = 0; i < NumVerts; i++)
+			HashNext[i] = -1;
+#endif // USE_HASHING
+	}
+
+	int AddVertex(const CVec3 &Pos, const CVec3 &Normal)
+	{
+		int PointIndex = -1;
+
+#if USE_HASHING
+		// compute hash
+		int h = appFloor(
+			( (Pos[0] - Mins[0]) / Extents[0] + (Pos[1] - Mins[1]) / Extents[1] + (Pos[2] - Mins[2]) / Extents[2] ) // 0..3
+			* (ARRAY_COUNT(Hash) / 3.0f * 16)			// multiply to 16 for better spreading inside Hash array
+		) % ARRAY_COUNT(Hash);
+		// find point with the same position and normal
+		for (PointIndex = Hash[h]; PointIndex >= 0; PointIndex = HashNext[PointIndex])
+		{
+			if (Points[PointIndex] == Pos && Normals[PointIndex] == Normal)
+				break;		// found it
+		}
+#else
+		// find wedge with the same position and normal
+		while (true)
+		{
+			PointIndex = Points.FindItem(Pos, PointIndex + 1);
+			if (PointIndex == INDEX_NONE) break;
+			if (Normals[PointIndex] == Normal) break;
+		}
+#endif
+		if (PointIndex == INDEX_NONE)
+		{
+			// point was not found - create it
+			PointIndex = Points.AddItem(Pos);
+			Normals.AddItem(Normal);
+#if USE_HASHING
+			// add to Hash
+			HashNext[PointIndex] = Hash[h];
+			Hash[h] = PointIndex;
+#endif // USE_HASHING
+		}
+
+		// remember vertex <-> wedge map
+		WedgeToVert.AddItem(PointIndex);
+		VertToWedge[PointIndex] = WedgeIndex++;
+
+		return PointIndex;
+	}
+};
+
+
 static void ExportCommonMeshData
 (
 	FArchive &Ar,
 	const CMeshSection *Sections, int NumSections,
 	const CMeshVertex  *Verts,    int NumVerts, int VertexSize,
-	const CIndexBuffer &Indices
+	const CIndexBuffer &Indices,
+	CVertexShare       &Share
 )
 {
 	guard(ExportCommonMeshData);
@@ -61,15 +153,25 @@ static void ExportCommonMeshData
 	static VChunkHeader PtsHdr, WedgHdr, FacesHdr, MatrHdr;
 	int i, j;
 
-#define VERT(n)		OffsetPointer(Verts, VertexSize * (n))
 #define SECT(n)		(Sections + n)
 
-	PtsHdr.DataCount = NumVerts;
-	PtsHdr.DataSize  = sizeof(FVector);
-	SAVE_CHUNK(PtsHdr, "PNTS0000");
+	// share vertices
+//	appResetProfiler();
+	Share.Prepare(Verts, NumVerts, VertexSize);
 	for (i = 0; i < NumVerts; i++)
 	{
-		FVector V = (FVector&) VERT(i)->Position;
+		const CMeshVertex &S = *VERT(i);
+		Share.AddVertex(S.Position, S.Normal);
+	}
+//	appPrintProfiler();
+//	appPrintf("%d wedges were merged to %d verts\n", NumVerts, Share.Points.Num());
+
+	PtsHdr.DataCount = Share.Points.Num();
+	PtsHdr.DataSize  = sizeof(FVector);
+	SAVE_CHUNK(PtsHdr, "PNTS0000");
+	for (i = 0; i < Share.Points.Num(); i++)
+	{
+		FVector V = (FVector&) Share.Points[i];
 #if MIRROR_MESH
 		V.Y = -V.Y;
 #endif
@@ -101,7 +203,7 @@ static void ExportCommonMeshData
 	{
 		VVertex W;
 		const CMeshVertex &S = *VERT(i);
-		W.PointIndex = i;
+		W.PointIndex = Share.WedgeToVert[i];
 		W.U          = S.UV[0].U;
 		W.V          = S.UV[0].V;
 		W.MatIndex   = WedgeMat[i];
@@ -110,7 +212,7 @@ static void ExportCommonMeshData
 		Ar << W;
 	}
 
-	if (numFaces * 3 <= 65536)
+	if (NumVerts <= 65536) //?? (numFaces * 3 <= 65536)
 	{
 		FacesHdr.DataCount = numFaces;
 		FacesHdr.DataSize  = sizeof(VTriangle16);
@@ -124,6 +226,7 @@ static void ExportCommonMeshData
 				for (int k = 0; k < 3; k++)
 				{
 					int idx = Index(Sec.FirstIndex + j * 3 + k);
+					assert(idx >= 0 && idx < 65536);
 					T.WedgeIndex[k] = idx;
 				}
 				T.MatIndex        = i;
@@ -233,12 +336,14 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
+	CVertexShare Share;
 	ExportCommonMeshData
 	(
 		Ar,
 		&Lod.Sections[0], Lod.Sections.Num(),
 		Lod.Verts, Lod.NumVerts, sizeof(CSkelMeshVertex),
-		Lod.Indices
+		Lod.Indices,
+		Share
 	);
 
 	BoneHdr.DataCount = numBones;
@@ -271,9 +376,10 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 	// count influences
 	int NumInfluences = 0;
-	for (i = 0; i < numVerts; i++)
+	for (i = 0; i < Share.Points.Num(); i++)
 	{
-		const CSkelMeshVertex &V = Lod.Verts[i];
+		int WedgeIndex = Share.VertToWedge[i];
+		const CSkelMeshVertex &V = Lod.Verts[WedgeIndex];
 		for (j = 0; j < NUM_INFLUENCES; j++)
 		{
 			if (V.Bone[j] < 0) break;
@@ -284,9 +390,10 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	InfHdr.DataCount = NumInfluences;
 	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
-	for (i = 0; i < numVerts; i++)
+	for (i = 0; i < Share.Points.Num(); i++)
 	{
-		const CSkelMeshVertex &V = Lod.Verts[i];
+		int WedgeIndex = Share.VertToWedge[i];
+		const CSkelMeshVertex &V = Lod.Verts[WedgeIndex];
 		for (j = 0; j < NUM_INFLUENCES; j++)
 		{
 			if (V.Bone[j] < 0) break;
@@ -295,7 +402,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 			VRawBoneInfluence I;
 			I.Weight     = V.Weight[j];
 			I.BoneIndex  = V.Bone[j];
-			I.PointIndex = i;				//?? remap
+			I.PointIndex = i;
 			Ar << I;
 		}
 	}
@@ -333,13 +440,6 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		}
 	}
 
-/*	if (!GExportPskx)
-	{
-		// perform some verifications to warn user about missing -pskx option
-		int NumTexCoords = Mesh->Lods[0].NumTexCoords;
-		if (NumTexCoords > 1) appPrintf("WARNING: SkeletalMesh %s has %d TexCoords, -pskx option is adviced\n", OriginalMesh->Name, NumTexCoords);
-	} */
-
 	int MaxLod = (GExportLods) ? Mesh->Lods.Num() : 1;
 	for (int Lod = 0; Lod < MaxLod; Lod++)
 	{
@@ -348,7 +448,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		const CSkelMeshLod &MeshLod = Mesh->Lods[Lod];
 		if (!MeshLod.Sections.Num()) continue;		// empty mesh
 
-		bool UsePskx = (MeshLod.Indices.Num() > 65536) /* || (GExportPskx && (MeshLod.NumTexCoords > 1)) */;
+		bool UsePskx = (MeshLod.NumVerts > 65536); //?? (MeshLod.Indices.Num() > 65536);
 
 		char filename[512];
 		const char *Ext = (UsePskx) ? "pskx" : "psk";
@@ -531,12 +631,14 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
+	CVertexShare Share;
 	ExportCommonMeshData
 	(
 		Ar,
 		&Lod.Sections[0], Lod.Sections.Num(),
 		Lod.Verts, Lod.NumVerts, sizeof(CStaticMeshVertex),
-		Lod.Indices
+		Lod.Indices,
+		Share
 	);
 
 	BoneHdr.DataCount = 0;		// dummy ...

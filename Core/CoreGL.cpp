@@ -573,11 +573,11 @@ void CFramebuffer::Release()
 {
 	if (GL_IsValidObject(ColorTex, Timestamp))
 		glDeleteTextures(1, &ColorTex);
-	if (GL_IsValidObject(DepthRenderbuffer, Timestamp))
-		glDeleteRenderbuffersEXT(1, &DepthRenderbuffer);
+	if (GL_IsValidObject(DepthTex, Timestamp))
+		glDeleteTextures(1, &DepthTex);
 	if (GL_IsValidObject(FBObj, Timestamp))
 		glDeleteFramebuffersEXT(1, &FBObj);
-	ColorTex = DepthRenderbuffer = FBObj = 0;
+	ColorTex = DepthTex = FBObj = 0;
 }
 
 void CFramebuffer::SetSize(int winWidth, int winHeight)
@@ -597,7 +597,7 @@ void CFramebuffer::SetSize(int winWidth, int winHeight)
 	GLenum internalFormat = fpFormat ? GL_RGBA16F_ARB : GL_RGBA8;
 	GLenum type           = fpFormat ? GL_HALF_FLOAT_ARB : GL_UNSIGNED_BYTE;
 	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGBA, type, NULL);
-	GL_CheckError("TexImage");
+	GL_CheckError("ColorTexImage");
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -606,21 +606,25 @@ void CFramebuffer::SetSize(int winWidth, int winHeight)
 	// create depth renderbuffer
 	if (hasDepth)
 	{
-		glGenRenderbuffersEXT(1, &DepthRenderbuffer);
-		glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, DepthRenderbuffer);
-		glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, width, height);
-		GL_CheckError("RenderBufferStorage");
+		glGenTextures(1, &DepthTex);
+		glBindTexture(GL_TEXTURE_2D, DepthTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_INT, NULL);
+		GL_CheckError("DepthTexImage");
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
 
 	// create frame buffer object
 	glGenFramebuffersEXT(1, &FBObj);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, FBObj);
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, ColorTex, 0);
-	GL_CheckError("FrameBufferTexture");
+	GL_CheckError("SetColorTexture");
 	if (hasDepth)
 	{
-		glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, DepthRenderbuffer);
-		GL_CheckError("SetRenderbuffer");
+		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, DepthTex, 0);
+		GL_CheckError("SetDepthTexture");
 	}
 
 	// check frame buffer status

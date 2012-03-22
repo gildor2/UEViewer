@@ -123,8 +123,16 @@ public:
 	:	OriginalMesh(Original)
 	{}
 
+	void FinalizeMesh()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].BuildNormals();
+		SortBones();
+	}
+
 	void SortBones();
 	int FindBone(const char *Name) const;
+	int GetRootBone() const;
 
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CSkeletalMesh)

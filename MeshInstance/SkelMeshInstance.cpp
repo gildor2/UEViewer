@@ -95,10 +95,6 @@ CSkelMeshInstance::CSkelMeshInstance()
 ,	BoneData(NULL)
 ,	Skinned(NULL)
 ,	InfColors(NULL)
-,	ShowSkel(0)
-,	ShowLabels(false)
-,	ShowAttach(false)
-,	ShowInfluences(false)
 {
 	ClearSkelAnims();
 }
@@ -162,7 +158,7 @@ static int CheckBoneTree(const TArray<CSkelMeshBone> &Bones, int Index,
 		}
 	// store gathered information
 //	assert(currIndex == Index);		//??
-	if (currIndex != Index) appNotify("Strange skeleton, check childs of bone %d", Index);
+	if (currIndex != Index) appNotify("Strange skeleton, check childs of bone %d (%s)", currIndex, *Bones[currIndex].Name);
 	Sizes[currIndex] = treeSize;
 	Depth[currIndex] = depth;
 	return treeSize + 1;
@@ -395,6 +391,19 @@ void CSkelMeshInstance::SetBoneScale(const char *BoneName, float scale)
 	int BoneIndex = FindBone(BoneName);
 	if (BoneIndex == INDEX_NONE) return;
 	BoneData[BoneIndex].Scale = scale;
+}
+
+
+CVec3 CSkelMeshInstance::GetMeshOrigin() const
+{
+	if (!BoneData)
+		return nullVec3;
+	// find first animated bone
+	int BoneIndex = pMesh->GetRootBone();	//?? cache this value
+	if (BoneIndex < 0)
+		BoneIndex = 0;
+//	appPrintf("Focus on bone %d (%s)\n", BoneIndex, *pMesh->RefSkeleton[BoneIndex].Name);
+	return BoneData[BoneIndex].Coords.origin;
 }
 
 
@@ -817,7 +826,7 @@ static void GetBoneInfColor(int BoneIndex, float *Color)
 }
 
 
-void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
+void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 {
 	guard(CSkelMeshInstance::DrawSkeleton);
 
@@ -837,6 +846,8 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 
 		CVec3 v1;
 		float Color[4];
+		unsigned TextColor;
+
 		Color[3] = 0.5f;
 		if (i > 0)
 		{
@@ -854,8 +865,12 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 			Color[0] = 1; Color[1] = 0; Color[2] = 1;
 			v1.Zero();
 		}
-		if (ShowInfluences)
+		TextColor = RGBA(1,1,0,0.7);
+		if (ColorizeBones)
+		{
 			GetBoneInfColor(i, Color);
+			TextColor = RGBAS(Color[0], Color[1], Color[2], 0.7);
+		}
 		glColor4fv(Color);
 		glVertex3fv(v1.v);
 		glVertex3fv(BC.origin.v);
@@ -865,7 +880,7 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels)
 			// show bone label
 			v1.Add(BC.origin);
 			v1.Scale(0.5f);
-			DrawText3D(v1, S_YELLOW"(%d)%s", i, *B.Name);
+			DrawText3D(v1, TextColor, "(%d)%s", i, *B.Name);
 		}
 	}
 	glColor3f(1,1,1);
@@ -916,7 +931,7 @@ void CSkelMeshInstance::DrawAttachments()
 		CVec3 labelOrigin;
 		static const CVec3 origin0 = { 4, 4, 4 };
 		AC.UnTransformPoint(origin0, labelOrigin);
-		DrawText3D(labelOrigin, S_GREEN"%s\n(%s)", *S.Name, BoneName);
+		DrawText3D(labelOrigin, RGB(0,1,0), "%s\n(%s)", *S.Name, BoneName);
 	}
 	glColor3f(1,1,1);
 	glEnd();
@@ -1030,17 +1045,19 @@ void CSkelMeshInstance::TransformMesh()
 }
 
 
-void CSkelMeshInstance::DrawMesh()
+void CSkelMeshInstance::DrawMesh(unsigned flags)
 {
 	guard(CSkelMeshInstance::DrawMesh);
 	int i;
+
+	if (!pMesh->Lods.Num()) return;
 
 	/*const*/ CSkelMeshLod& Mesh = pMesh->Lods[LodNum];	//?? not 'const' because of BuildTangents(); change this?
 	int NumSections = Mesh.Sections.Num();
 	int NumVerts    = Mesh.NumVerts;
 	if (!NumSections || !NumVerts) return;
 
-	if (!Mesh.HasNormals)  Mesh.BuildNormals();
+//	if (!Mesh.HasNormals)  Mesh.BuildNormals();
 	if (!Mesh.HasTangents) Mesh.BuildTangents();
 
 #if 0
@@ -1096,7 +1113,7 @@ void CSkelMeshInstance::DrawMesh()
 	glNormalPointer(GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Normal);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(CSkelMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
 
-	if (ShowInfluences)
+	if (flags & DF_SHOW_INFLUENCES)
 	{
 		// in this mode mesh is displayed colorized instead of textured
 		if (!InfColors) BuildInfColors();
@@ -1126,7 +1143,7 @@ void CSkelMeshInstance::DrawMesh()
 		const CMeshSection &Sec = Mesh.Sections[MaterialIndex];
 		if (!Sec.NumFaces) continue;
 		// select material
-		if (!ShowInfluences)
+		if (!(flags & DF_SHOW_INFLUENCES))
 			SetMaterial(Sec.Material, MaterialIndex);
 		// check tangent space
 		GLint aTangent = -1, aBinormal = -1;
@@ -1198,7 +1215,7 @@ void CSkelMeshInstance::DrawMesh()
 
 	// draw mesh normals
 
-	if (bShowNormals)
+	if (flags & DF_SHOW_NORMALS)
 	{
 		glBegin(GL_LINES);
 		glColor3f(0.5f, 1, 0);
@@ -1247,11 +1264,11 @@ void CSkelMeshInstance::DrawMesh()
 }
 
 
-void CSkelMeshInstance::Draw()
+void CSkelMeshInstance::Draw(unsigned flags)
 {
 	guard(CSkelMeshInstance::Draw);
 
-	// show mesh
+	// switch LOD model
 	if (LodNum != LastLodNum)
 	{
 		// LOD has been changed
@@ -1263,16 +1280,8 @@ void CSkelMeshInstance::Draw()
 		}
 		LastLodNum = LodNum;
 	}
-
-	if (ShowSkel != 2)				// not "show skeleton only" mode
-		DrawMesh();
-
-	//?? move this part to CSkelMeshViewer; call Inst->DrawSkeleton() etc
-	// show skeleton
-	if (ShowSkel)
-		DrawSkeleton(ShowLabels);
-	if (ShowAttach)
-		DrawAttachments();
+	// draw ...
+	DrawMesh(flags);
 
 	unguard;
 }

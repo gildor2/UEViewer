@@ -106,6 +106,9 @@ public:
 			return;
 		}
 #endif // APB
+#if MASSEFF
+		if (Ar.Game == GAME_MassEffect3) return;
+#endif
 		SourceArt.Serialize(Ar);
 		unguard;
 	}
@@ -299,7 +302,7 @@ public:
 			Format = (EPixelFormat)Format2;		// int -> byte (enum)
 		}
 #if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
+		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57) Ar.Seek(Ar.Tell() + 16);	// some hash; version unknown!!
 #endif
 #if MKVSDC
 		if (Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 31)	//?? may be MidwayVer ?
@@ -310,13 +313,14 @@ public:
 #endif // MKVSDC
 		Ar << Mips;
 #if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands) Ar.Seek(Ar.Tell() + 16);	// some hash
+		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57) Ar.Seek(Ar.Tell() + 16);	// some hash; version unknown!!
 #endif
 #if MASSEFF
-		if (Ar.Game == GAME_MassEffect && Ar.ArLicenseeVer >= 65)
+		if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
 		{
 			int unkFC;
-			Ar << unkFC;
+			if (Ar.ArLicenseeVer >= 65) Ar << unkFC;
+			if (Ar.ArLicenseeVer >= 99) goto tfc_guid;
 		}
 #endif // MASSEFF
 #if HUXLEY
@@ -326,7 +330,10 @@ public:
 		if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0x1700) return;
 #endif
 		if (Ar.ArVer >= 567)
+		{
+		tfc_guid:
 			Ar << TextureFileCacheGuid;
+		}
 		if (Ar.ArVer >= 674)
 		{
 			TArray<FTexture2DMipMap> CachedPVRTCMips;
@@ -603,6 +610,11 @@ public:
 	virtual void Serialize(FArchive &Ar)
 	{
 		Super::Serialize(Ar);
+		if (Ar.ArVer >= 858)
+		{
+			int unkMask;		// default 1
+			Ar << unkMask;
+		}
 		if (Ar.ArVer >= 656)
 		{
 			guard(SerializeFMaterialResource);

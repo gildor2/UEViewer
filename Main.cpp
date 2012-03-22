@@ -341,8 +341,9 @@ static const GameInfo games[] = {
 		G("Rainbow 6: Vegas 2", r6v2, GAME_R6Vegas2),
 #	endif
 #	if MASSEFF
-		G("Mass Effect", mass, GAME_MassEffect),
+		G("Mass Effect",   mass,  GAME_MassEffect ),
 		G("Mass Effect 2", mass2, GAME_MassEffect2),
+		G("Mass Effect 3", mass3, GAME_MassEffect3),
 #	endif
 #	if A51
 		G("BlackSite: Area 51", a51, GAME_A51),
@@ -596,7 +597,7 @@ static void Usage()
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
 			"    -sounds         allow export of sounds\n"
-			"    -3rdparty       allow 3rd party asset export (ScaleForm)\n"
+			"    -3rdparty       allow 3rd party asset export (ScaleForm, FaceFX)\n"
 			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
 			"\n"
 			"Platform selection:\n"
@@ -614,7 +615,7 @@ static void Usage()
 			"    -uncook         use original package name as a base export directory\n"
 			"    -groups         use group names instead of class names for directories\n"
 			"    -uc             create unreal script when possible\n"
-//!!			"    -pskx           use pskx format for skeletal mesh\n"
+//			"    -pskx           use pskx format for skeletal mesh\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -lods           export all available mesh LOD levels\n"
 			"    -dds            export textures in DDS format whenever possible\n"
@@ -731,7 +732,7 @@ int main(int argc, char **argv)
 			OPT_BOOL ("all",     exprtAll)
 			OPT_BOOL ("uncook",  GUncook)
 			OPT_BOOL ("groups",  GUseGroups)
-			OPT_BOOL ("pskx",    GExportPskx)	//!! remove later
+//			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
 			OPT_BOOL ("md5",     md5)
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
@@ -1162,6 +1163,7 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	{
 		if (Viewer->Object == Obj) return true;	// object is not changed
 		delete Viewer;
+		Viewer = NULL;
 	}
 
 	if (!test)
@@ -1209,15 +1211,7 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 }
 
 
-void AppDrawFrame(float TimeDelta)
-{
-	guard(AppDrawFrame);
-	Viewer->Draw3D(TimeDelta);
-	unguard;
-}
-
-
-static void TakeScreenshot(const char *ObjectName)
+static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 {
 	char filename[256];
 	appSprintf(ARRAY_ARG(filename), "Screenshots/%s.tga", ObjectName);
@@ -1240,14 +1234,72 @@ static void TakeScreenshot(const char *ObjectName)
 	byte *pic = new byte [width * height * 4];
 	glFinish();
 	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pic);
+
+	if (CatchAlpha)
+	{
+		/*
+		NOTES:
+		- this will work in GL1 mode only, GL2 has depth buffer somewhere in CFramebuffer;
+		  we are copying depth to the main framebuffer in bloom shader
+		- rendering using black background for better semi-transparency
+		- processing semi-transparency with alpha channel in framebuffer will not work because
+		  some parts of image could have different blending modes (blend, add etc)
+		- some translucent parts could be painted with no depthwrite, this will produce black
+		  areas! (example: bloom has no depthwrite, it is screen-space effect)
+		*/
+		float *picDepth = new float [width * height];
+		glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, picDepth);
+		for (int i = 0; i < width * height; i++)
+		{
+			float v = picDepth[i];
+			pic[i * 4 + 3] = (v == 1) ? 0 : 255;
+		}
+		delete picDepth;
+	}
+
 	WriteTGA(Ar, width, height, pic);
 	delete pic;
 }
 
 
-void AppKeyEvent(int key)
+static int GDoScreenshot = 0;
+
+void AppDrawFrame(float TimeDelta)
+{
+	guard(AppDrawFrame);
+
+	bool AlphaBgShot = GDoScreenshot >= 2;
+	if (AlphaBgShot)
+	{
+		// screenshot with transparent background
+		glClearColor(0, 0, 0, 0);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
+	// draw the frame
+	Viewer->Draw3D(TimeDelta);
+
+	if (GDoScreenshot)
+	{
+		UObject *Obj = UObject::GObjObjects[ObjIndex];
+		TakeScreenshot(Obj->Name, AlphaBgShot);
+		GDoScreenshot = 0;
+	}
+
+	unguard;
+}
+
+
+void AppKeyEvent(int key, bool isDown)
 {
 	guard(AppKeyEvent);
+
+	if (!isDown)
+	{
+		Viewer->ProcessKeyUp(key);
+		return;
+	}
+
 	if (key == SPEC_KEY(PAGEDOWN) || key == SPEC_KEY(PAGEUP))
 	{
 		// browse loaded objects
@@ -1285,11 +1337,16 @@ void AppKeyEvent(int key)
 	}
 	if (key == ('s'|KEY_CTRL))
 	{
-		UObject *Obj = UObject::GObjObjects[ObjIndex];
-		TakeScreenshot(Obj->Name);
+		GDoScreenshot = 1;
+		return;
+	}
+	if (key == ('s'|KEY_ALT))
+	{
+		GDoScreenshot = 2;
 		return;
 	}
 	Viewer->ProcessKey(key);
+
 	unguard;
 }
 

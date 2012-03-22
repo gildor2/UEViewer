@@ -170,6 +170,7 @@ class UMaterialWithPolyFlags : public UUnrealMaterial
 public:
 	// PolyFlags support functions
 
+#if RENDERING
 	virtual void SetupGL();
 
 	// Proxy functions
@@ -195,6 +196,7 @@ public:
 protected:
 	UUnrealMaterial			*Material;
 	unsigned				PolyFlags;
+#endif // RENDERING
 };
 
 

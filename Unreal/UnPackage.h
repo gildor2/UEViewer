@@ -215,6 +215,13 @@ struct FPackageFileSummary
 			Ar << unk10;		// some flags?
 		}
 #endif // LEAD
+#if MASSEFF
+		if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (S.PackageFlags & 8))
+		{
+			int unk88;
+			Ar << unk88;
+		}
+#endif // MASSEFF
 		Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
 #if APB
 		if (Ar.Game == GAME_APB)
@@ -359,18 +366,22 @@ struct FPackageFileSummary
 				Ar << S.CookerVersion;
 	#if MASSEFF
 			// ... MassEffect has some additional structure here ...
-			if (Ar.Game == GAME_MassEffect || Ar.Game == GAME_MassEffect2)
+			if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
 			{
 				int unk1, unk2, unk3[2], unk4[2];
-				if (Ar.ArLicenseeVer >= 16) Ar << unk1;					// random value
-				if (Ar.ArLicenseeVer >= 32) Ar << unk2;					// unknown
-				if (Ar.ArLicenseeVer >= 35 && Ar.Game != GAME_MassEffect2) // MassEffect2 has upper version limit: 113
+				if (Ar.ArLicenseeVer >= 16 && Ar.ArLicenseeVer < 136)
+					Ar << unk1;					// random value, ME1&2
+				if (Ar.ArLicenseeVer >= 32 && Ar.ArLicenseeVer < 136)
+					Ar << unk2;					// unknown, ME1&2
+				if (Ar.ArLicenseeVer >= 35 && Ar.ArLicenseeVer < 113)	// ME1
 				{
 					TMap<FString, TArray<FString> > unk5;
 					Ar << unk5;
 				}
-				if (Ar.ArLicenseeVer >= 37) Ar << unk3[0] << unk3[1];	// 2 ints: 1, 0
-				if (Ar.ArLicenseeVer >= 39) Ar << unk4[0] << unk4[1];	// 2 ints: -1, -1
+				if (Ar.ArLicenseeVer >= 37)
+					Ar << unk3[0] << unk3[1];	// 2 ints: 1, 0
+				if (Ar.ArLicenseeVer >= 39 && Ar.ArLicenseeVer < 136)
+					Ar << unk4[0] << unk4[1];	// 2 ints: -1, -1 (ME1&2)
 			}
 	#endif // MASSEFF
 			if (Ar.ArVer >= 334)

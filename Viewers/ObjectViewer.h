@@ -36,6 +36,8 @@ public:
 	virtual void ShowHelp();
 	virtual void Draw2D();
 	virtual void ProcessKey(int key);
+	virtual void ProcessKeyUp(int key)
+	{}
 
 	virtual void Draw3D(float TimeDelta)
 	{}
@@ -73,9 +75,14 @@ class CMeshViewer : public CObjectViewer
 public:
 	// linked data
 	CMeshInstance	*Inst;
+	// debug rendering
+	unsigned		DrawFlags;
+	bool			Wireframe;
 
 	CMeshViewer(UObject *Mesh)
 	:	CObjectViewer(Mesh)
+	,	DrawFlags(0)
+	,	Wireframe(false)
 	{}
 	virtual ~CMeshViewer();
 
@@ -84,6 +91,8 @@ public:
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
 	virtual void Draw3D(float TimeDelta);
+
+	virtual void DrawMesh(CMeshInstance *Inst);
 
 	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
 };
@@ -122,6 +131,10 @@ class CSkelMeshViewer : public CMeshViewer
 {
 public:
 	int				AnimIndex;
+	bool			IsFollowingMesh;
+	int				ShowSkel;					// 0 - mesh, 1 - mesh+skel, 2 - skel only
+	bool			ShowLabels;
+	bool			ShowAttach;
 
 	CSkelMeshViewer(CSkeletalMesh *Mesh);
 
@@ -133,6 +146,9 @@ public:
 	virtual void Draw2D();
 	virtual void Draw3D(float TimeDelta);
 	virtual void ProcessKey(int key);
+	virtual void ProcessKeyUp(int key);
+
+	virtual void DrawMesh(CMeshInstance *Inst);
 
 	static TArray<CSkelMeshInstance*> Meshes;	// for displaying multipart meshes
 

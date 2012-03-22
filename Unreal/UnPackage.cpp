@@ -618,28 +618,34 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	#endif
 
 				// skip object flags
-				int tmp;
-				*this << tmp;
 	#if UNREAL3
 		#if BIOSHOCK
 				if (Game == GAME_Bioshock) goto qword_flags;
 		#endif
-				if (Game >= GAME_UE3)
+				if (Game >= GAME_UE3 && ArVer >= 195)
 				{
-					if (ArVer < 195) goto word_flags;
 		#if WHEELMAN
-					if (Game == GAME_Wheelman) goto word_flags;
+					if (Game == GAME_Wheelman) goto dword_flags;
 		#endif
 		#if MASSEFF
-					if (Game == GAME_MassEffect2 && ArLicenseeVer >= 102) goto word_flags;
-		#endif
+					if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
+					{
+						if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
+						if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
+					}
+		#endif // MASSEFF
+
 				qword_flags:
 					// object flags are 64-bit in UE3, skip additional 32 bits
-					int unk;
-					*this << unk;
-				word_flags: ;
+					int64 flags64;
+					*this << flags64;
+					goto done;
 				}
 	#endif // UNREAL3
+
+			dword_flags:
+				int flags32;
+				*this << flags32;
 			}
 		done: ;
 #if DEBUG_PACKAGE

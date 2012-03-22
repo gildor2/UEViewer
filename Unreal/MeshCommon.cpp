@@ -10,7 +10,7 @@
 
 void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const CIndexBuffer &Indices)
 {
-	guard(CSkelMeshLod::BuildNormals);
+	guard(BuildNormalsCommon);
 
 	int i, j;
 

@@ -285,6 +285,22 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/MeshInstance.obj : MeshInstance/MeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshInstance.obj" MeshInstance/MeshInstance.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
@@ -351,6 +367,7 @@ DEPENDS = \
 	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnObject.h
 
 $(OUT_1)/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
@@ -608,21 +625,6 @@ DEPENDS = \
 
 $(OUT_1)/ExportThirdParty.obj : Exporters/ExportThirdParty.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportThirdParty.obj" Exporters/ExportThirdParty.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-$(OUT_1)/MeshInstance.obj : MeshInstance/MeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshInstance.obj" MeshInstance/MeshInstance.cpp
 
 DEPENDS = \
 	Build.h \

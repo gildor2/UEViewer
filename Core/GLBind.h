@@ -11,6 +11,8 @@ struct GL_t
 	void	(APIENTRY * Color3f) (GLfloat red, GLfloat green, GLfloat blue);
 	void	(APIENTRY * Color3fv) (const GLfloat *v);
 	void	(APIENTRY * Color4f) (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+	void	(APIENTRY * Color4fv) (const GLfloat *v);
+	void	(APIENTRY * Color4ubv) (const GLubyte *v);
 	void	(APIENTRY * ColorPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 	void	(APIENTRY * CullFace) (GLenum mode);
 	void	(APIENTRY * DeleteTextures) (GLsizei n, const GLuint *textures);
@@ -122,6 +124,8 @@ extern GL_t GL;
 #define glColor3f	GL.Color3f
 #define glColor3fv	GL.Color3fv
 #define glColor4f	GL.Color4f
+#define glColor4fv	GL.Color4fv
+#define glColor4ubv	GL.Color4ubv
 #define glColorPointer	GL.ColorPointer
 #define glCullFace	GL.CullFace
 #define glDeleteTextures	GL.DeleteTextures

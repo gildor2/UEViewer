@@ -117,6 +117,40 @@ int CSkeletalMesh::FindBone(const char *Name) const
 }
 
 
+int CSkeletalMesh::GetRootBone() const
+{
+	if (!Lods.Num() || !RefSkeleton.Num())
+		return -1;
+	// find first bone with attached vertices
+	const CSkelMeshLod &L = Lods[0];
+	const CSkelMeshVertex *V = L.Verts;
+	int RootBone = RefSkeleton.Num() + 1;
+	for (int i = 0; i < L.NumVerts; i++, V++)
+	{
+		for (int j = 0; j < NUM_INFLUENCES; j++)
+		{
+			int Bone = V->Bone[j];
+			if (Bone < 0) break;
+			if (Bone < RootBone)
+				RootBone = Bone;
+		}
+	}
+	if (RootBone >= RefSkeleton.Num())
+	{
+		// no influences found?
+		return -1;
+	}
+#if 1
+	return RootBone;
+#else
+	// get parent of this bone
+	if (RootBone == 0)
+		return 0;
+	return RefSkeleton[RootBone].ParentIndex;
+#endif
+}
+
+
 /*-----------------------------------------------------------------------------
 	CAnimSet
 -----------------------------------------------------------------------------*/

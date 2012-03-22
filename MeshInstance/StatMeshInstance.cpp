@@ -14,16 +14,18 @@
 #define MAX_MESHMATERIALS		256
 
 
-void CStatMeshInstance::Draw()
+void CStatMeshInstance::Draw(unsigned flags)
 {
 	guard(CStatMeshInstance::Draw);
 	int i;
+
+	if (!pMesh->Lods.Num()) return;
 
 	/*const*/ CStaticMeshLod& Mesh = pMesh->Lods[LodNum];	//?? not 'const' because of BuildTangents(); change this?
 	int NumSections = Mesh.Sections.Num();
 	if (!NumSections || !Mesh.NumVerts) return;
 
-	if (!Mesh.HasNormals)  Mesh.BuildNormals();
+//	if (!Mesh.HasNormals)  Mesh.BuildNormals();
 	if (!Mesh.HasTangents) Mesh.BuildTangents();
 
 	// copy of CSkelMeshInstance::Draw sorting code
@@ -121,7 +123,7 @@ void CStatMeshInstance::Draw()
 	BindDefaultMaterial(true);
 
 	// draw mesh normals
-	if (bShowNormals)
+	if (flags & DF_SHOW_NORMALS)
 	{
 		int NumVerts = Mesh.NumVerts;
 		glBegin(GL_LINES);

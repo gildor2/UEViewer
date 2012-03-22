@@ -126,7 +126,7 @@ const char *CVertMeshInstance::GetAnimName(int Index) const
 }
 
 
-void CVertMeshInstance::Draw()
+void CVertMeshInstance::Draw(unsigned flags)
 {
 	guard(CVertMeshInstance::Draw);
 
@@ -245,7 +245,7 @@ void CVertMeshInstance::Draw()
 	BindDefaultMaterial(true);
 
 	// draw mesh normals
-	if (bShowNormals)
+	if (flags & DF_SHOW_NORMALS)
 	{
 		glBegin(GL_LINES);
 		glColor3f(0.5, 1, 0);

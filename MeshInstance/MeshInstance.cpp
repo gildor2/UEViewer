@@ -4,6 +4,17 @@
 #if RENDERING
 
 #include "MeshInstance.h"
+#include "GlWindow.h"			// for RGB macro
+
+
+unsigned CMeshInstance::GetMaterialDebugColor(int Index)
+{
+	int color = Index + 1;
+	static const byte table[] = { 64, 255, 128, 0 };
+#define C(x)	( (x) & 1 ) | ( ((x) >> 2) & 2 )
+	return RGB255(table[C(color)], table[C(color >> 1)], table[C(color >> 2)]);
+#undef C
+}
 
 
 void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index)
@@ -21,11 +32,8 @@ void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index)
 	{
 		BindDefaultMaterial(true);
 		glDisable(GL_CULL_FACE);
-		int color = Index + 1;
-		if (color > 7) color = 7;
-#define C(n)	( ((color >> n) & 1) * 0.5f + 0.3f )
-		glColor3f(C(0), C(1), C(2));
-#undef C
+		unsigned color = GetMaterialDebugColor(Index);
+		glColor4ubv((GLubyte*)&color);
 	}
 	unguard;
 }

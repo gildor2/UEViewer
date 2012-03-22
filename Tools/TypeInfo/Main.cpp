@@ -95,7 +95,7 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 	const UField *Next = NULL;
 	for (const UField *F = Struct->Children; F; F = Next)
 	{
-//		printf("field: %s (%s)\n", F->Name, F->GetClassName());
+//		appPrintf("field: %s (%s)\n", F->Name, F->GetClassName());
 		Next = F->Next;
 		Ar.Printf("\n");
 		const char *ClassName = F->GetClassName();
@@ -220,6 +220,22 @@ void DumpClass(const UClass *Class)
 	Ar.Printf("\n");
 }
 
+bool DumpTextBuffer(const UTextBuffer *Text)
+{
+	if (!Text->Text.Num()) return false;		// empty
+
+	// get class name (UTextBuffer's outer UPackage)
+	const FObjectExport &Exp = Text->Package->GetExport(Text->PackageIndex);
+	const char *ClassName = Text->Package->GetExport(Exp.PackageIndex-1).ObjectName;
+
+	char Filename[256];
+	appSprintf(ARRAY_ARG(Filename), "%s/%s.uc", Text->Package->Name, ClassName);
+	FFileWriter Ar(Filename);
+	Ar.Serialize((void*)*Text->Text, Text->Text.Num());
+
+	return true;
+}
+
 
 /*-----------------------------------------------------------------------------
 	Main function
@@ -237,25 +253,29 @@ int main(int argc, char **argv)
 	if (argc < 2)
 	{
 	help:
-		printf(	"Unreal typeinfo dumper\n"
-				"Usage: typeinfo [options] <package filename>\n"
-				"\n"
-				"Options:\n"
-				"    -lzo|lzx|zlib      force compression method for fully-compressed packages\n"
-				"\n"
-				"For details and updates please visit " HOMEPAGE "\n"
+		appPrintf("Unreal typeinfo dumper\n"
+				  "Usage: typeinfo [options] <package filename>\n"
+				  "\n"
+				  "Options:\n"
+				  "    -text              use TextBuffer object instead of decompilation\n"
+				  "    -lzo|lzx|zlib      force compression method for fully-compressed packages\n"
+				  "\n"
+				  "For details and updates please visit " HOMEPAGE "\n"
 		);
 		exit(0);
 	}
 
 	// parse command line
 	int arg = 1;
+	bool UseTextBuffer = false;
 	for (arg = 1; arg < argc; arg++)
 	{
 		if (argv[arg][0] == '-')
 		{
 			const char *opt = argv[arg]+1;
-			if (!stricmp(opt, "lzo"))
+			if (!stricmp(opt, "text"))
+				UseTextBuffer = true;
+			else if (!stricmp(opt, "lzo"))
 				GForceCompMethod = COMPRESS_LZO;
 			else if (!stricmp(opt, "zlib"))
 				GForceCompMethod = COMPRESS_ZLIB;
@@ -288,7 +308,7 @@ int main(int argc, char **argv)
 		Package = UnPackage::LoadPackage(argPkgName);
 	if (!Package)
 	{
-		printf("ERROR: Unable to find/load package %s\n", argPkgName);
+		appPrintf("ERROR: Unable to find/load package %s\n", argPkgName);
 		exit(1);
 	}
 
@@ -303,6 +323,29 @@ int main(int argc, char **argv)
 	if (s2) *s2 = 0;
 	appMakeDirectory(PkgName);
 
+	if (UseTextBuffer)
+	{
+		bool dumped = true;
+		for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
+		{
+			const FObjectExport &Exp = Package->GetExport(idx);
+			if (stricmp(Package->GetObjectName(Exp.ClassIndex), "TextBuffer") != 0)
+				continue;		// not UTextBuffer
+			if (stricmp(Exp.ObjectName, "ScriptText"))
+				continue;
+			UObject *Obj = Package->CreateExport(idx);
+			assert(Obj);
+			assert(Obj->IsA("TextBuffer"));
+			if (!DumpTextBuffer(static_cast<UTextBuffer*>(Obj)))
+			{
+				dumped = false;
+				appPrintf("Error: empty TextBuffer, switching to decompiler\n");
+				break;
+			}
+		}
+		if (dumped) return 0;
+	}
+
 	guard(LoadWholePackage);
 	// load whole package
 	for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
@@ -311,11 +354,11 @@ int main(int argc, char **argv)
 		if (strcmp(Package->GetObjectName(Exp.ClassIndex), "Class") != 0)
 			continue;		// not a class
 		if (!strcmp(Exp.ObjectName, "None"))
-			continue;		// Class'None' (UT2, others not checked)
+			continue;		// Class'None'
 		UObject *Obj = Package->CreateExport(idx);
+		assert(Obj);
 		assert(Obj->IsA("Class"));
 		DumpClass(static_cast<UClass*>(Obj));
-		assert(Obj);
 	}
 	unguard;
 
@@ -327,12 +370,12 @@ int main(int argc, char **argv)
 	} CATCH {
 		if (GErrorHistory[0])
 		{
-//			printf("ERROR: %s\n", GErrorHistory);
+//			appPrintf("ERROR: %s\n", GErrorHistory);
 			appNotify("ERROR: %s\n", GErrorHistory);
 		}
 		else
 		{
-//			printf("Unknown error\n");
+//			appPrintf("Unknown error\n");
 			appNotify("Unknown error\n");
 		}
 		exit(1);

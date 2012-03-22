@@ -105,6 +105,7 @@ struct FSkelMeshSection3
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection3 &S)
 	{
+		guard(FSkelMeshSection3<<);
 		if (Ar.ArVer < 215)
 		{
 			// UE2 fields
@@ -145,7 +146,17 @@ struct FSkelMeshSection3
 		new_ver:
 			Ar << S.unk2;
 		}
+#if MASSEFF
+		if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 135)
+		{
+			byte SomeFlag;
+			Ar << SomeFlag;
+			assert(SomeFlag == 0);
+			// has extra data here in a case of SomeFlag != 0
+		}
+#endif // MASSEFF
 		return Ar;
+		unguard;
 	}
 };
 
@@ -947,7 +958,7 @@ struct FStaticLODModel3
 		}
 
 #if ENDWAR || BORDERLANDS
-		if (Ar.Game == GAME_EndWar || Ar.Game == GAME_Borderlands)
+		if (Ar.Game == GAME_EndWar || (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57))	//!! Borderlands version unknown
 		{
 			// refined field set
 			Ar << Lod.UsedBones << Lod.Chunks << Lod.f80 << Lod.NumVertices;
@@ -1629,6 +1640,8 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	}
 	unguard; // ProcessSkeleton
 
+	Mesh->FinalizeMesh();
+
 	unguard; // ConvertMesh
 
 #if BATMAN
@@ -1879,6 +1892,13 @@ struct FStaticMeshVertexStream3
 			Ar << unk28;
 		}
 #endif // SHADOWS_DAMNED
+#if MASSEFF
+		if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 150)
+		{
+			int unk28;
+			Ar << unk28;
+		}
+#endif // MASSEFF
 #if DEBUG_STATICMESH
 		appPrintf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
 #endif
@@ -2020,6 +2040,13 @@ struct FStaticMeshUVStream3
 			Ar << HasNormals;
 		GStripStaticNormals = (HasNormals == 0);
 #endif // BATMAN
+#if MASSEFF
+		if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 150)
+		{
+			int unk30;
+			Ar << unk30;
+		}
+#endif // MASSEFF
 #if DEBUG_STATICMESH
 		appPrintf("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
 #endif
@@ -2230,7 +2257,7 @@ struct FStaticMeshLODModel
 #endif
 
 #if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands)
+		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57)	//!! version unknown
 		{
 			// refined field set
 			Ar << Lod.VertexStream;
@@ -2686,6 +2713,9 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 #if BULLETSTORM
 	if (Ar.Game == GAME_Bulletstorm && Ar.ArVer >= 739) goto ver_770;
 #endif
+#if MASSEFF
+	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 153) goto ver_770;
+#endif
 	// kDOP tree
 	if (Ar.ArVer < 770)
 	{
@@ -2791,6 +2821,12 @@ version:
 	}
 #endif // SHADOWS_DAMNED
 
+	if (Ar.ArVer >= 859)
+	{
+		int unk;
+		Ar << unk;
+	}
+
 lods:
 	Ar << Lods;
 
@@ -2869,6 +2905,8 @@ done:
 
 		unguardf(("lod=%d", lod));
 	}
+
+	Mesh->FinalizeMesh();
 
 	unguard;	// ConvertMesh
 

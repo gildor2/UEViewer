@@ -40,13 +40,13 @@ void Color3fv(const GLfloat *v);
 //void Color4d(GLdouble red, GLdouble green, GLdouble blue, GLdouble alpha);
 //void Color4dv(const GLdouble *v);
 void Color4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) ARGS
-//void Color4fv(const GLfloat *v);
+void Color4fv(const GLfloat *v);
 //void Color4i(GLint red, GLint green, GLint blue, GLint alpha);
 //void Color4iv(const GLint *v);
 //void Color4s(GLshort red, GLshort green, GLshort blue, GLshort alpha);
 //void Color4sv(const GLshort *v);
 //void Color4ub(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha) ARGS
-//void Color4ubv(const GLubyte *v);
+void Color4ubv(const GLubyte *v);
 //void Color4ui(GLuint red, GLuint green, GLuint blue, GLuint alpha);
 //void Color4uiv(const GLuint *v);
 //void Color4us(GLushort red, GLushort green, GLushort blue, GLushort alpha);

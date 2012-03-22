@@ -71,6 +71,7 @@ inline void InvalidateContext()
 //-----------------------------------------------------------------------------
 
 #define DEFAULT_DIST			256
+#define DEFAULT_FOV				80
 #define MIN_DIST				25
 #define MAX_DIST				2048
 #define CLEAR_COLOR				0.05, 0.05, 0.05, 1
@@ -110,7 +111,7 @@ static CVec3 viewOffset = {0, 0, 0};
 // view params (const)
 static float zNear = 1;//??4;		// near clipping plane -- should auto-adjust
 static float zFar  = 4096;			// far clipping plane
-static float yFov  = 80;
+static float yFov  = DEFAULT_FOV;
 static float tFovX, tFovY;			// tan(fov_x|y)
 
 // mouse state
@@ -123,6 +124,8 @@ static int   mouseButtons;			// bit mask: left=1, middle=2, right=4, wheel up=8,
 
 static float distScale  = 1;
 bool   vpInvertXAxis = false;
+
+bool   GShowDebugInfo = true;
 
 
 //-----------------------------------------------------------------------------
@@ -190,6 +193,7 @@ void ResetView()
 	viewOrigin.Set(DEFAULT_DIST * distScale, 0, 0);
 	viewOrigin.Add(viewOffset);
 	rotOrigin.Zero();
+	yFov = DEFAULT_FOV;
 }
 
 void SetDistScale(float scale)
@@ -260,23 +264,11 @@ static void LoadFont()
 }
 
 
-static void DrawChar(char c, int color, int textX, int textY)
+static void DrawChar(char c, unsigned color, int textX, int textY)
 {
 	if (textX <= -CHAR_WIDTH || textY <= -CHAR_HEIGHT ||
 		textX > winWidth || textY > winHeight)
 		return;				// outside of screen
-
-	static const float colorTable[][3] =
-	{
-		{0, 0, 0},
-		{1, 0, 0},
-		{0, 1, 0},
-		{1, 1, 0},
-		{0, 0, 1},
-		{1, 0, 1},
-		{0, 1, 1},
-		{1, 1, 1}
-	};
 
 	glBegin(GL_QUADS);
 
@@ -302,10 +294,11 @@ static void DrawChar(char c, int color, int textX, int textY)
 	t0 /= TEX_HEIGHT;
 	t1 /= TEX_HEIGHT;
 
+	unsigned color2 = color & 0xFF000000;	// RGB=0, keep alpha
 	for (int s = 1; s >= 0; s--)
 	{
 		// s=1 -> shadow, s=0 -> char
-		glColor3fv(s ? colorTable[0] : colorTable[color]);
+		glColor4ubv((GLubyte*)&color2);
 		glTexCoord2f(s0, t0);
 		glVertex2f(x1+s, y1+s);
 		glTexCoord2f(s1, t0);
@@ -314,6 +307,7 @@ static void DrawChar(char c, int color, int textX, int textY)
 		glVertex2f(x2+s, y2+s);
 		glTexCoord2f(s0, t1);
 		glVertex2f(x1+s, y2+s);
+		color2 = color;
 	}
 
 	glEnd();
@@ -522,6 +516,20 @@ void MoveCamera(float YawDelta, float PitchDelta, float DistDelta, float PanX, f
 }
 
 
+void FocusCameraOnPoint(const CVec3 &center)
+{
+	rotOrigin = center;
+
+	CAxis axis;
+	axis.FromEuler(viewAngles);
+	// recompute viewOrigin
+	viewDist = bound(viewDist, MIN_DIST * distScale, MAX_DIST * distScale);
+	VectorScale(axis[0], -viewDist, viewOrigin);
+	viewOrigin.Add(rotOrigin);
+	viewOrigin.Add(viewOffset);
+}
+
+
 //-------------------------------------------------------------------------
 // Building modelview and projection matrices
 //-------------------------------------------------------------------------
@@ -681,12 +689,32 @@ struct CRText : public CTextRec
 {
 	short			x, y;
 	ETextAnchor		anchor;
+	unsigned		color;
 };
 
 static TTextContainer<CRText, 65536> Text;
 
 static int nextText_y[TA_Last];
 static int textOffset = 0;
+
+#define I 255
+#define o 51
+static const unsigned colorTable[8] =
+{
+	RGB255(0, 0, 0),
+	RGB255(I, o, o),
+	RGB255(o, I, o),
+	RGB255(I, I, o),
+	RGB255(o, o, I),
+	RGB255(I, o, I),
+	RGB255(o, I, I),
+	RGB255(I, I, I)
+};
+
+#define WHITE_COLOR		RGB(255,255,255)
+
+#undef I
+#undef o
 
 
 static void ClearTexts()
@@ -733,7 +761,8 @@ static void DrawText(const CRText *rec)
 		y = y + winHeight - nextText_y[rec->anchor] - BOTTOM_TEXT_POS;
 	}
 
-	int color = 7;
+	unsigned color = rec->color;
+
 	while (true)
 	{
 		const char *s = strchr(text, '\n');
@@ -748,7 +777,7 @@ static void DrawText(const CRText *rec)
 				char c2 = text[i+1];
 				if (c2 >= '0' && c2 <= '7')
 				{
-					color = c2 - '0';
+					color = colorTable[c2 - '0'];
 					i++;
 					continue;
 				}
@@ -769,6 +798,7 @@ static bool dumpTexts = false;
 
 void FlushTexts()
 {
+	if (GUseGLSL) glUseProgram(0);				//?? default shader will not allow alpha on text
 	// setup GL
 	glEnable(GL_TEXTURE_2D);
 	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
@@ -807,17 +837,20 @@ void FlushTexts()
 }
 
 
-static void DrawTextPos(int x, int y, const char *text, ETextAnchor anchor = TA_None)
+static void DrawTextPos(int x, int y, const char *text, unsigned color, ETextAnchor anchor = TA_None)
 {
+	if (!GShowDebugInfo) return;
+
 	CRText *rec = Text.Add(text);
 	if (!rec) return;
 	rec->x      = x;
 	rec->y      = y;
 	rec->anchor = anchor;
+	rec->color  = color;
 }
 
 
-static void DrawTextAtAnchor(ETextAnchor anchor, const char *fmt, va_list argptr)
+static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, const char *fmt, va_list argptr)
 {
 	guard(DrawTextAtAnchor);
 
@@ -845,7 +878,7 @@ static void DrawTextAtAnchor(ETextAnchor anchor, const char *fmt, va_list argptr
 	if (!isBottom && pos_y + h <= 0 && !dumpTexts)		// out of screen
 		return;
 
-	DrawTextPos(isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w, pos_y, msg, anchor);
+	DrawTextPos(isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w, pos_y, msg, color, anchor);
 
 #if DUMP_TEXTS
 	if (dumpTexts)
@@ -871,40 +904,46 @@ static void DrawTextAtAnchor(ETextAnchor anchor, const char *fmt, va_list argptr
 }
 
 
-#define DRAW_TEXT(anchor,fmt)	\
+#define DRAW_TEXT(anchor,color,fmt)	\
 	va_list	argptr;				\
 	va_start(argptr, fmt);		\
-	DrawTextAtAnchor(anchor, fmt, argptr); \
+	DrawTextAtAnchor(anchor, color, fmt, argptr); \
 	va_end(argptr);
 
 
 void DrawTextLeft(const char *text, ...)
 {
-	DRAW_TEXT(TA_TopLeft, text);
+	DRAW_TEXT(TA_TopLeft, WHITE_COLOR, text);
 }
 
 
 void DrawTextRight(const char *text, ...)
 {
-	DRAW_TEXT(TA_TopRight, text);
+	DRAW_TEXT(TA_TopRight, WHITE_COLOR, text);
 }
 
 
 void DrawTextBottomLeft(const char *text, ...)
 {
-	DRAW_TEXT(TA_BottomLeft, text);
+	DRAW_TEXT(TA_BottomLeft, WHITE_COLOR, text);
 }
 
 
 void DrawTextBottomRight(const char *text, ...)
 {
-	DRAW_TEXT(TA_BottomRight, text);
+	DRAW_TEXT(TA_BottomRight, WHITE_COLOR, text);
 }
 
 
 void DrawText(ETextAnchor anchor, const char *text, ...)
 {
-	DRAW_TEXT(anchor, text);
+	DRAW_TEXT(anchor, WHITE_COLOR, text);
+}
+
+
+void DrawText(ETextAnchor anchor, unsigned color, const char *text, ...)
+{
+	DRAW_TEXT(anchor, color, text);
 }
 
 
@@ -930,7 +969,7 @@ static bool ProjectToScreen(const CVec3 &pos, int scr[2])
 }
 
 
-void DrawText3D(const CVec3 &pos, const char *text, ...)
+void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
 {
 	int coords[2];
 	if (!ProjectToScreen(pos, coords)) return;
@@ -941,7 +980,7 @@ void DrawText3D(const CVec3 &pos, const char *text, ...)
 	vsnprintf(ARRAY_ARG(msg), text, argptr);
 	va_end(argptr);
 
-	DrawTextPos(coords[0], coords[1], msg);
+	DrawTextPos(coords[0], coords[1], msg, color);
 }
 
 
@@ -986,14 +1025,14 @@ static void BloomScene(CFramebuffer &FBO)
 	BloomGatherShader.Use();
 	FBO.Flush();
 
-	// proform horizontal blurring
+	// perform horizontal blurring
 	FB[1].Use();
 	BloomPassShader.Use();
 	BloomPassShader.SetUniform("Tex", 0);
 	BloomPassShader.SetUniform("Step", 1.0f / width, 0.0f);
 	FB[0].Flush();
 
-	// proform vertical blurring
+	// perform vertical blurring
 	FB[0].Use();
 	BloomPassShader.SetUniform("Step", 0.0f, 1.0f / height);
 	FB[1].Flush();
@@ -1004,13 +1043,18 @@ static void BloomScene(CFramebuffer &FBO)
 //	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	BloomBlendShader.Use();
-	BloomBlendShader.SetUniform("BlurTex", 0);
-	BloomBlendShader.SetUniform("OrigTex", 1);
+	BloomBlendShader.SetUniform("BlurTex",  0);
+	BloomBlendShader.SetUniform("OrigTex",  1);
+	BloomBlendShader.SetUniform("DepthTex", 2);
 
+	glActiveTexture(GL_TEXTURE2);
+	FBO.BindDepthTexture();
 	glActiveTexture(GL_TEXTURE1);
 	FBO.BindTexture();					// original screen -> TMU1
 	glActiveTexture(GL_TEXTURE0);
+	glDisable(GL_DEPTH_TEST);			// shader will write to the depth
 	FB[0].Flush();						// render with bloom component as TMU0
+	glEnable(GL_DEPTH_TEST);
 
 	CShader::Unset();
 	BindDefaultMaterial();
@@ -1048,6 +1092,7 @@ static void DrawBackground()
 #endif // FUNNY_BACKGROUND
 }
 
+//!! rename function!
 static void Display()
 {
 	guard(Display);
@@ -1163,7 +1208,7 @@ void DrawKeyHelp(const char *Key, const char *Help)
 
 static bool RequestingQuit = false;
 
-static void OnKeyboard(unsigned key, unsigned mod)
+static void OnKeyDown(unsigned key, unsigned mod)
 {
 	key = tolower(key);
 
@@ -1213,13 +1258,33 @@ static void OnKeyboard(unsigned key, unsigned mod)
 			Exchange(StoreUseGLSL, GUseGLSL);
 		}
 		break;
+	case 'q'|KEY_CTRL:
+		GShowDebugInfo = !GShowDebugInfo;
+		break;
 #if DUMP_TEXTS
 	case 'd'|KEY_CTRL:
 		dumpTexts = true;
 		break;
 #endif
+	case SPEC_KEY(UP)|KEY_SHIFT:
+	case SPEC_KEY(DOWN)|KEY_SHIFT:
+		{
+			float oldFov = yFov;
+			yFov += (key == (SPEC_KEY(UP)|KEY_SHIFT)) ? +5 : -5;
+			yFov = bound(yFov, 10, 120);
+			if (yFov != oldFov)
+			{
+				float s = tan(oldFov * M_PI / 360) / tan(yFov * M_PI / 360);
+				distScale *= s;
+				viewDist  *= s;
+			}
+			appPrintf("new fov: %g\n", yFov);
+			MoveCamera(0, 0, 0, 0, 0);
+			break;
+		}
+		break;
 	default:
-		AppKeyEvent(key);
+		AppKeyEvent(key, true);
 	}
 }
 
@@ -1277,7 +1342,9 @@ void VisualizerLoop(const char *caption)
 	if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplay(sdlWindow), &desktopMode) == 0)
 		frameTime = 1000 / desktopMode.refresh_rate;
 #endif // NEW_SDL && LIMIT_FPS
+#if !NEW_SDL
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+#endif
 #if SMART_RESIZE
 	#if NEW_SDL
 	SDL_SetEventFilter(&OnEvent, NULL);
@@ -1297,7 +1364,10 @@ void VisualizerLoop(const char *caption)
 			switch (evt.type)
 			{
 			case SDL_KEYDOWN:
-				OnKeyboard(evt.key.keysym.sym, evt.key.keysym.mod);
+				OnKeyDown(evt.key.keysym.sym, evt.key.keysym.mod);
+				break;
+			case SDL_KEYUP:
+				AppKeyEvent(evt.key.keysym.sym, false);
 				break;
 #if NEW_SDL
 			case SDL_WINDOWEVENT:

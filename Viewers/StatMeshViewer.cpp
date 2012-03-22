@@ -32,8 +32,15 @@ CStatMeshViewer::CStatMeshViewer(CStaticMesh *Mesh0)
 #else
 	//?? if Lods.Count > 0 && Lods[0].Verts.Num() > 0
 	CVec3 Mins, Maxs;
-	const CStaticMeshLod &Lod = Mesh0->Lods[0];
-	ComputeBounds(&Lod.Verts[0].Position, Lod.NumVerts, sizeof(CStaticMeshVertex), Mins, Maxs);
+	if (Mesh0->Lods.Num())
+	{
+		const CStaticMeshLod &Lod = Mesh0->Lods[0];
+		ComputeBounds(&Lod.Verts[0].Position, Lod.NumVerts, sizeof(CStaticMeshVertex), Mins, Maxs);
+	}
+	else
+	{
+		Mins = Maxs = nullVec3;
+	}
 	InitViewerPosition(Mins, Maxs);
 #endif
 
@@ -52,6 +59,12 @@ void CStatMeshViewer::Dump()
 void CStatMeshViewer::Draw2D()
 {
 	CObjectViewer::Draw2D();
+
+	if (!Mesh->Lods.Num())
+	{
+		DrawTextLeft(S_RED"Mesh has no LODs");
+		return;
+	}
 
 	const CStatMeshInstance *MeshInst = static_cast<CStatMeshInstance*>(Inst);
 	const CStaticMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];

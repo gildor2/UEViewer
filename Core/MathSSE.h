@@ -30,12 +30,14 @@ struct CVec4
 		return *this;
 	}
 
-	FORCEINLINE operator CVec3() const
+	FORCEINLINE operator CVec3&()
 	{
-		// NOTE: uses temporary stack variable, use ToVec3() whenever possible
-		CVec3 r;
-		r.Set(v[0], v[1], v[2]);
-		return r;
+		return *(CVec3*)this;
+	}
+
+	FORCEINLINE operator const CVec3&() const
+	{
+		return *(CVec3*)this;
 	}
 
 	FORCEINLINE CVec3& ToVec3()

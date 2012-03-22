@@ -1608,7 +1608,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		CUBEMAP (appStristr(Name, "cube"), 100);
 		CUBEMAP (appStristr(Name, "refl"), 90);
 		OPACITY (appStristr(Name, "opac"), 90);
-		OPACITY (appStristr(Name, "trans"), 80);
+		OPACITY (appStristr(Name, "trans") && !appStristr(Name, "transmission"), 80);
 //??		OPACITY (appStristr(Name, "mask"), 100);
 //??		Params.OpacityFromAlpha = true;
 #if TRON

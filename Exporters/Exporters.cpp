@@ -10,7 +10,6 @@
 // configuration variables
 bool GExportScripts      = false;
 bool GExportLods         = false;
-bool GExportPskx         = false;
 bool GDontOverwriteFiles = false;
 
 

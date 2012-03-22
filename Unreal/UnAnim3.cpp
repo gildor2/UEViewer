@@ -128,7 +128,7 @@ void UAnimSet::ConvertAnims()
 
 #if MASSEFF
 	UBioAnimSetData *BioData = NULL;
-	if ((Package->Game == GAME_MassEffect || Package->Game == GAME_MassEffect2) && !TrackBoneNames.Num() && Sequences.Num())
+	if ((Package->Game >= GAME_MassEffect && Package->Game <= GAME_MassEffect3) && !TrackBoneNames.Num() && Sequences.Num())
 	{
 		// Mass Effect has separated TrackBoneNames from UAnimSet to UBioAnimSetData
 		BioData = Sequences[0]->m_pBioAnimSetData;
@@ -179,8 +179,10 @@ void UAnimSet::ConvertAnims()
 			continue;
 		}
 #if DEBUG_DECOMPRESS
-		appPrintf("Sequence: %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
+		appPrintf("Sequence %d (%s):%s %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
 			   "          trans %s, rot %s, key %s\n",
+			i, *Seq->SequenceName,
+			Seq->bIsAdditive ? " [additive]" : "",
 			NumTracks, Seq->CompressedTrackOffsets.Num(), Seq->CompressedTrackOffsets.Num() / (float)NumTracks,
 			Seq->NumFrames,
 			Seq->CompressedByteStream.Num(),
@@ -562,9 +564,8 @@ void UAnimSet::ConvertAnims()
 #endif // BORDERLANDS
 
 #if TRANSFORMERS
-				if (Package->Game == GAME_Transformers && TransKeys >= 4)
+				if (Package->Game == GAME_Transformers && TransKeys >= 4 && Package->ArLicenseeVer >= 100)
 				{
-					assert(Package->ArLicenseeVer >= 100);
 					FVector Scale, Offset;
 					Reader << Scale.X;
 					if (Scale.X != -1)
@@ -731,7 +732,6 @@ void UAnimSet::ConvertAnims()
 						FQuat q2;
 						Reader << q;
 						q2 = q.ToQuat(Mins, Ranges);
-						q2 = TransModifyQuat(q2, TransQuatMod);
 						A->KeyQuat.AddItem(CVT(q2));
 					}
 	#endif
@@ -755,6 +755,19 @@ void UAnimSet::ConvertAnims()
 					appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
 				}
 			}
+
+#if TRANSFORMERS
+			if (Package->Game == GAME_Transformers && RotKeys >= 2 &&
+				(RotationCompressionFormat == ACF_IntervalFixed32NoW || RotationCompressionFormat == ACF_IntervalFixed48NoW))
+			{
+				for (int i = 0; i < RotKeys; i++)
+				{
+					CQuat q = A->KeyQuat[i];
+					q = CVT(TransModifyQuat((FQuat&)q, TransQuatMod));
+					A->KeyQuat[i] = q;
+				}
+			}
+#endif // TRANSFORMERS
 
 		rot_keys_done:
 			// align to 4 bytes

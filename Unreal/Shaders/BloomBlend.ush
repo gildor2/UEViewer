@@ -2,8 +2,11 @@
  *	This shader blends blurred picture into the frame buffer
  *****************************************************************************/
 
+//#define SHOW_DEPTH
+
 uniform sampler2D BlurTex;
 uniform sampler2D OrigTex;
+uniform sampler2D DepthTex;
 
 void VertexShaderMain()
 {
@@ -27,5 +30,14 @@ void PixelShaderMain()
 	c = vec4(Orig + Blur.rgb * Blur.a * BLOOM_SCALE, 1.0);
 //	c = vec4(Blur * 1.0, 1.0);					// blur only
 //	c = vec4(Orig, 1.0);						// unblurred image only
+
 	gl_FragColor = c;
+
+	float f = texture2D(DepthTex, TexCoord).r;
+	gl_FragDepth = f;
+
+#ifdef SHOW_DEPTH
+	f = 2.0 / (1000.0 - f * 1000.0);
+	gl_FragColor = vec4(f, f, f, 1.0);
+#endif
 }

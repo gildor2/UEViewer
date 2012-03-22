@@ -972,18 +972,22 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		// UNICODE string
 		for (i = 0; i < -len; i++)
 		{
-			short c;
+			word c;
 			Ar << c;
+#if MASSEFF
+			if (Ar.Game == GAME_MassEffect3 && Ar.ReverseBytes)	// uses little-endian strings for XBox360
+				c = (c >> 8) | ((c & 0xFF) << 8);
+#endif
 			if (c & 0xFF00) c = '$';	//!! incorrect ...
 			S.AddItem(c & 255);			//!! incorrect ...
 		}
 	}
-	for (i = 0; i < S.Num(); i++)
+/*	for (i = 0; i < S.Num(); i++) -- disabled 21.03.2012, Unicode chars are "fixed" before S.AddItem() above
 	{
 		char c = S[i];
 		if (c >= 1 && c < ' ')
 			S[i] = '$';
-	}
+	} */
 	if (S[abs(len)-1] != 0)
 		appError("Serialized FString is not null-terminated");
 	return Ar;
@@ -1190,10 +1194,12 @@ void FArchive::DetectGame()
 #endif
 #if MASSEFF
 	if ((ArVer == 391 && ArLicenseeVer == 92) ||		// XBox 360 version
-		(ArVer == 491 && ArLicenseeVer == 0x3F0))		// PC version
+		(ArVer == 491 && ArLicenseeVer == 1008))		// PC version
 		SET(GAME_MassEffect);
 	if (ArVer == 512 && ArLicenseeVer == 130)
 		SET(GAME_MassEffect2);
+	if (ArVer == 684 && (ArLicenseeVer == 185 || ArLicenseeVer == 194)) // 185 = demo, 194 = release
+		SET(GAME_MassEffect3);
 #endif
 #if MKVSDC
 	if ( (ArVer == 402 && ArLicenseeVer == 30) ||		//!! has extra tag
@@ -1256,10 +1262,12 @@ void FArchive::DetectGame()
 #define OVERRIDE_TERA_VER		568
 #define OVERRIDE_HUNTED_VER		708			// real version is 709, which is incorrect
 #define OVERRIDE_DND_VER		673			// real version is 674
+#define OVERRIDE_ME1_LVER		90			// real version is 1008, which is greater than LicenseeVersion of Mass Effect 2 and 3
 
 void FArchive::OverrideVersion()
 {
-	int OldVer = ArVer;
+	int OldVer  = ArVer;
+	int OldLVer = ArLicenseeVer;
 #if ENDWAR
 	if (Game == GAME_EndWar)	ArVer = OVERRIDE_ENDWAR_VER;
 #endif
@@ -1272,7 +1280,11 @@ void FArchive::OverrideVersion()
 #if DND
 	if (Game == GAME_DND)		ArVer = OVERRIDE_DND_VER;
 #endif
-	if (ArVer != OldVer) appPrintf("Overrided version %d -> %d\n", OldVer, ArVer);
+#if MASSEFF
+	if (Game == GAME_MassEffect) ArLicenseeVer = OVERRIDE_ME1_LVER;
+#endif
+	if (ArVer != OldVer || ArLicenseeVer != OldLVer)
+		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }
 
 

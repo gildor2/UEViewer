@@ -140,6 +140,11 @@ function alice()
 	run $*
 }
 function mass()   { run1 "C:/GAMES/Mass Effect/BioGame/CookedPC" $*; }
+function mass3()
+{
+	CheckDir "data/3/MassEffect3"
+	run $*
+}
 function dcu()    { run1 "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC" $*; }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }

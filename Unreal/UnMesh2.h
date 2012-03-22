@@ -1172,6 +1172,7 @@ public:
 	void InitSections(CSkelMeshLod &Lod);
 	void BuildIndices(CSkelMeshLod &Lod);
 	void BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel &SrcLod);
+	bool IsCorrectLOD(const FStaticLODModel &Lod) const;
 
 	void UpgradeFaces();
 	void UpgradeMesh();

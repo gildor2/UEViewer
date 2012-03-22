@@ -14,28 +14,28 @@ class CStaticMesh;
 	Basic CMeshInstance class
 -----------------------------------------------------------------------------*/
 
+// Draw flags
+#define DF_SHOW_NORMALS			0x0001
+
 class CMeshInstance
 {
 public:
 	// common properties
 	CCoords			BaseTransform;			// rotation for mesh; have identity axis
 	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
-	// debugging
-	bool			bShowNormals;
-	bool			bColorMaterials;
-	bool			bWireframe;
+	// debug
+	bool			bColorMaterials;		//?? replace with DF_COLOR_MATERIALS, but flags are stored outside of mesh and used in MeshInstance::SetMaterial()
 
 	CMeshInstance()
-	:	bShowNormals(false)
-	,	bColorMaterials(false)
-	,	bWireframe(false)
+	:	bColorMaterials(false)
 	{}
 
 	virtual ~CMeshInstance()
 	{}
 
+	static unsigned GetMaterialDebugColor(int Index);
 	void SetMaterial(UUnrealMaterial *Mat, int Index);
-	virtual void Draw() = 0;
+	virtual void Draw(unsigned flags = 0) = 0;
 };
 
 
@@ -58,7 +58,7 @@ public:
 
 	void SetMesh(const UVertMesh *Mesh);
 
-	virtual void Draw();
+	virtual void Draw(unsigned flags = 0);
 
 	// animation control
 	void PlayAnim(const char *AnimName, float Rate = 1)
@@ -112,6 +112,9 @@ protected:
 
 #define MAX_SKELANIMCHANNELS	32
 
+// Draw flags
+#define DF_SHOW_INFLUENCES		0x0100
+
 class CSkelMeshInstance : public CMeshInstance
 {
 	struct CAnimChan
@@ -136,11 +139,6 @@ public:
 	int			LodNum;
 	int			UVIndex;
 	int			RotationMode;				// EAnimRotationOnly
-	// debugging
-	int			ShowSkel;					// 0 - mesh, 1 - mesh+skel, 2 - skel only
-	bool		ShowInfluences;
-	bool		ShowLabels;
-	bool		ShowAttach;
 
 	CSkelMeshInstance();
 	virtual ~CSkelMeshInstance();
@@ -150,12 +148,12 @@ public:
 
 	void ClearSkelAnims();
 //??	void StopAnimating(bool ClearAllButBase);
-	virtual void Draw();
+	virtual void Draw(unsigned flags = 0);
 
 	void DumpBones();
-	void DrawSkeleton(bool ShowLabels);
+	void DrawSkeleton(bool ShowLabels, bool ColorizeBones);
 	void DrawAttachments();
-	void DrawMesh();
+	void DrawMesh(unsigned flags);
 
 	// skeleton configuration
 	void SetBoneScale(const char *BoneName, float scale = 1.0f);
@@ -233,6 +231,8 @@ public:
 		return Animation;
 	}
 
+	CVec3 GetMeshOrigin() const;
+
 protected:
 	const CAnimSet		 *Animation;
 	// mesh data
@@ -283,7 +283,7 @@ public:
 		pMesh = Mesh;
 	}
 
-	virtual void Draw();
+	virtual void Draw(unsigned flags = 0);
 
 	// mesh state
 	int			LodNum;

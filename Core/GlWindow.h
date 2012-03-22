@@ -10,11 +10,12 @@
 
 void VisualizerLoop(const char *caption);
 void AppDrawFrame(float TimeDelta);
-void AppKeyEvent(int key);
+void AppKeyEvent(int key, bool isDown);
 void AppDisplayTexts(bool helpVisible);
 
 
 void MoveCamera(float YawDelta, float PitchDelta, float DistDelta = 0, float PanX = 0, float PanY = 0);
+void FocusCameraOnPoint(const CVec3 &center);
 void SetDistScale(float scale);
 void SetViewOffset(const CVec3 &offset);
 void ResetView();
@@ -25,16 +26,30 @@ void GetWindowSize(int &x, int &y);
 extern bool  vpInvertXAxis;
 extern CAxis viewAxis;
 
+extern bool GShowDebugInfo;
+
 
 /*-----------------------------------------------------------------------------
 	Text output
 -----------------------------------------------------------------------------*/
 
+// constant colors
+#define RGBA(r,g,b,a)		((int)((r)*255) | ((int)((g)*255)<<8) | ((int)((b)*255)<<16) | ((int)((a)*255)<<24))
+#define RGB(r,g,b)			RGBA(r,g,b,1)
+#define RGB255(r,g,b)		((r) | ((g)<<8) | ((b)<<16) | (255<<24))
+#define RGBA255(r,g,b,a)	((r) | ((g)<<8) | ((b)<<16) | ((a)<<24))
+
+// computed colors
+//?? make as methods; or - constructor of CColor
+#define RGBAS(r,g,b,a)		(appRound((r)*255) | (appRound((g)*255)<<8) | (appRound((b)*255)<<16) | (appRound((a)*255)<<24))
+#define RGBS(r,g,b)			(appRound((r)*255) | (appRound((g)*255)<<8) | (appRound((b)*255)<<16) | (255<<24))
+
+
 void DrawTextLeft(const char *text, ...);
 void DrawTextRight(const char *text, ...);
 void DrawTextBottomLeft(const char *text, ...);
 void DrawTextBottomRight(const char *text, ...);
-void DrawText3D(const CVec3 &pos, const char *text, ...);
+void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...);
 
 enum ETextAnchor
 {
@@ -49,6 +64,7 @@ enum ETextAnchor
 };
 
 void DrawText(ETextAnchor anchor, const char *text, ...);
+void DrawText(ETextAnchor anchor, unsigned color, const char *text, ...);
 
 void FlushTexts();
 

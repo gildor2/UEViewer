@@ -480,6 +480,7 @@ public:
 			RawAnimationBulkData.Serialize(Ar);
 			unguard;
 		}
+		if (Ar.Game == GAME_MassEffect3) goto old_code;		// Mass Effect 3 has no RawAnimationData
 #endif // MASSEFF
 #if MOH2010
 		if (Ar.Game == GAME_MOH2010) goto old_code;
@@ -714,7 +715,7 @@ public:
 #define REGISTER_MESH_CLASSES_U3	\
 	REGISTER_CLASS(USkeletalMeshSocket) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
-	REGISTER_CLASS_ALIAS(USkeletalMesh, UGolemSkeletalMesh) \
+	REGISTER_CLASS_ALIAS(USkeletalMesh3, UGolemSkeletalMesh) \
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
 	REGISTER_CLASS(FBoxSphereBounds) \
 	REGISTER_CLASS(UAnimSequence)	\

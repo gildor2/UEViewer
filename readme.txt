@@ -48,13 +48,17 @@ with a help message, but this window will immediately disappear.
 
 Keyboard:
 H                show/hide full keyboard help
-ESC              exit from the umodel
-PgUp/UpDn        browse through loaded objects
+Esc              exit from the umodel
+PgUp/PgDn        browse through loaded objects
 Ctrl+S           take a screenshot into the file Screenshots/ObjectName.tga
+Alt+S            take screenshot with transparent background
+Ctrl+X           export all objects from the current scene
 Ctrl+PgUp/PgDn   scroll onscreen texts
 Ctrl+L           switch lighting modes
+Shift+Up/Down    change scene FOV
 Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
-Ctrl+X           export all objects from the current scene
+
+To see full shortcut list press 'H' key.
 
 
 Notes about psk/psa export
@@ -65,10 +69,10 @@ Its announcements thread is here:
 http://www.gildor.org/smf/index.php/topic,228.0.html
 
 Some meshes contains information which cannot fit into psk standard. In this case I've
-extended the format to hold advanced information such as extra UV sets etc. Files in this
-format has extension pskx and cannot be loaded into UnrealEd or other application with
-ActorX support. There only one tool with pskx support at the moment - ActorX Importer for
-3ds Max which was mentioned above.
+extended the format to hold advanced information. Files in this format has extension pskx
+and cannot be loaded into UnrealEd or other application with ActorX support. There only
+one tool with pskx support at the moment - ActorX Importer for 3ds Max which was mentioned
+above.
 
 
 Notes about md5mesh/md5anim export
@@ -91,8 +95,8 @@ Notes about StaticMesh support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 StaticMesh export is performed into psk format. This format was originally designed for
 SkeletalMesh export, but umodel uses it for StaticMesh too. Exported mesh will not have
-skeleton and vertex influences. Resulting psk files are cannot be imported directly into
-UnrealEd (that's why their extension were changed to pskx).
+skeleton and vertex influences. Resulting psk files cannot be imported directly into the
+UnrealEd, so I've decided to save ot with pskx extension to avoid silly user errors.
 
 
 Notes about material export
@@ -129,6 +133,35 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+22.03.2012
+- updated support for the February 2012 UDK
+
+21.03.2012
+- fixed crash in StaticMesh with recent Lineage 2 update
+
+20.03.2012
+- Shift+Up/Down key could be used to change scene FOV
+
+19.03.2012
+- Ctrl+Q key will toggle visualization of debug information (text, 3D axis etc)
+- Alt+S key will produce screenshot with transparent background
+
+07.03.2012
+- implemented Mass Effect 3 support
+
+05.03.2012
+- sharing vertices with the same position and normal when exporting psk file
+
+02.03.2012
+- implemented support for The Bourne Conspiracy animations
+
+28.02.2012
+- implemented support for Transformers: War for Cybertron and Transformers: Dark of the Moon
+  animation
+
+20.02.2012
+- 'F' key will focus camera on SkeletalMesh (useful for animations with root motion)
+
 17.02.2012
 - implemented Batman: Arkham City animation support
 

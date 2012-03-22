@@ -32,26 +32,36 @@ void CMeshViewer::Draw3D(float TimeDelta)
 	guard(CMeshViewer::Draw3D);
 	assert(Inst);
 
-	// draw axis
-	BindDefaultMaterial(true);
-	glBegin(GL_LINES);
-	for (int i = 0; i < 3; i++)
+	if (GShowDebugInfo)
 	{
-		CVec3 tmp = nullVec3;
-		tmp[i] = 1;
-		glColor3fv(tmp.v);
-		tmp[i] = 70;
-		glVertex3fv(tmp.v);
-		glVertex3fv(nullVec3.v);
+		// draw axis
+		BindDefaultMaterial(true);
+		glBegin(GL_LINES);
+		for (int i = 0; i < 3; i++)
+		{
+			CVec3 tmp = nullVec3;
+			tmp[i] = 1;
+			glColor3fv(tmp.v);
+			tmp[i] = 70;
+			glVertex3fv(tmp.v);
+			glVertex3fv(nullVec3.v);
+		}
+		glEnd();
+		glColor3f(1, 1, 1);
 	}
-	glEnd();
-	glColor3f(1, 1, 1);
 
 	// draw mesh
-	glPolygonMode(GL_FRONT_AND_BACK, Inst->bWireframe ? GL_LINE : GL_FILL);	//?? bWireframe is inside Inst, but used here only ?
-	Inst->Draw();
+	glPolygonMode(GL_FRONT_AND_BACK, Wireframe ? GL_LINE : GL_FILL);	//?? bWireframe is inside Inst, but used here only ?
+	DrawMesh(Inst);
 
 	unguard;
+}
+
+
+void CMeshViewer::DrawMesh(CMeshInstance *Inst)
+{
+	unsigned flags = 0;
+	Inst->Draw(DrawFlags);
 }
 
 
@@ -69,7 +79,7 @@ void CMeshViewer::ProcessKey(int key)
 	switch (key)
 	{
 	case 'n':
-		Inst->bShowNormals = !Inst->bShowNormals;
+		DrawFlags ^= DF_SHOW_NORMALS;
 		break;
 
 	case 'm':
@@ -77,7 +87,7 @@ void CMeshViewer::ProcessKey(int key)
 		break;
 
 	case 'w':
-		Inst->bWireframe = !Inst->bWireframe;
+		Wireframe = !Wireframe;
 		break;
 
 	default:
@@ -88,11 +98,11 @@ void CMeshViewer::ProcessKey(int key)
 
 void CMeshViewer::PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces)
 {
-	int color = Index < 7 ? Index + 1 : 7;
+	unsigned color = CMeshInstance::GetMaterialDebugColor(Index);
 	if (Material)
-		DrawTextLeft("^%d  %d: %s (%s), %d tris", color, Index, Material->Name, Material->GetClassName(), NumFaces);
+		DrawText(TA_TopLeft, color, "  %d: %s (%s), %d tris", Index, Material->Name, Material->GetClassName(), NumFaces);
 	else
-		DrawTextLeft("^%d  %d: null, %d tris", color, Index, NumFaces);
+		DrawText(TA_TopLeft, color, "  %d: null, %d tris", Index, NumFaces);
 }
 
 

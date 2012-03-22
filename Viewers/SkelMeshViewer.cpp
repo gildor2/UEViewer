@@ -47,6 +47,10 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
 :	CMeshViewer(Mesh0->OriginalMesh)
 ,	Mesh(Mesh0)
 ,	AnimIndex(-1)
+,	IsFollowingMesh(false)
+,	ShowSkel(0)
+,	ShowLabels(false)
+,	ShowAttach(false)
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
@@ -70,11 +74,18 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
 	Inst = SkelInst;
 	// compute bounds for the current mesh
 	CVec3 Mins, Maxs;
-	const CSkelMeshLod &Lod = Mesh0->Lods[0];
-	ComputeBounds(&Lod.Verts[0].Position, Lod.NumVerts, sizeof(CSkelMeshVertex), Mins, Maxs);
-	// ... transform bounds
-	SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
-	SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
+	if (Mesh0->Lods.Num())
+	{
+		const CSkelMeshLod &Lod = Mesh0->Lods[0];
+		ComputeBounds(&Lod.Verts[0].Position, Lod.NumVerts, sizeof(CSkelMeshVertex), Mins, Maxs);
+		// ... transform bounds
+		SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
+		SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
+	}
+	else
+	{
+		Mins = Maxs = nullVec3;
+	}
 	// extend bounds with additional meshes
 	for (int i = 0; i < Meshes.Num(); i++)
 	{
@@ -230,6 +241,12 @@ void CSkelMeshViewer::Draw2D()
 {
 	CMeshViewer::Draw2D();
 
+	if (!Mesh->Lods.Num())
+	{
+		DrawTextLeft(S_RED"Mesh has no LODs");
+		return;
+	}
+
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
@@ -333,6 +350,7 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	}
 #endif // HIGHLIGHT_CURRENT
 
+	// draw main mesh
 	CMeshViewer::Draw3D(TimeDelta);
 
 #if HIGHLIGHT_CURRENT
@@ -349,7 +367,7 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	int i;
 
 #if SHOW_BOUNDS
-	//?? separate function for drawing wireframe Box
+	//?? separate function for drawing wireframe Box (pass CCoords, Mins and Maxs to function)
 	BindDefaultMaterial(true);
 	glBegin(GL_LINES);
 	CVec3 verts[8];
@@ -384,10 +402,31 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 		CSkelMeshInstance *mesh = Meshes[i];
 		if (mesh->pMesh == MeshInst->pMesh) continue;	// avoid duplicates
 		mesh->UpdateAnimation(TimeDelta);
-		mesh->Draw();
+		DrawMesh(mesh);
 	}
 
+	//?? make this common - place into DrawMesh() ?
+	//?? problem: overdraw of skeleton when displaying multiple meshes
+	//?? (especially when ShowInfluences is on, and meshes has different bone counts - the same bone
+	//?? will be painted multiple times with different colors)
+	if (ShowSkel)
+		MeshInst->DrawSkeleton(ShowLabels, (DrawFlags & DF_SHOW_INFLUENCES) != 0);
+	if (ShowAttach)
+		MeshInst->DrawAttachments();
+
+	if (IsFollowingMesh)
+		FocusCameraOnPoint(MeshInst->GetMeshOrigin());
+
 	unguard;
+}
+
+
+void CSkelMeshViewer::DrawMesh(CMeshInstance *Inst)
+{
+	if (ShowSkel == 2) return;	// no mesh should be painted in this mode
+
+	CSkelMeshInstance *mesh = static_cast<CSkelMeshInstance*>(Inst);
+	mesh->Draw(DrawFlags);
 }
 
 
@@ -400,6 +439,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("B",      "show bone names");
 	DrawKeyHelp("I",      "show influences");
 	DrawKeyHelp("A",      "show attach sockets");
+	DrawKeyHelp("F",      "focus camera on mesh");
 	DrawKeyHelp("Ctrl+B", "dump skeleton to console");
 	DrawKeyHelp("Ctrl+A", "cycle mesh animation sets");
 	DrawKeyHelp("Ctrl+R", "toggle animation translaton mode");
@@ -410,7 +450,9 @@ void CSkelMeshViewer::ShowHelp()
 void CSkelMeshViewer::ProcessKey(int key)
 {
 	guard(CSkelMeshViewer::ProcessKey);
+#if TEST_ANIMS
 	static float Alpha = -1.0f; //!!!!
+#endif
 	int i;
 
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
@@ -449,23 +491,17 @@ void CSkelMeshViewer::ProcessKey(int key)
 
 	case ',':		// '<'
 	case '.':		// '>'
-		if (key == ',')
+		if (NumFrames)
 		{
-			Frame -= 0.2f;
-			if (Frame < 0)
-				Frame = 0;
+			if (key == ',')
+				Frame -= 0.2f;
+			else
+				Frame += 0.2f;
+			Frame = bound(Frame, 0, NumFrames-1);
+			MeshInst->FreezeAnimAt(Frame);
+			for (i = 0; i < Meshes.Num(); i++)
+				Meshes[i]->FreezeAnimAt(Frame);
 		}
-		else
-		{
-			Frame += 0.2f;
-			if (Frame > NumFrames - 1)
-				Frame = NumFrames - 1;
-			if (Frame < 0)
-				Frame = 0;
-		}
-		MeshInst->FreezeAnimAt(Frame);
-		for (i = 0; i < Meshes.Num(); i++)
-			Meshes[i]->FreezeAnimAt(Frame);
 		break;
 
 	case ' ':
@@ -495,17 +531,17 @@ void CSkelMeshViewer::ProcessKey(int key)
 			MeshInst->UVIndex = 0;
 		break;
 	case 's':
-		if (++MeshInst->ShowSkel > 2)
-			MeshInst->ShowSkel = 0;
+		if (++ShowSkel > 2)
+			ShowSkel = 0;
 		break;
 	case 'b':
-		MeshInst->ShowLabels = !MeshInst->ShowLabels;
+		ShowLabels = !ShowLabels;
 		break;
 	case 'a':
-		MeshInst->ShowAttach = !MeshInst->ShowAttach;
+		ShowAttach = !ShowAttach;
 		break;
 	case 'i':
-		MeshInst->ShowInfluences = !MeshInst->ShowInfluences;
+		DrawFlags ^= DF_SHOW_INFLUENCES;
 		break;
 	case 'b'|KEY_CTRL:
 		MeshInst->DumpBones();
@@ -612,11 +648,31 @@ void CSkelMeshViewer::ProcessKey(int key)
 		}
 		break;
 
+	case 'f':
+		IsFollowingMesh = true;
+		break;
+
 	default:
 		CMeshViewer::ProcessKey(key);
 	}
 
 	unguard;
 }
+
+
+void CSkelMeshViewer::ProcessKeyUp(int key)
+{
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+	switch (key)
+	{
+	case 'f':
+		FocusCameraOnPoint(MeshInst->GetMeshOrigin());
+		IsFollowingMesh = false;
+		break;
+	default:
+		CMeshViewer::ProcessKeyUp(key);
+	}
+}
+
 
 #endif // RENDERING

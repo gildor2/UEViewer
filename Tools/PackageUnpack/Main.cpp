@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 	FILE *out = fopen(OutFile, "wb");
 
 	/*!! Notes:
-	 *	- GOW1 (XBox360 core.u is not decompressed
+	 *	- GOW1 (XBox360 core.u) is not decompressed
 	 *	- Bioshock core.u is not decompressed (because it has non-full compression, but
 	 *	  CompressionFlags are 0) -- should place compressed chunks to Package.Summary
 	 */
@@ -128,16 +128,17 @@ int main(int argc, char **argv)
 
 		// find package flags
 		found = false;
+		const FString &Group = Summary.PackageGroup;
 		for (pos = 8; pos < 32; pos++)
 		{
 			mem.Seek(pos);
 			int tmp;
 			mem << tmp;
-			if (tmp != Summary.PackageGroup.Num()) continue;
+			if (tmp != Group.Num() && tmp != -Group.Num()) continue;	// ANSI or Unicode string (MassEffect3 has unicode here)
 			mem.Seek(pos);
 			FString tmp2;
 			mem << tmp2;
-			if (strcmp(tmp2, *Summary.PackageGroup) != 0) continue;
+			if (strcmp(tmp2, *Group) != 0) continue;
 			int flagsPos = mem.Tell();
 			mem << tmp;
 			if (tmp != Summary.PackageFlags) continue;

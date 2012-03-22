@@ -77,6 +77,12 @@ public:
 	:	OriginalMesh(Original)
 	{}
 
+	void FinalizeMesh()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].BuildNormals();
+	}
+
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMesh)
 	BEGIN_PROP_TABLE

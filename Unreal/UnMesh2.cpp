@@ -660,7 +660,7 @@ void USkeletalMesh::ConvertMesh()
 		Lod->HasNormals   = false;
 		Lod->HasTangents  = false;
 
-		if (SrcLod.Points.Num() && SrcLod.Wedges.Num() && SrcLod.VertInfluences.Num())
+		if (IsCorrectLOD(SrcLod))
 		{
 			InitSections(*Lod);
 			ConvertWedges(*Lod, SrcLod.Points, SrcLod.Wedges, SrcLod.VertInfluences);
@@ -671,6 +671,7 @@ void USkeletalMesh::ConvertMesh()
 			if (lod == 0)
 			{
 				appPrintf("WARNING: bad LOD mesh, switching to base\n");
+				Mesh->Lods.Empty();
 				goto base_mesh;
 			}
 		}
@@ -703,6 +704,8 @@ skeleton:
 		DS->Bone      = AttachBoneNames[i];
 		DS->Transform = CVT(AttachCoords[i]);
 	}
+
+	Mesh->FinalizeMesh();
 
 	unguard;
 }
@@ -898,8 +901,9 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		{
 			const FSkelMeshSection &ms = SrcLod.SmoothSections[s];
 			int MatIndex = ms.MaterialIndex;
+			if (MatIndex >= Lod.Sections.Num())		// possible situation: real mesh has more materials than stored in USkeletalMesh::Materials
+				Lod.Sections.Add(MatIndex - Lod.Sections.Num() + 1);
 			CMeshSection &Sec  = Lod.Sections[MatIndex];
-			assert(MatIndex < NumSections);
 
 			if (pass == 1)
 			{
@@ -917,12 +921,14 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 			Sec.NumFaces += ms.NumFaces;
 		}
 		// rigid sections (influence count == 1)
+		// code is similar to the block above
 		for (s = 0; s < SrcLod.RigidSections.Num(); s++)
 		{
 			const FSkelMeshSection &ms = SrcLod.RigidSections[s];
 			int MatIndex = ms.MaterialIndex;
+			if (MatIndex >= Lod.Sections.Num())
+				Lod.Sections.Add(MatIndex - Lod.Sections.Num() + 1);
 			CMeshSection &Sec  = Lod.Sections[MatIndex];
-			assert(MatIndex < NumSections);
 
 			if (pass == 1)
 			{
@@ -939,6 +945,33 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 	}
 
 	unguard;
+}
+
+
+bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
+{
+	if (!Lod.Points.Num() || !Lod.Wedges.Num() || !Lod.VertInfluences.Num() || !(Lod.RigidIndices.Indices.Num() + Lod.SmoothIndices.Indices.Num()))
+		return false;
+
+#if 0
+	int s;
+
+	// smooth sections (influence count >= 2)
+	for (s = 0; s < SrcLod.SmoothSections.Num(); s++)
+	{
+		const FSkelMeshSection &ms = Lod.SmoothSections[s];
+		int MatIndex = ms.MaterialIndex;
+		if (MatIndex < 0 || MatIndex >=
+	}
+	// rigid sections (influence count == 1)
+	for (s = 0; s < Lod.RigidSections.Num(); s++)
+	{
+		const FSkelMeshSection &ms = Lod.RigidSections[s];
+		int MatIndex = ms.MaterialIndex;
+	}
+#endif
+
+	return true;
 }
 
 
@@ -1319,6 +1352,8 @@ void UStaticMesh::ConvertMesh()
 {
 	guard(UStaticMesh::ConvertMesh);
 
+	int i;
+
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
 	Mesh->BoundingBox    = BoundingBox;
@@ -1330,7 +1365,7 @@ void UStaticMesh::ConvertMesh()
 
 	// convert sections
 	Lod->Sections.Add(Sections.Num());
-	for (int i = 0; i < Sections.Num(); i++)
+	for (i = 0; i < Sections.Num(); i++)
 	{
 		CMeshSection &Dst = Lod->Sections[i];
 		const FStaticMeshSection &Src = Sections[i];
@@ -1350,7 +1385,8 @@ void UStaticMesh::ConvertMesh()
 	Lod->NumTexCoords = NumTexCoords;
 
 	Lod->AllocateVerts(NumVerts);
-	for (int i = 0; i < NumVerts; i++)
+	bool PrintedWarning = false;
+	for (i = 0; i < NumVerts; i++)
 	{
 		CStaticMeshVertex &V = Lod->Verts[i];
 		const FStaticMeshVertex &SV = VertexStream.Vert[i];
@@ -1358,14 +1394,24 @@ void UStaticMesh::ConvertMesh()
 		V.Normal   = CVT(SV.Normal);
 		for (int j = 0; j < NumTexCoords; j++)
 		{
-			const FMeshUVFloat &SUV = UVStream[j].Data[i];
-			V.UV[j].U      = SUV.U;
-			V.UV[j].V      = SUV.V;
+			if (i < UVStream[j].Data.Num())		// Lineage2 has meshes with UVStream[i>1].Data size less than NumVerts
+			{
+				const FMeshUVFloat &SUV = UVStream[j].Data[i];
+				V.UV[j].U = SUV.U;
+				V.UV[j].V = SUV.V;
+			}
+			else if (!PrintedWarning)
+			{
+				appPrintf("WARNING: StaticMesh UV#%d has %d vertices (should be %d)\n", j, UVStream[j].Data.Num(), NumVerts);
+				PrintedWarning = true;
+			}
 		}
 	}
 
 	// copy indices
 	Lod->Indices.Initialize(&IndexStream1.Indices);
+
+	Mesh->FinalizeMesh();
 
 	unguard;
 }
