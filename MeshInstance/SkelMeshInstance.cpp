@@ -1142,6 +1142,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 #endif
 		const CMeshSection &Sec = Mesh.Sections[MaterialIndex];
 		if (!Sec.NumFaces) continue;
+
 		// select material
 		if (!(flags & DF_SHOW_INFLUENCES))
 			SetMaterial(Sec.Material, MaterialIndex);

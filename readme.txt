@@ -133,6 +133,40 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+03.07.2012
+- implemenved Tribes: Ascend texture support
+
+25.06.2012
+- improved compatibility with some UE2 games
+
+04.06.2012
+- improved Blade & Soul rendering
+
+28.05.2012
+- updated Special Force 2 (Tornado Force) support
+
+27.05.2012
+- implemented Tao Yuan (beta) support - everything but textures is supported
+
+26.05.2012
+- preventing umodel from opening non-package files from the command line (tfc, blk etc)
+
+23.05.2012
+- improved Mass Effect 3 animation support (now more animations are available)
+
+22.05.2012
+- implemented Special Force 2 support
+
+11.05.2012
+- implemented Gunslayer Legend Texture2D support; "-game=gunsl" is required
+- fixed some problems with non-English keyboards
+
+27.04.2012
+- updated Blade & Soul support for CBT3
+
+16.04.2012
+- fixed incompatibility with some UE2 games
+
 22.03.2012
 - updated support for the February 2012 UDK
 
@@ -312,7 +346,7 @@ Changes
 - implemented Medal of Honor: Airborne StaticMesh support
 
 27.04.2011
-- implemented Blade & Soul beta support
+- implemented Blade & Soul CBT1 support
 - limited renderer FPS to reduce CPU usage
 
 24.04.2011

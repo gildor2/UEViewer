@@ -5,7 +5,7 @@
 - HP3:
   - Dimentor: uses paletted Texture with Masked=true, has pink borders when alpha changed
 
-SDL bug: after Alt+Tab <Alt> key becomes sticky and program will not respond to keyboard; Ctrl key
+* SDL bug: after Alt+Tab <Alt> key becomes sticky and program will not respond to keyboard; Ctrl key
   may become sticky too
 
 * MercFemaleB: bugs with alpha-texture on head (hear)

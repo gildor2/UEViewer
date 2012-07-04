@@ -469,6 +469,15 @@ static const GameInfo games[] = {
 		G("Rise of the Argonauts", argo, GAME_Argonauts),
 		G("Thor: God of Thunder",  argo, GAME_Argonauts),
 #	endif
+#	if GUNLEGEND
+		G("Gunslayer Legend", gunsl, GAME_GunLegend),
+#	endif
+#	if SPECIALFORCE2
+		G("Special Force 2", sf2, GAME_SpecialForce2),
+#	endif
+#	if TRIBES4
+		G("Tribes: Ascend", t4, GAME_Tribes4),
+#	endif
 #endif // UNREAL3
 };
 
@@ -975,6 +984,7 @@ int main(int argc, char **argv)
 			int found = 0;
 			for (int pkg = 0; pkg < Packages.Num(); pkg++)
 			{
+				UObject::BeginLoad();
 				UnPackage *Package2 = Packages[pkg];
 				// load specific object(s)
 				int idx = -1;
@@ -996,6 +1006,7 @@ int main(int argc, char **argv)
 					if (objName == attachAnimName)
 						GForceAnimSet = Obj;
 				}
+				UObject::EndLoad();
 				if (found) break;
 			}
 			if (!found)
@@ -1013,6 +1024,7 @@ int main(int argc, char **argv)
 		{
 			UnPackage *Package2 = Packages[pkg];
 			guard(LoadWholePackage);
+			UObject::BeginLoad();
 			for (int idx = 0; idx < Package2->Summary.ExportCount; idx++)
 			{
 				if (!IsKnownClass(Package2->GetObjectName(Package2->GetExport(idx).ClassIndex)))
@@ -1020,6 +1032,7 @@ int main(int argc, char **argv)
 				int TmpObjIdx = UObject::GObjObjects.Num();			// place where new object will be created
 				/*UObject *TmpObj =*/ Package2->CreateExport(idx);
 			}
+			UObject::EndLoad();
 			unguardf(("%s", Package2->Name));
 		}
 	}

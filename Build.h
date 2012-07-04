@@ -86,6 +86,10 @@
 #define DND				1		// Dungeons & Dragons: Daggerdale
 #define SHADOWS_DAMNED	1		// Shadows of the Damned
 #define ARGONAUTS		1		// Rise of the Argonauts, Thor: God of Thunder
+#define GUNLEGEND		1		// Gunslayer Legend
+#define SPECIALFORCE2	1		// Special Force 2
+#define TAO_YUAN		1
+#define TRIBES4			1		// Tribes: Ascend
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

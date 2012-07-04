@@ -81,6 +81,8 @@ void CStatMeshInstance::Draw(unsigned flags)
 		int MaterialIndex = i;
 #endif
 		const CMeshSection &Sec = Mesh.Sections[MaterialIndex];
+		if (!Sec.NumFaces) continue;
+
 		SetMaterial(Sec.Material, MaterialIndex);
 
 		// check tangent space

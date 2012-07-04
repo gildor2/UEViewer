@@ -75,6 +75,7 @@ public:
 		PROP_DROP(AdjustRGBCurve)			// UDK
 		PROP_DROP(AdjustSaturation)			// UDK
 		PROP_DROP(AdjustBrightnessCurve)	// UDK
+		PROP_DROP(MipGenSettings)
 #if HUXLEY
 		PROP_DROP(SourceArtWidth)
 		PROP_DROP(SourceArtHeight)
@@ -110,6 +111,19 @@ public:
 		if (Ar.Game == GAME_MassEffect3) return;
 #endif
 		SourceArt.Serialize(Ar);
+#if GUNLEGEND
+		if (Ar.Game == GAME_GunLegend && Ar.ArVer >= 811)
+		{
+			// TIndirectArray<FByteBulkData> NonTopSourceArt
+			int Count;
+			Ar << Count;
+			for (int i = 0; i < Count; i++)
+			{
+				FByteBulkData tmpBulk;
+				tmpBulk.Skip(Ar);
+			}
+		}
+#endif // GUNLEGEND
 		unguard;
 	}
 
@@ -274,6 +288,8 @@ public:
 		PROP_DROP(OriginalSizeX)
 		PROP_DROP(OriginalSizeY)
 		PROP_BOOL(bForcePVRTC4)
+		PROP_DROP(FirstResourceMemMip)
+		PROP_DROP(SystemMemoryData)
 #if FRONTLINES
 		PROP_DROP(NumMips)
 		PROP_DROP(SourceDataSizeX)
@@ -433,7 +449,11 @@ enum EBlendMode
 	BLEND_Masked,
 	BLEND_Translucent,
 	BLEND_Additive,
-	BLEND_Modulate
+	BLEND_Modulate,
+	BLEND_ModulateAndAdd,
+	BLEND_SoftMasked,
+	BLEND_AlphaComposite,
+	BLEND_DitheredTranslucent
 };
 
 _ENUM(EBlendMode)
@@ -442,7 +462,11 @@ _ENUM(EBlendMode)
 	_E(BLEND_Masked),
 	_E(BLEND_Translucent),
 	_E(BLEND_Additive),
-	_E(BLEND_Modulate)
+	_E(BLEND_Modulate),
+	_E(BLEND_ModulateAndAdd),
+	_E(BLEND_SoftMasked),
+	_E(BLEND_AlphaComposite),
+	_E(BLEND_DitheredTranslucent)
 };
 
 enum EMaterialLightingModel	// unused now
@@ -578,6 +602,12 @@ public:
 		PROP_DROP(bUsedWithDecals)			// GoW2
 		PROP_DROP(bUsedWithFracturedMeshes)	// GoW2
 		PROP_DROP(bUsedWithFluidSurfaces)	// GoW2
+		PROP_DROP(bUsedWithSplineMeshes)
+		// physics
+		PROP_DROP(PhysMaterialMask)
+		PROP_DROP(PhysMaterialMaskUVChannel)
+		PROP_DROP(BlackPhysicalMaterial)
+		PROP_DROP(WhitePhysicalMaterial)
 		// other
 		PROP_DROP(Wireframe)
 		PROP_DROP(bIsFallbackMaterial)
@@ -655,6 +685,11 @@ public:
 		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overrided textures
 		PROP_DROP(ReferencedTextureGuids)
 		PROP_DROP(ParentLightingGuid)
+		// physics
+		PROP_DROP(PhysMaterialMask)
+		PROP_DROP(PhysMaterialMaskUVChannel)
+		PROP_DROP(BlackPhysicalMaterial)
+		PROP_DROP(WhitePhysicalMaterial)
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)

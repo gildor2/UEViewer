@@ -74,13 +74,68 @@ public:
 			byte v;
 			for (shift = 1, v = b & (b - 1); v; v = v & (v - 1))	// shift = number of identity bits in 'v' (but b=0 -> shift=1)
 				shift++;
-			b = (b | (b << 8)) << shift >> 8;						// simulate cyclic shift left (ROL)
+			b = ROL8(b, shift);
 			*p = b;
 		}
 	}
 };
 
 #endif // BATTLE_TERR
+
+
+/*-----------------------------------------------------------------------------
+	Blade & Soul
+-----------------------------------------------------------------------------*/
+
+#if BLADENSOUL
+
+class FFileReaderBnS : public FReaderWrapper
+{
+public:
+	FFileReaderBnS(FArchive *File)
+	:	FReaderWrapper(File)
+	{}
+
+	virtual void Serialize(void *data, int size)
+	{
+		int Pos = Reader->Tell();
+		Reader->Serialize(data, size);
+
+		int i;
+		byte *p;
+		static const char *key = "qiffjdlerdoqymvketdcl0er2subioxq";
+		for (i = 0, p = (byte*)data; i < size; i++, p++, Pos++)
+		{
+			*p ^= key[Pos % 32];
+		}
+	}
+};
+
+
+static void DecodeBnSPointer(int &Value, unsigned Code1, unsigned Code2, int Index)
+{
+  unsigned tmp1 = ROR32(Value, (Index + Code2) & 0x1F);
+  unsigned tmp2 = ROR32(Code1, Index % 32);
+  Value = tmp2 ^ tmp1;
+}
+
+
+static void PatchBnSExports(FObjectExport *Exp, const FPackageFileSummary &Summary)
+{
+	unsigned Code1 = ((Summary.HeadersSize & 0xFF) << 24) |
+					 ((Summary.NameCount   & 0xFF) << 16) |
+					 ((Summary.NameOffset  & 0xFF) << 8)  |
+					 ((Summary.ExportCount & 0xFF));
+	unsigned Code2 = (Summary.ExportOffset + Summary.ImportCount + Summary.ImportOffset) & 0x1F;
+
+	for (int i = 0; i < Summary.ExportCount; i++, Exp++)
+	{
+		DecodeBnSPointer(Exp->SerialSize,   Code1, Code2, i);
+		DecodeBnSPointer(Exp->SerialOffset, Code1, Code2, i);
+	}
+}
+
+#endif // BLADENSOUL
 
 
 /*-----------------------------------------------------------------------------
@@ -370,7 +425,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 
 	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
 
-#if LINEAGE2 || EXTEEL || BATTLE_TERR || LEAD
+#if LINEAGE2 || EXTEEL || BATTLE_TERR || BLADENSOUL
 	int checkDword;
 	*this << checkDword;
 
@@ -407,6 +462,14 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Loader = NurienReader = new FFileReaderNurien(Loader);
 	}
 	#endif // NURIEN
+	#if BLADENSOUL
+	if (checkDword == 0xF84CEAB0)
+	{
+		Game = GAME_BladeNSoul;
+		if (!GForceGame) GForceGame = GAME_BladeNSoul;
+		Loader = new FFileReaderBnS(Loader);
+	}
+	#endif // BLADENSOUL
 	Seek(0);	// seek back to header
 #endif // complex
 
@@ -687,6 +750,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #endif
 		}
 	}
+#if BLADENSOUL
+	if (Game == GAME_BladeNSoul && (Summary.PackageFlags & 0x08000000))
+		PatchBnSExports(ExportTable, Summary);
+#endif
 	unguard;
 
 #if UNREAL3
@@ -876,10 +943,12 @@ UObject* UnPackage::CreateExport(int index)
 				if (!Exp2.PackageIndex) break;
 				PackageIndex = Exp2.PackageIndex - 1;			// subtract 1 ...
 			}
+/*!! -- should display this message during serialization in UObject::EndLoad()
 			const FObjectExport &Exp2 = GetExport(PackageIndex);
 			assert(Exp2.ExportFlags & EF_ForcedExport);
 			const char *PackageName = Exp2.ObjectName;
 			appPrintf("Forced export (%s): %s'%s.%s'\n", Name, ClassName, PackageName, *Exp.ObjectName);
+*/
 		}
 	}
 #endif // UNREAL3
@@ -1110,7 +1179,8 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 		return new UnPackage(Name);
 	}
 
-	if (const CGameFileInfo *info = appFindGameFile(LocalName))
+	const CGameFileInfo *info = appFindGameFile(LocalName);
+	if (info && info->IsPackage)
 	{
 		// Check in loaded packages again, but use info->RelativeName to compare
 		// (package.Filename is set from info->RelativeName, see below).

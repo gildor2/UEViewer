@@ -433,6 +433,10 @@ void CSkelMeshViewer::DrawMesh(CMeshInstance *Inst)
 void CSkelMeshViewer::ShowHelp()
 {
 	CMeshViewer::ShowHelp();
+	DrawKeyHelp("[]",     "prev/next animation");
+	DrawKeyHelp("<>",     "prev/next frame");
+	DrawKeyHelp("Space",  "play animation");
+	DrawKeyHelp("X",      "play looped animation");
 	DrawKeyHelp("L",      "cycle mesh LODs");
 	DrawKeyHelp("U",      "cycle UV sets");
 	DrawKeyHelp("S",      "show skeleton");

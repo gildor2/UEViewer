@@ -141,6 +141,13 @@ void UAnimSet::ConvertAnims()
 	}
 #endif // MASSEFF
 
+	if (!TrackBoneNames.Num())
+	{
+		// in Mass Effect 2 it is possible that BioAnimSetData placed in other package which is missing (for umodel),
+		// so m_pBioAnimSetData would be NULL and we will get the following error
+		appPrintf("WARNING: AnimSet %s has %d sequences, but empty TrackBoneNames\n", Name, Sequences.Num());
+		return;
+	}
 	CopyArray(AnimSet->TrackBoneNames, TrackBoneNames);
 
 #if FIND_HOLES
@@ -169,6 +176,10 @@ void UAnimSet::ConvertAnims()
 					AnimSet->ForceMeshTranslation[j] = true;
 		}
 	}
+
+#if DEBUG_DECOMPRESS
+	appPrintf("----------- AnimSet %s: %d seq, %d bones -----------\n", Name, Sequences.Num(), TrackBoneNames.Num());
+#endif
 
 	for (i = 0; i < Sequences.Num(); i++)
 	{
@@ -804,6 +815,53 @@ void UAnimSet::ConvertAnims()
 
 	unguard;
 }
+
+
+#if MASSEFF
+
+void UBioAnimSetData::PostLoad()
+{
+	TArray<UAnimSequence*> LinkedSequences;
+
+	for (int i = 0; i < Package->Summary.ExportCount; i++)
+	{
+		FObjectExport &Exp = Package->ExportTable[i];
+		UObject *Obj = Exp.Object;
+		if (!Obj) continue;
+
+		if (Obj->IsA("AnimSet"))
+		{
+			UAnimSet *Set = static_cast<UAnimSet*>(Obj);
+			if (Set->m_pBioAnimSetData == this)
+				return;					// this UBioAnimSetData already has
+		}
+		else if (Obj->IsA("AnimSequence"))
+		{
+			UAnimSequence *Seq = static_cast<UAnimSequence*>(Obj);
+			if (Seq->m_pBioAnimSetData == this)
+				LinkedSequences.AddItem(Seq);
+		}
+	}
+
+	if (!LinkedSequences.Num()) return;	// there is no UAnimSequence for this UBioAnimSetData
+
+	// generate UAnimSet
+	char AnimSetName[256];
+	strcpy(AnimSetName, Name);
+	int len = strlen(AnimSetName);
+	if (len > 15 && !strcmp(AnimSetName + len - 15, "_BioAnimSetData"))	// truncate "_BioAnimSetData" suffix
+		AnimSetName[len - 15] = 0;
+	appPrintf("Generating AnimSet %s (%d sequences)\n", AnimSetName, LinkedSequences.Num());
+	UAnimSet *AnimSet = static_cast<UAnimSet*>(CreateClass("AnimSet"));
+	AnimSet->Name              = strdup(AnimSetName);
+	AnimSet->Package           = Package;
+	AnimSet->m_pBioAnimSetData = this;
+	CopyArray(AnimSet->Sequences, LinkedSequences);
+
+	AnimSet->PostLoad();
+}
+
+#endif // MASSEFF
 
 
 #endif // UNREAL3

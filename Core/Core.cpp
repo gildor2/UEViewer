@@ -98,13 +98,24 @@ void appNotify(const char *fmt, ...)
 	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
 
 	fflush(stdout);
-	// print to log file
+
+	// a bit ugly code: printing the same thing into 3 streams
+
+	// print to notify file
 	if (FILE *f = fopen("notify.log", "a"))
 	{
 		if (NotifyBuf[0])
 			fprintf(f, "\n******** %s ********\n\n", NotifyBuf);
 		fprintf(f, "%s\n", buf);
 		fclose(f);
+	}
+	// print to log file
+	if (GLogFile)
+	{
+		if (NotifyBuf[0])
+			fprintf(GLogFile, "******** %s ********\n", NotifyBuf);
+		fprintf(GLogFile, "*** %s\n", buf);
+		fflush(GLogFile);
 	}
 	// print to console
 	if (NotifyBuf[0])

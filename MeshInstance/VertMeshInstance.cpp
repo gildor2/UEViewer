@@ -233,6 +233,7 @@ void CVertMeshInstance::Draw(unsigned flags)
 	for (i = 0; i < Sections.Num(); i++)
 	{
 		const CMeshSection &Sec = Sections[i];
+		if (!Sec.NumFaces) continue;
 		SetMaterial(Sec.Material, i);
 		glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Indices[Sec.FirstIndex]);
 	}

@@ -12,13 +12,13 @@
 #include "Build.h"
 
 #if RENDERING
-#	include <SDL/SDL.h>		//?? move outside
+#	include <SDL/SDL.h>			//?? move outside (here for SDL_GetTicks() only?)
 #endif
 
-#define VECTOR_ARG(name)	name[0],name[1],name[2]
-#define QUAT_ARG(name)		name.x,name.y,name.z,name.w
-#define ARRAY_ARG(array)	array, sizeof(array)/sizeof(array[0])
-#define ARRAY_COUNT(array)	(sizeof(array)/sizeof(array[0]))
+#define VECTOR_ARG(name)		name[0],name[1],name[2]
+#define QUAT_ARG(name)			name.x,name.y,name.z,name.w
+#define ARRAY_ARG(array)		array, sizeof(array)/sizeof(array[0])
+#define ARRAY_COUNT(array)		(sizeof(array)/sizeof(array[0]))
 
 // use "STR(any_value)" to convert it to string (may be float value)
 #define STR2(s) #s
@@ -52,68 +52,90 @@ template<>    struct CompileTimeError<true> {};
 	}
 
 #undef M_PI
-#define M_PI				(3.14159265358979323846)
+#define M_PI					(3.14159265358979323846)
 
 
 #undef min
 #undef max
 
-#define min(a,b)  (((a) < (b)) ? (a) : (b))
-#define max(a,b)  (((a) > (b)) ? (a) : (b))
-#define bound(a,minval,maxval)  ( ((a) > (minval)) ? ( ((a) < (maxval)) ? (a) : (maxval) ) : (minval) )
+#define min(a,b)				( ((a) < (b)) ? (a) : (b) )
+#define max(a,b)				( ((a) > (b)) ? (a) : (b) )
+#define bound(a,minval,maxval)	( ((a) > (minval)) ? ( ((a) < (maxval)) ? (a) : (maxval) ) : (minval) )
 
-#define appFloor(x)		( (int)floor(x) )
-#define appCeil(x)		( (int)ceil(x) )
-#define appRound(x)		( (int) (x >= 0 ? (x)+0.5f : (x)-0.5f) )
+#define appFloor(x)				( (int)floor(x) )
+#define appCeil(x)				( (int)ceil(x)  )
+#define appRound(x)				( (int) (x >= 0 ? (x)+0.5f : (x)-0.5f) )
 
 
 #if _MSC_VER
-#	define vsnprintf		_vsnprintf
-#	define FORCEINLINE		__forceinline
-#	define NORETURN			__declspec(noreturn)
+#	define vsnprintf			_vsnprintf
+#	define FORCEINLINE			__forceinline
+#	define NORETURN				__declspec(noreturn)
 #	define GCC_PACK							// VC uses #pragma pack()
 #	if _MSC_VER >= 1400
-#		define IS_POD(T)	__is_pod(T)
+#		define IS_POD(T)		__is_pod(T)
 #	endif
 #	pragma warning(disable : 4291)			// no matched operator delete found
 	// this functions are smaller, when in intrinsic form (and, of course, faster):
-#	pragma intrinsic(memcpy, memset, memcmp, abs, fabs)
+#	pragma intrinsic(memcpy, memset, memcmp, abs, fabs, _rotl8, _rotl, _rotr8, _rotr)
 	// allow nested inline expansions
 #	pragma inline_depth(8)
-#	define WIN32_USE_SEH	1
-typedef __int64				int64;
-typedef unsigned __int64	uint64;
+#	define WIN32_USE_SEH		1
+#	define ROL8(val,shift)		_rotl8(val,shift)
+#	define ROR8(val,shift)		_rotr8(val,shift)
+#	define ROL32(val,shift)		_rotl(val,shift)
+#	define ROR32(val,shift)		_rotr(val,shift)
+typedef __int64					int64;
+typedef unsigned __int64		uint64;
 #elif __GNUC__
-#	define NORETURN			__attribute__((noreturn))
+#	define NORETURN				__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
 	// strange, but there is only way to work (inline+always_inline)
-#		define FORCEINLINE	inline __attribute__((always_inline))
+#		define FORCEINLINE		inline __attribute__((always_inline))
 #	else
-#		define FORCEINLINE	inline
+#		define FORCEINLINE		inline
 #	endif
 #	if (__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 4))
-#		define IS_POD(T)	__is_pod(T)
+#		define IS_POD(T)		__is_pod(T)
 #	endif
-#	define stricmp			strcasecmp
-#	define strnicmp			strncasecmp
-#	define GCC_PACK			__attribute__((__packed__))
+#	define stricmp				strcasecmp
+#	define strnicmp				strncasecmp
+#	define GCC_PACK				__attribute__((__packed__))
 #	undef VSTIDIO_INTEGRATION
 #	undef WIN32_USE_SEH
-typedef signed long long	int64;
-typedef unsigned long long	uint64;
+typedef signed long long		int64;
+typedef unsigned long long		uint64;
 #else
 #	error "Unsupported compiler"
 #endif
 
 // necessary types
-typedef unsigned char		byte;
-typedef unsigned short		word;
+typedef unsigned char			byte;
+typedef unsigned short			word;
 
 #ifndef IS_POD
-#	define IS_POD(T)		false
+#	define IS_POD(T)			false
 #endif
 
-#define COLOR_ESCAPE	'^'		// may be used for quick location of color-processing code
+// cyclical shift operations
+#ifndef ROL8
+#define ROL8(val,shift)			( ((val) << (shift)) | ((val) >> (8-(shift))) )
+#endif
+
+#ifndef ROR8
+#define ROR8(val,shift)			( ((val) >> (shift)) | ((val) << (8-(shift))) )
+#endif
+
+#ifndef ROL32
+#define ROL32(val,shift)		( ((val) << (shift)) | ((val) >> (32-(shift))) )
+#endif
+
+#ifndef ROR32
+#define ROR32(val,shift)		( ((val) >> (shift)) | ((val) << (32-(shift))) )
+#endif
+
+
+#define COLOR_ESCAPE	'^'		// could be used for quick location of color-processing code
 
 #define S_BLACK			"^0"
 #define S_RED			"^1"

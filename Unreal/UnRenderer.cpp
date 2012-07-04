@@ -352,7 +352,7 @@ static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
 #endif
 
 	//!! BUGS: does not works with mipmap generation on Intel graphics (other not tested)
-	//!! Works find when calling glTexParameteri(target2, GL_GENERATE_MIPMAP, GL_TRUE) before 1st side upload
+	//!! Works fine when calling glTexParameteri(target2, GL_GENERATE_MIPMAP, GL_TRUE) before 1st side upload
 	//!! GL_INVALID_OPERATION when calling glGenerateMipmapEXT(GL_TEXTURE_CUBE_MAP_ARB) after last face
 	//!! If will not find a working path, should remove target2 from UploadCompressedTex()
 	//?? Info:
@@ -562,8 +562,8 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 			ADD_DEFINE("EMISSIVE 1");
 		}
 		if (Params.SpecularMaskChannel)
-			specularExpr = va("vec3(%s)", maskChannel[Params.SpecularMaskChannel]);
-		if (Params.SpecularMaskChannel)
+			specularExpr  = va("vec3(%s)", maskChannel[Params.SpecularMaskChannel]);
+		if (Params.SpecularPowerChannel)
 			specPowerExpr = va("%s * 100.0 + 5.0", maskChannel[Params.SpecularPowerChannel]);
 		if (Params.CubemapMaskChannel)
 			cubeMaskExpr = maskChannel[Params.CubemapMaskChannel];
@@ -1591,6 +1591,9 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	bool normalSet = false;
 	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0, EmcWeight = 0, CubeWeight = 0, MaskWeight = 0;
 
+	if (TextureParameterValues.Num())
+		Params.Opacity = NULL;			// it's better to disable opacity mask from parent material
+
 	int i;
 	for (i = 0; i < TextureParameterValues.Num(); i++)
 	{
@@ -1626,6 +1629,12 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 			EMISSIVE (appStristr(Name, "Reflection_Mask"), 100);
 		}
 #endif // BATMAN
+#if BLADENSOUL
+		if (Package->Game == GAME_BladeNSoul)
+		{
+			BAKEDMASK(!stricmp(Name, "Body_mask_RGB"), 100);
+		}
+#endif // BLADENSOUL
 	}
 	for (i = 0; i < VectorParameterValues.Num(); i++)
 	{
@@ -1667,6 +1676,18 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		}
 	}
 #endif // BATMAN
+
+#if BLADENSOUL
+	if (Package->Game == GAME_BladeNSoul)
+	{
+		if (Params.Mask)
+		{
+			Params.CubemapMaskChannel   = TC_B;
+			Params.SpecularPowerChannel = TC_G;
+			// TC_R = skin
+		}
+	}
+#endif // BLADENSOUL
 
 	// try to get diffuse texture when nothing found
 	if (!Params.Diffuse && TextureParameterValues.Num() == 1)

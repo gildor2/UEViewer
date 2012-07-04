@@ -1328,6 +1328,33 @@ static int OnEvent(const SDL_Event *evt)
 #endif // SMART_RESIZE
 
 
+#if NEW_SDL
+// localized keyboard could return different chars for some keys - should translate them back to English keyboard
+// note: there is no scancodes in SDL1.2
+static int TranslateKey(int sym, int scan)
+{
+	static const struct
+	{
+		word scan;
+		word sym;
+	} scanToSym[] =
+	{
+		SDL_SCANCODE_LEFTBRACKET, '[',
+		SDL_SCANCODE_RIGHTBRACKET, ']',
+		SDL_SCANCODE_COMMA, ',',
+		SDL_SCANCODE_PERIOD, '.',
+	};
+	for (int i = 0; i < ARRAY_COUNT(scanToSym); i++)
+		if (scanToSym[i].scan == scan)
+		{
+//			appPrintf("%d -> %c\n", scanToSym[i].scan, scanToSym[i].sym);
+			return scanToSym[i].sym;
+		}
+//	appPrintf("%d\n", scan);
+	return sym;
+}
+#endif
+
 void VisualizerLoop(const char *caption)
 {
 	guard(VisualizerLoop);
@@ -1364,7 +1391,11 @@ void VisualizerLoop(const char *caption)
 			switch (evt.type)
 			{
 			case SDL_KEYDOWN:
+#if NEW_SDL
+				OnKeyDown(TranslateKey(evt.key.keysym.sym, evt.key.keysym.scancode), evt.key.keysym.mod);
+#else
 				OnKeyDown(evt.key.keysym.sym, evt.key.keysym.mod);
+#endif
 				break;
 			case SDL_KEYUP:
 				AppKeyEvent(evt.key.keysym.sym, false);

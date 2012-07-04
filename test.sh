@@ -7,12 +7,12 @@ Usage:
     test.sh [--nobuild] [--exe=...] [--game=...] <umodel options>
 
 Options:
-    --nobuild               use as 1st option to prevent from umodel rebuilding
-    --<game>                choose predefined game path
-    --exe=<executable>      do not build when overrided (usefult for testing with older exe from svn)
+    --nobuild               prevent from umodel rebuilding
+    --exe=<executable>      do not build when overrided (useful for testing with older exe from svn)
+    --<game>                choose predefined game path; <game> = ut2|ut3|gow2 etc
     --debug                 start with -debug option
     --help                  display this help message
-    -path=<path>            will disable default game substitution
+    -path=<path>            set game path; will disable default game substitution
 EOF
 	exit
 }
@@ -151,6 +151,11 @@ function scell2() { run1 "data/SplinterCell2" $*; }
 function bat2()
 {
 	CheckDir "E:/GAMES/Batman Arkham City/BmGame" data/3/Batman2
+	run $*
+}
+function tr4()
+{
+	CheckDir data/3/Tribes4
 	run $*
 }
 function rund()   {	run1 "data" $*; }

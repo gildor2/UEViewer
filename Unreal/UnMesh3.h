@@ -333,6 +333,8 @@ public:
 		PROP_ARRAY(TrackBoneNames, FName)
 		PROP_ARRAY(UseTranslationBoneNames, FName)
 	END_PROP_TABLE
+
+	virtual void PostLoad();
 };
 
 #endif // MASSEFF
@@ -691,6 +693,7 @@ public:
 		PROP_DROP(ContentTags)
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
+		PROP_DROP(bCanBecomeDynamic)
 #if DECLARE_VIEWER_PROPS
 		PROP_INT(InternalVersion)
 #endif // DECLARE_VIEWER_PROPS

@@ -119,6 +119,16 @@ struct FPackageFileSummary
 			goto tag_ok;
 		}
 #endif // BERKANIX
+#if TAO_YUAN
+		if (S.Tag == 0x12345678)
+		{
+			int tmp;			// some additional version?
+			Ar << tmp;
+			Ar.Game = GAME_TaoYuan;
+			if (!GForceGame) GForceGame = GAME_TaoYuan;
+			goto tag_ok;
+		}
+#endif // TAO_YUAN
 
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{

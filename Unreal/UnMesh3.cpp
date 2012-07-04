@@ -1399,6 +1399,14 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		Ar << OATStags2;
 	}
 #endif
+#if SPECIALFORCE2
+	if (Ar.Game == GAME_SpecialForce2 && Ar.ArLicenseeVer >= 14)
+	{
+		byte  unk108;
+		FName unk10C;
+		Ar << unk108 << unk10C;
+	}
+#endif
 	Ar << LODModels;
 #if 0
 	//!! also: NameIndexMap (ArVer >= 296), PerPolyKDOPs (ArVer >= 435)

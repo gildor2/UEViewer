@@ -102,49 +102,52 @@ static char RootDirectory[256];
 
 static const char *PackageExtensions[] =
 {
-	"u", "ut2", "utx", "uax", "usx", "ukx"
+	"u", "ut2", "utx", "uax", "usx", "ukx",
 #if RUNE
-	, "ums"
+	"ums",
 #endif
 #if BATTLE_TERR
-	, "bsx", "btx", "bkx"				// older version
-	, "ebsx", "ebtx", "ebkx", "ebax"	// newer version, with encryption
+	"bsx", "btx", "bkx",				// older version
+	"ebsx", "ebtx", "ebkx", "ebax",		// newer version, with encryption
 #endif
 #if TRIBES3
-	, "pkg"
+	"pkg",
 #endif
 #if BIOSHOCK
-	, "bsm"
+	"bsm",
 #endif
 #if LEAD
-	, "ass", "umd"
+	"ass", "umd",
 #endif
 #if UNREAL3
-	, "upk", "ut3", "xxx", "umap", "udk", "map"
+	"upk", "ut3", "xxx", "umap", "udk", "map",
 #endif
 #if MASSEFF
-	, "sfm"			// Mass Effect
-	, "pcc"			// Mass Effect 2
+	"sfm",			// Mass Effect
+	"pcc",			// Mass Effect 2
 #endif
 #if TLR
-	, "tlr"
+	"tlr",
 #endif
 #if LEGENDARY
-	, "ppk", "pda"	// Legendary: Pandora's Box
+	"ppk", "pda",	// Legendary: Pandora's Box
 #endif
 #if R6VEGAS
-	, "uppc", "rmpc"// Rainbow 6 Vegas 2
+	"uppc", "rmpc",	// Rainbow 6 Vegas 2
 #endif
 #if TERA
-	, "gpk"			// TERA: Exiled Realms of Arborea
+	"gpk",			// TERA: Exiled Realms of Arborea
 #endif
 #if APB
-	, "apb"			// All Points Bulletin
+	"apb",			// All Points Bulletin
+#endif
+#if TRIBES4
+	"fmap",			// Tribes: Ascend
 #endif
 	// other games with no special code
-	, "lm"			// Landmass
-	, "s8m"			// Section 8 map
-	, "ccpk"		// Crime Craft character package
+	"lm",			// Landmass
+	"s8m",			// Section 8 map
+	"ccpk",			// Crime Craft character package
 };
 
 #if UNREAL3 || UC2
@@ -158,7 +161,10 @@ static const char *KnownExtensions[] =
 	"xpr",			// XBox texture container
 #	endif
 #	if BIOSHOCK
-	"blk", "bdc"	// Bulk Content + Catalog
+	"blk", "bdc",	// Bulk Content + Catalog
+#	endif
+#	if TRIBES4
+	"rtc",
 #	endif
 };
 #endif
@@ -1180,8 +1186,14 @@ void FArchive::DetectGame()
 #if BULLETSTORM
 	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
 #endif
+#if TRIBES4
+	if (ArVer == 805 && ArLicenseeVer == 2)		SET(GAME_Tribes4);
+#endif
 #if BATMAN
 	if (ArVer == 805 && ArLicenseeVer == 101)	SET(GAME_Batman2);
+#endif
+#if SPECIALFORCE2
+	if (ArVer == 904 && (ArLicenseeVer == 9 || ArLicenseeVer == 14)) SET(GAME_SpecialForce2);
 #endif
 
 	// UE3 games with the various versions of files
@@ -1263,6 +1275,7 @@ void FArchive::DetectGame()
 #define OVERRIDE_HUNTED_VER		708			// real version is 709, which is incorrect
 #define OVERRIDE_DND_VER		673			// real version is 674
 #define OVERRIDE_ME1_LVER		90			// real version is 1008, which is greater than LicenseeVersion of Mass Effect 2 and 3
+#define OVERRIDE_SF2_VER		700
 
 void FArchive::OverrideVersion()
 {
@@ -1283,6 +1296,16 @@ void FArchive::OverrideVersion()
 #if MASSEFF
 	if (Game == GAME_MassEffect) ArLicenseeVer = OVERRIDE_ME1_LVER;
 #endif
+#if SPECIALFORCE2
+	if (Game == GAME_SpecialForce2)
+	{
+		// engine for this game is upgraded without changing ArVer, they have ArVer set too high and changind ArLicenseeVer only
+		if (ArLicenseeVer >= 14)
+			ArVer = 710;
+		else if (ArLicenseeVer == 9)
+			ArVer = OVERRIDE_SF2_VER;
+	}
+#endif // SPECIALFORCE2
 	if (ArVer != OldVer || ArLicenseeVer != OldLVer)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }
@@ -1440,6 +1463,19 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		Flags = COMPRESS_LZO;
 	}
 #endif // BLADENSOUL
+
+#if 0 // TAO_YUAN -- not working anyway, LZO returns error -6
+	if (GForceGame == GAME_TaoYuan)	// note: GForceGame is required (to not pass 'Game' here);
+	{
+		static const byte key[] =
+		{
+			137, 35, 95, 142, 69, 136, 243, 119, 25, 35, 111, 94, 101, 136, 243, 204,
+			243, 67, 95, 158, 69, 106, 107, 187, 237, 35, 103, 142, 72, 142, 243, 0
+		};
+		for (int i = 0; i < CompressedSize; i++)
+			CompressedBuffer[i] ^= key[i % 32];
+	}
+#endif // TAO_YUAN
 
 #if 1
 		//?? Alice: Madness Returns only?

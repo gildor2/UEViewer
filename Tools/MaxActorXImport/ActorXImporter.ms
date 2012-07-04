@@ -10,6 +10,14 @@
 
  Revision History:
 
+	10.06.2012 v1.26
+	- stability improvements
+	  more info: MaxScript documentation, "Do not use return, break, exit or continue"
+
+	02.06.2012 v1.25
+	- fixed Max 2013 support; fix made by sunnydavis, check
+	  http://www.gildor.org/smf/index.php/topic,1408.0.html for details
+
 	18.02.2012 v1.24
 	- fixed parsing psa config file with spaces in track names
 
@@ -124,7 +132,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 24
+global AX_IMPORTER_VERSION = 126
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -306,7 +314,7 @@ fn IsEndOfFile bstream =
 	fseek bstream 0 #seek_end			-- compute file size
 	local fileSize = ftell bstream
 	fseek bstream savePos #seek_set
-	return (savePos >= fileSize)
+	(savePos >= fileSize)
 )
 
 
@@ -319,10 +327,12 @@ fn ReadFixedString bstream fixedLen =
 	(
 		local c = ReadByte bstream #unsigned
 		if c == 0 then finished = true	-- end of line char
-		if finished then continue		-- has end of line before - skip remaining chars
-		-- not "finished" string
-		str += bit.intAsChar(c)			-- append a character
-		if c != 32 then length = i		-- position of last non-space char
+		if not finished then 			-- has end of line before - skip remaining chars
+		(
+			-- not "finished" string
+			str += bit.intAsChar(c)		-- append a character
+			if c != 32 then length = i	-- position of last non-space char
+		)
 	)
 	substring str 1 length				-- return first "length" chars
 )
@@ -357,15 +367,20 @@ fn ReadFQuat bstream =
 -- Function used to determine bone length
 fn axFindFirstChild boneArray boneIndex =
 (
-	for i = 1 to boneArray.count do
+	local res = undefined, notfound = true
+	for i = 1 to boneArray.count while notfound do
 	(
 		if (i != boneIndex) then
 		(
 			bn = boneArray[i]
-			if bn.ParentIndex == boneIndex-1 then return bn
+			if bn.ParentIndex == boneIndex-1 then
+			(
+				res = bn
+				notfound = false
+			)
 		)
 	)
-	return undefined
+	res
 )
 
 
@@ -393,25 +408,33 @@ fn axFixBoneNames boneArray =
 
 fn axFindFile path filename recurse:false =
 (
+	local res = undefined
 	local check = path + "\\" + filename
-	if doesFileExist check then return check
-	if recurse then
+	if doesFileExist check then
+	(
+		res = check
+	)
+	else if recurse then
 	(
 		local dirs = getDirectories (path + "/*")
-		for dir in dirs do
+		local notfound = true
+		for dir in dirs while notfound do
 		(
-			local ret = axFindFile dir filename recurse:true
-			if ret != undefined then return ret
+			res = axFindFile dir filename recurse:true
+			if res != undefined then
+			(
+				notfound = false		-- break the loop
+			)
 		)
 	)
-	return undefined
+	res
 )
 
 
 fn axGetRotationMatrix =
 (
 	local angles = eulerAngles g_rotR -g_rotP -g_rotY
-	return angles as matrix3
+	angles as matrix3
 )
 
 
@@ -644,12 +667,16 @@ fn axFindTexture texDir baseName =
 (
 	-- DDS
 	foundTex = axFindFile texDir (baseName + ".dds") recurse:g_texRecurse
-	if foundTex != undefined then return foundTex
-	-- TGA
-	foundTex = axFindFile texDir (baseName + ".tga") recurse:g_texRecurse
---	if foundTex != undefined then return foundTex
-	-- other formats?
-	return foundTex
+	if foundTex == undefined then
+	(
+		-- TGA
+		foundTex = axFindFile texDir (baseName + ".tga") recurse:g_texRecurse
+/*		if foundTex == undefined then
+		(
+			-- other formats?
+		) */
+	)
+	foundTex
 )
 
 fn axImportMaterial matName texDir =
@@ -1085,6 +1112,7 @@ fn ImportPskFile filename skelOnly:false =
 	select newMesh
 
 	skinMod = skin ()
+	boneIDMap = #()
 	if numBones > 0 then
 	(
 		addModifier newMesh skinMod
@@ -1094,6 +1122,24 @@ fn ImportPskFile filename skelOnly:false =
 				skinOps.addBone skinMod MaxBones[i] 0
 			else
 				skinOps.addBone skinMod MaxBones[i] 1
+		)
+		-- In Max 2013 the bone IDs are scrambled, so we look them up
+		-- by bone's name and stores them in a table.
+		local numSkinBones = skinOps.GetNumberBones skinMod
+		-- iterate all bones in the Max (could be more than in a mesh)
+		for i = 1 to numSkinBones do
+		(
+			local boneName = skinOps.GetBoneName skinMod i 0
+			-- compare with mesh bones by name
+			for j = 1 to numBones do
+			(
+				if boneName == MeshBones[j].Name then
+				(
+					boneIDMap[j] = i
+--					format "MaxID[%]: %, OriginalID: %\n" i boneName j
+					j = numBones + 1 -- break the loop (faster than 'exit')
+				)
+			)
 		)
 	)
 	update newMesh
@@ -1170,7 +1216,7 @@ fn ImportPskFile filename skelOnly:false =
 			for i = 1 to numInfs do
 			(
 				v = Infs[start + i - 1]
-				append infBones   (v.BoneIndex + 1)
+				append infBones   boneIDMap[v.BoneIndex + 1]
 				append infWeights v.Weight
 			)
 --			format "W[%] V[%] % // %\n" wedge vert infBones infWeights
@@ -1202,13 +1248,12 @@ fn ImportPskFile filename skelOnly:false =
 		boneName = OldMeshBones[i].Name
 		found = false
 		-- find bone in MeshBones
-		for j = 1 to MeshBones.count do
+		for j = 1 to MeshBones.count while not found do
 		(
 			if MeshBones[j].Name == boneName then
 			(
 --				format "..... found in MeshBones"
 				found = true
-				exit
 			)
 		)
 		if not found then
@@ -1234,20 +1279,30 @@ fn ImportPskFile filename skelOnly:false =
 
 fn FindPsaTrackIndex Anims Name =
 (
-	for i = 1 to Anims.count do
+	local notfound = true, res = -1
+	for i = 1 to Anims.count while notfound do
 	(
-		if Anims[i].Name == Name then return i
+		if Anims[i].Name == Name then
+		(
+			res = i
+			notfound = false
+		)
 	)
-	return -1
+	res
 )
 
 fn FindPsaBoneIndex Bones Name =
 (
-	for i = 1 to Bones.count do
+	local notfound = true, res = -1
+	for i = 1 to Bones.count while notfound do
 	(
-		if Bones[i].Name == Name then return i
+		if Bones[i].Name == Name then
+		(
+			res = i
+			notfound = false
+		)
 	)
-	return -1
+	res
 )
 
 -- UseAnimTranslation[] is array of flags signalling that particular bone should use translation
@@ -1495,15 +1550,16 @@ fn ImportPsaFile filename trackNum all:false =
 		boneName        = Bones[i].Name
 		MaxBones[i]     = getNodeByName boneName exact:true ignoreCase:true
 		MeshBoneLink[i] = undefined
-		for j = 1 to MeshBones.count do
+		local notfound  = true
+		for j = 1 to MeshBones.count while notfound do
 		(
 			if MeshBones[j].Name == boneName then
 			(
 				MeshBoneLink[i] = MeshBones[j]
-				exit
+				notfound = false
 			)
 		)
-		if (MaxBones[i] == undefined) or (MeshBoneLink[i] == undefined) then
+		if notfound or (MaxBones[i] == undefined) then
 		(
 			format "WARNING: cannot find bone %\n" boneName
 		)
@@ -1607,8 +1663,10 @@ fn ImportPsaFile filename trackNum all:false =
 				for b = 1 to Bones.count do
 				(
 					bone = MaxBones[b]
-					if bone == undefined then continue	-- missing bone
-					bone.transform = firstFrame[b]
+					if bone != undefined then
+					(
+						bone.transform = firstFrame[b]
+					)
 				)
 			)
 		)
@@ -1662,7 +1720,7 @@ fn axLoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.24"
+	label     Lbl1 "Version 1.26"
 	label     Lbl2 "\xA9 2009-2012 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \

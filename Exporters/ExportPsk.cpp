@@ -20,7 +20,7 @@
 
 /*??
 
-- ActorX + UDK has support for vertex colors and extra UV sets - make umodel compatible with this
+- ActorX + UDK has support for vertex colors - make umodel compatible with this
 
 */
 

@@ -7,8 +7,8 @@ Logging:
   ? place notify.log into directory of umodel.exe
   - add current date/time, some umodel info (version) and cmdline in a case of crash
 
-- add options to force loading startup package(s) with non-standard names (see GOW2)
-  - may be use -pkg=... and find forced objects in all loaded packages instead of current package +
+* add options to force loading startup package(s) with non-standard names (see GOW2)
+  * may be use -pkg=... and find forced objects in all loaded packages instead of current package +
     single statup package
 
 - check VertMesh export: export ut2004/SkaarjPack_rc, compare *.3d and *.uc files with UT2004 source
@@ -38,10 +38,7 @@ GUI-relative:
   - custom package extensions
   ? custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
     (already has -uncook and -groups -- is anything else needed?)
-- key to toggle debug text and 3D lines (good for screenshots)
-
-ForcedExport handling: should use this information for UE3 package loading:
-- prevent export/listing of such resources (or list with "forced" flag?)
+* key to toggle debug text and 3D lines (good for screenshots)
 
 - use lzop to compress shader texts (call from make.pl)
 
@@ -61,9 +58,10 @@ GENMAKE:
 ! implement UMaterialSequence (check 2K4Menus package)
 
 ?? (check, possibly fixed) TRIBES3:
-  - skeletal mesh LOD levels - has visual bugs on most LOD meshes
+  * skeletal mesh LOD levels - has visual bugs on most LOD meshes
+    (LODs were disabled for Tribes)
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
-  - bugs with U8V8 texture format
+  * bugs with U8V8 texture format
 
 ? when exporting mesh, can create .uc with sockets too (if possible)
   - requires conversion FCoords -> FVector+FRotator
@@ -84,6 +82,7 @@ GENMAKE:
 
 Exporting (typeinfo tool?):
 - TextBuffer export
+  * TextBuffer is exported now, without defaultproperties
   - will require to get defaultproperties from "Class'Name'.properties" (object with name=ClassName and
     class name="")
 

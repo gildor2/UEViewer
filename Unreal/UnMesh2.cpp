@@ -668,11 +668,16 @@ void USkeletalMesh::ConvertMesh()
 		}
 		else
 		{
+			appPrintf("WARNING: bad LOD#%d mesh, switching to base\n", lod);
 			if (lod == 0)
 			{
-				appPrintf("WARNING: bad LOD mesh, switching to base\n");
 				Mesh->Lods.Empty();
 				goto base_mesh;
+			}
+			else
+			{
+				Mesh->Lods.Remove(lod);
+				break;
 			}
 		}
 
@@ -744,7 +749,7 @@ void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &Mesh
 	// collect influences per vertex
 	for (i = 0; i < VertInfluences.Num(); i++)
 	{
-		const FVertInfluence &Inf  = VertInfluences[i];
+		const FVertInfluence &Inf = VertInfluences[i];
 		CVertInfo &V = Verts[Inf.PointIndex];
 		int NumInfs = V.NumInfs++;
 		int idx = NumInfs;
@@ -846,8 +851,13 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 		{
 			const VTriangle &Face = Triangles[i];
 			int MatIndex = Face.MatIndex;
-			CMeshSection &Sec  = Lod.Sections[MatIndex];
-			assert(MatIndex < NumSections);
+			// if section does not exist - add it
+			if (MatIndex >= NumSections)
+			{
+				Lod.Sections.Add(MatIndex - NumSections + 1);
+				NumSections = MatIndex + 1;
+			}
+			CMeshSection &Sec = Lod.Sections[MatIndex];
 
 			if (pass == 1)	// on 1st pass count NumFaces, on 2nd pass fill indices
 			{
@@ -901,9 +911,13 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		{
 			const FSkelMeshSection &ms = SrcLod.SmoothSections[s];
 			int MatIndex = ms.MaterialIndex;
-			if (MatIndex >= Lod.Sections.Num())		// possible situation: real mesh has more materials than stored in USkeletalMesh::Materials
-				Lod.Sections.Add(MatIndex - Lod.Sections.Num() + 1);
-			CMeshSection &Sec  = Lod.Sections[MatIndex];
+			// if section does not exist - add it
+			if (MatIndex >= NumSections)
+			{
+				Lod.Sections.Add(MatIndex - NumSections + 1);
+				NumSections = MatIndex + 1;
+			}
+			CMeshSection &Sec = Lod.Sections[MatIndex];
 
 			if (pass == 1)
 			{
@@ -950,8 +964,19 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 
 bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 {
-	if (!Lod.Points.Num() || !Lod.Wedges.Num() || !Lod.VertInfluences.Num() || !(Lod.RigidIndices.Indices.Num() + Lod.SmoothIndices.Indices.Num()))
+	if (!Lod.Points.Num() || !Lod.Wedges.Num() || !Lod.VertInfluences.Num())
 		return false;
+	if (!(Lod.RigidIndices.Indices.Num() + Lod.SmoothIndices.Indices.Num()) && !Lod.Faces.Num())
+		return false;
+
+	int i;
+
+	int NumPoints = Lod.Points.Num();
+	for (i = 0; i < Lod.VertInfluences.Num(); i++)
+	{
+		int PointIndex = Lod.VertInfluences[i].PointIndex;
+		if (PointIndex < 0 || PointIndex >= NumPoints) return false;
+	}
 
 #if 0
 	int s;
@@ -961,7 +986,7 @@ bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 	{
 		const FSkelMeshSection &ms = Lod.SmoothSections[s];
 		int MatIndex = ms.MaterialIndex;
-		if (MatIndex < 0 || MatIndex >=
+		if (MatIndex < 0 || MatIndex >= ... //??
 	}
 	// rigid sections (influence count == 1)
 	for (s = 0; s < Lod.RigidSections.Num(); s++)

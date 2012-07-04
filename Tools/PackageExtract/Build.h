@@ -36,6 +36,7 @@
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
 #define TERA			1
+#define BLADENSOUL		1		// Blade & Soul
 #define APB				1
 #define ALPHA_PR		1
 //#define AA3				1		// America's Army

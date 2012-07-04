@@ -276,6 +276,10 @@ enum EGame
 		GAME_DND,
 		GAME_ShadowsDamned,
 		GAME_Argonauts,
+		GAME_SpecialForce2,
+		GAME_GunLegend,
+		GAME_TaoYuan,
+		GAME_Tribes4,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
