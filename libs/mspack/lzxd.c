@@ -12,11 +12,11 @@
 
 /* LZX decompression implementation */
 
-#include "system.h" // original: <system.h>
-#include <mspack/lzx.h>
+#include "system.h"		// Gildor: original: <system.h>
+#include <mspack/lzx.h>	// Gildor: original: <lzx.h>
 
-/* Microsoft's LZX document and their implementation of the
- * com.ms.util.cab Java package do not concur.
+/* Microsoft's LZX document (in cab-sdk.exe) and their implementation
+ * of the com.ms.util.cab Java package do not concur.
  *
  * In the LZX document, there is a table showing the correlation between
  * window size and the number of position slots. It states that the 1MB
@@ -58,237 +58,77 @@
  * least one element. However, many CAB files contain blocks where the
  * length tree is completely empty (because there are no matches), and
  * this is expected to succeed.
+ *
+ * The errors in LZX documentation appear have been corrected in the
+ * new documentation for the LZX DELTA format.
+ *
+ *     http://msdn.microsoft.com/en-us/library/cc483133.aspx
+ *
+ * However, this is a different format, an extension of regular LZX.
+ * I have noticed the following differences, there may be more:
+ *
+ * The maximum window size has increased from 2MB to 32MB. This also
+ * increases the maximum number of position slots, etc.
+ *
+ * The format now allows for "reference data", supplied by the caller.
+ * If match offsets go further back than the number of bytes
+ * decompressed so far, that is them accessing the reference data.
  */
 
-
-/* LZX decompressor input macros
- *
- * STORE_BITS        stores bitstream state in lzxd_stream structure
- * RESTORE_BITS      restores bitstream state from lzxd_stream structure
- * READ_BITS(var,n)  takes N bits from the buffer and puts them in var
- * ENSURE_BITS(n)    ensures there are at least N bits in the bit buffer.
- * PEEK_BITS(n)      extracts without removing N bits from the bit buffer
- * REMOVE_BITS(n)    removes N bits from the bit buffer
- *
- * These bit access routines work by using the area beyond the MSB and the
- * LSB as a free source of zeroes when shifting. This avoids having to
- * mask any bits. So we have to know the bit width of the bit buffer
- * variable.
- *
- * The bit buffer datatype should be at least 32 bits wide: it must be
- * possible to ENSURE_BITS(16), so it must be possible to add 16 new bits
- * to the bit buffer when the bit buffer already has 1 to 15 bits left.
- */
-
-#if HAVE_LIMITS_H
-# include <limits.h>
-#endif
-#ifndef CHAR_BIT
-# define CHAR_BIT (8)
-#endif
-#define BITBUF_WIDTH (sizeof(bit_buffer) * CHAR_BIT)
-
-#define STORE_BITS do {                                                 \
-  lzx->i_ptr      = i_ptr;                                              \
-  lzx->i_end      = i_end;                                              \
-  lzx->bit_buffer = bit_buffer;                                         \
-  lzx->bits_left  = bits_left;                                          \
+/* import bit-reading macros and code */
+#define BITS_TYPE struct lzxd_stream
+#define BITS_VAR lzx
+#define BITS_ORDER_MSB
+#define READ_BYTES do {			\
+    unsigned char b0, b1;		\
+    READ_IF_NEEDED; b0 = *i_ptr++;	\
+    READ_IF_NEEDED; b1 = *i_ptr++;	\
+    INJECT_BITS((b1 << 8) | b0, 16);	\
 } while (0)
+#include "readbits.h" // Gildor: original: <readbits.h>
 
-#define RESTORE_BITS do {                                               \
-  i_ptr      = lzx->i_ptr;                                              \
-  i_end      = lzx->i_end;                                              \
-  bit_buffer = lzx->bit_buffer;                                         \
-  bits_left  = lzx->bits_left;                                          \
-} while (0)
-
-#define ENSURE_BITS(nbits)                                              \
-  while (bits_left < (nbits)) {                                         \
-    unsigned char b0;                                                   \
-    if (i_ptr >= i_end) {                                               \
-      if (lzxd_read_input(lzx)) return lzx->error;                      \
-      i_ptr = lzx->i_ptr;                                               \
-      i_end = lzx->i_end;                                               \
-    }                                                                   \
-    b0 = *i_ptr++;                                                      \
-    if (i_ptr >= i_end) {                                               \
-      if (lzxd_read_input(lzx)) return lzx->error;                      \
-      i_ptr = lzx->i_ptr;                                               \
-      i_end = lzx->i_end;                                               \
-    }                                                                   \
-    bit_buffer |= ((*i_ptr << 8) | b0)                                  \
-                  << (BITBUF_WIDTH - 16 - bits_left);                   \
-    bits_left  += 16;                                                   \
-    i_ptr      += 1;                                                    \
-  }
-
-#define PEEK_BITS(nbits) (bit_buffer >> (BITBUF_WIDTH - (nbits)))
-
-#define REMOVE_BITS(nbits) ((bit_buffer <<= (nbits)), (bits_left -= (nbits)))
-
-#define READ_BITS(val, nbits) do {                                      \
-  ENSURE_BITS(nbits);                                                   \
-  (val) = PEEK_BITS(nbits);                                             \
-  REMOVE_BITS(nbits);                                                   \
-} while (0)
-
-static int lzxd_read_input(struct lzxd_stream *lzx) {
-  int read = lzx->sys->read(lzx->input, &lzx->inbuf[0], (int)lzx->inbuf_size);
-  if (read < 0) return lzx->error = MSPACK_ERR_READ;
-
-  /* huff decode's ENSURE_BYTES(16) might overrun the input stream, even
-   * if those bits aren't used, so fake 2 more bytes */
-  if (read == 0) {
-    if (lzx->input_end) {
-      D(("out of input bytes"))
-      return lzx->error = MSPACK_ERR_READ;
-    }
-    else {
-      read = 2;
-      lzx->inbuf[0] = lzx->inbuf[1] = 0;
-      lzx->input_end = 1;
-    }
-  }
-
-  lzx->i_ptr = &lzx->inbuf[0];
-  lzx->i_end = &lzx->inbuf[read];
-
-  return MSPACK_ERR_OK;
-}
-
-/* Huffman decoding macros */
-
-/* READ_HUFFSYM(tablename, var) decodes one huffman symbol from the
- * bitstream using the stated table and puts it in var.
- */
-#define READ_HUFFSYM(tbl, var) do {                                     \
-  /* huffman symbols can be up to 16 bits long */                       \
-  ENSURE_BITS(16);                                                      \
-  /* immediate table lookup of [tablebits] bits of the code */          \
-  sym = lzx->tbl##_table[PEEK_BITS(LZX_##tbl##_TABLEBITS)];             \
-  /* is the symbol is longer than [tablebits] bits? (i=node index) */   \
-  if (sym >= LZX_##tbl##_MAXSYMBOLS) {                                  \
-    /* decode remaining bits by tree traversal */                       \
-    i = 1 << (BITBUF_WIDTH - LZX_##tbl##_TABLEBITS);                    \
-    do {                                                                \
-      /* one less bit. error if we run out of bits before decode */     \
-      i >>= 1;                                                          \
-      if (i == 0) {                                                     \
-        D(("out of bits in huffman decode"))                            \
-        return lzx->error = MSPACK_ERR_DECRUNCH;                        \
-      }                                                                 \
-      /* double node index and add 0 (left branch) or 1 (right) */      \
-      sym <<= 1; sym |= (bit_buffer & i) ? 1 : 0;                       \
-      /* hop to next node index / decoded symbol */                     \
-      sym = lzx->tbl##_table[sym];                                      \
-      /* while we are still in node indicies, not decoded symbols */    \
-    } while (sym >= LZX_##tbl##_MAXSYMBOLS);                            \
-  }                                                                     \
-  /* result */                                                          \
-  (var) = sym;                                                          \
-  /* look up the code length of that symbol and discard those bits */   \
-  i = lzx->tbl##_len[sym];                                              \
-  REMOVE_BITS(i);                                                       \
-} while (0)
+/* import huffman-reading macros and code */
+#define TABLEBITS(tbl)      LZX_##tbl##_TABLEBITS
+#define MAXSYMBOLS(tbl)     LZX_##tbl##_MAXSYMBOLS
+#define HUFF_TABLE(tbl,idx) lzx->tbl##_table[idx]
+#define HUFF_LEN(tbl,idx)   lzx->tbl##_len[idx]
+#define HUFF_ERROR          return lzx->error = MSPACK_ERR_DECRUNCH
+#include "readhuff.h" // Gildor: original: <readhuff.h>
 
 /* BUILD_TABLE(tbl) builds a huffman lookup table from code lengths */
-#define BUILD_TABLE(tbl)                                                \
-  if (make_decode_table(LZX_##tbl##_MAXSYMBOLS, LZX_##tbl##_TABLEBITS,  \
-			&lzx->tbl##_len[0], &lzx->tbl##_table[0]))      \
-  {                                                                     \
-    D(("failed to build %s table", #tbl))                               \
-    return lzx->error = MSPACK_ERR_DECRUNCH;                            \
-  }
-
-/* make_decode_table(nsyms, nbits, length[], table[])
- *
- * This function was coded by David Tritscher. It builds a fast huffman
- * decoding table from a canonical huffman code lengths table.
- *
- * nsyms  = total number of symbols in this huffman tree.
- * nbits  = any symbols with a code length of nbits or less can be decoded
- *          in one lookup of the table.
- * length = A table to get code lengths from [0 to syms-1]
- * table  = The table to fill up with decoded symbols and pointers.
- *
- * Returns 0 for OK or 1 for error
- */
-
-static int make_decode_table(unsigned int nsyms, unsigned int nbits,
-			     unsigned char *length, unsigned short *table)
-{
-  register unsigned short sym;
-  register unsigned int leaf, fill;
-  register unsigned char bit_num;
-  unsigned int pos         = 0; /* the current position in the decode table */
-  unsigned int table_mask  = 1 << nbits;
-  unsigned int bit_mask    = table_mask >> 1; /* don't do 0 length codes */
-  unsigned int next_symbol = bit_mask; /* base of allocation for long codes */
-
-  /* fill entries for codes short enough for a direct mapping */
-  for (bit_num = 1; bit_num <= nbits; bit_num++) {
-    for (sym = 0; sym < nsyms; sym++) {
-      if (length[sym] != bit_num) continue;
-      leaf = pos;
-      if((pos += bit_mask) > table_mask) return 1; /* table overrun */
-      /* fill all possible lookups of this symbol with the symbol itself */
-      for (fill = bit_mask; fill-- > 0;) table[leaf++] = sym;
+#define BUILD_TABLE(tbl)						\
+    if (make_decode_table(MAXSYMBOLS(tbl), TABLEBITS(tbl),		\
+			  &HUFF_LEN(tbl,0), &HUFF_TABLE(tbl,0)))	\
+    {									\
+        D(("failed to build %s table", #tbl))				\
+	return lzx->error = MSPACK_ERR_DECRUNCH;			\
     }
-    bit_mask >>= 1;
-  }
 
-  /* full table already? */
-  if (pos == table_mask) return 0;
-
-  /* clear the remainder of the table */
-  for (sym = pos; sym < table_mask; sym++) table[sym] = 0xFFFF;
-
-  /* allow codes to be up to nbits+16 long, instead of nbits */
-  pos <<= 16;
-  table_mask <<= 16;
-  bit_mask = 1 << 15;
-
-  for (bit_num = nbits+1; bit_num <= 16; bit_num++) {
-    for (sym = 0; sym < nsyms; sym++) {
-      if (length[sym] != bit_num) continue;
-
-      leaf = pos >> 16;
-      for (fill = 0; fill < bit_num - nbits; fill++) {
-	/* if this path hasn't been taken yet, 'allocate' two entries */
-	if (table[leaf] == 0xFFFF) {
-	  table[(next_symbol << 1)] = 0xFFFF;
-	  table[(next_symbol << 1) + 1] = 0xFFFF;
-	  table[leaf] = next_symbol++;
-	}
-	/* follow the path and select either left or right for next bit */
-	leaf = table[leaf] << 1;
-	if ((pos >> (15-fill)) & 1) leaf++;
-      }
-      table[leaf] = sym;
-
-      if ((pos += bit_mask) > table_mask) return 1; /* table overflow */
-    }
-    bit_mask >>= 1;
-  }
-
-  /* full table? */
-  if (pos == table_mask) return 0;
-
-  /* either erroneous table, or all elements are 0 - let's find out. */
-  for (sym = 0; sym < nsyms; sym++) if (length[sym]) return 1;
-  return 0;
-}
-
+#define BUILD_TABLE_MAYBE_EMPTY(tbl) do {				\
+    lzx->tbl##_empty = 0;						\
+    if (make_decode_table(MAXSYMBOLS(tbl), TABLEBITS(tbl),		\
+                          &HUFF_LEN(tbl,0), &HUFF_TABLE(tbl,0)))	\
+    {									\
+	for (i = 0; i < MAXSYMBOLS(tbl); i++) {				\
+	    if (HUFF_LEN(tbl, i) > 0) {					\
+		D(("failed to build %s table", #tbl))			\
+		return lzx->error = MSPACK_ERR_DECRUNCH;		\
+	    }								\
+	}								\
+	/* empty tree - allow it, but don't decode symbols with it */	\
+	lzx->tbl##_empty = 1;						\
+    }									\
+} while (0)
 
 /* READ_LENGTHS(tablename, first, last) reads in code lengths for symbols
  * first to last in the given table. The code lengths are stored in their
  * own special LZX way.
  */
-#define READ_LENGTHS(tbl, first, last) do {                            \
-  STORE_BITS;                                                          \
-  if (lzxd_read_lens(lzx, &lzx->tbl##_len[0], (first),                 \
-    (unsigned int)(last))) return lzx->error;                          \
-  RESTORE_BITS;                                                        \
+#define READ_LENGTHS(tbl, first, last) do {		\
+  STORE_BITS;						\
+  if (lzxd_read_lens(lzx, &HUFF_LEN(tbl, 0), (first),	\
+    (unsigned int)(last))) return lzx->error;		\
+  RESTORE_BITS;						\
 } while (0)
 
 static int lzxd_read_lens(struct lzxd_stream *lzx, unsigned char *lens,
@@ -352,25 +192,25 @@ static int lzxd_read_lens(struct lzxd_stream *lzx, unsigned char *lens,
  * position_base[] is an index to the position slot bases
  *
  * extra_bits[] states how many bits of offset-from-base data is needed.
+ *
+ * They are generated like so:
+ * for (i = 0;        i < 4;  i++)  extra_bits[i] = 0;
+ * for (i = 4, j = 0; i < 36; i+=2) extra_bits[i] = extra_bits[i+1] = j++;
+ * for (i = 36;       i < 51; i++)  extra_bits[i] = 17;
+ * for (i = 0, j = 0; i < 51; j += 1 << extra_bits[i++]) position_base[i] = j;
  */
-static unsigned int  position_base[51];
-static unsigned char extra_bits[51];
-
-static void lzxd_static_init() {
-  int i, j;
-
-  for (i = 0, j = 0; i < 50; i += 2) {
-    extra_bits[i]   = j; /* 0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7... */
-    extra_bits[i+1] = j;
-    if ((i != 0) && (j < 17)) j++; /* 0,0,1,2,3,4...15,16,17,17,17,17... */
-  }
-  extra_bits[50] = 17;
-
-  for (i = 0, j = 0; i < 51; i++) {
-    position_base[i] = j; /* 0,1,2,3,4,6,8,12,16,24,32,... */
-    j += 1 << extra_bits[i]; /* 1,1,1,1,2,2,4,4,8,8,16,16,32,32,... */
-  }
-}
+static const unsigned int position_base[51] = {
+  0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256,
+  384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288,
+  16384, 24576, 32768, 49152, 65536, 98304, 131072, 196608, 262144,
+  393216, 524288, 655360, 786432, 917504, 1048576, 1179648, 1310720,
+  1441792, 1572864, 1703936, 1835008, 1966080, 2097152
+};
+static const unsigned char extra_bits[51] = {
+  0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8,
+  9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16,
+  17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17
+};
 
 static void lzxd_reset_state(struct lzxd_stream *lzx) {
   int i;
@@ -408,17 +248,14 @@ struct lzxd_stream *lzxd_init(struct mspack_system *system,
   input_buffer_size = (input_buffer_size + 1) & -2;
   if (!input_buffer_size) return NULL;
 
-  /* initialise static data */
-  lzxd_static_init();
-
   /* allocate decompression state */
-  if (!(lzx = system->alloc(system, sizeof(struct lzxd_stream)))) {
+  if (!(lzx = (struct lzxd_stream *) system->alloc(system, sizeof(struct lzxd_stream)))) {
     return NULL;
   }
 
   /* allocate decompression window and input buffer */
-  lzx->window = system->alloc(system, (size_t) window_size);
-  lzx->inbuf  = system->alloc(system, (size_t) input_buffer_size);
+  lzx->window = (unsigned char *) system->alloc(system, (size_t) window_size);
+  lzx->inbuf  = (unsigned char *) system->alloc(system, (size_t) input_buffer_size);
   if (!lzx->window || !lzx->inbuf) {
     system->free(lzx->window);
     system->free(lzx->inbuf);
@@ -441,21 +278,17 @@ struct lzxd_stream *lzxd_init(struct mspack_system *system,
   lzx->reset_interval  = reset_interval;
   lzx->intel_filesize  = 0;
   lzx->intel_curpos    = 0;
+  lzx->intel_started   = 0;
+  lzx->error           = MSPACK_ERR_OK;
 
   /* window bits:    15  16  17  18  19  20  21
    * position slots: 30  32  34  36  38  42  50  */
   lzx->posn_slots      = ((window_bits == 21) ? 50 :
 			  ((window_bits == 20) ? 42 : (window_bits << 1)));
-  lzx->intel_started   = 0;
-  lzx->input_end       = 0;
 
-  lzx->error = MSPACK_ERR_OK;
-
-  lzx->i_ptr = lzx->i_end = &lzx->inbuf[0];
   lzx->o_ptr = lzx->o_end = &lzx->e8_buf[0];
-  lzx->bit_buffer = lzx->bits_left = 0;
-
   lzxd_reset_state(lzx);
+  INIT_BITS;
   return lzx;
 }
 
@@ -464,11 +297,11 @@ void lzxd_set_output_length(struct lzxd_stream *lzx, off_t out_bytes) {
 }
 
 int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
-  /* bitstream reading and huffman variables */
+  /* bitstream and huffman reading variables */
   register unsigned int bit_buffer;
   register int bits_left, i=0;
-  register unsigned short sym;
   unsigned char *i_ptr, *i_end;
+  register unsigned short sym;
 
   int match_length, length_footer, extra, verbatim_bits, bytes_todo;
   int this_run, main_element, aligned_bits, j;
@@ -544,11 +377,7 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	if ((lzx->block_type == LZX_BLOCKTYPE_UNCOMPRESSED) &&
 	    (lzx->block_length & 1))
 	{
-	  if (i_ptr == i_end) {
-	    if (lzxd_read_input(lzx)) return lzx->error;
-	    i_ptr = lzx->i_ptr;
-	    i_end = lzx->i_end;
-	  }
+	  READ_IF_NEEDED;
 	  i_ptr++;
 	}
 
@@ -574,7 +403,7 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	  if (lzx->MAINTREE_len[0xE8] != 0) lzx->intel_started = 1;
 	  /* read lengths of and build lengths huffman decoding tree */
 	  READ_LENGTHS(LENGTH, 0, LZX_NUM_SECONDARY_LENGTHS);
-	  BUILD_TABLE(LENGTH);
+	  BUILD_TABLE_MAYBE_EMPTY(LENGTH);
 	  break;
 
 	case LZX_BLOCKTYPE_UNCOMPRESSED:
@@ -588,11 +417,7 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 
 	  /* read 12 bytes of stored R0 / R1 / R2 values */
 	  for (rundest = &buf[0], i = 0; i < 12; i++) {
-	    if (i_ptr == i_end) {
-	      if (lzxd_read_input(lzx)) return lzx->error;
-	      i_ptr = lzx->i_ptr;
-	      i_end = lzx->i_end;
-	    }
+	    READ_IF_NEEDED;
 	    *rundest++ = *i_ptr++;
 	  }
 	  R0 = buf[0] | (buf[1] << 8) | (buf[2]  << 16) | (buf[3]  << 24);
@@ -632,6 +457,10 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	    /* get match length */
 	    match_length = main_element & LZX_NUM_PRIMARY_LENGTHS;
 	    if (match_length == LZX_NUM_PRIMARY_LENGTHS) {
+	      if (lzx->LENGTH_empty) {
+                D(("LENGTH symbol needed but tree is empty"))
+                return lzx->error = MSPACK_ERR_DECRUNCH;
+              }
 	      READ_HUFFSYM(LENGTH, length_footer);
 	      match_length += length_footer;
 	    }
@@ -660,6 +489,10 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	    i = match_length;
 	    /* does match offset wrap the window? */
 	    if (match_offset > window_posn) {
+	      if (match_offset > lzx->offset) {
+		D(("match offset beyond LZX stream"))
+		return lzx->error = MSPACK_ERR_DECRUNCH;
+	      }
 	      /* j = length from match offset to end of window */
 	      j = match_offset - window_posn;
 	      if (j > (int) lzx->window_size) {
@@ -700,6 +533,10 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	    /* get match length */
 	    match_length = main_element & LZX_NUM_PRIMARY_LENGTHS;
 	    if (match_length == LZX_NUM_PRIMARY_LENGTHS) {
+              if (lzx->LENGTH_empty) {
+                D(("LENGTH symbol needed but tree is empty"))
+                return lzx->error = MSPACK_ERR_DECRUNCH;
+              }
 	      READ_HUFFSYM(LENGTH, length_footer);
 	      match_length += length_footer;
 	    }
@@ -749,6 +586,10 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	    i = match_length;
 	    /* does match offset wrap the window? */
 	    if (match_offset > window_posn) {
+	      if (match_offset > lzx->offset) {
+		D(("match offset beyond LZX stream"))
+		return lzx->error = MSPACK_ERR_DECRUNCH;
+	      }
 	      /* j = length from match offset to end of window */
 	      j = match_offset - window_posn;
 	      if (j > (int) lzx->window_size) {
@@ -780,17 +621,15 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	rundest = &window[window_posn];
 	window_posn += this_run;
 	while (this_run > 0) {
-	  if ((i = i_end - i_ptr)) {
+	  if ((i = i_end - i_ptr) == 0) {
+	    READ_IF_NEEDED;
+	  }
+	  else {
 	    if (i > this_run) i = this_run;
 	    lzx->sys->copy(i_ptr, rundest, (size_t) i);
 	    rundest  += i;
 	    i_ptr    += i;
 	    this_run -= i;
-	  }
-	  else {
-	    if (lzxd_read_input(lzx)) return lzx->error;
-	    i_ptr = lzx->i_ptr;
-	    i_end = lzx->i_end;
 	  }
 	}
 	break;
@@ -823,7 +662,7 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 
     /* check that we've used all of the previous frame first */
     if (lzx->o_ptr != lzx->o_end) {
-      D(("%d avail bytes, new %d frame", lzx->o_end-lzx->o_ptr, frame_size))
+      D(("%ld avail bytes, new %d frame", lzx->o_end-lzx->o_ptr, frame_size))
       return lzx->error = MSPACK_ERR_DECRUNCH;
     }
 

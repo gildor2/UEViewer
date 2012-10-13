@@ -119,6 +119,13 @@ struct FPackageFileSummary
 			goto tag_ok;
 		}
 #endif // BERKANIX
+#if HAVKEN
+		if (S.Tag == 0xEA31928C)
+		{
+			Ar.Game = GAME_Havken;
+			goto tag_ok;
+		}
+#endif // HAVKEN
 #if TAO_YUAN
 		if (S.Tag == 0x12345678)
 		{
@@ -181,10 +188,18 @@ struct FPackageFileSummary
 		}
 #endif // HUXLEY
 #if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55)
+		if (Ar.Game == GAME_Transformers)
 		{
-			int unk8;								// always 0x4BF1EB6B?
-			Ar << unk8;
+			if (Ar.ArLicenseeVer >= 181)
+			{
+				int unk1, unk2[3];
+				Ar << unk1 << unk2[0] << unk2[1] << unk2[2];
+			}
+			if (Ar.ArLicenseeVer >= 55)
+			{
+				int unk8;							// always 0x4BF1EB6B? (not true for later game versions)
+				Ar << unk8;
+			}
 		}
 #endif // TRANSFORMERS
 #if MORTALONLINE
@@ -232,6 +247,13 @@ struct FPackageFileSummary
 			Ar << unk88;
 		}
 #endif // MASSEFF
+#if HAVKEN
+		if (Ar.Game == GAME_Havken && Ar.ArLicenseeVer >= 2)
+		{
+			int unkVer;
+			Ar << unkVer;
+		}
+#endif // HAVKEN
 		Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
 #if APB
 		if (Ar.Game == GAME_APB)

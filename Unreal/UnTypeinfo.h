@@ -176,7 +176,14 @@ public:
 		Ar << ScriptSize;
 		if (ScriptSize)
 		{
-			appPrintf("script: %d, rest: %d\n", ScriptSize, Ar.GetStopper() - Ar.Tell());
+			int remaining = Ar.GetStopper() - Ar.Tell();
+			appPrintf("script: %d, rest: %d\n", ScriptSize, remaining);
+			if (remaining < ScriptSize)
+			{
+				appPrintf("WARNING: bad ScriptSize, dropping\n");
+				return;
+			}
+			if (Ar.Game == GAME_Transformers) return;	//?? bad, did not understand the layout
 			Script.Empty(ScriptSize);
 			Script.Add(ScriptSize);
 			Ar.Serialize(&Script[0], ScriptSize);

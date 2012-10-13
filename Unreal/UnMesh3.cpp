@@ -1047,6 +1047,10 @@ struct FStaticLODModel3
 			goto after_bulk;
 		}
 #endif // APB
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) // Transformers: Fall of Cybertron, no version in code
+			goto after_bulk;
+#endif
 		/*!! PS3 MK:
 			- no Bulk here
 			- int NumSections (equals to Sections.Num())
@@ -1306,6 +1310,18 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		if (Ar.ArLicenseeVer >= 15) Ar << b4;
 	}
 #endif // FURY
+#if DISHONORED
+	if (Ar.Game == GAME_Dishonored && Ar.ArVer >= 759)
+	{
+		// FUserBounds m_UserBounds
+		FName   m_BoneName;
+		FVector m_Offset;
+		float   m_fRadius;
+		Ar << m_BoneName;
+		if (Ar.ArVer >= 761) Ar << m_Offset;
+		Ar << m_fRadius;
+	}
+#endif // DISHONORED
 	Ar << Bounds;
 	if (Ar.ArVer < 180)
 	{
@@ -1370,6 +1386,13 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	}
 #endif // MKVSDC
 	Ar << MeshOrigin << RotOrigin;
+#if DISHONORED
+	if (Ar.Game == GAME_Dishonored && Ar.ArVer >= 775)
+	{
+		TArray<byte> EdgeSkeleton;
+		Ar << EdgeSkeleton;
+	}
+#endif // DISHONORED
 	Ar << RefSkeleton << SkeletalDepth;
 #if DEBUG_SKELMESH
 	appPrintf("RefSkeleton: %d bones, %d depth\n", RefSkeleton.Num(), SkeletalDepth);
@@ -1984,6 +2007,9 @@ struct FStaticMeshUVItem3
 #if UNDERTOW
 		if (Ar.Game == GAME_Undertow) goto uvs;
 #endif
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) goto uvs; // Transformers: Fall of Cybertron, no version in code
+#endif
 		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
 			Ar << V.f10;				// starting from 615 made as separate stream
 	uvs:
@@ -2265,7 +2291,7 @@ struct FStaticMeshLODModel
 #endif
 
 #if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57)	//!! version unknown
+		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57 && Ar.ArVer < 832)	// Borderlands 1, version unknown; not valid for Borderlands 2
 		{
 			// refined field set
 			Ar << Lod.VertexStream;
@@ -2284,11 +2310,16 @@ struct FStaticMeshLODModel
 			FTRMeshUnkStream unkStream;		// normals?
 			int unkD8;						// part of Indices2
 			Ar << Lod.VertexStream << Lod.UVStream;
-			if (Ar.ArVer >= 536) Ar << Lod.ColorStream2;
+			if (Ar.ArVer >= 516) Ar << Lod.ColorStream2;
 			if (Ar.ArLicenseeVer >= 71) Ar << unkStream;
 			if (Ar.ArVer < 536) Ar << Lod.ColorStream;
 			Ar << Lod.f80 << Lod.Indices << Lod.Indices2;
 			if (Ar.ArLicenseeVer >= 58) Ar << unkD8;
+			if (Ar.ArLicenseeVer >= 181)	// Fall of Cybertron
+			{								// pre-Fall of Cybertron has 0 or 1 ints after indices, but Fall of Cybertron has 1 or 2 ints
+				int unkIndexStreamField;
+				Ar << unkIndexStreamField;
+			}
 			if (Ar.ArVer < 536)
 			{
 				Ar << RAW_ARRAY(Lod.Edges);
@@ -2437,6 +2468,9 @@ struct FStaticMeshLODModel
 			goto after_indices;				// do not need this data
 		}
 #endif // APB
+#if BORDERLANDS
+		if (Ar.Game == GAME_Borderlands && Ar.ArVer >= 832) goto after_indices; // Borderlands 2
+#endif
 		Ar << Lod.Indices2;
 	after_indices:
 
@@ -2715,23 +2749,27 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles);
 		// new serialization code
 		// bug in Singularity serialization code: serialized the same things twice!
-		goto ver_770;
+		goto new_kdop;
 	}
 #endif // SINGULARITY
 #if BULLETSTORM
-	if (Ar.Game == GAME_Bulletstorm && Ar.ArVer >= 739) goto ver_770;
+	if (Ar.Game == GAME_Bulletstorm && Ar.ArVer >= 739) goto new_kdop;
 #endif
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 153) goto ver_770;
+	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 153) goto new_kdop;
+#endif
+#if DISHONORED
+	if (Ar.Game == GAME_Dishonored) goto old_kdop;
 #endif
 	// kDOP tree
 	if (Ar.ArVer < 770)
 	{
+	old_kdop:
 		Ar << RAW_ARRAY(kDOPNodes);
 	}
 	else
 	{
-	ver_770:
+	new_kdop:
 		FkDOPBounds Bounds;
 		TArray<FkDOPNode3New> Nodes;
 		Ar << Bounds << RAW_ARRAY(Nodes);

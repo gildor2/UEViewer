@@ -6,6 +6,20 @@
 #define HOMEPAGE		"http://www.gildor.org/"
 
 
+static void CopyStream(FArchive *Src, FILE *Dst, int Count)
+{
+	byte buffer[16384];
+
+	while (Count > 0)
+	{
+		int Size = min(Count, sizeof(buffer));
+		Src->Serialize(buffer, Size);
+		if (fwrite(buffer, Size, 1, Dst) != 1) appError("Write failed");
+		Count -= Size;
+	}
+}
+
+
 /*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
@@ -101,7 +115,6 @@ int main(int argc, char **argv)
 	if (uncompressedSize == 0) appError("GetFileSize for %s returned 0", argPkgName);
 	printf("%s: uncompressed size %d\n", argPkgName, uncompressedSize);
 
-	byte *buffer = new byte[uncompressedSize];
 	FILE *out = fopen(OutFile, "wb");
 
 	/*!! Notes:
@@ -117,6 +130,7 @@ int main(int argc, char **argv)
 		int compressedStart   = Summary.CompressedChunks[0].CompressedOffset;
 		int uncompressedStart = Summary.CompressedChunks[0].UncompressedOffset;
 		FILE *h = fopen(Package->Filename, "rb");
+		byte *buffer = new byte[compressedStart];
 		fread(buffer, compressedStart, 1, h);
 		fclose(h);
 
@@ -129,7 +143,7 @@ int main(int argc, char **argv)
 		// find package flags
 		found = false;
 		const FString &Group = Summary.PackageGroup;
-		for (pos = 8; pos < 32; pos++)
+		for (pos = 8; pos < 48; pos++)
 		{
 			mem.Seek(pos);
 			int tmp;
@@ -195,9 +209,13 @@ int main(int argc, char **argv)
 		if (compressedStart - cut != uncompressedStart)
 			appNotify("WARNING: wrong size of %s: differs in %d bytes", argPkgName, compressedStart - cut - uncompressedStart);
 
-		// read package data
+		// write the header
+		if (fwrite(buffer, uncompressedStart, 1, out) != 1) appError("Write failed");
+		delete buffer;
+
+		// copy data
 		Package->Seek(uncompressedStart);
-		Package->Serialize(buffer + uncompressedStart, uncompressedSize - uncompressedStart);
+		CopyStream(Package, out, uncompressedSize - uncompressedStart);
 	}
 	else
 	{
@@ -205,16 +223,12 @@ int main(int argc, char **argv)
 		guard(LoadFullyCompressedPackage);
 
 		Package->Seek(0);
-		Package->Serialize(buffer, uncompressedSize);
+		CopyStream(Package, out, uncompressedSize);
 
 		unguard;
 	}
 
-	// write file
-	if (fwrite(buffer, uncompressedSize, 1, out) != 1) appError("Write failed");
-
 	// cleanup
-	delete buffer;
 	fclose(out);
 
 	unguard;

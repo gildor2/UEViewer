@@ -44,7 +44,7 @@ struct CMaterialParams
 	UUnrealMaterial			*Emissive;
 	UUnrealMaterial			*Cube;
 	UUnrealMaterial			*Mask;					// multiple mask textures baked into a single one
-	// channels
+	// channels (used with Mask texture)
 	ETextureCannel			EmissiveChannel;
 	ETextureCannel			SpecularMaskChannel;
 	ETextureCannel			SpecularPowerChannel;

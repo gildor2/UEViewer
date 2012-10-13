@@ -1635,6 +1635,13 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 			BAKEDMASK(!stricmp(Name, "Body_mask_RGB"), 100);
 		}
 #endif // BLADENSOUL
+#if DISHONORED
+		if (Package->Game == GAME_Dishonored)
+		{
+			CUBEMAP (appStristr(Name, "cubemap_tex"), 100);
+			EMISSIVE(appStristr(Name, "cubemap_mask"), 100);
+		}
+#endif // DISHONORED
 	}
 	for (i = 0; i < VectorParameterValues.Num(); i++)
 	{

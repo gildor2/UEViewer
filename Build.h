@@ -90,6 +90,8 @@
 #define SPECIALFORCE2	1		// Special Force 2
 #define TAO_YUAN		1
 #define TRIBES4			1		// Tribes: Ascend
+#define DISHONORED		1
+//#define HAVKEN			1
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

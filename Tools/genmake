@@ -82,7 +82,7 @@ at a time of registration of source files
 	INCLUDES	= path1 [path2 path3 ...]
 	OBJDIR		= directory for obj files (if not specified, obj files will be placed near c/cpp files)
 	WARNLEVEL	= num					compiler warning level (0 - disable; 1 - max; 2+ - less)
-	OPTIMIZE	= size | speed
+	OPTIMIZE	= size | speed | none
 	INLINES		= no | explicit | all	expanding inlines: disabled | explicit only | any suitable
 	OPTIONS		= string				compiler-dependent: extra options for command line
 
@@ -595,6 +595,8 @@ sub AddObjectList {
 				$options .= " -O1";
 			} elsif ($opt eq "speed") {
 				$options .= " -O2";
+			} elsif ($opt eq "none") {
+				$options .= " -Od";
 			} elsif ($opt ne "") {
 				WarningOnce ("unknown OPTIMIZE option: [$opt]");
 			}

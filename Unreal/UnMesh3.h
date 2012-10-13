@@ -225,8 +225,10 @@ enum AnimationCompressionFormat
 	ACF_Fixed48Max,
 #endif
 #if BORDERLANDS
-	ACF_Delta40NoW,
+	ACF_Delta40NoW,											// not implemented in game?
 	ACF_Delta48NoW,
+	ACF_PolarEncoded32,										// Borderlands 2
+	ACF_PolarEncoded48,										// Borderlands 2
 #endif
 #if MASSEFF
 	ACF_BioFixed48,											// Mass Effect 2
@@ -238,6 +240,9 @@ enum AnimationCompressionFormat
 #endif
 #if TRANSFORMERS || ARGONAUTS
 	ACF_IntervalFixed48NoW,									// 2 games has such quaternion type, and it is different!
+#endif
+#if DISHONORED
+	ACF_EdgeAnim,
 #endif
 };
 
@@ -256,6 +261,8 @@ _ENUM(AnimationCompressionFormat)
 #if BORDERLANDS
 	_E(ACF_Delta40NoW),
 	_E(ACF_Delta48NoW),
+	_E(ACF_PolarEncoded32),
+	_E(ACF_PolarEncoded48),
 #endif
 #if MASSEFF
 	_E(ACF_BioFixed48),
@@ -267,6 +274,9 @@ _ENUM(AnimationCompressionFormat)
 #endif
 #if TRANSFORMERS || ARGONAUTS
 	_E(ACF_IntervalFixed48NoW),
+#endif
+#if DISHONORED
+	_E(ACF_EdgeAnim),
 #endif
 };
 
@@ -373,6 +383,11 @@ public:
 #if BATMAN
 	TArray<byte>			AnimZip_Data;
 #endif
+#if TRANSFORMERS
+	TArray<int>				Tracks;							// Transformers: Fall of Cybertron
+	TArray<int>				TrackOffsets;
+	TArray<byte>			Trans3Data;
+#endif
 
 	UAnimSequence()
 	:	RateScale(1.0f)
@@ -403,6 +418,10 @@ public:
 #if ARGONAUTS
 		PROP_ARRAY(CompressedTrackTimeOffsets, int)
 		PROP_DROP(CompressedTrackSizes)
+#endif
+#if TRANSFORMERS
+		PROP_ARRAY(Tracks, int)				//?? not used?
+		PROP_ARRAY(TrackOffsets, int)
 #endif
 		// unsupported
 		PROP_DROP(Notifies)
@@ -490,6 +509,18 @@ public:
 #if TERA
 		if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overriden ArVer, so compare by ArLicenseeVer ...
 #endif
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) // Transformers: Fall of Cybertron, no version in code
+		{
+			int UseNewFormat;
+			Ar << UseNewFormat;
+			if (UseNewFormat)
+			{
+				Ar << Trans3Data;
+				return;
+			}
+		}
+#endif // TRANSFORMERS
 		if (Ar.ArVer >= 577)
 		{
 		new_code:
@@ -521,6 +552,9 @@ public:
 
 #if BATMAN
 	void DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) const;
+#endif
+#if TRANSFORMERS
+	void DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const;
 #endif
 };
 
@@ -712,6 +746,9 @@ public:
 
 #define REGISTER_MESH_CLASSES_MASSEFF \
 	REGISTER_CLASS(UBioAnimSetData)
+
+#define REGISTER_MESH_CLASSES_TRANS \
+	REGISTER_CLASS_ALIAS(USkeletalMesh3, USkeletalMeshSkeleton)
 
 // UGolemSkeletalMesh - APB: Reloaded, derived from USkeletalMesh
 // UTdAnimSet - Mirror's Edge, derived from UAnimSet

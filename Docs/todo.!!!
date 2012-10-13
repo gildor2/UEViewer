@@ -66,7 +66,7 @@ GENMAKE:
 ? when exporting mesh, can create .uc with sockets too (if possible)
   - requires conversion FCoords -> FVector+FRotator
   ? better - create .config for skeletal mesh
-? when cannot load some material type, or file is absent - sould at least give ability to list these
+? when cannot load some material type, or file is absent - should at least give ability to list these
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
 

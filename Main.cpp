@@ -31,6 +31,16 @@ static bool showMeshes = false;
 static bool showMaterials = false;
 #endif
 
+class CUmodelApp : public CApplication
+{
+	virtual void Draw3D(float TimeDelta);
+	virtual void DrawTexts(bool helpVisible);
+	virtual void BeforeSwap();
+	virtual void ProcessKey(int key, bool isDown);
+};
+
+static CUmodelApp GApplication;
+
 
 /*-----------------------------------------------------------------------------
 	Table of known Unreal classes
@@ -96,6 +106,9 @@ BEGIN_CLASS_TABLE
 #if DCU_ONLINE
 	REGISTER_MATERIAL_CLASSES_DCUO
 #endif
+#if TRANSFORMERS
+	REGISTER_MESH_CLASSES_TRANS
+#endif
 END_CLASS_TABLE
 #endif // UNREAL3
 }
@@ -108,6 +121,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_SOUND_CLASSES
 #if UNREAL3
 	REGISTER_SOUND_CLASSES_UE3
+#endif
+#if TRANSFORMERS
+	REGISTER_SOUND_CLASSES_TRANS
 #endif
 END_CLASS_TABLE
 }
@@ -403,7 +419,8 @@ static const GameInfo games[] = {
 		G("50 Cent: Blood on the Sand", 50cent, GAME_50Cent),
 #	endif
 #	if BORDERLANDS
-		G("Borderlands", border, GAME_Borderlands),
+		G("Borderlands",   border, GAME_Borderlands),
+		G("Borderlands 2", border, GAME_Borderlands),
 		G("Brothers in Arms: Hell's Highway", border, GAME_Borderlands),
 #	endif
 #	if DARKVOID
@@ -428,6 +445,7 @@ static const GameInfo games[] = {
 		G("The Bourne Conspiracy",           trans, GAME_Transformers),
 		G("Transformers: War for Cybertron", trans, GAME_Transformers),
 		G("Transformers: Dark of the Moon",  trans, GAME_Transformers),
+		G("Transformers: Fall of Cybertron", trans, GAME_Transformers),
 #	endif
 #	if AA3
 		G("America's Army 3", aa3, GAME_AA3),
@@ -477,6 +495,12 @@ static const GameInfo games[] = {
 #	endif
 #	if TRIBES4
 		G("Tribes: Ascend", t4, GAME_Tribes4),
+#	endif
+#	if DISHONORED
+		G("Dishonored", dis, GAME_Dishonored),
+#	endif
+#	if HAVKEN
+		G3("Havken"),
 #	endif
 #endif // UNREAL3
 };
@@ -1002,9 +1026,12 @@ int main(int argc, char **argv)
 					appSetNotifyHeader("%s:  %s'%s'", Package2->Name, realClassName, objName);
 					// create object from package
 					UObject *Obj = Package2->CreateExport(idx);
-					Objects.AddItem(Obj);
-					if (objName == attachAnimName)
-						GForceAnimSet = Obj;
+					if (Obj)
+					{
+						Objects.AddItem(Obj);
+						if (objName == attachAnimName && (Obj->IsA("MeshAnimation") || Obj->IsA("AnimSet")))
+							GForceAnimSet = Obj;
+					}
 				}
 				UObject::EndLoad();
 				if (found) break;
@@ -1129,7 +1156,7 @@ int main(int argc, char **argv)
 		// show object
 		vpInvertXAxis = true;
 		guard(MainLoop);
-		VisualizerLoop(APP_CAPTION);
+		VisualizerLoop(APP_CAPTION, &GApplication);
 		unguard;
 	}
 #endif // RENDERING
@@ -1277,9 +1304,9 @@ static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 
 static int GDoScreenshot = 0;
 
-void AppDrawFrame(float TimeDelta)
+void CUmodelApp::Draw3D(float TimeDelta)
 {
-	guard(AppDrawFrame);
+	guard(CUmodelApp::Draw3D);
 
 	bool AlphaBgShot = GDoScreenshot >= 2;
 	if (AlphaBgShot)
@@ -1292,10 +1319,11 @@ void AppDrawFrame(float TimeDelta)
 	// draw the frame
 	Viewer->Draw3D(TimeDelta);
 
-	if (GDoScreenshot)
+	if (AlphaBgShot)
 	{
+		// take screenshot without 2D texts and with transparency
 		UObject *Obj = UObject::GObjObjects[ObjIndex];
-		TakeScreenshot(Obj->Name, AlphaBgShot);
+		TakeScreenshot(Obj->Name, true);
 		GDoScreenshot = 0;
 	}
 
@@ -1303,9 +1331,25 @@ void AppDrawFrame(float TimeDelta)
 }
 
 
-void AppKeyEvent(int key, bool isDown)
+void CUmodelApp::BeforeSwap()
 {
-	guard(AppKeyEvent);
+	guard(CUmodelApp::BeforeSwap);
+
+	if (GDoScreenshot)
+	{
+		// take regular screenshot
+		UObject *Obj = UObject::GObjObjects[ObjIndex];
+		TakeScreenshot(Obj->Name, false);
+		GDoScreenshot = 0;
+	}
+
+	unguard;
+}
+
+
+void CUmodelApp::ProcessKey(int key, bool isDown)
+{
+	guard(CUmodelApp::ProcessKey);
 
 	if (!isDown)
 	{
@@ -1364,9 +1408,10 @@ void AppKeyEvent(int key, bool isDown)
 }
 
 
-void AppDisplayTexts(bool helpVisible)
+void CUmodelApp::DrawTexts(bool helpVisible)
 {
-	guard(AppDisplayTexts);
+	guard(CUmodelApp::DrawTexts);
+	CApplication::DrawTexts(helpVisible);
 	if (helpVisible)
 	{
 		DrawKeyHelp("PgUp/PgDn", "browse objects");

@@ -121,13 +121,11 @@ EOF
 	print OUT <<EOF
 </script>
 
-<div style="width:736px;">
-  <div class="filter_container">
-    <form>
-      <b>FILTER</b> <input name="filt" onkeyup="filter(this, 'compat_table', '1')" type="text" class="filter">
-    </form>
-    <p />
-  </div>
+<div class="filter_container">
+  <form>
+    <b>FILTER</b> <input name="filt" onkeyup="filter(this, 'compat_table', '1')" type="text" class="filter">
+  </form>
+  <p />
 </div>
 EOF
 ;
@@ -136,7 +134,7 @@ EOF
 
 sub tableHeader {
 	print OUT <<EOF
-<table id="compat_table" width="736" border="1" align="left" class="config">
+<table id="compat_table" width="100%" border="1" align="left" class="config">
   <tr>
     <td width="35"  class="detailbold">Year</td>
     <td width="301" class="detailbold"><div align="left">Title</div></td>
@@ -145,7 +143,7 @@ sub tableHeader {
     <td width="30"  class="detailbold">Anim</td>
     <td width="24"  class="detailbold">Stat</td>
     <td width="60"  class="detailbold">Engine</td>
-    <td width="181" class="detailbold"><div align="left">Developer</div></td>
+    <td class="detailbold"><div align="left">Developer</div></td>
   </tr>
 EOF
 ;
@@ -280,6 +278,7 @@ EOF
 				$url2 = $lines[4];
 			}
 		}
+		$url1 = "" if $url1 eq "-";
 		$newWindow = " target=\"_blank\"";
 		if ($color ne "") {
 			print OUT "  <tr bgcolor=\"$color\">\n";

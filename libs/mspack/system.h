@@ -10,12 +10,16 @@
 #ifndef MSPACK_SYSTEM_H
 #define MSPACK_SYSTEM_H 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ensure config.h is read before mspack.h */
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
-#include <mspack/mspack.h>
+#include <mspack/mspack.h> // Gildor: original: <mspack.h>
 
 /* fix for problem with GCC 4 and glibc (thanks to Ville Skytta)
  * http://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=150429
@@ -26,10 +30,44 @@
 
 #ifdef DEBUG
 # include <stdio.h>
-# define D(x) do { printf("%s:%d ",__FILE__, __LINE__); \
+/* Old GCCs don't have __func__, but __FUNCTION__:
+ * http://gcc.gnu.org/onlinedocs/gcc/Function-Names.html
+ */
+# if __STDC_VERSION__ < 199901L
+#  if __GNUC__ >= 2
+#   define __func__ __FUNCTION__
+#  else
+#   define __func__ "<unknown>"
+#  endif
+# endif
+# define D(x) do { printf("%s:%d (%s) ",__FILE__, __LINE__, __func__); \
                    printf x ; fputc('\n', stdout); fflush(stdout);} while (0);
 #else
 # define D(x)
+#endif
+
+/* CAB supports searching through files over 4GB in size, and the CHM file
+ * format actively uses 64-bit offsets. These can only be fully supported
+ * if the system the code runs on supports large files. If not, the library
+ * will work as normal using only 32-bit arithmetic, but if an offset
+ * greater than 2GB is detected, an error message indicating the library
+ * can't support the file should be printed.
+ */
+#ifdef HAVE_LIMITS_H
+# include <limits.h>
+#endif
+
+#if ((defined(_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS >= 64) || \
+     (defined(FILESIZEBITS)      && FILESIZEBITS      >= 64) || \
+     (defined(SIZEOF_OFF_T)      && SIZEOF_OFF_T      >= 8)  || \
+     defined(_LARGEFILE_SOURCE) || defined(_LARGEFILE64_SOURCE))
+# define LARGEFILE_SUPPORT
+# define LD "lld"
+# define LU "llu"
+#else
+extern const char *largefile_msg;
+# define LD "ld"
+# define LU "lu"
 #endif
 
 /* endian-neutral reading of little-endian data */
@@ -70,12 +108,17 @@ extern int mspack_valid_system(struct mspack_system *sys);
 # define mspack_memcmp memcmp
 #else
 /* inline memcmp() */
+// Gildor: replaced "inline" with "__inline"
 static __inline int mspack_memcmp(const void *s1, const void *s2, size_t n) {
   unsigned char *c1 = (unsigned char *) s1;
   unsigned char *c2 = (unsigned char *) s2;
   if (n == 0) return 0;
   while (--n && (*c1 == *c2)) c1++, c2++;
   return *c1 - *c2;
+}
+#endif
+
+#ifdef __cplusplus
 }
 #endif
 

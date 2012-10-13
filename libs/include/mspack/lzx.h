@@ -13,6 +13,10 @@
 #ifndef MSPACK_LZX_H
 #define MSPACK_LZX_H 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* LZX compression / decompression definitions */
 
 /* some constants defined by the LZX specification */
@@ -90,6 +94,7 @@ struct lzxd_stream {
 				(LZX_LENGTH_MAXSYMBOLS * 2)];
   unsigned short ALIGNED_table [(1 << LZX_ALIGNED_TABLEBITS) +
 				(LZX_ALIGNED_MAXSYMBOLS * 2)];
+  unsigned char LENGTH_empty;
 
   /* this is used purely for doing the intel E8 transform */
   unsigned char  e8_buf[LZX_FRAME_SIZE];
@@ -181,5 +186,9 @@ extern int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes);
  * @param lzx LZX decompression state to free.
  */
 void lzxd_free(struct lzxd_stream *lzx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

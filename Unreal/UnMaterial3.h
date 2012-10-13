@@ -96,6 +96,9 @@ public:
 		// Transformers: SourceArt is moved to separate class; but The Bourne Conspiracy has it (real ArLicenseeVer is unknown)
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 100) return;
 #endif
+#if BORDERLANDS
+		if (Ar.Game == GAME_Borderlands && Ar.ArVer >= 832) return;	// Borderlands 2; version unknown
+#endif
 #if APB
 		if (Ar.Game == GAME_APB)
 		{
@@ -318,7 +321,7 @@ public:
 			Format = (EPixelFormat)Format2;		// int -> byte (enum)
 		}
 #if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57) Ar.Seek(Ar.Tell() + 16);	// some hash; version unknown!!
+		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 46) Ar.Seek(Ar.Tell() + 16);	// Borderlands 1,2; some hash; version unknown!!
 #endif
 #if MKVSDC
 		if (Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 31)	//?? may be MidwayVer ?
@@ -329,7 +332,7 @@ public:
 #endif // MKVSDC
 		Ar << Mips;
 #if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 57) Ar.Seek(Ar.Tell() + 16);	// some hash; version unknown!!
+		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 46) Ar.Seek(Ar.Tell() + 16);	// Borderlands 1,2; some hash; version unknown!!
 #endif
 #if MASSEFF
 		if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
@@ -712,6 +715,9 @@ struct FScalarParameterValue
 		PROP_NAME(ParameterName)
 		PROP_FLOAT(ParameterValue)
 		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+#if TRANSFORMERS
+		PROP_DROP(ParameterCategory)
+#endif
 	END_PROP_TABLE
 };
 
@@ -727,6 +733,9 @@ struct FTextureParameterValue
 		PROP_NAME(ParameterName)
 		PROP_OBJ(ParameterValue)
 		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+#if TRANSFORMERS
+		PROP_DROP(ParameterCategory)
+#endif
 	END_PROP_TABLE
 };
 
@@ -742,6 +751,9 @@ struct FVectorParameterValue
 		PROP_NAME(ParameterName)
 		PROP_STRUC(ParameterValue, FLinearColor)
 		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+#if TRANSFORMERS
+		PROP_DROP(ParameterCategory)
+#endif
 	END_PROP_TABLE
 };
 

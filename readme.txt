@@ -133,6 +133,25 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+10.10.2012
+- implemented support for Dishonored (except animations)
+
+26.09.2012
+- implemented Transformers sounds support
+- FSB sound format is now recognized
+
+20.09.2012
+- implemented Borderlands 2 support
+
+18.09.2012
+- implemented Transformers: Fall of Cybertron support
+
+06.09.2012
+- fixed incompatibility of exported DDS with UE2 UnrealEd
+
+17.08.2012
+- improved compatibility with UE2 SkeletalMesh
+
 03.07.2012
 - implemenved Tribes: Ascend texture support
 

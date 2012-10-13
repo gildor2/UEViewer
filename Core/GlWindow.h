@@ -8,11 +8,20 @@
 	Control functions
 -----------------------------------------------------------------------------*/
 
-void VisualizerLoop(const char *caption);
-void AppDrawFrame(float TimeDelta);
-void AppKeyEvent(int key, bool isDown);
-void AppDisplayTexts(bool helpVisible);
+class CApplication
+{
+public:
+	virtual void Draw3D(float TimeDelta)
+	{}
+	virtual void DrawTexts(bool helpVisible);
+	virtual void BeforeSwap()
+	{}
+	virtual void ProcessKey(int key, bool isDown)
+	{}
+};
 
+// Main application function
+void VisualizerLoop(const char *caption, CApplication *App);
 
 void MoveCamera(float YawDelta, float PitchDelta, float DistDelta = 0, float PanX = 0, float PanY = 0);
 void FocusCameraOnPoint(const CVec3 &center);

@@ -243,7 +243,10 @@ fi
 case "" in
 
 "")
-	bat2 -meshes -pkg=BmGame -pkg=Playable_Catwoman_SF Playable_Catwoman_Std_SF -anim=CW_Combat -obj=Catwoman_Whip_Skin
+	run1 data/3/Dishonored Startup.upk -meshes -nostat Heart -anim=Heart_as
+#	run1 data/3X/Borderlands2 Startup.xxx GestaltDef_AssaultRifle_GestaltSkeletalMesh -anim=AssaultRifle
+#	run1 "data/3/Transformers Fall of Cybertron" -meshes L08b_SpitterIntro_DSN_m.xxx RB_GrimlockALT_SKEL -anim=Grimlock_ALT_ANIM
+#	bat2 -meshes -pkg=BmGame -pkg=Playable_Catwoman_SF Playable_Catwoman_Std_SF -anim=CW_Combat -obj=Catwoman_Whip_Skin
 #	run1 data/3/RiseOfTheArgonauts -meshes -pkg=Jason_Agility_AnimSet.upk Jason_Art.upk
 #	gow2 -meshes GearGame.xxx
 #	run1 data/3i/EpicCitadel -ios CastleMap.xxx T_FX_Flare_02

@@ -17,16 +17,13 @@
 
 #	if !USE_XDK
 
-		extern "C"
-		{
 #		include "mspack/mspack.h"
 #		include "mspack/lzx.h"
-		}
 
 #	else // USE_XDK
 
 #		if _WIN32
-#		pragma comment(lib, "xdecompress.lib")
+#		pragma comment(lib, "xcompress.lib")
 		extern "C"
 		{
 			int  __stdcall XMemCreateDecompressionContext(int CodecType, const void* pCodecParams, unsigned Flags, void** pContext);
@@ -1186,6 +1183,9 @@ void FArchive::DetectGame()
 #if BULLETSTORM
 	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
 #endif
+#if DISHONORED
+	if (ArVer == 801 && ArLicenseeVer == 30)	SET(GAME_Dishonored);
+#endif
 #if TRIBES4
 	if (ArVer == 805 && ArLicenseeVer == 2)		SET(GAME_Tribes4);
 #endif
@@ -1237,14 +1237,16 @@ void FArchive::DetectGame()
 #endif
 #if TRANSFORMERS
 	if ( (ArVer == 511 && ArLicenseeVer == 39 ) ||		// The Bourne Conspiracy
-		 (ArVer == 511 && ArLicenseeVer == 145) ||		// Transformers - PC version
-		 (ArVer == 511 && ArLicenseeVer == 144) ||		// Transformers - PS3 and XBox 360 version
-		 (ArVer == 537 && ArLicenseeVer == 174) )		// Transformers: Dark of the Moon
+		 (ArVer == 511 && ArLicenseeVer == 145) ||		// Transformers: War for Cybertron (PC version)
+		 (ArVer == 511 && ArLicenseeVer == 144) ||		// Transformers: War for Cybertron (PS3 and XBox 360 version)
+		 (ArVer == 537 && ArLicenseeVer == 174) ||		// Transformers: Dark of the Moon
+		 (ArVer == 846 && ArLicenseeVer == 181) )		// Transformers: Fall of Cybertron
 		SET(GAME_Transformers);
 #endif
 #if BORDERLANDS
 	if ( (ArVer == 512 && ArLicenseeVer == 35) ||		// Brothers in Arms: Hell's Highway
-		 (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) ) // Borderlands: release and update
+		 (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) || // Borderlands: release and update
+		 (ArVer == 832 && ArLicenseeVer == 46) )		// Borderlands 2
 		SET(GAME_Borderlands);
 #endif
 #if TERA
@@ -1275,7 +1277,9 @@ void FArchive::DetectGame()
 #define OVERRIDE_HUNTED_VER		708			// real version is 709, which is incorrect
 #define OVERRIDE_DND_VER		673			// real version is 674
 #define OVERRIDE_ME1_LVER		90			// real version is 1008, which is greater than LicenseeVersion of Mass Effect 2 and 3
+#define OVERRIDE_TRANSFORMERS3	566			// real version is 846
 #define OVERRIDE_SF2_VER		700
+#define OVERRIDE_SF2_VER2		710
 
 void FArchive::OverrideVersion()
 {
@@ -1296,12 +1300,15 @@ void FArchive::OverrideVersion()
 #if MASSEFF
 	if (Game == GAME_MassEffect) ArLicenseeVer = OVERRIDE_ME1_LVER;
 #endif
+#if TRANSFORMERS
+	if (Game == GAME_Transformers && ArLicenseeVer >= 181) ArVer = OVERRIDE_TRANSFORMERS3; // Transformers: Fall of Cybertron
+#endif
 #if SPECIALFORCE2
 	if (Game == GAME_SpecialForce2)
 	{
 		// engine for this game is upgraded without changing ArVer, they have ArVer set too high and changind ArLicenseeVer only
 		if (ArLicenseeVer >= 14)
-			ArVer = 710;
+			ArVer = OVERRIDE_SF2_VER2;
 		else if (ArLicenseeVer == 9)
 			ArVer = OVERRIDE_SF2_VER;
 	}
@@ -1687,6 +1694,11 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		return;
 	}
 
+#if TRANSFORMERS
+	// PS3 sounds in Transformers has alignment to 0x8000 with filling zeros
+	if (Ar.Game == GAME_Transformers && Ar.Platform == PLATFORM_PS3)
+		Ar.Seek(BulkDataOffsetInFile);
+#endif
 	assert(BulkDataOffsetInFile == Ar.Tell());
 	SerializeChunk(Ar);
 

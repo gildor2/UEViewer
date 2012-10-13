@@ -44,6 +44,13 @@ public:
 
 		Super::Serialize(Ar);
 		RawData.Serialize(Ar);
+#if TRANSFORMERS
+		if (Ar.Game == GAME_Transformers)
+		{
+			DROP_REMAINING_DATA(Ar);
+			return;
+		}
+#endif
 		CompressedPCData.Serialize(Ar);
 		CompressedXbox360Data.Serialize(Ar);
 		CompressedPS3Data.Serialize(Ar);
@@ -68,5 +75,8 @@ public:
 
 #define REGISTER_SOUND_CLASSES_UE3	\
 	REGISTER_CLASS(USoundNodeWave)
+
+#define REGISTER_SOUND_CLASSES_TRANS \
+	REGISTER_CLASS_ALIAS(USoundNodeWave, USoundNodeWaveEx)
 
 #endif // __UNSOUND_H__

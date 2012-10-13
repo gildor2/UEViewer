@@ -11,9 +11,53 @@
 #include "TypeConvert.h"
 
 
+// following defines will help finding new undocumented compression schemes
+#define FIND_HOLES			1
+//#define DEBUG_DECOMPRESS	1
+
 /*-----------------------------------------------------------------------------
 	UAnimSet
 -----------------------------------------------------------------------------*/
+
+// position
+#define TP(Enum, VecType)						\
+				case Enum:						\
+					{							\
+						VecType v;				\
+						Reader << v;			\
+						A->KeyPos.AddItem(CVT(v)); \
+					}							\
+					break;
+// position ranged
+#define TPR(Enum, VecType)						\
+				case Enum:						\
+					{							\
+						VecType v;				\
+						Reader << v;			\
+						FVector v2 = v.ToVector(Mins, Ranges); \
+						A->KeyPos.AddItem(CVT(v2)); \
+					}							\
+					break;
+// rotation
+#define TR(Enum, QuatType)						\
+				case Enum:						\
+					{							\
+						QuatType q;				\
+						Reader << q;			\
+						A->KeyQuat.AddItem(CVT(q)); \
+					}							\
+					break;
+// rotation ranged
+#define TRR(Enum, QuatType)						\
+				case Enum:						\
+					{							\
+						QuatType q;				\
+						Reader << q;			\
+						FQuat q2 = q.ToQuat(Mins, Ranges); \
+						A->KeyQuat.AddItem(CVT(q2));	\
+					}							\
+					break;
+
 
 UAnimSet::~UAnimSet()
 {
@@ -21,9 +65,11 @@ UAnimSet::~UAnimSet()
 }
 
 
-// following defines will help finding new undocumented compression schemes
-#define FIND_HOLES			1
-//#define DEBUG_DECOMPRESS	1
+#if DEBUG_DECOMPRESS
+#define DBG(...)			appPrintf(__VA_ARGS__)
+#else
+#define DBG(...)
+#endif
 
 static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int NumFrames)
 {
@@ -94,24 +140,229 @@ static void ReadArgonautsTimeArray(const TArray<unsigned> &SourceArray, int Firs
 
 #if TRANSFORMERS
 
-static FQuat TransModifyQuat(const FQuat &q, const FQuat &m)
+void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 {
-	FQuat r;
-	float x  = q.X, y  = q.Y, z  = q.Z, w  = q.W;
-	float sx = m.X, sy = m.Y, sz = m.Z, sw = m.W;
+	guard(UAnimSequence::DecodeTrans3Anims);
 
-	float VAR_A = (sy-sz)*(z-y);
-	float VAR_B = (sz+sy)*(w-x);
-	float VAR_C = (sw-sx)*(z+y);
-	float VAR_D = (sw+sz)*(w-y) + (sw-sz)*(w+y) + (sx+sy)*(x+z);
-	float xmm0  = ( VAR_D + (sx-sy)*(z-x) ) / 2;
+	// read some counts first
+	FMemReader Reader1(Trans3Data.GetData(), Trans3Data.Num());
+	Reader1.SetupFrom(*Package);
 
-	r.X =  (sx+sw)*(x+w) + xmm0 - VAR_D;
-	r.Y = -(sw+sz)*(w-y) + xmm0 + VAR_B;
-	r.Z = -(sw-sz)*(w+y) + xmm0 + VAR_C;
-	r.W = -(sx+sy)*(x+z) + xmm0 + VAR_A;
+	int NumberOfStaticRotations, NumberOfStaticTranslations, NumberOfAnimatedRotations, NumberOfAnimatedTranslations,
+		NumberOfAnimatedUncompressedTranslations;
+	Reader1 << NumberOfStaticRotations << NumberOfStaticTranslations
+			<< NumberOfAnimatedRotations << NumberOfAnimatedTranslations
+			<< NumberOfAnimatedUncompressedTranslations;
 
-	return r;
+	// create new reader for keyframe data
+	int StartOffset = Reader1.Tell();	// always equals to 20
+	FMemReader Reader((byte*)Trans3Data.GetData() + StartOffset, Trans3Data.Num() - StartOffset);
+
+	// key index offsets
+	int StartOfStaticRotations        = 0;
+	int StartOfStaticTranslations     = StartOfStaticRotations + NumberOfStaticRotations;
+	int StartOfAnimatedRotations      = StartOfStaticTranslations + NumberOfStaticTranslations;
+	int StartOfAnimatedTranslations   = StartOfAnimatedRotations + NumberOfAnimatedRotations;
+	int StartOfAnimUncompTranslations = StartOfAnimatedTranslations + NumberOfAnimatedTranslations;
+
+	// determine quaternion size for this format
+	int QuatSize;
+	switch (RotationCompressionFormat)
+	{
+	case ACF_None:
+		QuatSize = 16; break;
+	case ACF_Float96NoW:
+		QuatSize = 12; break;
+	case ACF_Fixed48NoW:
+	case ACF_IntervalFixed48NoW:
+		QuatSize = 6; break;
+	case ACF_IntervalFixed32NoW:
+	case ACF_Fixed32NoW:
+	case ACF_Float32NoW:
+		QuatSize = 4; break;
+	default:
+		appError("Unknown RotationCompressionFormat %d", RotationCompressionFormat);
+	}
+
+	// block sizes
+	int StaticRotationSize        = 16 * NumberOfStaticRotations;					// FQuat
+	int StaticTranslationsSize    = 12 * NumberOfStaticTranslations;				// FVector
+	int AnimatedRotationSize      = QuatSize * NumberOfAnimatedRotations;
+	int AnimatedTranslationSize   = 4  * NumberOfAnimatedTranslations;				// FPackedVector_Trans
+	int AnimUncompTranslationSize = 12 * NumberOfAnimatedUncompressedTranslations;	// FVector
+	int AnimatedDataSize          = AnimatedRotationSize + AnimatedTranslationSize + AnimUncompTranslationSize;
+	// interval data blocks
+	int RotationIntervalSize = 0;
+	if (RotationCompressionFormat == ACF_IntervalFixed32NoW || RotationCompressionFormat == ACF_IntervalFixed48NoW)
+		RotationIntervalSize = 40 * NumberOfAnimatedRotations;						// 3+3+4 floats
+	int TranslationIntervalSize = 24 * NumberOfAnimatedTranslations;
+
+	// compute offsets, in order of appearance in data
+	int StaticRotationOffset       = 0;
+	int StaticTranslationOffset    = StaticRotationOffset + StaticRotationSize;
+	int RotationIntervalOffset     = StaticTranslationOffset + StaticTranslationsSize;
+	int TranslationIntervalOffset  = RotationIntervalOffset + RotationIntervalSize;
+	int AnimatedRotationOffset     = TranslationIntervalOffset + TranslationIntervalSize;
+	int AnimatedTranslationOffset  = AnimatedRotationOffset + AnimatedRotationSize;
+	int AnimatedUncompTranslationOffset = AnimatedTranslationOffset + AnimatedTranslationSize;
+
+	// Differences in original game code: serialization function copies data to anither array with alignment of AnimatedRotationSize to 4 and
+	// RotationIntervalOffset to 16, plus is makes rotation interval data in size of 48 bytes each (it takes 40 bytes in a package)
+
+	// verification
+	int TotalDataSize = AnimatedRotationOffset + AnimatedDataSize * NumFrames;
+	assert(TotalDataSize == Trans3Data.Num() - StartOffset);
+
+	DBG("          TF3: StatRot=%d StatTrans=%d AnimRot=%d AnimTrans=%d UncompTrans=%d TotalSize=%d (%d)\n",
+		NumberOfStaticRotations, NumberOfStaticTranslations, NumberOfAnimatedRotations, NumberOfAnimatedTranslations,
+		NumberOfAnimatedUncompressedTranslations, Trans3Data.Num() - StartOffset, TotalDataSize
+	);
+/*	DBG("  StatRot: %08X [%d]\n"
+		"  StatTr:  %08X [%d]\n"
+		"  RotInt:  %08X [%d]\n"
+		"  TrInt:   %08X [%d]\n"
+		"  AnRot:   %08X [%d] + N\n"
+		"  AnTr:    %08X [%d]\n"
+		"  AnTrU:   %08X [%d]\n",
+		StaticRotationOffset, NumberOfStaticRotations,
+		StaticTranslationOffset, NumberOfStaticTranslations,
+		RotationIntervalOffset, NumberOfAnimatedRotations,
+		TranslationIntervalOffset, NumberOfAnimatedTranslations,
+		AnimatedRotationOffset, NumberOfAnimatedRotations,
+		AnimatedTranslationOffset, NumberOfAnimatedTranslations,
+		AnimatedUncompTranslationOffset, NumberOfAnimatedUncompressedTranslations
+	); */
+
+	static const CVec3 nullVec  = { 0, 0, 0 };
+	static const CQuat nullQuat = { 0, 0, 0, 1 };
+
+	int NumTracks = Owner->TrackBoneNames.Num();
+	assert(TrackOffsets.Num() == NumTracks * 2);
+	Dst->Tracks.Empty(NumTracks);
+	int i;
+	for (int Bone = 0; Bone < NumTracks; Bone++)
+	{
+		CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
+		int RotKeyIndex   = TrackOffsets[Bone * 2    ];
+		int TransKeyIndex = TrackOffsets[Bone * 2 + 1];
+
+		// decode translation
+		DBG("          Trans: key=%d -> ", TransKeyIndex);
+		if (TransKeyIndex < StartOfStaticTranslations)
+		{
+			// null vector
+			DBG("null ");
+			A->KeyPos.AddItem(nullVec);
+		}
+		else if (TransKeyIndex < StartOfAnimatedTranslations)
+		{
+			// static vector (single key)
+			TransKeyIndex -= StartOfStaticTranslations;
+			DBG("static[%d] ", TransKeyIndex);
+			Reader.Seek(StaticTranslationOffset + 12 * TransKeyIndex);
+			FVector pos;
+			Reader << pos;
+			A->KeyPos.AddItem(CVT(pos));
+		}
+		else if (TransKeyIndex < StartOfAnimUncompTranslations)
+		{
+			// animated compressed translation
+			TransKeyIndex -= StartOfAnimatedTranslations;
+			DBG("comp[%d] ", TransKeyIndex);
+			A->KeyPos.Empty(NumFrames);
+			Reader.Seek(TranslationIntervalOffset + 24 * TransKeyIndex);
+			FVector Mins, Ranges;
+			Reader << Mins << Ranges;
+			for (i = 0; i < NumFrames; i++)
+			{
+				Reader.Seek(AnimatedTranslationOffset + 4 * TransKeyIndex + i * AnimatedDataSize);
+				FPackedVector_Trans pos;
+				Reader << pos;
+				FVector pos2 = pos.ToVector(Mins, Ranges); // convert
+				A->KeyPos.AddItem(CVT(pos2));
+			}
+		}
+		else
+		{
+			// animated uncompressed translation
+			TransKeyIndex -= StartOfAnimUncompTranslations;
+			DBG("uncomp[%d] ", TransKeyIndex);
+			A->KeyPos.Empty(NumFrames);
+			for (i = 0; i < NumFrames; i++)
+			{
+				Reader.Seek(AnimatedUncompTranslationOffset + 12 * TransKeyIndex + i * AnimatedDataSize);
+				FVector pos;
+				Reader << pos;
+				A->KeyPos.AddItem(CVT(pos));
+			}
+		}
+
+		// decode rotation
+		DBG("; Rot: key=%d -> ", RotKeyIndex);
+		if (RotKeyIndex < StartOfStaticRotations)
+		{
+			// null quaternion
+			DBG("null ");
+			A->KeyQuat.AddItem(nullQuat);
+		}
+		else if (RotKeyIndex < StartOfAnimatedRotations)
+		{
+			// static rotation
+			RotKeyIndex -= StartOfStaticRotations;
+			DBG("static[%d] ", RotKeyIndex);
+			Reader.Seek(StaticRotationOffset + 16 * RotKeyIndex);
+			FQuat q;
+			Reader << q;
+			q.W *= -1;
+			A->KeyQuat.AddItem(CVT(q));
+		}
+		else
+		{
+			// animated rotation
+			RotKeyIndex -= StartOfAnimatedRotations;
+			DBG("comp[%d] ", RotKeyIndex);
+			A->KeyQuat.Empty(NumFrames);
+			FVector Mins, Ranges;
+			FQuat TransQuatBase;
+			if (RotationIntervalSize)
+			{
+				// get interval data
+				Reader.Seek(RotationIntervalOffset + 40 * RotKeyIndex);
+				Reader << Mins << Ranges;
+				Reader << TransQuatBase.W << TransQuatBase.X << TransQuatBase.Y << TransQuatBase.Z;
+			}
+			for (i = 0; i < NumFrames; i++)
+			{
+				Reader.Seek(AnimatedRotationOffset + QuatSize * RotKeyIndex + i * AnimatedDataSize);
+				switch (RotationCompressionFormat)
+				{
+				TR (ACF_None, FQuat)
+				TR (ACF_Float96NoW, FQuatFloat96NoW)
+				TR (ACF_Fixed48NoW, FQuatFixed48NoW)
+				TR (ACF_Fixed32NoW, FQuatFixed32NoW)
+				TRR(ACF_IntervalFixed32NoW, FQuatIntervalFixed32NoW)
+				TR (ACF_Float32NoW, FQuatFloat32NoW)
+				TRR(ACF_IntervalFixed48NoW, FQuatIntervalFixed48NoW_Trans)
+				default:
+					appError("Unknown rotation compression method: %d", RotationCompressionFormat);
+				}
+			}
+			if (RotationIntervalSize)
+			{
+				for (i = 0; i < NumFrames; i++)
+				{
+					CQuat q = A->KeyQuat[i];
+					q.Mul(CVT(TransQuatBase));
+					q.w *= -1;
+					A->KeyQuat[i] = q;
+				}
+			}
+		}
+
+		DBG(" - %s\n", *Owner->TrackBoneNames[Bone]);
+	}
+
+	unguard;
 }
 
 #endif // TRANSFORMERS
@@ -177,9 +428,7 @@ void UAnimSet::ConvertAnims()
 		}
 	}
 
-#if DEBUG_DECOMPRESS
-	appPrintf("----------- AnimSet %s: %d seq, %d bones -----------\n", Name, Sequences.Num(), TrackBoneNames.Num());
-#endif
+	DBG("----------- AnimSet %s: %d seq, %d bones -----------\n", Name, Sequences.Num(), TrackBoneNames.Num());
 
 	for (i = 0; i < Sequences.Num(); i++)
 	{
@@ -190,9 +439,9 @@ void UAnimSet::ConvertAnims()
 			continue;
 		}
 #if DEBUG_DECOMPRESS
-		appPrintf("Sequence %d (%s):%s %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
+		appPrintf("Sequence %d (%s, %s):%s %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
 			   "          trans %s, rot %s, key %s\n",
-			i, *Seq->SequenceName,
+			i, *Seq->SequenceName, Seq->Name,
 			Seq->bIsAdditive ? " [additive]" : "",
 			NumTracks, Seq->CompressedTrackOffsets.Num(), Seq->CompressedTrackOffsets.Num() / (float)NumTracks,
 			Seq->NumFrames,
@@ -201,6 +450,9 @@ void UAnimSet::ConvertAnims()
 			EnumToName("AnimationCompressionFormat", Seq->RotationCompressionFormat),
 			EnumToName("AnimationKeyFormat",         Seq->KeyEncodingFormat)
 		);
+	#if TRANSFORMERS
+		if (Package->Game == GAME_Transformers && Seq->Trans3Data.Num()) goto no_track_details;
+	#endif
 		for (int i2 = 0; i2 < Seq->CompressedTrackOffsets.Num(); /*empty*/)
 		{
 			if (Seq->KeyEncodingFormat != AKF_PerTrackCompression)
@@ -224,7 +476,19 @@ void UAnimSet::ConvertAnims()
 				i2 += 2;
 			}
 		}
+	no_track_details: ;
 #endif // DEBUG_DECOMPRESS
+#if TRANSFORMERS
+		if (Package->Game == GAME_Transformers && Seq->Trans3Data.Num())
+		{
+			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
+			Dst->Name      = Seq->SequenceName;
+			Dst->NumFrames = Seq->NumFrames;
+			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
+			Seq->DecodeTrans3Anims(Dst, this);
+			continue;
+		}
+#endif // TRANSFORMERS
 #if MASSEFF
 		if (Seq->m_pBioAnimSetData != BioData)
 		{
@@ -298,45 +562,6 @@ void UAnimSet::ConvertAnims()
 			static const CVec3 nullVec  = { 0, 0, 0 };
 			static const CQuat nullQuat = { 0, 0, 0, 1 };
 
-// position
-#define TP(Enum, VecType)						\
-				case Enum:						\
-					{							\
-						VecType v;				\
-						Reader << v;			\
-						A->KeyPos.AddItem(CVT(v)); \
-					}							\
-					break;
-// position ranged
-#define TPR(Enum, VecType)						\
-				case Enum:						\
-					{							\
-						VecType v;				\
-						Reader << v;			\
-						FVector v2 = v.ToVector(Mins, Ranges); \
-						A->KeyPos.AddItem(CVT(v2)); \
-					}							\
-					break;
-// rotation
-#define TR(Enum, QuatType)						\
-				case Enum:						\
-					{							\
-						QuatType q;				\
-						Reader << q;			\
-						A->KeyQuat.AddItem(CVT(q)); \
-					}							\
-					break;
-// rotation ranged
-#define TRR(Enum, QuatType)						\
-				case Enum:						\
-					{							\
-						QuatType q;				\
-						Reader << q;			\
-						FQuat q2 = q.ToQuat(Mins, Ranges); \
-						A->KeyQuat.AddItem(CVT(q2));	\
-					}							\
-					break;
-
 			//----------------------------------------------
 			// decode AKF_PerTrackCompression data
 			//----------------------------------------------
@@ -366,9 +591,7 @@ void UAnimSet::ConvertAnims()
 				if (TransOffset == -1)
 				{
 					A->KeyPos.AddItem(nullVec);
-#if DEBUG_DECOMPRESS
-					appPrintf("    [%d] no translation data\n", j);
-#endif
+					DBG("    [%d] no translation data\n", j);
 				}
 				else
 				{
@@ -376,11 +599,9 @@ void UAnimSet::ConvertAnims()
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
 					A->KeyPos.Empty(NumKeys);
-#if DEBUG_DECOMPRESS
-					appPrintf("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
+					DBG("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
 					);
-#endif
 					if (KeyFormat == ACF_IntervalFixed32NoW)
 					{
 						// read mins/maxs
@@ -448,21 +669,32 @@ void UAnimSet::ConvertAnims()
 				if (RotOffset == -1)
 				{
 					A->KeyQuat.AddItem(nullQuat);
-#if DEBUG_DECOMPRESS
-					appPrintf("    [%d] no rotation data\n", j);
-#endif
+					DBG("    [%d] no rotation data\n", j);
 				}
 				else
 				{
 					Reader.Seek(RotOffset);
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
+#if BORDERLANDS
+					if (Package->Game == GAME_Borderlands)	// Borderlands 2
+					{
+						// this game has more different key formats; each described by number. which
+						// could differ from numbers in UnMesh3.h; so, transcode format
+						switch (KeyFormat)
+						{
+						case 6:  KeyFormat = ACF_Delta40NoW; break; // not used
+						case 7:  KeyFormat = ACF_Delta48NoW; break; // not used
+						case 8:  KeyFormat = ACF_Identity;   break;
+						case 9:  KeyFormat = ACF_PolarEncoded32; break;
+						case 10: KeyFormat = ACF_PolarEncoded48; break;
+						}
+					}
+#endif // BORDERLANDS
 					A->KeyQuat.Empty(NumKeys);
-#if DEBUG_DECOMPRESS
-					appPrintf("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
+					DBG("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
 						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
 					);
-#endif
 					if (KeyFormat == ACF_IntervalFixed32NoW)
 					{
 						// read mins/maxs
@@ -499,11 +731,15 @@ void UAnimSet::ConvertAnims()
 						TR (ACF_Fixed32NoW, FQuatFixed32NoW)
 						TRR(ACF_IntervalFixed32NoW, FQuatIntervalFixed32NoW)
 						TR (ACF_Float32NoW, FQuatFloat32NoW)
+#if BORDERLANDS
+						TR (ACF_PolarEncoded32, FQuatPolarEncoded32)
+						TR (ACF_PolarEncoded48, FQuatPolarEncoded48)
+#endif // BORDERLANDS
 						case ACF_Identity:
 							A->KeyQuat.AddItem(nullQuat);
 							break;
 						default:
-							appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
+							appError("Unknown rotation compression method: %d", KeyFormat);
 						}
 					}
 					// align to 4 bytes
@@ -692,9 +928,9 @@ void UAnimSet::ConvertAnims()
 			}
 #endif // BORDERLANDS
 #if TRANSFORMERS
-			FQuat TransQuatMod;
+			FQuat TransQuatBase;
 			if (Package->Game == GAME_Transformers && RotKeys >= 2)
-				Reader << TransQuatMod;
+				Reader << TransQuatBase;
 #endif // TRANSFORMERS
 
 			for (k = 0; k < RotKeys; k++)
@@ -733,6 +969,8 @@ void UAnimSet::ConvertAnims()
 						A->KeyQuat.AddItem(CVT(q2));
 					}
 					break;
+				TR (ACF_PolarEncoded32, FQuatPolarEncoded32)
+				TR (ACF_PolarEncoded48, FQuatPolarEncoded48)
 #endif // BORDERLANDS
 #if TRANSFORMERS || ARGONAUTS
 				case ACF_IntervalFixed48NoW:
@@ -774,7 +1012,7 @@ void UAnimSet::ConvertAnims()
 				for (int i = 0; i < RotKeys; i++)
 				{
 					CQuat q = A->KeyQuat[i];
-					q = CVT(TransModifyQuat((FQuat&)q, TransQuatMod));
+					q.Mul(CVT(TransQuatBase));
 					A->KeyQuat[i] = q;
 				}
 			}

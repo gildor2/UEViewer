@@ -78,7 +78,7 @@ struct FQuatFixed48NoW
 {
 	word			X, Y, Z;				// unsigned short, corresponds to (float+1)*32767
 
-	inline operator FQuat() const
+	operator FQuat() const
 	{
 		FQuat r;
 		r.X = (X - 32767) / 32767.0f;
@@ -101,7 +101,7 @@ struct FVectorFixed48
 {
 	word			X, Y, Z;
 
-	inline operator FVector() const
+	operator FVector() const
 	{
 		FVector r;
 		static const float scale = 128.0f / 32767.0f;
@@ -125,7 +125,7 @@ struct FQuatFixed32NoW
 {
 	unsigned		Z:10, Y:11, X:11;
 
-	inline operator FQuat() const
+	operator FQuat() const
 	{
 		FQuat r;
 		r.X = X / 1023.0f - 1.0f;
@@ -218,7 +218,7 @@ struct FQuatFloat32NoW
 {
 	unsigned		data;
 
-	inline operator FQuat() const
+	operator FQuat() const
 	{
 		FQuat r;
 
@@ -245,14 +245,15 @@ SIMPLE_TYPE(FQuatFloat32NoW, unsigned)
 
 #if BATMAN
 
-// This is a variant of FQuatFixed48NoW developer for Batman: Arkham Asylum. It's destination
+// This is a variant of FQuatFixed48NoW developed for Batman: Arkham Asylum. It's destination
 // is to store quaternion with a better precision than FQuatFixed48NoW, but there was a logical
-// error: FQuatFixed48NoW's precision is 1/32768, but FQuatFixed48Max's precision is only 1/23170 !
+// error (?): FQuatFixed48NoW's precision is 1/32768, but FQuatFixed48Max's precision is only 1/23170.
+// Found the name of this compression scheme in SCE Edge library overview: "smallest 3 compression".
 struct FQuatFixed48Max
 {
 	word			data[3];				// layout: V2[15] : V1[15] : V0[15] : S[2]
 
-	inline operator FQuat() const
+	operator FQuat() const
 	{
 		unsigned tmp;
 		tmp = (data[1] << 16) | data[0];
@@ -314,7 +315,7 @@ struct FQuatBioFixed48
 {
 	word			data[3];
 
-	inline operator FQuat() const
+	operator FQuat() const
 	{
 		FQuat r;
 		static const float shift = 0.70710678118f;		// sqrt(0.5)
@@ -436,7 +437,7 @@ struct FQuatFixed64NoW_Argo
 {
 	uint64			V;
 
-	inline operator FQuat() const
+	operator FQuat() const
 	{
 		FQuat r;
 		r.X =  int(V >> 43)             * (1.0f / 0x0FFFFF) - 1.0f;	// upper 64-43=21 bits
@@ -459,7 +460,7 @@ struct FQuatFloat48NoW_Argo
 {
 	word			X, Y, Z;
 
-	inline operator FQuat() const
+	operator FQuat() const
 	{
 		FQuat r;
 
@@ -523,6 +524,113 @@ struct FVectorDelta48NoW
 	friend FArchive& operator<<(FArchive &Ar, FVectorDelta48NoW &V)
 	{
 		return Ar << V.X << V.Y << V.Z;
+	}
+};
+
+
+// Borderlands 2
+
+struct FQuatPolarEncoded32
+{
+	unsigned		data;
+
+	operator FQuat() const
+	{
+		FQuat r;
+		float angle1, angle2;
+
+		float D0 = (data & 0x7FF) / 2047.0f;
+		r.W = 1.0f - (D0 * D0);
+
+		int D1 = (data >> 11) & 0x3FFFF;
+		int D2 = appFloor(sqrt((float)D1));
+
+		if ( (D2+1)*(D2+1) <= D1 )
+			D2++;
+
+		static const float AngleScale = 1.5717963f; // not M_PI/2
+		if ( (D2+1)*(D2+1) - D2*D2 == 1 )	//?? strange code: (a+b)^2 = a^2 + 2ab + b^2; (D2+1)^2 = D2^2+2*D2+1
+			angle1 = 0;
+		else
+			angle1 = AngleScale * (float)(D1 - D2*D2) / (float)( (D2+1)*(D2+1) - D2*D2 - 1 ); //?? strange code, see above
+		angle2 = AngleScale * D2 / 511.0f;
+
+		float _X = cos(angle1);
+		float _Y = sqrt(1.0f - _X*_X);
+		float _Z = cos(angle2);
+
+		float scale1 = sqrt(1.0f - _Z*_Z);
+		_X *= scale1;
+		_Y *= scale1;
+
+		float scale = sqrt(1.0f - r.W*r.W) / sqrt(_X*_X + _Y*_Y + _Z*_Z);
+		r.X = _X * scale;
+		r.Y = _Y * scale;
+		r.Z = _Z * scale;
+
+		if (data & 0x80000000) r.X *= -1;
+		if (data & 0x40000000) r.Y *= -1;
+		if (data & 0x20000000) r.Z *= -1;
+
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatPolarEncoded32 &Q)
+	{
+		return Ar << Q.data;
+	}
+};
+
+struct FQuatPolarEncoded48
+{
+	byte			data[6];
+
+	operator FQuat() const
+	{
+		FQuat r;
+		float angle1, angle2;
+
+		float D0 = ( *(word*)data ) / 65535.0f;
+		r.W = 1.0f - (D0 * D0);
+
+		int data2 = *(int*) (data+2);
+		int D1 = data2 & 0x1FFFFFFF;
+		int D2 = appFloor(sqrt((float)D1));
+
+		if ( (D2+1)*(D2+1) <= D1 )
+			D2++;
+
+		static const float AngleScale = 1.5717963f; // not M_PI/2
+		if ( (D2+1)*(D2+1) - D2*D2 == 1 )	//?? strange code: (a+b)^2 = a^2 + 2ab + b^2; (D2+1)^2 = D2^2+2*D2+1
+			angle1 = 0;
+		else
+			angle1 = AngleScale * (float)(D1 - D2*D2) / (float)( (D2+1)*(D2+1) - D2*D2 - 1 ); //?? strange code, see above
+		angle2 = AngleScale * D2 / 16383.0f;
+
+		float _X = cos(angle1);
+		float _Y = sqrt(1.0f - _X*_X);
+		float _Z = cos(angle2);
+
+		float scale1 = sqrt(1.0f - _Z*_Z);
+		_X *= scale1;
+		_Y *= scale1;
+
+		float scale = sqrt(1.0f - r.W*r.W) / sqrt(_X*_X + _Y*_Y + _Z*_Z);
+		r.X = _X * scale;
+		r.Y = _Y * scale;
+		r.Z = _Z * scale;
+
+		if (data2 & 0x80000000) r.X *= -1;
+		if (data2 & 0x40000000) r.Y *= -1;
+		if (data2 & 0x20000000) r.Z *= -1;
+
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FQuatPolarEncoded48 &Q)
+	{
+		Ar.ByteOrderSerialize(Q.data, 6);
+		return Ar;
 	}
 };
 

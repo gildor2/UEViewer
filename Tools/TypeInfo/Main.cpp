@@ -85,7 +85,14 @@ static void DumpProperty(FArchive &Ar, const UProperty *Prop, const char *Type, 
 	Ar.Printf(" %s %s", Type, Prop->Name);
 	if (Prop->ArrayDim > 1)
 		Ar.Printf("[%d]", Prop->ArrayDim);
-	Ar.Printf(";\t// %08X", Prop->PropertyFlags);
+	Ar.Printf(";");
+	if (Prop->PropertyFlags || Prop->PropertyFlags2)
+	{
+		Ar.Printf("\t// ");
+		if (Prop->PropertyFlags2)	// UE3's int64
+			Ar.Printf("%08X:", Prop->PropertyFlags2);
+		Ar.Printf("%08X", Prop->PropertyFlags);
+	}
 }
 
 void DumpProps(FArchive &Ar, const UStruct *Struct)

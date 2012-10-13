@@ -10,6 +10,7 @@ class FLeadUmdFile;
 
 FArchive* CreateUMDReader(FArchive *File);
 bool ExtractUMDArchive(FArchive *UmdFile, const char *OutDir);
+void SaveUMDArchive(FArchive *UmdFile, const char *OutName);
 
 
 #endif // LEAD

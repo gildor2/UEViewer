@@ -56,6 +56,7 @@ static int lightingMode = LIGHTING_SPECULAR;
 
 #endif // LIGHTING_MODES
 
+CApplication *GApp = NULL;
 int GCurrentFrame = 1;
 int GContextFrame = 0;
 
@@ -1154,7 +1155,7 @@ static void Display()
 #endif // LIGHTING_MODES
 
 	// draw scene
-	AppDrawFrame(TimeDelta);
+	GApp->Draw3D(TimeDelta);
 
 	// restore draw state
 	BindDefaultMaterial(true);
@@ -1173,6 +1174,28 @@ static void Display()
 	// 2D drawings
 	Set2Dmode();
 
+	GApp->DrawTexts(isHelpVisible);
+	FlushTexts();
+
+	// swap buffers
+	GApp->BeforeSwap();
+#if NEW_SDL
+	SDL_GL_SwapWindow(sdlWindow);
+#else
+	SDL_GL_SwapBuffers();
+#endif
+
+	unguard;
+}
+
+
+void DrawKeyHelp(const char *Key, const char *Help)
+{
+	DrawTextLeft(S_YELLOW"%-"STR(KEY_HELP_TAB)"s "S_WHITE"%s", Key, Help);
+}
+
+void CApplication::DrawTexts(bool isHelpVisible)
+{
 	// display help when needed
 	if (isHelpVisible)
 	{
@@ -1187,22 +1210,6 @@ static void Display()
 		DrawKeyHelp("MiddleMouse", "move camera");
 		DrawKeyHelp("R",           "reset view");
 	}
-	AppDisplayTexts(isHelpVisible);
-	FlushTexts();
-
-#if NEW_SDL
-	SDL_GL_SwapWindow(sdlWindow);
-#else
-	SDL_GL_SwapBuffers();
-#endif
-
-	unguard;
-}
-
-
-void DrawKeyHelp(const char *Key, const char *Help)
-{
-	DrawTextLeft(S_YELLOW"%-"STR(KEY_HELP_TAB)"s "S_WHITE"%s", Key, Help);
 }
 
 
@@ -1284,7 +1291,7 @@ static void OnKeyDown(unsigned key, unsigned mod)
 		}
 		break;
 	default:
-		AppKeyEvent(key, true);
+		GApp->ProcessKey(key, true);
 	}
 }
 
@@ -1355,9 +1362,11 @@ static int TranslateKey(int sym, int scan)
 }
 #endif
 
-void VisualizerLoop(const char *caption)
+void VisualizerLoop(const char *caption, CApplication *App)
 {
 	guard(VisualizerLoop);
+
+	GApp = App;
 
 	Init(caption);
 	ClearTexts();
@@ -1398,7 +1407,7 @@ void VisualizerLoop(const char *caption)
 #endif
 				break;
 			case SDL_KEYUP:
-				AppKeyEvent(evt.key.keysym.sym, false);
+				GApp->ProcessKey(evt.key.keysym.sym, false);
 				break;
 #if NEW_SDL
 			case SDL_WINDOWEVENT:

@@ -12,6 +12,7 @@
 -----------------------------------------------------------------------------*/
 
 static char BaseDir[256];
+static bool GUnpackUmd = false;
 
 static bool ScanFile(const CGameFileInfo *file)
 {
@@ -33,7 +34,20 @@ static bool ScanFile(const CGameFileInfo *file)
 	printf("Processing: %s\n", file->RelativeName);
 	Ar = TmpAr;		// original reader will be destroyed automatically with this reader
 
-	ExtractUMDArchive(Ar, BaseDir);
+	if (!GUnpackUmd)
+	{
+#if 0
+		ExtractUMDArchive(Ar, BaseDir);
+#else
+		appPrintf("Disabled!\n");
+#endif
+	}
+	else
+	{
+		char FileName[512];
+		appSprintf(ARRAY_ARG(FileName), "%s/%s", BaseDir, file->ShortFilename);
+		SaveUMDArchive(Ar, FileName);
+	}
 
 	delete Ar;
 	return true;
@@ -60,6 +74,7 @@ int main(int argc, char **argv)
 				"Options:\n"
 				"    -path=PATH         set directory with UMD files\n"
 				"    -out=PATH          extract everything into PATH, default is \"" DEF_UNP_DIR "\"\n"
+				"    -unpack            unpack UMD file instead of extraction\n"
 				"\n"
 				"For details and updates please visit " HOMEPAGE "\n"
 		);
@@ -85,6 +100,8 @@ int main(int argc, char **argv)
 			{
 				strcpy(BaseDir, opt+4);
 			}
+			else if (!stricmp(opt, "unpack"))
+				GUnpackUmd = true;
 			else
 				goto help;
 		}

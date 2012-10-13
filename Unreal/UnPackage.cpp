@@ -611,6 +611,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #endif // UC1 || PARIAH
 			else
 			{
+				FString name;
+
 #if SPLINTER_CELL
 				if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
 				{
@@ -641,9 +643,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					assert(len > 0 && len < 0x3FF);	// requires extra code
 					NameTable[i] = new char[len + 1];
 					Serialize(NameTable[i], len);
-					int f1, f2;						// flags (cannot goto flags - prohibited by VC6)
-					*this << f1 << f2;
-					goto done;
+					goto qword_flags;
 				}
 #endif // DCU_ONLINE
 #if R6VEGAS
@@ -656,9 +656,18 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					goto done;
 				}
 #endif // R6VEGAS
+#if TRANSFORMERS
+				if (Game == GAME_Transformers && ArLicenseeVer >= 181) // Transformers: Fall of Cybertron; no real version in code
+				{
+					int len;
+					*this << len;
+					NameTable[i] = new char[len + 1];
+					Serialize(NameTable[i], len);
+					goto qword_flags;
+				}
+#endif // TRANSFORMERS
 
 				// Korean games sometimes uses Unicode strings ...
-				FString name;
 				*this << name;
 	#if AVA
 				if (Game == GAME_AVA)

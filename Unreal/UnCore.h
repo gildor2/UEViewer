@@ -280,6 +280,8 @@ enum EGame
 		GAME_GunLegend,
 		GAME_TaoYuan,
 		GAME_Tribes4,
+		GAME_Dishonored,
+		GAME_Havken,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -703,7 +705,7 @@ protected:
 		for (int i = 0; i < NumBytes; i++)				\
 		{												\
 			if (Ar.IsStopper() || Ar.IsEof()) break;	\
-			if (!(i & 31)) appPrintf("\n%06X :", i);	\
+			if (!(i & 31)) appPrintf("\n%06X :", OldPos+i);	\
 			if (!(i & 3)) appPrintf(" ");				\
 			byte b;										\
 			Ar << b;									\
@@ -1514,13 +1516,14 @@ struct FCompressedChunkHeader
 		if (H.Tag == PACKAGE_FILE_TAG_REV)
 			Ar.ReverseBytes = !Ar.ReverseBytes;
 #if BERKANIX
-		else if (Ar.Game == GAME_Berkanix && H.Tag == 0xF2BAC156)
-		{
-			// do nothing, correct tag
-		}
-#endif // BERKANIX
+		else if (Ar.Game == GAME_Berkanix && H.Tag == 0xF2BAC156) goto tag_ok;
+#endif
+#if HAVKEN
+		else if (Ar.Game == GAME_Havken && H.Tag == 0xEA31928C) goto tag_ok;
+#endif
 		else
 			assert(H.Tag == PACKAGE_FILE_TAG);
+	tag_ok:
 		Ar << H.BlockSize << H.CompressedSize << H.UncompressedSize;
 #if 0
 		if (H.BlockSize == PACKAGE_FILE_TAG)

@@ -9,6 +9,10 @@
 #include <ctype.h>
 #include <math.h>
 
+#if _MSC_VER
+#	include <intrin.h>
+#endif
+
 #include "Build.h"
 
 #if RENDERING

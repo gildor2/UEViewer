@@ -25,6 +25,8 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 		ext = "ogg";
 	else if (!memcmp(Data, "RIFF", 4))
 		ext = "wav";
+	else if (!memcmp(Data, "FSB4", 4))
+		ext = "fsb";		// FMOD sound bank
 
 	FArchive *Ar = CreateExportArchive(Obj, "%s.%s", Obj->Name, ext);
 	if (Ar)

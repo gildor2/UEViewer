@@ -206,6 +206,7 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 	header.setWidth(TexData.USize);
 	header.setHeight(TexData.VSize);
 //	header.setNormalFlag(TexData.Format == TPF_DXT5N || TexData.Format == TPF_3DC); -- required for decompression only
+	header.setLinearSize(TexData.DataSize);
 
 	appMakeDirectoryForFile(Filename);
 	nv::StdOutputStream stream(Filename);	// using nv stream for header serialization only

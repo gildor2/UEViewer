@@ -969,12 +969,22 @@ bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 	if (!(Lod.RigidIndices.Indices.Num() + Lod.SmoothIndices.Indices.Num()) && !Lod.Faces.Num())
 		return false;
 
-	int i;
+	//?? really any mesh with rigid sections should be considered as "bad" (we can't work with such LODs)
 
+	int i;
 	int NumPoints = Lod.Points.Num();
+
+	// verify influences
 	for (i = 0; i < Lod.VertInfluences.Num(); i++)
 	{
 		int PointIndex = Lod.VertInfluences[i].PointIndex;
+		if (PointIndex < 0 || PointIndex >= NumPoints) return false;
+	}
+
+	// verify indices (only RigidIndices, SmoothIndices aren't used)
+	for (i = 0; i < Lod.RigidIndices.Indices.Num(); i++)
+	{
+		int PointIndex = Lod.RigidIndices.Indices[i];
 		if (PointIndex < 0 || PointIndex >= NumPoints) return false;
 	}
 

@@ -321,7 +321,7 @@ public:
 	}
 
 	// test function
-	void SaveEmbeddedFile()
+	void SaveEmbeddedFile(const char *FileName)
 	{
 		appPrintf("Extracting ...\n");
 		byte* mem = new byte[FileSize];
@@ -329,10 +329,11 @@ public:
 		Serialize(mem, FileSize);
 		for (int i = DataStart; i < FileSize; i++)	// data XOR-ed from DataStart offset
 			mem[i] ^= 0xB7;
-		FILE* f = fopen(".\\test.umod", "wb");
-		fwrite(mem, FileSize, 1, f);
+		appMakeDirectoryForFile(FileName);
+		FArchive *OutAr = new FFileWriter(FileName);
+		OutAr->Serialize(mem, FileSize);
 		delete mem;
-		fclose(f);
+		delete OutAr;
 		appPrintf("Extraction done.\n");
 	}
 
@@ -344,7 +345,6 @@ public:
 		// extra bytes to allow oversize (bug in LEAD engine?)
 #define ALLOW_EXTRA_BYTES	1
 //		PrintHeaders();
-//		SaveEmbeddedFile();
 
 		// precache all file contents
 		byte *Data = new byte[FileSize + ALLOW_EXTRA_BYTES];
@@ -385,7 +385,7 @@ public:
 			char FullFileName[512];
 			appSprintf(ARRAY_ARG(FullFileName), "%s/%s", OutDir, FileName);
 			appMakeDirectoryForFile(FullFileName);
-			FILE *f = fopen(FullFileName, "rb+"); //"rb+");		// open for update
+			FILE *f = fopen(FullFileName, "rb+");				// open for update
 			if (!f) f = fopen(FullFileName, "wb");				// open for writting
 			if (!f)
 			{
@@ -418,7 +418,7 @@ public:
 
 
 /*-----------------------------------------------------------------------------
-	External interface functions (CHANGE!!)
+	External interface functions (CHANGE!! MOVE FLeadUmdFile to .h)
 -----------------------------------------------------------------------------*/
 
 FArchive* CreateUMDReader(FArchive *File)
@@ -443,6 +443,17 @@ bool ExtractUMDArchive(FArchive *UmdFile, const char *OutDir)
 
 	FLeadUmdFile *File = (FLeadUmdFile*)UmdFile;
 	return File->Extract(OutDir);
+
+	unguard;
+}
+
+
+void SaveUMDArchive(FArchive *UmdFile, const char *OutName)
+{
+	guard(SaveUMDArchive);
+
+	FLeadUmdFile *File = (FLeadUmdFile*)UmdFile;
+	return File->SaveEmbeddedFile(OutName);
 
 	unguard;
 }

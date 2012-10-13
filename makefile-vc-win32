@@ -823,6 +823,8 @@ $(OUT)/lzo_init.obj : ./libs/lzo/lzo_init.c $(DEPENDS)
 	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lzo_init.obj" ./libs/lzo/lzo_init.c
 
 DEPENDS = \
+	libs/mspack/readbits.h \
+	libs/mspack/readhuff.h \
 	libs/mspack/system.h
 
 $(OUT)/lzxd.obj : ./libs/mspack/lzxd.c $(DEPENDS)
