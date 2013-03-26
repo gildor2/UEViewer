@@ -253,6 +253,7 @@ class UTexture2D : public UTexture3
 	DECLARE_CLASS(UTexture2D, UTexture3)
 public:
 	TArray<FTexture2DMipMap> Mips;
+	TArray<FTexture2DMipMap> CachedETCMips;
 	int				SizeX;
 	int				SizeY;
 	EPixelFormat	Format;
@@ -357,7 +358,21 @@ public:
 		{
 			TArray<FTexture2DMipMap> CachedPVRTCMips;
 			Ar << CachedPVRTCMips;
+			if (CachedPVRTCMips.Num()) appPrintf("*** %s has %d PVRTC mips (%d normal mips)\n", Name, CachedPVRTCMips.Num(), Mips.Num()); //!!
 		}
+
+		if (Ar.ArVer >= 857)
+		{
+			int CachedFlashMipsMaxResolution;
+			TArray<FTexture2DMipMap> CachedATITCMips;
+			FByteBulkData CachedFlashMips;
+			Ar << CachedFlashMipsMaxResolution;
+			Ar << CachedATITCMips;
+			CachedFlashMips.Serialize(Ar);
+			if (CachedATITCMips.Num()) appPrintf("*** %s has %d ATITC mips (%d normal mips)\n", Name, CachedATITCMips.Num(), Mips.Num()); //!!
+		}
+
+		if (Ar.ArVer >= 864) Ar << CachedETCMips;
 
 		// some hack to support more games ...
 		if (Ar.Tell() < Ar.GetStopper())
@@ -370,7 +385,7 @@ public:
 		unguard;
 	}
 
-	bool LoadBulkTexture(int MipIndex) const;
+	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool UseETC_TFC) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
 #if RENDERING
 	virtual void Bind();
@@ -489,7 +504,11 @@ enum EMobileSpecularMask
 	MSM_DiffuseGreen,
 	MSM_DiffuseBlue,
 	MSM_DiffuseAlpha,
-	MSM_MaskTextureRGB
+	MSM_MaskTextureRGB,
+	MSM_MaskTextureRed,
+	MSM_MaskTextureGreen,
+	MSM_MaskTextureBlue,
+	MSM_MaskTextureAlpha
 };
 
 _ENUM(EMobileSpecularMask)
@@ -500,7 +519,11 @@ _ENUM(EMobileSpecularMask)
 	_E(MSM_DiffuseGreen),
 	_E(MSM_DiffuseBlue),
 	_E(MSM_DiffuseAlpha),
-	_E(MSM_MaskTextureRGB)
+	_E(MSM_MaskTextureRGB),
+	_E(MSM_MaskTextureRed),
+	_E(MSM_MaskTextureGreen),
+	_E(MSM_MaskTextureBlue),
+	_E(MSM_MaskTextureAlpha)
 };
 
 

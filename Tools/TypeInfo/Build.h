@@ -23,6 +23,7 @@
 #define MASSEFF			1
 #define HUXLEY			1
 #define BORDERLANDS		1
+#define ALIENS_CM		1
 
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1		//?? incomplete

@@ -269,7 +269,7 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 	{
 		// GL 3.0 or GL_EXT_framebuffer_object
 		glCompressedTexImage2D(target, 0, format, TexData.USize, TexData.VSize, 0, TexData.DataSize, TexData.CompressedData);
-		glGenerateMipmapEXT(target2);
+		glGenerateMipmapEXT(target2);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
 	}
 	else
 	{
@@ -385,6 +385,7 @@ static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
 		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glGenerateMipmapEXT(GL_TEXTURE_CUBE_MAP_ARB);
+		GL_ResetError();	// previous function could fail for some reasons
 	}
 
 	return true;
@@ -589,7 +590,11 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 			"texture2D(diffTex, TexCoord).g * vec3(2.0)",	// MSM_DiffuseGreen
 			"texture2D(diffTex, TexCoord).b * vec3(2.0)",	// MSM_DiffuseBlue
 			"texture2D(diffTex, TexCoord).a * vec3(2.0)",	// MSM_DiffuseAlpha
-			"texture2D(opacTex, TexCoord).rgb * 2.0"		// MSM_MaskTextureRGB
+			"texture2D(opacTex, TexCoord).rgb * 2.0",		// MSM_MaskTextureRGB
+			"texture2D(opacTex, TexCoord).r * vec3(2.0)",	// MSM_MaskTextureRed
+			"texture2D(opacTex, TexCoord).g * vec3(2.0)",	// MSM_MaskTextureGreen
+			"texture2D(opacTex, TexCoord).b * vec3(2.0)",	// MSM_MaskTextureBlue
+			"texture2D(opacTex, TexCoord).a * vec3(2.0)",	// MSM_MaskTextureAlpha
 		};
 //??		check presence of textures used in a shader ?
 		subst[1] = mobileSpecExpr[Params.MobileSpecularMask];
@@ -713,13 +718,14 @@ static TArray<UMaterialWithPolyFlags*> WrappedMaterials;
 UUnrealMaterial *UMaterialWithPolyFlags::Create(UUnrealMaterial *OriginalMaterial, unsigned PolyFlags)
 {
 	if (PolyFlags == 0) return OriginalMaterial;	// no wrapping required
+	// find for the same material with the same flags wrapped before
 	for (int i = 0; i < WrappedMaterials.Num(); i++)
 	{
 		UMaterialWithPolyFlags *WM = WrappedMaterials[i];
 		if (WM->Material == OriginalMaterial && WM->PolyFlags == PolyFlags)
 			return WM;
 	}
-	// material is not yet wrapped, wrap it
+	// material is not wrapped yet, so wrap it
 	UMaterialWithPolyFlags *WM = new UMaterialWithPolyFlags;
 	WM->Name      = (OriginalMaterial) ? OriginalMaterial->Name : "None";
 	WM->Material  = OriginalMaterial;
@@ -1151,10 +1157,144 @@ void UFacingShader::GetParams(CMaterialParams &Params) const
 
 bool UFacingShader::IsTranslucent() const
 {
-	return OutputBlending != FB_Overwrite;
+	return (OutputBlending != FB_Overwrite);
 }
 
 #endif // BIOSHOCK
+
+
+#if SPLINTER_CELL
+
+void UUnreal3Material::SetupGL()
+{
+	guard(UUnreal3Material::SetupGL);
+
+	glEnable(GL_DEPTH_TEST);
+	// TwoSided
+	if (bDoubleSided)
+		glDisable(GL_CULL_FACE);
+	else
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
+	// part of UFinalBlend::SetupGL()
+	if (BlendingMode == U3BM_OPAQUE)
+		glDisable(GL_BLEND);
+	else
+		glEnable(GL_BLEND);
+	switch (BlendingMode)
+	{
+//	case U3BM_OPAQUE:
+//		glBlendFunc(GL_ONE, GL_ZERO);				// src
+//		break;
+	case U3BM_TRANSLUCENT:
+	case U3BM_TRANSLUCENT_NO_DISTORTION:
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+		break;
+	case U3BM_ADDITIVE:
+		glBlendFunc(GL_ONE, GL_ONE);				// src + dst
+		break;
+	case U3BM_MASKED:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	// src*srcA + dst*(1-srcA)
+		break;
+	}
+
+	if (BlendingMode == U3BM_MASKED)
+	{
+		glAlphaFunc(GL_GREATER, 0.0f);
+		glEnable(GL_ALPHA_TEST);
+	}
+	else
+	{
+		glDisable(GL_ALPHA_TEST);
+	}
+
+	unguard;
+}
+
+
+void UUnreal3Material::GetParams(CMaterialParams &Params) const
+{
+	guard(UUnreal3Material::GetParams);
+
+	for (int i = 0; i < ARRAY_COUNT(Textures); i++)
+	{
+		UTexture *Tex = Textures[i];
+		if (!Tex) continue;
+		const char *Name = Tex->Name;
+		int len = strlen(Name);
+		if (!stricmp(Name + len - 2, "_d"))
+			Params.Diffuse = Tex;
+		else if (!stricmp(Name + len - 2, "_n"))
+			Params.Normal = Tex;
+		else if (!stricmp(Name + len - 2, "_m"))
+			Params.Mask = Tex;
+//		else
+//			appPrintf("Tex: %s\n", Name);
+	}
+	Params.SpecularMaskChannel = TC_G;
+
+	unguard;
+}
+
+
+bool UUnreal3Material::IsTranslucent() const
+{
+	return (BlendingMode != U3BM_OPAQUE);
+}
+
+
+void USCX_basic_material::SetupGL()
+{
+	guard(USCX_basic_material::SetupGL);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glDisable(GL_BLEND);
+	glDisable(GL_ALPHA_TEST);
+
+	unguard;
+}
+
+
+void USCX_basic_material::GetParams(CMaterialParams &Params) const
+{
+	guard(USCX_basic_material::GetParams);
+
+	Params.Diffuse = Base;
+	Params.Normal  = Normal;
+	Params.Mask    = SpecularMask;		// Params.Specular, but single channel
+	Params.Cube    = Environment;
+
+	switch (SpecularSource)
+	{
+	case SpecSrc_SRed:
+		Params.SpecularMaskChannel = TC_R;
+		break;
+	case SpecSrc_SGreen:
+		Params.SpecularMaskChannel = TC_G;
+		break;
+	case SpecSrc_SBlue:
+		Params.SpecularMaskChannel = TC_B;
+		break;
+	case SpecSrc_NAlpha:
+		Params.SpecularMaskChannel = TC_MA;	//?? TC_A ?
+		break;
+	}
+
+	unguard;
+}
+
+
+bool USCX_basic_material::IsTranslucent() const
+{
+	return false;
+}
+
+
+#endif // SPLINTER_CELL
 
 
 void UCombiner::GetParams(CMaterialParams &Params) const

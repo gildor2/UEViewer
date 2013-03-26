@@ -58,6 +58,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_MATERIAL_CLASSES_BIO
 	REGISTER_MESH_CLASSES_BIO
 #endif
+#if SPLINTER_CELL
+	REGISTER_MATERIAL_CLASSES_SCELL
+#endif
 #if UNREAL3
 	REGISTER_MATERIAL_CLASSES_U3		//!! needed for Bioshock 2 too
 #endif
@@ -325,6 +328,12 @@ static const GameInfo games[] = {
 #	if EXTEEL
 		G("Exteel", extl, GAME_Exteel),
 #	endif
+#	if AA2
+		G("America's Army 2", aa2, GAME_AA2),
+#	endif
+#	if VANGUARD
+		G("Vanguard: Saga of Heroes", vang, GAME_Vanguard),
+#	endif
 #	if SPECIAL_TAGS
 		G2("Killing Floor"),
 #	endif
@@ -343,6 +352,7 @@ static const GameInfo games[] = {
 #	if XBOX360
 		G3("Gears of War 2"),
 		G3("Gears of War 3"),
+		G("Gears of War: Judgment", gowj, GAME_GoWJ),
 #	endif
 #	if IPHONE
 		G3("Infinity Blade"),
@@ -423,6 +433,9 @@ static const GameInfo games[] = {
 		G("Borderlands 2", border, GAME_Borderlands),
 		G("Brothers in Arms: Hell's Highway", border, GAME_Borderlands),
 #	endif
+#	if ALIENS_CM
+		G("Aliens: Colonial Marines", acm, GAME_AliensCM),
+#	endif
 #	if DARKVOID
 		G("Dark Void", darkv, GAME_DarkVoid),
 #	endif
@@ -499,8 +512,17 @@ static const GameInfo games[] = {
 #	if DISHONORED
 		G("Dishonored", dis, GAME_Dishonored),
 #	endif
-#	if HAVKEN
-		G3("Havken"),
+#	if FABLE
+		G("Fable: The Journey", fable, GAME_Fable),
+#	endif
+#	if DMC
+		G("DmC: Devil May Cry", dmc, GAME_DmC),
+#	endif
+#	if HAWKEN
+		G3("Hawken"),
+#	endif
+#	if PLA
+		G("Passion Leads Army", pla, GAME_PLA),
 #	endif
 #endif // UNREAL3
 };
@@ -587,7 +609,7 @@ static int FindGameTag(const char *name)
 	Usage information
 -----------------------------------------------------------------------------*/
 
-static void Usage()
+static void PrintUsage()
 {
 	appPrintf(
 			"UE viewer / exporter\n"
@@ -604,6 +626,7 @@ static void Usage()
 			"    -list           list contents of package\n"
 			"    -export         export specified object or whole package\n"
 			"    -taglist        list of tags to override game autodetection\n"
+			"    -version        display umodel version information\n"
 			"\n"
 			"Developer commands:\n"
 			"    -log=file       write log to the specified file\n"
@@ -680,6 +703,17 @@ static void Usage()
 }
 
 
+static void PrintVersionInfo()
+{
+	appPrintf(
+			"UE viewer (UMODEL)\n"
+			"This version was built " __DATE__ "\n"
+			"(c)2007-2013 Konstantin Nosov (Gildor)\n"
+			HOMEPAGE "\n"
+	);
+}
+
+
 /*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
@@ -716,7 +750,7 @@ int main(int argc, char **argv)
 	guard(Main);
 
 	// display usage
-	if (argc < 2) Usage();
+	if (argc < 2) PrintUsage();
 
 	// parse command line
 	enum
@@ -727,7 +761,8 @@ int main(int argc, char **argv)
 		CMD_PkgInfo,
 		CMD_List,
 		CMD_Export,
-		CMD_TagList
+		CMD_TagList,
+		CMD_VersionInfo,
 	};
 	static byte mainCmd = CMD_View;
 	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
@@ -755,6 +790,7 @@ int main(int argc, char **argv)
 			OPT_VALUE("taglist", mainCmd, CMD_TagList)
 			OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
 			OPT_VALUE("list",    mainCmd, CMD_List)
+			OPT_VALUE("version", mainCmd, CMD_VersionInfo)
 #if VSTUDIO_INTEGRATION
 			OPT_BOOL ("debug",   GUseDebugger)
 #endif
@@ -808,8 +844,7 @@ int main(int argc, char **argv)
 			int tag = FindGameTag(opt+5);
 			if (tag == -1)
 			{
-				appPrintf("ERROR: unknown game tag \"%s\".", opt+5);
-				PrintGameList(true);
+				appPrintf("ERROR: unknown game tag \"%s\". Use -taglist option to display available tags.\n", opt+5);
 				exit(0);
 			}
 			GForceGame = tag;
@@ -835,6 +870,12 @@ int main(int argc, char **argv)
 			appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);
 			goto bad_params;
 		}
+	}
+
+	if (mainCmd == CMD_VersionInfo)
+	{
+		PrintVersionInfo();
+		return 0;
 	}
 
 	if (mainCmd == CMD_TagList)
@@ -961,7 +1002,7 @@ int main(int argc, char **argv)
 	// end of initialization
 
 	if (mainCmd == CMD_PkgInfo)
-		return 0;
+		return 0;					// already displayed when loaded package; extend it?
 
 	if (mainCmd == CMD_List)
 	{

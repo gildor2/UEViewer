@@ -58,12 +58,19 @@ function CheckDir()
 	exit
 }
 
+function console_title()
+{
+    echo -en "\033]2;$@\007"
+}
+
 function run()
 {
 	if [ "$foundPath" ]; then
+		console_title "$exe -path="$foundPath" $@"
 		echo "Starting $exe -path="$foundPath" $@"
 		./$exe -path="$foundPath" $debugOpt $@
 	else
+		console_title "$exe $debugOpt $@"
 		echo "Starting $exe $debugOpt $@"
 		./$exe $@
 	fi
@@ -195,6 +202,7 @@ done
 
 # rebuild umodel when not desired opposite
 if [ -z "$nobuild" ]; then
+	console_title "Building umodel ..."
 	rm $exe
 	./build.sh
 fi
@@ -243,7 +251,8 @@ fi
 case "" in
 
 "")
-	run1 data/3/Dishonored Startup.upk -meshes -nostat Heart -anim=Heart_as
+	run1 data/2/SplinterCell4 -game=scell -noanim ESam.ukx
+#	run1 data/3/Dishonored Startup.upk -meshes -nostat Heart -anim=Heart_as
 #	run1 data/3X/Borderlands2 Startup.xxx GestaltDef_AssaultRifle_GestaltSkeletalMesh -anim=AssaultRifle
 #	run1 "data/3/Transformers Fall of Cybertron" -meshes L08b_SpitterIntro_DSN_m.xxx RB_GrimlockALT_SKEL -anim=Grimlock_ALT_ANIM
 #	bat2 -meshes -pkg=BmGame -pkg=Playable_Catwoman_SF Playable_Catwoman_Std_SF -anim=CW_Combat -obj=Catwoman_Whip_Skin

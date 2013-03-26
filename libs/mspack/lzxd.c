@@ -378,7 +378,7 @@ int lzxd_decompress(struct lzxd_stream *lzx, off_t out_bytes) {
 	    (lzx->block_length & 1))
 	{
 	  READ_IF_NEEDED;
-	  i_ptr++;
+//	  i_ptr++; -- Gildor: wrong for XBox360 decompression
 	}
 
 	/* read block type (3 bits) and block length (24 bits) */

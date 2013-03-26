@@ -9,7 +9,7 @@ for i in $filelist; do
 	fi
 done
 
-#if grep -q -E "(XMemDecompress|Huxley)" umodel.exe; then
+#if grep -q -E "(XMemDecompress|Gears of War: Judgment)" umodel.exe; then
 #	echo "ERROR: this is a private build"
 #	exit
 #fi

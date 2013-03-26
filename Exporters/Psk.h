@@ -141,10 +141,6 @@ struct VRawBoneInfluence
 };
 
 
-/******************************************************************************
- *	PSKX extended information
- *****************************************************************************/
-
 struct VMeshUV
 {
 	float			U;
@@ -157,8 +153,12 @@ struct VMeshUV
 };
 
 
-// the same as VTriangle16 but with 32-bit vertex indices
-//!! note: this structure has different on-disk and in-memory layout and size (due to alignment)
+/******************************************************************************
+ *	PSKX extended information
+ *****************************************************************************/
+
+// The same as VTriangle16 but with 32-bit vertex indices.
+// NOTE: this structure has different on-disk and in-memory layout and size (due to alignment).
 struct VTriangle32
 {
 	int				WedgeIndex[3];			// Point to three vertices in the vertex list.

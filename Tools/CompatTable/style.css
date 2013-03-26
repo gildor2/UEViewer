@@ -55,15 +55,16 @@ table.config td {
 /*	text-shadow : -0.1em 0.1em #FFFFFF; */
 }
 
-.filter_container {
+.filter_container, .filter, #filter_info {
 	font-family : Verdana, Arial, Helvetica, sans-serif;
 	font-size   : 10px;
+}
+
+.filter_container {
 	float       : right;
 }
 
 .filter {
-	font-family : Verdana, Arial, Helvetica, sans-serif;
-	font-size   : 10px;
 	color       : #404080;
 	background  : #FFFFFF;
 	border      : 1px solid #C0C0C0;
@@ -75,4 +76,12 @@ table.config td {
 	border-bottom-right-radius: 3px;
 	border-top-left-radius    : 3px;
 	border-top-right-radius   : 3px;
+}
+
+#filter_info {
+	color       : #404080;
+	width       : 80px;
+	height      : 16px;
+	padding-top : 2px;
+	float       : left;
 }

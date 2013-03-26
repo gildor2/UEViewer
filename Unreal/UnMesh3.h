@@ -526,6 +526,13 @@ public:
 		new_code:
 			Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
 		}
+#if PLA
+		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+		{
+			FGuid unk;
+			Ar << unk;
+		}
+#endif // PLA
 	old_code:
 		Ar << CompressedByteStream;
 #if ARGONAUTS

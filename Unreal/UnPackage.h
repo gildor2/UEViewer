@@ -119,13 +119,13 @@ struct FPackageFileSummary
 			goto tag_ok;
 		}
 #endif // BERKANIX
-#if HAVKEN
+#if HAWKEN
 		if (S.Tag == 0xEA31928C)
 		{
-			Ar.Game = GAME_Havken;
+			Ar.Game = GAME_Hawken;
 			goto tag_ok;
 		}
-#endif // HAVKEN
+#endif // HAWKEN
 #if TAO_YUAN
 		if (S.Tag == 0x12345678)
 		{
@@ -136,6 +136,15 @@ struct FPackageFileSummary
 			goto tag_ok;
 		}
 #endif // TAO_YUAN
+#if STORMWAR
+		if (S.Tag == 0xEC201133)
+		{
+			byte Count;
+			Ar << Count;
+			Ar.Seek(Ar.Tell() + Count);
+			goto tag_ok;
+		}
+#endif // STORMWAR
 
 		if (S.Tag != PACKAGE_FILE_TAG)
 		{
@@ -247,13 +256,13 @@ struct FPackageFileSummary
 			Ar << unk88;
 		}
 #endif // MASSEFF
-#if HAVKEN
-		if (Ar.Game == GAME_Havken && Ar.ArLicenseeVer >= 2)
+#if HAWKEN
+		if (Ar.Game == GAME_Hawken && Ar.ArLicenseeVer >= 2)
 		{
 			int unkVer;
 			Ar << unkVer;
 		}
-#endif // HAVKEN
+#endif // HAWKEN
 		Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
 #if APB
 		if (Ar.Game == GAME_APB)
@@ -293,7 +302,7 @@ struct FPackageFileSummary
 				// - no generations (since version 446)
 				Ar << S.Guid;
 				S.DependsOffset = 0;
-				goto extra_versions;
+				goto engine_version;
 			}
 		}
 	#endif // MKVSDC
@@ -388,12 +397,21 @@ struct FPackageFileSummary
 			for (int i = 0; i < Count; i++)
 				Ar << S.Generations[i];
 		}
+#if ALIENS_CM
+		if (Ar.Game == GAME_AliensCM)
+		{
+			word unk64, unk66, unk68;		// complex EngineVersion?
+			Ar << unk64 << unk66 << unk68;
+			goto cooker_version;
+		}
+#endif // ALIENS_CM
 #if UNREAL3
 //		if (Ar.ArVer >= PACKAGE_V3)
 //		{
-		extra_versions:
+		engine_version:
 			if (Ar.ArVer >= 245)
 				Ar << S.EngineVersion;
+		cooker_version:
 			if (Ar.ArVer >= 277)
 				Ar << S.CookerVersion;
 	#if MASSEFF
@@ -620,6 +638,18 @@ struct FObjectExport
 			return Ar;
 		}
 #endif // SWRC
+#if AA2
+		if (Ar.Game == GAME_AA2)
+		{
+			int rnd;	// random value
+			Ar << AR_INDEX(E.SuperIndex) << rnd << AR_INDEX(E.ClassIndex) << E.PackageIndex;
+			Ar << E.ObjectFlags << E.ObjectName << AR_INDEX(E.SerialSize);	// ObjectFlags are serialized in different order, ObjectFlags are negated
+			if (E.SerialSize)
+				Ar << AR_INDEX(E.SerialOffset);
+			E.ObjectFlags = ~E.ObjectFlags;
+			return Ar;
+		}
+#endif // AA2
 		// generic UE1/UE2 code
 		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
 		Ar << E.ObjectName << E.ObjectFlags << AR_INDEX(E.SerialSize);
@@ -636,6 +666,7 @@ struct FObjectImport
 	FName		ClassName;
 	int			PackageIndex;
 	FName		ObjectName;
+	bool		Missing;			// not serialized
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 	{
@@ -651,6 +682,13 @@ struct FObjectImport
 #if PARIAH
 		if (Ar.Game == GAME_Pariah)
 			return Ar << I.PackageIndex << I.ObjectName << I.ClassPackage << I.ClassName;
+#endif
+#if AA2
+		if (Ar.Game == GAME_AA2)
+		{
+			byte unk;	// serialized length of ClassName string?
+			return Ar << I.ClassPackage << I.ClassName << unk << I.ObjectName << I.PackageIndex;
+		}
 #endif
 		return Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
 	}
@@ -710,7 +748,14 @@ public:
 		return NameTable[index];
 	}
 
-	const FObjectImport& GetImport(int index) const
+	FObjectImport& GetImport(int index)
+	{
+		if (index < 0 || index >= Summary.ImportCount)
+			appError("Package \"%s\": wrong import index %d", Filename, index);
+		return ImportTable[index];
+	}
+
+	const FObjectImport& GetImport(int index) const // duplicate for 'const' package
 	{
 		if (index < 0 || index >= Summary.ImportCount)
 			appError("Package \"%s\": wrong import index %d", Filename, index);

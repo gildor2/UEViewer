@@ -87,6 +87,8 @@ template<>    struct CompileTimeError<true> {};
 #	define WIN32_USE_SEH		1
 #	define ROL8(val,shift)		_rotl8(val,shift)
 #	define ROR8(val,shift)		_rotr8(val,shift)
+#	define ROL16(val,shift)		_rotl16(val,shift)
+#	define ROR16(val,shift)		_rotr16(val,shift)
 #	define ROL32(val,shift)		_rotl(val,shift)
 #	define ROR32(val,shift)		_rotr(val,shift)
 typedef __int64					int64;
@@ -128,6 +130,14 @@ typedef unsigned short			word;
 
 #ifndef ROR8
 #define ROR8(val,shift)			( ((val) >> (shift)) | ((val) << (8-(shift))) )
+#endif
+
+#ifndef ROL16
+#define ROL16(val,shift)		( ((val) << (shift)) | ((val) >> (16-(shift))) )
+#endif
+
+#ifndef ROR16
+#define ROR16(val,shift)		( ((val) >> (shift)) | ((val) << (16-(shift))) )
 #endif
 
 #ifndef ROL32

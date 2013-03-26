@@ -54,6 +54,15 @@ public:
 		CompressedPCData.Serialize(Ar);
 		CompressedXbox360Data.Serialize(Ar);
 		CompressedPS3Data.Serialize(Ar);
+
+		// some hack to support more games ...
+		if (Ar.Tell() < Ar.GetStopper())
+		{
+			appPrintf("USoundNodeWave %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+//		skip_rest_quiet:
+			DROP_REMAINING_DATA(Ar);
+		}
+
 #if 0
 		appPrintf("Sound: raw(%d) pc(%d) xbox(%d) ps3(%d)\n",
 			RawData.ElementCount,

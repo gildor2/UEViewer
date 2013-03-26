@@ -589,6 +589,7 @@ void CFramebuffer::SetSize(int winWidth, int winHeight)
 	width  = winWidth;
 	height = winHeight;
 
+	GL_ResetError();
 	Release();
 
 	// create color texture

@@ -25,6 +25,7 @@
 #define HUXLEY			1
 
 #define BATMAN			1
+#define AVA				1		// AVA Online
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1		//?? incomplete
 #define MKVSDC			1		// Mortal Kombat vs. DC Universe
@@ -38,3 +39,5 @@
 #define DCU_ONLINE		1		// DC Universe Online
 #define BULLETSTORM		1
 #define NURIEN			1
+#define HAWKEN			1
+#define ALIENS_CM		1

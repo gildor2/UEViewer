@@ -1088,6 +1088,13 @@ struct FStaticLODModel
 			}
 		}
 #endif // UC2
+#if VANGUARD
+		if (Ar.Game == GAME_Vanguard && Ar.ArLicenseeVer >= 1)
+		{
+			TArray<unsigned> unkC;
+			Ar << unkC;
+		}
+#endif // VANGUARD
 		return Ar;
 
 		unguard;
@@ -1237,7 +1244,7 @@ struct AnalogTrack
 	{
 		guard(AnalogTrack<<);
 #if SPLINTER_CELL
-		if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 0x0D)	// compressed Quat and Time tracks
+		if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 13)	// compressed Quat and Time tracks
 		{
 			A.SerializeSCell(Ar);
 			return Ar;
@@ -1438,6 +1445,12 @@ public:
 	UStaticMesh class
 -----------------------------------------------------------------------------*/
 
+// forwards (structures are declared in cpp)
+struct FkDOPNode;
+struct FkDOPCollisionTriangle;
+struct FStaticMeshTriangle;
+
+
 struct FStaticMeshSection
 {
 	int						f4;				// always 0 ??
@@ -1506,6 +1519,36 @@ RAW_TYPE(FStaticMeshVertexUC2)
 
 #endif // UC2
 
+#if VANGUARD
+
+extern bool GUseNewVanguardStaticMesh;
+
+struct FStaticMeshVertexVanguard
+{
+	FVector					Pos;
+	FVector					Normal;
+	float					unk[8];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexVanguard &V)
+	{
+		Ar << V.Pos << V.Normal;
+		for (int i = 0; i < 8; i++) Ar << V.unk[i];
+		return Ar;
+	}
+
+	operator FStaticMeshVertex() const
+	{
+		FStaticMeshVertex r;
+		r.Pos    = Pos;
+		r.Normal = Normal;
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FStaticMeshVertexVanguard, float)
+
+#endif // VANGUARD
+
 struct FStaticMeshVertexStream
 {
 	TArray<FStaticMeshVertex> Vert;
@@ -1527,6 +1570,15 @@ struct FStaticMeshVertexStream
 			return Ar << S.Revision;
 		}
 #endif // UC2
+#if VANGUARD
+		if (Ar.Game == GAME_Vanguard && GUseNewVanguardStaticMesh)
+		{
+			TArray<FStaticMeshVertexVanguard> VangVerts;
+			Ar << VangVerts;
+			CopyArray(S.Vert, VangVerts);
+			return Ar << S.Revision;
+		}
+#endif // VANGUARD
 #if TRIBES3
 		TRIBES_HDR(Ar, 0xD);
 #endif
@@ -1602,115 +1654,6 @@ struct FStaticMeshUVStream
 	}
 };
 
-struct FStaticMeshTriangleUnk
-{
-	float					unk1[2];
-	float					unk2[2];
-	float					unk3[2];
-};
-
-// complex FStaticMeshTriangle structure
-struct FStaticMeshTriangle
-{
-	FVector					f0;
-	FVector					fC;
-	FVector					f18;
-	FStaticMeshTriangleUnk	f24[8];
-	byte					fE4[12];
-	int						fF0;
-	int						fF4;
-	int						fF8;
-
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshTriangle &T)
-	{
-		guard(FStaticMeshTriangle<<);
-		int i;
-
-		assert(Ar.ArVer >= 112);
-		Ar << T.f0 << T.fC << T.f18;
-		Ar << T.fF8;
-		assert(T.fF8 <= ARRAY_COUNT(T.f24));
-		for (i = 0; i < T.fF8; i++)
-		{
-			FStaticMeshTriangleUnk &V = T.f24[i];
-			Ar << V.unk1[0] << V.unk1[1] << V.unk2[0] << V.unk2[1] << V.unk3[0] << V.unk3[1];
-		}
-		for (i = 0; i < 12; i++)
-			Ar << T.fE4[i];			// UT2 has strange order of field serialization: [2,1,0,3] x 3 times
-		Ar << T.fF0 << T.fF4;
-		// extra fields for older version (<= 111)
-
-		return Ar;
-		unguard;
-	}
-};
-
-struct FkDOPNode
-{
-	float					unk1[3];
-	float					unk2[3];
-	int						unk3;		//?? index * 32 ?
-	short					unk4;
-	short					unk5;
-
-	friend FArchive& operator<<(FArchive &Ar, FkDOPNode &N)
-	{
-		guard(FkDOPNode<<);
-		int i;
-		for (i = 0; i < 3; i++)
-			Ar << N.unk1[i];
-		for (i = 0; i < 3; i++)
-			Ar << N.unk2[i];
-		Ar << N.unk3 << N.unk4 << N.unk5;
-		return Ar;
-		unguard;
-	}
-};
-
-RAW_TYPE(FkDOPNode)
-
-struct FkDOPCollisionTriangle
-{
-	short					v[4];
-
-	friend FArchive& operator<<(FArchive &Ar, FkDOPCollisionTriangle &T)
-	{
-		return Ar << T.v[0] << T.v[1] << T.v[2] << T.v[3];
-	}
-};
-
-SIMPLE_TYPE(FkDOPCollisionTriangle, short)
-
-struct FStaticMeshCollisionNode
-{
-	int						f1[4];
-	float					f2[6];
-	byte					f3;
-
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshCollisionNode &N)
-	{
-		int i;
-		for (i = 0; i < 4; i++) Ar << AR_INDEX(N.f1[i]);
-		for (i = 0; i < 6; i++) Ar << N.f2[i];
-		Ar << N.f3;
-		return Ar;
-	}
-};
-
-struct FStaticMeshCollisionTriangle
-{
-	float					f1[16];
-	int						f2[4];
-
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshCollisionTriangle &T)
-	{
-		int i;
-		for (i = 0; i < 16; i++) Ar << T.f1[i];
-		for (i = 0; i <  4; i++) Ar << AR_INDEX(T.f2[i]);
-		return Ar;
-	}
-};
-
 struct FStaticMeshMaterial
 {
 	DECLARE_STRUCT(FStaticMeshMaterial);
@@ -1781,7 +1724,9 @@ public:
 #endif // DECLARE_VIEWER_PROPS
 	END_PROP_TABLE
 
+	UStaticMesh();
 	virtual ~UStaticMesh();
+	virtual void Serialize(FArchive &Ar);
 
 #if UC2
 	void LoadExternalUC2Data();
@@ -1789,124 +1734,10 @@ public:
 #if BIOSHOCK
 	void SerializeBioshockMesh(FArchive &Ar);
 #endif
-	void ConvertMesh();
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(UStaticMesh::Serialize);
-
-		assert(Ar.Game < GAME_UE3);
-
-#if BIOSHOCK
-		if (Ar.Game == GAME_Bioshock)
-		{
-			SerializeBioshockMesh(Ar);
-			return;
-		}
-#endif // BIOSHOCK
-
-		if (Ar.ArVer < 112)
-		{
-			appNotify("StaticMesh of old version %d/%d has been found", Ar.ArVer, Ar.ArLicenseeVer);
-		skip_remaining:
-			DROP_REMAINING_DATA(Ar);
-			ConvertMesh();
-			return;
-		}
-
-		//!! copy common part inside BIOSHOCK and UC2 code paths
-		//!! separate BIOSHOCK and UC2 code paths to cpps
-		//!! separate specific data type declarations into cpps
-		//!! UC2 code: can integrate LoadExternalUC2Data() into serializer
-		Super::Serialize(Ar);
-#if TRIBES3
-		TRIBES_HDR(Ar, 3);
+#if VANGUARD
+	void SerializeVanguardMesh(FArchive &Ar);
 #endif
-		Ar << Sections;
-		Ar << BoundingBox;			// UPrimitive field, serialized twice ...
-#if UC2
-		if (Ar.Engine() == GAME_UE2X)
-		{
-			FVector f120, VectorScale, VectorBase;	// defaults: vec(1.0), Scale=vec(1.0), Base=vec(0.0)
-			int     f154, f158, f15C, f160;
-			if (Ar.ArVer >= 135)
-			{
-				Ar << f120 << VectorScale << f154 << f158 << f15C << f160;
-				if (Ar.ArVer >= 137) Ar << VectorBase;
-			}
-			GUC2VectorScale = VectorScale;
-			GUC2VectorBase  = VectorBase;
-			Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1;
-			if (Ar.ArLicenseeVer != 1) Ar << IndexStream2;
-			//!!!!!
-//			appPrintf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
-//				UVStream.Num() ? UVStream[0].Data.Num() : -1, IndexStream1.Indices.Num());
-			Ar << f108;
-
-			LoadExternalUC2Data();
-
-			// skip collision information
-			goto skip_remaining;
-		}
-#endif // UC2
-#if SWRC
-		if (Ar.Game == GAME_RepCommando)
-		{
-			int f164, f160;
-			Ar << VertexStream;
-			if (Ar.ArVer >= 155) Ar << f164;
-			if (Ar.ArVer >= 149) Ar << f160;
-			Ar << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
-			goto skip_remaining;
-		}
-#endif // SWRC
-		Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
-
-#if 1
-		// UT2 and UE2Runtime has very different collision structures
-		// We don't need it, so don't bother serializing it
-		goto skip_remaining;
-#else
-		if (Ar.ArVer < 126)
-		{
-			assert(Ar.ArVer >= 112);
-			TArray<FStaticMeshCollisionTriangle> CollisionFaces;
-			TArray<FStaticMeshCollisionNode>     CollisionNodes;
-			Ar << CollisionFaces << CollisionNodes;
-		}
-		else
-		{
-			// this is an UT2 code, UE2Runtime has different structures
-			Ar << kDOPNodes << kDOPCollisionFaces;
-		}
-		if (Ar.ArVer < 114)
-			Ar << f124 << f128 << f12C;
-
-		Ar << Faces;					// can skip this array
-		Ar << InternalVersion;
-
-#if UT2
-		if (Ar.Game == GAME_UT2)
-		{
-			//?? check for generic UE2
-			if (Ar.ArLicenseeVer == 22)
-			{
-				float unk;				// predecessor of f150
-				Ar << unk;
-			}
-			else if (Ar.ArLicenseeVer >= 23)
-				Ar << f150;
-			Ar << f16C;
-			if (Ar.ArVer >= 120)
-				Ar << f15C;
-		}
-#endif // UT2
-#endif // 0
-
-		ConvertMesh();
-
-		unguard;
-	}
+	void ConvertMesh();
 };
 
 

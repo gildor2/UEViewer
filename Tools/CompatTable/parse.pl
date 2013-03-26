@@ -4,6 +4,7 @@
 $embed_css = 1;
 $debug_js = 0;
 $OUT = "table.html";
+$debug = 0;
 
 $JsLog = "opera.postError";				# Opera
 #$JsLog = "console.log";					# IE
@@ -122,8 +123,9 @@ EOF
 </script>
 
 <div class="filter_container">
+  <div id="filter_info"></div>
   <form>
-    <b>FILTER</b> <input name="filt" onkeyup="filter(this, 'compat_table', '1')" type="text" class="filter">
+    <b>FILTER</b> <input name="filt" onkeyup="filter(this, 'compat_table', 'filter_info')" type="text" class="filter">
   </form>
   <p />
 </div>
@@ -155,12 +157,14 @@ sub tableFooter {
 	print OUT <<EOF
   <tr><td colspan="8">&nbsp;</td></tr>
   <tr>
-    <td colspan="8"><table width="680" border="0" align="center">
+    <td colspan="8"><table width="100%" border="0" align="center">
       <tr>
+        <td style="border-style: none;" width="35">&nbsp</td>
         <td style="border-style: none; font-size: 8px;"><div align="left">
           <p><span class="detailbold">Year:</span> <span class="detailtxt">By clicking on the year for an entry, it will take you to the thread on the form that talks about this game.</span></p>
           <p><span class="detailbold">Title:</span> <span class="detailtxt">By clicking on the title of a game, it will take you to the Wikipedia information for that game. If the Wikipedia page does not exist it will take you to their website or other press release.</span></p>
           <p><span class="detailbold">Developer:</span> <span class="detailtxt">By clicking on Developer for an entry it will take you to the Wikipedia information for that developer. If the Wikipedia page does not exist it will take you to their website or other related information.</span></p>
+          <p><span class="detailbold">Other columns:</span><span class="detailtxt"> Mesh: skeletal mesh, Tex: texture, Anim: skeletal animation, Stat: static mesh.</span></p>
         </div></td>
       </tr>
     </table></td>
@@ -200,12 +204,17 @@ sub readCompanies {
 #	Main code
 #------------------------------------------------------------------------------
 
+# parsing state
 @lines = ();
+$engine = "";
 $year = 0;
 
-$fullSupp = 0;
-$partSupp = 0;
-$notSupp  = 0;
+# statistics
+$fullSupp = 0;		# number of fully supported games in total
+$partSupp = 0;		# number of partially supported games
+$notSupp  = 0;		# number of unsupported games
+$lastEngine = "";
+$yearGames = 0;		# number of supported games in the current year
 
 sub yesno {
 	my ($v) = $_[0];
@@ -215,12 +224,25 @@ sub yesno {
 }
 
 
+sub flushYearStats {
+	if ($yearGames) {
+		printf("  %d  %3d\n", $year, $yearGames);
+		$yearGames = 0;
+	}
+	if ($engine ne $lastEngine) {
+		$lastEngine = $engine;
+		printf("\n%s\n", $engine);
+	}
+}
+
 sub flushGame {
 	my ($cmd, $val) = $lines[0] =~ /^ \[ (.+) \s* = \s* (.+) \] $/x;
 	if (defined($cmd) && defined($val)) {
 		# command
-		printf("COMMAND: [%s] = [%s]\n", $cmd, $val);
+		printf("COMMAND: [%s] = [%s]\n", $cmd, $val) if $debug;
 		if ($cmd =~ /engine/i) {
+			flushYearStats();
+			$engine = $val;
 print OUT <<EOF
   <td colspan="8">&nbsp;</td>
   <tr class="engine">
@@ -229,6 +251,7 @@ print OUT <<EOF
 EOF
 ;
 		} elsif ($cmd =~ /year/i) {
+			flushYearStats();
 			$year = $val;
 print OUT <<EOF
   <td colspan="8">&nbsp;</td>
@@ -245,7 +268,7 @@ EOF
 		# game
 		my ($game) = $lines[0] =~ /\[ \s* (.*) \s* \]/x;
 		my $caps = $lines[1];
-		printf("GAME: [%s] [%s]\n", $game, $caps);
+		printf("GAME: [%s] [%s]\n", $game, $caps) if $debug;
 		my ($c1, $c2, $c3, $c4, $ver) = $caps =~ /^ (\S+) \s+ (\S+) \s+ (\S+) \s+ (\S+) \s+ (\S+) $/x;
 		my $color = "";
 		my $note  = "";
@@ -263,11 +286,13 @@ EOF
 		if (($c1 =~ /[-Y]/i) && ($c2 =~ /[-Y]/i) && ($c3 =~ /[-Y]/i) && ($c4 =~ /[-Y]/i)) {
 			$color = "#BBFFBB";
 			$fullSupp = $fullSupp + 1;
+			$yearGames++;
 		} elsif (($c1 =~ /[-N]/i) && ($c2 =~ /[-N]/i) && ($c3 =~ /[-N]/i) && ($c4 =~ /[-N]/i)) {
 			$color = "#FFBBBB";
 			$notSupp = $notSupp + 1;
 		} else {
 			$partSupp = $partSupp + 1;
+			$yearGames++;
 		}
 		my $company = $lines[2];
 		my $url1 = "";
@@ -342,4 +367,5 @@ process("table.ini");
 tableFooter();
 close(OUT);
 
-printf("Found %d supported games (%d fully supported) + %d unsupported\n", $partSupp + $fullSupp, $fullSupp, $notSupp);
+flushYearStats();
+printf("\nFound %d supported games (%d fully supported) + %d unsupported\n", $partSupp + $fullSupp, $fullSupp, $notSupp);

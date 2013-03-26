@@ -10,6 +10,7 @@
 #include "TypeConvert.h"
 
 //#define DEBUG_SKELMESH		1
+//#define DEBUG_STATICMESH		1
 
 
 /*-----------------------------------------------------------------------------
@@ -48,6 +49,21 @@ struct FLocoUnk2
 
 #endif // LOCO
 
+#if VANGUARD
+
+struct FVanguardSkin
+{
+	TArray<UMaterial*> Textures;
+	FName		Name;
+
+	friend FArchive& operator<<(FArchive &Ar, FVanguardSkin &S)
+	{
+		return Ar << S.Textures << S.Name;
+	}
+};
+
+#endif // VANGUARD
+
 void ULodMesh::Serialize(FArchive &Ar)
 {
 	guard(ULodMesh::Serialize);
@@ -62,7 +78,24 @@ void ULodMesh::Serialize(FArchive &Ar)
 		Ar << tmp;
 	}
 
+#if VANGUARD
+	if (Ar.Game == GAME_Vanguard && Ar.ArLicenseeVer >= 9)
+	{
+		TArray<FVanguardSkin> Skins;
+		int unk74;
+		Ar << Skins << unk74;
+		if (Skins.Num())
+			CopyArray(Textures, Skins[0].Textures);
+		goto after_textures;
+	}
+#endif // VANGUARD
 	Ar << Textures;
+after_textures:
+
+#if DEBUG_SKELMESH
+	for (int i = 0; i < Textures.Num(); i++) appPrintf("Tex[%d] = %s\n", i, Textures[i] ? Textures[i]->Name : "None");
+#endif
+
 #if SPLINTER_CELL
 	if (Ar.Game == GAME_SplinterCell && Version >= 3)
 	{
@@ -83,6 +116,10 @@ void ULodMesh::Serialize(FArchive &Ar)
 	}
 #endif // LOCO
 	Ar << MeshScale << MeshOrigin << RotOrigin;
+
+#if DEBUG_SKELMESH
+	appPrintf("Scale: %g %g %g\nOrigin: %g %g %g\nRotation: %d %d %d\n", FVECTOR_ARG(MeshScale), FVECTOR_ARG(MeshOrigin), FROTATOR_ARG(RotOrigin));
+#endif
 
 	if (Version <= 1 || Ar.Game == GAME_SplinterCell)
 	{
@@ -323,7 +360,14 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 		Ar << Points3;
 	}
 #endif // BATTLE_TERR
+
 	Ar << RefSkeleton;
+#if DEBUG_SKELMESH
+	appPrintf("RefSkeleton: %d bones\n", RefSkeleton.Num());
+	for (int i1 = 0; i1 < RefSkeleton.Num(); i1++)
+		appPrintf("  [%d] n=%s p=%d\n", i1, *RefSkeleton[i1].Name, RefSkeleton[i1].ParentIndex);
+#endif // DEBUG_SKELMESH
+
 #if SWRC
 	if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 142)
 	{
@@ -344,6 +388,13 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 	else
 #endif // SWRC
 		Ar << Animation;
+#if AA2
+	if (Ar.Game == GAME_AA2 && Ar.ArLicenseeVer >= 22)
+	{
+		TArray<UObject*> unk230;
+		Ar << unk230;
+	}
+#endif // AA2
 	Ar << SkeletalDepth << WeightIndices << BoneInfluences;
 #if SWRC
 	if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 140)
@@ -973,6 +1024,7 @@ bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 
 	int i;
 	int NumPoints = Lod.Points.Num();
+	int NumWedges = Lod.Wedges.Num();
 
 	// verify influences
 	for (i = 0; i < Lod.VertInfluences.Num(); i++)
@@ -984,27 +1036,30 @@ bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 	// verify indices (only RigidIndices, SmoothIndices aren't used)
 	for (i = 0; i < Lod.RigidIndices.Indices.Num(); i++)
 	{
-		int PointIndex = Lod.RigidIndices.Indices[i];
-		if (PointIndex < 0 || PointIndex >= NumPoints) return false;
+		int WedgeIndex = Lod.RigidIndices.Indices[i];
+		if (WedgeIndex < 0 || WedgeIndex >= NumWedges) return false;
 	}
 
-#if 0
-	int s;
+	int TotalFaces = 0;
 
 	// smooth sections (influence count >= 2)
-	for (s = 0; s < SrcLod.SmoothSections.Num(); s++)
+	int s;
+	for (s = 0; s < Lod.SmoothSections.Num(); s++)
 	{
 		const FSkelMeshSection &ms = Lod.SmoothSections[s];
-		int MatIndex = ms.MaterialIndex;
-		if (MatIndex < 0 || MatIndex >= ... //??
+		TotalFaces += ms.NumFaces;
+//		int MatIndex = ms.MaterialIndex;
+//		if (MatIndex < 0 || MatIndex >= ... //??
 	}
 	// rigid sections (influence count == 1)
 	for (s = 0; s < Lod.RigidSections.Num(); s++)
 	{
 		const FSkelMeshSection &ms = Lod.RigidSections[s];
-		int MatIndex = ms.MaterialIndex;
+		TotalFaces += ms.NumFaces;
+//		int MatIndex = ms.MaterialIndex; ... //??
 	}
-#endif
+
+	if (!TotalFaces) return false;
 
 	return true;
 }
@@ -1112,14 +1167,19 @@ void USkeletalMesh::SerializeSCell(FArchive &Ar)
 	Ar << Points2;
 	if (Ar.ArLicenseeVer >= 48)
 	{
-		TArray<FVector> unk;
-		Ar << unk;
+		TArray<FVector> unk1;
+		Ar << unk1;
+	}
+	if (Ar.ArLicenseeVer >= 49 && Ar.ArLicenseeVer < 67)
+	{
+		TArray<byte> unk2;
+		Ar << unk2;
 	}
 	Ar << RefSkeleton;
 	Ar << Animation;
 	if (Ar.ArLicenseeVer >= 155)
 	{
-		TArray<UObject*> unk218;
+		UObject* unk218;
 		Ar << unk218;
 	}
 	Ar << SkeletalDepth << WeightIndices << BoneInfluences;
@@ -1300,9 +1360,252 @@ void FStaticLODModel::RestoreLineageMesh()
 	UStaticMesh class
 -----------------------------------------------------------------------------*/
 
+struct FStaticMeshTriangleUnk
+{
+	float					unk1[2];
+	float					unk2[2];
+	float					unk3[2];
+};
+
+// complex FStaticMeshTriangle structure
+struct FStaticMeshTriangle
+{
+	FVector					f0;
+	FVector					fC;
+	FVector					f18;
+	FStaticMeshTriangleUnk	f24[8];
+	byte					fE4[12];
+	int						fF0;
+	int						fF4;
+	int						fF8;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshTriangle &T)
+	{
+		guard(FStaticMeshTriangle<<);
+		int i;
+
+		assert(Ar.ArVer >= 112);
+		Ar << T.f0 << T.fC << T.f18;
+		Ar << T.fF8;
+		assert(T.fF8 <= ARRAY_COUNT(T.f24));
+		for (i = 0; i < T.fF8; i++)
+		{
+			FStaticMeshTriangleUnk &V = T.f24[i];
+			Ar << V.unk1[0] << V.unk1[1] << V.unk2[0] << V.unk2[1] << V.unk3[0] << V.unk3[1];
+		}
+		for (i = 0; i < 12; i++)
+			Ar << T.fE4[i];			// UT2 has strange order of field serialization: [2,1,0,3] x 3 times
+		Ar << T.fF0 << T.fF4;
+		// extra fields for older version (<= 111)
+
+		return Ar;
+		unguard;
+	}
+};
+
+struct FkDOPNode
+{
+	float					unk1[3];
+	float					unk2[3];
+	int						unk3;		//?? index * 32 ?
+	short					unk4;
+	short					unk5;
+
+	friend FArchive& operator<<(FArchive &Ar, FkDOPNode &N)
+	{
+		guard(FkDOPNode<<);
+		int i;
+		for (i = 0; i < 3; i++)
+			Ar << N.unk1[i];
+		for (i = 0; i < 3; i++)
+			Ar << N.unk2[i];
+		Ar << N.unk3 << N.unk4 << N.unk5;
+		return Ar;
+		unguard;
+	}
+};
+
+RAW_TYPE(FkDOPNode)
+
+struct FkDOPCollisionTriangle
+{
+	short					v[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FkDOPCollisionTriangle &T)
+	{
+		return Ar << T.v[0] << T.v[1] << T.v[2] << T.v[3];
+	}
+};
+
+SIMPLE_TYPE(FkDOPCollisionTriangle, short)
+
+struct FStaticMeshCollisionNode
+{
+	int						f1[4];
+	float					f2[6];
+	byte					f3;
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshCollisionNode &N)
+	{
+		int i;
+		for (i = 0; i < 4; i++) Ar << AR_INDEX(N.f1[i]);
+		for (i = 0; i < 6; i++) Ar << N.f2[i];
+		Ar << N.f3;
+		return Ar;
+	}
+};
+
+struct FStaticMeshCollisionTriangle
+{
+	float					f1[16];
+	int						f2[4];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshCollisionTriangle &T)
+	{
+		int i;
+		for (i = 0; i < 16; i++) Ar << T.f1[i];
+		for (i = 0; i <  4; i++) Ar << AR_INDEX(T.f2[i]);
+		return Ar;
+	}
+};
+
+
+// Implement constructor in cpp to avoid inlining (it's large enough).
+// It's useful to declare TArray<> structures as forward declarations in header file.
+UStaticMesh::UStaticMesh()
+{}
+
 UStaticMesh::~UStaticMesh()
 {
 	delete ConvertedMesh;
+}
+
+void UStaticMesh::Serialize(FArchive &Ar)
+{
+	guard(UStaticMesh::Serialize);
+
+	assert(Ar.Game < GAME_UE3);
+
+#if BIOSHOCK
+	if (Ar.Game == GAME_Bioshock)
+	{
+		SerializeBioshockMesh(Ar);
+		return;
+	}
+#endif // BIOSHOCK
+
+#if VANGUARD
+	if (Ar.Game == GAME_Vanguard && Ar.ArVer >= 128 && Ar.ArLicenseeVer >= 25)
+	{
+		SerializeVanguardMesh(Ar);
+		return;
+	}
+#endif // VANGUARD
+
+	if (Ar.ArVer < 112)
+	{
+		appNotify("StaticMesh of old version %d/%d has been found", Ar.ArVer, Ar.ArLicenseeVer);
+	skip_remaining:
+		DROP_REMAINING_DATA(Ar);
+		ConvertMesh();
+		return;
+	}
+
+	//!! copy common part inside BIOSHOCK and UC2 code paths
+	//!! separate BIOSHOCK and UC2 code paths to cpps
+	//!! separate specific data type declarations into cpps
+	//!! UC2 code: can integrate LoadExternalUC2Data() into serializer
+	Super::Serialize(Ar);
+#if TRIBES3
+	TRIBES_HDR(Ar, 3);
+#endif
+#if VANGUARD
+	if (Ar.Game == GAME_Vanguard) GUseNewVanguardStaticMesh = false; // in game code InternalVersion is analyzed before serialization
+#endif
+	Ar << Sections;
+	Ar << BoundingBox;			// UPrimitive field, serialized twice ...
+#if UC2
+	if (Ar.Engine() == GAME_UE2X)
+	{
+		FVector f120, VectorScale, VectorBase;	// defaults: vec(1.0), Scale=vec(1.0), Base=vec(0.0)
+		int     f154, f158, f15C, f160;
+		if (Ar.ArVer >= 135)
+		{
+			Ar << f120 << VectorScale << f154 << f158 << f15C << f160;
+			if (Ar.ArVer >= 137) Ar << VectorBase;
+		}
+		GUC2VectorScale = VectorScale;
+		GUC2VectorBase  = VectorBase;
+		Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1;
+		if (Ar.ArLicenseeVer != 1) Ar << IndexStream2;
+		//!!!!!
+//		appPrintf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
+//			UVStream.Num() ? UVStream[0].Data.Num() : -1, IndexStream1.Indices.Num());
+		Ar << f108;
+
+		LoadExternalUC2Data();
+
+		// skip collision information
+		goto skip_remaining;
+	}
+#endif // UC2
+#if SWRC
+	if (Ar.Game == GAME_RepCommando)
+	{
+		int f164, f160;
+		Ar << VertexStream;
+		if (Ar.ArVer >= 155) Ar << f164;
+		if (Ar.ArVer >= 149) Ar << f160;
+		Ar << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
+		goto skip_remaining;
+	}
+#endif // SWRC
+	Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
+
+#if 1
+	// UT2 and UE2Runtime has very different collision structures
+	// We don't need it, so don't bother serializing it
+	goto skip_remaining;
+#else
+	if (Ar.ArVer < 126)
+	{
+		assert(Ar.ArVer >= 112);
+		TArray<FStaticMeshCollisionTriangle> CollisionFaces;
+		TArray<FStaticMeshCollisionNode>     CollisionNodes;
+		Ar << CollisionFaces << CollisionNodes;
+	}
+	else
+	{
+		// this is an UT2 code, UE2Runtime has different structures
+		Ar << kDOPNodes << kDOPCollisionFaces;
+	}
+	if (Ar.ArVer < 114)
+		Ar << f124 << f128 << f12C;
+
+	Ar << Faces;					// can skip this array
+	Ar << InternalVersion;
+
+#if UT2
+	if (Ar.Game == GAME_UT2)
+	{
+		//?? check for generic UE2
+		if (Ar.ArLicenseeVer == 22)
+		{
+			float unk;				// predecessor of f150
+			Ar << unk;
+		}
+		else if (Ar.ArLicenseeVer >= 23)
+			Ar << f150;
+		Ar << f16C;
+		if (Ar.ArVer >= 120)
+			Ar << f15C;
+	}
+#endif // UT2
+#endif // 0
+
+	ConvertMesh();
+
+	unguard;
 }
 
 #if UC2
@@ -1383,6 +1686,93 @@ void UStaticMesh::LoadExternalUC2Data()
 #endif // UC2
 
 
+#if VANGUARD
+
+struct FVanguardBasisVector
+{
+	FVector					v1, v2;
+
+	friend FArchive& operator<<(FArchive &Ar, FVanguardBasisVector &V)
+	{
+		return Ar << V.v1 << V.v2;
+	}
+};
+
+SIMPLE_TYPE(FVanguardBasisVector, float)
+
+struct FVanguardUTangentStream
+{
+	TArray<FVanguardBasisVector> Data;
+	int						Version;
+
+	friend FArchive& operator<<(FArchive &Ar, FVanguardUTangentStream &S)
+	{
+		return Ar << S.Data << S.Version;
+	}
+};
+
+
+bool GUseNewVanguardStaticMesh;
+
+void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
+{
+	guard(UStaticMesh::SerializeVanguardMesh);
+
+	Super::Serialize(Ar);
+
+	Ar.Seek(Ar.Tell() + 236);		// skip header
+	Ar << InternalVersion;
+	GUseNewVanguardStaticMesh = (InternalVersion >= 13);
+
+	int		unk1CC, unk134;
+	UObject	*unk198, *unk1DC;
+	float	unk194, unk19C, unk1A0;
+	byte	unk1A4;
+	TArray<FVanguardUTangentStream> BasisStream;
+	TArray<int> unk144, unk150;
+	TArray<byte> unk200;
+
+	Ar << unk1CC << unk134 << f108 << unk198 << unk194 << unk19C;
+#if DEBUG_STATICMESH
+	appPrintf("Version: %d\n", InternalVersion);
+#endif
+	if (InternalVersion > 11)
+		Ar << unk1A0;
+	Ar << unk1A4;
+	Ar << unk1DC;
+
+	Ar << BoundingBox;
+#if DEBUG_STATICMESH
+	appPrintf("Bounds: %g %g %g - %g %g %g (%d)\n", FVECTOR_ARG(BoundingBox.Min), FVECTOR_ARG(BoundingBox.Max), BoundingBox.IsValid);
+#endif
+
+	Ar << Sections;
+
+	TArray<FVanguardSkin> Skins;
+	Ar << Skins;
+	if (Skins.Num() && !Materials.Num())
+	{
+		const FVanguardSkin &S = Skins[0];
+		Materials.Add(S.Textures.Num());
+		for (int i = 0; i < S.Textures.Num(); i++)
+			Materials[i].Material = S.Textures[i];
+	}
+
+	Ar << Faces << UVStream << BasisStream;
+	Ar << unk144 << unk150 << unk200;
+
+	Ar << VertexStream << ColorStream1 << ColorStream2 << IndexStream1 << IndexStream2;
+
+	// skip the remaining data
+	Ar.Seek(Ar.GetStopper());
+
+	ConvertMesh();
+
+	unguard;
+}
+
+#endif // VANGUARD
+
 void UStaticMesh::ConvertMesh()
 {
 	guard(UStaticMesh::ConvertMesh);
@@ -1404,7 +1794,7 @@ void UStaticMesh::ConvertMesh()
 	{
 		CMeshSection &Dst = Lod->Sections[i];
 		const FStaticMeshSection &Src = Sections[i];
-		Dst.Material   = Materials[i].Material;
+		Dst.Material   = (i < Materials.Num()) ? Materials[i].Material : NULL;
 		Dst.FirstIndex = Src.FirstIndex;
 		Dst.NumFaces   = Src.NumFaces;
 	}

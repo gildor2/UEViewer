@@ -11,6 +11,7 @@
 #define LINEAGE2		1
 #define SWRC			1
 #define BATTLE_TERR		1		// Battle Territory Online
+#define AA2				1		//!! requires GForceGame change
 
 // requires UNREAL25
 #define TRIBES3			1
@@ -27,6 +28,7 @@
 #define MASSEFF			1
 #define HUXLEY			1
 #define AVA				1
+#define ALIENS_CM		1
 
 #define BATMAN			1
 #define A51				1		// Blacksite: Area 51
@@ -46,3 +48,4 @@
 #define DCU_ONLINE		1		// DC Universe Online
 #define BULLETSTORM		1
 #define NURIEN			1
+#define HAWKEN			1

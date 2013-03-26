@@ -72,6 +72,9 @@ static const CPixelFormatInfo PixelFormatInfo[] =
 	{ 0,						8,			4,			8,				0,			0		},	// TPF_PVRTC2
 	{ 0,						4,			4,			8,				0,			0		},	// TPF_PVRTC4
 #endif
+#if ANDROID
+	{ 0,						4,			4,			8,				0,			0		},	// TPF_ETC1
+#endif
 };
 
 
@@ -207,6 +210,7 @@ byte *CTextureData::Decompress()
 			}
 		}
 		return dst;
+
 #if IPHONE
 	case TPF_PVRTC2:
 	case TPF_PVRTC4:
@@ -219,6 +223,18 @@ byte *CTextureData::Decompress()
 	#endif
 		return dst;
 #endif // IPHONE
+
+#if ANDROID
+	case TPF_ETC1:
+	#if PROFILE_DDS
+		appResetProfiler();
+	#endif
+		PVRTDecompressETC(Data, USize, VSize, dst, 0);
+	#if PROFILE_DDS
+		appPrintProfiler();
+	#endif
+		return dst;
+#endif // ANDROID
 	}
 
 	staticAssert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, Wrong_PixelFormatInfo_array);
@@ -1253,24 +1269,28 @@ static byte *FindTribes4Texture(const UTexture2D *Tex, CTextureData *TexData)
 #endif // TRIBES4
 
 
-bool UTexture2D::LoadBulkTexture(int MipIndex) const
+bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool UseETC_TFC) const
 {
 	const CGameFileInfo *bulkFile = NULL;
 
 	guard(UTexture2D::LoadBulkTexture);
 
-	const FTexture2DMipMap &Mip = Mips[MipIndex];
+	const FTexture2DMipMap &Mip = MipsArray[MipIndex];
 
 	// Here: data is either in TFC file or in other package
-	const char *bulkFileName = NULL, *bulkFileExt = NULL;
+	char bulkFileName[256];
+	const char *bulkFileExt = NULL;
 	if (stricmp(TextureFileCacheName, "None") != 0)
 	{
 		// TFC file is assigned
 		//!! cache checking of tfc file(s) + cache handles (FFileReader)
 		//!! note #1: there can be few cache files!
 		//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
-		bulkFileName = TextureFileCacheName;
+		strcpy(bulkFileName, TextureFileCacheName);
 		bulkFileExt  = "tfc";
+#if ANDROID
+		if (UseETC_TFC) appSprintf(ARRAY_ARG(bulkFileName), "%s_ETC", *TextureFileCacheName);
+#endif
 		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
 		if (!bulkFile)
 			bulkFile = appFindGameFile(bulkFileName, "xxx");	// sometimes tfc has xxx extension
@@ -1292,12 +1312,12 @@ bool UTexture2D::LoadBulkTexture(int MipIndex) const
 			const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
 			if (Exp2.ExportFlags & EF_ForcedExport)
 			{
-				bulkFileName = Exp2.ObjectName;
+				strcpy(bulkFileName,  Exp2.ObjectName);
 				bulkFileExt  = NULL;					// find package file
 //				appPrintf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
 			}
 		}
-		if (!bulkFileName) return false;					// just in case
+		if (!bulkFileName[0]) return false;				// just in case
 		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
 	}
 
@@ -1351,14 +1371,25 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 #endif // TRIBES4
 
+	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
+	bool AndroidCompression = false;
+
+#if ANDROID
+	if (!Mips.Num() && CachedETCMips.Num())
+	{
+		MipsArray = &CachedETCMips;
+		AndroidCompression = true;
+	}
+#endif
+
 	if (!TexData.CompressedData)
 	{
 		bool bulkChecked = false;
-		for (int n = 0; n < Mips.Num(); n++)
+		for (int n = 0; n < MipsArray->Num(); n++)
 		{
 			// find 1st mipmap with non-null data array
 			// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
-			const FTexture2DMipMap &Mip = Mips[n];
+			const FTexture2DMipMap &Mip = (*MipsArray)[n];
 			const FByteBulkData &Bulk = Mip.Data;
 			if (!Mip.Data.BulkData)
 			{
@@ -1371,7 +1402,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 				// some optimization in a case of missing bulk file
 				if (bulkChecked) continue;				// already checked for previous mip levels
 				bulkChecked = true;
-				if (!LoadBulkTexture(n)) continue;		// note: this could be called for any mip level, not for the 1st only
+				if (!LoadBulkTexture(*MipsArray, n, AndroidCompression)) continue;	// note: this could be called for any mip level, not for the 1st only
 			}
 			// this mipmap has data
 			TexData.CompressedData = Bulk.BulkData;
@@ -1379,6 +1410,14 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			TexData.VSize          = Mip.SizeY;
 			TexData.DataSize       = Bulk.ElementCount * Bulk.GetElementSize();
 			TexData.Platform       = Package->Platform;
+#if 0
+			FILE *f = fopen(va("%s-%s.dmp", Package->Name, Name), "wb");
+			if (f)
+			{
+				fwrite(Bulk.BulkData, Bulk.ElementCount * Bulk.GetElementSize(), 1, f);
+				fclose(f);
+			}
+#endif
 			break;
 		}
 	}
@@ -1415,10 +1454,20 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	{
 		if (Format == PF_DXT1)
 			intFormat = bForcePVRTC4 ? TPF_PVRTC4 : TPF_PVRTC2;
-		if (Format == PF_DXT5)
+		else if (Format == PF_DXT5)
 			intFormat = TPF_PVRTC4;
 	}
 #endif // IPHONE
+
+#if ANDROID
+	if (AndroidCompression)
+	{
+		if (Format == PF_DXT1)
+			intFormat = TPF_ETC1;
+//??		else if (Format == PF_DXT5)
+//??			intFormat = TPF_ETC2_EAC; ???
+	}
+#endif // ANDROID
 
 	TexData.Format = intFormat;
 

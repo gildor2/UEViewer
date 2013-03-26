@@ -117,7 +117,7 @@ struct CVertexShare
 			if (PointIndex == INDEX_NONE) break;
 			if (Normals[PointIndex] == Normal) break;
 		}
-#endif
+#endif // USE_HASHING
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
@@ -150,10 +150,14 @@ static void ExportCommonMeshData
 {
 	guard(ExportCommonMeshData);
 
-	static VChunkHeader PtsHdr, WedgHdr, FacesHdr, MatrHdr;
+	// using 'static' here to avoid zero-filling unused fields
+	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr;
 	int i, j;
 
 #define SECT(n)		(Sections + n)
+
+	// main psk header
+	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
 	// share vertices
 //	appResetProfiler();
@@ -212,7 +216,7 @@ static void ExportCommonMeshData
 		Ar << W;
 	}
 
-	if (NumVerts <= 65536) //?? (numFaces * 3 <= 65536)
+	if (NumVerts <= 65536)
 	{
 		FacesHdr.DataCount = numFaces;
 		FacesHdr.DataSize  = sizeof(VTriangle16);
@@ -328,13 +332,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	guard(ExportSkeletalMeshLod);
 
 	// using 'static' here to avoid zero-filling unused fields
-	static VChunkHeader MainHdr, BoneHdr, InfHdr;
-	int i, j;
-
-	int numVerts = Lod.NumVerts;
-	int numBones = Mesh.RefSkeleton.Num();
-
-	SAVE_CHUNK(MainHdr, "ACTRHEAD");
+	static VChunkHeader BoneHdr, InfHdr;
 
 	CVertexShare Share;
 	ExportCommonMeshData
@@ -345,6 +343,9 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 		Lod.Indices,
 		Share
 	);
+
+	int i, j;
+	int numBones = Mesh.RefSkeleton.Num();
 
 	BoneHdr.DataCount = numBones;
 	BoneHdr.DataSize  = sizeof(VBone);
@@ -448,7 +449,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		const CSkelMeshLod &MeshLod = Mesh->Lods[Lod];
 		if (!MeshLod.Sections.Num()) continue;		// empty mesh
 
-		bool UsePskx = (MeshLod.NumVerts > 65536); //?? (MeshLod.Indices.Num() > 65536);
+		bool UsePskx = (MeshLod.NumVerts > 65536);
 
 		char filename[512];
 		const char *Ext = (UsePskx) ? "pskx" : "psk";
@@ -625,11 +626,10 @@ void ExportPsa(const CAnimSet *Anim)
 
 static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 {
-	// using 'static' here to avoid zero-filling unused fields
-	static VChunkHeader MainHdr, BoneHdr, InfHdr;
-	int i;
+	guard(ExportStaticMeshLod);
 
-	SAVE_CHUNK(MainHdr, "ACTRHEAD");
+	// using 'static' here to avoid zero-filling unused fields
+	static VChunkHeader BoneHdr, InfHdr;
 
 	CVertexShare Share;
 	ExportCommonMeshData
@@ -650,6 +650,8 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
 
 	ExportExtraUV(Ar, Lod.Verts, Lod.NumVerts, sizeof(Lod.Verts[0]), Lod.NumTexCoords);
+
+	unguard;
 }
 
 

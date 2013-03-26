@@ -136,6 +136,18 @@ struct FMeshBone
 		}
 #endif // BATMAN
 		Ar << B.Name << B.Flags << B.BonePos << B.NumChildren << B.ParentIndex;
+#if AA2
+		if (Ar.Game == GAME_AA2)
+		{
+			int		unk44;
+			float	unk40, unk48;
+			byte	unk4C;
+			if (Ar.ArLicenseeVer >= 9)
+				Ar << unk40 << unk44 << unk48;
+			if (Ar.ArLicenseeVer >= 20)
+				Ar << unk4C;
+		}
+#endif // AA2
 #if ARMYOF2
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArVer >= 459)
 		{

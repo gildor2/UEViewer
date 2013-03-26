@@ -80,6 +80,9 @@ enum ETexturePixelFormat
 	TPF_PVRTC2,
 	TPF_PVRTC4,
 #endif
+#if ANDROID
+	TPF_ETC1,
+#endif
 	TPF_MAX
 };
 

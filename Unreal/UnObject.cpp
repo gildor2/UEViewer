@@ -234,7 +234,7 @@ static int MapTypeName(const char *Name)
 {
 	guard(MapTypeName);
 	for (int i = 0; i < ARRAY_COUNT(NameToIndex); i++)
-		if (!strcmp(Name, NameToIndex[i].Name))
+		if (!stricmp(Name, NameToIndex[i].Name))
 			return NameToIndex[i].Index;
 	appError("MapTypeName: unknown type '%s'", Name);
 	return 0;
@@ -591,10 +591,13 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #	define PROP_DBG(fmt, value)
 #endif
 
+	int PropTagPos;
+
 	// property list
 	while (true)
 	{
 		FPropertyTag Tag;
+		PropTagPos = Ar.Tell();
 
 #if BATMAN
 		//!! try to move to separate function
@@ -936,9 +939,19 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			appError("Unknown property");
 			break;
 		}
-		if (Ar.Tell() != StopPos) appError("%s\'%s\'.%s: Pos-StopPos = %d", Name, Name, *Tag.Name, Ar.Tell() - StopPos);
+		// verification
+		int Pos = Ar.Tell();
+		if (Pos != StopPos)
+		{
+#if DEBUG_PROPS
+			// show property dump
+			Ar.Seek(PropTagPos);
+			DUMP_ARC_BYTES(Ar, StopPos - PropTagPos);
+#endif
+			appError("%s\'%s\'.%s: Property read error: %d unread bytes", Name, UObject::GLoadingObj->Name, *Tag.Name, StopPos - Pos);
+		}
 
-		unguardf(("(%s.%s)", Name, *Tag.Name));
+		unguardf(("(%s.%s, TagPos=%X)", Name, *Tag.Name, PropTagPos));
 	}
 
 	unguard;
@@ -1003,11 +1016,11 @@ const CTypeInfo *FindClassType(const char *Name, bool ClassType)
 		// skip 1st char only for ClassType==true?
 		if (ClassType)
 		{
-			if (strcmp(GClasses[i].Name + 1, Name) != 0) continue;
+			if (stricmp(GClasses[i].Name + 1, Name) != 0) continue;
 		}
 		else
 		{
-			if (strcmp(GClasses[i].Name, Name) != 0) continue;
+			if (stricmp(GClasses[i].Name, Name) != 0) continue;
 		}
 
 		if (!GClasses[i].TypeInfo) appError("No typeinfo for class");
@@ -1073,7 +1086,7 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 	for (i = 0; i < Patches.Num(); i++)
 	{
 		const PropPatch &p = Patches[i];
-		if (!strcmp(p.ClassName, this->Name) && !strcmp(p.OldName, Name))
+		if (!stricmp(p.ClassName, this->Name) && !stricmp(p.OldName, Name))
 		{
 			Name = p.NewName;
 			break;
@@ -1083,7 +1096,7 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
 	{
 		for (i = 0; i < Type->NumProps; i++)
-			if (!(strcmp(Type->Props[i].Name, Name)))
+			if (!(stricmp(Type->Props[i].Name, Name)))
 				return Type->Props + i;
 	}
 	return NULL;

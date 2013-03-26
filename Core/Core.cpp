@@ -193,7 +193,8 @@ struct CBlockHeader
 void *appMalloc(int size, int alignment)
 {
 	guard(appMalloc);
-	assert(size >= 0 && size < (256<<20));	// upper limit to allocation is 256Mb
+	if (size < 0 || size >= (256<<20))		// upper limit to allocation is 256Mb
+		appError("Trying to allocate %d bytes", size);
 	assert(alignment > 1 && alignment <= 16 && ((alignment & (alignment - 1)) == 0));
 	void *block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
 	if (!block)

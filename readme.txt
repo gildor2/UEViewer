@@ -1,5 +1,5 @@
 UMODEL (UE Viewer)
-(c) Konstantin Nosov (Gildor), 2007-2012
+(c) Konstantin Nosov (Gildor), 2007-2013
 
 
 Please support the development by making a donation here:
@@ -39,50 +39,59 @@ Other documentation:
 http://www.gildor.org/smf/index.php/board,9.0.html
 
 
-Some usage information
-~~~~~~~~~~~~~~~~~~~~~~
-This is a console application, there is no GUI.
-For the list of command line options run 'umodel' without arguments.
+Quick start
+~~~~~~~~~~~
+WARNING: it's highly recommended to read the FAQ and to watch video tutorials (see the
+links above) before starting the umodel for the first time.
+
+This is a console application, there is no GUI. Umodel is started with a set of command
+line options. Easiest run is 'umodel <package_file>', it will start umodel in a viewer
+mode. To see the full list of available command line options run 'umodel' without
+arguments.
+
 Note: if you will launch program from Windows explorer etc, you will get a console window
-with a help message, but this window will immediately disappear.
+with a help message, but this window will immediately disappear. You could try to drag
+a package file (.upk, .xxx, .ukx etc) to umodel's icon to launch the application.
 
-Keyboard:
-H                show/hide full keyboard help
-Esc              exit from the umodel
-PgUp/PgDn        browse through loaded objects
-Ctrl+S           take a screenshot into the file Screenshots/ObjectName.tga
-Alt+S            take screenshot with transparent background
-Ctrl+X           export all objects from the current scene
-Ctrl+PgUp/PgDn   scroll onscreen texts
-Ctrl+L           switch lighting modes
-Shift+Up/Down    change scene FOV
-Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
+The application is controlled with keyboard and mouse. You may see the full list of
+keyboard shortcuts by pressing 'H' (Help) key. Here's the list of some shortcuts:
 
-To see full shortcut list press 'H' key.
+  PgUp/PgDn        browse through loaded objects
+  Ctrl+S           take a screenshot into the file Screenshots/ObjectName.tga
+  Alt+S            take screenshot with transparent background
+  Ctrl+X           export all objects from the current scene
+  Ctrl+PgUp/PgDn   scroll onscreen texts
+  Shift+Up/Down    change scene FOV
+  Ctrl+L           switch lighting modes
+  Ctrl+Q           toggle visualization of debug information (text, 3D axis etc)
+  Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
+  Esc              exit from the umodel
+
+You may attach the AnimSet to the SkeletalMesh object using Ctrl+A key. Animation
+sequences are listed by '[' and ']' keys, playback is started with a Space key.
 
 
 Notes about psk/psa export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-To load psk or psa into 3ds Max you'll need this script (ActorX Importer) created by me:
+To load psk or psa into the 3ds Max you'll need ActorX Importer script created by me:
 http://www.gildor.org/projects/unactorx
-Its announcements thread is here:
+It has own announcements thread here:
 http://www.gildor.org/smf/index.php/topic,228.0.html
 
-Some meshes contains information which cannot fit into psk standard. In this case I've
+Some meshes contains information which cannot fit into psk standard. For this reason I've
 extended the format to hold advanced information. Files in this format has extension pskx
-and cannot be loaded into UnrealEd or other application with ActorX support. There only
-one tool with pskx support at the moment - ActorX Importer for 3ds Max which was mentioned
-above.
+and cannot be loaded into UnrealEd or any other application with ActorX support. There's
+only one tool with pskx support at the moment - ActorX Importer mentioned above.
 
 
 Notes about md5mesh/md5anim export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To use these exporters you should add "-md5" option to the command line options.
-MeshAnimation and AnimSet objects are exported as multiple md5anim files (one file for
-each animation track). "bounds" section in md5anim is filled with dummy data. "hierarchy"
-section also does not contain real skeleton hierarchy, because Unreal engine uses
-hierarchy from the mesh, not from animations. Some md5 viewers/importers does require
-md5anim hierarchy, some - does not.
+Umodel has possibility to export skeletal meshes and animations in idSoftware md5 format.
+To use this exporter you should use command line option "-md5". MeshAnimation and AnimSet
+objects are exported as multiple md5anim files (one file for each animation track). "bounds"
+section in md5anim is filled with dummy data. "hierarchy" section also does not contain real
+skeleton hierarchy because Unreal engine uses hierarchy from the mesh, not from the
+animation. Some md5 viewers/importers does require md5anim hierarchy, some - does not.
 
 There is a 3ds Max md5mesh/md5anim importer script available on umodel forum:
 http://www.gildor.org/smf/index.php?topic=87.0
@@ -90,35 +99,44 @@ or here
 http://www.gildor.org/downloads
 This script was originally created by der_ton, but was updated by me.
 
+Please note that psk/psa format is more powerful, and ActorX Importer script has much more
+capabilities than md5 Importer.
+
 
 Notes about StaticMesh support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-StaticMesh export is performed into psk format. This format was originally designed for
-SkeletalMesh export, but umodel uses it for StaticMesh too. Exported mesh will not have
-skeleton and vertex influences. Resulting psk files cannot be imported directly into the
-UnrealEd, so I've decided to save ot with pskx extension to avoid silly user errors.
+StaticMesh export is performed into psk format. This format was originally designed to hold
+SkeletalMesh, but umodel uses it for StaticMesh too. Exported mesh will not have a skeleton
+and vertex influences. Resulting psk files cannot be imported directly into the UnrealEd,
+so I've decided to save ot with pskx extension to avoid silly user errors. Such mesh could
+be imported into 3ds Max using ActorX Importer plugin as well as ordinary psk file.
 
 
 Notes about material export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Materials are exported in a custom format. File extension is ".mat". At the current moment,
-this format is supported by my ActorX Importer plugin only. Unreal engine materials are
-very complex, it's hard to separate a few channels (diffuse, specular, bump etc) from it.
-Umodel tries to do this by using some heuristics. Umodel will never export full materials
-(GLSL script etc). Do not expect too much from this.
+this format is supported by ActorX Importer plugin only. Unreal engine materials are very
+complex, so it's very hard to separate a few channels (diffuse, specular, bump etc) from it.
+Umodel tries to accomplish this with use of some heuristics - sometimes with good results,
+sometimes with bad. Umodel will never export full materials (GLSL script etc). Do not expect
+too much from this feature.
 
 
 Used third-party libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-zlib
+SDL - Simple DirectMedia Layer
+  (c) Sam Lantinga
+  http://www.libsdl.org/
+
+zlib data compression library
   (c) Jean-loup Gailly and Mark Adler
   http://zlib.net/
 
-lzo
+LZO data compression library
   (c) Markus F.X.J. Oberhumer
   http://www.oberhumer.com/opensource/lzo/
 
-libmspack
+libmspack - a library for Microsoft compression formats
   (c) Stuart Caie
   http://www.cabextract.org.uk/libmspack/
 
@@ -133,6 +151,54 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+21.02.2013
+- added "-version" option to display brief build information
+
+20.02.2013
+- implemented Gears of War: Judgment support; "-game=gowj" option is required
+
+12.02.2013
+- Aliens: Colonial Marines is fully supported
+
+07.02.2013
+- umodel will detect platform by the name of "Cooked<PlatformName>" directory when possible
+- implemented support for Android's ETC1 compressed textures
+
+06.02.2013
+- implemented full support for America's Army 2 ("-game=aa2" option is required)
+
+16.01.2013
+- improved Splinter Cell 4 (Double Agent) support
+
+15.01.2013
+- umodel should no longer crash with error "Too much unknown files" when game path includes
+  files extracted by umodel
+
+29.12.2012
+- implemented Passion Leads Army full support
+
+25.12.2012
+- fixed bug in UE2 SkeletalMesh verification code caused "bad LOD/base mesh" errors
+- reduced amount of log output in a case of missing packages
+
+18.12.2012
+- implemented Storm Warriors Online support
+
+14.12.2012
+- Hawken (beta) is fully supported
+
+21.11.2012
+- implemented DmC: Devil May Cry (XBox360 demo) SkeletalMesh support
+
+23.10.2012
+- implemented Fable: The Journey support
+
+22.10.2012
+- implemented Vanguard: Saga of Heroes support; "-game=vang" option is required
+
+16.10.2012
+- fixed bug in LZX decompression code causing crashes in some cases
+
 10.10.2012
 - implemented support for Dishonored (except animations)
 
@@ -147,13 +213,13 @@ Changes
 - implemented Transformers: Fall of Cybertron support
 
 06.09.2012
-- fixed incompatibility of exported DDS with UE2 UnrealEd
+- fixed incompatibility of exported DDS with UE2's UnrealEd
 
 17.08.2012
 - improved compatibility with UE2 SkeletalMesh
 
 03.07.2012
-- implemenved Tribes: Ascend texture support
+- implemented Tribes: Ascend texture support
 
 25.06.2012
 - improved compatibility with some UE2 games
@@ -171,7 +237,7 @@ Changes
 - preventing umodel from opening non-package files from the command line (tfc, blk etc)
 
 23.05.2012
-- improved Mass Effect 3 animation support (now more animations are available)
+- improved support for Mass Effect 3 animation (more animations are available now)
 
 22.05.2012
 - implemented Special Force 2 support
@@ -221,17 +287,17 @@ Changes
 13.02.2012
 - added option "-obj=<object>" to specify any number of objects to load
 - added option "-anim=<object>" to specify AnimSet which will be automatically attached to
-  SkeletalMesh
+  SkeletalMesh objects
 
 07.02.2012
 - eliminated -pskx option requirement - extra UV sets are stored in standard ActorX 2010 format
 
 31.01.2012
-- displaying real (cooked) texture size in material viewer
+- displaying real (cooked) texture size in the material viewer
 
 30.01.2012
 - umodel will try to find cooked resources in startup packages with non-standard name
-  (not "startup_int.xxx" etc) which are specified using "-pkg=..." option
+  (not just "startup_int.xxx" etc) which are specified using "-pkg=..." option
 
 25.01.2012
 - implemented Brothers in Arms: Hell's Highway animation support
@@ -247,8 +313,7 @@ Changes
 
 10.01.2012
 - command line arguments now may be specified in any order; before that, all options had to
-  go before the package name; example: "umodel <package_name> -meshes" (did not worked
-  before)
+  go before the package name; example: "umodel <package_name> -meshes" (did not work before)
 
 14.12.2011
 - implemented XBox360 XMA audio export
@@ -268,10 +333,10 @@ Changes
 
 25.11.2011
 - exporter improvements:
-  - no more crashes when umodel is unable to create output file due to invalid characters etc
+  - no more crashes when umodel is unable to create output file due to invalid character etc
   - added option "-nooverwrite" to prevent existing files from being overwritten; this may
-    be useful to speedup export process when the same object could be exported from different
-    packages
+    be useful to speedup export process when the same object could be exported multiple times
+    from different packages
   - umodel will save mesh with .psk extension when "-pskx" option is specified but there is
     no format extension required, and it will save as .pskx when it is not possible to store
     mesh as .psk, even when "-pskx" is not specified
@@ -295,16 +360,17 @@ Changes
 - controlling translation mode with 'Ctrl+R' key
 
 09.11.2011
-- highlighting current mesh in a viewer in multipart mesh rendering mode
-- taking into account bounds of all meshes of multipart mesh when positioning camera
-- Ctrl+X in a viewer will export all objects which are currently shown on the scene
+- multipart mesh support improvements:
+  - highlighting current mesh in a viewer in multipart mesh rendering mode
+  - taking into account bounds of all meshes of multipart mesh when positioning camera
+  - Ctrl+X in a viewer will export all objects which are currently shown on the scene
 
 08.11.2011
 - animation system were rewritten
   - implemented support for UE3 rotation-only tracks
   - removed export into psax format - now everything is saved into psa format, additional
-    atttributes are stored in the text configuration file near the psa file
-- improved positioning of the mesh in viewer
+    attributes are stored in the text configuration file near the psa file
+- improved positioning of the mesh in a viewer
 
 06.11.2011
 - major rewritting of the StaticMesh subsystem
@@ -359,7 +425,7 @@ Changes
 - updated Nurien support
 
 13.05.2011
-- software skinning code were remade using SSE instructions, works 4 times faster now
+- software skinning code were remade with use of SSE instructions, now works 4 times faster
 
 07.05.2011
 - implemented Medal of Honor: Airborne StaticMesh support
@@ -475,19 +541,19 @@ Changes
 - implemented support for Splinter Cell 3 and 4 packages (requires "-game=scell")
 
 14.12.2010
-- implemented support for Turok animations and StaticMesh
+- implemented support for Turok StaticMesh and animation
 
 13.12.2010
 - optimized PVRTC decompression code - works 3.5 times faster
 - implemented UE3/iOS material specularity
 
 12.12.2010
-- implemented iOS (iPhone/iPad) texture support, activated with "-ios" switch
+- implemented iOS (iPhone/iPad) texture support, activated with "-ios" option
 
 09.12.2010
 - updated support for recent versions of the XBox360 UE3
 - updated TERA: The Exiled Realm of Arborea support
-- "-noxbox" has been replaced with "-ps3" switch
+- "-noxbox" option has been replaced with "-ps3" switch
 
 29.11.2010
 - implemented support for the recent UE3 animations (September 2010+ UDK)
@@ -526,7 +592,8 @@ Changes
 
 03.10.2010
 - improved XBox360 Bioshock support:
-  - disabled Havok parsing for XBox360 version of Bioshock (prevent umodel from crash)
+  - disabled parsing of Havok data for XBox360 version of Bioshock (prevents umodel
+    from crash)
   - implemented support for XBox360 version of Bioshock textures
 
 01.10.2010
@@ -544,13 +611,12 @@ Changes
 27.07.2010
 - implemented game autodetection override with "-game=tag" switch, list of possible
   game tags can be obtained with "-taglist" option
-- implemented SWAT 4 support (use "-game=swat4")
+- implemented SWAT 4 support (requires "-game=swat4" option)
 
 
 23.07.2010
 - implemented pskx/psax mesh and animation export - activated by "-pskx" command
-  line switch; pskx and psax formats are supported by ActorX Importer 1.10 and
-  higher
+  line switch; pskx and psax formats are supported by ActorX Importer 1.10 and newer
 
 14.07.2010
 - skeletal mesh LODs will have reduced skeleton (removing unused bones)
@@ -817,8 +883,8 @@ Changes
 
 25.05.2009
 - exporter improvements
-  - correct exporting skeletal meshes with unregistered materials (both psk and md5mesh)
-  - correct handling of duplicate skeletal mesh bone names (md5mesh only)
+  - correct exporting of skeletal meshes with unregistered materials (both psk and md5mesh)
+  - correct handling of duplicates of skeletal mesh bone names (md5mesh only)
   - when exporting 2 objects with the same name index suffix (_2, _3 etc) will be appended
     to the filename
 

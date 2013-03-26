@@ -34,6 +34,8 @@
 #define SWAT4			1
 #define RAGNAROK2		1
 #define EXTEEL			1
+#define AA2				1		// America's Army 2
+#define VANGUARD		1		// Vanguard: Saga of Heroes
 #define LEAD			1		// UbiSoft LEAD Engine (Splinter Cell: Conviction)
 
 // UE2X
@@ -43,6 +45,7 @@
 // requires UNREAL3
 #define XBOX360			1		// XBox360 support
 #define IPHONE			1		// iPhone/iPad support
+#define ANDROID			1		// Android support
 
 #define ENDWAR			1		// EndWar
 #define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
@@ -62,6 +65,7 @@
 #define FRONTLINES		1		// Frontlines: Fuel of War and Homefront
 #define BLOODONSAND		1		// 50 Cent: Blood on the Sand
 #define BORDERLANDS		1		// Borderlands, Brothers in Arms: Hell's Highway
+#define ALIENS_CM		1		// Aliens: Colonial Marines
 #define DARKVOID		1		// Dark Void
 #define HUXLEY			1
 #define AA3				1		// America's Army 3
@@ -91,7 +95,11 @@
 #define TAO_YUAN		1
 #define TRIBES4			1		// Tribes: Ascend
 #define DISHONORED		1
-//#define HAVKEN			1
+#define FABLE			1		// Fable: The Journey
+#define DMC				1		// DmC: Devil May Cry
+#define HAWKEN			1
+#define STORMWAR		1		// Storm Warriors Online
+#define PLA				1		// Passion Leads Army
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

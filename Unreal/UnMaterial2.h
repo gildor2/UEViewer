@@ -478,6 +478,27 @@ public:
 			if (Format == 14) Format = TEXF_CxV8U8;		//?? not verified
 		}
 #endif // SWRC
+#if VANGUARD
+		if (Ar.Game == GAME_Vanguard && Ar.ArVer >= 128 && Ar.ArLicenseeVer >= 25)
+		{
+			// has some table for fast mipmap lookups
+			Ar.Seek(Ar.Tell() + 142);	// skip that table
+			// serialize mips using AR_INDEX count (this game uses int for array counts in all other places)
+			int Count;
+			Ar << AR_INDEX(Count);
+			Mips.Add(Count);
+			for (int i = 0; i < Count; i++)
+				Ar << Mips[i];
+			return;
+		}
+#endif // VANGUARD
+#if AA2
+		if (Ar.Game == GAME_AA2 && Ar.ArLicenseeVer >= 8)
+		{
+			int unk;		// always 10619
+			Ar << unk;
+		}
+#endif // AA2
 		Ar << Mips;
 		if (Ar.Engine() == GAME_UE1)
 		{
@@ -541,6 +562,11 @@ public:
 		PROP_BOOL(bHasComp)
 #if XIII
 		PROP_DROP(HitSound)
+#endif
+#if SPLINTER_CELL
+		PROP_DROP(bFullLoaded)
+		PROP_DROP(iCachedLODLevel)
+		PROP_DROP(TexVerNumber)
 #endif
 #if BIOSHOCK
 		PROP_BOOL(HasBeenStripped)
@@ -1249,6 +1275,96 @@ public:
 #endif // BIOSHOCK
 
 
+#if SPLINTER_CELL
+
+enum U3BlendingMode
+{
+	U3BM_OPAQUE,
+	U3BM_TRANSLUCENT,
+	U3BM_TRANSLUCENT_NO_DISTORTION,
+	U3BM_ADDITIVE,
+	U3BM_MASKED
+};
+
+class UUnreal3Material : public URenderedMaterial
+{
+	DECLARE_CLASS(UUnreal3Material, URenderedMaterial);
+public:
+	union
+	{
+		// used in in property serialization
+		struct
+		{
+			UTexture	*Texture0, *Texture1, *Texture2, *Texture3, *Texture4, *Texture5, *Texture6, *Texture7;
+			UTexture	*Texture8, *Texture9, *Texture10, *Texture11, *Texture12, *Texture13, *Texture14, *Texture15;
+		};
+		// used in our framework
+		UTexture	*Textures[16];
+	};
+	U3BlendingMode	BlendingMode;
+	bool			bDoubleSided;
+	bool			bHasEmissive;
+	bool			bForceNoZWrite;
+
+	BEGIN_PROP_TABLE
+		PROP_ENUM2(BlendingMode, U3BlendingMode)
+		PROP_BOOL(bDoubleSided)
+		PROP_BOOL(bHasEmissive)
+		PROP_BOOL(bForceNoZWrite)
+		PROP_OBJ(Texture0) PROP_OBJ(Texture1) PROP_OBJ(Texture2) PROP_OBJ(Texture3)
+		PROP_OBJ(Texture4) PROP_OBJ(Texture5) PROP_OBJ(Texture6) PROP_OBJ(Texture7)
+		PROP_OBJ(Texture8) PROP_OBJ(Texture9) PROP_OBJ(Texture10) PROP_OBJ(Texture11)
+		PROP_OBJ(Texture12) PROP_OBJ(Texture13) PROP_OBJ(Texture14) PROP_OBJ(Texture15)
+	END_PROP_TABLE
+
+#if RENDERING
+	virtual void SetupGL();
+	virtual bool IsTranslucent() const;
+	virtual void GetParams(CMaterialParams &Params) const;
+#endif
+};
+
+
+enum SpecSrc
+{
+	SpecSrc_SRed,
+	SpecSrc_SGreen,
+	SpecSrc_SBlue,
+	SpecSrc_NAlpha,
+};
+
+class USCX_basic_material : public URenderedMaterial
+{
+	DECLARE_CLASS(USCX_basic_material, URenderedMaterial);
+public:
+	UTexture		*Base;
+	UTexture		*Normal;
+	UTexture		*SpecularMask;
+	UTexture		*Environment;		//!! UCubemap
+	UTexture		*HeightMap;
+	UTexture		*HDRMask;
+	SpecSrc			SpecularSource;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Base)
+		PROP_OBJ(Normal)
+		PROP_OBJ(SpecularMask)
+		PROP_OBJ(Environment)
+		PROP_OBJ(HeightMap)
+		PROP_OBJ(HDRMask)
+		PROP_ENUM2(SpecularSource, SpecSrc)
+	END_PROP_TABLE
+
+#if RENDERING
+	virtual void SetupGL();
+	virtual bool IsTranslucent() const;
+	virtual void GetParams(CMaterialParams &Params) const;
+#endif
+};
+
+#endif // SPLINTER_CELL
+
+
 #define REGISTER_MATERIAL_CLASSES		\
 	REGISTER_CLASS(UConstantColor)		\
 	REGISTER_CLASS(UBitmapMaterial)		\
@@ -1266,6 +1382,10 @@ public:
 #define REGISTER_MATERIAL_CLASSES_BIO	\
 	REGISTER_CLASS(FMaskMaterial)		\
 	REGISTER_CLASS(UFacingShader)
+
+#define REGISTER_MATERIAL_CLASSES_SCELL	\
+	REGISTER_CLASS(UUnreal3Material)	\
+	REGISTER_CLASS(USCX_basic_material)
 
 #define REGISTER_MATERIAL_ENUMS			\
 	REGISTER_ENUM(ETextureFormat)		\

@@ -1721,7 +1721,7 @@ rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
 	label     Lbl1 "Version 1.26"
-	label     Lbl2 "\xA9 2009-2012 Konstantin Nosov (Gildor)"
+	label     Lbl2 "\xA9 2009-2013 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black

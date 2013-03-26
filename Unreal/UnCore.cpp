@@ -113,6 +113,9 @@ static const char *PackageExtensions[] =
 #if BIOSHOCK
 	"bsm",
 #endif
+#if VANGUARD
+	"uea", "uem",
+#endif
 #if LEAD
 	"ass", "umd",
 #endif
@@ -148,6 +151,7 @@ static const char *PackageExtensions[] =
 };
 
 #if UNREAL3 || UC2
+#define HAS_SUPORT_FILES 1
 // secondary (non-package) files
 static const char *KnownExtensions[] =
 {
@@ -166,6 +170,18 @@ static const char *KnownExtensions[] =
 };
 #endif
 
+// By default umodel extracts data to the current directory. Working with a huge amount of files
+// could result to get "too much unknown files" error. We can ignore types of files which are
+// extracted by umodel to reduce chance to get such error.
+static const char *SkipExtensions[] =
+{
+	"tga", "dds", "bmp", "mat",				// textures, materials
+	"psk", "pskx", "psa", "config",			// meshes, animations
+	"ogg", "wav", "fsb", "xma", "unk",		// sounds
+	"gfx", "fxa",							// 3rd party
+	"md5mesh", "md5anim",					// md5 mesh
+	"uc", "3d",								// vertex mesh
+};
 
 static bool FindExtension(const char *Filename, const char **Extensions, int NumExtensions)
 {
@@ -192,21 +208,27 @@ static bool RegisterGameFile(const char *FullName)
 	if (NumGameFiles >= ARRAY_COUNT(GameFiles))
 		return false;
 
-	bool IsPackage = false;
-	if (!FindExtension(FullName, ARRAY_ARG(PackageExtensions)))
+	bool IsPackage;
+	if (FindExtension(FullName, ARRAY_ARG(PackageExtensions)))
 	{
-#if UNREAL3 || UC2
+		IsPackage = true;
+	}
+	else
+	{
+#if HAS_SUPORT_FILES
 		if (!FindExtension(FullName, ARRAY_ARG(KnownExtensions)))
 #endif
 		{
+			// perhaps this file was exported by our tool - skip it
+			if (FindExtension(FullName, ARRAY_ARG(SkipExtensions)))
+				return true;
 			// unknown file type
 			if (++NumForeignFiles >= MAX_FOREIGN_FILES)
 				appError("Too much unknown files - bad root directory?");
 			return true;
 		}
+		IsPackage = false;
 	}
-	else
-		IsPackage = true;
 
 	// create entry
 	CGameFileInfo *info = new CGameFileInfo;
@@ -343,6 +365,7 @@ void appSetRootDirectory2(const char *filename)
 	strcpy(buf2, buf);
 	// analyze path
 	bool detected = false;
+	const char *pCooked = NULL;
 	for (int i = 0; i < 8; i++)
 	{
 		// find deepest directory name
@@ -359,7 +382,8 @@ void appSetRootDirectory2(const char *filename)
 				}
 		}
 		if (detected) break;
-		if (appStristr(s, "Cooked") || appStristr(s, "Content"))
+		pCooked = appStristr(s, "Cooked");
+		if (pCooked || appStristr(s, "Content"))
 		{
 			s[-1] = '/';	// put it back
 			detected = true;
@@ -367,7 +391,33 @@ void appSetRootDirectory2(const char *filename)
 		}
 	}
 	const char *root = (detected) ? buf : buf2;
-	appPrintf("Detected game root %s%s\n", root, (detected == false) ? " (no recurse)" : "");
+	appPrintf("Detected game root %s%s", root, (detected == false) ? " (no recurse)" : "");
+	// detect platform
+	if (GForcePlatform == PLATFORM_UNKNOWN && pCooked)
+	{
+		pCooked += 6;	// skip "Cooked" string
+		if (!strnicmp(pCooked, "PS3", 3))
+			GForcePlatform = PLATFORM_PS3;
+		else if (!strnicmp(pCooked, "Xenon", 5))
+			GForcePlatform = PLATFORM_XBOX360;
+		else if (!strnicmp(pCooked, "IPhone", 6))
+			GForcePlatform = PLATFORM_IOS;
+		if (GForcePlatform != PLATFORM_UNKNOWN)
+		{
+			static const char *PlatformNames[] =
+			{
+				"",
+				"PC",
+				"XBox360",
+				"PS3",
+				"iPhone",
+			};
+			staticAssert(ARRAY_COUNT(PlatformNames) == PLATFORM_COUNT, Verify_PlatformNames);
+			appPrintf("; platform %s", PlatformNames[GForcePlatform]);
+		}
+	}
+	// scan root directory
+	appPrintf("\n");
 	appSetRootDirectory(root, detected);
 }
 
@@ -520,7 +570,7 @@ void FArray::Empty(int count, int elementSize)
 		DataPtr = appMalloc(count * elementSize);
 		memset(DataPtr, 0, count * elementSize);
 	}
-	unguard;
+	unguardf(("%d x %d", count, elementSize));
 }
 
 
@@ -606,6 +656,20 @@ void* FArray::GetItem(int index, int elementSize) const
 }
 
 
+static bool GameUsesFCompactIndex(FArchive &Ar)
+{
+#if UC2
+	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) return false;
+#endif
+#if VANGUARD
+	if (Ar.Game == GAME_Vanguard && Ar.ArVer >= 128 && Ar.ArLicenseeVer >= 25) return false;
+#endif
+#if UNREAL3
+	if (Ar.Engine() >= GAME_UE3) return false;
+#endif
+	return true;
+}
+
 FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize)
 {
 	int i = 0;
@@ -620,15 +684,10 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 
 	// serialize data count
 	int Count = DataCount;
-#if UC2
-	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << Count;
-	else
-#endif
-#if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) Ar << Count;
-	else
-#endif
+	if (GameUsesFCompactIndex(Ar))
 		Ar << AR_INDEX(Count);
+	else
+		Ar << Count;
 
 	if (Ar.IsLoading)
 	{
@@ -673,15 +732,10 @@ FArchive& FArray::SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*
 
 	// serialize data count
 	int Count = DataCount;
-#if UC2
-	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << Count;
-	else
-#endif
-#if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) Ar << Count;
-	else
-#endif
+	if (GameUsesFCompactIndex(Ar))
 		Ar << AR_INDEX(Count);
+	else
+		Ar << Count;
 
 	if (Ar.IsLoading)
 	{
@@ -709,15 +763,10 @@ FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 
 	// serialize data count
 	int Count = DataCount;
-#if UC2
-	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << Count;
-	else
-#endif
-#if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) Ar << Count;
-	else
-#endif
+	if (GameUsesFCompactIndex(Ar))
 		Ar << AR_INDEX(Count);
+	else
+		Ar << Count;
 
 	int elementSize = NumFields * FieldSize;
 	if (Ar.IsLoading)
@@ -934,27 +983,32 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		Ar << (TArray<char>&)S;
 		return Ar;
 	}
+
 	// loading
-	int len, i;
-#if UC2
-	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << len;
-	else
-#endif
+
+	// serialize character count
+	int len;
 #if BIOSHOCK
 	if (Ar.Game == GAME_Bioshock)
 	{
-		Ar << AR_INDEX(len);	// Bioshock serialized positive number, but it's string is always unicode
+		Ar << AR_INDEX(len);		// Bioshock serialized positive number, but it's string is always unicode
 		len = -len;
 	}
 	else
 #endif
-#if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) Ar << len;
+#if VANGUARD
+	if (Ar.Game == GAME_Vanguard)	// this game uses int for arrays, but FCompactIndex for strings
+		Ar << AR_INDEX(len);
 	else
 #endif
+	if (GameUsesFCompactIndex(Ar))
 		Ar << AR_INDEX(len);
+	else
+		Ar << len;
+
 	S.Empty((len >= 0) ? len : -len);
 
+	// resialize the string
 	if (!len)
 	{
 		// empty FString
@@ -973,7 +1027,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	else
 	{
 		// UNICODE string
-		for (i = 0; i < -len; i++)
+		for (int i = 0; i < -len; i++)
 		{
 			word c;
 			Ar << c;
@@ -1060,8 +1114,8 @@ void FArchive::DetectGame()
 		SET(GAME_Loco);
 #endif
 #if SPLINTER_CELL
-	if ( (ArVer == 100 && (ArLicenseeVer >= 0x09 && ArLicenseeVer <= 0x11)) ||		// Splinter Cell 1
-		 (ArVer == 102 && (ArLicenseeVer >= 0x14 && ArLicenseeVer <= 0x1C)) )		// Splinter Cell 2
+	if ( (ArVer == 100 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 17)) ||		// Splinter Cell 1
+		 (ArVer == 102 && (ArLicenseeVer >= 29 && ArLicenseeVer <= 28)) )		// Splinter Cell 2
 		SET(GAME_SplinterCell);
 #endif
 #if SWRC
@@ -1183,6 +1237,9 @@ void FArchive::DetectGame()
 #if BULLETSTORM
 	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
 #endif
+#if ALIENS_CM
+	if (ArVer == 787 && ArLicenseeVer == 47)	SET(GAME_AliensCM);
+#endif
 #if DISHONORED
 	if (ArVer == 801 && ArLicenseeVer == 30)	SET(GAME_Dishonored);
 #endif
@@ -1191,6 +1248,12 @@ void FArchive::DetectGame()
 #endif
 #if BATMAN
 	if (ArVer == 805 && ArLicenseeVer == 101)	SET(GAME_Batman2);
+#endif
+#if DMC
+	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);
+#endif
+#if FABLE
+	if (ArVer == 850 && ArLicenseeVer == 1017)	SET(GAME_Fable);
 #endif
 #if SPECIALFORCE2
 	if (ArVer == 904 && (ArLicenseeVer == 9 || ArLicenseeVer == 14)) SET(GAME_SpecialForce2);
@@ -1280,6 +1343,7 @@ void FArchive::DetectGame()
 #define OVERRIDE_TRANSFORMERS3	566			// real version is 846
 #define OVERRIDE_SF2_VER		700
 #define OVERRIDE_SF2_VER2		710
+#define OVERRIDE_GOWJ			828			// real version is 846
 
 void FArchive::OverrideVersion()
 {
@@ -1313,6 +1377,10 @@ void FArchive::OverrideVersion()
 			ArVer = OVERRIDE_SF2_VER;
 	}
 #endif // SPECIALFORCE2
+	if (Game == GAME_GoWJ)
+	{
+		ArVer = OVERRIDE_GOWJ;
+	}
 	if (ArVer != OldVer || ArLicenseeVer != OldLVer)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }

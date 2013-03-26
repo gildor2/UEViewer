@@ -1,4 +1,4 @@
-function filter(phrase, _id) {
+function filter(phrase, _id, _id2) {
 	// split phrase to words
 	var hasFilter = (phrase.value != "");
 	var words = phrase.value.toLowerCase().split(" ");
@@ -12,7 +12,8 @@ function filter(phrase, _id) {
 	// get table
 	var table = document.getElementById(_id);
 	// iterate all rows starting from 1 (keep table header)
-	var lastInfo = -1;
+	var lastInfo = -1;	// current info line
+	var count = 0;		// number of games found
 	for (var r = 1; r < table.rows.length; r++) {
 		var text = table.rows[r].innerHTML;
 		// search for special tags
@@ -23,7 +24,7 @@ function filter(phrase, _id) {
 		// remove HTML tags, special spaces and newlines
 		text = text.replace(/(<[^>]+>|&nbsp;|\r|\n)/g," ");
 		// squeeze spaces
-		text = text.replace(/\s+/g, " ");
+		text = text.replace(/\s+/g, " ").toLowerCase();
 		var hide = false;
 		if (text.match(/^\s+$/)) {
 			// empty line - keep when no active filter only
@@ -47,12 +48,13 @@ function filter(phrase, _id) {
 //			DEBUG("[" + text + "] -- other info");
 		} else {
 //			DEBUG("["+text+"]... GAME");
-			// game
+			// it's a game
 			for (var i = 0; i < words.length; i++) {
-				if (text.toLowerCase().indexOf(words[i]) >= 0) {
+				if (text.indexOf(words[i]) >= 0) {
 ///				if (reg.test(text)) {
 //					DEBUG("... matched " + text);
 					hide = false;
+					count++;
 				} else {
 					hide = true;
 					break;
@@ -70,5 +72,12 @@ function filter(phrase, _id) {
 	if (lastInfo >= 0 && hasFilter) {
 //		DEBUG("remove row " + lastInfo + "(" + table.rows[lastInfo].innerHTML + ")");
 		table.rows[lastInfo].style.display = 'none';
+	}
+	// show game count
+	var filter_info = document.getElementById(_id2);
+	if (hasFilter) {
+		filter_info.innerText = count + ' game(s)';
+	} else {
+		filter_info.innerText = '';
 	}
 }

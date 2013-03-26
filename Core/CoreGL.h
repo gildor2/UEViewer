@@ -56,6 +56,11 @@ extern bool GUseGLSL;
 void GL_CheckGLSL();
 void GL_CheckError(const char *msg = NULL);
 
+inline void GL_ResetError()
+{
+	glGetError();
+}
+
 
 /*-----------------------------------------------------------------------------
 	Timestamp

@@ -677,7 +677,7 @@ void UAnimSet::ConvertAnims()
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
 #if BORDERLANDS
-					if (Package->Game == GAME_Borderlands)	// Borderlands 2
+					if (Package->Game == GAME_Borderlands || Package->Game == GAME_AliensCM)	// Borderlands 2
 					{
 						// this game has more different key formats; each described by number. which
 						// could differ from numbers in UnMesh3.h; so, transcode format

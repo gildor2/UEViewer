@@ -87,6 +87,54 @@ public:
 	Blade & Soul
 -----------------------------------------------------------------------------*/
 
+#if AA2
+
+class FFileReaderAA2 : public FReaderWrapper
+{
+public:
+	FFileReaderAA2(FArchive *File)
+	:	FReaderWrapper(File)
+	{}
+
+	virtual void Serialize(void *data, int size)
+	{
+		int StartPos = Reader->Tell();
+		Reader->Serialize(data, size);
+
+		int i;
+		byte *p;
+		for (i = 0, p = (byte*)data; i < size; i++, p++)
+		{
+			byte b = *p;
+		#if 0
+			// used with ArraysAGPCount != 0
+			int shift;
+			byte v;
+			for (shift = 1, v = b & (b - 1); v; v = v & (v - 1))	// shift = number of identity bits in 'v' (but b=0 -> shift=1)
+				shift++;
+			b = ROR8(b, shift);
+		#else
+			// used with ArraysAGPCount == 0
+			int PosXor = StartPos + i;
+			PosXor = (PosXor >> 8) ^ PosXor;
+			b ^= (PosXor & 0xFF);
+			if (PosXor & 2)
+			{
+				b = ROL8(b, 1);
+			}
+		#endif
+			*p = b;
+		}
+	}
+};
+
+#endif // AA2
+
+
+/*-----------------------------------------------------------------------------
+	Blade & Soul
+-----------------------------------------------------------------------------*/
+
 #if BLADENSOUL
 
 class FFileReaderBnS : public FReaderWrapper
@@ -554,6 +602,19 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	}
 #endif // BIOSHOCK
 
+#if AA2
+	if (Game == GAME_AA2)
+	{
+		// America's Army 2 has encryption after FPackageFileSummary
+		if (ArLicenseeVer >= 19)
+		{
+			int IsEncrypted;
+			*this << IsEncrypted;
+			if (IsEncrypted) Loader = new FFileReaderAA2(Loader);
+		}
+	}
+#endif // AA2
+
 #if UNREAL3
 	if (Game >= GAME_UE3 && Summary.CompressionFlags)
 	{
@@ -635,6 +696,32 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					goto done;
 				}
 #endif // LEAD
+	#if AA2
+				if (Game == GAME_AA2)
+				{
+					guard(AA2_FName);
+					int len;
+					*this << AR_INDEX(len);
+					// read as unicode string and decrypt
+					assert(len <= 0);
+					len = -len;
+					char *d = NameTable[i] = new char[len];
+					byte shift = 5;
+					for (int j = 0; j < len; j++, d++)
+					{
+						word c;
+						*this << c;
+						word c2 = ROR16(c, shift);
+						assert(c2 < 256);
+						*d = c2 & 0xFF;
+						shift = (c - 5) & 15;
+					}
+					int unk;
+					*this << AR_INDEX(unk);
+					unguard;
+					goto dword_flags;
+				}
+	#endif // AA2
 #if DCU_ONLINE
 				if (Game == GAME_DCUniverse)		// no version checking
 				{
@@ -982,7 +1069,8 @@ UObject* UnPackage::CreateImport(int index)
 {
 	guard(UnPackage::CreateImport);
 
-	const FObjectImport &Imp = GetImport(index);
+	FObjectImport &Imp = GetImport(index);
+	if (Imp.Missing) return NULL;	// error message already displayed for this entry
 
 	// load package
 	const char *PackageName = GetObjectPackageName(Imp.PackageIndex);
@@ -996,6 +1084,7 @@ UObject* UnPackage::CreateImport(int index)
 		if (ObjIndex == INDEX_NONE)
 		{
 			appPrintf("WARNING: Import(%s) was not found in package %s\n", *Imp.ObjectName, PackageName);
+			Imp.Missing = true;
 			return NULL;
 		}
 	}
@@ -1025,6 +1114,7 @@ UObject* UnPackage::CreateImport(int index)
 		if (ObjIndex == INDEX_NONE)
 		{
 			appPrintf("WARNING: Import(%s.%s) was not found\n", PackageName, *Imp.ObjectName);
+			Imp.Missing = true;
 			return NULL;
 		}
 	}
@@ -1034,7 +1124,8 @@ UObject* UnPackage::CreateImport(int index)
 
 	if (!Package)
 	{
-		appPrintf("WARNING: Import(%s): package %s was not found\n", *Imp.ObjectName, PackageName);
+		appPrintf("WARNING: Import(%s'%s'): package %s was not found\n", *Imp.ClassName, *Imp.ObjectName, PackageName);
+		Imp.Missing = true;
 		return NULL;
 	}
 

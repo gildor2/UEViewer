@@ -221,6 +221,8 @@ enum EGame
 		GAME_BattleTerr,
 		GAME_UC1,				// note: not UE2X
 		GAME_XIII,
+		GAME_Vanguard,
+		GAME_AA2,
 
 	GAME_VENGEANCE = 0x2100,	// variant of UE2
 		GAME_Tribes3,
@@ -281,7 +283,12 @@ enum EGame
 		GAME_TaoYuan,
 		GAME_Tribes4,
 		GAME_Dishonored,
-		GAME_Havken,
+		GAME_Hawken,
+		GAME_Fable,
+		GAME_DmC,
+		GAME_PLA,
+		GAME_AliensCM,
+		GAME_GoWJ,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -300,6 +307,8 @@ enum EPlatform
 	PLATFORM_XBOX360,
 	PLATFORM_PS3,
 	PLATFORM_IOS,
+
+	PLATFORM_COUNT,
 };
 
 
@@ -699,21 +708,21 @@ protected:
 	Ar.Seek(Ar.GetStopper());
 
 // research helper
-#define DUMP_ARC_BYTES(Ar, NumBytes)					\
-	{													\
-		int OldPos = Ar.Tell();							\
-		for (int i = 0; i < NumBytes; i++)				\
-		{												\
-			if (Ar.IsStopper() || Ar.IsEof()) break;	\
-			if (!(i & 31)) appPrintf("\n%06X :", OldPos+i);	\
-			if (!(i & 3)) appPrintf(" ");				\
-			byte b;										\
-			Ar << b;									\
-			appPrintf(" %02X", b);						\
-		}												\
-		appPrintf("\n");								\
-		Ar.Seek(OldPos);								\
+inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes)
+{
+	int OldPos = Ar.Tell();
+	for (int i = 0; i < NumBytes; i++)
+	{
+		if (Ar.IsStopper() || Ar.IsEof()) break;
+		if (!(i & 31)) appPrintf("\n%06X :", OldPos+i);
+		if (!(i & 3)) appPrintf(" ");
+		byte b;
+		Ar << b;
+		appPrintf(" %02X", b);
 	}
+	appPrintf("\n");
+	Ar.Seek(OldPos);
+}
 
 
 // Reverse byte order for data array, inplace
@@ -1518,8 +1527,8 @@ struct FCompressedChunkHeader
 #if BERKANIX
 		else if (Ar.Game == GAME_Berkanix && H.Tag == 0xF2BAC156) goto tag_ok;
 #endif
-#if HAVKEN
-		else if (Ar.Game == GAME_Havken && H.Tag == 0xEA31928C) goto tag_ok;
+#if HAWKEN
+		else if (Ar.Game == GAME_Hawken && H.Tag == 0xEA31928C) goto tag_ok;
 #endif
 		else
 			assert(H.Tag == PACKAGE_FILE_TAG);

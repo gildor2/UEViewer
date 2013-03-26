@@ -160,16 +160,21 @@ struct FSkelMeshSection3
 	}
 };
 
+// This class is used now for UStaticMesh only
 struct FIndexBuffer3
 {
 	TArray<word>		Indices;
 
 	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
 	{
+		guard(FIndexBuffer3<<);
+
 		int unk;						// Revision?
 		Ar << RAW_ARRAY(I.Indices);
 		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
 		return Ar;
+
+		unguard;
 	}
 };
 
@@ -202,6 +207,13 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 			int		f0;
 			Ar << f0 << ItemSize;
 		}
+#if PLA
+		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+		{
+			FGuid unk;
+			Ar << unk;
+		}
+#endif // PLA
 		if (ItemSize == 2)
 			Ar << RAW_ARRAY(I.Indices16);
 		else if (ItemSize == 4)
@@ -749,6 +761,14 @@ struct FGPUSkin3
 		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) S.NumUVSets = GNumGPUUVSets = 4;
 	#endif
 
+	#if PLA
+		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+		{
+			FGuid unk;
+			Ar << unk;
+		}
+	#endif // PLA
+
 	serialize_verts:
 		// serialize vertex array
 		if (!S.bUseFullPrecisionUVs)
@@ -1029,6 +1049,10 @@ struct FStaticLODModel3
 		}
 #endif // STRANGLE
 
+#if DMC
+		if (Ar.Game == GAME_DmC && Ar.ArLicenseeVer >= 3) goto word_f24;
+#endif
+
 	part2:
 		if (Ar.ArVer >= 207)
 		{
@@ -1036,6 +1060,7 @@ struct FStaticLODModel3
 		}
 		else
 		{
+		word_f24:
 			TArray<short> f24_a;
 			Ar << f24_a;
 		}
@@ -1385,6 +1410,13 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		goto material_bones;
 	}
 #endif // MKVSDC
+#if ALIENS_CM
+	if (Ar.Game == GAME_AliensCM && Ar.ArVer >= 21)	// && Ar.ExtraVer >= 1
+	{
+		TArray<UObject*> unk;
+		Ar << unk;
+	}
+#endif // ALIENS_CM
 	Ar << MeshOrigin << RotOrigin;
 #if DISHONORED
 	if (Ar.Game == GAME_Dishonored && Ar.ArVer >= 775)
@@ -1821,6 +1853,13 @@ struct FStaticMeshSection3
 			return Ar;
 		}
 #endif // TRANSFORMERS
+#if FABLE
+		if (Ar.Game == GAME_Fable && Ar.ArLicenseeVer >= 1007)
+		{
+			int unk40;
+			Ar << unk40;
+		}
+#endif // FABLE
 		if (Ar.ArVer >= 514) Ar << S.f30;
 #if ALPHA_PR
 		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 39)
@@ -1930,6 +1969,13 @@ struct FStaticMeshVertexStream3
 			Ar << unk28;
 		}
 #endif // MASSEFF
+#if PLA
+		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+		{
+			FGuid unk;
+			Ar << unk;
+		}
+#endif // PLA
 #if DEBUG_STATICMESH
 		appPrintf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
 #endif
@@ -2113,6 +2159,13 @@ struct FStaticMeshUVStream3
 			Ar << unk30;
 		}
 #endif // SHADOWS_DAMNED
+#if PLA
+		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+		{
+			FGuid unk;
+			Ar << unk;
+		}
+#endif // PLA
 		// prepare for UV serialization
 		if (S.NumTexCoords > NUM_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", S.NumTexCoords);
@@ -2134,7 +2187,11 @@ struct FStaticMeshColorStream3
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshColorStream3 &S)
 	{
 		guard(FStaticMeshColorStream3<<);
-		return Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Colors);
+		Ar << S.ItemSize << S.NumVerts;
+#if DEBUG_STATICMESH
+		appPrintf("StaticMesh ColorStream: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
+#endif
+		return Ar << RAW_ARRAY(S.Colors);
 		unguard;
 	}
 };
@@ -2150,7 +2207,20 @@ struct FStaticMeshColorStream3New		// ArVer >= 615
 	{
 		guard(FStaticMeshColorStream3New<<);
 		Ar << S.ItemSize << S.NumVerts;
-		if (S.NumVerts) Ar << RAW_ARRAY(S.Colors);
+#if DEBUG_STATICMESH
+		appPrintf("StaticMesh ColorStreamNew: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
+#endif
+		if (S.NumVerts)
+		{
+#if PLA
+			if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+			{
+				FGuid unk;
+				Ar << unk;
+			}
+#endif // PLA
+			Ar << RAW_ARRAY(S.Colors);
+		}
 		return Ar;
 		unguard;
 	}
@@ -2449,6 +2519,9 @@ struct FStaticMeshLODModel
 			}
 		}
 	indices:
+#if DEBUG_STATICMESH
+		appPrintf("Serializing indices ...\n");
+#endif
 #if BATMAN
 		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 45)
 		{
@@ -2456,6 +2529,13 @@ struct FStaticMeshLODModel
 			Ar << unk34;
 		}
 #endif // BATMAN
+#if PLA
+		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+		{
+			FGuid unk;
+			Ar << unk;
+		}
+#endif // PLA
 		Ar << Lod.Indices;
 #if ENDWAR
 		if (Ar.Game == GAME_EndWar) goto after_indices;	// single Indices buffer since version 262
@@ -2516,6 +2596,13 @@ struct FStaticMeshLODModel
 		if (Ar.ArVer >= 841)
 		{
 			FIndexBuffer3 Indices3;
+#if PLA
+			if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+			{
+				FGuid unk;
+				Ar << unk;
+			}
+#endif // PLA
 			Ar << Indices3;
 			if (Indices3.Indices.Num())
 				appPrintf("LOD has extra index buffer (%d items)\n", Indices3.Indices.Num());
