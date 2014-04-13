@@ -1,5 +1,5 @@
 #define DO_GUARD		1
-//#define DO_GUARD_MAX	1
+//#define MAX_DEBUG		1		// Maximal debugging level
 #define RENDERING		1
 #define PROFILE			1
 #define DECLARE_VIEWER_PROPS	1
@@ -95,17 +95,23 @@
 #define TAO_YUAN		1
 #define TRIBES4			1		// Tribes: Ascend
 #define DISHONORED		1
-#define FABLE			1		// Fable: The Journey
+#define FABLE			1		// Fable: The Journey, Fable Anniversary
 #define DMC				1		// DmC: Devil May Cry
 #define HAWKEN			1
 #define STORMWAR		1		// Storm Warriors Online
 #define PLA				1		// Passion Leads Army
+#define BIOSHOCK3		1		// Bioshock Infinite
+#define REMEMBER_ME		1
+#define MARVEL_HEROES	1
+#define LOST_PLANET3	1
+#define XCOM_BUREAU		1		// The Bureau: XCOM Declassified
+#define THIEF4			1		// Thief
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??
 #define A51				1		// Blacksite: Area 51
 #define WHEELMAN		1		//?? incomplete
-#define MKVSDC			1		// Mortal Kombat vs. DC Universe, Mortal Kombat
+#define MKVSDC			1		// Mortal Kombat vs. DC Universe, Mortal Kombat, Injustice: Gods Among Us
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
 

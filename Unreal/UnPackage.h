@@ -218,6 +218,13 @@ struct FPackageFileSummary
 			Ar << unk8;								// always 0?
 		}
 #endif
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3 && Ar.ArLicenseeVer >= 66)
+		{
+			int unkC;
+			Ar << unkC;
+		}
+#endif
 #if UNREAL3
 //		if (Ar.ArVer >= PACKAGE_V3)
 //		{
@@ -226,11 +233,12 @@ struct FPackageFileSummary
 			else
 				S.HeadersSize = 0;
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
-	#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT				//?? special define ?
+	#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT		//?? special define ?
 			int midwayVer = 0;
 			if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 2)	//?? Wheelman not checked
 			{
-				int Tag;							// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC" or "TNA "
+				// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC", "TNA ", "KORE"
+				int Tag;
 				int unk10;
 				Ar << Tag << midwayVer;
 				if (Ar.Game == GAME_Strangle && midwayVer >= 256)
@@ -290,14 +298,21 @@ struct FPackageFileSummary
 	#if MKVSDC
 		if (Ar.Game == GAME_MK)
 		{
-			int unk3C, unk40;
+			int unk3C, unk40, unk54;
+			int unk30, unk44, unk48, unk4C;
+			if (Ar.ArVer >= 524)		// Injustice
+				Ar << unk3C;
 			if (midwayVer >= 16)
 				Ar << unk3C;
 			if (Ar.ArVer >= 391)
 				Ar << unk40;
+			if (Ar.ArVer >= 482)		// Injustice
+				Ar << unk44 << unk48 << unk4C;
+			if (Ar.ArVer >= 484)		// Injustice
+				Ar << unk54;
 			if (Ar.ArVer >= 472)
 			{
-				// Mortal Kombat:
+				// Mortal Kombat, Injustice:
 				// - no DependsOffset
 				// - no generations (since version 446)
 				Ar << S.Guid;
@@ -326,6 +341,9 @@ struct FPackageFileSummary
 	#endif
 		if (Ar.ArVer >= 415) // PACKAGE_V3
 			Ar << S.DependsOffset;
+	#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3) goto read_unk38;
+	#endif
 		if (Ar.ArVer >= 623)
 			Ar << S.f38 << S.f3C << S.f40;
 #endif // UNREAL3
@@ -514,7 +532,14 @@ struct FObjectExport
 			Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
 			if (Ar.ArVer >= 220) Ar << E.Archetype;
 #	if BATMAN
-			if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 89)
+			if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 89)
+			{
+				int unk18;
+				Ar << unk18;
+			}
+#	endif
+#	if MKVSDC
+			if (Ar.Game == GAME_MK && Ar.ArVer >= 573)	// Injustice, version unknown
 			{
 				int unk18;
 				Ar << unk18;
@@ -538,7 +563,14 @@ struct FObjectExport
 #	if TRANSFORMERS
 			if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 37) goto ue3_export_flags;	// no ComponentMap
 #	endif
-			if (Ar.ArVer < 543)  Ar << E.ComponentMap;
+#	if MKVSDC
+			if (Ar.Game == GAME_MK && Ar.ArVer >= 573) goto ue3_component_map; // Injustice, version unknown
+#	endif
+			if (Ar.ArVer < 543)
+			{
+			ue3_component_map:
+				Ar << E.ComponentMap;
+			}
 		ue3_export_flags:
 			if (Ar.ArVer >= 247) Ar << E.ExportFlags;
 #	if TRANSFORMERS
@@ -558,6 +590,14 @@ struct FObjectExport
 				return Ar << E.Guid;
 			}
 #	endif // MKVSDC
+#	if BIOSHOCK3
+			if (Ar.Game == GAME_Bioshock3)
+			{
+				int flag;
+				Ar << flag;
+				if (!flag) return Ar;			// stripped some fields
+			}
+#	endif // BIOSHOCK3
 			if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;
 #	if UNDERTOW
 			if (Ar.Game == GAME_Undertow && Ar.ArVer >= 431) Ar << E.U3unk6C;	// partially upgraded?
@@ -578,6 +618,13 @@ struct FObjectExport
 				E.SerialOffset ^= AA3Obfuscator;
 			}
 #	endif // AA3
+#	if THIEF4
+			if (Ar.Game == GAME_Thief4)
+			{
+				int unk5C;
+				if (E.ExportFlags & 8) Ar << unk5C;
+			}
+#	endif // THIEF4
 			return Ar;
 		}
 #endif // UNREAL3

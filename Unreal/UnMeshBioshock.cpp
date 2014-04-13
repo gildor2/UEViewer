@@ -14,7 +14,7 @@
 #define XBOX_HACK	1			// disable XBox360 Havok parsing (endian problems)
 
 /*-----------------------------------------------------------------------------
-	Bioshock Havok structures
+	Bioshock 1 & 2 Havok structures
 	Mostly for Havok-4.1.0-r1
 -----------------------------------------------------------------------------*/
 

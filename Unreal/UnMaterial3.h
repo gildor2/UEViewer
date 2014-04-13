@@ -113,6 +113,9 @@ public:
 #if MASSEFF
 		if (Ar.Game == GAME_MassEffect3) return;
 #endif
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3) return;
+#endif
 		SourceArt.Serialize(Ar);
 #if GUNLEGEND
 		if (Ar.Game == GAME_GunLegend && Ar.ArVer >= 811)
@@ -171,6 +174,9 @@ enum EPixelFormat
 	PF_NormalMap_LQ,
 	PF_NormalMap_HQ,
 #endif
+#if THIEF4
+	PF_BC7,
+#endif
 };
 
 _ENUM(EPixelFormat)
@@ -205,6 +211,9 @@ _ENUM(EPixelFormat)
 #if MASSEFF
 	_E(PF_NormalMap_LQ),
 	_E(PF_NormalMap_HQ),
+#endif
+#if THIEF4
+	_E(PF_BC7),
 #endif
 };
 
@@ -302,6 +311,10 @@ public:
 #if MASSEFF
 		PROP_DROP(TFCFileGuid)
 #endif
+#if BATMAN
+		// Batman 3
+		PROP_DROP(MipTailInfo)
+#endif
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -329,6 +342,14 @@ public:
 		{
 			FByteBulkData CustomMipSourceArt;
 			CustomMipSourceArt.Skip(Ar);
+			if (Ar.ArVer >= 573)		// Injustice, version unknown
+			{
+				int unk1, unk2;
+				TArray<int> unk3;
+				Ar << unk1 << unk2 << unk3;
+			}
+			Ar << Mips;
+			goto skip_rest_quiet;		// Injustice has some extra mipmap arrays
 		}
 #endif // MKVSDC
 		Ar << Mips;
@@ -349,11 +370,21 @@ public:
 #if DCU_ONLINE
 		if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0x1700) return;
 #endif
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3) return;
+#endif
 		if (Ar.ArVer >= 567)
 		{
 		tfc_guid:
 			Ar << TextureFileCacheGuid;
 		}
+#if XCOM_BUREAU
+		if (Ar.Game == GAME_XcomB) return;
+#endif
+		// Extra check for some incorrectly upgrated UE3 versions, in particular for
+		// Dungeons & Dragons: Daggerdale
+		if (Ar.Tell() == Ar.GetStopper()) return;
+
 		if (Ar.ArVer >= 674)
 		{
 			TArray<FTexture2DMipMap> CachedPVRTCMips;
@@ -372,6 +403,9 @@ public:
 			if (CachedATITCMips.Num()) appPrintf("*** %s has %d ATITC mips (%d normal mips)\n", Name, CachedATITCMips.Num(), Mips.Num()); //!!
 		}
 
+#if PLA
+		if (Ar.Game == GAME_PLA) goto skip_rest_quiet;
+#endif
 		if (Ar.ArVer >= 864) Ar << CachedETCMips;
 
 		// some hack to support more games ...
@@ -666,6 +700,30 @@ public:
 	virtual void Serialize(FArchive &Ar)
 	{
 		Super::Serialize(Ar);
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3)
+		{
+			// Bioshock Infinite has different internal material format
+			FGuid unk44;
+			TArray<UTexture2D*> Textures[5];
+			Ar << unk44;
+			for (int i = 0; i < 5; i++)
+			{
+				Ar << Textures[i];
+				if (!ReferencedTextures.Num() && Textures[i].Num())
+					CopyArray(ReferencedTextures, Textures[i]);
+	#if 0
+				appPrintf("Arr[%d]\n", i);
+				for (int j = 0; j < Textures[i].Num(); j++)
+				{
+					UObject *obj = Textures[i][j];
+					appPrintf("... %d: %s %s\n", j, obj ? obj->GetClassName() : "??", obj ? obj->Name : "??");
+				}
+	#endif
+			}
+			return;
+		}
+#endif // BIOSHOCK3
 		if (Ar.ArVer >= 858)
 		{
 			int unkMask;		// default 1

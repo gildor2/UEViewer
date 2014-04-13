@@ -129,7 +129,7 @@ struct FMeshBone
 			return Ar << B.Name << B.Flags << B.BonePos << B.ParentIndex;	// no NumChildren
 #endif // XIII
 #if BATMAN
-		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 31)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 31)
 		{
 			Ar << B.BonePos << B.Name << B.ParentIndex;						// no Flags and NumChildren fields
 			goto ue3_unk;

@@ -486,6 +486,8 @@ void VertexAttrib3fv(GLuint index, const GLfloat *v);
 //void VertexAttrib4usv(GLuint, const GLushort *);
 void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer) ARGS
 
+#name 3.1
+
 //-----------------------------------------------------------------------------
 //  Extensions
 //-----------------------------------------------------------------------------
@@ -512,6 +514,11 @@ void FramebufferRenderbufferEXT(GLenum target, GLenum attachment, GLenum renderb
 void GenerateMipmapEXT(GLenum target) ARGS
 
 #name GL_ARB_texture_float
+
+#name GL_ARB_texture_compression_rgtc
+#alias GL_EXT_texture_compression_rgtc
+
+#name GL_ARB_texture_compression_bptc
 
 #platform win32
 #platform linux

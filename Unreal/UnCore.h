@@ -166,7 +166,7 @@ public:
 		return *this;
 	}
 
-	inline bool operator==(FName& Other) const
+	inline bool operator==(const FName& Other) const
 	{
 		return (Str == Other.Str) || (stricmp(Str, Other.Str) == 0);
 	}
@@ -254,6 +254,7 @@ enum EGame
 		GAME_Frontlines,
 		GAME_Batman,
 		GAME_Batman2,
+		GAME_Batman3,
 		GAME_Borderlands,
 		GAME_AA3,
 		GAME_DarkVoid,
@@ -289,6 +290,12 @@ enum EGame
 		GAME_PLA,
 		GAME_AliensCM,
 		GAME_GoWJ,
+		GAME_Bioshock3,
+		GAME_RememberMe,
+		GAME_MarvelHeroes,
+		GAME_LostPlanet3,
+		GAME_XcomB,
+		GAME_Thief4,
 
 	GAME_MIDWAY3   = 0x8100,	// variant of UE3
 		GAME_A51,
@@ -1042,15 +1049,15 @@ public:
 		MaxCount  = 0;
 	}
 
-	void *GetData()
+	FORCEINLINE void *GetData()
 	{
 		return DataPtr;
 	}
-	const void *GetData() const
+	FORCEINLINE const void *GetData() const
 	{
 		return DataPtr;
 	}
-	int Num() const
+	FORCEINLINE int Num() const
 	{
 		return DataCount;
 	}
@@ -1078,7 +1085,7 @@ protected:
 };
 
 #if DECLARE_VIEWER_PROPS
-#define ARRAY_COUNT_FIELD_OFFSET	( sizeof(void*) )
+#define ARRAY_COUNT_FIELD_OFFSET	( sizeof(void*) )	// offset of DataCount field inside TArray structure
 #endif
 
 
@@ -1105,7 +1112,7 @@ public:
 	// data accessors
 
 #if !DO_ASSERT
-	// version without verifications, compact
+	// version without verifications, very compact
 	FORCEINLINE T& operator[](int index)
 	{
 		return *((T*)DataPtr + index);
@@ -1116,7 +1123,6 @@ public:
 	}
 #elif DO_GUARD_MAX
 	// version with guardfunc instead of guard
-	//?? remove this?
 	T& operator[](int index)
 	{
 		guardfunc;
@@ -1281,6 +1287,10 @@ template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 }
 
 
+// Skip array of items of fixed size
+void SkipFixedArray(FArchive &Ar, int ItemSize);
+
+
 // TLazyArray implemented as simple wrapper around TArray with
 // different serialization function
 // Purpose in UE: array with can me loaded asynchronously (when serializing
@@ -1398,10 +1408,12 @@ template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const 
 {
 	if (IsSameType<T1,T2>::Value && TTypeInfo<T1>::IsPod)
 	{
+		// fast version when copying POD type array
 		Dst.RawCopy(Src, sizeof(T1));
 		return;
 	}
 
+	// copying 2 different types, or non-POD type
 	int Count = Src.Num();
 	Dst.Empty(Count);
 	if (Count)
@@ -1421,6 +1433,7 @@ template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const 
 	TMap template
 -----------------------------------------------------------------------------*/
 
+// Very simple class, required only for serialization
 template<class TK, class TV> struct TMapPair
 {
 	TK		Key;
@@ -1453,8 +1466,11 @@ public:
 	{}
 	FString(const char* src);
 
-	char* Detach();		// use FString as allocated char*, FString became empty
+	// use FString as allocated char*, FString became empty and will not free
+	// detached string in destructor
+	char* Detach();
 
+	// convert string to char* - use "*Str"
 	inline const char *operator*() const
 	{
 		return (char*)DataPtr;
@@ -1488,6 +1504,11 @@ public:
 		}
 #endif // FURY
 		return Ar;
+	}
+
+	FORCEINLINE bool operator==(const FGuid& Other) const
+	{
+		return memcmp(this, &Other, sizeof(FGuid)) == 0;
 	}
 };
 
@@ -1645,6 +1666,9 @@ struct FIntBulkData : public FByteBulkData
 #if BLADENSOUL
 #define COMPRESS_LZO_ENC	8						// encrypted LZO
 #endif
+
+#define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
+
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 

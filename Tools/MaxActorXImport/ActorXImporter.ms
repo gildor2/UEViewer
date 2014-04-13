@@ -10,6 +10,9 @@
 
  Revision History:
 
+	16.12.2013 v1.27
+	- added option "Don't conjugate root bone"
+
 	10.06.2012 v1.26
 	- stability improvements
 	  more info: MaxScript documentation, "Do not use return, break, exit or continue"
@@ -132,7 +135,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 126
+global AX_IMPORTER_VERSION = 127
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -156,6 +159,7 @@ global g_rotP
 global g_rotR
 global g_meshScale
 global g_reorientBones
+global g_dontConjugateRoot
 global Anims
 global MeshBones
 
@@ -185,6 +189,7 @@ fn axDefaultSettings =
 	g_rotR       = 0
 	g_meshScale  = 1.0
 	g_reorientBones = false
+	g_dontConjugateRoot = false
 )
 
 
@@ -262,6 +267,7 @@ fn axSerializeSettings isLoading =
 	axDoSetting "MeshRoll"      "g_rotR"
 	axDoSetting "MeshScale"     "g_meshScale"
 	axDoSetting "ReorientBones" "g_reorientBones"
+	axDoSetting "DontConjRoot"  "g_dontConjugateRoot"
 )
 
 
@@ -960,7 +966,7 @@ fn ImportPskFile filename skelOnly:false =
 		bn = MeshBones[i]
 		-- build bone matrix
 		q = bn.Orientation
-		if (i == 1) then q = conjugate q
+		if ((i == 1) and not g_dontConjugateRoot) then q = conjugate q
 		mat = (normalize q) as matrix3
 		mat.row4 = bn.Position * g_meshScale
 		-- transform from parent bone coordinate space to world space
@@ -1626,7 +1632,7 @@ fn ImportPsaFile filename trackNum all:false =
 					else
 						q = k.Orientation				-- from animation
 
-					if (b == 1) then q = conjugate q
+					if ((b == 1) and not g_dontConjugateRoot) then q = conjugate q
 					-- build matrix
 					mat = (q as matrix3)
 					mat.row4 = p
@@ -1720,8 +1726,8 @@ fn axLoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.26"
-	label     Lbl2 "\xA9 2009-2013 Konstantin Nosov (Gildor)"
+	label     Lbl1 "Version 1.27"
+	label     Lbl2 "\xA9 2009-2014 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black
@@ -1842,6 +1848,7 @@ rollout axSettingsRollout "Settings"
 		label Lbl1                "WARNING: do not modify these settings"
 		label Lbl2                "unless you know what you are doing!"
 		checkbox ChkReorientBones "Reorient bones" checked:g_reorientBones
+		checkbox ChkDontConjRoot  "Don't conjugate root bone" checked:g_dontConjugateRoot
 	)
 
 	button BtnReset "Reset to defaults"
@@ -1873,6 +1880,7 @@ rollout axSettingsRollout "Settings"
 	on ChkTexRecurse changed state do g_texRecurse    = state
 	on RadMissingTex changed state do g_texMissAction = state
 	on ChkReorientBones changed state do g_reorientBones = state
+	on ChkDontConjRoot changed state do g_dontConjugateRoot = state
 
 	on EdTexPath    changed val do g_texDir = val
 	on BtnBrowseTex pressed do

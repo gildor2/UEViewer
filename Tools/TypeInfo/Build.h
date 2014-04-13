@@ -34,3 +34,6 @@
 #define TRANSFORMERS	1
 #define DCU_ONLINE		1		// DC Universe Online
 #define BATMAN			1
+#define BIOSHOCK3		1		// Bioshock Infinite
+#define LOST_PLANET3	1
+#define THIEF4			1

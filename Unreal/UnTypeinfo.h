@@ -44,8 +44,12 @@ public:
 		guard(UField::Serialize);
 		assert(Ar.IsLoading);
 		Super::Serialize(Ar);
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3) goto new_ver;
+#endif
 		if (Ar.ArVer < 756)
 			Ar << SuperField2;
+	new_ver:
 		Ar << Next;
 //		appPrintf("super: %s next: %s\n", SuperField ? SuperField->Name : "-", Next ? Next->Name : "-");
 		unguard;
@@ -64,6 +68,7 @@ public:
 		guard(UEnum::Serialize);
 		Super::Serialize(Ar);
 		Ar << Names;
+//		for (int i = 0; i < Names.Num(); i++) appPrintf("enum %s: %d = %s\n", Name, i, Names[i]);
 		unguard;
 	}
 };
@@ -141,8 +146,14 @@ public:
 		guard(UStruct::Serialize);
 		Super::Serialize(Ar);
 #if UNREAL3
+	#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3) goto new_ver;
+	#endif
 		if (Ar.ArVer >= 756)
+		{
+		new_ver:
 			Ar << SuperField;
+		}
 		else
 			SuperField = SuperField2;	// serialized in parent
 #endif // UNREAL3
@@ -265,7 +276,18 @@ public:
 	{
 		guard(UProperty::Serialize);
 		Super::Serialize(Ar);
-		Ar << ArrayDim << PropertyFlags;
+#if LOST_PLANET3
+		if (Ar.Game == GAME_LostPlanet3 && Ar.ArLicenseeVer >= 79)
+		{
+			short Dim2;
+			Ar << Dim2;
+			ArrayDim = Dim2;
+			goto flags;
+		}
+#endif // LOST_PLANET3
+		Ar << ArrayDim;
+	flags:
+		Ar << PropertyFlags;
 #if UNREAL3
 		if (Ar.Game >= GAME_UE3)
 			Ar << PropertyFlags2;
@@ -286,7 +308,7 @@ public:
 		}
 #endif // BORDERLANDS
 #if BATMAN
-		if (Ar.Game == GAME_Batman2)
+		if (Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
 		{
 			// property flags constants were changed since ArLicenseeVer >= 101, performed conversion
 			// we need correct 0x20 value only

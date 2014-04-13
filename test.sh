@@ -251,7 +251,9 @@ fi
 case "" in
 
 "")
-	run1 data/2/SplinterCell4 -game=scell -noanim ESam.ukx
+	run1 data/3/MarvelHeroes UC__MarvelPlayer_Thor_SF.upk -game=mh thor_avengers_diff
+#	run1 data/3X/Injustice -noanim CHAR_Ares.xxx -meshes
+#	run1 data/2/SplinterCell4 -game=scell -noanim ESam.ukx
 #	run1 data/3/Dishonored Startup.upk -meshes -nostat Heart -anim=Heart_as
 #	run1 data/3X/Borderlands2 Startup.xxx GestaltDef_AssaultRifle_GestaltSkeletalMesh -anim=AssaultRifle
 #	run1 "data/3/Transformers Fall of Cybertron" -meshes L08b_SpitterIntro_DSN_m.xxx RB_GrimlockALT_SKEL -anim=Grimlock_ALT_ANIM

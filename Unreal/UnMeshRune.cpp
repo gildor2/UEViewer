@@ -330,12 +330,14 @@ void USkelModel::Serialize(FArchive &Ar)
 		sm->Name         = name;
 		sm->Package      = Package;
 		sm->PackageIndex = INDEX_NONE;		// not really exported
+		sm->Outer        = NULL;
 	}
 	// create animation
 	Anim = static_cast<UMeshAnimation*>(CreateClass("MeshAnimation"));
 	Anim->Name         = Name;
 	Anim->Package      = Package;
 	Anim->PackageIndex = INDEX_NONE;		// not really exported
+	Anim->Outer        = NULL;
 	ConvertRuneAnimations(*Anim, joints, AnimSeqs);
 	Anim->ConvertAnims();					//?? second conversion
 	// get baseframe

@@ -238,7 +238,9 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 		return false;		// cannot automatically generate mipmaps
 
 	//?? support some other formats too
-	// TPF_V8U8 = GL_RG8 (GL_ARB_texture_rg, GL3.0)
+	// TPF_V8U8 = GL_RG8_SNORM (GL3.1)
+	// TPF_BC5  = GL_COMPRESSED_RG_RGTC2 (GL_ARB_texture_compression_rgtc/GL_EXT_texture_compression_rgtc)
+	// TPF_BC7  = GL_COMPRESSED_RGBA_BPTC_UNORM_ARB (GL_ARB_texture_compression_bptc)
 	// TPF_G8   = GL_LUMINANCE
 	// Notes:
 	// - most formats are uploaded with glTexImage2D(), not with glCompressedTexImage2D()
@@ -255,6 +257,18 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 		break;
 	case TPF_DXT5:
 		format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		break;
+//	case TPF_V8U8:
+//		if (!GL_SUPPORT(QGL_3_1)) return false;
+//		format = GL_RG8_SNORM;
+//		break;
+	case TPF_3DC: // BC5
+		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_RGTC)) return false;
+		format = GL_COMPRESSED_RG_RGTC2;
+		break;
+	case TPF_BC7:
+		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_BPTC)) return false;
+		format = GL_COMPRESSED_RGBA_BPTC_UNORM_ARB;
 		break;
 	default:
 		return false;
@@ -276,6 +290,11 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 		// GL 1.4 - set GL_GENERATE_MIPMAP before uploading
 		glTexParameteri(target2, GL_GENERATE_MIPMAP, GL_TRUE);
 		glCompressedTexImage2D(target, 0, format, TexData.USize, TexData.VSize, 0, TexData.DataSize, TexData.CompressedData);
+	}
+	if (glGetError() != 0)
+	{
+		appNotify("Failed to upload texture in format 0x%04X", format);
+		return false;
 	}
 
 	return true;
@@ -775,6 +794,8 @@ void BindDefaultMaterial(bool White)
 		Mat->bTwoSided = true;
 		Mat->Mips.Add();
 		Mat->Format = TEXF_RGBA8;
+		Mat->Package = NULL;
+		Mat->Name = "Default";
 		// create 1st mipmap
 #define TEX_SIZE	64
 		FMipmap &Mip = Mat->Mips[0];

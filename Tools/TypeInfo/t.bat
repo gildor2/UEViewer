@@ -10,4 +10,6 @@ bash build.sh
 ::typeinfo.exe "C:\GAMES\UT3\UTGame\CookedPC\Core.u"
 ::typeinfo.exe "C:\GAMES\UT3\UTGame\CookedPC\Engine.u"
 ::typeinfo.exe ..\..\data\3\Batman2\Engine.upk
-typeinfo.exe -text ..\..\data\3\Alice\AliceGame.u
+::typeinfo.exe -text ..\..\data\3\Alice\AliceGame.u
+::typeinfo.exe -lzo ..\..\data\3\Bioshock3\XCore.xxx
+typeinfo ..\..\data\3\Thief\Core.u

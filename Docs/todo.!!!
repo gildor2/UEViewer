@@ -1,4 +1,13 @@
+Update nvtt:
+* use svn, packaged version is from 2010
+- has DirectDrawSurface::load(Stream * stream)
+
 Platform: can get platform from Cooked[...] directory name (PS3, Xenon|XBox360, IPhone)
+
+OpenGL error validation:
+- add error checking after texture uploading (at least for compressed formats)
+- add GL_ResetError before all places with GL_CheckError (glBindBufferEXT doesn't have one)
+- error logging for make.pl - use appNotify instead of printf
 
 Logging:
 - appNotify, appPrintf: make with GLog->Printf or GWarn->Printf ? (to allow overriding)
@@ -39,6 +48,7 @@ GUI-relative:
   ? custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
     (already has -uncook and -groups -- is anything else needed?)
 * key to toggle debug text and 3D lines (good for screenshots)
+? use WPF for UI
 
 - use lzop to compress shader texts (call from make.pl)
 

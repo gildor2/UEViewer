@@ -31,7 +31,21 @@
 #define BYTES4(a,b,c,d)	((a) | ((b)<<8) | ((c)<<16) | ((d)<<24))
 
 
-#define DO_ASSERT			1
+#define DO_ASSERT				1
+
+
+#if MAX_DEBUG
+// override some settings with MAX_DEBUG option
+#undef  DO_ASSERT
+#define DO_ASSERT				1
+#undef  DO_GUARD
+#define DO_GUARD				1
+#undef  DO_GUARD_MAX
+#define DO_GUARD_MAX			1
+#undef  VSTUDIO_INTEGRATION
+#define VSTUDIO_INTEGRATION		1
+#endif
+
 
 #undef assert
 
@@ -107,7 +121,7 @@ typedef unsigned __int64		uint64;
 #	define stricmp				strcasecmp
 #	define strnicmp				strncasecmp
 #	define GCC_PACK				__attribute__((__packed__))
-#	undef VSTIDIO_INTEGRATION
+#	undef VSTUDIO_INTEGRATION
 #	undef WIN32_USE_SEH
 typedef signed long long		int64;
 typedef unsigned long long		uint64;
@@ -241,7 +255,7 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 
 #if !WIN32_USE_SEH
 
-// C++excpetion-based guard/unguard system
+// C++exception-based guard/unguard system
 #define guard(func)						\
 	{									\
 		static const char __FUNC__[] = #func; \

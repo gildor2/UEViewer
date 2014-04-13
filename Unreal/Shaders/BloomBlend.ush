@@ -2,6 +2,7 @@
  *	This shader blends blurred picture into the frame buffer
  *****************************************************************************/
 
+// debug: visualize depth buffer in some fog-like manner
 //#define SHOW_DEPTH
 
 uniform sampler2D BlurTex;
@@ -33,6 +34,7 @@ void PixelShaderMain()
 
 	gl_FragColor = c;
 
+	// copy depth
 	float f = texture2D(DepthTex, TexCoord).r;
 	gl_FragDepth = f;
 

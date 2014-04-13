@@ -752,9 +752,6 @@ bool DDSHeader::hasDX10Header() const
 
 
 DirectDrawSurface::DirectDrawSurface(const char * name) : stream(new StdInputStream(name))
-#if UMODEL
-, externStream(false)
-#endif
 {
 	if (!stream->isError())
 	{
@@ -763,18 +760,17 @@ DirectDrawSurface::DirectDrawSurface(const char * name) : stream(new StdInputStr
 }
 
 #if UMODEL
-DirectDrawSurface::DirectDrawSurface(const DDSHeader &hdr, Stream * str)
-: stream(str)
-, externStream(true)
-, header(hdr)
-{}
+DirectDrawSurface::DirectDrawSurface(Stream * str) : stream(str)
+{
+	if (!stream->isError())
+	{
+		(*stream) << header;
+	}
+}
 #endif
 
 DirectDrawSurface::~DirectDrawSurface()
 {
-#if UMODEL
-	if (!externStream)
-#endif
 	delete stream;
 }
 
@@ -1214,9 +1210,6 @@ uint DirectDrawSurface::faceSize() const
 uint DirectDrawSurface::offset(const uint face, const uint mipmap)
 {
 	uint size = 128; // sizeof(DDSHeader);
-#if UMODEL
-	if (externStream) size = 0;	// no header
-#endif
 
 	if (header.hasDX10Header())
 	{

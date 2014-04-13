@@ -8,7 +8,7 @@
 byte GForceCompMethod = 0;		// COMPRESS_...
 
 
-//#define DEBUG_PACKAGE		1
+//#define DEBUG_PACKAGE			1
 
 
 /*-----------------------------------------------------------------------------
@@ -162,9 +162,9 @@ public:
 
 static void DecodeBnSPointer(int &Value, unsigned Code1, unsigned Code2, int Index)
 {
-  unsigned tmp1 = ROR32(Value, (Index + Code2) & 0x1F);
-  unsigned tmp2 = ROR32(Code1, Index % 32);
-  Value = tmp2 ^ tmp1;
+	unsigned tmp1 = ROR32(Value, (Index + Code2) & 0x1F);
+	unsigned tmp2 = ROR32(Code1, Index % 32);
+	Value = tmp2 ^ tmp1;
 }
 
 
@@ -359,8 +359,7 @@ public:
 				else
 				{
 					// have seen such block in Borderlands: chunk has CompressedSize==UncompressedSize
-					// and has no compression
-					//!! verify UE3 code for this !!
+					// and has no compression; no such code in original engine
 					ChunkHeader.BlockSize = -1;	// mark as uncompressed (checked below)
 					ChunkHeader.CompressedSize = ChunkHeader.UncompressedSize = Chunk->UncompressedSize;
 					ChunkHeader.Blocks.Empty(1);
@@ -473,7 +472,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 
 	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
 
-#if LINEAGE2 || EXTEEL || BATTLE_TERR || BLADENSOUL
+#if LINEAGE2 || EXTEEL || BATTLE_TERR || NURIEN || BLADENSOUL
 	int checkDword;
 	*this << checkDword;
 
@@ -555,7 +554,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		Loader->SetupFrom(*this);				//?? low-level loader; possibly, do it in FUE3ArchiveReader()
 		byte CompMethod = GForceCompMethod;
 		if (!CompMethod)
-			CompMethod = (Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_ZLIB;
+			CompMethod = (Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_FIND;
 		Loader = new FUE3ArchiveReader(Loader, CompMethod, Chunks);
 		fullyCompressed = true;
 		unguard;
@@ -575,6 +574,15 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		PKG_LOG(("[FullComp] "));
 #endif
 	PKG_LOG(("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game));
+
+#if DEBUG_PACKAGE
+	appPrintf("Name offset: %X, Export offset: %X, Import offset: %X\n", Summary.NameOffset, Summary.ExportOffset, Summary.ImportOffset);
+	for (int i = 0; i < Summary.CompressedChunks.Num(); i++)
+	{
+		const FCompressedChunk &ch = Summary.CompressedChunks[i];
+		appPrintf("chunk[%d]: comp=%X+%X, unk=%X+%X\n", i, ch.CompressedOffset, ch.CompressedSize, ch.UncompressedOffset, ch.UncompressedSize);
+	}
+#endif // DEBUG_PACKAGE
 
 #if BIOSHOCK
 	if (Game == GAME_Bioshock)
@@ -781,19 +789,18 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		#if BIOSHOCK
 				if (Game == GAME_Bioshock) goto qword_flags;
 		#endif
-				if (Game >= GAME_UE3 && ArVer >= 195)
-				{
 		#if WHEELMAN
-					if (Game == GAME_Wheelman) goto dword_flags;
+				if (Game == GAME_Wheelman) goto dword_flags;
 		#endif
 		#if MASSEFF
-					if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
-					{
-						if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
-						if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
-					}
+				if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
+				{
+					if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
+					if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
+				}
 		#endif // MASSEFF
-
+				if (Game >= GAME_UE3 && ArVer >= 195)
+				{
 				qword_flags:
 					// object flags are 64-bit in UE3, skip additional 32 bits
 					int64 flags64;
@@ -841,8 +848,8 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		{
 			*this << *Exp;
 #if DEBUG_PACKAGE
-			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
-				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype));
+			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
+				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype));
 #endif
 		}
 	}
@@ -853,7 +860,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	unguard;
 
 #if UNREAL3
-	if (Game == GAME_DCUniverse) goto no_depends;				// has non-standard checks
+	if (Game == GAME_DCUniverse || Game == GAME_Bioshock3) goto no_depends;		// has non-standard checks
 	if (Summary.FileVersion >= 415 && Summary.DependsOffset)	// some games are patrially upgraded: ArVer >= 415, but no depends table
 	{
 		guard(ReadDependsTable);
@@ -1050,9 +1057,24 @@ UObject* UnPackage::CreateExport(int index)
 #endif // UNREAL3
 	UObject::BeginLoad();
 
+	// find outer object
+	UObject *Outer = NULL;
+	if (Exp.PackageIndex)
+	{
+		const FObjectExport &OuterExp = GetExport(Exp.PackageIndex - 1);
+		Outer = OuterExp.Object;
+		if (!Outer)
+		{
+			const char *OuterClassName = GetObjectName(OuterExp.ClassIndex);
+			if (IsKnownClass(OuterClassName))			// avoid error message if class name is not registered
+				Outer = CreateExport(Exp.PackageIndex - 1);
+		}
+	}
+
 	// setup constant object fields
 	Obj->Package      = this;
 	Obj->PackageIndex = index;
+	Obj->Outer        = Outer;
 	Obj->Name         = Exp.ObjectName;
 	// add object to GObjLoaded for later serialization
 	if (strnicmp(Exp.ObjectName, "Default__", 9) != 0)	// default properties are not supported -- this is a clean UObject format

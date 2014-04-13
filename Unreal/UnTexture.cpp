@@ -1,9 +1,4 @@
-// nvimage includes
-#include <nvcore/StdStream.h>
-#include <nvimage/Image.h>
-#include <nvimage/DirectDrawSurface.h>
-#undef __FUNC__						// conflicted with our guard macros
-
+#include "UnTextureNVTT.h"
 
 #include "Core.h"
 #include "UnCore.h"
@@ -68,6 +63,8 @@ static const CPixelFormatInfo PixelFormatInfo[] =
 	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8
 	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8_2
 	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0		},	// TPF_3DC
+	{ 0,						4,			4,			16,				0,			0		},	// TPF_BC7
+	{ 0,						8,			1,			1,				0,			0		},	// TPF_A1
 #if IPHONE
 	{ 0,						8,			4,			8,				0,			0		},	// TPF_PVRTC2
 	{ 0,						4,			4,			8,				0,			0		},	// TPF_PVRTC4
@@ -210,6 +207,9 @@ byte *CTextureData::Decompress()
 			}
 		}
 		return dst;
+	case TPF_A1:
+		appNotify("TPF_A1 unsupported");	//!! easy to do, but need samples - I've got some PF_A1 textures with no mipmaps inside
+		return dst;
 
 #if IPHONE
 	case TPF_PVRTC2:
@@ -251,17 +251,12 @@ byte *CTextureData::Decompress()
 #endif
 
 	nv::DDSHeader header;
+	nv::Image image;
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
 	header.setWidth(USize);
 	header.setHeight(VSize);
 	header.setNormalFlag(Format == TPF_DXT5N || Format == TPF_3DC);	// flag to restore normalmap from 2 colors
-	nv::MemoryInputStream input(Data, USize * VSize * 4);	//!! size is incorrect, it is greater than it should be
-
-	nv::DirectDrawSurface dds(header, &input);
-	nv::Image image;
-	guard(nv::DecompressDDS);
-	dds.mipmap(&image, 0, 0);
-	unguard;
+	DecodeDDS(Data, USize, VSize, header, image);
 
 	byte *s = (byte*)image.pixels();
 	byte *d = dst;
@@ -881,30 +876,82 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	}
 
 	ETexturePixelFormat intFormat;
-	if (Format == TEXF_P8)
-		intFormat = TPF_P8;
-	else if (Format == TEXF_DXT1)
-		intFormat = TPF_DXT1;
-	else if (Format == TEXF_RGB8)
-		intFormat = TPF_RGB8;
-	else if (Format == TEXF_RGBA8)
-		intFormat = TPF_RGBA8;
-	else if (Format == TEXF_DXT3)
-		intFormat = TPF_DXT3;
-	else if (Format == TEXF_DXT5)
-		intFormat = TPF_DXT5;
-	else if (Format == TEXF_L8)
-		intFormat = TPF_G8;
-	else if (Format == TEXF_CxV8U8)
-		intFormat = TPF_V8U8_2;
-	else if (Format == TEXF_DXT5N)
-		intFormat = TPF_DXT5N;
-	else if (Format == TEXF_3DC)
-		intFormat = TPF_3DC;
+
+	//?? return old code back - UE1 and UE2 differs in codes 6 and 7 only
+	if (Package && (Package->Engine() == GAME_UE1))
+	{
+		// UE1 has different ETextureFormat layout
+		switch (Format)
+		{
+		case 0:
+			intFormat = TPF_P8;
+			break;
+//		case 1:
+//			intFormat = TPF_RGB32; // in script source code: TEXF_RGB32, but TEXF_RGBA7 in .h
+//			break;
+//		case 2:
+//			intFormat = TPF_RGB64; // in script source code: TEXF_RGB64, but TEXF_RGB16 in .h
+//			break;
+		case 3:
+			intFormat = TPF_DXT1;
+			break;
+		case 4:
+			intFormat = TPF_RGB8;
+			break;
+		case 5:
+			intFormat = TPF_RGBA8;
+			break;
+		// newer UE1 versions has DXT3 and DXT5
+		case 6:
+			intFormat = TPF_DXT3;
+			break;
+		case 7:
+			intFormat = TPF_DXT5;
+			break;
+		default:
+			appNotify("Unknown UE1 texture format: %d", Format);
+			return false;
+		}
+	}
 	else
 	{
-		appNotify("Unknown texture format: %s (%d)", TexData.OriginalFormatName, Format);
-		return false;
+		// UE2
+		switch (Format)
+		{
+		case TEXF_P8:
+			intFormat = TPF_P8;
+			break;
+		case TEXF_DXT1:
+			intFormat = TPF_DXT1;
+			break;
+		case TEXF_RGB8:
+			intFormat = TPF_RGB8;
+			break;
+		case TEXF_RGBA8:
+			intFormat = TPF_RGBA8;
+			break;
+		case TEXF_DXT3:
+			intFormat = TPF_DXT3;
+			break;
+		case TEXF_DXT5:
+			intFormat = TPF_DXT5;
+			break;
+		case TEXF_L8:
+			intFormat = TPF_G8;
+			break;
+		case TEXF_CxV8U8:
+			intFormat = TPF_V8U8_2;
+			break;
+		case TEXF_DXT5N:
+			intFormat = TPF_DXT5N;
+			break;
+		case TEXF_3DC:
+			intFormat = TPF_3DC;
+			break;
+		default:
+			appNotify("Unknown UE2 texture format: %s (%d)", TexData.OriginalFormatName, Format);
+			return false;
+		}
 	}
 
 	TexData.Format = intFormat;
@@ -913,10 +960,33 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	if (TexData.CompressedData && TexData.Platform == PLATFORM_XBOX360)
 		TexData.DecodeXBox360();
 #endif
+#if BIOSHOCK
+	if (Package && Package->Game == GAME_Bioshock)
+	{
+		// This game has DataSize stored for all mipmaps, we should compute side of 1st mipmap
+		// in order to accept this value when uploading texture to video card (some vendors rejects
+		// large values)
+		//?? Place code to CTextureData method?
+		const CPixelFormatInfo &Info = PixelFormatInfo[intFormat];
+		int bytesPerBlock = Info.BytesPerBlock;
+		int numBlocks = TexData.USize * TexData.VSize / (Info.BlockSizeX * Info.BlockSizeY);	// used for validation only
+		int requiredDataSize = numBlocks * Info.BytesPerBlock;
+		if (requiredDataSize > TexData.DataSize)
+		{
+			appNotify("Bioshock texture %s: data too small; %dx%d, requires %X bytes, got %X\n",
+				Name, TexData.USize, TexData.VSize, requiredDataSize, TexData.DataSize);
+		}
+		else if (requiredDataSize < TexData.DataSize)
+		{
+//			appPrintf("Bioshock texture %s: stripping data size from %X to %X\n", Name, TexData.DataSize, requiredDataSize);
+			TexData.DataSize = requiredDataSize;
+		}
+	}
+#endif // BIOSHOCK
 
 	return (TexData.CompressedData != NULL);
 
-	unguard;
+	unguardf(("%s", Name));
 }
 
 
@@ -1096,6 +1166,7 @@ void UUIStreamingTextures::PostLoad()
 		Tex->Name         = name;
 		Tex->Package      = Package;
 		Tex->PackageIndex = INDEX_NONE;		// not really exported
+		Tex->Outer        = NULL;
 		Tex->TextureFileCacheName = S.TextureFileCacheName;
 		Tex->Format       = (EPixelFormat)S.Format;
 		Tex->SizeX        = S.nWidth;
@@ -1190,13 +1261,13 @@ static void Tribes4ReadRtcData()
 	const CGameFileInfo *hdrFile = appFindGameFile("texture.cache.hdr.rtc");
 	if (!hdrFile)
 	{
-		appPrintf("WARNING: unable to find texture.cache.hdr.rtc\n");
+		appPrintf("WARNING: unable to find %s\n", "texture.cache.hdr.rtc");
 		return;
 	}
 	const CGameFileInfo *dataFile = appFindGameFile("texture.cache.data.rtc");
 	if (!dataFile)
 	{
-		appPrintf("WARNING: unable to find texture.cache.data.rtc\n");
+		appPrintf("WARNING: unable to find %s\n", "texture.cache.data.rtc");
 		return;
 	}
 	tribes4DataAr = appCreateFileReader(dataFile);
@@ -1269,6 +1340,88 @@ static byte *FindTribes4Texture(const UTexture2D *Tex, CTextureData *TexData)
 #endif // TRIBES4
 
 
+#if MARVEL_HEROES
+
+struct MHManifestMip
+{
+	int					Index;			// index of mipmap (first mip levels could be skipped with cooking)
+	int					Offset;
+	int					Size;
+
+	friend FArchive& operator<<(FArchive &Ar, MHManifestMip &M)
+	{
+		return Ar << M.Index << M.Offset << M.Size;
+	}
+};
+
+struct TFCManifest_MH
+{
+	FString				TFCName;
+	FGuid				Guid;
+	TArray<MHManifestMip> Mips;
+
+	friend FArchive& operator<<(FArchive &Ar, TFCManifest_MH &M)
+	{
+		return Ar << M.TFCName << M.Guid << M.Mips;
+	}
+};
+
+static TArray<TFCManifest_MH> mhTFCmanifest;
+
+static void ReadMarvelHeroesTFCManifest()
+{
+	guard(ReadMarvelHeroesTFCManifest);
+
+	static bool ready = false;
+	if (ready) return;
+	ready = true;
+
+	const CGameFileInfo *fileInfo = appFindGameFile("TextureFileCacheManifest.bin");
+	if (!fileInfo)
+	{
+		appPrintf("WARNING: unable to find %s\n", "TextureFileCacheManifest.bin");
+		return;
+	}
+	FArchive *Ar = appCreateFileReader(fileInfo);
+	Ar->Game  = GAME_MarvelHeroes;
+	Ar->ArVer = 859;			// just in case
+	Ar->ArLicenseeVer = 3;
+	*Ar << mhTFCmanifest;
+	assert(Ar->IsEof());
+
+	delete Ar;
+
+	unguard;
+}
+
+
+static int GetRealTextureOffset_MH(const UTexture2D *Obj, int MipIndex)
+{
+	guard(GetRealTextureOffset_MH);
+
+	ReadMarvelHeroesTFCManifest();
+
+	printf("LOOK %08X-%08X-%08X-%08X\n", Obj->TextureFileCacheGuid.A, Obj->TextureFileCacheGuid.B, Obj->TextureFileCacheGuid.C, Obj->TextureFileCacheGuid.D);
+	for (int i = 0; i < mhTFCmanifest.Num(); i++)
+	{
+		const TFCManifest_MH &M = mhTFCmanifest[i];
+		if (M.Guid == Obj->TextureFileCacheGuid)
+		{
+			const MHManifestMip &Mip = M.Mips[0];
+			assert(Mip.Index == MipIndex);
+			printf("%s - %08X-%08X-%08X-%08X = %X %X\n", *M.TFCName, M.Guid.A, M.Guid.B, M.Guid.C, M.Guid.D, Mip.Offset, Mip.Size);
+			return Mip.Offset;
+		}
+	}
+
+	return -1;	// not found
+
+	unguard;
+}
+
+#endif // MARVEL_HEROES
+
+
 bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool UseETC_TFC) const
 {
 	const CGameFileInfo *bulkFile = NULL;
@@ -1331,16 +1484,32 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	FArchive *Ar = appCreateFileReader(bulkFile);
 	Ar->SetupFrom(*Package);
 	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
-#if DCU_ONLINE
-	if (Package->Game == GAME_DCUniverse && Bulk->BulkDataOffsetInFile < 0)
+	if (Bulk->BulkDataOffsetInFile < 0)
 	{
-		int Offset = GetRealTextureOffset_DCU(this);
-		if (Offset < 0) return false;
-		Bulk->BulkDataOffsetInFile = Offset - Bulk->BulkDataOffsetInFile - 1;
-//		appPrintf("OFFS: %X\n", Bulk->BulkDataOffsetInFile);
-	}
+#if DCU_ONLINE
+		if (Package->Game == GAME_DCUniverse)
+		{
+			int Offset = GetRealTextureOffset_DCU(this);
+			if (Offset < 0) return false;
+			Bulk->BulkDataOffsetInFile = Offset - Bulk->BulkDataOffsetInFile - 1;
+//			appPrintf("OFFS: %X\n", Bulk->BulkDataOffsetInFile);
+		}
 #endif // DCU_ONLINE
-//	appPrintf("%X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
+#if MARVEL_HEROES
+		if (Package->Game == GAME_MarvelHeroes)
+		{
+			int Offset = GetRealTextureOffset_MH(this, MipIndex);
+			if (Offset < 0) return false;
+			Bulk->BulkDataOffsetInFile = Offset;
+		}
+#endif // MARVEL_HEROES
+		if (Bulk->BulkDataOffsetInFile < 0)
+		{
+			appPrintf("ERROR: BulkOffset = %d\n", Bulk->BulkDataOffsetInFile);
+			return false;
+		}
+	}
+//	appPrintf("Bulk %X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
 	Bulk->SerializeChunk(*Ar);
 	delete Ar;
 	return true;
@@ -1437,6 +1606,10 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		intFormat = TPF_V8U8;
 	else if (Format == PF_BC5)
 		intFormat = TPF_3DC;
+	else if (Format == PF_BC7)
+		intFormat = TPF_BC7;
+	else if (Format == PF_A1)
+		intFormat = TPF_A1;
 #if MASSEFF
 //??else if (Format == PF_NormapMap_LQ) -- seems not used
 //??	intFormat = TPF_3DC;
@@ -1478,7 +1651,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 
 	return (TexData.CompressedData != NULL);
 
-	unguard;
+	unguardf(("%s", Name));
 }
 
 

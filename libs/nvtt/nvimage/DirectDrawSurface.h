@@ -111,7 +111,7 @@ namespace nv
 	public:
 		DirectDrawSurface(const char * file);
 #if UMODEL
-		DirectDrawSurface(const DDSHeader &header, Stream * stream);
+		DirectDrawSurface(Stream * stream);	// added implicit stream version, like in recent NVTT code
 #endif
 		~DirectDrawSurface();
 
@@ -148,12 +148,11 @@ namespace nv
 
 
 	private:
-#if UMODEL
-		bool  externStream;
-#endif
 		Stream * const stream;
-		DDSHeader header;
 		DDSHeader10 header10;
+
+	public:
+		DDSHeader header;		// UMODEL: moved to public, like in recent NVTT version
 	};
 
 } // nv namespace

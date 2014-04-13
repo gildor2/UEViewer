@@ -19,7 +19,7 @@ class NVMATH_CLASS Matrix
 {
 public:
 	typedef Matrix const & Arg;
-	
+
 	Matrix();
 	Matrix(zero_t);
 	Matrix(identity_t);
@@ -34,13 +34,13 @@ public:
 
 	Vector4 row(uint i) const;
 	Vector4 column(uint i) const;
-	
+
 	void scale(scalar s);
 	void scale(Vector3::Arg s);
 	void translate(Vector3::Arg t);
 	void rotate(scalar theta, scalar v0, scalar v1, scalar v2);
     scalar determinant() const;
-	
+
 	void apply(Matrix::Arg m);
 
 private:
@@ -159,7 +159,7 @@ inline void Matrix::rotate(scalar theta, scalar v0, scalar v1, scalar v2)
 inline void Matrix::apply(Matrix::Arg m)
 {
 	nvDebugCheck(this != &m);
-	
+
 	for(int i = 0; i < 4; i++) {
 		const scalar ai0 = get(i,0), ai1 = get(i,1), ai2 = get(i,2), ai3 = get(i,3);
 		m_data[0 + i] = ai0 * m(0,0) + ai1 * m(1,0) + ai2 * m(2,0) + ai3 * m(3,0);
@@ -204,7 +204,7 @@ inline Matrix rotation(scalar theta, scalar v0, scalar v1, scalar v2)
 	scalar sint = sinf(theta);
 
 	Matrix m(identity);
-	
+
 	if( 1 == v0 && 0 == v1 && 0 == v2 ) {
 		m(1,1) = cost; m(2,1) = -sint;
 		m(1,2) = sint; m(2,2) = cost;
@@ -216,7 +216,7 @@ inline Matrix rotation(scalar theta, scalar v0, scalar v1, scalar v2)
 	else if( 0 == v0 && 0 == v1 && 1 == v2 ) {
 		m(0,0) = cost; m(1,0) = -sint;
 		m(0,1) = sint; m(1,1) = cost;
-	} 
+	}
 	else {
 		scalar a2, b2, c2;
 		a2 = v0 * v0;
@@ -270,7 +270,7 @@ inline Matrix frustum(scalar xmin, scalar xmax, scalar ymin, scalar ymax, scalar
 	m(2,2) = -(zFar + zNear) * one_deltaz;
 	m(3,2) = -1.0f;
 	m(2,3) = -(zFar * doubleznear) * one_deltaz;
-	
+
 	return m;
 }
 
@@ -278,7 +278,7 @@ inline Matrix frustum(scalar xmin, scalar xmax, scalar ymin, scalar ymax, scalar
 inline Matrix frustum(scalar xmin, scalar xmax, scalar ymin, scalar ymax, scalar zNear)
 {
 	Matrix m(zero);
-	
+
 	scalar doubleznear = 2.0f * zNear;
 	scalar one_deltax = 1.0f / (xmax - xmin);
 	scalar one_deltay = 1.0f / (ymax - ymin);
@@ -291,7 +291,7 @@ inline Matrix frustum(scalar xmin, scalar xmax, scalar ymin, scalar ymax, scalar
 	m(2,2) = -1.0f * nudge;
 	m(3,2) = -1.0f;
 	m(2,3) = -doubleznear * nudge;
-	
+
 	return m;
 }
 
@@ -304,7 +304,7 @@ inline Matrix perspective(scalar fovy, scalar aspect, scalar zNear, scalar zFar)
 	scalar ymax = xmax / aspect;
 	scalar ymin = -ymax;
 
-	return frustum(xmin, xmax, ymin, ymax, zNear, zFar);	
+	return frustum(xmin, xmax, ymin, ymax, zNear, zFar);
 }
 
 /// Get infinite perspective matrix.
@@ -312,13 +312,13 @@ inline Matrix perspective(scalar fovy, scalar aspect, scalar zNear)
 {
 	scalar x = zNear * tan(fovy / 2);
 	scalar y = x / aspect;
-	return frustum( -x, x, -y, y, zNear );	
+	return frustum( -x, x, -y, y, zNear );
 }
 
 /// Get matrix determinant.
 inline scalar Matrix::determinant() const
 {
-	return 
+	return
 		m_data[3] * m_data[6] * m_data[ 9] * m_data[12] - m_data[2] * m_data[7] * m_data[ 9] * m_data[12] - m_data[3] * m_data[5] * m_data[10] * m_data[12] + m_data[1] * m_data[7] * m_data[10] * m_data[12] +
 		m_data[2] * m_data[5] * m_data[11] * m_data[12] - m_data[1] * m_data[6] * m_data[11] * m_data[12] - m_data[3] * m_data[6] * m_data[ 8] * m_data[13] + m_data[2] * m_data[7] * m_data[ 8] * m_data[13] +
 		m_data[3] * m_data[4] * m_data[10] * m_data[13] - m_data[0] * m_data[7] * m_data[10] * m_data[13] - m_data[2] * m_data[4] * m_data[11] * m_data[13] + m_data[0] * m_data[6] * m_data[11] * m_data[13] +
@@ -332,7 +332,7 @@ inline Matrix transpose(Matrix::Arg m)
 	Matrix r;
 	for (int i = 0; i < 4; i++)
 	{
-		for (int j = 0; j < 4; i++)
+		for (int j = 0; j < 4; j++)
 		{
 			r(i, j) = m(j, i);
 		}
@@ -366,7 +366,7 @@ inline Matrix inverse(Matrix::Arg m)
 inline Matrix isometryInverse(Matrix::Arg m)
 {
 	Matrix r(identity);
-	
+
 	// transposed 3x3 upper left matrix
 	for (int i = 0; i < 3; i++)
 	{
@@ -375,7 +375,7 @@ inline Matrix isometryInverse(Matrix::Arg m)
 			r(i, j) = m(j, i);
 		}
 	}
-	
+
 	// translate by the negative offsets
 	r.translate(-Vector3(m.data(12), m.data(13), m.data(14)));
 
@@ -458,7 +458,7 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 	        data[4] = sint; data[5] = cost;	data[6] = 0.0f;	data[7] = 0.0f;
 		    data[8] = 0.0f;	data[9] = 0.0f;	data[10] = 1.0f;data[11] = 0.0f;
 			data[12] = 0.0f;data[13] = 0.0f;data[14] = 0.0f;data[15] = 1.0f;
-	    } 
+	    }
 		else {
 			//we need scale a,b,c to unit length.
 			scalar a2, b2, c2;
@@ -690,24 +690,24 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 		yy = q.y * y2;   yz = q.y * z2;   zz = q.z * z2;
 		wx = q.w * x2;   wy = q.w * y2;   wz = q.w * z2;
 
-		data[0] = 1.0f - (yy + zz); 	
+		data[0] = 1.0f - (yy + zz);
 		data[1] = xy - wz;
-		data[2] = xz + wy;		
+		data[2] = xz + wy;
 		data[3] = 0.0f;
- 
-		data[4] = xy + wz;		
+
+		data[4] = xy + wz;
 		data[5] = 1.0f - (xx + zz);
-		data[6] = yz - wx;		
+		data[6] = yz - wx;
 		data[7] = 0.0f;
 
-		data[8] = xz - wy;		
+		data[8] = xz - wy;
 		data[9] = yz + wx;
-		data[10] = 1.0f - (xx + yy);		
+		data[10] = 1.0f - (xx + yy);
 		data[11] = 0.0f;
 
 		data[12] = offset.x;
 		data[13] = offset.y;
-		data[14] = offset.z;			
+		data[14] = offset.z;
 		data[15] = 1.0f;
 	}
 
@@ -751,8 +751,8 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 		data[15] = data[3] * t.x + data[7] * t.y + data[11] * t.z + data[15];
 	}
 
-	/** 
-	 * Translate the matrix by x, y, z. This is the same as multiplying by a 
+	/**
+	 * Translate the matrix by x, y, z. This is the same as multiplying by a
 	 * translation matrix with the given offsets.
 	 */
 	void Translate( scalar x, scalar y, scalar z ) {
@@ -794,10 +794,10 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 
 	/** @name Matrix operations: */
 	//@{
-	
+
 	/** Return the determinant of this matrix. */
 	scalar Determinant() const {
-		return	data[0] * data[5] * data[10] * data[15] + 
+		return	data[0] * data[5] * data[10] * data[15] +
 				data[1] * data[6] * data[11] * data[12] +
 				data[2] * data[7] * data[ 8] * data[13] +
 				data[3] * data[4] * data[ 9] * data[14] -
@@ -816,7 +816,7 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 	/** Standard matrix product: this = A * B. this != B*/
 	void Multiply4x4( const Matrix & A, const Matrix & restrict B ) {
 		piDebugCheck(this != &B);
-	
+
 		for(int i = 0; i < 4; i++) {
 			const scalar ai0 = A(i,0), ai1 = A(i,1), ai2 = A(i,2), ai3 = A(i,3);
 			GetElem(i,0) = ai0 * B(0,0) + ai1 * B(1,0) + ai2 * B(2,0) + ai3 * B(3,0);
@@ -853,7 +853,7 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 	/** Standard product of matrices, where the last row is [0 0 0 1]. */
 	void Multiply4x3( const Matrix & A, const Matrix & restrict B ) {
 		piDebugCheck(this != &B);
-	
+
 		for(int i = 0; i < 3; i++) {
 			const scalar ai0 = A(i,0), ai1 = A(i,1), ai2 = A(i,2), ai3 = A(i,3);
 			GetElem(i,0) = ai0 * B(0,0) + ai1 * B(1,0) + ai2 * B(2,0) + ai3 * B(3,0);
@@ -887,7 +887,7 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 
 	/** @name Vector operations: */
 	//@{
-	
+
 	/** Transform 3d vector (w=0). */
 	void TransformVec3(const Vec3 & restrict orig, Vec3 * restrict dest) const {
 		piDebugCheck(&orig != dest);
@@ -943,7 +943,7 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 
 	/** @name Matrix analysis. */
 	//@{
-	
+
 	/** Get the ZYZ euler angles from the matrix. Assumes the matrix is orthonormal. */
 	void GetEulerAnglesZYZ(scalar * s, scalar * t, scalar * r) const {
 		if( GetElem(2,2) < 1.0f ) {
@@ -953,7 +953,7 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 				//	-cs*st				ss*st				ct
 				*s = atan2(GetElem(1,2), -GetElem(0,2));
 				*t = acos(GetElem(2,2));
-				*r = atan2(GetElem(2,1), GetElem(2,0));		
+				*r = atan2(GetElem(2,1), GetElem(2,0));
 			}
 			else {
 				// 	-c(s-r)	 	s(s-r)		0
@@ -975,7 +975,7 @@ inline Matrix mul(Matrix::Arg a, Matrix::Arg b)
 	}
 
 	//@}
-	
+
 	MATHLIB_API friend PiStream & operator<< ( PiStream & s, Matrix & m );
 
 	/** Print to debug output. */

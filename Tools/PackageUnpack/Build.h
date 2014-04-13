@@ -41,3 +41,6 @@
 #define NURIEN			1
 #define HAWKEN			1
 #define ALIENS_CM		1
+#define BIOSHOCK3		1		// Bioshock Infinite
+#define REMEMBER_ME		1
+

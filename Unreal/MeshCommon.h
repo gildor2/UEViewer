@@ -30,8 +30,8 @@ struct CIndexBuffer
 		const CIndexBuffer	*Buffer;
 	};
 
-	TArray<word>			Indices16;			// used when mesh has less than 64k indices
-	TArray<unsigned>		Indices32;			// used when mesh has more than 64k indices
+	TArray<word>			Indices16;			// used when mesh has less than 64k verts
+	TArray<unsigned>		Indices32;			// used when mesh has more than 64k verts
 
 	FORCEINLINE bool Is32Bit() const
 	{

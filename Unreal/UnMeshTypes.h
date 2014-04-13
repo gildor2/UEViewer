@@ -214,6 +214,50 @@ struct FVectorIntervalFixed32GPU
 SIMPLE_TYPE(FVectorIntervalFixed32GPU, unsigned)
 
 
+struct FVectorIntervalFixed48Bio
+{
+	word			X, Y, Z;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = (X / 65535.0f) * Ranges.X + Mins.X;
+		r.Y = (Y / 65535.0f) * Ranges.Y + Mins.Y;
+		r.Z = (Z / 65535.0f) * Ranges.Z + Mins.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed48Bio &V)
+	{
+		return Ar << V.X << V.Y << V.Z;
+	}
+};
+
+SIMPLE_TYPE(FVectorIntervalFixed48Bio, word)
+
+
+struct FVectorIntervalFixed64Bio
+{
+	short			X, Y, Z, W;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = (X / 32767.0f) * Ranges.X + Mins.X;
+		r.Y = (Y / 32767.0f) * Ranges.Y + Mins.Y;
+		r.Z = (Z / 32767.0f) * Ranges.Z + Mins.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed64Bio &V)
+	{
+		return Ar << V.X << V.Y << V.Z << V.W;
+	}
+};
+
+SIMPLE_TYPE(FVectorIntervalFixed64Bio, word)
+
+
 struct FQuatFloat32NoW
 {
 	unsigned		data;

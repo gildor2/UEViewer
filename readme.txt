@@ -151,8 +151,56 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+02.04.2014
+- fixed incompatibility with some Thief packages
+
+24.03.2014
+- implemented Thief static mesh support
+- added support for viewing BC7 textures, when hardware supports it
+- improved stability to OpenGL errors
+
+07.02.2014
+- improved UE2 SkeletalMesh compatibility
+- much faster generation on UE2 mesh normals
+
+05.02.2014
+- updated Fable autodetection - supports Fable Anniversary
+
+02.02.2014
+- support for DXT3 and DXT5 textures from recent Unreal 1 patch
+
+29.11.2013
+- improved compatibility with UE2 animations
+
+25.11.2013
+- fixed issue with incompatibility of Bioshock compressed textures with some videocard drivers
+
+25.10.2013
+- implemented Batman: Arkham Origins support
+
+12.10.2013
+- implemented The Bureau: XCOM Declassified support
+
+29.09.2013
+- added "-nolightmap" option to prevent lightmap textures from being loaded and exported
+
+31.08.2013
+- implemented Lost Planet 3 support
+
+11.08.2013
+- added experimental compression method detection, so perhaps -lzo option is not needed anymore
+
+14.06.2013
+- implemented Remember Me support
+
+30.05.2013
+- implemented Injustice: Gods Among Us support (except animation)
+
+04.05.2013
+- implemented Bioshock Infinite support (all but animations)
+
 21.02.2013
-- added "-version" option to display brief build information
+- added "-version" option to display brief umodel build information
 
 20.02.2013
 - implemented Gears of War: Judgment support; "-game=gowj" option is required

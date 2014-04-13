@@ -3,15 +3,15 @@
 #if _WIN32
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	36
-#	define NUM_EXTENSIONS	6
+#	define NUM_EXTENSIONS	9
 #elif __linux__
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	36
-#	define NUM_EXTENSIONS	6
+#	define NUM_EXTENSIONS	9
 #else
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	36
-#	define NUM_EXTENSIONS	6
+#	define NUM_EXTENSIONS	9
 #endif
 
 
@@ -843,9 +843,12 @@ static extInfo_t extInfo[NUM_EXTENSIONS] = {
 	{"1.3\0", NULL, NULL, NUM_GLFUNCS+0, 2, 0, 0},
 	{"1.4\0", NULL, NULL, 0, 0, 0, 0},
 	{"2.0\0", NULL, NULL, NUM_GLFUNCS+2, 23, 0, 0},
+	{"3.1\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_EXT_texture_compression_s3tc\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_EXT_framebuffer_object\0", NULL, NULL, NUM_GLFUNCS+25, 11, 0, 0},
-	{"GL_ARB_texture_float\0", NULL, NULL, 0, 0, 0, 0}
+	{"GL_ARB_texture_float\0", NULL, NULL, 0, 0, 0, 0},
+	{"GL_ARB_texture_compression_rgtc\0" "GL_EXT_texture_compression_rgtc\0", NULL, NULL, 0, 0, 0, 0},
+	{"GL_ARB_texture_compression_bptc\0", NULL, NULL, 0, 0, 0, 0}
 #if _WIN32
 
 

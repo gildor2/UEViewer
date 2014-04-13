@@ -15,7 +15,7 @@ OLDCRT     = 1
 
 !if "$PLATFORM" ne "win32"
 	# linux/cygwin + GCC
-	STDLIBS   = stdc++ GL
+	STDLIBS   = stdc++ m GL 							# libm for math.h functions
 	!if "$PLATFORM" ne "cygwin"
 		STDLIBS += dl	# dlopen() and friends
 	!endif
@@ -55,6 +55,8 @@ sources(NV_LIBS) = {
 	$R/libs/nvtt/nvcore/*.cpp
 	$R/libs/nvtt/nvimage/*.cpp
 #	$R/libs/nvtt/nvmath/*.cpp
+#	$R/libs/nvtt/nvtt/bc6h/*.cpp
+#	$R/libs/nvtt/nvtt/bc7/*.cpp
 }
 
 pop(INCLUDES)

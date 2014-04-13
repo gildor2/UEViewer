@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 			FObjectExport &Exp = Package->ExportTable[idx];
 			const char *ClassName = Package->GetObjectName(Exp.ClassIndex);
 			if (!FilterClass(ClassName)) continue;
-			char objName[1024];
+			char objName[2048];
 			GetFullExportName(Exp, Package, ARRAY_ARG(objName));
 			printf("%5d  %s\n", idx, objName);
 		}
@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 	if (s2) *s2 = 0;
 	// extract objects and write export table
 	FILE *f;
-	char buf2[1024];
+	char buf2[2048];
 	guard(ExtractObjects);
 	appSprintf(ARRAY_ARG(buf2), "%s/%s/ExportTable.txt", BaseDir, PkgName);
 	appMakeDirectoryForFile(buf2);
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
 		fprintf(f, "%d = %s'%s%s'\n", idx, ClassName, buf3, *Exp.ObjectName);
 		appSprintf(ARRAY_ARG(buf2), "%s/%s/%s%s.%s", BaseDir, buf, buf3, *Exp.ObjectName, ClassName);
 #else
-		char objName[1024];
+		char objName[2048];
 		GetFullExportName(Exp, Package, ARRAY_ARG(objName));
 		fprintf(f, "%d = %s\n", idx, objName);
 		GetFullExportFileName(Exp, Package, ARRAY_ARG(objName));

@@ -991,18 +991,20 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		{
 			const FSkelMeshSection &ms = SrcLod.RigidSections[s];
 			int MatIndex = ms.MaterialIndex;
-			if (MatIndex >= Lod.Sections.Num())
-				Lod.Sections.Add(MatIndex - Lod.Sections.Num() + 1);
+			// if section does not exist - add it
+			if (MatIndex >= NumSections)
+			{
+				Lod.Sections.Add(MatIndex - NumSections + 1);
+				NumSections = MatIndex + 1;
+			}
 			CMeshSection &Sec  = Lod.Sections[MatIndex];
 
 			if (pass == 1)
 			{
 				word *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
-				for (i = 0; i < ms.NumFaces; i++)
-				{
-					for (int j = 0; j < 3; j++)
-						*idx++ = SrcLod.RigidIndices.Indices[(ms.FirstFace + i) * 3 + j];
-				}
+				word firstIndex = ms.FirstFace * 3;
+				for (i = 0; i < ms.NumFaces * 3; i++)
+					*idx++ = SrcLod.RigidIndices.Indices[firstIndex + i];
 			}
 
 			Sec.NumFaces += ms.NumFaces;

@@ -314,7 +314,7 @@ int appSprintf(char *dest, int size, const char *fmt, ...)
 	int len = vsnprintf(dest, size, fmt, argptr);
 	va_end(argptr);
 	if (len < 0 || len >= size - 1)
-		appPrintf("appSprintf: overflow of %d\n", size);
+		appPrintf("appSprintf: overflow of size %d (fmt=%s)\n", size, fmt);
 
 	return len;
 }

@@ -144,6 +144,7 @@ public:
 #if BATMAN
 		PROP_DROP(CharacterFilter_Enabled)
 		PROP_DROP(CharacterFilter)
+		PROP_DROP(EventName)
 #endif
 	END_PROP_TABLE
 };

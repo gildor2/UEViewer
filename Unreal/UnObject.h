@@ -252,6 +252,7 @@ public:
 	UnPackage		*Package;
 	int				PackageIndex;	// index in package export table; INDEX_NONE for non-packaged (transient) object
 	const char		*Name;
+	UObject			*Outer;
 #if UNREAL3
 	int				NetIndex;
 #endif

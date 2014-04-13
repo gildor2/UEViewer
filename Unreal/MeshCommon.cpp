@@ -2,11 +2,11 @@
 #include "UnCore.h"
 #include "UnObject.h"			// for typeinfo
 #include "MeshCommon.h"
+#include "UnMathTools.h"		// CVertexShare
 
 
 // WARNING for BuildNnnCommon functions: do not access Verts[i] directly, use VERT macro only!
 #define VERT(n)		OffsetPointer(Verts, (n) * VertexSize)
-
 
 void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const CIndexBuffer &Indices)
 {
@@ -17,20 +17,14 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 	// Find vertices to share.
 	// We are using very simple algorithm here: to share all vertices with the same position
 	// independently on normals of faces which share this vertex.
-	TArray<CVec3> tmpNorm, Points;
-	TArray<int>   vertToPoint;						// Verts[] to Points[] map to share vertices
+	TArray<CVec3> tmpNorm;
 	tmpNorm.Add(NumVerts);							// really will use Points.Num() items, which value is smaller than NumVerts
-	Points.Empty(NumVerts);							// ...
+	CVertexShare Share;
+	Share.Prepare(Verts, NumVerts, VertexSize);
 	for (i = 0; i < NumVerts; i++)
 	{
-		const CVec3 &Pos = VERT(i)->Position;
-		int PointIndex = Points.FindItem(Pos);
-		if (PointIndex == INDEX_NONE)
-		{
-			// unique vertex (not appeared before)
-			PointIndex = Points.AddItem(Pos);
-		}
-		vertToPoint.AddItem(PointIndex);
+		static const CVec3 NullVec = { 0, 0, 0 };
+		Share.AddVertex(VERT(i)->Position, NullVec);
 	}
 
 	CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
@@ -42,7 +36,7 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 		{
 			int idx = Index(i * 3 + j);				// index in Verts[]
 			V[j] = VERT(idx);
-			N[j] = &tmpNorm[vertToPoint[idx]];		// remap to shared verts
+			N[j] = &tmpNorm[Share.WedgeToVert[idx]]; // remap to shared verts
 		}
 
 		// compute edges
@@ -66,12 +60,12 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 	}
 
 	// normalize shared normals ...
-	for (i = 0; i < Points.Num(); i++)
+	for (i = 0; i < Share.Points.Num(); i++)
 		tmpNorm[i].Normalize();
 
 	// ... then place ("unshare") normals to Verts
 	for (i = 0; i < NumVerts; i++)
-		VERT(i)->Normal = tmpNorm[vertToPoint[i]];
+		VERT(i)->Normal = tmpNorm[Share.WedgeToVert[i]];
 
 	unguard;
 }

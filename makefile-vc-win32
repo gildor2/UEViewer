@@ -53,6 +53,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnPackage.obj \
 	$(OUT_1)/UnRenderer.obj \
 	$(OUT_1)/UnTexture.obj \
+	$(OUT_1)/UnTextureNVTT.obj \
 	$(OUT_1)/UnUbisoft.obj \
 	$(OUT_1)/MaterialViewer.obj \
 	$(OUT_1)/MeshViewer.obj \
@@ -546,6 +547,7 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Unreal/MeshCommon.h \
 	Unreal/UnCore.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnObject.h
 
 $(OUT_1)/MeshCommon.obj : Unreal/MeshCommon.cpp $(DEPENDS)
@@ -580,6 +582,18 @@ DEPENDS = \
 
 $(OUT_1)/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportMaterial.obj" Exporters/ExportMaterial.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Exporters/Exporters.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnTextureNVTT.h
 
 $(OUT_1)/ExportTexture.obj : Exporters/ExportTexture.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportTexture.obj" Exporters/ExportTexture.cpp
@@ -692,7 +706,8 @@ DEPENDS = \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMaterial3.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnPackage.h \
+	Unreal/UnTextureNVTT.h
 
 $(OUT_1)/UnTexture.obj : Unreal/UnTexture.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture.obj" Unreal/UnTexture.cpp
@@ -782,6 +797,15 @@ DEPENDS = \
 
 $(OUT_1)/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/TextContainer.obj" Core/TextContainer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/UnTextureNVTT.h
+
+$(OUT_1)/UnTextureNVTT.obj : Unreal/UnTextureNVTT.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTextureNVTT.obj" Unreal/UnTextureNVTT.cpp
 
 OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/"
 

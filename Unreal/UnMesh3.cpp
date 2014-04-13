@@ -12,6 +12,7 @@
 #include "StaticMesh.h"
 #include "TypeConvert.h"
 
+
 //#define DEBUG_SKELMESH		1
 //#define DEBUG_STATICMESH		1
 
@@ -119,8 +120,12 @@ struct FSkelMeshSection3
 			return Ar;
 		}
 		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex;
+#if BATMAN
+		if (Ar.Game == GAME_Batman3) goto old_section; // Batman1 and 2 has version smaller than 806
+#endif
 		if (Ar.ArVer < 806)
 		{
+		old_section:
 			// NumTriangles is unsigned short
 			word NumTriangles;
 			Ar << NumTriangles;
@@ -155,6 +160,41 @@ struct FSkelMeshSection3
 			// has extra data here in a case of SomeFlag != 0
 		}
 #endif // MASSEFF
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3)
+		{
+			//!! the same code as for MassEffect3, combine?
+			byte SomeFlag;
+			Ar << SomeFlag;
+			assert(SomeFlag == 0);
+			// has extra data here in a case of SomeFlag != 0
+		}
+#endif // BIOSHOCK3
+#if REMEMBER_ME
+		if (Ar.Game == GAME_RememberMe && Ar.ArLicenseeVer >= 17)
+		{
+			byte SomeFlag;
+			TArray<byte> SomeArray;
+			Ar << SomeFlag;
+			if (SomeFlag) Ar << SomeArray;
+		}
+#endif // REMEMBER_ME
+#if LOST_PLANET3
+		if (Ar.Game == GAME_LostPlanet3 && Ar.ArLicenseeVer >= 75)
+		{
+			byte SomeFlag;
+			Ar << SomeFlag;
+			assert(SomeFlag == 0);	// array of 40-byte structures (serialized size = 36)
+		}
+#endif // LOST_PLANET3
+#if XCOM_BUREAU
+		if (Ar.Game == GAME_XcomB)
+		{
+			int SomeFlag;
+			Ar << SomeFlag;
+			assert(SomeFlag == 0);	// extra data
+		}
+#endif // XCOM_BUREAU
 		return Ar;
 		unguard;
 	}
@@ -193,15 +233,17 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 	{
 		guard(FSkelIndexBuffer3<<);
 
+		byte ItemSize = 2;
+
 #if BATMAN
-		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 45)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 45)
 		{
 			int unk34;
 			Ar << unk34;
+			goto old_index_buffer;
 		}
 #endif // BATMAN
 
-		byte ItemSize = 2;
 		if (Ar.ArVer >= 806)
 		{
 			int		f0;
@@ -214,6 +256,7 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 			Ar << unk;
 		}
 #endif // PLA
+	old_index_buffer:
 		if (ItemSize == 2)
 			Ar << RAW_ARRAY(I.Indices16);
 		else if (ItemSize == 4)
@@ -278,7 +321,8 @@ struct FRigidVertex3
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
 #endif
 #if MKVSDC || STRANGLE || TRANSFORMERS
-		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
+		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) ||
+			Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
 			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
 			NumUVSets = 2;
 #endif
@@ -372,7 +416,8 @@ struct FSmoothVertex3
 		if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 13) NumUVSets = 3;
 #endif
 #if MKVSDC || STRANGLE || TRANSFORMERS
-		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) || Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
+		if ((Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 11) ||
+			Ar.Game == GAME_Strangle ||	// Stranglehold check MidwayVer >= 17
 			(Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55))
 			NumUVSets = 2;
 #endif
@@ -488,8 +533,8 @@ struct FSkinChunk3
 		}
 #endif // TRANSFORMERS
 #if DEBUG_SKELMESH
-		appPrintf("Chunk: FirstVert=%d RigidVerts=%d (%d) SmoothVerts=%d (%d)\n",
-			V.FirstVertex, V.RigidVerts.Num(), V.NumRigidVerts, V.SmoothVerts.Num(), V.NumSmoothVerts);
+		appPrintf("Chunk: FirstVert=%d RigidVerts=%d (%d) SmoothVerts=%d (%d) MaxInfs=%d\n",
+			V.FirstVertex, V.RigidVerts.Num(), V.NumRigidVerts, V.SmoothVerts.Num(), V.NumSmoothVerts, V.MaxInfluences);
 #endif
 		return Ar;
 		unguard;
@@ -743,9 +788,25 @@ struct FGPUSkin3
 			Ar << S.bUsePackedPosition << S.MeshExtension << S.MeshOrigin;
 
 		if (Ar.Platform == PLATFORM_XBOX360 || Ar.Platform == PLATFORM_PS3) AllowPackedPosition = true;
+
 	#if MOH2010
 		if (Ar.Game == GAME_MOH2010) AllowPackedPosition = true;
 	#endif
+	#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 573) GNumGPUUVSets = S.NumUVSets = 2;	// Injustice
+	#endif
+	#if CRIMECRAFT
+		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) S.NumUVSets = GNumGPUUVSets = 4;
+	#endif
+	#if LOST_PLANET3
+		if (Ar.Game == GAME_LostPlanet3 && Ar.ArLicenseeVer >= 75)
+		{
+			int NoUV;
+			Ar << NoUV;
+			assert(!NoUV);	// when NoUV - special vertex format used: FCompNormal[2] + FVector (or something like this?)
+		}
+	#endif // LOST_PLANET3
+
 		// UE3 PC version ignored bUsePackedPosition - forced !bUsePackedPosition in FGPUSkin3 serializer.
 		// Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position.
 		// Working bUsePackedPosition version was found in all XBox360 games. For PC there is only one game -
@@ -756,10 +817,6 @@ struct FGPUSkin3
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
 	#endif
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
-
-	#if CRIMECRAFT
-		if (Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 2) S.NumUVSets = GNumGPUUVSets = 4;
-	#endif
 
 	#if PLA
 		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
@@ -951,7 +1008,7 @@ struct FStaticLODModel3
 #endif // FURY
 
 #if MKVSDC
-		if (Ar.Game == GAME_MK && Ar.ArVer >= 472 && Ar.Platform == PLATFORM_PS3)
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 472 && Ar.Platform == PLATFORM_PS3)	//?? remove this code, doesn't work anyway
 		{
 			// this platform has no IndexBuffer
 			Ar << Lod.Sections;
@@ -1109,10 +1166,28 @@ struct FStaticLODModel3
 			Ar << unk84 << RAW_ARRAY(extraUV);
 		}
 #endif // ARMYOF2
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3)
+		{
+			int unkE4;
+			Ar << unkE4;
+		}
+#endif // BIOSHOCK3
+#if REMEMBER_ME
+		if (Ar.Game == GAME_RememberMe && Ar.ArLicenseeVer >= 19)
+		{
+			int unkD4;
+			Ar << unkD4;
+		}
+#endif // REMEMBER_ME
 		if (Ar.ArVer >= 709)
 			Ar << Lod.NumUVSets;
 		else
 			Lod.NumUVSets = 1;
+#if DEBUG_SKELMESH
+		appPrintf("NumUVSets=%d\n", Lod.NumUVSets);
+#endif
+
 #if MOH2010
 		int RealArVer = Ar.ArVer;
 		if (Ar.Game == GAME_MOH2010)
@@ -1136,6 +1211,7 @@ struct FStaticLODModel3
 		{
 			TArray<FMesh3Unk4_MK> unkA8;
 			Ar << unkA8;
+			return Ar;		// no extra fields
 		}
 #endif // MKVSDC
 #if MOH2010
@@ -1193,6 +1269,14 @@ struct FMaterialBone
 
 	friend FArchive& operator<<(FArchive &Ar, FMaterialBone &V)
 	{
+		if (Ar.ArVer >= 573) // Injustice, version unknown
+		{
+			int f1[6], f2[6];
+			Ar << f1[0] << f1[1] << f1[2] << f1[3] << f1[4] << f1[5];
+			Ar << V.Param;
+			Ar << f2[0] << f2[1] << f2[2] << f2[3] << f2[4] << f2[5];
+			return Ar;
+		}
 		return Ar << V.Bone << V.Param;
 	}
 };
@@ -1354,7 +1438,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		Ar << unk;
 	}
 #if BATMAN
-	if ((Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2) && Ar.ArLicenseeVer >= 15)
+	if ((Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 15)
 	{
 		float ConservativeBounds;
 		TArray<FBoneBounds> PerBoneBounds;
@@ -1388,7 +1472,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	}
 #endif // ALPHA_PR
 #if MKVSDC
-	if (Ar.Game == GAME_MK && Ar.ArVer >= 472)	// real version is unknown
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 472)	// MK, real version is unknown
 	{
 		FReferenceSkeleton_MK Skel;
 		Ar << Skel << SkeletalDepth;
@@ -1407,7 +1491,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 			B.ParentIndex = Skel.Parentage[i];
 //			appPrintf("BONE: [%d] %s -> %d\n", i, *B.Name, B.ParentIndex);
 		}
-		goto material_bones;
+		goto after_skeleton;
 	}
 #endif // MKVSDC
 #if ALIENS_CM
@@ -1426,6 +1510,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	}
 #endif // DISHONORED
 	Ar << RefSkeleton << SkeletalDepth;
+after_skeleton:
 #if DEBUG_SKELMESH
 	appPrintf("RefSkeleton: %d bones, %d depth\n", RefSkeleton.Num(), SkeletalDepth);
 	for (int i1 = 0; i1 < RefSkeleton.Num(); i1++)
@@ -1435,7 +1520,6 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	//?? check GAME_Wheelman
 	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 0xF)
 	{
-	material_bones:
 		TArray<FMaterialBone> MaterialBones;
 		Ar << MaterialBones;
 	}
@@ -1708,7 +1792,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 	unguard; // ConvertMesh
 
 #if BATMAN
-	if (Ar.Game == GAME_Batman2)
+	if (Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
 		FixBatman2Skeleton();
 #endif
 
@@ -1820,6 +1904,16 @@ struct FStaticMeshSection3
 		}
 #endif // TUROK
 		Ar << S.Mat << S.f10 << S.f14;
+#if MKVSDC
+		if (Ar.Game == GAME_MK)
+		{
+			TArray<FGuid> unk28;				// 4x32-bit
+			// no bEnableShadowCasting and Index fields
+			Ar << S.FirstIndex << S.NumFaces << S.f24 << S.f28;
+			if (Ar.ArVer >= 409) Ar << unk28;
+			return Ar;
+		}
+#endif // MKVSDC
 		if (Ar.ArVer >= 473) Ar << S.bEnableShadowCasting;
 		Ar << S.FirstIndex << S.NumFaces << S.f24 << S.f28;
 #if MASSEFF
@@ -1838,13 +1932,6 @@ struct FStaticMeshSection3
 			Ar << unk30 << unk34;
 		}
 #endif // ALPHA_PR
-#if MKVSDC
-		if (Ar.Game == GAME_MK && Ar.ArVer >= 409)
-		{
-			TArray<FEdge3> unk28;				// TArray<int[4]>
-			Ar << unk28;
-		}
-#endif // MKVSDC
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 49)
 		{
@@ -1878,18 +1965,32 @@ struct FStaticMeshSection3
 		}
 #endif // MOH2010
 #if BATMAN
-		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 28)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 28)
 		{
 			UObject *unk4;
 			Ar << unk4;
 		}
 #endif // BATMAN
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3)
+		{
+			FString unk4;
+			Ar << unk4;
+		}
+#endif // BIOSHOCK3
 		if (Ar.ArVer >= 618)
 		{
 			byte unk;
 			Ar << unk;
 			assert(unk == 0);
 		}
+#if XCOM_BUREAU
+		if (Ar.Game == GAME_XcomB)
+		{
+			FString unk;
+			Ar << unk;
+		}
+#endif // XCOM_BUREAU
 		return Ar;
 		unguard;
 	}
@@ -1906,7 +2007,7 @@ struct FStaticMeshVertexStream3
 		guard(FStaticMeshVertexStream3<<);
 
 #if BATMAN
-		if (Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2)
+		if (Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
 		{
 			byte VertexType = 0;		// appeared in Batman 2; 0 -> FVector, 1 -> half[3], 2 -> half[4] (not checked!)
 			int unk18;					// default is 1
@@ -1936,6 +2037,10 @@ struct FStaticMeshVertexStream3
 #endif // BATMAN
 
 		Ar << S.VertexSize << S.NumVerts;
+#if DEBUG_STATICMESH
+		appPrintf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
+#endif
+
 #if AVA
 		if (Ar.Game == GAME_AVA && Ar.ArVer >= 442)
 		{
@@ -1976,8 +2081,61 @@ struct FStaticMeshVertexStream3
 			Ar << unk;
 		}
 #endif // PLA
-#if DEBUG_STATICMESH
-		appPrintf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
+#if BIOSHOCK3
+		if (Ar.Game == GAME_Bioshock3)
+		{
+			byte IsPacked, VectorType;		// VectorType used only when IsPacked != 0
+			FVector Mins, Extents;
+			Ar << IsPacked << VectorType << Mins << Extents;
+	#if DEBUG_STATICMESH
+			appPrintf("... Bioshock3: IsPacked=%d VectorType=%d Mins=%g %g %g Extents=%g %g %g\n",
+				IsPacked, VectorType, FVECTOR_ARG(Mins), FVECTOR_ARG(Extents));
+	#endif
+			if (IsPacked)
+			{
+				if (VectorType)
+				{
+					TArray<FVectorIntervalFixed48Bio> Vecs16x3;
+					Ar << RAW_ARRAY(Vecs16x3);
+					S.Verts.Add(Vecs16x3.Num());
+					for (int i = 0; i < Vecs16x3.Num(); i++)
+						S.Verts[i] = Vecs16x3[i].ToVector(Mins, Extents);
+					appNotify("type1 - untested");	//?? not found - not used?
+				}
+				else
+				{
+					TArray<FVectorIntervalFixed64Bio> Vecs16x4;
+					Ar << RAW_ARRAY(Vecs16x4);
+					S.Verts.Add(Vecs16x4.Num());
+					for (int i = 0; i < Vecs16x4.Num(); i++)
+						S.Verts[i] = Vecs16x4[i].ToVector(Mins, Extents);
+				}
+				return Ar;
+			}
+			// else - normal vertex stream
+		}
+#endif // BIOSHOCK3
+#if REMEMBER_ME
+		if (Ar.Game == GAME_RememberMe && Ar.ArLicenseeVer >= 18)
+		{
+			int UsePackedPosition, VertexType;
+			FVector v1, v2;
+			Ar << VertexType << UsePackedPosition;
+			if (Ar.ArLicenseeVer >= 20)
+				Ar << v1 << v2;
+//			appPrintf("VT=%d, PP=%d, V1=%g %g %g, V2=%g %g %g\n", VertexType, UsePackedPosition, FVECTOR_ARG(v1), FVECTOR_ARG(v2));
+			if (UsePackedPosition && VertexType != 0)
+			{
+				appError("Unsupported vertex type!\n");
+			}
+		}
+#endif // REMEMBER_ME
+#if THIEF4
+		if (Ar.Game == GAME_Thief4 && Ar.ArLicenseeVer >= 15)
+		{
+			int unk28;
+			Ar << unk28;
+		}
 #endif
 		Ar << RAW_ARRAY(S.Verts);
 		return Ar;
@@ -2109,14 +2267,19 @@ struct FStaticMeshUVStream3
 #if MOHA
 		if (Ar.Game == GAME_MOHA && Ar.ArVer >= 421) goto new_ver;
 #endif
+#if MKVSDC
+		if (Ar.Game == GAME_MK) goto old_ver;	// Injustice has no float/half selection
+#endif
 		if (Ar.ArVer >= 474)
 		{
 		new_ver:
 			Ar << S.bUseFullPrecisionUVs;
 		}
+	old_ver:
+
 #if BATMAN
 		int HasNormals = 1;
-		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 42)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 42)
 			Ar << HasNormals;
 		GStripStaticNormals = (HasNormals == 0);
 #endif // BATMAN
@@ -2166,6 +2329,13 @@ struct FStaticMeshUVStream3
 			Ar << unk;
 		}
 #endif // PLA
+#if THIEF4
+		if (Ar.Game == GAME_Thief4 && Ar.ArLicenseeVer >= 15)
+		{
+			int unk30;
+			Ar << unk30;
+		}
+#endif
 		// prepare for UV serialization
 		if (S.NumTexCoords > NUM_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", S.NumTexCoords);
@@ -2209,6 +2379,13 @@ struct FStaticMeshColorStream3New		// ArVer >= 615
 		Ar << S.ItemSize << S.NumVerts;
 #if DEBUG_STATICMESH
 		appPrintf("StaticMesh ColorStreamNew: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
+#endif
+#if THIEF4
+		if (Ar.Game == GAME_Thief4 && Ar.ArLicenseeVer >= 43)
+		{
+			byte unk;
+			Ar << unk;
+		}
 #endif
 		if (S.NumVerts)
 		{
@@ -2265,6 +2442,8 @@ struct FStaticMeshNormal_MK
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshNormal_MK &V)
 	{
+		if (Ar.ArVer >= 573)
+			return Ar << V.Normal[0] << V.Normal[2];	// Injustice
 		return Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 	}
 };
@@ -2277,7 +2456,11 @@ struct FStaticMeshNormalStream_MK
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshNormalStream_MK &S)
 	{
-		return Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Normals);
+		Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Normals);
+#if DEBUG_STATICMESH
+		appPrintf("MK NormalStream: ItemSize=%d, Count=%d (%d)\n", S.ItemSize, S.NumVerts, S.Normals.Num());
+#endif
+		return Ar;
 	}
 };
 
@@ -2523,7 +2706,7 @@ struct FStaticMeshLODModel
 		appPrintf("Serializing indices ...\n");
 #endif
 #if BATMAN
-		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 45)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 45)
 		{
 			int unk34;		// variable in IndexBuffer, but in 1st only
 			Ar << unk34;
@@ -2848,6 +3031,18 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 #if DISHONORED
 	if (Ar.Game == GAME_Dishonored) goto old_kdop;
 #endif
+#if BIOSHOCK3
+	if (Ar.Game == GAME_Bioshock3)
+	{
+		FVector v1, v2[2], v3;
+		TArray<int> arr4;
+		Ar << v1 << v2[0] << v2[1] << v3 << arr4;
+		goto version;
+	}
+#endif
+#if THIEF4
+	if (Ar.Game == GAME_Thief4 && Ar.ArVer >= 707) goto new_kdop;
+#endif
 	// kDOP tree
 	if (Ar.ArVer < 770)
 	{
@@ -2889,6 +3084,26 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 		goto done;
 	}
 #endif // DOH
+#if THIEF4
+	if (Ar.Game == GAME_Thief4)
+	{
+		if (Ar.ArLicenseeVer >= 7)
+			SkipFixedArray(Ar, sizeof(int) * 7);
+		if (Ar.ArLicenseeVer >= 5)
+			SkipFixedArray(Ar, sizeof(int) * (2+9));	// FName + int[9]
+		if (Ar.ArLicenseeVer >= 3)
+			SkipFixedArray(Ar, sizeof(int) * 7);
+		if (Ar.ArLicenseeVer >= 2)
+		{
+			SkipFixedArray(Ar, sizeof(int) * 7);
+			SkipFixedArray(Ar, sizeof(int) * 10);
+			// complex structure
+			SkipFixedArray(Ar, sizeof(int) * 3);
+			SkipFixedArray(Ar, sizeof(int));
+			SkipFixedArray(Ar, sizeof(int));
+		}
+	}
+#endif // THIEF4
 
 version:
 	Ar << InternalVersion;
@@ -2996,7 +3211,7 @@ done:
 		Lod->HasNormals   = true;
 		Lod->HasTangents  = (Ar.ArVer >= 364);				//?? check; FStaticMeshUVStream3 is used since this version
 #if BATMAN
-		if (Ar.Game == GAME_Batman2 && CanStripNormalsAndTangents)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && CanStripNormalsAndTangents)
 			Lod->HasNormals = Lod->HasTangents = false;
 #endif
 		if (NumTexCoords > NUM_MESH_UV_SETS)

@@ -157,6 +157,7 @@ static const char *KnownExtensions[] =
 {
 #	if UNREAL3
 	"tfc",			// Texture File Cache
+	"bin",			// just in case
 #	endif
 #	if UC2
 	"xpr",			// XBox texture container
@@ -705,6 +706,22 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 }
 
 
+struct DummyItem	// non-srializeable
+{
+	friend FArchive& operator<<(FArchive &Ar, DummyItem &Item)
+	{
+		return Ar;
+	}
+};
+
+void SkipFixedArray(FArchive &Ar, int ItemSize)
+{
+	TArray<DummyItem> DummyArray;
+	Ar << DummyArray;
+	Ar.Seek(Ar.Tell() + DummyArray.Num() * ItemSize);
+}
+
+
 void appReverseBytes(void *Block, int NumItems, int ItemSize)
 {
 	byte *p1 = (byte*)Block;
@@ -1234,6 +1251,12 @@ void FArchive::DetectGame()
 #if SHADOWS_DAMNED
 	if (ArVer == 706 && ArLicenseeVer == 28)	SET(GAME_ShadowsDamned);
 #endif
+#if THIEF4
+	if (ArVer == 721 && ArLicenseeVer == 148)	SET(GAME_Thief4);
+#endif
+#if BIOSHOCK3
+	if (ArVer == 727 && ArLicenseeVer == 75)	SET(GAME_Bioshock3);
+#endif
 #if BULLETSTORM
 	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
 #endif
@@ -1248,12 +1271,26 @@ void FArchive::DetectGame()
 #endif
 #if BATMAN
 	if (ArVer == 805 && ArLicenseeVer == 101)	SET(GAME_Batman2);
+	if ( (ArVer == 806 || ArVer == 807) &&
+		 (ArLicenseeVer == 103 || ArLicenseeVer == 137 || ArLicenseeVer == 138) )
+		SET(GAME_Batman3);
+#endif
+#if REMEMBER_ME
+	if (ArVer == 832 && ArLicenseeVer == 21)	SET(GAME_RememberMe);
 #endif
 #if DMC
 	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);
 #endif
+#if XCOM_BUREAU
+	if (ArVer == 849 && ArLicenseeVer == 32795)	SET(GAME_XcomB);
+#endif
 #if FABLE
-	if (ArVer == 850 && ArLicenseeVer == 1017)	SET(GAME_Fable);
+	if ( (ArVer == 850 || ArVer == 860) && (ArLicenseeVer == 1017) )	// 850 = Fable: The Journey, 860 = Fable Anniversary
+		SET(GAME_Fable);
+#endif
+#if LOST_PLANET3
+	if (ArVer == 860 && (ArLicenseeVer == 97 || ArLicenseeVer == 98))	// 97 = Lost Planet 3, 98 = Yaiba: Ninja Gaiden Z
+		SET(GAME_LostPlanet3);
 #endif
 #if SPECIALFORCE2
 	if (ArVer == 904 && (ArLicenseeVer == 9 || ArLicenseeVer == 14)) SET(GAME_SpecialForce2);
@@ -1277,8 +1314,9 @@ void FArchive::DetectGame()
 		SET(GAME_MassEffect3);
 #endif
 #if MKVSDC
-	if ( (ArVer == 402 && ArLicenseeVer == 30) ||		//!! has extra tag
-		 (ArVer == 472 && ArLicenseeVer == 46) )
+	if ( (ArVer == 402 && ArLicenseeVer == 30) ||		//!! has extra tag; MK vs DC
+		 (ArVer == 472 && ArLicenseeVer == 46) ||		// Mortal Kombat
+		 (ArVer == 573 && ArLicenseeVer == 49) )		// Injustice: God Among Us
 		SET(GAME_MK);
 #endif
 #if HUXLEY
@@ -1512,7 +1550,7 @@ static void appDecompressLZX(byte *CompressedBuffer, int CompressedSize, byte *U
 	// decompress
 	int r = lzxd_decompress(lzxd, UncompressedSize);
 	if (r != MSPACK_ERR_OK)
-		appError("lzxd_decompress() returned %d", r);
+		appError("lzxd_decompress(%d,%d) returned %d", CompressedSize, UncompressedSize, r);
 	// free resources
 	lzxd_free(lzxd);
 
@@ -1553,14 +1591,31 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 #endif // TAO_YUAN
 
 #if 1
-		//?? Alice: Madness Returns only?
-		if (CompressedSize == UncompressedSize)
-		{
-			// CompressedSize == UncompressedSize -> no compression
-			memcpy(UncompressedBuffer, CompressedBuffer, UncompressedSize);
-			return UncompressedSize;
-		}
+	//?? Alice: Madness Returns only?
+	if (CompressedSize == UncompressedSize)
+	{
+		// CompressedSize == UncompressedSize -> no compression
+		memcpy(UncompressedBuffer, CompressedBuffer, UncompressedSize);
+		return UncompressedSize;
+	}
 #endif
+
+	if (Flags == COMPRESS_FIND && CompressedSize >= 2)
+	{
+		byte b1 = CompressedBuffer[0];
+		byte b2 = CompressedBuffer[1];
+		// detect compression
+		// zlib:
+		//   http://tools.ietf.org/html/rfc1950
+		//   http://stackoverflow.com/questions/9050260/what-does-a-zlib-header-look-like
+		if ( b1 == 0x78 &&					// b1=CMF: 7=32k buffer (CINFO), 8=deflate (CM)
+			(b2 == 0x9C || b2 == 0xDA) )	// b2=FLG
+		{
+			Flags = COMPRESS_ZLIB;
+		}
+		else
+			Flags = COMPRESS_LZO;
+	}
 
 	if (Flags == COMPRESS_LZO)
 	{
@@ -1569,7 +1624,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		if (r != LZO_E_OK) appError("lzo_init() returned %d", r);
 		unsigned long newLen = UncompressedSize;
 		r = lzo1x_decompress_safe(CompressedBuffer, CompressedSize, UncompressedBuffer, &newLen, NULL);
-		if (r != LZO_E_OK) appError("lzo_decompress() returned %d", r);
+		if (r != LZO_E_OK) appError("lzo_decompress(%d,%d) returned %d", CompressedSize, UncompressedSize, r);
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
 		return newLen;
 	}
@@ -1581,7 +1636,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 #else
 		unsigned long newLen = UncompressedSize;
 		int r = uncompress(UncompressedBuffer, &newLen, CompressedBuffer, CompressedSize);
-		if (r != Z_OK) appError("zlib uncompress() returned %d", r);
+		if (r != Z_OK) appError("zlib uncompress(%d,%d) returned %d", CompressedSize, UncompressedSize, r);
 //		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize); -- needed by Bioshock
 		return newLen;
 #endif

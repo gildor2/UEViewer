@@ -57,6 +57,7 @@ const char *UObject::GetUncookedPackageName() const
 // Package.Group.Object
 void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool IncludeCookedPackageName, bool ForcePackageName) const
 {
+	guard(UObject::GetFullName);
 	if (!Package)
 	{
 		buf[0] = 0;
@@ -71,6 +72,7 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 		return;
 	}
 	Package->GetFullExportName(Exp, buf, bufSize, IncludeObjectName, IncludeCookedPackageName);
+	unguard;
 }
 
 
@@ -405,6 +407,7 @@ struct FPropertyTagBat2
 	{
 		Ar << Tag.Type;
 		if (!Tag.Type) return Ar;
+		if (Ar.Game == GAME_Batman3 && Ar.ArLicenseeVer >= 104) goto named_prop; // Batman3 Online has old version
 		Ar << Tag.Offset;
 		if (Tag.Type == NAME_IntProperty || Tag.Type == NAME_FloatProperty || Tag.Type == NAME_NameProperty || Tag.Type == NAME_VectorProperty ||
 			Tag.Type == NAME_RotatorProperty || Tag.Type == NAME_StrProperty || Tag.Type == 16 /*NAME_ObjectNCRProperty*/)
@@ -415,6 +418,7 @@ struct FPropertyTagBat2
 		}
 		else
 		{
+		named_prop:
 			// property serialized by name
 			Ar << Tag.PropertyName << Tag.DataSize << Tag.ArrayIndex;
 		}
@@ -601,7 +605,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 #if BATMAN
 		//!! try to move to separate function
-		if (Ar.Game == GAME_Batman2)
+		if (Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
 		{
 			// Batman 2 has more compact FPropertyTag implementation which uses serialization
 			// by offset, not by name - this should work faster (in game) and use less disk space.
@@ -721,6 +725,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #if DEBUG_PROPS
 			appPrintf("  (skipping %s)\n", *Tag.Name);
 #endif
+		skip_property:
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
@@ -730,11 +735,14 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		if (Tag.Type == NAME_ArrayProperty)
 		{
 			if (!(Prop->Count == -1 && Tag.ArrayIndex == 0))
-				appError("Struct \"%s\": %s %s has Prop.Count=%d (should be -1) and ArrayIndex=%d (should be 0)",
+			{
+				appPrintf("ERROR: Struct \"%s\": %s %s has Prop.Count=%d (should be -1) and ArrayIndex=%d (should be 0). Skipping property.\n",
 					Name, Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
+				goto skip_property;
+			}
 		}
-		else if (Tag.ArrayIndex >= Prop->Count)
-			appError("Struct \"%s\": %s %s[%d]: serializing index %d",
+		else if (Tag.ArrayIndex < 0 || Tag.ArrayIndex >= Prop->Count)
+			appError("Struct \"%s\": %s %s[%d]: invalid index %d",
 				Name, Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
 		byte *value = (byte*)ObjectData + Prop->Offset;
 
@@ -936,7 +944,24 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		case NAME_StringProperty:	//------  string  => used str
 		case NAME_VectorProperty:	//------  vector  => used structure"Vector"
 		case NAME_RotatorProperty:	//------  rotator => used structure"Rotator"
-			appError("Unknown property");
+#if BATMAN
+			if (Ar.Game == GAME_Batman3)
+			{
+				if (Tag.Type == NAME_VectorProperty)
+				{
+					Ar << PROP(FVector);
+					PROP_DBG("%s", *PROP(FVector));
+					break;
+				}
+				else if (Tag.Type == NAME_RotatorProperty)
+				{
+					Ar << PROP(FRotator);
+					PROP_DBG("%s", *PROP(FRotator));
+					break;
+				}
+			}
+#endif
+			appError("Unknown property type %d, name %s", Tag.Type, *Tag.Name);
 			break;
 		}
 		// verification

@@ -485,77 +485,7 @@ public:
 #endif // TRANSFORMERS
 	END_PROP_TABLE
 
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(UAnimSequence::Serialize);
-		assert(Ar.ArVer >= 372);		// older version is not yet ready
-		Super::Serialize(Ar);
-#if TUROK
-		if (Ar.Game == GAME_Turok) return;
-#endif
-#if MASSEFF
-		if (Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110)
-		{
-			guard(SerializeMassEffect2);
-			FByteBulkData RawAnimationBulkData;
-			RawAnimationBulkData.Serialize(Ar);
-			unguard;
-		}
-		if (Ar.Game == GAME_MassEffect3) goto old_code;		// Mass Effect 3 has no RawAnimationData
-#endif // MASSEFF
-#if MOH2010
-		if (Ar.Game == GAME_MOH2010) goto old_code;
-#endif
-#if TERA
-		if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overriden ArVer, so compare by ArLicenseeVer ...
-#endif
-#if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) // Transformers: Fall of Cybertron, no version in code
-		{
-			int UseNewFormat;
-			Ar << UseNewFormat;
-			if (UseNewFormat)
-			{
-				Ar << Trans3Data;
-				return;
-			}
-		}
-#endif // TRANSFORMERS
-		if (Ar.ArVer >= 577)
-		{
-		new_code:
-			Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
-		}
-#if PLA
-		if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
-		{
-			FGuid unk;
-			Ar << unk;
-		}
-#endif // PLA
-	old_code:
-		Ar << CompressedByteStream;
-#if ARGONAUTS
-		if (Ar.Game == GAME_Argonauts && Ar.ArLicenseeVer >= 30)
-		{
-			Ar << CompressedTrackTimes;
-			if (Ar.ReverseBytes)
-			{
-				// CompressedTrackTimes is originally serialized as array of words, should swap low and high words
-				for (int i = 0; i < CompressedTrackTimes.Num(); i++)
-				{
-					unsigned v = CompressedTrackTimes[i];
-					CompressedTrackTimes[i] = ((v & 0xFFFF) << 16) | ((v >> 16) & 0xFFFF);
-				}
-			}
-		}
-#endif // ARGONAUTS
-#if BATMAN
-		if (Ar.Game == GAME_Batman2 && Ar.ArLicenseeVer >= 55)
-			Ar << AnimZip_Data;
-#endif // BATMAN
-		unguard;
-	}
+	virtual void Serialize(FArchive &Ar);
 
 #if BATMAN
 	void DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) const;
@@ -628,37 +558,7 @@ public:
 	END_PROP_TABLE
 
 	void ConvertAnims();
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(UAnimSet::Serialize);
-		UObject::Serialize(Ar);
-#if TUROK
-		if (Ar.Game == GAME_Turok)
-		{
-			// native part of structure
-			//?? can simple skip to the end of file - these data are not used
-			for (int i = 0; i < BulkDataBlocks.Num(); i++)
-				Ar << BulkDataBlocks[i].mBulkData;
-			return;
-		}
-#endif // TUROK
-#if FRONTLINES
-		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 40)
-		{
-			guard(SerializeFrontlinesAnimSet);
-			TArray<FFrontlinesHashSeq> HashSequences;
-			Ar << HashSequences;
-			// fill Sequences from HashSequences
-			assert(Sequences.Num() == 0);
-			Sequences.Empty(HashSequences.Num());
-			for (int i = 0; i < HashSequences.Num(); i++) Sequences.AddItem(HashSequences[i].Seq);
-			return;
-			unguard;
-		}
-#endif // FRONTLINES
-		unguard;
-	}
+	virtual void Serialize(FArchive &Ar);
 
 	virtual void PostLoad()
 	{
@@ -735,6 +635,9 @@ public:
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
 		PROP_DROP(bCanBecomeDynamic)
+#if BIOSHOCK3
+		PROP_DROP(UseCompressedPositions)
+#endif
 #if DECLARE_VIEWER_PROPS
 		PROP_INT(InternalVersion)
 #endif // DECLARE_VIEWER_PROPS

@@ -377,6 +377,7 @@ static const GameInfo games[] = {
 #	if MKVSDC
 		G("Mortal Kombat vs. DC Universe", mk, GAME_MK),
 		G("Mortal Kombat", mk, GAME_MK),
+		G("Injustice: Gods Among Us", mk, GAME_MK),
 #	endif
 #	if TUROK
 		G("Turok", turok, GAME_Turok),
@@ -412,8 +413,9 @@ static const GameInfo games[] = {
 		G("Magna Carta 2", mcarta, GAME_MagnaCarta),
 #	endif
 #	if BATMAN
-		G("Batman: Arkham Asylum", batman, GAME_Batman),
-		G("Batman: Arkham City", batman2, GAME_Batman2),
+		G("Batman: Arkham Asylum",  batman,  GAME_Batman),
+		G("Batman: Arkham City",    batman2, GAME_Batman2),
+		G("Batman: Arkham Origins", batman3, GAME_Batman3),
 #	endif
 #	if CRIMECRAFT
 		G("Crime Craft", crime, GAME_CrimeCraft),
@@ -514,6 +516,7 @@ static const GameInfo games[] = {
 #	endif
 #	if FABLE
 		G("Fable: The Journey", fable, GAME_Fable),
+		G("Fable Anniversary",  fable, GAME_Fable),
 #	endif
 #	if DMC
 		G("DmC: Devil May Cry", dmc, GAME_DmC),
@@ -523,6 +526,25 @@ static const GameInfo games[] = {
 #	endif
 #	if PLA
 		G("Passion Leads Army", pla, GAME_PLA),
+#	endif
+#	if BIOSHOCK3
+		G("Bioshock Infinite", bio3, GAME_Bioshock3),
+#	endif
+#	if REMEMBER_ME
+		G("Remember Me", rem, GAME_RememberMe),
+#	endif
+#	if MARVEL_HEROES
+		G("Marvel Heroes", mh, GAME_MarvelHeroes),
+#	endif
+#	if LOST_PLANET3
+		G("Lost Planet 3", lp3, GAME_LostPlanet3),
+		G("Yaiba: Ninja Gaiden Z", lp3, GAME_LostPlanet3),
+#	endif
+#	if XCOM_BUREAU
+		G("The Bureau: XCOM Declassified", xcom, GAME_XcomB),
+#	endif
+#	if THIEF4
+		G("Thief", thief4, GAME_Thief4),
 #	endif
 #endif // UNREAL3
 };
@@ -652,6 +674,7 @@ static void PrintUsage()
 			"    -noanim         disable loading of MeshAnimation classes\n"
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
+			"    -nolightmap     disable loading of Lightmap textures\n"
 			"    -sounds         allow export of sounds\n"
 			"    -3rdparty       allow 3rd party asset export (ScaleForm, FaceFX)\n"
 			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
@@ -708,7 +731,7 @@ static void PrintVersionInfo()
 	appPrintf(
 			"UE viewer (UMODEL)\n"
 			"This version was built " __DATE__ "\n"
-			"(c)2007-2013 Konstantin Nosov (Gildor)\n"
+			"(c)2007-2014 Konstantin Nosov (Gildor)\n"
 			HOMEPAGE "\n"
 	);
 }
@@ -766,7 +789,7 @@ int main(int argc, char **argv)
 	};
 	static byte mainCmd = CMD_View;
 	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
-		 noTex = false, regSounds = false, reg3rdparty = false, hasRootDir = false;
+		 noTex = false, noLightmap = false, regSounds = false, reg3rdparty = false, hasRootDir = false;
 	TArray<const char*> extraPackages, objectsToLoad;
 	TArray<const char*> params;
 	const char *attachAnimName = NULL;
@@ -810,6 +833,7 @@ int main(int argc, char **argv)
 			OPT_BOOL ("nostat",  noStat)
 			OPT_BOOL ("noanim",  noAnim)
 			OPT_BOOL ("notex",   noTex)
+			OPT_BOOL ("nolightmap", noLightmap)
 			OPT_BOOL ("sounds",  regSounds)
 			OPT_BOOL ("3rdparty", reg3rdparty)
 			OPT_BOOL ("dds",     GExportDDS)
@@ -998,6 +1022,7 @@ int main(int argc, char **argv)
 	}
 	if (noStat) UnregisterClass("StaticMesh",     true);
 	if (noTex)  UnregisterClass("UnrealMaterial", true);
+	if (noLightmap) UnregisterClass("LightMapTexture2D", true);
 
 	// end of initialization
 

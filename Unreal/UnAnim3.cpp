@@ -65,11 +65,162 @@ UAnimSet::~UAnimSet()
 }
 
 
+#if LOST_PLANET3
+
+struct FReducedAnimData_LP3
+{
+	short					v1;
+	short					v2;
+
+	friend FArchive& operator<<(FArchive &Ar, FReducedAnimData_LP3 &D)
+	{
+		return Ar << D.v1 << D.v2;
+	}
+};
+
+#endif // LOST_PLANET3
+
+
+void UAnimSet::Serialize(FArchive &Ar)
+{
+	guard(UAnimSet::Serialize);
+	UObject::Serialize(Ar);
+#if TUROK
+	if (Ar.Game == GAME_Turok)
+	{
+		// native part of structure
+		//?? can simple skip to the end of file - these data are not used
+		for (int i = 0; i < BulkDataBlocks.Num(); i++)
+			Ar << BulkDataBlocks[i].mBulkData;
+		return;
+	}
+#endif // TUROK
+#if FRONTLINES
+	if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 40)
+	{
+		guard(SerializeFrontlinesAnimSet);
+		TArray<FFrontlinesHashSeq> HashSequences;
+		Ar << HashSequences;
+		// fill Sequences from HashSequences
+		assert(Sequences.Num() == 0);
+		Sequences.Empty(HashSequences.Num());
+		for (int i = 0; i < HashSequences.Num(); i++) Sequences.AddItem(HashSequences[i].Seq);
+		return;
+		unguard;
+	}
+#endif // FRONTLINES
+#if LOST_PLANET3
+	if (Ar.Game == GAME_LostPlanet3 && Ar.ArLicenseeVer >= 90)
+	{
+		TArray<FReducedAnimData_LP3> d;
+		Ar << d;
+//		appPrintf("LostPlanet AnimSet %s: %d reduced tracks\n", Name, d.Num());
+	}
+#endif // LOST_PLANET3
+	unguard;
+}
+
+
+/*-----------------------------------------------------------------------------
+	UAnimSequence
+-----------------------------------------------------------------------------*/
+
 #if DEBUG_DECOMPRESS
 #define DBG(...)			appPrintf(__VA_ARGS__)
 #else
 #define DBG(...)
 #endif
+
+void UAnimSequence::Serialize(FArchive &Ar)
+{
+	guard(UAnimSequence::Serialize);
+	assert(Ar.ArVer >= 372);		// older version is not yet ready
+	Super::Serialize(Ar);
+#if TUROK
+	if (Ar.Game == GAME_Turok) return;
+#endif
+#if MASSEFF
+	if (Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110)
+	{
+		guard(SerializeMassEffect2);
+		FByteBulkData RawAnimationBulkData;
+		RawAnimationBulkData.Serialize(Ar);
+		unguard;
+	}
+	if (Ar.Game == GAME_MassEffect3) goto old_code;		// Mass Effect 3 has no RawAnimationData
+#endif // MASSEFF
+#if MOH2010
+	if (Ar.Game == GAME_MOH2010) goto old_code;
+#endif
+#if TERA
+	if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overriden ArVer, so compare by ArLicenseeVer ...
+#endif
+#if TRANSFORMERS
+	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) // Transformers: Fall of Cybertron, no version in code
+	{
+		int UseNewFormat;
+		Ar << UseNewFormat;
+		if (UseNewFormat)
+		{
+			Ar << Trans3Data;
+			return;
+		}
+	}
+#endif // TRANSFORMERS
+	if (Ar.ArVer >= 577)
+	{
+	new_code:
+		Ar << RawAnimData;			// this field was moved to RawAnimationData, RawAnimData is deprecated
+	}
+#if PLA
+	if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
+	{
+		FGuid unk;
+		Ar << unk;
+	}
+#endif // PLA
+old_code:
+	Ar << CompressedByteStream;
+#if ARGONAUTS
+	if (Ar.Game == GAME_Argonauts && Ar.ArLicenseeVer >= 30)
+	{
+		Ar << CompressedTrackTimes;
+		if (Ar.ReverseBytes)
+		{
+			// CompressedTrackTimes is originally serialized as array of words, should swap low and high words
+			for (int i = 0; i < CompressedTrackTimes.Num(); i++)
+			{
+				unsigned v = CompressedTrackTimes[i];
+				CompressedTrackTimes[i] = ((v & 0xFFFF) << 16) | ((v >> 16) & 0xFFFF);
+			}
+		}
+	}
+#endif // ARGONAUTS
+#if BATMAN
+	if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 55)
+		Ar << AnimZip_Data;
+#endif // BATMAN
+#if LOST_PLANET3
+	if (Ar.Game == GAME_LostPlanet3 && Ar.ArLicenseeVer >= 90)
+	{
+		TArray<FReducedAnimData_LP3> d;
+		Ar << d;
+	#if 0
+		UAnimSet *AnimSet = static_cast<UAnimSet*>(Outer);
+		assert(AnimSet && AnimSet->IsA("AnimSet"));
+		//!!!!!
+		printf("%s reduced: %d, %d tracks\n", *SequenceName, d.Num(), AnimSet->TrackBoneNames.Num());
+		for (int i = 0; i < d.Num(); i++)
+		{
+			const FReducedAnimData_LP3 &v = d[i];
+			printf("   %d  %d\n", v.v1, v.v2);
+		}
+	#endif
+	}
+#endif // LOST_PLANET3
+	unguard;
+}
+
 
 static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int NumFrames)
 {
@@ -498,7 +649,7 @@ void UAnimSet::ConvertAnims()
 		}
 #endif // MASSEFF
 #if BATMAN
-		if (Package->Game == GAME_Batman2 && Seq->AnimZip_Data.Num())
+		if ((Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3) && Seq->AnimZip_Data.Num())
 		{
 			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
 			Dst->Name      = Seq->SequenceName;

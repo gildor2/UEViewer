@@ -41,6 +41,25 @@
 #define NEW_SDL					1
 #endif
 
+#if MAX_DEBUG
+
+static void CheckSDLError()
+{
+	const char *err = SDL_GetError();
+	if (err && err[0])
+	{
+		appPrintf("SDL ERROR: %s\n", err);
+		SDL_ClearError();
+	}
+}
+
+#define SDL_CHECK_ERROR	CheckSDLError()
+
+#else
+
+#define SDL_CHECK_ERROR
+
+#endif // SDL_CHECK_ERROR
 
 #if LIGHTING_MODES
 
@@ -334,6 +353,7 @@ static void ResizeWindow(int w, int h)
 #else
 	SDL_SetVideoMode(winWidth, winHeight, 24, SDL_OPENGL|SDL_RESIZABLE);
 #endif
+	SDL_CHECK_ERROR;
 
 	static bool loaded = false;
 	if (!loaded)

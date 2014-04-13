@@ -1,9 +1,4 @@
-// nvimage includes
-#include <nvcore/StdStream.h>
-#include <nvimage/Image.h>
-#include <nvimage/DirectDrawSurface.h>
-#undef __FUNC__						// conflicted with our guard macros
-
+#include "UnTextureNVTT.h"
 
 #include "Core.h"
 #include "UnCore.h"
@@ -209,10 +204,14 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 	header.setLinearSize(TexData.DataSize);
 
 	appMakeDirectoryForFile(Filename);
-	nv::StdOutputStream stream(Filename);	// using nv stream for header serialization only
-	stream << header;
 
-	stream.serialize((void*)TexData.CompressedData, TexData.DataSize);
+	byte headerBuffer[128];					// DDS header is 128 bytes long
+	memset(headerBuffer, 0, 128);
+	WriteDDSHeader(headerBuffer, header);
+	FArchive *Ar = new FFileWriter(Filename);
+	Ar->Serialize(headerBuffer, 128);
+	Ar->Serialize((byte*)TexData.CompressedData, TexData.DataSize);
+	delete Ar;
 
 	unguard;
 }
