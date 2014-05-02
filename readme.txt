@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+02.05.2014
+- updated material support for recent Lineage 2 version
+
 02.04.2014
 - fixed incompatibility with some Thief packages
 

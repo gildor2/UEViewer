@@ -589,10 +589,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #define PROP(type)		( ((type*)value)[ArrayIndex] )
 
 #if DEBUG_PROPS
-#	define PROP_DBG(fmt, value) \
-		appPrintf("  %s[%d] = " fmt "\n", *Tag.Name, Tag.ArrayIndex, value);
+#	define PROP_DBG(fmt, ...) \
+		appPrintf("  %s[%d] = " fmt "\n", *Tag.Name, Tag.ArrayIndex, __VA_ARGS__);
 #else
-#	define PROP_DBG(fmt, value)
+#	define PROP_DBG(fmt, ...)
 #endif
 
 	int PropTagPos;
@@ -949,14 +949,16 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			{
 				if (Tag.Type == NAME_VectorProperty)
 				{
-					Ar << PROP(FVector);
-					PROP_DBG("%s", *PROP(FVector));
+					FVector& prop = PROP(FVector);
+					Ar << prop;
+					PROP_DBG("%g %g %g", prop.X, prop.Y, prop.Z);
 					break;
 				}
 				else if (Tag.Type == NAME_RotatorProperty)
 				{
-					Ar << PROP(FRotator);
-					PROP_DBG("%s", *PROP(FRotator));
+					FRotator& prop = PROP(FRotator);
+					Ar << prop;
+					PROP_DBG("%g %g %g", prop.Yaw, prop.Pitch, prop.Roll);
 					break;
 				}
 			}

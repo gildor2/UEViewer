@@ -72,24 +72,46 @@ struct FLineageMaterialStageProperty
 struct FLineageShaderProperty
 {
 	// possibly, MaterialInfo, TextureTranform, TwoPassRenderState, AlphaRef
-	byte			b1[4];
+	byte			b1, b2;
+	byte			b3[5], b4[5], b5[5], b6[5], b7[5], b8[5];
 	// possibly, SrcBlend, DestBlend, OverriddenFogColor
-	int				i1[3];
+	int				i1[5], i2[5], i3[5];
 	// nested structure
 	// possibly, int FC_Color1, FC_Color2 (strange byte order)
-	byte			b2[8];
+	byte			be[8];
 	// possibly, float FC_FadePeriod, FC_FadePhase, FC_ColorFadeType
-	int				i2[3];
+	int				ie[3];
 	// stages
 	TArray<FLineageMaterialStageProperty> Stages;
 
 	friend FArchive& operator<<(FArchive &Ar, FLineageShaderProperty &P)
 	{
 		int i;
-		for (i = 0; i < 4; i++) Ar << P.b1[i];
-		for (i = 0; i < 3; i++) Ar << P.i1[i];
-		for (i = 0; i < 8; i++) Ar << P.b2[i];
-		for (i = 0; i < 3; i++) Ar << P.i2[i];
+		Ar << P.b1 << P.b2;
+
+		if (Ar.ArVer < 128)
+		{
+			Ar << P.b3[0] << P.b4[0] << P.i1[0] << P.i2[0] << P.i3[0];
+		}
+		else if (Ar.ArVer == 129)
+		{
+			for (i = 0; i < 5; i++)
+			{
+				Ar << P.b3[i] << P.b4[i];
+				Ar << P.i1[i] << P.i2[i] << P.i3[i];
+			}
+		}
+		else // if (Ar.ArVer >= 130)
+		{
+			for (i = 0; i < 5; i++)
+			{
+				Ar << P.b3[i] << P.b4[i] << P.b5[i] << P.b6[i] << P.b7[i] << P.b8[i];
+				Ar << P.i2[i] << P.i3[i];
+			}
+		}
+
+		for (i = 0; i < 8; i++) Ar << P.be[i];
+		for (i = 0; i < 3; i++) Ar << P.ie[i];
 		Ar << P.Stages;
 		return Ar;
 	}
@@ -168,17 +190,17 @@ public:
 		{
 			guard(SerializeLineage2Material);
 			//?? separate to cpp
-			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x10 && Ar.ArLicenseeVer < 0x25)
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 16 && Ar.ArLicenseeVer < 37)
 			{
 				int unk1;
 				Ar << unk1;					// simply drop obsolete variable (int Reserved ?)
 			}
-			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1E && Ar.ArLicenseeVer < 0x25)
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 30 && Ar.ArLicenseeVer < 37)
 			{
 				int i;
 				// some function
 				byte MaterialInfo, TextureTranform, MAX_SAMPLER_NUM, MAX_TEXMAT_NUM, MAX_PASS_NUM, TwoPassRenderState, AlphaRef;
-				if (Ar.ArLicenseeVer >= 0x21 && Ar.ArLicenseeVer < 0x24)
+				if (Ar.ArLicenseeVer >= 33 && Ar.ArLicenseeVer < 36)
 					Ar << MaterialInfo;
 				Ar << TextureTranform << MAX_SAMPLER_NUM << MAX_TEXMAT_NUM << MAX_PASS_NUM << TwoPassRenderState << AlphaRef;
 				int SrcBlend, DestBlend, OverriddenFogColor;
@@ -188,7 +210,7 @@ public:
 				{
 					char b1, b2;
 					Ar << b1;
-					if (Ar.ArLicenseeVer < 0x24) Ar << b2;
+					if (Ar.ArLicenseeVer < 36) Ar << b2;
 					for (int j = 0; j < 126; j++)
 					{
 						// really, 1Kb of floats and ints ...
@@ -211,7 +233,7 @@ public:
 				FString ShaderCode;
 				Ar << ShaderCode;
 			}
-			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x25)
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 37)
 			{
 				// ShaderProperty + ShaderCode
 				FLineageShaderProperty ShaderProp;

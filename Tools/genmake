@@ -1196,7 +1196,7 @@ sub FlushTargetText {
 		$line .= " $libs" if $libs ne "";
 		$line .= " -base:0x$baseaddr" if $baseaddr ne "";
 		$line .= " -map:\"$shortOutName.map\"" if GetTargetOption ($n, "MAPFILES") eq "1";
-		$line .= " -debug -pdb:\"$shortOutName.pdb\" -pdbtype:sept -opt:ref -opt:icf" if GetSrcOption("PDB", 0) >= 1;
+		$line .= " -debug -pdb:\"$shortOutName.pdb\" -opt:ref -opt:icf" if GetSrcOption("PDB", 0) >= 1;
 		$line .= $fileList;
 		my $linkflags = GetTargetOption ($n, "LINKFLAGS");
 		$line .= " $linkflags" if ($linkflags ne "");

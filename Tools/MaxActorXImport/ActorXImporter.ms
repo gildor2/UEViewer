@@ -1084,13 +1084,15 @@ fn ImportPskFile filename skelOnly:false =
 			uv = uvSet[i]
 			meshop.setMapVert newMesh j i [ uv.x, 1-uv.y, 1-uv.y ]	-- V coordinate is flipped
 		)
+/* commented 18.04.2014 - probably this is not needed, because completely duplicates code for 1st UV set
 		for i = 1 to numTris do
 		(
 			-- setup face vertices and material
 			tri = Tris[i]
 			meshop.setMapFace newMesh j i [ tri.Wedge1+1, tri.Wedge0+1, tri.Wedge2+1 ]
-			setFaceMatId newMesh j (tri.MatIndex+1)
+			setFaceMatId newMesh i (tri.MatIndex+1)
 		)
+*/
 	)
 
 	newMat = multiMaterial numsubs:numMaterials
