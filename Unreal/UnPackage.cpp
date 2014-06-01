@@ -14,6 +14,349 @@ byte GForceCompMethod = 0;		// COMPRESS_...
 	Unreal package structures
 -----------------------------------------------------------------------------*/
 
+static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
+{
+	guard(SerializePackageFileSummary2);
+
+#if SPLINTER_CELL
+	if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 83)
+	{
+		int unk8;
+		Ar << unk8;
+	}
+#endif // SPLINTER_CELL
+
+	Ar << S.PackageFlags;
+
+#if LEAD
+	if (Ar.Game == GAME_SplinterCellConv)
+	{
+		int unk10;
+		Ar << unk10;		// some flags?
+	}
+#endif // LEAD
+
+	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+
+#if LEAD
+	if (Ar.Game == GAME_SplinterCellConv && Ar.ArLicenseeVer >= 48)
+	{
+		// this game has additional name table for some packages
+		int ExtraNameCount, ExtraNameOffset;
+		int unkC;
+		Ar << ExtraNameCount << ExtraNameOffset;
+		if (ExtraNameOffset < S.ImportOffset) ExtraNameCount = 0;
+		if (Ar.ArLicenseeVer >= 85) Ar << unkC;
+		goto generations;	// skip Guid
+	}
+#endif // LEAD
+#if SPLINTER_CELL
+	if (Ar.Game == GAME_SplinterCell)
+	{
+		int tmp1;
+		TArray<byte> tmp2;
+		Ar << tmp1;								// 0xFF0ADDE
+		Ar << tmp2;
+	}
+#endif // SPLINTER_CELL
+#if RAGNAROK2
+	if (S.PackageFlags & 0x10000 && (Ar.ArVer >= 0x80 && Ar.ArVer < 0x88))	//?? unknown upper limit; known lower limit: 0x80
+	{
+		// encrypted Ragnarok Online archive header (data taken by archive analysis)
+		Ar.Game = GAME_Ragnarok2;
+		S.NameCount    ^= 0xD97790C7 ^ 0x1C;
+		S.NameOffset   ^= 0xF208FB9F ^ 0x40;
+		S.ExportCount  ^= 0xEBBDE077 ^ 0x04;
+		S.ExportOffset ^= 0xE292EC62 ^ 0x03E9E1;
+		S.ImportCount  ^= 0x201DA87A ^ 0x05;
+		S.ImportOffset ^= 0xA9B999DF ^ 0x003E9BE;
+		return;									// other data is useless for us, and they are encrypted too
+	}
+#endif // RAGNAROK2
+
+	// Guid and generations
+	if (Ar.ArVer < 68)
+	{
+		// old generations code
+		int HeritageCount, HeritageOffset;
+		Ar << HeritageCount << HeritageOffset;	// not used
+		if (Ar.IsLoading)
+		{
+			S.Generations.Empty(1);
+			FGenerationInfo gen;
+			gen.ExportCount = S.ExportCount;
+			gen.NameCount   = S.NameCount;
+			S.Generations.AddItem(gen);
+		}
+	}
+	else
+	{
+		Ar << S.Guid;
+		// current generations code
+	generations:
+		// always used int for generation count (even for UE1-2)
+		int Count;
+		Ar << Count;
+		S.Generations.Empty(Count);
+		S.Generations.Add(Count);
+		for (int i = 0; i < Count; i++)
+			Ar << S.Generations[i];
+	}
+
+	unguard;
+}
+
+
+#if UNREAL3
+
+static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
+{
+	guard(SerializePackageFileSummary3);
+
+#if R6VEGAS
+	if (Ar.Game == GAME_R6Vegas2)
+	{
+		int unk8, unkC;
+		if (Ar.ArLicenseeVer >= 48) Ar << unk8;
+		if (Ar.ArLicenseeVer >= 49) Ar << unkC;
+	}
+#endif // R6VEGAS
+#if HUXLEY
+	if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 8)
+	{
+		int skip;
+		Ar << skip;								// 0xFEFEFEFE
+		if (Ar.ArLicenseeVer >= 17)
+		{
+			int unk8;							// unknown used field
+			Ar << unk8;
+		}
+	}
+#endif // HUXLEY
+#if TRANSFORMERS
+	if (Ar.Game == GAME_Transformers)
+	{
+		if (Ar.ArLicenseeVer >= 181)
+		{
+			int unk1, unk2[3];
+			Ar << unk1 << unk2[0] << unk2[1] << unk2[2];
+		}
+		if (Ar.ArLicenseeVer >= 55)
+		{
+			int unk8;							// always 0x4BF1EB6B? (not true for later game versions)
+			Ar << unk8;
+		}
+	}
+#endif // TRANSFORMERS
+#if MORTALONLINE
+	if (Ar.Game == GAME_MortalOnline && Ar.ArLicenseeVer >= 1)
+	{
+		int unk8;
+		Ar << unk8;								// always 0?
+	}
+#endif
+#if BIOSHOCK3
+	if (Ar.Game == GAME_Bioshock3 && Ar.ArLicenseeVer >= 66)
+	{
+		int unkC;
+		Ar << unkC;
+	}
+#endif
+
+	if (Ar.ArVer >= 249)
+		Ar << S.HeadersSize;
+	else
+		S.HeadersSize = 0;
+
+	// NOTE: A51 and MKVSDC has exactly the same code paths!
+#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT		//?? special define ?
+	int midwayVer = 0;
+	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 2)	//?? Wheelman not checked
+	{
+		// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC", "TNA ", "KORE"
+		int Tag;
+		int unk10;
+		Ar << Tag << midwayVer;
+		if (Ar.Game == GAME_Strangle && midwayVer >= 256)
+			Ar << unk10;
+	}
+#endif // MIDWAY
+
+	if (Ar.ArVer >= 269)
+		Ar << S.PackageGroup;
+
+	Ar << S.PackageFlags;
+
+#if MASSEFF
+	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (S.PackageFlags & 8))
+	{
+		int unk88;
+		Ar << unk88;
+	}
+#endif // MASSEFF
+#if HAWKEN
+	if (Ar.Game == GAME_Hawken && Ar.ArLicenseeVer >= 2)
+	{
+		int unkVer;
+		Ar << unkVer;
+	}
+#endif // HAWKEN
+
+	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
+
+#if APB
+	if (Ar.Game == GAME_APB)
+	{
+		int unk2C;
+		float unk30[5];
+		if (Ar.ArLicenseeVer >= 29) Ar << unk2C;
+		if (Ar.ArLicenseeVer >= 28) Ar << unk30[0] << unk30[1] << unk30[2] << unk30[3] << unk30[4];
+	}
+#endif // APB
+
+	Ar << S.ImportCount << S.ImportOffset;
+
+#if MKVSDC
+	if (Ar.Game == GAME_MK)
+	{
+		int unk3C, unk40, unk54;
+		int unk30, unk44, unk48, unk4C;
+		if (Ar.ArVer >= 524)		// Injustice
+			Ar << unk3C;
+		if (midwayVer >= 16)
+			Ar << unk3C;
+		if (Ar.ArVer >= 391)
+			Ar << unk40;
+		if (Ar.ArVer >= 482)		// Injustice
+			Ar << unk44 << unk48 << unk4C;
+		if (Ar.ArVer >= 484)		// Injustice
+			Ar << unk54;
+		if (Ar.ArVer >= 472)
+		{
+			// Mortal Kombat, Injustice:
+			// - no DependsOffset
+			// - no generations (since version 446)
+			Ar << S.Guid;
+			S.DependsOffset = 0;
+			goto engine_version;
+		}
+	}
+#endif // MKVSDC
+#if WHEELMAN
+	if (Ar.Game == GAME_Wheelman && midwayVer >= 23)
+	{
+		int unk3C;
+		Ar << unk3C;
+	}
+#endif // WHEELMAN
+#if STRANGLE
+	if (Ar.Game == GAME_Strangle && Ar.ArVer >= 375)
+	{
+		int unk40;
+		Ar << unk40;
+	}
+#endif // STRANGLE
+#if TERA
+	// de-obfuscate NameCount for Tera
+	if (Ar.Game == GAME_Tera && (S.PackageFlags & 8)) S.NameCount -= S.NameOffset;
+#endif
+
+	if (Ar.ArVer >= 415)
+		Ar << S.DependsOffset;
+
+#if BIOSHOCK3
+	if (Ar.Game == GAME_Bioshock3) goto read_unk38;
+#endif
+
+	if (Ar.ArVer >= 623)
+		Ar << S.f38 << S.f3C << S.f40;
+
+#if TRANSFORMERS
+	if (Ar.Game == GAME_Transformers && Ar.ArVer >= 535) goto read_unk38;
+#endif
+
+	if (Ar.ArVer >= 584)
+	{
+	read_unk38:
+		int unk38;
+		Ar << unk38;
+	}
+
+	// Guid and generations
+	Ar << S.Guid;
+	int Count;
+	Ar << Count;
+
+#if APB
+	if (Ar.Game == GAME_APB && Ar.ArLicenseeVer >= 32)
+	{
+		FGuid Guid2;
+		Ar << Guid2;
+	}
+#endif // APB
+
+	S.Generations.Empty(Count);
+	S.Generations.Add(Count);
+	for (int i = 0; i < Count; i++)
+		Ar << S.Generations[i];
+
+#if ALIENS_CM
+	if (Ar.Game == GAME_AliensCM)
+	{
+		word unk64, unk66, unk68;		// complex EngineVersion?
+		Ar << unk64 << unk66 << unk68;
+		goto cooker_version;
+	}
+#endif // ALIENS_CM
+
+engine_version:
+	if (Ar.ArVer >= 245)
+		Ar << S.EngineVersion;
+cooker_version:
+	if (Ar.ArVer >= 277)
+		Ar << S.CookerVersion;
+
+#if MASSEFF
+	// ... MassEffect has some additional structure here ...
+	if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
+	{
+		int unk1, unk2, unk3[2], unk4[2];
+		if (Ar.ArLicenseeVer >= 16 && Ar.ArLicenseeVer < 136)
+			Ar << unk1;					// random value, ME1&2
+		if (Ar.ArLicenseeVer >= 32 && Ar.ArLicenseeVer < 136)
+			Ar << unk2;					// unknown, ME1&2
+		if (Ar.ArLicenseeVer >= 35 && Ar.ArLicenseeVer < 113)	// ME1
+		{
+			TMap<FString, TArray<FString> > unk5;
+			Ar << unk5;
+		}
+		if (Ar.ArLicenseeVer >= 37)
+			Ar << unk3[0] << unk3[1];	// 2 ints: 1, 0
+		if (Ar.ArLicenseeVer >= 39 && Ar.ArLicenseeVer < 136)
+			Ar << unk4[0] << unk4[1];	// 2 ints: -1, -1 (ME1&2)
+	}
+#endif // MASSEFF
+
+	if (Ar.ArVer >= 334)
+		Ar << S.CompressionFlags << S.CompressedChunks;
+	if (Ar.ArVer >= 482)
+		Ar << S.U3unk60;
+//	if (Ar.ArVer >= 516)
+//		Ar << some array ... (U3unk70)
+	// ... MassEffect has additional field here ...
+	// if (Ar.Game == GAME_MassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
+
+#if 0
+	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
+	appPrintf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
+	appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
+#endif
+
+	unguard;
+}
+
+#endif // UNREAL3
+
 FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(FPackageFileSummary<<);
@@ -103,304 +446,11 @@ tag_ok:
 
 	// read other fields
 
-#if SPLINTER_CELL
-	if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 83)
-	{
-		int unk8;
-		Ar << unk8;
-	}
-#endif // SPLINTER_CELL
-#if R6VEGAS
-	if (Ar.Game == GAME_R6Vegas2)
-	{
-		int unk8, unkC;
-		if (Ar.ArLicenseeVer >= 48) Ar << unk8;
-		if (Ar.ArLicenseeVer >= 49) Ar << unkC;
-	}
-#endif // R6VEGAS
-#if HUXLEY
-	if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 8)
-	{
-		int skip;
-		Ar << skip;								// 0xFEFEFEFE
-		if (Ar.ArLicenseeVer >= 17)
-		{
-			int unk8;							// unknown used field
-			Ar << unk8;
-		}
-	}
-#endif // HUXLEY
-#if TRANSFORMERS
-	if (Ar.Game == GAME_Transformers)
-	{
-		if (Ar.ArLicenseeVer >= 181)
-		{
-			int unk1, unk2[3];
-			Ar << unk1 << unk2[0] << unk2[1] << unk2[2];
-		}
-		if (Ar.ArLicenseeVer >= 55)
-		{
-			int unk8;							// always 0x4BF1EB6B? (not true for later game versions)
-			Ar << unk8;
-		}
-	}
-#endif // TRANSFORMERS
-#if MORTALONLINE
-	if (Ar.Game == GAME_MortalOnline && Ar.ArLicenseeVer >= 1)
-	{
-		int unk8;
-		Ar << unk8;								// always 0?
-	}
-#endif
-#if BIOSHOCK3
-	if (Ar.Game == GAME_Bioshock3 && Ar.ArLicenseeVer >= 66)
-	{
-		int unkC;
-		Ar << unkC;
-	}
-#endif
-#if UNREAL3
-//	if (Ar.ArVer >= PACKAGE_V3)
-//	{
-		if (Ar.ArVer >= 249)
-			Ar << S.HeadersSize;
-		else
-			S.HeadersSize = 0;
-	// NOTE: A51 and MKVSDC has exactly the same code paths!
-	#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT		//?? special define ?
-		int midwayVer = 0;
-		if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 2)	//?? Wheelman not checked
-		{
-			// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC", "TNA ", "KORE"
-			int Tag;
-			int unk10;
-			Ar << Tag << midwayVer;
-			if (Ar.Game == GAME_Strangle && midwayVer >= 256)
-				Ar << unk10;
-		}
-	#endif // MIDWAY
-		if (Ar.ArVer >= 269)
-			Ar << S.PackageGroup;
-//	}
-#endif // UNREAL3
-	Ar << S.PackageFlags;
-#if LEAD
-	if (Ar.Game == GAME_SplinterCellConv)
-	{
-		int unk10;
-		Ar << unk10;		// some flags?
-	}
-#endif // LEAD
-#if MASSEFF
-	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (S.PackageFlags & 8))
-	{
-		int unk88;
-		Ar << unk88;
-	}
-#endif // MASSEFF
-#if HAWKEN
-	if (Ar.Game == GAME_Hawken && Ar.ArLicenseeVer >= 2)
-	{
-		int unkVer;
-		Ar << unkVer;
-	}
-#endif // HAWKEN
-	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
-#if APB
-	if (Ar.Game == GAME_APB)
-	{
-		int unk2C;
-		float unk30[5];
-		if (Ar.ArLicenseeVer >= 29) Ar << unk2C;
-		if (Ar.ArLicenseeVer >= 28) Ar << unk30[0] << unk30[1] << unk30[2] << unk30[3] << unk30[4];
-	}
-#endif // APB
-	Ar << S.ImportCount << S.ImportOffset;
-#if LEAD
-	if (Ar.Game == GAME_SplinterCellConv && Ar.ArLicenseeVer >= 48)
-	{
-		// this game has additional name table for some packages
-		int ExtraNameCount, ExtraNameOffset;
-		int unkC;
-		Ar << ExtraNameCount << ExtraNameOffset;
-		if (ExtraNameOffset < S.ImportOffset) ExtraNameCount = 0;
-		if (Ar.ArLicenseeVer >= 85) Ar << unkC;
-		goto generations;	// skip Guid
-	}
-#endif // LEAD
-#if UNREAL3
-	#if MKVSDC
-	if (Ar.Game == GAME_MK)
-	{
-		int unk3C, unk40, unk54;
-		int unk30, unk44, unk48, unk4C;
-		if (Ar.ArVer >= 524)		// Injustice
-			Ar << unk3C;
-		if (midwayVer >= 16)
-			Ar << unk3C;
-		if (Ar.ArVer >= 391)
-			Ar << unk40;
-		if (Ar.ArVer >= 482)		// Injustice
-			Ar << unk44 << unk48 << unk4C;
-		if (Ar.ArVer >= 484)		// Injustice
-			Ar << unk54;
-		if (Ar.ArVer >= 472)
-		{
-			// Mortal Kombat, Injustice:
-			// - no DependsOffset
-			// - no generations (since version 446)
-			Ar << S.Guid;
-			S.DependsOffset = 0;
-			goto engine_version;
-		}
-	}
-	#endif // MKVSDC
-	#if WHEELMAN
-	if (Ar.Game == GAME_Wheelman && midwayVer >= 23)
-	{
-		int unk3C;
-		Ar << unk3C;
-	}
-	#endif // WHEELMAN
-	#if STRANGLE
-	if (Ar.Game == GAME_Strangle && Ar.ArVer >= 375)
-	{
-		int unk40;
-		Ar << unk40;
-	}
-	#endif // STRANGLE
-	#if TERA
-	// de-obfuscate NameCount for Tera
-	if (Ar.Game == GAME_Tera && (S.PackageFlags & 8)) S.NameCount -= S.NameOffset;
-	#endif
-	if (Ar.ArVer >= 415) // PACKAGE_V3
-		Ar << S.DependsOffset;
-	#if BIOSHOCK3
-	if (Ar.Game == GAME_Bioshock3) goto read_unk38;
-	#endif
-	if (Ar.ArVer >= 623)
-		Ar << S.f38 << S.f3C << S.f40;
-#endif // UNREAL3
-#if SPLINTER_CELL
-	if (Ar.Game == GAME_SplinterCell)
-	{
-		int tmp1;
-		TArray<byte> tmp2;
-		Ar << tmp1;								// 0xFF0ADDE
-		Ar << tmp2;
-	}
-#endif // SPLINTER_CELL
-#if RAGNAROK2
-	if (S.PackageFlags & 0x10000 && (Ar.ArVer >= 0x80 && Ar.ArVer < 0x88))	//?? unknown upper limit; known lower limit: 0x80
-	{
-		// encrypted Ragnarok Online archive header (data taken by archive analysis)
-		Ar.Game = GAME_Ragnarok2;
-		S.NameCount    ^= 0xD97790C7 ^ 0x1C;
-		S.NameOffset   ^= 0xF208FB9F ^ 0x40;
-		S.ExportCount  ^= 0xEBBDE077 ^ 0x04;
-		S.ExportOffset ^= 0xE292EC62 ^ 0x03E9E1;
-		S.ImportCount  ^= 0x201DA87A ^ 0x05;
-		S.ImportOffset ^= 0xA9B999DF ^ 0x003E9BE;
-		return Ar;								// other data is useless for us, and they are encrypted too
-	}
-#endif // RAGNAROK2
-	if (Ar.ArVer < 68)
-	{
-		// old generations code
-		int HeritageCount, HeritageOffset;
-		Ar << HeritageCount << HeritageOffset;	// not used
-		if (Ar.IsLoading)
-		{
-			S.Generations.Empty(1);
-			FGenerationInfo gen;
-			gen.ExportCount = S.ExportCount;
-			gen.NameCount   = S.NameCount;
-			S.Generations.AddItem(gen);
-		}
-	}
+	if (Ar.Game >= GAME_UE3)
+		SerializePackageFileSummary3(Ar, S);
 	else
-	{
-#if UNREAL3
-	#if TRANSFORMERS
-		if (Ar.Game == GAME_Transformers && Ar.ArVer >= 535) goto read_unk38;
-	#endif
-		if (Ar.ArVer >= 584)
-		{
-		read_unk38:
-			int unk38;
-			Ar << unk38;
-		}
-#endif // UNREAL3
-		Ar << S.Guid;
-		// current generations code
-	generations:
-		// always used int for generation count (even for UE1-2)
-		int Count;
-		Ar << Count;
-#if APB
-		if (Ar.Game == GAME_APB && Ar.ArLicenseeVer >= 32)
-		{
-			FGuid Guid2;
-			Ar << Guid2;
-		}
-#endif // APB
-		S.Generations.Empty(Count);
-		S.Generations.Add(Count);
-		for (int i = 0; i < Count; i++)
-			Ar << S.Generations[i];
-	}
-#if ALIENS_CM
-	if (Ar.Game == GAME_AliensCM)
-	{
-		word unk64, unk66, unk68;		// complex EngineVersion?
-		Ar << unk64 << unk66 << unk68;
-		goto cooker_version;
-	}
-#endif // ALIENS_CM
-#if UNREAL3
-//	if (Ar.ArVer >= PACKAGE_V3)
-//	{
-	engine_version:
-		if (Ar.ArVer >= 245)
-			Ar << S.EngineVersion;
-	cooker_version:
-		if (Ar.ArVer >= 277)
-			Ar << S.CookerVersion;
-	#if MASSEFF
-		// ... MassEffect has some additional structure here ...
-		if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
-		{
-			int unk1, unk2, unk3[2], unk4[2];
-			if (Ar.ArLicenseeVer >= 16 && Ar.ArLicenseeVer < 136)
-				Ar << unk1;					// random value, ME1&2
-			if (Ar.ArLicenseeVer >= 32 && Ar.ArLicenseeVer < 136)
-				Ar << unk2;					// unknown, ME1&2
-			if (Ar.ArLicenseeVer >= 35 && Ar.ArLicenseeVer < 113)	// ME1
-			{
-				TMap<FString, TArray<FString> > unk5;
-				Ar << unk5;
-			}
-			if (Ar.ArLicenseeVer >= 37)
-				Ar << unk3[0] << unk3[1];	// 2 ints: 1, 0
-			if (Ar.ArLicenseeVer >= 39 && Ar.ArLicenseeVer < 136)
-				Ar << unk4[0] << unk4[1];	// 2 ints: -1, -1 (ME1&2)
-		}
-	#endif // MASSEFF
-		if (Ar.ArVer >= 334)
-			Ar << S.CompressionFlags << S.CompressedChunks;
-		if (Ar.ArVer >= 482)
-			Ar << S.U3unk60;
-//		if (Ar.ArVer >= 516)
-//			Ar << some array ... (U3unk70)
-		// ... MassEffect has additional field here ...
-		// if (Ar.Game == GAME_MassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
-//	}
-	#if 0
-	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
-	appPrintf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
-	appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
-	#endif
-#endif // UNREAL3
+		SerializePackageFileSummary2(Ar, S);
+
 	return Ar;
 	unguardf(("Ver=%d/%d", S.FileVersion, S.LicenseeVersion));
 }
