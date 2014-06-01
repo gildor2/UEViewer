@@ -205,10 +205,10 @@ enum EGame
 {
 	GAME_UNKNOWN   = 0,			// should be 0
 
-	GAME_UE1       = 0x1000,
+	GAME_UE1       = 0x01000,
 		GAME_Undying,
 
-	GAME_UE2       = 0x2000,
+	GAME_UE2       = 0x02000,
 		GAME_UT2,
 		GAME_Pariah,
 		GAME_SplinterCell,
@@ -224,17 +224,17 @@ enum EGame
 		GAME_Vanguard,
 		GAME_AA2,
 
-	GAME_VENGEANCE = 0x2100,	// variant of UE2
+	GAME_VENGEANCE = 0x02100,	// variant of UE2
 		GAME_Tribes3,
 		GAME_Swat4,				// not autodetected, overlaps with Tribes3
 		GAME_Bioshock,
 
-	GAME_LEAD      = 0x2200,
+	GAME_LEAD      = 0x02200,
 
-	GAME_UE2X      = 0x4000,
+	GAME_UE2X      = 0x04000,
 		GAME_UC2,
 
-	GAME_UE3       = 0x8000,
+	GAME_UE3       = 0x08000,
 		GAME_EndWar,
 		GAME_MassEffect,
 		GAME_MassEffect2,
@@ -297,14 +297,16 @@ enum EGame
 		GAME_XcomB,
 		GAME_Thief4,
 
-	GAME_MIDWAY3   = 0x8100,	// variant of UE3
+	GAME_MIDWAY3   = 0x08100,	// variant of UE3
 		GAME_A51,
 		GAME_Wheelman,
 		GAME_MK,
 		GAME_Strangle,
 		GAME_TNA,
 
-	GAME_ENGINE    = 0xFF00		// mask for game engine
+	GAME_UE4       = 0x10000,
+
+	GAME_ENGINE    = 0xFFF00	// mask for game engine
 };
 
 enum EPlatform

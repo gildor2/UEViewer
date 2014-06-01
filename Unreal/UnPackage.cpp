@@ -343,27 +343,124 @@ cooker_version:
 		Ar << S.U3unk60;
 //	if (Ar.ArVer >= 516)
 //		Ar << some array ... (U3unk70)
+
 	// ... MassEffect has additional field here ...
 	// if (Ar.Game == GAME_MassEffect() && Ar.ArLicenseeVer >= 44) serialize 1*int
-
-#if 0
-	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
-	appPrintf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
-	appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
-#endif
 
 	unguard;
 }
 
 #endif // UNREAL3
 
+
+#if UNREAL4
+
+static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
+{
+	guard(SerializePackageFileSummary4);
+
+	// read versions
+	int VersionUE3, Version, LicenseeVersion;				// int32 instead of uint16
+	Ar << VersionUE3 << Version << LicenseeVersion;
+	// VersionUE3 is ignored
+	assert((Version & ~0xFFFF) == 0);
+	assert((LicenseeVersion & ~0xFFFF) == 0);
+	S.FileVersion     = Version & 0xFFFF;
+	S.LicenseeVersion = LicenseeVersion & 0xFFFF;
+
+	// store file version to archive
+	Ar.ArVer         = S.FileVersion;
+	Ar.ArLicenseeVer = S.LicenseeVersion;
+
+	if (S.LegacyVersion <= -2)
+	{
+		// CustomVersions array
+		int CustomVersionsSize;
+		Ar << CustomVersionsSize;
+		if (CustomVersionsSize != 0) appError("TODO: support UE4 CustomVersions");
+	}
+
+	if (S.FileVersion == 0 && S.LicenseeVersion == 0)
+		appError("Unversioned UE4 packages are not supported");
+
+	Ar << S.HeadersSize;
+	Ar << S.PackageGroup;
+	Ar << S.PackageFlags;
+
+	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+	Ar << S.DependsOffset;
+
+	int ThumbnailTableOffset;
+	Ar << ThumbnailTableOffset;
+
+	// guid and generations
+	Ar << S.Guid;
+	int Count;
+	Ar << Count;
+	S.Generations.Empty(Count);
+	S.Generations.Add(Count);
+	for (int i = 0; i < Count; i++)
+		Ar << S.Generations[i];
+
+	// engine version
+	if (Ar.ArVer >= 336) // VER_UE4_ENGINE_VERSION_OBJECT
+	{
+		FEngineVersion engineVersion; // empty for cooked packages, so don't store it anywhere ...
+		Ar << engineVersion;
+#if DEBUG_PACKAGE
+		appPrintf("version: %d.%d.%d changelist %d (branch %s)\n", engineVersion.Major, engineVersion.Minor, engineVersion.Patch,
+			engineVersion.Changelist, *engineVersion.Branch);
+#endif
+	}
+	else
+	{
+		int changelist;
+		Ar << changelist;
+	}
+
+	// compression structures
+	Ar << S.CompressionFlags;
+	Ar << S.CompressedChunks;
+
+	int PackageSource;
+	Ar << PackageSource;
+
+	TArray<FString> AdditionalPackagesToCook;
+	Ar << AdditionalPackagesToCook;
+
+	int TextureAllocations;
+	Ar << TextureAllocations;		// obsolete?
+
+	if (Ar.ArVer >= 112) // VER_UE4_ASSET_REGISTRY_TAGS
+	{
+		int AssetRegistryDataOffset;
+		Ar << AssetRegistryDataOffset;
+	}
+
+	if (Ar.ArVer >= 213) // VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET
+	{
+		//!! use this value!
+		int BulkDataStartOffset;
+		Ar << BulkDataStartOffset;
+	}
+
+	//!! other fields
+
+	unguard;
+}
+
+#endif // UNREAL4
+
+
 FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(FPackageFileSummary<<);
 	assert(Ar.IsLoading);						// saving is not supported
 
-	// read tag and version
+	// read package tag
 	Ar << S.Tag;
+
+	// some games has special tag constants
 #if SPECIAL_TAGS
 	if (S.Tag == 0x9E2A83C2) goto tag_ok;		// Killing Floor
 #endif // SPECIAL_TAGS
@@ -374,20 +471,19 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	if (S.Tag == 0xA1B2C93F)
 	{
 		Ar.Game = GAME_BattleTerr;
-		goto tag_ok;		// Battle Territory Online
+		goto tag_ok;							// Battle Territory Online
 	}
 #endif // BATTLE_TERR
 #if LOCO
 	if (S.Tag == 0xD58C3147)
 	{
 		Ar.Game = GAME_Loco;
-		goto tag_ok;		// Land of Chaos Online
+		goto tag_ok;							// Land of Chaos Online
 	}
 #endif // LOCO
 #if BERKANIX
 	if (S.Tag == 0xF2BAC156)
 	{
-		//?? check later: probably this game has only a custom package tag
 		Ar.Game = GAME_Berkanix;
 		goto tag_ok;
 	}
@@ -419,6 +515,7 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // STORMWAR
 
+	// support reverse byte order
 	if (S.Tag != PACKAGE_FILE_TAG)
 	{
 		if (S.Tag != PACKAGE_FILE_TAG_REV)
@@ -427,14 +524,27 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 		S.Tag = PACKAGE_FILE_TAG;
 	}
 
+	// read version
 tag_ok:
 	int Version;
 	Ar << Version;
+
+#if UNREAL4
+	if (Version < 0)
+	{
+		S.LegacyVersion = Version;
+		Ar.Game = GAME_UE4;
+		SerializePackageFileSummary4(Ar, S);
+		//!! note: UE4 requires different DetectGame way, perhaps it's not possible at all
+		return Ar;
+	}
+#endif // UNREAL4
 
 #if UNREAL3
 	if (Version == PACKAGE_FILE_TAG || Version == 0x20000)
 		appError("Fully compressed package header?");
 #endif // UNREAL3
+
 	S.FileVersion     = Version & 0xFFFF;
 	S.LicenseeVersion = Version >> 16;
 	// store file version to archive (required for some structures, for UNREAL3 path)
@@ -450,6 +560,12 @@ tag_ok:
 		SerializePackageFileSummary3(Ar, S);
 	else
 		SerializePackageFileSummary2(Ar, S);
+
+#if DEBUG_PACKAGE
+	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
+	appPrintf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
+	appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
+#endif
 
 	return Ar;
 	unguardf(("Ver=%d/%d", S.FileVersion, S.LicenseeVersion));
@@ -695,8 +811,45 @@ ue3_export_flags:
 #endif // UNREAL3
 
 
+#if UNREAL4
+
+static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
+{
+	guard(SerializeObjectExport4);
+
+	Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
+	if (Ar.ArVer < 163) Ar << E.Archetype; // VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES
+
+	Ar << E.ObjectFlags;
+
+	Ar << E.SerialSize << E.SerialOffset;
+
+	int bForcedExport, bNotForClient, bNotForServer; // 32-bit bool
+	Ar << bForcedExport << bNotForClient << bNotForServer;
+	if (Ar.IsLoading)
+	{
+		E.ExportFlags = bForcedExport ? EF_ForcedExport : 0;	//?? change this
+	}
+
+	if (Ar.ArVer < 196) Ar << E.NetObjectCount; // VER_UE4_REMOVE_NET_INDEX
+
+	Ar << E.Guid << E.U3unk6C;
+
+	unguard;
+}
+
+#endif // UNREAL4
+
+
 FArchive& operator<<(FArchive &Ar, FObjectExport &E)
 {
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		SerializeObjectExport4(Ar, E);
+		return Ar;
+	}
+#endif
 #if UNREAL3
 	if (Ar.Game >= GAME_UE3)
 	{
@@ -741,6 +894,7 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 	}
 #endif
 
+	// this code is the same for all engine versions
 	return Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
 
 	unguard;
@@ -1521,6 +1675,9 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	#endif
 
 				// skip object flags
+	#if UNREAL4
+				if (Game >= GAME_UE4) goto done;
+	#endif
 	#if UNREAL3
 		#if BIOSHOCK
 				if (Game == GAME_Bioshock) goto qword_flags;

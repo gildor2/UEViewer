@@ -19,6 +19,9 @@ struct FGenerationInfo
 	friend FArchive& operator<<(FArchive &Ar, FGenerationInfo &I)
 	{
 		Ar << I.ExportCount << I.NameCount;
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4 && Ar.ArVer >= 196) return Ar; // VER_UE4_REMOVE_NET_INDEX
+#endif
 #if UNREAL3
 		if (Ar.ArVer >= 322) // PACKAGE_V3
 			Ar << I.NetObjectCount;
@@ -59,9 +62,29 @@ struct FCompressedChunk
 #endif // UNREAL3
 
 
+#if UNREAL4
+
+struct FEngineVersion
+{
+	word		Major, Minor, Patch;
+	int			Changelist;
+	FString		Branch;
+
+	friend FArchive& operator<<(FArchive& Ar, FEngineVersion& V)
+	{
+		return Ar << V.Major << V.Minor << V.Patch << V.Changelist << V.Branch;
+	}
+};
+
+#endif // UNREAL4
+
+
 struct FPackageFileSummary
 {
 	int			Tag;
+#if UNREAL4
+	int			LegacyVersion;
+#endif
 	word		FileVersion;
 	word		LicenseeVersion;
 	int			PackageFlags;
@@ -109,7 +132,7 @@ struct FObjectExport
 	TMap<FName, int> ComponentMap;
 	TArray<int>	NetObjectCount;				// generations
 	FGuid		Guid;
-	int			U3unk6C;
+	int			U3unk6C;					//!! PackageFlags
 #endif // UNREAL3
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E);

@@ -122,6 +122,9 @@ static const char *PackageExtensions[] =
 #if UNREAL3
 	"upk", "ut3", "xxx", "umap", "udk", "map",
 #endif
+#if UNREAL4
+	"uasset",
+#endif
 #if MASSEFF
 	"sfm",			// Mass Effect
 	"pcc",			// Mass Effect 2

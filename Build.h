@@ -13,6 +13,7 @@
 #define UNREAL1			1
 #define UNREAL25		1
 #define UNREAL3			1
+#define UNREAL4			1
 
 // UE2 (supported by default)
 #define UT2				1

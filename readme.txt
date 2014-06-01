@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+01.06.2014
+- added initial Unreal engine 4 package support
+
 02.05.2014
 - updated material support for recent Lineage 2 version
 - implemented Tao Yuan texture support; "-game=taoyuan" option is required
