@@ -1577,16 +1577,16 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	}
 #endif // BLADENSOUL
 
-#if 0 // TAO_YUAN -- not working anyway, LZO returns error -6
+#if TAO_YUAN
 	if (GForceGame == GAME_TaoYuan)	// note: GForceGame is required (to not pass 'Game' here);
 	{
 		static const byte key[] =
 		{
 			137, 35, 95, 142, 69, 136, 243, 119, 25, 35, 111, 94, 101, 136, 243, 204,
-			243, 67, 95, 158, 69, 106, 107, 187, 237, 35, 103, 142, 72, 142, 243, 0
+			243, 67, 95, 158, 69, 106, 107, 187, 237, 35, 103, 142, 72, 142, 243
 		};
 		for (int i = 0; i < CompressedSize; i++)
-			CompressedBuffer[i] ^= key[i % 32];
+			CompressedBuffer[i] ^= key[i % 31];		// note: "N % 31" is not the same as "N & 0x1F"
 	}
 #endif // TAO_YUAN
 

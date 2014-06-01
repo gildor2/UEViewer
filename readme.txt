@@ -153,6 +153,7 @@ Changes
 ~~~~~~~
 02.05.2014
 - updated material support for recent Lineage 2 version
+- implemented Tao Yuan texture support; "-game=taoyuan" option is required
 
 02.04.2014
 - fixed incompatibility with some Thief packages

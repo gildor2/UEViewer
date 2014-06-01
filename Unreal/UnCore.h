@@ -339,7 +339,7 @@ public:
 	FArchive()
 	:	ArPos(0)
 	,	ArStopper(0)
-	,	ArVer(99999)			//?? something large
+	,	ArVer(100000)			//?? something large
 	,	ArLicenseeVer(0)
 	,	ReverseBytes(false)
 	,	Game(GAME_UNKNOWN)

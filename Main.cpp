@@ -527,6 +527,9 @@ static const GameInfo games[] = {
 #	if PLA
 		G("Passion Leads Army", pla, GAME_PLA),
 #	endif
+#	if TAO_YUAN
+		G("Tao Yuan", taoyuan, GAME_TaoYuan),
+#	endif
 #	if BIOSHOCK3
 		G("Bioshock Infinite", bio3, GAME_Bioshock3),
 #	endif
@@ -916,15 +919,15 @@ int main(int argc, char **argv)
 		appPrintf("Use \"umodel\" without arguments to show command line help\n");;
 		exit(1);
 	}
-	if (params.Num() > 3)
-	{
-		appPrintf("COMMAND LINE ERROR: too much arguments\n");
-		goto bad_params;
-	}
 
 	const char *argPkgName   = params[0];
 	const char *argObjName   = (params.Num() >= 2) ? params[1] : NULL;
 	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
+	if (params.Num() > 3)
+	{
+		appPrintf("COMMAND LINE ERROR: too many arguments. Check your command line.\nYou specified: package=%s, object=%s, class=%s\n", argPkgName, argObjName, argClassName);
+		goto bad_params;
+	}
 
 	if (!argPkgName) goto bad_pkg_name;
 
