@@ -199,7 +199,10 @@ enum EPropType // hardcoded in Unreal
 	NAME_FixedArrayProperty,	// missing in UE3
 #if UNREAL3
 	NAME_DelegateProperty,		// equals to NAME_StringProperty = 7
-	NAME_InterfaceProperty		// euqals to NAME_FixedArrayProperty = 15
+	NAME_InterfaceProperty,		// euqals to NAME_FixedArrayProperty = 15
+#endif
+#if UNREAL4
+	NAME_AttributeProperty,
 #endif
 };
 
@@ -227,7 +230,10 @@ static const struct
 	F(FixedArrayProperty),
 #if UNREAL3
 	F(DelegateProperty),
-	F(InterfaceProperty)
+	F(InterfaceProperty),
+#endif
+#if UNREAL4
+	F(AttributeProperty),
 #endif
 #undef F
 };
@@ -264,6 +270,7 @@ struct FPropertyTag
 	int			DataSize;
 	int			BoolValue;
 	FName		EnumName;			// UE3 ver >= 633
+	FName		InnerType;			// UE4 ver >= 282
 
 	bool IsValid()
 	{
@@ -311,6 +318,24 @@ struct FPropertyTag
 		if (!stricmp(Tag.Name, "None"))
 			return Ar;
 
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4)
+		{
+			FName PropType;
+			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
+			Tag.Type = MapTypeName(PropType);
+			if (Tag.Type == NAME_StructProperty)
+				Ar << Tag.StrucName;
+			else if (Tag.Type == NAME_BoolProperty)
+				Ar << (byte&)Tag.BoolValue;		// byte
+			else if (Tag.Type == NAME_ByteProperty)
+				Ar << Tag.EnumName;
+			else if ((Tag.Type == NAME_ArrayProperty || Tag.Type == NAME_AttributeProperty) && (Ar.ArVer >= 282)) // VAR_UE4_ARRAY_PROPERTY_INNER_TAGS
+				Ar << Tag.InnerType;
+			return Ar;
+		}
+#endif // UNREAL4
+
 #if UNREAL3
 		if (Ar.Game >= GAME_UE3)
 		{
@@ -319,14 +344,14 @@ struct FPropertyTag
 			Tag.Type = MapTypeName(PropType);
 			if (Tag.Type == NAME_StructProperty)
 				Ar << Tag.StrucName;
-			if (Tag.Type == NAME_BoolProperty)
+			else if (Tag.Type == NAME_BoolProperty)
 			{
 				if (Ar.ArVer < 673)
 					Ar << Tag.BoolValue;			// int
 				else
 					Ar << (byte&)Tag.BoolValue;		// byte
 			}
-			if (Tag.Type == NAME_ByteProperty && Ar.ArVer >= 633)
+			else if (Tag.Type == NAME_ByteProperty && Ar.ArVer >= 633)
 				Ar << Tag.EnumName;
 			return Ar;
 		}
@@ -553,6 +578,15 @@ void UObject::Serialize(FArchive &Ar)
 	TRIBES_HDR(Ar, 0x19);
 #endif
 
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		if (Ar.ArVer < 282) // VER_UE4_REMOVE_NET_INDEX
+			goto net_index;
+		goto no_net_index;
+	}
+#endif // UNREAL4
+
 #if UNREAL3
 
 #	if WHEELMAN || MKVSDC
@@ -561,7 +595,10 @@ void UObject::Serialize(FArchive &Ar)
 		goto no_net_index;
 #	endif
 	if (Ar.ArVer >= 322)
+	{
+	net_index:
 		Ar << NetIndex;
+	}
 no_net_index:
 #	if DCU_ONLINE
 	if (Ar.Game == GAME_DCUniverse && NetIndex != -1)
