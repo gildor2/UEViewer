@@ -581,7 +581,7 @@ void UObject::Serialize(FArchive &Ar)
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4)
 	{
-		if (Ar.ArVer < 282) // VER_UE4_REMOVE_NET_INDEX
+		if (Ar.ArVer < 196) // VER_UE4_REMOVE_NET_INDEX
 			goto net_index;
 		goto no_net_index;
 	}

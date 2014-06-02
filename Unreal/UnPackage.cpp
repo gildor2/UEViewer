@@ -437,7 +437,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		Ar << AssetRegistryDataOffset;
 	}
 
-	if (Ar.ArVer >= 213) // VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET
+	if (Ar.ArVer >= 212) // VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET
 	{
 		//!! use this value!
 		int BulkDataStartOffset;
