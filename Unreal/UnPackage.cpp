@@ -440,8 +440,9 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	if (Ar.ArVer >= 212) // VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET
 	{
 		//!! use this value!
-		int BulkDataStartOffset;
+		int64 BulkDataStartOffset;
 		Ar << BulkDataStartOffset;
+		printf("BulkStart: %I64X\n", BulkDataStartOffset);
 	}
 
 	//!! other fields
@@ -1810,6 +1811,108 @@ UnPackage::~UnPackage()
 	unguard;
 }
 
+
+/*-----------------------------------------------------------------------------
+	UObject* and FName serializers
+-----------------------------------------------------------------------------*/
+
+FArchive& UnPackage::operator<<(FName &N)
+{
+	guard(UnPackage::SerializeFName);
+
+	assert(IsLoading);
+#if BIOSHOCK
+	if (Game == GAME_Bioshock)
+	{
+		*this << AR_INDEX(N.Index) << N.ExtraIndex;
+		N.Str = GetName(N.Index);
+		N.AppendIndexBio();
+		return *this;
+	}
+	else
+#endif // BIOSHOCK
+#if UC2
+	if (Engine() == GAME_UE2X && ArVer >= 145)
+	{
+		*this << N.Index;
+	}
+	else
+#endif // UC2
+#if LEAD
+	if (Game == GAME_SplinterCellConv && ArVer >= 64)
+	{
+		*this << N.Index;
+	}
+	else
+#endif // LEAD
+#if UNREAL3 || UNREAL4
+	if (Engine() >= GAME_UE3)
+	{
+		*this << N.Index;
+		if (Game >= GAME_UE4) goto extra_index;
+	#if R6VEGAS
+		if (Game == GAME_R6Vegas2)
+		{
+			N.ExtraIndex = N.Index >> 19;
+			N.Index &= 0x7FFFF;
+		}
+	#endif // R6VEGAS
+		if (ArVer >= 343)
+		{
+		extra_index:
+			*this << N.ExtraIndex;
+		}
+	}
+	else
+#endif // UNREAL3 || UNREAL4
+		*this << AR_INDEX(N.Index);
+	N.Str = GetName(N.Index);
+#if UNREAL3 || UNREAL4
+	N.AppendIndex();
+#endif
+	return *this;
+
+	unguardf(("pos=%08X", Tell()));
+}
+
+FArchive& UnPackage::operator<<(UObject *&Obj)
+{
+	guard(UnPackage::SerializeUObject);
+
+	assert(IsLoading);
+	int index;
+#if UC2
+	if (Engine() == GAME_UE2X && ArVer >= 145)
+		*this << index;
+	else
+#endif
+#if UNREAL3 || UNREAL4
+	if (Engine() >= GAME_UE3)
+		*this << index;
+	else
+#endif // UNREAL3 || UNREAL4
+		*this << AR_INDEX(index);
+
+	if (index < 0)
+	{
+//		const FObjectImport &Imp = GetImport(-index-1);
+//		appPrintf("PKG: Import[%s,%d] OBJ=%s CLS=%s\n", GetObjectName(Imp.PackageIndex), index, *Imp.ObjectName, *Imp.ClassName);
+		Obj = CreateImport(-index-1);
+	}
+	else if (index > 0)
+	{
+//		const FObjectExport &Exp = GetExport(index-1);
+//		appPrintf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
+		Obj = CreateExport(index-1);
+	}
+	else // index == 0
+	{
+		Obj = NULL;
+	}
+	return *this;
+
+	unguard;
+}
 
 /*-----------------------------------------------------------------------------
 	Loading particular import or export package entry

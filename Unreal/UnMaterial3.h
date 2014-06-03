@@ -91,6 +91,15 @@ public:
 	virtual void Serialize(FArchive &Ar)
 	{
 		guard(UTexture3::Serialize);
+
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4)
+		{
+			Serialize4(Ar);
+			return;
+		}
+#endif
+
 		Super::Serialize(Ar);
 #if TRANSFORMERS
 		// Transformers: SourceArt is moved to separate class; but The Bourne Conspiracy has it (real ArLicenseeVer is unknown)
@@ -132,6 +141,22 @@ public:
 #endif // GUNLEGEND
 		unguard;
 	}
+
+#if UNREAL4
+	void Serialize4(FArchive& Ar)
+	{
+		guard(UTexture3::Serialize4);
+		Super::Serialize(Ar);
+		FStripDataFlags StripFlags(Ar);
+		if (Ar.ArVer < 143) // VER_UE4_TEXTURE_SOURCE_ART_REFACTOR
+			appError("VER_UE4_TEXTURE_SOURCE_ART_REFACTOR");
+		if (!StripFlags.IsEditorDataStripped())
+		{
+			SourceArt.Serialize(Ar);
+		}
+		unguard;
+	}
+#endif // UNREAL4
 
 #if RENDERING
 	virtual bool IsTexture() const

@@ -615,6 +615,19 @@ no_net_index:
 
 	Type->SerializeProps(Ar, this);
 
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		int bSerializeGuid;
+		Ar << bSerializeGuid;
+		if (bSerializeGuid)
+		{
+			FGuid guid;
+			Ar << guid;
+		}
+	}
+#endif // UNREAL4
+
 	unguard;
 }
 
@@ -751,6 +764,11 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 	read_property:
 		guard(ReadProperty);
+
+#if DEBUG_PROPS
+		appPrintf("-- %s \"%s::%s\" [%d] size=%d enum=%s struc=%s\n", GetTypeName(Tag.Type), Name, *Tag.Name,
+			Tag.ArrayIndex, Tag.DataSize, *Tag.EnumName, *Tag.StrucName);
+#endif
 
 		int StopPos = Ar.Tell() + Tag.DataSize;	// for verification
 

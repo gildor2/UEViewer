@@ -1710,6 +1710,29 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 {
 	guard(FByteBulkData::SerializeHeader);
 
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		Ar << BulkDataFlags << ElementCount;
+		Ar << BulkDataSizeOnDisk;
+		if (Ar.ArVer < 198) // VER_UE4_BULKDATA_AT_LARGE_OFFSETS
+		{
+			Ar << BulkDataOffsetInFile;
+			BulkDataOffsetInFile64 = BulkDataOffsetInFile;
+		}
+		else
+		{
+			Ar << BulkDataOffsetInFile64;
+		}
+		//!! add Summary.BulkDataStartOffset
+#if DEBUG_BULK
+		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%I64X+%X)\n",
+			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile64, BulkDataSizeOnDisk);
+#endif
+		return;
+	}
+#endif // UNREAL4
+
 	if (Ar.ArVer < 266)
 	{
 		guard(OldBulkFormat);
@@ -1773,6 +1796,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		BulkDataFlags |= BULKDATA_SeparateData;
 	}
 #endif // APB
+
 #if DEBUG_BULK
 	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n",
 		Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);

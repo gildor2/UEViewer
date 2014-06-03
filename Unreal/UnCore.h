@@ -415,6 +415,7 @@ public:
 };
 
 
+// Note: bools in UE are usually serialized as int32
 FORCEINLINE FArchive& operator<<(FArchive &Ar, bool &B)
 {
 	Ar.Serialize(&B, 1);
@@ -1610,6 +1611,9 @@ struct FByteBulkData //?? separate FUntypedBulkData
 	int		BulkDataFlags;				// BULKDATA_...
 	int		ElementCount;				// number of array elements
 	int		BulkDataOffsetInFile;		// position in file, points to BulkData
+#if UNREAL4
+	int64	BulkDataOffsetInFile64;
+#endif
 	int		BulkDataSizeOnDisk;			// size of bulk data on disk
 //	int		SavedBulkDataFlags;
 //	int		SavedElementCount;
@@ -1621,6 +1625,8 @@ struct FByteBulkData //?? separate FUntypedBulkData
 
 	FByteBulkData()
 	:	BulkData(NULL)
+	,	BulkDataOffsetInFile(0)
+	,	BulkDataOffsetInFile64(0)
 	{}
 
 	virtual ~FByteBulkData()
@@ -1674,6 +1680,49 @@ struct FIntBulkData : public FByteBulkData
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 
+
+/*-----------------------------------------------------------------------------
+	UE4 support
+-----------------------------------------------------------------------------*/
+
+#if UNREAL4
+
+class FStripDataFlags
+{
+public:
+	FStripDataFlags(FArchive& Ar, int MinVersion = 130) // VER_UE4_REMOVED_STRIP_DATA
+	{
+		if (Ar.ArVer >= MinVersion)
+		{
+			Ar << GlobalStripFlags << ClassStripFlags;
+		}
+		else
+		{
+			GlobalStripFlags = ClassStripFlags = 0;
+		}
+	}
+
+	FORCEINLINE bool IsEditorDataStripped() const
+	{
+		return (GlobalStripFlags & 1) != 0;
+	}
+
+	FORCEINLINE bool IsServerDataStripped() const
+	{
+		return (GlobalStripFlags & 2) != 0;
+	}
+
+	FORCEINLINE bool IsClassDataStripped(byte Flag) const
+	{
+		return (ClassStripFlags & Flag) != 0;
+	}
+
+protected:
+	byte	GlobalStripFlags;
+	byte	ClassStripFlags;
+};
+
+#endif // UNREAL4
 
 /*-----------------------------------------------------------------------------
 	Global variables
