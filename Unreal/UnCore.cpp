@@ -1715,7 +1715,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 	{
 		Ar << BulkDataFlags << ElementCount;
 		Ar << BulkDataSizeOnDisk;
-		if (Ar.ArVer < 198) // VER_UE4_BULKDATA_AT_LARGE_OFFSETS
+		if (Ar.ArVer < VER_UE4_BULKDATA_AT_LARGE_OFFSETS)
 		{
 			Ar << BulkDataOffsetInFile;
 			BulkDataOffsetInFile64 = BulkDataOffsetInFile;

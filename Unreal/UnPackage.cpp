@@ -403,7 +403,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		Ar << S.Generations[i];
 
 	// engine version
-	if (Ar.ArVer >= 336) // VER_UE4_ENGINE_VERSION_OBJECT
+	if (Ar.ArVer >= VER_UE4_ENGINE_VERSION_OBJECT)
 	{
 		FEngineVersion engineVersion; // empty for cooked packages, so don't store it anywhere ...
 		Ar << engineVersion;
@@ -431,13 +431,13 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	int TextureAllocations;
 	Ar << TextureAllocations;		// obsolete?
 
-	if (Ar.ArVer >= 112) // VER_UE4_ASSET_REGISTRY_TAGS
+	if (Ar.ArVer >= VER_UE4_ASSET_REGISTRY_TAGS)
 	{
 		int AssetRegistryDataOffset;
 		Ar << AssetRegistryDataOffset;
 	}
 
-	if (Ar.ArVer >= 212) // VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET
+	if (Ar.ArVer >= VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET)
 	{
 		//!! use this value!
 		int64 BulkDataStartOffset;
@@ -819,7 +819,7 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 	guard(SerializeObjectExport4);
 
 	Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
-	if (Ar.ArVer < 163) Ar << E.Archetype; // VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES
+	if (Ar.ArVer < VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES) Ar << E.Archetype;
 
 	Ar << E.ObjectFlags;
 
@@ -832,7 +832,7 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 		E.ExportFlags = bForcedExport ? EF_ForcedExport : 0;	//?? change this
 	}
 
-	if (Ar.ArVer < 196) Ar << E.NetObjectCount; // VER_UE4_REMOVE_NET_INDEX
+	if (Ar.ArVer < VER_UE4_REMOVE_NET_INDEX) Ar << E.NetObjectCount;
 
 	Ar << E.Guid << E.U3unk6C;
 

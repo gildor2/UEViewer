@@ -240,7 +240,7 @@ public:
 				FString ShaderCode;
 				Ar << ShaderProp << ShaderCode;
 			}
-			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 0x1F)
+			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 31)
 			{
 				word ver1, ver2;			// 'int MaterialCodeVersion' serialized as 2 words
 				Ar << ver1 << ver2;
@@ -483,82 +483,8 @@ public:
 #endif
 	{}
 	virtual bool GetTextureData(CTextureData &TexData) const;
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(UTexture::Serialize);
-		Super::Serialize(Ar);
-#if BIOSHOCK
-		TRIBES_HDR(Ar, 0x2E);
-		if (Ar.Game == GAME_Bioshock && t3_hdrSV >= 1)
-			Ar << CachedBulkDataSize;
-		if (Ar.Game == GAME_Bioshock && Format == 12)	// remap format; note: Bioshock used 3DC name, but real format is DXT5N
-			Format = TEXF_DXT5N;
-#endif // BIOSHOCK
-#if SWRC
-		if (Ar.Game == GAME_RepCommando)
-		{
-			if (Format == 14) Format = TEXF_CxV8U8;		//?? not verified
-		}
-#endif // SWRC
-#if VANGUARD
-		if (Ar.Game == GAME_Vanguard && Ar.ArVer >= 128 && Ar.ArLicenseeVer >= 25)
-		{
-			// has some table for fast mipmap lookups
-			Ar.Seek(Ar.Tell() + 142);	// skip that table
-			// serialize mips using AR_INDEX count (this game uses int for array counts in all other places)
-			int Count;
-			Ar << AR_INDEX(Count);
-			Mips.Add(Count);
-			for (int i = 0; i < Count; i++)
-				Ar << Mips[i];
-			return;
-		}
-#endif // VANGUARD
-#if AA2
-		if (Ar.Game == GAME_AA2 && Ar.ArLicenseeVer >= 8)
-		{
-			int unk;		// always 10619
-			Ar << unk;
-		}
-#endif // AA2
-		Ar << Mips;
-		if (Ar.Engine() == GAME_UE1)
-		{
-			// UE1
-			bMasked = false;			// ignored by UE1, used surface.PolyFlags instead (but UE2 ignores PolyFlags ...)
-			if (bHasComp)				// skip compressed mipmaps
-			{
-				TArray<FMipmap>	CompMips;
-				Ar << CompMips;
-			}
-		}
-#if XIII
-		if (Ar.Game == GAME_XIII)
-		{
-			if (Ar.ArLicenseeVer >= 42)
-			{
-				// serialize palette
-				if (Format == TEXF_P8 || Format == 13)	// 13 == TEXF_P4
-				{
-					assert(!Palette);
-					Palette = new UPalette;
-					Ar << Palette->Colors;
-				}
-			}
-			if (Ar.ArLicenseeVer >= 55)
-				Ar.Seek(Ar.Tell() + 3);
-		}
-#endif // XIII
-#if EXTEEL
-		if (Ar.Game == GAME_Exteel)
-		{
-			// note: this property is serialized as UObject's property too
-			byte MaterialType;			// enum GFMaterialType
-			Ar << MaterialType;
-		}
-#endif // EXTEEL
-		unguard;
-	}
+	virtual void Serialize(FArchive &Ar);
+
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Palette)
 		PROP_OBJ(Detail)

@@ -88,75 +88,10 @@ public:
 #endif // BATMAN
 	END_PROP_TABLE
 
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(UTexture3::Serialize);
-
+	virtual void Serialize(FArchive &Ar);
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4)
-		{
-			Serialize4(Ar);
-			return;
-		}
+	void Serialize4(FArchive& Ar);
 #endif
-
-		Super::Serialize(Ar);
-#if TRANSFORMERS
-		// Transformers: SourceArt is moved to separate class; but The Bourne Conspiracy has it (real ArLicenseeVer is unknown)
-		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 100) return;
-#endif
-#if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands && Ar.ArVer >= 832) return;	// Borderlands 2; version unknown
-#endif
-#if APB
-		if (Ar.Game == GAME_APB)
-		{
-			// APB has source art stored in separate bulk
-			// here are 2 headers: 1 for SourceArt and 1 for TIndirectArray<BulkData> MipSourceArt
-			// we can skip these blocks by skipping headers
-			// each header is a magic 0x5D0E7707 + position in package
-			Ar.Seek(Ar.Tell() + 8 * 2);
-			return;
-		}
-#endif // APB
-#if MASSEFF
-		if (Ar.Game == GAME_MassEffect3) return;
-#endif
-#if BIOSHOCK3
-		if (Ar.Game == GAME_Bioshock3) return;
-#endif
-		SourceArt.Serialize(Ar);
-#if GUNLEGEND
-		if (Ar.Game == GAME_GunLegend && Ar.ArVer >= 811)
-		{
-			// TIndirectArray<FByteBulkData> NonTopSourceArt
-			int Count;
-			Ar << Count;
-			for (int i = 0; i < Count; i++)
-			{
-				FByteBulkData tmpBulk;
-				tmpBulk.Skip(Ar);
-			}
-		}
-#endif // GUNLEGEND
-		unguard;
-	}
-
-#if UNREAL4
-	void Serialize4(FArchive& Ar)
-	{
-		guard(UTexture3::Serialize4);
-		Super::Serialize(Ar);
-		FStripDataFlags StripFlags(Ar);
-		if (Ar.ArVer < 143) // VER_UE4_TEXTURE_SOURCE_ART_REFACTOR
-			appError("VER_UE4_TEXTURE_SOURCE_ART_REFACTOR");
-		if (!StripFlags.IsEditorDataStripped())
-		{
-			SourceArt.Serialize(Ar);
-		}
-		unguard;
-	}
-#endif // UNREAL4
 
 #if RENDERING
 	virtual bool IsTexture() const
@@ -342,107 +277,7 @@ public:
 #endif
 	END_PROP_TABLE
 
-	virtual void Serialize(FArchive &Ar)
-	{
-		guard(UTexture2D::Serialize);
-		Super::Serialize(Ar);
-#if TERA
-		if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 3)
-		{
-			FString SourceFilePath; // field from UTexture
-			Ar << SourceFilePath;
-		}
-#endif // TERA
-		if (Ar.ArVer < 297)
-		{
-			int Format2;
-			Ar << SizeX << SizeY << Format2;
-			Format = (EPixelFormat)Format2;		// int -> byte (enum)
-		}
-#if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 46) Ar.Seek(Ar.Tell() + 16);	// Borderlands 1,2; some hash; version unknown!!
-#endif
-#if MKVSDC
-		if (Ar.Game == GAME_MK && Ar.ArLicenseeVer >= 31)	//?? may be MidwayVer ?
-		{
-			FByteBulkData CustomMipSourceArt;
-			CustomMipSourceArt.Skip(Ar);
-			if (Ar.ArVer >= 573)		// Injustice, version unknown
-			{
-				int unk1, unk2;
-				TArray<int> unk3;
-				Ar << unk1 << unk2 << unk3;
-			}
-			Ar << Mips;
-			goto skip_rest_quiet;		// Injustice has some extra mipmap arrays
-		}
-#endif // MKVSDC
-		Ar << Mips;
-#if BORDERLANDS
-		if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 46) Ar.Seek(Ar.Tell() + 16);	// Borderlands 1,2; some hash; version unknown!!
-#endif
-#if MASSEFF
-		if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
-		{
-			int unkFC;
-			if (Ar.ArLicenseeVer >= 65) Ar << unkFC;
-			if (Ar.ArLicenseeVer >= 99) goto tfc_guid;
-		}
-#endif // MASSEFF
-#if HUXLEY
-		if (Ar.Game == GAME_Huxley) goto skip_rest_quiet;
-#endif
-#if DCU_ONLINE
-		if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0x1700) return;
-#endif
-#if BIOSHOCK3
-		if (Ar.Game == GAME_Bioshock3) return;
-#endif
-		if (Ar.ArVer >= 567)
-		{
-		tfc_guid:
-			Ar << TextureFileCacheGuid;
-		}
-#if XCOM_BUREAU
-		if (Ar.Game == GAME_XcomB) return;
-#endif
-		// Extra check for some incorrectly upgrated UE3 versions, in particular for
-		// Dungeons & Dragons: Daggerdale
-		if (Ar.Tell() == Ar.GetStopper()) return;
-
-		if (Ar.ArVer >= 674)
-		{
-			TArray<FTexture2DMipMap> CachedPVRTCMips;
-			Ar << CachedPVRTCMips;
-			if (CachedPVRTCMips.Num()) appPrintf("*** %s has %d PVRTC mips (%d normal mips)\n", Name, CachedPVRTCMips.Num(), Mips.Num()); //!!
-		}
-
-		if (Ar.ArVer >= 857)
-		{
-			int CachedFlashMipsMaxResolution;
-			TArray<FTexture2DMipMap> CachedATITCMips;
-			FByteBulkData CachedFlashMips;
-			Ar << CachedFlashMipsMaxResolution;
-			Ar << CachedATITCMips;
-			CachedFlashMips.Serialize(Ar);
-			if (CachedATITCMips.Num()) appPrintf("*** %s has %d ATITC mips (%d normal mips)\n", Name, CachedATITCMips.Num(), Mips.Num()); //!!
-		}
-
-#if PLA
-		if (Ar.Game == GAME_PLA) goto skip_rest_quiet;
-#endif
-		if (Ar.ArVer >= 864) Ar << CachedETCMips;
-
-		// some hack to support more games ...
-		if (Ar.Tell() < Ar.GetStopper())
-		{
-			appPrintf("UTexture2D %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
-		skip_rest_quiet:
-			DROP_REMAINING_DATA(Ar);
-		}
-
-		unguard;
-	}
+	virtual void Serialize(FArchive &Ar);
 
 	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool UseETC_TFC) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;

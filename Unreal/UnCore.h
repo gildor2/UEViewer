@@ -1687,10 +1687,26 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 #if UNREAL4
 
+// Unreal engine 4 versions, declared as enum to be able to see all revisions in single place
+enum
+{
+	VER_UE4_ASSET_REGISTRY_TAGS = 112,
+	VER_UE4_REMOVED_STRIP_DATA = 130,
+	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,
+	VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES = 163,
+	VER_UE4_REMOVE_NET_INDEX = 196,
+	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,
+	VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET = 212,
+	VER_UE4_ENGINE_VERSION_OBJECT = 336,
+	// 342 = 4.0.0, 4.0.1
+	// 352 = 4.1.0, 4.1.1
+	// 363 = 4.2.0 preview
+};
+
 class FStripDataFlags
 {
 public:
-	FStripDataFlags(FArchive& Ar, int MinVersion = 130) // VER_UE4_REMOVED_STRIP_DATA
+	FStripDataFlags(FArchive& Ar, int MinVersion = VER_UE4_REMOVED_STRIP_DATA)
 	{
 		if (Ar.ArVer >= MinVersion)
 		{
