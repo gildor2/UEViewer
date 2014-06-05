@@ -531,7 +531,12 @@ tag_ok:
 	Ar << Version;
 
 #if UNREAL4
-	if (Version < 0)
+	// UE4 has negative version value, glowing from -1 towards negative direction. This value is followed
+	// by "UE3 Version", "UE4 Version" and "Licensee Version" (parsed in SerializePackageFileSummary4).
+	// The value is used as some version for package header, and it's not changed frequently. We can't
+	// expect these values to have large values in the future. The code below checks this value for
+	// being less than zero, but allows UE1-UE3 LicenseeVersion up to 32767.
+	if ((Version & 0xFFFFF000) == 0xFFFFF000)
 	{
 		S.LegacyVersion = Version;
 		Ar.Game = GAME_UE4;
