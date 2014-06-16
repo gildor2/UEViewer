@@ -278,6 +278,9 @@ public:
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar);
+#if UNREAL4
+	void Serialize4(FArchive& Ar);
+#endif
 
 	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool UseETC_TFC) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;

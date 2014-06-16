@@ -123,6 +123,7 @@ struct CNullType
 #define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
 
 
+// BEGIN_PROP_TABLE/END_PROP_TABLE declares property table inside class declaration
 #define BEGIN_PROP_TABLE						\
 	enum { PropLevel = Super::PropLevel + 1 };	\
 	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps) \
@@ -158,6 +159,7 @@ struct CNullType
 #endif // DECLARE_VIEWER_PROPS
 
 // Mix of BEGIN_PROP_TABLE and DECLARE_BASE
+// Allows to declare property table outside of class declaration
 #define BEGIN_PROP_TABLE_EXTERNAL(Class)		\
 static const CTypeInfo* Class##_StaticGetTypeinfo() \
 {												\
@@ -209,6 +211,7 @@ FORCEINLINE bool IsKnownClass(const char *Name)
 		static const CClassInfo Table[] = {
 #define REGISTER_CLASS(Class)					\
 			{ #Class, Class::StaticGetTypeinfo },
+// Class with BEGIN_PROP_TABLE_EXTERNAL/END_PROP_TABLE_EXTERNAL property table
 #define REGISTER_CLASS_EXTERNAL(Class)			\
 			{ #Class, Class##_StaticGetTypeinfo },
 #define REGISTER_CLASS_ALIAS(Class,ClassName)	\

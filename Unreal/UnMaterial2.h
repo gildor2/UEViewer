@@ -295,7 +295,7 @@ enum ETextureFormat
 	// Tribes texture formats
 	TEXF_CxV8U8,
 	TEXF_DXT5N,			// Note: in Bioshock this value has name 3DC, but really DXT5N is used
-	TEXF_3DC,			// names: 3Dc, ATI2, BC5
+	TEXF_3DC,			// BC5 compression
 };
 
 _ENUM(ETextureFormat)

@@ -74,8 +74,8 @@ enum ETexturePixelFormat
 	TPF_DXT5,
 	TPF_DXT5N,
 	TPF_V8U8,
-	TPF_V8U8_2,			// different decoding
-	TPF_3DC,			// names: 3Dc, ATI2, BC5 (change name to standard ??)
+	TPF_V8U8_2,			// different decoding, has color offset compared to TPF_V8U8
+	TPF_BC5,			// alias names: 3Dc, ATI2, BC5
 	TPF_BC7,
 	TPF_A1,				// 8 monochrome pixels per byte
 #if IPHONE

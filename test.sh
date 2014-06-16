@@ -251,7 +251,8 @@ fi
 case "" in
 
 "")
-	run1 data/3/MarvelHeroes UC__MarvelPlayer_Thor_SF.upk -game=mh thor_avengers_diff
+	run1 "C:/Projects/Epic/UnrealTournament4/UnrealTournament/Content" T_CH_Imm_MalcolmBody_D.uasset
+#	run1 data/3/MarvelHeroes UC__MarvelPlayer_Thor_SF.upk -game=mh thor_avengers_diff
 #	run1 data/3X/Injustice -noanim CHAR_Ares.xxx -meshes
 #	run1 data/2/SplinterCell4 -game=scell -noanim ESam.ukx
 #	run1 data/3/Dishonored Startup.upk -meshes -nostat Heart -anim=Heart_as

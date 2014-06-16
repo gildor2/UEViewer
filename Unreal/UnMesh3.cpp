@@ -96,6 +96,23 @@ USkeletalMesh3::~USkeletalMesh3()
 }
 
 
+#if MURDERED
+
+struct FSkelMeshSection_MurderedUnk
+{
+	TArray<byte>		unk1, unk2;
+
+	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection_MurderedUnk &V)
+	{
+		Ar << V.unk1 << V.unk2;
+		Ar.Seek(Ar.Tell() + 8 * sizeof(short) + 2 * sizeof(int) + 5 * sizeof(short));
+		return Ar;
+	}
+};
+
+#endif // MURDERED
+
+
 struct FSkelMeshSection3
 {
 	short				MaterialIndex;
@@ -119,6 +136,19 @@ struct FSkelMeshSection3
 			S.unk1 = 0;
 			return Ar;
 		}
+#if MURDERED
+		if (Ar.Game == GAME_Murdered && Ar.ArLicenseeVer >= 85)
+		{
+			byte flag;
+			Ar << flag;
+			if (flag)
+			{
+				TArray<FSkelMeshSection_MurderedUnk> unk1;
+				int unk2;
+				Ar << unk1 << unk2;
+			}
+		}
+#endif // MURDERED
 		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex;
 #if BATMAN
 		if (Ar.Game == GAME_Batman3) goto old_section; // Batman1 and 2 has version smaller than 806

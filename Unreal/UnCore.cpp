@@ -1291,6 +1291,9 @@ void FArchive::DetectGame()
 	if ( (ArVer == 850 || ArVer == 860) && (ArLicenseeVer == 1017) )	// 850 = Fable: The Journey, 860 = Fable Anniversary
 		SET(GAME_Fable);
 #endif
+#if MURDERED
+	if (ArVer == 860 && ArLicenseeVer == 93)	SET(GAME_Murdered);
+#endif
 #if LOST_PLANET3
 	if (ArVer == 860 && (ArLicenseeVer == 97 || ArLicenseeVer == 98))	// 97 = Lost Planet 3, 98 = Yaiba: Ninja Gaiden Z
 		SET(GAME_LostPlanet3);

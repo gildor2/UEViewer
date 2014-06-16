@@ -262,7 +262,7 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 //		if (!GL_SUPPORT(QGL_3_1)) return false;
 //		format = GL_RG8_SNORM;
 //		break;
-	case TPF_3DC: // BC5
+	case TPF_BC5:
 		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_RGTC)) return false;
 		format = GL_COMPRESSED_RG_RGTC2;
 		break;
@@ -334,9 +334,11 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 		delete pic;
 	}
 
+	bool isDefault = (Tex->Package == NULL) && (Tex->Name == "Default");
+
 	// setup min/max filter
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, doMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);	// trilinear filter
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, isDefault ? GL_NEAREST : GL_LINEAR);
 
 	// setup wrap flags
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clampS ? GL_CLAMP : GL_REPEAT);
@@ -806,14 +808,24 @@ void BindDefaultMaterial(bool White)
 		{
 			for (int y = 0; y < TEX_SIZE; y++)
 			{
-				static const byte colors[4][4] = {
-					{192,64,64,255}, {32,32,255,255}, {32,255,32,255}, {32,192,192,255}	// BGRA
+				static const byte colors[4][4] =
+				{
+//					{192,64,64,255}, {32,32,192,255}, {32,239,32,255}, {32,192,192,255}				// BGRA; most colorful
+#define N 96		// saturation level; 0 = greyscale, 255-64-16 = max color (64 is max greyscale, 16 for nested checkerboards)
+					{64+N,64,64,255}, {48,48,48+N,255}, {48,48+N,48,255}, {64,64+N/2,64+N/2,255}	// BGRA; colorized
+#undef N
+//					{64,64,64,255}, {48,48,48,255}, {48,48,48,255}, {64,64,64,255}					// BGRA; greyscale
 				};
 				byte *p = pic + y * TEX_SIZE * 4 + x * 4;
 				int i1 = x < TEX_SIZE / 2;
 				int i2 = y < TEX_SIZE / 2;
-				const byte *c = colors[i1 * 2 + i2];
-				memcpy(p, c, 4);
+				const byte *c = colors[i1 * 2 + i2];	// top checkerboard level
+				int corr = ((x ^ y) & 4) ? 4 : -4;		// nested checkerboard
+//				corr += ((x ^ y) & 8) ? 12 : -12;		// one more nested checkerboard level
+				p[0] = c[0] + corr;
+				p[1] = c[1] + corr;
+				p[2] = c[2] + corr;
+				p[3] = c[3];
 			}
 		}
 #undef TEX_SIZE

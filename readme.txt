@@ -151,6 +151,10 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+15.06.2014
+- implemented Murdered: Soul Suspect support
+- changed default texture appearance
+
 01.06.2014
 - added initial Unreal engine 4 package support
 

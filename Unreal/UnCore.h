@@ -296,6 +296,7 @@ enum EGame
 		GAME_LostPlanet3,
 		GAME_XcomB,
 		GAME_Thief4,
+		GAME_Murdered,
 
 	GAME_MIDWAY3   = 0x08100,	// variant of UE3
 		GAME_A51,
@@ -1691,6 +1692,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 enum
 {
 	VER_UE4_ASSET_REGISTRY_TAGS = 112,
+	VER_UE4_ADD_COOKED_TO_TEXTURE2D = 125,
 	VER_UE4_REMOVED_STRIP_DATA = 130,
 	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,
 	VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES = 163,
@@ -1700,7 +1702,7 @@ enum
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
 	// 342 = 4.0.0, 4.0.1
 	// 352 = 4.1.0, 4.1.1
-	// 363 = 4.2.0 preview
+	// 363 = 4.2.0, 4.2.1
 };
 
 class FStripDataFlags

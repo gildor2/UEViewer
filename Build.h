@@ -107,6 +107,7 @@
 #define LOST_PLANET3	1
 #define XCOM_BUREAU		1		// The Bureau: XCOM Declassified
 #define THIEF4			1		// Thief
+#define MURDERED		1		// Murdered: Soul Suspect
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

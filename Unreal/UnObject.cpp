@@ -594,6 +594,10 @@ void UObject::Serialize(FArchive &Ar)
 		 (Ar.Game == GAME_MK && Ar.ArVer >= 446) )
 		goto no_net_index;
 #	endif
+#	if MURDERED
+	if (Ar.Game == GAME_Murdered && Ar.ArLicenseeVer >= 93)
+		goto no_net_index;
+#	endif
 	if (Ar.ArVer >= 322)
 	{
 	net_index:

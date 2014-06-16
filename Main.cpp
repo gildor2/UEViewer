@@ -549,6 +549,9 @@ static const GameInfo games[] = {
 #	if THIEF4
 		G("Thief", thief4, GAME_Thief4),
 #	endif
+#	if MURDERED
+		G("Murdered: Soul Suspect", murd, GAME_Murdered),
+#	endif
 #endif // UNREAL3
 };
 

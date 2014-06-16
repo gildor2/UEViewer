@@ -62,7 +62,7 @@ static const CPixelFormatInfo PixelFormatInfo[] =
 	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128		},	// TPF_DXT5N
 	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8
 	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8_2
-	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0		},	// TPF_3DC
+	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0		},	// TPF_BC5
 	{ 0,						4,			4,			16,				0,			0		},	// TPF_BC7
 	{ 0,						8,			1,			1,				0,			0		},	// TPF_A1
 #if IPHONE
@@ -85,7 +85,7 @@ bool CTextureData::IsDXT() const
 {
 	return (
 		CompressedData != NULL &&
-		(Format == TPF_DXT1 || Format == TPF_DXT3 || Format == TPF_DXT5 || Format == TPF_DXT5N || Format == TPF_3DC) );
+		(Format == TPF_DXT1 || Format == TPF_DXT3 || Format == TPF_DXT5 || Format == TPF_DXT5N || Format == TPF_BC5) );
 }
 
 
@@ -255,7 +255,7 @@ byte *CTextureData::Decompress()
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
 	header.setWidth(USize);
 	header.setHeight(VSize);
-	header.setNormalFlag(Format == TPF_DXT5N || Format == TPF_3DC);	// flag to restore normalmap from 2 colors
+	header.setNormalFlag(Format == TPF_DXT5N || Format == TPF_BC5);	// flag to restore normalmap from 2 colors
 	DecodeDDS(Data, USize, VSize, header, image);
 
 	byte *s = (byte*)image.pixels();
@@ -1024,7 +1024,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 			intFormat = TPF_DXT5N;
 			break;
 		case TEXF_3DC:
-			intFormat = TPF_3DC;
+			intFormat = TPF_BC5;
 			break;
 		default:
 			appNotify("Unknown UE2 texture format: %s (%d)", TexData.OriginalFormatName, Format);
@@ -1132,6 +1132,15 @@ void UTexture3::Serialize(FArchive &Ar)
 void UTexture2D::Serialize(FArchive &Ar)
 {
 	guard(UTexture2D::Serialize);
+
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		Serialize4(Ar);
+		return;
+	}
+#endif
+
 	Super::Serialize(Ar);
 #if TERA
 	if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 3)
@@ -1154,14 +1163,14 @@ void UTexture2D::Serialize(FArchive &Ar)
 	{
 		FByteBulkData CustomMipSourceArt;
 		CustomMipSourceArt.Skip(Ar);
-		if (Ar.ArVer >= 573)		// Injustice, version unknown
+		if (Ar.ArVer >= 573)				// Injustice, version unknown
 		{
 			int unk1, unk2;
 			TArray<int> unk3;
 			Ar << unk1 << unk2 << unk3;
 		}
 		Ar << Mips;
-		goto skip_rest_quiet;		// Injustice has some extra mipmap arrays
+		goto skip_rest_quiet;				// Injustice has some extra mipmap arrays
 	}
 #endif // MKVSDC
 	Ar << Mips;
@@ -1841,16 +1850,16 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	else if (Format == PF_V8U8)
 		intFormat = TPF_V8U8;
 	else if (Format == PF_BC5)
-		intFormat = TPF_3DC;
+		intFormat = TPF_BC5;
 	else if (Format == PF_BC7)
 		intFormat = TPF_BC7;
 	else if (Format == PF_A1)
 		intFormat = TPF_A1;
 #if MASSEFF
 //??else if (Format == PF_NormapMap_LQ) -- seems not used
-//??	intFormat = TPF_3DC;
+//??	intFormat = TPF_BC5;
 	else if (Format == PF_NormalMap_HQ)
-		intFormat = TPF_3DC;
+		intFormat = TPF_BC5;
 #endif // MASSEFF
 	else
 	{
@@ -1903,14 +1912,44 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 void UTexture3::Serialize4(FArchive& Ar)
 {
 	guard(UTexture3::Serialize4);
-	Super::Serialize(Ar);
+	Super::Serialize(Ar);				// UObject
+
 	FStripDataFlags StripFlags(Ar);
+
 	if (Ar.ArVer < VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
 		appError("VER_UE4_TEXTURE_SOURCE_ART_REFACTOR");
+
 	if (!StripFlags.IsEditorDataStripped())
 	{
 		SourceArt.Serialize(Ar);
 	}
+	unguard;
+}
+
+
+void UTexture2D::Serialize4(FArchive& Ar)
+{
+	guard(UTexture2D::Serialize4);
+
+	Super::Serialize4(Ar);
+
+	FStripDataFlags StripFlags(Ar);		// note: these flags are used for pre-VER_UE4_TEXTURE_SOURCE_ART_REFACTOR versions
+
+	int bCooked = 0;
+	if (Ar.ArVer >= VER_UE4_ADD_COOKED_TO_TEXTURE2D) Ar << bCooked;
+
+	if (Ar.ArVer < VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
+		appError("VER_UE4_TEXTURE_SOURCE_ART_REFACTOR");
+
+	if (bCooked)
+	{
+		//!! C:\Projects\Epic\UnrealEngine4\Engine\Source\Runtime\Engine\Private\TextureDerivedData.cpp
+		//!! - UTexture::SerializeCookedPlatformData
+		//!! - FTexturePlatformData::SerializeCooked
+		//!! CubeMap has "Slices" - images are placed together into single bitmap?
+		appError("SerializeCookedData");
+	}
+
 	unguard;
 }
 
