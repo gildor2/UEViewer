@@ -1475,12 +1475,17 @@ public:
 	// detached string in destructor
 	char* Detach();
 
+	FORCEINLINE bool IsEmpty()
+	{
+		return Num() <= 1;
+	}
+
 	// convert string to char* - use "*Str"
-	inline const char *operator*() const
+	FORCEINLINE const char *operator*() const
 	{
 		return (char*)DataPtr;
 	}
-	inline operator const char*() const
+	FORCEINLINE operator const char*() const
 	{
 		return (char*)DataPtr;
 	}

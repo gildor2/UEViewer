@@ -3,7 +3,7 @@
 #define RENDERING		1
 #define PROFILE			1
 #define DECLARE_VIEWER_PROPS	1
-//#define HAS_UI			1		// disable this line to remove UI code
+#define HAS_UI			1		// disable this line to remove UI code
 //#define VSTUDIO_INTEGRATION		1	// improved debugging with Visual Studio
 
 //#define PRIVATE_BUILD	1

@@ -908,6 +908,12 @@ int main(int argc, char **argv)
 		else if (!stricmp(opt, "gui"))
 		{
 			UIBaseDialog dialog;
+			UIGroup* testGroup1 = new UIGroup("Group #1");
+			UIGroup* testGroup2 = new UIGroup("Group #2");
+			UIGroup* testGroup3 = new UIGroup("Group #3");
+			dialog.Add(testGroup1);
+			testGroup1->Add(testGroup2);
+			dialog.Add(testGroup3);
 			dialog.ShowDialog("Umodel Options", 400, 300);
 			exit(1);
 		}

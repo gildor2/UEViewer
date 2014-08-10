@@ -1,12 +1,34 @@
 #if _WIN32
 #define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
 #include <windows.h>
+#include <CommCtrl.h>
 #endif
 
 #include "BaseDialog.h"
 
+/*!! TODO
+- ugly looking controls: try to embed manifest
+  http://msdn.microsoft.com/en-us/library/bb773175.aspx
+  http://www.transmissionzero.co.uk/computing/win32-apps-with-mingw/
+*/
+
 
 #if HAS_UI
+
+
+#define VERTICAL_SPACING		4
+#define DEFAULT_VERT_BORDER		9
+#define DEFAULT_HORZ_BORDER		7
+
+#define GROUP_INDENT			10
+#define GROUP_MARGIN_TOP		16
+#define GROUP_MARGIN_BOTTOM		7
+#define GROUP_INDENT			10
+
+#define MAX_TITLE_LEN			256
+
+
+static HINSTANCE hInstance;
 
 /*-----------------------------------------------------------------------------
 	UIElement
@@ -27,12 +49,27 @@ UIElement::~UIElement()
 {}
 
 
+void UIElement::SetRect(int x, int y, int width, int height)
+{
+	if (x != -1)      X = x;
+	if (y != -1)      Y = y;
+	if (width != -1)  Width = width;
+	if (height != -1) Height = height;
+}
+
+
 /*-----------------------------------------------------------------------------
 	UIGroup
 -----------------------------------------------------------------------------*/
 
-UIGroup::UIGroup()
-{}
+UIGroup::UIGroup(const char* label)
+:	Label(label)
+,	TopBorder(0)
+,	NoBorder(false)
+,	NoAutoLayout(false)
+{
+	IsGroup = true;
+}
 
 
 UIGroup::~UIGroup()
@@ -43,9 +80,157 @@ UIGroup::~UIGroup()
 
 void UIGroup::ReleaseControls()
 {
+	guard(UIGroup::ReleaseControls);
+
 	for (int i = 0; i < Children.Num(); i++)
 		delete Children[i];
 	Children.Empty();
+
+	unguard;
+}
+
+
+void UIGroup::Add(UIElement* item)
+{
+	guard(UIGroup::Add);
+
+	if (item->Parent)
+		item->Parent->Remove(item);
+	Children.AddItem(item);
+	item->Parent = this;
+
+	unguard;
+}
+
+
+void UIGroup::Remove(UIElement* item)
+{
+	guard(UIGroup::Remove);
+
+	item->Parent = NULL;
+	for (int i = 0; i < Children.Num(); i++)
+	{
+		if (Children[i] == item)
+		{
+			Children.Remove(i);
+			break;
+		}
+	}
+
+	unguard;
+}
+
+
+void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
+{
+	guard(UIGroup::AllocateUISpace);
+
+	int parentX = X;
+	int parentWidth = Width;
+
+	if (!NoBorder)
+	{
+		parentX += GROUP_INDENT;
+		parentWidth -= GROUP_INDENT * 2;
+	}
+
+	if (x == -1)
+		x = parentX;					// DecodeWidth(x) would return 1.0, should use 0.0 here
+	else if (x < 0)
+		x = parentX + DecodeWidth(x) * parentWidth;	// left border of parent control, 'x' is relative value
+	else
+		x = parentX + x;				// treat 'x' as relative value
+
+	if (w < 0)
+		w = DecodeWidth(w) * parentWidth;
+
+	if (x + w > parentX + parentWidth)	// truncate width if too large
+		w = parentX + parentWidth - x;
+
+	if (y < 0)
+	{
+		y = Y + Height;					// next 'y' value
+		if (!NoAutoLayout)
+			Height += h;
+	}
+	else
+	{
+		y = Y + TopBorder + y;			// treat 'y' as relative value
+		// don't change 'Height'
+	}
+
+//	h = unchanged;
+
+	unguard;
+}
+
+
+void UIGroup::AddVerticalSpace(int height)
+{
+	if (NoAutoLayout) return;
+	if (height < 0) height = VERTICAL_SPACING;
+	Height += height;
+}
+
+
+void UIGroup::Create(UIBaseDialog* dialog)
+{
+	CreateGroupControls(dialog);
+}
+
+
+void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
+{
+	if (Parent)
+	{
+		Parent->AddVerticalSpace();
+		// request x, y and width; height is not available yet
+		int h = 0;
+		Parent->AllocateUISpace(X, Y, Width, h);
+	}
+	if (!NoBorder)
+	{
+		Height = TopBorder = GROUP_MARGIN_TOP;
+	}
+	else
+	{
+		if (Height < 0)		// allow custom initial Height for vertical spacing
+			Height = TopBorder = 0;
+	}
+
+	AddCustomControls();
+
+	// call 'Create' for all children
+	int maxControlY = Y + Height;
+	for (int i = 0; i < Children.Num(); i++)
+	{
+		UIElement* control = Children[i];
+		control->Create(dialog);
+		int bottom = control->Y + control->Height;
+		if (bottom > maxControlY)
+			maxControlY = bottom;
+	}
+	Height = maxControlY - Y;
+
+	if (!NoBorder)
+		Height += GROUP_MARGIN_BOTTOM;
+
+	if (Parent)
+	{
+		Parent->Height += Height;
+	}
+
+	if (!NoBorder)
+	{
+		// create a group window (border)
+		Wnd = CreateWindow(WC_BUTTON, *Label,
+			WS_CHILD | BS_GROUPBOX | WS_GROUP | WS_VISIBLE /*(IsVisible ? WS_VISIBLE : 0)*/,
+			X, Y, Width, Height,
+			dialog->Wnd, NULL, hInstance, NULL);
+	}
+
+	if (Parent)
+		Parent->AddVerticalSpace();
 }
 
 
@@ -55,6 +240,7 @@ void UIGroup::ReleaseControls()
 
 UIBaseDialog::UIBaseDialog()
 {
+	NoBorder = true;
 }
 
 
@@ -62,8 +248,6 @@ UIBaseDialog::~UIBaseDialog()
 {
 }
 
-
-#define MAX_TITLE_LEN	256
 
 static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize)
 {
@@ -121,6 +305,11 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 
 bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 {
+	guard(UIBaseDialog::ShowDialog);
+
+	if (!hInstance) hInstance = GetModuleHandle(NULL);
+
+	// convert title to unicode
 	wchar_t wTitle[MAX_TITLE_LEN];
 	mbstowcs(wTitle, title, MAX_TITLE_LEN);
 	DLGTEMPLATE* tmpl = MakeDialogTemplate(width, height, wTitle, L"MS Sans Serif", 8);
@@ -128,17 +317,17 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 #if 1
 	// modal
 	int result = DialogBoxIndirectParam(
-		GetModuleHandle(NULL),		// hInstance
+		hInstance,					// hInstance
 		tmpl,						// lpTemplate
 		0,							// hWndParent
 		StaticWndProc,				// lpDialogFunc
 		(LPARAM)this				// lParamInit
 	);
-	appPrintf("dialog result: %d, error: %d\n", result, GetLastError());
+	appPrintf("dialog result: %d\n", result);
 #else
 	// modeless
 	HWND dialog = CreateDialogIndirectParam(
-		GetModuleHandle(NULL),		// hInstance
+		hInstance,					// hInstance
 		tmpl,						// lpTemplate
 		0,							// hWndParent
 		StaticWndProc,				// lpDialogFunc
@@ -160,6 +349,8 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 #endif
 
 	return true;
+
+	unguard;
 }
 
 
@@ -169,12 +360,13 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 
 	if (msg == WM_INITDIALOG)
 	{
-		// remember pointer in window's user data
+		// remember pointer to UIBaseDialog in window's user data
 		dlg = (UIBaseDialog*)lParam;
 		SetWindowLongPtr(hWnd, GWLP_USERDATA, lParam);
 	}
 	else
 	{
+		// retrieve pointer to UIBaseDialog
 		dlg = (UIBaseDialog*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	}
 	return dlg->WndProc(hWnd, msg, wParam, lParam);
@@ -183,6 +375,8 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 
 INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	guard(UIBaseDialog::WndProc);
+
 	// handle dialog initialization
 	if (msg == WM_INITDIALOG)
 	{
@@ -195,15 +389,20 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		int newY = (GetSystemMetrics(SM_CYSCREEN) - (controlRect.bottom - controlRect.top)) / 2;
 		SetWindowPos(hWnd, NULL, newX, newY, 0, 0, SWP_NOSIZE);
 
-//!!		BeginDialogLayout(m_startOffset);
-//!!		InitUI();
-//!!		EndDialogLayout(m_extraHeight);
+		// create controls
+		X = DEFAULT_HORZ_BORDER;
+		Y = 0;
+		Width = controlRect.right - controlRect.left - DEFAULT_HORZ_BORDER * 2;
+		Height = DEFAULT_VERT_BORDER;
+		InitUI();
+		CreateGroupControls(this);
+
 		return TRUE;
 	}
 
 	if (msg == WM_CLOSE)
 	{
-		EndDialog(Wnd, 1);	//!! 1 = code, "cancel"
+		EndDialog(Wnd, IDCANCEL);
 		return TRUE;
 	}
 
@@ -213,7 +412,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return TRUE;
 	}
 
-	int cmd = -1;                     // some controls has cmd==0, only 'id' will be analyzed
+	int cmd = -1;
 	int id = 0;
 
 	// retrieve pointer to our class from user data
@@ -221,6 +420,12 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		id  = LOWORD(wParam);
 		cmd = HIWORD(wParam);
+		appPrintf("WM_COMMAND cmd=%d id=%d\n", cmd, id);
+		if (id == IDOK || id == IDCANCEL)
+		{
+			EndDialog(Wnd, id);
+			return TRUE;
+		}
 	}
 
 	if (cmd == -1)
@@ -232,6 +437,8 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	bool res = true; //!! HandleCommand(id, cmd, lParam);   // returns 'true' if command was processed
 
 	return res ? TRUE : FALSE;
+
+	unguard;
 }
 
 

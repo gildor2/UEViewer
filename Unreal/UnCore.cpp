@@ -978,9 +978,16 @@ FArchive& operator<<(FArchive &Ar, FCompactIndex &I)
 
 FString::FString(const char* src)
 {
-	int len = strlen(src) + 1;
-	Add(len);
-	memcpy(DataPtr, src, len);
+	if (!src)
+	{
+		Add(1);					// null char
+	}
+	else
+	{
+		int len = strlen(src) + 1;
+		Add(len);
+		memcpy(DataPtr, src, len);
+	}
 }
 
 
