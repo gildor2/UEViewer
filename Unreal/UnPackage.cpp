@@ -515,6 +515,14 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 		goto tag_ok;
 	}
 #endif // STORMWAR
+#if GUNLEGEND
+	if (S.Tag == 0x879A4B41)
+	{
+		Ar.Game = GAME_GunLegend;
+		if (!GForceGame) GForceGame = GAME_GunLegend;
+		goto tag_ok;
+	}
+#endif // GUNLEGEND
 
 	// support reverse byte order
 	if (S.Tag != PACKAGE_FILE_TAG)

@@ -1,5 +1,5 @@
 UMODEL (UE Viewer)
-(c) Konstantin Nosov (Gildor), 2007-2013
+(c) Konstantin Nosov (Gildor), 2007-2014
 
 
 Please support the development by making a donation here:
@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+28.07.2014
+- implemented Seal of Vajara skeletal mesh support (-game=sov is required)
+
 15.06.2014
 - implemented Murdered: Soul Suspect support
 - changed default texture appearance

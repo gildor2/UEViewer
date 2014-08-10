@@ -3,6 +3,7 @@
 #define RENDERING		1
 #define PROFILE			1
 #define DECLARE_VIEWER_PROPS	1
+//#define HAS_UI			1		// disable this line to remove UI code
 //#define VSTUDIO_INTEGRATION		1	// improved debugging with Visual Studio
 
 //#define PRIVATE_BUILD	1
@@ -108,6 +109,7 @@
 #define XCOM_BUREAU		1		// The Bureau: XCOM Declassified
 #define THIEF4			1		// Thief
 #define MURDERED		1		// Murdered: Soul Suspect
+#define SOV				1		// Seal of Vajra
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

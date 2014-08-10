@@ -9,8 +9,14 @@
 #	ifndef WINAPI
 #		define WINAPI   __stdcall
 #	endif
+#	ifndef CALLBACK
+#		define CALLBACK __stdcall
+#	endif
 #	ifndef WINGDIAPI
 #		define WINGDIAPI
+#		ifdef _WIN64
+#			error Review these types!
+#		endif
 		typedef unsigned		HDC;
 		typedef unsigned		HGLRC;
 		typedef const char *	LPCSTR;
@@ -18,6 +24,10 @@
 		typedef unsigned char	BYTE;
 		typedef unsigned short	WORD;
 		typedef unsigned int	UINT;
+		typedef void*			HWND;
+		typedef size_t			WPARAM;
+		typedef long			LPARAM;
+		typedef int				INT_PTR;
 		typedef int (APIENTRY *PROC)();
 		typedef void PIXELFORMATDESCRIPTOR;		// structure
 		typedef PIXELFORMATDESCRIPTOR * LPPIXELFORMATDESCRIPTOR;

@@ -1539,6 +1539,13 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		Ar << EdgeSkeleton;
 	}
 #endif // DISHONORED
+#if SOV
+	if (Ar.Game == GAME_SOV && Ar.ArVer >= 850)
+	{
+		FVector unk;
+		Ar << unk;
+	}
+#endif // SOV
 	Ar << RefSkeleton << SkeletalDepth;
 after_skeleton:
 #if DEBUG_SKELMESH

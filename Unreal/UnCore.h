@@ -297,6 +297,7 @@ enum EGame
 		GAME_XcomB,
 		GAME_Thief4,
 		GAME_Murdered,
+		GAME_SOV,
 
 	GAME_MIDWAY3   = 0x08100,	// variant of UE3
 		GAME_A51,
@@ -1700,9 +1701,10 @@ enum
 	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,
 	VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET = 212,
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
-	// 342 = 4.0.0, 4.0.1
-	// 352 = 4.1.0, 4.1.1
-	// 363 = 4.2.0, 4.2.1
+	// 342 = 4.0.0
+	// 352 = 4.1.0
+	// 363 = 4.2.0
+	// 382 = 4.3.0
 };
 
 class FStripDataFlags

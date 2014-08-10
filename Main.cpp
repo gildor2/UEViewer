@@ -1,4 +1,10 @@
 #include "Core.h"
+
+//!! move UI code to separate cpp and simply call their functions
+#if HAS_UI
+#include "../UI/BaseDialog.h"
+#endif
+
 #include "UnrealClasses.h"
 #include "UnPackage.h"
 #include "UnAnimNotify.h"
@@ -552,6 +558,9 @@ static const GameInfo games[] = {
 #	if MURDERED
 		G("Murdered: Soul Suspect", murd, GAME_Murdered),
 #	endif
+#	if SOV
+		G("Seal of Vajra", sov, GAME_SOV),
+#	endif
 #endif // UNREAL3
 };
 
@@ -895,6 +904,14 @@ int main(int argc, char **argv)
 			objectsToLoad.AddItem(obj);
 			attachAnimName = obj;
 		}
+#if HAS_UI	//!! testing only
+		else if (!stricmp(opt, "gui"))
+		{
+			UIBaseDialog dialog;
+			dialog.ShowDialog("Umodel Options", 400, 300);
+			exit(1);
+		}
+#endif		//!! HAS_UI
 		else
 		{
 			appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);

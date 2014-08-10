@@ -11,7 +11,11 @@ sources(MAIN) = {
 	Viewers/*.cpp
 	MeshInstance/*.cpp
 	Core/*.cpp
+	UI/*.cpp
 }
 
+!if "$PLATFORM" eq "win32"
+STDLIBS += user32	# for UI
+!endif
 
 target(executable, $PRJ, MAIN + NV_LIBS + UE3_LIBS + IOS_LIBS, MAIN)

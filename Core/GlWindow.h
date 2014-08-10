@@ -42,6 +42,8 @@ extern bool GShowDebugInfo;
 	Text output
 -----------------------------------------------------------------------------*/
 
+#undef RGB					// defined in windows
+
 // constant colors
 #define RGBA(r,g,b,a)		((int)((r)*255) | ((int)((g)*255)<<8) | ((int)((b)*255)<<16) | ((int)((a)*255)<<24))
 #define RGB(r,g,b)			RGBA(r,g,b,1)
