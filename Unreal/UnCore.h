@@ -736,6 +736,18 @@ inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes)
 	Ar.Seek(OldPos);
 }
 
+inline void DUMP_MEM_BYTES(const void* Data, int NumBytes)
+{
+	const byte* b = (byte*)Data;
+	for (int i = 0; i < NumBytes; i++)
+	{
+		if (!(i & 31)) appPrintf("\n%08X :", b);
+		if (!(i & 3)) appPrintf(" ");
+		appPrintf(" %02X", *b++);
+	}
+	appPrintf("\n");
+}
+
 
 // Reverse byte order for data array, inplace
 void appReverseBytes(void *Block, int NumItems, int ItemSize);

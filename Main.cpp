@@ -751,6 +751,13 @@ static void PrintVersionInfo()
 	);
 }
 
+#if HAS_UI
+static void PrintVersionInfoCB(UIButton*)
+{
+	PrintVersionInfo();
+}
+#endif
+
 
 /*-----------------------------------------------------------------------------
 	Main function
@@ -914,6 +921,23 @@ int main(int argc, char **argv)
 			dialog.Add(testGroup1);
 			testGroup1->Add(testGroup2);
 			dialog.Add(testGroup3);
+
+			UILabel* label1 = new UILabel("Test label 1", TA_Left);
+			testGroup1->Add(label1);
+
+			UIButton* button1 = new UIButton("Button 1");
+			button1->SetCallback(BIND_FREE_CB(&PrintVersionInfoCB));
+			testGroup1->Add(button1);
+
+			UICheckbox* checkbox1 = new UICheckbox("Checkbox 1", true);
+			testGroup1->Add(checkbox1);
+
+			UILabel* label2 = new UILabel("Test label 2", TA_Right);
+			testGroup2->Add(label2);
+
+			UILabel* label3 = new UILabel("Test label 3", TA_Center);
+			testGroup3->Add(label3);
+
 			dialog.ShowDialog("Umodel Options", 400, 300);
 			exit(1);
 		}

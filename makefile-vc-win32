@@ -72,7 +72,8 @@ MAIN_FILES = \
 	$(OUT_1)/GlWindow.obj \
 	$(OUT_1)/Math3D.obj \
 	$(OUT_1)/TextContainer.obj \
-	$(OUT_1)/BaseDialog.obj
+	$(OUT_1)/BaseDialog.obj \
+	$(OUT_1)/umodel.res
 
 NV_LIBS_FILES = \
 	$(OUT)/Memory.obj \
@@ -115,6 +116,9 @@ $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
 
 OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT_1)/" -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32
+
+$(OUT_1)/umodel.res : UI/umodel.rc
+	rc.exe -l 0x409 -i UI/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UI/umodel.rc
 
 DEPENDS = \
 	Build.h \
@@ -192,7 +196,8 @@ DEPENDS = \
 	Unreal/UnSound.h \
 	Unreal/UnThirdParty.h \
 	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
+	Viewers/ObjectViewer.h \
+	libs/include/callback.hpp
 
 $(OUT_1)/Main.obj : Main.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Main.obj" Main.cpp
@@ -649,7 +654,8 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	UI/BaseDialog.h \
-	Unreal/UnCore.h
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
 
 $(OUT_1)/BaseDialog.obj : UI/BaseDialog.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/BaseDialog.obj" UI/BaseDialog.cpp

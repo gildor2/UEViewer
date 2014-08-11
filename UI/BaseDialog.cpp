@@ -7,7 +7,7 @@
 #include "BaseDialog.h"
 
 /*!! TODO
-- ugly looking controls: try to embed manifest
+* ugly looking controls: try to embed manifest
   http://msdn.microsoft.com/en-us/library/bb773175.aspx
   http://www.transmissionzero.co.uk/computing/win32-apps-with-mingw/
 */
@@ -15,17 +15,22 @@
 
 #if HAS_UI
 
+#define FIRST_DIALOG_ID				4000
 
-#define VERTICAL_SPACING		4
-#define DEFAULT_VERT_BORDER		9
-#define DEFAULT_HORZ_BORDER		7
+#define VERTICAL_SPACING			4
+#define DEFAULT_VERT_BORDER			9
+#define DEFAULT_HORZ_BORDER			7
 
-#define GROUP_INDENT			10
-#define GROUP_MARGIN_TOP		16
-#define GROUP_MARGIN_BOTTOM		7
-#define GROUP_INDENT			10
+#define DEFAULT_LABEL_HEIGHT		12
+#define DEFAULT_BUTTON_HEIGHT		20
+#define DEFAULT_CHECKBOX_HEIGHT		16
 
-#define MAX_TITLE_LEN			256
+#define GROUP_INDENT				10
+#define GROUP_MARGIN_TOP			16
+#define GROUP_MARGIN_BOTTOM			7
+#define GROUP_INDENT				10
+
+#define MAX_TITLE_LEN				256
 
 
 static HINSTANCE hInstance;
@@ -35,13 +40,14 @@ static HINSTANCE hInstance;
 -----------------------------------------------------------------------------*/
 
 UIElement::UIElement()
-: X(-1)
-, Y(-1)
-, Width(-1)
-, Height(-1)
-, IsGroup(false)
-, Parent(NULL)
-, Wnd(0)
+:	X(-1)
+,	Y(-1)
+,	Width(-1)
+,	Height(-1)
+,	IsGroup(false)
+,	Parent(NULL)
+,	Wnd(0)
+,	Id(0)
 {}
 
 
@@ -55,6 +61,137 @@ void UIElement::SetRect(int x, int y, int width, int height)
 	if (y != -1)      Y = y;
 	if (width != -1)  Width = width;
 	if (height != -1) Height = height;
+}
+
+
+/*-----------------------------------------------------------------------------
+	Utility functions
+	Move to UIElement??
+-----------------------------------------------------------------------------*/
+
+// required, otherwise we'll get ugly font there
+inline void CopyFont(HWND srcWnd, HWND dstWnd)
+{
+	SendMessage(dstWnd, WM_SETFONT, SendMessage(srcWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
+}
+
+static int ConvertTextAlign(ETextAlign align)
+{
+	if (align == TA_Left)
+		return SS_LEFT;
+	else if (align == TA_Right)
+		return SS_RIGHT;
+	else
+		return SS_CENTER;
+}
+
+
+/*-----------------------------------------------------------------------------
+	UILabel
+-----------------------------------------------------------------------------*/
+
+UILabel::UILabel(const char* text, ETextAlign align)
+:	Label(text)
+,	Align(align)
+{
+	Height = DEFAULT_LABEL_HEIGHT;
+}
+
+
+void UILabel::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Wnd = CreateWindow(WC_STATIC, *Label,
+		WS_CHILDWINDOW | ConvertTextAlign(Align) | WS_VISIBLE,
+		X, Y, Width, Height,
+		dialog->GetWnd(), NULL, hInstance, NULL);
+	CopyFont(dialog->GetWnd(), Wnd);
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIButton
+-----------------------------------------------------------------------------*/
+
+UIButton::UIButton(const char* text)
+:	Label(text)
+{
+	Height = DEFAULT_BUTTON_HEIGHT;
+}
+
+
+void UIButton::Create(UIBaseDialog* dialog)
+{
+	Parent->AddVerticalSpace();
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Parent->AddVerticalSpace();
+	Id = dialog->GenerateDialogId();
+
+	Wnd = CreateWindow(WC_BUTTON, *Label,
+		WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE,	//!! BS_DEFPUSHBUTTON - for default key
+		X, Y, Width, Height,
+		dialog->GetWnd(), (HMENU)Id, hInstance, NULL);
+	CopyFont(dialog->GetWnd(), Wnd);
+}
+
+
+bool UIButton::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == BN_CLICKED && Callback)
+		Callback(this);
+	return true;
+}
+
+
+/*-----------------------------------------------------------------------------
+	UICheckbox
+-----------------------------------------------------------------------------*/
+
+UICheckbox::UICheckbox(const char* text, bool value)
+:	Label(text)
+,	bValue(value)
+,	pValue(&bValue)		// points to local variable
+{
+	Height = DEFAULT_CHECKBOX_HEIGHT;
+}
+
+
+UICheckbox::UICheckbox(const char* text, bool* value)
+:	Label(text)
+//,	bValue(value) - uninitialized
+,	pValue(value)
+{
+	Height = DEFAULT_CHECKBOX_HEIGHT;
+}
+
+
+void UICheckbox::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Id = dialog->GenerateDialogId();
+
+	DlgWnd = dialog->GetWnd();
+
+	Wnd = CreateWindow(WC_BUTTON, *Label,
+		WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX,
+		X, Y, Width, Height,
+		dialog->GetWnd(), (HMENU)Id, hInstance, NULL);
+	CopyFont(DlgWnd, Wnd);
+
+	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
+}
+
+
+bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	bool checked = (IsDlgButtonChecked(DlgWnd, Id) != BST_UNCHECKED);
+	if (*pValue != checked)
+	{
+		*pValue = checked;
+		if (Callback)
+			Callback(this, checked);
+	}
+	return true;
 }
 
 
@@ -173,6 +310,22 @@ void UIGroup::AddVerticalSpace(int height)
 }
 
 
+bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	for (int i = 0; i < Children.Num(); i++)
+	{
+		UIElement* ctl = Children[i];
+		if (ctl->IsGroup || ctl->Id == id)
+		{
+			// pass command to control
+			if (ctl->HandleCommand(id, cmd, lParam))
+				return true;
+		}
+	}
+	return false;
+}
+
+
 void UIGroup::Create(UIBaseDialog* dialog)
 {
 	CreateGroupControls(dialog);
@@ -224,9 +377,10 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	{
 		// create a group window (border)
 		Wnd = CreateWindow(WC_BUTTON, *Label,
-			WS_CHILD | BS_GROUPBOX | WS_GROUP | WS_VISIBLE /*(IsVisible ? WS_VISIBLE : 0)*/,
+			WS_CHILDWINDOW | BS_GROUPBOX | WS_GROUP | WS_VISIBLE,
 			X, Y, Width, Height,
-			dialog->Wnd, NULL, hInstance, NULL);
+			dialog->GetWnd(), NULL, hInstance, NULL);
+		CopyFont(dialog->GetWnd(), Wnd);
 	}
 
 	if (Parent)
@@ -239,6 +393,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 -----------------------------------------------------------------------------*/
 
 UIBaseDialog::UIBaseDialog()
+:	NextDialogId(FIRST_DIALOG_ID)
 {
 	NoBorder = true;
 }
@@ -287,7 +442,7 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 	dlg1->dlgVer = 1;
 	dlg1->signature = 0xFFFF;
 	dlg1->exStyle = 0;
-	dlg1->style = WS_VISIBLE | WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME;
+	dlg1->style = WS_VISIBLE | WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME | DS_CENTER;
 	dlg1->cx = width;
 	dlg1->cy = height;
 
@@ -295,7 +450,7 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 	assert(titleLen < MAX_TITLE_LEN);
 	wcscpy(dlg1->title, title);
 
-	DLGTEMPLATEEX2* dlg2 = (DLGTEMPLATEEX2*)buffer + sizeof(DLGTEMPLATEEX1) + titleLen * sizeof(wchar_t);
+	DLGTEMPLATEEX2* dlg2 = (DLGTEMPLATEEX2*)(buffer + sizeof(DLGTEMPLATEEX1) + titleLen * sizeof(wchar_t));
 	dlg2->pointsize = fontSize;
 	wcscpy(dlg2->typeface, fontName);
 
@@ -312,7 +467,7 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 	// convert title to unicode
 	wchar_t wTitle[MAX_TITLE_LEN];
 	mbstowcs(wTitle, title, MAX_TITLE_LEN);
-	DLGTEMPLATE* tmpl = MakeDialogTemplate(width, height, wTitle, L"MS Sans Serif", 8);
+	DLGTEMPLATE* tmpl = MakeDialogTemplate(width, height, wTitle, L"MS Shell Dlg", 8);
 
 #if 1
 	// modal
@@ -385,9 +540,11 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		// center window on screen
 		RECT controlRect;
 		GetClientRect(hWnd, &controlRect);
+#if 0	// current implementation uses DS_CENTER
 		int newX = (GetSystemMetrics(SM_CXSCREEN) - (controlRect.right - controlRect.left)) / 2;
 		int newY = (GetSystemMetrics(SM_CYSCREEN) - (controlRect.bottom - controlRect.top)) / 2;
 		SetWindowPos(hWnd, NULL, newX, newY, 0, 0, SWP_NOSIZE);
+#endif
 
 		// create controls
 		X = DEFAULT_HORZ_BORDER;
@@ -431,10 +588,10 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	if (cmd == -1)
 		return FALSE;
 
-//!!	if (id < FIRST_ITEM_ID || id >= m_nextDialogId)
-//!!		return TRUE;                  // not any of our controls
+	if (id < FIRST_DIALOG_ID || id >= NextDialogId)
+		return TRUE;				// not any of our controls
 
-	bool res = true; //!! HandleCommand(id, cmd, lParam);   // returns 'true' if command was processed
+	bool res = HandleCommand(id, cmd, lParam);   // returns 'true' if command was processed
 
 	return res ? TRUE : FALSE;
 

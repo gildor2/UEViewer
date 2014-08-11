@@ -12,6 +12,9 @@ sources(MAIN) = {
 	MeshInstance/*.cpp
 	Core/*.cpp
 	UI/*.cpp
+!if "$PLATFORM" eq "win32"
+	UI/umodel.rc
+!endif
 }
 
 !if "$PLATFORM" eq "win32"
