@@ -63,7 +63,7 @@ protected:
 	HWND		Wnd;
 	int			Id;
 
-	HWND Window(const char* className, const char* text, DWORD style, UIBaseDialog* dialog,
+	HWND Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
 
 	virtual void Create(UIBaseDialog* dialog) = 0;
@@ -73,6 +73,8 @@ protected:
 	{
 		return false;
 	}
+	virtual void DialogClosed(bool cancel)
+	{}
 };
 
 
@@ -136,6 +138,30 @@ protected:
 };
 
 
+class UITextEdit : public UIElement
+{
+public:
+	UITextEdit(const char* text);
+	UITextEdit(FString* text);
+
+	typedef util::Callback<void (UITextEdit*, const char* text)> Callback_t;
+
+	FORCEINLINE void SetCallback(Callback_t cb)
+	{
+		Callback = cb;
+	}
+
+protected:
+	Callback_t	Callback;
+	FString		sValue;
+	FString*	pValue;
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void DialogClosed(bool cancel);
+};
+
+
 class UIGroup : public UIElement
 {
 public:
@@ -161,6 +187,7 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void DialogClosed(bool cancel);
 	void CreateGroupControls(UIBaseDialog* dialog);
 };
 
@@ -180,6 +207,7 @@ public:
 	}
 
 	bool ShowDialog(const char* title, int width, int height);
+	void CloseDialog(bool cancel = false);
 
 protected:
 	int			NextDialogId;

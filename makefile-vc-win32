@@ -98,7 +98,7 @@ IOS_LIBS_FILES = \
 
 umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs SDL.lib SDLmain.lib user32.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/startup/crtexe2.obj ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs SDL.lib SDLmain.lib user32.lib comctl32.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/startup/crtexe2.obj ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files

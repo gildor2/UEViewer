@@ -1483,6 +1483,8 @@ public:
 	{}
 	FString(const char* src);
 
+	FString& operator=(const char* src);
+
 	// use FString as allocated char*, FString became empty and will not free
 	// detached string in destructor
 	char* Detach();

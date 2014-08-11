@@ -991,6 +991,23 @@ FString::FString(const char* src)
 }
 
 
+FString& FString::operator=(const char* src)
+{
+	Empty();
+	if (!src)
+	{
+		Add(1);					// null char
+	}
+	else
+	{
+		int len = strlen(src) + 1;
+		Add(len);
+		memcpy(DataPtr, src, len);
+	}
+	return *this;
+}
+
+
 char* FString::Detach()
 {
 	char* data = (char*)DataPtr;

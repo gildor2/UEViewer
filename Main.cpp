@@ -938,7 +938,13 @@ int main(int argc, char **argv)
 			UILabel* label3 = new UILabel("Test label 3", TA_Center);
 			testGroup3->Add(label3);
 
-			dialog.ShowDialog("Umodel Options", 400, 300);
+			FString str;
+			str = "test text";
+			UITextEdit* textEdit = new UITextEdit(&str);
+			testGroup3->Add(textEdit);
+
+			int res = dialog.ShowDialog("Umodel Options", 400, 300);
+			appPrintf("Closed: result code %d, str=\"%s\"\n", res, *str);
 			exit(1);
 		}
 #endif		//!! HAS_UI

@@ -10,6 +10,7 @@
 * ugly looking controls: try to embed manifest
   http://msdn.microsoft.com/en-us/library/bb773175.aspx
   http://www.transmissionzero.co.uk/computing/win32-apps-with-mingw/
+* Putty has better visual appearance - perhaps it uses visual styles?
 */
 
 
@@ -24,6 +25,7 @@
 #define DEFAULT_LABEL_HEIGHT		12
 #define DEFAULT_BUTTON_HEIGHT		20
 #define DEFAULT_CHECKBOX_HEIGHT		16
+#define DEFAULT_EDIT_HEIGHT			16
 
 #define GROUP_INDENT				10
 #define GROUP_MARGIN_TOP			16
@@ -64,7 +66,7 @@ void UIElement::SetRect(int x, int y, int width, int height)
 }
 
 
-HWND UIElement::Window(const char* className, const char* text, DWORD style, UIBaseDialog* dialog,
+HWND UIElement::Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 	int id, int x, int y, int w, int h)
 {
 	if (x == -1) x = X;
@@ -75,7 +77,7 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, UIB
 
 	HWND dialogWnd = dialog->GetWnd();
 
-	HWND wnd = ::CreateWindow(className, text, style, x, y, w, h,
+	HWND wnd = CreateWindowEx(exstyle, className, text, style, x, y, w, h,
 		dialogWnd, (HMENU)id, hInstance, NULL);
 	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
 
@@ -114,7 +116,7 @@ UILabel::UILabel(const char* text, ETextAlign align)
 void UILabel::Create(UIBaseDialog* dialog)
 {
 	Parent->AllocateUISpace(X, Y, Width, Height);
-	Wnd = Window(WC_STATIC, *Label, WS_CHILDWINDOW | ConvertTextAlign(Align) | WS_VISIBLE, dialog);
+	Wnd = Window(WC_STATIC, *Label, WS_CHILDWINDOW | ConvertTextAlign(Align) | WS_VISIBLE, 0, dialog);
 }
 
 
@@ -137,7 +139,7 @@ void UIButton::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	//!! BS_DEFPUSHBUTTON - for default key
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, dialog);
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, 0, dialog);
 }
 
 
@@ -178,7 +180,7 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 	DlgWnd = dialog->GetWnd();
 
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, dialog);
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog);
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 }
@@ -194,6 +196,49 @@ bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
 			Callback(this, checked);
 	}
 	return true;
+}
+
+
+/*-----------------------------------------------------------------------------
+	UITextEdit
+-----------------------------------------------------------------------------*/
+
+UITextEdit::UITextEdit(const char* value)
+:	pValue(&sValue)		// points to local variable
+,	sValue(value)
+{
+	Height = DEFAULT_EDIT_HEIGHT;
+}
+
+UITextEdit::UITextEdit(FString* value)
+:	pValue(value)
+//,	sValue(value) - uninitialized
+{
+	Height = DEFAULT_EDIT_HEIGHT;
+}
+
+void UITextEdit::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Id = dialog->GenerateDialogId();
+
+	Wnd = Window(WC_EDIT, "", WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, WS_EX_CLIENTEDGE, dialog);
+	SetWindowText(Wnd, *(*pValue));
+}
+
+bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	return true;
+}
+
+void UITextEdit::DialogClosed(bool cancel)
+{
+	if (cancel) return;
+	int len = GetWindowTextLength(Wnd) + 1;
+	FString& S = *pValue;
+	S.Empty(len+1);
+	S.Add(len+1);
+	GetWindowText(Wnd, &S[0], len + 1);
 }
 
 
@@ -328,6 +373,13 @@ bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 }
 
 
+void UIGroup::DialogClosed(bool cancel)
+{
+	for (int i = 0; i < Children.Num(); i++)
+		Children[i]->DialogClosed(cancel);
+}
+
+
 void UIGroup::Create(UIBaseDialog* dialog)
 {
 	CreateGroupControls(dialog);
@@ -378,7 +430,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	if (!NoBorder)
 	{
 		// create a group window (border)
-		Wnd = Window(WC_BUTTON, *Label, WS_CHILDWINDOW | BS_GROUPBOX | WS_GROUP | WS_VISIBLE, dialog);
+		Wnd = Window(WC_BUTTON, *Label, WS_CHILDWINDOW | BS_GROUPBOX | WS_GROUP | WS_VISIBLE, 0, dialog);
 	}
 
 	if (Parent)
@@ -460,7 +512,11 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 {
 	guard(UIBaseDialog::ShowDialog);
 
-	if (!hInstance) hInstance = GetModuleHandle(NULL);
+	if (!hInstance)
+	{
+		hInstance = GetModuleHandle(NULL);
+//		InitCommonControls();
+	}
 
 	// convert title to unicode
 	wchar_t wTitle[MAX_TITLE_LEN];
@@ -476,7 +532,6 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 		StaticWndProc,				// lpDialogFunc
 		(LPARAM)this				// lParamInit
 	);
-	appPrintf("dialog result: %d\n", result);
 #else
 	// modeless
 	HWND dialog = CreateDialogIndirectParam(
@@ -504,6 +559,13 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 	return true;
 
 	unguard;
+}
+
+
+void UIBaseDialog::CloseDialog(bool cancel)
+{
+	DialogClosed(cancel);
+	EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
 }
 
 
@@ -535,6 +597,9 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		Wnd = hWnd;
 
+		// show dialog's icon; 200 is resource id (we're not using resource.h here)
+		SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(200)));
+
 		// center window on screen
 		RECT controlRect;
 		GetClientRect(hWnd, &controlRect);
@@ -557,7 +622,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	if (msg == WM_CLOSE)
 	{
-		EndDialog(Wnd, IDCANCEL);
+		CloseDialog(true);
 		return TRUE;
 	}
 
@@ -578,7 +643,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		appPrintf("WM_COMMAND cmd=%d id=%d\n", cmd, id);
 		if (id == IDOK || id == IDCANCEL)
 		{
-			EndDialog(Wnd, id);
+			CloseDialog(id != IDOK);
 			return TRUE;
 		}
 	}
