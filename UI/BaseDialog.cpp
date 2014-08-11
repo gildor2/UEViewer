@@ -64,16 +64,29 @@ void UIElement::SetRect(int x, int y, int width, int height)
 }
 
 
+HWND UIElement::Window(const char* className, const char* text, DWORD style, UIBaseDialog* dialog,
+	int id, int x, int y, int w, int h)
+{
+	if (x == -1) x = X;
+	if (y == -1) y = Y;
+	if (w == -1) w = Width;
+	if (h == -1) h = Height;
+	if (id == -1) id = Id;
+
+	HWND dialogWnd = dialog->GetWnd();
+
+	HWND wnd = ::CreateWindow(className, text, style, x, y, w, h,
+		dialogWnd, (HMENU)id, hInstance, NULL);
+	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
+
+	return wnd;
+}
+
+
 /*-----------------------------------------------------------------------------
 	Utility functions
 	Move to UIElement??
 -----------------------------------------------------------------------------*/
-
-// required, otherwise we'll get ugly font there
-inline void CopyFont(HWND srcWnd, HWND dstWnd)
-{
-	SendMessage(dstWnd, WM_SETFONT, SendMessage(srcWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
-}
 
 static int ConvertTextAlign(ETextAlign align)
 {
@@ -101,11 +114,7 @@ UILabel::UILabel(const char* text, ETextAlign align)
 void UILabel::Create(UIBaseDialog* dialog)
 {
 	Parent->AllocateUISpace(X, Y, Width, Height);
-	Wnd = CreateWindow(WC_STATIC, *Label,
-		WS_CHILDWINDOW | ConvertTextAlign(Align) | WS_VISIBLE,
-		X, Y, Width, Height,
-		dialog->GetWnd(), NULL, hInstance, NULL);
-	CopyFont(dialog->GetWnd(), Wnd);
+	Wnd = Window(WC_STATIC, *Label, WS_CHILDWINDOW | ConvertTextAlign(Align) | WS_VISIBLE, dialog);
 }
 
 
@@ -127,11 +136,8 @@ void UIButton::Create(UIBaseDialog* dialog)
 	Parent->AddVerticalSpace();
 	Id = dialog->GenerateDialogId();
 
-	Wnd = CreateWindow(WC_BUTTON, *Label,
-		WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE,	//!! BS_DEFPUSHBUTTON - for default key
-		X, Y, Width, Height,
-		dialog->GetWnd(), (HMENU)Id, hInstance, NULL);
-	CopyFont(dialog->GetWnd(), Wnd);
+	//!! BS_DEFPUSHBUTTON - for default key
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, dialog);
 }
 
 
@@ -172,11 +178,7 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 	DlgWnd = dialog->GetWnd();
 
-	Wnd = CreateWindow(WC_BUTTON, *Label,
-		WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX,
-		X, Y, Width, Height,
-		dialog->GetWnd(), (HMENU)Id, hInstance, NULL);
-	CopyFont(DlgWnd, Wnd);
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, dialog);
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 }
@@ -376,11 +378,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	if (!NoBorder)
 	{
 		// create a group window (border)
-		Wnd = CreateWindow(WC_BUTTON, *Label,
-			WS_CHILDWINDOW | BS_GROUPBOX | WS_GROUP | WS_VISIBLE,
-			X, Y, Width, Height,
-			dialog->GetWnd(), NULL, hInstance, NULL);
-		CopyFont(dialog->GetWnd(), Wnd);
+		Wnd = Window(WC_BUTTON, *Label, WS_CHILDWINDOW | BS_GROUPBOX | WS_GROUP | WS_VISIBLE, dialog);
 	}
 
 	if (Parent)

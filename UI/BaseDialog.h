@@ -63,6 +63,9 @@ protected:
 	HWND		Wnd;
 	int			Id;
 
+	HWND Window(const char* className, const char* text, DWORD style, UIBaseDialog* dialog,
+		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
+
 	virtual void Create(UIBaseDialog* dialog) = 0;
 	// Process WM_COMMAND message. 'id' is useless in most cases, useful for
 	// groups only.

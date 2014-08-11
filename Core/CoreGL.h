@@ -23,6 +23,7 @@
 		typedef int				BOOL;
 		typedef unsigned char	BYTE;
 		typedef unsigned short	WORD;
+		typedef unsigned int	DWORD;
 		typedef unsigned int	UINT;
 		typedef void*			HWND;
 		typedef size_t			WPARAM;
