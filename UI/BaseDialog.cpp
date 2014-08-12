@@ -6,13 +6,6 @@
 
 #include "BaseDialog.h"
 
-/*!! TODO
-* ugly looking controls: try to embed manifest
-  http://msdn.microsoft.com/en-us/library/bb773175.aspx
-  http://www.transmissionzero.co.uk/computing/win32-apps-with-mingw/
-* Putty has better visual appearance - perhaps it uses visual styles?
-*/
-
 
 #if HAS_UI
 
@@ -26,6 +19,7 @@
 #define DEFAULT_BUTTON_HEIGHT		20
 #define DEFAULT_CHECKBOX_HEIGHT		16
 #define DEFAULT_EDIT_HEIGHT			16
+#define DEFAULT_COMBOBOX_HEIGHT		20
 
 #define GROUP_INDENT				10
 #define GROUP_MARGIN_TOP			16
@@ -52,10 +46,8 @@ UIElement::UIElement()
 ,	Id(0)
 {}
 
-
 UIElement::~UIElement()
 {}
-
 
 void UIElement::SetRect(int x, int y, int width, int height)
 {
@@ -64,7 +56,6 @@ void UIElement::SetRect(int x, int y, int width, int height)
 	if (width != -1)  Width = width;
 	if (height != -1) Height = height;
 }
-
 
 HWND UIElement::Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 	int id, int x, int y, int w, int h)
@@ -112,7 +103,6 @@ UILabel::UILabel(const char* text, ETextAlign align)
 	Height = DEFAULT_LABEL_HEIGHT;
 }
 
-
 void UILabel::Create(UIBaseDialog* dialog)
 {
 	Parent->AllocateUISpace(X, Y, Width, Height);
@@ -130,7 +120,6 @@ UIButton::UIButton(const char* text)
 	Height = DEFAULT_BUTTON_HEIGHT;
 }
 
-
 void UIButton::Create(UIBaseDialog* dialog)
 {
 	Parent->AddVerticalSpace();
@@ -141,7 +130,6 @@ void UIButton::Create(UIBaseDialog* dialog)
 	//!! BS_DEFPUSHBUTTON - for default key
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, 0, dialog);
 }
-
 
 bool UIButton::HandleCommand(int id, int cmd, LPARAM lParam)
 {
@@ -163,7 +151,6 @@ UICheckbox::UICheckbox(const char* text, bool value)
 	Height = DEFAULT_CHECKBOX_HEIGHT;
 }
 
-
 UICheckbox::UICheckbox(const char* text, bool* value)
 :	Label(text)
 //,	bValue(value) - uninitialized
@@ -171,7 +158,6 @@ UICheckbox::UICheckbox(const char* text, bool* value)
 {
 	Height = DEFAULT_CHECKBOX_HEIGHT;
 }
-
 
 void UICheckbox::Create(UIBaseDialog* dialog)
 {
@@ -184,7 +170,6 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 }
-
 
 bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
@@ -243,6 +228,87 @@ void UITextEdit::DialogClosed(bool cancel)
 
 
 /*-----------------------------------------------------------------------------
+	UICombobox
+-----------------------------------------------------------------------------*/
+
+UICombobox::UICombobox()
+{
+	Height = DEFAULT_COMBOBOX_HEIGHT;
+}
+
+void UICombobox::AddItem(const char* item)
+{
+	new (Items) FString(item);
+	if (Wnd) SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)item);
+}
+
+void UICombobox::AddItems(const char** items)
+{
+	while (*items) AddItem(*items++);
+}
+
+void UICombobox::RemoveAllItems()
+{
+	Items.Empty();
+	if (Wnd) SendMessage(Wnd, CB_RESETCONTENT, 0, 0);
+}
+
+void UICombobox::SelectItem(int index)
+{
+	if (Value == index) return;
+	Value = index;
+	if (Wnd) SendMessage(Wnd, CB_SETCURSEL, Value, 0);
+}
+
+void UICombobox::SelectItem(const char* item)
+{
+	int index = -1;
+	for (int i = 0; i < Items.Num(); i++)
+	{
+		if (!stricmp(Items[i], item))
+		{
+			index = i;
+			break;
+		}
+	}
+	SelectItem(index);
+}
+
+void UICombobox::Create(UIBaseDialog* dialog)
+{
+	Parent->AddVerticalSpace();
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Parent->AddVerticalSpace();
+	Id = dialog->GenerateDialogId();
+
+	Wnd = Window(WC_COMBOBOX, "",
+		CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		WS_EX_CLIENTEDGE, dialog);
+	// add items
+	for (int i = 0; i < Items.Num(); i++)
+		SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)(*Items[i]));
+	// set selection
+	SendMessage(Wnd, CB_SETCURSEL, Value, 0);
+}
+
+bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == CBN_SELCHANGE)
+	{
+		int v = SendMessage(Wnd, CB_GETCURSEL, 0, 0);
+		if (v != Value)
+		{
+			Value = v;
+			if (Callback)
+				Callback(this, Value, GetSelectionText());
+		}
+		return true;
+	}
+	return false;
+}
+
+
+/*-----------------------------------------------------------------------------
 	UIGroup
 -----------------------------------------------------------------------------*/
 
@@ -255,12 +321,10 @@ UIGroup::UIGroup(const char* label)
 	IsGroup = true;
 }
 
-
 UIGroup::~UIGroup()
 {
 	ReleaseControls();
 }
-
 
 void UIGroup::ReleaseControls()
 {
@@ -273,7 +337,6 @@ void UIGroup::ReleaseControls()
 	unguard;
 }
 
-
 void UIGroup::Add(UIElement* item)
 {
 	guard(UIGroup::Add);
@@ -285,7 +348,6 @@ void UIGroup::Add(UIElement* item)
 
 	unguard;
 }
-
 
 void UIGroup::Remove(UIElement* item)
 {
@@ -303,7 +365,6 @@ void UIGroup::Remove(UIElement* item)
 
 	unguard;
 }
-
 
 void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 {
@@ -348,14 +409,12 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	unguard;
 }
 
-
 void UIGroup::AddVerticalSpace(int height)
 {
 	if (NoAutoLayout) return;
 	if (height < 0) height = VERTICAL_SPACING;
 	Height += height;
 }
-
 
 bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 {
@@ -372,19 +431,16 @@ bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 	return false;
 }
 
-
 void UIGroup::DialogClosed(bool cancel)
 {
 	for (int i = 0; i < Children.Num(); i++)
 		Children[i]->DialogClosed(cancel);
 }
 
-
 void UIGroup::Create(UIBaseDialog* dialog)
 {
 	CreateGroupControls(dialog);
 }
-
 
 void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 {
@@ -448,11 +504,9 @@ UIBaseDialog::UIBaseDialog()
 	NoBorder = true;
 }
 
-
 UIBaseDialog::~UIBaseDialog()
 {
 }
-
 
 static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize)
 {
@@ -507,7 +561,6 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 	return (DLGTEMPLATE*)buffer;
 }
 
-
 bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 {
 	guard(UIBaseDialog::ShowDialog);
@@ -561,13 +614,11 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 	unguard;
 }
 
-
 void UIBaseDialog::CloseDialog(bool cancel)
 {
 	DialogClosed(cancel);
 	EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
 }
-
 
 INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -586,7 +637,6 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 	}
 	return dlg->WndProc(hWnd, msg, wParam, lParam);
 }
-
 
 INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {

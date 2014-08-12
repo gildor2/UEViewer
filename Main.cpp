@@ -943,6 +943,14 @@ int main(int argc, char **argv)
 			UITextEdit* textEdit = new UITextEdit(&str);
 			testGroup3->Add(textEdit);
 
+			UICombobox* combo = new UICombobox;
+			for (int i = 0; i < ARRAY_COUNT(games); i++)
+			{
+				const GameInfo &info = games[i];
+				combo->AddItem(games[i].Name);
+			}
+			testGroup3->Add(combo);
+
 			int res = dialog.ShowDialog("Umodel Options", 400, 300);
 			appPrintf("Closed: result code %d, str=\"%s\"\n", res, *str);
 			exit(1);

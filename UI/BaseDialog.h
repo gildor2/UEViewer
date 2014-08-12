@@ -6,7 +6,6 @@
 
 #if HAS_UI	// defined in Build.h, included from Core.h
 
-//!! make this header windows.h independent
 #include "UnCore.h"					// for TArray and FString
 
 #include "callback.hpp"
@@ -98,7 +97,7 @@ public:
 
 	typedef util::Callback<void (UIButton*)> Callback_t;
 
-	FORCEINLINE void SetCallback(Callback_t cb)
+	FORCEINLINE void SetCallback(const Callback_t& cb)
 	{
 		Callback = cb;
 	}
@@ -120,7 +119,7 @@ public:
 
 	typedef util::Callback<void (UICheckbox*, bool)> Callback_t;
 
-	FORCEINLINE void SetCallback(Callback_t cb)
+	FORCEINLINE void SetCallback(const Callback_t& cb)
 	{
 		Callback = cb;
 	}
@@ -146,7 +145,7 @@ public:
 
 	typedef util::Callback<void (UITextEdit*, const char* text)> Callback_t;
 
-	FORCEINLINE void SetCallback(Callback_t cb)
+	FORCEINLINE void SetCallback(const Callback_t& cb)
 	{
 		Callback = cb;
 	}
@@ -158,7 +157,50 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	// request edited text only when dialog is closed
 	virtual void DialogClosed(bool cancel);
+};
+
+
+class UICombobox : public UIElement
+{
+public:
+	UICombobox();
+
+	void AddItem(const char* item);
+	void AddItems(const char** items);
+	void RemoveAllItems();
+
+	typedef util::Callback<void (UICombobox*, int, const char*)> Callback_t;
+
+	FORCEINLINE void SetCallback(const Callback_t& cb)
+	{
+		Callback = cb;
+	}
+
+	void SelectItem(int index);
+	void SelectItem(const char* item);
+
+	FORCEINLINE const char* GetItem(int index) const
+	{
+		return Items[index];
+	}
+	FORCEINLINE int GetSelectionIndex() const
+	{
+		return Value;
+	}
+	FORCEINLINE const char* GetSelectionText() const
+	{
+		return (Value >= 0) ? *Items[Value] : NULL;
+	}
+
+protected:
+	Callback_t	Callback;
+	TArray<FString> Items;
+	int			Value;
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 };
 
 
