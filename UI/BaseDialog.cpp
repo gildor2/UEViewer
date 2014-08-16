@@ -6,6 +6,24 @@
 
 #include "BaseDialog.h"
 
+/*!! TODO
+- SHBrowseForFolder replacement with GetOpenFileName:
+  http://microsoft.public.win32.programmer.ui.narkive.com/YKMAHx5L/getopenfilename-to-select-a-folder
+  http://stackoverflow.com/questions/31059/how-do-you-configure-an-openfiledialog-to-select-folders/510035#510035
+  http://www.codeproject.com/Articles/16276/Customizing-OpenFileDialog-in-NET
+- IFileDialog
+  http://msdn.microsoft.com/en-us/library/windows/desktop/bb776913(v=vs.85).aspx
+*/
+
+/* Useful links:
+- http://msdn.microsoft.com/en-us/library/windows/desktop/ms644996%28v=vs.85%29.aspx
+  has section "Creating a Template in Memory"
+- http://blogs.msdn.com/b/oldnewthing/archive/2004/07/30/201988.aspx
+  creating dialogs as child windows
+- http://msdn.microsoft.com/en-us/library/windows/desktop/bb773175(v=vs.85).aspx
+  Enabling Visual Styles
+*/
+
 
 #if HAS_UI
 
@@ -30,6 +48,7 @@
 
 
 static HINSTANCE hInstance;
+
 
 /*-----------------------------------------------------------------------------
 	UIElement
