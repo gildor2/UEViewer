@@ -29,6 +29,11 @@ public:
 	UIElement();
 	virtual ~UIElement();
 
+	void Enable(bool enable);
+	FORCEINLINE bool IsEnabled() const       { return Enabled;  }
+
+	// Layout functions
+
 	void SetRect(int x, int y, int width, int height);
 	FORCEINLINE void SetWidth(int width)     { Width = width;   }
 	FORCEINLINE void SetHeight(int height)   { Height = height; }
@@ -51,12 +56,15 @@ public:
 		return (w & 0xFF) / 255.0f;      // w=-1 -> 1.0f
 	}
 
+	void MeasureTextSize(const char* text, int* width, int* height = NULL, HWND wnd = 0);
+
 protected:
 	int			X;
 	int			Y;
 	int			Width;
 	int			Height;
 	bool		IsGroup;
+	bool		Enabled;
 	UIGroup*	Parent;
 
 	HWND		Wnd;
@@ -74,6 +82,7 @@ protected:
 	}
 	virtual void DialogClosed(bool cancel)
 	{}
+	virtual void UpdateEnabled();
 };
 
 
@@ -220,6 +229,8 @@ public:
 	virtual void AddCustomControls()
 	{}
 
+	void EnableAllControls(bool enabled);
+
 protected:
 	FString		Label;
 	TArray<UIElement*> Children;
@@ -230,7 +241,34 @@ protected:
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 	virtual void DialogClosed(bool cancel);
+	virtual void UpdateEnabled();
 	void CreateGroupControls(UIBaseDialog* dialog);
+};
+
+
+// Mix of UICheckbox and UIGroup: this control has a checkbox instead
+// of simple title. When it is not checked, all controls are disabled.
+class UICheckboxGroup : public UIGroup
+{
+public:
+	UICheckboxGroup(const char* label, bool value);
+
+	typedef util::Callback<void (UICheckboxGroup*, bool)> Callback_t;
+
+	FORCEINLINE void SetCallback(const Callback_t& cb)
+	{
+		Callback = cb;
+	}
+
+protected:
+	FString		Label;			// overrides Label of parent
+	bool		Value;
+	HWND		CheckboxWnd;	// checkbox window
+	HWND		DlgWnd;
+	Callback_t	Callback;		// called when checkbox clicked
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 };
 
 

@@ -16,8 +16,6 @@
 */
 
 /* Useful links:
-- http://msdn.microsoft.com/en-us/library/windows/desktop/ms644996%28v=vs.85%29.aspx
-  has section "Creating a Template in Memory"
 - http://blogs.msdn.com/b/oldnewthing/archive/2004/07/30/201988.aspx
   creating dialogs as child windows
 - http://msdn.microsoft.com/en-us/library/windows/desktop/bb773175(v=vs.85).aspx
@@ -60,6 +58,7 @@ UIElement::UIElement()
 ,	Width(-1)
 ,	Height(-1)
 ,	IsGroup(false)
+,	Enabled(true)
 ,	Parent(NULL)
 ,	Wnd(0)
 ,	Id(0)
@@ -68,12 +67,43 @@ UIElement::UIElement()
 UIElement::~UIElement()
 {}
 
+void UIElement::Enable(bool enable)
+{
+	if (Enabled == enable) return;
+	Enabled = enable;
+	UpdateEnabled();
+}
+
+void UIElement::UpdateEnabled()
+{
+	if (!Wnd) return;
+	EnableWindow(Wnd, Enabled ? TRUE : FALSE);
+	InvalidateRect(Wnd, NULL, TRUE);
+}
+
 void UIElement::SetRect(int x, int y, int width, int height)
 {
 	if (x != -1)      X = x;
 	if (y != -1)      Y = y;
 	if (width != -1)  Width = width;
 	if (height != -1) Height = height;
+}
+
+void UIElement::MeasureTextSize(const char* text, int* width, int* height, HWND wnd)
+{
+	guard(UIElement::MeasureTextSize);
+	if (!wnd) wnd = Wnd;
+	assert(wnd);
+	HDC dc = GetDC(wnd);
+	HGDIOBJ oldFont = SelectObject(dc, (HFONT)SendMessage(wnd, WM_GETFONT, 0, 0));
+	SIZE size;
+	//?? probably use DrawText() with DT_CALCRECT instead of GetTextExtentPoint32()
+	GetTextExtentPoint32(dc, text, strlen(text), &size);
+	if (width) *width = size.cx;
+	if (height) *height = size.cy;
+	SelectObject(dc, oldFont);
+	ReleaseDC(wnd, dc);
+	unguard;
 }
 
 HWND UIElement::Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
@@ -96,9 +126,15 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 
 
 /*-----------------------------------------------------------------------------
-	Utility functions
-	Move to UIElement??
+	UILabel
 -----------------------------------------------------------------------------*/
+
+UILabel::UILabel(const char* text, ETextAlign align)
+:	Label(text)
+,	Align(align)
+{
+	Height = DEFAULT_LABEL_HEIGHT;
+}
 
 static int ConvertTextAlign(ETextAlign align)
 {
@@ -110,22 +146,11 @@ static int ConvertTextAlign(ETextAlign align)
 		return SS_CENTER;
 }
 
-
-/*-----------------------------------------------------------------------------
-	UILabel
------------------------------------------------------------------------------*/
-
-UILabel::UILabel(const char* text, ETextAlign align)
-:	Label(text)
-,	Align(align)
-{
-	Height = DEFAULT_LABEL_HEIGHT;
-}
-
 void UILabel::Create(UIBaseDialog* dialog)
 {
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, *Label, WS_CHILDWINDOW | ConvertTextAlign(Align) | WS_VISIBLE, 0, dialog);
+	UpdateEnabled();
 }
 
 
@@ -148,6 +173,7 @@ void UIButton::Create(UIBaseDialog* dialog)
 
 	//!! BS_DEFPUSHBUTTON - for default key
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, 0, dialog);
+	UpdateEnabled();
 }
 
 bool UIButton::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -185,9 +211,16 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 	DlgWnd = dialog->GetWnd();
 
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog);
+	// compute width of checkbox, otherwise it would react on whole parent's width area
+	int checkboxWidth;
+	MeasureTextSize(*Label, &checkboxWidth, NULL, DlgWnd);
+
+	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog,
+		Id, X, Y, checkboxWidth + DEFAULT_CHECKBOX_HEIGHT);
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
+	UpdateEnabled();
 }
 
 bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -228,6 +261,7 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 
 	Wnd = Window(WC_EDIT, "", WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, WS_EX_CLIENTEDGE, dialog);
 	SetWindowText(Wnd, *(*pValue));
+	UpdateEnabled();
 }
 
 bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -308,6 +342,7 @@ void UICombobox::Create(UIBaseDialog* dialog)
 		SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)(*Items[i]));
 	// set selection
 	SendMessage(Wnd, CB_SETCURSEL, Value, 0);
+	UpdateEnabled();
 }
 
 bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -456,9 +491,20 @@ void UIGroup::DialogClosed(bool cancel)
 		Children[i]->DialogClosed(cancel);
 }
 
+void UIGroup::EnableAllControls(bool enabled)
+{
+	for (int i = 0; i < Children.Num(); i++)
+		Children[i]->Enable(enabled);
+}
+
 void UIGroup::Create(UIBaseDialog* dialog)
 {
 	CreateGroupControls(dialog);
+}
+
+void UIGroup::UpdateEnabled()
+{
+	EnableAllControls(Enabled);
 }
 
 void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
@@ -514,6 +560,53 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 
 /*-----------------------------------------------------------------------------
+	UICheckboxGroup
+-----------------------------------------------------------------------------*/
+
+UICheckboxGroup::UICheckboxGroup(const char* label, bool value)
+:	UIGroup()
+,	Label(label)
+,	Value(value)
+,	CheckboxWnd(0)
+{}
+
+void UICheckboxGroup::Create(UIBaseDialog* dialog)
+{
+	UIGroup::Create(dialog);
+
+	Id = dialog->GenerateDialogId();
+	DlgWnd = dialog->GetWnd();
+
+	int checkboxWidth;
+	MeasureTextSize(*Label, &checkboxWidth);
+
+	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog,
+		Id, X + GROUP_INDENT, Y, checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, DEFAULT_CHECKBOX_HEIGHT);
+
+	CheckDlgButton(DlgWnd, Id, Value ? BST_CHECKED : BST_UNCHECKED);
+	EnableAllControls(Value);
+}
+
+bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (id == Id)
+	{
+		// checkbox
+		bool checked = (IsDlgButtonChecked(DlgWnd, Id) != BST_UNCHECKED);
+		if (Value != checked)
+		{
+			Value = checked;
+			EnableAllControls(Value);
+			if (Callback)
+				Callback(this, checked);
+			return true;
+		}
+	}
+	return UIGroup::HandleCommand(id, cmd, lParam);
+}
+
+
+/*-----------------------------------------------------------------------------
 	UIBaseDialog
 -----------------------------------------------------------------------------*/
 
@@ -530,9 +623,11 @@ UIBaseDialog::~UIBaseDialog()
 static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize)
 {
 	// This code uses volatile structure DLGTEMPLATEEX. It's described in MSDN, but
-	// cannot be represented as a structure. We're declaring partial case of structure,
-	// with empty strings, except font name.
+	// cannot be represented as a structure. We're building DLGTEMPLATEEX here.
 	// This code works exactly like declaring dialog in resources.
+	// More info:
+	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms644996%28v=vs.85%29.aspx
+	// (has section "Creating a Template in Memory")
 	typedef struct {
 		WORD      dlgVer;
 		WORD      signature;
@@ -606,6 +701,7 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 	);
 #else
 	// modeless
+	//!! make as separate function
 	HWND dialog = CreateDialogIndirectParam(
 		hInstance,					// hInstance
 		tmpl,						// lpTemplate
@@ -619,7 +715,7 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 		// implement a message loop
 		appPrintf("Dialog created");
 		MSG msg;
-		while (GetMessage(&msg, NULL, 0, 0))	//!! no exit condition here
+		while (GetMessage(&msg, NULL, 0, 0))	//!! there's no exit condition here
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -695,11 +791,8 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return TRUE;
 	}
 
-	if (msg == WM_DESTROY)
-	{
-//!!		RemoveRollout();
+	if (msg == WM_DESTROY)		//?? destroy local data here?
 		return TRUE;
-	}
 
 	int cmd = -1;
 	int id = 0;
