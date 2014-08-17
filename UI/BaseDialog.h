@@ -22,6 +22,10 @@ enum ETextAlign
 };
 
 
+/*-----------------------------------------------------------------------------
+	UIElement
+-----------------------------------------------------------------------------*/
+
 class UIElement
 {
 	friend class UIGroup;
@@ -30,17 +34,18 @@ public:
 	virtual ~UIElement();
 
 	void Enable(bool enable);
-	FORCEINLINE bool IsEnabled() const       { return Enabled;  }
+	FORCEINLINE bool IsEnabled() const       { return Enabled; }
 
 	// Layout functions
 
-	void SetRect(int x, int y, int width, int height);
-	FORCEINLINE void SetWidth(int width)     { Width = width;   }
-	FORCEINLINE void SetHeight(int height)   { Height = height; }
-	FORCEINLINE int  GetWidth() const        { return Width;    }
-	FORCEINLINE int  GetHeight() const       { return Height;   }
+	UIElement& SetRect(int x, int y, int width, int height);
+	FORCEINLINE UIElement& SetWidth(int width)     { Width = width; return *this; }
+	FORCEINLINE UIElement& SetHeight(int height)   { Height = height; return *this; }
+	FORCEINLINE int  GetWidth() const        { return Width; }
+	FORCEINLINE int  GetHeight() const       { return Height; }
+	UIElement& SetParent(UIGroup* group);
 
-	FORCEINLINE HWND GetWnd() const          { return Wnd;      }
+	FORCEINLINE HWND GetWnd() const          { return Wnd; }
 
 	static FORCEINLINE int EncodeWidth(float w)
 	{
@@ -58,6 +63,8 @@ public:
 
 	void MeasureTextSize(const char* text, int* width, int* height = NULL, HWND wnd = 0);
 
+	friend UIElement& operator+(UIElement& elem, UIElement& next);
+
 protected:
 	int			X;
 	int			Y;
@@ -66,6 +73,7 @@ protected:
 	bool		IsGroup;
 	bool		Enabled;
 	UIGroup*	Parent;
+	UIElement*	CreateChain;
 
 	HWND		Wnd;
 	int			Id;
@@ -85,9 +93,78 @@ protected:
 	virtual void UpdateEnabled();
 };
 
+#define DECLARE_UI_CLASS(ClassName, ParentClass)	\
+	typedef ClassName ThisClass;					\
+	typedef ParentClass Super;						\
+public:												\
+	FORCEINLINE ThisClass& SetRect(int x, int y, int width, int height) { return (ThisClass&) Super::SetRect(x, y, width, height); } \
+	FORCEINLINE ThisClass& SetWidth(int width)       { return (ThisClass&) Super::SetWidth(width); } \
+	FORCEINLINE ThisClass& SetHeight(int height)     { return (ThisClass&) Super::SetHeight(height); } \
+	FORCEINLINE ThisClass& Expose(ThisClass*& var)   { var = this; return *this; } \
+	FORCEINLINE ThisClass& SetParent(UIGroup* group) { return (ThisClass&) Super::SetParent(group); } \
+	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
+private:
+
+#define DECLARE_CALLBACK(VarName, ...)				\
+public:												\
+	typedef util::Callback<void (ThisClass*, __VA_ARGS__)> VarName##_t; \
+	FORCEINLINE ThisClass& SetCallback(VarName##_t& cb) \
+	{												\
+		VarName = cb; return *this;					\
+	}												\
+protected:											\
+	VarName##_t		VarName;						\
+private:
+
+
+// Control creation helpers.
+// Use these to receive 'Type&' value instead of 'Type*' available with 'new Type' call
+
+#define NewControl(type, ...)	_NewControl<type>(__VA_ARGS__)
+
+template<class T>
+FORCEINLINE T& _NewControl()
+{
+	T* control = new T();
+	return *control;
+}
+
+template<class T, class P1>
+FORCEINLINE T& _NewControl(P1 p1)
+{
+	T* control = new T(p1);
+	return *control;
+}
+
+template<class T, class P1, class P2>
+FORCEINLINE T& _NewControl(P1 p1, P2 p2)
+{
+	T* control = new T(p1, p2);
+	return *control;
+}
+
+template<class T, class P1, class P2, class P3>
+FORCEINLINE T& _NewControl(P1 p1, P2 p2, P3 p3)
+{
+	T* control = new T(p1, p2, p3);
+	return *control;
+}
+
+template<class T, class P1, class P2, class P3, class P4>
+FORCEINLINE T& _NewControl(P1 p1, P2 p2, P3 p3, P4 p4)
+{
+	T* control = new T(p1, p2, p3, p4);
+	return *control;
+}
+
+
+/*-----------------------------------------------------------------------------
+	Controls
+-----------------------------------------------------------------------------*/
 
 class UILabel : public UIElement
 {
+	DECLARE_UI_CLASS(UILabel, UIElement);
 public:
 	UILabel(const char* text, ETextAlign align = TA_Left);
 
@@ -101,19 +178,13 @@ protected:
 
 class UIButton : public UIElement
 {
+	DECLARE_UI_CLASS(UIButton, UIElement);
+	DECLARE_CALLBACK(Callback);
 public:
 	UIButton(const char* text);
 
-	typedef util::Callback<void (UIButton*)> Callback_t;
-
-	FORCEINLINE void SetCallback(const Callback_t& cb)
-	{
-		Callback = cb;
-	}
-
 protected:
 	FString		Label;
-	Callback_t	Callback;
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
@@ -122,20 +193,14 @@ protected:
 
 class UICheckbox : public UIElement
 {
+	DECLARE_UI_CLASS(UICheckbox, UIElement);
+	DECLARE_CALLBACK(Callback, bool);
 public:
 	UICheckbox(const char* text, bool value);
 	UICheckbox(const char* text, bool* value);
 
-	typedef util::Callback<void (UICheckbox*, bool)> Callback_t;
-
-	FORCEINLINE void SetCallback(const Callback_t& cb)
-	{
-		Callback = cb;
-	}
-
 protected:
 	FString		Label;
-	Callback_t	Callback;
 	bool		bValue;			// local bool value
 	bool*		pValue;			// pointer to editable value
 
@@ -148,6 +213,8 @@ protected:
 
 class UITextEdit : public UIElement
 {
+	DECLARE_UI_CLASS(UITextEdit, UIElement);
+	DECLARE_CALLBACK(Callback, const char*);
 public:
 	UITextEdit(const char* text);
 	UITextEdit(FString* text);
@@ -155,15 +222,7 @@ public:
 	void SetText(const char* text = NULL);
 	const char* GetText();
 
-	typedef util::Callback<void (UITextEdit*, const char* text)> Callback_t;
-
-	FORCEINLINE void SetCallback(const Callback_t& cb)
-	{
-		Callback = cb;
-	}
-
 protected:
-	Callback_t	Callback;
 	FString		sValue;
 	FString*	pValue;
 
@@ -178,19 +237,14 @@ protected:
 
 class UICombobox : public UIElement
 {
+	DECLARE_UI_CLASS(UICombobox, UIElement);
+	DECLARE_CALLBACK(Callback, int, const char*);
 public:
 	UICombobox();
 
 	void AddItem(const char* item);
 	void AddItems(const char** items);
 	void RemoveAllItems();
-
-	typedef util::Callback<void (UICombobox*, int, const char*)> Callback_t;
-
-	FORCEINLINE void SetCallback(const Callback_t& cb)
-	{
-		Callback = cb;
-	}
 
 	void SelectItem(int index);
 	void SelectItem(const char* item);
@@ -209,7 +263,6 @@ public:
 	}
 
 protected:
-	Callback_t	Callback;
 	TArray<FString> Items;
 	int			Value;
 
@@ -217,6 +270,10 @@ protected:
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 };
 
+
+/*-----------------------------------------------------------------------------
+	UI containers
+-----------------------------------------------------------------------------*/
 
 // Constants for setting some group properties
 #define GROUP_NO_BORDER			1
@@ -226,12 +283,17 @@ protected:
 
 class UIGroup : public UIElement
 {
+	DECLARE_UI_CLASS(UIGroup, UIElement);
 public:
 	UIGroup(const char* label, unsigned flags = 0);
 	UIGroup(unsigned flags = 0);
 	virtual ~UIGroup();
 
 	void Add(UIElement* item);
+	FORCEINLINE void Add(UIElement& item)
+	{
+		Add(&item);
+	}
 	void Remove(UIElement* item);
 	void ReleaseControls();
 
@@ -239,6 +301,13 @@ public:
 	void AddVerticalSpace(int height = -1);
 
 	void EnableAllControls(bool enabled);
+
+	// control creation helpers
+
+	FORCEINLINE UIGroup& operator[](UIElement& item)
+	{
+		Add(item); return *this;
+	}
 
 protected:
 	FString		Label;
@@ -261,22 +330,16 @@ protected:
 // of simple title. When it is not checked, all controls are disabled.
 class UICheckboxGroup : public UIGroup
 {
+	DECLARE_UI_CLASS(UICheckboxGroup, UIGroup);
+	DECLARE_CALLBACK(Callback, bool);
 public:
 	UICheckboxGroup(const char* label, bool value, unsigned flags = 0);
-
-	typedef util::Callback<void (UICheckboxGroup*, bool)> Callback_t;
-
-	FORCEINLINE void SetCallback(const Callback_t& cb)
-	{
-		Callback = cb;
-	}
 
 protected:
 	FString		Label;			// overrides Label of parent
 	bool		Value;
 	HWND		CheckboxWnd;	// checkbox window
 	HWND		DlgWnd;
-	Callback_t	Callback;		// called when checkbox clicked
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
@@ -285,6 +348,7 @@ protected:
 
 class UIBaseDialog : public UIGroup
 {
+	DECLARE_UI_CLASS(UIBaseDialog, UIElement);
 public:
 	UIBaseDialog();
 	virtual ~UIBaseDialog();

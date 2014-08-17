@@ -5,6 +5,7 @@
 
 class UIFilePathEditor : public UIGroup
 {
+	DECLARE_UI_CLASS(UIFilePathEditor, UIGroup);
 public:
 	UIFilePathEditor();
 

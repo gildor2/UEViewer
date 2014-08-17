@@ -41,7 +41,7 @@ UIFilePathEditor::UIFilePathEditor()
 
 void UIFilePathEditor::Create(UIBaseDialog* dialog)
 {
-	UIGroup::Create(dialog);
+	Super::Create(dialog);
 	InitializeOLE();
 	SHAutoComplete(Editor->GetWnd(), SHACF_FILESYS_DIRS);
 	DlgWnd = dialog->GetWnd();

@@ -351,7 +351,6 @@ static void PrintUsage()
 			"\n"
 			"For details and updates please visit " HOMEPAGE "\n"
 	);
-	exit(0);
 }
 
 
@@ -402,7 +401,13 @@ int main(int argc, char **argv)
 	guard(Main);
 
 	// display usage
-	if (argc < 2) PrintUsage();
+#if !HAS_UI
+	if (argc < 2)
+	{
+		PrintUsage();
+		exit(0);
+	}
+#endif // HAS_UI
 
 	// parse command line
 	enum
@@ -518,23 +523,29 @@ int main(int argc, char **argv)
 			objectsToLoad.AddItem(obj);
 			attachAnimName = obj;
 		}
-#if HAS_UI	//!! testing only
-		else if (!stricmp(opt, "gui"))
+		else if (!stricmp(opt, "help"))
 		{
-			UIStartupDialog* dialog = new UIStartupDialog;
-			bool res = dialog->Show();
-//			appPrintf("Closed: result %d, str=\"%s\"\n", res, *str);
-			appPrintf("Closed: result %d\n", res);
-			delete dialog;
-			exit(1);
+			PrintUsage();
+			exit(0);
 		}
-#endif		//!! HAS_UI
 		else
 		{
 			appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);
 			goto bad_params;
 		}
 	}
+
+#if HAS_UI
+	if (argc < 2)
+	{
+		// no arguments provided - display startup options
+		UIStartupDialog dialog;
+		bool res = dialog.Show();
+		if (!res) exit(0);
+		// process options
+		//!! todo
+	}
+#endif // HAS_UI
 
 	if (mainCmd == CMD_VersionInfo)
 	{

@@ -62,6 +62,7 @@ UIElement::UIElement()
 ,	Parent(NULL)
 ,	Wnd(0)
 ,	Id(0)
+,	CreateChain(NULL)
 {}
 
 UIElement::~UIElement()
@@ -81,12 +82,19 @@ void UIElement::UpdateEnabled()
 	InvalidateRect(Wnd, NULL, TRUE);
 }
 
-void UIElement::SetRect(int x, int y, int width, int height)
+UIElement& UIElement::SetRect(int x, int y, int width, int height)
 {
 	if (x != -1)      X = x;
 	if (y != -1)      Y = y;
 	if (width != -1)  Width = width;
 	if (height != -1) Height = height;
+	return *this;
+}
+
+UIElement& UIElement::SetParent(UIGroup* group)
+{
+	group->Add(this);
+	return *this;
 }
 
 void UIElement::MeasureTextSize(const char* text, int* width, int* height, HWND wnd)
@@ -124,6 +132,21 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 	return wnd;
 }
 
+UIElement& operator+(UIElement& elem, UIElement& next)
+{
+	UIElement* e = &elem;
+	while (true)
+	{
+		UIElement* n = e->CreateChain;
+		if (!n)
+		{
+			e->CreateChain = &next;
+			break;
+		}
+		e = n;
+	}
+	return elem;
+}
 
 /*-----------------------------------------------------------------------------
 	UILabel
@@ -423,10 +446,14 @@ void UIGroup::Add(UIElement* item)
 {
 	guard(UIGroup::Add);
 
-	if (item->Parent)
-		item->Parent->Remove(item);
-	Children.AddItem(item);
-	item->Parent = this;
+	while (item)
+	{
+		if (item->Parent)
+			item->Parent->Remove(item);
+		Children.AddItem(item);
+		item->Parent = this;
+		item = item->CreateChain;
+	}
 
 	unguard;
 }
@@ -630,7 +657,7 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 			return true;
 		}
 	}
-	return UIGroup::HandleCommand(id, cmd, lParam);
+	return Super::HandleCommand(id, cmd, lParam);
 }
 
 
@@ -751,7 +778,7 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 	}
 #endif
 
-	return true;
+	return (result != IDCANCEL);
 
 	unguard;
 }
@@ -829,7 +856,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		id  = LOWORD(wParam);
 		cmd = HIWORD(wParam);
-		appPrintf("WM_COMMAND cmd=%d id=%d\n", cmd, id);
+//		appPrintf("WM_COMMAND cmd=%d id=%d\n", cmd, id);
 		if (id == IDOK || id == IDCANCEL)
 		{
 			CloseDialog(id != IDOK);

@@ -19,24 +19,27 @@ UIStartupDialog::UIStartupDialog()
 
 bool UIStartupDialog::Show()
 {
-	return ShowDialog("Umodel Options", 300, 200);
+	return ShowDialog("Umodel Startup Options", 300, 180);
 }
 
 void UIStartupDialog::InitUI()
 {
 	guard(UIStartupDialog::InitUI);
 
-	UICheckboxGroup* overrideGame = new UICheckboxGroup("Override game detection", false);
-	Add(overrideGame);
-		UIGroup* gameSelectGroup = new UIGroup(GROUP_CUSTOM_LAYOUT);
-		overrideGame->Add(gameSelectGroup);
-			OverrideEngineCombo = new UICombobox();
-			OverrideEngineCombo->SetCallback(BIND_MEM_CB(&UIStartupDialog::OnEngineChanges, this));
-			OverrideEngineCombo->SetRect(0, 0, EncodeWidth(0.4f), -1);
-			gameSelectGroup->Add(OverrideEngineCombo);
-			OverrideGameCombo = new UICombobox();
-			OverrideGameCombo->SetRect(EncodeWidth(0.42f), -1, -1, -1);
-			gameSelectGroup->Add(OverrideGameCombo);
+	NewControl(UICheckboxGroup, "Override game detection", false)
+	.SetParent(this)
+	[
+		NewControl(UIGroup, GROUP_CUSTOM_LAYOUT)
+		[
+			NewControl(UICombobox)
+			.Expose(OverrideEngineCombo)
+			.SetCallback(BIND_MEM_CB(&UIStartupDialog::OnEngineChanged, this))
+			.SetRect(0, 0, EncodeWidth(0.4f), -1)
+			+ NewControl(UICombobox)
+			.Expose(OverrideGameCombo)
+			.SetRect(EncodeWidth(0.42f), -1, -1, -1)
+		]
+	];
 
 	int i;
 	const char* lastEngine = NULL;
@@ -62,20 +65,33 @@ void UIStartupDialog::InitUI()
 
 	UIGroup* classList = new UIGroup("Engine classed to load");
 	Add(classList);
-		UIGroup* classList1 = new UIGroup(GROUP_NO_BORDER);
-		classList->Add(classList1);
-		classList1->SetRect(0, 0, EncodeWidth(0.5f), -1);
-			classList1->Add(new UICheckbox("Skeletal mesh", &UseSkeletalMesh));
-			classList1->Add(new UICheckbox("Static mesh",   &UseStaticMesh));
-			classList1->Add(new UICheckbox("Animation",     &UseAnimation));
-			classList1->Add(new UICheckbox("Textures",      &UseTexture));
-		UIGroup* classList2 = new UIGroup(GROUP_NO_BORDER);
-		classList->Add(classList2);
-		classList2->SetRect(EncodeWidth(0.5f), 0, -1, -1);
-			classList2->Add(new UICheckbox("Sound",     &UseSound));
-			classList2->Add(new UICheckbox("ScaleForm", &UseScaleForm));
-			classList2->Add(new UICheckbox("FaceFX",    &UseFaceFX));
+	(*classList)
+	[
+		NewControl(UIGroup, GROUP_NO_BORDER)
+		.SetRect(0, 0, EncodeWidth(0.5f), -1)
+		[
+			NewControl(UILabel, "Common classes:").SetHeight(20)
+			+ NewControl(UICheckbox, "Skeletal mesh", &UseSkeletalMesh)
+			+ NewControl(UICheckbox, "Static mesh",   &UseStaticMesh)
+			+ NewControl(UICheckbox, "Animation",     &UseAnimation)
+			+ NewControl(UICheckbox, "Textures",      &UseTexture)
+		]
+		//!! lightmap
+		+ NewControl(UIGroup, GROUP_NO_BORDER)
+		.SetRect(EncodeWidth(0.5f), 0, -1, -1)
+		[
+			NewControl(UILabel, "Export-only classes:").SetHeight(20)
+			+ NewControl(UICheckbox, "Sound",     &UseSound)
+			+ NewControl(UICheckbox, "ScaleForm", &UseScaleForm)
+			+ NewControl(UICheckbox, "FaceFX",    &UseFaceFX)
+		]
+	];
 
+	//!! platform
+	//!! compression method
+	//!! save log to file (-log=...)
+
+#if 0 // test code
 	UIGroup* testGroup1 = new UIGroup("Group #1");
 	UIGroup* testGroup2 = new UIGroup("Group #2");
 	UIGroup* testGroup3 = new UIGroup("Group #3");
@@ -103,6 +119,7 @@ void UIStartupDialog::InitUI()
 	str = "test text";
 	UITextEdit* textEdit = new UITextEdit(&str);
 	testGroup3->Add(textEdit);
+#endif
 
 	unguard;
 }
@@ -146,7 +163,7 @@ void UIStartupDialog::FillGameList()
 	OverrideGameCombo->SelectItem(0);
 }
 
-void UIStartupDialog::OnEngineChanges(UICombobox* sender, int value, const char* text)
+void UIStartupDialog::OnEngineChanged(UICombobox* sender, int value, const char* text)
 {
 	FillGameList();
 }
