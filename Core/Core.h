@@ -198,6 +198,13 @@ template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*
 	qsort(array, count, sizeof(T), (int (*)(const void*, const void*)) cmpFunc);
 }
 
+// special version for 'const char*' arrays (for easier comparator declaration)
+//!! todo: add default comparator function with stricmp()
+inline void QSort(const char** array, int count, int (*cmpFunc)(const char**, const char**))
+{
+	qsort(array, count, sizeof(char*), (int (*)(const void*, const void*)) cmpFunc);
+}
+
 void appOpenLogFile(const char *filename);
 void appPrintf(const char *fmt, ...);
 

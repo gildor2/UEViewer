@@ -74,6 +74,8 @@ MAIN_FILES = \
 	$(OUT_1)/Math3D.obj \
 	$(OUT_1)/TextContainer.obj \
 	$(OUT_1)/BaseDialog.obj \
+	$(OUT_1)/FileControls.obj \
+	$(OUT_1)/StartupDialog.obj \
 	$(OUT_1)/umodel.res
 
 NV_LIBS_FILES = \
@@ -99,7 +101,7 @@ IOS_LIBS_FILES = \
 
 umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs SDL.lib SDLmain.lib user32.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/startup/crtexe2.obj ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs SDL.lib SDLmain.lib user32.lib gdi32.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/startup/crtexe2.obj ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
@@ -157,6 +159,7 @@ DEPENDS = \
 	Exporters/Exporters.h \
 	GameList.h \
 	UI/BaseDialog.h \
+	UI/StartupDialog.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -656,10 +659,40 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	GameList.h \
+	UI/BaseDialog.h \
+	UI/FileControls.h \
+	UI/StartupDialog.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/StartupDialog.obj : UI/StartupDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/StartupDialog.obj" UI/StartupDialog.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	GameList.h \
 	Unreal/UnCore.h
 
 $(OUT_1)/GameList.obj : GameList.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameList.obj" GameList.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	UI/FileControls.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/FileControls.obj : UI/FileControls.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/FileControls.obj" UI/FileControls.cpp
 
 DEPENDS = \
 	Build.h \

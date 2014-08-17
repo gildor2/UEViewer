@@ -3,6 +3,7 @@
 //!! move UI code to separate cpp and simply call their functions
 #if HAS_UI
 #include "../UI/BaseDialog.h"
+#include "../UI/StartupDialog.h"
 #endif
 
 #include "UnrealClasses.h"
@@ -364,13 +365,6 @@ static void PrintVersionInfo()
 	);
 }
 
-#if HAS_UI
-static void PrintVersionInfoCB(UIButton*)
-{
-	PrintVersionInfo();
-}
-#endif
-
 
 /*-----------------------------------------------------------------------------
 	Main function
@@ -527,46 +521,11 @@ int main(int argc, char **argv)
 #if HAS_UI	//!! testing only
 		else if (!stricmp(opt, "gui"))
 		{
-			UIBaseDialog dialog;
-			UIGroup* testGroup1 = new UIGroup("Group #1");
-			UIGroup* testGroup2 = new UIGroup("Group #2");
-			UIGroup* testGroup3 = new UIGroup("Group #3");
-			dialog.Add(testGroup1);
-			testGroup1->Add(testGroup2);
-			dialog.Add(testGroup3);
-
-			UILabel* label1 = new UILabel("Test label 1", TA_Left);
-			testGroup1->Add(label1);
-
-			UIButton* button1 = new UIButton("Button 1");
-			button1->SetCallback(BIND_FREE_CB(&PrintVersionInfoCB));
-			testGroup1->Add(button1);
-
-			UICheckbox* checkbox1 = new UICheckbox("Checkbox 1", true);
-			testGroup1->Add(checkbox1);
-
-			UILabel* label2 = new UILabel("Test label 2", TA_Right);
-			testGroup2->Add(label2);
-
-			UILabel* label3 = new UILabel("Test label 3", TA_Center);
-			testGroup3->Add(label3);
-
-			FString str;
-			str = "test text";
-			UITextEdit* textEdit = new UITextEdit(&str);
-			testGroup3->Add(textEdit);
-
-			UICombobox* combo = new UICombobox;
-			for (int i = 0; /* empty */; i++)
-			{
-				const GameInfo &info = GListOfGames[i];
-				if (!info.Name) break;
-				combo->AddItem(info.Name);
-			}
-			testGroup3->Add(combo);
-
-			int res = dialog.ShowDialog("Umodel Options", 400, 300);
-			appPrintf("Closed: result code %d, str=\"%s\"\n", res, *str);
+			UIStartupDialog* dialog = new UIStartupDialog;
+			bool res = dialog->Show();
+//			appPrintf("Closed: result %d, str=\"%s\"\n", res, *str);
+			appPrintf("Closed: result %d\n", res);
+			delete dialog;
 			exit(1);
 		}
 #endif		//!! HAS_UI

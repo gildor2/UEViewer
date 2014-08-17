@@ -217,7 +217,7 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog,
-		Id, X, Y, checkboxWidth + DEFAULT_CHECKBOX_HEIGHT);
+		Id, X, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width));
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
@@ -254,6 +254,20 @@ UITextEdit::UITextEdit(FString* value)
 	Height = DEFAULT_EDIT_HEIGHT;
 }
 
+void UITextEdit::SetText(const char* text)
+{
+	if (text)
+		*pValue = text;
+	if (Wnd)
+		SetWindowText(Wnd, *(*pValue));
+}
+
+const char* UITextEdit::GetText()
+{
+	UpdateText();
+	return *(*pValue);
+}
+
 void UITextEdit::Create(UIBaseDialog* dialog)
 {
 	Parent->AllocateUISpace(X, Y, Width, Height);
@@ -269,14 +283,20 @@ bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
 	return true;
 }
 
-void UITextEdit::DialogClosed(bool cancel)
+void UITextEdit::UpdateText()
 {
-	if (cancel) return;
+	if (!Wnd) return;
 	int len = GetWindowTextLength(Wnd) + 1;
 	FString& S = *pValue;
 	S.Empty(len+1);
 	S.Add(len+1);
 	GetWindowText(Wnd, &S[0], len + 1);
+}
+
+void UITextEdit::DialogClosed(bool cancel)
+{
+	if (cancel) return;
+	UpdateText();
 }
 
 
@@ -285,6 +305,7 @@ void UITextEdit::DialogClosed(bool cancel)
 -----------------------------------------------------------------------------*/
 
 UICombobox::UICombobox()
+:	Value(-1)
 {
 	Height = DEFAULT_COMBOBOX_HEIGHT;
 }
@@ -304,6 +325,7 @@ void UICombobox::RemoveAllItems()
 {
 	Items.Empty();
 	if (Wnd) SendMessage(Wnd, CB_RESETCONTENT, 0, 0);
+	Value = -1;
 }
 
 void UICombobox::SelectItem(int index)
@@ -366,11 +388,17 @@ bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
 	UIGroup
 -----------------------------------------------------------------------------*/
 
-UIGroup::UIGroup(const char* label)
+UIGroup::UIGroup(const char* label, unsigned flags)
 :	Label(label)
 ,	TopBorder(0)
-,	NoBorder(false)
-,	NoAutoLayout(false)
+,	Flags(flags)
+{
+	IsGroup = true;
+}
+
+UIGroup::UIGroup(unsigned flags)
+:	TopBorder(0)
+,	Flags(flags)
 {
 	IsGroup = true;
 }
@@ -427,7 +455,7 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	int parentX = X;
 	int parentWidth = Width;
 
-	if (!NoBorder)
+	if (!(Flags & GROUP_NO_BORDER))
 	{
 		parentX += GROUP_INDENT;
 		parentWidth -= GROUP_INDENT * 2;
@@ -449,7 +477,7 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	if (y < 0)
 	{
 		y = Y + Height;					// next 'y' value
-		if (!NoAutoLayout)
+		if (!(Flags & GROUP_NO_AUTO_LAYOUT))
 			Height += h;
 	}
 	else
@@ -465,7 +493,7 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 
 void UIGroup::AddVerticalSpace(int height)
 {
-	if (NoAutoLayout) return;
+	if (Flags & GROUP_NO_AUTO_LAYOUT) return;
 	if (height < 0) height = VERTICAL_SPACING;
 	Height += height;
 }
@@ -516,7 +544,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		int h = 0;
 		Parent->AllocateUISpace(X, Y, Width, h);
 	}
-	if (!NoBorder)
+	if (!(Flags & GROUP_NO_BORDER))
 	{
 		Height = TopBorder = GROUP_MARGIN_TOP;
 	}
@@ -540,7 +568,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	}
 	Height = maxControlY - Y;
 
-	if (!NoBorder)
+	if (!(Flags & GROUP_NO_BORDER))
 		Height += GROUP_MARGIN_BOTTOM;
 
 	if (Parent)
@@ -548,7 +576,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		Parent->Height += Height;
 	}
 
-	if (!NoBorder)
+	if (!(Flags & GROUP_NO_BORDER))
 	{
 		// create a group window (border)
 		Wnd = Window(WC_BUTTON, *Label, WS_CHILDWINDOW | BS_GROUPBOX | WS_GROUP | WS_VISIBLE, 0, dialog);
@@ -563,8 +591,8 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	UICheckboxGroup
 -----------------------------------------------------------------------------*/
 
-UICheckboxGroup::UICheckboxGroup(const char* label, bool value)
-:	UIGroup()
+UICheckboxGroup::UICheckboxGroup(const char* label, bool value, unsigned flags)
+:	UIGroup(flags)
 ,	Label(label)
 ,	Value(value)
 ,	CheckboxWnd(0)
@@ -581,7 +609,7 @@ void UICheckboxGroup::Create(UIBaseDialog* dialog)
 	MeasureTextSize(*Label, &checkboxWidth);
 
 	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog,
-		Id, X + GROUP_INDENT, Y, checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, DEFAULT_CHECKBOX_HEIGHT);
+		Id, X + GROUP_INDENT, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width), DEFAULT_CHECKBOX_HEIGHT);
 
 	CheckDlgButton(DlgWnd, Id, Value ? BST_CHECKED : BST_UNCHECKED);
 	EnableAllControls(Value);
@@ -611,10 +639,9 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 -----------------------------------------------------------------------------*/
 
 UIBaseDialog::UIBaseDialog()
-:	NextDialogId(FIRST_DIALOG_ID)
-{
-	NoBorder = true;
-}
+:	UIGroup(GROUP_NO_BORDER)
+,	NextDialogId(FIRST_DIALOG_ID)
+{}
 
 UIBaseDialog::~UIBaseDialog()
 {

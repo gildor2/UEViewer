@@ -50,7 +50,7 @@ public:
 		return 0xFFFF0000 | iw;
 	}
 
-	static FORCEINLINE int DecodeWidth(int w)
+	static FORCEINLINE float DecodeWidth(int w)
 	{
 		assert((w & 0xFFFFFF00) == 0xFFFF0000 || w == -1);
 		return (w & 0xFF) / 255.0f;      // w=-1 -> 1.0f
@@ -152,6 +152,9 @@ public:
 	UITextEdit(const char* text);
 	UITextEdit(FString* text);
 
+	void SetText(const char* text = NULL);
+	const char* GetText();
+
 	typedef util::Callback<void (UITextEdit*, const char* text)> Callback_t;
 
 	FORCEINLINE void SetCallback(const Callback_t& cb)
@@ -166,6 +169,8 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	// request edited text from UI
+	void UpdateText();
 	// request edited text only when dialog is closed
 	virtual void DialogClosed(bool cancel);
 };
@@ -213,10 +218,17 @@ protected:
 };
 
 
+// Constants for setting some group properties
+#define GROUP_NO_BORDER			1
+#define GROUP_NO_AUTO_LAYOUT	2
+
+#define GROUP_CUSTOM_LAYOUT		(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
+
 class UIGroup : public UIElement
 {
 public:
-	UIGroup(const char* label = NULL);
+	UIGroup(const char* label, unsigned flags = 0);
+	UIGroup(unsigned flags = 0);
 	virtual ~UIGroup();
 
 	void Add(UIElement* item);
@@ -226,23 +238,22 @@ public:
 	void AllocateUISpace(int& x, int& y, int& w, int& h);
 	void AddVerticalSpace(int height = -1);
 
-	virtual void AddCustomControls()
-	{}
-
 	void EnableAllControls(bool enabled);
 
 protected:
 	FString		Label;
 	TArray<UIElement*> Children;
 	int			TopBorder;
-	bool		NoBorder;
-	bool		NoAutoLayout;
+	unsigned	Flags;
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 	virtual void DialogClosed(bool cancel);
 	virtual void UpdateEnabled();
 	void CreateGroupControls(UIBaseDialog* dialog);
+
+	virtual void AddCustomControls()
+	{}
 };
 
 
@@ -251,7 +262,7 @@ protected:
 class UICheckboxGroup : public UIGroup
 {
 public:
-	UICheckboxGroup(const char* label, bool value);
+	UICheckboxGroup(const char* label, bool value, unsigned flags = 0);
 
 	typedef util::Callback<void (UICheckboxGroup*, bool)> Callback_t;
 
