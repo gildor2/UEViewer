@@ -89,7 +89,7 @@ struct FLineageShaderProperty
 		int i;
 		Ar << P.b1 << P.b2;
 
-		if (Ar.ArVer < 128)
+		if (Ar.ArVer < 129)
 		{
 			Ar << P.b3[0] << P.b4[0] << P.i1[0] << P.i2[0] << P.i3[0];
 		}
