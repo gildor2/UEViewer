@@ -132,6 +132,10 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 	return wnd;
 }
 
+// This function will add another UIElement to chain for creation. This function
+// has a little overhead: it iterates over all already added elements to add a new
+// one to the end of CreateChain. But it allows us to use UE4-like "declarative syntax"
+// for creating controls.
 UIElement& operator+(UIElement& elem, UIElement& next)
 {
 	UIElement* e = &elem;

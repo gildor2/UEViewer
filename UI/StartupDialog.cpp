@@ -70,17 +70,19 @@ void UIStartupDialog::InitUI()
 		NewControl(UIGroup, GROUP_NO_BORDER)
 		.SetRect(0, 0, EncodeWidth(0.5f), -1)
 		[
-			NewControl(UILabel, "Common classes:").SetHeight(20)
+			NewControl(UILabel, "Common classes:")
+			.SetHeight(20)
 			+ NewControl(UICheckbox, "Skeletal mesh", &UseSkeletalMesh)
 			+ NewControl(UICheckbox, "Static mesh",   &UseStaticMesh)
 			+ NewControl(UICheckbox, "Animation",     &UseAnimation)
 			+ NewControl(UICheckbox, "Textures",      &UseTexture)
+			//!! lightmap
 		]
-		//!! lightmap
 		+ NewControl(UIGroup, GROUP_NO_BORDER)
 		.SetRect(EncodeWidth(0.5f), 0, -1, -1)
 		[
-			NewControl(UILabel, "Export-only classes:").SetHeight(20)
+			NewControl(UILabel, "Export-only classes:")
+			.SetHeight(20)
 			+ NewControl(UICheckbox, "Sound",     &UseSound)
 			+ NewControl(UICheckbox, "ScaleForm", &UseScaleForm)
 			+ NewControl(UICheckbox, "FaceFX",    &UseFaceFX)

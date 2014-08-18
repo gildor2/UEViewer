@@ -49,16 +49,17 @@ public:
 
 	static FORCEINLINE int EncodeWidth(float w)
 	{
-		if (w > 1) w = 1;
-		if (w < 0) w = 0;
-		int iw = w * 255.0f;
+		w = bound(w, 0, 1);
+		int iw = w * 255.0f;			// float -> int
 		return 0xFFFF0000 | iw;
 	}
 
 	static FORCEINLINE float DecodeWidth(int w)
 	{
+#if MAX_DEBUG
 		assert((w & 0xFFFFFF00) == 0xFFFF0000 || w == -1);
-		return (w & 0xFF) / 255.0f;      // w=-1 -> 1.0f
+#endif
+		return (w & 0xFF) / 255.0f;		// w=-1 -> 1.0f
 	}
 
 	void MeasureTextSize(const char* text, int* width, int* height = NULL, HWND wnd = 0);
@@ -93,11 +94,42 @@ protected:
 	virtual void UpdateEnabled();
 };
 
+// Declare some functions which could be useful for UE4-like declarative syntax:
+//	Expose(var)			save pointer to control in variable
+//	SetParent(parent)	attach control to parent
+
+// Some functions exists in UIElement but overrided here to be able to chain them
+// without falling back to UIElement class: UIElement's functions can't return
+// 'this' of derived type, so we're redeclaring functions here.
+
+// To add controls to a UIGroup object use the following syntax:
+//		NewControl(UIGroup)
+//		.Expose(GroupVar)
+//		.SomeGroupFunc()
+//		[
+//			NewControl(ControlType1, args1)
+//			.SomeControl1Func1()
+//			.SomeControl1Func2()
+//			+ NewControl(ControlType2, args2)
+//			.Expose(Control2Var)
+//			...
+//		]
+// This code is identical to:
+//		GroupVar = new UIGroup();				// make a group
+//		GroupVar->SomeGroupFunc();
+//		tmpControl1 = new ControlType1(args1);	// make a control 1
+//		tmpControl1->SomeControl1Func1();
+//		tmpControl1->SomeControl1Func2();
+//		ControlVar2 = new ControlType2(args2);	// make a control 2
+//		GroupVar->Add(tmpControl1);				// add controls to group
+//		GroupVar->Add(ControlVar2);
+
 #define DECLARE_UI_CLASS(ClassName, ParentClass)	\
 	typedef ClassName ThisClass;					\
 	typedef ParentClass Super;						\
 public:												\
-	FORCEINLINE ThisClass& SetRect(int x, int y, int width, int height) { return (ThisClass&) Super::SetRect(x, y, width, height); } \
+	FORCEINLINE ThisClass& SetRect(int x, int y, int width, int height) \
+	{ return (ThisClass&) Super::SetRect(x, y, width, height); } \
 	FORCEINLINE ThisClass& SetWidth(int width)       { return (ThisClass&) Super::SetWidth(width); } \
 	FORCEINLINE ThisClass& SetHeight(int height)     { return (ThisClass&) Super::SetHeight(height); } \
 	FORCEINLINE ThisClass& Expose(ThisClass*& var)   { var = this; return *this; } \
@@ -105,6 +137,8 @@ public:												\
 	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
 private:
 
+// Use this macro to declare callback type, variable and SetCallback function. It will
+// automatically add 'ThisClass' pointer as a first parameter for callback function.
 #define DECLARE_CALLBACK(VarName, ...)				\
 public:												\
 	typedef util::Callback<void (ThisClass*, __VA_ARGS__)> VarName##_t; \
@@ -122,39 +156,36 @@ private:
 
 #define NewControl(type, ...)	_NewControl<type>(__VA_ARGS__)
 
+// C++11 offers Variadic Templates (http://en.wikipedia.org/wiki/Variadic_template), unfortunately
+// Visual Studio prior to 2013 doesn't support them. GCC 4.3 has variadic template support.
 template<class T>
 FORCEINLINE T& _NewControl()
 {
-	T* control = new T();
-	return *control;
+	return *new T();
 }
 
 template<class T, class P1>
 FORCEINLINE T& _NewControl(P1 p1)
 {
-	T* control = new T(p1);
-	return *control;
+	return *new T(p1);
 }
 
 template<class T, class P1, class P2>
 FORCEINLINE T& _NewControl(P1 p1, P2 p2)
 {
-	T* control = new T(p1, p2);
-	return *control;
+	return *new T(p1, p2);
 }
 
 template<class T, class P1, class P2, class P3>
 FORCEINLINE T& _NewControl(P1 p1, P2 p2, P3 p3)
 {
-	T* control = new T(p1, p2, p3);
-	return *control;
+	return *new T(p1, p2, p3);
 }
 
 template<class T, class P1, class P2, class P3, class P4>
 FORCEINLINE T& _NewControl(P1 p1, P2 p2, P3 p3, P4 p4)
 {
-	T* control = new T(p1, p2, p3, p4);
-	return *control;
+	return *new T(p1, p2, p3, p4);
 }
 
 
@@ -302,8 +333,7 @@ public:
 
 	void EnableAllControls(bool enabled);
 
-	// control creation helpers
-
+	// Function for adding children in declarative syntax
 	FORCEINLINE UIGroup& operator[](UIElement& item)
 	{
 		Add(item); return *this;
@@ -356,7 +386,7 @@ public:
 	virtual void InitUI()
 	{}
 
-	int GenerateDialogId()
+	FORCEINLINE int GenerateDialogId()
 	{
 		return NextDialogId++;
 	}
