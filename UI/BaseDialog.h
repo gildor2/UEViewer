@@ -74,7 +74,7 @@ protected:
 	bool		IsGroup;
 	bool		Enabled;
 	UIGroup*	Parent;
-	UIElement*	CreateChain;
+	UIElement*	NextChild;
 
 	HWND		Wnd;
 	int			Id;
@@ -341,7 +341,7 @@ public:
 
 protected:
 	FString		Label;
-	TArray<UIElement*> Children;
+	UIElement*	FirstChild;
 	int			TopBorder;
 	unsigned	Flags;
 

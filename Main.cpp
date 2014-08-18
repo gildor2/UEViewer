@@ -278,6 +278,7 @@ static void PrintUsage()
 			"    -export         export specified object or whole package\n"
 			"    -taglist        list of tags to override game autodetection\n"
 			"    -version        display umodel version information\n"
+			"    -help           display this help page\n"
 			"\n"
 			"Developer commands:\n"
 			"    -log=file       write log to the specified file\n"
@@ -536,7 +537,7 @@ int main(int argc, char **argv)
 	}
 
 #if HAS_UI
-	if (argc < 2)
+	if (argc < 2 || (GForceGame == GAME_UNKNOWN && !hasRootDir))
 	{
 		// no arguments provided - display startup options
 		UIStartupDialog dialog;

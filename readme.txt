@@ -46,8 +46,8 @@ links above) before starting the umodel for the first time.
 
 This is a console application, there is no GUI. Umodel is started with a set of command
 line options. Easiest run is 'umodel <package_file>', it will start umodel in a viewer
-mode. To see the full list of available command line options run 'umodel' without
-arguments.
+mode. To see the full list of available command line options run 'umodel' with '-help'
+option.
 
 Note: if you will launch program from Windows explorer etc, you will get a console window
 with a help message, but this window will immediately disappear. You could try to drag

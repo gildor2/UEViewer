@@ -60,9 +60,9 @@ UIElement::UIElement()
 ,	IsGroup(false)
 ,	Enabled(true)
 ,	Parent(NULL)
+,	NextChild(NULL)
 ,	Wnd(0)
 ,	Id(0)
-,	CreateChain(NULL)
 {}
 
 UIElement::~UIElement()
@@ -134,17 +134,17 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 
 // This function will add another UIElement to chain for creation. This function
 // has a little overhead: it iterates over all already added elements to add a new
-// one to the end of CreateChain. But it allows us to use UE4-like "declarative syntax"
+// one to the end of create chain. But it allows us to use UE4-like "declarative syntax"
 // for creating controls.
 UIElement& operator+(UIElement& elem, UIElement& next)
 {
 	UIElement* e = &elem;
 	while (true)
 	{
-		UIElement* n = e->CreateChain;
+		UIElement* n = e->NextChild;
 		if (!n)
 		{
-			e->CreateChain = &next;
+			e->NextChild = &next;
 			break;
 		}
 		e = n;
@@ -417,6 +417,7 @@ bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
 
 UIGroup::UIGroup(const char* label, unsigned flags)
 :	Label(label)
+,	FirstChild(NULL)
 ,	TopBorder(0)
 ,	Flags(flags)
 {
@@ -424,7 +425,8 @@ UIGroup::UIGroup(const char* label, unsigned flags)
 }
 
 UIGroup::UIGroup(unsigned flags)
-:	TopBorder(0)
+:	FirstChild(NULL)
+,	TopBorder(0)
 ,	Flags(flags)
 {
 	IsGroup = true;
@@ -439,9 +441,12 @@ void UIGroup::ReleaseControls()
 {
 	guard(UIGroup::ReleaseControls);
 
-	for (int i = 0; i < Children.Num(); i++)
-		delete Children[i];
-	Children.Empty();
+	UIElement* next;
+	for (UIElement* curr = FirstChild; curr; curr = next)
+	{
+		next = curr->NextChild;
+		delete curr;
+	}
 
 	unguard;
 }
@@ -450,13 +455,30 @@ void UIGroup::Add(UIElement* item)
 {
 	guard(UIGroup::Add);
 
-	while (item)
+	// if control belongs to some group, detach it
+	// note: this will break NextChild chain, so we'll attach only one control there
+	if (item->Parent)
+		item->Parent->Remove(item);
+
+	if (!FirstChild)
 	{
-		if (item->Parent)
-			item->Parent->Remove(item);
-		Children.AddItem(item);
+		FirstChild = item;
+	}
+	else
+	{
+		// find last child
+		UIElement* prev = NULL;
+		for (UIElement* curr = FirstChild; curr; prev = curr, curr = curr->NextChild)
+		{ /* empty */ }
+		// add item(s)
+		prev->NextChild = item;
+	}
+
+	// set parent for all items in chain
+	for ( /* empty */; item; item = item->NextChild)
+	{
+		assert(item->Parent == NULL);
 		item->Parent = this;
-		item = item->CreateChain;
 	}
 
 	unguard;
@@ -466,15 +488,30 @@ void UIGroup::Remove(UIElement* item)
 {
 	guard(UIGroup::Remove);
 
+	assert(item->Parent == this);
 	item->Parent = NULL;
-	for (int i = 0; i < Children.Num(); i++)
+
+	// remove control from child chain
+
+	if (item == FirstChild)
 	{
-		if (Children[i] == item)
+		FirstChild = item->NextChild;
+		item->NextChild = NULL;
+		return;
+	}
+
+	UIElement* prev = NULL;
+	for (UIElement* curr = FirstChild; curr; prev = curr, curr = curr->NextChild)
+	{
+		if (curr == item)
 		{
-			Children.Remove(i);
-			break;
+			assert(prev);
+			prev->NextChild = curr->NextChild;
+			curr->NextChild = NULL;
+			return;
 		}
 	}
+	assert(0);
 
 	unguard;
 }
@@ -531,13 +568,14 @@ void UIGroup::AddVerticalSpace(int height)
 
 bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 {
-	for (int i = 0; i < Children.Num(); i++)
+	for (UIElement* ctl = FirstChild; ctl; ctl = ctl->NextChild)
 	{
-		UIElement* ctl = Children[i];
 		if (ctl->IsGroup || ctl->Id == id)
 		{
-			// pass command to control
+			// pass command to control or all groups
 			if (ctl->HandleCommand(id, cmd, lParam))
+				return true;
+			if (ctl->Id == id)
 				return true;
 		}
 	}
@@ -546,14 +584,14 @@ bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 
 void UIGroup::DialogClosed(bool cancel)
 {
-	for (int i = 0; i < Children.Num(); i++)
-		Children[i]->DialogClosed(cancel);
+	for (UIElement* ctl = FirstChild; ctl; ctl = ctl->NextChild)
+		ctl->DialogClosed(cancel);
 }
 
 void UIGroup::EnableAllControls(bool enabled)
 {
-	for (int i = 0; i < Children.Num(); i++)
-		Children[i]->Enable(enabled);
+	for (UIElement* ctl = FirstChild; ctl; ctl = ctl->NextChild)
+		ctl->Enable(enabled);
 }
 
 void UIGroup::Create(UIBaseDialog* dialog)
@@ -589,9 +627,8 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 	// call 'Create' for all children
 	int maxControlY = Y + Height;
-	for (int i = 0; i < Children.Num(); i++)
+	for (UIElement* control = FirstChild; control; control = control->NextChild)
 	{
-		UIElement* control = Children[i];
 		control->Create(dialog);
 		int bottom = control->Y + control->Height;
 		if (bottom > maxControlY)
