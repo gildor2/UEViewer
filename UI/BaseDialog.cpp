@@ -300,6 +300,56 @@ bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
 
 
 /*-----------------------------------------------------------------------------
+	UIRadioButton
+-----------------------------------------------------------------------------*/
+
+UIRadioButton::UIRadioButton(const char* text, bool autoSize)
+:	Label(text)
+,	AutoSize(autoSize)
+{
+	Height = DEFAULT_CHECKBOX_HEIGHT;
+}
+
+void UIRadioButton::UpdateSize(UIBaseDialog* dialog)
+{
+	if (AutoSize)
+	{
+		int radioWidth;
+		MeasureTextSize(*Label, &radioWidth, NULL, dialog->GetWnd());
+		Width = radioWidth + DEFAULT_CHECKBOX_HEIGHT;
+	}
+}
+
+void UIRadioButton::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Id = dialog->GenerateDialogId();
+
+	DlgWnd = dialog->GetWnd();
+
+	// compute width of checkbox, otherwise it would react on whole parent's width area
+	int radioWidth;
+	MeasureTextSize(*Label, &radioWidth, NULL, DlgWnd);
+
+	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTORADIOBUTTON, 0, dialog,
+		Id, X, Y, min(radioWidth + DEFAULT_CHECKBOX_HEIGHT, Width));
+
+//	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
+	UpdateEnabled();
+}
+
+bool UIRadioButton::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == BN_CLICKED)
+	{
+		appPrintf("radio: %s\n", *Label);
+	}
+	return true;
+}
+
+
+/*-----------------------------------------------------------------------------
 	UITextEdit
 -----------------------------------------------------------------------------*/
 
@@ -697,16 +747,22 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 	// determine default width of control in horizontal layout
 	AutoWidth = 0;
+	int horizontalSpacing = 0;
 	if (Flags & GROUP_HORIZONTAL_LAYOUT)
 	{
 		int totalWidth = 0;					// total width of controls with specified width
 		int numAutoWidthControls = 0;		// number of controls with width set to -1
+		int numControls = 0;
 		int parentWidth = Width;			// width of space for children controls
 		if (!(Flags & GROUP_NO_BORDER))
 			parentWidth -= GROUP_INDENT * 2;
 
 		for (UIElement* control = FirstChild; control; control = control->NextChild)
 		{
+			numControls++;
+			// some controls could compite size depending on text
+			control->UpdateSize(dialog);
+			// get width of control
 			int w = control->Width;
 			if (w == -1)
 				numAutoWidthControls++;
@@ -717,12 +773,27 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		assert(totalWidth <= parentWidth);
 		if (numAutoWidthControls)
 			AutoWidth = (parentWidth - totalWidth) / numAutoWidthControls;
+		if (Flags & GROUP_HORIZONTAL_SPACING)
+		{
+			if (numAutoWidthControls)
+			{
+				appNotify("Group(%s) has GROUP_HORIZONTAL_SPACING and auto-width controls");
+			}
+			else
+			{
+				if (numControls > 1)
+					horizontalSpacing = (parentWidth - totalWidth) / (numControls - 1);
+			}
+		}
 	}
 
 	// call 'Create' for all children
 	int maxControlY = Y + Height;
 	for (UIElement* control = FirstChild; control; control = control->NextChild)
 	{
+		// evenly space controls for horizontal layout, when requested
+		if (horizontalSpacing > 0 && control != FirstChild)
+			AddHorizontalSpace(horizontalSpacing);
 		DBG_LAYOUT("%screate %s: x=%d y=%d w=%d h=%d\n", GetDebugLayoutIndent(),
 			control->ClassName(), control->X, control->Y, control->Width, control->Height);
 		control->Create(dialog);

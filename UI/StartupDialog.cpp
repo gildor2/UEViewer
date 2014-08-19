@@ -19,25 +19,31 @@ UIStartupDialog::UIStartupDialog()
 
 bool UIStartupDialog::Show()
 {
-	return ShowDialog("Umodel Startup Options", 300, 180);
+	return ShowDialog("Umodel Startup Options", 320, 200);
 }
 
 void UIStartupDialog::InitUI()
 {
 	guard(UIStartupDialog::InitUI);
 
+	(*this)
+	[
+		NewControl(UILabel, "Path to game files:")
+		+ NewControl(UIFilePathEditor)
+	];
+
 	NewControl(UICheckboxGroup, "Override game detection", false)
 	.SetParent(this)
 	[
-		NewControl(UIGroup, GROUP_CUSTOM_LAYOUT)
+		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT)
 		[
 			NewControl(UICombobox)
 			.Expose(OverrideEngineCombo)
 			.SetCallback(BIND_MEM_CB(&UIStartupDialog::OnEngineChanged, this))
-			.SetRect(0, 0, EncodeWidth(0.4f), -1)
+			.SetWidth(EncodeWidth(0.4f))
+			+ NewControl(UISpacer)
 			+ NewControl(UICombobox)
 			.Expose(OverrideGameCombo)
-			.SetRect(EncodeWidth(0.42f), -1, -1, -1)
 		]
 	];
 
@@ -59,67 +65,56 @@ void UIStartupDialog::InitUI()
 	FillGameList();
 #endif
 
-	Add(new UILabel("Path to game files:"));
-	UIFilePathEditor* pathEditor = new UIFilePathEditor();
-	Add(pathEditor);
-
-	UIGroup* classList = new UIGroup("Engine classed to load", GROUP_HORIZONTAL_LAYOUT);
-	Add(classList);
-	(*classList)
+	(*this)
 	[
-		NewControl(UIGroup, GROUP_NO_BORDER)
+		NewControl(UIGroup, "Engine classed to load", GROUP_HORIZONTAL_LAYOUT)
 		[
-			NewControl(UILabel, "Common classes:")
-			.SetHeight(20)
-			+ NewControl(UICheckbox, "Skeletal mesh", &UseSkeletalMesh)
-			+ NewControl(UICheckbox, "Static mesh",   &UseStaticMesh)
-			+ NewControl(UICheckbox, "Animation",     &UseAnimation)
-			+ NewControl(UICheckbox, "Textures",      &UseTexture)
-			//!! lightmap
-		]
-		+ NewControl(UIGroup, GROUP_NO_BORDER)
-		[
-			NewControl(UILabel, "Export-only classes:")
-			.SetHeight(20)
-			+ NewControl(UICheckbox, "Sound",     &UseSound)
-			+ NewControl(UICheckbox, "ScaleForm", &UseScaleForm)
-			+ NewControl(UICheckbox, "FaceFX",    &UseFaceFX)
+			NewControl(UIGroup, GROUP_NO_BORDER)
+			[
+				NewControl(UILabel, "Common classes:")
+				.SetHeight(20)
+				+ NewControl(UICheckbox, "Skeletal mesh", &UseSkeletalMesh)
+				+ NewControl(UICheckbox, "Static mesh",   &UseStaticMesh)
+				+ NewControl(UICheckbox, "Animation",     &UseAnimation)
+				+ NewControl(UICheckbox, "Textures",      &UseTexture)
+				//!! lightmap
+			]
+			+ NewControl(UIGroup, GROUP_NO_BORDER)
+			[
+				NewControl(UILabel, "Export-only classes:")
+				.SetHeight(20)
+				+ NewControl(UICheckbox, "Sound",     &UseSound)
+				+ NewControl(UICheckbox, "ScaleForm", &UseScaleForm)
+				+ NewControl(UICheckbox, "FaceFX",    &UseFaceFX)
+			]
 		]
 	];
 
-	//!! platform
-	//!! compression method
+	(*this)
+	[
+		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+		[
+			NewControl(UIGroup, "Package compression", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
+			.SetWidth(EncodeWidth(0.4f))
+			[
+				NewControl(UIRadioButton, "Auto")
+				+ NewControl(UIRadioButton, "LZO")
+				+ NewControl(UIRadioButton, "zlib")
+				+ NewControl(UIRadioButton, "LZX")
+			]
+			+ NewControl(UISpacer)
+			+ NewControl(UIGroup, "Platform", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
+			[
+				NewControl(UIRadioButton, "Auto")
+				+ NewControl(UIRadioButton, "PC")
+				+ NewControl(UIRadioButton, "XBox360")
+				+ NewControl(UIRadioButton, "PS3")
+				+ NewControl(UIRadioButton, "iOS")
+			]
+		]
+	];
+
 	//!! save log to file (-log=...)
-
-#if 0 // test code
-	UIGroup* testGroup1 = new UIGroup("Group #1");
-	UIGroup* testGroup2 = new UIGroup("Group #2");
-	UIGroup* testGroup3 = new UIGroup("Group #3");
-	Add(testGroup1);
-	testGroup1->Add(testGroup2);
-	Add(testGroup3);
-
-	UILabel* label1 = new UILabel("Test label 1", TA_Left);
-	testGroup1->Add(label1);
-
-	UIButton* button1 = new UIButton("Button 1");
-//	button1->SetCallback(BIND_FREE_CB(&PrintVersionInfoCB));
-	testGroup1->Add(button1);
-
-	UICheckbox* checkbox1 = new UICheckbox("Checkbox 1", true);
-	testGroup1->Add(checkbox1);
-
-	UILabel* label2 = new UILabel("Test label 2", TA_Right);
-	testGroup2->Add(label2);
-
-	UILabel* label3 = new UILabel("Test label 3", TA_Center);
-	testGroup3->Add(label3);
-
-	static FString str;
-	str = "test text";
-	UITextEdit* textEdit = new UITextEdit(&str);
-	testGroup3->Add(textEdit);
-#endif
 
 	unguard;
 }

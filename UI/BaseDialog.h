@@ -83,6 +83,8 @@ protected:
 		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
 
 	virtual void Create(UIBaseDialog* dialog) = 0;
+	virtual void UpdateSize(UIBaseDialog* dialog)
+	{}
 	// Process WM_COMMAND message. 'id' is useless in most cases, useful for
 	// groups only.
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam)
@@ -256,6 +258,25 @@ protected:
 };
 
 
+class UIRadioButton : public UIElement
+{
+	DECLARE_UI_CLASS(UIRadioButton, UIElement);
+	DECLARE_CALLBACK(Callback);
+public:
+	UIRadioButton(const char* text, bool autoSize = true);
+
+protected:
+	FString		Label;
+	bool		AutoSize;
+
+	HWND		DlgWnd;
+
+	virtual void UpdateSize(UIBaseDialog* dialog);
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+};
+
+
 class UITextEdit : public UIElement
 {
 	DECLARE_UI_CLASS(UITextEdit, UIElement);
@@ -324,6 +345,7 @@ protected:
 #define GROUP_NO_BORDER				1
 #define GROUP_NO_AUTO_LAYOUT		2
 #define GROUP_HORIZONTAL_LAYOUT		4
+#define GROUP_HORIZONTAL_SPACING	8	// for GROUP_HORIZONTAL_LAYOUT, evenly distribute controls
 
 #define GROUP_CUSTOM_LAYOUT			(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
 
