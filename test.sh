@@ -102,6 +102,11 @@ function run1()
 # all following functions are called as "--func" argument
 # example: test.sh --ut2 HumanMaleA
 
+function gui()
+{
+	run $*
+}
+
 function u1()
 {
 	CheckDir {c,d,e}:/games/{unreal,unreal~1}/UnrealGold

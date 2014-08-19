@@ -33,19 +33,19 @@ public:
 	UIElement();
 	virtual ~UIElement();
 
+	virtual const char* ClassName() const;
+
 	void Enable(bool enable);
-	FORCEINLINE bool IsEnabled() const       { return Enabled; }
+	FORCEINLINE bool IsEnabled() const   { return Enabled; }
+
+	UIElement& SetParent(UIGroup* group);
+	FORCEINLINE HWND GetWnd() const      { return Wnd; }
 
 	// Layout functions
 
 	UIElement& SetRect(int x, int y, int width, int height);
-	FORCEINLINE UIElement& SetWidth(int width)     { Width = width; return *this; }
-	FORCEINLINE UIElement& SetHeight(int height)   { Height = height; return *this; }
-	FORCEINLINE int  GetWidth() const        { return Width; }
-	FORCEINLINE int  GetHeight() const       { return Height; }
-	UIElement& SetParent(UIGroup* group);
-
-	FORCEINLINE HWND GetWnd() const          { return Wnd; }
+	FORCEINLINE int GetWidth() const     { return Width; }
+	FORCEINLINE int GetHeight() const    { return Height; }
 
 	static FORCEINLINE int EncodeWidth(float w)
 	{
@@ -124,14 +124,17 @@ protected:
 //		GroupVar->Add(tmpControl1);				// add controls to group
 //		GroupVar->Add(ControlVar2);
 
-#define DECLARE_UI_CLASS(ClassName, ParentClass)	\
-	typedef ClassName ThisClass;					\
-	typedef ParentClass Super;						\
+#define DECLARE_UI_CLASS(Class, Base)				\
+	typedef Class ThisClass;						\
+	typedef Base Super;								\
 public:												\
+	virtual const char* ClassName() const { return #Class; } \
 	FORCEINLINE ThisClass& SetRect(int x, int y, int width, int height) \
 	{ return (ThisClass&) Super::SetRect(x, y, width, height); } \
-	FORCEINLINE ThisClass& SetWidth(int width)       { return (ThisClass&) Super::SetWidth(width); } \
-	FORCEINLINE ThisClass& SetHeight(int height)     { return (ThisClass&) Super::SetHeight(height); } \
+	FORCEINLINE ThisClass& SetX(int x)               { X = x; return *this; } \
+	FORCEINLINE ThisClass& SetY(int y)               { Y = y; return *this; } \
+	FORCEINLINE ThisClass& SetWidth(int width)       { Width = width; return *this; } \
+	FORCEINLINE ThisClass& SetHeight(int height)     { Height = height; return *this; } \
 	FORCEINLINE ThisClass& Expose(ThisClass*& var)   { var = this; return *this; } \
 	FORCEINLINE ThisClass& SetParent(UIGroup* group) { return (ThisClass&) Super::SetParent(group); } \
 	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
@@ -192,6 +195,17 @@ FORCEINLINE T& _NewControl(P1 p1, P2 p2, P3 p3, P4 p4)
 /*-----------------------------------------------------------------------------
 	Controls
 -----------------------------------------------------------------------------*/
+
+class UISpacer : public UIElement
+{
+	DECLARE_UI_CLASS(UISpacer, UIElement);
+public:
+	UISpacer(int size = -1);
+
+protected:
+	virtual void Create(UIBaseDialog* dialog);
+};
+
 
 class UILabel : public UIElement
 {
@@ -307,10 +321,11 @@ protected:
 -----------------------------------------------------------------------------*/
 
 // Constants for setting some group properties
-#define GROUP_NO_BORDER			1
-#define GROUP_NO_AUTO_LAYOUT	2
+#define GROUP_NO_BORDER				1
+#define GROUP_NO_AUTO_LAYOUT		2
+#define GROUP_HORIZONTAL_LAYOUT		4
 
-#define GROUP_CUSTOM_LAYOUT		(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
+#define GROUP_CUSTOM_LAYOUT			(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
 
 class UIGroup : public UIElement
 {
@@ -329,7 +344,8 @@ public:
 	void ReleaseControls();
 
 	void AllocateUISpace(int& x, int& y, int& w, int& h);
-	void AddVerticalSpace(int height = -1);
+	void AddVerticalSpace(int size = -1);
+	void AddHorizontalSpace(int size = -1);
 
 	void EnableAllControls(bool enabled);
 
@@ -339,10 +355,27 @@ public:
 		Add(item); return *this;
 	}
 
+	FORCEINLINE bool UseAutomaticLayout() const
+	{
+		return (Flags & GROUP_NO_AUTO_LAYOUT) == 0;
+	}
+
+	FORCEINLINE bool UseVerticalLayout() const
+	{
+		return (Flags & GROUP_HORIZONTAL_LAYOUT) == 0;
+	}
+
+	FORCEINLINE bool UseHorizontalLayout() const
+	{
+		return (Flags & GROUP_HORIZONTAL_LAYOUT) != 0;
+	}
+
 protected:
 	FString		Label;
 	UIElement*	FirstChild;
-	int			TopBorder;
+	int			AutoWidth;		// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
+	int			CursorX;		// where to place next control in horizontal layout
+	int			CursorY;
 	unsigned	Flags;
 
 	virtual void Create(UIBaseDialog* dialog);

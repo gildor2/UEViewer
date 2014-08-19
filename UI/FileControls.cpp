@@ -36,7 +36,7 @@ static void InitializeOLE()
 #define BROWSE_BUTTON_WIDTH		70
 
 UIFilePathEditor::UIFilePathEditor()
-:	UIGroup(GROUP_CUSTOM_LAYOUT)
+:	UIGroup(GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 {}
 
 void UIFilePathEditor::Create(UIBaseDialog* dialog)
@@ -49,14 +49,16 @@ void UIFilePathEditor::Create(UIBaseDialog* dialog)
 
 void UIFilePathEditor::AddCustomControls()
 {
-	Editor = new UITextEdit(&Path);
-	Add(Editor);
-	Editor->SetRect(0, 2, Width - BROWSE_BUTTON_WIDTH - 8, -1);
-
-	UIButton* browseButton = new UIButton("Browse ...");
-	Add(browseButton);
-	browseButton->SetRect(Width - BROWSE_BUTTON_WIDTH, 0, -1, -1);
-	browseButton->SetCallback(BIND_MEM_CB(&UIFilePathEditor::OnBrowseClicked, this));
+	(*this)
+	[
+		NewControl(UITextEdit, &Path)
+		.Expose(Editor)
+		.SetY(2)
+		+ NewControl(UISpacer)
+		+ NewControl(UIButton, "Browse ...")
+		.SetWidth(BROWSE_BUTTON_WIDTH)
+		.SetCallback(BIND_MEM_CB(&UIFilePathEditor::OnBrowseClicked, this))
+	];
 }
 
 static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)

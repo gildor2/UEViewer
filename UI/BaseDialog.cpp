@@ -25,9 +25,19 @@
 
 #if HAS_UI
 
+#define DEBUG_LAYOUT				0
+
+#if DEBUG_LAYOUT
+#define DBG_LAYOUT(...)				appPrintf(__VA_ARGS__)
+#else
+#define DBG_LAYOUT(...)
+#endif
+
 #define FIRST_DIALOG_ID				4000
 
 #define VERTICAL_SPACING			4
+#define HORIZONTAL_SPACING			4
+
 #define DEFAULT_VERT_BORDER			9
 #define DEFAULT_HORZ_BORDER			7
 
@@ -67,6 +77,11 @@ UIElement::UIElement()
 
 UIElement::~UIElement()
 {}
+
+const char* UIElement::ClassName() const
+{
+	return "UIElement";
+}
 
 void UIElement::Enable(bool enable)
 {
@@ -132,10 +147,11 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 	return wnd;
 }
 
-// This function will add another UIElement to chain for creation. This function
-// has a little overhead: it iterates over all already added elements to add a new
-// one to the end of create chain. But it allows us to use UE4-like "declarative syntax"
-// for creating controls.
+// This function will add another UIElement to chain for creation. As we're
+// using NextChild for both holding a list of group's children and for
+// this operation, there's no overhead here - adding a group of controls
+// to children performed (in UIGroup::Add) as a simple list concatenation
+// operation.
 UIElement& operator+(UIElement& elem, UIElement& next)
 {
 	UIElement* e = &elem;
@@ -151,6 +167,26 @@ UIElement& operator+(UIElement& elem, UIElement& next)
 	}
 	return elem;
 }
+
+/*-----------------------------------------------------------------------------
+	UISpacer
+-----------------------------------------------------------------------------*/
+
+UISpacer::UISpacer(int size)
+{
+	Width  = (size >= 0) ? size : HORIZONTAL_SPACING;
+	Height = (size >= 0) ? size : VERTICAL_SPACING;
+}
+
+void UISpacer::Create(UIBaseDialog* dialog)
+{
+	assert(Parent->UseAutomaticLayout());
+	if (Parent->UseVerticalLayout())
+		Parent->AddVerticalSpace(Width);
+	else
+		Parent->AddHorizontalSpace(Height);
+}
+
 
 /*-----------------------------------------------------------------------------
 	UILabel
@@ -418,7 +454,6 @@ bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
 UIGroup::UIGroup(const char* label, unsigned flags)
 :	Label(label)
 ,	FirstChild(NULL)
-,	TopBorder(0)
 ,	Flags(flags)
 {
 	IsGroup = true;
@@ -426,7 +461,6 @@ UIGroup::UIGroup(const char* label, unsigned flags)
 
 UIGroup::UIGroup(unsigned flags)
 :	FirstChild(NULL)
-,	TopBorder(0)
 ,	Flags(flags)
 {
 	IsGroup = true;
@@ -516,54 +550,83 @@ void UIGroup::Remove(UIElement* item)
 	unguard;
 }
 
+#if DEBUG_LAYOUT
+
+static int DebugLayoutDepth = 0;
+
+const char* GetDebugLayoutIndent()
+{
+#define MAX_INDENT 32
+	static char indent[MAX_INDENT*2+1];
+	if (!indent[0]) memset(indent, ' ', sizeof(indent)-1);
+	return &indent[MAX_INDENT*2 - DebugLayoutDepth*2];
+}
+
+#endif // DEBUG_LAYOUT
+
 void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 {
 	guard(UIGroup::AllocateUISpace);
 
-	int parentX = X;
+	int baseX = X + CursorX;
 	int parentWidth = Width;
 
 	if (!(Flags & GROUP_NO_BORDER))
-	{
-		parentX += GROUP_INDENT;
 		parentWidth -= GROUP_INDENT * 2;
+
+	DBG_LAYOUT("%s... AllocSpace (%d %d %d %d) IN: Curs: %d,%d W: %d -- ", GetDebugLayoutIndent(), x, y, w, h, CursorX, CursorY, parentWidth);
+
+	if (w < 0)
+	{
+		if (w == -1 && (Flags & GROUP_HORIZONTAL_LAYOUT))
+			w = AutoWidth;
+		else
+			w = DecodeWidth(w) * parentWidth;
 	}
 
 	if (x == -1)
-		x = parentX;					// DecodeWidth(x) would return 1.0, should use 0.0 here
+	{
+		x = baseX;
+		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == GROUP_HORIZONTAL_LAYOUT)
+			CursorX += w;
+	}
 	else if (x < 0)
-		x = parentX + DecodeWidth(x) * parentWidth;	// left border of parent control, 'x' is relative value
+		x = baseX + DecodeWidth(x) * parentWidth;	// left border of parent control, 'x' is relative value
 	else
-		x = parentX + x;				// treat 'x' as relative value
+		x = baseX + x;								// treat 'x' as relative value
 
-	if (w < 0)
-		w = DecodeWidth(w) * parentWidth;
-
-	if (x + w > parentX + parentWidth)	// truncate width if too large
-		w = parentX + parentWidth - x;
+	if (x + w > baseX + parentWidth)				// truncate width if too large
+		w = baseX + parentWidth - x;
 
 	if (y < 0)
 	{
-		y = Y + Height;					// next 'y' value
-		if (!(Flags & GROUP_NO_AUTO_LAYOUT))
-			Height += h;
+		y = Y + CursorY;							// next 'y' value
+		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
+			CursorY += h;
 	}
 	else
 	{
-		y = Y + TopBorder + y;			// treat 'y' as relative value
+		y = Y + CursorY + y;						// treat 'y' as relative value
 		// don't change 'Height'
 	}
 
 //	h = unchanged;
 
+	DBG_LAYOUT("OUT: (%d %d %d %d) Curs: %d,%d\n", x, y, w, h, CursorX, CursorY);
+
 	unguard;
 }
 
-void UIGroup::AddVerticalSpace(int height)
+void UIGroup::AddVerticalSpace(int size)
 {
-	if (Flags & GROUP_NO_AUTO_LAYOUT) return;
-	if (height < 0) height = VERTICAL_SPACING;
-	Height += height;
+	if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
+		CursorY += (size >= 0 ? size : VERTICAL_SPACING);
+}
+
+void UIGroup::AddHorizontalSpace(int size)
+{
+	if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == GROUP_HORIZONTAL_LAYOUT)
+		CursorX += (size >= 0 ? size : HORIZONTAL_SPACING);
 }
 
 bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -606,6 +669,9 @@ void UIGroup::UpdateEnabled()
 
 void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 {
+	// save original positions for second AllocateUISpace call
+	int origX = X, origY = Y, origW = Width, origH = Height;
+
 	if (Parent)
 	{
 		Parent->AddVerticalSpace();
@@ -615,34 +681,70 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	}
 	if (!(Flags & GROUP_NO_BORDER))
 	{
-		Height = TopBorder = GROUP_MARGIN_TOP;
+		CursorX = GROUP_INDENT;
+		CursorY = GROUP_MARGIN_TOP;
 	}
 	else
 	{
-		if (Height < 0)		// allow custom initial Height for vertical spacing
-			Height = TopBorder = 0;
+		CursorX = CursorY = 0;
 	}
+#if DEBUG_LAYOUT
+	DBG_LAYOUT("%sgroup \"%s\" cursor: %d %d\n", GetDebugLayoutIndent(), *Label, CursorX, CursorY);
+	DebugLayoutDepth++;
+#endif
 
 	AddCustomControls();
+
+	// determine default width of control in horizontal layout
+	AutoWidth = 0;
+	if (Flags & GROUP_HORIZONTAL_LAYOUT)
+	{
+		int totalWidth = 0;					// total width of controls with specified width
+		int numAutoWidthControls = 0;		// number of controls with width set to -1
+		int parentWidth = Width;			// width of space for children controls
+		if (!(Flags & GROUP_NO_BORDER))
+			parentWidth -= GROUP_INDENT * 2;
+
+		for (UIElement* control = FirstChild; control; control = control->NextChild)
+		{
+			int w = control->Width;
+			if (w == -1)
+				numAutoWidthControls++;
+			else if (w < 0)
+				w = DecodeWidth(w) * parentWidth;
+			totalWidth += w;
+		}
+		assert(totalWidth <= parentWidth);
+		if (numAutoWidthControls)
+			AutoWidth = (parentWidth - totalWidth) / numAutoWidthControls;
+	}
 
 	// call 'Create' for all children
 	int maxControlY = Y + Height;
 	for (UIElement* control = FirstChild; control; control = control->NextChild)
 	{
+		DBG_LAYOUT("%screate %s: x=%d y=%d w=%d h=%d\n", GetDebugLayoutIndent(),
+			control->ClassName(), control->X, control->Y, control->Width, control->Height);
 		control->Create(dialog);
 		int bottom = control->Y + control->Height;
 		if (bottom > maxControlY)
 			maxControlY = bottom;
 	}
-	Height = maxControlY - Y;
+	Height = max(Height, maxControlY - Y);
 
 	if (!(Flags & GROUP_NO_BORDER))
 		Height += GROUP_MARGIN_BOTTOM;
 
-	if (Parent)
+	if (Parent && !(Parent->Flags & GROUP_HORIZONTAL_LAYOUT))
 	{
-		Parent->Height += Height;
+		// for vertical layout we should call AllocateUISpace again to adjust parent's CursorY
+		// (because height wasn't known when we called AllocateUISpace first time)
+		origH = Height;
+		Parent->AllocateUISpace(origX, origY, origW, origH);
 	}
+#if DEBUG_LAYOUT
+	DebugLayoutDepth--;
+#endif
 
 	if (!(Flags & GROUP_NO_BORDER))
 	{
@@ -868,6 +970,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		int newY = (GetSystemMetrics(SM_CYSCREEN) - (controlRect.bottom - controlRect.top)) / 2;
 		SetWindowPos(hWnd, NULL, newX, newY, 0, 0, SWP_NOSIZE);
 #endif
+		//!! resize window, but take into account that the rect is CLIENT
 
 		// create controls
 		X = DEFAULT_HORZ_BORDER;

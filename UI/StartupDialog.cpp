@@ -63,12 +63,11 @@ void UIStartupDialog::InitUI()
 	UIFilePathEditor* pathEditor = new UIFilePathEditor();
 	Add(pathEditor);
 
-	UIGroup* classList = new UIGroup("Engine classed to load");
+	UIGroup* classList = new UIGroup("Engine classed to load", GROUP_HORIZONTAL_LAYOUT);
 	Add(classList);
 	(*classList)
 	[
 		NewControl(UIGroup, GROUP_NO_BORDER)
-		.SetRect(0, 0, EncodeWidth(0.5f), -1)
 		[
 			NewControl(UILabel, "Common classes:")
 			.SetHeight(20)
@@ -79,7 +78,6 @@ void UIStartupDialog::InitUI()
 			//!! lightmap
 		]
 		+ NewControl(UIGroup, GROUP_NO_BORDER)
-		.SetRect(EncodeWidth(0.5f), 0, -1, -1)
 		[
 			NewControl(UILabel, "Export-only classes:")
 			.SetHeight(20)
