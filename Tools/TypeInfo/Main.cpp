@@ -207,7 +207,7 @@ void DumpProps(FArchive &Ar, const UStruct *Struct)
 #undef DUMP
 	}
 
-	unguardf(("Struct=%s", Struct->Name));
+	unguardf("Struct=%s", Struct->Name);
 }
 
 void DumpClass(const UClass *Class)

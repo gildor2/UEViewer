@@ -439,7 +439,7 @@ const CShader &GL_UseGenericShader(GenericShaderType type)
 	Sh.SetUniform("useLighting", glIsEnabled(GL_LIGHTING));
 	return Sh;
 
-	unguardf(("type=%d", type));
+	unguardf("type=%d", type);
 }
 
 
@@ -693,7 +693,7 @@ void UUnrealMaterial::SetMaterial()
 			BindDefaultMaterial();
 	}
 
-	unguardf(("%s", Name));
+	unguardf("%s", Name);
 }
 
 
@@ -1094,7 +1094,7 @@ void UShader::GetParams(CMaterialParams &Params) const
 		Params.OpacityFromAlpha = true;
 	}
 
-	unguardf(("%s", Name));
+	unguardf("%s", Name);
 }
 
 

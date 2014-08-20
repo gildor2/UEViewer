@@ -847,7 +847,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 		guard(ControlCreate);
 		control->Create(dialog);
-		unguardf(("index=%d,class=%s", controlIndex, control->ClassName()));
+		unguardf("index=%d,class=%s", controlIndex, control->ClassName());
 
 		int bottom = control->Y + control->Height;
 		if (bottom > maxControlY)
@@ -881,7 +881,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	if (Parent)
 		Parent->AddVerticalSpace();
 
-	unguardf(("%s", *Label));
+	unguardf("%s", *Label);
 }
 
 void UIGroup::InitializeRadioGroup()

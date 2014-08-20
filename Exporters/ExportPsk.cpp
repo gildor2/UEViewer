@@ -377,7 +377,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 			delete Ar;
 		}
 
-		unguardf(("%d", Lod));
+		unguardf("%d", Lod);
 	}
 }
 
@@ -593,6 +593,6 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 			delete Ar;
 		}
 
-		unguardf(("%d", Lod));
+		unguardf("%d", Lod);
 	}
 }

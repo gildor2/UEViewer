@@ -804,7 +804,7 @@ int main(int argc, char **argv)
 				/*UObject *TmpObj =*/ Package2->CreateExport(idx);
 			}
 			UObject::EndLoad();
-			unguardf(("%s", Package2->Name));
+			unguardf("%s", Package2->Name);
 		}
 	}
 
@@ -991,7 +991,7 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 	}
 	return false;
 #undef CLASS_VIEWER
-	unguardf(("%s'%s'", Obj->GetClassName(), Obj->Name));
+	unguardf("%s'%s'", Obj->GetClassName(), Obj->Name);
 }
 
 

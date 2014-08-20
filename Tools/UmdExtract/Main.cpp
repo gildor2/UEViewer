@@ -52,7 +52,7 @@ static bool ScanFile(const CGameFileInfo *file)
 	delete Ar;
 	return true;
 
-	unguardf(("%s", file->RelativeName));
+	unguardf("%s", file->RelativeName);
 }
 
 

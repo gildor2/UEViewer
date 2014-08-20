@@ -535,7 +535,7 @@ void GL_MakeShader(GLuint &VsObj, GLuint &PsObj, GLuint &PrObj, const char *src,
 	// validate
 	CheckProgram(PrObj, src);
 
-	unguardf(("%s", src));
+	unguardf("%s", src);
 }
 
 
@@ -644,7 +644,7 @@ void CFramebuffer::SetSize(int winWidth, int winHeight)
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 	GL_TouchObject(Timestamp);
 
-	unguardf(("size=%dx%d", winWidth, winHeight));
+	unguardf("size=%dx%d", winWidth, winHeight);
 }
 
 

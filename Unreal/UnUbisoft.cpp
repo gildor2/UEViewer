@@ -403,7 +403,7 @@ public:
 				assert(Chunk.PackedOffset + Chunk.ChunkSize <= FileSize - DataStart + ALLOW_EXTRA_BYTES);
 				fwrite(Data + Chunk.PackedOffset, Chunk.ChunkSize, 1, f);
 			}
-			unguardf(("list %d/%d, chunk %d/%d", i, Hdr.chunkList.Num(), j, List.chunks.Num()));
+			unguardf("list %d/%d, chunk %d/%d", i, Hdr.chunkList.Num(), j, List.chunks.Num());
 
 			fclose(f);
 		}

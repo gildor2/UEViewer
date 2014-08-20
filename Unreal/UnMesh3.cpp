@@ -1804,7 +1804,7 @@ after_skeleton:
 
 		unguard;	// ProcessSections
 
-		unguardf(("lod=%d", lod)); // ConvertLod
+		unguardf("lod=%d", lod); // ConvertLod
 	}
 
 	// copy skeleton
@@ -3288,7 +3288,7 @@ done:
 		// indices
 		Lod->Indices.Initialize(&SrcLod.Indices.Indices);			// 16-bit only
 
-		unguardf(("lod=%d", lod));
+		unguardf("lod=%d", lod);
 	}
 
 	Mesh->FinalizeMesh();

@@ -286,11 +286,10 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 		}								\
 	}
 
-//!! use __VA_ARGS__, avoid ungiardf(("msg", args)), use unguardf("msg", args) instead
-#define unguardf(msg)					\
+#define unguardf(...)					\
 		} catch (...) {					\
 			appUnwindPrefix(__FUNC__);	\
-			appUnwindThrow msg;			\
+			appUnwindThrow(__VA_ARGS__);\
 		}								\
 	}
 
@@ -328,10 +327,10 @@ unsigned win32ExceptFilter2();
 		}								\
 	}
 
-#define unguardf(msg)					\
+#define unguardf(...)					\
 		} __except (EXCEPT_FILTER) {	\
 			appUnwindPrefix(__FUNC__);	\
-			appUnwindThrow msg;			\
+			appUnwindThrow(__VA_ARGS__);\
 		}								\
 	}
 
@@ -353,7 +352,7 @@ extern char GErrorHistory[2048];
 #define guard(func)		{
 #define guardfunc		{
 #define unguard			}
-#define unguardf(msg)	}
+#define unguardf(...)	}
 
 #define TRY				if (1) {
 #define CATCH			} else {

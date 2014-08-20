@@ -235,7 +235,7 @@ int main(int argc, char **argv)
 #endif // !DISABLE_WRITE
 		// cleanup
 		delete data;
-		unguardf(("file=%s", buf2));
+		unguardf("file=%s", buf2);
 		// notification
 		printf("Done: %d/%d ...\r", idx, Package->Summary.ExportCount);
 	}

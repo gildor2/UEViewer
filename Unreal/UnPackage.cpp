@@ -582,7 +582,7 @@ tag_ok:
 #endif
 
 	return Ar;
-	unguardf(("Ver=%d/%d", S.FileVersion, S.LicenseeVersion));
+	unguardf("Ver=%d/%d", S.FileVersion, S.LicenseeVersion);
 }
 
 
@@ -1311,7 +1311,7 @@ public:
 			assert(Block->CompressedSize == Block->UncompressedSize);
 			memcpy(Buffer, CompressedBlock, Block->CompressedSize);
 		}
-		unguardf(("block=%X+%X", ChunkData, Block->CompressedSize));
+		unguardf("block=%X+%X", ChunkData, Block->CompressedSize);
 		// setup BufferStart/BufferEnd
 		BufferStart = ChunkPosition;
 		BufferEnd   = ChunkPosition + Block->UncompressedSize;
@@ -1724,7 +1724,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #if DEBUG_PACKAGE
 			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
 #endif
-			unguardf(("%d", i));
+			unguardf("%d", i);
 		}
 	}
 	unguard;
@@ -1799,7 +1799,7 @@ no_depends: ;
 	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
 	PackageMap.AddItem(this);
 
-	unguardf(("%s, ver=%d/%d, game=%X", filename, ArVer, ArLicenseeVer, Game));
+	unguardf("%s, ver=%d/%d, game=%X", filename, ArVer, ArLicenseeVer, Game);
 }
 
 
@@ -1885,7 +1885,7 @@ FArchive& UnPackage::operator<<(FName &N)
 #endif
 	return *this;
 
-	unguardf(("pos=%08X", Tell()));
+	unguardf("pos=%08X", Tell());
 }
 
 FArchive& UnPackage::operator<<(UObject *&Obj)
@@ -2092,7 +2092,7 @@ UObject* UnPackage::CreateExport(int index)
 	UObject::EndLoad();
 	return Obj;
 
-	unguardf(("%s:%d", Filename, index));
+	unguardf("%s:%d", Filename, index);
 }
 
 
@@ -2163,7 +2163,7 @@ UObject* UnPackage::CreateImport(int index)
 	// create object
 	return Package->CreateExport(ObjIndex);
 
-	unguardf(("%s:%d", Filename, index));
+	unguardf("%s:%d", Filename, index);
 }
 
 
@@ -2331,5 +2331,5 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 	MissingPackages.AddItem(strdup(Name));
 	return NULL;
 
-	unguardf(("%s", Name));
+	unguardf("%s", Name);
 }

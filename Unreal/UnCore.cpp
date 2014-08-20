@@ -255,7 +255,7 @@ static bool RegisterGameFile(const char *FullName)
 
 	return true;
 
-	unguardf(("%s", FullName));
+	unguardf("%s", FullName);
 }
 
 
@@ -323,7 +323,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
 	appPrintf("Found %d game files (%d skipped)\n", NumGameFiles, NumForeignFiles);
-	unguardf(("dir=%s", dir));
+	unguardf("dir=%s", dir);
 }
 
 
@@ -500,7 +500,7 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	}
 	return info;
 
-	unguardf(("name=%s ext=%s", Filename, Ext));
+	unguardf("name=%s ext=%s", Filename, Ext);
 }
 
 
@@ -575,7 +575,7 @@ void FArray::Empty(int count, int elementSize)
 		DataPtr = appMalloc(count * elementSize);
 		memset(DataPtr, 0, count * elementSize);
 	}
-	unguardf(("%d x %d", count, elementSize));
+	unguardf("%d x %d", count, elementSize);
 }
 
 
@@ -657,7 +657,7 @@ void* FArray::GetItem(int index, int elementSize) const
 	guard(operator[]);
 	assert(index >= 0 && index < DataCount);
 	return OffsetPointer(DataPtr, index * elementSize);
-	unguardf(("%d/%d", index, DataCount));
+	unguardf("%d/%d", index, DataCount);
 }
 
 
@@ -706,7 +706,7 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 		Serializer(Ar, ptr);
 	return Ar;
 
-	unguardf(("%d/%d", i, DataCount));
+	unguardf("%d/%d", i, DataCount);
 }
 
 
@@ -1699,7 +1699,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	appError("appDecompress: unknown compression flags: %d", Flags);
 	return 0;
 
-	unguardf(("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, Flags));
+	unguardf("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, Flags);
 }
 
 

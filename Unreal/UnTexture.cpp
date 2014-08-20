@@ -278,7 +278,7 @@ byte *CTextureData::Decompress()
 		PostProcessAlpha(dst, USize, VSize);	//??
 
 	return dst;
-	unguardf(("fmt=%s(%d)", OriginalFormatName, OriginalFormatEnum));
+	unguardf("fmt=%s(%d)", OriginalFormatName, OriginalFormatEnum);
 }
 
 
@@ -697,7 +697,7 @@ static bool ReadXprFile(const CGameFileInfo *file)
 	delete Ar;
 	return true;
 
-	unguardf(("%s", file->RelativeName));
+	unguardf("%s", file->RelativeName);
 }
 
 
@@ -829,7 +829,7 @@ static bool BioReadBulkCatalogFile(const CGameFileInfo *file)
 	// finalize
 	delete Ar;
 	return true;
-	unguardf(("%s", file->RelativeName));
+	unguardf("%s", file->RelativeName);
 }
 
 
@@ -1064,7 +1064,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 
 	return (TexData.CompressedData != NULL);
 
-	unguardf(("%s", Name));
+	unguardf("%s", Name);
 }
 
 
@@ -1361,7 +1361,7 @@ static int GetRealTextureOffset_DCU_2(unsigned Hash, const char *TFCName)
 	}
 	return Offset;
 
-	unguardf(("TFC=%s Hash=%08X", TFCName, Hash));
+	unguardf("TFC=%s Hash=%08X", TFCName, Hash);
 }
 
 
@@ -1375,7 +1375,7 @@ static int GetRealTextureOffset_DCU(const UTexture2D *Obj)
 	const char *TFCName = Obj->TextureFileCacheName;
 	return GetRealTextureOffset_DCU_2(Hash, TFCName);
 
-	unguardf(("%s.%s", Obj->Package->Name, Obj->Name));
+	unguardf("%s.%s", Obj->Package->Name, Obj->Name);
 }
 
 
@@ -1759,7 +1759,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	delete Ar;
 	return true;
 
-	unguardf(("File=%s", bulkFile ? bulkFile->RelativeName : "none"));
+	unguardf("File=%s", bulkFile ? bulkFile->RelativeName : "none");
 }
 
 
@@ -1896,7 +1896,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 
 	return (TexData.CompressedData != NULL);
 
-	unguardf(("%s", Name));
+	unguardf("%s", Name);
 }
 
 

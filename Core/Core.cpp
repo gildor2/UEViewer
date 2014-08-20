@@ -212,7 +212,7 @@ void *appMalloc(int size, int alignment)
 	GNumAllocs++;
 #endif
 	return ptr;
-	unguardf(("size=%d", size));
+	unguardf("size=%d", size);
 }
 
 void* appRealloc(void *ptr, int newSize)

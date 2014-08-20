@@ -40,5 +40,5 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 
 #endif // RENDERING
 
-	unguardf(("%s'%s'", Mat->GetClassName(), Mat->Name));
+	unguardf("%s'%s'", Mat->GetClassName(), Mat->Name);
 }

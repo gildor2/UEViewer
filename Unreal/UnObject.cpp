@@ -134,14 +134,14 @@ void UObject::EndLoad()
 				Package->GetStopper() - Package->Tell());
 		LoadedObjects.AddItem(Obj);
 
-		unguardf(("%s'%s.%s', pos=%X, ver=%d/%d, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer, Package->Game));
+		unguardf("%s'%s.%s', pos=%X, ver=%d/%d, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer, Package->Game);
 	}
 	// postload objects
 	int i;
 	guard(PostLoad);
 	for (i = 0; i < LoadedObjects.Num(); i++)
 		LoadedObjects[i]->PostLoad();
-	unguardf(("%s", LoadedObjects[i]->Name));
+	unguardf("%s", LoadedObjects[i]->Name);
 	// cleanup
 	GObjLoaded.Empty();
 	GObjBeginLoadCount--;		// decrement after loading
@@ -176,7 +176,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	if (!ItemType) return false;
 	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
 	return true;
-	unguardf(("%s", StrucName));
+	unguardf("%s", StrucName);
 }
 
 
@@ -1037,7 +1037,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			appError("%s\'%s\'.%s: Property read error: %d unread bytes", Name, UObject::GLoadingObj->Name, *Tag.Name, StopPos - Pos);
 		}
 
-		unguardf(("(%s.%s, TagPos=%X)", Name, *Tag.Name, PropTagPos));
+		unguardf("(%s.%s, TagPos=%X)", Name, *Tag.Name, PropTagPos);
 	}
 
 	unguard;
@@ -1121,7 +1121,7 @@ const CTypeInfo *FindClassType(const char *Name, bool ClassType)
 	appPrintf("failed!\n");
 #endif
 	return NULL;
-	unguardf(("%s", Name));
+	unguardf("%s", Name);
 }
 
 
@@ -1142,7 +1142,7 @@ UObject *CreateClass(const char *Name)
 	UObject::GObjObjects.AddItem(Obj);
 	return Obj;
 
-	unguardf(("%s", Name));
+	unguardf("%s", Name);
 }
 
 

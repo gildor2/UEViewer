@@ -22,7 +22,7 @@ class UnPackage;
 #endif
 
 #ifndef unguardf
-#define unguardf(x)
+#define unguardf(...)
 #endif
 
 
@@ -507,7 +507,7 @@ public:
 		fseek(f, Pos, SEEK_SET);
 		ArPos = ftell(f);
 		assert(Pos == ArPos);
-		unguardf(("File=%s, pos=%d", ShortName, Pos));
+		unguardf("File=%s, pos=%d", ShortName, Pos);
 	}
 
 	virtual bool IsEof() const
@@ -567,7 +567,7 @@ public:
 		guard(FFileReader::FFileReader);
 		IsLoading = true;
 		Open(Filename);
-		unguardf(("%s", Filename));
+		unguardf("%s", Filename);
 	}
 
 	virtual void Serialize(void *data, int size)
@@ -585,7 +585,7 @@ public:
 		GNumSerialize++;
 		GSerializeBytes += size;
 #endif
-		unguardf(("File=%s", ShortName));
+		unguardf("File=%s", ShortName);
 	}
 
 protected:
@@ -605,7 +605,7 @@ public:
 		guard(FFileWriter::FFileWriter);
 		IsLoading = false;
 		Open(Filename);
-		unguardf(("%s", Filename));
+		unguardf("%s", Filename);
 	}
 
 	virtual void Serialize(void *data, int size)
@@ -621,7 +621,7 @@ public:
 		GNumSerialize++;
 		GSerializeBytes += size;
 #endif
-		unguardf(("File=%s", ShortName));
+		unguardf("File=%s", ShortName);
 	}
 
 	virtual bool Open(const char *Filename)
@@ -1145,14 +1145,14 @@ public:
 		guardfunc;
 		assert(index >= 0 && index < DataCount);
 		return *((T*)DataPtr + index);
-		unguardf(("%d/%d", index, DataCount));
+		unguardf("%d/%d", index, DataCount);
 	}
 	const T& operator[](int index) const
 	{
 		guardfunc;
 		assert(index >= 0 && index < DataCount);
 		return *((T*)DataPtr + index);
-		unguardf(("%d/%d", index, DataCount));
+		unguardf("%d/%d", index, DataCount);
 	}
 #else // DO_ASSERT && !DO_GUARD_MAX
 	// common implementation for all types
@@ -1605,7 +1605,7 @@ struct FCompressedChunkHeader
 			H.BlockSize = H.Blocks[0].UncompressedSize;
 #endif
 		return Ar;
-		unguardf(("pos=%X", Ar.Tell()));
+		unguardf("pos=%X", Ar.Tell());
 	}
 };
 

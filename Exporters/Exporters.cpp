@@ -89,7 +89,7 @@ bool ExportObject(const UObject *Obj)
 	}
 	return false;
 
-	unguardf(("%s'%s'", Obj->GetClassName(), Obj->Name));
+	unguardf("%s'%s'", Obj->GetClassName(), Obj->Name);
 }
 
 
