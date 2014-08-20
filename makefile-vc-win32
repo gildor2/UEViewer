@@ -160,6 +160,7 @@ DEPENDS = \
 	GameList.h \
 	UI/BaseDialog.h \
 	UI/StartupDialog.h \
+	UmodelSettings.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -662,6 +663,7 @@ DEPENDS = \
 	UI/BaseDialog.h \
 	UI/FileControls.h \
 	UI/StartupDialog.h \
+	UmodelSettings.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
 

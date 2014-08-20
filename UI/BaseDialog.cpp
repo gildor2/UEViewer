@@ -68,6 +68,7 @@ UIElement::UIElement()
 ,	Width(-1)
 ,	Height(-1)
 ,	IsGroup(false)
+,	IsRadioButton(false)
 ,	Enabled(true)
 ,	Parent(NULL)
 ,	NextChild(NULL)
@@ -305,8 +306,21 @@ bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
 
 UIRadioButton::UIRadioButton(const char* text, bool autoSize)
 :	Label(text)
+,	Checked(false)
+,	Value(0)
 ,	AutoSize(autoSize)
 {
+	IsRadioButton = true;
+	Height = DEFAULT_CHECKBOX_HEIGHT;
+}
+
+UIRadioButton::UIRadioButton(const char* text, int value, bool autoSize)
+:	Label(text)
+,	Checked(false)
+,	Value(value)
+,	AutoSize(autoSize)
+{
+	IsRadioButton = true;
 	Height = DEFAULT_CHECKBOX_HEIGHT;
 }
 
@@ -325,7 +339,7 @@ void UIRadioButton::Create(UIBaseDialog* dialog)
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
-	DlgWnd = dialog->GetWnd();
+	HWND DlgWnd = dialog->GetWnd();
 
 	// compute width of checkbox, otherwise it would react on whole parent's width area
 	int radioWidth;
@@ -339,11 +353,25 @@ void UIRadioButton::Create(UIBaseDialog* dialog)
 	UpdateEnabled();
 }
 
+void UIRadioButton::ButtonSelected(bool value)
+{
+	if (value == Checked) return;
+	Checked = value;
+	if (Callback)
+		Callback(this, value);
+}
+
+void UIRadioButton::SelectButton()
+{
+	SendMessage(Wnd, BM_SETCHECK, BST_CHECKED, 0);
+}
+
 bool UIRadioButton::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd == BN_CLICKED)
 	{
-		appPrintf("radio: %s\n", *Label);
+		Parent->RadioButtonClicked(this);
+		ButtonSelected(true);
 	}
 	return true;
 }
@@ -505,6 +533,8 @@ UIGroup::UIGroup(const char* label, unsigned flags)
 :	Label(label)
 ,	FirstChild(NULL)
 ,	Flags(flags)
+,	RadioValue(0)
+,	pRadioValue(&RadioValue)
 {
 	IsGroup = true;
 }
@@ -512,6 +542,8 @@ UIGroup::UIGroup(const char* label, unsigned flags)
 UIGroup::UIGroup(unsigned flags)
 :	FirstChild(NULL)
 ,	Flags(flags)
+,	RadioValue(0)
+,	pRadioValue(&RadioValue)
 {
 	IsGroup = true;
 }
@@ -789,6 +821,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 	// call 'Create' for all children
 	int maxControlY = Y + Height;
+	bool isRadioGroup;
 	for (UIElement* control = FirstChild; control; control = control->NextChild)
 	{
 		// evenly space controls for horizontal layout, when requested
@@ -800,7 +833,10 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		int bottom = control->Y + control->Height;
 		if (bottom > maxControlY)
 			maxControlY = bottom;
+		if (control->IsRadioButton) isRadioGroup = true;
 	}
+	if (isRadioGroup) InitializeRadioGroup();
+
 	Height = max(Height, maxControlY - Y);
 
 	if (!(Flags & GROUP_NO_BORDER))
@@ -825,6 +861,50 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 	if (Parent)
 		Parent->AddVerticalSpace();
+}
+
+void UIGroup::InitializeRadioGroup()
+{
+	guard(UIGroup::InitializeRadioGroup);
+
+	int radioIndex = 0;
+	int numAssignedButtons = 0;	//!! used for assert/validation only
+	bool allZeros = true;
+	for (UIElement* control = FirstChild; control; control = control->NextChild)
+	{
+		if (!control->IsRadioButton) continue;
+		UIRadioButton* radio = (UIRadioButton*)control;
+
+		if (radio->Value) allZeros = false;
+		if (!radio->Value && allZeros)
+		{
+			// This button has no value assigned - auto-assign index here.
+			// Note: if all radio values are zeros, we'll assign automatic index. If
+			// just 1st value is zero, it will be reassigned to zero again, so value
+			// will not be changed
+			radio->Value = radioIndex;
+			numAssignedButtons++;
+		}
+		radioIndex++;
+		// find and mark active button
+		if (*pRadioValue == radio->Value)
+			radio->SelectButton();
+	}
+	// sanity check: we should either have all items to be zeros (will have auto-index now),
+	// or only one zero item; there's no check performed for other value duplicates
+	assert(numAssignedButtons <= 1 || numAssignedButtons == radioIndex);
+
+	//!! check selected item
+
+	unguard;
+}
+
+void UIGroup::RadioButtonClicked(UIRadioButton* sender)
+{
+	*pRadioValue = sender->Value;
+	if (RadioCallback)
+		RadioCallback(this, *pRadioValue);
+	//!! notify previously selected UIRadioButton that it's unchecked
 }
 
 

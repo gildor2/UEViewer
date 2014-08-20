@@ -6,20 +6,35 @@
 
 #if HAS_UI
 
-UIStartupDialog::UIStartupDialog()
-:	GameOverride(-1)
-,	UseSkeletalMesh(true)
-,	UseStaticMesh(true)
-,	UseAnimation(true)
-,	UseTexture(true)
-,	UseSound(false)
-,	UseScaleForm(false)
-,	UseFaceFX(false)
+UIStartupDialog::UIStartupDialog(UmodelSettings& settings)
+:	Opt(settings)
 {}
 
 bool UIStartupDialog::Show()
 {
-	return ShowDialog("Umodel Startup Options", 320, 200);
+	if (!ShowDialog("Umodel Startup Options", 320, 200))
+		return false;
+
+	// process some options
+
+	// GameOverride
+	Opt.GameOverride = GAME_UNKNOWN;
+	if (OverrideGameGroup->IsChecked() && (OverrideGameCombo->GetSelectionIndex() >= 0))
+	{
+		const char* gameName = OverrideGameCombo->GetSelectionText();
+		for (int i = 0; /* empty */; i++)
+		{
+			const GameInfo &info = GListOfGames[i];
+			if (!info.Name) break;
+			if (!strcmp(info.Name, gameName))
+			{
+				Opt.GameOverride = info.Enum;
+				break;
+			}
+		}
+	}
+
+	return true;
 }
 
 void UIStartupDialog::InitUI()
@@ -29,13 +44,14 @@ void UIStartupDialog::InitUI()
 	(*this)
 	[
 		NewControl(UILabel, "Path to game files:")
-		+ NewControl(UIFilePathEditor)
+		+ NewControl(UIFilePathEditor, &Opt.GamePath)
 	];
 
 	NewControl(UICheckboxGroup, "Override game detection", false)
 	.SetParent(this)
+	.Expose(OverrideGameGroup)
 	[
-		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT)
+		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
 			NewControl(UICombobox)
 			.Expose(OverrideEngineCombo)
@@ -47,6 +63,7 @@ void UIStartupDialog::InitUI()
 		]
 	];
 
+	// fill engines list
 	int i;
 	const char* lastEngine = NULL;
 	for (i = 0; /* empty */; i++)
@@ -67,25 +84,25 @@ void UIStartupDialog::InitUI()
 
 	(*this)
 	[
-		NewControl(UIGroup, "Engine classed to load", GROUP_HORIZONTAL_LAYOUT)
+		NewControl(UIGroup, "Engine classes to load", GROUP_HORIZONTAL_LAYOUT)
 		[
 			NewControl(UIGroup, GROUP_NO_BORDER)
 			[
 				NewControl(UILabel, "Common classes:")
 				.SetHeight(20)
-				+ NewControl(UICheckbox, "Skeletal mesh", &UseSkeletalMesh)
-				+ NewControl(UICheckbox, "Static mesh",   &UseStaticMesh)
-				+ NewControl(UICheckbox, "Animation",     &UseAnimation)
-				+ NewControl(UICheckbox, "Textures",      &UseTexture)
-				//!! lightmap
+				+ NewControl(UICheckbox, "Skeletal mesh", &Opt.UseSkeletalMesh)
+				+ NewControl(UICheckbox, "Static mesh",   &Opt.UseStaticMesh)
+				+ NewControl(UICheckbox, "Animation",     &Opt.UseAnimation)
+				+ NewControl(UICheckbox, "Textures",      &Opt.UseTexture)
+				+ NewControl(UICheckbox, "Lightmaps",     &Opt.UseLightmapTexture)
 			]
 			+ NewControl(UIGroup, GROUP_NO_BORDER)
 			[
 				NewControl(UILabel, "Export-only classes:")
 				.SetHeight(20)
-				+ NewControl(UICheckbox, "Sound",     &UseSound)
-				+ NewControl(UICheckbox, "ScaleForm", &UseScaleForm)
-				+ NewControl(UICheckbox, "FaceFX",    &UseFaceFX)
+				+ NewControl(UICheckbox, "Sound",     &Opt.UseSound)
+				+ NewControl(UICheckbox, "ScaleForm", &Opt.UseScaleForm)
+				+ NewControl(UICheckbox, "FaceFX",    &Opt.UseFaceFx)
 			]
 		]
 	];
@@ -96,25 +113,30 @@ void UIStartupDialog::InitUI()
 		[
 			NewControl(UIGroup, "Package compression", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
 			.SetWidth(EncodeWidth(0.4f))
+			.SetRadioVariable(&Opt.PackageCompression)
 			[
-				NewControl(UIRadioButton, "Auto")
-				+ NewControl(UIRadioButton, "LZO")
-				+ NewControl(UIRadioButton, "zlib")
-				+ NewControl(UIRadioButton, "LZX")
+				NewControl(UIRadioButton, "Auto", 0)
+				+ NewControl(UIRadioButton, "LZO", COMPRESS_LZO)
+				+ NewControl(UIRadioButton, "zlib", COMPRESS_ZLIB)
+				+ NewControl(UIRadioButton, "LZX", COMPRESS_LZX)
 			]
 			+ NewControl(UISpacer)
 			+ NewControl(UIGroup, "Platform", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
+			.SetRadioVariable(&Opt.Platform)
 			[
-				NewControl(UIRadioButton, "Auto")
-				+ NewControl(UIRadioButton, "PC")
-				+ NewControl(UIRadioButton, "XBox360")
-				+ NewControl(UIRadioButton, "PS3")
-				+ NewControl(UIRadioButton, "iOS")
+				NewControl(UIRadioButton, "Auto", PLATFORM_UNKNOWN)
+				+ NewControl(UIRadioButton, "PC", PLATFORM_PC)
+				+ NewControl(UIRadioButton, "XBox360", PLATFORM_XBOX360)
+				+ NewControl(UIRadioButton, "PS3", PLATFORM_PS3)
+				+ NewControl(UIRadioButton, "iOS", PLATFORM_IOS)
 			]
 		]
 	];
 
-	//!! save log to file (-log=...)
+	//!! - possibility to select a file to open, setup game path from it,
+	//!!   set file mask from known file extensions
+	//!! - save log to file (-log=...)
+	//!! - about/help
 
 	unguard;
 }

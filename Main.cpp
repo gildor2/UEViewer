@@ -297,6 +297,9 @@ static void PrintUsage()
 			"    -game=tag       override game autodetection (see -taglist for variants)\n"
 			"    -pkg=package    load extra package (in addition to <package>)\n"
 			"    -obj=object     specify object(s) to load\n"
+#if HAS_UI
+			"    -gui            force startup UI to appear\n" //?? debug-only option?
+#endif
 			"\n"
 			"Compatibility options:\n"
 			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
@@ -390,7 +393,8 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 }
 
 #define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
-#define OPT_VALUE(name,var,value)		{ name, &var,        value },
+#define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
+#define OPT_VALUE(name,var,value)		{ name, (byte*)&var, value },
 
 
 int main(int argc, char **argv)
@@ -422,9 +426,11 @@ int main(int argc, char **argv)
 		CMD_TagList,
 		CMD_VersionInfo,
 	};
+
+	UmodelSettings settings;
+
 	static byte mainCmd = CMD_View;
-	static bool md5 = false, exprtAll = false, noMesh = false, noStat = false, noAnim = false,
-		 noTex = false, noLightmap = false, regSounds = false, reg3rdparty = false, hasRootDir = false;
+	static bool md5 = false, exprtAll = false, hasRootDir = false, forceUI = false;
 	TArray<const char*> extraPackages, objectsToLoad;
 	TArray<const char*> params;
 	const char *attachAnimName = NULL;
@@ -464,23 +470,25 @@ int main(int argc, char **argv)
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
 			// disable classes
-			OPT_BOOL ("nomesh",  noMesh)
-			OPT_BOOL ("nostat",  noStat)
-			OPT_BOOL ("noanim",  noAnim)
-			OPT_BOOL ("notex",   noTex)
-			OPT_BOOL ("nolightmap", noLightmap)
-			OPT_BOOL ("sounds",  regSounds)
-			OPT_BOOL ("3rdparty", reg3rdparty)
+			OPT_NBOOL("nomesh",  settings.UseSkeletalMesh)
+			OPT_NBOOL("nostat",  settings.UseStaticMesh)
+			OPT_NBOOL("noanim",  settings.UseAnimation)
+			OPT_NBOOL("notex",   settings.UseTexture)
+			OPT_NBOOL("nolightmap", settings.UseLightmapTexture)
+			OPT_BOOL ("sounds",  settings.UseSound)
 			OPT_BOOL ("dds",     GExportDDS)
 			OPT_BOOL ("notgacomp", GNoTgaCompress)
 			OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
+#if HAS_UI
+			OPT_BOOL ("gui",     forceUI)
+#endif
 			// platform
-			OPT_VALUE("ps3",     GForcePlatform, PLATFORM_PS3)
-			OPT_VALUE("ios",     GForcePlatform, PLATFORM_IOS)
+			OPT_VALUE("ps3",     settings.Platform, PLATFORM_PS3)
+			OPT_VALUE("ios",     settings.Platform, PLATFORM_IOS)
 			// compression
-			OPT_VALUE("lzo",     GForceCompMethod, COMPRESS_LZO )
-			OPT_VALUE("zlib",    GForceCompMethod, COMPRESS_ZLIB)
-			OPT_VALUE("lzx",     GForceCompMethod, COMPRESS_LZX )
+			OPT_VALUE("lzo",     settings.PackageCompression, COMPRESS_LZO )
+			OPT_VALUE("zlib",    settings.PackageCompression, COMPRESS_ZLIB)
+			OPT_VALUE("lzx",     settings.PackageCompression, COMPRESS_LZX )
 		};
 		if (ProcessOption(ARRAY_ARG(options), opt))
 			continue;
@@ -491,7 +499,7 @@ int main(int argc, char **argv)
 		}
 		else if (!strnicmp(opt, "path=", 5))
 		{
-			appSetRootDirectory(opt+5);
+			settings.GamePath = opt+5;
 			hasRootDir = true;
 		}
 		else if (!strnicmp(opt, "out=", 4))
@@ -524,6 +532,10 @@ int main(int argc, char **argv)
 			objectsToLoad.AddItem(obj);
 			attachAnimName = obj;
 		}
+		else if (!stricmp(opt, "3rdparty"))
+		{
+			settings.UseScaleForm = settings.UseFaceFx = true;
+		}
 		else if (!stricmp(opt, "help"))
 		{
 			PrintUsage();
@@ -537,16 +549,20 @@ int main(int argc, char **argv)
 	}
 
 #if HAS_UI
-	if (argc < 2 || (GForceGame == GAME_UNKNOWN && !hasRootDir))
+	if (argc < 2 || (GForceGame == GAME_UNKNOWN && !hasRootDir) || forceUI)
 	{
 		// no arguments provided - display startup options
-		UIStartupDialog dialog;
+		UIStartupDialog dialog(settings);
 		bool res = dialog.Show();
 		if (!res) exit(0);
-		// process options
-		//!! todo
 	}
 #endif // HAS_UI
+
+	// apply some settings
+	appSetRootDirectory(settings.GamePath);
+	GForceGame = settings.GameOverride;
+	GForcePlatform = settings.Platform;
+	GForceCompMethod = settings.PackageCompression;
 
 	if (mainCmd == CMD_VersionInfo)
 	{
@@ -653,28 +669,38 @@ int main(int argc, char **argv)
 	// note: we are registering classes after loading package: in this case we can know engine version (1/2/3)
 	RegisterCommonUnrealClasses();
 	if (MainPackage->Game < GAME_UE3)
+	{
 		RegisterUnrealClasses2();
+	}
 	else
+	{
 		RegisterUnrealClasses3();
-	if (regSounds)   RegisterUnrealSoundClasses();
-	if (reg3rdparty) RegisterUnreal3rdPartyClasses();
+		RegisterUnreal3rdPartyClasses();
+	}
+	if (settings.UseSound) RegisterUnrealSoundClasses();
 
 	// remove some class loaders when requisted by command line
-	if (noAnim)
+	if (!settings.UseAnimation)
 	{
 		UnregisterClass("MeshAnimation", true);
 		UnregisterClass("AnimSet",       true);
 		UnregisterClass("AnimSequence",  true);
 		UnregisterClass("AnimNotify",    true);
 	}
-	if (noMesh)
+	if (!settings.UseSkeletalMesh)
 	{
 		UnregisterClass("SkeletalMesh",       true);
 		UnregisterClass("SkeletalMeshSocket", true);
 	}
-	if (noStat) UnregisterClass("StaticMesh",     true);
-	if (noTex)  UnregisterClass("UnrealMaterial", true);
-	if (noLightmap) UnregisterClass("LightMapTexture2D", true);
+	if (!settings.UseStaticMesh) UnregisterClass("StaticMesh", true);
+	if (!settings.UseTexture) UnregisterClass("UnrealMaterial", true);
+	if (!settings.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
+	if (!settings.UseScaleForm) UnregisterClass("SwfMovie", true);
+	if (!settings.UseFaceFx)
+	{
+		UnregisterClass("FaceFXAnimSet", true);
+		UnregisterClass("FaceFXAsset", true);
+	}
 
 	// end of initialization
 

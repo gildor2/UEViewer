@@ -3,27 +3,23 @@
 
 #if HAS_UI
 
+#include "../UmodelSettings.h"
+
+
 class UIStartupDialog : public UIBaseDialog
 {
 public:
-	UIStartupDialog();
+	UIStartupDialog(UmodelSettings& settings);
 
 	bool Show();
 	virtual void InitUI();
 
-	int		GameOverride;
-
-	bool			UseSkeletalMesh;
-	bool			UseStaticMesh;
-	bool			UseAnimation;
-	bool			UseTexture;
-	bool			UseSound;
-	bool			UseScaleForm;
-	bool			UseFaceFX;
-
 protected:
-	UICombobox*		OverrideEngineCombo;
-	UICombobox*		OverrideGameCombo;
+	UmodelSettings&	Opt;
+
+	UICheckboxGroup*	OverrideGameGroup;
+	UICombobox*			OverrideEngineCombo;
+	UICombobox*			OverrideGameCombo;
 
 	void FillGameList();
 	void OnEngineChanged(UICombobox* sender, int value, const char* text);

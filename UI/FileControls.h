@@ -7,11 +7,11 @@ class UIFilePathEditor : public UIGroup
 {
 	DECLARE_UI_CLASS(UIFilePathEditor, UIGroup);
 public:
-	UIFilePathEditor();
+	UIFilePathEditor(FString* path);
 
 protected:
 	UITextEdit*		Editor;
-	FString			Path;
+	FString*		Path;
 	HWND			DlgWnd;
 
 	virtual void Create(UIBaseDialog* dialog);

@@ -13,10 +13,6 @@
 
 #if HAS_UI
 
-/*-----------------------------------------------------------------------------
-	UIFilePathEditor
------------------------------------------------------------------------------*/
-
 #if _WIN32
 
 #pragma comment(lib, "ole32.lib")
@@ -33,10 +29,15 @@ static void InitializeOLE()
 
 #endif // _WIN32
 
+/*-----------------------------------------------------------------------------
+	UIFilePathEditor
+-----------------------------------------------------------------------------*/
+
 #define BROWSE_BUTTON_WIDTH		70
 
-UIFilePathEditor::UIFilePathEditor()
+UIFilePathEditor::UIFilePathEditor(FString* path)
 :	UIGroup(GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+,	Path(path)
 {}
 
 void UIFilePathEditor::Create(UIBaseDialog* dialog)
@@ -51,7 +52,7 @@ void UIFilePathEditor::AddCustomControls()
 {
 	(*this)
 	[
-		NewControl(UITextEdit, &Path)
+		NewControl(UITextEdit, Path)
 		.Expose(Editor)
 		.SetY(2)
 		+ NewControl(UISpacer)
@@ -101,7 +102,7 @@ void UIFilePathEditor::OnBrowseClicked(UIButton* sender)
 		BOOL bRet = SHGetPathFromIDList(pidl, szPathName);
 		if (bRet)
 		{
-			Path = szPathName;
+			*Path = szPathName;
 			Editor->SetText();
 		}
 	}

@@ -119,7 +119,7 @@
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
 
-#define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG: Killing Floor
+#define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 
 // some private games
 #if PRIVATE_BUILD

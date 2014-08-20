@@ -71,7 +71,8 @@ protected:
 	int			Y;
 	int			Width;
 	int			Height;
-	bool		IsGroup;
+	bool		IsGroup:1;
+	bool		IsRadioButton:1;
 	bool		Enabled;
 	UIGroup*	Parent;
 	UIElement*	NextChild;
@@ -144,10 +145,11 @@ private:
 
 // Use this macro to declare callback type, variable and SetCallback function. It will
 // automatically add 'ThisClass' pointer as a first parameter for callback function.
+// Note: SetCallback name depends on VarName
 #define DECLARE_CALLBACK(VarName, ...)				\
 public:												\
 	typedef util::Callback<void (ThisClass*, __VA_ARGS__)> VarName##_t; \
-	FORCEINLINE ThisClass& SetCallback(VarName##_t& cb) \
+	FORCEINLINE ThisClass& Set##VarName(VarName##_t& cb) \
 	{												\
 		VarName = cb; return *this;					\
 	}												\
@@ -260,16 +262,24 @@ protected:
 
 class UIRadioButton : public UIElement
 {
+	friend class UIGroup;
 	DECLARE_UI_CLASS(UIRadioButton, UIElement);
-	DECLARE_CALLBACK(Callback);
+	DECLARE_CALLBACK(Callback, bool);
 public:
+	// UIRadioButton with automatic value
+	// Value will be assigned in UIGroup::InitializeRadioGroup()
 	UIRadioButton(const char* text, bool autoSize = true);
+	// UIRadioButton with explicit valus
+	UIRadioButton(const char* text, int value, bool autoSize = true);
 
 protected:
 	FString		Label;
+	int			Value;
+	bool		Checked;
 	bool		AutoSize;
 
-	HWND		DlgWnd;
+	void ButtonSelected(bool value);
+	void SelectButton();
 
 	virtual void UpdateSize(UIBaseDialog* dialog);
 	virtual void Create(UIBaseDialog* dialog);
@@ -341,7 +351,7 @@ protected:
 	UI containers
 -----------------------------------------------------------------------------*/
 
-// Constants for setting some group properties
+// Constants for setting some group properties (Flags)
 #define GROUP_NO_BORDER				1
 #define GROUP_NO_AUTO_LAYOUT		2
 #define GROUP_HORIZONTAL_LAYOUT		4
@@ -352,6 +362,7 @@ protected:
 class UIGroup : public UIElement
 {
 	DECLARE_UI_CLASS(UIGroup, UIElement);
+	DECLARE_CALLBACK(RadioCallback, int);
 public:
 	UIGroup(const char* label, unsigned flags = 0);
 	UIGroup(unsigned flags = 0);
@@ -370,6 +381,24 @@ public:
 	void AddHorizontalSpace(int size = -1);
 
 	void EnableAllControls(bool enabled);
+
+	// Functions used with UIRadioButton - UIGroup works like a "radio group"
+
+	FORCEINLINE UIGroup& SetRadioVariable(int* var)
+	{
+		assert(Wnd == 0);
+		pRadioValue = var;
+		return *this;
+	}
+	FORCEINLINE UIGroup& SetRadioValue(int var)
+	{
+		assert(Wnd == 0);
+		*pRadioValue = var;
+		return *this;
+	}
+	FORCEINLINE int GetRadioValue() const { return *pRadioValue; }
+	// callback for UIRadioButton
+	void RadioButtonClicked(UIRadioButton* sender);
 
 	// Function for adding children in declarative syntax
 	FORCEINLINE UIGroup& operator[](UIElement& item)
@@ -395,16 +424,24 @@ public:
 protected:
 	FString		Label;
 	UIElement*	FirstChild;
+	unsigned	Flags;			// combination of GROUP_... flags
+
+	// transient variables used by layout code
 	int			AutoWidth;		// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
 	int			CursorX;		// where to place next control in horizontal layout
-	int			CursorY;
-	unsigned	Flags;
+	int			CursorY;		// ... for vertical layout
+
+	// support for children UIRadioButton
+	int			RadioValue;
+	int*		pRadioValue;
+	UIRadioButton* SelectedRadioButton;
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 	virtual void DialogClosed(bool cancel);
 	virtual void UpdateEnabled();
 	void CreateGroupControls(UIBaseDialog* dialog);
+	void InitializeRadioGroup();
 
 	virtual void AddCustomControls()
 	{}
@@ -419,6 +456,11 @@ class UICheckboxGroup : public UIGroup
 	DECLARE_CALLBACK(Callback, bool);
 public:
 	UICheckboxGroup(const char* label, bool value, unsigned flags = 0);
+
+	bool IsChecked() const
+	{
+		return Value;
+	}
 
 protected:
 	FString		Label;			// overrides Label of parent
