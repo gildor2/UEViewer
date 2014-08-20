@@ -155,9 +155,12 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 // operation.
 UIElement& operator+(UIElement& elem, UIElement& next)
 {
+	guard(operator+(UIElement));
+
 	UIElement* e = &elem;
 	while (true)
 	{
+		if (e->Parent) appError("Using UIElement::operator+ to join parented controls");
 		UIElement* n = e->NextChild;
 		if (!n)
 		{
@@ -167,6 +170,8 @@ UIElement& operator+(UIElement& elem, UIElement& next)
 		e = n;
 	}
 	return elem;
+
+	unguard;
 }
 
 /*-----------------------------------------------------------------------------
@@ -751,16 +756,11 @@ void UIGroup::UpdateEnabled()
 
 void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 {
+	guard(UIGroup::CreateGroupControls);
+
 	// save original positions for second AllocateUISpace call
 	int origX = X, origY = Y, origW = Width, origH = Height;
 
-	if (Parent)
-	{
-		Parent->AddVerticalSpace();
-		// request x, y and width; height is not available yet
-		int h = 0;
-		Parent->AllocateUISpace(X, Y, Width, h);
-	}
 	if (!(Flags & GROUP_NO_BORDER))
 	{
 		CursorX = GROUP_INDENT;
@@ -770,14 +770,28 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	{
 		CursorX = CursorY = 0;
 	}
+	if (Parent)
+	{
+		Parent->AddVerticalSpace();
+		// request x, y and width; height is not available yet
+		int h = 0;
+		Parent->AllocateUISpace(X, Y, Width, h);
+	}
+	else
+	{
+		// this is a dialog, add some space on top for better layout
+		CursorY += VERTICAL_SPACING;
+	}
 #if DEBUG_LAYOUT
 	DBG_LAYOUT("%sgroup \"%s\" cursor: %d %d\n", GetDebugLayoutIndent(), *Label, CursorX, CursorY);
 	DebugLayoutDepth++;
 #endif
 
+	// allow UIGroup-based classes to add own controls
 	AddCustomControls();
 
-	// determine default width of control in horizontal layout
+	// determine default width of control in horizontal layout; this value will be used for
+	// all controls which width was not specified (for Width==-1)
 	AutoWidth = 0;
 	int horizontalSpacing = 0;
 	if (Flags & GROUP_HORIZONTAL_LAYOUT)
@@ -822,14 +836,19 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	// call 'Create' for all children
 	int maxControlY = Y + Height;
 	bool isRadioGroup;
-	for (UIElement* control = FirstChild; control; control = control->NextChild)
+	int controlIndex = 0;
+	for (UIElement* control = FirstChild; control; control = control->NextChild, controlIndex++)
 	{
 		// evenly space controls for horizontal layout, when requested
 		if (horizontalSpacing > 0 && control != FirstChild)
 			AddHorizontalSpace(horizontalSpacing);
 		DBG_LAYOUT("%screate %s: x=%d y=%d w=%d h=%d\n", GetDebugLayoutIndent(),
 			control->ClassName(), control->X, control->Y, control->Width, control->Height);
+
+		guard(ControlCreate);
 		control->Create(dialog);
+		unguardf(("index=%d,class=%s", controlIndex, control->ClassName()));
+
 		int bottom = control->Y + control->Height;
 		if (bottom > maxControlY)
 			maxControlY = bottom;
@@ -861,6 +880,8 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 	if (Parent)
 		Parent->AddVerticalSpace();
+
+	unguardf(("%s", *Label));
 }
 
 void UIGroup::InitializeRadioGroup()
@@ -1008,7 +1029,7 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 	dlg1->dlgVer = 1;
 	dlg1->signature = 0xFFFF;
 	dlg1->exStyle = 0;
-	dlg1->style = WS_VISIBLE | WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME | DS_CENTER;
+	dlg1->style = WS_VISIBLE | WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME;
 	dlg1->cx = width;
 	dlg1->cy = height;
 
@@ -1113,23 +1134,32 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		// show dialog's icon; 200 is resource id (we're not using resource.h here)
 		SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(200)));
 
-		// center window on screen
-		RECT controlRect;
-		GetClientRect(hWnd, &controlRect);
-#if 0	// current implementation uses DS_CENTER
-		int newX = (GetSystemMetrics(SM_CXSCREEN) - (controlRect.right - controlRect.left)) / 2;
-		int newY = (GetSystemMetrics(SM_CYSCREEN) - (controlRect.bottom - controlRect.top)) / 2;
-		SetWindowPos(hWnd, NULL, newX, newY, 0, 0, SWP_NOSIZE);
-#endif
-		//!! resize window, but take into account that the rect is CLIENT
+		// compute client area width
+		RECT r;
+		GetClientRect(Wnd, &r);
+		int clientWidth = r.right - r.left;
 
-		// create controls
+		// prepare layout variabled
 		X = DEFAULT_HORZ_BORDER;
 		Y = 0;
-		Width = controlRect.right - controlRect.left - DEFAULT_HORZ_BORDER * 2;
-		Height = DEFAULT_VERT_BORDER;
+		Width = clientWidth - DEFAULT_HORZ_BORDER * 2;
+		Height = 0;
+
+		// create controls
 		InitUI();
 		CreateGroupControls(this);
+
+		// adjust window size taking into account desired client size and center window on screen
+		r.left   = 0;
+		r.top    = 0;
+		r.right  = clientWidth;
+		r.bottom = Height + VERTICAL_SPACING;
+
+		int newX = (GetSystemMetrics(SM_CXSCREEN) - (r.right - r.left)) / 2;
+		int newY = (GetSystemMetrics(SM_CYSCREEN) - (r.bottom - r.top)) / 2;
+
+		AdjustWindowRect(&r, GetWindowLong(Wnd, GWL_STYLE), FALSE);
+		SetWindowPos(hWnd, NULL, newX, newY, r.right - r.left, r.bottom - r.top, 0);
 
 		return TRUE;
 	}

@@ -286,6 +286,7 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 		}								\
 	}
 
+//!! use __VA_ARGS__, avoid ungiardf(("msg", args)), use unguardf("msg", args) instead
 #define unguardf(msg)					\
 		} catch (...) {					\
 			appUnwindPrefix(__FUNC__);	\

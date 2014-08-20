@@ -228,7 +228,7 @@ static bool RegisterGameFile(const char *FullName)
 				return true;
 			// unknown file type
 			if (++NumForeignFiles >= MAX_FOREIGN_FILES)
-				appError("Too much unknown files - bad root directory?");
+				appError("Too much unknown files - bad root directory (%s)?", RootDirectory);
 			return true;
 		}
 		IsPackage = false;
@@ -319,6 +319,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 void appSetRootDirectory(const char *dir, bool recurse)
 {
 	guard(appSetRootDirectory);
+	if (dir[0] == 0) dir = ".";	// using dir="" will cause scanning of "/dir1", "/dir2" etc (i.e. drive root)
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
 	appPrintf("Found %d game files (%d skipped)\n", NumGameFiles, NumForeignFiles);
