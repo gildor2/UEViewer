@@ -180,17 +180,28 @@ UIElement& operator+(UIElement& elem, UIElement& next)
 
 UISpacer::UISpacer(int size)
 {
-	Width  = (size >= 0) ? size : HORIZONTAL_SPACING;
-	Height = (size >= 0) ? size : VERTICAL_SPACING;
+	Width = (size != 0) ? size : HORIZONTAL_SPACING;	// use size==-1 for automatic width (for horizontal layout)
+	Height = (size > 0) ? size : VERTICAL_SPACING;
 }
 
 void UISpacer::Create(UIBaseDialog* dialog)
 {
 	assert(Parent->UseAutomaticLayout());
 	if (Parent->UseVerticalLayout())
-		Parent->AddVerticalSpace(Width);
+	{
+		Parent->AddVerticalSpace(Height);
+	}
 	else
-		Parent->AddHorizontalSpace(Height);
+	{
+		if (Width > 0)
+		{
+			Parent->AddHorizontalSpace(Width);
+		}
+		else
+		{
+			Parent->AllocateUISpace(X, Y, Width, Height);
+		}
+	}
 }
 
 
@@ -233,12 +244,24 @@ UIButton::UIButton(const char* text)
 	Height = DEFAULT_BUTTON_HEIGHT;
 }
 
+UIButton& UIButton::SetOK()
+{
+	Id = IDOK;
+	return *this;
+}
+
+UIButton& UIButton::SetCancel()
+{
+	Id = IDCANCEL;
+	return *this;
+}
+
 void UIButton::Create(UIBaseDialog* dialog)
 {
 	Parent->AddVerticalSpace();
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Parent->AddVerticalSpace();
-	Id = dialog->GenerateDialogId();
+	if (!Id) Id = dialog->GenerateDialogId();
 
 	//!! BS_DEFPUSHBUTTON - for default key
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, 0, dialog);

@@ -82,28 +82,26 @@ void UIStartupDialog::InitUI()
 	FillGameList();
 #endif
 
-	(*this)
+	NewControl(UIGroup, "Engine classes to load", GROUP_HORIZONTAL_LAYOUT)
+	.SetParent(this)
 	[
-		NewControl(UIGroup, "Engine classes to load", GROUP_HORIZONTAL_LAYOUT)
+		NewControl(UIGroup, GROUP_NO_BORDER)
 		[
-			NewControl(UIGroup, GROUP_NO_BORDER)
-			[
-				NewControl(UILabel, "Common classes:")
-				.SetHeight(20)
-				+ NewControl(UICheckbox, "Skeletal mesh", &Opt.UseSkeletalMesh)
-				+ NewControl(UICheckbox, "Static mesh",   &Opt.UseStaticMesh)
-				+ NewControl(UICheckbox, "Animation",     &Opt.UseAnimation)
-				+ NewControl(UICheckbox, "Textures",      &Opt.UseTexture)
-				+ NewControl(UICheckbox, "Lightmaps",     &Opt.UseLightmapTexture)
-			]
-			+ NewControl(UIGroup, GROUP_NO_BORDER)
-			[
-				NewControl(UILabel, "Export-only classes:")
-				.SetHeight(20)
-				+ NewControl(UICheckbox, "Sound",     &Opt.UseSound)
-				+ NewControl(UICheckbox, "ScaleForm", &Opt.UseScaleForm)
-				+ NewControl(UICheckbox, "FaceFX",    &Opt.UseFaceFx)
-			]
+			NewControl(UILabel, "Common classes:")
+			.SetHeight(20)
+			+ NewControl(UICheckbox, "Skeletal mesh", &Opt.UseSkeletalMesh)
+			+ NewControl(UICheckbox, "Static mesh",   &Opt.UseStaticMesh)
+			+ NewControl(UICheckbox, "Animation",     &Opt.UseAnimation)
+			+ NewControl(UICheckbox, "Textures",      &Opt.UseTexture)
+			+ NewControl(UICheckbox, "Lightmaps",     &Opt.UseLightmapTexture)
+		]
+		+ NewControl(UIGroup, GROUP_NO_BORDER)
+		[
+			NewControl(UILabel, "Export-only classes:")
+			.SetHeight(20)
+			+ NewControl(UICheckbox, "Sound",     &Opt.UseSound)
+			+ NewControl(UICheckbox, "ScaleForm", &Opt.UseScaleForm)
+			+ NewControl(UICheckbox, "FaceFX",    &Opt.UseFaceFx)
 		]
 	];
 
@@ -131,6 +129,20 @@ void UIStartupDialog::InitUI()
 				+ NewControl(UIRadioButton, "iOS", PLATFORM_IOS)
 			]
 		]
+	];
+
+	// dialog buttons
+	NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+	.SetParent(this)
+	[
+		NewControl(UISpacer, -1)
+		+ NewControl(UIButton, "OK")
+		.SetWidth(EncodeWidth(0.2f))
+		.SetOK()
+		+ NewControl(UISpacer)
+		+ NewControl(UIButton, "Cancel")
+		.SetWidth(EncodeWidth(0.2f))
+		.SetCancel()
 	];
 
 	//!! - possibility to select a file to open, setup game path from it,

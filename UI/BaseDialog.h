@@ -204,7 +204,7 @@ class UISpacer : public UIElement
 {
 	DECLARE_UI_CLASS(UISpacer, UIElement);
 public:
-	UISpacer(int size = -1);
+	UISpacer(int size = 0);
 
 protected:
 	virtual void Create(UIBaseDialog* dialog);
@@ -231,6 +231,9 @@ class UIButton : public UIElement
 	DECLARE_CALLBACK(Callback);
 public:
 	UIButton(const char* text);
+
+	UIButton& SetOK();
+	UIButton& SetCancel();
 
 protected:
 	FString		Label;

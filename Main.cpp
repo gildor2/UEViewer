@@ -28,6 +28,7 @@
 #endif
 
 #include "GameList.h"
+#include "UmodelSettings.h"
 
 #define APP_CAPTION					"UE Viewer"
 #define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
