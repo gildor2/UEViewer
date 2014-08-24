@@ -46,6 +46,7 @@
 #define DEFAULT_CHECKBOX_HEIGHT		16
 #define DEFAULT_EDIT_HEIGHT			16
 #define DEFAULT_COMBOBOX_HEIGHT		20
+#define DEFAULT_LISTBOX_HEIGHT		120
 
 #define GROUP_INDENT				10
 #define GROUP_MARGIN_TOP			16
@@ -479,15 +480,17 @@ UICombobox::UICombobox()
 	Height = DEFAULT_COMBOBOX_HEIGHT;
 }
 
-void UICombobox::AddItem(const char* item)
+UICombobox& UICombobox::AddItem(const char* item)
 {
 	new (Items) FString(item);
 	if (Wnd) SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)item);
+	return *this;
 }
 
-void UICombobox::AddItems(const char** items)
+UICombobox& UICombobox::AddItems(const char** items)
 {
 	while (*items) AddItem(*items++);
+	return *this;
 }
 
 void UICombobox::RemoveAllItems()
@@ -497,14 +500,15 @@ void UICombobox::RemoveAllItems()
 	Value = -1;
 }
 
-void UICombobox::SelectItem(int index)
+UICombobox& UICombobox::SelectItem(int index)
 {
-	if (Value == index) return;
+	if (Value == index) return *this;
 	Value = index;
 	if (Wnd) SendMessage(Wnd, CB_SETCURSEL, Value, 0);
+	return *this;
 }
 
-void UICombobox::SelectItem(const char* item)
+UICombobox& UICombobox::SelectItem(const char* item)
 {
 	int index = -1;
 	for (int i = 0; i < Items.Num(); i++)
@@ -516,6 +520,7 @@ void UICombobox::SelectItem(const char* item)
 		}
 	}
 	SelectItem(index);
+	return *this;
 }
 
 void UICombobox::Create(UIBaseDialog* dialog)
@@ -541,6 +546,94 @@ bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (cmd == CBN_SELCHANGE)
 	{
 		int v = SendMessage(Wnd, CB_GETCURSEL, 0, 0);
+		if (v != Value)
+		{
+			Value = v;
+			if (Callback)
+				Callback(this, Value, GetSelectionText());
+		}
+		return true;
+	}
+	return false;
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIListbox
+-----------------------------------------------------------------------------*/
+
+UIListbox::UIListbox()
+:	Value(-1)
+{
+	Height = DEFAULT_LISTBOX_HEIGHT;
+}
+
+UIListbox& UIListbox::AddItem(const char* item)
+{
+	new (Items) FString(item);
+	if (Wnd) SendMessage(Wnd, LB_ADDSTRING, 0, (LPARAM)item);
+	return *this;
+}
+
+UIListbox& UIListbox::AddItems(const char** items)
+{
+	while (*items) AddItem(*items++);
+	return *this;
+}
+
+void UIListbox::RemoveAllItems()
+{
+	Items.Empty();
+	if (Wnd) SendMessage(Wnd, LB_RESETCONTENT, 0, 0);
+	Value = -1;
+}
+
+UIListbox& UIListbox::SelectItem(int index)
+{
+	if (Value == index) return *this;
+	Value = index;
+	if (Wnd) SendMessage(Wnd, LB_SETCURSEL, Value, 0);
+	return *this;
+}
+
+UIListbox& UIListbox::SelectItem(const char* item)
+{
+	int index = -1;
+	for (int i = 0; i < Items.Num(); i++)
+	{
+		if (!stricmp(Items[i], item))
+		{
+			index = i;
+			break;
+		}
+	}
+	SelectItem(index);
+	return *this;
+}
+
+void UIListbox::Create(UIBaseDialog* dialog)
+{
+	Parent->AddVerticalSpace();
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Parent->AddVerticalSpace();
+	Id = dialog->GenerateDialogId();
+
+	Wnd = Window(WC_LISTBOX, "",
+		LBS_NOINTEGRALHEIGHT | LBS_HASSTRINGS | LBS_NOTIFY | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		WS_EX_CLIENTEDGE, dialog);
+	// add items
+	for (int i = 0; i < Items.Num(); i++)
+		SendMessage(Wnd, LB_ADDSTRING, 0, (LPARAM)(*Items[i]));
+	// set selection
+	SendMessage(Wnd, LB_SETCURSEL, Value, 0);
+	UpdateEnabled();
+}
+
+bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == LBN_SELCHANGE)
+	{
+		int v = SendMessage(Wnd, LB_GETCURSEL, 0, 0);
 		if (v != Value)
 		{
 			Value = v;

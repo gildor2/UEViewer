@@ -45,6 +45,8 @@ void UIStartupDialog::InitUI()
 	[
 		NewControl(UILabel, "Path to game files:")
 		+ NewControl(UIFilePathEditor, &Opt.GamePath)
+		//!! could check file extensions in target directory and at least
+		//!! set "engine" part of "game override", if it is not set yet
 	];
 
 	NewControl(UICheckboxGroup, "Override game detection", false)

@@ -434,10 +434,11 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	char buf[256];
 	appStrncpyz(buf, Filename, ARRAY_COUNT(buf));
 
-	// validate name
-	if (strchr(Filename, '/') || strchr(Filename, '\\'))
+	// replace backslashes
+	for (char* s = buf; *s; s++)
 	{
-		appError("appFindGameFile: file has path");
+		char c = *s;
+		if (c == '\\') *s = '/';
 	}
 
 	if (Ext)
@@ -482,9 +483,20 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 			continue;
 		}
 #endif // UNREAL3
-		// verify filename
-		if (strnicmp(info2->ShortFilename, buf, nameLen) != 0) continue;
-		if (info2->ShortFilename[nameLen] != '.') continue;
+		// verify a filename
+		bool found = false;
+		if (strnicmp(info2->ShortFilename, buf, nameLen) == 0)
+		{
+			if (info2->ShortFilename[nameLen] == '.') found = true;
+		}
+		if (!found)
+		{
+			if (strnicmp(info2->RelativeName, buf, nameLen) == 0)
+			{
+				if (info2->RelativeName[nameLen] == '.') found = true;
+			}
+		}
+		if (!found) continue;
 		// verify extension
 		if (Ext)
 		{

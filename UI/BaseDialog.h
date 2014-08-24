@@ -272,7 +272,7 @@ public:
 	// UIRadioButton with automatic value
 	// Value will be assigned in UIGroup::InitializeRadioGroup()
 	UIRadioButton(const char* text, bool autoSize = true);
-	// UIRadioButton with explicit valus
+	// UIRadioButton with explicit value
 	UIRadioButton(const char* text, int value, bool autoSize = true);
 
 protected:
@@ -314,6 +314,7 @@ protected:
 };
 
 
+//!! add "int* pValue" like for other controls
 class UICombobox : public UIElement
 {
 	DECLARE_UI_CLASS(UICombobox, UIElement);
@@ -321,12 +322,50 @@ class UICombobox : public UIElement
 public:
 	UICombobox();
 
-	void AddItem(const char* item);
-	void AddItems(const char** items);
+	UICombobox& AddItem(const char* item);
+	UICombobox& AddItems(const char** items);
 	void RemoveAllItems();
 
-	void SelectItem(int index);
-	void SelectItem(const char* item);
+	UICombobox& SelectItem(int index);
+	UICombobox& SelectItem(const char* item);
+
+	FORCEINLINE const char* GetItem(int index) const
+	{
+		return Items[index];
+	}
+	FORCEINLINE int GetSelectionIndex() const
+	{
+		return Value;
+	}
+	FORCEINLINE const char* GetSelectionText() const
+	{
+		return (Value >= 0) ? *Items[Value] : NULL;
+	}
+
+protected:
+	TArray<FString> Items;
+	int			Value;
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+};
+
+
+// This class internally is very similar to UICombobox
+//!! add "int* pValue" like for other controls
+class UIListbox : public UIElement
+{
+	DECLARE_UI_CLASS(UIListbox, UIElement);
+	DECLARE_CALLBACK(Callback, int, const char*);
+public:
+	UIListbox();
+
+	UIListbox& AddItem(const char* item);
+	UIListbox& AddItems(const char** items);
+	void RemoveAllItems();
+
+	UIListbox& SelectItem(int index);
+	UIListbox& SelectItem(const char* item);
 
 	FORCEINLINE const char* GetItem(int index) const
 	{
@@ -493,6 +532,8 @@ public:
 
 	bool ShowDialog(const char* title, int width, int height);
 	void CloseDialog(bool cancel = false);
+
+	//!! UIBaseDialog& AddOkCancelButtons(); - should be done in InitUI as last operation
 
 protected:
 	int			NextDialogId;

@@ -75,6 +75,7 @@ MAIN_FILES = \
 	$(OUT_1)/TextContainer.obj \
 	$(OUT_1)/BaseDialog.obj \
 	$(OUT_1)/FileControls.obj \
+	$(OUT_1)/PackageDialog.obj \
 	$(OUT_1)/StartupDialog.obj \
 	$(OUT_1)/umodel.res
 
@@ -159,6 +160,7 @@ DEPENDS = \
 	Exporters/Exporters.h \
 	GameList.h \
 	UI/BaseDialog.h \
+	UI/PackageDialog.h \
 	UI/StartupDialog.h \
 	UmodelSettings.h \
 	Unreal/MeshCommon.h \
@@ -695,6 +697,20 @@ DEPENDS = \
 
 $(OUT_1)/FileControls.obj : UI/FileControls.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/FileControls.obj" UI/FileControls.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	UI/PackageDialog.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/PackageDialog.obj : UI/PackageDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageDialog.obj" UI/PackageDialog.cpp
 
 DEPENDS = \
 	Build.h \

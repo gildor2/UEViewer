@@ -558,6 +558,18 @@ protected:
 };
 
 
+inline bool appFileExists(const char* filename)
+{
+	FILE* f = fopen(filename, "rb");
+	if (f)
+	{
+		fclose(f);
+		return true;
+	}
+	return false;
+}
+
+
 class FFileReader : public FFileArchive
 {
 public:

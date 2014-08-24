@@ -4,6 +4,7 @@
 #if HAS_UI
 #include "../UI/BaseDialog.h"
 #include "../UI/StartupDialog.h"
+#include "../UI/PackageDialog.h"
 #endif
 
 #include "UnrealClasses.h"
@@ -556,11 +557,13 @@ int main(int argc, char **argv)
 		UIStartupDialog dialog(settings);
 		bool res = dialog.Show();
 		if (!res) exit(0);
+		hasRootDir = true;
 	}
 #endif // HAS_UI
 
 	// apply some settings
-	appSetRootDirectory(settings.GamePath);
+	if (hasRootDir)
+		appSetRootDirectory(settings.GamePath);
 	GForceGame = settings.GameOverride;
 	GForcePlatform = settings.Platform;
 	GForceCompMethod = settings.PackageCompression;
@@ -577,25 +580,35 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (!params.Num())
-	{
-	bad_pkg_name:
-		appPrintf("COMMAND LINE ERROR: package name is not specified\n");
-	bad_params:
-		appPrintf("Use \"umodel\" without arguments to show command line help\n");;
-		exit(1);
-	}
-
-	const char *argPkgName   = params[0];
+	const char *argPkgName   = (params.Num() >= 1) ? params[0] : NULL;
 	const char *argObjName   = (params.Num() >= 2) ? params[1] : NULL;
 	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
 	if (params.Num() > 3)
 	{
 		appPrintf("COMMAND LINE ERROR: too many arguments. Check your command line.\nYou specified: package=%s, object=%s, class=%s\n", argPkgName, argObjName, argClassName);
-		goto bad_params;
+	bad_params:
+		appPrintf("Use \"umodel\" without arguments to show command line help\n");;
+		exit(1);
 	}
 
+#if !HAS_UI
 	if (!argPkgName) goto bad_pkg_name;
+
+	if (!params.Num())
+	{
+	bad_pkg_name:
+		appPrintf("COMMAND LINE ERROR: package name is not specified\n");
+		goto bad_params;
+	}
+#else
+	if (!argPkgName)
+	{
+		UIPackageDialog dialog;
+		if (!dialog.Show())
+			exit(0);
+		argPkgName = *UIPackageDialog::SelectedPackage;
+	}
+#endif // !HAS_UI
 
 	if (argObjName)
 	{
@@ -612,15 +625,18 @@ int main(int argc, char **argv)
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);
 	// setup root directory
-	if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
+	if (!hasRootDir)
 	{
-		// has path in filename
-		if (!hasRootDir) appSetRootDirectory2(argPkgName);
-	}
-	else
-	{
-		// no path in filename
-		if (!hasRootDir) appSetRootDirectory(".");		// scan for packages
+		if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
+		{
+			// has path in filename
+			appSetRootDirectory2(argPkgName);
+		}
+		else
+		{
+			// no path in filename
+			appSetRootDirectory(".");		// scan for packages
+		}
 	}
 
 	// load main package

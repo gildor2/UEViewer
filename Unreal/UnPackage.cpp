@@ -2303,14 +2303,15 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 		if (!stricmp(LocalName, MissingPackages[i]))
 			return NULL;
 
-	if (/*??(LocalName == Name) &&*/ (strchr(LocalName, '/') || strchr(LocalName, '\\')))
+	const CGameFileInfo *info = appFindGameFile(LocalName);
+
+	if (!info)
 	{
-		//?? trying to load package outside of game directory
-		// or package contains path - appFindGameFile() will fail
-		return new UnPackage(Name);
+		// probably specified a full package name
+		if (appFileExists(Name))
+			return new UnPackage(Name);
 	}
 
-	const CGameFileInfo *info = appFindGameFile(LocalName);
 	if (info && info->IsPackage)
 	{
 		// Check in loaded packages again, but use info->RelativeName to compare
