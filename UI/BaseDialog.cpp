@@ -47,6 +47,7 @@
 #define DEFAULT_EDIT_HEIGHT			16
 #define DEFAULT_COMBOBOX_HEIGHT		20
 #define DEFAULT_LISTBOX_HEIGHT		120
+#define DEFAULT_TREEVIEW_HEIGHT		120
 
 #define GROUP_INDENT				10
 #define GROUP_MARGIN_TOP			16
@@ -645,6 +646,179 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 	return false;
 }
 
+/*-----------------------------------------------------------------------------
+	UITreeView
+-----------------------------------------------------------------------------*/
+
+struct TreeViewItem
+{
+	FString			Label;
+	TreeViewItem*	Parent;
+	HTREEITEM		hItem;
+
+	TreeViewItem()
+	:	Parent(NULL)
+	,	hItem(NULL)
+	{}
+};
+
+UITreeView::UITreeView()
+:	SelectedItem(NULL)
+,	RootLabel("Root")
+{
+	Height = DEFAULT_TREEVIEW_HEIGHT;
+	// create a root item
+	RemoveAllItems();
+}
+
+UITreeView& UITreeView::AddItem(const char* item)
+{
+	char buffer[1024];
+	appStrncpyz(buffer, item, ARRAY_COUNT(buffer));
+
+	// create full hierarchy if needed
+	TreeViewItem* parent = GetRoot();
+	char *s, *n;
+	for (s = buffer; s && s[0]; s = n)
+	{
+		// split path
+		n = strchr(s, '/');
+		if (n) *n = 0;
+		// find this item
+		bool found = false;
+		TreeViewItem* curr;
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			curr = Items[i];
+			if (!strcmp(*curr->Label, buffer))
+			{
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+		{
+			curr = new TreeViewItem;
+			curr->Label = buffer;		// names are "a", "a/b", "a/b/c" etc
+			curr->Parent = parent;
+			Items.AddItem(curr);
+			CreateItem(*curr);
+		}
+		// return '/' back and skip it
+		if (n) *n++ = '/';
+		parent = curr;
+	}
+
+	return *this;
+}
+
+void UITreeView::RemoveAllItems()
+{
+	for (int i = 0; i < Items.Num(); i++)
+		delete Items[i];
+	Items.Empty();
+	if (Wnd) TreeView_DeleteAllItems(Wnd);
+	// add root item, at index 0
+	TreeViewItem* root = new TreeViewItem;
+	root->Label = "";
+	Items.AddItem(root);
+//!!	Value = -1;
+}
+
+UITreeView& UITreeView::SelectItem(const char* item)
+{
+	int index = -1;
+	for (int i = 0; i < Items.Num(); i++)
+	{
+		if (!stricmp(Items[i]->Label, item))
+		{
+			index = i;
+			break;
+		}
+	}
+//!!	SelectItem(index);
+	return *this;
+}
+
+void UITreeView::Create(UIBaseDialog* dialog)
+{
+	Parent->AddVerticalSpace();
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Parent->AddVerticalSpace();
+	Id = dialog->GenerateDialogId();
+
+	Wnd = Window(WC_TREEVIEW, "",
+		TVS_HASLINES | TVS_HASBUTTONS | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		WS_EX_CLIENTEDGE, dialog);
+	// add items
+	for (int i = 0; i < Items.Num(); i++)
+		CreateItem(*Items[i]);
+	// set selection
+//!!	SendMessage(Wnd, LB_SETCURSEL, Value, 0);
+	UpdateEnabled();
+}
+
+bool UITreeView::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == TVN_SELCHANGED)
+	{
+		LPNMTREEVIEW data = (LPNMTREEVIEW)lParam;
+		HTREEITEM hItem = data->itemNew.hItem;
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			TreeViewItem* item = Items[i];
+			if (item->hItem == hItem)
+			{
+				if (SelectedItem != item)
+				{
+					SelectedItem = item;
+					if (Callback)
+						Callback(this, *item->Label);
+				}
+				break;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+void UITreeView::CreateItem(TreeViewItem& item)
+{
+	assert(item.hItem == NULL);
+	if (!Wnd) return;
+
+	// note: due to AddItem() nature, all item parents are placed before the item itself
+
+	TVINSERTSTRUCT tvis;
+	memset(&tvis, 0, sizeof(tvis));
+
+	const char* text;
+	if (!item.Parent)
+	{
+		text = *RootLabel;
+	}
+	else
+	{
+		text = *item.Label;
+		const char* s = strrchr(*item.Label, '/');
+		if (s) text = s+1;
+	}
+
+	tvis.hParent = item.Parent ? item.Parent->hItem : NULL;
+	tvis.item.mask = TVIF_TEXT;
+	tvis.item.pszText = const_cast<char*>(text);
+
+	item.hItem = TreeView_InsertItem(Wnd, &tvis);
+	// expand root item
+	if (item.Parent)
+	{
+		const TreeViewItem* root = GetRoot();
+		if (item.Parent == root || item.Parent->Parent == root)
+			TreeView_Expand(Wnd, item.Parent->hItem, TVE_EXPAND);
+	}
+}
+
 
 /*-----------------------------------------------------------------------------
 	UIGroup
@@ -787,6 +961,11 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 			w = DecodeWidth(w) * parentWidth;
 	}
 
+	if (h < 0 && Height > 0)
+	{
+		h = DecodeWidth(h) * Height;
+	}
+
 	if (x == -1)
 	{
 		x = baseX;
@@ -798,8 +977,9 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	else
 		x = baseX + x;								// treat 'x' as relative value
 
-	if (x + w > baseX + parentWidth)				// truncate width if too large
-		w = baseX + parentWidth - x;
+//!! wrong condition: will work incorrect when group has a border: it's 'X + parentWidth' will be GROUP_INDENT pixels less
+//	if (x + w > X + parentWidth)					// truncate width if too large
+//		w = X + parentWidth - x;
 
 	if (y < 0)
 	{
@@ -1167,7 +1347,7 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 	if (!hInstance)
 	{
 		hInstance = GetModuleHandle(NULL);
-//		InitCommonControls();
+		InitCommonControls();
 	}
 
 	// convert title to unicode
@@ -1303,6 +1483,13 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			CloseDialog(id != IDOK);
 			return TRUE;
 		}
+	}
+
+	// handle WM_NOTIFY in a similar way
+	if (msg == WM_NOTIFY)
+	{
+		id  = LOWORD(wParam);
+		cmd = ((LPNMHDR)lParam)->code;
 	}
 
 	if (cmd == -1)

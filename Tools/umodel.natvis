@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+  <!-- Copy this into c:\Users\<Your user folder>\My Documents\Visual Studio 2012\Visualizers -->
+
+  <!-- FString visualizer -->
+  <Type Name="FString">
+    <DisplayString Condition="DataCount == 0">Empty</DisplayString>
+    <DisplayString Condition="DataCount &lt; 0">Invalid</DisplayString>
+    <DisplayString Condition="MaxCount &lt; DataCount">Invalid</DisplayString>
+    <DisplayString Condition="MaxCount &gt;= DataCount">{DataPtr,s}</DisplayString>
+    <StringView Condition="MaxCount &gt;= DataCount">DataPtr,s</StringView>
+  </Type>
+
+  <!-- TArray<*> visualizer -->
+  <Type Name="TArray&lt;*&gt;">
+    <DisplayString Condition="DataCount == 0">Empty</DisplayString>
+    <DisplayString Condition="DataCount &lt; 0">Invalid</DisplayString>
+    <DisplayString Condition="MaxCount &lt; DataCount">Invalid</DisplayString>
+    <DisplayString Condition="MaxCount &gt;= DataCount">Num={DataCount}</DisplayString>
+    <Expand>
+      <ArrayItems Condition="DataCount &lt;= MaxCount">
+        <Size>DataCount</Size>
+        <ValuePointer>($T1*)DataPtr</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>

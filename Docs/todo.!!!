@@ -33,23 +33,6 @@ if code != 0)
 FArchive:
 ? ArVer, ArLicenseeVer -> Ver(), LicenseeVer() + hide these fields
 
-GUI-relative:
-- Settings.ini (umodel.cfg, different name ?)
-  - background (gradient) color
-  - disable GL2
-  - disable bloom (if one)
-  - disable notify.log
-  ? disable log at all
-  - extra (default) command line switches
-  - disable viewing of axis in 3D
-  - default lighting mode
-  - initial window size
-  - custom package extensions
-  ? custom directories to export data (now: ${Package}/${Class}/${Object}, before: ${Package}/${Object} etc)
-    (already has -uncook and -groups -- is anything else needed?)
-* key to toggle debug text and 3D lines (good for screenshots)
-? use WPF for UI
-
 - use lzop to compress shader texts (call from make.pl)
 
 FONTGEN

@@ -1,6 +1,9 @@
 #include "BaseDialog.h"
 #include "PackageDialog.h"
 
+/*!! TODO, remaining:
+- doubleclick in listbox -> open
+*/
 
 #if HAS_UI
 
@@ -10,7 +13,18 @@ bool UIPackageDialog::Show()
 {
 	if (!ShowDialog("Choose a package to open", 400, 200))
 		return false;
-	SelectedPackage = PackageListbox->GetSelectionText();
+	const char* pkgInDir = PackageListbox->GetSelectionText();
+	const char* dir = *SelectedDir;
+	if (dir[0])
+	{
+		char buffer[512];
+		appSprintf(ARRAY_ARG(buffer), "%s/%s", dir, pkgInDir);
+		SelectedPackage = buffer;
+	}
+	else
+	{
+		SelectedPackage = pkgInDir;
+	}
 	return true;
 }
 
@@ -24,17 +38,42 @@ static bool PackageListEnum(const CGameFileInfo *file)
 
 void UIPackageDialog::InitUI()
 {
-	PackageListbox = new UIListbox();
-	PackageListbox->SetHeight(500);
-	Add(PackageListbox);
+	UITreeView* tree;
+	(*this)
+	[
+		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+		.SetHeight(500)
+		[
+			NewControl(UITreeView)
+			.SetRootLabel("Game root")
+			.SetWidth(EncodeWidth(0.3f))
+			.SetHeight(-1)
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnTreeItemSelected, this))
+			.Expose(tree)
+			+ NewControl(UISpacer)
+			+ NewControl(UIListbox)
+			.SetHeight(-1)
+			.Expose(PackageListbox)
+		]
+	];
 
 	//!! make static for accessing it later
-	TArray<const CGameFileInfo*> packageList;
-	pPackageList = &packageList;
+	pPackageList = &Packages;
 	appEnumGameFiles(PackageListEnum);
 
-	for (int i = 0; i < packageList.Num(); i++)
-		PackageListbox->AddItem(packageList[i]->RelativeName);
+	// add paths of all found packages
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		char buffer[512];
+		appStrncpyz(buffer, Packages[i]->RelativeName, ARRAY_COUNT(buffer));
+		char* s = strrchr(buffer, '/');
+		if (s)
+		{
+			*s = 0;
+			tree->AddItem(buffer);
+		}
+//!!		PackageListbox->AddItem(packageList[i]->RelativeName);
+	}
 
 	// dialog buttons
 	NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
@@ -49,6 +88,26 @@ void UIPackageDialog::InitUI()
 		.SetWidth(EncodeWidth(0.2f))
 		.SetCancel()
 	];
+}
+
+void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
+{
+	PackageListbox->RemoveAllItems();
+	SelectedDir = text;
+
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		char buffer[512];
+		appStrncpyz(buffer, Packages[i]->RelativeName, ARRAY_COUNT(buffer));
+		char* s = strrchr(buffer, '/');
+		if (s) *s++ = 0;
+		if ((!s && !text[0]) ||					// root directory
+			(s && !strcmp(buffer, text)))		// other directory
+		{
+			// this package is in selected directory
+			PackageListbox->AddItem(s ? s : buffer);
+		}
+	}
 }
 
 

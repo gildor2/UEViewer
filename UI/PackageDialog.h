@@ -11,6 +11,14 @@ public:
 
 	UIListbox*		PackageListbox;
 	static FString	SelectedPackage;
+
+protected:
+	void OnTreeItemSelected(UITreeView* sender, const char* text);
+
+	FString			SelectedDir;
+
+	typedef TArray<const CGameFileInfo*> PackageList;
+	PackageList		Packages;
 };
 
 #endif // HAS_UI

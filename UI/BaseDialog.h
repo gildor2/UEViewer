@@ -143,9 +143,10 @@ public:												\
 	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
 private:
 
-// Use this macro to declare callback type, variable and SetCallback function. It will
-// automatically add 'ThisClass' pointer as a first parameter for callback function.
-// Note: SetCallback name depends on VarName
+// Use this macro to declare a callback type, its variable and SetCallback function.
+// Notes:
+// - It will automatically add 'ThisClass' pointer as a first parameter of callback function
+// - SetCallback function name depends on VarName
 #define DECLARE_CALLBACK(VarName, ...)				\
 public:												\
 	typedef util::Callback<void (ThisClass*, __VA_ARGS__)> VarName##_t; \
@@ -386,6 +387,39 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+};
+
+
+struct TreeViewItem;
+
+class UITreeView : public UIElement
+{
+	DECLARE_UI_CLASS(UITreeView, UIElement);
+	DECLARE_CALLBACK(Callback, const char*);
+public:
+	UITreeView();
+
+	FORCEINLINE UITreeView& SetRootLabel(const char* root)
+	{
+		RootLabel = root;
+		return *this;
+	}
+
+	UITreeView& AddItem(const char* item);
+	void RemoveAllItems();
+
+	UITreeView& SelectItem(const char* item);
+
+protected:
+	TArray<TreeViewItem*> Items;
+	FString		RootLabel;
+	TreeViewItem* SelectedItem;
+
+	FORCEINLINE TreeViewItem* GetRoot() { return Items[0]; }
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	void CreateItem(TreeViewItem& item);
 };
 
 
