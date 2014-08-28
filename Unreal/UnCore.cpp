@@ -239,6 +239,18 @@ static bool RegisterGameFile(const char *FullName)
 	GameFiles[NumGameFiles++] = info;
 	info->IsPackage = IsPackage;
 
+	FILE* f = fopen(FullName, "rb");
+	if (f)
+	{
+		fseek(f, 0, SEEK_END);
+		info->SizeInKb = (ftell(f) + 512) / 1024;
+		fclose(f);
+	}
+	else
+	{
+		info->SizeInKb = 0;
+	}
+
 	// cut RootDirectory from filename
 	const char *s = FullName + strlen(RootDirectory) + 1;
 	assert(s[-1] == '/');
@@ -609,7 +621,7 @@ void FArray::Insert(int index, int count, int elementSize)
 	{
 		// not enough space, resize ...
 		int prevCount = MaxCount;
-		MaxCount = ((DataCount + count + 7) / 8) * 8 + 8;
+		MaxCount = ((DataCount + count + 15) / 16) * 16 + 16;
 #if PROFILE
 		GNumAllocs++;
 #endif

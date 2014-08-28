@@ -20,6 +20,8 @@
   creating dialogs as child windows
 - http://msdn.microsoft.com/en-us/library/windows/desktop/bb773175(v=vs.85).aspx
   Enabling Visual Styles
+- "Explorer" visual style for TreeView and ListView
+  http://msdn.microsoft.com/ru-ru/library/windows/desktop/bb759827(v=vs.85).aspx
 */
 
 
@@ -86,11 +88,12 @@ const char* UIElement::ClassName() const
 	return "UIElement";
 }
 
-void UIElement::Enable(bool enable)
+UIElement& UIElement::Enable(bool enable)
 {
-	if (Enabled == enable) return;
+	if (Enabled == enable) return *this;
 	Enabled = enable;
 	UpdateEnabled();
+	return *this;
 }
 
 void UIElement::UpdateEnabled()
@@ -646,6 +649,197 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 	return false;
 }
 
+
+/*-----------------------------------------------------------------------------
+	UIMulticolumnListbox
+-----------------------------------------------------------------------------*/
+
+UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
+:	NumColumns(numColumns)
+,	Value(-1)
+{
+	Height = DEFAULT_LISTBOX_HEIGHT;
+	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
+	Items.Add(numColumns);		// reserve place for header
+}
+
+UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int width)
+{
+	// find first empty column
+	for (int i = 0; i < NumColumns; i++)
+	{
+		if (Items[i].IsEmpty())
+		{
+			Items[i] = title;
+			ColumnSizes[i] = width;
+			return *this;
+		}
+	}
+	appError("UIMulticolumnListbox: too much columns");
+	return *this;
+}
+
+int UIMulticolumnListbox::AddItem(const char* item)
+{
+	guard(UIMulticolumnListbox::AddItem);
+
+	assert(Items.Num() % NumColumns == 0);
+	int numItems = Items.Num() / NumColumns - 1;
+	int index = Items.Add(NumColumns);
+	Items[index] = item;
+
+	if (Wnd)
+	{
+		LVITEM lvi;
+		lvi.mask = LVIF_TEXT;
+		lvi.pszText = LPSTR_TEXTCALLBACK;
+		lvi.iSubItem = 0;
+		lvi.iItem = numItems;
+		ListView_InsertItem(Wnd, &lvi);
+	}
+
+	return numItems;
+
+	unguard;
+}
+
+void UIMulticolumnListbox::AddSubItem(int itemIndex, int column, const char* text)
+{
+	guard(UIMulticolumnListbox::AddSubItem);
+
+	assert(column >= 1 && column < NumColumns);
+	int index = (itemIndex + 1) * NumColumns + column;
+	Items[index] = text;
+	// note: not calling Win32 API here - Windows will request text with LVN_GETDISPINFO anyway
+
+	unguard;
+}
+
+const char* UIMulticolumnListbox::GetSumItem(int itemIndex, int column) const
+{
+	guard(UIMulticolumnListbox::AddSubItem);
+
+	assert(column >= 0 && column < NumColumns);
+	int index = (itemIndex + 1) * NumColumns + column;
+	return Items[index];
+
+	unguard;
+}
+
+void UIMulticolumnListbox::RemoveAllItems()
+{
+	int numStrings = Items.Num();
+	if (numStrings > NumColumns)
+		Items.Remove(NumColumns, numStrings - NumColumns);
+	if (Value != -1)
+	{
+		Value = -1;
+		if (Callback)
+			Callback(this, Value);
+	}
+	if (Wnd) ListView_DeleteAllItems(Wnd);
+}
+
+void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
+{
+	int i;
+
+	Parent->AddVerticalSpace();
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Parent->AddVerticalSpace();
+	Id = dialog->GenerateDialogId();
+
+	Wnd = Window(WC_LISTVIEW, "",
+		LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		WS_EX_CLIENTEDGE, dialog);
+	ListView_SetExtendedListViewStyle(Wnd, LVS_EX_FLATSB | LVS_EX_LABELTIP);
+
+	// compute automatic column width
+	int clientWidth = Width - GetSystemMetrics(SM_CXVSCROLL) - 6; // exclude scrollbar and border areas
+	int totalWidth = 0;
+	int numAutoWidthColumns = 0;
+	int autoColumnWidth = 0;
+	for (i = 0; i < NumColumns; i++)
+	{
+		int w = ColumnSizes[i];
+		if (w == -1)
+			numAutoWidthColumns++;
+		else if (w < 0)
+			w = DecodeWidth(w) * clientWidth;
+		totalWidth += w;
+	}
+	assert(totalWidth <= Width);
+	if (numAutoWidthColumns)
+		autoColumnWidth = (clientWidth - totalWidth) / numAutoWidthColumns;
+
+	// create columns
+	LVCOLUMN column;
+	column.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+	for (i = 0; i < NumColumns; i++)
+	{
+		column.iSubItem = i;
+		column.pszText = const_cast<char*>(*Items[i]);
+		int w = ColumnSizes[i];
+		if (w == -1)
+			column.cx = autoColumnWidth;
+		else if (w < 0)
+			column.cx = DecodeWidth(w) * clientWidth;
+		else
+			column.cx = w;
+		column.fmt = LVCFMT_LEFT;
+		ListView_InsertColumn(Wnd, i, &column);
+	}
+
+	// add items
+	int numItems = (Items.Num() / NumColumns) - 1;
+	LVITEM lvi;
+	lvi.mask = LVIF_TEXT;
+	lvi.pszText = LPSTR_TEXTCALLBACK;
+	lvi.iSubItem = 0;
+	for (i = 0; i < numItems; i++)
+	{
+		lvi.iItem = i;
+		ListView_InsertItem(Wnd, &lvi);
+	}
+
+	// set selection
+//!!	SendMessage(Wnd, LB_SETCURSEL, Value, 0);
+	UpdateEnabled();
+}
+
+bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == LVN_GETDISPINFO)
+	{
+		NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lParam;
+		plvdi->item.pszText = const_cast<char*>(*Items[(plvdi->item.iItem + 1) * NumColumns + plvdi->item.iSubItem]);
+		return true;
+	}
+
+	if (cmd == LVN_ITEMCHANGED)
+	{
+		NMLISTVIEW* nmlv = (NMLISTVIEW*)lParam;
+		if (nmlv->uChanged & LVIF_STATE)
+		{
+			if ((nmlv->uOldState ^ nmlv->uNewState) & LVIS_SELECTED)
+			{
+				int newValue = -1;
+				if (nmlv->uNewState & LVIS_SELECTED)
+					newValue = nmlv->iItem;
+				if (newValue != Value)
+				{
+					Value = newValue;
+					if (Callback)
+						Callback(this, Value);
+				}
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+
 /*-----------------------------------------------------------------------------
 	UITreeView
 -----------------------------------------------------------------------------*/
@@ -748,7 +942,7 @@ void UITreeView::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	Wnd = Window(WC_TREEVIEW, "",
-		TVS_HASLINES | TVS_HASBUTTONS | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
 		WS_EX_CLIENTEDGE, dialog);
 	// add items
 	for (int i = 0; i < Items.Num(); i++)

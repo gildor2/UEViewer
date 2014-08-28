@@ -88,6 +88,7 @@ struct CGameFileInfo
 	const char *ShortFilename;			// without path
 	const char *Extension;				// points to extension part (after '.')
 	bool		IsPackage;
+	int			SizeInKb;				// file size, in kilobytes
 };
 
 // Ext = NULL -> use any package extension

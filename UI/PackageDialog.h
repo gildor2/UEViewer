@@ -9,12 +9,14 @@ public:
 	bool Show();
 	virtual void InitUI();
 
-	UIListbox*		PackageListbox;
 	static FString	SelectedPackage;
 
 protected:
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
+	void OnPackageSelected(UIMulticolumnListbox* sender, int value);
 
+	UIMulticolumnListbox* PackageListbox;
+	UIButton*		OkButton;
 	FString			SelectedDir;
 
 	typedef TArray<const CGameFileInfo*> PackageList;

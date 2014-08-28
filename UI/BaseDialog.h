@@ -1,6 +1,13 @@
 #ifndef __BASE_DIALOG_H__
 #define __BASE_DIALOG_H__
 
+/*!! TODO:
+- TArray<FString>
+  - make StringArray class - TArray<const char*>
+    - will need a destructor
+  - possible improvements:
+    - add Reserve() for StringArray
+*/
 
 #include "Core.h"
 
@@ -35,7 +42,7 @@ public:
 
 	virtual const char* ClassName() const;
 
-	void Enable(bool enable);
+	UIElement& Enable(bool enable);
 	FORCEINLINE bool IsEnabled() const   { return Enabled; }
 
 	UIElement& SetParent(UIGroup* group);
@@ -138,6 +145,7 @@ public:												\
 	FORCEINLINE ThisClass& SetY(int y)               { Y = y; return *this; } \
 	FORCEINLINE ThisClass& SetWidth(int width)       { Width = width; return *this; } \
 	FORCEINLINE ThisClass& SetHeight(int height)     { Height = height; return *this; } \
+	FORCEINLINE ThisClass& Enable(bool enable)       { return (ThisClass&) Super::Enable(enable); } \
 	FORCEINLINE ThisClass& Expose(ThisClass*& var)   { var = this; return *this; } \
 	FORCEINLINE ThisClass& SetParent(UIGroup* group) { return (ThisClass&) Super::SetParent(group); } \
 	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
@@ -383,6 +391,47 @@ public:
 
 protected:
 	TArray<FString> Items;
+	int			Value;
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+};
+
+
+class UIMulticolumnListbox : public UIElement
+{
+	DECLARE_UI_CLASS(UIMulticolumnListbox, UIElement);
+	DECLARE_CALLBACK(Callback, int);
+public:
+	static const int MAX_COLUMNS = 16;
+
+	UIMulticolumnListbox(int numColumns);
+
+	UIMulticolumnListbox& AddColumn(const char* title, int width = -1);
+
+	int AddItem(const char* item);
+	void AddSubItem(int itemIndex, int column, const char* text);
+	void RemoveAllItems();
+
+//!!	UIMulticolumnListbox& SelectItem(int index);
+//!!	UIMulticolumnListbox& SelectItem(const char* item);
+
+	FORCEINLINE const char* GetItem(int itemIndex) const { return GetSumItem(itemIndex, 0); }
+	const char* GetSumItem(int itemIndex, int column) const;
+
+	FORCEINLINE int GetSelectionIndex() const
+	{
+		return Value;
+	}
+/*!!	FORCEINLINE const char* GetSelectionText() const
+	{
+		return (Value >= 0) ? *Items[Value] : NULL;
+	} */
+
+protected:
+	int			NumColumns;
+	TArray<FString> Items;		// first NumColumns items - column headers, next NumColumns - 1st line, 2nd line, ...
+	int			ColumnSizes[MAX_COLUMNS];
 	int			Value;
 
 	virtual void Create(UIBaseDialog* dialog);

@@ -2,6 +2,7 @@
 #include "PackageDialog.h"
 
 /*!! TODO, remaining:
+! bug: -path=data => in directory tree will be selected a wrong item
 - doubleclick in listbox -> open
 */
 
@@ -13,7 +14,10 @@ bool UIPackageDialog::Show()
 {
 	if (!ShowDialog("Choose a package to open", 400, 200))
 		return false;
-	const char* pkgInDir = PackageListbox->GetSelectionText();
+	int selectedPackageIndex = PackageListbox->GetSelectionIndex();
+	assert(selectedPackageIndex >= 0);
+
+	const char* pkgInDir = PackageListbox->GetItem(selectedPackageIndex);
 	const char* dir = *SelectedDir;
 	if (dir[0])
 	{
@@ -51,9 +55,12 @@ void UIPackageDialog::InitUI()
 			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnTreeItemSelected, this))
 			.Expose(tree)
 			+ NewControl(UISpacer)
-			+ NewControl(UIListbox)
+			+ NewControl(UIMulticolumnListbox, 2)
 			.SetHeight(-1)
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
 			.Expose(PackageListbox)
+			.AddColumn("Package name", EncodeWidth(0.7f))
+			.AddColumn("Size, Kb")
 		]
 	];
 
@@ -72,7 +79,6 @@ void UIPackageDialog::InitUI()
 			*s = 0;
 			tree->AddItem(buffer);
 		}
-//!!		PackageListbox->AddItem(packageList[i]->RelativeName);
 	}
 
 	// dialog buttons
@@ -82,6 +88,8 @@ void UIPackageDialog::InitUI()
 		NewControl(UISpacer, -1)
 		+ NewControl(UIButton, "OK")
 		.SetWidth(EncodeWidth(0.2f))
+		.Enable(false)
+		.Expose(OkButton)
 		.SetOK()
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Cancel")
@@ -97,17 +105,31 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 
 	for (int i = 0; i < Packages.Num(); i++)
 	{
+		const CGameFileInfo* package = Packages[i];
 		char buffer[512];
-		appStrncpyz(buffer, Packages[i]->RelativeName, ARRAY_COUNT(buffer));
+		appStrncpyz(buffer, package->RelativeName, ARRAY_COUNT(buffer));
 		char* s = strrchr(buffer, '/');
 		if (s) *s++ = 0;
 		if ((!s && !text[0]) ||					// root directory
 			(s && !strcmp(buffer, text)))		// other directory
 		{
 			// this package is in selected directory
-			PackageListbox->AddItem(s ? s : buffer);
+			int index = PackageListbox->AddItem(s ? s : buffer);
+			char buf[32];
+			appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
+			PackageListbox->AddSubItem(index, 1, buf);
 		}
 	}
+}
+
+void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender, int value)
+{
+	if (value == -1)
+	{
+		OkButton->Enable(false);
+		return;
+	}
+	OkButton->Enable(true);
 }
 
 
