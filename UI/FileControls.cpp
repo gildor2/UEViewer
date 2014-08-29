@@ -54,7 +54,6 @@ void UIFilePathEditor::AddCustomControls()
 	[
 		NewControl(UITextEdit, Path)
 		.Expose(Editor)
-		.SetY(2)
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Browse ...")
 		.SetWidth(BROWSE_BUTTON_WIDTH)
