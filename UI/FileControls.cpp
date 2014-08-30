@@ -38,7 +38,12 @@ static void InitializeOLE()
 UIFilePathEditor::UIFilePathEditor(FString* path)
 :	UIGroup(GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 ,	Path(path)
-{}
+{
+#if _WIN32
+	for (int i = 0; i < Path->Num(); i++)
+		if ((*Path)[i] == '/') (*Path)[i] = '\\';
+#endif
+}
 
 void UIFilePathEditor::Create(UIBaseDialog* dialog)
 {
@@ -63,15 +68,25 @@ void UIFilePathEditor::AddCustomControls()
 
 static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
-	// If the BFFM_INITIALIZED message is received
-	// set the path to the start path.
+	static LPARAM stored_lpData;
+
 	switch (uMsg)
 	{
-		case BFFM_INITIALIZED:
+	case BFFM_INITIALIZED:
+		if (lpData)
+			SendMessage(hwnd, BFFM_SETSELECTION, TRUE, lpData);
+		stored_lpData = lpData;
+		break;
+	case BFFM_SELCHANGED:
+		if (stored_lpData)
 		{
-			if (lpData)
-				SendMessage(hwnd, BFFM_SETSELECTION, TRUE, lpData);
+			// http://social.msdn.microsoft.com/Forums/vstudio/en-US/a22b664e-cb30-44f4-bf77-b7a385de49f3/shbrowseforfolder-bug-in-windows-7?forum=vcgeneral
+			// send BFFM_SETSELECTION after popping up the dialog again - this will fix
+			// out-of-view selection on Windows 7
+			SendMessage(hwnd, BFFM_SETSELECTION, TRUE, stored_lpData);
+			stored_lpData = NULL;
 		}
+		break;
 	}
 
 	return 0; // The function should always return 0.
@@ -88,7 +103,7 @@ void UIFilePathEditor::OnBrowseClicked(UIButton* sender)
 	bi.hwndOwner      = DlgWnd;
 	bi.pidlRoot       = NULL;
 	bi.pszDisplayName = szDisplayName;
-	bi.lpszTitle      = "Select a directory:";	//!! customize
+	bi.lpszTitle      = "Please select a directory:";	//!! customize
 	bi.ulFlags        = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 	bi.lParam         = (LPARAM)Editor->GetText();
 	bi.iImage         = 0;

@@ -49,7 +49,7 @@ void UIStartupDialog::InitUI()
 		//!! set "engine" part of "game override", if it is not set yet
 	];
 
-	NewControl(UICheckboxGroup, "Override game detection", false)
+	NewControl(UICheckboxGroup, "Override game detection", Opt.GameOverride != GAME_UNKNOWN)
 	.SetParent(this)
 	.Expose(OverrideGameGroup)
 	[
@@ -68,10 +68,12 @@ void UIStartupDialog::InitUI()
 	// fill engines list
 	int i;
 	const char* lastEngine = NULL;
+	const GameInfo* selectedGame = NULL;
 	for (i = 0; /* empty */; i++)
 	{
 		const GameInfo &info = GListOfGames[i];
 		if (!info.Name) break;
+		if (info.Enum == Opt.GameOverride) selectedGame = &info;
 		const char* engine = GetEngineName(info.Enum);
 		if (engine != lastEngine)
 		{
@@ -79,6 +81,15 @@ void UIStartupDialog::InitUI()
 			OverrideEngineCombo->AddItem(engine);
 		}
 	}
+
+	// select a game passed through the command line
+	if (selectedGame)
+	{
+		OverrideEngineCombo->SelectItem(GetEngineName(selectedGame->Enum));
+		FillGameList();
+		OverrideGameCombo->SelectItem(selectedGame->Name);
+	}
+
 #if 0
 	OverrideEngineCombo->SelectItem("Unreal engine 3"); // this engine has most number of game titles
 	FillGameList();
