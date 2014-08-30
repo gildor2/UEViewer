@@ -498,6 +498,14 @@ static void LoadWholePackage(UnPackage* Package)
 	unguardf("%s", Package->Name);
 }
 
+static void ReleaseAllObjects()
+{
+	for (int i = 0; i < UObject::GObjObjects.Num(); i++)
+		delete UObject::GObjObjects[i];
+	UObject::GObjObjects.Empty();
+}
+
+
 /*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
@@ -1144,8 +1152,11 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		return;
 	}
 
+	bool forceVisualizer = false;
+
 	if (key == SPEC_KEY(PAGEDOWN) || key == SPEC_KEY(PAGEUP))
 	{
+	change_object:
 		// browse loaded objects
 		int looped = 0;
 		UObject *Obj;
@@ -1170,7 +1181,11 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 				}
 			}
 			if (looped > 1)
+			{
+				if (forceVisualizer)
+					CreateVisualizer(UObject::GObjObjects[0]);
 				return;		// prevent infinite loop
+			}
 			Obj = UObject::GObjObjects[ObjIndex];
 			if (ObjectSupported(Obj))
 				break;
@@ -1195,7 +1210,23 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		if (!packageDialog.Show())
 			return;
 		const char* pkgName = *packageDialog.SelectedPackage;
-		appPrintf("load: %s\n", pkgName);
+		//!! don't release when package is not changed
+		UnPackage* package = UnPackage::LoadPackage(pkgName);
+		if (package)
+		{
+			if (Viewer)
+			{
+				CSkelMeshViewer::UntagAllMeshes();
+				delete Viewer;
+				Viewer = NULL;
+			}
+			ReleaseAllObjects();
+			LoadWholePackage(package);
+			ObjIndex = -1;
+			key = SPEC_KEY(PAGEDOWN);
+			forceVisualizer = true;
+			goto change_object;
+		}
 		return;
 	}
 #endif // HAS_UI

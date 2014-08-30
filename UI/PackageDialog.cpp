@@ -86,7 +86,7 @@ void UIPackageDialog::InitUI()
 	NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 	.SetParent(this)
 	[
-		NewControl(UISpacer, -1)
+		NewControl(UILabel, "Hint: you may open this dialog at any time by pressing Ctrl+O")
 		+ NewControl(UIButton, "OK")
 		.SetWidth(EncodeWidth(0.2f))
 		.Enable(false)

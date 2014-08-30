@@ -1,3 +1,6 @@
+BUG: when multiple meshes tagged, switching between them (highlighting different
+  "red" lines) will zoom viewport a bit - different scene bounding boxes for the same scene?
+
 Update nvtt:
 * use svn, packaged version is from 2010
 - has DirectDrawSurface::load(Stream * stream)

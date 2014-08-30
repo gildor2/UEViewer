@@ -237,6 +237,12 @@ void CSkelMeshViewer::TagMesh(CSkelMeshInstance *NewInst)
 }
 
 
+void CSkelMeshViewer::UntagAllMeshes()
+{
+	Meshes.Empty();
+}
+
+
 void CSkelMeshViewer::Draw2D()
 {
 	CMeshViewer::Draw2D();

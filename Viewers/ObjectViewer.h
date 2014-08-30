@@ -139,6 +139,7 @@ public:
 	CSkelMeshViewer(CSkeletalMesh *Mesh);
 
 	static void TagMesh(CSkelMeshInstance *NewInst);
+	static void UntagAllMeshes();
 
 	virtual void ShowHelp();
 	virtual void Dump();
