@@ -42,6 +42,8 @@
 #define DO_GUARD				1
 #undef  DO_GUARD_MAX
 #define DO_GUARD_MAX			1
+#undef  DEBUG_MEMORY
+#define DEBUG_MEMORY			1
 #undef  VSTUDIO_INTEGRATION
 #define VSTUDIO_INTEGRATION		1
 #endif

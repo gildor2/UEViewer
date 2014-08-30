@@ -180,6 +180,7 @@ int GNumAllocs = 0;
 #endif
 
 #define BLOCK_MAGIC		0xAE
+#define FREE_BLOCK		0xFE
 
 struct CBlockHeader
 {
@@ -236,6 +237,9 @@ void* appRealloc(void *ptr, int newSize)
 
 	memcpy(newData, ptr, min(newSize, oldSize));
 
+#if DEBUG_MEMORY
+	memset(ptr, FREE_BLOCK, oldSize);
+#endif
 	free(block);
 
 	return newData;
@@ -255,6 +259,9 @@ void appFree(void *ptr)
 	assert(hdr->magic == BLOCK_MAGIC);
 	hdr->magic--;		// modify to any value
 
+#if DEBUG_MEMORY
+	memset(ptr, FREE_BLOCK, hdr->blockSize);
+#endif
 	free(block);
 	unguard;
 }
