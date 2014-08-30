@@ -19,6 +19,7 @@
 
 // Maximal crash analysis when VSTUDIO_INTEGRATION is set
 #if VSTUDIO_INTEGRATION
+#include <signal.h>
 #undef  USE_DBGHELP
 #undef  GET_EXTENDED_INFO
 #undef  UNWIND_EBP_FRAMES
@@ -381,5 +382,24 @@ __declspec(naked) unsigned win32ExceptFilter2()
 
 
 #endif // WIN32_USE_SEH
+
+#if VSTUDIO_INTEGRATION
+
+static void AbortHandler(int signal)
+{
+	appPrintf("abort() called");
+	DebugBreak();
+}
+#endif
+
+void appInitPlatform()
+{
+#if VSTUDIO_INTEGRATION
+	// Win32 UI code doesn't allow us to use SEH, and any assert() will call abort() from CxxThrowException().
+	// To catch such exceptions, hook abort() function.
+	signal(SIGABRT, AbortHandler);
+#endif
+}
+
 
 #endif // _WIN32

@@ -383,6 +383,19 @@ extern int GNumAllocs;
 #endif
 
 
+#if _WIN32
+
+void appInitPlatform();
+
+#else
+
+inline appInitPlatform()
+{
+}
+
+#endif
+
+
 #include "Math3D.h"
 
 

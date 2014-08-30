@@ -9,7 +9,7 @@ public:
 	bool Show();
 	virtual void InitUI();
 
-	static FString	SelectedPackage;
+	FString			SelectedPackage;
 
 protected:
 	void OnTreeItemSelected(UITreeView* sender, const char* text);

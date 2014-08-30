@@ -4,8 +4,8 @@
 #include "UnPackage.h"
 
 
-//#define DEBUG_PROPS			1
-//#define PROFILE_LOADING		1
+//#define DEBUG_PROPS				1
+//#define PROFILE_LOADING			1
 //#define DEBUG_TYPES				1
 
 #define DUMP_SHOW_PROP_INDEX	0
@@ -102,10 +102,8 @@ void UObject::EndLoad()
 		return;
 	}
 
-//#if PROFILE_LOADING
-//	appPrintProfiler();
-//#endif
 	guard(UObject::EndLoad);
+
 	// process GObjLoaded array
 	// NOTE: while loading one array element, array may grow!
 	TArray<UObject*> LoadedObjects;
@@ -118,6 +116,8 @@ void UObject::EndLoad()
 		guard(LoadObject);
 		Package->SetupReader(Obj->PackageIndex);
 		appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
+		// setup NotifyInfo to describe object
+		appSetNotifyHeader("Loading object %s'%s.%s'", Obj->GetClassName(), Package->Name, Obj->Name);
 #if PROFILE_LOADING
 		appResetProfiler();
 #endif
@@ -145,7 +145,9 @@ void UObject::EndLoad()
 	// cleanup
 	GObjLoaded.Empty();
 	GObjBeginLoadCount--;		// decrement after loading
+	appSetNotifyHeader(NULL);
 	assert(GObjBeginLoadCount == 0);
+
 	unguard;
 }
 

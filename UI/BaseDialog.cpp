@@ -1052,6 +1052,7 @@ void UIGroup::ReleaseControls()
 		next = curr->NextChild;
 		delete curr;
 	}
+	FirstChild = NULL;
 
 	unguard;
 }
@@ -1596,6 +1597,12 @@ void UIBaseDialog::CloseDialog(bool cancel)
 
 INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+#if DO_GUARD
+	// windows will not allow us to pass SEH through the message handler, so
+	// add a SEH guards here
+	TRY {
+#endif
+
 	UIBaseDialog* dlg;
 
 	if (msg == WM_INITDIALOG)
@@ -1609,7 +1616,24 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 		// retrieve pointer to UIBaseDialog
 		dlg = (UIBaseDialog*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	}
+
 	return dlg->WndProc(hWnd, msg, wParam, lParam);
+
+#if DO_GUARD
+	} CATCH_CRASH {
+		if (GErrorHistory[0])
+		{
+//			appPrintf("ERROR: %s\n", GErrorHistory);
+			appNotify("ERROR in WindowProc: %s\n", GErrorHistory);
+		}
+		else
+		{
+//			appPrintf("Unknown error\n");
+			appNotify("Unknown error\n");
+		}
+		exit(1);
+	}
+#endif
 }
 
 INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1635,6 +1659,8 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		Width = clientWidth - DEFAULT_HORZ_BORDER * 2;
 		Height = 0;
 
+		// release old controls, if dialog is opened 2nd time
+		ReleaseControls();
 		// create controls
 		InitUI();
 		CreateGroupControls(this);

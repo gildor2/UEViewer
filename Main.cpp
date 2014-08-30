@@ -152,6 +152,46 @@ END_CLASS_TABLE
 #endif
 }
 
+static void RegisterClasses(const UmodelSettings& settings, int game)
+{
+	// prepare classes
+	// note: we are registering classes after loading package: in this case we can know engine version (1/2/3)
+	RegisterCommonUnrealClasses();
+	if (game < GAME_UE3)
+	{
+		RegisterUnrealClasses2();
+	}
+	else
+	{
+		RegisterUnrealClasses3();
+		RegisterUnreal3rdPartyClasses();
+	}
+	if (settings.UseSound) RegisterUnrealSoundClasses();
+
+	// remove some class loaders when requisted by command line
+	if (!settings.UseAnimation)
+	{
+		UnregisterClass("MeshAnimation", true);
+		UnregisterClass("AnimSet",       true);
+		UnregisterClass("AnimSequence",  true);
+		UnregisterClass("AnimNotify",    true);
+	}
+	if (!settings.UseSkeletalMesh)
+	{
+		UnregisterClass("SkeletalMesh",       true);
+		UnregisterClass("SkeletalMeshSocket", true);
+	}
+	if (!settings.UseStaticMesh) UnregisterClass("StaticMesh", true);
+	if (!settings.UseTexture) UnregisterClass("UnrealMaterial", true);
+	if (!settings.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
+	if (!settings.UseScaleForm) UnregisterClass("SwfMovie", true);
+	if (!settings.UseFaceFx)
+	{
+		UnregisterClass("FaceFXAnimSet", true);
+		UnregisterClass("FaceFXAsset", true);
+	}
+}
+
 
 /*-----------------------------------------------------------------------------
 	Object list support
@@ -176,7 +216,6 @@ inline bool ObjectSupported(UObject *Obj)
 }
 
 #endif // RENDERING
-
 
 // index of the current object in UObject::GObjObjects array
 static int ObjIndex = 0;
@@ -256,6 +295,42 @@ static void ExportMd5Anim3(const UAnimSet *Anim)
 	ExportMd5Anim(Anim->ConvertedAnim);
 }
 #endif
+
+
+static void RegisterExporters(bool md5)
+{
+	if (!md5)
+	{
+		RegisterExporter("SkeletalMesh",  ExportPsk2   );
+		RegisterExporter("MeshAnimation", ExportMeshAnimation);
+#if UNREAL3
+		RegisterExporter("SkeletalMesh3", ExportPsk3   );
+		RegisterExporter("AnimSet",       ExportAnimSet);
+#endif
+	}
+	else
+	{
+		RegisterExporter("SkeletalMesh",  ExportMd5Mesh2);
+		RegisterExporter("MeshAnimation", ExportMd5Anim2);
+#if UNREAL3
+		RegisterExporter("SkeletalMesh3", ExportMd5Mesh3);
+		RegisterExporter("AnimSet",       ExportMd5Anim3);
+#endif
+	}
+	RegisterExporter("VertMesh",      Export3D         );
+	RegisterExporter("StaticMesh",    ExportStaticMesh2);
+	RegisterExporter("Texture",       ExportTexture    );
+	RegisterExporter("Sound",         ExportSound      );
+#if UNREAL3
+	RegisterExporter("StaticMesh3",   ExportStaticMesh3  );
+	RegisterExporter("Texture2D",     ExportTexture      );
+	RegisterExporter("SoundNodeWave", ExportSoundNodeWave);
+	RegisterExporter("SwfMovie",      ExportGfx          );
+	RegisterExporter("FaceFXAnimSet", ExportFaceFXAnimSet);
+	RegisterExporter("FaceFXAsset",   ExportFaceFXAsset  );
+#endif // UNREAL3
+	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters
+}
 
 
 /*-----------------------------------------------------------------------------
@@ -372,6 +447,58 @@ static void PrintVersionInfo()
 
 
 /*-----------------------------------------------------------------------------
+	Package helpers
+-----------------------------------------------------------------------------*/
+
+static void ExportObjects(const TArray<UnPackage*> &Packages, const TArray<UObject*> *Objects)
+{
+	guard(ExportObjects);
+
+	appPrintf("Exporting objects ...\n");
+	// export object(s), if possible
+	UnPackage* notifyPackage = NULL;
+	bool hasObjectList = (Objects != NULL) && Objects->Num();
+
+	for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
+	{
+		UObject* ExpObj = UObject::GObjObjects[idx];
+		bool objectSelected = !hasObjectList || (Objects->FindItem(ExpObj) >= 0);
+
+		if (!objectSelected) continue;
+
+		if (notifyPackage != ExpObj->Package)
+		{
+			notifyPackage = ExpObj->Package;
+			appSetNotifyHeader(notifyPackage->Filename);
+		}
+
+		bool done = ExportObject(ExpObj);
+
+		if (!done && hasObjectList)
+		{
+			// display warning message only when failed to export object, specified from command line
+			appPrintf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
+		}
+	}
+
+	unguard;
+}
+
+static void LoadWholePackage(UnPackage* Package)
+{
+	guard(LoadWholePackage);
+	UObject::BeginLoad();
+	for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
+	{
+		if (!IsKnownClass(Package->GetObjectName(Package->GetExport(idx).ClassIndex)))
+			continue;
+		Package->CreateExport(idx);
+	}
+	UObject::EndLoad();
+	unguardf("%s", Package->Name);
+}
+
+/*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
 
@@ -398,9 +525,14 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
 #define OPT_VALUE(name,var,value)		{ name, (byte*)&var, value },
 
+#if HAS_UI
+static UIPackageDialog packageDialog;
+#endif
 
 int main(int argc, char **argv)
 {
+	appInitPlatform();
+
 #if DO_GUARD
 	TRY {
 #endif
@@ -516,7 +648,7 @@ int main(int argc, char **argv)
 				appPrintf("ERROR: unknown game tag \"%s\". Use -taglist option to display available tags.\n", opt+5);
 				exit(0);
 			}
-			GForceGame = tag;
+			settings.GameOverride = tag;
 		}
 		else if (!strnicmp(opt, "pkg=", 4))
 		{
@@ -603,10 +735,9 @@ int main(int argc, char **argv)
 #else
 	if (!argPkgName)
 	{
-		UIPackageDialog dialog;
-		if (!dialog.Show())
+		if (!packageDialog.Show())
 			exit(0);
-		argPkgName = *UIPackageDialog::SelectedPackage;
+		argPkgName = *packageDialog.SelectedPackage;
 	}
 #endif // !HAS_UI
 
@@ -649,75 +780,9 @@ int main(int argc, char **argv)
 
 	// initialization
 
-	// register exporters
-	if (!md5)
-	{
-		RegisterExporter("SkeletalMesh",  ExportPsk2   );
-		RegisterExporter("MeshAnimation", ExportMeshAnimation);
-#if UNREAL3
-		RegisterExporter("SkeletalMesh3", ExportPsk3   );
-		RegisterExporter("AnimSet",       ExportAnimSet);
-#endif
-	}
-	else
-	{
-		RegisterExporter("SkeletalMesh",  ExportMd5Mesh2);
-		RegisterExporter("MeshAnimation", ExportMd5Anim2);
-#if UNREAL3
-		RegisterExporter("SkeletalMesh3", ExportMd5Mesh3);
-		RegisterExporter("AnimSet",       ExportMd5Anim3);
-#endif
-	}
-	RegisterExporter("VertMesh",      Export3D         );
-	RegisterExporter("StaticMesh",    ExportStaticMesh2);
-	RegisterExporter("Texture",       ExportTexture    );
-	RegisterExporter("Sound",         ExportSound      );
-#if UNREAL3
-	RegisterExporter("StaticMesh3",   ExportStaticMesh3  );
-	RegisterExporter("Texture2D",     ExportTexture      );
-	RegisterExporter("SoundNodeWave", ExportSoundNodeWave);
-	RegisterExporter("SwfMovie",      ExportGfx          );
-	RegisterExporter("FaceFXAnimSet", ExportFaceFXAnimSet);
-	RegisterExporter("FaceFXAsset",   ExportFaceFXAsset  );
-#endif // UNREAL3
-	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters
-
-	// prepare classes
-	// note: we are registering classes after loading package: in this case we can know engine version (1/2/3)
-	RegisterCommonUnrealClasses();
-	if (MainPackage->Game < GAME_UE3)
-	{
-		RegisterUnrealClasses2();
-	}
-	else
-	{
-		RegisterUnrealClasses3();
-		RegisterUnreal3rdPartyClasses();
-	}
-	if (settings.UseSound) RegisterUnrealSoundClasses();
-
-	// remove some class loaders when requisted by command line
-	if (!settings.UseAnimation)
-	{
-		UnregisterClass("MeshAnimation", true);
-		UnregisterClass("AnimSet",       true);
-		UnregisterClass("AnimSequence",  true);
-		UnregisterClass("AnimNotify",    true);
-	}
-	if (!settings.UseSkeletalMesh)
-	{
-		UnregisterClass("SkeletalMesh",       true);
-		UnregisterClass("SkeletalMeshSocket", true);
-	}
-	if (!settings.UseStaticMesh) UnregisterClass("StaticMesh", true);
-	if (!settings.UseTexture) UnregisterClass("UnrealMaterial", true);
-	if (!settings.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
-	if (!settings.UseScaleForm) UnregisterClass("SwfMovie", true);
-	if (!settings.UseFaceFx)
-	{
-		UnregisterClass("FaceFXAnimSet", true);
-		UnregisterClass("FaceFXAsset", true);
-	}
+	// register exporters and classes
+	RegisterExporters(md5);
+	RegisterClasses(settings, MainPackage->Game);
 
 	// end of initialization
 
@@ -761,7 +826,9 @@ int main(int argc, char **argv)
 	// get requested object info
 	if (objectsToLoad.Num())
 	{
+		// selectively load objects
 		int totalFound = 0;
+		UObject::BeginLoad();
 		for (int objIdx = 0; objIdx < objectsToLoad.Num(); objIdx++)
 		{
 			const char *objName   = objectsToLoad[objIdx];
@@ -769,7 +836,6 @@ int main(int argc, char **argv)
 			int found = 0;
 			for (int pkg = 0; pkg < Packages.Num(); pkg++)
 			{
-				UObject::BeginLoad();
 				UnPackage *Package2 = Packages[pkg];
 				// load specific object(s)
 				int idx = -1;
@@ -780,11 +846,9 @@ int main(int argc, char **argv)
 
 					found++;
 					totalFound++;
-					appPrintf("Export \"%s\" was found in package %s\n", objName, Package2->Name);
+					appPrintf("Export \"%s\" was found in package \"%s\"\n", objName, Package2->Filename);
 
 					const char *realClassName = Package2->GetObjectName(Package2->ExportTable[idx].ClassIndex);
-					// setup NotifyInfo to describe object
-					appSetNotifyHeader("%s:  %s'%s'", Package2->Name, realClassName, objName);
 					// create object from package
 					UObject *Obj = Package2->CreateExport(idx);
 					if (Obj)
@@ -794,7 +858,6 @@ int main(int argc, char **argv)
 							GForceAnimSet = Obj;
 					}
 				}
-				UObject::EndLoad();
 				if (found) break;
 			}
 			if (!found)
@@ -804,25 +867,13 @@ int main(int argc, char **argv)
 			}
 		}
 		appPrintf("Found %d object(s)\n", totalFound);
+		UObject::EndLoad();
 	}
 	else
 	{
 		// fully load all packages
 		for (int pkg = 0; pkg < Packages.Num(); pkg++)
-		{
-			UnPackage *Package2 = Packages[pkg];
-			guard(LoadWholePackage);
-			UObject::BeginLoad();
-			for (int idx = 0; idx < Package2->Summary.ExportCount; idx++)
-			{
-				if (!IsKnownClass(Package2->GetObjectName(Package2->GetExport(idx).ClassIndex)))
-					continue;
-				int TmpObjIdx = UObject::GObjObjects.Num();			// place where new object will be created
-				/*UObject *TmpObj =*/ Package2->CreateExport(idx);
-			}
-			UObject::EndLoad();
-			unguardf("%s", Package2->Name);
-		}
+			LoadWholePackage(Packages[pkg]);
 	}
 
 	if (!UObject::GObjObjects.Num())
@@ -837,32 +888,7 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_Export)
 	{
-		appPrintf("Exporting objects ...\n");
-		// export object(s), if possible
-		UnPackage* notifyPackage = NULL;
-
-		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
-		{
-			UObject* ExpObj = UObject::GObjObjects[idx];
-			if (!exprtAll)
-			{
-				if (Packages.FindItem(ExpObj->Package) < 0)					// refine object by package
-					continue;
-				if (objectsToLoad.Num() && (Objects.FindItem(ExpObj) < 0))	// refine object by name
-					continue;
-			}
-			if (notifyPackage != ExpObj->Package)
-			{
-				notifyPackage = ExpObj->Package;
-				appSetNotifyHeader(notifyPackage->Filename);
-			}
-			bool done = ExportObject(ExpObj);
-			if (!done && Objects.Num() && (Objects.FindItem(ExpObj) >= 0))
-			{
-				// display warning message only when failed to export object, specified from command line
-				appPrintf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
-			}
-		}
+		ExportObjects(Packages, exprtAll ? NULL : &Objects);
 		return 0;
 	}
 
@@ -1163,6 +1189,16 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		GDoScreenshot = 2;
 		return;
 	}
+#if HAS_UI
+	if (key == ('o'|KEY_CTRL))
+	{
+		if (!packageDialog.Show())
+			return;
+		const char* pkgName = *packageDialog.SelectedPackage;
+		appPrintf("load: %s\n", pkgName);
+		return;
+	}
+#endif // HAS_UI
 	Viewer->ProcessKey(key);
 
 	unguard;
@@ -1176,6 +1212,9 @@ void CUmodelApp::DrawTexts(bool helpVisible)
 	if (helpVisible)
 	{
 		DrawKeyHelp("PgUp/PgDn", "browse objects");
+#if HAS_UI
+		DrawKeyHelp("Ctrl+O",    "open package");
+#endif
 		DrawKeyHelp("Ctrl+S",    "take screenshot");
 		Viewer->ShowHelp();
 		DrawTextLeft("-----\n");		// divider

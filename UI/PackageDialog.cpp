@@ -8,8 +8,6 @@
 
 #if HAS_UI
 
-FString UIPackageDialog::SelectedPackage;
-
 bool UIPackageDialog::Show()
 {
 	if (!ShowDialog("Choose a package to open", 400, 200))
@@ -64,9 +62,12 @@ void UIPackageDialog::InitUI()
 		]
 	];
 
-	//!! make static for accessing it later
-	pPackageList = &Packages;
-	appEnumGameFiles(PackageListEnum);
+	if (!Packages.Num())
+	{
+		// not scanned yet
+		pPackageList = &Packages;
+		appEnumGameFiles(PackageListEnum);
+	}
 
 	// add paths of all found packages
 	for (int i = 0; i < Packages.Num(); i++)
