@@ -184,8 +184,8 @@ int GNumAllocs = 0;
 struct CBlockHeader
 {
 	byte			magic;
-	byte			offset:4;
-	byte			align :4;
+	byte			offset;
+	byte			align;
 	int				blockSize;
 };
 
@@ -195,7 +195,7 @@ void *appMalloc(int size, int alignment)
 	guard(appMalloc);
 	if (size < 0 || size >= (256<<20))		// upper limit to allocation is 256Mb
 		appError("Trying to allocate %d bytes", size);
-	assert(alignment > 1 && alignment <= 16 && ((alignment & (alignment - 1)) == 0));
+	assert(alignment > 1 && alignment <= 256 && ((alignment & (alignment - 1)) == 0));
 	void *block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
 	if (!block)
 		appError("Failed to allocate %d bytes", size);

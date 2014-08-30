@@ -442,7 +442,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		//!! use this value!
 		int64 BulkDataStartOffset;
 		Ar << BulkDataStartOffset;
-		printf("BulkStart: %I64X\n", BulkDataStartOffset);
+		appPrintf("BulkStart: %I64X\n", BulkDataStartOffset);
 	}
 
 	//!! other fields

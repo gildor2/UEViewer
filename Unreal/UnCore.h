@@ -1213,7 +1213,7 @@ public:
 		return Item(index);
 	}
 
-	int FindItem(const T& item, int startIndex = 0)
+	int FindItem(const T& item, int startIndex = 0) const
 	{
 #if 1
 		const T *P;

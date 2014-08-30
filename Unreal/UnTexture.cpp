@@ -1646,7 +1646,7 @@ static int GetRealTextureOffset_MH(const UTexture2D *Obj, int MipIndex)
 
 	ReadMarvelHeroesTFCManifest();
 
-	printf("LOOK %08X-%08X-%08X-%08X\n", Obj->TextureFileCacheGuid.A, Obj->TextureFileCacheGuid.B, Obj->TextureFileCacheGuid.C, Obj->TextureFileCacheGuid.D);
+	appPrintf("LOOK %08X-%08X-%08X-%08X\n", Obj->TextureFileCacheGuid.A, Obj->TextureFileCacheGuid.B, Obj->TextureFileCacheGuid.C, Obj->TextureFileCacheGuid.D);
 	for (int i = 0; i < mhTFCmanifest.Num(); i++)
 	{
 		const TFCManifest_MH &M = mhTFCmanifest[i];
@@ -1654,7 +1654,7 @@ static int GetRealTextureOffset_MH(const UTexture2D *Obj, int MipIndex)
 		{
 			const MHManifestMip &Mip = M.Mips[0];
 			assert(Mip.Index == MipIndex);
-			printf("%s - %08X-%08X-%08X-%08X = %X %X\n", *M.TFCName, M.Guid.A, M.Guid.B, M.Guid.C, M.Guid.D, Mip.Offset, Mip.Size);
+			appPrintf("%s - %08X-%08X-%08X-%08X = %X %X\n", *M.TFCName, M.Guid.A, M.Guid.B, M.Guid.C, M.Guid.D, Mip.Offset, Mip.Size);
 			return Mip.Offset;
 		}
 	}

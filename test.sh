@@ -33,6 +33,13 @@ function DBG() { return; }
 foundPath=
 debugOpt=
 
+# Steam support:
+# - add other paths inside (), separate with spaces. add trailing slash
+# - use as
+#   CheckDir "${steam[@]/%/Some Game Name}"
+#   (this will append "Some Game Name" to all variants of steam path)
+steam=("c:/Program Files (x86)/Steam/SteamApps/common/")
+
 function CheckDir()
 {
 	local checkedDirs=""
@@ -109,38 +116,30 @@ function gui()
 
 function u1()
 {
-	CheckDir {c,d,e}:/games/{unreal,unreal~1}/UnrealGold
+	CheckDir {c,d,e}:/games/{unreal,Unreal\ Anthology}/UnrealGold
 	run $*
 }
 function ut1()
 {
-	CheckDir {c,d,e}:/games/{unreal,unreal~1}/UnrealTournament data/1/UT
+	CheckDir {c,d,e}:/games/{unreal,Unreal\ Anthology}/UnrealTournament data/1/UT
 	run $*
 }
 function ut2()
 {
-	CheckDir {c,d,e}:/games/{unreal,unreal~1}/ut2004 data/2/UT2004
+	CheckDir {c,d,e}:/games/{unreal,Unreal\ Anthology}/ut2004 data/2/UT2004
 	run $*
 }
 function ut3()
 {
-	CheckDir {c,d,e}:/games/ut3/UTGame/CookedPC data/3/UT3
+	CheckDir "${steam[@]/%/Unreal Tournament 3}" {c,d,e}:/games/ut3/UTGame/CookedPC data/3/UT3
 	run $*
 }
-function gow()
-{
-	CheckDir "C:/!umodel-data/GearsOfWar"
-	run $*
-}
+function gow()    { run1 "data/3/GearsOfWar" $*;          }
 function gow2()   { run1 "data/3X/GearsOfWar2_X360" $*;   }
 function gow3()   { run1 "data/3X/GOW3_beta_X360" $*;     }
 function ib()     { run1 "data/3i/InfinityBlade" -ios $*; }
-function uc2()    { run1 "data/UnrealChampionship2" $*;   }
-function l2()
-{
-	CheckDir "C:/!umodel-data/Lineage2"
-	run $*
-}
+function uc2()    { run1 "data/2X/UnrealChampionship2" $*;}
+function l2()     { run1 "data/2/Lineage2" $*;            }
 function bio()
 {
 	CheckDir {c,e}:/GAMES/BioShock
@@ -152,12 +151,7 @@ function alice()
 	run $*
 }
 function mass()   { run1 "C:/GAMES/Mass Effect/BioGame/CookedPC" $*; }
-function mass3()
-{
-	CheckDir "data/3/MassEffect3"
-	run $*
-}
-function dcu()    { run1 "E:/GAMES/DC Universe Online Live/UNREAL3/DCGAME/COOKEDPC" $*; }
+function mass3()  { run1 "data/3/MassEffect3" $*; }
 function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
 function bat2()
@@ -165,11 +159,8 @@ function bat2()
 	CheckDir "E:/GAMES/Batman Arkham City/BmGame" data/3/Batman2
 	run $*
 }
-function tr4()
-{
-	CheckDir data/3/Tribes4
-	run $*
-}
+function tr4()    { run1 "data/3/Tribes4" $*;     }
+
 function rund()   {	run1 "data" $*; }
 
 
