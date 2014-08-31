@@ -20,20 +20,26 @@ CObjectViewer::CObjectViewer(UObject *Obj)
 
 void CObjectViewer::Dump()
 {
-	appPrintf("\nObject info:\n============\n");
-	appPrintf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
-	Object->GetTypeinfo()->DumpProps(Object);
+	if (Object)
+	{
+		appPrintf("\nObject info:\n============\n");
+		appPrintf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
+		Object->GetTypeinfo()->DumpProps(Object);
+	}
 }
 
 
 void CObjectViewer::Export()
 {
-	ExportObject(Object);
+	if (Object)
+		ExportObject(Object);
 }
 
 
 void CObjectViewer::ProcessKey(int key)
 {
+	if (!Object) return;
+
 	switch (key)
 	{
 	case 'x'|KEY_CTRL:
@@ -48,6 +54,8 @@ void CObjectViewer::ProcessKey(int key)
 
 void CObjectViewer::ShowHelp()
 {
+	if (!Object) return;
+
 	DrawKeyHelp("D",      "dump info");
 	DrawKeyHelp("Ctrl+X", "export object");
 }
@@ -55,6 +63,13 @@ void CObjectViewer::ShowHelp()
 
 void CObjectViewer::Draw2D()
 {
+	if (!Object)
+	{
+		DrawTextLeft(S_RED"There's no visual object loaded now.");
+		DrawTextLeft(S_RED"Press <Ctrl+O> to load a different package.");
+		return;
+	}
+
 	const char *CookedPkgName   = Object->Package->Name;
 	const char *UncookedPkgName = Object->GetUncookedPackageName();
 	if (stricmp(CookedPkgName, UncookedPkgName) == 0)

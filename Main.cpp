@@ -484,9 +484,12 @@ static void ExportObjects(const TArray<UnPackage*> &Packages, const TArray<UObje
 	unguard;
 }
 
+static TArray<UnPackage*> GFullyLoadedPackages;
+
 static void LoadWholePackage(UnPackage* Package)
 {
 	guard(LoadWholePackage);
+
 	UObject::BeginLoad();
 	for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
 	{
@@ -495,6 +498,8 @@ static void LoadWholePackage(UnPackage* Package)
 		Package->CreateExport(idx);
 	}
 	UObject::EndLoad();
+	GFullyLoadedPackages.AddItem(Package);
+
 	unguardf("%s", Package->Name);
 }
 
@@ -504,6 +509,9 @@ static void ReleaseAllObjects()
 	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
 		delete UObject::GObjObjects[i];
 	UObject::GObjObjects.Empty();
+
+	GFullyLoadedPackages.Empty();
+
 #if 0
 	// verify that all object pointers were set to NULL
 	for (int i = 0; i < UnPackage::PackageMap.Num(); i++)
@@ -517,6 +525,41 @@ static void ReleaseAllObjects()
 	}
 #endif
 	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+}
+
+void DisplayPackageStats(const TArray<UnPackage*> &Packages)
+{
+	guard(DisplayPackageStats);
+
+	TArray<FString> classNames;
+	classNames.Empty(256);
+	TArray<int> classCounts;
+	classCounts.Empty(256);
+
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		UnPackage* pkg = Packages[i];
+		for (int j = 0; j < pkg->Summary.ExportCount; j++)
+		{
+			const FObjectExport &Exp = pkg->ExportTable[j];
+			FString className = pkg->GetObjectName(Exp.ClassIndex);
+			int index = classNames.FindItem(className);
+			if (index == INDEX_NONE)
+			{
+				classNames.AddItem(className);
+				classCounts.AddItem(1);
+			}
+			else
+			{
+				classCounts[index]++;
+			}
+		}
+	}
+	appPrintf("Class statistics:\n");
+	for (int i = 0; i < classNames.Num(); i++)
+		appPrintf("%5d %s\n", classCounts[i], *classNames[i]);
+
+	unguard;
 }
 
 
@@ -704,6 +747,7 @@ int main(int argc, char **argv)
 		}
 	}
 
+	bool guiShown = false;
 #if HAS_UI
 	if (argc < 2 || !hasRootDir || forceUI)	// really, !hasRootDir will always be 'false' if no arguments was provided
 	{
@@ -712,6 +756,7 @@ int main(int argc, char **argv)
 		bool res = dialog.Show();
 		if (!res) exit(0);
 		hasRootDir = true;
+		guiShown = true;
 	}
 #endif // HAS_UI
 
@@ -760,6 +805,7 @@ int main(int argc, char **argv)
 		if (!packageDialog.Show())
 			exit(0);
 		argPkgName = *packageDialog.SelectedPackage;
+		guiShown = true;
 	}
 #endif // !HAS_UI
 
@@ -808,9 +854,6 @@ int main(int argc, char **argv)
 
 	// end of initialization
 
-	if (mainCmd == CMD_PkgInfo)
-		return 0;					// already displayed when loaded package; extend it?
-
 	if (mainCmd == CMD_List)
 	{
 		guard(List);
@@ -842,6 +885,12 @@ int main(int argc, char **argv)
 			appPrintf("WARNING: unable to find/load package %s\n", extraPackages[i]);
 		else
 			Packages.AddItem(Package2);
+	}
+
+	if (mainCmd == CMD_PkgInfo)
+	{
+		DisplayPackageStats(Packages);
+		return 0;					// already displayed when loaded package; extend it?
 	}
 
 	TArray<UObject*> Objects;
@@ -898,10 +947,17 @@ int main(int argc, char **argv)
 			LoadWholePackage(Packages[pkg]);
 	}
 
-	if (!UObject::GObjObjects.Num())
+	if (!UObject::GObjObjects.Num() && !guiShown)
 	{
-		appPrintf("Specified package(s) has no supported objects\n");
-		exit(1);
+		appPrintf("\nThe specified package(s) has no supported objects.\n\n");
+	no_objects:
+		appPrintf("Selected package(s):\n");
+		for (int i = 0; i < Packages.Num(); i++)
+			appPrintf("  %s\n", Packages[i]->Filename);
+		appPrintf("\n");
+		// display list of classes
+		DisplayPackageStats(Packages);
+		return 0;
 	}
 
 #if PROFILE
@@ -952,8 +1008,13 @@ int main(int argc, char **argv)
 
 	if (!created)
 	{
-		appPrintf("Package \"%s\" has no objects to display\n", argPkgName);	//!! list of packages
-		return 0;
+		if (!guiShown)
+		{
+			appPrintf("\nThe specified package(s) has no objects to diaplay.\n\n");
+			goto no_objects;
+		}
+		// allow user to open packageDialog and change a package: create empty viewer
+		CreateVisualizer(NULL);
 	}
 	// print mesh info
 #	if TEST_FILES
@@ -1013,6 +1074,13 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 		if (Viewer->Object == Obj) return true;	// object is not changed
 		delete Viewer;
 		Viewer = NULL;
+	}
+
+	if (!Obj)
+	{
+		// dummy visualizer
+		Viewer = new CObjectViewer(NULL);
+		return true;
 	}
 
 	if (!test)
@@ -1194,10 +1262,10 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 					looped++;
 				}
 			}
-			if (looped > 1)
+			if (looped > 1 || UObject::GObjObjects.Num() == 0)
 			{
 				if (forceVisualizer)
-					CreateVisualizer(UObject::GObjObjects[0]);
+					CreateVisualizer(NULL);
 				return;		// prevent infinite loop
 			}
 			Obj = UObject::GObjObjects[ObjIndex];
@@ -1224,9 +1292,11 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		if (!packageDialog.Show())
 			return;
 		const char* pkgName = *packageDialog.SelectedPackage;
-		//!! don't release when package is not changed
+		// load a package, don't release anything when package was not changed
 		UnPackage* package = UnPackage::LoadPackage(pkgName);
-		if (!package) return; // should not happen
+		if (!package) return;	// should not happen
+		if (GFullyLoadedPackages.FindItem(package) >= 0)
+			return;				// this package was already loaded, don't do anything now
 		// release previously created viewer (could release some resources)
 		if (Viewer)
 		{

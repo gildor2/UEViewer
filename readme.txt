@@ -151,6 +151,10 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+31.08.2014
+- improved -pkginfo output: displaying class statistics for loaded package(s)
+- displaying -pkginfo when trying to load a package with no supported objects
+
 28.07.2014
 - implemented Seal of Vajara skeletal mesh support (-game=sov is required)
 

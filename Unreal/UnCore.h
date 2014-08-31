@@ -1497,6 +1497,10 @@ public:
 	FString(const char* src);
 
 	FString& operator=(const char* src);
+	FORCEINLINE FString& operator=(const FString& src)
+	{
+		return operator=(*src);
+	}
 
 	// use FString as allocated char*, FString became empty and will not free
 	// detached string in destructor
@@ -1515,6 +1519,15 @@ public:
 	FORCEINLINE operator const char*() const
 	{
 		return (char*)DataPtr;
+	}
+	// comparison
+	FORCEINLINE bool operator==(const FString& other) const
+	{
+		return !strcmp((char*)DataPtr, (char*)other.DataPtr);
+	}
+	FORCEINLINE bool operator==(const char* other) const
+	{
+		return !strcmp((char*)DataPtr, other);
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);
