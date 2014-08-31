@@ -390,6 +390,8 @@ extern bool GUseDebugger;
 extern int GNumAllocs;
 #endif
 
+extern int GTotalAllocationSize;
+extern int GTotalAllocationCount;
 
 #if _WIN32
 

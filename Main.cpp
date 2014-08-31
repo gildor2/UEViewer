@@ -500,6 +500,7 @@ static void LoadWholePackage(UnPackage* Package)
 
 static void ReleaseAllObjects()
 {
+//	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
 		delete UObject::GObjObjects[i];
 	UObject::GObjObjects.Empty();
@@ -515,6 +516,7 @@ static void ReleaseAllObjects()
 		}
 	}
 #endif
+	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 }
 
 

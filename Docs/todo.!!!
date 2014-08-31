@@ -1,5 +1,7 @@
-BUG: when multiple meshes tagged, switching between them (highlighting different
+- BUG: when multiple meshes tagged, switching between them (highlighting different
   "red" lines) will zoom viewport a bit - different scene bounding boxes for the same scene?
+- name table: keep all names in large name table, use hash for search (so, no duplicates
+  between packages), use MemoryChain to keep them in a few large blocks
 
 Update nvtt:
 * use svn, packaged version is from 2010

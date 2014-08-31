@@ -173,11 +173,15 @@ void appUnwindThrow(const char *fmt, ...)
 
 /*-----------------------------------------------------------------------------
 	Memory management
+	TODO: move to separate file
 -----------------------------------------------------------------------------*/
 
 #if PROFILE
 int GNumAllocs = 0;
 #endif
+
+int GTotalAllocationSize = 0;
+int GTotalAllocationCount = 0;
 
 #define BLOCK_MAGIC		0xAE
 #define FREE_BLOCK		0xFE
@@ -209,9 +213,14 @@ void *appMalloc(int size, int alignment)
 	hdr->offset    = offset - 1;
 	hdr->align     = alignment - 1;
 	hdr->blockSize = size;
+
+	// statistics
+	GTotalAllocationSize += size;
+	GTotalAllocationCount++;
 #if PROFILE
 	GNumAllocs++;
 #endif
+
 	return ptr;
 	unguardf("size=%d", size);
 }
@@ -237,10 +246,16 @@ void* appRealloc(void *ptr, int newSize)
 
 	memcpy(newData, ptr, min(newSize, oldSize));
 
+#if PROFILE
+	GNumAllocs++;
+#endif
 #if DEBUG_MEMORY
 	memset(ptr, FREE_BLOCK, oldSize);
 #endif
 	free(block);
+
+	// statistics
+	GTotalAllocationSize += newSize - oldSize;
 
 	return newData;
 
@@ -262,7 +277,13 @@ void appFree(void *ptr)
 #if DEBUG_MEMORY
 	memset(ptr, FREE_BLOCK, hdr->blockSize);
 #endif
+
+	// statistics
+	GTotalAllocationSize -= hdr->blockSize;
+	GTotalAllocationCount--;
+
 	free(block);
+
 	unguard;
 }
 
