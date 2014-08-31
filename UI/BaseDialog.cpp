@@ -740,6 +740,29 @@ void UIMulticolumnListbox::RemoveAllItems()
 	if (Wnd) ListView_DeleteAllItems(Wnd);
 }
 
+UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index)
+{
+	if (index == Value) return *this;
+	Value = index;
+	if (Wnd)
+		ListView_SetItemState(Wnd, Value, LVIS_SELECTED, LVIS_SELECTED);
+	return *this;
+}
+
+UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(const char* item)
+{
+	int index = 0;
+	for (int i = NumColumns; i < Items.Num(); i += NumColumns, index++)
+	{
+		if (!strcmp(Items[i], item))
+		{
+			SelectItem(index);
+			return *this;
+		}
+	}
+	return *this;
+}
+
 void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 {
 	int i;
@@ -803,7 +826,8 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	}
 
 	// set selection
-//!!	SendMessage(Wnd, LB_SETCURSEL, Value, 0);
+	ListView_SetItemState(Wnd, Value, LVIS_SELECTED, LVIS_SELECTED);
+
 	UpdateEnabled();
 }
 
@@ -916,21 +940,28 @@ void UITreeView::RemoveAllItems()
 	TreeViewItem* root = new TreeViewItem;
 	root->Label = "";
 	Items.AddItem(root);
-//!!	Value = -1;
+	SelectedItem = root;
 }
 
 UITreeView& UITreeView::SelectItem(const char* item)
 {
-	int index = -1;
+	TreeViewItem* foundItem = NULL;
 	for (int i = 0; i < Items.Num(); i++)
 	{
 		if (!stricmp(Items[i]->Label, item))
 		{
-			index = i;
+			foundItem = Items[i];
 			break;
 		}
 	}
-//!!	SelectItem(index);
+
+	if (foundItem && foundItem != SelectedItem)
+	{
+		SelectedItem = foundItem;
+		if (Wnd)
+			TreeView_SelectItem(Wnd, SelectedItem->hItem);
+	}
+
 	return *this;
 }
 
@@ -948,7 +979,8 @@ void UITreeView::Create(UIBaseDialog* dialog)
 	for (int i = 0; i < Items.Num(); i++)
 		CreateItem(*Items[i]);
 	// set selection
-//!!	SendMessage(Wnd, LB_SETCURSEL, Value, 0);
+	TreeView_SelectItem(Wnd, SelectedItem->hItem);
+
 	UpdateEnabled();
 }
 

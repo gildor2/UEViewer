@@ -16,9 +16,15 @@
 	UObject class
 -----------------------------------------------------------------------------*/
 
+UObject::UObject()
+:	PackageIndex(INDEX_NONE)
+{
+//	appPrintf("creating (%p)\n", this);
+}
+
 UObject::~UObject()
 {
-//	appPrintf("deleting %s\n", Name);
+//	appPrintf("deleting %s (%p) - package %s, index %d\n", Name, this, Package ? Package->Name : "None", PackageIndex);
 	// remove self from GObjObjects
 	for (int i = 0; i < GObjObjects.Num(); i++)
 		if (GObjObjects[i] == this)
@@ -32,8 +38,9 @@ UObject::~UObject()
 	// USkelModel)
 	if (Package && PackageIndex != INDEX_NONE)
 	{
-		assert(Package->ExportTable[PackageIndex].Object == this);
-		Package->ExportTable[PackageIndex].Object = NULL;
+		FObjectExport &Exp = Package->GetExport(PackageIndex);
+		assert(Exp.Object == this);
+		Exp.Object = NULL;
 		Package = NULL;
 	}
 }

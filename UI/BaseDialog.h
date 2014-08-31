@@ -413,8 +413,8 @@ public:
 	void AddSubItem(int itemIndex, int column, const char* text);
 	void RemoveAllItems();
 
-//!!	UIMulticolumnListbox& SelectItem(int index);
-//!!	UIMulticolumnListbox& SelectItem(const char* item);
+	UIMulticolumnListbox& SelectItem(int index);
+	UIMulticolumnListbox& SelectItem(const char* item);
 
 	FORCEINLINE const char* GetItem(int itemIndex) const { return GetSumItem(itemIndex, 0); }
 	const char* GetSumItem(int itemIndex, int column) const;
@@ -423,10 +423,6 @@ public:
 	{
 		return Value;
 	}
-/*!!	FORCEINLINE const char* GetSelectionText() const
-	{
-		return (Value >= 0) ? *Items[Value] : NULL;
-	} */
 
 protected:
 	int			NumColumns;

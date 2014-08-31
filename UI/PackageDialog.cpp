@@ -2,11 +2,14 @@
 #include "PackageDialog.h"
 
 /*!! TODO, remaining:
-! bug: -path=data => in directory tree will be selected a wrong item
 - doubleclick in listbox -> open
 */
 
 #if HAS_UI
+
+UIPackageDialog::UIPackageDialog()
+:	DirectorySelected(false)
+{}
 
 bool UIPackageDialog::Show()
 {
@@ -80,6 +83,22 @@ void UIPackageDialog::InitUI()
 			*s = 0;
 			tree->AddItem(buffer);
 		}
+		if (i == 0 && !DirectorySelected)
+		{
+			// set selection to the first directory
+			SelectedDir = buffer;
+		}
+	}
+
+	// select directory and package
+	tree->SelectItem(*SelectedDir);
+	OnTreeItemSelected(tree, *SelectedDir);
+	if (!SelectedPackage.IsEmpty())
+	{
+		const char *s = *SelectedPackage;
+		const char* s2 = strrchr(s, '/');	// strip path
+		if (s2) s = s2+1;
+		PackageListbox->SelectItem(s);
 	}
 
 	// dialog buttons
@@ -103,6 +122,7 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 {
 	PackageListbox->RemoveAllItems();
 	SelectedDir = text;
+	DirectorySelected = true;
 
 	for (int i = 0; i < Packages.Num(); i++)
 	{

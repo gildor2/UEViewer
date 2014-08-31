@@ -1018,6 +1018,9 @@ FString::FString(const char* src)
 
 FString& FString::operator=(const char* src)
 {
+	if (src == DataPtr)
+		return *this; // assigning to self
+
 	Empty();
 	if (!src)
 	{

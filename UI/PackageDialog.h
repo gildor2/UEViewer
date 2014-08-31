@@ -6,6 +6,8 @@
 class UIPackageDialog : public UIBaseDialog
 {
 public:
+	UIPackageDialog();
+
 	bool Show();
 	virtual void InitUI();
 
@@ -17,6 +19,7 @@ protected:
 
 	UIMulticolumnListbox* PackageListbox;
 	UIButton*		OkButton;
+	bool			DirectorySelected;
 	FString			SelectedDir;
 
 	typedef TArray<const CGameFileInfo*> PackageList;

@@ -35,6 +35,7 @@
 
 
 #if MAX_DEBUG
+
 // override some settings with MAX_DEBUG option
 #undef  DO_ASSERT
 #define DO_ASSERT				1
@@ -46,7 +47,12 @@
 #define DEBUG_MEMORY			1
 #undef  VSTUDIO_INTEGRATION
 #define VSTUDIO_INTEGRATION		1
+
+#if _MSC_VER
+#pragma optimize("", off)
 #endif
+
+#endif // MAX_DEBUG
 
 
 #undef assert

@@ -500,9 +500,21 @@ static void LoadWholePackage(UnPackage* Package)
 
 static void ReleaseAllObjects()
 {
-	for (int i = 0; i < UObject::GObjObjects.Num(); i++)
+	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
 		delete UObject::GObjObjects[i];
 	UObject::GObjObjects.Empty();
+#if 0
+	// verify that all object pointers were set to NULL
+	for (int i = 0; i < UnPackage::PackageMap.Num(); i++)
+	{
+		UnPackage* p = UnPackage::PackageMap[i];
+		for (int j = 0; j < p->Summary.ExportCount; j++)
+		{
+			FObjectExport& Exp = p->ExportTable[j];
+			if (Exp.Object) printf("! %s %d\n", p->Name, j);
+		}
+	}
+#endif
 }
 
 
@@ -691,7 +703,7 @@ int main(int argc, char **argv)
 	}
 
 #if HAS_UI
-	if (argc < 2 || (GForceGame == GAME_UNKNOWN && !hasRootDir) || forceUI)
+	if (argc < 2 || !hasRootDir || forceUI)	// really, !hasRootDir will always be 'false' if no arguments was provided
 	{
 		// no arguments provided - display startup options
 		UIStartupDialog dialog(settings);
@@ -1212,22 +1224,22 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		const char* pkgName = *packageDialog.SelectedPackage;
 		//!! don't release when package is not changed
 		UnPackage* package = UnPackage::LoadPackage(pkgName);
-		if (package)
+		if (!package) return; // should not happen
+		// release previously created viewer (could release some resources)
+		if (Viewer)
 		{
-			if (Viewer)
-			{
-				CSkelMeshViewer::UntagAllMeshes();
-				delete Viewer;
-				Viewer = NULL;
-			}
-			ReleaseAllObjects();
-			LoadWholePackage(package);
-			ObjIndex = -1;
-			key = SPEC_KEY(PAGEDOWN);
-			forceVisualizer = true;
-			goto change_object;
+			CSkelMeshViewer::UntagAllMeshes();
+			delete Viewer;
+			Viewer = NULL;
 		}
-		return;
+		// load a new package "from scratch"
+		ReleaseAllObjects();
+		LoadWholePackage(package);
+		// execute code which will select 1st viewable object
+		ObjIndex = -1;
+		key = SPEC_KEY(PAGEDOWN);
+		forceVisualizer = true;
+		goto change_object;
 	}
 #endif // HAS_UI
 	Viewer->ProcessKey(key);
