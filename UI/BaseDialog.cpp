@@ -635,14 +635,23 @@ void UIListbox::Create(UIBaseDialog* dialog)
 
 bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
-	if (cmd == LBN_SELCHANGE)
+	if (cmd == LBN_SELCHANGE || cmd == LBN_DBLCLK)
 	{
 		int v = SendMessage(Wnd, LB_GETCURSEL, 0, 0);
 		if (v != Value)
 		{
 			Value = v;
-			if (Callback)
-				Callback(this, Value, GetSelectionText());
+			if (cmd == LBN_SELCHANGE)
+			{
+				if (Callback)
+					Callback(this, Value, GetSelectionText());
+			}
+			else
+			{
+				//!! not tested
+				if (DblClickCallback)
+					DblClickCallback(this, Value, GetSelectionText());
+			}
 		}
 		return true;
 	}
@@ -860,6 +869,14 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		}
 		return true;
 	}
+
+	if (cmd == LVN_ITEMACTIVATE)
+	{
+		if (DblClickCallback)
+			DblClickCallback(this, Value);
+		return true;
+	}
+
 	return false;
 }
 

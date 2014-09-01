@@ -366,6 +366,7 @@ class UIListbox : public UIElement
 {
 	DECLARE_UI_CLASS(UIListbox, UIElement);
 	DECLARE_CALLBACK(Callback, int, const char*);
+	DECLARE_CALLBACK(DblClickCallback, int, const char*);
 public:
 	UIListbox();
 
@@ -402,6 +403,7 @@ class UIMulticolumnListbox : public UIElement
 {
 	DECLARE_UI_CLASS(UIMulticolumnListbox, UIElement);
 	DECLARE_CALLBACK(Callback, int);
+	DECLARE_CALLBACK(DblClickCallback, int);
 public:
 	static const int MAX_COLUMNS = 16;
 

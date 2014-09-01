@@ -59,6 +59,7 @@ void UIPackageDialog::InitUI()
 			+ NewControl(UIMulticolumnListbox, 2)
 			.SetHeight(-1)
 			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
+			.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
 			.Expose(PackageListbox)
 			.AddColumn("Package name", EncodeWidth(0.7f))
 			.AddColumn("Size, Kb")
@@ -151,6 +152,12 @@ void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender, int value)
 		return;
 	}
 	OkButton->Enable(true);
+}
+
+void UIPackageDialog::OnPackageDblClick(UIMulticolumnListbox* sender, int value)
+{
+	if (value != -1)
+		CloseDialog();
 }
 
 

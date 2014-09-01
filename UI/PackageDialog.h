@@ -16,6 +16,7 @@ public:
 protected:
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
 	void OnPackageSelected(UIMulticolumnListbox* sender, int value);
+	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 
 	UIMulticolumnListbox* PackageListbox;
 	UIButton*		OkButton;
