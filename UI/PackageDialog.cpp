@@ -11,10 +11,12 @@ UIPackageDialog::UIPackageDialog()
 :	DirectorySelected(false)
 {}
 
-bool UIPackageDialog::Show()
+UIPackageDialog::EResult UIPackageDialog::Show()
 {
+	ModalResult = SHOW;
 	if (!ShowDialog("Choose a package to open", 400, 200))
-		return false;
+		return CANCEL;
+
 	int selectedPackageIndex = PackageListbox->GetSelectionIndex();
 	assert(selectedPackageIndex >= 0);
 
@@ -30,7 +32,7 @@ bool UIPackageDialog::Show()
 	{
 		SelectedPackage = pkgInDir;
 	}
-	return true;
+	return ModalResult;
 }
 
 static TArray<const CGameFileInfo*> *pPackageList;
@@ -107,15 +109,21 @@ void UIPackageDialog::InitUI()
 	.SetParent(this)
 	[
 		NewControl(UILabel, "Hint: you may open this dialog at any time by pressing \"O\"")
-		+ NewControl(UIButton, "OK")
-		.SetWidth(EncodeWidth(0.2f))
-		.Enable(false)
-		.Expose(OkButton)
-		.SetOK()
+		+ NewControl(UIButton, "Open")
+			.SetWidth(EncodeWidth(0.15f))
+			.Enable(false)
+			.Expose(OkButton)
+			.SetOK()
+		+ NewControl(UISpacer)
+		+ NewControl(UIButton, "Export")
+			.SetWidth(EncodeWidth(0.15f))
+			.Enable(false)
+			.Expose(ExportButton)
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnExportClicked, this))
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Cancel")
-		.SetWidth(EncodeWidth(0.2f))
-		.SetCancel()
+			.SetWidth(EncodeWidth(0.15f))
+			.SetCancel()
 	];
 }
 
@@ -146,18 +154,21 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 
 void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender, int value)
 {
-	if (value == -1)
-	{
-		OkButton->Enable(false);
-		return;
-	}
-	OkButton->Enable(true);
+	bool enableButtons = (value != -1);
+	OkButton->Enable(enableButtons);
+	ExportButton->Enable(enableButtons);
 }
 
 void UIPackageDialog::OnPackageDblClick(UIMulticolumnListbox* sender, int value)
 {
 	if (value != -1)
 		CloseDialog();
+}
+
+void UIPackageDialog::OnExportClicked(UIButton* sender)
+{
+	ModalResult = EXPORT;
+	CloseDialog();
 }
 
 

@@ -8,7 +8,14 @@ class UIPackageDialog : public UIBaseDialog
 public:
 	UIPackageDialog();
 
-	bool Show();
+	enum EResult
+	{
+		SHOW,
+		EXPORT,
+		CANCEL,
+	};
+
+	EResult Show();
 	virtual void InitUI();
 
 	FString			SelectedPackage;
@@ -17,11 +24,14 @@ protected:
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
 	void OnPackageSelected(UIMulticolumnListbox* sender, int value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
+	void OnExportClicked(UIButton* sender);
 
 	UIMulticolumnListbox* PackageListbox;
 	UIButton*		OkButton;
+	UIButton*		ExportButton;
 	bool			DirectorySelected;
 	FString			SelectedDir;
+	EResult			ModalResult;
 
 	typedef TArray<const CGameFileInfo*> PackageList;
 	PackageList		Packages;

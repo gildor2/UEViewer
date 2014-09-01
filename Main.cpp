@@ -803,8 +803,10 @@ int main(int argc, char **argv)
 #else
 	if (!argPkgName)
 	{
-		if (!packageDialog.Show())
-			exit(0);
+		UIPackageDialog::EResult result = packageDialog.Show();
+		if (result == UIPackageDialog::CANCEL)
+			return 0;
+		mainCmd = (result == UIPackageDialog::SHOW) ? CMD_View : CMD_Export;
 		argPkgName = *packageDialog.SelectedPackage;
 		guiShown = true;
 	}
@@ -968,7 +970,10 @@ int main(int argc, char **argv)
 	if (mainCmd == CMD_Export)
 	{
 		ExportObjects(Packages, exprtAll ? NULL : &Objects);
-		return 0;
+		if (!guiShown)
+			return 0;
+		// switch to a viewer in GUI mode
+		mainCmd = CMD_View;
 	}
 
 #if RENDERING
@@ -1290,7 +1295,8 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 #if HAS_UI
 	if (key == 'o')
 	{
-		if (!packageDialog.Show())
+		UIPackageDialog::EResult result = packageDialog.Show();
+		if (result == UIPackageDialog::CANCEL)
 			return;
 		const char* pkgName = *packageDialog.SelectedPackage;
 		// load a package, don't release anything when package was not changed
@@ -1308,6 +1314,12 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		// load a new package "from scratch"
 		ReleaseAllObjects();
 		LoadWholePackage(package);
+		if (result == UIPackageDialog::EXPORT)
+		{
+			TArray<UnPackage*> Packages;
+			Packages.AddItem(package);
+			ExportObjects(Packages, NULL);
+		}
 		// execute code which will select 1st viewable object
 		ObjIndex = -1;
 		key = SPEC_KEY(PAGEDOWN);
