@@ -87,7 +87,7 @@ void UIPackageDialog::InitUI()
 		if (i == 0 && !DirectorySelected)
 		{
 			// set selection to the first directory
-			SelectedDir = buffer;
+			SelectedDir = s ? buffer : "";
 		}
 	}
 

@@ -753,7 +753,10 @@ UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index)
 	if (index == Value) return *this;
 	Value = index;
 	if (Wnd)
+	{
 		ListView_SetItemState(Wnd, Value, LVIS_SELECTED, LVIS_SELECTED);
+		ListView_EnsureVisible(Wnd, Value, FALSE);
+	}
 	return *this;
 }
 
@@ -835,6 +838,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 
 	// set selection
 	ListView_SetItemState(Wnd, Value, LVIS_SELECTED, LVIS_SELECTED);
+	ListView_EnsureVisible(Wnd, Value, FALSE);
 
 	UpdateEnabled();
 }
