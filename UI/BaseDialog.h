@@ -445,6 +445,7 @@ class UITreeView : public UIElement
 	DECLARE_CALLBACK(Callback, const char*);
 public:
 	UITreeView();
+	virtual ~UITreeView();
 
 	FORCEINLINE UITreeView& SetRootLabel(const char* root)
 	{

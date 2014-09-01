@@ -38,8 +38,6 @@
 	DBGHELP tools
 -----------------------------------------------------------------------------*/
 
-typedef size_t		address_t;
-
 #if USE_DBGHELP
 
 #pragma comment(lib, "dbghelp.lib")
@@ -123,6 +121,27 @@ simple:
 	return buf;
 }
 
+
+
+/*-----------------------------------------------------------------------------
+	Stack trace functions
+-----------------------------------------------------------------------------*/
+
+int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip)
+{
+	return RtlCaptureStackBackTrace(framesToSkip, maxDepth, (void**)buffer, NULL);
+}
+
+
+void appDumpStackTrace(const address_t* buffer, int depth)
+{
+	for (int i = 0; i < depth; i++)
+	{
+		if (!buffer[i]) break;
+		const char *symbol = appSymbolName(buffer[i]);
+		appPrintf("    %s\n", symbol);
+	}
+}
 
 
 /*-----------------------------------------------------------------------------

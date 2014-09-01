@@ -72,6 +72,7 @@ MAIN_FILES = \
 	$(OUT_1)/GLBind.obj \
 	$(OUT_1)/GlWindow.obj \
 	$(OUT_1)/Math3D.obj \
+	$(OUT_1)/Memory.obj \
 	$(OUT_1)/TextContainer.obj \
 	$(OUT_1)/BaseDialog.obj \
 	$(OUT_1)/FileControls.obj \
@@ -873,6 +874,9 @@ $(OUT_1)/CoreWin32.obj : Core/CoreWin32.cpp $(DEPENDS)
 
 $(OUT_1)/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Math3D.obj" Core/Math3D.cpp
+
+$(OUT_1)/Memory.obj : Core/Memory.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Memory.obj" Core/Memory.cpp
 
 DEPENDS = \
 	Build.h \

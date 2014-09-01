@@ -525,6 +525,7 @@ static void ReleaseAllObjects()
 	}
 #endif
 	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+//	appDumpMemoryAllocations();
 }
 
 void DisplayPackageStats(const TArray<UnPackage*> &Packages)
@@ -1287,7 +1288,7 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		return;
 	}
 #if HAS_UI
-	if (key == ('o'|KEY_CTRL))
+	if (key == 'o')
 	{
 		if (!packageDialog.Show())
 			return;
@@ -1328,7 +1329,7 @@ void CUmodelApp::DrawTexts(bool helpVisible)
 	{
 		DrawKeyHelp("PgUp/PgDn", "browse objects");
 #if HAS_UI
-		DrawKeyHelp("Ctrl+O",    "open package");
+		DrawKeyHelp("O",         "open package");
 #endif
 		DrawKeyHelp("Ctrl+S",    "take screenshot");
 		Viewer->ShowHelp();

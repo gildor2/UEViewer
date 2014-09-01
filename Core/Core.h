@@ -141,6 +141,9 @@ typedef unsigned long long		uint64;
 typedef unsigned char			byte;
 typedef unsigned short			word;
 
+typedef size_t					address_t;
+
+
 #ifndef IS_POD
 #	define IS_POD(T)			false
 #endif
@@ -393,17 +396,23 @@ extern int GNumAllocs;
 extern int GTotalAllocationSize;
 extern int GTotalAllocationCount;
 
+void appDumpMemoryAllocations();
+
 #if _WIN32
 
 void appInitPlatform();
 
+int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip);
+void appDumpStackTrace(const address_t* buffer, int depth);
+
 #else
 
-inline appInitPlatform()
-{
-}
+inline appInitPlatform() {}
 
-#endif
+int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip) {}
+void appDumpStackTrace(const address_t* buffer, int depth) {}
+
+#endif // _WIN32
 
 
 #include "Math3D.h"

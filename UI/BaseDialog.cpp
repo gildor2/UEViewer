@@ -6,22 +6,21 @@
 
 #include "BaseDialog.h"
 
-/*!! TODO
+
+/* Useful links:
+
 - SHBrowseForFolder replacement with GetOpenFileName:
   http://microsoft.public.win32.programmer.ui.narkive.com/YKMAHx5L/getopenfilename-to-select-a-folder
   http://stackoverflow.com/questions/31059/how-do-you-configure-an-openfiledialog-to-select-folders/510035#510035
   http://www.codeproject.com/Articles/16276/Customizing-OpenFileDialog-in-NET
 - IFileDialog
   http://msdn.microsoft.com/en-us/library/windows/desktop/bb776913(v=vs.85).aspx
-*/
-
-/* Useful links:
-- http://blogs.msdn.com/b/oldnewthing/archive/2004/07/30/201988.aspx
-  creating dialogs as child windows
-- http://msdn.microsoft.com/en-us/library/windows/desktop/bb773175(v=vs.85).aspx
-  Enabling Visual Styles
+- creating dialogs as child windows
+  http://blogs.msdn.com/b/oldnewthing/archive/2004/07/30/201988.aspx
+- Enabling Visual Styles
+  http://msdn.microsoft.com/en-us/library/windows/desktop/bb773175.aspx
 - "Explorer" visual style for TreeView and ListView
-  http://msdn.microsoft.com/ru-ru/library/windows/desktop/bb759827(v=vs.85).aspx
+  http://msdn.microsoft.com/ru-ru/library/windows/desktop/bb759827.aspx
 */
 
 
@@ -906,6 +905,12 @@ UITreeView::UITreeView()
 	RemoveAllItems();
 }
 
+UITreeView::~UITreeView()
+{
+	for (int i = 0; i < Items.Num(); i++)
+		delete Items[i];
+}
+
 UITreeView& UITreeView::AddItem(const char* item)
 {
 	char buffer[1024];
@@ -947,6 +952,7 @@ UITreeView& UITreeView::AddItem(const char* item)
 	return *this;
 }
 
+// Note: this function will create "root" item
 void UITreeView::RemoveAllItems()
 {
 	for (int i = 0; i < Items.Num(); i++)
