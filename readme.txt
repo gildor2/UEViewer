@@ -151,6 +151,10 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+01.09.2014
+- first public release of umodel with UI; to show the UI, launch umodel without arguments;
+  to show package selection dialog at any time, press "O" key
+
 31.08.2014
 - improved -pkginfo output: displaying class statistics for loaded package(s)
 - displaying -pkginfo when trying to load a package with no supported objects

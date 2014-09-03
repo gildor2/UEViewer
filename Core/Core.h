@@ -232,6 +232,7 @@ void appNotify(const char *fmt, ...);
 
 const char *va(const char *format, ...);
 int appSprintf(char *dest, int size, const char *fmt, ...);
+char* appStrdup(const char* str);
 void appStrncpyz(char *dst, const char *src, int count);
 void appStrncpylwr(char *dst, const char *src, int count);
 void appStrcatn(char *dst, int count, const char *src);

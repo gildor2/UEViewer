@@ -218,6 +218,15 @@ const char *va(const char *format, ...)
 }
 
 
+char* appStrdup(const char* str)
+{
+	int len = strlen(str) + 1;
+	char* buf = (char*)appMalloc(len);
+	memcpy(buf, str, len);
+	return buf;
+}
+
+
 int appSprintf(char *dest, int size, const char *fmt, ...)
 {
 	va_list	argptr;

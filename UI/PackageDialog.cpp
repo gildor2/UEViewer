@@ -76,6 +76,7 @@ void UIPackageDialog::InitUI()
 	}
 
 	// add paths of all found packages
+	int selectedPathLen = 1024; // something large
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		char buffer[512];
@@ -86,10 +87,15 @@ void UIPackageDialog::InitUI()
 			*s = 0;
 			tree->AddItem(buffer);
 		}
-		if (i == 0 && !DirectorySelected)
+		if (!DirectorySelected)
 		{
-			// set selection to the first directory
-			SelectedDir = s ? buffer : "";
+			int pathLen = s ? s - buffer : 0;
+			if (pathLen < selectedPathLen)
+			{
+				// set selection to the first directory
+				SelectedDir = s ? buffer : "";
+				selectedPathLen = pathLen;
+			}
 		}
 	}
 

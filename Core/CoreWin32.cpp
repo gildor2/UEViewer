@@ -12,6 +12,7 @@
 
 // Debugging options
 //#define USE_DBGHELP				1
+//#define EXTRA_UNDECORATE		1		// use different undecorate function, providing better results but not allowing to display static symbols
 //#define DUMP_SEH				1		// for debugging SEH frames
 #define GET_EXTENDED_INFO		1
 //#define UNWIND_EBP_FRAMES		1
@@ -20,12 +21,14 @@
 // Maximal crash analysis when VSTUDIO_INTEGRATION is set
 #if VSTUDIO_INTEGRATION
 #include <signal.h>
+
 #undef  USE_DBGHELP
 #undef  GET_EXTENDED_INFO
 #undef  UNWIND_EBP_FRAMES
 #define USE_DBGHELP				1
 #define GET_EXTENDED_INFO		1
 #define UNWIND_EBP_FRAMES		1
+
 #endif // VSTUDIO_INTEGRATION
 
 
@@ -50,11 +53,45 @@ static void InitSymbols()
 	if (initialized) return;
 	initialized = true;
 
-	SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_FAIL_CRITICAL_ERRORS);
+	// Article about using decorated and undecorated names at the same time:
+	// http://www.microsoft.com/library/images/msdn/library/periodic/periodic/msj/hood897.htm
+
+	SymSetOptions(
+		SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_FAIL_CRITICAL_ERRORS
+#if EXTRA_UNDECORATE
+		| SYMOPT_PUBLICS_ONLY		// this will disallow "private" symbols, and allow undecorated names
+#else
+		| SYMOPT_UNDNAME			// use the demangler, but function parameter info will be stripped
+#endif
+	);
 
 	hProcess = GetCurrentProcess();
 	SymInitialize(hProcess, NULL, TRUE);
 }
+
+
+#if EXTRA_UNDECORATE
+
+// Strips all occurences of string 'cut' from 'string'
+static void StripPrefix(char* string, const char* cut)
+{
+	int len1 = strlen(string);
+	int len2 = strlen(cut);
+	int pos = 0;
+
+	while (pos <= len1 - len2)
+	{
+		if (memcmp(string, cut, len2) != 0)
+		{
+			pos++;
+			continue;
+		}
+		strcpy(string + pos, string + pos + len2);
+		len1 -= len2;
+	}
+}
+
+#endif // EXTRA_UNDECORATE
 
 
 bool appSymbolName(address_t addr, char *buffer, int size)
@@ -75,7 +112,23 @@ bool appSymbolName(address_t addr, char *buffer, int size)
 		else
 			OffsetBuffer[0] = 0;
 
+#if EXTRA_UNDECORATE
+		char undecBuffer[256];
+		if (UnDecorateSymbolName(pSymbol->Name, ARRAY_ARG(undecBuffer),
+			UNDNAME_NO_LEADING_UNDERSCORES|UNDNAME_NO_LEADING_UNDERSCORES|UNDNAME_NO_ALLOCATION_LANGUAGE|UNDNAME_NO_ACCESS_SPECIFIERS))
+		{
+			StripPrefix(undecBuffer, "virtual ");
+			StripPrefix(undecBuffer, "class ");
+			StripPrefix(undecBuffer, "struct ");
+			appSprintf(buffer, size, "%s%s", undecBuffer, OffsetBuffer);
+		}
+		else
+		{
+			appSprintf(buffer, size, "%s%s", pSymbol->Name, OffsetBuffer);
+		}
+#else
 		appSprintf(buffer, size, "%s%s", pSymbol->Name, OffsetBuffer);
+#endif // EXTRA_UNDECORATE
 	}
 	else
 	{
@@ -84,7 +137,7 @@ bool appSymbolName(address_t addr, char *buffer, int size)
 	return true;
 }
 
-#endif
+#endif // USE_DBGHELP
 
 const char *appSymbolName(address_t addr)
 {
@@ -167,6 +220,7 @@ bool GUseDebugger = false;
 */
 
 #if DUMP_SEH
+
 struct EXCEPTION_REGISTRATION
 {
 	EXCEPTION_REGISTRATION	*prev;
@@ -228,6 +282,7 @@ static void DumpSEH()
 	}
 	printf("\n");
 }
+
 #endif // DUMP_SEH
 
 
@@ -288,7 +343,7 @@ void UnwindEbpFrame(const address_t *data)
 	}
 	if (level) appPrintf("\n\n");
 }
-#endif
+#endif // UNWIND_EBP_FRAMES
 
 
 long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
@@ -399,7 +454,6 @@ __declspec(naked) unsigned win32ExceptFilter2()
 	}
 }
 
-
 #endif // WIN32_USE_SEH
 
 #if VSTUDIO_INTEGRATION
@@ -409,7 +463,8 @@ static void AbortHandler(int signal)
 	appPrintf("abort() called");
 	DebugBreak();
 }
-#endif
+
+#endif // VSTUDIO_INTEGRATION
 
 void appInitPlatform()
 {
@@ -417,7 +472,7 @@ void appInitPlatform()
 	// Win32 UI code doesn't allow us to use SEH, and any assert() will call abort() from CxxThrowException().
 	// To catch such exceptions, hook abort() function.
 	signal(SIGABRT, AbortHandler);
-#endif
+#endif // VSTUDIO_INTEGRATION
 }
 
 

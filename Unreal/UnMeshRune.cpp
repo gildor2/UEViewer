@@ -323,9 +323,9 @@ void USkelModel::Serialize(FArchive &Ar)
 		USkeletalMesh *sm = static_cast<USkeletalMesh*>(CreateClass("SkeletalMesh"));
 		char nameBuf[256];
 		appSprintf(ARRAY_ARG(nameBuf), "%s_%d", Name, modelIdx);
-		char *name = strdup(nameBuf);
+		char *name = appStrdup(nameBuf);
 		Meshes.AddItem(sm);
-		MeshNames.AddItem(name);
+		MeshNames.AddItem(name);			//!! FNamePool, plus remove cleanup of MeshNames in destructor
 		// setup UOnject
 		sm->Name         = name;
 		sm->Package      = Package;
@@ -479,7 +479,7 @@ USkelModel::~USkelModel()
 		delete Meshes[i];
 	delete Anim;
 	for (i = 0; i < MeshNames.Num(); i++)
-		free(MeshNames[i]);				// allocated with strdup()
+		appFree(MeshNames[i]);			// FNamePool !!
 }
 
 

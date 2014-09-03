@@ -130,7 +130,7 @@ public:
 	~FName()
 	{
 #if UNREAL3
-		if (NameGenerated) free((void*)Str);
+		if (NameGenerated) appFree((void*)Str);
 #endif
 	}
 
@@ -139,7 +139,7 @@ public:
 	{
 		if (NameGenerated || !ExtraIndex) return;
 		NameGenerated = true;
-		Str = strdup(va("%s_%d", Str, ExtraIndex-1));
+		Str = appStrdup(va("%s_%d", Str, ExtraIndex-1));	//!! FNamePool
 	}
 #endif // UNREAL3
 
@@ -148,7 +148,7 @@ public:
 	{
 		if (NameGenerated || !ExtraIndex) return;
 		NameGenerated = true;
-		Str = strdup(va("%s%d", Str, ExtraIndex-1));	// without "_" char
+		Str = appStrdup(va("%s%d", Str, ExtraIndex-1));	// without "_" char -- FNamePool !!
 	}
 #endif // BIOSHOCK
 
@@ -161,7 +161,7 @@ public:
 		if (Other.NameGenerated)
 		{
 			// should duplicate generated names to avoid crash in destructor
-			Str = strdup(Other.Str);
+			Str = appStrdup(Other.Str);			//!! FNamePool
 		}
 #endif // UNREAL3
 		return *this;

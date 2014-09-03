@@ -490,6 +490,10 @@ static void LoadWholePackage(UnPackage* Package)
 {
 	guard(LoadWholePackage);
 
+#if PROFILE
+	appResetProfiler();
+#endif
+
 	UObject::BeginLoad();
 	for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
 	{
@@ -499,6 +503,10 @@ static void LoadWholePackage(UnPackage* Package)
 	}
 	UObject::EndLoad();
 	GFullyLoadedPackages.AddItem(Package);
+
+#if PROFILE
+	appPrintProfiler();
+#endif
 
 	unguardf("%s", Package->Name);
 }
@@ -528,14 +536,31 @@ static void ReleaseAllObjects()
 //	appDumpMemoryAllocations();
 }
 
+struct ClassStats
+{
+	const char*	Name;
+	int			Count;
+
+	ClassStats()
+	{}
+
+	ClassStats(const char* name)
+	:	Name(name)
+	,	Count(0)
+	{}
+};
+
+static int CompareClassStats(const ClassStats* p1, const ClassStats* p2)
+{
+	return stricmp(p1->Name, p2->Name);
+}
+
 void DisplayPackageStats(const TArray<UnPackage*> &Packages)
 {
 	guard(DisplayPackageStats);
 
-	TArray<FString> classNames;
-	classNames.Empty(256);
-	TArray<int> classCounts;
-	classCounts.Empty(256);
+	TArray<ClassStats> stats;
+	stats.Empty(256);
 
 	for (int i = 0; i < Packages.Num(); i++)
 	{
@@ -543,22 +568,23 @@ void DisplayPackageStats(const TArray<UnPackage*> &Packages)
 		for (int j = 0; j < pkg->Summary.ExportCount; j++)
 		{
 			const FObjectExport &Exp = pkg->ExportTable[j];
-			FString className = pkg->GetObjectName(Exp.ClassIndex);
-			int index = classNames.FindItem(className);
-			if (index == INDEX_NONE)
-			{
-				classNames.AddItem(className);
-				classCounts.AddItem(1);
-			}
-			else
-			{
-				classCounts[index]++;
-			}
+			const char* className = pkg->GetObjectName(Exp.ClassIndex);
+			ClassStats* found = NULL;
+			for (int k = 0; k < stats.Num(); k++)
+				if (stats[k].Name == className)
+				{
+					found = &stats[k];
+					break;
+				}
+			if (!found)
+				found = new (stats) ClassStats(className);
+			found->Count++;
 		}
 	}
+	stats.Sort(CompareClassStats);
 	appPrintf("Class statistics:\n");
-	for (int i = 0; i < classNames.Num(); i++)
-		appPrintf("%5d %s\n", classCounts[i], *classNames[i]);
+	for (int i = 0; i < stats.Num(); i++)
+		appPrintf("%5d %s\n", stats[i].Count, stats[i].Name);
 
 	unguard;
 }
@@ -1271,7 +1297,11 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 			if (looped > 1 || UObject::GObjObjects.Num() == 0)
 			{
 				if (forceVisualizer)
+				{
 					CreateVisualizer(NULL);
+					appPrintf("\nThe specified package(s) has no supported objects.\n\n");
+					DisplayPackageStats(GFullyLoadedPackages);
+				}
 				return;		// prevent infinite loop
 			}
 			Obj = UObject::GObjObjects[ObjIndex];

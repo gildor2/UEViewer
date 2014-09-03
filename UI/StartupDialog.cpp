@@ -193,7 +193,7 @@ void UIStartupDialog::FillGameList()
 	}
 	if (gameNames.Num() > numEngineEntries + 1)
 	{
-		// sort items, keep 1st item (engine name) first
+		// sort items, keep 1st numEngineEntries items (engine name) in place
 		QSort(&gameNames[numEngineEntries], gameNames.Num() - numEngineEntries, CompareStrings);
 	}
 	for (i = 0; i < gameNames.Num(); i++)

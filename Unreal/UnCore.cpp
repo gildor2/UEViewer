@@ -62,8 +62,11 @@ void appResetProfiler()
 void appPrintProfiler()
 {
 	if (ProfileStartTime == -1) return;
+	float timeDelta = (appMilliseconds() - ProfileStartTime) / 1000.0f;
+	if (timeDelta < 0.01f && !GNumAllocs && !GSerializeBytes && !GNumSerialize)
+		return;		// perhaps already printed?
 	appPrintf("Loaded in %.2g sec, %d allocs, %.2f MBytes serialized in %d calls.\n",
-		(appMilliseconds() - ProfileStartTime) / 1000.0f, GNumAllocs, GSerializeBytes / (1024.0f * 1024.0f), GNumSerialize);
+		timeDelta, GNumAllocs, GSerializeBytes / (1024.0f * 1024.0f), GNumSerialize);
 	appResetProfiler();
 }
 

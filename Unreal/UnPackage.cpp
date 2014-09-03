@@ -9,6 +9,7 @@ byte GForceCompMethod = 0;		// COMPRESS_...
 
 
 //#define DEBUG_PACKAGE			1
+//#define PROFILE_PACKAGE_TABLES	1
 
 /*-----------------------------------------------------------------------------
 	Unreal package structures
@@ -1370,6 +1371,10 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 {
 	guard(UnPackage::UnPackage);
 
+#if PROFILE_PACKAGE_TABLES
+	appResetProfiler();
+#endif
+
 	// setup FArchive
 	Loader = (Ar) ? Ar : new FFileReader(filename);
 	IsLoading = true;
@@ -1798,6 +1803,10 @@ no_depends: ;
 	if (s2) *s2 = 0;
 	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
 	PackageMap.AddItem(this);
+
+#if PROFILE_PACKAGE_TABLES
+	appPrintProfiler();
+#endif
 
 	unguardf("%s, ver=%d/%d, game=%X", filename, ArVer, ArLicenseeVer, Game);
 }
