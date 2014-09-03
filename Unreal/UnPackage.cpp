@@ -11,6 +11,8 @@ byte GForceCompMethod = 0;		// COMPRESS_...
 //#define DEBUG_PACKAGE			1
 //#define PROFILE_PACKAGE_TABLES	1
 
+#define MAX_FNAME_LEN			256
+
 /*-----------------------------------------------------------------------------
 	Unreal package structures
 -----------------------------------------------------------------------------*/
@@ -1549,13 +1551,13 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	if (Summary.NameCount > 0)
 	{
 		Seek(Summary.NameOffset);
-		NameTable = new char*[Summary.NameCount];
+		NameTable = new const char* [Summary.NameCount];
 		for (int i = 0; i < Summary.NameCount; i++)
 		{
 			guard(Name);
 			if (Summary.FileVersion < 64)
 			{
-				char buf[1024];
+				char buf[MAX_FNAME_LEN];
 				int len;
 				for (len = 0; len < ARRAY_COUNT(buf); len++)
 				{
@@ -1565,7 +1567,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 					if (!c) break;
 				}
 				assert(len < ARRAY_COUNT(buf));
-				NameTable[i] = strdup(buf);
+				NameTable[i] = appStrdupPool(buf);
 				// skip object flags
 				int tmp;
 				*this << tmp;
@@ -1575,10 +1577,12 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 			{
 			uc1_name:
 				// used word + char[] instead of FString
+				char buf[MAX_FNAME_LEN];
 				word len;
 				*this << len;
-				NameTable[i] = new char[len+1];
-				Serialize(NameTable[i], len+1);
+				assert(len < ARRAY_COUNT(buf));
+				Serialize(buf, len+1);
+				NameTable[i] = appStrdupPool(buf);
 				// skip object flags
 				int tmp;
 				*this << tmp;
@@ -1589,16 +1593,18 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #endif // UC1 || PARIAH
 			else
 			{
-				FString name;
+				FStaticString<MAX_FNAME_LEN> name;
 
 #if SPLINTER_CELL
 				if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
 				{
+					char buf[MAX_FNAME_LEN];
 					byte len;
 					int flags;
 					*this << len;
-					NameTable[i] = new char[len + 1];
-					Serialize(NameTable[i], len + 1);
+					assert(len < ARRAY_COUNT(buf));
+					Serialize(buf, len+1);
+					NameTable[i] = appStrdupPool(buf);
 					*this << flags;
 					goto done;
 				}
@@ -1606,10 +1612,13 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #if LEAD
 				if (Game == GAME_SplinterCellConv && ArVer >= 68)
 				{
+					char buf[MAX_FNAME_LEN];
 					int len;
 					*this << AR_INDEX(len);
-					NameTable[i] = new char[len + 1];
-					Serialize(NameTable[i], len);
+					assert(len < ARRAY_COUNT(buf));
+					Serialize(buf, len);
+					buf[len] = 0;
+					NameTable[i] = appStrdupPool(buf);
 					goto done;
 				}
 #endif // LEAD
@@ -1617,12 +1626,14 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				if (Game == GAME_AA2)
 				{
 					guard(AA2_FName);
+					char buf[MAX_FNAME_LEN];
 					int len;
 					*this << AR_INDEX(len);
 					// read as unicode string and decrypt
 					assert(len <= 0);
 					len = -len;
-					char *d = NameTable[i] = new char[len];
+					assert(len < ARRAY_COUNT(buf));
+					char* d = buf;
 					byte shift = 5;
 					for (int j = 0; j < len; j++, d++)
 					{
@@ -1633,6 +1644,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 						*d = c2 & 0xFF;
 						shift = (c - 5) & 15;
 					}
+					NameTable[i] = appStrdupPool(buf);
 					int unk;
 					*this << AR_INDEX(unk);
 					unguard;
@@ -1642,31 +1654,40 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 #if DCU_ONLINE
 				if (Game == GAME_DCUniverse)		// no version checking
 				{
+					char buf[MAX_FNAME_LEN];
 					int len;
 					*this << len;
 					assert(len > 0 && len < 0x3FF);	// requires extra code
-					NameTable[i] = new char[len + 1];
-					Serialize(NameTable[i], len);
+					assert(len < ARRAY_COUNT(buf));
+					Serialize(buf, len);
+					buf[len] = 0;
+					NameTable[i] = appStrdupPool(buf);
 					goto qword_flags;
 				}
 #endif // DCU_ONLINE
 #if R6VEGAS
 				if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
 				{
+					char buf[MAX_FNAME_LEN];
 					byte len;
 					*this << len;
-					NameTable[i] = new char[len + 1];
-					Serialize(NameTable[i], len);
+					assert(len < ARRAY_COUNT(buf));
+					Serialize(buf, len);
+					buf[len] = 0;
+					NameTable[i] = appStrdupPool(buf);
 					goto done;
 				}
 #endif // R6VEGAS
 #if TRANSFORMERS
 				if (Game == GAME_Transformers && ArLicenseeVer >= 181) // Transformers: Fall of Cybertron; no real version in code
 				{
+					char buf[MAX_FNAME_LEN];
 					int len;
 					*this << len;
-					NameTable[i] = new char[len + 1];
-					Serialize(NameTable[i], len);
+					assert(len < ARRAY_COUNT(buf));
+					Serialize(buf, len);
+					buf[len] = 0;
+					NameTable[i] = appStrdupPool(buf);
 					goto qword_flags;
 				}
 #endif // TRANSFORMERS
@@ -1690,7 +1711,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 				NameTable[i] = new char[name.Num()];
 				strcpy(NameTable[i], *name);
 	#else
-				NameTable[i] = name.Detach();
+				NameTable[i] = appStrdupPool(*name);
 	#endif
 
 				// skip object flags
@@ -1817,9 +1838,6 @@ UnPackage::~UnPackage()
 	guard(UnPackage::~UnPackage);
 	// free resources
 	if (Loader) delete Loader;
-	int i;
-	for (i = 0; i < Summary.NameCount; i++)
-		free(NameTable[i]);
 	delete NameTable;
 	delete ImportTable;
 	delete ExportTable;
@@ -1827,7 +1845,7 @@ UnPackage::~UnPackage()
 	if (DependsTable) delete DependsTable;
 #endif
 	// remove self from package table
-	i = PackageMap.FindItem(this);
+	int i = PackageMap.FindItem(this);
 	assert(i != INDEX_NONE);
 	PackageMap.Remove(i);
 	unguard;
@@ -2338,7 +2356,7 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 	// do not print any warnings: missing package is a normal situation in UE3 cooked builds, so print warnings
 	// when needed at upper level
 //	appPrintf("WARNING: package %s was not found\n", Name);
-	MissingPackages.AddItem(strdup(Name));
+	MissingPackages.AddItem(appStrdup(Name));
 	return NULL;
 
 	unguardf("%s", Name);

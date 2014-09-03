@@ -175,7 +175,7 @@ public:
 	// package header
 	FPackageFileSummary		Summary;
 	// tables
-	char					**NameTable;
+	const char				**NameTable;
 	FObjectImport			*ImportTable;
 	FObjectExport			*ExportTable;
 #if UNREAL3

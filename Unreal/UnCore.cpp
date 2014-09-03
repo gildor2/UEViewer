@@ -589,9 +589,31 @@ void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext)
 	FArray
 -----------------------------------------------------------------------------*/
 
+FArray::~FArray()
+{
+	if (!IsStatic())
+	{
+		if (DataPtr)
+			appFree(DataPtr);
+		DataPtr  = NULL;
+		MaxCount = 0;
+	}
+	DataCount = 0;
+}
+
 void FArray::Empty(int count, int elementSize)
 {
 	guard(FArray::Empty);
+
+	if (IsStatic())
+	{
+		if (count > MaxCount)
+			appError("Static array is growing too large: %d > %d", count, MaxCount);
+		DataCount = 0;
+		memset(DataPtr, 0, count * elementSize);
+		return;
+	}
+
 	if (DataPtr)
 		appFree(DataPtr);
 	DataPtr   = NULL;
@@ -622,6 +644,8 @@ void FArray::Insert(int index, int count, int elementSize)
 	// check for available space
 	if (DataCount + count > MaxCount)
 	{
+		if (IsStatic())
+			appError("Static array is growing too large: %d > %d", DataCount + count, MaxCount);
 		// not enough space, resize ...
 		int prevCount = MaxCount;
 		MaxCount = ((DataCount + count + 15) / 16) * 16 + 16;
@@ -1041,6 +1065,7 @@ FString& FString::operator=(const char* src)
 
 char* FString::Detach()
 {
+	if (IsStatic()) appError("FStaticString::Detach() called");
 	char* data = (char*)DataPtr;
 	DataPtr   = NULL;
 	DataCount = 0;

@@ -1060,19 +1060,12 @@ class FArray
 	friend struct CTypeInfo;
 
 public:
-	FArray()
+	FORCEINLINE FArray()
 	:	DataCount(0)
 	,	MaxCount(0)
 	,	DataPtr(NULL)
 	{}
-	~FArray()
-	{
-		if (DataPtr)
-			appFree(DataPtr);
-		DataPtr   = NULL;
-		DataCount = 0;
-		MaxCount  = 0;
-	}
+	~FArray();
 
 	FORCEINLINE void *GetData()
 	{
@@ -1097,6 +1090,12 @@ protected:
 	void	*DataPtr;
 	int		DataCount;
 	int		MaxCount;
+
+	// helper for TStaticArray and FStaticString
+	FORCEINLINE bool IsStatic() const
+	{
+		return DataPtr == (void*)(this + 1);
+	}
 
 	// serializers
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
@@ -1302,6 +1301,20 @@ private:
 	}
 };
 
+
+// Binary-compatible array, but with no allocations inside
+template<class T, int N> class TStaticArray : public TArray<T>
+{
+public:
+	FORCEINLINE TStaticArray()
+	{
+		DataPtr = (void*)&StaticData[0];
+		MaxCount = N;
+	}
+
+protected:
+	T		StaticData[N];
+};
 
 template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
@@ -1526,6 +1539,30 @@ public:
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);
+};
+
+// Binary-compatible string, but with no allocations inside
+template<int N> class FStaticString : public FString
+{
+public:
+	FORCEINLINE FStaticString()
+	{
+		DataPtr = (void*)&StaticData[0];
+		MaxCount = N;
+	}
+
+	// operators
+	FORCEINLINE FString& operator=(const char* src)
+	{
+		return (FStaticString&) FString::operator=(src);
+	}
+	FORCEINLINE FString& operator=(const FString& src)
+	{
+		return (FStaticString&) FString::operator=(src);
+	}
+
+protected:
+	char	StaticData[N];
 };
 
 
