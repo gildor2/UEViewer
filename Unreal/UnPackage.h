@@ -129,7 +129,7 @@ struct FObjectExport
 	unsigned	ObjectFlags2;				// really, 'int64 ObjectFlags'
 	int			Archetype;
 	unsigned	ExportFlags;				// EF_* flags
-	TMap<FName, int> ComponentMap;
+//	TMap<FName, int> ComponentMap;			-- this field was removed from UE3, so serialize it as a temporaty variable when needed
 	TArray<int>	NetObjectCount;				// generations
 	FGuid		Guid;
 	int			U3unk6C;					//!! PackageFlags

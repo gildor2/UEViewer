@@ -172,6 +172,11 @@ private:
 	  - UAnimSequence is always has at least one key for excluded bone (there is no empty arrays)
 */
 
+/*!!
+	Warning: very unoptimal data format. Each CAnimSequence has NumBones CAnimTrack's, each CAnimTrack has up to 5 arrays.
+	Ideally should put all the data into CAnimSequence as a single data block (like was done for UAnimSequence).
+*/
+
 
 struct CAnimTrack
 {

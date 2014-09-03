@@ -607,8 +607,7 @@ void FArray::Empty(int count, int elementSize)
 
 	if (IsStatic())
 	{
-		if (count > MaxCount)
-			appError("Static array is growing too large: %d > %d", count, MaxCount);
+		if (count > MaxCount) goto allocate; // "static" array becomes non-static
 		DataCount = 0;
 		memset(DataPtr, 0, count * elementSize);
 		return;
@@ -616,6 +615,8 @@ void FArray::Empty(int count, int elementSize)
 
 	if (DataPtr)
 		appFree(DataPtr);
+
+allocate:
 	DataPtr   = NULL;
 	DataCount = 0;
 	MaxCount  = count;
@@ -644,15 +645,20 @@ void FArray::Insert(int index, int count, int elementSize)
 	// check for available space
 	if (DataCount + count > MaxCount)
 	{
-		if (IsStatic())
-			appError("Static array is growing too large: %d > %d", DataCount + count, MaxCount);
 		// not enough space, resize ...
 		int prevCount = MaxCount;
 		MaxCount = ((DataCount + count + 15) / 16) * 16 + 16;
-#if PROFILE
-		GNumAllocs++;
-#endif
-		DataPtr = appRealloc(DataPtr, MaxCount * elementSize);
+		if (!IsStatic())
+		{
+			DataPtr = appRealloc(DataPtr, MaxCount * elementSize);
+		}
+		else
+		{
+			// "static" array becomes non-static
+			void* oldData = DataPtr; // this is a static pointer
+			DataPtr = appMalloc(MaxCount * elementSize);
+			memcpy(DataPtr, oldData, prevCount * elementSize);
+		}
 		// zero added memory
 		memset(
 			(byte*)DataPtr + prevCount * elementSize,
@@ -1065,8 +1071,16 @@ FString& FString::operator=(const char* src)
 
 char* FString::Detach()
 {
-	if (IsStatic()) appError("FStaticString::Detach() called");
-	char* data = (char*)DataPtr;
+	char* data;
+	if (IsStatic())
+	{
+		data = appStrdup((char*)DataPtr);
+		// clear string
+		DataCount = 0;
+		*(char*)DataPtr = 0;
+		return data;
+	}
+	data = (char*)DataPtr;
 	DataPtr   = NULL;
 	DataCount = 0;
 	MaxCount  = 0;

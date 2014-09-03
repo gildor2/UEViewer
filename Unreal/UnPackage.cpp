@@ -759,7 +759,8 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 	if (Ar.ArVer < 543)
 	{
 	ue3_component_map:
-		Ar << E.ComponentMap;
+		TStaticMap<FName, int, 16> tmpComponentMap;
+		Ar << tmpComponentMap;
 	}
 ue3_export_flags:
 	if (Ar.ArVer >= 247) Ar << E.ExportFlags;

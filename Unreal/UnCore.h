@@ -1493,6 +1493,16 @@ public:
 	}
 };
 
+template<class TK, class TV, int N> class TStaticMap : public TStaticArray<TMapPair<TK, TV>, N>
+{
+public:
+	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TStaticMap &Map)
+	{
+		return Ar << (TStaticArray<TMapPair<TK, TV>, N>&)Map;
+	}
+};
+
+
 /*-----------------------------------------------------------------------------
 	FString
 -----------------------------------------------------------------------------*/

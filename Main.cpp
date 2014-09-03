@@ -35,6 +35,7 @@
 #define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
 
 //#define SHOW_HIDDEN_SWITCHES		1
+//#define DUMP_MEM_ON_EXIT			1
 
 #if RENDERING
 static CObjectViewer *Viewer;			// used from GlWindow callbacks
@@ -513,7 +514,10 @@ static void LoadWholePackage(UnPackage* Package)
 
 static void ReleaseAllObjects()
 {
-//	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+#if 0
+	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appDumpMemoryAllocations();
+#endif
 	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
 		delete UObject::GObjObjects[i];
 	UObject::GObjObjects.Empty();
@@ -1067,8 +1071,12 @@ int main(int argc, char **argv)
 #if RENDERING
 	delete Viewer;
 #endif
-	for (int i = 0; i < Objects.Num(); i++)
-		delete Objects[i];
+
+#if DUMP_MEM_ON_EXIT
+	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appDumpMemoryAllocations();
+#endif
+//	ReleaseAllObjects();
 
 	unguard;
 
