@@ -222,13 +222,15 @@ void appPrintf(const char *fmt, ...);
 extern bool GIsSwError;
 
 void appError(const char *fmt, ...);
-void* appMalloc(int size, int alignment = 8);
-void* appRealloc(void *ptr, int newSize);
-void appFree(void *ptr);
 
-// log some interesting information
+
+// Log some information
+
 void appSetNotifyHeader(const char *fmt, ...);
 void appNotify(const char *fmt, ...);
+
+
+// String functions
 
 const char *va(const char *format, ...);
 int appSprintf(char *dest, int size, const char *fmt, ...);
@@ -240,6 +242,13 @@ const char *appStristr(const char *s1, const char *s2);
 
 void appMakeDirectory(const char *dirname);
 void appMakeDirectoryForFile(const char *filename);
+
+
+// Memory management
+
+void* appMalloc(int size, int alignment = 8);
+void* appRealloc(void *ptr, int newSize);
+void appFree(void *ptr);
 
 
 FORCEINLINE void* operator new(size_t size)
@@ -263,6 +272,40 @@ FORCEINLINE void* operator new(size_t size, void* ptr)
 	return ptr;
 }
 
+
+#define DEFAULT_ALIGNMENT		8
+#define MEM_CHUNK_SIZE			16384
+
+class CMemoryChain
+{
+public:
+	void* Alloc(size_t size, int alignment = DEFAULT_ALIGNMENT);
+	// creating chain
+	void* operator new(size_t size, int dataSize = MEM_CHUNK_SIZE);
+	// deleting chain
+	void operator delete(void* ptr);
+	// stats
+	int GetSize() const;
+
+private:
+	CMemoryChain*	next;
+	int				size;
+	byte*			data;
+	byte*			end;
+};
+
+
+#if PROFILE
+extern int GNumAllocs;
+#endif
+
+extern int GTotalAllocationSize;
+extern int GTotalAllocationCount;
+
+void appDumpMemoryAllocations();
+
+
+// "Guard" macros
 
 //!! GCC: use __PRETTY_FUNCTION__ instead of __FUNCSIG__
 
@@ -390,14 +433,6 @@ extern bool GUseDebugger;
 #	define appMilliseconds()		GetTickCount()
 #endif // RENDERING
 
-#if PROFILE
-extern int GNumAllocs;
-#endif
-
-extern int GTotalAllocationSize;
-extern int GTotalAllocationCount;
-
-void appDumpMemoryAllocations();
 
 #if _WIN32
 

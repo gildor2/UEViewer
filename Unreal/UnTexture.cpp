@@ -1385,8 +1385,6 @@ UUIStreamingTextures::~UUIStreamingTextures()
 	int i;
 	for (i = 0; i < Textures.Num(); i++)
 		delete Textures[i];
-	for (i = 0; i < Names.Num(); i++)
-		appFree(Names[i]);					// FNamePool !!
 }
 
 
@@ -1404,9 +1402,8 @@ void UUIStreamingTextures::PostLoad()
 		UTexture2D *Tex = static_cast<UTexture2D*>(CreateClass("Texture2D"));
 		char nameBuf[256];
 		appSprintf(ARRAY_ARG(nameBuf), "UITexture_%08X", S.Hash);
-		char *name = appStrdup(nameBuf);	//!! FNamePool
+		const char *name = appStrdupPool(nameBuf);
 		Textures.AddItem(Tex);
-		Names.AddItem(name);
 		// setup UOnject
 		Tex->Name         = name;
 		Tex->Package      = Package;

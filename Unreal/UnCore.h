@@ -108,6 +108,8 @@ extern const char *GStartupPackage;
 	FName class
 -----------------------------------------------------------------------------*/
 
+const char* appStrdupPool(const char* str);
+
 class FName
 {
 public:
@@ -127,19 +129,12 @@ public:
 #endif
 	{}
 
-	~FName()
-	{
-#if UNREAL3
-		if (NameGenerated) appFree((void*)Str);
-#endif
-	}
-
 #if UNREAL3
 	void AppendIndex()
 	{
 		if (NameGenerated || !ExtraIndex) return;
 		NameGenerated = true;
-		Str = appStrdup(va("%s_%d", Str, ExtraIndex-1));	//!! FNamePool
+		Str = appStrdupPool(va("%s_%d", Str, ExtraIndex-1));
 	}
 #endif // UNREAL3
 
@@ -148,7 +143,7 @@ public:
 	{
 		if (NameGenerated || !ExtraIndex) return;
 		NameGenerated = true;
-		Str = appStrdup(va("%s%d", Str, ExtraIndex-1));	// without "_" char -- FNamePool !!
+		Str = appStrdupPool(va("%s%d", Str, ExtraIndex-1));	// without "_" char
 	}
 #endif // BIOSHOCK
 
@@ -161,7 +156,7 @@ public:
 		if (Other.NameGenerated)
 		{
 			// should duplicate generated names to avoid crash in destructor
-			Str = appStrdup(Other.Str);			//!! FNamePool
+			Str = appStrdupPool(Other.Str);
 		}
 #endif // UNREAL3
 		return *this;

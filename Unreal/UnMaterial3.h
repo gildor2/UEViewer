@@ -759,7 +759,6 @@ public:
 
 	// generated data
 	TArray<UTexture2D*>		Textures;
-	TArray<char*>			Names;
 	virtual ~UUIStreamingTextures();
 
 	virtual void Serialize(FArchive &Ar)

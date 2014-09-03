@@ -1242,7 +1242,7 @@ void UBioAnimSetData::PostLoad()
 		AnimSetName[len - 15] = 0;
 	appPrintf("Generating AnimSet %s (%d sequences)\n", AnimSetName, LinkedSequences.Num());
 	UAnimSet *AnimSet = static_cast<UAnimSet*>(CreateClass("AnimSet"));
-	AnimSet->Name              = appStrdup(AnimSetName);	//!! FNamePool
+	AnimSet->Name              = appStrdupPool(AnimSetName);
 	AnimSet->Package           = Package;
 	AnimSet->m_pBioAnimSetData = this;
 	CopyArray(AnimSet->Sequences, LinkedSequences);

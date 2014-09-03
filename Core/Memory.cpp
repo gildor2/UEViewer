@@ -93,6 +93,10 @@ CBlockHeader* CBlockHeader::first = NULL;
 #endif
 
 
+/*-----------------------------------------------------------------------------
+	Primary allocation functions
+-----------------------------------------------------------------------------*/
+
 void *appMalloc(int size, int alignment)
 {
 	guard(appMalloc);
@@ -216,6 +220,83 @@ void appFree(void *ptr)
 	unguard;
 }
 
+
+/*-----------------------------------------------------------------------------
+	CMemoryChain
+-----------------------------------------------------------------------------*/
+
+void* CMemoryChain::operator new(size_t size, int dataSize)
+{
+	guard(CMemoryChain::new);
+	int alloc = Align(size + dataSize, MEM_CHUNK_SIZE);
+	CMemoryChain *chain = (CMemoryChain *) appMalloc(alloc);	//!! allocate
+	if (!chain)
+		appError("Failed to allocate %d bytes", alloc);
+	chain->size = alloc;
+	chain->next = NULL;
+	chain->data = (byte*) OffsetPointer(chain, size);
+	chain->end  = (byte*) OffsetPointer(chain, alloc);
+
+	memset(chain->data, 0, chain->end - chain->data);
+
+	return chain;
+	unguard;
+}
+
+
+void CMemoryChain::operator delete(void *ptr)
+{
+	guard(CMemoryChain::delete);
+	CMemoryChain *curr, *next;
+	for (curr = (CMemoryChain *)ptr; curr; curr = next)
+	{
+		// free memory block
+		next = curr->next;
+		free(curr);				//!! deallocate
+	}
+	unguard;
+}
+
+
+void *CMemoryChain::Alloc(size_t size, int alignment)
+{
+	guard(CMemoryChain::Alloc);
+	if (!size) return NULL;
+
+	// sequence of blocks (with using "next" field): 1(==this)->5(last)->4->3->2->NULL
+	CMemoryChain *b = (next) ? next : this;			// block for allocation
+	byte* start = Align(b->data, alignment);		// start of new allocation
+	// check block free space
+	if (start + size > b->end)
+	{
+		//?? may be, search in other blocks ...
+		// allocate in the new block
+		b = new (size + alignment - 1) CMemoryChain;
+		// insert new block immediately after 1st block (==this)
+		b->next = next;
+		next = b;
+		start = Align(b->data, alignment);
+	}
+	// update pointer to a free space
+	b->data = start + size;
+
+	return start;
+	unguard;
+}
+
+
+int CMemoryChain::GetSize() const
+{
+	int n = 0;
+	for (const CMemoryChain *c = this; c; c = c->next)
+		n += c->size;
+	return n;
+}
+
+
+/*-----------------------------------------------------------------------------
+	Debugging information
+-----------------------------------------------------------------------------*/
 
 #if DEBUG_MEMORY
 

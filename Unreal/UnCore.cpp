@@ -1975,3 +1975,46 @@ void FByteBulkData::SerializeChunk(FArchive &Ar)
 
 
 #endif // UNREAL3
+
+
+/*-----------------------------------------------------------------------------
+	FName (string) pool
+-----------------------------------------------------------------------------*/
+
+#define STRING_HASH_SIZE		1024
+
+struct CStringPoolEntry
+{
+	CStringPoolEntry*	Next;
+	int					Length;
+	char				Str[1];
+};
+
+static CStringPoolEntry* StringHashTable[STRING_HASH_SIZE];
+static CMemoryChain* StringPool;
+
+const char* appStrdupPool(const char* str)
+{
+	int len = strlen(str);
+	int hash = 0;
+	for (int i = 0; i < len; i++)
+		hash = (hash + str[i]) ^ 0xABCDEF;
+	hash &= (STRING_HASH_SIZE - 1);
+
+	for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->Next)
+	{
+		if (s->Length == len && !strcmp(str, s->Str))		// found a string
+			return s->Str;
+	}
+
+	if (!StringPool) StringPool = new CMemoryChain();
+
+	// allocate new string from pool
+	CStringPoolEntry* n = (CStringPoolEntry*)StringPool->Alloc(sizeof(CStringPoolEntry) + len);	// note: null byte is taken into account in CStringPoolEntry
+	n->Next = StringHashTable[hash];
+	StringHashTable[hash] = n;
+	n->Length = len;
+	memcpy(n->Str, str, len+1);
+
+	return n->Str;
+}

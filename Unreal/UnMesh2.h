@@ -1207,7 +1207,6 @@ class USkelModel : public UPrimitive
 public:
 	// transient data
 	TArray<USkeletalMesh*>	Meshes;
-	TArray<char*>			MeshNames;
 	UMeshAnimation			*Anim;
 	virtual ~USkelModel();
 
