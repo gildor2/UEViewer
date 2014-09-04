@@ -45,6 +45,9 @@ public:
 	UIElement& Enable(bool enable);
 	FORCEINLINE bool IsEnabled() const   { return Enabled; }
 
+	UIElement& Show(bool visible);
+	FORCEINLINE bool IsVisible() const   { return Visible; }
+
 	UIElement& SetParent(UIGroup* group);
 	FORCEINLINE HWND GetWnd() const      { return Wnd; }
 
@@ -81,6 +84,7 @@ protected:
 	bool		IsGroup:1;
 	bool		IsRadioButton:1;
 	bool		Enabled;
+	bool		Visible;
 	UIGroup*	Parent;
 	UIElement*	NextChild;
 
@@ -102,6 +106,7 @@ protected:
 	virtual void DialogClosed(bool cancel)
 	{}
 	virtual void UpdateEnabled();
+	virtual void UpdateVisible();
 };
 
 // Declare some functions which could be useful for UE4-like declarative syntax:
@@ -146,6 +151,7 @@ public:												\
 	FORCEINLINE ThisClass& SetWidth(int width)       { Width = width; return *this; } \
 	FORCEINLINE ThisClass& SetHeight(int height)     { Height = height; return *this; } \
 	FORCEINLINE ThisClass& Enable(bool enable)       { return (ThisClass&) Super::Enable(enable); } \
+	FORCEINLINE ThisClass& Show(bool visible)        { return (ThisClass&) Super::Show(visible); } \
 	FORCEINLINE ThisClass& Expose(ThisClass*& var)   { var = this; return *this; } \
 	FORCEINLINE ThisClass& SetParent(UIGroup* group) { return (ThisClass&) Super::SetParent(group); } \
 	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
@@ -504,8 +510,6 @@ public:
 	void AddVerticalSpace(int size = -1);
 	void AddHorizontalSpace(int size = -1);
 
-	void EnableAllControls(bool enabled);
-
 	// Functions used with UIRadioButton - UIGroup works like a "radio group"
 
 	FORCEINLINE UIGroup& SetRadioVariable(int* var)
@@ -564,8 +568,12 @@ protected:
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 	virtual void DialogClosed(bool cancel);
 	virtual void UpdateEnabled();
+	virtual void UpdateVisible();
+
 	void CreateGroupControls(UIBaseDialog* dialog);
 	void InitializeRadioGroup();
+	void EnableAllControls(bool enabled);
+	void ShowAllControls(bool show);
 
 	virtual void AddCustomControls()
 	{}

@@ -73,6 +73,7 @@ UIElement::UIElement()
 ,	IsGroup(false)
 ,	IsRadioButton(false)
 ,	Enabled(true)
+,	Visible(true)
 ,	Parent(NULL)
 ,	NextChild(NULL)
 ,	Wnd(0)
@@ -100,6 +101,20 @@ void UIElement::UpdateEnabled()
 	if (!Wnd) return;
 	EnableWindow(Wnd, Enabled ? TRUE : FALSE);
 	InvalidateRect(Wnd, NULL, TRUE);
+}
+
+UIElement& UIElement::Show(bool visible)
+{
+	if (Visible == visible) return *this;
+	Visible = visible;
+	UpdateVisible();
+	return *this;
+}
+
+void UIElement::UpdateVisible()
+{
+	if (!Wnd) return;
+	ShowWindow(Wnd, Visible ? SW_SHOW : SW_HIDE);
 }
 
 UIElement& UIElement::SetRect(int x, int y, int width, int height)
@@ -145,7 +160,8 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 
 	HWND dialogWnd = dialog->GetWnd();
 
-	HWND wnd = CreateWindowEx(exstyle, className, text, style, x, y, w, h,
+	if (Visible) style |= WS_VISIBLE;
+	HWND wnd = CreateWindowEx(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
 		dialogWnd, (HMENU)id, hInstance, NULL);
 	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
 
@@ -233,7 +249,7 @@ static int ConvertTextAlign(ETextAlign align)
 void UILabel::Create(UIBaseDialog* dialog)
 {
 	Parent->AllocateUISpace(X, Y, Width, Height);
-	Wnd = Window(WC_STATIC, *Label, WS_CHILDWINDOW | ConvertTextAlign(Align) | WS_VISIBLE, 0, dialog);
+	Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align), 0, dialog);
 	UpdateEnabled();
 }
 
@@ -268,7 +284,7 @@ void UIButton::Create(UIBaseDialog* dialog)
 	if (!Id) Id = dialog->GenerateDialogId();
 
 	//!! BS_DEFPUSHBUTTON - for default key
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, 0, dialog);
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP, 0, dialog);
 	UpdateEnabled();
 }
 
@@ -312,7 +328,7 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 	MeasureTextSize(*Label, &checkboxWidth, NULL, DlgWnd);
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog,
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
 		Id, X, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width));
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
@@ -378,7 +394,7 @@ void UIRadioButton::Create(UIBaseDialog* dialog)
 	MeasureTextSize(*Label, &radioWidth, NULL, DlgWnd);
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTORADIOBUTTON, 0, dialog,
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTORADIOBUTTON, 0, dialog,
 		Id, X, Y, min(radioWidth + DEFAULT_CHECKBOX_HEIGHT, Width));
 
 //	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
@@ -446,7 +462,7 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
-	Wnd = Window(WC_EDIT, "", WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE, WS_EX_CLIENTEDGE, dialog);
+	Wnd = Window(WC_EDIT, "", WS_TABSTOP, WS_EX_CLIENTEDGE, dialog);
 	SetWindowText(Wnd, *(*pValue));
 	UpdateEnabled();
 }
@@ -534,7 +550,7 @@ void UICombobox::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	Wnd = Window(WC_COMBOBOX, "",
-		CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog);
 	// add items
 	for (int i = 0; i < Items.Num(); i++)
@@ -622,7 +638,7 @@ void UIListbox::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	Wnd = Window(WC_LISTBOX, "",
-		LBS_NOINTEGRALHEIGHT | LBS_HASSTRINGS | LBS_NOTIFY | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		LBS_NOINTEGRALHEIGHT | LBS_HASSTRINGS | LBS_NOTIFY | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog);
 	// add items
 	for (int i = 0; i < Items.Num(); i++)
@@ -784,7 +800,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	Wnd = Window(WC_LISTVIEW, "",
-		LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog);
 	ListView_SetExtendedListViewStyle(Wnd, LVS_EX_FLATSB | LVS_EX_LABELTIP);
 
@@ -1000,7 +1016,7 @@ void UITreeView::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	Wnd = Window(WC_TREEVIEW, "",
-		TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | WS_CHILDWINDOW | WS_VSCROLL | WS_TABSTOP | WS_VISIBLE,
+		TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog);
 	// add items
 	for (int i = 0; i < Items.Num(); i++)
@@ -1294,6 +1310,12 @@ void UIGroup::EnableAllControls(bool enabled)
 		ctl->Enable(enabled);
 }
 
+void UIGroup::ShowAllControls(bool show)
+{
+	for (UIElement* ctl = FirstChild; ctl; ctl = ctl->NextChild)
+		ctl->Show(show);
+}
+
 void UIGroup::Create(UIBaseDialog* dialog)
 {
 	CreateGroupControls(dialog);
@@ -1302,6 +1324,11 @@ void UIGroup::Create(UIBaseDialog* dialog)
 void UIGroup::UpdateEnabled()
 {
 	EnableAllControls(Enabled);
+}
+
+void UIGroup::UpdateVisible()
+{
+	ShowAllControls(Visible);
 }
 
 void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
@@ -1425,7 +1452,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	if (!(Flags & GROUP_NO_BORDER))
 	{
 		// create a group window (border)
-		Wnd = Window(WC_BUTTON, *Label, WS_CHILDWINDOW | BS_GROUPBOX | WS_GROUP | WS_VISIBLE, 0, dialog);
+		Wnd = Window(WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0, dialog);
 	}
 
 	if (Parent)
@@ -1500,7 +1527,7 @@ void UICheckboxGroup::Create(UIBaseDialog* dialog)
 	int checkboxWidth;
 	MeasureTextSize(*Label, &checkboxWidth);
 
-	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | WS_CHILDWINDOW | WS_VISIBLE | BS_AUTOCHECKBOX, 0, dialog,
+	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
 		Id, X + GROUP_INDENT, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width), DEFAULT_CHECKBOX_HEIGHT);
 
 	CheckDlgButton(DlgWnd, Id, Value ? BST_CHECKED : BST_UNCHECKED);
