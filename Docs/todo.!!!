@@ -1,3 +1,12 @@
+OSS Licenses:
+- http://licenseit.ru/wiki/index.php/Категория:Некоммерческие_лицензии
+  (russian)
+- http://opensource.org/licenses/category
+- New BSD says they can do pretty much whatever they like as long as they don't claim to have written
+  your code themselves.
+- Dual licensing: http://oss-watch.ac.uk/resources/duallicence2
+- https://ru.wikipedia.org/wiki/Shared_source
+
 - BUG: when multiple meshes tagged, switching between them (highlighting different
   "red" lines) will zoom viewport a bit - different scene bounding boxes for the same scene?
 - name table: keep all names in large name table, use hash for search (so, no duplicates

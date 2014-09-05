@@ -1,14 +1,16 @@
 #include "BaseDialog.h"
 #include "PackageDialog.h"
 
-/*!! TODO, remaining:
-- doubleclick in listbox -> open
-*/
 
 #if HAS_UI
 
+/*-----------------------------------------------------------------------------
+	Main UI code
+-----------------------------------------------------------------------------*/
+
 UIPackageDialog::UIPackageDialog()
 :	DirectorySelected(false)
+,	UseFlatView(false)
 {}
 
 UIPackageDialog::EResult UIPackageDialog::Show()
@@ -17,21 +19,12 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 	if (!ShowDialog("Choose a package to open", 400, 200))
 		return CANCEL;
 
-	int selectedPackageIndex = PackageListbox->GetSelectionIndex();
-	assert(selectedPackageIndex >= 0);
+	UpdateSelectedPackage();
 
-	const char* pkgInDir = PackageListbox->GetItem(selectedPackageIndex);
-	const char* dir = *SelectedDir;
-	if (dir[0])
-	{
-		char buffer[512];
-		appSprintf(ARRAY_ARG(buffer), "%s/%s", dir, pkgInDir);
-		SelectedPackage = buffer;
-	}
-	else
-	{
-		SelectedPackage = pkgInDir;
-	}
+	// controls are not released automatically when dialog closed to be able to
+	// poll them for user selection; release the memory now
+	ReleaseControls();
+
 	return ModalResult;
 }
 
@@ -45,26 +38,41 @@ static bool PackageListEnum(const CGameFileInfo *file)
 
 void UIPackageDialog::InitUI()
 {
-	UITreeView* tree;
 	(*this)
 	[
-		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
-		.SetHeight(500)
+		NewControl(UICheckbox, "Flat view", &UseFlatView)
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFlatViewChanged, this))
+		+ NewControl(UIPageControl)
+			.Expose(FlatViewPager)
+			.SetHeight(500)
 		[
-			NewControl(UITreeView)
-			.SetRootLabel("Game root")
-			.SetWidth(EncodeWidth(0.3f))
-			.SetHeight(-1)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnTreeItemSelected, this))
-			.Expose(tree)
-			+ NewControl(UISpacer)
+			// page 0: TreeView + ListBox
+			NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+			.SetHeight(500)
+			[
+				NewControl(UITreeView)
+					.SetRootLabel("Game")
+					.SetWidth(EncodeWidth(0.3f))
+					.SetHeight(-1)
+					.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnTreeItemSelected, this))
+					.Expose(PackageTree)
+				+ NewControl(UISpacer)
+				+ NewControl(UIMulticolumnListbox, 2)
+					.SetHeight(-1)
+					.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
+					.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
+					.Expose(PackageListbox)
+					.AddColumn("Package name")
+					.AddColumn("Size, Kb", 70)		//?? right-align text in column
+			]
+			// page 1: lingle ListBox
 			+ NewControl(UIMulticolumnListbox, 2)
-			.SetHeight(-1)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
-			.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
-			.Expose(PackageListbox)
-			.AddColumn("Package name", EncodeWidth(0.7f))
-			.AddColumn("Size, Kb")
+				.SetHeight(-1)
+				.Expose(FlatPackageList)
+				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
+				.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
+				.AddColumn("Package name")
+				.AddColumn("Size, Kb", 70)			//?? right-align text in column
 		]
 	];
 
@@ -85,7 +93,7 @@ void UIPackageDialog::InitUI()
 		if (s)
 		{
 			*s = 0;
-			tree->AddItem(buffer);
+			PackageTree->AddItem(buffer);
 		}
 		if (!DirectorySelected)
 		{
@@ -97,17 +105,6 @@ void UIPackageDialog::InitUI()
 				selectedPathLen = pathLen;
 			}
 		}
-	}
-
-	// select directory and package
-	tree->SelectItem(*SelectedDir);
-	OnTreeItemSelected(tree, *SelectedDir);
-	if (!SelectedPackage.IsEmpty())
-	{
-		const char *s = *SelectedPackage;
-		const char* s2 = strrchr(s, '/');	// strip path
-		if (s2) s = s2+1;
-		PackageListbox->SelectItem(s);
 	}
 
 	// dialog buttons
@@ -131,6 +128,63 @@ void UIPackageDialog::InitUI()
 			.SetWidth(EncodeWidth(0.15f))
 			.SetCancel()
 	];
+
+	UpdateFlatMode();
+}
+
+/*-----------------------------------------------------------------------------
+	Support for tree and flat package lists
+-----------------------------------------------------------------------------*/
+
+void UIPackageDialog::UpdateSelectedPackage()
+{
+	if (!UseFlatView)
+	{
+		// get package name from directory + name
+		int selectedPackageIndex = PackageListbox->GetSelectionIndex();
+		if (selectedPackageIndex < 0)
+		{
+			SelectedPackage = "";
+			return;
+		}
+
+		const char* pkgInDir = PackageListbox->GetItem(selectedPackageIndex);
+		const char* dir = *SelectedDir;
+		if (dir[0])
+		{
+			char buffer[512];
+			appSprintf(ARRAY_ARG(buffer), "%s/%s", dir, pkgInDir);
+			SelectedPackage = buffer;
+		}
+		else
+		{
+			SelectedPackage = pkgInDir;
+		}
+	}
+	else
+	{
+		// use flat list, with relative filename (including path)
+		int selectedPackageIndex = FlatPackageList->GetSelectionIndex();
+		if (selectedPackageIndex < 0)
+		{
+			SelectedPackage = "";
+			return;
+		}
+		SelectedPackage = FlatPackageList->GetItem(selectedPackageIndex);
+		// split SelectedPackage to SelectedDir and SelectedPackage
+		char buffer[512];
+		appStrncpyz(buffer, *SelectedPackage, ARRAY_COUNT(buffer));
+		char* s = strrchr(buffer, '/');
+		if (s)
+		{
+			*s = 0;
+			SelectedDir = buffer;
+		}
+		else
+		{
+			SelectedDir = "";
+		}
+	}
 }
 
 void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
@@ -150,13 +204,79 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 			(s && !strcmp(buffer, text)))		// other directory
 		{
 			// this package is in selected directory
-			int index = PackageListbox->AddItem(s ? s : buffer);
-			char buf[32];
-			appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
-			PackageListbox->AddSubItem(index, 1, buf);
+			AddPackageToList(PackageListbox, package, true);
 		}
 	}
 }
+
+void UIPackageDialog::FillFlatPackageList()
+{
+	FlatPackageList->RemoveAllItems();
+	for (int i = 0; i < Packages.Num(); i++)
+		AddPackageToList(FlatPackageList, Packages[i], false);
+}
+
+void UIPackageDialog::AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath)
+{
+	const char* s = package->RelativeName;
+	if (stripPath)
+	{
+		const char* s2 = strrchr(s, '/');
+		if (s2) s = s2 + 1;
+	}
+	int index = listbox->AddItem(s);
+	char buf[32];
+	appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
+	listbox->AddSubItem(index, 1, buf);
+}
+
+void UIPackageDialog::OnFlatViewChanged(UICheckbox* sender, bool value)
+{
+	UseFlatView = !UseFlatView;
+	UpdateSelectedPackage();
+	UseFlatView = !UseFlatView;
+
+	UpdateFlatMode();
+}
+
+void UIPackageDialog::UpdateFlatMode()
+{
+	if (UseFlatView)
+	{
+		PackageListbox->RemoveAllItems();
+		// switching to flat list
+		FillFlatPackageList();
+		// select item which was active in tree+list
+		if (!SelectedPackage.IsEmpty())
+		{
+			FlatPackageList->SelectItem(*SelectedPackage);
+			// update buttons enable state
+			OnPackageSelected(FlatPackageList, FlatPackageList->GetSelectionIndex());
+		}
+	}
+	else
+	{
+		FlatPackageList->RemoveAllItems();
+		// switching to tree+list
+		// select directory and package
+		PackageTree->SelectItem(*SelectedDir);
+		OnTreeItemSelected(PackageTree, *SelectedDir);
+		if (!SelectedPackage.IsEmpty())
+		{
+			const char *s = *SelectedPackage;
+			const char* s2 = strrchr(s, '/');	// strip path
+			if (s2) s = s2+1;
+			PackageListbox->SelectItem(s);
+			// update buttons enable state
+			OnPackageSelected(PackageListbox, PackageListbox->GetSelectionIndex());
+		}
+	}
+	FlatViewPager->SetActivePage(UseFlatView ? 1 : 0);
+}
+
+/*-----------------------------------------------------------------------------
+	Miscellaneous UI callbacks
+-----------------------------------------------------------------------------*/
 
 void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender, int value)
 {

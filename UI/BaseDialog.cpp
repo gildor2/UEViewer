@@ -23,6 +23,21 @@
   http://msdn.microsoft.com/ru-ru/library/windows/desktop/bb759827.aspx
 */
 
+/* GTK+ notes
+- UIMulticolumnListbox and UITreeView could be implemented with GtkTreeView
+  https://developer.gnome.org/gtk3/stable/GtkTreeView.html
+- LVN_GETDISPINFO doesn't have a direct analogue in GTK+, but workarounds are possible
+  http://stackoverflow.com/questions/3164262/lazy-loaded-list-view-in-gtk
+  http://stackoverflow.com/questions/23433819/creating-a-simple-file-browser-using-python-and-gtktreeview
+- how to use GtkTreeView
+  http://scentric.net/tutorial/treeview-tutorial.html
+  https://developer.gnome.org/gtkmm-tutorial/3.9/sec-treeview-examples.html.en
+  http://habrahabr.ru/post/116268/
+- GTK+ C++ interface
+  http://www.gtkmm.org/en/index.html
+  (warning: possibly uses STL)
+*/
+
 
 #if HAS_UI
 
@@ -47,8 +62,8 @@
 #define DEFAULT_CHECKBOX_HEIGHT		18
 #define DEFAULT_EDIT_HEIGHT			20
 #define DEFAULT_COMBOBOX_HEIGHT		20
-#define DEFAULT_LISTBOX_HEIGHT		120
-#define DEFAULT_TREEVIEW_HEIGHT		120
+#define DEFAULT_LISTBOX_HEIGHT		-1
+#define DEFAULT_TREEVIEW_HEIGHT		-1
 
 #define GROUP_INDENT				10
 #define GROUP_MARGIN_TOP			16
@@ -863,8 +878,11 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd == LVN_GETDISPINFO)
 	{
+		// Note: this callback is executed only when items is visualized, so we can
+		// add items in "lazy" fashion.
 		NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lParam;
-		plvdi->item.pszText = const_cast<char*>(*Items[(plvdi->item.iItem + 1) * NumColumns + plvdi->item.iSubItem]);
+		int itemIndex = (plvdi->item.iItem + 1) * NumColumns;
+		plvdi->item.pszText = const_cast<char*>(*Items[itemIndex + plvdi->item.iSubItem]);
 		return true;
 	}
 
@@ -1235,6 +1253,7 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	{
 		h = DecodeWidth(h) * Height;
 	}
+	assert(h >= 0);
 
 	if (x == -1)
 	{
@@ -1323,11 +1342,13 @@ void UIGroup::Create(UIBaseDialog* dialog)
 
 void UIGroup::UpdateEnabled()
 {
+	Super::UpdateEnabled();
 	EnableAllControls(Enabled);
 }
 
 void UIGroup::UpdateVisible()
 {
+	Super::UpdateVisible();
 	ShowAllControls(Visible);
 }
 
@@ -1527,8 +1548,10 @@ void UICheckboxGroup::Create(UIBaseDialog* dialog)
 	int checkboxWidth;
 	MeasureTextSize(*Label, &checkboxWidth);
 
+	int checkboxOffset = (Flags & GROUP_NO_BORDER) ? 0 : GROUP_INDENT;
+
 	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
-		Id, X + GROUP_INDENT, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width), DEFAULT_CHECKBOX_HEIGHT);
+		Id, X + checkboxOffset, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT);
 
 	CheckDlgButton(DlgWnd, Id, Value ? BST_CHECKED : BST_UNCHECKED);
 	EnableAllControls(Value);
@@ -1550,6 +1573,60 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 		}
 	}
 	return Super::HandleCommand(id, cmd, lParam);
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIPageControl
+-----------------------------------------------------------------------------*/
+
+UIPageControl::UIPageControl()
+:	UIGroup(GROUP_CUSTOM_LAYOUT)
+,	ActivePage(0)
+{}
+
+UIPageControl& UIPageControl::SetActivePage(int index)
+{
+	if (index == ActivePage) return *this;
+	ActivePage = index;
+
+	int pageIndex = 0;
+	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
+		page->Show(pageIndex == index);
+	return *this;
+}
+
+UIPageControl& UIPageControl::SetActivePage(UIElement* child)
+{
+	int pageIndex = 0;
+	ActivePage = -1;
+	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
+	{
+		bool show = (page == child);
+		if (show) ActivePage = pageIndex;
+		page->Show(show);
+	}
+	return *this;
+}
+
+void UIPageControl::Create(UIBaseDialog* dialog)
+{
+	guard(UIPageControl::Create);
+
+	Parent->AllocateUISpace(X, Y, Width, Height);
+
+	int pageIndex = 0;
+	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
+	{
+		CursorX = CursorY = 0;
+		page->Show(pageIndex == ActivePage);
+
+		guard(PageCreate);
+		page->Create(dialog);
+		unguardf("index=%d,class=%s", pageIndex, page->ClassName());
+	}
+
+	unguard;
 }
 
 

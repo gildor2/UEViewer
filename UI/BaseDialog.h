@@ -36,6 +36,7 @@ enum ETextAlign
 class UIElement
 {
 	friend class UIGroup;
+	friend class UIPageControl;
 public:
 	UIElement();
 	virtual ~UIElement();
@@ -579,12 +580,20 @@ protected:
 	{}
 };
 
+// Use DECLARE_UIGROUP_CLASS for declaration of group-derived class
+#define DECLARE_UIGROUP_CLASS(Class, Base)			\
+	DECLARE_UI_CLASS(Class, Base);					\
+public:												\
+	FORCEINLINE ThisClass& SetRadioVariable(int* var)  { return (ThisClass&) Super::SetRadioVariable(var); } \
+	FORCEINLINE ThisClass& SetRadioValue(int var)      { return (ThisClass&) Super::SetRadioValue(var); } \
+	FORCEINLINE ThisClass& operator[](UIElement& item) { return (ThisClass&) Super::operator[](item); } \
+private:
 
 // Mix of UICheckbox and UIGroup: this control has a checkbox instead
 // of simple title. When it is not checked, all controls are disabled.
 class UICheckboxGroup : public UIGroup
 {
-	DECLARE_UI_CLASS(UICheckboxGroup, UIGroup);
+	DECLARE_UIGROUP_CLASS(UICheckboxGroup, UIGroup);
 	DECLARE_CALLBACK(Callback, bool);
 public:
 	UICheckboxGroup(const char* label, bool value, unsigned flags = 0);
@@ -605,9 +614,27 @@ protected:
 };
 
 
+// This control has any number of children (like UIGroup), but only one children could be visible at time.
+// Index of visible children is specified in ActivePage.
+class UIPageControl : public UIGroup
+{
+	DECLARE_UIGROUP_CLASS(UIPageControl, UIGroup);
+public:
+	UIPageControl();
+
+	UIPageControl& SetActivePage(int index);
+	UIPageControl& SetActivePage(UIElement* child);
+
+protected:
+	int			ActivePage;
+
+	virtual void Create(UIBaseDialog* dialog);
+};
+
+
 class UIBaseDialog : public UIGroup
 {
-	DECLARE_UI_CLASS(UIBaseDialog, UIElement);
+	DECLARE_UIGROUP_CLASS(UIBaseDialog, UIGroup);
 public:
 	UIBaseDialog();
 	virtual ~UIBaseDialog();

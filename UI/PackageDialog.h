@@ -23,12 +23,24 @@ public:
 protected:
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
 	void OnPackageSelected(UIMulticolumnListbox* sender, int value);
+	void OnFlatViewChanged(UICheckbox* sender, bool value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 	void OnExportClicked(UIButton* sender);
 
+	void UpdateSelectedPackage();
+	void UpdateFlatMode();
+
+	void FillFlatPackageList();
+	void AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath);
+
+	UIPageControl*	FlatViewPager;
+	UITreeView*		PackageTree;
 	UIMulticolumnListbox* PackageListbox;
+	UIMulticolumnListbox* FlatPackageList;
 	UIButton*		OkButton;
 	UIButton*		ExportButton;
+
+	bool			UseFlatView;
 	bool			DirectorySelected;
 	FString			SelectedDir;
 	EResult			ModalResult;
