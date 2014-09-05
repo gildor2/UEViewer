@@ -151,6 +151,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+05.09.2014
+- UI: added "flat" mode for package selection, with no directory tree, all packages are in
+  single list
+- UI: added package name filter
+
 01.09.2014
 - first public release of umodel with UI; to show the UI, launch umodel without arguments;
   to show package selection dialog at any time, press "O" key

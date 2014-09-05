@@ -26,6 +26,7 @@ protected:
 	void OnFlatViewChanged(UICheckbox* sender, bool value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 	void OnExportClicked(UIButton* sender);
+	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
 	void UpdateSelectedPackage();
 	void UpdateFlatMode();
@@ -40,10 +41,11 @@ protected:
 	UIButton*		OkButton;
 	UIButton*		ExportButton;
 
+	EResult			ModalResult;
 	bool			UseFlatView;
 	bool			DirectorySelected;
-	FString			SelectedDir;
-	EResult			ModalResult;
+	FStaticString<64>  PackageFilter;
+	FStaticString<256> SelectedDir;
 
 	typedef TArray<const CGameFileInfo*> PackageList;
 	PackageList		Packages;

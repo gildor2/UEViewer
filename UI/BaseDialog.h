@@ -232,11 +232,14 @@ class UILabel : public UIElement
 	DECLARE_UI_CLASS(UILabel, UIElement);
 public:
 	UILabel(const char* text, ETextAlign align = TA_Left);
+	UILabel& SetAutoSize() { AutoSize = true; return *this; }
 
 protected:
 	FString		Label;
 	ETextAlign	Align;
+	bool		AutoSize;
 
+	virtual void UpdateSize(UIBaseDialog* dialog);
 	virtual void Create(UIBaseDialog* dialog);
 };
 
@@ -264,16 +267,18 @@ class UICheckbox : public UIElement
 	DECLARE_UI_CLASS(UICheckbox, UIElement);
 	DECLARE_CALLBACK(Callback, bool);
 public:
-	UICheckbox(const char* text, bool value);
-	UICheckbox(const char* text, bool* value);
+	UICheckbox(const char* text, bool value, bool autoSize = true);
+	UICheckbox(const char* text, bool* value, bool autoSize = true);
 
 protected:
 	FString		Label;
 	bool		bValue;			// local bool value
 	bool*		pValue;			// pointer to editable value
+	bool		AutoSize;
 
 	HWND		DlgWnd;
 
+	virtual void UpdateSize(UIBaseDialog* dialog);
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 };

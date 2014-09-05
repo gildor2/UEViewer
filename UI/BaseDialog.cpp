@@ -247,8 +247,19 @@ void UISpacer::Create(UIBaseDialog* dialog)
 UILabel::UILabel(const char* text, ETextAlign align)
 :	Label(text)
 ,	Align(align)
+,	AutoSize(false)
 {
 	Height = DEFAULT_LABEL_HEIGHT;
+}
+
+void UILabel::UpdateSize(UIBaseDialog* dialog)
+{
+	if (AutoSize)
+	{
+		int labelWidth;
+		MeasureTextSize(*Label, &labelWidth, NULL, dialog->GetWnd());
+		Width = labelWidth;
+	}
 }
 
 static int ConvertTextAlign(ETextAlign align)
@@ -315,20 +326,32 @@ bool UIButton::HandleCommand(int id, int cmd, LPARAM lParam)
 	UICheckbox
 -----------------------------------------------------------------------------*/
 
-UICheckbox::UICheckbox(const char* text, bool value)
+UICheckbox::UICheckbox(const char* text, bool value, bool autoSize)
 :	Label(text)
 ,	bValue(value)
 ,	pValue(&bValue)		// points to local variable
+,	AutoSize(autoSize)
 {
 	Height = DEFAULT_CHECKBOX_HEIGHT;
 }
 
-UICheckbox::UICheckbox(const char* text, bool* value)
+UICheckbox::UICheckbox(const char* text, bool* value, bool autoSize)
 :	Label(text)
 //,	bValue(value) - uninitialized
 ,	pValue(value)
+,	AutoSize(autoSize)
 {
 	Height = DEFAULT_CHECKBOX_HEIGHT;
+}
+
+void UICheckbox::UpdateSize(UIBaseDialog* dialog)
+{
+	if (AutoSize)
+	{
+		int checkboxWidth;
+		MeasureTextSize(*Label, &checkboxWidth, NULL, dialog->GetWnd());
+		Width = checkboxWidth + DEFAULT_CHECKBOX_HEIGHT;
+	}
 }
 
 void UICheckbox::Create(UIBaseDialog* dialog)
@@ -484,6 +507,14 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 
 bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
 {
+	if (cmd == EN_CHANGE)
+	{
+		if (Callback)
+		{
+			UpdateText();
+			Callback(this, **pValue);
+		}
+	}
 	return true;
 }
 

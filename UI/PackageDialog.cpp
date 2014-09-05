@@ -40,8 +40,18 @@ void UIPackageDialog::InitUI()
 {
 	(*this)
 	[
-		NewControl(UICheckbox, "Flat view", &UseFlatView)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFlatViewChanged, this))
+		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+		[
+			NewControl(UICheckbox, "Flat view", &UseFlatView)
+				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFlatViewChanged, this))
+			+ NewControl(UISpacer)
+			+ NewControl(UILabel, "Filter:")
+				.SetY(2)
+				.SetAutoSize()
+			+ NewControl(UITextEdit, &PackageFilter)
+				.SetWidth(120)
+				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFilterTextChanged, this))
+		]
 		+ NewControl(UIPageControl)
 			.Expose(FlatViewPager)
 			.SetHeight(500)
@@ -193,6 +203,9 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 	SelectedDir = text;
 	DirectorySelected = true;
 
+	const char* filter = *PackageFilter;
+	if (!filter[0]) filter = NULL;
+
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		const CGameFileInfo* package = Packages[i];
@@ -203,8 +216,12 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 		if ((!s && !text[0]) ||					// root directory
 			(s && !strcmp(buffer, text)))		// other directory
 		{
-			// this package is in selected directory
-			AddPackageToList(PackageListbox, package, true);
+			const char* packageName = s ? s : buffer;
+			if (!filter || appStristr(packageName, filter))
+			{
+				// this package is in selected directory
+				AddPackageToList(PackageListbox, package, true);
+			}
 		}
 	}
 }
@@ -212,8 +229,16 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 void UIPackageDialog::FillFlatPackageList()
 {
 	FlatPackageList->RemoveAllItems();
+
+	const char* filter = *PackageFilter;
+	if (!filter[0]) filter = NULL;
+
 	for (int i = 0; i < Packages.Num(); i++)
-		AddPackageToList(FlatPackageList, Packages[i], false);
+	{
+		const CGameFileInfo* package = Packages[i];
+		if (!filter || appStristr(package->RelativeName, filter))
+			AddPackageToList(FlatPackageList, package, false);
+	}
 }
 
 void UIPackageDialog::AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath)
@@ -272,6 +297,12 @@ void UIPackageDialog::UpdateFlatMode()
 		}
 	}
 	FlatViewPager->SetActivePage(UseFlatView ? 1 : 0);
+}
+
+void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
+{
+	// re-filter lists
+	UpdateFlatMode();
 }
 
 /*-----------------------------------------------------------------------------
