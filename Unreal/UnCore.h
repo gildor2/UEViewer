@@ -1103,7 +1103,10 @@ protected:
 	void Empty (int count, int elementSize);
 	void Add   (int count, int elementSize);
 	void Insert(int index, int count, int elementSize);
+	// remove items and then move next items to the position of removed items
 	void Remove(int index, int count, int elementSize);
+	// remove items and then fill the hole with items from array end
+	void FastRemove(int index, int count, int elementSize);
 
 	void* GetItem(int index, int elementSize) const;
 };
@@ -1194,6 +1197,16 @@ public:
 		FArray::Remove(index, count, sizeof(T));
 	}
 
+	// Remove an item and copy last array's item to the removed item position,
+	// so no array shifting performed.
+	FORCEINLINE void FastRemove(int index, int count = 1)
+	{
+		// destruct specified array items
+		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
+		// remove items from array
+		FArray::FastRemove(index, count, sizeof(T));
+	}
+
 	int AddItem(const T& item)
 	{
 		int index = Add();
@@ -1229,6 +1242,14 @@ public:
 		if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
 		// remove data array (count=0) or preallocate memory (count>0)
 		FArray::Empty(count, sizeof(T));
+	}
+
+	FORCEINLINE void FastEmpty()
+	{
+		// destruct all array items
+		if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
+		// set DataCount to 0 without reallocation
+		DataCount = 0;
 	}
 
 	FORCEINLINE void Sort(int (*cmpFunc)(const T*, const T*))

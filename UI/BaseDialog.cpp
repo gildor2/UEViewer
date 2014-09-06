@@ -49,6 +49,9 @@
 #define DBG_LAYOUT(...)
 #endif
 
+//#define DEBUG_MULTILIST_SEL			1
+
+
 #define FIRST_DIALOG_ID				4000
 
 #define VERTICAL_SPACING			4
@@ -726,7 +729,7 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 
 UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 :	NumColumns(numColumns)
-,	Value(-1)
+,	Multiselect(false)
 {
 	Height = DEFAULT_LISTBOX_HEIGHT;
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
@@ -796,44 +799,148 @@ const char* UIMulticolumnListbox::GetSumItem(int itemIndex, int column) const
 	unguard;
 }
 
+static int CompareInts(const int* i1, const int* i2)
+{
+	return *i1 - *i2;
+}
+
+int UIMulticolumnListbox::GetSelectionIndex(int i) const
+{
+	if (i >= SelectedItems.Num()) return -1;
+
+	if (SelectedItems.Num() >= 2 && i == 0)
+	{
+		// sort items when called for 1st item
+		// ignore "const" modifier (don't want to use "mutable" for SelectedItems or non-const for this function)
+		const_cast<UIMulticolumnListbox*>(this)->SelectedItems.Sort(CompareInts);
+	}
+	return SelectedItems[i];
+
+/*
+	// this code works only while dialog window exists
+	if (!Wnd) return -1;		// should not happen - there's no API for selecting multiple items, so UI should exist here
+	int pos = ListView_GetNextItem(Wnd, -1, LVNI_SELECTED);
+	while (--i >= 0 && pos >= 0)
+		pos = ListView_GetNextItem(Wnd, pos, LVNI_SELECTED);
+	return pos;
+*/
+}
+
 void UIMulticolumnListbox::RemoveAllItems()
 {
+	// remove items from local storage and from control
 	int numStrings = Items.Num();
 	if (numStrings > NumColumns)
 		Items.Remove(NumColumns, numStrings - NumColumns);
-	if (Value != -1)
-	{
-		Value = -1;
-		if (Callback)
-			Callback(this, Value);
-	}
 	if (Wnd) ListView_DeleteAllItems(Wnd);
+
+	// process selection
+	if (SelectedItems.Num())
+	{
+		// execute a callback about selection change
+		if (SelectedItems.Num() == 1)
+		{
+			if (Callback)
+				Callback(this, -1);
+		}
+		if (SelChangedCallback)
+			SelChangedCallback(this);
+	}
+	SelectedItems.FastEmpty();
 }
 
-UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index)
+#if DEBUG_MULTILIST_SEL
+static void PrintSelection(const char* title, const TArray<int> &selection)
 {
-	if (index == Value) return *this;
-	Value = index;
-	if (Wnd)
+	appPrintf("%s: Selection[%d] =", title, selection.Num());
+	for (int i = 0; i < selection.Num(); i++) appPrintf(" %d", selection[i]);
+	appPrintf("\n");
+}
+#endif
+
+UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index, bool add)
+{
+	assert(!add || Multiselect);
+
+	if (index == -1 || (Multiselect && !add))
 	{
-		ListView_SetItemState(Wnd, Value, LVIS_SELECTED, LVIS_SELECTED);
-		ListView_EnsureVisible(Wnd, Value, FALSE);
+		UnselectAllItems();
+		return *this;
 	}
+
+	// put this item to SelectedItems array
+	if (!Multiselect)
+	{
+		int value = GetSelectionIndex();
+		if (index != value)
+		{
+			SelectedItems.FastEmpty();
+			SelectedItems.AddItem(index);
+			// perform selection for control
+			if (Wnd) SetItemSelection(index, true);
+		}
+	}
+	else
+	{
+		int pos = SelectedItems.FindItem(index);
+		if (pos < 0)
+		{
+			SelectedItems.AddItem(index);
+			// perform selection for control
+			if (Wnd) SetItemSelection(index, true);
+		}
+	}
+#if DEBUG_MULTILIST_SEL
+	PrintSelection("SelectItem", SelectedItems);
+#endif
 	return *this;
 }
 
-UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(const char* item)
+UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(const char* item, bool add)
 {
 	int index = 0;
 	for (int i = NumColumns; i < Items.Num(); i += NumColumns, index++)
 	{
 		if (!strcmp(Items[i], item))
-		{
-			SelectItem(index);
-			return *this;
-		}
+			return SelectItem(index, add);
 	}
 	return *this;
+}
+
+UIMulticolumnListbox& UIMulticolumnListbox::UnselectItem(int index)
+{
+	if (Wnd) SetItemSelection(index, false);
+	int pos = SelectedItems.FindItem(index);
+	if (pos >= 0) SelectedItems.FastRemove(pos);
+	return *this;
+}
+
+UIMulticolumnListbox& UIMulticolumnListbox::UnselectItem(const char* item)
+{
+	int index = 0;
+	for (int i = NumColumns; i < Items.Num(); i += NumColumns, index++)
+	{
+		if (!strcmp(Items[i], item))
+			return UnselectItem(index);
+	}
+	return *this;
+}
+
+UIMulticolumnListbox& UIMulticolumnListbox::UnselectAllItems()
+{
+	if (Wnd)
+	{
+		for (int i = 0; i < SelectedItems.Num(); i++)
+			SetItemSelection(SelectedItems[i], false);
+	}
+	SelectedItems.FastEmpty();
+	return *this;
+}
+
+void UIMulticolumnListbox::SetItemSelection(int index, bool select)
+{
+	ListView_SetItemState(Wnd, index, LVIS_SELECTED, select ? LVIS_SELECTED : 0);
+	ListView_EnsureVisible(Wnd, index, FALSE);
 }
 
 void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
@@ -845,8 +952,10 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	Parent->AddVerticalSpace();
 	Id = dialog->GenerateDialogId();
 
+	DWORD style = Multiselect ? 0 : LVS_SINGLESEL;
+
 	Wnd = Window(WC_LISTVIEW, "",
-		LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL | WS_VSCROLL | WS_TABSTOP,
+		style | LVS_REPORT | LVS_SHOWSELALWAYS | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog);
 	ListView_SetExtendedListViewStyle(Wnd, LVS_EX_FLATSB | LVS_EX_LABELTIP);
 
@@ -899,14 +1008,16 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	}
 
 	// set selection
-	ListView_SetItemState(Wnd, Value, LVIS_SELECTED, LVIS_SELECTED);
-	ListView_EnsureVisible(Wnd, Value, FALSE);
+	for (i = 0; i < SelectedItems.Num(); i++)
+		SetItemSelection(SelectedItems[i], true);
 
 	UpdateEnabled();
 }
 
 bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
+	guard(UIMulticolumnListbox::HandleCommand);
+
 	if (cmd == LVN_GETDISPINFO)
 	{
 		// Note: this callback is executed only when items is visualized, so we can
@@ -924,15 +1035,34 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		{
 			if ((nmlv->uOldState ^ nmlv->uNewState) & LVIS_SELECTED)
 			{
-				int newValue = -1;
+				int item = nmlv->iItem;
+				int pos = SelectedItems.FindItem(item);
 				if (nmlv->uNewState & LVIS_SELECTED)
-					newValue = nmlv->iItem;
-				if (newValue != Value)
 				{
-					Value = newValue;
-					if (Callback)
-						Callback(this, Value);
+					// the item could be already in selection list when we're creating control
+					// and setting selection for all SelectedItems
+					if (pos < 0)
+						SelectedItems.AddItem(item);
 				}
+				else
+				{
+					assert(pos >= 0);
+					SelectedItems.FastRemove(pos);
+				}
+				// callbacks
+				if (GetSelectionCount() <= 1)
+				{
+					// sending this callback only when no multiple items selected
+					int value = GetSelectionIndex();
+					if (Callback)
+						Callback(this, value);
+				}
+				// just notify about selection changes
+				if (SelChangedCallback)
+					SelChangedCallback(this);
+#if DEBUG_MULTILIST_SEL
+				PrintSelection("HandleCommand", SelectedItems);
+#endif
 			}
 		}
 		return true;
@@ -941,11 +1071,13 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (cmd == LVN_ITEMACTIVATE)
 	{
 		if (DblClickCallback)
-			DblClickCallback(this, Value);
+			DblClickCallback(this, GetSelectionIndex());
 		return true;
 	}
 
 	return false;
+
+	unguard;
 }
 
 

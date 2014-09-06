@@ -685,11 +685,35 @@ void FArray::Remove(int index, int count, int elementSize)
 	assert(count > 0);
 	assert(index + count <= DataCount);
 	// move data
-	memcpy(
-		(byte*)DataPtr + index                       * elementSize,
-		(byte*)DataPtr + (index + count)             * elementSize,
-						 (DataCount - index - count) * elementSize
-	);
+	if (index + count < DataCount)
+	{
+		memmove(
+			(byte*)DataPtr + index                       * elementSize,
+			(byte*)DataPtr + (index + count)             * elementSize,	// all next items
+							 (DataCount - index - count) * elementSize
+		);
+	}
+	// decrease counter
+	DataCount -= count;
+	unguard;
+}
+
+
+void FArray::FastRemove(int index, int count, int elementSize)
+{
+	guard(FArray::FastRemove);
+	assert(index >= 0);
+	assert(count > 0);
+	assert(index + count <= DataCount);
+	// move data
+	if (index + count < DataCount)
+	{
+		memmove(
+			(byte*)DataPtr + index               * elementSize,
+			(byte*)DataPtr + (DataCount - count) * elementSize,	// 'count' items from the end of array
+							 count               * elementSize
+		);
+	}
 	// decrease counter
 	DataCount -= count;
 	unguard;

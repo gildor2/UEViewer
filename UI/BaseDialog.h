@@ -411,11 +411,14 @@ protected:
 };
 
 
+//?? Probably rename to ListView? But we're supporting only "report" style, so it generally looks
+//?? like a Listbox with columns.
 class UIMulticolumnListbox : public UIElement
 {
 	DECLARE_UI_CLASS(UIMulticolumnListbox, UIElement);
-	DECLARE_CALLBACK(Callback, int);
-	DECLARE_CALLBACK(DblClickCallback, int);
+	DECLARE_CALLBACK(Callback, int);					// when single item selected (not for multiselect)
+	DECLARE_CALLBACK(SelChangedCallback);				// when selection changed
+	DECLARE_CALLBACK(DblClickCallback, int);			// when double-clicked an item
 public:
 	static const int MAX_COLUMNS = 16;
 
@@ -427,22 +430,32 @@ public:
 	void AddSubItem(int itemIndex, int column, const char* text);
 	void RemoveAllItems();
 
-	UIMulticolumnListbox& SelectItem(int index);
-	UIMulticolumnListbox& SelectItem(const char* item);
+	UIMulticolumnListbox& AllowMultiselect() { Multiselect = true; return *this; }
+
+	// select an item; if index==-1, unselect all items; if add==true - extend current selection
+	// with this item (only when multiselect is enabled)
+	UIMulticolumnListbox& SelectItem(int index, bool add = false);
+	UIMulticolumnListbox& SelectItem(const char* item, bool add = false);
+	// unselect an item
+	UIMulticolumnListbox& UnselectItem(int index);
+	UIMulticolumnListbox& UnselectItem(const char* item);
+	UIMulticolumnListbox& UnselectAllItems();
 
 	FORCEINLINE const char* GetItem(int itemIndex) const { return GetSumItem(itemIndex, 0); }
 	const char* GetSumItem(int itemIndex, int column) const;
 
-	FORCEINLINE int GetSelectionIndex() const
-	{
-		return Value;
-	}
+	int GetSelectionIndex(int i = 0) const;							// returns -1 when no items selected
+	int GetSelectionCount() const { return SelectedItems.Num(); }	// returns 0 when no items selected
 
 protected:
 	int			NumColumns;
-	TArray<FString> Items;		// first NumColumns items - column headers, next NumColumns - 1st line, 2nd line, ...
 	int			ColumnSizes[MAX_COLUMNS];
-	int			Value;
+	bool		Multiselect;
+
+	TArray<FString> Items;		// first NumColumns items - column headers, next NumColumns - 1st line, 2nd line, ...
+	TStaticArray<int, 32> SelectedItems;
+
+	void SetItemSelection(int index, bool select);
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
