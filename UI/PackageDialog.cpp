@@ -69,18 +69,20 @@ void UIPackageDialog::InitUI()
 				+ NewControl(UISpacer)
 				+ NewControl(UIMulticolumnListbox, 2)
 					.SetHeight(-1)
-					.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
+					.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
 					.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
 					.Expose(PackageListbox)
+					.AllowMultiselect()
 					.AddColumn("Package name")
 					.AddColumn("Size, Kb", 70)		//?? right-align text in column
 			]
-			// page 1: lingle ListBox
+			// page 1: single ListBox
 			+ NewControl(UIMulticolumnListbox, 2)
 				.SetHeight(-1)
-				.Expose(FlatPackageList)
-				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
+				.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
 				.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
+				.Expose(FlatPackageList)
+				.AllowMultiselect()
 				.AddColumn("Package name")
 				.AddColumn("Size, Kb", 70)			//?? right-align text in column
 		]
@@ -148,51 +150,52 @@ void UIPackageDialog::InitUI()
 
 void UIPackageDialog::UpdateSelectedPackage()
 {
+	SelectedPackages.FastEmpty();
+
 	if (!UseFlatView)
 	{
 		// get package name from directory + name
-		int selectedPackageIndex = PackageListbox->GetSelectionIndex();
-		if (selectedPackageIndex < 0)
+		for (int selIndex = 0; selIndex < PackageListbox->GetSelectionCount(); selIndex++)
 		{
-			SelectedPackage = "";
-			return;
-		}
-
-		const char* pkgInDir = PackageListbox->GetItem(selectedPackageIndex);
-		const char* dir = *SelectedDir;
-		if (dir[0])
-		{
-			char buffer[512];
-			appSprintf(ARRAY_ARG(buffer), "%s/%s", dir, pkgInDir);
-			SelectedPackage = buffer;
-		}
-		else
-		{
-			SelectedPackage = pkgInDir;
+			const char* pkgInDir = PackageListbox->GetItem(PackageListbox->GetSelectionIndex(selIndex));
+			const char* dir = *SelectedDir;
+			FString* newPackageName = new (SelectedPackages) FString;
+			if (dir[0])
+			{
+				char buffer[512];
+				appSprintf(ARRAY_ARG(buffer), "%s/%s", dir, pkgInDir);
+				*newPackageName = buffer;
+			}
+			else
+			{
+				*newPackageName = pkgInDir;
+			}
 		}
 	}
 	else
 	{
 		// use flat list, with relative filename (including path)
-		int selectedPackageIndex = FlatPackageList->GetSelectionIndex();
-		if (selectedPackageIndex < 0)
+		for (int selIndex = 0; selIndex < FlatPackageList->GetSelectionCount(); selIndex++)
 		{
-			SelectedPackage = "";
-			return;
-		}
-		SelectedPackage = FlatPackageList->GetItem(selectedPackageIndex);
-		// split SelectedPackage to SelectedDir and SelectedPackage
-		char buffer[512];
-		appStrncpyz(buffer, *SelectedPackage, ARRAY_COUNT(buffer));
-		char* s = strrchr(buffer, '/');
-		if (s)
-		{
-			*s = 0;
-			SelectedDir = buffer;
-		}
-		else
-		{
-			SelectedDir = "";
+			FString* newPackageName = new (SelectedPackages) FString;
+			const char* text = FlatPackageList->GetItem(FlatPackageList->GetSelectionIndex(selIndex));
+			*newPackageName = text;
+			if (selIndex == 0)
+			{
+				// extract a directory name from 1st package name
+				char buffer[512];
+				appStrncpyz(buffer, text, ARRAY_COUNT(buffer));
+				char* s = strrchr(buffer, '/');
+				if (s)
+				{
+					*s = 0;
+					SelectedDir = buffer;
+				}
+				else
+				{
+					SelectedDir = "";
+				}
+			}
 		}
 	}
 }
@@ -266,35 +269,40 @@ void UIPackageDialog::OnFlatViewChanged(UICheckbox* sender, bool value)
 
 void UIPackageDialog::UpdateFlatMode()
 {
+#if 0
+	appPrintf("Selected packages:\n");
+	for (int i = 0; i < SelectedPackages.Num(); i++) appPrintf("  %s\n", *SelectedPackages[i]);
+#endif
 	if (UseFlatView)
 	{
-		PackageListbox->RemoveAllItems();
 		// switching to flat list
+		PackageListbox->RemoveAllItems();
 		FillFlatPackageList();
 		// select item which was active in tree+list
-		if (!SelectedPackage.IsEmpty())
-		{
-			FlatPackageList->SelectItem(*SelectedPackage);
-			// update buttons enable state
-			OnPackageSelected(FlatPackageList, FlatPackageList->GetSelectionIndex());
-		}
+		FlatPackageList->UnselectAllItems();
+		for (int i = 0; i < SelectedPackages.Num(); i++)
+			FlatPackageList->SelectItem(SelectedPackages[i], true);
+		// update buttons enable state
+		OnPackageSelected(FlatPackageList);
 	}
 	else
 	{
-		FlatPackageList->RemoveAllItems();
 		// switching to tree+list
-		// select directory and package
+		FlatPackageList->RemoveAllItems();
 		PackageTree->SelectItem(*SelectedDir);
 		OnTreeItemSelected(PackageTree, *SelectedDir);
-		if (!SelectedPackage.IsEmpty())
+		// select directory and package
+		PackageListbox->UnselectAllItems();
+		for (int i = 0; i < SelectedPackages.Num(); i++)
 		{
-			const char *s = *SelectedPackage;
+			const char *s = SelectedPackages[i];
 			const char* s2 = strrchr(s, '/');	// strip path
 			if (s2) s = s2+1;
-			PackageListbox->SelectItem(s);
-			// update buttons enable state
-			OnPackageSelected(PackageListbox, PackageListbox->GetSelectionIndex());
+			//!! todo: compare string between [s,s2] with SelectedDir, add only when strings are equal
+			PackageListbox->SelectItem(s, true);
 		}
+		// update buttons enable state
+		OnPackageSelected(PackageListbox);
 	}
 	FlatViewPager->SetActivePage(UseFlatView ? 1 : 0);
 }
@@ -309,9 +317,9 @@ void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
 	Miscellaneous UI callbacks
 -----------------------------------------------------------------------------*/
 
-void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender, int value)
+void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender)
 {
-	bool enableButtons = (value != -1);
+	bool enableButtons = (sender->GetSelectionCount() > 0);
 	OkButton->Enable(enableButtons);
 	ExportButton->Enable(enableButtons);
 }

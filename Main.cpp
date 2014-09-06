@@ -195,34 +195,6 @@ static void RegisterClasses(const UmodelSettings& settings, int game)
 
 
 /*-----------------------------------------------------------------------------
-	Object list support
-	change!!
------------------------------------------------------------------------------*/
-
-
-#if RENDERING
-
-static bool CreateVisualizer(UObject *Obj, bool test = false);
-
-inline bool ObjectSupported(UObject *Obj)
-{
-	return CreateVisualizer(Obj, true);
-}
-
-#else
-
-inline bool ObjectSupported(UObject *Obj)
-{
-	return true;
-}
-
-#endif // RENDERING
-
-// index of the current object in UObject::GObjObjects array
-static int ObjIndex = 0;
-
-
-/*-----------------------------------------------------------------------------
 	Exporters
 -----------------------------------------------------------------------------*/
 
@@ -333,6 +305,29 @@ static void RegisterExporters(bool md5)
 	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters
 }
 
+
+/*-----------------------------------------------------------------------------
+	Initialization of class and export systems
+-----------------------------------------------------------------------------*/
+
+static UmodelSettings settings;
+
+static void InitClassAndExportSystems(int Game, bool useMd5)
+{
+	static bool initialized = false;
+	if (initialized) return;
+	initialized = true;
+
+	RegisterExporters(useMd5);
+	RegisterClasses(settings, Game);
+#if BIOSHOCK
+	if (Game == GAME_Bioshock)
+	{
+		//!! should change this code!
+		CTypeInfo::RemapProp("UShader", "Opacity", "Opacity_Bio"); //!!
+	}
+#endif // BIOSHOCK
+}
 
 /*-----------------------------------------------------------------------------
 	Usage information
@@ -451,7 +446,8 @@ static void PrintVersionInfo()
 	Package helpers
 -----------------------------------------------------------------------------*/
 
-static void ExportObjects(const TArray<UnPackage*> &Packages, const TArray<UObject*> *Objects)
+// Export all loaded objects.
+static void ExportObjects(const TArray<UObject*> *Objects = NULL)
 {
 	guard(ExportObjects);
 
@@ -460,6 +456,7 @@ static void ExportObjects(const TArray<UnPackage*> &Packages, const TArray<UObje
 	UnPackage* notifyPackage = NULL;
 	bool hasObjectList = (Objects != NULL) && Objects->Num();
 
+	//?? when 'Objects' passed, probably iterate over that list instead of GObjObjects
 	for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 	{
 		UObject* ExpObj = UObject::GObjObjects[idx];
@@ -490,6 +487,8 @@ static TArray<UnPackage*> GFullyLoadedPackages;
 static void LoadWholePackage(UnPackage* Package)
 {
 	guard(LoadWholePackage);
+
+	if (GFullyLoadedPackages.FindItem(Package) >= 0) return;	// already loaded
 
 #if PROFILE
 	appResetProfiler();
@@ -595,6 +594,182 @@ void DisplayPackageStats(const TArray<UnPackage*> &Packages)
 
 
 /*-----------------------------------------------------------------------------
+	Object visualizer support
+-----------------------------------------------------------------------------*/
+
+#if RENDERING
+
+static bool CreateVisualizer(UObject *Obj, bool test = false);
+
+inline bool ObjectSupported(UObject *Obj)
+{
+	return CreateVisualizer(Obj, true);
+}
+
+// index of the current object in UObject::GObjObjects array
+static int ObjIndex = 0;
+
+// dir = 1 - forward direction for search, dir = -1 - backward.
+// When forceVisualizer is true, dummy visualizer will be created if no supported object found
+static bool FindObjectAndCreateVisualizer(int dir, bool forceVisualizer = false, bool newPackage = false)
+{
+	if (newPackage)
+	{
+		assert(dir > 0); // just in case
+		ObjIndex = -1;
+	}
+
+	int looped = 0;
+	UObject *Obj;
+	while (true)
+	{
+		if (dir > 0)
+		{
+			ObjIndex++;
+			if (ObjIndex >= UObject::GObjObjects.Num())
+			{
+				ObjIndex = 0;
+				looped++;
+			}
+		}
+		else
+		{
+			ObjIndex--;
+			if (ObjIndex < 0)
+			{
+				ObjIndex = UObject::GObjObjects.Num()-1;
+				looped++;
+			}
+		}
+		if (looped > 1 || UObject::GObjObjects.Num() == 0)
+		{
+			if (forceVisualizer)
+			{
+				CreateVisualizer(NULL);
+				appPrintf("\nThe specified package(s) has no supported objects.\n\n");
+				DisplayPackageStats(GFullyLoadedPackages);
+				return true;
+			}
+			return false;
+		}
+		Obj = UObject::GObjObjects[ObjIndex];
+		if (ObjectSupported(Obj))
+			break;
+	}
+	// change visualizer
+	CreateVisualizer(Obj);
+	return true;
+}
+
+#if HAS_UI
+static UIPackageDialog GPackageDialog;
+
+// This function will return 'false' when dialog has popped up and cancelled. If
+// user performs some action, and then pop up the dialog again - the function will
+// always return true.
+static bool ShowPackageUI()
+{
+	static bool firstDialogCancelled = true;
+
+	// When we're doing export, then switching back to GUI, then pressing "Esc",
+	// we can't return to the visualizer which was used before doing export because
+	// all object was unloaded. In this case, code will set 'packagesChanged' flag
+	// to true, causing re-initialization of browser list.
+	bool packagesChanged = false;
+
+	while (true)
+	{
+		UIPackageDialog::EResult mode = GPackageDialog.Show();
+		if (mode == UIPackageDialog::CANCEL)
+		{
+			if (packagesChanged)
+				FindObjectAndCreateVisualizer(1, true, true);
+			return !firstDialogCancelled;
+		}
+		firstDialogCancelled = false;
+
+		TStaticArray<UnPackage*, 256> Packages;
+		for (int i = 0; i < GPackageDialog.SelectedPackages.Num(); i++)
+		{
+			const char* pkgName = *GPackageDialog.SelectedPackages[i];
+			UnPackage* package = UnPackage::LoadPackage(pkgName);	// should always return non-NULL
+			if (package) Packages.AddItem(package);
+		}
+		if (!Packages.Num()) break;			// should not happen
+
+		// register exporters and classes (will be performed only once); use any package
+		// to detect an engine version
+		InitClassAndExportSystems(Packages[0]->Game, false);		//!! should use 'md5' option; perhaps change on the fly
+
+		// here we're in visualize mode
+
+		// check whether we need to perform package unloading
+		bool needReload = false;
+		for (int i = 0; i < GFullyLoadedPackages.Num(); i++)
+		{
+			if (Packages.FindItem(GFullyLoadedPackages[i]) < 0)
+			{
+				// One of currently loaded packages is not needed anymore. We can't safely
+				// unload only one package because it could be linked by other loaded packages.
+				// So, unload everything.
+				needReload = true;
+				break;
+			}
+		}
+
+		if (needReload || mode == UIPackageDialog::EXPORT)
+		{
+			// destroy a viewer before releasing packages
+			CSkelMeshViewer::UntagAllMeshes();
+			delete Viewer;
+			Viewer = NULL;
+
+			packagesChanged = true;
+			ReleaseAllObjects();
+		}
+
+		if (mode == UIPackageDialog::EXPORT)
+		{
+			// for each package: load a package, export, then release
+			for (int i = 0; i < Packages.Num(); i++)
+			{
+				LoadWholePackage(Packages[i]);
+				ExportObjects();
+				ReleaseAllObjects();
+			}
+			// cleanup
+			//!! unregister all exported objects
+			continue;		// after export, show the dialog again
+		}
+
+		// fully load all selected packages
+		for (int i = 0; i < Packages.Num(); i++)
+			LoadWholePackage(Packages[i]);
+
+		if (packagesChanged || !Viewer)
+		{
+			FindObjectAndCreateVisualizer(1, true, true);
+			packagesChanged = false;
+		}
+		break;
+	}
+
+	return true;
+}
+
+#endif // HAS_UI
+
+#else // RENDERING
+
+inline bool ObjectSupported(UObject *Obj)
+{
+	return true;
+}
+
+#endif // RENDERING
+
+
+/*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
 
@@ -620,10 +795,6 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 #define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
 #define OPT_VALUE(name,var,value)		{ name, (byte*)&var, value },
-
-#if HAS_UI
-static UIPackageDialog packageDialog;
-#endif
 
 int main(int argc, char **argv)
 {
@@ -653,11 +824,7 @@ int main(int argc, char **argv)
 		CMD_PkgInfo,
 		CMD_List,
 		CMD_Export,
-		CMD_TagList,
-		CMD_VersionInfo,
 	};
-
-	UmodelSettings settings;
 
 	static byte mainCmd = CMD_View;
 	static bool md5 = false, exprtAll = false, hasRootDir = false, forceUI = false;
@@ -681,10 +848,8 @@ int main(int argc, char **argv)
 			OPT_VALUE("dump",    mainCmd, CMD_Dump)
 			OPT_VALUE("check",   mainCmd, CMD_Check)
 			OPT_VALUE("export",  mainCmd, CMD_Export)
-			OPT_VALUE("taglist", mainCmd, CMD_TagList)
 			OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
 			OPT_VALUE("list",    mainCmd, CMD_List)
-			OPT_VALUE("version", mainCmd, CMD_VersionInfo)
 #if VSTUDIO_INTEGRATION
 			OPT_BOOL ("debug",   GUseDebugger)
 #endif
@@ -766,10 +931,21 @@ int main(int argc, char **argv)
 		{
 			settings.UseScaleForm = settings.UseFaceFx = true;
 		}
+		// information commands
+		else if (!stricmp(opt, "taglist"))
+		{
+			PrintGameList(true);
+			return 0;
+		}
 		else if (!stricmp(opt, "help"))
 		{
 			PrintUsage();
-			exit(0);
+			return 0;
+		}
+		else if (!stricmp(opt, "version"))
+		{
+			PrintVersionInfo();
+			return 0;
 		}
 		else
 		{
@@ -778,9 +954,20 @@ int main(int argc, char **argv)
 		}
 	}
 
+	const char *argPkgName   = (params.Num() >= 1) ? params[0] : NULL;
+	const char *argObjName   = (params.Num() >= 2) ? params[1] : NULL;
+	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
+	if (params.Num() > 3)
+	{
+		appPrintf("COMMAND LINE ERROR: too many arguments. Check your command line.\nYou specified: package=%s, object=%s, class=%s\n", argPkgName, argObjName, argClassName);
+	bad_params:
+		appPrintf("Use \"umodel\" without arguments to show command line help\n");;
+		exit(1);
+	}
+
 	bool guiShown = false;
 #if HAS_UI
-	if (argc < 2 || !hasRootDir || forceUI)	// really, !hasRootDir will always be 'false' if no arguments was provided
+	if (argc < 2 || (!hasRootDir && !argPkgName) || forceUI)
 	{
 		// no arguments provided - display startup options
 		UIStartupDialog dialog(settings);
@@ -798,28 +985,8 @@ int main(int argc, char **argv)
 	GForcePlatform = settings.Platform;
 	GForceCompMethod = settings.PackageCompression;
 
-	if (mainCmd == CMD_VersionInfo)
-	{
-		PrintVersionInfo();
-		return 0;
-	}
-
-	if (mainCmd == CMD_TagList)
-	{
-		PrintGameList(true);
-		return 0;
-	}
-
-	const char *argPkgName   = (params.Num() >= 1) ? params[0] : NULL;
-	const char *argObjName   = (params.Num() >= 2) ? params[1] : NULL;
-	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
-	if (params.Num() > 3)
-	{
-		appPrintf("COMMAND LINE ERROR: too many arguments. Check your command line.\nYou specified: package=%s, object=%s, class=%s\n", argPkgName, argObjName, argClassName);
-	bad_params:
-		appPrintf("Use \"umodel\" without arguments to show command line help\n");;
-		exit(1);
-	}
+	TArray<UnPackage*> Packages;
+	TArray<UObject*> Objects;
 
 #if !HAS_UI
 	if (!argPkgName) goto bad_pkg_name;
@@ -833,12 +1000,11 @@ int main(int argc, char **argv)
 #else
 	if (!argPkgName)
 	{
-		UIPackageDialog::EResult result = packageDialog.Show();
-		if (result == UIPackageDialog::CANCEL)
-			return 0;
-		mainCmd = (result == UIPackageDialog::SHOW) ? CMD_View : CMD_Export;
-		argPkgName = *packageDialog.SelectedPackage;
+		if (!ShowPackageUI())
+			return 0;		// user has cancelled the dialog when it appears for the first time
+
 		guiShown = true;
+		goto main_loop;
 	}
 #endif // !HAS_UI
 
@@ -859,6 +1025,9 @@ int main(int argc, char **argv)
 	// setup root directory
 	if (!hasRootDir)
 	{
+		//!! - place this code before UIStartupDialog, set game path in options so UI
+		//!!   could pick it up
+		//!! - appSetRootDirectory2(): replace with appGetRootDirectoryFromFile() + appSetRootDirectory()
 		if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
 		{
 			// has path in filename
@@ -879,14 +1048,6 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	// initialization
-
-	// register exporters and classes
-	RegisterExporters(md5);
-	RegisterClasses(settings, MainPackage->Game);
-
-	// end of initialization
-
 	if (mainCmd == CMD_List)
 	{
 		guard(List);
@@ -900,16 +1061,10 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-#if BIOSHOCK
-	if (MainPackage->Game == GAME_Bioshock)
-	{
-		//!! should change this code!
-		CTypeInfo::RemapProp("UShader", "Opacity", "Opacity_Bio"); //!!
-	}
-#endif // BIOSHOCK
+	// register exporters and classes
+	InitClassAndExportSystems(MainPackage->Game, md5);
 
 	// preload all extra packages first
-	TArray<UnPackage*> Packages;
 	Packages.AddItem(MainPackage);	// already loaded
 	for (int i = 0; i < extraPackages.Num(); i++)
 	{
@@ -926,7 +1081,6 @@ int main(int argc, char **argv)
 		return 0;					// already displayed when loaded package; extend it?
 	}
 
-	TArray<UObject*> Objects;
 	// get requested object info
 	if (objectsToLoad.Num())
 	{
@@ -999,7 +1153,7 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_Export)
 	{
-		ExportObjects(Packages, exprtAll ? NULL : &Objects);
+		ExportObjects(exprtAll ? NULL : &Objects);
 		if (!guiShown)
 			return 0;
 		// switch to a viewer in GUI mode
@@ -1033,25 +1187,12 @@ int main(int argc, char **argv)
 	}
 
 	// find any object to display
-	bool created = false;
-	for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
-		if (CreateVisualizer(UObject::GObjObjects[idx]))
-		{
-			ObjIndex = idx;
-			created = true;
-			break;
-		}
-
-	if (!created)
+	if (!FindObjectAndCreateVisualizer(1, false, guiShown))
 	{
-		if (!guiShown)
-		{
-			appPrintf("\nThe specified package(s) has no objects to diaplay.\n\n");
-			goto no_objects;
-		}
-		// allow user to open packageDialog and change a package: create empty viewer
-		CreateVisualizer(NULL);
+		appPrintf("\nThe specified package(s) has no objects to diaplay.\n\n");
+		goto no_objects;
 	}
+
 	// print mesh info
 #	if TEST_FILES
 	Viewer->Test();
@@ -1059,6 +1200,7 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_View)
 	{
+	main_loop:
 		// show object
 		vpInvertXAxis = true;
 		guard(MainLoop);
@@ -1137,8 +1279,14 @@ static bool CreateVisualizer(UObject *Obj, bool test)
 #define MESH_VIEWER(UClass, CViewer)				\
 	if (Obj->IsA(#UClass + 1))						\
 	{												\
-		UClass *Obj2 = static_cast<UClass*>(Obj); 	\
-		if (!test) Viewer = new CViewer(Obj2->ConvertedMesh); \
+		if (!test)									\
+		{											\
+			UClass *Obj2 = static_cast<UClass*>(Obj); \
+			if (!Obj2->ConvertedMesh)				\
+				Viewer = new CObjectViewer(Obj);	\
+			else									\
+				Viewer = new CViewer(Obj2->ConvertedMesh); \
+		}											\
 		return true;								\
 	}
 	// create viewer for known class
@@ -1274,50 +1422,9 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		return;
 	}
 
-	bool forceVisualizer = false;
-
 	if (key == SPEC_KEY(PAGEDOWN) || key == SPEC_KEY(PAGEUP))
 	{
-	change_object:
-		// browse loaded objects
-		int looped = 0;
-		UObject *Obj;
-		while (true)
-		{
-			if (key == SPEC_KEY(PAGEDOWN))
-			{
-				ObjIndex++;
-				if (ObjIndex >= UObject::GObjObjects.Num())
-				{
-					ObjIndex = 0;
-					looped++;
-				}
-			}
-			else
-			{
-				ObjIndex--;
-				if (ObjIndex < 0)
-				{
-					ObjIndex = UObject::GObjObjects.Num()-1;
-					looped++;
-				}
-			}
-			if (looped > 1 || UObject::GObjObjects.Num() == 0)
-			{
-				if (forceVisualizer)
-				{
-					CreateVisualizer(NULL);
-					appPrintf("\nThe specified package(s) has no supported objects.\n\n");
-					DisplayPackageStats(GFullyLoadedPackages);
-				}
-				return;		// prevent infinite loop
-			}
-			Obj = UObject::GObjObjects[ObjIndex];
-			if (ObjectSupported(Obj))
-				break;
-		}
-		// change visualizer
-		CreateVisualizer(Obj);
+		FindObjectAndCreateVisualizer((key == SPEC_KEY(PAGEDOWN)) ? 1 : -1);
 		return;
 	}
 	if (key == ('s'|KEY_CTRL))
@@ -1333,36 +1440,8 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 #if HAS_UI
 	if (key == 'o')
 	{
-		UIPackageDialog::EResult result = packageDialog.Show();
-		if (result == UIPackageDialog::CANCEL)
-			return;
-		const char* pkgName = *packageDialog.SelectedPackage;
-		// load a package, don't release anything when package was not changed
-		UnPackage* package = UnPackage::LoadPackage(pkgName);
-		if (!package) return;	// should not happen
-		if (GFullyLoadedPackages.FindItem(package) >= 0)
-			return;				// this package was already loaded, don't do anything now
-		// release previously created viewer (could release some resources)
-		if (Viewer)
-		{
-			CSkelMeshViewer::UntagAllMeshes();
-			delete Viewer;
-			Viewer = NULL;
-		}
-		// load a new package "from scratch"
-		ReleaseAllObjects();
-		LoadWholePackage(package);
-		if (result == UIPackageDialog::EXPORT)
-		{
-			TArray<UnPackage*> Packages;
-			Packages.AddItem(package);
-			ExportObjects(Packages, NULL);
-		}
-		// execute code which will select 1st viewable object
-		ObjIndex = -1;
-		key = SPEC_KEY(PAGEDOWN);
-		forceVisualizer = true;
-		goto change_object;
+		ShowPackageUI();
+		return;
 	}
 #endif // HAS_UI
 	Viewer->ProcessKey(key);

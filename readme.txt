@@ -151,6 +151,12 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+06.09.2014
+- UI: added possibility to select multiple packages; these packages could be either loaded
+  for viewing or exported in batch mode
+- passing a package name in command line without -path=... option will not pop up a startup
+  UI anymore
+
 05.09.2014
 - UI: added "flat" mode for package selection, with no directory tree, all packages are in
   single list

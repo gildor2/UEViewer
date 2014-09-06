@@ -18,11 +18,11 @@ public:
 	EResult Show();
 	virtual void InitUI();
 
-	FString			SelectedPackage;
+	TArray<FString>	SelectedPackages;
 
 protected:
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
-	void OnPackageSelected(UIMulticolumnListbox* sender, int value);
+	void OnPackageSelected(UIMulticolumnListbox* sender);
 	void OnFlatViewChanged(UICheckbox* sender, bool value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 	void OnExportClicked(UIButton* sender);

@@ -185,7 +185,9 @@ public:
 	UnPackage(const char *filename, FArchive *Ar = NULL);
 	~UnPackage();
 
-	// load package using short name (without path and extension)
+	// Load package using short name (without path and extension). When the package
+	// is already loaded, this function will symply return a pointer to earlier
+	// loaded UnPackage.
 	static UnPackage *LoadPackage(const char *Name);
 
 	void SetupReader(int ExportIndex)
