@@ -7,7 +7,7 @@
 shopt -s extglob
 
 arc_name=source-${PWD##*/}.rar
-skip_dirs=@(./data|./bak|./obj|./Screenshots)
+skip_dirs=@(./data|./bak|./obj|./Screenshots|./UmodelExport)
 skip_files=@(./notify.log|./umodel_win32.zip)
 skip_dirs2="-xdata -xobj"							# part of skip_dirs used to speedup rar scan
 

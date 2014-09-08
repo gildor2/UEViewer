@@ -246,6 +246,21 @@ protected:
 };
 
 
+class UIProgressBar : public UIElement
+{
+	DECLARE_UI_CLASS(UIProgressBar, UIElement);
+public:
+	UIProgressBar();
+
+	void SetValue(float value);
+
+protected:
+	float		Value;
+
+	virtual void Create(UIBaseDialog* dialog);
+};
+
+
 class UIButton : public UIElement
 {
 	DECLARE_UI_CLASS(UIButton, UIElement);
@@ -678,6 +693,15 @@ public:
 		return Wnd != 0;
 	}
 
+	// Allow closing of non-modal dialog when Esc key pressed. In order to make
+	// it working, we should call PumpMessageLoop() to handle messages.
+	// Details: 'Escape' key is processed in PumpMessageLoop().
+	FORCEINLINE UIBaseDialog& CloseOnEsc()
+	{
+		DoCloseOnEsc = true;
+		return *this;
+	}
+
 	// Pumping a message loop, return 'false' when dialog was closed.
 	// Should call this function for non-modal dialogs.
 	bool PumpMessageLoop();
@@ -688,6 +712,7 @@ public:
 
 protected:
 	int			NextDialogId;
+	bool		DoCloseOnEsc;
 
 	bool ShowDialog(bool modal, const char* title, int width, int height);
 

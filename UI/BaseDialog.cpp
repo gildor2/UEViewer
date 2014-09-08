@@ -61,6 +61,7 @@
 #define DEFAULT_HORZ_BORDER			7
 
 #define DEFAULT_LABEL_HEIGHT		14
+#define DEFAULT_PROGRESS_BAR_HEIGHT	18
 #define DEFAULT_BUTTON_HEIGHT		20
 #define DEFAULT_CHECKBOX_HEIGHT		18
 #define DEFAULT_EDIT_HEIGHT			20
@@ -286,6 +287,33 @@ void UILabel::Create(UIBaseDialog* dialog)
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align), 0, dialog);
 	UpdateEnabled();
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIProgressBar
+-----------------------------------------------------------------------------*/
+
+UIProgressBar::UIProgressBar()
+:	Value(0)
+{
+	Height = DEFAULT_PROGRESS_BAR_HEIGHT;
+}
+
+void UIProgressBar::SetValue(float value)
+{
+	if (value == Value) return;
+	Value = value;
+	if (Wnd) SendMessage(Wnd, PBM_SETPOS, Value * 16384, 0);
+}
+
+void UIProgressBar::Create(UIBaseDialog* dialog)
+{
+	Parent->AddVerticalSpace();
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Wnd = Window(PROGRESS_CLASS, "", 0, 0, dialog);
+	SendMessage(Wnd, PBM_SETRANGE, 0, MAKELPARAM(0, 16384));
+	if (Wnd) SendMessage(Wnd, PBM_SETPOS, Value * 16384, 0);
 }
 
 
@@ -1559,6 +1587,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	}
 	if (Parent)
 	{
+//		if (!(Flags & GROUP_NO_BORDER)) -- makes control layout looking awful
 		Parent->AddVerticalSpace();
 		// request x, y and width; height is not available yet
 		int h = 0;
@@ -1826,6 +1855,7 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 UIBaseDialog::UIBaseDialog()
 :	UIGroup(GROUP_NO_BORDER)
 ,	NextDialogId(FIRST_DIALOG_ID)
+,	DoCloseOnEsc(false)
 {}
 
 UIBaseDialog::~UIBaseDialog()
@@ -1900,6 +1930,8 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		InitCommonControls();
 	}
 
+	NextDialogId = FIRST_DIALOG_ID;
+
 	// convert title to unicode
 	wchar_t wTitle[MAX_TITLE_LEN];
 	mbstowcs(wTitle, title, MAX_TITLE_LEN);
@@ -1920,7 +1952,6 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 	else
 	{
 		// modeless
-		//!! make as separate function
 		HWND dialog = CreateDialogIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
@@ -1947,6 +1978,22 @@ bool UIBaseDialog::PumpMessageLoop()
 	MSG msg;
 	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
+		if (msg.message == WM_KEYDOWN && DoCloseOnEsc && msg.wParam == VK_ESCAPE)
+		{
+			// Win32 dialog boxes doesn't receive keyboard message. In order to handle 'escape' key,
+			// we should have own message loop. We have one for non-modal dialog boxes here. We don't have
+			// access to the message loop of modal dialog box. Note: we are comparing msg.hwnd with dialog's
+			// window, and also comparing msg.hwnd's parent with dialog too. No other check are performed
+			// because we have very simple hierarchy in our UI system: all children are parented by single
+			// dialog window.
+			// If we'll need nore robust way of processing messages (for example, when we need to process
+			// keys for modal dialogs, or when message loop is processed by code which is not accessible for
+			// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
+			// (because key messages are sent to the focused window only, and not to its parent).
+			if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
+				CloseDialog(true);
+		}
+
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}

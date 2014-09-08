@@ -8,6 +8,7 @@ class UIProgressDialog : public UIBaseDialog
 public:
 	void Show(const char* title)
 	{
+		CloseOnEsc();
 		ShowDialog(title, 250, 200);
 	}
 
@@ -21,7 +22,10 @@ public:
 		char buffer[512];
 		appSprintf(ARRAY_ARG(buffer), "%s %d/%d", DescriptionText, index+1, total);
 		DescriptionLabel->SetText(buffer);
+
 		PackageLabel->SetText(package);
+
+		ProgressBar->SetValue((float)(index+1) / total);
 
 		return Tick();
 	}
@@ -36,23 +40,13 @@ public:
 		return PumpMessageLoop();
 	}
 
-	// +-------------------
-	// | Scanning packages N/N
-	// | (or Loading/Exporting package N/N)
-	// | <package name>
-	// | [###########..................]
-	// +-------------------
-	// +-------------------
-	// | Loaded objects: %d
-	// |    Used memory: %d MBytes
-	// +-------------------
-
 protected:
 	const char*	DescriptionText;
 	UILabel*	DescriptionLabel;
 	UILabel*	PackageLabel;
 	UILabel*	MemoryLabel;
 	UILabel*	ObjectsLabel;
+	UIProgressBar* ProgressBar;
 
 	virtual void InitUI()
 	{
@@ -65,6 +59,8 @@ protected:
 				+ NewControl(UISpacer)
 				+ NewControl(UILabel, "")
 				.Expose(PackageLabel)
+				+ NewControl(UIProgressBar)
+				.Expose(ProgressBar)
 			]
 			+ NewControl(UIGroup)
 			[
