@@ -12,7 +12,7 @@ UIStartupDialog::UIStartupDialog(UmodelSettings& settings)
 
 bool UIStartupDialog::Show()
 {
-	if (!ShowDialog("Umodel Startup Options", 320, 200))
+	if (!ShowModal("Umodel Startup Options", 320, 200))
 		return false;
 
 	// process some options

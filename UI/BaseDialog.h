@@ -234,6 +234,8 @@ public:
 	UILabel(const char* text, ETextAlign align = TA_Left);
 	UILabel& SetAutoSize() { AutoSize = true; return *this; }
 
+	void SetText(const char* text);
+
 protected:
 	FString		Label;
 	ETextAlign	Align;
@@ -657,25 +659,44 @@ public:
 	UIBaseDialog();
 	virtual ~UIBaseDialog();
 
-	virtual void InitUI()
-	{}
-
 	FORCEINLINE int GenerateDialogId()
 	{
 		return NextDialogId++;
 	}
 
-	bool ShowDialog(const char* title, int width, int height);
+	FORCEINLINE bool ShowModal(const char* title, int width, int height)
+	{
+		return ShowDialog(true, title, width, height);
+	}
+	FORCEINLINE void ShowDialog(const char* title, int width, int height)
+	{
+		ShowDialog(false, title, width, height);
+	}
+
+	FORCEINLINE bool IsDialogOpen() const
+	{
+		return Wnd != 0;
+	}
+
+	// Pumping a message loop, return 'false' when dialog was closed.
+	// Should call this function for non-modal dialogs.
+	bool PumpMessageLoop();
+
 	void CloseDialog(bool cancel = false);
 
-	//!! UIBaseDialog& AddOkCancelButtons(); - should be done in InitUI as last operation
+	//?? UIBaseDialog& AddOkCancelButtons(); - should be done in InitUI as last operation
 
 protected:
 	int			NextDialogId;
 
+	bool ShowDialog(bool modal, const char* title, int width, int height);
+
 	// dialog procedure
 	static INT_PTR CALLBACK StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	INT_PTR WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+	virtual void InitUI()
+	{}
 };
 
 

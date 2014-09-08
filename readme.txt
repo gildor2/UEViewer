@@ -151,6 +151,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+08.09.2014
+- UI: pressing Ctrl+A on package list will select all packages
+- UI: displaying progress window while loading or exporting objects
+- by default, umodel now exports all files to the directory {current_path}/UmodelExport
+
 06.09.2014
 - UI: added possibility to select multiple packages; these packages could be either loaded
   for viewing or exported in batch mode

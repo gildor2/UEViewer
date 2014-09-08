@@ -16,24 +16,10 @@ public:
 	};
 
 	EResult Show();
-	virtual void InitUI();
 
 	TArray<FString>	SelectedPackages;
 
 protected:
-	void OnTreeItemSelected(UITreeView* sender, const char* text);
-	void OnPackageSelected(UIMulticolumnListbox* sender);
-	void OnFlatViewChanged(UICheckbox* sender, bool value);
-	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
-	void OnExportClicked(UIButton* sender);
-	void OnFilterTextChanged(UITextEdit* sender, const char* text);
-
-	void UpdateSelectedPackage();
-	void UpdateFlatMode();
-
-	void FillFlatPackageList();
-	void AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath);
-
 	UIPageControl*	FlatViewPager;
 	UITreeView*		PackageTree;
 	UIMulticolumnListbox* PackageListbox;
@@ -49,6 +35,21 @@ protected:
 
 	typedef TArray<const CGameFileInfo*> PackageList;
 	PackageList		Packages;
+
+	void OnTreeItemSelected(UITreeView* sender, const char* text);
+	void OnPackageSelected(UIMulticolumnListbox* sender);
+	void OnFlatViewChanged(UICheckbox* sender, bool value);
+	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
+	void OnExportClicked(UIButton* sender);
+	void OnFilterTextChanged(UITextEdit* sender, const char* text);
+
+	void UpdateSelectedPackage();
+	void UpdateFlatMode();
+
+	void FillFlatPackageList();
+	void AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath);
+
+	virtual void InitUI();
 };
 
 #endif // HAS_UI

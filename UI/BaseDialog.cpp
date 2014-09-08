@@ -255,6 +255,12 @@ UILabel::UILabel(const char* text, ETextAlign align)
 	Height = DEFAULT_LABEL_HEIGHT;
 }
 
+void UILabel::SetText(const char* text)
+{
+	Label = text;
+	if (Wnd) SetWindowText(Wnd, *Label);
+}
+
 void UILabel::UpdateSize(UIBaseDialog* dialog)
 {
 	if (AutoSize)
@@ -1075,6 +1081,23 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		return true;
 	}
 
+	if (cmd == LVN_KEYDOWN)
+	{
+		NMLVKEYDOWN* pnkd = (NMLVKEYDOWN*)lParam;
+		if (GetKeyState(VK_CONTROL) & 0x8000)	//?? check other keys too
+		{
+			// handle Ctrl+A
+			if (pnkd->wVKey == 'A')
+			{
+				int numItems = Items.Num() / NumColumns - 1;
+				for (int i = 0; i < numItems; i++)
+					SetItemSelection(i, true);
+			}
+		}
+
+		return true;
+	}
+
 	return false;
 
 	unguard;
@@ -1398,9 +1421,13 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 
 	int baseX = X + CursorX;
 	int parentWidth = Width;
+	int rightMargin = X + Width;
 
 	if (!(Flags & GROUP_NO_BORDER))
+	{
 		parentWidth -= GROUP_INDENT * 2;
+		rightMargin -= GROUP_INDENT;
+	}
 
 	DBG_LAYOUT("%s... AllocSpace (%d %d %d %d) IN: Curs: %d,%d W: %d -- ", GetDebugLayoutIndent(), x, y, w, h, CursorX, CursorY, parentWidth);
 
@@ -1429,9 +1456,8 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	else
 		x = baseX + x;								// treat 'x' as relative value
 
-//!! wrong condition: will work incorrect when group has a border: it's 'X + parentWidth' will be GROUP_INDENT pixels less
-//	if (x + w > X + parentWidth)					// truncate width if too large
-//		w = X + parentWidth - x;
+	if (x + w > rightMargin)
+		w = rightMargin - x;
 
 	if (y < 0)
 	{
@@ -1804,6 +1830,7 @@ UIBaseDialog::UIBaseDialog()
 
 UIBaseDialog::~UIBaseDialog()
 {
+	CloseDialog(false);
 }
 
 static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize)
@@ -1861,9 +1888,11 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 	return (DLGTEMPLATE*)buffer;
 }
 
-bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
+bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int height)
 {
 	guard(UIBaseDialog::ShowDialog);
+
+	assert(Wnd == 0);
 
 	if (!hInstance)
 	{
@@ -1876,41 +1905,52 @@ bool UIBaseDialog::ShowDialog(const char* title, int width, int height)
 	mbstowcs(wTitle, title, MAX_TITLE_LEN);
 	DLGTEMPLATE* tmpl = MakeDialogTemplate(width, height, wTitle, L"MS Shell Dlg", 8);
 
-#if 1
-	// modal
-	int result = DialogBoxIndirectParam(
-		hInstance,					// hInstance
-		tmpl,						// lpTemplate
-		0,							// hWndParent
-		StaticWndProc,				// lpDialogFunc
-		(LPARAM)this				// lParamInit
-	);
-#else
-	// modeless
-	//!! make as separate function
-	HWND dialog = CreateDialogIndirectParam(
-		hInstance,					// hInstance
-		tmpl,						// lpTemplate
-		0,							// hWndParent
-		StaticWndProc,				// lpDialogFunc
-		(LPARAM)this				// lParamInit
-	);
-
-	if (dialog)
+	if (modal)
 	{
-		// implement a message loop
-		appPrintf("Dialog created");
-		MSG msg;
-		while (GetMessage(&msg, NULL, 0, 0))	//!! there's no exit condition here
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-		appPrintf("Dialog closed");
+		// modal
+		int result = DialogBoxIndirectParam(
+			hInstance,					// hInstance
+			tmpl,						// lpTemplate
+			0,							// hWndParent
+			StaticWndProc,				// lpDialogFunc
+			(LPARAM)this				// lParamInit
+		);
+		return (result != IDCANCEL);
 	}
-#endif
+	else
+	{
+		// modeless
+		//!! make as separate function
+		HWND dialog = CreateDialogIndirectParam(
+			hInstance,					// hInstance
+			tmpl,						// lpTemplate
+			0,							// hWndParent
+			StaticWndProc,				// lpDialogFunc
+			(LPARAM)this				// lParamInit
+		);
 
-	return (result != IDCANCEL);
+		assert(dialog);
+		// implement a message loop
+		PumpMessageLoop();
+		return true;
+	}
+
+	unguardf("modal=%d, title=\"%s\"", modal, title);
+}
+
+bool UIBaseDialog::PumpMessageLoop()
+{
+	guard(UIBaseDialog::PumpMessageLoop);
+
+	if (Wnd == 0) return false;
+
+	MSG msg;
+	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return (Wnd != 0);	//!! check correctness of result value
 
 	unguard;
 }
@@ -1919,6 +1959,7 @@ void UIBaseDialog::CloseDialog(bool cancel)
 {
 	DialogClosed(cancel);
 	EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
+	Wnd = 0;
 }
 
 INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

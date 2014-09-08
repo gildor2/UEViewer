@@ -20,6 +20,10 @@ struct UmodelSettings
 	int				PackageCompression;
 	int				Platform;
 
+	// export options
+	FString			ExportPath;
+	bool			ExportMd5Mesh;
+
 	UmodelSettings()
 	{
 		SetDefaults();
@@ -27,6 +31,10 @@ struct UmodelSettings
 
 	void SetDefaults()
 	{
+		//!! WARNING: if this function will be called from anything else but constructor,
+		//!! should empty string values as well
+		assert(GamePath.IsEmpty());
+
 		GameOverride = GAME_UNKNOWN;
 		GamePath = "";
 
@@ -42,6 +50,10 @@ struct UmodelSettings
 
 		PackageCompression = 0;
 		Platform = PLATFORM_UNKNOWN;
+
+		// export options
+
+		ExportMd5Mesh = false;
 	}
 };
 

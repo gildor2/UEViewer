@@ -12,7 +12,6 @@ public:
 	UIStartupDialog(UmodelSettings& settings);
 
 	bool Show();
-	virtual void InitUI();
 
 protected:
 	UmodelSettings&	Opt;
@@ -23,6 +22,8 @@ protected:
 
 	void FillGameList();
 	void OnEngineChanged(UICombobox* sender, int value, const char* text);
+
+	virtual void InitUI();
 };
 
 #endif // HAS_UI

@@ -162,6 +162,7 @@ DEPENDS = \
 	GameList.h \
 	UI/BaseDialog.h \
 	UI/PackageDialog.h \
+	UI/ProgressDialog.h \
 	UI/StartupDialog.h \
 	UmodelSettings.h \
 	Unreal/MeshCommon.h \

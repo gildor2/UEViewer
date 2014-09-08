@@ -16,7 +16,7 @@ UIPackageDialog::UIPackageDialog()
 UIPackageDialog::EResult UIPackageDialog::Show()
 {
 	ModalResult = SHOW;
-	if (!ShowDialog("Choose a package to open", 400, 200))
+	if (!ShowModal("Choose a package to open", 400, 200))
 		return CANCEL;
 
 	UpdateSelectedPackage();

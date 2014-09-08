@@ -1,10 +1,9 @@
 #include "Core.h"
 
-//!! move UI code to separate cpp and simply call their functions
-#if HAS_UI
-#include "../UI/BaseDialog.h"
-#include "../UI/StartupDialog.h"
-#include "../UI/PackageDialog.h"
+#if _WIN32
+#include <direct.h>		// getcwd
+#else
+#include <unistd.h>		// getcwd
 #endif
 
 #include "UnrealClasses.h"
@@ -31,6 +30,14 @@
 #include "GameList.h"
 #include "UmodelSettings.h"
 
+//!! move UI code to separate cpp and simply call their functions
+#if HAS_UI
+#include "UI/BaseDialog.h"
+#include "UI/StartupDialog.h"
+#include "UI/PackageDialog.h"
+#include "UI/ProgressDialog.h"
+#endif // HAS_UI
+
 #define APP_CAPTION					"UE Viewer"
 #define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
 
@@ -52,6 +59,9 @@ class CUmodelApp : public CApplication
 };
 
 static CUmodelApp GApplication;
+
+//!! rename to GSettings
+static UmodelSettings settings;
 
 
 /*-----------------------------------------------------------------------------
@@ -199,33 +209,25 @@ static void RegisterClasses(const UmodelSettings& settings, int game)
 -----------------------------------------------------------------------------*/
 
 // wrappers
-static void ExportPsk2(const USkeletalMesh *Mesh)
+static void ExportSkeletalMesh2(const USkeletalMesh *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportPsk(Mesh->ConvertedMesh);
+	if (!settings.ExportMd5Mesh)
+		ExportPsk(Mesh->ConvertedMesh);
+	else
+		ExportMd5Mesh(Mesh->ConvertedMesh);
 }
 
 #if UNREAL3
-static void ExportPsk3(const USkeletalMesh3 *Mesh)
+static void ExportSkeletalMesh3(const USkeletalMesh3 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	ExportPsk(Mesh->ConvertedMesh);
+	if (!settings.ExportMd5Mesh)
+		ExportPsk(Mesh->ConvertedMesh);
+	else
+		ExportMd5Mesh(Mesh->ConvertedMesh);
 }
-#endif
-
-static void ExportMd5Mesh2(const USkeletalMesh *Mesh)
-{
-	assert(Mesh->ConvertedMesh);
-	ExportMd5Mesh(Mesh->ConvertedMesh);
-}
-
-#if UNREAL3
-static void ExportMd5Mesh3(const USkeletalMesh3 *Mesh)
-{
-	assert(Mesh->ConvertedMesh);
-	ExportMd5Mesh(Mesh->ConvertedMesh);
-}
-#endif
+#endif // UNREAL3
 
 static void ExportStaticMesh2(const UStaticMesh *Mesh)
 {
@@ -244,52 +246,31 @@ static void ExportStaticMesh3(const UStaticMesh3 *Mesh)
 static void ExportMeshAnimation(const UMeshAnimation *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	ExportPsa(Anim->ConvertedAnim);
+	if (!settings.ExportMd5Mesh)
+		ExportPsa(Anim->ConvertedAnim);
+	else
+		ExportMd5Anim(Anim->ConvertedAnim);
 }
 
 #if UNREAL3
 static void ExportAnimSet(const UAnimSet *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	ExportPsa(Anim->ConvertedAnim);
-}
-#endif
-
-static void ExportMd5Anim2(const UMeshAnimation *Anim)
-{
-	assert(Anim->ConvertedAnim);
-	ExportMd5Anim(Anim->ConvertedAnim);
-}
-
-#if UNREAL3
-static void ExportMd5Anim3(const UAnimSet *Anim)
-{
-	assert(Anim->ConvertedAnim);
-	ExportMd5Anim(Anim->ConvertedAnim);
-}
-#endif
-
-
-static void RegisterExporters(bool md5)
-{
-	if (!md5)
-	{
-		RegisterExporter("SkeletalMesh",  ExportPsk2   );
-		RegisterExporter("MeshAnimation", ExportMeshAnimation);
-#if UNREAL3
-		RegisterExporter("SkeletalMesh3", ExportPsk3   );
-		RegisterExporter("AnimSet",       ExportAnimSet);
-#endif
-	}
+	if (!settings.ExportMd5Mesh)
+		ExportPsa(Anim->ConvertedAnim);
 	else
-	{
-		RegisterExporter("SkeletalMesh",  ExportMd5Mesh2);
-		RegisterExporter("MeshAnimation", ExportMd5Anim2);
+		ExportMd5Anim(Anim->ConvertedAnim);
+}
+#endif // UNREAL3
+
+static void RegisterExporters()
+{
+	RegisterExporter("SkeletalMesh",  ExportSkeletalMesh2);
+	RegisterExporter("MeshAnimation", ExportMeshAnimation);
 #if UNREAL3
-		RegisterExporter("SkeletalMesh3", ExportMd5Mesh3);
-		RegisterExporter("AnimSet",       ExportMd5Anim3);
+	RegisterExporter("SkeletalMesh3", ExportSkeletalMesh3);
+	RegisterExporter("AnimSet",       ExportAnimSet      );
 #endif
-	}
 	RegisterExporter("VertMesh",      Export3D         );
 	RegisterExporter("StaticMesh",    ExportStaticMesh2);
 	RegisterExporter("Texture",       ExportTexture    );
@@ -310,15 +291,13 @@ static void RegisterExporters(bool md5)
 	Initialization of class and export systems
 -----------------------------------------------------------------------------*/
 
-static UmodelSettings settings;
-
-static void InitClassAndExportSystems(int Game, bool useMd5)
+static void InitClassAndExportSystems(int Game)
 {
 	static bool initialized = false;
 	if (initialized) return;
 	initialized = true;
 
-	RegisterExporters(useMd5);
+	RegisterExporters();
 	RegisterClasses(settings, Game);
 #if BIOSHOCK
 	if (Game == GAME_Bioshock)
@@ -447,11 +426,18 @@ static void PrintVersionInfo()
 -----------------------------------------------------------------------------*/
 
 // Export all loaded objects.
-static void ExportObjects(const TArray<UObject*> *Objects = NULL)
+#if HAS_UI
+static bool ExportObjects(const TArray<UObject*> *Objects = NULL, UIProgressDialog* progress = NULL)
+#else
+static bool ExportObjects(const TArray<UObject*> *Objects = NULL)
+#endif
 {
 	guard(ExportObjects);
 
 	appPrintf("Exporting objects ...\n");
+
+	appSetBaseExportDirectory(settings.ExportPath);
+
 	// export object(s), if possible
 	UnPackage* notifyPackage = NULL;
 	bool hasObjectList = (Objects != NULL) && Objects->Num();
@@ -459,6 +445,9 @@ static void ExportObjects(const TArray<UObject*> *Objects = NULL)
 	//?? when 'Objects' passed, probably iterate over that list instead of GObjObjects
 	for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 	{
+#if HAS_UI
+		if (progress && !progress->Tick()) return false;
+#endif
 		UObject* ExpObj = UObject::GObjObjects[idx];
 		bool objectSelected = !hasObjectList || (Objects->FindItem(ExpObj) >= 0);
 
@@ -479,16 +468,22 @@ static void ExportObjects(const TArray<UObject*> *Objects = NULL)
 		}
 	}
 
+	return true;
+
 	unguard;
 }
 
 static TArray<UnPackage*> GFullyLoadedPackages;
 
-static void LoadWholePackage(UnPackage* Package)
+#if HAS_UI
+static bool LoadWholePackage(UnPackage* Package, UIProgressDialog* progress = NULL)
+#else
+static bool LoadWholePackage(UnPackage* Package)
+#endif
 {
 	guard(LoadWholePackage);
 
-	if (GFullyLoadedPackages.FindItem(Package) >= 0) return;	// already loaded
+	if (GFullyLoadedPackages.FindItem(Package) >= 0) return true;	// already loaded
 
 #if PROFILE
 	appResetProfiler();
@@ -499,6 +494,9 @@ static void LoadWholePackage(UnPackage* Package)
 	{
 		if (!IsKnownClass(Package->GetObjectName(Package->GetExport(idx).ClassIndex)))
 			continue;
+#if HAS_UI
+		if (progress && !progress->Tick()) return false;
+#endif
 		Package->CreateExport(idx);
 	}
 	UObject::EndLoad();
@@ -507,6 +505,8 @@ static void LoadWholePackage(UnPackage* Package)
 #if PROFILE
 	appPrintProfiler();
 #endif
+
+	return true;
 
 	unguardf("%s", Package->Name);
 }
@@ -686,20 +686,37 @@ static bool ShowPackageUI()
 				FindObjectAndCreateVisualizer(1, true, true);
 			return !firstDialogCancelled;
 		}
-		firstDialogCancelled = false;
 
+		UIProgressDialog progress;
+		progress.Show(mode == UIPackageDialog::EXPORT ? "Exporting packages" : "Loading packages");
+		bool cancelled = false;
+
+		progress.SetDescription("Scanning packages");
 		TStaticArray<UnPackage*, 256> Packages;
 		for (int i = 0; i < GPackageDialog.SelectedPackages.Num(); i++)
 		{
 			const char* pkgName = *GPackageDialog.SelectedPackages[i];
+			if (!progress.Progress(pkgName, i, GPackageDialog.SelectedPackages.Num()))
+			{
+				cancelled = true;
+				break;
+			}
 			UnPackage* package = UnPackage::LoadPackage(pkgName);	// should always return non-NULL
 			if (package) Packages.AddItem(package);
 		}
+		if (cancelled)
+		{
+			progress.CloseDialog();
+			continue;
+		}
+
 		if (!Packages.Num()) break;			// should not happen
+
+		firstDialogCancelled = false;
 
 		// register exporters and classes (will be performed only once); use any package
 		// to detect an engine version
-		InitClassAndExportSystems(Packages[0]->Game, false);		//!! should use 'md5' option; perhaps change on the fly
+		InitClassAndExportSystems(Packages[0]->Game);
 
 		// here we're in visualize mode
 
@@ -730,21 +747,64 @@ static bool ShowPackageUI()
 
 		if (mode == UIPackageDialog::EXPORT)
 		{
+			progress.SetDescription("Exporting packages");
 			// for each package: load a package, export, then release
 			for (int i = 0; i < Packages.Num(); i++)
 			{
-				LoadWholePackage(Packages[i]);
-				ExportObjects();
+				UnPackage* package = Packages[i];
+				if (!progress.Progress(package->Name, i, Packages.Num()))
+				{
+					cancelled = true;
+					break;
+				}
+				if (!LoadWholePackage(package, &progress))
+				{
+					cancelled = true;
+					break;
+				}
+				if (!ExportObjects(NULL, &progress))
+				{
+					cancelled = true;
+					break;
+				}
 				ReleaseAllObjects();
 			}
 			// cleanup
 			//!! unregister all exported objects
+			if (cancelled)
+			{
+				ReleaseAllObjects();
+				//!! message box
+				appPrintf("Operation interrupted by user.\n");
+			}
+			progress.CloseDialog();
 			continue;		// after export, show the dialog again
 		}
 
 		// fully load all selected packages
+		progress.SetDescription("Loading packages");
 		for (int i = 0; i < Packages.Num(); i++)
-			LoadWholePackage(Packages[i]);
+		{
+			UnPackage* package = Packages[i];
+			if (!progress.Progress(package->Name, i, Packages.Num()))
+			{
+				cancelled = true;
+				break;
+			}
+			if (!LoadWholePackage(package, &progress))
+			{
+				cancelled = true;
+				break;
+			}
+		}
+
+		if (cancelled)
+		{
+			//!! message box
+			appPrintf("Operation interrupted by user.\n");
+		}
+
+		progress.CloseDialog();
 
 		if (packagesChanged || !Viewer)
 		{
@@ -792,6 +852,34 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 	return false;
 }
 
+static void SetPathOption(FString& where, const char* value)
+{
+	// determine whether absolute path is used
+#if _WIN32
+	int isAbsPath = (value[0] != 0) && (value[1] == ':');
+#else
+	int isAbsPath = (value[0] == '~' || value[0] == '/');
+#endif
+	if (isAbsPath)
+	{
+		where = value;
+		return;
+	}
+	char path[512];
+	getcwd(ARRAY_ARG(path));
+
+	if (!value || !value[0])
+	{
+		where = path;
+		return;
+	}
+
+	char buffer[512];
+	appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
+	where = buffer;
+}
+
+
 #define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
 #define OPT_VALUE(name,var,value)		{ name, (byte*)&var, value },
@@ -827,7 +915,7 @@ int main(int argc, char **argv)
 	};
 
 	static byte mainCmd = CMD_View;
-	static bool md5 = false, exprtAll = false, hasRootDir = false, forceUI = false;
+	static bool exprtAll = false, hasRootDir = false, forceUI = false;
 	TArray<const char*> extraPackages, objectsToLoad;
 	TArray<const char*> params;
 	const char *attachAnimName = NULL;
@@ -861,7 +949,7 @@ int main(int argc, char **argv)
 			OPT_BOOL ("uncook",  GUncook)
 			OPT_BOOL ("groups",  GUseGroups)
 //			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
-			OPT_BOOL ("md5",     md5)
+			OPT_BOOL ("md5",     settings.ExportMd5Mesh)
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
 			// disable classes
@@ -894,12 +982,12 @@ int main(int argc, char **argv)
 		}
 		else if (!strnicmp(opt, "path=", 5))
 		{
-			settings.GamePath = opt+5;
+			SetPathOption(settings.GamePath, opt+5);
 			hasRootDir = true;
 		}
 		else if (!strnicmp(opt, "out=", 4))
 		{
-			appSetBaseExportDirectory(opt+4);
+			SetPathOption(settings.ExportPath, opt+4);
 		}
 		else if (!strnicmp(opt, "game=", 5))
 		{
@@ -969,6 +1057,10 @@ int main(int argc, char **argv)
 #if HAS_UI
 	if (argc < 2 || (!hasRootDir && !argPkgName) || forceUI)
 	{
+		// fill game path with current directory, if it's empty - for easier work with UI
+		if (settings.GamePath.IsEmpty())
+			SetPathOption(settings.GamePath, "");
+		//!! the same for -log option
 		// no arguments provided - display startup options
 		UIStartupDialog dialog(settings);
 		bool res = dialog.Show();
@@ -984,6 +1076,8 @@ int main(int argc, char **argv)
 	GForceGame = settings.GameOverride;
 	GForcePlatform = settings.Platform;
 	GForceCompMethod = settings.PackageCompression;
+	if (settings.ExportPath.IsEmpty())
+		SetPathOption(settings.ExportPath, "UmodelExport");	//!! linux: ~/UmodelExport
 
 	TArray<UnPackage*> Packages;
 	TArray<UObject*> Objects;
@@ -1062,7 +1156,7 @@ int main(int argc, char **argv)
 	}
 
 	// register exporters and classes
-	InitClassAndExportSystems(MainPackage->Game, md5);
+	InitClassAndExportSystems(MainPackage->Game);
 
 	// preload all extra packages first
 	Packages.AddItem(MainPackage);	// already loaded
