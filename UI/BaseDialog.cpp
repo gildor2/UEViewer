@@ -1863,6 +1863,13 @@ UIBaseDialog::~UIBaseDialog()
 	CloseDialog(false);
 }
 
+static HWND GMainWindow;
+
+void UIBaseDialog::SetMainWindow(HWND window)
+{
+	GMainWindow = window;
+}
+
 static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize)
 {
 	// This code uses volatile structure DLGTEMPLATEEX. It's described in MSDN, but
@@ -1943,7 +1950,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		int result = DialogBoxIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
-			0,							// hWndParent
+			GMainWindow,				// hWndParent
 			StaticWndProc,				// lpDialogFunc
 			(LPARAM)this				// lParamInit
 		);
@@ -1955,7 +1962,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		HWND dialog = CreateDialogIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
-			0,							// hWndParent
+			GMainWindow,				// hWndParent
 			StaticWndProc,				// lpDialogFunc
 			(LPARAM)this				// lParamInit
 		);
@@ -2004,6 +2011,7 @@ bool UIBaseDialog::PumpMessageLoop()
 
 void UIBaseDialog::CloseDialog(bool cancel)
 {
+	if (!Wnd) return;
 	DialogClosed(cancel);
 	EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
 	Wnd = 0;

@@ -11,6 +11,8 @@
 class CApplication
 {
 public:
+	SDL_Window* GetWindow() const;
+
 	virtual void Draw3D(float TimeDelta)
 	{}
 	virtual void DrawTexts(bool helpVisible);

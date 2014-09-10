@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+10.09.2014
+- filling some DDS header fields when exporting DXT textures
+
 08.09.2014
 - UI: pressing Ctrl+A on package list will select all packages
 - UI: displaying progress window while loading or exporting objects

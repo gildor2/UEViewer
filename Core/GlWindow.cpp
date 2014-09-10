@@ -1500,4 +1500,9 @@ void VisualizerLoop(const char *caption, CApplication *App)
 	unguard;
 }
 
+SDL_Window* CApplication::GetWindow() const
+{
+	return sdlWindow;
+}
+
 #endif // RENDERING

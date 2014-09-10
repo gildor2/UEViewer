@@ -13,6 +13,11 @@ ERROR: Package "StaticMeshes/DanielsMeshes.usx": wrong name index 178111707
 UnPackage::SerializeFName:pos=0000010A <- FPropertyTag<< <- CTypeInfo::SerializeProps <- ReadProperty:(UStaticMesh.Materials, TagPos=FA) <- CTypeInfo::SerializeProps <- UObject::Serialize <- UPrimitive::Serialize <- UStaticMesh::Serialize <- LoadObject:StaticMesh'DanielsMeshes.ball', pos=10A, ver=115/0, game=2000 <- UObject::EndLoad <- LoadWholePackage:DanielsMeshes <- Main
 =end=
 
+- SDL: 1.3 -> 2.0 (win+lin)
+- B&S RLE Anim: check this
+  https://sites.google.com/site/sippeyfunlabs/blade-and-soul-a-unreal-3-based-game-mod-section
+- try OBJ export for statics
+
 - BUG: when multiple meshes tagged, switching between them (highlighting different
   "red" lines) will zoom viewport a bit - different scene bounding boxes for the same scene?
 - name table: keep all names in large name table, use hash for search (so, no duplicates

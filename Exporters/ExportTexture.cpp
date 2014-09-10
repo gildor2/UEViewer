@@ -198,6 +198,7 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 
 	nv::DDSHeader header;
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
+	header.setPixelFormat(32, 0xFF, 0xFF << 8, 0xFF << 16, 0xFF << 24);	// bit count and per-channel masks
 	header.setWidth(TexData.USize);
 	header.setHeight(TexData.VSize);
 //	header.setNormalFlag(TexData.Format == TPF_DXT5N || TexData.Format == TPF_3DC); -- required for decompression only
@@ -205,7 +206,7 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 
 	appMakeDirectoryForFile(Filename);
 
-	byte headerBuffer[128];					// DDS header is 128 bytes long
+	byte headerBuffer[128];							// DDS header is 128 bytes long
 	memset(headerBuffer, 0, 128);
 	WriteDDSHeader(headerBuffer, header);
 	FArchive *Ar = new FFileWriter(Filename);

@@ -710,6 +710,8 @@ public:
 
 	//?? UIBaseDialog& AddOkCancelButtons(); - should be done in InitUI as last operation
 
+	static void SetMainWindow(HWND window);
+
 protected:
 	int			NextDialogId;
 	bool		DoCloseOnEsc;
