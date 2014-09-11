@@ -489,6 +489,9 @@ public:
 	UITreeView();
 	virtual ~UITreeView();
 
+	//!! TODO:
+	//!! - HideRootItem() -- may be when label is empty?
+
 	FORCEINLINE UITreeView& SetRootLabel(const char* root)
 	{
 		RootLabel = root;
@@ -500,10 +503,15 @@ public:
 
 	UITreeView& SelectItem(const char* item);
 
+	UITreeView& UseFolderIcons()          { DoUseFolderIcons = true; return *this; }
+	UITreeView& SetItemHeight(int value)  { ItemHeight = value; return *this;      }
+
 protected:
 	TArray<TreeViewItem*> Items;
 	FString		RootLabel;
 	TreeViewItem* SelectedItem;
+	int			ItemHeight;
+	bool		DoUseFolderIcons;		//!! awful name
 
 	FORCEINLINE TreeViewItem* GetRoot() { return Items[0]; }
 
@@ -714,7 +722,7 @@ public:
 
 protected:
 	int			NextDialogId;
-	bool		DoCloseOnEsc;
+	bool		DoCloseOnEsc;		//!! awful name
 
 	bool ShowDialog(bool modal, const char* title, int width, int height);
 

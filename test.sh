@@ -134,6 +134,21 @@ function ut3()
 	CheckDir "${steam[@]/%/Unreal Tournament 3}" {c,d,e}:/games/ut3/UTGame/CookedPC data/3/UT3
 	run $*
 }
+function ut4()
+{
+	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament
+	run $*
+}
+function ue3()
+{
+	CheckDir C:/Projects/Epic/UnrealEngine3/UDKGame
+	run $*
+}
+function ue4()
+{
+	CheckDir C:/Projects/Epic/UnrealEngine4
+	run $*
+}
 function gow()    { run1 "data/3/GearsOfWar" $*;          }
 function gow2()   { run1 "data/3X/GearsOfWar2_X360" $*;   }
 function gow3()   { run1 "data/3X/GOW3_beta_X360" $*;     }

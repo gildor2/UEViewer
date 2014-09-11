@@ -50,6 +50,7 @@
 #endif
 
 //#define DEBUG_MULTILIST_SEL			1
+#define USE_EXPLORER_STYLE			1
 
 
 #define FIRST_DIALOG_ID				4000
@@ -68,6 +69,7 @@
 #define DEFAULT_COMBOBOX_HEIGHT		20
 #define DEFAULT_LISTBOX_HEIGHT		-1
 #define DEFAULT_TREEVIEW_HEIGHT		-1
+#define DEFAULT_TREE_ITEM_HEIGHT	0
 
 #define GROUP_INDENT				10
 #define GROUP_MARGIN_TOP			16
@@ -761,6 +763,31 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 	UIMulticolumnListbox
 -----------------------------------------------------------------------------*/
 
+#if USE_EXPLORER_STYLE
+
+static void SetExplorerTheme(HWND Wnd)
+{
+	static bool loaded = false;
+	static HRESULT (WINAPI *SetWindowTheme)(HWND, LPCWSTR, LPCWSTR) = NULL;
+
+	if (!loaded)
+	{
+		loaded = true;
+		HMODULE hDll = LoadLibrary("uxtheme.dll");
+		if (hDll == NULL) return;
+		SetWindowTheme = (HRESULT (WINAPI *)(HWND, LPCWSTR, LPCWSTR))GetProcAddress(hDll, "SetWindowTheme");
+	}
+
+	if (SetWindowTheme != NULL)
+	{
+		SetWindowTheme(Wnd, L"Explorer", NULL);
+//??	SendMessage(Wnd, TVM_SETEXTENDEDSTYLE, 0, TVS_EX_DOUBLEBUFFER);
+//??	SendMessage(Wnd, TV_FIRST + 44, 0x0004, 0);
+	}
+}
+
+#endif // USE_EXPLORER_STYLE
+
 UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 :	NumColumns(numColumns)
 ,	Multiselect(false)
@@ -993,6 +1020,10 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 		WS_EX_CLIENTEDGE, dialog);
 	ListView_SetExtendedListViewStyle(Wnd, LVS_EX_FLATSB | LVS_EX_LABELTIP);
 
+#if USE_EXPLORER_STYLE
+	SetExplorerTheme(Wnd);
+#endif
+
 	// compute automatic column width
 	int clientWidth = Width - GetSystemMetrics(SM_CXVSCROLL) - 6; // exclude scrollbar and border areas
 	int totalWidth = 0;
@@ -1151,6 +1182,8 @@ struct TreeViewItem
 UITreeView::UITreeView()
 :	SelectedItem(NULL)
 ,	RootLabel("Root")
+,	DoUseFolderIcons(false)
+,	ItemHeight(DEFAULT_TREE_ITEM_HEIGHT)
 {
 	Height = DEFAULT_TREEVIEW_HEIGHT;
 	// create a root item
@@ -1240,6 +1273,31 @@ UITreeView& UITreeView::SelectItem(const char* item)
 	return *this;
 }
 
+// This image list is created once and shared between all possible UITreeView controls.
+static HIMAGELIST GTreeFolderImages;
+
+static void LoadFolderIcons()
+{
+	// the code is based on Microsoft's CppWindowsCommonControls demo
+	// http://code.msdn.microsoft.com/windowsapps/CppWindowsCommonControls-9ea0de64
+	if (GTreeFolderImages != NULL) return;
+
+	GTreeFolderImages = ImageList_Create(GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), ILC_COLOR32 | ILC_MASK, 1, 1);
+
+	HINSTANCE hDll = LoadLibrary("shell32.dll");
+	if (!hDll) return;
+
+	for (int i = 4; i < 6; i++)	// load 2 icons
+	{
+		// Because the icons are loaded from system resources (i.e. they are
+		// shared), it is not necessary to free resources with 'DestroyIcon'.
+		HICON hIcon = (HICON)LoadImage(hDll, MAKEINTRESOURCE(i), IMAGE_ICON, 0, 0, LR_SHARED);
+		ImageList_AddIcon(GTreeFolderImages, hIcon);
+	}
+
+	FreeLibrary(hDll);
+}
+
 void UITreeView::Create(UIBaseDialog* dialog)
 {
 	Parent->AddVerticalSpace();
@@ -1250,6 +1308,21 @@ void UITreeView::Create(UIBaseDialog* dialog)
 	Wnd = Window(WC_TREEVIEW, "",
 		TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog);
+
+#if USE_EXPLORER_STYLE
+	SetExplorerTheme(Wnd);
+#endif
+
+	if (ItemHeight > 0)
+		TreeView_SetItemHeight(Wnd, ItemHeight);
+
+	if (DoUseFolderIcons)
+	{
+		LoadFolderIcons();
+		// Attach image lists to tree view common control
+		TreeView_SetImageList(Wnd, GTreeFolderImages, TVSIL_NORMAL);
+	}
+
 	// add items
 	for (int i = 0; i < Items.Num(); i++)
 		CreateItem(*Items[i]);
@@ -1309,6 +1382,13 @@ void UITreeView::CreateItem(TreeViewItem& item)
 	tvis.hParent = item.Parent ? item.Parent->hItem : NULL;
 	tvis.item.mask = TVIF_TEXT;
 	tvis.item.pszText = const_cast<char*>(text);
+
+	if (DoUseFolderIcons)
+	{
+		tvis.item.mask |= TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+//		tvis.item.iImage = 0;
+		tvis.item.iSelectedImage = 1;
+	}
 
 	item.hItem = TreeView_InsertItem(Wnd, &tvis);
 	// expand root item

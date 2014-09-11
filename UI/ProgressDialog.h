@@ -1,8 +1,8 @@
 #ifndef __PROGRESS_DIALOG_H__
 #define __PROGRESS_DIALOG_H__
 
-//!! add progress bar - show ( number_of_loaded/exported_objects / number_of_objects_to_process )
-//!! esc should close this dialog
+//!! Other possible statistics:
+//!! - elapsed time
 class UIProgressDialog : public UIBaseDialog
 {
 public:

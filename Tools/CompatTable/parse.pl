@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 
+# TODO fixed table headers: jQuery version: http://codepen.io/jgx/pen/wiIGc
 
 $embed_css = 1;
 $debug_js = 0;

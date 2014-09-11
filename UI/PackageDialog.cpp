@@ -16,7 +16,7 @@ UIPackageDialog::UIPackageDialog()
 UIPackageDialog::EResult UIPackageDialog::Show()
 {
 	ModalResult = SHOW;
-	if (!ShowModal("Choose a package to open", 400, 200))
+	if (!ShowModal("Choose a package to open", 500, 200))
 		return CANCEL;
 
 	UpdateSelectedPackage();
@@ -65,6 +65,8 @@ void UIPackageDialog::InitUI()
 					.SetWidth(EncodeWidth(0.3f))
 					.SetHeight(-1)
 					.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnTreeItemSelected, this))
+					.UseFolderIcons()
+					.SetItemHeight(20)
 					.Expose(PackageTree)
 				+ NewControl(UISpacer)
 				+ NewControl(UIMulticolumnListbox, 2)
@@ -125,19 +127,19 @@ void UIPackageDialog::InitUI()
 	[
 		NewControl(UILabel, "Hint: you may open this dialog at any time by pressing \"O\"")
 		+ NewControl(UIButton, "Open")
-			.SetWidth(EncodeWidth(0.15f))
+			.SetWidth(80)
 			.Enable(false)
 			.Expose(OkButton)
 			.SetOK()
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Export")
-			.SetWidth(EncodeWidth(0.15f))
+			.SetWidth(80)
 			.Enable(false)
 			.Expose(ExportButton)
 			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnExportClicked, this))
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Cancel")
-			.SetWidth(EncodeWidth(0.15f))
+			.SetWidth(80)
 			.SetCancel()
 	];
 
