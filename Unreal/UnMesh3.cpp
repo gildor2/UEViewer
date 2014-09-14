@@ -13,9 +13,9 @@
 #include "TypeConvert.h"
 
 
+//!! add DBG_STATIC() and DBG_SKEL() which will do appPrintf when enabled
 //#define DEBUG_SKELMESH		1
 //#define DEBUG_STATICMESH		1
-
 
 //?? move outside?
 float half2float(word h)
@@ -1916,6 +1916,35 @@ struct FMOHStaticMeshSectionUnk
 
 #endif // MOH2010
 
+struct FPS3StaticMeshData
+{
+	TArray<int>			unk1;
+	TArray<int>			unk2;
+	TArray<word>		unk3;
+	TArray<word>		unk4;
+	TArray<word>		unk5;
+	TArray<word>		unk6;
+	TArray<word>		unk7;
+	TArray<word>		unk8;
+
+	friend FArchive& operator<<(FArchive &Ar, FPS3StaticMeshData &S)
+	{
+		Ar << S.unk1 << S.unk2 << S.unk3 << S.unk4 << S.unk5 << S.unk6 << S.unk7 << S.unk8;
+#if DUST514
+		if (Ar.Game == GAME_Dust514) // there's no version check, perhaps that code is standard for UE3?
+		{
+			short s1, s2;
+			TArray<FVector> va1, va2;
+			TArray<short> sa1;
+			Ar << s1 << s2 << va1 << va2;
+			if (Ar.ArLicenseeVer >= 32) Ar << sa1;
+//			appPrintf("s1=%d s2=%d va1=%d va2=%d sa1=%d\n", s1, s2, va1.Num(), va2.Num(), sa1.Num());
+		}
+#endif // DUST514
+		return Ar;
+	}
+};
+
 
 struct FStaticMeshSection3
 {
@@ -2019,7 +2048,16 @@ struct FStaticMeshSection3
 		{
 			byte unk;
 			Ar << unk;
-			assert(unk == 0);
+			if (unk)
+			{
+				FPS3StaticMeshData ps3data;
+				Ar << ps3data;
+#if DEBUG_STATICMESH
+				appPrintf("PS3 data: %d %d %d %d %d %d %d %d\n",
+					ps3data.unk1.Num(), ps3data.unk2.Num(), ps3data.unk3.Num(), ps3data.unk4.Num(),
+					ps3data.unk5.Num(), ps3data.unk6.Num(), ps3data.unk7.Num(), ps3data.unk8.Num());
+#endif
+			}
 		}
 #if XCOM_BUREAU
 		if (Ar.Game == GAME_XcomB)
@@ -2032,6 +2070,31 @@ struct FStaticMeshSection3
 		unguard;
 	}
 };
+
+#if DUST514
+
+//?? move to UnMeshTypes.h
+struct FVectorHalf
+{
+	short				X, Y, Z;
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorHalf &v)
+	{
+		return Ar << v.X << v.Y << v.Z;
+	}
+	operator FVector() const
+	{
+		FVector r;
+		r.X = half2float(X);
+		r.Y = half2float(Y);
+		r.Z = half2float(Z);
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FVectorHalf, short);
+
+#endif // DUST514
 
 struct FStaticMeshVertexStream3
 {
@@ -2173,7 +2236,21 @@ struct FStaticMeshVertexStream3
 			int unk28;
 			Ar << unk28;
 		}
-#endif
+#endif // THIEF4
+#if DUST514
+		if (Ar.Game == GAME_Dust514 && Ar.ArLicenseeVer >= 31)
+		{
+			int bUseFullPrecisionPosition;
+			Ar << bUseFullPrecisionPosition;
+			if (!bUseFullPrecisionPosition)
+			{
+				TArray<FVectorHalf> HalfVerts;
+				Ar << RAW_ARRAY(HalfVerts);
+				CopyArray(S.Verts, HalfVerts);
+				return Ar;
+			}
+		}
+#endif // DUST514
 		Ar << RAW_ARRAY(S.Verts);
 		return Ar;
 
@@ -2513,7 +2590,7 @@ struct FStaticMeshLODModel
 	FStaticMeshColorStream3New  ColorStream2;	//??
 	FIndexBuffer3		Indices;
 	FIndexBuffer3		Indices2;		// wireframe
-	int					f80;
+	int					NumVerts;
 	TArray<FEdge3>		Edges;
 	TArray<byte>		fEC;			// flags for faces? removed simultaneously with Edges
 
@@ -2586,7 +2663,7 @@ struct FStaticMeshLODModel
 			// refined field set
 			Ar << Lod.VertexStream;
 			Ar << Lod.UVStream;
-			Ar << Lod.f80;
+			Ar << Lod.NumVerts;
 			Ar << Lod.Indices;
 			// note: no fEC (smoothing groups?)
 			return Ar;
@@ -2603,7 +2680,7 @@ struct FStaticMeshLODModel
 			if (Ar.ArVer >= 516) Ar << Lod.ColorStream2;
 			if (Ar.ArLicenseeVer >= 71) Ar << unkStream;
 			if (Ar.ArVer < 536) Ar << Lod.ColorStream;
-			Ar << Lod.f80 << Lod.Indices << Lod.Indices2;
+			Ar << Lod.NumVerts << Lod.Indices << Lod.Indices2;
 			if (Ar.ArLicenseeVer >= 58) Ar << unkD8;
 			if (Ar.ArLicenseeVer >= 181)	// Fall of Cybertron
 			{								// pre-Fall of Cybertron has 0 or 1 ints after indices, but Fall of Cybertron has 1 or 2 ints
@@ -2637,7 +2714,10 @@ struct FStaticMeshLODModel
 				Ar << Lod.ColorStream2;
 			}
 			if (Ar.ArVer < 686) Ar << Lod.ColorStream;	//?? probably this is not a color stream - the same version is used to remove "edges"
-			Ar << Lod.f80;
+			Ar << Lod.NumVerts;
+#if DEBUG_STATICMESH
+			appPrintf("NumVerts: %d\n", Lod.NumVerts);
+#endif
 		}
 		else if (Ar.ArVer >= 466)
 		{
@@ -2646,7 +2726,7 @@ struct FStaticMeshLODModel
 			if (Ar.Game == GAME_MK && Ar.ArVer >= 472) // MK9; real version: MidwayVer >= 36
 			{
 				FStaticMeshNormalStream_MK NormalStream;
-				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream << Lod.f80;
+				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream << Lod.NumVerts;
 				// copy NormalStream into UVStream
 				assert(Lod.UVStream.UV.Num() == NormalStream.Normals.Num());
 				for (int i = 0; i < Lod.UVStream.UV.Num(); i++)
@@ -2662,7 +2742,7 @@ struct FStaticMeshLODModel
 #endif // MKVSDC
 			Ar << Lod.VertexStream;
 			Ar << Lod.UVStream;
-			Ar << Lod.f80;
+			Ar << Lod.NumVerts;
 #if MKVSDC || AVA
 			if (Ar.Game == GAME_MK || Ar.Game == GAME_AVA)
 			{
@@ -2685,7 +2765,7 @@ struct FStaticMeshLODModel
 		{
 		// ver_2:
 			Ar << Lod.UVStream;
-			Ar << Lod.f80;
+			Ar << Lod.NumVerts;
 			// create VertexStream
 			int NumVerts = Lod.UVStream.UV.Num();
 			Lod.VertexStream.Verts.Empty(NumVerts);
@@ -2738,6 +2818,15 @@ struct FStaticMeshLODModel
 				}
 			}
 		}
+
+#if DUST514
+		if (Ar.Game == GAME_Dust514 && Ar.ArLicenseeVer >= 32)
+		{
+			TArray<byte> unk;		// compressed index buffer?
+			Ar << RAW_ARRAY(unk);
+		}
+#endif // DUST514
+
 	indices:
 #if DEBUG_STATICMESH
 		appPrintf("Serializing indices ...\n");
@@ -2772,6 +2861,9 @@ struct FStaticMeshLODModel
 		if (Ar.Game == GAME_Borderlands && Ar.ArVer >= 832) goto after_indices; // Borderlands 2
 #endif
 		Ar << Lod.Indices2;
+#if DEBUG_STATICMESH
+		appPrintf("Indices: %d %d\n", Lod.Indices.Indices.Num(), Lod.Indices2.Indices.Num());
+#endif
 	after_indices:
 
 		if (Ar.ArVer < 686)
@@ -3287,6 +3379,7 @@ done:
 
 		// indices
 		Lod->Indices.Initialize(&SrcLod.Indices.Indices);			// 16-bit only
+		if (Lod->Indices.Num() == 0) appError("This StaticMesh doesn't have an index buffer");
 
 		unguardf("lod=%d", lod);
 	}

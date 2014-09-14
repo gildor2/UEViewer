@@ -111,6 +111,7 @@
 #define THIEF4			1		// Thief
 #define MURDERED		1		// Murdered: Soul Suspect
 #define SOV				1		// Seal of Vajra
+#define DUST514			1		// Dust 514
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

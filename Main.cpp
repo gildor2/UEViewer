@@ -1478,6 +1478,8 @@ static int GDoScreenshot = 0;
 
 void CUmodelApp::Draw3D(float TimeDelta)
 {
+	UObject *Obj = UObject::GObjObjects[ObjIndex];
+
 	guard(CUmodelApp::Draw3D);
 
 	bool AlphaBgShot = GDoScreenshot >= 2;
@@ -1494,12 +1496,11 @@ void CUmodelApp::Draw3D(float TimeDelta)
 	if (AlphaBgShot)
 	{
 		// take screenshot without 2D texts and with transparency
-		UObject *Obj = UObject::GObjObjects[ObjIndex];
 		TakeScreenshot(Obj->Name, true);
 		GDoScreenshot = 0;
 	}
 
-	unguard;
+	unguardf("Obj=%s'%s'", Obj->GetClassName(), Obj->Name);
 }
 
 

@@ -1372,6 +1372,9 @@ void FArchive::DetectGame()
 #if SHADOWS_DAMNED
 	if (ArVer == 706 && ArLicenseeVer == 28)	SET(GAME_ShadowsDamned);
 #endif
+#if DUST514
+	if (ArVer == 708 && ArLicenseeVer == 35)	SET(GAME_Dust514);
+#endif
 #if THIEF4
 	if (ArVer == 721 && ArLicenseeVer == 148)	SET(GAME_Thief4);
 #endif
@@ -1406,7 +1409,7 @@ void FArchive::DetectGame()
 	if (ArVer == 849 && ArLicenseeVer == 32795)	SET(GAME_XcomB);
 #endif
 #if FABLE
-	if ( (ArVer == 850 || ArVer == 860) && (ArLicenseeVer == 1017) )	// 850 = Fable: The Journey, 860 = Fable Anniversary
+	if ( (ArVer == 850 || ArVer == 860) && (ArLicenseeVer == 1017 || ArLicenseeVer == 26985) )	// 850 = Fable: The Journey, 860 = Fable Anniversary
 		SET(GAME_Fable);
 #endif
 #if MURDERED

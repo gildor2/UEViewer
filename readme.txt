@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+13.09.2014
+- updated Fable: Anniversary detection code
+
 10.09.2014
 - filling some DDS header fields when exporting DXT textures
 
