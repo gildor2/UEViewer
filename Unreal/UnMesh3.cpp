@@ -13,9 +13,20 @@
 #include "TypeConvert.h"
 
 
-//!! add DBG_STATIC() and DBG_SKEL() which will do appPrintf when enabled
 //#define DEBUG_SKELMESH		1
 //#define DEBUG_STATICMESH		1
+
+#if DEBUG_SKELMESH
+#define DBG_SKEL(...)			appPrintf(__VA_ARGS__);
+#else
+#define DBG_SKEL(...)
+#endif
+
+#if DEBUG_STATICMESH
+#define DBG_STAT(...)			appPrintf(__VA_ARGS__);
+#else
+#define DBG_STAT(...)
+#endif
 
 //?? move outside?
 float half2float(word h)
@@ -562,10 +573,8 @@ struct FSkinChunk3
 			Ar << NumTexCoords;
 		}
 #endif // TRANSFORMERS
-#if DEBUG_SKELMESH
-		appPrintf("Chunk: FirstVert=%d RigidVerts=%d (%d) SmoothVerts=%d (%d) MaxInfs=%d\n",
+		DBG_SKEL("Chunk: FirstVert=%d RigidVerts=%d (%d) SmoothVerts=%d (%d) MaxInfs=%d\n",
 			V.FirstVertex, V.RigidVerts.Num(), V.NumRigidVerts, V.SmoothVerts.Num(), V.NumSmoothVerts, V.MaxInfluences);
-#endif
 		return Ar;
 		unguard;
 	}
@@ -737,9 +746,8 @@ struct FGPUSkin3
 	{
 		guard(FGPUSkin3<<);
 
-	#if DEBUG_SKELMESH
-		appPrintf("Reading GPU skin\n");
-	#endif
+		DBG_SKEL("Reading GPU skin\n");
+
 		if (Ar.IsLoading) S.bUsePackedPosition = false;
 		bool AllowPackedPosition = false;
 		S.NumUVSets = GNumGPUUVSets = 1;
@@ -789,9 +797,7 @@ struct FGPUSkin3
 			// old version - FSmoothVertex3 array
 			TArray<FSmoothVertex3> Verts;
 			Ar << RAW_ARRAY(Verts);
-	#if DEBUG_SKELMESH
-			appPrintf("... %d verts in old format\n", Verts.Num());
-	#endif
+			DBG_SKEL("... %d verts in old format\n", Verts.Num());
 			// convert verts
 			CopyArray(S.VertsFloat, Verts);
 			S.bUseFullPrecisionUVs = true;
@@ -841,11 +847,9 @@ struct FGPUSkin3
 		// Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position.
 		// Working bUsePackedPosition version was found in all XBox360 games. For PC there is only one game -
 		// MOH2010, which uses bUsePackedPosition. PS3 also has bUsePackedPosition support (at least TRON)
-	#if DEBUG_SKELMESH
-		appPrintf("... data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
+		DBG_SKEL("... data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
 			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
-	#endif
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
 	#if PLA
@@ -872,10 +876,8 @@ struct FGPUSkin3
 			else
 				Ar << RAW_ARRAY(S.VertsFloatPacked);
 		}
-	#if DEBUG_SKELMESH
-		appPrintf("... verts: Half[%d] HalfPacked[%d] Float[%d] FloatPacked[%d]\n",
+		DBG_SKEL("... verts: Half[%d] HalfPacked[%d] Float[%d] FloatPacked[%d]\n",
 			S.VertsHalf.Num(), S.VertsHalfPacked.Num(), S.VertsFloat.Num(), S.VertsFloatPacked.Num());
-	#endif
 
 		return Ar;
 		unguard;
@@ -935,9 +937,7 @@ struct FSkeletalMeshVertexInfluences
 	friend FArchive& operator<<(FArchive &Ar, FSkeletalMeshVertexInfluences &S)
 	{
 		guard(FSkeletalMeshVertexInfluences<<);
-#if DEBUG_SKELMESH
-		appPrintf("Extra vertex influence:\n");
-#endif
+		DBG_SKEL("Extra vertex influence:\n");
 		Ar << S.f0;
 		if (Ar.ArVer >= 609)
 		{
@@ -1096,9 +1096,7 @@ struct FStaticLODModel3
 		chunks:
 			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 		}
-#if DEBUG_SKELMESH
-		appPrintf("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
-#endif
+		DBG_SKEL("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
 
 #if FRONTLINES
 		if (Ar.Game == GAME_Frontlines && Ar.ArLicenseeVer >= 11)
@@ -1214,9 +1212,7 @@ struct FStaticLODModel3
 			Ar << Lod.NumUVSets;
 		else
 			Lod.NumUVSets = 1;
-#if DEBUG_SKELMESH
-		appPrintf("NumUVSets=%d\n", Lod.NumUVSets);
-#endif
+		DBG_SKEL("NumUVSets=%d\n", Lod.NumUVSets);
 
 #if MOH2010
 		int RealArVer = Ar.ArVer;
@@ -2052,11 +2048,9 @@ struct FStaticMeshSection3
 			{
 				FPS3StaticMeshData ps3data;
 				Ar << ps3data;
-#if DEBUG_STATICMESH
-				appPrintf("PS3 data: %d %d %d %d %d %d %d %d\n",
+				DBG_STAT("PS3 data: %d %d %d %d %d %d %d %d\n",
 					ps3data.unk1.Num(), ps3data.unk2.Num(), ps3data.unk3.Num(), ps3data.unk4.Num(),
 					ps3data.unk5.Num(), ps3data.unk6.Num(), ps3data.unk7.Num(), ps3data.unk8.Num());
-#endif
 			}
 		}
 #if XCOM_BUREAU
@@ -2116,9 +2110,7 @@ struct FStaticMeshVertexStream3
 			Ar << S.VertexSize << S.NumVerts;
 			if (Ar.ArLicenseeVer >= 17)
 				Ar << unk18;
-	#if DEBUG_STATICMESH
-			appPrintf("Batman StaticMesh VertexStream: IS:%d NV:%d VT:%d unk:%d\n", S.VertexSize, S.NumVerts, VertexType, unk18);
-	#endif
+			DBG_STAT("Batman StaticMesh VertexStream: IS:%d NV:%d VT:%d unk:%d\n", S.VertexSize, S.NumVerts, VertexType, unk18);
 			switch (VertexType)
 			{
 				case 0:
@@ -2137,9 +2129,7 @@ struct FStaticMeshVertexStream3
 #endif // BATMAN
 
 		Ar << S.VertexSize << S.NumVerts;
-#if DEBUG_STATICMESH
-		appPrintf("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
-#endif
+		DBG_STAT("StaticMesh Vertex stream: IS:%d NV:%d\n", S.VertexSize, S.NumVerts);
 
 #if AVA
 		if (Ar.Game == GAME_AVA && Ar.ArVer >= 442)
@@ -2187,10 +2177,8 @@ struct FStaticMeshVertexStream3
 			byte IsPacked, VectorType;		// VectorType used only when IsPacked != 0
 			FVector Mins, Extents;
 			Ar << IsPacked << VectorType << Mins << Extents;
-	#if DEBUG_STATICMESH
-			appPrintf("... Bioshock3: IsPacked=%d VectorType=%d Mins=%g %g %g Extents=%g %g %g\n",
+			DBG_STAT("... Bioshock3: IsPacked=%d VectorType=%d Mins=%g %g %g Extents=%g %g %g\n",
 				IsPacked, VectorType, FVECTOR_ARG(Mins), FVECTOR_ARG(Extents));
-	#endif
 			if (IsPacked)
 			{
 				if (VectorType)
@@ -2404,9 +2392,7 @@ struct FStaticMeshUVStream3
 			Ar << unk30;
 		}
 #endif // MASSEFF
-#if DEBUG_STATICMESH
-		appPrintf("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
-#endif
+		DBG_STAT("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.ItemSize, S.NumVerts, S.bUseFullPrecisionUVs);
 #if MKVSDC
 		if (Ar.Game == GAME_MK)
 			S.bUseFullPrecisionUVs = false;
@@ -2472,9 +2458,7 @@ struct FStaticMeshColorStream3
 	{
 		guard(FStaticMeshColorStream3<<);
 		Ar << S.ItemSize << S.NumVerts;
-#if DEBUG_STATICMESH
-		appPrintf("StaticMesh ColorStream: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
-#endif
+		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
 		return Ar << RAW_ARRAY(S.Colors);
 		unguard;
 	}
@@ -2491,9 +2475,7 @@ struct FStaticMeshColorStream3New		// ArVer >= 615
 	{
 		guard(FStaticMeshColorStream3New<<);
 		Ar << S.ItemSize << S.NumVerts;
-#if DEBUG_STATICMESH
-		appPrintf("StaticMesh ColorStreamNew: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
-#endif
+		DBG_STAT("StaticMesh ColorStreamNew: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
 #if THIEF4
 		if (Ar.Game == GAME_Thief4 && Ar.ArLicenseeVer >= 43)
 		{
@@ -2571,9 +2553,7 @@ struct FStaticMeshNormalStream_MK
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshNormalStream_MK &S)
 	{
 		Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Normals);
-#if DEBUG_STATICMESH
-		appPrintf("MK NormalStream: ItemSize=%d, Count=%d (%d)\n", S.ItemSize, S.NumVerts, S.Normals.Num());
-#endif
+		DBG_STAT("MK NormalStream: ItemSize=%d, Count=%d (%d)\n", S.ItemSize, S.NumVerts, S.Normals.Num());
 		return Ar;
 	}
 };
@@ -2598,9 +2578,7 @@ struct FStaticMeshLODModel
 	{
 		guard(FStaticMeshLODModel<<);
 
-#if DEBUG_STATICMESH
-		appPrintf("Serialize UStaticMesh LOD\n");
-#endif
+		DBG_STAT("Serialize UStaticMesh LOD\n");
 #if FURY
 		if (Ar.Game == GAME_Fury)
 		{
@@ -2715,9 +2693,7 @@ struct FStaticMeshLODModel
 			}
 			if (Ar.ArVer < 686) Ar << Lod.ColorStream;	//?? probably this is not a color stream - the same version is used to remove "edges"
 			Ar << Lod.NumVerts;
-#if DEBUG_STATICMESH
-			appPrintf("NumVerts: %d\n", Lod.NumVerts);
-#endif
+			DBG_STAT("NumVerts: %d\n", Lod.NumVerts);
 		}
 		else if (Ar.ArVer >= 466)
 		{
@@ -2828,9 +2804,7 @@ struct FStaticMeshLODModel
 #endif // DUST514
 
 	indices:
-#if DEBUG_STATICMESH
-		appPrintf("Serializing indices ...\n");
-#endif
+		DBG_STAT("Serializing indices ...\n");
 #if BATMAN
 		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 45)
 		{
@@ -2861,9 +2835,7 @@ struct FStaticMeshLODModel
 		if (Ar.Game == GAME_Borderlands && Ar.ArVer >= 832) goto after_indices; // Borderlands 2
 #endif
 		Ar << Lod.Indices2;
-#if DEBUG_STATICMESH
-		appPrintf("Indices: %d %d\n", Lod.Indices.Indices.Num(), Lod.Indices2.Indices.Num());
-#endif
+		DBG_STAT("Indices: %d %d\n", Lod.Indices.Indices.Num(), Lod.Indices2.Indices.Num());
 	after_indices:
 
 		if (Ar.ArVer < 686)
@@ -3237,10 +3209,8 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 version:
 	Ar << InternalVersion;
 
-#if DEBUG_STATICMESH
-	appPrintf("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
-	appPrintf("ver: %d\n", InternalVersion);
-#endif
+	DBG_STAT("kDOPNodes=%d kDOPTriangles=%d\n", kDOPNodes.Num(), kDOPTriangles.Num());
+	DBG_STAT("ver: %d\n", InternalVersion);
 
 #if FURY
 	if (Ar.Game == GAME_Fury)
