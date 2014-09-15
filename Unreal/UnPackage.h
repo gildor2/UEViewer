@@ -182,13 +182,15 @@ public:
 	FObjectDepends			*DependsTable;
 #endif
 
-	UnPackage(const char *filename, FArchive *Ar = NULL);
+	UnPackage(const char *filename, FArchive *baseLoader = NULL);
 	~UnPackage();
 
 	// Load package using short name (without path and extension). When the package
 	// is already loaded, this function will symply return a pointer to earlier
 	// loaded UnPackage.
 	static UnPackage *LoadPackage(const char *Name);
+
+	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
 
 	void SetupReader(int ExportIndex)
 	{

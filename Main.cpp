@@ -671,6 +671,7 @@ static HWND GetSDLWindowHandle(SDL_Window* window)
 	if (!window) return 0;
 
 	SDL_SysWMinfo info;
+	SDL_VERSION(&info.version);
 	SDL_GetWindowWMInfo(window, &info);
 	return info.info.win.window;
 }
@@ -1294,7 +1295,7 @@ int main(int argc, char **argv)
 	}
 
 	// find any object to display
-	if (!FindObjectAndCreateVisualizer(1, false, guiShown))
+	if (!FindObjectAndCreateVisualizer(1, guiShown, true))
 	{
 		appPrintf("\nThe specified package(s) has no objects to diaplay.\n\n");
 		goto no_objects;
@@ -1478,7 +1479,7 @@ static int GDoScreenshot = 0;
 
 void CUmodelApp::Draw3D(float TimeDelta)
 {
-	UObject *Obj = UObject::GObjObjects[ObjIndex];
+	UObject *Obj = (ObjIndex < UObject::GObjObjects.Num()) ? UObject::GObjObjects[ObjIndex] : NULL;
 
 	guard(CUmodelApp::Draw3D);
 
@@ -1500,7 +1501,7 @@ void CUmodelApp::Draw3D(float TimeDelta)
 		GDoScreenshot = 0;
 	}
 
-	unguardf("Obj=%s'%s'", Obj->GetClassName(), Obj->Name);
+	unguardf("Obj=%s'%s'", Obj ? Obj->GetClassName() : "None", Obj ? Obj->Name : "None");
 }
 
 

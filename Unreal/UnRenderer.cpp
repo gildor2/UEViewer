@@ -346,7 +346,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 
 	return TexNum;
 
-	unguard;
+	unguardf("%s'%s'", Tex->GetClassName(), Tex->Name);
 }
 
 

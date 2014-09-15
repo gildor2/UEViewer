@@ -410,7 +410,7 @@ void CTextureData::DecodeXBox360()
 		strcpy(ErrorMessage, "unsupported texture format");
 
 	error:
-		if (ShouldFreeData) delete CompressedData;
+		ReleaseCompressedData();
 		CompressedData = NULL;
 		appNotify("ERROR: DecodeXBox360 %s'%s' (%s=%d): %s", Obj->GetClassName(), Obj->Name,
 			OriginalFormatName, OriginalFormatEnum, ErrorMessage);
@@ -441,7 +441,7 @@ void CTextureData::DecodeXBox360()
 	}
 
 	// untile and unalign
-	byte *buf = new byte[DataSize];
+	byte *buf = (byte*)appMalloc(DataSize);
 	UntileXbox360TexturePacked(CompressedData, buf, USize1, USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
 	// swap bytes
@@ -449,9 +449,9 @@ void CTextureData::DecodeXBox360()
 		appReverseBytes(buf, DataSize / 2, 2);
 
 	// release old CompressedData
-	if (ShouldFreeData) delete CompressedData;
+	ReleaseCompressedData();
 	CompressedData = buf;
-	ShouldFreeData = true;			// data were allocated here ...
+	ShouldFreeData = (buf != NULL);			// data were allocated here ...
 	DataSize       = (USize / Info.BlockSizeX) * (VSize / Info.BlockSizeY) * Info.BytesPerBlock; // essential for exporting
 
 	return;		// no error
@@ -723,7 +723,7 @@ byte *FindXprData(const char *Name, int *DataSize)
 				appPrintf("Loading stream %s from %s (%d bytes)\n", Name, Info->File->RelativeName, File->DataSize);
 				FArchive *Reader = appCreateFileReader(Info->File);
 				Reader->Seek(File->DataOffset);
-				byte *buf = new byte[File->DataSize];
+				byte *buf = (byte*)appMalloc(File->DataSize);
 				Reader->Serialize(buf, File->DataSize);
 				delete Reader;
 				if (DataSize) *DataSize = File->DataSize;
@@ -852,45 +852,45 @@ static byte *FindBioTexture(const UTexture *Tex)
 	for (int i = 0; i < bioCatalog.Num(); i++)
 	{
 		BioBulkCatalog &Cat = bioCatalog[i];
-	for (int j = 0; j < Cat.Files.Num(); j++)
-	{
-		const BioBulkCatalogFile &File = Cat.Files[j];
-		for (int k = 0; k < File.Items.Num(); k++)
+		for (int j = 0; j < Cat.Files.Num(); j++)
 		{
-			const BioBulkCatalogItem &Item = File.Items[k];
-			if (!strcmp(Tex->Name, Item.ObjectName))
+			const BioBulkCatalogFile &File = Cat.Files[j];
+			for (int k = 0; k < File.Items.Num(); k++)
 			{
-				if (abs(needSize - Item.DataSize) > 0x4000)		// differs in 16k
+				const BioBulkCatalogItem &Item = File.Items[k];
+				if (!strcmp(Tex->Name, Item.ObjectName))
 				{
+					if (abs(needSize - Item.DataSize) > 0x4000)		// differs in 16k
+					{
 #if DEBUG_BIO_BULK
-					appPrintf("... Found %s in %s with wrong BulkDataSize %X (need %X)\n", Tex->Name, *File.Filename, Item.DataSize, needSize);
+						appPrintf("... Found %s in %s with wrong BulkDataSize %X (need %X)\n", Tex->Name, *File.Filename, Item.DataSize, needSize);
 #endif
-					continue;
-				}
+						continue;
+					}
 #if DEBUG_BIO_BULK
-				appPrintf("... Found %s in %s at %X size %X (%dx%d fmt=%d bpp=%g strip:%d mips:%d)\n", Tex->Name, *File.Filename, Item.DataOffset, Item.DataSize,
-					Tex->USize, Tex->VSize, Tex->Format, (float)Item.DataSize / (Tex->USize * Tex->VSize),
-					Tex->HasBeenStripped, Tex->StrippedNumMips);
+					appPrintf("... Found %s in %s at %X size %X (%dx%d fmt=%d bpp=%g strip:%d mips:%d)\n", Tex->Name, *File.Filename, Item.DataOffset, Item.DataSize,
+						Tex->USize, Tex->VSize, Tex->Format, (float)Item.DataSize / (Tex->USize * Tex->VSize),
+						Tex->HasBeenStripped, Tex->StrippedNumMips);
 #endif
-				// found
-				const CGameFileInfo *bulkFile = appFindGameFile(File.Filename);
-				if (!bulkFile)
-				{
-					// no bulk file
-					appPrintf("Decompressing %s: %s is missing\n", Tex->Name, *File.Filename);
-					return NULL;
-				}
+					// found
+					const CGameFileInfo *bulkFile = appFindGameFile(File.Filename);
+					if (!bulkFile)
+					{
+						// no bulk file
+						appPrintf("Decompressing %s: %s is missing\n", Tex->Name, *File.Filename);
+						return NULL;
+					}
 
-				appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, bulkFile->RelativeName);
-				FArchive *Reader = appCreateFileReader(bulkFile);
-				Reader->Seek(Item.DataOffset);
-				byte *buf = new byte[max(Item.DataSize, needSize)];
-				Reader->Serialize(buf, Item.DataSize);
-				delete Reader;
-				return buf;
+					appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, bulkFile->RelativeName);
+					FArchive *Reader = appCreateFileReader(bulkFile);
+					Reader->Seek(Item.DataOffset);
+					byte *buf = (byte*)appMalloc(max(Item.DataSize, needSize));
+					Reader->Serialize(buf, Item.DataSize);
+					delete Reader;
+					return buf;
+				}
 			}
 		}
-	}
 	}
 #if DEBUG_BIO_BULK
 	appPrintf("... Bulk for %s was not found\n", Tex->Name);
@@ -914,10 +914,8 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 #if BIOSHOCK
 	if (Package && Package->Game == GAME_Bioshock && CachedBulkDataSize) //?? check bStripped or Baked ?
 	{
-		BioReadBulkCatalog();
-
 		TexData.CompressedData = FindBioTexture(this);	// may be NULL
-		TexData.ShouldFreeData = true;
+		TexData.ShouldFreeData = (TexData.CompressedData != NULL);
 		TexData.USize          = USize;
 		TexData.VSize          = VSize;
 		TexData.DataSize       = CachedBulkDataSize;
@@ -929,7 +927,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	{
 		// try to find texture inside XBox xpr files
 		TexData.CompressedData = FindXprData(Name, &TexData.DataSize);
-		TexData.ShouldFreeData = true;
+		TexData.ShouldFreeData = (TexData.CompressedData != NULL);
 		TexData.USize          = USize;
 		TexData.VSize          = VSize;
 	}

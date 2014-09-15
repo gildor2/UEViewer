@@ -109,8 +109,16 @@ struct CTextureData
 	}
 	~CTextureData()
 	{
+		ReleaseCompressedData();
+	}
+	void ReleaseCompressedData()
+	{
 		if (ShouldFreeData && CompressedData)
-			delete const_cast<byte*>(CompressedData);
+		{
+			appFree(const_cast<byte*>(CompressedData));
+			ShouldFreeData = false;
+			CompressedData = NULL;
+		}
 	}
 
 	unsigned GetFourCC() const;

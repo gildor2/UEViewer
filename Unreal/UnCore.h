@@ -411,7 +411,39 @@ public:
 	{
 		return *this;
 	}
+
+	// some typeinfo
+
+	static const char* StaticGetName()
+	{
+		return "FArchive";
+	}
+
+	virtual const char* GetName() const
+	{
+		return StaticGetName();
+	}
+
+	template<class T> T* CastTo()
+	{
+		if (!strcmp(GetName(), T::StaticGetName()))
+			return (T*)this;
+		else
+			return NULL;
+	}
 };
+
+#define DECLARE_ARCHIVE(Name)			\
+public:									\
+	static const char* StaticGetName()	\
+	{									\
+		return #Name;					\
+	}									\
+	virtual const char* GetName() const	\
+	{									\
+		return StaticGetName();			\
+	}									\
+private:
 
 
 // Note: bools in UE are usually serialized as int32
@@ -475,6 +507,7 @@ enum EFileReaderOptions
 
 class FFileArchive : public FArchive
 {
+	DECLARE_ARCHIVE(FFileArchive);
 public:
 	FFileArchive(const char *Filename, unsigned InOptions)
 	{
@@ -569,6 +602,7 @@ inline bool appFileExists(const char* filename)
 
 class FFileReader : public FFileArchive
 {
+	DECLARE_ARCHIVE(FFileReader);
 public:
 	FFileReader(const char *Filename, unsigned InOptions = 0)
 	:	FFileArchive(Filename, Options)
@@ -607,6 +641,7 @@ protected:
 
 class FFileWriter : public FFileArchive
 {
+	DECLARE_ARCHIVE(FFileWriter);
 public:
 	FFileWriter(const char *Filename, unsigned Options = 0)
 	:	FFileArchive(Filename, Options)
@@ -642,6 +677,7 @@ public:
 
 class FReaderWrapper : public FArchive
 {
+	DECLARE_ARCHIVE(FReaderWrapper);
 public:
 	FArchive	*Reader;
 	int			ArPosOffset;
@@ -679,6 +715,7 @@ public:
 
 class FMemReader : public FArchive
 {
+	DECLARE_ARCHIVE(FMemReader);
 public:
 	FMemReader(const void *data, int size)
 	:	DataPtr((const byte*)data)

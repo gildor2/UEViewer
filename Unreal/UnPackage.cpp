@@ -929,6 +929,7 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 
 class FFileReaderLineage : public FReaderWrapper
 {
+	DECLARE_ARCHIVE(FFileReaderLineage);
 public:
 	int			ArPosOffset;
 	byte		XorKey;
@@ -937,6 +938,7 @@ public:
 	:	FReaderWrapper(File, LINEAGE_HEADER_SIZE)
 	,	XorKey(Key)
 	{
+		Game = GAME_Lineage2;
 		Seek(0);		// skip header
 	}
 
@@ -964,10 +966,13 @@ public:
 
 class FFileReaderBattleTerr : public FReaderWrapper
 {
+	DECLARE_ARCHIVE(FFileReaderBattleTerr);
 public:
 	FFileReaderBattleTerr(FArchive *File)
 	:	FReaderWrapper(File)
-	{}
+	{
+		Game = GAME_BattleTerr;
+	}
 
 	virtual void Serialize(void *data, int size)
 	{
@@ -999,6 +1004,7 @@ public:
 
 class FFileReaderAA2 : public FReaderWrapper
 {
+	DECLARE_ARCHIVE(FFileReaderAA2);
 public:
 	FFileReaderAA2(FArchive *File)
 	:	FReaderWrapper(File)
@@ -1047,10 +1053,13 @@ public:
 
 class FFileReaderBnS : public FReaderWrapper
 {
+	DECLARE_ARCHIVE(FFileReaderBnS);
 public:
 	FFileReaderBnS(FArchive *File)
 	:	FReaderWrapper(File)
-	{}
+	{
+		Game = GAME_BladeNSoul;
+	}
 
 	virtual void Serialize(void *data, int size)
 	{
@@ -1102,6 +1111,7 @@ static void PatchBnSExports(FObjectExport *Exp, const FPackageFileSummary &Summa
 
 class FFileReaderNurien : public FReaderWrapper
 {
+	DECLARE_ARCHIVE(FFileReaderNurien);
 public:
 	int			Threshold;
 
@@ -1130,6 +1140,11 @@ public:
 			*p ^= key[Pos & 0xF];
 		}
 	}
+
+	virtual void SetStartingPosition(int pos)
+	{
+		Threshold = pos;
+	}
 };
 
 #endif // NURIEN
@@ -1143,8 +1158,12 @@ public:
 
 class FUE3ArchiveReader : public FArchive
 {
+	DECLARE_ARCHIVE(FUE3ArchiveReader);
 public:
 	FArchive				*Reader;
+
+	bool					IsFullyCompressed;
+
 	// compression data
 	int						CompressionFlags;
 	TArray<FCompressedChunk> CompressedChunks;
@@ -1164,6 +1183,7 @@ public:
 
 	FUE3ArchiveReader(FArchive *File, int Flags, const TArray<FCompressedChunk> &Chunks)
 	:	Reader(File)
+	,	IsFullyCompressed(false)
 	,	CompressionFlags(Flags)
 	,	Buffer(NULL)
 	,	BufferSize(0)
@@ -1369,37 +1389,35 @@ public:
 	Package loading (creation) / unloading
 -----------------------------------------------------------------------------*/
 
-UnPackage::UnPackage(const char *filename, FArchive *Ar)
-:	Loader(NULL)
-{
-	guard(UnPackage::UnPackage);
+//!! Move CreateLoader and all loaders to a separate h/cpp.
+//!! Note: it's not enough just to expose CreateLoader to .h file - some loaders
+//!! are accrssed from UnPackage constructor (see all CastTo functions).
+//!! Also, 2 loaders are created directly from UnPackage constructor, after
+//!! FPackageFileSummary surialization - perhaps it's possible to move them
+//!! into CreateLoader too.
 
-#if PROFILE_PACKAGE_TABLES
-	appResetProfiler();
-#endif
+FArchive* UnPackage::CreateLoader(const char* filename, FArchive* baseLoader)
+{
+	guard(UnPackage::CreateLoader);
 
 	// setup FArchive
-	Loader = (Ar) ? Ar : new FFileReader(filename);
-	IsLoading = true;
-
-	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
+	FArchive* Loader = (baseLoader) ? baseLoader : new FFileReader(filename);
 
 #if LINEAGE2 || EXTEEL || BATTLE_TERR || NURIEN || BLADENSOUL
 	int checkDword;
-	*this << checkDword;
+	*Loader << checkDword;
 
 	#if LINEAGE2 || EXTEEL
 	if (checkDword == ('L' | ('i' << 16)))	// unicode string "Lineage2Ver111"
 	{
 		// this is a Lineage2 package
-		Seek(LINEAGE_HEADER_SIZE);
+		Loader->Seek(LINEAGE_HEADER_SIZE);
 		// here is a encrypted by 'xor' standard FPackageFileSummary
 		// to get encryption key, can check 1st byte
 		byte b;
-		*this << b;
+		*Loader << b;
 		// for Ver111 XorKey==0xAC for Lineage or ==0x42 for Exteel, for Ver121 computed from filename
 		byte XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
-		Game = GAME_Lineage2;	// may be changed by DetectGame()
 		// replace Loader
 		Loader = new FFileReaderLineage(Loader, XorKey);
 	}
@@ -1408,43 +1426,39 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	#if BATTLE_TERR
 	if (checkDword == 0x342B9CFC)
 	{
-		Game = GAME_BattleTerr;
 		// replace Loader
 		Loader = new FFileReaderBattleTerr(Loader);
 	}
 	#endif // BATTLE_TERR
 	#if NURIEN
-	FFileReaderNurien *NurienReader = NULL;
 	if (checkDword == 0xB01F713F)
 	{
 		// replace loader
-		Loader = NurienReader = new FFileReaderNurien(Loader);
+		Loader = new FFileReaderNurien(Loader);
 	}
 	#endif // NURIEN
 	#if BLADENSOUL
 	if (checkDword == 0xF84CEAB0)
 	{
-		Game = GAME_BladeNSoul;
 		if (!GForceGame) GForceGame = GAME_BladeNSoul;
 		Loader = new FFileReaderBnS(Loader);
 	}
 	#endif // BLADENSOUL
-	Seek(0);	// seek back to header
+	Loader->Seek(0);	// seek back to header
 #endif // complex
 
 #if UNREAL3
 	// code for fully compressed packages support
 	//!! rewrite this code, merge with game autodetection
-	bool fullyCompressed = false;
 	int checkDword1, checkDword2;
-	*this << checkDword1;
+	*Loader << checkDword1;
 	if (checkDword1 == PACKAGE_FILE_TAG_REV)
 	{
-		ReverseBytes = true;
+		Loader->ReverseBytes = true;
 		if (GForcePlatform == PLATFORM_UNKNOWN)
-			Platform = PLATFORM_XBOX360;			// default platform for "ReverseBytes" mode is PLATFORM_XBOX360
+			Loader->Platform = PLATFORM_XBOX360;			// default platform for "ReverseBytes" mode is PLATFORM_XBOX360
 	}
-	*this << checkDword2;
+	*Loader << checkDword2;
 	Loader->Seek(0);
 	if (checkDword2 == PACKAGE_FILE_TAG || checkDword2 == 0x20000 || checkDword2 == 0x10000)	// seen 0x10000 in Enslaved PS3
 	{
@@ -1456,35 +1470,56 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		guard(ReadFullyCompressedHeader);
 		// this is a fully compressed package
 		FCompressedChunkHeader H;
-		*this << H;
+		*Loader << H;
 		TArray<FCompressedChunk> Chunks;
 		FCompressedChunk *Chunk = new (Chunks) FCompressedChunk;
 		Chunk->UncompressedOffset = 0;
 		Chunk->UncompressedSize   = H.UncompressedSize;
 		Chunk->CompressedOffset   = 0;
 		Chunk->CompressedSize     = H.CompressedSize;
-		Loader->SetupFrom(*this);				//?? low-level loader; possibly, do it in FUE3ArchiveReader()
 		byte CompMethod = GForceCompMethod;
 		if (!CompMethod)
-			CompMethod = (Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_FIND;
-		Loader = new FUE3ArchiveReader(Loader, CompMethod, Chunks);
-		fullyCompressed = true;
+			CompMethod = (Loader->Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_FIND;
+		FUE3ArchiveReader* UE3Loader = new FUE3ArchiveReader(Loader, CompMethod, Chunks);
+		UE3Loader->IsFullyCompressed = true;
+		Loader = UE3Loader;
 		unguard;
 	}
 #endif // UNREAL3
 
+	return Loader;
+
+	unguardf("%s", filename);
+}
+
+UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
+:	Loader(NULL)
+{
+	guard(UnPackage::UnPackage);
+
+#if PROFILE_PACKAGE_TABLES
+	appResetProfiler();
+#endif
+
+	IsLoading = true;
+	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
+	Loader = CreateLoader(filename, baseLoader);
+	SetupFrom(*Loader);
+
 	// read summary
 	*this << Summary;
-//	ArVer         = Summary.FileVersion; -- already set by FPackageFileSummary serializer; plus, it may be overrided by DetectGame()
-//	ArLicenseeVer = Summary.LicenseeVersion;
-	Loader->SetupFrom(*this);
+	Loader->SetupFrom(*this);	// serialization of FPackageFileSummary could change some FArchive properties
+
 	PKG_LOG(("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion));
 #if UNREAL3
 	if (Game >= GAME_UE3)
+	{
 		PKG_LOG(("Engine: %d ", Summary.EngineVersion));
-	if (fullyCompressed)
-		PKG_LOG(("[FullComp] "));
-#endif
+		FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
+		if (UE3Loader && UE3Loader->IsFullyCompressed)
+			PKG_LOG(("[FullComp] "));
+	}
+#endif // UNREAL3
 	PKG_LOG(("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game));
 
 #if DEBUG_PACKAGE
@@ -1496,6 +1531,7 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 	}
 #endif // DEBUG_PACKAGE
 
+	//!! try to separate the following code too
 #if BIOSHOCK
 	if (Game == GAME_Bioshock)
 	{
@@ -1534,17 +1570,23 @@ UnPackage::UnPackage(const char *filename, FArchive *Ar)
 		}
 	}
 #endif // AA2
+	//!! end of loader substitution
+
 
 #if UNREAL3
 	if (Game >= GAME_UE3 && Summary.CompressionFlags)
 	{
-		if (fullyCompressed) appError("Fully compressed package %s has additional compression table", filename);
+		FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
+		if (UE3Loader && UE3Loader->IsFullyCompressed)
+			appError("Fully compressed package %s has additional compression table", filename);
 		// replace Loader with special reader for compressed UE3 archives
 		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, Summary.CompressedChunks);
 	}
 	#if NURIEN
-	if (NurienReader) NurienReader->Threshold = Summary.HeadersSize;
-	#endif
+	FFileReaderNurien* NurienReader = Loader->CastTo<FFileReaderNurien>();
+	if (NurienReader)
+		NurienReader->Threshold = Summary.HeadersSize;
+	#endif // NURIEN
 #endif // UNREAL3
 
 	// read name table

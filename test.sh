@@ -157,7 +157,7 @@ function uc2()    { run1 "data/2X/UnrealChampionship2" $*;}
 function l2()     { run1 "data/2/Lineage2" $*;            }
 function bio()
 {
-	CheckDir {c,e}:/GAMES/BioShock
+	CheckDir {c,e}:/GAMES/BioShock data/2/Bioshock
 	run $*
 }
 function alice()
