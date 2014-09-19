@@ -131,6 +131,7 @@ typedef unsigned __int64		uint64;
 #	define GCC_PACK				__attribute__((__packed__))
 #	undef VSTUDIO_INTEGRATION
 #	undef WIN32_USE_SEH
+#	undef HAS_UI				// not yet supported on this platform
 typedef signed long long		int64;
 typedef unsigned long long		uint64;
 #else
@@ -443,10 +444,10 @@ void appDumpStackTrace(const address_t* buffer, int depth);
 
 #else
 
-inline appInitPlatform() {}
+inline void appInitPlatform() {}
 
-int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip) {}
-void appDumpStackTrace(const address_t* buffer, int depth) {}
+inline int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip) {}
+inline void appDumpStackTrace(const address_t* buffer, int depth) {}
 
 #endif // _WIN32
 

@@ -29,6 +29,7 @@ MAIN : umodel
 
 MAIN_FILES = \
 	$(OUT_1)/Main.o \
+	$(OUT_1)/GameList.o \
 	$(OUT_1)/Export3D.o \
 	$(OUT_1)/Exporters.o \
 	$(OUT_1)/ExportMaterial.o \
@@ -71,7 +72,12 @@ MAIN_FILES = \
 	$(OUT_1)/GLBind.o \
 	$(OUT_1)/GlWindow.o \
 	$(OUT_1)/Math3D.o \
-	$(OUT_1)/TextContainer.o
+	$(OUT_1)/Memory.o \
+	$(OUT_1)/TextContainer.o \
+	$(OUT_1)/BaseDialog.o \
+	$(OUT_1)/FileControls.o \
+	$(OUT_1)/PackageDialog.o \
+	$(OUT_1)/StartupDialog.o
 
 NV_LIBS_FILES = \
 	$(OUT)/Memory.o \
@@ -149,31 +155,12 @@ DEPENDS_3 = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Exporters/Exporters.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/MeshCommon.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnMesh3.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
-
-$(OUT_1)/SkelMeshViewer.o : Viewers/SkelMeshViewer.cpp $(DEPENDS_3)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/SkelMeshViewer.o Viewers/SkelMeshViewer.cpp
-
-DEPENDS_4 = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Core/MathSSE.h \
-	Exporters/Exporters.h \
+	GameList.h \
+	UI/BaseDialog.h \
+	UI/PackageDialog.h \
+	UI/ProgressDialog.h \
+	UI/StartupDialog.h \
+	UmodelSettings.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -190,10 +177,36 @@ DEPENDS_4 = \
 	Unreal/UnSound.h \
 	Unreal/UnThirdParty.h \
 	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/Main.o : Main.cpp $(DEPENDS_3)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Main.o Main.cpp
+
+DEPENDS_4 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Exporters/Exporters.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-$(OUT_1)/Main.o : Main.cpp $(DEPENDS_4)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Main.o Main.cpp
+$(OUT_1)/SkelMeshViewer.o : Viewers/SkelMeshViewer.cpp $(DEPENDS_4)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/SkelMeshViewer.o Viewers/SkelMeshViewer.cpp
 
 DEPENDS_5 = \
 	Build.h \
@@ -646,6 +659,76 @@ DEPENDS_30 = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
+	GameList.h \
+	UI/BaseDialog.h \
+	UI/FileControls.h \
+	UI/StartupDialog.h \
+	UmodelSettings.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/StartupDialog.o : UI/StartupDialog.cpp $(DEPENDS_30)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/StartupDialog.o UI/StartupDialog.cpp
+
+DEPENDS_31 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	GameList.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/GameList.o : GameList.cpp $(DEPENDS_31)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/GameList.o GameList.cpp
+
+DEPENDS_32 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	UI/FileControls.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/FileControls.o : UI/FileControls.cpp $(DEPENDS_32)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/FileControls.o UI/FileControls.cpp
+
+DEPENDS_33 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	UI/PackageDialog.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/PackageDialog.o : UI/PackageDialog.cpp $(DEPENDS_33)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageDialog.o UI/PackageDialog.cpp
+
+DEPENDS_34 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/BaseDialog.o : UI/BaseDialog.cpp $(DEPENDS_34)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/BaseDialog.o UI/BaseDialog.cpp
+
+DEPENDS_35 = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnHavok.h \
@@ -658,10 +741,10 @@ DEPENDS_30 = \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMeshBioshock.o : Unreal/UnMeshBioshock.cpp $(DEPENDS_30)
+$(OUT_1)/UnMeshBioshock.o : Unreal/UnMeshBioshock.cpp $(DEPENDS_35)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnMeshBioshock.o Unreal/UnMeshBioshock.cpp
 
-DEPENDS_31 = \
+DEPENDS_36 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -677,10 +760,10 @@ DEPENDS_31 = \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMeshRune.o : Unreal/UnMeshRune.cpp $(DEPENDS_31)
+$(OUT_1)/UnMeshRune.o : Unreal/UnMeshRune.cpp $(DEPENDS_36)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnMeshRune.o Unreal/UnMeshRune.cpp
 
-DEPENDS_32 = \
+DEPENDS_37 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -692,10 +775,10 @@ DEPENDS_32 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_32)
+$(OUT_1)/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_37)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnHavok.o Unreal/UnHavok.cpp
 
-DEPENDS_33 = \
+DEPENDS_38 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -709,10 +792,10 @@ DEPENDS_33 = \
 	Unreal/UnPackage.h \
 	Unreal/UnTextureNVTT.h
 
-$(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_33)
+$(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_38)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture.o Unreal/UnTexture.cpp
 
-DEPENDS_34 = \
+DEPENDS_39 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -726,10 +809,10 @@ DEPENDS_34 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMesh1.o : Unreal/UnMesh1.cpp $(DEPENDS_34)
+$(OUT_1)/UnMesh1.o : Unreal/UnMesh1.cpp $(DEPENDS_39)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnMesh1.o Unreal/UnMesh1.cpp
 
-DEPENDS_35 = \
+DEPENDS_40 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -738,10 +821,10 @@ DEPENDS_35 = \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h
 
-$(OUT_1)/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_35)
+$(OUT_1)/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_40)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnUbisoft.o Unreal/UnUbisoft.cpp
 
-DEPENDS_36 = \
+DEPENDS_41 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -751,13 +834,13 @@ DEPENDS_36 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-$(OUT_1)/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_36)
+$(OUT_1)/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_41)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnObject.o Unreal/UnObject.cpp
 
-$(OUT_1)/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_36)
+$(OUT_1)/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_41)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnPackage.o Unreal/UnPackage.cpp
 
-DEPENDS_37 = \
+DEPENDS_42 = \
 	Build.h \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -772,54 +855,57 @@ DEPENDS_37 = \
 	libs/include/zlib/zconf.h \
 	libs/include/zlib/zlib.h
 
-$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_37)
+$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_42)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCore.o Unreal/UnCore.cpp
 
-DEPENDS_38 = \
+DEPENDS_43 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h
 
-$(OUT_1)/Core.o : Core/Core.cpp $(DEPENDS_38)
+$(OUT_1)/Core.o : Core/Core.cpp $(DEPENDS_43)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Core.o Core/Core.cpp
 
-$(OUT_1)/CoreWin32.o : Core/CoreWin32.cpp $(DEPENDS_38)
+$(OUT_1)/CoreWin32.o : Core/CoreWin32.cpp $(DEPENDS_43)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/CoreWin32.o Core/CoreWin32.cpp
 
-$(OUT_1)/Math3D.o : Core/Math3D.cpp $(DEPENDS_38)
+$(OUT_1)/Math3D.o : Core/Math3D.cpp $(DEPENDS_43)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Math3D.o Core/Math3D.cpp
 
-DEPENDS_39 = \
+$(OUT_1)/Memory.o : Core/Memory.cpp $(DEPENDS_43)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Memory.o Core/Memory.cpp
+
+DEPENDS_44 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
 	Core/TextContainer.h
 
-$(OUT_1)/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_39)
+$(OUT_1)/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_44)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/TextContainer.o Core/TextContainer.cpp
 
-DEPENDS_40 = \
+DEPENDS_45 = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
 	Unreal/UnTextureNVTT.h
 
-$(OUT_1)/UnTextureNVTT.o : Unreal/UnTextureNVTT.cpp $(DEPENDS_40)
+$(OUT_1)/UnTextureNVTT.o : Unreal/UnTextureNVTT.cpp $(DEPENDS_45)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTextureNVTT.o Unreal/UnTextureNVTT.cpp
 
 OPT_IOS_LIBS = -msse -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os
 
-DEPENDS_41 = \
+DEPENDS_46 = \
 	libs/PowerVR/PVRTDecompress.h \
 	libs/PowerVR/PVRTGlobal.h \
 	libs/PowerVR/PVRTTexture.h
 
-$(OUT)/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_41)
+$(OUT)/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_46)
 	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/PVRTDecompress.o ./libs/PowerVR/PVRTDecompress.cpp
 
 OPT_UE3_LIBS = -msse -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 
-DEPENDS_42 = \
+DEPENDS_47 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
@@ -831,10 +917,10 @@ DEPENDS_42 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_42)
+$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_47)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
-DEPENDS_43 = \
+DEPENDS_48 = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/lzo/lzo_conf.h \
@@ -843,41 +929,41 @@ DEPENDS_43 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_43)
+$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_48)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo_init.o ./libs/lzo/lzo_init.c
 
-DEPENDS_44 = \
+DEPENDS_49 = \
 	libs/mspack/readbits.h \
 	libs/mspack/readhuff.h \
 	libs/mspack/system.h
 
-$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_44)
+$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_49)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzxd.o ./libs/mspack/lzxd.c
 
-DEPENDS_45 = \
+DEPENDS_50 = \
 	libs/nvtt/nvcore/Debug.h \
 	libs/nvtt/nvcore/Memory.h
 
-$(OUT)/Memory.o : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS_45)
+$(OUT)/Memory.o : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS_50)
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/Memory.o ./libs/nvtt/nvcore/Memory.cpp
 
-DEPENDS_46 = \
+DEPENDS_51 = \
 	libs/nvtt/nvimage/BlockDXT.h \
 	libs/nvtt/nvimage/ColorBlock.h
 
-$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_46)
+$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_51)
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
-DEPENDS_47 = \
+DEPENDS_52 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_47)
+$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_52)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_48 = \
+DEPENDS_53 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -886,10 +972,10 @@ DEPENDS_48 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_48)
+$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_53)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_49 = \
+DEPENDS_54 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -897,26 +983,26 @@ DEPENDS_49 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_49)
+$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_54)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_50 = \
+DEPENDS_55 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_50)
+$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_55)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_51 = \
+DEPENDS_56 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_51)
+$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_56)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/adler32.o ./libs/zlib/adler32.c
 
-$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_51)
+$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_56)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

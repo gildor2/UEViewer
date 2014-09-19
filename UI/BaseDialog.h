@@ -58,6 +58,8 @@ public:
 	FORCEINLINE int GetWidth() const     { return Width; }
 	FORCEINLINE int GetHeight() const    { return Height; }
 
+	//!! add SetFontHeight(int)
+
 	static FORCEINLINE int EncodeWidth(float w)
 	{
 		w = bound(w, 0, 1);
@@ -92,6 +94,8 @@ protected:
 	HWND		Wnd;
 	int			Id;
 
+	//!! pass 'inout HWND* wnd' here, don't create a window when already created - but update window position
+	//!! instead (that's for resizing capabilities)
 	HWND Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
 

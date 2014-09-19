@@ -38,7 +38,7 @@ case "$PLATFORM" in
 		gccfilt make -f $makefile
 		;;
 	"linux")
-		make -f $makefile
+		make -j 4 -f $makefile			# use 4 jobs for build
 		;;
 	*)
 		echo "Unknown PLATFORM=\"$PLATFORM\""

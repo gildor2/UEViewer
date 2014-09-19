@@ -1502,7 +1502,9 @@ void VisualizerLoop(const char *caption, CApplication *App)
 
 SDL_Window* CApplication::GetWindow() const
 {
+#if NEW_SDL
 	return sdlWindow;
+#endif
 }
 
 #endif // RENDERING

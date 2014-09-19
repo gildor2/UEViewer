@@ -893,6 +893,20 @@ static void SetPathOption(FString& where, const char* value)
 	where = buffer;
 }
 
+// Display error message about wrong command line and then exit.
+static void CommandLineError(const char *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	char buf[4096];
+	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
+	va_end(argptr);
+	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
+
+	appPrintf("%s\nTry \"umodel -help\" for more information.\n", buf);
+	exit(1);
+}
+
 
 #define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
@@ -1051,8 +1065,7 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			appPrintf("COMMAND LINE ERROR: unknown option: %s\n", argv[arg]);
-			goto bad_params;
+			CommandLineError("umodel: invalid option: %s", opt);
 		}
 	}
 
@@ -1061,10 +1074,8 @@ int main(int argc, char **argv)
 	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
 	if (params.Num() > 3)
 	{
-		appPrintf("COMMAND LINE ERROR: too many arguments. Check your command line.\nYou specified: package=%s, object=%s, class=%s\n", argPkgName, argObjName, argClassName);
-	bad_params:
-		appPrintf("Use \"umodel\" without arguments to show command line help\n");;
-		exit(1);
+		CommandLineError("umodel: too many arguments, please check your command line.\nYou specified: package=%s, object=%s, class=%s",
+			argPkgName, argObjName, argClassName);
 	}
 
 	bool guiShown = false;
@@ -1097,13 +1108,9 @@ int main(int argc, char **argv)
 	TArray<UObject*> Objects;
 
 #if !HAS_UI
-	if (!argPkgName) goto bad_pkg_name;
-
-	if (!params.Num())
+	if (!argPkgName || !params.Num())
 	{
-	bad_pkg_name:
-		appPrintf("COMMAND LINE ERROR: package name is not specified\n");
-		goto bad_params;
+		CommandLineError("umodel: package name was not specified.");
 	}
 #else
 	if (!argPkgName)

@@ -1364,6 +1364,12 @@ private:
 // Binary-compatible array, but with no allocations inside
 template<class T, int N> class TStaticArray : public TArray<T>
 {
+	// We require "using TArray<T>::*" for gcc 3.4+ compilation
+	// http://gcc.gnu.org/gcc-3.4/changes.html
+	// - look for "unqualified names"
+	// - "temp.dep/3" section of the C++ standard [ISO/IEC 14882:2003]
+	using TArray<T>::DataPtr;
+	using TArray<T>::MaxCount;
 public:
 	FORCEINLINE TStaticArray()
 	{

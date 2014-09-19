@@ -21,7 +21,14 @@ EOF
 shopt -s extglob
 
 exe=umodel.exe
-[ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && exe="umodel"
+c_drive=
+if [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ]; then
+	exe="umodel"
+	# VirtualBox default C: drive mapping
+	if [ -d "/media/sf_C_DRIVE" ]; then
+		c_drive="/media/sf_C_DRIVE"
+	fi
+fi
 
 #function DBG() { echo "LOG: $*"; }
 function DBG() { return; }
@@ -44,8 +51,12 @@ function CheckDir()
 {
 	local checkedDirs=""
 	while [ $# -gt 0 ]; do
-		DBG "... check $1"
 		dir=$1
+		DBG "... check $dir"
+		# support Windows paths on Linux
+		if [ "$c_drive" ] && [ "${dir:1:1}" == ":" ]; then
+			dir="${c_drive}${dir:2}"
+		fi
 		if [ -z "$checkedDirs" ]; then
 			checkedDirs=$dir
 		else
