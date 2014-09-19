@@ -1,0 +1,6 @@
+data/
+obj/
+bak/
+Tools/MaxActorXImport/ActorXImporter.ini
+Tools/UT2down/
+Unreal/Shaders.h

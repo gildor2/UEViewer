@@ -1,0 +1,8 @@
+#
+# This file contains rules that control how Git handles binary and text files, including line endings
+#
+ 
+
+*.bat eol=crlf
+*.sh eol=lf
+*.pl eol=lf

@@ -75,7 +75,7 @@ sub process {
 
 # return file modification time
 sub FileTime {
-	my @s = stat($_[0])  or die "File \"${_[0]}\" was not found\n";
+	my @s = stat($_[0]) or die "File \"${_[0]}\" was not found\n";
 	return $s[9];
 }
 
@@ -101,13 +101,16 @@ if (!-f $OUT) {
 }
 
 
-for $f (@filelist)
-{
-	if ($f =~ /.*\.($EXTS)$/) {
-		my $ShaderTime = FileTime($f);
-		if ($ShaderTime > $OutTime) {
-			print STDERR "$f is updated, rebuilding $OUT ...\n";
-			$rebuild = 1;
+if ($rebuild == 0) {
+	# verify individual file times
+	for $f (@filelist)
+	{
+		if ($f =~ /.*\.($EXTS)$/) {
+			my $ShaderTime = FileTime($f);
+			if ($ShaderTime > $OutTime) {
+				print STDERR "$f is updated, rebuilding $OUT ...\n";
+				$rebuild = 1;
+			}
 		}
 	}
 }
