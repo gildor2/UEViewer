@@ -4,3 +4,8 @@ bak/
 Tools/MaxActorXImport/ActorXImporter.ini
 Tools/UT2down/
 Unreal/Shaders.h
+Tools/PackageExtract/makefile-*
+Tools/PackageTool/makefile-*
+Tools/PackageUnpack/makefile-*
+Tools/TypeInfo/makefile-*
+Tools/UmdExtract/makefile-*

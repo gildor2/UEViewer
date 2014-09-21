@@ -777,7 +777,9 @@ void USkeletalMesh::InitSections(CSkelMeshLod &Lod)
 		CMeshSection &Sec = Lod.Sections[sec];
 		int TexIndex  = M.TextureIndex;
 		UUnrealMaterial *Mat = (TexIndex < Textures.Num()) ? Textures[TexIndex] : NULL;
+#if RENDERING
 		Sec.Material = UMaterialWithPolyFlags::Create(Mat, M.PolyFlags);
+#endif
 	}
 }
 

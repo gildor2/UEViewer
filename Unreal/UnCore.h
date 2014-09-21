@@ -1780,7 +1780,9 @@ struct FByteBulkData //?? separate FUntypedBulkData
 	FByteBulkData()
 	:	BulkData(NULL)
 	,	BulkDataOffsetInFile(0)
+#if UNREAL4
 	,	BulkDataOffsetInFile64(0)
+#endif
 	{}
 
 	virtual ~FByteBulkData()

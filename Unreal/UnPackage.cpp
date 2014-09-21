@@ -542,7 +542,7 @@ tag_ok:
 	Ar << Version;
 
 #if UNREAL4
-	// UE4 has negative version value, glowing from -1 towards negative direction. This value is followed
+	// UE4 has negative version value, growing from -1 towards negative direction. This value is followed
 	// by "UE3 Version", "UE4 Version" and "Licensee Version" (parsed in SerializePackageFileSummary4).
 	// The value is used as some version for package header, and it's not changed frequently. We can't
 	// expect these values to have large values in the future. The code below checks this value for
@@ -553,6 +553,7 @@ tag_ok:
 		Ar.Game = GAME_UE4;
 		SerializePackageFileSummary4(Ar, S);
 		//!! note: UE4 requires different DetectGame way, perhaps it's not possible at all
+		//!! (but can use PAK file names for game detection)
 		return Ar;
 	}
 #endif // UNREAL4
@@ -573,9 +574,11 @@ tag_ok:
 
 	// read other fields
 
+#if UNREAL3
 	if (Ar.Game >= GAME_UE3)
 		SerializePackageFileSummary3(Ar, S);
 	else
+#endif
 		SerializePackageFileSummary2(Ar, S);
 
 #if DEBUG_PACKAGE
@@ -1510,17 +1513,17 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 	*this << Summary;
 	Loader->SetupFrom(*this);	// serialization of FPackageFileSummary could change some FArchive properties
 
-	PKG_LOG(("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion));
+	PKG_LOG("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion);
 #if UNREAL3
 	if (Game >= GAME_UE3)
 	{
-		PKG_LOG(("Engine: %d ", Summary.EngineVersion));
+		PKG_LOG("Engine: %d ", Summary.EngineVersion);
 		FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
 		if (UE3Loader && UE3Loader->IsFullyCompressed)
-			PKG_LOG(("[FullComp] "));
+			PKG_LOG("[FullComp] ");
 	}
 #endif // UNREAL3
-	PKG_LOG(("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game));
+	PKG_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
 
 #if DEBUG_PACKAGE
 	appPrintf("Name offset: %X, Export offset: %X, Import offset: %X\n", Summary.NameOffset, Summary.ExportOffset, Summary.ImportOffset);
@@ -1791,7 +1794,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 			}
 		done: ;
 #if DEBUG_PACKAGE
-			PKG_LOG(("Name[%d]: \"%s\"\n", i, NameTable[i]));
+			PKG_LOG("Name[%d]: \"%s\"\n", i, NameTable[i]);
 #endif
 			unguardf("%d", i);
 		}
@@ -1808,7 +1811,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 		{
 			*this << *Imp;
 #if DEBUG_PACKAGE
-			PKG_LOG(("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName));
+			PKG_LOG("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName);
 #endif
 		}
 	}
@@ -1824,8 +1827,8 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 		{
 			*this << *Exp;
 #if DEBUG_PACKAGE
-			PKG_LOG(("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
-				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype));
+			PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
+				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype);
 #endif
 		}
 	}

@@ -3,9 +3,9 @@
 
 
 #if 1
-#	define PKG_LOG(x)		appPrintf x
+#	define PKG_LOG(...)		appPrintf(__VA_ARGS__)
 #else
-#	define PKG_LOG(x)
+#	define PKG_LOG(...)
 #endif
 
 

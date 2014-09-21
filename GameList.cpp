@@ -397,3 +397,371 @@ int FindGameTag(const char *name)
 	}
 	return -1;
 }
+
+
+/*-----------------------------------------------------------------------------
+	Detecting game by package file version
+-----------------------------------------------------------------------------*/
+
+//!! Important notes about separation of this function from FArchive:
+//!! - the easiest way: pass FArchive as argument
+//!! - FArchive::Platform should be set outside, 'Game' could be set by CreateLoader()
+//!!   by analyzing special package tag
+
+void FArchive::DetectGame()
+{
+	if (GForcePlatform != PLATFORM_UNKNOWN)
+		Platform = GForcePlatform;
+
+	if (GForceGame != GAME_UNKNOWN)
+	{
+		Game = GForceGame;
+		return;
+	}
+
+	// different game platforms autodetection
+	//?? should change this, if will implement command line switch to force mode
+	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
+
+	//?? remove #if ... #endif guards - detect game even when its support is disabled
+
+	// check for already detected game
+#if LINEAGE2 || EXTEEL
+	if (Game == GAME_Lineage2)
+	{
+		if (ArLicenseeVer >= 1000)	// lineage LicenseeVer < 1000, exteel >= 1000
+			Game = GAME_Exteel;
+		return;
+	}
+#endif
+	if (Game != GAME_UNKNOWN)		// may be GAME_Ragnarok2
+		return;
+
+	// here Game == GAME_UNKNOWN
+	int check = 0;					// number of detected games; should be 0 or 1, otherwise autodetect is failed
+#define SET(game)	{ Game = game; check++; }
+
+	/*-----------------------------------------------------------------------
+	 * UE2 games
+	 *-----------------------------------------------------------------------*/
+	// Digital Extremes games
+#if UT2
+	if ( ((ArVer >= 117 && ArVer <= 119) && (ArLicenseeVer >= 25 && ArLicenseeVer <= 27)) ||
+		  (ArVer == 120 && (ArLicenseeVer == 27 || ArLicenseeVer == 28)) ||
+		 ((ArVer >= 121 && ArVer <= 128) && ArLicenseeVer == 29) )
+		SET(GAME_UT2);
+#endif
+#if PARIAH
+	if (ArVer == 119 && ArLicenseeVer == 0x9127)
+		SET(GAME_Pariah);
+#endif
+#if UC1
+	if (ArVer == 119 && (ArLicenseeVer == 28 || ArLicenseeVer == 30))
+		SET(GAME_UC1);
+#endif
+#if UC2
+	if (ArVer == 151 && (ArLicenseeVer == 0 || ArLicenseeVer == 1))
+		SET(GAME_UC2);
+#endif
+
+#if LOCO
+	if ((ArVer >= 131 && ArVer <= 134) && ArLicenseeVer == 29)
+		SET(GAME_Loco);
+#endif
+#if SPLINTER_CELL
+	if ( (ArVer == 100 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 17)) ||		// Splinter Cell 1
+		 (ArVer == 102 && (ArLicenseeVer >= 29 && ArLicenseeVer <= 28)) )		// Splinter Cell 2
+		SET(GAME_SplinterCell);
+#endif
+#if SWRC
+	if ( ArLicenseeVer == 1 && (
+		(ArVer >= 133 && ArVer <= 148) || (ArVer >= 154 && ArVer <= 159)
+		) )
+		SET(GAME_RepCommando);
+#endif
+#if TRIBES3
+	if ( ((ArVer == 129 || ArVer == 130) && (ArLicenseeVer >= 0x17 && ArLicenseeVer <= 0x1B)) ||
+		 ((ArVer == 123) && (ArLicenseeVer >= 3    && ArLicenseeVer <= 0xF )) ||
+		 ((ArVer == 126) && (ArLicenseeVer >= 0x12 && ArLicenseeVer <= 0x17)) )
+		SET(GAME_Tribes3);
+#endif
+#if BIOSHOCK
+	if ( (ArVer == 141 && (ArLicenseeVer == 56 || ArLicenseeVer == 57)) || //?? Bioshock and Bioshock 2
+		 (ArVer == 143 && ArLicenseeVer == 59) )					// Bioshock 2 multiplayer?
+		SET(GAME_Bioshock);
+#endif
+
+	/*-----------------------------------------------------------------------
+	 * UE3 games
+	 *-----------------------------------------------------------------------*/
+	// most UE3 games has single version for all packages
+	// here is a list of such games, sorted by version
+#if R6VEGAS
+	if (ArVer == 241 && ArLicenseeVer == 71)	SET(GAME_R6Vegas2);
+#endif
+//#if ENDWAR
+//	if (ArVer == 329 && ArLicenseeVer == 0)		SET(GAME_EndWar);	// LicenseeVer == 0
+//#endif
+#if STRANGLE
+	if (ArVer == 375 && ArLicenseeVer == 25)	SET(GAME_Strangle);	//!! has extra tag
+#endif
+#if A51
+	if (ArVer == 377 && ArLicenseeVer == 25)	SET(GAME_A51);		//!! has extra tag
+#endif
+#if TNA_IMPACT
+	if (ArVer == 380 && ArLicenseeVer == 35)	SET(GAME_TNA);		//!! has extra tag
+#endif
+#if WHEELMAN
+	if (ArVer == 390 && ArLicenseeVer == 32)	SET(GAME_Wheelman);	//!! has extra tag
+#endif
+#if FURY
+	if (ArVer == 407 && (ArLicenseeVer == 26 || ArLicenseeVer == 36)) SET(GAME_Fury);
+#endif
+#if MOHA
+	if (ArVer == 421 && ArLicenseeVer == 11)	SET(GAME_MOHA);
+#endif
+#if UNDERTOW
+//	if (ArVer == 435 && ArLicenseeVer == 0)		SET(GAME_Undertow);	// LicenseeVer==0!
+#endif
+#if MCARTA
+	if (ArVer == 446 && ArLicenseeVer == 25)	SET(GAME_MagnaCarta);
+#endif
+#if AVA
+	if (ArVer == 451 && (ArLicenseeVer >= 52 || ArLicenseeVer <= 53)) SET(GAME_AVA);
+#endif
+#if DOH
+	if (ArVer == 455 && ArLicenseeVer == 90)	SET(GAME_DOH);
+#endif
+#if TLR
+	if (ArVer == 507 && ArLicenseeVer == 11)	SET(GAME_TLR);
+#endif
+#if MEDGE
+	if (ArVer == 536 && ArLicenseeVer == 43)	SET(GAME_MirrorEdge);
+#endif
+#if BLOODONSAND
+	if (ArVer == 538 && ArLicenseeVer == 73)	SET(GAME_50Cent);
+#endif
+#if ARGONAUTS
+	if (ArVer == 539 && (ArLicenseeVer == 43 || ArLicenseeVer == 47)) SET(GAME_Argonauts);	// Rise of the Argonauts, Thor: God of Thunder
+#endif
+#if ALPHA_PR
+	if (ArVer == 539 && ArLicenseeVer == 91)	SET(GAME_AlphaProtocol);
+#endif
+#if APB
+	if (ArVer == 547 && (ArLicenseeVer == 31 || ArLicenseeVer == 32)) SET(GAME_APB);
+#endif
+#if LEGENDARY
+	if (ArVer == 567 && ArLicenseeVer == 39)	SET(GAME_Legendary);
+#endif
+//#if AA3
+//	if (ArVer == 568 && ArLicenseeVer == 0)		SET(GAME_AA3);	//!! LicenseeVer == 0 ! bad!
+//#endif
+#if XMEN
+	if (ArVer == 568 && ArLicenseeVer == 101)	SET(GAME_XMen);
+#endif
+#if CRIMECRAFT
+	if (ArVer == 576 && ArLicenseeVer == 5)		SET(GAME_CrimeCraft);
+#endif
+#if BATMAN
+	if (ArVer == 576 && ArLicenseeVer == 21)	SET(GAME_Batman);
+#endif
+#if DARKVOID
+	if (ArVer == 576 && (ArLicenseeVer == 61 || ArLicenseeVer == 66)) SET(GAME_DarkVoid); // demo and release
+#endif
+#if MOH2010
+	if (ArVer == 581 && ArLicenseeVer == 58)	SET(GAME_MOH2010);
+#endif
+#if SINGULARITY
+	if (ArVer == 584 && ArLicenseeVer == 126)	SET(GAME_Singularity);
+#endif
+#if TRON
+	if (ArVer == 648 && ArLicenseeVer == 3)		SET(GAME_Tron);
+#endif
+#if DCU_ONLINE
+	if (ArVer == 648 && ArLicenseeVer == 6405)	SET(GAME_DCUniverse);
+#endif
+#if ENSLAVED
+	if (ArVer == 673 && ArLicenseeVer == 2)		SET(GAME_Enslaved);
+#endif
+#if MORTALONLINE
+	if (ArVer == 678 && ArLicenseeVer == 32771) SET(GAME_MortalOnline);
+#endif
+#if SHADOWS_DAMNED
+	if (ArVer == 706 && ArLicenseeVer == 28)	SET(GAME_ShadowsDamned);
+#endif
+#if DUST514
+	if (ArVer == 708 && ArLicenseeVer == 35)	SET(GAME_Dust514);
+#endif
+#if THIEF4
+	if (ArVer == 721 && ArLicenseeVer == 148)	SET(GAME_Thief4);
+#endif
+#if BIOSHOCK3
+	if (ArVer == 727 && ArLicenseeVer == 75)	SET(GAME_Bioshock3);
+#endif
+#if BULLETSTORM
+	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);
+#endif
+#if ALIENS_CM
+	if (ArVer == 787 && ArLicenseeVer == 47)	SET(GAME_AliensCM);
+#endif
+#if DISHONORED
+	if (ArVer == 801 && ArLicenseeVer == 30)	SET(GAME_Dishonored);
+#endif
+#if TRIBES4
+	if (ArVer == 805 && ArLicenseeVer == 2)		SET(GAME_Tribes4);
+#endif
+#if BATMAN
+	if (ArVer == 805 && ArLicenseeVer == 101)	SET(GAME_Batman2);
+	if ( (ArVer == 806 || ArVer == 807) &&
+		 (ArLicenseeVer == 103 || ArLicenseeVer == 137 || ArLicenseeVer == 138) )
+		SET(GAME_Batman3);
+#endif
+#if REMEMBER_ME
+	if (ArVer == 832 && ArLicenseeVer == 21)	SET(GAME_RememberMe);
+#endif
+#if DMC
+	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);
+#endif
+#if XCOM_BUREAU
+	if (ArVer == 849 && ArLicenseeVer == 32795)	SET(GAME_XcomB);
+#endif
+#if FABLE
+	if ( (ArVer == 850 || ArVer == 860) && (ArLicenseeVer == 1017 || ArLicenseeVer == 26985) )	// 850 = Fable: The Journey, 860 = Fable Anniversary
+		SET(GAME_Fable);
+#endif
+#if MURDERED
+	if (ArVer == 860 && ArLicenseeVer == 93)	SET(GAME_Murdered);
+#endif
+#if LOST_PLANET3
+	if (ArVer == 860 && (ArLicenseeVer == 97 || ArLicenseeVer == 98))	// 97 = Lost Planet 3, 98 = Yaiba: Ninja Gaiden Z
+		SET(GAME_LostPlanet3);
+#endif
+#if SPECIALFORCE2
+	if (ArVer == 904 && (ArLicenseeVer == 9 || ArLicenseeVer == 14)) SET(GAME_SpecialForce2);
+#endif
+
+	// UE3 games with the various versions of files
+#if TUROK
+	if ( (ArVer == 374 && ArLicenseeVer == 16) ||
+		 (ArVer == 375 && ArLicenseeVer == 19) ||
+		 (ArVer == 392 && ArLicenseeVer == 23) ||
+		 (ArVer == 393 && (ArLicenseeVer >= 27 && ArLicenseeVer <= 61)) )
+		SET(GAME_Turok);
+#endif
+#if MASSEFF
+	if ((ArVer == 391 && ArLicenseeVer == 92) ||		// XBox 360 version
+		(ArVer == 491 && ArLicenseeVer == 1008))		// PC version
+		SET(GAME_MassEffect);
+	if (ArVer == 512 && ArLicenseeVer == 130)
+		SET(GAME_MassEffect2);
+	if (ArVer == 684 && (ArLicenseeVer == 185 || ArLicenseeVer == 194)) // 185 = demo, 194 = release
+		SET(GAME_MassEffect3);
+#endif
+#if MKVSDC
+	if ( (ArVer == 402 && ArLicenseeVer == 30) ||		//!! has extra tag; MK vs DC
+		 (ArVer == 472 && ArLicenseeVer == 46) ||		// Mortal Kombat
+		 (ArVer == 573 && ArLicenseeVer == 49) )		// Injustice: God Among Us
+		SET(GAME_MK);
+#endif
+#if HUXLEY
+	if ( (ArVer == 402 && (ArLicenseeVer == 0  || ArLicenseeVer == 10)) ||	//!! has extra tag
+		 (ArVer == 491 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 16)) ||
+		 (ArVer == 496 && (ArLicenseeVer >= 16 && ArLicenseeVer <= 23)) )
+		SET(GAME_Huxley);
+#endif
+#if FRONTLINES
+	if ( (ArVer == 433 && ArLicenseeVer == 52) ||		// Frontlines: Fuel of War
+		 (ArVer == 576 && ArLicenseeVer == 100) )		// Homefront
+		SET(GAME_Frontlines);
+#endif
+#if ARMYOF2
+	if ( (ArVer == 445 && ArLicenseeVer == 79)  ||		// Army of Two
+		 (ArVer == 482 && ArLicenseeVer == 222) ||		// Army of Two: the 40th Day
+		 (ArVer == 483 && ArLicenseeVer == 4317) )		// ...
+		SET(GAME_ArmyOf2);
+#endif
+#if TRANSFORMERS
+	if ( (ArVer == 511 && ArLicenseeVer == 39 ) ||		// The Bourne Conspiracy
+		 (ArVer == 511 && ArLicenseeVer == 145) ||		// Transformers: War for Cybertron (PC version)
+		 (ArVer == 511 && ArLicenseeVer == 144) ||		// Transformers: War for Cybertron (PS3 and XBox 360 version)
+		 (ArVer == 537 && ArLicenseeVer == 174) ||		// Transformers: Dark of the Moon
+		 (ArVer == 846 && ArLicenseeVer == 181) )		// Transformers: Fall of Cybertron
+		SET(GAME_Transformers);
+#endif
+#if BORDERLANDS
+	if ( (ArVer == 512 && ArLicenseeVer == 35) ||		// Brothers in Arms: Hell's Highway
+		 (ArVer == 584 && (ArLicenseeVer == 57 || ArLicenseeVer == 58)) || // Borderlands: release and update
+		 (ArVer == 832 && ArLicenseeVer == 46) )		// Borderlands 2
+		SET(GAME_Borderlands);
+#endif
+#if TERA
+	if ((ArVer == 568 && (ArLicenseeVer >= 9 && ArLicenseeVer <= 10)) ||
+		(ArVer == 610 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 14)))
+		SET(GAME_Tera);
+#endif
+
+	if (check > 1)
+		appNotify("DetectGame detected a few titles (%d): Ver=%d, LicVer=%d", check, ArVer, ArLicenseeVer);
+
+	if (Game == GAME_UNKNOWN)
+	{
+		// generic or unknown engine
+		if (ArVer < PACKAGE_V2)
+			Game = GAME_UE1;
+		else if (ArVer < PACKAGE_V3)
+			Game = GAME_UE2;
+		else
+			Game = GAME_UE3;
+	}
+#undef SET
+}
+
+#define OVERRIDE_ENDWAR_VER		224
+#define OVERRIDE_TERA_VER		568
+#define OVERRIDE_HUNTED_VER		708			// real version is 709, which is incorrect
+#define OVERRIDE_DND_VER		673			// real version is 674
+#define OVERRIDE_ME1_LVER		90			// real version is 1008, which is greater than LicenseeVersion of Mass Effect 2 and 3
+#define OVERRIDE_TRANSFORMERS3	566			// real version is 846
+#define OVERRIDE_SF2_VER		700
+#define OVERRIDE_SF2_VER2		710
+#define OVERRIDE_GOWJ			828			// real version is 846
+
+void FArchive::OverrideVersion()
+{
+	int OldVer  = ArVer;
+	int OldLVer = ArLicenseeVer;
+#if ENDWAR
+	if (Game == GAME_EndWar)	ArVer = OVERRIDE_ENDWAR_VER;
+#endif
+#if TERA
+	if (Game == GAME_Tera)		ArVer = OVERRIDE_TERA_VER;
+#endif
+#if HUNTED
+	if (Game == GAME_Hunted)	ArVer = OVERRIDE_HUNTED_VER;
+#endif
+#if DND
+	if (Game == GAME_DND)		ArVer = OVERRIDE_DND_VER;
+#endif
+#if MASSEFF
+	if (Game == GAME_MassEffect) ArLicenseeVer = OVERRIDE_ME1_LVER;
+#endif
+#if TRANSFORMERS
+	if (Game == GAME_Transformers && ArLicenseeVer >= 181) ArVer = OVERRIDE_TRANSFORMERS3; // Transformers: Fall of Cybertron
+#endif
+#if SPECIALFORCE2
+	if (Game == GAME_SpecialForce2)
+	{
+		// engine for this game is upgraded without changing ArVer, they have ArVer set too high and changind ArLicenseeVer only
+		if (ArLicenseeVer >= 14)
+			ArVer = OVERRIDE_SF2_VER2;
+		else if (ArLicenseeVer == 9)
+			ArVer = OVERRIDE_SF2_VER;
+	}
+#endif // SPECIALFORCE2
+	if (Game == GAME_GoWJ)
+	{
+		ArVer = OVERRIDE_GOWJ;
+	}
+	if (ArVer != OldVer || ArLicenseeVer != OldLVer)
+		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
+}
