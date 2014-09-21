@@ -29,7 +29,6 @@ MAIN : umodel.exe
 
 MAIN_FILES = \
 	$(OUT_1)/Main.obj \
-	$(OUT_1)/GameList.obj \
 	$(OUT_1)/Export3D.obj \
 	$(OUT_1)/Exporters.obj \
 	$(OUT_1)/ExportMaterial.obj \
@@ -38,6 +37,7 @@ MAIN_FILES = \
 	$(OUT_1)/ExportSound.obj \
 	$(OUT_1)/ExportTexture.obj \
 	$(OUT_1)/ExportThirdParty.obj \
+	$(OUT_1)/GameDatabase.obj \
 	$(OUT_1)/MeshCommon.obj \
 	$(OUT_1)/SkeletalMesh.obj \
 	$(OUT_1)/UnAnim2.obj \
@@ -159,12 +159,37 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Exporters/Exporters.h \
-	GameList.h \
+	MeshInstance/MeshInstance.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Exporters/Exporters.h \
 	UI/BaseDialog.h \
 	UI/PackageDialog.h \
 	UI/ProgressDialog.h \
 	UI/StartupDialog.h \
 	UmodelSettings.h \
+	Unreal/GameDatabase.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -186,31 +211,6 @@ DEPENDS = \
 
 $(OUT_1)/Main.obj : Main.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Main.obj" Main.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Core/MathSSE.h \
-	Exporters/Exporters.h \
-	MeshInstance/MeshInstance.h \
-	Unreal/MeshCommon.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnMesh3.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
-
-$(OUT_1)/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
 
 DEPENDS = \
 	Build.h \
@@ -663,28 +663,16 @@ DEPENDS = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
-	GameList.h \
 	UI/BaseDialog.h \
 	UI/FileControls.h \
 	UI/StartupDialog.h \
 	UmodelSettings.h \
+	Unreal/GameDatabase.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
 
 $(OUT_1)/StartupDialog.obj : UI/StartupDialog.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/StartupDialog.obj" UI/StartupDialog.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	GameList.h \
-	Unreal/UnCore.h
-
-$(OUT_1)/GameList.obj : GameList.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameList.obj" GameList.cpp
 
 DEPENDS = \
 	Build.h \
@@ -726,6 +714,18 @@ DEPENDS = \
 
 $(OUT_1)/BaseDialog.obj : UI/BaseDialog.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/BaseDialog.obj" UI/BaseDialog.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Unreal/GameDatabase.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/GameDatabase.obj : Unreal/GameDatabase.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameDatabase.obj" Unreal/GameDatabase.cpp
 
 DEPENDS = \
 	Build.h \

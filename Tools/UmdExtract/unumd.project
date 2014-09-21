@@ -9,6 +9,7 @@ sources(MAIN) = {
 	$R/Unreal/UnCore.cpp
 	$R/Unreal/UnPackage.cpp
 	$R/Unreal/UnObject.cpp
+	$R/Unreal/GameDatabase.cpp
 	$R/Unreal/UnUbisoft.cpp
 	$R/Core/*.cpp
 }

@@ -6,7 +6,6 @@ PRJ = umodel
 
 sources(MAIN) = {
 	Main.cpp
-	GameList.cpp
 	Exporters/*.cpp
 	Unreal/*.cpp
 	Viewers/*.cpp

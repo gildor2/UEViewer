@@ -2,7 +2,7 @@
 #include "StartupDialog.h"
 #include "FileControls.h"
 
-#include "../GameList.h"
+#include "GameDatabase.h"
 
 #if HAS_UI
 

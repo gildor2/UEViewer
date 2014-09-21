@@ -30,7 +30,7 @@
 #include "StaticMesh.h"
 #endif
 
-#include "GameList.h"
+#include "GameDatabase.h"
 #include "UmodelSettings.h"
 
 //!! move UI code to separate cpp and simply call their functions
