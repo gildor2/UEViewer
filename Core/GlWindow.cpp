@@ -835,14 +835,14 @@ void FlushTexts()
 #if SHOW_FONT_TEX
 	glColor3f(1, 1, 1);
 	glBegin(GL_QUADS);
-	glTexCoord2f(0, 0);
-	glVertex2f(winWidth-TEX_WIDTH, 0);
 	glTexCoord2f(1, 0);
 	glVertex2f(winWidth, 0);
-	glTexCoord2f(1, 1);
-	glVertex2f(winWidth, TEX_HEIGHT);
+	glTexCoord2f(0, 0);
+	glVertex2f(winWidth-TEX_WIDTH, 0);
 	glTexCoord2f(0, 1);
 	glVertex2f(winWidth-TEX_WIDTH, TEX_HEIGHT);
+	glTexCoord2f(1, 1);
+	glVertex2f(winWidth, TEX_HEIGHT);
 	glEnd();
 #endif // SHOW_FONT_TEX
 
@@ -1100,11 +1100,11 @@ static void DrawBackground()
 	Set2Dmode();
 	glBegin(GL_QUADS);
 	glColor4f(CLEAR_COLOR);
-	glVertex2f(0, 0);
 	glVertex2f(winWidth, 0);
+	glVertex2f(0, 0);
 	glColor4f(CLEAR_COLOR2);
-	glVertex2f(winWidth, winHeight);
 	glVertex2f(0, winHeight);
+	glVertex2f(winWidth, winHeight);
 	glEnd();
 	glClear(GL_DEPTH_BUFFER_BIT);
 #else

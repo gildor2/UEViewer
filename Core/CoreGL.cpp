@@ -659,13 +659,12 @@ void CFramebuffer::Flush()
 	glLoadIdentity();
 	glOrtho(0, 1, 0, 1, 0, 1);
 
-	//?? can use vertex arrays here
-	//?? note: texture coords are identical to vertex2f
+	// note: texture coords are identical to vertex2f
 	glBegin(GL_QUADS);
-	glTexCoord2f(0, 1); glVertex2f(0, 1);
-	glTexCoord2f(1, 1); glVertex2f(1, 1);
 	glTexCoord2f(1, 0); glVertex2f(1, 0);
 	glTexCoord2f(0, 0); glVertex2f(0, 0);
+	glTexCoord2f(0, 1); glVertex2f(0, 1);
+	glTexCoord2f(1, 1); glVertex2f(1, 1);
 	glEnd();
 
 	glPopMatrix();
