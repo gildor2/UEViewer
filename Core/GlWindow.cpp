@@ -319,14 +319,14 @@ static void DrawChar(char c, unsigned color, int textX, int textY)
 	{
 		// s=1 -> shadow, s=0 -> char
 		glColor4ubv((GLubyte*)&color2);
-		glTexCoord2f(s0, t0);
-		glVertex2f(x1+s, y1+s);
 		glTexCoord2f(s1, t0);
 		glVertex2f(x2+s, y1+s);
-		glTexCoord2f(s1, t1);
-		glVertex2f(x2+s, y2+s);
+		glTexCoord2f(s0, t0);
+		glVertex2f(x1+s, y1+s);
 		glTexCoord2f(s0, t1);
 		glVertex2f(x1+s, y2+s);
+		glTexCoord2f(s1, t1);
+		glVertex2f(x2+s, y2+s);
 		color2 = color;
 	}
 

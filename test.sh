@@ -78,7 +78,9 @@ function CheckDir()
 
 function console_title()
 {
-    echo -en "\033]2;$@\007"
+	# set console title if outout is not redirected to file
+	# http://rosettacode.org/wiki/Check_output_device_is_a_terminal
+	[ -t 1 ] && echo -en "\033]2;$@\007"
 }
 
 function run()

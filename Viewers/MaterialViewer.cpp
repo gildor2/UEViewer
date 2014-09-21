@@ -240,14 +240,14 @@ void CMaterialViewer::Draw2D()
 			};
 			glColor3fv(colors[i].v);
 			glBegin(GL_QUADS);
-			glTexCoord2f(0, 0);
-			glVertex2f(x0, y0);
 			glTexCoord2f(1, 0);
 			glVertex2f(x0+w, y0);
-			glTexCoord2f(1, 1);
-			glVertex2f(x0+w, y0+w);
+			glTexCoord2f(0, 0);
+			glVertex2f(x0, y0);
 			glTexCoord2f(0, 1);
 			glVertex2f(x0, y0+w);
+			glTexCoord2f(1, 1);
+			glVertex2f(x0+w, y0+w);
 			glEnd();
 		}
 	}
