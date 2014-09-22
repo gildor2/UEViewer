@@ -1,0 +1,16 @@
+- content is stored in series of "FlashVFS/VFS_fileN_chunk0.con" files, each file corresponds to one of
+  CookedFlash/... files
+- correspondance could be found in UDKGamePreloader.swf (binary view, not decompiler) - it has sequences
+  of <original-file-name> + <vfs-file-name> strings
+  - mapping .as file cound be found when decompiling UDKGamePreloader.swf with "Flash Decompiler Trillix"
+- each VFS file looks like zlib-compressed (most likely compression is performed at UDK level)
+- flash uses ATF (Adobe Texture Format), some details here: http://www.bytearray.org/?p=4472
+
+EpicCitadel demo download URLs:
+http://www.unrealengine.com/flash/
+  UDKGamePreloader.swf - contains all URLs for loading
+  UDKGame.swf - contains game executable (ELF file)
+  FlashVFS/
+    VFS_file0_chunk0.con
+    ...
+    VFS_file22_chunk0.con

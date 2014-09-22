@@ -1,0 +1,16 @@
+Ссылки:
+http://www.tommesani.com/SSE.html
+  SSE/SSE2 "в картинках"
+
+http://www.cs.uaf.edu/2006/fall/cs301/lecture/11_17_sse.html
+  лекция по SSE
+
+http://www.liranuna.com/sse-intrinsics-optimizations-in-popular-compilers/
+  сравнения оптимизации кода SSE в разных компиляторах
+
+Проблемы:
+- VC7 не может нормально скомпилировать код, содержащий SSE intrinsics - каждая функция загружает значения
+  параметров из локальной переменной (из стека) и сохраняет результат тоже в локальную переменную. VC8+
+  создаёт нормальный код.
+- В GCC4 функция CSkelMeshInstance::TransformMesh() не может использовать все 8 XMM-регистров - некоторые
+  значения попадают в локальные переменные.

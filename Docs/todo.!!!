@@ -1,39 +1,3 @@
-OSS Licenses:
-- http://choosealicense.com/licenses/
-- http://licenseit.ru/wiki/index.php/Категория:Некоммерческие_лицензии
-  (russian)
-- http://opensource.org/licenses/category
-- New BSD says they can do pretty much whatever they like as long as they don't claim to have written
-  your code themselves.
-- Dual licensing: http://oss-watch.ac.uk/resources/duallicence2
-- https://ru.wikipedia.org/wiki/Shared_source
-
-PAINT.NET license:
-- http://www.getpaint.net/license.html
-- http://blog.getpaint.net/2009/11/06/a-new-license-for-paintnet-v35/
-
-*UT2004 CRASH*
-=red=
-ERROR: Package "StaticMeshes/DanielsMeshes.usx": wrong name index 178111707
-UnPackage::SerializeFName:pos=0000010A <- FPropertyTag<< <- CTypeInfo::SerializeProps <- ReadProperty:(UStaticMesh.Materials, TagPos=FA) <- CTypeInfo::SerializeProps <- UObject::Serialize <- UPrimitive::Serialize <- UStaticMesh::Serialize <- LoadObject:StaticMesh'DanielsMeshes.ball', pos=10A, ver=115/0, game=2000 <- UObject::EndLoad <- LoadWholePackage:DanielsMeshes <- Main
-=end=
-
-*SITE* compatibility table: "filter" is misaligned in Opera
-
-- SDL: 1.3 -> 2.0 (win+lin)
-- B&S RLE Anim: check this
-  https://sites.google.com/site/sippeyfunlabs/blade-and-soul-a-unreal-3-based-game-mod-section
-- try OBJ export for statics
-
-- BUG: when multiple meshes tagged, switching between them (highlighting different
-  "red" lines) will zoom viewport a bit - different scene bounding boxes for the same scene?
-- name table: keep all names in large name table, use hash for search (so, no duplicates
-  between packages), use MemoryChain to keep them in a few large blocks
-
-Update nvtt:
-* use svn, packaged version is from 2010
-- has DirectDrawSurface::load(Stream * stream)
-
 Platform: can get platform from Cooked[...] directory name (PS3, Xenon|XBox360, IPhone)
 
 OpenGL error validation:
@@ -47,10 +11,6 @@ Logging:
   - add "-nolog" switch to disable it
   ? place notify.log into directory of umodel.exe
   - add current date/time, some umodel info (version) and cmdline in a case of crash
-
-* add options to force loading startup package(s) with non-standard names (see GOW2)
-  * may be use -pkg=... and find forced objects in all loaded packages instead of current package +
-    single statup package
 
 - check VertMesh export: export ut2004/SkaarjPack_rc, compare *.3d and *.uc files with UT2004 source
 
