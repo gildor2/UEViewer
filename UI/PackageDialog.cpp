@@ -128,6 +128,7 @@ void UIPackageDialog::InitUI()
 		+ NewControl(UIButton, "Scan")
 			.SetWidth(80)
 			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnScanClicked, this))
+		+ NewControl(UISpacer)
 		//!! ^^^
 		+ NewControl(UIButton, "Open")
 			.SetWidth(80)

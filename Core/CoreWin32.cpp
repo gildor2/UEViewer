@@ -477,6 +477,7 @@ void appInitPlatform()
 
 void appCopyTextToClipboard(const char* text)
 {
+#if HAS_UI
 	if (!OpenClipboard(0)) return;
 
 	// We should insert CR character before each LF in order to allow this text to be copied
@@ -504,6 +505,7 @@ void appCopyTextToClipboard(const char* text)
 	GlobalUnlock(hMem);
 	SetClipboardData(CF_TEXT, hMem);
 	CloseClipboard();
+#endif // HAS_UI
 }
 
 

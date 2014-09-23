@@ -353,7 +353,7 @@ void appDumpMemoryAllocations();
 #define CATCH			catch (...)
 #define CATCH_CRASH		catch (...)
 #define	THROW_AGAIN		throw
-#define THROW			throw 1
+#define THROW			throw
 
 #else
 
@@ -394,7 +394,7 @@ unsigned win32ExceptFilter2();
 #define CATCH			__except(1)			// 1==EXCEPTION_EXECUTE_HANDLER
 #define CATCH_CRASH		__except(EXCEPT_FILTER)
 #define THROW_AGAIN		throw
-#define THROW			throw 1
+#define THROW			throw
 
 #endif
 
@@ -414,7 +414,7 @@ extern char GErrorHistory[2048];
 #define CATCH			} else {
 #define CATCH_CRASH		} else {
 #define THROW_AGAIN		throw
-#define THROW			throw 1
+#define THROW			throw
 
 #endif // DO_GUARD
 
