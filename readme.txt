@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+23.04.2014
+- added package version scanner to package selection dialog (UI analogue of "pkgtool")
+
 13.09.2014
 - updated Fable: Anniversary detection code
 

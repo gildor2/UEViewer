@@ -202,8 +202,9 @@ static bool FindExtension(const char *Filename, const char **Extensions, int Num
 
 
 static CGameFileInfo *GameFiles[MAX_GAME_FILES];
-static int           NumGameFiles = 0;
-static int           NumForeignFiles = 0;
+int GNumGameFiles = 0;
+int GNumPackageFiles = 0;
+int GNumForeignFiles = 0;
 
 
 static bool RegisterGameFile(const char *FullName)
@@ -212,7 +213,7 @@ static bool RegisterGameFile(const char *FullName)
 
 //	printf("..file %s\n", FullName);
 	// return false when MAX_GAME_FILES
-	if (NumGameFiles >= ARRAY_COUNT(GameFiles))
+	if (GNumGameFiles >= ARRAY_COUNT(GameFiles))
 		return false;
 
 	bool IsPackage;
@@ -230,7 +231,7 @@ static bool RegisterGameFile(const char *FullName)
 			if (FindExtension(FullName, ARRAY_ARG(SkipExtensions)))
 				return true;
 			// unknown file type
-			if (++NumForeignFiles >= MAX_FOREIGN_FILES)
+			if (++GNumForeignFiles >= MAX_FOREIGN_FILES)
 				appError("Too much unknown files - bad root directory (%s)?", RootDirectory);
 			return true;
 		}
@@ -239,8 +240,9 @@ static bool RegisterGameFile(const char *FullName)
 
 	// create entry
 	CGameFileInfo *info = new CGameFileInfo;
-	GameFiles[NumGameFiles++] = info;
+	GameFiles[GNumGameFiles++] = info;
 	info->IsPackage = IsPackage;
+	if (IsPackage) GNumPackageFiles++;
 
 	FILE* f = fopen(FullName, "rb");
 	if (f)
@@ -337,7 +339,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	if (dir[0] == 0) dir = ".";	// using dir="" will cause scanning of "/dir1", "/dir2" etc (i.e. drive root)
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
-	appPrintf("Found %d game files (%d skipped)\n", NumGameFiles, NumForeignFiles);
+	appPrintf("Found %d game files (%d skipped)\n", GNumGameFiles, GNumForeignFiles);
 	unguardf("dir=%s", dir);
 }
 
@@ -478,7 +480,7 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 
 	int nameLen = strlen(buf);
 	CGameFileInfo *info = NULL;
-	for (int i = 0; i < NumGameFiles; i++)
+	for (int i = 0; i < GNumGameFiles; i++)
 	{
 		CGameFileInfo *info2 = GameFiles[i];
 #if UNREAL3
@@ -567,7 +569,7 @@ FArchive *appCreateFileReader(const CGameFileInfo *info)
 
 void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const char *Ext, void *Param)
 {
-	for (int i = 0; i < NumGameFiles; i++)
+	for (int i = 0; i < GNumGameFiles; i++)
 	{
 		const CGameFileInfo *info = GameFiles[i];
 		if (!Ext)
@@ -1088,6 +1090,25 @@ FString& FString::operator=(const char* src)
 		int len = strlen(src) + 1;
 		Add(len);
 		memcpy(DataPtr, src, len);
+	}
+	return *this;
+}
+
+
+FString& FString::operator+=(const char* text)
+{
+	int len = strlen(text);
+	int oldLen = Num();
+	if (oldLen)
+	{
+		Add(len);
+		// oldLen-1 -- cut null char, len+1 -- append null char
+		memcpy(OffsetPointer(DataPtr, oldLen-1), text, len+1);
+	}
+	else
+	{
+		Add(len+1);	// reserve space for null char
+		memcpy(DataPtr, text, len+1);
 	}
 	return *this;
 }

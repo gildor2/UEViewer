@@ -26,7 +26,11 @@ struct FileInfo
 	char	FileName[512];
 };
 
+#if HAS_UI
+bool ScanPackages(TArray<FileInfo>& info, UIProgressDialog* progress = NULL);
+#else
 void ScanPackages(TArray<FileInfo>& info);
+#endif
 
 
 #endif // __PACKAGE_UTILS_H__

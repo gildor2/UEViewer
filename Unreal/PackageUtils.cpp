@@ -85,6 +85,24 @@ void ReleaseAllObjects()
 	Package scanner
 -----------------------------------------------------------------------------*/
 
+struct ScanPackageData
+{
+	ScanPackageData()
+#if HAS_UI
+	:	Progress(NULL)
+	,	Cancelled(false)
+	,	Index(0)
+#endif
+	{}
+
+	TArray<FileInfo>*	PkgInfo;
+#if HAS_UI
+	UIProgressDialog*	Progress;
+	bool				Cancelled;
+	int					Index;
+#endif
+};
+
 static int InfoCmp(const FileInfo *p1, const FileInfo *p2)
 {
 	int dif = p1->Ver - p2->Ver;
@@ -92,18 +110,36 @@ static int InfoCmp(const FileInfo *p1, const FileInfo *p2)
 	return p1->LicVer - p2->LicVer;
 }
 
-static bool ScanPackage(const CGameFileInfo *file, TArray<FileInfo> &PkgInfo)
+static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 {
 	guard(ScanPackage);
 
+#if HAS_UI
+	if (data.Progress)
+	{
+		if (!data.Progress->Progress(file->RelativeName, data.Index++, GNumPackageFiles))
+		{
+			data.Cancelled = true;
+			return false;
+		}
+	}
+#endif // HAS_UI
+
+	//!! use CreatePackageLoader() here to allow scanning of packages
+	//!! with custom header (Lineage etc)
 	FArchive *Ar = appCreateFileReader(file);
 
 	unsigned Tag, FileVer;
 	*Ar << Tag;
 	if (Tag == PACKAGE_FILE_TAG_REV)
+	{
 		Ar->ReverseBytes = true;
+	}
 	else if (Tag != PACKAGE_FILE_TAG)	//?? possibly Lineage2 file etc
+	{
+		delete Ar;
 		return true;
+	}
 	*Ar << FileVer;
 
 	FileInfo Info;
@@ -113,9 +149,9 @@ static bool ScanPackage(const CGameFileInfo *file, TArray<FileInfo> &PkgInfo)
 	strcpy(Info.FileName, file->RelativeName);
 //	printf("%s - %d/%d\n", file->RelativeName, Info.Ver, Info.LicVer);
 	int Index = INDEX_NONE;
-	for (int i = 0; i < PkgInfo.Num(); i++)
+	for (int i = 0; i < data.PkgInfo->Num(); i++)
 	{
-		FileInfo &Info2 = PkgInfo[i];
+		FileInfo &Info2 = (*data.PkgInfo)[i];
 		if (Info2.Ver == Info.Ver && Info2.LicVer == Info.LicVer)
 		{
 			Index = i;
@@ -123,11 +159,12 @@ static bool ScanPackage(const CGameFileInfo *file, TArray<FileInfo> &PkgInfo)
 		}
 	}
 	if (Index == INDEX_NONE)
-		Index = PkgInfo.AddItem(Info);
+		Index = data.PkgInfo->AddItem(Info);
 	// update info
-	PkgInfo[Index].Count++;
+	FileInfo& fileInfo = (*data.PkgInfo)[Index];
+	fileInfo.Count++;
 	// combine filename
-	char *s = PkgInfo[Index].FileName;
+	char *s = fileInfo.FileName;
 	char *d = Info.FileName;
 	while (*s == *d && *s != 0)
 	{
@@ -143,9 +180,29 @@ static bool ScanPackage(const CGameFileInfo *file, TArray<FileInfo> &PkgInfo)
 }
 
 
+#if HAS_UI
+
+bool ScanPackages(TArray<FileInfo>& info, UIProgressDialog* progress)
+{
+	info.Empty();
+	ScanPackageData data;
+	data.PkgInfo = &info;
+	data.Progress = progress;
+	appEnumGameFiles(ScanPackage, data);
+	info.Sort(InfoCmp);
+
+	return !data.Cancelled;
+}
+
+#else // HAS_UI
+
 void ScanPackages(TArray<FileInfo>& info)
 {
 	info.Empty();
-	appEnumGameFiles(ScanPackage, info);
+	ScanPackageData data;
+	data.PkgInfo = &info;
+	appEnumGameFiles(ScanPackage, data);
 	info.Sort(InfoCmp);
 }
+
+#endif // HAS_UI

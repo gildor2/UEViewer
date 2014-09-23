@@ -91,6 +91,10 @@ struct CGameFileInfo
 	int			SizeInKb;				// file size, in kilobytes
 };
 
+extern int GNumGameFiles;
+extern int GNumPackageFiles;
+extern int GNumForeignFiles;
+
 // Ext = NULL -> use any package extension
 // Filename can contain extension, but should not contain path
 const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NULL);
@@ -1603,6 +1607,8 @@ public:
 		return operator=(*src);
 	}
 
+	FString& operator+=(const char* text);
+
 	// use FString as allocated char*, FString became empty and will not free
 	// detached string in destructor
 	char* Detach();
@@ -1613,6 +1619,7 @@ public:
 	}
 
 	// convert string to char* - use "*Str"
+	//!! WARNING: could crash if string is empty
 	FORCEINLINE const char *operator*() const
 	{
 		return (char*)DataPtr;

@@ -43,6 +43,8 @@ protected:
 	void OnExportClicked(UIButton* sender);
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
+	void OnScanClicked(UIButton* sender);
+
 	void UpdateSelectedPackage();
 	void UpdateFlatMode();
 

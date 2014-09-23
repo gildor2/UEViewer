@@ -1,5 +1,6 @@
 #include "BaseDialog.h"
 #include "PackageDialog.h"
+#include "PackageScanDialog.h"
 
 
 #if HAS_UI
@@ -123,6 +124,11 @@ void UIPackageDialog::InitUI()
 	.SetParent(this)
 	[
 		NewControl(UILabel, "Hint: you may open this dialog at any time by pressing \"O\"")
+		//!! temporary code: move this control somewhere, perhaps to menu
+		+ NewControl(UIButton, "Scan")
+			.SetWidth(80)
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnScanClicked, this))
+		//!! ^^^
 		+ NewControl(UIButton, "Open")
 			.SetWidth(80)
 			.Enable(false)
@@ -333,6 +339,11 @@ void UIPackageDialog::OnExportClicked(UIButton* sender)
 {
 	ModalResult = EXPORT;
 	CloseDialog();
+}
+
+void UIPackageDialog::OnScanClicked(UIButton* sender)
+{
+	ShowPackageScanDialog();
 }
 
 

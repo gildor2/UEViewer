@@ -78,6 +78,8 @@ MAIN_FILES = \
 	$(OUT_1)/BaseDialog.obj \
 	$(OUT_1)/FileControls.obj \
 	$(OUT_1)/PackageDialog.obj \
+	$(OUT_1)/PackageScanDialog.obj \
+	$(OUT_1)/ProgressDialog.obj \
 	$(OUT_1)/StartupDialog.obj \
 	$(OUT_1)/umodel.res
 
@@ -698,6 +700,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	UI/BaseDialog.h \
 	UI/PackageDialog.h \
+	UI/PackageScanDialog.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
 
@@ -720,6 +723,36 @@ DEPENDS = \
 
 $(OUT_1)/PackageUtils.obj : Unreal/PackageUtils.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageUtils.obj" Unreal/PackageUtils.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	UI/ProgressDialog.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/PackageScanDialog.obj : UI/PackageScanDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageScanDialog.obj" UI/PackageScanDialog.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	UI/ProgressDialog.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/ProgressDialog.obj : UI/ProgressDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ProgressDialog.obj" UI/ProgressDialog.cpp
 
 DEPENDS = \
 	Build.h \
