@@ -475,5 +475,36 @@ void appInitPlatform()
 #endif // VSTUDIO_INTEGRATION
 }
 
+void appCopyTextToClipboard(const char* text)
+{
+	if (!OpenClipboard(0)) return;
+
+	// We should insert CR character before each LF in order to allow this text to be copied
+	// to any Windows application without problem. Count number of lines first.
+	int len = strlen(text);
+	int i, numLines = 0;
+	for (i = 0; i < len; i++)
+		if (text[i] == '\n') numLines++;
+
+	EmptyClipboard();
+	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len + numLines + 1);
+	char* data = (char*)GlobalLock(hMem);
+
+	// copy string with CRLF expansion
+	for (i = 0; i <= len; i++)
+	{
+		char c = text[i];
+		if (c == '\n')
+		{
+			*data++ = '\r';
+		}
+		*data++ = c;
+	}
+
+	GlobalUnlock(hMem);
+	SetClipboardData(CF_TEXT, hMem);
+	CloseClipboard();
+}
+
 
 #endif // _WIN32

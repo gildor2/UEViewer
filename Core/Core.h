@@ -439,6 +439,8 @@ extern bool GUseDebugger;
 
 void appInitPlatform();
 
+void appCopyTextToClipboard(const char* text);
+
 int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip);
 void appDumpStackTrace(const address_t* buffer, int depth);
 
