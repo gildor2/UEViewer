@@ -28,11 +28,9 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 	return ModalResult;
 }
 
-static TArray<const CGameFileInfo*> *pPackageList;
-
-static bool PackageListEnum(const CGameFileInfo *file)
+static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInfo*> &param)
 {
-	pPackageList->AddItem(file);
+	param.AddItem(file);
 	return true;
 }
 
@@ -93,8 +91,7 @@ void UIPackageDialog::InitUI()
 	if (!Packages.Num())
 	{
 		// not scanned yet
-		pPackageList = &Packages;
-		appEnumGameFiles(PackageListEnum);
+		appEnumGameFiles(PackageListEnum, Packages);
 	}
 
 	// add paths of all found packages

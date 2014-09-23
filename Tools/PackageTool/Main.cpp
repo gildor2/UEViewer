@@ -1,78 +1,11 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 #include "UnPackage.h"
+#include "PackageUtils.h"
 
 /*-----------------------------------------------------------------------------
 	Main function
 -----------------------------------------------------------------------------*/
-
-struct FileInfo
-{
-	int		Ver;
-	int		LicVer;
-	int		Count;
-	char	FileName[512];
-};
-
-static int InfoCmp(const FileInfo *p1, const FileInfo *p2)
-{
-	int dif = p1->Ver - p2->Ver;
-	if (dif) return dif;
-	return p1->LicVer - p2->LicVer;
-}
-
-TArray<FileInfo> PkgInfo;
-
-static bool ScanPackage(const CGameFileInfo *file)
-{
-	guard(ScanPackage);
-
-	FArchive *Ar = appCreateFileReader(file);
-
-	unsigned Tag, FileVer;
-	*Ar << Tag;
-	if (Tag == PACKAGE_FILE_TAG_REV)
-		Ar->ReverseBytes = true;
-	else if (Tag != PACKAGE_FILE_TAG)	//?? possibly Lineage2 file etc
-		return true;
-	*Ar << FileVer;
-
-	FileInfo Info;
-	Info.Ver    = FileVer & 0xFFFF;
-	Info.LicVer = FileVer >> 16;
-	Info.Count  = 0;
-	strcpy(Info.FileName, file->RelativeName);
-//	printf("%s - %d/%d\n", file->RelativeName, Info.Ver, Info.LicVer);
-	int Index = INDEX_NONE;
-	for (int i = 0; i < PkgInfo.Num(); i++)
-	{
-		FileInfo &Info2 = PkgInfo[i];
-		if (Info2.Ver == Info.Ver && Info2.LicVer == Info.LicVer)
-		{
-			Index = i;
-			break;
-		}
-	}
-	if (Index == INDEX_NONE)
-		Index = PkgInfo.AddItem(Info);
-	// update info
-	PkgInfo[Index].Count++;
-	// combine filename
-	char *s = PkgInfo[Index].FileName;
-	char *d = Info.FileName;
-	while (*s == *d && *s != 0)
-	{
-		s++;
-		d++;
-	}
-	*s = 0;
-
-	delete Ar;
-	return true;
-
-	unguardf("%s", file->RelativeName);
-}
-
 
 int main(int argc, char **argv)
 {
@@ -121,9 +54,9 @@ int main(int argc, char **argv)
 	appSetRootDirectory(argPkgDir);
 
 	// scan packages
-	appEnumGameFiles(ScanPackage);
+	TArray<FileInfo> PkgInfo;
+	ScanPackages(PkgInfo);
 
-	PkgInfo.Sort(InfoCmp);
 	printf("Version summary:\n"
 		   "%-9s  %-9s  %s   %s\n", "Ver", "LicVer", "Count", "Filename");
 	for (int i = 0; i < PkgInfo.Num(); i++)

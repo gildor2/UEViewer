@@ -33,6 +33,8 @@
 #include "GameDatabase.h"
 #include "UmodelSettings.h"
 
+#include "PackageUtils.h"
+
 //!! move UI code to separate cpp and simply call their functions
 #if HAS_UI
 #include "UI/BaseDialog.h"
@@ -475,71 +477,6 @@ static bool ExportObjects(const TArray<UObject*> *Objects = NULL)
 	unguard;
 }
 
-static TArray<UnPackage*> GFullyLoadedPackages;
-
-#if HAS_UI
-static bool LoadWholePackage(UnPackage* Package, UIProgressDialog* progress = NULL)
-#else
-static bool LoadWholePackage(UnPackage* Package)
-#endif
-{
-	guard(LoadWholePackage);
-
-	if (GFullyLoadedPackages.FindItem(Package) >= 0) return true;	// already loaded
-
-#if PROFILE
-	appResetProfiler();
-#endif
-
-	UObject::BeginLoad();
-	for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
-	{
-		if (!IsKnownClass(Package->GetObjectName(Package->GetExport(idx).ClassIndex)))
-			continue;
-#if HAS_UI
-		if (progress && !progress->Tick()) return false;
-#endif
-		Package->CreateExport(idx);
-	}
-	UObject::EndLoad();
-	GFullyLoadedPackages.AddItem(Package);
-
-#if PROFILE
-	appPrintProfiler();
-#endif
-
-	return true;
-
-	unguardf("%s", Package->Name);
-}
-
-static void ReleaseAllObjects()
-{
-#if 0
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
-	appDumpMemoryAllocations();
-#endif
-	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
-		delete UObject::GObjObjects[i];
-	UObject::GObjObjects.Empty();
-
-	GFullyLoadedPackages.Empty();
-
-#if 0
-	// verify that all object pointers were set to NULL
-	for (int i = 0; i < UnPackage::PackageMap.Num(); i++)
-	{
-		UnPackage* p = UnPackage::PackageMap[i];
-		for (int j = 0; j < p->Summary.ExportCount; j++)
-		{
-			FObjectExport& Exp = p->ExportTable[j];
-			if (Exp.Object) printf("! %s %d\n", p->Name, j);
-		}
-	}
-#endif
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
-//	appDumpMemoryAllocations();
-}
 
 struct ClassStats
 {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-  <!-- Copy this into c:\Users\<Your user folder>\My Documents\Visual Studio 2012\Visualizers -->
+  <!-- Copy this into c:\Users\<Your user folder>\My Documents\Visual Studio 20NN\Visualizers -->
 
   <!-- FString visualizer -->
   <Type Name="FString">

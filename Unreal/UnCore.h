@@ -96,8 +96,26 @@ struct CGameFileInfo
 const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NULL);
 const char *appSkipRootDir(const char *Filename);
 FArchive *appCreateFileReader(const CGameFileInfo *info);
-void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext = NULL);
 
+typedef bool (*EnumGameFilesCallback_t)(const CGameFileInfo*, void*);
+void appEnumGameFilesWorker(EnumGameFilesCallback_t, const char *Ext = NULL, void *Param = NULL);
+
+template<class T>
+FORCEINLINE void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*, T&), const char* Ext, T& Param)
+{
+	appEnumGameFilesWorker((EnumGameFilesCallback_t)Callback, Ext, &Param);
+}
+
+template<class T>
+FORCEINLINE void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*, T&), T& Param)
+{
+	appEnumGameFilesWorker((EnumGameFilesCallback_t)Callback, NULL, &Param);
+}
+
+FORCEINLINE void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char* Ext = NULL)
+{
+	appEnumGameFilesWorker((EnumGameFilesCallback_t)Callback, Ext, NULL);
+}
 
 #if UNREAL3
 extern const char *GStartupPackage;

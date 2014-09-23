@@ -565,7 +565,7 @@ FArchive *appCreateFileReader(const CGameFileInfo *info)
 }
 
 
-void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext)
+void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const char *Ext, void *Param)
 {
 	for (int i = 0; i < NumGameFiles; i++)
 	{
@@ -580,7 +580,7 @@ void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*), const char *Ext)
 			// check extension
 			if (stricmp(info->Extension, Ext) != 0) continue;
 		}
-		if (!Callback(info)) break;
+		if (!Callback(info, Param)) break;
 	}
 }
 

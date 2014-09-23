@@ -39,6 +39,7 @@ MAIN_FILES = \
 	$(OUT_1)/ExportThirdParty.obj \
 	$(OUT_1)/GameDatabase.obj \
 	$(OUT_1)/MeshCommon.obj \
+	$(OUT_1)/PackageUtils.obj \
 	$(OUT_1)/SkeletalMesh.obj \
 	$(OUT_1)/UnAnim2.obj \
 	$(OUT_1)/UnAnim3.obj \
@@ -191,6 +192,7 @@ DEPENDS = \
 	UmodelSettings.h \
 	Unreal/GameDatabase.h \
 	Unreal/MeshCommon.h \
+	Unreal/PackageUtils.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
 	Unreal/UnAnimNotify.h \
@@ -701,6 +703,23 @@ DEPENDS = \
 
 $(OUT_1)/PackageDialog.obj : UI/PackageDialog.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageDialog.obj" UI/PackageDialog.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	UI/BaseDialog.h \
+	UI/ProgressDialog.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/PackageUtils.obj : Unreal/PackageUtils.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageUtils.obj" Unreal/PackageUtils.cpp
 
 DEPENDS = \
 	Build.h \
