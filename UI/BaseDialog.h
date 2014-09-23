@@ -727,6 +727,7 @@ public:
 protected:
 	int			NextDialogId;
 	bool		DoCloseOnEsc;		//!! awful name
+	UIBaseDialog* ParentDialog;
 
 	bool ShowDialog(bool modal, const char* title, int width, int height);
 

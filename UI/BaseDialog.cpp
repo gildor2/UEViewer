@@ -1936,6 +1936,7 @@ UIBaseDialog::UIBaseDialog()
 :	UIGroup(GROUP_NO_BORDER)
 ,	NextDialogId(FIRST_DIALOG_ID)
 ,	DoCloseOnEsc(false)
+,	ParentDialog(NULL)
 {}
 
 UIBaseDialog::~UIBaseDialog()
@@ -1944,6 +1945,7 @@ UIBaseDialog::~UIBaseDialog()
 }
 
 static HWND GMainWindow;
+static UIBaseDialog* GCurrentDialog;
 
 void UIBaseDialog::SetMainWindow(HWND window)
 {
@@ -2024,16 +2026,23 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 	mbstowcs(wTitle, title, MAX_TITLE_LEN);
 	DLGTEMPLATE* tmpl = MakeDialogTemplate(width, height, wTitle, L"MS Shell Dlg", 8);
 
+	HWND ParentWindow = GMainWindow;
+	if (GCurrentDialog) ParentWindow = GCurrentDialog->GetWnd();
+
 	if (modal)
 	{
 		// modal
+		ParentDialog = GCurrentDialog;
+		GCurrentDialog = this;
 		int result = DialogBoxIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
-			GMainWindow,				// hWndParent
+			ParentWindow,				// hWndParent
 			StaticWndProc,				// lpDialogFunc
 			(LPARAM)this				// lParamInit
 		);
+		GCurrentDialog = ParentDialog;
+		ParentDialog = NULL;
 		return (result != IDCANCEL);
 	}
 	else
@@ -2042,7 +2051,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		HWND dialog = CreateDialogIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
-			GMainWindow,				// hWndParent
+			ParentWindow,				// hWndParent
 			StaticWndProc,				// lpDialogFunc
 			(LPARAM)this				// lParamInit
 		);
