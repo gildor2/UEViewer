@@ -7,13 +7,18 @@
 #include "GlWindow.h"			// for RGB macro
 
 
+//!! This code is based on GetBoneInfColor(). Should place both in some place (utility functions)
+//!! and rename to "DebugColorByIndex()" etc. 2 versions: RGBA and float3.
 unsigned CMeshInstance::GetMaterialDebugColor(int Index)
 {
-	int color = Index + 1;
-	static const byte table[] = { 64, 255, 128, 0 };
-#define C(x)	( (x) & 1 ) | ( ((x) >> 2) & 2 )
-	return RGB255(table[C(color)], table[C(color >> 1)], table[C(color >> 2)]);
-#undef C
+	// most of this code is targetted to make maximal color combinations
+	// which are maximally different for adjancent BoneIndex values
+	static const byte table[]  = { 255*0.9f, 25*3.0f, 255*0.6f, 255*0.0f };
+	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };
+	Index = (Index & 0xFFF8) | table2[Index & 7] ^ 7;
+	#define C(x)	( (x) & 1 ) | ( ((x) >> 2) & 2 )
+	return RGB255(table[C(Index)], table[C(Index >> 1)], table[C(Index >> 2)]);
+	#undef C
 }
 
 

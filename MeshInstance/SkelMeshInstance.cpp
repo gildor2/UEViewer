@@ -809,14 +809,16 @@ static void GetBoneInfColor(int BoneIndex, float *Color)
 {
 	// most of this code is targetted to make maximal color combinations
 	// which are maximally different for adjancent BoneIndex values
-	static const float table[] = { 0.3f, 0.9f, 0.0f, 0.6f };
+	static const float table[] = { 0.9f, 0.3f, 0.6f, 0.0f };
 	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };
-	BoneIndex = (BoneIndex & 0xFFF8) | table2[BoneIndex & 7];
+	BoneIndex = (BoneIndex & 0xFFF8) | table2[BoneIndex & 7] ^ 7;
 #if 0
+	// this version produces similar colors for adjacent indices - less contrast picture
 	Color[0] = table[BoneIndex & 3];
 	Color[1] = table[(BoneIndex >> 2) & 3];
 	Color[2] = table[(BoneIndex >> 4) & 3];
 #else
+	// this version produces more color contrast between adjacent indices
 	#define C(x)	( (x) & 1 ) | ( ((x) >> 2) & 2 )
 	Color[0] = table[C(BoneIndex)];
 	Color[1] = table[C(BoneIndex >> 1)];
