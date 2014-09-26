@@ -151,7 +151,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
-23.04.2014
+26.09.2014
+- implemented The Vanishing of Ethan Carter support; requires overriding of game either with
+  -game=vec command line option or with UI
+
+23.09.2014
 - added package version scanner to package selection dialog (UI analogue of "pkgtool")
 
 13.09.2014

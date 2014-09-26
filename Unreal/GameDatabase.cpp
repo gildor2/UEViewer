@@ -304,6 +304,9 @@ const GameInfo GListOfGames[] = {
 #	if SOV
 		G("Seal of Vajra", sov, GAME_SOV),
 #	endif
+#	if VEC
+		G("The Vanishing of Ethan Carter", vec, GAME_VEC),
+#	endif
 #	if DUST514
 		G("Dust 514", dust514, GAME_Dust514),
 #	endif

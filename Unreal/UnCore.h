@@ -316,6 +316,7 @@ enum EGame
 		GAME_Thief4,
 		GAME_Murdered,
 		GAME_SOV,
+		GAME_VEC,
 		GAME_Dust514,
 
 	GAME_MIDWAY3   = 0x08100,	// variant of UE3
