@@ -137,7 +137,8 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GLBindImpl.h \
 	Core/Math3D.h \
-	Core/Win32Types.h
+	Core/Win32Types.h \
+	Unreal/GameDefines.h
 
 $(OUT_1)/GLBind.obj : Core/GLBind.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GLBind.obj" Core/GLBind.cpp
@@ -152,6 +153,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/TextContainer.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/Shaders.h
 
 $(OUT_1)/GlWindow.obj : Core/GlWindow.cpp $(DEPENDS)
@@ -168,6 +170,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/UnCore.h \
@@ -199,6 +202,7 @@ DEPENDS = \
 	UI/StartupDialog.h \
 	UmodelSettings.h \
 	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/PackageUtils.h \
 	Unreal/SkeletalMesh.h \
@@ -232,6 +236,7 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/UnCore.h \
@@ -253,6 +258,7 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
@@ -275,6 +281,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -296,6 +303,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
@@ -315,6 +323,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
@@ -332,6 +341,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
@@ -349,6 +359,7 @@ DEPENDS = \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/Shaders.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -368,6 +379,7 @@ DEPENDS = \
 	Core/GlWindow.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
@@ -389,6 +401,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	Exporters/Psk.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -409,6 +422,7 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/UnCore.h \
@@ -427,6 +441,7 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/StaticMesh.h \
 	Unreal/UnCore.h \
@@ -446,6 +461,7 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
@@ -467,6 +483,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -491,6 +508,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/StaticMesh.h \
@@ -516,6 +534,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/TypeConvert.h \
@@ -538,6 +557,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/TypeConvert.h \
@@ -564,6 +584,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/UnCore.h \
@@ -580,6 +601,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/UnCore.h \
 	Unreal/UnMathTools.h \
@@ -594,19 +616,9 @@ DEPENDS = \
 	Core/CoreGL.h \
 	Core/GLBind.h \
 	Core/Math3D.h \
-	Core/Win32Types.h
-
-$(OUT_1)/CoreGL.obj : Core/CoreGL.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/CoreGL.obj" Core/CoreGL.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
@@ -624,6 +636,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h
@@ -639,6 +652,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
@@ -655,6 +669,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
@@ -670,6 +685,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
 	Unreal/UnSound.h
@@ -685,6 +701,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
 	Unreal/UnThirdParty.h
@@ -704,6 +721,7 @@ DEPENDS = \
 	UI/StartupDialog.h \
 	UmodelSettings.h \
 	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
 
@@ -719,6 +737,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
 	UI/FileControls.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
 
@@ -735,6 +754,7 @@ DEPENDS = \
 	UI/BaseDialog.h \
 	UI/PackageDialog.h \
 	UI/PackageScanDialog.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
 
@@ -750,6 +770,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
 	UI/ProgressDialog.h \
+	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
@@ -768,6 +789,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
 	UI/ProgressDialog.h \
+	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
@@ -784,6 +806,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
 	UI/ProgressDialog.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
 	libs/include/callback.hpp
@@ -799,6 +822,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	libs/include/callback.hpp
 
@@ -813,6 +837,7 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h
 
 $(OUT_1)/GameDatabase.obj : Unreal/GameDatabase.cpp $(DEPENDS)
@@ -825,6 +850,19 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/CoreGL.obj : Core/CoreGL.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/CoreGL.obj" Core/CoreGL.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnHavok.h \
@@ -847,6 +885,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/TypeConvert.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -867,6 +906,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h
 
 $(OUT_1)/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
@@ -882,6 +922,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnHavok.h \
 	Unreal/UnMaterial.h \
@@ -898,6 +939,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
@@ -916,6 +958,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
@@ -934,6 +977,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h
 
@@ -947,6 +991,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
@@ -964,6 +1009,7 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/Math3D.h \
 	Core/Win32Types.h \
+	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
@@ -979,7 +1025,18 @@ $(OUT_1)/UnCoreCompression.obj : Unreal/UnCoreCompression.cpp $(DEPENDS)
 DEPENDS = \
 	Build.h \
 	Core/Core.h \
-	Core/Math3D.h
+	Core/Math3D.h \
+	Core/TextContainer.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/TextContainer.obj" Core/TextContainer.cpp
+
+DEPENDS = \
+	Build.h \
+	Core/Core.h \
+	Core/Math3D.h \
+	Unreal/GameDefines.h
 
 $(OUT_1)/Core.obj : Core/Core.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Core.obj" Core/Core.cpp
@@ -997,15 +1054,7 @@ DEPENDS = \
 	Build.h \
 	Core/Core.h \
 	Core/Math3D.h \
-	Core/TextContainer.h
-
-$(OUT_1)/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/TextContainer.obj" Core/TextContainer.cpp
-
-DEPENDS = \
-	Build.h \
-	Core/Core.h \
-	Core/Math3D.h \
+	Unreal/GameDefines.h \
 	Unreal/UnTextureNVTT.h
 
 $(OUT_1)/UnTextureNVTT.obj : Unreal/UnTextureNVTT.cpp $(DEPENDS)
