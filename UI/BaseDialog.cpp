@@ -54,6 +54,7 @@
 
 
 #define FIRST_DIALOG_ID				4000
+#define FIRST_MENU_ID				8000
 
 #define VERTICAL_SPACING			4
 #define HORIZONTAL_SPACING			8
@@ -1410,6 +1411,298 @@ void UITreeView::CreateItem(TreeViewItem& item)
 
 
 /*-----------------------------------------------------------------------------
+	UIMenu
+-----------------------------------------------------------------------------*/
+
+// Checkbox
+UIMenuItem::UIMenuItem(const char* text, bool checked)
+:	bValue(checked)
+,	pValue(&bValue)
+{
+	Init(MI_Checkbox, text);
+}
+
+// Checkbox
+UIMenuItem::UIMenuItem(const char* text, bool* checked)
+:	pValue(checked)
+//,	bValue(value) - uninitialized
+{
+	Init(MI_Checkbox, text);
+}
+
+// RadioGroup
+UIMenuItem::UIMenuItem(int value)
+:	iValue(value)
+,	pValue(&iValue)
+{
+	Init(MI_RadioGroup, NULL);
+}
+
+// RadioGroup
+UIMenuItem::UIMenuItem(int* value)
+:	pValue(value)
+//,	iValue(value) - uninitialized
+{
+	Init(MI_RadioGroup, NULL);
+}
+
+// RadioButton
+UIMenuItem::UIMenuItem(const char* text, int value)
+:	iValue(value)
+{
+	Init(MI_RadioButton, text);
+}
+
+// Common part of constructors
+void UIMenuItem::Init(EType type, const char* label)
+{
+	Type = type;
+	Label = label ? label : "";
+	Id = 0;
+	NextChild = FirstChild = NULL;
+	Enabled = true;
+	Checked = false;
+}
+
+// Destructor: release all child items
+UIMenuItem::~UIMenuItem()
+{
+	UIMenuItem* next;
+	for (UIMenuItem* curr = FirstChild; curr; curr = next)
+	{
+		next = curr->NextChild;
+		delete curr;		// may be recurse here
+	}
+	FirstChild = NULL;
+}
+
+// Append a new menu item to chain
+UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next)
+{
+	guard(operator+(UIMenuItem));
+
+	UIMenuItem* e = &item;
+	while (true)
+	{
+		UIMenuItem* n = e->NextChild;
+		if (!n)
+		{
+			e->NextChild = &next;
+			break;
+		}
+		e = n;
+	}
+	return item;
+
+	unguard;
+}
+
+// Add new submenu
+void UIMenuItem::Add(UIMenuItem* item)
+{
+	guard(UIMenuItem::Add);
+
+	assert(Type == MI_Submenu || Type == MI_RadioGroup);
+
+	if (!FirstChild)
+	{
+		FirstChild = item;
+	}
+	else
+	{
+		// find last child
+		UIMenuItem* prev = NULL;
+		for (UIMenuItem* curr = FirstChild; curr; prev = curr, curr = curr->NextChild)
+		{ /* empty */ }
+		// add item(s)
+		prev->NextChild = item;
+	}
+
+	unguard;
+}
+
+// Recursive function for menu creation
+void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
+{
+	guard(UIMenuItem::FillMenuItems);
+
+	assert(Type == MI_Submenu || Type == MI_RadioGroup);
+
+	for (UIMenuItem* item = FirstChild; item; item = item->NextChild, position++)
+	{
+		switch (item->Type)
+		{
+		case MI_Text:
+		case MI_Checkbox:
+		case MI_RadioButton:
+			{
+				assert(item->Id == 0);
+				item->Id = nextId++;
+
+				MENUITEMINFO mii;
+				memset(&mii, 0, sizeof(mii));
+
+				UINT fType = MFT_STRING;
+				UINT fState = 0;
+				if (!item->Enabled) fState |= MFS_DISABLED;
+				if (item->Type == MI_Checkbox && *(bool*)item->pValue)
+				{
+					// checked checkbox
+					fState |= MFS_CHECKED;
+				}
+				else if (Type == MI_RadioGroup && item->Type == MI_RadioButton)
+				{
+					// radio button will work as needed only
+					fType |= MFT_RADIOCHECK;
+					if (*(int*)pValue == item->iValue)
+						fState |= MFS_CHECKED;
+				}
+
+				mii.cbSize     = sizeof(mii);
+				mii.fMask      = MIIM_FTYPE | MIIM_STATE | MIIM_ID | MIIM_STRING;
+				mii.fType      = fType;
+				mii.fState     = fState;
+				mii.wID        = item->Id;
+				mii.dwTypeData = const_cast<char*>(*item->Label);
+				mii.cch        = strlen(mii.dwTypeData);
+
+				InsertMenuItem(parentMenu, position, TRUE, &mii);
+			}
+			break;
+
+		case MI_Separator:
+			AppendMenu(parentMenu, MF_SEPARATOR, 0, NULL);
+			break;
+
+		case MI_Submenu:
+			{
+				HMENU hSubMenu = CreatePopupMenu();
+				AppendMenu(parentMenu, MF_POPUP, (UINT_PTR)hSubMenu, *item->Label);
+				int submenuPosition = 0;
+				item->FillMenuItems(hSubMenu, nextId, submenuPosition);
+			}
+			break;
+
+		case MI_RadioGroup:
+			// just add all children to current menu
+			item->FillMenuItems(parentMenu, nextId, position);
+			break;
+
+		default:
+			appError("Unkwnown item type: %d (label=%s)", item->Type, *item->Label);
+		}
+	}
+
+	unguard;
+}
+
+bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
+{
+	guard(UIMenuItem::HandleCommand);
+
+	for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
+	{
+		if (item->Id == id)
+		{
+			// this item was clicked
+			switch (item->Type)
+			{
+			case MI_Text:
+				//!! callback
+				break;
+
+			case MI_Checkbox:
+				{
+					bool value = !*(bool*)item->pValue;
+					*(bool*)item->pValue = value;
+					CheckMenuItem(owner->GetHandle(), item->Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
+					//!! callback
+				}
+				break;
+
+			default:
+				appError("Unkwnown item type: %d (label=%s)", item->Type, *item->Label);
+			}
+			return true;
+		}
+		// id is different, verify container items
+		switch (item->Type)
+		{
+		case MI_Submenu:
+			// recurse to children
+			if (item->HandleCommand(owner, id))
+				return true;
+			break;
+
+		case MI_RadioGroup:
+			{
+				// check whether this id belongs to radio group
+				// 'item' is group here
+				bool found = false;
+				int newValue = 0;
+				for (UIMenuItem* button = item->FirstChild; button; button = button->NextChild)
+					if (button->Id == id)
+					{
+						found = true;
+						newValue = button->iValue;
+						break;
+					}
+				if (!found) continue;	// not in this group
+				// it's ours, process button
+				int oldValue = *(int*)item->pValue;
+				for (UIMenuItem* button = item->FirstChild; button; button = button->NextChild)
+				{
+					assert(button->Type == MI_RadioButton);
+					bool checked = (button->Id == id);
+					if (button->iValue == oldValue || checked)
+						CheckMenuItem(owner->GetHandle(), button->Id, MF_BYCOMMAND | (checked ? MF_CHECKED : 0));
+				}
+				// update value
+				*(int*)item->pValue = newValue;
+				//!! callback
+			}
+			break;
+		}
+	}
+
+	// the command was not processed
+	return false;
+
+	unguard;
+}
+
+UIMenu::UIMenu()
+:	UIMenuItem(MI_Submenu)
+,	hMenu(0)
+{}
+
+UIMenu::~UIMenu()
+{
+	if (hMenu)
+		DestroyMenu(hMenu);
+}
+
+HMENU UIMenu::GetHandle()
+{
+	if (!hMenu) Create();
+	return hMenu;
+}
+
+void UIMenu::Create()
+{
+	guard(UIMenu::Create);
+
+	assert(!hMenu);
+	hMenu = CreateMenu();
+
+	int nextId = FIRST_MENU_ID, position = 0;
+	FillMenuItems(hMenu, nextId, position);
+
+	unguard;
+}
+
+
+/*-----------------------------------------------------------------------------
 	UIGroup
 -----------------------------------------------------------------------------*/
 
@@ -1942,6 +2235,7 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 
 UIBaseDialog::UIBaseDialog()
 :	UIGroup(GROUP_NO_BORDER)
+,	Menu(NULL)
 ,	NextDialogId(FIRST_DIALOG_ID)
 ,	DoCloseOnEsc(false)
 ,	ParentDialog(NULL)
@@ -2184,6 +2478,9 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		InitUI();
 		CreateGroupControls(this);
 
+		if (Menu)
+			::SetMenu(Wnd, Menu->GetHandle());
+
 		// adjust window size taking into account desired client size and center window on screen
 		r.left   = 0;
 		r.top    = 0;
@@ -2193,7 +2490,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		int newX = (GetSystemMetrics(SM_CXSCREEN) - (r.right - r.left)) / 2;
 		int newY = (GetSystemMetrics(SM_CYSCREEN) - (r.bottom - r.top)) / 2;
 
-		AdjustWindowRect(&r, GetWindowLong(Wnd, GWL_STYLE), FALSE);
+		AdjustWindowRect(&r, GetWindowLong(Wnd, GWL_STYLE), (Menu != NULL) ? TRUE : FALSE);
 		SetWindowPos(hWnd, NULL, newX, newY, r.right - r.left, r.bottom - r.top, 0);
 
 		return TRUE;
@@ -2221,6 +2518,12 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			CloseDialog(id != IDOK);
 			return TRUE;
+		}
+
+		if (id >= FIRST_MENU_ID && Menu)
+		{
+			if (Menu->HandleCommand(id))
+				return TRUE;
 		}
 	}
 

@@ -19,6 +19,7 @@
 #include "callback.hpp"
 
 // forwards
+class UIMenu;
 class UIBaseDialog;
 
 
@@ -527,6 +528,151 @@ protected:
 
 
 /*-----------------------------------------------------------------------------
+	UIMenu
+-----------------------------------------------------------------------------*/
+
+class UIMenuItem
+{
+public:
+	enum EType
+	{
+		MI_Text,
+		MI_Checkbox,
+		MI_RadioButton,
+		MI_RadioGroup,		// container for radio buttons
+		MI_Separator,
+		MI_Submenu,
+	};
+
+	// Normal menu item
+	FORCEINLINE UIMenuItem(const char* text)
+	{
+		Init(MI_Text, text);
+	}
+	// Checkbox
+	UIMenuItem(const char* text, bool checked);
+	UIMenuItem(const char* text, bool* checked);
+	// RadioGroup
+	UIMenuItem(int value);
+	UIMenuItem(int* value);
+	// RadioButton
+	UIMenuItem(const char* text, int value);
+	// other types
+	FORCEINLINE UIMenuItem(EType type, const char* text = NULL)
+	{
+		Init(type, text);
+	}
+
+	~UIMenuItem();
+
+	// Making a list of menu items
+	friend UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next);
+
+	UIMenuItem& Enable(bool enable)
+	{
+		Enabled = enable;
+		return *this;
+	}
+
+	// Submenu methods
+	void Add(UIMenuItem* item);
+	FORCEINLINE void Add(UIMenuItem& item)
+	{
+		Add(&item);
+	}
+
+	// Function for adding children in declarative syntax
+	FORCEINLINE UIMenuItem& operator[](UIMenuItem& item)
+	{
+		Add(item); return *this;
+	}
+
+protected:
+	FStaticString<32> Label;
+	int			Id;
+	UIMenuItem*	NextChild;
+
+	EType		Type;
+	bool		Enabled;
+	bool		Checked;
+
+	// Submenu
+	UIMenuItem*	FirstChild;
+	// Checkbox and radio group
+	bool		bValue;			// local bool value
+	int			iValue;			// local int value; used as radio constant for MI_RadioButton
+	void*		pValue;			// pointer to editable value (bool for MI_Checkbox and int for MI_RadioGroup)
+
+	void Init(EType type, const char* label);
+	void FillMenuItems(HMENU parentMenu, int& nextId, int& position);
+	bool HandleCommand(UIMenu* owner, int id);
+};
+
+class UIMenu : public UIMenuItem // note: we're not using virtual functions in menu classes now
+{
+public:
+	UIMenu();
+	~UIMenu();
+
+	HMENU GetHandle();
+
+	FORCEINLINE bool HandleCommand(int id)
+	{
+		return UIMenuItem::HandleCommand(this, id);
+	}
+
+protected:
+	HMENU		hMenu;
+
+	void Create();
+};
+
+FORCEINLINE UIMenuItem& NewMenuItem(const char* label)
+{
+	return *new UIMenuItem(label);
+}
+
+FORCEINLINE UIMenuItem& NewSubmenu(const char* label)
+{
+	return *new UIMenuItem(UIMenuItem::MI_Submenu, label);
+}
+
+FORCEINLINE UIMenuItem& NewMenuSeparator()
+{
+	return *new UIMenuItem(UIMenuItem::MI_Separator);
+}
+
+// Create a checkbox
+
+FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, bool* value)
+{
+	return *new UIMenuItem(label, value);
+}
+
+FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, bool value)
+{
+	return *new UIMenuItem(label, value);
+}
+
+// Create a radio group: RadioGroup holds a number of RadioItems
+
+FORCEINLINE UIMenuItem& NewMenuRadioGroup(int* value)
+{
+	return *new UIMenuItem(value);
+}
+
+FORCEINLINE UIMenuItem& NewMenuRadioGroup(int value)
+{
+	return *new UIMenuItem(value);
+}
+
+FORCEINLINE UIMenuItem& NewMenuRadioButton(const char* label, int value)
+{
+	return *new UIMenuItem(label, value);
+}
+
+
+/*-----------------------------------------------------------------------------
 	UI containers
 -----------------------------------------------------------------------------*/
 
@@ -687,6 +833,12 @@ public:
 	UIBaseDialog();
 	virtual ~UIBaseDialog();
 
+	FORCEINLINE UIBaseDialog& SetMenu(UIMenu* menu)
+	{
+		Menu = menu;
+		return *this;
+	}
+
 	FORCEINLINE int GenerateDialogId()
 	{
 		return NextDialogId++;
@@ -726,6 +878,7 @@ public:
 	static void SetMainWindow(HWND window);
 
 protected:
+	UIMenu*		Menu;
 	int			NextDialogId;
 	bool		DoCloseOnEsc;		//!! awful name
 	UIBaseDialog* ParentDialog;

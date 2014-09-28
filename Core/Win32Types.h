@@ -26,6 +26,7 @@
 		typedef unsigned int	DWORD;
 		typedef unsigned int	UINT;
 		typedef void*			HWND;
+		typedef void*			HMENU;
 		typedef size_t			WPARAM;
 		typedef long			LPARAM;
 		typedef int				INT_PTR;
