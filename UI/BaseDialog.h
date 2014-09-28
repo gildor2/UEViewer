@@ -13,6 +13,7 @@
 
 #if HAS_UI	// defined in Build.h, included from Core.h
 
+#include "Win32Types.h"
 #include "UnCore.h"					// for TArray and FString
 
 #include "callback.hpp"

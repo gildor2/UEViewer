@@ -17,8 +17,4 @@ sources(MAIN) = {
 !endif
 }
 
-!if "$PLATFORM" eq "win32"
-STDLIBS += user32 gdi32 comctl32 # for UI
-!endif
-
 target(executable, $PRJ, MAIN + NV_LIBS + UE3_LIBS + IOS_LIBS, MAIN)

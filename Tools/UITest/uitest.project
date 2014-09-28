@@ -1,0 +1,15 @@
+# perl highlighting
+
+R   = ../..
+PRJ = uitest
+!include ../../common.project
+
+sources(MAIN) = {
+	Main.cpp
+	$R/Unreal/UnCore.cpp
+#	$R/Unreal/GameDatabase.cpp
+	$R/UI/BaseDialog.cpp
+	$R/Core/*.cpp
+}
+
+target(executable, $PRJ, MAIN, MAIN)

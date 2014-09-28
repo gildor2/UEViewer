@@ -7,6 +7,8 @@ PRJ = unumd
 sources(MAIN) = {
 	Main.cpp
 	$R/Unreal/UnCore.cpp
+	$R/Unreal/UnCoreCompression.cpp
+	$R/Unreal/UnCoreSerialize.cpp
 	$R/Unreal/UnPackage.cpp
 	$R/Unreal/UnObject.cpp
 	$R/Unreal/GameDatabase.cpp

@@ -79,7 +79,15 @@
 #define MAX_TITLE_LEN				256
 
 
+#if _WIN32
+
+#pragma comment(lib, "user32.lib")
+#pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "comctl32.lib")
+
 static HINSTANCE hInstance;
+
+#endif // _WIN32
 
 
 /*-----------------------------------------------------------------------------

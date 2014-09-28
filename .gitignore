@@ -1,11 +1,19 @@
+# Some temporaty directories and directories with data
 data/
 obj/
 bak/
-Tools/MaxActorXImport/ActorXImporter.ini
-Tools/UT2down/
+
+# Generated files
 Unreal/Shaders.h
+
+# Ignore makefiles for tools
 Tools/PackageExtract/makefile-*
 Tools/PackageTool/makefile-*
 Tools/PackageUnpack/makefile-*
 Tools/TypeInfo/makefile-*
 Tools/UmdExtract/makefile-*
+Tools/UITest/makefile-*
+
+# Other ignores
+Tools/MaxActorXImport/ActorXImporter.ini
+Tools/UT2down/
