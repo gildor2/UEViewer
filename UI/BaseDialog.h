@@ -533,6 +533,10 @@ protected:
 
 class UIMenuItem
 {
+	typedef UIMenuItem ThisClass;
+	DECLARE_CALLBACK(Callback);					// this callback is executed for any clicked menu item
+	DECLARE_CALLBACK(CheckboxCallback, bool);	// this callback is executed for checkboxes, in addition to main 'Callback'
+	DECLARE_CALLBACK(RadioCallback, int);		// this callback is executed for RadioGroup when one of its children clicked
 public:
 	enum EType
 	{
@@ -568,11 +572,9 @@ public:
 	// Making a list of menu items
 	friend UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next);
 
-	UIMenuItem& Enable(bool enable)
-	{
-		Enabled = enable;
-		return *this;
-	}
+	UIMenuItem& Expose(UIMenuItem*& var) { var = this; return *this; }
+
+	UIMenuItem& Enable(bool enable);
 
 	// Submenu methods
 	void Add(UIMenuItem* item);
@@ -590,14 +592,15 @@ public:
 protected:
 	FStaticString<32> Label;
 	int			Id;
-	UIMenuItem*	NextChild;
 
 	EType		Type;
 	bool		Enabled;
 	bool		Checked;
 
-	// Submenu
-	UIMenuItem*	FirstChild;
+	// Hierarchy
+	UIMenuItem*	Parent;
+	UIMenuItem*	FirstChild;		// child submenu for MI_Submenu and for MI_RadioGroup
+	UIMenuItem*	NextChild;		// next item belongs to the same parent
 	// Checkbox and radio group
 	bool		bValue;			// local bool value
 	int			iValue;			// local int value; used as radio constant for MI_RadioButton
@@ -610,6 +613,7 @@ protected:
 
 class UIMenu : public UIMenuItem // note: we're not using virtual functions in menu classes now
 {
+	friend class UIMenuItem;
 public:
 	UIMenu();
 	~UIMenu();

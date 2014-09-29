@@ -1459,7 +1459,7 @@ void UIMenuItem::Init(EType type, const char* label)
 	Type = type;
 	Label = label ? label : "";
 	Id = 0;
-	NextChild = FirstChild = NULL;
+	Parent = NextChild = FirstChild = NULL;
 	Enabled = true;
 	Checked = false;
 }
@@ -1476,7 +1476,8 @@ UIMenuItem::~UIMenuItem()
 	FirstChild = NULL;
 }
 
-// Append a new menu item to chain
+// Append a new menu item to chain. This code is very similar to
+// UIElement::operator+().
 UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next)
 {
 	guard(operator+(UIMenuItem));
@@ -1497,7 +1498,28 @@ UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next)
 	unguard;
 }
 
-// Add new submenu
+UIMenuItem& UIMenuItem::Enable(bool enable)
+{
+	Enabled = enable;
+	if (!Id) return *this;
+
+	for (UIMenuItem* p = Parent; p; p = p->Parent)
+	{
+		if (!p->Parent)
+		{
+			// this is root item
+			//?? move this code to UIMenu and remove 'friend' from class declatation?
+			UIMenu* menu = (UIMenu*)p;
+			if (menu->hMenu)
+				EnableMenuItem(menu->hMenu, Id, MF_BYCOMMAND | (enable ? MF_ENABLED : MF_DISABLED));
+			break;
+		}
+	}
+
+	return *this;
+}
+
+// Add new submenu. This code is very similar to UIGroup::Add().
 void UIMenuItem::Add(UIMenuItem* item)
 {
 	guard(UIMenuItem::Add);
@@ -1516,6 +1538,13 @@ void UIMenuItem::Add(UIMenuItem* item)
 		{ /* empty */ }
 		// add item(s)
 		prev->NextChild = item;
+	}
+
+	// set parent for all items in chain
+	for ( /* empty */; item; item = item->NextChild)
+	{
+		assert(item->Parent == NULL);
+		item->Parent = this;
 	}
 
 	unguard;
@@ -1608,15 +1637,22 @@ bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
 			switch (item->Type)
 			{
 			case MI_Text:
-				//!! callback
+				if (item->Callback)
+					item->Callback(item);
 				break;
 
 			case MI_Checkbox:
 				{
+					// change value
 					bool value = !*(bool*)item->pValue;
 					*(bool*)item->pValue = value;
+					// update menu
 					CheckMenuItem(owner->GetHandle(), item->Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
-					//!! callback
+					// callbacks
+					if (item->Callback)
+						item->Callback(item);
+					if (item->CheckboxCallback)
+						item->CheckboxCallback(item, value);
 				}
 				break;
 
@@ -1638,28 +1674,32 @@ bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
 			{
 				// check whether this id belongs to radio group
 				// 'item' is group here
-				bool found = false;
+				UIMenuItem* clickedButton = NULL;
 				int newValue = 0;
 				for (UIMenuItem* button = item->FirstChild; button; button = button->NextChild)
 					if (button->Id == id)
 					{
-						found = true;
+						clickedButton = button;
 						newValue = button->iValue;
 						break;
 					}
-				if (!found) continue;	// not in this group
-				// it's ours, process button
+				if (!clickedButton) continue;	// not in this group
+				// it's ours, process the button
 				int oldValue = *(int*)item->pValue;
 				for (UIMenuItem* button = item->FirstChild; button; button = button->NextChild)
 				{
 					assert(button->Type == MI_RadioButton);
-					bool checked = (button->Id == id);
+					bool checked = (button == clickedButton);
 					if (button->iValue == oldValue || checked)
 						CheckMenuItem(owner->GetHandle(), button->Id, MF_BYCOMMAND | (checked ? MF_CHECKED : 0));
 				}
 				// update value
 				*(int*)item->pValue = newValue;
-				//!! callback
+				// callbacks
+				if (clickedButton->Callback)
+					clickedButton->Callback(item);
+				if (item->RadioCallback)
+					item->RadioCallback(item, newValue);
 			}
 			break;
 		}

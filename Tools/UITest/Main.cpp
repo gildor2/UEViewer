@@ -8,7 +8,7 @@ public:
 		value1 = false;
 		value2 = true;
 		value3 = 0;
-		ShowModal("UI Test", 500, 200);
+		ShowModal("UI Test", 300, 200);
 		printf("v1=%d v2=%d v3=%d\n", value1, value2, value3);
 	}
 
@@ -23,8 +23,9 @@ public:
 			[
 				NewMenuItem("First item")
 				+ NewMenuSeparator()
-				+ NewMenuCheckbox("Not checked", &value1)
-				+ NewMenuCheckbox("Checked", &value2)
+				+ NewMenuCheckbox("Item #1", &value1)
+					.Expose(item1)
+				+ NewMenuCheckbox("Item #2", &value2)
 				+ NewMenuSeparator()
 				+ NewMenuRadioGroup(&value3)
 				[
@@ -39,17 +40,32 @@ public:
 
 		(*this)
 		[
-			NewControl(UIGroup, "Group 1")
+			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 			[
-				NewControl(UIButton, "Button 1")
-				+ NewControl(UIButton, "Button 2")
+				NewControl(UIGroup, "Menu control")
+				[
+					NewControl(UICheckbox, "Enable item #1", true)
+					.SetCallback(BIND_MEM_CB(&TestDialog::OnEnableItem1, this))
+				]
+				+ NewControl(UISpacer)
+				+ NewControl(UIGroup, "Group 1")
+				[
+					NewControl(UIButton, "Button 1")
+					+ NewControl(UIButton, "Button 2")
+				]
 			]
 		];
 	}
 
-	bool value1;
-	bool value2;
-	int  value3;
+	void OnEnableItem1(UICheckbox* sender, bool value)
+	{
+		item1->Enable(value);
+	}
+
+	UIMenuItem*		item1;
+	bool			value1;
+	bool			value2;
+	int				value3;
 };
 
 void main()
