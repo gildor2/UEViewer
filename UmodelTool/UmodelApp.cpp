@@ -515,9 +515,9 @@ void CUmodelApp::WindowCreated()
 		NewSubmenu("File")
 		[
 			NewMenuItem("Open package\tO")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::OnOpenPackage, this))
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::ShowPackageUI, this))
 			+ NewMenuItem("Exit\tEsc")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::OnExit, this))
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::Exit, this))
 		]
 		+ NewSubmenu("View")
 		[
@@ -534,17 +534,6 @@ void CUmodelApp::WindowCreated()
 }
 
 #if HAS_MENU
-
-void CUmodelApp::OnOpenPackage(UIMenuItem* sender)
-{
-	ShowPackageUI();
-}
-
-void CUmodelApp::OnExit(UIMenuItem* sender)
-{
-	Exit();
-}
-
 void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	guard(CUmodelApp::WndProc);
@@ -552,6 +541,6 @@ void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 		MainMenu->HandleCommand(LOWORD(wParam));
 	unguard;
 }
-#endif
+#endif // HAS_MENU
 
 #endif // RENDERING

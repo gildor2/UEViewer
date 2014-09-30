@@ -54,8 +54,7 @@ public:
 	UIMenu*		MainMenu;
 	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
 	// menu callbacks
-	void OnOpenPackage(UIMenuItem* sender);
-	void OnExit(UIMenuItem* sender);
+	// ...
 #endif
 
 #if RENDERING
