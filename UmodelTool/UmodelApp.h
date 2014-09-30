@@ -48,6 +48,7 @@ public:
 #if HAS_UI
 	bool ShowStartupDialog(UmodelSettings& settings);
 	bool ShowPackageUI();
+	void SetPackageName(const char* name);
 #endif
 
 #if HAS_MENU

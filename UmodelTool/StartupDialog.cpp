@@ -57,7 +57,7 @@ void UIStartupDialog::InitUI()
 		[
 			NewControl(UICombobox)
 			.Expose(OverrideEngineCombo)
-			.SetCallback(BIND_MEM_CB(&UIStartupDialog::OnEngineChanged, this))
+			.SetCallback(BIND_MEM_CB(&UIStartupDialog::FillGameList, this))
 			.SetWidth(EncodeWidth(0.4f))
 			+ NewControl(UISpacer)
 			+ NewControl(UICombobox)
@@ -201,11 +201,6 @@ void UIStartupDialog::FillGameList()
 
 	// select engine item
 	OverrideGameCombo->SelectItem(0);
-}
-
-void UIStartupDialog::OnEngineChanged(UICombobox* sender, int value, const char* text)
-{
-	FillGameList();
 }
 
 

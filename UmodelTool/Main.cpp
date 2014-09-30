@@ -967,12 +967,15 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_View)
 	{
+#if HAS_UI
+		// Put argPkgName into package selection dialog, so when opening a package window for the first
+		// time, currently opened package will be selected
+		if (!guiShown) GApplication.SetPackageName(MainPackage->Filename);
+#endif // HAS_UI
 	main_loop:
 		// show object
 		vpInvertXAxis = true;
-		guard(MainLoop);
 		GApplication.VisualizerLoop(APP_CAPTION);
-		unguard;
 	}
 #endif // RENDERING
 

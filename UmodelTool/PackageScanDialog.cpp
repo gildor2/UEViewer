@@ -1,7 +1,9 @@
 #include "BaseDialog.h"
+
+#if HAS_UI
+
 #include "ProgressDialog.h"
 #include "PackageUtils.h"
-
 
 class UIPackageScanDialog : public UIBaseDialog
 {
@@ -92,3 +94,5 @@ void ShowPackageScanDialog()
 	UIPackageScanDialog dialog;
 	dialog.Show();
 }
+
+#endif // HAS_UI

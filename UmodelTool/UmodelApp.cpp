@@ -257,6 +257,11 @@ bool CUmodelApp::ShowPackageUI()
 	return true;
 }
 
+void CUmodelApp::SetPackageName(const char* name)
+{
+	GPackageDialog.SelectPackage(name);
+}
+
 #endif // HAS_UI
 
 #endif // RENDERING
@@ -508,14 +513,22 @@ void CUmodelApp::DrawTexts(bool helpVisible)
 
 void CUmodelApp::WindowCreated()
 {
+#if HAS_UI
+	HWND wnd = GetSDLWindowHandle(GetWindow());
+	// set window icon
+	//!! TODO: lookup for MAKEINTRESOURCE in all files, should use some constant or global variable for icon id (now '200')
+	SendMessage(wnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(200)));
+#endif // HAS_UI
+
 #if HAS_MENU
 	MainMenu = new UIMenu();
 	(*MainMenu)
 	[
 		NewSubmenu("File")
 		[
-			NewMenuItem("Open package\tO")
+			NewMenuItem("Open package ...\tO")
 			.SetCallback(BIND_MEM_CB(&CUmodelApp::ShowPackageUI, this))
+			+ NewMenuSeparator()
 			+ NewMenuItem("Exit\tEsc")
 			.SetCallback(BIND_MEM_CB(&CUmodelApp::Exit, this))
 		]
@@ -526,7 +539,6 @@ void CUmodelApp::WindowCreated()
 		]
 	];
 	// attach menu to the SDL window
-	HWND wnd = GetSDLWindowHandle(GetWindow());
 	SetMenu(wnd, MainMenu->GetHandle());
 	// menu has been attached, resize the window
 	ResizeWindow();

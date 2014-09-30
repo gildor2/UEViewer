@@ -1,6 +1,8 @@
 #include "BaseDialog.h"
-#include "ProgressDialog.h"
 
+#if HAS_UI
+
+#include "ProgressDialog.h"
 #include "UnObject.h"
 
 
@@ -82,3 +84,5 @@ void UIProgressDialog::InitUI()
 		]
 	];
 }
+
+#endif // HAS_UI

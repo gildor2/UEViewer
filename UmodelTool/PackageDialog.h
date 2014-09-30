@@ -16,6 +16,7 @@ public:
 	};
 
 	EResult Show();
+	void SelectPackage(const char* name);
 
 	TArray<FString>	SelectedPackages;
 
@@ -46,6 +47,7 @@ protected:
 	void OnScanClicked(UIButton* sender);
 
 	void UpdateSelectedPackage();
+	void SelectDirFromFilename(const char* filename);
 	void UpdateFlatMode();
 
 	void FillFlatPackageList();

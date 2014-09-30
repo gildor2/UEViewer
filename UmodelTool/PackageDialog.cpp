@@ -29,6 +29,13 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 	return ModalResult;
 }
 
+void UIPackageDialog::SelectPackage(const char* name)
+{
+	SelectedPackages.Empty();
+	SelectedPackages.AddItem(name);
+	SelectDirFromFilename(name);
+}
+
 static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInfo*> &param)
 {
 	param.AddItem(file);
@@ -96,6 +103,7 @@ void UIPackageDialog::InitUI()
 	}
 
 	// add paths of all found packages
+	if (SelectedPackages.Num()) DirectorySelected = true;
 	int selectedPathLen = 1024; // something large
 	for (int i = 0; i < Packages.Num(); i++)
 	{
@@ -187,22 +195,25 @@ void UIPackageDialog::UpdateSelectedPackage()
 			const char* text = FlatPackageList->GetItem(FlatPackageList->GetSelectionIndex(selIndex));
 			*newPackageName = text;
 			if (selIndex == 0)
-			{
-				// extract a directory name from 1st package name
-				char buffer[512];
-				appStrncpyz(buffer, text, ARRAY_COUNT(buffer));
-				char* s = strrchr(buffer, '/');
-				if (s)
-				{
-					*s = 0;
-					SelectedDir = buffer;
-				}
-				else
-				{
-					SelectedDir = "";
-				}
-			}
+				SelectDirFromFilename(text);
 		}
+	}
+}
+
+void UIPackageDialog::SelectDirFromFilename(const char* filename)
+{
+	// extract a directory name from 1st package name
+	char buffer[512];
+	appStrncpyz(buffer, filename, ARRAY_COUNT(buffer));
+	char* s = strrchr(buffer, '/');
+	if (s)
+	{
+		*s = 0;
+		SelectedDir = buffer;
+	}
+	else
+	{
+		SelectedDir = "";
 	}
 }
 

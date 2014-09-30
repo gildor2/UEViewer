@@ -21,7 +21,6 @@ protected:
 	UICombobox*			OverrideGameCombo;
 
 	void FillGameList();
-	void OnEngineChanged(UICombobox* sender, int value, const char* text);
 
 	virtual void InitUI();
 };
