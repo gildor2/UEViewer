@@ -1,3 +1,6 @@
+#include <SDL/SDL_syswm.h>
+#undef DrawText
+
 #include "Core.h"
 #include "TextContainer.h"
 #include "GlWindow.h"
@@ -75,7 +78,7 @@ static int lightingMode = LIGHTING_SPECULAR;
 
 #endif // LIGHTING_MODES
 
-CApplication *GApp = NULL;
+CApplication *GApp = NULL;	//!! there's only one application, is it correct?
 int GCurrentFrame = 1;
 int GContextFrame = 0;
 
@@ -1382,15 +1385,18 @@ static int TranslateKey(int sym, int scan)
 }
 #endif
 
-void VisualizerLoop(const char *caption, CApplication *App)
+void CApplication::VisualizerLoop(const char *caption)
 {
 	guard(VisualizerLoop);
 
-	GApp = App;
+	GApp = this;
 
 	Init(caption);
-	GApp->WindowCreated();
+	WindowCreated();
 	ClearTexts();
+
+	// Hook window messages
+    SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 
 #if NEW_SDL && LIMIT_FPS
 	// get display refresh rate
@@ -1428,7 +1434,7 @@ void VisualizerLoop(const char *caption, CApplication *App)
 #endif
 				break;
 			case SDL_KEYUP:
-				GApp->ProcessKey(evt.key.keysym.sym, false);
+				ProcessKey(evt.key.keysym.sym, false);
 				break;
 #if NEW_SDL
 			case SDL_WINDOWEVENT:
@@ -1469,6 +1475,11 @@ void VisualizerLoop(const char *caption, CApplication *App)
 			case SDL_QUIT:
 				RequestingQuit = true;
 				break;
+#if _WIN32
+			case SDL_SYSWMEVENT:
+				WndProc(evt.syswm.msg->msg.win.msg, evt.syswm.msg->msg.win.wParam, evt.syswm.msg->msg.win.lParam);
+				break;
+#endif
 			}
 		}
 		if (!disableUpdate)
@@ -1508,9 +1519,14 @@ SDL_Window* CApplication::GetWindow() const
 #endif
 }
 
-void CApplication::ResizeWindow() const
+void CApplication::ResizeWindow()
 {
 	::ResizeWindow(winWidth, winHeight);
+}
+
+void CApplication::Exit()
+{
+	RequestingQuit = true;
 }
 
 #endif // RENDERING

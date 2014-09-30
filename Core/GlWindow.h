@@ -4,6 +4,10 @@
 
 #include "Core.h"
 
+#if _WIN32
+#include "Win32Types.h"
+#endif
+
 struct SDL_Window;
 
 /*-----------------------------------------------------------------------------
@@ -14,8 +18,12 @@ struct SDL_Window;
 class CApplication
 {
 public:
+	// Main application function
+	void VisualizerLoop(const char *caption);
+
 	SDL_Window* GetWindow() const;
-	void ResizeWindow() const;
+	void ResizeWindow();
+	void Exit();
 
 	virtual void WindowCreated()
 	{}
@@ -26,10 +34,12 @@ public:
 	{}
 	virtual void ProcessKey(int key, bool isDown)
 	{}
+#if _WIN32
+	// Win32 message hook
+	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
+	{}
+#endif
 };
-
-// Main application function
-void VisualizerLoop(const char *caption, CApplication *App);
 
 void MoveCamera(float YawDelta, float PitchDelta, float DistDelta = 0, float PanX = 0, float PanY = 0);
 void FocusCameraOnPoint(const CVec3 &center);

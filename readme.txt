@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+30.09.2014
+- initial implementation of menu for the main window
+
 26.09.2014
 - implemented The Vanishing of Ethan Carter support; requires overriding of game either with
   -game=vec command line option or with UI

@@ -4,6 +4,17 @@
 #include "Viewers/ObjectViewer.h"
 #include "UmodelSettings.h"
 
+class UIMenu;
+class UIMenuItem;
+
+//?? remove this define - we have 3 defines here!
+#if _WIN32 && HAS_UI && RENDERING
+#define HAS_MENU		1
+#else
+#define HAS_MENU		0
+#endif
+
+//!! TODO: verify: perhaps RENDERING=0 would keep some SDL stuff now (too much things has been changed)
 class CUmodelApp : public CApplication
 {
 public:
@@ -27,6 +38,7 @@ public:
 		return CreateVisualizer(Obj, true);
 	}
 #else // RENDERING
+	// pure command line tool
 	FORCEINLINE bool ObjectSupported(UObject *Obj)
 	{
 		return true;
@@ -36,6 +48,14 @@ public:
 #if HAS_UI
 	bool ShowStartupDialog(UmodelSettings& settings);
 	bool ShowPackageUI();
+#endif
+
+#if HAS_MENU
+	UIMenu*		MainMenu;
+	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
+	// menu callbacks
+	void OnOpenPackage(UIMenuItem* sender);
+	void OnExit(UIMenuItem* sender);
 #endif
 
 #if RENDERING
@@ -48,6 +68,7 @@ public:
 
 extern CUmodelApp GApplication;
 
+// Main.cpp functions
 void InitClassAndExportSystems(int Game);
 bool ExportObjects(const TArray<UObject*> *Objects = NULL, IProgressCallback* progress = NULL);
 void DisplayPackageStats(const TArray<UnPackage*> &Packages);

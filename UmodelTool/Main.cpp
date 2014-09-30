@@ -971,7 +971,7 @@ int main(int argc, char **argv)
 		// show object
 		vpInvertXAxis = true;
 		guard(MainLoop);
-		VisualizerLoop(APP_CAPTION, &GApplication);
+		GApplication.VisualizerLoop(APP_CAPTION);
 		unguard;
 	}
 #endif // RENDERING

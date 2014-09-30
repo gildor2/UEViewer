@@ -406,25 +406,6 @@ CUmodelApp::~CUmodelApp()
 #endif
 }
 
-void CUmodelApp::WindowCreated()
-{
-#if HAS_UI
-	UIMenu* menu = new UIMenu();
-	(*menu)
-	[
-		NewSubmenu("File")
-		[
-			NewMenuItem("Exit\tEsc")
-		]
-	];
-	// attach menu to the SDL window
-	HWND wnd = GetSDLWindowHandle(GetWindow());
-	SetMenu(wnd, menu->GetHandle());
-	// menu has been attached, resize the window
-	ResizeWindow();
-#endif
-}
-
 void CUmodelApp::Draw3D(float TimeDelta)
 {
 	UObject *Obj = (ObjIndex < UObject::GObjObjects.Num()) ? UObject::GObjObjects[ObjIndex] : NULL;
@@ -524,5 +505,53 @@ void CUmodelApp::DrawTexts(bool helpVisible)
 	Viewer->Draw2D();
 	unguard;
 }
+
+void CUmodelApp::WindowCreated()
+{
+#if HAS_MENU
+	MainMenu = new UIMenu();
+	(*MainMenu)
+	[
+		NewSubmenu("File")
+		[
+			NewMenuItem("Open package\tO")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::OnOpenPackage, this))
+			+ NewMenuItem("Exit\tEsc")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::OnExit, this))
+		]
+		+ NewSubmenu("View")
+		[
+			NewMenuCheckbox("Include meshes", &ShowMeshes)
+			+ NewMenuCheckbox("Include materials", &ShowMaterials)
+		]
+	];
+	// attach menu to the SDL window
+	HWND wnd = GetSDLWindowHandle(GetWindow());
+	SetMenu(wnd, MainMenu->GetHandle());
+	// menu has been attached, resize the window
+	ResizeWindow();
+#endif // HAS_MENU
+}
+
+#if HAS_MENU
+
+void CUmodelApp::OnOpenPackage(UIMenuItem* sender)
+{
+	ShowPackageUI();
+}
+
+void CUmodelApp::OnExit(UIMenuItem* sender)
+{
+	Exit();
+}
+
+void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	guard(CUmodelApp::WndProc);
+	if (msg == WM_COMMAND)
+		MainMenu->HandleCommand(LOWORD(wParam));
+	unguard;
+}
+#endif
 
 #endif // RENDERING
