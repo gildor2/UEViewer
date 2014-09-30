@@ -4,11 +4,6 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 
-#if HAS_UI
-#include "BaseDialog.h"
-#include "../UmodelTool/ProgressDialog.h"
-#endif
-
 #include "PackageUtils.h"
 
 /*-----------------------------------------------------------------------------
@@ -16,11 +11,7 @@
 -----------------------------------------------------------------------------*/
 
 TArray<UnPackage*> GFullyLoadedPackages;
-#if HAS_UI
-bool LoadWholePackage(UnPackage* Package, UIProgressDialog* progress)
-#else
-bool LoadWholePackage(UnPackage* Package)
-#endif
+bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 {
 	guard(LoadWholePackage);
 
@@ -35,9 +26,7 @@ bool LoadWholePackage(UnPackage* Package)
 	{
 		if (!IsKnownClass(Package->GetObjectName(Package->GetExport(idx).ClassIndex)))
 			continue;
-#if HAS_UI
 		if (progress && !progress->Tick()) return false;
-#endif
 		Package->CreateExport(idx);
 	}
 	UObject::EndLoad();
@@ -88,19 +77,15 @@ void ReleaseAllObjects()
 struct ScanPackageData
 {
 	ScanPackageData()
-#if HAS_UI
 	:	Progress(NULL)
 	,	Cancelled(false)
 	,	Index(0)
-#endif
 	{}
 
 	TArray<FileInfo>*	PkgInfo;
-#if HAS_UI
-	UIProgressDialog*	Progress;
+	IProgressCallback*	Progress;
 	bool				Cancelled;
 	int					Index;
-#endif
 };
 
 static int InfoCmp(const FileInfo *p1, const FileInfo *p2)
@@ -114,7 +99,6 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 {
 	guard(ScanPackage);
 
-#if HAS_UI
 	if (data.Progress)
 	{
 		if (!data.Progress->Progress(file->RelativeName, data.Index++, GNumPackageFiles))
@@ -123,7 +107,6 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 			return false;
 		}
 	}
-#endif // HAS_UI
 
 	//!! use CreatePackageLoader() here to allow scanning of packages
 	//!! with custom header (Lineage etc)
@@ -180,9 +163,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 }
 
 
-#if HAS_UI
-
-bool ScanPackages(TArray<FileInfo>& info, UIProgressDialog* progress)
+bool ScanPackages(TArray<FileInfo>& info, IProgressCallback* progress)
 {
 	info.Empty();
 	ScanPackageData data;
@@ -193,16 +174,3 @@ bool ScanPackages(TArray<FileInfo>& info, UIProgressDialog* progress)
 
 	return !data.Cancelled;
 }
-
-#else // HAS_UI
-
-void ScanPackages(TArray<FileInfo>& info)
-{
-	info.Empty();
-	ScanPackageData data;
-	data.PkgInfo = &info;
-	appEnumGameFiles(ScanPackage, data);
-	info.Sort(InfoCmp);
-}
-
-#endif // HAS_UI

@@ -83,6 +83,7 @@ MAIN_FILES = \
 	$(OUT_1)/PackageScanDialog.obj \
 	$(OUT_1)/ProgressDialog.obj \
 	$(OUT_1)/StartupDialog.obj \
+	$(OUT_1)/UmodelApp.obj \
 	$(OUT_1)/umodel.res
 
 NV_LIBS_FILES = \
@@ -195,11 +196,8 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
-	UI/BaseDialog.h \
 	UmodelTool/Build.h \
-	UmodelTool/PackageDialog.h \
-	UmodelTool/ProgressDialog.h \
-	UmodelTool/StartupDialog.h \
+	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
 	Unreal/GameDatabase.h \
 	Unreal/GameDefines.h \
@@ -220,8 +218,7 @@ DEPENDS = \
 	Unreal/UnSound.h \
 	Unreal/UnThirdParty.h \
 	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h \
-	libs/include/callback.hpp
+	Viewers/ObjectViewer.h
 
 $(OUT_1)/Main.obj : UmodelTool/Main.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Main.obj" UmodelTool/Main.cpp
@@ -293,6 +290,37 @@ DEPENDS = \
 
 $(OUT_1)/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UI/BaseDialog.h \
+	UmodelTool/Build.h \
+	UmodelTool/PackageDialog.h \
+	UmodelTool/ProgressDialog.h \
+	UmodelTool/StartupDialog.h \
+	UmodelTool/UmodelApp.h \
+	UmodelTool/UmodelSettings.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/UmodelApp.obj : UmodelTool/UmodelApp.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UmodelApp.obj" UmodelTool/UmodelApp.cpp
 
 DEPENDS = \
 	Core/Core.h \
@@ -774,11 +802,10 @@ DEPENDS = \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	libs/include/callback.hpp
 
-$(OUT_1)/PackageUtils.obj : Unreal/PackageUtils.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageUtils.obj" Unreal/PackageUtils.cpp
+$(OUT_1)/ProgressDialog.obj : UmodelTool/ProgressDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ProgressDialog.obj" UmodelTool/ProgressDialog.cpp
 
 DEPENDS = \
 	Core/Core.h \
@@ -796,23 +823,6 @@ DEPENDS = \
 
 $(OUT_1)/PackageScanDialog.obj : UmodelTool/PackageScanDialog.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageScanDialog.obj" UmodelTool/PackageScanDialog.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UI/BaseDialog.h \
-	UmodelTool/Build.h \
-	UmodelTool/ProgressDialog.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnObject.h \
-	libs/include/callback.hpp
-
-$(OUT_1)/ProgressDialog.obj : UmodelTool/ProgressDialog.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ProgressDialog.obj" UmodelTool/ProgressDialog.cpp
 
 DEPENDS = \
 	Core/Core.h \
@@ -854,6 +864,22 @@ DEPENDS = \
 
 $(OUT_1)/CoreGL.obj : Core/CoreGL.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/CoreGL.obj" Core/CoreGL.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/PackageUtils.obj : Unreal/PackageUtils.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageUtils.obj" Unreal/PackageUtils.cpp
 
 DEPENDS = \
 	Core/Core.h \

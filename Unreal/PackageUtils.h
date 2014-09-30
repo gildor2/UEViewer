@@ -1,18 +1,27 @@
 #ifndef __PACKAGE_UTILS_H__
 #define __PACKAGE_UTILS_H__
 
-class UnPackage;
-#if HAS_UI
-class UIProgressDialog;
-#endif
 
+class UnPackage;
 extern TArray<UnPackage*> GFullyLoadedPackages;
 
-#if HAS_UI
-bool LoadWholePackage(UnPackage* Package, UIProgressDialog* progress = NULL);
-#else
-bool LoadWholePackage(UnPackage* Package);
-#endif
+// Virtual interface which could be used for progress indication.
+class IProgressCallback
+{
+public:
+	// Stop operating when these functions returns 'false'.
+	virtual bool Progress(const char* package, int index, int total)
+	{
+		return true;
+	}
+	virtual bool Tick()
+	{
+		return true;
+	}
+};
+
+
+bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress = NULL);
 void ReleaseAllObjects();
 
 
@@ -26,11 +35,7 @@ struct FileInfo
 	char	FileName[512];
 };
 
-#if HAS_UI
-bool ScanPackages(TArray<FileInfo>& info, UIProgressDialog* progress = NULL);
-#else
-void ScanPackages(TArray<FileInfo>& info);
-#endif
+bool ScanPackages(TArray<FileInfo>& info, IProgressCallback* progress = NULL);
 
 
 #endif // __PACKAGE_UTILS_H__
