@@ -9,7 +9,7 @@ PLATFORM="vc-win32"
 
 export vc_ver=10
 
-[ "$project" ] || project="umodel"		# setup default prohect name
+[ "$project" ] || project="UmodelTool/umodel"		# setup default prohect name
 [ "$root"    ] || root="."
 [ "$render"  ] || render=1
 

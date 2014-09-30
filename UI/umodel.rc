@@ -1,6 +1,0 @@
-#include <winresrc.h>
-
-// Enable themes for GUI elements
-// http://www.angelfire.com/hi5/delphizeus/theme_xp.html
-1 RT_MANIFEST "umodel.manifest"
-200 ICON "umodel.ico"

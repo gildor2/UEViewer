@@ -106,12 +106,15 @@ UIElement::UIElement()
 ,	Visible(true)
 ,	Parent(NULL)
 ,	NextChild(NULL)
+,	Menu(NULL)
 ,	Wnd(0)
 ,	Id(0)
 {}
 
 UIElement::~UIElement()
-{}
+{
+	if (Menu) Menu->Detach();
+}
 
 const char* UIElement::ClassName() const
 {
@@ -153,6 +156,14 @@ UIElement& UIElement::SetRect(int x, int y, int width, int height)
 	if (y != -1)      Y = y;
 	if (width != -1)  Width = width;
 	if (height != -1) Height = height;
+	return *this;
+}
+
+UIElement& UIElement::SetMenu(UIMenu* menu)
+{
+	if (Menu) Menu->Detach();
+	Menu = menu;
+	if (Menu) Menu->Attach();
 	return *this;
 }
 
@@ -1714,12 +1725,12 @@ bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
 UIMenu::UIMenu()
 :	UIMenuItem(MI_Submenu)
 ,	hMenu(0)
+,	ReferenceCount(0)
 {}
 
 UIMenu::~UIMenu()
 {
-	if (hMenu)
-		DestroyMenu(hMenu);
+	if (hMenu) DestroyMenu(hMenu);
 }
 
 HMENU UIMenu::GetHandle()
@@ -2275,7 +2286,6 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 
 UIBaseDialog::UIBaseDialog()
 :	UIGroup(GROUP_NO_BORDER)
-,	Menu(NULL)
 ,	NextDialogId(FIRST_DIALOG_ID)
 ,	DoCloseOnEsc(false)
 ,	ParentDialog(NULL)

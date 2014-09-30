@@ -5,8 +5,8 @@
 #include "UnPackage.h"
 
 #if HAS_UI
-#include "../UI/BaseDialog.h"
-#include "../UI/ProgressDialog.h"
+#include "BaseDialog.h"
+#include "../UmodelTool/ProgressDialog.h"
 #endif
 
 #include "PackageUtils.h"

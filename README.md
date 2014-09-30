@@ -28,9 +28,9 @@ using 'nmake' for Visual Studio or 'make' for gcc.
 UModel is compiled using Visual Studio. Currently build is performed with Visual C++ 2010, but in theory
 almost all Visual Studio versions should be supported (perhaps except Visual C++ 6.0 and Visual C++ 2001).
 
-Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged WIndows versions
-of such tools which was a part of [MinGW project](http://www.mingw.org/). You may everything required for
-build [here](https://github.com/gildor2/UModel/releases). This page contains "BuildTools.zip". You should
+Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
+of such tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You may everything required for
+build [here](https://github.com/gildor2/UModel/releases). This page contains **BuildTools.zip**. You should
 download it and extract into some directory. After that, put "GNU/bin" and "Tools" directories to system
 *PATH* variable. Also it is possible to create batch file which will temporarily tune *PATH* and then execute
 build script.
@@ -74,7 +74,7 @@ runtime libraries on system. You may disable MSVCRT.DLL linking by commenting ou
 OLDCRT = 1
 ```
 
-If you want to use MSVCRT.DLL, you should extract MSVCRT.zip archive available
+If you want to use MSVCRT.DLL, you should extract **MSVCRT.zip** archive available
 [here](https://github.com/gildor2/UModel/releases) to the directory LIBS one level above of UModel directory.
 So, the directory structure should look like this
 

@@ -60,6 +60,8 @@ public:
 	FORCEINLINE int GetWidth() const     { return Width; }
 	FORCEINLINE int GetHeight() const    { return Height; }
 
+	UIElement& SetMenu(UIMenu* menu);
+
 	//!! add SetFontHeight(int)
 
 	static FORCEINLINE int EncodeWidth(float w)
@@ -92,6 +94,7 @@ protected:
 	bool		Visible;
 	UIGroup*	Parent;
 	UIElement*	NextChild;
+	UIMenu*		Menu;
 
 	HWND		Wnd;
 	int			Id;
@@ -162,6 +165,7 @@ public:												\
 	FORCEINLINE ThisClass& Expose(ThisClass*& var)   { var = this; return *this; } \
 	FORCEINLINE ThisClass& SetParent(UIGroup* group) { return (ThisClass&) Super::SetParent(group); } \
 	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
+	FORCEINLINE ThisClass& SetMenu(UIMenu* menu)     { return (ThisClass&) Super::SetMenu(menu); } \
 private:
 
 // Use this macro to declare a callback type, its variable and SetCallback function.
@@ -625,8 +629,19 @@ public:
 		return UIMenuItem::HandleCommand(this, id);
 	}
 
+	FORCEINLINE void Attach()
+	{
+		ReferenceCount++;
+	}
+
+	FORCEINLINE void Detach()
+	{
+		if (--ReferenceCount == 0) delete this;
+	}
+
 protected:
 	HMENU		hMenu;
+	int			ReferenceCount;
 
 	void Create();
 };
@@ -837,12 +852,6 @@ public:
 	UIBaseDialog();
 	virtual ~UIBaseDialog();
 
-	FORCEINLINE UIBaseDialog& SetMenu(UIMenu* menu)
-	{
-		Menu = menu;
-		return *this;
-	}
-
 	FORCEINLINE int GenerateDialogId()
 	{
 		return NextDialogId++;
@@ -882,7 +891,6 @@ public:
 	static void SetMainWindow(HWND window);
 
 protected:
-	UIMenu*		Menu;
 	int			NextDialogId;
 	bool		DoCloseOnEsc;		//!! awful name
 	UIBaseDialog* ParentDialog;

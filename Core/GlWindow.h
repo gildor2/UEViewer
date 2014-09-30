@@ -10,11 +10,15 @@ struct SDL_Window;
 	Control functions
 -----------------------------------------------------------------------------*/
 
+//!! move most 'static' code to this class
 class CApplication
 {
 public:
 	SDL_Window* GetWindow() const;
+	void ResizeWindow() const;
 
+	virtual void WindowCreated()
+	{}
 	virtual void Draw3D(float TimeDelta)
 	{}
 	virtual void DrawTexts(bool helpVisible);

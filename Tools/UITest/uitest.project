@@ -4,12 +4,16 @@ R   = ../..
 PRJ = uitest
 !include ../../common.project
 
+INCLUDES += $R/UI
+
 sources(MAIN) = {
 	Main.cpp
 	$R/Unreal/UnCore.cpp
 #	$R/Unreal/GameDatabase.cpp
 	$R/UI/BaseDialog.cpp
-	$R/Core/*.cpp
+	$R/Core/Core.cpp
+	$R/Core/CoreWin32.cpp
+	$R/Core/Memory.cpp
 }
 
 target(executable, $PRJ, MAIN, MAIN)

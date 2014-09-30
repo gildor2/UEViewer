@@ -1,4 +1,4 @@
-#include "../UI/BaseDialog.h"
+#include "BaseDialog.h"
 
 class TestDialog : public UIBaseDialog
 {
@@ -21,7 +21,7 @@ public:
 		[
 			NewSubmenu("File")
 			[
-				NewMenuItem("First item")
+				NewMenuItem("First item\tCtrl+T")
 				+ NewMenuSeparator()
 				+ NewMenuCheckbox("Item #1", &value1)
 					.Expose(item1)

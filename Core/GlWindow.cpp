@@ -1389,6 +1389,7 @@ void VisualizerLoop(const char *caption, CApplication *App)
 	GApp = App;
 
 	Init(caption);
+	GApp->WindowCreated();
 	ClearTexts();
 
 #if NEW_SDL && LIMIT_FPS
@@ -1505,6 +1506,11 @@ SDL_Window* CApplication::GetWindow() const
 #if NEW_SDL
 	return sdlWindow;
 #endif
+}
+
+void CApplication::ResizeWindow() const
+{
+	::ResizeWindow(winWidth, winHeight);
 }
 
 #endif // RENDERING

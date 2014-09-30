@@ -1,0 +1,24 @@
+# perl highlighting
+
+R   = .
+PRJ = umodel
+!include common.project
+
+UMODEL=UmodelTool
+
+INCLUDES += $UMODEL UI
+
+sources(MAIN) = {
+	Exporters/*.cpp
+	Unreal/*.cpp
+	Viewers/*.cpp
+	MeshInstance/*.cpp
+	Core/*.cpp
+	UI/*.cpp
+	$UMODEL/*.cpp
+!if "$PLATFORM" eq "win32"
+	$UMODEL/umodel.rc
+!endif
+}
+
+target(executable, $PRJ, MAIN + NV_LIBS + UE3_LIBS + IOS_LIBS, MAIN)
