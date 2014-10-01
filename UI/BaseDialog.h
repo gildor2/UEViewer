@@ -630,12 +630,11 @@ protected:
 
 class UIMenu : public UIMenuItem // note: we're not using virtual functions in menu classes now
 {
-	friend class UIMenuItem;
 public:
 	UIMenu();
 	~UIMenu();
 
-	HMENU GetHandle();
+	HMENU GetHandle(bool forceCreate = false);
 
 	FORCEINLINE void Attach()
 	{

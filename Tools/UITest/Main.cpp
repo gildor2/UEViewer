@@ -46,12 +46,22 @@ public:
 				[
 					NewControl(UICheckbox, "Enable item #1", true)
 					.SetCallback(BIND_MEM_CB(&TestDialog::OnEnableItem1, this))
+					+ NewControl(UICheckbox, "Item #1", &value1)
+					+ NewControl(UICheckbox, "Item #2", &value2)
 				]
 				+ NewControl(UISpacer)
 				+ NewControl(UIGroup, "Group 1")
 				[
 					NewControl(UIButton, "Button 1")
 					+ NewControl(UIButton, "Button 2")
+				]
+				+ NewControl(UISpacer)
+				+ NewControl(UIGroup, "Group 2")
+				.SetRadioVariable(&value3)
+				[
+					NewControl(UIRadioButton, "Value 0", 0)
+					+ NewControl(UIRadioButton, "Value 1", 1)
+					+ NewControl(UIRadioButton, "Value 2", 2)
 				]
 			]
 		];

@@ -489,8 +489,9 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 	Viewer->ProcessKey(key);
 
 #if HAS_MENU
-	// processing keys most likely would change some settings, should update menu
-	// in order to reflect these changes
+	// Processing keys most likely would change some settings. So we should update menu
+	// in order to reflect these changes. Note: hooking WM_INITMENU in WndProc
+	// doesn't help because WM_INITMENU dispatched to WndProc only when menu closed.
 	MainMenu->Update();
 #endif
 
@@ -550,7 +551,7 @@ void CUmodelApp::WindowCreated()
 		]
 	];
 	// attach menu to the SDL window
-	SetMenu(wnd, MainMenu->GetHandle());
+	SetMenu(wnd, MainMenu->GetHandle(true));
 	// menu has been attached, resize the window
 	ResizeWindow();
 #endif // HAS_MENU
@@ -562,6 +563,7 @@ void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 	guard(CUmodelApp::WndProc);
 	if (msg == WM_COMMAND)
 		MainMenu->HandleCommand(LOWORD(wParam));
+//	if (msg == WM_INITMENU) MainMenu->Update(); -- this doesn't work, because this message dispatched to this WndProc only when menu closed
 	unguard;
 }
 #endif // HAS_MENU

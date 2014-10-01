@@ -768,7 +768,6 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 			}
 			else
 			{
-				//!! not tested
 				if (DblClickCallback)
 					DblClickCallback(this, Value, GetSelectionText());
 			}
@@ -1163,7 +1162,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (cmd == LVN_KEYDOWN)
 	{
 		NMLVKEYDOWN* pnkd = (NMLVKEYDOWN*)lParam;
-		if (GetKeyState(VK_CONTROL) & 0x8000)	//?? check other keys too
+		if (GetKeyState(VK_CONTROL) & 0x8000)	// can check other keys here too
 		{
 			// handle Ctrl+A
 			if (pnkd->wVKey == 'A')
@@ -1514,19 +1513,9 @@ UIMenuItem& UIMenuItem::Enable(bool enable)
 	Enabled = enable;
 	if (!Id) return *this;
 
-	for (UIMenuItem* p = Parent; p; p = p->Parent)
-	{
-		if (!p->Parent)
-		{
-			// this is root item
-			//?? move this code to UIMenu and remove 'friend' from class declatation?
-			UIMenu* menu = (UIMenu*)p;
-			if (menu->hMenu)
-				EnableMenuItem(menu->hMenu, Id, MF_BYCOMMAND | (enable ? MF_ENABLED : MF_DISABLED));
-			break;
-		}
-	}
-
+	HMENU hMenu = GetMenuHandle();
+	if (hMenu)
+		EnableMenuItem(hMenu, Id, MF_BYCOMMAND | (enable ? MF_ENABLED : MF_DISABLED));
 	return *this;
 }
 
@@ -1641,6 +1630,7 @@ bool UIMenuItem::HandleCommand(int id)
 	guard(UIMenuItem::HandleCommand);
 
 	HMENU hMenu = GetMenuHandle();
+	if (!hMenu) return false; // should not happen - HandleCommand executed when menu is active, so it exists
 
 	for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
 	{
@@ -1737,6 +1727,7 @@ void UIMenuItem::Update()
 	guard(UIMenuItem::Update);
 
 	HMENU hMenu = GetMenuHandle();
+	if (!hMenu) return;
 
 	switch (Type)
 	{
@@ -1770,9 +1761,9 @@ UIMenu::~UIMenu()
 	if (hMenu) DestroyMenu(hMenu);
 }
 
-HMENU UIMenu::GetHandle()
+HMENU UIMenu::GetHandle(bool forceCreate)
 {
-	if (!hMenu) Create();
+	if (!hMenu && forceCreate) Create();
 	return hMenu;
 }
 
@@ -2566,7 +2557,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		CreateGroupControls(this);
 
 		if (Menu)
-			::SetMenu(Wnd, Menu->GetHandle());
+			::SetMenu(Wnd, Menu->GetHandle(true));
 
 		// adjust window size taking into account desired client size and center window on screen
 		r.left   = 0;
@@ -2612,6 +2603,13 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (Menu->HandleCommand(id))
 				return TRUE;
 		}
+	}
+
+	if (msg == WM_INITMENU && Menu != NULL)
+	{
+		//!! process WM_INITMENUPOPUP for popup menus
+		Menu->Update();
+		return TRUE;
 	}
 
 	// handle WM_NOTIFY in a similar way
