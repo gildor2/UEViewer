@@ -19,11 +19,11 @@ class CUmodelApp : public CApplication
 {
 public:
 	CUmodelApp();
-	~CUmodelApp(); //?? virtual?
+	virtual ~CUmodelApp();
 
 	virtual void WindowCreated();
 	virtual void Draw3D(float TimeDelta);
-	virtual void DrawTexts(bool helpVisible);
+	virtual void DrawTexts();
 	virtual void BeforeSwap();
 	virtual void ProcessKey(int key, bool isDown);
 

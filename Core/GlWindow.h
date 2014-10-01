@@ -18,6 +18,9 @@ struct SDL_Window;
 class CApplication
 {
 public:
+	CApplication();
+	virtual ~CApplication();
+
 	// Main application function
 	void VisualizerLoop(const char *caption);
 
@@ -29,16 +32,23 @@ public:
 	{}
 	virtual void Draw3D(float TimeDelta)
 	{}
-	virtual void DrawTexts(bool helpVisible);
+	virtual void DrawTexts();
 	virtual void BeforeSwap()
 	{}
-	virtual void ProcessKey(int key, bool isDown)
-	{}
+	virtual void ProcessKey(int key, bool isDown);
 #if _WIN32
 	// Win32 message hook
 	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 	{}
 #endif
+
+protected:
+	static int OnEvent(void *userdata, SDL_Event *evt);
+	void Display();
+	void HandleKeyDown(unsigned key, unsigned mod);
+
+	bool		RequestingQuit;
+	bool		IsHelpVisible;
 };
 
 void MoveCamera(float YawDelta, float PitchDelta, float DistDelta = 0, float PanX = 0, float PanY = 0);

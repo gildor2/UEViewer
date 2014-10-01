@@ -44,6 +44,10 @@
 #define NEW_SDL					1
 #endif
 
+#if SMART_RESIZE && !NEW_SDL
+#error "SMART_RESIZE requires NEW_SDL"
+#endif
+
 #if MAX_DEBUG
 
 static void CheckSDLError()
@@ -78,7 +82,6 @@ static int lightingMode = LIGHTING_SPECULAR;
 
 #endif // LIGHTING_MODES
 
-CApplication *GApp = NULL;	//!! there's only one application, is it correct?
 int GCurrentFrame = 1;
 int GContextFrame = 0;
 
@@ -109,7 +112,6 @@ inline void InvalidateContext()
 // State variables
 //-----------------------------------------------------------------------------
 
-static bool  isHelpVisible = false;
 static float frameTime;
 static unsigned lastFrameTime = 0;
 
@@ -1117,9 +1119,9 @@ static void DrawBackground()
 }
 
 //!! rename function!
-static void Display()
+void CApplication::Display()
 {
-	guard(Display);
+	guard(CApplication::Display);
 
 	GCurrentFrame++;
 
@@ -1178,7 +1180,7 @@ static void Display()
 #endif // LIGHTING_MODES
 
 	// draw scene
-	GApp->Draw3D(TimeDelta);
+	Draw3D(TimeDelta);
 
 	// restore draw state
 	BindDefaultMaterial(true);
@@ -1197,11 +1199,11 @@ static void Display()
 	// 2D drawings
 	Set2Dmode();
 
-	GApp->DrawTexts(isHelpVisible);
+	DrawTexts();
 	FlushTexts();
 
 	// swap buffers
-	GApp->BeforeSwap();
+	BeforeSwap();
 #if NEW_SDL
 	SDL_GL_SwapWindow(sdlWindow);
 #else
@@ -1217,10 +1219,10 @@ void DrawKeyHelp(const char *Key, const char *Help)
 	DrawTextLeft(S_YELLOW"%-"STR(KEY_HELP_TAB)"s "S_WHITE"%s", Key, Help);
 }
 
-void CApplication::DrawTexts(bool isHelpVisible)
+void CApplication::DrawTexts()
 {
 	// display help when needed
-	if (isHelpVisible)
+	if (IsHelpVisible)
 	{
 		DrawTextLeft(S_RED"Keyboard:\n~~~~~~~~~");
 		DrawKeyHelp("Esc",         "exit");
@@ -1236,9 +1238,7 @@ void CApplication::DrawTexts(bool isHelpVisible)
 }
 
 
-static bool RequestingQuit = false;
-
-static void OnKeyDown(unsigned key, unsigned mod)
+void CApplication::HandleKeyDown(unsigned key, unsigned mod)
 {
 	key = tolower(key);
 
@@ -1248,6 +1248,14 @@ static void OnKeyDown(unsigned key, unsigned mod)
 		key |= KEY_SHIFT;
 	else if (mod & KMOD_ALT)
 		key |= KEY_ALT;
+
+	ProcessKey(key, true);
+}
+
+void CApplication::ProcessKey(int key, bool isDown)
+{
+	if (!isDown)
+		return;
 
 	switch (key)
 	{
@@ -1260,7 +1268,7 @@ static void OnKeyDown(unsigned key, unsigned mod)
 		break;
 #endif
 	case 'h':
-		isHelpVisible = !isHelpVisible;
+		IsHelpVisible = !IsHelpVisible;
 		break;
 	case 'r':
 		ResetView();
@@ -1313,8 +1321,6 @@ static void OnKeyDown(unsigned key, unsigned mod)
 			break;
 		}
 		break;
-	default:
-		GApp->ProcessKey(key, true);
 	}
 }
 
@@ -1323,37 +1329,27 @@ static void OnKeyDown(unsigned key, unsigned mod)
 // Main function
 //-----------------------------------------------------------------------------
 
+CApplication::CApplication()
+:	IsHelpVisible(false)
+,	RequestingQuit(false)
+{}
+
+CApplication::~CApplication()
+{}
+
 #if SMART_RESIZE
 
-	#if NEW_SDL
-
-static int OnEvent(void *userdata, SDL_Event *evt)
+int CApplication::OnEvent(void *userdata, SDL_Event *evt)
 {
 	if (evt->type == SDL_WINDOWEVENT && evt->window.event == SDL_WINDOWEVENT_RESIZED)
 	{
-		ResizeWindow(evt->window.data1, evt->window.data2);
-		Display();
+		CApplication* app = (CApplication*)userdata;
+		::ResizeWindow(evt->window.data1, evt->window.data2);
+		app->Display();
 		return 0;	// drop this event (already handled)
 	}
 	return 1;		// add event to queue
 }
-
-	#else // NEW_SDL
-
-static int OnEvent(const SDL_Event *evt)
-{
-	// Solution is from this topic:
-	// http://www.gamedev.net/community/forums/topic.asp?topic_id=428022
-	if (evt->type == SDL_VIDEORESIZE)
-	{
-		ResizeWindow(evt->resize.w, evt->resize.h);
-		Display();
-		return 0;	// drop this event (already handled)
-	}
-	return 1;		// add event to queue
-}
-
-	#endif // NEW_SDL
 
 #endif // SMART_RESIZE
 
@@ -1389,8 +1385,6 @@ void CApplication::VisualizerLoop(const char *caption)
 {
 	guard(VisualizerLoop);
 
-	GApp = this;
-
 	Init(caption);
 	WindowCreated();
 	ClearTexts();
@@ -1409,11 +1403,7 @@ void CApplication::VisualizerLoop(const char *caption)
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 #endif
 #if SMART_RESIZE
-	#if NEW_SDL
-	SDL_SetEventFilter(&OnEvent, NULL);
-	#else
-	SDL_SetEventFilter(&OnEvent);
-	#endif
+	SDL_SetEventFilter(&OnEvent, this);
 #endif // SMART_RESIZE
 	if (viewDist == 0)
 		ResetView();			// may be initialized before VisualizerLoop call
@@ -1428,9 +1418,9 @@ void CApplication::VisualizerLoop(const char *caption)
 			{
 			case SDL_KEYDOWN:
 #if NEW_SDL
-				OnKeyDown(TranslateKey(evt.key.keysym.sym, evt.key.keysym.scancode), evt.key.keysym.mod);
+				HandleKeyDown(TranslateKey(evt.key.keysym.sym, evt.key.keysym.scancode), evt.key.keysym.mod);
 #else
-				OnKeyDown(evt.key.keysym.sym, evt.key.keysym.mod);
+				HandleKeyDown(evt.key.keysym.sym, evt.key.keysym.mod);
 #endif
 				break;
 			case SDL_KEYUP:

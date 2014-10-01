@@ -2,10 +2,6 @@
 #include "UnCore.h"
 
 
-//#define DEBUG_BULK			1
-//#define DEBUG_RAW_ARRAY		1
-
-
 int  GForceGame     = GAME_UNKNOWN;
 byte GForcePlatform = PLATFORM_UNKNOWN;
 

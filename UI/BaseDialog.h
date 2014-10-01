@@ -588,6 +588,11 @@ public:
 
 	UIMenuItem& Enable(bool enable);
 
+	HMENU GetMenuHandle();
+
+	// Update checkboxes and radio groups according to attached variables
+	void Update();
+
 	// Submenu methods
 	void Add(UIMenuItem* item);
 	FORCEINLINE void Add(UIMenuItem& item)
@@ -620,7 +625,7 @@ protected:
 
 	void Init(EType type, const char* label);
 	void FillMenuItems(HMENU parentMenu, int& nextId, int& position);
-	bool HandleCommand(UIMenu* owner, int id);
+	bool HandleCommand(int id);
 };
 
 class UIMenu : public UIMenuItem // note: we're not using virtual functions in menu classes now
@@ -632,11 +637,6 @@ public:
 
 	HMENU GetHandle();
 
-	FORCEINLINE bool HandleCommand(int id)
-	{
-		return UIMenuItem::HandleCommand(this, id);
-	}
-
 	FORCEINLINE void Attach()
 	{
 		ReferenceCount++;
@@ -645,6 +645,12 @@ public:
 	FORCEINLINE void Detach()
 	{
 		if (--ReferenceCount == 0) delete this;
+	}
+
+	// make HandleCommand public for UIMenu
+	FORCEINLINE bool HandleCommand(int id)
+	{
+		return UIMenuItem::HandleCommand(id);
 	}
 
 protected:

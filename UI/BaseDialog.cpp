@@ -1636,9 +1636,11 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 	unguard;
 }
 
-bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
+bool UIMenuItem::HandleCommand(int id)
 {
 	guard(UIMenuItem::HandleCommand);
+
+	HMENU hMenu = GetMenuHandle();
 
 	for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
 	{
@@ -1658,7 +1660,7 @@ bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
 					bool value = !*(bool*)item->pValue;
 					*(bool*)item->pValue = value;
 					// update menu
-					CheckMenuItem(owner->GetHandle(), item->Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
+					CheckMenuItem(hMenu, item->Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
 					// callbacks
 					if (item->Callback)
 						item->Callback(item);
@@ -1677,7 +1679,7 @@ bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
 		{
 		case MI_Submenu:
 			// recurse to children
-			if (item->HandleCommand(owner, id))
+			if (item->HandleCommand(id))
 				return true;
 			break;
 
@@ -1702,7 +1704,7 @@ bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
 					assert(button->Type == MI_RadioButton);
 					bool checked = (button == clickedButton);
 					if (button->iValue == oldValue || checked)
-						CheckMenuItem(owner->GetHandle(), button->Id, MF_BYCOMMAND | (checked ? MF_CHECKED : 0));
+						CheckMenuItem(hMenu, button->Id, MF_BYCOMMAND | (checked ? MF_CHECKED : 0));
 				}
 				// update value
 				*(int*)item->pValue = newValue;
@@ -1718,6 +1720,41 @@ bool UIMenuItem::HandleCommand(UIMenu* owner, int id)
 
 	// the command was not processed
 	return false;
+
+	unguard;
+}
+
+HMENU UIMenuItem::GetMenuHandle()
+{
+	UIMenuItem* item = this;
+	while (item->Parent)
+		item = item->Parent;
+	return static_cast<UIMenu*>(item)->GetHandle();
+}
+
+void UIMenuItem::Update()
+{
+	guard(UIMenuItem::Update);
+
+	HMENU hMenu = GetMenuHandle();
+
+	switch (Type)
+	{
+	case MI_Checkbox:
+		CheckMenuItem(hMenu, Id, MF_BYCOMMAND | (*(bool*)pValue ? MF_CHECKED : 0));
+		break;
+	case MI_RadioGroup:
+		for (UIMenuItem* button = FirstChild; button; button = button->NextChild)
+		{
+			bool checked = (button->iValue == *(int*)pValue);
+			CheckMenuItem(hMenu, button->Id, MF_BYCOMMAND | (checked ? MF_CHECKED : 0));
+		}
+		break;
+	case MI_Submenu:
+		for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
+			item->Update();
+		break;
+	}
 
 	unguard;
 }
@@ -2445,7 +2482,7 @@ bool UIBaseDialog::PumpMessageLoop()
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-	return (Wnd != 0);	//!! check correctness of result value
+	return (Wnd != 0);
 
 	unguard;
 }
@@ -2552,7 +2589,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return TRUE;
 	}
 
-	if (msg == WM_DESTROY)		//?? destroy local data here?
+	if (msg == WM_DESTROY)
 		return TRUE;
 
 	int cmd = -1;

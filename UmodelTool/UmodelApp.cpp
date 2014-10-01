@@ -459,45 +459,50 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 {
 	guard(CUmodelApp::ProcessKey);
 
+	CApplication::ProcessKey(key, isDown);
+
 	if (!isDown)
 	{
 		Viewer->ProcessKeyUp(key);
 		return;
 	}
 
-	if (key == SPEC_KEY(PAGEDOWN) || key == SPEC_KEY(PAGEUP))
+	switch (key)
 	{
+	case SPEC_KEY(PAGEDOWN):
+	case SPEC_KEY(PAGEUP):
 		FindObjectAndCreateVisualizer((key == SPEC_KEY(PAGEDOWN)) ? 1 : -1);
-		return;
-	}
-	if (key == ('s'|KEY_CTRL))
-	{
+		break;
+	case 's'|KEY_CTRL:
 		GDoScreenshot = 1;
-		return;
-	}
-	if (key == ('s'|KEY_ALT))
-	{
+		break;
+	case 's'|KEY_ALT:
 		GDoScreenshot = 2;
-		return;
-	}
+		break;
 #if HAS_UI
-	if (key == 'o')
-	{
+	case 'o':
 		ShowPackageUI();
-		return;
-	}
+		break;
 #endif // HAS_UI
+	}
+
 	Viewer->ProcessKey(key);
+
+#if HAS_MENU
+	// processing keys most likely would change some settings, should update menu
+	// in order to reflect these changes
+	MainMenu->Update();
+#endif
 
 	unguard;
 }
 
 
-void CUmodelApp::DrawTexts(bool helpVisible)
+void CUmodelApp::DrawTexts()
 {
 	guard(CUmodelApp::DrawTexts);
-	CApplication::DrawTexts(helpVisible);
-	if (helpVisible)
+	CApplication::DrawTexts();
+	if (IsHelpVisible)
 	{
 		DrawKeyHelp("PgUp/PgDn", "browse objects");
 #if HAS_UI
@@ -536,6 +541,12 @@ void CUmodelApp::WindowCreated()
 		[
 			NewMenuCheckbox("Include meshes", &ShowMeshes)
 			+ NewMenuCheckbox("Include materials", &ShowMaterials)
+			+ NewMenuSeparator()
+			+ NewMenuCheckbox("Show debug information\tCtrl+Q", &GShowDebugInfo)
+		]
+		+ NewSubmenu("Help")
+		[
+			NewMenuCheckbox("On-screen help\tH", &IsHelpVisible)
 		]
 	];
 	// attach menu to the SDL window
