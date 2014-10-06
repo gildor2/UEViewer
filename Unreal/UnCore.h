@@ -426,6 +426,18 @@ public:
 		return 0;
 	}
 
+	virtual bool IsOpen() const
+	{
+		return true;
+	}
+	virtual bool Open()
+	{
+		return true;
+	}
+	virtual void Close()
+	{
+	}
+
 	virtual FArchive& operator<<(FName &N)
 	{
 		return *this;
@@ -558,14 +570,8 @@ public:
 
 	virtual ~FFileArchive()
 	{
-		if (IsOpen()) Close();
+		Close();
 		appFree(const_cast<char*>(FullName));
-	}
-
-	FORCEINLINE bool IsOpen() const
-	{
-		// this function is useful only for FRO_NoOpenError mode
-		return (f != NULL);
 	}
 
 	virtual void Seek(int Pos)
@@ -605,9 +611,13 @@ public:
 		return size;
 	}
 
-	virtual bool Open() = 0;
+	// this function is useful only for FRO_NoOpenError mode
+	virtual bool IsOpen() const
+	{
+		return (f != NULL);
+	}
 
-	void Close()
+	virtual void Close()
 	{
 		if (IsOpen())
 		{
@@ -723,6 +733,7 @@ public:
 };
 
 
+// NOTE: this class should work well as a writer too!
 class FReaderWrapper : public FArchive
 {
 	DECLARE_ARCHIVE(FReaderWrapper, FArchive);
@@ -757,6 +768,18 @@ public:
 	virtual int GetStopper() const
 	{
 		return Reader->GetStopper() - ArPosOffset;
+	}
+	virtual bool IsOpen() const
+	{
+		return Reader->IsOpen();
+	}
+	virtual bool Open()
+	{
+		return Reader->Open();
+	}
+	virtual void Close()
+	{
+		Reader->Close();
 	}
 };
 
