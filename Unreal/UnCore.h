@@ -640,6 +640,7 @@ protected:
 		if (f) return true;			// success
 		if (!(Options & FRO_NoOpenError))
 			appError("Unable to open file %s", FullName);
+		ArPos = 0;
 		return false;
 		unguard;
 	}

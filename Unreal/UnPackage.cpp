@@ -1426,6 +1426,7 @@ public:
 		{
 			delete[] Buffer;
 			Buffer = NULL;
+			BufferStart = BufferEnd = BufferSize = 0;
 		}
 		CurrentChunk = NULL;
 	}
