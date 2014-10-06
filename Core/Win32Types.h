@@ -1,8 +1,13 @@
 #ifndef __WIN32_TYPES_H__
 #define __WIN32_TYPES_H__
 
+// This file contains all Windows type definitions which are used in project headers.
+// It allows to avoid doing #include <windows.h> in all source files, that header should
+// be included only when needed. If some cpp file has #include for both windows.h and this
+// file, windows.h should be included first, so definitions in this header will be simply
+// ignored. Otherwise type conflicts would appear.
+
 #if _WIN32
-// avoid include of windows.h
 #	ifndef APIENTRY
 #		define APIENTRY __stdcall
 #	endif

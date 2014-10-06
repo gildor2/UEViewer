@@ -185,7 +185,7 @@ public:												\
 	template<class T>								\
 	FORCEINLINE ThisClass& Set##VarName(util::Callback<T ()>& cb) \
 	{												\
-		VarName = (Callback_t&)cb; return *this;	\
+		VarName = (VarName##_t&)cb; return *this;	\
 	}												\
 protected:											\
 	VarName##_t		VarName;						\
@@ -895,11 +895,17 @@ public:
 
 	// Pumping a message loop, return 'false' when dialog was closed.
 	// Should call this function for non-modal dialogs.
+	// To popup a non-modal dialog and allow it working, the following construction
+	// should be used:
+	//	SomeDialogClass dialog;
+	//	dialog.ShowDialog("Title", WIDTH, HEIGHT)
+	//	while (dialog.PumpMessageLoop()) {} -- processing messages while window is visible
+	//	-- at this point dialog window will be closed
+	// If another message loop would be active, everything would work fine except window will
+	// not react on 'Escape' key.
 	bool PumpMessageLoop();
 
 	void CloseDialog(bool cancel = false);
-
-	//?? UIBaseDialog& AddOkCancelButtons(); - should be done in InitUI as last operation
 
 	static void SetMainWindow(HWND window);
 

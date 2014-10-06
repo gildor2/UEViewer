@@ -2437,7 +2437,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		);
 
 		assert(dialog);
-		// implement a message loop
+		// process all messages to allow window to appear on screen
 		PumpMessageLoop();
 		return true;
 	}
@@ -2456,16 +2456,18 @@ bool UIBaseDialog::PumpMessageLoop()
 	{
 		if (msg.message == WM_KEYDOWN && DoCloseOnEsc && msg.wParam == VK_ESCAPE)
 		{
-			// Win32 dialog boxes doesn't receive keyboard message. In order to handle 'escape' key,
-			// we should have own message loop. We have one for non-modal dialog boxes here. We don't have
-			// access to the message loop of modal dialog box. Note: we are comparing msg.hwnd with dialog's
-			// window, and also comparing msg.hwnd's parent with dialog too. No other check are performed
-			// because we have very simple hierarchy in our UI system: all children are parented by single
-			// dialog window.
+			// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
+			// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
+			// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
+			// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
+			// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
+			// checks are performed because we have very simple hierarchy in our UI system: all children are
+			// parented by single dialog window.
 			// If we'll need nore robust way of processing messages (for example, when we need to process
 			// keys for modal dialogs, or when message loop is processed by code which is not accessible for
 			// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
-			// (because key messages are sent to the focused window only, and not to its parent).
+			// (because key messages are sent to the focused window only, and not to its parent), but it looks
+			// more complicated.
 			if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
 				CloseDialog(true);
 		}

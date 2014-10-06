@@ -139,7 +139,7 @@ void *appMalloc(int size, int alignment)
 		*found = stack;
 	}
 	hdr->stack = found;
-#endif
+#endif // DEBUG_MEMORY
 
 	// statistics
 	GTotalAllocationSize += size;

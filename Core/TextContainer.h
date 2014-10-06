@@ -26,7 +26,9 @@ public:
 };
 
 
-template<class R, int BufferSize> class TTextContainer : public CTextContainer
+// Type 'R' should be derived from CTextRec.
+template<class R, int BufferSize>
+class TTextContainer : public CTextContainer
 {
 public:
 	inline TTextContainer()
@@ -37,7 +39,7 @@ public:
 	}
 	~TTextContainer()
 	{
-		delete textBuf;
+		delete[] textBuf;
 	}
 	inline R *Add(const char *text)
 	{
