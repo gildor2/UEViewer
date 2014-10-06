@@ -151,6 +151,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+06.10.2014
+- significantly reduced memory footprint of loaded package
+- closing package files when they're not needed; this allows umodel to perform batch export
+  on large number of packages (previously there was an error "unable to open file")
+
 30.09.2014
 - initial implementation of menu for the main window
 

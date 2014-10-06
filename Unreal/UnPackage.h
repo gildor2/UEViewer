@@ -8,6 +8,8 @@
 #	define PKG_LOG(...)
 #endif
 
+#define USE_COMPACT_PACKAGE_STRUCTS		1		// define if you want to drop/skip data which are not used in framework
+
 
 struct FGenerationInfo
 {
@@ -126,13 +128,15 @@ struct FObjectExport
 	UObject		*Object;					// not serialized, filled by object loader
 	unsigned	ObjectFlags;
 #if UNREAL3
+	unsigned	ExportFlags;				// EF_* flags
+	#if !USE_COMPACT_PACKAGE_STRUCTS
 	unsigned	ObjectFlags2;				// really, 'int64 ObjectFlags'
 	int			Archetype;
-	unsigned	ExportFlags;				// EF_* flags
 //	TMap<FName, int> ComponentMap;			-- this field was removed from UE3, so serialize it as a temporaty variable when needed
 	TArray<int>	NetObjectCount;				// generations
 	FGuid		Guid;
 	int			U3unk6C;					//!! PackageFlags
+	#endif // USE_COMPACT_PACKAGE_STRUCTS
 #endif // UNREAL3
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E);
@@ -193,14 +197,13 @@ public:
 
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
 
-	void SetupReader(int ExportIndex)
-	{
-		guard(UnPackage::SetupReader);
-		const FObjectExport &Exp = GetExport(ExportIndex);
-		SetStopper(Exp.SerialOffset + Exp.SerialSize);
-		Seek(Exp.SerialOffset);
-		unguard;
-	}
+	// Prepare for serialization of particular object. Will open a reader if it was
+	// closed before.
+	void SetupReader(int ExportIndex);
+	// Close reader when not needed anymore. Could be reopened again with SetupReader().
+	void CloseReader();
+
+	static void CloseAllReaders();
 
 	const char* GetName(int index)
 	{

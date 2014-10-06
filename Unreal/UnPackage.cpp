@@ -689,6 +689,18 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 {
 	guard(SerializeObjectExport3);
 
+#if USE_COMPACT_PACKAGE_STRUCTS
+	// locally declare FObjectImport data which are stripped
+	unsigned	TMP_ObjectFlags2;
+	int			TMP_Archetype;
+	TArray<int>	TMP_NetObjectCount;
+	FGuid		TMP_Guid;
+	int			TMP_U3unk6C;
+	#define LOC(name) TMP_##name
+#else
+	#define LOC(name) E.name
+#endif // USE_COMPACT_PACKAGE_STRUCTS
+
 #if AA3
 	int AA3Obfuscator = 0;
 	if (Ar.Game == GAME_AA3)
@@ -706,20 +718,20 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 		// Ar.MidwayVer >= 22; when < 22 => standard version w/o ObjectFlags
 		int tmp1, tmp2, tmp3;
 		Ar << tmp1;	// 0 or 1
-		Ar << E.ObjectName << E.PackageIndex << E.ClassIndex << E.SuperIndex << E.Archetype;
-		Ar << E.ObjectFlags << E.ObjectFlags2 << E.SerialSize << E.SerialOffset;
+		Ar << E.ObjectName << E.PackageIndex << E.ClassIndex << E.SuperIndex << LOC(Archetype);
+		Ar << E.ObjectFlags << LOC(ObjectFlags2) << E.SerialSize << E.SerialOffset;
 		Ar << tmp2; // zero ?
 		Ar << tmp3; // -1 ?
 		Ar.Seek(Ar.Tell() + 0x14);	// skip raw version of ComponentMap
 		Ar << E.ExportFlags;
 		Ar.Seek(Ar.Tell() + 0xC); // skip raw version of NetObjectCount
-		Ar << E.Guid;
+		Ar << LOC(Guid);
 		return;
 	}
 #endif // WHEELMAN
 
 	Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
-	if (Ar.ArVer >= 220) Ar << E.Archetype;
+	if (Ar.ArVer >= 220) Ar << LOC(Archetype);
 
 #if BATMAN
 	if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 89)
@@ -737,7 +749,7 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 #endif
 
 	Ar << E.ObjectFlags;
-	if (Ar.ArVer >= 195) Ar << E.ObjectFlags2;	// qword flags after version 195
+	if (Ar.ArVer >= 195) Ar << LOC(ObjectFlags2);	// qword flags after version 195
 	Ar << E.SerialSize;
 	if (E.SerialSize || Ar.ArVer >= 249)
 		Ar << E.SerialOffset;
@@ -782,7 +794,7 @@ ue3_export_flags:
 	if (Ar.Game == GAME_MK && Ar.ArVer >= 446)
 	{
 		// removed generations (NetObjectCount)
-		Ar << E.Guid;
+		Ar << LOC(Guid);
 		return;
 	}
 #endif // MKVSDC
@@ -795,16 +807,16 @@ ue3_export_flags:
 	}
 #endif // BIOSHOCK3
 
-	if (Ar.ArVer >= 322) Ar << E.NetObjectCount << E.Guid;
+	if (Ar.ArVer >= 322) Ar << LOC(NetObjectCount) << LOC(Guid);
 
 #if UNDERTOW
-	if (Ar.Game == GAME_Undertow && Ar.ArVer >= 431) Ar << E.U3unk6C;	// partially upgraded?
+	if (Ar.Game == GAME_Undertow && Ar.ArVer >= 431) Ar << LOC(U3unk6C);	// partially upgraded?
 #endif
 #if ARMYOF2
 	if (Ar.Game == GAME_ArmyOf2) return;
 #endif
 
-	if (Ar.ArVer >= 475) Ar << E.U3unk6C;
+	if (Ar.ArVer >= 475) Ar << LOC(U3unk6C);
 
 #if AA3
 	if (Ar.Game == GAME_AA3)
@@ -813,7 +825,7 @@ ue3_export_flags:
 		E.ClassIndex   ^= AA3Obfuscator;
 		E.SuperIndex   ^= AA3Obfuscator;
 		E.PackageIndex ^= AA3Obfuscator;
-		E.Archetype    ^= AA3Obfuscator;
+		LOC(Archetype) ^= AA3Obfuscator;
 		E.SerialSize   ^= AA3Obfuscator;
 		E.SerialOffset ^= AA3Obfuscator;
 	}
@@ -826,6 +838,7 @@ ue3_export_flags:
 	}
 #endif // THIEF4
 
+#undef LOC
 	unguard;
 }
 
@@ -838,8 +851,19 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 {
 	guard(SerializeObjectExport4);
 
+#if USE_COMPACT_PACKAGE_STRUCTS
+	// locally declare FObjectImport data which are stripped
+	int			TMP_Archetype;
+	TArray<int>	TMP_NetObjectCount;
+	FGuid		TMP_Guid;
+	int			TMP_U3unk6C;
+	#define LOC(name) TMP_##name
+#else
+	#define LOC(name) E.name
+#endif // USE_COMPACT_PACKAGE_STRUCTS
+
 	Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
-	if (Ar.ArVer < VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES) Ar << E.Archetype;
+	if (Ar.ArVer < VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES) Ar << LOC(Archetype);
 
 	Ar << E.ObjectFlags;
 
@@ -852,9 +876,11 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 		E.ExportFlags = bForcedExport ? EF_ForcedExport : 0;	//?? change this
 	}
 
-	if (Ar.ArVer < VER_UE4_REMOVE_NET_INDEX) Ar << E.NetObjectCount;
+	if (Ar.ArVer < VER_UE4_REMOVE_NET_INDEX) Ar << LOC(NetObjectCount);
 
-	Ar << E.Guid << E.U3unk6C;
+	Ar << LOC(Guid) << LOC(U3unk6C);	//!! use name for U3unk6C
+
+#undef LOC
 
 	unguard;
 }
@@ -1204,7 +1230,7 @@ public:
 
 	~FUE3ArchiveReader()
 	{
-		if (Buffer) delete Buffer;
+		if (Buffer) delete[] Buffer;
 		if (Reader) delete Reader;
 	}
 
@@ -1253,7 +1279,7 @@ public:
 		// DC Universe has uncompressed package headers but compressed remaining package part
 		if (Pos < Chunk->UncompressedOffset)
 		{
-			if (Buffer) delete Buffer;
+			if (Buffer) delete[] Buffer;
 			int Size = Chunk->CompressedOffset;
 			Buffer      = new byte[Size];
 			BufferSize  = Size;
@@ -1324,7 +1350,7 @@ public:
 		// prepare buffer for decompression
 		if (Block->UncompressedSize > BufferSize)
 		{
-			if (Buffer) delete Buffer;
+			if (Buffer) delete[] Buffer;
 			Buffer = new byte[Block->UncompressedSize];
 			BufferSize = Block->UncompressedSize;
 		}
@@ -1343,7 +1369,7 @@ public:
 		BufferStart = ChunkPosition;
 		BufferEnd   = ChunkPosition + Block->UncompressedSize;
 		// cleanup
-		delete CompressedBlock;
+		delete[] CompressedBlock;
 		unguard;
 	}
 
@@ -1383,6 +1409,25 @@ public:
 	virtual int  GetStopper() const
 	{
 		return Stopper;
+	}
+	virtual bool IsOpen() const
+	{
+		return Reader->IsOpen();
+	}
+	virtual bool Open()
+	{
+		return Reader->Open();
+	}
+
+	virtual void Close()
+	{
+		Reader->Close();
+		if (Buffer)
+		{
+			delete[] Buffer;
+			Buffer = NULL;
+		}
+		CurrentChunk = NULL;
 	}
 };
 
@@ -1838,7 +1883,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 #endif
 	unguard;
 
-#if UNREAL3
+#if UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS			// we can serialize dependencies when needed
 	if (Game == GAME_DCUniverse || Game == GAME_Bioshock3) goto no_depends;		// has non-standard checks
 	if (Summary.FileVersion >= 415 && Summary.DependsOffset)	// some games are patrially upgraded: ArVer >= 415, but no depends table
 	{
@@ -1858,7 +1903,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 		unguard;
 	}
 no_depends: ;
-#endif // UNREAL3
+#endif // UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS
 
 	// add self to package map
 	char buf[256];
@@ -1870,6 +1915,9 @@ no_depends: ;
 	if (s2) *s2 = 0;
 	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
 	PackageMap.AddItem(this);
+
+	// Release package file handle
+	CloseReader();
 
 #if PROFILE_PACKAGE_TABLES
 	appPrintProfiler();
@@ -1895,6 +1943,61 @@ UnPackage::~UnPackage()
 	assert(i != INDEX_NONE);
 	PackageMap.Remove(i);
 	unguard;
+}
+
+#if 0
+// Commented, not used
+// Find file archive inside a package loader
+static FFileArchive* FindFileArchive(FArchive* Ar)
+{
+#if UNREAL3
+	FUE3ArchiveReader* ArUE3 = Ar->CastTo<FUE3ArchiveReader>();
+	if (ArUE3) Ar = ArUE3->Reader;
+#endif
+
+	FReaderWrapper* ArWrap = Ar->CastTo<FReaderWrapper>();
+	if (ArWrap) Ar = ArWrap->Reader;
+
+	return Ar->CastTo<FFileArchive>();
+}
+#endif
+
+void UnPackage::SetupReader(int ExportIndex)
+{
+	guard(UnPackage::SetupReader);
+	// open loader if it is closed
+#if 0
+	FFileArchive* File = FindFileArchive(Loader);
+	assert(File);
+	if (!File->IsOpen()) File->Open();
+#else
+	if (!Loader->IsOpen()) Loader->Open();
+#endif
+	// setup for object
+	const FObjectExport &Exp = GetExport(ExportIndex);
+	SetStopper(Exp.SerialOffset + Exp.SerialSize);
+	Seek(Exp.SerialOffset);
+	unguard;
+}
+
+void UnPackage::CloseReader()
+{
+#if 0
+	FFileArchive* File = FindFileArchive(Loader);
+	assert(File);
+	if (File->IsOpen()) File->Close();
+#else
+	Loader->Close();
+#endif
+}
+
+void UnPackage::CloseAllReaders()
+{
+	for (int i = 0; i < PackageMap.Num(); i++)
+	{
+		UnPackage* p = PackageMap[i];
+		p->CloseReader();
+	}
 }
 
 

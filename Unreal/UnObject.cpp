@@ -155,6 +155,9 @@ void UObject::EndLoad()
 	appSetNotifyHeader(NULL);
 	assert(GObjBeginLoadCount == 0);
 
+	// close all opened file handles
+	UnPackage::CloseAllReaders();
+
 	unguard;
 }
 
