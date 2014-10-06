@@ -517,6 +517,16 @@ void CUmodelApp::DrawTexts()
 	unguard;
 }
 
+#if MAX_DEBUG
+
+static void DumpMemory()
+{
+	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appDumpMemoryAllocations();
+}
+
+#endif // MAX_DEBUG
+
 void CUmodelApp::WindowCreated()
 {
 #if HAS_UI
@@ -545,6 +555,13 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuSeparator()
 			+ NewMenuCheckbox("Show debug information\tCtrl+Q", &GShowDebugInfo)
 		]
+#if MAX_DEBUG
+		+ NewSubmenu("Debug")
+		[
+			NewMenuItem("Dump memory")
+			.SetCallback(BIND_FREE_CB(&DumpMemory))
+		]
+#endif
 		+ NewSubmenu("Help")
 		[
 			NewMenuCheckbox("On-screen help\tH", &IsHelpVisible)
