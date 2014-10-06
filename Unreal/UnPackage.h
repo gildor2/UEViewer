@@ -168,7 +168,7 @@ struct FObjectDepends
 // In Unreal Engine class with similar functionality named "ULinkerLoad"
 class UnPackage : public FArchive
 {
-	DECLARE_ARCHIVE(UnPackage);
+	DECLARE_ARCHIVE(UnPackage, FArchive);
 public:
 	char					Filename[256];			// full name with path and extension
 	char					Name[64];				// short name

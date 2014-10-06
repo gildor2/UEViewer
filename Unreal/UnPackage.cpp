@@ -932,7 +932,7 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 
 class FFileReaderLineage : public FReaderWrapper
 {
-	DECLARE_ARCHIVE(FFileReaderLineage);
+	DECLARE_ARCHIVE(FFileReaderLineage, FReaderWrapper);
 public:
 	int			ArPosOffset;
 	byte		XorKey;
@@ -969,7 +969,7 @@ public:
 
 class FFileReaderBattleTerr : public FReaderWrapper
 {
-	DECLARE_ARCHIVE(FFileReaderBattleTerr);
+	DECLARE_ARCHIVE(FFileReaderBattleTerr, FReaderWrapper);
 public:
 	FFileReaderBattleTerr(FArchive *File)
 	:	FReaderWrapper(File)
@@ -1007,7 +1007,7 @@ public:
 
 class FFileReaderAA2 : public FReaderWrapper
 {
-	DECLARE_ARCHIVE(FFileReaderAA2);
+	DECLARE_ARCHIVE(FFileReaderAA2, FReaderWrapper);
 public:
 	FFileReaderAA2(FArchive *File)
 	:	FReaderWrapper(File)
@@ -1056,7 +1056,7 @@ public:
 
 class FFileReaderBnS : public FReaderWrapper
 {
-	DECLARE_ARCHIVE(FFileReaderBnS);
+	DECLARE_ARCHIVE(FFileReaderBnS, FReaderWrapper);
 public:
 	FFileReaderBnS(FArchive *File)
 	:	FReaderWrapper(File)
@@ -1114,7 +1114,7 @@ static void PatchBnSExports(FObjectExport *Exp, const FPackageFileSummary &Summa
 
 class FFileReaderNurien : public FReaderWrapper
 {
-	DECLARE_ARCHIVE(FFileReaderNurien);
+	DECLARE_ARCHIVE(FFileReaderNurien, FReaderWrapper);
 public:
 	int			Threshold;
 
@@ -1161,7 +1161,7 @@ public:
 
 class FUE3ArchiveReader : public FArchive
 {
-	DECLARE_ARCHIVE(FUE3ArchiveReader);
+	DECLARE_ARCHIVE(FUE3ArchiveReader, FArchive);
 public:
 	FArchive				*Reader;
 

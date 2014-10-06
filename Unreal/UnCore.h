@@ -447,24 +447,35 @@ public:
 		return StaticGetName();
 	}
 
+	virtual bool IsA(const char* type)
+	{
+		return !strcmp(type, "FArchive");
+	}
+
 	template<class T> T* CastTo()
 	{
-		if (!strcmp(GetName(), T::StaticGetName()))
-			return (T*)this;
+		if (IsA(T::StaticGetName()))
+			return static_cast<T*>(this);
 		else
 			return NULL;
 	}
 };
 
-#define DECLARE_ARCHIVE(Name)			\
+#define DECLARE_ARCHIVE(Class,Base)		\
+	typedef Class	ThisClass;			\
+	typedef Base	Super;				\
 public:									\
 	static const char* StaticGetName()	\
 	{									\
-		return #Name;					\
+		return #Class;					\
 	}									\
 	virtual const char* GetName() const	\
 	{									\
 		return StaticGetName();			\
+	}									\
+	virtual bool IsA(const char* type)	\
+	{									\
+		return !strcmp(type, StaticGetName()) || Super::IsA(type); \
 	}									\
 private:
 
@@ -530,25 +541,28 @@ enum EFileReaderOptions
 
 class FFileArchive : public FArchive
 {
-	DECLARE_ARCHIVE(FFileArchive);
+	DECLARE_ARCHIVE(FFileArchive, FArchive);
 public:
 	FFileArchive(const char *Filename, unsigned InOptions)
 	{
 		ArPos   = 0;
 		Options = InOptions;
 
-		const char *s = strrchr(Filename, '/');
-		if (!s)     s = strrchr(Filename, '\\');
-		if (s) s++; else s = Filename;
-		appStrncpyz(ShortName, s, ARRAY_COUNT(ShortName));
+		// process the filename
+		FullName = appStrdup(Filename);
+		const char *s = strrchr(FullName, '/');
+		if (!s)     s = strrchr(FullName, '\\');
+		if (s) s++; else s = FullName;
+		ShortName = s;
 	}
 
 	virtual ~FFileArchive()
 	{
-		if (f) fclose(f);
+		if (IsOpen()) Close();
+		appFree(const_cast<char*>(FullName));
 	}
 
-	bool IsOpen() const
+	FORCEINLINE bool IsOpen() const
 	{
 		// this function is useful only for FRO_NoOpenError mode
 		return (f != NULL);
@@ -591,20 +605,31 @@ public:
 		return size;
 	}
 
+	virtual bool Open() = 0;
+
+	void Close()
+	{
+		if (IsOpen())
+		{
+			fclose(f);
+			f = NULL;
+		}
+	}
+
 protected:
 	FILE		*f;
 	unsigned	Options;
-	char		ShortName[128];
+	const char	*FullName;		// allocared with appStrdup
+	const char	*ShortName;		// points to FullName[N]
 
-	virtual bool Open(const char *Filename) = 0;
-
-	bool OpenFile(const char *Filename, const char *Mode)
+	bool OpenFile(const char *Mode)
 	{
-		guard(FFileArchive::Open);
-		f = fopen(Filename, Mode);
+		guard(FFileArchive::OpenFile);
+		assert(!IsOpen());
+		f = fopen(FullName, Mode);
 		if (f) return true;			// success
 		if (!(Options & FRO_NoOpenError))
-			appError("Unable to open file %s", Filename);
+			appError("Unable to open file %s", FullName);
 		return false;
 		unguard;
 	}
@@ -625,14 +650,14 @@ inline bool appFileExists(const char* filename)
 
 class FFileReader : public FFileArchive
 {
-	DECLARE_ARCHIVE(FFileReader);
+	DECLARE_ARCHIVE(FFileReader, FFileArchive);
 public:
 	FFileReader(const char *Filename, unsigned InOptions = 0)
 	:	FFileArchive(Filename, Options)
 	{
 		guard(FFileReader::FFileReader);
 		IsLoading = true;
-		Open(Filename);
+		Open();
 		unguardf("%s", Filename);
 	}
 
@@ -655,23 +680,23 @@ public:
 	}
 
 protected:
-	virtual bool Open(const char *Filename)
+	virtual bool Open()
 	{
-		return OpenFile(Filename, "rb");
+		return OpenFile("rb");
 	}
 };
 
 
 class FFileWriter : public FFileArchive
 {
-	DECLARE_ARCHIVE(FFileWriter);
+	DECLARE_ARCHIVE(FFileWriter, FFileArchive);
 public:
 	FFileWriter(const char *Filename, unsigned Options = 0)
 	:	FFileArchive(Filename, Options)
 	{
 		guard(FFileWriter::FFileWriter);
 		IsLoading = false;
-		Open(Filename);
+		Open();
 		unguardf("%s", Filename);
 	}
 
@@ -691,16 +716,16 @@ public:
 		unguardf("File=%s", ShortName);
 	}
 
-	virtual bool Open(const char *Filename)
+	virtual bool Open()
 	{
-		return OpenFile(Filename, "wb");
+		return OpenFile("wb");
 	}
 };
 
 
 class FReaderWrapper : public FArchive
 {
-	DECLARE_ARCHIVE(FReaderWrapper);
+	DECLARE_ARCHIVE(FReaderWrapper, FArchive);
 public:
 	FArchive	*Reader;
 	int			ArPosOffset;
@@ -738,7 +763,7 @@ public:
 
 class FMemReader : public FArchive
 {
-	DECLARE_ARCHIVE(FMemReader);
+	DECLARE_ARCHIVE(FMemReader, FArchive);
 public:
 	FMemReader(const void *data, int size)
 	:	DataPtr((const byte*)data)
