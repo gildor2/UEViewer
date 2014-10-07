@@ -103,6 +103,9 @@ protected:
 	//!! instead (that's for resizing capabilities)
 	HWND Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
+	// Unicode version of Window()
+	HWND Window(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
+		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
 
 	virtual void Create(UIBaseDialog* dialog) = 0;
 	virtual void UpdateSize(UIBaseDialog* dialog)
@@ -261,6 +264,21 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog);
 	virtual void Create(UIBaseDialog* dialog);
+};
+
+
+class UIHyperLink : public UILabel
+{
+	DECLARE_UI_CLASS(UIHyperLink, UILabel);
+public:
+	UIHyperLink(const char* text, const char* link, ETextAlign align = TA_Left);
+	UIHyperLink& SetAutoSize() { return (ThisClass&)Super::SetAutoSize(); }
+
+protected:
+	FString		Link;
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 };
 
 

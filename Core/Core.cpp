@@ -240,6 +240,20 @@ int appSprintf(char *dest, int size, const char *fmt, ...)
 }
 
 
+// Unicode appSprintf
+int appSprintf(wchar_t *dest, int size, const wchar_t *fmt, ...)
+{
+	va_list	argptr;
+	va_start(argptr, fmt);
+	int len = vsnwprintf(dest, size, fmt, argptr);
+	va_end(argptr);
+	if (len < 0 || len >= size - 1)
+		appPrintf("appSprintf: overflow of size %d (fmt=%S)\n", size, fmt);
+
+	return len;
+}
+
+
 void appStrncpyz(char *dst, const char *src, int count)
 {
 	if (count <= 0) return;	// zero-length string

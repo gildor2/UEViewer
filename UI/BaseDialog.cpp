@@ -2,6 +2,7 @@
 #define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
 #include <windows.h>
 #include <CommCtrl.h>
+#include <ShellAPI.h>				// for ShellExecute
 #endif
 
 #include "BaseDialog.h"
@@ -85,6 +86,7 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "shell32.lib")	// for ShellExecute
 
 static HINSTANCE hInstance;
 
@@ -204,6 +206,31 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 	if (Visible) style |= WS_VISIBLE;
 	HWND wnd = CreateWindowEx(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
 		dialogWnd, (HMENU)id, hInstance, NULL);
+#if MAX_DEBUG
+	if (!wnd) appError("CreateWindow failed, GetLastError returned %d\n", GetLastError());
+#endif
+	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
+
+	return wnd;
+}
+
+HWND UIElement::Window(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
+	int id, int x, int y, int w, int h)
+{
+	if (x == -1) x = X;
+	if (y == -1) y = Y;
+	if (w == -1) w = Width;
+	if (h == -1) h = Height;
+	if (id == -1) id = Id;
+
+	HWND dialogWnd = dialog->GetWnd();
+
+	if (Visible) style |= WS_VISIBLE;
+	HWND wnd = CreateWindowExW(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
+		dialogWnd, (HMENU)id, hInstance, NULL);
+#if MAX_DEBUG
+	if (!wnd) appError("CreateWindow failed, GetLastError returned %d\n", GetLastError());
+#endif
 	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
 
 	return wnd;
@@ -309,6 +336,54 @@ void UILabel::Create(UIBaseDialog* dialog)
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align), 0, dialog);
 	UpdateEnabled();
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIHyperLink
+-----------------------------------------------------------------------------*/
+
+UIHyperLink::UIHyperLink(const char* text, const char* link, ETextAlign align)
+:	UILabel(text, align)
+,	Link(link)
+{
+}
+
+void UIHyperLink::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Id = dialog->GenerateDialogId();
+
+#if 0
+	// works without this code
+	INITCOMMONCONTROLSEX iccex;
+	iccex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	iccex.dwICC = ICC_LINK_CLASS;
+	InitCommonControlsEx(&iccex);
+#endif
+
+#if 0
+	// Unicode version
+	wchar_t buffer[MAX_TITLE_LEN];
+	appSprintf(ARRAY_ARG(buffer), L"<a href=\"%S\">%S</a>", *Link, *Label);
+	Wnd = Window(WC_LINK, buffer, ConvertTextAlign(Align), 0, dialog);
+#else
+	// ANSI version works too
+	char buffer[MAX_TITLE_LEN];
+	appSprintf(ARRAY_ARG(buffer), "<a href=\"%s\">%s</a>", *Link, *Label);
+	Wnd = Window("SysLink", buffer, ConvertTextAlign(Align), 0, dialog);
+#endif
+
+	UpdateEnabled();
+}
+
+bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == NM_CLICK || cmd == NM_RETURN)
+	{
+		ShellExecute(NULL, "open", *Link, NULL, NULL, SW_SHOW);
+	}
+	return true;
 }
 
 

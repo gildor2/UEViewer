@@ -8,7 +8,9 @@
 #	define PKG_LOG(...)
 #endif
 
+#ifndef USE_COMPACT_PACKAGE_STRUCTS
 #define USE_COMPACT_PACKAGE_STRUCTS		1		// define if you want to drop/skip data which are not used in framework
+#endif
 
 
 struct FGenerationInfo
@@ -303,17 +305,5 @@ public:
 private:
 	static TArray<UnPackage*> PackageMap;
 };
-
-
-// VC7 has strange bug with friend functions, declared in class
-// Here is a workaround
-#if _MSC_VER >= 1300 && _MSC_VER < 1400
-template<class T>
-FArchive& operator<<(UnPackage &Ar, T &V)
-{
-	return static_cast<FArchive&>(Ar) << V;
-}
-#endif
-
 
 #endif // __UNPACKAGE_H__

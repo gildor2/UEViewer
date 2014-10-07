@@ -2,6 +2,9 @@
 #undef DrawText
 
 #include "Core.h"
+
+#if RENDERING
+
 #include "TextContainer.h"
 #include "GlWindow.h"
 #include "CoreGL.h"
@@ -33,8 +36,6 @@
 // This bug appears in SDL 1.3 because it has no SDL_ResetKeyboard() call when application has lost the
 // focus (SDL 1.2 has such call!)
 #define FIX_STICKY_MOD_KEYS		1
-
-#if RENDERING
 
 #if _MSC_VER
 #pragma comment(lib, "opengl32.lib")

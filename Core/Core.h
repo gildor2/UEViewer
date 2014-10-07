@@ -95,6 +95,7 @@ template<>    struct CompileTimeError<true> {};
 
 #if _MSC_VER
 #	define vsnprintf			_vsnprintf
+#	define vsnwprintf			_vsnwprintf
 #	define FORCEINLINE			__forceinline
 #	define NORETURN				__declspec(noreturn)
 #	define GCC_PACK							// VC uses #pragma pack()
@@ -235,6 +236,7 @@ void appNotify(const char *fmt, ...);
 
 const char *va(const char *format, ...);
 int appSprintf(char *dest, int size, const char *fmt, ...);
+int appSprintf(wchar_t *dest, int size, const wchar_t *fmt, ...);
 char* appStrdup(const char* str);
 void appStrncpyz(char *dst, const char *src, int count);
 void appStrncpylwr(char *dst, const char *src, int count);

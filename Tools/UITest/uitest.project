@@ -14,6 +14,8 @@ sources(MAIN) = {
 	$R/Core/Core.cpp
 	$R/Core/CoreWin32.cpp
 	$R/Core/Memory.cpp
+	# include manifest - required for UIHyperLink
+#	$R/UmodelTool/umodel.rc
 }
 
 target(executable, $PRJ, MAIN, MAIN)
