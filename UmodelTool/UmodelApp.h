@@ -49,13 +49,13 @@ public:
 	bool ShowStartupDialog(UmodelSettings& settings);
 	bool ShowPackageUI();
 	void SetPackageName(const char* name);
+	// menu callbacks
+	void ShowAboutDialog();
 #endif
 
 #if HAS_MENU
 	UIMenu*		MainMenu;
 	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
-	// menu callbacks
-	// ...
 #endif
 
 #if RENDERING

@@ -199,6 +199,7 @@ DEPENDS = \
 	UmodelTool/Build.h \
 	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
+	UmodelTool/Version.h \
 	Unreal/GameDatabase.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
@@ -300,12 +301,14 @@ DEPENDS = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	UI/BaseDialog.h \
+	UmodelTool/AboutDialog.h \
 	UmodelTool/Build.h \
 	UmodelTool/PackageDialog.h \
 	UmodelTool/ProgressDialog.h \
 	UmodelTool/StartupDialog.h \
 	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
+	UmodelTool/Version.h \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \

@@ -19,6 +19,7 @@
 #include "PackageDialog.h"
 #include "StartupDialog.h"
 #include "ProgressDialog.h"
+#include "AboutDialog.h"
 #endif
 
 
@@ -107,8 +108,6 @@ static HWND GetSDLWindowHandle(SDL_Window* window)
 // always return true.
 bool CUmodelApp::ShowPackageUI()
 {
-	UIBaseDialog::SetMainWindow(GetSDLWindowHandle(GetWindow()));
-
 	static bool firstDialogCancelled = true;
 
 	// When we're doing export, then switching back to GUI, then pressing "Esc",
@@ -260,6 +259,12 @@ bool CUmodelApp::ShowPackageUI()
 void CUmodelApp::SetPackageName(const char* name)
 {
 	GPackageDialog.SelectPackage(name);
+}
+
+void CUmodelApp::ShowAboutDialog()
+{
+	UIAboutDialog dialog;
+	dialog.Show();
 }
 
 #endif // HAS_UI
@@ -534,6 +539,7 @@ void CUmodelApp::WindowCreated()
 	// set window icon
 	//!! TODO: lookup for MAKEINTRESOURCE in all files, should use some constant or global variable for icon id (now '200')
 	SendMessage(wnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(200)));
+	UIBaseDialog::SetMainWindow(wnd);
 #endif // HAS_UI
 
 #if HAS_MENU
@@ -565,6 +571,16 @@ void CUmodelApp::WindowCreated()
 		+ NewSubmenu("Help")
 		[
 			NewMenuCheckbox("On-screen help\tH", &IsHelpVisible)
+			+ NewMenuHyperLink("Display README", "readme.txt")	//?? add directory here
+			+ NewMenuSeparator()
+			+ NewMenuHyperLink("UModel website", HOMEPAGE)
+			+ NewMenuHyperLink("UModel FAQ", "http://www.gildor.org/projects/umodel/faq")
+			+ NewMenuHyperLink("Compatibility information", "http://www.gildor.org/projects/umodel/compat")
+			+ NewMenuHyperLink("UModel forums", "http://www.gildor.org/smf/")
+			+ NewMenuHyperLink("Donate", "http://www.gildor.org/en/donate")
+			+ NewMenuSeparator()
+			+ NewMenuItem("About")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::ShowAboutDialog, this))
 		]
 	];
 	// attach menu to the SDL window

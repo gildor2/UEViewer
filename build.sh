@@ -1,5 +1,43 @@
 #!/bin/bash
 
+#-------------------------------------------------------------
+# Get revision number from Git
+
+revision=""
+version_file="UmodelTool/Version.h"
+if [ -d .git ]; then
+	git=`type -p git`							# equals to `which git`
+	if [ -z "$git" ]; then
+		if [ "$OSTYPE" == "msys" ]; then
+			# assume Windows, find local git distribution
+			progs="${PROGRAMFILES//\\//}"		# get from environment with slash replacement
+			progs="/${progs//:/}"				# for msys: convert "C:/Program Files" to "/C/Program Files"
+			if [ -d "$progs/Git" ]; then
+				PATH=$PATH:"$progs/Git/bin"
+			elif [ -d "$progs/SmartGitHg/git" ]; then
+				PATH=$PATH:"$progs/SmartGitHg/git/bin"
+			elif [ -d "$LOCALAPPDATA/Atlassian/SourceTree/git_local" ]; then
+				PATH=$PATH:"$LOCALAPPDATA/Atlassian/SourceTree/git_local"
+			fi
+			# find gi
+			git=`type -p git`
+		fi
+	fi
+	if [ "$git" ]; then
+		revision=`git rev-list --count HEAD`
+		revision=$((revision+1))				# increment revision, because we're advanced from recent git commit
+	fi
+fi
+
+# update tool version
+# read current revision
+[ -f "$version_file" ] && [ "$revision" ] && read last_revision < $version_file
+last_revision=${last_revision##* }		# cut "#define ..."
+# write back to a file if value differs or is file doesn't exist
+[ "$last_revision" != "$revision" ] && echo "#define GIT_REVISION $revision" > $version_file
+
+#-------------------------------------------------------------
+
 PLATFORM="vc-win32"
 #PLATFORM="mingw32"
 

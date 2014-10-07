@@ -248,6 +248,18 @@ protected:
 };
 
 
+//?? could extend to show box or vertical line
+class UIHorizontalLine : public UIElement
+{
+	DECLARE_UI_CLASS(UIHorizontalLine, UIElement);
+public:
+	UIHorizontalLine();
+
+protected:
+	virtual void Create(UIBaseDialog* dialog);
+};
+
+
 class UILabel : public UIElement
 {
 	DECLARE_UI_CLASS(UILabel, UIElement);
@@ -571,6 +583,7 @@ public:
 	enum EType
 	{
 		MI_Text,
+		MI_HyperLink,
 		MI_Checkbox,
 		MI_RadioButton,
 		MI_RadioGroup,		// container for radio buttons
@@ -583,6 +596,8 @@ public:
 	{
 		Init(MI_Text, text);
 	}
+	// Hyperlink
+	UIMenuItem(const char* text, const char* link);
 	// Checkbox
 	UIMenuItem(const char* text, bool checked);
 	UIMenuItem(const char* text, bool* checked);
@@ -626,6 +641,7 @@ public:
 
 protected:
 	FStaticString<32> Label;
+	const char*	Link;			// web page link
 	int			Id;
 
 	EType		Type;
@@ -680,6 +696,11 @@ protected:
 FORCEINLINE UIMenuItem& NewMenuItem(const char* label)
 {
 	return *new UIMenuItem(label);
+}
+
+FORCEINLINE UIMenuItem& NewMenuHyperLink(const char* label, const char* link)
+{
+	return *new UIMenuItem(label, link);
 }
 
 FORCEINLINE UIMenuItem& NewSubmenu(const char* label)

@@ -31,6 +31,7 @@
 #include "PackageUtils.h"
 
 #include "UmodelApp.h"
+#include "Version.h"
 
 #define APP_CAPTION					"UE Viewer"
 #define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
@@ -391,9 +392,9 @@ static void PrintUsage()
 static void PrintVersionInfo()
 {
 	appPrintf(
-			"UE viewer (UMODEL)\n"
-			"This version was built " __DATE__ "\n"
-			"(c)2007-2014 Konstantin Nosov (Gildor)\n"
+			"UE viewer (UModel)\n"
+			"Compiled " __DATE__ " (git " STR(GIT_REVISION) ")\n"
+			"Copyright (c) 2007-2014 Konstantin Nosov (Gildor). All rights reserved.\n"
 			HOMEPAGE "\n"
 	);
 }
@@ -986,7 +987,7 @@ int main(int argc, char **argv)
 	appDumpMemoryAllocations();
 #endif
 
-	unguard;
+	unguardf("umodel_version=%d", GIT_REVISION);
 
 #if DO_GUARD
 	} CATCH_CRASH {

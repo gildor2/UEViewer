@@ -5,6 +5,7 @@ bak/
 
 # Generated files
 Unreal/Shaders.h
+UmodelTool/Version.h
 
 # Ignore makefiles for tools
 Tools/PackageExtract/makefile-*

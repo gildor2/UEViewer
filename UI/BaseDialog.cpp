@@ -296,6 +296,22 @@ void UISpacer::Create(UIBaseDialog* dialog)
 
 
 /*-----------------------------------------------------------------------------
+	UIHorizontalLine
+-----------------------------------------------------------------------------*/
+
+UIHorizontalLine::UIHorizontalLine()
+{
+	Height = 2;
+}
+
+void UIHorizontalLine::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Wnd = Window(WC_STATIC, "", SS_ETCHEDHORZ, 0, dialog);
+}
+
+
+/*-----------------------------------------------------------------------------
 	UILabel
 -----------------------------------------------------------------------------*/
 
@@ -373,9 +389,13 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 	char buffer[MAX_TITLE_LEN];
 	appSprintf(ARRAY_ARG(buffer), "<a href=\"%s\">%s</a>", *Link, *Label);
 	Wnd = Window("SysLink", buffer, ConvertTextAlign(Align), 0, dialog);
-	// fallback to ordinary label if SysLink was not created for some reason
 	if (!Wnd)
+	{
+		// Fallback to ordinary label if SysLink was not created for some reason.
+		// Could also change text color:
+		// http://stackoverflow.com/questions/1525669/set-static-text-color-win32
 		Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align) | SS_NOTIFY, 0, dialog);
+	}
 #endif
 
 	UpdateEnabled();
@@ -1503,6 +1523,13 @@ void UITreeView::CreateItem(TreeViewItem& item)
 	UIMenu
 -----------------------------------------------------------------------------*/
 
+// Hyperlink
+UIMenuItem::UIMenuItem(const char* text, const char* link)
+{
+	Init(MI_HyperLink, text);
+	Link = link;
+}
+
 // Checkbox
 UIMenuItem::UIMenuItem(const char* text, bool checked)
 :	bValue(checked)
@@ -1547,6 +1574,7 @@ void UIMenuItem::Init(EType type, const char* label)
 {
 	Type = type;
 	Label = label ? label : "";
+	Link = NULL;
 	Id = 0;
 	Parent = NextChild = FirstChild = NULL;
 	Enabled = true;
@@ -1641,6 +1669,7 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 		switch (item->Type)
 		{
 		case MI_Text:
+		case MI_HyperLink:
 		case MI_Checkbox:
 		case MI_RadioButton:
 			{
@@ -1721,6 +1750,10 @@ bool UIMenuItem::HandleCommand(int id)
 			case MI_Text:
 				if (item->Callback)
 					item->Callback(item);
+				break;
+
+			case MI_HyperLink:
+				ShellExecute(NULL, "open", item->Link, NULL, NULL, SW_SHOW);
 				break;
 
 			case MI_Checkbox:
