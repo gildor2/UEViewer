@@ -312,6 +312,64 @@ void UIHorizontalLine::Create(UIBaseDialog* dialog)
 
 
 /*-----------------------------------------------------------------------------
+	UIBitmap
+-----------------------------------------------------------------------------*/
+
+// Check SS_REALSIZEIMAGE, SS_REALSIZECONTROL - may be useful.
+
+UIBitmap::UIBitmap()
+:	hImage(0)
+{
+	Width = Height = 0;		// use dimensions from resource
+}
+
+UIBitmap& UIBitmap::SetResourceIcon(int resId)
+{
+	IsIcon = true;
+	hImage = LoadImage(hInstance, MAKEINTRESOURCE(resId), IMAGE_ICON, Width, Height, LR_SHARED);
+#if DEBUG_WINDOWS_ERRORS
+	if (!hImage)
+		appPrintf("UIBitmap::SetResourceIcon: %d\n", GetLastError());
+#endif
+	// Note: can't get icon dimensione using GetObject() - this function would fail.
+	if ((!Width || !Height) && hImage)
+	{
+		Width = GetSystemMetrics(SM_CXICON);
+		Height = GetSystemMetrics(SM_CYICON);
+	}
+	return *this;
+}
+
+//!! WARNINGS:
+//!! - This code (IsIcon==false) is not tested!
+UIBitmap& UIBitmap::SetResourceBitmap(int resId)
+{
+	IsIcon = false;
+	hImage = LoadImage(hInstance, MAKEINTRESOURCE(resId), IMAGE_BITMAP, Width, Height, LR_SHARED);
+#if DEBUG_WINDOWS_ERRORS
+	if (!hImage)
+		appPrintf("UIBitmap::SetResourceBitmap: %d\n", GetLastError());
+#endif
+	if ((!Width || !Height) && hImage)
+	{
+		BITMAP bm;
+		memset(&bm, 0, sizeof(bm));
+		GetObject(hImage, sizeof(bm), &bm);
+		Width = bm.bmWidth;
+		Height = bm.bmHeight;
+	}
+	return *this;
+}
+
+void UIBitmap::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Wnd = Window(WC_STATIC, "", IsIcon ? SS_ICON : SS_BITMAP, 0, dialog);
+	if (Wnd && hImage) SendMessage(Wnd, STM_SETIMAGE, IsIcon ? IMAGE_ICON : IMAGE_BITMAP, (LPARAM)hImage);
+}
+
+
+/*-----------------------------------------------------------------------------
 	UILabel
 -----------------------------------------------------------------------------*/
 
@@ -2651,7 +2709,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		Wnd = hWnd;
 
 		// show dialog's icon; 200 is resource id (we're not using resource.h here)
-		SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(200)));
+		SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(200)));	//!! IDC_ICON
 
 		// compute client area width
 		RECT r;

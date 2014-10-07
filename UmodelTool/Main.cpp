@@ -392,7 +392,7 @@ static void PrintUsage()
 static void PrintVersionInfo()
 {
 	appPrintf(
-			"UE viewer (UModel)\n"
+			"UE Viewer (UModel)\n"
 			"Compiled " __DATE__ " (git " STR(GIT_REVISION) ")\n"
 			"Copyright (c) 2007-2014 Konstantin Nosov (Gildor). All rights reserved.\n"
 			HOMEPAGE "\n"

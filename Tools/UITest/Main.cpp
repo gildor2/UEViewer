@@ -8,7 +8,7 @@ public:
 		value1 = false;
 		value2 = true;
 		value3 = 0;
-		ShowModal("UI Test", 300, 200);
+		ShowModal("UI Test", 350, 200);
 		printf("v1=%d v2=%d v3=%d\n", value1, value2, value3);
 	}
 
@@ -40,10 +40,17 @@ public:
 
 		(*this)
 		[
-			NewControl(UIHyperLink, "Test link", "http://www.gildor.org/") +
 			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 			[
-				NewControl(UIGroup, "Menu control")
+				NewControl(UIGroup, GROUP_NO_BORDER)
+				[
+					NewControl(UIHyperLink, "Test link", "http://www.gildor.org/")
+					+ NewControl(UIBitmap)
+					.SetWidth(64)
+					.SetHeight(64)
+					.SetResourceIcon(200)
+				]
+				+ NewControl(UIGroup, "Menu control")
 				[
 					NewControl(UICheckbox, "Enable item #1", true)
 					.SetCallback(BIND_MEM_CB(&TestDialog::OnEnableItem1, this))

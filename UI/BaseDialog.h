@@ -63,6 +63,15 @@ public:
 	UIElement& SetMenu(UIMenu* menu);
 
 	//!! add SetFontHeight(int)
+	/*	Also support bold-italic. Update 'Height' when AutoSize is set.
+		Requires updates in MeasureTextSize()
+		Snippet:
+		    HFONT hFont = (HFONT)m_ProgList.SendMessage(WM_GETFONT);
+    		LOGFONT lf = {0};
+	    	GetObject(hFont, sizeof(LOGFONT), &lf);
+	    	lf.lfWeight = FW_BOLD;
+		    m_boldFont = CreateFontIndirect(&lf);
+	*/
 
 	static FORCEINLINE int EncodeWidth(float w)
 	{
@@ -256,6 +265,27 @@ public:
 	UIHorizontalLine();
 
 protected:
+	virtual void Create(UIBaseDialog* dialog);
+};
+
+
+class UIBitmap : public UIElement
+{
+	DECLARE_UI_CLASS(UIBitmap, UIElement);
+public:
+	UIBitmap();
+
+	//!! win32 version; check Linux
+	// If you want to specify custom resource size, call SetWidth/SetHeight for UIBitmap.
+	// Otherwise, image size will be placed into Width and Height fields.
+	// WARNING: SetResource... functions will ignore SetWidth/SetHeight AFTER this call.
+	UIBitmap& SetResourceIcon(int resId);
+	UIBitmap& SetResourceBitmap(int resId);
+
+protected:
+	HANDLE		hImage;
+	bool		IsIcon;
+
 	virtual void Create(UIBaseDialog* dialog);
 };
 

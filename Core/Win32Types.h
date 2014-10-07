@@ -30,6 +30,7 @@
 		typedef unsigned short	WORD;
 		typedef unsigned int	DWORD;
 		typedef unsigned int	UINT;
+		typedef void*			HANDLE;
 		typedef void*			HWND;
 		typedef void*			HMENU;
 		typedef size_t			WPARAM;
