@@ -50,6 +50,8 @@
 #define DBG_LAYOUT(...)
 #endif
 
+//#define DEBUG_WINDOWS_ERRORS		MAX_DEBUG
+
 //#define DEBUG_MULTILIST_SEL			1
 #define USE_EXPLORER_STYLE			1
 
@@ -206,8 +208,8 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 	if (Visible) style |= WS_VISIBLE;
 	HWND wnd = CreateWindowEx(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
 		dialogWnd, (HMENU)id, hInstance, NULL);
-#if MAX_DEBUG
-	if (!wnd) appError("CreateWindow failed, GetLastError returned %d\n", GetLastError());
+#if DEBUG_WINDOWS_ERRORS
+	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
 #endif
 	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
 
@@ -228,8 +230,8 @@ HWND UIElement::Window(const wchar_t* className, const wchar_t* text, DWORD styl
 	if (Visible) style |= WS_VISIBLE;
 	HWND wnd = CreateWindowExW(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
 		dialogWnd, (HMENU)id, hInstance, NULL);
-#if MAX_DEBUG
-	if (!wnd) appError("CreateWindow failed, GetLastError returned %d\n", GetLastError());
+#if DEBUG_WINDOWS_ERRORS
+	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
 #endif
 	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
 
@@ -346,8 +348,7 @@ void UILabel::Create(UIBaseDialog* dialog)
 UIHyperLink::UIHyperLink(const char* text, const char* link, ETextAlign align)
 :	UILabel(text, align)
 ,	Link(link)
-{
-}
+{}
 
 void UIHyperLink::Create(UIBaseDialog* dialog)
 {
@@ -363,7 +364,7 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 #endif
 
 #if 0
-	// Unicode version
+	// Unicode version (this control, as mentioned in SysLink documentaion, in Unicode-only)
 	wchar_t buffer[MAX_TITLE_LEN];
 	appSprintf(ARRAY_ARG(buffer), L"<a href=\"%S\">%S</a>", *Link, *Label);
 	Wnd = Window(WC_LINK, buffer, ConvertTextAlign(Align), 0, dialog);
@@ -372,6 +373,9 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 	char buffer[MAX_TITLE_LEN];
 	appSprintf(ARRAY_ARG(buffer), "<a href=\"%s\">%s</a>", *Link, *Label);
 	Wnd = Window("SysLink", buffer, ConvertTextAlign(Align), 0, dialog);
+	// fallback to ordinary label if SysLink was not created for some reason
+	if (!Wnd)
+		Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align) | SS_NOTIFY, 0, dialog);
 #endif
 
 	UpdateEnabled();
@@ -379,7 +383,7 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 
 bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam)
 {
-	if (cmd == NM_CLICK || cmd == NM_RETURN)
+	if (cmd == NM_CLICK || cmd == NM_RETURN || cmd == STN_CLICKED) // STN_CLICKED for WC_STATIC fallback
 	{
 		ShellExecute(NULL, "open", *Link, NULL, NULL, SW_SHOW);
 	}

@@ -40,6 +40,7 @@ public:
 
 		(*this)
 		[
+			NewControl(UIHyperLink, "Test link", "http://www.gildor.org/") +
 			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 			[
 				NewControl(UIGroup, "Menu control")
