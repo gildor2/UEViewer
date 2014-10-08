@@ -31,24 +31,23 @@ almost all Visual Studio versions should be supported (perhaps except Visual C++
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
 of such tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You may everything required for
 build [here](https://github.com/gildor2/UModel/releases). This page contains **BuildTools.zip**. You should
-download it and extract into some directory. After that, put "GNU/bin" and "Tools" directories to system
-*PATH* variable. Also it is possible to create batch file which will temporarily tune *PATH* and then execute
-build script.
+download it and extract into some directory, let's say to *C:\BuildTools*. After that, put *C:\BuildTools*
+to system *PATH* variable. Also it is possible to create batch file which will temporarily tune *PATH* and then
+execute build script. Here's an example of such file:
 
-To launch build process, execute
+    set PATH=%PATH%;C:\BuildTools
+    bash build.sh
 
-```
-bash build.sh
-```
+To launch build process without a batch, execute
+
+    bash build.sh
 
 ### Linux
 
 This system has everything what is required for build. You'll only need to install SDL development package
 (and of course gcc). To build UModel, execute from console
 
-```
-./build.sh
-```
+    ./build.sh
 
 
 C runtime library for MSVC
@@ -96,6 +95,43 @@ Also you may change MSVCRT library path by changing **WDKCRT** variable in *comm
 Debugging in Visual Studio
 --------------------------
 
+UModel was released without Visual Studio solution. By the way it is still possible to debug it within IDE. You may
+build Debug version of UModel by uncommenting ```#define MAX_DEBUG 1``` in *UmodelTool/Build.h* and rebuilding the
+project. After that you'll get executable with optimizations disabled, and with some extra features. For example,
+if umodel.exe crashes, and it is started with *-debug* option, standard Windows window appears with offer to close
+program or debug it. You may choose "Debug with Visual Studio" there.
+
+If you want to debug umodel.exe in VIsual Studio without having a crash, you may load it either from IDE (```File |
+Open | Project/Solution```, then select *umodel.exe*), or you may type
+
+    devenv umodel.exe
+
+from console.
+
+It is recommended to use **Visual Studio 2013** because it has more advanced debugging features than previous studio
+versions. You may copy **Tools/umodel.natvis** file to *C:\Users\Your_user_folder\My Documents\Visual Studio 20NN\Visualizers*,
+and after that you'll be able to view *TArray* and *FString* structures during debug session.
+
 
 Directory structure
 -------------------
+
+**TODO**
+
+    /Core
+      /GL
+    /Docs
+    /Exporters
+    /Libs
+    /MeshInstance
+    /obj
+    /Tools
+      /CompatTable
+      /MaxActorXImport
+      /PackageExtract
+      /PackageUnpack
+    /UI
+    /UmodelTool
+    /Unreal
+      /Shaders
+    /Viewers
