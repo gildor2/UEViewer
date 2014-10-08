@@ -1,11 +1,8 @@
 #ifndef __ABOUT_DIALOG_H__
 #define __ABOUT_DIALOG_H__
 
-#include "Version.h"
+#include "MiscStrings.h"
 #include "res/resource.h"
-
-//!! move to common header
-#define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
 
 class UIAboutDialog : public UIBaseDialog
 {
@@ -36,16 +33,16 @@ public:
 					NewControl(UISpacer, 8)
 					+ NewControl(UILabel, "UE Viewer (UModel)")
 					+ NewControl(UISpacer)
-					+ NewControl(UILabel, "Compiled " __DATE__ " (git " STR(GIT_REVISION) ")")
+					+ NewControl(UILabel, GBuildString)
 					+ NewControl(UISpacer)
-					+ NewControl(UILabel, "Copyright © 2007-2014 Konstantin Nosov (Gildor). All rights reserved")
+					+ NewControl(UILabel, GCopyrightString)
 				]
 			]
 			// bottom part
 			+ NewControl(UISpacer, 8)
 			+ NewControl(UIHorizontalLine)
 			+ NewControl(UISpacer, 8)
-			+ NewControl(UIHyperLink, "Visit our website", HOMEPAGE)
+			+ NewControl(UIHyperLink, "Visit our website", GUmodelHomepage)
 			+ NewControl(UISpacer)
 			+ NewControl(UIHyperLink, "and support the developers", "http://www.gildor.org/en/donate")
 			+ NewControl(UISpacer)

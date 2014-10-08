@@ -79,6 +79,7 @@ MAIN_FILES = \
 	$(OUT_1)/BaseDialog.obj \
 	$(OUT_1)/FileControls.obj \
 	$(OUT_1)/Main.obj \
+	$(OUT_1)/MiscStrings.obj \
 	$(OUT_1)/PackageDialog.obj \
 	$(OUT_1)/PackageScanDialog.obj \
 	$(OUT_1)/ProgressDialog.obj \
@@ -194,6 +195,7 @@ DEPENDS = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	UmodelTool/Build.h \
+	UmodelTool/MiscStrings.h \
 	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
 	UmodelTool/Version.h \
@@ -300,12 +302,12 @@ DEPENDS = \
 	UI/BaseDialog.h \
 	UmodelTool/AboutDialog.h \
 	UmodelTool/Build.h \
+	UmodelTool/MiscStrings.h \
 	UmodelTool/PackageDialog.h \
 	UmodelTool/ProgressDialog.h \
 	UmodelTool/StartupDialog.h \
 	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
-	UmodelTool/Version.h \
 	UmodelTool/res/resource.h \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
@@ -1058,6 +1060,17 @@ DEPENDS = \
 
 $(OUT_1)/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/TextContainer.obj" Core/TextContainer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/Math3D.h \
+	UmodelTool/Build.h \
+	UmodelTool/MiscStrings.h \
+	UmodelTool/Version.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/MiscStrings.obj : UmodelTool/MiscStrings.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MiscStrings.obj" UmodelTool/MiscStrings.cpp
 
 DEPENDS = \
 	Core/Core.h \

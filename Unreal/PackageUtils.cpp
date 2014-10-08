@@ -108,26 +108,42 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 		}
 	}
 
-	//!! use CreatePackageLoader() here to allow scanning of packages
-	//!! with custom header (Lineage etc)
+	// read a few first bytes as integers
 	FArchive *Ar = appCreateFileReader(file);
+	unsigned int FileData[16];
+	Ar->Serialize(FileData, sizeof(FileData));
+	delete Ar;
 
-	unsigned Tag, FileVer;
-	*Ar << Tag;
+	unsigned Tag = FileData[0];
 	if (Tag == PACKAGE_FILE_TAG_REV)
 	{
-		Ar->ReverseBytes = true;
+		// big-endian package
+		appReverseBytes(&FileData, ARRAY_COUNT(FileData), sizeof(FileData[0]));
 	}
 	else if (Tag != PACKAGE_FILE_TAG)	//?? possibly Lineage2 file etc
 	{
-		delete Ar;
+		//!! use CreatePackageLoader() here to allow scanning of packages with custom header (Lineage etc);
+		//!! do that only when something "strange" within data noticed
 		return true;
 	}
-	*Ar << FileVer;
+	int Version = FileData[1];
 
 	FileInfo Info;
-	Info.Ver    = FileVer & 0xFFFF;
-	Info.LicVer = FileVer >> 16;
+
+#if UNREAL4
+	if ((Version & 0xFFFFF000) == 0xFFFFF000)
+	{
+		// next fields are: int VersionUE3, Version, LicenseeVersion
+		Info.Ver    = FileData[3];
+		Info.LicVer = FileData[4];
+	}
+	else
+#endif // UNREAL4
+	{
+		Info.Ver    = Version & 0xFFFF;
+		Info.LicVer = Version >> 16;
+	}
+
 	Info.Count  = 0;
 	strcpy(Info.FileName, file->RelativeName);
 //	printf("%s - %d/%d\n", file->RelativeName, Info.Ver, Info.LicVer);
@@ -156,7 +172,6 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 	}
 	*s = 0;
 
-	delete Ar;
 	return true;
 
 	unguardf("%s", file->RelativeName);

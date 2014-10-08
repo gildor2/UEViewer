@@ -573,16 +573,16 @@ void CUmodelApp::WindowCreated()
 #endif
 		+ NewSubmenu("Help")
 		[
-			NewMenuCheckbox("On-screen help\tH", &IsHelpVisible)
-			+ NewMenuHyperLink("Display README", "readme.txt")	//?? add directory here
+			NewMenuCheckbox("Keyboard shortcuts\tH", &IsHelpVisible)
+			+ NewMenuHyperLink("View readme", "readme.txt")	//?? add directory here
 			+ NewMenuSeparator()
-			+ NewMenuHyperLink("UModel website", HOMEPAGE)
+			+ NewMenuHyperLink("UModel website", GUmodelHomepage)
 			+ NewMenuHyperLink("UModel FAQ", "http://www.gildor.org/projects/umodel/faq")
 			+ NewMenuHyperLink("Compatibility information", "http://www.gildor.org/projects/umodel/compat")
 			+ NewMenuHyperLink("UModel forums", "http://www.gildor.org/smf/")
 			+ NewMenuHyperLink("Donate", "http://www.gildor.org/en/donate")
 			+ NewMenuSeparator()
-			+ NewMenuItem("About")
+			+ NewMenuItem("About UModel")
 			.SetCallback(BIND_MEM_CB(&CUmodelApp::ShowAboutDialog, this))
 		]
 	];

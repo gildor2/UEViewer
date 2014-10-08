@@ -153,6 +153,7 @@ Changes
 ~~~~~~~
 08.10.2014
 - implemented WWE All Stars support - everything except the animation (use -noanim option)
+- package scan utility supports UE4 package format
 
 06.10.2014
 - significantly reduced memory footprint of loaded package

@@ -32,9 +32,9 @@
 
 #include "UmodelApp.h"
 #include "Version.h"
+#include "MiscStrings.h"
 
 #define APP_CAPTION					"UE Viewer"
-#define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
 
 //#define SHOW_HIDDEN_SWITCHES		1
 //#define DUMP_MEM_ON_EXIT			1
@@ -384,7 +384,7 @@ static void PrintUsage()
 
 	appPrintf(
 			"\n"
-			"For details and updates please visit " HOMEPAGE "\n"
+			"For details and updates please visit %s\n", GUmodelHomepage
 	);
 }
 
@@ -392,10 +392,8 @@ static void PrintUsage()
 static void PrintVersionInfo()
 {
 	appPrintf(
-			"UE Viewer (UModel)\n"
-			"Compiled " __DATE__ " (git " STR(GIT_REVISION) ")\n"
-			"Copyright (c) 2007-2014 Konstantin Nosov (Gildor). All rights reserved.\n"
-			HOMEPAGE "\n"
+			"UE Viewer (UModel)\n" "%s\n" "%s\n" "%s\n",
+			GBuildString, GCopyrightString, GUmodelHomepage
 	);
 }
 
