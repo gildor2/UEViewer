@@ -36,11 +36,7 @@ static bool ScanFile(const CGameFileInfo *file)
 
 	if (!GUnpackUmd)
 	{
-#if 1
 		ExtractUMDArchive(Ar, BaseDir);
-#else
-		appPrintf("Disabled!\n");
-#endif
 	}
 	else
 	{

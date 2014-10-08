@@ -301,6 +301,7 @@ void UISpacer::Create(UIBaseDialog* dialog)
 
 UIHorizontalLine::UIHorizontalLine()
 {
+	Width = -1;
 	Height = 2;
 }
 
@@ -308,6 +309,26 @@ void UIHorizontalLine::Create(UIBaseDialog* dialog)
 {
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, "", SS_ETCHEDHORZ, 0, dialog);
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIVerticalLine
+-----------------------------------------------------------------------------*/
+
+UIVerticalLine::UIVerticalLine()
+{
+	Width = 2;
+	Height = -1;
+	//!! would be nice to get "Height = -1" working; probably would require 2-pass processing of UIGroup
+	//!! layout: 1st pass would set Height, for example, to 1, plus remember control which requires height
+	//!! change; 2nd pass will resize all remembered controls with the height of group
+}
+
+void UIVerticalLine::Create(UIBaseDialog* dialog)
+{
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Wnd = Window(WC_STATIC, "", SS_ETCHEDVERT, 0, dialog);
 }
 
 
@@ -419,8 +440,8 @@ void UILabel::Create(UIBaseDialog* dialog)
 	UIHyperLink
 -----------------------------------------------------------------------------*/
 
-UIHyperLink::UIHyperLink(const char* text, const char* link, ETextAlign align)
-:	UILabel(text, align)
+UIHyperLink::UIHyperLink(const char* text, const char* link /*, ETextAlign align*/)
+:	UILabel(text /*, align*/)
 ,	Link(link)
 {}
 
@@ -2487,6 +2508,7 @@ UIBaseDialog::UIBaseDialog()
 ,	NextDialogId(FIRST_DIALOG_ID)
 ,	DoCloseOnEsc(false)
 ,	ParentDialog(NULL)
+,	IconResId(0)
 {}
 
 UIBaseDialog::~UIBaseDialog()
@@ -2494,12 +2516,18 @@ UIBaseDialog::~UIBaseDialog()
 	CloseDialog(false);
 }
 
-static HWND GMainWindow;
-static UIBaseDialog* GCurrentDialog;
+static HWND GMainWindow = 0;
+static UIBaseDialog* GCurrentDialog = NULL;
+static int GGlobalIconResId = 0;
 
 void UIBaseDialog::SetMainWindow(HWND window)
 {
 	GMainWindow = window;
+}
+
+void UIBaseDialog::SetGlobalIconResId(int iconResId)
+{
+	GGlobalIconResId = iconResId;
 }
 
 static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize)
@@ -2709,7 +2737,10 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		Wnd = hWnd;
 
 		// show dialog's icon; 200 is resource id (we're not using resource.h here)
-		SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(200)));	//!! IDC_ICON
+		int icon = IconResId;
+		if (!icon) icon = GGlobalIconResId;
+		if (icon)
+			SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(icon)));
 
 		// compute client area width
 		RECT r;

@@ -2,6 +2,7 @@
 #define __ABOUT_DIALOG_H__
 
 #include "Version.h"
+#include "res/resource.h"
 
 //!! move to common header
 #define HOMEPAGE					"http://www.gildor.org/en/projects/umodel"
@@ -27,7 +28,7 @@ public:
 				NewControl(UIBitmap)
 					.SetWidth(64)
 					.SetHeight(64)
-					.SetResourceIcon(200)
+					.SetResourceIcon(IDC_MAIN_ICON)
 				+ NewControl(UISpacer, 8)
 				// and text
 				+ NewControl(UIGroup, GROUP_NO_BORDER)

@@ -3,7 +3,7 @@
 #-------------------------------------------------------------
 # Get revision number from Git
 
-revision=""
+revision="unknown"								# this value will be used in a case of missing git
 version_file="UmodelTool/Version.h"
 if [ -d .git ]; then
 	git=`type -p git`							# equals to `which git`
@@ -33,7 +33,7 @@ fi
 # read current revision
 [ -f "$version_file" ] && [ "$revision" ] && read last_revision < $version_file
 last_revision=${last_revision##* }		# cut "#define ..."
-# write back to a file if value differs or is file doesn't exist
+# write back to a file if value differs or if file doesn't exist
 [ "$last_revision" != "$revision" ] && echo "#define GIT_REVISION $revision" > $version_file
 
 #-------------------------------------------------------------

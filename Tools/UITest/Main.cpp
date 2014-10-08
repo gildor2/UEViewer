@@ -1,4 +1,5 @@
 #include "BaseDialog.h"
+#include "../../UmodelTool/res/resource.h"
 
 class TestDialog : public UIBaseDialog
 {
@@ -19,7 +20,7 @@ public:
 
 		(*menu)
 		[
-			NewSubmenu("File")
+			NewSubmenu("Menu")
 			[
 				NewMenuItem("First item\tCtrl+T")
 				+ NewMenuSeparator()
@@ -43,33 +44,64 @@ public:
 			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 			[
 				NewControl(UIGroup, GROUP_NO_BORDER)
+				.SetWidth(70)
 				[
 					NewControl(UIHyperLink, "Test link", "http://www.gildor.org/")
 					+ NewControl(UIBitmap)
-					.SetWidth(64)
-					.SetHeight(64)
-					.SetResourceIcon(200)
+						.SetWidth(64)
+						.SetHeight(64)
+						.SetResourceIcon(IDC_MAIN_ICON)
+					+ NewControl(UIBitmap)
+						.SetX(16)
+						.SetWidth(32)
+						.SetHeight(32)
+						.SetResourceIcon(IDC_MAIN_ICON)
+					+ NewControl(UIBitmap)
+						.SetX(24)
+						.SetWidth(16)
+						.SetHeight(16)
+						.SetResourceIcon(IDC_MAIN_ICON)
 				]
-				+ NewControl(UIGroup, "Menu control")
+				+ NewControl(UISpacer, 8)
+				+ NewControl(UIVerticalLine)
+				.SetHeight(100)
+				+ NewControl(UISpacer, 8)
+				+ NewControl(UIGroup, GROUP_NO_BORDER)
 				[
-					NewControl(UICheckbox, "Enable item #1", true)
-					.SetCallback(BIND_MEM_CB(&TestDialog::OnEnableItem1, this))
-					+ NewControl(UICheckbox, "Item #1", &value1)
-					+ NewControl(UICheckbox, "Item #2", &value2)
-				]
-				+ NewControl(UISpacer)
-				+ NewControl(UIGroup, "Group 1")
-				[
-					NewControl(UIButton, "Button 1")
-					+ NewControl(UIButton, "Button 2")
-				]
-				+ NewControl(UISpacer)
-				+ NewControl(UIGroup, "Group 2")
-				.SetRadioVariable(&value3)
-				[
-					NewControl(UIRadioButton, "Value 0", 0)
-					+ NewControl(UIRadioButton, "Value 1", 1)
-					+ NewControl(UIRadioButton, "Value 2", 2)
+					NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+					[
+						NewControl(UIGroup, "Menu control")
+						[
+							NewControl(UICheckbox, "Enable item #1", true)
+							.SetCallback(BIND_MEM_CB(&TestDialog::OnEnableItem1, this))
+							+ NewControl(UICheckbox, "Item #1", &value1)
+							+ NewControl(UICheckbox, "Item #2", &value2)
+						]
+						+ NewControl(UISpacer)
+						+ NewControl(UIGroup, "Group 1")
+						[
+							NewControl(UIButton, "Button 1")
+							+ NewControl(UIButton, "Button 2")
+						]
+						+ NewControl(UISpacer)
+						+ NewControl(UIGroup, "Group 2")
+						.SetRadioVariable(&value3)
+						[
+							NewControl(UIRadioButton, "Value 0", 0)
+							+ NewControl(UIRadioButton, "Value 1", 1)
+							+ NewControl(UIRadioButton, "Value 2", 2)
+						]
+					]
+					+ NewControl(UISpacer, 8)
+					+ NewControl(UIHorizontalLine)
+					+ NewControl(UISpacer, 8)
+					+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+					[
+						NewControl(UISpacer, -1)
+						+ NewControl(UIButton, "Close")
+						.SetWidth(100)
+						.SetOK()
+					]
 				]
 			]
 		];

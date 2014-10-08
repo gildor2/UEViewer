@@ -128,9 +128,6 @@ $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 
 OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT_1)/" -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI
 
-$(OUT_1)/umodel.res : UmodelTool/umodel.rc
-	rc.exe -l 0x409 -i UmodelTool/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/umodel.rc
-
 DEPENDS = \
 	Core/Core.h \
 	Core/CoreGL.h \
@@ -309,6 +306,7 @@ DEPENDS = \
 	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
 	UmodelTool/Version.h \
+	UmodelTool/res/resource.h \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
@@ -1088,6 +1086,12 @@ DEPENDS = \
 
 $(OUT_1)/UnTextureNVTT.obj : Unreal/UnTextureNVTT.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTextureNVTT.obj" Unreal/UnTextureNVTT.cpp
+
+DEPENDS = \
+	UmodelTool/res/resource.h
+
+$(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
+	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
 
 OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/"
 

@@ -828,10 +828,12 @@ sub CollectFileDependencies {
 	my ($path) = $file =~ /^(\S+)\/[\w+\.]+$/;
 	$path = "" if !defined($path);
 
-	if ($srcType eq "rc") {
-		$depends{$file} = "";					# do not parse resources and avoid processing later
-		return 1;
-	}
+# -- disabled 08.10.2014: process .rc file like it's ordinary C++ file; perhaps later should allow
+# -- "relaxed" includes, if we'll have any problems: should completely ignore includes which genmake can't find
+#	if ($srcType eq "rc") {
+#		$depends{$file} = "";					# do not parse resources and avoid processing later
+#		return 1;
+#	}
 
 	local *DEP;									# NOTE: "local", not "my"
 	open (DEP, $file) || Error ("cannot open file \"$file\"");	# headers should be already checked, but .c/.cpp - may absent

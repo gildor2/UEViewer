@@ -407,7 +407,11 @@ CUmodelApp::CUmodelApp()
 ,	ShowMaterials(false)
 ,	ObjIndex(0)
 #endif
-{}
+{
+#if HAS_UI
+	UIBaseDialog::SetGlobalIconResId(IDC_MAIN_ICON);
+#endif
+}
 
 CUmodelApp::~CUmodelApp()
 {
@@ -537,8 +541,7 @@ void CUmodelApp::WindowCreated()
 #if HAS_UI
 	HWND wnd = GetSDLWindowHandle(GetWindow());
 	// set window icon
-	//!! TODO: lookup for MAKEINTRESOURCE in all files, should use some constant or global variable for icon id (now '200')
-	SendMessage(wnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(200)));
+	SendMessage(wnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDC_MAIN_ICON)));
 	UIBaseDialog::SetMainWindow(wnd);
 #endif // HAS_UI
 

@@ -257,12 +257,23 @@ protected:
 };
 
 
-//?? could extend to show box or vertical line
+//?? could extend to show box
 class UIHorizontalLine : public UIElement
 {
 	DECLARE_UI_CLASS(UIHorizontalLine, UIElement);
 public:
 	UIHorizontalLine();
+
+protected:
+	virtual void Create(UIBaseDialog* dialog);
+};
+
+
+class UIVerticalLine : public UIElement
+{
+	DECLARE_UI_CLASS(UIVerticalLine, UIElement);
+public:
+	UIVerticalLine();
 
 protected:
 	virtual void Create(UIBaseDialog* dialog);
@@ -313,7 +324,7 @@ class UIHyperLink : public UILabel
 {
 	DECLARE_UI_CLASS(UIHyperLink, UILabel);
 public:
-	UIHyperLink(const char* text, const char* link, ETextAlign align = TA_Left);
+	UIHyperLink(const char* text, const char* link /*, ETextAlign align = TA_Left*/); // align is not working
 	UIHyperLink& SetAutoSize() { return (ThisClass&)Super::SetAutoSize(); }
 
 protected:
@@ -962,6 +973,12 @@ public:
 		return *this;
 	}
 
+	FORCEINLINE UIBaseDialog& SetIconResId(int iconResId)
+	{
+		IconResId = iconResId;
+		return *this;
+	}
+
 	// Pumping a message loop, return 'false' when dialog was closed.
 	// Should call this function for non-modal dialogs.
 	// To popup a non-modal dialog and allow it working, the following construction
@@ -977,9 +994,11 @@ public:
 	void CloseDialog(bool cancel = false);
 
 	static void SetMainWindow(HWND window);
+	static void SetGlobalIconResId(int iconResId);
 
 protected:
 	int			NextDialogId;
+	int			IconResId;
 	bool		DoCloseOnEsc;		//!! awful name
 	UIBaseDialog* ParentDialog;
 

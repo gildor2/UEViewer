@@ -1,0 +1,1 @@
+#define IDC_MAIN_ICON		200
