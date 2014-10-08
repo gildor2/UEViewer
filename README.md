@@ -29,16 +29,17 @@ UModel is compiled using Visual Studio. Currently build is performed with Visual
 almost all Visual Studio versions should be supported (perhaps except Visual C++ 6.0 and Visual C++ 2001).
 
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
-of such tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You may everything required for
-build [here](https://github.com/gildor2/UModel/releases). This page contains **BuildTools.zip**. You should
-download it and extract into some directory, let's say to *C:\BuildTools*. After that, put *C:\BuildTools*
-to system *PATH* variable. Also it is possible to create batch file which will temporarily tune *PATH* and then
-execute build script. Here's an example of such file:
+of such tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You get may everything you need
+for a build [here](https://github.com/gildor2/UModel/releases). This page contains **BuildTools.zip**. You should
+download it and extract into some directory, let's say to *C:\BuildTools*. After that, put *C:\BuildTools\bin*
+to the system *PATH* variable. Also it is possible to create a batch file which will temporarily tune *PATH* and
+then execute build script. Here's an example of such file:
 
-    set PATH=%PATH%;C:\BuildTools
+    @echo off
+    set PATH=%PATH%;C:\BuildTools\bin
     bash build.sh
 
-To launch build process without a batch, execute
+To launch a build process without a batch, simply execute
 
     bash build.sh
 
