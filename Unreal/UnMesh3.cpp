@@ -1286,7 +1286,7 @@ struct FStaticLODModel3
 	}
 };
 
-#if A51 || MKVSDC || STRANGLE
+#if A51 || MKVSDC || STRANGLE || TNA_IMPACT
 
 struct FMaterialBone
 {
@@ -1549,9 +1549,9 @@ after_skeleton:
 	for (int i1 = 0; i1 < RefSkeleton.Num(); i1++)
 		appPrintf("  [%d] n=%s p=%d\n", i1, *RefSkeleton[i1].Name, RefSkeleton[i1].ParentIndex);
 #endif // DEBUG_SKELMESH
-#if A51 || MKVSDC || STRANGLE
+#if A51 || MKVSDC || STRANGLE || TNA_IMPACT
 	//?? check GAME_Wheelman
-	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 0xF)
+	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 15)
 	{
 		TArray<FMaterialBone> MaterialBones;
 		Ar << MaterialBones;

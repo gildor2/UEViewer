@@ -145,6 +145,7 @@ const GameInfo GListOfGames[] = {
 #	endif
 #	if TNA_IMPACT
 		G("TNA iMPACT!", tna, GAME_TNA),
+		G("WWE All Stars", tna, GAME_TNA),
 #	endif
 #	if STRANGLE
 		G("Stranglehold", strang, GAME_Strangle),
@@ -520,9 +521,6 @@ void FArchive::DetectGame()
 #if A51
 	if (ArVer == 377 && ArLicenseeVer == 25)	SET(GAME_A51);		//!! has extra tag
 #endif
-#if TNA_IMPACT
-	if (ArVer == 380 && ArLicenseeVer == 35)	SET(GAME_TNA);		//!! has extra tag
-#endif
 #if WHEELMAN
 	if (ArVer == 390 && ArLicenseeVer == 32)	SET(GAME_Wheelman);	//!! has extra tag
 #endif
@@ -659,6 +657,11 @@ void FArchive::DetectGame()
 		 (ArVer == 392 && ArLicenseeVer == 23) ||
 		 (ArVer == 393 && (ArLicenseeVer >= 27 && ArLicenseeVer <= 61)) )
 		SET(GAME_Turok);
+#endif
+#if TNA_IMPACT
+	if ((ArVer == 380 && ArLicenseeVer == 35) ||		// TNA Impact
+		(ArVer == 398 && ArLicenseeVer == 37))			// WWE All Stars
+		SET(GAME_TNA);		//!! has extra tag
 #endif
 #if MASSEFF
 	if ((ArVer == 391 && ArLicenseeVer == 92) ||		// XBox 360 version

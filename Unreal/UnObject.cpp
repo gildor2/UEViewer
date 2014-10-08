@@ -602,8 +602,8 @@ void UObject::Serialize(FArchive &Ar)
 #if UNREAL3
 
 #	if WHEELMAN || MKVSDC
-	if ( (Ar.Game == GAME_Wheelman && Ar.ArVer >= 385) ||
-		 (Ar.Game == GAME_MK && Ar.ArVer >= 446) )
+	if ( ((Ar.Game == GAME_Wheelman || Ar.Game == GAME_TNA) && Ar.ArVer >= 385) ||
+		  (Ar.Game == GAME_MK && Ar.ArVer >= 446) )
 		goto no_net_index;
 #	endif
 #	if MURDERED

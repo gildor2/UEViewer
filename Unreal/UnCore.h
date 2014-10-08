@@ -929,7 +929,17 @@ struct FRotator
 
 	friend FArchive& operator<<(FArchive &Ar, FRotator &R)
 	{
-		return Ar << R.Pitch << R.Yaw << R.Roll;
+		Ar << R.Pitch << R.Yaw << R.Roll;
+#if TNA_IMPACT
+		if (Ar.Game == GAME_TNA && Ar.ArVer >= 395)
+		{
+			// WWE All Stars: this game has strange FRotator values; found formulas below experimentally
+			R.Pitch = R.Pitch / 65536;
+			R.Yaw   = R.Yaw   / 65536 - 692;
+			R.Roll  = R.Roll  / 65536 - 692;
+		}
+#endif // TNA_IMPACT
+		return Ar;
 	}
 };
 

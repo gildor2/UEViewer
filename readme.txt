@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+08.10.2014
+- implemented WWE All Stars support - everything except the animation (use -noanim option)
+
 06.10.2014
 - significantly reduced memory footprint of loaded package
 - closing package files when they're not needed; this allows umodel to perform batch export
