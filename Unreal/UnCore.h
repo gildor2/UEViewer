@@ -557,11 +557,11 @@ class FFileArchive : public FArchive
 public:
 	FFileArchive(const char *Filename, unsigned InOptions);
 	virtual ~FFileArchive();
+
 	virtual void Seek(int Pos);
 	virtual bool IsEof() const;
 	virtual FArchive& operator<<(FName &N);
 	virtual FArchive& operator<<(UObject *&Obj);
-	virtual int GetFileSize() const;
 	virtual bool IsOpen() const;
 	virtual void Close();
 
@@ -570,6 +570,12 @@ protected:
 	unsigned	Options;
 	const char	*FullName;		// allocared with appStrdup
 	const char	*ShortName;		// points to FullName[N]
+	int			FileSize;
+
+	byte*		Buffer;
+	int			BufferSize;
+	int			BufferPos;
+	int			FilePos;
 
 	bool OpenFile(const char *Mode);
 };
@@ -592,8 +598,11 @@ class FFileReader : public FFileArchive
 	DECLARE_ARCHIVE(FFileReader, FFileArchive);
 public:
 	FFileReader(const char *Filename, unsigned InOptions = 0);
+	virtual ~FFileReader();
+
 	virtual void Serialize(void *data, int size);
 	virtual bool Open();
+	virtual int GetFileSize() const;
 };
 
 
@@ -602,8 +611,15 @@ class FFileWriter : public FFileArchive
 	DECLARE_ARCHIVE(FFileWriter, FFileArchive);
 public:
 	FFileWriter(const char *Filename, unsigned Options = 0);
+	virtual ~FFileWriter();
+
 	virtual void Serialize(void *data, int size);
 	virtual bool Open();
+	virtual void Close();
+	virtual int GetFileSize() const;
+
+protected:
+	void FlushBuffer();
 };
 
 

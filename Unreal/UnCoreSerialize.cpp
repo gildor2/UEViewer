@@ -2,6 +2,9 @@
 #include "UnCore.h"
 
 
+#define FILE_BUFFER_SIZE		4096
+
+
 //#define DEBUG_BULK			1
 //#define DEBUG_RAW_ARRAY		1
 
@@ -448,9 +451,13 @@ void FArchive::Printf(const char *fmt, ...)
 -----------------------------------------------------------------------------*/
 
 FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
+:	Options(InOptions)
+,	FileSize(-1)
+,	Buffer(NULL)
+,	BufferPos(0)
+,	BufferSize(0)
 {
-	ArPos   = 0;
-	Options = InOptions;
+	ArPos = 0;
 
 	// process the filename
 	FullName = appStrdup(Filename);
@@ -462,45 +469,29 @@ FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
 
 FFileArchive::~FFileArchive()
 {
-	Close();
 	appFree(const_cast<char*>(FullName));
 }
 
 void FFileArchive::Seek(int Pos)
 {
-	guard(FFileArchive::Seek);
-	fseek(f, Pos, SEEK_SET);
-	ArPos = ftell(f);
-	assert(Pos == ArPos);
-	unguardf("File=%s, pos=%d", ShortName, Pos);
+	ArPos = Pos;
 }
 
 bool FFileArchive::IsEof() const
 {
-	int pos  = ftell(f); fseek(f, 0, SEEK_END);
-	int size = ftell(f); fseek(f, pos, SEEK_SET);
-	return size == pos;
+	return ArPos < GetFileSize();
 }
 
 FArchive& FFileArchive::operator<<(FName &N)
 {
-	*this << AR_INDEX(N.Index);
+	// do nothing
 	return *this;
 }
 
 FArchive& FFileArchive::operator<<(UObject *&Obj)
 {
-	int tmp;
-	*this << AR_INDEX(tmp);
-	appPrintf("Object: %d\n", tmp);
+	// do nothing
 	return *this;
-}
-
-int FFileArchive::GetFileSize() const
-{
-	int pos  = ftell(f); fseek(f, 0, SEEK_END);
-	int size = ftell(f); fseek(f, pos, SEEK_SET);
-	return size;
 }
 
 // this function is useful only for FRO_NoOpenError mode
@@ -515,6 +506,8 @@ void FFileArchive::Close()
 	{
 		fclose(f);
 		f = NULL;
+		appFree(Buffer);
+		Buffer = NULL;
 	}
 }
 
@@ -522,11 +515,17 @@ bool FFileArchive::OpenFile(const char *Mode)
 {
 	guard(FFileArchive::OpenFile);
 	assert(!IsOpen());
+
+	ArPos = FilePos = 0;
+	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
+	BufferPos = 0;
+	BufferSize = 0;
+
 	f = fopen(FullName, Mode);
 	if (f) return true;			// success
 	if (!(Options & FRO_NoOpenError))
 		appError("Unable to open file %s", FullName);
-	ArPos = 0;
+
 	return false;
 	unguard;
 }
@@ -540,27 +539,89 @@ FFileReader::FFileReader(const char *Filename, unsigned InOptions)
 	unguardf("%s", Filename);
 }
 
+FFileReader::~FFileReader()
+{
+	Close();
+}
+
 void FFileReader::Serialize(void *data, int size)
 {
 	guard(FFileReader::Serialize);
-	if (size == 0) return;
+
 	if (ArStopper > 0 && ArPos + size > ArStopper)
 		appError("Serializing behind stopper (%d+%d > %d)", ArPos, size, ArStopper);
 
-	int res = fread(data, size, 1, f);
-	if (res != 1)
-		appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
-	ArPos += size;
-#if PROFILE
-	GNumSerialize++;
-	GSerializeBytes += size;
-#endif
+	while (size > 0)
+	{
+		int LocalPos = ArPos - BufferPos;
+		if (LocalPos < 0 || LocalPos >= BufferSize)
+		{
+			// seek to desired position if needed
+			if (ArPos != FilePos)
+			{
+				fseek(f, ArPos, SEEK_SET);
+				assert(ftell(f) == ArPos);
+				FilePos = ArPos;
+			}
+			// the requested data is not in buffer
+			if (size >= FILE_BUFFER_SIZE)
+			{
+				// large block, read directly from file
+				int res = fread(data, size, 1, f);
+				if (res != 1)
+					appError("Unable to serialize %d bytes at pos=%d", size, FilePos);
+			#if PROFILE
+				GNumSerialize++;
+				GSerializeBytes += size;
+			#endif
+				ArPos += size;
+				FilePos += size;
+				return;
+			}
+			// fill buffer
+			int ReadBytes = fread(Buffer, 1, FILE_BUFFER_SIZE, f);
+			if (ReadBytes == 0)
+				appError("Unable to serialize %d bytes at pos=%d", 1, FilePos);
+		#if PROFILE
+			GNumSerialize++;
+			GSerializeBytes += ReadBytes;
+		#endif
+			BufferPos = FilePos;
+			BufferSize = ReadBytes;
+			FilePos += ReadBytes;
+			// update LocalPos
+			LocalPos = ArPos - BufferPos;
+			assert(LocalPos >= 0 && LocalPos < BufferSize);
+		}
+
+		// have something in buffer
+		int CanCopy = BufferSize - LocalPos;
+		if (CanCopy > size) CanCopy = size;
+		memcpy(data, Buffer + LocalPos, CanCopy);
+		data = OffsetPointer(data, CanCopy);
+		size -= CanCopy;
+		ArPos += CanCopy;
+	}
+
 	unguardf("File=%s", ShortName);
 }
 
 bool FFileReader::Open()
 {
 	return OpenFile("rb");
+}
+
+int FFileReader::GetFileSize() const
+{
+	// lazy file size computation
+	if (FileSize < 0)
+	{
+		fseek(f, 0, SEEK_END);
+		FFileReader* _this = const_cast<FFileReader*>(this);
+		// don't rewind file back
+		_this->FilePos = _this->FileSize = ftell(f);
+	}
+	return FileSize;
 }
 
 FFileWriter::FFileWriter(const char *Filename, unsigned Options)
@@ -572,25 +633,101 @@ FFileWriter::FFileWriter(const char *Filename, unsigned Options)
 	unguardf("%s", Filename);
 }
 
+FFileWriter::~FFileWriter()
+{
+	Close();
+}
+
 void FFileWriter::Serialize(void *data, int size)
 {
 	guard(FFileWriter::Serialize);
-	if (size == 0) return;
 
-	int res = fwrite(data, size, 1, f);
-	if (res != 1)
-		appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
-	ArPos += size;
-#if PROFILE
-	GNumSerialize++;
-	GSerializeBytes += size;
-#endif
+	while (size > 0)
+	{
+		int LocalPos = ArPos - BufferPos;
+		if (LocalPos < 0 || LocalPos >= FILE_BUFFER_SIZE || size >= FILE_BUFFER_SIZE)
+		{
+			// trying to write outside of buffer
+			FlushBuffer();
+			if (size >= FILE_BUFFER_SIZE)
+			{
+				// large block, write directly to file
+				if (ArPos != FilePos)
+				{
+					fseek(f, ArPos, SEEK_SET);
+					assert(ftell(f) == ArPos);
+					FilePos = ArPos;
+				}
+				int res = fwrite(data, size, 1, f);
+				if (res != 1)
+					appError("Unable to serialize %d bytes at pos=%d", size, FilePos);
+			#if PROFILE
+				GNumSerialize++;
+				GSerializeBytes += size;
+			#endif
+				ArPos += size;
+				FilePos += size;
+				return;
+			}
+			BufferPos = ArPos;
+			BufferSize = 0;
+			LocalPos = 0;
+		}
+
+		// have something for buffer
+		int CanCopy = FILE_BUFFER_SIZE - LocalPos;
+		if (CanCopy > size) CanCopy = size;
+		memcpy(Buffer + LocalPos, data, CanCopy);
+		data = OffsetPointer(data, CanCopy);
+		size -= CanCopy;
+		ArPos += CanCopy;
+		BufferSize = max(BufferSize, LocalPos + CanCopy);
+	}
+
 	unguardf("File=%s", ShortName);
 }
 
 bool FFileWriter::Open()
 {
+	assert(!IsOpen());
+	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
+	BufferPos = 0;
+	BufferSize = 0;
 	return OpenFile("wb");
+}
+
+void FFileWriter::Close()
+{
+	FlushBuffer();
+	Super::Close();
+}
+
+void FFileWriter::FlushBuffer()
+{
+	if (BufferSize > 0)
+	{
+		if (BufferPos != FilePos)
+		{
+			fseek(f, BufferPos, SEEK_SET);
+			assert(ftell(f) == BufferPos);
+			FilePos = BufferPos;
+		}
+		int res = fwrite(Buffer, BufferSize, 1, f);
+		if (res != 1)
+			appError("Unable to serialize %d bytes at pos=%d", BufferSize, FilePos);
+#if PROFILE
+		GNumSerialize++;
+		GSerializeBytes += BufferSize;
+#endif
+		FilePos += BufferSize;
+		BufferSize = 0;
+		if (FilePos > FileSize) FileSize = FilePos;
+	}
+}
+
+int FFileWriter::GetFileSize() const
+{
+	return max(FileSize, FilePos + BufferSize);
 }
 
 
