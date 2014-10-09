@@ -555,76 +555,15 @@ class FFileArchive : public FArchive
 {
 	DECLARE_ARCHIVE(FFileArchive, FArchive);
 public:
-	FFileArchive(const char *Filename, unsigned InOptions)
-	{
-		ArPos   = 0;
-		Options = InOptions;
-
-		// process the filename
-		FullName = appStrdup(Filename);
-		const char *s = strrchr(FullName, '/');
-		if (!s)     s = strrchr(FullName, '\\');
-		if (s) s++; else s = FullName;
-		ShortName = s;
-	}
-
-	virtual ~FFileArchive()
-	{
-		Close();
-		appFree(const_cast<char*>(FullName));
-	}
-
-	virtual void Seek(int Pos)
-	{
-		guard(FFileArchive::Seek);
-		fseek(f, Pos, SEEK_SET);
-		ArPos = ftell(f);
-		assert(Pos == ArPos);
-		unguardf("File=%s, pos=%d", ShortName, Pos);
-	}
-
-	virtual bool IsEof() const
-	{
-		int pos  = ftell(f); fseek(f, 0, SEEK_END);
-		int size = ftell(f); fseek(f, pos, SEEK_SET);
-		return size == pos;
-	}
-
-	virtual FArchive& operator<<(FName &N)
-	{
-		*this << AR_INDEX(N.Index);
-		return *this;
-	}
-
-	virtual FArchive& operator<<(UObject *&Obj)
-	{
-		int tmp;
-		*this << AR_INDEX(tmp);
-		appPrintf("Object: %d\n", tmp);
-		return *this;
-	}
-
-	virtual int GetFileSize() const
-	{
-		int pos  = ftell(f); fseek(f, 0, SEEK_END);
-		int size = ftell(f); fseek(f, pos, SEEK_SET);
-		return size;
-	}
-
-	// this function is useful only for FRO_NoOpenError mode
-	virtual bool IsOpen() const
-	{
-		return (f != NULL);
-	}
-
-	virtual void Close()
-	{
-		if (IsOpen())
-		{
-			fclose(f);
-			f = NULL;
-		}
-	}
+	FFileArchive(const char *Filename, unsigned InOptions);
+	virtual ~FFileArchive();
+	virtual void Seek(int Pos);
+	virtual bool IsEof() const;
+	virtual FArchive& operator<<(FName &N);
+	virtual FArchive& operator<<(UObject *&Obj);
+	virtual int GetFileSize() const;
+	virtual bool IsOpen() const;
+	virtual void Close();
 
 protected:
 	FILE		*f;
@@ -632,18 +571,7 @@ protected:
 	const char	*FullName;		// allocared with appStrdup
 	const char	*ShortName;		// points to FullName[N]
 
-	bool OpenFile(const char *Mode)
-	{
-		guard(FFileArchive::OpenFile);
-		assert(!IsOpen());
-		f = fopen(FullName, Mode);
-		if (f) return true;			// success
-		if (!(Options & FRO_NoOpenError))
-			appError("Unable to open file %s", FullName);
-		ArPos = 0;
-		return false;
-		unguard;
-	}
+	bool OpenFile(const char *Mode);
 };
 
 
@@ -663,38 +591,9 @@ class FFileReader : public FFileArchive
 {
 	DECLARE_ARCHIVE(FFileReader, FFileArchive);
 public:
-	FFileReader(const char *Filename, unsigned InOptions = 0)
-	:	FFileArchive(Filename, Options)
-	{
-		guard(FFileReader::FFileReader);
-		IsLoading = true;
-		Open();
-		unguardf("%s", Filename);
-	}
-
-	virtual void Serialize(void *data, int size)
-	{
-		guard(FFileReader::Serialize);
-		if (size == 0) return;
-		if (ArStopper > 0 && ArPos + size > ArStopper)
-			appError("Serializing behind stopper (%d+%d > %d)", ArPos, size, ArStopper);
-
-		int res = fread(data, size, 1, f);
-		if (res != 1)
-			appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
-		ArPos += size;
-#if PROFILE
-		GNumSerialize++;
-		GSerializeBytes += size;
-#endif
-		unguardf("File=%s", ShortName);
-	}
-
-protected:
-	virtual bool Open()
-	{
-		return OpenFile("rb");
-	}
+	FFileReader(const char *Filename, unsigned InOptions = 0);
+	virtual void Serialize(void *data, int size);
+	virtual bool Open();
 };
 
 
@@ -702,35 +601,9 @@ class FFileWriter : public FFileArchive
 {
 	DECLARE_ARCHIVE(FFileWriter, FFileArchive);
 public:
-	FFileWriter(const char *Filename, unsigned Options = 0)
-	:	FFileArchive(Filename, Options)
-	{
-		guard(FFileWriter::FFileWriter);
-		IsLoading = false;
-		Open();
-		unguardf("%s", Filename);
-	}
-
-	virtual void Serialize(void *data, int size)
-	{
-		guard(FFileWriter::Serialize);
-		if (size == 0) return;
-
-		int res = fwrite(data, size, 1, f);
-		if (res != 1)
-			appError("Unable to serialize %d bytes at pos=%d", size, ArPos);
-		ArPos += size;
-#if PROFILE
-		GNumSerialize++;
-		GSerializeBytes += size;
-#endif
-		unguardf("File=%s", ShortName);
-	}
-
-	virtual bool Open()
-	{
-		return OpenFile("wb");
-	}
+	FFileWriter(const char *Filename, unsigned Options = 0);
+	virtual void Serialize(void *data, int size);
+	virtual bool Open();
 };
 
 
@@ -1507,16 +1380,7 @@ template<class T> class TLazyArray : public TArray<T>
 };
 
 
-inline void SkipLazyArray(FArchive &Ar)
-{
-	guard(SkipLazyArray);
-	assert(Ar.IsLoading);
-	int pos;
-	Ar << pos;
-	assert(Ar.Tell() < pos);
-	Ar.Seek(pos);
-	unguard;
-}
+void SkipLazyArray(FArchive &Ar);
 
 
 #if UNREAL3
@@ -1559,25 +1423,7 @@ protected:
 	{}
 };
 
-inline void SkipRawArray(FArchive &Ar, int Size)
-{
-	guard(SkipRawArray);
-	if (Ar.ArVer >= 453)
-	{
-		int ElementSize, Count;
-		Ar << ElementSize << Count;
-		assert(ElementSize == Size);
-		Ar.Seek(Ar.Tell() + ElementSize * Count);
-	}
-	else
-	{
-		assert(Size > 0);
-		int Count;
-		Ar << Count;
-		Ar.Seek(Ar.Tell() + Size * Count);
-	}
-	unguard;
-}
+void SkipRawArray(FArchive &Ar, int Size);
 
 // helper function for RAW_ARRAY macro
 template<class T> inline TRawArray<T>& ToRawArray(TArray<T> &Arr)
@@ -1780,51 +1626,7 @@ struct FCompressedChunkHeader
 	int			UncompressedSize;
 	TArray<FCompressedChunkBlock> Blocks;
 
-	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
-	{
-		guard(FCompressedChunkHeader<<);
-		int i;
-		Ar << H.Tag;
-		if (H.Tag == PACKAGE_FILE_TAG_REV)
-			Ar.ReverseBytes = !Ar.ReverseBytes;
-#if BERKANIX
-		else if (Ar.Game == GAME_Berkanix && H.Tag == 0xF2BAC156) goto tag_ok;
-#endif
-#if HAWKEN
-		else if (Ar.Game == GAME_Hawken && H.Tag == 0xEA31928C) goto tag_ok;
-#endif
-		else
-			assert(H.Tag == PACKAGE_FILE_TAG);
-	tag_ok:
-		Ar << H.BlockSize << H.CompressedSize << H.UncompressedSize;
-#if 0
-		if (H.BlockSize == PACKAGE_FILE_TAG)
-			H.BlockSize = (Ar.ArVer >= 369) ? 0x20000 : 0x8000;
-		int BlockCount = (H.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
-		H.Blocks.Empty(BlockCount);
-		H.Blocks.Add(BlockCount);
-		for (i = 0; i < BlockCount; i++)
-			Ar << H.Blocks[i];
-#else
-		H.BlockSize = 0x20000;
-		H.Blocks.Empty((H.UncompressedSize + 0x20000 - 1) / 0x20000);	// optimized for block size 0x20000
-		int CompSize = 0, UncompSize = 0;
-		while (CompSize < H.CompressedSize && UncompSize < H.UncompressedSize)
-		{
-			FCompressedChunkBlock *Block = new (H.Blocks) FCompressedChunkBlock;
-			Ar << *Block;
-			CompSize   += Block->CompressedSize;
-			UncompSize += Block->UncompressedSize;
-		}
-		// check header; seen one package where sum(Block.CompressedSize) < H.CompressedSize,
-		// but UncompressedSize is exact
-		assert(/*CompSize == H.CompressedSize &&*/ UncompSize == H.UncompressedSize);
-		if (H.Blocks.Num() > 1)
-			H.BlockSize = H.Blocks[0].UncompressedSize;
-#endif
-		return Ar;
-		unguardf("pos=%X", Ar.Tell());
-	}
+	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H);
 };
 
 void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int CompressionFlags);
