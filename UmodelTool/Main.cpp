@@ -409,8 +409,6 @@ bool ExportObjects(const TArray<UObject*> *Objects, IProgressCallback* progress)
 
 	appPrintf("Exporting objects ...\n");
 
-	appSetBaseExportDirectory(GSettings.ExportPath);
-
 	// export object(s), if possible
 	UnPackage* notifyPackage = NULL;
 	bool hasObjectList = (Objects != NULL) && Objects->Num();
@@ -758,6 +756,7 @@ int main(int argc, char **argv)
 	GForceCompMethod = GSettings.PackageCompression;
 	if (GSettings.ExportPath.IsEmpty())
 		SetPathOption(GSettings.ExportPath, "UmodelExport");	//!! linux: ~/UmodelExport
+	appSetBaseExportDirectory(GSettings.ExportPath);
 
 	TArray<UnPackage*> Packages;
 	TArray<UObject*> Objects;
@@ -924,6 +923,7 @@ int main(int argc, char **argv)
 	if (mainCmd == CMD_Export)
 	{
 		ExportObjects(exprtAll ? NULL : &Objects);
+		ResetExportedList();
 		if (!guiShown)
 			return 0;
 		// switch to a viewer in GUI mode

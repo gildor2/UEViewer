@@ -40,7 +40,86 @@ void RegisterExporter(const char *ClassName, ExporterFunc_t Func)
 }
 
 
-static TArray<const UObject*> ProcessedObjects;
+// List of already exported objects
+
+#define EXPORTED_LIST_HASH_SIZE		4096
+
+struct ExportedObjectEntry
+{
+	const UnPackage* Package;
+	int				ExportIndex;
+	int				HashNext;
+
+	ExportedObjectEntry()
+	{}
+
+	ExportedObjectEntry(const UObject* Obj)
+	:	Package(Obj->Package)
+	,	ExportIndex(Obj->PackageIndex)
+	,	HashNext(NULL)
+	{}
+
+	int GetHash() const
+	{
+		return ( ((int)Package >> 3) ^ ExportIndex ^ (ExportIndex << 4) ) & (EXPORTED_LIST_HASH_SIZE - 1);
+	}
+};
+
+static TArray<ExportedObjectEntry> ProcessedObjects;
+static int ProcessedObjectHash[EXPORTED_LIST_HASH_SIZE];
+
+void ResetExportedList()
+{
+	ProcessedObjects.Empty(1024);
+}
+
+// return 'false' if object already registered
+static bool RegisterProcessedObject(const UObject* Obj)
+{
+	guard(RegisterProcessedObject);
+
+	if (Obj->Package == NULL || Obj->PackageIndex < 0)
+	{
+		// this object was generated; always export it to not write a more complex code here
+		// Example: UMaterialWithPolyFlags
+		return true;
+	}
+
+	if (ProcessedObjects.Num() == 0)
+	{
+		// we're adding first item here, initialize hash with -1
+		memset(ProcessedObjectHash, -1, sizeof(ProcessedObjectHash));
+	}
+
+	ExportedObjectEntry exp(Obj);
+	int h = exp.GetHash();
+
+//	appPrintf("Register: %s/%s/%s (%d) : ", Obj->Package->Name, Obj->GetClassName(), Obj->Name, ProcessedObjects.Num());
+
+	int newIndex = -1;
+	const ExportedObjectEntry* expEntry;
+	for (newIndex = ProcessedObjectHash[h]; newIndex >= 0; newIndex = expEntry->HashNext)
+	{
+//		appPrintf("-- %d ", newIndex);
+		expEntry = &ProcessedObjects[newIndex];
+		if ((expEntry->Package == exp.Package) && (expEntry->ExportIndex == exp.ExportIndex))
+		{
+//			appPrintf("-> FOUND\n");
+			return false;		// the object already exists
+		}
+	}
+
+	// not registered yet
+	newIndex = ProcessedObjects.AddItem(exp);
+	ProcessedObjects[newIndex].HashNext = ProcessedObjectHash[h];
+	ProcessedObjectHash[h] = newIndex;
+//	appPrintf("-> none\n");
+
+	return true;
+
+	unguard;
+}
+
 
 bool ExportObject(const UObject *Obj)
 {
@@ -53,8 +132,7 @@ bool ExportObject(const UObject *Obj)
 	static UniqueNameList ExportedNames;
 
 	// check for duplicate object export
-	if (ProcessedObjects.FindItem(Obj) != INDEX_NONE) return true;
-	ProcessedObjects.AddItem(Obj);
+	if (!RegisterProcessedObject(Obj)) return true;
 
 	for (int i = 0; i < numExporters; i++)
 	{

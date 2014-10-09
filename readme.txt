@@ -151,6 +151,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+09.10.2014
+- fixed bug: during batch export from GUI many objects were occasionally skipped from export
+- Ctrl+X didn't use export directory option ("-out=...")
+- file performance optimizations (reading packages and export)
+
 08.10.2014
 - implemented WWE All Stars support - everything except the animation (use -noanim option)
 - package scan utility supports UE4 package format

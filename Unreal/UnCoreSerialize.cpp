@@ -452,6 +452,7 @@ void FArchive::Printf(const char *fmt, ...)
 
 FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
 :	Options(InOptions)
+,	f(NULL)
 ,	FileSize(-1)
 ,	Buffer(NULL)
 ,	BufferPos(0)

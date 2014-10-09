@@ -18,3 +18,8 @@ Tools/UITest/makefile-*
 # Other ignores
 Tools/MaxActorXImport/ActorXImporter.ini
 Tools/UT2down/
+
+# Files produced by umodel
+UmodelExport/
+Screenshots/
+notify.log

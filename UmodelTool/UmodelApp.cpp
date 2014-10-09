@@ -108,8 +108,6 @@ static HWND GetSDLWindowHandle(SDL_Window* window)
 // always return true.
 bool CUmodelApp::ShowPackageUI()
 {
-	static bool firstDialogCancelled = true;
-
 	// When we're doing export, then switching back to GUI, then pressing "Esc",
 	// we can't return to the visualizer which was used before doing export because
 	// all object was unloaded. In this case, code will set 'packagesChanged' flag
@@ -123,7 +121,7 @@ bool CUmodelApp::ShowPackageUI()
 		{
 			if (packagesChanged)
 				FindObjectAndCreateVisualizer(1, true, true);
-			return !firstDialogCancelled;
+			return false;
 		}
 
 		UIProgressDialog progress;
@@ -150,8 +148,6 @@ bool CUmodelApp::ShowPackageUI()
 		}
 
 		if (!Packages.Num()) break;			// should not happen
-
-		firstDialogCancelled = false;
 
 		// register exporters and classes (will be performed only once); use any package
 		// to detect an engine version
@@ -186,6 +182,9 @@ bool CUmodelApp::ShowPackageUI()
 
 		if (mode == UIPackageDialog::EXPORT)
 		{
+#if PROFILE
+//			appResetProfiler(); -- there's nested appResetProfiler/appPrintProfiler calls, which are not supported
+#endif
 			progress.SetDescription("Exporting package");
 			// for each package: load a package, export, then release
 			for (int i = 0; i < Packages.Num(); i++)
@@ -209,7 +208,10 @@ bool CUmodelApp::ShowPackageUI()
 				ReleaseAllObjects();
 			}
 			// cleanup
-			//!! unregister all exported objects
+			ResetExportedList();
+#if PROFILE
+//			appPrintProfiler();
+#endif
 			if (cancelled)
 			{
 				ReleaseAllObjects();

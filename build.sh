@@ -23,10 +23,7 @@ if [ -d .git ]; then
 			git=`type -p git`
 		fi
 	fi
-	if [ "$git" ]; then
-		revision=`git rev-list --count HEAD`
-		revision=$((revision+1))				# increment revision, because we're advanced from recent git commit
-	fi
+	[ "$git" ] && revision=`git rev-list --count HEAD`
 fi
 
 # update tool version

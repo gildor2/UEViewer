@@ -15,6 +15,9 @@ FORCEINLINE void RegisterExporter(const char *ClassName, void (*Func)(const T*))
 	RegisterExporter(ClassName, (ExporterFunc_t)Func);
 }
 
+// This function will clear list of already exported objects
+void ResetExportedList();
+
 bool ExportObject(const UObject *Obj);
 
 // path

@@ -32,7 +32,10 @@ void CObjectViewer::Dump()
 void CObjectViewer::Export()
 {
 	if (Object)
+	{
 		ExportObject(Object);
+		ResetExportedList();
+	}
 }
 
 
