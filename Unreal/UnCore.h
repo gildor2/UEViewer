@@ -492,10 +492,12 @@ public:									\
 private:
 
 
-// Note: bools in UE are usually serialized as int32
+// Booleans in UE are serialized as int32
 FORCEINLINE FArchive& operator<<(FArchive &Ar, bool &B)
 {
-	Ar.Serialize(&B, 1);
+	int b32 = B;
+	Ar.Serialize(&b32, 4);
+	if (Ar.IsLoading) B = (b32 != 0);
 	return Ar;
 }
 FORCEINLINE FArchive& operator<<(FArchive &Ar, char &B)
@@ -1757,11 +1759,14 @@ enum
 	VER_UE4_REMOVE_NET_INDEX = 196,
 	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,
 	VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET = 212,
+	VAR_UE4_ARRAY_PROPERTY_INNER_TAGS = 282,
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
 	// 342 = 4.0.0
 	// 352 = 4.1.0
 	// 363 = 4.2.0
+	VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
 	// 382 = 4.3.0
+	VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
 	// 385 = 4.4.0
 };
 

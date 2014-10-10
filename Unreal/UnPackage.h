@@ -137,7 +137,7 @@ struct FObjectExport
 //	TMap<FName, int> ComponentMap;			-- this field was removed from UE3, so serialize it as a temporaty variable when needed
 	TArray<int>	NetObjectCount;				// generations
 	FGuid		Guid;
-	int			U3unk6C;					//!! PackageFlags
+	int			PackageFlags;
 	#endif // USE_COMPACT_PACKAGE_STRUCTS
 #endif // UNREAL3
 

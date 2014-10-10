@@ -393,6 +393,12 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
 	Ar << S.DependsOffset;
 
+	if (Ar.ArVer >= VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP)
+	{
+		int StringAssetReferencesCount, StringAssetReferencesOffset;
+		Ar << StringAssetReferencesCount << StringAssetReferencesOffset;
+	}
+
 	int ThumbnailTableOffset;
 	Ar << ThumbnailTableOffset;
 
@@ -856,7 +862,7 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 	int			TMP_Archetype;
 	TArray<int>	TMP_NetObjectCount;
 	FGuid		TMP_Guid;
-	int			TMP_U3unk6C;
+	int			TMP_PackageFlags;
 	#define LOC(name) TMP_##name
 #else
 	#define LOC(name) E.name
@@ -878,7 +884,11 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 
 	if (Ar.ArVer < VER_UE4_REMOVE_NET_INDEX) Ar << LOC(NetObjectCount);
 
-	Ar << LOC(Guid) << LOC(U3unk6C);	//!! use name for U3unk6C
+	Ar << LOC(Guid) << LOC(PackageFlags);
+
+	bool bNotForEditorGame;
+	if (Ar.ArVer >= VER_UE4_LOAD_FOR_EDITOR_GAME)
+		Ar << bNotForEditorGame;
 
 #undef LOC
 

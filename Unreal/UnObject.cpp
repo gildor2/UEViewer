@@ -200,20 +200,36 @@ enum EPropType // hardcoded in Unreal
 	NAME_FloatProperty,
 	NAME_ObjectProperty,
 	NAME_NameProperty,
-	NAME_StringProperty,		// missing in UE3
+	NAME_StringProperty,		// NAME_DelegateProperty in UE3 and UE4
 	NAME_ClassProperty,
 	NAME_ArrayProperty,
 	NAME_StructProperty,
 	NAME_VectorProperty,
 	NAME_RotatorProperty,
 	NAME_StrProperty,
-	NAME_MapProperty,
-	NAME_FixedArrayProperty,	// missing in UE3
-#if UNREAL3
-	NAME_DelegateProperty,		// equals to NAME_StringProperty = 7
-	NAME_InterfaceProperty,		// euqals to NAME_FixedArrayProperty = 15
+	NAME_MapProperty,			// NAME_TextProperty in UE4
+	NAME_FixedArrayProperty,	// NAME_InterfaceProperty in UE3
+#if UNREAL4
+	NAME_MulticastDelegateProperty = 16,
+	NAME_WeakObjectProperty = 17,
+	NAME_LazyObjectProperty = 18,
+	NAME_AssetObjectProperty = 19,
+	NAME_UInt64Property = 20,
+	NAME_UInt32Property = 21,
+	NAME_UInt16Property = 22,
+	NAME_Int64Property = 23,
+	// missing NAME_Int32Property - because of NAME_IntProperty?
+	NAME_Int16Property = 25,
+	NAME_Int8Property = 26,
+	NAME_AssetSubclassProperty = 27,
+#endif // UNREAL4
+	// property remaps from one engine to another
+#if UNREAL3 || UNREAL4
+	NAME_DelegateProperty = 7,
+	NAME_InterfaceProperty = 15,
 #endif
 #if UNREAL4
+	NAME_TextProperty = 14,
 	NAME_AttributeProperty,
 #endif
 };
@@ -282,7 +298,7 @@ struct FPropertyTag
 	int			DataSize;
 	int			BoolValue;
 	FName		EnumName;			// UE3 ver >= 633
-	FName		InnerType;			// UE4 ver >= 282
+	FName		InnerType;			// UE4 ver >= VAR_UE4_ARRAY_PROPERTY_INNER_TAGS
 
 	bool IsValid()
 	{
@@ -342,7 +358,7 @@ struct FPropertyTag
 				Ar << (byte&)Tag.BoolValue;		// byte
 			else if (Tag.Type == NAME_ByteProperty)
 				Ar << Tag.EnumName;
-			else if ((Tag.Type == NAME_ArrayProperty || Tag.Type == NAME_AttributeProperty) && (Ar.ArVer >= 282)) // VAR_UE4_ARRAY_PROPERTY_INNER_TAGS
+			else if ((Tag.Type == NAME_ArrayProperty) && (Ar.ArVer >= VAR_UE4_ARRAY_PROPERTY_INNER_TAGS))
 				Ar << Tag.InnerType;
 			return Ar;
 		}
