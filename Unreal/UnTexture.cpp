@@ -1427,13 +1427,13 @@ void UUIStreamingTextures::PostLoad()
 		{
 			int Offset = GetRealTextureOffset_DCU_2(S.Hash, S.TextureFileCacheName);
 			if (Offset < 0)
-				Mip->Data.BulkDataFlags = BULKDATA_NoData;
+				Mip->Data.BulkDataFlags = BULKDATA_Unused;
 			else
 				Mip->Data.BulkDataOffsetInFile = Offset - Mip->Data.BulkDataOffsetInFile - 1;
 			appPrintf("OFFS: %X\n", Mip->Data.BulkDataOffsetInFile);
 		}
 #if 1
-		appPrintf("%d: %s  {%08X} %dx%d %s [%08X + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
+		appPrintf("%d: %s  {%08X} %dx%d %s [%I64X + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
 			S.nWidth, S.nHeight, EnumToName("EPixelFormat", Tex->Format),
 			S.BulkDataOffsetInFile, S.BulkDataSizeOnDisk
 		);
@@ -1745,11 +1745,11 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 #endif // MARVEL_HEROES
 		if (Bulk->BulkDataOffsetInFile < 0)
 		{
-			appPrintf("ERROR: BulkOffset = %d\n", Bulk->BulkDataOffsetInFile);
+			appPrintf("ERROR: BulkOffset = %d\n", (int)Bulk->BulkDataOffsetInFile);
 			return false;
 		}
 	}
-//	appPrintf("Bulk %X %X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
+//	appPrintf("Bulk %X %I64X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
 	Bulk->SerializeChunk(*Ar);
 	delete Ar;
 	return true;
@@ -1806,7 +1806,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 				// check for external bulk
 				//!! * -notfc cmdline switch
 				//!! * material viewer: support switching mip levels (for xbox decompression testing)
-				if (Bulk.BulkDataFlags & BULKDATA_NoData) continue;		// mip level is stripped
+				if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
 				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue;
 				// some optimization in a case of missing bulk file
 				if (bulkChecked) continue;				// already checked for previous mip levels
@@ -1911,8 +1911,7 @@ void UTexture3::Serialize4(FArchive& Ar)
 
 	FStripDataFlags StripFlags(Ar);
 
-	if (Ar.ArVer < VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
-		appError("VER_UE4_TEXTURE_SOURCE_ART_REFACTOR");
+	assert(Ar.ArVer >= VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
 
 	if (!StripFlags.IsEditorDataStripped())
 	{

@@ -399,6 +399,11 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		Ar << StringAssetReferencesCount << StringAssetReferencesOffset;
 	}
 
+	// there's a thumbnail table in source packages with following layout
+	// * package headers
+	// * thumbnail data - sequence of FObjectThumbnail
+	// * thumbnail metadata - array of small headers pointed to 'thumbnail data' objects
+	//   (this metadata is what FPackageFileSummary::ThumbnailTableOffset points to)
 	int ThumbnailTableOffset;
 	Ar << ThumbnailTableOffset;
 
@@ -447,14 +452,9 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	}
 
 	if (Ar.ArVer >= VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET)
-	{
-		//!! use this value!
-		int64 BulkDataStartOffset;
-		Ar << BulkDataStartOffset;
-		appPrintf("BulkStart: %I64X\n", BulkDataStartOffset);
-	}
+		Ar << S.BulkDataStartOffset;
 
-	//!! other fields
+	//!! other fields - useless for now
 
 	unguard;
 }
@@ -1328,7 +1328,7 @@ public:
 					// have seen such block in Borderlands: chunk has CompressedSize==UncompressedSize
 					// and has no compression; no such code in original engine
 					ChunkHeader.BlockSize = -1;	// mark as uncompressed (checked below)
-					ChunkHeader.CompressedSize = ChunkHeader.UncompressedSize = Chunk->UncompressedSize;
+					ChunkHeader.Sum.CompressedSize = ChunkHeader.Sum.UncompressedSize = Chunk->UncompressedSize;
 					ChunkHeader.Blocks.Empty(1);
 					FCompressedChunkBlock *Block = new (ChunkHeader.Blocks) FCompressedChunkBlock;
 					Block->UncompressedSize = Block->CompressedSize = Chunk->UncompressedSize;
@@ -1533,9 +1533,9 @@ FArchive* UnPackage::CreateLoader(const char* filename, FArchive* baseLoader)
 		TArray<FCompressedChunk> Chunks;
 		FCompressedChunk *Chunk = new (Chunks) FCompressedChunk;
 		Chunk->UncompressedOffset = 0;
-		Chunk->UncompressedSize   = H.UncompressedSize;
+		Chunk->UncompressedSize   = H.Sum.UncompressedSize;
 		Chunk->CompressedOffset   = 0;
-		Chunk->CompressedSize     = H.CompressedSize;
+		Chunk->CompressedSize     = H.Sum.CompressedSize;
 		byte CompMethod = GForceCompMethod;
 		if (!CompMethod)
 			CompMethod = (Loader->Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_FIND;

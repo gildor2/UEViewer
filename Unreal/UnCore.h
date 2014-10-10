@@ -391,6 +391,12 @@ public:
 	}
 
 	virtual void Seek(int Pos) = 0;
+	void Seek64(int64 Pos)
+	{
+		//!! change when support large files; perhaps Seek() should call Seek64
+		if (Pos >= (1LL << 30)) appError("Seek64");
+		Seek((int)Pos);
+	}
 	virtual bool IsEof() const
 	{
 		return false;
@@ -1632,6 +1638,18 @@ struct FCompressedChunkBlock
 
 	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
 	{
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4)
+		{
+			// UE4 has 64-bit values here
+			int64 CompressedSize64, UncompressedSize64;
+			Ar << CompressedSize64 << UncompressedSize64;
+			assert((CompressedSize64 | UncompressedSize64) <= 0x7FFFFFFF); // we're using 32 bit values
+			B.CompressedSize = (int)CompressedSize64;
+			B.UncompressedSize = (int)UncompressedSize64;
+			return Ar;
+		}
+#endif // UNREAL4
 		return Ar << B.CompressedSize << B.UncompressedSize;
 	}
 };
@@ -1640,8 +1658,7 @@ struct FCompressedChunkHeader
 {
 	int			Tag;
 	int			BlockSize;				// maximal size of uncompressed block
-	int			CompressedSize;
-	int			UncompressedSize;
+	FCompressedChunkBlock Sum;			// summary for the whole compressed block
 	TArray<FCompressedChunkBlock> Blocks;
 
 	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H);
@@ -1651,13 +1668,14 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 
 /*-----------------------------------------------------------------------------
-	UE3 bulk data - replacement for TLazyArray
+	UE3/UE4 bulk data - replacement for TLazyArray
 -----------------------------------------------------------------------------*/
 
+// UE3
 #define BULKDATA_StoreInSeparateFile	0x01		// bulk stored in different file
 #define BULKDATA_CompressedZlib			0x02		// unknown name
 #define BULKDATA_CompressedLzo			0x10		// unknown name
-#define BULKDATA_NoData					0x20		// unknown name - empty bulk block
+#define BULKDATA_Unused					0x20		// empty bulk block
 #define BULKDATA_SeparateData			0x40		// unknown name - bulk stored in a different place in the same file
 #define BULKDATA_CompressedLzx			0x80		// unknown name
 
@@ -1665,14 +1683,22 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 #define BULKDATA_CompressedLzoEncr		0x100		// encrypted LZO
 #endif
 
+// UE4
+
+#if UNREAL4
+
+#define BULKDATA_PayloadAtEndOfFile		0x01		//?? bulk data stored at the end of this file
+//#define BULKDATA_CompressedZlib		0x02
+//#define BULKDATA_Unused				0x20
+#define BULKDATA_ForceInlinePayload		0x40		//?? bulk data stored immediately after header
+
+#endif // UNREAL4
+
 struct FByteBulkData //?? separate FUntypedBulkData
 {
 	int		BulkDataFlags;				// BULKDATA_...
 	int		ElementCount;				// number of array elements
-	int		BulkDataOffsetInFile;		// position in file, points to BulkData
-#if UNREAL4
-	int64	BulkDataOffsetInFile64;
-#endif
+	int64	BulkDataOffsetInFile;		// position in file, points to BulkData; 32-bit in UE3, 64-bit in UE4
 	int		BulkDataSizeOnDisk;			// size of bulk data on disk
 //	int		SavedBulkDataFlags;
 //	int		SavedElementCount;
@@ -1685,9 +1711,6 @@ struct FByteBulkData //?? separate FUntypedBulkData
 	FByteBulkData()
 	:	BulkData(NULL)
 	,	BulkDataOffsetInFile(0)
-#if UNREAL4
-	,	BulkDataOffsetInFile64(0)
-#endif
 	{}
 
 	virtual ~FByteBulkData()
@@ -1754,7 +1777,7 @@ enum
 	VER_UE4_ASSET_REGISTRY_TAGS = 112,
 	VER_UE4_ADD_COOKED_TO_TEXTURE2D = 125,
 	VER_UE4_REMOVED_STRIP_DATA = 130,
-	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,
+	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,	// not supported
 	VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES = 163,
 	VER_UE4_REMOVE_NET_INDEX = 196,
 	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,

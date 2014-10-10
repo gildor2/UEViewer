@@ -1,6 +1,10 @@
 #include "Core.h"
 #include "UnCore.h"
 
+#if UNREAL4
+#include "UnPackage.h"			// for accessing FPackageFileSummary from FByteBulkData
+#endif
+
 
 #define FILE_BUFFER_SIZE		4096
 
@@ -771,21 +775,38 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 #endif
 	else
 		assert(H.Tag == PACKAGE_FILE_TAG);
+
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		// Tag and BlockSize are really FCompressedChunkBlock, which has 64-bit integers here.
+		int Pad;
+		int64 BlockSize64;
+		Ar << Pad << BlockSize64;
+		assert((Pad == 0) && (BlockSize64 <= 0x7FFFFFFF));
+		H.BlockSize = (int)BlockSize64;
+		goto summary;
+	}
+#endif // UNREAL4
+
 tag_ok:
-	Ar << H.BlockSize << H.CompressedSize << H.UncompressedSize;
+	Ar << H.BlockSize;
+
+summary:
+	Ar << H.Sum;
 #if 0
 	if (H.BlockSize == PACKAGE_FILE_TAG)
 		H.BlockSize = (Ar.ArVer >= 369) ? 0x20000 : 0x8000;
-	int BlockCount = (H.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
+	int BlockCount = (H.Sum.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
 	H.Blocks.Empty(BlockCount);
 	H.Blocks.Add(BlockCount);
 	for (i = 0; i < BlockCount; i++)
 		Ar << H.Blocks[i];
 #else
 	H.BlockSize = 0x20000;
-	H.Blocks.Empty((H.UncompressedSize + 0x20000 - 1) / 0x20000);	// optimized for block size 0x20000
+	H.Blocks.Empty((H.Sum.UncompressedSize + 0x20000 - 1) / 0x20000);	// optimized for block size 0x20000
 	int CompSize = 0, UncompSize = 0;
-	while (CompSize < H.CompressedSize && UncompSize < H.UncompressedSize)
+	while (CompSize < H.Sum.CompressedSize && UncompSize < H.Sum.UncompressedSize)
 	{
 		FCompressedChunkBlock *Block = new (H.Blocks) FCompressedChunkBlock;
 		Ar << *Block;
@@ -794,7 +815,7 @@ tag_ok:
 	}
 	// check header; seen one package where sum(Block.CompressedSize) < H.CompressedSize,
 	// but UncompressedSize is exact
-	assert(/*CompSize == H.CompressedSize &&*/ UncompSize == H.UncompressedSize);
+	assert(/*CompSize == H.CompressedSize &&*/ UncompSize == H.Sum.UncompressedSize);
 	if (H.Blocks.Num() > 1)
 		H.BlockSize = H.Blocks[0].UncompressedSize;
 #endif
@@ -838,23 +859,28 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4)
 	{
+		guard(Bulk4);
+
 		Ar << BulkDataFlags << ElementCount;
 		Ar << BulkDataSizeOnDisk;
 		if (Ar.ArVer < VER_UE4_BULKDATA_AT_LARGE_OFFSETS)
 		{
-			Ar << BulkDataOffsetInFile;
-			BulkDataOffsetInFile64 = BulkDataOffsetInFile;
+			Ar << (int&)BulkDataOffsetInFile;		// 32-bit
 		}
 		else
 		{
-			Ar << BulkDataOffsetInFile64;
+			Ar << BulkDataOffsetInFile;				// 64-bit
 		}
-		//!! add Summary.BulkDataStartOffset
-#if DEBUG_BULK
+		UnPackage* Package = Ar.CastTo<UnPackage>();
+		assert(Package);
+		BulkDataOffsetInFile += Package->Summary.BulkDataStartOffset;
+	#if DEBUG_BULK
 		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%I64X+%X)\n",
-			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile64, BulkDataSizeOnDisk);
-#endif
+			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+	#endif
 		return;
+
+		unguard;
 	}
 #endif // UNREAL4
 
@@ -897,7 +923,9 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		// read header
 		Ar << BulkDataFlags << ElementCount;
 		assert(Ar.IsLoading);
-		Ar << BulkDataSizeOnDisk << BulkDataOffsetInFile;
+		int BulkDataOffsetInFile32;
+		Ar << BulkDataSizeOnDisk << BulkDataOffsetInFile32;
+		BulkDataOffsetInFile = BulkDataOffsetInFile32;			// sign extend to allow non-standard TFC systems which uses '-1' in this field
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 128)
 		{
@@ -923,7 +951,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 #endif // APB
 
 #if DEBUG_BULK
-	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%X+%X)\n",
+	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%I64X+%X)\n",
 		Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 #endif
 
@@ -937,31 +965,50 @@ void FByteBulkData::Serialize(FArchive &Ar)
 
 	SerializeHeader(Ar);
 
-	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
+	if (BulkDataFlags & BULKDATA_Unused)	// skip serializing
 	{
 #if DEBUG_BULK
-		appPrintf("bulk in separate file (flags=%X, pos=%X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+		appPrintf("bulk with no data\n");
 #endif
 		return;
 	}
 
-	if (BulkDataFlags & BULKDATA_NoData)	// skip serializing
+#if UNREAL4
+	if ((Ar.Game >= GAME_UE4) && (BulkDataFlags & BULKDATA_PayloadAtEndOfFile))
 	{
-#if DEBUG_BULK
-		appPrintf("bulk in separate file\n");
-#endif
-		return;								//?? what to do with BulkData ?
-	}
-
-	if (BulkDataFlags & BULKDATA_SeparateData)
-	{
+		// stored in the same file, but at different position
 		// save archive position
 		int savePos, saveStopper;
 		savePos     = Ar.Tell();
 		saveStopper = Ar.GetStopper();
 		// seek to data block and read data
 		Ar.SetStopper(0);
-		Ar.Seek(BulkDataOffsetInFile);
+		SerializeChunk(Ar);
+		// restore archive position
+		Ar.Seek(savePos);
+		Ar.SetStopper(saveStopper);
+		return;
+	}
+#endif // UNREAL4
+
+	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
+	{
+		// stored in a different file (TFC)
+#if DEBUG_BULK
+		appPrintf("bulk in separate file (flags=%X, pos=%I64X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+#endif
+		return;
+	}
+
+	if (BulkDataFlags & BULKDATA_SeparateData)
+	{
+		// stored in the same file, but at different position
+		// save archive position
+		int savePos, saveStopper;
+		savePos     = Ar.Tell();
+		saveStopper = Ar.GetStopper();
+		// seek to data block and read data
+		Ar.SetStopper(0);
 		SerializeChunk(Ar);
 		// restore archive position
 		Ar.Seek(savePos);
@@ -972,7 +1019,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 #if TRANSFORMERS
 	// PS3 sounds in Transformers has alignment to 0x8000 with filling zeros
 	if (Ar.Game == GAME_Transformers && Ar.Platform == PLATFORM_PS3)
-		Ar.Seek(BulkDataOffsetInFile);
+		Ar.Seek64(BulkDataOffsetInFile);
 #endif
 	assert(BulkDataOffsetInFile == Ar.Tell());
 	SerializeChunk(Ar);
@@ -981,13 +1028,10 @@ void FByteBulkData::Serialize(FArchive &Ar)
 }
 
 
+// Serialize only header, and skip data block if it is inline
 void FByteBulkData::Skip(FArchive &Ar)
 {
 	guard(FByteBulkData::Skip);
-
-	// we cannot simply skip data, because:
-	// 1) it may me compressed
-	// 2) ElementSize is variable and not stored in archive
 
 	SerializeHeader(Ar);
 	if (BulkDataOffsetInFile == Ar.Tell())
@@ -1004,7 +1048,7 @@ void FByteBulkData::SerializeChunk(FArchive &Ar)
 {
 	guard(FByteBulkData::SerializeChunk);
 
-	assert(!(BulkDataFlags & BULKDATA_NoData));
+	assert(!(BulkDataFlags & BULKDATA_Unused));
 
 	// allocate array
 	if (BulkData) appFree(BulkData);
@@ -1015,6 +1059,7 @@ void FByteBulkData::SerializeChunk(FArchive &Ar)
 
 	// serialize data block
 	Ar.Seek(BulkDataOffsetInFile);
+
 	if (BulkDataFlags & (BULKDATA_CompressedLzo | BULKDATA_CompressedZlib | BULKDATA_CompressedLzx))
 	{
 		// compressed block
@@ -1035,6 +1080,7 @@ void FByteBulkData::SerializeChunk(FArchive &Ar)
 		// uncompressed block
 		Ar.Serialize(BulkData, DataSize);
 	}
+
 	assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell());
 
 	unguard;

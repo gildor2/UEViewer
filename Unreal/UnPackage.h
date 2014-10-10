@@ -110,6 +110,9 @@ struct FPackageFileSummary
 	TArray<FCompressedChunk> CompressedChunks;
 	int			U3unk60;
 #endif // UNREAL3
+#if UNREAL4
+	int64		BulkDataStartOffset;
+#endif
 
 	friend FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S);
 };
