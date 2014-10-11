@@ -101,11 +101,14 @@ public:
 #endif // RENDERING
 };
 
+// Note: real enumeration values are not important for UE3/UE4 because these values are serialized
+// as FName. By the way, it's better to keep UE3 values in place, because some games could have
+// custom property serializers (for example, Batman2), which serializes enumaration values as integer.
 enum EPixelFormat
 {
 	PF_Unknown,
 	PF_A32B32G32R32F,
-	PF_A8R8G8B8,
+	PF_A8R8G8B8,			// exists in UE4, but marked as not used
 	PF_G8,
 	PF_G16,
 	PF_DXT1,
@@ -116,8 +119,8 @@ enum EPixelFormat
 	PF_FloatRGBA,			// A RGBA FP format with platform-specific implementation, for use with render targets
 	PF_DepthStencil,		// A depth+stencil format with platform-specific implementation, for use with render targets
 	PF_ShadowDepth,			// A depth format with platform-specific implementation, for use with render targets
-	PF_FilteredShadowDepth, // A depth format with platform-specific implementation, that can be filtered by hardware
-	PF_R32F,
+	PF_FilteredShadowDepth, // not in UE4
+	PF_R32F,				// UE3
 	PF_G16R16,
 	PF_G16R16F,
 	PF_G16R16F_FILTER,
@@ -130,12 +133,46 @@ enum EPixelFormat
 	PF_BC5,
 	PF_V8U8,
 	PF_A1,
+	PF_FloatR11G11B10,
+	PF_A4R4G4B4,			// not in UE4
+#if UNREAL4
+	PF_B8G8R8A8,			// new name for PF_A8R8G8B8
+	PF_R32FLOAT,			// == PF_R32F in UE4
+	PF_A8,
+	PF_R32_UINT,
+	PF_R32_SINT,
+	PF_PVRTC2,
+	PF_PVRTC4,
+	PF_R16_UINT,
+	PF_R16_SINT,
+	PF_R16G16B16A16_UINT,
+	PF_R16G16B16A16_SINT,
+	PF_R5G6B5_UNORM,
+	PF_R8G8B8A8,
+//	PF_A8R8G8B8,
+	PF_BC4,
+	PF_R8G8,
+	PF_ATC_RGB,
+	PF_ATC_RGBA_E,
+	PF_ATC_RGBA_I,
+	PF_X24_G8,
+	PF_ETC1,
+	PF_ETC2_RGB,
+	PF_ETC2_RGBA,
+	PF_R32G32B32A32_UINT,
+	PF_R16G16_UINT,
+	PF_ASTC_4x4,
+	PF_ASTC_6x6,
+	PF_ASTC_8x8,
+	PF_ASTC_10x10,
+	PF_ASTC_12x12,
+#endif // UNREAL4
+#if THIEF4
+	PF_BC7,
+#endif
 #if MASSEFF
 	PF_NormalMap_LQ,
 	PF_NormalMap_HQ,
-#endif
-#if THIEF4
-	PF_BC7,
 #endif
 };
 
@@ -168,12 +205,46 @@ _ENUM(EPixelFormat)
 	_E(PF_BC5),
 	_E(PF_V8U8),
 	_E(PF_A1),
+	_E(PF_FloatR11G11B10),
+	_E(PF_A4R4G4B4),
+#if UNREAL4
+	_E(PF_B8G8R8A8),
+	_E(PF_R32FLOAT),
+	_E(PF_A8),
+	_E(PF_R32_UINT),
+	_E(PF_R32_SINT),
+	_E(PF_PVRTC2),
+	_E(PF_PVRTC4),
+	_E(PF_R16_UINT),
+	_E(PF_R16_SINT),
+	_E(PF_R16G16B16A16_UINT),
+	_E(PF_R16G16B16A16_SINT),
+	_E(PF_R5G6B5_UNORM),
+	_E(PF_R8G8B8A8),
+//	_E(PF_A8R8G8B8),
+	_E(PF_BC4),
+	_E(PF_R8G8),
+	_E(PF_ATC_RGB),
+	_E(PF_ATC_RGBA_E),
+	_E(PF_ATC_RGBA_I),
+	_E(PF_X24_G8),
+	_E(PF_ETC1),
+	_E(PF_ETC2_RGB),
+	_E(PF_ETC2_RGBA),
+	_E(PF_R32G32B32A32_UINT),
+	_E(PF_R16G16_UINT),
+	_E(PF_ASTC_4x4),
+	_E(PF_ASTC_6x6),
+	_E(PF_ASTC_8x8),
+	_E(PF_ASTC_10x10),
+	_E(PF_ASTC_12x12),
+#endif // UNREAL4
+#if THIEF4
+	_E(PF_BC7),
+#endif
 #if MASSEFF
 	_E(PF_NormalMap_LQ),
 	_E(PF_NormalMap_HQ),
-#endif
-#if THIEF4
-	_E(PF_BC7),
 #endif
 };
 
@@ -205,6 +276,24 @@ struct FTexture2DMipMap
 
 	friend FArchive& operator<<(FArchive &Ar, FTexture2DMipMap &Mip)
 	{
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4)
+		{
+			// this code is generally the same as for UE3, but it's quite simple, so keep
+			// it in separate code block
+			bool cooked = false;
+			if (Ar.ArVer >= VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
+				Ar << cooked;
+			Mip.Data.Serialize(Ar);
+			Ar << Mip.SizeX << Mip.SizeY;
+			if (Ar.ArVer >= VER_UE4_TEXTURE_DERIVED_DATA2 && !cooked)
+			{
+				FString DerivedDataKey;
+				Ar << DerivedDataKey;
+			}
+			return Ar;
+		}
+#endif // UNREAL4
 		Mip.Data.Serialize(Ar);
 #if DARKVOID
 		if (Ar.Game == GAME_DarkVoid)

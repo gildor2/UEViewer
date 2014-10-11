@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+12.10.2014
+- implemented support for UE4 textures
+
 09.10.2014
 - fixed bug: during batch export from GUI many objects were occasionally skipped from export
 - Ctrl+X didn't use export directory option ("-out=...")

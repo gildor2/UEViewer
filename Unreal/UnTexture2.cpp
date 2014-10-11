@@ -520,7 +520,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 			intFormat = TPF_RGB8;
 			break;
 		case 5:
-			intFormat = TPF_RGBA8;
+			intFormat = TPF_BGRA8;
 			break;
 		// newer UE1 versions has DXT3 and DXT5
 		case 6:
@@ -549,7 +549,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 			intFormat = TPF_RGB8;
 			break;
 		case TEXF_RGBA8:
-			intFormat = TPF_RGBA8;
+			intFormat = TPF_BGRA8;
 			break;
 		case TEXF_DXT3:
 			intFormat = TPF_DXT3;

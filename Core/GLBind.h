@@ -225,15 +225,16 @@ extern GL_t GL;
 
 
 
-#define QGL_1_3	(1 << 0)
-#define QGL_1_4	(1 << 1)
-#define QGL_2_0	(1 << 2)
-#define QGL_3_1	(1 << 3)
-#define QGL_EXT_TEXTURE_COMPRESSION_S3TC	(1 << 4)
-#define QGL_EXT_FRAMEBUFFER_OBJECT	(1 << 5)
-#define QGL_ARB_TEXTURE_FLOAT	(1 << 6)
-#define QGL_ARB_TEXTURE_COMPRESSION_RGTC	(1 << 7)
-#define QGL_ARB_TEXTURE_COMPRESSION_BPTC	(1 << 8)
+#define QGL_1_2	(1 << 0)
+#define QGL_1_3	(1 << 1)
+#define QGL_1_4	(1 << 2)
+#define QGL_2_0	(1 << 3)
+#define QGL_3_1	(1 << 4)
+#define QGL_EXT_TEXTURE_COMPRESSION_S3TC	(1 << 5)
+#define QGL_EXT_FRAMEBUFFER_OBJECT	(1 << 6)
+#define QGL_ARB_TEXTURE_FLOAT	(1 << 7)
+#define QGL_ARB_TEXTURE_COMPRESSION_RGTC	(1 << 8)
+#define QGL_ARB_TEXTURE_COMPRESSION_BPTC	(1 << 9)
 
 #if _WIN32
 

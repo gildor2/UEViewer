@@ -1346,6 +1346,14 @@ private:
 	}
 };
 
+template<class T> inline void Exchange(TArray<T>& A, TArray<T>& B)
+{
+	const int size = sizeof(TArray<T>);
+	byte buffer[size];
+	memcpy(buffer, &A, size);
+	memcpy(&A, &B, size);
+	memcpy(&B, buffer, size);
+}
 
 // Binary-compatible array, but with no allocations inside
 template<class T, int N> class TStaticArray : public TArray<T>
@@ -1783,6 +1791,7 @@ enum
 {
 	// Pre-release file versions
 	VER_UE4_ASSET_REGISTRY_TAGS = 112,
+	VER_UE4_TEXTURE_DERIVED_DATA2 = 124,
 	VER_UE4_ADD_COOKED_TO_TEXTURE2D = 125,
 	VER_UE4_REMOVED_STRIP_DATA = 130,
 	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,	// not supported

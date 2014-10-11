@@ -246,6 +246,16 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 	// - most formats are uploaded with glTexImage2D(), not with glCompressedTexImage2D()
 	// - formats has different extension requirements (not QGL_EXT_TEXTURE_COMPRESSION_S3TC)
 
+	if (GL_SUPPORT(QGL_1_2) && (TexData.Format == TPF_BGRA8))
+	{
+		// avoid byte swapping, upload texture "as is"
+		//!! this format is uploaded with glTexImage2D, but all formats below are for glCompressedTexImage2D
+		//?? support other uncompressed formats, like A1, G8 etc
+		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_BGRA, GL_UNSIGNED_BYTE, TexData.CompressedData);
+		glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
+		return true;
+	}
+
 	GLenum format;
 	switch (TexData.Format)
 	{

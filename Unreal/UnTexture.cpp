@@ -43,7 +43,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ 0,						1,			1,			1,				64,			64		},	// TPF_G8
 //	{																						},	// TPF_G16
 	{ 0,						1,			1,			3,				0,			0,		},	// TPF_RGB8
-	{ 0,						1,			1,			4,				32,			32		},	// TPF_RGBA8
+	{ 0,						1,			1,			4,				32,			32		},	// TPF_BGRA8
 	{ BYTES4('D','X','T','1'),	4,			4,			8,				128,		128		},	// TPF_DXT1
 	{ BYTES4('D','X','T','3'),	4,			4,			16,				128,		128		},	// TPF_DXT3
 	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128		},	// TPF_DXT5
@@ -142,7 +142,7 @@ byte *CTextureData::Decompress()
 			}
 		}
 		return dst;
-	case TPF_RGBA8:
+	case TPF_BGRA8:
 		{
 			const byte *s = Data;
 			byte *d = dst;

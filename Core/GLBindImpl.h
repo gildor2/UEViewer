@@ -3,15 +3,15 @@
 #if _WIN32
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	36
-#	define NUM_EXTENSIONS	9
+#	define NUM_EXTENSIONS	10
 #elif __linux__
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	36
-#	define NUM_EXTENSIONS	9
+#	define NUM_EXTENSIONS	10
 #else
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	36
-#	define NUM_EXTENSIONS	9
+#	define NUM_EXTENSIONS	10
 #endif
 
 
@@ -840,6 +840,7 @@ struct extInfo_t {
 #if NUM_EXTENSIONS
 
 static extInfo_t extInfo[NUM_EXTENSIONS] = {
+	{"1.2\0", NULL, NULL, 0, 0, 0, 0},
 	{"1.3\0", NULL, NULL, NUM_GLFUNCS+0, 2, 0, 0},
 	{"1.4\0", NULL, NULL, 0, 0, 0, 0},
 	{"2.0\0", NULL, NULL, NUM_GLFUNCS+2, 23, 0, 0},

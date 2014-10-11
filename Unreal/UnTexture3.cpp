@@ -772,8 +772,8 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 
 	ETexturePixelFormat intFormat;
-	if (Format == PF_A8R8G8B8)
-		intFormat = TPF_RGBA8;
+	if (Format == PF_A8R8G8B8 || Format == PF_B8G8R8A8)	// PF_A8R8G8B8 was renamed to PF_B8G8R8A8
+		intFormat = TPF_BGRA8;
 	else if (Format == PF_DXT1)
 		intFormat = TPF_DXT1;
 	else if (Format == PF_DXT3)
@@ -791,8 +791,8 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	else if (Format == PF_A1)
 		intFormat = TPF_A1;
 #if MASSEFF
-//??else if (Format == PF_NormapMap_LQ) -- seems not used
-//??	intFormat = TPF_BC5;
+//	else if (Format == PF_NormapMap_LQ) -- seems not used
+//		intFormat = TPF_BC5;
 	else if (Format == PF_NormalMap_HQ)
 		intFormat = TPF_BC5;
 #endif // MASSEFF
