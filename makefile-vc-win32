@@ -56,6 +56,9 @@ MAIN_FILES = \
 	$(OUT_1)/UnPackage.obj \
 	$(OUT_1)/UnRenderer.obj \
 	$(OUT_1)/UnTexture.obj \
+	$(OUT_1)/UnTexture2.obj \
+	$(OUT_1)/UnTexture3.obj \
+	$(OUT_1)/UnTexture4.obj \
 	$(OUT_1)/UnTextureNVTT.obj \
 	$(OUT_1)/UnUbisoft.obj \
 	$(OUT_1)/MaterialViewer.obj \
@@ -969,7 +972,42 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
-	Unreal/UnMaterial3.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMesh1.obj : Unreal/UnMesh1.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh1.obj" Unreal/UnMesh1.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnTexture2.obj : Unreal/UnTexture2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture2.obj" Unreal/UnTexture2.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnTextureNVTT.h
@@ -987,14 +1025,28 @@ DEPENDS = \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMaterial2.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h
 
-$(OUT_1)/UnMesh1.obj : Unreal/UnMesh1.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh1.obj" Unreal/UnMesh1.cpp
+$(OUT_1)/UnTexture4.obj : Unreal/UnTexture4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture4.obj" Unreal/UnTexture4.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnTexture3.obj : Unreal/UnTexture3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture3.obj" Unreal/UnTexture3.cpp
 
 DEPENDS = \
 	Core/Core.h \

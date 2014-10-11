@@ -89,6 +89,19 @@ enum ETexturePixelFormat
 };
 
 
+struct CPixelFormatInfo
+{
+	unsigned	FourCC;				// 0 when not DDS-compatible
+	byte		BlockSizeX;
+	byte		BlockSizeY;
+	byte		BytesPerBlock;
+	byte		X360AlignX;			// 0 when unknown or not supported on XBox360
+	byte		X360AlignY;
+};
+
+
+extern const CPixelFormatInfo PixelFormatInfo[];	// index in array is TPF_... constant
+
 struct CTextureData
 {
 	const byte				*CompressedData;
