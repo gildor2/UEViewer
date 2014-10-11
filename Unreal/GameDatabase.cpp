@@ -324,12 +324,22 @@ const GameInfo GListOfGames[] = {
 
 	// Unreal engine 4
 #if UNREAL4
-		G("Unreal engine 4", ue4, GAME_UE4),
+		G("Unreal engine 4",   ue4,   GAME_UE4  ),		// useless?
+		G("Unreal engine 4.0", ue4.0, GAME_UE4_0),
+		G("Unreal engine 4.1", ue4.1, GAME_UE4_1),
+		G("Unreal engine 4.2", ue4.2, GAME_UE4_2),
+		G("Unreal engine 4.3", ue4.3, GAME_UE4_3),
+		G("Unreal engine 4.4", ue4.4, GAME_UE4_4),
 #endif // UNREAL4
 
 	// end marker
 	TABLE_END
 };
+
+#undef G1
+#undef G2
+#undef G3
+#undef G
 
 const char *GetEngineName(int Game)
 {
@@ -731,32 +741,62 @@ void FArchive::DetectGame()
 #undef SET
 }
 
-#define OVERRIDE_ENDWAR_VER		224
-#define OVERRIDE_TERA_VER		568
-#define OVERRIDE_HUNTED_VER		708			// real version is 709, which is incorrect
-#define OVERRIDE_DND_VER		673			// real version is 674
 #define OVERRIDE_ME1_LVER		90			// real version is 1008, which is greater than LicenseeVersion of Mass Effect 2 and 3
 #define OVERRIDE_TRANSFORMERS3	566			// real version is 846
 #define OVERRIDE_SF2_VER		700
 #define OVERRIDE_SF2_VER2		710
-#define OVERRIDE_GOWJ			828			// real version is 846
+
+
+struct UEVersionMap
+{
+	int		GameTag;
+	int		PackageVersion;
+};
+
+#define G(game,ver)		{ game, ver },
+// Mapping between GAME_UE4_n and
+#define M(ver)			{ GAME_UE4_##ver, VER_UE4_##ver }
+
+static const UEVersionMap ue4versions[] =
+{
+#if ENDWAR
+	G(GAME_EndWar, 224)
+#endif
+#if TERA
+	G(GAME_Tera, 568)
+#endif
+#if HUNTED
+	G(GAME_Hunted, 708)						// real version is 709, which is incorrect
+#endif
+#if DND
+	G(GAME_DND, 673)						// real version is 674
+#endif
+	G(GAME_GoWJ, 828)						// real version is 846
+
+	// Unreal engine 4
+#if UNREAL4
+	M(0), M(1), M(2), M(3), M(4)
+#endif
+};
+
+#undef G
+#undef M
+
 
 void FArchive::OverrideVersion()
 {
 	int OldVer  = ArVer;
 	int OldLVer = ArLicenseeVer;
-#if ENDWAR
-	if (Game == GAME_EndWar)	ArVer = OVERRIDE_ENDWAR_VER;
-#endif
-#if TERA
-	if (Game == GAME_Tera)		ArVer = OVERRIDE_TERA_VER;
-#endif
-#if HUNTED
-	if (Game == GAME_Hunted)	ArVer = OVERRIDE_HUNTED_VER;
-#endif
-#if DND
-	if (Game == GAME_DND)		ArVer = OVERRIDE_DND_VER;
-#endif
+
+	for (int i = 0; i < ARRAY_COUNT(ue4versions); i++)
+	{
+		if (ue4versions[i].GameTag == Game)
+		{
+			ArVer = ue4versions[i].PackageVersion;
+			break;
+		}
+	}
+
 #if MASSEFF
 	if (Game == GAME_MassEffect) ArLicenseeVer = OVERRIDE_ME1_LVER;
 #endif
@@ -773,10 +813,8 @@ void FArchive::OverrideVersion()
 			ArVer = OVERRIDE_SF2_VER;
 	}
 #endif // SPECIALFORCE2
-	if (Game == GAME_GoWJ)
-	{
-		ArVer = OVERRIDE_GOWJ;
-	}
+#if UNREAL4
+#endif
 	if (ArVer != OldVer || ArLicenseeVer != OldLVer)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }
@@ -1042,7 +1080,8 @@ const char *appGetRootDirectory()
 }
 
 
-static const char *KnownDirs[] =
+// UE2 has simple directory hierarchy with directory depth 1
+static const char *KnownDirs2[] =
 {
 	"Animations",
 	"Maps",
@@ -1078,7 +1117,9 @@ void appSetRootDirectory2(const char *filename)
 	// make a copy for fallback
 	strcpy(buf2, buf);
 	// analyze path
-	bool detected = false;
+	int detected = 0;				// weigth; 0 = not detected
+	FString root;
+
 	const char *pCooked = NULL;
 	for (int i = 0; i < 8; i++)
 	{
@@ -1086,26 +1127,38 @@ void appSetRootDirectory2(const char *filename)
 		s = strrchr(buf, '/');
 		if (!s) break;
 		*s++ = 0;
+		bool found = false;
 		if (i == 0)
 		{
-			for (int j = 0; j < ARRAY_COUNT(KnownDirs); j++)
-				if (!stricmp(KnownDirs[j], s))
+			for (int j = 0; j < ARRAY_COUNT(KnownDirs2); j++)
+				if (!stricmp(KnownDirs2[j], s))
 				{
-					detected = true;
+					found = true;
 					break;
 				}
 		}
-		if (detected) break;
+		if (found)
+		{
+			if (detected < 1)
+			{
+				detected = 1;
+				root = buf;
+			}
+		}
 		pCooked = appStristr(s, "Cooked");
 		if (pCooked || appStristr(s, "Content"))
 		{
-			s[-1] = '/';	// put it back
-			detected = true;
-			break;
+			s[-1] = '/';			// put it back
+			if (detected < 2)
+			{
+				detected = 2;
+				root = buf;
+				break;
+			}
 		}
 	}
-	const char *root = (detected) ? buf : buf2;
-	appPrintf("Detected game root %s%s", root, (detected == false) ? " (no recurse)" : "");
+	if (!detected) root = buf;
+	appPrintf("Detected game root %s%s", *root, (detected == false) ? " (no recurse)" : "");
 	// detect platform
 	if (GForcePlatform == PLATFORM_UNKNOWN && pCooked)
 	{
@@ -1132,7 +1185,7 @@ void appSetRootDirectory2(const char *filename)
 	}
 	// scan root directory
 	appPrintf("\n");
-	appSetRootDirectory(root, detected);
+	appSetRootDirectory(*root, detected);
 }
 
 

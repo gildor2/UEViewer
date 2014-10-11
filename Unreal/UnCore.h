@@ -327,6 +327,13 @@ enum EGame
 		GAME_TNA,
 
 	GAME_UE4       = 0x10000,
+		// engine versions
+		GAME_UE4_0,
+		GAME_UE4_1,
+		GAME_UE4_2,
+		GAME_UE4_3,
+		GAME_UE4_4,
+		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
 };
@@ -1774,6 +1781,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 // Unreal engine 4 versions, declared as enum to be able to see all revisions in single place
 enum
 {
+	// Pre-release file versions
 	VER_UE4_ASSET_REGISTRY_TAGS = 112,
 	VER_UE4_ADD_COOKED_TO_TEXTURE2D = 125,
 	VER_UE4_REMOVED_STRIP_DATA = 130,
@@ -1785,12 +1793,17 @@ enum
 	VAR_UE4_ARRAY_PROPERTY_INNER_TAGS = 282,
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
 	// 342 = 4.0.0
+	VER_UE4_0 = 342,
 	// 352 = 4.1.0
+	VER_UE4_1 = 352,
 	// 363 = 4.2.0
-	VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
+	VER_UE4_2 = 363,
+		VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
 	// 382 = 4.3.0
-	VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
+	VER_UE4_3 = 382,
+		VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
 	// 385 = 4.4.0
+	VER_UE4_4 = 385,
 };
 
 class FStripDataFlags

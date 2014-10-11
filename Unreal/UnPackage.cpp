@@ -374,6 +374,9 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	// store file version to archive
 	Ar.ArVer         = S.FileVersion;
 	Ar.ArLicenseeVer = S.LicenseeVersion;
+	// detect game
+	Ar.DetectGame();
+	Ar.OverrideVersion();
 
 	if (S.LegacyVersion <= -2)
 	{
@@ -383,7 +386,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		if (CustomVersionsSize != 0) appError("TODO: support UE4 CustomVersions");
 	}
 
-	if (S.FileVersion == 0 && S.LicenseeVersion == 0)
+	if (Ar.ArVer == 0 && Ar.ArLicenseeVer == 0)
 		appError("Unversioned UE4 packages are not supported");
 
 	Ar << S.HeadersSize;
@@ -1657,7 +1660,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 		for (int i = 0; i < Summary.NameCount; i++)
 		{
 			guard(Name);
-			if (Summary.FileVersion < 64)
+			if ((ArVer < 64) && (Game < GAME_UE2))
 			{
 				char buf[MAX_FNAME_LEN];
 				int len;
@@ -1883,8 +1886,12 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 		{
 			*this << *Exp;
 #if DEBUG_PACKAGE
-			PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
-				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype);
+//			USE_COMPACT_PACKAGE_STRUCTS - makes impossible to dump full information
+//			Perhaps add full support to extract.exe?
+//			PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
+//				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype);
+			PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X, exp_f=%08X\n", i, GetObjectName(Exp->ClassIndex),
+				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags, Exp->ExportFlags);
 #endif
 		}
 	}
@@ -1896,7 +1903,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 
 #if UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS			// we can serialize dependencies when needed
 	if (Game == GAME_DCUniverse || Game == GAME_Bioshock3) goto no_depends;		// has non-standard checks
-	if (Summary.FileVersion >= 415 && Summary.DependsOffset)	// some games are patrially upgraded: ArVer >= 415, but no depends table
+	if (Summary.DependsOffset)						// some games are patrially upgraded: ArVer >= 415, but no depends table
 	{
 		guard(ReadDependsTable);
 		Seek(Summary.DependsOffset);
