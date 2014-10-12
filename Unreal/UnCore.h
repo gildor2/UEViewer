@@ -1789,29 +1789,28 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 // Unreal engine 4 versions, declared as enum to be able to see all revisions in single place
 enum
 {
-	// Pre-release file versions
+	// Pre-release UE4 file versions
 	VER_UE4_ASSET_REGISTRY_TAGS = 112,
 	VER_UE4_TEXTURE_DERIVED_DATA2 = 124,
 	VER_UE4_ADD_COOKED_TO_TEXTURE2D = 125,
 	VER_UE4_REMOVED_STRIP_DATA = 130,
-	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,	// not supported
+	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,
 	VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES = 163,
 	VER_UE4_REMOVE_NET_INDEX = 196,
 	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,
 	VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET = 212,
 	VAR_UE4_ARRAY_PROPERTY_INNER_TAGS = 282,
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
-	// 342 = 4.0.0
+	// UE4.0 source code released on GitHub. Note: if we don't have any VER_UE4_...
+	// values between, for instance, VER_UE4_0 and VER_UE4_1, it doesn't matter for
+	// this framework which version is serialized - 4.0 or 4.1, because 4.1 has nothing
+	// new regarding supported object formats compared to 4.0.
 	VER_UE4_0 = 342,
-	// 352 = 4.1.0
 	VER_UE4_1 = 352,
-	// 363 = 4.2.0
 	VER_UE4_2 = 363,
 		VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
-	// 382 = 4.3.0
 	VER_UE4_3 = 382,
 		VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
-	// 385 = 4.4.0
 	VER_UE4_4 = 385,
 };
 

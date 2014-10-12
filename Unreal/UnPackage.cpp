@@ -1660,7 +1660,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 		for (int i = 0; i < Summary.NameCount; i++)
 		{
 			guard(Name);
-			if ((ArVer < 64) && (Game < GAME_UE2))
+			if ((ArVer < 64) && (Game < GAME_UE4)) // UE4 has restarted versioning from 0
 			{
 				char buf[MAX_FNAME_LEN];
 				int len;

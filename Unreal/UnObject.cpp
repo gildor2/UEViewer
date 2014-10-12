@@ -319,10 +319,18 @@ struct FPropertyTag
 			Ar << UseObject;
 			if (UseObject)
 			{
+				// This code was bever executed in my tests
 				Ar << Object;
 				if (!Object)
+				{
+					//!! WARNING:
+					//	Verify: this code didn't have {} for this block,
+					//	but code was formatted like it's a block. Should
+					//	'return Ar' be executed only for !Object, or for
+					//	UseObjecy?
 					Tag.Name.Str = "None";
 					return Ar;
+				}
 				// now, should continue serialization, skipping Name serialization
 				appError("Unknown field: Object #%d", Object);
 			}
@@ -385,6 +393,7 @@ struct FPropertyTag
 		}
 #endif // UNREAL3
 
+		// UE1 and UE2
 		byte info;
 		Ar << info;
 
@@ -460,7 +469,7 @@ struct FPropertyTagBat2
 	{
 		Ar << Tag.Type;
 		if (!Tag.Type) return Ar;
-		if (Ar.Game == GAME_Batman3 && Ar.ArLicenseeVer >= 104) goto named_prop; // Batman3 Online has old version
+		if (Ar.Game == GAME_Batman3 && Ar.ArLicenseeVer >= 104) goto named_prop; // Batman3 Online has old version of FPropertyTag
 		Ar << Tag.Offset;
 		if (Tag.Type == NAME_IntProperty || Tag.Type == NAME_FloatProperty || Tag.Type == NAME_NameProperty || Tag.Type == NAME_VectorProperty ||
 			Tag.Type == NAME_RotatorProperty || Tag.Type == NAME_StrProperty || Tag.Type == 16 /*NAME_ObjectNCRProperty*/)

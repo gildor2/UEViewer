@@ -228,6 +228,8 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		if (CheckExportFilePresence(Tex, "%s.dds", Tex->Name)) return;
 	}
 
+	//!! for UTexture3, can check SourceArt for PNG data and save it if available
+
 	byte *pic = NULL;
 	int width, height;
 

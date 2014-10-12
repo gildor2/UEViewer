@@ -41,6 +41,7 @@ OLDCRT     = 1
 	}
 !endif
 
+#OPTIONS += -analyze
 
 #------------------------------------------------
 #	Third-party libraries

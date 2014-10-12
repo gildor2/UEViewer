@@ -35,7 +35,9 @@ void UTexture3::Serialize4(FArchive& Ar)
 
 	FStripDataFlags StripFlags(Ar);
 
-	assert(Ar.ArVer >= VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
+	// For version prior to VER_UE4_TEXTURE_SOURCE_ART_REFACTOR, UTexture::Serialize will do exactly the same
+	// serialization action, but it will perform some extra processing of format and compression settings.
+	// Cooked packages are not affected by this code.
 
 	if (!StripFlags.IsEditorDataStripped())
 	{
@@ -53,11 +55,20 @@ void UTexture2D::Serialize4(FArchive& Ar)
 
 	FStripDataFlags StripFlags(Ar);		// note: these flags are used for pre-VER_UE4_TEXTURE_SOURCE_ART_REFACTOR versions
 
-	int bCooked = 0;
+	bool bCooked = false;
 	if (Ar.ArVer >= VER_UE4_ADD_COOKED_TO_TEXTURE2D) Ar << bCooked;
 
 	if (Ar.ArVer < VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
-		appError("VER_UE4_TEXTURE_SOURCE_ART_REFACTOR");
+	{
+		appNotify("Untested code: UTexture2D::LegacySerialize");
+		// This code lives in UTexture2D::LegacySerialize(). It relies on some depracated properties, and modern
+		// code UE4 can't read cooked packages prepared with pre-VER_UE4_TEXTURE_SOURCE_ART_REFACTOR version of
+		// the engine. So, it's not possible to know what should happen there unless we'll get some working game
+		// which uses old UE4 version.bDisableDerivedDataCache_DEPRECATED in UE4 serialized as property, when set
+		// to true - has serialization of TArray<FTexture2DMipMap>. We suppose here that it's 'false'.
+		FGuid TextureFileCacheGuid_DEPRECATED;
+		Ar << TextureFileCacheGuid_DEPRECATED;
+	}
 
 	// Formats are added in UE4 in Source/Developer/<Platform>TargetPlatform/Private/<Platform>TargetPlatform.h,
 	// in TTargetPlatformBase::GetTextureFormats(). Formats are choosen depending on platform settings (for example,
