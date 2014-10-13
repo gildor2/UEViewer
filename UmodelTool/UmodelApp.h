@@ -49,6 +49,7 @@ public:
 	bool ShowStartupDialog(UmodelSettings& settings);
 	bool ShowPackageUI();
 	void SetPackageName(const char* name);
+	void ShowErrorDialog();
 	// menu callbacks
 	void ShowAboutDialog();
 #endif
@@ -58,6 +59,7 @@ public:
 	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
 
+	bool		GuiShown;
 #if RENDERING
 	CObjectViewer *Viewer;			// used from GlWindow callbacks
 	int			ObjIndex;			// index of the current object in UObject::GObjObjects array

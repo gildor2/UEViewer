@@ -286,6 +286,15 @@ class UIBitmap : public UIElement
 public:
 	UIBitmap();
 
+	// System bitmaps
+	enum
+	{
+		BI_Warning = -1,
+		BI_Question = -2,
+		BI_Error = -3,
+		BI_Information = -4,
+	};
+
 	//!! win32 version; check Linux
 	// If you want to specify custom resource size, call SetWidth/SetHeight for UIBitmap.
 	// Otherwise, image size will be placed into Width and Height fields.
@@ -298,6 +307,7 @@ protected:
 	bool		IsIcon;
 
 	virtual void Create(UIBaseDialog* dialog);
+	void LoadResourceImage(int id, UINT type, UINT fuLoad);
 };
 
 
@@ -425,12 +435,19 @@ public:
 	UITextEdit(const char* text);
 	UITextEdit(FString* text);
 
+	FORCEINLINE UITextEdit& SetMultiline(bool enable = true)
+	{
+		IsMultiline = enable;
+		return *this;
+	}
+
 	void SetText(const char* text = NULL);
 	const char* GetText();
 
 protected:
 	FString		sValue;
 	FString*	pValue;
+	bool		IsMultiline;
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);

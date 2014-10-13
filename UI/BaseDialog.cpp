@@ -344,10 +344,40 @@ UIBitmap::UIBitmap()
 	Width = Height = 0;		// use dimensions from resource
 }
 
+void UIBitmap::LoadResourceImage(int id, UINT type, UINT fuLoad)
+{
+	HINSTANCE inst = hInstance;
+	LPCSTR rid = 0;
+	if (id < 0)
+	{
+		inst = GetModuleHandle("user32.dll");
+		switch (id)
+		{
+		case BI_Warning:
+			rid = MAKEINTRESOURCE(101); // IDI_EXCLAMATION
+			break;
+		case BI_Question:
+			rid = MAKEINTRESOURCE(102); // IDI_QUESTION
+			break;
+		case BI_Error:
+			rid = MAKEINTRESOURCE(103); // IDI_ERROR
+			break;
+		case BI_Information:
+			 rid = MAKEINTRESOURCE(104); // IDI_ASTERISK
+			 break;
+		}
+	}
+	else
+	{
+		rid = MAKEINTRESOURCE(id);
+	}
+	hImage = LoadImage(inst, rid, type, Width, Height, fuLoad);
+}
+
 UIBitmap& UIBitmap::SetResourceIcon(int resId)
 {
 	IsIcon = true;
-	hImage = LoadImage(hInstance, MAKEINTRESOURCE(resId), IMAGE_ICON, Width, Height, LR_SHARED);
+	LoadResourceImage(resId, IMAGE_ICON, LR_SHARED);
 #if DEBUG_WINDOWS_ERRORS
 	if (!hImage)
 		appPrintf("UIBitmap::SetResourceIcon: %d\n", GetLastError());
@@ -366,7 +396,7 @@ UIBitmap& UIBitmap::SetResourceIcon(int resId)
 UIBitmap& UIBitmap::SetResourceBitmap(int resId)
 {
 	IsIcon = false;
-	hImage = LoadImage(hInstance, MAKEINTRESOURCE(resId), IMAGE_BITMAP, Width, Height, LR_SHARED);
+	LoadResourceImage(resId, IMAGE_BITMAP, LR_SHARED);
 #if DEBUG_WINDOWS_ERRORS
 	if (!hImage)
 		appPrintf("UIBitmap::SetResourceBitmap: %d\n", GetLastError());
@@ -707,6 +737,7 @@ bool UIRadioButton::HandleCommand(int id, int cmd, LPARAM lParam)
 UITextEdit::UITextEdit(const char* value)
 :	pValue(&sValue)		// points to local variable
 ,	sValue(value)
+,	IsMultiline(false)
 {
 	Height = DEFAULT_EDIT_HEIGHT;
 }
@@ -714,6 +745,7 @@ UITextEdit::UITextEdit(const char* value)
 UITextEdit::UITextEdit(FString* value)
 :	pValue(value)
 //,	sValue(value) - uninitialized
+,	IsMultiline(false)
 {
 	Height = DEFAULT_EDIT_HEIGHT;
 }
@@ -737,7 +769,10 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
-	Wnd = Window(WC_EDIT, "", WS_TABSTOP, WS_EX_CLIENTEDGE, dialog);
+	int style = WS_TABSTOP;
+	if (IsMultiline) style |= ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL;
+
+	Wnd = Window(WC_EDIT, "", style, WS_EX_CLIENTEDGE, dialog);
 	SetWindowText(Wnd, *(*pValue));
 	UpdateEnabled();
 }
@@ -1022,10 +1057,11 @@ int UIMulticolumnListbox::AddItem(const char* item)
 	if (Wnd)
 	{
 		LVITEM lvi;
-		lvi.mask = LVIF_TEXT;
+		lvi.mask = LVIF_TEXT | LVIF_PARAM;
 		lvi.pszText = LPSTR_TEXTCALLBACK;
 		lvi.iSubItem = 0;
 		lvi.iItem = numItems;
+		lvi.lParam = numItems;
 		ListView_InsertItem(Wnd, &lvi);
 	}
 
@@ -1260,12 +1296,13 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	// add items
 	int numItems = (Items.Num() / NumColumns) - 1;
 	LVITEM lvi;
-	lvi.mask = LVIF_TEXT;
+	lvi.mask = LVIF_TEXT | LVIF_PARAM;
 	lvi.pszText = LPSTR_TEXTCALLBACK;
 	lvi.iSubItem = 0;
 	for (i = 0; i < numItems; i++)
 	{
 		lvi.iItem = i;
+		lvi.lParam = i;
 		ListView_InsertItem(Wnd, &lvi);
 	}
 
@@ -1285,7 +1322,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		// Note: this callback is executed only when items is visualized, so we can
 		// add items in "lazy" fashion.
 		NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lParam;
-		int itemIndex = (plvdi->item.iItem + 1) * NumColumns;
+		int itemIndex = (plvdi->item.lParam + 1) * NumColumns;
 		plvdi->item.pszText = const_cast<char*>(*Items[itemIndex + plvdi->item.iSubItem]);
 		return true;
 	}
@@ -1297,7 +1334,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		{
 			if ((nmlv->uOldState ^ nmlv->uNewState) & LVIS_SELECTED)
 			{
-				int item = nmlv->iItem;
+				int item = nmlv->lParam;
 				int pos = SelectedItems.FindItem(item);
 				if (nmlv->uNewState & LVIS_SELECTED)
 				{

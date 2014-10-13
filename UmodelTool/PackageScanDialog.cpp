@@ -70,7 +70,7 @@ public:
 	}
 
 protected:
-	void CopyToClipboard(UIButton* sender)
+	void CopyToClipboard()
 	{
 		FStaticString<1024> Report;
 		for (int i = 0; i < PkgInfo.Num(); i++)

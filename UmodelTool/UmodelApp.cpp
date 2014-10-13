@@ -20,6 +20,7 @@
 #include "StartupDialog.h"
 #include "ProgressDialog.h"
 #include "AboutDialog.h"
+#include "ErrorDialog.h"
 #endif
 
 
@@ -86,6 +87,7 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 
 bool CUmodelApp::ShowStartupDialog(UmodelSettings& settings)
 {
+	GuiShown = true;
 	UIStartupDialog dialog(settings);
 	return dialog.Show();
 }
@@ -113,6 +115,7 @@ bool CUmodelApp::ShowPackageUI()
 	// all object was unloaded. In this case, code will set 'packagesChanged' flag
 	// to true, causing re-initialization of browser list.
 	bool packagesChanged = false;
+	GuiShown = true;
 
 	while (true)
 	{
@@ -269,6 +272,12 @@ void CUmodelApp::ShowAboutDialog()
 	dialog.Show();
 }
 
+void CUmodelApp::ShowErrorDialog()
+{
+	UIErrorDialog errorDialog;
+	errorDialog.Show();
+}
+
 #endif // HAS_UI
 
 #endif // RENDERING
@@ -403,8 +412,9 @@ static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 static int GDoScreenshot = 0;
 
 CUmodelApp::CUmodelApp()
+:	GuiShown(false)
 #if RENDERING
-:	Viewer(NULL)
+,	Viewer(NULL)
 ,	ShowMeshes(false)
 ,	ShowMaterials(false)
 ,	ObjIndex(0)

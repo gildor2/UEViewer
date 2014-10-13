@@ -732,7 +732,6 @@ int main(int argc, char **argv)
 			argPkgName, argObjName, argClassName);
 	}
 
-	bool guiShown = false;
 #if HAS_UI
 	if (argc < 2 || (!hasRootDir && !argPkgName) || forceUI)
 	{
@@ -744,7 +743,6 @@ int main(int argc, char **argv)
 		bool res = GApplication.ShowStartupDialog(GSettings);
 		if (!res) exit(0);
 		hasRootDir = true;
-		guiShown = true;
 	}
 #endif // HAS_UI
 
@@ -771,8 +769,6 @@ int main(int argc, char **argv)
 	{
 		if (!GApplication.ShowPackageUI())
 			return 0;		// user has cancelled the dialog when it appears for the first time
-
-		guiShown = true;
 		goto main_loop;
 	}
 #endif // !HAS_UI
@@ -903,7 +899,7 @@ int main(int argc, char **argv)
 			LoadWholePackage(Packages[pkg]);
 	}
 
-	if (!UObject::GObjObjects.Num() && !guiShown)
+	if (!UObject::GObjObjects.Num() && !GApplication.GuiShown)
 	{
 		appPrintf("\nThe specified package(s) has no supported objects.\n\n");
 	no_objects:
@@ -924,7 +920,7 @@ int main(int argc, char **argv)
 	{
 		ExportObjects(exprtAll ? NULL : &Objects);
 		ResetExportedList();
-		if (!guiShown)
+		if (!GApplication.GuiShown)
 			return 0;
 		// switch to a viewer in GUI mode
 		mainCmd = CMD_View;
@@ -953,7 +949,7 @@ int main(int argc, char **argv)
 	}
 
 	// find any object to display
-	if (!GApplication.FindObjectAndCreateVisualizer(1, guiShown, true))
+	if (!GApplication.FindObjectAndCreateVisualizer(1, GApplication.GuiShown, true))	//!! don't need to pass GuiShown there
 	{
 		appPrintf("\nThe specified package(s) has no objects to diaplay.\n\n");
 		goto no_objects;
@@ -969,7 +965,7 @@ int main(int argc, char **argv)
 #if HAS_UI
 		// Put argPkgName into package selection dialog, so when opening a package window for the first
 		// time, currently opened package will be selected
-		if (!guiShown) GApplication.SetPackageName(MainPackage->Filename);
+		if (!GApplication.GuiShown) GApplication.SetPackageName(MainPackage->Filename);
 #endif // HAS_UI
 	main_loop:
 		// show object
@@ -999,6 +995,10 @@ int main(int argc, char **argv)
 //			appPrintf("Unknown error\n");
 			appNotify("Unknown error\n");
 		}
+	#if HAS_UI
+		if (GApplication.GuiShown)
+			GApplication.ShowErrorDialog();
+	#endif // HAS_UI
 		exit(1);
 	}
 #endif

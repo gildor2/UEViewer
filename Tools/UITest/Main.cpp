@@ -11,6 +11,7 @@ public:
 		value3 = 0;
 		ShowModal("UI Test", 350, 200);
 		printf("v1=%d v2=%d v3=%d\n", value1, value2, value3);
+		printf("Text: [%s]\n", *text);
 	}
 
 	virtual void InitUI()
@@ -104,6 +105,9 @@ public:
 					]
 				]
 			]
+			+ NewControl(UITextEdit, &text)
+			.SetHeight(100)
+			.SetMultiline()
 		];
 	}
 
@@ -116,6 +120,7 @@ public:
 	bool			value1;
 	bool			value2;
 	int				value3;
+	FString			text;
 };
 
 void main()
