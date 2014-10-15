@@ -330,6 +330,7 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.2", ue4.2, GAME_UE4_2),
 		G("Unreal engine 4.3", ue4.3, GAME_UE4_3),
 		G("Unreal engine 4.4", ue4.4, GAME_UE4_4),
+		G("Unreal engine 4.5", ue4.5, GAME_UE4_5),
 #endif // UNREAL4
 
 	// end marker
@@ -775,7 +776,7 @@ static const UEVersionMap ue4versions[] =
 
 	// Unreal engine 4
 #if UNREAL4
-	M(0), M(1), M(2), M(3), M(4)
+	M(0), M(1), M(2), M(3), M(4), M(5)
 #endif
 };
 
@@ -1116,10 +1117,12 @@ void appSetRootDirectory2(const char *filename)
 	*s = 0;
 	// make a copy for fallback
 	strcpy(buf2, buf);
-	// analyze path
-	int detected = 0;				// weigth; 0 = not detected
-	FString root;
 
+	FString root;
+	int detected = 0;				// weigth; 0 = not detected
+	root = buf;
+
+	// analyze path
 	const char *pCooked = NULL;
 	for (int i = 0; i < 8; i++)
 	{
@@ -1157,7 +1160,6 @@ void appSetRootDirectory2(const char *filename)
 			}
 		}
 	}
-	if (!detected) root = buf;
 	appPrintf("Detected game root %s%s", *root, (detected == false) ? " (no recurse)" : "");
 	// detect platform
 	if (GForcePlatform == PLATFORM_UNKNOWN && pCooked)

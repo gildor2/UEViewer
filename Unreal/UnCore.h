@@ -333,6 +333,7 @@ enum EGame
 		GAME_UE4_2,
 		GAME_UE4_3,
 		GAME_UE4_4,
+		GAME_UE4_5,
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
@@ -1812,6 +1813,7 @@ enum
 	VER_UE4_3 = 382,
 		VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
 	VER_UE4_4 = 385,
+	VER_UE4_5 = 401,
 };
 
 class FStripDataFlags

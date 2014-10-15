@@ -151,6 +151,10 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+13.10.2014
+- added error message dialog which would appear if umodel crashes and any of umodel windows
+  appeared before (so, it won't appear only in pure command line mode)
+
 12.10.2014
 - implemented support for UE4 textures
 
