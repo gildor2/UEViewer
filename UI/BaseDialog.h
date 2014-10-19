@@ -190,12 +190,12 @@ private:
 #define DECLARE_CALLBACK(VarName, ...)				\
 public:												\
 	typedef util::Callback<void (ThisClass*, __VA_ARGS__)> VarName##_t; \
-	FORCEINLINE ThisClass& Set##VarName(VarName##_t& cb) \
+	FORCEINLINE ThisClass& Set##VarName(const VarName##_t& cb) \
 	{												\
 		VarName = cb; return *this;					\
 	}												\
 	template<class T>								\
-	FORCEINLINE ThisClass& Set##VarName(util::Callback<T ()>& cb) \
+	FORCEINLINE ThisClass& Set##VarName(const util::Callback<T ()>& cb) \
 	{												\
 		VarName = (VarName##_t&)cb; return *this;	\
 	}												\

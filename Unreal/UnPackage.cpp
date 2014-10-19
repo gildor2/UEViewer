@@ -1252,7 +1252,7 @@ public:
 		guard(FUE3ArchiveReader::Serialize);
 
 		if (Stopper > 0 && Position + size > Stopper)
-			appError("Serializing behind stopper (%d+%d > %d)", Position, size, Stopper);
+			appError("Serializing behind stopper (%X+%X > %X)", Position, size, Stopper);
 
 		while (true)
 		{

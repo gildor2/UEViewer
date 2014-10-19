@@ -719,7 +719,7 @@ public:
 	{
 		guard(FMemReader::Serialize);
 		if (ArStopper > 0 && ArPos + size > ArStopper)
-			appError("Serializing behind stopper (%d+%d > %d)", ArPos, size, ArStopper);
+			appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
 		if (ArPos + size > DataSize)
 			appError("Serializing behind end of buffer");
 		memcpy(data, DataPtr + ArPos, size);

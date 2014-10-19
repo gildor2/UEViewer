@@ -554,7 +554,7 @@ void FFileReader::Serialize(void *data, int size)
 	guard(FFileReader::Serialize);
 
 	if (ArStopper > 0 && ArPos + size > ArStopper)
-		appError("Serializing behind stopper (%d+%d > %d)", ArPos, size, ArStopper);
+		appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
 
 	while (size > 0)
 	{

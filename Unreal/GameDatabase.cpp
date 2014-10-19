@@ -49,7 +49,7 @@ const GameInfo GListOfGames[] = {
 		G("Unreal Championship", uc1, GAME_UC1),
 #endif
 #if SPLINTER_CELL
-		G("Splinter Cell 1,2", scell, GAME_SplinterCell),
+		G("Splinter Cell 1-4", scell, GAME_SplinterCell),
 #endif
 #if LEAD
 		G("Splinter Cell: Conviction", scconv, GAME_SplinterCellConv),

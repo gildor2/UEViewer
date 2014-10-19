@@ -142,7 +142,12 @@ void UTexture2D::Serialize(FArchive &Ar)
 #endif
 	// Extra check for some incorrectly upgrated UE3 versions, in particular for
 	// Dungeons & Dragons: Daggerdale
-	if (Ar.Tell() == Ar.GetStopper()) return;
+	if (Ar.Tell() + 32 >= Ar.GetStopper())
+	{
+		// heuristic: not enough space for extra mips; example: Batman2 - it has version 805 but stores some
+		// integer instead of TArray<FTexture2DMipMap>
+		goto skip_rest;
+	}
 
 	if (Ar.ArVer >= 674)
 	{
@@ -168,6 +173,7 @@ void UTexture2D::Serialize(FArchive &Ar)
 	if (Ar.ArVer >= 864) Ar << CachedETCMips;
 
 	// some hack to support more games ...
+skip_rest:
 	if (Ar.Tell() < Ar.GetStopper())
 	{
 		appPrintf("UTexture2D %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());

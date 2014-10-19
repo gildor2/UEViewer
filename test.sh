@@ -49,6 +49,7 @@ steam=("c:/Program Files (x86)/Steam/SteamApps/common/")
 
 function CheckDir()
 {
+	[ "$foundPath" ] && return
 	local checkedDirs=""
 	while [ $# -gt 0 ]; do
 		dir=$1
@@ -184,6 +185,7 @@ function scell()  { run1 "data/SplinterCell" $*;  }
 function scell2() { run1 "data/SplinterCell2" $*; }
 function bat2()
 {
+	CheckDir "${steam[@]/%/Batman Arkham City GOTY/BmGame}"
 	CheckDir "E:/GAMES/Batman Arkham City/BmGame" data/3/Batman2
 	run $*
 }
@@ -275,7 +277,8 @@ fi
 case "" in
 
 "")
-	run1 "C:/Projects/Epic/UnrealTournament4/UnrealTournament/Content" T_CH_Imm_MalcolmBody_D.uasset
+	run ../Epic/UnrealProjects/ShooterGame/Saved/Cooked/WindowsNoEditor/ShooterGame/Content/Characters/Textures/Chr_FPS_D.uasset -game=ue4.4
+#	run1 "C:/Projects/Epic/UnrealTournament4/UnrealTournament/Content" T_CH_Imm_MalcolmBody_D.uasset
 #	run1 data/3/MarvelHeroes UC__MarvelPlayer_Thor_SF.upk -game=mh thor_avengers_diff
 #	run1 data/3X/Injustice -noanim CHAR_Ares.xxx -meshes
 #	run1 data/2/SplinterCell4 -game=scell -noanim ESam.ukx
