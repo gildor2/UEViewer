@@ -41,13 +41,9 @@
 #pragma comment(lib, "opengl32.lib")
 #endif
 
-#if SDL_VERSION_ATLEAST(1,3,0)
-#define NEW_SDL					1
-#endif
-
-#if SMART_RESIZE && !NEW_SDL
-#error "SMART_RESIZE requires NEW_SDL"
-#endif
+//#if SDL_VERSION_ATLEAST(1,3,0)
+//#define NEW_SDL					1
+//#endif
 
 #if MAX_DEBUG
 
@@ -341,10 +337,8 @@ static void DrawChar(char c, unsigned color, int textX, int textY)
 
 //-----------------------------------------------------------------------------
 
-#if NEW_SDL
 static SDL_Window		*sdlWindow;
 static SDL_GLContext	sdlContext;
-#endif // NEW_SDL
 
 // called when window resized
 static void ResizeWindow(int w, int h)
@@ -353,11 +347,7 @@ static void ResizeWindow(int w, int h)
 
 	winWidth  = w;
 	winHeight = h;
-#if NEW_SDL
 	SDL_SetWindowSize(sdlWindow, winWidth, winHeight);
-#else
-	SDL_SetVideoMode(winWidth, winHeight, 24, SDL_OPENGL|SDL_RESIZABLE);
-#endif
 	SDL_CHECK_ERROR;
 
 	static bool loaded = false;
@@ -403,8 +393,6 @@ void CApplication::GetWindowSize(int &x, int &y)
 }
 
 
-#if NEW_SDL
-
 void CApplication::ToggleFullscreen()
 {
 	IsFullscreen = !IsFullscreen;
@@ -432,8 +420,6 @@ void CApplication::ToggleFullscreen()
 	}
 }
 
-#endif // NEW_SDL
-
 
 //-----------------------------------------------------------------------------
 // Mouse control
@@ -443,11 +429,7 @@ static int mousePosX, mousePosY;
 
 inline void CenterMouseInWindow()
 {
-#if NEW_SDL
 	SDL_WarpMouseInWindow(sdlWindow, winWidth / 2, winHeight / 2);
-#else
-	SDL_WarpMouse(winWidth / 2, winHeight / 2);
-#endif // NEW_SDL
 }
 
 static void OnMouseButton(int type, int button)
@@ -467,21 +449,15 @@ static void OnMouseButton(int type, int button)
 	if (!prevButtons && mouseButtons)
 	{
 		SDL_ShowCursor(0);
-#if NEW_SDL
 		SDL_SetWindowGrab(sdlWindow, SDL_TRUE);
-#endif
 		SDL_GetMouseState(&mousePosX, &mousePosY);
 		CenterMouseInWindow();
 	}
 	else if (prevButtons && !mouseButtons)
 	{
 		SDL_ShowCursor(1);
-#if NEW_SDL
 		SDL_SetWindowGrab(sdlWindow, SDL_FALSE);
 		SDL_WarpMouseInWindow(sdlWindow, mousePosX, mousePosY);
-#else
-		SDL_WarpMouse(mousePosX, mousePosY);
-#endif
 	}
 }
 
@@ -678,7 +654,6 @@ static void Init(const char *caption)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 //	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
-#if NEW_SDL
 	sdlWindow = SDL_CreateWindow(caption,
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, winWidth, winHeight,
 		SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
@@ -689,9 +664,6 @@ static void Init(const char *caption)
 	#else
 	SDL_GL_SetSwapInterval(1);			// allow waiting for vsync to reduce CPU usage
 	#endif
-#else
-	SDL_WM_SetCaption(caption, caption);
-#endif
 
 	// initialize GL
 	ResizeWindow(winWidth, winHeight);
@@ -1211,11 +1183,7 @@ void CApplication::Display()
 
 	// swap buffers
 	BeforeSwap();
-#if NEW_SDL
 	SDL_GL_SwapWindow(sdlWindow);
-#else
-	SDL_GL_SwapBuffers();
-#endif
 
 	unguard;
 }
@@ -1234,9 +1202,7 @@ void CApplication::DrawTexts()
 		DrawTextLeft(S_RED"Keyboard:\n~~~~~~~~~");
 		DrawKeyHelp("Esc",         "exit");
 		DrawKeyHelp("H",           "toggle help");
-#if NEW_SDL
 		DrawKeyHelp("Alt+Enter",   "toggle fullscreen");
-#endif
 		DrawKeyHelp("LeftMouse",   "rotate view");
 		DrawKeyHelp("RightMouse",  "zoom view");
 		DrawKeyHelp("MiddleMouse", "move camera");
@@ -1269,11 +1235,9 @@ void CApplication::ProcessKey(int key, bool isDown)
 	case SDLK_ESCAPE:
 		RequestingQuit = true;
 		break;
-#if NEW_SDL
 	case SDLK_RETURN|KEY_ALT:
 		ToggleFullscreen();
 		break;
-#endif
 	case 'h':
 		IsHelpVisible = !IsHelpVisible;
 		break;
@@ -1362,7 +1326,6 @@ int CApplication::OnEvent(void *userdata, SDL_Event *evt)
 #endif // SMART_RESIZE
 
 
-#if NEW_SDL
 // localized keyboard could return different chars for some keys - should translate them back to English keyboard
 // note: there is no scancodes in SDL1.2
 static int TranslateKey(int sym, int scan)
@@ -1387,7 +1350,6 @@ static int TranslateKey(int sym, int scan)
 //	appPrintf("%d\n", scan);
 	return sym;
 }
-#endif
 
 void CApplication::VisualizerLoop(const char *caption)
 {
@@ -1400,16 +1362,13 @@ void CApplication::VisualizerLoop(const char *caption)
 	// Hook window messages
     SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 
-#if NEW_SDL && LIMIT_FPS
+#if LIMIT_FPS
 	// get display refresh rate
 	SDL_DisplayMode desktopMode;
 	int frameTime = 0;
 	if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplayIndex(sdlWindow), &desktopMode) == 0)
 		frameTime = 1000 / desktopMode.refresh_rate;
-#endif // NEW_SDL && LIMIT_FPS
-#if !NEW_SDL
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-#endif
+#endif // LIMIT_FPS
 #if SMART_RESIZE
 	SDL_SetEventFilter(&OnEvent, this);
 #endif // SMART_RESIZE
@@ -1425,16 +1384,11 @@ void CApplication::VisualizerLoop(const char *caption)
 			switch (evt.type)
 			{
 			case SDL_KEYDOWN:
-#if NEW_SDL
 				HandleKeyDown(TranslateKey(evt.key.keysym.sym, evt.key.keysym.scancode), evt.key.keysym.mod);
-#else
-				HandleKeyDown(evt.key.keysym.sym, evt.key.keysym.mod);
-#endif
 				break;
 			case SDL_KEYUP:
 				ProcessKey(evt.key.keysym.sym, false);
 				break;
-#if NEW_SDL
 			case SDL_WINDOWEVENT:
 				switch (evt.window.event)
 				{
@@ -1456,13 +1410,6 @@ void CApplication::VisualizerLoop(const char *caption)
 	#endif // FIX_STICKY_MOD_KEYS
 				}
 				break;
-#else // NEW_SDL
-	#if !SMART_RESIZE
-			case SDL_VIDEORESIZE:
-				::ResizeWindow(evt.resize.w, evt.resize.h);
-				break;
-	#endif // SMART_RESIZE
-#endif // NEW_SDL
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
 				OnMouseButton(evt.type, evt.button.button);
@@ -1482,7 +1429,7 @@ void CApplication::VisualizerLoop(const char *caption)
 		}
 		if (!disableUpdate)
 		{
-#if NEW_SDL && LIMIT_FPS
+#if LIMIT_FPS
 			unsigned time = SDL_GetTicks();
 			Display();			// draw the scene
 			int renderTime = SDL_GetTicks() - time;
@@ -1497,7 +1444,7 @@ void CApplication::VisualizerLoop(const char *caption)
 			lastTime = time;
 #else
 			Display();			// draw the scene
-#endif // NEW_SDL && LIMIT_FPS
+#endif // LIMIT_FPS
 		}
 		else
 		{
@@ -1512,9 +1459,7 @@ void CApplication::VisualizerLoop(const char *caption)
 
 SDL_Window* CApplication::GetWindow() const
 {
-#if NEW_SDL
 	return sdlWindow;
-#endif
 }
 
 void CApplication::ResizeWindow()
