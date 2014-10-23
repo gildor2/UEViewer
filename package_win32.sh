@@ -1,6 +1,6 @@
 #!/bin/bash
 archive="umodel_win32.zip"
-filelist="umodel.exe readme.txt SDL.dll"
+filelist="umodel.exe readme.txt SDL2.dll"
 
 for i in $filelist; do
 	if [ ! -f $i ]; then

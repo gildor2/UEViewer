@@ -11,7 +11,7 @@ System requirements
 Windows or Linux operating system
 x86-compatible CPU with SSE support
 OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
-SDL 1.2 (for Linux only, windows distribution has included sdl.dll)
+SDL 2.0 (for Linux only, windows distribution has SDL2.dll included)
 
 
 List of supported games
@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+23.10.2014
+- migrated to SDL2
+
 13.10.2014
 - added error message dialog which would appear if umodel crashes and any of umodel windows
   appeared before (so, it won't appear only in pure command line mode)

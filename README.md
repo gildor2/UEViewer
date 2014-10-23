@@ -45,7 +45,7 @@ To launch a build process without a batch, simply execute
 
 ### Linux
 
-This system has everything what is required for build. You'll only need to install SDL development package
+This system has everything what is required for build. You'll only need to install SDL2 development package
 (and of course gcc). To build UModel, execute from console
 
     ./build.sh
