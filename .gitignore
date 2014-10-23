@@ -8,12 +8,7 @@ Unreal/Shaders.h
 UmodelTool/Version.h
 
 # Ignore makefiles for tools
-Tools/PackageExtract/makefile-*
-Tools/PackageTool/makefile-*
-Tools/PackageUnpack/makefile-*
-Tools/TypeInfo/makefile-*
-Tools/UmdExtract/makefile-*
-Tools/UITest/makefile-*
+Tools/**/makefile-*
 
 # Other ignores
 Tools/MaxActorXImport/ActorXImporter.ini
@@ -23,3 +18,8 @@ Tools/UT2down/
 UmodelExport/
 Screenshots/
 notify.log
+
+# Executable files and pdb
+umodel.pdb
+Tools/**/*.exe
+Tools/**/*.pdb
