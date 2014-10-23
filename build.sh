@@ -10,15 +10,12 @@ if [ -d .git ]; then
 	if [ -z "$git" ]; then
 		if [ "$OSTYPE" == "msys" ]; then
 			# assume Windows, find local git distribution
-			progs="${PROGRAMFILES//\\//}"		# get from environment with slash replacement
-			progs="/${progs//:/}"				# for msys: convert "C:/Program Files" to "/C/Program Files"
-			if [ -d "$progs/Git" ]; then
-				PATH=$PATH:"$progs/Git/bin"
-			elif [ -d "$progs/SmartGitHg/git" ]; then
-				PATH=$PATH:"$progs/SmartGitHg/git/bin"
-			elif [ -d "$LOCALAPPDATA/Atlassian/SourceTree/git_local" ]; then
-				PATH=$PATH:"$LOCALAPPDATA/Atlassian/SourceTree/git_local"
-			fi
+#			progs="${PROGRAMFILES//\\//}"		# get from environment with slash replacement
+#			progs="/${progs//:/}"				# for msys: convert "C:/Program Files" to "/C/Program Files"
+			[ -d "$PROGRAMFILES/Git" ] && gitpath="$PROGRAMFILES/Git/bin"
+			! [ "$gitpath" ] && [ -d "$PROGRAMFILES/SmartGitHg/git" ] && gitpath="$PROGRAMFILES/SmartGitHg/git/bin"
+			! [ "$gitpath" ] && [ -d "$LOCALAPPDATA/Atlassian/SourceTree/git_local" ] && gitpath="$LOCALAPPDATA/Atlassian/SourceTree/git_local/bin"
+			[ "$gitpath" ] && PATH="$PATH:$gitpath"
 			# find gi
 			git=`type -p git`
 		fi

@@ -95,7 +95,7 @@ sources(IOS_LIBS) = {
 
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
 LIBRARIES  = $R/libs
-STDLIBS   += SDL SDLmain
+STDLIBS   += SDL2 SDL2main
 INCLUDES  += . $R/Core $R/Unreal $R/libs/include $R/libs/nvtt $R/libs/PowerVR
 
 !if "$PLATFORM" eq "win32"

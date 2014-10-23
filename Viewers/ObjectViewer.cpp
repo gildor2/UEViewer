@@ -9,8 +9,9 @@
 #include "Exporters/Exporters.h"
 
 
-CObjectViewer::CObjectViewer(UObject *Obj)
+CObjectViewer::CObjectViewer(UObject* Obj, CApplication *Win)
 :	Object(Obj)
+,	Window(Win)
 {
 	SetDistScale(1);
 	ResetView();

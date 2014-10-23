@@ -8,13 +8,12 @@
 #include "Win32Types.h"
 #endif
 
-struct SDL_Window;
-
 /*-----------------------------------------------------------------------------
-	Control functions
+	Application class
 -----------------------------------------------------------------------------*/
 
-//!! move most 'static' code to this class
+//!! - move most 'static' code to this class
+//!! - rename to CWindow (but this class has VisualizerLoop - this is global function)
 class CApplication
 {
 public:
@@ -24,8 +23,10 @@ public:
 	// Main application function
 	void VisualizerLoop(const char *caption);
 
-	SDL_Window* GetWindow() const;
+	struct SDL_Window* GetWindow() const;
 	void ResizeWindow();
+	void GetWindowSize(int &x, int &y);
+	void ToggleFullscreen();
 	void Exit();
 
 	virtual void WindowCreated()
@@ -49,6 +50,10 @@ protected:
 
 	bool		RequestingQuit;
 	bool		IsHelpVisible;
+	bool		IsFullscreen;
+
+	int			SavedWinWidth;			// saved window size before switching to fullscreen mode
+	int			SavedWinHeight;
 };
 
 void MoveCamera(float YawDelta, float PitchDelta, float DistDelta = 0, float PanX = 0, float PanY = 0);
@@ -56,8 +61,6 @@ void FocusCameraOnPoint(const CVec3 &center);
 void SetDistScale(float scale);
 void SetViewOffset(const CVec3 &offset);
 void ResetView();
-
-void GetWindowSize(int &x, int &y);
 
 // viewport params
 extern bool  vpInvertXAxis;

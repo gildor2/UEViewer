@@ -10,7 +10,7 @@
 #include "UnPackage.h"			//?? remove this hack
 #endif
 
-#if IPHONE
+#if SUPPORT_IPHONE
 #	include <PVRTDecompress.h>
 #endif
 
@@ -53,11 +53,11 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0		},	// TPF_BC5
 	{ 0,						4,			4,			16,				0,			0		},	// TPF_BC7
 	{ 0,						8,			1,			1,				0,			0		},	// TPF_A1
-#if IPHONE
+#if SUPPORT_IPHONE
 	{ 0,						8,			4,			8,				0,			0		},	// TPF_PVRTC2
 	{ 0,						4,			4,			8,				0,			0		},	// TPF_PVRTC4
 #endif
-#if ANDROID
+#if SUPPORT_ANDROID
 	{ 0,						4,			4,			8,				0,			0		},	// TPF_ETC1
 #endif
 };
@@ -199,7 +199,7 @@ byte *CTextureData::Decompress()
 		appNotify("TPF_A1 unsupported");	//!! easy to do, but need samples - I've got some PF_A1 textures with no mipmaps inside
 		return dst;
 
-#if IPHONE
+#if SUPPORT_IPHONE
 	case TPF_PVRTC2:
 	case TPF_PVRTC4:
 	#if PROFILE_DDS
@@ -210,9 +210,9 @@ byte *CTextureData::Decompress()
 		appPrintProfiler();
 	#endif
 		return dst;
-#endif // IPHONE
+#endif // SUPPORT_IPHONE
 
-#if ANDROID
+#if SUPPORT_ANDROID
 	case TPF_ETC1:
 	#if PROFILE_DDS
 		appResetProfiler();
@@ -222,7 +222,7 @@ byte *CTextureData::Decompress()
 		appPrintProfiler();
 	#endif
 		return dst;
-#endif // ANDROID
+#endif // SUPPORT_ANDROID
 	}
 
 	staticAssert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, Wrong_PixelFormatInfo_array);
@@ -274,7 +274,7 @@ byte *CTextureData::Decompress()
 	XBox360 texture decompression
 -----------------------------------------------------------------------------*/
 
-#if XBOX360
+#if SUPPORT_XBOX360
 
 inline int appLog2(int n)
 {
@@ -447,4 +447,4 @@ void CTextureData::DecodeXBox360()
 	unguard;
 }
 
-#endif // XBOX360
+#endif // SUPPORT_XBOX360

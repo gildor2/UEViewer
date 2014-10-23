@@ -56,7 +56,7 @@ struct ExportedObjectEntry
 	ExportedObjectEntry(const UObject* Obj)
 	:	Package(Obj->Package)
 	,	ExportIndex(Obj->PackageIndex)
-	,	HashNext(NULL)
+	,	HashNext(0)
 	{}
 
 	int GetHash() const

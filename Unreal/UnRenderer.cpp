@@ -1412,7 +1412,7 @@ void UCombiner::GetParams(CMaterialParams &Params) const
 
 void UMaterialInterface::GetParams(CMaterialParams &Params) const
 {
-#if IPHONE
+#if SUPPORT_IPHONE
 	//?? these parameters are common for UMaterial3 and UMaterialInstanceConstant (UMaterialInterface)
 	if (FlattenedTexture)		Params.Diffuse = FlattenedTexture;
 	if (MobileBaseTexture)		Params.Diffuse = MobileBaseTexture;
@@ -1421,7 +1421,7 @@ void UMaterialInterface::GetParams(CMaterialParams &Params) const
 	Params.bUseMobileSpecular  = bUseMobileSpecular;
 	Params.MobileSpecularPower = MobileSpecularPower;
 	Params.MobileSpecularMask  = MobileSpecularMask;
-#endif // IPHONE
+#endif // SUPPORT_IPHONE
 }
 
 

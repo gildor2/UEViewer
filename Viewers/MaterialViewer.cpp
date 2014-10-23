@@ -228,7 +228,7 @@ void CMaterialViewer::Draw2D()
 		UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
 		Mat->SetMaterial();
 		int width, height;
-		GetWindowSize(width, height);
+		Window->GetWindowSize(width, height);
 		int w = min(width, height) / 2;
 		for (int i = 0; i < 4; i++)
 		{
@@ -305,8 +305,8 @@ void CMaterialViewer::Draw2D()
 }
 
 
-CMaterialViewer::CMaterialViewer(UUnrealMaterial *Material)
-:	CObjectViewer(Material)
+CMaterialViewer::CMaterialViewer(UUnrealMaterial* Material, CApplication* Window)
+:	CObjectViewer(Material, Window)
 {
 	IsTexture = (Material->IsA("BitmapMaterial") || Material->IsA("Texture2D"));
 }

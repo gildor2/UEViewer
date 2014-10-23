@@ -107,12 +107,12 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 3", ue3, GAME_UE3),
 		G3("Unreal Tournament 3"),
 		G3("Gears of War"),
-#	if XBOX360
+#	if SUPPORT_XBOX360
 		G3("Gears of War 2"),
 		G3("Gears of War 3"),
 		G("Gears of War: Judgment", gowj, GAME_GoWJ),
 #	endif
-#	if IPHONE
+#	if SUPPORT_IPHONE
 		G3("Infinity Blade"),
 #	endif
 #	if BULLETSTORM

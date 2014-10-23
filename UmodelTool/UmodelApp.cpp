@@ -1,4 +1,4 @@
-#include <SDL/SDL_syswm.h>			// for SDL_SysWMinfo
+#include <SDL2/SDL_syswm.h>			// for SDL_SysWMinfo
 #undef UnregisterClass
 
 #include "Core.h"
@@ -303,7 +303,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 	if (!Obj)
 	{
 		// dummy visualizer
-		Viewer = new CObjectViewer(NULL);
+		Viewer = new CObjectViewer(NULL, this);
 		return true;
 	}
 
@@ -315,7 +315,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 	{												\
 		UClass *Obj2 = static_cast<UClass*>(Obj); 	\
 		if (!(extraCheck)) return false;			\
-		if (!test) Viewer = new CViewer(Obj2);		\
+		if (!test) Viewer = new CViewer(Obj2, this);\
 		return true;								\
 	}
 #define MESH_VIEWER(UClass, CViewer)				\
@@ -325,9 +325,9 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 		{											\
 			UClass *Obj2 = static_cast<UClass*>(Obj); \
 			if (!Obj2->ConvertedMesh)				\
-				Viewer = new CObjectViewer(Obj);	\
+				Viewer = new CObjectViewer(Obj, this); \
 			else									\
-				Viewer = new CViewer(Obj2->ConvertedMesh); \
+				Viewer = new CViewer(Obj2->ConvertedMesh, this); \
 		}											\
 		return true;								\
 	}
@@ -350,7 +350,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 	// fallback for unknown class
 	if (!test)
 	{
-		Viewer = new CObjectViewer(Obj);
+		Viewer = new CObjectViewer(Obj, this);
 	}
 	return false;
 #undef CLASS_VIEWER
@@ -376,7 +376,7 @@ static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 	appMakeDirectoryForFile(filename);
 	FFileWriter Ar(filename);
 	int width, height;
-	GetWindowSize(width, height);
+	GApplication.GetWindowSize(width, height);
 
 	byte *pic = new byte [width * height * 4];
 	glFinish();

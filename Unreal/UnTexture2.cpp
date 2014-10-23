@@ -577,7 +577,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 
 	TexData.Format = intFormat;
 
-#if BIOSHOCK && XBOX360
+#if BIOSHOCK && SUPPORT_XBOX360
 	if (TexData.CompressedData && TexData.Platform == PLATFORM_XBOX360)
 		TexData.DecodeXBox360();
 #endif

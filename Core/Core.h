@@ -13,10 +13,14 @@
 #	include <intrin.h>
 #endif
 
+#if __GNUC__
+#	include <wchar.h>
+#endif
+
 #include "Build.h"
 
 #if RENDERING
-#	include <SDL/SDL.h>			//?? move outside (here for SDL_GetTicks() only?)
+#	include <SDL2/SDL.h>			//?? move outside (here for SDL_GetTicks() only?)
 #endif
 
 #define VECTOR_ARG(name)		name[0],name[1],name[2]
@@ -117,6 +121,7 @@ template<>    struct CompileTimeError<true> {};
 typedef __int64					int64;
 typedef unsigned __int64		uint64;
 #elif __GNUC__
+#	define vsnwprintf			swprintf
 #	define NORETURN				__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
 	// strange, but there is only way to work (inline+always_inline)

@@ -627,7 +627,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 		//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
 		strcpy(bulkFileName, TextureFileCacheName);
 		bulkFileExt  = "tfc";
-#if ANDROID
+#if SUPPORT_ANDROID
 		if (UseETC_TFC) appSprintf(ARRAY_ARG(bulkFileName), "%s_ETC", *TextureFileCacheName);
 #endif
 		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
@@ -729,13 +729,13 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
 	bool AndroidCompression = false;
 
-#if ANDROID
+#if SUPPORT_ANDROID
 	if (!Mips.Num() && CachedETCMips.Num())
 	{
 		MipsArray = &CachedETCMips;
 		AndroidCompression = true;
 	}
-#endif
+#endif // SUPPORT_ANDROID
 
 	if (!TexData.CompressedData)
 	{
@@ -808,7 +808,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		return false;
 	}
 
-#if IPHONE
+#if SUPPORT_IPHONE
 	if (Package->Platform == PLATFORM_IOS)
 	{
 		if (Format == PF_DXT1)
@@ -816,9 +816,9 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		else if (Format == PF_DXT5)
 			intFormat = TPF_PVRTC4;
 	}
-#endif // IPHONE
+#endif // SUPPORT_IPHONE
 
-#if ANDROID
+#if SUPPORT_ANDROID
 	if (AndroidCompression)
 	{
 		if (Format == PF_DXT1)
@@ -826,11 +826,11 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 //??		else if (Format == PF_DXT5)
 //??			intFormat = TPF_ETC2_EAC; ???
 	}
-#endif // ANDROID
+#endif // SUPPORT_ANDROID
 
 	TexData.Format = intFormat;
 
-#if XBOX360
+#if SUPPORT_XBOX360
 	if (TexData.Platform == PLATFORM_XBOX360)
 		TexData.DecodeXBox360();
 #endif

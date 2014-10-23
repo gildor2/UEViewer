@@ -78,11 +78,11 @@ enum ETexturePixelFormat
 	TPF_BC5,			// alias names: 3Dc, ATI2, BC5
 	TPF_BC7,
 	TPF_A1,				// 8 monochrome pixels per byte
-#if IPHONE
+#if SUPPORT_IPHONE
 	TPF_PVRTC2,
 	TPF_PVRTC4,
 #endif
-#if ANDROID
+#if SUPPORT_ANDROID
 	TPF_ETC1,
 #endif
 	TPF_MAX
@@ -139,7 +139,7 @@ struct CTextureData
 
 	byte *Decompress();								// may return NULL in a case of error
 
-#if XBOX360
+#if SUPPORT_XBOX360
 	void DecodeXBox360();
 #endif
 };

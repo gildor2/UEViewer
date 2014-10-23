@@ -11,8 +11,8 @@
 #include "TypeConvert.h"
 
 
-CVertMeshViewer::CVertMeshViewer(UVertMesh *Mesh)
-:	CMeshViewer(Mesh)
+CVertMeshViewer::CVertMeshViewer(UVertMesh* Mesh, CApplication* Window)
+:	CMeshViewer(Mesh, Window)
 ,	AnimIndex(-1)
 {
 	CVertMeshInstance *VertInst = new CVertMeshInstance();

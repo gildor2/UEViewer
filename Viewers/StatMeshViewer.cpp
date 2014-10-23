@@ -10,8 +10,8 @@
 #include "StaticMesh.h"
 
 
-CStatMeshViewer::CStatMeshViewer(CStaticMesh *Mesh0)
-:	CMeshViewer(Mesh0->OriginalMesh)
+CStatMeshViewer::CStatMeshViewer(CStaticMesh* Mesh0, CApplication* Window)
+:	CMeshViewer(Mesh0->OriginalMesh, Window)
 ,	Mesh(Mesh0)
 {
 	guard(CStatMeshViewer::CStatMeshViewer);

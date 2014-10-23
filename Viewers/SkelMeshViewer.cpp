@@ -43,8 +43,8 @@ static CAnimSet *GetAnimSet(const UObject *Obj)
 }
 
 
-CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh *Mesh0)
-:	CMeshViewer(Mesh0->OriginalMesh)
+CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
+:	CMeshViewer(Mesh0->OriginalMesh, Window)
 ,	Mesh(Mesh0)
 ,	AnimIndex(-1)
 ,	IsFollowingMesh(false)

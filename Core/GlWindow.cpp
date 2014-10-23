@@ -1,4 +1,4 @@
-#include <SDL/SDL_syswm.h>
+#include <SDL2/SDL_syswm.h>
 #undef DrawText
 
 #include "Core.h"
@@ -344,7 +344,6 @@ static void DrawChar(char c, unsigned color, int textX, int textY)
 #if NEW_SDL
 static SDL_Window		*sdlWindow;
 static SDL_GLContext	sdlContext;
-static bool				isFullscreen = false;
 #endif // NEW_SDL
 
 // called when window resized
@@ -397,7 +396,7 @@ static void ResizeWindow(int w, int h)
 	unguard;
 }
 
-void GetWindowSize(int &x, int &y)
+void CApplication::GetWindowSize(int &x, int &y)
 {
 	x = winWidth;
 	y = winHeight;
@@ -406,24 +405,31 @@ void GetWindowSize(int &x, int &y)
 
 #if NEW_SDL
 
-static void ToggleFullscreen()
+void CApplication::ToggleFullscreen()
 {
-	isFullscreen = !isFullscreen;
+	IsFullscreen = !IsFullscreen;
 
-	if (isFullscreen)
+	if (IsFullscreen)
 	{
+		SavedWinWidth = winWidth;
+		SavedWinHeight = winHeight;
 		// get desktop display mode
 		SDL_DisplayMode desktopMode;
-		if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplay(sdlWindow), &desktopMode) != 0)
+		if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplayIndex(sdlWindow), &desktopMode) != 0)
 		{
 			appPrintf("ERROR: unable to get desktop display mode\n");
-			isFullscreen = false;
+			IsFullscreen = false;
 			return;
 		}
 		// and apply it to the window
 		SDL_SetWindowDisplayMode(sdlWindow, &desktopMode);
+		SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
 	}
-	SDL_SetWindowFullscreen(sdlWindow, (SDL_bool)isFullscreen);
+	else
+	{
+		SDL_SetWindowFullscreen(sdlWindow, 0);
+		::ResizeWindow(SavedWinWidth, SavedWinHeight);
+	}
 }
 
 #endif // NEW_SDL
@@ -1333,6 +1339,7 @@ void CApplication::ProcessKey(int key, bool isDown)
 CApplication::CApplication()
 :	IsHelpVisible(false)
 ,	RequestingQuit(false)
+,	IsFullscreen(false)
 {}
 
 CApplication::~CApplication()
@@ -1397,7 +1404,7 @@ void CApplication::VisualizerLoop(const char *caption)
 	// get display refresh rate
 	SDL_DisplayMode desktopMode;
 	int frameTime = 0;
-	if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplay(sdlWindow), &desktopMode) == 0)
+	if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplayIndex(sdlWindow), &desktopMode) == 0)
 		frameTime = 1000 / desktopMode.refresh_rate;
 #endif // NEW_SDL && LIMIT_FPS
 #if !NEW_SDL
@@ -1439,7 +1446,7 @@ void CApplication::VisualizerLoop(const char *caption)
 					break;
 	#if !SMART_RESIZE
 				case SDL_WINDOWEVENT_RESIZED:
-					ResizeWindow(evt.window.data1, evt.window.data2);
+					::ResizeWindow(evt.window.data1, evt.window.data2);
 					break;
 	#endif // SMART_RESIZE
 	#if FIX_STICKY_MOD_KEYS
@@ -1452,7 +1459,7 @@ void CApplication::VisualizerLoop(const char *caption)
 #else // NEW_SDL
 	#if !SMART_RESIZE
 			case SDL_VIDEORESIZE:
-				ResizeWindow(evt.resize.w, evt.resize.h);
+				::ResizeWindow(evt.resize.w, evt.resize.h);
 				break;
 	#endif // SMART_RESIZE
 #endif // NEW_SDL

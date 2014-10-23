@@ -19,9 +19,10 @@ class CStaticMesh;
 class CObjectViewer
 {
 public:
-	UObject*	Object;
+	UObject*		Object;
+	CApplication*	Window;
 
-	CObjectViewer(UObject *Obj);
+	CObjectViewer(UObject* Obj, CApplication* Win);
 	virtual ~CObjectViewer()
 	{}
 
@@ -55,7 +56,7 @@ public:
 	static bool		ShowOutline;
 	static bool		ShowChannels;
 
-	CMaterialViewer(UUnrealMaterial *Material);
+	CMaterialViewer(UUnrealMaterial* Material, CApplication* Window);
 	virtual ~CMaterialViewer();
 
 	virtual void ShowHelp();
@@ -79,8 +80,8 @@ public:
 	unsigned		DrawFlags;
 	bool			Wireframe;
 
-	CMeshViewer(UObject *Mesh)
-	:	CObjectViewer(Mesh)
+	CMeshViewer(UObject* Mesh, CApplication* Window)
+	:	CObjectViewer(Mesh, Window)
 	,	DrawFlags(0)
 	,	Wireframe(false)
 	{}
@@ -107,7 +108,7 @@ class CVertMeshViewer : public CMeshViewer
 public:
 	int				AnimIndex;
 
-	CVertMeshViewer(UVertMesh *Mesh);
+	CVertMeshViewer(UVertMesh* Mesh, CApplication* Window);
 
 	virtual void ShowHelp();
 	virtual void ProcessKey(int key);
@@ -136,7 +137,7 @@ public:
 	bool			ShowLabels;
 	bool			ShowAttach;
 
-	CSkelMeshViewer(CSkeletalMesh *Mesh);
+	CSkelMeshViewer(CSkeletalMesh* Mesh, CApplication* Window);
 
 	static void TagMesh(CSkelMeshInstance *NewInst);
 	static void UntagAllMeshes();
@@ -165,7 +166,7 @@ private:
 class CStatMeshViewer : public CMeshViewer
 {
 public:
-	CStatMeshViewer(CStaticMesh *Mesh);
+	CStatMeshViewer(CStaticMesh* Mesh, CApplication* Window);
 	virtual void ShowHelp();
 	virtual void Dump();
 	virtual void Draw2D();

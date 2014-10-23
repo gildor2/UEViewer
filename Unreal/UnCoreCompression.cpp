@@ -5,7 +5,7 @@
 #include "lzo/lzo1x.h"
 #include "zlib/zlib.h"
 
-#if XBOX360
+#if SUPPORT_XBOX360
 
 #	if !USE_XDK
 
@@ -27,7 +27,7 @@
 #		endif // _WIN32
 #	endif // USE_XDK
 
-#endif // XBOX360
+#endif // SUPPORT_XBOX360
 
 
 /*-----------------------------------------------------------------------------
@@ -51,7 +51,7 @@ extern "C" void zcfree(int opaque, void *ptr)
 	LZX support
 -----------------------------------------------------------------------------*/
 
-#if !USE_XDK && XBOX360
+#if !USE_XDK && SUPPORT_XBOX360
 
 struct mspack_file
 {
@@ -254,7 +254,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 	if (Flags == COMPRESS_LZX)
 	{
-#if XBOX360
+#if SUPPORT_XBOX360
 #	if !USE_XDK
 		appDecompressLZX(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
 		return UncompressedSize;
@@ -270,9 +270,9 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		XMemDestroyDecompressionContext(context);
 		return newLen;
 #	endif // USE_XDK
-#else  // XBOX360
+#else  // SUPPORT_XBOX360
 		appError("appDecompress: LZX compression is not supported");
-#endif // XBOX360
+#endif // SUPPORT_XBOX360
 	}
 
 	appError("appDecompress: unknown compression flags: %d", Flags);

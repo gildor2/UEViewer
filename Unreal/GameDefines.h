@@ -36,9 +36,9 @@
 #define UC2				1
 
 // requires UNREAL3
-#define XBOX360			1		// XBox360 support
-#define IPHONE			1		// iPhone/iPad support
-#define ANDROID			1		// Android support
+#define SUPPORT_XBOX360	1		// XBox360 support
+#define SUPPORT_IPHONE	1		// iPhone/iPad support
+#define SUPPORT_ANDROID	1		// Android support
 
 #define ENDWAR			1		// EndWar
 #define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3
