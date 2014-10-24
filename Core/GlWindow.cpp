@@ -425,12 +425,9 @@ void CApplication::ToggleFullscreen()
 // Mouse control
 //-----------------------------------------------------------------------------
 
+// Variables used to store mouse position before switching to relative mode, so
+// the position will be restored after releasing mouse buttons.
 static int mousePosX, mousePosY;
-
-inline void CenterMouseInWindow()
-{
-	SDL_WarpMouseInWindow(sdlWindow, winWidth / 2, winHeight / 2);
-}
 
 static void OnMouseButton(int type, int button)
 {
@@ -441,37 +438,27 @@ static void OnMouseButton(int type, int button)
 		mouseButtons |= mask;
 	else
 		mouseButtons &= ~mask;
-	// show/hide cursor
-	// NOTE: SDL 1.2 SDL_WM_GrabInput will keep mouse pointer in center of the window, but
-	// this functionality were removed in SDL 1.3; also, Linux version of 1.2 grab has some
-	// bugs. So I've decided to implement this by myself. Forks for SDL 1.2 and 1.3 without
-	// bugs on Linux.
 	if (!prevButtons && mouseButtons)
 	{
-		SDL_ShowCursor(0);
-		SDL_SetWindowGrab(sdlWindow, SDL_TRUE);
+		// grabbing mouse
 		SDL_GetMouseState(&mousePosX, &mousePosY);
-		CenterMouseInWindow();
+		SDL_SetRelativeMouseMode(SDL_TRUE);		// switch to relative mode - mouse cursor will be hidden and remains in single place
 	}
 	else if (prevButtons && !mouseButtons)
 	{
-		SDL_ShowCursor(1);
-		SDL_SetWindowGrab(sdlWindow, SDL_FALSE);
+		// releasing mouse
+		SDL_SetRelativeMouseMode(SDL_FALSE);
 		SDL_WarpMouseInWindow(sdlWindow, mousePosX, mousePosY);
 	}
 }
 
 
-static void OnMouseMove()
+static void OnMouseMove(int mx, int my)
 {
 	if (!mouseButtons) return;
 
-	int mx, my;
-	SDL_GetMouseState(&mx, &my);
-	CenterMouseInWindow();
-
-	float xDelta = (float)(mx - winWidth / 2) / winWidth;
-	float yDelta = (float)(my - winHeight / 2) / winHeight;
+	float xDelta = (float)mx / winWidth;
+	float yDelta = (float)my / winHeight;
 	if (vpInvertXAxis)
 		xDelta = -xDelta;
 
@@ -1415,7 +1402,7 @@ void CApplication::VisualizerLoop(const char *caption)
 				OnMouseButton(evt.type, evt.button.button);
 				break;
 			case SDL_MOUSEMOTION:
-				OnMouseMove();
+				OnMouseMove(evt.motion.xrel, evt.motion.yrel);
 				break;
 			case SDL_QUIT:
 				RequestingQuit = true;
