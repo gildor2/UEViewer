@@ -91,7 +91,6 @@ MAIN_FILES = \
 	$(OUT_1)/umodel.res
 
 NV_LIBS_FILES = \
-	$(OUT)/Memory.obj \
 	$(OUT)/BlockDXT.obj \
 	$(OUT)/ColorBlock.obj \
 	$(OUT)/DirectDrawSurface.obj \
@@ -1216,13 +1215,6 @@ DEPENDS = \
 
 $(OUT)/lzxd.obj : ./libs/mspack/lzxd.c $(DEPENDS)
 	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lzxd.obj" ./libs/mspack/lzxd.c
-
-DEPENDS = \
-	libs/nvtt/nvcore/Debug.h \
-	libs/nvtt/nvcore/Memory.h
-
-$(OUT)/Memory.obj : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Memory.obj" ./libs/nvtt/nvcore/Memory.cpp
 
 DEPENDS = \
 	libs/nvtt/nvimage/BlockDXT.h \

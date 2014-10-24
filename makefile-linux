@@ -90,7 +90,6 @@ MAIN_FILES = \
 	$(OUT_1)/UmodelApp.o
 
 NV_LIBS_FILES = \
-	$(OUT)/Memory.o \
 	$(OUT)/BlockDXT.o \
 	$(OUT)/ColorBlock.o \
 	$(OUT)/DirectDrawSurface.o \
@@ -1211,29 +1210,22 @@ $(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_59)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzxd.o ./libs/mspack/lzxd.c
 
 DEPENDS_60 = \
-	libs/nvtt/nvcore/Debug.h \
-	libs/nvtt/nvcore/Memory.h
-
-$(OUT)/Memory.o : ./libs/nvtt/nvcore/Memory.cpp $(DEPENDS_60)
-	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/Memory.o ./libs/nvtt/nvcore/Memory.cpp
-
-DEPENDS_61 = \
 	libs/nvtt/nvimage/BlockDXT.h \
 	libs/nvtt/nvimage/ColorBlock.h
 
-$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_61)
+$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_60)
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
-DEPENDS_62 = \
+DEPENDS_61 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_62)
+$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_61)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_63 = \
+DEPENDS_62 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -1242,10 +1234,10 @@ DEPENDS_63 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_63)
+$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_62)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_64 = \
+DEPENDS_63 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -1253,26 +1245,26 @@ DEPENDS_64 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_64)
+$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_63)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_65 = \
+DEPENDS_64 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_65)
+$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_64)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_66 = \
+DEPENDS_65 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_66)
+$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_65)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/adler32.o ./libs/zlib/adler32.c
 
-$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_66)
+$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_65)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

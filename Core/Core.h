@@ -122,6 +122,7 @@ typedef __int64					int64;
 typedef unsigned __int64		uint64;
 #elif __GNUC__
 #	define vsnwprintf			swprintf
+#	define __FUNCSIG__			__PRETTY_FUNCTION__
 #	define NORETURN				__attribute__((noreturn))
 #	if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 2))
 	// strange, but there is only way to work (inline+always_inline)
@@ -274,6 +275,11 @@ FORCEINLINE void operator delete(void* ptr)
 	appFree(ptr);
 }
 
+FORCEINLINE void operator delete[](void* ptr)
+{
+	appFree(ptr);
+}
+
 // inplace new
 FORCEINLINE void* operator new(size_t size, void* ptr)
 {
@@ -315,8 +321,6 @@ void appDumpMemoryAllocations();
 
 // "Guard" macros
 
-//!! GCC: use __PRETTY_FUNCTION__ instead of __FUNCSIG__
-
 #if DO_GUARD
 
 // NOTE: using "char __FUNC__[]" instead of "char *__FUNC__" here: in 2nd case compiler
@@ -328,18 +332,18 @@ void appDumpMemoryAllocations();
 // C++exception-based guard/unguard system
 #define guard(func)						\
 	{									\
-		static const char __FUNC__[] = #func; \
+		static const char *__FUNC__ = #func; \
 		try {
 
 #if DO_GUARD_MAX
 #define guardfunc						\
 	{									\
-		static const char __FUNC__[] = __FUNCSIG__; \
+		static const char *__FUNC__ = __FUNCSIG__; \
 		try {
 #else
 #define guardfunc						\
 	{									\
-		static const char __FUNC__[] = __FUNCTION__; \
+		static const char *__FUNC__ = __FUNCTION__; \
 		try {
 #endif
 
@@ -360,7 +364,7 @@ void appDumpMemoryAllocations();
 #define CATCH			catch (...)
 #define CATCH_CRASH		catch (...)
 #define	THROW_AGAIN		throw
-#define THROW			throw
+#define THROW			throw 1				// throw something (required for GCC in order to get working appError etc)
 
 #else
 

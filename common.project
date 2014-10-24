@@ -41,6 +41,14 @@ OLDCRT     = 1
 	}
 !endif
 
+!if ("$COMPILER" eq "GnuC") && 0
+	# GCC debug build
+	#!! should disable "-s" option from linker command
+	OPTIONS += -g3 -fno-omit-frame-pointer -funwind-tables -fstack-protector -fno-optimize-sibling-calls
+	LINKFLAGS += -rdynamic
+!endif
+
+
 #OPTIONS += -analyze
 
 #------------------------------------------------
@@ -53,7 +61,7 @@ push(INCLUDES)
 INCLUDES = $R/libs/nvtt
 
 sources(NV_LIBS) = {
-	$R/libs/nvtt/nvcore/*.cpp
+#	$R/libs/nvtt/nvcore/*.cpp
 	$R/libs/nvtt/nvimage/*.cpp
 #	$R/libs/nvtt/nvmath/*.cpp
 #	$R/libs/nvtt/nvtt/bc6h/*.cpp

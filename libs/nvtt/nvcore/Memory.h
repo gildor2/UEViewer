@@ -10,42 +10,90 @@
 
 #include <new>	// new and delete
 
+#if _MSC_VER
+#	define FORCEINLINE		__forceinline
+#elif __GNUC__
+#	define FORCEINLINE		inline __attribute__((always_inline))
+#endif
+
+
+#if UMODEL
+void* appMalloc(int size, int alignment = 8);
+void* appRealloc(void *ptr, int newSize);
+void appFree(void *ptr);
+#endif
+
 // Custom memory allocator
 namespace nv
 {
-	namespace mem 
+	namespace mem
 	{
+#if UMODEL
+		FORCEINLINE void * malloc(size_t size)
+		{
+			return appMalloc(size);
+		}
+		FORCEINLINE void * malloc(size_t size, const char * file, int line)
+		{
+			return appMalloc(size);
+		}
+		FORCEINLINE void free(const void * ptr)
+		{
+			appFree((void*)ptr);
+		}
+		FORCEINLINE void * realloc(void * ptr, size_t size)
+		{
+			appRealloc(ptr, size);
+		}
+#else
 		NVCORE_API void * malloc(size_t size);
 		NVCORE_API void * malloc(size_t size, const char * file, int line);
-		
+
 		NVCORE_API void free(const void * ptr);
 		NVCORE_API void * realloc(void * ptr, size_t size);
-		
+#endif
+
 	} // mem namespace
-	
+
 } // nv namespace
 
 
 // Override new/delete
 
-inline void * operator new (size_t size) throw()
+FORCEINLINE void * operator new (size_t size) throw()
 {
-	return nv::mem::malloc(size); 
-}
-
-inline void operator delete (void *p) throw()
-{
-	nv::mem::free(p); 
-}
-
-inline void * operator new [] (size_t size) throw()
-{
+#if UMODEL
+	return appMalloc(size);
+#else
 	return nv::mem::malloc(size);
+#endif
 }
 
-inline void operator delete [] (void * p) throw()
+FORCEINLINE void operator delete (void *p) throw()
 {
-	nv::mem::free(p); 
+#if UMODEL
+	return appFree(p);
+#else
+	nv::mem::free(p);
+#endif
+}
+
+FORCEINLINE void * operator new [] (size_t size) throw()
+{
+#if UMODEL
+	return appMalloc(size);
+#else
+	return nv::mem::malloc(size);
+#endif
+}
+
+FORCEINLINE void operator delete [] (void * p) throw()
+{
+#if UMODEL
+	return appFree(p);
+#else
+	nv::mem::free(p);
+#endif
 }
 
 /*
@@ -58,7 +106,7 @@ inline void operator delete [] (void * p) throw()
 #if 0
 /*
     File:	main.cpp
-    
+
     Version:	1.0
 
 	Abstract: Overrides the C++ 'operator new' and 'operator delete'.
@@ -112,7 +160,7 @@ inline void operator delete [] (void * p) throw()
 namespace {
   unsigned long long gNewCounter; // number of times 'new' was called
   unsigned long long gDeleteCounter;  // number of times 'delete' was called
-  
+
   void printCounters()  // print the counters above
   {
 	std::cout << "new was called " << gNewCounter << " times and delete was called " << gDeleteCounter << " times\n";
@@ -172,7 +220,7 @@ void operator delete(void* p, const std::nothrow_t&) throw()
 void __attribute__((weak, visibility("default"))) workaroundFor4067110 () { }
 
 /* This is a simple test program that causes the runtime library to call new and delete.  */
-int main() 
+int main()
 {
 	atexit (printCounters);
 	try {
