@@ -533,8 +533,10 @@ static void SetPathOption(FString& where, const char* value)
 		where = value;
 		return;
 	}
+	// relative path
 	char path[512];
-	getcwd(ARRAY_ARG(path));
+	if (!getcwd(ARRAY_ARG(path)))
+		strcpy(path, ".");	// path is too long, or other error occured
 
 	if (!value || !value[0])
 	{

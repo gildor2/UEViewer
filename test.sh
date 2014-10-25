@@ -26,7 +26,11 @@ if [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ]; then
 	exe="umodel"
 	# VirtualBox default C: drive mapping
 	if [ -d "/media/sf_C_DRIVE" ]; then
-		c_drive="/media/sf_C_DRIVE"
+		c_drive="/media/sf_C_DRIVE"			# VirtualBox
+	elif [ -d "/mnt/hgfs/C" ]; then
+		c_drive="/mnt/hgfs/C"				# VMware
+	elif [ -d "/media/c" ]; then
+		c_drive="/media/c"
 	fi
 fi
 
@@ -62,9 +66,6 @@ function CheckDir()
 			checkedDirs=$dir
 		else
 			checkedDirs="$checkedDirs, $dir"
-		fi
-		if [ "$OSTYPE" == "linux-gnu" ]; then
-			dir="/media/c/${dir:3}"
 		fi
 		if [ -d "$dir" ]; then
 			foundPath=$dir
