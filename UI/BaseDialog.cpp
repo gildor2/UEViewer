@@ -574,7 +574,8 @@ void UIButton::Create(UIBaseDialog* dialog)
 	Parent->AddVerticalSpace();
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Parent->AddVerticalSpace();
-	if (!Id) Id = dialog->GenerateDialogId();
+	if (Id == 0 || Id >= FIRST_DIALOG_ID)
+		Id = dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
 
 	//!! BS_DEFPUSHBUTTON - for default key
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP, 0, dialog);
@@ -974,17 +975,11 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		if (v != Value)
 		{
 			Value = v;
-			if (cmd == LBN_SELCHANGE)
-			{
-				if (Callback)
-					Callback(this, Value, GetSelectionText());
-			}
-			else
-			{
-				if (DblClickCallback)
-					DblClickCallback(this, Value, GetSelectionText());
-			}
+			if ((cmd == LBN_SELCHANGE) && Callback)
+				Callback(this, Value, GetSelectionText());
 		}
+		if ((cmd == LBN_DBLCLK) && DblClickCallback)
+			DblClickCallback(this, Value, GetSelectionText());
 		return true;
 	}
 	return false;
@@ -1041,7 +1036,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int wid
 			return *this;
 		}
 	}
-	appError("UIMulticolumnListbox: too much columns");
+	appError("UIMulticolumnListbox: too many columns");
 	return *this;
 }
 
@@ -2773,7 +2768,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		Wnd = hWnd;
 
-		// show dialog's icon; 200 is resource id (we're not using resource.h here)
+		// attach dialog's icon
 		int icon = IconResId;
 		if (!icon) icon = GGlobalIconResId;
 		if (icon)
