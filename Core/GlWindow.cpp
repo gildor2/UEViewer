@@ -1114,7 +1114,7 @@ void CApplication::Display()
 	// enable lighting
 	static const float lightPos[4]      = {1000, 2000, 2000, 0};
 	static const float lightAmbient[4]  = {0.1, 0.1, 0.15, 1};
-	static const float specIntens[4]    = {0.7, 0.7, 0.5,  0};
+	static const float specIntens[4]    = {0.4, 0.4, 0.4,  0};
 	static const float black[4]         = {0,   0,   0,    0};
 	static const float white[4]         = {1,   1,   1,    0};
 	glEnable(GL_COLOR_MATERIAL);
@@ -1131,7 +1131,7 @@ void CApplication::Display()
 	glMaterialfv(GL_FRONT, GL_DIFFUSE,  white);
 	glMaterialfv(GL_FRONT, GL_AMBIENT,  white);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, specIntens);
-	glMaterialf (GL_FRONT, GL_SHININESS, 20);
+	glMaterialf (GL_FRONT, GL_SHININESS, 5);
 	// Use GL_EXT_separate_specular_color without check (in worst case GL error code will be set)
 	glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 #if LIGHTING_MODES

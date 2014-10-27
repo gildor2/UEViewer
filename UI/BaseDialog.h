@@ -448,13 +448,12 @@ protected:
 	FString		sValue;
 	FString*	pValue;
 	bool		IsMultiline;
+	bool		TextDirty;
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 	// request edited text from UI
 	void UpdateText();
-	// request edited text only when dialog is closed
-	virtual void DialogClosed(bool cancel);
 };
 
 
@@ -890,7 +889,7 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
-	virtual void DialogClosed(bool cancel);
+	virtual void DialogClosed(bool cancel);	//!! NOTE: this feature is not used now
 	virtual void UpdateEnabled();
 	virtual void UpdateVisible();
 

@@ -643,6 +643,7 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
+	if (cmd != BN_CLICKED) return false;
 	bool checked = (IsDlgButtonChecked(DlgWnd, Id) != BST_UNCHECKED);
 	if (*pValue != checked)
 	{
@@ -739,6 +740,7 @@ UITextEdit::UITextEdit(const char* value)
 :	pValue(&sValue)		// points to local variable
 ,	sValue(value)
 ,	IsMultiline(false)
+,	TextDirty(false)
 {
 	Height = DEFAULT_EDIT_HEIGHT;
 }
@@ -771,7 +773,7 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	int style = WS_TABSTOP;
-	if (IsMultiline) style |= ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL;
+	if (IsMultiline) style |= WS_VSCROLL | ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL;
 
 	Wnd = Window(WC_EDIT, "", style, WS_EX_CLIENTEDGE, dialog);
 	SetWindowText(Wnd, *(*pValue));
@@ -782,11 +784,19 @@ bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd == EN_CHANGE)
 	{
+		// don't update pValue every time when text changed unless
+		// we need to execute callback
+		TextDirty = true;
 		if (Callback)
 		{
 			UpdateText();
 			Callback(this, **pValue);
 		}
+	}
+	else if (cmd == EN_KILLFOCUS)
+	{
+		// this callback is called when control looses focus or when dialog window is closed
+		UpdateText();
 	}
 	return true;
 }
@@ -794,17 +804,14 @@ bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
 void UITextEdit::UpdateText()
 {
 	if (!Wnd) return;
-	int len = GetWindowTextLength(Wnd) + 1;
+	if (!TextDirty) return;
+	TextDirty = true;
+
+	int len = GetWindowTextLength(Wnd);
 	FString& S = *pValue;
 	S.Empty(len+1);
 	S.Add(len+1);
 	GetWindowText(Wnd, &S[0], len + 1);
-}
-
-void UITextEdit::DialogClosed(bool cancel)
-{
-	if (cancel) return;
-	UpdateText();
 }
 
 
@@ -2463,6 +2470,8 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (id == Id)
 	{
 		// checkbox
+		if (cmd != BN_CLICKED) return false;
+
 		bool checked = (IsDlgButtonChecked(DlgWnd, Id) != BST_UNCHECKED);
 		if (Value != checked)
 		{
