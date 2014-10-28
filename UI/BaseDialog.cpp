@@ -1122,6 +1122,43 @@ int UIMulticolumnListbox::GetSelectionIndex(int i) const
 */
 }
 
+void UIMulticolumnListbox::RemoveItem(int itemIndex)
+{
+	int numItems = Items.Num() / NumColumns;
+	if (itemIndex < 0 || itemIndex >= numItems)
+		return;									// out of range
+	// remove from Items array
+	int stringIndex = (itemIndex + 1) * NumColumns;
+	Items.Remove(stringIndex, NumColumns);		// remove 1 item
+	// remove from ListView
+	if (Wnd)
+	{
+		// remove item
+		ListView_DeleteItem(Wnd, itemIndex);
+		// renumber items - keep their lParam values correct
+		LVITEM lvi;
+		lvi.mask = LVIF_PARAM;
+		lvi.iSubItem = 0;
+		for (int i = itemIndex; i < numItems - 1; i++) // 1 item was removed, so count is smaller by 1
+		{
+			lvi.iItem = i;
+			lvi.lParam = i;
+			ListView_SetItem(Wnd, &lvi);
+		}
+	}
+	// remove from selection
+	// (note: when window exists, item will be removed from selection in ListView_DeleteItem -> HandleCommand chain)
+	int pos = SelectedItems.FindItem(itemIndex);
+	if (pos >= 0) SelectedItems.FastRemove(pos);
+	// renumber selected items
+	for (int i = 0; i < SelectedItems.Num(); i++)
+	{
+		int n = SelectedItems[i];
+		if (n >= itemIndex)
+			SelectedItems[i] = n - 1;
+	}
+}
+
 void UIMulticolumnListbox::RemoveAllItems()
 {
 	// remove items from local storage and from control

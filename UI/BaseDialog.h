@@ -550,6 +550,7 @@ public:
 
 	int AddItem(const char* item);
 	void AddSubItem(int itemIndex, int column, const char* text);
+	void RemoveItem(int itemIndex);
 	void RemoveAllItems();
 
 	UIMulticolumnListbox& AllowMultiselect() { Multiselect = true; return *this; }
@@ -563,6 +564,7 @@ public:
 	UIMulticolumnListbox& UnselectItem(const char* item);
 	UIMulticolumnListbox& UnselectAllItems();
 
+	FORCEINLINE int GetItemCount() const { return Items.Num() / NumColumns - 1; }
 	FORCEINLINE const char* GetItem(int itemIndex) const { return GetSumItem(itemIndex, 0); }
 	const char* GetSumItem(int itemIndex, int column) const;
 

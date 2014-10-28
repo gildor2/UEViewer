@@ -9,6 +9,7 @@ public:
 		value1 = false;
 		value2 = true;
 		value3 = 0;
+		tabIndex = 0;
 		ShowModal("UI Test", 350, 200);
 		printf("v1=%d v2=%d v3=%d\n", value1, value2, value3);
 		printf("Text: [%s]\n", *text);
@@ -105,10 +106,75 @@ public:
 					]
 				]
 			]
-			+ NewControl(UITextEdit, &text)
-			.SetHeight(100)
-			.SetMultiline()
+			+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+			.SetRadioCallback(BIND_MEM_CB(&TestDialog::OnPageChanged, this))
+			.SetRadioVariable(&tabIndex)
+			[
+				NewControl(UIRadioButton, "page 1")
+				+ NewControl(UIRadioButton, "page 2")
+			]
+			+ NewControl(UIPageControl)
+			.SetHeight(150)
+			.Expose(pager)
+			[
+				// page 1
+				NewControl(UITextEdit, &text)
+				.SetHeight(-1)
+				.SetMultiline()
+				// page 2
+				+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+				[
+					NewControl(UIMulticolumnListbox, 3)
+					.Expose(list)
+					.SetHeight(150)
+					.AddColumn("Column 1", 100)
+					.AddColumn("Column 2", 50)
+					.AddColumn("Column 3")
+					.AllowMultiselect()
+					+ NewControl(UISpacer)
+					+ NewControl(UIGroup, GROUP_NO_BORDER)
+					.SetWidth(100)
+					[
+						NewControl(UIButton, "Add")
+						.SetCallback(BIND_MEM_CB(&TestDialog::OnAddItems, this))
+						+ NewControl(UIButton, "Remove")
+						.SetCallback(BIND_MEM_CB(&TestDialog::OnRemoveItems, this))
+					]
+				]
+			]
 		];
+	}
+
+	void OnAddItems()
+	{
+		static int nn = 0;
+		int n;
+		char buf[32];
+#define ITEM(text)								\
+		n = list->AddItem(text);				\
+		appSprintf(ARRAY_ARG(buf), "%d", n);	\
+		list->AddSubItem(n, 1, buf);			\
+		appSprintf(ARRAY_ARG(buf), "%d", ++nn);	\
+		list->AddSubItem(n, 2, buf);
+		ITEM("------");
+		ITEM("this");
+		ITEM("is");
+		ITEM("UI");
+		ITEM("framework");
+		ITEM("test");
+	}
+
+	void OnRemoveItems()
+	{
+		while (list->GetSelectionCount() > 0)
+		{
+			int index = list->GetSelectionIndex(0);
+			list->RemoveItem(index);
+		}
+		printf("------\n");
+		for (int i = 0; i < list->GetItemCount(); i++)
+			printf("%d = %s\n", i, list->GetItem(i));
+		printf("------\n");
 	}
 
 	void OnEnableItem1(UICheckbox* sender, bool value)
@@ -116,10 +182,18 @@ public:
 		item1->Enable(value);
 	}
 
+	void OnPageChanged()
+	{
+		pager->SetActivePage(tabIndex);
+	}
+
 	UIMenuItem*		item1;
+	UIPageControl*	pager;
+	UIMulticolumnListbox* list;
 	bool			value1;
 	bool			value2;
 	int				value3;
+	int				tabIndex;
 	FString			text;
 };
 

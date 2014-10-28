@@ -1222,8 +1222,9 @@ public:
 		FArray::Remove(index, count, sizeof(T));
 	}
 
-	// Remove an item and copy last array's item to the removed item position,
-	// so no array shifting performed.
+	// Remove an item and copy last array's item(s) to the removed item position,
+	// so no array shifting performed. Could be used when order of array elements
+	// is not important.
 	FORCEINLINE void FastRemove(int index, int count = 1)
 	{
 		// destruct specified array items
