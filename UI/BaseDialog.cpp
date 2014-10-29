@@ -1263,7 +1263,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::UnselectAllItems()
 {
 	if (Wnd)
 	{
-		for (int i = 0; i < SelectedItems.Num(); i++)
+		for (int i = SelectedItems.Num() - 1; i >= 0; i--) // SelectedItems will be altered in HandleCommand
 			SetItemSelection(SelectedItems[i], false);
 	}
 	SelectedItems.FastEmpty();
@@ -1272,8 +1272,8 @@ UIMulticolumnListbox& UIMulticolumnListbox::UnselectAllItems()
 
 void UIMulticolumnListbox::SetItemSelection(int index, bool select)
 {
-	ListView_SetItemState(Wnd, index, LVIS_SELECTED, select ? LVIS_SELECTED : 0);
-	ListView_EnsureVisible(Wnd, index, FALSE);
+	ListView_SetItemState(Wnd, index, select ? LVIS_SELECTED : 0, LVIS_SELECTED);
+	if (select) ListView_EnsureVisible(Wnd, index, FALSE);
 }
 
 void UIMulticolumnListbox::Create(UIBaseDialog* dialog)

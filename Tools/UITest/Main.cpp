@@ -139,6 +139,8 @@ public:
 						.SetCallback(BIND_MEM_CB(&TestDialog::OnAddItems, this))
 						+ NewControl(UIButton, "Remove")
 						.SetCallback(BIND_MEM_CB(&TestDialog::OnRemoveItems, this))
+						+ NewControl(UIButton, "Unselect")
+						.SetCallback(BIND_MEM_CB(&TestDialog::OnUnselectItems, this))
 					]
 				]
 			]
@@ -175,6 +177,11 @@ public:
 		for (int i = 0; i < list->GetItemCount(); i++)
 			printf("%d = %s\n", i, list->GetItem(i));
 		printf("------\n");
+	}
+
+	void OnUnselectItems()
+	{
+		list->UnselectAllItems();
 	}
 
 	void OnEnableItem1(UICheckbox* sender, bool value)
