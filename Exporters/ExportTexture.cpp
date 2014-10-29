@@ -198,7 +198,9 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 
 	nv::DDSHeader header;
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
-	header.setPixelFormat(32, 0xFF, 0xFF << 8, 0xFF << 16, 0xFF << 24);	// bit count and per-channel masks
+//	header.setPixelFormat(32, 0xFF, 0xFF << 8, 0xFF << 16, 0xFF << 24);	// bit count and per-channel masks
+	//!! Note: should use setFourCC for compressed formats, and setPixelFormat for uncompressed - these functions are
+	//!! incompatible. When fourcc is used, color masks are zero, and vice versa.
 	header.setWidth(TexData.USize);
 	header.setHeight(TexData.VSize);
 //	header.setNormalFlag(TexData.Format == TPF_DXT5N || TexData.Format == TPF_3DC); -- required for decompression only
