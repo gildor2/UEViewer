@@ -68,14 +68,19 @@ for ($i = 0; $i < $count; $i++)
 	push @lens, $len;
 }
 
-printf("%d files total\n", $count);
+$totalLen = 0;
+for ($i = 0; $i < $count; $i++)
+{
+	$totalLen += $lens[$i];
+}
+
+printf("%d files total, %.1f MBytes\n", $count, $totalLen / (1024*1024));
 
 
 # extract files
+$extractedLen = 0;
 for ($i = 0; $i < $count; $i++)
 {
-	sysseek(IN, $positions[$i], 0);
-	sysread(IN, $data, $lens[$i]);
 	my $filename = $filenames[$i];
 	$filename =~ s/\\/\//g;			# replace slashes
 	$filename =~ s/^\.\.\///;		# remove "../" at beginning
@@ -88,13 +93,30 @@ for ($i = 0; $i < $count; $i++)
 		MakeDir($dirname);
 	}
 
+	sysseek(IN, $positions[$i], 0);
 
 	# write file
 	open(F, ">$filename") or die "Unable to create file $filename\n";
 	binmode(F);
-	syswrite(F, $data);
+
+	$remainingLen = $lens[$i];
+	# copy streams in 64k chunks
+	do
+	{
+		$len = $remainingLen;
+		$len = 65536 if $len > 65536;
+		sysread(IN, $data, $len);
+		syswrite(F, $data);
+		$remainingLen -= $len;
+		# progress indicator
+		$extractedLen += $len;
+		printf("Extracting: %.1f%%\r", ($extractedLen / $totalLen) * 100);
+	} while ($remainingLen > 0);	# allow zero-sized files
+
 	close(F);
 }
+
+printf("\n");
 
 # close archive
 close(IN);
