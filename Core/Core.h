@@ -98,6 +98,7 @@ template<>    struct CompileTimeError<true> {};
 
 
 #if _MSC_VER
+
 #	define vsnprintf			_vsnprintf
 #	define vsnwprintf			_vsnwprintf
 #	define FORCEINLINE			__forceinline
@@ -118,9 +119,14 @@ template<>    struct CompileTimeError<true> {};
 #	define ROR16(val,shift)		_rotr16(val,shift)
 #	define ROL32(val,shift)		_rotl(val,shift)
 #	define ROR32(val,shift)		_rotr(val,shift)
+
+#	define appDebugBreak		__debugbreak
+
 typedef __int64					int64;
 typedef unsigned __int64		uint64;
+
 #elif __GNUC__
+
 #	define vsnwprintf			swprintf
 #	define __FUNCSIG__			__PRETTY_FUNCTION__
 #	define NORETURN				__attribute__((noreturn))
@@ -139,10 +145,14 @@ typedef unsigned __int64		uint64;
 #	undef VSTUDIO_INTEGRATION
 #	undef WIN32_USE_SEH
 #	undef HAS_UI				// not yet supported on this platform
+
 typedef signed long long		int64;
 typedef unsigned long long		uint64;
+
 #else
+
 #	error "Unsupported compiler"
+
 #endif
 
 // necessary types

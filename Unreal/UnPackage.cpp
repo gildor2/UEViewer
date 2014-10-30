@@ -973,9 +973,6 @@ class FFileReaderLineage : public FReaderWrapper
 {
 	DECLARE_ARCHIVE(FFileReaderLineage, FReaderWrapper);
 public:
-	int			ArPosOffset;
-	byte		XorKey;
-
 	FFileReaderLineage(FArchive *File, int Key)
 	:	FReaderWrapper(File, LINEAGE_HEADER_SIZE)
 	,	XorKey(Key)
@@ -995,6 +992,9 @@ public:
 				*p ^= XorKey;
 		}
 	}
+
+protected:
+	byte		XorKey;
 };
 
 #endif // LINEAGE2 || EXTEEL
@@ -1241,7 +1241,7 @@ public:
 		unguard;
 	}
 
-	~FUE3ArchiveReader()
+	virtual ~FUE3ArchiveReader()
 	{
 		if (Buffer) delete[] Buffer;
 		if (Reader) delete Reader;
@@ -1419,7 +1419,7 @@ public:
 	{
 		Stopper = Pos;
 	}
-	virtual int  GetStopper() const
+	virtual int GetStopper() const
 	{
 		return Stopper;
 	}

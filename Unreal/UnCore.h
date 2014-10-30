@@ -89,6 +89,7 @@ struct CGameFileInfo
 	const char *Extension;				// points to extension part (after '.')
 	bool		IsPackage;
 	int			SizeInKb;				// file size, in kilobytes
+	class FObbVFS* FileSystem;			// virtual file system
 };
 
 extern int GNumGameFiles;

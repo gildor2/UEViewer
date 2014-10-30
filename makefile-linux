@@ -853,6 +853,7 @@ DEPENDS_36 = \
 	UmodelTool/Build.h \
 	Unreal/GameDatabase.h \
 	Unreal/GameDefines.h \
+	Unreal/UnArchiveObb.h \
 	Unreal/UnCore.h
 
 $(OUT_1)/GameDatabase.o : Unreal/GameDatabase.cpp $(DEPENDS_36)

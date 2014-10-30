@@ -2,6 +2,8 @@
 #include "UnCore.h"
 #include "GameDatabase.h"
 
+#include "UnArchiveObb.h"
+
 // includes for file enumeration
 #if _WIN32
 #	include <io.h>					// for findfirst() set
@@ -938,7 +940,11 @@ int GNumPackageFiles = 0;
 int GNumForeignFiles = 0;
 
 
-static bool RegisterGameFile(const char *FullName)
+//!! add define USE_VFS = SUPPORT_ANDROID || UNREAL4
+
+static TArray<FObbVFS*> GFileSystems;
+
+static bool RegisterGameFile(const char *FullName, FObbVFS* parentVfs = NULL)
 {
 	guard(RegisterGameFile);
 
@@ -946,6 +952,52 @@ static bool RegisterGameFile(const char *FullName)
 	// return false when MAX_GAME_FILES
 	if (GNumGameFiles >= ARRAY_COUNT(GameFiles))
 		return false;
+
+	if (!parentVfs)		// no nested VFSs
+	{
+		const char* ext = strrchr(FullName, '.');
+		if (ext)
+		{
+			guard(MountVFS);
+
+			ext++;
+			FObbVFS* vfs = NULL;
+			FArchive* reader = NULL;
+
+#if SUPPORT_ANDROID
+			if (!stricmp(ext, "obb"))
+			{
+//??			GForcePlatform = PLATFORM_ANDROID;
+				reader = new FFileReader(FullName);
+				if (!reader) return true;
+				vfs = new FObbVFS();
+			}
+#endif // SUPPORT_ANDROID
+			//!! process other VFS types here
+			if (vfs)
+			{
+				assert(reader);
+				// read VF directory
+				if (!vfs->AttachReader(reader))
+				{
+					// something goes wrong
+					delete vfs;
+					delete reader;
+					return true;
+				}
+				// add game files
+				int NumVFSFiles = vfs->NumFiles();
+				for (int i = 0; i < NumVFSFiles; i++)
+				{
+					if (!RegisterGameFile(vfs->FileName(i), vfs))
+						return false;
+				}
+				return true;
+			}
+
+			unguard;
+		}
+	}
 
 	bool IsPackage;
 	if (FindExtension(FullName, ARRAY_ARG(PackageExtensions)))
@@ -973,26 +1025,37 @@ static bool RegisterGameFile(const char *FullName)
 	CGameFileInfo *info = new CGameFileInfo;
 	GameFiles[GNumGameFiles++] = info;
 	info->IsPackage = IsPackage;
+	info->FileSystem = parentVfs;
 	if (IsPackage) GNumPackageFiles++;
 
-	FILE* f = fopen(FullName, "rb");
-	if (f)
+	if (!parentVfs)
 	{
-		fseek(f, 0, SEEK_END);
-		info->SizeInKb = (ftell(f) + 512) / 1024;
-		fclose(f);
+		// regular file
+		FILE* f = fopen(FullName, "rb");
+		if (f)
+		{
+			fseek(f, 0, SEEK_END);
+			info->SizeInKb = (ftell(f) + 512) / 1024;
+			fclose(f);
+		}
+		else
+		{
+			info->SizeInKb = 0;
+		}
+		// cut RootDirectory from filename
+		const char *s = FullName + strlen(RootDirectory) + 1;
+		assert(s[-1] == '/');
+		appStrncpyz(info->RelativeName, s, ARRAY_COUNT(info->RelativeName));
 	}
 	else
 	{
-		info->SizeInKb = 0;
+		// file in virtual file system
+		info->SizeInKb = parentVfs->GetFileSize(FullName);
+		appStrncpyz(info->RelativeName, FullName, ARRAY_COUNT(info->RelativeName));
 	}
 
-	// cut RootDirectory from filename
-	const char *s = FullName + strlen(RootDirectory) + 1;
-	assert(s[-1] == '/');
-	appStrncpyz(info->RelativeName, s, ARRAY_COUNT(info->RelativeName));
 	// find filename
-	s = strrchr(info->RelativeName, '/');
+	const char* s = strrchr(info->RelativeName, '/');
 	if (s) s++; else s = info->RelativeName;
 	info->ShortFilename = s;
 	// find extension
@@ -1005,7 +1068,6 @@ static bool RegisterGameFile(const char *FullName)
 
 	unguardf("%s", FullName);
 }
-
 
 static bool ScanGameDirectory(const char *dir, bool recurse)
 {
@@ -1308,9 +1370,18 @@ const char *appSkipRootDir(const char *Filename)
 
 FArchive *appCreateFileReader(const CGameFileInfo *info)
 {
-	char buf[256];
-	appSprintf(ARRAY_ARG(buf), "%s/%s", RootDirectory, info->RelativeName);
-	return new FFileReader(buf);
+	if (!info->FileSystem)
+	{
+		// regular file
+		char buf[256];
+		appSprintf(ARRAY_ARG(buf), "%s/%s", RootDirectory, info->RelativeName);
+		return new FFileReader(buf);
+	}
+	else
+	{
+		// file from virtual file system
+		return info->FileSystem->CreateReader(info->RelativeName);
+	}
 }
 
 

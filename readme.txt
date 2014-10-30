@@ -151,6 +151,11 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+30.10.2014
+- added support for loading Android OBB files; to open them, just specify game path containing
+  the .obb file, and umodel will automatically scan its contents and allow working with embedded
+  files
+
 23.10.2014
 - migrated to SDL2
 
