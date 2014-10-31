@@ -311,6 +311,8 @@ class UTexture2D : public UTexture3
 	DECLARE_CLASS(UTexture2D, UTexture3)
 public:
 	TArray<FTexture2DMipMap> Mips;
+	TArray<FTexture2DMipMap> CachedPVRTCMips;
+	TArray<FTexture2DMipMap> CachedATITCMips;
 	TArray<FTexture2DMipMap> CachedETCMips;
 	int				SizeX;
 	int				SizeY;
@@ -371,7 +373,7 @@ public:
 	void Serialize4(FArchive& Ar);
 #endif
 
-	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool UseETC_TFC) const;
+	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
 #if RENDERING
 	virtual void Bind();

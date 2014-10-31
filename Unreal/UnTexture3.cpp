@@ -150,21 +150,15 @@ void UTexture2D::Serialize(FArchive &Ar)
 	}
 
 	if (Ar.ArVer >= 674)
-	{
-		TArray<FTexture2DMipMap> CachedPVRTCMips;
 		Ar << CachedPVRTCMips;
-		if (CachedPVRTCMips.Num()) appPrintf("*** %s has %d PVRTC mips (%d normal mips)\n", Name, CachedPVRTCMips.Num(), Mips.Num()); //!!
-	}
 
 	if (Ar.ArVer >= 857)
 	{
 		int CachedFlashMipsMaxResolution;
-		TArray<FTexture2DMipMap> CachedATITCMips;
 		FByteBulkData CachedFlashMips;
 		Ar << CachedFlashMipsMaxResolution;
 		Ar << CachedATITCMips;
 		CachedFlashMips.Serialize(Ar);
-		if (CachedATITCMips.Num()) appPrintf("*** %s has %d ATITC mips (%d normal mips)\n", Name, CachedATITCMips.Num(), Mips.Num()); //!!
 	}
 
 #if PLA
@@ -608,7 +602,7 @@ static int GetRealTextureOffset_MH(const UTexture2D *Obj, int MipIndex)
 #endif // MARVEL_HEROES
 
 
-bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool UseETC_TFC) const
+bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix) const
 {
 	const CGameFileInfo *bulkFile = NULL;
 
@@ -627,10 +621,15 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 		//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
 		strcpy(bulkFileName, TextureFileCacheName);
 		bulkFileExt  = "tfc";
-#if SUPPORT_ANDROID
-		if (UseETC_TFC) appSprintf(ARRAY_ARG(bulkFileName), "%s_ETC", *TextureFileCacheName);
-#endif
 		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+#if SUPPORT_ANDROID
+		if (!bulkFile)
+		{
+			if (!tfcSuffix) tfcSuffix = "DXT";
+			appSprintf(ARRAY_ARG(bulkFileName), "%s_%s", *TextureFileCacheName, tfcSuffix);
+			bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+		}
+#endif // SUPPORT_ANDROID
 		if (!bulkFile)
 			bulkFile = appFindGameFile(bulkFileName, "xxx");	// sometimes tfc has xxx extension
 	}
@@ -726,57 +725,6 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 #endif // TRIBES4
 
-	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
-	bool AndroidCompression = false;
-
-#if SUPPORT_ANDROID
-	if (!Mips.Num() && CachedETCMips.Num())
-	{
-		MipsArray = &CachedETCMips;
-		AndroidCompression = true;
-	}
-#endif // SUPPORT_ANDROID
-
-	if (!TexData.CompressedData)
-	{
-		bool bulkChecked = false;
-		for (int n = 0; n < MipsArray->Num(); n++)
-		{
-			// find 1st mipmap with non-null data array
-			// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
-			const FTexture2DMipMap &Mip = (*MipsArray)[n];
-			const FByteBulkData &Bulk = Mip.Data;
-			if (!Mip.Data.BulkData)
-			{
-				//?? Separate this function ?
-				// check for external bulk
-				//!! * -notfc cmdline switch
-				//!! * material viewer: support switching mip levels (for xbox decompression testing)
-				if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
-				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue;
-				// some optimization in a case of missing bulk file
-				if (bulkChecked) continue;				// already checked for previous mip levels
-				bulkChecked = true;
-				if (!LoadBulkTexture(*MipsArray, n, AndroidCompression)) continue;	// note: this could be called for any mip level, not for the 1st only
-			}
-			// this mipmap has data
-			TexData.CompressedData = Bulk.BulkData;
-			TexData.USize          = Mip.SizeX;
-			TexData.VSize          = Mip.SizeY;
-			TexData.DataSize       = Bulk.ElementCount * Bulk.GetElementSize();
-			TexData.Platform       = Package->Platform;
-#if 0
-			FILE *f = fopen(va("%s-%s.dmp", Package->Name, Name), "wb");
-			if (f)
-			{
-				fwrite(Bulk.BulkData, Bulk.ElementCount * Bulk.GetElementSize(), 1, f);
-				fclose(f);
-			}
-#endif
-			break;
-		}
-	}
-
 	ETexturePixelFormat intFormat;
 	if (Format == PF_A8R8G8B8 || Format == PF_B8G8R8A8)	// PF_A8R8G8B8 was renamed to PF_B8G8R8A8
 		intFormat = TPF_BGRA8;
@@ -808,6 +756,78 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		return false;
 	}
 
+	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
+	const char* tfcSuffix = NULL;
+
+#if SUPPORT_ANDROID
+	if (!Mips.Num())
+	{
+		if (CachedETCMips.Num())
+		{
+			MipsArray = &CachedETCMips;
+			tfcSuffix = "ETC";
+			if (Format == PF_DXT1)
+				intFormat = TPF_ETC1;
+//??		else if (Format == PF_DXT5)
+//??			intFormat = TPF_ETC2_EAC; ???
+		}
+		else if (CachedPVRTCMips.Num())
+		{
+			MipsArray = &CachedPVRTCMips;
+			tfcSuffix = "PVRTC";
+			if (Format == PF_DXT1) // the same code as for iOS
+				intFormat = bForcePVRTC4 ? TPF_PVRTC4 : TPF_PVRTC2;
+			else if (Format == PF_DXT5)
+				intFormat = TPF_PVRTC4;
+		}
+		else if (CachedATITCMips.Num())
+		{
+			appPrintf("Unsupported ATI texture compression\n");
+			return false;
+		}
+	}
+#endif // SUPPORT_ANDROID
+
+	if (!TexData.CompressedData)
+	{
+		bool bulkChecked = false;
+		for (int n = 0; n < MipsArray->Num(); n++)
+		{
+			// find 1st mipmap with non-null data array
+			// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
+			const FTexture2DMipMap &Mip = (*MipsArray)[n];
+			const FByteBulkData &Bulk = Mip.Data;
+			if (!Mip.Data.BulkData)
+			{
+				//?? Separate this function ?
+				// check for external bulk
+				//!! * -notfc cmdline switch
+				//!! * material viewer: support switching mip levels (for xbox decompression testing)
+				if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
+				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue;
+				// some optimization in a case of missing bulk file
+				if (bulkChecked) continue;				// already checked for previous mip levels
+				bulkChecked = true;
+				if (!LoadBulkTexture(*MipsArray, n, tfcSuffix)) continue;	// note: this could be called for any mip level, not for the 1st only
+			}
+			// this mipmap has data
+			TexData.CompressedData = Bulk.BulkData;
+			TexData.USize          = Mip.SizeX;
+			TexData.VSize          = Mip.SizeY;
+			TexData.DataSize       = Bulk.ElementCount * Bulk.GetElementSize();
+			TexData.Platform       = Package->Platform;
+#if 0
+			FILE *f = fopen(va("%s-%s.dmp", Package->Name, Name), "wb");
+			if (f)
+			{
+				fwrite(Bulk.BulkData, Bulk.ElementCount * Bulk.GetElementSize(), 1, f);
+				fclose(f);
+			}
+#endif
+			break;
+		}
+	}
+
 #if SUPPORT_IPHONE
 	if (Package->Platform == PLATFORM_IOS)
 	{
@@ -817,16 +837,6 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			intFormat = TPF_PVRTC4;
 	}
 #endif // SUPPORT_IPHONE
-
-#if SUPPORT_ANDROID
-	if (AndroidCompression)
-	{
-		if (Format == PF_DXT1)
-			intFormat = TPF_ETC1;
-//??		else if (Format == PF_DXT5)
-//??			intFormat = TPF_ETC2_EAC; ???
-	}
-#endif // SUPPORT_ANDROID
 
 	TexData.Format = intFormat;
 

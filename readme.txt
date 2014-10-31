@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+31.10.2014
+- added support for PVRTC and DXT Android textures
+
 30.10.2014
 - added support for loading Android OBB files; to open them, just specify game path containing
   the .obb file, and umodel will automatically scan its contents and allow working with embedded
