@@ -74,14 +74,18 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 #endif
 
 	glColor3f(1, 1, 1);
-	glEnable(GL_LIGHTING);	//?? disable for simple textures
-	float lightPos[4];
-	lightPos[0] = lightPosV[0];
-	lightPos[1] = lightPosV[1];
-	lightPos[2] = lightPosV[2];
-	lightPos[3] = 0;
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-//	glMaterialf(GL_FRONT, GL_SHININESS, 20);
+
+	if (!IsTexture)
+	{
+		glEnable(GL_LIGHTING);	// no lighting for textures
+		float lightPos[4];
+		lightPos[0] = lightPosV[0];
+		lightPos[1] = lightPosV[1];
+		lightPos[2] = lightPosV[2];
+		lightPos[3] = 0;
+		glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+//		glMaterialf(GL_FRONT, GL_SHININESS, 20);
+	}
 
 	// bind material
 	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
@@ -308,7 +312,7 @@ void CMaterialViewer::Draw2D()
 CMaterialViewer::CMaterialViewer(UUnrealMaterial* Material, CApplication* Window)
 :	CObjectViewer(Material, Window)
 {
-	IsTexture = (Material->IsA("BitmapMaterial") || Material->IsA("Texture2D"));
+	IsTexture = Material->IsTexture();
 }
 
 CMaterialViewer::~CMaterialViewer()

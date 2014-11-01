@@ -534,7 +534,8 @@ public:
 	END_PROP_TABLE
 
 #if RENDERING
-	virtual void Bind();
+	virtual bool Upload();
+	virtual bool Bind();
 	virtual void GetParams(CMaterialParams &Params) const;
 	virtual void SetupGL();
 	virtual void Release();

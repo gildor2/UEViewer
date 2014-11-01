@@ -162,9 +162,15 @@ public:
 
 	void SetMaterial();								// main function to use from outside
 
-	virtual void Bind()								// implemented for textures only
-	{}
-	virtual void SetupGL();
+	virtual bool Upload()							// implemented for textures only
+	{
+		return false;
+	}
+	virtual bool Bind()								// implemented for textures only
+	{
+		return false;
+	}
+	virtual void SetupGL();							// used by SetMaterial()
 	virtual void Release();
 	virtual void GetParams(CMaterialParams &Params) const
 	{}

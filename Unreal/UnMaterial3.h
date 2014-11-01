@@ -376,7 +376,8 @@ public:
 	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
 #if RENDERING
-	virtual void Bind();
+	virtual bool Upload();
+	virtual bool Bind();
 	virtual void GetParams(CMaterialParams &Params) const;
 	virtual void Release();
 #endif
@@ -438,7 +439,8 @@ public:
 	}
 
 #if RENDERING
-	virtual void Bind();
+	virtual bool Upload();
+	virtual bool Bind();
 	virtual void GetParams(CMaterialParams &Params) const;
 	virtual void Release();
 	virtual bool IsTextureCube() const

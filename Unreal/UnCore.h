@@ -403,7 +403,7 @@ public:
 	void Seek64(int64 Pos)
 	{
 		//!! change when support large files; perhaps Seek() should call Seek64
-		if (Pos >= (1LL << 30)) appError("Seek64");
+		if (Pos >= (1LL << 31)) appError("Seek64 %I64X", Pos);
 		Seek((int)Pos);
 	}
 	virtual bool IsEof() const

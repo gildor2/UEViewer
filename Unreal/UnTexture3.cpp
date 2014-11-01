@@ -768,8 +768,11 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			tfcSuffix = "ETC";
 			if (Format == PF_DXT1)
 				intFormat = TPF_ETC1;
-//??		else if (Format == PF_DXT5)
-//??			intFormat = TPF_ETC2_EAC; ???
+			else if (Format == PF_DXT5)
+			{
+				appPrintf("ETC2 texture format is not supported\n"); // TPF_ETC2_EAC
+				return false;
+			}
 		}
 		else if (CachedPVRTCMips.Num())
 		{

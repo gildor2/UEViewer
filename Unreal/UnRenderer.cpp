@@ -4,7 +4,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
-#include "UnPackage.h"					// for accessing Game field
+#include "UnPackage.h"						// for accessing Game field
 
 #include "UnMaterial2.h"
 #include "UnMaterial3.h"
@@ -16,11 +16,15 @@
 #include "Shaders.h"
 
 #define MAX_IMG_SIZE		4096
+#define BAD_TEXTURE			((GLuint) -2)	// the texture object has permanent error, don't try to upload it again
 
 
-static GLuint DefaultTexNum = 0;		//?? bad code ... should move default texture to CoreGL ?
+static UTexture *DefaultUTexture = NULL;
+static GLuint GetDefaultTexNum();
+
 
 //#define SHOW_SHADER_PARAMS	1
+
 
 /*-----------------------------------------------------------------------------
 	Mipmapping and resampling
@@ -321,9 +325,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 	if (!Tex->GetTextureData(TexData))
 	{
 		appPrintf("WARNING: %s %s has no valid mipmaps\n", Tex->GetClassName(), Tex->Name);
-	default_tex:
-		if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
-		return DefaultTexNum;						// "default texture"
+		return BAD_TEXTURE;
 	}
 
 	GLuint TexNum;
@@ -336,9 +338,9 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 		byte *pic = TexData.Decompress();
 		if (!pic)
 		{
-			// some internal decompression error, message should be already displayed
+			// some internal decompression error, message should be already printed to log
 			glDeleteTextures(1, &TexNum);
-			goto default_tex;
+			return BAD_TEXTURE;
 		}
 		UploadTex(GL_TEXTURE_2D, pic, TexData.USize, TexData.VSize, doMipmap);
 		delete pic;
@@ -454,12 +456,12 @@ const CShader &GL_UseGenericShader(GenericShaderType type)
 
 
 #if SHOW_SHADER_PARAMS
-#define DBG(x)		DrawTextLeft x
+#define DBG(...)	DrawTextLeft(__VA_ARGS__)
 #else
-#define DBG(x)
+#define DBG(...)
 #endif
 
-const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
+void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 {
 	guard(GL_NormalmapShader);
 
@@ -493,57 +495,58 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 
 	// diffuse
 	glActiveTexture(GL_TEXTURE0);	// used for BindDefaultMaterial() too
-	if (Params.Diffuse)
+	if (Params.Diffuse && Params.Diffuse->Bind())
 	{
-		DBG(("Diffuse  : %s", Params.Diffuse->Name));
+		DBG("Diffuse  : %s", Params.Diffuse->Name);
 		ADD_DEFINE("DIFFUSE 1");
-		Params.Diffuse->Bind();
 	}
-	else if (!Params.Normal && !Params.Cube)
+	else if (!Params.Cube)
 	{
-		BindDefaultMaterial();
+		if (!DefaultUTexture) GetDefaultTexNum();
+		DefaultUTexture->Bind();
 		ADD_DEFINE("DIFFUSE 1");
 	}
 
 	// normal
 	if (Params.Normal)	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
 	{
-		DBG(("Normal   : %s", Params.Normal->Name));
+		DBG("Normal   : %s", Params.Normal->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Normal);
-		Params.Normal->Bind();
+		if (!Params.Normal->Bind())
+			Params.Normal = NULL;
 	}
 
 	// specular
 	const char *specularExpr = "vec3(0.0)"; //?? vec3(specular)
 	if (Params.Specular)
 	{
-		DBG(("Specular : %s", Params.Specular->Name));
-		specularExpr = va("texture2D(specTex, TexCoord).%s * vec3(specular) * 1.5", !Params.SpecularFromAlpha ? "rgb" : "a");
+		DBG("Specular : %s", Params.Specular->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Specular);
-		Params.Specular->Bind();
+		if (Params.Specular->Bind())
+			specularExpr = va("texture2D(specTex, TexCoord).%s * vec3(specular) * 1.5", !Params.SpecularFromAlpha ? "rgb" : "a");
 	}
 	// specular power
 	const char *specPowerExpr = "gl_FrontMaterial.shininess";
 	if (Params.SpecPower)
 	{
-		DBG(("SpecPower: %s", Params.SpecPower->Name));
-		specPowerExpr = "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0";
+		DBG("SpecPower: %s", Params.SpecPower->Name);
 		glActiveTexture(GL_TEXTURE0 + I_SpecularPower);
-		Params.SpecPower->Bind();
+		if (Params.SpecPower->Bind())
+			specPowerExpr = "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0";
 	}
 
 	// opacity mask
 	const char *opacityExpr = "1.0";
 	if (Params.Opacity)
 	{
-		DBG(("Opacity  : %s", Params.Opacity->Name));
-		opacityExpr = va("texture2D(opacTex, TexCoord).%s", !Params.OpacityFromAlpha ? "g" : "a");
+		DBG("Opacity  : %s", Params.Opacity->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Opacity);
-		Params.Opacity->Bind();
+		if (Params.Opacity->Bind())
+			opacityExpr = va("texture2D(opacTex, TexCoord).%s", !Params.OpacityFromAlpha ? "g" : "a");
 	}
 	else if (Params.Diffuse)
 	{
-		DBG(("Opacity from diffuse"));
+		DBG("Opacity from diffuse");
 		opacityExpr = va("texture2D(diffTex, TexCoord).a");
 	}
 
@@ -551,13 +554,15 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	const char *emissExpr = "vec3(0.0)";
 	if (Params.Emissive)
 	{
-		DBG(("Emissive : %s", Params.Emissive->Name));
-		emissExpr = va("vec3(%g,%g,%g) * texture2D(emisTex, TexCoord).g * 2.0",
-			Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B
-		);
-		ADD_DEFINE("EMISSIVE 1");
+		DBG("Emissive : %s", Params.Emissive->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Emissive);
-		Params.Emissive->Bind();
+		if (Params.Emissive->Bind())
+		{
+			ADD_DEFINE("EMISSIVE 1");
+			emissExpr = va("vec3(%g,%g,%g) * texture2D(emisTex, TexCoord).g * 2.0",
+				Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B
+			);
+		}
 	}
 
 	// cubemap
@@ -565,40 +570,47 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	const char *cubeMaskExpr = "1.0";
 	if (Params.Cube)
 	{
-		DBG(("Cubemap  : %s", Params.Cube->Name));
-		cubeExpr = "textureCube(cubeTex, TexCoord).rgb";
-		ADD_DEFINE("CUBE 1");
+		DBG("Cubemap  : %s", Params.Cube->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Cube);
-		Params.Cube->Bind();
-		if (Params.Emissive)
+		if (Params.Cube->Bind())
 		{
-			// use emissive as cubemap mask
-			cubeMaskExpr = "texture2D(emisTex, TexCoord).g";
-			emissExpr = "vec3(0.0)";
+			ADD_DEFINE("CUBE 1");
+			if (Params.Emissive)
+			{
+				// use emissive as cubemap mask
+				cubeMaskExpr = "texture2D(emisTex, TexCoord).g";
+				emissExpr = "vec3(0.0)";
+			}
+			else
+			{
+				cubeExpr = "textureCube(cubeTex, TexCoord).rgb";
+			}
 		}
 	}
 
 	// mask
 	if (Params.Mask)
 	{
-		DBG(("Mask     : %s", Params.Mask->Name));
+		DBG("Mask     : %s", Params.Mask->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Mask);
-		Params.Mask->Bind();
-		// channels
-		if (Params.EmissiveChannel)
+		if (Params.Mask->Bind())
 		{
-			emissExpr = va("vec3(%g,%g,%g) * %s * 2.0",
-				Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B,
-				maskChannel[Params.EmissiveChannel]
-			);
-			ADD_DEFINE("EMISSIVE 1");
+			// channels
+			if (Params.EmissiveChannel)
+			{
+				emissExpr = va("vec3(%g,%g,%g) * %s * 2.0",
+					Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B,
+					maskChannel[Params.EmissiveChannel]
+				);
+				ADD_DEFINE("EMISSIVE 1");
+			}
+			if (Params.SpecularMaskChannel)
+				specularExpr  = va("vec3(%s)", maskChannel[Params.SpecularMaskChannel]);
+			if (Params.SpecularPowerChannel)
+				specPowerExpr = va("%s * 100.0 + 5.0", maskChannel[Params.SpecularPowerChannel]);
+			if (Params.CubemapMaskChannel)
+				cubeMaskExpr = maskChannel[Params.CubemapMaskChannel];
 		}
-		if (Params.SpecularMaskChannel)
-			specularExpr  = va("vec3(%s)", maskChannel[Params.SpecularMaskChannel]);
-		if (Params.SpecularPowerChannel)
-			specPowerExpr = va("%s * 100.0 + 5.0", maskChannel[Params.SpecularPowerChannel]);
-		if (Params.CubemapMaskChannel)
-			cubeMaskExpr = maskChannel[Params.CubemapMaskChannel];
 	}
 
 	//!! NOTE: Specular and SpecPower are scaled by const to improve visual; should be scaled by parameters from material
@@ -627,7 +639,7 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 			"texture2D(opacTex, TexCoord).b * vec3(2.0)",	// MSM_MaskTextureBlue
 			"texture2D(opacTex, TexCoord).a * vec3(2.0)",	// MSM_MaskTextureAlpha
 		};
-//??		check presence of textures used in a shader ?
+		// TODO: check presence of textures used in a shader (diffTex and opacTex)
 		subst[1] = mobileSpecExpr[Params.MobileSpecularMask];
 		subst[2] = va("%f * 1.0", Params.MobileSpecularPower);	//??
 	}
@@ -646,7 +658,6 @@ const CShader &GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	shader.SetUniform("emisTex",  I_Emissive);
 	shader.SetUniform("cubeTex",  I_Cube);
 	shader.SetUniform("maskTex",  I_Mask);
-	return shader;
 
 	unguard;
 }
@@ -674,7 +685,6 @@ void UUnrealMaterial::SetMaterial()
 
 	if (Params.IsNull())
 	{
-		//?? may be, use diffuse color + other params
 		BindDefaultMaterial();
 		return;
 	}
@@ -685,21 +695,21 @@ void UUnrealMaterial::SetMaterial()
 		if (Params.Diffuse == this)
 		{
 			// simple texture
-			Params.Diffuse->Bind();
-			GL_UseGenericShader(GS_Textured);
+			if (Params.Diffuse->Bind())
+				GL_UseGenericShader(GS_Textured);
+			else
+				BindDefaultMaterial();
 		}
 		else
 		{
-			DBG((S_BLUE"---- %s %s ----", GetClassName(), Name));
+			DBG(S_BLUE"---- %s %s ----", GetClassName(), Name);
 			GL_NormalmapShader(GLShader, Params);
 		}
 	}
 	else
 #endif // USE_GLSL
 	{
-		if (Params.Diffuse)	//?? already checked above
-			Params.Diffuse->Bind();
-		else
+		if (!Params.Diffuse || !Params.Diffuse->Bind())
 			BindDefaultMaterial();
 	}
 
@@ -767,6 +777,53 @@ UUnrealMaterial *UMaterialWithPolyFlags::Create(UUnrealMaterial *OriginalMateria
 }
 
 
+static GLuint GetDefaultTexNum()
+{
+	if (!DefaultUTexture)
+	{
+		// allocate material
+		DefaultUTexture = new UTexture;
+		DefaultUTexture->bTwoSided = true;
+		DefaultUTexture->Mips.Add();
+		DefaultUTexture->Format = TEXF_RGBA8;
+		DefaultUTexture->Package = NULL;
+		DefaultUTexture->Name = "Default";
+		// create 1st mipmap
+#define TEX_SIZE	64
+		FMipmap &Mip = DefaultUTexture->Mips[0];
+		Mip.USize = Mip.VSize = TEX_SIZE;
+		Mip.DataArray.Add(TEX_SIZE*TEX_SIZE*4);
+		byte *pic = &Mip.DataArray[0];
+		for (int x = 0; x < TEX_SIZE; x++)
+		{
+			for (int y = 0; y < TEX_SIZE; y++)
+			{
+				static const byte colors[4][4] =
+				{
+//					{192,64,64,255}, {32,32,192,255}, {32,239,32,255}, {32,192,192,255}				// BGRA; most colorful
+#define N 96		// saturation level; 0 = greyscale, 255-64-16 = max color (64 is max greyscale, 16 for nested checkerboards)
+					{64+N,64,64,255}, {48,48,48+N,255}, {48,48+N,48,255}, {64,64+N/2,64+N/2,255}	// BGRA; colorized
+#undef N
+//					{64,64,64,255}, {48,48,48,255}, {48,48,48,255}, {64,64,64,255}					// BGRA; greyscale
+				};
+				byte *p = pic + y * TEX_SIZE * 4 + x * 4;
+				int i1 = x < TEX_SIZE / 2;
+				int i2 = y < TEX_SIZE / 2;
+				const byte *c = colors[i1 * 2 + i2];	// top checkerboard level
+				int corr = ((x ^ y) & 4) ? 4 : -4;		// nested checkerboard
+//				corr += ((x ^ y) & 8) ? 12 : -12;		// one more nested checkerboard level
+				p[0] = c[0] + corr;
+				p[1] = c[1] + corr;
+				p[2] = c[2] + corr;
+				p[3] = c[3];
+			}
+		}
+#undef TEX_SIZE
+	}
+	DefaultUTexture->Upload();
+	return DefaultUTexture->TexNum;
+}
+
 void BindDefaultMaterial(bool White)
 {
 	guard(BindDefaultMaterial);
@@ -798,50 +855,9 @@ void BindDefaultMaterial(bool White)
 		return;
 	}
 
-	static UTexture *Mat = NULL;
-	if (!Mat)
-	{
-		// allocate material
-		Mat = new UTexture;
-		Mat->bTwoSided = true;
-		Mat->Mips.Add();
-		Mat->Format = TEXF_RGBA8;
-		Mat->Package = NULL;
-		Mat->Name = "Default";
-		// create 1st mipmap
-#define TEX_SIZE	64
-		FMipmap &Mip = Mat->Mips[0];
-		Mip.USize = Mip.VSize = TEX_SIZE;
-		Mip.DataArray.Add(TEX_SIZE*TEX_SIZE*4);
-		byte *pic = &Mip.DataArray[0];
-		for (int x = 0; x < TEX_SIZE; x++)
-		{
-			for (int y = 0; y < TEX_SIZE; y++)
-			{
-				static const byte colors[4][4] =
-				{
-//					{192,64,64,255}, {32,32,192,255}, {32,239,32,255}, {32,192,192,255}				// BGRA; most colorful
-#define N 96		// saturation level; 0 = greyscale, 255-64-16 = max color (64 is max greyscale, 16 for nested checkerboards)
-					{64+N,64,64,255}, {48,48,48+N,255}, {48,48+N,48,255}, {64,64+N/2,64+N/2,255}	// BGRA; colorized
-#undef N
-//					{64,64,64,255}, {48,48,48,255}, {48,48,48,255}, {64,64,64,255}					// BGRA; greyscale
-				};
-				byte *p = pic + y * TEX_SIZE * 4 + x * 4;
-				int i1 = x < TEX_SIZE / 2;
-				int i2 = y < TEX_SIZE / 2;
-				const byte *c = colors[i1 * 2 + i2];	// top checkerboard level
-				int corr = ((x ^ y) & 4) ? 4 : -4;		// nested checkerboard
-//				corr += ((x ^ y) & 8) ? 12 : -12;		// one more nested checkerboard level
-				p[0] = c[0] + corr;
-				p[1] = c[1] + corr;
-				p[2] = c[2] + corr;
-				p[3] = c[3];
-			}
-		}
-#undef TEX_SIZE
-	}
-	Mat->Bind();
-	DefaultTexNum = Mat->TexNum;
+	// bind texture
+	if (!DefaultUTexture) GetDefaultTexNum(); // create default texture
+	DefaultUTexture->Bind();
 
 	unguard;
 }
@@ -892,21 +908,30 @@ void UTexture::SetupGL()
 	unguard;
 }
 
+bool UTexture::Upload()
+{
+	if (TexNum == BAD_TEXTURE) return false;
+	if (!GL_TouchObject(DrawTimestamp))
+		TexNum = Upload2D(this, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
+	return (TexNum != BAD_TEXTURE);
+}
 
-void UTexture::Bind()
+bool UTexture::Bind()
 {
 	guard(UTexture::Bind);
 
 	glEnable(GL_TEXTURE_2D);
 	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 
-	bool upload = !GL_TouchObject(DrawTimestamp);
-	if (upload)
+	if (!Upload())
 	{
-		TexNum = Upload2D(this, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
+		glDisable(GL_TEXTURE_2D);
+		return false;
 	}
+
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
+	return true;
 
 	unguard;
 }
@@ -927,7 +952,7 @@ bool UTexture::IsTranslucent() const
 void UTexture::Release()
 {
 	guard(UTexture::Release);
-	if (GL_IsValidObject(TexNum, DrawTimestamp) && TexNum != DefaultTexNum)
+	if (GL_IsValidObject(TexNum, DrawTimestamp))
 		glDeleteTextures(1, &TexNum);
 	Super::Release();
 	unguard;
@@ -1642,20 +1667,30 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 }
 
 
-void UTexture2D::Bind()
+bool UTexture2D::Upload()
+{
+	if (TexNum == BAD_TEXTURE) return false;
+	if (!GL_TouchObject(DrawTimestamp))
+        TexNum = Upload2D(this, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
+	return (TexNum != BAD_TEXTURE);
+}
+
+bool UTexture2D::Bind()
 {
 	guard(UTexture2D::Bind);
 
 	glEnable(GL_TEXTURE_2D);
 	glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 
-	bool upload = !GL_TouchObject(DrawTimestamp);
-	if (upload)
+	if (!Upload())
 	{
-		TexNum = Upload2D(this, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
+		glDisable(GL_TEXTURE_2D);
+		return false;
 	}
+
 	// bind texture
 	glBindTexture(GL_TEXTURE_2D, TexNum);
+	return true;
 
 	unguard;
 }
@@ -1676,63 +1711,74 @@ void UTexture2D::Release()
 	unguard;
 }
 
+bool UTextureCube::Upload()
+{
+	if (!FacePosX || !FacePosY || !FacePosZ || !FaceNegX || !FaceNegY || !FaceNegZ)
+		return false; // one of faces is missing
 
-void UTextureCube::Bind()
+	if (TexNum == BAD_TEXTURE) return false;
+	if (GL_TouchObject(DrawTimestamp)) return true;
+
+	// upload all cube sides
+	glGenTextures(1, &TexNum);
+	glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+	for (int side = 0; side < 6; side++)
+	{
+		//?? can validate USize/VSize to be identical for all sides, plus - the same for "doMipmap" value
+		UTexture2D *Tex = NULL;
+		switch (side)
+		{
+		case 0:
+			Tex = FacePosX;
+			break;
+		case 1:
+			Tex = FaceNegX;
+			break;
+		case 2:
+			Tex = FacePosY;
+			break;
+		case 3:
+			Tex = FaceNegY;
+			break;
+		case 4:
+			Tex = FacePosZ;
+			break;
+		case 5:
+			Tex = FaceNegZ;
+			break;
+		}
+
+		if (!UploadCubeSide(Tex, Tex->Mips.Num() > 1, side))
+		{
+			glDeleteTextures(1, &TexNum);
+			TexNum = BAD_TEXTURE;
+			break;
+		}
+	}
+	return (TexNum != BAD_TEXTURE);
+}
+
+bool UTextureCube::Bind()
 {
 	guard(UTextureCube::Bind);
 
 	if (!GUseGLSL || !FacePosX || !FacePosY || !FacePosZ || !FaceNegX || !FaceNegY || !FaceNegZ)
 	{
 		BindDefaultMaterial();
-		return;
+		return false;
 	}
 
 	glEnable(GL_TEXTURE_CUBE_MAP_ARB);
 
-	bool upload = !GL_TouchObject(DrawTimestamp);
-
-	if (upload)
+	if (!Upload())
 	{
-		// upload texture
-		glGenTextures(1, &TexNum);
-		glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
-		for (int side = 0; side < 6; side++)
-		{
-			//?? can validate USize/VSize to be identical for all sides, plus - the same for "doMipmap" value
-			UTexture2D *Tex = NULL;
-			switch (side)
-			{
-			case 0:
-				Tex = FacePosX;
-				break;
-			case 1:
-				Tex = FaceNegX;
-				break;
-			case 2:
-				Tex = FacePosY;
-				break;
-			case 3:
-				Tex = FaceNegY;
-				break;
-			case 4:
-				Tex = FacePosZ;
-				break;
-			case 5:
-				Tex = FaceNegZ;
-				break;
-			}
-
-			if (!UploadCubeSide(Tex, Tex->Mips.Num() > 1, side))
-			{
-				if (!DefaultTexNum) BindDefaultMaterial();	//?? will produce bad result, but only for one frame
-				TexNum = DefaultTexNum;						// "default texture"; not working (see UTexture::Bind())
-				break;
-				//?? warning: DefaultTexNum is 2D texture, we need some default cubemap!
-			}
-		}
+		glDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		return false;
 	}
+
 	// bind texture
 	glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+	return true;
 
 	unguard;
 }
