@@ -612,26 +612,31 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 
 	// Here: data is either in TFC file or in other package
 	char bulkFileName[256];
-	const char *bulkFileExt = NULL;
 	if (stricmp(TextureFileCacheName, "None") != 0)
 	{
 		// TFC file is assigned
-		//!! cache checking of tfc file(s) + cache handles (FFileReader)
-		//!! note #1: there can be few cache files!
-		//!! note #2: XMen (PC) has renamed tfc file after cooking (TextureFileCacheName value is wrong)
 		strcpy(bulkFileName, TextureFileCacheName);
-		bulkFileExt  = "tfc";
-		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+		static const char* tfcExtensions[] = { "tfc", "xxx" };
+		for (int i = 0; i < ARRAY_COUNT(tfcExtensions); i++)
+		{
+			const char* bulkFileExt = tfcExtensions[i];
+			bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+			if (bulkFile) break;
 #if SUPPORT_ANDROID
+			if (!bulkFile)
+			{
+				if (!tfcSuffix) tfcSuffix = "DXT";
+				appSprintf(ARRAY_ARG(bulkFileName), "%s_%s", *TextureFileCacheName, tfcSuffix);
+				bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+				if (bulkFile) break;
+			}
+#endif // SUPPORT_ANDROID
+		}
 		if (!bulkFile)
 		{
-			if (!tfcSuffix) tfcSuffix = "DXT";
-			appSprintf(ARRAY_ARG(bulkFileName), "%s_%s", *TextureFileCacheName, tfcSuffix);
-			bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+			appPrintf("Decompressing %s: TFC file \"%s\" is missing\n", Name, *TextureFileCacheName);
+			return false;
 		}
-#endif // SUPPORT_ANDROID
-		if (!bulkFile)
-			bulkFile = appFindGameFile(bulkFileName, "xxx");	// sometimes tfc has xxx extension
 	}
 	else
 	{
@@ -651,20 +656,19 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			if (Exp2.ExportFlags & EF_ForcedExport)
 			{
 				strcpy(bulkFileName,  Exp2.ObjectName);
-				bulkFileExt  = NULL;					// find package file
 //				appPrintf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
 			}
 		}
 		if (!bulkFileName[0]) return false;				// just in case
-		bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+		bulkFile = appFindGameFile(bulkFileName);
+		if (!bulkFile)
+		{
+			appPrintf("Decompressing %s: package %s is missing\n", Name, bulkFileName);
+			return false;
+		}
 	}
 
-	if (!bulkFile)
-	{
-		appPrintf("Decompressing %s: %s.%s is missing\n", Name, bulkFileName, bulkFileExt ? bulkFileExt : "*");
-		return false;
-	}
-
+	assert(bulkFile);									// missing file is processed above
 	appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
 	FArchive *Ar = appCreateFileReader(bulkFile);
 	Ar->SetupFrom(*Package);

@@ -295,7 +295,12 @@ void CMaterialViewer::Draw2D()
 			height = Mip->SizeY;
 		}
 		if (width != Tex->SizeX || height != Tex->SizeY)
-			DrawTextLeft(S_RED"Stripped to %dx%d", width, height);
+		{
+			if (width && height)
+				DrawTextLeft(S_RED"Stripped to %dx%d", width, height);
+			else
+				DrawTextLeft(S_RED"Bad texture (no mipmaps)");
+		}
 	}
 #endif // UNREAL3
 
