@@ -788,8 +788,11 @@ DEPENDS = \
 	UmodelTool/Build.h \
 	UmodelTool/PackageDialog.h \
 	UmodelTool/PackageScanDialog.h \
+	UmodelTool/ProgressDialog.h \
 	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
+	Unreal/UnPackage.h \
 	libs/include/callback.hpp
 
 $(OUT_1)/PackageDialog.obj : UmodelTool/PackageDialog.cpp $(DEPENDS)

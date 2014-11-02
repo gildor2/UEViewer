@@ -1,9 +1,13 @@
 #include "BaseDialog.h"
-#include "PackageDialog.h"
-#include "PackageScanDialog.h"
-
 
 #if HAS_UI
+
+#include "PackageDialog.h"
+#include "PackageScanDialog.h"
+#include "ProgressDialog.h"
+
+#include "UnPackage.h"
+
 
 /*-----------------------------------------------------------------------------
 	Main UI code
@@ -42,6 +46,17 @@ static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInf
 	return true;
 }
 
+enum
+{
+	COLUMN_Name,
+	COLUMN_NumSkel,
+	COLUMN_NumStat,
+	COLUMN_NumAnim,
+	COLUMN_NumTex,
+	COLUMN_Size,
+	COLUMN_Count
+};
+
 void UIPackageDialog::InitUI()
 {
 	(*this)
@@ -75,24 +90,34 @@ void UIPackageDialog::InitUI()
 					.SetItemHeight(20)
 					.Expose(PackageTree)
 				+ NewControl(UISpacer)
-				+ NewControl(UIMulticolumnListbox, 2)
+				+ NewControl(UIMulticolumnListbox, COLUMN_Count)
 					.SetHeight(-1)
 					.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
 					.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
 					.Expose(PackageListbox)
 					.AllowMultiselect()
+					//?? right-align text in numeric columns
 					.AddColumn("Package name")
-					.AddColumn("Size, Kb", 70)		//?? right-align text in column
+					.AddColumn("Skel", 35)
+					.AddColumn("Stat", 35)
+					.AddColumn("Anim", 35)
+					.AddColumn("Tex",  35)
+					.AddColumn("Size, Kb", 70)
 			]
 			// page 1: single ListBox
-			+ NewControl(UIMulticolumnListbox, 2)
+			+ NewControl(UIMulticolumnListbox, COLUMN_Count)
 				.SetHeight(-1)
 				.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
 				.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
 				.Expose(FlatPackageList)
 				.AllowMultiselect()
+				//?? right-align text in numeric columns
 				.AddColumn("Package name")
-				.AddColumn("Size, Kb", 70)			//?? right-align text in column
+				.AddColumn("Skel", 35)
+				.AddColumn("Stat", 35)
+				.AddColumn("Anim", 35)
+				.AddColumn("Tex",  35)
+				.AddColumn("Size, Kb", 70)
 		]
 	];
 
@@ -133,9 +158,14 @@ void UIPackageDialog::InitUI()
 	[
 		NewControl(UILabel, "Hint: you may open this dialog at any time by pressing \"O\"")
 		//!! temporary code: move this control somewhere, perhaps to menu
-		+ NewControl(UIButton, "Scan")
-			.SetWidth(80)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnScanClicked, this))
+		+ NewControl(UIButton, "Scan content")
+			.SetWidth(100)
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::ScanContent, this))
+			.Expose(ScanContentButton)
+		+ NewControl(UISpacer)
+		+ NewControl(UIButton, "Scan versions")
+			.SetWidth(100)
+			.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
 		+ NewControl(UISpacer)
 		//!! ^^^
 		+ NewControl(UIButton, "Open")
@@ -271,8 +301,24 @@ void UIPackageDialog::AddPackageToList(UIMulticolumnListbox* listbox, const CGam
 	}
 	int index = listbox->AddItem(s);
 	char buf[32];
+	// object counts
+	if (package->PackageScanned)
+	{
+#define ADD_COLUMN(ColumnEnum, Value)	\
+		if (Value)						\
+		{								\
+			appSprintf(ARRAY_ARG(buf), "%d", Value); \
+			listbox->AddSubItem(index, ColumnEnum, buf); \
+		}
+		ADD_COLUMN(COLUMN_NumSkel, package->NumSkeletalMeshes);
+		ADD_COLUMN(COLUMN_NumStat, package->NumStaticMeshes);
+		ADD_COLUMN(COLUMN_NumAnim, package->NumAnimations);
+		ADD_COLUMN(COLUMN_NumTex,  package->NumTextures);
+#undef ADD_COLUMN
+	}
+	// size
 	appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
-	listbox->AddSubItem(index, 1, buf);
+	listbox->AddSubItem(index, COLUMN_Size, buf);
 }
 
 void UIPackageDialog::OnFlatViewChanged(UICheckbox* sender, bool value)
@@ -327,8 +373,67 @@ void UIPackageDialog::UpdateFlatMode()
 void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
 {
 	// re-filter lists
+	UpdateSelectedPackage();
 	UpdateFlatMode();
 }
+
+/*-----------------------------------------------------------------------------
+	Content tools
+-----------------------------------------------------------------------------*/
+
+static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
+{
+	for (int idx = 0; idx < package->Summary.ExportCount; idx++)
+	{
+		const char* ObjectClass = package->GetObjectName(package->GetExport(idx).ClassIndex);
+
+		if (!stricmp(ObjectClass, "SkeletalMesh"))
+			file->NumSkeletalMeshes++;
+		else if (!stricmp(ObjectClass, "StaticMesh"))
+			file->NumStaticMeshes++;
+		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet for UE2 and number of sequences for UE3+
+			file->NumAnimations++;
+		else if (!strnicmp(ObjectClass, "Texture", 7))
+			file->NumTextures++;
+	}
+}
+
+
+void UIPackageDialog::ScanContent()
+{
+	UIProgressDialog progress;
+	progress.Show("Scanning packages");
+	progress.SetDescription("Scanning package");
+
+	bool cancelled = false;
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
+		if (file->PackageScanned) continue;
+
+		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
+		{
+			cancelled = true;
+			break;
+		}
+		UnPackage* package = UnPackage::LoadPackage(file->RelativeName);	// should always return non-NULL
+		file->PackageScanned = true;
+		if (!package) continue;		// should not happen
+
+		ScanPackageExports(package, file);
+	}
+
+	progress.CloseDialog();
+	if (cancelled) return;
+
+	// finished - no needs to perform scan again, disable button
+	ScanContentButton->Enable(false);
+
+	// update package list with new data
+	UpdateSelectedPackage();
+	UpdateFlatMode();
+}
+
 
 /*-----------------------------------------------------------------------------
 	Miscellaneous UI callbacks
@@ -351,11 +456,6 @@ void UIPackageDialog::OnExportClicked(UIButton* sender)
 {
 	ModalResult = EXPORT;
 	CloseDialog();
-}
-
-void UIPackageDialog::OnScanClicked(UIButton* sender)
-{
-	ShowPackageScanDialog();
 }
 
 

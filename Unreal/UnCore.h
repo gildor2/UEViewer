@@ -85,11 +85,17 @@ const char *appGetRootDirectory();
 struct CGameFileInfo
 {
 	char		RelativeName[256];		// relative to RootDirectory
-	const char *ShortFilename;			// without path
-	const char *Extension;				// points to extension part (after '.')
+	const char *ShortFilename;			// without path, points to filename part of RelativeName
+	const char *Extension;				// points to extension part (after '.') of RelativeName
 	bool		IsPackage;
+	bool		PackageScanned;
 	int			SizeInKb;				// file size, in kilobytes
 	class FObbVFS* FileSystem;			// virtual file system
+	// content information
+	int			NumSkeletalMeshes;
+	int			NumStaticMeshes;
+	int			NumAnimations;
+	int			NumTextures;
 };
 
 extern int GNumGameFiles;

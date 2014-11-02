@@ -27,6 +27,7 @@ protected:
 	UIMulticolumnListbox* FlatPackageList;
 	UIButton*		OkButton;
 	UIButton*		ExportButton;
+	UIButton*		ScanContentButton;
 
 	EResult			ModalResult;
 	bool			UseFlatView;
@@ -44,7 +45,7 @@ protected:
 	void OnExportClicked(UIButton* sender);
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
-	void OnScanClicked(UIButton* sender);
+	void ScanContent();
 
 	void UpdateSelectedPackage();
 	void SelectDirFromFilename(const char* filename);
