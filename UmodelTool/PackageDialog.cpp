@@ -15,6 +15,7 @@
 
 UIPackageDialog::UIPackageDialog()
 :	DirectorySelected(false)
+,	ContentScanned(false)
 ,	UseFlatView(false)
 {}
 
@@ -98,11 +99,11 @@ void UIPackageDialog::InitUI()
 					.AllowMultiselect()
 					//?? right-align text in numeric columns
 					.AddColumn("Package name")
-					.AddColumn("Skel", 35)
-					.AddColumn("Stat", 35)
-					.AddColumn("Anim", 35)
-					.AddColumn("Tex",  35)
-					.AddColumn("Size, Kb", 70)
+					.AddColumn("Skel", 35, TA_Right)
+					.AddColumn("Stat", 35, TA_Right)
+					.AddColumn("Anim", 35, TA_Right)
+					.AddColumn("Tex",  35, TA_Right)
+					.AddColumn("Size, Kb", 70, TA_Right)
 			]
 			// page 1: single ListBox
 			+ NewControl(UIMulticolumnListbox, COLUMN_Count)
@@ -113,11 +114,11 @@ void UIPackageDialog::InitUI()
 				.AllowMultiselect()
 				//?? right-align text in numeric columns
 				.AddColumn("Package name")
-				.AddColumn("Skel", 35)
-				.AddColumn("Stat", 35)
-				.AddColumn("Anim", 35)
-				.AddColumn("Tex",  35)
-				.AddColumn("Size, Kb", 70)
+				.AddColumn("Skel", 35, TA_Right)
+				.AddColumn("Stat", 35, TA_Right)
+				.AddColumn("Anim", 35, TA_Right)
+				.AddColumn("Tex",  35, TA_Right)
+				.AddColumn("Size, Kb", 70, TA_Right)
 		]
 	];
 
@@ -160,6 +161,7 @@ void UIPackageDialog::InitUI()
 		//!! temporary code: move this control somewhere, perhaps to menu
 		+ NewControl(UIButton, "Scan content")
 			.SetWidth(100)
+			.Enable(!ContentScanned)
 			.SetCallback(BIND_MEM_CB(&UIPackageDialog::ScanContent, this))
 			.Expose(ScanContentButton)
 		+ NewControl(UISpacer)
@@ -425,6 +427,7 @@ void UIPackageDialog::ScanContent()
 
 	progress.CloseDialog();
 	if (cancelled) return;
+	ContentScanned = true;
 
 	// finished - no needs to perform scan again, disable button
 	ScanContentButton->Enable(false);

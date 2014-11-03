@@ -1031,7 +1031,7 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 	Items.Add(numColumns);		// reserve place for header
 }
 
-UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int width)
+UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int width, ETextAlign align)
 {
 	// find first empty column
 	for (int i = 0; i < NumColumns; i++)
@@ -1040,6 +1040,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int wid
 		{
 			Items[i] = title;
 			ColumnSizes[i] = width;
+			ColumnAlign[i] = align;
 			return *this;
 		}
 	}
@@ -1328,7 +1329,13 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 			column.cx = DecodeWidth(w) * clientWidth;
 		else
 			column.cx = w;
-		column.fmt = LVCFMT_LEFT;
+		switch (ColumnAlign[i])
+		{
+		case TA_Right:  column.fmt = LVCFMT_RIGHT; break;
+		case TA_Center: column.fmt = LVCFMT_CENTER; break;
+//		case TA_Left:
+		default:        column.fmt = LVCFMT_LEFT; break;
+		}
 		ListView_InsertColumn(Wnd, i, &column);
 	}
 

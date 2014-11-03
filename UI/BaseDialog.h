@@ -546,7 +546,7 @@ public:
 
 	UIMulticolumnListbox(int numColumns);
 
-	UIMulticolumnListbox& AddColumn(const char* title, int width = -1);
+	UIMulticolumnListbox& AddColumn(const char* title, int width = -1, ETextAlign align = TA_Left);
 
 	int AddItem(const char* item);
 	void AddSubItem(int itemIndex, int column, const char* text);
@@ -574,6 +574,7 @@ public:
 protected:
 	int			NumColumns;
 	int			ColumnSizes[MAX_COLUMNS];
+	ETextAlign	ColumnAlign[MAX_COLUMNS];
 	bool		Multiselect;
 
 	TArray<FString> Items;		// first NumColumns items - column headers, next NumColumns - 1st line, 2nd line, ...

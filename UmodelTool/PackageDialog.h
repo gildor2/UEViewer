@@ -32,6 +32,7 @@ protected:
 	EResult			ModalResult;
 	bool			UseFlatView;
 	bool			DirectorySelected;
+	bool			ContentScanned;
 	FStaticString<64>  PackageFilter;
 	FStaticString<256> SelectedDir;
 
