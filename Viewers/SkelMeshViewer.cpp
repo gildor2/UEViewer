@@ -249,7 +249,7 @@ void CSkelMeshViewer::Draw2D()
 
 	if (!Mesh->Lods.Num())
 	{
-		DrawTextLeft(S_RED"Mesh has no LODs");
+		DrawTextLeft(S_RED "Mesh has no LODs");
 		return;
 	}
 
@@ -257,11 +257,11 @@ void CSkelMeshViewer::Draw2D()
 	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
 	// mesh
-	DrawTextLeft(S_GREEN"LOD    : "S_WHITE"%d/%d\n"
-				 S_GREEN"Verts  : "S_WHITE"%d\n"
-				 S_GREEN"Tris   : "S_WHITE"%d\n"
-				 S_GREEN"UV Set : "S_WHITE"%d/%d\n"
-				 S_GREEN"Bones  : "S_WHITE"%d",
+	DrawTextLeft(S_GREEN "LOD    : " S_WHITE "%d/%d\n"
+				 S_GREEN "Verts  : " S_WHITE "%d\n"
+				 S_GREEN "Tris   : " S_WHITE "%d\n"
+				 S_GREEN "UV Set : " S_WHITE "%d/%d\n"
+				 S_GREEN "Bones  : " S_WHITE "%d",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
 				 Lod.NumVerts, Lod.Indices.Num() / 3,
 				 MeshInst->UVIndex+1, Lod.NumTexCoords,
@@ -284,7 +284,7 @@ void CSkelMeshViewer::Draw2D()
 	const CAnimSet *AnimSet = MeshInst->GetAnim();
 	if (AnimSet)
 	{
-		DrawTextBottomLeft("\n"S_GREEN"AnimSet: "S_WHITE"%s", AnimSet->OriginalAnim->Name);
+		DrawTextBottomLeft("\n" S_GREEN "AnimSet: " S_WHITE "%s", AnimSet->OriginalAnim->Name);
 
 		const char *OnOffStatus = NULL;
 		switch (MeshInst->RotationMode)
@@ -293,29 +293,29 @@ void CSkelMeshViewer::Draw2D()
 			OnOffStatus = (AnimSet->AnimRotationOnly) ? "on" : "off";
 			break;
 		case EARO_ForceEnabled:
-			OnOffStatus = S_RED"force on";
+			OnOffStatus = S_RED "force on";
 			break;
 		case EARO_ForceDisabled:
-			OnOffStatus = S_RED"force off";
+			OnOffStatus = S_RED "force off";
 			break;
 		}
-		DrawTextBottomLeft(S_GREEN"RotationOnly:"S_WHITE" %s", OnOffStatus);
+		DrawTextBottomLeft(S_GREEN "RotationOnly:" S_WHITE " %s", OnOffStatus);
 		if (AnimSet->UseAnimTranslation.Num() || AnimSet->ForceMeshTranslation.Num())
 		{
-			DrawTextBottomLeft(S_GREEN"UseAnimBones:"S_WHITE" %d "S_GREEN"ForceMeshBones:"S_WHITE" %d",
+			DrawTextBottomLeft(S_GREEN "UseAnimBones:" S_WHITE " %d " S_GREEN "ForceMeshBones:" S_WHITE " %d",
 				AnimSet->UseAnimTranslation.Num(), AnimSet->ForceMeshTranslation.Num());
 		}
 
 		const CAnimSequence *Seq = MeshInst->GetAnim(0);
 		if (Seq)
 		{
-			DrawTextBottomLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) "S_GREEN"Rate:"S_WHITE" %g "S_GREEN"Frames:"S_WHITE" %d",
+			DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " %d/%d (%s) " S_GREEN "Rate:" S_WHITE " %g " S_GREEN "Frames:" S_WHITE " %d",
 				AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames);
-			DrawTextBottomRight(S_GREEN"Time:"S_WHITE" %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
+			DrawTextBottomRight(S_GREEN "Time:" S_WHITE " %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
 		}
 		else
 		{
-			DrawTextBottomLeft(S_GREEN"Anim:"S_WHITE" 0/%d (none)", MeshInst->GetAnimCount());
+			DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " 0/%d (none)", MeshInst->GetAnimCount());
 		}
 	}
 }

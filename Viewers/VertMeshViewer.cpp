@@ -165,8 +165,8 @@ void CVertMeshViewer::Draw2D()
 	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
 
 	// mesh
-	DrawTextLeft(S_GREEN"Verts  : "S_WHITE"%d\n"
-				 S_GREEN"Tris   : "S_WHITE"%d",
+	DrawTextLeft(S_GREEN "Verts  : " S_WHITE "%d\n"
+				 S_GREEN "Tris   : " S_WHITE "%d",
 				 Mesh->Wedges.Num(),
 				 Mesh->Faces.Num());
 
@@ -187,9 +187,9 @@ void CVertMeshViewer::Draw2D()
 	float Frame, NumFrames, Rate;
 	MeshInst->GetAnimParams(AnimName, Frame, NumFrames, Rate);
 
-	DrawTextBottomLeft(S_GREEN"Anim:"S_WHITE" %d/%d (%s) rate: %g frames: %g",
+	DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " %d/%d (%s) rate: %g frames: %g",
 		AnimIndex+1, MeshInst->GetAnimCount(), AnimName, Rate, NumFrames);
-	DrawTextBottomLeft(S_GREEN"Time:"S_WHITE" %.1f/%g", Frame, NumFrames);
+	DrawTextBottomLeft(S_GREEN "Time:" S_WHITE " %.1f/%g", Frame, NumFrames);
 
 	unguard;
 }

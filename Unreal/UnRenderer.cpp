@@ -491,7 +491,7 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		"(1.0-texture2D(maskTex, TexCoord).a)",	// TC_MA
 	};
 
-#define ADD_DEFINE(name)	appStrcatn(ARRAY_ARG(defines), "#define "name"\n")
+#define ADD_DEFINE(name)	appStrcatn(ARRAY_ARG(defines), "#define " name "\n")
 
 	// diffuse
 	glActiveTexture(GL_TEXTURE0);	// used for BindDefaultMaterial() too

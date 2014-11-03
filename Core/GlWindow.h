@@ -76,10 +76,10 @@ extern bool GShowDebugInfo;
 #undef RGB					// defined in windows
 
 // constant colors
-#define RGBA(r,g,b,a)		((int)((r)*255) | ((int)((g)*255)<<8) | ((int)((b)*255)<<16) | ((int)((a)*255)<<24))
+#define RGBA(r,g,b,a)		( (unsigned)((r)*255) | ((unsigned)((g)*255)<<8) | ((unsigned)((b)*255)<<16) | ((unsigned)((a)*255)<<24) )
 #define RGB(r,g,b)			RGBA(r,g,b,1)
-#define RGB255(r,g,b)		((r) | ((g)<<8) | ((b)<<16) | (255<<24))
-#define RGBA255(r,g,b,a)	((r) | ((g)<<8) | ((b)<<16) | ((a)<<24))
+#define RGB255(r,g,b)		( (unsigned) ((r) | ((g)<<8) | ((b)<<16) | (255<<24)) )
+#define RGBA255(r,g,b,a)	( (r) | ((g)<<8) | ((b)<<16) | ((a)<<24) )
 
 // computed colors
 //?? make as methods; or - constructor of CColor

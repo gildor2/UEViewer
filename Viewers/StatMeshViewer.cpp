@@ -62,23 +62,23 @@ void CStatMeshViewer::Draw2D()
 
 	if (!Mesh->Lods.Num())
 	{
-		DrawTextLeft(S_RED"Mesh has no LODs");
+		DrawTextLeft(S_RED "Mesh has no LODs");
 		return;
 	}
 
 	const CStatMeshInstance *MeshInst = static_cast<CStatMeshInstance*>(Inst);
 	const CStaticMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
-	DrawTextLeft(S_GREEN"LOD    : "S_WHITE"%d/%d\n"
-				 S_GREEN"Verts  : "S_WHITE"%d\n"
-				 S_GREEN"Tris   : "S_WHITE"%d\n"
-				 S_GREEN"UV Set : "S_WHITE"%d/%d",
+	DrawTextLeft(S_GREEN "LOD    : " S_WHITE "%d/%d\n"
+				 S_GREEN "Verts  : " S_WHITE "%d\n"
+				 S_GREEN "Tris   : " S_WHITE "%d\n"
+				 S_GREEN "UV Set : " S_WHITE "%d/%d",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
 				 Lod.NumVerts, Lod.Indices.Num() / 3,
 				 MeshInst->UVIndex+1, Lod.NumTexCoords);
 
 	// code similar to CLodMeshViewer::Draw2D(), but using different fields
-	DrawTextLeft(S_GREEN"Sections: "S_WHITE"%d", Lod.Sections.Num());
+	DrawTextLeft(S_GREEN "Sections: " S_WHITE "%d", Lod.Sections.Num());
 	if (Inst->bColorMaterials)
 	{
 		for (int i = 0; i < Lod.Sections.Num(); i++)

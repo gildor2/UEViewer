@@ -13,7 +13,7 @@ unsigned CMeshInstance::GetMaterialDebugColor(int Index)
 {
 	// most of this code is targetted to make maximal color combinations
 	// which are maximally different for adjancent BoneIndex values
-	static const byte table[]  = { 255*0.9f, 25*3.0f, 255*0.6f, 255*0.0f };
+	static const byte table[]  = { byte(255*0.9f), byte(255*0.3f), byte(255*0.6f), byte(255*0.0f) };
 	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };
 	Index = (Index & 0xFFF8) | table2[Index & 7] ^ 7;
 	#define C(x)	( (x) & 1 ) | ( ((x) >> 2) & 2 )

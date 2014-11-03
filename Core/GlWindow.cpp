@@ -1178,7 +1178,7 @@ void CApplication::Display()
 
 void DrawKeyHelp(const char *Key, const char *Help)
 {
-	DrawTextLeft(S_YELLOW"%-"STR(KEY_HELP_TAB)"s "S_WHITE"%s", Key, Help);
+	DrawTextLeft(S_YELLOW "%-" STR(KEY_HELP_TAB) "s " S_WHITE "%s", Key, Help);
 }
 
 void CApplication::DrawTexts()
@@ -1186,7 +1186,7 @@ void CApplication::DrawTexts()
 	// display help when needed
 	if (IsHelpVisible)
 	{
-		DrawTextLeft(S_RED"Keyboard:\n~~~~~~~~~");
+		DrawTextLeft(S_RED "Keyboard:\n~~~~~~~~~");
 		DrawKeyHelp("Esc",         "exit");
 		DrawKeyHelp("H",           "toggle help");
 		DrawKeyHelp("Alt+Enter",   "toggle fullscreen");
