@@ -435,9 +435,19 @@ public:
 	UITextEdit(const char* text);
 	UITextEdit(FString* text);
 
-	FORCEINLINE UITextEdit& SetMultiline(bool enable = true)
+	FORCEINLINE UITextEdit& SetMultiline(bool multiline = true)
 	{
-		IsMultiline = enable;
+		IsMultiline = multiline;
+		return *this;
+	}
+	FORCEINLINE UITextEdit& SetReadOnly(bool readOnly = true)
+	{
+		IsReadOnly = readOnly;
+		return *this;
+	}
+	FORCEINLINE UITextEdit& SetWantFocus(bool focus = true)
+	{
+		IsWantFocus = focus;
 		return *this;
 	}
 
@@ -447,7 +457,10 @@ public:
 protected:
 	FString		sValue;
 	FString*	pValue;
+	//?? combine these bools into single dword flags
 	bool		IsMultiline;
+	bool		IsReadOnly;
+	bool		IsWantFocus;
 	bool		TextDirty;
 
 	virtual void Create(UIBaseDialog* dialog);

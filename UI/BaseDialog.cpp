@@ -740,6 +740,8 @@ UITextEdit::UITextEdit(const char* value)
 :	pValue(&sValue)		// points to local variable
 ,	sValue(value)
 ,	IsMultiline(false)
+,	IsReadOnly(false)
+,	IsWantFocus(true)
 ,	TextDirty(false)
 {
 	Height = DEFAULT_EDIT_HEIGHT;
@@ -749,6 +751,8 @@ UITextEdit::UITextEdit(FString* value)
 :	pValue(value)
 //,	sValue(value) - uninitialized
 ,	IsMultiline(false)
+,	IsReadOnly(false)
+,	IsWantFocus(true)
 {
 	Height = DEFAULT_EDIT_HEIGHT;
 }
@@ -772,8 +776,9 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
-	int style = WS_TABSTOP;
+	int style = (IsWantFocus) ? WS_TABSTOP : 0;
 	if (IsMultiline) style |= WS_VSCROLL | ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL;
+	if (IsReadOnly)  style |= ES_READONLY;
 
 	Wnd = Window(WC_EDIT, "", style, WS_EX_CLIENTEDGE, dialog);
 	SetWindowText(Wnd, *(*pValue));

@@ -41,9 +41,10 @@ public:
 					+ NewControl(UILabel, "Call stack:")
 					+ NewControl(UISpacer)
 					+ NewControl(UITextEdit, log)
-					.SetHeight(100)		//?? later: try to auto-size it
+					.SetHeight(100)		//?? try to auto-size it
 					.SetMultiline()
-					.Enable(false)
+					.SetReadOnly()
+					.SetWantFocus(false)
 				]
 				+ NewControl(UISpacer)
 				+ NewControl(UIGroup, GROUP_NO_BORDER)
