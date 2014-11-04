@@ -21,6 +21,7 @@
 #include "ProgressDialog.h"
 #include "AboutDialog.h"
 #include "ErrorDialog.h"
+#include "PackageScanDialog.h"
 #endif
 
 
@@ -575,6 +576,11 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuCheckbox("Include materials", &ShowMaterials)
 			+ NewMenuSeparator()
 			+ NewMenuCheckbox("Show debug information\tCtrl+Q", &GShowDebugInfo)
+		]
+		+ NewSubmenu("Tools")
+		[
+			NewMenuItem("Scan package versions")
+			.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
 		]
 #if MAX_DEBUG
 		+ NewSubmenu("Debug")

@@ -307,6 +307,7 @@ DEPENDS = \
 	UmodelTool/ErrorDialog.h \
 	UmodelTool/MiscStrings.h \
 	UmodelTool/PackageDialog.h \
+	UmodelTool/PackageScanDialog.h \
 	UmodelTool/ProgressDialog.h \
 	UmodelTool/StartupDialog.h \
 	UmodelTool/UmodelApp.h \
