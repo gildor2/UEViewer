@@ -63,14 +63,14 @@ $root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 # build
 case "$PLATFORM" in
 	"vc-win32")
-		vc32tools --make $makefile
+		vc32tools --make $makefile || exit 1
 		;;
 	"mingw32"|"cygwin")
-		PATH=/bin:/usr/bin:$PATH		# configure paths for Cygwin
-		gccfilt make -f $makefile
+		PATH=/bin:/usr/bin:$PATH			# configure paths for Cygwin
+		gccfilt make -f $makefile || exit 1
 		;;
 	"linux")
-		make -j 4 -f $makefile			# use 4 jobs for build
+		make -j 4 -f $makefile || exit 1	# use 4 jobs for build
 		;;
 	*)
 		echo "Unknown PLATFORM=\"$PLATFORM\""

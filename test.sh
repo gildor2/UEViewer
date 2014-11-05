@@ -230,8 +230,7 @@ done
 # rebuild umodel when not desired opposite
 if [ -z "$nobuild" ]; then
 	console_title "Building umodel ..."
-	rm $exe
-	./build.sh
+	./build.sh || exit 1
 fi
 
 # find whether -path= is used or not
