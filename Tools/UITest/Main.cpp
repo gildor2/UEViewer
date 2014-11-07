@@ -39,6 +39,18 @@ public:
 				+ NewMenuSeparator()
 				+ NewMenuItem("Last Item")
 			]
+			+ NewMenuItem("Empty")
+		];
+
+		UIMenu* popup = new UIMenu;
+		(*popup)
+		[
+			NewMenuItem("Popup item 1")
+			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			+ NewMenuItem("Popup item 2")
+			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			+ NewMenuItem("Popup item 3")
+			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
 		];
 
 		(*this)
@@ -100,6 +112,10 @@ public:
 					+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 					[
 						NewControl(UISpacer, -1)
+						+ NewControl(UIMenuButton, "Menu")
+						.SetWidth(100)
+						.SetMenu(popup)
+						+ NewControl(UISpacer)
 						+ NewControl(UIButton, "Close")
 						.SetWidth(100)
 						.SetOK()
@@ -145,6 +161,11 @@ public:
 				]
 			]
 		];
+	}
+
+	void OnMenuItem(UIMenuItem* item)
+	{
+		printf("Menu button clicked: %s\n", item->GetText());
 	}
 
 	void OnAddItems()

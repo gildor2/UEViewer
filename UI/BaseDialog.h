@@ -378,6 +378,21 @@ protected:
 };
 
 
+class UIMenuButton : public UIElement
+{
+	DECLARE_UI_CLASS(UIMenuButton, UIElement);
+	DECLARE_CALLBACK(Callback);
+public:
+	UIMenuButton(const char* text);
+
+protected:
+	FString		Label;
+
+	virtual void Create(UIBaseDialog* dialog);
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+};
+
+
 class UICheckbox : public UIElement
 {
 	DECLARE_UI_CLASS(UICheckbox, UIElement);
@@ -694,6 +709,7 @@ public:
 
 	UIMenuItem& Enable(bool enable);
 
+	const char* GetText() const { return Label; }
 	HMENU GetMenuHandle();
 
 	// Update checkboxes and radio groups according to attached variables
@@ -741,7 +757,7 @@ public:
 	UIMenu();
 	~UIMenu();
 
-	HMENU GetHandle(bool forceCreate = false);
+	HMENU GetHandle(bool popup, bool forceCreate = false);
 
 	FORCEINLINE void Attach()
 	{
@@ -763,7 +779,7 @@ protected:
 	HMENU		hMenu;
 	int			ReferenceCount;
 
-	void Create();
+	void Create(bool popup);
 };
 
 FORCEINLINE UIMenuItem& NewMenuItem(const char* label)

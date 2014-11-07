@@ -27,7 +27,7 @@ protected:
 	UIMulticolumnListbox* FlatPackageList;
 	UIButton*		OkButton;
 	UIButton*		ExportButton;
-	UIButton*		ScanContentButton;
+	UIMenuItem*		ScanContentMenu;
 
 	EResult			ModalResult;
 	bool			UseFlatView;

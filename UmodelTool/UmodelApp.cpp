@@ -605,7 +605,7 @@ void CUmodelApp::WindowCreated()
 		]
 	];
 	// attach menu to the SDL window
-	SetMenu(wnd, MainMenu->GetHandle(true));
+	SetMenu(wnd, MainMenu->GetHandle(false, true));
 	// menu has been attached, resize the window
 	ResizeWindow();
 #endif // HAS_MENU

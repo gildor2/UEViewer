@@ -153,23 +153,27 @@ void UIPackageDialog::InitUI()
 		}
 	}
 
+	// "Tools" menu
+	UIMenu* toolsMenu = new UIMenu;
+	(*toolsMenu)
+	[
+		NewMenuItem("Scan content")
+		.Enable(!ContentScanned)
+		.Expose(ScanContentMenu)
+		.SetCallback(BIND_MEM_CB(&UIPackageDialog::ScanContent, this))
+		+ NewMenuItem("Scan versions")
+		.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
+	];
+
 	// dialog buttons
 	NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 	.SetParent(this)
 	[
 		NewControl(UILabel, "Hint: you may open this dialog at any time by pressing \"O\"")
-		//!! temporary code: move this control somewhere, perhaps to menu
-		+ NewControl(UIButton, "Scan content")
-			.SetWidth(100)
-			.Enable(!ContentScanned)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::ScanContent, this))
-			.Expose(ScanContentButton)
+		+ NewControl(UIMenuButton, "Tools")
+		.SetWidth(80)
+		.SetMenu(toolsMenu)
 		+ NewControl(UISpacer)
-		+ NewControl(UIButton, "Scan versions")
-			.SetWidth(100)
-			.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
-		+ NewControl(UISpacer)
-		//!! ^^^
 		+ NewControl(UIButton, "Open")
 			.SetWidth(80)
 			.Enable(false)
@@ -430,7 +434,7 @@ void UIPackageDialog::ScanContent()
 	ContentScanned = true;
 
 	// finished - no needs to perform scan again, disable button
-	ScanContentButton->Enable(false);
+	ScanContentMenu->Enable(false);
 
 	// update package list with new data
 	UpdateSelectedPackage();

@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+07.11.2014
+- replaced "Scan ..." buttons in package dialog with single menu button "Tools"
+
 03.11.2014
 - added "Scan content" button in package selection dialog which will perform analysis of all game
   packages and display additional information in package list showing number of objects which are

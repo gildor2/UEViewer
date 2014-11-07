@@ -591,6 +591,52 @@ bool UIButton::HandleCommand(int id, int cmd, LPARAM lParam)
 
 
 /*-----------------------------------------------------------------------------
+	UIMenuButton
+-----------------------------------------------------------------------------*/
+
+UIMenuButton::UIMenuButton(const char* text)
+:	Label(text)
+{
+	Height = DEFAULT_BUTTON_HEIGHT;
+}
+
+void UIMenuButton::Create(UIBaseDialog* dialog)
+{
+	Parent->AddVerticalSpace();
+	Parent->AllocateUISpace(X, Y, Width, Height);
+	Parent->AddVerticalSpace();
+	if (Id == 0 || Id >= FIRST_DIALOG_ID)
+		Id = dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
+
+	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_SPLITBUTTON, 0, dialog);
+	UpdateEnabled();
+}
+
+bool UIMenuButton::HandleCommand(int id, int cmd, LPARAM lParam)
+{
+	if (cmd == BCN_DROPDOWN || (cmd == BN_CLICKED && !Callback))
+	{
+		// reference: MFC, CSplitButton::OnDropDown()
+		// create menu or ger its handle
+		HMENU hMenu = Menu->GetHandle(true, true);
+		// get rect of button for menu positioning
+		RECT rectButton;
+		GetWindowRect(Wnd, &rectButton);
+		TPMPARAMS tpmParams;
+		tpmParams.cbSize = sizeof(TPMPARAMS);
+		tpmParams.rcExclude = rectButton;
+		int cmd = TrackPopupMenuEx(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
+			rectButton.left, rectButton.bottom, Wnd, &tpmParams);
+		if (cmd)
+			Menu->HandleCommand(cmd);
+	}
+	else if (cmd == BN_CLICKED && Callback)
+		Callback(this);
+	return true;
+}
+
+
+/*-----------------------------------------------------------------------------
 	UICheckbox
 -----------------------------------------------------------------------------*/
 
@@ -1998,7 +2044,7 @@ HMENU UIMenuItem::GetMenuHandle()
 	UIMenuItem* item = this;
 	while (item->Parent)
 		item = item->Parent;
-	return static_cast<UIMenu*>(item)->GetHandle();
+	return static_cast<UIMenu*>(item)->GetHandle(false);
 }
 
 void UIMenuItem::Update()
@@ -2040,21 +2086,34 @@ UIMenu::~UIMenu()
 	if (hMenu) DestroyMenu(hMenu);
 }
 
-HMENU UIMenu::GetHandle(bool forceCreate)
+HMENU UIMenu::GetHandle(bool popup, bool forceCreate)
 {
-	if (!hMenu && forceCreate) Create();
-	return hMenu;
+	if (!hMenu && forceCreate) Create(popup);
+	return popup ? GetSubMenu(hMenu, 0) : hMenu;
 }
 
-void UIMenu::Create()
+void UIMenu::Create(bool popup)
 {
 	guard(UIMenu::Create);
 
 	assert(!hMenu);
-	hMenu = CreateMenu();
-
 	int nextId = FIRST_MENU_ID, position = 0;
-	FillMenuItems(hMenu, nextId, position);
+
+	if (popup)
+	{
+		// TrackPopupMenu can't work with main menu, it requires a submenu handle.
+		// Create dummy submenu to host all menu items. Note: GetMenuHandle() will
+		// return submenu at position 0 when requesting a popup memu handle.
+		hMenu = CreateMenu();
+		HMENU hSubMenu = CreatePopupMenu();
+		AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSubMenu, "");
+		FillMenuItems(hSubMenu, nextId, position);
+	}
+	else
+	{
+		hMenu = CreateMenu();
+		FillMenuItems(hMenu, nextId, position);
+	}
 
 	unguard;
 }
@@ -2850,7 +2909,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		CreateGroupControls(this);
 
 		if (Menu)
-			::SetMenu(Wnd, Menu->GetHandle(true));
+			::SetMenu(Wnd, Menu->GetHandle(false, true));
 
 		// adjust window size taking into account desired client size and center window on screen
 		r.left   = 0;
