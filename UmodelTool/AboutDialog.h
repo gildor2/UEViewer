@@ -7,9 +7,10 @@
 class UIAboutDialog : public UIBaseDialog
 {
 public:
-	void Show()
+	static void Show()
 	{
-		ShowModal("About UModel", 300, 200);
+		UIAboutDialog dialog;
+		dialog.ShowModal("About UModel", 300, 200);
 	}
 
 	//!! - Add these lines:

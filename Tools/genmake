@@ -1024,8 +1024,10 @@ sub FlushObjectFile {
 			$line = "nasm.exe -f win32 -i $srcDir -o \"$objFile\"";
 		} elsif ($srcType eq "rc") {
 			my $inc = "";
+			my $defs = "";
 			$inc = " ".GenerateOptions ($includes, "-I ") if $includes ne "";
-			$line = "rc.exe -l 0x409 -i $srcDir$inc -fo\"$objFile\" -dNDEBUG";
+			$defs = " ".GenerateOptions ($defines, "-D ") if $defines ne "";
+			$line = "rc.exe -l 0x409 -i ${srcDir}${inc}${defs} -fo\"$objFile\" -dNDEBUG";
 		} else {
 			# C/C++ file
 			my $crt = GetSrcOption ("LIBC");

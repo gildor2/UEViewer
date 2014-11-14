@@ -118,7 +118,7 @@ umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -I ./libs/nvtt
+OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -D _USING_V110_SDK71_ -I ./libs/nvtt
 
 $(OUT)/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -129,7 +129,7 @@ $(OUT)/DirectDrawSurface.obj : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT_1)/" -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI
+OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT_1)/" -D _USING_V110_SDK71_ -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI
 
 DEPENDS = \
 	Core/Core.h \
@@ -786,10 +786,13 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	UmodelTool/AboutDialog.h \
 	UmodelTool/Build.h \
+	UmodelTool/MiscStrings.h \
 	UmodelTool/PackageDialog.h \
 	UmodelTool/PackageScanDialog.h \
 	UmodelTool/ProgressDialog.h \
+	UmodelTool/res/resource.h \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
@@ -1172,9 +1175,9 @@ DEPENDS = \
 	UmodelTool/res/resource.h
 
 $(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
-	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
+	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI  -D _USING_V110_SDK71_ -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
 
-OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/"
+OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -D _USING_V110_SDK71_
 
 DEPENDS = \
 	libs/PowerVR/PVRTDecompress.h \

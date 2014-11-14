@@ -50,8 +50,6 @@ public:
 	bool ShowPackageUI();
 	void SetPackageName(const char* name);
 	void ShowErrorDialog();
-	// menu callbacks
-	void ShowAboutDialog();
 #endif
 
 #if HAS_MENU

@@ -24,9 +24,11 @@
 #endif
 #define vsscanf _vsscanf
 #define chdir _chdir
-#define getcwd _getcwd 
+#define getcwd _getcwd
 
-#define va_copy(a, b)	a = b
+#if _MSC_VER < 1800
+#	define va_copy(a, b)	a = b
+#endif
 
 #if !defined restrict
 #define restrict
@@ -36,7 +38,7 @@
 #define __attribute__(X)
 
 #if !defined __FUNC__
-#define __FUNC__ __FUNCTION__ 
+#define __FUNC__ __FUNCTION__
 #endif
 
 

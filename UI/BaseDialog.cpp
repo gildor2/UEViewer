@@ -534,7 +534,7 @@ void UIProgressBar::SetValue(float value)
 {
 	if (value == Value) return;
 	Value = value;
-	if (Wnd) SendMessage(Wnd, PBM_SETPOS, Value * 16384, 0);
+	if (Wnd) SendMessage(Wnd, PBM_SETPOS, (int)(Value * 16384), 0);
 }
 
 void UIProgressBar::Create(UIBaseDialog* dialog)
@@ -543,7 +543,7 @@ void UIProgressBar::Create(UIBaseDialog* dialog)
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(PROGRESS_CLASS, "", 0, 0, dialog);
 	SendMessage(Wnd, PBM_SETRANGE, 0, MAKELPARAM(0, 16384));
-	if (Wnd) SendMessage(Wnd, PBM_SETPOS, Value * 16384, 0);
+	if (Wnd) SendMessage(Wnd, PBM_SETPOS, (int)(Value * 16384), 0);
 }
 
 

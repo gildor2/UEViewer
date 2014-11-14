@@ -5,6 +5,7 @@
 #include "PackageDialog.h"
 #include "PackageScanDialog.h"
 #include "ProgressDialog.h"
+#include "AboutDialog.h"
 
 #include "UnPackage.h"
 
@@ -163,6 +164,9 @@ void UIPackageDialog::InitUI()
 		.SetCallback(BIND_MEM_CB(&UIPackageDialog::ScanContent, this))
 		+ NewMenuItem("Scan versions")
 		.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
+		+ NewMenuSeparator()
+		+ NewMenuItem("About UModel")
+		.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
 	];
 
 	// dialog buttons

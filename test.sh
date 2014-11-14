@@ -156,7 +156,7 @@ function ut4()
 }
 function ue3()
 {
-	CheckDir C:/Projects/Epic/UnrealEngine3/UDKGame
+	CheckDir C:/Projects/Epic/UnrealEngine3/UDKGame/Content
 	run $*
 }
 function ue4()

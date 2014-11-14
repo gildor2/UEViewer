@@ -267,12 +267,6 @@ void CUmodelApp::SetPackageName(const char* name)
 	GPackageDialog.SelectPackage(name);
 }
 
-void CUmodelApp::ShowAboutDialog()
-{
-	UIAboutDialog dialog;
-	dialog.Show();
-}
-
 void CUmodelApp::ShowErrorDialog()
 {
 	UIErrorDialog errorDialog;
@@ -601,7 +595,7 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuHyperLink("Donate", "http://www.gildor.org/en/donate")
 			+ NewMenuSeparator()
 			+ NewMenuItem("About UModel")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::ShowAboutDialog, this))
+			.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
 		]
 	];
 	// attach menu to the SDL window

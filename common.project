@@ -24,6 +24,10 @@ OLDCRT     = 1
 !if "$COMPILER" eq "VisualC"
 	CPP_EXCEPT = 0										# used with WIN32_USE_SEH in Core.h
 	OPTIONS = -GS- -GR- 								#?? VC8+
+#	OPTIONS += -FS										# VS2013+, required for parallel build to work (jom.exe)
+	DEFINES += _USING_V110_SDK71_						# avoid some warnings, perhaps affects something else
+					# see http://tedwvc.wordpress.com/2014/01/01/how-to-target-xp-with-vc2012-or-vc2013-and-continue-to-use-the-windows-8-x-sdk/
+					# it looks like VS2013 requires _USING_V120_SDK71_
 	!if "$OLDCRT" eq "1"
 		WDKCRT = $R/../Libs/msvcrt
 		!include $WDKCRT/msvcrt.project
