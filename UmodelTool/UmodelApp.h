@@ -50,7 +50,28 @@ public:
 	bool ShowPackageUI();
 	void SetPackageName(const char* name);
 	void ShowErrorDialog();
-#endif
+	// menu callbacks
+	void PrevObject()
+	{
+		FindObjectAndCreateVisualizer(-1);
+	}
+	void NextObject()
+	{
+		FindObjectAndCreateVisualizer(1);
+	}
+	void TakeScreenshot1()
+	{
+		DoScreenshot = 1;			// regular screenshot
+	}
+	void TakeScreenshot2()
+	{
+		DoScreenshot = 2;			// screenshot with alpha
+	}
+	void ExportObject()
+	{
+		if (Viewer) Viewer->Export();
+	}
+#endif // HAS_UI
 
 #if HAS_MENU
 	UIMenu*		MainMenu;
@@ -61,6 +82,7 @@ public:
 #if RENDERING
 	CObjectViewer *Viewer;			// used from GlWindow callbacks
 	int			ObjIndex;			// index of the current object in UObject::GObjObjects array
+	int			DoScreenshot;
 	bool		ShowMeshes;
 	bool		ShowMaterials;
 #endif

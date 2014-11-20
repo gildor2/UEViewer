@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+20.11.2014
+- added new menu items duplicating functionality previously available through keyboard shortcuts
+
 07.11.2014
 - replaced "Scan ..." buttons in package dialog with single menu button "Tools"
 

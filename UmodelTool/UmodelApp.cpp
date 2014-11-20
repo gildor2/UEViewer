@@ -11,6 +11,7 @@
 #include "UnMesh3.h"
 
 #include "UmodelApp.h"
+#include "UmodelSettings.h"
 
 #include "Exporters/Exporters.h"	// for WriteTGA
 
@@ -26,6 +27,8 @@
 
 
 CUmodelApp GApplication;
+
+#define SCREENSHOTS_DIR		"Screenshots"
 
 /*-----------------------------------------------------------------------------
 	Object visualizer support
@@ -356,7 +359,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 {
 	char filename[256];
-	appSprintf(ARRAY_ARG(filename), "Screenshots/%s.tga", ObjectName);
+	appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s.tga", ObjectName);
 	int retry = 1;
 	while (true)
 	{
@@ -365,7 +368,7 @@ static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 		fclose(f);
 		// if file exists, append index
 		retry++;
-		appSprintf(ARRAY_ARG(filename), "Screenshots/%s_%02d.tga", ObjectName, retry);
+		appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s_%02d.tga", ObjectName, retry);
 	}
 	appPrintf("Writting screenshot %s\n", filename);
 	appMakeDirectoryForFile(filename);
@@ -404,12 +407,11 @@ static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 }
 
 
-static int GDoScreenshot = 0;
-
 CUmodelApp::CUmodelApp()
 :	GuiShown(false)
 #if RENDERING
 ,	Viewer(NULL)
+,	DoScreenshot(0)
 ,	ShowMeshes(false)
 ,	ShowMaterials(false)
 ,	ObjIndex(0)
@@ -433,7 +435,7 @@ void CUmodelApp::Draw3D(float TimeDelta)
 
 	guard(CUmodelApp::Draw3D);
 
-	bool AlphaBgShot = GDoScreenshot >= 2;
+	bool AlphaBgShot = DoScreenshot >= 2;
 	if (AlphaBgShot)
 	{
 		// screenshot with transparent background
@@ -448,7 +450,7 @@ void CUmodelApp::Draw3D(float TimeDelta)
 	{
 		// take screenshot without 2D texts and with transparency
 		TakeScreenshot(Obj->Name, true);
-		GDoScreenshot = 0;
+		DoScreenshot = 0;
 	}
 
 	unguardf("Obj=%s'%s'", Obj ? Obj->GetClassName() : "None", Obj ? Obj->Name : "None");
@@ -459,12 +461,12 @@ void CUmodelApp::BeforeSwap()
 {
 	guard(CUmodelApp::BeforeSwap);
 
-	if (GDoScreenshot)
+	if (DoScreenshot)
 	{
 		// take regular screenshot
 		UObject *Obj = UObject::GObjObjects[ObjIndex];
 		TakeScreenshot(Obj->Name, false);
-		GDoScreenshot = 0;
+		DoScreenshot = 0;
 	}
 
 	unguard;
@@ -490,10 +492,10 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		FindObjectAndCreateVisualizer((key == SPEC_KEY(PAGEDOWN)) ? 1 : -1);
 		break;
 	case 's'|KEY_CTRL:
-		GDoScreenshot = 1;
+		DoScreenshot = 1;
 		break;
 	case 's'|KEY_ALT:
-		GDoScreenshot = 2;
+		DoScreenshot = 2;
 		break;
 #if HAS_UI
 	case 'o':
@@ -566,14 +568,32 @@ void CUmodelApp::WindowCreated()
 		]
 		+ NewSubmenu("View")
 		[
-			NewMenuCheckbox("Include meshes", &ShowMeshes)
-			+ NewMenuCheckbox("Include materials", &ShowMaterials)
+			NewMenuItem("Screenshot\tCtrl+S")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::TakeScreenshot1, this))
+			+ NewMenuItem("Screenshot with alpha\tAlt+S")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::TakeScreenshot2, this))
 			+ NewMenuSeparator()
 			+ NewMenuCheckbox("Show debug information\tCtrl+Q", &GShowDebugInfo)
 		]
+		+ NewSubmenu("Navigate")
+		[
+			NewMenuCheckbox("Include meshes", &ShowMeshes)
+			+ NewMenuCheckbox("Include materials", &ShowMaterials)
+			+ NewMenuSeparator()
+			+ NewMenuItem("Previous\tPgUp")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::PrevObject, this))
+			+ NewMenuItem("Next\tPgDn")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::NextObject, this))
+		]
 		+ NewSubmenu("Tools")
 		[
-			NewMenuItem("Scan package versions")
+			NewMenuItem("Export current object\tCtrl+X")
+			.SetCallback(BIND_MEM_CB(&CUmodelApp::ExportObject, this))
+			+ NewMenuSeparator()
+			+ NewMenuHyperLink("Open export folder", GSettings.ExportPath)	//!! should update if directory will be changed from UI
+			+ NewMenuHyperLink("Open screenshots folder", SCREENSHOTS_DIR)
+			+ NewMenuSeparator()
+			+ NewMenuItem("Scan package versions")
 			.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
 		]
 #if MAX_DEBUG

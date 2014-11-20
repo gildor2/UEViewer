@@ -40,7 +40,7 @@
 //#define DUMP_MEM_ON_EXIT			1
 
 
-static UmodelSettings GSettings;
+UmodelSettings GSettings;
 
 
 /*-----------------------------------------------------------------------------

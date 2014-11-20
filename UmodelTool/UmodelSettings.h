@@ -57,4 +57,6 @@ struct UmodelSettings
 	}
 };
 
+extern UmodelSettings GSettings;
+
 #endif // __UMODEL_SETINGS_H__
