@@ -90,7 +90,7 @@ struct CGameFileInfo
 	bool		IsPackage;
 	bool		PackageScanned;
 	int			SizeInKb;				// file size, in kilobytes
-	class FObbVFS* FileSystem;			// virtual file system
+	class FVirtualFileSystem* FileSystem;			// virtual file system
 	// content information
 	int			NumSkeletalMeshes;
 	int			NumStaticMeshes;

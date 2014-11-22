@@ -105,8 +105,6 @@ public:
 		unguard;
 	}
 
-	//!! when open file -> lock FObbVFS, when close - unlock
-
 	virtual int GetFileSize(const char* name)
 	{
 		const FObbEntry* info = FindFile(name);
@@ -114,7 +112,7 @@ public:
 	}
 
 	// iterating over all files
-	virtual int NumFiles()
+	virtual int NumFiles() const
 	{
 		return FileInfos.Num();
 	}

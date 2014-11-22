@@ -37,6 +37,7 @@ MAIN_FILES = \
 	$(OUT_1)/ExportTexture.obj \
 	$(OUT_1)/ExportThirdParty.obj \
 	$(OUT_1)/GameDatabase.obj \
+	$(OUT_1)/GameFileSystem.obj \
 	$(OUT_1)/MeshCommon.obj \
 	$(OUT_1)/PackageUtils.obj \
 	$(OUT_1)/SkeletalMesh.obj \
@@ -861,7 +862,6 @@ DEPENDS = \
 	UmodelTool/Build.h \
 	Unreal/GameDatabase.h \
 	Unreal/GameDefines.h \
-	Unreal/UnArchiveObb.h \
 	Unreal/UnCore.h
 
 $(OUT_1)/GameDatabase.obj : Unreal/GameDatabase.cpp $(DEPENDS)
@@ -878,6 +878,21 @@ DEPENDS = \
 
 $(OUT_1)/CoreGL.obj : Core/CoreGL.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/CoreGL.obj" Core/CoreGL.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/GameFileSystem.h \
+	Unreal/UnArchiveObb.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/GameFileSystem.obj : Unreal/GameFileSystem.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameFileSystem.obj" Unreal/GameFileSystem.cpp
 
 DEPENDS = \
 	Core/Core.h \
