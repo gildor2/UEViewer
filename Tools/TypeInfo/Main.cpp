@@ -307,12 +307,8 @@ int main(int argc, char **argv)
 		appSetRootDirectory2(argPkgName);
 	else
 		appSetRootDirectory(".");
-	// load package
-	UnPackage *Package;
-	if (strchr(argPkgName, '.'))
-		Package = new UnPackage(argPkgName);
-	else
-		Package = UnPackage::LoadPackage(argPkgName);
+	// load a package
+	UnPackage *Package = UnPackage::LoadPackage(argPkgName);
 	if (!Package)
 	{
 		appPrintf("ERROR: Unable to find/load package %s\n", argPkgName);

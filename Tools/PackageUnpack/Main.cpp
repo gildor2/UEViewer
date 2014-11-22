@@ -86,17 +86,15 @@ int main(int argc, char **argv)
 
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);
-	// load package
-	UnPackage *Package;
-	if (strchr(argPkgName, '.'))
-		Package = new UnPackage(argPkgName);
-	else
-		Package = UnPackage::LoadPackage(argPkgName);
+	// load a package
+	UnPackage *Package = UnPackage::LoadPackage(argPkgName);
 	if (!Package)
 	{
 		printf("ERROR: Unable to find/load package %s\n", argPkgName);
 		exit(1);
 	}
+	// prepare package for reading
+	Package->Open();
 
 	guard(ProcessPackage);
 	// extract package name, create directory for it

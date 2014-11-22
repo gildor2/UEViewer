@@ -192,9 +192,11 @@ public:
 	FObjectDepends			*DependsTable;
 #endif
 
+protected:
 	UnPackage(const char *filename, FArchive *baseLoader = NULL);
 	~UnPackage();
 
+public:
 	// Load package using short name (without path and extension). When the package
 	// is already loaded, this function will symply return a pointer to earlier
 	// loaded UnPackage.
@@ -288,7 +290,7 @@ public:
 	{
 		Loader->Seek(Pos);
 	}
-	virtual int  Tell() const
+	virtual int Tell() const
 	{
 		return Loader->Tell();
 	}
@@ -303,6 +305,18 @@ public:
 	virtual int GetFileSize() const
 	{
 		return Loader->GetFileSize();
+	}
+	virtual bool IsOpen() const
+	{
+		return Loader->IsOpen();
+	}
+	virtual bool Open()
+	{
+		return Loader->Open();
+	}
+	virtual void Close()
+	{
+		Loader->Close();
 	}
 
 private:
