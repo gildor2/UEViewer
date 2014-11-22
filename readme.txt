@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+22.11.2014
+- improved Passion Leads Army SkeletalMesh compatibility
+
 20.11.2014
 - added new menu items duplicating functionality previously available through keyboard shortcuts
 

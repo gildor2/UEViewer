@@ -1267,6 +1267,13 @@ struct FStaticLODModel3
 			assert(LoadingMesh);
 			if (LoadingMesh->bHasVertexColors)
 			{
+#if PLA
+				if (Ar.Game == GAME_PLA && Ar.ArVer >= 900) // this code was guessed, not checked in executable
+				{
+					FGuid unk;
+					Ar << unk;
+				}
+#endif // PLA
 				Ar << RAW_ARRAY(Lod.VertexColor);
 				appPrintf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
 			}
