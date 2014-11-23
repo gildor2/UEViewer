@@ -3,6 +3,7 @@
 #include "GameFileSystem.h"
 
 #include "UnArchiveObb.h"
+#include "UnArchivePak.h"
 
 // includes for file enumeration
 #if _WIN32
@@ -160,9 +161,20 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 //??			GForcePlatform = PLATFORM_ANDROID;
 				reader = new FFileReader(FullName);
 				if (!reader) return true;
+				reader->Game = GAME_UE3;
 				vfs = new FObbVFS();
 			}
 #endif // SUPPORT_ANDROID
+#if UNREAL4
+			if (!stricmp(ext, "pak"))
+			{
+				reader = new FFileReader(FullName);
+				if (!reader) return true;
+				reader->Game = GAME_UE4;
+				vfs = new FPakVFS();
+				//!! detect game by file name
+			}
+#endif // UNREAL4
 			//!! process other VFS types here
 			if (vfs)
 			{

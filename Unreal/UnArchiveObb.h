@@ -87,7 +87,6 @@ public:
 			*Reader << NameLen;
 			assert(NameLen < ARRAY_COUNT(FileName));
 			Reader->Serialize(FileName, NameLen);
-			FileName[NameLen] = 0; // the string in obb is not null-terminated
 			// process name
 			for (char* s = FileName; *s; s++)
 			{

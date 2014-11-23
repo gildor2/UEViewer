@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+23.11.2014
+- implemented Unreal engine 4 PAK file support
+
 22.11.2014
 - improved Passion Leads Army SkeletalMesh compatibility
 
