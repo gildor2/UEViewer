@@ -21,4 +21,4 @@ public:
 };
 
 
-#endif __GAME_FILE_SYSTEM_H__
+#endif // __GAME_FILE_SYSTEM_H__

@@ -29,6 +29,7 @@ OLDCRT     = 1
 					# see http://tedwvc.wordpress.com/2014/01/01/how-to-target-xp-with-vc2012-or-vc2013-and-continue-to-use-the-windows-8-x-sdk/
 					# it looks like VS2013 requires _USING_V120_SDK71_
 	!if "$OLDCRT" eq "1"
+		DEFINES += OLDCRT
 		WDKCRT = $R/../Libs/msvcrt
 		!include $WDKCRT/msvcrt.project
 	!endif

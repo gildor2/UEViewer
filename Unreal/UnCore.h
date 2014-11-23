@@ -388,14 +388,6 @@ public:
 	virtual ~FArchive()
 	{}
 
-	void DetectGame();
-	void OverrideVersion();
-
-	inline int Engine() const
-	{
-		return (Game & GAME_ENGINE);
-	}
-
 	void SetupFrom(const FArchive &Other)
 	{
 		ArVer         = Other.ArVer;
@@ -405,27 +397,63 @@ public:
 		Platform      = Other.Platform;
 	}
 
+	// Information aboit game and engine this archive belongs to.
+
+	void DetectGame();
+	void OverrideVersion();
+
+	inline int Engine() const
+	{
+		return (Game & GAME_ENGINE);
+	}
+
+	// Position and file size methods.
+
 	virtual void Seek(int Pos) = 0;
-	void Seek64(int64 Pos)
-	{
-		//!! change when support large files; perhaps Seek() should call Seek64
-		if (Pos >= (1LL << 31)) appError("Seek64 %I64X", Pos);
-		Seek((int)Pos);
-	}
-	virtual bool IsEof() const
-	{
-		return false;
-	}
 
 	virtual int Tell() const
 	{
 		return ArPos;
 	}
 
+	virtual int GetFileSize() const
+	{
+		return 0;
+	}
+
+	virtual bool IsEof() const
+	{
+		return false;
+	}
+
+	// 64-bit position support.
+	// Note: 64-bit position support is required for FFileArchive classes only,
+	// so use 32-bit position everywhere except these classes.
+
+	virtual void Seek64(int64 Pos)
+	{
+		if (Pos >= (1LL << 31)) appError("Seek64 %I64X", Pos);
+		Seek((int)Pos);
+	}
+
+	virtual int64 Tell64() const
+	{
+		return ArPos;
+	}
+
+	virtual int64 GetFileSize64() const
+	{
+		return GetFileSize();
+	}
+
+	// Serialization functions.
+
 	virtual void Serialize(void *data, int size) = 0;
 	void ByteOrderSerialize(void *data, int size);
 
-	void Printf(const char *fmt, ...);
+	// "Stopper" is used to check for overrun serialization.
+	// Note: there's no 64-bit "stopper" - large files are used only as containers for smaller
+	// files, so stopper validation is performed on upper level, with 32-bit values.
 
 	virtual void SetStopper(int Pos)
 	{
@@ -439,13 +467,11 @@ public:
 
 	bool IsStopper()
 	{
-		return Tell() == GetStopper();
+		int stopper = GetStopper();
+		return (stopper != 0) && (Tell() == stopper);
 	}
 
-	virtual int GetFileSize() const
-	{
-		return 0;
-	}
+	// Open/close functions, used to save file handles when working with large number of game files.
 
 	virtual bool IsOpen() const
 	{
@@ -459,6 +485,8 @@ public:
 	{
 	}
 
+	// Dummy implementation of Unreal type serialization
+
 	virtual FArchive& operator<<(FName &N)
 	{
 		return *this;
@@ -468,7 +496,11 @@ public:
 		return *this;
 	}
 
-	// some typeinfo
+	// Use FArchive as a text stream
+
+	void Printf(const char *fmt, ...);
+
+	// Typeinfo
 
 	static const char* StaticGetName()
 	{
@@ -582,9 +614,13 @@ public:
 	virtual ~FFileArchive();
 
 	virtual void Seek(int Pos);
+	virtual void Seek64(int64 Pos);
+	virtual int Tell() const;
+	virtual int64 Tell64() const;
+	virtual int GetFileSize() const;
+//	virtual int64 GetFileSize64() const; -- implemented in derived classes
+
 	virtual bool IsEof() const;
-	virtual FArchive& operator<<(FName &N);
-	virtual FArchive& operator<<(UObject *&Obj);
 	virtual bool IsOpen() const;
 	virtual void Close();
 
@@ -593,12 +629,13 @@ protected:
 	unsigned	Options;
 	const char	*FullName;		// allocared with appStrdup
 	const char	*ShortName;		// points to FullName[N]
-	int			FileSize;
+	int64		FileSize;
 
 	byte*		Buffer;
 	int			BufferSize;
-	int			BufferPos;
-	int			FilePos;
+	int64		BufferPos;		// position of Buffer in file
+	int64		ArPos64;
+	int64		FilePos;		// where 'f' position points to (when reading, it usually equals to 'BufferPos + BufferSize')
 
 	bool OpenFile(const char *Mode);
 };
@@ -625,7 +662,7 @@ public:
 
 	virtual void Serialize(void *data, int size);
 	virtual bool Open();
-	virtual int GetFileSize() const;
+	virtual int64 GetFileSize64() const;
 };
 
 
@@ -639,7 +676,7 @@ public:
 	virtual void Serialize(void *data, int size);
 	virtual bool Open();
 	virtual void Close();
-	virtual int GetFileSize() const;
+	virtual int64 GetFileSize64() const;
 
 protected:
 	void FlushBuffer();
@@ -752,7 +789,7 @@ protected:
 // research helper
 inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes)
 {
-	int OldPos = Ar.Tell();
+	int64 OldPos = Ar.Tell64();
 	for (int i = 0; i < NumBytes; i++)
 	{
 		if (Ar.IsStopper() || Ar.IsEof()) break;
@@ -763,7 +800,7 @@ inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes)
 		appPrintf(" %02X", b);
 	}
 	appPrintf("\n");
-	Ar.Seek(OldPos);
+	Ar.Seek64(OldPos);
 }
 
 inline void DUMP_MEM_BYTES(const void* Data, int NumBytes)

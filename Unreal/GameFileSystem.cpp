@@ -296,8 +296,9 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		if (ent->d_name[0] == '.') continue;			// "." or ".."
 		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, ent->d_name);
 		// directory -> recurse
-		struct stat buf;
-		if (stat(Path, &buf) < 0) continue;			// or break?
+		// note: using 'stat64' here because 'stat' ignores large files
+		struct stat64 buf;
+		if (stat64(Path, &buf) < 0) continue;			// or break?
 		if (S_ISDIR(buf.st_mode))
 		{
 			if (recurse)

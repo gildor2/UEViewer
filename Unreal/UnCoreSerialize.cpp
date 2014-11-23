@@ -5,6 +5,10 @@
 #include "UnPackage.h"			// for accessing FPackageFileSummary from FByteBulkData
 #endif
 
+#if _WIN32
+#include <io.h>					// for _filelengthi64
+#endif
+
 
 #define FILE_BUFFER_SIZE		4096
 
@@ -454,6 +458,19 @@ void FArchive::Printf(const char *fmt, ...)
 	FFileArchive classes
 -----------------------------------------------------------------------------*/
 
+#define ArPos			SomethingBad		// guard to not use ArPos here, use ArPos64 instead
+
+#if _WIN32
+
+#define fopen64			fopen
+#define fseeko64		_fseeki64
+
+	#ifndef OLDCRT
+	#define ftello64		_ftelli64
+	#endif
+
+#endif // _WIN32
+
 FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
 :	Options(InOptions)
 ,	f(NULL)
@@ -461,9 +478,8 @@ FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
 ,	Buffer(NULL)
 ,	BufferPos(0)
 ,	BufferSize(0)
+,	ArPos64(0)
 {
-	ArPos = 0;
-
 	// process the filename
 	FullName = appStrdup(Filename);
 	const char *s = strrchr(FullName, '/');
@@ -479,24 +495,35 @@ FFileArchive::~FFileArchive()
 
 void FFileArchive::Seek(int Pos)
 {
-	ArPos = Pos;
+	ArPos64 = Pos;
+}
+
+void FFileArchive::Seek64(int64 Pos)
+{
+	ArPos64 = Pos;
+}
+
+int FFileArchive::Tell() const
+{
+	if (ArPos64 >= (1LL << 31)) appError("Tell %I64X", ArPos64);
+	return (int)ArPos64;
+}
+
+int64 FFileArchive::Tell64() const
+{
+	return ArPos64;
+}
+
+int FFileArchive::GetFileSize() const
+{
+	int64 size = GetFileSize64();
+	if (size >= (1LL << 31)) appError("GetFileSize %I64X", size);
+	return (int)size;
 }
 
 bool FFileArchive::IsEof() const
 {
-	return ArPos < GetFileSize();
-}
-
-FArchive& FFileArchive::operator<<(FName &N)
-{
-	// do nothing
-	return *this;
-}
-
-FArchive& FFileArchive::operator<<(UObject *&Obj)
-{
-	// do nothing
-	return *this;
+	return ArPos64 >= GetFileSize64();
 }
 
 // this function is useful only for FRO_NoOpenError mode
@@ -521,12 +548,12 @@ bool FFileArchive::OpenFile(const char *Mode)
 	guard(FFileArchive::OpenFile);
 	assert(!IsOpen());
 
-	ArPos = FilePos = 0;
+	ArPos64 = FilePos = 0;
 	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
 	BufferPos = 0;
 	BufferSize = 0;
 
-	f = fopen(FullName, Mode);
+	f = fopen64(FullName, Mode);
 	if (f) return true;			// success
 	if (!(Options & FRO_NoOpenError))
 		appError("Unable to open file %s", FullName);
@@ -553,20 +580,20 @@ void FFileReader::Serialize(void *data, int size)
 {
 	guard(FFileReader::Serialize);
 
-	if (ArStopper > 0 && ArPos + size > ArStopper)
-		appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
+	if (ArStopper > 0 && ArPos64 + size > ArStopper)
+		appError("Serializing behind stopper (%X+%X > %X)", ArPos64, size, ArStopper);
 
 	while (size > 0)
 	{
-		int LocalPos = ArPos - BufferPos;
-		if (LocalPos < 0 || LocalPos >= BufferSize)
+		int64 LocalPos64 = ArPos64 - BufferPos;
+		if (LocalPos64 < 0 || LocalPos64 >= BufferSize)
 		{
 			// seek to desired position if needed
-			if (ArPos != FilePos)
+			if (ArPos64 != FilePos)
 			{
-				fseek(f, ArPos, SEEK_SET);
-				assert(ftell(f) == ArPos);
-				FilePos = ArPos;
+				if (fseeko64(f, ArPos64, SEEK_SET) != 0)
+					appError("Error seeking to position %I64X", ArPos64);
+				FilePos = ArPos64;
 			}
 			// the requested data is not in buffer
 			if (size >= FILE_BUFFER_SIZE)
@@ -579,7 +606,7 @@ void FFileReader::Serialize(void *data, int size)
 				GNumSerialize++;
 				GSerializeBytes += size;
 			#endif
-				ArPos += size;
+				ArPos64 += size;
 				FilePos += size;
 				return;
 			}
@@ -595,9 +622,12 @@ void FFileReader::Serialize(void *data, int size)
 			BufferSize = ReadBytes;
 			FilePos += ReadBytes;
 			// update LocalPos
-			LocalPos = ArPos - BufferPos;
-			assert(LocalPos >= 0 && LocalPos < BufferSize);
+			LocalPos64 = ArPos64 - BufferPos;
+			assert(LocalPos64 >= 0 && LocalPos64 < BufferSize);
 		}
+
+		// here we have 32-bit position in buffer
+		int LocalPos = (int)LocalPos64;
 
 		// have something in buffer
 		int CanCopy = BufferSize - LocalPos;
@@ -605,7 +635,7 @@ void FFileReader::Serialize(void *data, int size)
 		memcpy(data, Buffer + LocalPos, CanCopy);
 		data = OffsetPointer(data, CanCopy);
 		size -= CanCopy;
-		ArPos += CanCopy;
+		ArPos64 += CanCopy;
 	}
 
 	unguardf("File=%s", ShortName);
@@ -616,15 +646,21 @@ bool FFileReader::Open()
 	return OpenFile("rb");
 }
 
-int FFileReader::GetFileSize() const
+int64 FFileReader::GetFileSize64() const
 {
 	// lazy file size computation
 	if (FileSize < 0)
 	{
-		fseek(f, 0, SEEK_END);
+#if _WIN32
 		FFileReader* _this = const_cast<FFileReader*>(this);
 		// don't rewind file back
-		_this->FilePos = _this->FileSize = ftell(f);
+		_this->FilePos = _this->FileSize = _filelengthi64(fileno(f));
+#else
+		fseeko64(f, 0, SEEK_END);
+		FFileReader* _this = const_cast<FFileReader*>(this);
+		// don't rewind file back
+		_this->FilePos = _this->FileSize = ftello64(f);
+#endif // _WIN32
 	}
 	return FileSize;
 }
@@ -649,19 +685,21 @@ void FFileWriter::Serialize(void *data, int size)
 
 	while (size > 0)
 	{
-		int LocalPos = ArPos - BufferPos;
-		if (LocalPos < 0 || LocalPos >= FILE_BUFFER_SIZE || size >= FILE_BUFFER_SIZE)
+		int LocalPos64 = ArPos64 - BufferPos;
+		if (LocalPos64 < 0 || LocalPos64 >= FILE_BUFFER_SIZE || size >= FILE_BUFFER_SIZE)
 		{
 			// trying to write outside of buffer
 			FlushBuffer();
 			if (size >= FILE_BUFFER_SIZE)
 			{
 				// large block, write directly to file
-				if (ArPos != FilePos)
+				if (ArPos64 != FilePos)
 				{
-					fseek(f, ArPos, SEEK_SET);
-					assert(ftell(f) == ArPos);
-					FilePos = ArPos;
+					if (fseeko64(f, ArPos64, SEEK_SET) != 0)
+						appError("Error seeking to position %I64X", ArPos64);
+//					int ret = fseeko64(f, ArPos64, SEEK_SET);
+//					assert(ret == 0);
+					FilePos = ArPos64;
 				}
 				int res = fwrite(data, size, 1, f);
 				if (res != 1)
@@ -670,14 +708,17 @@ void FFileWriter::Serialize(void *data, int size)
 				GNumSerialize++;
 				GSerializeBytes += size;
 			#endif
-				ArPos += size;
+				ArPos64 += size;
 				FilePos += size;
 				return;
 			}
-			BufferPos = ArPos;
+			BufferPos = ArPos64;
 			BufferSize = 0;
-			LocalPos = 0;
+			LocalPos64 = 0;
 		}
+
+		// here we have 32-bit position in buffer
+		int LocalPos = (int)LocalPos64;
 
 		// have something for buffer
 		int CanCopy = FILE_BUFFER_SIZE - LocalPos;
@@ -685,7 +726,7 @@ void FFileWriter::Serialize(void *data, int size)
 		memcpy(Buffer + LocalPos, data, CanCopy);
 		data = OffsetPointer(data, CanCopy);
 		size -= CanCopy;
-		ArPos += CanCopy;
+		ArPos64 += CanCopy;
 		BufferSize = max(BufferSize, LocalPos + CanCopy);
 	}
 
@@ -713,8 +754,8 @@ void FFileWriter::FlushBuffer()
 	{
 		if (BufferPos != FilePos)
 		{
-			fseek(f, BufferPos, SEEK_SET);
-			assert(ftell(f) == BufferPos);
+			int ret = fseeko64(f, BufferPos, SEEK_SET);
+			assert(ret == 0);
 			FilePos = BufferPos;
 		}
 		int res = fwrite(Buffer, BufferSize, 1, f);
@@ -730,7 +771,7 @@ void FFileWriter::FlushBuffer()
 	}
 }
 
-int FFileWriter::GetFileSize() const
+int64 FFileWriter::GetFileSize64() const
 {
 	return max(FileSize, FilePos + BufferSize);
 }
