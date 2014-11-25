@@ -474,6 +474,8 @@ void FArchive::Printf(const char *fmt, ...)
 	// WinXP version of msvcrt.dll doesn't have _fseeki64 function
 	inline int fseeko64(FILE* f, int64 offset, int whence)
 	{
+		assert(whence == SEEK_SET);
+		fflush(f);
 		return _lseeki64(fileno(f), offset, whence) == -1 ? -1 : 0;
 	}
 
