@@ -61,7 +61,7 @@ struct ExportedObjectEntry
 
 	int GetHash() const
 	{
-		return ( ((int)Package >> 3) ^ ExportIndex ^ (ExportIndex << 4) ) & (EXPORTED_LIST_HASH_SIZE - 1);
+		return ( ((size_t)Package >> 3) ^ ExportIndex ^ (ExportIndex << 4) ) & (EXPORTED_LIST_HASH_SIZE - 1);
 	}
 };
 

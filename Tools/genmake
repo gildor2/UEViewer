@@ -54,9 +54,9 @@ defined(var)         will be replaced with 0 or 1
 3. System variables:
 
 platform specification:
-	PLATFORM	= win32 | cygwin | unix
+	PLATFORM	= win32 | win64 | cygwin | unix
 	COMPILER	= VisualC | GnuC
-	TARGET		= vc-win32 | mingw32 | cygwin | linux
+	TARGET		= vc-win32 | vc-win64 | mingw32 | cygwin | linux
 		Should specify either "TARGET" or "PLATFORM"+"COMPILER"
 
 global:
@@ -451,6 +451,9 @@ sub InitCompiler {
 		if ($TARGET eq "vc-win32") {
 			$COMPILER = "VisualC";
 			$PLATFORM = "win32";
+		} elsif ($TARGET eq "vc-win64") {
+			$COMPILER = "VisualC";
+			$PLATFORM = "win64";
 		} elsif ($TARGET eq "mingw32") {
 			$COMPILER = "GnuC";
 			$PLATFORM = "win32";
@@ -478,7 +481,7 @@ sub InitCompiler {
 		}
 	} elsif (defined($PLATFORM)) {
 		# defaults for PLATFORM
-		if ($PLATFORM eq "win32") {
+		if ($PLATFORM eq "win32" || $PLATFORM eq "win64") {
 			$COMPILER = "VisualC";
 		} elsif ($PLATFORM eq "cygwin") {
 			$COMPILER = "GnuC";
@@ -507,7 +510,7 @@ sub InitCompiler {
 	if ($PLATFORM eq "unix") {
 		$ExeFileExt = "";
 		$DllFileExt = ".so";
-	} elsif ($PLATFORM eq "win32" || $PLATFORM eq "cygwin") {
+	} elsif ($PLATFORM eq "win32" || $PLATFORM eq "win64" || $PLATFORM eq "cygwin") {
 		$ExeFileExt = ".exe";
 		$DllFileExt = ".dll";
 	}
@@ -518,7 +521,9 @@ sub EmitCompilerDefs {
 	Splitter ("Compiler definitions");
 	if ($COMPILER eq "VisualC") {
 		print "CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS\n";
-		print "LINK = link.exe -nologo -filealign:512 -incremental:no\n";
+		my $machine = "X86";
+		$machine = "X64" if $PLATFORM eq "win64";
+		print "LINK = link.exe -nologo -filealign:512 -incremental:no -machine:$machine\n";
 		print "AR   = link.exe -lib -nologo\n";		# cannot use "LIB" name
 	} elsif ($COMPILER eq "GnuC") {
 		my $platf = "gcc";
@@ -1027,6 +1032,11 @@ sub FlushObjectFile {
 			my $defs = "";
 			$inc = " ".GenerateOptions ($includes, "-I ") if $includes ne "";
 			$defs = " ".GenerateOptions ($defines, "-D ") if $defines ne "";
+			if ($PLATFORM eq "win32") {
+				$defs .= " -D _WIN32 -D WIN32";
+			} else {
+				$defs .= " -D _WIN64 -D WIN64";
+			}
 			$line = "rc.exe -l 0x409 -i ${srcDir}${inc}${defs} -fo\"$objFile\" -dNDEBUG";
 		} else {
 			# C/C++ file

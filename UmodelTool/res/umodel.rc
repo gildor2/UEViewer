@@ -3,5 +3,10 @@
 
 // Enable themes for GUI elements
 // http://www.angelfire.com/hi5/delphizeus/theme_xp.html
+#ifndef _WIN64
 1 RT_MANIFEST "umodel.manifest"
+#else
+1 RT_MANIFEST "umodel64.manifest"
+#endif
+
 IDC_MAIN_ICON ICON "umodel.ico"

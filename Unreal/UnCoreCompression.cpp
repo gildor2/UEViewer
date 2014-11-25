@@ -232,7 +232,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		int r;
 		r = lzo_init();
 		if (r != LZO_E_OK) appError("lzo_init() returned %d", r);
-		unsigned long newLen = UncompressedSize;
+		lzo_uint newLen = UncompressedSize;
 		r = lzo1x_decompress_safe(CompressedBuffer, CompressedSize, UncompressedBuffer, &newLen, NULL);
 		if (r != LZO_E_OK) appError("lzo_decompress(%d,%d) returned %d", CompressedSize, UncompressedSize, r);
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);

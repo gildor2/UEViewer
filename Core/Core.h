@@ -121,7 +121,7 @@ template<>    struct CompileTimeError<true> {};
 #	if _MSC_VER >= 1400
 #		define IS_POD(T)		__is_pod(T)
 #	endif
-#	pragma warning(disable : 4291)			// no matched operator delete found
+//#	pragma warning(disable : 4291)			// no matched operator delete found
 	// this functions are smaller, when in intrinsic form (and, of course, faster):
 #	pragma intrinsic(memcpy, memset, memcmp, abs, fabs, _rotl8, _rotl, _rotr8, _rotr)
 	// allow nested inline expansions
@@ -218,15 +218,16 @@ typedef size_t					address_t;
 #define S_WHITE			"^7"
 
 
+// Using size_t typecasts - that's platform integer type
 template<class T> inline T OffsetPointer(const T ptr, int offset)
 {
-	return (T) ((unsigned)ptr + offset);
+	return (T) ((size_t)ptr + offset);
 }
 
 // Align integer or pointer of any type
 template<class T> inline T Align(const T ptr, int alignment)
 {
-	return (T) (((unsigned)ptr + alignment - 1) & ~(alignment - 1));
+	return (T) (((size_t)ptr + alignment - 1) & ~(alignment - 1));
 }
 
 template<class T> inline void Exchange(T& A, T& B)
@@ -394,6 +395,12 @@ void appDumpMemoryAllocations();
 
 unsigned win32ExceptFilter2();
 #define EXCEPT_FILTER	win32ExceptFilter2() // may use 1==EXCEPTION_EXECUTE_HANDLER or win32ExceptFilter2()
+
+#if _WIN64
+//!! todo
+#undef EXCEPT_FILTER
+#define EXCEPT_FILTER	1		// EXCEPTION_EXECUTE_HANDLER
+#endif
 
 #define guard(func)						\
 	{									\

@@ -207,7 +207,7 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 
 	if (Visible) style |= WS_VISIBLE;
 	HWND wnd = CreateWindowEx(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
-		dialogWnd, (HMENU)id, hInstance, NULL);
+		dialogWnd, (HMENU)(size_t)id, hInstance, NULL);		// convert int -> size_t -> HANDLE to avoid warnings on 64-bit platform
 #if DEBUG_WINDOWS_ERRORS
 	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
 #endif
@@ -229,7 +229,7 @@ HWND UIElement::Window(const wchar_t* className, const wchar_t* text, DWORD styl
 
 	if (Visible) style |= WS_VISIBLE;
 	HWND wnd = CreateWindowExW(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
-		dialogWnd, (HMENU)id, hInstance, NULL);
+		dialogWnd, (HMENU)(size_t)id, hInstance, NULL);
 #if DEBUG_WINDOWS_ERRORS
 	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
 #endif

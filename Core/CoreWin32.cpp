@@ -31,6 +31,9 @@
 
 #endif // VSTUDIO_INTEGRATION
 
+#ifdef _WIN64
+#undef UNWIND_EBP_FRAMES				//!! should review the code and perhaps adopt to Win64
+#endif
 
 #if USE_DBGHELP
 #include <dbghelp.h>
@@ -165,7 +168,7 @@ const char *appSymbolName(address_t addr)
 //		*s = 0;
 	if (s = strrchr(moduleName, '\\'))
 		strcpy(moduleName, s+1);		// remove "path\" part
-	appSprintf(ARRAY_ARG(buf), "%s+0x%X", moduleName, addr - (int)hModule);
+	appSprintf(ARRAY_ARG(buf), "%s+0x%X", moduleName, (int)(addr - (size_t)hModule));
 	return buf;
 #endif // GET_EXTENDED_INFO
 
@@ -288,6 +291,7 @@ static void DumpSEH()
 
 static void DropSEHFrames()
 {
+#ifndef _WIN64
 	__asm
 	{
 		push	edx
@@ -306,6 +310,7 @@ static void DropSEHFrames()
 		pop		ebx
 		pop		edx
 	}
+#endif // _WIN64
 }
 
 
@@ -432,9 +437,15 @@ long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 
 		// log error
 		CONTEXT* ctx = info->ContextRecord;
+#ifndef _WIN64
 		appSprintf(ARRAY_ARG(GErrorHistory), "%s (%08X) at %s\n",
 			excName, info->ExceptionRecord->ExceptionCode, appSymbolName(ctx->Eip)
 		);
+#else
+		appSprintf(ARRAY_ARG(GErrorHistory), "%s (%08X) at %s\n",
+			excName, info->ExceptionRecord->ExceptionCode, appSymbolName(ctx->Rip)
+		);
+#endif // _WIN64
 #if UNWIND_EBP_FRAMES
 		UnwindEbpFrame((address_t*) ctx->Ebp);
 #endif // UNWIND_EBP_FRAMES
@@ -445,6 +456,7 @@ long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
+#ifndef _WIN64
 __declspec(naked) unsigned win32ExceptFilter2()
 {
 	__asm {
@@ -453,6 +465,7 @@ __declspec(naked) unsigned win32ExceptFilter2()
 		retn			// return value from win32ExceptFilter()
 	}
 }
+#endif // _WIN64
 
 #endif // WIN32_USE_SEH
 

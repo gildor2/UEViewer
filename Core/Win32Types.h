@@ -19,23 +19,26 @@
 #	endif
 #	ifndef WINGDIAPI
 #		define WINGDIAPI
-#		ifdef _WIN64
-#			error Review these types!
-#		endif
+		typedef void*			HANDLE;
+	#ifndef _WIN64
+		typedef int				INT_PTR;
+		typedef long			LONG_PTR;
+	#else
+		typedef __int64			INT_PTR;
+		typedef __int64			LONG_PTR;
+	#endif
 		typedef unsigned		HDC;
-		typedef unsigned		HGLRC;
+		typedef HANDLE			HGLRC;
 		typedef const char *	LPCSTR;
 		typedef int				BOOL;
 		typedef unsigned char	BYTE;
 		typedef unsigned short	WORD;
 		typedef unsigned int	DWORD;
 		typedef unsigned int	UINT;
-		typedef void*			HANDLE;
-		typedef void*			HWND;
-		typedef void*			HMENU;
-		typedef size_t			WPARAM;
-		typedef long			LPARAM;
-		typedef int				INT_PTR;
+		typedef HANDLE			HWND;
+		typedef HANDLE			HMENU;
+		typedef INT_PTR			WPARAM;
+		typedef LONG_PTR		LPARAM;
 		typedef int (APIENTRY *PROC)();
 		typedef void PIXELFORMATDESCRIPTOR;		// structure
 		typedef PIXELFORMATDESCRIPTOR * LPPIXELFORMATDESCRIPTOR;

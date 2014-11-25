@@ -33,7 +33,8 @@ last_revision=${last_revision##* }		# cut "#define ..."
 #-------------------------------------------------------------
 
 PLATFORM="vc-win32"
-#PLATFORM="mingw32"
+#PLATFORM="vc-win64"
+#PLATFORM="mingw32" - not implemented yet
 
 # force PLATFORM=linux under Linux OS
 #?? check this, when cross-compile under wine
@@ -64,6 +65,9 @@ $root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
 case "$PLATFORM" in
 	"vc-win32")
 		vc32tools --make $makefile || exit 1
+		;;
+	"vc-win64")
+		vc32tools --64 --make $makefile || exit 1
 		;;
 	"mingw32"|"cygwin")
 		PATH=/bin:/usr/bin:$PATH			# configure paths for Cygwin

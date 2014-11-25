@@ -16,7 +16,7 @@ sources(MAIN) = {
 	Core/*.cpp
 	UI/*.cpp
 	$UMODEL/*.cpp
-!if "$PLATFORM" eq "win32"
+!if "$PLATFORM" eq "win32" || "$PLATFORM" eq "win64"
 	$UMODEL/res/umodel.rc
 !endif
 }
