@@ -463,10 +463,20 @@ void FArchive::Printf(const char *fmt, ...)
 #if _WIN32
 
 #define fopen64			fopen
-#define fseeko64		_fseeki64
 
 	#ifndef OLDCRT
+
+	#define fseeko64		_fseeki64
 	#define ftello64		_ftelli64
+
+	#else
+
+	// WinXP version of msvcrt.dll doesn't have _fseeki64 function
+	inline int fseeko64(FILE* f, int64 offset, int whence)
+	{
+		return _lseeki64(fileno(f), offset, whence) == -1 ? -1 : 0;
+	}
+
 	#endif
 
 #endif // _WIN32

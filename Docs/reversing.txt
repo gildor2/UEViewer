@@ -23,3 +23,9 @@ Interface/Classes/CharacterCreateMenuWnd.uc, InventoryWnd.uc
 
 MeshComponent
 RequestCreateCharacter() - native
+
+===============================================================================
+Unreal Engine 4
+===============================================================================
+PackageFileSummary:
+- найти строку "The file '%s' contains" ...

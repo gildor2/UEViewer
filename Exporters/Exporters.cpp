@@ -254,14 +254,7 @@ bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...)
 	va_end(argptr);
 
 	if (!filename) return false;
-
-	FILE *f = fopen(filename, "r");
-	if (f)
-	{
-		fclose(f);
-		return true;
-	}
-	return false;
+	return appFileExists(filename);
 }
 
 
@@ -279,12 +272,7 @@ FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
 	if (GDontOverwriteFiles)
 	{
 		// check file presence
-		FILE *f = fopen(filename, "r");
-		if (f)
-		{
-			fclose(f);
-			return NULL;
-		}
+		if (appFileExists(filename)) return NULL;
 	}
 
 //	appPrintf("... writting %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, filename);

@@ -805,8 +805,7 @@ void FArchive::OverrideVersion()
 			ArVer = OVERRIDE_SF2_VER;
 	}
 #endif // SPECIALFORCE2
-#if UNREAL4
-#endif
+
 	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }

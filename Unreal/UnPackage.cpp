@@ -387,7 +387,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	}
 
 	if (Ar.ArVer == 0 && Ar.ArLicenseeVer == 0)
-		appError("Unversioned UE4 packages are not supported");
+		appError("Unversioned UE4 packages are not supported. Please override game using UI or command line.");
 
 	Ar << S.HeadersSize;
 	Ar << S.PackageGroup;

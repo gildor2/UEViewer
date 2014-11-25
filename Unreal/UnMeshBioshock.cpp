@@ -255,20 +255,7 @@ struct FBioshockUnk7					// Bioshock 2
 	{
 		assert(Ar.IsLoading);
 		Ar << S.Version << S.Size << S.Flags;
-#if 0
-		byte *Buffer = new byte[S.Size];
-		Ar.Serialize(Buffer, S.Size);
-		char Name[256];
-		static int N = 0;
-		appSprintf(ARRAY_ARG(Name), "data_%d.bin", N++);
-		FILE *f = fopen(Name, "wb");
-		assert(f);
-		fwrite(Buffer, S.Size, 1, f);
-		fclose(f);
-		delete Buffer;
-#else
 		Ar.Seek(Ar.Tell() + S.Size);
-#endif
 		return Ar;
 	}
 };

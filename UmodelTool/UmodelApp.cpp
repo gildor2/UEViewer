@@ -361,14 +361,10 @@ static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 	char filename[256];
 	appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s.tga", ObjectName);
 	int retry = 1;
-	while (true)
+	while (appFileExists(filename))
 	{
-		FILE *f = fopen(filename, "r");
-		if (!f) break;
-		fclose(f);
-		// if file exists, append index
-		retry++;
-		appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s_%02d.tga", ObjectName, retry);
+		// if file exists, append an index
+		appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s_%02d.tga", ObjectName, ++retry);
 	}
 	appPrintf("Writting screenshot %s\n", filename);
 	appMakeDirectoryForFile(filename);
