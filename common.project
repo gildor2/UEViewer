@@ -13,14 +13,6 @@ OLDCRT     = 1
 #	Compiler-specific options
 #------------------------------------------------
 
-!if ("$PLATFORM" ne "win32") && ("$PLATFORM" ne "win64")
-	# linux/cygwin + GCC
-	STDLIBS   = stdc++ m GL 							# libm for math.h functions
-	!if "$PLATFORM" ne "cygwin"
-		STDLIBS += dl	# dlopen() and friends
-	!endif
-!endif
-
 !if "$COMPILER" eq "VisualC"
 	CPP_EXCEPT = 0										# used with WIN32_USE_SEH in Core.h
 	OPTIONS = -GS- -GR- 								#?? VC8+
@@ -41,6 +33,12 @@ OLDCRT     = 1
 !endif
 
 !if "$COMPILER" eq "GnuC"
+	# linux/cygwin + GCC
+	STDLIBS   = stdc++ m GL 							# libm for math.h functions
+	!if "$PLATFORM" ne "cygwin"
+		STDLIBS += dl	# dlopen() and friends
+	!endif
+
 	LIBC      = shared
 	OPTIONS   = -msse									# enable SSE instructions
 	OPTIONS   += -std=c++0x								# allow C++11 features
@@ -52,8 +50,8 @@ OLDCRT     = 1
 	}
 !endif
 
+# GCC debug build
 !if ("$COMPILER" eq "GnuC") && 0
-	# GCC debug build
 	#!! should disable "-s" option from linker command
 	OPTIONS += -g3 -fno-omit-frame-pointer -funwind-tables -fstack-protector -fno-optimize-sibling-calls
 	LINKFLAGS += -rdynamic

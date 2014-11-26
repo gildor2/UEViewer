@@ -54,10 +54,12 @@ defined(var)         will be replaced with 0 or 1
 3. System variables:
 
 platform specification:
-	PLATFORM	= win32 | win64 | cygwin | unix
+	PLATFORM	= win32 | win64 | cygwin | unix | unix32 | unix64
 	COMPILER	= VisualC | GnuC
-	TARGET		= vc-win32 | vc-win64 | mingw32 | cygwin | linux
+	TARGET		= vc-win32 | vc-win64 | mingw32 | cygwin | linux | linux32 | linux64
 		Should specify either "TARGET" or "PLATFORM"+"COMPILER"
+		"linux" = use current system's platform
+		"linux32" or "linux64" = cross-compile for different platform
 
 global:
 	CPP_EXCEPT	= 1 == undef | 0		0 = disable C++ exceptions
@@ -463,6 +465,12 @@ sub InitCompiler {
 		} elsif ($TARGET eq "linux") {
 			$COMPILER = "GnuC";
 			$PLATFORM = "unix";
+		} elsif ($TARGET eq "linux32") {
+			$COMPILER = "GnuC";
+			$PLATFORM = "unix32";
+		} elsif ($TARGET eq "linux64") {
+			$COMPILER = "GnuC";
+			$PLATFORM = "unix64";
 		} else {
 			Error ("Unknown TARGET: \"$TARGET\"");
 		}
@@ -485,7 +493,7 @@ sub InitCompiler {
 			$COMPILER = "VisualC";
 		} elsif ($PLATFORM eq "cygwin") {
 			$COMPILER = "GnuC";
-		} elsif ($PLATFORM eq "unix") {
+		} elsif ($PLATFORM eq "unix" || $PLATFORM eq "unix32" || $PLATFORM eq "unix64") {
 			$COMPILER = "GnuC";
 		} else {
 			Error ("Unknown PLATFORM: \"$PLATFORM\"");
@@ -506,13 +514,17 @@ sub InitCompiler {
 	} elsif ($COMPILER eq "GnuC") {
 		$ObjFileExt = ".o";
 		$LibFileExt = ".a";
+	} else {
+		die;
 	}
-	if ($PLATFORM eq "unix") {
+	if ($PLATFORM eq "unix" || $PLATFORM eq "unix32" || $PLATFORM eq "unix64") {
 		$ExeFileExt = "";
 		$DllFileExt = ".so";
 	} elsif ($PLATFORM eq "win32" || $PLATFORM eq "win64" || $PLATFORM eq "cygwin") {
 		$ExeFileExt = ".exe";
 		$DllFileExt = ".dll";
+	} else {
+		die;
 	}
 }
 
@@ -527,11 +539,15 @@ sub EmitCompilerDefs {
 		print "AR   = link.exe -lib -nologo\n";		# cannot use "LIB" name
 	} elsif ($COMPILER eq "GnuC") {
 		my $platf = "gcc";
+		# platform override
 		if ($PLATFORM eq "win32") {
 			# mingw32
 			$platf .= " -mno-cygwin";
+		} elsif ($PLATFORM eq "unix32") {
+			$platf .= " -m32";
+		} elsif ($PLATFORM eq "unix64") {
+			$platf .= " -m64";
 		}
-		#?? test -pipe under Win9X and Linux (cygwin/winxp - ok)
 		print "CPP  = $platf -pipe -c\n";
 		print "LINK = $platf -pipe -s\n";
 		print "AR   = ar -rcs\n";					# r=(replace files), c=(create archive), s=(write object file index)
@@ -631,7 +647,7 @@ sub AddObjectList {
 			if ($opt >= 2) {
 				$options .= " -Zi -Fd\"$objdir/\"";	# enable debugging information; note: no final slash, so pdb will be names as objdir
 			}
-		} elsif ($COMPILER eq "GnuC") {		#!! GnuC - compiler options
+		} elsif ($COMPILER eq "GnuC") {
 			my $opt = GetSrcOption ("WARNLEVEL");
 			# warning level: GnuC can disable warnings or enable all warnings
 			if ($opt ne "") {
@@ -1245,6 +1261,8 @@ sub FlushTargetText {
 		$prefix .= "\t\@echo Creating $target \"$n\" ...\n";
 		$line = "\t\$(LINK) -o $n";
 		$line .= $fileList;
+		my $linkflags = GetTargetOption ($n, "LINKFLAGS");
+		$line .= " $linkflags" if ($linkflags ne "");
 		# static/shared libgcc
 		my $crt = GetSrcOption ("LIBC");
 		if ($crt eq "static") {

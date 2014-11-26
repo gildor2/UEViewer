@@ -112,7 +112,7 @@ IOS_LIBS_FILES = \
 
 umodel : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES)
 	@echo Creating executable "umodel" ...
-	$(LINK) -o umodel $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -shared-libgcc -L./libs -lstdc++ -lm -lGL -ldl -lSDL2 -lSDL2main
+	$(LINK) -o umodel $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -shared-libgcc -lstdc++ -lm -lGL -ldl -lSDL2 -lSDL2main
 
 #------------------------------------------------------------------------------
 #	compiling source files

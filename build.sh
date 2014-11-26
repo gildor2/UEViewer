@@ -39,6 +39,7 @@ PLATFORM="vc-win32"
 # force PLATFORM=linux under Linux OS
 #?? check this, when cross-compile under wine
 [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
+#[ "$PLATFORM" == "linux" ] && PLATFORM="linux64"
 
 export vc_ver=10
 
@@ -73,7 +74,7 @@ case "$PLATFORM" in
 		PATH=/bin:/usr/bin:$PATH			# configure paths for Cygwin
 		gccfilt make -f $makefile || exit 1
 		;;
-	"linux")
+	linux*)
 		make -j 4 -f $makefile || exit 1	# use 4 jobs for build
 		;;
 	*)
