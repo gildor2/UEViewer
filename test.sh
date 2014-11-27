@@ -4,9 +4,10 @@ function usage()
 {
 	cat <<EOF
 Usage:
-    test.sh [--nobuild] [--exe=...] [--game=...] <umodel options>
+    test.sh [--64][--nobuild] [--exe=...] [--game=...] <umodel options>
 
 Options:
+    --64                    build 64-bit version
     --nobuild               prevent from umodel rebuilding
     --exe=<executable>      do not build when overrided (useful for testing with older exe from svn)
     --<game>                choose predefined game path; <game> = ut2|ut3|gow2 etc
@@ -198,6 +199,7 @@ function rund()   {	run1 "data" $*; }
 #------------------------------------------------------------------------------
 
 cmd=""
+buildopt=
 nobuild=
 
 # parse our command line options
@@ -205,6 +207,9 @@ for arg in $*; do
 	case $arg in
 	--help)
 		usage
+		;;
+	--64)
+		buildopt=vc-win64
 		;;
 	--nobuild)
 		nobuild=1
@@ -230,7 +235,7 @@ done
 # rebuild umodel when not desired opposite
 if [ -z "$nobuild" ]; then
 	console_title "Building umodel ..."
-	./build.sh || exit 1
+	./build.sh $buildopt || exit 1
 fi
 
 # find whether -path= is used or not

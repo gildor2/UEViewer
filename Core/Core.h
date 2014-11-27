@@ -11,6 +11,7 @@
 
 #if _MSC_VER
 #	include <intrin.h>
+#	include <excpt.h>
 #endif
 
 #if __GNUC__
@@ -393,14 +394,8 @@ void appDumpMemoryAllocations();
 
 #else
 
-unsigned win32ExceptFilter2();
-#define EXCEPT_FILTER	win32ExceptFilter2() // may use 1==EXCEPTION_EXECUTE_HANDLER or win32ExceptFilter2()
-
-#if _WIN64
-//!! todo
-#undef EXCEPT_FILTER
-#define EXCEPT_FILTER	1		// EXCEPTION_EXECUTE_HANDLER
-#endif
+long win32ExceptFilter(struct _EXCEPTION_POINTERS *info);
+#define EXCEPT_FILTER	win32ExceptFilter(GetExceptionInformation())
 
 #define guard(func)						\
 	{									\

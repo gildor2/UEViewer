@@ -351,7 +351,7 @@ void UnwindEbpFrame(const address_t *data)
 #endif // UNWIND_EBP_FRAMES
 
 
-long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
+long win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 {
 #if VSTUDIO_INTEGRATION
 	static bool skipAllHandlers = false;
@@ -448,6 +448,11 @@ long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 #endif // _WIN64
 #if UNWIND_EBP_FRAMES
 		UnwindEbpFrame((address_t*) ctx->Ebp);
+#elif VSTUDIO_INTEGRATION
+		address_t stackTrace[64];
+		appCaptureStackTrace(ARRAY_ARG(stackTrace), 7);
+		appPrintf("\nCall stack:\n");
+		appDumpStackTrace(ARRAY_ARG(stackTrace));
 #endif // UNWIND_EBP_FRAMES
 	} CATCH {
 		// do nothing
@@ -455,17 +460,6 @@ long WINAPI win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }
-
-#ifndef _WIN64
-__declspec(naked) unsigned win32ExceptFilter2()
-{
-	__asm {
-		push	[ebp-0x14]
-		call	win32ExceptFilter
-		retn			// return value from win32ExceptFilter()
-	}
-}
-#endif // _WIN64
 
 #endif // WIN32_USE_SEH
 

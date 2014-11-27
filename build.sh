@@ -41,6 +41,9 @@ PLATFORM="vc-win32"
 [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
 #[ "$PLATFORM" == "linux" ] && PLATFORM="linux64"
 
+# allow platform overriding from command line
+[ "$1" ] && PLATFORM=$1
+
 export vc_ver=10
 
 [ "$project" ] || project="UmodelTool/umodel"		# setup default prohect name
