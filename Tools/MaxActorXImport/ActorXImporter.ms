@@ -10,6 +10,9 @@
 
  Revision History:
 
+	28.11.2014 v1.28
+	- added "mesh translation" options to settings
+
 	16.12.2013 v1.27
 	- added option "Don't conjugate root bone"
 
@@ -135,7 +138,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 127
+global AX_IMPORTER_VERSION = 128
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -157,6 +160,9 @@ global g_reposBones
 global g_rotY
 global g_rotP
 global g_rotR
+global g_transX
+global g_transY
+global g_transZ
 global g_meshScale
 global g_reorientBones
 global g_dontConjugateRoot
@@ -187,6 +193,9 @@ fn axDefaultSettings =
 	g_rotY       = 0
 	g_rotP       = 0
 	g_rotR       = 0
+	g_transX     = 0
+	g_transY     = 0
+	g_transZ     = 0
 	g_meshScale  = 1.0
 	g_reorientBones = false
 	g_dontConjugateRoot = false
@@ -265,6 +274,9 @@ fn axSerializeSettings isLoading =
 	axDoSetting "MeshYaw"       "g_rotY"
 	axDoSetting "MeshPitch"     "g_rotP"
 	axDoSetting "MeshRoll"      "g_rotR"
+	axDoSetting "MeshX"         "g_transX"
+	axDoSetting "MeshY"         "g_transY"
+	axDoSetting "MeshZ"         "g_transZ"
 	axDoSetting "MeshScale"     "g_meshScale"
 	axDoSetting "ReorientBones" "g_reorientBones"
 	axDoSetting "DontConjRoot"  "g_dontConjugateRoot"
@@ -437,10 +449,12 @@ fn axFindFile path filename recurse:false =
 )
 
 
-fn axGetRotationMatrix =
+fn axGetRootMatrix =
 (
 	local angles = eulerAngles g_rotR -g_rotP -g_rotY
-	angles as matrix3
+	local m = angles as matrix3
+	m.translation = [g_transX, g_transY, g_transZ]
+	m
 )
 
 
@@ -775,7 +789,7 @@ fn RestoreBindpose =
 
 	try
 	(
-		local rotMatrix = axGetRotationMatrix()
+		local rotMatrix = axGetRootMatrix()
 		-- note: should rotate every bone because we are not applying parent's rotation here
 		-- find bones
 		for i = 1 to MeshBones.count do
@@ -1246,7 +1260,7 @@ fn ImportPskFile filename skelOnly:false =
 	-- apply mesh rotation
 	if numBones >= 1 then
 	(
-		MaxBones[1].transform = MaxBones[1].transform * axGetRotationMatrix()
+		MaxBones[1].transform = MaxBones[1].transform * axGetRootMatrix()
 	)
 
 	-- combine with old skeleton for correct work of combined meshes
@@ -1653,7 +1667,7 @@ fn ImportPsaFile filename trackNum all:false =
 				-- rotate animation
 				if MaxBones[1] != undefined then
 				(
-					MaxBones[1].transform = MaxBones[1].transform * axGetRotationMatrix()
+					MaxBones[1].transform = MaxBones[1].transform * axGetRootMatrix()
 				)
 			)
 			-- progress bar
@@ -1728,7 +1742,7 @@ fn axLoadAnimation index =
 rollout axImportRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.27"
+	label     Lbl1 "Version 1.28"
 	label     Lbl2 "\xA9 2009-2014 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -1836,6 +1850,13 @@ rollout axSettingsRollout "Settings"
 		button   BtnRotApply   "Apply"
 	)
 
+	group "Mesh offset"
+	(
+		spinner  SpnTX "X"     range:[-10000,10000,g_transX] type:#float scale:0.01 fieldwidth:50 align:#left across:3
+		spinner  SpnTY "Y"     range:[-10000,10000,g_transY] type:#float scale:0.01 fieldwidth:50
+		spinner  SpnTZ "Z"     range:[-10000,10000,g_transZ] type:#float scale:0.01 fieldwidth:50 align:#right
+	)
+
 	group "Materials"
 	(
 		edittext EdTexPath     "Path to materials" text:g_texDir width:180 across:2
@@ -1860,6 +1881,9 @@ rollout axSettingsRollout "Settings"
 	on SpnRY changed val do g_rotY = val
 	on SpnRP changed val do g_rotP = val
 	on SpnRR changed val do g_rotR = val
+	on SpnTX changed val do g_transX = val
+	on SpnTY changed val do g_transY = val
+	on SpnTZ changed val do g_transZ = val
 	on BtnRotMaya pressed do
 	(
 		g_rotY = SpnRY.value = -90
