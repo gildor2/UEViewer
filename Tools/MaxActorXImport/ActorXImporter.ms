@@ -12,6 +12,7 @@
 
 	28.11.2014 v1.28
 	- added "mesh translation" options to settings
+	- "advanced settings" are not stored to the ini file anymore
 
 	16.12.2013 v1.27
 	- added option "Don't conjugate root bone"
@@ -278,8 +279,8 @@ fn axSerializeSettings isLoading =
 	axDoSetting "MeshY"         "g_transY"
 	axDoSetting "MeshZ"         "g_transZ"
 	axDoSetting "MeshScale"     "g_meshScale"
-	axDoSetting "ReorientBones" "g_reorientBones"
-	axDoSetting "DontConjRoot"  "g_dontConjugateRoot"
+--	axDoSetting "ReorientBones" "g_reorientBones"
+--	axDoSetting "DontConjRoot"  "g_dontConjugateRoot"
 )
 
 
