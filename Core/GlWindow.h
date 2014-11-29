@@ -73,7 +73,7 @@ extern bool GShowDebugInfo;
 	Text output
 -----------------------------------------------------------------------------*/
 
-#undef RGB					// defined in windows
+#undef RGB					// defined in windows headers
 
 // constant colors
 #define RGBA(r,g,b,a)		( (unsigned)((r)*255) | ((unsigned)((g)*255)<<8) | ((unsigned)((b)*255)<<16) | ((unsigned)((a)*255)<<24) )

@@ -6,6 +6,8 @@
 #	include "CoreGL.h"		//?? for materials only
 #endif
 
+#undef PLATFORM_UNKNOWN		// defined in windows headers
+
 
 // forward declarations
 class FArchive;

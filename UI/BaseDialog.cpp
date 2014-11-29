@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <CommCtrl.h>
 #include <ShellAPI.h>				// for ShellExecute
+#include <Shlwapi.h>				// for DllGetVersion stuff
 #endif
 
 #include "BaseDialog.h"
@@ -71,6 +72,7 @@
 #define DEFAULT_CHECKBOX_HEIGHT		18
 #define DEFAULT_EDIT_HEIGHT			20
 #define DEFAULT_COMBOBOX_HEIGHT		20
+#define DEFAULT_COMBOBOX_LIST_HEIGHT 200	// height of combobox dropdown list
 #define DEFAULT_LISTBOX_HEIGHT		-1
 #define DEFAULT_TREEVIEW_HEIGHT		-1
 #define DEFAULT_TREE_ITEM_HEIGHT	0
@@ -594,6 +596,28 @@ bool UIButton::HandleCommand(int id, int cmd, LPARAM lParam)
 	UIMenuButton
 -----------------------------------------------------------------------------*/
 
+static int GetComctl32Version()
+{
+	static DWORD dwVersion = 0;
+	if (dwVersion) return dwVersion;	// already checked
+
+	HINSTANCE hInstDll = GetModuleHandle("comctl32.dll");
+	if (!hInstDll) return 0;
+
+	DLLGETVERSIONPROC pDllGetVersion;
+	pDllGetVersion = (DLLGETVERSIONPROC)GetProcAddress(hInstDll, "DllGetVersion");
+	if (!pDllGetVersion) return 0;
+
+	DLLVERSIONINFO dvi;
+	memset(&dvi, 0, sizeof(dvi));
+	dvi.cbSize = sizeof(dvi);
+
+	HRESULT hr = (*pDllGetVersion)(&dvi);
+	if (SUCCEEDED(hr))
+		dwVersion = (dvi.dwMajorVersion << 8) | dvi.dwMinorVersion;
+	return dwVersion;
+}
+
 UIMenuButton::UIMenuButton(const char* text)
 :	Label(text)
 {
@@ -608,7 +632,11 @@ void UIMenuButton::Create(UIBaseDialog* dialog)
 	if (Id == 0 || Id >= FIRST_DIALOG_ID)
 		Id = dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
 
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_SPLITBUTTON, 0, dialog);
+	// should check Common Controls library version - if it's too low, control's window
+	// will be created anyway, but will look completely wrong
+	DWORD flags = WS_TABSTOP;
+	if (GetComctl32Version() >= 0x600) flags |= BS_SPLITBUTTON; // not supported in comctl32.dll prior version 6.00
+	Wnd = Window(WC_BUTTON, *Label, flags, 0, dialog);
 	UpdateEnabled();
 }
 
@@ -926,9 +954,13 @@ void UICombobox::Create(UIBaseDialog* dialog)
 	Parent->AddVerticalSpace();
 	Id = dialog->GenerateDialogId();
 
+	// Note: we're sending DEFAULT_COMBOBOX_LIST_HEIGHT instead of control's Height here, otherwise
+	// dropdown list could appear empty (with zero height) or systems not supporting visual styles
+	// (pre-XP Windows) or when dropdown list is empty
 	Wnd = Window(WC_COMBOBOX, "",
 		CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
-		WS_EX_CLIENTEDGE, dialog);
+		WS_EX_CLIENTEDGE, dialog,
+		Id, -1, -1, -1, DEFAULT_COMBOBOX_LIST_HEIGHT);
 	// add items
 	for (int i = 0; i < Items.Num(); i++)
 		SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)(*Items[i]));
