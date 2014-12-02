@@ -1893,8 +1893,11 @@ rollout axToolsRollout "Tools"
 	on BtnBatchExport     pressed do fileIn "export_fbx.ms"
 	on BtnReloadScript    pressed do
 	(
-		axStoreLayout axInfoRollout
-		fileIn(getSourceFileName())
+		if getSourceFileName != undefined then	-- checking Max version (Max9+) ...
+		(
+			axStoreLayout axInfoRollout
+			fileIn(getSourceFileName())
+		)
 	)
 )
 
@@ -2015,14 +2018,17 @@ if (g_axImporterVersion == undefined) then
 	axDefaultSettings()
 	axSerializeSettings(true)
 
-	-- Add action handler (macro script).
-	-- Max will copy contents of macroScript() block to the "AppData/Local/Autodesk/3dsMax/*/ENU/usermacros".
-	-- To avoid copying of entire file we're generating string which will simply execute THIS file.
-	str = "macroScript GildorTools_ActorXImporter category:\"Gildor Tools\" buttontext:\"ActorX Importer\" tooltip:\"ActorX Importer\"\n" \
-		+ "(\n" \
-		+ "    fileIn \"" + getSourceFileName() + "\"\n" \
-		+ ")\n"
-	execute str
+	if getSourceFileName != undefined then	-- checking Max version (Max9+) ...
+	(
+		-- Add action handler (macro script).
+		-- Max will copy contents of macroScript() block to the "AppData/Local/Autodesk/3dsMax/*/ENU/usermacros".
+		-- To avoid copying of entire file we're generating string which will simply execute THIS file.
+		str = "macroScript GildorTools_ActorXImporter category:\"Gildor Tools\" buttontext:\"ActorX Importer\" tooltip:\"ActorX Importer\"\n" \
+			+ "(\n" \
+			+ "    fileIn \"" + getSourceFileName() + "\"\n" \
+			+ ")\n"
+		execute str
+	)
 )
 
 
