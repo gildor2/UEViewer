@@ -10,6 +10,13 @@
 
  Revision History:
 
+	02.12.2014 v1.29
+	- ActorX Imported now could be bound to toolbar, keyboard or menu - use "Customize user interface",
+	  category "Gildor Tools", and then use "ActorX Importer" as you like
+	- reordered controls, separated some options to own rollouts for easy reordering etc
+	- preserving dialog position, scroll position and rollout "open" state during 3ds Max session (until
+	  Max closed)
+
 	28.11.2014 v1.28
 	- added "mesh translation" options to settings
 	- "advanced settings" are not stored to the ini file anymore
@@ -139,7 +146,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 128
+global AX_IMPORTER_VERSION = 129
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -187,7 +194,7 @@ fn axDefaultSettings =
 	g_lastDir1   = ""
 	g_lastDir2   = ""
 	g_texDir     = ""
-	g_texRecurse = false
+	g_texRecurse = true
 	g_texMissAction = 1
 	g_boneSize   = 0.5
 	g_reposBones = true
@@ -283,30 +290,6 @@ fn axSerializeSettings isLoading =
 --	axDoSetting "DontConjRoot"  "g_dontConjugateRoot"
 )
 
-
-global g_axImporterInited
-global g_axImporterVersion
-if (g_axImporterInited != true) then
-(
-	-- initialize plugin
-	g_axImporterInited = true
-	g_axImporterVersion = AX_IMPORTER_VERSION
-	heapSize += 33554432	-- 32 Mb; will speedup most tasks
-	Anims     = #()
-	MeshBones = #()
-	axDefaultSettings()
-	axSerializeSettings(true)
-)
-
-
-if (g_axImporterVersion != AX_IMPORTER_VERSION) then
-(
-	format "ActorX Importer were updated while 3ds Max is running.\nReloading config settings.\n"
-	--?? used twice, make a separate function ?
-	g_axImporterVersion = AX_IMPORTER_VERSION
-	axDefaultSettings()
-	axSerializeSettings(true)
-)
 
 -------------------------------------------------------------------------------
 --	Service functions
@@ -1732,6 +1715,37 @@ fn ImportPsaFile filename trackNum all:false =
 --	User interface
 -------------------------------------------------------------------------------
 
+-- layout
+global axRolloutList
+global axRolloutStates
+global g_axScrollPos
+
+fn axStoreLayout roll =
+(
+	if axRolloutStates == undefined then axRolloutStates = #()
+	for i = 1 to axRolloutList.count do
+	(
+		axRolloutStates[i] = axRolloutList[i].open
+	)
+	-- sometimes 'roll' is non-null, but it's property 'scrollPos' is inaccessible
+	if roll.scrollPos != undefined then g_axScrollPos = roll.scrollPos
+)
+
+
+fn axRestoreLayout roll =
+(
+	if axRolloutStates != undefined then
+	(
+		for i = 1 to axRolloutList.count do
+		(
+			axRolloutList[i].open = axRolloutStates[i]
+		)
+	)
+	-- when execing first time, layout will not be stored, and g_axScrollPos will be undefined
+	if g_axScrollPos != undefined then roll.scrollPos = g_axScrollPos
+)
+
+
 global MeshFileName
 global AnimFileName
 
@@ -1740,22 +1754,51 @@ fn axLoadAnimation index =
 	if (index > 0) and (index <= Anims.count) then ImportPsaFile AnimFileName index
 )
 
-rollout axImportRollout "ActorX Importer"
+
+rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.28"
+	label     Lbl1 "Version 1.29"
 	label     Lbl2 "\xA9 2009-2014 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black
 
-	Group "Mesh Import"
+	on axInfoRollout close do
 	(
-		checkbox ChkSeeThru    "See-Thru Mesh" checked:g_seeThru
-		checkbox ChkSkelOnly   "Load skeleton only" checked:g_skelOnly
-		button   BtnImportPsk  "Import PSK ..."
+		format "Saving settings ...\n"
+		axSerializeSettings false
+		axStoreLayout axInfoRollout
 	)
+)
 
+
+rollout axMeshImportRollout "Mesh Import"
+(
+	checkbox ChkSeeThru    "See-Thru Mesh" checked:g_seeThru
+	checkbox ChkSkelOnly   "Load skeleton only" checked:g_skelOnly
+	button   BtnImportPsk  "Import PSK ..."
+
+	-- event handlers
+
+	on ChkSeeThru    changed state do g_seeThru    = state
+	on ChkSkelOnly   changed state do g_skelOnly   = state
+
+	on BtnImportPsk pressed do
+	(
+		local filename = getOpenFileName types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
+		if filename != undefined then
+		(
+			MeshFileName = filename
+			g_lastDir1 = getFilenamePath MeshFileName
+			if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
+		)
+	)
+)
+
+
+rollout axAnimImportRollout "Animation Import"
+(
 	Group "Animation Import"
 	(
 		button   BtnImportPsa  "Import PSA ..."
@@ -1769,17 +1812,6 @@ rollout axImportRollout "ActorX Importer"
 	)
 
 	-- event handlers
-
-	on BtnImportPsk pressed do
-	(
-		local filename = getOpenFileName types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
-		if filename != undefined then
-		(
-			MeshFileName = filename
-			g_lastDir1 = getFilenamePath MeshFileName
-			if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
-		)
-	)
 
 	on BtnImportPsa pressed do
 	(
@@ -1801,41 +1833,73 @@ rollout axImportRollout "ActorX Importer"
 	on BtnImportAll pressed       do ImportPsaFile AnimFileName 1 all:true
 	on LstAnims doubleClicked sel do axLoadAnimation sel
 
-	on ChkSeeThru    changed state do g_seeThru    = state
-	on ChkSkelOnly   changed state do g_skelOnly   = state
 	on ChkAnimTime   changed state do g_updateTime = state
 	on ChkFixLooping changed state do g_fixLooping = state
 	on ChkPlayAnim   changed state do g_playAnim   = state
 	on LstTransMode  selected mode do g_animTransMode = mode
 
-	on axImportRollout open do
+	on axAnimImportRollout open do
 	(
 		-- fill LstAnims
 		LstAnims.items = for a in Anims collect (a.Name + " [" + (a.NumRawFrames as string) + "]")
 	)
+)
 
-	on axImportRollout close do
+
+rollout axTexturesRollout "Materials"
+(
+	edittext EdTexPath     "Path to materials" text:g_texDir width:180 across:2
+	button   BtnBrowseTex  "..."     align:#right height:16
+	checkbox ChkTexRecurse "Recurse" checked:g_texRecurse
+	label    LblMissingTex "On missing texture:" across:2
+	radiobuttons RadMissingTex labels:#("do nothing", "ask") default:g_texMissAction align:#left columns:1
+
+	on EdTexPath    changed val do g_texDir = val
+	on BtnBrowseTex pressed do
 	(
-		axSerializeSettings false
+		dir = getSavePath caption:"Directory for texture lookup" initialDir:g_texDir
+		if dir != undefined then
+		(
+			g_texDir       = dir
+			EdTexPath.text = dir
+		)
 	)
+
+	on ChkTexRecurse changed state do g_texRecurse    = state
+	on RadMissingTex changed state do g_texMissAction = state
 )
 
 
 rollout axToolsRollout "Tools"
 (
+	button BtnReset "Reset to defaults" width:180
+
 	button BtnRestoreBindpose "Restore BindPose" width:180
 	button BtnRemoveAnimation "Remove animation" width:180
 	button BtnClearScene      "Clear scene"      width:180
 	button BtnBatchExport     "Batch export"     width:180
+	button BtnReloadScript    "Reload importer"  width:180
 
+	on BtnReset pressed do
+	(
+		if configFile != undefined then deleteFile configFile
+		axDefaultSettings()
+		-- reset controls
+		axShowUI()
+	)
 	on BtnRestoreBindpose pressed do RestoreBindpose()
 	on BtnRemoveAnimation pressed do RemoveAnimation()
 	on BtnClearScene      pressed do ClearMaxScene()
 	on BtnBatchExport     pressed do fileIn "export_fbx.ms"
+	on BtnReloadScript    pressed do
+	(
+		axStoreLayout axInfoRollout
+		fileIn(getSourceFileName())
+	)
 )
 
 
-rollout axSettingsRollout "Settings"
+rollout axSettingsRollout "Mesh Settings"
 (
 	spinner SpnBoneSize  "Bone size"  range:[0.1,10,g_boneSize]     type:#float scale:0.1  align:#left  across:2
 	spinner SpnMeshScale "Mesh scale" range:[0.01,1000,g_meshScale] type:#float scale:0.01 align:#right
@@ -1858,26 +1922,10 @@ rollout axSettingsRollout "Settings"
 		spinner  SpnTZ "Z"     range:[-10000,10000,g_transZ] type:#float scale:0.01 fieldwidth:50 align:#right
 	)
 
-	group "Materials"
-	(
-		edittext EdTexPath     "Path to materials" text:g_texDir width:180 across:2
-		button   BtnBrowseTex  "..."     align:#right height:16
-		checkbox ChkTexRecurse "Recurse" checked:g_texRecurse
-		label    LblMissingTex "On missing texture:" across:2
-		radiobuttons RadMissingTex labels:#("do nothing", "ask") default:g_texMissAction align:#left columns:1
-	)
-
-	group "Advanced"
-	(
-		label Lbl1                "WARNING: do not modify these settings"
-		label Lbl2                "unless you know what you are doing!"
-		checkbox ChkReorientBones "Reorient bones" checked:g_reorientBones
-		checkbox ChkDontConjRoot  "Don't conjugate root bone" checked:g_dontConjugateRoot
-	)
-
-	button BtnReset "Reset to defaults"
-
 	-- event handlers
+	on SpnBoneSize  changed val do g_boneSize  = val
+	on SpnMeshScale changed val do g_meshScale = val
+	on ChkRepBones  changed state do g_reposBones = state
 
 	on SpnRY changed val do g_rotY = val
 	on SpnRP changed val do g_rotP = val
@@ -1885,6 +1933,7 @@ rollout axSettingsRollout "Settings"
 	on SpnTX changed val do g_transX = val
 	on SpnTY changed val do g_transY = val
 	on SpnTZ changed val do g_transZ = val
+
 	on BtnRotMaya pressed do
 	(
 		g_rotY = SpnRY.value = -90
@@ -1900,40 +1949,90 @@ rollout axSettingsRollout "Settings"
 		RestoreBindpose()
 	)
 	on BtnRotApply pressed do RestoreBindpose()
-
-	on SpnBoneSize  changed val do g_boneSize  = val
-	on SpnMeshScale changed val do g_meshScale = val
-	on ChkRepBones   changed state do g_reposBones    = state
-	on ChkTexRecurse changed state do g_texRecurse    = state
-	on RadMissingTex changed state do g_texMissAction = state
-	on ChkReorientBones changed state do g_reorientBones = state
-	on ChkDontConjRoot changed state do g_dontConjugateRoot = state
-
-	on EdTexPath    changed val do g_texDir = val
-	on BtnBrowseTex pressed do
-	(
-		dir = getSavePath caption:"Directory for texture lookup" initialDir:g_texDir
-		if dir != undefined then
-		(
-			g_texDir       = dir
-			EdTexPath.text = dir
-		)
-	)
-
-	on BtnReset pressed do
-	(
-		if configFile != undefined then deleteFile configFile
-		axDefaultSettings()
-		--?? find a way to reset GUI controls too
-	)
 )
 
 
--- Create plugin window
-if axImportFloater != undefined do closeRolloutFloater axImportFloater	-- close old window if visible
-axImportFloater = newRolloutFloater "ActorX Import" 250 550 30 100		-- create a new window
+rollout axAdvSettingsRollout "Advanced Settings"
+(
+	label Lbl1                "WARNING: do not modify these settings"
+	label Lbl2                "unless you know what you are doing!"
+	checkbox ChkReorientBones "Reorient bones" checked:g_reorientBones
+	checkbox ChkDontConjRoot  "Don't conjugate root bone" checked:g_dontConjugateRoot
 
--- add controls
-addRollout axImportRollout   axImportFloater
-addRollout axToolsRollout    axImportFloater
-addRollout axSettingsRollout axImportFloater
+	-- event handlers
+	on ChkReorientBones changed state do g_reorientBones = state
+	on ChkDontConjRoot changed state do g_dontConjugateRoot = state
+)
+
+
+global axImportFloater
+
+fn axShowUI =
+(
+	-- request position of previous window, if it was already opened
+	local x = 30
+	local y = 100
+	local w = 250
+	local h = 700
+	if axImportFloater != undefined then
+	(
+		x = axImportFloater.pos.x
+		y = axImportFloater.pos.y
+		w = axImportFloater.size.x
+		h = axImportFloater.size.y
+		-- close old window
+		closeRolloutFloater axImportFloater
+	)
+	-- Create plugin window
+	axImportFloater = newRolloutFloater "ActorX Import" w h x y				-- create a new window
+
+	-- init axRolloutList
+	axRolloutList = #(axInfoRollout, axMeshImportRollout, axAnimImportRollout, axTexturesRollout, axToolsRollout, axSettingsRollout, axAdvSettingsRollout)
+
+	-- add controls
+	for i = 1 to axRolloutList.count do
+	(
+		addRollout axRolloutList[i] axImportFloater
+	)
+
+	axRestoreLayout axInfoRollout
+)
+
+
+-------------------------------------------------------------------------------
+--	Plugin startup
+-------------------------------------------------------------------------------
+
+global g_axImporterVersion
+
+if (g_axImporterVersion == undefined) then
+(
+	-- initialize plugin
+	heapSize += 33554432	-- 32 Mb; will speedup most tasks
+	Anims     = #()
+	MeshBones = #()
+	g_axImporterVersion = AX_IMPORTER_VERSION
+	axDefaultSettings()
+	axSerializeSettings(true)
+
+	-- Add action handler (macro script).
+	-- Max will copy contents of macroScript() block to the "AppData/Local/Autodesk/3dsMax/*/ENU/usermacros".
+	-- To avoid copying of entire file we're generating string which will simply execute THIS file.
+	str = "macroScript GildorTools_ActorXImporter category:\"Gildor Tools\" buttontext:\"ActorX Importer\" tooltip:\"ActorX Importer\"\n" \
+		+ "(\n" \
+		+ "    fileIn \"" + getSourceFileName() + "\"\n" \
+		+ ")\n"
+	execute str
+)
+
+
+if (g_axImporterVersion != AX_IMPORTER_VERSION) then
+(
+	format "ActorX Importer was updated while 3ds Max is running.\nReloading config settings.\n"
+	-- copy-paste of code above
+	g_axImporterVersion = AX_IMPORTER_VERSION
+	axDefaultSettings()
+	axSerializeSettings(true)
+)
+
+axShowUI()
