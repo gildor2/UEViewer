@@ -310,7 +310,6 @@ void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 
 void CSkelMeshInstance::DumpBones()
 {
-#if 1
 	int treeSizes[MAX_MESHBONES], depth[MAX_MESHBONES];
 	int numIndices = 0;
 	CheckBoneTree(pMesh->RefSkeleton, 0, treeSizes, depth, numIndices, MAX_MESHBONES);
@@ -323,10 +322,6 @@ void CSkelMeshInstance::DumpBones()
 #if 1
 		for (int j = 0; j < depth[i]; j++)
 		{
-	#if 0
-			// simple picture
-			appPrintf("|  ");
-	#else
 			// graph-like picture
 			bool found = false;
 			for (int n = i+1; n < numIndices; n++)
@@ -348,14 +343,12 @@ void CSkelMeshInstance::DumpBones()
 			else
 				appPrintf(found ? "|  " : "   ");
         #endif
-	#endif
 		}
 		appPrintf("%s\n", *B.Name);
 #else
-		appPrintf("%s {%g %g %g} {%g %g %g %g}\n", *B.Name, FVECTOR_ARG(B.BonePos.Position), FQUAT_ARG(B.BonePos.Orientation));
+		appPrintf("%s {%g %g %g} {%g %g %g %g}\n", *B.Name, VECTOR_ARG(B.Position), QUAT_ARG(B.Orientation));
 #endif
 	}
-#endif
 }
 
 

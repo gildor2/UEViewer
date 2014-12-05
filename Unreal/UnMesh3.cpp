@@ -2107,6 +2107,13 @@ struct FStaticMeshVertexStream3
 	{
 		guard(FStaticMeshVertexStream3<<);
 
+		//!! Borderlands3:
+		//!! (EngineVersion>>16) >= 29
+		//!! int VertexSize, int NumVerts
+		//!! byte UseCompressedPositions, always 1 (0==float[3], 1=short[])
+		//!! byte Use3Components, always 0 (0==short[4], 0=short[3])
+		//!! FVector Mins, Extents
+
 #if BATMAN
 		if (Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
 		{

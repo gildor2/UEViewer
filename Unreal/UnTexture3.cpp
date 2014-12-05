@@ -823,14 +823,6 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			TexData.VSize          = Mip.SizeY;
 			TexData.DataSize       = Bulk.ElementCount * Bulk.GetElementSize();
 			TexData.Platform       = Package->Platform;
-#if 0
-			FILE *f = fopen(va("%s-%s.dmp", Package->Name, Name), "wb");
-			if (f)
-			{
-				fwrite(Bulk.BulkData, Bulk.ElementCount * Bulk.GetElementSize(), 1, f);
-				fclose(f);
-			}
-#endif
 			break;
 		}
 	}

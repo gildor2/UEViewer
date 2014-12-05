@@ -343,6 +343,7 @@ enum EGame
 		GAME_UE4_3,
 		GAME_UE4_4,
 		GAME_UE4_5,
+		GAME_UE4_6,
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
@@ -440,7 +441,7 @@ public:
 
 	virtual int64 Tell64() const
 	{
-		return ArPos;
+		return Tell();
 	}
 
 	virtual int64 GetFileSize64() const
@@ -1861,6 +1862,7 @@ enum
 		VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
 	VER_UE4_4 = 385,
 	VER_UE4_5 = 401,
+	VER_UE4_6 = 413,
 };
 
 class FStripDataFlags
