@@ -311,6 +311,9 @@ const GameInfo GListOfGames[] = {
 #	if DUST514
 		G("Dust 514", dust514, GAME_Dust514),
 #	endif
+#	if GUILTY
+		G("Guilty Gear Xrd", guilty, GAME_Guilty),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4
@@ -648,6 +651,9 @@ void FArchive::DetectGame()
 #if LOST_PLANET3
 	if (ArVer == 860 && (ArLicenseeVer == 97 || ArLicenseeVer == 98))	// 97 = Lost Planet 3, 98 = Yaiba: Ninja Gaiden Z
 		SET(GAME_LostPlanet3);
+#endif
+#if GUILTY
+	if (ArVer == 868 && ArLicenseeVer == 2)		SET(GAME_Guilty);
 #endif
 #if SPECIALFORCE2
 	if (ArVer == 904 && (ArLicenseeVer == 9 || ArLicenseeVer == 14)) SET(GAME_SpecialForce2);

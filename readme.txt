@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+05.12.2014
+- implemented full support for Guilty Gear Xrd (PS3 version)
+
 23.11.2014
 - implemented Unreal engine 4 PAK file support
 

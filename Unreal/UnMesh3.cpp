@@ -631,6 +631,13 @@ struct FGPUVert3Common
 		int i;
 		for (i = 0; i < NUM_INFLUENCES_UE3; i++) Ar << V.BoneIndex[i];
 		for (i = 0; i < NUM_INFLUENCES_UE3; i++) Ar << V.BoneWeight[i];
+#if GUILTY
+		if (Ar.Game == GAME_Guilty && Ar.ArLicenseeVer >= 1)
+		{
+			int unk;		// probably vertex color - this was removed from FStaticLODModel3 serializer
+			Ar << unk;
+		}
+#endif // GUILTY
 		return Ar;
 	}
 };
@@ -1261,6 +1268,9 @@ struct FStaticLODModel3
 			return Ar;
 		}
 #endif // TRANSFORMERS
+#if GUILTY
+		if (Ar.Game == GAME_Guilty && Ar.ArLicenseeVer >= 1) goto no_vert_color;
+#endif
 		if (Ar.ArVer >= 710)
 		{
 			USkeletalMesh3 *LoadingMesh = (USkeletalMesh3*)UObject::GLoadingObj;
@@ -1278,6 +1288,7 @@ struct FStaticLODModel3
 				appPrintf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
 			}
 		}
+	no_vert_color:
 		if (Ar.ArVer >= 534)		// post-UT3 code
 			Ar << Lod.fC4;
 		if (Ar.ArVer >= 841)		// unknown extra index buffer
