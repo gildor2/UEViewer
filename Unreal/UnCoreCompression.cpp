@@ -200,15 +200,15 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	}
 #endif // TAO_YUAN
 
-#if 1
-	//?? Alice: Madness Returns only?
-	if (CompressedSize == UncompressedSize)
+#if ALICE
+	// this code exists in Alice: Madness Returns only
+	if (GForceGame == GAME_Alice && CompressedSize == UncompressedSize)
 	{
 		// CompressedSize == UncompressedSize -> no compression
 		memcpy(UncompressedBuffer, CompressedBuffer, UncompressedSize);
 		return UncompressedSize;
 	}
-#endif
+#endif // ALICE
 
 	if (Flags == COMPRESS_FIND && CompressedSize >= 2)
 	{

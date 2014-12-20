@@ -104,6 +104,7 @@
 #define DUST514			1		// Dust 514
 #define VEC				1		// The Vanishing of Ethan Carter
 #define GUILTY			1		// Guilty Gear Xrd
+#define ALICE			1		// Alice: Madness Returns
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

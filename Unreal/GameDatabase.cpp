@@ -227,6 +227,9 @@ const GameInfo GListOfGames[] = {
 #	if MOH2010
 		G("Medal of Honor 2010", moh2010, GAME_MOH2010),
 #	endif
+#	if ALICE
+		G("Alice: Madness Returns", alice, GAME_Alice),
+#	endif
 #	if BERKANIX
 		G("Berkanix", berk, GAME_Berkanix),
 #	endif
@@ -602,6 +605,9 @@ void FArchive::DetectGame()
 #if MORTALONLINE
 	if (ArVer == 678 && ArLicenseeVer == 32771) SET(GAME_MortalOnline);
 #endif
+#if ALICE
+	if (ArVer == 690 && ArLicenseeVer == 0)		SET(GAME_Alice); // only this game has LicenseeVer==0 here!
+#endif
 #if SHADOWS_DAMNED
 	if (ArVer == 706 && ArLicenseeVer == 28)	SET(GAME_ShadowsDamned);
 #endif
@@ -812,6 +818,13 @@ void FArchive::OverrideVersion()
 			ArVer = OVERRIDE_SF2_VER;
 	}
 #endif // SPECIALFORCE2
+#if ALICE
+	if (Game == GAME_Alice && GForceGame == GAME_UNKNOWN)
+	{
+		appPrintf("Forcing game set to Alice2\n");
+		GForceGame = GAME_Alice;
+	}
+#endif // ALICE
 
 	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
