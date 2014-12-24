@@ -793,7 +793,7 @@ ue3_export_flags:
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 116)
 	{
 		// version prior 116
-		bool someFlag;
+		byte someFlag;
 		Ar << someFlag;
 		if (!someFlag) return;
 		// else - continue serialization of remaining fields
