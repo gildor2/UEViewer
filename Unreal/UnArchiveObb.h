@@ -58,6 +58,7 @@ class FObbVFS : public FVirtualFileSystem
 public:
 	FObbVFS()
 	:	LastInfo(NULL)
+	,	Reader(NULL)
 	{}
 
 	virtual ~FObbVFS()
@@ -69,10 +70,12 @@ public:
 	{
 		guard(FObbVFS::ReadDirectory);
 
-		Reader = reader;
 		char signature[13];
-		Reader->Serialize(signature, 13);
+		reader->Serialize(signature, 13);
 		if (memcmp(signature, "UE3AndroidOBB", 13) != 0) return false; // bad signature
+
+		// this file looks correct, store 'reader'
+		Reader = reader;
 
 		int count;
 		*Reader << count;

@@ -136,6 +136,7 @@ class FPakVFS : public FVirtualFileSystem
 public:
 	FPakVFS()
 	:	LastInfo(NULL)
+	,	Reader(NULL)
 	{}
 
 	virtual ~FPakVFS()
@@ -147,14 +148,15 @@ public:
 	{
 		guard(FPakVFS::ReadDirectory);
 
-		Reader = reader;
-
 		// Read pak header
 		FPakInfo info;
-		Reader->Seek64(Reader->GetFileSize64() - FPakInfo::Size);
-		*Reader << info;
+		reader->Seek64(reader->GetFileSize64() - FPakInfo::Size);
+		*reader << info;
 		if (info.Magic != PAK_FILE_MAGIC)		// no endian checking here
 			return false;
+
+		// this file looks correct, store 'reader'
+		Reader = reader;
 
 		// Read pak index
 
