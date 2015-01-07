@@ -193,6 +193,8 @@ function bat2()
 }
 function tr4()    { run1 "data/3/Tribes4" $*;     }
 
+function thief()  { run1 "${steam[@]/%/Thief/ThiefGame/CookedPCNG}" $*; }
+
 function rund()   {	run1 "data" $*; }
 
 

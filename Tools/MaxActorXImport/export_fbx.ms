@@ -216,7 +216,7 @@ rollout fbxExportRollout "ActorX Batch Export"
 (
 	-- copyright label
 	label     Lbl1 "Version 1.01"
-	label     Lbl2 "\xA9 2010-2014 Konstantin Nosov (Gildor)"
+	label     Lbl2 "\xA9 2010-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black

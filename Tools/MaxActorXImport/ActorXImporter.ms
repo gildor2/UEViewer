@@ -138,7 +138,6 @@
 
 /*
 TODO:
-- menu item for plugin
 - try to not use setBoneEnable false ...
 - option to create separate materials, not submaterials
 - do not create material when it is already exists - but how to find whether I need to get loaded material
@@ -1759,7 +1758,7 @@ rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
 	label     Lbl1 "Version 1.29"
-	label     Lbl2 "\xA9 2009-2014 Konstantin Nosov (Gildor)"
+	label     Lbl2 "\xA9 2009-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black
@@ -2034,7 +2033,7 @@ if (g_axImporterVersion == undefined) then
 
 if (g_axImporterVersion != AX_IMPORTER_VERSION) then
 (
-	format "ActorX Importer was updated while 3ds Max is running.\nReloading config settings.\n"
+	format "ActorX Importer has been updated while 3ds Max is running.\nReloading settings.\n"
 	-- copy-paste of code above
 	g_axImporterVersion = AX_IMPORTER_VERSION
 	axDefaultSettings()

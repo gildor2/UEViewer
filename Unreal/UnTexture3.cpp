@@ -14,8 +14,6 @@
 
 void UTexture3::Serialize(FArchive &Ar)
 {
-	guard(UTexture3::Serialize);
-
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4)
 	{
@@ -23,6 +21,8 @@ void UTexture3::Serialize(FArchive &Ar)
 		return;
 	}
 #endif
+
+	guard(UTexture3::Serialize);
 
 	Super::Serialize(Ar);
 #if TRANSFORMERS

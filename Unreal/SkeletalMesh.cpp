@@ -84,7 +84,8 @@ void CSkeletalMesh::SortBones()
 	{
 		CSkelMeshBone *Bone = new (NewSkeleton) CSkelMeshBone;
 		*Bone = RefSkeleton[RemapBack[i]];
-		Bone->ParentIndex = Remap[Bone->ParentIndex];
+		int oldParent = Bone->ParentIndex;
+		Bone->ParentIndex = (oldParent > 0) ? Remap[oldParent] : 0;
 	}
 	CopyArray(RefSkeleton, NewSkeleton);
 

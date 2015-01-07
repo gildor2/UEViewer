@@ -1,18 +1,15 @@
-Works with VC7,8,9. But VC7-compiled program has bugs (at least one: no on-screen texts).
+Works with VC7-2010. But VC7-compiled program has bugs (at least one: no on-screen texts).
 
 Issues:
 * GPF when starting exe linked with "oldnames.lib" (not "wdk_oldnames.lib") -- incorrect call of stricmp():
-  compiler were generated "call dword ptr ds:[400000]" instead of "call ds:__imp___stricmp"
-- makefiles with WDKCRT dependency will not be compatible (not compiled) using standard VC installations
+  compiler generated code "call dword ptr ds:[400000]" instead of "call ds:__imp___stricmp"
+- makefiles with WDKCRT dependency will not be compatible (not compiled) with standard VC installations
   - try to add wdk_msvcrt_win2000.obj and oldnames.lib into msvcrt.lib
 - Has a lot of kernel32.dll function calls from __security_init_cookie() - this function is called from
   mainCRTStartup() and cannot be overrided (unless use own version of this function)
   - check "VC9/crt/src/crtexe.c"
 - executable will not need a manifest when linked with msvcrt.dll - can exclude manifest using link.exe
   option "-manifest:no" (VC8+)
-
-Todo:
-- needs to specify path to WDK CRT files (add "OLDCRT" option?) (common.project)
 
 Links:
 http://kobyk.wordpress.com/2007/07/20/dynamically-linking-with-msvcrtdll-using-visual-c-2005/
