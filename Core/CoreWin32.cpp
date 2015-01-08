@@ -433,6 +433,9 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 		case EXCEPTION_STACK_OVERFLOW:
 			excName = "Stack overflow";
 			break;
+		case EXCEPTION_BREAKPOINT:
+			excName = "Breakpoint";
+			break;
 		}
 
 		// log error

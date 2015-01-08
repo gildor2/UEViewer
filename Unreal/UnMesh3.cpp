@@ -7,6 +7,7 @@
 #include "UnMeshTypes.h"
 #include "UnMathTools.h"			// for FRotator to FCoords
 #include "UnMaterial3.h"
+#include "UnPackage.h"
 
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
@@ -47,7 +48,7 @@ float half2float(word h)
 }
 
 
-static void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
+void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 {
 	// tangents: convert to FVector (unpack) then cast to CVec3
 	FVector Tangent = SrcNormal[0];
@@ -2585,7 +2586,7 @@ struct FStaticMeshNormalStream_MK
 
 #endif // MKVSDC
 
-struct FStaticMeshLODModel
+struct FStaticMeshLODModel3
 {
 	FByteBulkData		BulkData;		// ElementSize = 0xFC for UT3 and 0x170 for UDK ... it's simpler to skip it
 	TArray<FStaticMeshSection3> Sections;
@@ -2599,9 +2600,9 @@ struct FStaticMeshLODModel
 	TArray<FEdge3>		Edges;
 	TArray<byte>		fEC;			// flags for faces? removed simultaneously with Edges
 
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshLODModel &Lod)
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshLODModel3 &Lod)
 	{
-		guard(FStaticMeshLODModel<<);
+		guard(FStaticMeshLODModel3<<);
 
 		DBG_STAT("Serialize UStaticMesh LOD\n");
 #if FURY
@@ -3262,7 +3263,7 @@ version:
 		guard(SerializeExtraLOD);
 
 		int unkFlag;
-		FStaticMeshLODModel unkLod;
+		FStaticMeshLODModel3 unkLod;
 		Ar << unkFlag;
 		if (unkFlag)
 		{
@@ -3307,15 +3308,21 @@ lods:
 done:
 	DROP_REMAINING_DATA(Ar);
 
-	// convert UStaticMesh3 to CStaticMesh
+	ConvertMesh();
 
-	guard(ConvertMesh);
+	unguard;
+}
+
+// convert UStaticMesh3 to CStaticMesh
+void UStaticMesh3::ConvertMesh()
+{
+	guard(UStaticMesh3::ConvertMesh);
 
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
 
 	// convert bounds
-	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
+	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;			//?? UE3 meshes has radius 2 times larger than mesh itself
 	VectorSubtract(CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Min));
 	VectorAdd     (CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Max));
 
@@ -3325,7 +3332,7 @@ done:
 	{
 		guard(ConvertLod);
 
-		const FStaticMeshLODModel &SrcLod = Lods[lod];
+		const FStaticMeshLODModel3 &SrcLod = Lods[lod];
 		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
 
 		int NumTexCoords = SrcLod.UVStream.NumTexCoords;
@@ -3333,9 +3340,9 @@ done:
 
 		Lod->NumTexCoords = NumTexCoords;
 		Lod->HasNormals   = true;
-		Lod->HasTangents  = (Ar.ArVer >= 364);				//?? check; FStaticMeshUVStream3 is used since this version
+		Lod->HasTangents  = (Package->ArVer >= 364);			//?? check; FStaticMeshUVStream3 is used since this version
 #if BATMAN
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && CanStripNormalsAndTangents)
+		if ((Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3) && CanStripNormalsAndTangents)
 			Lod->HasNormals = Lod->HasTangents = false;
 #endif
 		if (NumTexCoords > NUM_MESH_UV_SETS)
@@ -3365,7 +3372,7 @@ done:
 			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
 #if 0
 			for (int j = 0; j < NumTexCoords; j++)
-				V.UV[j] = (CMeshUVFloat&/SUV.UV[j];
+				V.UV[j] = (CMeshUVFloat&)SUV.UV[j];
 #else
 			memcpy(V.UV, SUV.UV, sizeof(V.UV));
 #endif
@@ -3380,8 +3387,6 @@ done:
 	}
 
 	Mesh->FinalizeMesh();
-
-	unguard;	// ConvertMesh
 
 	unguard;
 }

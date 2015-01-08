@@ -21,25 +21,6 @@ UE3 CLASS TREE:
 class UMaterialInterface;
 
 
-struct FBoxSphereBounds
-{
-	DECLARE_STRUCT(FBoxSphereBounds);
-	FVector					Origin;
-	FVector					BoxExtent;
-	float					SphereRadius;
-	BEGIN_PROP_TABLE
-		PROP_VECTOR(Origin)
-		PROP_VECTOR(BoxExtent)
-		PROP_FLOAT(SphereRadius)
-	END_PROP_TABLE
-
-	friend FArchive& operator<<(FArchive &Ar, FBoxSphereBounds &B)
-	{
-		return Ar << B.Origin << B.BoxExtent << B.SphereRadius;
-	}
-};
-
-
 /*-----------------------------------------------------------------------------
 	USkeletalMesh
 -----------------------------------------------------------------------------*/
@@ -573,7 +554,7 @@ public:
 -----------------------------------------------------------------------------*/
 
 // forwards (structures are declared in cpp)
-struct FStaticMeshLODModel;
+struct FStaticMeshLODModel3;
 struct FkDOPNode3;
 struct FkDOPTriangle3;
 
@@ -597,7 +578,7 @@ public:
 	FBoxSphereBounds		Bounds;
 	int						InternalVersion;	// GOW1_PC: 15, UT3: 16, UDK: 18-...
 	UObject					*BodySetup;			// URB_BodySetup
-	TArray<FStaticMeshLODModel> Lods;
+	TArray<FStaticMeshLODModel3> Lods;
 	// kDOP tree
 	TArray<FkDOPNode3>		kDOPNodes;
 	TArray<FkDOPTriangle3>	kDOPTriangles;
@@ -616,7 +597,7 @@ public:
 	CStaticMesh				*ConvertedMesh;
 
 	BEGIN_PROP_TABLE
-		PROP_OBJ(BodySetup)						// this property is serialized twice - in UObject and in UStaticMesh
+		PROP_OBJ(BodySetup)						// this property is serialized twice - as a property and in UStaticMesh::Serialize
 		PROP_BOOL(UseSimpleLineCollision)
 		PROP_BOOL(UseSimpleBoxCollision)
 		PROP_BOOL(UseSimpleRigidBodyCollision)
@@ -647,6 +628,9 @@ public:
 	virtual ~UStaticMesh3();
 
 	virtual void Serialize(FArchive &Ar);
+
+protected:
+	void ConvertMesh();
 };
 
 
@@ -667,7 +651,6 @@ public:
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh3, UGolemSkeletalMesh) \
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
-	REGISTER_CLASS(FBoxSphereBounds) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)		\
 	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet) \

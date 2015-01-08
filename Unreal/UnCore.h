@@ -1031,6 +1031,33 @@ struct FLinearColor
 	}
 };
 
+struct FBoxSphereBounds
+{
+	FVector					Origin;
+	FVector					BoxExtent;
+	float					SphereRadius;
+
+	friend FArchive& operator<<(FArchive &Ar, FBoxSphereBounds &B)
+	{
+		return Ar << B.Origin << B.BoxExtent << B.SphereRadius;
+	}
+};
+
+
+#if UNREAL4
+
+struct FIntVector
+{
+	int		X, Y, Z;
+
+	friend FArchive& operator<<(FArchive &Ar, FIntVector &V)
+	{
+		return Ar << V.X << V.Y << V.Z;
+	}
+};
+
+#endif // UNREAL4
+
 
 /*-----------------------------------------------------------------------------
 	Typeinfo for fast array serialization
@@ -1114,6 +1141,12 @@ SIMPLE_TYPE(FVector, float)
 SIMPLE_TYPE(FQuat,   float)
 SIMPLE_TYPE(FCoords, float)
 SIMPLE_TYPE(FColor,  byte)
+
+#if UNREAL4
+
+SIMPLE_TYPE(FIntVector, int)
+
+#endif // UNREAL4
 
 
 /*-----------------------------------------------------------------------------
@@ -1850,7 +1883,10 @@ enum
 	VER_UE4_REMOVE_NET_INDEX = 196,
 	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,
 	VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET = 212,
-	VAR_UE4_ARRAY_PROPERTY_INNER_TAGS = 282,
+	VER_UE4_STATIC_MESH_STORE_NAV_COLLISION = 216,
+	VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX = 269,
+	VER_UE4_SUPPORT_32BIT_STATIC_MESH_INDICES = 277,
+	VAR_UE4_ARRAY_PROPERTY_INNER_TAGS = 282, // note: here's a typo in UE4 code - "VAR_" instead of "VER_"
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
 	// UE4.0 source code released on GitHub. Note: if we don't have any VER_UE4_...
 	// values between, for instance, VER_UE4_0 and VER_UE4_1, it doesn't matter for
@@ -1860,11 +1896,15 @@ enum
 	VER_UE4_1 = 352,
 	VER_UE4_2 = 363,
 		VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
+		VER_UE4_FTEXT_HISTORY = 368,					// used for UStaticMesh versioning
 	VER_UE4_3 = 382,
 		VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
 	VER_UE4_4 = 385,
+		VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN = 394,	// used for UStaticMesh versioning
+		VER_UE4_DEPRECATE_UMG_STYLE_ASSETS = 397,		// used for UStaticMesh versioning
 	VER_UE4_5 = 401,
 	VER_UE4_6 = 413,
+		VER_UE4_RENAME_WIDGET_VISIBILITY = 416,			// used for UStaticMesh versioning
 };
 
 class FStripDataFlags
@@ -1887,7 +1927,7 @@ public:
 		return (GlobalStripFlags & 1) != 0;
 	}
 
-	FORCEINLINE bool IsServerDataStripped() const
+	FORCEINLINE bool IsDataStrippedForServer() const
 	{
 		return (GlobalStripFlags & 2) != 0;
 	}

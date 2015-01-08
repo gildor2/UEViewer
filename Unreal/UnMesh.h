@@ -16,6 +16,10 @@ UE1 CLASS TREE:
 //?? declare separately? place to UnCore?
 float half2float(word h);
 
+struct FPackedNormal;
+struct CMeshVertex;
+void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V);
+
 //?? move these declarations outside
 class CSkeletalMesh;
 struct CSkelMeshLod;

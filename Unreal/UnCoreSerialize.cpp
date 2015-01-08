@@ -273,6 +273,9 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 {
 	guard(TRawArray<<);
 	assert(Ar.IsLoading);
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4) goto new_ver;
+#endif
 #if A51
 	if (Ar.Game == GAME_A51 && Ar.ArVer >= 376) goto new_ver;	// partially upgraded old engine
 #endif // A51

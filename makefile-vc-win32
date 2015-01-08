@@ -50,6 +50,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnMesh1.obj \
 	$(OUT_1)/UnMesh2.obj \
 	$(OUT_1)/UnMesh3.obj \
+	$(OUT_1)/UnMesh4.obj \
 	$(OUT_1)/UnMeshBatman.obj \
 	$(OUT_1)/UnMeshBioshock.obj \
 	$(OUT_1)/UnMeshRune.obj \
@@ -216,6 +217,7 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh2.h \
 	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnSound.h \
@@ -321,6 +323,7 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh2.h \
 	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h \
@@ -557,6 +560,7 @@ DEPENDS = \
 	Unreal/UnMesh3.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
@@ -628,6 +632,29 @@ DEPENDS = \
 
 $(OUT_1)/SkeletalMesh.obj : Unreal/SkeletalMesh.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkeletalMesh.obj" Unreal/SkeletalMesh.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/StaticMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh4.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMesh4.obj : Unreal/UnMesh4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh4.obj" Unreal/UnMesh4.cpp
 
 DEPENDS = \
 	Core/Core.h \

@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+09.01.2015
+- implemented UE4 StaticMesh support
+
 05.12.2014
 - implemented full support for Guilty Gear Xrd (PS3 version)
 

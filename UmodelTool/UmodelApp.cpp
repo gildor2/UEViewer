@@ -9,6 +9,7 @@
 
 #include "UnMesh2.h"
 #include "UnMesh3.h"
+#include "UnMesh4.h"
 
 #include "UmodelApp.h"
 #include "UmodelSettings.h"
@@ -339,6 +340,9 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 #if UNREAL3
 		MESH_VIEWER (USkeletalMesh3,  CSkelMeshViewer      );
 		MESH_VIEWER (UStaticMesh3,    CStatMeshViewer      );
+#endif
+#if UNREAL4
+		MESH_VIEWER (UStaticMesh4,    CStatMeshViewer      );
 #endif
 	}
 	if (ShowMaterials || showAll)

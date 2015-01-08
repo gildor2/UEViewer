@@ -16,6 +16,7 @@
 
 #include "UnMesh2.h"
 #include "UnMesh3.h"
+#include "UnMesh4.h"
 
 #include "UnSound.h"
 #include "UnThirdParty.h"
@@ -118,6 +119,16 @@ END_CLASS_TABLE
 }
 
 
+static void RegisterUnrealClasses4()
+{
+#if UNREAL4
+BEGIN_CLASS_TABLE
+	REGISTER_MESH_CLASSES_U4
+END_CLASS_TABLE
+#endif // UNREAL4
+}
+
+
 
 static void RegisterUnrealSoundClasses()
 {
@@ -151,10 +162,14 @@ static void RegisterClasses(int game)
 	{
 		RegisterUnrealClasses2();
 	}
-	else
+	else if (game < GAME_UE4)
 	{
 		RegisterUnrealClasses3();
 		RegisterUnreal3rdPartyClasses();
+	}
+	else
+	{
+		RegisterUnrealClasses4();
 	}
 	if (GSettings.UseSound) RegisterUnrealSoundClasses();
 
@@ -222,6 +237,14 @@ static void ExportStaticMesh3(const UStaticMesh3 *Mesh)
 }
 #endif
 
+#if UNREAL4
+static void ExportStaticMesh4(const UStaticMesh4 *Mesh)
+{
+	assert(Mesh->ConvertedMesh);
+	ExportStaticMesh(Mesh->ConvertedMesh);
+}
+#endif
+
 static void ExportMeshAnimation(const UMeshAnimation *Anim)
 {
 	assert(Anim->ConvertedAnim);
@@ -262,6 +285,9 @@ static void RegisterExporters()
 	RegisterExporter("FaceFXAnimSet", ExportFaceFXAnimSet);
 	RegisterExporter("FaceFXAsset",   ExportFaceFXAsset  );
 #endif // UNREAL3
+#if UNREAL4
+	RegisterExporter("StaticMesh4",   ExportStaticMesh4  );
+#endif
 	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters
 }
 
