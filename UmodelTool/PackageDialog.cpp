@@ -132,23 +132,28 @@ void UIPackageDialog::InitUI()
 	// add paths of all found packages
 	if (SelectedPackages.Num()) DirectorySelected = true;
 	int selectedPathLen = 1024; // something large
+	char prevPath[512], path[512];
+	prevPath[0] = 0;
 	for (int i = 0; i < Packages.Num(); i++)
 	{
-		char buffer[512];
-		appStrncpyz(buffer, Packages[i]->RelativeName, ARRAY_COUNT(buffer));
-		char* s = strrchr(buffer, '/');
+		appStrncpyz(path, Packages[i]->RelativeName, ARRAY_COUNT(path));
+		char* s = strrchr(path, '/');
 		if (s)
 		{
 			*s = 0;
-			PackageTree->AddItem(buffer);
+			// simple optimization - avoid calling PackageTree->AddItem() too frequently (assume package list is sorted)
+			if (!strcmp(prevPath, path)) continue;
+			strcpy(prevPath, path);
+			// add a directory to TreeView
+			PackageTree->AddItem(path);
 		}
 		if (!DirectorySelected)
 		{
-			int pathLen = s ? s - buffer : 0;
+			int pathLen = s ? s - path : 0;
 			if (pathLen < selectedPathLen)
 			{
 				// set selection to the first directory
-				SelectedDir = s ? buffer : "";
+				SelectedDir = s ? path : "";
 				selectedPathLen = pathLen;
 			}
 		}
