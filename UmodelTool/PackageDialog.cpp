@@ -132,7 +132,7 @@ void UIPackageDialog::InitUI()
 	// add paths of all found packages
 	if (SelectedPackages.Num()) DirectorySelected = true;
 	int selectedPathLen = 1024; // something large
-	char prevPath[512], path[512];
+	char prevPath[MAX_PACKAGE_PATH], path[MAX_PACKAGE_PATH];
 	prevPath[0] = 0;
 	for (int i = 0; i < Packages.Num(); i++)
 	{
@@ -221,7 +221,7 @@ void UIPackageDialog::UpdateSelectedPackage()
 			FString* newPackageName = new (SelectedPackages) FString;
 			if (dir[0])
 			{
-				char buffer[512];
+				char buffer[MAX_PACKAGE_PATH];
 				appSprintf(ARRAY_ARG(buffer), "%s/%s", dir, pkgInDir);
 				*newPackageName = buffer;
 			}
@@ -274,7 +274,7 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		const CGameFileInfo* package = Packages[i];
-		char buffer[512];
+		char buffer[MAX_PACKAGE_PATH];
 		appStrncpyz(buffer, package->RelativeName, ARRAY_COUNT(buffer));
 		char* s = strrchr(buffer, '/');
 		if (s) *s++ = 0;

@@ -21,7 +21,7 @@
 	- save settings to the ActorX Importer ini (using its API)
 */
 
-global g_axImporterInited
+global g_axImporterVersion
 
 global g_meshDir
 global g_meshRecurse
@@ -40,12 +40,12 @@ if (g_useDefaultFBXSettings == undefined) then g_useDefaultFBXSettings = true
 
 fn VerifyAXI =
 (
-	if (g_axImporterInited != true) then
+	if (g_axImporterVersion == undefined) then
 	(
 		messageBox "ActorX Importer is not loaded!"
 		return false
 	)
-	if (AX_IMPORTER_VERSION < 13) then
+	if (g_axImporterVersion < 13) then
 	(
 		messageBox "Your ActorX Importer is too old, please upgrade!"
 		return false

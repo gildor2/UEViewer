@@ -21,12 +21,18 @@
 #define MAX_GAME_FILES			32768		// DC Universe Online has more than 20k upk files
 #define MAX_FOREIGN_FILES		32768
 
-static char RootDirectory[256];
+static char RootDirectory[MAX_PACKAGE_PATH];
 
 
 static const char *PackageExtensions[] =
 {
 	"u", "ut2", "utx", "uax", "usx", "ukx",
+#if UNREAL3
+	"upk", "ut3", "xxx", "umap", "udk", "map",
+#endif
+#if UNREAL4
+	"uasset",
+#endif
 #if RUNE
 	"ums",
 #endif
@@ -45,12 +51,6 @@ static const char *PackageExtensions[] =
 #endif
 #if LEAD
 	"ass", "umd",
-#endif
-#if UNREAL3
-	"upk", "ut3", "xxx", "umap", "udk", "map",
-#endif
-#if UNREAL4
-	"uasset",
 #endif
 #if MASSEFF
 	"sfm",			// Mass Effect
@@ -130,8 +130,66 @@ int GNumGameFiles = 0;
 int GNumPackageFiles = 0;
 int GNumForeignFiles = 0;
 
+#define GAME_FILE_HASH_SIZE		4096
+#define GAME_FILE_HASH_MASK		(GAME_FILE_HASH_SIZE-1)
 
-//!! add define USE_VFS = SUPPORT_ANDROID || UNREAL4
+//#define PRINT_HASH_DISTRIBUTION	1
+//#define DEBUG_HASH_NAME			"MiniMap"
+
+static CGameFileInfo* GGameFileHash[GAME_FILE_HASH_SIZE];
+
+
+#if UNREAL3
+const char *GStartupPackage = "startup_xxx";
+static CGameFileInfo* GStartupPackageInfo = NULL;
+static int            GStartupPackageInfoWeight = 0;
+#endif
+
+
+static int GetHashForFileName(const char* FileName)
+{
+	const char* s1 = strrchr(FileName, '/'); // assume path delimiters are normalized
+	s1 = (s1 != NULL) ? s1 + 1 : FileName;
+	const char* s2 = strrchr(s1, '.');
+	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
+
+	int hash = 0;
+	for (int i = 0; i < len; i++)
+	{
+		char c = s1[i];
+		if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; // lowercase a character
+		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
+	}
+#ifdef DEBUG_HASH_NAME
+	if (strstr(FileName, DEBUG_HASH_NAME))
+		printf("hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash & GAME_FILE_HASH_MASK);
+#endif
+	return hash & GAME_FILE_HASH_MASK;
+}
+
+#if PRINT_HASH_DISTRIBUTION
+
+static void PrintHashDistribution()
+{
+	int hashCounts[1024];
+	memset(hashCounts, 0, sizeof(hashCounts));
+	for (int hash = 0; hash < GAME_FILE_HASH_SIZE; hash++)
+	{
+		int count = 0;
+		for (CGameFileInfo* info = GGameFileHash[hash]; info; info = info->HashNext)
+			count++;
+		assert(count < ARRAY_COUNT(hashCounts));
+		hashCounts[count]++;
+	}
+	for (int i = 0; i < ARRAY_COUNT(hashCounts); i++)
+		if (hashCounts[i] > 0)
+			appPrintf("%d -> %d\n", i, hashCounts[i]);
+}
+
+#endif // PRINT_HASH_DISTRIBUTION
+
+
+//!! add define USE_VFS = SUPPORT_ANDROID || UNREAL4, perhaps || SUPPORT_IOS
 
 static TArray<FVirtualFileSystem*> GFileSystems;
 
@@ -266,6 +324,36 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 	info->Extension = s;
 //	printf("..  -> %s (pkg=%d)\n", info->ShortFilename, info->IsPackage);
 
+#if UNREAL3
+	if (info->IsPackage && (strnicmp(info->ShortFilename, "startup", 7) == 0))
+	{
+		// Register a startup package
+		// possible name variants:
+		// - startup
+		// - startup_int
+		// - startup_*
+		int startupWeight = 0;
+		if (info->ShortFilename[7] == '.')
+			startupWeight = 30;							// "startup.upk"
+		else if (strnicmp(info->ShortFilename+7, "_int.", 5) == 0)
+			startupWeight = 20;							// "startup_int.upk"
+		else if (strnicmp(info->ShortFilename+7, "_loc_int.", 9) == 0)
+			startupWeight = 20;							// "startup_int.upk"
+		else if (info->ShortFilename[7] == '_')
+			startupWeight = 1;							// non-int locale, lower priority - use if when other is not detected
+		if (startupWeight > GStartupPackageInfoWeight)
+		{
+			GStartupPackageInfoWeight = startupWeight;
+			GStartupPackageInfo = info;
+		}
+	}
+#endif // UNREAL3
+
+	// insert CGameFileInfo into hash table
+	int hash = GetHashForFileName(info->ShortFilename);
+	info->HashNext = GGameFileHash[hash];
+	GGameFileHash[hash] = info;
+
 	return true;
 
 	unguardf("%s", FullName);
@@ -275,7 +363,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 {
 	guard(ScanGameDirectory);
 
-	char Path[256];
+	char Path[MAX_PACKAGE_PATH];
 	bool res = true;
 //	printf("Scan %s\n", dir);
 #if _WIN32
@@ -336,6 +424,9 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
 	appPrintf("Found %d game files (%d skipped)\n", GNumGameFiles, GNumForeignFiles);
+#if PRINT_HASH_DISTRIBUTION
+	PrintHashDistribution();
+#endif
 	unguardf("dir=%s", dir);
 }
 
@@ -364,14 +455,10 @@ static const char *KnownDirs2[] =
 	"Textures"
 };
 
-#if UNREAL3
-const char *GStartupPackage = "startup_xxx";
-#endif
-
 
 void appSetRootDirectory2(const char *filename)
 {
-	char buf[256], buf2[256];
+	char buf[MAX_PACKAGE_PATH], buf2[MAX_PACKAGE_PATH];
 	appStrncpyz(buf, filename, ARRAY_COUNT(buf));
 	char *s;
 	// replace slashes
@@ -460,7 +547,13 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 {
 	guard(appFindGameFile);
 
-	char buf[256];
+#if UNREAL3
+	bool findStartupPackage = (strcmp(Filename, GStartupPackage) == 0);
+	if (findStartupPackage)
+		return GStartupPackageInfo;
+#endif
+
+	char buf[MAX_PACKAGE_PATH];
 	appStrncpyz(buf, Filename, ARRAY_COUNT(buf));
 
 	// replace backslashes
@@ -486,60 +579,44 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 		}
 	}
 
-#if UNREAL3
-	bool findStartupPackage = (strcmp(Filename, GStartupPackage) == 0);
-#endif
-
 	int nameLen = strlen(buf);
-	CGameFileInfo *info = NULL;
-	for (int i = 0; i < GNumGameFiles; i++)
+	int hash = GetHashForFileName(buf);
+#ifdef DEBUG_HASH_NAME
+	printf("--> Loading %s\n", buf);
+#endif
+	for (CGameFileInfo* info = GGameFileHash[hash]; info; info = info->HashNext)
 	{
-		CGameFileInfo *info2 = GameFiles[i];
-#if UNREAL3
-		// check for startup package
-		// possible variants:
-		// - startup
-		if (findStartupPackage)
-		{
-			if (strnicmp(info2->ShortFilename, "startup", 7) != 0)
-				continue;
-			if (info2->ShortFilename[7] == '.')
-				return info2;							// "startup.upk" (DCUO, may be others too)
-			if (strnicmp(info2->ShortFilename+7, "_int.", 5) == 0)
-				return info2;							// "startup_int.upk"
-			if (info2->ShortFilename[7] == '_')
-				info = info2;							// non-int locale, lower priority - use if when other is not detected
-			continue;
-		}
-#endif // UNREAL3
+#ifdef DEBUG_HASH_NAME
+		printf("----> verify %s\n", info->RelativeName);
+#endif
 		// verify a filename
 		bool found = false;
-		if (strnicmp(info2->ShortFilename, buf, nameLen) == 0)
+		if (strnicmp(info->ShortFilename, buf, nameLen) == 0)
 		{
-			if (info2->ShortFilename[nameLen] == '.') found = true;
+			if (info->ShortFilename[nameLen] == '.') found = true;
 		}
 		if (!found)
 		{
-			if (strnicmp(info2->RelativeName, buf, nameLen) == 0)
+			if (strnicmp(info->RelativeName, buf, nameLen) == 0)
 			{
-				if (info2->RelativeName[nameLen] == '.') found = true;
+				if (info->RelativeName[nameLen] == '.') found = true;
 			}
 		}
 		if (!found) continue;
 		// verify extension
 		if (Ext)
 		{
-			if (stricmp(info2->Extension, Ext) != 0) continue;
+			if (stricmp(info->Extension, Ext) != 0) continue;
 		}
 		else
 		{
 			// Ext = NULL => should be any package extension
-			if (!info2->IsPackage) continue;
+			if (!info->IsPackage) continue;
 		}
 		// file was found
-		return info2;
+		return info;
 	}
-	return info;
+	return NULL;
 
 	unguardf("name=%s ext=%s", Filename, Ext);
 }
@@ -576,7 +653,7 @@ FArchive *appCreateFileReader(const CGameFileInfo *info)
 	if (!info->FileSystem)
 	{
 		// regular file
-		char buf[256];
+		char buf[MAX_PACKAGE_PATH];
 		appSprintf(ARRAY_ARG(buf), "%s/%s", RootDirectory, info->RelativeName);
 		return new FFileReader(buf);
 	}

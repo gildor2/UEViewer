@@ -11,7 +11,7 @@ byte GForceCompMethod = 0;		// COMPRESS_...
 //#define DEBUG_PACKAGE			1
 //#define PROFILE_PACKAGE_TABLES	1
 
-#define MAX_FNAME_LEN			256
+#define MAX_FNAME_LEN			MAX_PACKAGE_PATH
 
 /*-----------------------------------------------------------------------------
 	Unreal package structures
@@ -1924,7 +1924,7 @@ no_depends: ;
 #endif // UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS
 
 	// add self to package map
-	char buf[256];
+	char buf[MAX_PACKAGE_PATH];
 	const char *s = strrchr(filename, '/');
 	if (!s) s = strrchr(filename, '\\');			// WARNING: not processing mixed '/' and '\'
 	if (s) s++; else s = filename;

@@ -67,6 +67,8 @@ void appPrintProfiler();
 
 #endif
 
+#define MAX_PACKAGE_PATH		512
+
 /*-----------------------------------------------------------------------------
 	Game compatibility
 -----------------------------------------------------------------------------*/
@@ -86,14 +88,15 @@ const char *appGetRootDirectory();
 
 struct CGameFileInfo
 {
-	char		RelativeName[256];		// relative to RootDirectory
-	const char *ShortFilename;			// without path, points to filename part of RelativeName
-	const char *Extension;				// points to extension part (after '.') of RelativeName
+	char		RelativeName[MAX_PACKAGE_PATH];		// relative to RootDirectory
+	const char *ShortFilename;						// without path, points to filename part of RelativeName
+	const char *Extension;							// points to extension part (excluding '.') of RelativeName
+	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 	bool		IsPackage;
 	bool		PackageScanned;
-	int			SizeInKb;				// file size, in kilobytes
-	class FVirtualFileSystem* FileSystem;			// virtual file system
-	// content information
+	int			SizeInKb;							// file size, in kilobytes
+	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
+	// content information, valid when PackageScanned is true
 	int			NumSkeletalMeshes;
 	int			NumStaticMeshes;
 	int			NumAnimations;
