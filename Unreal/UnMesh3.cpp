@@ -3333,6 +3333,13 @@ void UStaticMesh3::ConvertMesh()
 		guard(ConvertLod);
 
 		const FStaticMeshLODModel3 &SrcLod = Lods[lod];
+		if (SrcLod.Sections.Num() == 0)
+		{
+			// skip empty LODs
+			appPrintf("StaticMesh %s.%s lod #%d has no sections\n", Package->Name, Name, lod);
+			continue;
+		}
+
 		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
 
 		int NumTexCoords = SrcLod.UVStream.NumTexCoords;
