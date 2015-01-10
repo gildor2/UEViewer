@@ -271,11 +271,11 @@ char* FString::Detach()
 	FName (string) pool
 -----------------------------------------------------------------------------*/
 
-#define STRING_HASH_SIZE		1024
+#define STRING_HASH_SIZE		16384
 
 struct CStringPoolEntry
 {
-	CStringPoolEntry*	Next;
+	CStringPoolEntry*	HashNext;
 	int					Length;
 	char				Str[1];
 };
@@ -288,10 +288,17 @@ const char* appStrdupPool(const char* str)
 	int len = strlen(str);
 	int hash = 0;
 	for (int i = 0; i < len; i++)
-		hash = (hash + str[i]) ^ 0xABCDEF;
+	{
+		char c = str[i];
+#if 0
+		hash = (hash + c) ^ 0xABCDEF;
+#else
+		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
+#endif
+	}
 	hash &= (STRING_HASH_SIZE - 1);
 
-	for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->Next)
+	for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->HashNext)
 	{
 		if (s->Length == len && !strcmp(str, s->Str))		// found a string
 			return s->Str;
@@ -301,10 +308,30 @@ const char* appStrdupPool(const char* str)
 
 	// allocate new string from pool
 	CStringPoolEntry* n = (CStringPoolEntry*)StringPool->Alloc(sizeof(CStringPoolEntry) + len);	// note: null byte is taken into account in CStringPoolEntry
-	n->Next = StringHashTable[hash];
+	n->HashNext = StringHashTable[hash];
 	StringHashTable[hash] = n;
 	n->Length = len;
 	memcpy(n->Str, str, len+1);
 
 	return n->Str;
 }
+
+#if 0
+void PrintStringHashDistribution()
+{
+	int hashCounts[1024];
+	memset(hashCounts, 0, sizeof(hashCounts));
+	for (int hash = 0; hash < STRING_HASH_SIZE; hash++)
+	{
+		int count = 0;
+		for (CStringPoolEntry* item = StringHashTable[hash]; item; item = item->HashNext)
+			count++;
+		assert(count < ARRAY_COUNT(hashCounts));
+		hashCounts[count]++;
+	}
+	appPrintf("String hash distribution:\n");
+	for (int i = 0; i < ARRAY_COUNT(hashCounts); i++)
+		if (hashCounts[i] > 0)
+			appPrintf("%d -> %d\n", i, hashCounts[i]);
+}
+#endif
