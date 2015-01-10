@@ -151,6 +151,10 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+10.01.2015
+- added support for UE4 StaticMesh materials
+- UE4 package imports are working now
+
 09.01.2015
 - implemented UE4 StaticMesh support
 

@@ -32,6 +32,8 @@ public:
 	typedef UObject UStaticMeshSocket;			//!! remove when UStaticMeshSocket will be declared
 	TArray<UStaticMeshSocket*> Sockets;
 
+	TArray<UMaterialInterface*> Materials;
+
 	// FStaticMeshRenderData fields
 	FBoxSphereBounds		Bounds;
 	float					ScreenSize[MAX_STATIC_LODS_UE4];
@@ -42,8 +44,7 @@ public:
 	TArray<FStaticMeshLODModel4> Lods;
 
 	BEGIN_PROP_TABLE
-		//!! review table, add props
-		PROP_OBJ(BodySetup)						// this property is serialized twice - as a property and in UStaticMesh::Serialize
+		PROP_ARRAY(Materials, UObject*)
 	END_PROP_TABLE
 
 	UStaticMesh4();

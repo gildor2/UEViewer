@@ -160,11 +160,13 @@ static int GetHashForFileName(const char* FileName)
 		if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; // lowercase a character
 		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
 	}
+//	hash += (len << 6) - len;
+	hash &= GAME_FILE_HASH_MASK;
 #ifdef DEBUG_HASH_NAME
 	if (strstr(FileName, DEBUG_HASH_NAME))
-		printf("hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash & GAME_FILE_HASH_MASK);
+		printf("hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash);
 #endif
-	return hash & GAME_FILE_HASH_MASK;
+	return hash;
 }
 
 #if PRINT_HASH_DISTRIBUTION
@@ -181,6 +183,7 @@ static void PrintHashDistribution()
 		assert(count < ARRAY_COUNT(hashCounts));
 		hashCounts[count]++;
 	}
+	appPrintf("Filename hash distribution:\n");
 	for (int i = 0; i < ARRAY_COUNT(hashCounts); i++)
 		if (hashCounts[i] > 0)
 			appPrintf("%d -> %d\n", i, hashCounts[i]);
@@ -557,10 +560,12 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	appStrncpyz(buf, Filename, ARRAY_COUNT(buf));
 
 	// replace backslashes
+	const char* ShortFilename = buf;
 	for (char* s = buf; *s; s++)
 	{
 		char c = *s;
 		if (c == '\\') *s = '/';
+		if (*s == '/') ShortFilename = s + 1;
 	}
 
 	if (Ext)
@@ -579,30 +584,25 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 		}
 	}
 
-	int nameLen = strlen(buf);
+	int nameLen = strlen(ShortFilename);
 	int hash = GetHashForFileName(buf);
 #ifdef DEBUG_HASH_NAME
-	printf("--> Loading %s\n", buf);
+	printf("--> Loading %s (%s, len=%d)\n", buf, ShortFilename, nameLen);
 #endif
+
+	CGameFileInfo* bestMatch = NULL;
+	int bestMatchWeight = -1;
 	for (CGameFileInfo* info = GGameFileHash[hash]; info; info = info->HashNext)
 	{
 #ifdef DEBUG_HASH_NAME
 		printf("----> verify %s\n", info->RelativeName);
 #endif
-		// verify a filename
-		bool found = false;
-		if (strnicmp(info->ShortFilename, buf, nameLen) == 0)
+		if (info->Extension - 1 - info->ShortFilename != nameLen)	// info->Extension points to char after '.'
 		{
-			if (info->ShortFilename[nameLen] == '.') found = true;
+//			printf("-----> wrong length %d\n", info->Extension - info->ShortFilename);
+			continue;		// different filename length
 		}
-		if (!found)
-		{
-			if (strnicmp(info->RelativeName, buf, nameLen) == 0)
-			{
-				if (info->RelativeName[nameLen] == '.') found = true;
-			}
-		}
-		if (!found) continue;
+
 		// verify extension
 		if (Ext)
 		{
@@ -613,10 +613,32 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 			// Ext = NULL => should be any package extension
 			if (!info->IsPackage) continue;
 		}
-		// file was found
-		return info;
+
+		// verify a filename
+		if (strnicmp(info->ShortFilename, ShortFilename, nameLen) != 0)
+			continue;
+//		if (info->ShortFilename[nameLen] != '.') -- verified before extension comparison
+//			continue;
+
+		// Short filename matched, now compare path before the filename.
+		// Assume 'ShortFilename' is part of 'buf' and 'info->ShortFilename' is part of 'info->RelativeName'.
+		int matchWeight = 0;
+		const char *s = ShortFilename;
+		const char *d = info->ShortFilename;
+		while (--s >= buf && --d >= info->RelativeName)
+		{
+			if (*s != *d) break;
+			matchWeight++;
+		}
+//		printf("--> matched: %s (weight=%d)\n", info->RelativeName, matchWeight);
+		if (matchWeight > bestMatchWeight)
+		{
+//			printf("---> better match\n");
+			bestMatch = info;
+			bestMatchWeight = matchWeight;
+		}
 	}
-	return NULL;
+	return bestMatch;
 
 	unguardf("name=%s ext=%s", Filename, Ext);
 }

@@ -432,7 +432,8 @@ void UStaticMesh4::ConvertMesh()
 		{
 			CMeshSection &Dst = Lod->Sections[i];
 			const FStaticMeshSection4 &Src = SrcLod.Sections[i];
-//!!			Dst.Material   = Src.Mat;
+			if (Src.MaterialIndex < Materials.Num())
+				Dst.Material = (UUnrealMaterial*)Materials[Src.MaterialIndex];
 			Dst.FirstIndex = Src.FirstIndex;
 			Dst.NumFaces   = Src.NumTriangles;
 		}

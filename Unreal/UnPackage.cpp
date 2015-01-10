@@ -2208,6 +2208,14 @@ int UnPackage::FindExportForImport(const char *ObjectName, const char *ClassName
 		ObjIndex = FindExport(ObjectName, ClassName, ObjIndex + 1);
 		if (ObjIndex == INDEX_NONE)
 			break;				// not found
+		if (Game >= GAME_UE4)
+		{
+			// UE4 usually has single object in package. Plus, each object import has a parent UPackage
+			// describing where to get an object, but object export has no parent UObject - so depth
+			// of import path is 1 step deeper than depth of export path, and CompareObjectPaths()
+			// will always fail.
+			return ObjIndex;
+		}
 		// a few objects in package could have the same name and class but resides in different groups,
 		// so compare full object paths for sure
 		if (CompareObjectPaths(ObjIndex+1, ImporterPackage, -1-ImporterIndex))
