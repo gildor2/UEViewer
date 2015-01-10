@@ -179,8 +179,8 @@ class UnPackage : public FArchive
 {
 	DECLARE_ARCHIVE(UnPackage, FArchive);
 public:
-	char					Filename[256];			// full name with path and extension
-	char					Name[64];				// short name
+	char					Filename[MAX_PACKAGE_PATH];		// full name with path and extension
+	char					Name[64];						// short name
 	FArchive				*Loader;
 	// package header
 	FPackageFileSummary		Summary;
@@ -197,9 +197,9 @@ protected:
 	~UnPackage();
 
 public:
-	// Load package using short name (without path and extension). When the package
-	// is already loaded, this function will symply return a pointer to earlier
-	// loaded UnPackage.
+	// Load package using short name (without path and extension) or full path name.
+	// When the package is already loaded, this function will simply return a pointer
+	// to previously loaded UnPackage.
 	static UnPackage *LoadPackage(const char *Name);
 
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);

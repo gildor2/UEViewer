@@ -2493,45 +2493,50 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 
 	const char *LocalName = appSkipRootDir(Name);
 
-	int i;
-	// check in loaded packages list
-	for (i = 0; i < PackageMap.Num(); i++)
-		if (!stricmp(LocalName, PackageMap[i]->Name))
-			return PackageMap[i];
-	// check in missing package names
-	// note: it is not much faster than appFindGameFile(), but at least
-	// this check will allow to print "missing package" warning only once
-	for (i = 0; i < MissingPackages.Num(); i++)
-		if (!stricmp(LocalName, MissingPackages[i]))
-			return NULL;
-
+	// Call appFindGameFile() first. This function is fast because it uses
+	// hashing internally.
 	const CGameFileInfo *info = appFindGameFile(LocalName);
 
-	if (!info)
+	int i;
+
+	if (info && info->IsPackage)
 	{
-		// probably specified a full package name
+		// Check if package was already loaded.
+		if (info->Package)
+			return info->Package;
+		// Load the package.
+		UnPackage* package = new UnPackage(info->RelativeName, appCreateFileReader(info));
+		// Cache pointer in CGameFileInfo so next time it will be found quickly.
+		const_cast<CGameFileInfo*>(info)->Package = package;
+		return package;
+	}
+	else
+	{
+		// The file was not found in registered game files. Probably the file name
+		// was specified fully qualified, with full path name, outside of root game path.
+		// This is rare situation, so we can allow a bit unoptimized code here - linear search
+		// for package inside a PackageMap array.
+
+		// Check in missing package names. This check will allow to print "missing package"
+		// warning only once.
+		for (i = 0; i < MissingPackages.Num(); i++)
+			if (!stricmp(LocalName, MissingPackages[i]))
+				return NULL;
+		// Check in loaded packages list. This is done to prevent loading the same package
+		// twice when this function is called with a different filename qualifiers:
+		// "path/package.ext", "package.ext", "package"
+		for (i = 0; i < PackageMap.Num(); i++)
+			if (!stricmp(LocalName, PackageMap[i]->Filename))
+				return PackageMap[i];
+		// Try to load package.
 		if (appFileExists(Name))
 			return new UnPackage(Name);
 	}
 
-	if (info && info->IsPackage)
-	{
-		// Check in loaded packages again, but use info->RelativeName to compare
-		// (package.Filename is set from info->RelativeName, see below).
-		// This is done to prevent loading the same package twice when this function
-		// is called with a different filename qualifiers: "path/package.ext",
-		// "package.ext", "package"
-		for (i = 0; i < PackageMap.Num(); i++)
-			if (!stricmp(info->RelativeName, PackageMap[i]->Filename))
-				return PackageMap[i];
-		// package is not found, load it
-		return new UnPackage(info->RelativeName, appCreateFileReader(info));
-	}
-	// package is missing
-	// do not print any warnings: missing package is a normal situation in UE3 cooked builds, so print warnings
-	// when needed at upper level
+	// The package is missing. Do not print any warnings: missing package is a normal situation
+	// in UE3 cooked builds, so print warnings when needed at upper level.
 //	appPrintf("WARNING: package %s was not found\n", Name);
-	MissingPackages.AddItem(appStrdup(Name));
+	MissingPackages.AddItem(appStrdup(LocalName));
 	return NULL;
 
 	unguardf("%s", Name);
