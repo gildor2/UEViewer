@@ -160,7 +160,9 @@ void PixelShaderMain()
 {
 	vec2 TexCoord  = gl_TexCoord[0].st;
 
-	vec3 normal    = normalize(GetMaterialNormal(TexCoord));
+	vec3 normal    = GetMaterialNormal(TexCoord);
+	%s
+	normal = normalize(normal);
 	vec3 nLightDir = normalize(tangentLightDir);
 	// ambient + diffuse
 	float NdotL    = max(dot(normal, nLightDir), 0.0);

@@ -231,9 +231,11 @@ static void UploadTex(GLenum target, const void *pic, int width, int height, boo
 
 // Try to upload texture without decompression
 // Return false when not uploaded
-static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &TexData, bool doMipmap)
+static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum target2, CTextureData &TexData, bool doMipmap)
 {
 	guard(UploadCompressedTex);
+
+	Tex->NormalUnpackExpr = NULL;
 
 	// verify GL capabilities
 	if (!GL_SUPPORT(QGL_EXT_TEXTURE_COMPRESSION_S3TC))
@@ -243,8 +245,8 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 
 	//?? support some other formats too
 	// TPF_V8U8 = GL_RG8_SNORM (GL3.1)
-	// TPF_BC5  = GL_COMPRESSED_RG_RGTC2 (GL_ARB_texture_compression_rgtc/GL_EXT_texture_compression_rgtc)
-	// TPF_BC7  = GL_COMPRESSED_RGBA_BPTC_UNORM_ARB (GL_ARB_texture_compression_bptc)
+	//*TPF_BC5  = GL_COMPRESSED_RG_RGTC2 (GL_ARB_texture_compression_rgtc/GL_EXT_texture_compression_rgtc)
+	//*TPF_BC7  = GL_COMPRESSED_RGBA_BPTC_UNORM_ARB (GL_ARB_texture_compression_bptc)
 	// TPF_G8   = GL_LUMINANCE
 	// Notes:
 	// - most formats are uploaded with glTexImage2D(), not with glCompressedTexImage2D()
@@ -279,6 +281,7 @@ static bool UploadCompressedTex(GLenum target, GLenum target2, CTextureData &Tex
 	case TPF_BC5:
 		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_RGTC)) return false;
 		format = GL_COMPRESSED_RG_RGTC2;
+		Tex->NormalUnpackExpr = "normal.z = sqrt(1.0 - normal.x * normal.x - normal.y * normal.y);";
 		break;
 	case TPF_BC7:
 		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_BPTC)) return false;
@@ -332,7 +335,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 	glGenTextures(1, &TexNum);
 	glBindTexture(GL_TEXTURE_2D, TexNum);
 
-	if (!UploadCompressedTex(GL_TEXTURE_2D, GL_TEXTURE_2D, TexData, doMipmap))
+	if (!UploadCompressedTex(Tex, GL_TEXTURE_2D, GL_TEXTURE_2D, TexData, doMipmap))
 	{
 		// upload uncompressed
 		byte *pic = TexData.Decompress();
@@ -393,7 +396,7 @@ static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
 	doMipmap = false;	//!! workaround?
 
 	GLenum target = GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side;
-	if (!UploadCompressedTex(target, GL_TEXTURE_CUBE_MAP_ARB, TexData, doMipmap))
+	if (!UploadCompressedTex(Tex, target, GL_TEXTURE_CUBE_MAP_ARB, TexData, doMipmap))
 	{
 		// upload uncompressed
 		byte *pic = TexData.Decompress();
@@ -508,12 +511,15 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	}
 
 	// normal
+	const char* normalUnpackExpr = "";
 	if (Params.Normal)	//!! reimplement ! plus, check for correct normalmap texture (VTC texture compression etc ...)
 	{
 		DBG("Normal   : %s", Params.Normal->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Normal);
 		if (!Params.Normal->Bind())
 			Params.Normal = NULL;
+		else
+			normalUnpackExpr = Params.Normal->NormalUnpackExpr ? Params.Normal->NormalUnpackExpr : "";
 	}
 
 	// specular
@@ -621,8 +627,9 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	subst[4] = emissExpr;
 	subst[5] = cubeExpr;
 	subst[6] = cubeMaskExpr;
+	subst[7] = normalUnpackExpr;
 	// finalize paramerers and make shader
-	subst[7] = NULL;
+	subst[8] = NULL;
 
 	if (Params.bUseMobileSpecular)
 	{

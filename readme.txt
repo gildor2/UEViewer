@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+11.01.2015
+- fixed visual appearance of materials using BC5 textures for normal maps
+
 10.01.2015
 - added support for UE4 StaticMesh materials
 - UE4 package imports are working now

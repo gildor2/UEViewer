@@ -158,6 +158,7 @@ public:
 #if RENDERING
 	UUnrealMaterial()
 	:	DrawTimestamp(0)
+	,	NormalUnpackExpr(NULL)
 	{}
 
 	void SetMaterial();								// main function to use from outside
@@ -186,6 +187,8 @@ public:
 	{
 		return false;
 	}
+
+	const char*				NormalUnpackExpr;
 
 protected:
 	// rendering implementation fields

@@ -7,7 +7,7 @@
 #include "UnMaterial2.h"		// for UPalette
 
 #if BIOSHOCK
-#include "UnPackage.h"			//?? remove this hack
+#	include "UnPackage.h"			//?? remove this hack
 #endif
 
 #if SUPPORT_IPHONE
@@ -71,9 +71,7 @@ unsigned CTextureData::GetFourCC() const
 
 bool CTextureData::IsDXT() const
 {
-	return (
-		CompressedData != NULL &&
-		(Format == TPF_DXT1 || Format == TPF_DXT3 || Format == TPF_DXT5 || Format == TPF_DXT5N || Format == TPF_BC5) );
+	return (CompressedData != NULL) && (PixelFormatInfo[Format].FourCC != 0);
 }
 
 
@@ -311,7 +309,7 @@ static unsigned GetTiledOffset(int x, int y, int width, int logBpb)
 			) >> logBpb;
 }
 
-// Untile decompressed texture
+// Untile decompressed texture.
 // This function also removes U alignment when originalWidth < tiledWidth
 static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
 {
@@ -351,11 +349,11 @@ static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWi
 	unguard;
 }
 
-// Untile compressed texture
+// Untile compressed texture - it will remains compressed, but in PC format instead of XBox360.
 // This function also removes U alignment when originalWidth < tiledWidth
-static void UntileXbox360TexturePacked(const byte *src, byte *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
 {
-	guard(UntileXbox360TexturePacked);
+	guard(UntileCompressedXbox360Texture);
 
 	int blockWidth          = tiledWidth / blockSizeX;			// width of image in blocks
 	int originalBlockWidth  = originalWidth / blockSizeX;		// width of image in blocks
@@ -430,7 +428,7 @@ void CTextureData::DecodeXBox360()
 
 	// untile and unalign
 	byte *buf = (byte*)appMalloc(DataSize);
-	UntileXbox360TexturePacked(CompressedData, buf, USize1, USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
+	UntileCompressedXbox360Texture(CompressedData, buf, USize1, USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
 	// swap bytes
 	if (bytesPerBlock > 1)
