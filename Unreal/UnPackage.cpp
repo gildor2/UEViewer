@@ -2323,7 +2323,7 @@ UObject* UnPackage::CreateImport(int index)
 	}
 #if UNREAL3
 	// try to find import in startup package
-	else if (Engine() >= GAME_UE3)
+	else if (Engine() >= GAME_UE3 && Engine() < GAME_UE4)
 	{
 		// check startup package
 		Package = LoadPackage(GStartupPackage);

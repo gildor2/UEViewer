@@ -656,6 +656,16 @@ public:
 	virtual void Serialize(FArchive &Ar)
 	{
 		Super::Serialize(Ar);
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4)
+		{
+			// UE4 has complex FMaterialResource format, so avoid reading anything here, but
+			// scan package's imports for UTexture objects instead
+			ScanForTextures();
+			DROP_REMAINING_DATA(Ar);
+			return;
+		}
+#endif // UNREAL4
 #if BIOSHOCK3
 		if (Ar.Game == GAME_Bioshock3)
 		{
@@ -704,6 +714,10 @@ public:
 		}
 		DROP_REMAINING_DATA(Ar);			//?? drop native data
 	}
+
+#if UNREAL4
+	void ScanForTextures();
+#endif
 
 #if RENDERING
 	virtual void SetupGL();

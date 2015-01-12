@@ -3,6 +3,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMaterial3.h"
+#include "UnPackage.h"
 
 /*-----------------------------------------------------------------------------
 	UTexture/UTexture2D (Unreal engine 4)
@@ -110,6 +111,26 @@ void UTexture2D::Serialize4(FArchive& Ar)
 			// read next format name
 			Ar << PixelFormatEnum;
 		}
+	}
+
+	unguard;
+}
+
+void UMaterial3::ScanForTextures()
+{
+	guard(UMaterial3::ScanForTextures);
+
+//	printf("--> %d imports\n", Package->Summary.ImportCount);
+	for (int i = 0; i < Package->Summary.ImportCount; i++)
+	{
+		const FObjectImport &Imp = Package->GetImport(i);
+//		printf("--> import %d (%s)\n", i, *Imp.ClassName);
+		if (stricmp(Imp.ClassName, "Class") == 0 || stricmp(Imp.ClassName, "Package") == 0)
+			continue;		// avoid spamming to log
+		UObject* obj = Package->CreateImport(i);
+//		if (obj) printf("--> %s (%s)\n", obj->Name, obj->GetClassName());
+		if (obj && obj->IsA("Texture3"))
+			ReferencedTextures.AddItem(static_cast<UTexture3*>(obj));
 	}
 
 	unguard;

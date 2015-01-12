@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+12.01.2015
+- implemented quick support for UE3 materials
+
 11.01.2015
 - fixed visual appearance of materials using BC5 textures for normal maps
 

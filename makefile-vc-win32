@@ -1077,27 +1077,14 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial3.h \
-	Unreal/UnObject.h
-
-$(OUT_1)/UnTexture4.obj : Unreal/UnTexture4.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture4.obj" Unreal/UnTexture4.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMaterial3.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
 $(OUT_1)/UnTexture3.obj : Unreal/UnTexture3.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture3.obj" Unreal/UnTexture3.cpp
+
+$(OUT_1)/UnTexture4.obj : Unreal/UnTexture4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture4.obj" Unreal/UnTexture4.cpp
 
 DEPENDS = \
 	Core/Core.h \
