@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnCore.h"
 #include "UnPackage.h"
+#include "GameDatabase.h"
 
 #define MAKE_DIRS		1
 //#define DISABLE_WRITE	1		// for quick testing of extraction
@@ -77,13 +78,19 @@ int main(int argc, char **argv)
 				"Usage: extract [command] [options] <package filename>\n"
 				"\n"
 				"Commands:\n"
-				"    -extract           (default) extract package\n"
-				"    -list              list contents of package\n"
+				"    -extract        (default) extract package\n"
+				"    -list           list contents of package\n"
 				"\n"
 				"Options:\n"
-				"    -filter=<value>    add filter for output types\n"
-				"    -out=PATH          extract everything into PATH instead of the current directory\n"
-				"    -lzo|lzx|zlib      force compression method for fully-compressed packages\n"
+				"    -path=PATH      path to game installation directory; if not specified,\n"
+				"                    program will search for packages in current directory\n"
+				"    -game=tag       override game autodetection (see -taglist for variants)\n"
+				"    -filter=<value> add filter for output types\n"
+				"    -out=PATH       extract everything into PATH instead of the current directory\n"
+				"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
+				"    -log=file       write log to the specified file\n"
+				"    -taglist        list of tags to override game autodetection\n"
+				"    -help           display this help page\n"
 				"\n"
 				"Platform selection:\n"
 				"    -ps3               override platform autodetection to PS3\n"
@@ -104,41 +111,78 @@ int main(int argc, char **argv)
 	char BaseDir[256];
 	strcpy(BaseDir, ".");
 
+	const char *argPkgName = NULL;
+
 	int arg;
 	for (arg = 1; arg < argc; arg++)
 	{
-		if (argv[arg][0] == '-')
+		const char *opt = argv[arg];
+		if (opt[0] != '-')
 		{
-			const char *opt = argv[arg]+1;
-			if (!stricmp(opt, "extract"))
-				mainCmd = CMD_Extract;
-			else if (!stricmp(opt, "list"))
-				mainCmd = CMD_List;
-			else if (!strnicmp(opt, "filter=", 7))
+			if (argPkgName)
 			{
-				FString* S = new (filters) FString(opt+7);
+				appPrintf("Package name already specified (passed \"%s\" and \"%s\")\n", argPkgName, opt);
+				return 1;
 			}
-			else if (!strnicmp(opt, "out=", 4))
+			argPkgName = opt;
+			continue;
+		}
+
+		opt++;			// skip '-'
+
+		if (!stricmp(opt, "extract"))
+			mainCmd = CMD_Extract;
+		else if (!stricmp(opt, "list"))
+			mainCmd = CMD_List;
+		else if (!strnicmp(opt, "filter=", 7))
+		{
+			FString* S = new (filters) FString(opt+7);
+		}
+		else if (!strnicmp(opt, "log=", 4))
+		{
+			appOpenLogFile(opt+4);
+		}
+		else if (!strnicmp(opt, "path=", 5))
+		{
+			appSetRootDirectory(opt+5);
+		}
+		else if (!strnicmp(opt, "out=", 4))
+		{
+			strcpy(BaseDir, opt+4);
+		}
+		else if (!strnicmp(opt, "game=", 5))
+		{
+			int tag = FindGameTag(opt+5);
+			if (tag == -1)
 			{
-				strcpy(BaseDir, opt+4);
+				appPrintf("ERROR: unknown game tag \"%s\". Use -taglist option to display available tags.\n", opt+5);
+				exit(0);
 			}
-			else if (!stricmp(opt, "lzo"))
-				GForceCompMethod = COMPRESS_LZO;
-			else if (!stricmp(opt, "zlib"))
-				GForceCompMethod = COMPRESS_ZLIB;
-			else if (!stricmp(opt, "lzx"))
-				GForceCompMethod = COMPRESS_LZX;
-			else if (!stricmp(opt, "ps3"))
-				GForcePlatform = PLATFORM_PS3;
-			else
-				goto help;
+			GForceGame = tag;
+		}
+		else if (!stricmp(opt, "lzo"))
+			GForceCompMethod = COMPRESS_LZO;
+		else if (!stricmp(opt, "zlib"))
+			GForceCompMethod = COMPRESS_ZLIB;
+		else if (!stricmp(opt, "lzx"))
+			GForceCompMethod = COMPRESS_LZX;
+		else if (!stricmp(opt, "ps3"))
+			GForcePlatform = PLATFORM_PS3;
+		else if (!stricmp(opt, "taglist"))
+		{
+			PrintGameList(true);
+			return 0;
+		}
+		else if (!stricmp(opt, "help"))
+		{
+			goto help;
 		}
 		else
 		{
-			break;
+			appPrintf("decompress: invalid option: %s\n", opt);
+			return 1;
 		}
 	}
-	const char *argPkgName = argv[arg];
 	if (!argPkgName) goto help;
 
 	// setup NotifyInfo to describe package only
