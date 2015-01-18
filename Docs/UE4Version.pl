@@ -1,6 +1,9 @@
 #!/usr/bin/perl -w
 
-$verfionsCpp = "C:/Projects/Epic/UnrealEngine4-latest/Engine/Source/Runtime/Core/Public/UObject/ObjectVersion.h";
+@files = (
+	"C:/Projects/Epic/UnrealEngine4-latest/Engine/Source/Runtime/Core/Public/UObject/ObjectVersion.h",
+	"ObjectVersion.h"
+);
 
 sub DBG() {0}
 
@@ -26,51 +29,60 @@ sub getline0 {
 }
 
 
-open(IN, $verfionsCpp) || Error ("can't open infile $verfionsCpp");
-
-while (getline0())
+sub ParseVersionFile
 {
-	if ($line =~ /^enum\s*\w+/) {
-		last;
+	my $verfionsCpp = $_[0];
+	open(IN, $verfionsCpp) || Error ("can't open infile $verfionsCpp");
+
+	while (getline0())
+	{
+		if ($line =~ /^enum\s*\w+/) {
+			last;
+		}
+		print("SKIP: $line\n") if DBG;
 	}
-	print("SKIP: $line\n") if DBG;
+
+	if ($line !~ ".*\{") {
+		getline0();
+		die "Bad format" if $line !~ /\{/;
+	}
+
+	$value = 0;
+	$findConst = $ARGV[0];
+
+	if (!defined($findConst)) {
+		print("Please supply constant name as argument\n");
+		exit(1);
+	}
+
+	while (getline0())
+	{
+		if ($line =~ /^\}/) {
+			last;
+		}
+		my ($name, undef, $val) = $line =~ /^ (\w+) (\s* \= \s* (\w+))? (\,)? $/x;
+		if (defined($val)) {
+			$value = $val;
+		}
+
+		if (!defined($name)) {
+			print("Bad: $line\n") if DBG;
+			last;
+		}
+		print("ENUM: $name = $value ($line)\n") if DBG;
+
+		if (uc($findConst) eq uc($name)) {
+			print("$findConst = $value\n");
+			exit(0);
+		}
+
+		$value = $value + 1;
+	}
 }
 
-if ($line !~ ".*\{") {
-	getline0();
-	die "Bad format" if $line !~ /\{/;
-}
-
-$value = 0;
-$findConst = $ARGV[0];
-
-if (!defined($findConst)) {
-	print("Please supply constant name as argument\n");
-	exit(1);
-}
-
-while (getline0())
+for my $f (@files)
 {
-	if ($line =~ /^\}/) {
-		last;
-	}
-	my ($name, undef, $val) = $line =~ /^ (\w+) (\s* \= \s* (\w+))? (\,)? $/x;
-	if (defined($val)) {
-		$value = $val;
-	}
-
-	if (!defined($name)) {
-		print("Bad: $line\n") if DBG;
-		last;
-	}
-	print("ENUM: $name = $value ($line)\n") if DBG;
-
-	if (uc($findConst) eq uc($name)) {
-		print("$findConst = $value\n");
-		exit(0);
-	}
-
-	$value = $value + 1;
+	ParseVersionFile($f);
 }
 
 print("$findConst was not found!\n");

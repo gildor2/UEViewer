@@ -342,6 +342,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 		MESH_VIEWER (UStaticMesh3,    CStatMeshViewer      );
 #endif
 #if UNREAL4
+		MESH_VIEWER (USkeletalMesh4,  CSkelMeshViewer      );
 		MESH_VIEWER (UStaticMesh4,    CStatMeshViewer      );
 #endif
 	}

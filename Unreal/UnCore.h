@@ -857,6 +857,16 @@ struct FVector
 	}
 };
 
+struct FVector4
+{
+	float	X, Y, Z, W;
+
+	friend FArchive& operator<<(FArchive &Ar, FVector4 &V)
+	{
+		return Ar << V.X << V.Y << V.Z << V.W;
+	}
+};
+
 #if 1
 
 FORCEINLINE bool operator==(const FVector &V1, const FVector &V2)
@@ -1037,9 +1047,9 @@ struct FLinearColor
 
 struct FBoxSphereBounds
 {
-	FVector					Origin;
-	FVector					BoxExtent;
-	float					SphereRadius;
+	FVector	Origin;
+	FVector	BoxExtent;
+	float	SphereRadius;
 
 	friend FArchive& operator<<(FArchive &Ar, FBoxSphereBounds &B)
 	{
@@ -1057,6 +1067,18 @@ struct FIntVector
 	friend FArchive& operator<<(FArchive &Ar, FIntVector &V)
 	{
 		return Ar << V.X << V.Y << V.Z;
+	}
+};
+
+struct FTransform
+{
+	FQuat	Rotation;
+	FVector	Translation;
+	FVector	Scale3D;
+
+	friend FArchive& operator<<(FArchive &Ar, FTransform &T)
+	{
+		return Ar << T.Rotation << T.Translation << T.Scale3D;
 	}
 };
 
@@ -1141,14 +1163,16 @@ SIMPLE_TYPE(int64,    int64)
 SIMPLE_TYPE(uint64,   uint64)
 
 // Aggregates
-SIMPLE_TYPE(FVector, float)
-SIMPLE_TYPE(FQuat,   float)
-SIMPLE_TYPE(FCoords, float)
-SIMPLE_TYPE(FColor,  byte)
+SIMPLE_TYPE(FVector,  float)
+SIMPLE_TYPE(FVector4, float)
+SIMPLE_TYPE(FQuat,    float)
+SIMPLE_TYPE(FCoords,  float)
+SIMPLE_TYPE(FColor,   byte)
 
 #if UNREAL4
 
 SIMPLE_TYPE(FIntVector, int)
+SIMPLE_TYPE(FTransform, float)
 
 #endif // UNREAL4
 
@@ -1550,7 +1574,7 @@ protected:
 	{}
 };
 
-void SkipRawArray(FArchive &Ar, int Size);
+void SkipRawArray(FArchive &Ar, int Size = -1);
 
 // helper function for RAW_ARRAY macro
 template<class T> inline TRawArray<T>& ToRawArray(TArray<T> &Arr)
@@ -1882,15 +1906,25 @@ enum
 	VER_UE4_TEXTURE_DERIVED_DATA2 = 124,
 	VER_UE4_ADD_COOKED_TO_TEXTURE2D = 125,
 	VER_UE4_REMOVED_STRIP_DATA = 130,
+	VER_UE4_REMOVE_EXTRA_SKELMESH_VERTEX_INFLUENCES = 134,
 	VER_UE4_TEXTURE_SOURCE_ART_REFACTOR = 143,
+	VER_UE4_ADD_SKELMESH_MESHTOIMPORTVERTEXMAP = 152,
 	VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES = 163,
 	VER_UE4_REMOVE_NET_INDEX = 196,
 	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,
 	VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET = 212,
 	VER_UE4_STATIC_MESH_STORE_NAV_COLLISION = 216,
+	VER_UE4_APEX_CLOTH = 254,
 	VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX = 269,
 	VER_UE4_SUPPORT_32BIT_STATIC_MESH_INDICES = 277,
+	VER_UE4_APEX_CLOTH_LOD = 280,
 	VAR_UE4_ARRAY_PROPERTY_INNER_TAGS = 282, // note: here's a typo in UE4 code - "VAR_" instead of "VER_"
+	VER_UE4_KEEP_SKEL_MESH_INDEX_DATA = 283,
+	VER_UE4_MOVE_SKELETALMESH_SHADOWCASTING = 302,
+	VER_UE4_REFERENCE_SKELETON_REFACTOR = 310,
+	VER_UE4_FIXUP_ROOTBONE_PARENT = 312,
+	VER_UE4_SUPPORT_8_BONE_INFLUENCES_SKELETAL_MESHES = 332,
+	VER_UE4_SUPPORT_GPUSKINNING_8_BONE_INFLUENCES = 334,
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
 	// UE4.0 source code released on GitHub. Note: if we don't have any VER_UE4_...
 	// values between, for instance, VER_UE4_0 and VER_UE4_1, it doesn't matter for

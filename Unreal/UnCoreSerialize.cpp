@@ -317,11 +317,15 @@ old_ver:
 void SkipRawArray(FArchive &Ar, int Size)
 {
 	guard(SkipRawArray);
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4) goto new_ver;
+#endif
 	if (Ar.ArVer >= 453)
 	{
+	new_ver:
 		int ElementSize, Count;
 		Ar << ElementSize << Count;
-		assert(ElementSize == Size);
+		assert(Size == -1 || ElementSize == Size);
 		Ar.Seek(Ar.Tell() + ElementSize * Count);
 	}
 	else

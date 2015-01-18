@@ -159,6 +159,9 @@ public:
 #if BATMAN
 	void FixBatman2Skeleton();
 #endif
+
+protected:
+	void ConvertMesh();
 };
 
 

@@ -17,7 +17,7 @@ bool GDontOverwriteFiles = false;
 	Exporter function management
 -----------------------------------------------------------------------------*/
 
-#define MAX_EXPORTERS		16
+#define MAX_EXPORTERS		20
 
 struct CExporterInfo
 {

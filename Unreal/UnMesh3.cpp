@@ -95,6 +95,7 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 // It's useful to declare TArray<> structures as forward declarations in header file.
 USkeletalMesh3::USkeletalMesh3()
 :	bHasVertexColors(false)
+,	ConvertedMesh(NULL)
 #if BATMAN
 ,	EnableTwistBoneFixers(true)
 ,	EnableClavicleFixer(true)
@@ -128,7 +129,7 @@ struct FSkelMeshSection_MurderedUnk
 struct FSkelMeshSection3
 {
 	short				MaterialIndex;
-	short				unk1;
+	short				ChunkIndex;
 	int					FirstIndex;
 	int					NumTriangles;
 	byte				unk2;
@@ -145,7 +146,7 @@ struct FSkelMeshSection3
 			Ar << S.MaterialIndex << FirstIndex << unk1 << unk2 << unk3 << unk4 << unk5 << unk6 << S.NumTriangles;
 			if (Ar.ArVer < 202) Ar << unk8;	// ArVer<202 -- from EndWar
 			S.FirstIndex = FirstIndex;
-			S.unk1 = 0;
+			S.ChunkIndex = 0;
 			return Ar;
 		}
 #if MURDERED
@@ -161,7 +162,7 @@ struct FSkelMeshSection3
 			}
 		}
 #endif // MURDERED
-		Ar << S.MaterialIndex << S.unk1 << S.FirstIndex;
+		Ar << S.MaterialIndex << S.ChunkIndex << S.FirstIndex;
 #if BATMAN
 		if (Ar.Game == GAME_Batman3) goto old_section; // Batman1 and 2 has version smaller than 806
 #endif
@@ -524,8 +525,7 @@ struct FMesh3Unk4_MK
 };
 #endif // MKVSDC
 
-// real name: FSkelMeshChunk
-struct FSkinChunk3
+struct FSkelMeshChunk3
 {
 	int					FirstVertex;
 	TArray<FRigidVertex3>  RigidVerts;
@@ -535,9 +535,9 @@ struct FSkinChunk3
 	int					NumSmoothVerts;
 	int					MaxInfluences;
 
-	friend FArchive& operator<<(FArchive &Ar, FSkinChunk3 &V)
+	friend FArchive& operator<<(FArchive &Ar, FSkelMeshChunk3 &V)
 	{
-		guard(FSkinChunk3<<);
+		guard(FSkelMeshChunk3<<);
 		Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts;
 #if MKVSDC
 		if (Ar.Game == GAME_MK && Ar.ArVer >= 459)
@@ -726,8 +726,7 @@ struct FGPUVert3PackedFloat : FGPUVert3Common
 	}
 };
 
-// real name: FSkeletalMeshVertexBuffer
-struct FGPUSkin3
+struct FSkeletalMeshVertexBuffer3
 {
 	int							NumUVSets;
 	int							bUseFullPrecisionUVs;		// 0 = half, 1 = float; copy of corresponding USkeletalMesh field
@@ -750,9 +749,9 @@ struct FGPUSkin3
 		return 0;
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, FGPUSkin3 &S)
+	friend FArchive& operator<<(FArchive &Ar, FSkeletalMeshVertexBuffer3 &S)
 	{
-		guard(FGPUSkin3<<);
+		guard(FSkeletalMeshVertexBuffer3<<);
 
 		DBG_SKEL("Reading GPU skin\n");
 
@@ -851,7 +850,7 @@ struct FGPUSkin3
 		}
 	#endif // LOST_PLANET3
 
-		// UE3 PC version ignored bUsePackedPosition - forced !bUsePackedPosition in FGPUSkin3 serializer.
+		// UE3 PC version ignored bUsePackedPosition - forced !bUsePackedPosition in FSkeletalMeshVertexBuffer3 serializer.
 		// Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position.
 		// Working bUsePackedPosition version was found in all XBox360 games. For PC there is only one game -
 		// MOH2010, which uses bUsePackedPosition. PS3 also has bUsePackedPosition support (at least TRON)
@@ -938,7 +937,7 @@ struct FSkeletalMeshVertexInfluences
 	TArray<FMesh3Unk3>	fC;				// Map or Set
 	TArray<FMesh3Unk3A>	fCA;
 	TArray<FSkelMeshSection3> Sections;
-	TArray<FSkinChunk3>	Chunks;
+	TArray<FSkelMeshChunk3>	Chunks;
 	TArray<byte>		f80;
 	byte				f8C;			// default = 0
 
@@ -967,7 +966,7 @@ struct FSkeletalMeshVertexInfluences
 		for (int i1 = 0; i1 < S.Sections.Num(); i1++)
 		{
 			FSkelMeshSection3 &Sec = S.Sections[i1];
-			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d Unk=%d\n", i1, Sec.MaterialIndex, Sec.FirstIndex, Sec.NumTriangles, Sec.unk1);
+			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d Chunk=%d\n", i1, Sec.MaterialIndex, Sec.FirstIndex, Sec.NumTriangles, Sec.ChunkIndex);
 		}
 
 #endif // DEBUG_SKELMESH
@@ -1015,8 +1014,9 @@ struct FTRMeshUnkStream
 // Other: GOW PC
 struct FStaticLODModel3
 {
+	//!! field names (from UE4 source): f80 = Size, UsedBones = ActiveBoneIndices, f24 = RequiredBones
 	TArray<FSkelMeshSection3> Sections;
-	TArray<FSkinChunk3>	Chunks;
+	TArray<FSkelMeshChunk3>	Chunks;
 	FSkelIndexBuffer3	IndexBuffer;
 	TArray<short>		UsedBones;		// bones, value = [0, NumBones-1]
 	TArray<byte>		f24;			// count = NumBones, value = [0, NumBones-1]; note: BoneIndex is 'short', not 'byte' ...
@@ -1027,7 +1027,7 @@ struct FStaticLODModel3
 	TArray<FEdge3>		Edges;			// links 2 vertices and 2 faces (triangles)
 	FWordBulkData		BulkData;		// ElementCount = NumVertices
 	FIntBulkData		BulkData2;		// used instead of BulkData since version 806, indices?
-	FGPUSkin3			GPUSkin;
+	FSkeletalMeshVertexBuffer3 GPUSkin;
 	TArray<FSkeletalMeshVertexInfluences> fC4;	// GoW2+ engine
 	int					NumUVSets;
 	TArray<int>			VertexColor;	// since version 710
@@ -1059,7 +1059,7 @@ struct FStaticLODModel3
 		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
 		{
 			FSkelMeshSection3 &S = Lod.Sections[i1];
-			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d Unk=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles, S.unk1);
+			appPrintf("Sec[%d]: M=%d, FirstIdx=%d, NumTris=%d Chunk=%d\n", i1, S.MaterialIndex, S.FirstIndex, S.NumTriangles, S.ChunkIndex);
 		}
 		appPrintf("Indices: %d (16) / %d (32)\n", Lod.IndexBuffer.Indices16.Num(), Lod.IndexBuffer.Indices32.Num());
 #endif // DEBUG_SKELMESH
@@ -1605,7 +1605,15 @@ after_skeleton:
 	DROP_REMAINING_DATA(Ar);
 #endif
 
-	guard(ConvertMesh);
+	ConvertMesh();
+
+	unguard;
+}
+
+
+void USkeletalMesh3::ConvertMesh()
+{
+	guard(USkeletalMesh3::ConvertMesh);
 
 	CSkeletalMesh *Mesh = new CSkeletalMesh(this);
 	ConvertedMesh = Mesh;
@@ -1646,16 +1654,16 @@ after_skeleton:
 		bool UseGpuSkinVerts = (VertexCount > 0);
 		if (!VertexCount)
 		{
-			const FSkinChunk3 &C = SrcLod.Chunks[SrcLod.Chunks.Num() - 1];		// last chunk
+			const FSkelMeshChunk3 &C = SrcLod.Chunks[SrcLod.Chunks.Num() - 1];		// last chunk
 			VertexCount = C.FirstVertex + C.NumRigidVerts + C.NumSmoothVerts;
 		}
 		// allocate the vertices
 		Lod->AllocateVerts(VertexCount);
 
 		int chunkIndex = 0;
-		const FSkinChunk3 *C = NULL;
+		const FSkelMeshChunk3 *C = NULL;
 		int lastChunkVertex = -1;
-		const FGPUSkin3 &S = SrcLod.GPUSkin;
+		const FSkeletalMeshVertexBuffer3 &S = SrcLod.GPUSkin;
 		CSkelMeshVertex *D = Lod->Verts;
 
 		for (int Vert = 0; Vert < VertexCount; Vert++, D++)
@@ -1841,10 +1849,8 @@ after_skeleton:
 
 	Mesh->FinalizeMesh();
 
-	unguard; // ConvertMesh
-
 #if BATMAN
-	if (Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
+	if (Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3)
 		FixBatman2Skeleton();
 #endif
 
@@ -1886,6 +1892,7 @@ void USkeletalMesh3::PostLoad()
 // Implement constructor in cpp to avoid inlining (it's large enough).
 // It's useful to declare TArray<> structures as forward declarations in header file.
 UStaticMesh3::UStaticMesh3()
+:	ConvertedMesh(NULL)
 {}
 
 UStaticMesh3::~UStaticMesh3()

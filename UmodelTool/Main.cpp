@@ -238,6 +238,15 @@ static void ExportStaticMesh3(const UStaticMesh3 *Mesh)
 #endif
 
 #if UNREAL4
+static void ExportSkeletalMesh4(const USkeletalMesh4 *Mesh)
+{
+	assert(Mesh->ConvertedMesh);
+	if (!GSettings.ExportMd5Mesh)
+		ExportPsk(Mesh->ConvertedMesh);
+	else
+		ExportMd5Mesh(Mesh->ConvertedMesh);
+}
+
 static void ExportStaticMesh4(const UStaticMesh4 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
@@ -286,6 +295,7 @@ static void RegisterExporters()
 	RegisterExporter("FaceFXAsset",   ExportFaceFXAsset  );
 #endif // UNREAL3
 #if UNREAL4
+	RegisterExporter("SkeletalMesh4", ExportSkeletalMesh4);
 	RegisterExporter("StaticMesh4",   ExportStaticMesh4  );
 #endif
 	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters

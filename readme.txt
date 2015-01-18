@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+18.01.2015
+- implemented UE4 SkeletalMesh support
+
 12.01.2015
 - implemented quick support for UE3 materials
 
