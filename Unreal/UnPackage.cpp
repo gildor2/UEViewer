@@ -1247,6 +1247,11 @@ public:
 		if (Reader) delete Reader;
 	}
 
+	virtual bool IsCompressed() const
+	{
+		return true;
+	}
+
 	virtual void Serialize(void *data, int size)
 	{
 		guard(FUE3ArchiveReader::Serialize);

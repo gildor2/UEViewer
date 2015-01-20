@@ -184,6 +184,14 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	{
 		STRUC_TYPE(FLinearColor)
 	}
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		/// reference: CureUObject/Classes/Object.h
+		/// objects with native serializer has "atomic" or "immutable" mark
+		STRUC_TYPE(FIntPoint)
+	}
+#endif // UNREAL4
 	const CTypeInfo *ItemType = FindStructType(StrucName);
 	if (!ItemType) return false;
 	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
@@ -1589,6 +1597,15 @@ END_PROP_TABLE_EXTERNAL
 
 #endif // UNREAL3
 
+#if UNREAL4
+
+BEGIN_PROP_TABLE_EXTERNAL(FIntPoint)
+	PROP_INT(X)
+	PROP_INT(Y)
+END_PROP_TABLE_EXTERNAL
+
+#endif // UNREAL4
+
 void RegisterCoreClasses()
 {
 	BEGIN_CLASS_TABLE
@@ -1598,6 +1615,9 @@ void RegisterCoreClasses()
 	#if UNREAL3
 		REGISTER_CLASS_EXTERNAL(FLinearColor)
 		REGISTER_CLASS_EXTERNAL(FBoxSphereBounds)
+	#endif
+	#if UNREAL4
+		REGISTER_CLASS_EXTERNAL(FIntPoint)
 	#endif
 	END_CLASS_TABLE
 }

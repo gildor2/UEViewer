@@ -416,6 +416,11 @@ public:
 		return (Game & GAME_ENGINE);
 	}
 
+	virtual bool IsCompressed() const
+	{
+		return false;
+	}
+
 	// Position and file size methods.
 
 	virtual void Seek(int Pos) = 0;
@@ -707,6 +712,10 @@ public:
 	virtual ~FReaderWrapper()
 	{
 		delete Reader;
+	}
+	virtual bool IsCompressed() const
+	{
+		return Reader->IsCompressed();
 	}
 	virtual void Seek(int Pos)
 	{
@@ -1059,6 +1068,16 @@ struct FBoxSphereBounds
 
 
 #if UNREAL4
+
+struct FIntPoint
+{
+	int		X, Y;
+
+	friend FArchive& operator<<(FArchive &Ar, FIntPoint &V)
+	{
+		return Ar << V.X << V.Y;
+	}
+};
 
 struct FIntVector
 {
@@ -1852,10 +1871,13 @@ struct FByteBulkData //?? separate FUntypedBulkData
 
 	// support functions
 	void SerializeHeader(FArchive &Ar);
-	void SerializeChunk(FArchive &Ar);
+	void SerializeData(FArchive &Ar);
 	// main functions
 	void Serialize(FArchive &Ar);
 	void Skip(FArchive &Ar);
+
+protected:
+	void SerializeDataChunk(FArchive &Ar);
 };
 
 struct FWordBulkData : public FByteBulkData
@@ -1888,6 +1910,7 @@ struct FIntBulkData : public FByteBulkData
 
 #define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
 
+#define PKG_StoreCompressed	0x2000000
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 

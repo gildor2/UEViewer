@@ -5,6 +5,17 @@
 #include "UnMaterial3.h"
 #include "UnPackage.h"
 
+
+//#define DEBUG_TEX		1
+
+#if DEBUG_TEX
+#define DBG(...)			appPrintf(__VA_ARGS__);
+#else
+#define DBG(...)
+#endif
+
+
+
 /*-----------------------------------------------------------------------------
 	UTexture/UTexture2D (Unreal engine 4)
 -----------------------------------------------------------------------------*/
@@ -24,6 +35,7 @@ struct FTexturePlatformData
 		Ar << D.SizeX << D.SizeY << D.NumSlices << D.PixelFormat;
 		int FirstMip;
 		Ar << FirstMip;					// only for cooked, but we don't read FTexturePlatformData for non-cooked textures
+		DBG("   SizeX=%d SizeY=%d NumSlices=%d PixelFormat=%s FirstMip=%d\n", D.SizeX, D.SizeY, D.NumSlices, *D.PixelFormat, FirstMip);
 		Ar << D.Mips;
 		return Ar;
 	}

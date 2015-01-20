@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 			mem << tmp;
 			if (tmp != Summary.PackageFlags) continue;
 			int *p = (int*)(buffer + flagsPos);
-			*p &= (!Package->ReverseBytes) ? ~0x2000000 : ~0x2;	// remove PKG_Compressed flag
+			*p &= (!Package->ReverseBytes) ? ~0x2000000 : ~0x2;	// remove PKG_StoreCompressed flag (2 variants for different byte order)
 			found = true;
 			break;
 		}

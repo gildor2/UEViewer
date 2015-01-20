@@ -699,7 +699,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 		}
 	}
 //	appPrintf("Bulk %X %I64X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
-	Bulk->SerializeChunk(*Ar);
+	Bulk->SerializeData(*Ar);
 	delete Ar;
 	return true;
 

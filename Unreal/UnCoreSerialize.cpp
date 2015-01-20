@@ -1043,7 +1043,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		saveStopper = Ar.GetStopper();
 		// seek to data block and read data
 		Ar.SetStopper(0);
-		SerializeChunk(Ar);
+		SerializeData(Ar);
 		// restore archive position
 		Ar.Seek(savePos);
 		Ar.SetStopper(saveStopper);
@@ -1069,7 +1069,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		saveStopper = Ar.GetStopper();
 		// seek to data block and read data
 		Ar.SetStopper(0);
-		SerializeChunk(Ar);
+		SerializeData(Ar);
 		// restore archive position
 		Ar.Seek(savePos);
 		Ar.SetStopper(saveStopper);
@@ -1082,7 +1082,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		Ar.Seek64(BulkDataOffsetInFile);
 #endif
 	assert(BulkDataOffsetInFile == Ar.Tell());
-	SerializeChunk(Ar);
+	SerializeData(Ar);
 
 	unguard;
 }
@@ -1104,11 +1104,53 @@ void FByteBulkData::Skip(FArchive &Ar)
 }
 
 
-void FByteBulkData::SerializeChunk(FArchive &Ar)
+void FByteBulkData::SerializeData(FArchive &Ar)
 {
-	guard(FByteBulkData::SerializeChunk);
+	guard(FByteBulkData::SerializeData);
 
 	assert(!(BulkDataFlags & BULKDATA_Unused));
+
+	// serialize data block
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4 && Ar.IsCompressed())
+	{
+		// UE4 compressed packages use uncompressed position for bulk data
+		/// reference: FUntypedBulkData::LoadDataIntoMemory
+
+		// open new FArchive for the current file
+		UnPackage* Package = Ar.CastTo<UnPackage>();
+		assert(Package);
+		//!! should make the following code as separate function
+		const CGameFileInfo* info = appFindGameFile(Package->Filename);
+		FArchive* loader = NULL;
+		if (info)
+		{
+			loader = appCreateFileReader(info);
+			assert(loader);
+		}
+		else
+		{
+			loader = new FFileReader(Package->Filename);
+		}
+		loader->Game = Ar.Game;
+
+		loader->Seek(BulkDataOffsetInFile);
+		SerializeDataChunk(*loader);
+		delete loader;
+	}
+	else
+#endif // UNREAL4
+	{
+		Ar.Seek(BulkDataOffsetInFile);
+		SerializeDataChunk(Ar);
+	}
+
+	unguard;
+}
+
+void FByteBulkData::SerializeDataChunk(FArchive &Ar)
+{
+	guard(FByteBulkData::SerializeDataChunk);
 
 	// allocate array
 	if (BulkData) appFree(BulkData);
@@ -1116,9 +1158,6 @@ void FByteBulkData::SerializeChunk(FArchive &Ar)
 	int DataSize = ElementCount * GetElementSize();
 	if (!DataSize) return;		// nothing to serialize
 	BulkData = (byte*)appMalloc(DataSize);
-
-	// serialize data block
-	Ar.Seek(BulkDataOffsetInFile);
 
 	if (BulkDataFlags & (BULKDATA_CompressedLzo | BULKDATA_CompressedZlib | BULKDATA_CompressedLzx))
 	{

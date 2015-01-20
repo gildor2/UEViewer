@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+20.01.2015
+- fixed loading of bulk data from compressed UE4 packages
+
 18.01.2015
 - implemented UE4 SkeletalMesh support
 

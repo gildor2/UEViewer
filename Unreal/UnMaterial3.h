@@ -323,6 +323,9 @@ public:
 	FGuid			TextureFileCacheGuid;
 	int				MipTailBaseIdx;
 	bool			bForcePVRTC4;		// iPhone
+#if UNREAL4
+	FIntPoint		ImportedSize;
+#endif
 
 #if RENDERING
 	// rendering implementation fields
@@ -347,6 +350,9 @@ public:
 		PROP_ENUM2(AddressY, ETextureAddress)
 		PROP_NAME(TextureFileCacheName)
 		PROP_INT(MipTailBaseIdx)
+#if UNREAL4
+		PROP_STRUC(ImportedSize, FIntPoint)
+#endif
 		// drop unneeded props
 		PROP_DROP(bGlobalForceMipLevelsToBeResident)
 		PROP_DROP(OriginalSizeX)

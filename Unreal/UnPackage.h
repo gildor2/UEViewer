@@ -282,6 +282,10 @@ public:
 	virtual FArchive& operator<<(FName &N);
 	virtual FArchive& operator<<(UObject *&Obj);
 
+	virtual bool IsCompressed() const
+	{
+		return Loader->IsCompressed();
+	}
 	virtual void Serialize(void *data, int size)
 	{
 		Loader->Serialize(data, size);
