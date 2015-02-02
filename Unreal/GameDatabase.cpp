@@ -288,6 +288,7 @@ const GameInfo GListOfGames[] = {
 #	endif
 #	if REMEMBER_ME
 		G("Remember Me", rem, GAME_RememberMe),
+		G("Life is Strange", rem, GAME_RememberMe),
 #	endif
 #	if MARVEL_HEROES
 		G("Marvel Heroes", mh, GAME_MarvelHeroes),
@@ -638,9 +639,6 @@ void FArchive::DetectGame()
 		 (ArLicenseeVer == 103 || ArLicenseeVer == 137 || ArLicenseeVer == 138) )
 		SET(GAME_Batman3);
 #endif
-#if REMEMBER_ME
-	if (ArVer == 832 && ArLicenseeVer == 21)	SET(GAME_RememberMe);
-#endif
 #if DMC
 	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);
 #endif
@@ -729,6 +727,10 @@ void FArchive::DetectGame()
 		(ArVer == 610 && (ArLicenseeVer >= 13 && ArLicenseeVer <= 14)))
 		SET(GAME_Tera);
 #endif
+#if REMEMBER_ME
+	if ((ArVer == 832 || ArVer == 893) && ArLicenseeVer == 21)	// Remember Me (832) or Life Is Strange (893)
+		SET(GAME_RememberMe);
+#endif
 
 	if (check > 1)
 		appNotify("DetectGame detected a few titles (%d): Ver=%d, LicVer=%d", check, ArVer, ArLicenseeVer);
@@ -750,6 +752,7 @@ void FArchive::DetectGame()
 #define OVERRIDE_TRANSFORMERS3	566			// real version is 846
 #define OVERRIDE_SF2_VER		700
 #define OVERRIDE_SF2_VER2		710
+#define OVERRIDE_LIS_VER		832			// >= 832 || < 858 (for UMaterial), < 841 (for USkeletalMesh)
 
 
 struct UEVersionMap
@@ -762,7 +765,7 @@ struct UEVersionMap
 // Mapping between GAME_UE4_n and
 #define M(ver)			{ GAME_UE4_##ver, VER_UE4_##ver }
 
-static const UEVersionMap ue4versions[] =
+static const UEVersionMap ueVersions[] =
 {
 #if ENDWAR
 	G(GAME_EndWar, 224)
@@ -780,7 +783,7 @@ static const UEVersionMap ue4versions[] =
 
 	// Unreal engine 4
 #if UNREAL4
-	M(0), M(1), M(2), M(3), M(4), M(5)
+	M(0), M(1), M(2), M(3), M(4), M(5), M(6)
 #endif
 };
 
@@ -793,11 +796,11 @@ void FArchive::OverrideVersion()
 	int OldVer  = ArVer;
 	int OldLVer = ArLicenseeVer;
 
-	for (int i = 0; i < ARRAY_COUNT(ue4versions); i++)
+	for (int i = 0; i < ARRAY_COUNT(ueVersions); i++)
 	{
-		if (ue4versions[i].GameTag == Game)
+		if (ueVersions[i].GameTag == Game)
 		{
-			ArVer = ue4versions[i].PackageVersion;
+			ArVer = ueVersions[i].PackageVersion;
 			break;
 		}
 	}
@@ -825,6 +828,13 @@ void FArchive::OverrideVersion()
 		GForceGame = GAME_Alice;
 	}
 #endif // ALICE
+#if REMEMBER_ME
+	if (Game == GAME_RememberMe)
+	{
+		if (ArVer > 832) // 832 = Remember Me, higher - Life is Strange
+			ArVer = OVERRIDE_LIS_VER;
+	}
+#endif // REMEMBER_ME
 
 	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);

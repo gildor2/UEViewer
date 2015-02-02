@@ -1190,6 +1190,7 @@ SIMPLE_TYPE(FColor,   byte)
 
 #if UNREAL4
 
+SIMPLE_TYPE(FIntPoint, int)
 SIMPLE_TYPE(FIntVector, int)
 SIMPLE_TYPE(FTransform, float)
 
@@ -1205,8 +1206,8 @@ SIMPLE_TYPE(FTransform, float)
  *	- FArray/TArray should not contain objects with virtual tables (no
  *	  constructor/destructor support)
  *	- should not use new[] and delete[] here, because compiler will alloc
- *	  additional 'count' field for correct delete[], but we uses appMalloc/
- *	  appFree calls.
+ *	  additional 'count' field to support correct delete[], but we use
+ *	  appMalloc/appFree calls to allocate/release memory.
  */
 
 class FArray
@@ -1245,7 +1246,8 @@ protected:
 	int		DataCount;
 	int		MaxCount;
 
-	// helper for TStaticArray and FStaticString
+	// helper for TStaticArray and FStaticString - these classes has data allocated
+	// immediately after FArray structure
 	FORCEINLINE bool IsStatic() const
 	{
 		return DataPtr == (void*)(this + 1);

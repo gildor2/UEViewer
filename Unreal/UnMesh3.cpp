@@ -1214,6 +1214,7 @@ struct FStaticLODModel3
 		{
 			int unkD4;
 			Ar << unkD4;
+			if (unkD4) appError("RememberMe: new vertex buffer format");
 		}
 #endif // REMEMBER_ME
 		if (Ar.ArVer >= 709)

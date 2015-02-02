@@ -10,6 +10,11 @@
 
  Revision History:
 
+	01.02.2015 v1.30
+	- added animation import option "import at slider position"
+	- integrated patch by Ayrshi (http://www.gildor.org/smf/index.php/topic,1925.0.html) intended to
+	  improve mesh normals
+
 	02.12.2014 v1.29
 	- ActorX Imported now could be bound to toolbar, keyboard or menu - use "Customize user interface",
 	  category "Gildor Tools", and then use "ActorX Importer" as you like
@@ -145,7 +150,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 129
+global AX_IMPORTER_VERSION = 130
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -155,6 +160,7 @@ global g_seeThru
 global g_skelOnly
 global g_updateTime
 global g_playAnim
+global g_animAtSlider
 global g_animTransMode			-- 1 = from AnimSet, 2 = force mesh translation, 3 = force AnimSet translation
 global g_fixLooping
 global g_lastDir1
@@ -188,6 +194,7 @@ fn axDefaultSettings =
 	g_skelOnly   = false
 	g_updateTime = true
 	g_playAnim   = false
+	g_animAtSlider = false
 	g_animTransMode = 1
 	g_fixLooping = false
 	g_lastDir1   = ""
@@ -271,6 +278,7 @@ fn axSerializeSettings isLoading =
 	axDoSetting "TexRecurse"    "g_texRecurse"
 	axDoSetting "TexMissAction" "g_texMissAction"
 	axDoSetting "AutoPlayAnim"  "g_playAnim"
+	axDoSetting "AnimAtSlider"  "g_animAtSlider"
 	axDoSetting "AnimTransMode" "g_animTransMode"
 	axDoSetting "UpdateTime"    "g_updateTime"
 	axDoSetting "FixLoopAnim"   "g_fixLooping"
@@ -1037,9 +1045,15 @@ fn ImportPskFile filename skelOnly:false =
 	MaxVerts = #()
 	MaxFaces[numTris]   = [ 0, 0, 0 ]			-- preallocate
 	MaxVerts[numWedges] = [ 0, 0, 0 ]			-- ...
+	VertList = #();								-- list of wedges linked for each vertex
+	VertList.count = numVerts					-- preallocate
+	for i = 1 to numVerts do VertList[i] = #()	-- initialize with empty array
 	for i = 1 to numWedges do
 	(
-		MaxVerts[i] = Verts[Wedges[i].PointIndex + 1] * g_meshScale
+--!!		MaxVerts[i] = Verts[Wedges[i].PointIndex + 1] * g_meshScale
+		local vertId = Wedges[i].PointIndex + 1
+		MaxVerts[i] = Verts[vertId] * g_meshScale
+		append VertList[vertId] i
 	)
 	for i = 1 to numTris do
 	(
@@ -1112,10 +1126,30 @@ fn ImportPskFile filename skelOnly:false =
 	)
 	newMesh.material = newMat
 
-	-- generate skin modifier
+	update newMesh
+
+	-- smooth vertex normals accross UV seams
 	max modify mode
 	select newMesh
 
+	normalMod = editNormals ()
+	addModifier newMesh normalMod
+	normalMod.selectBy = 1
+
+	for i = 1 to VertList.count do
+	(
+		if VertList[i].count > 1 then
+		(
+			local seamWedges = VertList[i] as bitArray
+			local n = #{}
+			normalMod.ConvertVertexSelection &seamWedges &n
+			normalMod.Average selection:n
+		)
+	)
+	VertList.count = 0
+	collapsestack newMesh
+
+	-- generate skin modifier
 	skinMod = skin ()
 	boneIDMap = #()
 	if numBones > 0 then
@@ -1147,7 +1181,6 @@ fn ImportPskFile filename skelOnly:false =
 			)
 		)
 	)
-	update newMesh
 
 	if skelOnly then
 	(
@@ -1578,8 +1611,14 @@ fn ImportPsaFile filename trackNum all:false =
 
 	set coordsys world
 	startframe = 0	-- can modify layer ...
-
-	RemoveAnimation()
+	if g_animAtSlider then
+	(
+		startframe = sliderTime
+	)
+	else
+	(
+		RemoveAnimation()
+	)
 
 	LoadPsaConfig ( (getFilenamePath filename) + (getFilenameFile filename) + ".config" ) Anims Bones UseAnimTranslation AnimFlags
 
@@ -1702,6 +1741,7 @@ fn ImportPsaFile filename trackNum all:false =
 	if (ar_end == ar_start) then ar_end = ar_end + 1 -- avoid zero-length intervals
 
 	animationRange = interval ar_start ar_end
+	sliderTime     = startframe
 --	frameRate      = track.AnimRate
 
 	if g_playAnim then playAnimation immediateReturn:true
@@ -1757,7 +1797,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.29"
+	label     Lbl1 "Version 1.30"
 	label     Lbl2 "\xA9 2009-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -1805,6 +1845,7 @@ rollout axAnimImportRollout "Animation Import"
 		checkbox ChkAnimTime   "Update animation length" checked:g_updateTime
 		checkbox ChkFixLooping "Fix loop animation" checked:g_fixLooping tooltip:"Append 1st keyframe to animation\ntrack for smooth loop"
 		checkbox ChkPlayAnim   "Play animation" checked:g_playAnim
+		checkbox ChkAtSlider   "Import at slider position" checked:g_animAtSlider
 		dropdownlist LstTransMode "Translation mode" items:#("Use from AnimSet", "Force mesh translation", "Force AnimSet translation") selection:g_animTransMode
 		button   BtnImportTrk  "Load track" across:2
 		button   BtnImportAll  "Load all" tooltip:"Load all animations as a single track"
@@ -1832,9 +1873,10 @@ rollout axAnimImportRollout "Animation Import"
 	on BtnImportAll pressed       do ImportPsaFile AnimFileName 1 all:true
 	on LstAnims doubleClicked sel do axLoadAnimation sel
 
-	on ChkAnimTime   changed state do g_updateTime = state
-	on ChkFixLooping changed state do g_fixLooping = state
-	on ChkPlayAnim   changed state do g_playAnim   = state
+	on ChkAnimTime   changed state do g_updateTime    = state
+	on ChkFixLooping changed state do g_fixLooping    = state
+	on ChkPlayAnim   changed state do g_playAnim      = state
+	on ChkAtSlider   changed state do g_animAtSlider  = state
 	on LstTransMode  selected mode do g_animTransMode = mode
 
 	on axAnimImportRollout open do

@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+02.02.2015
+- implemented Life is Strange support
+
 20.01.2015
 - fixed loading of bulk data from compressed UE4 packages
 

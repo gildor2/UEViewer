@@ -74,6 +74,9 @@ static const char *PackageExtensions[] =
 #if TRIBES4
 	"fmap",			// Tribes: Ascend
 #endif
+#if HUNTED			// Hunted: The Demon's Forge
+	"lvl",
+#endif
 	// other games with no special code
 	"lm",			// Landmass
 	"s8m",			// Section 8 map
