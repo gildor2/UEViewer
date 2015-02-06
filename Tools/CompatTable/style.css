@@ -62,13 +62,15 @@ table.config td {
 
 .filter_container {
 	float       : right;
+	width       : 400px;
+	padding-bottom : 4px;
 }
 
 .filter {
 	color       : #404080;
 	background  : #FFFFFF;
 	border      : 1px solid #C0C0C0;
-	width       : 100px;
+	width       : 150px;
 	height      : 16px;
 	padding-left : 5px;
 	padding-right: 5px;
@@ -76,11 +78,14 @@ table.config td {
 	border-bottom-right-radius: 3px;
 	border-top-left-radius    : 3px;
 	border-top-right-radius   : 3px;
+	float       : right;
 }
 
 #filter_info {
 	color       : #404080;
+	width       : 230px;
 	height      : 16px;
 	padding-top : 2px;
 	float       : left;
+	text-align  : right;
 }
