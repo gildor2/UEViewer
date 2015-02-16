@@ -1252,10 +1252,12 @@ void UIMulticolumnListbox::RemoveAllItems()
 	if (Wnd) ListView_DeleteAllItems(Wnd);
 
 	// process selection
-	if (SelectedItems.Num())
+	int selCount = SelectedItems.Num();
+	SelectedItems.FastEmpty();
+	if (selCount)
 	{
 		// execute a callback about selection change
-		if (SelectedItems.Num() == 1)
+		if (selCount == 1)
 		{
 			if (Callback)
 				Callback(this, -1);
@@ -1263,7 +1265,6 @@ void UIMulticolumnListbox::RemoveAllItems()
 		if (SelChangedCallback)
 			SelChangedCallback(this);
 	}
-	SelectedItems.FastEmpty();
 }
 
 #if DEBUG_MULTILIST_SEL
