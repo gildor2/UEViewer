@@ -362,9 +362,13 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary4);
 
+	// LegacyVersion: contains negative value. Code below supportes up to version -5.
+
 	// read versions
-	int VersionUE3, Version, LicenseeVersion;				// int32 instead of uint16
-	Ar << VersionUE3 << Version << LicenseeVersion;
+	int VersionUE3, Version, LicenseeVersion;		// note: using int32 instead of uint16 as in UE1-UE3
+	if (S.LegacyVersion != -4)						// UE4 had some changes for version -4, but these changes were reverted in -5 due to some problems
+		Ar << VersionUE3;
+	Ar << Version << LicenseeVersion;
 	// VersionUE3 is ignored
 	assert((Version & ~0xFFFF) == 0);
 	assert((LicenseeVersion & ~0xFFFF) == 0);
@@ -1590,7 +1594,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 	PKG_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
 
 #if DEBUG_PACKAGE
-	appPrintf("Name offset: %X, Export offset: %X, Import offset: %X\n", Summary.NameOffset, Summary.ExportOffset, Summary.ImportOffset);
+	appPrintf("Flags: %X, Name offset: %X, Export offset: %X, Import offset: %X\n", Summary.PackageFlags, Summary.NameOffset, Summary.ExportOffset, Summary.ImportOffset);
 	for (int i = 0; i < Summary.CompressedChunks.Num(); i++)
 	{
 		const FCompressedChunk &ch = Summary.CompressedChunks[i];

@@ -2,6 +2,7 @@
 
 @files = (
 	"C:/Projects/Epic/UnrealEngine4-latest/Engine/Source/Runtime/Core/Public/UObject/ObjectVersion.h",
+	"C:/Projects/Epic/UnrealEngine4/Engine/Source/Runtime/Core/Public/UObject/ObjectVersion.h",
 	"ObjectVersion.h"
 );
 

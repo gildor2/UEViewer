@@ -30,7 +30,7 @@ void appPrintf(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
+	assert(len >= 0 && len < ARRAY_COUNT(buf) - 1);
 
 	fwrite(buf, len, 1, stdout);
 	if (GLogFile) fwrite(buf, len, 1, GLogFile);
@@ -55,7 +55,7 @@ void appError(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
+	assert(len >= 0 && len < ARRAY_COUNT(buf) - 1);
 
 	GIsSwError = true;
 
@@ -95,7 +95,7 @@ void appNotify(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
+	assert(len >= 0 && len < ARRAY_COUNT(buf) - 1);
 
 	fflush(stdout);
 
@@ -155,11 +155,11 @@ void appUnwindThrow(const char *fmt, ...)
 	if (WasError)
 	{
 		strcpy(buf, " <- ");
-		vsnprintf(buf+4, sizeof(buf)-4, fmt, argptr);
+		vsnprintf(buf+4, ARRAY_COUNT(buf)-4, fmt, argptr);
 	}
 	else
 	{
-		vsnprintf(buf, sizeof(buf), fmt, argptr);
+		vsnprintf(buf, ARRAY_COUNT(buf), fmt, argptr);
 		WasError = true;
 	}
 	va_end(argptr);
@@ -207,7 +207,7 @@ const char *va(const char *format, ...)
 	if (len < 0)					// not enough buffer space
 	{
 		const char suffix[] = " ... (overflow)";		// it is better, than return empty string
-		memcpy(buf + VA_BUFSIZE - sizeof(suffix), suffix, sizeof(suffix));
+		memcpy(buf + VA_BUFSIZE - ARRAY_COUNT(suffix), suffix, ARRAY_COUNT(suffix));
 		return str;
 	}
 

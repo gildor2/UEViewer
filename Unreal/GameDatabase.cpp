@@ -330,6 +330,7 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.4", ue4.4, GAME_UE4_4),
 		G("Unreal engine 4.5", ue4.5, GAME_UE4_5),
 		G("Unreal engine 4.6", ue4.6, GAME_UE4_6),
+		G("Unreal engine 4.7", ue4.7, GAME_UE4_7),
 #endif // UNREAL4
 
 	// end marker
@@ -783,7 +784,7 @@ static const UEVersionMap ueVersions[] =
 
 	// Unreal engine 4
 #if UNREAL4
-	M(0), M(1), M(2), M(3), M(4), M(5), M(6)
+	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7)
 #endif
 };
 
