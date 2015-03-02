@@ -38,6 +38,40 @@
 
 
 /*-----------------------------------------------------------------------------
+	USkeleton
+-----------------------------------------------------------------------------*/
+
+void USkeleton::Serialize(FArchive &Ar)
+{
+	guard(USkeleton::Serialize);
+
+	Super::Serialize(Ar);
+
+	if (Ar.ArVer >= VER_UE4_REFERENCE_SKELETON_REFACTOR)
+		Ar << ReferenceSkeleton;
+
+	if (Ar.ArVer >= VER_UE4_FIX_ANIMATIONBASEPOSE_SERIALIZATION)
+	{
+		Ar << AnimRetargetSources;
+	}
+	else
+	{
+		appPrintf("USkeleton has old AnimRetargetSources format, skipping\n");
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+
+	if (Ar.ArVer >= VER_UE4_SKELETON_GUID_SERIALIZATION)
+		Ar << Guid;
+
+	if (Ar.ArVer >= VER_UE4_SKELETON_ADD_SMARTNAMES)
+		Ar << SmartNames;
+
+	unguard;
+}
+
+
+/*-----------------------------------------------------------------------------
 	USkeletalMesh
 -----------------------------------------------------------------------------*/
 

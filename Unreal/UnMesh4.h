@@ -14,7 +14,6 @@ class UMaterialInterface;
 #define MAX_STATIC_LODS_UE4				4
 
 //!! These classes should be explicitly defined
-typedef UObject USkeleton;
 typedef UObject UStaticMeshSocket;
 
 
@@ -50,6 +49,8 @@ struct FReferenceSkeleton
 
 	friend FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 	{
+		guard(FReferenceSkeleton<<);
+
 		Ar << S.RefBoneInfo;
 		Ar << S.RefBonePose;
 
@@ -59,8 +60,60 @@ struct FReferenceSkeleton
 			S.RefBoneInfo[0].ParentIndex = INDEX_NONE;
 
 		return Ar;
+
+		unguard;
 	}
 };
+
+
+struct FReferencePose
+{
+	FName					PoseName;
+	TArray<FTransform>		ReferencePose;
+
+	friend FArchive& operator<<(FArchive& Ar, FReferencePose& P)
+	{
+		return Ar << P.PoseName << P.ReferencePose;
+	}
+};
+
+
+struct FSmartNameMapping
+{
+	short					NextUid;
+	TMap<short, FName>		UidMap;
+
+	friend FArchive& operator<<(FArchive& Ar, FSmartNameMapping& N)
+	{
+		return Ar << N.NextUid << N.UidMap;
+	}
+};
+
+
+struct FSmartNameContainer
+{
+	TMap<FName, FSmartNameMapping> NameMappings;
+
+	friend FArchive& operator<<(FArchive& Ar, FSmartNameContainer& C)
+	{
+		return Ar << C.NameMappings;
+	}
+};
+
+
+class USkeleton : public UObject
+{
+	DECLARE_CLASS(USkeleton, UObject);
+public:
+	FReferenceSkeleton		ReferenceSkeleton;
+	TMap<FName, FReferencePose> AnimRetargetSources;
+	FGuid					Guid;
+	FSmartNameContainer		SmartNames;
+	//!! TODO: sockets
+
+	virtual void Serialize(FArchive &Ar);
+};
+
 
 class USkeletalMesh4 : public UObject
 {
@@ -78,6 +131,7 @@ public:
 	CSkeletalMesh			*ConvertedMesh;
 
 	BEGIN_PROP_TABLE
+		PROP_OBJ(Skeleton)
 		PROP_BOOL(bHasVertexColors)
 	END_PROP_TABLE
 
@@ -136,6 +190,7 @@ protected:
 
 
 #define REGISTER_MESH_CLASSES_U4 \
+	REGISTER_CLASS(USkeleton) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh)
 
