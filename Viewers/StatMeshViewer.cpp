@@ -69,10 +69,10 @@ void CStatMeshViewer::Draw2D()
 	const CStatMeshInstance *MeshInst = static_cast<CStatMeshInstance*>(Inst);
 	const CStaticMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
-	DrawTextLeft(S_GREEN "LOD    : " S_WHITE "%d/%d\n"
-				 S_GREEN "Verts  : " S_WHITE "%d\n"
-				 S_GREEN "Tris   : " S_WHITE "%d\n"
-				 S_GREEN "UV Set : " S_WHITE "%d/%d",
+	DrawTextLeft(S_GREEN "LOD     : " S_WHITE "%d/%d\n"
+				 S_GREEN "Verts   : " S_WHITE "%d\n"
+				 S_GREEN "Tris    : " S_WHITE "%d\n"
+				 S_GREEN "UV Set  : " S_WHITE "%d/%d",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
 				 Lod.NumVerts, Lod.Indices.Num() / 3,
 				 MeshInst->UVIndex+1, Lod.NumTexCoords);

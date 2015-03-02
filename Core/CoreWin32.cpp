@@ -401,7 +401,7 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 	_clearfp();
 
 
-	TRY {
+	__try {
 		const char *excName = "Exception";
 		switch (info->ExceptionRecord->ExceptionCode)
 		{
@@ -457,7 +457,7 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 		appPrintf("\nCall stack:\n");
 		appDumpStackTrace(ARRAY_ARG(stackTrace));
 #endif // UNWIND_EBP_FRAMES
-	} CATCH {
+	} __except(EXCEPTION_EXECUTE_HANDLER) {
 		// do nothing
 	}
 

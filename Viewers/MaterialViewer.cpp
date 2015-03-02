@@ -261,9 +261,9 @@ void CMaterialViewer::Draw2D()
 		const UBitmapMaterial *Tex = static_cast<UBitmapMaterial*>(Object);
 
 		const char *fmt = EnumToName("ETextureFormat", Tex->Format);
-		DrawTextLeft(S_GREEN "Width  :" S_WHITE " %d\n"
-					 S_GREEN "Height :" S_WHITE " %d\n"
-					 S_GREEN "Format :" S_WHITE " %s",
+		DrawTextLeft(S_GREEN "Width   :" S_WHITE " %d\n"
+					 S_GREEN "Height  :" S_WHITE " %d\n"
+					 S_GREEN "Format  :" S_WHITE " %s",
 					 Tex->USize, Tex->VSize,
 					 fmt ? fmt : "???");
 	}
@@ -274,10 +274,10 @@ void CMaterialViewer::Draw2D()
 		const UTexture2D *Tex = static_cast<UTexture2D*>(Object);
 
 		const char *fmt = EnumToName("EPixelFormat", Tex->Format);
-		DrawTextLeft(S_GREEN "Width  :" S_WHITE " %d\n"
-					 S_GREEN "Height :" S_WHITE " %d\n"
-					 S_GREEN "Format :" S_WHITE " %s\n"
-					 S_GREEN "TFCName:" S_WHITE " %s",
+		DrawTextLeft(S_GREEN "Width   :" S_WHITE " %d\n"
+					 S_GREEN "Height  :" S_WHITE " %d\n"
+					 S_GREEN "Format  :" S_WHITE " %s\n"
+					 S_GREEN "TFCName :" S_WHITE " %s",
 					 Tex->SizeX, Tex->SizeY,
 					 fmt ? fmt : "???", *Tex->TextureFileCacheName);
 		// get first available mipmap

@@ -9,6 +9,7 @@
 
 #include "UnMesh2.h"		// for UE2 USkeletalMesh and UMeshAnimation
 #include "UnMesh3.h"		// for UAnimSet
+#include "UnMesh4.h"
 #include "SkeletalMesh.h"
 
 #include "Exporters/Exporters.h"
@@ -256,12 +257,21 @@ void CSkelMeshViewer::Draw2D()
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
+#if UNREAL4
+	if (Mesh->OriginalMesh->IsA("SkeletalMesh4"))
+	{
+		USkeletalMesh4* Mesh4 = static_cast<USkeletalMesh4*>(Mesh->OriginalMesh);
+		if (Mesh4->Skeleton)
+			DrawTextLeft(S_GREEN"Skeleton: " S_WHITE "%s", Mesh4->Skeleton->Name);
+	}
+#endif // UNREAL4
+
 	// mesh
-	DrawTextLeft(S_GREEN "LOD    : " S_WHITE "%d/%d\n"
-				 S_GREEN "Verts  : " S_WHITE "%d\n"
-				 S_GREEN "Tris   : " S_WHITE "%d\n"
-				 S_GREEN "UV Set : " S_WHITE "%d/%d\n"
-				 S_GREEN "Bones  : " S_WHITE "%d",
+	DrawTextLeft(S_GREEN "LOD     : " S_WHITE "%d/%d\n"
+				 S_GREEN "Verts   : " S_WHITE "%d\n"
+				 S_GREEN "Tris    : " S_WHITE "%d\n"
+				 S_GREEN "UV Set  : " S_WHITE "%d/%d\n"
+				 S_GREEN "Bones   : " S_WHITE "%d",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
 				 Lod.NumVerts, Lod.Indices.Num() / 3,
 				 MeshInst->UVIndex+1, Lod.NumTexCoords,
@@ -284,7 +294,7 @@ void CSkelMeshViewer::Draw2D()
 	const CAnimSet *AnimSet = MeshInst->GetAnim();
 	if (AnimSet)
 	{
-		DrawTextBottomLeft("\n" S_GREEN "AnimSet: " S_WHITE "%s", AnimSet->OriginalAnim->Name);
+		DrawTextBottomLeft("\n" S_GREEN "AnimSet : " S_WHITE "%s", AnimSet->OriginalAnim->Name);
 
 		const char *OnOffStatus = NULL;
 		switch (MeshInst->RotationMode)

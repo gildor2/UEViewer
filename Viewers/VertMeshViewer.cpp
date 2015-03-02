@@ -165,8 +165,8 @@ void CVertMeshViewer::Draw2D()
 	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
 
 	// mesh
-	DrawTextLeft(S_GREEN "Verts  : " S_WHITE "%d\n"
-				 S_GREEN "Tris   : " S_WHITE "%d",
+	DrawTextLeft(S_GREEN "Verts   : " S_WHITE "%d\n"
+				 S_GREEN "Tris    : " S_WHITE "%d",
 				 Mesh->Wedges.Num(),
 				 Mesh->Faces.Num());
 

@@ -182,6 +182,7 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh2.h \
 	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
