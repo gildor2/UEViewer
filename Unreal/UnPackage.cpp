@@ -271,6 +271,17 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	if (Ar.Game == GAME_Bioshock3) goto read_unk38;
 #endif
 
+#if DUNDEF
+	if (Ar.Game == GAME_DunDef)
+	{
+		if (S.PackageFlags & 8)
+		{
+			int unk38;
+			Ar << unk38;
+		}
+	}
+#endif // DUNDEF
+
 	if (Ar.ArVer >= 623)
 		Ar << S.f38 << S.f3C << S.f40;
 

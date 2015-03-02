@@ -318,6 +318,9 @@ const GameInfo GListOfGames[] = {
 #	if GUILTY
 		G("Guilty Gear Xrd", guilty, GAME_Guilty),
 #	endif
+#	if DUNDEF
+		G("Dungeon Defenders", dundef, GAME_DunDef),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4
