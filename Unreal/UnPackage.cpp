@@ -369,6 +369,39 @@ cooker_version:
 
 #if UNREAL4
 
+struct FCustomVersion
+{
+	FGuid			Key;
+	int				Version;
+	FString			FriendlyName;
+
+	friend FArchive& operator<<(FArchive& Ar, FCustomVersion& V)
+	{
+		return Ar << V.Key << V.Version << V.FriendlyName;
+	}
+};
+
+struct FCustomVersionContainer
+{
+	TArray<FCustomVersion> Versions;
+
+	void Serialize(FArchive& Ar, int LegacyVersion)
+	{
+		if (LegacyVersion == -2)
+		{
+			int Count;
+			Ar << Count;	// part of TArray
+			if (Count)
+				appError("TODO: support old FCustomVersionContainer");
+			// look for 'ECustomVersionSerializationFormat::Enums' in Core/Private/Serialization/CustomVersion.cpp
+		}
+		else
+		{
+			Ar << Versions;
+		}
+	}
+};
+
 static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary4);
@@ -396,9 +429,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	if (S.LegacyVersion <= -2)
 	{
 		// CustomVersions array
-		int CustomVersionsSize;
-		Ar << CustomVersionsSize;
-		if (CustomVersionsSize != 0) appError("TODO: support UE4 CustomVersions");
+		FCustomVersionContainer versions;
+		versions.Serialize(Ar, S.LegacyVersion != -2);
 	}
 
 	if (Ar.ArVer == 0 && Ar.ArLicenseeVer == 0)
