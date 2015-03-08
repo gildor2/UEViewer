@@ -321,6 +321,9 @@ const GameInfo GListOfGames[] = {
 #	if DUNDEF
 		G("Dungeon Defenders", dundef, GAME_DunDef),
 #	endif
+#	if GIGANTIC
+		G("Gigantic", gigantic, GAME_Gigantic),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4

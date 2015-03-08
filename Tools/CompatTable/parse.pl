@@ -305,6 +305,7 @@ EOF
 			}
 		}
 		$url1 = "" if $url1 eq "-";
+		$url2 = "" if $url2 eq "-";
 		$newWindow = " target=\"_blank\"";
 		if ($color ne "") {
 			print OUT "  <tr bgcolor=\"$color\">\n";

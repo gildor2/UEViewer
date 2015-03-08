@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+07.03.2015
+- added Gigantic (alpha) support
+
 02.02.2015
 - implemented Life is Strange support
 

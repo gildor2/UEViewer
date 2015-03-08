@@ -105,6 +105,7 @@
 #define VEC				1		// The Vanishing of Ethan Carter
 #define GUILTY			1		// Guilty Gear Xrd
 #define ALICE			1		// Alice: Madness Returns
+#define GIGANTIC		1
 //#define DUNDEF			1		// Dungeon Defenders - doesn't work, all export offsets are 0
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 

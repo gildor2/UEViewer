@@ -204,6 +204,13 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 		Ar << unkVer;
 	}
 #endif // HAWKEN
+#if GIGANTIC
+	if (Ar.Game == GAME_Gigantic && Ar.ArLicenseeVer >= 2)
+	{
+		int unk;
+		Ar << unk;
+	}
+#endif // GIGANTIC
 
 	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
 
