@@ -192,6 +192,7 @@ protected:
 #define REGISTER_MESH_CLASSES_U4 \
 	REGISTER_CLASS(USkeleton) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
+	REGISTER_CLASS_ALIAS(USkeletalMesh4, UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh)
 
 

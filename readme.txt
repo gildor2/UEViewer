@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+08.04.2015
+- implemented support for destructible meshes: UE3 FracturedStaticMesh and UE4 DestructibleMesh
+
 07.03.2015
 - added Gigantic (alpha) support
 

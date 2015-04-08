@@ -658,7 +658,8 @@ protected:
 	REGISTER_CLASS(UAnimSet)		\
 	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh3, USkeletalMesh) \
-	REGISTER_CLASS_ALIAS(UStaticMesh3, UStaticMesh)
+	REGISTER_CLASS_ALIAS(UStaticMesh3, UStaticMesh) \
+	REGISTER_CLASS_ALIAS(UStaticMesh3, UFracturedStaticMesh) \
 
 #define REGISTER_MESH_ENUMS_U3		\
 	REGISTER_ENUM(AnimationCompressionFormat) \
