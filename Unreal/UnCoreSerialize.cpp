@@ -1081,8 +1081,12 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	if (Ar.Game == GAME_Transformers && Ar.Platform == PLATFORM_PS3)
 		Ar.Seek64(BulkDataOffsetInFile);
 #endif
-	assert(BulkDataOffsetInFile == Ar.Tell());
-	SerializeData(Ar);
+
+	if (ElementCount > 0)
+	{
+//		assert(BulkDataOffsetInFile == Ar.Tell());
+		SerializeData(Ar);
+	}
 
 	unguard;
 }
@@ -1141,8 +1145,17 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 	else
 #endif // UNREAL4
 	{
-		Ar.Seek(BulkDataOffsetInFile);
-		SerializeDataChunk(Ar);
+		if (BulkDataFlags & BULKDATA_SeparateData)
+		{
+			Ar.Seek(BulkDataOffsetInFile);
+			SerializeDataChunk(Ar);
+			assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell());
+		}
+		else
+		{
+			// no seeks, so ignore any offset differences when BULKDATA_SeparateData is not set (i.e. no assertions)
+			SerializeDataChunk(Ar);
+		}
 	}
 
 	unguard;
@@ -1179,8 +1192,6 @@ void FByteBulkData::SerializeDataChunk(FArchive &Ar)
 		// uncompressed block
 		Ar.Serialize(BulkData, DataSize);
 	}
-
-	assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell());
 
 	unguard;
 }
