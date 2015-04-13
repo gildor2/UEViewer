@@ -1116,8 +1116,10 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 
 	// serialize data block
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4 && Ar.IsCompressed())
+	if (Ar.Game >= GAME_UE4)
 	{
+		if (!Ar.IsCompressed()) goto serialize_separate_data;
+
 		// UE4 compressed packages use uncompressed position for bulk data
 		/// reference: FUntypedBulkData::LoadDataIntoMemory
 
@@ -1145,8 +1147,9 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 	else
 #endif // UNREAL4
 	{
-		if (BulkDataFlags & BULKDATA_SeparateData)
+		if (BulkDataFlags & (BULKDATA_SeparateData | BULKDATA_StoreInSeparateFile))
 		{
+		serialize_separate_data:
 			Ar.Seek(BulkDataOffsetInFile);
 			SerializeDataChunk(Ar);
 			assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell());
