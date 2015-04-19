@@ -133,6 +133,8 @@ void UMaterial3::ScanForTextures()
 	guard(UMaterial3::ScanForTextures);
 
 //	printf("--> %d imports\n", Package->Summary.ImportCount);
+	//!! NOTE: this code will not work when textures are located in the same package - they don't present in import table
+	//!! but could be found in export table. That's true for Simplygon-generated materials.
 	for (int i = 0; i < Package->Summary.ImportCount; i++)
 	{
 		const FObjectImport &Imp = Package->GetImport(i);

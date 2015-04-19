@@ -1810,7 +1810,6 @@ void USkeletalMesh3::ConvertMesh()
 		// sections
 		guard(ProcessSections);
 		Lod->Sections.Empty(SrcLod.Sections.Num());
-		assert(LODModels.Num() == LODInfo.Num());
 		const FSkeletalMeshLODInfo &Info = LODInfo[lod];
 
 		for (int Sec = 0; Sec < SrcLod.Sections.Num(); Sec++)
@@ -1818,9 +1817,11 @@ void USkeletalMesh3::ConvertMesh()
 			const FSkelMeshSection3 &S = SrcLod.Sections[Sec];
 			CMeshSection *Dst = new (Lod->Sections) CMeshSection;
 
+			// remap material for LOD
 			int MaterialIndex = S.MaterialIndex;
 			if (MaterialIndex >= 0 && MaterialIndex < Info.LODMaterialMap.Num())
 				MaterialIndex = Info.LODMaterialMap[MaterialIndex];
+
 			Dst->Material   = (MaterialIndex < Materials.Num()) ? Materials[MaterialIndex] : NULL;
 			Dst->FirstIndex = S.FirstIndex;
 			Dst->NumFaces   = S.NumTriangles;

@@ -4,6 +4,7 @@
 
 #include "UnrealClasses.h"
 #include "UnMesh4.h"
+#include "UnMesh3.h"		// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
 #include "UnMaterial3.h"
 
@@ -586,12 +587,15 @@ void USkeletalMesh4::ConvertMesh()
 	VectorAdd     (CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Max));
 
 	// MeshScale, MeshOrigin, RotOrigin are removed in UE4
+	//!! NOTE: MeshScale is integrated into RefSkeleton.RefBonePose[0].Scale3D.
+	//!! Perhaps rotation/translation are integrated too!
 	Mesh->MeshOrigin.Set(0, 0, 0);
 	Mesh->RotOrigin.Set(0, 0, 0);
 	Mesh->MeshScale.Set(1, 1, 1);							// missing in UE3
 
 	// convert LODs
 	Mesh->Lods.Empty(LODModels.Num());
+	assert(LODModels.Num() == LODInfo.Num());
 	for (int lod = 0; lod < LODModels.Num(); lod++)
 	{
 		guard(ConvertLod);
@@ -686,13 +690,20 @@ void USkeletalMesh4::ConvertMesh()
 		// sections
 		guard(ProcessSections);
 		Lod->Sections.Empty(SrcLod.Sections.Num());
+		const FSkeletalMeshLODInfo &Info = LODInfo[lod];
+
 		for (int Sec = 0; Sec < SrcLod.Sections.Num(); Sec++)
 		{
 			const FSkelMeshSection4 &S = SrcLod.Sections[Sec];
 			CMeshSection *Dst = new (Lod->Sections) CMeshSection;
 
+			// remap material for LOD
+			int MaterialIndex = S.MaterialIndex;
+			if (MaterialIndex >= 0 && MaterialIndex < Info.LODMaterialMap.Num())
+				MaterialIndex = Info.LODMaterialMap[MaterialIndex];
+
 			if (S.MaterialIndex < Materials.Num())
-				Dst->Material = Materials[S.MaterialIndex].Material;
+				Dst->Material = Materials[MaterialIndex].Material;
 			Dst->FirstIndex = S.BaseIndex;
 			Dst->NumFaces   = S.NumTriangles;
 		}
@@ -715,6 +726,16 @@ void USkeletalMesh4::ConvertMesh()
 		Dst->ParentIndex = B.ParentIndex;
 		Dst->Position    = CVT(T.Translation);
 		Dst->Orientation = CVT(T.Rotation);
+		if (fabs(T.Scale3D.X - 1.0f) + fabs(T.Scale3D.Y - 1.0f) + fabs(T.Scale3D.Z - 1.0f) > 0.001f)
+		{
+			// TODO: mesh has non-identity scale
+/*			if (i == 0)
+			{
+				// root bone
+				Mesh->MeshScale = CVT(T.Scale3D); -- not works: should scale only the skeleton, but not geometry
+			} */
+			appPrintf("WARNING: Scale[%s] = %g %g %g\n", *B.Name, FVECTOR_ARG(T.Scale3D));
+		}
 		//!! use T.Scale3D
 		// fix skeleton; all bones but 0
 		if (i >= 1)

@@ -584,6 +584,7 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial3.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
 	Unreal/UnMesh4.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \

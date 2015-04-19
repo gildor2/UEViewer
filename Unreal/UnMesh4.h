@@ -23,6 +23,7 @@ typedef UObject UStaticMeshSocket;
 
 struct FSkeletalMaterial;
 struct FStaticLODModel4;
+struct FSkeletalMeshLODInfo;
 
 struct FMeshBoneInfo
 {
@@ -124,6 +125,7 @@ public:
 	FReferenceSkeleton		RefSkeleton;
 	USkeleton				*Skeleton;
 	TArray<FStaticLODModel4> LODModels;
+	TArray<FSkeletalMeshLODInfo> LODInfo;
 
 	// properties
 	bool					bHasVertexColors;
@@ -133,6 +135,7 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Skeleton)
 		PROP_BOOL(bHasVertexColors)
+		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
 	END_PROP_TABLE
 
 	USkeletalMesh4();
@@ -191,6 +194,7 @@ protected:
 
 #define REGISTER_MESH_CLASSES_U4 \
 	REGISTER_CLASS(USkeleton) \
+	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh)
