@@ -279,6 +279,27 @@ DEPENDS_7 = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_7)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/MeshViewer.o Viewers/MeshViewer.cpp
+
+DEPENDS_8 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
@@ -293,10 +314,10 @@ DEPENDS_7 = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-$(OUT_1)/VertMeshViewer.o : Viewers/VertMeshViewer.cpp $(DEPENDS_7)
+$(OUT_1)/VertMeshViewer.o : Viewers/VertMeshViewer.cpp $(DEPENDS_8)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/VertMeshViewer.o Viewers/VertMeshViewer.cpp
 
-DEPENDS_8 = \
+DEPENDS_9 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -330,10 +351,10 @@ DEPENDS_8 = \
 	Viewers/ObjectViewer.h \
 	libs/include/callback.hpp
 
-$(OUT_1)/UmodelApp.o : UmodelTool/UmodelApp.cpp $(DEPENDS_8)
+$(OUT_1)/UmodelApp.o : UmodelTool/UmodelApp.cpp $(DEPENDS_9)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UmodelApp.o UmodelTool/UmodelApp.cpp
 
-DEPENDS_9 = \
+DEPENDS_10 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -350,26 +371,8 @@ DEPENDS_9 = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-$(OUT_1)/ObjectViewer.o : Viewers/ObjectViewer.cpp $(DEPENDS_9)
+$(OUT_1)/ObjectViewer.o : Viewers/ObjectViewer.cpp $(DEPENDS_10)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ObjectViewer.o Viewers/ObjectViewer.cpp
-
-DEPENDS_10 = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	MeshInstance/MeshInstance.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-$(OUT_1)/MeshInstance.o : MeshInstance/MeshInstance.cpp $(DEPENDS_10)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/MeshInstance.o MeshInstance/MeshInstance.cpp
 
 DEPENDS_11 = \
 	Core/Core.h \
@@ -384,11 +387,10 @@ DEPENDS_11 = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
+	Unreal/UnrealClasses.h
 
-$(OUT_1)/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_11)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/MeshViewer.o Viewers/MeshViewer.cpp
+$(OUT_1)/MeshInstance.o : MeshInstance/MeshInstance.cpp $(DEPENDS_11)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/MeshInstance.o MeshInstance/MeshInstance.cpp
 
 DEPENDS_12 = \
 	Core/Core.h \
@@ -583,6 +585,7 @@ DEPENDS_20 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial3.h \
 	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
 	Unreal/UnMesh4.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \

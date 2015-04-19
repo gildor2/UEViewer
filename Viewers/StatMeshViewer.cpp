@@ -13,6 +13,7 @@
 CStatMeshViewer::CStatMeshViewer(CStaticMesh* Mesh0, CApplication* Window)
 :	CMeshViewer(Mesh0->OriginalMesh, Window)
 ,	Mesh(Mesh0)
+,	ShowUV(false)
 {
 	guard(CStatMeshViewer::CStatMeshViewer);
 
@@ -69,6 +70,11 @@ void CStatMeshViewer::Draw2D()
 	const CStatMeshInstance *MeshInst = static_cast<CStatMeshInstance*>(Inst);
 	const CStaticMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
 
+	if (ShowUV)
+	{
+		DisplayUV(Lod.Verts, sizeof(CMeshVertex), Lod.Indices, Lod.Sections, MeshInst->UVIndex);
+	}
+
 	DrawTextLeft(S_GREEN "LOD     : " S_WHITE "%d/%d\n"
 				 S_GREEN "Verts   : " S_WHITE "%d\n"
 				 S_GREEN "Tris    : " S_WHITE "%d\n"
@@ -93,6 +99,7 @@ void CStatMeshViewer::ShowHelp()
 	CMeshViewer::ShowHelp();
 	DrawKeyHelp("L", "cycle mesh LODs");
 	DrawKeyHelp("U", "cycle UV sets");
+	DrawKeyHelp("Ctrl+U", "display UV");
 }
 
 
@@ -111,6 +118,9 @@ void CStatMeshViewer::ProcessKey(int key)
 	case 'u':
 		if (++MeshInst->UVIndex >= Mesh->Lods[MeshInst->LodNum].NumTexCoords)
 			MeshInst->UVIndex = 0;
+		break;
+	case 'u'|KEY_CTRL:
+		ShowUV = !ShowUV;
 		break;
 	default:
 		CMeshViewer::ProcessKey(key);

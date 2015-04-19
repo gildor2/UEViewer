@@ -52,6 +52,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 ,	ShowSkel(0)
 ,	ShowLabels(false)
 ,	ShowAttach(false)
+,	ShowUV(false)
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
@@ -256,6 +257,11 @@ void CSkelMeshViewer::Draw2D()
 
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
+
+	if (ShowUV)
+	{
+		DisplayUV(Lod.Verts, sizeof(CSkelMeshVertex), Lod.Indices, Lod.Sections, MeshInst->UVIndex);
+	}
 
 #if UNREAL4
 	if (Mesh->OriginalMesh->IsA("SkeletalMesh4"))
@@ -464,6 +470,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("Ctrl+A", "cycle mesh animation sets");
 	DrawKeyHelp("Ctrl+R", "toggle animation translaton mode");
 	DrawKeyHelp("Ctrl+T", "tag/untag mesh");
+	DrawKeyHelp("Ctrl+U", "display UV");
 }
 
 
@@ -599,14 +606,14 @@ void CSkelMeshViewer::ProcessKey(int key)
 		MeshInst->SetSecondaryBlend(2, Alpha);
 		break;
 
-	case 'u'|KEY_CTRL:
+/*	case 'u'|KEY_CTRL:
 		MeshInst->LoopAnim("Gesture_Taunt02", 1, 0, 1);
 		MeshInst->SetBlendParams(1, 1.0f, "Bip01 Spine1");
 		MeshInst->LoopAnim("WalkF", 1, 0, 2);
 		MeshInst->SetBlendParams(2, 1.0f, "Bip01 R Thigh");
 		MeshInst->LoopAnim("AssSmack", 1, 0, 4);
 		MeshInst->SetBlendParams(4, 1.0f, "Bip01 L UpperArm");
-		break;
+		break; */
 #endif // TEST_ANIMS
 
 	case 'a'|KEY_CTRL:
@@ -666,6 +673,10 @@ void CSkelMeshViewer::ProcessKey(int key)
 			for (int i = 0; i < Meshes.Num(); i++)
 				Meshes[i]->RotationMode = (EAnimRotationOnly)mode;
 		}
+		break;
+
+	case 'u'|KEY_CTRL:
+		ShowUV = !ShowUV;
 		break;
 
 	case 'f':

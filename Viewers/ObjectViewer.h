@@ -7,6 +7,9 @@ class CSkelMeshInstance;
 
 class CSkeletalMesh;
 class CStaticMesh;
+struct CMeshVertex;
+struct CIndexBuffer;
+struct CMeshSection;
 
 
 #define TEST_FILES		1		// comment line to disable some notifications
@@ -96,6 +99,8 @@ public:
 	virtual void DrawMesh(CMeshInstance *Inst);
 
 	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
+
+	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex);
 };
 
 
@@ -136,6 +141,7 @@ public:
 	int				ShowSkel;					// 0 - mesh, 1 - mesh+skel, 2 - skel only
 	bool			ShowLabels;
 	bool			ShowAttach;
+	bool			ShowUV;
 
 	CSkelMeshViewer(CSkeletalMesh* Mesh, CApplication* Window);
 
@@ -174,6 +180,7 @@ public:
 
 private:
 	CStaticMesh		*Mesh;
+	bool			ShowUV;
 };
 
 

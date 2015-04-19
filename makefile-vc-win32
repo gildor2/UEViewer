@@ -280,6 +280,27 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshViewer.obj" Viewers/MeshViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
@@ -371,25 +392,6 @@ DEPENDS = \
 
 $(OUT_1)/MeshInstance.obj : MeshInstance/MeshInstance.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshInstance.obj" MeshInstance/MeshInstance.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	MeshInstance/MeshInstance.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
-
-$(OUT_1)/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshViewer.obj" Viewers/MeshViewer.cpp
 
 DEPENDS = \
 	Core/Core.h \

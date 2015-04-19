@@ -151,6 +151,10 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+19.04.2015
+- added UV display mode for skeletal and static meshes, activated with Ctrl+U
+- improved UE4 SkeletalMesh LOD support
+
 08.04.2015
 - implemented support for destructible meshes: UE3 FracturedStaticMesh and UE4 DestructibleMesh
 
