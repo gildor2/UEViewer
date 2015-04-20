@@ -127,6 +127,7 @@ const GameInfo GListOfGames[] = {
 		G("Mortal Kombat vs. DC Universe", mk, GAME_MK),
 		G("Mortal Kombat", mk, GAME_MK),
 		G("Injustice: Gods Among Us", mk, GAME_MK),
+		G("Mortal Kombat X", mk, GAME_MK),
 #	endif
 #	if TUROK
 		G("Turok", turok, GAME_Turok),
@@ -695,7 +696,8 @@ void FArchive::DetectGame()
 #if MKVSDC
 	if ( (ArVer == 402 && ArLicenseeVer == 30) ||		//!! has extra tag; MK vs DC
 		 (ArVer == 472 && ArLicenseeVer == 46) ||		// Mortal Kombat
-		 (ArVer == 573 && ArLicenseeVer == 49) )		// Injustice: God Among Us
+		 (ArVer == 573 && ArLicenseeVer == 49) ||		// Injustice: God Among Us
+		 (ArVer == 677 && ArLicenseeVer == 157) )		// Mortal Kombat X
 		SET(GAME_MK);
 #endif
 #if HUXLEY

@@ -151,6 +151,9 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+20.04.2015
+- added Mortal Kombat X package support
+
 19.04.2015
 - added UV display mode for skeletal and static meshes, activated with Ctrl+U
 - improved UE4 SkeletalMesh LOD support

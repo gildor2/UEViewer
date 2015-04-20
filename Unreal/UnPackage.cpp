@@ -172,16 +172,21 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 		S.HeadersSize = 0;
 
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
-#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT		//?? special define ?
+#if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT			//?? special define ?
 	int midwayVer = 0;
 	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 2)	//?? Wheelman not checked
 	{
-		// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC", "TNA ", "KORE"
+		// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC", "TNA ", "KORE", "MK10"
 		int Tag;
 		int unk10;
+		FGuid unkGuid;
 		Ar << Tag << midwayVer;
 		if (Ar.Game == GAME_Strangle && midwayVer >= 256)
 			Ar << unk10;
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 668) // MK X
+			Ar << unk10;
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 596)
+			Ar << unkGuid;
 	}
 #endif // MIDWAY
 
@@ -211,6 +216,33 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 		Ar << unk;
 	}
 #endif // GIGANTIC
+
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		guard(SerializeMK10);
+
+		// MK X, no explicit version
+		int64 NameOffset64, ExportOffset64, ImportOffset64;
+		int64 unk112, unk136, unk120, unk144;
+		int   unk84, unk128, unk132, unk168;
+		FGuid unk152;
+		Ar << S.NameCount << NameOffset64 << S.ExportCount << ExportOffset64 << S.ImportCount << ImportOffset64;
+		S.NameOffset   = (int)NameOffset64;
+		S.ExportOffset = (int)ExportOffset64;
+		S.ImportOffset = (int)ImportOffset64;
+		Ar << unk84 << unk112 << unk136 << unk120 << unk128 << unk132 << unk144;
+		Ar << unk152;
+		Ar << unk168;
+
+		Ar << S.EngineVersion << S.CompressionFlags << S.CompressedChunks;
+
+		// drop everything else in FPackageFileSummary
+		return;
+
+		unguard;
+	}
+#endif // MKVSDC
 
 	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
 
@@ -808,6 +840,12 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 	{
 		int unk18;
 		Ar << unk18;
+		if (Ar.ArVer >= 677)
+		{
+			// MK X, version unknown
+			int unk1, unk2, unk3, unk4;
+			Ar << unk1 << unk2 << unk3 << unk4;
+		}
 	}
 #endif
 
@@ -831,8 +869,18 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 37) goto ue3_export_flags;	// no ComponentMap
 #endif
 #if MKVSDC
-	if (Ar.Game == GAME_MK && Ar.ArVer >= 573) goto ue3_component_map; // Injustice, version unknown
-#endif
+	if (Ar.Game == GAME_MK)
+	{
+		if (Ar.ArVer >= 677)
+		{
+			// MK X has 64-bit SerialOffset, skip HIDWORD
+			int SerialOffsetUpper;
+			Ar << SerialOffsetUpper;
+			assert(SerialOffsetUpper == 0);
+		}
+		if (Ar.ArVer >= 573) goto ue3_component_map; // Injustice, version unknown
+	}
+#endif // MKVSDC
 
 	if (Ar.ArVer < 543)
 	{
@@ -1009,7 +1057,18 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 #endif
 
 	// this code is the same for all engine versions
-	return Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
+	Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
+
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		// MK X
+		FGuid unk;
+		Ar << unk;
+	}
+#endif // MKVSDC
+
+	return Ar;
 
 	unguard;
 }
@@ -1648,7 +1707,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 	for (int i = 0; i < Summary.CompressedChunks.Num(); i++)
 	{
 		const FCompressedChunk &ch = Summary.CompressedChunks[i];
-		appPrintf("chunk[%d]: comp=%X+%X, unk=%X+%X\n", i, ch.CompressedOffset, ch.CompressedSize, ch.UncompressedOffset, ch.UncompressedSize);
+		appPrintf("chunk[%d]: comp=%X+%X, uncomp=%X+%X\n", i, ch.CompressedOffset, ch.CompressedSize, ch.UncompressedOffset, ch.UncompressedSize);
 	}
 #endif // DEBUG_PACKAGE
 
@@ -1878,8 +1937,8 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 				NameTable[i] = appStrdupPool(*name);
 	#endif
 
-				// skip object flags
 	#if UNREAL4
+				// skip object flags
 				if (Game >= GAME_UE4) goto done;
 	#endif
 	#if UNREAL3
@@ -1896,6 +1955,9 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 					if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
 				}
 		#endif // MASSEFF
+		#if MKVSDC
+				if (Game == GAME_MK && ArVer >= 677) goto done;		// no flags for MK X
+		#endif
 				if (Game >= GAME_UE3 && ArVer >= 195)
 				{
 				qword_flags:

@@ -1787,22 +1787,7 @@ struct FCompressedChunkBlock
 	int			CompressedSize;
 	int			UncompressedSize;
 
-	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
-	{
-#if UNREAL4
-		if (Ar.Game >= GAME_UE4)
-		{
-			// UE4 has 64-bit values here
-			int64 CompressedSize64, UncompressedSize64;
-			Ar << CompressedSize64 << UncompressedSize64;
-			assert((CompressedSize64 | UncompressedSize64) <= 0x7FFFFFFF); // we're using 32 bit values
-			B.CompressedSize = (int)CompressedSize64;
-			B.UncompressedSize = (int)UncompressedSize64;
-			return Ar;
-		}
-#endif // UNREAL4
-		return Ar << B.CompressedSize << B.UncompressedSize;
-	}
+	friend FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B);
 };
 
 struct FCompressedChunkHeader

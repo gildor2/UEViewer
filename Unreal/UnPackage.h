@@ -47,7 +47,21 @@ struct FCompressedChunk
 	friend FArchive& operator<<(FArchive &Ar, FCompressedChunk &C)
 	{
 		guard(FCompressedChunk<<);
+
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			// MK X has 64-bit file offsets
+			int64 UncompressedOffset64, CompressedOffset64;
+			Ar << UncompressedOffset64 << C.UncompressedSize << CompressedOffset64 << C.CompressedSize;
+			C.UncompressedOffset = (int)UncompressedOffset64;
+			C.CompressedOffset   = (int)CompressedOffset64;
+			return Ar;
+		}
+#endif // MKVSDC
+
 		Ar << C.UncompressedOffset << C.UncompressedSize << C.CompressedOffset << C.CompressedSize;
+
 #if BULLETSTORM
 		if (Ar.Game == GAME_Bulletstorm && Ar.ArLicenseeVer >= 21)
 		{
@@ -56,7 +70,9 @@ struct FCompressedChunk
 			assert(unk10 == 1);
 		}
 #endif // BULLETSTORM
+
 		return Ar;
+
 		unguard;
 	}
 };

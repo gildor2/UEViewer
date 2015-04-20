@@ -820,6 +820,29 @@ FArchive *GDummySave = &DummyArchive;
 
 #if UNREAL3
 
+FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
+{
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)	// MK X
+		goto int64_offsets;
+#endif // MKVSDC
+
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+	int64_offsets:
+		// UE4 has 64-bit values here
+		int64 CompressedSize64, UncompressedSize64;
+		Ar << CompressedSize64 << UncompressedSize64;
+		assert((CompressedSize64 | UncompressedSize64) <= 0x7FFFFFFF); // we're using 32 bit values
+		B.CompressedSize = (int)CompressedSize64;
+		B.UncompressedSize = (int)UncompressedSize64;
+		return Ar;
+	}
+#endif // UNREAL4
+	return Ar << B.CompressedSize << B.UncompressedSize;
+}
+
 FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 {
 	guard(FCompressedChunkHeader<<);
@@ -827,6 +850,7 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 	Ar << H.Tag;
 	if (H.Tag == PACKAGE_FILE_TAG_REV)
 		Ar.ReverseBytes = !Ar.ReverseBytes;
+
 #if BERKANIX
 	else if (Ar.Game == GAME_Berkanix && H.Tag == 0xF2BAC156) goto tag_ok;
 #endif
@@ -836,9 +860,15 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 	else
 		assert(H.Tag == PACKAGE_FILE_TAG);
 
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)	// MK X
+		goto int64_offsets;
+#endif // MKVSDC
+
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4)
 	{
+	int64_offsets:
 		// Tag and BlockSize are really FCompressedChunkBlock, which has 64-bit integers here.
 		int Pad;
 		int64 BlockSize64;
