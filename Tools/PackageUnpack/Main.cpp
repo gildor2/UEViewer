@@ -244,6 +244,10 @@ int main(int argc, char **argv)
 		if (Package->Game == GAME_Bulletstorm)
 			cut = Summary.CompressedChunks.Num() * 20;
 #endif
+#if MKVSDC
+		if (Package->Game == GAME_MK && Package->ArVer >= 677) // MK X
+			cut = Summary.CompressedChunks.Num() * 24;
+#endif
 		int dstPos = pos + 8;	// skip CompressionFlags and CompressedChunks.Num
 		int srcPos = pos + 8 + cut;	// skip CompressedChunks
 		memcpy(buffer + dstPos, buffer + srcPos, compressedStart - srcPos);
