@@ -385,6 +385,23 @@ struct FPropertyTag
 		{
 			FName PropType;
 			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
+	#if MKVSDC
+			if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+			{
+				// MK X
+				if (PropType == "EnumProperty")
+				{
+					Tag.Type = NAME_ByteProperty;
+					return Ar;
+				}
+				else if (PropType == "BoolProperty")
+				{
+					Tag.Type = NAME_BoolProperty;
+					Ar << Tag.BoolValue;			// as original code, but 'int' value (would be serialized as byte otherwise)
+					return Ar;
+				}
+			}
+	#endif // MKVSDC
 			Tag.Type = MapTypeName(PropType);
 			if (Tag.Type == NAME_StructProperty)
 				Ar << Tag.StrucName;
@@ -860,7 +877,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 #define CHECK_TYPE(name) \
 	if (strcmp(Prop->TypeName, name)) \
-		appError("Property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, name)
+		appError("Property %s expected type %s but read %s", *Tag.Name, name, Prop->TypeName)
 
 		int ArrayIndex = Tag.ArrayIndex;
 		switch (Tag.Type)
@@ -1014,6 +1031,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 		case NAME_StructProperty:
 			{
+#if MKVSDC
+				if (Ar.Game == GAME_MK && Ar.ArVer >= 677 && (*Tag.StrucName)[0] == 'F')
+					Tag.StrucName.Str++;		// Tag.StrucName points to 'FStrucName' instead of 'StrucName'
+#endif // MKVSDC
 				if (stricmp(Prop->TypeName+1, *Tag.StrucName) != 0 && stricmp(*Tag.StrucName, "None") != 0) // Tag.StrucName could be unknown in Batman2
 				{
 					appNotify("Struc property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, *Tag.StrucName);
@@ -1041,7 +1062,22 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			break;
 
 		case NAME_StrProperty:
-			appError("String property not implemented");
+			if (!stricmp(Prop->TypeName, "FName"))
+			{
+				// serialize FString to FName
+				// MK X, "TextureFileCacheName": UE3 has it as FName, but MK X as FString
+				FString tmpStr;
+				Ar << tmpStr;
+				PROP(FName) = *tmpStr;
+				PROP_DBG("%s", *PROP(FName));
+			}
+			else
+			{
+				// serialize FString
+				CHECK_TYPE("FString");
+				Ar << PROP(FString);
+				PROP_DBG("%s", *PROP(FString));
+			}
 			break;
 
 		case NAME_MapProperty:

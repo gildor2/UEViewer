@@ -151,6 +151,10 @@ PVRTexLib Library
 
 Changes
 ~~~~~~~
+24.04.2015
+- implemented Mortal Kombat X textre support; note: all textures are in BC7 format, no extraction
+  possible
+
 20.04.2015
 - added Mortal Kombat X package support
 

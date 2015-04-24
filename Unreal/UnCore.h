@@ -197,9 +197,21 @@ public:
 		return *this;
 	}
 
+	inline FName& operator=(const char* String)
+	{
+		Str = appStrdupPool(String);
+		Index = 0;
+		return *this;
+	}
+
 	inline bool operator==(const FName& Other) const
 	{
 		return (Str == Other.Str) || (stricmp(Str, Other.Str) == 0);
+	}
+
+	inline bool operator==(const char* String) const
+	{
+		return (stricmp(Str, String) == 0);
 	}
 
 	FORCEINLINE const char *operator*() const

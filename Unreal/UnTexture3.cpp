@@ -108,6 +108,19 @@ void UTexture2D::Serialize(FArchive &Ar)
 			Ar << unk1 << unk2 << unk3;
 		}
 		Ar << Mips;
+		if (Ar.ArVer >= 677)
+		{
+			// MK X has enum properties serialized as bytes, without text - so PixelFormat values should be remapped
+			// Insertions are:
+			//   PF_FloatRGBA_Full=14
+			//   PF_BC6=20
+			//   PF_BC7=21
+			// Other enum values are in the same order.
+			if (Format == PF_R16F)
+			{
+				Format = PF_BC7;
+			}
+		}
 		goto skip_rest_quiet;				// Injustice has some extra mipmap arrays
 	}
 #endif // MKVSDC
@@ -616,6 +629,11 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	{
 		// TFC file is assigned
 		strcpy(bulkFileName, TextureFileCacheName);
+		if (char* s = strchr(bulkFileName, '.'))
+		{
+			// MK X has string with file extension - cut it
+			*s = 0;
+		}
 		static const char* tfcExtensions[] = { "tfc", "xxx" };
 		for (int i = 0; i < ARRAY_COUNT(tfcExtensions); i++)
 		{

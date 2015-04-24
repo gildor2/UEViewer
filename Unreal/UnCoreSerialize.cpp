@@ -1013,9 +1013,19 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		// read header
 		Ar << BulkDataFlags << ElementCount;
 		assert(Ar.IsLoading);
-		int BulkDataOffsetInFile32;
-		Ar << BulkDataSizeOnDisk << BulkDataOffsetInFile32;
-		BulkDataOffsetInFile = BulkDataOffsetInFile32;			// sign extend to allow non-standard TFC systems which uses '-1' in this field
+		int tmpBulkDataOffsetInFile32;
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			// MK X has 64-bit offset and size fields
+			int64 tmpBulkDataSizeOnDisk64;
+			Ar << tmpBulkDataSizeOnDisk64 << BulkDataOffsetInFile;
+			BulkDataSizeOnDisk = (int)tmpBulkDataSizeOnDisk64;
+			goto header_done;
+		}
+#endif // MKVSDC
+		Ar << BulkDataSizeOnDisk << tmpBulkDataOffsetInFile32;
+		BulkDataOffsetInFile = tmpBulkDataOffsetInFile32;		// sign extend to allow non-standard TFC systems which uses '-1' in this field
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 128)
 		{
@@ -1024,6 +1034,8 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		}
 #endif // TRANSFORMERS
 	}
+
+header_done: ;
 
 #if MCARTA
 	if (Ar.Game == GAME_MagnaCarta && (BulkDataFlags & 0x40))	// different flags

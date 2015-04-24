@@ -696,6 +696,14 @@ public:
 			return;
 		}
 #endif // BIOSHOCK3
+#if MKVSDC
+		if (Ar.Game == GAME_MK)
+		{
+			// MK X has version 677, but different format of UMaterial
+			DROP_REMAINING_DATA(Ar);
+			return;
+		}
+#endif // MKVSDC
 		if (Ar.ArVer >= 858)
 		{
 			int unkMask;		// default 1
