@@ -64,10 +64,13 @@ OLDCRT     = 1
 #	Third-party libraries
 #------------------------------------------------
 
+LIBINCLUDES = $R/libs/include
+
 OBJDIR = $R/obj/libs-$PLATFORM
 
 push(INCLUDES)
 INCLUDES = $R/libs/nvtt
+LIBINCLUDES += $R/libs/nvtt
 
 sources(NV_LIBS) = {
 #	$R/libs/nvtt/nvcore/*.cpp
@@ -104,7 +107,19 @@ pop(DEFINES)
 sources(IOS_LIBS) = {
 	$R/libs/PowerVR/*.cpp
 }
+LIBINCLUDES += $R/libs/PowerVR
 
+!if 0		#!! temporarily disable "detex" library, until it will be stable enough
+
+DEFINES += ENABLE_DETEX=1
+LIBINCLUDES += $R/libs/detex
+#!! NOTE: if "detex" will be used, readme.txt should be updated to include it into "third-party" list
+
+sources(UE3_LIBS) = {
+	$R/libs/detex/*.cpp
+}
+
+!endif
 
 #------------------------------------------------
 #	Project-specific options
@@ -112,7 +127,7 @@ sources(IOS_LIBS) = {
 
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
 STDLIBS   += SDL2 SDL2main
-INCLUDES  += . $R/Core $R/Unreal $R/libs/include $R/libs/nvtt $R/libs/PowerVR
+INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
 
 !if "$PLATFORM" eq "win32"
 	INCLUDES += $R/libs/includewin32

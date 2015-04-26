@@ -14,7 +14,15 @@
 #	include <PVRTDecompress.h>
 #endif
 
-//#define PROFILE_DDS			1
+#if ENABLE_DETEX
+#include <detex.h>
+#endif
+
+#if 0
+#	define PROFILE_DDS(cmd)		cmd
+#else
+#	define PROFILE_DDS(cmd)
+#endif
 
 /*-----------------------------------------------------------------------------
 	Texture decompression
@@ -38,27 +46,28 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 
 const CPixelFormatInfo PixelFormatInfo[] =
 {
-	// FourCC					BlockSizeX	BlockSizeY	BytesPerBlock	X360AlignX	X360AlignY
-	{ 0,						1,			1,			1,				0,			0		},	// TPF_P8
-	{ 0,						1,			1,			1,				64,			64		},	// TPF_G8
-//	{																						},	// TPF_G16
-	{ 0,						1,			1,			3,				0,			0,		},	// TPF_RGB8
-	{ 0,						1,			1,			4,				32,			32		},	// TPF_BGRA8
-	{ BYTES4('D','X','T','1'),	4,			4,			8,				128,		128		},	// TPF_DXT1
-	{ BYTES4('D','X','T','3'),	4,			4,			16,				128,		128		},	// TPF_DXT3
-	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128		},	// TPF_DXT5
-	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128		},	// TPF_DXT5N
-	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8
-	{ 0,						1,			1,			2,				64,			32		},	// TPF_V8U8_2
-	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0		},	// TPF_BC5
-	{ 0,						4,			4,			16,				0,			0		},	// TPF_BC7
-	{ 0,						8,			1,			1,				0,			0		},	// TPF_A1
+	// FourCC					BlockSizeX	BlockSizeY	BytesPerBlock	X360AlignX	X360AlignY	Name
+	{ 0,						1,			1,			1,				0,			0,			"P8"	},	// TPF_P8
+	{ 0,						1,			1,			1,				64,			64,			"G8"	},	// TPF_G8
+//	{																								},	// TPF_G16
+	{ 0,						1,			1,			3,				0,			0,			"RGB8"	},	// TPF_RGB8
+	{ 0,						1,			1,			4,				32,			32,			"BGRA8"	},	// TPF_BGRA8
+	{ BYTES4('D','X','T','1'),	4,			4,			8,				128,		128,		"DXT1"	},	// TPF_DXT1
+	{ BYTES4('D','X','T','3'),	4,			4,			16,				128,		128,		"DXT3"	},	// TPF_DXT3
+	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128,		"DXT5"	},	// TPF_DXT5
+	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128,		"DXT5N"	},	// TPF_DXT5N
+	{ 0,						1,			1,			2,				64,			32,			"V8U8"	},	// TPF_V8U8
+	{ 0,						1,			1,			2,				64,			32,			"V8U8"	},	// TPF_V8U8_2
+	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0,			"BC5"	},	// TPF_BC5
+	{ 0,						4,			4,			16,				0,			0,			"BC7"	},	// TPF_BC7
+	{ 0,						8,			1,			1,				0,			0,			"A1"	},	// TPF_A1
 #if SUPPORT_IPHONE
-	{ 0,						8,			4,			8,				0,			0		},	// TPF_PVRTC2
-	{ 0,						4,			4,			8,				0,			0		},	// TPF_PVRTC4
+	{ 0,						8,			4,			8,				0,			0,			"PVRTC2"},	// TPF_PVRTC2
+	{ 0,						4,			4,			8,				0,			0,			"PVRTC4"},	// TPF_PVRTC4
 #endif
 #if SUPPORT_ANDROID
-	{ 0,						4,			4,			8,				0,			0		},	// TPF_ETC1
+	{ 0,						4,			4,			8,				0,			0,			"ETC1"	},	// TPF_ETC1
+	{ 0,						4,			4,			8,				0,			0,			"ETC2"	},	// TPF_ETC2
 #endif
 };
 
@@ -200,41 +209,80 @@ byte *CTextureData::Decompress()
 #if SUPPORT_IPHONE
 	case TPF_PVRTC2:
 	case TPF_PVRTC4:
-	#if PROFILE_DDS
-		appResetProfiler();
-	#endif
+		PROFILE_DDS(appResetProfiler());
 		PVRTDecompressPVRTC(Data, Format == TPF_PVRTC2, USize, VSize, dst);
-	#if PROFILE_DDS
-		appPrintProfiler();
-	#endif
+		PROFILE_DDS(appPrintProfiler());
 		return dst;
 #endif // SUPPORT_IPHONE
 
 #if SUPPORT_ANDROID
 	case TPF_ETC1:
-	#if PROFILE_DDS
-		appResetProfiler();
-	#endif
+#if 1
+		PROFILE_DDS(appResetProfiler());
 		PVRTDecompressETC(Data, USize, VSize, dst, 0);
-	#if PROFILE_DDS
-		appPrintProfiler();
-	#endif
+		PROFILE_DDS(appPrintProfiler());
+#else
+		{
+			// NOTE: this code works well too
+			detexTexture tex;
+			tex.format = DETEX_TEXTURE_FORMAT_ETC1;
+			tex.data = const_cast<byte*>(Data);	// will be used as 'const' anyway
+			tex.width = USize;
+			tex.height = VSize;
+			tex.width_in_blocks = USize / 4;
+			tex.height_in_blocks = VSize / 4;
+			PROFILE_DDS(appResetProfiler());
+			detexDecompressTextureLinear(&tex, dst, DETEX_PIXEL_FORMAT_RGBA8);
+			PROFILE_DDS(appPrintProfiler());
+		}
+#endif
 		return dst;
+	#if 0 && ENABLE_DETEX
+	case TPF_ETC2:
+		{
+			detexTexture tex;
+			tex.format = DETEX_TEXTURE_FORMAT_ETC2;
+			tex.data = const_cast<byte*>(Data);	// will be used as 'const' anyway
+			tex.width = USize;
+			tex.height = VSize;
+			tex.width_in_blocks = USize / 4;
+			tex.height_in_blocks = VSize / 4;
+			PROFILE_DDS(appResetProfiler());
+			detexDecompressTextureLinear(&tex, dst, DETEX_PIXEL_FORMAT_RGBA8);
+			PROFILE_DDS(appPrintProfiler());
+		}
+		return dst;
+	#endif
 #endif // SUPPORT_ANDROID
+
+#if ENABLE_DETEX
+	case TPF_BC7:
+		{
+			detexTexture tex;
+			tex.format = DETEX_TEXTURE_FORMAT_BPTC;
+			tex.data = const_cast<byte*>(Data);	// will be used as 'const' anyway
+			tex.width = USize;
+			tex.height = VSize;
+			tex.width_in_blocks = USize / 4;
+			tex.height_in_blocks = VSize / 4;
+			PROFILE_DDS(appResetProfiler());
+			detexDecompressTextureLinear(&tex, dst, DETEX_PIXEL_FORMAT_RGBA8);
+			PROFILE_DDS(appPrintProfiler());
+		}
+		return dst;
+#endif
 	}
 
 	staticAssert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, Wrong_PixelFormatInfo_array);
 	unsigned fourCC = PixelFormatInfo[Format].FourCC;
 	if (!fourCC)
 	{
-		appNotify("%s: unknown texture format %d \n", Obj->Name, Format);
+		appNotify("Unable to unpack texture %s: unsupported texture format %s\n", Obj->Name, PixelFormatInfo[Format].Name);
 		memset(dst, 0xFF, size);
 		return dst;
 	}
 
-#if PROFILE_DDS
-	appResetProfiler();
-#endif
+	PROFILE_DDS(appResetProfiler());
 
 	nv::DDSHeader header;
 	nv::Image image;
@@ -256,9 +304,7 @@ byte *CTextureData::Decompress()
 		d[3] = s[3];
 	}
 
-#if PROFILE_DDS
-	appPrintProfiler();
-#endif
+	PROFILE_DDS(appPrintProfiler());
 
 	if (Format == TPF_DXT1)
 		PostProcessAlpha(dst, USize, VSize);	//??

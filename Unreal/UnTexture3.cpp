@@ -644,7 +644,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			if (!bulkFile)
 			{
 				if (!tfcSuffix) tfcSuffix = "DXT";
-				appSprintf(ARRAY_ARG(bulkFileName), "%s_%s", *TextureFileCacheName, tfcSuffix);
+				appSprintf(ARRAY_ARG(bulkFileName), "%s_%s", bulkFileName, tfcSuffix);
 				bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
 				if (bulkFile) break;
 			}
@@ -791,10 +791,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			if (Format == PF_DXT1)
 				intFormat = TPF_ETC1;
 			else if (Format == PF_DXT5)
-			{
-				appPrintf("ETC2 texture format is not supported\n"); // TPF_ETC2_EAC
-				return false;
-			}
+				intFormat = TPF_ETC2;
 		}
 		else if (CachedPVRTCMips.Num())
 		{

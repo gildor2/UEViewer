@@ -84,6 +84,7 @@ enum ETexturePixelFormat
 #endif
 #if SUPPORT_ANDROID
 	TPF_ETC1,
+	TPF_ETC2,
 #endif
 	TPF_MAX
 };
@@ -97,6 +98,7 @@ struct CPixelFormatInfo
 	byte		BytesPerBlock;
 	byte		X360AlignX;			// 0 when unknown or not supported on XBox360
 	byte		X360AlignY;
+	const char*	Name;
 };
 
 

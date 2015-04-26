@@ -846,7 +846,7 @@ sub CollectFileDependencies {
 
 	$dep = "";
 	$depends{$file} = "(computing)";			# flag for detection of recursive includes
-	my ($path) = $file =~ /^(\S+)\/[\w+\.]+$/;
+	my ($path) = $file =~ /^(\S+)\/[\w+\-\.]+$/;
 	$path = "" if !defined($path);
 
 # -- disabled 08.10.2014: process .rc file like it's ordinary C++ file; perhaps later should allow

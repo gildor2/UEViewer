@@ -142,7 +142,7 @@ libmspack - a library for Microsoft compression formats
 
 NVIDIA Texture Tools
   (c) NVIDIA
-  http://code.google.com/p/nvidia-texture-tools/
+  https://github.com/castano/nvidia-texture-tools
 
 PVRTexLib Library
   (c) Imagination Technologies Limited
