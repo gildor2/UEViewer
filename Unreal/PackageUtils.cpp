@@ -43,6 +43,8 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 
 void ReleaseAllObjects()
 {
+	guard(ReleaseAllObjects);
+
 #if 0
 	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	appDumpMemoryAllocations();
@@ -67,6 +69,8 @@ void ReleaseAllObjects()
 #endif
 	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 //	appDumpMemoryAllocations();
+
+	unguard;
 }
 
 

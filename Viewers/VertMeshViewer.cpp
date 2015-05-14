@@ -223,6 +223,8 @@ void CVertMeshViewer::ShowHelp()
 
 void CVertMeshViewer::ProcessKey(int key)
 {
+	guard(CVertMeshViewer::ProcessKey);
+
 	int i;
 
 	CVertMeshInstance *MeshInst = static_cast<CVertMeshInstance*>(Inst);
@@ -291,6 +293,8 @@ void CVertMeshViewer::ProcessKey(int key)
 	default:
 		CMeshViewer::ProcessKey(key);
 	}
+
+	unguard;
 }
 
 

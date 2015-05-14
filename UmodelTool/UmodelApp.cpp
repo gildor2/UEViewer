@@ -39,6 +39,8 @@ CUmodelApp GApplication;
 
 bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bool newPackage)
 {
+	guard(CUmodelApp::FindObjectAndCreateVisualizer);
+
 	if (newPackage)
 	{
 		assert(dir > 0); // just in case
@@ -85,6 +87,8 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 	// change visualizer
 	CreateVisualizer(Obj);
 	return true;
+
+	unguard;
 }
 
 
@@ -115,6 +119,8 @@ static HWND GetSDLWindowHandle(SDL_Window* window)
 // always return true.
 bool CUmodelApp::ShowPackageUI()
 {
+	guard(CUmodelApp::ShowPackageUI);
+
 	// When we're doing export, then switching back to GUI, then pressing "Esc",
 	// we can't return to the visualizer which was used before doing export because
 	// all object was unloaded. In this case, code will set 'packagesChanged' flag
@@ -264,6 +270,8 @@ bool CUmodelApp::ShowPackageUI()
 	}
 
 	return true;
+
+	unguard;
 }
 
 void CUmodelApp::SetPackageName(const char* name)
@@ -514,7 +522,7 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 	MainMenu->Update();
 #endif
 
-	unguard;
+	unguardf("key=%X, down=%d", key, isDown);
 }
 
 

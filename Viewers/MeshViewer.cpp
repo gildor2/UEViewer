@@ -119,6 +119,7 @@ void CMeshViewer::ShowHelp()
 
 void CMeshViewer::ProcessKey(int key)
 {
+	guard(CMeshViewer::ProcessKey);
 	switch (key)
 	{
 	case 'n':
@@ -136,6 +137,7 @@ void CMeshViewer::ProcessKey(int key)
 	default:
 		CObjectViewer::ProcessKey(key);
 	}
+	unguard;
 }
 
 

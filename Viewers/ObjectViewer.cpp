@@ -42,6 +42,7 @@ void CObjectViewer::Export()
 
 void CObjectViewer::ProcessKey(int key)
 {
+	guard(CObjectViewer::ProcessKey);
 	if (!Object) return;
 
 	switch (key)
@@ -53,6 +54,7 @@ void CObjectViewer::ProcessKey(int key)
 		Dump();
 		break;
 	}
+	unguard;
 }
 
 
