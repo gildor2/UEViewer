@@ -245,8 +245,6 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 
 	//?? support some other formats too
 	// TPF_V8U8 = GL_RG8_SNORM (GL3.1)
-	//*TPF_BC5  = GL_COMPRESSED_RG_RGTC2 (GL_ARB_texture_compression_rgtc/GL_EXT_texture_compression_rgtc)
-	//*TPF_BC7  = GL_COMPRESSED_RGBA_BPTC_UNORM_ARB (GL_ARB_texture_compression_bptc)
 	// TPF_G8   = GL_LUMINANCE
 	// Notes:
 	// - most formats are uploaded with glTexImage2D(), not with glCompressedTexImage2D()

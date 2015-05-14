@@ -157,6 +157,7 @@ Changes
 ~~~~~~~
 14.05.2015
 - added full BC7 texture format support using "detex" library
+- added support for Android ETC texture packages (DXT5 format didn't work)
 
 24.04.2015
 - implemented Mortal Kombat X textre support; note: all textures are in BC7 format, no extraction

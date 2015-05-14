@@ -791,7 +791,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			if (Format == PF_DXT1)
 				intFormat = TPF_ETC1;
 			else if (Format == PF_DXT5)
-				intFormat = TPF_ETC2;
+				intFormat = TPF_RGBA8;
 		}
 		else if (CachedPVRTCMips.Num())
 		{
