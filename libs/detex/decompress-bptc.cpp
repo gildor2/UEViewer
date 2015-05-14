@@ -27,15 +27,19 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 // Rotation bits = { 0, 0, 0, 0, 2, 2, 0, 0 };
 // Mode 4 has one index selection bit.
 //
-//	    #subsets  color   alpha part. index before color	index after color	index after alpha
-// Mode 0	3	4	0		1 + 4 = 5	5 + 6 * 3 * 4 = 77	77
-// Mode 1	Handled elsewhere.
-// Mode 2	3	5	0		3 + 6 = 9	9 + 6 * 3 * 5 = 99	99
-// Mode 3	2	7	0		4 + 6 = 10	10 + 4 * 3 * 7 = 94	94
-// Mode 4	1	5	6		5 + 2 + 1 = 8	8 + 2 * 3 * 5 = 38	37 + 2 * 6 = 50
-// Mode 5	1	7	8		6 + 2 = 8	8 + 2 * 3 * 7 = 50	50 + 2 * 8 = 66
-// Mode	6	1	7	7		7		7 + 2 * 3 * 7 = 49	49 + 2 * 7 = 63
-// Mode 7	2	5	5		8 + 6 = 14	14 + 4 * 3 * 5 = 74	74 + 4 * 5 = 94
+//      #subsets color alpha before color   index after color	 index after	  After	     Index
+//                                                               alpha		  pbits	     bits (*)
+// Mode 0   3	  4	0    1 + 4 = 5	    5 + 6 * 3 * 4 = 77	 77		  + 6 = 83   + 48 - 3 = 128
+// Mode 1   2	  6	0    2 + 6 = 8	    8 + 4 * 3 * 6 = 80	 80		  + 2 = 82   + 48 - 2 = 128
+// Mode 2   3	  5	0    3 + 6 = 9	    9 + 6 * 3 * 5 = 99	 99		  99	     + 32 - 3 = 128
+// Mode 3   2	  7	0    4 + 6 = 10	    10 + 4 * 3 * 7 = 94	 94		  + 4 = 98   + 32 - 2 = 128
+// Mode 4   1	  5	6    5 + 2 + 1 = 8  8 + 2 * 3 * 5 = 38	 37 + 2 * 6 = 50  50	     + 80 - 2 = 128
+// Mode 5   1	  7	8    6 + 2 = 8	    8 + 2 * 3 * 7 = 50	 50 + 2 * 8 = 66  66	     + 64 - 2 = 128
+// Mode	6   1	  7	7    7		    7 + 2 * 3 * 7 = 49	 49 + 2 * 7 = 63  + 2 = 65   + 64 - 1 = 128
+// Mode 7   2	  5	5    8 + 6 = 14     14 + 4 * 3 * 5 = 74	 74 + 4 * 5 = 94  + 4 = 98   + 32 - 2 = 128
+//
+// (*) For formats without alpha, the number of index bits is reduced by #subsets anchor bits.
+//     For formats with alpha, the number of index bits is reduced by 2 * #subsets by the anchor bits.
 
 
 static const uint8_t color_precision_table[8] = { 4, 6, 5, 7, 5, 7, 7, 5 };
@@ -108,9 +112,12 @@ uint8_t * DETEX_RESTRICT endpoint_array) {
 	// Alpha component.
 	if (GetAlphaComponentPrecision(mode) > 0) {
 		// For mode 7, the alpha data is wholly in data1.
-		// For modes 4, 5 and 6, the alpha data is wholly in data0.
+		// For modes 4 and 6, the alpha data is wholly in data0.
+		// For mode 5, the alpha data is in data0 and data1.
 		if (mode == 7)
 			data = block->data1 >> (block->index - 64);
+		else if (mode == 5)
+			data = (block->data0 >> block->index) | ((block->data1 & 0x3) << 14);
 		else
 			data = block->data0 >> block->index;
 		uint8_t alpha_precision = GetAlphaComponentPrecision(mode);
@@ -129,8 +136,8 @@ static const uint8_t mode_has_p_bits[8] = { 1, 1, 0, 1, 0, 0, 1, 1 };
 static void FullyDecodeEndpoints(uint8_t * DETEX_RESTRICT endpoint_array, int nu_subsets,
 int mode, detexBlock128 * DETEX_RESTRICT block) {
 	if (mode_has_p_bits[mode]) {
-		// Mode 1 handled elsewhere.
-		// Extract end-point pbits. Take advantage of the fact that they don't cross the
+		// Mode 1 (shared P-bits) handled elsewhere.
+		// Extract end-point P-bits. Take advantage of the fact that they don't cross the
 		// 64-bit word boundary in any mode.
 		uint32_t bits;
 		if (block->index < 64)
@@ -600,5 +607,17 @@ uint32_t detexGetModeBPTC(const uint8_t *bitstring) {
 	block.index = 0;
 	int mode = ExtractMode(&block);
 	return mode;
+}
+
+void detexSetModeBPTC(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+uint32_t *colors) {
+	// Mode 0 starts with 1
+	// Mode 1 starts with 01
+	// ...
+	// Mode 7 starts with 00000001
+	int bit = 0x1 << mode;
+	bitstring[0] &= ~(bit - 1);
+	bitstring[0] |= bit;
+	return;
 }
 

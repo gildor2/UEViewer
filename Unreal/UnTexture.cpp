@@ -14,9 +14,7 @@
 #	include <PVRTDecompress.h>
 #endif
 
-#if ENABLE_DETEX
 #include <detex.h>
-#endif
 
 #if 0
 #	define PROFILE_DDS(cmd)		cmd
@@ -237,7 +235,7 @@ byte *CTextureData::Decompress()
 		}
 #endif
 		return dst;
-	#if 0 && ENABLE_DETEX
+	#if 0
 	case TPF_ETC2:
 		{
 			detexTexture tex;
@@ -255,7 +253,6 @@ byte *CTextureData::Decompress()
 	#endif
 #endif // SUPPORT_ANDROID
 
-#if ENABLE_DETEX
 	case TPF_BC7:
 		{
 			detexTexture tex;
@@ -270,7 +267,6 @@ byte *CTextureData::Decompress()
 			PROFILE_DDS(appPrintProfiler());
 		}
 		return dst;
-#endif
 	}
 
 	staticAssert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, Wrong_PixelFormatInfo_array);

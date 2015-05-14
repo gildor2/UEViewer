@@ -106,7 +106,18 @@ UE3_LIBS_FILES = \
 	$(OUT)/inflate.o \
 	$(OUT)/inftrees.o \
 	$(OUT)/uncompr.o \
-	$(OUT)/lzxd.o
+	$(OUT)/lzxd.o \
+	$(OUT)/bits.o \
+	$(OUT)/bptc-tables.o \
+	$(OUT)/clamp.o \
+	$(OUT)/convert.o \
+	$(OUT)/dds.o \
+	$(OUT)/decompress-bptc.o \
+	$(OUT)/decompress-eac.o \
+	$(OUT)/decompress-etc.o \
+	$(OUT)/file-info.o \
+	$(OUT)/misc.o \
+	$(OUT)/texture.o
 
 IOS_LIBS_FILES = \
 	$(OUT)/PVRTDecompress.o
@@ -130,7 +141,7 @@ $(OUT)/DirectDrawSurface.o : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.o : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/Image.o ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -msse -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I UmodelTool -I UI
+OPT_MAIN = -msse -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I UmodelTool -I UI
 
 DEPENDS_1 = \
 	Core/Core.h \
@@ -1216,9 +1227,69 @@ DEPENDS_57 = \
 $(OUT)/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_57)
 	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/PVRTDecompress.o ./libs/PowerVR/PVRTDecompress.cpp
 
+DEPENDS_58 = \
+	libs/detex/bits.h \
+	libs/detex/bptc-tables.h \
+	libs/detex/detex.h
+
+$(OUT)/bptc-tables.o : ./libs/detex/bptc-tables.cpp $(DEPENDS_58)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/bptc-tables.o ./libs/detex/bptc-tables.cpp
+
+$(OUT)/decompress-bptc.o : ./libs/detex/decompress-bptc.cpp $(DEPENDS_58)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/decompress-bptc.o ./libs/detex/decompress-bptc.cpp
+
+DEPENDS_59 = \
+	libs/detex/bits.h \
+	libs/detex/detex.h
+
+$(OUT)/bits.o : ./libs/detex/bits.cpp $(DEPENDS_59)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/bits.o ./libs/detex/bits.cpp
+
+DEPENDS_60 = \
+	libs/detex/detex.h
+
+$(OUT)/clamp.o : ./libs/detex/clamp.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/clamp.o ./libs/detex/clamp.cpp
+
+$(OUT)/decompress-eac.o : ./libs/detex/decompress-eac.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/decompress-eac.o ./libs/detex/decompress-eac.cpp
+
+$(OUT)/decompress-etc.o : ./libs/detex/decompress-etc.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/decompress-etc.o ./libs/detex/decompress-etc.cpp
+
+$(OUT)/misc.o : ./libs/detex/misc.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/misc.o ./libs/detex/misc.cpp
+
+DEPENDS_61 = \
+	libs/detex/detex.h \
+	libs/detex/file-info.h \
+	libs/detex/misc.h
+
+$(OUT)/dds.o : ./libs/detex/dds.cpp $(DEPENDS_61)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/dds.o ./libs/detex/dds.cpp
+
+$(OUT)/file-info.o : ./libs/detex/file-info.cpp $(DEPENDS_61)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/file-info.o ./libs/detex/file-info.cpp
+
+DEPENDS_62 = \
+	libs/detex/detex.h \
+	libs/detex/half-float.h \
+	libs/detex/hdr.h \
+	libs/detex/misc.h
+
+$(OUT)/convert.o : ./libs/detex/convert.cpp $(DEPENDS_62)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/convert.o ./libs/detex/convert.cpp
+
+DEPENDS_63 = \
+	libs/detex/detex.h \
+	libs/detex/misc.h
+
+$(OUT)/texture.o : ./libs/detex/texture.cpp $(DEPENDS_63)
+	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/texture.o ./libs/detex/texture.cpp
+
 OPT_UE3_LIBS = -msse -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 
-DEPENDS_58 = \
+DEPENDS_64 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
@@ -1230,10 +1301,10 @@ DEPENDS_58 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_58)
+$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_64)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
-DEPENDS_59 = \
+DEPENDS_65 = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/lzo/lzo_conf.h \
@@ -1242,34 +1313,34 @@ DEPENDS_59 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_59)
+$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_65)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo_init.o ./libs/lzo/lzo_init.c
 
-DEPENDS_60 = \
+DEPENDS_66 = \
 	libs/mspack/readbits.h \
 	libs/mspack/readhuff.h \
 	libs/mspack/system.h
 
-$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_60)
+$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_66)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzxd.o ./libs/mspack/lzxd.c
 
-DEPENDS_61 = \
+DEPENDS_67 = \
 	libs/nvtt/nvimage/BlockDXT.h \
 	libs/nvtt/nvimage/ColorBlock.h
 
-$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_61)
+$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_67)
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
-DEPENDS_62 = \
+DEPENDS_68 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_62)
+$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_68)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_63 = \
+DEPENDS_69 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -1278,10 +1349,10 @@ DEPENDS_63 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_63)
+$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_69)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_64 = \
+DEPENDS_70 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -1289,26 +1360,26 @@ DEPENDS_64 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_64)
+$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_70)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_65 = \
+DEPENDS_71 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_65)
+$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_71)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_66 = \
+DEPENDS_72 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_66)
+$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_72)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/adler32.o ./libs/zlib/adler32.c
 
-$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_66)
+$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_72)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

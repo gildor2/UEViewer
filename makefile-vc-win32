@@ -107,7 +107,18 @@ UE3_LIBS_FILES = \
 	$(OUT)/inflate.obj \
 	$(OUT)/inftrees.obj \
 	$(OUT)/uncompr.obj \
-	$(OUT)/lzxd.obj
+	$(OUT)/lzxd.obj \
+	$(OUT)/bits.obj \
+	$(OUT)/bptc-tables.obj \
+	$(OUT)/clamp.obj \
+	$(OUT)/convert.obj \
+	$(OUT)/dds.obj \
+	$(OUT)/decompress-bptc.obj \
+	$(OUT)/decompress-eac.obj \
+	$(OUT)/decompress-etc.obj \
+	$(OUT)/file-info.obj \
+	$(OUT)/misc.obj \
+	$(OUT)/texture.obj
 
 IOS_LIBS_FILES = \
 	$(OUT)/PVRTDecompress.obj
@@ -131,7 +142,7 @@ $(OUT)/DirectDrawSurface.obj : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT_1)/" -D _USING_V110_SDK71_ -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI
+OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT_1)/" -D _USING_V110_SDK71_ -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI
 
 DEPENDS = \
 	Core/Core.h \
@@ -1211,7 +1222,7 @@ DEPENDS = \
 	UmodelTool/res/resource.h
 
 $(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
-	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/includewin32 -I UmodelTool -I UI  -D _USING_V110_SDK71_ -D OLDCRT -D _WIN32 -D WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
+	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI  -D _USING_V110_SDK71_ -D OLDCRT -D _WIN32 -D WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
 
 OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -D _USING_V110_SDK71_ -D OLDCRT
 
@@ -1222,6 +1233,66 @@ DEPENDS = \
 
 $(OUT)/PVRTDecompress.obj : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/PVRTDecompress.obj" ./libs/PowerVR/PVRTDecompress.cpp
+
+DEPENDS = \
+	libs/detex/bits.h \
+	libs/detex/bptc-tables.h \
+	libs/detex/detex.h
+
+$(OUT)/bptc-tables.obj : ./libs/detex/bptc-tables.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/bptc-tables.obj" ./libs/detex/bptc-tables.cpp
+
+$(OUT)/decompress-bptc.obj : ./libs/detex/decompress-bptc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/decompress-bptc.obj" ./libs/detex/decompress-bptc.cpp
+
+DEPENDS = \
+	libs/detex/bits.h \
+	libs/detex/detex.h
+
+$(OUT)/bits.obj : ./libs/detex/bits.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/bits.obj" ./libs/detex/bits.cpp
+
+DEPENDS = \
+	libs/detex/detex.h
+
+$(OUT)/clamp.obj : ./libs/detex/clamp.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/clamp.obj" ./libs/detex/clamp.cpp
+
+$(OUT)/decompress-eac.obj : ./libs/detex/decompress-eac.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/decompress-eac.obj" ./libs/detex/decompress-eac.cpp
+
+$(OUT)/decompress-etc.obj : ./libs/detex/decompress-etc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/decompress-etc.obj" ./libs/detex/decompress-etc.cpp
+
+$(OUT)/misc.obj : ./libs/detex/misc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/misc.obj" ./libs/detex/misc.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/file-info.h \
+	libs/detex/misc.h
+
+$(OUT)/dds.obj : ./libs/detex/dds.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/dds.obj" ./libs/detex/dds.cpp
+
+$(OUT)/file-info.obj : ./libs/detex/file-info.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/file-info.obj" ./libs/detex/file-info.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/half-float.h \
+	libs/detex/hdr.h \
+	libs/detex/misc.h
+
+$(OUT)/convert.obj : ./libs/detex/convert.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/convert.obj" ./libs/detex/convert.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/misc.h
+
+$(OUT)/texture.obj : ./libs/detex/texture.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/texture.obj" ./libs/detex/texture.cpp
 
 OPT_UE3_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 

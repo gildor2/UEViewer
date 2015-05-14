@@ -148,9 +148,16 @@ PVRTexLib Library
   (c) Imagination Technologies Limited
   http://www.imgtec.com/powervr/insider/
 
+detex
+  (c) 2015 Harm Hanemaaijer
+  https://github.com/hglm/detex
+
 
 Changes
 ~~~~~~~
+14.05.2015
+- added full BC7 texture format support using "detex" library
+
 24.04.2015
 - implemented Mortal Kombat X textre support; note: all textures are in BC7 format, no extraction
   possible

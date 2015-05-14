@@ -189,6 +189,14 @@ uint32_t detexGetModeETC1(const uint8_t *bitstring) {
 		return 1;
 }
 
+void detexSetModeETC1(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+uint32_t *colors) {
+	if (mode == 0)
+		bitstring[3] &= ~0x2;
+	else
+		bitstring[3] |= 0x2;
+}
+
 static const int etc2_distance_table[8] = { 3, 6, 11, 16, 23, 32, 41, 64 };
 
 static void ProcessBlockETC2TOrHMode(const uint8_t * DETEX_RESTRICT bitstring, int mode,
@@ -384,6 +392,81 @@ uint32_t detexGetModeETC2(const uint8_t *bitstring) {
 	else
 		// Differential mode.
 		return 1;
+}
+
+static void SetModeETC2THP(uint8_t *bitstring, uint32_t mode) {
+	if (mode == 2) {
+		// bitstring[0] bits 0, 1, 3, 4 are used.
+		// Bits 2, 5, 6, 7 can be modified.
+		// Modify bits 2, 5, 6, 7 so that R < 0 or R > 31.
+		int R_bits_5_to_7_clear = (bitstring[0] & 0x18) >> 3;
+		int R_compl_bit_2_clear = complement3bit(bitstring[0] & 0x3);
+		if (R_bits_5_to_7_clear + 0x1C + R_compl_bit_2_clear > 31) {
+			// Set bits 5, 6, 7 and clear bit 2.
+			bitstring[0] &= ~0x04;
+			bitstring[0] |= 0xE0;
+		}
+		else {
+			int R_compl_bit_2_set = complement3bit((bitstring[0] & 0x3) | 0x4);
+			if (R_bits_5_to_7_clear + R_compl_bit_2_set < 0) {
+				// Clear bits 5, 6, 7 and set bit 2.
+				bitstring[0] &= ~0xE0;
+				bitstring[0] |= 0x04;
+			}
+			else
+				; // Shouldn't happen.
+		}
+	}
+	else if (mode == 3) {
+		int G_bits_5_to_7_clear = (bitstring[1] & 0x18) >> 3;
+		int G_compl_bit_2_clear = complement3bit(bitstring[1] & 0x3);
+		if (G_bits_5_to_7_clear + 0x1C + G_compl_bit_2_clear > 31) {
+			// Set bits 5, 6, 7 and clear bit 2.
+			bitstring[1] &= ~0x04;
+			bitstring[1] |= 0xE0;
+		}
+		else {
+			int G_compl_bit_2_set = complement3bit((bitstring[1] & 0x3) | 0x4);
+			if (G_bits_5_to_7_clear + G_compl_bit_2_set < 0) {
+				// Clear bits 5, 6, 7 and set bit 2.
+				bitstring[1] &= ~0xE0;
+				bitstring[1] |= 0x04;
+			}
+			else
+				; // Shouldn't happen.
+		}
+	}
+	else if (mode == 4) {
+		int B_bits_5_to_7_clear = (bitstring[2] & 0x18) >> 3;
+		int B_compl_bit_2_clear = complement3bit(bitstring[2] & 0x3);
+		if (B_bits_5_to_7_clear + 0x1C + B_compl_bit_2_clear > 31) {
+			// Set bits 5, 6, 7 and clear bit 2.
+			bitstring[2] &= ~0x04;
+			bitstring[2] |= 0xE0;
+		}
+		else {
+			int B_compl_bit_2_set = complement3bit((bitstring[2] & 0x3) | 0x4);
+			if (B_bits_5_to_7_clear + B_compl_bit_2_set < 0) {
+				// Clear bits 5, 6, 7 and set bit 2.
+				bitstring[2] &= ~0xE0;
+				bitstring[2] |= 0x04;
+			}
+			else
+				; // Shouldn't happen.
+		}
+	}
+}
+
+void detexSetModeETC2(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+uint32_t *colors) {
+	if (mode == 0)
+		// Set Individual mode.
+		bitstring[3] &= ~0x2;
+	else {
+		// Set Differential, T, H or P mode.
+		bitstring[3] |= 0x2;
+		SetModeETC2THP(bitstring, mode);
+	}
 }
 
 static const int punchthrough_modifier_table[8][4] = {
@@ -656,5 +739,14 @@ uint32_t detexGetModeETC2_PUNCHTHROUGH(const uint8_t *bitstring) {
 	else
 		// Differential mode.
 		return 1;
+}
+
+void detexSetModeETC2_PUNCHTHROUGH(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+uint32_t *colors) {
+	if (flags & DETEX_DECOMPRESS_FLAG_NON_OPAQUE_ONLY)
+		bitstring[3] &= ~0x2;
+	if (flags & DETEX_DECOMPRESS_FLAG_OPAQUE_ONLY)
+		bitstring[3] |= 0x2;
+	SetModeETC2THP(bitstring, flags);
 }
 

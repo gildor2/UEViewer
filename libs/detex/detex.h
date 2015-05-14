@@ -68,6 +68,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 __BEGIN_DECLS
 
+#include <stdlib.h>
 #include <stdint.h>
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -540,9 +541,11 @@ DETEX_API bool detexDecompressBlockBPTC_SIGNED_FLOAT(const uint8_t *bitstring,
 
 /*
  * Get mode functions. They return the internal compression format mode used
- * inside the compressed block.
+ * inside the compressed block. For compressed formats that do not use a mode,
+ * there is no GetMode function.
  */
 
+DETEX_API uint32_t detexGetModeBC1(const uint8_t *bitstring);
 DETEX_API uint32_t detexGetModeETC1(const uint8_t *bitstring);
 DETEX_API uint32_t detexGetModeETC2(const uint8_t *bitstring);
 DETEX_API uint32_t detexGetModeETC2_PUNCHTHROUGH(const uint8_t *bitstring);
@@ -555,17 +558,24 @@ DETEX_API uint32_t detexGetModeBPTC_SIGNED_FLOAT(const uint8_t *bitstring);
  * Set mode functions. The set mode function modifies a compressed texture block
  * so that the specified mode is set, making use of information about the block
  * (whether it is opaque, non-opaque or punchthrough for formats with alpha,
- * whether at most two different colors are used).
+ * whether at most two different colors are used). For compressed formats
+ * that do not use a mode, there is no SetMode function.
  */
 
-/*
- * Set mode functions for 8-bit RGB8/RGB8A formats. pixel_buffer is assumed to
- * be in DETEX_PIXEL_FORMAT_RGBA8 or DETEX_PIXEL_FORMAT_RGBX8 format.
- */
-
+DETEX_API void detexSetModeBC1(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+	uint32_t *colors);
 DETEX_API void detexSetModeETC1(uint8_t *bitstring, uint32_t mode, uint32_t flags,
 	uint32_t *colors);
-
+DETEX_API void detexSetModeETC2(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+	uint32_t *colors);
+DETEX_API void detexSetModeETC2_PUNCHTHROUGH(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+	uint32_t *colors);
+DETEX_API void detexSetModeETC2_EAC(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+	uint32_t *colors);
+DETEX_API void detexSetModeBPTC(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+	uint32_t *colors);
+DETEX_API void detexSetModeBPTC_FLOAT(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+	uint32_t *colors);
 
 /* Compressed texture format definitions for general texture decompression */
 /* functions. */
@@ -943,6 +953,40 @@ static DETEX_INLINE_ONLY float detexClamp0To1(float f) {
 		return 1.0f;
 	else
 		return f;
+}
+
+
+/* Integer division using look-up tables, used by BC1/2/3 and RGTC (BC4/5) */
+/* decompression. */
+
+DETEX_API extern const uint8_t detex_division_by_3_table[768];
+
+static DETEX_INLINE_ONLY uint32_t detexDivide0To767By3(uint32_t value) {
+	return detex_division_by_3_table[value];
+}
+
+DETEX_API extern const uint8_t detex_division_by_7_table[1792];
+
+static DETEX_INLINE_ONLY uint32_t detexDivide0To1791By7(uint32_t value) {
+	return detex_division_by_7_table[value];
+}
+
+static DETEX_INLINE_ONLY int8_t detexSignInt32(int v) {
+	return (int8_t)((v >> 31) | - (- v >> 31));
+}
+
+static DETEX_INLINE_ONLY int detexDivideMinus895To895By7(int value) {
+	return (int8_t)detex_division_by_7_table[abs(value)] * detexSignInt32(value);
+}
+
+DETEX_API extern const uint8_t detex_division_by_5_table[1280];
+
+static DETEX_INLINE_ONLY uint32_t detexDivide0To1279By5(uint32_t value) {
+	return detex_division_by_5_table[value];
+}
+
+static DETEX_INLINE_ONLY int detexDivideMinus639To639By5(int value) {
+	return (int8_t)detex_division_by_5_table[abs(value)] * detexSignInt32(value);
 }
 
 

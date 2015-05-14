@@ -90,6 +90,11 @@ uint32_t detexGetModeETC2_EAC(const uint8_t *bitstring) {
 	return detexGetModeETC2(&bitstring[8]);
 }
 
+void detexSetModeETC2_EAC(uint8_t *bitstring, uint32_t mode, uint32_t flags,
+uint32_t *colors) {
+	detexSetModeETC2(&bitstring[8], mode, flags, colors);
+}
+
 static DETEX_INLINE_ONLY int Clamp0To2047(int x) {
 	if (x < 0)
 		return 0;

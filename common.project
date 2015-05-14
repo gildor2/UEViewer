@@ -109,17 +109,11 @@ sources(IOS_LIBS) = {
 }
 LIBINCLUDES += $R/libs/PowerVR
 
-!if 0		#!! temporarily disable "detex" library, until it will be stable enough
 
-DEFINES += ENABLE_DETEX=1
 LIBINCLUDES += $R/libs/detex
-#!! NOTE: if "detex" will be used, readme.txt should be updated to include it into "third-party" list
-
 sources(UE3_LIBS) = {
 	$R/libs/detex/*.cpp
 }
-
-!endif
 
 #------------------------------------------------
 #	Project-specific options
