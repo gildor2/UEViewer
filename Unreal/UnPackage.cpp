@@ -621,6 +621,13 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 		goto tag_ok;
 	}
 #endif // GUNLEGEND
+#if MMH7
+	if (S.Tag == 0x4D4D4837)
+	{
+		Ar.Game = GAME_UE3;	// version conflict with Guilty Gear Xrd
+		goto tag_ok;		// Might & Magic Heroes 7
+	}
+#endif // MMH7
 
 	// support reverse byte order
 	if (S.Tag != PACKAGE_FILE_TAG)

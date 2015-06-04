@@ -857,6 +857,9 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 #if HAWKEN
 	else if (Ar.Game == GAME_Hawken && H.Tag == 0xEA31928C) goto tag_ok;
 #endif
+#if MMH7
+	if (/*Ar.Game == GAME_MMH7 && */ H.Tag == 0x4D4D4837) goto tag_ok;		// Might & Magic Heroes 7
+#endif
 	else
 		assert(H.Tag == PACKAGE_FILE_TAG);
 

@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+04.06.2015
+- added Might & Magic Heroes 7 support
+
 14.05.2015
 - added full BC7 texture format support using "detex" library
 - added support for Android ETC texture packages (DXT5 format didn't work)
