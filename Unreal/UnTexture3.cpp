@@ -842,8 +842,9 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		}
 	}
 
+	// Older Android and iOS UE3 versions didn't have dedicated CachedETCMips etc, all data were stored in Mips, but with different format
 #if SUPPORT_IPHONE
-	if (Package->Platform == PLATFORM_IOS)
+	if (Package->Platform == PLATFORM_IOS && Mips.Num())
 	{
 		if (Format == PF_DXT1)
 			intFormat = bForcePVRTC4 ? TPF_PVRTC4 : TPF_PVRTC2;
@@ -851,6 +852,16 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			intFormat = TPF_PVRTC4;
 	}
 #endif // SUPPORT_IPHONE
+
+#if SUPPORT_ANDROID
+	if (Package->Platform == PLATFORM_ANDROID && Mips.Num())
+	{
+		if (Format == PF_DXT1)
+			intFormat = TPF_ETC1;
+		else if (Format == PF_DXT5)
+			intFormat = TPF_RGBA4;	// probably check BytesPerPixel - should be 2 for this format
+	}
+#endif // SUPPORT_ANDROID
 
 	TexData.Format = intFormat;
 

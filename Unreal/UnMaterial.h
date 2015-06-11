@@ -79,6 +79,7 @@ enum ETexturePixelFormat
 	TPF_BC5,			// alias names: 3Dc, ATI2, BC5
 	TPF_BC7,
 	TPF_A1,				// 8 monochrome pixels per byte
+	TPF_RGBA4,
 #if SUPPORT_IPHONE
 	TPF_PVRTC2,
 	TPF_PVRTC4,

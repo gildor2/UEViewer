@@ -260,6 +260,13 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		return true;
 	}
 
+	if (TexData.Format == TPF_RGBA4)
+	{
+		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, TexData.CompressedData);
+		glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
+		return true;
+	}
+
 	GLenum format;
 	switch (TexData.Format)
 	{

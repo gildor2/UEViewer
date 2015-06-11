@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+11.06.2015
+- improved UE3 Android support
+
 04.06.2015
 - added Might & Magic Heroes 7 support
 

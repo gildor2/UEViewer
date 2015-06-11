@@ -60,6 +60,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0,			"BC5"	},	// TPF_BC5
 	{ 0,						4,			4,			16,				0,			0,			"BC7"	},	// TPF_BC7
 	{ 0,						8,			1,			1,				0,			0,			"A1"	},	// TPF_A1
+	{ 0,						1,			1,			2,				0,			0,			"RGBA4"	},	// TPF_RGBA4
 #if SUPPORT_IPHONE
 	{ 0,						8,			4,			8,				0,			0,			"PVRTC2"},	// TPF_PVRTC2
 	{ 0,						4,			4,			8,				0,			0,			"PVRTC4"},	// TPF_PVRTC4
@@ -165,6 +166,23 @@ byte *CTextureData::Decompress()
 				*d++ = s[0];
 				*d++ = s[3];
 				s += 4;
+			}
+		}
+		return dst;
+	case TPF_RGBA4:
+		{
+			const byte *s = Data;
+			byte *d = dst;
+			for (int i = 0; i < USize * VSize; i++)
+			{
+				byte b1 = s[0];
+				byte b2 = s[1];
+				// BGRA -> RGBA
+				*d++ = b2 & 0xF0;
+				*d++ = (b2 & 0xF) << 4;
+				*d++ = b1 & 0xF0;
+				*d++ = (b1 & 0xF) << 4;
+				s += 2;
 			}
 		}
 		return dst;

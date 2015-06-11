@@ -222,7 +222,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 #if SUPPORT_ANDROID
 			if (!stricmp(ext, "obb"))
 			{
-//??			GForcePlatform = PLATFORM_ANDROID;
+				GForcePlatform = PLATFORM_ANDROID;
 				reader = new FFileReader(FullName);
 				if (!reader) return true;
 				reader->Game = GAME_UE3;
@@ -538,6 +538,7 @@ void appSetRootDirectory2(const char *filename)
 				"XBox360",
 				"PS3",
 				"iPhone",
+				"Android",
 			};
 			staticAssert(ARRAY_COUNT(PlatformNames) == PLATFORM_COUNT, Verify_PlatformNames);
 			appPrintf("; platform %s", PlatformNames[GForcePlatform]);

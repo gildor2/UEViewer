@@ -12,7 +12,7 @@ UIStartupDialog::UIStartupDialog(UmodelSettings& settings)
 
 bool UIStartupDialog::Show()
 {
-	if (!ShowModal("Umodel Startup Options", 320, 200))
+	if (!ShowModal("Umodel Startup Options", 360, 200))
 		return false;
 
 	// process some options
@@ -121,7 +121,7 @@ void UIStartupDialog::InitUI()
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
 			NewControl(UIGroup, "Package compression", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
-			.SetWidth(EncodeWidth(0.4f))
+			.SetWidth(EncodeWidth(0.35f))
 			.SetRadioVariable(&Opt.PackageCompression)
 			[
 				NewControl(UIRadioButton, "Auto", 0)
@@ -138,6 +138,7 @@ void UIStartupDialog::InitUI()
 				+ NewControl(UIRadioButton, "XBox360", PLATFORM_XBOX360)
 				+ NewControl(UIRadioButton, "PS3", PLATFORM_PS3)
 				+ NewControl(UIRadioButton, "iOS", PLATFORM_IOS)
+				+ NewControl(UIRadioButton, "Android", PLATFORM_ANDROID)
 			]
 		]
 	];
