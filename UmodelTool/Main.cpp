@@ -382,6 +382,7 @@ static void PrintUsage()
 			"Platform selection:\n"
 			"    -ps3            override platform autodetection to PS3\n"
 			"    -ios            set platform to iOS (iPhone/iPad)\n"
+			"    -android        set platform to Android\n"
 			"\n"
 			"Viewer options:\n"
 			"    -meshes         view meshes only\n"
@@ -688,6 +689,7 @@ int main(int argc, char **argv)
 			// platform
 			OPT_VALUE("ps3",     GSettings.Platform, PLATFORM_PS3)
 			OPT_VALUE("ios",     GSettings.Platform, PLATFORM_IOS)
+			OPT_VALUE("android", GSettings.Platform, PLATFORM_ANDROID)
 			// compression
 			OPT_VALUE("lzo",     GSettings.PackageCompression, COMPRESS_LZO )
 			OPT_VALUE("zlib",    GSettings.PackageCompression, COMPRESS_ZLIB)
