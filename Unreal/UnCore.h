@@ -365,6 +365,7 @@ enum EGame
 		GAME_UE4_5,
 		GAME_UE4_6,
 		GAME_UE4_7,
+		GAME_UE4_8,
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
@@ -1973,6 +1974,9 @@ enum
 	VER_UE4_6 = 413,
 		VER_UE4_RENAME_WIDGET_VISIBILITY = 416,			// used for UStaticMesh versioning
 	VER_UE4_7 = 434,
+		VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION = 444,
+	VER_UE4_8 = 451,
+		VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
 };
 
 class FStripDataFlags

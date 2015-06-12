@@ -479,7 +479,15 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	Ar << S.PackageGroup;
 	Ar << S.PackageFlags;
 
-	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+	Ar << S.NameCount << S.NameOffset;
+
+	if (Ar.ArVer >= VER_UE4_SERIALIZE_TEXT_IN_PACKAGES)
+	{
+		int GatherableTextDataCount, GatherableTextDataOffset;
+		Ar << GatherableTextDataCount << GatherableTextDataOffset;
+	}
+
+	Ar << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
 	Ar << S.DependsOffset;
 
 	if (Ar.ArVer >= VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP)
@@ -519,6 +527,12 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	{
 		int changelist;
 		Ar << changelist;
+	}
+
+	if (Ar.ArVer >= VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION)
+	{
+		FEngineVersion CompatibleVersion;
+		Ar << CompatibleVersion;
 	}
 
 	// compression structures
