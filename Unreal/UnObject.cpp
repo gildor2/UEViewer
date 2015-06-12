@@ -192,6 +192,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 		STRUC_TYPE(FIntPoint)
 	}
 #endif // UNREAL4
+	// Serialize nested property block
 	const CTypeInfo *ItemType = FindStructType(StrucName);
 	if (!ItemType) return false;
 	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
@@ -369,7 +370,14 @@ struct FPropertyTag
 			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
 			Tag.Type = MapTypeName(PropType);
 			if (Tag.Type == NAME_StructProperty)
+			{
 				Ar << Tag.StrucName;
+				if (Ar.ArVer >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG)
+				{
+					FGuid StructGuid;
+					Ar << StructGuid;
+				}
+			}
 			else if (Tag.Type == NAME_BoolProperty)
 				Ar << (byte&)Tag.BoolValue;		// byte
 			else if (Tag.Type == NAME_ByteProperty)
@@ -871,8 +879,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			}
 		}
 		else if (Tag.ArrayIndex < 0 || Tag.ArrayIndex >= Prop->Count)
+		{
 			appError("Struct \"%s\": %s %s[%d]: invalid index %d",
 				Name, Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
+		}
 		byte *value = (byte*)ObjectData + Prop->Offset;
 
 #define CHECK_TYPE(name) \
@@ -908,7 +918,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				}
 			}
 			else
-#endif
+#endif // UNREAL3
 			{
 				if (Prop->TypeName[0] != '#')
 				{

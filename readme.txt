@@ -157,6 +157,7 @@ Changes
 ~~~~~~~
 12.06.2015
 - added support for compressed UE4 pak files
+- implemented UE4.8 support
 
 11.06.2015
 - improved UE3 Android support

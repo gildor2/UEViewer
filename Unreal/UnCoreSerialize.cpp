@@ -1079,20 +1079,28 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	}
 
 #if UNREAL4
-	if ((Ar.Game >= GAME_UE4) && (BulkDataFlags & BULKDATA_PayloadAtEndOfFile))
+	if (Ar.Game >= GAME_UE4)
 	{
-		// stored in the same file, but at different position
-		// save archive position
-		int savePos, saveStopper;
-		savePos     = Ar.Tell();
-		saveStopper = Ar.GetStopper();
-		// seek to data block and read data
-		Ar.SetStopper(0);
-		SerializeData(Ar);
-		// restore archive position
-		Ar.Seek(savePos);
-		Ar.SetStopper(saveStopper);
-		return;
+		if (BulkDataFlags & BULKDATA_PayloadAtEndOfFile)
+		{
+			// stored in the same file, but at different position
+			// save archive position
+			int savePos, saveStopper;
+			savePos     = Ar.Tell();
+			saveStopper = Ar.GetStopper();
+			// seek to data block and read data
+			Ar.SetStopper(0);
+			SerializeData(Ar);
+			// restore archive position
+			Ar.Seek(savePos);
+			Ar.SetStopper(saveStopper);
+			return;
+		}
+		if (BulkDataFlags & BULKDATA_ForceInlinePayload)
+		{
+			SerializeDataChunk(Ar);
+			return;
+		}
 	}
 #endif // UNREAL4
 

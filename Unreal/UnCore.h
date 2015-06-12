@@ -1837,10 +1837,10 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 #if UNREAL4
 
-#define BULKDATA_PayloadAtEndOfFile		0x01		//?? bulk data stored at the end of this file
+#define BULKDATA_PayloadAtEndOfFile		0x01		// bulk data stored at the end of this file, data offset added to global data offset in package
 //#define BULKDATA_CompressedZlib		0x02
 //#define BULKDATA_Unused				0x20
-#define BULKDATA_ForceInlinePayload		0x40		//?? bulk data stored immediately after header
+#define BULKDATA_ForceInlinePayload		0x40		// bulk data stored immediately after header
 
 #endif // UNREAL4
 
@@ -1974,6 +1974,7 @@ enum
 	VER_UE4_6 = 413,
 		VER_UE4_RENAME_WIDGET_VISIBILITY = 416,			// used for UStaticMesh versioning
 	VER_UE4_7 = 434,
+		VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG = 441,
 		VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION = 444,
 	VER_UE4_8 = 451,
 		VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
