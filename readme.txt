@@ -155,6 +155,10 @@ detex
 
 Changes
 ~~~~~~~
+13.06.2015
+- added "Save selected packages" option for "Tools" button in package dialog - this allows user
+  to extract packages from pak and obb files
+
 12.06.2015
 - added support for compressed UE4 pak files
 - implemented UE4.8 support

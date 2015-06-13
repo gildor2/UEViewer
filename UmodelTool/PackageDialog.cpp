@@ -26,7 +26,7 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 	if (!ShowModal("Choose a package to open", 500, 200))
 		return CANCEL;
 
-	UpdateSelectedPackage();
+	UpdateSelectedPackages();
 
 	// controls are not released automatically when dialog closed to be able to
 	// poll them for user selection; release the memory now
@@ -170,6 +170,11 @@ void UIPackageDialog::InitUI()
 		+ NewMenuItem("Scan versions")
 		.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
 		+ NewMenuSeparator()
+		+ NewMenuItem("Save selected packages")
+		.Enable(SelectedPackages.Num() > 0)
+		.SetCallback(BIND_MEM_CB(&UIPackageDialog::SavePackages, this))
+		.Expose(SavePackagesMenu)
+		+ NewMenuSeparator()
 		+ NewMenuItem("About UModel")
 		.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
 	];
@@ -207,7 +212,7 @@ void UIPackageDialog::InitUI()
 	Support for tree and flat package lists
 -----------------------------------------------------------------------------*/
 
-void UIPackageDialog::UpdateSelectedPackage()
+void UIPackageDialog::UpdateSelectedPackages()
 {
 	SelectedPackages.FastEmpty();
 
@@ -339,7 +344,7 @@ void UIPackageDialog::AddPackageToList(UIMulticolumnListbox* listbox, const CGam
 void UIPackageDialog::OnFlatViewChanged(UICheckbox* sender, bool value)
 {
 	UseFlatView = !UseFlatView;
-	UpdateSelectedPackage();
+	UpdateSelectedPackages();
 	UseFlatView = !UseFlatView;
 
 	UpdateFlatMode();
@@ -388,7 +393,7 @@ void UIPackageDialog::UpdateFlatMode()
 void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
 {
 	// re-filter lists
-	UpdateSelectedPackage();
+	UpdateSelectedPackages();
 	UpdateFlatMode();
 }
 
@@ -446,8 +451,62 @@ void UIPackageDialog::ScanContent()
 	ScanContentMenu->Enable(false);
 
 	// update package list with new data
-	UpdateSelectedPackage();
+	UpdateSelectedPackages();
 	UpdateFlatMode();
+}
+
+
+static void CopyStream(FArchive *Src, FILE *Dst, int Count)
+{
+	byte buffer[16384];
+
+	while (Count > 0)
+	{
+		int Size = min(Count, sizeof(buffer));
+		Src->Serialize(buffer, Size);
+		if (fwrite(buffer, Size, 1, Dst) != 1) appError("Write failed");
+		Count -= Size;
+	}
+}
+
+void UIPackageDialog::SavePackages()
+{
+	guard(UIPackageDialog::SavePackages);
+
+	//!! Possible options:
+	//!! - save used packages (find better name - "imports", "links", "used packages" ...)
+	//!! - decompress packages
+	//!! - preserve package paths
+	UpdateSelectedPackages();
+
+	UIProgressDialog progress;
+	progress.Show("Saving packages");
+	progress.SetDescription("Saving package");
+
+	for (int i = 0; i < SelectedPackages.Num(); i++)
+	{
+		const CGameFileInfo* file = appFindGameFile(*SelectedPackages[i]);
+		assert(file);
+		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
+			break;
+
+		FArchive *Ar = appCreateFileReader(file);
+		if (!Ar) continue;
+		// prepare destination file
+		char OutFile[1024];
+		appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);	//!! make an option, add menu item to open "saved" directory
+		appMakeDirectoryForFile(OutFile);
+		FILE *out = fopen(OutFile, "wb");
+		// copy data
+		CopyStream(Ar, out, Ar->GetFileSize());
+		// cleanup
+		delete Ar;
+		fclose(out);
+	}
+
+	progress.CloseDialog();
+
+	unguard;
 }
 
 
@@ -460,6 +519,7 @@ void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender)
 	bool enableButtons = (sender->GetSelectionCount() > 0);
 	OkButton->Enable(enableButtons);
 	ExportButton->Enable(enableButtons);
+	SavePackagesMenu->Enable(enableButtons);
 }
 
 void UIPackageDialog::OnPackageDblClick(UIMulticolumnListbox* sender, int value)

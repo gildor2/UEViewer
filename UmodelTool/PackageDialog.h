@@ -28,6 +28,7 @@ protected:
 	UIButton*		OkButton;
 	UIButton*		ExportButton;
 	UIMenuItem*		ScanContentMenu;
+	UIMenuItem*		SavePackagesMenu;
 
 	EResult			ModalResult;
 	bool			UseFlatView;
@@ -47,8 +48,9 @@ protected:
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
 	void ScanContent();
+	void SavePackages();
 
-	void UpdateSelectedPackage();
+	void UpdateSelectedPackages();
 	void SelectDirFromFilename(const char* filename);
 	void UpdateFlatMode();
 
