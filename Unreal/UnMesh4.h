@@ -10,6 +10,7 @@ class UMaterialInterface;
 
 #define NUM_INFLUENCES_UE4				4
 #define MAX_TOTAL_INFLUENCES_UE4		8
+#define MAX_SKELETAL_UV_SETS_UE4		4
 #define MAX_STATIC_UV_SETS_UE4			8
 #define MAX_STATIC_LODS_UE4				4
 

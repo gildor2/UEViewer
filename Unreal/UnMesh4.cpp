@@ -33,8 +33,12 @@
 //!!#error NUM_INFLUENCES_UE4 and NUM_INFLUENCES are not matching!
 #endif
 
-#if NAX_STATIC_UV_SETS_UE4 != NUM_MESH_UV_SETS
-//!!#error MAX_STATIC_UV_SETS_UE4 and NUM_MESH_UV_SETS are not matching!
+#if MAX_SKELETAL_UV_SETS_UE4 > NUM_MESH_UV_SETS
+#error MAX_SKELETAL_UV_SETS_UE4 too large
+#endif
+
+#if MAX_STATIC_UV_SETS_UE4 > NUM_MESH_UV_SETS
+#error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
 
@@ -191,7 +195,7 @@ struct FRigidVertex4
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
 	byte				BoneIndex;
 	FColor				Color;
 
@@ -200,7 +204,7 @@ struct FRigidVertex4
 		Ar << V.Pos;
 		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 
-		for (int i = 0; i < NUM_MESH_UV_SETS; i++)
+		for (int i = 0; i < MAX_SKELETAL_UV_SETS_UE4; i++)
 			Ar << V.UV[i];
 
 		Ar << V.Color;
@@ -214,7 +218,7 @@ struct FSoftVertex4
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
 	byte				BoneIndex[NUM_INFLUENCES_UE4];
 	byte				BoneWeight[NUM_INFLUENCES_UE4];
 	FColor				Color;
@@ -226,7 +230,7 @@ struct FSoftVertex4
 		Ar << V.Pos;
 		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 
-		for (int i = 0; i < NUM_MESH_UV_SETS; i++)
+		for (int i = 0; i < MAX_SKELETAL_UV_SETS_UE4; i++)
 			Ar << V.UV[i];
 
 		Ar << V.Color;
@@ -321,7 +325,7 @@ struct FGPUVert4Common
 struct FGPUVert4Half : FGPUVert4Common
 {
 	FVector				Pos;
-	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
+	FMeshUVHalf			UV[MAX_SKELETAL_UV_SETS_UE4];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Half &V)
 	{
@@ -334,7 +338,7 @@ struct FGPUVert4Half : FGPUVert4Common
 struct FGPUVert4Float : FGPUVert4Common
 {
 	FVector				Pos;
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Float &V)
 	{
@@ -1121,7 +1125,7 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 
 void UStaticMesh4::ConvertMesh()
 {
-	guard(UStaticMesh4::ConvertedMesh);
+	guard(UStaticMesh4::ConvertMesh);
 
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
@@ -1143,11 +1147,12 @@ void UStaticMesh4::ConvertMesh()
 		int NumTexCoords = SrcLod.VertexBuffer.NumTexCoords;
 		int NumVerts     = SrcLod.PositionVertexBuffer.Verts.Num();
 
+		if (NumTexCoords > NUM_MESH_UV_SETS)
+			appError("StaticMesh has %d UV sets", NumTexCoords);
+
 		Lod->NumTexCoords = NumTexCoords;
 		Lod->HasNormals   = true;
 		Lod->HasTangents  = true;
-		if (NumTexCoords > NUM_MESH_UV_SETS)	//!! support 8 UV sets
-			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		// sections
 		Lod->Sections.Add(SrcLod.Sections.Num());
@@ -1171,13 +1176,12 @@ void UStaticMesh4::ConvertMesh()
 			V.Position = CVT(SrcLod.PositionVertexBuffer.Verts[i]);
 			UnpackNormals(SUV.Normal, V);
 			// copy UV
-#if 1
-			//!! TODO: support memcpy path?
+#if 0
 			for (int j = 0; j < NumTexCoords; j++)
 				V.UV[j] = (CMeshUVFloat&)SUV.UV[j];
 #else
-			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
-			memcpy(V.UV, SUV.UV, sizeof(V.UV));
+//			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
+			memcpy(V.UV, SUV.UV, sizeof(CMeshUVFloat) * NumTexCoords);
 #endif
 			//!! also has ColorStream
 		}

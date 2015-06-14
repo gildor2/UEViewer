@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+14.06.2015
+- added support for up to 8 UV sets, required for UE4 static meshes
+
 13.06.2015
 - added "Save selected packages" option for "Tools" button in package dialog - this allows user
   to extract packages from pak and obb files

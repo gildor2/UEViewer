@@ -15,7 +15,7 @@ typedef CVec3 CVecT;
 #endif
 
 
-#define NUM_MESH_UV_SETS			4
+#define NUM_MESH_UV_SETS			8
 
 
 struct CIndexBuffer

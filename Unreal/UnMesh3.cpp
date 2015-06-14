@@ -86,8 +86,8 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 #error NUM_INFLUENCES_UE3 and NUM_INFLUENCES are not matching!
 #endif
 
-#if NUM_UV_SETS_UE3 != NUM_MESH_UV_SETS
-#error NUM_UV_SETS_UE3 and NUM_MESH_UV_SETS are not matching!
+#if NUM_UV_SETS_UE3 > NUM_MESH_UV_SETS
+#error NUM_UV_SETS_UE3 too large!
 #endif
 
 
@@ -320,7 +320,7 @@ struct FRigidVertex3
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 	byte				BoneIndex;
 	int					Color;
 
@@ -413,7 +413,7 @@ struct FSmoothVertex3
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 	byte				BoneIndex[NUM_INFLUENCES_UE3];
 	byte				BoneWeight[NUM_INFLUENCES_UE3];
 	int					Color;
@@ -649,12 +649,12 @@ static int GNumGPUUVSets = 1;
  * Half = Float16
  * http://www.openexr.com/  source: ilmbase-*.tar.gz/Half/toFloat.cpp
  * http://en.wikipedia.org/wiki/Half_precision
- * Also look GL_ARB_half_float_pixel
+ * Also look at GL_ARB_half_float_pixel
  */
 struct FGPUVert3Half : FGPUVert3Common
 {
 	FVector				Pos;
-	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
+	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Half &V)
 	{
@@ -670,7 +670,7 @@ struct FGPUVert3Half : FGPUVert3Common
 struct FGPUVert3Float : FGPUVert3Common
 {
 	FVector				Pos;
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
 	FGPUVert3Float& operator=(const FSmoothVertex3 &S)
 	{
@@ -679,7 +679,7 @@ struct FGPUVert3Float : FGPUVert3Common
 		Normal[0] = S.Normal[0];
 		Normal[1] = S.Normal[1];
 		Normal[2] = S.Normal[2];
-		for (i = 0; i < NUM_MESH_UV_SETS; i++)
+		for (i = 0; i < NUM_UV_SETS_UE3; i++)
 			UV[i] = S.UV[i];
 		for (i = 0; i < NUM_INFLUENCES_UE3; i++)
 		{
@@ -703,7 +703,7 @@ struct FGPUVert3Float : FGPUVert3Common
 struct FGPUVert3PackedHalf : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
-	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
+	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedHalf &V)
 	{
@@ -716,7 +716,7 @@ struct FGPUVert3PackedHalf : FGPUVert3Common
 struct FGPUVert3PackedFloat : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedFloat &V)
 	{
@@ -2291,7 +2291,7 @@ struct FStaticMeshUVItem3
 	FVector				Pos;			// old version (< 472)
 	FPackedNormal		Normal[3];
 	int					f10;			//?? VertexColor?
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVItem3 &V)
 	{
@@ -3385,12 +3385,12 @@ void UStaticMesh3::ConvertMesh()
 			V.Position = CVT(SrcLod.VertexStream.Verts[i]);
 			UnpackNormals(SUV.Normal, V);
 			// copy UV
-			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
 #if 0
 			for (int j = 0; j < NumTexCoords; j++)
 				V.UV[j] = (CMeshUVFloat&)SUV.UV[j];
 #else
-			memcpy(V.UV, SUV.UV, sizeof(V.UV));
+//			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
+			memcpy(V.UV, SUV.UV, sizeof(CMeshUVFloat) * NumTexCoords);
 #endif
 			//!! also has ColorStream
 		}
