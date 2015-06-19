@@ -166,6 +166,9 @@ struct FSkelMeshSection3
 #if BATMAN
 		if (Ar.Game == GAME_Batman3) goto old_section; // Batman1 and 2 has version smaller than 806
 #endif
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677) goto new_section; // MK X
+#endif
 		if (Ar.ArVer < 806)
 		{
 		old_section:
@@ -176,6 +179,7 @@ struct FSkelMeshSection3
 		}
 		else
 		{
+		new_section:
 			// NumTriangles is int
 			Ar << S.NumTriangles;
 		}
@@ -286,6 +290,15 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 			goto old_index_buffer;
 		}
 #endif // BATMAN
+
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			// MK X
+			Ar << I.Indices16 << I.Indices32;
+			return Ar;
+		}
+#endif // MKVSDC
 
 		if (Ar.ArVer >= 806)
 		{
@@ -889,6 +902,82 @@ struct FSkeletalMeshVertexBuffer3
 		return Ar;
 		unguard;
 	}
+
+#if MKVSDC
+	void Serialize_MK10(FArchive &Ar, int NumVertices)
+	{
+		guard(FSkeletalMeshVertexBuffer3::Serialize_MK10);
+
+		// MK X vertex data
+		// Position stream
+		int PositionSize, NumPosVerts;
+		Ar << PositionSize << NumPosVerts;
+		assert(PositionSize == 12 && NumPosVerts == NumVertices);
+		TArray<FVector> Positions;
+		Ar << Positions;
+
+		// Normal stream
+		int NormalSize, NumNormals;
+		Ar << NormalSize << NumNormals;
+		assert(NormalSize == 8 && NumNormals == NumVertices);
+		TArrayOfArray<FPackedNormal, 2> Normals;
+		Ar << Normals;
+
+		// Influence stream
+		int InfSize, NumInfs;
+		Ar << InfSize << NumInfs;
+		assert(InfSize == 8 && NumInfs == NumVertices);
+		TArray<int64> Infs;
+		Ar << Infs;
+
+		// UVs
+		int UVSize, NumUVs;
+		Ar << NumUVSets << UVSize << NumUVs;
+		TArray<FMeshUVHalf> UVs;
+		Ar << UVs;
+		assert(NumUVs == NumVertices * NumUVSets);
+
+		// skip everything else, would fail if number of LODs is > 1
+
+		// combine vertex data
+		VertsHalf.Add(NumVertices);
+		int UVIndex = 0;
+		for (int i = 0; i < NumVertices; i++)
+		{
+			FGPUVert3Half& V = VertsHalf[i];
+			memset(&V, 0, sizeof(V));
+			V.Pos = Positions[i];
+			V.Normal[0] = Normals[i].Data[0];
+			V.Normal[2] = Normals[i].Data[1];
+			for (int j = 0; j < NumUVSets; j++)
+			{
+				V.UV[j] = UVs[UVIndex++];
+			}
+			// unpack influences
+			// MK X allows more than 256 bones per section
+			// stored as 10bit BoneIndices[4] + 8bit Weights[3]
+			// 4th weight is restored in shader taking into account that sum is 255
+			uint64 data = Infs[i];
+			int b[4], w[4];
+			b[0] = data & 0x3FF;
+			b[1] = (data >> 10) & 0x3FF;
+			b[2] = (data >> 20) & 0x3FF;
+			b[3] = (data >> 30) & 0x3FF;
+			w[0] = (data >> 40) & 0xFF;
+			w[1] = (data >> 48) & 0xFF;
+			w[2] = (data >> 56) & 0xFF;
+			w[3] = 255 - w[0] - w[1] - w[2];
+			for (int j = 0; j < 4; j++)
+			{
+				assert(b[j] < 256);
+				V.BoneIndex[j] = b[j];
+				V.BoneWeight[j] = w[j];
+			}
+		}
+
+		unguard;
+	}
+#endif // MKVSDC
 };
 
 // real name: FVertexInfluence
@@ -1052,9 +1141,17 @@ struct FStaticLODModel3
 			Ar << Lod.Sections;
 			goto part1;
 		}
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			// MK X
+			int unk;
+			Ar << unk;			// serialized before FStaticLodModel, inside an array serializer function
+		}
 #endif // MKVSDC
 
 		Ar << Lod.Sections << Lod.IndexBuffer;
+
+	part1:
 #if DEBUG_SKELMESH
 		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
 		{
@@ -1095,7 +1192,6 @@ struct FStaticLODModel3
 		}
 #endif // TRANSFORMERS
 
-	part1:
 		if (Ar.ArVer < 686) Ar << Lod.f68;
 		Ar << Lod.UsedBones;
 		if (Ar.ArVer < 686) Ar << Lod.f74;
@@ -1217,6 +1313,17 @@ struct FStaticLODModel3
 			if (unkD4) appError("RememberMe: new vertex buffer format");
 		}
 #endif // REMEMBER_ME
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			FByteBulkData UnkBulk;
+			UnkBulk.Skip(Ar);
+			Lod.GPUSkin.Serialize_MK10(Ar, Lod.NumVertices);
+			Lod.NumUVSets = Lod.GPUSkin.NumUVSets;
+			return Ar;
+		}
+#endif // MKVSDC
+
 		if (Ar.ArVer >= 709)
 			Ar << Lod.NumUVSets;
 		else
@@ -1430,6 +1537,25 @@ struct FSPAITag2
 
 #endif // LEGENDARY
 
+#if MKVSDC
+
+void USkeleton_MK::Serialize(FArchive &Ar)
+{
+	guard(USkeleton_MK::Serialize);
+	assert(Ar.Game == GAME_MK);
+	Super::Serialize(Ar);
+
+	Ar << BonePos;
+	Ar << BoneParent;
+	Ar << BoneName;
+
+	DROP_REMAINING_DATA(Ar);
+
+	unguard;
+}
+
+#endif // MKVSDC
+
 void USkeletalMesh3::Serialize(FArchive &Ar)
 {
 	guard(USkeletalMesh3::Serialize);
@@ -1443,6 +1569,18 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 #endif // FRONTLINES
 
 	UObject::Serialize(Ar);			// no UPrimitive ...
+
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		Ar << LODModels;
+		// MK X has 1 LODModel and 4 LODInfo
+		if (LODInfo.Num() > LODModels.Num())
+			LODInfo.Remove(LODModels.Num(), LODInfo.Num() - LODModels.Num());
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+#endif // MKVSDC
 
 #if MEDGE
 	if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15)
@@ -1606,8 +1744,6 @@ after_skeleton:
 	DROP_REMAINING_DATA(Ar);
 #endif
 
-	ConvertMesh();
-
 	unguard;
 }
 
@@ -1618,6 +1754,29 @@ void USkeletalMesh3::ConvertMesh()
 
 	CSkeletalMesh *Mesh = new CSkeletalMesh(this);
 	ConvertedMesh = Mesh;
+
+#if MKVSDC
+	if (Package->Game == GAME_MK && Skeleton != NULL && RefSkeleton.Num() == 0)
+	{
+		// convert MK X USkeleton to RefSkeleton
+		int NumBones = Skeleton->BoneName.Num();
+		assert(Skeleton->BoneParent.Num() == NumBones && Skeleton->BonePos.Num() == NumBones);
+		RefSkeleton.Add(NumBones);
+		for (int i = 0; i < NumBones; i++)
+		{
+			FMeshBone& B = RefSkeleton[i];
+			B.Name        = Skeleton->BoneName[i];
+			B.BonePos     = Skeleton->BonePos[i];
+			B.ParentIndex = Skeleton->BoneParent[i];
+		}
+	}
+#endif // MKVSDC
+
+	if (!RefSkeleton.Num())
+	{
+		appNotify("SkeletalMesh with no skeleton");
+		return;
+	}
 
 	// convert bounds
 	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
@@ -1864,6 +2023,8 @@ void USkeletalMesh3::PostLoad()
 {
 	guard(USkeletalMesh3::PostLoad);
 
+	// MK X has bones serialized in separate USkeleton object, so perform conversion in PostLoad()
+	ConvertMesh();
 	assert(ConvertedMesh);
 
 	int NumSockets = Sockets.Num();

@@ -1686,6 +1686,28 @@ public:
 
 
 /*-----------------------------------------------------------------------------
+	TMap template
+-----------------------------------------------------------------------------*/
+
+template<class T, int N>
+struct TArrayOfArrayItem
+{
+	T	Data[N];
+
+	friend FArchive& operator<<(FArchive &Ar, TArrayOfArrayItem &S)
+	{
+		for (int i = 0; i < N; i++)
+			Ar << S.Data[i];
+		return Ar;
+	}
+};
+
+template<class T, int N>
+class TArrayOfArray : public TArray<TArrayOfArrayItem<T, N> >
+{
+};
+
+/*-----------------------------------------------------------------------------
 	FString
 -----------------------------------------------------------------------------*/
 
