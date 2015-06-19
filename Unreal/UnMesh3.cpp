@@ -7,7 +7,6 @@
 #include "UnMeshTypes.h"
 #include "UnMathTools.h"			// for FRotator to FCoords
 #include "UnMaterial3.h"
-#include "UnPackage.h"
 
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
@@ -1755,8 +1754,10 @@ void USkeletalMesh3::ConvertMesh()
 	CSkeletalMesh *Mesh = new CSkeletalMesh(this);
 	ConvertedMesh = Mesh;
 
+	int ArGame = GetGame();
+
 #if MKVSDC
-	if (Package->Game == GAME_MK && Skeleton != NULL && RefSkeleton.Num() == 0)
+	if (ArGame == GAME_MK && Skeleton != NULL && RefSkeleton.Num() == 0)
 	{
 		// convert MK X USkeleton to RefSkeleton
 		int NumBones = Skeleton->BoneName.Num();
@@ -2011,7 +2012,7 @@ void USkeletalMesh3::ConvertMesh()
 	Mesh->FinalizeMesh();
 
 #if BATMAN
-	if (Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3)
+	if (ArGame == GAME_Batman2 || ArGame == GAME_Batman3)
 		FixBatman2Skeleton();
 #endif
 
@@ -3491,6 +3492,9 @@ void UStaticMesh3::ConvertMesh()
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
 
+	int ArVer  = GetArVer();
+	int ArGame = GetGame();
+
 	// convert bounds
 	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;			//?? UE3 meshes has radius 2 times larger than mesh itself
 	VectorSubtract(CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Min));
@@ -3506,7 +3510,7 @@ void UStaticMesh3::ConvertMesh()
 		if (SrcLod.Sections.Num() == 0)
 		{
 			// skip empty LODs
-			appPrintf("StaticMesh %s.%s lod #%d has no sections\n", Package->Name, Name, lod);
+			appPrintf("StaticMesh %s.%s lod #%d has no sections\n", GetPackageName(), Name, lod);
 			continue;
 		}
 
@@ -3517,9 +3521,9 @@ void UStaticMesh3::ConvertMesh()
 
 		Lod->NumTexCoords = NumTexCoords;
 		Lod->HasNormals   = true;
-		Lod->HasTangents  = (Package->ArVer >= 364);			//?? check; FStaticMeshUVStream3 is used since this version
+		Lod->HasTangents  = (ArVer >= 364);			//?? check; FStaticMeshUVStream3 is used since this version
 #if BATMAN
-		if ((Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3) && CanStripNormalsAndTangents)
+		if ((ArGame == GAME_Batman2 || ArGame == GAME_Batman3) && CanStripNormalsAndTangents)
 			Lod->HasNormals = Lod->HasTangents = false;
 #endif
 		if (NumTexCoords > NUM_MESH_UV_SETS)

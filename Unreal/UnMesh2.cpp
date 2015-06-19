@@ -1,7 +1,6 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 #include "UnMesh2.h"
-#include "UnPackage.h"			// for Bioshock
 
 #include "UnMaterial2.h"
 
@@ -569,7 +568,7 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 void USkeletalMesh::PostLoad()
 {
 #if BIOSHOCK
-	if (Package->Game == GAME_Bioshock)
+	if (GetGame() == GAME_Bioshock)
 		PostLoadBioshockMesh();		// should be called after loading of all used objects
 #endif // BIOSHOCK
 }
@@ -657,10 +656,10 @@ void USkeletalMesh::ConvertMesh()
 
 	// some games has troubles with LOD models ...
 #if TRIBES3
-	if (Package->Game == GAME_Tribes3) goto base_mesh;
+	if (GetGame() == GAME_Tribes3) goto base_mesh;
 #endif
 #if SWRC
-	if (Package->Game == GAME_RepCommando) goto base_mesh;
+	if (GetGame() == GAME_RepCommando) goto base_mesh;
 #endif
 
 	if (!LODModels.Num())

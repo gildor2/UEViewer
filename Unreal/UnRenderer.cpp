@@ -4,8 +4,6 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
-#include "UnPackage.h"						// for accessing Game field
-
 #include "UnMaterial2.h"
 #include "UnMaterial3.h"
 
@@ -1602,6 +1600,9 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		Params.EmissiveColor = Color;	\
 		EmcWeight = weight;				\
 	}
+
+	int ArGame = GetGame();
+
 	for (int i = 0; i < ReferencedTextures.Num(); i++)
 	{
 		UTexture3 *Tex = ReferencedTextures[i];
@@ -1637,7 +1638,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		NORMAL  (!stricmp(Name + len - 3, "_NM"), 20);
 		NORMAL  (appStristr(Name, "_N"), 9);
 #if BULLETSTORM
-		if (Package->Game == GAME_Bulletstorm)
+		if (ArGame == GAME_Bulletstorm)
 		{
 			DIFFUSE (appStristr(Name, "_C"), 12);
 			NORMAL(appStristr(Name, "_TS"), 5);
@@ -1835,6 +1836,8 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	if (TextureParameterValues.Num())
 		Params.Opacity = NULL;			// it's better to disable opacity mask from parent material
 
+	int ArGame = GetGame();
+
 	int i;
 	for (i = 0; i < TextureParameterValues.Num(); i++)
 	{
@@ -1856,7 +1859,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 //??		OPACITY (appStristr(Name, "mask"), 100);
 //??		Params.OpacityFromAlpha = true;
 #if TRON
-		if (Package->Game == GAME_Tron)
+		if (ArGame == GAME_Tron)
 		{
 			SPECPOW (appStristr(Name, "SPPW"), 100);
 			EMISSIVE(appStristr(Name, "Emss"), 100);
@@ -1864,20 +1867,20 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		}
 #endif // TRON
 #if BATMAN
-		if (Package->Game == GAME_Batman2)
+		if (ArGame == GAME_Batman2)
 		{
 			BAKEDMASK(!stricmp(Name, "Material_Attributes"), 100);
 			EMISSIVE (appStristr(Name, "Reflection_Mask"), 100);
 		}
 #endif // BATMAN
 #if BLADENSOUL
-		if (Package->Game == GAME_BladeNSoul)
+		if (ArGame == GAME_BladeNSoul)
 		{
 			BAKEDMASK(!stricmp(Name, "Body_mask_RGB"), 100);
 		}
 #endif // BLADENSOUL
 #if DISHONORED
-		if (Package->Game == GAME_Dishonored)
+		if (ArGame == GAME_Dishonored)
 		{
 			CUBEMAP (appStristr(Name, "cubemap_tex"), 100);
 			EMISSIVE(appStristr(Name, "cubemap_mask"), 100);
@@ -1891,7 +1894,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		const FLinearColor &Color = P.ParameterValue;
 		EMISSIVE_COLOR(appStristr(Name, "Emissive"), 100);
 #if TRON
-		if (Package->Game == GAME_Tron)
+		if (ArGame == GAME_Tron)
 		{
 			EMISSIVE_COLOR(appStristr(Name, "PipingColour"), 90);
 		}
@@ -1899,7 +1902,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	}
 
 #if TRON
-	if (Package->Game == GAME_Tron)
+	if (ArGame == GAME_Tron)
 	{
 		if (Params.Mask && Params.SpecPower && Params.Emissive)
 			Params.Mask = NULL;		// some different meaning for this texture
@@ -1914,7 +1917,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 #endif // TRON
 
 #if BATMAN
-	if (Package->Game == GAME_Batman2)
+	if (ArGame == GAME_Batman2)
 	{
 		if (Params.Mask)
 		{
@@ -1926,7 +1929,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 #endif // BATMAN
 
 #if BLADENSOUL
-	if (Package->Game == GAME_BladeNSoul)
+	if (ArGame == GAME_BladeNSoul)
 	{
 		if (Params.Mask)
 		{

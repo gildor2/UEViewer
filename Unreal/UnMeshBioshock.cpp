@@ -3,7 +3,6 @@
 #include "UnMesh2.h"
 #include "UnMeshTypes.h"		// for FPackedNormal
 #include "UnHavok.h"
-#include "UnPackage.h"			// to get "Platform"
 
 #include "UnMaterial2.h"		//!! engine dependency
 
@@ -682,7 +681,7 @@ void UAnimationPackageWrapper::Process()
 {
 	guard(UAnimationPackageWrapper::Process);
 #if XBOX_HACK
-	if (Package->Platform == PLATFORM_XBOX360) return;
+	if (GetPackageArchive()->Platform == PLATFORM_XBOX360) return;
 #endif
 	FixupHavokPackfile(Name, &HavokData[0]);
 #if 0

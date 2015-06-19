@@ -418,8 +418,7 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMaterial3.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
 $(OUT_1)/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnRenderer.obj" Unreal/UnRenderer.cpp
@@ -547,7 +546,6 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh2.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh2.obj : Unreal/UnMesh2.cpp $(DEPENDS)
@@ -574,7 +572,6 @@ DEPENDS = \
 	Unreal/UnMesh3.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
@@ -972,7 +969,6 @@ DEPENDS = \
 	Unreal/UnMesh2.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMeshBioshock.obj : Unreal/UnMeshBioshock.cpp $(DEPENDS)
@@ -1059,8 +1055,7 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
 $(OUT_1)/UnTexture2.obj : Unreal/UnTexture2.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture2.obj" Unreal/UnTexture2.cpp
@@ -1077,7 +1072,6 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnTextureNVTT.h
 
 $(OUT_1)/UnTexture.obj : Unreal/UnTexture.cpp $(DEPENDS)

@@ -3,7 +3,6 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMaterial2.h"
-#include "UnPackage.h"
 
 //#define XPR_DEBUG			1
 
@@ -455,20 +454,22 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	TexData.Obj                = this;
 	TexData.Palette            = Palette;
 
+	const FArchive* PackageAr = GetPackageArchive();
+
 	// process external sources for some games
 #if BIOSHOCK
-	if (Package && Package->Game == GAME_Bioshock && CachedBulkDataSize) //?? check bStripped or Baked ?
+	if (PackageAr && PackageAr->Game == GAME_Bioshock && CachedBulkDataSize) //?? check bStripped or Baked ?
 	{
 		TexData.CompressedData = FindBioTexture(this);	// may be NULL
 		TexData.ShouldFreeData = (TexData.CompressedData != NULL);
 		TexData.USize          = USize;
 		TexData.VSize          = VSize;
 		TexData.DataSize       = CachedBulkDataSize;
-		TexData.Platform       = Package->Platform;
+		TexData.Platform       = PackageAr->Platform;
 	}
 #endif // BIOSHOCK
 #if UC2
-	if (Package && Package->Engine() == GAME_UE2X)
+	if (PackageAr && PackageAr->Engine() == GAME_UE2X)
 	{
 		// try to find texture inside XBox xpr files
 		TexData.CompressedData = FindXprData(Name, &TexData.DataSize);
@@ -499,7 +500,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	ETexturePixelFormat intFormat;
 
 	//?? return old code back - UE1 and UE2 differs in codes 6 and 7 only
-	if (Package && (Package->Engine() == GAME_UE1))
+	if (Package && (PackageAr->Engine() == GAME_UE1))
 	{
 		// UE1 has different ETextureFormat layout
 		switch (Format)
@@ -582,7 +583,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		TexData.DecodeXBox360();
 #endif
 #if BIOSHOCK
-	if (Package && Package->Game == GAME_Bioshock)
+	if (Package && PackageAr->Game == GAME_Bioshock)
 	{
 		// This game has DataSize stored for all mipmaps, we should compute side of 1st mipmap
 		// in order to accept this value when uploading texture to video card (some vendors rejects

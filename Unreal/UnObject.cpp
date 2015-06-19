@@ -53,6 +53,11 @@ const char *UObject::GetRealClassName() const
 	return Package->GetObjectName(Exp.ClassIndex);
 }
 
+const char *UObject::GetPackageName() const
+{
+	if (!Package) return "None";
+	return Package->Name;
+}
 
 const char *UObject::GetUncookedPackageName() const
 {
@@ -80,6 +85,26 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 	}
 	Package->GetFullExportName(Exp, buf, bufSize, IncludeObjectName, IncludeCookedPackageName);
 	unguard;
+}
+
+const FArchive* UObject::GetPackageArchive() const
+{
+	return Package ? static_cast<const FArchive*>(Package) : NULL;
+}
+
+int UObject::GetGame() const
+{
+	return Package ? Package->Game : GAME_UNKNOWN;
+}
+
+int UObject::GetArVer() const
+{
+	return Package ? Package->ArVer : 0;
+}
+
+int UObject::GetLicenseeVer() const
+{
+	return Package ? Package->ArLicenseeVer : 0;
 }
 
 

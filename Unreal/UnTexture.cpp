@@ -6,10 +6,6 @@
 #include "UnMaterial.h"
 #include "UnMaterial2.h"		// for UPalette
 
-#if BIOSHOCK
-#	include "UnPackage.h"			//?? remove this hack
-#endif
-
 #if SUPPORT_IPHONE
 #	include <PVRTDecompress.h>
 #endif
@@ -482,7 +478,7 @@ void CTextureData::DecodeXBox360()
 #if BIOSHOCK
 	// some verification
 	float rate = bpp / bytesPerBlock;
-	if (Obj->Package->Game == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
+	if (Obj->GetGame() == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
 		bpp = bytesPerBlock;
 #endif // BIOSHOCK
 

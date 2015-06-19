@@ -278,6 +278,7 @@ public:
 		return GetTypeinfo()->Name + 1;
 	}
 	const char *GetRealClassName() const;		// class name from the package export table
+	const char* GetPackageName() const;
 	const char *GetUncookedPackageName() const;
 	void GetFullName(char *buf, int bufSize, bool IncludeObjectName = true, bool IncludeCookedPackageName = true, bool ForcePackageName = false) const;
 
@@ -301,6 +302,12 @@ public:
 
 	static void BeginLoad();
 	static void EndLoad();
+
+	// accessing object's package properties (here just to exclude UnPackage.h whenever possible)
+	const FArchive* GetPackageArchive() const;
+	int GetGame() const;
+	int GetArVer() const;
+	int GetLicenseeVer() const;
 
 	void *operator new(size_t Size)
 	{

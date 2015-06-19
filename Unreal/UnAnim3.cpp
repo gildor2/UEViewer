@@ -528,9 +528,12 @@ void UAnimSet::ConvertAnims()
 	CAnimSet *AnimSet = new CAnimSet(this);
 	ConvertedAnim = AnimSet;
 
+	int ArVer  = GetArVer();
+	int ArGame = GetGame();
+
 #if MASSEFF
 	UBioAnimSetData *BioData = NULL;
-	if ((Package->Game >= GAME_MassEffect && Package->Game <= GAME_MassEffect3) && !TrackBoneNames.Num() && Sequences.Num())
+	if ((ArGame >= GAME_MassEffect && ArGame <= GAME_MassEffect3) && !TrackBoneNames.Num() && Sequences.Num())
 	{
 		// Mass Effect has separated TrackBoneNames from UAnimSet to UBioAnimSetData
 		BioData = Sequences[0]->m_pBioAnimSetData;
@@ -602,7 +605,7 @@ void UAnimSet::ConvertAnims()
 			EnumToName("AnimationKeyFormat",         Seq->KeyEncodingFormat)
 		);
 	#if TRANSFORMERS
-		if (Package->Game == GAME_Transformers && Seq->Trans3Data.Num()) goto no_track_details;
+		if (ArGame == GAME_Transformers && Seq->Trans3Data.Num()) goto no_track_details;
 	#endif
 		for (int i2 = 0; i2 < Seq->CompressedTrackOffsets.Num(); /*empty*/)
 		{
@@ -630,7 +633,7 @@ void UAnimSet::ConvertAnims()
 	no_track_details: ;
 #endif // DEBUG_DECOMPRESS
 #if TRANSFORMERS
-		if (Package->Game == GAME_Transformers && Seq->Trans3Data.Num())
+		if (ArGame == GAME_Transformers && Seq->Trans3Data.Num())
 		{
 			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
 			Dst->Name      = Seq->SequenceName;
@@ -649,7 +652,7 @@ void UAnimSet::ConvertAnims()
 		}
 #endif // MASSEFF
 #if BATMAN
-		if ((Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3) && Seq->AnimZip_Data.Num())
+		if ((ArGame == GAME_Batman2 || ArGame == GAME_Batman3) && Seq->AnimZip_Data.Num())
 		{
 			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
 			Dst->Name      = Seq->SequenceName;
@@ -664,10 +667,10 @@ void UAnimSet::ConvertAnims()
 		if (Seq->KeyEncodingFormat == AKF_PerTrackCompression)
 			offsetsPerBone = 2;
 #if TLR
-		if (Package->Game == GAME_TLR) offsetsPerBone = 6;
+		if (ArGame == GAME_TLR) offsetsPerBone = 6;
 #endif
 #if XMEN
-		if (Package->Game == GAME_XMen) offsetsPerBone = 6;		// has additional CutInfo array
+		if (ArGame == GAME_XMen) offsetsPerBone = 6;		// has additional CutInfo array
 #endif
 		if (Seq->CompressedTrackOffsets.Num() != NumTracks * offsetsPerBone && !Seq->RawAnimData.Num())
 		{
@@ -828,7 +831,7 @@ void UAnimSet::ConvertAnims()
 					Reader << PackedInfo;
 					DECODE_PER_TRACK_INFO(PackedInfo);
 #if BORDERLANDS
-					if (Package->Game == GAME_Borderlands || Package->Game == GAME_AliensCM)	// Borderlands 2
+					if (ArGame == GAME_Borderlands || ArGame == GAME_AliensCM)	// Borderlands 2
 					{
 						// this game has more different key formats; each described by number. which
 						// could differ from numbers in UnMesh3.h; so, transcode format
@@ -916,7 +919,7 @@ void UAnimSet::ConvertAnims()
 			int RotKeys     = Seq->CompressedTrackOffsets[offsetIndex+3];
 #if TLR
 			int ScaleOffset = 0, ScaleKeys = 0;
-			if (Package->Game == GAME_TLR)
+			if (ArGame == GAME_TLR)
 			{
 				ScaleOffset  = Seq->CompressedTrackOffsets[offsetIndex+4];
 				ScaleKeys    = Seq->CompressedTrackOffsets[offsetIndex+5];
@@ -942,7 +945,7 @@ void UAnimSet::ConvertAnims()
 				Reader.Seek(TransOffset);
 				AnimationCompressionFormat TranslationCompressionFormat = Seq->TranslationCompressionFormat;
 #if ARGONAUTS
-				if (Package->Game == GAME_Argonauts) goto do_not_override_trans_format;
+				if (ArGame == GAME_Argonauts) goto do_not_override_trans_format;
 #endif
 				if (TransKeys == 1)
 					TranslationCompressionFormat = ACF_None;	// single key is stored without compression
@@ -950,19 +953,19 @@ void UAnimSet::ConvertAnims()
 				// read mins/ranges
 				if (TranslationCompressionFormat == ACF_IntervalFixed32NoW)
 				{
-					assert(Package->ArVer >= 761);
+					assert(ArVer >= 761);
 					Reader << Mins << Ranges;
 				}
 #if BORDERLANDS
 				FVector Base;
-				if (Package->Game == GAME_Borderlands && (TranslationCompressionFormat == ACF_Delta40NoW || TranslationCompressionFormat == ACF_Delta48NoW))
+				if (ArGame == GAME_Borderlands && (TranslationCompressionFormat == ACF_Delta40NoW || TranslationCompressionFormat == ACF_Delta48NoW))
 				{
 					Reader << Mins << Ranges << Base;
 				}
 #endif // BORDERLANDS
 
 #if TRANSFORMERS
-				if (Package->Game == GAME_Transformers && TransKeys >= 4 && Package->ArLicenseeVer >= 100)
+				if (ArGame == GAME_Transformers && TransKeys >= 4 && GetLicenseeVer() >= 100)
 				{
 					FVector Scale, Offset;
 					Reader << Scale.X;
@@ -1062,10 +1065,10 @@ void UAnimSet::ConvertAnims()
 			{
 				RotationCompressionFormat = ACF_Float96NoW;	// single key is stored without compression
 			}
-			else if (RotationCompressionFormat == ACF_IntervalFixed32NoW || Package->ArVer < 761)
+			else if (RotationCompressionFormat == ACF_IntervalFixed32NoW || ArVer < 761)
 			{
 #if SHADOWS_DAMNED
-				if (Package->Game == GAME_ShadowsDamned) goto skip_ranges;
+				if (ArGame == GAME_ShadowsDamned) goto skip_ranges;
 #endif
 				// starting with version 761 Mins/Ranges are read only when needed - i.e. for ACF_IntervalFixed32NoW
 				Reader << Mins << Ranges;
@@ -1073,14 +1076,14 @@ void UAnimSet::ConvertAnims()
 			}
 #if BORDERLANDS
 			FQuat Base;
-			if (Package->Game == GAME_Borderlands && (RotationCompressionFormat == ACF_Delta40NoW || RotationCompressionFormat == ACF_Delta48NoW))
+			if (ArGame == GAME_Borderlands && (RotationCompressionFormat == ACF_Delta40NoW || RotationCompressionFormat == ACF_Delta48NoW))
 			{
 				Reader << Base;			// in addition to Mins and Ranges
 			}
 #endif // BORDERLANDS
 #if TRANSFORMERS
 			FQuat TransQuatBase;
-			if (Package->Game == GAME_Transformers && RotKeys >= 2)
+			if (ArGame == GAME_Transformers && RotKeys >= 2)
 				Reader << TransQuatBase;
 #endif // TRANSFORMERS
 
@@ -1126,7 +1129,7 @@ void UAnimSet::ConvertAnims()
 #if TRANSFORMERS || ARGONAUTS
 				case ACF_IntervalFixed48NoW:
 	#if TRANSFORMERS
-					if (Package->Game == GAME_Transformers)
+					if (ArGame == GAME_Transformers)
 					{
 						FQuatIntervalFixed48NoW_Trans q;
 						FQuat q2;
@@ -1136,7 +1139,7 @@ void UAnimSet::ConvertAnims()
 					}
 	#endif
 	#if ARGONAUTS
-					if (Package->Game == GAME_Argonauts)
+					if (ArGame == GAME_Argonauts)
 					{
 						FQuatIntervalFixed48NoW_Argo q;
 						FQuat q2;
@@ -1157,7 +1160,7 @@ void UAnimSet::ConvertAnims()
 			}
 
 #if TRANSFORMERS
-			if (Package->Game == GAME_Transformers && RotKeys >= 2 &&
+			if (ArGame == GAME_Transformers && RotKeys >= 2 &&
 				(RotationCompressionFormat == ACF_IntervalFixed32NoW || RotationCompressionFormat == ACF_IntervalFixed48NoW))
 			{
 				for (int i = 0; i < RotKeys; i++)
@@ -1185,7 +1188,7 @@ void UAnimSet::ConvertAnims()
 #endif // TLR
 
 #if ARGONAUTS
-			if (Package->Game == GAME_Argonauts && Seq->CompressedTrackTimeOffsets.Num())
+			if (ArGame == GAME_Argonauts && Seq->CompressedTrackTimeOffsets.Num())
 			{
 				// convert time tracks
 				ReadArgonautsTimeArray(Seq->CompressedTrackTimes, Seq->CompressedTrackTimeOffsets[j*2  ], TransKeys, A->KeyPosTime,  Seq->NumFrames);
