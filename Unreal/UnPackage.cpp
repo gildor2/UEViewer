@@ -2471,14 +2471,15 @@ UObject* UnPackage::CreateImport(int index)
 		Package = LoadPackage(GStartupPackage);
 		if (Package)
 			ObjIndex = Package->FindExportForImport(Imp.ObjectName, Imp.ClassName, this, index);
+		// look in other loaded packages
 		if (ObjIndex == INDEX_NONE)
 		{
-			// look in other loaded packages
+			//?? speedup this search when many packages are loaded (not tested, perhaps works well enough)
 			UnPackage *SkipPackage = Package;	// Package = either startup package or NULL
 			for (int i = 0; i < PackageMap.Num(); i++)
 			{
 				Package = PackageMap[i];
-				appPrintf("check for %s in %s\n", *Imp.ObjectName, Package->Name);
+				//appPrintf("check for %s in %s\n", *Imp.ObjectName, Package->Name); - don't spam, could slowdown when many packages loaded!
 				if (Package == this || Package == SkipPackage)
 					continue;		// already checked
 				ObjIndex = Package->FindExportForImport(Imp.ObjectName, Imp.ClassName, this, index);
