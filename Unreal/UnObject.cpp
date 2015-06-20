@@ -205,6 +205,12 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	STRUC_TYPE(FVector)
 	STRUC_TYPE(FRotator)
 	STRUC_TYPE(FColor)
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		STRUC_TYPE(FBoxSphereBounds)
+	}
+#endif // MKVSDC
 	if (Ar.ArVer >= 300)	// real version is unknown; native FLinearColor serializer does not work with EndWar
 	{
 		STRUC_TYPE(FLinearColor)

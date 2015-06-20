@@ -2899,7 +2899,13 @@ struct FStaticMeshLODModel3
 			if (Ar.Game == GAME_MK && Ar.ArVer >= 472) // MK9; real version: MidwayVer >= 36
 			{
 				FStaticMeshNormalStream_MK NormalStream;
-				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream << Lod.NumVerts;
+				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream;
+				if (Ar.ArVer >= 677)
+				{
+					// MK X
+					Ar << Lod.ColorStream2;
+				}
+				Ar << Lod.NumVerts;
 				// copy NormalStream into UVStream
 				assert(Lod.UVStream.UV.Num() == NormalStream.Normals.Num());
 				for (int i = 0; i < Lod.UVStream.UV.Num(); i++)
@@ -3291,6 +3297,15 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 		goto done;
 	}
 #endif // TRANSFORMERS
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		// MK X
+		TArrayOfArray<float, 9> kDOPNodes_MK;
+		Ar << kDOPNodes_MK;
+		goto kdop_tris;
+	}
+#endif // MKVSDC
 
 	Ar << Bounds << BodySetup;
 #if TUROK
@@ -3361,6 +3376,7 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 		Ar << kDopUnk;
 	}
 #endif // FURY
+kdop_tris:
 	Ar << RAW_ARRAY(kDOPTriangles);
 #if DCU_ONLINE
 	if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0xA00)

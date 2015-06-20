@@ -155,8 +155,8 @@ detex
 
 Changes
 ~~~~~~~
-19.06.2015
-- implemented Mortal Kombat X SkeletalMesh support
+20.06.2015
+- implemented Mortal Kombat X SkeletalMesh and StaticMesh support
 
 14.06.2015
 - added support for up to 8 UV sets, required for UE4 static meshes
