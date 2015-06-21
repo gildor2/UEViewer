@@ -83,6 +83,9 @@ const GameInfo GListOfGames[] = {
 #	if VANGUARD
 		G("Vanguard: Saga of Heroes", vang, GAME_Vanguard),
 #	endif
+#	if EOS
+		G("Echo of Soul", eos, GAME_EOS),
+#	endif
 #	if SPECIAL_TAGS
 		G2("Killing Floor"),
 #	endif

@@ -993,10 +993,23 @@ struct FStaticLODModel
 		}
 #endif // SWRC
 		Ar << M.SkinningData << M.SkinPoints << M.NumDynWedges;
+#if EOS
+		if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 42)
+		{
+			TArray<int> unk;
+			Ar << unk;
+		}
+#endif // EOS
 		Ar << M.SmoothSections << M.RigidSections << M.SmoothIndices << M.RigidIndices;
 		Ar << M.VertexStream;
 		Ar << M.VertInfluences << M.Wedges << M.Faces << M.Points;
-		Ar << M.LODDistanceFactor << M.LODHysteresis << M.NumSharedVerts;
+		Ar << M.LODDistanceFactor;
+#if EOS
+		if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 42) goto no_lod_hysteresis;
+#endif
+		Ar << M.LODHysteresis;
+	no_lod_hysteresis:
+		Ar << M.NumSharedVerts;
 		Ar << M.LODMaxInfluences << M.f114 << M.f118;
 #if TRIBES3
 		if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 1)

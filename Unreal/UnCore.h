@@ -266,6 +266,7 @@ enum EGame
 		GAME_XIII,
 		GAME_Vanguard,
 		GAME_AA2,
+		GAME_EOS,
 
 	GAME_VENGEANCE = 0x02100,	// variant of UE2
 		GAME_Tribes3,

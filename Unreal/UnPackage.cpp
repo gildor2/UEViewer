@@ -76,6 +76,9 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 		return;									// other data is useless for us, and they are encrypted too
 	}
 #endif // RAGNAROK2
+#if EOS
+	if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 49) goto generations;
+#endif
 
 	// Guid and generations
 	if (Ar.ArVer < 68)

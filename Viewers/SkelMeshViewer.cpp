@@ -128,88 +128,94 @@ void CSkelMeshViewer::Dump()
 	appPrintf("\n");
 	Mesh->GetTypeinfo()->DumpProps(Mesh);
 
-/*
-	appPrintf(
-		"\nSkelMesh info:\n==============\n"
-		"Bones  # %4d  Points    # %4d  Points2  # %4d\n"
-		"Wedges # %4d  Triangles # %4d\n"
-		"CollapseWedge # %4d  f1C8      # %4d\n"
-		"BoneDepth      %d\n"
-		"WeightIds # %d  BoneInfs # %d  VertInfs # %d\n"
-		"Attachments #  %d\n"
-		"LODModels # %d\n"
-		"Animations: %s\n",
-		Mesh->RefSkeleton.Num(),
-		Mesh->Points.Num(), Mesh->Points2.Num(),
-		Mesh->Wedges.Num(),Mesh->Triangles.Num(),
-		Mesh->CollapseWedge.Num(), Mesh->f1C8.Num(),
-		Mesh->SkeletalDepth,
-		Mesh->WeightIndices.Num(), Mesh->BoneInfluences.Num(), Mesh->VertInfluences.Num(),
-		Mesh->AttachBoneNames.Num(),
-		Mesh->LODModels.Num(),
-		Mesh->Animation ? Mesh->Animation->Name : "None"
-	);
-
-	int i;
-
-	// check bone sort order (assumed, that child go after parent)
-	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
+#if 0
+	if (Mesh->OriginalMesh->IsA("SkeletalMesh"))	// UE2 class
 	{
-		const FMeshBone &B = Mesh->RefSkeleton[i];
-		if (B.ParentIndex >= i + 1) appNotify("bone[%d] has parent %d", i+1, B.ParentIndex);
-	}
+		const USkeletalMesh *OriginalMesh = static_cast<USkeletalMesh*>(Mesh->OriginalMesh);
 
-	for (i = 0; i < Mesh->LODModels.Num(); i++)
-	{
-		appPrintf("model # %d\n", i);
-		const FStaticLODModel &lod = Mesh->LODModels[i];
 		appPrintf(
-			"  SkinningData=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
-			"  DistanceFactor=%g  Hysteresis=%g  SharedVerts=%d  MaxInfluences=%d  114=%d  118=%d\n"
-			"  smoothInds=%d  rigidInds=%d  vertStream.Size=%d\n",
-			lod.SkinningData.Num(),
-			lod.SkinPoints.Num(),
-			lod.VertInfluences.Num(),
-			lod.Wedges.Num(), lod.NumDynWedges,
-			lod.Faces.Num(),
-			lod.Points.Num(),
-			lod.LODDistanceFactor, lod.LODHysteresis, lod.NumSharedVerts, lod.LODMaxInfluences, lod.f114, lod.f118,
-			lod.SmoothIndices.Indices.Num(), lod.RigidIndices.Indices.Num(), lod.VertexStream.Verts.Num());
+			"\nSkelMesh info:\n==============\n"
+			"Bones  # %4d  Points    # %4d  Points2  # %4d\n"
+			"Wedges # %4d  Triangles # %4d\n"
+			"CollapseWedge # %4d  f1C8      # %4d\n"
+			"BoneDepth      %d\n"
+			"WeightIds # %d  BoneInfs # %d  VertInfs # %d\n"
+			"Attachments #  %d\n"
+			"LODModels # %d\n"
+			"Animations: %s\n",
+			OriginalMesh->RefSkeleton.Num(),
+			OriginalMesh->Points.Num(), OriginalMesh->Points2.Num(),
+			OriginalMesh->Wedges.Num(), OriginalMesh->Triangles.Num(),
+			OriginalMesh->CollapseWedge.Num(), OriginalMesh->f1C8.Num(),
+			OriginalMesh->SkeletalDepth,
+			OriginalMesh->WeightIndices.Num(), OriginalMesh->BoneInfluences.Num(), OriginalMesh->VertInfluences.Num(),
+			OriginalMesh->AttachBoneNames.Num(),
+			OriginalMesh->LODModels.Num(),
+			OriginalMesh->Animation ? OriginalMesh->Animation->Name : "None"
+		);
 
-		int i0 = 99999999, i1 = -99999999;
-		int j;
-		for (j = 0; j < lod.SmoothIndices.Indices.Num(); j++)
-		{
-			int x = lod.SmoothIndices.Indices[j];
-			if (x < i0) i0 = x;
-			if (x > i1) i1 = x;
-		}
-		appPrintf("  smoothIndices: [%d .. %d]\n", i0, i1);
-		i0 = 99999999; i1 = -99999999;
-		for (j = 0; j < lod.RigidIndices.Indices.Num(); j++)
-		{
-			int x = lod.RigidIndices.Indices[j];
-			if (x < i0) i0 = x;
-			if (x > i1) i1 = x;
-		}
-		appPrintf("  rigidIndices:  [%d .. %d]\n", i0, i1);
+		int i;
 
-		const TArray<FSkelMeshSection> *sec[2];
-		sec[0] = &lod.SmoothSections;
-		sec[1] = &lod.RigidSections;
-		static const char *secNames[] = { "smooth", "rigid" };
-		for (int k = 0; k < 2; k++)
+		// check bone sort order (assumed, that child go after parent)
+		for (i = 0; i < OriginalMesh->RefSkeleton.Num(); i++)
 		{
-			appPrintf("  %s sections: %d\n", secNames[k], sec[k]->Num());
-			for (int j = 0; j < sec[k]->Num(); j++)
+			const FMeshBone &B = OriginalMesh->RefSkeleton[i];
+			if (B.ParentIndex >= i + 1) appNotify("bone[%d] has parent %d", i+1, B.ParentIndex);
+		}
+
+		for (i = 0; i < OriginalMesh->LODModels.Num(); i++)
+		{
+			appPrintf("model # %d\n", i);
+			const FStaticLODModel &lod = OriginalMesh->LODModels[i];
+			appPrintf(
+				"  SkinningData=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
+				"  DistanceFactor=%g  Hysteresis=%g  SharedVerts=%d  MaxInfluences=%d  114=%d  118=%d\n"
+				"  smoothInds=%d  rigidInds=%d  vertStream.Size=%d\n",
+				lod.SkinningData.Num(),
+				lod.SkinPoints.Num(),
+				lod.VertInfluences.Num(),
+				lod.Wedges.Num(), lod.NumDynWedges,
+				lod.Faces.Num(),
+				lod.Points.Num(),
+				lod.LODDistanceFactor, lod.LODHysteresis, lod.NumSharedVerts, lod.LODMaxInfluences, lod.f114, lod.f118,
+				lod.SmoothIndices.Indices.Num(), lod.RigidIndices.Indices.Num(), lod.VertexStream.Verts.Num());
+
+			int i0 = 99999999, i1 = -99999999;
+			int j;
+			for (j = 0; j < lod.SmoothIndices.Indices.Num(); j++)
 			{
-				const FSkelMeshSection &S = (*sec[k])[j];
-				appPrintf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
-					S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
-					S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
+				int x = lod.SmoothIndices.Indices[j];
+				if (x < i0) i0 = x;
+				if (x > i1) i1 = x;
+			}
+			appPrintf("  smoothIndices: [%d .. %d]\n", i0, i1);
+			i0 = 99999999; i1 = -99999999;
+			for (j = 0; j < lod.RigidIndices.Indices.Num(); j++)
+			{
+				int x = lod.RigidIndices.Indices[j];
+				if (x < i0) i0 = x;
+				if (x > i1) i1 = x;
+			}
+			appPrintf("  rigidIndices:  [%d .. %d]\n", i0, i1);
+
+			const TArray<FSkelMeshSection> *sec[2];
+			sec[0] = &lod.SmoothSections;
+			sec[1] = &lod.RigidSections;
+			static const char *secNames[] = { "smooth", "rigid" };
+			for (int k = 0; k < 2; k++)
+			{
+				appPrintf("  %s sections: %d\n", secNames[k], sec[k]->Num());
+				for (int j = 0; j < sec[k]->Num(); j++)
+				{
+					const FSkelMeshSection &S = (*sec[k])[j];
+					appPrintf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
+						S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
+						S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
+				}
 			}
 		}
-	} */
+	}
+#endif
 }
 
 

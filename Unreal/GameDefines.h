@@ -30,6 +30,7 @@
 #define AA2				1		// America's Army 2
 #define VANGUARD		1		// Vanguard: Saga of Heroes
 #define LEAD			1		// UbiSoft LEAD Engine (Splinter Cell: Conviction)
+#define EOS				1		// Echo of Soul
 
 // UE2X
 #define UC1				1

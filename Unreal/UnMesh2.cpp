@@ -128,7 +128,14 @@ after_textures:
 	}
 
 	Ar << FaceLevel << Faces << CollapseWedgeThus << Wedges << Materials;
-	Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
+	Ar << MeshScaleMax;
+
+#if EOS
+	if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 42) goto lod_fields2;
+#endif
+	Ar << LODHysteresis;
+lod_fields2:
+	Ar << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
 
 #if SPLINTER_CELL
 	if (Ar.Game == GAME_SplinterCell) return;
@@ -436,6 +443,18 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 			goto skip_remaining;
 		}
 #endif // SWRC
+#if EOS
+		if (Ar.Game == GAME_EOS)
+		{
+			int unk1;
+			UObject* unk2;
+			UObject* unk3;
+			if (Version >= 6) Ar << unk1 << unk2;
+			if (Version >= 7) Ar << unk3;
+			Ar << LODModels;
+			goto skip_remaining;
+		}
+#endif // EOS
 #if 0
 		// Shui Hu Q Zhuan 2 Online
 		if (Ar.ArVer == 126 && Ar.ArLicenseeVer == 1)
