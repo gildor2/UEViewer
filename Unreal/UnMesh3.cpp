@@ -3037,6 +3037,13 @@ struct FStaticMeshLODModel3
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands && Ar.ArVer >= 832) goto after_indices; // Borderlands 2
 #endif
+#if METRO_CONF
+		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 8)
+		{
+			short unk;
+			Ar << unk;
+		}
+#endif
 		Ar << Lod.Indices2;
 		DBG_STAT("Indices: %d %d\n", Lod.Indices.Indices.Num(), Lod.Indices2.Indices.Num());
 	after_indices:
@@ -3223,6 +3230,13 @@ struct FkDOPTriangle3
 			V.f4 = tmp4;
 			V.f6 = tmp6;
 		}
+#if METRO_CONF
+		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 2)
+		{
+			short unk;
+			Ar << unk;
+		}
+#endif // METRO_CONF
 		return Ar;
 	}
 };

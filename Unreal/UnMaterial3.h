@@ -704,8 +704,12 @@ public:
 			return;
 		}
 #endif // MKVSDC
+#if METRO_CONF
+		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 21) goto mask;
+#endif
 		if (Ar.ArVer >= 858)
 		{
+		mask:
 			int unkMask;		// default 1
 			Ar << unkMask;
 		}
