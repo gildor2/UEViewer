@@ -348,6 +348,7 @@ enum EGame
 		GAME_Alice,
 		GAME_DunDef,
 		GAME_Gigantic,
+		GAME_MetroConflict,
 
 	GAME_MIDWAY3   = 0x08100,	// variant of UE3
 		GAME_A51,

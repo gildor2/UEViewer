@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+26.06.2015
+- implemented Metro Conflict support; -game=metroconf option is required
+
 20.06.2015
 - implemented Mortal Kombat X SkeletalMesh and StaticMesh support
 

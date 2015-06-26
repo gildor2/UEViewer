@@ -1869,7 +1869,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 					goto done;
 				}
 #endif // LEAD
-	#if AA2
+#if AA2
 				if (Game == GAME_AA2)
 				{
 					guard(AA2_FName);
@@ -1897,7 +1897,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 					unguard;
 					goto dword_flags;
 				}
-	#endif // AA2
+#endif // AA2
 #if DCU_ONLINE
 				if (Game == GAME_DCUniverse)		// no version checking
 				{
@@ -1982,6 +1982,24 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 		#if MKVSDC
 				if (Game == GAME_MK && ArVer >= 677) goto done;		// no flags for MK X
 		#endif
+		#if METRO_CONF
+				if (Game == GAME_MetroConflict)
+				{
+					int TrashLen = 0;
+					if (ArLicenseeVer < 3)
+					{
+					}
+					else if (ArLicenseeVer < 16)
+					{
+						TrashLen = (name.Num() - 1) ^ 7;
+					}
+					else
+					{
+						TrashLen = (name.Num() - 1) ^ 6;
+					}
+					this->Seek(this->Tell() + (TrashLen & 0xF));
+				}
+		#endif // METRO_CONF
 				if (Game >= GAME_UE3 && ArVer >= 195)
 				{
 				qword_flags:

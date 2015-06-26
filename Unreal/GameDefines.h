@@ -108,6 +108,7 @@
 #define ALICE			1		// Alice: Madness Returns
 #define GIGANTIC		1
 #define MMH7			1		// Might and Magic Heroes 7
+#define METRO_CONF		1		// Metro Conflict
 //#define DUNDEF			1		// Dungeon Defenders - doesn't work, all export offsets are 0
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 

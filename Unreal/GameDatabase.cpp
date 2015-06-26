@@ -328,6 +328,9 @@ const GameInfo GListOfGames[] = {
 #	if GIGANTIC
 		G("Gigantic", gigantic, GAME_Gigantic),
 #	endif
+#	if METRO_CONF
+		G("Metro Conflict", metroconf, GAME_MetroConflict),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4
@@ -775,7 +778,7 @@ struct UEVersionMap
 };
 
 #define G(game,ver)		{ game, ver },
-// Mapping between GAME_UE4_n and
+// Mapping between GAME_UE4_n and VER_UE4_n
 #define M(ver)			{ GAME_UE4_##ver, VER_UE4_##ver }
 
 static const UEVersionMap ueVersions[] =
@@ -796,7 +799,7 @@ static const UEVersionMap ueVersions[] =
 
 	// Unreal engine 4
 #if UNREAL4
-	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7)
+	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7), M(8)
 #endif
 };
 
