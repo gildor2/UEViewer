@@ -130,7 +130,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 		//!! do that only when something "strange" within data noticed
 		return true;
 	}
-	int Version = FileData[1];
+	unsigned int Version = FileData[1];
 
 	FileInfo Info;
 

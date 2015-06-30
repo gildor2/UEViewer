@@ -1027,6 +1027,14 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 			goto header_done;
 		}
 #endif // MKVSDC
+#if BATMAN
+		if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 153)
+		{
+			// 64-bit offset
+			Ar << BulkDataSizeOnDisk << BulkDataOffsetInFile;
+			goto header_done;
+		}
+#endif // BATMAN
 		Ar << BulkDataSizeOnDisk << tmpBulkDataOffsetInFile32;
 		BulkDataOffsetInFile = tmpBulkDataOffsetInFile32;		// sign extend to allow non-standard TFC systems which uses '-1' in this field
 #if TRANSFORMERS

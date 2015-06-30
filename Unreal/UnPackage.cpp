@@ -119,6 +119,13 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary3);
 
+#if BATMAN
+	if (Ar.Game == GAME_Batman4)
+	{
+		Ar.ArLicenseeVer  &= 0x7FFF;			// higher bit is used for something else, and it's set to 1
+		S.LicenseeVersion &= 0x7FFF;
+	}
+#endif // BATMAN
 #if R6VEGAS
 	if (Ar.Game == GAME_R6Vegas2)
 	{
@@ -657,7 +664,7 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 
 	// read version
 tag_ok:
-	int Version;
+	unsigned int Version;
 	Ar << Version;
 
 #if UNREAL4
@@ -853,7 +860,7 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 	if (Ar.ArVer >= 220) Ar << LOC(Archetype);
 
 #if BATMAN
-	if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 89)
+	if ((Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4) && Ar.ArLicenseeVer >= 89)
 	{
 		int unk18;
 		Ar << unk18;

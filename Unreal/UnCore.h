@@ -299,6 +299,7 @@ enum EGame
 		GAME_Batman,
 		GAME_Batman2,
 		GAME_Batman3,
+		GAME_Batman4,
 		GAME_Borderlands,
 		GAME_AA3,
 		GAME_DarkVoid,

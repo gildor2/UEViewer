@@ -170,6 +170,7 @@ const GameInfo GListOfGames[] = {
 		G("Batman: Arkham Asylum",  batman,  GAME_Batman),
 		G("Batman: Arkham City",    batman2, GAME_Batman2),
 		G("Batman: Arkham Origins", batman3, GAME_Batman3),
+		G("Batman: Arkham Knight",  batman4, GAME_Batman4),
 #	endif
 #	if CRIMECRAFT
 		G("Crime Craft", crime, GAME_CrimeCraft),
@@ -653,6 +654,7 @@ void FArchive::DetectGame()
 	if ( (ArVer == 806 || ArVer == 807) &&
 		 (ArLicenseeVer == 103 || ArLicenseeVer == 137 || ArLicenseeVer == 138) )
 		SET(GAME_Batman3);
+	if (ArVer == 863 && ArLicenseeVer == 32995)	SET(GAME_Batman4);
 #endif
 #if DMC
 	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);

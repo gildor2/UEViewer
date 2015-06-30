@@ -363,15 +363,10 @@ struct FPropertyTag
 				Ar << Object;
 				if (!Object)
 				{
-					//!! WARNING:
-					//	Verify: this code didn't have {} for this block,
-					//	but code was formatted like it's a block. Should
-					//	'return Ar' be executed only for !Object, or for
-					//	UseObjecy?
 					Tag.Name.Str = "None";
 					return Ar;
 				}
-				// now, should continue serialization, skipping Name serialization
+				// now, should continue serialization, skipping Name serialization (not implemented right now, so - appError)
 				appError("Unknown field: Object #%d", Object);
 			}
 		}
@@ -538,16 +533,18 @@ struct FPropertyTagBat2
 		if (Tag.Type == NAME_IntProperty || Tag.Type == NAME_FloatProperty || Tag.Type == NAME_NameProperty || Tag.Type == NAME_VectorProperty ||
 			Tag.Type == NAME_RotatorProperty || Tag.Type == NAME_StrProperty || Tag.Type == 16 /*NAME_ObjectNCRProperty*/)
 		{
+		simple_prop:
 			// property serialized by offset
 			Tag.PropertyName.Str = "None";
 			Tag.DataSize = Tag.ArrayIndex = 0;
+			return Ar;
 		}
-		else
-		{
-		named_prop:
-			// property serialized by name
-			Ar << Tag.PropertyName << Tag.DataSize << Tag.ArrayIndex;
-		}
+
+		if (Ar.Game == GAME_Batman4 && Tag.Type == NAME_BoolProperty) goto simple_prop;
+
+	named_prop:
+		// property serialized by name
+		Ar << Tag.PropertyName << Tag.DataSize << Tag.ArrayIndex;
 		if (Tag.Type == NAME_BoolProperty)
 			Ar << Tag.BoolValue;
 		return Ar;
@@ -555,7 +552,7 @@ struct FPropertyTagBat2
 };
 
 
-static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &TagBat, FPropertyTag &Tag)
+static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &TagBat, FPropertyTag &Tag, int Game)
 {
 	struct OffsetInfo
 	{
@@ -623,6 +620,19 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 
 	}; // end of info[]
 
+	static const OffsetInfo info4[] =
+	{
+
+	BEGIN("Texture2D")
+		MAP(SizeX, 0x144)
+		MAP(SizeY, 0x148)
+		MAP(TextureFileCacheName, 0x180)
+//		MAP(OriginalSizeX, 0x14C)
+//		MAP(OriginalSizeY, 0x150)
+	END
+
+	}; // end of info4[]
+
 #undef MAP
 #undef BEGIN
 #undef END
@@ -634,8 +644,20 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 	Tag.ArrayIndex = 0;
 
 	// find a field
-	const OffsetInfo *p   = info;
-	const OffsetInfo *end = info + ARRAY_COUNT(info);
+	const OffsetInfo *p;
+	const OffsetInfo *end;
+
+	if (Game < GAME_Batman4)
+	{
+		p = info;
+		end = info + ARRAY_COUNT(info);
+	}
+	else
+	{
+		assert(Game == GAME_Batman4);
+		p = info4;
+		end = info4 + ARRAY_COUNT(info4);
+	}
 
 	while (p < end)
 	{
@@ -707,6 +729,10 @@ void UObject::Serialize(FArchive &Ar)
 		if (Ar.ArVer >= 871) Ar << str2;
 	}
 #	endif // VEC
+#	if BATMAN
+	if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 203)
+		goto no_net_index;
+#	endif // BATMAN
 	if (Ar.ArVer >= 322)
 	{
 	net_index:
@@ -768,7 +794,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 #if BATMAN
 		//!! try to move to separate function
-		if (Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4)
 		{
 			// Batman 2 has more compact FPropertyTag implementation which uses serialization
 			// by offset, not by name - this should work faster (in game) and use less disk space.
@@ -803,7 +829,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				static byte Dummy[16];
 				byte *value = Dummy;
 				const int ArrayIndex = 0; // used in PROP macro
-				if (FindPropBat2(this, TagBat, Tag))
+				if (FindPropBat2(this, TagBat, Tag, Ar.Game))
 				{
 					const CPropInfo *Prop = FindProperty(Tag.Name);
 					if (Prop)
@@ -878,10 +904,27 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 	read_property:
 		guard(ReadProperty);
 
+		const char *TypeName = "??";
+	#if BATMAN
+		if (Ar.Game >= GAME_Batman2) // copy-paste of code above
+		{
+			if (Tag.Type < 16)
+				TypeName = GetTypeName(Tag.Type);
+			else if (Tag.Type == 16)
+				TypeName = "ObjectNCRProperty";
+			else if (Tag.Type == 17)
+				TypeName = "GuidProperty";
+		}
+		else
+	#endif // BATMAN
+		{
+			TypeName = GetTypeName(Tag.Type);
+		}
+
 #if DEBUG_PROPS
-		appPrintf("-- %s \"%s::%s\" [%d] size=%d enum=%s struc=%s\n", GetTypeName(Tag.Type), Name, *Tag.Name,
+		appPrintf("-- %s \"%s::%s\" [%d] size=%d enum=%s struc=%s\n", TypeName, Name, *Tag.Name,
 			Tag.ArrayIndex, Tag.DataSize, *Tag.EnumName, *Tag.StrucName);
-#endif
+#endif // DEBUG_PROPS
 
 		int StopPos = Ar.Tell() + Tag.DataSize;	// for verification
 
@@ -889,7 +932,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
 			if (!Prop)
-				appPrintf("WARNING: %s \"%s::%s\" was not found\n", GetTypeName(Tag.Type), Name, *Tag.Name);
+				appPrintf("WARNING: %s \"%s::%s\" was not found\n", TypeName, Name, *Tag.Name);
 #if DEBUG_PROPS
 			appPrintf("  (skipping %s)\n", *Tag.Name);
 #endif

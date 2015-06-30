@@ -157,8 +157,8 @@ public:
 		else
 			SuperField = SuperField2;	// serialized in parent
 #endif // UNREAL3
-#if MKVSDC
-		if (Ar.Game == GAME_MK && Ar.ArVer >= 472)
+#if MKVSDC || BATMAN
+		if ((Ar.Game == GAME_MK && Ar.ArVer >= 472) || (Ar.Game == GAME_Batman4))
 		{
 			Ar << Children;
 			return;				//!! remaining data will be dropped anyway
@@ -308,7 +308,7 @@ public:
 		}
 #endif // BORDERLANDS
 #if BATMAN
-		if (Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4)
 		{
 			// property flags constants were changed since ArLicenseeVer >= 101, performed conversion
 			// we need correct 0x20 value only
