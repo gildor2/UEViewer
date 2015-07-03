@@ -128,12 +128,13 @@ struct FMeshBone
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshBone &B)
 	{
+		guard(FMeshBone<<);
 #if XIII
 		if (Ar.Game == GAME_XIII && Ar.ArLicenseeVer > 26)					// real version is unknown; beta = old code, retail = new code
 			return Ar << B.Name << B.Flags << B.BonePos << B.ParentIndex;	// no NumChildren
 #endif // XIII
 #if BATMAN
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 31)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 31)
 		{
 			Ar << B.BonePos << B.Name << B.ParentIndex;						// no Flags and NumChildren fields
 			goto ue3_unk;
@@ -171,6 +172,7 @@ struct FMeshBone
 		}
 #endif // UNREAL3
 		return Ar;
+		unguard;
 	}
 };
 

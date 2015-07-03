@@ -540,7 +540,7 @@ struct FPropertyTagBat2
 			return Ar;
 		}
 
-		if (Ar.Game == GAME_Batman4 && Tag.Type == NAME_BoolProperty) goto simple_prop;
+		if (Ar.Game == GAME_Batman4 && Tag.Type == NAME_BoolProperty) goto simple_prop;	// serialized as 4 byte int, i.e. a bunch of boolean properties
 
 	named_prop:
 		// property serialized by name
@@ -629,6 +629,25 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 		MAP(TextureFileCacheName, 0x180)
 //		MAP(OriginalSizeX, 0x14C)
 //		MAP(OriginalSizeY, 0x150)
+	END
+
+	BEGIN("MaterialInstance")
+		MAP(Parent, 0x84)
+	END
+
+	BEGIN("ScalarParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("TextureParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("VectorParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
 	END
 
 	}; // end of info4[]
@@ -868,7 +887,19 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						int BoolValue;
 						Ar << BoolValue;
 						PROP(bool) = (BoolValue != 0);
-						PROP_DBG("%s", BoolValue ? "true" : "false");
+						PROP_DBG("%08X", BoolValue);
+						// Ugly hack to support Batman4 SkeletalMesh format
+						if ((Ar.Game == GAME_Batman4) && IsA("SkeletalMesh3") && (TagBat.Offset == 0x528))
+						{
+							bool bHasVertexColors = (BoolValue & 2) != 0;
+							const CPropInfo *Prop2 = FindProperty("bHasVertexColors");
+							if (Prop2)
+							{
+								byte* value = (byte*)ObjectData + Prop2->Offset;
+								*value = (byte)bHasVertexColors;
+								PROP_DBG("B4 bHasVertexColors=%d\n", bHasVertexColors);
+							}
+						}
 					}
 					break;
 
