@@ -738,29 +738,29 @@ struct FGPUVert3PackedFloat : FGPUVert3Common
 };
 
 #if BATMAN
-struct FGPUVertBat4PackedHalf : FGPUVert3Common
+struct FGPUVertBat4_HalfUV_Pos48 : FGPUVert3Common
 {
-	short				Pos[4];
+	FVectorIntervalFixed64 Pos;
 	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
 
-	friend FArchive& operator<<(FArchive &Ar, FGPUVertBat4PackedHalf &V)
+	friend FArchive& operator<<(FArchive &Ar, FGPUVertBat4_HalfUV_Pos48 &V)
 	{
 		V.Serialize(Ar);
-		Ar << V.Pos[0] << V.Pos[1] << V.Pos[2] << V.Pos[3];
+		Ar << V.Pos;
 		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
 };
 
-struct FGPUVertBat4PackedFloat : FGPUVert3Common
+struct FGPUVertBat4_HalfUV_Pos32 : FGPUVert3Common
 {
-	short				Pos[4];
-	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
+	FVectorIntervalFixed32Bat4 Pos;
+	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
 
-	friend FArchive& operator<<(FArchive &Ar, FGPUVertBat4PackedFloat &V)
+	friend FArchive& operator<<(FArchive &Ar, FGPUVertBat4_HalfUV_Pos32 &V)
 	{
 		V.Serialize(Ar);
-		Ar << V.Pos[0] << V.Pos[1] << V.Pos[2] << V.Pos[3];
+		Ar << V.Pos;
 		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
@@ -953,6 +953,8 @@ struct FSkeletalMeshVertexBuffer3
 	void Serialize_Batman4Verts(FArchive &Ar)
 	{
 		guard(Serialize_Batman4Verts);
+		//!! TODO: that'd be great to move this function to UnMeshBatman.cpp, but it requires vertex declatations.
+		//!! Batman4 vertex is derived from FGPUVert3Common.
 
 		int BatmanPackType;
 		Ar << BatmanPackType;
@@ -970,26 +972,35 @@ struct FSkeletalMeshVertexBuffer3
 			case 1:
 			case 2:
 				{
-					TArray<FGPUVertBat4PackedHalf> Verts;
+					TArray<FGPUVertBat4_HalfUV_Pos48> Verts;
 					Ar << RAW_ARRAY(Verts);
 					// copy data
 					VertsHalf.Add(Verts.Num());
 					for (int i = 0; i < Verts.Num(); i++)
 					{
-						const FGPUVertBat4PackedHalf& S = Verts[i];
+						const FGPUVertBat4_HalfUV_Pos48& S = Verts[i];
 						FGPUVert3Half& D = VertsHalf[i];
 						(FGPUVert3Common&)D = (FGPUVert3Common&)S;
 						memcpy(D.UV, S.UV, sizeof(S.UV));
-						D.Pos.X = S.Pos[0] / 32768.0f * MeshExtension.X + MeshOrigin.X;
-						D.Pos.Y = S.Pos[1] / 32768.0f * MeshExtension.Y + MeshOrigin.Y;
-						D.Pos.Z = S.Pos[2] / 32768.0f * MeshExtension.Z + MeshOrigin.Z;
-						assert(S.Pos[3] == 1);
+						D.Pos = S.Pos.ToVector(MeshOrigin, MeshExtension);
 					}
 				}
 				return;
 			case 3:
-				Ar << RAW_ARRAY(VertsHalfPacked);
-				bUsePackedPosition = true;
+				{
+					TArray<FGPUVertBat4_HalfUV_Pos32> Verts;
+					Ar << RAW_ARRAY(Verts);
+					// copy data
+					VertsHalf.Add(Verts.Num());
+					for (int i = 0; i < Verts.Num(); i++)
+					{
+						const FGPUVertBat4_HalfUV_Pos32& S = Verts[i];
+						FGPUVert3Half& D = VertsHalf[i];
+						(FGPUVert3Common&)D = (FGPUVert3Common&)S;
+						memcpy(D.UV, S.UV, sizeof(S.UV));
+						D.Pos = S.Pos.ToVector(MeshOrigin, MeshExtension);
+					}
+				}
 				return;
 			default:
 				Ar << RAW_ARRAY(VertsHalf);
@@ -1003,15 +1014,9 @@ struct FSkeletalMeshVertexBuffer3
 			{
 			case 1:
 			case 2:
-				{
-					TArray<FGPUVertBat4PackedFloat> Verts;
-					Ar << RAW_ARRAY(Verts);
-					appError("FGPUVertBat4PackedFloat");
-				}
-				return;
 			case 3:
-				Ar << RAW_ARRAY(VertsFloatPacked);
-				bUsePackedPosition = true;
+				appError("Batman4 GPU vertex type %d", BatmanPackType);
+//				Ar << RAW_ARRAY(VertsFloatPacked);
 				return;
 			default:
 				Ar << RAW_ARRAY(VertsFloat);
@@ -2542,7 +2547,7 @@ struct FStaticMeshVertexStream3
 				}
 				else
 				{
-					TArray<FVectorIntervalFixed64Bio> Vecs16x4;
+					TArray<FVectorIntervalFixed64> Vecs16x4;
 					Ar << RAW_ARRAY(Vecs16x4);
 					S.Verts.Add(Vecs16x4.Num());
 					for (int i = 0; i < Vecs16x4.Num(); i++)

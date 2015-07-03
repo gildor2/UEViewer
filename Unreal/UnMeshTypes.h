@@ -189,6 +189,28 @@ struct FVectorIntervalFixed32
 SIMPLE_TYPE(FVectorIntervalFixed32, unsigned)
 
 
+struct FVectorIntervalFixed32Bat4
+{
+	unsigned		X:10, Y:10, Z:10;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = X / 1023.0f * Ranges.X + Mins.X;
+		r.Y = Y / 1023.0f * Ranges.Y + Mins.Y;
+		r.Z = Z / 1023.0f * Ranges.Z + Mins.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed32Bat4 &V)
+	{
+		return Ar << GET_DWORD(V);
+	}
+};
+
+SIMPLE_TYPE(FVectorIntervalFixed32Bat4, unsigned)
+
+
 // Similar to FVectorIntervalFixed32 used in animation, but has different X/Y/Z bit count.
 // Used for GPU skin with compressed position. It looks like original UE3 has permitted use
 // of this data type for XBox360 and PS3 builds only.
@@ -236,7 +258,7 @@ struct FVectorIntervalFixed48Bio
 SIMPLE_TYPE(FVectorIntervalFixed48Bio, word)
 
 
-struct FVectorIntervalFixed64Bio
+struct FVectorIntervalFixed64
 {
 	short			X, Y, Z, W;
 
@@ -249,13 +271,13 @@ struct FVectorIntervalFixed64Bio
 		return r;
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed64Bio &V)
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed64 &V)
 	{
 		return Ar << V.X << V.Y << V.Z << V.W;
 	}
 };
 
-SIMPLE_TYPE(FVectorIntervalFixed64Bio, word)
+SIMPLE_TYPE(FVectorIntervalFixed64, word)
 
 
 struct FQuatFloat32NoW
