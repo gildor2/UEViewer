@@ -1984,6 +1984,7 @@ void USkeletalMesh3::ConvertMesh()
 		int lastChunkVertex = -1;
 		const FSkeletalMeshVertexBuffer3 &S = SrcLod.GPUSkin;
 		CSkelMeshVertex *D = Lod->Verts;
+		int NumReweightedVerts = 0;
 
 		for (int Vert = 0; Vert < VertexCount; Vert++, D++)
 		{
@@ -2058,7 +2059,7 @@ void USkeletalMesh3::ConvertMesh()
 				// convert Normal[3]
 				UnpackNormals(V->Normal, *D);
 				// convert influences
-//				int TotalWeight = 0;
+				int TotalWeight = 0;
 				int i2 = 0;
 				for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
 				{
@@ -2068,9 +2069,15 @@ void USkeletalMesh3::ConvertMesh()
 					D->Weight[i2] = BoneWeight / 255.0f;
 					D->Bone[i2]   = C->Bones[BoneIndex];
 					i2++;
-//					TotalWeight += BoneWeight;
+					TotalWeight += BoneWeight;
 				}
-//				assert(TotalWeight = 255);
+				if (TotalWeight != 255 && TotalWeight > 0)
+				{
+					NumReweightedVerts++;
+					float WeightScale = 255.0f / TotalWeight;
+					for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
+						D->Weight[i] *= WeightScale;
+				}
 				if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 			}
 			else
@@ -2110,7 +2117,7 @@ void USkeletalMesh3::ConvertMesh()
 						i2++;
 //						TotalWeight += BoneWeight;
 					}
-//					assert(TotalWeight = 255);
+//					assert(TotalWeight == 255);
 					if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 					SUV = V0.UV;
 				}
@@ -2119,6 +2126,9 @@ void USkeletalMesh3::ConvertMesh()
 					D->UV[i] = CVT(SUV[i]);
 			}
 		}
+
+		if (NumReweightedVerts > 0)
+			appPrintf("LOD %d: udjusted weights for %d vertices\n", lod, NumReweightedVerts);
 
 		unguard;	// ProcessVerts
 
@@ -2170,7 +2180,7 @@ void USkeletalMesh3::ConvertMesh()
 	Mesh->FinalizeMesh();
 
 #if BATMAN
-	if (ArGame == GAME_Batman2 || ArGame == GAME_Batman3)
+	if (ArGame == GAME_Batman2 && ArGame <= GAME_Batman4)
 		FixBatman2Skeleton();
 #endif
 
