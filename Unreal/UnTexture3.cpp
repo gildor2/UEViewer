@@ -386,7 +386,7 @@ void UUIStreamingTextures::PostLoad()
 			appPrintf("OFFS: %X\n", Mip->Data.BulkDataOffsetInFile);
 		}
 #if 1
-		appPrintf("%d: %s  {%08X} %dx%d %s [%I64X + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
+		appPrintf("%d: %s  {%08X} %dx%d %s [%llX + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
 			S.nWidth, S.nHeight, EnumToName("EPixelFormat", Tex->Format),
 			S.BulkDataOffsetInFile, S.BulkDataSizeOnDisk
 		);
@@ -716,7 +716,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			return false;
 		}
 	}
-//	appPrintf("Bulk %X %I64X [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
+//	appPrintf("Bulk %X %llX [%d] f=%X\n", Bulk, Bulk->BulkDataOffsetInFile, Bulk->ElementCount, Bulk->BulkDataFlags);
 	Bulk->SerializeData(*Ar);
 	delete Ar;
 	return true;

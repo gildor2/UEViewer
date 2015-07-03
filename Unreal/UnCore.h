@@ -466,7 +466,7 @@ public:
 
 	virtual void Seek64(int64 Pos)
 	{
-		if (Pos >= (1LL << 31)) appError("Seek64 %I64X", Pos);
+		if (Pos >= (1LL << 31)) appError("FArchive::Seek64(0x%llX)", Pos);
 		Seek((int)Pos);
 	}
 
