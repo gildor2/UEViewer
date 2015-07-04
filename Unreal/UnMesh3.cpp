@@ -2385,7 +2385,7 @@ struct FStaticMeshSection3
 		}
 #endif // MOH2010
 #if BATMAN
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 28)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && (Ar.ArLicenseeVer >= 28) && (Ar.ArLicenseeVer < 102))
 		{
 			UObject *unk4;
 			Ar << unk4;
@@ -2423,30 +2423,6 @@ struct FStaticMeshSection3
 	}
 };
 
-#if DUST514
-
-//?? move to UnMeshTypes.h
-struct FVectorHalf
-{
-	short				X, Y, Z;
-
-	friend FArchive& operator<<(FArchive &Ar, FVectorHalf &v)
-	{
-		return Ar << v.X << v.Y << v.Z;
-	}
-	operator FVector() const
-	{
-		FVector r;
-		r.X = half2float(X);
-		r.Y = half2float(Y);
-		r.Z = half2float(Z);
-		return r;
-	}
-};
-
-SIMPLE_TYPE(FVectorHalf, short);
-
-#endif // DUST514
 
 struct FStaticMeshVertexStream3
 {
@@ -2466,7 +2442,7 @@ struct FStaticMeshVertexStream3
 		//!! FVector Mins, Extents
 
 #if BATMAN
-		if (Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
+		if (Ar.Game >= GAME_Batman && Ar.Game <= GAME_Batman4)
 		{
 			byte VertexType = 0;		// appeared in Batman 2; 0 -> FVector, 1 -> half[3], 2 -> half[4] (not checked!)
 			int unk18;					// default is 1
@@ -2478,11 +2454,18 @@ struct FStaticMeshVertexStream3
 			DBG_STAT("Batman StaticMesh VertexStream: IS:%d NV:%d VT:%d unk:%d\n", S.VertexSize, S.NumVerts, VertexType, unk18);
 			switch (VertexType)
 			{
-				case 0:
-					Ar << RAW_ARRAY(S.Verts);
-					break;
-				default:
-					appError("unsupported vertex type %d", VertexType);
+			case 0:
+				Ar << RAW_ARRAY(S.Verts);
+				break;
+			case 4:
+				{
+					TArray<FVectorHalf> PackedVerts;
+					Ar << RAW_ARRAY(PackedVerts);
+					CopyArray(S.Verts, PackedVerts);
+				}
+				break;
+			default:
+				appError("unsupported vertex type %d", VertexType);
 			}
 			if (Ar.ArLicenseeVer >= 24)
 			{
@@ -2746,8 +2729,15 @@ struct FStaticMeshUVStream3
 
 #if BATMAN
 		int HasNormals = 1;
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 42)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 42)
+		{
 			Ar << HasNormals;
+			if (Ar.ArLicenseeVer >= 194)
+			{
+				int unk;
+				Ar << unk;
+			}
+		}
 		GStripStaticNormals = (HasNormals == 0);
 #endif // BATMAN
 #if MASSEFF
@@ -3177,7 +3167,7 @@ struct FStaticMeshLODModel3
 	indices:
 		DBG_STAT("Serializing indices ...\n");
 #if BATMAN
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 45)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 45)
 		{
 			int unk34;		// variable in IndexBuffer, but in 1st only
 			Ar << unk34;
@@ -3258,6 +3248,14 @@ struct FStaticMeshLODModel3
 		if (Ar.ArVer >= 841)
 		{
 			FIndexBuffer3 Indices3;
+#if BATMAN
+			if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 45)
+			{
+				// the same as for indices above
+				int unk;
+				Ar << unk;
+			}
+#endif // BATMAN
 #if PLA
 			if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
 			{

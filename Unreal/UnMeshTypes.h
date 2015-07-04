@@ -309,6 +309,27 @@ struct FQuatFloat32NoW
 SIMPLE_TYPE(FQuatFloat32NoW, unsigned)
 
 
+struct FVectorHalf
+{
+	short				X, Y, Z;
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorHalf &v)
+	{
+		return Ar << v.X << v.Y << v.Z;
+	}
+	operator FVector() const
+	{
+		FVector r;
+		r.X = half2float(X);
+		r.Y = half2float(Y);
+		r.Z = half2float(Z);
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FVectorHalf, short);
+
+
 #if BATMAN
 
 // This is a variant of FQuatFixed48NoW developed for Batman: Arkham Asylum. It's destination
