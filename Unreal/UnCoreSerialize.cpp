@@ -685,18 +685,40 @@ int64 FFileReader::GetFileSize64() const
 	return FileSize;
 }
 
+static TArray<FFileWriter*> GFileWriters;
+
 FFileWriter::FFileWriter(const char *Filename, unsigned Options)
 :	FFileArchive(Filename, Options)
 {
 	guard(FFileWriter::FFileWriter);
 	IsLoading = false;
 	Open();
+	GFileWriters.AddItem(this);
 	unguardf("%s", Filename);
 }
 
 FFileWriter::~FFileWriter()
 {
+	GFileWriters.RemoveItem(this);
 	Close();
+}
+
+void FFileWriter::CleanupOnError()
+{
+	for (int i = GFileWriters.Num() - 1; i >= 0; i--)
+	{
+		FFileWriter* Writer = GFileWriters[i];
+		FString FileName(Writer->FullName);
+		delete Writer;
+		appPrintf("Deleting partially saved file %s\n", *FileName);
+#if MAX_DEBUG
+		char NewFileName[1024];
+		appSprintf(ARRAY_ARG(NewFileName), "%s.crash", *FileName);
+		rename(*FileName, NewFileName);
+#else
+		remove(*FileName);
+#endif
+	}
 }
 
 void FFileWriter::Serialize(void *data, int size)

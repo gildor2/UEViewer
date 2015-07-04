@@ -2794,6 +2794,9 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		// modal
 		ParentDialog = GCurrentDialog;
 		GCurrentDialog = this;
+#if DO_GUARD
+		TRY {
+#endif
 		int result = DialogBoxIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
@@ -2804,6 +2807,13 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		GCurrentDialog = ParentDialog;
 		ParentDialog = NULL;
 		return (result != IDCANCEL);
+#if DO_GUARD
+		} CATCH_CRASH {
+			GCurrentDialog = ParentDialog;
+			ParentDialog = NULL;
+			THROW;
+		}
+#endif // DO_GUARD
 	}
 	else
 	{
@@ -2870,12 +2880,6 @@ void UIBaseDialog::CloseDialog(bool cancel)
 
 INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-#if DO_GUARD
-	// windows will not allow us to pass SEH through the message handler, so
-	// add a SEH guards here
-	TRY {
-#endif
-
 	UIBaseDialog* dlg;
 
 	if (msg == WM_INITDIALOG)
@@ -2890,11 +2894,15 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 		dlg = (UIBaseDialog*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	}
 
+#if !DO_GUARD
 	return dlg->WndProc(hWnd, msg, wParam, lParam);
-
-#if DO_GUARD
+#else
+	// windows will not allow us to pass SEH through the message handler, so
+	// add a SEH guards here
+	TRY {
+	return dlg->WndProc(hWnd, msg, wParam, lParam);
 	} CATCH_CRASH {
-		if (GErrorHistory[0])
+/*		if (GErrorHistory[0])
 		{
 //			appPrintf("ERROR: %s\n", GErrorHistory);
 			appNotify("ERROR in WindowProc: %s\n", GErrorHistory);
@@ -2902,9 +2910,11 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 		else
 		{
 //			appPrintf("Unknown error\n");
-			appNotify("Unknown error\n");
+			appNotify("Unknown error in WindowProc\n");
 		}
-		exit(1);
+//		exit(1);
+//		dlg->CloseDialog(true); */
+		THROW;
 	}
 #endif
 }

@@ -712,6 +712,8 @@ public:
 	virtual void Close();
 	virtual int64 GetFileSize64() const;
 
+	static void CleanupOnError();
+
 protected:
 	void FlushBuffer();
 };
@@ -1395,6 +1397,13 @@ public:
 	{
 		int index = Add();
 		return Item(index);
+	}
+
+	void RemoveItem(const T& item)
+	{
+		int index = FindItem(item);
+		if (index >= 0)
+			Remove(index);
 	}
 
 	int FindItem(const T& item, int startIndex = 0) const

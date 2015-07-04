@@ -1028,6 +1028,7 @@ int main(int argc, char **argv)
 
 #if DO_GUARD
 	} CATCH_CRASH {
+		FFileWriter::CleanupOnError();
 		if (GErrorHistory[0])
 		{
 //			appPrintf("ERROR: %s\n", GErrorHistory);
