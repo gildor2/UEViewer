@@ -492,6 +492,13 @@ public:
 		PROP_DROP(ProportionalMotionDistanceCap)
 		// Batman 2
 		PROP_DROP(WeaponSwitchPointEnabled)
+		// Batman 4
+		PROP_DROP(FootSyncOut)
+		PROP_DROP(FootSyncOutSpeed)
+		PROP_DROP(FootSyncOutDirection)
+		PROP_DROP(MotionOptions)
+		PROP_DROP(CollisionOptions2)
+		PROP_DROP(AnimZip_LinearMotion)
 #endif // BATMAN
 #if TRANSFORMERS
 		PROP_DROP(TranslationScale)		//?? use it?

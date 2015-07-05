@@ -197,7 +197,7 @@ old_code:
 	}
 #endif // ARGONAUTS
 #if BATMAN
-	if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 55)
+	if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 55)
 		Ar << AnimZip_Data;
 #endif // BATMAN
 #if LOST_PLANET3
@@ -652,7 +652,7 @@ void UAnimSet::ConvertAnims()
 		}
 #endif // MASSEFF
 #if BATMAN
-		if ((ArGame == GAME_Batman2 || ArGame == GAME_Batman3) && Seq->AnimZip_Data.Num())
+		if (ArGame >= GAME_Batman2 && ArGame <= GAME_Batman4 && Seq->AnimZip_Data.Num())
 		{
 			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
 			Dst->Name      = Seq->SequenceName;

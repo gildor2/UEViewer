@@ -28,6 +28,7 @@ TODO:
 
 #define MAX_MESHBONES				2048
 #define NUM_INFLUENCES				4
+//#define ANIM_DEBUG_INFO				1
 
 struct CSkelMeshVertex : public CMeshVertex
 {
@@ -204,6 +205,9 @@ struct CAnimSequence
 	int						NumFrames;
 	float					Rate;
 	TArray<CAnimTrack>		Tracks;					// for each CAnimSet.TrackBoneNames
+#if ANIM_DEBUG_INFO
+	FString					DebugInfo;
+#endif
 };
 
 

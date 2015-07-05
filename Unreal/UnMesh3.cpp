@@ -2180,7 +2180,7 @@ void USkeletalMesh3::ConvertMesh()
 	Mesh->FinalizeMesh();
 
 #if BATMAN
-	if (ArGame == GAME_Batman2 && ArGame <= GAME_Batman4)
+	if (ArGame >= GAME_Batman2 && ArGame <= GAME_Batman4)
 		FixBatman2Skeleton();
 #endif
 
@@ -2385,7 +2385,7 @@ struct FStaticMeshSection3
 		}
 #endif // MOH2010
 #if BATMAN
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && (Ar.ArLicenseeVer >= 28) && (Ar.ArLicenseeVer < 102))
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && (Ar.ArLicenseeVer >= 28)) // && (Ar.ArLicenseeVer < 102)) - this will drop Batman3 support
 		{
 			UObject *unk4;
 			Ar << unk4;

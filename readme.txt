@@ -155,8 +155,8 @@ detex
 
 Changes
 ~~~~~~~
-04.07.2015
-- implemented Batman: Arkham Knight texture, SkeletalMesh and StaticMesh support
+06.07.2015
+- implemented full support for Batman: Arkham Knight
 
 26.06.2015
 - implemented Metro Conflict support; -game=metroconf option is required

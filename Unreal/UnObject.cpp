@@ -650,6 +650,15 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 		MAP(ParameterValue, 8)
 	END
 
+	BEGIN("AnimSequence")
+		MAP(SequenceName, 0x54)
+		MAP(SequenceLength, 0x9C)
+		MAP(NumFrames, 0xA0)
+		MAP(RateScale, 0xA4)
+	END
+
+	//!! add Material.TwoSided, BlendMode, ...
+
 	}; // end of info4[]
 
 #undef MAP
@@ -888,16 +897,36 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						Ar << BoolValue;
 						PROP(bool) = (BoolValue != 0);
 						PROP_DBG("%08X", BoolValue);
-						// Ugly hack to support Batman4 SkeletalMesh format
-						if ((Ar.Game == GAME_Batman4) && IsA("SkeletalMesh3") && (TagBat.Offset == 0x528))
+						// Ugly hack to support Batman4 bool properties
+						if (Ar.Game == GAME_Batman4)
 						{
-							bool bHasVertexColors = (BoolValue & 2) != 0;
-							const CPropInfo *Prop2 = FindProperty("bHasVertexColors");
-							if (Prop2)
+							struct BoolPropInfo
 							{
-								byte* value = (byte*)ObjectData + Prop2->Offset;
-								*value = (byte)bHasVertexColors;
-								PROP_DBG("B4 bHasVertexColors=%d\n", bHasVertexColors);
+								const char* ClassName;
+								const char* PropName;
+								word		PropOffset;
+								word		PropMask;
+							};
+							static const BoolPropInfo BoolProps[] =
+							{
+								{ "SkeletalMesh3", "bHasVertexColors", 0x528, 2 },
+								{ "AnimSet", "bAnimRotationOnly", 0x5C, 1 },
+							};
+							for (int i = 0; i < ARRAY_COUNT(BoolProps); i++)
+							{
+								const BoolPropInfo& Info = BoolProps[i];
+								if (TagBat.Offset == Info.PropOffset && IsA(Info.ClassName))
+								{
+									const CPropInfo* Prop2 = FindProperty(Info.PropName);
+									if (Prop2)
+									{
+										byte* value = (byte*)ObjectData + Prop2->Offset;
+										bool b = (BoolValue & Info.PropMask) != 0;
+										*value = (byte)b;
+										PROP_DBG("B4 %s=%d\n", Info.PropName, b);
+									}
+									break;
+								}
 							}
 						}
 					}
