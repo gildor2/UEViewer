@@ -379,8 +379,11 @@ public:
 	void Serialize4(FArchive& Ar);
 #endif
 
+	const TArray<FTexture2DMipMap>* GetMipmapArray() const;
+
 	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
+	virtual void ReleaseTextureData() const;
 #if RENDERING
 	virtual bool Upload();
 	virtual bool Bind();

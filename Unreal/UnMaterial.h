@@ -159,6 +159,9 @@ public:
 		return false;
 	}
 
+	virtual void ReleaseTextureData() const
+	{}
+
 #if RENDERING
 	UUnrealMaterial()
 	:	DrawTimestamp(0)

@@ -1899,12 +1899,18 @@ struct FByteBulkData //?? separate FUntypedBulkData
 
 	virtual ~FByteBulkData()
 	{
-		if (BulkData) appFree(BulkData);
+		ReleaseData();
 	}
 
 	virtual int GetElementSize() const
 	{
 		return 1;
+	}
+
+	void ReleaseData()
+	{
+		if (BulkData) appFree(BulkData);
+		BulkData = NULL;
 	}
 
 	// support functions

@@ -1720,6 +1720,7 @@ void UTexture2D::Release()
 	guard(UTexture2D::Release);
 	if (GL_IsValidObject(TexNum, DrawTimestamp))
 		glDeleteTextures(1, &TexNum);
+	ReleaseTextureData();
 	Super::Release();
 	unguard;
 }

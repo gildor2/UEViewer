@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+07.07.2015
+- optimizations of memory use, especially for export operation
+
 06.07.2015
 - implemented full support for Batman: Arkham Knight
 

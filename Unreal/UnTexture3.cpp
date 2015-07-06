@@ -690,7 +690,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
 	FArchive *Ar = appCreateFileReader(bulkFile);
 	Ar->SetupFrom(*Package);
-	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);	//!! const_cast
+	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);
 	if (Bulk->BulkDataOffsetInFile < 0)
 	{
 #if DCU_ONLINE
@@ -722,6 +722,50 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	return true;
 
 	unguardf("File=%s", bulkFile ? bulkFile->RelativeName : "none");
+}
+
+
+void UTexture2D::ReleaseTextureData() const
+{
+	guard(UTexture2D::ReleaseTextureData);
+
+	// Release bulk data loaded with GetTextureData() call. Next time GetTextureData() will be
+	// called, bulk data will be loaded again.
+
+	const TArray<FTexture2DMipMap> *MipsArray = GetMipmapArray();
+
+	for (int n = 0; n < MipsArray->Num(); n++)
+	{
+		const FTexture2DMipMap &Mip = (*MipsArray)[n];
+		const FByteBulkData &Bulk = Mip.Data;
+		if (Mip.Data.BulkData && (Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile))
+			const_cast<FByteBulkData*>(&Bulk)->ReleaseData();
+	}
+
+	unguardf("%s", Name);
+}
+
+
+const TArray<FTexture2DMipMap>* UTexture2D::GetMipmapArray() const
+{
+	guard(UTexture2D::GetMipmapArray);
+
+	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
+#if SUPPORT_ANDROID
+	if (!MipsArray->Num())
+	{
+		if (CachedETCMips.Num())
+			MipsArray = &CachedETCMips;
+		else if (CachedPVRTCMips.Num())
+			MipsArray = &CachedPVRTCMips;
+		else if (CachedATITCMips.Num())
+			MipsArray = &CachedATITCMips;
+	}
+#endif // SUPPORT_ANDROID
+
+	return MipsArray;
+
+	unguard;
 }
 
 
@@ -826,7 +870,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 				//!! * -notfc cmdline switch
 				//!! * material viewer: support switching mip levels (for xbox decompression testing)
 				if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
-				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue;
+				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue; // equelas to BULKDATA_PayloadAtEndOfFile for UE4
 				// some optimization in a case of missing bulk file
 				if (bulkChecked) continue;				// already checked for previous mip levels
 				bulkChecked = true;

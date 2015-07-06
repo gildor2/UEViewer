@@ -281,5 +281,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 
 	delete pic;
 
+	Tex->ReleaseTextureData();
+
 	unguard;
 }

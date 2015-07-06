@@ -283,18 +283,7 @@ void CMaterialViewer::Draw2D()
 		// get first available mipmap to find its size
 		//!! todo: use CTextureData for this to avoid any code copy-pastes
 		//!! also, display real texture format (TPF_...), again - with CTextureData use
-		const TArray<FTexture2DMipMap> *MipsArray = &Tex->Mips;
-#if SUPPORT_ANDROID
-		if (!MipsArray->Num())
-		{
-			if (Tex->CachedETCMips.Num())
-				MipsArray = &Tex->CachedETCMips;
-			else if (Tex->CachedPVRTCMips.Num())
-				MipsArray = &Tex->CachedPVRTCMips;
-			else if (Tex->CachedATITCMips.Num())
-				MipsArray = &Tex->CachedATITCMips;
-		}
-#endif // SUPPORT_ANDROID
+		const TArray<FTexture2DMipMap> *MipsArray = Tex->GetMipmapArray();
 		const FTexture2DMipMap *Mip = NULL;
 		for (int i = 0; i < MipsArray->Num(); i++)
 			if ((*MipsArray)[i].Data.BulkData)
