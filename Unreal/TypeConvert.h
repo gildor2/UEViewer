@@ -17,6 +17,14 @@ FORCEINLINE To& CVT(From &V)				\
 FORCEINLINE const To& CVT(const From &V)	\
 {											\
 	return (const To&)V;					\
+}											\
+FORCEINLINE To* CVT(From *V)				\
+{											\
+	return (To*)V;							\
+}											\
+FORCEINLINE const To* CVT(const From *V)	\
+{											\
+	return (const To*)V;					\
 }
 
 //?? combine CONVERTER(T) with CONVERTER(TArray<T>)?

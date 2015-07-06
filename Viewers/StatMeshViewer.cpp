@@ -72,7 +72,7 @@ void CStatMeshViewer::Draw2D()
 
 	if (ShowUV)
 	{
-		DisplayUV(Lod.Verts, sizeof(CMeshVertex), Lod.Indices, Lod.Sections, MeshInst->UVIndex);
+		DisplayUV(Lod.Verts, sizeof(CMeshVertex), Lod.ExtraUV, Lod.Indices, Lod.Sections, MeshInst->UVIndex);
 	}
 
 	DrawTextLeft(S_GREEN "LOD     : " S_WHITE "%d/%d\n"

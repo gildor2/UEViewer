@@ -89,12 +89,12 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 
 		// compute tangent
 		CVecT tang;
-		float U0 = V[0]->UV[0].U;
-		float V0 = V[0]->UV[0].V;
-		float U1 = V[1]->UV[0].U;
-		float V1 = V[1]->UV[0].V;
-		float U2 = V[2]->UV[0].U;
-		float V2 = V[2]->UV[0].V;
+		float U0 = V[0]->UV.U;
+		float V0 = V[0]->UV.V;
+		float U1 = V[1]->UV.U;
+		float V1 = V[1]->UV.V;
+		float U2 = V[2]->UV.U;
+		float V2 = V[2]->UV.V;
 
 		if (V0 == V2)
 		{
@@ -137,7 +137,7 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 				// check projections of these points to binormal
 				float p1 = dot(V[W1]->Position, tang2);
 				float p2 = dot(V[W2]->Position, tang2);
-				if ((p1 - p2) * (V[W1]->UV[0].V - V[W2]->UV[0].V) < 0)
+				if ((p1 - p2) * (V[W1]->UV.V - V[W2]->UV.V) < 0)
 					binormalScale = -1.0f;
 			}
 			tang2.Scale(binormalScale);

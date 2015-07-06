@@ -33,11 +33,11 @@
 //!!#error NUM_INFLUENCES_UE4 and NUM_INFLUENCES are not matching!
 #endif
 
-#if MAX_SKELETAL_UV_SETS_UE4 > NUM_MESH_UV_SETS
+#if MAX_SKELETAL_UV_SETS_UE4 > MAX_MESH_UV_SETS
 #error MAX_SKELETAL_UV_SETS_UE4 too large
 #endif
 
-#if MAX_STATIC_UV_SETS_UE4 > NUM_MESH_UV_SETS
+#if MAX_STATIC_UV_SETS_UE4 > MAX_MESH_UV_SETS
 #error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
@@ -608,7 +608,7 @@ void USkeletalMesh4::ConvertMesh()
 		if (!SrcLod.Chunks.Num()) continue;
 
 		int NumTexCoords = SrcLod.NumTexCoords;
-		if (NumTexCoords > NUM_MESH_UV_SETS)
+		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("SkeletalMesh has %d UV sets", NumTexCoords);
 
 		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
@@ -650,10 +650,11 @@ void USkeletalMesh4::ConvertMesh()
 				V = &V0;
 				SUV = V0.UV;
 				// UV
-				for (int i = 0; i < NumTexCoords; i++)
+				FMeshUVFloat fUV = SUV[0];				// convert half->float
+				D->UV = CVT(fUV);
+				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
 				{
-					FMeshUVFloat fUV = SUV[i];				// convert
-					D->UV[i] = CVT(fUV);
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
 				}
 			}
 			else
@@ -664,8 +665,12 @@ void USkeletalMesh4::ConvertMesh()
 				D->Position = CVT(V0.Pos);
 				SUV = V0.UV;
 				// UV
-				for (int i = 0; i < NumTexCoords; i++)
-					D->UV[i] = CVT(SUV[i]);
+				FMeshUVFloat fUV = SUV[0];
+				D->UV = CVT(fUV);
+				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+				{
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+				}
 			}
 			// convert Normal[3]
 			UnpackNormals(V->Normal, *D);
@@ -1147,7 +1152,7 @@ void UStaticMesh4::ConvertMesh()
 		int NumTexCoords = SrcLod.VertexBuffer.NumTexCoords;
 		int NumVerts     = SrcLod.PositionVertexBuffer.Verts.Num();
 
-		if (NumTexCoords > NUM_MESH_UV_SETS)
+		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		Lod->NumTexCoords = NumTexCoords;
@@ -1176,13 +1181,13 @@ void UStaticMesh4::ConvertMesh()
 			V.Position = CVT(SrcLod.PositionVertexBuffer.Verts[i]);
 			UnpackNormals(SUV.Normal, V);
 			// copy UV
-#if 0
-			for (int j = 0; j < NumTexCoords; j++)
-				V.UV[j] = (CMeshUVFloat&)SUV.UV[j];
-#else
-//			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
-			memcpy(V.UV, SUV.UV, sizeof(CMeshUVFloat) * NumTexCoords);
-#endif
+			const FMeshUVFloat* fUV = &SUV.UV[0];
+			V.UV = *CVT(fUV);
+			for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+			{
+				fUV++;
+				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
+			}
 			//!! also has ColorStream
 		}
 

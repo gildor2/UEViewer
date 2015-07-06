@@ -120,8 +120,8 @@ static void ExportCommonMeshData
 		VVertex W;
 		const CMeshVertex &S = *VERT(i);
 		W.PointIndex = Share.WedgeToVert[i];
-		W.U          = S.UV[0].U;
-		W.V          = S.UV[0].V;
+		W.U          = S.UV.U;
+		W.V          = S.UV.V;
 		W.MatIndex   = WedgeMat[i];
 		W.Reserved   = 0;
 		W.Pad        = 0;
@@ -210,7 +210,8 @@ static void ExportCommonMeshData
 static void ExportExtraUV
 (
 	FArchive &Ar,
-	const CMeshVertex *Verts, int NumVerts, int VertexSize,
+	const CMeshUVFloat* const ExtraUV[],
+	int NumVerts,
 	int NumTexCoords
 )
 {
@@ -225,12 +226,12 @@ static void ExportExtraUV
 		char chunkName[32];
 		appSprintf(ARRAY_ARG(chunkName), "EXTRAUVS%d", j-1);
 		SAVE_CHUNK(UVHdr, chunkName);
-		for (int i = 0; i < NumVerts; i++)
+		const CMeshUVFloat* SUV = ExtraUV[j-1];
+		for (int i = 0; i < NumVerts; i++, SUV++)
 		{
 			VMeshUV UV;
-			const CMeshVertex &S = *VERT(i);
-			UV.U = S.UV[j].U;
-			UV.V = S.UV[j].V;
+			UV.U = SUV->U;
+			UV.V = SUV->V;
 			Ar << UV;
 		}
 	}
@@ -321,7 +322,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	}
 	assert(NumInfluences == 0);
 
-	ExportExtraUV(Ar, Lod.Verts, Lod.NumVerts, sizeof(Lod.Verts[0]), Lod.NumTexCoords);
+	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
 
 /*	if (!GExportPskx)						// nothing more to write
 		return;
@@ -561,7 +562,7 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
 
-	ExportExtraUV(Ar, Lod.Verts, Lod.NumVerts, sizeof(Lod.Verts[0]), Lod.NumTexCoords);
+	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
 
 	unguard;
 }

@@ -1106,7 +1106,14 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 
 	glVertexPointer(3, GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Position);
 	glNormalPointer(GL_FLOAT, sizeof(CSkinVert), &Skinned[0].Normal);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(CSkelMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
+	if (UVIndex == 0)
+	{
+		glTexCoordPointer(2, GL_FLOAT, sizeof(CSkelMeshVertex), &Mesh.Verts[0].UV.U);
+	}
+	else
+	{
+		glTexCoordPointer(2, GL_FLOAT, sizeof(CMeshUVFloat), &Mesh.ExtraUV[UVIndex-1][0].U);
+	}
 
 	if (flags & DF_SHOW_INFLUENCES)
 	{

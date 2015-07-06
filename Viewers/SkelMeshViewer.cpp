@@ -266,7 +266,7 @@ void CSkelMeshViewer::Draw2D()
 
 	if (ShowUV)
 	{
-		DisplayUV(Lod.Verts, sizeof(CSkelMeshVertex), Lod.Indices, Lod.Sections, MeshInst->UVIndex);
+		DisplayUV(Lod.Verts, sizeof(CSkelMeshVertex), Lod.ExtraUV, Lod.Indices, Lod.Sections, MeshInst->UVIndex);
 	}
 
 #if UNREAL4

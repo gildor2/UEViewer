@@ -241,7 +241,7 @@ if (i == 32 || i == 34)
 			int iPoint = MeshVerts[i];
 			const CSkelMeshVertex &V = Lod.Verts[iPoint];
 			Ar->Printf("\tvert %d ( %f %f ) %d %d\n",
-				i, V.UV[0].U, V.UV[0].V, MeshWeights[iPoint], Weights[iPoint].Inf.Num());
+				i, V.UV.U, V.UV.V, MeshWeights[iPoint], Weights[iPoint].Inf.Num());
 		}
 		// triangles
 		Ar->Printf("\n\tnumtris %d\n", Sec.NumFaces);

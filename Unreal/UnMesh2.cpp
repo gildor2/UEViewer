@@ -866,7 +866,7 @@ void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &Mesh
 		const FMeshWedge &SW = MeshWedges[i];
 		CSkelMeshVertex  &DW = Lod.Verts[i];
 		DW.Position = CVT(MeshPoints[SW.iVertex]);
-		DW.UV[0] = CVT(SW.TexUV);
+		DW.UV = CVT(SW.TexUV);
 		// DW.Normal and DW.Tangent are unset
 		// setup Bone[] and Weight[]
 		const CVertInfo &V = Verts[SW.iVertex];
@@ -1824,10 +1824,10 @@ void UStaticMesh::ConvertMesh()
 	// convert vertices
 	int NumVerts = VertexStream.Vert.Num();
 	int NumTexCoords = UVStream.Num();
-	if (NumTexCoords > NUM_MESH_UV_SETS)
+	if (NumTexCoords > MAX_MESH_UV_SETS)
 	{
 		appNotify("StaticMesh has %d UV sets", NumTexCoords);
-		NumTexCoords = NUM_MESH_UV_SETS;
+		NumTexCoords = MAX_MESH_UV_SETS;
 	}
 	Lod->NumTexCoords = NumTexCoords;
 
@@ -1844,8 +1844,14 @@ void UStaticMesh::ConvertMesh()
 			if (i < UVStream[j].Data.Num())		// Lineage2 has meshes with UVStream[i>1].Data size less than NumVerts
 			{
 				const FMeshUVFloat &SUV = UVStream[j].Data[i];
-				V.UV[j].U = SUV.U;
-				V.UV[j].V = SUV.V;
+				if (j == 0)
+				{
+					V.UV = CVT(SUV);
+				}
+				else
+				{
+					Lod->ExtraUV[j-1][i] = CVT(SUV);
+				}
 			}
 			else if (!PrintedWarning)
 			{

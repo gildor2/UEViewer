@@ -85,7 +85,7 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 #error NUM_INFLUENCES_UE3 and NUM_INFLUENCES are not matching!
 #endif
 
-#if NUM_UV_SETS_UE3 > NUM_MESH_UV_SETS
+#if NUM_UV_SETS_UE3 > MAX_MESH_UV_SETS
 #error NUM_UV_SETS_UE3 too large!
 #endif
 
@@ -1958,7 +1958,7 @@ void USkeletalMesh3::ConvertMesh()
 		if (!SrcLod.Chunks.Num()) continue;
 
 		int NumTexCoords = max(SrcLod.NumUVSets, SrcLod.GPUSkin.NumUVSets);		// number of texture coordinates is serialized differently for some games
-		if (NumTexCoords > NUM_MESH_UV_SETS)
+		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("SkeletalMesh has %d UV sets", NumTexCoords);
 
 		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
@@ -2026,10 +2026,11 @@ void USkeletalMesh3::ConvertMesh()
 						SUV = V0.UV;
 					}
 					// UV
-					for (int i = 0; i < NumTexCoords; i++)
+					FMeshUVFloat fUV = SUV[0];			// convert half->float
+					D->UV = CVT(fUV);
+					for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
 					{
-						FMeshUVFloat fUV = SUV[i];				// convert
-						D->UV[i] = CVT(fUV);
+						Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
 					}
 				}
 				else
@@ -2053,8 +2054,12 @@ void USkeletalMesh3::ConvertMesh()
 						SUV = V0.UV;
 					}
 					// UV
-					for (int i = 0; i < NumTexCoords; i++)
-						D->UV[i] = CVT(SUV[i]);
+					FMeshUVFloat fUV = SUV[0];
+					D->UV = CVT(fUV);
+					for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+					{
+						Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+					}
 				}
 				// convert Normal[3]
 				UnpackNormals(V->Normal, *D);
@@ -2122,8 +2127,12 @@ void USkeletalMesh3::ConvertMesh()
 					SUV = V0.UV;
 				}
 				// UV
-				for (int i = 0; i < NumTexCoords; i++)
-					D->UV[i] = CVT(SUV[i]);
+				FMeshUVFloat fUV = SUV[0];			// convert half->float
+				D->UV = CVT(fUV);
+				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+				{
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+				}
 			}
 		}
 
@@ -2792,7 +2801,7 @@ struct FStaticMeshUVStream3
 		}
 #endif
 		// prepare for UV serialization
-		if (S.NumTexCoords > NUM_MESH_UV_SETS)
+		if (S.NumTexCoords > MAX_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", S.NumTexCoords);
 		GNumStaticUVSets   = S.NumTexCoords;
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
@@ -3131,10 +3140,10 @@ struct FStaticMeshLODModel3
 				int i;
 				int NumVerts     = Verts.Num();
 				int NumTexCoords = UVStream.Num();
-				if (NumTexCoords > NUM_MESH_UV_SETS)
+				if (NumTexCoords > MAX_MESH_UV_SETS)
 				{
 					appNotify("StaticMesh has %d UV sets", NumTexCoords);
-					NumTexCoords = NUM_MESH_UV_SETS;
+					NumTexCoords = MAX_MESH_UV_SETS;
 				}
 				Lod.VertexStream.Verts.Empty(NumVerts);
 				Lod.VertexStream.Verts.Add(NumVerts);
@@ -3722,7 +3731,7 @@ void UStaticMesh3::ConvertMesh()
 		if ((ArGame == GAME_Batman2 || ArGame == GAME_Batman3) && CanStripNormalsAndTangents)
 			Lod->HasNormals = Lod->HasTangents = false;
 #endif
-		if (NumTexCoords > NUM_MESH_UV_SETS)
+		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		// sections
@@ -3746,13 +3755,13 @@ void UStaticMesh3::ConvertMesh()
 			V.Position = CVT(SrcLod.VertexStream.Verts[i]);
 			UnpackNormals(SUV.Normal, V);
 			// copy UV
-#if 0
-			for (int j = 0; j < NumTexCoords; j++)
-				V.UV[j] = (CMeshUVFloat&)SUV.UV[j];
-#else
-//			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
-			memcpy(V.UV, SUV.UV, sizeof(CMeshUVFloat) * NumTexCoords);
-#endif
+			const FMeshUVFloat* fUV = &SUV.UV[0];
+			V.UV = *CVT(fUV);
+			for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+			{
+				fUV++;
+				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
+			}
 			//!! also has ColorStream
 		}
 

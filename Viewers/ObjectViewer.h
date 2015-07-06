@@ -8,6 +8,7 @@ class CSkelMeshInstance;
 class CSkeletalMesh;
 class CStaticMesh;
 struct CMeshVertex;
+struct CMeshUVFloat;
 struct CIndexBuffer;
 struct CMeshSection;
 
@@ -100,7 +101,8 @@ public:
 
 	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
 
-	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex);
+	//!! separate all these fields to some CMeshLod structure and pass it here
+	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CMeshUVFloat* const ExtraUV[], const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex);
 };
 
 

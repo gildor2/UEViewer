@@ -55,7 +55,14 @@ void CStatMeshInstance::Draw(unsigned flags)
 
 	glVertexPointer(3, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Position);
 	glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
+	if (UVIndex == 0)
+	{
+		glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV.U);
+	}
+	else
+	{
+		glTexCoordPointer(2, GL_FLOAT, sizeof(CMeshUVFloat), &Mesh.ExtraUV[UVIndex-1][0].U);
+	}
 
 	/*??
 		Can move tangent/binormal setup here too, but this will require to force shader to use fixed attribute locations

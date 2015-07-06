@@ -66,7 +66,7 @@ void CMeshViewer::DrawMesh(CMeshInstance *Inst)
 }
 
 
-void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex)
+void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CMeshUVFloat* const ExtraUV[], const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex)
 {
 	guard(CMeshViewer::DisplayUV);
 
@@ -96,8 +96,9 @@ void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CInd
 		glBegin(GL_TRIANGLES);
 		for (int i = Sec.FirstIndex; i < Sec.FirstIndex + Sec.NumFaces * 3; i++)
 		{
-			const CMeshVertex* V = OffsetPointer(Verts, Index(i) * VertexSize);
-			const CMeshUVFloat& UV = V->UV[UVIndex];
+			int VertIndex = Index(i);
+			const CMeshVertex* V = OffsetPointer(Verts, VertIndex * VertexSize);
+			const CMeshUVFloat& UV = (UVIndex == 0) ? V->UV : ExtraUV[UVIndex-1][VertIndex];
 			glVertex2f(UV.U * w + x0, UV.V * w + y0);
 		}
 		glEnd();

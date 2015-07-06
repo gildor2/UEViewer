@@ -27,8 +27,8 @@ fi
 # read current revision
 [ -f "$version_file" ] && [ "$revision" ] && read last_revision < $version_file
 last_revision=${last_revision##* }		# cut "#define ..."
-# write back to a file if value differs or if file doesn't exist
-[ "$last_revision" != "$revision" ] && echo "#define GIT_REVISION $revision" > $version_file
+# write back to a file if value differs or if file doesn't exist (only for UModel project, i.e. when $project is empty)
+[ -z "$project" ] && [ "$last_revision" != "$revision" ] && echo "#define GIT_REVISION $revision" > $version_file
 
 #-------------------------------------------------------------
 
