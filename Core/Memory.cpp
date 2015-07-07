@@ -10,8 +10,8 @@
 int GNumAllocs = 0;
 #endif
 
-int GTotalAllocationSize = 0;
-int GTotalAllocationCount = 0;
+size_t GTotalAllocationSize = 0;
+int    GTotalAllocationCount = 0;
 
 #define BLOCK_MAGIC		0xAE
 #define FREE_BLOCK		0xFE
@@ -319,7 +319,7 @@ void appDumpMemoryAllocations()
 {
 	appPrintf(
 		"Memory information:\n"
-		"%d bytes allocated in %d blocks from %d points\n\n", GTotalAllocationSize, GTotalAllocationCount, GNumAllocationPoints
+		FORMAT_SIZE("d")" bytes allocated in %d blocks from %d points\n\n", GTotalAllocationSize, GTotalAllocationCount, GNumAllocationPoints
 	);
 
 	// collect statistics

@@ -548,7 +548,7 @@ void CUmodelApp::DrawTexts()
 
 static void DumpMemory()
 {
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	appDumpMemoryAllocations();
 }
 

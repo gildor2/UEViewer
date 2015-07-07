@@ -122,6 +122,7 @@ template<>    struct CompileTimeError<true> {};
 #	if _MSC_VER >= 1400
 #		define IS_POD(T)		__is_pod(T)
 #	endif
+#	define FORMAT_SIZE(fmt)		"%I" fmt
 //#	pragma warning(disable : 4291)			// no matched operator delete found
 	// this functions are smaller, when in intrinsic form (and, of course, faster):
 #	pragma intrinsic(memcpy, memset, memcmp, abs, fabs, _rotl8, _rotl, _rotr8, _rotr)
@@ -157,6 +158,7 @@ typedef unsigned __int64		uint64;
 #	define stricmp				strcasecmp
 #	define strnicmp				strncasecmp
 #	define GCC_PACK				__attribute__((__packed__))
+#	define FORMAT_SIZE(fmt)		"%z" fmt
 #	undef VSTUDIO_INTEGRATION
 #	undef WIN32_USE_SEH
 #	undef HAS_UI				// not yet supported on this platform
@@ -336,11 +338,13 @@ private:
 
 
 #if PROFILE
+// number of dynamic allocations
 extern int GNumAllocs;
 #endif
 
-extern int GTotalAllocationSize;
-extern int GTotalAllocationCount;
+// static allocation stats
+extern size_t GTotalAllocationSize;
+extern int    GTotalAllocationCount;
 
 void appDumpMemoryAllocations();
 

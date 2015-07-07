@@ -46,7 +46,7 @@ void ReleaseAllObjects()
 	guard(ReleaseAllObjects);
 
 #if 0
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	appDumpMemoryAllocations();
 #endif
 	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
@@ -67,7 +67,7 @@ void ReleaseAllObjects()
 		}
 	}
 #endif
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 //	appDumpMemoryAllocations();
 
 	unguard;

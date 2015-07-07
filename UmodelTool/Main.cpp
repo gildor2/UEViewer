@@ -1020,7 +1020,7 @@ int main(int argc, char **argv)
 //	ReleaseAllObjects();
 #if DUMP_MEM_ON_EXIT
 	//!! note: CUmodelApp is not destroyed here
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	appDumpMemoryAllocations();
 #endif
 
