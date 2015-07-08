@@ -1089,6 +1089,40 @@ struct FBoxSphereBounds
 };
 
 
+struct FPackedNormal
+{
+	unsigned	Data;
+
+	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
+	{
+		return Ar << N.Data;
+	}
+
+	operator FVector() const
+	{
+		// "x / 127.5 - 1" comes from Common.usf, TangentBias() macro
+		FVector r;
+		r.X = ( Data        & 0xFF) / 127.5f - 1;
+		r.Y = ((Data >> 8 ) & 0xFF) / 127.5f - 1;
+		r.Z = ((Data >> 16) & 0xFF) / 127.5f - 1;
+		return r;
+	}
+
+	FPackedNormal &operator=(const FVector &V)
+	{
+		Data = int((V.X + 1) * 255)
+			+ (int((V.Y + 1) * 255) << 8)
+			+ (int((V.Z + 1) * 255) << 16);
+		return *this;
+	}
+
+	float GetW() const
+	{
+		return (Data >> 24) / 127.5 - 1;
+	}
+};
+
+
 #if UNREAL4
 
 struct FIntPoint

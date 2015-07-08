@@ -23,7 +23,8 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 	Share.Prepare(Verts, NumVerts, VertexSize);
 	for (i = 0; i < NumVerts; i++)
 	{
-		static const CVec3 NullVec = { 0, 0, 0 };
+		CPackedNormal NullVec;
+		NullVec.Data = 0;
 		Share.AddVertex(VERT(i)->Position, NullVec);
 	}
 
@@ -65,7 +66,7 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 
 	// ... then place ("unshare") normals to Verts
 	for (i = 0; i < NumVerts; i++)
-		VERT(i)->Normal = tmpNorm[Share.WedgeToVert[i]];
+		Pack(VERT(i)->Normal, tmpNorm[Share.WedgeToVert[i]]);
 
 	unguard;
 }
@@ -120,28 +121,32 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 		for (j = 0; j < 3; j++)
 		{
 			CMeshVertex &DW = *V[j];
-			const CVecT &norm = DW.Normal;
-			float pos = dot(norm, tang);
-			CVecT tang2;
-			VectorMA(tang, -pos, norm, tang2);
-			tang2.Normalize();
-			DW.Tangent = tang2;
-			cross(DW.Normal, DW.Tangent, tang2);
-			tang2.Normalize();
-			if (j == 0)		// do this only once for triangle
+			CVecT normal;
+			Unpack(normal, DW.Normal);
+			float pos = dot(normal, tang);
+
+			CVecT tangent;
+			VectorMA(tang, -pos, normal, tangent);
+			tangent.Normalize();
+			Pack(DW.Tangent, tangent);		// store
+
+			CVecT binormal;
+			cross(normal, tangent, binormal);
+			binormal.Normalize();
+			if (j == 0)		// do this only once per triangle
 			{
 				// check binormal sign
 				// find two points with different V
 				int W1 = 0;
 				int W2 = (V1 != V0) ? 1 : 2;
 				// check projections of these points to binormal
-				float p1 = dot(V[W1]->Position, tang2);
-				float p2 = dot(V[W2]->Position, tang2);
+				float p1 = dot(V[W1]->Position, binormal);
+				float p2 = dot(V[W2]->Position, binormal);
 				if ((p1 - p2) * (V[W1]->UV.V - V[W2]->UV.V) < 0)
 					binormalScale = -1.0f;
 			}
-			tang2.Scale(binormalScale);
-			DW.Binormal = tang2;
+			binormal.Scale(binormalScale);
+			Pack(DW.Binormal, binormal);	// store
 		}
 	}
 

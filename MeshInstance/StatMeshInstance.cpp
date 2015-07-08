@@ -54,7 +54,7 @@ void CStatMeshInstance::Draw(unsigned flags)
 	glEnableClientState(GL_NORMAL_ARRAY);
 
 	glVertexPointer(3, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Position);
-	glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
+	glNormalPointer(GL_BYTE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
 	if (UVIndex == 0)
 	{
 		glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV.U);
@@ -102,12 +102,15 @@ void CStatMeshInstance::Draw(unsigned flags)
 			aBinormal  = Sh->GetAttrib("binormal");
 			hasTangent = (aTangent >= 0 && aBinormal >= 0);
 		}
-		if (hasTangent)
+		if (aTangent >= 0)
 		{
 			glEnableVertexAttribArray(aTangent);
+			glVertexAttribPointer(aTangent,  3, GL_BYTE, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Tangent);
+		}
+		if (aBinormal >= 0)
+		{
 			glEnableVertexAttribArray(aBinormal);
-			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Tangent);
-			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Binormal);
+			glVertexAttribPointer(aBinormal, 3, GL_BYTE, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Binormal);
 		}
 		// draw
 		//?? place this code into CIndexBuffer?
@@ -117,11 +120,10 @@ void CStatMeshInstance::Draw(unsigned flags)
 			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Mesh.Indices.Indices16[Sec.FirstIndex]);
 
 		// disable tangents
-		if (hasTangent)
-		{
+		if (aTangent >= 0)
 			glDisableVertexAttribArray(aTangent);
+		if (aBinormal >= 0)
 			glDisableVertexAttribArray(aBinormal);
-		}
 	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
@@ -137,11 +139,13 @@ void CStatMeshInstance::Draw(unsigned flags)
 		int NumVerts = Mesh.NumVerts;
 		glBegin(GL_LINES);
 		glColor3f(0.5, 1, 0);
+		CVec3 tmp, unpacked;
+		const float VisualLength = 2.0f;
 		for (i = 0; i < NumVerts; i++)
 		{
 			glVertex3fv(Mesh.Verts[i].Position.v);
-			CVec3 tmp;
-			VectorMA(Mesh.Verts[i].Position, 2, Mesh.Verts[i].Normal, tmp);
+			Unpack(unpacked, Mesh.Verts[i].Normal);
+			VectorMA(Mesh.Verts[i].Position, VisualLength, unpacked, tmp);
 			glVertex3fv(tmp.v);
 		}
 #if SHOW_TANGENTS
@@ -150,8 +154,8 @@ void CStatMeshInstance::Draw(unsigned flags)
 		{
 			const CVec3 &v = Mesh.Verts[i].Position;
 			glVertex3fv(v.v);
-			CVec3 tmp;
-			VectorMA(v, 2, Mesh.Verts[i].Tangent, tmp);
+			Unpack(unpacked, Mesh.Verts[i].Tangent);
+			VectorMA(v, VisualLength, unpacked, tmp);
 			glVertex3fv(tmp.v);
 		}
 		glColor3f(1, 0, 0.5f);
@@ -159,8 +163,8 @@ void CStatMeshInstance::Draw(unsigned flags)
 		{
 			const CVec3 &v = Mesh.Verts[i].Position;
 			glVertex3fv(v.v);
-			CVec3 tmp;
-			VectorMA(v, 2, Mesh.Verts[i].Binormal, tmp);
+			Unpack(unpacked, Mesh.Verts[i].Binormal);
+			VectorMA(v, VisualLength, unpacked, tmp);
 			glVertex3fv(tmp.v);
 		}
 #endif // SHOW_TANGENTS

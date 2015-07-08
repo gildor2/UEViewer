@@ -77,12 +77,72 @@ struct CMeshUVFloat
 };
 
 
+struct CPackedNormal
+{
+	unsigned				Data;
+};
+
+FORCEINLINE bool operator==(CPackedNormal V1, CPackedNormal V2)
+{
+	return V1.Data == V2.Data;
+}
+
+FORCEINLINE void Pack(CPackedNormal& Packed, const CVec3& Unpacked)
+{
+	Packed.Data =  (byte)appRound(Unpacked.v[0] * 127.0f)
+				+ ((byte)appRound(Unpacked.v[1] * 127.0f) << 8)
+				+ ((byte)appRound(Unpacked.v[2] * 127.0f) << 16);
+}
+
+FORCEINLINE void Unpack(CVec3& Unpacked, const CPackedNormal& Packed)
+{
+	Unpacked.v[0] = (char)( Packed.Data        & 0xFF) / 127.0f;
+	Unpacked.v[1] = (char)((Packed.Data >> 8 ) & 0xFF) / 127.0f;
+	Unpacked.v[2] = (char)((Packed.Data >> 16) & 0xFF) / 127.0f;
+}
+
+#if USE_SSE
+/*FORCEINLINE void Pack(CPackedNormal& Packed, const CVec4& Unpacked)
+{
+	// REWRITE WITH SSE, but not used yet
+	Packed.Data =  (byte)appRound(Unpacked.v[0] * 127.0f)
+				+ ((byte)appRound(Unpacked.v[1] * 127.0f) << 8)
+				+ ((byte)appRound(Unpacked.v[2] * 127.0f) << 16);
+}*/
+
+FORCEINLINE __m128 Unpack(const CPackedNormal& Packed)
+{
+	// http://stackoverflow.com/questions/12121640/how-to-load-a-pixel-struct-into-an-sse-register
+	__m128i r = _mm_cvtsi32_si128(Packed.Data);	// read 32-bit int to lower part of XMM register - ABCD.0000.0000.0000
+	r = _mm_unpacklo_epi8(r, r);				// interleave bytes with themselves - AABB.CCDD.0000.0000
+	r = _mm_unpacklo_epi16(r, r);				// interleave words with themselves - AAAA.BBBB.CCCC.DDDD
+	r = _mm_srai_epi32(r, 24);					// arithmetical shift right by 24 bits, i.e. sign extend
+	__m128 r2 = _mm_cvtepi32_ps(r);				// convert to floats
+	static const __m128 scale = { 1.0f / 127, 1.0f / 127, 1.0f / 127, 1.0f / 127 };
+	return _mm_mul_ps(r2, scale);
+}
+
+FORCEINLINE void Unpack(CVec4& Unpacked, const CPackedNormal& Packed)
+{
+	Unpacked.mm = Unpack(Packed);
+}
+
+#endif // USE_SSE
+
+
+// TODO: remove "Binormal", compute in shader - this will allow compiler to put UV into the same 16-byte block with normals, so
+// CMeshVertex will be 16 bytes smaller (CVecT forces 16-byte alignment for structure).
+/* Required changes for that:
+  - when doing SkeletalMesh skinning, remove "Binormal" skinning, but pass 4th "Tangent" component to GL (i.e. use "4" instead of "3" in glAttrib...)
+  - use vec4 in shader for "tangent", compute "binormal"
+  - eliminate binormal computation/saving in Unreal and MeshCommon code
+*/
 struct CMeshVertex
 {
 	CVecT					Position;
-	CVecT					Normal;
-	CVecT					Tangent;
-	CVecT					Binormal;
+	CPackedNormal			Normal;
+	CPackedNormal			Tangent;
+	CPackedNormal			Binormal;
 	CMeshUVFloat			UV;				// base UV channel
 };
 

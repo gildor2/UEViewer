@@ -997,10 +997,14 @@ void CSkelMeshInstance::TransformMesh()
 		// perform transformation
 
 #if !USE_SSE
+		CVec3 UnpNormal, UnpTangent, UnpBinormal;
+		Unpack(UnpNormal, V.Normal);
+		Unpack(UnpTangent, V.Tangent);
+		Unpack(UnpBinormal, V.Binormal);
 		transform.UnTransformPoint(V.Position, D.Position);
-		transform.axis.UnTransformVector(V.Normal, D.Normal);
-		transform.axis.UnTransformVector(V.Tangent, D.Tangent);
-		transform.axis.UnTransformVector(V.Binormal, D.Binormal);
+		transform.axis.UnTransformVector(UnpNormal, D.Normal);
+		transform.axis.UnTransformVector(UnpTangent, D.Tangent);
+		transform.axis.UnTransformVector(UnpBinormal, D.Binormal);
 #else
 		// at this point we have x1..x4 = transform matrix
 
@@ -1017,9 +1021,9 @@ void CSkelMeshInstance::TransformMesh()
 		x7 = _mm_mul_ps(x3, x6);											\
 		D.value.mm = _mm_add_ps(x8, x7);
 
-// version of code above, but without Transform.origin use
+// version of the code above, but without Transform.origin use
 #define TRANSFORM_NORMAL(value)												\
-		x5 = V.value.mm;													\
+		x5 = Unpack(V.value);												\
 		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
 		x8 = _mm_mul_ps(x1, x6);											\
 		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\

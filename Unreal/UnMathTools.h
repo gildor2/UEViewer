@@ -58,7 +58,7 @@ inline void ComputeBounds(const T *Data, int NumVerts, int Stride, CVec3 &Mins, 
 struct CVertexShare
 {
 	TArray<CVec3>	Points;
-	TArray<CVec3>	Normals;
+	TArray<CPackedNormal> Normals;
 	TArray<int>		WedgeToVert;
 	TArray<int>		VertToWedge;
 	int				WedgeIndex;
@@ -93,7 +93,7 @@ struct CVertexShare
 #endif // USE_HASHING
 	}
 
-	int AddVertex(const CVec3 &Pos, const CVec3 &Normal)
+	int AddVertex(const CVec3 &Pos, const CPackedNormal &Normal)
 	{
 		int PointIndex = -1;
 

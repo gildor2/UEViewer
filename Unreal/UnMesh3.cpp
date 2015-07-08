@@ -47,27 +47,33 @@ float half2float(word h)
 }
 
 
+//!! REMOVE THIS FUNCTION LATER
+//!! OR - compute W for Binormal computation in shader
+//!! RENAME to CopyNormals/ConvertNormals/PutNormals etc
 void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 {
 	// tangents: convert to FVector (unpack) then cast to CVec3
-	FVector Tangent = SrcNormal[0];
-	FVector Normal  = SrcNormal[2];
-	V.Tangent = CVT(Tangent);
-	V.Normal  = CVT(Normal);
+	V.Tangent = CVT(SrcNormal[0]);
+	V.Normal  = CVT(SrcNormal[2]);
+
 	if (SrcNormal[1].Data == 0)
 	{
 		// new UE3 version - this normal is not serialized and restored in vertex shader
 		// LocalVertexFactory.usf, VertexFactoryGetTangentBasis() (static mesh)
 		// GpuSkinVertexFactory.usf, SkinTangents() (skeletal mesh)
-		cross(V.Normal, V.Tangent, V.Binormal);
+		FVector Tangent = SrcNormal[0];
+		FVector Normal  = SrcNormal[2];
+		CVec3   Binormal;
+		cross(CVT(Normal), CVT(Tangent), Binormal);
 		if (SrcNormal[2].GetW() == -1)
-			V.Binormal.Negate();
+			Binormal.Negate();
+		Pack(V.Binormal, Binormal);
 	}
 	else
 	{
 		// unpack Binormal
-		FVector Binormal = SrcNormal[1];
-		V.Binormal = CVT(Binormal);
+		//!! REMOVE Binormal and put Normal[2].W as sign
+		V.Binormal = CVT(SrcNormal[1]);
 	}
 }
 

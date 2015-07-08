@@ -1838,7 +1838,7 @@ void UStaticMesh::ConvertMesh()
 		CStaticMeshVertex &V = Lod->Verts[i];
 		const FStaticMeshVertex &SV = VertexStream.Vert[i];
 		V.Position = CVT(SV.Pos);
-		V.Normal   = CVT(SV.Normal);
+		Pack(V.Normal, CVT(SV.Normal));
 		for (int j = 0; j < NumTexCoords; j++)
 		{
 			if (i < UVStream[j].Data.Num())		// Lineage2 has meshes with UVStream[i>1].Data size less than NumVerts

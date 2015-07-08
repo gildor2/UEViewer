@@ -9,7 +9,7 @@ http://www.gildor.org/en/donate
 System requirements
 ~~~~~~~~~~~~~~~~~~~
 Windows or Linux operating system
-x86-compatible CPU with SSE support
+x86-compatible CPU with SSE2 support
 OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
 SDL 2.0 (for Linux only, windows distribution has SDL2.dll included)
 
