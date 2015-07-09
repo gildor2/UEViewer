@@ -4,6 +4,7 @@
 #include "MeshCommon.h"
 #include "UnMathTools.h"		// CVertexShare
 
+#define STRIP_BINORMAL		1
 
 // WARNING for BuildNnnCommon functions: do not access Verts[i] directly, use VERT macro only!
 #define VERT(n)		OffsetPointer(Verts, (n) * VertexSize)
@@ -145,8 +146,12 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 				if ((p1 - p2) * (V[W1]->UV.V - V[W2]->UV.V) < 0)
 					binormalScale = -1.0f;
 			}
+#if !STRIP_BINORMAL
 			binormal.Scale(binormalScale);
 			Pack(DW.Binormal, binormal);	// store
+#else
+			DW.Normal.SetW(binormalScale);
+#endif
 		}
 	}
 

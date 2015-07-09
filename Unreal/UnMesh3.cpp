@@ -29,6 +29,12 @@
 #endif
 
 //?? move outside?
+/*
+ * Half = Float16
+ * http://www.openexr.com/  source: ilmbase-*.tar.gz/Half/toFloat.cpp
+ * http://en.wikipedia.org/wiki/Half_precision
+ * Also look at GL_ARB_half_float_pixel
+ */
 float half2float(word h)
 {
 	union
@@ -47,33 +53,25 @@ float half2float(word h)
 }
 
 
-//!! REMOVE THIS FUNCTION LATER
-//!! OR - compute W for Binormal computation in shader
-//!! RENAME to CopyNormals/ConvertNormals/PutNormals etc
+//!! RENAME to CopyNormals/ConvertNormals/PutNormals/RepackNormals etc
 void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 {
 	// tangents: convert to FVector (unpack) then cast to CVec3
 	V.Tangent = CVT(SrcNormal[0]);
 	V.Normal  = CVT(SrcNormal[2]);
 
-	if (SrcNormal[1].Data == 0)
+	// new UE3 version - binormal is not serialized and restored in vertex shader
+
+	if (SrcNormal[1].Data != 0)
 	{
-		// new UE3 version - this normal is not serialized and restored in vertex shader
-		// LocalVertexFactory.usf, VertexFactoryGetTangentBasis() (static mesh)
-		// GpuSkinVertexFactory.usf, SkinTangents() (skeletal mesh)
-		FVector Tangent = SrcNormal[0];
-		FVector Normal  = SrcNormal[2];
-		CVec3   Binormal;
-		cross(CVT(Normal), CVT(Tangent), Binormal);
-		if (SrcNormal[2].GetW() == -1)
-			Binormal.Negate();
-		Pack(V.Binormal, Binormal);
-	}
-	else
-	{
-		// unpack Binormal
-		//!! REMOVE Binormal and put Normal[2].W as sign
-		V.Binormal = CVT(SrcNormal[1]);
+		// pack binormal sign into Normal.W
+		FVector Tangent  = SrcNormal[0];
+		FVector Binormal = SrcNormal[1];
+		FVector Normal   = SrcNormal[2];
+		CVec3   ComputedBinormal;
+		cross(CVT(Normal), CVT(Tangent), ComputedBinormal);
+		float Sign = dot(CVT(Binormal), ComputedBinormal);
+		V.Normal.SetW(Sign > 0 ? 1.0f : -1.0f);
 	}
 }
 
@@ -662,12 +660,6 @@ struct FGPUVert3Common
 
 static int GNumGPUUVSets = 1;
 
-/*
- * Half = Float16
- * http://www.openexr.com/  source: ilmbase-*.tar.gz/Half/toFloat.cpp
- * http://en.wikipedia.org/wiki/Half_precision
- * Also look at GL_ARB_half_float_pixel
- */
 struct FGPUVert3Half : FGPUVert3Common
 {
 	FVector				Pos;

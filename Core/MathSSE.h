@@ -138,7 +138,15 @@ FORCEINLINE float dot(const CVec4 &a, const CVec4 &b)
 
 FORCEINLINE void cross(const CVec4 &v1, const CVec4 &v2, CVec4 &result)
 {
+#if 1
+	__m128 A_YZXW = _mm_shuffle_ps(v1.mm, v1.mm, _MM_SHUFFLE(3,0,2,1));
+	__m128 B_ZXYW = _mm_shuffle_ps(v2.mm, v2.mm, _MM_SHUFFLE(3,1,0,2));
+	__m128 A_ZXYW = _mm_shuffle_ps(v1.mm, v1.mm, _MM_SHUFFLE(3,1,0,2));
+	__m128 B_YZXW = _mm_shuffle_ps(v2.mm, v2.mm, _MM_SHUFFLE(3,0,2,1));
+	result.mm = _mm_sub_ps(_mm_mul_ps(A_YZXW,B_ZXYW), _mm_mul_ps(A_ZXYW, B_YZXW));
+#else
 	cross(v1.ToVec3(), v2.ToVec3(), result.ToVec3());
+#endif
 }
 
 FORCEINLINE void cross(const CVec4 &v1, const CVec4 &v2, CVec3 &result)

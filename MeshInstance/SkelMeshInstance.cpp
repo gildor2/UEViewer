@@ -52,7 +52,9 @@ struct CMeshBoneData
 struct CSkinVert
 {
 	CVecT		Position;
-	CVecT		Normal, Tangent, Binormal;
+	CVec4		Normal;				// force to have 4 components - W is used for binormal decoding
+	CVecT		Tangent;
+//	CVecT		Binormal;
 };
 
 
@@ -997,14 +999,17 @@ void CSkelMeshInstance::TransformMesh()
 		// perform transformation
 
 #if !USE_SSE
-		CVec3 UnpNormal, UnpTangent, UnpBinormal;
+		CVec3 UnpNormal, UnpTangent
+//		CVec3 UnpBinormal;
 		Unpack(UnpNormal, V.Normal);
 		Unpack(UnpTangent, V.Tangent);
-		Unpack(UnpBinormal, V.Binormal);
+//		Unpack(UnpBinormal, V.Binormal);
 		transform.UnTransformPoint(V.Position, D.Position);
 		transform.axis.UnTransformVector(UnpNormal, D.Normal);
 		transform.axis.UnTransformVector(UnpTangent, D.Tangent);
-		transform.axis.UnTransformVector(UnpBinormal, D.Binormal);
+//		transform.axis.UnTransformVector(UnpBinormal, D.Binormal);
+		// Preserve Normal.W to be able to compute binormal correctly
+		D.Normal.v[3] = V.Normal.GetW();
 #else
 		// at this point we have x1..x4 = transform matrix
 
@@ -1036,7 +1041,10 @@ void CSkelMeshInstance::TransformMesh()
 		TRANSFORM_POS(Position);
 		TRANSFORM_NORMAL(Normal);
 		TRANSFORM_NORMAL(Tangent);
-		TRANSFORM_NORMAL(Binormal);
+//		TRANSFORM_NORMAL(Binormal);
+
+		// Preserve Normal.W to be able to compute binormal correctly
+		D.Normal.v[3] = V.Normal.GetW();
 #endif // USE_SSE
 	}
 
@@ -1153,22 +1161,32 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 		if (!(flags & DF_SHOW_INFLUENCES))
 			SetMaterial(Sec.Material, MaterialIndex);
 		// check tangent space
-		GLint aTangent = -1, aBinormal = -1;
-		bool hasTangent = false;
+		GLint aNormal = -1;
+		GLint aTangent = -1;
+//		GLint aBinormal = -1;
 		const CShader *Sh = GCurrentShader;
 		if (Sh)
 		{
+			aNormal    = Sh->GetAttrib("normal");
 			aTangent   = Sh->GetAttrib("tangent");
-			aBinormal  = Sh->GetAttrib("binormal");
-			hasTangent = (aTangent >= 0 && aBinormal >= 0);
+//			aBinormal  = Sh->GetAttrib("binormal");
 		}
-		if (hasTangent)
+		if (aNormal >= 0)
+		{
+			glEnableVertexAttribArray(aNormal);
+			// send 4 components to decode binormal in shader
+			glVertexAttribPointer(aNormal, 4, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Normal);
+		}
+		if (aTangent >= 0)
 		{
 			glEnableVertexAttribArray(aTangent);
-			glEnableVertexAttribArray(aBinormal);
 			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Tangent);
-			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Binormal);
 		}
+//		if (aBinormal >= 0)
+//		{
+//			glEnableVertexAttribArray(aBinormal);
+//			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Binormal);
+//		}
 		// draw
 		//?? place this code into CIndexBuffer?
 		//?? (the same code is in CStatMeshInstance)
@@ -1177,11 +1195,12 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 		else
 			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Mesh.Indices.Indices16[Sec.FirstIndex]);
 		// disable tangents
-		if (hasTangent)
-		{
+		if (aNormal >= 0)
+			glDisableVertexAttribArray(aNormal);
+		if (aTangent >= 0)
 			glDisableVertexAttribArray(aTangent);
-			glDisableVertexAttribArray(aBinormal);
-		}
+//		if (aBinormal >= 0)
+//			glDisableVertexAttribArray(aBinormal);
 	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
@@ -1226,30 +1245,38 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 	{
 		glBegin(GL_LINES);
 		glColor3f(0.5f, 1, 0);
+		const float VisualLength = 1.0f;
 		for (i = 0; i < NumVerts; i++)
 		{
-			glVertex3fv(Skinned[i].Position.v);
-			CVec3 tmp;
-			VectorMA(Skinned[i].Position, 1, Skinned[i].Normal, tmp);
+			const CSkinVert& vert = Skinned[i];
+			glVertex3fv(vert.Position.v);
+			CVecT tmp;
+			VectorMA(vert.Position, VisualLength, vert.Normal, tmp);
 			glVertex3fv(tmp.v);
 		}
 #if SHOW_TANGENTS
 		glColor3f(0, 0.5f, 1);
 		for (i = 0; i < NumVerts; i++)
 		{
-			const CVecT &v = Skinned[i].Position;
-			glVertex3fv(v.v);
+			const CSkinVert& vert = Skinned[i];
+			glVertex3fv(vert.Position.v);
 			CVecT tmp;
-			VectorMA(v, 1, Skinned[i].Tangent, tmp);
+			VectorMA(vert.Position, VisualLength, vert.Tangent, tmp);
 			glVertex3fv(tmp.v);
 		}
 		glColor3f(1, 0, 0.5f);
 		for (i = 0; i < NumVerts; i++)
 		{
-			const CVecT &v = Skinned[i].Position;
+			const CSkinVert& vert = Skinned[i];
+			// compute binormal
+			CVecT binormal;
+			cross(vert.Normal, vert.Tangent, binormal);
+			binormal.Scale(vert.Normal.v[3]);
+			// render
+			const CVecT &v = vert.Position;
 			glVertex3fv(v.v);
 			CVecT tmp;
-			VectorMA(v, 1, Skinned[i].Binormal, tmp);
+			VectorMA(v, VisualLength, binormal, tmp);
 			glVertex3fv(tmp.v);
 		}
 #endif // SHOW_TANGENTS

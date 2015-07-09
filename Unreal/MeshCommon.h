@@ -80,6 +80,15 @@ struct CMeshUVFloat
 struct CPackedNormal
 {
 	unsigned				Data;
+
+	FORCEINLINE void SetW(float Value)
+	{
+		Data = (Data & 0xFFFFFF) | (appRound(Value * 127.0f) << 24);
+	}
+	FORCEINLINE float GetW() const
+	{
+		return ( (char)(Data >> 24) ) / 127.0f;
+	}
 };
 
 FORCEINLINE bool operator==(CPackedNormal V1, CPackedNormal V2)
@@ -142,8 +151,15 @@ struct CMeshVertex
 	CVecT					Position;
 	CPackedNormal			Normal;
 	CPackedNormal			Tangent;
-	CPackedNormal			Binormal;
 	CMeshUVFloat			UV;				// base UV channel
+
+	void DecodeTangents(CVecT& OutNormal, CVecT& OutTangent, CVecT& OutBinormal) const
+	{
+		Unpack(OutNormal, Normal);
+		Unpack(OutTangent, Tangent);
+		cross(OutNormal, OutTangent, OutBinormal);
+		OutNormal.Scale(OutNormal.v[3]);
+	}
 };
 
 
