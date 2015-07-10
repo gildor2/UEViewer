@@ -7,8 +7,9 @@ class UUnrealMaterial;
 
 #define USE_SSE						1
 
-#if USE_SSE
 #include "MathSSE.h"
+
+#if USE_SSE
 typedef CVec4 CVecT;
 #else
 typedef CVec3 CVecT;
@@ -119,21 +120,9 @@ FORCEINLINE void Unpack(CVec3& Unpacked, const CPackedNormal& Packed)
 				+ ((byte)appRound(Unpacked.v[2] * 127.0f) << 16);
 }*/
 
-FORCEINLINE __m128 Unpack(const CPackedNormal& Packed)
-{
-	// http://stackoverflow.com/questions/12121640/how-to-load-a-pixel-struct-into-an-sse-register
-	__m128i r = _mm_cvtsi32_si128(Packed.Data);	// read 32-bit int to lower part of XMM register - ABCD.0000.0000.0000
-	r = _mm_unpacklo_epi8(r, r);				// interleave bytes with themselves - AABB.CCDD.0000.0000
-	r = _mm_unpacklo_epi16(r, r);				// interleave words with themselves - AAAA.BBBB.CCCC.DDDD
-	r = _mm_srai_epi32(r, 24);					// arithmetical shift right by 24 bits, i.e. sign extend
-	__m128 r2 = _mm_cvtepi32_ps(r);				// convert to floats
-	static const __m128 scale = { 1.0f / 127, 1.0f / 127, 1.0f / 127, 1.0f / 127 };
-	return _mm_mul_ps(r2, scale);
-}
-
 FORCEINLINE void Unpack(CVec4& Unpacked, const CPackedNormal& Packed)
 {
-	Unpacked.mm = Unpack(Packed);
+	Unpacked.mm = UnpackPackedChars(Packed.Data);
 }
 
 #endif // USE_SSE

@@ -937,10 +937,12 @@ void CSkelMeshInstance::DrawAttachments()
 }
 
 
-// Software skinning
-void CSkelMeshInstance::TransformMesh()
+#if !USE_SSE
+
+// Software skinning - FPU version
+void CSkelMeshInstance::SkinMeshVerts()
 {
-	guard(CSkelMeshInstance::TransformMesh);
+	guard(CSkelMeshInstance::SkinMeshVerts);
 
 	const CSkelMeshLod& Mesh = pMesh->Lods[LodNum];
 	int NumVerts = Mesh.NumVerts;
@@ -952,26 +954,15 @@ void CSkelMeshInstance::TransformMesh()
 		const CSkelMeshVertex &V = Mesh.Verts[i];
 		CSkinVert             &D = Skinned[i];
 
+		CVec4 UnpackedWeights;
+		V.UnpackWeights(UnpackedWeights);
+
 		// compute weighted transform from all influenced bones
 
 		// take a 1st influence
-#if !USE_SSE
 		CCoords transform;
 		transform = BoneData[V.Bone[0]].Transform;
-		transform.Scale(V.Weight[0]);
-#else
-		const CCoords4 &transform = BoneData[V.Bone[0]].Transform4;
-		__m128 x1, x2, x3, x4, x5, x6, x7, x8;
-		x1 = transform.mm[0];					// bone transform
-		x2 = transform.mm[1];
-		x3 = transform.mm[2];
-		x4 = transform.mm[3];
-		x5 = _mm_load1_ps(&V.Weight[0]);		// Weight
-		x1 = _mm_mul_ps(x1, x5);				// Transform * Weight
-		x2 = _mm_mul_ps(x2, x5);
-		x3 = _mm_mul_ps(x3, x5);
-		x4 = _mm_mul_ps(x4, x5);
-#endif // USE_SSE
+		transform.Scale(UnpackedWeights.v[0]);
 		// add remaining influences
 		for (int j = 1; j < NUM_INFLUENCES; j++)
 		{
@@ -980,26 +971,12 @@ void CSkelMeshInstance::TransformMesh()
 			assert(iBone < pMesh->RefSkeleton.Num());	// validate bone index
 
 			const CMeshBoneData &data = BoneData[iBone];
-#if !USE_SSE
-			CoordsMA(transform, V.Weight[j], data.Transform);
-#else
-			x5 = _mm_load1_ps(&V.Weight[j]);	// Weight
-			// x1..x4 += data.Transform * Weight
-			x6 = _mm_mul_ps(data.Transform4.mm[0], x5);
-			x1 = _mm_add_ps(x1, x6);
-			x6 = _mm_mul_ps(data.Transform4.mm[1], x5);
-			x2 = _mm_add_ps(x2, x6);
-			x6 = _mm_mul_ps(data.Transform4.mm[2], x5);
-			x3 = _mm_add_ps(x3, x6);
-			x6 = _mm_mul_ps(data.Transform4.mm[3], x5);
-			x4 = _mm_add_ps(x4, x6);
-#endif // USE_SSE
+			CoordsMA(transform, UnpackedWeights.v[j], data.Transform);
 		}
 
 		// perform transformation
 
-#if !USE_SSE
-		CVec3 UnpNormal, UnpTangent
+		CVec3 UnpNormal, UnpTangent;
 //		CVec3 UnpBinormal;
 		Unpack(UnpNormal, V.Normal);
 		Unpack(UnpTangent, V.Tangent);
@@ -1010,7 +987,68 @@ void CSkelMeshInstance::TransformMesh()
 //		transform.axis.UnTransformVector(UnpBinormal, D.Binormal);
 		// Preserve Normal.W to be able to compute binormal correctly
 		D.Normal.v[3] = V.Normal.GetW();
-#else
+	}
+
+	unguard;
+}
+
+#else // USE_SSE
+
+// Software skinning - SSE version
+void CSkelMeshInstance::SkinMeshVerts()
+{
+	guard(CSkelMeshInstance::SkinMeshVerts);
+
+	const CSkelMeshLod& Mesh = pMesh->Lods[LodNum];
+	int NumVerts = Mesh.NumVerts;
+
+	memset(Skinned, 0, sizeof(CSkinVert) * NumVerts);
+
+	for (int i = 0; i < NumVerts; i++)
+	{
+		const CSkelMeshVertex &V = Mesh.Verts[i];
+		CSkinVert             &D = Skinned[i];
+
+		CVec4 UnpackedWeights;
+		V.UnpackWeights(UnpackedWeights);
+
+		// compute weighted transform from all influenced bones
+
+		// take a 1st influence
+		const CCoords4 &transform = BoneData[V.Bone[0]].Transform4;
+		__m128 x1, x2, x3, x4, x5, x6, x7, x8;
+		x1 = transform.mm[0];					// bone transform
+		x2 = transform.mm[1];
+		x3 = transform.mm[2];
+		x4 = transform.mm[3];
+		x5 = _mm_load1_ps(&UnpackedWeights.v[0]);// Weight
+		x1 = _mm_mul_ps(x1, x5);				// Transform * Weight
+		x2 = _mm_mul_ps(x2, x5);
+		x3 = _mm_mul_ps(x3, x5);
+		x4 = _mm_mul_ps(x4, x5);
+
+		// add remaining influences
+		for (int j = 1; j < NUM_INFLUENCES; j++)
+		{
+			int iBone = V.Bone[j];
+			if (iBone < 0) break;
+			assert(iBone < pMesh->RefSkeleton.Num());	// validate bone index
+
+			const CMeshBoneData &data = BoneData[iBone];
+			x5 = _mm_load1_ps(&UnpackedWeights.v[j]);	// Weight
+			// x1..x4 += data.Transform * Weight
+			x6 = _mm_mul_ps(data.Transform4.mm[0], x5);
+			x1 = _mm_add_ps(x1, x6);
+			x6 = _mm_mul_ps(data.Transform4.mm[1], x5);
+			x2 = _mm_add_ps(x2, x6);
+			x6 = _mm_mul_ps(data.Transform4.mm[2], x5);
+			x3 = _mm_add_ps(x3, x6);
+			x6 = _mm_mul_ps(data.Transform4.mm[3], x5);
+			x4 = _mm_add_ps(x4, x6);
+		}
+
+		// perform transformation
+
 		// at this point we have x1..x4 = transform matrix
 
 #define TRANSFORM_POS(value)												\
@@ -1028,7 +1066,7 @@ void CSkelMeshInstance::TransformMesh()
 
 // version of the code above, but without Transform.origin use
 #define TRANSFORM_NORMAL(value)												\
-		x5 = Unpack(V.value);												\
+		x5 = UnpackPackedChars(V.value.Data);								\
 		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(0,0,0,0));	/* X */			\
 		x8 = _mm_mul_ps(x1, x6);											\
 		x6 = _mm_shuffle_ps(x5, x5, _MM_SHUFFLE(1,1,1,1));	/* Y */			\
@@ -1045,11 +1083,12 @@ void CSkelMeshInstance::TransformMesh()
 
 		// Preserve Normal.W to be able to compute binormal correctly
 		D.Normal.v[3] = V.Normal.GetW();
-#endif // USE_SSE
 	}
 
 	unguard;
 }
+
+#endif // USE_SSE
 
 
 void CSkelMeshInstance::DrawMesh(unsigned flags)
@@ -1068,7 +1107,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 	if (!Mesh.HasTangents) Mesh.BuildTangents();
 
 #if 0
-	TransformMesh();
+	SkinMeshVerts();
 	glBegin(GL_POINTS);
 	for (i = 0; i < Mesh.NumVerts; i++)
 	{
@@ -1082,7 +1121,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 #if PROFILE_MESH
 	int timeBeforeTransform = appMilliseconds();
 #endif
-	TransformMesh();
+	SkinMeshVerts();
 #if PROFILE_MESH
 	int timeAfterTransform = appMilliseconds();
 #endif
@@ -1342,10 +1381,12 @@ void CSkelMeshInstance::BuildInfColors()
 	for (i = 0; i < Lod.NumVerts; i++)
 	{
 		const CSkelMeshVertex &V = Lod.Verts[i];
+		CVec4 UnpackedWeights;
+		V.UnpackWeights(UnpackedWeights);
 		for (int j = 0; j < NUM_INFLUENCES; j++)
 		{
 			if (V.Bone[j] < 0) break;
-			VectorMA(InfColors[i], V.Weight[j], BoneColors[V.Bone[j]]);
+			VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j]]);
 		}
 	}
 

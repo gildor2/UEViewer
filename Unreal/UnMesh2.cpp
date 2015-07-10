@@ -870,15 +870,16 @@ void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &Mesh
 		// DW.Normal and DW.Tangent are unset
 		// setup Bone[] and Weight[]
 		const CVertInfo &V = Verts[SW.iVertex];
+		unsigned PackedWeights = 0;
 		for (j = 0; j < V.NumInfs; j++)
 		{
 			DW.Bone[j]   = V.Bone[j];
-			DW.Weight[j] = V.Weight[j];
+			PackedWeights |= appRound(V.Weight[j] * 255) << (j * 8);
 		}
+		DW.PackedWeights = PackedWeights;
 		for (/* continue */; j < NUM_INFLUENCES; j++)	// place end marker and zero weight
 		{
-			DW.Bone[j]   = -1;
-			DW.Weight[j] = 0.0f;
+			DW.Bone[j] = -1;
 		}
 	}
 

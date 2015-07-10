@@ -255,7 +255,7 @@ protected:
 		assert(StageIndex >= 0 && StageIndex < MAX_SKELANIMCHANNELS);
 		return Channels[StageIndex];
 	}
-	void TransformMesh();
+	void SkinMeshVerts();
 	int FindBone(const char *BoneName) const;
 	const CAnimSequence *FindAnim(const char *AnimName) const;
 	void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);

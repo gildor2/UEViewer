@@ -32,9 +32,21 @@ TODO:
 
 struct CSkelMeshVertex : public CMeshVertex
 {
-	//?? use short for Bone[] and byte for Weight[]
-	int						Bone[NUM_INFLUENCES];	// Bone < 0 - end of list
-	float					Weight[NUM_INFLUENCES];
+	unsigned				PackedWeights;			// Works with 4 weights only!
+	short					Bone[NUM_INFLUENCES];	// Bone < 0 - end of list
+
+	void UnpackWeights(CVec4& OutWeights) const
+	{
+#if USE_SSE
+		OutWeights.mm = UnpackPackedBytes(PackedWeights);
+#else
+		float Scale = 1.0f / 255;
+		OutWeights.v[0] =  (PackedWeights        & 0xFF) * Scale;
+		OutWeights.v[1] = ((PackedWeights >> 8 ) & 0xFF) * Scale;
+		OutWeights.v[2] = ((PackedWeights >> 16) & 0xFF) * Scale;
+		OutWeights.v[3] = ((PackedWeights >> 24) & 0xFF) * Scale;
+#endif
+	}
 };
 
 

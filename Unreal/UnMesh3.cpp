@@ -2064,22 +2064,33 @@ void USkeletalMesh3::ConvertMesh()
 				// convert influences
 				int TotalWeight = 0;
 				int i2 = 0;
+				unsigned PackedWeights = 0;
 				for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
 				{
 					int BoneIndex  = V->BoneIndex[i];
-					int BoneWeight = V->BoneWeight[i];
+					byte BoneWeight = V->BoneWeight[i];
 					if (BoneWeight == 0) continue;				// skip this influence (but do not stop the loop!)
-					D->Weight[i2] = BoneWeight / 255.0f;
+					PackedWeights |= BoneWeight << (i2 * 8);
 					D->Bone[i2]   = C->Bones[BoneIndex];
 					i2++;
 					TotalWeight += BoneWeight;
 				}
+				D->PackedWeights = PackedWeights;
 				if (TotalWeight != 255 && TotalWeight > 0)
 				{
 					NumReweightedVerts++;
 					float WeightScale = 255.0f / TotalWeight;
+					unsigned ScaledWeight = 0;
 					for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
-						D->Weight[i] *= WeightScale;
+					{
+						int shift = i * 8;
+						unsigned mask = 0xFF << shift;
+						unsigned w = (PackedWeights & mask) >> shift;
+						w = appRound((float)w * WeightScale);
+						assert(w > 0 && w < 256);
+						ScaledWeight |= w << shift;
+					}
+					D->PackedWeights = ScaledWeight;
 				}
 				if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 			}
@@ -2096,7 +2107,7 @@ void USkeletalMesh3::ConvertMesh()
 					D->Position = CVT(V0.Pos);
 					UnpackNormals(V0.Normal, *D);
 					// single influence
-					D->Weight[0] = 1.0f;
+					D->PackedWeights = 0xFF;
 					D->Bone[0]   = C->Bones[V0.BoneIndex];
 					SUV = V0.UV;
 				}
@@ -2110,16 +2121,18 @@ void USkeletalMesh3::ConvertMesh()
 					// influences
 //					int TotalWeight = 0;
 					int i2 = 0;
+					unsigned PackedWeights = 0;
 					for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
 					{
 						int BoneIndex  = V0.BoneIndex[i];
-						int BoneWeight = V0.BoneWeight[i];
+						byte BoneWeight = V0.BoneWeight[i];
 						if (BoneWeight == 0) continue;
-						D->Weight[i2] = BoneWeight / 255.0f;
+						PackedWeights |= BoneWeight << (i2 * 8);
 						D->Bone[i2]   = C->Bones[BoneIndex];
 						i2++;
 //						TotalWeight += BoneWeight;
 					}
+					D->PackedWeights = PackedWeights;
 //					assert(TotalWeight == 255);
 					if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 					SUV = V0.UV;

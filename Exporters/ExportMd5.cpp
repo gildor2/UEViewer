@@ -165,12 +165,14 @@ if (i == 32 || i == 34)
 	for (i = 0; i < Lod.NumVerts; i++)
 	{
 		const CSkelMeshVertex &V = Lod.Verts[i];
+		CVec4 UnpackedWeights;
+		V.UnpackWeights(UnpackedWeights);
 		for (int j = 0; j < NUM_INFLUENCES; j++)
 		{
 			if (V.Bone[j] < 0) break;
 			VertInfluence *I = new (Weights[i].Inf) VertInfluence;
 			I->Bone   = V.Bone[j];
-			I->Weight = V.Weight[j];
+			I->Weight = UnpackedWeights[j];
 		}
 	}
 

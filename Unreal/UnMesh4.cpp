@@ -677,17 +677,19 @@ void USkeletalMesh4::ConvertMesh()
 			// convert influences
 //			int TotalWeight = 0;
 			int i2 = 0;
+			unsigned PackedWeights = 0;
 			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
 			{
 				int BoneIndex  = V->BoneIndex[i];
-				int BoneWeight = V->BoneWeight[i];
+				byte BoneWeight = V->BoneWeight[i];
 				if (BoneWeight == 0) continue;				// skip this influence (but do not stop the loop!)
-				D->Weight[i2] = BoneWeight / 255.0f;
+				PackedWeights |= BoneWeight << (i2 * 8);
 				D->Bone[i2]   = C->BoneMap[BoneIndex];
 				i2++;
 //				TotalWeight += BoneWeight;
 			}
-//			assert(TotalWeight = 255);
+			D->PackedWeights = PackedWeights;
+//			assert(TotalWeight == 255);
 			if (i2 < NUM_INFLUENCES_UE4) D->Bone[i2] = INDEX_NONE; // mark end of list
 		}
 

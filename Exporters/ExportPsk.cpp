@@ -308,13 +308,15 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	{
 		int WedgeIndex = Share.VertToWedge[i];
 		const CSkelMeshVertex &V = Lod.Verts[WedgeIndex];
+		CVec4 UnpackedWeights;
+		V.UnpackWeights(UnpackedWeights);
 		for (j = 0; j < NUM_INFLUENCES; j++)
 		{
 			if (V.Bone[j] < 0) break;
 			NumInfluences--;				// just for verification
 
 			VRawBoneInfluence I;
-			I.Weight     = V.Weight[j];
+			I.Weight     = UnpackedWeights.v[j];
 			I.BoneIndex  = V.Bone[j];
 			I.PointIndex = i;
 			Ar << I;
