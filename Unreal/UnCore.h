@@ -1388,6 +1388,8 @@ public:
 	}
 #endif
 
+	//!! UE4 different API: AddZeroed(count), AddUninitialized(count) (pass to FArray)
+	//!! UE4 name: AddDefaulted(count), but returns 'index'
 	FORCEINLINE int Add(int count = 1)
 	{
 		int index = DataCount;
@@ -1395,32 +1397,8 @@ public:
 		return index;
 	}
 
-	FORCEINLINE void Insert(int index, int count = 1)
-	{
-		FArray::Insert(index, count, sizeof(T));
-		if (!TTypeInfo<T>::IsPod) Construct(index, count);
-	}
-
-	FORCEINLINE void Remove(int index, int count = 1)
-	{
-		// destruct specified array items
-		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
-		// remove items from array
-		FArray::Remove(index, count, sizeof(T));
-	}
-
-	// Remove an item and copy last array's item(s) to the removed item position,
-	// so no array shifting performed. Could be used when order of array elements
-	// is not important.
-	FORCEINLINE void FastRemove(int index, int count = 1)
-	{
-		// destruct specified array items
-		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
-		// remove items from array
-		FArray::FastRemove(index, count, sizeof(T));
-	}
-
-	int AddItem(const T& item)
+	//!! UE4 name: Add(item)
+	FORCEINLINE int AddItem(const T& item)
 	{
 		int index = Add();
 		Item(index) = item;
@@ -1433,6 +1411,35 @@ public:
 		return Item(index);
 	}
 
+	//!! UE4 different API: Insert(item, index), InsertZeroed(index,count), InsertUninitialized(index,count)
+	FORCEINLINE void Insert(int index, int count = 1)
+	{
+		FArray::Insert(index, count, sizeof(T));
+		if (!TTypeInfo<T>::IsPod) Construct(index, count);
+	}
+
+	//!! UE4 name: RemoveAt()
+	FORCEINLINE void Remove(int index, int count = 1)
+	{
+		// destruct specified array items
+		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
+		// remove items from array
+		FArray::Remove(index, count, sizeof(T));
+	}
+
+	// Remove an item and copy last array's item(s) to the removed item position,
+	// so no array shifting performed. Could be used when order of array elements
+	// is not important.
+	//!! UE4 name: RemoveAtSwap()
+	FORCEINLINE void FastRemove(int index, int count = 1)
+	{
+		// destruct specified array items
+		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
+		// remove items from array
+		FArray::FastRemove(index, count, sizeof(T));
+	}
+
+	//!! UE4 name: RemoveSingle(item)
 	void RemoveItem(const T& item)
 	{
 		int index = FindItem(item);
@@ -1464,6 +1471,7 @@ public:
 		FArray::Empty(count, sizeof(T));
 	}
 
+	//!! UE4 name: Reset(int count) - will call Empty(count) if new size is larger
 	FORCEINLINE void FastEmpty()
 	{
 		// destruct all array items
@@ -1627,6 +1635,7 @@ void SkipLazyArray(FArchive &Ar);
 // reading will be performed (as usual in TArray)
 // There is no reading optimization performed here (in umodel)
 
+//!! UE4 name: use "Array.BulkSerialize(Ar)" instead of "Ar << RAW_ARRAY(Array)"
 template<class T> class TRawArray : protected TArray<T>
 {
 public:
@@ -1757,6 +1766,7 @@ class TArrayOfArray : public TArray<TArrayOfArrayItem<T, N> >
 	FString
 -----------------------------------------------------------------------------*/
 
+//!! Note: "Num" returns length including final zero byte. Should review this.
 class FString : public TArray<char>
 {
 public:

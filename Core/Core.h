@@ -280,6 +280,13 @@ const char *appStristr(const char *s1, const char *s2);
 void appMakeDirectory(const char *dirname);
 void appMakeDirectoryForFile(const char *filename);
 
+#define FS_FILE				1
+#define FS_DIR				2
+
+// Check file name type. Returns 0 if not exists, FS_FILE if this is a file,
+// and FS_DIR if this is a directory
+unsigned appGetFileType(const char *filename);
+
 
 // Memory management
 

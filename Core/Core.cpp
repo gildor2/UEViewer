@@ -2,9 +2,9 @@
 
 #if _WIN32
 #include <direct.h>					// for mkdir()
-#else
-#include <sys/stat.h>				// for mkdir()
 #endif
+
+#include <sys/stat.h>				// for mkdir(), stat()
 
 #if VSTUDIO_INTEGRATION
 #define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
@@ -365,4 +365,23 @@ void appMakeDirectoryForFile(const char *filename)
 		*s = 0;
 		appMakeDirectory(Name);
 	}
+}
+
+#ifndef S_ISDIR
+// no such declarations in windows headers, but exists in mingw32 ...
+#define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
+#define	S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
+#define stat _stati64
+#endif
+
+unsigned appGetFileType(const char *filename)
+{
+	struct stat buf;
+	if (stat(filename, &buf) == -1)
+		return 0;					// no such file/dir
+	if (S_ISDIR(buf.st_mode))
+		return FS_DIR;
+	else if (S_ISREG(buf.st_mode))
+		return FS_FILE;
+	return 0;						// just in case ... (may be, win32 have other file types?)
 }

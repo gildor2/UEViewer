@@ -335,11 +335,17 @@ static void PrintUsage()
 	appPrintf(
 			"UE viewer / exporter\n"
 			"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
+#if HAS_UI
+			"       umodel [command] [options] <directory>\n"
+#endif
 			"\n"
 			"    <package>       name of package to load, without file extension\n"
 			"    <object>        name of object to load\n"
 			"    <class>         class of object to load (useful, when trying to load\n"
 			"                    object with ambiguous name)\n"
+#if HAS_UI
+			"    <directory>     path to the game (see -path option)\n"
+#endif
 			"\n"
 			"Commands:\n"
 			"    -view           (default) visualize object; when no <object> specified\n"
@@ -571,22 +577,31 @@ static void SetPathOption(FString& where, const char* value)
 	if (isAbsPath)
 	{
 		where = value;
-		return;
 	}
-	// relative path
-	char path[512];
-	if (!getcwd(ARRAY_ARG(path)))
-		strcpy(path, ".");	// path is too long, or other error occured
-
-	if (!value || !value[0])
+	else
 	{
-		where = path;
-		return;
-	}
+		// relative path
+		char path[512];
+		if (!getcwd(ARRAY_ARG(path)))
+			strcpy(path, ".");	// path is too long, or other error occured
 
-	char buffer[512];
-	appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
-	where = buffer;
+		if (!value || !value[0])
+		{
+			where = path;
+		}
+		else
+		{
+			char buffer[512];
+			int len = appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
+			where = buffer;
+		}
+	}
+	// strip possible trailing double quote
+	int len = where.Num() - 1;			// exclude trailing zero byte
+	if (len > 0 && where[len-1] == '"')
+	{
+		where.Remove(len-1, 1);
+	}
 }
 
 // Display error message about wrong command line and then exit.
@@ -776,6 +791,19 @@ int main(int argc, char **argv)
 	}
 
 #if HAS_UI
+	if (argPkgName && !argObjName && !argClassName && !hasRootDir)
+	{
+		// only 1 parameter has been specified - check if this is a directory name
+		// note: this is only meaningful for UI version of umodel, because there's nothing to
+		// do with directory without UI
+		if (appGetFileType(argPkgName) == FS_DIR)
+		{
+			SetPathOption(GSettings.GamePath, argPkgName);
+			hasRootDir = true;
+			argPkgName = NULL;
+		}
+	}
+
 	if (argc < 2 || (!hasRootDir && !argPkgName) || forceUI)
 	{
 		// fill game path with current directory, if it's empty - for easier work with UI

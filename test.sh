@@ -191,6 +191,12 @@ function bat2()
 	CheckDir "E:/GAMES/Batman Arkham City/BmGame" data/3/Batman2
 	run $*
 }
+function bat3()
+{
+	CheckDir "${steam[@]/%/Batman Arkham Origins/SinglePlayer/BMGame}"
+	CheckDir "E:/GAMES/Batman Arkham City/BmGame" data/3/Batman2
+	run $*
+}
 function tr4()    { run1 "data/3/Tribes4" $*;     }
 
 function thief()  { run1 "${steam[@]/%/Thief/ThiefGame/CookedPCNG}" $*; }

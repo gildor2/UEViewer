@@ -1236,7 +1236,12 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 		serialize_separate_data:
 			Ar.Seek64(BulkDataOffsetInFile);
 			SerializeDataChunk(Ar);
-			assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell64());
+			if (BulkDataOffsetInFile + BulkDataSizeOnDisk != Ar.Tell64())
+			{
+				// At least Special Force 2 has this situation with correct data - perhaps BulkDataSizeOnDisk is wrong there.
+				// Let's spam, but don't crash.
+				appNotify("Serialize bulk data: current position %llX, expected %llX", Ar.Tell64(), BulkDataOffsetInFile + BulkDataSizeOnDisk);
+			}
 		}
 		else
 		{

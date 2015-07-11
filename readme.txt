@@ -155,6 +155,10 @@ detex
 
 Changes
 ~~~~~~~
+11.07.2015
+- added new command line syntax: "umodel <options> <directory>", shortcut to
+  "umodel <options> -path=<directory>"
+
 07.07.2015
 - optimizations of memory use, especially for export operation
 
