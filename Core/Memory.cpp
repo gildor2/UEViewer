@@ -161,8 +161,8 @@ void* appRealloc(void *ptr, int newSize)
 
 	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
 
-	int offset = hdr->offset + 1;
-	void *block = OffsetPointer(ptr, -offset);
+	int oldSize = hdr->blockSize;
+	if (oldSize == newSize) return ptr;	// size not changed
 
 	assert(hdr->magic == BLOCK_MAGIC);
 	hdr->magic--;		// modify to any value
@@ -171,10 +171,12 @@ void* appRealloc(void *ptr, int newSize)
 #endif
 
 	int alignment = hdr->align + 1;
-	int oldSize   = hdr->blockSize;
 	void *newData = appMalloc(newSize, alignment);
 
 	memcpy(newData, ptr, min(newSize, oldSize));
+
+	int offset = hdr->offset + 1;
+	void *block = OffsetPointer(ptr, -offset);
 
 #if DEBUG_MEMORY
 	memset(ptr, FREE_BLOCK, oldSize);

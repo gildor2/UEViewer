@@ -53,26 +53,39 @@ void FArray::Empty(int count, int elementSize)
 {
 	guard(FArray::Empty);
 
+	DataCount = 0;
+
 	if (IsStatic())
 	{
-		if (count > MaxCount) goto allocate; // "static" array becomes non-static
-		DataCount = 0;
-		memset(DataPtr, 0, count * elementSize);
-		return;
+		if (count <= MaxCount)
+			return;
+		// "static" array becomes non-static, invalidate data pointer
+		DataPtr = NULL;
 	}
 
+	//!! TODO: perhaps round up 'Max' to 16 bytes, allow comparison below to be 'softer'
+	//!! (i.e. when array is 16 items, and calling Empty(15) - don't reallicate it, unless
+	//!! item size is large
 	if (DataPtr)
+	{
+		// check if we need to release old array
+		if (count == MaxCount)
+		{
+			// the size was not changed
+			return;
+		}
+		// delete old memory block
 		appFree(DataPtr);
+		DataPtr = NULL;
+	}
 
-allocate:
-	DataPtr   = NULL;
-	DataCount = 0;
-	MaxCount  = count;
+	MaxCount = count;
+
 	if (count)
 	{
 		DataPtr = appMalloc(count * elementSize);
-		memset(DataPtr, 0, count * elementSize);
 	}
+
 	unguardf("%d x %d", count, elementSize);
 }
 
