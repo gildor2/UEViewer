@@ -699,7 +699,7 @@ FFileWriter::FFileWriter(const char *Filename, unsigned Options)
 
 FFileWriter::~FFileWriter()
 {
-	GFileWriters.RemoveItem(this);
+	GFileWriters.RemoveSingle(this);
 	Close();
 }
 

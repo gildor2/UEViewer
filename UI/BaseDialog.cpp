@@ -1214,7 +1214,7 @@ void UIMulticolumnListbox::RemoveItem(int itemIndex)
 		return;									// out of range
 	// remove from Items array
 	int stringIndex = (itemIndex + 1) * NumColumns;
-	Items.Remove(stringIndex, NumColumns);		// remove 1 item
+	Items.RemoveAt(stringIndex, NumColumns);	// remove 1 item
 	// remove from ListView
 	if (Wnd)
 	{
@@ -1234,7 +1234,7 @@ void UIMulticolumnListbox::RemoveItem(int itemIndex)
 	// remove from selection
 	// (note: when window exists, item will be removed from selection in ListView_DeleteItem -> HandleCommand chain)
 	int pos = SelectedItems.FindItem(itemIndex);
-	if (pos >= 0) SelectedItems.FastRemove(pos);
+	if (pos >= 0) SelectedItems.RemoveAtSwap(pos);
 	// renumber selected items
 	for (int i = 0; i < SelectedItems.Num(); i++)
 	{
@@ -1249,12 +1249,12 @@ void UIMulticolumnListbox::RemoveAllItems()
 	// remove items from local storage and from control
 	int numStrings = Items.Num();
 	if (numStrings > NumColumns)
-		Items.Remove(NumColumns, numStrings - NumColumns);
+		Items.RemoveAt(NumColumns, numStrings - NumColumns);
 	if (Wnd) ListView_DeleteAllItems(Wnd);
 
 	// process selection
 	int selCount = SelectedItems.Num();
-	SelectedItems.FastEmpty();
+	SelectedItems.Reset();
 	if (selCount)
 	{
 		// execute a callback about selection change
@@ -1293,7 +1293,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index, bool add)
 		int value = GetSelectionIndex();
 		if (index != value)
 		{
-			SelectedItems.FastEmpty();
+			SelectedItems.Reset();
 			SelectedItems.AddItem(index);
 			// perform selection for control
 			if (Wnd) SetItemSelection(index, true);
@@ -1330,7 +1330,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::UnselectItem(int index)
 {
 	if (Wnd) SetItemSelection(index, false);
 	int pos = SelectedItems.FindItem(index);
-	if (pos >= 0) SelectedItems.FastRemove(pos);
+	if (pos >= 0) SelectedItems.RemoveAtSwap(pos);
 	return *this;
 }
 
@@ -1352,7 +1352,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::UnselectAllItems()
 		for (int i = SelectedItems.Num() - 1; i >= 0; i--) // SelectedItems will be altered in HandleCommand
 			SetItemSelection(SelectedItems[i], false);
 	}
-	SelectedItems.FastEmpty();
+	SelectedItems.Reset();
 	return *this;
 }
 
@@ -1477,7 +1477,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 				else
 				{
 					assert(pos >= 0);
-					SelectedItems.FastRemove(pos);
+					SelectedItems.RemoveAtSwap(pos);
 				}
 				// callbacks
 				if (GetSelectionCount() <= 1)

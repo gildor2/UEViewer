@@ -2128,7 +2128,7 @@ UnPackage::~UnPackage()
 	// remove self from package table
 	int i = PackageMap.FindItem(this);
 	assert(i != INDEX_NONE);
-	PackageMap.Remove(i);
+	PackageMap.RemoveAt(i);
 	unguard;
 }
 

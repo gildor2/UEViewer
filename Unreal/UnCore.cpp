@@ -77,12 +77,6 @@ allocate:
 }
 
 
-void FArray::Add(int count, int elementSize)
-{
-	Insert(0, count, elementSize);
-}
-
-
 void FArray::Insert(int index, int count, int elementSize)
 {
 	guard(FArray::Insert);
@@ -147,9 +141,9 @@ void FArray::Remove(int index, int count, int elementSize)
 }
 
 
-void FArray::FastRemove(int index, int count, int elementSize)
+void FArray::RemoveAtSwap(int index, int count, int elementSize)
 {
-	guard(FArray::FastRemove);
+	guard(FArray::RemoveAtSwap);
 	assert(index >= 0);
 	assert(count > 0);
 	assert(index + count <= DataCount);

@@ -214,7 +214,7 @@ void UIPackageDialog::InitUI()
 
 void UIPackageDialog::UpdateSelectedPackages()
 {
-	SelectedPackages.FastEmpty();
+	SelectedPackages.Reset();
 
 	if (!UseFlatView)
 	{
@@ -474,9 +474,10 @@ void UIPackageDialog::SavePackages()
 	guard(UIPackageDialog::SavePackages);
 
 	//!! Possible options:
-	//!! - save used packages (find better name - "imports", "links", "used packages" ...)
+	//!! - save used packages (find better name - "imports", "links", "used packages", "referenced packages" ...)
 	//!! - decompress packages
 	//!! - preserve package paths
+	//!! - destination directory
 	UpdateSelectedPackages();
 
 	UIProgressDialog progress;

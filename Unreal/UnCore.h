@@ -117,13 +117,13 @@ FArchive *appCreateFileReader(const CGameFileInfo *info);
 typedef bool (*EnumGameFilesCallback_t)(const CGameFileInfo*, void*);
 void appEnumGameFilesWorker(EnumGameFilesCallback_t, const char *Ext = NULL, void *Param = NULL);
 
-template<class T>
+template<typename T>
 FORCEINLINE void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*, T&), const char* Ext, T& Param)
 {
 	appEnumGameFilesWorker((EnumGameFilesCallback_t)Callback, Ext, &Param);
 }
 
-template<class T>
+template<typename T>
 FORCEINLINE void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*, T&), T& Param)
 {
 	appEnumGameFilesWorker((EnumGameFilesCallback_t)Callback, NULL, &Param);
@@ -551,7 +551,8 @@ public:
 		return !strcmp(type, "FArchive");
 	}
 
-	template<class T> T* CastTo()
+	template<typename T>
+	T* CastTo()
 	{
 		if (IsA(T::StaticGetName()))
 			return static_cast<T*>(this);
@@ -1165,7 +1166,8 @@ struct FTransform
 -----------------------------------------------------------------------------*/
 
 // Default typeinfo
-template<class T> struct TTypeInfo
+template<typename T>
+struct TTypeInfo
 {
 	enum { FieldSize = sizeof(T) };
 	enum { NumFields = 1         };
@@ -1175,12 +1177,14 @@ template<class T> struct TTypeInfo
 };
 
 
-template<class T1, class T2> struct IsSameType
+template<typename T1, typename T2>
+struct IsSameType
 {
 	enum { Value = 0 };
 };
 
-template<class T> struct IsSameType<T,T>
+template<typename T>
+struct IsSameType<T,T>
 {
 	enum { Value = 1 };
 };
@@ -1254,14 +1258,14 @@ SIMPLE_TYPE(FTransform, float)
 
 
 /*-----------------------------------------------------------------------------
-	TArray/TLazyArray templates
+	TArray class
 -----------------------------------------------------------------------------*/
 
 /*
  * NOTES:
  *	- FArray/TArray should not contain objects with virtual tables (no
  *	  constructor/destructor support)
- *	- should not use new[] and delete[] here, because compiler will alloc
+ *	- should not use new[] and delete[] here, because compiler will allocate
  *	  additional 'count' field to support correct delete[], but we use
  *	  appMalloc/appFree calls to allocate/release memory.
  */
@@ -1315,12 +1319,12 @@ protected:
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 
 	void Empty (int count, int elementSize);
-	void Add   (int count, int elementSize);
+	// insert 'count' items of size 'elementSize' at position 'index', memory will be zeroed
 	void Insert(int index, int count, int elementSize);
 	// remove items and then move next items to the position of removed items
 	void Remove(int index, int count, int elementSize);
-	// remove items and then fill the hole with items from array end
-	void FastRemove(int index, int count, int elementSize);
+	// remove items and then fill the hole with items from array's end
+	void RemoveAtSwap(int index, int count, int elementSize);
 
 	void* GetItem(int index, int elementSize) const;
 };
@@ -1339,7 +1343,8 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 // NOTE: this container cannot hold objects, required constructor/destructor
 // (at least, Add/Insert/Remove functions are not supported, but can serialize
 // such data)
-template<class T> class TArray : public FArray
+template<typename T>
+class TArray : public FArray
 {
 public:
 	TArray()
@@ -1360,6 +1365,10 @@ public:
 	{
 		return (const T*)DataPtr;
 	}
+	FORCEINLINE bool IsValidIndex(int index) const
+	{
+		return index >= 0 && index < DataCount;
+	}
 #if !DO_ASSERT
 	// version without verifications, very compact
 	FORCEINLINE T& operator[](int index)
@@ -1375,14 +1384,14 @@ public:
 	T& operator[](int index)
 	{
 		guardfunc;
-		assert(index >= 0 && index < DataCount);
+		assert(IsValidIndex(index));
 		return *((T*)DataPtr + index);
 		unguardf("%d/%d", index, DataCount);
 	}
 	const T& operator[](int index) const
 	{
 		guardfunc;
-		assert(index >= 0 && index < DataCount);
+		assert(IsValidIndex(index));
 		return *((T*)DataPtr + index);
 		unguardf("%d/%d", index, DataCount);
 	}
@@ -1396,7 +1405,7 @@ public:
 	{
 		return *(T*)GetItem(index, sizeof(T));
 	}
-#endif
+#endif // DO_ASSERT && !DO_GUARD_MAX
 
 	//!! UE4 different API: AddZeroed(count), AddUninitialized(count) (pass to FArray)
 	//!! UE4 name: AddDefaulted(count), but returns 'index'
@@ -1415,6 +1424,7 @@ public:
 		return index;
 	}
 
+	//!! Missing in UE4, find alternative (where is it used here?)
 	FORCEINLINE T& AddItem()
 	{
 		int index = Add();
@@ -1428,8 +1438,7 @@ public:
 		if (!TTypeInfo<T>::IsPod) Construct(index, count);
 	}
 
-	//!! UE4 name: RemoveAt()
-	FORCEINLINE void Remove(int index, int count = 1)
+	FORCEINLINE void RemoveAt(int index, int count = 1)
 	{
 		// destruct specified array items
 		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
@@ -1440,21 +1449,19 @@ public:
 	// Remove an item and copy last array's item(s) to the removed item position,
 	// so no array shifting performed. Could be used when order of array elements
 	// is not important.
-	//!! UE4 name: RemoveAtSwap()
-	FORCEINLINE void FastRemove(int index, int count = 1)
+	FORCEINLINE void RemoveAtSwap(int index, int count = 1)
 	{
 		// destruct specified array items
 		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
 		// remove items from array
-		FArray::FastRemove(index, count, sizeof(T));
+		FArray::RemoveAtSwap(index, count, sizeof(T));
 	}
 
-	//!! UE4 name: RemoveSingle(item)
-	void RemoveItem(const T& item)
+	void RemoveSingle(const T& item)
 	{
 		int index = FindItem(item);
 		if (index >= 0)
-			Remove(index);
+			RemoveAt(index);
 	}
 
 	int FindItem(const T& item, int startIndex = 0) const
@@ -1481,13 +1488,18 @@ public:
 		FArray::Empty(count, sizeof(T));
 	}
 
-	//!! UE4 name: Reset(int count) - will call Empty(count) if new size is larger
-	FORCEINLINE void FastEmpty()
+	// set new DataCount without reallocation if possible
+	FORCEINLINE void Reset(int count = 0)
 	{
-		// destruct all array items
-		if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
-		// set DataCount to 0 without reallocation
-		DataCount = 0;
+		if (MaxCount < count)
+		{
+			Empty(count);
+		}
+		else
+		{
+			if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
+			DataCount = 0;
+		}
 	}
 
 	FORCEINLINE void Sort(int (*cmpFunc)(const T*, const T*))
@@ -1560,7 +1572,8 @@ private:
 	}
 };
 
-template<class T> inline void Exchange(TArray<T>& A, TArray<T>& B)
+template<typename T>
+inline void Exchange(TArray<T>& A, TArray<T>& B)
 {
 	const int size = sizeof(TArray<T>);
 	byte buffer[size];
@@ -1569,8 +1582,10 @@ template<class T> inline void Exchange(TArray<T>& A, TArray<T>& B)
 	memcpy(&B, buffer, size);
 }
 
-// Binary-compatible array, but with no allocations inside
-template<class T, int N> class TStaticArray : public TArray<T>
+// Binary-compatible array, but with inline allocation. FArray has
+// helper function IsStatic() for this class.
+template<typename T, int N>
+class TStaticArray : public TArray<T>
 {
 	// We require "using TArray<T>::*" for gcc 3.4+ compilation
 	// http://gcc.gnu.org/gcc-3.4/changes.html
@@ -1589,7 +1604,8 @@ protected:
 	T		StaticData[N];
 };
 
-template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
+template<typename T>
+FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
 	guard(TArray::operator new);
 	assert(size == sizeof(T));
@@ -1608,7 +1624,8 @@ void SkipFixedArray(FArchive &Ar, int ItemSize);
 // it 1st time only disk position is remembered, and later array can be
 // read from file when needed)
 
-template<class T> class TLazyArray : public TArray<T>
+template<typename T>
+class TLazyArray : public TArray<T>
 {
 	// Helper function to reduce TLazyArray<>::operator<<() code size.
 	// Used as C-style wrapper around TArray<>::operator<<().
@@ -1646,7 +1663,8 @@ void SkipLazyArray(FArchive &Ar);
 // There is no reading optimization performed here (in umodel)
 
 //!! UE4 name: use "Array.BulkSerialize(Ar)" instead of "Ar << RAW_ARRAY(Array)"
-template<class T> class TRawArray : protected TArray<T>
+template<typename T>
+class TRawArray : protected TArray<T>
 {
 public:
 	// Helper function to reduce TRawArray<>::operator<<() code size.
@@ -1680,7 +1698,8 @@ protected:
 void SkipRawArray(FArchive &Ar, int Size = -1);
 
 // helper function for RAW_ARRAY macro
-template<class T> inline TRawArray<T>& ToRawArray(TArray<T> &Arr)
+template<typename T>
+FORCEINLINE TRawArray<T>& ToRawArray(TArray<T> &Arr)
 {
 	return (TRawArray<T>&)Arr;
 }
@@ -1689,7 +1708,8 @@ template<class T> inline TRawArray<T>& ToRawArray(TArray<T> &Arr)
 
 #endif // UNREAL3
 
-template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
+template<typename T1, typename T2>
+inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
 {
 	if (IsSameType<T1,T2>::Value && TTypeInfo<T1>::IsPod)
 	{
@@ -1719,7 +1739,8 @@ template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const 
 -----------------------------------------------------------------------------*/
 
 // Very simple class, required only for serialization
-template<class TK, class TV> struct TMapPair
+template<typename TK, typename TV>
+struct TMapPair
 {
 	TK		Key;
 	TV		Value;
@@ -1731,7 +1752,8 @@ template<class TK, class TV> struct TMapPair
 };
 
 
-template<class TK, class TV> class TMap : public TArray<TMapPair<TK, TV> >
+template<typename TK, typename TV>
+class TMap : public TArray<TMapPair<TK, TV> >
 {
 public:
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TMap &Map)
@@ -1740,7 +1762,8 @@ public:
 	}
 };
 
-template<class TK, class TV, int N> class TStaticMap : public TStaticArray<TMapPair<TK, TV>, N>
+template<typename TK, typename TV, int N>
+class TStaticMap : public TStaticArray<TMapPair<TK, TV>, N>
 {
 public:
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TStaticMap &Map)
@@ -1751,10 +1774,10 @@ public:
 
 
 /*-----------------------------------------------------------------------------
-	TMap template
+	TArray of T[N] template
 -----------------------------------------------------------------------------*/
 
-template<class T, int N>
+template<typename T, int N>
 struct TArrayOfArrayItem
 {
 	T	Data[N];
@@ -1767,7 +1790,7 @@ struct TArrayOfArrayItem
 	}
 };
 
-template<class T, int N>
+template<typename T, int N>
 class TArrayOfArray : public TArray<TArrayOfArrayItem<T, N> >
 {
 };
@@ -1828,7 +1851,7 @@ public:
 
 	FORCEINLINE void RemoveAt(int index, int count = 1)
 	{
-		Data.Remove(index, count);
+		Data.RemoveAt(index, count);
 	}
 
 	char& operator[](int index)
@@ -1872,7 +1895,8 @@ protected:
 };
 
 // Binary-compatible string, but with no allocations inside
-template<int N> class FStaticString : public FString
+template<int N>
+class FStaticString : public FString
 {
 public:
 	FORCEINLINE FStaticString()

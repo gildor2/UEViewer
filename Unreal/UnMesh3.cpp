@@ -1731,7 +1731,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		Ar << LODModels;
 		// MK X has 1 LODModel and 4 LODInfo
 		if (LODInfo.Num() > LODModels.Num())
-			LODInfo.Remove(LODModels.Num(), LODInfo.Num() - LODModels.Num());
+			LODInfo.RemoveAt(LODModels.Num(), LODInfo.Num() - LODModels.Num());
 		DROP_REMAINING_DATA(Ar);
 		return;
 	}

@@ -745,7 +745,7 @@ void USkeletalMesh::ConvertMesh()
 			}
 			else
 			{
-				Mesh->Lods.Remove(lod);
+				Mesh->Lods.RemoveAt(lod);
 				break;
 			}
 		}

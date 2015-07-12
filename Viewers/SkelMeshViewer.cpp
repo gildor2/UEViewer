@@ -238,7 +238,7 @@ void CSkelMeshViewer::TagMesh(CSkelMeshInstance *NewInst)
 		if (Meshes[i]->pMesh == NewInst->pMesh)
 		{
 			// already tagged, remove
-			Meshes.Remove(i);
+			Meshes.RemoveAt(i);
 			return;
 		}
 	Meshes.AddItem(NewInst);

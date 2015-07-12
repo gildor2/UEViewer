@@ -26,12 +26,7 @@ UObject::~UObject()
 {
 //	appPrintf("deleting %s (%p) - package %s, index %d\n", Name, this, Package ? Package->Name : "None", PackageIndex);
 	// remove self from GObjObjects
-	for (int i = 0; i < GObjObjects.Num(); i++)
-		if (GObjObjects[i] == this)
-		{
-			GObjObjects.Remove(i);
-			break;
-		}
+	GObjObjects.RemoveSingle(this);
 	// remove self from package export table
 	// note: we using PackageIndex==INDEX_NONE when creating dummy object, not exported from
 	// any package, but which still belongs to this package (for example check Rune's
@@ -142,7 +137,7 @@ void UObject::EndLoad()
 	while (GObjLoaded.Num())
 	{
 		UObject *Obj = GObjLoaded[0];
-		GObjLoaded.Remove(0);
+		GObjLoaded.RemoveAt(0);
 		//!! should sort by packages + package offset
 		UnPackage *Package = Obj->Package;
 		guard(LoadObject);
@@ -1134,7 +1129,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						appError("Unknown structure type %s", Prop->TypeName);
 					// prepare array
 					Arr->Empty(DataCount, ItemType->SizeOf);
-					Arr->Add(DataCount, ItemType->SizeOf);
+					Arr->Insert(0, DataCount, ItemType->SizeOf);
 					// serialize items
 					byte *item = (byte*)Arr->GetData();
 					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
