@@ -385,15 +385,15 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		// empty FString
 		// original UE has array count == 0 and special handling when converting FString
 		// to char*
-		S.AddItem(0);
+		S.Data.AddItem(0);
 		return Ar;
 	}
 
 	if (len > 0)
 	{
 		// ANSI string
-		S.Add(len);
-		Ar.Serialize(S.GetData(), len);
+		S.Data.Add(len);
+		Ar.Serialize(S.Data.GetData(), len);
 	}
 	else
 	{
@@ -407,7 +407,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 				c = (c >> 8) | ((c & 0xFF) << 8);
 #endif
 			if (c & 0xFF00) c = '$';	//!! incorrect ...
-			S.AddItem(c & 255);			//!! incorrect ...
+			S.Data.AddItem(c & 255);	//!! incorrect ...
 		}
 	}
 /*	for (i = 0; i < S.Num(); i++) -- disabled 21.03.2012, Unicode chars are "fixed" before S.AddItem() above

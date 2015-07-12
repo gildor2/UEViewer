@@ -888,9 +888,10 @@ void UITextEdit::UpdateText()
 
 	int len = GetWindowTextLength(Wnd);
 	FString& S = *pValue;
-	S.Empty(len+1);
-	S.Add(len+1);
-	GetWindowText(Wnd, &S[0], len + 1);
+	TArray<char>& StrData = S.GetDataArray();
+	StrData.Empty(len+1);
+	StrData.Add(len+1);
+	GetWindowText(Wnd, StrData.GetData(), len + 1);
 }
 
 

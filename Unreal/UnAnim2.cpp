@@ -591,7 +591,7 @@ public:
 		Empty(Count);
 		DataCount = Count;
 		// serialize items from "DataAr"
-		T* Item = (T*)GetData();
+		T* Item = GetData();
 		while (Count > 0)
 		{
 			DataAr << *Item;

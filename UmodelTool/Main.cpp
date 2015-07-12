@@ -569,6 +569,8 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 static void SetPathOption(FString& where, const char* value)
 {
 	// determine whether absolute path is used
+	const char* value2;
+
 #if _WIN32
 	int isAbsPath = (value[0] != 0) && (value[1] == ':');
 #else
@@ -576,7 +578,7 @@ static void SetPathOption(FString& where, const char* value)
 #endif
 	if (isAbsPath)
 	{
-		where = value;
+		value2 = value;
 	}
 	else
 	{
@@ -587,21 +589,26 @@ static void SetPathOption(FString& where, const char* value)
 
 		if (!value || !value[0])
 		{
-			where = path;
+			value2 = path;
 		}
 		else
 		{
 			char buffer[512];
 			int len = appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
-			where = buffer;
+			value2 = buffer;
 		}
 	}
+
+	char finalName[512];
+	appStrncpyz(finalName, value, ARRAY_COUNT(finalName)-1);
+	appNormalizeFilename(finalName);
+
+	where = finalName;
+
 	// strip possible trailing double quote
-	int len = where.Num() - 1;			// exclude trailing zero byte
+	int len = where.Len();
 	if (len > 0 && where[len-1] == '"')
-	{
-		where.Remove(len-1, 1);
-	}
+		where.RemoveAt(len-1);
 }
 
 // Display error message about wrong command line and then exit.
@@ -796,7 +803,7 @@ int main(int argc, char **argv)
 		// only 1 parameter has been specified - check if this is a directory name
 		// note: this is only meaningful for UI version of umodel, because there's nothing to
 		// do with directory without UI
-		if (appGetFileType(argPkgName) == FS_DIR)
+		if (appGetFileType(argPkgName) == FS_FILE)
 		{
 			SetPathOption(GSettings.GamePath, argPkgName);
 			hasRootDir = true;

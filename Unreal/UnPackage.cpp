@@ -1955,8 +1955,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 					// V(0) = len ^ 0x3E
 					// V(i) = V(i-1) + 0x48 ^ 0xE1
 					// Number of bytes = (len ^ 7) & 0xF
-					int skip = name.Num();
-					if (skip > 0) skip--;				// Num() included null terminating char
+					int skip = name.Len();
 					skip = (skip ^ 7) & 0xF;
 					Seek(Tell() + skip);
 				}
@@ -1998,11 +1997,11 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 					}
 					else if (ArLicenseeVer < 16)
 					{
-						TrashLen = (name.Num() - 1) ^ 7;
+						TrashLen = name.Len() ^ 7;
 					}
 					else
 					{
-						TrashLen = (name.Num() - 1) ^ 6;
+						TrashLen = name.Len() ^ 6;
 					}
 					this->Seek(this->Tell() + (TrashLen & 0xF));
 				}

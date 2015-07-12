@@ -198,32 +198,32 @@ FString::FString(const char* src)
 {
 	if (!src)
 	{
-		Add(1);					// null char
+		Data.Add(1);			// null char
 	}
 	else
 	{
 		int len = strlen(src) + 1;
-		Add(len);
-		memcpy(DataPtr, src, len);
+		Data.Add(len);
+		memcpy(Data.GetData(), src, len);
 	}
 }
 
 
 FString& FString::operator=(const char* src)
 {
-	if (src == DataPtr)
+	if (src == Data.GetData())
 		return *this; // assigning to self
 
 	Empty();
 	if (!src)
 	{
-		Add(1);					// null char
+		Data.Add(1);			// null char
 	}
 	else
 	{
 		int len = strlen(src) + 1;
-		Add(len);
-		memcpy(DataPtr, src, len);
+		Data.Add(len);
+		memcpy(Data.GetData(), src, len);
 	}
 	return *this;
 }
@@ -232,17 +232,17 @@ FString& FString::operator=(const char* src)
 FString& FString::operator+=(const char* text)
 {
 	int len = strlen(text);
-	int oldLen = Num();
+	int oldLen = Data.Num();
 	if (oldLen)
 	{
-		Add(len);
+		Data.Add(len);
 		// oldLen-1 -- cut null char, len+1 -- append null char
-		memcpy(OffsetPointer(DataPtr, oldLen-1), text, len+1);
+		memcpy(OffsetPointer(Data.GetData(), oldLen-1), text, len+1);
 	}
 	else
 	{
-		Add(len+1);	// reserve space for null char
-		memcpy(DataPtr, text, len+1);
+		Data.Add(len+1);	// reserve space for null char
+		memcpy(Data.GetData(), text, len+1);
 	}
 	return *this;
 }
@@ -250,20 +250,22 @@ FString& FString::operator+=(const char* text)
 
 char* FString::Detach()
 {
-	char* data;
-	if (IsStatic())
+	char* RetData;
+	if (Data.IsStatic())
 	{
-		data = appStrdup((char*)DataPtr);
+		RetData = appStrdup((char*)Data.DataPtr);
 		// clear string
-		DataCount = 0;
-		*(char*)DataPtr = 0;
-		return data;
+		Data.DataCount = 0;
+		*(char*)Data.DataPtr = 0;
 	}
-	data = (char*)DataPtr;
-	DataPtr   = NULL;
-	DataCount = 0;
-	MaxCount  = 0;
-	return data;
+	else
+	{
+		RetData = (char*)Data.DataPtr;
+		Data.DataPtr   = NULL;
+		Data.DataCount = 0;
+		Data.MaxCount  = 0;
+	}
+	return RetData;
 }
 
 

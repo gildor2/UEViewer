@@ -1269,6 +1269,8 @@ SIMPLE_TYPE(FTransform, float)
 class FArray
 {
 	friend struct CTypeInfo;
+	friend class FString;
+	template<int N> friend class FStaticString;
 
 public:
 	FORCEINLINE FArray()
@@ -1350,6 +1352,14 @@ public:
 	}
 	// data accessors
 
+	FORCEINLINE T* GetData()
+	{
+		return (T*)DataPtr;
+	}
+	FORCEINLINE const T* GetData() const
+	{
+		return (const T*)DataPtr;
+	}
 #if !DO_ASSERT
 	// version without verifications, very compact
 	FORCEINLINE T& operator[](int index)
@@ -1766,8 +1776,7 @@ class TArrayOfArray : public TArray<TArrayOfArrayItem<T, N> >
 	FString
 -----------------------------------------------------------------------------*/
 
-//!! Note: "Num" returns length including final zero byte. Should review this.
-class FString : public TArray<char>
+class FString
 {
 public:
 	FString()
@@ -1786,32 +1795,80 @@ public:
 	// detached string in destructor
 	char* Detach();
 
-	FORCEINLINE bool IsEmpty()
+	FORCEINLINE int Len() const
 	{
-		return Num() <= 1;
+		return Data.Num() <= 1 ? 0 : Data.Num() - 1;
+	}
+
+	FORCEINLINE TArray<char>& GetDataArray()
+	{
+		return Data;
+	}
+
+	FORCEINLINE const TArray<char>& GetDataArray() const
+	{
+		return Data;
+	}
+
+	FORCEINLINE void Empty(int count = 0)
+	{
+		Data.Empty(count);
+	}
+
+	FORCEINLINE bool IsEmpty() const
+	{
+		return Data.Num() <= 1;
+	}
+
+	FORCEINLINE FString& AppendChar(char ch)
+	{
+		int index = Data.Add(1);
+		Data[index] = ch;
+	}
+
+	FORCEINLINE void RemoveAt(int index, int count = 1)
+	{
+		Data.Remove(index, count);
+	}
+
+	char& operator[](int index)
+	{
+		guard(FString::operator[]);
+		assert(index >= 0 && index < Data.Num());
+		return Data.GetData()[index];
+		unguardf("%d/%d", index, Data.Num());
+	}
+	const char& operator[](int index) const
+	{
+		guard(FString::operator[]);
+		assert(index >= 0 && index < Data.Num());
+		return Data.GetData()[index];
+		unguardf("%d/%d", index, Data.Num());
 	}
 
 	// convert string to char* - use "*Str"
-	//!! WARNING: could crash if string is empty
 	FORCEINLINE const char *operator*() const
 	{
-		return (char*)DataPtr;
+		return IsEmpty() ? "" : Data.GetData();
 	}
 	FORCEINLINE operator const char*() const
 	{
-		return (char*)DataPtr;
+		return IsEmpty() ? "" : Data.GetData();
 	}
 	// comparison
-	FORCEINLINE bool operator==(const FString& other) const
+	friend FORCEINLINE bool operator==(const FString& A, const FString& B)
 	{
-		return !strcmp((char*)DataPtr, (char*)other.DataPtr);
+		return !strcmp(*A, *B);
 	}
-	FORCEINLINE bool operator==(const char* other) const
+	friend FORCEINLINE bool operator==(const FString& A, const char* B)
 	{
-		return !strcmp((char*)DataPtr, other);
+		return !strcmp(*A, B);
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);
+
+protected:
+	TArray<char>		Data;
 };
 
 // Binary-compatible string, but with no allocations inside
@@ -1820,8 +1877,8 @@ template<int N> class FStaticString : public FString
 public:
 	FORCEINLINE FStaticString()
 	{
-		DataPtr = (void*)&StaticData[0];
-		MaxCount = N;
+		Data.DataPtr = (void*)&StaticData[0];
+		Data.MaxCount = N;
 	}
 
 	// operators

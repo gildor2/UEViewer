@@ -40,7 +40,7 @@ UIFilePathEditor::UIFilePathEditor(FString* path)
 ,	Path(path)
 {
 #if _WIN32
-	for (int i = 0; i < Path->Num(); i++)
+	for (int i = 0; i < Path->Len(); i++)
 		if ((*Path)[i] == '/') (*Path)[i] = '\\';
 #endif
 }

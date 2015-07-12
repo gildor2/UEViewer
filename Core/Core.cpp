@@ -311,7 +311,7 @@ const char *appStristr(const char *s1, const char *s2)
 	return s1 + (s - buf1);
 }
 
-static void NormalizeFilename(char *filename)
+void appNormalizeFilename(char *filename)
 {
 	char *src = filename;
 	char *dst = filename;
@@ -324,6 +324,11 @@ static void NormalizeFilename(char *filename)
 		*dst++ = prev = c;
 		if (!c) break;
 	}
+	if (--dst > filename)
+	{
+		// strip trailing slash, if one
+		if (*dst == '/') *dst = 0;
+	}
 }
 
 void appMakeDirectory(const char *dirname)
@@ -333,7 +338,7 @@ void appMakeDirectory(const char *dirname)
 	// so - we will create "a", then "a/b", then "a/b/c"
 	char Name[256];
 	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
-	NormalizeFilename(Name);
+	appNormalizeFilename(Name);
 
 	for (char *s = Name; /* empty */ ; s++)
 	{
@@ -357,7 +362,7 @@ void appMakeDirectoryForFile(const char *filename)
 {
 	char Name[256];
 	appStrncpyz(Name, filename, ARRAY_COUNT(Name));
-	NormalizeFilename(Name);
+	appNormalizeFilename(Name);
 
 	char *s = strrchr(Name, '/');
 	if (s)
@@ -376,6 +381,10 @@ void appMakeDirectoryForFile(const char *filename)
 
 unsigned appGetFileType(const char *filename)
 {
+	char Name[256];
+	appStrncpyz(Name, filename, ARRAY_COUNT(Name));
+	appNormalizeFilename(Name);
+
 	struct stat buf;
 	if (stat(filename, &buf) == -1)
 		return 0;					// no such file/dir

@@ -241,7 +241,7 @@ struct FTfcRemapEntry_DCU
 	{
 		guard(FTfcRemapEntry_DCU<<);
 		Ar << R.Hash << R.Offset << R.CollisionString;
-		if (R.CollisionString.Num() > 1) appNotify("HASH COLLISION: %s\n", *R.CollisionString);	//!!
+		if (!R.CollisionString.IsEmpty()) appNotify("HASH COLLISION: %s\n", *R.CollisionString);	//!!
 		return Ar;
 		unguard;
 	}
