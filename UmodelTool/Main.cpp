@@ -600,7 +600,7 @@ static void SetPathOption(FString& where, const char* value)
 	}
 
 	char finalName[512];
-	appStrncpyz(finalName, value, ARRAY_COUNT(finalName)-1);
+	appStrncpyz(finalName, value2, ARRAY_COUNT(finalName)-1);
 	appNormalizeFilename(finalName);
 
 	where = finalName;
