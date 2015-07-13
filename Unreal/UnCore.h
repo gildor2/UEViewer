@@ -1409,22 +1409,39 @@ public:
 
 	//!! Possible additions from UE4:
 	//!! Emplace(...)       = new(...)
-	//!! Init(Value, Count) = fill array with 'Count' values
 	//!! SetNum/SetNumUninitialized/SetNumZeroed
 
-	//!! UE4 different API: AddZeroed(count), AddUninitialized(count) (pass to FArray)
-	//!! UE4 name: AddDefaulted(count), but returns 'index'
-	FORCEINLINE int Add(int count = 1)
+	FORCEINLINE void Init(const T& value, int count)
+	{
+		Empty(count);
+		DataCount = count;
+		for (int i = 0; i < count; i++)
+			*((T*)DataPtr + i) = value;
+	}
+
+	FORCEINLINE int AddZeroed(int count = 1)
 	{
 		int index = DataCount;
-		Insert(index, count);
+		FArray::Insert(index, count, sizeof(T));
 		return index;
+	}
+	FORCEINLINE int AddDefaulted(int count = 1)
+	{
+		int index = DataCount;
+		FArray::Insert(index, count, sizeof(T));
+		if (!TTypeInfo<T>::IsPod) Construct(index, count);
+		return index;
+	}
+	// There's no way to implement AddUninitialized - FArray functions always zero memory for newly allocated items
+	FORCEINLINE int AddUninitialized(int count = 1)
+	{
+		return AddZeroed(count);
 	}
 
 	//!! UE4 name: Add(item)
 	FORCEINLINE int AddItem(const T& item)
 	{
-		int index = Add();
+		int index = AddUninitialized();
 		Item(index) = item;
 		return index;
 	}
@@ -1432,7 +1449,7 @@ public:
 	//!! Missing in UE4, find alternative (where is it used here?)
 	FORCEINLINE T& AddItem()
 	{
-		int index = Add();
+		int index = AddDefaulted();
 		return Item(index);
 	}
 
@@ -1693,7 +1710,7 @@ inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
 	Dst.Empty(Count);
 	if (Count)
 	{
-		Dst.Add(Count);
+		Dst.AddUninitialized(Count);
 		T1 *pDst = (T1*)Dst.GetData();
 		T2 *pSrc = (T2*)Src.GetData();
 		do		// Count is > 0 here - checked above, so "do ... while" is more suitable (and more compact)
@@ -1815,7 +1832,7 @@ public:
 
 	FORCEINLINE FString& AppendChar(char ch)
 	{
-		int index = Data.Add(1);
+		int index = Data.AddUninitialized();
 		Data[index] = ch;
 	}
 

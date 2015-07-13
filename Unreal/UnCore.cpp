@@ -205,12 +205,12 @@ FString::FString(const char* src)
 {
 	if (!src)
 	{
-		Data.Add(1);			// null char
+		Data.AddZeroed(1);		// null char
 	}
 	else
 	{
 		int len = strlen(src) + 1;
-		Data.Add(len);
+		Data.AddUninitialized(len);
 		memcpy(Data.GetData(), src, len);
 	}
 }
@@ -224,12 +224,12 @@ FString& FString::operator=(const char* src)
 	Empty();
 	if (!src)
 	{
-		Data.Add(1);			// null char
+		Data.AddZeroed(1);		// null char
 	}
 	else
 	{
 		int len = strlen(src) + 1;
-		Data.Add(len);
+		Data.AddUninitialized(len);
 		memcpy(Data.GetData(), src, len);
 	}
 	return *this;
@@ -242,13 +242,13 @@ FString& FString::operator+=(const char* text)
 	int oldLen = Data.Num();
 	if (oldLen)
 	{
-		Data.Add(len);
+		Data.AddUninitialized(len);
 		// oldLen-1 -- cut null char, len+1 -- append null char
 		memcpy(OffsetPointer(Data.GetData(), oldLen-1), text, len+1);
 	}
 	else
 	{
-		Data.Add(len+1);	// reserve space for null char
+		Data.AddUninitialized(len+1);	// reserve space for null char
 		memcpy(Data.GetData(), text, len+1);
 	}
 	return *this;

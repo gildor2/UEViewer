@@ -794,7 +794,7 @@ static GLuint GetDefaultTexNum()
 		// allocate material
 		DefaultUTexture = new UTexture;
 		DefaultUTexture->bTwoSided = true;
-		DefaultUTexture->Mips.Add();
+		DefaultUTexture->Mips.AddDefaulted();
 		DefaultUTexture->Format = TEXF_RGBA8;
 		DefaultUTexture->Package = NULL;
 		DefaultUTexture->Name = "Default";
@@ -802,7 +802,7 @@ static GLuint GetDefaultTexNum()
 #define TEX_SIZE	64
 		FMipmap &Mip = DefaultUTexture->Mips[0];
 		Mip.USize = Mip.VSize = TEX_SIZE;
-		Mip.DataArray.Add(TEX_SIZE*TEX_SIZE*4);
+		Mip.DataArray.AddUninitialized(TEX_SIZE*TEX_SIZE*4);
 		byte *pic = &Mip.DataArray[0];
 		for (int x = 0; x < TEX_SIZE; x++)
 		{

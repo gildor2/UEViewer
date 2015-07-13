@@ -189,10 +189,10 @@ void UVertMesh::BuildNormals()
 	int numVerts = Verts.Num();
 	int i;
 	Normals.Empty(numVerts);
-	Normals.Add(numVerts);
+	Normals.AddZeroed(numVerts);
 	TArray<CVec3> tmpVerts, tmpNormals;
-	tmpVerts.Add(numVerts);
-	tmpNormals.Add(numVerts);
+	tmpVerts.AddZeroed(numVerts);
+	tmpNormals.AddZeroed(numVerts);
 	// convert verts
 	for (i = 0; i < numVerts; i++)
 	{
@@ -600,7 +600,7 @@ void USkeletalMesh::UpgradeFaces()
 	if (Faces.Num() && !Triangles.Num())
 	{
 		Triangles.Empty(Faces.Num());
-		Triangles.Add(Faces.Num());
+		Triangles.AddUninitialized(Faces.Num());
 		for (int i = 0; i < Faces.Num(); i++)
 		{
 			const FMeshFace &F = Faces[i];
@@ -628,7 +628,7 @@ void USkeletalMesh::UpgradeMesh()
 	for (i = 0; i < WeightIndices.Num(); i++)
 		numInfluences += WeightIndices[i].BoneInfIndices.Num() * (i + 1);
 	VertInfluences.Empty(numInfluences);
-	VertInfluences.Add(numInfluences);
+	VertInfluences.AddZeroed(numInfluences);
 	int vIndex = 0;
 	for (i = 0; i < WeightIndices.Num(); i++)				// loop by influence count per vertex
 	{
@@ -788,7 +788,7 @@ skeleton:
 void USkeletalMesh::InitSections(CSkelMeshLod &Lod)
 {
 	// allocate sections and set CMeshSection.Material
-	Lod.Sections.Add(Materials.Num());
+	Lod.Sections.AddZeroed(Materials.Num());
 	for (int sec = 0; sec < Materials.Num(); sec++)
 	{
 		const FMeshMaterial &M = Materials[sec];
@@ -916,7 +916,7 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 		// allocate index buffer
 		if (pass == 1)
 		{
-			Lod.Indices.Indices16.Add(NumIndices);
+			Lod.Indices.Indices16.AddZeroed(NumIndices);
 		}
 
 		for (i = 0; i < Triangles.Num(); i++)
@@ -926,7 +926,7 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 			// if section does not exist - add it
 			if (MatIndex >= NumSections)
 			{
-				Lod.Sections.Add(MatIndex - NumSections + 1);
+				Lod.Sections.AddZeroed(MatIndex - NumSections + 1);
 				NumSections = MatIndex + 1;
 			}
 			CMeshSection &Sec = Lod.Sections[MatIndex];
@@ -973,7 +973,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		// allocate index buffer
 		if (pass == 1)
 		{
-			Lod.Indices.Indices16.Add(NumIndices);
+			Lod.Indices.Indices16.AddZeroed(NumIndices);
 		}
 
 		int s;
@@ -986,7 +986,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 			// if section does not exist - add it
 			if (MatIndex >= NumSections)
 			{
-				Lod.Sections.Add(MatIndex - NumSections + 1);
+				Lod.Sections.AddZeroed(MatIndex - NumSections + 1);
 				NumSections = MatIndex + 1;
 			}
 			CMeshSection &Sec = Lod.Sections[MatIndex];
@@ -1015,7 +1015,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 			// if section does not exist - add it
 			if (MatIndex >= NumSections)
 			{
-				Lod.Sections.Add(MatIndex - NumSections + 1);
+				Lod.Sections.AddZeroed(MatIndex - NumSections + 1);
 				NumSections = MatIndex + 1;
 			}
 			CMeshSection &Sec  = Lod.Sections[MatIndex];
@@ -1314,7 +1314,7 @@ void FStaticLODModel::RestoreLineageMesh()
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.Add();
+			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = LW.Point;
 			PointNormals.AddItem(LW.Normal);
 			// build influences
@@ -1354,7 +1354,7 @@ void FStaticLODModel::RestoreLineageMesh()
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.Add();
+			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = LW.Pos;
 			PointNormals.AddItem(LW.Norm);
 			// build influences
@@ -1776,7 +1776,7 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	if (Skins.Num() && !Materials.Num())
 	{
 		const FVanguardSkin &S = Skins[0];
-		Materials.Add(S.Textures.Num());
+		Materials.AddZeroed(S.Textures.Num());
 		for (int i = 0; i < S.Textures.Num(); i++)
 			Materials[i].Material = S.Textures[i];
 	}
@@ -1812,7 +1812,7 @@ void UStaticMesh::ConvertMesh()
 	Lod->HasTangents = false;
 
 	// convert sections
-	Lod->Sections.Add(Sections.Num());
+	Lod->Sections.AddZeroed(Sections.Num());
 	for (i = 0; i < Sections.Num(); i++)
 	{
 		CMeshSection &Dst = Lod->Sections[i];

@@ -962,7 +962,7 @@ struct FRawStaticIndexBuffer4
 				byte* src = &data[0];
 				if (Ar.ReverseBytes)
 					appReverseBytes(src, count, 4);
-				S.Indices32.Add(count);
+				S.Indices32.AddUninitialized(count);
 				for (int i = 0; i < count; i++, src += 4)
 					S.Indices32[i] = *(int*)src;
 			}
@@ -972,7 +972,7 @@ struct FRawStaticIndexBuffer4
 				byte* src = &data[0];
 				if (Ar.ReverseBytes)
 					appReverseBytes(src, count, 2);
-				S.Indices16.Add(count);
+				S.Indices16.AddUninitialized(count);
 				for (int i = 0; i < count; i++, src += 2)
 					S.Indices16[i] = *(word*)src;
 			}
@@ -1162,7 +1162,7 @@ void UStaticMesh4::ConvertMesh()
 		Lod->HasTangents  = true;
 
 		// sections
-		Lod->Sections.Add(SrcLod.Sections.Num());
+		Lod->Sections.AddDefaulted(SrcLod.Sections.Num());
 		for (int i = 0; i < SrcLod.Sections.Num(); i++)
 		{
 			CMeshSection &Dst = Lod->Sections[i];

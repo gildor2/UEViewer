@@ -258,7 +258,7 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<RJoint> &Bones, 
 
 	int numBones = Anim.Num();
 	Coords.Empty(numBones);
-	Coords.Add(numBones);
+	Coords.AddZeroed(numBones);
 
 	for (int i = 0; i < numBones; i++)
 	{

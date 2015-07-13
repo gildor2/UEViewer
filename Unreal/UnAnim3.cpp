@@ -563,7 +563,7 @@ void UAnimSet::ConvertAnims()
 	AnimSet->AnimRotationOnly = bAnimRotationOnly;
 	if (UseTranslationBoneNames.Num())
 	{
-		AnimSet->UseAnimTranslation.Add(NumTracks);
+		AnimSet->UseAnimTranslation.AddZeroed(NumTracks);
 		for (i = 0; i < UseTranslationBoneNames.Num(); i++)
 		{
 			for (j = 0; j < TrackBoneNames.Num(); j++)
@@ -573,7 +573,7 @@ void UAnimSet::ConvertAnims()
 	}
 	if (ForceMeshTranslationBoneNames.Num())
 	{
-		AnimSet->ForceMeshTranslation.Add(NumTracks);
+		AnimSet->ForceMeshTranslation.AddZeroed(NumTracks);
 		for (i = 0; i < ForceMeshTranslationBoneNames.Num(); i++)
 		{
 			for (j = 0; j < TrackBoneNames.Num(); j++)

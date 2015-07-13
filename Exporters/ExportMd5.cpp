@@ -22,7 +22,7 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<CSkelMeshBone> &
 
 	int numBones = Bones.Num();
 	Coords.Empty(numBones);
-	Coords.Add(numBones);
+	Coords.AddZeroed(numBones);
 
 	for (int i = 0; i < numBones; i++)
 	{
@@ -161,7 +161,7 @@ if (i == 32 || i == 34)
 
 	// collect weights information
 	TArray<VertInfluences> Weights;				// Point -> Influences
-	Weights.Add(Lod.NumVerts);
+	Weights.AddZeroed(Lod.NumVerts);
 	for (i = 0; i < Lod.NumVerts; i++)
 	{
 		const CSkelMeshVertex &V = Lod.Verts[i];
@@ -193,9 +193,9 @@ if (i == 32 || i == 34)
 		TArray<bool> UsedVerts;					// mesh vertex -> surface: used of not
 		TArray<int>  MeshWeights;				// mesh vertex -> weight index
 		MeshVerts.Empty(Lod.NumVerts);
-		UsedVerts.Add(Lod.NumVerts);
-		BackWedge.Add(Lod.NumVerts);
-		MeshWeights.Add(Lod.NumVerts);
+		UsedVerts.AddZeroed(Lod.NumVerts);
+		BackWedge.AddZeroed(Lod.NumVerts);
+		MeshWeights.AddZeroed(Lod.NumVerts);
 
 		// find verts and triangles for current material
 		for (i = 0; i < Sec.NumFaces * 3; i++)

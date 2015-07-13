@@ -19,7 +19,7 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 	// We are using very simple algorithm here: to share all vertices with the same position
 	// independently on normals of faces which share this vertex.
 	TArray<CVec3> tmpNorm;
-	tmpNorm.Add(NumVerts);							// really will use Points.Num() items, which value is smaller than NumVerts
+	tmpNorm.AddZeroed(NumVerts);					// really will use Points.Num() items, which value is smaller than NumVerts
 	CVertexShare Share;
 	Share.Prepare(Verts, NumVerts, VertexSize);
 	for (i = 0; i < NumVerts; i++)

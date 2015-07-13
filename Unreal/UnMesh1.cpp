@@ -211,7 +211,7 @@ void ULodMesh::SerializeLodMesh1(FArchive &Ar, TArray<FMeshAnimSeq> &AnimSeqs, T
 		{
 			guard(RemapVerts);
 			TArray<FMeshVert> NewVerts;
-			NewVerts.Add(FrameCount * VertexCount);
+			NewVerts.AddZeroed(FrameCount * VertexCount);
 			for (int j = 0; j < FrameCount; j++)
 			{
 				int base    = VertexCount * j;
@@ -373,7 +373,7 @@ void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 	guard(Influences);
 	int numInfluences = tmpBoneWeights.Num();
 	VertInfluences.Empty(numInfluences);
-	VertInfluences.Add(numInfluences);
+	VertInfluences.AddZeroed(numInfluences);
 	int vIndex = 0;
 	assert(tmpBoneWeightIdx.Num() == RefSkeleton.Num());
 	for (int bone = 0; bone < tmpBoneWeightIdx.Num(); bone++) // loop by bones

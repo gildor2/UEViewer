@@ -78,18 +78,15 @@ struct CVertexShare
 		Normals.Empty(NumVerts);
 		WedgeToVert.Empty(NumVerts);
 		VertToWedge.Empty(NumVerts);
-		VertToWedge.Add(NumVerts);
+		VertToWedge.AddZeroed(NumVerts);
 #if USE_HASHING
 		// compute bounds for better hashing
 		ComputeBounds(&Verts->Position, NumVerts, VertexSize, Mins, Maxs);
 		VectorSubtract(Maxs, Mins, Extents);
 		Extents[0] += 1; Extents[1] += 1; Extents[2] += 1; // avoid zero divide
-		HashNext.Empty(NumVerts);
-		HashNext.Add(NumVerts);
 		// initialize Hash and HashNext with -1
+		HashNext.Init(-1, NumVerts);
 		memset(Hash, -1, sizeof(Hash));
-		for (int i = 0; i < NumVerts; i++)
-			HashNext[i] = -1;
 #endif // USE_HASHING
 	}
 

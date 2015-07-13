@@ -35,7 +35,7 @@ void UTexture::Serialize(FArchive &Ar)
 		// serialize mips using AR_INDEX count (this game uses int for array counts in all other places)
 		int Count;
 		Ar << AR_INDEX(Count);
-		Mips.Add(Count);
+		Mips.AddDefaulted(Count);
 		for (int i = 0; i < Count; i++)
 			Ar << Mips[i];
 		return;

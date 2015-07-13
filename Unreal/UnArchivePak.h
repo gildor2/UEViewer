@@ -227,7 +227,7 @@ public:
 
 		int count;
 		*Reader << count;
-		FileInfos.Add(count);
+		FileInfos.AddZeroed(count);
 
 		for (int i = 0; i < count; i++)
 		{

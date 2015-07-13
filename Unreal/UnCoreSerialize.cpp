@@ -392,7 +392,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	if (len > 0)
 	{
 		// ANSI string
-		S.Data.Add(len);
+		S.Data.AddUninitialized(len);
 		Ar.Serialize(S.Data.GetData(), len);
 	}
 	else
@@ -915,7 +915,7 @@ summary:
 		H.BlockSize = (Ar.ArVer >= 369) ? 0x20000 : 0x8000;
 	int BlockCount = (H.Sum.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
 	H.Blocks.Empty(BlockCount);
-	H.Blocks.Add(BlockCount);
+	H.Blocks.AddZeroed(BlockCount);
 	for (i = 0; i < BlockCount; i++)
 		Ar << H.Blocks[i];
 #else

@@ -104,7 +104,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 		int Count;
 		Ar << Count;
 		S.Generations.Empty(Count);
-		S.Generations.Add(Count);
+		S.Generations.AddZeroed(Count);
 		for (int i = 0; i < Count; i++)
 			Ar << S.Generations[i];
 	}
@@ -359,7 +359,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #endif // APB
 
 	S.Generations.Empty(Count);
-	S.Generations.Add(Count);
+	S.Generations.AddZeroed(Count);
 	for (int i = 0; i < Count; i++)
 		Ar << S.Generations[i];
 
@@ -519,7 +519,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	int Count;
 	Ar << Count;
 	S.Generations.Empty(Count);
-	S.Generations.Add(Count);
+	S.Generations.AddZeroed(Count);
 	for (int i = 0; i < Count; i++)
 		Ar << S.Generations[i];
 

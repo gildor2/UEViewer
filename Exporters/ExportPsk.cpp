@@ -99,7 +99,7 @@ static void ExportCommonMeshData
 	int numFaces = 0;
 	TArray<int> WedgeMat;
 	WedgeMat.Empty(NumVerts);
-	WedgeMat.Add(NumVerts);
+	WedgeMat.AddZeroed(NumVerts);
 	CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
 	for (i = 0; i < NumSections; i++)
 	{

@@ -890,7 +890,7 @@ void UITextEdit::UpdateText()
 	FString& S = *pValue;
 	TArray<char>& StrData = S.GetDataArray();
 	StrData.Empty(len+1);
-	StrData.Add(len+1);
+	StrData.AddUninitialized(len+1);
 	GetWindowText(Wnd, StrData.GetData(), len + 1);
 }
 
@@ -1112,7 +1112,7 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 {
 	Height = DEFAULT_LISTBOX_HEIGHT;
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
-	Items.Add(numColumns);		// reserve place for header
+	Items.AddZeroed(numColumns);	// reserve place for header
 }
 
 UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int width, ETextAlign align)
@@ -1138,7 +1138,7 @@ int UIMulticolumnListbox::AddItem(const char* item)
 
 	assert(Items.Num() % NumColumns == 0);
 	int numItems = Items.Num() / NumColumns - 1;
-	int index = Items.Add(NumColumns);
+	int index = Items.AddZeroed(NumColumns);
 	Items[index] = item;
 
 	if (Wnd)

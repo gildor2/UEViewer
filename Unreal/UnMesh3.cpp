@@ -973,7 +973,7 @@ struct FSkeletalMeshVertexBuffer3
 					TArray<FGPUVertBat4_HalfUV_Pos48> Verts;
 					Verts.BulkSerialize(Ar);
 					// copy data
-					VertsHalf.Add(Verts.Num());
+					VertsHalf.AddUninitialized(Verts.Num());
 					for (int i = 0; i < Verts.Num(); i++)
 					{
 						const FGPUVertBat4_HalfUV_Pos48& S = Verts[i];
@@ -989,7 +989,7 @@ struct FSkeletalMeshVertexBuffer3
 					TArray<FGPUVertBat4_HalfUV_Pos32> Verts;
 					Verts.BulkSerialize(Ar);
 					// copy data
-					VertsHalf.Add(Verts.Num());
+					VertsHalf.AddUninitialized(Verts.Num());
 					for (int i = 0; i < Verts.Num(); i++)
 					{
 						const FGPUVertBat4_HalfUV_Pos32& S = Verts[i];
@@ -1063,7 +1063,7 @@ struct FSkeletalMeshVertexBuffer3
 		// skip everything else, would fail if number of LODs is > 1
 
 		// combine vertex data
-		VertsHalf.Add(NumVertices);
+		VertsHalf.AddZeroed(NumVertices);
 		int UVIndex = 0;
 		for (int i = 0; i < NumVertices; i++)
 		{
@@ -1822,7 +1822,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		int NumBones = Skel.RefPose.Num();
 		assert(NumBones == Skel.Parentage.Num());
 		assert(NumBones == Skel.BoneNames.Num());
-		RefSkeleton.Add(NumBones);
+		RefSkeleton.AddDefaulted(NumBones);
 		for (int i = 0; i < NumBones; i++)
 		{
 			FMeshBone &B = RefSkeleton[i];
@@ -1919,7 +1919,7 @@ void USkeletalMesh3::ConvertMesh()
 		// convert MK X USkeleton to RefSkeleton
 		int NumBones = Skeleton->BoneName.Num();
 		assert(Skeleton->BoneParent.Num() == NumBones && Skeleton->BonePos.Num() == NumBones);
-		RefSkeleton.Add(NumBones);
+		RefSkeleton.AddDefaulted(NumBones);
 		for (int i = 0; i < NumBones; i++)
 		{
 			FMeshBone& B = RefSkeleton[i];
@@ -2554,7 +2554,7 @@ struct FStaticMeshVertexStream3
 				{
 					TArray<FVectorIntervalFixed48Bio> Vecs16x3;
 					Vecs16x3.BulkSerialize(Ar);
-					S.Verts.Add(Vecs16x3.Num());
+					S.Verts.AddUninitialized(Vecs16x3.Num());
 					for (int i = 0; i < Vecs16x3.Num(); i++)
 						S.Verts[i] = Vecs16x3[i].ToVector(Mins, Extents);
 					appNotify("type1 - untested");	//?? not found - not used?
@@ -2563,7 +2563,7 @@ struct FStaticMeshVertexStream3
 				{
 					TArray<FVectorIntervalFixed64> Vecs16x4;
 					Vecs16x4.BulkSerialize(Ar);
-					S.Verts.Add(Vecs16x4.Num());
+					S.Verts.AddUninitialized(Vecs16x4.Num());
 					for (int i = 0; i < Vecs16x4.Num(); i++)
 						S.Verts[i] = Vecs16x4[i].ToVector(Mins, Extents);
 				}
@@ -3114,7 +3114,7 @@ struct FStaticMeshLODModel3
 				if (n1 * 2 == n2)
 				{
 					appPrintf("Duplicating MK StaticMesh verts\n");
-					Lod.VertexStream.Verts.Add(n1);
+					Lod.VertexStream.Verts.AddUninitialized(n1);
 					for (int i = 0; i < n1; i++)
 						Lod.VertexStream.Verts[i+n1] = Lod.VertexStream.Verts[i];
 				}
@@ -3160,9 +3160,9 @@ struct FStaticMeshLODModel3
 					NumTexCoords = MAX_MESH_UV_SETS;
 				}
 				Lod.VertexStream.Verts.Empty(NumVerts);
-				Lod.VertexStream.Verts.Add(NumVerts);
+				Lod.VertexStream.Verts.AddZeroed(NumVerts);
 				Lod.UVStream.UV.Empty();
-				Lod.UVStream.UV.Add(NumVerts);
+				Lod.UVStream.UV.AddDefaulted(NumVerts);
 				Lod.UVStream.NumVerts     = NumVerts;
 				Lod.UVStream.NumTexCoords = NumTexCoords;
 				// resize UV streams
@@ -3753,7 +3753,7 @@ void UStaticMesh3::ConvertMesh()
 			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		// sections
-		Lod->Sections.Add(SrcLod.Sections.Num());
+		Lod->Sections.AddDefaulted(SrcLod.Sections.Num());
 		for (int i = 0; i < SrcLod.Sections.Num(); i++)
 		{
 			CMeshSection &Dst = Lod->Sections[i];
