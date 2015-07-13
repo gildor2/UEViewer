@@ -1336,7 +1336,7 @@ protected:
 
 FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 #if UNREAL3
-FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
+FArchive& SerializeBulkArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 #endif
 
 
@@ -1406,6 +1406,11 @@ public:
 		return *(T*)GetItem(index, sizeof(T));
 	}
 #endif // DO_ASSERT && !DO_GUARD_MAX
+
+	//!! Possible additions from UE4:
+	//!! Emplace(...)       = new(...)
+	//!! Init(Value, Count) = fill array with 'Count' values
+	//!! SetNum/SetNumUninitialized/SetNumZeroed
 
 	//!! UE4 different API: AddZeroed(count), AddUninitialized(count) (pass to FArray)
 	//!! UE4 name: AddDefaulted(count), but returns 'index'
@@ -1534,6 +1539,24 @@ public:
 #endif
 	}
 
+#if UNREAL3
+	// Serialize an  array, which file contents exactly the same as in-memory contents.
+	// Whole array can be read using single read call. Package engine version should
+	// equals to game engine version, and endianness should match, otherwise per-element
+	// reading will be performed (as usual in TArray). Note: there is no reading
+	// optimization performed here (in umodel).
+	FORCEINLINE void BulkSerialize(FArchive& Ar)
+	{
+	#if DO_GUARD_MAX
+		guardfunc;
+	#endif
+		SerializeBulkArray(Ar, *this, SerializeArray);
+	#if DO_GUARD_MAX
+		unguard;
+	#endif
+	}
+#endif // UNREAL3
+
 	// serializer helper; used from 'operator<<(FArchive, TArray<>)' only
 	static void SerializeItem(FArchive &Ar, void *item)
 	{
@@ -1542,7 +1565,7 @@ public:
 		Ar << *(T*)item;		// serialize item
 	}
 
-private:
+protected:
 	// disable array copying
 	TArray(const TArray &Other)
 	:	FArray()
@@ -1550,6 +1573,12 @@ private:
 	TArray& operator=(const TArray &Other)
 	{
 		return this;
+	}
+	// Helper function to reduce TLazyArray etc operator<<'s code size.
+	// Used as C-style wrapper around TArray<>::operator<<().
+	static FArchive& SerializeArray(FArchive &Ar, void *Array)
+	{
+		return Ar << *(TArray<T>*)Array;
 	}
 	// fast version of operator[] without assertions (may be used in safe code)
 	FORCEINLINE T& Item(int index)
@@ -1582,8 +1611,9 @@ inline void Exchange(TArray<T>& A, TArray<T>& B)
 	memcpy(&B, buffer, size);
 }
 
-// Binary-compatible array, but with inline allocation. FArray has
-// helper function IsStatic() for this class.
+// Binary-compatible array, but with inline allocation. FArray has helper function
+// IsStatic() for this class. The array size is not limited to 'N' - if more items
+// will be required, memory will be allocated.
 template<typename T, int N>
 class TStaticArray : public TArray<T>
 {
@@ -1627,13 +1657,6 @@ void SkipFixedArray(FArchive &Ar, int ItemSize);
 template<typename T>
 class TLazyArray : public TArray<T>
 {
-	// Helper function to reduce TLazyArray<>::operator<<() code size.
-	// Used as C-style wrapper around TArray<>::operator<<().
-	static FArchive& SerializeArray(FArchive &Ar, void *Array)
-	{
-		return Ar << *(TArray<T>*)Array;
-	}
-
 #if DO_GUARD_MAX
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
@@ -1651,61 +1674,8 @@ class TLazyArray : public TArray<T>
 
 
 void SkipLazyArray(FArchive &Ar);
-
-
 #if UNREAL3
-
-// NOTE: real class name is unknown; other suitable names: TCookedArray, TPodArray.
-// Purpose in UE: array, which file contents exactly the same as in-memory
-// contents. Whole array can be read using single read call. Package
-// engine version should equals to game engine version, otherwise per-element
-// reading will be performed (as usual in TArray)
-// There is no reading optimization performed here (in umodel)
-
-//!! UE4 name: use "Array.BulkSerialize(Ar)" instead of "Ar << RAW_ARRAY(Array)"
-template<typename T>
-class TRawArray : protected TArray<T>
-{
-public:
-	// Helper function to reduce TRawArray<>::operator<<() code size.
-	// Used as C-style wrapper around TArray<>::operator<<().
-	static FArchive& SerializeArray(FArchive &Ar, void *Array)
-	{
-		return Ar << *(TArray<T>*)Array;
-	}
-
-#if DO_GUARD_MAX
-	friend FArchive& operator<<(FArchive &Ar, TRawArray &A)
-	{
-		guardfunc;
-		return SerializeRawArray(Ar, A, SerializeArray);
-		unguard;
-	}
-#else
-	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TRawArray &A)
-	{
-		return SerializeRawArray(Ar, A, SerializeArray);
-	}
-#endif
-
-protected:
-	// disallow direct creation of TRawArray, this is a helper class with a
-	// different serializer
-	TRawArray()
-	{}
-};
-
-void SkipRawArray(FArchive &Ar, int Size = -1);
-
-// helper function for RAW_ARRAY macro
-template<typename T>
-FORCEINLINE TRawArray<T>& ToRawArray(TArray<T> &Arr)
-{
-	return (TRawArray<T>&)Arr;
-}
-
-#define RAW_ARRAY(Arr)		ToRawArray(Arr)
-
+void SkipBulkArrayData(FArchive &Ar, int Size = -1);
 #endif // UNREAL3
 
 template<typename T1, typename T2>

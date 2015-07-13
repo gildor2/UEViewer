@@ -218,9 +218,10 @@ struct FRawAnimSequenceTrack
 		if (Ar.ArVer >= 577)
 		{
 			// newer UE3 version has replaced serializer for this structure
-			Ar << RAW_ARRAY(T.PosKeys) << RAW_ARRAY(T.RotKeys);
+			T.PosKeys.BulkSerialize(Ar);
+			T.RotKeys.BulkSerialize(Ar);
 			// newer version will not serialize times
-			if (Ar.ArVer < 604) Ar << RAW_ARRAY(T.KeyTimes);
+			if (Ar.ArVer < 604) T.KeyTimes.BulkSerialize(Ar);
 			return Ar;
 		}
 		return Ar << T.PosKeys << T.RotKeys << T.KeyTimes;

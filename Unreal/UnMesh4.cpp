@@ -162,9 +162,9 @@ struct FMultisizeIndexContainer
 		Ar << DataSize;
 
 		if (DataSize == 2)
-			Ar << RAW_ARRAY(B.Indices16);
+			B.Indices16.BulkSerialize(Ar);
 		else if (DataSize == 4)
-			Ar << RAW_ARRAY(B.Indices32);
+			B.Indices32.BulkSerialize(Ar);
 		else
 			appError("Unknown DataSize %d", DataSize);
 
@@ -381,9 +381,9 @@ struct FSkeletalMeshVertexBuffer4
 		GNumSkelUVSets = B.NumTexCoords;
 		GNumSkelInfluences = B.bExtraBoneInfluences ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
 		if (!B.bUseFullPrecisionUVs)
-			Ar << RAW_ARRAY(B.VertsHalf);
+			B.VertsHalf.BulkSerialize(Ar);
 		else
-			Ar << RAW_ARRAY(B.VertsFloat);
+			B.VertsFloat.BulkSerialize(Ar);
 		DBG_SKEL("  Verts: Half[%d] Float[%d]\n", B.VertsHalf.Num(), B.VertsFloat.Num());
 
 		return Ar;
@@ -408,7 +408,7 @@ struct FSkeletalMeshVertexColorBuffer4
 		guard(FSkeletalMeshVertexColorBuffer4<<);
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		if (!StripFlags.IsDataStrippedForServer())
-			Ar << RAW_ARRAY(B.Data);
+			B.Data.BulkSerialize(Ar);
 		return Ar;
 		unguard;
 	}
@@ -423,7 +423,7 @@ struct FSkeletalMeshVertexAPEXClothBuffer
 		if (!StripFlags.IsDataStrippedForServer())
 		{
 			DBG_SKEL("Dropping ApexCloth\n");
-			SkipRawArray(Ar);
+			SkipBulkArrayData(Ar);
 		}
 		return Ar;
 	}
@@ -832,7 +832,7 @@ struct FPositionVertexBuffer4
 
 		Ar << S.Stride << S.NumVertices;
 		DBG_STAT("StaticMesh PositionStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
-		Ar << RAW_ARRAY(S.Verts);
+		S.Verts.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -893,7 +893,7 @@ struct FStaticMeshVertexBuffer4
 		{
 			GNumStaticUVSets = S.NumTexCoords;
 			GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
-			Ar << RAW_ARRAY(S.UV);
+			S.UV.BulkSerialize(Ar);
 		}
 
 		return Ar;
@@ -917,7 +917,7 @@ struct FColorVertexBuffer4
 		Ar << S.Stride << S.NumVertices;
 		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
 		if (!StripFlags.IsDataStrippedForServer() && (S.NumVertices > 0)) // zero size arrays are not serialized
-			Ar << RAW_ARRAY(S.Data);
+			S.Data.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -942,7 +942,7 @@ struct FRawStaticIndexBuffer4
 
 		if (Ar.ArVer < VER_UE4_SUPPORT_32BIT_STATIC_MESH_INDICES)
 		{
-			Ar << RAW_ARRAY(S.Indices16);
+			S.Indices16.BulkSerialize(Ar);
 			DBG_STAT("RawIndexBuffer, old format - %d indices\n", S.Indices16.Num());
 		}
 		else
@@ -951,7 +951,7 @@ struct FRawStaticIndexBuffer4
 			bool is32bit;
 			TArray<byte> data;
 			Ar << is32bit;
-			Ar << RAW_ARRAY(data);
+			data.BulkSerialize(Ar);
 			DBG_STAT("RawIndexBuffer, 32 bit = %d, %d indices (data size = %d)\n", is32bit, data.Num() / (is32bit ? 4 : 2), data.Num());
 			if (!data.Num()) return Ar;
 

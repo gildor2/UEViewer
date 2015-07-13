@@ -260,7 +260,7 @@ struct FIndexBuffer3
 		guard(FIndexBuffer3<<);
 
 		int unk;						// Revision?
-		Ar << RAW_ARRAY(I.Indices);
+		I.Indices.BulkSerialize(Ar);
 		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
 		return Ar;
 
@@ -317,9 +317,9 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 #endif // PLA
 	old_index_buffer:
 		if (ItemSize == 2)
-			Ar << RAW_ARRAY(I.Indices16);
+			I.Indices16.BulkSerialize(Ar);
 		else if (ItemSize == 4)
-			Ar << RAW_ARRAY(I.Indices32);
+			I.Indices32.BulkSerialize(Ar);
 		else
 			appError("Unknown ItemSize %d", ItemSize);
 
@@ -578,7 +578,7 @@ struct FSkelMeshChunk3
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
 			TArray<FMeshUVFloat> extraUV;
-			Ar << RAW_ARRAY(extraUV);
+			extraUV.BulkSerialize(Ar);
 		}
 #endif // ARMYOF2
 		if (Ar.ArVer >= 362)
@@ -842,7 +842,7 @@ struct FSkeletalMeshVertexBuffer3
 		old_version:
 			// old version - FSmoothVertex3 array
 			TArray<FSmoothVertex3> Verts;
-			Ar << RAW_ARRAY(Verts);
+			Verts.BulkSerialize(Ar);
 			DBG_SKEL("... %d verts in old format\n", Verts.Num());
 			// convert verts
 			CopyArray(S.VertsFloat, Verts);
@@ -919,16 +919,16 @@ struct FSkeletalMeshVertexBuffer3
 		if (!S.bUseFullPrecisionUVs)
 		{
 			if (!S.bUsePackedPosition)
-				Ar << RAW_ARRAY(S.VertsHalf);
+				S.VertsHalf.BulkSerialize(Ar);
 			else
-				Ar << RAW_ARRAY(S.VertsHalfPacked);
+				S.VertsHalfPacked.BulkSerialize(Ar);
 		}
 		else
 		{
 			if (!S.bUsePackedPosition)
-				Ar << RAW_ARRAY(S.VertsFloat);
+				S.VertsFloat.BulkSerialize(Ar);
 			else
-				Ar << RAW_ARRAY(S.VertsFloatPacked);
+				S.VertsFloatPacked.BulkSerialize(Ar);
 		}
 	after_serialize_verts:
 		DBG_SKEL("... verts: Half[%d] HalfPacked[%d] Float[%d] FloatPacked[%d]\n",
@@ -971,7 +971,7 @@ struct FSkeletalMeshVertexBuffer3
 			case 2:
 				{
 					TArray<FGPUVertBat4_HalfUV_Pos48> Verts;
-					Ar << RAW_ARRAY(Verts);
+					Verts.BulkSerialize(Ar);
 					// copy data
 					VertsHalf.Add(Verts.Num());
 					for (int i = 0; i < Verts.Num(); i++)
@@ -987,7 +987,7 @@ struct FSkeletalMeshVertexBuffer3
 			case 3:
 				{
 					TArray<FGPUVertBat4_HalfUV_Pos32> Verts;
-					Ar << RAW_ARRAY(Verts);
+					Verts.BulkSerialize(Ar);
 					// copy data
 					VertsHalf.Add(Verts.Num());
 					for (int i = 0; i < Verts.Num(); i++)
@@ -1001,7 +1001,7 @@ struct FSkeletalMeshVertexBuffer3
 				}
 				return;
 			default:
-				Ar << RAW_ARRAY(VertsHalf);
+				VertsHalf.BulkSerialize(Ar);
 				return;
 			}
 		}
@@ -1014,10 +1014,10 @@ struct FSkeletalMeshVertexBuffer3
 			case 2:
 			case 3:
 				appError("Batman4 GPU vertex type %d", BatmanPackType);
-//				Ar << RAW_ARRAY(VertsFloatPacked);
+//				VertsFloatPacked.BulkSerialize(Ar);
 				return;
 			default:
-				Ar << RAW_ARRAY(VertsFloat);
+				VertsFloat.BulkSerialize(Ar);
 				return;
 			}
 		}
@@ -1228,7 +1228,7 @@ struct FTRMeshUnkStream
 	{
 		Ar << S.ItemSize << S.NumVerts;
 		if (S.ItemSize && S.NumVerts)
-			Ar << RAW_ARRAY(S.Data);
+			S.Data.BulkSerialize(Ar);
 		return Ar;
 	}
 };
@@ -1441,7 +1441,8 @@ struct FStaticLODModel3
 		{
 			int unk84;
 			TArray<FMeshUVFloat> extraUV;
-			Ar << unk84 << RAW_ARRAY(extraUV);
+			Ar << unk84;
+			extraUV.BulkSerialize(Ar);
 		}
 #endif // ARMYOF2
 #if BIOSHOCK3
@@ -1539,7 +1540,7 @@ struct FStaticLODModel3
 					Ar << unk;
 				}
 #endif // PLA
-				Ar << RAW_ARRAY(Lod.VertexColor);
+				Lod.VertexColor.BulkSerialize(Ar);
 				appPrintf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
 			}
 		}
@@ -2475,12 +2476,12 @@ struct FStaticMeshVertexStream3
 			switch (VertexType)
 			{
 			case 0:
-				Ar << RAW_ARRAY(S.Verts);
+				S.Verts.BulkSerialize(Ar);
 				break;
 			case 4:
 				{
 					TArray<FVectorHalf> PackedVerts;
-					Ar << RAW_ARRAY(PackedVerts);
+					PackedVerts.BulkSerialize(Ar);
 					CopyArray(S.Verts, PackedVerts);
 				}
 				break;
@@ -2552,7 +2553,7 @@ struct FStaticMeshVertexStream3
 				if (VectorType)
 				{
 					TArray<FVectorIntervalFixed48Bio> Vecs16x3;
-					Ar << RAW_ARRAY(Vecs16x3);
+					Vecs16x3.BulkSerialize(Ar);
 					S.Verts.Add(Vecs16x3.Num());
 					for (int i = 0; i < Vecs16x3.Num(); i++)
 						S.Verts[i] = Vecs16x3[i].ToVector(Mins, Extents);
@@ -2561,7 +2562,7 @@ struct FStaticMeshVertexStream3
 				else
 				{
 					TArray<FVectorIntervalFixed64> Vecs16x4;
-					Ar << RAW_ARRAY(Vecs16x4);
+					Vecs16x4.BulkSerialize(Ar);
 					S.Verts.Add(Vecs16x4.Num());
 					for (int i = 0; i < Vecs16x4.Num(); i++)
 						S.Verts[i] = Vecs16x4[i].ToVector(Mins, Extents);
@@ -2601,13 +2602,13 @@ struct FStaticMeshVertexStream3
 			if (!bUseFullPrecisionPosition)
 			{
 				TArray<FVectorHalf> HalfVerts;
-				Ar << RAW_ARRAY(HalfVerts);
+				HalfVerts.BulkSerialize(Ar);
 				CopyArray(S.Verts, HalfVerts);
 				return Ar;
 			}
 		}
 #endif // DUST514
-		Ar << RAW_ARRAY(S.Verts);
+		S.Verts.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -2816,7 +2817,7 @@ struct FStaticMeshUVStream3
 			appError("StaticMesh has %d UV sets", S.NumTexCoords);
 		GNumStaticUVSets   = S.NumTexCoords;
 		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
-		Ar << RAW_ARRAY(S.UV);
+		S.UV.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -2834,7 +2835,8 @@ struct FStaticMeshColorStream3
 		guard(FStaticMeshColorStream3<<);
 		Ar << S.ItemSize << S.NumVerts;
 		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
-		return Ar << RAW_ARRAY(S.Colors);
+		S.Colors.BulkSerialize(Ar);
+		return Ar;
 		unguard;
 	}
 };
@@ -2867,7 +2869,7 @@ struct FStaticMeshColorStream3New		// ArVer >= 615
 				Ar << unk;
 			}
 #endif // PLA
-			Ar << RAW_ARRAY(S.Colors);
+			S.Colors.BulkSerialize(Ar);
 		}
 		return Ar;
 		unguard;
@@ -2898,7 +2900,7 @@ struct FStaticMeshUVStream3Old			// ArVer < 364; corresponds to UE2 StaticMesh?
 	{
 		guard(FStaticMeshUVStream3Old<<);
 		int unk;						// Revision?
-		Ar << S.Data;					// used RAW_ARRAY, but RAW_ARRAY is newer than this version
+		Ar << S.Data;					// used BulkSerialize, but BulkSerialize is newer than this version
 		if (Ar.ArVer < 297) Ar << unk;
 		return Ar;
 		unguard;
@@ -2927,7 +2929,8 @@ struct FStaticMeshNormalStream_MK
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshNormalStream_MK &S)
 	{
-		Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Normals);
+		Ar << S.ItemSize << S.NumVerts;
+		S.Normals.BulkSerialize(Ar);
 		DBG_STAT("MK NormalStream: ItemSize=%d, Count=%d (%d)\n", S.ItemSize, S.NumVerts, S.Normals.Num());
 		return Ar;
 	}
@@ -3042,7 +3045,7 @@ struct FStaticMeshLODModel3
 			}
 			if (Ar.ArVer < 536)
 			{
-				Ar << RAW_ARRAY(Lod.Edges);
+				Lod.Edges.BulkSerialize(Ar);
 				Ar << Lod.fEC;
 			}
 			return Ar;
@@ -3139,7 +3142,7 @@ struct FStaticMeshLODModel3
 				appNotify("StaticMesh: untested code! (ArVer=%d)", Ar.ArVer);
 				TArray<FQuat> Verts;
 				TArray<int>   Normals;	// compressed
-				Ar << Verts << Normals << UVStream;	// really used RAW_ARRAY, but it is too new for this code
+				Ar << Verts << Normals << UVStream;	// really used BulkSerialize, but it is too new for this code
 				//!! convert
 			}
 			else
@@ -3180,7 +3183,7 @@ struct FStaticMeshLODModel3
 		if (Ar.Game == GAME_Dust514 && Ar.ArLicenseeVer >= 32)
 		{
 			TArray<byte> unk;		// compressed index buffer?
-			Ar << RAW_ARRAY(unk);
+			unk.BulkSerialize(Ar);
 		}
 #endif // DUST514
 
@@ -3228,7 +3231,7 @@ struct FStaticMeshLODModel3
 
 		if (Ar.ArVer < 686)
 		{
-			Ar << RAW_ARRAY(Lod.Edges);
+			Lod.Edges.BulkSerialize(Ar);
 			Ar << Lod.fEC;
 		}
 #if ALPHA_PR
@@ -3238,7 +3241,7 @@ struct FStaticMeshLODModel3
 			if (Ar.ArLicenseeVer >= 4)
 			{
 				TArray<int> unk128;
-				Ar << RAW_ARRAY(unk128);
+				unk128.BulkSerialize(Ar);
 			}
 		}
 #endif // ALPHA_PR
@@ -3492,7 +3495,9 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 #if TRANSFORMERS
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 50)
 	{
-		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles) << Lods;
+		kDOPNodes.BulkSerialize(Ar);
+		kDOPTriangles.BulkSerialize(Ar);
+		Ar << Lods;
 		// note: Bounds is serialized as property (see UStaticMesh in h-file)
 		goto done;
 	}
@@ -3529,7 +3534,8 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 		// serialize kDOP tree
 		assert(Ar.ArLicenseeVer >= 112);
 		// old serialization code
-		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles);
+		kDOPNodes.BulkSerialize(Ar);
+		kDOPTriangles.BulkSerialize(Ar);
 		// new serialization code
 		// bug in Singularity serialization code: serialized the same things twice!
 		goto new_kdop;
@@ -3560,14 +3566,15 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 	if (Ar.ArVer < 770)
 	{
 	old_kdop:
-		Ar << RAW_ARRAY(kDOPNodes);
+		kDOPNodes.BulkSerialize(Ar);
 	}
 	else
 	{
 	new_kdop:
 		FkDOPBounds Bounds;
 		TArray<FkDOPNode3New> Nodes;
-		Ar << Bounds << RAW_ARRAY(Nodes);
+		Ar << Bounds;
+		Nodes.BulkSerialize(Ar);
 	}
 #if FURY
 	if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 32)
@@ -3577,7 +3584,7 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 	}
 #endif // FURY
 kdop_tris:
-	Ar << RAW_ARRAY(kDOPTriangles);
+	kDOPTriangles.BulkSerialize(Ar);
 #if DCU_ONLINE
 	if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0xA00)
 	{

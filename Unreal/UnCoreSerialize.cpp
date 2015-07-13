@@ -269,9 +269,9 @@ FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 
 #if UNREAL3
 
-FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*))
+FArchive& SerializeBulkArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*))
 {
-	guard(TRawArray<<);
+	guard(SerializeBulkArray);
 	assert(Ar.IsLoading);
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4) goto new_ver;
@@ -314,9 +314,9 @@ old_ver:
 	unguard;
 }
 
-void SkipRawArray(FArchive &Ar, int Size)
+void SkipBulkArrayData(FArchive &Ar, int Size)
 {
-	guard(SkipRawArray);
+	guard(SkipBulkArrayData);
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4) goto new_ver;
 #endif
