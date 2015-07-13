@@ -131,7 +131,6 @@ void UIPackageDialog::InitUI()
 
 	// add paths of all found packages
 	if (SelectedPackages.Num()) DirectorySelected = true;
-	int selectedPathLen = 1024; // something large
 	char prevPath[MAX_PACKAGE_PATH], path[MAX_PACKAGE_PATH];
 	prevPath[0] = 0;
 	for (int i = 0; i < Packages.Num(); i++)
@@ -149,12 +148,12 @@ void UIPackageDialog::InitUI()
 		}
 		if (!DirectorySelected)
 		{
-			int pathLen = s ? s - path : 0;
-			if (pathLen < selectedPathLen)
+			// find the first directory with packages, but don't select /Game/Engine subdirectories by default
+			bool isUE4EnginePath = strnicmp(path, "Engine/", 7) == 0;
+			if (!isUE4EnginePath && (stricmp(path, SelectedDir) < 0 || SelectedDir.IsEmpty()))
 			{
 				// set selection to the first directory
 				SelectedDir = s ? path : "";
-				selectedPathLen = pathLen;
 			}
 		}
 	}
