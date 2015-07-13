@@ -25,7 +25,7 @@
 					{							\
 						VecType v;				\
 						Reader << v;			\
-						A->KeyPos.AddItem(CVT(v)); \
+						A->KeyPos.Add(CVT(v));	\
 					}							\
 					break;
 // position ranged
@@ -35,7 +35,7 @@
 						VecType v;				\
 						Reader << v;			\
 						FVector v2 = v.ToVector(Mins, Ranges); \
-						A->KeyPos.AddItem(CVT(v2)); \
+						A->KeyPos.Add(CVT(v2));	\
 					}							\
 					break;
 // rotation
@@ -44,7 +44,7 @@
 					{							\
 						QuatType q;				\
 						Reader << q;			\
-						A->KeyQuat.AddItem(CVT(q)); \
+						A->KeyQuat.Add(CVT(q));	\
 					}							\
 					break;
 // rotation ranged
@@ -54,7 +54,7 @@
 						QuatType q;				\
 						Reader << q;			\
 						FQuat q2 = q.ToQuat(Mins, Ranges); \
-						A->KeyQuat.AddItem(CVT(q2));	\
+						A->KeyQuat.Add(CVT(q2));\
 					}							\
 					break;
 
@@ -104,7 +104,7 @@ void UAnimSet::Serialize(FArchive &Ar)
 		// fill Sequences from HashSequences
 		assert(Sequences.Num() == 0);
 		Sequences.Empty(HashSequences.Num());
-		for (int i = 0; i < HashSequences.Num(); i++) Sequences.AddItem(HashSequences[i].Seq);
+		for (int i = 0; i < HashSequences.Num(); i++) Sequences.Add(HashSequences[i].Seq);
 		return;
 		unguard;
 	}
@@ -236,7 +236,7 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 		{
 			byte v;
 			Ar << v;
-			Times.AddItem(v);
+			Times.Add(v);
 //			if (k < 4 || k > NumKeys - 5) appPrintf(" %02X ", v);
 //			else if (k == 4) appPrintf("...");
 		}
@@ -247,7 +247,7 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 		{
 			word v;
 			Ar << v;
-			Times.AddItem(v);
+			Times.Add(v);
 //			if (k < 4 || k > NumKeys - 5) appPrintf(" %04X ", v);
 //			else if (k == 4) appPrintf("...");
 		}
@@ -280,7 +280,7 @@ static void ReadArgonautsTimeArray(const TArray<unsigned> &SourceArray, int Firs
 			v &= 0xFFFF;			// low word
 		else
 			v >>= 16;				// high word
-		Times.AddItem(v * TimeScale);
+		Times.Add(v * TimeScale);
 	}
 
 	unguard;
@@ -403,7 +403,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 		{
 			// null vector
 			DBG("null ");
-			A->KeyPos.AddItem(nullVec);
+			A->KeyPos.Add(nullVec);
 		}
 		else if (TransKeyIndex < StartOfAnimatedTranslations)
 		{
@@ -413,7 +413,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 			Reader.Seek(StaticTranslationOffset + 12 * TransKeyIndex);
 			FVector pos;
 			Reader << pos;
-			A->KeyPos.AddItem(CVT(pos));
+			A->KeyPos.Add(CVT(pos));
 		}
 		else if (TransKeyIndex < StartOfAnimUncompTranslations)
 		{
@@ -430,7 +430,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 				FPackedVector_Trans pos;
 				Reader << pos;
 				FVector pos2 = pos.ToVector(Mins, Ranges); // convert
-				A->KeyPos.AddItem(CVT(pos2));
+				A->KeyPos.Add(CVT(pos2));
 			}
 		}
 		else
@@ -444,7 +444,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 				Reader.Seek(AnimatedUncompTranslationOffset + 12 * TransKeyIndex + i * AnimatedDataSize);
 				FVector pos;
 				Reader << pos;
-				A->KeyPos.AddItem(CVT(pos));
+				A->KeyPos.Add(CVT(pos));
 			}
 		}
 
@@ -454,7 +454,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 		{
 			// null quaternion
 			DBG("null ");
-			A->KeyQuat.AddItem(nullQuat);
+			A->KeyQuat.Add(nullQuat);
 		}
 		else if (RotKeyIndex < StartOfAnimatedRotations)
 		{
@@ -465,7 +465,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 			FQuat q;
 			Reader << q;
 			q.W *= -1;
-			A->KeyQuat.AddItem(CVT(q));
+			A->KeyQuat.Add(CVT(q));
 		}
 		else
 		{
@@ -744,7 +744,7 @@ void UAnimSet::ConvertAnims()
 				// read translation keys
 				if (TransOffset == -1)
 				{
-					A->KeyPos.AddItem(nullVec);
+					A->KeyPos.Add(nullVec);
 					DBG("    [%d] no translation data\n", j);
 				}
 				else
@@ -785,7 +785,7 @@ void UAnimSet::ConvertAnims()
 									// ACF_Float96NoW has a special case for ((ComponentMask & 7) == 0)
 									Reader << v;
 								}
-								A->KeyPos.AddItem(CVT(v));
+								A->KeyPos.Add(CVT(v));
 							}
 							break;
 						TPR(ACF_IntervalFixed32NoW, FVectorIntervalFixed32)
@@ -801,11 +801,11 @@ void UAnimSet::ConvertAnims()
 								v2.X *= scale;
 								v2.Y *= scale;
 								v2.Z *= scale;
-								A->KeyPos.AddItem(CVT(v2));
+								A->KeyPos.Add(CVT(v2));
 							}
 							break;
 						case ACF_Identity:
-							A->KeyPos.AddItem(nullVec);
+							A->KeyPos.Add(nullVec);
 							break;
 						default:
 							appError("Unknown translation compression method: %d", KeyFormat);
@@ -822,7 +822,7 @@ void UAnimSet::ConvertAnims()
 				// read rotation keys
 				if (RotOffset == -1)
 				{
-					A->KeyQuat.AddItem(nullQuat);
+					A->KeyQuat.Add(nullQuat);
 					DBG("    [%d] no rotation data\n", j);
 				}
 				else
@@ -868,7 +868,7 @@ void UAnimSet::ConvertAnims()
 								FQuatFloat96NoW q;
 								Reader << q;
 								FQuat q2 = q;				// convert
-								A->KeyQuat.AddItem(CVT(q2));
+								A->KeyQuat.Add(CVT(q2));
 							}
 							break;
 						case ACF_Fixed48NoW:
@@ -879,7 +879,7 @@ void UAnimSet::ConvertAnims()
 								if (ComponentMask & 2) Reader << q.Y;
 								if (ComponentMask & 4) Reader << q.Z;
 								FQuat q2 = q;				// convert
-								A->KeyQuat.AddItem(CVT(q2));
+								A->KeyQuat.Add(CVT(q2));
 							}
 							break;
 						TR (ACF_Fixed32NoW, FQuatFixed32NoW)
@@ -890,7 +890,7 @@ void UAnimSet::ConvertAnims()
 						TR (ACF_PolarEncoded48, FQuatPolarEncoded48)
 #endif // BORDERLANDS
 						case ACF_Identity:
-							A->KeyQuat.AddItem(nullQuat);
+							A->KeyQuat.Add(nullQuat);
 							break;
 						default:
 							appError("Unknown rotation compression method: %d", KeyFormat);
@@ -978,7 +978,7 @@ void UAnimSet::ConvertAnims()
 							FPackedVector_Trans pos;
 							Reader << pos;
 							FVector pos2 = pos.ToVector(Offset, Scale); // convert
-							A->KeyPos.AddItem(CVT(pos2));
+							A->KeyPos.Add(CVT(pos2));
 						}
 						goto trans_keys_done;
 					} // else - original code with 4-byte overhead
@@ -994,7 +994,7 @@ void UAnimSet::ConvertAnims()
 					TPR(ACF_IntervalFixed32NoW, FVectorIntervalFixed32)
 					TP (ACF_Fixed48NoW,         FVectorFixed48)
 					case ACF_Identity:
-						A->KeyPos.AddItem(nullVec);
+						A->KeyPos.Add(nullVec);
 						break;
 #if BORDERLANDS
 					case ACF_Delta48NoW:
@@ -1002,7 +1002,7 @@ void UAnimSet::ConvertAnims()
 							if (k == 0)
 							{
 								// "Base" works as 1st key
-								A->KeyPos.AddItem(CVT(Base));
+								A->KeyPos.Add(CVT(Base));
 								continue;
 							}
 							FVectorDelta48NoW V;
@@ -1010,7 +1010,7 @@ void UAnimSet::ConvertAnims()
 							FVector V2;
 							V2 = V.ToVector(Mins, Ranges, Base);
 							Base = V2;			// for delta
-							A->KeyPos.AddItem(CVT(V2));
+							A->KeyPos.Add(CVT(V2));
 						}
 						break;
 #endif // BORDERLANDS
@@ -1023,7 +1023,7 @@ void UAnimSet::ConvertAnims()
 							v.X = half2float(x) / 2;	// Argonauts has "half" with biased exponent, so fix it with division by 2
 							v.Y = half2float(y) / 2;
 							v.Z = half2float(z) / 2;
-							A->KeyPos.AddItem(CVT(v));
+							A->KeyPos.Add(CVT(v));
 						}
 						break;
 #endif // ARGONAUTS
@@ -1040,7 +1040,7 @@ void UAnimSet::ConvertAnims()
 			}
 			else
 			{
-//				A->KeyPos.AddItem(nullVec);
+//				A->KeyPos.Add(nullVec);
 //				appNotify("No translation keys!");
 			}
 
@@ -1098,7 +1098,7 @@ void UAnimSet::ConvertAnims()
 				TRR(ACF_IntervalFixed32NoW, FQuatIntervalFixed32NoW)
 				TR (ACF_Float32NoW, FQuatFloat32NoW)
 				case ACF_Identity:
-					A->KeyQuat.AddItem(nullQuat);
+					A->KeyQuat.Add(nullQuat);
 					break;
 #if BATMAN
 				TR (ACF_Fixed48Max, FQuatFixed48Max)
@@ -1112,7 +1112,7 @@ void UAnimSet::ConvertAnims()
 						if (k == 0)
 						{
 							// "Base" works as 1st key
-							A->KeyQuat.AddItem(CVT(Base));
+							A->KeyQuat.Add(CVT(Base));
 							continue;
 						}
 						FQuatDelta48NoW q;
@@ -1120,7 +1120,7 @@ void UAnimSet::ConvertAnims()
 						FQuat q2;
 						q2 = q.ToQuat(Mins, Ranges, Base);
 						Base = q2;			// for delta
-						A->KeyQuat.AddItem(CVT(q2));
+						A->KeyQuat.Add(CVT(q2));
 					}
 					break;
 				TR (ACF_PolarEncoded32, FQuatPolarEncoded32)
@@ -1135,7 +1135,7 @@ void UAnimSet::ConvertAnims()
 						FQuat q2;
 						Reader << q;
 						q2 = q.ToQuat(Mins, Ranges);
-						A->KeyQuat.AddItem(CVT(q2));
+						A->KeyQuat.Add(CVT(q2));
 					}
 	#endif
 	#if ARGONAUTS
@@ -1145,7 +1145,7 @@ void UAnimSet::ConvertAnims()
 						FQuat q2;
 						Reader << q;
 						q2 = q.ToQuat(Mins, Ranges);
-						A->KeyQuat.AddItem(CVT(q2));
+						A->KeyQuat.Add(CVT(q2));
 					}
 	#endif // ARGONAUTS
 					break;
@@ -1231,7 +1231,7 @@ void UBioAnimSetData::PostLoad()
 		{
 			UAnimSequence *Seq = static_cast<UAnimSequence*>(Obj);
 			if (Seq->m_pBioAnimSetData == this)
-				LinkedSequences.AddItem(Seq);
+				LinkedSequences.Add(Seq);
 		}
 	}
 

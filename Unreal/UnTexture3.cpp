@@ -354,7 +354,7 @@ void UUIStreamingTextures::PostLoad()
 		char nameBuf[256];
 		appSprintf(ARRAY_ARG(nameBuf), "UITexture_%08X", S.Hash);
 		const char *name = appStrdupPool(nameBuf);
-		Textures.AddItem(Tex);
+		Textures.Add(Tex);
 		// setup UOnject
 		Tex->Name         = name;
 		Tex->Package      = Package;

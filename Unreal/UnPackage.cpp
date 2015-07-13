@@ -92,7 +92,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 			FGenerationInfo gen;
 			gen.ExportCount = S.ExportCount;
 			gen.NameCount   = S.NameCount;
-			S.Generations.AddItem(gen);
+			S.Generations.Add(gen);
 		}
 	}
 	else
@@ -2101,7 +2101,7 @@ no_depends: ;
 	char *s2 = strchr(buf, '.');
 	if (s2) *s2 = 0;
 	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
-	PackageMap.AddItem(this);
+	PackageMap.Add(this);
 
 	// Release package file handle
 	CloseReader();
@@ -2458,7 +2458,7 @@ UObject* UnPackage::CreateExport(int index)
 	Obj->Name         = Exp.ObjectName;
 	// add object to GObjLoaded for later serialization
 	if (strnicmp(Exp.ObjectName, "Default__", 9) != 0)	// default properties are not supported -- this is a clean UObject format
-		UObject::GObjLoaded.AddItem(Obj);
+		UObject::GObjLoaded.Add(Obj);
 
 	UObject::EndLoad();
 	return Obj;
@@ -2706,7 +2706,7 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 	// The package is missing. Do not print any warnings: missing package is a normal situation
 	// in UE3 cooked builds, so print warnings when needed at upper level.
 //	appPrintf("WARNING: package %s was not found\n", Name);
-	MissingPackages.AddItem(appStrdup(LocalName));
+	MissingPackages.Add(appStrdup(LocalName));
 	return NULL;
 
 	unguardf("%s", Name);

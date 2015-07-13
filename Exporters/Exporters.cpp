@@ -110,7 +110,7 @@ static bool RegisterProcessedObject(const UObject* Obj)
 	}
 
 	// not registered yet
-	newIndex = ProcessedObjects.AddItem(exp);
+	newIndex = ProcessedObjects.Add(exp);
 	ProcessedObjects[newIndex].HashNext = ProcessedObjectHash[h];
 	ProcessedObjectHash[h] = newIndex;
 //	appPrintf("-> none\n");

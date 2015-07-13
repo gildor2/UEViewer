@@ -1419,6 +1419,12 @@ public:
 			*((T*)DataPtr + i) = value;
 	}
 
+	FORCEINLINE int Add(const T& item)
+	{
+		int index = AddUninitialized();
+		Item(index) = item;
+		return index;
+	}
 	FORCEINLINE int AddZeroed(int count = 1)
 	{
 		int index = DataCount;
@@ -1438,26 +1444,24 @@ public:
 		return AddZeroed(count);
 	}
 
-	//!! UE4 name: Add(item)
-	FORCEINLINE int AddItem(const T& item)
+	FORCEINLINE void Insert(const T& item, int index)
 	{
-		int index = AddUninitialized();
+		InsertUninitialized(index, 1);
 		Item(index) = item;
-		return index;
 	}
-
-	//!! Missing in UE4, find alternative (where is it used here?)
-	FORCEINLINE T& AddItem()
+	FORCEINLINE void InsertZeroed(int index, int count = 1)
 	{
-		int index = AddDefaulted();
-		return Item(index);
+		FArray::Insert(index, count, sizeof(T));
 	}
-
-	//!! UE4 different API: Insert(item, index), InsertZeroed(index,count), InsertUninitialized(index,count)
-	FORCEINLINE void Insert(int index, int count = 1)
+	// This function doesn't exist in UE4
+	FORCEINLINE void InsertDefaulted(int index, int count = 1)
 	{
 		FArray::Insert(index, count, sizeof(T));
 		if (!TTypeInfo<T>::IsPod) Construct(index, count);
+	}
+	FORCEINLINE void InsertUninitialized(int index, int count = 1)
+	{
+		InsertZeroed(index, count);
 	}
 
 	FORCEINLINE void RemoveAt(int index, int count = 1)
@@ -1479,7 +1483,7 @@ public:
 		FArray::RemoveAtSwap(index, count, sizeof(T));
 	}
 
-	void RemoveSingle(const T& item)
+	FORCEINLINE void RemoveSingle(const T& item)
 	{
 		int index = FindItem(item);
 		if (index >= 0)
@@ -1656,7 +1660,8 @@ FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
 	guard(TArray::operator new);
 	assert(size == sizeof(T));
-	return &Array.AddItem();
+	int index = Array.AddUninitialized(1);
+	return Array.GetData() + index;
 	unguard;
 }
 

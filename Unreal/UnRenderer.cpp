@@ -781,7 +781,7 @@ UUnrealMaterial *UMaterialWithPolyFlags::Create(UUnrealMaterial *OriginalMateria
 	WM->Name      = (OriginalMaterial) ? OriginalMaterial->Name : "None";
 	WM->Material  = OriginalMaterial;
 	WM->PolyFlags = PolyFlags;
-	WrappedMaterials.AddItem(WM);
+	WrappedMaterials.Add(WM);
 //	appNotify("WRAP: %s %X", OriginalMaterial ? OriginalMaterial->Name : "NULL", PolyFlags);
 	return WM;
 }

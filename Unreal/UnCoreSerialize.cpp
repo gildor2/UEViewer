@@ -385,7 +385,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		// empty FString
 		// original UE has array count == 0 and special handling when converting FString
 		// to char*
-		S.Data.AddItem(0);
+		S.Data.AddZeroed(1);
 		return Ar;
 	}
 
@@ -407,15 +407,9 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 				c = (c >> 8) | ((c & 0xFF) << 8);
 #endif
 			if (c & 0xFF00) c = '$';	//!! incorrect ...
-			S.Data.AddItem(c & 255);	//!! incorrect ...
+			S.Data.Add(c & 255);		//!! incorrect ...
 		}
 	}
-/*	for (i = 0; i < S.Num(); i++) -- disabled 21.03.2012, Unicode chars are "fixed" before S.AddItem() above
-	{
-		char c = S[i];
-		if (c >= 1 && c < ' ')
-			S[i] = '$';
-	} */
 	if (S[abs(len)-1] != 0)
 		appError("Serialized FString is not null-terminated");
 	return Ar;
@@ -693,7 +687,7 @@ FFileWriter::FFileWriter(const char *Filename, unsigned Options)
 	guard(FFileWriter::FFileWriter);
 	IsLoading = false;
 	Open();
-	GFileWriters.AddItem(this);
+	GFileWriters.Add(this);
 	unguardf("%s", Filename);
 }
 

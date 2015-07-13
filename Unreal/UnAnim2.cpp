@@ -647,7 +647,7 @@ struct FlexTrackStatic : public FlexTrackBase
 		{
 			FVector pos;
 			Ar << pos;
-			KeyPos.AddItem(pos);
+			KeyPos.Add(pos);
 		}
 	}
 #if UC2
@@ -662,7 +662,7 @@ struct FlexTrackStatic : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		T.KeyQuat.AddItem(KeyQuat);
+		T.KeyQuat.Add(KeyQuat);
 		CopyArray(T.KeyPos, KeyPos);
 	}
 };
@@ -710,7 +710,7 @@ struct FlexTrack48RotOnly : public FlexTrackBase
 		CopyArray(T.KeyQuat, KeyQuat);
 		CopyArray(T.KeyTime, KeyTime);
 		T.KeyPos.Empty(1);
-		T.KeyPos.AddItem(KeyPos);
+		T.KeyPos.Add(KeyPos);
 	}
 };
 
@@ -758,8 +758,8 @@ struct FlexTrack6 : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		T.KeyQuat.AddItem(KeyQuat);
-		T.KeyPos.AddItem(KeyPos);
+		T.KeyQuat.Add(KeyQuat);
+		T.KeyPos.Add(KeyPos);
 	}
 };
 
@@ -781,7 +781,7 @@ struct FlexTrack7 : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		T.KeyQuat.AddItem(KeyQuat);
+		T.KeyQuat.Add(KeyQuat);
 	}
 };
 

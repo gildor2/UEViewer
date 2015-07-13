@@ -159,7 +159,7 @@ void UObject::EndLoad()
 			appError("%s::Serialize(%s): %d unread bytes",
 				Obj->GetClassName(), Obj->Name,
 				Package->GetStopper() - Package->Tell());
-		LoadedObjects.AddItem(Obj);
+		LoadedObjects.Add(Obj);
 
 		unguardf("%s'%s.%s', pos=%X, ver=%d/%d, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer, Package->Game);
 	}
@@ -1367,7 +1367,7 @@ UObject *CreateClass(const char *Name)
 	// to allow runtime creation of objects without linked package
 	// Really, should add to this list after loading from package
 	// (in CreateExport/Import or after serialization)
-	UObject::GObjObjects.AddItem(Obj);
+	UObject::GObjObjects.Add(Obj);
 	return Obj;
 
 	unguardf("%s", Name);

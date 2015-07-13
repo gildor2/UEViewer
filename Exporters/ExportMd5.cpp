@@ -204,7 +204,7 @@ if (i == 32 || i == 34)
 
 			if (UsedVerts[idx]) continue;		// vertex is already used in previous triangle
 			UsedVerts[idx] = true;
-			int locWedge = MeshVerts.AddItem(idx);
+			int locWedge = MeshVerts.Add(idx);
 			BackWedge[idx] = locWedge;
 		}
 

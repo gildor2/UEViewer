@@ -320,7 +320,7 @@ struct FMeshAnimSeq
 			FName tmpGroup;					// single group
 			Ar << tmpGroup;
 			if (strcmp(tmpGroup, "None") != 0)
-				A.Groups.AddItem(tmpGroup);
+				A.Groups.Add(tmpGroup);
 		}
 		else
 #endif // UNREAL1

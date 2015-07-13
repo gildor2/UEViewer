@@ -38,13 +38,13 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 void UIPackageDialog::SelectPackage(const char* name)
 {
 	SelectedPackages.Empty();
-	SelectedPackages.AddItem(name);
+	SelectedPackages.Add(name);
 	SelectDirFromFilename(name);
 }
 
 static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInfo*> &param)
 {
-	param.AddItem(file);
+	param.Add(file);
 	return true;
 }
 

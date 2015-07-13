@@ -239,8 +239,8 @@ static void ConvertRuneAnimations(UMeshAnimation &Anim, const TArray<RJoint> &Bo
 #undef GET
 #undef GETF
 #undef GETI
-				A.KeyQuat.AddItem(EulerToQuat(rot));
-				A.KeyPos.AddItem(pos);
+				A.KeyQuat.Add(EulerToQuat(rot));
+				A.KeyPos.Add(pos);
 				//?? notify about scale!=(1,1,1)
 			}
 		}
@@ -324,7 +324,7 @@ void USkelModel::Serialize(FArchive &Ar)
 		char nameBuf[256];
 		appSprintf(ARRAY_ARG(nameBuf), "%s_%d", Name, modelIdx);
 		const char *name = appStrdupPool(nameBuf);
-		Meshes.AddItem(sm);
+		Meshes.Add(sm);
 		// setup UOnject
 		sm->Name         = name;
 		sm->Package      = Package;
@@ -434,7 +434,7 @@ void USkelModel::Serialize(FArchive &Ar)
 			if (strcmp(texName, "None") == 0)
 			{
 				// texture should be set from script
-				sm->Textures.AddItem(NULL);
+				sm->Textures.Add(NULL);
 				continue;
 			}
 			// find texture in object's package
@@ -447,7 +447,7 @@ void USkelModel::Serialize(FArchive &Ar)
 			}
 			// load and remember texture
 			UMaterial *Tex = static_cast<UMaterial*>(Package->CreateExport(texExportIdx));
-			sm->Textures.AddItem(Tex);
+			sm->Textures.Add(Tex);
 		}
 		// setup UPrimitive properties using 1st animation frame
 		// note: this->BoundingBox and this->BoundingSphere are null

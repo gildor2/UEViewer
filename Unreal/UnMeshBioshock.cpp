@@ -404,7 +404,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 			// point was not found - create it
 			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = V.Pos;
-			PointNormals.AddItem(V.Normal[0]);
+			PointNormals.Add(V.Normal[0]);
 			// add influence
 			FVertInfluence *Inf = new(VertInfluences) FVertInfluence;
 			Inf->PointIndex = PointIndex;
@@ -436,7 +436,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 			// point was not found - create it
 			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = V.Pos;
-			PointNormals.AddItem(V.Normal[0]);
+			PointNormals.Add(V.Normal[0]);
 			// add influences
 //			appPrintf("point[%d]: %d/%d  %d/%d  %d/%d  %d/%d\n", PointIndex, V.BoneIndex[0], V.BoneWeight[0],
 //				V.BoneIndex[1], V.BoneWeight[1], V.BoneIndex[2], V.BoneWeight[2], V.BoneIndex[3], V.BoneWeight[3]);

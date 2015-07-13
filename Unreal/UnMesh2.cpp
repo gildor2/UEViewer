@@ -1254,8 +1254,7 @@ void FStaticLODModel::RestoreLineageMesh()
 	// remap bones and build faces
 	TArray<const FSkelMeshSection*> WedgeSection;
 	WedgeSection.Empty(NumWedges);
-	for (i = 0; i < NumWedges; i++)
-		WedgeSection.AddItem(NULL);
+	WedgeSection.AddZeroed(NumWedges);
 	// smooth sections
 	guard(SmoothWedges);
 	for (k = 0; k < SmoothSections.Num(); k++)
@@ -1316,7 +1315,7 @@ void FStaticLODModel::RestoreLineageMesh()
 			// point was not found - create it
 			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = LW.Point;
-			PointNormals.AddItem(LW.Normal);
+			PointNormals.Add(LW.Normal);
 			// build influences
 			const FSkelMeshSection *ms = WedgeSection[i];
 			assert(ms);
@@ -1356,7 +1355,7 @@ void FStaticLODModel::RestoreLineageMesh()
 			// point was not found - create it
 			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = LW.Pos;
-			PointNormals.AddItem(LW.Norm);
+			PointNormals.Add(LW.Norm);
 			// build influences
 			const FSkelMeshSection *ms = WedgeSection[i];
 			assert(ms);

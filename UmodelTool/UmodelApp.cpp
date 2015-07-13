@@ -153,7 +153,7 @@ bool CUmodelApp::ShowPackageUI()
 				break;
 			}
 			UnPackage* package = UnPackage::LoadPackage(pkgName);	// should always return non-NULL
-			if (package) Packages.AddItem(package);
+			if (package) Packages.Add(package);
 		}
 		if (cancelled)
 		{

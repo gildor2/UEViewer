@@ -118,8 +118,8 @@ struct CVertexShare
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.AddItem(Pos);
-			Normals.AddItem(Normal);
+			PointIndex = Points.Add(Pos);
+			Normals.Add(Normal);
 #if USE_HASHING
 			// add to Hash
 			HashNext[PointIndex] = Hash[h];
@@ -128,7 +128,7 @@ struct CVertexShare
 		}
 
 		// remember vertex <-> wedge map
-		WedgeToVert.AddItem(PointIndex);
+		WedgeToVert.Add(PointIndex);
 		VertToWedge[PointIndex] = WedgeIndex++;
 
 		return PointIndex;

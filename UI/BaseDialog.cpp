@@ -1294,7 +1294,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index, bool add)
 		if (index != value)
 		{
 			SelectedItems.Reset();
-			SelectedItems.AddItem(index);
+			SelectedItems.Add(index);
 			// perform selection for control
 			if (Wnd) SetItemSelection(index, true);
 		}
@@ -1304,7 +1304,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index, bool add)
 		int pos = SelectedItems.FindItem(index);
 		if (pos < 0)
 		{
-			SelectedItems.AddItem(index);
+			SelectedItems.Add(index);
 			// perform selection for control
 			if (Wnd) SetItemSelection(index, true);
 		}
@@ -1472,7 +1472,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 					// the item could be already in selection list when we're creating control
 					// and setting selection for all SelectedItems
 					if (pos < 0)
-						SelectedItems.AddItem(item);
+						SelectedItems.Add(item);
 				}
 				else
 				{
@@ -1591,7 +1591,7 @@ UITreeView& UITreeView::AddItem(const char* item)
 			curr = new TreeViewItem;
 			curr->Label = buffer;		// names are "a", "a/b", "a/b/c" etc
 			curr->Parent = parent;
-			Items.AddItem(curr);
+			Items.Add(curr);
 			CreateItem(*curr);
 		}
 		// return '/' back and skip it
@@ -1612,7 +1612,7 @@ void UITreeView::RemoveAllItems()
 	// add root item, at index 0
 	TreeViewItem* root = new TreeViewItem;
 	root->Label = "";
-	Items.AddItem(root);
+	Items.Add(root);
 	SelectedItem = root;
 }
 

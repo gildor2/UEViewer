@@ -30,7 +30,7 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 		Package->CreateExport(idx);
 	}
 	UObject::EndLoad();
-	GFullyLoadedPackages.AddItem(Package);
+	GFullyLoadedPackages.Add(Package);
 
 #if PROFILE
 	appPrintProfiler();
@@ -162,7 +162,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 		}
 	}
 	if (Index == INDEX_NONE)
-		Index = data.PkgInfo->AddItem(Info);
+		Index = data.PkgInfo->Add(Info);
 	// update info
 	FileInfo& fileInfo = (*data.PkgInfo)[Index];
 	fileInfo.Count++;

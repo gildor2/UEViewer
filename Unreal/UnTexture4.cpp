@@ -144,7 +144,7 @@ void UMaterial3::ScanForTextures()
 		UObject* obj = Package->CreateImport(i);
 //		if (obj) printf("--> %s (%s)\n", obj->Name, obj->GetClassName());
 		if (obj && obj->IsA("Texture3"))
-			ReferencedTextures.AddItem(static_cast<UTexture3*>(obj));
+			ReferencedTextures.Add(static_cast<UTexture3*>(obj));
 	}
 
 	unguard;

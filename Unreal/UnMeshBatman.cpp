@@ -466,7 +466,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 					((b[4] << 8) | b[5]) & 0x7FFF,			// last 2 bytes
 					((b[2] >> 6) & 2) | (b[4] >> 7)
 				);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -485,7 +485,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 					(((b[3] << 8) | b[4]) >> 4) & 0xFFF,	// DDE
 					b[4] & 3								// E
 				);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -502,7 +502,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 				Ar.Serialize(b, 4);
 				unsigned val32 = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
 				CQuat q = FinishQuatRelative(10, (val32 >> 20) & 0x3FF, (val32 >> 10) & 0x3FF, val32 & 0x3FF, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -518,7 +518,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 				byte b[3];
 				Ar.Serialize(b, 3);
 				CQuat q = FinishQuatRelative(8, b[0], b[1], b[2], Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -535,7 +535,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 				Ar.Serialize(b, 2);
 				unsigned val32 = (b[0] << 8) | b[1];
 				CQuat q = FinishQuatRelative(5, (val32 >> 10) & 0x1F, (val32 >> 5) & 0x1F, val32 & 0x1F, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -551,7 +551,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 				word w;
 				Ar << w;
 				CQuat q = FinishQuatFixedAxis(16, w, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -567,7 +567,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 				byte b;
 				Ar << b;
 				CQuat q = FinishQuatFixedAxis(8, b, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -611,7 +611,7 @@ static int FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, i
 				FVector v;
 				float	f;
 				Ar << v << f;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;
@@ -623,7 +623,7 @@ static int FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, i
 				Ar.Seek(T.CompressedDataOffset + (TrackIndex + T.NumBones * i) * 12);
 				FVector v;
 				Ar << v;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;
@@ -644,7 +644,7 @@ static int FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, i
 				v.X = vi[0] / 32767.0f * Ranges.X + Mins.X;
 				v.Y = vi[1] / 32767.0f * Ranges.Y + Mins.Y;
 				v.Z = vi[2] / 32767.0f * Ranges.Z + Mins.Z;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;
@@ -665,7 +665,7 @@ static int FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, i
 				v.X = vi[0] / 127.0f * Ranges.X + Mins.X;
 				v.Y = vi[1] / 127.0f * Ranges.Y + Mins.Y;
 				v.Z = vi[2] / 127.0f * Ranges.Z + Mins.Z;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;

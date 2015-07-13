@@ -241,7 +241,7 @@ void CSkelMeshViewer::TagMesh(CSkelMeshInstance *NewInst)
 			Meshes.RemoveAt(i);
 			return;
 		}
-	Meshes.AddItem(NewInst);
+	Meshes.Add(NewInst);
 }
 
 

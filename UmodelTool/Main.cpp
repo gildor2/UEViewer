@@ -670,7 +670,7 @@ int main(int argc, char **argv)
 		const char *opt = argv[arg];
 		if (opt[0] != '-')
 		{
-			params.AddItem(opt);
+			params.Add(opt);
 			continue;
 		}
 
@@ -749,17 +749,17 @@ int main(int argc, char **argv)
 		else if (!strnicmp(opt, "pkg=", 4))
 		{
 			const char *pkg = opt+4;
-			extraPackages.AddItem(pkg);
+			extraPackages.Add(pkg);
 		}
 		else if (!strnicmp(opt, "obj=", 4))
 		{
 			const char *obj = opt+4;
-			objectsToLoad.AddItem(obj);
+			objectsToLoad.Add(obj);
 		}
 		else if (!strnicmp(opt, "anim=", 5))
 		{
 			const char *obj = opt+5;
-			objectsToLoad.AddItem(obj);
+			objectsToLoad.Add(obj);
 			attachAnimName = obj;
 		}
 		else if (!stricmp(opt, "3rdparty"))
@@ -853,8 +853,7 @@ int main(int argc, char **argv)
 
 	if (argObjName)
 	{
-		objectsToLoad.Insert(0);
-		objectsToLoad[0] = argObjName;
+		objectsToLoad.Insert(argObjName, 0);
 	}
 
 	// load the package
@@ -908,14 +907,14 @@ int main(int argc, char **argv)
 	InitClassAndExportSystems(MainPackage->Game);
 
 	// preload all extra packages first
-	Packages.AddItem(MainPackage);	// already loaded
+	Packages.Add(MainPackage);	// already loaded
 	for (int i = 0; i < extraPackages.Num(); i++)
 	{
 		UnPackage *Package2 = UnPackage::LoadPackage(extraPackages[i]);
 		if (!Package2)
 			appPrintf("WARNING: unable to find/load package %s\n", extraPackages[i]);
 		else
-			Packages.AddItem(Package2);
+			Packages.Add(Package2);
 	}
 
 	if (mainCmd == CMD_PkgInfo)
@@ -954,7 +953,7 @@ int main(int argc, char **argv)
 					UObject *Obj = Package2->CreateExport(idx);
 					if (Obj)
 					{
-						Objects.AddItem(Obj);
+						Objects.Add(Obj);
 						if (objName == attachAnimName && (Obj->IsA("MeshAnimation") || Obj->IsA("AnimSet")))
 							GForceAnimSet = Obj;
 					}

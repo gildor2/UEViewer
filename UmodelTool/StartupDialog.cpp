@@ -187,7 +187,7 @@ void UIStartupDialog::FillGameList()
 		const char* engine = GetEngineName(info.Enum);
 		if (!strcmp(engine, selectedEngine))
 		{
-			gameNames.AddItem(info.Name);
+			gameNames.Add(info.Name);
 			if (!strnicmp(info.Name, "Unreal engine ", 14))
 				numEngineEntries++;
 		}

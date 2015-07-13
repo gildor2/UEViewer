@@ -3131,7 +3131,7 @@ struct FStaticMeshLODModel3
 			Lod.VertexStream.Verts.Empty(NumVerts);
 //			Lod.VertexStream.NumVerts = NumVerts;
 			for (int i = 0; i < NumVerts; i++)
-				Lod.VertexStream.Verts.AddItem(Lod.UVStream.UV[i].Pos);
+				Lod.VertexStream.Verts.Add(Lod.UVStream.UV[i].Pos);
 		}
 		else
 		{
