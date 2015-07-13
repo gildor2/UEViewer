@@ -464,6 +464,7 @@ void FArchive::Printf(const char *fmt, ...)
 #if _WIN32
 
 #define fopen64			fopen
+#define fileno			_fileno
 
 	#ifndef OLDCRT
 
@@ -721,7 +722,7 @@ void FFileWriter::Serialize(void *data, int size)
 
 	while (size > 0)
 	{
-		int LocalPos64 = ArPos64 - BufferPos;
+		int LocalPos64 = int(ArPos64 - BufferPos);
 		if (LocalPos64 < 0 || LocalPos64 >= FILE_BUFFER_SIZE || size >= FILE_BUFFER_SIZE)
 		{
 			// trying to write outside of buffer
@@ -863,7 +864,6 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
 FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 {
 	guard(FCompressedChunkHeader<<);
-	int i;
 	Ar << H.Tag;
 	if (H.Tag == PACKAGE_FILE_TAG_REV)
 		Ar.ReverseBytes = !Ar.ReverseBytes;
@@ -910,7 +910,7 @@ summary:
 	int BlockCount = (H.Sum.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
 	H.Blocks.Empty(BlockCount);
 	H.Blocks.AddZeroed(BlockCount);
-	for (i = 0; i < BlockCount; i++)
+	for (int i = 0; i < BlockCount; i++)
 		Ar << H.Blocks[i];
 #else
 	H.BlockSize = 0x20000;
@@ -1024,7 +1024,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		if (BulkDataSizeOnDisk == INDEX_NONE)
 			BulkDataSizeOnDisk = ElementCount * GetElementSize();
 		BulkDataOffsetInFile = Ar.Tell();
-		BulkDataSizeOnDisk   = EndPosition - BulkDataOffsetInFile;
+		BulkDataSizeOnDisk   = EndPosition - (int)BulkDataOffsetInFile;
 		unguard;
 	}
 	else

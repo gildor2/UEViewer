@@ -521,11 +521,11 @@ public:
 
 	// Dummy implementation of Unreal type serialization
 
-	virtual FArchive& operator<<(FName &N)
+	virtual FArchive& operator<<(FName &/*N*/)
 	{
 		return *this;
 	}
-	virtual FArchive& operator<<(UObject *&Obj)
+	virtual FArchive& operator<<(UObject *&/*Obj*/)
 	{
 		return *this;
 	}
@@ -1119,7 +1119,7 @@ struct FPackedNormal
 
 	float GetW() const
 	{
-		return (Data >> 24) / 127.5 - 1;
+		return (Data >> 24) / 127.5f - 1;
 	}
 };
 

@@ -1661,7 +1661,7 @@ void UStaticMesh::LoadExternalUC2Data()
 
 	for (i = 0; i < Sections.Num(); i++)
 	{
-		FStaticMeshSection &S = Sections[i];
+//		FStaticMeshSection &S = Sections[i];
 		Data = FindXprData(va("%s_%d_pb", Name, i), &Size);
 		if (!Data)
 		{

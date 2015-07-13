@@ -272,7 +272,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	if (Ar.Game == GAME_MK)
 	{
 		int unk3C, unk40, unk54;
-		int unk30, unk44, unk48, unk4C;
+		int unk44, unk48, unk4C;
 		if (Ar.ArVer >= 524)		// Injustice
 			Ar << unk3C;
 		if (midwayVer >= 16)
@@ -1492,7 +1492,6 @@ public:
 		// find block in ChunkHeader.Blocks
 		int ChunkPosition = Chunk->UncompressedOffset;
 		int ChunkData     = ChunkDataPos;
-		int UncompSize = 0, CompSize = 0;
 		assert(ChunkPosition <= Pos);
 		const FCompressedChunkBlock *Block = NULL;
 		for (int BlockIndex = 0; BlockIndex < ChunkHeader.Blocks.Num(); BlockIndex++)

@@ -61,7 +61,6 @@ void CMeshViewer::Draw3D(float TimeDelta)
 
 void CMeshViewer::DrawMesh(CMeshInstance *Inst)
 {
-	unsigned flags = 0;
 	Inst->Draw(DrawFlags);
 }
 

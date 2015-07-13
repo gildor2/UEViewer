@@ -156,7 +156,7 @@ static int GetHashForFileName(const char* FileName)
 	const char* s2 = strrchr(s1, '.');
 	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
 
-	int hash = 0;
+	short hash = 0;
 	for (int i = 0; i < len; i++)
 	{
 		char c = s1[i];
@@ -546,7 +546,7 @@ void appSetRootDirectory2(const char *filename)
 	}
 	// scan root directory
 	appPrintf("\n");
-	appSetRootDirectory(*root, detected);
+	appSetRootDirectory(*root, detected != 0);
 }
 
 

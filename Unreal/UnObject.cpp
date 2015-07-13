@@ -1439,7 +1439,6 @@ struct CPropDump
 
 	void PrintTo(char *Dst, int DstSize, const char *fmt, va_list argptr)
 	{
-		char buf[512];
 		int oldLen = strlen(Dst);
 		int len = vsnprintf(Dst + oldLen, DstSize - oldLen, fmt, argptr);
 		if (len < 0 || (len + oldLen >= DstSize))

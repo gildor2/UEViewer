@@ -225,8 +225,6 @@ void CVertMeshViewer::ProcessKey(int key)
 {
 	guard(CVertMeshViewer::ProcessKey);
 
-	int i;
-
 	CVertMeshInstance *MeshInst = static_cast<CVertMeshInstance*>(Inst);
 	int NumAnims = MeshInst->GetAnimCount();
 

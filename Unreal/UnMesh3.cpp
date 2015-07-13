@@ -144,7 +144,7 @@ struct FSkelMeshSection3
 		{
 			// UE2 fields
 			short FirstIndex;
-			short unk1, unk2, unk3, unk4, unk5, unk6, unk7;
+			short unk1, unk2, unk3, unk4, unk5, unk6;
 			TArray<short> unk8;
 			Ar << S.MaterialIndex << FirstIndex << unk1 << unk2 << unk3 << unk4 << unk5 << unk6 << S.NumTriangles;
 			if (Ar.ArVer < 202) Ar << unk8;	// ArVer<202 -- from EndWar
@@ -1333,7 +1333,6 @@ struct FStaticLODModel3
 		if (Ar.ArVer < 686) Ar << Lod.f74;
 		if (Ar.ArVer >= 215)
 		{
-		chunks:
 			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 		}
 		DBG_SKEL("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
@@ -2816,7 +2815,7 @@ struct FStaticMeshUVStream3
 		if (S.NumTexCoords > MAX_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", S.NumTexCoords);
 		GNumStaticUVSets   = S.NumTexCoords;
-		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
+		GUseStaticFloatUVs = (S.bUseFullPrecisionUVs != 0);
 		S.UV.BulkSerialize(Ar);
 		return Ar;
 
@@ -3187,7 +3186,6 @@ struct FStaticMeshLODModel3
 		}
 #endif // DUST514
 
-	indices:
 		DBG_STAT("Serializing indices ...\n");
 #if BATMAN
 		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 45)

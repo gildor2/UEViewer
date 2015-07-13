@@ -216,8 +216,9 @@ struct CAnimTrack
 };
 
 
-struct CAnimSequence
+class CAnimSequence
 {
+public:
 	FName					Name;					// sequence's name
 	int						NumFrames;
 	float					Rate;

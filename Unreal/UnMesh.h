@@ -24,7 +24,7 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V);
 class CSkeletalMesh;
 struct CSkelMeshLod;
 class CAnimSet;
-struct CAnimSequence;
+class CAnimSequence;
 class CStaticMesh;
 
 

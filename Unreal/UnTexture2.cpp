@@ -464,7 +464,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		TexData.ShouldFreeData = (TexData.CompressedData != NULL);
 		TexData.USize          = USize;
 		TexData.VSize          = VSize;
-		TexData.DataSize       = CachedBulkDataSize;
+		TexData.DataSize       = (int)CachedBulkDataSize;
 		TexData.Platform       = PackageAr->Platform;
 	}
 #endif // BIOSHOCK
@@ -590,7 +590,6 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		// large values)
 		//?? Place code to CTextureData method?
 		const CPixelFormatInfo &Info = PixelFormatInfo[intFormat];
-		int bytesPerBlock = Info.BytesPerBlock;
 		int numBlocks = TexData.USize * TexData.VSize / (Info.BlockSizeX * Info.BlockSizeY);	// used for validation only
 		int requiredDataSize = numBlocks * Info.BytesPerBlock;
 		if (requiredDataSize > TexData.DataSize)

@@ -97,8 +97,8 @@ inline void InvalidateContext()
 #define DEFAULT_FOV				80
 #define MIN_DIST				25
 #define MAX_DIST				2048
-#define CLEAR_COLOR				0.05, 0.05, 0.05, 1
-#define CLEAR_COLOR2			0.2, 0.2, 0.2, 1
+#define CLEAR_COLOR				0.05f, 0.05f, 0.05f, 1.0f
+#define CLEAR_COLOR2			0.2f, 0.2f, 0.2f, 1.0f
 //#define CLEAR_COLOR			0.3, 0.4, 0.6, 1
 //#define CLEAR_COLOR2			0.2, 0.4, 0.3, 1
 //#define CLEAR_COLOR			0.5, 0.6, 0.7, 1
@@ -240,7 +240,6 @@ static void LoadFont()
 {
 	// decompress font texture
 	byte *pic = (byte*)appMalloc(TEX_WIDTH * TEX_HEIGHT * 4);
-	int i;
 	const byte *p;
 	byte *dst;
 
@@ -1112,9 +1111,9 @@ void CApplication::Display()
 	Set3Dmode();
 
 	// enable lighting
-	static const float lightPos[4]      = {1000, 2000, 2000, 0};
-	static const float lightAmbient[4]  = {0.1, 0.1, 0.15, 1};
-	static const float specIntens[4]    = {0.4, 0.4, 0.4,  0};
+	static const float lightPos[4]      = {1000, 2000, 2000,  0};
+	static const float lightAmbient[4]  = {0.1f, 0.1f, 0.15f, 1};
+	static const float specIntens[4]    = {0.4f, 0.4f, 0.4f,  0};
 	static const float black[4]         = {0,   0,   0,    0};
 	static const float white[4]         = {1,   1,   1,    0};
 	glEnable(GL_COLOR_MATERIAL);

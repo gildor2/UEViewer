@@ -582,7 +582,7 @@ public:
 
 		assert(DataAr.IsLoading && CountAr.IsLoading);
 		// serialize memory size from "CountAr"
-		int DataSize;
+		unsigned DataSize;
 		CountAr << DataSize;
 		// compute items count
 		int Count = DataSize / sizeof(T);

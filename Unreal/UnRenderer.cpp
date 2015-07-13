@@ -1831,7 +1831,6 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	Super::GetParams(Params);
 
 	// get local parameters
-	bool normalSet = false;
 	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0, EmcWeight = 0, CubeWeight = 0, MaskWeight = 0;
 
 	if (TextureParameterValues.Num())

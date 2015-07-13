@@ -62,7 +62,7 @@ struct FPakEntry
 	TArray<FPakCompressedBlock> CompressionBlocks;
 	int			CompressionBlockSize;
 
-	int			StructSize;					// computed value
+	int64		StructSize;					// computed value
 
 	friend FArchive& operator<<(FArchive& Ar, FPakEntry& P)
 	{
@@ -127,7 +127,7 @@ public:
 			if (UncompressedData == NULL)
 			{
 				// didn't start decompression yet
-				UncompressedData = (byte*)appMalloc(Info->UncompressedSize);
+				UncompressedData = (byte*)appMalloc((int)Info->UncompressedSize);
 				UncompressedPos = 0;
 			}
 
@@ -138,7 +138,7 @@ public:
 				int BlockIndex = UncompressedPos / Info->CompressionBlockSize;
 				const FPakCompressedBlock& Block = Info->CompressionBlocks[BlockIndex];
 				int CompressedBlockSize = (int)(Block.CompressedEnd - Block.CompressedStart);
-				int UncompressedBlockSize = min(Info->CompressionBlockSize, Info->UncompressedSize - UncompressedPos);
+				int UncompressedBlockSize = min((int)Info->CompressionBlockSize, (int)Info->UncompressedSize - UncompressedPos);
 				byte* CompressedData = (byte*)appMalloc(CompressedBlockSize);
 				Reader->Seek64(Block.CompressedStart);
 				Reader->Serialize(CompressedData, CompressedBlockSize);
@@ -178,7 +178,7 @@ public:
 
 	virtual int GetFileSize() const
 	{
-		return Info->UncompressedSize;
+		return (int)Info->UncompressedSize;
 	}
 
 protected:
@@ -248,7 +248,7 @@ public:
 	virtual int GetFileSize(const char* name)
 	{
 		const FPakEntry* info = FindFile(name);
-		return (info) ? info->UncompressedSize : 0;
+		return (info) ? (int)info->UncompressedSize : 0;
 	}
 
 	// iterating over all files

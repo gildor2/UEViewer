@@ -1,6 +1,10 @@
 #ifndef __CORE_H__
 #define __CORE_H__
 
+#if _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -118,12 +122,18 @@ template<>    struct CompileTimeError<true> {};
 #	define vsnwprintf			_vsnwprintf
 #	define FORCEINLINE			__forceinline
 #	define NORETURN				__declspec(noreturn)
+#	define stricmp				_stricmp
+#	define strnicmp				_strnicmp
 #	define GCC_PACK							// VC uses #pragma pack()
 #	if _MSC_VER >= 1400
 #		define IS_POD(T)		__is_pod(T)
 #	endif
 #	define FORMAT_SIZE(fmt)		"%I" fmt
 //#	pragma warning(disable : 4291)			// no matched operator delete found
+#	pragma warning(disable : 4100)			// unreferenced formal parameter
+#	pragma warning(disable : 4127)			// conditional expression is constant
+#	pragma warning(disable : 4509)			// nonstandard extension used: '..' uses SEH and '..' has destructor
+#	pragma warning(disable : 4714)			// function '...' marked as __forceinline not inlined
 	// this functions are smaller, when in intrinsic form (and, of course, faster):
 #	pragma intrinsic(memcpy, memset, memcmp, abs, fabs, _rotl8, _rotl, _rotr8, _rotr)
 	// allow nested inline expansions
@@ -317,7 +327,7 @@ FORCEINLINE void operator delete[](void* ptr)
 }
 
 // inplace new
-FORCEINLINE void* operator new(size_t size, void* ptr)
+FORCEINLINE void* operator new(size_t /*size*/, void* ptr)
 {
 	return ptr;
 }

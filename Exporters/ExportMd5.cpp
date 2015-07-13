@@ -176,8 +176,6 @@ if (i == 32 || i == 34)
 		}
 	}
 
-	int numIndices  = Lod.Indices.Num();
-	int numFaces    = numIndices / 3;
 	CIndexBuffer::IndexAccessor_t Index = Lod.Indices.GetAccessor();
 
 	// write meshes

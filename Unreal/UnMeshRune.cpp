@@ -167,7 +167,7 @@ static void ConvertRuneAnimations(UMeshAnimation &Anim, const TArray<RJoint> &Bo
 {
 	guard(ConvertRuneAnimations);
 
-	int i, j, k;
+	int i, j;
 	int numBones = Bones.Num();
 	// create RefBones
 	Anim.RefBones.Empty(Bones.Num());

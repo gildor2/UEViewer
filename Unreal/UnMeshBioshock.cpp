@@ -385,7 +385,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 	Wedges.Empty        (NumVertices);
 	VertInfluences.Empty(NumVertices * 4);
 
-	int Vert, j;
+	int Vert;
 
 	guard(RigidVerts);
 	for (Vert = 0; Vert < Lod.RigidVerts.Num(); Vert++)

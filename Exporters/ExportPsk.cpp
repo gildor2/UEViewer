@@ -64,7 +64,7 @@ static void ExportCommonMeshData
 
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr;
-	int i, j;
+	int i;
 
 #define SECT(n)		(Sections + n)
 
@@ -347,7 +347,6 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 	// export script file
 	if (GExportScripts)
 	{
-		char filename[512];
 		FArchive *Ar = CreateExportArchive(OriginalMesh, "%s.uc", OriginalMesh->Name);
 		if (Ar)
 		{

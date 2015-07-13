@@ -594,7 +594,7 @@ static void SetPathOption(FString& where, const char* value)
 		else
 		{
 			char buffer[512];
-			int len = appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
+			appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
 			value2 = buffer;
 		}
 	}
@@ -948,7 +948,6 @@ int main(int argc, char **argv)
 					totalFound++;
 					appPrintf("Export \"%s\" was found in package \"%s\"\n", objName, Package2->Filename);
 
-					const char *realClassName = Package2->GetObjectName(Package2->ExportTable[idx].ClassIndex);
 					// create object from package
 					UObject *Obj = Package2->CreateExport(idx);
 					if (Obj)

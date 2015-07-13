@@ -150,12 +150,12 @@ static void RefineShader(char *buffer, bool isFragShader)
 		}
 		continue;
 
-	skip_line:		// skip until end of line
+/*	skip_line:		// skip until end of line
 		buffer = strchr(buffer, '\n');
 		if (!buffer) break;
 		buffer++;
 		*dst++ = '\n';
-		continue;
+		continue; */
 
 	skip_c_line:	// skip until C line delimiter (;)
 		while (true)
