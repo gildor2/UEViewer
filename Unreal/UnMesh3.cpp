@@ -1104,39 +1104,45 @@ struct FSkeletalMeshVertexBuffer3
 };
 
 // real name: FVertexInfluence
-struct FMesh3Unk1
+struct FVertexInfluence
 {
-	int					f0;
-	int					f4;
+	int					Weights;
+	int					Boned;
 
-	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk1 &S)
+	friend FArchive& operator<<(FArchive &Ar, FVertexInfluence &S)
 	{
-		return Ar << S.f0 << S.f4;
+		return Ar << S.Weights << S.Boned;
 	}
 };
 
-SIMPLE_TYPE(FMesh3Unk1, int)
+SIMPLE_TYPE(FVertexInfluence, int)
 
-struct FMesh3Unk3
+// In UE4.0: TMap<FBoneIndexPair, TArray<uint16> >
+struct FVertexInfluenceMapOld
 {
+	// key
 	int					f0;
 	int					f4;
+	// value
 	TArray<word>		f8;
 
-	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk3 &S)
+	friend FArchive& operator<<(FArchive &Ar, FVertexInfluenceMapOld &S)
 	{
 		Ar << S.f0 << S.f4 << S.f8;
 		return Ar;
 	}
 };
 
-struct FMesh3Unk3A
+// In UE4.0: TMap<FBoneIndexPair, TArray<uint32> >
+struct FVertexInfluenceMap
 {
+	// key
 	int					f0;
 	int					f4;
+	// value
 	TArray<int>			f8;
 
-	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk3A &S)
+	friend FArchive& operator<<(FArchive &Ar, FVertexInfluenceMap &S)
 	{
 		Ar << S.f0 << S.f4 << S.f8;
 		return Ar;
@@ -1145,30 +1151,30 @@ struct FMesh3Unk3A
 
 struct FSkeletalMeshVertexInfluences
 {
-	TArray<FMesh3Unk1>	f0;
-	TArray<FMesh3Unk3>	fC;				// Map or Set
-	TArray<FMesh3Unk3A>	fCA;
-	TArray<FSkelMeshSection3> Sections;
-	TArray<FSkelMeshChunk3>	Chunks;
-	TArray<byte>		f80;
-	byte				f8C;			// default = 0
+	TArray<FVertexInfluence>	Influences;
+	TArray<FVertexInfluenceMap>	VertexInfluenceMapping;
+	TArray<FSkelMeshSection3>	Sections;
+	TArray<FSkelMeshChunk3>		Chunks;
+	TArray<byte>				RequiredBones;
+	byte						Usage;			// default = 0
 
 	friend FArchive& operator<<(FArchive &Ar, FSkeletalMeshVertexInfluences &S)
 	{
 		guard(FSkeletalMeshVertexInfluences<<);
 		DBG_SKEL("Extra vertex influence:\n");
-		Ar << S.f0;
+		Ar << S.Influences;
 		if (Ar.ArVer >= 609)
 		{
 			if (Ar.ArVer >= 808)
 			{
-				Ar << S.fCA;
+				Ar << S.VertexInfluenceMapping;
 			}
 			else
 			{
 				byte unk1;
 				if (Ar.ArVer >= 806) Ar << unk1;
-				Ar << S.fC;
+				TArray<FVertexInfluenceMapOld> VertexInfluenceMappingOld;
+				Ar << VertexInfluenceMappingOld;
 			}
 		}
 		if (Ar.ArVer >= 700) Ar << S.Sections << S.Chunks;
@@ -1177,16 +1183,16 @@ struct FSkeletalMeshVertexInfluences
 #if BATMAN
 			if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 159)
 			{
-				TArray<int> unk;
-				Ar << unk;
+				TArray<int> RequiredBones32;
+				Ar << RequiredBones32;
 			}
 			else
 #endif
 			{
-				Ar << S.f80;
+				Ar << S.RequiredBones;
 			}
 		}
-		if (Ar.ArVer >= 715) Ar << S.f8C;
+		if (Ar.ArVer >= 715) Ar << S.Usage;
 #if DEBUG_SKELMESH
 		for (int i1 = 0; i1 < S.Sections.Num(); i1++)
 		{
@@ -1253,7 +1259,7 @@ struct FStaticLODModel3
 	FWordBulkData		BulkData;		// ElementCount = NumVertices
 	FIntBulkData		BulkData2;		// used instead of BulkData since version 806, indices?
 	FSkeletalMeshVertexBuffer3 GPUSkin;
-	TArray<FSkeletalMeshVertexInfluences> fC4;	// GoW2+ engine
+	TArray<FSkeletalMeshVertexInfluences> ExtraVertexInfluences;	// GoW2+ engine
 	int					NumUVSets;
 	TArray<int>			VertexColor;	// since version 710
 
@@ -1482,7 +1488,7 @@ struct FStaticLODModel3
 		{
 			Ar.ArVer = 592;			// partially upgraded engine, override version (for easier coding)
 			if (Ar.ArLicenseeVer >= 42)
-				Ar << Lod.fC4;		// original code: this field is serialized after GPU Skin
+				Ar << Lod.ExtraVertexInfluences;	// original code: this field is serialized after GPU Skin
 		}
 #endif // MOH2010
 #if FURY
@@ -1545,7 +1551,7 @@ struct FStaticLODModel3
 		}
 	no_vert_color:
 		if (Ar.ArVer >= 534)		// post-UT3 code
-			Ar << Lod.fC4;
+			Ar << Lod.ExtraVertexInfluences;
 		if (Ar.ArVer >= 841)		// unknown extra index buffer
 		{
 			FSkelIndexBuffer3 unk;
@@ -2252,23 +2258,6 @@ UStaticMesh3::~UStaticMesh3()
 	delete ConvertedMesh;
 }
 
-#if TRANSFORMERS
-
-struct FTRStaticMeshSectionUnk
-{
-	int					f0;
-	int					f4;
-
-	friend FArchive& operator<<(FArchive &Ar, FTRStaticMeshSectionUnk &S)
-	{
-		return Ar << S.f0 << S.f4;
-	}
-};
-
-SIMPLE_TYPE(FTRStaticMeshSectionUnk, int)
-
-#endif // TRANSFORMERS
-
 #if MOH2010
 
 struct FMOHStaticMeshSectionUnk
@@ -2331,7 +2320,7 @@ struct FStaticMeshSection3
 	int					f24;		//?? first used vertex
 	int					f28;		//?? last used vertex
 	int					Index;		//?? index of section
-	TArray<FMesh3Unk1>	f30;
+	TArrayOfArray<int, 2> f30;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshSection3 &S)
 	{
@@ -2375,8 +2364,7 @@ struct FStaticMeshSection3
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 49)
 		{
-			TArray<FTRStaticMeshSectionUnk> f30;
-			Ar << f30;
+			Ar << S.f30;
 			return Ar;
 		}
 #endif // TRANSFORMERS
