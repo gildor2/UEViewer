@@ -10,6 +10,9 @@
 
  Revision History:
 
+	14.07.2015 v1.31
+	- trying to detect and repair bad vertex weights for imported psk file
+
 	01.02.2015 v1.30
 	- added animation import option "import at slider position"
 	- integrated patch by Ayrshi (http://www.gildor.org/smf/index.php/topic,1925.0.html) intended to
@@ -150,7 +153,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 130
+global AX_IMPORTER_VERSION = 131
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -1050,7 +1053,6 @@ fn ImportPskFile filename skelOnly:false =
 	for i = 1 to numVerts do VertList[i] = #()	-- initialize with empty array
 	for i = 1 to numWedges do
 	(
---!!		MaxVerts[i] = Verts[Wedges[i].PointIndex + 1] * g_meshScale
 		local vertId = Wedges[i].PointIndex + 1
 		MaxVerts[i] = Verts[vertId] * g_meshScale
 		append VertList[vertId] i
@@ -1229,22 +1231,25 @@ fn ImportPskFile filename skelOnly:false =
 
 --	progressStart "Setting weights ..."
 	disableSceneRedraw()
+	numRepairedVerts = 0
+	numBadVerts = 0
 	try
 	(
+
 		for wedge = 1 to numWedges do
 		(
 			vert    = Wedges[wedge].PointIndex+1
 			start   = vertInfStart[vert]
 			numInfs = vertInfNum[vert]
-/*
-			-- This code uses SetVertexWeights; it is fast, but Max will automatically assign
+
+/*			-- This code uses SetVertexWeights; it is fast, but Max will automatically assign
 			-- vertex weights to a nearest bone when creating mesh, and there is no simple
 			-- way to erase them. SetVertexWeights will not erase extra weights.
 			for i = 1 to numInfs do
 			(
 				v = Infs[start + i - 1]
---				format "Inf %(%) % : %\n" wedge vert MeshBones[v.BoneIndex+1].Name v.Weight
-				skinOps.SetVertexWeights skinMod wedge (v.BoneIndex+1) v.Weight
+--				format "Inf %(%) % : %\n" wedge vert MeshBones[boneIDMap[v.BoneIndex+1]].Name v.Weight
+				skinOps.SetVertexWeights skinMod wedge boneIDMap[v.BoneIndex+1] v.Weight
 			) */
 
 			-- This code uses ReplaceVertexWeights with arrays, a few times slower;
@@ -1257,10 +1262,47 @@ fn ImportPskFile filename skelOnly:false =
 				append infBones   boneIDMap[v.BoneIndex + 1]
 				append infWeights v.Weight
 			)
---			format "W[%] V[%] % // %\n" wedge vert infBones infWeights
 			skinOps.ReplaceVertexWeights skinMod wedge infBones infWeights
 			-- NOTE: ReplaceVertexWeights will reset infBones and infWeights arrays, so we
-			-- cannot reuse them
+			-- cannot reuse them.
+			-- Check is weights were set correctly
+			numWeights = skinOps.GetVertexWeightCount skinMod wedge
+			if numWeights != numInfs then
+			(
+				-- We've tried to set weights for this vertex, but MaxScript decided to add
+				-- other bones to dependency (bug in ReplaceVertexWeights). Try to repair:
+				-- enumerate all current weights and set unwanted bone weights to 0 explicitly.
+--				format "Bad vertex: % bone0=%\n" wedge (skinOps.GetVertexWeightBoneID skinMod wedge 1)
+				for w = 1 to numWeights do
+				(
+					bone = skinOps.GetVertexWeightBoneID skinMod wedge w
+					found = false
+					for i2 = 1 to numInfs do
+					(
+						if bone == infBones[i2] then
+						(
+							found = true
+							i2 = numInfs + 1
+						)
+					)
+					if not found then
+					(
+						append infBones bone
+						append infWeights 0
+					)
+				)
+				skinOps.ReplaceVertexWeights skinMod wedge infBones infWeights
+				numWeights = skinOps.GetVertexWeightCount skinMod wedge
+				if numWeights != numInfs then
+				(
+--					format "Bad vertex: %\n" wedge
+					numBadVerts += 1
+				)
+				else
+				(
+					numRepairedVerts += 1
+				)
+			)
 --			progressUpdate (100.0 * wedge / numWedges)
 		)
 	)
@@ -1272,6 +1314,10 @@ fn ImportPskFile filename skelOnly:false =
 	)
 	enableSceneRedraw()
 --	progressEnd()
+	if (numRepairedVerts > 0) or (numBadVerts > 0) then
+	(
+		format "Problems during skinning: % bad vertices, % repaired vertices\n" numBadVerts numRepairedVerts
+	)
 
 	-- apply mesh rotation
 	if numBones >= 1 then
@@ -1797,7 +1843,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.30"
+	label     Lbl1 "Version 1.31"
 	label     Lbl2 "\xA9 2009-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
