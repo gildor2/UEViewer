@@ -816,13 +816,13 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 	guard(SerializeObjectExport3);
 
 #if USE_COMPACT_PACKAGE_STRUCTS
-	// locally declare FObjectImport data which are stripped
-	unsigned	TMP_ObjectFlags2;
-	int			TMP_Archetype;
-	TArray<int>	TMP_NetObjectCount;
-	FGuid		TMP_Guid;
-	int			TMP_U3unk6C;
 	#define LOC(name) TMP_##name
+	// locally declare FObjectImport data which are stripped
+	unsigned	LOC(ObjectFlags2);
+	int			LOC(Archetype);
+	FGuid		LOC(Guid);
+	int			LOC(U3unk6C);
+	TStaticArray<int, 16> LOC(NetObjectCount);
 #else
 	#define LOC(name) E.name
 #endif // USE_COMPACT_PACKAGE_STRUCTS
@@ -994,12 +994,12 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 	guard(SerializeObjectExport4);
 
 #if USE_COMPACT_PACKAGE_STRUCTS
-	// locally declare FObjectImport data which are stripped
-	int			TMP_Archetype;
-	TArray<int>	TMP_NetObjectCount;
-	FGuid		TMP_Guid;
-	int			TMP_PackageFlags;
 	#define LOC(name) TMP_##name
+	// locally declare FObjectImport data which are stripped
+	int			LOC(Archetype);
+	TArray<int>	LOC(NetObjectCount);
+	FGuid		LOC(Guid);
+	int			LOC(PackageFlags);
 #else
 	#define LOC(name) E.name
 #endif // USE_COMPACT_PACKAGE_STRUCTS
@@ -1702,7 +1702,7 @@ FArchive* UnPackage::CreateLoader(const char* filename, FArchive* baseLoader)
 	unguardf("%s", filename);
 }
 
-UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
+UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 :	Loader(NULL)
 {
 	guard(UnPackage::UnPackage);
@@ -1720,17 +1720,22 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 	*this << Summary;
 	Loader->SetupFrom(*this);	// serialization of FPackageFileSummary could change some FArchive properties
 
-	PKG_LOG("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion);
-#if UNREAL3
-	if (Game >= GAME_UE3)
+#if !DEBUG_PACKAGE
+	if (!silent)
+#endif
 	{
-		PKG_LOG("Engine: %d ", Summary.EngineVersion);
-		FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
-		if (UE3Loader && UE3Loader->IsFullyCompressed)
-			PKG_LOG("[FullComp] ");
-	}
+		PKG_LOG("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion);
+#if UNREAL3
+		if (Game >= GAME_UE3)
+		{
+			PKG_LOG("Engine: %d ", Summary.EngineVersion);
+			FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
+			if (UE3Loader && UE3Loader->IsFullyCompressed)
+				PKG_LOG("[FullComp] ");
+		}
 #endif // UNREAL3
-	PKG_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
+		PKG_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
+	}
 
 #if DEBUG_PACKAGE
 	appPrintf("Flags: %X, Name offset: %X, Export offset: %X, Import offset: %X\n", Summary.PackageFlags, Summary.NameOffset, Summary.ExportOffset, Summary.ImportOffset);
@@ -1799,275 +1804,9 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader)
 	#endif // NURIEN
 #endif // UNREAL3
 
-	// read name table
-	guard(ReadNameTable);
-	if (Summary.NameCount > 0)
-	{
-		Seek(Summary.NameOffset);
-		NameTable = new const char* [Summary.NameCount];
-		for (int i = 0; i < Summary.NameCount; i++)
-		{
-			guard(Name);
-			if ((ArVer < 64) && (Game < GAME_UE4)) // UE4 has restarted versioning from 0
-			{
-				char buf[MAX_FNAME_LEN];
-				int len;
-				for (len = 0; len < ARRAY_COUNT(buf); len++)
-				{
-					char c;
-					*this << c;
-					buf[len] = c;
-					if (!c) break;
-				}
-				assert(len < ARRAY_COUNT(buf));
-				NameTable[i] = appStrdupPool(buf);
-				// skip object flags
-				int tmp;
-				*this << tmp;
-			}
-#if UC1 || PARIAH
-			else if (Game == GAME_UC1 && ArLicenseeVer >= 28)
-			{
-			uc1_name:
-				// used word + char[] instead of FString
-				char buf[MAX_FNAME_LEN];
-				word len;
-				*this << len;
-				assert(len < ARRAY_COUNT(buf));
-				Serialize(buf, len+1);
-				NameTable[i] = appStrdupPool(buf);
-				// skip object flags
-				int tmp;
-				*this << tmp;
-			}
-	#if PARIAH
-			else if (Game == GAME_Pariah && ((ArLicenseeVer & 0x3F) >= 28)) goto uc1_name;
-	#endif
-#endif // UC1 || PARIAH
-			else
-			{
-				FStaticString<MAX_FNAME_LEN> name;
-
-#if SPLINTER_CELL
-				if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
-				{
-					char buf[MAX_FNAME_LEN];
-					byte len;
-					int flags;
-					*this << len;
-					assert(len < ARRAY_COUNT(buf));
-					Serialize(buf, len+1);
-					NameTable[i] = appStrdupPool(buf);
-					*this << flags;
-					goto done;
-				}
-#endif // SPLINTER_CELL
-#if LEAD
-				if (Game == GAME_SplinterCellConv && ArVer >= 68)
-				{
-					char buf[MAX_FNAME_LEN];
-					int len;
-					*this << AR_INDEX(len);
-					assert(len < ARRAY_COUNT(buf));
-					Serialize(buf, len);
-					buf[len] = 0;
-					NameTable[i] = appStrdupPool(buf);
-					goto done;
-				}
-#endif // LEAD
-#if AA2
-				if (Game == GAME_AA2)
-				{
-					guard(AA2_FName);
-					char buf[MAX_FNAME_LEN];
-					int len;
-					*this << AR_INDEX(len);
-					// read as unicode string and decrypt
-					assert(len <= 0);
-					len = -len;
-					assert(len < ARRAY_COUNT(buf));
-					char* d = buf;
-					byte shift = 5;
-					for (int j = 0; j < len; j++, d++)
-					{
-						word c;
-						*this << c;
-						word c2 = ROR16(c, shift);
-						assert(c2 < 256);
-						*d = c2 & 0xFF;
-						shift = (c - 5) & 15;
-					}
-					NameTable[i] = appStrdupPool(buf);
-					int unk;
-					*this << AR_INDEX(unk);
-					unguard;
-					goto dword_flags;
-				}
-#endif // AA2
-#if DCU_ONLINE
-				if (Game == GAME_DCUniverse)		// no version checking
-				{
-					char buf[MAX_FNAME_LEN];
-					int len;
-					*this << len;
-					assert(len > 0 && len < 0x3FF);	// requires extra code
-					assert(len < ARRAY_COUNT(buf));
-					Serialize(buf, len);
-					buf[len] = 0;
-					NameTable[i] = appStrdupPool(buf);
-					goto qword_flags;
-				}
-#endif // DCU_ONLINE
-#if R6VEGAS
-				if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
-				{
-					char buf[MAX_FNAME_LEN];
-					byte len;
-					*this << len;
-					assert(len < ARRAY_COUNT(buf));
-					Serialize(buf, len);
-					buf[len] = 0;
-					NameTable[i] = appStrdupPool(buf);
-					goto done;
-				}
-#endif // R6VEGAS
-#if TRANSFORMERS
-				if (Game == GAME_Transformers && ArLicenseeVer >= 181) // Transformers: Fall of Cybertron; no real version in code
-				{
-					char buf[MAX_FNAME_LEN];
-					int len;
-					*this << len;
-					assert(len < ARRAY_COUNT(buf));
-					Serialize(buf, len);
-					buf[len] = 0;
-					NameTable[i] = appStrdupPool(buf);
-					goto qword_flags;
-				}
-#endif // TRANSFORMERS
-
-				// Korean games sometimes uses Unicode strings ...
-				*this << name;
-	#if AVA
-				if (Game == GAME_AVA)
-				{
-					// strange code - package contains some bytes:
-					// V(0) = len ^ 0x3E
-					// V(i) = V(i-1) + 0x48 ^ 0xE1
-					// Number of bytes = (len ^ 7) & 0xF
-					int skip = name.Len();
-					skip = (skip ^ 7) & 0xF;
-					Seek(Tell() + skip);
-				}
-	#endif // AVA
-	#if 0
-				NameTable[i] = new char[name.Num()];
-				strcpy(NameTable[i], *name);
-	#else
-				NameTable[i] = appStrdupPool(*name);
-	#endif
-
-	#if UNREAL4
-				// skip object flags
-				if (Game >= GAME_UE4) goto done;
-	#endif
-	#if UNREAL3
-		#if BIOSHOCK
-				if (Game == GAME_Bioshock) goto qword_flags;
-		#endif
-		#if WHEELMAN
-				if (Game == GAME_Wheelman) goto dword_flags;
-		#endif
-		#if MASSEFF
-				if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
-				{
-					if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
-					if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
-				}
-		#endif // MASSEFF
-		#if MKVSDC
-				if (Game == GAME_MK && ArVer >= 677) goto done;		// no flags for MK X
-		#endif
-		#if METRO_CONF
-				if (Game == GAME_MetroConflict)
-				{
-					int TrashLen = 0;
-					if (ArLicenseeVer < 3)
-					{
-					}
-					else if (ArLicenseeVer < 16)
-					{
-						TrashLen = name.Len() ^ 7;
-					}
-					else
-					{
-						TrashLen = name.Len() ^ 6;
-					}
-					this->Seek(this->Tell() + (TrashLen & 0xF));
-				}
-		#endif // METRO_CONF
-				if (Game >= GAME_UE3 && ArVer >= 195)
-				{
-				qword_flags:
-					// object flags are 64-bit in UE3, skip additional 32 bits
-					int64 flags64;
-					*this << flags64;
-					goto done;
-				}
-	#endif // UNREAL3
-
-			dword_flags:
-				int flags32;
-				*this << flags32;
-			}
-		done: ;
-#if DEBUG_PACKAGE
-			PKG_LOG("Name[%d]: \"%s\"\n", i, NameTable[i]);
-#endif
-			unguardf("%d", i);
-		}
-	}
-	unguard;
-
-	// load import table
-	guard(ReadImportTable);
-	if (Summary.ImportCount > 0)
-	{
-		Seek(Summary.ImportOffset);
-		FObjectImport *Imp = ImportTable = new FObjectImport[Summary.ImportCount];
-		for (int i = 0; i < Summary.ImportCount; i++, Imp++)
-		{
-			*this << *Imp;
-#if DEBUG_PACKAGE
-			PKG_LOG("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName);
-#endif
-		}
-	}
-	unguard;
-
-	// load exports table
-	guard(ReadExportTable);
-	if (Summary.ExportCount > 0)
-	{
-		Seek(Summary.ExportOffset);
-		FObjectExport *Exp = ExportTable = new FObjectExport[Summary.ExportCount];
-		for (int i = 0; i < Summary.ExportCount; i++, Exp++)
-		{
-			*this << *Exp;
-#if DEBUG_PACKAGE
-//			USE_COMPACT_PACKAGE_STRUCTS - makes impossible to dump full information
-//			Perhaps add full support to extract.exe?
-//			PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
-//				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype);
-			PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X, exp_f=%08X\n", i, GetObjectName(Exp->ClassIndex),
-				*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags, Exp->ExportFlags);
-#endif
-		}
-	}
-#if BLADENSOUL
-	if (Game == GAME_BladeNSoul && (Summary.PackageFlags & 0x08000000))
-		PatchBnSExports(ExportTable, Summary);
-#endif
-	unguard;
+	LoadNameTable();
+	LoadImportTable();
+	LoadExportTable();
 
 #if UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS			// we can serialize dependencies when needed
 	if (Game == GAME_DCUniverse || Game == GAME_Bioshock3) goto no_depends;		// has non-standard checks
@@ -2110,6 +1849,290 @@ no_depends: ;
 #endif
 
 	unguardf("%s, ver=%d/%d, game=%X", filename, ArVer, ArLicenseeVer, Game);
+}
+
+
+void UnPackage::LoadNameTable()
+{
+	guard(UnPackage::LoadNameTable);
+
+	if (Summary.NameCount == 0) return;
+
+	Seek(Summary.NameOffset);
+	NameTable = new const char* [Summary.NameCount];
+	for (int i = 0; i < Summary.NameCount; i++)
+	{
+		guard(Name);
+		if ((ArVer < 64) && (Game < GAME_UE4)) // UE4 has restarted versioning from 0
+		{
+			char buf[MAX_FNAME_LEN];
+			int len;
+			for (len = 0; len < ARRAY_COUNT(buf); len++)
+			{
+				char c;
+				*this << c;
+				buf[len] = c;
+				if (!c) break;
+			}
+			assert(len < ARRAY_COUNT(buf));
+			NameTable[i] = appStrdupPool(buf);
+			// skip object flags
+			int tmp;
+			*this << tmp;
+		}
+#if UC1 || PARIAH
+		else if (Game == GAME_UC1 && ArLicenseeVer >= 28)
+		{
+		uc1_name:
+			// used word + char[] instead of FString
+			char buf[MAX_FNAME_LEN];
+			word len;
+			*this << len;
+			assert(len < ARRAY_COUNT(buf));
+			Serialize(buf, len+1);
+			NameTable[i] = appStrdupPool(buf);
+			// skip object flags
+			int tmp;
+			*this << tmp;
+		}
+	#if PARIAH
+		else if (Game == GAME_Pariah && ((ArLicenseeVer & 0x3F) >= 28)) goto uc1_name;
+	#endif
+#endif // UC1 || PARIAH
+		else
+		{
+			FStaticString<MAX_FNAME_LEN> name;
+
+#if SPLINTER_CELL
+			if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
+			{
+				char buf[MAX_FNAME_LEN];
+				byte len;
+				int flags;
+				*this << len;
+				assert(len < ARRAY_COUNT(buf));
+				Serialize(buf, len+1);
+				NameTable[i] = appStrdupPool(buf);
+				*this << flags;
+				goto done;
+			}
+#endif // SPLINTER_CELL
+#if LEAD
+			if (Game == GAME_SplinterCellConv && ArVer >= 68)
+			{
+				char buf[MAX_FNAME_LEN];
+				int len;
+				*this << AR_INDEX(len);
+				assert(len < ARRAY_COUNT(buf));
+				Serialize(buf, len);
+				buf[len] = 0;
+				NameTable[i] = appStrdupPool(buf);
+				goto done;
+			}
+#endif // LEAD
+#if AA2
+			if (Game == GAME_AA2)
+			{
+				guard(AA2_FName);
+				char buf[MAX_FNAME_LEN];
+				int len;
+				*this << AR_INDEX(len);
+				// read as unicode string and decrypt
+				assert(len <= 0);
+				len = -len;
+				assert(len < ARRAY_COUNT(buf));
+				char* d = buf;
+				byte shift = 5;
+				for (int j = 0; j < len; j++, d++)
+				{
+					word c;
+					*this << c;
+					word c2 = ROR16(c, shift);
+					assert(c2 < 256);
+					*d = c2 & 0xFF;
+					shift = (c - 5) & 15;
+				}
+				NameTable[i] = appStrdupPool(buf);
+				int unk;
+				*this << AR_INDEX(unk);
+				unguard;
+				goto dword_flags;
+			}
+#endif // AA2
+#if DCU_ONLINE
+			if (Game == GAME_DCUniverse)		// no version checking
+			{
+				char buf[MAX_FNAME_LEN];
+				int len;
+				*this << len;
+				assert(len > 0 && len < 0x3FF);	// requires extra code
+				assert(len < ARRAY_COUNT(buf));
+				Serialize(buf, len);
+				buf[len] = 0;
+				NameTable[i] = appStrdupPool(buf);
+				goto qword_flags;
+			}
+#endif // DCU_ONLINE
+#if R6VEGAS
+			if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
+			{
+				char buf[MAX_FNAME_LEN];
+				byte len;
+				*this << len;
+				assert(len < ARRAY_COUNT(buf));
+				Serialize(buf, len);
+				buf[len] = 0;
+				NameTable[i] = appStrdupPool(buf);
+				goto done;
+			}
+#endif // R6VEGAS
+#if TRANSFORMERS
+			if (Game == GAME_Transformers && ArLicenseeVer >= 181) // Transformers: Fall of Cybertron; no real version in code
+			{
+				char buf[MAX_FNAME_LEN];
+				int len;
+				*this << len;
+				assert(len < ARRAY_COUNT(buf));
+				Serialize(buf, len);
+				buf[len] = 0;
+				NameTable[i] = appStrdupPool(buf);
+				goto qword_flags;
+			}
+#endif // TRANSFORMERS
+
+			// Korean games sometimes uses Unicode strings ...
+			*this << name;
+	#if AVA
+			if (Game == GAME_AVA)
+			{
+				// strange code - package contains some bytes:
+				// V(0) = len ^ 0x3E
+				// V(i) = V(i-1) + 0x48 ^ 0xE1
+				// Number of bytes = (len ^ 7) & 0xF
+				int skip = name.Len();
+				skip = (skip ^ 7) & 0xF;
+				Seek(Tell() + skip);
+			}
+	#endif // AVA
+	#if 0
+			NameTable[i] = new char[name.Num()];
+			strcpy(NameTable[i], *name);
+	#else
+			NameTable[i] = appStrdupPool(*name);
+	#endif
+
+	#if UNREAL4
+			// skip object flags
+			if (Game >= GAME_UE4) goto done;
+	#endif
+	#if UNREAL3
+		#if BIOSHOCK
+			if (Game == GAME_Bioshock) goto qword_flags;
+		#endif
+		#if WHEELMAN
+			if (Game == GAME_Wheelman) goto dword_flags;
+		#endif
+		#if MASSEFF
+			if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
+			{
+				if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
+				if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
+			}
+		#endif // MASSEFF
+		#if MKVSDC
+			if (Game == GAME_MK && ArVer >= 677) goto done;		// no flags for MK X
+		#endif
+		#if METRO_CONF
+			if (Game == GAME_MetroConflict)
+			{
+				int TrashLen = 0;
+				if (ArLicenseeVer < 3)
+				{
+				}
+				else if (ArLicenseeVer < 16)
+				{
+					TrashLen = name.Len() ^ 7;
+				}
+				else
+				{
+					TrashLen = name.Len() ^ 6;
+				}
+				this->Seek(this->Tell() + (TrashLen & 0xF));
+			}
+		#endif // METRO_CONF
+			if (Game >= GAME_UE3 && ArVer >= 195)
+			{
+			qword_flags:
+				// object flags are 64-bit in UE3, skip additional 32 bits
+				int64 flags64;
+				*this << flags64;
+				goto done;
+			}
+	#endif // UNREAL3
+
+		dword_flags:
+			int flags32;
+			*this << flags32;
+		}
+	done: ;
+#if DEBUG_PACKAGE
+		PKG_LOG("Name[%d]: \"%s\"\n", i, NameTable[i]);
+#endif
+		unguardf("%d", i);
+	}
+
+	unguard;
+}
+
+
+void UnPackage::LoadImportTable()
+{
+	guard(UnPackage::LoadImportTable);
+
+	if (Summary.ImportCount == 0) return;
+
+	Seek(Summary.ImportOffset);
+	FObjectImport *Imp = ImportTable = new FObjectImport[Summary.ImportCount];
+	for (int i = 0; i < Summary.ImportCount; i++, Imp++)
+	{
+		*this << *Imp;
+#if DEBUG_PACKAGE
+		PKG_LOG("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName);
+#endif
+	}
+
+	unguard;
+}
+
+
+void UnPackage::LoadExportTable()
+{
+	// load exports table
+	guard(UnPackage::LoadExportTable);
+
+	if (Summary.ExportCount == 0) return;
+
+	Seek(Summary.ExportOffset);
+	FObjectExport *Exp = ExportTable = new FObjectExport[Summary.ExportCount];
+	for (int i = 0; i < Summary.ExportCount; i++, Exp++)
+	{
+		*this << *Exp;
+#if DEBUG_PACKAGE
+//		USE_COMPACT_PACKAGE_STRUCTS - makes impossible to dump full information
+//		Perhaps add full support to extract.exe?
+//		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
+//			*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype);
+		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X, exp_f=%08X\n", i, GetObjectName(Exp->ClassIndex),
+			*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags, Exp->ExportFlags);
+#endif
+	}
+
+#if BLADENSOUL
+	if (Game == GAME_BladeNSoul && (Summary.PackageFlags & 0x08000000))
+		PatchBnSExports(ExportTable, Summary);
+#endif
+
+	unguard;
 }
 
 
@@ -2196,16 +2219,23 @@ FArchive& UnPackage::operator<<(FName &N)
 	guard(UnPackage::SerializeFName);
 
 	assert(IsLoading);
+
 #if BIOSHOCK
 	if (Game == GAME_Bioshock)
 	{
 		*this << AR_INDEX(N.Index) << N.ExtraIndex;
-		N.Str = GetName(N.Index);
-		N.AppendIndexBio();
+		if (N.ExtraIndex == 0)
+		{
+			N.Str = GetName(N.Index);
+		}
+		else
+		{
+			N.Str = appStrdupPool(va("%s%d", GetName(N.Index), N.ExtraIndex-1));	// without "_" char
+		}
 		return *this;
 	}
-	else
 #endif // BIOSHOCK
+
 #if UC2
 	if (Engine() == GAME_UE2X && ArVer >= 145)
 	{
@@ -2240,11 +2270,26 @@ FArchive& UnPackage::operator<<(FName &N)
 	}
 	else
 #endif // UNREAL3 || UNREAL4
+	{
+		// UE1 and UE2
 		*this << AR_INDEX(N.Index);
-	N.Str = GetName(N.Index);
+	}
+
+	// Convert name index to string
 #if UNREAL3 || UNREAL4
-	N.AppendIndex();
-#endif
+	if (N.ExtraIndex == 0)
+	{
+		N.Str = GetName(N.Index);
+	}
+	else
+	{
+		N.Str = appStrdupPool(va("%s_%d", GetName(N.Index), N.ExtraIndex-1));
+	}
+#else
+	// no modern engines compiled
+	N.Str = GetName(N.Index);
+#endif // UNREAL3 || UNREAL4
+
 	return *this;
 
 	unguardf("pos=%08X", Tell());
@@ -2656,7 +2701,7 @@ const char *UnPackage::GetUncookedPackageName(int PackageIndex) const
 TArray<UnPackage*>	UnPackage::PackageMap;
 TArray<char*>		MissingPackages;
 
-UnPackage *UnPackage::LoadPackage(const char *Name)
+UnPackage *UnPackage::LoadPackage(const char *Name, bool silent)
 {
 	guard(UnPackage::LoadPackage);
 
@@ -2674,7 +2719,7 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 		if (info->Package)
 			return info->Package;
 		// Load the package.
-		UnPackage* package = new UnPackage(info->RelativeName, appCreateFileReader(info));
+		UnPackage* package = new UnPackage(info->RelativeName, appCreateFileReader(info), silent);
 		// Cache pointer in CGameFileInfo so next time it will be found quickly.
 		const_cast<CGameFileInfo*>(info)->Package = package;
 		return package;
@@ -2699,7 +2744,7 @@ UnPackage *UnPackage::LoadPackage(const char *Name)
 				return PackageMap[i];
 		// Try to load package.
 		if (appFileExists(Name))
-			return new UnPackage(Name);
+			return new UnPackage(Name, NULL, silent);
 	}
 
 	// The package is missing. Do not print any warnings: missing package is a normal situation

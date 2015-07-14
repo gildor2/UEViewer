@@ -149,51 +149,26 @@ class FName
 {
 public:
 	int			Index;
-#if UNREAL3
+#if UNREAL3 || UNREAL4
 	int			ExtraIndex;
-	bool		NameGenerated;
 #endif
 	const char	*Str;
 
 	FName()
 	:	Index(0)
 	,	Str("None")
-#if UNREAL3
+#if UNREAL3 || UNREAL4
 	,	ExtraIndex(0)
-	,	NameGenerated(false)
 #endif
 	{}
-
-#if UNREAL3
-	void AppendIndex()
-	{
-		if (NameGenerated || !ExtraIndex) return;
-		NameGenerated = true;
-		Str = appStrdupPool(va("%s_%d", Str, ExtraIndex-1));
-	}
-#endif // UNREAL3
-
-#if BIOSHOCK
-	void AppendIndexBio()
-	{
-		if (NameGenerated || !ExtraIndex) return;
-		NameGenerated = true;
-		Str = appStrdupPool(va("%s%d", Str, ExtraIndex-1));	// without "_" char
-	}
-#endif // BIOSHOCK
 
 	inline FName& operator=(const FName &Other)
 	{
 		Index = Other.Index;
-		Str   = Other.Str;
-#if UNREAL3
-		NameGenerated = Other.NameGenerated;
-		if (Other.NameGenerated)
-		{
-			// should duplicate generated names to avoid crash in destructor
-			Str = appStrdupPool(Other.Str);
-		}
+#if UNREAL3 || UNREAL4
+		ExtraIndex = Other.ExtraIndex;
 #endif // UNREAL3
+		Str = Other.Str;
 		return *this;
 	}
 
@@ -201,11 +176,15 @@ public:
 	{
 		Str = appStrdupPool(String);
 		Index = 0;
+#if UNREAL3 || UNREAL4
+		ExtraIndex = 0;
+#endif
 		return *this;
 	}
 
 	inline bool operator==(const FName& Other) const
 	{
+		// we're using appStrdupPool for FName strings, so perhaps comparison of pointers is enough here
 		return (Str == Other.Str) || (stricmp(Str, Other.Str) == 0);
 	}
 

@@ -435,7 +435,7 @@ void UIPackageDialog::ScanContent()
 			cancelled = true;
 			break;
 		}
-		UnPackage* package = UnPackage::LoadPackage(file->RelativeName);	// should always return non-NULL
+		UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
 		file->PackageScanned = true;
 		if (!package) continue;		// should not happen
 
