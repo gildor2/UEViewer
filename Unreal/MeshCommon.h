@@ -169,6 +169,31 @@ struct CMeshSection
 };
 
 
+struct CBaseMeshLod
+{
+	// generic properties
+	int						NumTexCoords;
+	bool					HasNormals;
+	bool					HasTangents;
+	// geometry
+	TArray<CMeshSection>	Sections;
+	int						NumVerts;
+	CMeshUVFloat*			ExtraUV[MAX_MESH_UV_SETS-1];
+	CIndexBuffer			Indices;
+
+	~CBaseMeshLod()
+	{
+		for (int i = 0; i < NumTexCoords-1; i++)
+			appFree(ExtraUV[i]);
+	}
+
+	void AllocateUVBuffers()
+	{
+		for (int i = 0; i < NumTexCoords-1; i++)
+			ExtraUV[i] = (CMeshUVFloat*)appMalloc(sizeof(CMeshUVFloat) * NumVerts);
+	}
+};
+
 void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const CIndexBuffer &Indices);
 void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer &Indices);
 

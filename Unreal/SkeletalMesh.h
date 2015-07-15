@@ -59,24 +59,13 @@ struct CSkelMeshBone
 };
 
 
-struct CSkelMeshLod
+struct CSkelMeshLod : public CBaseMeshLod
 {
-	// generic properties
-	int						NumTexCoords;
-	bool					HasNormals;
-	bool					HasTangents;
-	// geometry
-	TArray<CMeshSection>	Sections;
 	CSkelMeshVertex			*Verts;
-	CMeshUVFloat*			ExtraUV[MAX_MESH_UV_SETS-1];
-	int						NumVerts;
-	CIndexBuffer			Indices;
 
 	~CSkelMeshLod()
 	{
 		if (Verts) appFree(Verts);
-		for (int i = 0; i < NumTexCoords-1; i++)
-			appFree(ExtraUV[i]);
 	}
 
 	void BuildNormals()
@@ -99,8 +88,7 @@ struct CSkelMeshLod
 		assert(Verts == NULL);
 		Verts    = (CSkelMeshVertex*)appMalloc(sizeof(CSkelMeshVertex) * Count, 16);		// alignment for SSE
 		NumVerts = Count;
-		for (int i = 0; i < NumTexCoords-1; i++)
-			ExtraUV[i] = (CMeshUVFloat*)appMalloc(sizeof(CMeshUVFloat) * Count);
+		AllocateUVBuffers();
 		unguard;
 	}
 

@@ -8,9 +8,7 @@ class CSkelMeshInstance;
 class CSkeletalMesh;
 class CStaticMesh;
 struct CMeshVertex;
-struct CMeshUVFloat;
-struct CIndexBuffer;
-struct CMeshSection;
+struct CBaseMeshLod;
 
 
 #define TEST_FILES		1		// comment line to disable some notifications
@@ -101,8 +99,7 @@ public:
 
 	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
 
-	//!! separate all these fields to some CMeshLod structure and pass it here
-	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CMeshUVFloat* const ExtraUV[], const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex);
+	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CBaseMeshLod* Mesh, int UVIndex);
 };
 
 
