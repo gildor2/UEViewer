@@ -219,6 +219,14 @@ struct FMeshAnimNotify
 #endif
 		if (Ar.ArVer >= 112)
 			Ar << N.NotifyObj;
+#if LINEAGE2
+		if (Ar.Game == GAME_Lineage2 && Ar.ArVer >= 131)
+		{
+			int StringLen;
+			Ar << StringLen;
+			Ar.Seek(Ar.Tell() + StringLen * 2);
+		}
+#endif // LINEAGE2
 		return Ar;
 		unguard;
 	}

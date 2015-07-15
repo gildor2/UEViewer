@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+16.07.2015
+- updated Lineage 2 animation support
+
 11.07.2015
 - added new command line syntax: "umodel <options> <directory>", shortcut to
   "umodel <options> -path=<directory>"
