@@ -1662,13 +1662,13 @@ class TLazyArray : public TArray<T>
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
 		guardfunc;
-		return SerializeLazyArray(Ar, A, SerializeArray);
+		return SerializeLazyArray(Ar, A, TArray<T>::SerializeArray);
 		unguard;
 	}
 #else
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
-		return SerializeLazyArray(Ar, A, SerializeArray);
+		return SerializeLazyArray(Ar, A, TArray<T>::SerializeArray);
 	}
 #endif
 };
