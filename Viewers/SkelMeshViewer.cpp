@@ -28,7 +28,7 @@
 static float TimeSinceCreate;
 #endif
 
-TArray<CSkelMeshInstance*> CSkelMeshViewer::Meshes;
+TArray<CSkelMeshInstance*> CSkelMeshViewer::TaggedMeshes;
 UObject *GForceAnimSet = NULL;
 
 
@@ -89,9 +89,9 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 		Mins = Maxs = nullVec3;
 	}
 	// extend bounds with additional meshes
-	for (int i = 0; i < Meshes.Num(); i++)
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
 	{
-		CSkelMeshInstance* Inst = Meshes[i];
+		CSkelMeshInstance* Inst = TaggedMeshes[i];
 		if (Inst->pMesh != SkelInst->pMesh)
 		{
 			const CSkeletalMesh *Mesh2 = Inst->pMesh;
@@ -104,7 +104,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 			ComputeBounds(Bounds2, 2, sizeof(CVec3), Mins, Maxs, true);	// include Bounds2 into Mins/Maxs
 		}
 		// reset animation for all meshes
-		Meshes[i]->TweenAnim(NULL, 0);
+		TaggedMeshes[i]->TweenAnim(NULL, 0);
 	}
 	InitViewerPosition(Mins, Maxs);
 
@@ -227,27 +227,35 @@ void CSkelMeshViewer::Export()
 	const CAnimSet *Anim = MeshInst->GetAnim();
 	if (Anim) ExportObject(Anim->OriginalAnim);
 
-	for (int i = 0; i < Meshes.Num(); i++)
-		ExportObject(Meshes[i]->pMesh->OriginalMesh);
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+		ExportObject(TaggedMeshes[i]->pMesh->OriginalMesh);
 }
 
 
-void CSkelMeshViewer::TagMesh(CSkelMeshInstance *NewInst)
+void CSkelMeshViewer::TagMesh(CSkelMeshInstance *Inst)
 {
-	for (int i = 0; i < Meshes.Num(); i++)
-		if (Meshes[i]->pMesh == NewInst->pMesh)
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+	{
+		if (TaggedMeshes[i]->pMesh == Inst->pMesh)
 		{
 			// already tagged, remove
-			Meshes.RemoveAt(i);
+			delete TaggedMeshes[i];
+			TaggedMeshes.RemoveAt(i);
 			return;
 		}
-	Meshes.Add(NewInst);
+	}
+	// not tagget yet, create a copy of the mesh
+	CSkelMeshInstance* NewInst = new CSkelMeshInstance();
+	NewInst->SetMesh(Inst->pMesh);
+	TaggedMeshes.Add(NewInst);
 }
 
 
 void CSkelMeshViewer::UntagAllMeshes()
 {
-	Meshes.Empty();
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+		delete TaggedMeshes[i];
+	TaggedMeshes.Empty();
 }
 
 
@@ -299,8 +307,8 @@ void CSkelMeshViewer::Draw2D()
 	}
 
 	// show extra meshes
-	for (int i = 0; i < Meshes.Num(); i++)
-		DrawTextLeft("%s%d: %s", (Meshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, Meshes[i]->pMesh->OriginalMesh->Name);
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+		DrawTextLeft("%s%d: %s", (TaggedMeshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, TaggedMeshes[i]->pMesh->OriginalMesh->Name);
 
 	// show animation information
 	const CAnimSet *AnimSet = MeshInst->GetAnim();
@@ -368,7 +376,7 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	float boost = 0;
 	float highlightTime = max(TimeSinceCreate, 0);
 
-	if (Meshes.Num() && highlightTime < HIGHLIGHT_DURATION)
+	if (TaggedMeshes.Num() && highlightTime < HIGHLIGHT_DURATION)
 	{
 		if (highlightTime > HIGHLIGHT_DURATION / 2)
 			highlightTime = HIGHLIGHT_DURATION - highlightTime;	// fade
@@ -430,9 +438,9 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	glColor3f(1, 1, 1);
 #endif // SHOW_BOUNDS
 
-	for (i = 0; i < Meshes.Num(); i++)
+	for (i = 0; i < TaggedMeshes.Num(); i++)
 	{
-		CSkelMeshInstance *mesh = Meshes[i];
+		CSkelMeshInstance *mesh = TaggedMeshes[i];
 		if (mesh->pMesh == MeshInst->pMesh) continue;	// avoid duplicates
 		mesh->UpdateAnimation(TimeDelta);
 		DrawMesh(mesh);
@@ -522,8 +530,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 			// note: AnimIndex changed now
 			AnimName = MeshInst->GetAnimName(AnimIndex);
 			MeshInst->TweenAnim(AnimName, 0.25);	// change animation with tweening
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->TweenAnim(AnimName, 0.25);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->TweenAnim(AnimName, 0.25);
 		}
 		break;
 
@@ -537,8 +545,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 				Frame += 0.2f;
 			Frame = bound(Frame, 0, NumFrames-1);
 			MeshInst->FreezeAnimAt(Frame);
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->FreezeAnimAt(Frame);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->FreezeAnimAt(Frame);
 		}
 		break;
 
@@ -546,16 +554,16 @@ void CSkelMeshViewer::ProcessKey(int key)
 		if (AnimIndex >= 0)
 		{
 			MeshInst->PlayAnim(AnimName);
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->PlayAnim(AnimName);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->PlayAnim(AnimName);
 		}
 		break;
 	case 'x':
 		if (AnimIndex >= 0)
 		{
 			MeshInst->LoopAnim(AnimName);
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->LoopAnim(AnimName);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->LoopAnim(AnimName);
 		}
 		break;
 
@@ -658,8 +666,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 				{
 					// found desired animation set
 					MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
-					for (int i = 0; i < Meshes.Num(); i++)
-						Meshes[i]->SetAnim(Anim);
+					for (int i = 0; i < TaggedMeshes.Num(); i++)
+						TaggedMeshes[i]->SetAnim(Anim);
 					AnimIndex = -1;
 					appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
 					break;
@@ -669,11 +677,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 		break;
 
 	case 't'|KEY_CTRL:
-		{
-			CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
-			SkelInst->SetMesh(MeshInst->pMesh);
-			TagMesh(SkelInst);
-		}
+		TagMesh(MeshInst);
 		break;
 
 	case 'r'|KEY_CTRL:
@@ -681,8 +685,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 			int mode = MeshInst->RotationMode + 1;
 			if (mode > EARO_ForceDisabled) mode = 0;
 			MeshInst->RotationMode = (EAnimRotationOnly)mode;
-			for (int i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->RotationMode = (EAnimRotationOnly)mode;
+			for (int i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->RotationMode = (EAnimRotationOnly)mode;
 		}
 		break;
 

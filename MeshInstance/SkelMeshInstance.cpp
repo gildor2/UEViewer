@@ -106,6 +106,7 @@ CSkelMeshInstance::~CSkelMeshInstance()
 {
 	if (DataBlock) appFree(DataBlock);
 	if (InfColors) delete[] InfColors;
+	if (pMesh) pMesh->UnlockMaterials();
 }
 
 
@@ -173,7 +174,9 @@ void CSkelMeshInstance::SetMesh(CSkeletalMesh *Mesh)
 
 	int i;
 
+	assert(pMesh == NULL);
 	pMesh = Mesh;
+	pMesh->LockMaterials();
 
 	// orientation
 

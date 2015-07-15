@@ -14,6 +14,18 @@
 #define MAX_MESHMATERIALS		256
 
 
+CStatMeshInstance::~CStatMeshInstance()
+{
+	if (pMesh) pMesh->UnlockMaterials();
+}
+
+void CStatMeshInstance::SetMesh(CStaticMesh *Mesh)
+{
+	assert(pMesh == NULL);
+	pMesh = Mesh;
+	pMesh->LockMaterials();
+}
+
 void CStatMeshInstance::Draw(unsigned flags)
 {
 	guard(CStatMeshInstance::Draw);

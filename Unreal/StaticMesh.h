@@ -76,6 +76,18 @@ public:
 			Lods[i].BuildNormals();
 	}
 
+	void LockMaterials()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].LockMaterials();
+	}
+
+	void UnlockMaterials()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].UnlockMaterials();
+	}
+
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMesh)
 	BEGIN_PROP_TABLE

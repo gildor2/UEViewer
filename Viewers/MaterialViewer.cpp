@@ -321,13 +321,14 @@ CMaterialViewer::CMaterialViewer(UUnrealMaterial* Material, CApplication* Window
 :	CObjectViewer(Material, Window)
 {
 	IsTexture = Material->IsTexture();
+	Material->Lock();
 }
 
 CMaterialViewer::~CMaterialViewer()
 {
 	guard(CMaterialViewer::~);
 	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
-	Mat->Release();
+	Mat->Unlock();
 	unguard;
 }
 

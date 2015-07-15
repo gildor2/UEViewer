@@ -277,11 +277,10 @@ public:
 	,	UVIndex(0)
 	{}
 
+	~CStatMeshInstance();
+
 	// not 'const *mesh' because can call BuildTangents()
-	void SetMesh(CStaticMesh *Mesh)
-	{
-		pMesh = Mesh;
-	}
+	void SetMesh(CStaticMesh *Mesh);
 
 	virtual void Draw(unsigned flags = 0);
 

@@ -144,7 +144,7 @@ public:
 
 	CSkelMeshViewer(CSkeletalMesh* Mesh, CApplication* Window);
 
-	static void TagMesh(CSkelMeshInstance *NewInst);
+	static void TagMesh(CSkelMeshInstance *Inst);
 	static void UntagAllMeshes();
 
 	virtual void ShowHelp();
@@ -157,7 +157,7 @@ public:
 
 	virtual void DrawMesh(CMeshInstance *Inst);
 
-	static TArray<CSkelMeshInstance*> Meshes;	// for displaying multipart meshes
+	static TArray<CSkelMeshInstance*> TaggedMeshes;	// for displaying multipart meshes
 
 private:
 	CSkeletalMesh	*Mesh;

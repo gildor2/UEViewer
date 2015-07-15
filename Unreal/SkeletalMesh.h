@@ -136,6 +136,18 @@ public:
 		SortBones();
 	}
 
+	void LockMaterials()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].LockMaterials();
+	}
+
+	void UnlockMaterials()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].UnlockMaterials();
+	}
+
 	void SortBones();
 	int FindBone(const char *Name) const;
 	int GetRootBone() const;

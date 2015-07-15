@@ -673,6 +673,43 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 }
 
 
+void UUnrealMaterial::Lock()
+{
+	LockCount++;
+
+//	appPrintf("Lock(%d) %s\n", LockCount, Name);
+
+	if (!IsTexture() && LockCount == 1)
+	{
+		// material
+		TArray<UUnrealMaterial*> Textures;
+		AppendReferencedTextures(Textures);
+		for (int i = 0; i < Textures.Num(); i++)
+			Textures[i]->Lock();
+	}
+}
+
+void UUnrealMaterial::Unlock()
+{
+	assert(LockCount > 0);
+//	appPrintf("Unlock(%d) %s\n", LockCount-1, Name);
+	if (--LockCount > 0) return;
+
+
+	if (IsTexture())
+	{
+		Release();
+	}
+	else
+	{
+		// material
+		TArray<UUnrealMaterial*> Textures;
+		AppendReferencedTextures(Textures);
+		for (int i = 0; i < Textures.Num(); i++)
+			Textures[i]->Unlock();
+	}
+}
+
 void UUnrealMaterial::Release()
 {
 	guard(UUnrealMaterial::Release);
@@ -724,6 +761,18 @@ void UUnrealMaterial::SetMaterial()
 	}
 
 	unguardf("%s", Name);
+}
+
+
+void UUnrealMaterial::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures)
+{
+	guard(UUnrealMaterial::AppendReferencedTextures);
+
+	CMaterialParams Params;
+	GetParams(Params);
+	Params.AppendAllTextures(OutTextures);
+
+	unguard;
 }
 
 
@@ -1762,7 +1811,12 @@ bool UTextureCube::Upload()
 			break;
 		}
 
-		if (!UploadCubeSide(Tex, Tex->Mips.Num() > 1, side))
+		bool success = UploadCubeSide(Tex, Tex->Mips.Num() > 1, side);
+		// release bulk data immediately
+		//!! better - use Lock (when uploaded)/Unlock (when destroyed/released) for referenced textures
+		Tex->ReleaseTextureData();
+
+		if (!success)
 		{
 			glDeleteTextures(1, &TexNum);
 			TexNum = BAD_TEXTURE;

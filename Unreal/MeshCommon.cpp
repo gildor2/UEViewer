@@ -3,6 +3,7 @@
 #include "UnObject.h"			// for typeinfo
 #include "MeshCommon.h"
 #include "UnMathTools.h"		// CVertexShare
+#include "UnMaterial.h"
 
 #define STRIP_BINORMAL		1
 
@@ -156,4 +157,22 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 	}
 
 	unguard;
+}
+
+void CBaseMeshLod::LockMaterials()
+{
+	for (int i = 0; i < Sections.Num(); i++)
+	{
+		UUnrealMaterial* Material = Sections[i].Material;
+		if (Material) Material->Lock();
+	}
+}
+
+void CBaseMeshLod::UnlockMaterials()
+{
+	for (int i = 0; i < Sections.Num(); i++)
+	{
+		UUnrealMaterial* Material = Sections[i].Material;
+		if (Material) Material->Unlock();
+	}
 }
