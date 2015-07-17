@@ -803,7 +803,7 @@ int main(int argc, char **argv)
 		// only 1 parameter has been specified - check if this is a directory name
 		// note: this is only meaningful for UI version of umodel, because there's nothing to
 		// do with directory without UI
-		if (appGetFileType(argPkgName) != FS_FILE)
+		if (appGetFileType(argPkgName) == FS_DIR)
 		{
 			SetPathOption(GSettings.GamePath, argPkgName);
 			hasRootDir = true;

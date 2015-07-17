@@ -43,7 +43,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	// FourCC					BlockSizeX	BlockSizeY	BytesPerBlock	X360AlignX	X360AlignY	Name
 	{ 0,						1,			1,			1,				0,			0,			"P8"	},	// TPF_P8
 	{ 0,						1,			1,			1,				64,			64,			"G8"	},	// TPF_G8
-//	{																								},	// TPF_G16
+//	{																									},	// TPF_G16
 	{ 0,						1,			1,			3,				0,			0,			"RGB8"	},	// TPF_RGB8
 	{ 0,						1,			1,			4,				32,			32,			"RGBA8"	},	// TPF_RGBA8
 	{ 0,						1,			1,			4,				32,			32,			"BGRA8"	},	// TPF_BGRA8

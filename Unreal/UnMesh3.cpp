@@ -893,8 +893,8 @@ struct FSkeletalMeshVertexBuffer3
 		// Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position.
 		// Working bUsePackedPosition version was found in all XBox360 games. For PC there is only one game -
 		// MOH2010, which uses bUsePackedPosition. PS3 also has bUsePackedPosition support (at least TRON)
-		DBG_SKEL("... data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
-			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
+		DBG_SKEL("... data: packUV:%d packPos:%d%s numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
+			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, AllowPackedPosition ? "" : " (disabled)", S.NumUVSets,
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
