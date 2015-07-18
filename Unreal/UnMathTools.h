@@ -90,9 +90,11 @@ struct CVertexShare
 #endif // USE_HASHING
 	}
 
-	int AddVertex(const CVec3 &Pos, const CPackedNormal &Normal)
+	int AddVertex(const CVec3 &Pos, CPackedNormal Normal)
 	{
 		int PointIndex = -1;
+
+		Normal.Data &= 0xFFFFFF;		// clear W component which is used for binormal computation
 
 #if USE_HASHING
 		// compute hash

@@ -129,12 +129,7 @@ public:
 	:	OriginalMesh(Original)
 	{}
 
-	void FinalizeMesh()
-	{
-		for (int i = 0; i < Lods.Num(); i++)
-			Lods[i].BuildNormals();
-		SortBones();
-	}
+	void FinalizeMesh();
 
 	void LockMaterials()
 	{
