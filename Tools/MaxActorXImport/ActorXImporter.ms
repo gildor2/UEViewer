@@ -10,6 +10,9 @@
 
  Revision History:
 
+	18.07.2015 v1.32
+	- allowing psa import to work with any mesh, i.e. without previously imported psk file
+
 	14.07.2015 v1.31
 	- trying to detect and repair bad vertex weights for imported psk file
 
@@ -153,7 +156,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 131
+global AX_IMPORTER_VERSION = 132
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -1272,7 +1275,7 @@ fn ImportPskFile filename skelOnly:false =
 				-- We've tried to set weights for this vertex, but MaxScript decided to add
 				-- other bones to dependency (bug in ReplaceVertexWeights). Try to repair:
 				-- enumerate all current weights and set unwanted bone weights to 0 explicitly.
---				format "Bad vertex: % bone0=%\n" wedge (skinOps.GetVertexWeightBoneID skinMod wedge 1)
+--				format "Bad vertex: % bones(%)\n" wedge infBones
 				for w = 1 to numWeights do
 				(
 					bone = skinOps.GetVertexWeightBoneID skinMod wedge w
@@ -1295,7 +1298,7 @@ fn ImportPskFile filename skelOnly:false =
 				numWeights = skinOps.GetVertexWeightCount skinMod wedge
 				if numWeights != numInfs then
 				(
---					format "Bad vertex: %\n" wedge
+--					format "Bad vertex: %: bones(%) weights(%)\n" wedge infBones infWeights
 					numBadVerts += 1
 				)
 				else
@@ -1693,28 +1696,38 @@ fn ImportPsaFile filename trackNum all:false =
 				for b = 1 to Bones.count do
 				(
 					-- get key
-					k = ReadVQuatAnimKey file			-- read key from file
+					k = ReadVQuatAnimKey file				-- read key from file
 					-- get bones
-					bone     = MaxBones[b]				-- scene bone to transform
-					MeshBone = MeshBoneLink[b]			-- for BindPose transform
+					bone     = MaxBones[b]					-- scene bone to transform
+					MeshBone = MeshBoneLink[b]				-- for BindPose transform
 					-- get animation flags
 					flag = 0
 					if flagIndex < flagCount then flag = AnimFlags[flagIndex]
 					flagIndex = flagIndex + 1
-					-- when either scene or mesh bone is missing , skip everything (key is already read)
-					if (bone == undefined) or (MeshBone == undefined) then continue
+					-- when either scene or mesh bone is missing, skip everything (key was already read)
+					if bone == undefined then continue
 
-					if (bit.and flag 1) != 0 then		-- NO_TRANSLATION
-						p = MeshBone.Position			-- translation from the mesh
-					else if not UseAnimTranslation[b] then
-						p = MeshBone.Position			-- translation from the mesh
+					if MeshBone != undefined then
+					(
+						-- translation
+						if (bit.and flag 1) != 0 then		-- NO_TRANSLATION
+							p = MeshBone.Position			-- translation from the mesh
+						else if not UseAnimTranslation[b] then
+							p = MeshBone.Position			-- translation from the mesh
+						else
+							p = k.Position * g_meshScale	-- translation from animation
+						-- rotation
+						if (bit.and flag 2) != 0 then		-- NO_ROTATION
+							q = MeshBone.Orientation		-- rotation from mesh
+						else
+							q = k.Orientation				-- rotation from animation
+					)
 					else
-						p = k.Position * g_meshScale	-- translation from animation
-
-					if (bit.and flag 2) != 0 then		-- NO_ROTATION
-						q = MeshBone.Orientation		-- from mesh
-					else
-						q = k.Orientation				-- from animation
+					(
+						-- the MeshBone object doesn't exists, use all data from the animation
+						p = k.Position * g_meshScale		-- translation from animation
+						q = k.Orientation					-- rotation from animation
+					)
 
 					if ((b == 1) and not g_dontConjugateRoot) then q = conjugate q
 					-- build matrix
@@ -1843,7 +1856,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.31"
+	label     Lbl1 "Version 1.32"
 	label     Lbl2 "\xA9 2009-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
