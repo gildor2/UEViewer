@@ -149,7 +149,6 @@
 
 /*
 TODO:
-- try to not use setBoneEnable false ...
 - option to create separate materials, not submaterials
 - do not create material when it is already exists - but how to find whether I need to get loaded material
   or create a new one?
@@ -1026,7 +1025,7 @@ fn ImportPskFile filename skelOnly:false =
 			newBone.name   = bn.Name
 			newBone.width  = g_boneSize
 			newBone.height = g_boneSize
-			newBone.setBoneEnable false 0
+--			newBone.setBoneEnable false 0		-- disabled 20.07.2015
 			newBone.pos.controller      = TCB_position ()
 			newBone.rotation.controller = TCB_rotation ()	-- required for correct animation
 			-- setup parent
@@ -1284,6 +1283,8 @@ fn ImportPskFile filename skelOnly:false =
 				-- We've tried to set weights for this vertex, but MaxScript decided to keep
 				-- other bones as dependency (bug in ReplaceVertexWeights). Try to repair:
 				-- enumerate all current weights and set unwanted bone weights to 0 explicitly.
+				-- Note: it looks like this is not an issue for Max 2014, it appears in 2015:
+				-- https://trello.com/c/76npwkAY/115-possible-bug-with-importer-on-max-2015
 --				format "Bad vertex: % bones(%) but %\n" wedge numInfs numWeights
 				for w = 1 to numWeights do
 				(
@@ -1629,7 +1630,7 @@ fn ImportPsaFile filename trackNum all:false =
 
 	if keyPos == 0 then
 	(
-		format "No ANIMKEYS chunk were found\n"
+		format "No ANIMKEYS chunk was found\n"
 		return undefined
 	)
 
@@ -1860,7 +1861,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.32.1"
+	label     Lbl1 "Version 1.32.2"
 	label     Lbl2 "\xA9 2009-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
