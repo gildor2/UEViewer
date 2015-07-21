@@ -5,11 +5,11 @@
 
   <!-- FString visualizer -->
   <Type Name="FString">
-    <DisplayString Condition="DataCount == 0">Empty</DisplayString>
-    <DisplayString Condition="DataCount &lt; 0">Invalid</DisplayString>
-    <DisplayString Condition="MaxCount &lt; DataCount">Invalid</DisplayString>
-    <DisplayString Condition="MaxCount &gt;= DataCount">{DataPtr,s}</DisplayString>
-    <StringView Condition="MaxCount &gt;= DataCount">DataPtr,s</StringView>
+    <DisplayString Condition="Data.DataCount == 0">Empty</DisplayString>
+    <DisplayString Condition="Data.DataCount &lt; 0">Invalid</DisplayString>
+    <DisplayString Condition="Data.MaxCount &lt; Data.DataCount">Invalid</DisplayString>
+    <DisplayString Condition="Data.MaxCount &gt;= Data.DataCount">{Data.DataPtr,s}</DisplayString>
+    <StringView Condition="Data.MaxCount &gt;= Data.DataCount">Data.DataPtr,s</StringView>
   </Type>
 
   <!-- TArray<*> visualizer -->
