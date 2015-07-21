@@ -8,6 +8,11 @@
 
  Web page:	http://www.gildor.org/projects/unactorx
 
+ Revision History:
+
+	21.07.2015 v1.02
+	- updated to match ActorX Importer 1.33 changes, improved appearance
+
 	29.12.2010 v1.01
 	- added output format selection (fbx, ase, max)
 
@@ -45,9 +50,9 @@ fn VerifyAXI =
 		messageBox "ActorX Importer is not loaded!"
 		return false
 	)
-	if (g_axImporterVersion < 13) then
+	if (g_axImporterVersion < 133) then
 	(
-		messageBox "Your ActorX Importer is too old, please upgrade!"
+		messageBox "Your ActorX Importer script is too old, please update!"
 		return false
 	)
 	return true
@@ -138,7 +143,8 @@ fn ExportFbxAnim =
 (
 	if (not VerifyAXI()) then return undefined
 
-	if (MeshBones.count == 0) then
+	bones = FindAllBones()
+	if (bones.count == 0) then
 	(
 		messageBox "Mesh is not loaded!"
 		return undefined
@@ -215,7 +221,7 @@ fn ExportFbxMeshes path recurse =
 rollout fbxExportRollout "ActorX Batch Export"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.01"
+	label     Lbl1 "Version 1.02"
 	label     Lbl2 "\xA9 2010-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -230,16 +236,24 @@ rollout fbxExportRollout "ActorX Batch Export"
 
 	group "Meshes"
 	(
-		edittext EdMeshPath     "Path to PSK" text:g_meshDir width:180 across:2
-		button   BtnBrowseMesh  "..."     align:#right height:16
-		checkbox ChkMeshRecurse "Recurse" checked:g_meshRecurse
-		checkbox ChkSmGroups    "Smoothing groups" checked:g_fbxSmGroups
-		checkbox ChkSmMesh      "Smooth mesh export" checked:g_fbxSmMesh
-		button BtnExportMeshes  "Export meshes"
+		label    Lbl10           "This tool will convert all PSK meshes from" align:#left
+		label    Lbl11           "selected directory to specified output format" align:#left
+		label    Lbl12           ""
+		edittext EdMeshPath      "Path to PSK" text:g_meshDir width:180 across:2
+		button   BtnBrowseMesh   "..."     align:#right height:16
+		checkbox ChkMeshRecurse  "Recurse" checked:g_meshRecurse
+		checkbox ChkSmGroups     "Smoothing groups" checked:g_fbxSmGroups
+		checkbox ChkSmMesh       "Use FBX TurboSmooth" checked:g_fbxSmMesh
+		button   BtnExportMeshes "Export meshes"
 	)
 
 	group "Animations"
 	(
+		label  Lbl20          "This tool will convert all animations from" align:#left
+		label  Lbl21          "loaded PSA to FBX format. A mesh should"    align:#left
+		label  Lbl22          "be loaded first (in any suitable format)."  align:#left
+		label  Lbl23          "Each animation track will produce separate" align:#left
+		label  Lbl24          "FBX file"                                   align:#left
 		button BtnExportAnims "Export animations"
 	)
 
@@ -266,6 +280,6 @@ rollout fbxExportRollout "ActorX Batch Export"
 
 
 if fbxExportFloater != undefined do closeRolloutFloater fbxExportFloater	-- close old window if visible
-fbxExportFloater = newRolloutFloater "FBX Batch Export" 250 380 290 100 	-- create new window
+fbxExportFloater = newRolloutFloater "FBX Batch Export" 250 520 290 100 	-- create new window
 
 addRollout fbxExportRollout fbxExportFloater
