@@ -10,6 +10,10 @@
 
  Revision History:
 
+	21.07.2015 v1.33
+	- saving bind pose information inside bone objects, this information will survive saving scene
+	  to a max file
+
 	18.07.2015 v1.32
 	- allowing psa import to work with any mesh, i.e. without previously imported psk file
 
@@ -155,7 +159,7 @@ TODO:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 132
+global AX_IMPORTER_VERSION = 133
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -184,8 +188,7 @@ global g_transZ
 global g_meshScale
 global g_reorientBones
 global g_dontConjugateRoot
-global Anims
-global MeshBones
+global Anims					-- array of AnimInfoBinary
 
 
 -------------------------------------------------------------------------------
@@ -353,7 +356,7 @@ fn ReadFixedString bstream fixedLen =
 
 fn ReadVector2 bstream =
 (
-	local v = [ 0, 0 ]
+	local v = point2 0 0
 	v.x = ReadFloat bstream
 	v.y = ReadFloat bstream
 	v
@@ -361,7 +364,7 @@ fn ReadVector2 bstream =
 
 fn ReadFVector bstream =
 (
-	local v = [ 0, 0, 0 ]
+	local v = point3 0 0 0
 	v.x = ReadFloat bstream
 	v.y = ReadFloat bstream
 	v.z = ReadFloat bstream
@@ -676,6 +679,20 @@ fn ReadVQuatAnimKey bstream =
 
 
 -------------------------------------------------------------------------------
+--	Bone attributes
+-------------------------------------------------------------------------------
+
+AXBoneCustomDataDef = attributes AXBoneCustomData
+attribID:#(0xF3DD7FCD, 0x4DB58449)
+(
+	parameters BindPose
+	(
+		AX_RelMatrix	type: #matrix3		-- matrix relative to parent bone
+		AX_WorldMatrix	type: #matrix3		-- world matrix
+	)
+)
+
+-------------------------------------------------------------------------------
 --	Loading materials
 -------------------------------------------------------------------------------
 
@@ -767,13 +784,36 @@ fn axImportMaterial matName texDir =
 --	MAX helpers
 -------------------------------------------------------------------------------
 
+fn FindAllBones_Recurse bones parent =
+(
+	for i = 1 to parent.children.count do
+	(
+		node = parent.children[i]
+		if isKindOf node BoneObj then
+		(
+			append bones node
+		)
+		FindAllBones_Recurse bones node
+	)
+)
+
+fn FindAllBones =
+(
+	local bones = #()
+
+	FindAllBones_Recurse bones rootNode
+
+	bones
+)
+
 fn RemoveAnimation =
 (
 	stopAnimation()
-	for i = 1 to MeshBones.count do
+	bones = FindAllBones()
+	for i = 1 to bones.count do
 	(
-		local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:true
-		if Bone != undefined then deleteKeys Bone #allKeys
+		b = bones[i]
+		deleteKeys b #allKeys
 	)
 	animationRange = interval 0 1
 )
@@ -788,13 +828,19 @@ fn RestoreBindpose =
 		local rotMatrix = axGetRootMatrix()
 		-- note: should rotate every bone because we are not applying parent's rotation here
 		-- find bones
-		for i = 1 to MeshBones.count do
+		bones = FindAllBones()
+		for i = 1 to bones.count do
 		(
-			local Bone = getNodeByName MeshBones[i].Name exact:true ignoreCase:true
-			if Bone == undefined then
-				format "WARNING: cannot find the bone %\n" MeshBones[i].Name
-			else
-				Bone.transform = MeshBones[i].Matrix * rotMatrix
+			b = bones[i]
+			data = custAttributes.get b AXBoneCustomDataDef
+			if data != undefined then
+			(
+				b.transform = data.AX_WorldMatrix * rotMatrix
+			)
+--			else
+--			(
+--				format "no info for %\n" b.name
+--			)
 		)
 
 		set coordsys world
@@ -821,13 +867,11 @@ fn ImportPskFile filename skelOnly:false =
 (
 	set coordsys world
 
-	local OldMeshBones = MeshBones
-
 	local Verts     = #()
 	local Wedges    = #()
 	local Tris      = #()
 	local Materials = #()
-		  MeshBones = #()		-- global for access to bind pose from outside
+	local MeshBones = #()
 	local Infs      = #()
 
 	--------- Read the file ---------
@@ -1008,6 +1052,7 @@ fn ImportPskFile filename skelOnly:false =
 		(
 			if (g_reorientBones == false or childBone == undefined) then
 			(
+				-- create new bone
 				newBone = bonesys.createbone	\
 					  bn.Matrix.row4			\
 					  (bn.Matrix.row4 + len * (normalize bn.Matrix.row1)) \
@@ -1015,6 +1060,7 @@ fn ImportPskFile filename skelOnly:false =
 			)
 			else
 			(
+				-- reorient bone matrix to point directly to a child
 				-- get world position of the child bone
 				local childPos = childBone.Position * bn.Matrix * g_meshScale
 				newBone = bonesys.createbone	\
@@ -1038,6 +1084,12 @@ fn ImportPskFile filename skelOnly:false =
 				)
 				newBone.parent = MaxBones[bn.ParentIndex + 1]
 			)
+			-- store bind pose in custom data block
+			custAttributes.add newBone AXBoneCustomDataDef
+			mat = (normalize q) as matrix3		-- rebuild 'mat', but without scale
+			mat.row4 = bn.Position
+			newBone.AX_RelMatrix   = mat
+			newBone.AX_WorldMatrix = bn.Matrix
 		)
 		else
 		(
@@ -1330,34 +1382,6 @@ fn ImportPskFile filename skelOnly:false =
 		MaxBones[1].transform = MaxBones[1].transform * axGetRootMatrix()
 	)
 
-	-- combine with old skeleton for correct work of combined meshes
-	format "... processing % OldMeshBones\n" OldMeshBones.count
-	for i = 1 to OldMeshBones.count do
-	(
-		boneName = OldMeshBones[i].Name
-		found = false
-		-- find bone in MeshBones
-		for j = 1 to MeshBones.count while not found do
-		(
-			if MeshBones[j].Name == boneName then
-			(
---				format "..... found in MeshBones"
-				found = true
-			)
-		)
-		if not found then
-		(
-			-- bone already exists in MeshBones array
-			-- find bone in Max scene
-			if getNodeByName boneName exact:true ignoreCase:true != undefined then
-			(
-				-- bone still exists in Max scene, should add it to MeshBones array
-				MeshBones[MeshBones.count+1] = OldMeshBones[i]
---				format "... restored bone from old mesh: %\n" boneName
-			)
-		)
-	)
-
 	local profileEndTime = timeStamp()
 	format "Loaded in % sec\n" ((profileEndTime - profileStartTime) / 1000.0)
 
@@ -1636,24 +1660,30 @@ fn ImportPsaFile filename trackNum all:false =
 
 	-- find existing scene bones
 	MaxBones     = #()
-	MeshBoneLink = #()
+	BindPoseInfo = #()
+	SceneBones = FindAllBones()
 	for i = 1 to numBones do
 	(
-		boneName        = Bones[i].Name
-		MaxBones[i]     = getNodeByName boneName exact:true ignoreCase:true
-		MeshBoneLink[i] = undefined
-		local notfound  = true
-		for j = 1 to MeshBones.count while notfound do
+		boneName = Bones[i].Name
+		local notfound = true
+		for j = 1 to SceneBones.count while notfound do
 		(
-			if MeshBones[j].Name == boneName then
+			b = SceneBones[j]
+			if b.name == boneName then
 			(
-				MeshBoneLink[i] = MeshBones[j]
-				notfound = false
+				MaxBones[i]     = b
+				BindPoseInfo[i] = custAttributes.get b AXBoneCustomDataDef	-- could be 'undefined'
+				notfound        = false
 			)
 		)
-		if notfound or (MaxBones[i] == undefined) then
+
+		if notfound then
 		(
 			format "WARNING: cannot find bone %\n" boneName
+		)
+		else if BindPoseInfo[i] == undefined then
+		(
+			format "WARNING: cannot get bind pose information for bone %\n" boneName
 		)
 	)
 
@@ -1704,7 +1734,7 @@ fn ImportPsaFile filename trackNum all:false =
 					k = ReadVQuatAnimKey file				-- read key from file
 					-- get bones
 					bone     = MaxBones[b]					-- scene bone to transform
-					MeshBone = MeshBoneLink[b]				-- for BindPose transform
+					BindPose = BindPoseInfo[b]				-- for BindPose transform
 					-- get animation flags
 					flag = 0
 					if flagIndex < flagCount then flag = AnimFlags[flagIndex]
@@ -1712,32 +1742,51 @@ fn ImportPsaFile filename trackNum all:false =
 					-- when either scene or mesh bone is missing, skip everything (key was already read)
 					if bone == undefined then continue
 
-					if MeshBone != undefined then
+					local mat
+					if BindPose != undefined then
 					(
-						-- translation
-						if (bit.and flag 1) != 0 then		-- NO_TRANSLATION
-							p = MeshBone.Position			-- translation from the mesh
-						else if not UseAnimTranslation[b] then
-							p = MeshBone.Position			-- translation from the mesh
-						else
-							p = k.Position * g_meshScale	-- translation from animation
 						-- rotation
 						if (bit.and flag 2) != 0 then		-- NO_ROTATION
-							q = MeshBone.Orientation		-- rotation from mesh
+						(
+							-- rotation from mesh
+							mat = BindPose.AX_RelMatrix
+						)
 						else
-							q = k.Orientation				-- rotation from animation
+						(
+							-- rotation from animation
+							q = k.Orientation
+							if ((b == 1) and not g_dontConjugateRoot) then q = conjugate q
+							mat = (q as matrix3)
+						)
+						-- translation
+						if (bit.and flag 1) != 0 then		-- NO_TRANSLATION
+						(
+							-- translation from the mesh
+							mat.row4 = BindPose.AX_RelMatrix.row4 * g_meshScale
+						)
+						else if not UseAnimTranslation[b] then
+						(
+							-- translation from the mesh
+							mat.row4 = BindPose.AX_RelMatrix.row4 * g_meshScale
+						)
+						else
+						(
+							-- translation from animation
+							mat.row4 = k.Position * g_meshScale
+						)
 					)
 					else
 					(
-						-- the MeshBone object doesn't exists, use all data from the animation
-						p = k.Position * g_meshScale		-- translation from animation
+						-- the BindPose object doesn't exists, use all data from the animation
 						q = k.Orientation					-- rotation from animation
+						p = k.Position * g_meshScale		-- translation from animation
+						-- build matrix
+						if ((b == 1) and not g_dontConjugateRoot) then q = conjugate q
+						-- build matrix
+						mat = (q as matrix3)
+						mat.row4 = p
 					)
 
-					if ((b == 1) and not g_dontConjugateRoot) then q = conjugate q
-					-- build matrix
-					mat = (q as matrix3)
-					mat.row4 = p
 					-- modify bone
 					if bone.parent != undefined then
 					(
@@ -1861,7 +1910,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.32.2"
+	label     Lbl1 "Version 1.33"
 	label     Lbl2 "\xA9 2009-2015 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -2118,7 +2167,6 @@ if (g_axImporterVersion == undefined) then
 	-- initialize plugin
 	heapSize += 33554432	-- 32 Mb; will speedup most tasks
 	Anims     = #()
-	MeshBones = #()
 	g_axImporterVersion = AX_IMPORTER_VERSION
 	axDefaultSettings()
 	axSerializeSettings(true)
