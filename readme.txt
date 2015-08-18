@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+18.08.2015
+- improved Unreal engine 4 texture support
+
 16.07.2015
 - updated Lineage 2 animation support
 

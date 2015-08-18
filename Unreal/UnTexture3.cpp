@@ -625,6 +625,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 
 	// Here: data is either in TFC file or in other package
 	char bulkFileName[256];
+	bulkFileName[0] = 0;
 	if (stricmp(TextureFileCacheName, "None") != 0)
 	{
 		// TFC file is assigned
@@ -658,6 +659,14 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	}
 	else
 	{
+#if UNREAL4
+		if (GetGame() >= GAME_UE4)
+		{
+			//!! check for presence of BULKDATA_PayloadAtEndOfFile flag
+			strcpy(bulkFileName, Package->Filename);
+		}
+		else
+#endif // UNREAL4
 		// data is inside another package
 		//!! copy-paste from UnPackage::CreateExport(), should separate function
 		// find outermost package
@@ -738,7 +747,7 @@ void UTexture2D::ReleaseTextureData() const
 	{
 		const FTexture2DMipMap &Mip = (*MipsArray)[n];
 		const FByteBulkData &Bulk = Mip.Data;
-		if (Mip.Data.BulkData && (Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile))
+		if (Bulk.BulkData && (Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile))
 			const_cast<FByteBulkData*>(&Bulk)->ReleaseData();
 	}
 
@@ -816,6 +825,16 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	else if (Format == PF_NormalMap_HQ)
 		intFormat = TPF_BC5;
 #endif // MASSEFF
+#if UNREAL4
+	else if (Format == PF_PVRTC2)
+		intFormat = TPF_PVRTC2;
+	else if (Format == PF_PVRTC4)
+		intFormat = TPF_PVRTC4;
+	else if (Format == PF_ETC1)
+		intFormat = TPF_ETC1;
+//!!	else if (Format == PF_ETC2_RGB)		// GL_COMPRESSED_RGB8_ETC2
+//!!	else if (Format == PF_ETC2_RGBA)	// GL_COMPRESSED_RGBA8_ETC2_EAC
+#endif // UNREAL4
 	else
 	{
 		appNotify("Unknown texture format: %s (%d)", TexData.OriginalFormatName, Format);
@@ -870,7 +889,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 				//!! * -notfc cmdline switch
 				//!! * material viewer: support switching mip levels (for xbox decompression testing)
 				if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
-				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue; // equelas to BULKDATA_PayloadAtEndOfFile for UE4
+				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue; // equals to BULKDATA_PayloadAtEndOfFile for UE4
 				// some optimization in a case of missing bulk file
 				if (bulkChecked) continue;				// already checked for previous mip levels
 				bulkChecked = true;
