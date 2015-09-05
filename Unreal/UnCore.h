@@ -348,6 +348,7 @@ enum EGame
 		GAME_UE4_6,
 		GAME_UE4_7,
 		GAME_UE4_8,
+		GAME_UE4_9,
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
@@ -1275,6 +1276,10 @@ public:
 	{
 		return DataCount;
 	}
+	FORCEINLINE bool IsValidIndex(int index) const
+	{
+		return index >= 0 && index < DataCount;
+	}
 
 	void RawCopy(const FArray &Src, int elementSize);
 
@@ -1344,10 +1349,6 @@ public:
 	{
 		return (const T*)DataPtr;
 	}
-	FORCEINLINE bool IsValidIndex(int index) const
-	{
-		return index >= 0 && index < DataCount;
-	}
 #if !DO_ASSERT
 	// version without verifications, very compact
 	FORCEINLINE T& operator[](int index)
@@ -1359,20 +1360,16 @@ public:
 		return *((T*)DataPtr + index);
 	}
 #elif DO_GUARD_MAX
-	// version with guardfunc instead of guard
+	// version with __FUNCSIG__
 	T& operator[](int index)
 	{
-		guardfunc;
-		assert(IsValidIndex(index));
+		if (!IsValidIndex(index)) appError("%s: index %d is out of range (%d)", __FUNCSIG__, index, DataCount);
 		return *((T*)DataPtr + index);
-		unguardf("%d/%d", index, DataCount);
 	}
 	const T& operator[](int index) const
 	{
-		guardfunc;
-		assert(IsValidIndex(index));
+		if (!IsValidIndex(index)) appError("%s: index %d is out of range (%d)", __FUNCSIG__, index, DataCount);
 		return *((T*)DataPtr + index);
-		unguardf("%d/%d", index, DataCount);
 	}
 #else // DO_ASSERT && !DO_GUARD_MAX
 	// common implementation for all types
@@ -1540,11 +1537,11 @@ public:
 	}
 
 #if UNREAL3
-	// Serialize an  array, which file contents exactly the same as in-memory contents.
+	// Serialize an array, which file contents exactly matches in-memory contents.
 	// Whole array can be read using single read call. Package engine version should
 	// equals to game engine version, and endianness should match, otherwise per-element
-	// reading will be performed (as usual in TArray). Note: there is no reading
-	// optimization performed here (in umodel).
+	// reading will be performed (as usual in TArray). Implemented in UE3 and UE4.
+	// Note: there is no reading optimization performed here (in umodel).
 	FORCEINLINE void BulkSerialize(FArchive& Ar)
 	{
 	#if DO_GUARD_MAX
@@ -2114,6 +2111,7 @@ enum
 		VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION = 444,
 	VER_UE4_8 = 451,
 		VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
+	VER_UE4_9 = 482,
 };
 
 class FStripDataFlags

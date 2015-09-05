@@ -13,6 +13,7 @@ if [ -d .git ]; then
 #			progs="${PROGRAMFILES//\\//}"		# get from environment with slash replacement
 #			progs="/${progs//:/}"				# for msys: convert "C:/Program Files" to "/C/Program Files"
 			[ -d "$PROGRAMFILES/Git" ] && gitpath="$PROGRAMFILES/Git/bin"
+			[ -d "$PROGRAMW6432/Git" ] && gitpath="$PROGRAMW6432/Git/bin"
 			! [ "$gitpath" ] && [ -d "$PROGRAMFILES/SmartGitHg/git" ] && gitpath="$PROGRAMFILES/SmartGitHg/git/bin"
 			! [ "$gitpath" ] && [ -d "$LOCALAPPDATA/Atlassian/SourceTree/git_local" ] && gitpath="$LOCALAPPDATA/Atlassian/SourceTree/git_local/bin"
 			[ "$gitpath" ] && PATH="$PATH:$gitpath"

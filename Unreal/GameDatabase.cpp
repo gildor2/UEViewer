@@ -346,6 +346,7 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.6", ue4.6, GAME_UE4_6),
 		G("Unreal engine 4.7", ue4.7, GAME_UE4_7),
 		G("Unreal engine 4.8", ue4.8, GAME_UE4_8),
+		G("Unreal engine 4.9", ue4.9, GAME_UE4_9),
 #endif // UNREAL4
 
 	// end marker

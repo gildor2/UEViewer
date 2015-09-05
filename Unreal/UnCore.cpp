@@ -190,10 +190,8 @@ void FArray::RawCopy(const FArray &Src, int elementSize)
 
 void* FArray::GetItem(int index, int elementSize) const
 {
-	guard(operator[]);
-	assert(index >= 0 && index < DataCount);
+	if (!IsValidIndex(index)) appError("TArray: index %d is out of range (%d)", index, DataCount);
 	return OffsetPointer(DataPtr, index * elementSize);
-	unguardf("%d/%d", index, DataCount);
 }
 
 

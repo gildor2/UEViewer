@@ -440,7 +440,7 @@ CUmodelApp::~CUmodelApp()
 
 void CUmodelApp::Draw3D(float TimeDelta)
 {
-	UObject *Obj = (ObjIndex < UObject::GObjObjects.Num()) ? UObject::GObjObjects[ObjIndex] : NULL;
+	UObject *Obj = (UObject::GObjObjects.IsValidIndex(ObjIndex)) ? UObject::GObjObjects[ObjIndex] : NULL;
 
 	guard(CUmodelApp::Draw3D);
 
