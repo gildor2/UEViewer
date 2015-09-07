@@ -153,7 +153,7 @@ bool CUmodelApp::ShowPackageUI()
 				break;
 			}
 			UnPackage* package = UnPackage::LoadPackage(pkgName);	// should always return non-NULL
-			if (package) Packages.AddItem(package);
+			if (package) Packages.Add(package);
 		}
 		if (cancelled)
 		{
@@ -440,7 +440,7 @@ CUmodelApp::~CUmodelApp()
 
 void CUmodelApp::Draw3D(float TimeDelta)
 {
-	UObject *Obj = (ObjIndex < UObject::GObjObjects.Num()) ? UObject::GObjObjects[ObjIndex] : NULL;
+	UObject *Obj = (UObject::GObjObjects.IsValidIndex(ObjIndex)) ? UObject::GObjObjects[ObjIndex] : NULL;
 
 	guard(CUmodelApp::Draw3D);
 
@@ -548,7 +548,7 @@ void CUmodelApp::DrawTexts()
 
 static void DumpMemory()
 {
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	appDumpMemoryAllocations();
 }
 

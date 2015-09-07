@@ -26,12 +26,7 @@ UObject::~UObject()
 {
 //	appPrintf("deleting %s (%p) - package %s, index %d\n", Name, this, Package ? Package->Name : "None", PackageIndex);
 	// remove self from GObjObjects
-	for (int i = 0; i < GObjObjects.Num(); i++)
-		if (GObjObjects[i] == this)
-		{
-			GObjObjects.Remove(i);
-			break;
-		}
+	GObjObjects.RemoveSingle(this);
 	// remove self from package export table
 	// note: we using PackageIndex==INDEX_NONE when creating dummy object, not exported from
 	// any package, but which still belongs to this package (for example check Rune's
@@ -53,6 +48,11 @@ const char *UObject::GetRealClassName() const
 	return Package->GetObjectName(Exp.ClassIndex);
 }
 
+const char *UObject::GetPackageName() const
+{
+	if (!Package) return "None";
+	return Package->Name;
+}
 
 const char *UObject::GetUncookedPackageName() const
 {
@@ -80,6 +80,26 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 	}
 	Package->GetFullExportName(Exp, buf, bufSize, IncludeObjectName, IncludeCookedPackageName);
 	unguard;
+}
+
+const FArchive* UObject::GetPackageArchive() const
+{
+	return Package ? static_cast<const FArchive*>(Package) : NULL;
+}
+
+int UObject::GetGame() const
+{
+	return Package ? Package->Game : GAME_UNKNOWN;
+}
+
+int UObject::GetArVer() const
+{
+	return Package ? Package->ArVer : 0;
+}
+
+int UObject::GetLicenseeVer() const
+{
+	return Package ? Package->ArLicenseeVer : 0;
 }
 
 
@@ -117,7 +137,7 @@ void UObject::EndLoad()
 	while (GObjLoaded.Num())
 	{
 		UObject *Obj = GObjLoaded[0];
-		GObjLoaded.Remove(0);
+		GObjLoaded.RemoveAt(0);
 		//!! should sort by packages + package offset
 		UnPackage *Package = Obj->Package;
 		guard(LoadObject);
@@ -139,7 +159,7 @@ void UObject::EndLoad()
 			appError("%s::Serialize(%s): %d unread bytes",
 				Obj->GetClassName(), Obj->Name,
 				Package->GetStopper() - Package->Tell());
-		LoadedObjects.AddItem(Obj);
+		LoadedObjects.Add(Obj);
 
 		unguardf("%s'%s.%s', pos=%X, ver=%d/%d, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer, Package->Game);
 	}
@@ -180,6 +200,12 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	STRUC_TYPE(FVector)
 	STRUC_TYPE(FRotator)
 	STRUC_TYPE(FColor)
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		STRUC_TYPE(FBoxSphereBounds)
+	}
+#endif // MKVSDC
 	if (Ar.ArVer >= 300)	// real version is unknown; native FLinearColor serializer does not work with EndWar
 	{
 		STRUC_TYPE(FLinearColor)
@@ -192,6 +218,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 		STRUC_TYPE(FIntPoint)
 	}
 #endif // UNREAL4
+	// Serialize nested property block
 	const CTypeInfo *ItemType = FindStructType(StrucName);
 	if (!ItemType) return false;
 	ItemType->SerializeProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
@@ -331,15 +358,10 @@ struct FPropertyTag
 				Ar << Object;
 				if (!Object)
 				{
-					//!! WARNING:
-					//	Verify: this code didn't have {} for this block,
-					//	but code was formatted like it's a block. Should
-					//	'return Ar' be executed only for !Object, or for
-					//	UseObjecy?
 					Tag.Name.Str = "None";
 					return Ar;
 				}
-				// now, should continue serialization, skipping Name serialization
+				// now, should continue serialization, skipping Name serialization (not implemented right now, so - appError)
 				appError("Unknown field: Object #%d", Object);
 			}
 		}
@@ -369,7 +391,14 @@ struct FPropertyTag
 			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
 			Tag.Type = MapTypeName(PropType);
 			if (Tag.Type == NAME_StructProperty)
+			{
 				Ar << Tag.StrucName;
+				if (Ar.ArVer >= VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG)
+				{
+					FGuid StructGuid;
+					Ar << StructGuid;
+				}
+			}
 			else if (Tag.Type == NAME_BoolProperty)
 				Ar << (byte&)Tag.BoolValue;		// byte
 			else if (Tag.Type == NAME_ByteProperty)
@@ -499,16 +528,18 @@ struct FPropertyTagBat2
 		if (Tag.Type == NAME_IntProperty || Tag.Type == NAME_FloatProperty || Tag.Type == NAME_NameProperty || Tag.Type == NAME_VectorProperty ||
 			Tag.Type == NAME_RotatorProperty || Tag.Type == NAME_StrProperty || Tag.Type == 16 /*NAME_ObjectNCRProperty*/)
 		{
+		simple_prop:
 			// property serialized by offset
 			Tag.PropertyName.Str = "None";
 			Tag.DataSize = Tag.ArrayIndex = 0;
+			return Ar;
 		}
-		else
-		{
-		named_prop:
-			// property serialized by name
-			Ar << Tag.PropertyName << Tag.DataSize << Tag.ArrayIndex;
-		}
+
+		if (Ar.Game == GAME_Batman4 && Tag.Type == NAME_BoolProperty) goto simple_prop;	// serialized as 4 byte int, i.e. a bunch of boolean properties
+
+	named_prop:
+		// property serialized by name
+		Ar << Tag.PropertyName << Tag.DataSize << Tag.ArrayIndex;
 		if (Tag.Type == NAME_BoolProperty)
 			Ar << Tag.BoolValue;
 		return Ar;
@@ -516,7 +547,7 @@ struct FPropertyTagBat2
 };
 
 
-static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &TagBat, FPropertyTag &Tag)
+static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &TagBat, FPropertyTag &Tag, int Game)
 {
 	struct OffsetInfo
 	{
@@ -584,6 +615,47 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 
 	}; // end of info[]
 
+	static const OffsetInfo info4[] =
+	{
+
+	BEGIN("Texture2D")
+		MAP(SizeX, 0x144)
+		MAP(SizeY, 0x148)
+		MAP(TextureFileCacheName, 0x180)
+//		MAP(OriginalSizeX, 0x14C)
+//		MAP(OriginalSizeY, 0x150)
+	END
+
+	BEGIN("MaterialInstance")
+		MAP(Parent, 0x84)
+	END
+
+	BEGIN("ScalarParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("TextureParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("VectorParameterValue")
+		MAP(ParameterName, 0)
+		MAP(ParameterValue, 8)
+	END
+
+	BEGIN("AnimSequence")
+		MAP(SequenceName, 0x54)
+		MAP(SequenceLength, 0x9C)
+		MAP(NumFrames, 0xA0)
+		MAP(RateScale, 0xA4)
+	END
+
+	//!! add Material.TwoSided, BlendMode, ...
+
+	}; // end of info4[]
+
 #undef MAP
 #undef BEGIN
 #undef END
@@ -595,8 +667,20 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 	Tag.ArrayIndex = 0;
 
 	// find a field
-	const OffsetInfo *p   = info;
-	const OffsetInfo *end = info + ARRAY_COUNT(info);
+	const OffsetInfo *p;
+	const OffsetInfo *end;
+
+	if (Game < GAME_Batman4)
+	{
+		p = info;
+		end = info + ARRAY_COUNT(info);
+	}
+	else
+	{
+		assert(Game == GAME_Batman4);
+		p = info4;
+		end = info4 + ARRAY_COUNT(info4);
+	}
 
 	while (p < end)
 	{
@@ -668,6 +752,10 @@ void UObject::Serialize(FArchive &Ar)
 		if (Ar.ArVer >= 871) Ar << str2;
 	}
 #	endif // VEC
+#	if BATMAN
+	if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 203)
+		goto no_net_index;
+#	endif // BATMAN
 	if (Ar.ArVer >= 322)
 	{
 	net_index:
@@ -729,7 +817,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 #if BATMAN
 		//!! try to move to separate function
-		if (Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4)
 		{
 			// Batman 2 has more compact FPropertyTag implementation which uses serialization
 			// by offset, not by name - this should work faster (in game) and use less disk space.
@@ -764,7 +852,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				static byte Dummy[16];
 				byte *value = Dummy;
 				const int ArrayIndex = 0; // used in PROP macro
-				if (FindPropBat2(this, TagBat, Tag))
+				if (FindPropBat2(this, TagBat, Tag, Ar.Game))
 				{
 					const CPropInfo *Prop = FindProperty(Tag.Name);
 					if (Prop)
@@ -803,7 +891,39 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						int BoolValue;
 						Ar << BoolValue;
 						PROP(bool) = (BoolValue != 0);
-						PROP_DBG("%s", BoolValue ? "true" : "false");
+						PROP_DBG("%08X", BoolValue);
+						// Ugly hack to support Batman4 bool properties
+						if (Ar.Game == GAME_Batman4)
+						{
+							struct BoolPropInfo
+							{
+								const char* ClassName;
+								const char* PropName;
+								word		PropOffset;
+								word		PropMask;
+							};
+							static const BoolPropInfo BoolProps[] =
+							{
+								{ "SkeletalMesh3", "bHasVertexColors", 0x528, 2 },
+								{ "AnimSet", "bAnimRotationOnly", 0x5C, 1 },
+							};
+							for (int i = 0; i < ARRAY_COUNT(BoolProps); i++)
+							{
+								const BoolPropInfo& Info = BoolProps[i];
+								if (TagBat.Offset == Info.PropOffset && IsA(Info.ClassName))
+								{
+									const CPropInfo* Prop2 = FindProperty(Info.PropName);
+									if (Prop2)
+									{
+										byte* value = (byte*)ObjectData + Prop2->Offset;
+										bool b = (BoolValue & Info.PropMask) != 0;
+										*value = (byte)b;
+										PROP_DBG("B4 %s=%d\n", Info.PropName, b);
+									}
+									break;
+								}
+							}
+						}
 					}
 					break;
 
@@ -839,10 +959,27 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 	read_property:
 		guard(ReadProperty);
 
+		const char *TypeName = "??";
+	#if BATMAN
+		if (Ar.Game >= GAME_Batman2) // copy-paste of code above
+		{
+			if (Tag.Type < 16)
+				TypeName = GetTypeName(Tag.Type);
+			else if (Tag.Type == 16)
+				TypeName = "ObjectNCRProperty";
+			else if (Tag.Type == 17)
+				TypeName = "GuidProperty";
+		}
+		else
+	#endif // BATMAN
+		{
+			TypeName = GetTypeName(Tag.Type);
+		}
+
 #if DEBUG_PROPS
-		appPrintf("-- %s \"%s::%s\" [%d] size=%d enum=%s struc=%s\n", GetTypeName(Tag.Type), Name, *Tag.Name,
+		appPrintf("-- %s \"%s::%s\" [%d] size=%d enum=%s struc=%s\n", TypeName, Name, *Tag.Name,
 			Tag.ArrayIndex, Tag.DataSize, *Tag.EnumName, *Tag.StrucName);
-#endif
+#endif // DEBUG_PROPS
 
 		int StopPos = Ar.Tell() + Tag.DataSize;	// for verification
 
@@ -850,7 +987,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
 		{
 			if (!Prop)
-				appPrintf("WARNING: %s \"%s::%s\" was not found\n", GetTypeName(Tag.Type), Name, *Tag.Name);
+				appPrintf("WARNING: %s \"%s::%s\" was not found\n", TypeName, Name, *Tag.Name);
 #if DEBUG_PROPS
 			appPrintf("  (skipping %s)\n", *Tag.Name);
 #endif
@@ -871,8 +1008,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			}
 		}
 		else if (Tag.ArrayIndex < 0 || Tag.ArrayIndex >= Prop->Count)
+		{
 			appError("Struct \"%s\": %s %s[%d]: invalid index %d",
 				Name, Prop->TypeName, Prop->Name, Prop->Count, Tag.ArrayIndex);
+		}
 		byte *value = (byte*)ObjectData + Prop->Offset;
 
 #define CHECK_TYPE(name) \
@@ -908,7 +1047,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 				}
 			}
 			else
-#endif
+#endif // UNREAL3
 			{
 				if (Prop->TypeName[0] != '#')
 				{
@@ -990,7 +1129,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						appError("Unknown structure type %s", Prop->TypeName);
 					// prepare array
 					Arr->Empty(DataCount, ItemType->SizeOf);
-					Arr->Add(DataCount, ItemType->SizeOf);
+					Arr->Insert(0, DataCount, ItemType->SizeOf);
 					// serialize items
 					byte *item = (byte*)Arr->GetData();
 					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
@@ -1228,7 +1367,7 @@ UObject *CreateClass(const char *Name)
 	// to allow runtime creation of objects without linked package
 	// Really, should add to this list after loading from package
 	// (in CreateExport/Import or after serialization)
-	UObject::GObjObjects.AddItem(Obj);
+	UObject::GObjObjects.Add(Obj);
 	return Obj;
 
 	unguardf("%s", Name);
@@ -1300,7 +1439,6 @@ struct CPropDump
 
 	void PrintTo(char *Dst, int DstSize, const char *fmt, va_list argptr)
 	{
-		char buf[512];
 		int oldLen = strlen(Dst);
 		int len = vsnprintf(Dst + oldLen, DstSize - oldLen, fmt, argptr);
 		if (len < 0 || (len + oldLen >= DstSize))

@@ -61,12 +61,11 @@ void CMeshViewer::Draw3D(float TimeDelta)
 
 void CMeshViewer::DrawMesh(CMeshInstance *Inst)
 {
-	unsigned flags = 0;
 	Inst->Draw(DrawFlags);
 }
 
 
-void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex)
+void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CBaseMeshLod* Mesh, int UVIndex)
 {
 	guard(CMeshViewer::DisplayUV);
 
@@ -81,9 +80,9 @@ void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CInd
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	for (int MaterialIndex = 0; MaterialIndex < Sections.Num(); MaterialIndex++)
+	for (int MaterialIndex = 0; MaterialIndex < Mesh->Sections.Num(); MaterialIndex++)
 	{
-		const CMeshSection &Sec = Sections[MaterialIndex];
+		const CMeshSection &Sec = Mesh->Sections[MaterialIndex];
 		if (!Sec.NumFaces) continue;
 
 		BindDefaultMaterial(true);
@@ -91,13 +90,14 @@ void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CInd
 		unsigned color = CMeshInstance::GetMaterialDebugColor(MaterialIndex);
 		glColor4ubv((GLubyte*)&color);
 
-		CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
+		CIndexBuffer::IndexAccessor_t Index = Mesh->Indices.GetAccessor();
 
 		glBegin(GL_TRIANGLES);
 		for (int i = Sec.FirstIndex; i < Sec.FirstIndex + Sec.NumFaces * 3; i++)
 		{
-			const CMeshVertex* V = OffsetPointer(Verts, Index(i) * VertexSize);
-			const CMeshUVFloat& UV = V->UV[UVIndex];
+			int VertIndex = Index(i);
+			const CMeshVertex* V = OffsetPointer(Verts, VertIndex * VertexSize);
+			const CMeshUVFloat& UV = (UVIndex == 0) ? V->UV : Mesh->ExtraUV[UVIndex-1][VertIndex];
 			glVertex2f(UV.U * w + x0, UV.V * w + y0);
 		}
 		glEnd();

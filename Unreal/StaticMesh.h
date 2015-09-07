@@ -13,17 +13,9 @@ struct CStaticMeshVertex : public CMeshVertex
 };
 
 
-struct CStaticMeshLod
+struct CStaticMeshLod : public CBaseMeshLod
 {
-	// generic properties
-	int						NumTexCoords;
-	bool					HasNormals;
-	bool					HasTangents;
-	// geometry
-	TArray<CMeshSection>	Sections;
 	CStaticMeshVertex		*Verts;
-	int						NumVerts;
-	CIndexBuffer			Indices;
 
 	~CStaticMeshLod()
 	{
@@ -50,6 +42,7 @@ struct CStaticMeshLod
 		assert(Verts == NULL);
 		Verts    = (CStaticMeshVertex*)appMalloc(sizeof(CStaticMeshVertex) * Count, 16);		// alignment for SSE
 		NumVerts = Count;
+		AllocateUVBuffers();
 		unguard;
 	}
 
@@ -81,6 +74,18 @@ public:
 	{
 		for (int i = 0; i < Lods.Num(); i++)
 			Lods[i].BuildNormals();
+	}
+
+	void LockMaterials()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].LockMaterials();
+	}
+
+	void UnlockMaterials()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].UnlockMaterials();
 	}
 
 #if DECLARE_VIEWER_PROPS

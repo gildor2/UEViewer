@@ -44,12 +44,17 @@ struct FSkeletalMeshLODInfo
 		PROP_ARRAY(bEnableShadowCasting, bool)
 		PROP_DROP(TriangleSorting)
 		PROP_DROP(TriangleSortSettings)
+		PROP_DROP(bHasBeenSimplified)
 #if FRONTLINES
 		PROP_DROP(bExcludeFromConsoles)
 		PROP_DROP(bCanRemoveForLowDetail)
 #endif
 #if MCARTA
 		PROP_DROP(LODMaterialDrawOrder)
+#endif
+#if MKVSDC
+		PROP_DROP(BonesEnabled)
+		PROP_DROP(UsedForParticleSpawning)
 #endif
 	END_PROP_TABLE
 };
@@ -77,8 +82,28 @@ public:
 		PROP_VECTOR(RelativeLocation)
 		PROP_ROTATOR(RelativeRotation)
 		PROP_VECTOR(RelativeScale)
+#if MKVSDC
+		PROP_DROP(m_EditConst)
+		PROP_DROP(m_SocketName)
+		PROP_DROP(m_RelativeLocation)
+		PROP_DROP(m_RelativeRotation)
+#endif // MKVSDC
 	END_PROP_TABLE
 };
+
+#if MKVSDC
+// MK X USkeleton
+class USkeleton_MK : public UObject
+{
+	DECLARE_CLASS(USkeleton_MK, UObject);
+public:
+	TArray<VJointPos>		BonePos;
+	TArray<FName>			BoneName;
+	TArray<short>			BoneParent;
+
+	virtual void Serialize(FArchive &Ar);
+};
+#endif // MKVSDC
 
 
 class USkeletalMesh3 : public UObject
@@ -100,6 +125,9 @@ public:
 	bool					EnableTwistBoneFixers;
 	bool					EnableClavicleFixer;
 #endif // BATMAN
+#if MKVSDC
+	USkeleton_MK*			Skeleton;
+#endif
 
 	CSkeletalMesh			*ConvertedMesh;
 
@@ -135,17 +163,20 @@ public:
 		PROP_DROP(ClothTearFactor)
 		PROP_DROP(SourceFilePath)
 		PROP_DROP(SourceFileTimestamp)
-#	if MEDGE
+#if MEDGE
 		PROP_DROP(NumUVSets)
-#	endif
-#	if BATMAN
+#endif
+#if BATMAN
 		PROP_DROP(SkeletonName)
 		PROP_DROP(Stretches)
 		// Batman 2
 		PROP_BOOL(EnableTwistBoneFixers)
 		PROP_BOOL(EnableClavicleFixer)
 		PROP_DROP(ClothingTeleportRefBones)
-#	endif // BATMAN
+#endif // BATMAN
+#if MKVSDC
+		PROP_OBJ(Skeleton)
+#endif
 #if DECLARE_VIEWER_PROPS
 		PROP_ARRAY(Materials, UObject*)
 #endif // DECLARE_VIEWER_PROPS
@@ -187,9 +218,10 @@ struct FRawAnimSequenceTrack
 		if (Ar.ArVer >= 577)
 		{
 			// newer UE3 version has replaced serializer for this structure
-			Ar << RAW_ARRAY(T.PosKeys) << RAW_ARRAY(T.RotKeys);
+			T.PosKeys.BulkSerialize(Ar);
+			T.RotKeys.BulkSerialize(Ar);
 			// newer version will not serialize times
-			if (Ar.ArVer < 604) Ar << RAW_ARRAY(T.KeyTimes);
+			if (Ar.ArVer < 604) T.KeyTimes.BulkSerialize(Ar);
 			return Ar;
 		}
 		return Ar << T.PosKeys << T.RotKeys << T.KeyTimes;
@@ -461,6 +493,13 @@ public:
 		PROP_DROP(ProportionalMotionDistanceCap)
 		// Batman 2
 		PROP_DROP(WeaponSwitchPointEnabled)
+		// Batman 4
+		PROP_DROP(FootSyncOut)
+		PROP_DROP(FootSyncOutSpeed)
+		PROP_DROP(FootSyncOutDirection)
+		PROP_DROP(MotionOptions)
+		PROP_DROP(CollisionOptions2)
+		PROP_DROP(AnimZip_LinearMotion)
 #endif // BATMAN
 #if TRANSFORMERS
 		PROP_DROP(TranslationScale)		//?? use it?
@@ -647,6 +686,9 @@ protected:
 #define REGISTER_MESH_CLASSES_TRANS \
 	REGISTER_CLASS_ALIAS(USkeletalMesh3, USkeletalMeshSkeleton)
 
+#define REGISTER_MESH_CLASSES_MK \
+	REGISTER_CLASS_ALIAS(USkeleton_MK, USkeleton)
+
 // UGolemSkeletalMesh - APB: Reloaded, derived from USkeletalMesh
 // UTdAnimSet - Mirror's Edge, derived from UAnimSet
 #define REGISTER_MESH_CLASSES_U3	\
@@ -659,7 +701,7 @@ protected:
 	REGISTER_CLASS_ALIAS(UAnimSet, UTdAnimSet) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh3, USkeletalMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh3, UStaticMesh) \
-	REGISTER_CLASS_ALIAS(UStaticMesh3, UFracturedStaticMesh) \
+	REGISTER_CLASS_ALIAS(UStaticMesh3, UFracturedStaticMesh)
 
 #define REGISTER_MESH_ENUMS_U3		\
 	REGISTER_ENUM(AnimationCompressionFormat) \

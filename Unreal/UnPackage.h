@@ -157,6 +157,7 @@ struct FObjectExport
 	TArray<int>	NetObjectCount;				// generations
 	FGuid		Guid;
 	int			PackageFlags;
+	int			U3unk6C;
 	#endif // USE_COMPACT_PACKAGE_STRUCTS
 #endif // UNREAL3
 
@@ -209,14 +210,14 @@ public:
 #endif
 
 protected:
-	UnPackage(const char *filename, FArchive *baseLoader = NULL);
+	UnPackage(const char *filename, FArchive *baseLoader = NULL, bool silent = false);
 	~UnPackage();
 
 public:
 	// Load package using short name (without path and extension) or full path name.
 	// When the package is already loaded, this function will simply return a pointer
 	// to previously loaded UnPackage.
-	static UnPackage *LoadPackage(const char *Name);
+	static UnPackage *LoadPackage(const char *Name, bool silent = false);
 
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
 
@@ -340,6 +341,10 @@ public:
 	}
 
 private:
+	void LoadNameTable();
+	void LoadImportTable();
+	void LoadExportTable();
+
 	static TArray<UnPackage*> PackageMap;
 };
 

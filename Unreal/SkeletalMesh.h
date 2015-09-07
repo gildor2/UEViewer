@@ -28,12 +28,25 @@ TODO:
 
 #define MAX_MESHBONES				2048
 #define NUM_INFLUENCES				4
+//#define ANIM_DEBUG_INFO				1
 
 struct CSkelMeshVertex : public CMeshVertex
 {
-	//?? use short for Bone[] and byte for Weight[]
-	int						Bone[NUM_INFLUENCES];	// Bone < 0 - end of list
-	float					Weight[NUM_INFLUENCES];
+	unsigned				PackedWeights;			// Works with 4 weights only!
+	short					Bone[NUM_INFLUENCES];	// Bone < 0 - end of list
+
+	void UnpackWeights(CVec4& OutWeights) const
+	{
+#if USE_SSE
+		OutWeights.mm = UnpackPackedBytes(PackedWeights);
+#else
+		float Scale = 1.0f / 255;
+		OutWeights.v[0] =  (PackedWeights        & 0xFF) * Scale;
+		OutWeights.v[1] = ((PackedWeights >> 8 ) & 0xFF) * Scale;
+		OutWeights.v[2] = ((PackedWeights >> 16) & 0xFF) * Scale;
+		OutWeights.v[3] = ((PackedWeights >> 24) & 0xFF) * Scale;
+#endif
+	}
 };
 
 
@@ -46,17 +59,9 @@ struct CSkelMeshBone
 };
 
 
-struct CSkelMeshLod
+struct CSkelMeshLod : public CBaseMeshLod
 {
-	// generic properties
-	int						NumTexCoords;
-	bool					HasNormals;
-	bool					HasTangents;
-	// geometry
-	TArray<CMeshSection>	Sections;
 	CSkelMeshVertex			*Verts;
-	int						NumVerts;
-	CIndexBuffer			Indices;
 
 	~CSkelMeshLod()
 	{
@@ -83,6 +88,7 @@ struct CSkelMeshLod
 		assert(Verts == NULL);
 		Verts    = (CSkelMeshVertex*)appMalloc(sizeof(CSkelMeshVertex) * Count, 16);		// alignment for SSE
 		NumVerts = Count;
+		AllocateUVBuffers();
 		unguard;
 	}
 
@@ -123,11 +129,18 @@ public:
 	:	OriginalMesh(Original)
 	{}
 
-	void FinalizeMesh()
+	void FinalizeMesh();
+
+	void LockMaterials()
 	{
 		for (int i = 0; i < Lods.Num(); i++)
-			Lods[i].BuildNormals();
-		SortBones();
+			Lods[i].LockMaterials();
+	}
+
+	void UnlockMaterials()
+	{
+		for (int i = 0; i < Lods.Num(); i++)
+			Lods[i].UnlockMaterials();
 	}
 
 	void SortBones();
@@ -198,12 +211,16 @@ struct CAnimTrack
 };
 
 
-struct CAnimSequence
+class CAnimSequence
 {
+public:
 	FName					Name;					// sequence's name
 	int						NumFrames;
 	float					Rate;
 	TArray<CAnimTrack>		Tracks;					// for each CAnimSet.TrackBoneNames
+#if ANIM_DEBUG_INFO
+	FString					DebugInfo;
+#endif
 };
 
 

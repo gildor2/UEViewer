@@ -14,6 +14,18 @@
 #define MAX_MESHMATERIALS		256
 
 
+CStatMeshInstance::~CStatMeshInstance()
+{
+	if (pMesh) pMesh->UnlockMaterials();
+}
+
+void CStatMeshInstance::SetMesh(CStaticMesh *Mesh)
+{
+	assert(pMesh == NULL);
+	pMesh = Mesh;
+	pMesh->LockMaterials();
+}
+
 void CStatMeshInstance::Draw(unsigned flags)
 {
 	guard(CStatMeshInstance::Draw);
@@ -54,8 +66,15 @@ void CStatMeshInstance::Draw(unsigned flags)
 	glEnableClientState(GL_NORMAL_ARRAY);
 
 	glVertexPointer(3, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Position);
-	glNormalPointer(GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV[UVIndex].U);
+	glNormalPointer(GL_BYTE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
+	if (UVIndex == 0)
+	{
+		glTexCoordPointer(2, GL_FLOAT, sizeof(CStaticMeshVertex), &Mesh.Verts[0].UV.U);
+	}
+	else
+	{
+		glTexCoordPointer(2, GL_FLOAT, sizeof(CMeshUVFloat), &Mesh.ExtraUV[UVIndex-1][0].U);
+	}
 
 	/*??
 		Can move tangent/binormal setup here too, but this will require to force shader to use fixed attribute locations
@@ -86,22 +105,32 @@ void CStatMeshInstance::Draw(unsigned flags)
 		SetMaterial(Sec.Material, MaterialIndex);
 
 		// check tangent space
-		GLint aTangent = -1, aBinormal = -1;
-		bool hasTangent = false;
+		GLint aNormal = -1;
+		GLint aTangent = -1;
+//		GLint aBinormal = -1;
 		const CShader *Sh = GCurrentShader;
 		if (Sh)
 		{
+			aNormal    = Sh->GetAttrib("normal");
 			aTangent   = Sh->GetAttrib("tangent");
-			aBinormal  = Sh->GetAttrib("binormal");
-			hasTangent = (aTangent >= 0 && aBinormal >= 0);
+//			aBinormal  = Sh->GetAttrib("binormal");
 		}
-		if (hasTangent)
+		if (aNormal >= 0)
+		{
+			glEnableVertexAttribArray(aNormal);
+			// send 4 components to decode binormal in shader
+			glVertexAttribPointer(aNormal, 4, GL_BYTE, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Normal);
+		}
+		if (aTangent >= 0)
 		{
 			glEnableVertexAttribArray(aTangent);
-			glEnableVertexAttribArray(aBinormal);
-			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Tangent);
-			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Binormal);
+			glVertexAttribPointer(aTangent, 3, GL_BYTE, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Tangent);
 		}
+/*		if (aBinormal >= 0)
+		{
+			glEnableVertexAttribArray(aBinormal);
+			glVertexAttribPointer(aBinormal, 3, GL_BYTE, GL_FALSE, sizeof(CStaticMeshVertex), &Mesh.Verts[0].Binormal);
+		} */
 		// draw
 		//?? place this code into CIndexBuffer?
 		if (Mesh.Indices.Is32Bit())
@@ -110,11 +139,12 @@ void CStatMeshInstance::Draw(unsigned flags)
 			glDrawElements(GL_TRIANGLES, Sec.NumFaces * 3, GL_UNSIGNED_SHORT, &Mesh.Indices.Indices16[Sec.FirstIndex]);
 
 		// disable tangents
-		if (hasTangent)
-		{
+		if (aNormal >= 0)
+			glDisableVertexAttribArray(aNormal);
+		if (aTangent >= 0)
 			glDisableVertexAttribArray(aTangent);
-			glDisableVertexAttribArray(aBinormal);
-		}
+//		if (aBinormal >= 0)
+//			glDisableVertexAttribArray(aBinormal);
 	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
@@ -130,11 +160,13 @@ void CStatMeshInstance::Draw(unsigned flags)
 		int NumVerts = Mesh.NumVerts;
 		glBegin(GL_LINES);
 		glColor3f(0.5, 1, 0);
+		CVec3 tmp, unpacked;
+		const float VisualLength = 2.0f;
 		for (i = 0; i < NumVerts; i++)
 		{
 			glVertex3fv(Mesh.Verts[i].Position.v);
-			CVec3 tmp;
-			VectorMA(Mesh.Verts[i].Position, 2, Mesh.Verts[i].Normal, tmp);
+			Unpack(unpacked, Mesh.Verts[i].Normal);
+			VectorMA(Mesh.Verts[i].Position, VisualLength, unpacked, tmp);
 			glVertex3fv(tmp.v);
 		}
 #if SHOW_TANGENTS
@@ -143,17 +175,21 @@ void CStatMeshInstance::Draw(unsigned flags)
 		{
 			const CVec3 &v = Mesh.Verts[i].Position;
 			glVertex3fv(v.v);
-			CVec3 tmp;
-			VectorMA(v, 2, Mesh.Verts[i].Tangent, tmp);
+			Unpack(unpacked, Mesh.Verts[i].Tangent);
+			VectorMA(v, VisualLength, unpacked, tmp);
 			glVertex3fv(tmp.v);
 		}
 		glColor3f(1, 0, 0.5f);
 		for (i = 0; i < NumVerts; i++)
 		{
-			const CVec3 &v = Mesh.Verts[i].Position;
+			const CMeshVertex& vert = Mesh.Verts[i];
+			// decode binormal
+			CVecT normal, tangent, binormal;
+			vert.DecodeTangents(normal, tangent, binormal);
+			// render
+			const CVecT &v = vert.Position;
 			glVertex3fv(v.v);
-			CVec3 tmp;
-			VectorMA(v, 2, Mesh.Verts[i].Binormal, tmp);
+			VectorMA(v, VisualLength, binormal, tmp);
 			glVertex3fv(tmp.v);
 		}
 #endif // SHOW_TANGENTS

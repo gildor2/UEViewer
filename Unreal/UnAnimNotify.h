@@ -145,6 +145,7 @@ public:
 		PROP_DROP(CharacterFilter_Enabled)
 		PROP_DROP(CharacterFilter)
 		PROP_DROP(EventName)
+		PROP_DROP(CharacterFilters)
 #endif
 	END_PROP_TABLE
 };

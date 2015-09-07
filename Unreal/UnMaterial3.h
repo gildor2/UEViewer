@@ -379,8 +379,11 @@ public:
 	void Serialize4(FArchive& Ar);
 #endif
 
+	const TArray<FTexture2DMipMap>* GetMipmapArray() const;
+
 	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
+	virtual void ReleaseTextureData() const;
 #if RENDERING
 	virtual bool Upload();
 	virtual bool Bind();
@@ -704,8 +707,12 @@ public:
 			return;
 		}
 #endif // MKVSDC
+#if METRO_CONF
+		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 21) goto mask;
+#endif
 		if (Ar.ArVer >= 858)
 		{
+		mask:
 			int unkMask;		// default 1
 			Ar << unkMask;
 		}

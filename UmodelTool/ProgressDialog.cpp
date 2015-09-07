@@ -36,7 +36,7 @@ bool UIProgressDialog::Progress(const char* package, int index, int total)
 bool UIProgressDialog::Tick()
 {
 	char buffer[64];
-	appSprintf(ARRAY_ARG(buffer), "%d MBytes", GTotalAllocationSize >> 20);
+	appSprintf(ARRAY_ARG(buffer), "%d MBytes", (int)(GTotalAllocationSize >> 20));
 	MemoryLabel->SetText(buffer);
 	appSprintf(ARRAY_ARG(buffer), "%d", UObject::GObjObjects.Num());
 	ObjectsLabel->SetText(buffer);

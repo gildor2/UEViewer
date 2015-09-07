@@ -33,8 +33,12 @@
 //!!#error NUM_INFLUENCES_UE4 and NUM_INFLUENCES are not matching!
 #endif
 
-#if NAX_STATIC_UV_SETS_UE4 != NUM_MESH_UV_SETS
-//!!#error MAX_STATIC_UV_SETS_UE4 and NUM_MESH_UV_SETS are not matching!
+#if MAX_SKELETAL_UV_SETS_UE4 > MAX_MESH_UV_SETS
+#error MAX_SKELETAL_UV_SETS_UE4 too large
+#endif
+
+#if MAX_STATIC_UV_SETS_UE4 > MAX_MESH_UV_SETS
+#error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
 
@@ -158,9 +162,9 @@ struct FMultisizeIndexContainer
 		Ar << DataSize;
 
 		if (DataSize == 2)
-			Ar << RAW_ARRAY(B.Indices16);
+			B.Indices16.BulkSerialize(Ar);
 		else if (DataSize == 4)
-			Ar << RAW_ARRAY(B.Indices32);
+			B.Indices32.BulkSerialize(Ar);
 		else
 			appError("Unknown DataSize %d", DataSize);
 
@@ -191,7 +195,7 @@ struct FRigidVertex4
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
 	byte				BoneIndex;
 	FColor				Color;
 
@@ -200,7 +204,7 @@ struct FRigidVertex4
 		Ar << V.Pos;
 		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 
-		for (int i = 0; i < NUM_MESH_UV_SETS; i++)
+		for (int i = 0; i < MAX_SKELETAL_UV_SETS_UE4; i++)
 			Ar << V.UV[i];
 
 		Ar << V.Color;
@@ -214,7 +218,7 @@ struct FSoftVertex4
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
 	byte				BoneIndex[NUM_INFLUENCES_UE4];
 	byte				BoneWeight[NUM_INFLUENCES_UE4];
 	FColor				Color;
@@ -226,7 +230,7 @@ struct FSoftVertex4
 		Ar << V.Pos;
 		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
 
-		for (int i = 0; i < NUM_MESH_UV_SETS; i++)
+		for (int i = 0; i < MAX_SKELETAL_UV_SETS_UE4; i++)
 			Ar << V.UV[i];
 
 		Ar << V.Color;
@@ -321,7 +325,7 @@ struct FGPUVert4Common
 struct FGPUVert4Half : FGPUVert4Common
 {
 	FVector				Pos;
-	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
+	FMeshUVHalf			UV[MAX_SKELETAL_UV_SETS_UE4];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Half &V)
 	{
@@ -334,7 +338,7 @@ struct FGPUVert4Half : FGPUVert4Common
 struct FGPUVert4Float : FGPUVert4Common
 {
 	FVector				Pos;
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Float &V)
 	{
@@ -377,9 +381,9 @@ struct FSkeletalMeshVertexBuffer4
 		GNumSkelUVSets = B.NumTexCoords;
 		GNumSkelInfluences = B.bExtraBoneInfluences ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
 		if (!B.bUseFullPrecisionUVs)
-			Ar << RAW_ARRAY(B.VertsHalf);
+			B.VertsHalf.BulkSerialize(Ar);
 		else
-			Ar << RAW_ARRAY(B.VertsFloat);
+			B.VertsFloat.BulkSerialize(Ar);
 		DBG_SKEL("  Verts: Half[%d] Float[%d]\n", B.VertsHalf.Num(), B.VertsFloat.Num());
 
 		return Ar;
@@ -404,7 +408,7 @@ struct FSkeletalMeshVertexColorBuffer4
 		guard(FSkeletalMeshVertexColorBuffer4<<);
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		if (!StripFlags.IsDataStrippedForServer())
-			Ar << RAW_ARRAY(B.Data);
+			B.Data.BulkSerialize(Ar);
 		return Ar;
 		unguard;
 	}
@@ -419,7 +423,7 @@ struct FSkeletalMeshVertexAPEXClothBuffer
 		if (!StripFlags.IsDataStrippedForServer())
 		{
 			DBG_SKEL("Dropping ApexCloth\n");
-			SkipRawArray(Ar);
+			SkipBulkArrayData(Ar);
 		}
 		return Ar;
 	}
@@ -604,7 +608,7 @@ void USkeletalMesh4::ConvertMesh()
 		if (!SrcLod.Chunks.Num()) continue;
 
 		int NumTexCoords = SrcLod.NumTexCoords;
-		if (NumTexCoords > NUM_MESH_UV_SETS)
+		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("SkeletalMesh has %d UV sets", NumTexCoords);
 
 		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
@@ -646,10 +650,11 @@ void USkeletalMesh4::ConvertMesh()
 				V = &V0;
 				SUV = V0.UV;
 				// UV
-				for (int i = 0; i < NumTexCoords; i++)
+				FMeshUVFloat fUV = SUV[0];				// convert half->float
+				D->UV = CVT(fUV);
+				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
 				{
-					FMeshUVFloat fUV = SUV[i];				// convert
-					D->UV[i] = CVT(fUV);
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
 				}
 			}
 			else
@@ -660,25 +665,31 @@ void USkeletalMesh4::ConvertMesh()
 				D->Position = CVT(V0.Pos);
 				SUV = V0.UV;
 				// UV
-				for (int i = 0; i < NumTexCoords; i++)
-					D->UV[i] = CVT(SUV[i]);
+				FMeshUVFloat fUV = SUV[0];
+				D->UV = CVT(fUV);
+				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+				{
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+				}
 			}
 			// convert Normal[3]
 			UnpackNormals(V->Normal, *D);
 			// convert influences
 //			int TotalWeight = 0;
 			int i2 = 0;
+			unsigned PackedWeights = 0;
 			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
 			{
 				int BoneIndex  = V->BoneIndex[i];
-				int BoneWeight = V->BoneWeight[i];
+				byte BoneWeight = V->BoneWeight[i];
 				if (BoneWeight == 0) continue;				// skip this influence (but do not stop the loop!)
-				D->Weight[i2] = BoneWeight / 255.0f;
+				PackedWeights |= BoneWeight << (i2 * 8);
 				D->Bone[i2]   = C->BoneMap[BoneIndex];
 				i2++;
 //				TotalWeight += BoneWeight;
 			}
-//			assert(TotalWeight = 255);
+			D->PackedWeights = PackedWeights;
+//			assert(TotalWeight == 255);
 			if (i2 < NUM_INFLUENCES_UE4) D->Bone[i2] = INDEX_NONE; // mark end of list
 		}
 
@@ -821,7 +832,7 @@ struct FPositionVertexBuffer4
 
 		Ar << S.Stride << S.NumVertices;
 		DBG_STAT("StaticMesh PositionStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
-		Ar << RAW_ARRAY(S.Verts);
+		S.Verts.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -882,7 +893,7 @@ struct FStaticMeshVertexBuffer4
 		{
 			GNumStaticUVSets = S.NumTexCoords;
 			GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
-			Ar << RAW_ARRAY(S.UV);
+			S.UV.BulkSerialize(Ar);
 		}
 
 		return Ar;
@@ -906,7 +917,7 @@ struct FColorVertexBuffer4
 		Ar << S.Stride << S.NumVertices;
 		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
 		if (!StripFlags.IsDataStrippedForServer() && (S.NumVertices > 0)) // zero size arrays are not serialized
-			Ar << RAW_ARRAY(S.Data);
+			S.Data.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -931,7 +942,7 @@ struct FRawStaticIndexBuffer4
 
 		if (Ar.ArVer < VER_UE4_SUPPORT_32BIT_STATIC_MESH_INDICES)
 		{
-			Ar << RAW_ARRAY(S.Indices16);
+			S.Indices16.BulkSerialize(Ar);
 			DBG_STAT("RawIndexBuffer, old format - %d indices\n", S.Indices16.Num());
 		}
 		else
@@ -940,7 +951,7 @@ struct FRawStaticIndexBuffer4
 			bool is32bit;
 			TArray<byte> data;
 			Ar << is32bit;
-			Ar << RAW_ARRAY(data);
+			data.BulkSerialize(Ar);
 			DBG_STAT("RawIndexBuffer, 32 bit = %d, %d indices (data size = %d)\n", is32bit, data.Num() / (is32bit ? 4 : 2), data.Num());
 			if (!data.Num()) return Ar;
 
@@ -951,7 +962,7 @@ struct FRawStaticIndexBuffer4
 				byte* src = &data[0];
 				if (Ar.ReverseBytes)
 					appReverseBytes(src, count, 4);
-				S.Indices32.Add(count);
+				S.Indices32.AddUninitialized(count);
 				for (int i = 0; i < count; i++, src += 4)
 					S.Indices32[i] = *(int*)src;
 			}
@@ -961,7 +972,7 @@ struct FRawStaticIndexBuffer4
 				byte* src = &data[0];
 				if (Ar.ReverseBytes)
 					appReverseBytes(src, count, 2);
-				S.Indices16.Add(count);
+				S.Indices16.AddUninitialized(count);
 				for (int i = 0; i < count; i++, src += 2)
 					S.Indices16[i] = *(word*)src;
 			}
@@ -1121,7 +1132,7 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 
 void UStaticMesh4::ConvertMesh()
 {
-	guard(UStaticMesh4::ConvertedMesh);
+	guard(UStaticMesh4::ConvertMesh);
 
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
@@ -1143,14 +1154,15 @@ void UStaticMesh4::ConvertMesh()
 		int NumTexCoords = SrcLod.VertexBuffer.NumTexCoords;
 		int NumVerts     = SrcLod.PositionVertexBuffer.Verts.Num();
 
+		if (NumTexCoords > MAX_MESH_UV_SETS)
+			appError("StaticMesh has %d UV sets", NumTexCoords);
+
 		Lod->NumTexCoords = NumTexCoords;
 		Lod->HasNormals   = true;
 		Lod->HasTangents  = true;
-		if (NumTexCoords > NUM_MESH_UV_SETS)	//!! support 8 UV sets
-			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		// sections
-		Lod->Sections.Add(SrcLod.Sections.Num());
+		Lod->Sections.AddDefaulted(SrcLod.Sections.Num());
 		for (int i = 0; i < SrcLod.Sections.Num(); i++)
 		{
 			CMeshSection &Dst = Lod->Sections[i];
@@ -1171,14 +1183,13 @@ void UStaticMesh4::ConvertMesh()
 			V.Position = CVT(SrcLod.PositionVertexBuffer.Verts[i]);
 			UnpackNormals(SUV.Normal, V);
 			// copy UV
-#if 1
-			//!! TODO: support memcpy path?
-			for (int j = 0; j < NumTexCoords; j++)
-				V.UV[j] = (CMeshUVFloat&)SUV.UV[j];
-#else
-			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
-			memcpy(V.UV, SUV.UV, sizeof(V.UV));
-#endif
+			const FMeshUVFloat* fUV = &SUV.UV[0];
+			V.UV = *CVT(fUV);
+			for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+			{
+				fUV++;
+				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
+			}
 			//!! also has ColorStream
 		}
 

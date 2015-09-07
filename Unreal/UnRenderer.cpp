@@ -4,8 +4,6 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 
-#include "UnPackage.h"						// for accessing Game field
-
 #include "UnMaterial2.h"
 #include "UnMaterial3.h"
 
@@ -256,6 +254,13 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		//!! this format is uploaded with glTexImage2D, but all formats below are for glCompressedTexImage2D
 		//?? support other uncompressed formats, like A1, G8 etc
 		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_BGRA, GL_UNSIGNED_BYTE, TexData.CompressedData);
+		glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
+		return true;
+	}
+
+	if (TexData.Format == TPF_RGBA4)
+	{
+		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, TexData.CompressedData);
 		glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
 		return true;
 	}
@@ -668,6 +673,43 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 }
 
 
+void UUnrealMaterial::Lock()
+{
+	LockCount++;
+
+//	appPrintf("Lock(%d) %s\n", LockCount, Name);
+
+	if (!IsTexture() && LockCount == 1)
+	{
+		// material
+		TArray<UUnrealMaterial*> Textures;
+		AppendReferencedTextures(Textures);
+		for (int i = 0; i < Textures.Num(); i++)
+			Textures[i]->Lock();
+	}
+}
+
+void UUnrealMaterial::Unlock()
+{
+	assert(LockCount > 0);
+//	appPrintf("Unlock(%d) %s\n", LockCount-1, Name);
+	if (--LockCount > 0) return;
+
+
+	if (IsTexture())
+	{
+		Release();
+	}
+	else
+	{
+		// material
+		TArray<UUnrealMaterial*> Textures;
+		AppendReferencedTextures(Textures);
+		for (int i = 0; i < Textures.Num(); i++)
+			Textures[i]->Unlock();
+	}
+}
+
 void UUnrealMaterial::Release()
 {
 	guard(UUnrealMaterial::Release);
@@ -719,6 +761,18 @@ void UUnrealMaterial::SetMaterial()
 	}
 
 	unguardf("%s", Name);
+}
+
+
+void UUnrealMaterial::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures)
+{
+	guard(UUnrealMaterial::AppendReferencedTextures);
+
+	CMaterialParams Params;
+	GetParams(Params);
+	Params.AppendAllTextures(OutTextures);
+
+	unguard;
 }
 
 
@@ -776,7 +830,7 @@ UUnrealMaterial *UMaterialWithPolyFlags::Create(UUnrealMaterial *OriginalMateria
 	WM->Name      = (OriginalMaterial) ? OriginalMaterial->Name : "None";
 	WM->Material  = OriginalMaterial;
 	WM->PolyFlags = PolyFlags;
-	WrappedMaterials.AddItem(WM);
+	WrappedMaterials.Add(WM);
 //	appNotify("WRAP: %s %X", OriginalMaterial ? OriginalMaterial->Name : "NULL", PolyFlags);
 	return WM;
 }
@@ -789,7 +843,7 @@ static GLuint GetDefaultTexNum()
 		// allocate material
 		DefaultUTexture = new UTexture;
 		DefaultUTexture->bTwoSided = true;
-		DefaultUTexture->Mips.Add();
+		DefaultUTexture->Mips.AddDefaulted();
 		DefaultUTexture->Format = TEXF_RGBA8;
 		DefaultUTexture->Package = NULL;
 		DefaultUTexture->Name = "Default";
@@ -797,7 +851,7 @@ static GLuint GetDefaultTexNum()
 #define TEX_SIZE	64
 		FMipmap &Mip = DefaultUTexture->Mips[0];
 		Mip.USize = Mip.VSize = TEX_SIZE;
-		Mip.DataArray.Add(TEX_SIZE*TEX_SIZE*4);
+		Mip.DataArray.AddUninitialized(TEX_SIZE*TEX_SIZE*4);
 		byte *pic = &Mip.DataArray[0];
 		for (int x = 0; x < TEX_SIZE; x++)
 		{
@@ -1595,6 +1649,9 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		Params.EmissiveColor = Color;	\
 		EmcWeight = weight;				\
 	}
+
+	int ArGame = GetGame();
+
 	for (int i = 0; i < ReferencedTextures.Num(); i++)
 	{
 		UTexture3 *Tex = ReferencedTextures[i];
@@ -1630,7 +1687,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		NORMAL  (!stricmp(Name + len - 3, "_NM"), 20);
 		NORMAL  (appStristr(Name, "_N"), 9);
 #if BULLETSTORM
-		if (Package->Game == GAME_Bulletstorm)
+		if (ArGame == GAME_Bulletstorm)
 		{
 			DIFFUSE (appStristr(Name, "_C"), 12);
 			NORMAL(appStristr(Name, "_TS"), 5);
@@ -1712,6 +1769,7 @@ void UTexture2D::Release()
 	guard(UTexture2D::Release);
 	if (GL_IsValidObject(TexNum, DrawTimestamp))
 		glDeleteTextures(1, &TexNum);
+	ReleaseTextureData();
 	Super::Release();
 	unguard;
 }
@@ -1753,7 +1811,12 @@ bool UTextureCube::Upload()
 			break;
 		}
 
-		if (!UploadCubeSide(Tex, Tex->Mips.Num() > 1, side))
+		bool success = UploadCubeSide(Tex, Tex->Mips.Num() > 1, side);
+		// release bulk data immediately
+		//!! better - use Lock (when uploaded)/Unlock (when destroyed/released) for referenced textures
+		Tex->ReleaseTextureData();
+
+		if (!success)
 		{
 			glDeleteTextures(1, &TexNum);
 			TexNum = BAD_TEXTURE;
@@ -1822,11 +1885,12 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	Super::GetParams(Params);
 
 	// get local parameters
-	bool normalSet = false;
 	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0, EmcWeight = 0, CubeWeight = 0, MaskWeight = 0;
 
 	if (TextureParameterValues.Num())
 		Params.Opacity = NULL;			// it's better to disable opacity mask from parent material
+
+	int ArGame = GetGame();
 
 	int i;
 	for (i = 0; i < TextureParameterValues.Num(); i++)
@@ -1849,7 +1913,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 //??		OPACITY (appStristr(Name, "mask"), 100);
 //??		Params.OpacityFromAlpha = true;
 #if TRON
-		if (Package->Game == GAME_Tron)
+		if (ArGame == GAME_Tron)
 		{
 			SPECPOW (appStristr(Name, "SPPW"), 100);
 			EMISSIVE(appStristr(Name, "Emss"), 100);
@@ -1857,20 +1921,20 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		}
 #endif // TRON
 #if BATMAN
-		if (Package->Game == GAME_Batman2)
+		if (ArGame == GAME_Batman2)
 		{
 			BAKEDMASK(!stricmp(Name, "Material_Attributes"), 100);
 			EMISSIVE (appStristr(Name, "Reflection_Mask"), 100);
 		}
 #endif // BATMAN
 #if BLADENSOUL
-		if (Package->Game == GAME_BladeNSoul)
+		if (ArGame == GAME_BladeNSoul)
 		{
 			BAKEDMASK(!stricmp(Name, "Body_mask_RGB"), 100);
 		}
 #endif // BLADENSOUL
 #if DISHONORED
-		if (Package->Game == GAME_Dishonored)
+		if (ArGame == GAME_Dishonored)
 		{
 			CUBEMAP (appStristr(Name, "cubemap_tex"), 100);
 			EMISSIVE(appStristr(Name, "cubemap_mask"), 100);
@@ -1884,7 +1948,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		const FLinearColor &Color = P.ParameterValue;
 		EMISSIVE_COLOR(appStristr(Name, "Emissive"), 100);
 #if TRON
-		if (Package->Game == GAME_Tron)
+		if (ArGame == GAME_Tron)
 		{
 			EMISSIVE_COLOR(appStristr(Name, "PipingColour"), 90);
 		}
@@ -1892,7 +1956,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	}
 
 #if TRON
-	if (Package->Game == GAME_Tron)
+	if (ArGame == GAME_Tron)
 	{
 		if (Params.Mask && Params.SpecPower && Params.Emissive)
 			Params.Mask = NULL;		// some different meaning for this texture
@@ -1907,7 +1971,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 #endif // TRON
 
 #if BATMAN
-	if (Package->Game == GAME_Batman2)
+	if (ArGame == GAME_Batman2)
 	{
 		if (Params.Mask)
 		{
@@ -1919,7 +1983,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 #endif // BATMAN
 
 #if BLADENSOUL
-	if (Package->Game == GAME_BladeNSoul)
+	if (ArGame == GAME_BladeNSoul)
 	{
 		if (Params.Mask)
 		{

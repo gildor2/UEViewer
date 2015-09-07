@@ -22,7 +22,7 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<CSkelMeshBone> &
 
 	int numBones = Bones.Num();
 	Coords.Empty(numBones);
-	Coords.Add(numBones);
+	Coords.AddZeroed(numBones);
 
 	for (int i = 0; i < numBones; i++)
 	{
@@ -161,21 +161,21 @@ if (i == 32 || i == 34)
 
 	// collect weights information
 	TArray<VertInfluences> Weights;				// Point -> Influences
-	Weights.Add(Lod.NumVerts);
+	Weights.AddZeroed(Lod.NumVerts);
 	for (i = 0; i < Lod.NumVerts; i++)
 	{
 		const CSkelMeshVertex &V = Lod.Verts[i];
+		CVec4 UnpackedWeights;
+		V.UnpackWeights(UnpackedWeights);
 		for (int j = 0; j < NUM_INFLUENCES; j++)
 		{
 			if (V.Bone[j] < 0) break;
 			VertInfluence *I = new (Weights[i].Inf) VertInfluence;
 			I->Bone   = V.Bone[j];
-			I->Weight = V.Weight[j];
+			I->Weight = UnpackedWeights[j];
 		}
 	}
 
-	int numIndices  = Lod.Indices.Num();
-	int numFaces    = numIndices / 3;
 	CIndexBuffer::IndexAccessor_t Index = Lod.Indices.GetAccessor();
 
 	// write meshes
@@ -191,9 +191,9 @@ if (i == 32 || i == 34)
 		TArray<bool> UsedVerts;					// mesh vertex -> surface: used of not
 		TArray<int>  MeshWeights;				// mesh vertex -> weight index
 		MeshVerts.Empty(Lod.NumVerts);
-		UsedVerts.Add(Lod.NumVerts);
-		BackWedge.Add(Lod.NumVerts);
-		MeshWeights.Add(Lod.NumVerts);
+		UsedVerts.AddZeroed(Lod.NumVerts);
+		BackWedge.AddZeroed(Lod.NumVerts);
+		MeshWeights.AddZeroed(Lod.NumVerts);
 
 		// find verts and triangles for current material
 		for (i = 0; i < Sec.NumFaces * 3; i++)
@@ -202,7 +202,7 @@ if (i == 32 || i == 34)
 
 			if (UsedVerts[idx]) continue;		// vertex is already used in previous triangle
 			UsedVerts[idx] = true;
-			int locWedge = MeshVerts.AddItem(idx);
+			int locWedge = MeshVerts.Add(idx);
 			BackWedge[idx] = locWedge;
 		}
 
@@ -241,7 +241,7 @@ if (i == 32 || i == 34)
 			int iPoint = MeshVerts[i];
 			const CSkelMeshVertex &V = Lod.Verts[iPoint];
 			Ar->Printf("\tvert %d ( %f %f ) %d %d\n",
-				i, V.UV[0].U, V.UV[0].V, MeshWeights[iPoint], Weights[iPoint].Inf.Num());
+				i, V.UV.U, V.UV.V, MeshWeights[iPoint], Weights[iPoint].Inf.Num());
 		}
 		// triangles
 		Ar->Printf("\n\tnumtris %d\n", Sec.NumFaces);

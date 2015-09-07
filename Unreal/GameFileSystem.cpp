@@ -156,7 +156,7 @@ static int GetHashForFileName(const char* FileName)
 	const char* s2 = strrchr(s1, '.');
 	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
 
-	int hash = 0;
+	short hash = 0;
 	for (int i = 0; i < len; i++)
 	{
 		char c = s1[i];
@@ -222,7 +222,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 #if SUPPORT_ANDROID
 			if (!stricmp(ext, "obb"))
 			{
-//??			GForcePlatform = PLATFORM_ANDROID;
+				GForcePlatform = PLATFORM_ANDROID;
 				reader = new FFileReader(FullName);
 				if (!reader) return true;
 				reader->Game = GAME_UE3;
@@ -538,6 +538,7 @@ void appSetRootDirectory2(const char *filename)
 				"XBox360",
 				"PS3",
 				"iPhone",
+				"Android",
 			};
 			staticAssert(ARRAY_COUNT(PlatformNames) == PLATFORM_COUNT, Verify_PlatformNames);
 			appPrintf("; platform %s", PlatformNames[GForcePlatform]);
@@ -545,7 +546,7 @@ void appSetRootDirectory2(const char *filename)
 	}
 	// scan root directory
 	appPrintf("\n");
-	appSetRootDirectory(*root, detected);
+	appSetRootDirectory(*root, detected != 0);
 }
 
 

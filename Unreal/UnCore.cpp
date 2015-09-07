@@ -53,33 +53,40 @@ void FArray::Empty(int count, int elementSize)
 {
 	guard(FArray::Empty);
 
+	DataCount = 0;
+
 	if (IsStatic())
 	{
-		if (count > MaxCount) goto allocate; // "static" array becomes non-static
-		DataCount = 0;
-		memset(DataPtr, 0, count * elementSize);
-		return;
+		if (count <= MaxCount)
+			return;
+		// "static" array becomes non-static, invalidate data pointer
+		DataPtr = NULL;
 	}
 
+	//!! TODO: perhaps round up 'Max' to 16 bytes, allow comparison below to be 'softer'
+	//!! (i.e. when array is 16 items, and calling Empty(15) - don't reallicate it, unless
+	//!! item size is large
 	if (DataPtr)
+	{
+		// check if we need to release old array
+		if (count == MaxCount)
+		{
+			// the size was not changed
+			return;
+		}
+		// delete old memory block
 		appFree(DataPtr);
+		DataPtr = NULL;
+	}
 
-allocate:
-	DataPtr   = NULL;
-	DataCount = 0;
-	MaxCount  = count;
+	MaxCount = count;
+
 	if (count)
 	{
 		DataPtr = appMalloc(count * elementSize);
-		memset(DataPtr, 0, count * elementSize);
 	}
+
 	unguardf("%d x %d", count, elementSize);
-}
-
-
-void FArray::Add(int count, int elementSize)
-{
-	Insert(0, count, elementSize);
 }
 
 
@@ -147,9 +154,9 @@ void FArray::Remove(int index, int count, int elementSize)
 }
 
 
-void FArray::FastRemove(int index, int count, int elementSize)
+void FArray::RemoveAtSwap(int index, int count, int elementSize)
 {
-	guard(FArray::FastRemove);
+	guard(FArray::RemoveAtSwap);
 	assert(index >= 0);
 	assert(count > 0);
 	assert(index + count <= DataCount);
@@ -183,10 +190,8 @@ void FArray::RawCopy(const FArray &Src, int elementSize)
 
 void* FArray::GetItem(int index, int elementSize) const
 {
-	guard(operator[]);
-	assert(index >= 0 && index < DataCount);
+	if (!IsValidIndex(index)) appError("TArray: index %d is out of range (%d)", index, DataCount);
 	return OffsetPointer(DataPtr, index * elementSize);
-	unguardf("%d/%d", index, DataCount);
 }
 
 
@@ -198,32 +203,32 @@ FString::FString(const char* src)
 {
 	if (!src)
 	{
-		Add(1);					// null char
+		Data.AddZeroed(1);		// null char
 	}
 	else
 	{
 		int len = strlen(src) + 1;
-		Add(len);
-		memcpy(DataPtr, src, len);
+		Data.AddUninitialized(len);
+		memcpy(Data.GetData(), src, len);
 	}
 }
 
 
 FString& FString::operator=(const char* src)
 {
-	if (src == DataPtr)
+	if (src == Data.GetData())
 		return *this; // assigning to self
 
 	Empty();
 	if (!src)
 	{
-		Add(1);					// null char
+		Data.AddZeroed(1);		// null char
 	}
 	else
 	{
 		int len = strlen(src) + 1;
-		Add(len);
-		memcpy(DataPtr, src, len);
+		Data.AddUninitialized(len);
+		memcpy(Data.GetData(), src, len);
 	}
 	return *this;
 }
@@ -232,17 +237,17 @@ FString& FString::operator=(const char* src)
 FString& FString::operator+=(const char* text)
 {
 	int len = strlen(text);
-	int oldLen = Num();
+	int oldLen = Data.Num();
 	if (oldLen)
 	{
-		Add(len);
+		Data.AddUninitialized(len);
 		// oldLen-1 -- cut null char, len+1 -- append null char
-		memcpy(OffsetPointer(DataPtr, oldLen-1), text, len+1);
+		memcpy(OffsetPointer(Data.GetData(), oldLen-1), text, len+1);
 	}
 	else
 	{
-		Add(len+1);	// reserve space for null char
-		memcpy(DataPtr, text, len+1);
+		Data.AddUninitialized(len+1);	// reserve space for null char
+		memcpy(Data.GetData(), text, len+1);
 	}
 	return *this;
 }
@@ -250,20 +255,22 @@ FString& FString::operator+=(const char* text)
 
 char* FString::Detach()
 {
-	char* data;
-	if (IsStatic())
+	char* RetData;
+	if (Data.IsStatic())
 	{
-		data = appStrdup((char*)DataPtr);
+		RetData = appStrdup((char*)Data.DataPtr);
 		// clear string
-		DataCount = 0;
-		*(char*)DataPtr = 0;
-		return data;
+		Data.DataCount = 0;
+		*(char*)Data.DataPtr = 0;
 	}
-	data = (char*)DataPtr;
-	DataPtr   = NULL;
-	DataCount = 0;
-	MaxCount  = 0;
-	return data;
+	else
+	{
+		RetData = (char*)Data.DataPtr;
+		Data.DataPtr   = NULL;
+		Data.DataCount = 0;
+		Data.MaxCount  = 0;
+	}
+	return RetData;
 }
 
 

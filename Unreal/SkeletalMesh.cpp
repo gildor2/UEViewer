@@ -151,6 +151,78 @@ int CSkeletalMesh::GetRootBone() const
 #endif
 }
 
+void CSkeletalMesh::FinalizeMesh()
+{
+	for (int lod = 0; lod < Lods.Num(); lod++)
+		Lods[lod].BuildNormals();
+	SortBones();
+
+	// fix bone weights
+	int NumFixedVerts = 0;
+	for (int lod = 0; lod < Lods.Num(); lod++)
+	{
+		CSkelMeshLod &L = Lods[lod];
+		CSkelMeshVertex *V = L.Verts;
+		for (int vert = 0; vert < L.NumVerts; vert++, V++)
+		{
+			byte UnpackedWeights[NUM_INFLUENCES];
+			// int32 -> byte4
+			*(int*)UnpackedWeights = V->PackedWeights;
+
+			bool ShouldFix = false;
+			for (int i = 0; i < NUM_INFLUENCES; i++)
+			{
+				int Bone = V->Bone[i];
+				if (Bone < 0) break;
+				if (UnpackedWeights[i] == 0)
+				{
+					// remove zero weight
+					ShouldFix = true;
+					continue;
+				}
+				// remove duplicated influences, if any
+				for (int k = 0; k < i; k++)
+				{
+					if (V->Bone[k] == Bone)
+					{
+						// add k's weight to i, and set k's weight to 0
+						int NewWeight = UnpackedWeights[i] + UnpackedWeights[k];
+						if (NewWeight > 255) NewWeight = 255;
+						UnpackedWeights[i] = NewWeight & 0xFF;
+						UnpackedWeights[k] = 0;
+						ShouldFix = true;
+					}
+				}
+			}
+
+			if (ShouldFix)
+			{
+				for (int i = 0; i < NUM_INFLUENCES; i++)
+				{
+					if (UnpackedWeights[i] == 0)
+					{
+						if (i < NUM_INFLUENCES-1)
+						{
+							// not very fast, but shouldn't do that too often
+							memcpy(UnpackedWeights+i, UnpackedWeights+i+1, NUM_INFLUENCES-i-1);
+							memcpy(V->Bone+i, V->Bone+i+1, (NUM_INFLUENCES-i-1) * sizeof(V->Bone[0]));
+						}
+						// remove last weight item
+						UnpackedWeights[NUM_INFLUENCES-1] = 0;
+						V->Bone[NUM_INFLUENCES-1] = -1;
+					}
+				}
+				// pack weights back to vertex
+				V->PackedWeights = *(int*)UnpackedWeights;
+				NumFixedVerts++;
+			}
+		}
+	}
+
+	if (NumFixedVerts) appPrintf("INFO: fixed %d vertices\n", NumFixedVerts);
+}
+
+
 
 /*-----------------------------------------------------------------------------
 	CAnimSet

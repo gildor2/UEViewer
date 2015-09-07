@@ -111,7 +111,7 @@ public:
 	{
 		guard(FLeadArchiveReader::ReadPageTable);
 		int NumPages = (FileSize + BufferSize - 1) / BufferSize;
-		Pages.Add(NumPages);
+		Pages.AddZeroed(NumPages);
 		int Remaining = FileSize;
 		int NumPages2;
 		Ar << AR_INDEX(NumPages2);	// unused

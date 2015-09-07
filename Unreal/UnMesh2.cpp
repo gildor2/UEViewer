@@ -1,7 +1,6 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 #include "UnMesh2.h"
-#include "UnPackage.h"			// for Bioshock
 
 #include "UnMaterial2.h"
 
@@ -129,7 +128,14 @@ after_textures:
 	}
 
 	Ar << FaceLevel << Faces << CollapseWedgeThus << Wedges << Materials;
-	Ar << MeshScaleMax << LODHysteresis << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
+	Ar << MeshScaleMax;
+
+#if EOS
+	if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 42) goto lod_fields2;
+#endif
+	Ar << LODHysteresis;
+lod_fields2:
+	Ar << LODStrength << LODMinVerts << LODMorph << LODZDisplace;
 
 #if SPLINTER_CELL
 	if (Ar.Game == GAME_SplinterCell) return;
@@ -183,10 +189,10 @@ void UVertMesh::BuildNormals()
 	int numVerts = Verts.Num();
 	int i;
 	Normals.Empty(numVerts);
-	Normals.Add(numVerts);
+	Normals.AddZeroed(numVerts);
 	TArray<CVec3> tmpVerts, tmpNormals;
-	tmpVerts.Add(numVerts);
-	tmpNormals.Add(numVerts);
+	tmpVerts.AddZeroed(numVerts);
+	tmpNormals.AddZeroed(numVerts);
 	// convert verts
 	for (i = 0; i < numVerts; i++)
 	{
@@ -437,6 +443,18 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 			goto skip_remaining;
 		}
 #endif // SWRC
+#if EOS
+		if (Ar.Game == GAME_EOS)
+		{
+			int unk1;
+			UObject* unk2;
+			UObject* unk3;
+			if (Version >= 6) Ar << unk1 << unk2;
+			if (Version >= 7) Ar << unk3;
+			Ar << LODModels;
+			goto skip_remaining;
+		}
+#endif // EOS
 #if 0
 		// Shui Hu Q Zhuan 2 Online
 		if (Ar.ArVer == 126 && Ar.ArLicenseeVer == 1)
@@ -569,7 +587,7 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 void USkeletalMesh::PostLoad()
 {
 #if BIOSHOCK
-	if (Package->Game == GAME_Bioshock)
+	if (GetGame() == GAME_Bioshock)
 		PostLoadBioshockMesh();		// should be called after loading of all used objects
 #endif // BIOSHOCK
 }
@@ -582,7 +600,7 @@ void USkeletalMesh::UpgradeFaces()
 	if (Faces.Num() && !Triangles.Num())
 	{
 		Triangles.Empty(Faces.Num());
-		Triangles.Add(Faces.Num());
+		Triangles.AddUninitialized(Faces.Num());
 		for (int i = 0; i < Faces.Num(); i++)
 		{
 			const FMeshFace &F = Faces[i];
@@ -610,7 +628,7 @@ void USkeletalMesh::UpgradeMesh()
 	for (i = 0; i < WeightIndices.Num(); i++)
 		numInfluences += WeightIndices[i].BoneInfIndices.Num() * (i + 1);
 	VertInfluences.Empty(numInfluences);
-	VertInfluences.Add(numInfluences);
+	VertInfluences.AddZeroed(numInfluences);
 	int vIndex = 0;
 	for (i = 0; i < WeightIndices.Num(); i++)				// loop by influence count per vertex
 	{
@@ -657,10 +675,10 @@ void USkeletalMesh::ConvertMesh()
 
 	// some games has troubles with LOD models ...
 #if TRIBES3
-	if (Package->Game == GAME_Tribes3) goto base_mesh;
+	if (GetGame() == GAME_Tribes3) goto base_mesh;
 #endif
 #if SWRC
-	if (Package->Game == GAME_RepCommando) goto base_mesh;
+	if (GetGame() == GAME_RepCommando) goto base_mesh;
 #endif
 
 	if (!LODModels.Num())
@@ -727,7 +745,7 @@ void USkeletalMesh::ConvertMesh()
 			}
 			else
 			{
-				Mesh->Lods.Remove(lod);
+				Mesh->Lods.RemoveAt(lod);
 				break;
 			}
 		}
@@ -770,7 +788,7 @@ skeleton:
 void USkeletalMesh::InitSections(CSkelMeshLod &Lod)
 {
 	// allocate sections and set CMeshSection.Material
-	Lod.Sections.Add(Materials.Num());
+	Lod.Sections.AddZeroed(Materials.Num());
 	for (int sec = 0; sec < Materials.Num(); sec++)
 	{
 		const FMeshMaterial &M = Materials[sec];
@@ -848,19 +866,20 @@ void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &Mesh
 		const FMeshWedge &SW = MeshWedges[i];
 		CSkelMeshVertex  &DW = Lod.Verts[i];
 		DW.Position = CVT(MeshPoints[SW.iVertex]);
-		DW.UV[0] = CVT(SW.TexUV);
+		DW.UV = CVT(SW.TexUV);
 		// DW.Normal and DW.Tangent are unset
 		// setup Bone[] and Weight[]
 		const CVertInfo &V = Verts[SW.iVertex];
+		unsigned PackedWeights = 0;
 		for (j = 0; j < V.NumInfs; j++)
 		{
 			DW.Bone[j]   = V.Bone[j];
-			DW.Weight[j] = V.Weight[j];
+			PackedWeights |= appRound(V.Weight[j] * 255) << (j * 8);
 		}
+		DW.PackedWeights = PackedWeights;
 		for (/* continue */; j < NUM_INFLUENCES; j++)	// place end marker and zero weight
 		{
-			DW.Bone[j]   = -1;
-			DW.Weight[j] = 0.0f;
+			DW.Bone[j] = -1;
 		}
 	}
 
@@ -897,7 +916,7 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 		// allocate index buffer
 		if (pass == 1)
 		{
-			Lod.Indices.Indices16.Add(NumIndices);
+			Lod.Indices.Indices16.AddZeroed(NumIndices);
 		}
 
 		for (i = 0; i < Triangles.Num(); i++)
@@ -907,7 +926,7 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 			// if section does not exist - add it
 			if (MatIndex >= NumSections)
 			{
-				Lod.Sections.Add(MatIndex - NumSections + 1);
+				Lod.Sections.AddZeroed(MatIndex - NumSections + 1);
 				NumSections = MatIndex + 1;
 			}
 			CMeshSection &Sec = Lod.Sections[MatIndex];
@@ -954,7 +973,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 		// allocate index buffer
 		if (pass == 1)
 		{
-			Lod.Indices.Indices16.Add(NumIndices);
+			Lod.Indices.Indices16.AddZeroed(NumIndices);
 		}
 
 		int s;
@@ -967,7 +986,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 			// if section does not exist - add it
 			if (MatIndex >= NumSections)
 			{
-				Lod.Sections.Add(MatIndex - NumSections + 1);
+				Lod.Sections.AddZeroed(MatIndex - NumSections + 1);
 				NumSections = MatIndex + 1;
 			}
 			CMeshSection &Sec = Lod.Sections[MatIndex];
@@ -996,7 +1015,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 			// if section does not exist - add it
 			if (MatIndex >= NumSections)
 			{
-				Lod.Sections.Add(MatIndex - NumSections + 1);
+				Lod.Sections.AddZeroed(MatIndex - NumSections + 1);
 				NumSections = MatIndex + 1;
 			}
 			CMeshSection &Sec  = Lod.Sections[MatIndex];
@@ -1235,8 +1254,7 @@ void FStaticLODModel::RestoreLineageMesh()
 	// remap bones and build faces
 	TArray<const FSkelMeshSection*> WedgeSection;
 	WedgeSection.Empty(NumWedges);
-	for (i = 0; i < NumWedges; i++)
-		WedgeSection.AddItem(NULL);
+	WedgeSection.AddZeroed(NumWedges);
 	// smooth sections
 	guard(SmoothWedges);
 	for (k = 0; k < SmoothSections.Num(); k++)
@@ -1295,9 +1313,9 @@ void FStaticLODModel::RestoreLineageMesh()
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.Add();
+			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = LW.Point;
-			PointNormals.AddItem(LW.Normal);
+			PointNormals.Add(LW.Normal);
 			// build influences
 			const FSkelMeshSection *ms = WedgeSection[i];
 			assert(ms);
@@ -1335,9 +1353,9 @@ void FStaticLODModel::RestoreLineageMesh()
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.Add();
+			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = LW.Pos;
-			PointNormals.AddItem(LW.Norm);
+			PointNormals.Add(LW.Norm);
 			// build influences
 			const FSkelMeshSection *ms = WedgeSection[i];
 			assert(ms);
@@ -1643,7 +1661,7 @@ void UStaticMesh::LoadExternalUC2Data()
 
 	for (i = 0; i < Sections.Num(); i++)
 	{
-		FStaticMeshSection &S = Sections[i];
+//		FStaticMeshSection &S = Sections[i];
 		Data = FindXprData(va("%s_%d_pb", Name, i), &Size);
 		if (!Data)
 		{
@@ -1757,7 +1775,7 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	if (Skins.Num() && !Materials.Num())
 	{
 		const FVanguardSkin &S = Skins[0];
-		Materials.Add(S.Textures.Num());
+		Materials.AddZeroed(S.Textures.Num());
 		for (int i = 0; i < S.Textures.Num(); i++)
 			Materials[i].Material = S.Textures[i];
 	}
@@ -1793,7 +1811,7 @@ void UStaticMesh::ConvertMesh()
 	Lod->HasTangents = false;
 
 	// convert sections
-	Lod->Sections.Add(Sections.Num());
+	Lod->Sections.AddZeroed(Sections.Num());
 	for (i = 0; i < Sections.Num(); i++)
 	{
 		CMeshSection &Dst = Lod->Sections[i];
@@ -1806,10 +1824,10 @@ void UStaticMesh::ConvertMesh()
 	// convert vertices
 	int NumVerts = VertexStream.Vert.Num();
 	int NumTexCoords = UVStream.Num();
-	if (NumTexCoords > NUM_MESH_UV_SETS)
+	if (NumTexCoords > MAX_MESH_UV_SETS)
 	{
 		appNotify("StaticMesh has %d UV sets", NumTexCoords);
-		NumTexCoords = NUM_MESH_UV_SETS;
+		NumTexCoords = MAX_MESH_UV_SETS;
 	}
 	Lod->NumTexCoords = NumTexCoords;
 
@@ -1820,14 +1838,20 @@ void UStaticMesh::ConvertMesh()
 		CStaticMeshVertex &V = Lod->Verts[i];
 		const FStaticMeshVertex &SV = VertexStream.Vert[i];
 		V.Position = CVT(SV.Pos);
-		V.Normal   = CVT(SV.Normal);
+		Pack(V.Normal, CVT(SV.Normal));
 		for (int j = 0; j < NumTexCoords; j++)
 		{
 			if (i < UVStream[j].Data.Num())		// Lineage2 has meshes with UVStream[i>1].Data size less than NumVerts
 			{
 				const FMeshUVFloat &SUV = UVStream[j].Data[i];
-				V.UV[j].U = SUV.U;
-				V.UV[j].V = SUV.V;
+				if (j == 0)
+				{
+					V.UV = CVT(SUV);
+				}
+				else
+				{
+					Lod->ExtraUV[j-1][i] = CVT(SUV);
+				}
 			}
 			else if (!PrintedWarning)
 			{

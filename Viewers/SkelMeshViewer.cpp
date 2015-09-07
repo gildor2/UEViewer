@@ -28,7 +28,7 @@
 static float TimeSinceCreate;
 #endif
 
-TArray<CSkelMeshInstance*> CSkelMeshViewer::Meshes;
+TArray<CSkelMeshInstance*> CSkelMeshViewer::TaggedMeshes;
 UObject *GForceAnimSet = NULL;
 
 
@@ -89,9 +89,9 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 		Mins = Maxs = nullVec3;
 	}
 	// extend bounds with additional meshes
-	for (int i = 0; i < Meshes.Num(); i++)
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
 	{
-		CSkelMeshInstance* Inst = Meshes[i];
+		CSkelMeshInstance* Inst = TaggedMeshes[i];
 		if (Inst->pMesh != SkelInst->pMesh)
 		{
 			const CSkeletalMesh *Mesh2 = Inst->pMesh;
@@ -104,7 +104,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 			ComputeBounds(Bounds2, 2, sizeof(CVec3), Mins, Maxs, true);	// include Bounds2 into Mins/Maxs
 		}
 		// reset animation for all meshes
-		Meshes[i]->TweenAnim(NULL, 0);
+		TaggedMeshes[i]->TweenAnim(NULL, 0);
 	}
 	InitViewerPosition(Mins, Maxs);
 
@@ -128,88 +128,94 @@ void CSkelMeshViewer::Dump()
 	appPrintf("\n");
 	Mesh->GetTypeinfo()->DumpProps(Mesh);
 
-/*
-	appPrintf(
-		"\nSkelMesh info:\n==============\n"
-		"Bones  # %4d  Points    # %4d  Points2  # %4d\n"
-		"Wedges # %4d  Triangles # %4d\n"
-		"CollapseWedge # %4d  f1C8      # %4d\n"
-		"BoneDepth      %d\n"
-		"WeightIds # %d  BoneInfs # %d  VertInfs # %d\n"
-		"Attachments #  %d\n"
-		"LODModels # %d\n"
-		"Animations: %s\n",
-		Mesh->RefSkeleton.Num(),
-		Mesh->Points.Num(), Mesh->Points2.Num(),
-		Mesh->Wedges.Num(),Mesh->Triangles.Num(),
-		Mesh->CollapseWedge.Num(), Mesh->f1C8.Num(),
-		Mesh->SkeletalDepth,
-		Mesh->WeightIndices.Num(), Mesh->BoneInfluences.Num(), Mesh->VertInfluences.Num(),
-		Mesh->AttachBoneNames.Num(),
-		Mesh->LODModels.Num(),
-		Mesh->Animation ? Mesh->Animation->Name : "None"
-	);
-
-	int i;
-
-	// check bone sort order (assumed, that child go after parent)
-	for (i = 0; i < Mesh->RefSkeleton.Num(); i++)
+#if 0
+	if (Mesh->OriginalMesh->IsA("SkeletalMesh"))	// UE2 class
 	{
-		const FMeshBone &B = Mesh->RefSkeleton[i];
-		if (B.ParentIndex >= i + 1) appNotify("bone[%d] has parent %d", i+1, B.ParentIndex);
-	}
+		const USkeletalMesh *OriginalMesh = static_cast<USkeletalMesh*>(Mesh->OriginalMesh);
 
-	for (i = 0; i < Mesh->LODModels.Num(); i++)
-	{
-		appPrintf("model # %d\n", i);
-		const FStaticLODModel &lod = Mesh->LODModels[i];
 		appPrintf(
-			"  SkinningData=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
-			"  DistanceFactor=%g  Hysteresis=%g  SharedVerts=%d  MaxInfluences=%d  114=%d  118=%d\n"
-			"  smoothInds=%d  rigidInds=%d  vertStream.Size=%d\n",
-			lod.SkinningData.Num(),
-			lod.SkinPoints.Num(),
-			lod.VertInfluences.Num(),
-			lod.Wedges.Num(), lod.NumDynWedges,
-			lod.Faces.Num(),
-			lod.Points.Num(),
-			lod.LODDistanceFactor, lod.LODHysteresis, lod.NumSharedVerts, lod.LODMaxInfluences, lod.f114, lod.f118,
-			lod.SmoothIndices.Indices.Num(), lod.RigidIndices.Indices.Num(), lod.VertexStream.Verts.Num());
+			"\nSkelMesh info:\n==============\n"
+			"Bones  # %4d  Points    # %4d  Points2  # %4d\n"
+			"Wedges # %4d  Triangles # %4d\n"
+			"CollapseWedge # %4d  f1C8      # %4d\n"
+			"BoneDepth      %d\n"
+			"WeightIds # %d  BoneInfs # %d  VertInfs # %d\n"
+			"Attachments #  %d\n"
+			"LODModels # %d\n"
+			"Animations: %s\n",
+			OriginalMesh->RefSkeleton.Num(),
+			OriginalMesh->Points.Num(), OriginalMesh->Points2.Num(),
+			OriginalMesh->Wedges.Num(), OriginalMesh->Triangles.Num(),
+			OriginalMesh->CollapseWedge.Num(), OriginalMesh->f1C8.Num(),
+			OriginalMesh->SkeletalDepth,
+			OriginalMesh->WeightIndices.Num(), OriginalMesh->BoneInfluences.Num(), OriginalMesh->VertInfluences.Num(),
+			OriginalMesh->AttachBoneNames.Num(),
+			OriginalMesh->LODModels.Num(),
+			OriginalMesh->Animation ? OriginalMesh->Animation->Name : "None"
+		);
 
-		int i0 = 99999999, i1 = -99999999;
-		int j;
-		for (j = 0; j < lod.SmoothIndices.Indices.Num(); j++)
-		{
-			int x = lod.SmoothIndices.Indices[j];
-			if (x < i0) i0 = x;
-			if (x > i1) i1 = x;
-		}
-		appPrintf("  smoothIndices: [%d .. %d]\n", i0, i1);
-		i0 = 99999999; i1 = -99999999;
-		for (j = 0; j < lod.RigidIndices.Indices.Num(); j++)
-		{
-			int x = lod.RigidIndices.Indices[j];
-			if (x < i0) i0 = x;
-			if (x > i1) i1 = x;
-		}
-		appPrintf("  rigidIndices:  [%d .. %d]\n", i0, i1);
+		int i;
 
-		const TArray<FSkelMeshSection> *sec[2];
-		sec[0] = &lod.SmoothSections;
-		sec[1] = &lod.RigidSections;
-		static const char *secNames[] = { "smooth", "rigid" };
-		for (int k = 0; k < 2; k++)
+		// check bone sort order (assumed, that child go after parent)
+		for (i = 0; i < OriginalMesh->RefSkeleton.Num(); i++)
 		{
-			appPrintf("  %s sections: %d\n", secNames[k], sec[k]->Num());
-			for (int j = 0; j < sec[k]->Num(); j++)
+			const FMeshBone &B = OriginalMesh->RefSkeleton[i];
+			if (B.ParentIndex >= i + 1) appNotify("bone[%d] has parent %d", i+1, B.ParentIndex);
+		}
+
+		for (i = 0; i < OriginalMesh->LODModels.Num(); i++)
+		{
+			appPrintf("model # %d\n", i);
+			const FStaticLODModel &lod = OriginalMesh->LODModels[i];
+			appPrintf(
+				"  SkinningData=%d  SkinPoints=%d inf=%d  wedg=%d dynWedges=%d faces=%d  points=%d\n"
+				"  DistanceFactor=%g  Hysteresis=%g  SharedVerts=%d  MaxInfluences=%d  114=%d  118=%d\n"
+				"  smoothInds=%d  rigidInds=%d  vertStream.Size=%d\n",
+				lod.SkinningData.Num(),
+				lod.SkinPoints.Num(),
+				lod.VertInfluences.Num(),
+				lod.Wedges.Num(), lod.NumDynWedges,
+				lod.Faces.Num(),
+				lod.Points.Num(),
+				lod.LODDistanceFactor, lod.LODHysteresis, lod.NumSharedVerts, lod.LODMaxInfluences, lod.f114, lod.f118,
+				lod.SmoothIndices.Indices.Num(), lod.RigidIndices.Indices.Num(), lod.VertexStream.Verts.Num());
+
+			int i0 = 99999999, i1 = -99999999;
+			int j;
+			for (j = 0; j < lod.SmoothIndices.Indices.Num(); j++)
 			{
-				const FSkelMeshSection &S = (*sec[k])[j];
-				appPrintf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
-					S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
-					S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
+				int x = lod.SmoothIndices.Indices[j];
+				if (x < i0) i0 = x;
+				if (x > i1) i1 = x;
+			}
+			appPrintf("  smoothIndices: [%d .. %d]\n", i0, i1);
+			i0 = 99999999; i1 = -99999999;
+			for (j = 0; j < lod.RigidIndices.Indices.Num(); j++)
+			{
+				int x = lod.RigidIndices.Indices[j];
+				if (x < i0) i0 = x;
+				if (x > i1) i1 = x;
+			}
+			appPrintf("  rigidIndices:  [%d .. %d]\n", i0, i1);
+
+			const TArray<FSkelMeshSection> *sec[2];
+			sec[0] = &lod.SmoothSections;
+			sec[1] = &lod.RigidSections;
+			static const char *secNames[] = { "smooth", "rigid" };
+			for (int k = 0; k < 2; k++)
+			{
+				appPrintf("  %s sections: %d\n", secNames[k], sec[k]->Num());
+				for (int j = 0; j < sec[k]->Num(); j++)
+				{
+					const FSkelMeshSection &S = (*sec[k])[j];
+					appPrintf("    %d:  mat=%d %d [w=%d .. %d] %d b=%d %d [f=%d + %d]\n", j,
+						S.MaterialIndex, S.MinStreamIndex, S.MinWedgeIndex, S.MaxWedgeIndex,
+						S.NumStreamIndices, S.BoneIndex, S.fE, S.FirstFace, S.NumFaces);
+				}
 			}
 		}
-	} */
+	}
+#endif
 }
 
 
@@ -221,27 +227,35 @@ void CSkelMeshViewer::Export()
 	const CAnimSet *Anim = MeshInst->GetAnim();
 	if (Anim) ExportObject(Anim->OriginalAnim);
 
-	for (int i = 0; i < Meshes.Num(); i++)
-		ExportObject(Meshes[i]->pMesh->OriginalMesh);
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+		ExportObject(TaggedMeshes[i]->pMesh->OriginalMesh);
 }
 
 
-void CSkelMeshViewer::TagMesh(CSkelMeshInstance *NewInst)
+void CSkelMeshViewer::TagMesh(CSkelMeshInstance *Inst)
 {
-	for (int i = 0; i < Meshes.Num(); i++)
-		if (Meshes[i]->pMesh == NewInst->pMesh)
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+	{
+		if (TaggedMeshes[i]->pMesh == Inst->pMesh)
 		{
 			// already tagged, remove
-			Meshes.Remove(i);
+			delete TaggedMeshes[i];
+			TaggedMeshes.RemoveAt(i);
 			return;
 		}
-	Meshes.AddItem(NewInst);
+	}
+	// not tagget yet, create a copy of the mesh
+	CSkelMeshInstance* NewInst = new CSkelMeshInstance();
+	NewInst->SetMesh(Inst->pMesh);
+	TaggedMeshes.Add(NewInst);
 }
 
 
 void CSkelMeshViewer::UntagAllMeshes()
 {
-	Meshes.Empty();
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+		delete TaggedMeshes[i];
+	TaggedMeshes.Empty();
 }
 
 
@@ -260,7 +274,7 @@ void CSkelMeshViewer::Draw2D()
 
 	if (ShowUV)
 	{
-		DisplayUV(Lod.Verts, sizeof(CSkelMeshVertex), Lod.Indices, Lod.Sections, MeshInst->UVIndex);
+		DisplayUV(Lod.Verts, sizeof(CSkelMeshVertex), &Lod, MeshInst->UVIndex);
 	}
 
 #if UNREAL4
@@ -293,8 +307,8 @@ void CSkelMeshViewer::Draw2D()
 	}
 
 	// show extra meshes
-	for (int i = 0; i < Meshes.Num(); i++)
-		DrawTextLeft("%s%d: %s", (Meshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, Meshes[i]->pMesh->OriginalMesh->Name);
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+		DrawTextLeft("%s%d: %s", (TaggedMeshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, TaggedMeshes[i]->pMesh->OriginalMesh->Name);
 
 	// show animation information
 	const CAnimSet *AnimSet = MeshInst->GetAnim();
@@ -328,6 +342,11 @@ void CSkelMeshViewer::Draw2D()
 			DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " %d/%d (%s) " S_GREEN "Rate:" S_WHITE " %g " S_GREEN "Frames:" S_WHITE " %d",
 				AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames);
 			DrawTextBottomRight(S_GREEN "Time:" S_WHITE " %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
+#if ANIM_DEBUG_INFO
+			const FString& DebugText = Seq->DebugInfo;
+			if (DebugText.Num())
+				DrawTextBottomLeft(S_RED"Info:" S_WHITE " %s", *DebugText);
+#endif
 		}
 		else
 		{
@@ -357,7 +376,7 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	float boost = 0;
 	float highlightTime = max(TimeSinceCreate, 0);
 
-	if (Meshes.Num() && highlightTime < HIGHLIGHT_DURATION)
+	if (TaggedMeshes.Num() && highlightTime < HIGHLIGHT_DURATION)
 	{
 		if (highlightTime > HIGHLIGHT_DURATION / 2)
 			highlightTime = HIGHLIGHT_DURATION - highlightTime;	// fade
@@ -419,9 +438,9 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	glColor3f(1, 1, 1);
 #endif // SHOW_BOUNDS
 
-	for (i = 0; i < Meshes.Num(); i++)
+	for (i = 0; i < TaggedMeshes.Num(); i++)
 	{
-		CSkelMeshInstance *mesh = Meshes[i];
+		CSkelMeshInstance *mesh = TaggedMeshes[i];
 		if (mesh->pMesh == MeshInst->pMesh) continue;	// avoid duplicates
 		mesh->UpdateAnimation(TimeDelta);
 		DrawMesh(mesh);
@@ -511,8 +530,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 			// note: AnimIndex changed now
 			AnimName = MeshInst->GetAnimName(AnimIndex);
 			MeshInst->TweenAnim(AnimName, 0.25);	// change animation with tweening
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->TweenAnim(AnimName, 0.25);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->TweenAnim(AnimName, 0.25);
 		}
 		break;
 
@@ -526,8 +545,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 				Frame += 0.2f;
 			Frame = bound(Frame, 0, NumFrames-1);
 			MeshInst->FreezeAnimAt(Frame);
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->FreezeAnimAt(Frame);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->FreezeAnimAt(Frame);
 		}
 		break;
 
@@ -535,16 +554,16 @@ void CSkelMeshViewer::ProcessKey(int key)
 		if (AnimIndex >= 0)
 		{
 			MeshInst->PlayAnim(AnimName);
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->PlayAnim(AnimName);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->PlayAnim(AnimName);
 		}
 		break;
 	case 'x':
 		if (AnimIndex >= 0)
 		{
 			MeshInst->LoopAnim(AnimName);
-			for (i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->LoopAnim(AnimName);
+			for (i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->LoopAnim(AnimName);
 		}
 		break;
 
@@ -647,8 +666,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 				{
 					// found desired animation set
 					MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
-					for (int i = 0; i < Meshes.Num(); i++)
-						Meshes[i]->SetAnim(Anim);
+					for (int i = 0; i < TaggedMeshes.Num(); i++)
+						TaggedMeshes[i]->SetAnim(Anim);
 					AnimIndex = -1;
 					appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
 					break;
@@ -658,11 +677,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 		break;
 
 	case 't'|KEY_CTRL:
-		{
-			CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
-			SkelInst->SetMesh(MeshInst->pMesh);
-			TagMesh(SkelInst);
-		}
+		TagMesh(MeshInst);
 		break;
 
 	case 'r'|KEY_CTRL:
@@ -670,8 +685,8 @@ void CSkelMeshViewer::ProcessKey(int key)
 			int mode = MeshInst->RotationMode + 1;
 			if (mode > EARO_ForceDisabled) mode = 0;
 			MeshInst->RotationMode = (EAnimRotationOnly)mode;
-			for (int i = 0; i < Meshes.Num(); i++)
-				Meshes[i]->RotationMode = (EAnimRotationOnly)mode;
+			for (int i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->RotationMode = (EAnimRotationOnly)mode;
 		}
 		break;
 

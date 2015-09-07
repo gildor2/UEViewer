@@ -28,11 +28,31 @@ struct CMaterialParams
 		memset(this, 0, sizeof(*this));
 		EmissiveColor.Set(0.5f, 0.5f, 1.0f, 1);		// light-blue color
 	}
+
+#define ITERATE_ALL_PARAMS	\
+	PARAM(Diffuse)			\
+	PARAM(Normal)			\
+	PARAM(Specular)			\
+	PARAM(SpecPower)		\
+	PARAM(Opacity)			\
+	PARAM(Emissive)			\
+	PARAM(Cube)				\
+	PARAM(Mask)
+
 	bool IsNull() const
 	{
-#define C(x) ((size_t)x)
-		return (C(Diffuse) | C(Normal) | C(Specular) | C(SpecPower) | C(Opacity) | C(Emissive) | C(Cube)) == 0;
-#undef C
+#define PARAM(name)		ret |= (size_t)name;
+		size_t ret = 0;
+		ITERATE_ALL_PARAMS;
+		return ret == 0;
+#undef PARAM
+	}
+
+	void AppendAllTextures(TArray<UUnrealMaterial*>& OutTextures)
+	{
+#define PARAM(name)		if (name != NULL) OutTextures.Add(name);
+		ITERATE_ALL_PARAMS;
+#undef PARAM
 	}
 
 	// textures
@@ -60,6 +80,8 @@ struct CMaterialParams
 	bool					OpacityFromAlpha;
 };
 
+#undef ITERATE_ALL_PARAMS
+
 
 // Should change PixelFormatInfo[] in UnTexture.cpp when modify this enum!
 enum ETexturePixelFormat
@@ -79,6 +101,7 @@ enum ETexturePixelFormat
 	TPF_BC5,			// alias names: 3Dc, ATI2, BC5
 	TPF_BC7,
 	TPF_A1,				// 8 monochrome pixels per byte
+	TPF_RGBA4,
 #if SUPPORT_IPHONE
 	TPF_PVRTC2,
 	TPF_PVRTC4,
@@ -158,27 +181,27 @@ public:
 		return false;
 	}
 
+	virtual void ReleaseTextureData() const
+	{}
+
 #if RENDERING
 	UUnrealMaterial()
 	:	DrawTimestamp(0)
+	,	LockCount(0)
 	,	NormalUnpackExpr(NULL)
 	{}
 
 	void SetMaterial();								// main function to use from outside
 
-	virtual bool Upload()							// implemented for textures only
+	//!! WARNING: UTextureCube will not work correctly - referenced textures are not encountered
+	void AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures);
+
+	// Texture interface
+	virtual bool Upload()
 	{
 		return false;
 	}
-	virtual bool Bind()								// implemented for textures only
-	{
-		return false;
-	}
-	virtual void SetupGL();							// used by SetMaterial()
-	virtual void Release();
-	virtual void GetParams(CMaterialParams &Params) const
-	{}
-	virtual bool IsTranslucent() const
+	virtual bool Bind()
 	{
 		return false;
 	}
@@ -190,6 +213,17 @@ public:
 	{
 		return false;
 	}
+	void Lock();
+	void Unlock();
+
+	virtual void SetupGL();							// used by SetMaterial()
+	virtual void Release();							//!! make it protected
+	virtual void GetParams(CMaterialParams &Params) const
+	{}
+	virtual bool IsTranslucent() const
+	{
+		return false;
+	}
 
 	const char*				NormalUnpackExpr;
 
@@ -197,6 +231,7 @@ protected:
 	// rendering implementation fields
 	CShader					GLShader;
 	int						DrawTimestamp;			// timestamp for object validation
+	int						LockCount;
 		//?? may be use GLShader.DrawTimestamp only ?
 #endif // RENDERING
 };

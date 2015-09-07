@@ -83,6 +83,9 @@ const GameInfo GListOfGames[] = {
 #	if VANGUARD
 		G("Vanguard: Saga of Heroes", vang, GAME_Vanguard),
 #	endif
+#	if EOS
+		G("Echo of Soul", eos, GAME_EOS),
+#	endif
 #	if SPECIAL_TAGS
 		G2("Killing Floor"),
 #	endif
@@ -167,6 +170,7 @@ const GameInfo GListOfGames[] = {
 		G("Batman: Arkham Asylum",  batman,  GAME_Batman),
 		G("Batman: Arkham City",    batman2, GAME_Batman2),
 		G("Batman: Arkham Origins", batman3, GAME_Batman3),
+		G("Batman: Arkham Knight",  batman4, GAME_Batman4),
 #	endif
 #	if CRIMECRAFT
 		G("Crime Craft", crime, GAME_CrimeCraft),
@@ -325,6 +329,9 @@ const GameInfo GListOfGames[] = {
 #	if GIGANTIC
 		G("Gigantic", gigantic, GAME_Gigantic),
 #	endif
+#	if METRO_CONF
+		G("Metro Conflict", metroconf, GAME_MetroConflict),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4
@@ -338,6 +345,8 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.5", ue4.5, GAME_UE4_5),
 		G("Unreal engine 4.6", ue4.6, GAME_UE4_6),
 		G("Unreal engine 4.7", ue4.7, GAME_UE4_7),
+		G("Unreal engine 4.8", ue4.8, GAME_UE4_8),
+		G("Unreal engine 4.9", ue4.9, GAME_UE4_9),
 #endif // UNREAL4
 
 	// end marker
@@ -646,6 +655,7 @@ void FArchive::DetectGame()
 	if ( (ArVer == 806 || ArVer == 807) &&
 		 (ArLicenseeVer == 103 || ArLicenseeVer == 137 || ArLicenseeVer == 138) )
 		SET(GAME_Batman3);
+	if (ArVer == 863 && ArLicenseeVer == 32995)	SET(GAME_Batman4);
 #endif
 #if DMC
 	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);
@@ -771,7 +781,7 @@ struct UEVersionMap
 };
 
 #define G(game,ver)		{ game, ver },
-// Mapping between GAME_UE4_n and
+// Mapping between GAME_UE4_n and VER_UE4_n
 #define M(ver)			{ GAME_UE4_##ver, VER_UE4_##ver }
 
 static const UEVersionMap ueVersions[] =
@@ -792,7 +802,7 @@ static const UEVersionMap ueVersions[] =
 
 	// Unreal engine 4
 #if UNREAL4
-	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7)
+	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7), M(8)
 #endif
 };
 

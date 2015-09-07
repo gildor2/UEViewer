@@ -58,7 +58,7 @@ inline void ComputeBounds(const T *Data, int NumVerts, int Stride, CVec3 &Mins, 
 struct CVertexShare
 {
 	TArray<CVec3>	Points;
-	TArray<CVec3>	Normals;
+	TArray<CPackedNormal> Normals;
 	TArray<int>		WedgeToVert;
 	TArray<int>		VertToWedge;
 	int				WedgeIndex;
@@ -78,24 +78,23 @@ struct CVertexShare
 		Normals.Empty(NumVerts);
 		WedgeToVert.Empty(NumVerts);
 		VertToWedge.Empty(NumVerts);
-		VertToWedge.Add(NumVerts);
+		VertToWedge.AddZeroed(NumVerts);
 #if USE_HASHING
 		// compute bounds for better hashing
 		ComputeBounds(&Verts->Position, NumVerts, VertexSize, Mins, Maxs);
 		VectorSubtract(Maxs, Mins, Extents);
 		Extents[0] += 1; Extents[1] += 1; Extents[2] += 1; // avoid zero divide
-		HashNext.Empty(NumVerts);
-		HashNext.Add(NumVerts);
 		// initialize Hash and HashNext with -1
+		HashNext.Init(-1, NumVerts);
 		memset(Hash, -1, sizeof(Hash));
-		for (int i = 0; i < NumVerts; i++)
-			HashNext[i] = -1;
 #endif // USE_HASHING
 	}
 
-	int AddVertex(const CVec3 &Pos, const CVec3 &Normal)
+	int AddVertex(const CVec3 &Pos, CPackedNormal Normal)
 	{
 		int PointIndex = -1;
+
+		Normal.Data &= 0xFFFFFF;		// clear W component which is used for binormal computation
 
 #if USE_HASHING
 		// compute hash
@@ -121,8 +120,8 @@ struct CVertexShare
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.AddItem(Pos);
-			Normals.AddItem(Normal);
+			PointIndex = Points.Add(Pos);
+			Normals.Add(Normal);
 #if USE_HASHING
 			// add to Hash
 			HashNext[PointIndex] = Hash[h];
@@ -131,7 +130,7 @@ struct CVertexShare
 		}
 
 		// remember vertex <-> wedge map
-		WedgeToVert.AddItem(PointIndex);
+		WedgeToVert.Add(PointIndex);
 		VertToWedge[PointIndex] = WedgeIndex++;
 
 		return PointIndex;

@@ -24,7 +24,7 @@ struct gl_config_t
 
 extern gl_config_t gl_config;
 
-#define GL_SUPPORT(ext)	(gl_config.extensionMask & (ext))
+#define GL_SUPPORT(ext)	( (gl_config.extensionMask & (ext)) != 0 )
 
 extern bool GUseGLSL;
 

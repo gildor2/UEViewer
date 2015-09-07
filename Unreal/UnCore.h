@@ -117,13 +117,13 @@ FArchive *appCreateFileReader(const CGameFileInfo *info);
 typedef bool (*EnumGameFilesCallback_t)(const CGameFileInfo*, void*);
 void appEnumGameFilesWorker(EnumGameFilesCallback_t, const char *Ext = NULL, void *Param = NULL);
 
-template<class T>
+template<typename T>
 FORCEINLINE void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*, T&), const char* Ext, T& Param)
 {
 	appEnumGameFilesWorker((EnumGameFilesCallback_t)Callback, Ext, &Param);
 }
 
-template<class T>
+template<typename T>
 FORCEINLINE void appEnumGameFiles(bool (*Callback)(const CGameFileInfo*, T&), T& Param)
 {
 	appEnumGameFilesWorker((EnumGameFilesCallback_t)Callback, NULL, &Param);
@@ -149,51 +149,26 @@ class FName
 {
 public:
 	int			Index;
-#if UNREAL3
+#if UNREAL3 || UNREAL4
 	int			ExtraIndex;
-	bool		NameGenerated;
 #endif
 	const char	*Str;
 
 	FName()
 	:	Index(0)
 	,	Str("None")
-#if UNREAL3
+#if UNREAL3 || UNREAL4
 	,	ExtraIndex(0)
-	,	NameGenerated(false)
 #endif
 	{}
-
-#if UNREAL3
-	void AppendIndex()
-	{
-		if (NameGenerated || !ExtraIndex) return;
-		NameGenerated = true;
-		Str = appStrdupPool(va("%s_%d", Str, ExtraIndex-1));
-	}
-#endif // UNREAL3
-
-#if BIOSHOCK
-	void AppendIndexBio()
-	{
-		if (NameGenerated || !ExtraIndex) return;
-		NameGenerated = true;
-		Str = appStrdupPool(va("%s%d", Str, ExtraIndex-1));	// without "_" char
-	}
-#endif // BIOSHOCK
 
 	inline FName& operator=(const FName &Other)
 	{
 		Index = Other.Index;
-		Str   = Other.Str;
-#if UNREAL3
-		NameGenerated = Other.NameGenerated;
-		if (Other.NameGenerated)
-		{
-			// should duplicate generated names to avoid crash in destructor
-			Str = appStrdupPool(Other.Str);
-		}
+#if UNREAL3 || UNREAL4
+		ExtraIndex = Other.ExtraIndex;
 #endif // UNREAL3
+		Str = Other.Str;
 		return *this;
 	}
 
@@ -201,11 +176,15 @@ public:
 	{
 		Str = appStrdupPool(String);
 		Index = 0;
+#if UNREAL3 || UNREAL4
+		ExtraIndex = 0;
+#endif
 		return *this;
 	}
 
 	inline bool operator==(const FName& Other) const
 	{
+		// we're using appStrdupPool for FName strings, so perhaps comparison of pointers is enough here
 		return (Str == Other.Str) || (stricmp(Str, Other.Str) == 0);
 	}
 
@@ -266,6 +245,7 @@ enum EGame
 		GAME_XIII,
 		GAME_Vanguard,
 		GAME_AA2,
+		GAME_EOS,
 
 	GAME_VENGEANCE = 0x02100,	// variant of UE2
 		GAME_Tribes3,
@@ -298,6 +278,7 @@ enum EGame
 		GAME_Batman,
 		GAME_Batman2,
 		GAME_Batman3,
+		GAME_Batman4,
 		GAME_Borderlands,
 		GAME_AA3,
 		GAME_DarkVoid,
@@ -347,6 +328,7 @@ enum EGame
 		GAME_Alice,
 		GAME_DunDef,
 		GAME_Gigantic,
+		GAME_MetroConflict,
 
 	GAME_MIDWAY3   = 0x08100,	// variant of UE3
 		GAME_A51,
@@ -365,6 +347,8 @@ enum EGame
 		GAME_UE4_5,
 		GAME_UE4_6,
 		GAME_UE4_7,
+		GAME_UE4_8,
+		GAME_UE4_9,
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
@@ -377,6 +361,7 @@ enum EPlatform
 	PLATFORM_XBOX360,
 	PLATFORM_PS3,
 	PLATFORM_IOS,
+	PLATFORM_ANDROID,
 
 	PLATFORM_COUNT,
 };
@@ -461,7 +446,7 @@ public:
 
 	virtual void Seek64(int64 Pos)
 	{
-		if (Pos >= (1LL << 31)) appError("Seek64 %I64X", Pos);
+		if (Pos >= (1LL << 31)) appError("FArchive::Seek64(0x%llX)", Pos);
 		Seek((int)Pos);
 	}
 
@@ -516,11 +501,11 @@ public:
 
 	// Dummy implementation of Unreal type serialization
 
-	virtual FArchive& operator<<(FName &N)
+	virtual FArchive& operator<<(FName &/*N*/)
 	{
 		return *this;
 	}
-	virtual FArchive& operator<<(UObject *&Obj)
+	virtual FArchive& operator<<(UObject *&/*Obj*/)
 	{
 		return *this;
 	}
@@ -546,7 +531,8 @@ public:
 		return !strcmp(type, "FArchive");
 	}
 
-	template<class T> T* CastTo()
+	template<typename T>
+	T* CastTo()
 	{
 		if (IsA(T::StaticGetName()))
 			return static_cast<T*>(this);
@@ -706,6 +692,8 @@ public:
 	virtual bool Open();
 	virtual void Close();
 	virtual int64 GetFileSize64() const;
+
+	static void CleanupOnError();
 
 protected:
 	void FlushBuffer();
@@ -1082,6 +1070,40 @@ struct FBoxSphereBounds
 };
 
 
+struct FPackedNormal
+{
+	unsigned	Data;
+
+	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
+	{
+		return Ar << N.Data;
+	}
+
+	operator FVector() const
+	{
+		// "x / 127.5 - 1" comes from Common.usf, TangentBias() macro
+		FVector r;
+		r.X = ( Data        & 0xFF) / 127.5f - 1;
+		r.Y = ((Data >> 8 ) & 0xFF) / 127.5f - 1;
+		r.Z = ((Data >> 16) & 0xFF) / 127.5f - 1;
+		return r;
+	}
+
+	FPackedNormal &operator=(const FVector &V)
+	{
+		Data = int((V.X + 1) * 255)
+			+ (int((V.Y + 1) * 255) << 8)
+			+ (int((V.Z + 1) * 255) << 16);
+		return *this;
+	}
+
+	float GetW() const
+	{
+		return (Data >> 24) / 127.5f - 1;
+	}
+};
+
+
 #if UNREAL4
 
 struct FIntPoint
@@ -1124,7 +1146,8 @@ struct FTransform
 -----------------------------------------------------------------------------*/
 
 // Default typeinfo
-template<class T> struct TTypeInfo
+template<typename T>
+struct TTypeInfo
 {
 	enum { FieldSize = sizeof(T) };
 	enum { NumFields = 1         };
@@ -1134,12 +1157,14 @@ template<class T> struct TTypeInfo
 };
 
 
-template<class T1, class T2> struct IsSameType
+template<typename T1, typename T2>
+struct IsSameType
 {
 	enum { Value = 0 };
 };
 
-template<class T> struct IsSameType<T,T>
+template<typename T>
+struct IsSameType<T,T>
 {
 	enum { Value = 1 };
 };
@@ -1213,14 +1238,14 @@ SIMPLE_TYPE(FTransform, float)
 
 
 /*-----------------------------------------------------------------------------
-	TArray/TLazyArray templates
+	TArray class
 -----------------------------------------------------------------------------*/
 
 /*
  * NOTES:
  *	- FArray/TArray should not contain objects with virtual tables (no
  *	  constructor/destructor support)
- *	- should not use new[] and delete[] here, because compiler will alloc
+ *	- should not use new[] and delete[] here, because compiler will allocate
  *	  additional 'count' field to support correct delete[], but we use
  *	  appMalloc/appFree calls to allocate/release memory.
  */
@@ -1228,6 +1253,8 @@ SIMPLE_TYPE(FTransform, float)
 class FArray
 {
 	friend struct CTypeInfo;
+	friend class FString;
+	template<int N> friend class FStaticString;
 
 public:
 	FORCEINLINE FArray()
@@ -1248,6 +1275,10 @@ public:
 	FORCEINLINE int Num() const
 	{
 		return DataCount;
+	}
+	FORCEINLINE bool IsValidIndex(int index) const
+	{
+		return index >= 0 && index < DataCount;
 	}
 
 	void RawCopy(const FArray &Src, int elementSize);
@@ -1272,12 +1303,12 @@ protected:
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 
 	void Empty (int count, int elementSize);
-	void Add   (int count, int elementSize);
+	// insert 'count' items of size 'elementSize' at position 'index', memory will be zeroed
 	void Insert(int index, int count, int elementSize);
 	// remove items and then move next items to the position of removed items
 	void Remove(int index, int count, int elementSize);
-	// remove items and then fill the hole with items from array end
-	void FastRemove(int index, int count, int elementSize);
+	// remove items and then fill the hole with items from array's end
+	void RemoveAtSwap(int index, int count, int elementSize);
 
 	void* GetItem(int index, int elementSize) const;
 };
@@ -1289,14 +1320,15 @@ protected:
 
 FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 #if UNREAL3
-FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
+FArchive& SerializeBulkArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 #endif
 
 
 // NOTE: this container cannot hold objects, required constructor/destructor
 // (at least, Add/Insert/Remove functions are not supported, but can serialize
 // such data)
-template<class T> class TArray : public FArray
+template<typename T>
+class TArray : public FArray
 {
 public:
 	TArray()
@@ -1309,6 +1341,14 @@ public:
 	}
 	// data accessors
 
+	FORCEINLINE T* GetData()
+	{
+		return (T*)DataPtr;
+	}
+	FORCEINLINE const T* GetData() const
+	{
+		return (const T*)DataPtr;
+	}
 #if !DO_ASSERT
 	// version without verifications, very compact
 	FORCEINLINE T& operator[](int index)
@@ -1320,20 +1360,16 @@ public:
 		return *((T*)DataPtr + index);
 	}
 #elif DO_GUARD_MAX
-	// version with guardfunc instead of guard
+	// version with __FUNCSIG__
 	T& operator[](int index)
 	{
-		guardfunc;
-		assert(index >= 0 && index < DataCount);
+		if (!IsValidIndex(index)) appError("%s: index %d is out of range (%d)", __FUNCSIG__, index, DataCount);
 		return *((T*)DataPtr + index);
-		unguardf("%d/%d", index, DataCount);
 	}
 	const T& operator[](int index) const
 	{
-		guardfunc;
-		assert(index >= 0 && index < DataCount);
+		if (!IsValidIndex(index)) appError("%s: index %d is out of range (%d)", __FUNCSIG__, index, DataCount);
 		return *((T*)DataPtr + index);
-		unguardf("%d/%d", index, DataCount);
 	}
 #else // DO_ASSERT && !DO_GUARD_MAX
 	// common implementation for all types
@@ -1345,22 +1381,66 @@ public:
 	{
 		return *(T*)GetItem(index, sizeof(T));
 	}
-#endif
+#endif // DO_ASSERT && !DO_GUARD_MAX
 
-	FORCEINLINE int Add(int count = 1)
+	//!! Possible additions from UE4:
+	//!! Emplace(...)       = new(...)
+	//!! SetNum/SetNumUninitialized/SetNumZeroed
+
+	FORCEINLINE void Init(const T& value, int count)
 	{
-		int index = DataCount;
-		Insert(index, count);
-		return index;
+		Empty(count);
+		DataCount = count;
+		for (int i = 0; i < count; i++)
+			*((T*)DataPtr + i) = value;
 	}
 
-	FORCEINLINE void Insert(int index, int count = 1)
+	FORCEINLINE int Add(const T& item)
+	{
+		int index = AddUninitialized();
+		Item(index) = item;
+		return index;
+	}
+	FORCEINLINE int AddZeroed(int count = 1)
+	{
+		int index = DataCount;
+		FArray::Insert(index, count, sizeof(T));
+		return index;
+	}
+	FORCEINLINE int AddDefaulted(int count = 1)
+	{
+		int index = DataCount;
+		FArray::Insert(index, count, sizeof(T));
+		if (!TTypeInfo<T>::IsPod) Construct(index, count);
+		return index;
+	}
+	// There's no way to implement AddUninitialized - FArray functions always zero memory for newly allocated items
+	FORCEINLINE int AddUninitialized(int count = 1)
+	{
+		return AddZeroed(count);
+	}
+
+	FORCEINLINE void Insert(const T& item, int index)
+	{
+		InsertUninitialized(index, 1);
+		Item(index) = item;
+	}
+	FORCEINLINE void InsertZeroed(int index, int count = 1)
+	{
+		FArray::Insert(index, count, sizeof(T));
+	}
+	// This function doesn't exist in UE4
+	FORCEINLINE void InsertDefaulted(int index, int count = 1)
 	{
 		FArray::Insert(index, count, sizeof(T));
 		if (!TTypeInfo<T>::IsPod) Construct(index, count);
 	}
+	FORCEINLINE void InsertUninitialized(int index, int count = 1)
+	{
+		InsertZeroed(index, count);
+	}
 
-	FORCEINLINE void Remove(int index, int count = 1)
+	FORCEINLINE void RemoveAt(int index, int count = 1)
 	{
 		// destruct specified array items
 		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
@@ -1371,25 +1451,19 @@ public:
 	// Remove an item and copy last array's item(s) to the removed item position,
 	// so no array shifting performed. Could be used when order of array elements
 	// is not important.
-	FORCEINLINE void FastRemove(int index, int count = 1)
+	FORCEINLINE void RemoveAtSwap(int index, int count = 1)
 	{
 		// destruct specified array items
 		if (!TTypeInfo<T>::IsPod) Destruct(index, count);
 		// remove items from array
-		FArray::FastRemove(index, count, sizeof(T));
+		FArray::RemoveAtSwap(index, count, sizeof(T));
 	}
 
-	int AddItem(const T& item)
+	FORCEINLINE void RemoveSingle(const T& item)
 	{
-		int index = Add();
-		Item(index) = item;
-		return index;
-	}
-
-	FORCEINLINE T& AddItem()
-	{
-		int index = Add();
-		return Item(index);
+		int index = FindItem(item);
+		if (index >= 0)
+			RemoveAt(index);
 	}
 
 	int FindItem(const T& item, int startIndex = 0) const
@@ -1416,12 +1490,18 @@ public:
 		FArray::Empty(count, sizeof(T));
 	}
 
-	FORCEINLINE void FastEmpty()
+	// set new DataCount without reallocation if possible
+	FORCEINLINE void Reset(int count = 0)
 	{
-		// destruct all array items
-		if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
-		// set DataCount to 0 without reallocation
-		DataCount = 0;
+		if (MaxCount < count)
+		{
+			Empty(count);
+		}
+		else
+		{
+			if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
+			DataCount = 0;
+		}
 	}
 
 	FORCEINLINE void Sort(int (*cmpFunc)(const T*, const T*))
@@ -1456,6 +1536,24 @@ public:
 #endif
 	}
 
+#if UNREAL3
+	// Serialize an array, which file contents exactly matches in-memory contents.
+	// Whole array can be read using single read call. Package engine version should
+	// equals to game engine version, and endianness should match, otherwise per-element
+	// reading will be performed (as usual in TArray). Implemented in UE3 and UE4.
+	// Note: there is no reading optimization performed here (in umodel).
+	FORCEINLINE void BulkSerialize(FArchive& Ar)
+	{
+	#if DO_GUARD_MAX
+		guardfunc;
+	#endif
+		SerializeBulkArray(Ar, *this, SerializeArray);
+	#if DO_GUARD_MAX
+		unguard;
+	#endif
+	}
+#endif // UNREAL3
+
 	// serializer helper; used from 'operator<<(FArchive, TArray<>)' only
 	static void SerializeItem(FArchive &Ar, void *item)
 	{
@@ -1464,7 +1562,7 @@ public:
 		Ar << *(T*)item;		// serialize item
 	}
 
-private:
+protected:
 	// disable array copying
 	TArray(const TArray &Other)
 	:	FArray()
@@ -1472,6 +1570,12 @@ private:
 	TArray& operator=(const TArray &Other)
 	{
 		return this;
+	}
+	// Helper function to reduce TLazyArray etc operator<<'s code size.
+	// Used as C-style wrapper around TArray<>::operator<<().
+	static FArchive& SerializeArray(FArchive &Ar, void *Array)
+	{
+		return Ar << *(TArray<T>*)Array;
 	}
 	// fast version of operator[] without assertions (may be used in safe code)
 	FORCEINLINE T& Item(int index)
@@ -1494,7 +1598,8 @@ private:
 	}
 };
 
-template<class T> inline void Exchange(TArray<T>& A, TArray<T>& B)
+template<typename T>
+inline void Exchange(TArray<T>& A, TArray<T>& B)
 {
 	const int size = sizeof(TArray<T>);
 	byte buffer[size];
@@ -1503,8 +1608,11 @@ template<class T> inline void Exchange(TArray<T>& A, TArray<T>& B)
 	memcpy(&B, buffer, size);
 }
 
-// Binary-compatible array, but with no allocations inside
-template<class T, int N> class TStaticArray : public TArray<T>
+// Binary-compatible array, but with inline allocation. FArray has helper function
+// IsStatic() for this class. The array size is not limited to 'N' - if more items
+// will be required, memory will be allocated.
+template<typename T, int N>
+class TStaticArray : public TArray<T>
 {
 	// We require "using TArray<T>::*" for gcc 3.4+ compilation
 	// http://gcc.gnu.org/gcc-3.4/changes.html
@@ -1523,11 +1631,13 @@ protected:
 	T		StaticData[N];
 };
 
-template<class T> FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
+template<typename T>
+FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
 	guard(TArray::operator new);
 	assert(size == sizeof(T));
-	return &Array.AddItem();
+	int index = Array.AddUninitialized(1);
+	return Array.GetData() + index;
 	unguard;
 }
 
@@ -1542,87 +1652,32 @@ void SkipFixedArray(FArchive &Ar, int ItemSize);
 // it 1st time only disk position is remembered, and later array can be
 // read from file when needed)
 
-template<class T> class TLazyArray : public TArray<T>
+template<typename T>
+class TLazyArray : public TArray<T>
 {
-	// Helper function to reduce TLazyArray<>::operator<<() code size.
-	// Used as C-style wrapper around TArray<>::operator<<().
-	static FArchive& SerializeArray(FArchive &Ar, void *Array)
-	{
-		return Ar << *(TArray<T>*)Array;
-	}
-
 #if DO_GUARD_MAX
 	friend FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
 		guardfunc;
-		return SerializeLazyArray(Ar, A, SerializeArray);
+		return SerializeLazyArray(Ar, A, TArray<T>::SerializeArray);
 		unguard;
 	}
 #else
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TLazyArray &A)
 	{
-		return SerializeLazyArray(Ar, A, SerializeArray);
+		return SerializeLazyArray(Ar, A, TArray<T>::SerializeArray);
 	}
 #endif
 };
 
 
 void SkipLazyArray(FArchive &Ar);
-
-
 #if UNREAL3
-
-// NOTE: real class name is unknown; other suitable names: TCookedArray, TPodArray.
-// Purpose in UE: array, which file contents exactly the same as in-memory
-// contents. Whole array can be read using single read call. Package
-// engine version should equals to game engine version, otherwise per-element
-// reading will be performed (as usual in TArray)
-// There is no reading optimization performed here (in umodel)
-
-template<class T> class TRawArray : protected TArray<T>
-{
-public:
-	// Helper function to reduce TRawArray<>::operator<<() code size.
-	// Used as C-style wrapper around TArray<>::operator<<().
-	static FArchive& SerializeArray(FArchive &Ar, void *Array)
-	{
-		return Ar << *(TArray<T>*)Array;
-	}
-
-#if DO_GUARD_MAX
-	friend FArchive& operator<<(FArchive &Ar, TRawArray &A)
-	{
-		guardfunc;
-		return SerializeRawArray(Ar, A, SerializeArray);
-		unguard;
-	}
-#else
-	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TRawArray &A)
-	{
-		return SerializeRawArray(Ar, A, SerializeArray);
-	}
-#endif
-
-protected:
-	// disallow direct creation of TRawArray, this is a helper class with a
-	// different serializer
-	TRawArray()
-	{}
-};
-
-void SkipRawArray(FArchive &Ar, int Size = -1);
-
-// helper function for RAW_ARRAY macro
-template<class T> inline TRawArray<T>& ToRawArray(TArray<T> &Arr)
-{
-	return (TRawArray<T>&)Arr;
-}
-
-#define RAW_ARRAY(Arr)		ToRawArray(Arr)
-
+void SkipBulkArrayData(FArchive &Ar, int Size = -1);
 #endif // UNREAL3
 
-template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
+template<typename T1, typename T2>
+inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
 {
 	if (IsSameType<T1,T2>::Value && TTypeInfo<T1>::IsPod)
 	{
@@ -1636,7 +1691,7 @@ template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const 
 	Dst.Empty(Count);
 	if (Count)
 	{
-		Dst.Add(Count);
+		Dst.AddUninitialized(Count);
 		T1 *pDst = (T1*)Dst.GetData();
 		T2 *pSrc = (T2*)Src.GetData();
 		do		// Count is > 0 here - checked above, so "do ... while" is more suitable (and more compact)
@@ -1652,7 +1707,8 @@ template<typename T1, typename T2> inline void CopyArray(TArray<T1> &Dst, const 
 -----------------------------------------------------------------------------*/
 
 // Very simple class, required only for serialization
-template<class TK, class TV> struct TMapPair
+template<typename TK, typename TV>
+struct TMapPair
 {
 	TK		Key;
 	TV		Value;
@@ -1664,7 +1720,8 @@ template<class TK, class TV> struct TMapPair
 };
 
 
-template<class TK, class TV> class TMap : public TArray<TMapPair<TK, TV> >
+template<typename TK, typename TV>
+class TMap : public TArray<TMapPair<TK, TV> >
 {
 public:
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TMap &Map)
@@ -1673,7 +1730,8 @@ public:
 	}
 };
 
-template<class TK, class TV, int N> class TStaticMap : public TStaticArray<TMapPair<TK, TV>, N>
+template<typename TK, typename TV, int N>
+class TStaticMap : public TStaticArray<TMapPair<TK, TV>, N>
 {
 public:
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TStaticMap &Map)
@@ -1684,10 +1742,32 @@ public:
 
 
 /*-----------------------------------------------------------------------------
+	TArray of T[N] template
+-----------------------------------------------------------------------------*/
+
+template<typename T, int N>
+struct TArrayOfArrayItem
+{
+	T	Data[N];
+
+	friend FArchive& operator<<(FArchive &Ar, TArrayOfArrayItem &S)
+	{
+		for (int i = 0; i < N; i++)
+			Ar << S.Data[i];
+		return Ar;
+	}
+};
+
+template<typename T, int N>
+class TArrayOfArray : public TArray<TArrayOfArrayItem<T, N> >
+{
+};
+
+/*-----------------------------------------------------------------------------
 	FString
 -----------------------------------------------------------------------------*/
 
-class FString : public TArray<char>
+class FString
 {
 public:
 	FString()
@@ -1706,42 +1786,91 @@ public:
 	// detached string in destructor
 	char* Detach();
 
-	FORCEINLINE bool IsEmpty()
+	FORCEINLINE int Len() const
 	{
-		return Num() <= 1;
+		return Data.Num() <= 1 ? 0 : Data.Num() - 1;
+	}
+
+	FORCEINLINE TArray<char>& GetDataArray()
+	{
+		return Data;
+	}
+
+	FORCEINLINE const TArray<char>& GetDataArray() const
+	{
+		return Data;
+	}
+
+	FORCEINLINE void Empty(int count = 0)
+	{
+		Data.Empty(count);
+	}
+
+	FORCEINLINE bool IsEmpty() const
+	{
+		return Data.Num() <= 1;
+	}
+
+	FORCEINLINE FString& AppendChar(char ch)
+	{
+		int index = Data.AddUninitialized();
+		Data[index] = ch;
+	}
+
+	FORCEINLINE void RemoveAt(int index, int count = 1)
+	{
+		Data.RemoveAt(index, count);
+	}
+
+	char& operator[](int index)
+	{
+		guard(FString::operator[]);
+		assert(index >= 0 && index < Data.Num());
+		return Data.GetData()[index];
+		unguardf("%d/%d", index, Data.Num());
+	}
+	const char& operator[](int index) const
+	{
+		guard(FString::operator[]);
+		assert(index >= 0 && index < Data.Num());
+		return Data.GetData()[index];
+		unguardf("%d/%d", index, Data.Num());
 	}
 
 	// convert string to char* - use "*Str"
-	//!! WARNING: could crash if string is empty
 	FORCEINLINE const char *operator*() const
 	{
-		return (char*)DataPtr;
+		return IsEmpty() ? "" : Data.GetData();
 	}
 	FORCEINLINE operator const char*() const
 	{
-		return (char*)DataPtr;
+		return IsEmpty() ? "" : Data.GetData();
 	}
 	// comparison
-	FORCEINLINE bool operator==(const FString& other) const
+	friend FORCEINLINE bool operator==(const FString& A, const FString& B)
 	{
-		return !strcmp((char*)DataPtr, (char*)other.DataPtr);
+		return !strcmp(*A, *B);
 	}
-	FORCEINLINE bool operator==(const char* other) const
+	friend FORCEINLINE bool operator==(const FString& A, const char* B)
 	{
-		return !strcmp((char*)DataPtr, other);
+		return !strcmp(*A, B);
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);
+
+protected:
+	TArray<char>		Data;
 };
 
 // Binary-compatible string, but with no allocations inside
-template<int N> class FStaticString : public FString
+template<int N>
+class FStaticString : public FString
 {
 public:
 	FORCEINLINE FStaticString()
 	{
-		DataPtr = (void*)&StaticData[0];
-		MaxCount = N;
+		Data.DataPtr = (void*)&StaticData[0];
+		Data.MaxCount = N;
 	}
 
 	// operators
@@ -1835,10 +1964,10 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 #if UNREAL4
 
-#define BULKDATA_PayloadAtEndOfFile		0x01		//?? bulk data stored at the end of this file
+#define BULKDATA_PayloadAtEndOfFile		0x01		// bulk data stored at the end of this file, data offset added to global data offset in package
 //#define BULKDATA_CompressedZlib		0x02
 //#define BULKDATA_Unused				0x20
-#define BULKDATA_ForceInlinePayload		0x40		//?? bulk data stored immediately after header
+#define BULKDATA_ForceInlinePayload		0x40		// bulk data stored immediately after header
 
 #endif // UNREAL4
 
@@ -1863,12 +1992,18 @@ struct FByteBulkData //?? separate FUntypedBulkData
 
 	virtual ~FByteBulkData()
 	{
-		if (BulkData) appFree(BulkData);
+		ReleaseData();
 	}
 
 	virtual int GetElementSize() const
 	{
 		return 1;
+	}
+
+	void ReleaseData()
+	{
+		if (BulkData) appFree(BulkData);
+		BulkData = NULL;
 	}
 
 	// support functions
@@ -1972,6 +2107,11 @@ enum
 	VER_UE4_6 = 413,
 		VER_UE4_RENAME_WIDGET_VISIBILITY = 416,			// used for UStaticMesh versioning
 	VER_UE4_7 = 434,
+		VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG = 441,
+		VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION = 444,
+	VER_UE4_8 = 451,
+		VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
+	VER_UE4_9 = 482,
 };
 
 class FStripDataFlags

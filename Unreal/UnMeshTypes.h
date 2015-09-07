@@ -2,45 +2,6 @@
 #define __UNMESHTYPES_H__
 
 /*-----------------------------------------------------------------------------
-	4-byte packed normal vector
------------------------------------------------------------------------------*/
-
-// used in Bioshock and in UE3
-struct FPackedNormal
-{
-	unsigned				Data;
-
-	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
-	{
-		return Ar << N.Data;
-	}
-
-	operator FVector() const
-	{
-		// "x / 127.5 - 1" comes from Common.usf, TangentBias() macro
-		FVector r;
-		r.X = ( Data        & 0xFF) / 127.5f - 1;
-		r.Y = ((Data >> 8 ) & 0xFF) / 127.5f - 1;
-		r.Z = ((Data >> 16) & 0xFF) / 127.5f - 1;
-		return r;
-	}
-
-	FPackedNormal &operator=(const FVector &V)
-	{
-		Data = int((V.X + 1) * 255)
-			+ (int((V.Y + 1) * 255) << 8)
-			+ (int((V.Z + 1) * 255) << 16);
-		return *this;
-	}
-
-	float GetW() const
-	{
-		return (Data >> 24) / 127.5 - 1;
-	}
-};
-
-
-/*-----------------------------------------------------------------------------
 	Different compressed quaternion types
 -----------------------------------------------------------------------------*/
 
@@ -189,6 +150,28 @@ struct FVectorIntervalFixed32
 SIMPLE_TYPE(FVectorIntervalFixed32, unsigned)
 
 
+struct FVectorIntervalFixed32Bat4
+{
+	unsigned		X:10, Y:10, Z:10;
+
+	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
+	{
+		FVector r;
+		r.X = X / 1023.0f * Ranges.X + Mins.X;
+		r.Y = Y / 1023.0f * Ranges.Y + Mins.Y;
+		r.Z = Z / 1023.0f * Ranges.Z + Mins.Z;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed32Bat4 &V)
+	{
+		return Ar << GET_DWORD(V);
+	}
+};
+
+SIMPLE_TYPE(FVectorIntervalFixed32Bat4, unsigned)
+
+
 // Similar to FVectorIntervalFixed32 used in animation, but has different X/Y/Z bit count.
 // Used for GPU skin with compressed position. It looks like original UE3 has permitted use
 // of this data type for XBox360 and PS3 builds only.
@@ -236,7 +219,7 @@ struct FVectorIntervalFixed48Bio
 SIMPLE_TYPE(FVectorIntervalFixed48Bio, word)
 
 
-struct FVectorIntervalFixed64Bio
+struct FVectorIntervalFixed64
 {
 	short			X, Y, Z, W;
 
@@ -249,13 +232,13 @@ struct FVectorIntervalFixed64Bio
 		return r;
 	}
 
-	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed64Bio &V)
+	friend FArchive& operator<<(FArchive &Ar, FVectorIntervalFixed64 &V)
 	{
 		return Ar << V.X << V.Y << V.Z << V.W;
 	}
 };
 
-SIMPLE_TYPE(FVectorIntervalFixed64Bio, word)
+SIMPLE_TYPE(FVectorIntervalFixed64, word)
 
 
 struct FQuatFloat32NoW
@@ -285,6 +268,27 @@ struct FQuatFloat32NoW
 };
 
 SIMPLE_TYPE(FQuatFloat32NoW, unsigned)
+
+
+struct FVectorHalf
+{
+	short				X, Y, Z;
+
+	friend FArchive& operator<<(FArchive &Ar, FVectorHalf &v)
+	{
+		return Ar << v.X << v.Y << v.Z;
+	}
+	operator FVector() const
+	{
+		FVector r;
+		r.X = half2float(X);
+		r.Y = half2float(Y);
+		r.Z = half2float(Z);
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FVectorHalf, short);
 
 
 #if BATMAN

@@ -15,18 +15,20 @@
 
 /*!!---------------------------------------------------------------------------
 BUGS:
-- some animations has bugs (good sample - Frontend_Enviro.upk - it has a lot
-  of static poses, sometimes legs are turned inside-out)
-  - try to add some debug information to CAnimSequence - store information
-    about track encoding, gather statistics: possibly I have bug in one (or
-    more) of rotation decoders; can view information with DEBUG_DECOMPRESS too
-- Catwoman animation where she is hanging on her arms (arms are "up"):
+- Batman 4:
+  t -path=data/3/Batman4 -notex Film_B1_Cine_Ch23_Gordon_Flashback.upk Gordon_BM3_Skin_Head -anim=Baked_CH02_Gordon_Flashback_BM_FACE_0
+    face mesh, with bad looking animation - verified everything, works correctly,
+    but the mesh still looking badly
+  t -path=data/3/Batman4 -notex Ace_A1 ACE_A1_PlatformDestruction -anim=Baked_ACE_A1_PlatformDestruction_Anims_0
+    this mesh has AnimRotationOnly=true, but should be false; there's some object
+    quickly flying around while animating - perhaps design bug?
+- CHECK: Catwoman animation where she is hanging on her arms (arms are "up"):
   shoulders are ugly - probably this could be fixed with animation of Twist
   bones
 -----------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------
-	Batman 2 specific mesh code
+	Batman 2+ specific mesh code
 -----------------------------------------------------------------------------*/
 
 /*
@@ -67,7 +69,7 @@ void USkeletalMesh3::FixBatman2Skeleton()
 		are animated proceduraly in game (for less animation memory footprint?) so
 		these bones has no tracks in UAnimSet. Unfortunately, these bones are attached
 		to incorrect parent bone (legs has separate hierarchy at all!) so we must
-		reattach bones for better place.
+		reattach thesee bones to a better place.
 	*/
 
 	//?? use EnableTwistBoneFixers and EnableClavicleFixer vars
@@ -93,6 +95,8 @@ void USkeletalMesh3::FixBatman2Skeleton()
 		if (i)	// do not rotate root bone
 			Coords[B.ParentIndex].UnTransformCoords(BC, BC);
 	}
+
+	int NumFixedBones = 0;
 
 	// verify all bones
 	for (i = 0; i < NumBones; i++)
@@ -124,9 +128,13 @@ void USkeletalMesh3::FixBatman2Skeleton()
 		Coords[NewParent].TransformCoords(Coords[i], BC);
 		B.Position    = BC.origin;
 		B.Orientation.FromAxis(BC.axis);
+
+		NumFixedBones++;
 	}
 
 	Mesh->SortBones();
+
+	if (NumFixedBones > 0) appPrintf("Fixed Batman skeleton: %d/%d bones\n", NumFixedBones, NumBones);
 }
 
 
@@ -176,12 +184,15 @@ index stored at <offset of bone indices> position.
 Interval data stored immediately after bone indices, i.e. at position
 <offset of bone indices> + <number of bones>. Each bone has own interval set.
 
+Batman4 has more than 256 animated bones, so layout of data structures is
+a bit different.
+
 -----------------------------------------------------------------------------*/
 
 
 struct FAnimZipHeader
 {
-	// "single track" - camera?
+	// "single track" - camera? not used here
 	int						SingleRotationOffset;		// < 0 = no track
 	int						SingleTranslationOffset;	// < 0 = no track
 	int						RotationCount;
@@ -206,6 +217,16 @@ enum EAnimZipTranslationScaleCodec
 	AZTSC_MAX,
 };
 
+#if ANIM_DEBUG_INFO
+static const char* TranslationCodecName[] =
+{
+	"Float_128",
+	"NoScale_Float_96",
+	"NoScale_Interval_Fixed_48",
+	"NoScale_Interval_Fixed_24",
+};
+#endif
+
 enum EAnimZipRotationCodec
 {
 	AZRC_QuatMax_48,
@@ -218,17 +239,50 @@ enum EAnimZipRotationCodec
 	AZRC_MAX,
 };
 
+#if ANIM_DEBUG_INFO
+static const char* RotationCodecName[] =
+{
+	"QuatMax_48",
+	"QuatMax_40",
+	"QuatRelative_32",
+	"QuatRelative_24",
+	"QuatRelative_16",
+	"FixedAxis_16",
+	"FixedAxis_8",
+};
+#endif
+
 struct FAnimZipTrack
 {
-	byte					Codec;
-	byte					NumBones;
+	word					NumBones;
 	word					NumKeys;
 	int						BoneInfoOffset;
 	int						CompressedDataOffset;
+	byte					Codec;
 
 	friend FArchive& operator<<(FArchive &Ar, FAnimZipTrack &T)
 	{
-		return Ar << T.Codec << T.NumBones << T.NumKeys << T.BoneInfoOffset << T.CompressedDataOffset;
+		if (Ar.Game < GAME_Batman4)
+		{
+			T.NumBones = 0;
+			Ar << T.Codec;
+			Ar << (byte&)T.NumBones;		// 8-bit bone index
+			Ar << T.NumKeys;
+			Ar << T.BoneInfoOffset;
+			Ar << T.CompressedDataOffset;
+		}
+		else
+		{
+			assert(Ar.Game == GAME_Batman4);
+			Ar << T.NumBones;				// 16-bit bone index
+			Ar << T.NumKeys;
+			Ar << T.BoneInfoOffset;
+			Ar << T.CompressedDataOffset;
+			int Codec;
+			Ar << Codec;
+			T.Codec = Codec & 0xFF;
+		}
+		return Ar;
 	}
 };
 
@@ -247,14 +301,32 @@ static int FindTrack(int Bone, FArchive &Ar, FAnimZipTrack &T, int Pos, int Coun
 		Pos = Ar.Tell();
 		// find bone
 		Ar.Seek(T.BoneInfoOffset);
-		for (int b = 0; b < T.NumBones; b++)
+		if (Ar.Game < GAME_Batman4)
 		{
-			byte b0;
-			Ar << b0;
-			if (b0 == Bone)
+			// find bone in byte array
+			for (int b = 0; b < T.NumBones; b++)
 			{
-				TrackIndex = b;
-				break;
+				byte b0;
+				Ar << b0;
+				if (b0 == Bone)
+				{
+					TrackIndex = b;
+					break;
+				}
+			}
+		}
+		else
+		{
+			// find bone in word array
+			for (int b = 0; b < T.NumBones; b++)
+			{
+				word b0;
+				Ar << b0;
+				if (b0 == Bone)
+				{
+					TrackIndex = b;
+					break;
+				}
 			}
 		}
 	}
@@ -359,15 +431,23 @@ static CQuat FinishQuatFixedAxis(int Shift, unsigned Value, byte *Interval)
 }
 
 
-static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int Pos, int Count, UAnimSet *Owner)
+static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int Pos, int Count, UAnimSet *Owner)
 {
 	guard(FindAndDecodeRotation);
 
 	FAnimZipTrack T;
 	int TrackIndex = FindTrack(Bone, Ar, T, Pos, Count, Owner, "rotation");
-	if (TrackIndex < 0) return;
+	if (TrackIndex < 0) return -1;
 
-	int IntervalDataOffset = T.BoneInfoOffset + T.NumBones;
+	int IntervalDataOffset;
+	if (Ar.Game < GAME_Batman4)
+	{
+		IntervalDataOffset = T.BoneInfoOffset + T.NumBones;		// bone index is byte
+	}
+	else
+	{
+		IntervalDataOffset = T.BoneInfoOffset + T.NumBones * 2;	// bone index is word
+	}
 	Track.KeyQuat.Empty(T.NumKeys);
 
 	switch (T.Codec)
@@ -381,12 +461,12 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 				Ar.Serialize(b, 6);
 				CQuat q = FinishQuatMax(
 					15,
-					((b[0] << 8) | b[1]) & 0x7FFF,			// first 2 bytes, big-endian
-					((b[2] << 8) | b[3]) & 0x7FFF,			// next 2 bytes
+					((b[2] << 8) | b[3]) & 0x7FFF,			// 2nd 2 bytes, big-endian
+					((b[0] << 8) | b[1]) & 0x7FFF,			// 1st 2 bytes, big-endian
 					((b[4] << 8) | b[5]) & 0x7FFF,			// last 2 bytes
 					((b[2] >> 6) & 2) | (b[4] >> 7)
 				);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -405,7 +485,7 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 					(((b[3] << 8) | b[4]) >> 4) & 0xFFF,	// DDE
 					b[4] & 3								// E
 				);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -422,7 +502,7 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 				Ar.Serialize(b, 4);
 				unsigned val32 = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
 				CQuat q = FinishQuatRelative(10, (val32 >> 20) & 0x3FF, (val32 >> 10) & 0x3FF, val32 & 0x3FF, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -438,7 +518,7 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 				byte b[3];
 				Ar.Serialize(b, 3);
 				CQuat q = FinishQuatRelative(8, b[0], b[1], b[2], Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -455,7 +535,7 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 				Ar.Serialize(b, 2);
 				unsigned val32 = (b[0] << 8) | b[1];
 				CQuat q = FinishQuatRelative(5, (val32 >> 10) & 0x1F, (val32 >> 5) & 0x1F, val32 & 0x1F, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -471,7 +551,7 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 				word w;
 				Ar << w;
 				CQuat q = FinishQuatFixedAxis(16, w, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -487,7 +567,7 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 				byte b;
 				Ar << b;
 				CQuat q = FinishQuatFixedAxis(8, b, Interval);
-				Track.KeyQuat.AddItem(q);
+				Track.KeyQuat.Add(q);
 			}
 		}
 		break;
@@ -496,19 +576,29 @@ static void FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int
 		appError("Unknown rotation codec %d", T.Codec);
 	}
 
+	return T.Codec;
+
 	unguard;
 }
 
 
-static void FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, int Pos, int Count, UAnimSet *Owner)
+static int FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, int Pos, int Count, UAnimSet *Owner)
 {
 	guard(FindAndDecodeTranslation);
 
 	FAnimZipTrack T;
 	int TrackIndex = FindTrack(Bone, Ar, T, Pos, Count, Owner, "translation");
-	if (TrackIndex < 0) return;
+	if (TrackIndex < 0) return -1;
 
-	int IntervalDataOffset = T.BoneInfoOffset + T.NumBones;
+	int IntervalDataOffset;
+	if (Ar.Game < GAME_Batman4)
+	{
+		IntervalDataOffset = T.BoneInfoOffset + T.NumBones;		// bone index is byte
+	}
+	else
+	{
+		IntervalDataOffset = T.BoneInfoOffset + T.NumBones * 2;	// bone index is word
+	}
 	Track.KeyPos.Empty(T.NumKeys);
 
 	switch (T.Codec)
@@ -521,7 +611,7 @@ static void FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, 
 				FVector v;
 				float	f;
 				Ar << v << f;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;
@@ -533,7 +623,7 @@ static void FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, 
 				Ar.Seek(T.CompressedDataOffset + (TrackIndex + T.NumBones * i) * 12);
 				FVector v;
 				Ar << v;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;
@@ -554,7 +644,7 @@ static void FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, 
 				v.X = vi[0] / 32767.0f * Ranges.X + Mins.X;
 				v.Y = vi[1] / 32767.0f * Ranges.Y + Mins.Y;
 				v.Z = vi[2] / 32767.0f * Ranges.Z + Mins.Z;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;
@@ -575,7 +665,7 @@ static void FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, 
 				v.X = vi[0] / 127.0f * Ranges.X + Mins.X;
 				v.Y = vi[1] / 127.0f * Ranges.Y + Mins.Y;
 				v.Z = vi[2] / 127.0f * Ranges.Z + Mins.Z;
-				Track.KeyPos.AddItem(CVT(v));
+				Track.KeyPos.Add(CVT(v));
 			}
 		}
 		break;
@@ -583,6 +673,8 @@ static void FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, 
 	default:
 		appError("Unknown translation codec %d", T.Codec);
 	}
+
+	return T.Codec;
 
 	unguard;
 }
@@ -603,23 +695,49 @@ void UAnimSequence::DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) cons
 	Reader << Hdr;
 
 	int NumTracks = Owner->TrackBoneNames.Num();
-	assert(NumTracks < 256);		// internal restriction
 	Dst->Tracks.Empty(NumTracks);
+
+#if ANIM_DEBUG_INFO
+	int RotationCodecUsed[AZRC_MAX];
+	int TranslationCodecUsed[AZTSC_MAX];
+	memset(&RotationCodecUsed, 0, sizeof(RotationCodecUsed));
+	memset(&TranslationCodecUsed, 0, sizeof(TranslationCodecUsed));
+#endif
 
 	int Bone;
 	for (Bone = 0; Bone < NumTracks; Bone++)
 	{
 		// decompress track
 		CAnimTrack *Track = new (Dst->Tracks) CAnimTrack;
-		FindAndDecodeRotation(Bone, Reader, *Track, Hdr.RotationOffset, Hdr.RotationCount, Owner);
-		FindAndDecodeTranslation(Bone, Reader, *Track, Hdr.TranslationOffset, Hdr.TranslationCount, Owner);
+		int RotationCodec = FindAndDecodeRotation(Bone, Reader, *Track, Hdr.RotationOffset, Hdr.RotationCount, Owner);
+		int TranslationCodec = FindAndDecodeTranslation(Bone, Reader, *Track, Hdr.TranslationOffset, Hdr.TranslationCount, Owner);
 		// fix quaternions
 		if (Bone > 0)
 		{
 			for (int i = 0; i < Track->KeyQuat.Num(); i++)
 				Track->KeyQuat[i].Conjugate();
 		}
+#if ANIM_DEBUG_INFO
+		if (RotationCodec >= 0) RotationCodecUsed[RotationCodec]++;
+		if (TranslationCodec >= 0) TranslationCodecUsed[TranslationCodec]++;
+#endif
 	}
+
+#if ANIM_DEBUG_INFO
+	char Buffer[1024];
+	Buffer[0] = 0;
+	appStrcatn(ARRAY_ARG(Buffer), S_RED "\n  Rotation:\n" S_WHITE);
+	for (int i = 0; i < ARRAY_COUNT(RotationCodecUsed); i++)
+	{
+		if (RotationCodecUsed[i] > 0) appStrcatn(ARRAY_ARG(Buffer), va("    %s [%d]\n", RotationCodecName[i], RotationCodecUsed[i]));
+	}
+	appStrcatn(ARRAY_ARG(Buffer), S_RED "  Translation:\n" S_WHITE);
+	for (int i = 0; i < ARRAY_COUNT(TranslationCodecUsed); i++)
+	{
+		if (TranslationCodecUsed[i] > 0) appStrcatn(ARRAY_ARG(Buffer), va("    %s [%d]\n", TranslationCodecName[i], TranslationCodecUsed[i]));
+	}
+	Dst->DebugInfo = Buffer;
+#endif // ANIM_DEBUG_INFO
 
 #if 0
 	// fix some missing tracks

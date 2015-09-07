@@ -30,6 +30,7 @@
 #define AA2				1		// America's Army 2
 #define VANGUARD		1		// Vanguard: Saga of Heroes
 #define LEAD			1		// UbiSoft LEAD Engine (Splinter Cell: Conviction)
+#define EOS				1		// Echo of Soul
 
 // UE2X
 #define UC1				1
@@ -107,6 +108,7 @@
 #define ALICE			1		// Alice: Madness Returns
 #define GIGANTIC		1
 #define MMH7			1		// Might and Magic Heroes 7
+#define METRO_CONF		1		// Metro Conflict
 //#define DUNDEF			1		// Dungeon Defenders - doesn't work, all export offsets are 0
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 

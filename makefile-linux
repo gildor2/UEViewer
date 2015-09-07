@@ -130,7 +130,7 @@ umodel : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_NV_LIBS = -msse -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -I ./libs/nvtt
+OPT_NV_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -I ./libs/nvtt
 
 $(OUT)/ColorBlock.o : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/ColorBlock.o ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -141,7 +141,7 @@ $(OUT)/DirectDrawSurface.o : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.o : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/Image.o ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -msse -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I UmodelTool -I UI
+OPT_MAIN = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof  -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I UmodelTool -I UI
 
 DEPENDS_1 = \
 	Core/Core.h \
@@ -417,8 +417,7 @@ DEPENDS_12 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMaterial3.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
 $(OUT_1)/UnRenderer.o : Unreal/UnRenderer.cpp $(DEPENDS_12)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnRenderer.o Unreal/UnRenderer.cpp
@@ -546,7 +545,6 @@ DEPENDS_18 = \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh2.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh2.o : Unreal/UnMesh2.cpp $(DEPENDS_18)
@@ -573,7 +571,6 @@ DEPENDS_19 = \
 	Unreal/UnMesh3.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh3.o : Unreal/UnMesh3.cpp $(DEPENDS_19)
@@ -683,6 +680,7 @@ DEPENDS_24 = \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
 	Unreal/UnMathTools.h \
 	Unreal/UnObject.h
 
@@ -971,7 +969,6 @@ DEPENDS_41 = \
 	Unreal/UnMesh2.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMeshBioshock.o : Unreal/UnMeshBioshock.cpp $(DEPENDS_41)
@@ -1058,8 +1055,7 @@ DEPENDS_46 = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
 $(OUT_1)/UnTexture2.o : Unreal/UnTexture2.cpp $(DEPENDS_46)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture2.o Unreal/UnTexture2.cpp
@@ -1076,7 +1072,6 @@ DEPENDS_47 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnTextureNVTT.h
 
 $(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_47)
@@ -1217,7 +1212,7 @@ DEPENDS_56 = \
 $(OUT_1)/UnTextureNVTT.o : Unreal/UnTextureNVTT.cpp $(DEPENDS_56)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTextureNVTT.o Unreal/UnTextureNVTT.cpp
 
-OPT_IOS_LIBS = -msse -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os
+OPT_IOS_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os
 
 DEPENDS_57 = \
 	libs/PowerVR/PVRTDecompress.h \
@@ -1287,7 +1282,7 @@ DEPENDS_63 = \
 $(OUT)/texture.o : ./libs/detex/texture.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/texture.o ./libs/detex/texture.cpp
 
-OPT_UE3_LIBS = -msse -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
+OPT_UE3_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 
 DEPENDS_64 = \
 	libs/include/lzo/lzo1x.h \

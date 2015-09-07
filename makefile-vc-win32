@@ -142,7 +142,7 @@ $(OUT)/DirectDrawSurface.obj : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT_1)/" -D _USING_V110_SDK71_ -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI
+OPT_MAIN = -GS- -GR-  -O1 -EHs- -Zi -Fd"$(OUT_1)/" -D _USING_V110_SDK71_ -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI
 
 DEPENDS = \
 	Core/Core.h \
@@ -418,8 +418,7 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnMaterial3.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
 $(OUT_1)/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnRenderer.obj" Unreal/UnRenderer.cpp
@@ -547,7 +546,6 @@ DEPENDS = \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh2.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh2.obj : Unreal/UnMesh2.cpp $(DEPENDS)
@@ -574,7 +572,6 @@ DEPENDS = \
 	Unreal/UnMesh3.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
@@ -684,6 +681,7 @@ DEPENDS = \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
 	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
 	Unreal/UnMathTools.h \
 	Unreal/UnObject.h
 
@@ -972,7 +970,6 @@ DEPENDS = \
 	Unreal/UnMesh2.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMeshBioshock.obj : Unreal/UnMeshBioshock.cpp $(DEPENDS)
@@ -1059,8 +1056,7 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
 $(OUT_1)/UnTexture2.obj : Unreal/UnTexture2.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture2.obj" Unreal/UnTexture2.cpp
@@ -1077,7 +1073,6 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnTextureNVTT.h
 
 $(OUT_1)/UnTexture.obj : Unreal/UnTexture.cpp $(DEPENDS)

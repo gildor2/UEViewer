@@ -10,8 +10,8 @@
 int GNumAllocs = 0;
 #endif
 
-int GTotalAllocationSize = 0;
-int GTotalAllocationCount = 0;
+size_t GTotalAllocationSize = 0;
+int    GTotalAllocationCount = 0;
 
 #define BLOCK_MAGIC		0xAE
 #define FREE_BLOCK		0xFE
@@ -161,8 +161,8 @@ void* appRealloc(void *ptr, int newSize)
 
 	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
 
-	int offset = hdr->offset + 1;
-	void *block = OffsetPointer(ptr, -offset);
+	int oldSize = hdr->blockSize;
+	if (oldSize == newSize) return ptr;	// size not changed
 
 	assert(hdr->magic == BLOCK_MAGIC);
 	hdr->magic--;		// modify to any value
@@ -171,10 +171,12 @@ void* appRealloc(void *ptr, int newSize)
 #endif
 
 	int alignment = hdr->align + 1;
-	int oldSize   = hdr->blockSize;
 	void *newData = appMalloc(newSize, alignment);
 
 	memcpy(newData, ptr, min(newSize, oldSize));
+
+	int offset = hdr->offset + 1;
+	void *block = OffsetPointer(ptr, -offset);
 
 #if DEBUG_MEMORY
 	memset(ptr, FREE_BLOCK, oldSize);
@@ -319,7 +321,7 @@ void appDumpMemoryAllocations()
 {
 	appPrintf(
 		"Memory information:\n"
-		"%d bytes allocated in %d blocks from %d points\n\n", GTotalAllocationSize, GTotalAllocationCount, GNumAllocationPoints
+		FORMAT_SIZE("d")" bytes allocated in %d blocks from %d points\n\n", GTotalAllocationSize, GTotalAllocationCount, GNumAllocationPoints
 	);
 
 	// collect statistics

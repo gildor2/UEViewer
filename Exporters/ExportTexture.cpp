@@ -120,7 +120,7 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 				{
 					// start new copy sequence
 					flag = dst++;
-					*flag = 0 - 1;							// 255, to be exact
+					*flag = 255;
 				}
 				*dst++ = b; *dst++ = g; *dst++ = r;			// store RGB
 				if (colorBytes == 4) *dst++ = a;			// store alpha
@@ -136,8 +136,8 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 	// write header
 	tgaHdr_t header;
 	memset(&header, 0, sizeof(header));
-	header.width      = width;
-	header.height     = height;
+	header.width  = width;
+	header.height = height;
 #if 0
 	// debug: write black/white image
 	header.pixel_size = 8;
@@ -280,6 +280,8 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	delete Ar;
 
 	delete pic;
+
+	Tex->ReleaseTextureData();
 
 	unguard;
 }

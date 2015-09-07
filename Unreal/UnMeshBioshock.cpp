@@ -3,7 +3,6 @@
 #include "UnMesh2.h"
 #include "UnMeshTypes.h"		// for FPackedNormal
 #include "UnHavok.h"
-#include "UnPackage.h"			// to get "Platform"
 
 #include "UnMaterial2.h"		//!! engine dependency
 
@@ -313,7 +312,7 @@ struct FStaticLODModelBio
 			// convert to old version
 			int NumVerts = Verts.Num();
 			Lod.SmoothVerts.Empty(NumVerts);
-			Lod.SmoothVerts.Add(NumVerts);
+			Lod.SmoothVerts.AddUninitialized(NumVerts);
 			for (int i = 0; i < NumVerts; i++)
 			{
 				const FSkelVertexBio2 &V1    = Verts[i];
@@ -386,7 +385,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 	Wedges.Empty        (NumVertices);
 	VertInfluences.Empty(NumVertices * 4);
 
-	int Vert, j;
+	int Vert;
 
 	guard(RigidVerts);
 	for (Vert = 0; Vert < Lod.RigidVerts.Num(); Vert++)
@@ -403,9 +402,9 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.Add();
+			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = V.Pos;
-			PointNormals.AddItem(V.Normal[0]);
+			PointNormals.Add(V.Normal[0]);
 			// add influence
 			FVertInfluence *Inf = new(VertInfluences) FVertInfluence;
 			Inf->PointIndex = PointIndex;
@@ -435,9 +434,9 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 		if (PointIndex == INDEX_NONE)
 		{
 			// point was not found - create it
-			PointIndex = Points.Add();
+			PointIndex = Points.AddUninitialized();
 			Points[PointIndex] = V.Pos;
-			PointNormals.AddItem(V.Normal[0]);
+			PointNormals.Add(V.Normal[0]);
 			// add influences
 //			appPrintf("point[%d]: %d/%d  %d/%d  %d/%d  %d/%d\n", PointIndex, V.BoneIndex[0], V.BoneWeight[0],
 //				V.BoneIndex[1], V.BoneWeight[1], V.BoneIndex[2], V.BoneWeight[2], V.BoneIndex[3], V.BoneWeight[3]);
@@ -567,12 +566,12 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 	// convert LODs
 	int i;
 	LODModels.Empty(bioLODModels.Num());
-	LODModels.Add(bioLODModels.Num());
+	LODModels.AddDefaulted(bioLODModels.Num());
 	for (i = 0; i < bioLODModels.Num(); i++)
 		LODModels[i].RestoreMeshBio(*this, bioLODModels[i]);
 
 	// materials
-	Materials.Add(Textures.Num());
+	Materials.AddDefaulted(Textures.Num());
 	for (i = 0; i < Materials.Num(); i++)
 		Materials[i].TextureIndex = i;
 
@@ -633,7 +632,7 @@ void USkeletalMesh::PostLoadBioshockMesh()
 		// convert skeleton
 		const hkSkeleton *Skel = Object->m_highBoneSkeleton;
 //		assert(RefSkeleton.Num() == 0);
-		RefSkeleton.Add(Skel->m_numBones);
+		RefSkeleton.AddDefaulted(Skel->m_numBones);
 		for (i = 0; i < Skel->m_numBones; i++)
 		{
 			FMeshBone &B = RefSkeleton[i];
@@ -653,7 +652,7 @@ void USkeletalMesh::PostLoadBioshockMesh()
 		// convert skeleton
 		const hkaSkeleton5 *Skel = Object->m_highBoneSkeleton;
 //		assert(RefSkeleton.Num() == 0);
-		RefSkeleton.Add(Skel->m_numBones);
+		RefSkeleton.AddDefaulted(Skel->m_numBones);
 		for (i = 0; i < Skel->m_numBones; i++)
 		{
 			FMeshBone &B = RefSkeleton[i];
@@ -682,7 +681,7 @@ void UAnimationPackageWrapper::Process()
 {
 	guard(UAnimationPackageWrapper::Process);
 #if XBOX_HACK
-	if (Package->Platform == PLATFORM_XBOX360) return;
+	if (GetPackageArchive()->Platform == PLATFORM_XBOX360) return;
 #endif
 	FixupHavokPackfile(Name, &HavokData[0]);
 #if 0

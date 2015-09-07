@@ -13,6 +13,8 @@ OLDCRT     = 1
 #	Compiler-specific options
 #------------------------------------------------
 
+WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), empty by default
+
 !if "$COMPILER" eq "VisualC"
 	CPP_EXCEPT = 0										# used with WIN32_USE_SEH in Core.h
 	OPTIONS = -GS- -GR- 								#?? VC8+
@@ -22,6 +24,7 @@ OLDCRT     = 1
 	# http://blogs.msdn.com/b/vcblog/archive/2014/06/13/compiler-switch-deprecation-removal-changes-in-visual-studio-14.aspx
 #	OPTIONS += -Wp64									# 64-bit portability warnings; note: deprecated option, will display a command line warning
 #	OPTIONS += -FS										# VS2013+, required for parallel build to work (jom.exe)
+#	WARNINGS += -W4										# maximal warning level for Visual C++
 	DEFINES += _USING_V110_SDK71_						# avoid some warnings, perhaps affects something else
 					# see http://tedwvc.wordpress.com/2014/01/01/how-to-target-xp-with-vc2012-or-vc2013-and-continue-to-use-the-windows-8-x-sdk/
 					# it looks like VS2013 requires _USING_V120_SDK71_
@@ -40,7 +43,7 @@ OLDCRT     = 1
 	!endif
 
 	LIBC      = shared
-	OPTIONS   = -msse									# enable SSE instructions
+	OPTIONS   = -msse2									# enable SSE instructions
 	OPTIONS   += -std=c++0x								# allow C++11 features
 	OPTIONS   += -fno-strict-aliasing					# required for our uint_cast()-based FP hacks
 	OPTIONS   += -fno-stack-protector					# this will remove GLIBC_2.4 dependency
@@ -115,6 +118,7 @@ sources(UE3_LIBS) = {
 	$R/libs/detex/*.cpp
 }
 
+
 #------------------------------------------------
 #	Project-specific options
 #------------------------------------------------
@@ -122,11 +126,12 @@ sources(UE3_LIBS) = {
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
 STDLIBS   += SDL2 SDL2main
 INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
+OPTIONS   += $WARNINGS
 
 !if "$PLATFORM" eq "win32"
 	INCLUDES += $R/libs/includewin32
-	LIBRARIES  = $R/libs/SDL2/x86
+	LIBRARIES = $R/libs/SDL2/x86
 !elif "$PLATFORM" eq "win64"
 	INCLUDES += $R/libs/includewin32
-	LIBRARIES  = $R/libs/SDL2/x64
+	LIBRARIES = $R/libs/SDL2/x64
 !endif

@@ -6,10 +6,6 @@
 #include "UnMaterial.h"
 #include "UnMaterial2.h"		// for UPalette
 
-#if BIOSHOCK
-#	include "UnPackage.h"			//?? remove this hack
-#endif
-
 #if SUPPORT_IPHONE
 #	include <PVRTDecompress.h>
 #endif
@@ -47,7 +43,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	// FourCC					BlockSizeX	BlockSizeY	BytesPerBlock	X360AlignX	X360AlignY	Name
 	{ 0,						1,			1,			1,				0,			0,			"P8"	},	// TPF_P8
 	{ 0,						1,			1,			1,				64,			64,			"G8"	},	// TPF_G8
-//	{																								},	// TPF_G16
+//	{																									},	// TPF_G16
 	{ 0,						1,			1,			3,				0,			0,			"RGB8"	},	// TPF_RGB8
 	{ 0,						1,			1,			4,				32,			32,			"RGBA8"	},	// TPF_RGBA8
 	{ 0,						1,			1,			4,				32,			32,			"BGRA8"	},	// TPF_BGRA8
@@ -60,6 +56,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0,			"BC5"	},	// TPF_BC5
 	{ 0,						4,			4,			16,				0,			0,			"BC7"	},	// TPF_BC7
 	{ 0,						8,			1,			1,				0,			0,			"A1"	},	// TPF_A1
+	{ 0,						1,			1,			2,				0,			0,			"RGBA4"	},	// TPF_RGBA4
 #if SUPPORT_IPHONE
 	{ 0,						8,			4,			8,				0,			0,			"PVRTC2"},	// TPF_PVRTC2
 	{ 0,						4,			4,			8,				0,			0,			"PVRTC4"},	// TPF_PVRTC4
@@ -165,6 +162,23 @@ byte *CTextureData::Decompress()
 				*d++ = s[0];
 				*d++ = s[3];
 				s += 4;
+			}
+		}
+		return dst;
+	case TPF_RGBA4:
+		{
+			const byte *s = Data;
+			byte *d = dst;
+			for (int i = 0; i < USize * VSize; i++)
+			{
+				byte b1 = s[0];
+				byte b2 = s[1];
+				// BGRA -> RGBA
+				*d++ = b2 & 0xF0;
+				*d++ = (b2 & 0xF) << 4;
+				*d++ = b1 & 0xF0;
+				*d++ = (b1 & 0xF) << 4;
+				s += 2;
 			}
 		}
 		return dst;
@@ -464,7 +478,7 @@ void CTextureData::DecodeXBox360()
 #if BIOSHOCK
 	// some verification
 	float rate = bpp / bytesPerBlock;
-	if (Obj->Package->Game == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
+	if (Obj->GetGame() == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
 		bpp = bytesPerBlock;
 #endif // BIOSHOCK
 

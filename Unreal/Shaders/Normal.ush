@@ -37,8 +37,9 @@ varying mat3 tangentToWorld;
 varying vec3 tmp;
 
 
+attribute vec4 normal;
 attribute vec3 tangent;
-attribute vec3 binormal;
+//attribute vec3 binormal;
 
 
 // Parameters
@@ -79,12 +80,18 @@ void VertexShaderMain()
 
 	// get TBN in screen-space coordinate system
 #ifndef NEW
-	vec3 t = (gl_ModelViewMatrix * vec4(tangent,   0.0)).xyz;
-	vec3 b = (gl_ModelViewMatrix * vec4(binormal,  0.0)).xyz;
-	vec3 n = (gl_ModelViewMatrix * vec4(gl_Normal, 0.0)).xyz;
+	vec3 t = (gl_ModelViewMatrix * vec4(normalize(tangent),    0.0)).xyz;
+//	vec3 b = (gl_ModelViewMatrix * vec4(normalize(binormal),   0.0)).xyz;
+//	vec3 n = (gl_ModelViewMatrix * vec4(          gl_Normal,   0.0)).xyz;
+	vec3 n = (gl_ModelViewMatrix * vec4(normalize(normal.xyz), 0.0)).xyz;
+	vec3 b = cross(n, t) * (normal.w / 127.0);
 #else
 	// this code may not work when TBN or ModelView is not normalized
-	mat3 tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(tangent, binormal, gl_Normal));
+//	mat3 tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(normalize(tangent), normalize(binormal), gl_Normal));
+	vec3 n = normalize(normal.xyz);
+	vec3 t = normalize(tangent);
+	vec3 b = cross(n, t) * (normal.w / 127.0);
+	mat3 tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(t, b, n));
 #endif
 
 	// note: gl_LightSource.position is already transformed to eye-space

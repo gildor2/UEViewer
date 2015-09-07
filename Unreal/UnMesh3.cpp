@@ -7,7 +7,6 @@
 #include "UnMeshTypes.h"
 #include "UnMathTools.h"			// for FRotator to FCoords
 #include "UnMaterial3.h"
-#include "UnPackage.h"
 
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
@@ -30,6 +29,12 @@
 #endif
 
 //?? move outside?
+/*
+ * Half = Float16
+ * http://www.openexr.com/  source: ilmbase-*.tar.gz/Half/toFloat.cpp
+ * http://en.wikipedia.org/wiki/Half_precision
+ * Also look at GL_ARB_half_float_pixel
+ */
 float half2float(word h)
 {
 	union
@@ -48,27 +53,25 @@ float half2float(word h)
 }
 
 
+//!! RENAME to CopyNormals/ConvertNormals/PutNormals/RepackNormals etc
 void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 {
 	// tangents: convert to FVector (unpack) then cast to CVec3
-	FVector Tangent = SrcNormal[0];
-	FVector Normal  = SrcNormal[2];
-	V.Tangent = CVT(Tangent);
-	V.Normal  = CVT(Normal);
-	if (SrcNormal[1].Data == 0)
+	V.Tangent = CVT(SrcNormal[0]);
+	V.Normal  = CVT(SrcNormal[2]);
+
+	// new UE3 version - binormal is not serialized and restored in vertex shader
+
+	if (SrcNormal[1].Data != 0)
 	{
-		// new UE3 version - this normal is not serialized and restored in vertex shader
-		// LocalVertexFactory.usf, VertexFactoryGetTangentBasis() (static mesh)
-		// GpuSkinVertexFactory.usf, SkinTangents() (skeletal mesh)
-		cross(V.Normal, V.Tangent, V.Binormal);
-		if (SrcNormal[2].GetW() == -1)
-			V.Binormal.Negate();
-	}
-	else
-	{
-		// unpack Binormal
+		// pack binormal sign into Normal.W
+		FVector Tangent  = SrcNormal[0];
 		FVector Binormal = SrcNormal[1];
-		V.Binormal = CVT(Binormal);
+		FVector Normal   = SrcNormal[2];
+		CVec3   ComputedBinormal;
+		cross(CVT(Normal), CVT(Tangent), ComputedBinormal);
+		float Sign = dot(CVT(Binormal), ComputedBinormal);
+		V.Normal.SetW(Sign > 0 ? 1.0f : -1.0f);
 	}
 }
 
@@ -86,8 +89,8 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 #error NUM_INFLUENCES_UE3 and NUM_INFLUENCES are not matching!
 #endif
 
-#if NUM_UV_SETS_UE3 != NUM_MESH_UV_SETS
-#error NUM_UV_SETS_UE3 and NUM_MESH_UV_SETS are not matching!
+#if NUM_UV_SETS_UE3 > MAX_MESH_UV_SETS
+#error NUM_UV_SETS_UE3 too large!
 #endif
 
 
@@ -141,7 +144,7 @@ struct FSkelMeshSection3
 		{
 			// UE2 fields
 			short FirstIndex;
-			short unk1, unk2, unk3, unk4, unk5, unk6, unk7;
+			short unk1, unk2, unk3, unk4, unk5, unk6;
 			TArray<short> unk8;
 			Ar << S.MaterialIndex << FirstIndex << unk1 << unk2 << unk3 << unk4 << unk5 << unk6 << S.NumTriangles;
 			if (Ar.ArVer < 202) Ar << unk8;	// ArVer<202 -- from EndWar
@@ -164,7 +167,10 @@ struct FSkelMeshSection3
 #endif // MURDERED
 		Ar << S.MaterialIndex << S.ChunkIndex << S.FirstIndex;
 #if BATMAN
-		if (Ar.Game == GAME_Batman3) goto old_section; // Batman1 and 2 has version smaller than 806
+		if (Ar.Game == GAME_Batman3) goto old_section; // Batman1 and 2 has version smaller than 806; Batman3 has outdated code, but Batman4 - new one
+#endif
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677) goto new_section; // MK X
 #endif
 		if (Ar.ArVer < 806)
 		{
@@ -176,6 +182,7 @@ struct FSkelMeshSection3
 		}
 		else
 		{
+		new_section:
 			// NumTriangles is int
 			Ar << S.NumTriangles;
 		}
@@ -253,7 +260,7 @@ struct FIndexBuffer3
 		guard(FIndexBuffer3<<);
 
 		int unk;						// Revision?
-		Ar << RAW_ARRAY(I.Indices);
+		I.Indices.BulkSerialize(Ar);
 		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
 		return Ar;
 
@@ -287,6 +294,15 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 		}
 #endif // BATMAN
 
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			// MK X
+			Ar << I.Indices16 << I.Indices32;
+			return Ar;
+		}
+#endif // MKVSDC
+
 		if (Ar.ArVer >= 806)
 		{
 			int		f0;
@@ -301,9 +317,9 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 #endif // PLA
 	old_index_buffer:
 		if (ItemSize == 2)
-			Ar << RAW_ARRAY(I.Indices16);
+			I.Indices16.BulkSerialize(Ar);
 		else if (ItemSize == 4)
-			Ar << RAW_ARRAY(I.Indices32);
+			I.Indices32.BulkSerialize(Ar);
 		else
 			appError("Unknown ItemSize %d", ItemSize);
 
@@ -320,7 +336,7 @@ struct FRigidVertex3
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 	byte				BoneIndex;
 	int					Color;
 
@@ -413,7 +429,7 @@ struct FSmoothVertex3
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 	byte				BoneIndex[NUM_INFLUENCES_UE3];
 	byte				BoneWeight[NUM_INFLUENCES_UE3];
 	int					Color;
@@ -562,7 +578,7 @@ struct FSkelMeshChunk3
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
 		{
 			TArray<FMeshUVFloat> extraUV;
-			Ar << RAW_ARRAY(extraUV);
+			extraUV.BulkSerialize(Ar);
 		}
 #endif // ARMYOF2
 		if (Ar.ArVer >= 362)
@@ -612,17 +628,17 @@ struct FGPUVert3Common
 	byte				BoneIndex[NUM_INFLUENCES_UE3];
 	byte				BoneWeight[NUM_INFLUENCES_UE3];
 
-	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Common &V)
+	void Serialize(FArchive &Ar)
 	{
 #if AVA
 		if (Ar.Game == GAME_AVA) goto new_ver;
 #endif
 		if (Ar.ArVer < 494)
-			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+			Ar << Normal[0] << Normal[1] << Normal[2];
 		else
 		{
 		new_ver:
-			Ar << V.Normal[0] << V.Normal[2];
+			Ar << Normal[0] << Normal[2];
 		}
 #if CRIMECRAFT || FRONTLINES
 		if ((Ar.Game == GAME_CrimeCraft && Ar.ArLicenseeVer >= 1) ||
@@ -630,8 +646,8 @@ struct FGPUVert3Common
 			Ar.Seek(Ar.Tell() + sizeof(float)); // pad or vertex color?
 #endif
 		int i;
-		for (i = 0; i < NUM_INFLUENCES_UE3; i++) Ar << V.BoneIndex[i];
-		for (i = 0; i < NUM_INFLUENCES_UE3; i++) Ar << V.BoneWeight[i];
+		for (i = 0; i < NUM_INFLUENCES_UE3; i++) Ar << BoneIndex[i];
+		for (i = 0; i < NUM_INFLUENCES_UE3; i++) Ar << BoneWeight[i];
 #if GUILTY
 		if (Ar.Game == GAME_Guilty && Ar.ArLicenseeVer >= 1)
 		{
@@ -639,29 +655,21 @@ struct FGPUVert3Common
 			Ar << unk;
 		}
 #endif // GUILTY
-		return Ar;
 	}
 };
 
 static int GNumGPUUVSets = 1;
 
-/*
- * Half = Float16
- * http://www.openexr.com/  source: ilmbase-*.tar.gz/Half/toFloat.cpp
- * http://en.wikipedia.org/wiki/Half_precision
- * Also look GL_ARB_half_float_pixel
- */
 struct FGPUVert3Half : FGPUVert3Common
 {
 	FVector				Pos;
-	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
+	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Half &V)
 	{
-		if (Ar.ArVer < 592)
-			Ar << V.Pos << *((FGPUVert3Common*)&V);
-		else
-			Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		if (Ar.ArVer < 592) Ar << V.Pos;
+		V.Serialize(Ar);
+		if (Ar.ArVer >= 592) Ar << V.Pos;
 		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
@@ -670,7 +678,7 @@ struct FGPUVert3Half : FGPUVert3Common
 struct FGPUVert3Float : FGPUVert3Common
 {
 	FVector				Pos;
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
 	FGPUVert3Float& operator=(const FSmoothVertex3 &S)
 	{
@@ -679,7 +687,7 @@ struct FGPUVert3Float : FGPUVert3Common
 		Normal[0] = S.Normal[0];
 		Normal[1] = S.Normal[1];
 		Normal[2] = S.Normal[2];
-		for (i = 0; i < NUM_MESH_UV_SETS; i++)
+		for (i = 0; i < NUM_UV_SETS_UE3; i++)
 			UV[i] = S.UV[i];
 		for (i = 0; i < NUM_INFLUENCES_UE3; i++)
 		{
@@ -691,10 +699,9 @@ struct FGPUVert3Float : FGPUVert3Common
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3Float &V)
 	{
-		if (Ar.ArVer < 592)
-			Ar << V.Pos << *((FGPUVert3Common*)&V);
-		else
-			Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		if (Ar.ArVer < 592) Ar << V.Pos;
+		V.Serialize(Ar);
+		if (Ar.ArVer >= 592) Ar << V.Pos;
 		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
@@ -703,11 +710,12 @@ struct FGPUVert3Float : FGPUVert3Common
 struct FGPUVert3PackedHalf : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
-	FMeshUVHalf			UV[NUM_MESH_UV_SETS];
+	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedHalf &V)
 	{
-		Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		V.Serialize(Ar);
+		Ar << V.Pos;
 		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
@@ -716,15 +724,46 @@ struct FGPUVert3PackedHalf : FGPUVert3Common
 struct FGPUVert3PackedFloat : FGPUVert3Common
 {
 	FVectorIntervalFixed32GPU Pos;
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert3PackedFloat &V)
 	{
-		Ar << *((FGPUVert3Common*)&V) << V.Pos;
+		V.Serialize(Ar);
+		Ar << V.Pos;
 		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
 };
+
+#if BATMAN
+struct FGPUVertBat4_HalfUV_Pos48 : FGPUVert3Common
+{
+	FVectorIntervalFixed64 Pos;
+	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVertBat4_HalfUV_Pos48 &V)
+	{
+		V.Serialize(Ar);
+		Ar << V.Pos;
+		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
+		return Ar;
+	}
+};
+
+struct FGPUVertBat4_HalfUV_Pos32 : FGPUVert3Common
+{
+	FVectorIntervalFixed32Bat4 Pos;
+	FMeshUVHalf			UV[NUM_UV_SETS_UE3];
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVertBat4_HalfUV_Pos32 &V)
+	{
+		V.Serialize(Ar);
+		Ar << V.Pos;
+		for (int i = 0; i < GNumGPUUVSets; i++) Ar << V.UV[i];
+		return Ar;
+	}
+};
+#endif // BATMAN
 
 struct FSkeletalMeshVertexBuffer3
 {
@@ -803,7 +842,7 @@ struct FSkeletalMeshVertexBuffer3
 		old_version:
 			// old version - FSmoothVertex3 array
 			TArray<FSmoothVertex3> Verts;
-			Ar << RAW_ARRAY(Verts);
+			Verts.BulkSerialize(Ar);
 			DBG_SKEL("... %d verts in old format\n", Verts.Num());
 			// convert verts
 			CopyArray(S.VertsFloat, Verts);
@@ -854,8 +893,8 @@ struct FSkeletalMeshVertexBuffer3
 		// Note: in UDK (newer engine) there is no code to serialize GPU vertex with packed position.
 		// Working bUsePackedPosition version was found in all XBox360 games. For PC there is only one game -
 		// MOH2010, which uses bUsePackedPosition. PS3 also has bUsePackedPosition support (at least TRON)
-		DBG_SKEL("... data: packUV:%d packVert:%d numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
-			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, S.NumUVSets,
+		DBG_SKEL("... data: packUV:%d packPos:%d%s numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
+			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, AllowPackedPosition ? "" : " (disabled)", S.NumUVSets,
 			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
@@ -867,64 +906,243 @@ struct FSkeletalMeshVertexBuffer3
 		}
 	#endif // PLA
 
+	#if BATMAN
+		if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 192)
+		{
+			S.Serialize_Batman4Verts(Ar);
+			goto after_serialize_verts;
+		}
+	#endif // BATMAN
+
 	serialize_verts:
 		// serialize vertex array
 		if (!S.bUseFullPrecisionUVs)
 		{
 			if (!S.bUsePackedPosition)
-				Ar << RAW_ARRAY(S.VertsHalf);
+				S.VertsHalf.BulkSerialize(Ar);
 			else
-				Ar << RAW_ARRAY(S.VertsHalfPacked);
+				S.VertsHalfPacked.BulkSerialize(Ar);
 		}
 		else
 		{
 			if (!S.bUsePackedPosition)
-				Ar << RAW_ARRAY(S.VertsFloat);
+				S.VertsFloat.BulkSerialize(Ar);
 			else
-				Ar << RAW_ARRAY(S.VertsFloatPacked);
+				S.VertsFloatPacked.BulkSerialize(Ar);
 		}
+	after_serialize_verts:
 		DBG_SKEL("... verts: Half[%d] HalfPacked[%d] Float[%d] FloatPacked[%d]\n",
 			S.VertsHalf.Num(), S.VertsHalfPacked.Num(), S.VertsFloat.Num(), S.VertsFloatPacked.Num());
+
+	#if BATMAN
+		if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 190)
+		{
+			TArray<FVector> unk1;
+			int unk2;
+			Ar << unk1 << unk2;
+		}
+	#endif // BATMAN
 
 		return Ar;
 		unguard;
 	}
+
+#if BATMAN
+	void Serialize_Batman4Verts(FArchive &Ar)
+	{
+		guard(Serialize_Batman4Verts);
+		//!! TODO: that'd be great to move this function to UnMeshBatman.cpp, but it requires vertex declatations.
+		//!! Batman4 vertex is derived from FGPUVert3Common.
+
+		int BatmanPackType;
+		Ar << BatmanPackType;
+		// 0 = FVector
+		// 1 = short[4]
+		// 2 = short[4]
+		// 3 = int32 (packed)
+		DBG_SKEL("... bat4 position pack: %d\n", BatmanPackType);
+
+		if (!bUseFullPrecisionUVs)
+		{
+			// half-precision UVs
+			switch (BatmanPackType)
+			{
+			case 1:
+			case 2:
+				{
+					TArray<FGPUVertBat4_HalfUV_Pos48> Verts;
+					Verts.BulkSerialize(Ar);
+					// copy data
+					VertsHalf.AddUninitialized(Verts.Num());
+					for (int i = 0; i < Verts.Num(); i++)
+					{
+						const FGPUVertBat4_HalfUV_Pos48& S = Verts[i];
+						FGPUVert3Half& D = VertsHalf[i];
+						(FGPUVert3Common&)D = (FGPUVert3Common&)S;
+						memcpy(D.UV, S.UV, sizeof(S.UV));
+						D.Pos = S.Pos.ToVector(MeshOrigin, MeshExtension);
+					}
+				}
+				return;
+			case 3:
+				{
+					TArray<FGPUVertBat4_HalfUV_Pos32> Verts;
+					Verts.BulkSerialize(Ar);
+					// copy data
+					VertsHalf.AddUninitialized(Verts.Num());
+					for (int i = 0; i < Verts.Num(); i++)
+					{
+						const FGPUVertBat4_HalfUV_Pos32& S = Verts[i];
+						FGPUVert3Half& D = VertsHalf[i];
+						(FGPUVert3Common&)D = (FGPUVert3Common&)S;
+						memcpy(D.UV, S.UV, sizeof(S.UV));
+						D.Pos = S.Pos.ToVector(MeshOrigin, MeshExtension);
+					}
+				}
+				return;
+			default:
+				VertsHalf.BulkSerialize(Ar);
+				return;
+			}
+		}
+		else
+		{
+			// float-precision UVs
+			switch (BatmanPackType)
+			{
+			case 1:
+			case 2:
+			case 3:
+				appError("Batman4 GPU vertex type %d", BatmanPackType);
+//				VertsFloatPacked.BulkSerialize(Ar);
+				return;
+			default:
+				VertsFloat.BulkSerialize(Ar);
+				return;
+			}
+		}
+
+		unguard;
+	}
+#endif // BATMAN
+
+#if MKVSDC
+	void Serialize_MK10(FArchive &Ar, int NumVertices)
+	{
+		guard(FSkeletalMeshVertexBuffer3::Serialize_MK10);
+
+		// MK X vertex data
+		// Position stream
+		int PositionSize, NumPosVerts;
+		Ar << PositionSize << NumPosVerts;
+		assert(PositionSize == 12 && NumPosVerts == NumVertices);
+		TArray<FVector> Positions;
+		Ar << Positions;
+
+		// Normal stream
+		int NormalSize, NumNormals;
+		Ar << NormalSize << NumNormals;
+		assert(NormalSize == 8 && NumNormals == NumVertices);
+		TArrayOfArray<FPackedNormal, 2> Normals;
+		Ar << Normals;
+
+		// Influence stream
+		int InfSize, NumInfs;
+		Ar << InfSize << NumInfs;
+		assert(InfSize == 8 && NumInfs == NumVertices);
+		TArray<int64> Infs;
+		Ar << Infs;
+
+		// UVs
+		int UVSize, NumUVs;
+		Ar << NumUVSets << UVSize << NumUVs;
+		TArray<FMeshUVHalf> UVs;
+		Ar << UVs;
+		assert(NumUVs == NumVertices * NumUVSets);
+
+		// skip everything else, would fail if number of LODs is > 1
+
+		// combine vertex data
+		VertsHalf.AddZeroed(NumVertices);
+		int UVIndex = 0;
+		for (int i = 0; i < NumVertices; i++)
+		{
+			FGPUVert3Half& V = VertsHalf[i];
+			memset(&V, 0, sizeof(V));
+			V.Pos = Positions[i];
+			V.Normal[0] = Normals[i].Data[0];
+			V.Normal[2] = Normals[i].Data[1];
+			for (int j = 0; j < NumUVSets; j++)
+			{
+				V.UV[j] = UVs[UVIndex++];
+			}
+			// unpack influences
+			// MK X allows more than 256 bones per section
+			// stored as 10bit BoneIndices[4] + 8bit Weights[3]
+			// 4th weight is restored in shader taking into account that sum is 255
+			uint64 data = Infs[i];
+			int b[4], w[4];
+			b[0] = data & 0x3FF;
+			b[1] = (data >> 10) & 0x3FF;
+			b[2] = (data >> 20) & 0x3FF;
+			b[3] = (data >> 30) & 0x3FF;
+			w[0] = (data >> 40) & 0xFF;
+			w[1] = (data >> 48) & 0xFF;
+			w[2] = (data >> 56) & 0xFF;
+			w[3] = 255 - w[0] - w[1] - w[2];
+			for (int j = 0; j < 4; j++)
+			{
+				assert(b[j] < 256);
+				V.BoneIndex[j] = b[j];
+				V.BoneWeight[j] = w[j];
+			}
+		}
+
+		unguard;
+	}
+#endif // MKVSDC
 };
 
 // real name: FVertexInfluence
-struct FMesh3Unk1
+struct FVertexInfluence
 {
-	int					f0;
-	int					f4;
+	int					Weights;
+	int					Boned;
 
-	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk1 &S)
+	friend FArchive& operator<<(FArchive &Ar, FVertexInfluence &S)
 	{
-		return Ar << S.f0 << S.f4;
+		return Ar << S.Weights << S.Boned;
 	}
 };
 
-SIMPLE_TYPE(FMesh3Unk1, int)
+SIMPLE_TYPE(FVertexInfluence, int)
 
-struct FMesh3Unk3
+// In UE4.0: TMap<FBoneIndexPair, TArray<uint16> >
+struct FVertexInfluenceMapOld
 {
+	// key
 	int					f0;
 	int					f4;
+	// value
 	TArray<word>		f8;
 
-	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk3 &S)
+	friend FArchive& operator<<(FArchive &Ar, FVertexInfluenceMapOld &S)
 	{
 		Ar << S.f0 << S.f4 << S.f8;
 		return Ar;
 	}
 };
 
-struct FMesh3Unk3A
+// In UE4.0: TMap<FBoneIndexPair, TArray<uint32> >
+struct FVertexInfluenceMap
 {
+	// key
 	int					f0;
 	int					f4;
+	// value
 	TArray<int>			f8;
 
-	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk3A &S)
+	friend FArchive& operator<<(FArchive &Ar, FVertexInfluenceMap &S)
 	{
 		Ar << S.f0 << S.f4 << S.f8;
 		return Ar;
@@ -933,35 +1151,48 @@ struct FMesh3Unk3A
 
 struct FSkeletalMeshVertexInfluences
 {
-	TArray<FMesh3Unk1>	f0;
-	TArray<FMesh3Unk3>	fC;				// Map or Set
-	TArray<FMesh3Unk3A>	fCA;
-	TArray<FSkelMeshSection3> Sections;
-	TArray<FSkelMeshChunk3>	Chunks;
-	TArray<byte>		f80;
-	byte				f8C;			// default = 0
+	TArray<FVertexInfluence>	Influences;
+	TArray<FVertexInfluenceMap>	VertexInfluenceMapping;
+	TArray<FSkelMeshSection3>	Sections;
+	TArray<FSkelMeshChunk3>		Chunks;
+	TArray<byte>				RequiredBones;
+	byte						Usage;			// default = 0
 
 	friend FArchive& operator<<(FArchive &Ar, FSkeletalMeshVertexInfluences &S)
 	{
 		guard(FSkeletalMeshVertexInfluences<<);
 		DBG_SKEL("Extra vertex influence:\n");
-		Ar << S.f0;
+		Ar << S.Influences;
 		if (Ar.ArVer >= 609)
 		{
 			if (Ar.ArVer >= 808)
 			{
-				Ar << S.fCA;
+				Ar << S.VertexInfluenceMapping;
 			}
 			else
 			{
 				byte unk1;
 				if (Ar.ArVer >= 806) Ar << unk1;
-				Ar << S.fC;
+				TArray<FVertexInfluenceMapOld> VertexInfluenceMappingOld;
+				Ar << VertexInfluenceMappingOld;
 			}
 		}
 		if (Ar.ArVer >= 700) Ar << S.Sections << S.Chunks;
-		if (Ar.ArVer >= 708) Ar << S.f80;
-		if (Ar.ArVer >= 715) Ar << S.f8C;
+		if (Ar.ArVer >= 708)
+		{
+#if BATMAN
+			if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 159)
+			{
+				TArray<int> RequiredBones32;
+				Ar << RequiredBones32;
+			}
+			else
+#endif
+			{
+				Ar << S.RequiredBones;
+			}
+		}
+		if (Ar.ArVer >= 715) Ar << S.Usage;
 #if DEBUG_SKELMESH
 		for (int i1 = 0; i1 < S.Sections.Num(); i1++)
 		{
@@ -1003,7 +1234,7 @@ struct FTRMeshUnkStream
 	{
 		Ar << S.ItemSize << S.NumVerts;
 		if (S.ItemSize && S.NumVerts)
-			Ar << RAW_ARRAY(S.Data);
+			S.Data.BulkSerialize(Ar);
 		return Ar;
 	}
 };
@@ -1028,7 +1259,7 @@ struct FStaticLODModel3
 	FWordBulkData		BulkData;		// ElementCount = NumVertices
 	FIntBulkData		BulkData2;		// used instead of BulkData since version 806, indices?
 	FSkeletalMeshVertexBuffer3 GPUSkin;
-	TArray<FSkeletalMeshVertexInfluences> fC4;	// GoW2+ engine
+	TArray<FSkeletalMeshVertexInfluences> ExtraVertexInfluences;	// GoW2+ engine
 	int					NumUVSets;
 	TArray<int>			VertexColor;	// since version 710
 
@@ -1052,9 +1283,17 @@ struct FStaticLODModel3
 			Ar << Lod.Sections;
 			goto part1;
 		}
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			// MK X
+			int unk;
+			Ar << unk;			// serialized before FStaticLodModel, inside an array serializer function
+		}
 #endif // MKVSDC
 
 		Ar << Lod.Sections << Lod.IndexBuffer;
+
+	part1:
 #if DEBUG_SKELMESH
 		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
 		{
@@ -1095,13 +1334,11 @@ struct FStaticLODModel3
 		}
 #endif // TRANSFORMERS
 
-	part1:
 		if (Ar.ArVer < 686) Ar << Lod.f68;
 		Ar << Lod.UsedBones;
 		if (Ar.ArVer < 686) Ar << Lod.f74;
 		if (Ar.ArVer >= 215)
 		{
-		chunks:
 			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 		}
 		DBG_SKEL("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
@@ -1146,6 +1383,15 @@ struct FStaticLODModel3
 		if (Ar.Game == GAME_DmC && Ar.ArLicenseeVer >= 3) goto word_f24;
 #endif
 
+#if BATMAN
+		if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 159)
+		{
+			TArray<int> f24_new;
+			Ar << f24_new;
+			goto bulk;
+		}
+#endif // BATMAN
+
 	part2:
 		if (Ar.ArVer >= 207)
 		{
@@ -1179,6 +1425,7 @@ struct FStaticLODModel3
 			- word SomeSize (same as above)
 			- ...
 		*/
+	bulk:
 		if (Ar.ArVer >= 221)
 		{
 			if (Ar.ArVer < 806)
@@ -1199,7 +1446,8 @@ struct FStaticLODModel3
 		{
 			int unk84;
 			TArray<FMeshUVFloat> extraUV;
-			Ar << unk84 << RAW_ARRAY(extraUV);
+			Ar << unk84;
+			extraUV.BulkSerialize(Ar);
 		}
 #endif // ARMYOF2
 #if BIOSHOCK3
@@ -1217,6 +1465,17 @@ struct FStaticLODModel3
 			if (unkD4) appError("RememberMe: new vertex buffer format");
 		}
 #endif // REMEMBER_ME
+#if MKVSDC
+		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+		{
+			FByteBulkData UnkBulk;
+			UnkBulk.Skip(Ar);
+			Lod.GPUSkin.Serialize_MK10(Ar, Lod.NumVertices);
+			Lod.NumUVSets = Lod.GPUSkin.NumUVSets;
+			return Ar;
+		}
+#endif // MKVSDC
+
 		if (Ar.ArVer >= 709)
 			Ar << Lod.NumUVSets;
 		else
@@ -1229,7 +1488,7 @@ struct FStaticLODModel3
 		{
 			Ar.ArVer = 592;			// partially upgraded engine, override version (for easier coding)
 			if (Ar.ArLicenseeVer >= 42)
-				Ar << Lod.fC4;		// original code: this field is serialized after GPU Skin
+				Ar << Lod.ExtraVertexInfluences;	// original code: this field is serialized after GPU Skin
 		}
 #endif // MOH2010
 #if FURY
@@ -1286,13 +1545,13 @@ struct FStaticLODModel3
 					Ar << unk;
 				}
 #endif // PLA
-				Ar << RAW_ARRAY(Lod.VertexColor);
+				Lod.VertexColor.BulkSerialize(Ar);
 				appPrintf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
 			}
 		}
 	no_vert_color:
 		if (Ar.ArVer >= 534)		// post-UT3 code
-			Ar << Lod.fC4;
+			Ar << Lod.ExtraVertexInfluences;
 		if (Ar.ArVer >= 841)		// unknown extra index buffer
 		{
 			FSkelIndexBuffer3 unk;
@@ -1300,6 +1559,15 @@ struct FStaticLODModel3
 		}
 //		assert(Lod.IndexBuffer.Indices.Num() == Lod.f68.Num()); -- mostly equals (failed in CH_TwinSouls_Cine.upk)
 //		assert(Lod.BulkData.ElementCount == Lod.NumVertices); -- mostly equals (failed on some GoW packages)
+
+#if BATMAN
+		if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 107)
+		{
+			TArray<int> unk;
+			Ar << unk;
+		}
+#endif // BATMAN
+
 		return Ar;
 
 		unguard;
@@ -1430,6 +1698,25 @@ struct FSPAITag2
 
 #endif // LEGENDARY
 
+#if MKVSDC
+
+void USkeleton_MK::Serialize(FArchive &Ar)
+{
+	guard(USkeleton_MK::Serialize);
+	assert(Ar.Game == GAME_MK);
+	Super::Serialize(Ar);
+
+	Ar << BonePos;
+	Ar << BoneParent;
+	Ar << BoneName;
+
+	DROP_REMAINING_DATA(Ar);
+
+	unguard;
+}
+
+#endif // MKVSDC
+
 void USkeletalMesh3::Serialize(FArchive &Ar)
 {
 	guard(USkeletalMesh3::Serialize);
@@ -1443,6 +1730,18 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 #endif // FRONTLINES
 
 	UObject::Serialize(Ar);			// no UPrimitive ...
+
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		Ar << LODModels;
+		// MK X has 1 LODModel and 4 LODInfo
+		if (LODInfo.Num() > LODModels.Num())
+			LODInfo.RemoveAt(LODModels.Num(), LODInfo.Num() - LODModels.Num());
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+#endif // MKVSDC
 
 #if MEDGE
 	if (Ar.Game == GAME_MirrorEdge && Ar.ArLicenseeVer >= 15)
@@ -1484,7 +1783,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		Ar << unk;
 	}
 #if BATMAN
-	if ((Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 15)
+	if (Ar.Game >= GAME_Batman && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 15)
 	{
 		float ConservativeBounds;
 		TArray<FBoneBounds> PerBoneBounds;
@@ -1528,7 +1827,7 @@ void USkeletalMesh3::Serialize(FArchive &Ar)
 		int NumBones = Skel.RefPose.Num();
 		assert(NumBones == Skel.Parentage.Num());
 		assert(NumBones == Skel.BoneNames.Num());
-		RefSkeleton.Add(NumBones);
+		RefSkeleton.AddDefaulted(NumBones);
 		for (int i = 0; i < NumBones; i++)
 		{
 			FMeshBone &B = RefSkeleton[i];
@@ -1606,8 +1905,6 @@ after_skeleton:
 	DROP_REMAINING_DATA(Ar);
 #endif
 
-	ConvertMesh();
-
 	unguard;
 }
 
@@ -1618,6 +1915,31 @@ void USkeletalMesh3::ConvertMesh()
 
 	CSkeletalMesh *Mesh = new CSkeletalMesh(this);
 	ConvertedMesh = Mesh;
+
+	int ArGame = GetGame();
+
+#if MKVSDC
+	if (ArGame == GAME_MK && Skeleton != NULL && RefSkeleton.Num() == 0)
+	{
+		// convert MK X USkeleton to RefSkeleton
+		int NumBones = Skeleton->BoneName.Num();
+		assert(Skeleton->BoneParent.Num() == NumBones && Skeleton->BonePos.Num() == NumBones);
+		RefSkeleton.AddDefaulted(NumBones);
+		for (int i = 0; i < NumBones; i++)
+		{
+			FMeshBone& B = RefSkeleton[i];
+			B.Name        = Skeleton->BoneName[i];
+			B.BonePos     = Skeleton->BonePos[i];
+			B.ParentIndex = Skeleton->BoneParent[i];
+		}
+	}
+#endif // MKVSDC
+
+	if (!RefSkeleton.Num())
+	{
+		appNotify("SkeletalMesh with no skeleton");
+		return;
+	}
 
 	// convert bounds
 	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;		//?? UE3 meshes has radius 2 times larger than mesh
@@ -1640,7 +1962,7 @@ void USkeletalMesh3::ConvertMesh()
 		if (!SrcLod.Chunks.Num()) continue;
 
 		int NumTexCoords = max(SrcLod.NumUVSets, SrcLod.GPUSkin.NumUVSets);		// number of texture coordinates is serialized differently for some games
-		if (NumTexCoords > NUM_MESH_UV_SETS)
+		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("SkeletalMesh has %d UV sets", NumTexCoords);
 
 		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
@@ -1666,6 +1988,7 @@ void USkeletalMesh3::ConvertMesh()
 		int lastChunkVertex = -1;
 		const FSkeletalMeshVertexBuffer3 &S = SrcLod.GPUSkin;
 		CSkelMeshVertex *D = Lod->Verts;
+		int NumReweightedVerts = 0;
 
 		for (int Vert = 0; Vert < VertexCount; Vert++, D++)
 		{
@@ -1707,10 +2030,11 @@ void USkeletalMesh3::ConvertMesh()
 						SUV = V0.UV;
 					}
 					// UV
-					for (int i = 0; i < NumTexCoords; i++)
+					FMeshUVFloat fUV = SUV[0];			// convert half->float
+					D->UV = CVT(fUV);
+					for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
 					{
-						FMeshUVFloat fUV = SUV[i];				// convert
-						D->UV[i] = CVT(fUV);
+						Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
 					}
 				}
 				else
@@ -1734,25 +2058,46 @@ void USkeletalMesh3::ConvertMesh()
 						SUV = V0.UV;
 					}
 					// UV
-					for (int i = 0; i < NumTexCoords; i++)
-						D->UV[i] = CVT(SUV[i]);
+					FMeshUVFloat fUV = SUV[0];
+					D->UV = CVT(fUV);
+					for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+					{
+						Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+					}
 				}
 				// convert Normal[3]
 				UnpackNormals(V->Normal, *D);
 				// convert influences
-//				int TotalWeight = 0;
+				int TotalWeight = 0;
 				int i2 = 0;
+				unsigned PackedWeights = 0;
 				for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
 				{
 					int BoneIndex  = V->BoneIndex[i];
-					int BoneWeight = V->BoneWeight[i];
+					byte BoneWeight = V->BoneWeight[i];
 					if (BoneWeight == 0) continue;				// skip this influence (but do not stop the loop!)
-					D->Weight[i2] = BoneWeight / 255.0f;
+					PackedWeights |= BoneWeight << (i2 * 8);
 					D->Bone[i2]   = C->Bones[BoneIndex];
 					i2++;
-//					TotalWeight += BoneWeight;
+					TotalWeight += BoneWeight;
 				}
-//				assert(TotalWeight = 255);
+				D->PackedWeights = PackedWeights;
+				if (TotalWeight != 255 && TotalWeight > 0)
+				{
+					NumReweightedVerts++;
+					float WeightScale = 255.0f / TotalWeight;
+					unsigned ScaledWeight = 0;
+					for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
+					{
+						int shift = i * 8;
+						unsigned mask = 0xFF << shift;
+						unsigned w = (PackedWeights & mask) >> shift;
+						w = appRound((float)w * WeightScale);
+						assert(w > 0 && w < 256);
+						ScaledWeight |= w << shift;
+					}
+					D->PackedWeights = ScaledWeight;
+				}
 				if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 			}
 			else
@@ -1768,7 +2113,7 @@ void USkeletalMesh3::ConvertMesh()
 					D->Position = CVT(V0.Pos);
 					UnpackNormals(V0.Normal, *D);
 					// single influence
-					D->Weight[0] = 1.0f;
+					D->PackedWeights = 0xFF;
 					D->Bone[0]   = C->Bones[V0.BoneIndex];
 					SUV = V0.UV;
 				}
@@ -1782,25 +2127,34 @@ void USkeletalMesh3::ConvertMesh()
 					// influences
 //					int TotalWeight = 0;
 					int i2 = 0;
+					unsigned PackedWeights = 0;
 					for (int i = 0; i < NUM_INFLUENCES_UE3; i++)
 					{
 						int BoneIndex  = V0.BoneIndex[i];
-						int BoneWeight = V0.BoneWeight[i];
+						byte BoneWeight = V0.BoneWeight[i];
 						if (BoneWeight == 0) continue;
-						D->Weight[i2] = BoneWeight / 255.0f;
+						PackedWeights |= BoneWeight << (i2 * 8);
 						D->Bone[i2]   = C->Bones[BoneIndex];
 						i2++;
 //						TotalWeight += BoneWeight;
 					}
-//					assert(TotalWeight = 255);
+					D->PackedWeights = PackedWeights;
+//					assert(TotalWeight == 255);
 					if (i2 < NUM_INFLUENCES_UE3) D->Bone[i2] = INDEX_NONE; // mark end of list
 					SUV = V0.UV;
 				}
 				// UV
-				for (int i = 0; i < NumTexCoords; i++)
-					D->UV[i] = CVT(SUV[i]);
+				FMeshUVFloat fUV = SUV[0];			// convert half->float
+				D->UV = CVT(fUV);
+				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+				{
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+				}
 			}
 		}
+
+		if (NumReweightedVerts > 0)
+			appPrintf("LOD %d: udjusted weights for %d vertices\n", lod, NumReweightedVerts);
 
 		unguard;	// ProcessVerts
 
@@ -1852,7 +2206,7 @@ void USkeletalMesh3::ConvertMesh()
 	Mesh->FinalizeMesh();
 
 #if BATMAN
-	if (Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3)
+	if (ArGame >= GAME_Batman2 && ArGame <= GAME_Batman4)
 		FixBatman2Skeleton();
 #endif
 
@@ -1864,6 +2218,8 @@ void USkeletalMesh3::PostLoad()
 {
 	guard(USkeletalMesh3::PostLoad);
 
+	// MK X has bones serialized in separate USkeleton object, so perform conversion in PostLoad()
+	ConvertMesh();
 	assert(ConvertedMesh);
 
 	int NumSockets = Sockets.Num();
@@ -1901,23 +2257,6 @@ UStaticMesh3::~UStaticMesh3()
 {
 	delete ConvertedMesh;
 }
-
-#if TRANSFORMERS
-
-struct FTRStaticMeshSectionUnk
-{
-	int					f0;
-	int					f4;
-
-	friend FArchive& operator<<(FArchive &Ar, FTRStaticMeshSectionUnk &S)
-	{
-		return Ar << S.f0 << S.f4;
-	}
-};
-
-SIMPLE_TYPE(FTRStaticMeshSectionUnk, int)
-
-#endif // TRANSFORMERS
 
 #if MOH2010
 
@@ -1981,7 +2320,7 @@ struct FStaticMeshSection3
 	int					f24;		//?? first used vertex
 	int					f28;		//?? last used vertex
 	int					Index;		//?? index of section
-	TArray<FMesh3Unk1>	f30;
+	TArrayOfArray<int, 2> f30;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshSection3 &S)
 	{
@@ -2025,8 +2364,7 @@ struct FStaticMeshSection3
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 49)
 		{
-			TArray<FTRStaticMeshSectionUnk> f30;
-			Ar << f30;
+			Ar << S.f30;
 			return Ar;
 		}
 #endif // TRANSFORMERS
@@ -2055,7 +2393,7 @@ struct FStaticMeshSection3
 		}
 #endif // MOH2010
 #if BATMAN
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 28)
+		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && (Ar.ArLicenseeVer >= 28)) // && (Ar.ArLicenseeVer < 102)) - this will drop Batman3 support
 		{
 			UObject *unk4;
 			Ar << unk4;
@@ -2093,30 +2431,6 @@ struct FStaticMeshSection3
 	}
 };
 
-#if DUST514
-
-//?? move to UnMeshTypes.h
-struct FVectorHalf
-{
-	short				X, Y, Z;
-
-	friend FArchive& operator<<(FArchive &Ar, FVectorHalf &v)
-	{
-		return Ar << v.X << v.Y << v.Z;
-	}
-	operator FVector() const
-	{
-		FVector r;
-		r.X = half2float(X);
-		r.Y = half2float(Y);
-		r.Z = half2float(Z);
-		return r;
-	}
-};
-
-SIMPLE_TYPE(FVectorHalf, short);
-
-#endif // DUST514
 
 struct FStaticMeshVertexStream3
 {
@@ -2136,7 +2450,7 @@ struct FStaticMeshVertexStream3
 		//!! FVector Mins, Extents
 
 #if BATMAN
-		if (Ar.Game == GAME_Batman || Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3)
+		if (Ar.Game >= GAME_Batman && Ar.Game <= GAME_Batman4)
 		{
 			byte VertexType = 0;		// appeared in Batman 2; 0 -> FVector, 1 -> half[3], 2 -> half[4] (not checked!)
 			int unk18;					// default is 1
@@ -2148,11 +2462,18 @@ struct FStaticMeshVertexStream3
 			DBG_STAT("Batman StaticMesh VertexStream: IS:%d NV:%d VT:%d unk:%d\n", S.VertexSize, S.NumVerts, VertexType, unk18);
 			switch (VertexType)
 			{
-				case 0:
-					Ar << RAW_ARRAY(S.Verts);
-					break;
-				default:
-					appError("unsupported vertex type %d", VertexType);
+			case 0:
+				S.Verts.BulkSerialize(Ar);
+				break;
+			case 4:
+				{
+					TArray<FVectorHalf> PackedVerts;
+					PackedVerts.BulkSerialize(Ar);
+					CopyArray(S.Verts, PackedVerts);
+				}
+				break;
+			default:
+				appError("unsupported vertex type %d", VertexType);
 			}
 			if (Ar.ArLicenseeVer >= 24)
 			{
@@ -2219,17 +2540,17 @@ struct FStaticMeshVertexStream3
 				if (VectorType)
 				{
 					TArray<FVectorIntervalFixed48Bio> Vecs16x3;
-					Ar << RAW_ARRAY(Vecs16x3);
-					S.Verts.Add(Vecs16x3.Num());
+					Vecs16x3.BulkSerialize(Ar);
+					S.Verts.AddUninitialized(Vecs16x3.Num());
 					for (int i = 0; i < Vecs16x3.Num(); i++)
 						S.Verts[i] = Vecs16x3[i].ToVector(Mins, Extents);
 					appNotify("type1 - untested");	//?? not found - not used?
 				}
 				else
 				{
-					TArray<FVectorIntervalFixed64Bio> Vecs16x4;
-					Ar << RAW_ARRAY(Vecs16x4);
-					S.Verts.Add(Vecs16x4.Num());
+					TArray<FVectorIntervalFixed64> Vecs16x4;
+					Vecs16x4.BulkSerialize(Ar);
+					S.Verts.AddUninitialized(Vecs16x4.Num());
 					for (int i = 0; i < Vecs16x4.Num(); i++)
 						S.Verts[i] = Vecs16x4[i].ToVector(Mins, Extents);
 				}
@@ -2268,13 +2589,13 @@ struct FStaticMeshVertexStream3
 			if (!bUseFullPrecisionPosition)
 			{
 				TArray<FVectorHalf> HalfVerts;
-				Ar << RAW_ARRAY(HalfVerts);
+				HalfVerts.BulkSerialize(Ar);
 				CopyArray(S.Verts, HalfVerts);
 				return Ar;
 			}
 		}
 #endif // DUST514
-		Ar << RAW_ARRAY(S.Verts);
+		S.Verts.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -2291,7 +2612,7 @@ struct FStaticMeshUVItem3
 	FVector				Pos;			// old version (< 472)
 	FPackedNormal		Normal[3];
 	int					f10;			//?? VertexColor?
-	FMeshUVFloat		UV[NUM_MESH_UV_SETS];
+	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVItem3 &V)
 	{
@@ -2416,8 +2737,15 @@ struct FStaticMeshUVStream3
 
 #if BATMAN
 		int HasNormals = 1;
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 42)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 42)
+		{
 			Ar << HasNormals;
+			if (Ar.ArLicenseeVer >= 194)
+			{
+				int unk;
+				Ar << unk;
+			}
+		}
 		GStripStaticNormals = (HasNormals == 0);
 #endif // BATMAN
 #if MASSEFF
@@ -2472,11 +2800,11 @@ struct FStaticMeshUVStream3
 		}
 #endif
 		// prepare for UV serialization
-		if (S.NumTexCoords > NUM_MESH_UV_SETS)
+		if (S.NumTexCoords > MAX_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", S.NumTexCoords);
 		GNumStaticUVSets   = S.NumTexCoords;
-		GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
-		Ar << RAW_ARRAY(S.UV);
+		GUseStaticFloatUVs = (S.bUseFullPrecisionUVs != 0);
+		S.UV.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;
@@ -2494,7 +2822,8 @@ struct FStaticMeshColorStream3
 		guard(FStaticMeshColorStream3<<);
 		Ar << S.ItemSize << S.NumVerts;
 		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
-		return Ar << RAW_ARRAY(S.Colors);
+		S.Colors.BulkSerialize(Ar);
+		return Ar;
 		unguard;
 	}
 };
@@ -2527,7 +2856,7 @@ struct FStaticMeshColorStream3New		// ArVer >= 615
 				Ar << unk;
 			}
 #endif // PLA
-			Ar << RAW_ARRAY(S.Colors);
+			S.Colors.BulkSerialize(Ar);
 		}
 		return Ar;
 		unguard;
@@ -2558,7 +2887,7 @@ struct FStaticMeshUVStream3Old			// ArVer < 364; corresponds to UE2 StaticMesh?
 	{
 		guard(FStaticMeshUVStream3Old<<);
 		int unk;						// Revision?
-		Ar << S.Data;					// used RAW_ARRAY, but RAW_ARRAY is newer than this version
+		Ar << S.Data;					// used BulkSerialize, but BulkSerialize is newer than this version
 		if (Ar.ArVer < 297) Ar << unk;
 		return Ar;
 		unguard;
@@ -2587,7 +2916,8 @@ struct FStaticMeshNormalStream_MK
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshNormalStream_MK &S)
 	{
-		Ar << S.ItemSize << S.NumVerts << RAW_ARRAY(S.Normals);
+		Ar << S.ItemSize << S.NumVerts;
+		S.Normals.BulkSerialize(Ar);
 		DBG_STAT("MK NormalStream: ItemSize=%d, Count=%d (%d)\n", S.ItemSize, S.NumVerts, S.Normals.Num());
 		return Ar;
 	}
@@ -2702,7 +3032,7 @@ struct FStaticMeshLODModel3
 			}
 			if (Ar.ArVer < 536)
 			{
-				Ar << RAW_ARRAY(Lod.Edges);
+				Lod.Edges.BulkSerialize(Ar);
 				Ar << Lod.fEC;
 			}
 			return Ar;
@@ -2737,7 +3067,13 @@ struct FStaticMeshLODModel3
 			if (Ar.Game == GAME_MK && Ar.ArVer >= 472) // MK9; real version: MidwayVer >= 36
 			{
 				FStaticMeshNormalStream_MK NormalStream;
-				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream << Lod.NumVerts;
+				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream;
+				if (Ar.ArVer >= 677)
+				{
+					// MK X
+					Ar << Lod.ColorStream2;
+				}
+				Ar << Lod.NumVerts;
 				// copy NormalStream into UVStream
 				assert(Lod.UVStream.UV.Num() == NormalStream.Normals.Num());
 				for (int i = 0; i < Lod.UVStream.UV.Num(); i++)
@@ -2765,7 +3101,7 @@ struct FStaticMeshLODModel3
 				if (n1 * 2 == n2)
 				{
 					appPrintf("Duplicating MK StaticMesh verts\n");
-					Lod.VertexStream.Verts.Add(n1);
+					Lod.VertexStream.Verts.AddUninitialized(n1);
 					for (int i = 0; i < n1; i++)
 						Lod.VertexStream.Verts[i+n1] = Lod.VertexStream.Verts[i];
 				}
@@ -2782,7 +3118,7 @@ struct FStaticMeshLODModel3
 			Lod.VertexStream.Verts.Empty(NumVerts);
 //			Lod.VertexStream.NumVerts = NumVerts;
 			for (int i = 0; i < NumVerts; i++)
-				Lod.VertexStream.Verts.AddItem(Lod.UVStream.UV[i].Pos);
+				Lod.VertexStream.Verts.Add(Lod.UVStream.UV[i].Pos);
 		}
 		else
 		{
@@ -2793,7 +3129,7 @@ struct FStaticMeshLODModel3
 				appNotify("StaticMesh: untested code! (ArVer=%d)", Ar.ArVer);
 				TArray<FQuat> Verts;
 				TArray<int>   Normals;	// compressed
-				Ar << Verts << Normals << UVStream;	// really used RAW_ARRAY, but it is too new for this code
+				Ar << Verts << Normals << UVStream;	// really used BulkSerialize, but it is too new for this code
 				//!! convert
 			}
 			else
@@ -2805,15 +3141,15 @@ struct FStaticMeshLODModel3
 				int i;
 				int NumVerts     = Verts.Num();
 				int NumTexCoords = UVStream.Num();
-				if (NumTexCoords > NUM_MESH_UV_SETS)
+				if (NumTexCoords > MAX_MESH_UV_SETS)
 				{
 					appNotify("StaticMesh has %d UV sets", NumTexCoords);
-					NumTexCoords = NUM_MESH_UV_SETS;
+					NumTexCoords = MAX_MESH_UV_SETS;
 				}
 				Lod.VertexStream.Verts.Empty(NumVerts);
-				Lod.VertexStream.Verts.Add(NumVerts);
+				Lod.VertexStream.Verts.AddZeroed(NumVerts);
 				Lod.UVStream.UV.Empty();
-				Lod.UVStream.UV.Add(NumVerts);
+				Lod.UVStream.UV.AddDefaulted(NumVerts);
 				Lod.UVStream.NumVerts     = NumVerts;
 				Lod.UVStream.NumTexCoords = NumTexCoords;
 				// resize UV streams
@@ -2834,14 +3170,13 @@ struct FStaticMeshLODModel3
 		if (Ar.Game == GAME_Dust514 && Ar.ArLicenseeVer >= 32)
 		{
 			TArray<byte> unk;		// compressed index buffer?
-			Ar << RAW_ARRAY(unk);
+			unk.BulkSerialize(Ar);
 		}
 #endif // DUST514
 
-	indices:
 		DBG_STAT("Serializing indices ...\n");
 #if BATMAN
-		if ((Ar.Game == GAME_Batman2 || Ar.Game == GAME_Batman3) && Ar.ArLicenseeVer >= 45)
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4 && Ar.ArLicenseeVer >= 45)
 		{
 			int unk34;		// variable in IndexBuffer, but in 1st only
 			Ar << unk34;
@@ -2869,13 +3204,20 @@ struct FStaticMeshLODModel3
 #if BORDERLANDS
 		if (Ar.Game == GAME_Borderlands && Ar.ArVer >= 832) goto after_indices; // Borderlands 2
 #endif
+#if METRO_CONF
+		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 8)
+		{
+			short unk;
+			Ar << unk;
+		}
+#endif
 		Ar << Lod.Indices2;
 		DBG_STAT("Indices: %d %d\n", Lod.Indices.Indices.Num(), Lod.Indices2.Indices.Num());
 	after_indices:
 
 		if (Ar.ArVer < 686)
 		{
-			Ar << RAW_ARRAY(Lod.Edges);
+			Lod.Edges.BulkSerialize(Ar);
 			Ar << Lod.fEC;
 		}
 #if ALPHA_PR
@@ -2885,7 +3227,7 @@ struct FStaticMeshLODModel3
 			if (Ar.ArLicenseeVer >= 4)
 			{
 				TArray<int> unk128;
-				Ar << RAW_ARRAY(unk128);
+				unk128.BulkSerialize(Ar);
 			}
 		}
 #endif // ALPHA_PR
@@ -2915,6 +3257,14 @@ struct FStaticMeshLODModel3
 		if (Ar.ArVer >= 841)
 		{
 			FIndexBuffer3 Indices3;
+#if BATMAN
+			if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 45)
+			{
+				// the same as for indices above
+				int unk;
+				Ar << unk;
+			}
+#endif // BATMAN
 #if PLA
 			if (Ar.Game == GAME_PLA && Ar.ArVer >= 900)
 			{
@@ -3055,6 +3405,13 @@ struct FkDOPTriangle3
 			V.f4 = tmp4;
 			V.f6 = tmp6;
 		}
+#if METRO_CONF
+		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 2)
+		{
+			short unk;
+			Ar << unk;
+		}
+#endif // METRO_CONF
 		return Ar;
 	}
 };
@@ -3124,11 +3481,22 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 #if TRANSFORMERS
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 50)
 	{
-		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles) << Lods;
+		kDOPNodes.BulkSerialize(Ar);
+		kDOPTriangles.BulkSerialize(Ar);
+		Ar << Lods;
 		// note: Bounds is serialized as property (see UStaticMesh in h-file)
 		goto done;
 	}
 #endif // TRANSFORMERS
+#if MKVSDC
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	{
+		// MK X
+		TArrayOfArray<float, 9> kDOPNodes_MK;
+		Ar << kDOPNodes_MK;
+		goto kdop_tris;
+	}
+#endif // MKVSDC
 
 	Ar << Bounds << BodySetup;
 #if TUROK
@@ -3152,7 +3520,8 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 		// serialize kDOP tree
 		assert(Ar.ArLicenseeVer >= 112);
 		// old serialization code
-		Ar << RAW_ARRAY(kDOPNodes) << RAW_ARRAY(kDOPTriangles);
+		kDOPNodes.BulkSerialize(Ar);
+		kDOPTriangles.BulkSerialize(Ar);
 		// new serialization code
 		// bug in Singularity serialization code: serialized the same things twice!
 		goto new_kdop;
@@ -3183,14 +3552,15 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 	if (Ar.ArVer < 770)
 	{
 	old_kdop:
-		Ar << RAW_ARRAY(kDOPNodes);
+		kDOPNodes.BulkSerialize(Ar);
 	}
 	else
 	{
 	new_kdop:
 		FkDOPBounds Bounds;
 		TArray<FkDOPNode3New> Nodes;
-		Ar << Bounds << RAW_ARRAY(Nodes);
+		Ar << Bounds;
+		Nodes.BulkSerialize(Ar);
 	}
 #if FURY
 	if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 32)
@@ -3199,7 +3569,8 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 		Ar << kDopUnk;
 	}
 #endif // FURY
-	Ar << RAW_ARRAY(kDOPTriangles);
+kdop_tris:
+	kDOPTriangles.BulkSerialize(Ar);
 #if DCU_ONLINE
 	if (Ar.Game == GAME_DCUniverse && (Ar.ArLicenseeVer & 0xFF00) >= 0xA00)
 	{
@@ -3330,6 +3701,9 @@ void UStaticMesh3::ConvertMesh()
 	CStaticMesh *Mesh = new CStaticMesh(this);
 	ConvertedMesh = Mesh;
 
+	int ArVer  = GetArVer();
+	int ArGame = GetGame();
+
 	// convert bounds
 	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;			//?? UE3 meshes has radius 2 times larger than mesh itself
 	VectorSubtract(CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Min));
@@ -3345,7 +3719,7 @@ void UStaticMesh3::ConvertMesh()
 		if (SrcLod.Sections.Num() == 0)
 		{
 			// skip empty LODs
-			appPrintf("StaticMesh %s.%s lod #%d has no sections\n", Package->Name, Name, lod);
+			appPrintf("StaticMesh %s.%s lod #%d has no sections\n", GetPackageName(), Name, lod);
 			continue;
 		}
 
@@ -3356,16 +3730,16 @@ void UStaticMesh3::ConvertMesh()
 
 		Lod->NumTexCoords = NumTexCoords;
 		Lod->HasNormals   = true;
-		Lod->HasTangents  = (Package->ArVer >= 364);			//?? check; FStaticMeshUVStream3 is used since this version
+		Lod->HasTangents  = (ArVer >= 364);			//?? check; FStaticMeshUVStream3 is used since this version
 #if BATMAN
-		if ((Package->Game == GAME_Batman2 || Package->Game == GAME_Batman3) && CanStripNormalsAndTangents)
+		if ((ArGame == GAME_Batman2 || ArGame == GAME_Batman3) && CanStripNormalsAndTangents)
 			Lod->HasNormals = Lod->HasTangents = false;
 #endif
-		if (NumTexCoords > NUM_MESH_UV_SETS)
+		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		// sections
-		Lod->Sections.Add(SrcLod.Sections.Num());
+		Lod->Sections.AddDefaulted(SrcLod.Sections.Num());
 		for (int i = 0; i < SrcLod.Sections.Num(); i++)
 		{
 			CMeshSection &Dst = Lod->Sections[i];
@@ -3385,13 +3759,13 @@ void UStaticMesh3::ConvertMesh()
 			V.Position = CVT(SrcLod.VertexStream.Verts[i]);
 			UnpackNormals(SUV.Normal, V);
 			// copy UV
-			staticAssert((sizeof(CMeshUVFloat) == sizeof(FMeshUVFloat)) && (sizeof(V.UV) == sizeof(SUV.UV)), Incompatible_CStaticMeshUV);
-#if 0
-			for (int j = 0; j < NumTexCoords; j++)
-				V.UV[j] = (CMeshUVFloat&)SUV.UV[j];
-#else
-			memcpy(V.UV, SUV.UV, sizeof(V.UV));
-#endif
+			const FMeshUVFloat* fUV = &SUV.UV[0];
+			V.UV = *CVT(fUV);
+			for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+			{
+				fUV++;
+				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
+			}
 			//!! also has ColorStream
 		}
 

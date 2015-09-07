@@ -30,7 +30,7 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 		Package->CreateExport(idx);
 	}
 	UObject::EndLoad();
-	GFullyLoadedPackages.AddItem(Package);
+	GFullyLoadedPackages.Add(Package);
 
 #if PROFILE
 	appPrintProfiler();
@@ -46,7 +46,7 @@ void ReleaseAllObjects()
 	guard(ReleaseAllObjects);
 
 #if 0
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	appDumpMemoryAllocations();
 #endif
 	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
@@ -67,7 +67,7 @@ void ReleaseAllObjects()
 		}
 	}
 #endif
-	appPrintf("Memory: allocated %d bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 //	appDumpMemoryAllocations();
 
 	unguard;
@@ -130,7 +130,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 		//!! do that only when something "strange" within data noticed
 		return true;
 	}
-	int Version = FileData[1];
+	unsigned int Version = FileData[1];
 
 	FileInfo Info;
 
@@ -162,7 +162,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 		}
 	}
 	if (Index == INDEX_NONE)
-		Index = data.PkgInfo->AddItem(Info);
+		Index = data.PkgInfo->Add(Info);
 	// update info
 	FileInfo& fileInfo = (*data.PkgInfo)[Index];
 	fileInfo.Count++;

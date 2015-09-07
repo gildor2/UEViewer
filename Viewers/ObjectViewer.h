@@ -8,8 +8,7 @@ class CSkelMeshInstance;
 class CSkeletalMesh;
 class CStaticMesh;
 struct CMeshVertex;
-struct CIndexBuffer;
-struct CMeshSection;
+struct CBaseMeshLod;
 
 
 #define TEST_FILES		1		// comment line to disable some notifications
@@ -100,7 +99,7 @@ public:
 
 	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
 
-	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CIndexBuffer& Indices, const TArray<CMeshSection>& Sections, int UVIndex);
+	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CBaseMeshLod* Mesh, int UVIndex);
 };
 
 
@@ -145,7 +144,7 @@ public:
 
 	CSkelMeshViewer(CSkeletalMesh* Mesh, CApplication* Window);
 
-	static void TagMesh(CSkelMeshInstance *NewInst);
+	static void TagMesh(CSkelMeshInstance *Inst);
 	static void UntagAllMeshes();
 
 	virtual void ShowHelp();
@@ -158,7 +157,7 @@ public:
 
 	virtual void DrawMesh(CMeshInstance *Inst);
 
-	static TArray<CSkelMeshInstance*> Meshes;	// for displaying multipart meshes
+	static TArray<CSkelMeshInstance*> TaggedMeshes;	// for displaying multipart meshes
 
 private:
 	CSkeletalMesh	*Mesh;

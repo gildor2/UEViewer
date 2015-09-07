@@ -28,13 +28,13 @@ void UMeshAnimation::ConvertAnims()
 
 	// TrackBoneNames
 	int numBones = RefBones.Num();
-	AnimSet->TrackBoneNames.Add(numBones);
+	AnimSet->TrackBoneNames.AddUninitialized(numBones);
 	for (i = 0; i < numBones; i++)
 		AnimSet->TrackBoneNames[i] = RefBones[i].Name;
 
 	// Sequences
 	int numSeqs = AnimSeqs.Num();
-	AnimSet->Sequences.Add(numSeqs);
+	AnimSet->Sequences.AddZeroed(numSeqs);
 	for (i = 0; i < numSeqs; i++)
 	{
 		CAnimSequence &S = AnimSet->Sequences[i];
@@ -47,7 +47,7 @@ void UMeshAnimation::ConvertAnims()
 		S.Rate      = Src.Rate;
 
 		// S.Tracks
-		S.Tracks.Add(numBones);
+		S.Tracks.AddZeroed(numBones);
 		for (j = 0; j < numBones; j++)
 		{
 			CAnimTrack &T = S.Tracks[j];
@@ -234,7 +234,7 @@ template<class T> struct MotionChunkCompress : public MotionChunkCompressBase
 		CopyArray(D.BoneIndices, BoneIndices);
 		int numAnims = AnimTracks.Num();
 		D.AnimTracks.Empty(numAnims);
-		D.AnimTracks.Add(numAnims);
+		D.AnimTracks.AddZeroed(numAnims);
 		for (int i = 0; i < numAnims; i++)
 			AnimTracks[i].Decompress(D.AnimTracks[i]);
 		// RootTrack is unused ...
@@ -291,7 +291,7 @@ void UMeshAnimation::SerializeSCell(FArchive &Ar)
 				{
 					// 1st iteration, prepare Moves[] array
 					Moves.Empty(Count);
-					Moves.Add(Count);
+					Moves.AddZeroed(Count);
 				}
 				// decompress current track
 				M->Decompress(Moves[i]);
@@ -424,7 +424,7 @@ void AnalogTrack::SerializeSWRC(FArchive &Ar)
 	int NumKeys, i;
 	NumKeys = TimeTrack.Num();
 	KeyTime.Empty(NumKeys);
-	KeyTime.Add(NumKeys);
+	KeyTime.AddUninitialized(NumKeys);
 	int Time = 0;
 	for (i = 0; i < NumKeys; i++)
 	{
@@ -435,7 +435,7 @@ void AnalogTrack::SerializeSWRC(FArchive &Ar)
 	// rotation track
 	NumKeys = RotTrack.Num();
 	KeyQuat.Empty(NumKeys);
-	KeyQuat.Add(NumKeys);
+	KeyQuat.AddUninitialized(NumKeys);
 	for (i = 0; i < NumKeys; i++)
 	{
 		FQuat Q;
@@ -451,7 +451,7 @@ void AnalogTrack::SerializeSWRC(FArchive &Ar)
 	// translation track
 	NumKeys = PosTrack.Num();
 	KeyPos.Empty(NumKeys);
-	KeyPos.Add(NumKeys);
+	KeyPos.AddUninitialized(NumKeys);
 	for (i = 0; i < NumKeys; i++)
 		KeyPos[i] = PosTrack[i].ToFVector(PosScale);
 
@@ -470,9 +470,9 @@ void UMeshAnimation::SerializeSWRCAnims(FArchive &Ar)
 	Ar << AR_INDEX(NumAnims);		// TArray.Num
 	// prepare arrays
 	Moves.Empty(NumAnims);
-	Moves.Add(NumAnims);
+	Moves.AddZeroed(NumAnims);
 	AnimSeqs.Empty(NumAnims);
-	AnimSeqs.Add(NumAnims);
+	AnimSeqs.AddZeroed(NumAnims);
 	// serialize items
 	for (int i = 0; i < NumAnims; i++)
 	{
@@ -582,7 +582,7 @@ public:
 
 		assert(DataAr.IsLoading && CountAr.IsLoading);
 		// serialize memory size from "CountAr"
-		int DataSize;
+		unsigned DataSize;
 		CountAr << DataSize;
 		// compute items count
 		int Count = DataSize / sizeof(T);
@@ -591,7 +591,7 @@ public:
 		Empty(Count);
 		DataCount = Count;
 		// serialize items from "DataAr"
-		T* Item = (T*)GetData();
+		T* Item = GetData();
 		while (Count > 0)
 		{
 			DataAr << *Item;
@@ -647,7 +647,7 @@ struct FlexTrackStatic : public FlexTrackBase
 		{
 			FVector pos;
 			Ar << pos;
-			KeyPos.AddItem(pos);
+			KeyPos.Add(pos);
 		}
 	}
 #if UC2
@@ -662,7 +662,7 @@ struct FlexTrackStatic : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		T.KeyQuat.AddItem(KeyQuat);
+		T.KeyQuat.Add(KeyQuat);
 		CopyArray(T.KeyPos, KeyPos);
 	}
 };
@@ -710,7 +710,7 @@ struct FlexTrack48RotOnly : public FlexTrackBase
 		CopyArray(T.KeyQuat, KeyQuat);
 		CopyArray(T.KeyTime, KeyTime);
 		T.KeyPos.Empty(1);
-		T.KeyPos.AddItem(KeyPos);
+		T.KeyPos.Add(KeyPos);
 	}
 };
 
@@ -758,8 +758,8 @@ struct FlexTrack6 : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		T.KeyQuat.AddItem(KeyQuat);
-		T.KeyPos.AddItem(KeyPos);
+		T.KeyQuat.Add(KeyQuat);
+		T.KeyPos.Add(KeyPos);
 	}
 };
 
@@ -781,7 +781,7 @@ struct FlexTrack7 : public FlexTrackBase
 
 	virtual void Decompress(AnalogTrack &T)
 	{
-		T.KeyQuat.AddItem(KeyQuat);
+		T.KeyQuat.Add(KeyQuat);
 	}
 };
 
@@ -863,7 +863,7 @@ void SerializeFlexTracks(FArchive &Ar, MotionChunk &M)
 	int numTracks = FT.Num();
 	if (!numTracks) return;
 	M.AnimTracks.Empty(numTracks);
-	M.AnimTracks.Add(numTracks);
+	M.AnimTracks.AddZeroed(numTracks);
 	for (int i = 0; i < numTracks; i++)
 		FT[i].Track->Decompress(M.AnimTracks[i]);
 
@@ -971,7 +971,7 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 	// serialize Moves2 and copy Moves2 to Moves
 	int numMoves = Moves2.Num();
 	Moves.Empty(numMoves);
-	Moves.Add(numMoves);
+	Moves.AddZeroed(numMoves);
 	for (int mi = 0; mi < numMoves; mi++)
 	{
 		MotionChunkUC2 &M = Moves2[mi];
@@ -981,7 +981,7 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 		int numATracks = M.AnimTracks.Num();
 		if (numATracks)
 		{
-			DM.AnimTracks.Add(numATracks);
+			DM.AnimTracks.AddZeroed(numATracks);
 			for (int ti = 0; ti < numATracks; ti++)
 			{
 				AnalogTrack &A = DM.AnimTracks[ti];
@@ -998,7 +998,7 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 		int numFTracks = M.FlexTracks.Num();
 		if (numFTracks)
 		{
-			DM.AnimTracks.Add(numFTracks);
+			DM.AnimTracks.AddZeroed(numFTracks);
 			for (int ti = 0; ti < numFTracks; ti++)
 			{
 				FlexTrackBase *Track = M.FlexTracks[ti].Track;

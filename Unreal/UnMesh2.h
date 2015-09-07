@@ -219,6 +219,14 @@ struct FMeshAnimNotify
 #endif
 		if (Ar.ArVer >= 112)
 			Ar << N.NotifyObj;
+#if LINEAGE2
+		if (Ar.Game == GAME_Lineage2 && Ar.ArVer >= 131)
+		{
+			int StringLen;
+			Ar << StringLen;
+			Ar.Seek(Ar.Tell() + StringLen * 2);
+		}
+#endif // LINEAGE2
 		return Ar;
 		unguard;
 	}
@@ -320,7 +328,7 @@ struct FMeshAnimSeq
 			FName tmpGroup;					// single group
 			Ar << tmpGroup;
 			if (strcmp(tmpGroup, "None") != 0)
-				A.Groups.AddItem(tmpGroup);
+				A.Groups.Add(tmpGroup);
 		}
 		else
 #endif // UNREAL1
@@ -993,10 +1001,23 @@ struct FStaticLODModel
 		}
 #endif // SWRC
 		Ar << M.SkinningData << M.SkinPoints << M.NumDynWedges;
+#if EOS
+		if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 42)
+		{
+			TArray<int> unk;
+			Ar << unk;
+		}
+#endif // EOS
 		Ar << M.SmoothSections << M.RigidSections << M.SmoothIndices << M.RigidIndices;
 		Ar << M.VertexStream;
 		Ar << M.VertInfluences << M.Wedges << M.Faces << M.Points;
-		Ar << M.LODDistanceFactor << M.LODHysteresis << M.NumSharedVerts;
+		Ar << M.LODDistanceFactor;
+#if EOS
+		if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 42) goto no_lod_hysteresis;
+#endif
+		Ar << M.LODHysteresis;
+	no_lod_hysteresis:
+		Ar << M.NumSharedVerts;
 		Ar << M.LODMaxInfluences << M.f114 << M.f118;
 #if TRIBES3
 		if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 1)

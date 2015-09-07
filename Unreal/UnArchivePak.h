@@ -39,6 +39,17 @@ struct FPakInfo
 	}
 };
 
+struct FPakCompressedBlock
+{
+	int64		CompressedStart;
+	int64		CompressedEnd;
+
+	friend FArchive& operator<<(FArchive& Ar, FPakCompressedBlock& B)
+	{
+		return Ar << B.CompressedStart << B.CompressedEnd;
+	}
+};
+
 struct FPakEntry
 {
 	const char*	Name;
@@ -48,9 +59,10 @@ struct FPakEntry
 	int			CompressionMethod;
 	byte		Hash[20];
 	byte		bEncrypted;
+	TArray<FPakCompressedBlock> CompressionBlocks;
 	int			CompressionBlockSize;
 
-	int			StructSize;					// computed value
+	int64		StructSize;					// computed value
 
 	friend FArchive& operator<<(FArchive& Ar, FPakEntry& P)
 	{
@@ -73,10 +85,7 @@ struct FPakEntry
 		if (Ar.PakVer >= PAK_COMPRESSION_ENCRYPTION)
 		{
 			if (P.CompressionMethod != 0)
-			{
-				appError("Compressed PAKs are not supported");
-				// Ar << P.CompressionBlocks;
-			}
+				Ar << P.CompressionBlocks;
 			Ar << P.bEncrypted << P.CompressionBlockSize;
 			if (P.bEncrypted) appError("Encrypted PAKs are not supported");
 		}
@@ -96,19 +105,66 @@ public:
 	FPakFile(const FPakEntry* info, FArchive* reader)
 	:	Info(info)
 	,	Reader(reader)
+	,	UncompressedData(NULL)
 	{}
+
+	virtual ~FPakFile()
+	{
+		if (UncompressedData)
+			appFree(UncompressedData);
+	}
 
 	virtual void Serialize(void *data, int size)
 	{
 		guard(FPakFile::Serialize);
 		if (ArStopper > 0 && ArPos + size > ArStopper)
 			appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
-		// seek every time in a case if the same 'Reader' was used by different FPakFile
-		// (this is a lightweight operation for buffered FArchive)
-		// Note:
-		Reader->Seek64(Info->Pos + Info->StructSize + ArPos);
-		Reader->Serialize(data, size);
-		ArPos += size;
+
+		if (Info->CompressionMethod)
+		{
+			guard(SerializeCompressed);
+
+			if (UncompressedData == NULL)
+			{
+				// didn't start decompression yet
+				UncompressedData = (byte*)appMalloc((int)Info->UncompressedSize);
+				UncompressedPos = 0;
+			}
+
+			// fill uncompressed buffer
+			int DesiredDataEnd = ArPos + size;
+			while (DesiredDataEnd > UncompressedPos)
+			{
+				int BlockIndex = UncompressedPos / Info->CompressionBlockSize;
+				const FPakCompressedBlock& Block = Info->CompressionBlocks[BlockIndex];
+				int CompressedBlockSize = (int)(Block.CompressedEnd - Block.CompressedStart);
+				int UncompressedBlockSize = min((int)Info->CompressionBlockSize, (int)Info->UncompressedSize - UncompressedPos);
+				byte* CompressedData = (byte*)appMalloc(CompressedBlockSize);
+				Reader->Seek64(Block.CompressedStart);
+				Reader->Serialize(CompressedData, CompressedBlockSize);
+				appDecompress(CompressedData, CompressedBlockSize, UncompressedData + UncompressedPos, UncompressedBlockSize, Info->CompressionMethod);
+				UncompressedPos += UncompressedBlockSize;
+				appFree(CompressedData);
+			}
+
+			// copy uncompressed data
+			memcpy(data, UncompressedData + ArPos, size);
+			ArPos += size;
+
+			unguard;
+		}
+		else
+		{
+			guard(SerializeUncompressed);
+
+			// seek every time in a case if the same 'Reader' was used by different FPakFile
+			// (this is a lightweight operation for buffered FArchive)
+			Reader->Seek64(Info->Pos + Info->StructSize + ArPos);
+			Reader->Serialize(data, size);
+			ArPos += size;
+
+			unguard;
+		}
 		unguard;
 	}
 
@@ -122,12 +178,14 @@ public:
 
 	virtual int GetFileSize() const
 	{
-		return Info->UncompressedSize;
+		return (int)Info->UncompressedSize;
 	}
 
 protected:
 	const FPakEntry* Info;
 	FArchive*	Reader;
+	byte*		UncompressedData;
+	int			UncompressedPos;
 };
 
 
@@ -169,7 +227,7 @@ public:
 
 		int count;
 		*Reader << count;
-		FileInfos.Add(count);
+		FileInfos.AddZeroed(count);
 
 		for (int i = 0; i < count; i++)
 		{
@@ -190,7 +248,7 @@ public:
 	virtual int GetFileSize(const char* name)
 	{
 		const FPakEntry* info = FindFile(name);
-		return (info) ? info->Size : 0;
+		return (info) ? (int)info->UncompressedSize : 0;
 	}
 
 	// iterating over all files

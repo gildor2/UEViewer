@@ -269,9 +269,9 @@ FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 
 #if UNREAL3
 
-FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*))
+FArchive& SerializeBulkArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*))
 {
-	guard(TRawArray<<);
+	guard(SerializeBulkArray);
 	assert(Ar.IsLoading);
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4) goto new_ver;
@@ -304,7 +304,7 @@ FArchive& SerializeRawArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)
 				Ar.Tell());
 #endif
 		if (Ar.Tell() != SavePos + 4 + Array.Num() * ElementSize)	// check position
-			appError("RawArray item size mismatch: expected %d, got %d\n", ElementSize, (Ar.Tell() - SavePos) / Array.Num());
+			appError("RawArray item size mismatch: expected %d, serialized %d\n", ElementSize, (Ar.Tell() - SavePos) / Array.Num());
 		return Ar;
 	}
 old_ver:
@@ -314,9 +314,9 @@ old_ver:
 	unguard;
 }
 
-void SkipRawArray(FArchive &Ar, int Size)
+void SkipBulkArrayData(FArchive &Ar, int Size)
 {
-	guard(SkipRawArray);
+	guard(SkipBulkArrayData);
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4) goto new_ver;
 #endif
@@ -385,15 +385,15 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		// empty FString
 		// original UE has array count == 0 and special handling when converting FString
 		// to char*
-		S.AddItem(0);
+		S.Data.AddZeroed(1);
 		return Ar;
 	}
 
 	if (len > 0)
 	{
 		// ANSI string
-		S.Add(len);
-		Ar.Serialize(S.GetData(), len);
+		S.Data.AddUninitialized(len);
+		Ar.Serialize(S.Data.GetData(), len);
 	}
 	else
 	{
@@ -407,15 +407,9 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 				c = (c >> 8) | ((c & 0xFF) << 8);
 #endif
 			if (c & 0xFF00) c = '$';	//!! incorrect ...
-			S.AddItem(c & 255);			//!! incorrect ...
+			S.Data.Add(c & 255);		//!! incorrect ...
 		}
 	}
-/*	for (i = 0; i < S.Num(); i++) -- disabled 21.03.2012, Unicode chars are "fixed" before S.AddItem() above
-	{
-		char c = S[i];
-		if (c >= 1 && c < ' ')
-			S[i] = '$';
-	} */
 	if (S[abs(len)-1] != 0)
 		appError("Serialized FString is not null-terminated");
 	return Ar;
@@ -470,6 +464,7 @@ void FArchive::Printf(const char *fmt, ...)
 #if _WIN32
 
 #define fopen64			fopen
+#define fileno			_fileno
 
 	#ifndef OLDCRT
 
@@ -524,8 +519,9 @@ void FFileArchive::Seek64(int64 Pos)
 
 int FFileArchive::Tell() const
 {
-	if (ArPos64 >= (1LL << 31)) appError("Tell %I64X", ArPos64);
+	guard(FFileArchive::Tell());
 	return (int)ArPos64;
+	unguard;
 }
 
 int64 FFileArchive::Tell64() const
@@ -536,7 +532,7 @@ int64 FFileArchive::Tell64() const
 int FFileArchive::GetFileSize() const
 {
 	int64 size = GetFileSize64();
-	if (size >= (1LL << 31)) appError("GetFileSize %I64X", size);
+	if (size >= (1LL << 31)) appError("GetFileSize returns 0x%llX", size);
 	return (int)size;
 }
 
@@ -600,7 +596,7 @@ void FFileReader::Serialize(void *data, int size)
 	guard(FFileReader::Serialize);
 
 	if (ArStopper > 0 && ArPos64 + size > ArStopper)
-		appError("Serializing behind stopper (%X+%X > %X)", ArPos64, size, ArStopper);
+		appError("Serializing behind stopper (%llX+%X > %X)", ArPos64, size, ArStopper);
 
 	while (size > 0)
 	{
@@ -611,7 +607,7 @@ void FFileReader::Serialize(void *data, int size)
 			if (ArPos64 != FilePos)
 			{
 				if (fseeko64(f, ArPos64, SEEK_SET) != 0)
-					appError("Error seeking to position %I64X", ArPos64);
+					appError("Error seeking to position 0x%llX", ArPos64);
 				FilePos = ArPos64;
 			}
 			// the requested data is not in buffer
@@ -620,7 +616,7 @@ void FFileReader::Serialize(void *data, int size)
 				// large block, read directly from file
 				int res = fread(data, size, 1, f);
 				if (res != 1)
-					appError("Unable to serialize %d bytes at pos=%d", size, FilePos);
+					appError("Unable to serialize %d bytes at pos=0x%llX", size, ArPos64);
 			#if PROFILE
 				GNumSerialize++;
 				GSerializeBytes += size;
@@ -632,7 +628,7 @@ void FFileReader::Serialize(void *data, int size)
 			// fill buffer
 			int ReadBytes = fread(Buffer, 1, FILE_BUFFER_SIZE, f);
 			if (ReadBytes == 0)
-				appError("Unable to serialize %d bytes at pos=%d", 1, FilePos);
+				appError("Unable to serialize %d bytes at pos=0x%llX", 1, ArPos64);
 		#if PROFILE
 			GNumSerialize++;
 			GSerializeBytes += ReadBytes;
@@ -684,18 +680,40 @@ int64 FFileReader::GetFileSize64() const
 	return FileSize;
 }
 
+static TArray<FFileWriter*> GFileWriters;
+
 FFileWriter::FFileWriter(const char *Filename, unsigned Options)
 :	FFileArchive(Filename, Options)
 {
 	guard(FFileWriter::FFileWriter);
 	IsLoading = false;
 	Open();
+	GFileWriters.Add(this);
 	unguardf("%s", Filename);
 }
 
 FFileWriter::~FFileWriter()
 {
+	GFileWriters.RemoveSingle(this);
 	Close();
+}
+
+void FFileWriter::CleanupOnError()
+{
+	for (int i = GFileWriters.Num() - 1; i >= 0; i--)
+	{
+		FFileWriter* Writer = GFileWriters[i];
+		FString FileName(Writer->FullName);
+		delete Writer;
+		appPrintf("Deleting partially saved file %s\n", *FileName);
+#if MAX_DEBUG
+		char NewFileName[1024];
+		appSprintf(ARRAY_ARG(NewFileName), "%s.crash", *FileName);
+		rename(*FileName, NewFileName);
+#else
+		remove(*FileName);
+#endif
+	}
 }
 
 void FFileWriter::Serialize(void *data, int size)
@@ -704,7 +722,7 @@ void FFileWriter::Serialize(void *data, int size)
 
 	while (size > 0)
 	{
-		int LocalPos64 = ArPos64 - BufferPos;
+		int LocalPos64 = int(ArPos64 - BufferPos);
 		if (LocalPos64 < 0 || LocalPos64 >= FILE_BUFFER_SIZE || size >= FILE_BUFFER_SIZE)
 		{
 			// trying to write outside of buffer
@@ -715,14 +733,14 @@ void FFileWriter::Serialize(void *data, int size)
 				if (ArPos64 != FilePos)
 				{
 					if (fseeko64(f, ArPos64, SEEK_SET) != 0)
-						appError("Error seeking to position %I64X", ArPos64);
+						appError("Error seeking to position 0x%llX", ArPos64);
 //					int ret = fseeko64(f, ArPos64, SEEK_SET);
 //					assert(ret == 0);
 					FilePos = ArPos64;
 				}
 				int res = fwrite(data, size, 1, f);
 				if (res != 1)
-					appError("Unable to serialize %d bytes at pos=%d", size, FilePos);
+					appError("Unable to serialize %d bytes at pos=0x%llX", size, ArPos64);
 			#if PROFILE
 				GNumSerialize++;
 				GSerializeBytes += size;
@@ -779,7 +797,7 @@ void FFileWriter::FlushBuffer()
 		}
 		int res = fwrite(Buffer, BufferSize, 1, f);
 		if (res != 1)
-			appError("Unable to serialize %d bytes at pos=%d", BufferSize, FilePos);
+			appError("Unable to serialize %d bytes at pos=0x%llX", BufferSize, ArPos64);
 #if PROFILE
 		GNumSerialize++;
 		GSerializeBytes += BufferSize;
@@ -846,7 +864,6 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
 FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 {
 	guard(FCompressedChunkHeader<<);
-	int i;
 	Ar << H.Tag;
 	if (H.Tag == PACKAGE_FILE_TAG_REV)
 		Ar.ReverseBytes = !Ar.ReverseBytes;
@@ -892,8 +909,8 @@ summary:
 		H.BlockSize = (Ar.ArVer >= 369) ? 0x20000 : 0x8000;
 	int BlockCount = (H.Sum.UncompressedSize + H.BlockSize - 1) / H.BlockSize;
 	H.Blocks.Empty(BlockCount);
-	H.Blocks.Add(BlockCount);
-	for (i = 0; i < BlockCount; i++)
+	H.Blocks.AddZeroed(BlockCount);
+	for (int i = 0; i < BlockCount; i++)
 		Ar << H.Blocks[i];
 #else
 	H.BlockSize = 0x20000;
@@ -968,7 +985,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		assert(Package);
 		BulkDataOffsetInFile += Package->Summary.BulkDataStartOffset;
 	#if DEBUG_BULK
-		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%I64X+%X)\n",
+		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X)\n",
 			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 	#endif
 		return;
@@ -1007,7 +1024,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		if (BulkDataSizeOnDisk == INDEX_NONE)
 			BulkDataSizeOnDisk = ElementCount * GetElementSize();
 		BulkDataOffsetInFile = Ar.Tell();
-		BulkDataSizeOnDisk   = EndPosition - BulkDataOffsetInFile;
+		BulkDataSizeOnDisk   = EndPosition - (int)BulkDataOffsetInFile;
 		unguard;
 	}
 	else
@@ -1027,6 +1044,14 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 			goto header_done;
 		}
 #endif // MKVSDC
+#if BATMAN
+		if (Ar.Game == GAME_Batman4 && Ar.ArLicenseeVer >= 153)
+		{
+			// 64-bit offset
+			Ar << BulkDataSizeOnDisk << BulkDataOffsetInFile;
+			goto header_done;
+		}
+#endif // BATMAN
 		Ar << BulkDataSizeOnDisk << tmpBulkDataOffsetInFile32;
 		BulkDataOffsetInFile = tmpBulkDataOffsetInFile32;		// sign extend to allow non-standard TFC systems which uses '-1' in this field
 #if TRANSFORMERS
@@ -1056,7 +1081,7 @@ header_done: ;
 #endif // APB
 
 #if DEBUG_BULK
-	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%I64X+%X)\n",
+	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X)\n",
 		Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 #endif
 
@@ -1079,20 +1104,28 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	}
 
 #if UNREAL4
-	if ((Ar.Game >= GAME_UE4) && (BulkDataFlags & BULKDATA_PayloadAtEndOfFile))
+	if (Ar.Game >= GAME_UE4)
 	{
-		// stored in the same file, but at different position
-		// save archive position
-		int savePos, saveStopper;
-		savePos     = Ar.Tell();
-		saveStopper = Ar.GetStopper();
-		// seek to data block and read data
-		Ar.SetStopper(0);
-		SerializeData(Ar);
-		// restore archive position
-		Ar.Seek(savePos);
-		Ar.SetStopper(saveStopper);
-		return;
+		if (BulkDataFlags & BULKDATA_PayloadAtEndOfFile)
+		{
+			// stored in the same file, but at different position
+			// save archive position
+			int savePos, saveStopper;
+			savePos     = Ar.Tell();
+			saveStopper = Ar.GetStopper();
+			// seek to data block and read data
+			Ar.SetStopper(0);
+			SerializeData(Ar);
+			// restore archive position
+			Ar.Seek(savePos);
+			Ar.SetStopper(saveStopper);
+			return;
+		}
+		if (BulkDataFlags & BULKDATA_ForceInlinePayload)
+		{
+			SerializeDataChunk(Ar);
+			return;
+		}
 	}
 #endif // UNREAL4
 
@@ -1100,7 +1133,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	{
 		// stored in a different file (TFC)
 #if DEBUG_BULK
-		appPrintf("bulk in separate file (flags=%X, pos=%I64X+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+		appPrintf("bulk in separate file (flags=%X, pos=%llX+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 #endif
 		return;
 	}
@@ -1146,7 +1179,7 @@ void FByteBulkData::Skip(FArchive &Ar)
 	if (BulkDataOffsetInFile == Ar.Tell())
 	{
 		// really should check flags here, but checking position is simpler
-		Ar.Seek(Ar.Tell() + BulkDataSizeOnDisk);
+		Ar.Seek64(Ar.Tell64() + BulkDataSizeOnDisk);
 	}
 
 	unguard;
@@ -1185,7 +1218,7 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 		}
 		loader->Game = Ar.Game;
 
-		loader->Seek(BulkDataOffsetInFile);
+		loader->Seek64(BulkDataOffsetInFile);
 		SerializeDataChunk(*loader);
 		delete loader;
 	}
@@ -1195,9 +1228,14 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 		if (BulkDataFlags & (BULKDATA_SeparateData | BULKDATA_StoreInSeparateFile))
 		{
 		serialize_separate_data:
-			Ar.Seek(BulkDataOffsetInFile);
+			Ar.Seek64(BulkDataOffsetInFile);
 			SerializeDataChunk(Ar);
-			assert(BulkDataOffsetInFile + BulkDataSizeOnDisk == Ar.Tell());
+			if (BulkDataOffsetInFile + BulkDataSizeOnDisk != Ar.Tell64())
+			{
+				// At least Special Force 2 has this situation with correct data - perhaps BulkDataSizeOnDisk is wrong there.
+				// Let's spam, but don't crash.
+				appNotify("Serialize bulk data: current position %llX, expected %llX", Ar.Tell64(), BulkDataOffsetInFile + BulkDataSizeOnDisk);
+			}
 		}
 		else
 		{

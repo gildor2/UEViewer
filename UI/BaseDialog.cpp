@@ -888,9 +888,10 @@ void UITextEdit::UpdateText()
 
 	int len = GetWindowTextLength(Wnd);
 	FString& S = *pValue;
-	S.Empty(len+1);
-	S.Add(len+1);
-	GetWindowText(Wnd, &S[0], len + 1);
+	TArray<char>& StrData = S.GetDataArray();
+	StrData.Empty(len+1);
+	StrData.AddUninitialized(len+1);
+	GetWindowText(Wnd, StrData.GetData(), len + 1);
 }
 
 
@@ -1111,7 +1112,7 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 {
 	Height = DEFAULT_LISTBOX_HEIGHT;
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
-	Items.Add(numColumns);		// reserve place for header
+	Items.AddZeroed(numColumns);	// reserve place for header
 }
 
 UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int width, ETextAlign align)
@@ -1137,7 +1138,7 @@ int UIMulticolumnListbox::AddItem(const char* item)
 
 	assert(Items.Num() % NumColumns == 0);
 	int numItems = Items.Num() / NumColumns - 1;
-	int index = Items.Add(NumColumns);
+	int index = Items.AddZeroed(NumColumns);
 	Items[index] = item;
 
 	if (Wnd)
@@ -1213,7 +1214,7 @@ void UIMulticolumnListbox::RemoveItem(int itemIndex)
 		return;									// out of range
 	// remove from Items array
 	int stringIndex = (itemIndex + 1) * NumColumns;
-	Items.Remove(stringIndex, NumColumns);		// remove 1 item
+	Items.RemoveAt(stringIndex, NumColumns);	// remove 1 item
 	// remove from ListView
 	if (Wnd)
 	{
@@ -1233,7 +1234,7 @@ void UIMulticolumnListbox::RemoveItem(int itemIndex)
 	// remove from selection
 	// (note: when window exists, item will be removed from selection in ListView_DeleteItem -> HandleCommand chain)
 	int pos = SelectedItems.FindItem(itemIndex);
-	if (pos >= 0) SelectedItems.FastRemove(pos);
+	if (pos >= 0) SelectedItems.RemoveAtSwap(pos);
 	// renumber selected items
 	for (int i = 0; i < SelectedItems.Num(); i++)
 	{
@@ -1248,12 +1249,12 @@ void UIMulticolumnListbox::RemoveAllItems()
 	// remove items from local storage and from control
 	int numStrings = Items.Num();
 	if (numStrings > NumColumns)
-		Items.Remove(NumColumns, numStrings - NumColumns);
+		Items.RemoveAt(NumColumns, numStrings - NumColumns);
 	if (Wnd) ListView_DeleteAllItems(Wnd);
 
 	// process selection
 	int selCount = SelectedItems.Num();
-	SelectedItems.FastEmpty();
+	SelectedItems.Reset();
 	if (selCount)
 	{
 		// execute a callback about selection change
@@ -1292,8 +1293,8 @@ UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index, bool add)
 		int value = GetSelectionIndex();
 		if (index != value)
 		{
-			SelectedItems.FastEmpty();
-			SelectedItems.AddItem(index);
+			SelectedItems.Reset();
+			SelectedItems.Add(index);
 			// perform selection for control
 			if (Wnd) SetItemSelection(index, true);
 		}
@@ -1303,7 +1304,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(int index, bool add)
 		int pos = SelectedItems.FindItem(index);
 		if (pos < 0)
 		{
-			SelectedItems.AddItem(index);
+			SelectedItems.Add(index);
 			// perform selection for control
 			if (Wnd) SetItemSelection(index, true);
 		}
@@ -1329,7 +1330,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::UnselectItem(int index)
 {
 	if (Wnd) SetItemSelection(index, false);
 	int pos = SelectedItems.FindItem(index);
-	if (pos >= 0) SelectedItems.FastRemove(pos);
+	if (pos >= 0) SelectedItems.RemoveAtSwap(pos);
 	return *this;
 }
 
@@ -1351,7 +1352,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::UnselectAllItems()
 		for (int i = SelectedItems.Num() - 1; i >= 0; i--) // SelectedItems will be altered in HandleCommand
 			SetItemSelection(SelectedItems[i], false);
 	}
-	SelectedItems.FastEmpty();
+	SelectedItems.Reset();
 	return *this;
 }
 
@@ -1471,12 +1472,12 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 					// the item could be already in selection list when we're creating control
 					// and setting selection for all SelectedItems
 					if (pos < 0)
-						SelectedItems.AddItem(item);
+						SelectedItems.Add(item);
 				}
 				else
 				{
 					assert(pos >= 0);
-					SelectedItems.FastRemove(pos);
+					SelectedItems.RemoveAtSwap(pos);
 				}
 				// callbacks
 				if (GetSelectionCount() <= 1)
@@ -1590,7 +1591,7 @@ UITreeView& UITreeView::AddItem(const char* item)
 			curr = new TreeViewItem;
 			curr->Label = buffer;		// names are "a", "a/b", "a/b/c" etc
 			curr->Parent = parent;
-			Items.AddItem(curr);
+			Items.Add(curr);
 			CreateItem(*curr);
 		}
 		// return '/' back and skip it
@@ -1611,7 +1612,7 @@ void UITreeView::RemoveAllItems()
 	// add root item, at index 0
 	TreeViewItem* root = new TreeViewItem;
 	root->Label = "";
-	Items.AddItem(root);
+	Items.Add(root);
 	SelectedItem = root;
 }
 
@@ -2794,6 +2795,9 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		// modal
 		ParentDialog = GCurrentDialog;
 		GCurrentDialog = this;
+#if DO_GUARD
+		TRY {
+#endif
 		int result = DialogBoxIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
@@ -2804,6 +2808,13 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		GCurrentDialog = ParentDialog;
 		ParentDialog = NULL;
 		return (result != IDCANCEL);
+#if DO_GUARD
+		} CATCH_CRASH {
+			GCurrentDialog = ParentDialog;
+			ParentDialog = NULL;
+			THROW;
+		}
+#endif // DO_GUARD
 	}
 	else
 	{
@@ -2870,12 +2881,6 @@ void UIBaseDialog::CloseDialog(bool cancel)
 
 INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-#if DO_GUARD
-	// windows will not allow us to pass SEH through the message handler, so
-	// add a SEH guards here
-	TRY {
-#endif
-
 	UIBaseDialog* dlg;
 
 	if (msg == WM_INITDIALOG)
@@ -2890,11 +2895,15 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 		dlg = (UIBaseDialog*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	}
 
+#if !DO_GUARD
 	return dlg->WndProc(hWnd, msg, wParam, lParam);
-
-#if DO_GUARD
+#else
+	// windows will not allow us to pass SEH through the message handler, so
+	// add a SEH guards here
+	TRY {
+	return dlg->WndProc(hWnd, msg, wParam, lParam);
 	} CATCH_CRASH {
-		if (GErrorHistory[0])
+/*		if (GErrorHistory[0])
 		{
 //			appPrintf("ERROR: %s\n", GErrorHistory);
 			appNotify("ERROR in WindowProc: %s\n", GErrorHistory);
@@ -2902,9 +2911,11 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 		else
 		{
 //			appPrintf("Unknown error\n");
-			appNotify("Unknown error\n");
+			appNotify("Unknown error in WindowProc\n");
 		}
-		exit(1);
+//		exit(1);
+//		dlg->CloseDialog(true); */
+		THROW;
 	}
 #endif
 }

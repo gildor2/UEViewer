@@ -138,7 +138,15 @@ FORCEINLINE float dot(const CVec4 &a, const CVec4 &b)
 
 FORCEINLINE void cross(const CVec4 &v1, const CVec4 &v2, CVec4 &result)
 {
+#if 1
+	__m128 A_YZXW = _mm_shuffle_ps(v1.mm, v1.mm, _MM_SHUFFLE(3,0,2,1));
+	__m128 B_ZXYW = _mm_shuffle_ps(v2.mm, v2.mm, _MM_SHUFFLE(3,1,0,2));
+	__m128 A_ZXYW = _mm_shuffle_ps(v1.mm, v1.mm, _MM_SHUFFLE(3,1,0,2));
+	__m128 B_YZXW = _mm_shuffle_ps(v2.mm, v2.mm, _MM_SHUFFLE(3,0,2,1));
+	result.mm = _mm_sub_ps(_mm_mul_ps(A_YZXW,B_ZXYW), _mm_mul_ps(A_ZXYW, B_YZXW));
+#else
 	cross(v1.ToVec3(), v2.ToVec3(), result.ToVec3());
+#endif
 }
 
 FORCEINLINE void cross(const CVec4 &v1, const CVec4 &v2, CVec3 &result)
@@ -162,3 +170,30 @@ struct CCoords4
 		f[3] = f[7] = f[11] = f[15] = 0;
 	}
 };
+
+
+// Byte unpacking functions.
+// http://stackoverflow.com/questions/12121640/how-to-load-a-pixel-struct-into-an-sse-register
+
+// Unpack char[4] (int32) in range -127..+127 -> float[4] (__m128) in range -1..+1
+FORCEINLINE __m128 UnpackPackedChars(unsigned Packed)
+{
+	__m128i r = _mm_cvtsi32_si128(Packed);			// read 32-bit int to lower part of XMM register - ABCD.0000.0000.0000
+	r = _mm_unpacklo_epi8(r, r);					// interleave bytes with themselves - AABB.CCDD.0000.0000
+	r = _mm_unpacklo_epi16(r, r);					// interleave words with themselves - AAAA.BBBB.CCCC.DDDD
+	r = _mm_srai_epi32(r, 24);						// arithmetical shift right by 24 bits, i.e. sign extend
+	__m128 r2 = _mm_cvtepi32_ps(r);					// convert to floats
+	static const __m128 scale = { 1.0f / 127, 1.0f / 127, 1.0f / 127, 1.0f / 127 };
+	return _mm_mul_ps(r2, scale);
+}
+
+// Unpack byte[4] (int32) in range 0..255 -> float[4] (__m128) in range 0..+1
+FORCEINLINE __m128 UnpackPackedBytes(unsigned Packed)
+{
+	__m128i r = _mm_cvtsi32_si128(Packed);			// read 32-bit int to lower part of XMM register - ABCD.0000.0000.0000
+	r = _mm_unpacklo_epi8(r, _mm_setzero_si128());	// interleave bytes with zeros - 0A0B.0C0D.0000.0000
+	r = _mm_unpacklo_epi16(r, _mm_setzero_si128());	// interleave words with themselves - 000A.000B.000C.000D
+	__m128 r2 = _mm_cvtepi32_ps(r);					// convert to floats
+	static const __m128 scale = { 1.0f / 255, 1.0f / 255, 1.0f / 255, 1.0f / 255 };
+	return _mm_mul_ps(r2, scale);
+}

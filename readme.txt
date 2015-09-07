@@ -9,7 +9,7 @@ http://www.gildor.org/en/donate
 System requirements
 ~~~~~~~~~~~~~~~~~~~
 Windows or Linux operating system
-x86-compatible CPU with SSE support
+x86-compatible CPU with SSE2 support
 OpenGL 1.1 videocard (OpenGL 2.0 is recommended)
 SDL 2.0 (for Linux only, windows distribution has SDL2.dll included)
 
@@ -155,6 +155,42 @@ detex
 
 Changes
 ~~~~~~~
+18.08.2015
+- improved Unreal engine 4 texture support
+
+16.07.2015
+- updated Lineage 2 animation support
+
+11.07.2015
+- added new command line syntax: "umodel <options> <directory>", shortcut to
+  "umodel <options> -path=<directory>"
+
+07.07.2015
+- optimizations of memory use, especially for export operation
+
+06.07.2015
+- implemented full support for Batman: Arkham Knight
+
+26.06.2015
+- implemented Metro Conflict support; -game=metroconf option is required
+
+20.06.2015
+- implemented Mortal Kombat X SkeletalMesh and StaticMesh support
+
+14.06.2015
+- added support for up to 8 UV sets, required for UE4 static meshes
+
+13.06.2015
+- added "Save selected packages" option for "Tools" button in package dialog - this allows user
+  to extract packages from pak and obb files
+
+12.06.2015
+- added support for compressed UE4 pak files
+- implemented UE4.8 support
+
+11.06.2015
+- improved UE3 Android support
+
 04.06.2015
 - added Might & Magic Heroes 7 support
 

@@ -13,6 +13,7 @@ if [ -d .git ]; then
 #			progs="${PROGRAMFILES//\\//}"		# get from environment with slash replacement
 #			progs="/${progs//:/}"				# for msys: convert "C:/Program Files" to "/C/Program Files"
 			[ -d "$PROGRAMFILES/Git" ] && gitpath="$PROGRAMFILES/Git/bin"
+			[ -d "$PROGRAMW6432/Git" ] && gitpath="$PROGRAMW6432/Git/bin"
 			! [ "$gitpath" ] && [ -d "$PROGRAMFILES/SmartGitHg/git" ] && gitpath="$PROGRAMFILES/SmartGitHg/git/bin"
 			! [ "$gitpath" ] && [ -d "$LOCALAPPDATA/Atlassian/SourceTree/git_local" ] && gitpath="$LOCALAPPDATA/Atlassian/SourceTree/git_local/bin"
 			[ "$gitpath" ] && PATH="$PATH:$gitpath"
@@ -27,8 +28,8 @@ fi
 # read current revision
 [ -f "$version_file" ] && [ "$revision" ] && read last_revision < $version_file
 last_revision=${last_revision##* }		# cut "#define ..."
-# write back to a file if value differs or if file doesn't exist
-[ "$last_revision" != "$revision" ] && echo "#define GIT_REVISION $revision" > $version_file
+# write back to a file if value differs or if file doesn't exist (only for UModel project, i.e. when $project is empty)
+[ -z "$project" ] && [ "$last_revision" != "$revision" ] && echo "#define GIT_REVISION $revision" > $version_file
 
 #-------------------------------------------------------------
 
