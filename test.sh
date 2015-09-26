@@ -13,6 +13,7 @@ Options:
     --<game>                choose predefined game path; <game> = ut2|ut3|gow2 etc
     --debug                 start with -debug option
     --help                  display this help message
+    --path=<path>			use instead of -path=... when path has spaces
     -path=<path>            set game path; will disable default game substitution
 EOF
 	exit
@@ -209,9 +210,11 @@ function rund()   {	run1 "data" $*; }
 cmd=""
 buildopt=
 nobuild=
+path=0
 
 # parse our command line options
-for arg in $*; do
+for arg in "$@"; do		# using quoted $@ will allow to correctly separate arguments like [ --path="some string with spaces" -debug ]
+#	echo "ARG=$arg"
 	case $arg in
 	--help)
 		usage
@@ -228,6 +231,11 @@ for arg in $*; do
 		;;
 	--debug)
 		debugOpt=-debug
+		;;
+	--path=*)
+		path=1
+		foundPath=${arg:7}
+		DBG "--path '$foundPath'"
 		;;
 	--*)
 		cmd=${arg:2}
@@ -247,17 +255,17 @@ if [ -z "$nobuild" ]; then
 fi
 
 # find whether -path= is used or not
-path=0
 for arg in $*; do
 	case $arg in
 	-path=*)
+		DBG "'-path' is specified"
 		path=1
 		;;
 	esac
 done
 
 # execute command
-if [ $# -gt 0 ] || [ "$cmd" ]; then
+if [ $# -gt 0 ] || [ "$cmd" ] || [ $path != 0 ]; then
 	# started with arguments
 	# extract command from "--cmd" argument
 	if [ -z "$cmd" ]; then

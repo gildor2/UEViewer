@@ -167,7 +167,7 @@ static int GetHashForFileName(const char* FileName)
 	hash &= GAME_FILE_HASH_MASK;
 #ifdef DEBUG_HASH_NAME
 	if (strstr(FileName, DEBUG_HASH_NAME))
-		printf("hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash);
+		printf("-> hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash);
 #endif
 	return hash;
 }
@@ -572,6 +572,9 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 		if (*s == '/') ShortFilename = s + 1;
 	}
 
+	// Get hash before stripping extension (could be required for files with double extension, like .hdr.rtc for games with Redux textures)
+	int hash = GetHashForFileName(buf);
+
 	if (Ext)
 	{
 		// extension is provided
@@ -589,9 +592,8 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	}
 
 	int nameLen = strlen(ShortFilename);
-	int hash = GetHashForFileName(buf);
 #ifdef DEBUG_HASH_NAME
-	printf("--> Loading %s (%s, len=%d)\n", buf, ShortFilename, nameLen);
+	printf("--> Loading %s (%s, len=%d, hash=%X)\n", buf, ShortFilename, nameLen, hash);
 #endif
 
 	CGameFileInfo* bestMatch = NULL;

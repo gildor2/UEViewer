@@ -399,53 +399,54 @@ void UUIStreamingTextures::PostLoad()
 
 #endif // DCU_ONLINE
 
+//!! Rename "Tribes4" to "Redux" - supported in 2 UE3 games: Tribes Ascend and Blacklight Retribution
 #if TRIBES4
 
 //#define DUMP_RTC_CATALOG	1
 
-struct Tribes4MipEntry
+struct ReduxMipEntry
 {
 	byte				f1;					// always == 1
-	int					FileOffset;
+	unsigned			FileOffset;
 	int					PackedSize;
 	int					UnpackedSize;
 
-	friend FArchive& operator<<(FArchive &Ar, Tribes4MipEntry &M)
+	friend FArchive& operator<<(FArchive &Ar, ReduxMipEntry &M)
 	{
-		guard(Tribes4MipEntry<<);
+		guard(ReduxMipEntry<<);
 		return Ar << M.f1 << M.FileOffset << M.PackedSize << M.UnpackedSize;
 		unguard;
 	}
 };
 
-struct Tribes4TextureEntry
+struct ReduxTextureEntry
 {
 	FString				Name;
 	EPixelFormat		Format;				// 2, 3, 5, 7, 25
 	byte				f2;					// always = 2
 	short				USize, VSize;
-	TArray<Tribes4MipEntry>	Mips;
+	TArray<ReduxMipEntry>	Mips;
 
-	friend FArchive& operator<<(FArchive &Ar, Tribes4TextureEntry &E)
+	friend FArchive& operator<<(FArchive &Ar, ReduxTextureEntry &E)
 	{
-		guard(Tribes4TextureEntry<<);
+		guard(ReduxTextureEntry<<);
 		// here is non-nullterminated string, so can't use FString serializer directly
 		assert(Ar.IsLoading);
 		int NameLen;
 		Ar << NameLen;
-		E.Name.Empty(NameLen + 1);
+		E.Name.GetDataArray().AddZeroed(NameLen + 1);
 		Ar.Serialize((void*)*E.Name, NameLen);
 		return Ar << (byte&)E.Format << E.f2 << E.USize << E.VSize << E.Mips;
 		unguard;
 	}
 };
 
-static TArray<Tribes4TextureEntry> tribes4Catalog;
-static FArchive *tribes4DataAr = NULL;
+static TArray<ReduxTextureEntry> reduxCatalog;
+static FArchive *reduxDataAr = NULL;
 
-static void Tribes4ReadRtcData()
+static void ReduxReadRtcData()
 {
-	guard(Tribes4ReadRtcData);
+	guard(ReduxReadRtcData);
 
 	static bool ready = false;
 	if (ready) return;
@@ -457,32 +458,40 @@ static void Tribes4ReadRtcData()
 		appPrintf("WARNING: unable to find %s\n", "texture.cache.hdr.rtc");
 		return;
 	}
+	bool NewReduxSystem = false; // old one for Tribes4, new one - Blacklight: Retribution
 	const CGameFileInfo *dataFile = appFindGameFile("texture.cache.data.rtc");
 	if (!dataFile)
 	{
-		appPrintf("WARNING: unable to find %s\n", "texture.cache.data.rtc");
-		return;
+		dataFile = appFindGameFile("texture.cache.0.data.rtc");
+		if (!dataFile)
+		{
+			appPrintf("WARNING: unable to find %s\n", "texture.cache[.0].data.rtc");
+			return;
+		}
+		NewReduxSystem = true;
 	}
-	tribes4DataAr = appCreateFileReader(dataFile);
+	reduxDataAr = appCreateFileReader(dataFile);
 
 	FArchive *Ar = appCreateFileReader(hdrFile);
 	Ar->Game  = GAME_Tribes4;
 	Ar->ArVer = 805;			// just in case
-	*Ar << tribes4Catalog;
+	if (NewReduxSystem)
+		Ar->Seek(8);			// skip unknown 12 bytes
+	*Ar << reduxCatalog;
 	assert(Ar->IsEof());
 
 	delete Ar;
 
 #if DUMP_RTC_CATALOG
-	for (int i = 0; i < tribes4Catalog.Num(); i++)
+	for (int i = 0; i < reduxCatalog.Num(); i++)
 	{
-		const Tribes4TextureEntry &Tex = tribes4Catalog[i];
+		const ReduxTextureEntry &Tex = reduxCatalog[i];
 		appPrintf("%d: %s - %s %d %d %d\n", i, *Tex.Name, EnumToName("EPixelFormat", Tex.Format), Tex.f2, Tex.USize, Tex.VSize);
 		if (Tex.Format != 2 && Tex.Format != 3 && Tex.Format != 5 && Tex.Format != 7 && Tex.Format != 25) appError("f1=%d", Tex.Format);
 		if (Tex.f2 != 2) appError("f2=%d", Tex.f2);
 		for (int j = 0; j < Tex.Mips.Num(); j++)
 		{
-			const Tribes4MipEntry &Mip = Tex.Mips[j];
+			const ReduxMipEntry &Mip = Tex.Mips[j];
 			assert(Mip.f1 == 1);
 			assert(Mip.PackedSize && Mip.UnpackedSize);
 			appPrintf("  %d: %d %d %d\n", j, Mip.FileOffset, Mip.PackedSize, Mip.UnpackedSize);
@@ -493,30 +502,30 @@ static void Tribes4ReadRtcData()
 	unguard;
 }
 
-static byte *FindTribes4Texture(const UTexture2D *Tex, CTextureData *TexData)
+static byte *FindReduxTexture(const UTexture2D *Tex, CTextureData *TexData)
 {
-	guard(FindTribes4Texture);
+	guard(FindReduxTexture);
 
-	if (!tribes4Catalog.Num())
+	if (!reduxCatalog.Num())
 		return NULL;
-	assert(tribes4DataAr);
+	assert(reduxDataAr);
 
 	char ObjName[256];
 	Tex->GetFullName(ARRAY_ARG(ObjName), true, true, true);
 //	appPrintf("FIND: %s\n", ObjName);
-	for (int i = 0; i < tribes4Catalog.Num(); i++)
+	for (int i = 0; i < reduxCatalog.Num(); i++)
 	{
-		const Tribes4TextureEntry &E = tribes4Catalog[i];
+		const ReduxTextureEntry &E = reduxCatalog[i];
 		if (!stricmp(E.Name, ObjName))
 		{
 			// found it
 			assert(Tex->Format == E.Format);
 //			assert(Tex->SizeX == E.USize && Tex->SizeY == E.VSize); -- not true because of cooking
-			const Tribes4MipEntry &Mip = E.Mips[0];
+			const ReduxMipEntry &Mip = E.Mips[0];
 			byte *CompressedData   = (byte*)appMalloc(Mip.PackedSize);
 			byte *UncompressedData = (byte*)appMalloc(Mip.UnpackedSize);
-			tribes4DataAr->Seek(Mip.FileOffset);
-			tribes4DataAr->Serialize(CompressedData, Mip.PackedSize);
+			reduxDataAr->Seek64(Mip.FileOffset);
+			reduxDataAr->Serialize(CompressedData, Mip.PackedSize);
 			appDecompress(CompressedData, Mip.PackedSize, UncompressedData, Mip.UnpackedSize, COMPRESS_ZLIB);
 			appFree(CompressedData);
 			TexData->USize    = E.USize;
@@ -789,9 +798,9 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 #if TRIBES4
 	if (Package && Package->Game == GAME_Tribes4)
 	{
-		Tribes4ReadRtcData();
+		ReduxReadRtcData();
 
-		TexData.CompressedData = FindTribes4Texture(this, &TexData);	// may be NULL
+		TexData.CompressedData = FindReduxTexture(this, &TexData);	// may be NULL
 		if (TexData.CompressedData)
 		{
 			TexData.ShouldFreeData = true;

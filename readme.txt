@@ -155,6 +155,10 @@ detex
 
 Changes
 ~~~~~~~
+26.09.2015
+- implemented support for Blacklight: Retribution textures; note: for the moment game should be overrided to
+  "Tribes: Ascend" (-game=t4)
+
 18.08.2015
 - improved Unreal engine 4 texture support
 

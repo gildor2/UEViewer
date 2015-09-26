@@ -234,6 +234,11 @@ if getSourceFileName != undefined then	-- checking Max version (Max9+) ...
 	local s = getSourceFileName()
 	configFile = (getFilenamePath s) + (getFilenameFile s) + ".ini"
 )
+else
+(
+	-- workaround for Max 8 and older
+	configFile = (getDir #scripts) + "\ActorXImporter.ini"
+)
 
 
 tmp_v = undefined		-- global variable, helper for axDoSetting() (required for execute() ...)
@@ -273,9 +278,9 @@ fn axDoSetting name var =
 
 fn axSerializeSettings isLoading =
 (
+	if configFile == undefined then return undefined			-- could happen with old 3ds Max, where getSourceFileName() doesn't exist
 	if isLoading then
 	(
-		if configFile == undefined then return undefined
 		if not doesFileExist configFile then return undefined	-- no config file
 	)
 	g_isLoading = isLoading
