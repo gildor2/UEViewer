@@ -197,7 +197,7 @@ void CSkeletalMesh::FinalizeMesh()
 
 			if (ShouldFix)
 			{
-				for (int i = 0; i < NUM_INFLUENCES; i++)
+				for (int i = NUM_INFLUENCES - 1; i >= 0; i--) // iterate in reverse order for correct removal of '0' followed by '0'
 				{
 					if (UnpackedWeights[i] == 0)
 					{

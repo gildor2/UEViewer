@@ -698,30 +698,12 @@ DEPENDS_25 = \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
 	Unreal/UnObject.h
 
-$(OUT_1)/Export3D.o : Exporters/Export3D.cpp $(DEPENDS_25)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Export3D.o Exporters/Export3D.cpp
-
-DEPENDS_26 = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	Exporters/Exporters.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
-
-$(OUT_1)/ExportMaterial.o : Exporters/ExportMaterial.cpp $(DEPENDS_26)
+$(OUT_1)/ExportMaterial.o : Exporters/ExportMaterial.cpp $(DEPENDS_25)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ExportMaterial.o Exporters/ExportMaterial.cpp
 
-DEPENDS_27 = \
+DEPENDS_26 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -735,8 +717,25 @@ DEPENDS_27 = \
 	Unreal/UnObject.h \
 	Unreal/UnTextureNVTT.h
 
-$(OUT_1)/ExportTexture.o : Exporters/ExportTexture.cpp $(DEPENDS_27)
+$(OUT_1)/ExportTexture.o : Exporters/ExportTexture.cpp $(DEPENDS_26)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ExportTexture.o Exporters/ExportTexture.cpp
+
+DEPENDS_27 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/Export3D.o : Exporters/Export3D.cpp $(DEPENDS_27)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Export3D.o Exporters/Export3D.cpp
 
 DEPENDS_28 = \
 	Core/Core.h \

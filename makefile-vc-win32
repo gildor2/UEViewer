@@ -699,24 +699,6 @@ DEPENDS = \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnObject.h
-
-$(OUT_1)/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Export3D.obj" Exporters/Export3D.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	Exporters/Exporters.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
 	Unreal/UnObject.h
 
 $(OUT_1)/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
@@ -738,6 +720,23 @@ DEPENDS = \
 
 $(OUT_1)/ExportTexture.obj : Exporters/ExportTexture.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportTexture.obj" Exporters/ExportTexture.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Export3D.obj" Exporters/Export3D.cpp
 
 DEPENDS = \
 	Core/Core.h \
