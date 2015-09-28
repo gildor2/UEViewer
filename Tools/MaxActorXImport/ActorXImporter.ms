@@ -1294,6 +1294,11 @@ fn ImportPskFile filename skelOnly:false =
 			vert    = Wedges[wedge].PointIndex+1
 			start   = vertInfStart[vert]
 			numInfs = vertInfNum[vert]
+			if numInfs == undefined then
+			(
+				numInfs = 0
+				format "Vertex % (wedge %) has no weights\n" (vert-1) (wedge-1)
+			)
 
 /*
 			-- This code uses SetVertexWeights

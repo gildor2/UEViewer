@@ -850,6 +850,14 @@ void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &Mesh
 	for (i = 0; i < MeshPoints.Num(); i++)
 	{
 		CVertInfo &V = Verts[i];
+		if (V.NumInfs == 0)
+		{
+			appPrintf("WARNING: Vertex %d has 0 influences\n", i);
+			V.NumInfs = 1;
+			V.Bone[0] = 0;
+			V.Weight[0] = 1.0f;
+			continue;
+		}
 		if (V.NumInfs <= NUM_INFLUENCES) continue;	// no normalization is required
 		float s = 0;
 		for (j = 0; j < NUM_INFLUENCES; j++)		// count sum
