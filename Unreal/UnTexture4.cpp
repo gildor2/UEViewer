@@ -124,6 +124,68 @@ void UTexture2D::Serialize4(FArchive& Ar)
 			Ar << PixelFormatEnum;
 		}
 	}
+	else if (SourceArt.BulkData != NULL)
+	{
+		guard(UTexture4::LoadSourceData);
+
+		//!! WARNING: this code in theory is common for all UTexture types, but we're working with mips here,
+		//!! so it is implemented only for UTexture2D.
+		EPixelFormat NewPixelFormat = PF_Unknown;
+		int BytesPerPixel = 0;
+		const char* FormatName = EnumToName("ETextureSourceFormat", Source.Format);
+		switch (Source.Format)
+		{
+		case TSF_G8:
+			BytesPerPixel = 1;
+			NewPixelFormat = PF_G8;
+			break;
+		case TSF_BGRA8:
+		case TSF_RGBA8:
+			BytesPerPixel = 4;
+			NewPixelFormat = PF_B8G8R8A8;
+			break;
+		}
+		if (Source.NumSlices == 1 && Source.bPNGCompressed == false && BytesPerPixel > 0)
+		{
+			// Cubemaps and PNG images are not supported
+			Format = NewPixelFormat;
+			SizeX = Source.SizeX;
+			SizeY = Source.SizeY;
+
+			int MipSizeX = SizeX;
+			int MipSizeY = SizeY;
+			int MipOffset = 0;
+
+			Mips.AddDefaulted(Source.NumMips);
+			const byte* SourceData = SourceArt.BulkData;
+			int SourceDataSize = SourceArt.ElementCount;
+//			appPrintf("SourceDataSize = %X\n", SourceDataSize);
+			for (int MipIndex = 0; MipIndex < Source.NumMips; MipIndex++, MipSizeX >>= 1, MipSizeY >>= 1)
+			{
+				// Don't allow Size to go to zero.
+				if (MipSizeX == 0) MipSizeX = 1;
+				if (MipSizeY == 0) MipSizeY = 1;
+				// Copy mip data to UTexture2D.
+				FTexture2DMipMap& Mip = Mips[MipIndex];
+				Mip.SizeX = MipSizeX;
+				Mip.SizeY = MipSizeY;
+				int MipDataSize = MipSizeX * MipSizeY * BytesPerPixel;
+//				appPrintf("mip %d: %d x %d, %X bytes, offset %X\n", MipIndex, MipSizeX, MipSizeY, MipDataSize, MipOffset);
+				assert(MipOffset + MipDataSize <= SourceDataSize);
+				Mip.Data.BulkData = (byte*)appMalloc(MipDataSize);
+				Mip.Data.ElementCount = MipDataSize;
+				memcpy(Mip.Data.BulkData, SourceArt.BulkData + MipOffset, MipDataSize);
+				MipOffset += MipDataSize;
+			}
+			appPrintf("  Loading SourceArt: %s, NumMips=%d, Slices=%d, PNGCompressed=%d\n", FormatName, Source.NumMips, Source.NumSlices, Source.bPNGCompressed);
+		}
+		else
+		{
+			appPrintf("  Skipping SourceArt: %s, NumMips=%d, Slices=%d, PNGCompressed=%d\n", FormatName, Source.NumMips, Source.NumSlices, Source.bPNGCompressed);
+		}
+
+		unguard;
+	}
 
 	unguard;
 }

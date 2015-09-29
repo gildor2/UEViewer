@@ -1152,19 +1152,19 @@ struct TTypeInfo
 	enum { FieldSize = sizeof(T) };
 	enum { NumFields = 1         };
 	enum { IsSimpleType = 0      };		// type consists of NumFields fields of integral type, sizeof(type) == FieldSize
-	enum { IsRawType = 0         };		// type memory layour is the same as archive layout
+	enum { IsRawType = 0         };		// type's on-disk layout exactly matches in-memory layout
 	enum { IsPod = IS_POD(T)     };		// type has no constructor/destructor
 };
 
 
 template<typename T1, typename T2>
-struct IsSameType
+struct TAreTypesEqual
 {
 	enum { Value = 0 };
 };
 
 template<typename T>
-struct IsSameType<T,T>
+struct TAreTypesEqual<T,T>
 {
 	enum { Value = 1 };
 };
@@ -1679,7 +1679,7 @@ void SkipBulkArrayData(FArchive &Ar, int Size = -1);
 template<typename T1, typename T2>
 inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
 {
-	if (IsSameType<T1,T2>::Value && TTypeInfo<T1>::IsPod)
+	if (TAreTypesEqual<T1,T2>::Value && TTypeInfo<T1>::IsPod)
 	{
 		// fast version when copying POD type array
 		Dst.RawCopy(Src, sizeof(T1));

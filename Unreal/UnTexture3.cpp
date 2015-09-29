@@ -476,7 +476,7 @@ static void ReduxReadRtcData()
 	Ar->Game  = GAME_Tribes4;
 	Ar->ArVer = 805;			// just in case
 	if (NewReduxSystem)
-		Ar->Seek(8);			// skip unknown 12 bytes
+		Ar->Seek(8);			// skip 8 bytes of header: for Blacklight there are 2 ints: 0, 1
 	*Ar << reduxCatalog;
 	assert(Ar->IsEof());
 

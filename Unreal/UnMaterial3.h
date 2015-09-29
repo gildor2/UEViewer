@@ -35,6 +35,58 @@ UE3 MATERIALS TREE:
 	Unreal Engine 3 materials
 -----------------------------------------------------------------------------*/
 
+#if UNREAL4
+
+enum ETextureSourceFormat
+{
+	TSF_Invalid,
+	TSF_G8,
+	TSF_BGRA8,
+	TSF_BGRE8,
+	TSF_RGBA16,
+	TSF_RGBA16F,
+
+	// Deprecated formats:
+	TSF_RGBA8,
+	TSF_RGBE8,
+};
+
+_ENUM(ETextureSourceFormat)
+{
+	_E(TSF_Invalid),
+	_E(TSF_G8),
+	_E(TSF_BGRA8),
+	_E(TSF_BGRE8),
+	_E(TSF_RGBA16),
+	_E(TSF_RGBA16F),
+	_E(TSF_RGBA8),
+	_E(TSF_RGBE8),
+};
+
+struct FTextureSource
+{
+	DECLARE_STRUCT(FTextureSource)
+
+	int				SizeX;
+	int				SizeY;
+	int				NumSlices;
+	int				NumMips;
+	bool			bPNGCompressed;
+	ETextureSourceFormat Format;
+
+	BEGIN_PROP_TABLE
+		PROP_INT(SizeX)
+		PROP_INT(SizeY)
+		PROP_INT(NumSlices)
+		PROP_INT(NumMips)
+		PROP_BOOL(bPNGCompressed)
+		PROP_ENUM2(Format, ETextureSourceFormat)
+		PROP_DROP(Id)		// Guid
+	END_PROP_TABLE
+};
+
+#endif // UNREAL4
+
 class UTexture3 : public UUnrealMaterial	// in UE3 it is derived from USurface->UObject; real name is UTexture
 {
 	DECLARE_CLASS(UTexture3, UUnrealMaterial)
@@ -42,6 +94,7 @@ public:
 	float			UnpackMin[4];
 	float			UnpackMax[4];
 	FByteBulkData	SourceArt;
+	FTextureSource	Source;
 
 	UTexture3()
 	{
@@ -51,6 +104,10 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_FLOAT(UnpackMin)
 		PROP_FLOAT(UnpackMax)
+#if UNREAL4
+		PROP_STRUC(Source, FTextureSource)
+		PROP_DROP(AssetImportData)
+#endif
 		// no properties required (all are for importing and cooking)
 		PROP_DROP(SRGB)
 		PROP_DROP(RGBE)
@@ -922,6 +979,11 @@ public:
 	REGISTER_ENUM(EBlendMode)			\
 	REGISTER_ENUM(EMobileSpecularMask)
 
+#define REGISTER_MATERIAL_CLASSES_U4	\
+	REGISTER_CLASS(FTextureSource)
+
+#define REGISTER_MATERIAL_ENUMS_U4		\
+	REGISTER_ENUM(ETextureSourceFormat)
 
 #endif // UNREAL3
 
