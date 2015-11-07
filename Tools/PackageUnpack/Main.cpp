@@ -185,12 +185,13 @@ int main(int argc, char **argv)
 		// find package flags
 		found = false;
 		const FString &Group = Summary.PackageGroup;
+		int DataArrayLen = Group.GetDataArray().Num();
 		for (pos = 8; pos < 48; pos++)
 		{
 			mem.Seek(pos);
 			int tmp;
 			mem << tmp;
-			if (tmp != Group.Num() && tmp != -Group.Num()) continue;	// ANSI or Unicode string (MassEffect3 has unicode here)
+			if (tmp != DataArrayLen && tmp != -DataArrayLen) continue;	// ANSI or Unicode string (MassEffect3 has unicode here)
 			mem.Seek(pos);
 			FString tmp2;
 			mem << tmp2;

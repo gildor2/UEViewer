@@ -1789,7 +1789,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 
 
 #if UNREAL3
-	if (Game >= GAME_UE3 && Summary.CompressionFlags)
+	if (Game >= GAME_UE3 && Summary.CompressionFlags && Summary.CompressedChunks.Num())
 	{
 		FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
 		if (UE3Loader && UE3Loader->IsFullyCompressed)
