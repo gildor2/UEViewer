@@ -16,6 +16,15 @@
 #define MAX_IMG_SIZE		4096
 #define BAD_TEXTURE			((GLuint) -2)	// the texture object has permanent error, don't try to upload it again
 
+#if 0
+// profiling
+#define PROFILE_UPLOAD(...)	__VA_ARGS__
+#define PROFILE_SHADER(...)	__VA_ARGS__
+#else
+// no profiling
+#define PROFILE_UPLOAD(...)
+#define PROFILE_SHADER(...)
+#endif
 
 static UTexture *DefaultUTexture = NULL;
 static GLuint GetDefaultTexNum();
@@ -254,14 +263,16 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		//!! this format is uploaded with glTexImage2D, but all formats below are for glCompressedTexImage2D
 		//?? support other uncompressed formats, like A1, G8 etc
 		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_BGRA, GL_UNSIGNED_BYTE, TexData.CompressedData);
-		glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
+		if (doMipmap)
+			glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
 		return true;
 	}
 
 	if (TexData.Format == TPF_RGBA4)
 	{
 		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, TexData.CompressedData);
-		glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
+		if (doMipmap)
+			glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
 		return true;
 	}
 
@@ -328,6 +339,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 	guard(Upload2D);
 
 	CTextureData TexData;
+	PROFILE_UPLOAD(appResetProfiler());
 	if (!Tex->GetTextureData(TexData))
 	{
 		appPrintf("WARNING: %s %s has no valid mipmaps\n", Tex->GetClassName(), Tex->Name);
@@ -362,6 +374,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clampS ? GL_CLAMP : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clampT ? GL_CLAMP : GL_REPEAT);
 
+	PROFILE_UPLOAD(appPrintf("Uploaded %s (%dx%d)\n", Tex->Name, TexData.USize, TexData.VSize); appPrintProfiler());
 	return TexNum;
 
 	unguardf("%s'%s'", Tex->GetClassName(), Tex->Name);
@@ -657,7 +670,13 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	glActiveTexture(GL_TEXTURE0);
 
 	//?? should check IsValid before preparing params above (they're needed only once)
-	if (!shader.IsValid()) shader.Make(Normal_ush, defines, subst);
+	//?? (but this will not allow SHOW_SHADER_PARAMS to work)
+	if (!shader.IsValid())
+	{
+		PROFILE_SHADER(appResetProfiler());
+		shader.Make(Normal_ush, defines, subst);
+		PROFILE_SHADER(appPrintf("Compiled shader\n"); appPrintProfiler());
+	}
 	shader.Use();
 
 	shader.SetUniform("diffTex",  I_Diffuse);

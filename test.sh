@@ -153,7 +153,8 @@ function ut3()
 }
 function ut4()
 {
-	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament/Saved/Cooked/WindowsNoEditor/UnrealTournament/Content
+	CheckDir C:/3-UnrealEngine/UnrealTournamentDev/UnrealTournament/Content/Paks
+#	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament/Saved/Cooked/WindowsNoEditor/UnrealTournament/Content
 	run $*
 }
 function ue3()

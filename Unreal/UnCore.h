@@ -2047,7 +2047,8 @@ struct FIntBulkData : public FByteBulkData
 
 #define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
 
-#define PKG_StoreCompressed	0x2000000
+#define PKG_StoreCompressed	 0x02000000
+#define PKG_FilterEditorOnly 0x80000000
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 

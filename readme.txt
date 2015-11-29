@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+29.11.2015
+- improved support for UE4 editor packages, added support for editor SkeletalMesh
+
 29.09.2015
 - implemented partial support for UE4 source textures (8-bit uncompressed textures)
 

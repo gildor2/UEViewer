@@ -31,16 +31,7 @@ struct FMeshBoneInfo
 	FName					Name;
 	int						ParentIndex;
 
-	friend FArchive& operator<<(FArchive& Ar, FMeshBoneInfo& B)
-	{
-		Ar << B.Name << B.ParentIndex;
-		if (Ar.ArVer < VER_UE4_REFERENCE_SKELETON_REFACTOR)
-		{
-			FColor Color;
-			Ar << Color;
-		}
-		return Ar;
-	}
+	friend FArchive& operator<<(FArchive& Ar, FMeshBoneInfo& B);
 };
 
 struct FReferenceSkeleton

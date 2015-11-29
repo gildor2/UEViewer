@@ -7,6 +7,7 @@
 #include "UnMesh3.h"		// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
 #include "UnMaterial3.h"
+#include "UnPackage.h"		// just to get access to PackageFlags
 
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
@@ -45,6 +46,24 @@
 /*-----------------------------------------------------------------------------
 	USkeleton
 -----------------------------------------------------------------------------*/
+
+FArchive& operator<<(FArchive& Ar, FMeshBoneInfo& B)
+{
+	Ar << B.Name << B.ParentIndex;
+	if (Ar.ArVer < VER_UE4_REFERENCE_SKELETON_REFACTOR)
+	{
+		FColor Color;
+		Ar << Color;
+	}
+	UnPackage* Package = Ar.CastTo<UnPackage>();
+	// Support for editor packages
+	if (Package && (Package->Summary.PackageFlags & PKG_FilterEditorOnly) == 0)
+	{
+		FString ExportName;
+		Ar << ExportName;
+	}
+	return Ar;
+}
 
 void USkeleton::Serialize(FArchive &Ar)
 {
@@ -237,8 +256,11 @@ struct FSoftVertex4
 
 		if (Ar.ArVer >= VER_UE4_SUPPORT_8_BONE_INFLUENCES_SKELETAL_MESHES)
 		{
+			//!! todo: 8 influences will require BoneIndex[] and BoneWeight[] to have 8 items
 			for (i = 0; i < NUM_INFLUENCES_UE4; i++) Ar << V.BoneIndex[i];
+			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influcences info
 			for (i = 0; i < NUM_INFLUENCES_UE4; i++) Ar << V.BoneWeight[i];
+			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influcences info
 		}
 		else
 		{

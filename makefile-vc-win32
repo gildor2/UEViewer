@@ -598,6 +598,7 @@ DEPENDS = \
 	Unreal/UnMesh4.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh4.obj : Unreal/UnMesh4.cpp $(DEPENDS)

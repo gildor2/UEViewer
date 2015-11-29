@@ -191,6 +191,7 @@ static void ExportCommonMeshData
 		VMaterial M;
 		memset(&M, 0, sizeof(M));
 		const UUnrealMaterial *Tex = SECT(i)->Material;
+		M.TextureIndex = i; // could be required for UT99
 		//!! this will not handle (UMaterialWithPolyFlags->Material==NULL) correctly - will make MaterialName=="None"
 		//!! (the same valid for md5mesh export)
 		if (Tex)

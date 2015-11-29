@@ -216,6 +216,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 		/// reference: CureUObject/Classes/Object.h
 		/// objects with native serializer has "atomic" or "immutable" mark
 		STRUC_TYPE(FIntPoint)
+		STRUC_TYPE(FLinearColor)
 	}
 #endif // UNREAL4
 	// Serialize nested property block
@@ -297,6 +298,8 @@ static const struct
 #endif
 #if UNREAL4
 	F(AttributeProperty),
+	F(AssetObjectProperty),
+	F(AssetSubclassProperty),
 #endif
 #undef F
 };
