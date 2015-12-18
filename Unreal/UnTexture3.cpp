@@ -638,15 +638,15 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	if (stricmp(TextureFileCacheName, "None") != 0)
 	{
 		// TFC file is assigned
-		strcpy(bulkFileName, TextureFileCacheName);
-		if (char* s = strchr(bulkFileName, '.'))
-		{
-			// MK X has string with file extension - cut it
-			*s = 0;
-		}
 		static const char* tfcExtensions[] = { "tfc", "xxx" };
 		for (int i = 0; i < ARRAY_COUNT(tfcExtensions); i++)
 		{
+			strcpy(bulkFileName, TextureFileCacheName);
+			if (char* s = strchr(bulkFileName, '.'))
+			{
+				// MK X has string with file extension - cut it
+				*s = 0;
+			}
 			const char* bulkFileExt = tfcExtensions[i];
 			bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
 			if (bulkFile) break;
