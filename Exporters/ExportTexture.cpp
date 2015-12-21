@@ -190,6 +190,9 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 {
 	guard(WriteDDS);
 
+	if (!TexData.Mips.Num()) return;
+	const CMipMap& Mip = TexData.Mips[0];
+
 	unsigned fourCC = TexData.GetFourCC();
 
 	// code from CTextureData::Decompress()
@@ -201,10 +204,10 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 //	header.setPixelFormat(32, 0xFF, 0xFF << 8, 0xFF << 16, 0xFF << 24);	// bit count and per-channel masks
 	//!! Note: should use setFourCC for compressed formats, and setPixelFormat for uncompressed - these functions are
 	//!! incompatible. When fourcc is used, color masks are zero, and vice versa.
-	header.setWidth(TexData.USize);
-	header.setHeight(TexData.VSize);
+	header.setWidth(Mip.USize);
+	header.setHeight(Mip.VSize);
 //	header.setNormalFlag(TexData.Format == TPF_DXT5N || TexData.Format == TPF_3DC); -- required for decompression only
-	header.setLinearSize(TexData.DataSize);
+	header.setLinearSize(Mip.DataSize);
 
 	appMakeDirectoryForFile(Filename);
 
@@ -213,7 +216,7 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 	WriteDDSHeader(headerBuffer, header);
 	FArchive *Ar = new FFileWriter(Filename);
 	Ar->Serialize(headerBuffer, 128);
-	Ar->Serialize((byte*)TexData.CompressedData, TexData.DataSize);
+	Ar->Serialize(const_cast<byte*>(Mip.CompressedData), Mip.DataSize);
 	delete Ar;
 
 	unguard;
@@ -244,8 +247,8 @@ void ExportTexture(const UUnrealMaterial *Tex)
 			return;
 		}
 
-		width = TexData.USize;
-		height = TexData.VSize;
+		width = TexData.Mips[0].USize;
+		height = TexData.Mips[0].VSize;
 		pic = TexData.Decompress();
 	}
 

@@ -155,6 +155,10 @@ detex
 
 Changes
 ~~~~~~~
+21.12.2015
+- reading all texture mipmaps from UE3 and UE4 packages - this speeds up content browsing a lot, especially
+  for games which have huge textures
+
 29.11.2015
 - improved support for UE4 editor packages, added support for editor SkeletalMesh
 

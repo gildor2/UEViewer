@@ -128,14 +128,36 @@ struct CPixelFormatInfo
 
 extern const CPixelFormatInfo PixelFormatInfo[];	// index in array is TPF_... constant
 
-struct CTextureData
+struct CMipMap
 {
-	const byte				*CompressedData;
-	bool					ShouldFreeData;			// free CompressedData when set to true
-	ETexturePixelFormat		Format;
-	int						DataSize;				// used for XBox360 decompressor and DDS export
+	const byte*				CompressedData;			// not TArray because we could just point to another data block without memory reallocation
+	int						DataSize;
 	int						USize;
 	int						VSize;
+	bool					ShouldFreeData;			// free CompressedData when set to true
+
+	CMipMap()
+	{
+		memset(this, 0, sizeof(CMipMap));
+	}
+	~CMipMap()
+	{
+		ReleaseData();
+	}
+	void ReleaseData()
+	{
+		if (ShouldFreeData)
+			appFree(const_cast<byte*>(CompressedData));
+		CompressedData = NULL;
+		DataSize = 0;
+		ShouldFreeData = false;
+	}
+};
+
+struct CTextureData
+{
+	TArray<CMipMap>			Mips;					// mipmaps; could have 0, 1 or N entries
+	ETexturePixelFormat		Format;
 	int						Platform;
 	const char				*OriginalFormatName;	// string value from typeinfo
 	int						OriginalFormatEnum;		// ETextureFormat or EPixelFormat
@@ -152,21 +174,17 @@ struct CTextureData
 	}
 	void ReleaseCompressedData()
 	{
-		if (ShouldFreeData && CompressedData)
-		{
-			appFree(const_cast<byte*>(CompressedData));
-			ShouldFreeData = false;
-			CompressedData = NULL;
-		}
+		for (int i = 0; i < Mips.Num(); i++)
+			Mips[i].ReleaseData();
 	}
 
 	unsigned GetFourCC() const;
 	bool IsDXT() const;
 
-	byte *Decompress();								// may return NULL in a case of error
+	byte *Decompress(int MipLevel = 0);				// may return NULL in a case of error
 
 #if SUPPORT_XBOX360
-	void DecodeXBox360();
+	void DecodeXBox360(int MipLevel);
 #endif
 };
 

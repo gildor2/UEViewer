@@ -438,7 +438,7 @@ public:
 
 	const TArray<FTexture2DMipMap>* GetMipmapArray() const;
 
-	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix) const;
+	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix, bool verbose) const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
 	virtual void ReleaseTextureData() const;
 #if RENDERING

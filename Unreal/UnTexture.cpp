@@ -76,13 +76,23 @@ unsigned CTextureData::GetFourCC() const
 
 bool CTextureData::IsDXT() const
 {
-	return (CompressedData != NULL) && (PixelFormatInfo[Format].FourCC != 0);
+	return (Mips.Num() > 0) && (PixelFormatInfo[Format].FourCC != 0);
 }
 
 
-byte *CTextureData::Decompress()
+byte *CTextureData::Decompress(int MipLevel)
 {
 	guard(CTextureData::Decompress);
+
+	if (!Mips.IsValidIndex(MipLevel))
+		return NULL;
+
+	const CMipMap& Mip = Mips[MipLevel];
+
+	// Get mip map data
+	int USize = Mip.USize;
+	int VSize = Mip.VSize;
+	const byte *Data = Mip.CompressedData;
 
 	int size = USize * VSize * 4;
 	byte *dst = new byte [size];
@@ -108,7 +118,6 @@ byte *CTextureData::Decompress()
 #endif
 
 	// process non-dxt formats here
-	const byte *Data = CompressedData;
 	switch (Format)
 	{
 	case TPF_P8:
@@ -443,12 +452,13 @@ static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiled
 }
 
 
-void CTextureData::DecodeXBox360()
+void CTextureData::DecodeXBox360(int MipLevel)
 {
 	guard(CTextureData::DecodeXBox360);
 
-	if (!CompressedData)
+	if (!Mips.IsValidIndex(MipLevel))
 		return;
+	CMipMap& Mip = Mips[MipLevel];
 
 	const CPixelFormatInfo &Info = PixelFormatInfo[Format];
 
@@ -458,22 +468,19 @@ void CTextureData::DecodeXBox360()
 		strcpy(ErrorMessage, "unsupported texture format");
 
 	error:
-		ReleaseCompressedData();
-		CompressedData = NULL;
+		Mip.ReleaseData();
 		appNotify("ERROR: DecodeXBox360 %s'%s' (%s=%d): %s", Obj->GetClassName(), Obj->Name,
 			OriginalFormatName, OriginalFormatEnum, ErrorMessage);
 		return;
 	}
 
 	int bytesPerBlock = Info.BytesPerBlock;
-	int USize1 = Align(USize, Info.X360AlignX);
-	int VSize1 = Align(VSize, Info.X360AlignY);
-	// NOTE: 16x16 textures will not work! (needs different untiling or no untiling at all?)
+	int USize1 = Align(Mip.USize, Info.X360AlignX);
+	int VSize1 = Align(Mip.VSize, Info.X360AlignY);
 
-	float bpp = (float)DataSize / (USize1 * VSize1) * Info.BlockSizeX * Info.BlockSizeY;	// used for validation only
-
-//	appPrintf("%s'%s': %d x %d (%d x %d aligned), %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
-//		USize, VSize, USize1, VSize1, OriginalFormatName, Info.BytesPerBlock, bpp, DataSize);
+	float bpp = (float)Mip.DataSize / (USize1 * VSize1) * Info.BlockSizeX * Info.BlockSizeY;	// used for validation only
+//	appPrintf("DecodeXBox360: %s'%s': %d x %d (%d x %d aligned), %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
+//		Mip.USize, Mip.VSize, USize1, VSize1, OriginalFormatName, Info.BytesPerBlock, bpp, Mip.DataSize);
 
 #if BIOSHOCK
 	// some verification
@@ -489,18 +496,18 @@ void CTextureData::DecodeXBox360()
 	}
 
 	// untile and unalign
-	byte *buf = (byte*)appMalloc(DataSize);
-	UntileCompressedXbox360Texture(CompressedData, buf, USize1, USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
+	byte *buf = (byte*)appMalloc(Mip.DataSize);
+	UntileCompressedXbox360Texture(Mip.CompressedData, buf, USize1, Mip.USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
 	// swap bytes
 	if (bytesPerBlock > 1)
-		appReverseBytes(buf, DataSize / 2, 2);
+		appReverseBytes(buf, Mip.DataSize / 2, 2);
 
 	// release old CompressedData
-	ReleaseCompressedData();
-	CompressedData = buf;
-	ShouldFreeData = (buf != NULL);			// data were allocated here ...
-	DataSize       = (USize / Info.BlockSizeX) * (VSize / Info.BlockSizeY) * Info.BytesPerBlock; // essential for exporting
+	Mip.ReleaseData();
+	Mip.CompressedData = buf;
+	Mip.ShouldFreeData = true;			// data were allocated here ...
+	Mip.DataSize = (Mip.USize / Info.BlockSizeX) * (Mip.VSize / Info.BlockSizeY) * Info.BytesPerBlock; // essential for exporting
 
 	return;		// no error
 

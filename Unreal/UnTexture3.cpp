@@ -502,12 +502,12 @@ static void ReduxReadRtcData()
 	unguard;
 }
 
-static byte *FindReduxTexture(const UTexture2D *Tex, CTextureData *TexData)
+static byte FindReduxTexture(const UTexture2D *Tex, CTextureData *TexData)
 {
 	guard(FindReduxTexture);
 
 	if (!reduxCatalog.Num())
-		return NULL;
+		return false;
 	assert(reduxDataAr);
 
 	char ObjName[256];
@@ -528,13 +528,16 @@ static byte *FindReduxTexture(const UTexture2D *Tex, CTextureData *TexData)
 			reduxDataAr->Serialize(CompressedData, Mip.PackedSize);
 			appDecompress(CompressedData, Mip.PackedSize, UncompressedData, Mip.UnpackedSize, COMPRESS_ZLIB);
 			appFree(CompressedData);
-			TexData->USize    = E.USize;
-			TexData->VSize    = E.VSize;
-			TexData->DataSize = Mip.UnpackedSize;
-			return UncompressedData;
+			CMipMap* DstMip = new (TexData->Mips) CMipMap;
+			DstMip->CompressedData = UncompressedData;
+			DstMip->ShouldFreeData = true;
+			DstMip->USize = E.USize;
+			DstMip->VSize    = E.VSize;
+			DstMip->DataSize = Mip.UnpackedSize;
+			return true;
 		}
 	}
-	return NULL;
+	return false;
 
 	unguard;
 }
@@ -624,7 +627,7 @@ static int GetRealTextureOffset_MH(const UTexture2D *Obj, int MipIndex)
 #endif // MARVEL_HEROES
 
 
-bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix) const
+bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix, bool verbose) const
 {
 	const CGameFileInfo *bulkFile = NULL;
 
@@ -705,7 +708,9 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	}
 
 	assert(bulkFile);									// missing file is processed above
-	appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
+	if (verbose)
+		appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
+
 	FArchive *Ar = appCreateFileReader(bulkFile);
 	Ar->SetupFrom(*Package);
 	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);
@@ -800,11 +805,9 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	{
 		ReduxReadRtcData();
 
-		TexData.CompressedData = FindReduxTexture(this, &TexData);	// may be NULL
-		if (TexData.CompressedData)
+		if (FindReduxTexture(this, &TexData))
 		{
-			TexData.ShouldFreeData = true;
-			TexData.Platform       = Package->Platform;
+			TexData.Platform = Package->Platform;
 		}
 	}
 #endif // TRIBES4
@@ -882,35 +885,49 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 #endif // SUPPORT_ANDROID
 
-	if (!TexData.CompressedData)
+	if (TexData.Mips.Num() == 0)
 	{
-		bool bulkChecked = false;
-		for (int n = 0; n < MipsArray->Num(); n++)
+		bool bulkFailed = false;
+		bool dataLoaded = false;
+		int OrigUSize = (*MipsArray)[0].SizeX;
+		int OrigVSize = (*MipsArray)[0].SizeY;
+		for (int mipLevel = 0; mipLevel < MipsArray->Num(); mipLevel++)
 		{
 			// find 1st mipmap with non-null data array
 			// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
-			const FTexture2DMipMap &Mip = (*MipsArray)[n];
+			const FTexture2DMipMap &Mip = (*MipsArray)[mipLevel];
 			const FByteBulkData &Bulk = Mip.Data;
 			if (!Mip.Data.BulkData)
 			{
-				//?? Separate this function ?
 				// check for external bulk
+				//?? Separate this function ?
 				//!! * -notfc cmdline switch
 				//!! * material viewer: support switching mip levels (for xbox decompression testing)
 				if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
 				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue; // equals to BULKDATA_PayloadAtEndOfFile for UE4
 				// some optimization in a case of missing bulk file
-				if (bulkChecked) continue;				// already checked for previous mip levels
-				bulkChecked = true;
-				if (!LoadBulkTexture(*MipsArray, n, tfcSuffix)) continue;	// note: this could be called for any mip level, not for the 1st only
+				if (bulkFailed) continue;				// already checked for previous mip levels - no TFC file exists
+				if (!LoadBulkTexture(*MipsArray, mipLevel, tfcSuffix, !dataLoaded))
+				{
+					bulkFailed = true;
+					continue;	// note: this could be called for any mip level, not for the 1st only
+				}
+				else
+				{
+					dataLoaded = true;
+				}
 			}
 			// this mipmap has data
-			TexData.CompressedData = Bulk.BulkData;
-			TexData.USize          = Mip.SizeX;
-			TexData.VSize          = Mip.SizeY;
-			TexData.DataSize       = Bulk.ElementCount * Bulk.GetElementSize();
-			TexData.Platform       = Package->Platform;
-			break;
+			CMipMap* DstMip = new (TexData.Mips) CMipMap;
+			DstMip->CompressedData = Bulk.BulkData;
+			DstMip->DataSize = Bulk.ElementCount * Bulk.GetElementSize();
+			DstMip->ShouldFreeData = false;
+			// Note: UE3 can store incorrect SizeX/SizeY for lowest mips - these values could have 4x4 for all smaller mips
+			// (perhaps minimal size of DXT block). So compute mip size by ourselves.
+			DstMip->USize = max(1, OrigUSize >> mipLevel);
+			DstMip->VSize = max(1, OrigVSize >> mipLevel);
+//			printf("+%d: %d x %d (%X)\n", mipLevel, DstMip->USize, DstMip->VSize, DstMip->DataSize);
+			TexData.Platform = Package->Platform;
 		}
 	}
 
@@ -939,10 +956,13 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 
 #if SUPPORT_XBOX360
 	if (TexData.Platform == PLATFORM_XBOX360)
-		TexData.DecodeXBox360();
+	{
+		for (int MipLevel = 0; MipLevel < TexData.Mips.Num(); MipLevel++)
+			TexData.DecodeXBox360(MipLevel);
+	}
 #endif
 
-	return (TexData.CompressedData != NULL);
+	return (TexData.Mips.Num() > 0);
 
 	unguardf("%s", Name);
 }

@@ -460,26 +460,38 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 #if BIOSHOCK
 	if (PackageAr && PackageAr->Game == GAME_Bioshock && CachedBulkDataSize) //?? check bStripped or Baked ?
 	{
-		TexData.CompressedData = FindBioTexture(this);	// may be NULL
-		TexData.ShouldFreeData = (TexData.CompressedData != NULL);
-		TexData.USize          = USize;
-		TexData.VSize          = VSize;
-		TexData.DataSize       = (int)CachedBulkDataSize;
-		TexData.Platform       = PackageAr->Platform;
+		byte* CompressedData = FindBioTexture(this);	// may be NULL
+		if (CompressedData)
+		{
+			CMipMap* DstMip = new (TexData.Mips) CMipMap;
+			DstMip->CompressedData = CompressedData;
+			DstMip->ShouldFreeData = true;
+			DstMip->USize = USize;
+			DstMip->VSize = VSize;
+			DstMip->DataSize = (int)CachedBulkDataSize;
+		}
+		TexData.Platform = PackageAr->Platform;
 	}
 #endif // BIOSHOCK
 #if UC2
 	if (PackageAr && PackageAr->Engine() == GAME_UE2X)
 	{
 		// try to find texture inside XBox xpr files
-		TexData.CompressedData = FindXprData(Name, &TexData.DataSize);
-		TexData.ShouldFreeData = (TexData.CompressedData != NULL);
-		TexData.USize          = USize;
-		TexData.VSize          = VSize;
+		int DataSize;
+		byte* CompressedData = FindXprData(Name, &DataSize);	// may be NULL
+		if (CompressedData)
+		{
+			CMipMap* DstMip = new (TexData.Mips) CMipMap;
+			DstMip->CompressedData = CompressedData;
+			DstMip->ShouldFreeData = true;
+			DstMip->USize = USize;
+			DstMip->VSize = VSize;
+			DstMip->DataSize = DataSize;
+		}
 	}
 #endif // UC2
 
-	if (!TexData.CompressedData)
+	if (TexData.Mips.Num() == 0)
 	{
 		// texture was not taken from external source
 		for (int n = 0; n < Mips.Num(); n++)
@@ -489,10 +501,12 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 			const FMipmap &Mip = Mips[n];
 			if (!Mip.DataArray.Num())
 				continue;
-			TexData.CompressedData = &Mip.DataArray[0];
-			TexData.USize          = Mip.USize;
-			TexData.VSize          = Mip.VSize;
-			TexData.DataSize       = Mip.DataArray.Num();
+			CMipMap* DstMip = new (TexData.Mips) CMipMap;
+			DstMip->CompressedData = &Mip.DataArray[0];
+			DstMip->ShouldFreeData = false;
+			DstMip->USize = Mip.USize;
+			DstMip->VSize = Mip.VSize;
+			DstMip->DataSize = Mip.DataArray.Num();
 			break;
 		}
 	}
@@ -579,8 +593,11 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	TexData.Format = intFormat;
 
 #if BIOSHOCK && SUPPORT_XBOX360
-	if (TexData.CompressedData && TexData.Platform == PLATFORM_XBOX360)
-		TexData.DecodeXBox360();
+	if (TexData.Mips.Num() && TexData.Platform == PLATFORM_XBOX360)
+	{
+		for (int MipLevel = 0; MipLevel < TexData.Mips.Num(); MipLevel++)
+			TexData.DecodeXBox360(MipLevel);
+	}
 #endif
 #if BIOSHOCK
 	if (Package && PackageAr->Game == GAME_Bioshock)
@@ -590,22 +607,22 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		// large values)
 		//?? Place code to CTextureData method?
 		const CPixelFormatInfo &Info = PixelFormatInfo[intFormat];
-		int numBlocks = TexData.USize * TexData.VSize / (Info.BlockSizeX * Info.BlockSizeY);	// used for validation only
+		int numBlocks = TexData.Mips[0].USize * TexData.Mips[0].VSize / (Info.BlockSizeX * Info.BlockSizeY);	// used for validation only
 		int requiredDataSize = numBlocks * Info.BytesPerBlock;
-		if (requiredDataSize > TexData.DataSize)
+		if (requiredDataSize > TexData.Mips[0].DataSize)
 		{
 			appNotify("Bioshock texture %s: data too small; %dx%d, requires %X bytes, got %X\n",
-				Name, TexData.USize, TexData.VSize, requiredDataSize, TexData.DataSize);
+				Name, TexData.Mips[0].USize, TexData.Mips[0].VSize, requiredDataSize, TexData.Mips[0].DataSize);
 		}
-		else if (requiredDataSize < TexData.DataSize)
+		else if (requiredDataSize < TexData.Mips[0].DataSize)
 		{
-//			appPrintf("Bioshock texture %s: stripping data size from %X to %X\n", Name, TexData.DataSize, requiredDataSize);
-			TexData.DataSize = requiredDataSize;
+//			appPrintf("Bioshock texture %s: stripping data size from %X to %X\n", Name, TexData.Mips[0].DataSize, requiredDataSize);
+			TexData.Mips[0].DataSize = requiredDataSize;
 		}
 	}
 #endif // BIOSHOCK
 
-	return (TexData.CompressedData != NULL);
+	return (TexData.Mips.Num() > 0);
 
 	unguardf("%s", Name);
 }

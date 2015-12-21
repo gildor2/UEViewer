@@ -194,20 +194,32 @@ static void GetImageDimensions(int width, int height, int* scaledWidth, int* sca
 }
 
 
-static void UploadTex(GLenum target, const void *pic, int width, int height, bool doMipmap)
+// Decompress and upload a texture. Returns false when decompression failed.
+static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData, bool doMipmap)
 {
 	guard(UploadTex);
 
+	byte *pic = TexData.Decompress(0);
+	if (!pic)
+	{
+		// some internal decompression error, message should be already printed to log
+		return false;
+	}
+
+	const CMipMap& Mip0 = TexData.Mips[0];
+
 	/*----- Calculate internal dimensions of the new texture --------*/
 	int scaledWidth, scaledHeight;
-	GetImageDimensions(width, height, &scaledWidth, &scaledHeight);
+	GetImageDimensions(Mip0.USize, Mip0.VSize, &scaledWidth, &scaledHeight);
 
-	/*---------------- Resample/lightscale texture ------------------*/
+	/*---------------- Resample texture ------------------*/
+	// Copy or resample texture to new buffer (we will generate mipmaps there later)
 	unsigned *scaledPic = new unsigned [scaledWidth * scaledHeight];
-	if (width != scaledWidth || height != scaledHeight)
-		ResampleTexture((unsigned*)pic, width, height, scaledPic, scaledWidth, scaledHeight);
+	if (Mip0.USize != scaledWidth || Mip0.VSize != scaledHeight)
+		ResampleTexture((unsigned*)pic, Mip0.USize, Mip0.VSize, scaledPic, scaledWidth, scaledHeight);
 	else
 		memcpy(scaledPic, pic, scaledWidth * scaledHeight * sizeof(unsigned));
+	delete pic; // no longer needed
 
 	/*------------- Determine texture format to upload --------------*/
 	GLenum format;
@@ -215,29 +227,54 @@ static void UploadTex(GLenum target, const void *pic, int width, int height, boo
 	format = (alpha ? 4 : 3);
 
 	/*------------------ Upload the image ---------------------------*/
+	// First mipmap
+//	printf("up_uncomp (%s, %d mips): %d %d (%d)\n", Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num()); //!!
 	glTexImage2D(target, 0, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledPic);
-	if (doMipmap)
+
+	// Upload or build other mipmaps
+	if (doMipmap && TexData.Mips.Num() > 1 && GL_SUPPORT(QGL_1_2)) // GL 1.2 is required for GL_TEXTURE_MAX_LEVEL
 	{
-		int miplevel = 0;
+		guard(UploadMips);
+//		printf("upload mips %s\n", Tex->Name); //!!!!
+		// use provided mipmaps; assume all have power-of-2 dimensions
+		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, TexData.Mips.Num() - 1);
+		for (int mipLevel = 1; mipLevel < TexData.Mips.Num(); mipLevel++)
+		{
+			const CMipMap& Mip = TexData.Mips[mipLevel];
+			byte* pic = TexData.Decompress(mipLevel);
+			assert(pic);
+//			printf("   mip %d x %d (%X)\n", Mip.USize, Mip.VSize, Mip.DataSize); //!!!
+			glTexImage2D(target, mipLevel, format, Mip.USize, Mip.VSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
+			delete pic;
+		}
+		unguard;
+	}
+	else if (doMipmap)
+	{
+		guard(BuildMips);
+		// build mipmaps
+//		printf("build mips %s\n", Tex->Name); //!!!!
+		int mipLevel = 0;
 		while (scaledWidth > 1 || scaledHeight > 1)
 		{
 			MipMap((byte *) scaledPic, scaledWidth, scaledHeight);
-			miplevel++;
+			mipLevel++;
 			scaledWidth  >>= 1;
 			scaledHeight >>= 1;
 			if (scaledWidth < 1)  scaledWidth  = 1;
 			if (scaledHeight < 1) scaledHeight = 1;
-			glTexImage2D(target, miplevel, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledPic);
+			glTexImage2D(target, mipLevel, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledPic);
 		}
+		unguard;
 	}
 	delete scaledPic;
+	return true;
 
 	unguard;
 }
 
 
-// Try to upload texture without decompression
-// Return false when not uploaded
+// Try to upload a compressed texture. Returns false when not uploaded (due to hardware restrictions etc).
 static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum target2, CTextureData &TexData, bool doMipmap)
 {
 	guard(UploadCompressedTex);
@@ -245,10 +282,11 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	Tex->NormalUnpackExpr = NULL;
 
 	// verify GL capabilities
-	if (!GL_SUPPORT(QGL_EXT_TEXTURE_COMPRESSION_S3TC))
-		return false;		// no DXTn support
 	if (!GL_SUPPORT(QGL_1_4))
 		return false;		// cannot automatically generate mipmaps
+	// at this point we have Open GL 1.4+
+
+	const CMipMap& Mip0 = TexData.Mips[0];
 
 	//?? support some other formats too
 	// TPF_V8U8 = GL_RG8_SNORM (GL3.1)
@@ -257,22 +295,25 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	// - most formats are uploaded with glTexImage2D(), not with glCompressedTexImage2D()
 	// - formats has different extension requirements (not QGL_EXT_TEXTURE_COMPRESSION_S3TC)
 
-	if (GL_SUPPORT(QGL_1_2) && (TexData.Format == TPF_BGRA8))
+	GLenum format1 = 0, format2 = 0;
+	if (TexData.Format == TPF_BGRA8)
 	{
-		// avoid byte swapping, upload texture "as is"
-		//!! this format is uploaded with glTexImage2D, but all formats below are for glCompressedTexImage2D
+		// GL 1.2 - avoid byte swapping, upload texture "as is"
 		//?? support other uncompressed formats, like A1, G8 etc
-		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_BGRA, GL_UNSIGNED_BYTE, TexData.CompressedData);
-		if (doMipmap)
-			glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
-		return true;
+		format1 = GL_BGRA;
+		format2 = GL_UNSIGNED_BYTE;
 	}
-
-	if (TexData.Format == TPF_RGBA4)
+	else if (TexData.Format == TPF_RGBA4)
 	{
-		glTexImage2D(target, 0, 4, TexData.USize, TexData.VSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, TexData.CompressedData);
+		format1 = GL_RGBA;
+		format2 = GL_UNSIGNED_SHORT_4_4_4_4;
+	}
+	if (format1 && format2)
+	{
+		glTexImage2D(target, 0, 4, Mip0.USize, Mip0.VSize, 0, format1, format2, Mip0.CompressedData);
+		//!! support uploading mipmaps here
 		if (doMipmap)
-			glGenerateMipmapEXT(target);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
+			glGenerateMipmapEXT(target);
 		return true;
 	}
 
@@ -280,12 +321,15 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	switch (TexData.Format)
 	{
 	case TPF_DXT1:
+		if (!GL_SUPPORT(QGL_EXT_TEXTURE_COMPRESSION_S3TC)) return false;
 		format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
 		break;
 	case TPF_DXT3:
+		if (!GL_SUPPORT(QGL_EXT_TEXTURE_COMPRESSION_S3TC)) return false;
 		format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 		break;
 	case TPF_DXT5:
+		if (!GL_SUPPORT(QGL_EXT_TEXTURE_COMPRESSION_S3TC)) return false;
 		format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 		break;
 //	case TPF_V8U8:
@@ -308,23 +352,48 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	if (!doMipmap)
 	{
 		// no mipmaps required
-		glCompressedTexImage2D(target, 0, format, TexData.USize, TexData.VSize, 0, TexData.DataSize, TexData.CompressedData);
+		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
 	}
+	else if (TexData.Mips.Num() > 1 && GL_SUPPORT(QGL_1_2)) // GL 1.2 is required for GL_TEXTURE_MAX_LEVEL
+	{
+		guard(UploadMips);
+		// has mipmaps
+//		printf("up (%s, %d mips): %d %d (%d) (%s) (0x%X)\n", Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize); //!!
+		glTexParameteri(target2, GL_TEXTURE_MAX_LEVEL, TexData.Mips.Num() - 1);
+		for (int mipLevel = 0; mipLevel < TexData.Mips.Num(); mipLevel++)
+		{
+			const CMipMap& Mip = TexData.Mips[mipLevel];
+			glCompressedTexImage2D(target, mipLevel, format, Mip.USize, Mip.VSize, 0, Mip.DataSize, Mip.CompressedData);
+			GLenum error = glGetError();
+//			printf("   mip %d x %d (%X)\n", Mip.USize, Mip.VSize, Mip.DataSize); //!!!
+			if (error != 0)
+			{
+				appNotify("Failed to upload mip %d of texture %s in format 0x%04X: error 0x%X\n", mipLevel, Tex->Name, format, error);
+//				printf("%d x %d (%X)\n", Mip.USize, Mip.VSize, Mip.DataSize); //!!!!
+				break;
+			}
+		}
+		unguard;
+	}
+	// code below generates mipmaps using OpenGL functionality
 	else if (GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT))
 	{
 		// GL 3.0 or GL_EXT_framebuffer_object
-		glCompressedTexImage2D(target, 0, format, TexData.USize, TexData.VSize, 0, TexData.DataSize, TexData.CompressedData);
-		glGenerateMipmapEXT(target2);	//!! warning: this function could be slow, perhaps we should use mipmaps from texture data
+//		printf("up+build_mips (%s): %d %d (%d) (%s) (%d)\n", Tex->Name, Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize); //!!
+		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
+		glGenerateMipmapEXT(target2);
 	}
 	else
 	{
 		// GL 1.4 - set GL_GENERATE_MIPMAP before uploading
 		glTexParameteri(target2, GL_GENERATE_MIPMAP, GL_TRUE);
-		glCompressedTexImage2D(target, 0, format, TexData.USize, TexData.VSize, 0, TexData.DataSize, TexData.CompressedData);
+		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
 	}
-	if (glGetError() != 0)
+
+	GLenum error = glGetError();
+	if (error)
 	{
-		appNotify("Failed to upload texture in format 0x%04X", format);
+		appNotify("Failed to upload texture %s in format 0x%04X, error 0x%04X", Tex->Name, format, error);
 		return false;
 	}
 
@@ -353,15 +422,11 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 	if (!UploadCompressedTex(Tex, GL_TEXTURE_2D, GL_TEXTURE_2D, TexData, doMipmap))
 	{
 		// upload uncompressed
-		byte *pic = TexData.Decompress();
-		if (!pic)
+		if (!UploadTex(Tex, GL_TEXTURE_2D, TexData, doMipmap))
 		{
-			// some internal decompression error, message should be already printed to log
 			glDeleteTextures(1, &TexNum);
 			return BAD_TEXTURE;
 		}
-		UploadTex(GL_TEXTURE_2D, pic, TexData.USize, TexData.VSize, doMipmap);
-		delete pic;
 	}
 
 	bool isDefault = (Tex->Package == NULL) && (Tex->Name == "Default");
@@ -403,26 +468,20 @@ static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
 	}
 #endif
 
-	//!! BUGS: does not works with mipmap generation on Intel graphics (other not tested)
-	//!! Works fine when calling glTexParameteri(target2, GL_GENERATE_MIPMAP, GL_TRUE) before 1st side upload
-	//!! GL_INVALID_OPERATION when calling glGenerateMipmapEXT(GL_TEXTURE_CUBE_MAP_ARB) after last face
-	//!! If will not find a working path, should remove target2 from UploadCompressedTex()
-	//?? Info:
-	//?? http://www.opengl.org/sdk/docs/man3/xhtml/glGenerateMipmap.xml
-	doMipmap = false;	//!! workaround?
+	// Automatic mipmap generation doesn't work with cubemaps, so allow mipmaps only for
+	// explicitly provided data.
+	// https://www.opengl.org/sdk/docs/man/html/glGenerateMipmap.xhtml
+	doMipmap = TexData.Mips.Num() > 0;
 
 	GLenum target = GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side;
 	if (!UploadCompressedTex(Tex, target, GL_TEXTURE_CUBE_MAP_ARB, TexData, doMipmap))
 	{
 		// upload uncompressed
-		byte *pic = TexData.Decompress();
-		if (!pic)
+		if (!UploadTex(Tex, target, TexData, doMipmap))
 		{
 			// some internal decompression error, message should be already displayed
 			return false;
 		}
-		UploadTex(target, pic, TexData.USize, TexData.VSize, doMipmap);
-		delete pic;
 	}
 
 	if (side == 5)
