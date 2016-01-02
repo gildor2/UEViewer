@@ -1,5 +1,5 @@
 UMODEL (UE Viewer)
-(c) Konstantin Nosov (Gildor), 2007-2015
+(c) Konstantin Nosov (Gildor), 2007-2016
 
 
 Please support the development by making a donation here:

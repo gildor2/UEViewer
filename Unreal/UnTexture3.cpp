@@ -885,7 +885,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 #endif // SUPPORT_ANDROID
 
-	if (TexData.Mips.Num() == 0)
+	if (TexData.Mips.Num() == 0 && MipsArray->Num())
 	{
 		bool bulkFailed = false;
 		bool dataLoaded = false;
