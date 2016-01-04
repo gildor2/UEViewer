@@ -3771,7 +3771,7 @@ void UStaticMesh3::ConvertMesh()
 
 		// indices
 		Lod->Indices.Initialize(&SrcLod.Indices.Indices);			// 16-bit only
-		if (Lod->Indices.Num() == 0) appError("This StaticMesh doesn't have an index buffer");
+		if (Lod->Indices.Num() == 0) appNotify("This StaticMesh doesn't have an index buffer");
 
 		unguardf("lod=%d", lod);
 	}
