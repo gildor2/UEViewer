@@ -469,7 +469,7 @@ void CTextureData::DecodeXBox360(int MipLevel)
 
 	error:
 		Mip.ReleaseData();
-		appNotify("ERROR: DecodeXBox360 %s'%s' (%s=%d): %s", Obj->GetClassName(), Obj->Name,
+		appNotify("ERROR: DecodeXBox360 %s'%s' mip %d (%s=%d): %s", Obj->GetClassName(), Obj->Name, MipLevel,
 			OriginalFormatName, OriginalFormatEnum, ErrorMessage);
 		return;
 	}
@@ -491,8 +491,12 @@ void CTextureData::DecodeXBox360(int MipLevel)
 
 	if (fabs(bpp - bytesPerBlock) > 0.001f)
 	{
-		appSprintf(ARRAY_ARG(ErrorMessage), "bytesPerBlock: got %g, need %d", bpp, bytesPerBlock);
-		goto error;
+		// Some XBox360 games (Lollipop Chainsaw, ...) has lower mip level (16x16) with half or 1/4 of data size - allow that.
+		if ( (Mip.VSize >= 32) || ( (bpp * 2 != bytesPerBlock) && (bpp * 4 != bytesPerBlock) ) )
+		{
+			appSprintf(ARRAY_ARG(ErrorMessage), "bytesPerBlock: got %g, need %d", bpp, bytesPerBlock);
+			goto error;
+		}
 	}
 
 	// untile and unalign
