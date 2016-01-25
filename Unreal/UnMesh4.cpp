@@ -1017,7 +1017,9 @@ struct FStaticMeshLODModel4
 	FPositionVertexBuffer4   PositionVertexBuffer;
 	FColorVertexBuffer4      ColorVertexBuffer;
 	FRawStaticIndexBuffer4   IndexBuffer;
+	FRawStaticIndexBuffer4   ReversedIndexBuffer;
 	FRawStaticIndexBuffer4   DepthOnlyIndexBuffer;
+	FRawStaticIndexBuffer4   ReversedDepthOnlyIndexBuffer;
 	FRawStaticIndexBuffer4   WireframeIndexBuffer;
 	FRawStaticIndexBuffer4   AdjacencyIndexBuffer;
 	float                    MaxDeviation;
@@ -1047,7 +1049,11 @@ struct FStaticMeshLODModel4
 			Ar << Lod.VertexBuffer;
 			Ar << Lod.ColorVertexBuffer;
 			Ar << Lod.IndexBuffer;
+			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE) Ar << Lod.ReversedIndexBuffer;
 			Ar << Lod.DepthOnlyIndexBuffer;
+			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE) Ar << Lod.ReversedDepthOnlyIndexBuffer;
+			/// reference for VER_UE4_SOUND_CONCURRENCY_PACKAGE:
+			/// 25.09.2015 - 948c1698
 
 			if (Ar.ArVer >= VER_UE4_FTEXT_HISTORY && Ar.ArVer < VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
 			{

@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+26.01.2016
+- added UE4.11 support
+
 21.12.2015
 - reading all texture mipmaps from UE3 and UE4 packages - this speeds up content browsing a lot, especially
   for games which have huge textures

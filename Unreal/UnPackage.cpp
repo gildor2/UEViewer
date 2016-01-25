@@ -418,15 +418,37 @@ cooker_version:
 
 #if UNREAL4
 
-struct FCustomVersion
+struct FEnumCustomVersion
+{
+	int				Tag;
+	int				Version;
+
+	friend FArchive& operator<<(FArchive& Ar, FEnumCustomVersion& V)
+	{
+		return Ar << V.Tag << V.Version;
+	}
+};
+
+struct FGuidCustomVersion
 {
 	FGuid			Key;
 	int				Version;
 	FString			FriendlyName;
 
-	friend FArchive& operator<<(FArchive& Ar, FCustomVersion& V)
+	friend FArchive& operator<<(FArchive& Ar, FGuidCustomVersion& V)
 	{
 		return Ar << V.Key << V.Version << V.FriendlyName;
+	}
+};
+
+struct FCustomVersion
+{
+	FGuid			Key;
+	int				Version;
+
+	friend FArchive& operator<<(FArchive& Ar, FCustomVersion& V)
+	{
+		return Ar << V.Key << V.Version;
 	}
 };
 
@@ -438,15 +460,20 @@ struct FCustomVersionContainer
 	{
 		if (LegacyVersion == -2)
 		{
-			int Count;
-			Ar << Count;	// part of TArray
-			if (Count)
-				appError("TODO: support old FCustomVersionContainer");
-			// look for 'ECustomVersionSerializationFormat::Enums' in Core/Private/Serialization/CustomVersion.cpp
+			TArray<FEnumCustomVersion> VersionsEnum;
+			Ar << VersionsEnum;
+			// 'ECustomVersionSerializationFormat::Enums' in Core/Private/Serialization/CustomVersion.cpp
+		}
+		else if (LegacyVersion < -2 && LegacyVersion >= -5)
+		{
+			TArray<FGuidCustomVersion> VersionsGuid;
+			Ar << VersionsGuid;
+			// ECustomVersionSerializationFormat::Guids
 		}
 		else
 		{
 			Ar << Versions;
+			// ECustomVersionSerializationFormat::Optimized
 		}
 	}
 };
@@ -455,7 +482,14 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary4);
 
-	// LegacyVersion: contains negative value. Code below supportes up to version -5.
+	// LegacyVersion: contains negative value. Code below supportes up to version -6.
+	// LegacyVersion to engine version map:
+	// -3	4.0
+	// -4	4.7 (early version, skipped)
+	// -5	4.7
+	// -6	4.11
+	if (S.LegacyVersion < -6 || S.LegacyVersion >= 0)
+		appError("UE4 LegacyVersion: unsupported value %d", S.LegacyVersion);
 
 	// read versions
 	int VersionUE3, Version, LicenseeVersion;		// note: using int32 instead of uint16 as in UE1-UE3
@@ -479,7 +513,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	{
 		// CustomVersions array
 		FCustomVersionContainer versions;
-		versions.Serialize(Ar, S.LegacyVersion != -2);
+		versions.Serialize(Ar, S.LegacyVersion);
 	}
 
 	if (Ar.ArVer == 0 && Ar.ArLicenseeVer == 0)
@@ -1025,6 +1059,10 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 	bool bNotForEditorGame;
 	if (Ar.ArVer >= VER_UE4_LOAD_FOR_EDITOR_GAME)
 		Ar << bNotForEditorGame;
+
+	bool bIsAsset;
+	if (Ar.ArVer >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT)
+		Ar << bIsAsset;
 
 #undef LOC
 

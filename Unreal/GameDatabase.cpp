@@ -347,6 +347,8 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.7", ue4.7, GAME_UE4_7),
 		G("Unreal engine 4.8", ue4.8, GAME_UE4_8),
 		G("Unreal engine 4.9", ue4.9, GAME_UE4_9),
+		G("Unreal engine 4.10", ue4.10, GAME_UE4_9),	// 4.10 has the same file version as 4.9
+		G("Unreal engine 4.11", ue4.11, GAME_UE4_11),
 #endif // UNREAL4
 
 	// end marker
