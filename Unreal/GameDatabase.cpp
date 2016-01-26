@@ -336,6 +336,7 @@ const GameInfo GListOfGames[] = {
 
 	// Unreal engine 4
 #if UNREAL4
+		// NEW_ENGINE_VERSION
 		G("Unreal engine 4",   ue4,   GAME_UE4  ),		// useless?
 		G("Unreal engine 4.0", ue4.0, GAME_UE4_0),
 		G("Unreal engine 4.1", ue4.1, GAME_UE4_1),
@@ -803,8 +804,9 @@ static const UEVersionMap ueVersions[] =
 	G(GAME_GoWJ, 828)						// real version is 846
 
 	// Unreal engine 4
+	// NEW_ENGINE_VERSION
 #if UNREAL4
-	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7), M(8)
+	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7), M(8), M(9), M(10), M(11)
 #endif
 };
 

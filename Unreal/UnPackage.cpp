@@ -599,7 +599,10 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	}
 
 	if (Ar.ArVer >= VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET)
+	{
 		Ar << S.BulkDataStartOffset;
+//		appPrintf("Bulk offset: %llX\n", S.BulkDataStartOffset);
+	}
 
 	//!! other fields - useless for now
 
@@ -1762,7 +1765,8 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 	if (!silent)
 #endif
 	{
-		PKG_LOG("Loading package: %s Ver: %d/%d ", Filename, Summary.FileVersion, Summary.LicenseeVersion);
+		PKG_LOG("Loading package: %s Ver: %d/%d ", Filename, Loader->ArVer, Loader->ArLicenseeVer);
+			// don't use 'Summary.FileVersion, Summary.LicenseeVersion' because UE4 has overrides for unversioned packages
 #if UNREAL3
 		if (Game >= GAME_UE3)
 		{

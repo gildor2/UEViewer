@@ -339,6 +339,7 @@ enum EGame
 
 	GAME_UE4       = 0x10000,
 		// engine versions
+		// NEW_ENGINE_VERSION
 		GAME_UE4_0,
 		GAME_UE4_1,
 		GAME_UE4_2,
@@ -348,7 +349,8 @@ enum EGame
 		GAME_UE4_6,
 		GAME_UE4_7,
 		GAME_UE4_8,
-		GAME_UE4_9,				// same for 4.10
+		GAME_UE4_9,
+		GAME_UE4_10,
 		GAME_UE4_11,
 		// games
 
@@ -2113,10 +2115,12 @@ enum
 		VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION = 444,
 	VER_UE4_8 = 451,
 		VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
-	VER_UE4_9 = 482,									// exactly the same file version for 4.10
+	VER_UE4_9 = 482,
+	VER_UE4_10 = VER_UE4_9,								// exactly the same file version for 4.10
 		VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT = 485,
 		VER_UE4_SOUND_CONCURRENCY_PACKAGE = 489,		// used for UStaticMesh versioning
 	VER_UE4_11,											//!! AUTO VALUE - change this constant!
+	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted
 };
 
 class FStripDataFlags
