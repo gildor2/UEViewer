@@ -504,8 +504,16 @@ void CTextureData::DecodeXBox360(int MipLevel)
 	UntileCompressedXbox360Texture(Mip.CompressedData, buf, USize1, Mip.USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
 	// swap bytes
-	if (bytesPerBlock > 1)
+	if (Format == TPF_RGBA8 || Format == TPF_BGRA8)
+	{
+		// Swap dwords for 32-bit formats
+		appReverseBytes(buf, Mip.DataSize / 4, 4);
+	}
+	else if (bytesPerBlock > 1)
+	{
+		// Swap words for everything else
 		appReverseBytes(buf, Mip.DataSize / 2, 2);
+	}
 
 	// release old CompressedData
 	Mip.ReleaseData();
