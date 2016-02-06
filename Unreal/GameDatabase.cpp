@@ -302,8 +302,9 @@ const GameInfo GListOfGames[] = {
 		G("Lost Planet 3", lp3, GAME_LostPlanet3),
 		G("Yaiba: Ninja Gaiden Z", lp3, GAME_LostPlanet3),
 #	endif
-#	if XCOM_BUREAU
+#	if XCOM
 		G("The Bureau: XCOM Declassified", xcom, GAME_XcomB),
+		G("XCOM 2", xcom2, GAME_Xcom2),
 #	endif
 #	if THIEF4
 		G("Thief", thief4, GAME_Thief4),
@@ -663,7 +664,8 @@ void FArchive::DetectGame()
 #if DMC
 	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);
 #endif
-#if XCOM_BUREAU
+#if XCOM
+	if (ArVer == 845 && ArLicenseeVer == 107)	SET(GAME_Xcom2);
 	if (ArVer == 849 && ArLicenseeVer == 32795)	SET(GAME_XcomB);
 #endif
 #if FABLE

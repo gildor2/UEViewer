@@ -237,14 +237,14 @@ struct FSkelMeshSection3
 			assert(SomeFlag == 0);	// array of 40-byte structures (serialized size = 36)
 		}
 #endif // LOST_PLANET3
-#if XCOM_BUREAU
+#if XCOM
 		if (Ar.Game == GAME_XcomB)
 		{
 			int SomeFlag;
 			Ar << SomeFlag;
 			assert(SomeFlag == 0);	// extra data
 		}
-#endif // XCOM_BUREAU
+#endif // XCOM
 		return Ar;
 		unguard;
 	}
@@ -2419,13 +2419,18 @@ struct FStaticMeshSection3
 					ps3data.unk5.Num(), ps3data.unk6.Num(), ps3data.unk7.Num(), ps3data.unk8.Num());
 			}
 		}
-#if XCOM_BUREAU
+#if XCOM
 		if (Ar.Game == GAME_XcomB)
 		{
 			FString unk;
 			Ar << unk;
 		}
-#endif // XCOM_BUREAU
+		if (Ar.Game == GAME_Xcom2 && Ar.ArLicenseeVer >= 83)
+		{
+			int unk;
+			Ar << unk;
+		}
+#endif // XCOM
 		return Ar;
 		unguard;
 	}

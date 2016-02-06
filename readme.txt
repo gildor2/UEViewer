@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+06.02.2016
+- added XCOM 2 StaticMesh support (animation is not supported)
+
 26.01.2016
 - added UE4.11 support
 

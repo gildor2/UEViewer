@@ -98,7 +98,7 @@
 #define REMEMBER_ME		1
 #define MARVEL_HEROES	1
 #define LOST_PLANET3	1
-#define XCOM_BUREAU		1		// The Bureau: XCOM Declassified
+#define XCOM			1		// The Bureau: XCOM Declassified, XCOM 2
 #define THIEF4			1		// Thief
 #define MURDERED		1		// Murdered: Soul Suspect
 #define SOV				1		// Seal of Vajra

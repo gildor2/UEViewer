@@ -150,7 +150,7 @@ void UTexture2D::Serialize(FArchive &Ar)
 	tfc_guid:
 		Ar << TextureFileCacheGuid;
 	}
-#if XCOM_BUREAU
+#if XCOM
 	if (Ar.Game == GAME_XcomB) return;
 #endif
 	// Extra check for some incorrectly upgrated UE3 versions, in particular for
