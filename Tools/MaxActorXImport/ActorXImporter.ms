@@ -158,6 +158,18 @@ TODO:
   or create a new one?
 */
 
+/*
+NOTES:
+- setBoneEnable false 0:
+  This call is required. Without it, we will have numerous problems with imported skeleton. Note that FBX
+  importer will enable "bones" mode, however we can't use it in Max. Why "bone" mode could be useful: hiding
+  bones could not hide the skeleton when bones are off, and works well when they are on. Why "bone" mode should
+  be disabled - otherwise we've got problems with rotation/moving of particular bones, they behave like
+  connected objects. Also saw a bug with imported animation with "force AnimSet translation" - mesh could became
+  bronen in parts, but began to behave well when unlinked child bone of bad bone and relinked it back. So it's
+  easier to disable bone mode than to fight against all the bugs.
+*/
+
 -- constant used to detect ActorX Importer updates during single 3ds Max session
 global AX_IMPORTER_VERSION = 133
 
@@ -1076,7 +1088,7 @@ fn ImportPskFile filename skelOnly:false =
 			newBone.name   = bn.Name
 			newBone.width  = g_boneSize
 			newBone.height = g_boneSize
---			newBone.setBoneEnable false 0		-- disabled 20.07.2015
+			newBone.setBoneEnable false 0					-- this is a required thing, otherwise a lot of problems would appear
 			newBone.pos.controller      = TCB_position ()
 			newBone.rotation.controller = TCB_rotation ()	-- required for correct animation
 			-- setup parent
@@ -1920,8 +1932,8 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.33"
-	label     Lbl2 "\xA9 2009-2015 Konstantin Nosov (Gildor)"
+	label     Lbl1 "Version 1.33.1"
+	label     Lbl2 "\xA9 2009-2016 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
 					color:black hovercolor:blue visitedcolor:black
