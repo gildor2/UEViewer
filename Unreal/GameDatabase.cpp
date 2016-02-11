@@ -333,6 +333,9 @@ const GameInfo GListOfGames[] = {
 #	if METRO_CONF
 		G("Metro Conflict", metroconf, GAME_MetroConflict),
 #	endif
+#	if SMITE
+		G("SMITE", smite, GAME_Smite),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4

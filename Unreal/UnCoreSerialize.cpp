@@ -1270,7 +1270,7 @@ void FByteBulkData::SerializeDataChunk(FArchive &Ar)
 #if BLADENSOUL
 	else if (Ar.Game == GAME_BladeNSoul && (BulkDataFlags & BULKDATA_CompressedLzoEncr))
 	{
-		appReadCompressedChunk(Ar, BulkData, DataSize, COMPRESS_LZO_ENC);
+		appReadCompressedChunk(Ar, BulkData, DataSize, COMPRESS_LZO_ENC_BNS);
 	}
 #endif
 	else

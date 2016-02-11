@@ -330,6 +330,7 @@ enum EGame
 		GAME_DunDef,
 		GAME_Gigantic,
 		GAME_MetroConflict,
+		GAME_Smite,
 
 	GAME_MIDWAY3   = 0x08100,	// variant of UE3
 		GAME_A51,
@@ -2046,7 +2047,11 @@ struct FIntBulkData : public FByteBulkData
 #define COMPRESS_LZX		4
 
 #if BLADENSOUL
-#define COMPRESS_LZO_ENC	8						// encrypted LZO
+#define COMPRESS_LZO_ENC_BNS	8					// encrypted LZO
+#endif
+
+#if SMITE
+#define COMPRESS_LZO_ENC_SMITE	514					// encrypted LZO
 #endif
 
 #define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known

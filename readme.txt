@@ -155,6 +155,9 @@ detex
 
 Changes
 ~~~~~~~
+11.02.2016
+- added SMITE encryption support; -game=smite is required
+
 06.02.2016
 - added XCOM 2 StaticMesh support (animation is not supported)
 

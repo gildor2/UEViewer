@@ -174,7 +174,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	guard(appDecompress);
 
 #if BLADENSOUL
-	if (GForceGame == GAME_BladeNSoul && Flags == COMPRESS_LZO_ENC)	// note: GForceGame is required (to not pass 'Game' here)
+	if (GForceGame == GAME_BladeNSoul && Flags == COMPRESS_LZO_ENC_BNS)	// note: GForceGame is required (to not pass 'Game' here)
 	{
 		if (CompressedSize >= 32)
 		{
@@ -186,6 +186,16 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		Flags = COMPRESS_LZO;
 	}
 #endif // BLADENSOUL
+
+#if SMITE
+	if (GForceGame == GAME_Smite && Flags == COMPRESS_LZO_ENC_SMITE)
+	{
+		for (int i = 0; i < CompressedSize; i++)
+			CompressedBuffer[i] ^= 0x2A;
+		// overide compression
+		Flags = COMPRESS_LZO;
+	}
+#endif // SMITE
 
 #if TAO_YUAN
 	if (GForceGame == GAME_TaoYuan)	// note: GForceGame is required (to not pass 'Game' here);
