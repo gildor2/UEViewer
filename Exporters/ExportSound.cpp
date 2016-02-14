@@ -27,6 +27,8 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 		ext = "wav";
 	else if (!memcmp(Data, "FSB4", 4))
 		ext = "fsb";		// FMOD sound bank
+	else if (!memcmp(Data, "MSFC", 4))
+		ext = "mp3";		// PS3 MP3 codec
 
 	FArchive *Ar = CreateExportArchive(Obj, "%s.%s", Obj->Name, ext);
 	if (Ar)
@@ -212,6 +214,7 @@ void ExportSoundNodeWave(const USoundNodeWave *Snd)
 	// select bulk containing data
 	const FByteBulkData *bulk = NULL;
 	const char *ext = "unk";
+	int extraHeaderSize = 0;
 
 	if (Snd->RawData.ElementCount)
 	{
@@ -234,9 +237,14 @@ void ExportSoundNodeWave(const USoundNodeWave *Snd)
 	{
 		bulk = &Snd->CompressedPS3Data;
 		ext  = "ps3audio";
+		extraHeaderSize = 16;
+		//!! note: has up to 4 sounds in single object
+		//!! bulk data starts with int32[4] holding sizes of all sounds
+		//!! 0 means no data for particular object
+		//!! data encoded in MP3 format
 	}
 
-	SaveSound(Snd, bulk->BulkData, bulk->ElementCount, ext);
+	SaveSound(Snd, OffsetPointer(bulk->BulkData, extraHeaderSize), bulk->ElementCount - extraHeaderSize, ext);
 }
 
 #endif // UNREAL3

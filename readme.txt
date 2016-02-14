@@ -155,6 +155,10 @@ detex
 
 Changes
 ~~~~~~~
+15.02.2016
+- fixed crash with PS3 BulletStorm packages
+- improved support for PS3 audio extraction
+
 11.02.2016
 - added SMITE encryption support; -game=smite is required
 

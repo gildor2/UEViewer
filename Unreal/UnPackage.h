@@ -65,9 +65,8 @@ struct FCompressedChunk
 #if BULLETSTORM
 		if (Ar.Game == GAME_Bulletstorm && Ar.ArLicenseeVer >= 21)
 		{
-			int unk10;			// unused?
+			int unk10;			// unused? could be 0 or 1
 			Ar << unk10;
-			assert(unk10 == 1);
 		}
 #endif // BULLETSTORM
 
