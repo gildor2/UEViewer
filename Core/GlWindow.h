@@ -64,6 +64,7 @@ void ResetView();
 
 // viewport params
 extern bool  vpInvertXAxis;
+extern CVec3 viewOrigin;
 extern CAxis viewAxis;
 
 extern bool GShowDebugInfo;

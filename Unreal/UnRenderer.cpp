@@ -527,6 +527,7 @@ const CShader &GL_UseGenericShader(GenericShaderType type)
 	if (!Sh.IsValid()) Sh.Make(Generic_ush, defines[type]);
 	Sh.Use();
 	Sh.SetUniform("useLighting", glIsEnabled(GL_LIGHTING));
+	Sh.SetUniform("eyeLocation", viewOrigin);
 	return Sh;
 
 	unguardf("type=%d", type);

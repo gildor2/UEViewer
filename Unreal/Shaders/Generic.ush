@@ -8,17 +8,17 @@
 #define TEXTURING	1
 #endif
 
-//#define PIXEL_LIGHT_DIR
+#define PIXEL_LIGHT_DIR
 #define PIXEL_HALF_VEC
 
 // Variables passed from vertex to fragment shader
 varying vec4 diffuse, ambient, specular;
 varying vec3 normal;
+// PIXEL_LIGHT_DIR is required for point light, but not needed for directional light
 #ifndef PIXEL_LIGHT_DIR
 varying vec3 lightDir;
-#else
-varying vec3 position
 #endif
+varying vec3 position;
 #ifndef PIXEL_HALF_VEC
 varying vec3 halfVector;
 #endif
@@ -29,16 +29,14 @@ uniform sampler2D tex;
 #endif
 
 uniform bool useLighting;		// when set to "false", use vertex color only
+uniform vec3 eyeLocation;
 
 
 void VertexShaderMain()
 {
-#ifndef PIXEL_LIGHT_DIR			// otherwise - varying
-	vec3 position;
-#endif
 	// vectors
 	normal     = normalize(gl_NormalMatrix * gl_Normal);		// eye-space
-	position   = gl_NormalMatrix * gl_Vertex.xyz;				// eye-space
+	position   = (gl_ModelViewMatrix * gl_Vertex).xyz;			// eye-space
 	// note: gl_LightSource.position is already transformed to eye-space
 #ifndef PIXEL_LIGHT_DIR
 	lightDir   = gl_LightSource[0].position.xyz - position;
@@ -86,12 +84,14 @@ void PixelShaderMain()
 	// specular
 	// per-pixel half vector: average between direction from pixel to
 	// light and from pixel to viewer
+	float specularScale = 0.5;
 #ifdef PIXEL_HALF_VEC
-	vec3 halfVector = nLightDir + vec3(0, 0, 1);
+	vec3 eyeDir     = normalize(eyeLocation - position);
+	vec3 halfVector = nLightDir + eyeDir;
 #endif
 	vec3 halfV      = normalize(halfVector);
 	float NdotHV    = max(dot(n, halfV), 0.0);
-	color.rgb += pow(NdotHV, gl_FrontMaterial.shininess) * specular.rgb;
+	color.rgb += pow(NdotHV, gl_FrontMaterial.shininess) * specular.rgb * specularScale;
 #endif // SPECULAR
 
 #ifdef NORMALMAP

@@ -125,9 +125,10 @@ static float modelMatrix[4][4];
 // view state
 static CVec3 viewAngles;
 static float viewDist   = 0;
-static CVec3 viewOrigin = { -DEFAULT_DIST, 0, 0 };
 static CVec3 rotOrigin  = {0, 0, 0};
 static CVec3 viewOffset = {0, 0, 0};
+// camera transform
+       CVec3 viewOrigin = { -DEFAULT_DIST, 0, 0 };
        CAxis viewAxis;				// generated from angles
 
 // view params (const)

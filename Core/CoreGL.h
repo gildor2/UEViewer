@@ -137,6 +137,13 @@ public:
 		glUniform2f(u, value1, value2);
 		return true;
 	}
+	inline bool SetUniform(const char *name, const CVec3& value) const
+	{
+		GLint u = glGetUniformLocation(PrObj, name);
+		if (u == -1) return false;
+		glUniform3fv(u, 1, value.v);
+		return true;
+	}
 	// attributes
 	inline GLint GetAttrib(const char *name) const
 	{

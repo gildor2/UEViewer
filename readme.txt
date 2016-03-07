@@ -44,15 +44,33 @@ Quick start
 WARNING: it's highly recommended to read the FAQ and to watch video tutorials (see the
 links above) before starting the umodel for the first time.
 
-This is a console application, there is no GUI. Umodel is started with a set of command
-line options. Easiest run is 'umodel <package_file>', it will start umodel in a viewer
-mode. To see the full list of available command line options run 'umodel' with '-help'
-option.
+UModel primarily is a console application, with rich command line capabilities. Easiest
+run is 'umodel <package_file>', it will start umodel in a viewer mode. To see the full
+list of available command line options run 'umodel -help'.
 
-Note: if you will launch program from Windows explorer etc, you will get a console window
-with a help message, but this window will immediately disappear. You could try to drag
-a package file (.upk, .xxx, .ukx etc) to umodel's icon to launch the application.
+You could also drag a package file (.upk, .xxx, .ukx etc) to umodel's icon to launch
+the application. However default settings will be used in this case, so if game requires
+some compatibility options, this will not work.
 
+
+GUI
+~~~
+Some time ago simple GUI has been added for Windows version of UModel. It appears when
+you start UModel without arguments (for example, clicking on UModel icon from Windows
+Explorer). Please note that all command line option still works even in GUI mode.
+A startup window appears only when you have neither game path nor package name specified.
+It will allow you to choose where UModel will look for files ('-path' option) as well as
+compatibility options. If you will set '-path' from the command line, startup GUI will
+not appear. In a case you want to specify path and show startup GUI, add option '-gui'
+to the command line.
+
+Viewer window has user menu on the top of the window. Please review and try options
+provided there. Most of them could be duplicated with keystrokes, and these key shortcuts
+are listed in menu.
+
+
+Viewer mode
+~~~~~~~~~~~
 The application is controlled with keyboard and mouse. You may see the full list of
 keyboard shortcuts by pressing 'H' (Help) key. Here's the list of some shortcuts:
 
@@ -71,8 +89,8 @@ You may attach the AnimSet to the SkeletalMesh object using Ctrl+A key. Animatio
 sequences are listed by '[' and ']' keys, playback is started with a Space key.
 
 
-Notes about psk/psa export
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Psk/psa export
+~~~~~~~~~~~~~~
 To load psk or psa into the 3ds Max you'll need ActorX Importer script created by me:
 http://www.gildor.org/projects/unactorx
 It has own announcements thread here:
@@ -84,8 +102,8 @@ and cannot be loaded into UnrealEd or any other application with ActorX support.
 only one tool with pskx support at the moment - ActorX Importer mentioned above.
 
 
-Notes about md5mesh/md5anim export
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Md5mesh/md5anim export
+~~~~~~~~~~~~~~~~~~~~~~
 Umodel has possibility to export skeletal meshes and animations in idSoftware md5 format.
 To use this exporter you should use command line option "-md5". MeshAnimation and AnimSet
 objects are exported as multiple md5anim files (one file for each animation track). "bounds"
@@ -103,8 +121,8 @@ Please note that psk/psa format is more powerful, and ActorX Importer script has
 capabilities than md5 Importer.
 
 
-Notes about StaticMesh support
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+StaticMesh export
+~~~~~~~~~~~~~~~~~
 StaticMesh export is performed into psk format. This format was originally designed to hold
 SkeletalMesh, but umodel uses it for StaticMesh too. Exported mesh will not have a skeleton
 and vertex influences. Resulting psk files cannot be imported directly into the UnrealEd,
@@ -112,8 +130,8 @@ so I've decided to save ot with pskx extension to avoid silly user errors. Such 
 be imported into 3ds Max using ActorX Importer plugin as well as ordinary psk file.
 
 
-Notes about material export
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Material export
+~~~~~~~~~~~~~~~
 Materials are exported in a custom format. File extension is ".mat". At the current moment,
 this format is supported by ActorX Importer plugin only. Unreal engine materials are very
 complex, so it's very hard to separate a few channels (diffuse, specular, bump etc) from it.

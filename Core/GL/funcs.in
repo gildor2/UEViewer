@@ -444,7 +444,7 @@ void Uniform1i(GLint, GLint) ARGS
 //void Uniform4i(GLint, GLint, GLint, GLint, GLint);
 //void Uniform1fv(GLint, GLsizei, const GLfloat *);
 //void Uniform2fv(GLint, GLsizei, const GLfloat *);
-//void Uniform3fv(GLint, GLsizei, const GLfloat *);
+void Uniform3fv(GLint, GLsizei, const GLfloat *);
 //void Uniform4fv(GLint, GLsizei, const GLfloat *);
 //void Uniform1iv(GLint, GLsizei, const GLint *);
 //void Uniform2iv(GLint, GLsizei, const GLint *);

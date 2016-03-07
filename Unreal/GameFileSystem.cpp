@@ -105,7 +105,7 @@ static const char *KnownExtensions[] =
 #endif
 
 // By default umodel extracts data to the current directory. Working with a huge amount of files
-// could result to get "too much unknown files" error. We can ignore types of files which are
+// could result to get "too many unknown files" error. We can ignore types of files which are
 // extracted by umodel to reduce chance to get such error.
 static const char *SkipExtensions[] =
 {
@@ -281,7 +281,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 				return true;
 			// unknown file type
 			if (++GNumForeignFiles >= MAX_FOREIGN_FILES)
-				appError("Too much unknown files - bad root directory (%s)?", RootDirectory);
+				appError("Too many unknown files - bad root directory (%s)?", RootDirectory);
 			return true;
 		}
 		IsPackage = false;
