@@ -668,7 +668,7 @@ void FArchive::DetectGame()
 	if (ArVer == 845 && ArLicenseeVer == 4)		SET(GAME_DmC);
 #endif
 #if XCOM
-	if (ArVer == 845 && ArLicenseeVer == 107)	SET(GAME_Xcom2);
+	if (ArVer == 845 && (ArLicenseeVer >= 101 && ArLicenseeVer <= 107))	SET(GAME_Xcom2);
 	if (ArVer == 849 && ArLicenseeVer == 32795)	SET(GAME_XcomB);
 #endif
 #if FABLE
