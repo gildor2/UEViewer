@@ -2125,7 +2125,7 @@ enum
 	VER_UE4_10 = VER_UE4_9,								// exactly the same file version for 4.10
 		VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT = 485,
 		VER_UE4_SOUND_CONCURRENCY_PACKAGE = 489,		// used for UStaticMesh versioning
-	VER_UE4_11,											//!! AUTO VALUE - change this constant!
+	VER_UE4_11 = 498,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted
 };
 
