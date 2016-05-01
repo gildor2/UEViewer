@@ -312,6 +312,27 @@ DEPENDS = \
 	Core/GLBind.h \
 	Core/GlWindow.h \
 	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MaterialViewer.obj" Viewers/MaterialViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
@@ -422,26 +443,6 @@ DEPENDS = \
 
 $(OUT_1)/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnRenderer.obj" Unreal/UnRenderer.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMaterial2.h \
-	Unreal/UnMaterial3.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
-
-$(OUT_1)/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MaterialViewer.obj" Viewers/MaterialViewer.cpp
 
 DEPENDS = \
 	Core/Core.h \

@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "UnrealClasses.h"
+#include "MathSSE.h"			// for CVec4
 
 #if RENDERING
 
@@ -91,14 +92,16 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
 	Mat->SetMaterial();
 
-	GLint aTangent = -1, aBinormal = -1;
-	bool hasTangent = false;
+	// check tangent space
+	GLint aNormal = -1;
+	GLint aTangent = -1;
+//	GLint aBinormal = -1;
 	const CShader *Sh = GCurrentShader;
 	if (Sh)
 	{
+		aNormal    = Sh->GetAttrib("normal");
 		aTangent   = Sh->GetAttrib("tangent");
-		aBinormal  = Sh->GetAttrib("binormal");
-		hasTangent = (aTangent >= 0 && aBinormal >= 0);
+//		aBinormal  = Sh->GetAttrib("binormal");
 	}
 
 	// and draw box ...
@@ -119,6 +122,12 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 #define N0P0 { 0, 1, 0 }
 #define N00M { 0, 0,-1 }
 #define N00P { 0, 0, 1 }
+#define NM00w {-1, 0, 0, 1 }
+#define NP00w { 1, 0, 0, 1 }
+#define N0M0w { 0,-1, 0, 1 }
+#define N0P0w { 0, 1, 0, 1 }
+#define N00Mw { 0, 0,-1, 1 }
+#define N00Pw { 0, 0, 1, 1 }
 	static const CVec3 box[] =
 	{
 		V001, V000, V010, V011,		// near   (x=0)
@@ -129,14 +138,14 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 		V001, V011, V111, V101,		// top    (z=1)
 #undef A
 	};
-	static const CVec3 normal[] =
+	static const CVec4 normal[] =
 	{
-		NM00, NM00, NM00, NM00,
-		NP00, NP00, NP00, NP00,
-		N0M0, N0M0, N0M0, N0M0,
-		N0P0, N0P0, N0P0, N0P0,
-		N00M, N00M, N00M, N00M,
-		N00P, N00P, N00P, N00P
+		NM00w, NM00w, NM00w, NM00w,
+		NP00w, NP00w, NP00w, NP00w,
+		N0M0w, N0M0w, N0M0w, N0M0w,
+		N0P0w, N0P0w, N0P0w, N0P0w,
+		N00Mw, N00Mw, N00Mw, N00Mw,
+		N00Pw, N00Pw, N00Pw, N00Pw
 	};
 	static const CVec3 tangent[] =
 	{
@@ -147,15 +156,15 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 		NP00, NP00, NP00, NP00,
 		NM00, NM00, NM00, NM00
 	};
-	static const CVec3 binormal[] =
-	{
-		N00P, N00P, N00P, N00P,
-		N00M, N00M, N00M, N00M,
-		N00M, N00M, N00M, N00M,
-		N00P, N00P, N00P, N00P,
-		N0M0, N0M0, N0M0, N0M0,
-		N0P0, N0P0, N0P0, N0P0
-	};
+//	static const CVec3 binormal[] =
+//	{
+//		N00P, N00P, N00P, N00P,
+//		N00M, N00M, N00M, N00M,
+//		N00M, N00M, N00M, N00M,
+//		N00P, N00P, N00P, N00P,
+//		N0M0, N0M0, N0M0, N0M0,
+//		N0P0, N0P0, N0P0, N0P0
+//	};
 	static const float tex[][2] =
 	{
 		{0, 0}, {0, 1}, {1, 1}, {1, 0},
@@ -178,31 +187,56 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
-	if (hasTangent)
-	{
-		glEnableVertexAttribArray(aTangent);
-		glEnableVertexAttribArray(aBinormal);
-	}
+
+//	if (hasTangent)
+//	{
+//		glEnableVertexAttribArray(aTangent);
+//		glEnableVertexAttribArray(aBinormal);
+//	}
 
 	glVertexPointer(3, GL_FLOAT, sizeof(CVec3), box);
 	glNormalPointer(GL_FLOAT, sizeof(CVec3), normal);
 	glTexCoordPointer(2, GL_FLOAT, 0, tex);
-	if (hasTangent)
+//	if (hasTangent)
+//	{
+//		glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CVec3), tangent);
+//		glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CVec3), binormal);
+//	}
+
+	if (aNormal >= 0)
 	{
-		glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CVec3), tangent);
-		glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CVec3), binormal);
+		glEnableVertexAttribArray(aNormal);
+		// send 4 components to decode binormal in shader
+		glVertexAttribPointer(aNormal, 4, GL_FLOAT, GL_FALSE, sizeof(CVec4), normal);
 	}
+	if (aTangent >= 0)
+	{
+		glEnableVertexAttribArray(aTangent);
+		glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CVec3), tangent);
+	}
+//	if (aBinormal >= 0)
+//	{
+//		glEnableVertexAttribArray(aBinormal);
+//		glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CVec3), binormal);
+//	}
 
 	glDrawElements(GL_QUADS, ARRAY_COUNT(inds), GL_UNSIGNED_INT, inds);
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
-	if (hasTangent)
-	{
+//	if (hasTangent)
+//	{
+//		glDisableVertexAttribArray(aTangent);
+//		glDisableVertexAttribArray(aBinormal);
+//	}
+	// disable tangents
+	if (aNormal >= 0)
+		glDisableVertexAttribArray(aNormal);
+	if (aTangent >= 0)
 		glDisableVertexAttribArray(aTangent);
-		glDisableVertexAttribArray(aBinormal);
-	}
+//	if (aBinormal >= 0)
+//		glDisableVertexAttribArray(aBinormal);
 
 	BindDefaultMaterial(true);
 

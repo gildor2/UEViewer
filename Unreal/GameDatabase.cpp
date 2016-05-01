@@ -849,13 +849,6 @@ void FArchive::OverrideVersion()
 			ArVer = OVERRIDE_SF2_VER;
 	}
 #endif // SPECIALFORCE2
-#if ALICE
-	if (Game == GAME_Alice && GForceGame == GAME_UNKNOWN)
-	{
-		appPrintf("Forcing game set to Alice2\n");
-		GForceGame = GAME_Alice;
-	}
-#endif // ALICE
 #if REMEMBER_ME
 	if (Game == GAME_RememberMe)
 	{

@@ -210,16 +210,6 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	}
 #endif // TAO_YUAN
 
-#if ALICE
-	// this code exists in Alice: Madness Returns only
-	if (GForceGame == GAME_Alice && CompressedSize == UncompressedSize)
-	{
-		// CompressedSize == UncompressedSize -> no compression
-		memcpy(UncompressedBuffer, CompressedBuffer, UncompressedSize);
-		return UncompressedSize;
-	}
-#endif // ALICE
-
 	if (Flags == COMPRESS_FIND && CompressedSize >= 2)
 	{
 		byte b1 = CompressedBuffer[0];
@@ -244,7 +234,20 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		if (r != LZO_E_OK) appError("lzo_init() returned %d", r);
 		lzo_uint newLen = UncompressedSize;
 		r = lzo1x_decompress_safe(CompressedBuffer, CompressedSize, UncompressedBuffer, &newLen, NULL);
-		if (r != LZO_E_OK) appError("lzo_decompress(%d,%d) returned %d", CompressedSize, UncompressedSize, r);
+		if (r != LZO_E_OK)
+		{
+			if (CompressedSize != UncompressedSize)
+			{
+				appError("lzo_decompress(%d,%d) returned %d", CompressedSize, UncompressedSize, r);
+			}
+			else
+			{
+				// This situation is unusual for UE3, it happened with Alice, and Batman 3
+				// TODO: probably extend this code for other compression methods too
+				memcpy(UncompressedBuffer, CompressedBuffer, UncompressedSize);
+				return UncompressedSize;
+			}
+		}
 		if (newLen != UncompressedSize) appError("len mismatch: %d != %d", newLen, UncompressedSize);
 		return newLen;
 	}
