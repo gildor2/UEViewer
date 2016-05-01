@@ -96,7 +96,7 @@
 #define PLA				1		// Passion Leads Army
 #define BIOSHOCK3		1		// Bioshock Infinite
 #define REMEMBER_ME		1
-#define MARVEL_HEROES	1
+//#define MARVEL_HEROES	1		-- disabled: were used for custom TFC, which didn't work anyway, plus that code requires update after changes in game engine
 #define LOST_PLANET3	1
 #define XCOM			1		// The Bureau: XCOM Declassified, XCOM 2
 #define THIEF4			1		// Thief
