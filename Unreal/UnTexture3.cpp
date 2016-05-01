@@ -958,9 +958,16 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	if (TexData.Platform == PLATFORM_XBOX360)
 	{
 		for (int MipLevel = 0; MipLevel < TexData.Mips.Num(); MipLevel++)
-			TexData.DecodeXBox360(MipLevel);
+		{
+			if (!TexData.DecodeXBox360(MipLevel))
+			{
+				// failed to decode this mip
+				TexData.Mips.RemoveAt(MipLevel, TexData.Mips.Num() - MipLevel);
+				break;
+			}
+		}
 	}
-#endif
+#endif // SUPPORT_XBOX360
 
 	return (TexData.Mips.Num() > 0);
 

@@ -31,6 +31,7 @@ static GLuint GetDefaultTexNum();
 
 
 //#define SHOW_SHADER_PARAMS	1
+//#define DEBUG_MIPS			1			// use to debug decompression of lower mip levels, especially for XBox360
 
 
 /*-----------------------------------------------------------------------------
@@ -242,6 +243,22 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 		{
 			const CMipMap& Mip = TexData.Mips[mipLevel];
 			byte* pic = TexData.Decompress(mipLevel);
+
+#if DEBUG_MIPS
+			// colorize mip levels
+			static const FVector cc[] = { {1,1,0}, {0,1,1}, {1,0,1}, {1,0,0}, {0,1,0}, {0,0,1} };
+			byte* d = pic;
+			FVector v = cc[min(mipLevel-1, 5)];
+			for (int i = 0; i < Mip.USize * Mip.VSize; i++, d += 4)
+			{
+				float r = d[0], g = d[1], b = d[2];
+				float c = (r + g + b) / 3.0f;
+				d[0] = byte(c * v.X);
+				d[1] = byte(c * v.Y);
+				d[2] = byte(c * v.Z);
+			}
+#endif // DEBUG_MIPS
+
 			assert(pic);
 //			printf("   mip %d x %d (%X)\n", Mip.USize, Mip.VSize, Mip.DataSize); //!!!
 			glTexImage2D(target, mipLevel, format, Mip.USize, Mip.VSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
@@ -267,6 +284,12 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 		}
 		unguard;
 	}
+
+#if DEBUG_MIPS
+	// blur textures to display lower mips
+	glTexEnvf(GL_TEXTURE_FILTER_CONTROL_EXT, GL_TEXTURE_LOD_BIAS_EXT, 3.0f);
+#endif
+
 	delete scaledPic;
 	return true;
 
@@ -278,6 +301,10 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum target2, CTextureData &TexData, bool doMipmap)
 {
 	guard(UploadCompressedTex);
+
+#if DEBUG_MIPS
+	return false; // always decompress
+#endif
 
 	Tex->NormalUnpackExpr = NULL;
 
@@ -347,6 +374,14 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		break;
 	default:
 		return false;
+	}
+
+	if (doMipmap && (TexData.Mips.Num() == 1))
+	{
+		// don't generate mipmaps for small compressed images
+		const CMipMap& Mip = TexData.Mips[0];
+		if (Mip.USize < 32 || Mip.VSize < 32)
+			doMipmap = false;
 	}
 
 	if (!doMipmap)

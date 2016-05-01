@@ -120,8 +120,8 @@ struct CPixelFormatInfo
 	byte		BlockSizeX;
 	byte		BlockSizeY;
 	byte		BytesPerBlock;
-	byte		X360AlignX;			// 0 when unknown or not supported on XBox360
-	byte		X360AlignY;
+	short		X360AlignX;			// 0 when unknown or not supported on XBox360
+	short		X360AlignY;
 	const char*	Name;
 };
 
@@ -184,7 +184,7 @@ struct CTextureData
 	byte *Decompress(int MipLevel = 0);				// may return NULL in a case of error
 
 #if SUPPORT_XBOX360
-	void DecodeXBox360(int MipLevel);
+	bool DecodeXBox360(int MipLevel);
 #endif
 };
 

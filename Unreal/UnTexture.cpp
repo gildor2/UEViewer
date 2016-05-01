@@ -18,6 +18,8 @@
 #	define PROFILE_DDS(cmd)
 #endif
 
+//#define DEBUG_XBOX360_TEX		1
+
 /*-----------------------------------------------------------------------------
 	Texture decompression
 -----------------------------------------------------------------------------*/
@@ -382,6 +384,8 @@ static unsigned GetTiledOffset(int x, int y, int width, int logBpb)
 
 // Untile decompressed texture.
 // This function also removes U alignment when originalWidth < tiledWidth
+// Note: this function is not used, and now it is outdated. See UntileCompressedXbox360Texture
+// for more details.
 static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
 {
 	guard(UntileXbox360Texture);
@@ -422,29 +426,57 @@ static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWi
 
 // Untile compressed texture - it will remains compressed, but in PC format instead of XBox360.
 // This function also removes U alignment when originalWidth < tiledWidth
-static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+//!! Note: this function doesn't work well with non-square textures - UModel will not crash, but textures
+//!! will not appear correctly. Example (from Gears of War 3):
+//!!   umodel GearGame.xxx -game=gowj T_Ramp_Right_To_Left
+static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiledWidth, int originalWidth, int tiledHeight, int originalHeight, int blockSizeX, int blockSizeY, int bytesPerBlock)
 {
 	guard(UntileCompressedXbox360Texture);
 
-	int blockWidth          = tiledWidth / blockSizeX;			// width of image in blocks
+	int tiledBlockWidth     = tiledWidth / blockSizeX;			// width of image in blocks
 	int originalBlockWidth  = originalWidth / blockSizeX;		// width of image in blocks
-	int blockHeight         = height / blockSizeY;				// height of image in blocks
+	int tiledBlockHeight    = tiledHeight / blockSizeY;			// height of image in blocks
+	int originalBlockHeight = originalHeight / blockSizeY;		// height of image in blocks
 	int logBpp              = appLog2(bytesPerBlock);
 
-	int numImageBlocks = blockWidth * blockHeight;				// used for verification
+	// XBox360 has packed multiple lower mip levels into a single tile - should use special code
+	// to unpack it.
+	// Packing looks like this:
+	// ....CCCCBBBBBBBBAAAAAAAAAAAAAAAA
+	// ....CCCCBBBBBBBBAAAAAAAAAAAAAAAA
+	// E.......BBBBBBBBAAAAAAAAAAAAAAAA
+	// ........BBBBBBBBAAAAAAAAAAAAAAAA
+	// DD..............AAAAAAAAAAAAAAAA
+	// ................AAAAAAAAAAAAAAAA
+	// ................AAAAAAAAAAAAAAAA
+	// ................AAAAAAAAAAAAAAAA
+	// (Where mips are A,B,C,D,E - E is 1x1, D is 2x2 etc)
+	// Force sxOffset=0 and enable DEBUG_MIPS in UnRender.cpp to visualize this layout.
+	// So we should offset X coordinate when unpacking to the width of mip level.
+	// Note: this doesn't work with non-square textures.
+	int sxOffset = 0;
+	if ((tiledBlockWidth >= originalBlockWidth * 2) && (originalWidth == 16))
+	{
+		sxOffset = originalBlockWidth;
+#if DEBUG_XBOX360_TEX
+		appPrintf("sxOffset=%d\n", sxOffset);
+#endif
+	}
+
+	int numImageBlocks = tiledBlockWidth * tiledBlockHeight;	// used for verification
 
 	// iterate image blocks
-	for (int y = 0; y < blockHeight; y++)
+	for (int dy = 0; dy < originalBlockHeight; dy++)
 	{
-		for (int x = 0; x < originalBlockWidth; x++)
+		for (int dx = 0; dx < originalBlockWidth; dx++)
 		{
-			unsigned swzAddr = GetTiledOffset(x, y, blockWidth, logBpp);	// do once for whole block
+			unsigned swzAddr = GetTiledOffset(dx + sxOffset, dy, tiledBlockWidth, logBpp);	// do once for whole block
 			assert(swzAddr < numImageBlocks);
-			int sy = swzAddr / blockWidth;
-			int sx = swzAddr % blockWidth;
+			int sy = swzAddr / tiledBlockWidth;
+			int sx = swzAddr % tiledBlockWidth;
 
-			byte       *pDst = dst + (y  * originalBlockWidth + x ) * bytesPerBlock;
-			const byte *pSrc = src + (sy * blockWidth         + sx) * bytesPerBlock;
+			byte       *pDst = dst + (dy * originalBlockWidth + dx) * bytesPerBlock;
+			const byte *pSrc = src + (sy * tiledBlockWidth    + sx) * bytesPerBlock;
 			memcpy(pDst, pSrc, bytesPerBlock);
 		}
 	}
@@ -452,12 +484,24 @@ static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiled
 }
 
 
-void CTextureData::DecodeXBox360(int MipLevel)
+bool CTextureData::DecodeXBox360(int MipLevel)
 {
 	guard(CTextureData::DecodeXBox360);
 
+#if DEBUG_XBOX360_TEX
+	if (MipLevel == 0)
+	{
+		appPrintf("Texture %s in format %s has %d mips:\n", Obj->Name, OriginalFormatName, Mips.Num());
+		for (int i = 0; i < Mips.Num(); i++)
+		{
+			const CMipMap& Mip = Mips[i];
+			appPrintf("%d: %d x %d, 0x%X bytes\n", i, Mip.USize, Mip.VSize, Mip.DataSize);
+		}
+	}
+#endif // DEBUG_XBOX360_TEX
+
 	if (!Mips.IsValidIndex(MipLevel))
-		return;
+		return false;
 	CMipMap& Mip = Mips[MipLevel];
 
 	const CPixelFormatInfo &Info = PixelFormatInfo[Format];
@@ -471,37 +515,52 @@ void CTextureData::DecodeXBox360(int MipLevel)
 		Mip.ReleaseData();
 		appNotify("ERROR: DecodeXBox360 %s'%s' mip %d (%s=%d): %s", Obj->GetClassName(), Obj->Name, MipLevel,
 			OriginalFormatName, OriginalFormatEnum, ErrorMessage);
-		return;
+		return false;
 	}
 
-	int bytesPerBlock = Info.BytesPerBlock;
 	int USize1 = Align(Mip.USize, Info.X360AlignX);
 	int VSize1 = Align(Mip.VSize, Info.X360AlignY);
+	int UBlockSize = USize1 / Info.BlockSizeX;
+	int VBlockSize = VSize1 / Info.BlockSizeY;
+	int TotalBlocks = Mip.DataSize / Info.BytesPerBlock;
 
 	float bpp = (float)Mip.DataSize / (USize1 * VSize1) * Info.BlockSizeX * Info.BlockSizeY;	// used for validation only
-//	appPrintf("DecodeXBox360: %s'%s': %d x %d (%d x %d aligned), %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
-//		Mip.USize, Mip.VSize, USize1, VSize1, OriginalFormatName, Info.BytesPerBlock, bpp, Mip.DataSize);
+#if DEBUG_XBOX360_TEX
+	appPrintf("DecodeXBox360: %s'%s': %d x %d (%d x %d aligned), %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
+		Mip.USize, Mip.VSize, USize1, VSize1, OriginalFormatName, Info.BytesPerBlock, bpp, Mip.DataSize);
+#endif
+
+	if (UBlockSize * VBlockSize > TotalBlocks)
+	{
+//		VSize1 = TotalBlocks / UBlockSize * Info.BlockSizeY;
+#if DEBUG_XBOX360_TEX
+		appPrintf("... can't fit aligned texture to a tile, dropping mip\n");
+#endif
+		return false;
+	}
 
 #if BIOSHOCK
 	// some verification
-	float rate = bpp / bytesPerBlock;
+	float rate = bpp / Info.BytesPerBlock;
 	if (Obj->GetGame() == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
-		bpp = bytesPerBlock;
+		bpp = Info.BytesPerBlock;
 #endif // BIOSHOCK
 
-	if (fabs(bpp - bytesPerBlock) > 0.001f)
+	if (fabs(bpp - Info.BytesPerBlock) > 0.001f)
 	{
 		// Some XBox360 games (Lollipop Chainsaw, ...) has lower mip level (16x16) with half or 1/4 of data size - allow that.
-		if ( (Mip.VSize >= 32) || ( (bpp * 2 != bytesPerBlock) && (bpp * 4 != bytesPerBlock) ) )
+		// TODO: review this code, perhaps useless due to recent changes in lower mipmap levels support. At least, check
+		// 'bpp * 2' and 'bpp * 4' cases.
+		if ( (Mip.VSize >= 32) || ( (bpp * 2 != Info.BytesPerBlock) && (bpp * 4 != Info.BytesPerBlock) ) )
 		{
-			appSprintf(ARRAY_ARG(ErrorMessage), "bytesPerBlock: got %g, need %d", bpp, bytesPerBlock);
+			appSprintf(ARRAY_ARG(ErrorMessage), "bytesPerBlock: got %g, need %d", bpp, Info.BytesPerBlock);
 			goto error;
 		}
 	}
 
 	// untile and unalign
-	byte *buf = (byte*)appMalloc(Mip.DataSize);
-	UntileCompressedXbox360Texture(Mip.CompressedData, buf, USize1, Mip.USize, VSize1, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
+	byte *buf = (byte*)appMalloc(Mip.DataSize);   	// older code: 'Mip.DataSize * 16'; perhaps should use Mip.USize * Mip.VSize * BytesPerPixel
+	UntileCompressedXbox360Texture(Mip.CompressedData, buf, USize1, Mip.USize, VSize1, Mip.VSize, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
 	// swap bytes
 	if (Format == TPF_RGBA8 || Format == TPF_BGRA8)
@@ -509,7 +568,7 @@ void CTextureData::DecodeXBox360(int MipLevel)
 		// Swap dwords for 32-bit formats
 		appReverseBytes(buf, Mip.DataSize / 4, 4);
 	}
-	else if (bytesPerBlock > 1)
+	else if (Info.BytesPerBlock > 1)
 	{
 		// Swap words for everything else
 		appReverseBytes(buf, Mip.DataSize / 2, 2);
@@ -521,7 +580,7 @@ void CTextureData::DecodeXBox360(int MipLevel)
 	Mip.ShouldFreeData = true;			// data were allocated here ...
 	Mip.DataSize = (Mip.USize / Info.BlockSizeX) * (Mip.VSize / Info.BlockSizeY) * Info.BytesPerBlock; // essential for exporting
 
-	return;		// no error
+	return true;	// no error
 
 	unguard;
 }
