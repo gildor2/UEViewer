@@ -1329,6 +1329,23 @@ static void PatchBnSExports(FObjectExport *Exp, const FPackageFileSummary &Summa
 
 #endif // BLADENSOUL
 
+#if DUNDEF
+
+static void PatchDunDefExports(FObjectExport *Exp, const FPackageFileSummary &Summary)
+{
+	// Dungeon Defenders has nullified ExportOffset entries starting from some version.
+	// Let's recover them.
+	int CurrentOffset = Summary.HeadersSize;
+	for (int i = 0; i < Summary.ExportCount; i++, Exp++)
+	{
+		if (Exp->SerialOffset == 0)
+			Exp->SerialOffset = CurrentOffset;
+		CurrentOffset = Exp->SerialOffset + Exp->SerialSize;
+	}
+}
+
+#endif // DUNDEF
+
 
 /*-----------------------------------------------------------------------------
 	Nurien
@@ -2172,6 +2189,10 @@ void UnPackage::LoadExportTable()
 #if BLADENSOUL
 	if (Game == GAME_BladeNSoul && (Summary.PackageFlags & 0x08000000))
 		PatchBnSExports(ExportTable, Summary);
+#endif
+#if DUNDEF
+	if (Game == GAME_DunDef)
+		PatchDunDefExports(ExportTable, Summary);
 #endif
 
 	unguard;

@@ -360,6 +360,10 @@ struct FRigidVertex3
 			if (Ar.ArLicenseeVer >= 2) NumUVSets = 4;
 		}
 #endif // CRIMECRAFT
+#if DUNDEF
+		if (Ar.Game == GAME_DunDef && Ar.ArLicenseeVer >= 21)
+			NumUVSets = 4;
+#endif // DUNDEF
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
 	normals:
@@ -455,6 +459,10 @@ struct FSmoothVertex3
 			if (Ar.ArLicenseeVer >= 2) NumUVSets = 4;
 		}
 #endif // CRIMECRAFT
+#if DUNDEF
+		if (Ar.Game == GAME_DunDef && Ar.ArLicenseeVer >= 21)
+			NumUVSets = 4;
+#endif // DUNDEF
 		// note: version prior 477 have different normal/tangent format (same layout, but different
 		// data meaning)
 	normals:
@@ -858,6 +866,9 @@ struct FSkeletalMeshVertexBuffer3
 	#endif
 	#if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 55) goto get_UV_count; // 1 or 2
+	#endif
+	#if DUNDEF
+		if (Ar.Game == GAME_DunDef && Ar.ArLicenseeVer >= 21) goto get_UV_count;
 	#endif
 		if (Ar.ArVer >= 709)
 		{
@@ -1476,10 +1487,14 @@ struct FStaticLODModel3
 		}
 #endif // MKVSDC
 
+		// UV sets count
+		Lod.NumUVSets = 1;
 		if (Ar.ArVer >= 709)
 			Ar << Lod.NumUVSets;
-		else
-			Lod.NumUVSets = 1;
+#if DUNDEF
+		if (Ar.Game == GAME_DunDef && Ar.ArLicenseeVer >= 21)
+			Ar << Lod.NumUVSets;
+#endif
 		DBG_SKEL("NumUVSets=%d\n", Lod.NumUVSets);
 
 #if MOH2010

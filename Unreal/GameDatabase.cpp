@@ -777,6 +777,7 @@ void FArchive::DetectGame()
 
 #define OVERRIDE_ME1_LVER		90			// real version is 1008, which is greater than LicenseeVersion of Mass Effect 2 and 3
 #define OVERRIDE_TRANSFORMERS3	566			// real version is 846
+#define OVERRIDE_DUNDEF_VER		685			// smaller than 686 (for FStaticLODModel)
 #define OVERRIDE_SF2_VER		700
 #define OVERRIDE_SF2_VER2		710
 #define OVERRIDE_LIS_VER		832			// >= 832 || < 858 (for UMaterial), < 841 (for USkeletalMesh)
@@ -856,6 +857,13 @@ void FArchive::OverrideVersion()
 			ArVer = OVERRIDE_LIS_VER;
 	}
 #endif // REMEMBER_ME
+#if DUNDEF
+	if (Game == GAME_DunDef)
+	{
+		if (ArVer >= 686)
+			ArVer = OVERRIDE_DUNDEF_VER;
+	}
+#endif // DUNDEF
 
 	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);

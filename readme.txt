@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+02.05.2016
+- added Dungeon Defenders support (-game=dundef is required)
+
 15.02.2016
 - fixed crash with PS3 BulletStorm packages
 - improved support for PS3 audio extraction
