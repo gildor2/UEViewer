@@ -137,6 +137,7 @@ int GNumForeignFiles = 0;
 #define GAME_FILE_HASH_MASK		(GAME_FILE_HASH_SIZE-1)
 
 //#define PRINT_HASH_DISTRIBUTION	1
+//#define DEBUG_HASH				1
 //#define DEBUG_HASH_NAME			"MiniMap"
 
 static CGameFileInfo* GGameFileHash[GAME_FILE_HASH_SIZE];
@@ -149,11 +150,11 @@ static int            GStartupPackageInfoWeight = 0;
 #endif
 
 
-static int GetHashForFileName(const char* FileName)
+static int GetHashForFileName(const char* FileName, bool stripExtension)
 {
 	const char* s1 = strrchr(FileName, '/'); // assume path delimiters are normalized
 	s1 = (s1 != NULL) ? s1 + 1 : FileName;
-	const char* s2 = strrchr(s1, '.');
+	const char* s2 = stripExtension ? strrchr(s1, '.') : NULL;
 	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
 
 	short hash = 0;
@@ -328,7 +329,6 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 	s = strrchr(info->ShortFilename, '.');
 	if (s) s++;
 	info->Extension = s;
-//	printf("..  -> %s (pkg=%d)\n", info->ShortFilename, info->IsPackage);
 
 #if UNREAL3
 	if (info->IsPackage && (strnicmp(info->ShortFilename, "startup", 7) == 0))
@@ -356,9 +356,12 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 #endif // UNREAL3
 
 	// insert CGameFileInfo into hash table
-	int hash = GetHashForFileName(info->ShortFilename);
+	int hash = GetHashForFileName(info->ShortFilename, true);
 	info->HashNext = GGameFileHash[hash];
 	GGameFileHash[hash] = info;
+#if DEBUG_HASH
+	printf("--> add(%s) pkg=%d hash=%X\n", info->ShortFilename, info->IsPackage, hash);
+#endif
 
 	return true;
 
@@ -573,12 +576,15 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	}
 
 	// Get hash before stripping extension (could be required for files with double extension, like .hdr.rtc for games with Redux textures)
-	int hash = GetHashForFileName(buf);
+	int hash = GetHashForFileName(buf, /* stripExtension = */ Ext == NULL);
+#if DEBUG_HASH
+	printf("--> find(%s) hash=%X\n", buf, hash);
+#endif
 
 	if (Ext)
 	{
 		// extension is provided
-		assert(!strchr(buf, '.'));
+		//assert(!strchr(buf, '.')); -- don't assert because Dungeon Defenders (and perhaps other games) has TFC file names with dots
 	}
 	else
 	{
@@ -592,7 +598,7 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	}
 
 	int nameLen = strlen(ShortFilename);
-#ifdef DEBUG_HASH_NAME
+#if defined(DEBUG_HASH_NAME) || DEBUG_HASH
 	printf("--> Loading %s (%s, len=%d, hash=%X)\n", buf, ShortFilename, nameLen, hash);
 #endif
 
@@ -600,7 +606,7 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 	int bestMatchWeight = -1;
 	for (CGameFileInfo* info = GGameFileHash[hash]; info; info = info->HashNext)
 	{
-#ifdef DEBUG_HASH_NAME
+#if defined(DEBUG_HASH_NAME) || DEBUG_HASH
 		printf("----> verify %s\n", info->RelativeName);
 #endif
 		if (info->Extension - 1 - info->ShortFilename != nameLen)	// info->Extension points to char after '.'

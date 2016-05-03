@@ -648,7 +648,8 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			if (char* s = strchr(bulkFileName, '.'))
 			{
 				// MK X has string with file extension - cut it
-				*s = 0;
+				if (!stricmp(s, ".tfc") || !stricmp(s, ".xxx"))
+					*s = 0;
 			}
 			const char* bulkFileExt = tfcExtensions[i];
 			bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
