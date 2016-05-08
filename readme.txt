@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+08.05.2016
+- implemented loading of UE4 StaticMesh from editor packages
+
 02.05.2016
 - added Dungeon Defenders support (-game=dundef is required)
 

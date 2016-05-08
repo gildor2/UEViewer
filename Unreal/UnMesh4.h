@@ -147,6 +147,18 @@ protected:
 // forwards (structures are declared in cpp)
 struct FStaticMeshLODModel4;
 
+struct FStaticMeshSourceModel
+{
+	DECLARE_STRUCT(FStaticMeshSourceModel);
+	FByteBulkData			BulkData;
+
+	BEGIN_PROP_TABLE
+		PROP_DROP(BuildSettings)				// note: contains BuildScale
+		PROP_DROP(ReductionSettings)
+		PROP_DROP(ScreenSize)
+	END_PROP_TABLE
+};
+
 class UStaticMesh4 : public UObject
 {
 	DECLARE_CLASS(UStaticMesh4, UObject);
@@ -169,9 +181,11 @@ public:
 	bool					bReducedBySimplygon;
 	bool					bLODsShareStaticLighting;
 	TArray<FStaticMeshLODModel4> Lods;
+	TArray<FStaticMeshSourceModel> SourceModels;
 
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Materials, UObject*)
+		PROP_ARRAY(SourceModels, FStaticMeshSourceModel)
 	END_PROP_TABLE
 
 	UStaticMesh4();
@@ -181,6 +195,7 @@ public:
 
 protected:
 	void ConvertMesh();
+	void ConvertSourceModels();
 };
 
 
@@ -189,7 +204,8 @@ protected:
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, UDestructibleMesh) \
-	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh)
+	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
+	REGISTER_CLASS(FStaticMeshSourceModel)
 
 
 #endif // UNREAL4

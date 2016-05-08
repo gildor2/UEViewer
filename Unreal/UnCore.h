@@ -1131,6 +1131,16 @@ struct FIntVector
 	}
 };
 
+struct FVector2D
+{
+	int		X, Y;
+
+	friend FArchive& operator<<(FArchive &Ar, FVector2D &V)
+	{
+		return Ar << V.X << V.Y;
+	}
+};
+
 struct FTransform
 {
 	FQuat	Rotation;
@@ -1237,6 +1247,7 @@ SIMPLE_TYPE(FColor,   byte)
 
 SIMPLE_TYPE(FIntPoint, int)
 SIMPLE_TYPE(FIntVector, int)
+SIMPLE_TYPE(FVector2D, float)
 SIMPLE_TYPE(FTransform, float)
 
 #endif // UNREAL4
@@ -2084,6 +2095,7 @@ enum
 	VER_UE4_BULKDATA_AT_LARGE_OFFSETS = 198,
 	VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET = 212,
 	VER_UE4_STATIC_MESH_STORE_NAV_COLLISION = 216,
+	VER_UE4_DEPRECATED_STATIC_MESH_THUMBNAIL_PROPERTIES_REMOVED = 242,
 	VER_UE4_APEX_CLOTH = 254,
 	VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX = 269,
 	VER_UE4_SUPPORT_32BIT_STATIC_MESH_INDICES = 277,

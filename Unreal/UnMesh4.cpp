@@ -1077,6 +1077,18 @@ struct FStaticMeshLODModel4
 };
 
 
+struct FMeshSectionInfo
+{
+	int					MaterialIndex;
+	bool				bEnableCollision;
+	bool				bCastShadow;
+
+	friend FArchive& operator<<(FArchive& Ar, FMeshSectionInfo& S)
+	{
+		return Ar << S.MaterialIndex << S.bEnableCollision << S.bCastShadow;
+	}
+};
+
 void UStaticMesh4::Serialize(FArchive &Ar)
 {
 	guard(UStaticMesh4::Serialize);
@@ -1086,15 +1098,23 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 	FStripDataFlags StripFlags(Ar);
 	bool bCooked;
 	Ar << bCooked;
+	DBG_STAT("Serializing %s StaticMesh\n", bCooked ? "cooked" : "source");
 
 	Ar << BodySetup;
 
 	if (Ar.ArVer >= VER_UE4_STATIC_MESH_STORE_NAV_COLLISION)
 		Ar << NavCollision;
+
 	if (!StripFlags.IsEditorDataStripped())
 	{
-		// thumbnail, etc
-		appError("UE4 editor packages are not supported");
+		if (Ar.ArVer < VER_UE4_DEPRECATED_STATIC_MESH_THUMBNAIL_PROPERTIES_REMOVED)
+		{
+			FRotator DummyThumbnailAngle;
+			float DummyThumbnailDistance;
+		}
+		FString HighResSourceMeshName;
+		unsigned HighResSourceMeshCRC;
+		Ar << HighResSourceMeshName << HighResSourceMeshCRC;
 	}
 
 	Ar << LightingGuid;
@@ -1103,56 +1123,90 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 	Ar << Sockets;
 	if (Sockets.Num()) appNotify("StaticMesh has %d sockets", Sockets.Num());
 
-	// serialize FStaticMeshRenderData
-
-	DBG_STAT("Serializing LODs\n");
-	Ar << Lods;
-
-	if (bCooked && (Ar.ArVer >= VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN))
+	// editor models
+	if (!StripFlags.IsEditorDataStripped())
 	{
-		/// reference: 28.08.2014 - f5238f04
-		bool stripped = false;
-		if (Ar.ArVer >= VER_UE4_RENAME_WIDGET_VISIBILITY)
+		DBG_STAT("Serializing %d SourceModels\n", SourceModels.Num());
+		for (int i = 0; i < SourceModels.Num(); i++)
 		{
-			/// reference: 13.11.2014 - 48a3c9b7
-			FStripDataFlags StripFlags2(Ar);
-			stripped = StripFlags.IsDataStrippedForServer();
+			// Serialize FRawMeshBulkData
+			SourceModels[i].BulkData.Serialize(Ar);
+			// drop extra fields
+			FGuid Guid;
+			bool bGuidIsHash;
+			Ar << Guid << bGuidIsHash;
 		}
-		if (!stripped)
+		TMap<unsigned, FMeshSectionInfo> MeshSectionInfo;
+		Ar << MeshSectionInfo;
+	}
+
+	// serialize FStaticMeshRenderData
+	if (bCooked)
+	{
+		// Note: code below still contains 'if (bCooked)' switches, this is because the same
+		// code could be used to read data from DDC, for non-cooked assets.
+		DBG_STAT("Serializing RenderData\n");
+		if (!bCooked)
 		{
-			// serialize FDistanceFieldVolumeData for each LOD
-			for (int i = 0; i < Lods.Num(); i++)
+			TArray<int> WedgeMap;
+			TArray<int> MaterialIndexToImportIndex;
+			Ar << WedgeMap << MaterialIndexToImportIndex;
+		}
+
+		Ar << Lods; // original code: TArray<FStaticMeshLODResources> LODResources
+
+		if (bCooked)
+		{
+			if (Ar.ArVer >= VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
 			{
-				bool HasDistanceDataField;
-				Ar << HasDistanceDataField;
-				if (HasDistanceDataField)
+				/// reference: 28.08.2014 - f5238f04
+				bool stripped = false;
+				if (Ar.ArVer >= VER_UE4_RENAME_WIDGET_VISIBILITY)
 				{
-					FDistanceFieldVolumeData VolumeData;
-					Ar << VolumeData;
+					/// reference: 13.11.2014 - 48a3c9b7
+					FStripDataFlags StripFlags2(Ar);
+					stripped = StripFlags.IsDataStrippedForServer();
+				}
+				if (!stripped)
+				{
+					// serialize FDistanceFieldVolumeData for each LOD
+					for (int i = 0; i < Lods.Num(); i++)
+					{
+						bool HasDistanceDataField;
+						Ar << HasDistanceDataField;
+						if (HasDistanceDataField)
+						{
+							FDistanceFieldVolumeData VolumeData;
+							Ar << VolumeData;
+						}
+					}
 				}
 			}
 		}
-	}
 
-	Ar << Bounds;
-	Ar << bLODsShareStaticLighting << bReducedBySimplygon;
+		Ar << Bounds;
+		Ar << bLODsShareStaticLighting << bReducedBySimplygon;
 
-	// StreamingTextureFactor for each UV set
-	for (int i = 0; i < MAX_STATIC_UV_SETS_UE4; i++)
-		Ar << StreamingTextureFactors[i];
-	Ar << MaxStreamingTextureFactor;
+		// StreamingTextureFactor for each UV set
+		for (int i = 0; i < MAX_STATIC_UV_SETS_UE4; i++)
+			Ar << StreamingTextureFactors[i];
+		Ar << MaxStreamingTextureFactor;
 
-	if (bCooked)
-	{
-		// ScreenSize for each LOD
-		for (int i = 0; i < MAX_STATIC_LODS_UE4; i++)
-			Ar << ScreenSize[i];
-	}
+		if (bCooked)
+		{
+			// ScreenSize for each LOD
+			for (int i = 0; i < MAX_STATIC_LODS_UE4; i++)
+				Ar << ScreenSize[i];
+		}
+	} // end of FStaticMeshRenderData
 
 	// remaining is SpeedTree data
 	DROP_REMAINING_DATA(Ar);
 
-	ConvertMesh();
+	if (bCooked)
+		ConvertMesh();
+	else
+		ConvertSourceModels();
 
 	unguard;
 }
@@ -1195,7 +1249,7 @@ void UStaticMesh4::ConvertMesh()
 		{
 			CMeshSection &Dst = Lod->Sections[i];
 			const FStaticMeshSection4 &Src = SrcLod.Sections[i];
-			if (Src.MaterialIndex < Materials.Num())
+			if (Materials.IsValidIndex(Src.MaterialIndex))
 				Dst.Material = (UUnrealMaterial*)Materials[Src.MaterialIndex];
 			Dst.FirstIndex = Src.FirstIndex;
 			Dst.NumFaces   = Src.NumTriangles;
@@ -1226,6 +1280,164 @@ void UStaticMesh4::ConvertMesh()
 		if (Lod->Indices.Num() == 0) appError("This StaticMesh doesn't have an index buffer");
 
 		unguardf("lod=%d", lod);
+	}
+
+	Mesh->FinalizeMesh();
+
+	unguard;
+}
+
+
+struct FRawMesh
+{
+	TArray<int>			FaceMaterialIndices;
+	TArray<int>			FaceSmoothingMask;
+	TArray<FVector>		VertexPositions;
+	TArray<int>			WedgeIndices;
+	TArray<FVector>		WedgeTangent;
+	TArray<FVector>		WedgeBinormal;
+	TArray<FVector>		WedgeNormal;
+	TArray<FVector2D>	WedgeTexCoords[MAX_STATIC_UV_SETS_UE4];
+	TArray<FColor>		WedgeColors;
+	TArray<int>			MaterialIndexToImportIndex;
+
+	void Serialize(FArchive& Ar)
+	{
+		int Version, LicenseeVersion;
+		Ar << Version << LicenseeVersion;
+
+		Ar << FaceMaterialIndices;
+		Ar << FaceSmoothingMask;
+		Ar << VertexPositions;
+		Ar << WedgeIndices;
+		Ar << WedgeTangent;
+		Ar << WedgeBinormal;
+		Ar << WedgeNormal;
+		for (int i = 0; i < MAX_STATIC_UV_SETS_UE4; i++)
+			Ar << WedgeTexCoords[i];
+		Ar << WedgeColors;
+
+		if (Version >= 1) // RAW_MESH_VER_REMOVE_ZERO_TRIANGLE_SECTIONS
+			Ar << MaterialIndexToImportIndex;
+	}
+};
+
+
+void UStaticMesh4::ConvertSourceModels()
+{
+	guard(UStaticMesh4::ConvertSourceModels);
+
+	CStaticMesh *Mesh = new CStaticMesh(this);
+	ConvertedMesh = Mesh;
+
+	// convert bounds
+	// (note: copy-paste of ConvertedMesh's code)
+	Mesh->BoundingSphere.R = Bounds.SphereRadius / 2;			//?? UE3 meshes has radius 2 times larger than mesh itself; verifty for UE4
+	VectorSubtract(CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Min));
+	VectorAdd     (CVT(Bounds.Origin), CVT(Bounds.BoxExtent), CVT(Mesh->BoundingBox.Max));
+
+	// convert lods
+	Mesh->Lods.Empty(Lods.Num());
+
+	for (int LODIndex = 0; LODIndex < SourceModels.Num(); LODIndex++)
+	{
+		guard(ConvertLod);
+
+		const FByteBulkData& Bulk = SourceModels[LODIndex].BulkData;
+		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
+
+		FRawMesh RawMesh;
+		FMemReader Reader(Bulk.BulkData, Bulk.ElementCount); // ElementCount is the same as data size, for byte bulk data
+		Reader.SetupFrom(*Package);
+		RawMesh.Serialize(Reader);
+
+		int NumTexCoords = MAX_STATIC_UV_SETS_UE4;
+		for (int i = 0; i < MAX_STATIC_UV_SETS_UE4; i++)
+		{
+			if (!RawMesh.WedgeTexCoords[i].Num())
+			{
+				NumTexCoords = i;
+				break;
+			}
+		}
+
+		if (NumTexCoords > MAX_MESH_UV_SETS)
+			appError("StaticMesh has %d UV sets", NumTexCoords);
+
+		Lod->NumTexCoords = NumTexCoords;
+		Lod->HasNormals   = RawMesh.WedgeNormal.Num() > 0;
+		Lod->HasTangents  = (RawMesh.WedgeTangent.Num() > 0) && (RawMesh.WedgeBinormal.Num() > 0);
+
+		int PrevMaterialIndex = -1;
+		for (int i = 0; i < RawMesh.FaceMaterialIndices.Num(); i++)
+		{
+			int MaterialIndex = RawMesh.FaceMaterialIndices[i];
+			// We're not performing UE4-like mesh build, where multiple sections with the same
+			// material will be combined into a single one. Instead, we're making a separate
+			// section in that case.
+			if (MaterialIndex != PrevMaterialIndex)
+			{
+				PrevMaterialIndex = MaterialIndex;
+				CMeshSection* Sec = new (Lod->Sections) CMeshSection;
+				if (Materials.IsValidIndex(MaterialIndex))
+					Sec->Material = (UUnrealMaterial*)Materials[MaterialIndex];
+				Sec->FirstIndex = i * 3;
+			}
+		}
+		// Count face count per section
+		for (int i = 0; i < Lod->Sections.Num(); i++)
+		{
+			CMeshSection& Sec = Lod->Sections[i];
+			if (i < Lod->Sections.Num() - 1)
+				Sec.NumFaces = (Lod->Sections[i+1].FirstIndex - Sec.FirstIndex) / 3;
+			else
+				Sec.NumFaces = RawMesh.FaceMaterialIndices.Num() - Sec.FirstIndex / 3;
+		}
+
+		// vertices
+		int NumVerts = RawMesh.WedgeIndices.Num();
+		Lod->AllocateVerts(NumVerts);
+		assert(NumTexCoords >= 1);
+
+		for (int i = 0; i < NumVerts; i++)
+		{
+			CStaticMeshVertex &V = Lod->Verts[i];
+
+			int PositionIndex = RawMesh.WedgeIndices[i];
+			V.Position = CVT(RawMesh.VertexPositions[PositionIndex]);
+			// Pack normals
+			if (Lod->HasNormals)
+			{
+				CVec3 Normal = CVT(RawMesh.WedgeNormal[i]);
+				if (Lod->HasTangents)
+				{
+					CVec3 Tangent = CVT(RawMesh.WedgeTangent[i]);
+					CVec3 Binormal = CVT(RawMesh.WedgeBinormal[i]);
+					Pack(V.Normal, Normal);
+					Pack(V.Tangent, Tangent);
+					CVec3 ComputedBinormal;
+					cross(Normal, Tangent, ComputedBinormal);
+					float Sign = dot(Binormal, ComputedBinormal);
+					V.Normal.SetW(Sign > 0 ? 1.0f : -1.0f);
+				}
+			}
+
+			// copy UV
+			V.UV = CVT(RawMesh.WedgeTexCoords[0][i]);
+			for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+			{
+				Lod->ExtraUV[TexCoordIndex-1][i] = CVT(RawMesh.WedgeTexCoords[TexCoordIndex][i]);
+			}
+			//!! also has ColorStream
+		}
+
+		// indices
+		TArray<unsigned>& Indices32 = Lod->Indices.Indices32;
+		Indices32.AddUninitialized(NumVerts);
+		for (int i = 0; i < NumVerts; i++)
+			Indices32[i] = i;
+
+		unguardf("lod=%d", LODIndex);
 	}
 
 	Mesh->FinalizeMesh();
