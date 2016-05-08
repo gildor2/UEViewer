@@ -354,6 +354,7 @@ enum EGame
 		GAME_UE4_9,
 		GAME_UE4_10,
 		GAME_UE4_11,
+		GAME_UE4_12,
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
@@ -1980,10 +1981,11 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 #if UNREAL4
 
-#define BULKDATA_PayloadAtEndOfFile		0x01		// bulk data stored at the end of this file, data offset added to global data offset in package
-//#define BULKDATA_CompressedZlib		0x02
-//#define BULKDATA_Unused				0x20
-#define BULKDATA_ForceInlinePayload		0x40		// bulk data stored immediately after header
+#define BULKDATA_PayloadAtEndOfFile		0x0001		// bulk data stored at the end of this file, data offset added to global data offset in package
+//#define BULKDATA_CompressedZlib		0x0002
+//#define BULKDATA_Unused				0x0020
+#define BULKDATA_ForceInlinePayload		0x0040		// bulk data stored immediately after header
+#define BULKDATA_PayloadInSeperateFile	0x0100		// data stored in .ubulk file near the asset (UE4.12)
 
 #endif // UNREAL4
 
@@ -2138,6 +2140,8 @@ enum
 		VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT = 485,
 		VER_UE4_SOUND_CONCURRENCY_PACKAGE = 489,		// used for UStaticMesh versioning
 	VER_UE4_11 = 498,
+		VER_UE4_NAME_HASHES_SERIALIZED = 504,
+	VER_UE4_12,											//!! set real version after release!
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted
 };
 

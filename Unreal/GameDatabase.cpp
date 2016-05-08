@@ -354,6 +354,7 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.9", ue4.9, GAME_UE4_9),
 		G("Unreal engine 4.10", ue4.10, GAME_UE4_9),	// 4.10 has the same file version as 4.9
 		G("Unreal engine 4.11", ue4.11, GAME_UE4_11),
+		G("Unreal engine 4.12", ue4.12, GAME_UE4_12),
 #endif // UNREAL4
 
 	// end marker
@@ -812,7 +813,7 @@ static const UEVersionMap ueVersions[] =
 	// Unreal engine 4
 	// NEW_ENGINE_VERSION
 #if UNREAL4
-	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7), M(8), M(9), M(10), M(11)
+	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7), M(8), M(9), M(10), M(11), M(12)
 #endif
 };
 

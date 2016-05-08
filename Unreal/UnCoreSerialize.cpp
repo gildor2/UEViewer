@@ -1126,6 +1126,12 @@ void FByteBulkData::Serialize(FArchive &Ar)
 			SerializeDataChunk(Ar);
 			return;
 		}
+		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
+		{
+			// TODO: serialize from .ubulk file
+			appNotify("TODO: BULKDATA_PayloadInSeperateFile");
+			return;
+		}
 	}
 #endif // UNREAL4
 

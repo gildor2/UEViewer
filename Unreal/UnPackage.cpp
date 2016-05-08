@@ -2081,8 +2081,16 @@ void UnPackage::LoadNameTable()
 	#endif
 
 	#if UNREAL4
-			// skip object flags
-			if (Game >= GAME_UE4) goto done;
+			if (Game >= GAME_UE4)
+			{
+				if (ArVer >= VER_UE4_NAME_HASHES_SERIALIZED)
+				{
+					short NonCasePreservingHash, CasePreservingHash;
+					*this << NonCasePreservingHash << CasePreservingHash;
+				}
+				// skip object flags
+				goto done;
+			}
 	#endif
 	#if UNREAL3
 		#if BIOSHOCK

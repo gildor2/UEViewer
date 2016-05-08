@@ -175,6 +175,7 @@ Changes
 ~~~~~~~
 08.05.2016
 - implemented loading of UE4 StaticMesh from editor packages
+- added initial support for UE4.12 packages
 
 02.05.2016
 - added Dungeon Defenders support (-game=dundef is required)
