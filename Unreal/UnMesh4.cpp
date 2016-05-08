@@ -1343,7 +1343,8 @@ void UStaticMesh4::ConvertSourceModels()
 	{
 		guard(ConvertLod);
 
-		const FByteBulkData& Bulk = SourceModels[LODIndex].BulkData;
+		const FStaticMeshSourceModel& SrcModel = SourceModels[LODIndex];
+		const FByteBulkData& Bulk = SrcModel.BulkData;
 		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
 
 		FRawMesh RawMesh;
@@ -1365,8 +1366,10 @@ void UStaticMesh4::ConvertSourceModels()
 			appError("StaticMesh has %d UV sets", NumTexCoords);
 
 		Lod->NumTexCoords = NumTexCoords;
-		Lod->HasNormals   = RawMesh.WedgeNormal.Num() > 0;
-		Lod->HasTangents  = (RawMesh.WedgeTangent.Num() > 0) && (RawMesh.WedgeBinormal.Num() > 0);
+		Lod->HasNormals   = !SrcModel.BuildSettings.bRecomputeNormals && (RawMesh.WedgeNormal.Num() > 0);
+		Lod->HasTangents  = !SrcModel.BuildSettings.bRecomputeTangents && (RawMesh.WedgeTangent.Num() > 0) && (RawMesh.WedgeBinormal.Num() > 0)
+							&& Lod->HasNormals;
+		//!! TODO: should use FaceSmoothingMask for recomputing normals
 
 		int PrevMaterialIndex = -1;
 		for (int i = 0; i < RawMesh.FaceMaterialIndices.Num(); i++)

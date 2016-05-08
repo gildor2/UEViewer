@@ -147,13 +147,40 @@ protected:
 // forwards (structures are declared in cpp)
 struct FStaticMeshLODModel4;
 
+struct FMeshBuildSettings
+{
+	DECLARE_STRUCT(FMeshBuildSettings);
+
+	bool					bRecomputeNormals;
+	bool					bRecomputeTangents;
+
+	BEGIN_PROP_TABLE
+		PROP_BOOL(bRecomputeNormals)
+		PROP_BOOL(bRecomputeTangents)
+		PROP_DROP(bUseMikkTSpace)
+		PROP_DROP(bRemoveDegenerates)
+		PROP_DROP(bBuildAdjacencyBuffer)
+		PROP_DROP(bBuildReversedIndexBuffer)
+		PROP_DROP(bUseFullPrecisionUVs)
+		PROP_DROP(bGenerateLightmapUVs)
+		PROP_DROP(MinLightmapResolution)
+		PROP_DROP(SrcLightmapIndex)
+		PROP_DROP(DstLightmapIndex)
+		PROP_DROP(BuildScale3D)						//?? FVector, use?
+		PROP_DROP(DistanceFieldResolutionScale)
+		PROP_DROP(bGenerateDistanceFieldAsIfTwoSided)
+		PROP_DROP(DistanceFieldReplacementMesh)
+	END_PROP_TABLE
+};
+
 struct FStaticMeshSourceModel
 {
 	DECLARE_STRUCT(FStaticMeshSourceModel);
 	FByteBulkData			BulkData;
+	FMeshBuildSettings		BuildSettings;
 
 	BEGIN_PROP_TABLE
-		PROP_DROP(BuildSettings)				// note: contains BuildScale
+		PROP_STRUC(BuildSettings, FMeshBuildSettings)
 		PROP_DROP(ReductionSettings)
 		PROP_DROP(ScreenSize)
 	END_PROP_TABLE
@@ -205,6 +232,7 @@ protected:
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
+	REGISTER_CLASS(FMeshBuildSettings) \
 	REGISTER_CLASS(FStaticMeshSourceModel)
 
 
