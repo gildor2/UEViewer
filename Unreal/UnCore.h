@@ -2140,6 +2140,8 @@ enum
 		VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT = 485,
 		VER_UE4_SOUND_CONCURRENCY_PACKAGE = 489,		// used for UStaticMesh versioning
 	VER_UE4_11 = 498,
+		VER_UE4_INNER_ARRAY_TAG_INFO = 500,
+		VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG = 503,
 		VER_UE4_NAME_HASHES_SERIALIZED = 504,
 	VER_UE4_12,											//!! set real version after release!
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted

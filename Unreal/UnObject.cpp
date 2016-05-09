@@ -392,6 +392,8 @@ struct FPropertyTag
 		{
 			FName PropType;
 			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
+
+			// type-specific serialization
 			Tag.Type = MapTypeName(PropType);
 			if (Tag.Type == NAME_StructProperty)
 			{
@@ -408,6 +410,16 @@ struct FPropertyTag
 				Ar << Tag.EnumName;
 			else if ((Tag.Type == NAME_ArrayProperty) && (Ar.ArVer >= VAR_UE4_ARRAY_PROPERTY_INNER_TAGS))
 				Ar << Tag.InnerType;
+
+			// serialize property Guid (seem used only for blueprint)
+			if (Ar.ArVer >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG)
+			{
+				byte HasPropertyGuid;
+				FGuid PropertyGuid;
+				Ar << HasPropertyGuid;
+				if (HasPropertyGuid) Ar << PropertyGuid;
+			}
+
 			return Ar;
 		}
 #endif // UNREAL4
@@ -1117,14 +1129,31 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 					// read data count
 					int DataCount;
 #if UC2
-					if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) Ar << DataCount;
+					if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145)
+					{
+						Ar << DataCount;
+					}
 					else
-#endif
+#endif // UC2
 #if UNREAL3
-					if (Ar.Engine() >= GAME_UE3) Ar << DataCount;
+					if (Ar.Engine() >= GAME_UE3)
+					{
+						Ar << DataCount;
+					}
 					else
-#endif
+#endif // UNREAL3
+					{
+						// UE1 and UE2 code
 						Ar << AR_INDEX(DataCount);
+					}
+#if UNREAL4
+					if (Ar.Engine() >= GAME_UE4 && Ar.ArVer >= VER_UE4_INNER_ARRAY_TAG_INFO)
+					{
+						// Serialize InnerTag, used for some verification
+						FPropertyTag InnerTag;
+						Ar << InnerTag;
+					}
+#endif // UNREAL4
 					//!! note: some structures should be serialized using SerializeStruc() (FVector etc)
 					// find data typeinfo
 					const CTypeInfo *ItemType = FindStructType(Prop->TypeName);

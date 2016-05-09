@@ -1303,6 +1303,8 @@ struct FRawMesh
 
 	void Serialize(FArchive& Ar)
 	{
+		guard(FRawMesh::Serialize);
+
 		int Version, LicenseeVersion;
 		Ar << Version << LicenseeVersion;
 
@@ -1319,6 +1321,8 @@ struct FRawMesh
 
 		if (Version >= 1) // RAW_MESH_VER_REMOVE_ZERO_TRIANGLE_SECTIONS
 			Ar << MaterialIndexToImportIndex;
+
+		unguard;
 	}
 };
 
@@ -1345,6 +1349,8 @@ void UStaticMesh4::ConvertSourceModels()
 
 		const FStaticMeshSourceModel& SrcModel = SourceModels[LODIndex];
 		const FByteBulkData& Bulk = SrcModel.BulkData;
+		if (Bulk.ElementCount == 0) continue;	// this SourceModel has generated LOD, not imported one
+
 		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
 
 		FRawMesh RawMesh;
