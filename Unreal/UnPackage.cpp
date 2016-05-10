@@ -511,7 +511,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 	if (S.LegacyVersion <= -2)
 	{
-		// CustomVersions array
+		// CustomVersions array - not serialized to unversioned packages, and UE4 always consider
+		// all custom versions to use highest available value
 		FCustomVersionContainer versions;
 		versions.Serialize(Ar, S.LegacyVersion);
 	}
