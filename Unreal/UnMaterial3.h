@@ -333,6 +333,7 @@ struct FTexture2DMipMap
 
 	friend FArchive& operator<<(FArchive &Ar, FTexture2DMipMap &Mip)
 	{
+		guard(FTexture2DMipMap<<);
 #if UNREAL4
 		if (Ar.Game >= GAME_UE4)
 		{
@@ -360,6 +361,7 @@ struct FTexture2DMipMap
 		}
 #endif // DARKVOID
 		return Ar << Mip.SizeX << Mip.SizeY;
+		unguard;
 	}
 };
 

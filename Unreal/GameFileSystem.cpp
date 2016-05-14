@@ -101,6 +101,9 @@ static const char *KnownExtensions[] =
 #	if TRIBES4
 	"rtc",
 #	endif
+#	if UNREAL4
+	"ubulk",
+#	endif
 };
 #endif
 

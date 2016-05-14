@@ -677,6 +677,13 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 		{
 			//!! check for presence of BULKDATA_PayloadAtEndOfFile flag
 			strcpy(bulkFileName, Package->Filename);
+			if (Mip.Data.BulkDataFlags & BULKDATA_PayloadInSeperateFile)
+			{
+				// UE4.12+, store bulk payload in .ubulk file
+				char* s = strrchr(bulkFileName, '.');
+				if (s && !stricmp(s, ".uasset"))
+					strcpy(s, ".ubulk");
+			}
 		}
 		else
 #endif // UNREAL4

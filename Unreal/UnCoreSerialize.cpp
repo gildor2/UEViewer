@@ -1106,6 +1106,13 @@ void FByteBulkData::Serialize(FArchive &Ar)
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4)
 	{
+		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
+		{
+#if DEBUG_BULK
+			appPrintf("bulk in .ubunk file (flags=%X, pos=%llX+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+#endif
+			return;
+		}
 		if (BulkDataFlags & BULKDATA_PayloadAtEndOfFile)
 		{
 			// stored in the same file, but at different position
@@ -1124,12 +1131,6 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		if (BulkDataFlags & BULKDATA_ForceInlinePayload)
 		{
 			SerializeDataChunk(Ar);
-			return;
-		}
-		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
-		{
-			// TODO: serialize from .ubulk file
-			appNotify("TODO: BULKDATA_PayloadInSeperateFile");
 			return;
 		}
 	}

@@ -157,6 +157,11 @@ function ut4()
 #	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament/Saved/Cooked/WindowsNoEditor/UnrealTournament/Content
 	run $*
 }
+function paragon()
+{
+	CheckDir "data/4/PARAGON"
+	run $*
+}
 function ue3()
 {
 	CheckDir C:/Projects/Epic/UnrealEngine3/UDKGame/Content

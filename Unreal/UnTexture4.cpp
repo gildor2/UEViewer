@@ -32,12 +32,14 @@ struct FTexturePlatformData
 
 	friend FArchive& operator<<(FArchive& Ar, FTexturePlatformData& D)
 	{
+		guard(FTexturePlatformData<<);
 		Ar << D.SizeX << D.SizeY << D.NumSlices << D.PixelFormat;
 		int FirstMip;
 		Ar << FirstMip;					// only for cooked, but we don't read FTexturePlatformData for non-cooked textures
 		DBG("   SizeX=%d SizeY=%d NumSlices=%d PixelFormat=%s FirstMip=%d\n", D.SizeX, D.SizeY, D.NumSlices, *D.PixelFormat, FirstMip);
 		Ar << D.Mips;
 		return Ar;
+		unguard;
 	}
 };
 

@@ -485,23 +485,55 @@ void UIPackageDialog::SavePackages()
 
 	for (int i = 0; i < SelectedPackages.Num(); i++)
 	{
-		const CGameFileInfo* file = appFindGameFile(*SelectedPackages[i]);
+		char SrcFile[1024];
+		strcpy(SrcFile, *SelectedPackages[i]);
+		const CGameFileInfo* file = appFindGameFile(SrcFile);
 		assert(file);
 		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
 			break;
 
 		FArchive *Ar = appCreateFileReader(file);
-		if (!Ar) continue;
-		// prepare destination file
-		char OutFile[1024];
-		appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);	//!! make an option, add menu item to open "saved" directory
-		appMakeDirectoryForFile(OutFile);
-		FILE *out = fopen(OutFile, "wb");
-		// copy data
-		CopyStream(Ar, out, Ar->GetFileSize());
-		// cleanup
-		delete Ar;
-		fclose(out);
+		if (Ar)
+		{
+			guard(SaveFile);
+			// prepare destination file
+			char OutFile[1024];
+			appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);	//!! make an option, add menu item to open "saved" directory
+			appMakeDirectoryForFile(OutFile);
+			FILE *out = fopen(OutFile, "wb");
+			// copy data
+			CopyStream(Ar, out, Ar->GetFileSize());
+			// cleanup
+			delete Ar;
+			fclose(out);
+			unguardf("%s", SrcFile);
+		}
+
+		// TODO: refactor the code! Should process linked content by adding them to SelectedPackages list etc
+		// Save ubulk files too
+		char* s = strrchr(SrcFile, '.');
+		if (s && !stricmp(s, ".uasset"))
+		{
+			// replace file extension
+			strcpy(s, ".ubulk");
+			// then repeat saving procedure for new file
+			const CGameFileInfo* file = appFindGameFile(SrcFile);
+			if (file)
+			{
+				FArchive *Ar = appCreateFileReader(file);
+				if (Ar)
+				{
+					guard(SaveUbulk);
+					char OutFile[1024];
+					appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);	//!! make an option, add menu item to open "saved" directory
+					FILE *out = fopen(OutFile, "wb");
+					CopyStream(Ar, out, Ar->GetFileSize());
+					fclose(out);
+					delete Ar;
+					unguardf("%s", SrcFile);
+				}
+			}
+		}
 	}
 
 	progress.CloseDialog();

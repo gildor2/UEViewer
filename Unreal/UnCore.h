@@ -1985,7 +1985,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 //#define BULKDATA_CompressedZlib		0x0002
 //#define BULKDATA_Unused				0x0020
 #define BULKDATA_ForceInlinePayload		0x0040		// bulk data stored immediately after header
-#define BULKDATA_PayloadInSeperateFile	0x0100		// data stored in .ubulk file near the asset (UE4.12)
+#define BULKDATA_PayloadInSeperateFile	0x0100		// data stored in .ubulk file near the asset (UE4.12+)
 
 #endif // UNREAL4
 
@@ -2081,7 +2081,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 #if UNREAL4
 
-// Unreal engine 4 versions, declared as enum to be able to see all revisions in single place
+// Unreal engine 4 versions, declared as enum to be able to see all revisions in a single place
 enum
 {
 	// Pre-release UE4 file versions
@@ -2112,10 +2112,10 @@ enum
 	VER_UE4_SUPPORT_GPUSKINNING_8_BONE_INFLUENCES = 334,
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
 	VER_UE4_SKELETON_GUID_SERIALIZATION = 338,
-	// UE4.0 source code released on GitHub. Note: if we don't have any VER_UE4_...
-	// values between, for instance, VER_UE4_0 and VER_UE4_1, it doesn't matter for
-	// this framework which version is serialized - 4.0 or 4.1, because 4.1 has nothing
-	// new regarding supported object formats compared to 4.0.
+	// UE4.0 source code was released on GitHub. Note: if we don't have any VER_UE4_...
+	// values between two VER_UE4_xx constants, for instance, between VER_UE4_0 and VER_UE4_1,
+	// it doesn't matter for this framework which version will be serialized serialized -
+	// 4.0 or 4.1, because 4.1 has nothing new for supported object formats compared to 4.0.
 	VER_UE4_0 = 342,
 	VER_UE4_1 = 352,
 	VER_UE4_2 = 363,
@@ -2136,7 +2136,7 @@ enum
 	VER_UE4_8 = 451,
 		VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
 	VER_UE4_9 = 482,
-	VER_UE4_10 = VER_UE4_9,								// exactly the same file version for 4.10
+	VER_UE4_10 = VER_UE4_9,								// exactly the same file version for 4.9 and 4.10
 		VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT = 485,
 		VER_UE4_SOUND_CONCURRENCY_PACKAGE = 489,		// used for UStaticMesh versioning
 	VER_UE4_11 = 498,
