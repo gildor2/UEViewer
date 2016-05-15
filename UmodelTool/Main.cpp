@@ -373,6 +373,7 @@ static void PrintUsage()
 			"    -path=PATH      path to game installation directory; if not specified,\n"
 			"                    program will search for packages in current directory\n"
 			"    -game=tag       override game autodetection (see -taglist for variants)\n"
+			"    -pkgver=nnn     override package version (advanced option!)\n"
 			"    -pkg=package    load extra package (in addition to <package>)\n"
 			"    -obj=object     specify object(s) to load\n"
 #if HAS_UI
@@ -747,6 +748,16 @@ int main(int argc, char **argv)
 				exit(0);
 			}
 			GSettings.GameOverride = tag;
+		}
+		else if (!strnicmp(opt, "pkgver=", 7))
+		{
+			int ver = atoi(opt+7);
+			if (ver < 1)
+			{
+				appPrintf("ERROR: pkgver number is not valid: %s\n", opt+7);
+				exit(0);
+			}
+			GForcePackageVersion = ver;
 		}
 		else if (!strnicmp(opt, "pkg=", 4))
 		{

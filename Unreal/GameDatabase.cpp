@@ -467,13 +467,7 @@ void FArchive::DetectGame()
 		return;
 	}
 
-	// different game platforms autodetection
-	//?? should change this, if will implement command line switch to force mode
-	//?? code moved here, check code of other structs loaded below for ability to use Ar.IsGameName...
-
-	//?? remove #if ... #endif guards - detect game even when its support is disabled
-
-	// check for already detected game
+	// check if already detected game requires some additional logic
 #if LINEAGE2 || EXTEEL
 	if (Game == GAME_Lineage2)
 	{
@@ -482,7 +476,9 @@ void FArchive::DetectGame()
 		return;
 	}
 #endif
-	if (Game != GAME_UNKNOWN)		// may be GAME_Ragnarok2
+
+	// skip autodetection when Ar.Game is explicitly set by SerializePackageFileSummary, when code detects custom package tag
+	if (Game != GAME_UNKNOWN)
 		return;
 
 	// here Game == GAME_UNKNOWN
@@ -761,7 +757,7 @@ void FArchive::DetectGame()
 #endif
 
 	if (check > 1)
-		appNotify("DetectGame detected a few titles (%d): Ver=%d, LicVer=%d", check, ArVer, ArLicenseeVer);
+		appNotify("DetectGame collision: detected %d titles, Ver=%d, LicVer=%d", check, ArVer, ArLicenseeVer);
 
 	if (Game == GAME_UNKNOWN)
 	{
@@ -772,6 +768,8 @@ void FArchive::DetectGame()
 			Game = GAME_UE2;
 		else
 			Game = GAME_UE3;
+		// UE4 has version numbering from zero, plus is has "unversioned" packages, so GAME_UE4 is set by
+		// FPackageFileSummary serializer explicitly.
 	}
 #undef SET
 }
@@ -791,8 +789,6 @@ struct UEVersionMap
 };
 
 #define G(game,ver)		{ game, ver },
-// Mapping between GAME_UE4_n and VER_UE4_n
-#define M(ver)			{ GAME_UE4_##ver, VER_UE4_##ver }
 
 static const UEVersionMap ueVersions[] =
 {
@@ -809,20 +805,43 @@ static const UEVersionMap ueVersions[] =
 	G(GAME_DND, 673)						// real version is 674
 #endif
 	G(GAME_GoWJ, 828)						// real version is 846
-
-	// Unreal engine 4
-	// NEW_ENGINE_VERSION
-#if UNREAL4
-	M(0), M(1), M(2), M(3), M(4), M(5), M(6), M(7), M(8), M(9), M(10), M(11), M(12)
-#endif
 };
 
 #undef G
-#undef M
 
+#if UNREAL4
+// NEW_ENGINE_VERSION
+static const int ue4Versions[] =
+{
+	VER_UE4_0, VER_UE4_1, VER_UE4_2, VER_UE4_3, VER_UE4_4,
+	VER_UE4_5, VER_UE4_6, VER_UE4_7, VER_UE4_8, VER_UE4_9,
+	VER_UE4_10, VER_UE4_11, VER_UE4_12
+};
+#endif // UNREAL4
 
 void FArchive::OverrideVersion()
 {
+	if (GForcePackageVersion)
+	{
+		ArVer = GForcePackageVersion;
+		return;
+	}
+
+#if UNREAL4
+	if (Game >= GAME_UE4_0 && Game <= GAME_UE4_0 + LATEST_SUPPORTED_UE4_VERSION)
+	{
+		// Special path for UE4.
+		staticAssert(ARRAY_COUNT(ue4Versions) == LATEST_SUPPORTED_UE4_VERSION + 1, "ue4Versions[] is outdated");
+		if (ArVer == 0)
+		{
+			// Override version only if package is unversioned. Mixed versioned and unversioned packages could
+			// appear in UE4 game when it has editor support (like UT4).
+			ArVer = ue4Versions[Game - GAME_UE4_0];
+		}
+		return;
+	}
+#endif // UNREAL4
+
 	int OldVer  = ArVer;
 	int OldLVer = ArLicenseeVer;
 

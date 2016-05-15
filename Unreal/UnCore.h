@@ -360,6 +360,8 @@ enum EGame
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
 };
 
+#define LATEST_SUPPORTED_UE4_VERSION		12		// UE4.XX
+
 enum EPlatform
 {
 	PLATFORM_UNKNOWN = 0,
@@ -2142,9 +2144,10 @@ enum
 	VER_UE4_11 = 498,
 		VER_UE4_INNER_ARRAY_TAG_INFO = 500,
 		VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG = 503,
-		VER_UE4_NAME_HASHES_SERIALIZED = 504,
+		VER_UE4_NAME_HASHES_SERIALIZED = 504,			// also used for USkeletalMesh CustomVersion
 	VER_UE4_12,											//!! set real version after release!
-	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted
+	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
+	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
 
 class FStripDataFlags
@@ -2190,6 +2193,7 @@ protected:
 
 extern FArchive *GDummySave;
 extern int       GForceGame;
+extern int       GForcePackageVersion;
 extern byte      GForcePlatform;
 extern byte      GForceCompMethod;
 

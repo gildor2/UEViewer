@@ -173,8 +173,12 @@ detex
 
 Changes
 ~~~~~~~
-10.05.2016
+15.05.2016
 - added UE4.12 support
+- added advanced option "-pkgver=..." to specify exact numeric version for package; useful when UE4 game
+  has mid-release engine files
+- game overriding for UE4 will now work only for unversioned packages; explicitly versioned packages will
+  ignore this option
 
 08.05.2016
 - implemented loading of UE4 StaticMesh from editor packages

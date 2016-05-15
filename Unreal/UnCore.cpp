@@ -2,8 +2,9 @@
 #include "UnCore.h"
 
 
-int  GForceGame     = GAME_UNKNOWN;
-byte GForcePlatform = PLATFORM_UNKNOWN;
+int  GForceGame           = GAME_UNKNOWN;
+int  GForcePackageVersion = 0;
+byte GForcePlatform       = PLATFORM_UNKNOWN;
 
 
 #if PROFILE

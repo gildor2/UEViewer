@@ -103,7 +103,7 @@ void USkeleton::Serialize(FArchive &Ar)
 // FRecomputeTangentCustomVersion
 // =0 - before UE4.12
 // =1 - UE4.12, added 5.04.2016, git fcf22bab, appeared after VER_UE4_NAME_HASHES_SERIALIZED (latest 4.12 version)
-#define FRecomputeTangentCustomVersion_Ver_1	VER_UE4_NAME_HASHES_SERIALIZED
+#define FRecomputeTangentCustomVersion_Ver_1	(VER_UE4_NAME_HASHES_SERIALIZED+1)
 
 struct FSkeletalMaterial
 {
