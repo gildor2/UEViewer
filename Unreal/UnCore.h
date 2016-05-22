@@ -650,7 +650,7 @@ public:
 protected:
 	FILE		*f;
 	unsigned	Options;
-	const char	*FullName;		// allocared with appStrdup
+	const char	*FullName;		// allocated with appStrdup
 	const char	*ShortName;		// points to FullName[N]
 	int64		FileSize;
 

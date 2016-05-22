@@ -317,6 +317,10 @@ old_ver:
 void SkipBulkArrayData(FArchive &Ar, int Size)
 {
 	guard(SkipBulkArrayData);
+	// Warning: this function has limited support for games, it works well only with
+	// pure UE3 and UE4. If more games needed to be supported, should copy-paste code
+	// from SerializeBulkArray(), or place it to separate function like
+	// IsNewBulkArrayFormat(Ar).
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4) goto new_ver;
 #endif
@@ -1109,7 +1113,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
 		{
 #if DEBUG_BULK
-			appPrintf("bulk in .ubunk file (flags=%X, pos=%llX+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+			appPrintf("data in .ubulk file (flags=%X, pos=%llX+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 #endif
 			return;
 		}

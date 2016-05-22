@@ -362,10 +362,10 @@ struct FGPUVert4Common
 		// Influences
 		if (GNumSkelInfluences <= ARRAY_COUNT(BoneIndex))
 		{
-		for (int i = 0; i < GNumSkelInfluences; i++)
-			Ar << V.BoneIndex[i];
-		for (int i = 0; i < GNumSkelInfluences; i++)
-			Ar << V.BoneWeight[i];
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << V.BoneIndex[i];
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << V.BoneWeight[i];
 		}
 		else
 		{
@@ -590,14 +590,14 @@ struct FStaticLODModel4
 			assert(LoadingMesh);
 			if (LoadingMesh->bHasVertexColors)
 			{
-				appPrintf("WARNING: SkeletalMesh %s uses vertex colors\n", LoadingMesh->Name);
+				appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
 				Ar << Lod.ColorVertexBuffer;
 				DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
 			}
 
 			if (Ar.ArVer < VER_UE4_REMOVE_EXTRA_SKELMESH_VERTEX_INFLUENCES)
 			{
-				appError("Unsupported: extra ScelMesh vertex influences");
+				appError("Unsupported: extra SkelMesh vertex influences (old mesh format)");
 			}
 
 			if (!StripFlags.IsClassDataStripped(1))

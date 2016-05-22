@@ -66,7 +66,7 @@ void appError(const char *fmt, ...)
 	THROW;
 #else
 	fprintf(stderr, "Fatal Error: %s\n", buf);
-	if (GLogFile) fprintf(stderr, "Fatal Error: %s\n", buf);
+	if (GLogFile) fprintf(GLogFile, "Fatal Error: %s\n", buf);
 	exit(1);
 #endif
 }
