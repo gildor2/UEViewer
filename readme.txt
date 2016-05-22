@@ -173,6 +173,10 @@ detex
 
 Changes
 ~~~~~~~
+22.05.2016
+- fixed loading of UE4 skeletal meshes with more than 4 bones per vertex: extra weights are dropped, and
+  weights are re-normalized
+
 15.05.2016
 - added UE4.12 support
 - added advanced option "-pkgver=..." to specify exact numeric version for package; useful when UE4 game

@@ -186,6 +186,14 @@ typedef unsigned long long		uint64;
 typedef unsigned char			byte;
 typedef unsigned short			word;
 
+// integer types of particular size (just for easier code understanding in some places)
+typedef signed char				int8;
+typedef unsigned char			uint8;			// byte
+typedef signed short			int16;
+typedef unsigned short			uint16;			// word
+typedef signed int				int32;
+typedef unsigned int			uint32;
+
 typedef size_t					address_t;
 
 

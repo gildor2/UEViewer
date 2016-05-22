@@ -278,16 +278,16 @@ struct FSoftVertex4
 		{
 			//!! todo: 8 influences will require BoneIndex[] and BoneWeight[] to have 8 items
 			for (i = 0; i < NUM_INFLUENCES_UE4; i++) Ar << V.BoneIndex[i];
-			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influcences info
+			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influences info
 			for (i = 0; i < NUM_INFLUENCES_UE4; i++) Ar << V.BoneWeight[i];
-			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influcences info
+			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influences info
 		}
 		else
 		{
 			// load 4 indices, put zeros to remaining 4 indices
 			for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
 			for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
-			for (i = 4; i < NUM_INFLUENCES_UE4; i++) V.BoneIndex[i] = 0;
+			for (i = 4; i < NUM_INFLUENCES_UE4; i++) V.BoneIndex[i] = 0;		// TODO: loop from 4 to 4 (0 iterations)
 			for (i = 4; i < NUM_INFLUENCES_UE4; i++) V.BoneWeight[i] = 0;
 		}
 
@@ -350,16 +350,60 @@ static int GNumSkelInfluences = 4;
 struct FGPUVert4Common
 {
 	FPackedNormal		Normal[3];		// Normal[1] (TangentY) is reconstructed from other 2 normals
+						//!! TODO: we're cutting down influences, but holding unused normal here!
+						//!! Should rename Normal[] and split into 2 separate fields
 	byte				BoneIndex[NUM_INFLUENCES_UE4];
 	byte				BoneWeight[NUM_INFLUENCES_UE4];
 
 	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Common &V)
 	{
 		Ar << V.Normal[0] << V.Normal[2];
+
+		// Influences
+		if (GNumSkelInfluences <= ARRAY_COUNT(BoneIndex))
+		{
 		for (int i = 0; i < GNumSkelInfluences; i++)
 			Ar << V.BoneIndex[i];
 		for (int i = 0; i < GNumSkelInfluences; i++)
 			Ar << V.BoneWeight[i];
+		}
+		else
+		{
+			// possibly this vertex has more vertex influences
+			assert(GNumSkelInfluences <= MAX_TOTAL_INFLUENCES_UE4);
+			// serialize influences
+			byte BoneIndex2[MAX_TOTAL_INFLUENCES_UE4];
+			byte BoneWeight2[MAX_TOTAL_INFLUENCES_UE4];
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << BoneIndex2[i];
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << BoneWeight2[i];
+			// check if sorting needed (possibly 2nd half of influences has zero weight)
+			uint32 PackedWeight2 = * (uint32*) &BoneIndex2[4];
+			if (PackedWeight2 != 0)
+			{
+//				printf("# %d %d %d %d %d %d %d %d\n", BoneWeight2[0],BoneWeight2[1],BoneWeight2[2],BoneWeight2[3],BoneWeight2[4],BoneWeight2[5],BoneWeight2[6],BoneWeight2[7]);
+				// Here we assume than weights are sorted by value - didn't see the sorting code in UE4, but printing of data shows that.
+				// Compute weight which should be distributed between other bones to keep sum of weights identity.
+				int ExtraWeight = 0;
+				for (int i = NUM_INFLUENCES_UE4; i < MAX_TOTAL_INFLUENCES_UE4; i++)
+					ExtraWeight += BoneWeight2[i];
+				int WeightPerBone = ExtraWeight / NUM_INFLUENCES_UE4; // note: could be division with remainder!
+				for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
+				{
+					BoneWeight2[i] += WeightPerBone;
+					ExtraWeight -= WeightPerBone;
+				}
+				// add remaining weight to the first bone
+				BoneWeight2[0] += ExtraWeight;
+			}
+			// copy influences to vertex
+			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
+			{
+				V.BoneIndex[i] = BoneIndex2[i];
+				V.BoneWeight[i] = BoneWeight2[i];
+			}
+		}
 		return Ar;
 	}
 };
