@@ -57,7 +57,7 @@ FArchive& operator<<(FArchive& Ar, FMeshBoneInfo& B)
 	}
 	UnPackage* Package = Ar.CastTo<UnPackage>();
 	// Support for editor packages
-	if (Package && (Package->Summary.PackageFlags & PKG_FilterEditorOnly) == 0)
+	if ((Ar.ArVer >= VER_UE4_STORE_BONE_EXPORT_NAMES) && Package && (Package->Summary.PackageFlags & PKG_FilterEditorOnly) == 0)
 	{
 		FString ExportName;
 		Ar << ExportName;

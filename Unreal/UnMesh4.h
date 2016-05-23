@@ -67,6 +67,7 @@ struct FReferencePose
 	friend FArchive& operator<<(FArchive& Ar, FReferencePose& P)
 	{
 		return Ar << P.PoseName << P.ReferencePose;
+		//!! TODO: non-cooked package also has P.ReferenceMesh (no way to detect if this is saved or not!)
 	}
 };
 
