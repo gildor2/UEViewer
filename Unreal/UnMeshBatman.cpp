@@ -638,7 +638,7 @@ static int FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, i
 			for (int i = 0; i < T.NumKeys; i++)
 			{
 				Ar.Seek(T.CompressedDataOffset + (TrackIndex + T.NumBones * i) * 6);
-				short vi[3];		// signed
+				int16 vi[3];		// signed
 				Ar << vi[0] << vi[1] << vi[2];
 				FVector v;
 				v.X = vi[0] / 32767.0f * Ranges.X + Mins.X;

@@ -6,13 +6,13 @@
 	Source/Common/Base/Types/hkBaseTypes.h
 -----------------------------------------------------------------------------*/
 
-typedef unsigned char	hkUint8;
-typedef short			hkInt16;
-typedef unsigned short	hkUint16;
-typedef int				hkInt32;
-typedef unsigned int	hkUint32;
+typedef uint8			hkUint8;
+typedef int16			hkInt16;
+typedef uint16			hkUint16;
+typedef int32			hkInt32;
+typedef uint32			hkUint32;
 typedef int64			hkInt64;
-typedef int64			hkUint64;
+typedef uint64			hkUint64;
 typedef bool			hkBool;
 typedef float			hkReal;
 

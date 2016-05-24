@@ -66,7 +66,7 @@ struct CPropInfo
 	const char	   *Name;		// field name
 	const char	   *TypeName;	// name of the field type
 	uint16			Offset;		// offset of this field from the class start
-	short			Count;		// number of array items
+	int16			Count;		// number of array items
 };
 
 

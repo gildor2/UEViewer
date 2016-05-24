@@ -1438,8 +1438,8 @@ struct FkDOPNode
 	float					unk1[3];
 	float					unk2[3];
 	int						unk3;		//?? index * 32 ?
-	short					unk4;
-	short					unk5;
+	int16					unk4;
+	int16					unk5;
 
 	friend FArchive& operator<<(FArchive &Ar, FkDOPNode &N)
 	{
@@ -1459,7 +1459,7 @@ RAW_TYPE(FkDOPNode)
 
 struct FkDOPCollisionTriangle
 {
-	short					v[4];
+	int16					v[4];
 
 	friend FArchive& operator<<(FArchive &Ar, FkDOPCollisionTriangle &T)
 	{
@@ -1467,7 +1467,7 @@ struct FkDOPCollisionTriangle
 	}
 };
 
-SIMPLE_TYPE(FkDOPCollisionTriangle, short)
+SIMPLE_TYPE(FkDOPCollisionTriangle, int16)
 
 struct FStaticMeshCollisionNode
 {
@@ -1660,7 +1660,7 @@ void UStaticMesh::LoadExternalUC2Data()
 	/*
 		FindXprData will return block in following format:
 			dword	unk
-			dword	itemSize (6 for index stream = 3 verts * sizeof(short))
+			dword	itemSize (6 for index stream = 3 verts * sizeof(int16))
 					(or unknown meanung in a case of trangle strips)
 			dword	unk
 			data[]

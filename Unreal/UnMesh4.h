@@ -74,8 +74,8 @@ struct FReferencePose
 
 struct FSmartNameMapping
 {
-	short					NextUid;
-	TMap<short, FName>		UidMap;
+	int16					NextUid;
+	TMap<int16, FName>		UidMap;
 
 	friend FArchive& operator<<(FArchive& Ar, FSmartNameMapping& N)
 	{

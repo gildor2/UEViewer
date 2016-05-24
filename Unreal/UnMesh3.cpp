@@ -121,7 +121,7 @@ struct FSkelMeshSection_MurderedUnk
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection_MurderedUnk &V)
 	{
 		Ar << V.unk1 << V.unk2;
-		Ar.Seek(Ar.Tell() + 8 * sizeof(short) + 2 * sizeof(int) + 5 * sizeof(short));
+		Ar.Seek(Ar.Tell() + 8 * sizeof(int16) + 2 * sizeof(int32) + 5 * sizeof(int16));
 		return Ar;
 	}
 };
@@ -131,8 +131,8 @@ struct FSkelMeshSection_MurderedUnk
 
 struct FSkelMeshSection3
 {
-	short				MaterialIndex;
-	short				ChunkIndex;
+	int16				MaterialIndex;
+	int16				ChunkIndex;
 	int					FirstIndex;
 	int					NumTriangles;
 	byte				unk2;
@@ -143,9 +143,9 @@ struct FSkelMeshSection3
 		if (Ar.ArVer < 215)
 		{
 			// UE2 fields
-			short FirstIndex;
-			short unk1, unk2, unk3, unk4, unk5, unk6;
-			TArray<short> unk8;
+			int16 FirstIndex;
+			int16 unk1, unk2, unk3, unk4, unk5, unk6;
+			TArray<int16> unk8;
 			Ar << S.MaterialIndex << FirstIndex << unk1 << unk2 << unk3 << unk4 << unk5 << unk6 << S.NumTriangles;
 			if (Ar.ArVer < 202) Ar << unk8;	// ArVer<202 -- from EndWar
 			S.FirstIndex = FirstIndex;
@@ -175,7 +175,7 @@ struct FSkelMeshSection3
 		if (Ar.ArVer < 806)
 		{
 		old_section:
-			// NumTriangles is unsigned short
+			// NumTriangles is 16-bit here
 			uint16 NumTriangles;
 			Ar << NumTriangles;
 			S.NumTriangles = NumTriangles;
@@ -554,7 +554,7 @@ struct FSkelMeshChunk3
 	int					FirstVertex;
 	TArray<FRigidVertex3>  RigidVerts;
 	TArray<FSmoothVertex3> SmoothVerts;
-	TArray<short>		Bones;
+	TArray<int16>		Bones;
 	int					NumRigidVerts;
 	int					NumSmoothVerts;
 	int					MaxInfluences;
@@ -615,7 +615,7 @@ struct FEdge3
 #if BATMAN
 		if (Ar.Game == GAME_Batman && Ar.ArLicenseeVer >= 5)
 		{
-			short iVertex[2], iFace[2];
+			int16 iVertex[2], iFace[2];
 			Ar << iVertex[0] << iVertex[1] << iFace[0] << iFace[1];
 			V.iVertex[0] = iVertex[0];
 			V.iVertex[1] = iVertex[1];
@@ -968,8 +968,8 @@ struct FSkeletalMeshVertexBuffer3
 		int BatmanPackType;
 		Ar << BatmanPackType;
 		// 0 = FVector
-		// 1 = short[4]
-		// 2 = short[4]
+		// 1 = int16[4]
+		// 2 = int16[4]
 		// 3 = int32 (packed)
 		DBG_SKEL("... bat4 position pack: %d\n", BatmanPackType);
 
@@ -1260,8 +1260,8 @@ struct FStaticLODModel3
 	TArray<FSkelMeshSection3> Sections;
 	TArray<FSkelMeshChunk3>	Chunks;
 	FSkelIndexBuffer3	IndexBuffer;
-	TArray<short>		UsedBones;		// bones, value = [0, NumBones-1]
-	TArray<byte>		f24;			// count = NumBones, value = [0, NumBones-1]; note: BoneIndex is 'short', not 'byte' ...
+	TArray<int16>		UsedBones;		// bones, value = [0, NumBones-1]
+	TArray<byte>		f24;			// count = NumBones, value = [0, NumBones-1]; note: BoneIndex is 'int16', not 'byte' ...
 	TArray<uint16>		f68;			// indices, value = [0, NumVertices-1]
 	TArray<byte>		f74;			// count = NumTriangles
 	int					f80;
@@ -1411,7 +1411,7 @@ struct FStaticLODModel3
 		else
 		{
 		word_f24:
-			TArray<short> f24_a;
+			TArray<int16> f24_a;
 			Ar << f24_a;
 		}
 #if APB
@@ -1637,7 +1637,7 @@ struct FBoneMirrorInfo_MK
 struct FReferenceSkeleton_MK
 {
 	TArray<VJointPos>	RefPose;
-	TArray<short>		Parentage;
+	TArray<int16>		Parentage;
 	TArray<FName>		BoneNames;
 	TArray<FSubSkeleton_MK> SubSkeletons;
 	TArray<FName>		UpperBoneNames;
@@ -2279,12 +2279,12 @@ struct FMOHStaticMeshSectionUnk
 {
 	TArray<int>			f4;
 	TArray<int>			f10;
-	TArray<short>		f1C;
-	TArray<short>		f28;
-	TArray<short>		f34;
-	TArray<short>		f40;
-	TArray<short>		f4C;
-	TArray<short>		f58;
+	TArray<int16>		f1C;
+	TArray<int16>		f28;
+	TArray<int16>		f34;
+	TArray<int16>		f40;
+	TArray<int16>		f4C;
+	TArray<int16>		f58;
 
 	friend FArchive& operator<<(FArchive &Ar, FMOHStaticMeshSectionUnk &S)
 	{
@@ -2311,9 +2311,9 @@ struct FPS3StaticMeshData
 #if DUST514
 		if (Ar.Game == GAME_Dust514) // there's no version check, perhaps that code is standard for UE3?
 		{
-			short s1, s2;
+			int16 s1, s2;
 			TArray<FVector> va1, va2;
-			TArray<short> sa1;
+			TArray<int16> sa1;
 			Ar << s1 << s2 << va1 << va2;
 			if (Ar.ArLicenseeVer >= 32) Ar << sa1;
 //			appPrintf("s1=%d s2=%d va1=%d va2=%d sa1=%d\n", s1, s2, va1.Num(), va2.Num(), sa1.Num());
@@ -2465,8 +2465,8 @@ struct FStaticMeshVertexStream3
 		//!! Borderlands3:
 		//!! (EngineVersion>>16) >= 29
 		//!! int VertexSize, int NumVerts
-		//!! byte UseCompressedPositions, always 1 (0==float[3], 1=short[])
-		//!! byte Use3Components, always 0 (0==short[4], 0=short[3])
+		//!! byte UseCompressedPositions, always 1 (0==float[3], 1=int16[])
+		//!! byte Use3Components, always 0 (0==int16[4], 0=int16[3])
 		//!! FVector Mins, Extents
 
 #if BATMAN
@@ -3227,7 +3227,7 @@ struct FStaticMeshLODModel3
 #if METRO_CONF
 		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 8)
 		{
-			short unk;
+			int16 unk;
 			Ar << unk;
 		}
 #endif
@@ -3314,7 +3314,7 @@ struct FkDOPBounds		// bounds for compressed (quantized) kDOP node
 		if (Ar.Game == GAME_Enslaved)
 		{
 			// compressed structure
-			short v1[3], v2[3];
+			int16 v1[3], v2[3];
 			Ar << v1[0] << v1[1] << v1[2] << v2[0] << v2[1] << v2[2];
 			return Ar;
 		}
@@ -3327,8 +3327,8 @@ struct FkDOPNode3
 {
 	FkDOPBounds			Bounds;
 	int					f18;
-	short				f1C;
-	short				f1E;
+	int16				f1C;
+	int16				f1E;
 
 	friend FArchive& operator<<(FArchive &Ar, FkDOPNode3 &V)
 	{
@@ -3337,7 +3337,7 @@ struct FkDOPNode3
 		{
 			// all data compressed
 			byte  fC, fD;
-			short fE;
+			int16 fE;
 			Ar << V.Bounds;		// compressed
 			Ar << fC << fD << fE;
 			return Ar;
@@ -3360,7 +3360,7 @@ struct FkDOPNode3
 		if ((Ar.ArVer < 209) || (Ar.ArVer >= 468))
 		{
 		new_ver:
-			Ar << V.f1C << V.f1E;	// short
+			Ar << V.f1C << V.f1E;	// int16
 		}
 		else
 		{
@@ -3393,7 +3393,7 @@ SIMPLE_TYPE(FkDOPNode3New, byte)
 
 struct FkDOPTriangle3
 {
-	short				f0, f2, f4, f6;
+	int16				f0, f2, f4, f6;
 
 	friend FArchive& operator<<(FArchive &Ar, FkDOPTriangle3 &V)
 	{
@@ -3428,7 +3428,7 @@ struct FkDOPTriangle3
 #if METRO_CONF
 		if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 2)
 		{
-			short unk;
+			int16 unk;
 			Ar << unk;
 		}
 #endif // METRO_CONF
@@ -3443,7 +3443,7 @@ struct FFuryStaticMeshUnk	// in other ganes this structure serialized after LOD 
 {
 	int					unk0;
 	int					fC, f10, f14;
-	TArray<short>		f18;				// old version uses TArray<int>, new - TArray<short>, but there is no code selection
+	TArray<int16>		f18;				// old version uses TArray<int>, new - TArray<int16>, but there is no code selection
 											// (array size in old version is always 0?)
 
 	friend FArchive& operator<<(FArchive &Ar, FFuryStaticMeshUnk &S)

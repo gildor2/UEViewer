@@ -33,7 +33,7 @@ SIMPLE_TYPE(RVertex, int)
 
 struct RTriangle
 {
-	short			vIndex[3];				// Vertex indices
+	int16			vIndex[3];				// Vertex indices
 	FMeshUV1		tex[3];					// Texture UV coordinates
 	byte			polygroup;				// polygroup this tri belongs to
 
@@ -127,7 +127,7 @@ SIMPLE_TYPE(RJointState, float)
 
 struct RAnimFrame
 {
-	short			sequenceID;				// Sequence this frame belongs to
+	int16			sequenceID;				// Sequence this frame belongs to
 	FName			event;					// Event to call during this frame
 	FBox			bounds;					// Bounding box of frame
 	TArray<RJointState> jointanim;			// O(numjoints) only used for preprocess (transient)
@@ -221,7 +221,7 @@ static void ConvertRuneAnimations(UMeshAnimation &Anim, const TArray<RJoint> &Bo
 				rot.Set(0, 0, 0);
 
 				byte f = *data++;
-				short d;
+				int16 d;
 #define GET		d = data[0] + (data[1] << 8); data += 2;
 #define GETF(v)	{ GET; v = (float)d / 256.0f; }
 #define GETI(v)	{ GET; v = d; }

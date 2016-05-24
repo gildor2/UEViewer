@@ -37,7 +37,7 @@ SIMPLE_TYPE(FQuatFloat96NoW, float)
 // normalized quaternion with 3 16-bit fixed point fields
 struct FQuatFixed48NoW
 {
-	uint16			X, Y, Z;				// unsigned short, corresponds to (float+1)*32767
+	uint16			X, Y, Z;				// uint16, corresponds to (float+1)*32767
 
 	operator FQuat() const
 	{
@@ -221,7 +221,7 @@ SIMPLE_TYPE(FVectorIntervalFixed48Bio, uint16)
 
 struct FVectorIntervalFixed64
 {
-	short			X, Y, Z, W;
+	int16			X, Y, Z, W;
 
 	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
 	{
@@ -272,7 +272,7 @@ SIMPLE_TYPE(FQuatFloat32NoW, unsigned)
 
 struct FVectorHalf
 {
-	short				X, Y, Z;
+	uint16				X, Y, Z;
 
 	friend FArchive& operator<<(FArchive &Ar, FVectorHalf &v)
 	{
@@ -288,7 +288,7 @@ struct FVectorHalf
 	}
 };
 
-SIMPLE_TYPE(FVectorHalf, short);
+SIMPLE_TYPE(FVectorHalf, uint16);
 
 
 #if BATMAN

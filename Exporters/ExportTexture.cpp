@@ -24,10 +24,10 @@
 struct GCC_PACK tgaHdr_t
 {
 	byte 	id_length, colormap_type, image_type;
-	unsigned short colormap_index, colormap_length;
+	uint16	colormap_index, colormap_length;
 	byte	colormap_size;
-	unsigned short x_origin, y_origin;				// unused
-	unsigned short width, height;
+	uint16	x_origin, y_origin;				// unused
+	uint16	width, height;
 	byte	pixel_size, attributes;
 };
 

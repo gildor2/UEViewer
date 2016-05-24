@@ -526,7 +526,7 @@ struct FPropertyTag
 
 struct FPropertyTagBat2
 {
-	short		Type;				// property type - used short instead of FName, 0 = end of property table
+	int16		Type;				// property type - used int16 instead of FName, 0 = end of property table
 	uint16		Offset;				// property offset in serialized class
 	// following fields are used when the property is serialized by name similar to original FPropertyTag
 	FName		PropertyName;

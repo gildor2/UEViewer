@@ -43,11 +43,11 @@ struct VChunkHeader
 
 struct VVertex
 {
-	int				PointIndex;				// short, padded to int; used as int for large meshes
+	int				PointIndex;				// int16, padded to int; used as int for large meshes
 	float			U, V;
 	byte			MatIndex;
 	byte			Reserved;
-	short			Pad;					// not used
+	int16			Pad;					// not used
 
 	friend FArchive& operator<<(FArchive &Ar, VVertex &V)
 	{

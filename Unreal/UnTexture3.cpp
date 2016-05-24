@@ -424,7 +424,7 @@ struct ReduxTextureEntry
 	FString				Name;
 	EPixelFormat		Format;				// 2, 3, 5, 7, 25
 	byte				f2;					// always = 2
-	short				USize, VSize;
+	int16				USize, VSize;
 	TArray<ReduxMipEntry>	Mips;
 
 	friend FArchive& operator<<(FArchive &Ar, ReduxTextureEntry &E)

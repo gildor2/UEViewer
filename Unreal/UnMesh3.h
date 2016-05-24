@@ -99,7 +99,7 @@ class USkeleton_MK : public UObject
 public:
 	TArray<VJointPos>		BonePos;
 	TArray<FName>			BoneName;
-	TArray<short>			BoneParent;
+	TArray<int16>			BoneParent;
 
 	virtual void Serialize(FArchive &Ar);
 };

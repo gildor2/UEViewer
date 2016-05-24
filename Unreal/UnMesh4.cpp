@@ -129,13 +129,13 @@ struct FSkeletalMaterial
 
 struct FSkelMeshSection4
 {
-	short					MaterialIndex;
-	short					ChunkIndex;
+	int16					MaterialIndex;
+	int16					ChunkIndex;
 	int						BaseIndex;
 	int						NumTriangles;
 	byte					TriangleSorting;		// TEnumAsByte<ETriangleSortOption>
 	bool					bDisabled;
-	short					CorrespondClothSectionIndex;
+	int16					CorrespondClothSectionIndex;
 
 	friend FArchive& operator<<(FArchive& Ar, FSkelMeshSection4& S)
 	{
@@ -218,7 +218,7 @@ struct FApexClothPhysToRenderVertData
 	FVector4				PositionBaryCoordsAndDist;
 	FVector4				NormalBaryCoordsAndDist;
 	FVector4				TangentBaryCoordsAndDist;
-	short					SimulMeshVertIndices[4];
+	int16					SimulMeshVertIndices[4];
 	int						Padding[2];
 
 	friend FArchive& operator<<(FArchive& Ar, FApexClothPhysToRenderVertData& V)
@@ -300,7 +300,7 @@ struct FSkelMeshChunk4
 	int						BaseVertexIndex;
 	TArray<FRigidVertex4>	RigidVertices;		// editor-only data
 	TArray<FSoftVertex4>	SoftVertices;		// editor-only data
-	TArray<short>			BoneMap;
+	TArray<int16>			BoneMap;
 	int						NumRigidVertices;
 	int						NumSoftVertices;
 	int						MaxBoneInfluences;
@@ -328,8 +328,8 @@ struct FSkelMeshChunk4
 			TArray<FApexClothPhysToRenderVertData> ApexClothMappingData;
 			TArray<FVector> PhysicalMeshVertices;
 			TArray<FVector> PhysicalMeshNormals;
-			short CorrespondClothAssetIndex;
-			short ClothAssetSubmeshIndex;
+			int16 CorrespondClothAssetIndex;
+			int16 ClothAssetSubmeshIndex;
 
 			Ar << ApexClothMappingData;
 			Ar << PhysicalMeshVertices << PhysicalMeshNormals;
@@ -520,8 +520,8 @@ struct FStaticLODModel4
 	TArray<FSkelMeshSection4>	Sections;
 	FMultisizeIndexContainer	Indices;
 	FMultisizeIndexContainer	AdjacencyIndexBuffer;
-	TArray<short>				ActiveBoneIndices;
-	TArray<short>				RequiredBones;
+	TArray<int16>				ActiveBoneIndices;
+	TArray<int16>				RequiredBones;
 	TArray<FSkelMeshChunk4>		Chunks;
 	int							Size;
 	int							NumVertices;
@@ -864,7 +864,7 @@ UStaticMesh4::~UStaticMesh4()
 // When changed, constant DISTANCEFIELD_DERIVEDDATA_VER TEXT is updated
 struct FDistanceFieldVolumeData
 {
-	TArray<short>	DistanceFieldVolume;	// TArray<Float16>
+	TArray<int16>	DistanceFieldVolume;	// TArray<Float16>
 	FIntVector		Size;
 	FBox			LocalBoundingBox;
 	bool			bMeshWasClosed;

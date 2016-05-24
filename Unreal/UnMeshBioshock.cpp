@@ -142,14 +142,14 @@ struct FSkelInfluenceBio2
 
 struct FBioshockUnk1
 {
-	TArray<short>		f0;
-	TArray<short>		fC;
-	TArray<short>		f18;
-	TArray<short>		f24;
-	TArray<short>		f30;
-	TArray<short>		f3C;
-	TArray<short>		f48;
-	TArray<short>		f54;
+	TArray<int16>		f0;
+	TArray<int16>		fC;
+	TArray<int16>		f18;
+	TArray<int16>		f24;
+	TArray<int16>		f30;
+	TArray<int16>		f3C;
+	TArray<int16>		f48;
+	TArray<int16>		f54;
 
 	friend FArchive& operator<<(FArchive &Ar, FBioshockUnk1 &S)
 	{
@@ -273,7 +273,7 @@ struct FStaticLODModelBio
 {
 	TArray<FSkelMeshSection> Sections;			// standard format, but 1 section = 1 material (rigid and smooth verts
 												// are placed into a single section)
-	TArray<short>			Bones;
+	TArray<int16>			Bones;
 	FRawIndexBuffer			IndexBuffer;
 	TArray<FSmoothVertexBio> SmoothVerts;
 	TArray<FRigidVertexBio>	RigidVerts;
@@ -533,7 +533,7 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 
 	SkipLazyArray(Ar);	// FMeshFace	f254
 	SkipLazyArray(Ar);	// FMeshWedge	f234
-	SkipLazyArray(Ar);	// short		f274
+	SkipLazyArray(Ar);	// int16		f274
 
 	if (t3_hdrSV >= 6 && Ar.ArLicenseeVer != 57) // not Bioshock 2 MP
 	{
@@ -726,7 +726,7 @@ SIMPLE_TYPE(FStaticMeshVertexBio, int)
 
 struct FStaticMeshVertexBio2
 {
-	short					Pos[4];
+	uint16					Pos[4];
 	FPackedNormal			Normal[3];
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio2 &V)

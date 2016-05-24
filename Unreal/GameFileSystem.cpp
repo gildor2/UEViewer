@@ -160,7 +160,7 @@ static int GetHashForFileName(const char* FileName, bool stripExtension)
 	const char* s2 = stripExtension ? strrchr(s1, '.') : NULL;
 	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
 
-	short hash = 0;
+	uint16 hash = 0;
 	for (int i = 0; i < len; i++)
 	{
 		char c = s1[i];

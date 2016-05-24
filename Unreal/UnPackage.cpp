@@ -827,7 +827,7 @@ static void SerializeObjectExport2X(FArchive &Ar, FObjectExport &E)
 	Ar << E.ClassIndex << E.SuperIndex;
 	if (Ar.ArVer >= 150)
 	{
-		short idx = E.PackageIndex;
+		int16 idx = E.PackageIndex;
 		Ar << idx;
 		E.PackageIndex = idx;
 	}
@@ -838,8 +838,8 @@ static void SerializeObjectExport2X(FArchive &Ar, FObjectExport &E)
 		Ar << E.SerialOffset;
 	// UC2 has strange thing here: indices are serialized as 4-byte int (instead of AR_INDEX),
 	// but stored into 2-byte shorts
-	E.ClassIndex = short(E.ClassIndex);
-	E.SuperIndex = short(E.SuperIndex);
+	E.ClassIndex = int16(E.ClassIndex);
+	E.SuperIndex = int16(E.SuperIndex);
 
 	unguard;
 }
@@ -1111,7 +1111,7 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 #if UC2
 	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 150)
 	{
-		short idx = I.PackageIndex;
+		int16 idx = I.PackageIndex;
 		Ar << I.ClassPackage << I.ClassName << idx << I.ObjectName;
 		I.PackageIndex = idx;
 		return Ar;
@@ -2086,7 +2086,7 @@ void UnPackage::LoadNameTable()
 			{
 				if (ArVer >= VER_UE4_NAME_HASHES_SERIALIZED)
 				{
-					short NonCasePreservingHash, CasePreservingHash;
+					int16 NonCasePreservingHash, CasePreservingHash;
 					*this << NonCasePreservingHash << CasePreservingHash;
 				}
 				// skip object flags

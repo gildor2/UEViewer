@@ -852,7 +852,7 @@ SIMPLE_TYPE(FBTUnk3, float)
 
 struct FUC2Vector
 {
-	short			X, Y, Z;
+	int16			X, Y, Z;
 
 	friend FArchive& operator<<(FArchive &Ar, FUC2Vector &V)
 	{
@@ -882,7 +882,7 @@ struct FUC2Normal
 
 struct FUC2Int
 {
-	short			V;
+	int16			V;
 
 	friend FArchive& operator<<(FArchive &Ar, FUC2Int &V)
 	{
@@ -1126,11 +1126,11 @@ struct FStaticLODModel
 // old USkeletalMesh
 struct FLODMeshSection
 {
-	short					f0, f2, f4;
-	short					LastIndex;
-	short					f8, fA, fC;
-	short					iFace;
-	short					f10;
+	int16					f0, f2, f4;
+	int16					LastIndex;
+	int16					f8, fA, fC;
+	int16					iFace;
+	int16					f10;
 //	FAnimMeshVertexStream	VertStream;
 //	FRawIndexBuffer			IndexBuffer;
 
@@ -1146,7 +1146,7 @@ struct FLODMeshSection
 
 struct FT3Unk1
 {
-	short		f0[3];
+	int16		f0[3];
 	byte		f1[2];
 	int			f2;
 

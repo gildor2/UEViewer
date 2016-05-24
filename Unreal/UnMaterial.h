@@ -120,8 +120,8 @@ struct CPixelFormatInfo
 	byte		BlockSizeX;
 	byte		BlockSizeY;
 	byte		BytesPerBlock;
-	short		X360AlignX;			// 0 when unknown or not supported on XBox360
-	short		X360AlignY;
+	int16		X360AlignX;			// 0 when unknown or not supported on XBox360
+	int16		X360AlignY;
 	const char*	Name;
 };
 

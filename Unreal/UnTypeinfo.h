@@ -279,7 +279,7 @@ public:
 #if LOST_PLANET3
 		if (Ar.Game == GAME_LostPlanet3 && Ar.ArLicenseeVer >= 79)
 		{
-			short Dim2;
+			int16 Dim2;
 			Ar << Dim2;
 			ArrayDim = Dim2;
 			goto flags;

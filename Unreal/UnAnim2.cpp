@@ -75,7 +75,7 @@ void UMeshAnimation::ConvertAnims()
 // quaternion with 4 16-bit fixed point fields
 struct FQuatComp
 {
-	short			X, Y, Z, W;				// signed short, corresponds to float*32767
+	int16			X, Y, Z, W;				// signed int16, corresponds to float*32767
 
 	inline operator FQuat() const
 	{
@@ -101,12 +101,12 @@ struct FQuatComp
 	}
 };
 
-SIMPLE_TYPE(FQuatComp, short)
+SIMPLE_TYPE(FQuatComp, int16)
 
 // normalized quaternion with 3 16-bit fixed point fields
 struct FQuatComp2
 {
-	short			X, Y, Z;				// signed short, corresponds to float*32767
+	int16			X, Y, Z;				// signed int16, corresponds to float*32767
 
 	inline operator FQuat() const
 	{
@@ -126,11 +126,11 @@ struct FQuatComp2
 	}
 };
 
-SIMPLE_TYPE(FQuatComp2, short)
+SIMPLE_TYPE(FQuatComp2, int16)
 
 struct FVectorComp
 {
-	short			X, Y, Z;
+	int16			X, Y, Z;
 
 	inline operator FVector() const
 	{
@@ -147,7 +147,7 @@ struct FVectorComp
 	}
 };
 
-SIMPLE_TYPE(FVectorComp, short)
+SIMPLE_TYPE(FVectorComp, int16)
 
 
 #define SCELL_TRACK(Name,Quat,Pos,Time)						\
@@ -342,7 +342,7 @@ void UMeshAnimation::SerializeLineageMoves(FArchive &Ar)
 
 struct FVectorShortSWRC
 {
-	short					X, Y, Z;
+	int16					X, Y, Z;
 
 	friend FArchive& operator<<(FArchive &Ar, FVectorShortSWRC &V)
 	{
@@ -383,10 +383,10 @@ struct FVectorShortSWRC
 
 	FQuat ToFQuat() const
 	{
-		static const float s = 0.70710678118f / 32767;	// short -> range(sqrt(2))
-		float A = short(X & 0xFFFE) * s;
-		float B = short(Y & 0xFFFE) * s;
-		float C = short(Z & 0xFFFE) * s;
+		static const float s = 0.70710678118f / 32767;	// int16 -> range(sqrt(2))
+		float A = int16(X & 0xFFFE) * s;
+		float B = int16(Y & 0xFFFE) * s;
+		float C = int16(Z & 0xFFFE) * s;
 		float D = sqrt(1.0f - (A*A + B*B + C*C));
 		if (Z & 1) D = -D;
 		FQuat r;
@@ -404,7 +404,7 @@ struct FVectorShortSWRC
 	}
 };
 
-SIMPLE_TYPE(FVectorShortSWRC, short)
+SIMPLE_TYPE(FVectorShortSWRC, int16)
 
 
 void AnalogTrack::SerializeSWRC(FArchive &Ar)
@@ -500,7 +500,7 @@ void UMeshAnimation::SerializeSWRCAnims(FArchive &Ar)
 
 struct FVectorShortUC1
 {
-	short					X, Y, Z;
+	int16					X, Y, Z;
 
 	friend FArchive& operator<<(FArchive &Ar, FVectorShortUC1 &V)
 	{
@@ -518,11 +518,11 @@ struct FVectorShortUC1
 	}
 };
 
-SIMPLE_TYPE(FVectorShortUC1, short)
+SIMPLE_TYPE(FVectorShortUC1, int16)
 
 struct FQuatShortUC1
 {
-	short					X, Y, Z, W;
+	int16					X, Y, Z, W;
 
 	friend FArchive& operator<<(FArchive &Ar, FQuatShortUC1 &Q)
 	{
@@ -541,7 +541,7 @@ struct FQuatShortUC1
 	}
 };
 
-SIMPLE_TYPE(FQuatShortUC1, short)
+SIMPLE_TYPE(FQuatShortUC1, int16)
 
 
 void AnalogTrack::SerializeUC1(FArchive &Ar)
@@ -670,7 +670,7 @@ struct FlexTrackStatic : public FlexTrackBase
 struct FlexTrack48 : public FlexTrackBase
 {
 	TArray<FQuatFixed48NoW>	KeyQuat;
-	TArray<short>		KeyTime;
+	TArray<int16>		KeyTime;
 	TArray<FVector>		KeyPos;
 
 	virtual void Serialize(FArchive &Ar)
@@ -697,7 +697,7 @@ struct FlexTrack48 : public FlexTrackBase
 struct FlexTrack48RotOnly : public FlexTrackBase
 {
 	TArray<FQuatFixed48NoW>	KeyQuat;
-	TArray<short>		KeyTime;
+	TArray<int16>		KeyTime;
 	FVector				KeyPos;
 
 	virtual void Serialize(FArchive &Ar)
@@ -720,7 +720,7 @@ struct FlexTrack48RotOnly : public FlexTrackBase
 struct FlexTrack5 : public FlexTrackBase
 {
 	TArray<FQuatFixed48NoW>	KeyQuat;
-	TArray<short>		KeyTime;
+	TArray<int16>		KeyTime;
 
 	virtual void Serialize(FArchive &Ar)
 	{}
@@ -799,7 +799,7 @@ FlexTrackBase *CreateFlexTrack(int TrackType)
 		return new FlexTrackStatic;
 
 //	case 2:
-//		// This type uses structure with TArray<FVector>, TArray<FQuatFloat96NoW> and TArray<short>.
+//		// This type uses structure with TArray<FVector>, TArray<FQuatFloat96NoW> and TArray<int16>.
 //		// It's Footprint() method returns 0, GetRotPos() does nothing, but serializer is working.
 //		appError("Unsupported FlexTrack type=2");
 

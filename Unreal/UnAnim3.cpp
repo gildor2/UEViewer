@@ -69,8 +69,8 @@ UAnimSet::~UAnimSet()
 
 struct FReducedAnimData_LP3
 {
-	short					v1;
-	short					v2;
+	int16					v1;
+	int16					v2;
 
 	friend FArchive& operator<<(FArchive &Ar, FReducedAnimData_LP3 &D)
 	{

@@ -56,8 +56,8 @@ SIMPLE_TYPE(FMeshUVFloat, float)
 
 struct FMeshUVHalf
 {
-	short			U;
-	short			V;
+	uint16			U;
+	uint16			V;
 
 	friend FArchive& operator<<(FArchive &Ar, FMeshUVHalf &V)
 	{

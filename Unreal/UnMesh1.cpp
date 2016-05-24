@@ -18,11 +18,11 @@ struct FMeshVertDeus
 	{
 		struct
 		{
-			int X:16; int Y:16; short Z:16; short Pad:16;
+			int X:16; int Y:16; int Z:16; int Pad:16;
 		};
 		struct
 		{
-			unsigned D1; unsigned D2;
+			uint32 D1; uint32 D2;
 		};
 	};
 
