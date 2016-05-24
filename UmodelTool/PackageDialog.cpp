@@ -411,10 +411,7 @@ static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
 		else if (!stricmp(ObjectClass, "StaticMesh"))
 			file->NumStaticMeshes++;
 		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "MeshAnimation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet for UE2 and number of sequences for UE3+
-		{
 			file->NumAnimations++;
-			printf("%s\n", ObjectClass);
-		}
 		else if (!strnicmp(ObjectClass, "Texture", 7))
 			file->NumTextures++;
 	}
