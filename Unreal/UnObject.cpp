@@ -484,8 +484,8 @@ struct FPropertyTag
 		case 3: Tag.DataSize = 12; break;
 		case 4: Tag.DataSize = 16; break;
 		case 5: Ar << *((byte*)&Tag.DataSize); break;
-		case 6: Ar << *((word*)&Tag.DataSize); break;
-		case 7: Ar << *((int *)&Tag.DataSize); break;
+		case 6: Ar << *((uint16*)&Tag.DataSize); break;
+		case 7: Ar << *((int32*)&Tag.DataSize); break;
 		}
 
 		Tag.ArrayIndex = 0;
@@ -527,7 +527,7 @@ struct FPropertyTag
 struct FPropertyTagBat2
 {
 	short		Type;				// property type - used short instead of FName, 0 = end of property table
-	word		Offset;				// property offset in serialized class
+	uint16		Offset;				// property offset in serialized class
 	// following fields are used when the property is serialized by name similar to original FPropertyTag
 	FName		PropertyName;
 	int			DataSize;
@@ -914,8 +914,8 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 							{
 								const char* ClassName;
 								const char* PropName;
-								word		PropOffset;
-								word		PropMask;
+								uint16		PropOffset;
+								uint16		PropMask;
 							};
 							static const BoolPropInfo BoolProps[] =
 							{

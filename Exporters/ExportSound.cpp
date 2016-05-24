@@ -78,13 +78,13 @@ struct FXmaInfoHeader
 // structure from DX10 audiodefs.h
 struct WAVEFORMATEX
 {
-	word			wFormatTag;				// Integer identifier of the format
-	word			nChannels;				// Number of audio channels
+	uint16			wFormatTag;				// Integer identifier of the format
+	uint16			nChannels;				// Number of audio channels
 	unsigned		nSamplesPerSec;			// Audio sample rate
 	unsigned		nAvgBytesPerSec;		// Bytes per second (possibly approximate)
-	word			nBlockAlign;			// Size in bytes of a sample block (all channels)
-	word			wBitsPerSample;			// Size in bits of a single per-channel sample
-	word			cbSize;					// Bytes of extra data appended to this struct
+	uint16			nBlockAlign;			// Size in bytes of a sample block (all channels)
+	uint16			wBitsPerSample;			// Size in bits of a single per-channel sample
+	uint16			cbSize;					// Bytes of extra data appended to this struct
 
 	friend FArchive& operator<<(FArchive &Ar, WAVEFORMATEX &V)
 	{
@@ -99,7 +99,7 @@ struct XMA2WAVEFORMATEX
 {
 	WAVEFORMATEX	wfx;
 
-	word			NumStreams;				// Number of audio streams (1 or 2 channels each)
+	uint16			NumStreams;				// Number of audio streams (1 or 2 channels each)
 	unsigned		ChannelMask;			// Spatial positions of the channels in this file,
 											// stored as SPEAKER_xxx values (see audiodefs.h)
 	unsigned		SamplesEncoded;			// Total number of PCM samples the file decodes to
@@ -110,7 +110,7 @@ struct XMA2WAVEFORMATEX
 	unsigned		LoopLength;				// Length of the loop region in decoded sample terms
 	byte			LoopCount;				// Number of loop repetitions; 255 = infinite
 	byte			EncoderVersion;			// Version of XMA encoder that generated the file
-	word			BlockCount;				// XMA blocks in file (and entries in its seek table)
+	uint16			BlockCount;				// XMA blocks in file (and entries in its seek table)
 
 	friend FArchive& operator<<(FArchive &Ar, XMA2WAVEFORMATEX &V)
 	{

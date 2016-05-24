@@ -37,7 +37,7 @@ SIMPLE_TYPE(FQuatFloat96NoW, float)
 // normalized quaternion with 3 16-bit fixed point fields
 struct FQuatFixed48NoW
 {
-	word			X, Y, Z;				// unsigned short, corresponds to (float+1)*32767
+	uint16			X, Y, Z;				// unsigned short, corresponds to (float+1)*32767
 
 	operator FQuat() const
 	{
@@ -55,12 +55,12 @@ struct FQuatFixed48NoW
 	}
 };
 
-SIMPLE_TYPE(FQuatFixed48NoW, word)
+SIMPLE_TYPE(FQuatFixed48NoW, uint16)
 
 
 struct FVectorFixed48
 {
-	word			X, Y, Z;
+	uint16			X, Y, Z;
 
 	operator FVector() const
 	{
@@ -78,7 +78,7 @@ struct FVectorFixed48
 	}
 };
 
-SIMPLE_TYPE(FVectorFixed48, word)
+SIMPLE_TYPE(FVectorFixed48, uint16)
 
 
 // normalized quaternion with 11/11/10-bit fixed point fields
@@ -199,7 +199,7 @@ SIMPLE_TYPE(FVectorIntervalFixed32GPU, unsigned)
 
 struct FVectorIntervalFixed48Bio
 {
-	word			X, Y, Z;
+	uint16			X, Y, Z;
 
 	FVector ToVector(const FVector &Mins, const FVector &Ranges) const
 	{
@@ -216,7 +216,7 @@ struct FVectorIntervalFixed48Bio
 	}
 };
 
-SIMPLE_TYPE(FVectorIntervalFixed48Bio, word)
+SIMPLE_TYPE(FVectorIntervalFixed48Bio, uint16)
 
 
 struct FVectorIntervalFixed64
@@ -238,7 +238,7 @@ struct FVectorIntervalFixed64
 	}
 };
 
-SIMPLE_TYPE(FVectorIntervalFixed64, word)
+SIMPLE_TYPE(FVectorIntervalFixed64, uint16)
 
 
 struct FQuatFloat32NoW
@@ -299,7 +299,7 @@ SIMPLE_TYPE(FVectorHalf, short);
 // Found the name of this compression scheme in SCE Edge library overview: "smallest 3 compression".
 struct FQuatFixed48Max
 {
-	word			data[3];				// layout: V2[15] : V1[15] : V0[15] : S[2]
+	uint16			data[3];				// layout: V2[15] : V1[15] : V0[15] : S[2]
 
 	operator FQuat() const
 	{
@@ -351,7 +351,7 @@ struct FQuatFixed48Max
 	}
 };
 
-SIMPLE_TYPE(FQuatFixed48Max, word)
+SIMPLE_TYPE(FQuatFixed48Max, uint16)
 
 #endif // BATMAN
 
@@ -361,7 +361,7 @@ SIMPLE_TYPE(FQuatFixed48Max, word)
 // similar to FQuatFixed48Max
 struct FQuatBioFixed48
 {
-	word			data[3];
+	uint16			data[3];
 
 	operator FQuat() const
 	{
@@ -400,7 +400,7 @@ struct FQuatBioFixed48
 	}
 };
 
-SIMPLE_TYPE(FQuatBioFixed48, word)
+SIMPLE_TYPE(FQuatBioFixed48, uint16)
 
 #endif // MASSEFF
 
@@ -410,7 +410,7 @@ SIMPLE_TYPE(FQuatBioFixed48, word)
 // mix of FQuatFixed48NoW and FQuatIntervalFixed32NoW
 struct FQuatIntervalFixed48NoW_Trans
 {
-	word			X, Y, Z;
+	uint16			X, Y, Z;
 
 	FQuat ToQuat(const FVector &Mins, const FVector &Ranges) const
 	{
@@ -428,7 +428,7 @@ struct FQuatIntervalFixed48NoW_Trans
 	}
 };
 
-SIMPLE_TYPE(FQuatIntervalFixed48NoW_Trans, word)
+SIMPLE_TYPE(FQuatIntervalFixed48NoW_Trans, uint16)
 
 
 struct FPackedVector_Trans
@@ -460,7 +460,7 @@ SIMPLE_TYPE(FPackedVector_Trans, unsigned)
 // mix of FQuatFixed48NoW and FQuatIntervalFixed32NoW
 struct FQuatIntervalFixed48NoW_Argo
 {
-	word			X, Y, Z;
+	uint16			X, Y, Z;
 
 	FQuat ToQuat(const FVector &Mins, const FVector &Ranges) const
 	{
@@ -478,7 +478,7 @@ struct FQuatIntervalFixed48NoW_Argo
 	}
 };
 
-SIMPLE_TYPE(FQuatIntervalFixed48NoW_Argo, word)
+SIMPLE_TYPE(FQuatIntervalFixed48NoW_Argo, uint16)
 
 
 struct FQuatFixed64NoW_Argo
@@ -506,7 +506,7 @@ SIMPLE_TYPE(FQuatFixed64NoW_Argo, int64)
 
 struct FQuatFloat48NoW_Argo
 {
-	word			X, Y, Z;
+	uint16			X, Y, Z;
 
 	operator FQuat() const
 	{
@@ -526,7 +526,7 @@ struct FQuatFloat48NoW_Argo
 	}
 };
 
-SIMPLE_TYPE(FQuatFloat48NoW_Argo, word)
+SIMPLE_TYPE(FQuatFloat48NoW_Argo, uint16)
 
 
 #endif // ARGONAUTS
@@ -536,7 +536,7 @@ SIMPLE_TYPE(FQuatFloat48NoW_Argo, word)
 
 struct FQuatDelta48NoW
 {
-	word			X, Y, Z;
+	uint16			X, Y, Z;
 
 	FQuat ToQuat(const FVector &Mins, const FVector &Ranges, const FQuat &Base) const
 	{
@@ -558,7 +558,7 @@ struct FQuatDelta48NoW
 
 struct FVectorDelta48NoW
 {
-	word			X, Y, Z;
+	uint16			X, Y, Z;
 
 	FVector ToVector(const FVector &Mins, const FVector &Ranges, const FVector &Base) const
 	{
@@ -638,7 +638,7 @@ struct FQuatPolarEncoded48
 		FQuat r;
 		float angle1, angle2;
 
-		float D0 = ( *(word*)data ) / 65535.0f;
+		float D0 = ( *(uint16*)data ) / 65535.0f;
 		r.W = 1.0f - (D0 * D0);
 
 		int data2 = *(int*) (data+2);

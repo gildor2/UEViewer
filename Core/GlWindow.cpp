@@ -1319,8 +1319,8 @@ static int TranslateKey(int sym, int scan)
 {
 	static const struct
 	{
-		word scan;
-		word sym;
+		uint16 scan;
+		uint16 sym;
 	} scanToSym[] =
 	{
 		SDL_SCANCODE_LEFTBRACKET, '[',

@@ -85,7 +85,7 @@ struct FCompressedChunk
 
 struct FEngineVersion
 {
-	word		Major, Minor, Patch;
+	uint16		Major, Minor, Patch;
 	int			Changelist;
 	FString		Branch;
 
@@ -104,8 +104,8 @@ struct FPackageFileSummary
 #if UNREAL4
 	int			LegacyVersion;
 #endif
-	word		FileVersion;
-	word		LicenseeVersion;
+	uint16		FileVersion;
+	uint16		LicenseeVersion;
 	int			PackageFlags;
 	int			NameCount,   NameOffset;
 	int			ExportCount, ExportOffset;

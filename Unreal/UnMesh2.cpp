@@ -123,7 +123,7 @@ after_textures:
 	if (Version <= 1 || Ar.Game == GAME_SplinterCell)
 	{
 		// skip 2nd obsolete section
-		TArray<word> tmp;
+		TArray<uint16> tmp;
 		Ar << tmp;
 	}
 
@@ -417,7 +417,7 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 	{
 //		appNotify("SkeletalMesh of version %d\n", Version);
 		TArray<FLODMeshSection> tmp1, tmp2;
-		TArray<word> tmp3;
+		TArray<uint16> tmp3;
 		Ar << tmp1 << tmp2 << tmp3;
 		// copy and convert data from old mesh format
 		UpgradeMesh();
@@ -495,7 +495,7 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 		// simply skipping these arrays
 		TLazyArray<FT3Unk1>    unk1;
 		TLazyArray<FMeshWedge> unk2;
-		TLazyArray<word>       unk3;
+		TLazyArray<uint16>     unk3;
 		Ar << unk1 << unk2 << unk3;
 	#else
 		SkipLazyArray(Ar);
@@ -941,7 +941,7 @@ void USkeletalMesh::BuildIndices(CSkelMeshLod &Lod)
 
 			if (pass == 1)	// on 1st pass count NumFaces, on 2nd pass fill indices
 			{
-				word *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
+				uint16 *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
 				for (int j = 0; j < 3; j++)
 					*idx++ = Face.WedgeIndex[j];
 			}
@@ -1001,7 +1001,7 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 
 			if (pass == 1)
 			{
-				word *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
+				uint16 *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
 				for (i = 0; i < ms.NumFaces; i++)
 				{
 					const FMeshFace &F = SrcLod.Faces[ms.FirstFace + i];
@@ -1030,8 +1030,8 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 
 			if (pass == 1)
 			{
-				word *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
-				word firstIndex = ms.FirstFace * 3;
+				uint16 *idx = &Lod.Indices.Indices16[Sec.FirstIndex + Sec.NumFaces * 3];
+				uint16 firstIndex = ms.FirstFace * 3;
 				for (i = 0; i < ms.NumFaces * 3; i++)
 					*idx++ = SrcLod.RigidIndices.Indices[firstIndex + i];
 			}
@@ -1224,7 +1224,7 @@ void USkeletalMesh::SerializeSCell(FArchive &Ar)
 	TArray<FSCellUnk2> tmp2;
 	TArray<FSCellUnk3> tmp3;
 	TArray<FLODMeshSection> tmp4, tmp5;
-	TArray<word> tmp6;
+	TArray<uint16> tmp6;
 	FSCellUnk4 complex;
 	Ar << tmp1 << tmp2 << tmp3 << tmp4 << tmp5 << tmp6 << complex; */
 }

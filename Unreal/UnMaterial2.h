@@ -242,7 +242,7 @@ public:
 			}
 			if (Ar.ArVer >= 123 && Ar.ArLicenseeVer >= 31)
 			{
-				word ver1, ver2;			// 'int MaterialCodeVersion' serialized as 2 words
+				uint16 ver1, ver2;			// 'int MaterialCodeVersion' serialized as 2 words
 				Ar << ver1 << ver2;
 			}
 			unguard;

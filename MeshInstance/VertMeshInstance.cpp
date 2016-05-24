@@ -60,10 +60,10 @@ void CVertMeshInstance::SetMesh(const UVertMesh *Mesh)
 
 	Verts   = new CVec3[pMesh->Wedges.Num()];
 	Normals = new CVec3[pMesh->Wedges.Num()];
-	Indices = new word[pMesh->Faces.Num() * 3];
+	Indices = new uint16[pMesh->Faces.Num() * 3];
 
 	const FMeshFace *F = &pMesh->Faces[0];
-	word *pIndex = Indices;
+	uint16 *pIndex = Indices;
 	int PrevMaterial = -2;
 	CMeshSection *Sec = NULL;
 	for (int i = 0; i < pMesh->Faces.Num(); i++, F++)

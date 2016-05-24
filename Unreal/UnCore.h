@@ -571,37 +571,37 @@ private:
 // Booleans in UE are serialized as int32
 FORCEINLINE FArchive& operator<<(FArchive &Ar, bool &B)
 {
-	int b32 = B;
+	int32 b32 = B;
 	Ar.Serialize(&b32, 4);
 	if (Ar.IsLoading) B = (b32 != 0);
 	return Ar;
 }
-FORCEINLINE FArchive& operator<<(FArchive &Ar, char &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, char &B) // int8
 {
 	Ar.Serialize(&B, 1);
 	return Ar;
 }
-FORCEINLINE FArchive& operator<<(FArchive &Ar, byte &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, byte &B) // uint8
 {
 	Ar.Serialize(&B, 1);
 	return Ar;
 }
-FORCEINLINE FArchive& operator<<(FArchive &Ar, short &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, int16 &B)
 {
 	Ar.ByteOrderSerialize(&B, 2);
 	return Ar;
 }
-FORCEINLINE FArchive& operator<<(FArchive &Ar, word &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, uint16 &B)
 {
 	Ar.ByteOrderSerialize(&B, 2);
 	return Ar;
 }
-FORCEINLINE FArchive& operator<<(FArchive &Ar, int &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, int32 &B)
 {
 	Ar.ByteOrderSerialize(&B, 4);
 	return Ar;
 }
-FORCEINLINE FArchive& operator<<(FArchive &Ar, unsigned &B)
+FORCEINLINE FArchive& operator<<(FArchive &Ar, uint32 &B)
 {
 	Ar.ByteOrderSerialize(&B, 4);
 	return Ar;
@@ -1080,7 +1080,7 @@ struct FBoxSphereBounds
 
 struct FPackedNormal
 {
-	unsigned	Data;
+	uint32	Data;
 
 	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
 	{
@@ -1232,9 +1232,9 @@ SIMPLE_TYPE(bool,     bool)
 SIMPLE_TYPE(byte,     byte)
 SIMPLE_TYPE(char,     char)
 SIMPLE_TYPE(short,    short)
-SIMPLE_TYPE(word,     word)
+SIMPLE_TYPE(uint16,   uint16)
 SIMPLE_TYPE(int,      int)
-SIMPLE_TYPE(unsigned, unsigned)
+SIMPLE_TYPE(uint32,   uint32)
 SIMPLE_TYPE(float,    float)
 SIMPLE_TYPE(int64,    int64)
 SIMPLE_TYPE(uint64,   uint64)
@@ -1248,9 +1248,9 @@ SIMPLE_TYPE(FColor,   byte)
 
 #if UNREAL4
 
-SIMPLE_TYPE(FIntPoint, int)
+SIMPLE_TYPE(FIntPoint,  int)
 SIMPLE_TYPE(FIntVector, int)
-SIMPLE_TYPE(FVector2D, float)
+SIMPLE_TYPE(FVector2D,  float)
 SIMPLE_TYPE(FTransform, float)
 
 #endif // UNREAL4

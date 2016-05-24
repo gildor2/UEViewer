@@ -58,10 +58,10 @@ static void ExportScript(const UVertMesh *Mesh, FArchive &Ar)
 
 struct FJSDataHeader
 {
-	word			NumPolys;
-	word			NumVertices;
-	word			BogusRot;		// unused
-	word			BogusFrame;		// unused
+	uint16			NumPolys;
+	uint16			NumVertices;
+	uint16			BogusRot;		// unused
+	uint16			BogusFrame;		// unused
 	unsigned		BogusNorm[3];	// unused
 	unsigned		FixScale;		// unused
 	unsigned		Unused[3];		// unused
@@ -81,7 +81,7 @@ struct FJSDataHeader
 // Mesh triangle.
 struct FJSMeshTri
 {
-	word			iVertex[3];		// Vertex indices.
+	uint16			iVertex[3];		// Vertex indices.
 	byte			Type;			// James' mesh type. (unused)
 	byte			Color;			// Color for flat and Gouraud shaded. (unused)
 	FMeshUV1		Tex[3];			// Texture UV coordinates.
@@ -125,8 +125,8 @@ static void ExportMesh(const UVertMesh *Mesh, FArchive &Ar)
 
 struct FJSAnivHeader
 {
-	word			NumFrames;		// Number of animation frames.
-	word			FrameSize;		// Size of one frame of animation.
+	uint16			NumFrames;		// Number of animation frames.
+	uint16			FrameSize;		// Size of one frame of animation.
 
 	friend FArchive& operator<<(FArchive &Ar, FJSAnivHeader &H)
 	{

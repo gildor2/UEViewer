@@ -393,7 +393,7 @@ public:
 	UBioAnimSetData			*m_pBioAnimSetData;
 #endif
 #if ARGONAUTS
-	TArray<unsigned>		CompressedTrackTimes;			// used as TArray<word>
+	TArray<unsigned>		CompressedTrackTimes;			// used as TArray<uint16>
 	TArray<int>				CompressedTrackTimeOffsets;
 #endif
 #if BATMAN

@@ -245,7 +245,7 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 	{
 		for (int k = 0; k < NumKeys; k++)
 		{
-			word v;
+			uint16 v;
 			Ar << v;
 			Times.Add(v);
 //			if (k < 4 || k > NumKeys - 5) appPrintf(" %04X ", v);
@@ -1017,7 +1017,7 @@ void UAnimSet::ConvertAnims()
 #if ARGONAUTS
 					case ATCF_Float16:
 						{
-							word x, y, z;
+							uint16 x, y, z;
 							Reader << x << y << z;
 							FVector v;
 							v.X = half2float(x) / 2;	// Argonauts has "half" with biased exponent, so fix it with division by 2

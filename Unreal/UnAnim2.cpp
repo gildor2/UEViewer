@@ -171,17 +171,17 @@ struct Name													\
 	}														\
 };
 
-SCELL_TRACK(FixedPointTrack, FQuatComp,  FQuatComp,   word)
-SCELL_TRACK(Quat16Track,     FQuatComp2, FVector,     word)	// all types are "large"
-SCELL_TRACK(FixPosTrack,     FQuatComp2, FVectorComp, word)	// "small" KeyPos
-SCELL_TRACK(FixTimeTrack,    FQuatComp2, FVector,     byte)	// "small" KeyTime
-SCELL_TRACK(FixPosTimeTrack, FQuatComp2, FVectorComp, byte)	// "small" KeyPos and KeyTime
+SCELL_TRACK(FixedPointTrack, FQuatComp,  FQuatComp,   uint16)
+SCELL_TRACK(Quat16Track,     FQuatComp2, FVector,     uint16)	// all types are "large"
+SCELL_TRACK(FixPosTrack,     FQuatComp2, FVectorComp, uint16)	// "small" KeyPos
+SCELL_TRACK(FixTimeTrack,    FQuatComp2, FVector,     byte)	    // "small" KeyTime
+SCELL_TRACK(FixPosTimeTrack, FQuatComp2, FVectorComp, byte)	    // "small" KeyPos and KeyTime
 
 
 void AnalogTrack::SerializeSCell(FArchive &Ar)
 {
 	TArray<FQuatComp> KeyQuat2;
-	TArray<word>      KeyTime2;
+	TArray<uint16>      KeyTime2;
 	Ar << KeyQuat2 << KeyPos << KeyTime2;
 	// copy with conversion
 	CopyArray(KeyQuat, KeyQuat2);

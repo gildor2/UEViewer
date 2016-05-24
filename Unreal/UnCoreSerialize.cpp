@@ -404,7 +404,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		// UNICODE string
 		for (int i = 0; i < -len; i++)
 		{
-			word c;
+			uint16 c;
 			Ar << c;
 #if MASSEFF
 			if (Ar.Game == GAME_MassEffect3 && Ar.ReverseBytes)	// uses little-endian strings for XBox360

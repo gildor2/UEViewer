@@ -229,7 +229,7 @@ public:
 	int64			ProbeMask;
 	int64			IgnoreMask;
 	int				StateFlags;
-	word			LabelTableOffset;
+	uint16			LabelTableOffset;
 
 	virtual void Serialize(FArchive &Ar)
 	{
@@ -266,7 +266,7 @@ public:
 	unsigned		PropertyFlags2;	// uint64
 #endif
 	FName			Category;
-	word			f48;
+	uint16			f48;
 	FString			f64;
 #if UNREAL3
 	UObject			*unk60;			// UEnum, which constant is used to specify ArrayDim
@@ -328,7 +328,7 @@ public:
 #if TNA_IMPACT
 		if (Ar.Game == GAME_TNA && PropertyFlags2 & 0x20)
 		{
-			word unk58;
+			uint16 unk58;
 			Ar << unk58;
 		}
 #endif // TNA_IMPACT

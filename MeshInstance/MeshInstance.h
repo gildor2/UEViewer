@@ -99,7 +99,7 @@ protected:
 	TArray<CMeshSection>	Sections;
 	CVec3					*Verts;				// deformed mesh, used in Draw() only
 	CVec3					*Normals;
-	word					*Indices;			// index buffer
+	uint16					*Indices;			// index buffer
 
 	int FindAnim(const char *AnimName) const;
 	void PlayAnimInternal(const char *AnimName, float Rate, bool Looped);

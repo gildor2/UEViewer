@@ -63,7 +63,7 @@ struct VVertex
 // This is a copy of UnMesh.h VTriangle
 struct VTriangle16
 {
-	word			WedgeIndex[3];			// Point to three vertices in the vertex list.
+	uint16			WedgeIndex[3];			// Point to three vertices in the vertex list.
 	byte			MatIndex;				// Materials can be anything.
 	byte			AuxMatIndex;			// Second material (unused).
 	unsigned		SmoothingGroups;		// 32-bit flag for smoothing groups.

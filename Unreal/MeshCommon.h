@@ -31,8 +31,8 @@ struct CIndexBuffer
 		const CIndexBuffer	*Buffer;
 	};
 
-	TArray<word>			Indices16;			// used when mesh has less than 64k verts
-	TArray<unsigned>		Indices32;			// used when mesh has more than 64k verts
+	TArray<uint16>			Indices16;			// used when mesh has less than 64k verts
+	TArray<uint32>			Indices32;			// used when mesh has more than 64k verts
 
 	FORCEINLINE bool Is32Bit() const
 	{
@@ -52,7 +52,7 @@ struct CIndexBuffer
 		return result;
 	}
 
-	void Initialize(const TArray<word> *Idx16, const TArray<unsigned> *Idx32 = NULL)
+	void Initialize(const TArray<uint16> *Idx16, const TArray<uint32> *Idx32 = NULL)
 	{
 		if (Idx32 && Idx32->Num())
 			CopyArray(Indices32, *Idx32);
@@ -80,7 +80,7 @@ struct CMeshUVFloat
 
 struct CPackedNormal
 {
-	unsigned				Data;
+	uint32					Data;
 
 	FORCEINLINE void SetW(float Value)
 	{
@@ -128,13 +128,6 @@ FORCEINLINE void Unpack(CVec4& Unpacked, const CPackedNormal& Packed)
 #endif // USE_SSE
 
 
-// TODO: remove "Binormal", compute in shader - this will allow compiler to put UV into the same 16-byte block with normals, so
-// CMeshVertex will be 16 bytes smaller (CVecT forces 16-byte alignment for structure).
-/* Required changes for that:
-  - when doing SkeletalMesh skinning, remove "Binormal" skinning, but pass 4th "Tangent" component to GL (i.e. use "4" instead of "3" in glAttrib...)
-  - use vec4 in shader for "tangent", compute "binormal"
-  - eliminate binormal computation/saving in Unreal and MeshCommon code
-*/
 struct CMeshVertex
 {
 	CVecT					Position;

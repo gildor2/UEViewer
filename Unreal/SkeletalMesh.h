@@ -32,7 +32,7 @@ TODO:
 
 struct CSkelMeshVertex : public CMeshVertex
 {
-	unsigned				PackedWeights;			// Works with 4 weights only!
+	uint32					PackedWeights;			// Works with 4 weights only!
 	short					Bone[NUM_INFLUENCES];	// Bone < 0 - end of list
 
 	void UnpackWeights(CVec4& OutWeights) const

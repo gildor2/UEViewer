@@ -254,8 +254,8 @@ static const char* RotationCodecName[] =
 
 struct FAnimZipTrack
 {
-	word					NumBones;
-	word					NumKeys;
+	uint16					NumBones;
+	uint16					NumKeys;
 	int						BoneInfoOffset;
 	int						CompressedDataOffset;
 	byte					Codec;
@@ -317,10 +317,10 @@ static int FindTrack(int Bone, FArchive &Ar, FAnimZipTrack &T, int Pos, int Coun
 		}
 		else
 		{
-			// find bone in word array
+			// find bone in uint16 array
 			for (int b = 0; b < T.NumBones; b++)
 			{
-				word b0;
+				uint16 b0;
 				Ar << b0;
 				if (b0 == Bone)
 				{
@@ -446,7 +446,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 	}
 	else
 	{
-		IntervalDataOffset = T.BoneInfoOffset + T.NumBones * 2;	// bone index is word
+		IntervalDataOffset = T.BoneInfoOffset + T.NumBones * 2;	// bone index is uint16
 	}
 	Track.KeyQuat.Empty(T.NumKeys);
 
@@ -548,7 +548,7 @@ static int FindAndDecodeRotation(int Bone, FArchive &Ar, CAnimTrack &Track, int 
 			for (int i = 0; i < T.NumKeys; i++)
 			{
 				Ar.Seek(T.CompressedDataOffset + (TrackIndex + T.NumBones * i) * 2);
-				word w;
+				uint16 w;
 				Ar << w;
 				CQuat q = FinishQuatFixedAxis(16, w, Interval);
 				Track.KeyQuat.Add(q);
@@ -597,7 +597,7 @@ static int FindAndDecodeTranslation(int Bone, FArchive &Ar, CAnimTrack &Track, i
 	}
 	else
 	{
-		IntervalDataOffset = T.BoneInfoOffset + T.NumBones * 2;	// bone index is word
+		IntervalDataOffset = T.BoneInfoOffset + T.NumBones * 2;	// bone index is uint16
 	}
 	Track.KeyPos.Empty(T.NumKeys);
 

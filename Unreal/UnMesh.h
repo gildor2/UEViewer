@@ -14,7 +14,7 @@ UE1 CLASS TREE:
 -----------------------------------------------------------------------------*/
 
 //?? declare separately? place to UnCore?
-float half2float(word h);
+float half2float(uint16 h);
 
 struct FPackedNormal;
 struct CMeshVertex;
@@ -74,7 +74,7 @@ struct FMeshUVHalf
 	}
 };
 
-SIMPLE_TYPE(FMeshUVHalf, word)
+SIMPLE_TYPE(FMeshUVHalf, uint16)
 
 
 //

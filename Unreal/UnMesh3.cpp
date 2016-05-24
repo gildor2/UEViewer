@@ -35,7 +35,7 @@
  * http://en.wikipedia.org/wiki/Half_precision
  * Also look at GL_ARB_half_float_pixel
  */
-float half2float(word h)
+float half2float(uint16 h)
 {
 	union
 	{
@@ -176,7 +176,7 @@ struct FSkelMeshSection3
 		{
 		old_section:
 			// NumTriangles is unsigned short
-			word NumTriangles;
+			uint16 NumTriangles;
 			Ar << NumTriangles;
 			S.NumTriangles = NumTriangles;
 		}
@@ -253,7 +253,7 @@ struct FSkelMeshSection3
 // This class is used now for UStaticMesh only
 struct FIndexBuffer3
 {
-	TArray<word>		Indices;
+	TArray<uint16>		Indices;
 
 	friend FArchive& operator<<(FArchive &Ar, FIndexBuffer3 &I)
 	{
@@ -271,8 +271,8 @@ struct FIndexBuffer3
 // real name (from Android version): FRawStaticIndexBuffer
 struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - has ability to store int indices
 {
-	TArray<word>		Indices16;
-	TArray<unsigned>	Indices32;
+	TArray<uint16>		Indices16;
+	TArray<uint32>		Indices32;
 
 	FORCEINLINE bool Is32Bit() const
 	{
@@ -540,7 +540,7 @@ struct FSmoothVertex3
 #if MKVSDC
 struct FMesh3Unk4_MK
 {
-	word				data[4];
+	uint16				data[4];
 
 	friend FArchive& operator<<(FArchive &Ar, FMesh3Unk4_MK &S)
 	{
@@ -1135,7 +1135,7 @@ struct FVertexInfluenceMapOld
 	int					f0;
 	int					f4;
 	// value
-	TArray<word>		f8;
+	TArray<uint16>		f8;
 
 	friend FArchive& operator<<(FArchive &Ar, FVertexInfluenceMapOld &S)
 	{
@@ -1262,7 +1262,7 @@ struct FStaticLODModel3
 	FSkelIndexBuffer3	IndexBuffer;
 	TArray<short>		UsedBones;		// bones, value = [0, NumBones-1]
 	TArray<byte>		f24;			// count = NumBones, value = [0, NumBones-1]; note: BoneIndex is 'short', not 'byte' ...
-	TArray<word>		f68;			// indices, value = [0, NumVertices-1]
+	TArray<uint16>		f68;			// indices, value = [0, NumVertices-1]
 	TArray<byte>		f74;			// count = NumTriangles
 	int					f80;
 	int					NumVertices;
@@ -1433,14 +1433,14 @@ struct FStaticLODModel3
 			- 4 x int unknown
 			- int SomeSize
 			- byte[SomeSize]
-			- word SomeSize (same as above)
+			- uint16 SomeSize (same as above)
 			- ...
 		*/
 	bulk:
 		if (Ar.ArVer >= 221)
 		{
 			if (Ar.ArVer < 806)
-				Lod.BulkData.Serialize(Ar);		// Bulk of word
+				Lod.BulkData.Serialize(Ar);		// Bulk of uint16
 			else
 				Lod.BulkData2.Serialize(Ar);	// Bulk of int
 		}
@@ -2298,12 +2298,12 @@ struct FPS3StaticMeshData
 {
 	TArray<int>			unk1;
 	TArray<int>			unk2;
-	TArray<word>		unk3;
-	TArray<word>		unk4;
-	TArray<word>		unk5;
-	TArray<word>		unk6;
-	TArray<word>		unk7;
-	TArray<word>		unk8;
+	TArray<uint16>		unk3;
+	TArray<uint16>		unk4;
+	TArray<uint16>		unk5;
+	TArray<uint16>		unk6;
+	TArray<uint16>		unk7;
+	TArray<uint16>		unk8;
 
 	friend FArchive& operator<<(FArchive &Ar, FPS3StaticMeshData &S)
 	{

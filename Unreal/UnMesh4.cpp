@@ -178,8 +178,8 @@ struct FSkelMeshSection4
 
 struct FMultisizeIndexContainer
 {
-	TArray<word>			Indices16;
-	TArray<unsigned>		Indices32;
+	TArray<uint16>			Indices16;
+	TArray<uint32>			Indices32;
 
 	FORCEINLINE bool Is32Bit() const
 	{
@@ -1014,8 +1014,8 @@ struct FColorVertexBuffer4
 //!! if use this class for SkeletalMesh - use both DBG_STAT and DBG_SKEL
 struct FRawStaticIndexBuffer4
 {
-	TArray<word>		Indices16;
-	TArray<unsigned>	Indices32;
+	TArray<uint16>		Indices16;
+	TArray<uint32>		Indices32;
 
 	FORCEINLINE bool Is32Bit() const
 	{
@@ -1060,7 +1060,7 @@ struct FRawStaticIndexBuffer4
 					appReverseBytes(src, count, 2);
 				S.Indices16.AddUninitialized(count);
 				for (int i = 0; i < count; i++, src += 2)
-					S.Indices16[i] = *(word*)src;
+					S.Indices16[i] = *(uint16*)src;
 			}
 		}
 

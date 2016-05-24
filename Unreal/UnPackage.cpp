@@ -366,7 +366,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if ALIENS_CM
 	if (Ar.Game == GAME_AliensCM)
 	{
-		word unk64, unk66, unk68;		// complex EngineVersion?
+		uint16 unk64, unk66, unk68;		// complex EngineVersion?
 		Ar << unk64 << unk66 << unk68;
 		goto cooker_version;
 	}
@@ -1944,9 +1944,9 @@ void UnPackage::LoadNameTable()
 		else if (Game == GAME_UC1 && ArLicenseeVer >= 28)
 		{
 		uc1_name:
-			// used word + char[] instead of FString
+			// used uint16 + char[] instead of FString
 			char buf[MAX_FNAME_LEN];
-			word len;
+			uint16 len;
 			*this << len;
 			assert(len < ARRAY_COUNT(buf));
 			Serialize(buf, len+1);
@@ -2005,9 +2005,9 @@ void UnPackage::LoadNameTable()
 				byte shift = 5;
 				for (int j = 0; j < len; j++, d++)
 				{
-					word c;
+					uint16 c;
 					*this << c;
-					word c2 = ROR16(c, shift);
+					uint16 c2 = ROR16(c, shift);
 					assert(c2 < 256);
 					*d = c2 & 0xFF;
 					shift = (c - 5) & 15;
