@@ -360,7 +360,7 @@ struct FGPUVert4Common
 		Ar << V.Normal[0] << V.Normal[2];
 
 		// Influences
-		if (GNumSkelInfluences <= ARRAY_COUNT(BoneIndex))
+		if (GNumSkelInfluences <= ARRAY_COUNT(V.BoneIndex))
 		{
 			for (int i = 0; i < GNumSkelInfluences; i++)
 				Ar << V.BoneIndex[i];
