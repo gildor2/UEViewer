@@ -71,17 +71,6 @@ static void ExportCommonMeshData
 	// main psk header
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
-	// share vertices
-//	appResetProfiler();
-	Share.Prepare(Verts, NumVerts, VertexSize);
-	for (i = 0; i < NumVerts; i++)
-	{
-		const CMeshVertex &S = *VERT(i);
-		Share.AddVertex(S.Position, S.Normal);
-	}
-//	appPrintProfiler();
-//	appPrintf("%d wedges were merged to %d verts\n", NumVerts, Share.Points.Num());
-
 	PtsHdr.DataCount = Share.Points.Num();
 	PtsHdr.DataSize  = sizeof(FVector);
 	SAVE_CHUNK(PtsHdr, "PNTS0000");
@@ -248,7 +237,31 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader BoneHdr, InfHdr;
 
+	int i, j;
 	CVertexShare Share;
+
+	// weld vertices
+	// The code below differs from similar code for StaticMesh export: it relies on wertex weight
+	// information to not perform occasional welding of vertices which has the same position and
+	// normal, but belongs to different bones.
+//	appResetProfiler();
+	Share.Prepare(Lod.Verts, Lod.NumVerts, sizeof(CSkelMeshVertex));
+	for (i = 0; i < Lod.NumVerts; i++)
+	{
+		const CSkelMeshVertex &S = Lod.Verts[i];
+		// Here we relies on high possibility that vertices which should be shared between
+		// triangles will have the same order of weights and bones (because most likely
+		// these vertices were duplicated by copying). Doing more complicated comparison
+		// will reduce performance with possibly reducing size of exported mesh by a few
+		// more vertices.
+		uint32 WeightsHash = S.PackedWeights;
+		for (j = 0; j < ARRAY_COUNT(S.Bone); j++)
+			WeightsHash ^= S.Bone[j] << j;
+		Share.AddVertex(S.Position, S.Normal, WeightsHash);
+	}
+//	appPrintProfiler();
+//	appPrintf("%d wedges were welded into %d verts\n", Lod.NumVerts, Share.Points.Num());
+
 	ExportCommonMeshData
 	(
 		Ar,
@@ -258,7 +271,6 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 		Share
 	);
 
-	int i, j;
 	int numBones = Mesh.RefSkeleton.Num();
 
 	BoneHdr.DataCount = numBones;
@@ -547,6 +559,18 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	static VChunkHeader BoneHdr, InfHdr;
 
 	CVertexShare Share;
+
+	// weld vertices
+//	appResetProfiler();
+	Share.Prepare(Lod.Verts, Lod.NumVerts, sizeof(CStaticMeshVertex));
+	for (int i = 0; i < Lod.NumVerts; i++)
+	{
+		const CMeshVertex &S = Lod.Verts[i];
+		Share.AddVertex(S.Position, S.Normal);
+	}
+//	appPrintProfiler();
+//	appPrintf("%d wedges were welded into %d verts\n", Lod.NumVerts, Share.Points.Num());
+
 	ExportCommonMeshData
 	(
 		Ar,

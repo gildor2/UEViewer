@@ -55,10 +55,12 @@ inline void ComputeBounds(const T *Data, int NumVerts, int Stride, CVec3 &Mins, 
 #define USE_HASHING	1		// can disable this to compare performance
 
 // structure which helps to share vertices between wedges
+//?? rename to "CVertexWelder"?
 struct CVertexShare
 {
 	TArray<CVec3>	Points;
 	TArray<CPackedNormal> Normals;
+	TArray<uint32>	ExtraInfos;
 	TArray<int>		WedgeToVert;
 	TArray<int>		VertToWedge;
 	int				WedgeIndex;
@@ -76,6 +78,7 @@ struct CVertexShare
 		WedgeIndex = 0;
 		Points.Empty(NumVerts);
 		Normals.Empty(NumVerts);
+		ExtraInfos.Empty(NumVerts);
 		WedgeToVert.Empty(NumVerts);
 		VertToWedge.Empty(NumVerts);
 		VertToWedge.AddZeroed(NumVerts);
@@ -90,7 +93,7 @@ struct CVertexShare
 #endif // USE_HASHING
 	}
 
-	int AddVertex(const CVec3 &Pos, CPackedNormal Normal)
+	int AddVertex(const CVec3 &Pos, CPackedNormal Normal, uint32 ExtraInfo = 0)
 	{
 		int PointIndex = -1;
 
@@ -105,7 +108,7 @@ struct CVertexShare
 		// find point with the same position and normal
 		for (PointIndex = Hash[h]; PointIndex >= 0; PointIndex = HashNext[PointIndex])
 		{
-			if (Points[PointIndex] == Pos && Normals[PointIndex] == Normal)
+			if (Points[PointIndex] == Pos && Normals[PointIndex] == Normal && ExtraInfos[PointIndex] == ExtraInfo)
 				break;		// found it
 		}
 #else
@@ -114,7 +117,7 @@ struct CVertexShare
 		{
 			PointIndex = Points.FindItem(Pos, PointIndex + 1);
 			if (PointIndex == INDEX_NONE) break;
-			if (Normals[PointIndex] == Normal) break;
+			if (Normals[PointIndex] == Normal && ExtraInfos[PointIndex] == ExtraInfo) break;
 		}
 #endif // USE_HASHING
 		if (PointIndex == INDEX_NONE)
@@ -122,6 +125,7 @@ struct CVertexShare
 			// point was not found - create it
 			PointIndex = Points.Add(Pos);
 			Normals.Add(Normal);
+			ExtraInfos.Add(ExtraInfo);
 #if USE_HASHING
 			// add to Hash
 			HashNext[PointIndex] = Hash[h];
