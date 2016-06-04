@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+05.06.2016
+- implemented Devil's Third support
+
 22.05.2016
 - fixed loading of UE4 skeletal meshes with more than 4 bones per vertex: extra weights are dropped, and
   weights are re-normalized

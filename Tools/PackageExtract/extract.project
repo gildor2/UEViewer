@@ -8,6 +8,7 @@ sources(MAIN) = {
 	Main.cpp
 	$R/Unreal/UnCore.cpp
 	$R/Unreal/UnCoreCompression.cpp
+	$R/Unreal/UnCoreDecrypt.cpp
 	$R/Unreal/UnCoreSerialize.cpp
 	$R/Unreal/UnObject.cpp
 	$R/Unreal/UnPackage.cpp

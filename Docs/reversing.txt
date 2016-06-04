@@ -13,6 +13,9 @@ Unreal Engine 3
 
 - serializer для FName: найти строку "Bad name index %i/%i"
 
+- custom decompression method: find a string
+  "appUncompressMemory - This compression type not supported"
+
 ===============================================================================
 Lineage 2
 ===============================================================================

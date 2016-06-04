@@ -111,6 +111,7 @@
 #define METRO_CONF		1		// Metro Conflict
 #define SMITE			1
 #define DUNDEF			1		// Dungeon Defenders
+#define DEVILS_THIRD	1		// Devil's Third
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

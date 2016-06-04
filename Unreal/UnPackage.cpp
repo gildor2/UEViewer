@@ -690,6 +690,14 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 		goto tag_ok;		// Might & Magic Heroes 7
 	}
 #endif // MMH7
+#if DEVILS_THIRD
+	if (S.Tag == 0x7BC342F0)
+	{
+		Ar.Game = GAME_DevilsThird;
+		if (!GForceGame) GForceGame = GAME_DevilsThird;
+		goto tag_ok;		// Devil's Third
+	}
+#endif // DEVILS_THIRD
 
 	// support reverse byte order
 	if (S.Tag != PACKAGE_FILE_TAG)
@@ -1294,6 +1302,7 @@ public:
 		int Pos = Reader->Tell();
 		Reader->Serialize(data, size);
 
+		// Note: similar code exists in DecryptBladeAndSoul()
 		int i;
 		byte *p;
 		static const char *key = "qiffjdlerdoqymvketdcl0er2subioxq";

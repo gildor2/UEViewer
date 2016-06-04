@@ -169,6 +169,11 @@ static void appDecompressLZX(byte *CompressedBuffer, int CompressedSize, byte *U
 	appDecompress()
 -----------------------------------------------------------------------------*/
 
+// Decryptors for compressed data
+void DecryptBladeAndSoul(byte* CompressedBuffer, int CompressedSize);
+void DecryptTaoYuan(byte* CompressedBuffer, int CompressedSize);
+void DecryptDevlsThird(byte* CompressedBuffer, int CompressedSize);
+
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
 {
 	guard(appDecompress);
@@ -176,12 +181,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 #if BLADENSOUL
 	if (GForceGame == GAME_BladeNSoul && Flags == COMPRESS_LZO_ENC_BNS)	// note: GForceGame is required (to not pass 'Game' here)
 	{
-		if (CompressedSize >= 32)
-		{
-			static const char *key = "qiffjdlerdoqymvketdcl0er2subioxq";
-			for (int i = 0; i < CompressedSize; i++)
-				CompressedBuffer[i] ^= key[i % 32];
-		}
+		DecryptBladeAndSoul(CompressedBuffer, CompressedSize);
 		// overide compression
 		Flags = COMPRESS_LZO;
 	}
@@ -200,15 +200,18 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 #if TAO_YUAN
 	if (GForceGame == GAME_TaoYuan)	// note: GForceGame is required (to not pass 'Game' here);
 	{
-		static const byte key[] =
-		{
-			137, 35, 95, 142, 69, 136, 243, 119, 25, 35, 111, 94, 101, 136, 243, 204,
-			243, 67, 95, 158, 69, 106, 107, 187, 237, 35, 103, 142, 72, 142, 243
-		};
-		for (int i = 0; i < CompressedSize; i++)
-			CompressedBuffer[i] ^= key[i % 31];		// note: "N % 31" is not the same as "N & 0x1F"
+		DecryptTaoYuan(CompressedBuffer, CompressedSize);
 	}
 #endif // TAO_YUAN
+
+#if DEVILS_THIRD
+	if ((GForceGame == GAME_DevilsThird) && (Flags & 8))
+	{
+		DecryptDevlsThird(CompressedBuffer, CompressedSize);
+		// overide compression
+		Flags &= ~8;
+	}
+#endif // DEVILS_THIRD
 
 	if (Flags == COMPRESS_FIND && CompressedSize >= 2)
 	{

@@ -45,6 +45,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnAnim3.obj \
 	$(OUT_1)/UnCore.obj \
 	$(OUT_1)/UnCoreCompression.obj \
+	$(OUT_1)/UnCoreDecrypt.obj \
 	$(OUT_1)/UnCoreSerialize.obj \
 	$(OUT_1)/UnHavok.obj \
 	$(OUT_1)/UnMesh1.obj \
@@ -1203,6 +1204,9 @@ $(OUT_1)/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
 
 $(OUT_1)/Memory.obj : Core/Memory.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Memory.obj" Core/Memory.cpp
+
+$(OUT_1)/UnCoreDecrypt.obj : Unreal/UnCoreDecrypt.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCoreDecrypt.obj" Unreal/UnCoreDecrypt.cpp
 
 DEPENDS = \
 	Core/Core.h \

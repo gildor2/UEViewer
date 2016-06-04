@@ -336,6 +336,9 @@ const GameInfo GListOfGames[] = {
 #	if SMITE
 		G("SMITE", smite, GAME_Smite),
 #	endif
+#	if DEVILS_THIRD
+		G("Devil's Third", dev3rd, GAME_DevilsThird),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4

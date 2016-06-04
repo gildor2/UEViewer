@@ -45,6 +45,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnAnim3.o \
 	$(OUT_1)/UnCore.o \
 	$(OUT_1)/UnCoreCompression.o \
+	$(OUT_1)/UnCoreDecrypt.o \
 	$(OUT_1)/UnCoreSerialize.o \
 	$(OUT_1)/UnHavok.o \
 	$(OUT_1)/UnMesh1.o \
@@ -1202,6 +1203,9 @@ $(OUT_1)/Math3D.o : Core/Math3D.cpp $(DEPENDS_55)
 
 $(OUT_1)/Memory.o : Core/Memory.cpp $(DEPENDS_55)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Memory.o Core/Memory.cpp
+
+$(OUT_1)/UnCoreDecrypt.o : Unreal/UnCoreDecrypt.cpp $(DEPENDS_55)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreDecrypt.o Unreal/UnCoreDecrypt.cpp
 
 DEPENDS_56 = \
 	Core/Core.h \

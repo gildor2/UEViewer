@@ -126,8 +126,9 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 	}
 	else if (Tag != PACKAGE_FILE_TAG)	//?? possibly Lineage2 file etc
 	{
-		//!! use CreatePackageLoader() here to allow scanning of packages with custom header (Lineage etc);
-		//!! do that only when something "strange" within data noticed
+		//!! Use CreatePackageLoader() here to allow scanning of packages with custom header (Lineage etc);
+		//!! do that only when something "strange" within data noticed.
+		//!! Also, this function could react on custom package tags.
 		return true;
 	}
 	unsigned int Version = FileData[1];
