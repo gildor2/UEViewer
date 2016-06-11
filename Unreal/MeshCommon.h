@@ -88,7 +88,7 @@ struct CPackedNormal
 	}
 	FORCEINLINE float GetW() const
 	{
-		return ( (char)(Data >> 24) ) / 127.0f;
+		return ( (int8)(Data >> 24) ) / 127.0f;
 	}
 };
 
@@ -99,25 +99,25 @@ FORCEINLINE bool operator==(CPackedNormal V1, CPackedNormal V2)
 
 FORCEINLINE void Pack(CPackedNormal& Packed, const CVec3& Unpacked)
 {
-	Packed.Data =  (byte)appRound(Unpacked.v[0] * 127.0f)
-				+ ((byte)appRound(Unpacked.v[1] * 127.0f) << 8)
-				+ ((byte)appRound(Unpacked.v[2] * 127.0f) << 16);
+	Packed.Data =  (uint8)appRound(Unpacked.v[0] * 127.0f)
+				+ ((uint8)appRound(Unpacked.v[1] * 127.0f) << 8)
+				+ ((uint8)appRound(Unpacked.v[2] * 127.0f) << 16);
 }
 
 FORCEINLINE void Unpack(CVec3& Unpacked, const CPackedNormal& Packed)
 {
-	Unpacked.v[0] = (char)( Packed.Data        & 0xFF) / 127.0f;
-	Unpacked.v[1] = (char)((Packed.Data >> 8 ) & 0xFF) / 127.0f;
-	Unpacked.v[2] = (char)((Packed.Data >> 16) & 0xFF) / 127.0f;
+	Unpacked.v[0] = (int8)( Packed.Data        & 0xFF) / 127.0f;
+	Unpacked.v[1] = (int8)((Packed.Data >> 8 ) & 0xFF) / 127.0f;
+	Unpacked.v[2] = (int8)((Packed.Data >> 16) & 0xFF) / 127.0f;
 }
 
 #if USE_SSE
 /*FORCEINLINE void Pack(CPackedNormal& Packed, const CVec4& Unpacked)
 {
-	// REWRITE WITH SSE, but not used yet
-	Packed.Data =  (byte)appRound(Unpacked.v[0] * 127.0f)
-				+ ((byte)appRound(Unpacked.v[1] * 127.0f) << 8)
-				+ ((byte)appRound(Unpacked.v[2] * 127.0f) << 16);
+	// COULD REWRITE WITH SSE, but not used yet
+	Packed.Data =  (uint8)appRound(Unpacked.v[0] * 127.0f)
+				+ ((uint8)appRound(Unpacked.v[1] * 127.0f) << 8)
+				+ ((uint8)appRound(Unpacked.v[2] * 127.0f) << 16);
 }*/
 
 FORCEINLINE void Unpack(CVec4& Unpacked, const CPackedNormal& Packed)

@@ -62,6 +62,9 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 			VectorMA(*N[j], angle[j], norm);
 	}
 
+	// TODO: add "hard angle threshold" - do not share vertex between faces when angle between them
+	// is too large.
+
 	// normalize shared normals ...
 	for (i = 0; i < Share.Points.Num(); i++)
 		tmpNorm[i].Normalize();
@@ -80,6 +83,14 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 
 	int i, j;
 
+	// TODO: this is not a 100% correct algorithm. Here we're iterating over all indices, processing the
+	// same wedge as many times as many triangles using it, with overwriting previous results. We should
+	// accumulate tangent value between triangles, counting number of triangles using them in a first
+	// loop. Then (in 2nd loop), offset the tangent vector to make it perpendicular to normal. And after
+	// this, in 3rd loop, compute a correct binormal.
+	// Should review the algorithm described above, to check for case when the same vertex should not
+	// share tangent space due to mirored texture (i.e. vertex use different tangent vector direction
+	// for different triangles).
 	CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
 	for (i = 0; i < Indices.Num() / 3; i++)
 	{
@@ -103,7 +114,7 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 		{
 			// W[0] -> W[2] -- axis for tangent
 			VectorSubtract(V[2]->Position, V[0]->Position, tang);
-			// we should make tang to look in side of growing U
+			// we should make 'tang' to look in direction of growing 'U'
 			if (U2 < U0) tang.Negate();
 		}
 		else
