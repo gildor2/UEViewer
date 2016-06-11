@@ -103,6 +103,7 @@ struct FPackageFileSummary
 	int			Tag;
 #if UNREAL4
 	int			LegacyVersion;
+	bool		IsUnversioned;
 #endif
 	uint16		FileVersion;
 	uint16		LicenseeVersion;
@@ -302,6 +303,15 @@ public:
 	{
 		return Loader->IsCompressed();
 	}
+#if UNREAL4
+	virtual bool ContainsEditorData() const
+	{
+		if (Game < GAME_UE4) return false;
+		if (Summary.IsUnversioned) return false;		// unversioned packages definitely has no editor data
+		if (Summary.PackageFlags & PKG_FilterEditorOnly) return false;
+		return true;
+	}
+#endif // UNREAL4
 	virtual void Serialize(void *data, int size)
 	{
 		Loader->Serialize(data, size);

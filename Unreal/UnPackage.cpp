@@ -491,6 +491,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	if (S.LegacyVersion < -6 || S.LegacyVersion >= 0)
 		appError("UE4 LegacyVersion: unsupported value %d", S.LegacyVersion);
 
+	S.IsUnversioned = false;
+
 	// read versions
 	int VersionUE3, Version, LicenseeVersion;		// note: using int32 instead of uint16 as in UE1-UE3
 	if (S.LegacyVersion != -4)						// UE4 had some changes for version -4, but these changes were reverted in -5 due to some problems
@@ -516,6 +518,9 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		FCustomVersionContainer versions;
 		versions.Serialize(Ar, S.LegacyVersion);
 	}
+
+	if (S.FileVersion == 0 && S.LicenseeVersion == 0)
+		S.IsUnversioned = true;
 
 	if (Ar.ArVer == 0 && Ar.ArLicenseeVer == 0)
 		appError("Unversioned UE4 packages are not supported. Please override game using UI or command line.");
@@ -1803,6 +1808,10 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 				PKG_LOG("[FullComp] ");
 		}
 #endif // UNREAL3
+#if UNREAL4
+		if (Game >= GAME_UE4 && Summary.IsUnversioned)
+			PKG_LOG("[Unversioned] ");
+#endif // UNREAL4
 		PKG_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
 	}
 

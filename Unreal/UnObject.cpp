@@ -161,7 +161,14 @@ void UObject::EndLoad()
 				Package->GetStopper() - Package->Tell());
 		LoadedObjects.Add(Obj);
 
-		unguardf("%s'%s.%s', pos=%X, ver=%d/%d, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(), Package->ArVer, Package->ArLicenseeVer, Package->Game);
+#if UNREAL4
+	#define UNVERS_STR		(Package->Game >= GAME_UE4 && Package->Summary.IsUnversioned) ? " (unversioned)" : ""
+#else
+	#define UNVERS_STR		""
+#endif
+
+		unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
+			Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, Package->Game);
 	}
 	// postload objects
 	int i;

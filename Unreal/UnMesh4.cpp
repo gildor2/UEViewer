@@ -7,7 +7,6 @@
 #include "UnMesh3.h"		// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
 #include "UnMaterial3.h"
-#include "UnPackage.h"		// just to get access to PackageFlags
 
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
@@ -55,9 +54,8 @@ FArchive& operator<<(FArchive& Ar, FMeshBoneInfo& B)
 		FColor Color;
 		Ar << Color;
 	}
-	UnPackage* Package = Ar.CastTo<UnPackage>();
 	// Support for editor packages
-	if ((Ar.ArVer >= VER_UE4_STORE_BONE_EXPORT_NAMES) && Package && (Package->Summary.PackageFlags & PKG_FilterEditorOnly) == 0)
+	if ((Ar.ArVer >= VER_UE4_STORE_BONE_EXPORT_NAMES) && Ar.ContainsEditorData())
 	{
 		FString ExportName;
 		Ar << ExportName;
@@ -1419,7 +1417,7 @@ void UStaticMesh4::ConvertSourceModels()
 
 		FRawMesh RawMesh;
 		FMemReader Reader(Bulk.BulkData, Bulk.ElementCount); // ElementCount is the same as data size, for byte bulk data
-		Reader.SetupFrom(*Package);
+		Reader.SetupFrom(*GetPackageArchive());
 		RawMesh.Serialize(Reader);
 
 		int NumTexCoords = MAX_STATIC_UV_SETS_UE4;

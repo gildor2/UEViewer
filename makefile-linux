@@ -599,7 +599,6 @@ DEPENDS_20 = \
 	Unreal/UnMesh4.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
 $(OUT_1)/UnMesh4.o : Unreal/UnMesh4.cpp $(DEPENDS_20)

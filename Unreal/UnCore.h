@@ -430,6 +430,13 @@ public:
 		return false;
 	}
 
+#if UNREAL4
+	virtual bool ContainsEditorData() const
+	{
+		return false;
+	}
+#endif
+
 	// Position and file size methods.
 
 	virtual void Seek(int Pos) = 0;
