@@ -806,14 +806,49 @@ public:
 #endif
 };
 
+#if UNREAL4
+
+struct FMaterialInstanceBasePropertyOverrides
+{
+	DECLARE_STRUCT(FMaterialInstanceBasePropertyOverrides);
+
+	bool			bOverride_BlendMode;
+	EBlendMode		BlendMode;
+
+	bool			bOverride_TwoSided;
+	bool			TwoSided;
+
+	BEGIN_PROP_TABLE
+		PROP_BOOL(bOverride_BlendMode)
+		PROP_ENUM2(BlendMode, EBlendMode)
+		PROP_BOOL(bOverride_TwoSided)
+		PROP_BOOL(TwoSided)
+	END_PROP_TABLE
+
+	FMaterialInstanceBasePropertyOverrides()
+	:	bOverride_BlendMode(false)
+	,	BlendMode(BLEND_Opaque)
+	,	bOverride_TwoSided(false)
+	,	TwoSided(0)
+	{}
+};
+
+#endif // UNREAL4
+
 class UMaterialInstance : public UMaterialInterface
 {
 	DECLARE_CLASS(UMaterialInstance, UMaterialInterface)
 public:
 	UUnrealMaterial	*Parent;				// UMaterialInterface*
+#if UNREAL4
+	FMaterialInstanceBasePropertyOverrides BasePropertyOverrides;
+#endif
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Parent)
+#if UNREAL4
+		PROP_STRUC(BasePropertyOverrides, FMaterialInstanceBasePropertyOverrides)
+#endif
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(bHasStaticPermutationResource)
 		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overrided textures
@@ -982,7 +1017,8 @@ public:
 	REGISTER_ENUM(EMobileSpecularMask)
 
 #define REGISTER_MATERIAL_CLASSES_U4	\
-	REGISTER_CLASS(FTextureSource)
+	REGISTER_CLASS(FTextureSource)		\
+	REGISTER_CLASS(FMaterialInstanceBasePropertyOverrides)
 
 #define REGISTER_MATERIAL_ENUMS_U4		\
 	REGISTER_ENUM(ETextureSourceFormat)

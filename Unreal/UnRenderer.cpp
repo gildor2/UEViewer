@@ -1622,6 +1622,37 @@ void UMaterialInterface::GetParams(CMaterialParams &Params) const
 #endif // SUPPORT_IPHONE
 }
 
+static void SetupUE3BlendMode(EBlendMode BlendMode)
+{
+	glDepthMask(BlendMode == BLEND_Translucent ? GL_FALSE : GL_TRUE); // may be, BLEND_Masked too
+
+	if (BlendMode == BLEND_Opaque || BlendMode == BLEND_Masked)
+		glDisable(GL_BLEND);
+	else
+	{
+		glEnable(GL_BLEND);
+		switch (BlendMode)
+		{
+//		case BLEND_Masked:
+//			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
+//			break;
+		case BLEND_Translucent:
+//			glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);	//?? should use opacity channel; no lighting
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; no lighting
+			break;
+		case BLEND_Additive:
+			glBlendFunc(GL_ONE, GL_ONE);
+			break;
+		case BLEND_Modulate:
+			glBlendFunc(GL_DST_COLOR, GL_ZERO);
+			break;
+		default:
+			glDisable(GL_BLEND);
+			DrawTextLeft("Unknown BlendMode %d", BlendMode);
+		}
+	}
+}
+
 
 //!! NOTE: when using this function sharing of shader between MaterialInstanceConstant's is impossible
 //!! (shader may differs because of different texture sets - some available, some - not)
@@ -1655,33 +1686,7 @@ void UMaterial3::SetupGL()
 		glEnable(GL_ALPHA_TEST);
 	}
 
-	glDepthMask(BlendMode == BLEND_Translucent ? GL_FALSE : GL_TRUE); // may be, BLEND_Masked too
-
-	if (BlendMode == BLEND_Opaque || BlendMode == BLEND_Masked)
-		glDisable(GL_BLEND);
-	else
-	{
-		glEnable(GL_BLEND);
-		switch (BlendMode)
-		{
-//		case BLEND_Masked:
-//			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; has lighting
-//			break;
-		case BLEND_Translucent:
-//			glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);	//?? should use opacity channel; no lighting
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	//?? should use opacity channel; no lighting
-			break;
-		case BLEND_Additive:
-			glBlendFunc(GL_ONE, GL_ONE);
-			break;
-		case BLEND_Modulate:
-			glBlendFunc(GL_DST_COLOR, GL_ZERO);
-			break;
-		default:
-			glDisable(GL_BLEND);
-			DrawTextLeft("Unknown BlendMode %d", BlendMode);
-		}
-	}
+	SetupUE3BlendMode(BlendMode);
 
 	unguard;
 }
@@ -1776,6 +1781,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		//!! - may implement with tables + macros
 		//!! - catch normalmap, specular and emissive textures
 		if (appStristr(Name, "noise")) continue;
+		if (appStristr(Name, "detail")) continue;
 
 		DIFFUSE(appStristr(Name, "diff"), 100);
 		NORMAL (appStristr(Name, "norm"), 100);
@@ -1986,6 +1992,23 @@ void UMaterialInstanceConstant::SetupGL()
 {
 	// redirect to Parent until UMaterial3
 	if (Parent) Parent->SetupGL();
+
+#if UNREAL4
+	if (BasePropertyOverrides.bOverride_TwoSided)
+	{
+		if (BasePropertyOverrides.TwoSided)
+			glDisable(GL_CULL_FACE);
+		else
+		{
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+		}
+	}
+	if (BasePropertyOverrides.bOverride_BlendMode)
+	{
+		SetupUE3BlendMode(BasePropertyOverrides.BlendMode);
+	}
+#endif // UNREAL4
 }
 
 
@@ -2014,7 +2037,10 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		UTexture3  *Tex  = P.ParameterValue;
 		if (!Tex) continue;
 
+		if (appStristr(Name, "detail")) continue;	// details normal etc
+
 		DIFFUSE (appStristr(Name, "dif"), 100);
+		DIFFUSE (appStristr(Name, "albedo"), 100);
 		DIFFUSE (appStristr(Name, "color"), 80);
 		NORMAL  (appStristr(Name, "norm") && !appStristr(Name, "fx"), 100);
 		SPECPOW (appStristr(Name, "specpow"), 100);

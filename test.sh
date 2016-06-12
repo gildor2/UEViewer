@@ -208,6 +208,8 @@ function tr4()    { run1 "data/3/Tribes4" $*;     }
 
 function thief()  { run1 "${steam[@]/%/Thief/ThiefGame/CookedPCNG}" $*; }
 
+function ark()    { run1 "${steam[@]/%/ARK/ShooterGame/Content}" $*; }
+
 function rund()   {	run1 "data" $*; }
 
 
