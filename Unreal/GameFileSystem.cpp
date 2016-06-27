@@ -269,7 +269,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 		}
 	}
 
-	bool IsPackage;
+	bool IsPackage = false;
 	if (FindExtension(FullName, ARRAY_ARG(PackageExtensions)))
 	{
 		IsPackage = true;
@@ -280,6 +280,10 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 		if (!FindExtension(FullName, ARRAY_ARG(KnownExtensions)))
 #endif
 		{
+			// ignore any unknown files inside VFS
+			if (parentVfs) return true;
+			// ignore unknown files inside "cooked" or "content" directories
+			if (appStristr(FullName, "cooked") || appStristr(FullName, "content")) return true;
 			// perhaps this file was exported by our tool - skip it
 			if (FindExtension(FullName, ARRAY_ARG(SkipExtensions)))
 				return true;
@@ -288,7 +292,6 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 				appError("Too many unknown files - bad root directory (%s)?", RootDirectory);
 			return true;
 		}
-		IsPackage = false;
 	}
 
 	// create entry

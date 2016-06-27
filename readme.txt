@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+28.06.2016
+- improved "too many unknown files" error logic - this error will not appear for correct game paths anymore
+
 05.06.2016
 - implemented Devil's Third support
 
