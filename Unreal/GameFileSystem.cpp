@@ -118,6 +118,7 @@ static const char *SkipExtensions[] =
 	"gfx", "fxa",							// 3rd party
 	"md5mesh", "md5anim",					// md5 mesh
 	"uc", "3d",								// vertex mesh
+	"wem",									// WwiseAudio files
 };
 
 static bool FindExtension(const char *Filename, const char **Extensions, int NumExtensions)

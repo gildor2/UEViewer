@@ -10,6 +10,9 @@
 
  Revision History:
 
+	25.07.2016 v1.03
+	- saving animation name as FBX Take name (thanks Skykila)
+
 	21.07.2015 v1.02
 	- updated to match ActorX Importer 1.33 changes, improved appearance
 
@@ -122,6 +125,7 @@ fn SaveAXFile filename =
 	(
 		-- FBX
 		exportFile filename #noPrompt using:FBXEXP
+		FBXExporterSetParam "SplitAnimationIntoTakes" "-clear"
 		return undefined
 	)
 	if (g_outFormat == 2) then
@@ -172,6 +176,7 @@ fn ExportFbxAnim =
 		local track = Anims[i]
 		local trackName = track.Name
 		local filename = dir + trackName
+		FBXExporterSetParam "SplitAnimationIntoTakes" trackName 0 track.NumRawFrames
 		format "Exporting animation % (% frames) -> %\n" trackName track.NumRawFrames filename
 
 		ImportPsaFile AnimFileName i
@@ -221,7 +226,7 @@ fn ExportFbxMeshes path recurse =
 rollout fbxExportRollout "ActorX Batch Export"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.02"
+	label     Lbl1 "Version 1.03"
 	label     Lbl2 "\xA9 2010-2016 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
