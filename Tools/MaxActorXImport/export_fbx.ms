@@ -10,6 +10,9 @@
 
  Revision History:
 
+	31.07.2016 v1.04
+	- option to save multiple animation is single FBX file (multi-take animation)
+
 	25.07.2016 v1.03
 	- saving animation name as FBX Take name (thanks Skykila)
 
@@ -35,6 +38,7 @@ global g_meshDir
 global g_meshRecurse
 global g_fbxSmGroups
 global g_fbxSmMesh
+global g_fbxMultiTake
 global g_outFormat
 global g_useDefaultFBXSettings
 
@@ -42,6 +46,7 @@ if (g_meshDir     == undefined) then g_meshDir     = ""
 if (g_meshRecurse == undefined) then g_meshRecurse = false
 if (g_fbxSmGroups == undefined) then g_fbxSmGroups = true
 if (g_fbxSmMesh   == undefined) then g_fbxSmMesh   = true
+if (g_fbxMultiTake == undefined) then g_fbxMultiTake = false
 if (g_outFormat   == undefined) then g_outFormat   = 1
 if (g_useDefaultFBXSettings == undefined) then g_useDefaultFBXSettings = true
 
@@ -125,7 +130,6 @@ fn SaveAXFile filename =
 	(
 		-- FBX
 		exportFile filename #noPrompt using:FBXEXP
-		FBXExporterSetParam "SplitAnimationIntoTakes" "-clear"
 		return undefined
 	)
 	if (g_outFormat == 2) then
@@ -166,22 +170,43 @@ fn ExportFbxAnim =
 	local playAnim = g_playAnim	-- save
 	g_playAnim = false
 
-	-- create target directory
-	local dir = getFilenamePath(AnimFileName) + GetExportSubDir() + "\\" + getFilenameFile(AnimFileName) + "\\"
-	makeDir dir all:true
-
 	-- export all animations
-	for i = 1 to Anims.count do
+	if (g_fbxMultiTake == false) then
 	(
-		local track = Anims[i]
-		local trackName = track.Name
-		local filename = dir + trackName
-		FBXExporterSetParam "SplitAnimationIntoTakes" trackName 0 track.NumRawFrames
-		format "Exporting animation % (% frames) -> %\n" trackName track.NumRawFrames filename
+		-- create target directory
+		local dir = getFilenamePath(AnimFileName) + GetExportSubDir() + "\\" + getFilenameFile(AnimFileName) + "\\"
+		makeDir dir all:true
 
-		ImportPsaFile AnimFileName i
+		for i = 1 to Anims.count do
+		(
+			local track = Anims[i]
+			local trackName = track.Name
+			local filename = dir + trackName
+			FBXExporterSetParam "SplitAnimationIntoTakes" trackName 0 track.NumRawFrames
+			format "Exporting animation % (% frames) -> %\n" trackName track.NumRawFrames filename
+
+			ImportPsaFile AnimFileName i
+			SaveAXFile filename
+		)
+	)
+	else
+	(
+		local dir = getFilenamePath(AnimFileName) + GetExportSubDir()
+		makeDir dir all:true
+		local filename = dir + "\\" + getFilenameFile(AnimFileName)
+		format "Exporting all animations -> %\n" filename
+		ImportPsaFile AnimFileName 1 all:true
+		for i = 1 to Anims.count do
+		(
+			local track = Anims[i]
+			local trackName = track.Name
+			FBXExporterSetParam "SplitAnimationIntoTakes" trackName track.FirstRawFrame (track.FirstRawFrame+track.NumRawFrames-1)
+		)
 		SaveAXFile filename
 	)
+
+	-- clear Take information after the export
+	FBXExporterSetParam "SplitAnimationIntoTakes" "-clear"
 
 	g_playAnim = playAnim		-- restore
 )
@@ -226,7 +251,7 @@ fn ExportFbxMeshes path recurse =
 rollout fbxExportRollout "ActorX Batch Export"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.03"
+	label     Lbl1 "Version 1.04"
 	label     Lbl2 "\xA9 2010-2016 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -254,16 +279,18 @@ rollout fbxExportRollout "ActorX Batch Export"
 
 	group "Animations"
 	(
-		label  Lbl20          "This tool will convert all animations from" align:#left
-		label  Lbl21          "loaded PSA to FBX format. A mesh should"    align:#left
-		label  Lbl22          "be loaded first (in any suitable format)."  align:#left
-		label  Lbl23          "Each animation track will produce separate" align:#left
-		label  Lbl24          "FBX file"                                   align:#left
-		button BtnExportAnims "Export animations"
+		label    Lbl20           "Converts all animations from currently"      align:#left
+		label    Lbl21           "loaded PSA to FBX format. A mesh should"     align:#left
+		label    Lbl22           "be loaded too. If multi-take FBX is not"     align:#left
+		label    Lbl23           "selected, each animation track will produce" align:#left
+		label    Lbl24           "a separate FBX file."                        align:#left
+		checkbox ChkMultiTakeFbx "Save multi-take FBX file" checked:g_fbxMultiTake
+		button   BtnExportAnims  "Export animations"
 	)
 
 	on RadOutFormat      changed state do g_outFormat             = state
 	on ChkDefFbxSettings changed state do g_useDefaultFBXSettings = state
+	on ChkMultiTakeFbx   changed state do g_fbxMultiTake          = state
 	on BtnExportAnims    pressed do ExportFbxAnim()
 	on BtnExportMeshes   pressed do ExportFbxMeshes g_meshDir g_meshRecurse
 
@@ -285,6 +312,6 @@ rollout fbxExportRollout "ActorX Batch Export"
 
 
 if fbxExportFloater != undefined do closeRolloutFloater fbxExportFloater	-- close old window if visible
-fbxExportFloater = newRolloutFloater "FBX Batch Export" 250 520 290 100 	-- create new window
+fbxExportFloater = newRolloutFloater "FBX Batch Export" 250 560 300 100 	-- create new window
 
 addRollout fbxExportRollout fbxExportFloater
