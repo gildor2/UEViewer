@@ -145,6 +145,9 @@ BEGIN_CLASS_TABLE
 #if TRANSFORMERS
 	REGISTER_SOUND_CLASSES_TRANS
 #endif
+#if UNREAL4
+	REGISTER_SOUND_CLASSES_UE4
+#endif
 END_CLASS_TABLE
 }
 
@@ -302,6 +305,7 @@ static void RegisterExporters()
 #if UNREAL4
 	RegisterExporter("SkeletalMesh4", ExportSkeletalMesh4);
 	RegisterExporter("StaticMesh4",   ExportStaticMesh4  );
+	RegisterExporter("SoundWave",     ExportSoundWave4);
 #endif
 	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters
 }

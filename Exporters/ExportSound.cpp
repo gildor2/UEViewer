@@ -248,3 +248,27 @@ void ExportSoundNodeWave(const USoundNodeWave *Snd)
 }
 
 #endif // UNREAL3
+
+#if UNREAL4
+
+void ExportSoundWave4(const USoundWave *Snd)
+{
+	// select bulk containing data
+	const FByteBulkData *bulk = NULL;
+	const char *ext = "unk";
+	int extraHeaderSize = 0;
+
+	if (Snd->RawData.ElementCount)
+	{
+		bulk = &Snd->RawData;
+	}
+	else if (Snd->CompressedFormatData.Num())
+	{
+		bulk = &Snd->CompressedFormatData[0].Data;
+		ext = *Snd->CompressedFormatData[0].FormatName; // "OGG"
+	}
+
+	SaveSound(Snd, bulk->BulkData, bulk->ElementCount, ext);
+}
+
+#endif // UNREAL4

@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+18.08.2016
+- added UE4 sound export
+
 28.06.2016
 - improved "too many unknown files" error logic - this error will not appear for correct game paths anymore
 

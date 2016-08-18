@@ -47,6 +47,7 @@ class UVertMesh;
 class UUnrealMaterial;
 class USound;
 class USoundNodeWave;
+class USoundWave;
 class USwfMovie;
 class UFaceFXAnimSet;
 class UFaceFXAsset;
@@ -71,6 +72,7 @@ void ExportMaterial(const UUnrealMaterial *Mat);
 // sound
 void ExportSound(const USound *Snd);
 void ExportSoundNodeWave(const USoundNodeWave *Snd);
+void ExportSoundWave4(const USoundWave *Snd);
 // third party
 void ExportGfx(const USwfMovie *Swf);
 void ExportFaceFXAnimSet(const UFaceFXAnimSet *Fx);
