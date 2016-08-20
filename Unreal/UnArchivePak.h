@@ -105,13 +105,13 @@ public:
 	FPakFile(const FPakEntry* info, FArchive* reader)
 	:	Info(info)
 	,	Reader(reader)
-	,	UncompressedData(NULL)
+	,	UncompressedBuffer(NULL)
 	{}
 
 	virtual ~FPakFile()
 	{
-		if (UncompressedData)
-			appFree(UncompressedData);
+		if (UncompressedBuffer)
+			appFree(UncompressedBuffer);
 	}
 
 	virtual void Serialize(void *data, int size)
@@ -124,32 +124,43 @@ public:
 		{
 			guard(SerializeCompressed);
 
-			if (UncompressedData == NULL)
+			while (size > 0)
 			{
-				// didn't start decompression yet
-				UncompressedData = (byte*)appMalloc((int)Info->UncompressedSize);
-				UncompressedPos = 0;
-			}
+				if ((UncompressedBuffer == NULL) || (ArPos < UncompressedBufferPos) || (ArPos >= UncompressedBufferPos + Info->CompressionBlockSize))
+				{
+					// buffer is not ready
+					if (UncompressedBuffer == NULL)
+					{
+						UncompressedBuffer = (byte*)appMalloc((int)Info->CompressionBlockSize); // size of uncompressed block
+					}
+					// prepare buffer
+					int BlockIndex = ArPos / Info->CompressionBlockSize;
+					UncompressedBufferPos = Info->CompressionBlockSize * BlockIndex;
 
-			// fill uncompressed buffer
-			int DesiredDataEnd = ArPos + size;
-			while (DesiredDataEnd > UncompressedPos)
-			{
-				int BlockIndex = UncompressedPos / Info->CompressionBlockSize;
-				const FPakCompressedBlock& Block = Info->CompressionBlocks[BlockIndex];
-				int CompressedBlockSize = (int)(Block.CompressedEnd - Block.CompressedStart);
-				int UncompressedBlockSize = min((int)Info->CompressionBlockSize, (int)Info->UncompressedSize - UncompressedPos);
-				byte* CompressedData = (byte*)appMalloc(CompressedBlockSize);
-				Reader->Seek64(Block.CompressedStart);
-				Reader->Serialize(CompressedData, CompressedBlockSize);
-				appDecompress(CompressedData, CompressedBlockSize, UncompressedData + UncompressedPos, UncompressedBlockSize, Info->CompressionMethod);
-				UncompressedPos += UncompressedBlockSize;
-				appFree(CompressedData);
-			}
+					const FPakCompressedBlock& Block = Info->CompressionBlocks[BlockIndex];
+					int CompressedBlockSize = (int)(Block.CompressedEnd - Block.CompressedStart);
+					int UncompressedBlockSize = min((int)Info->CompressionBlockSize, (int)Info->UncompressedSize - UncompressedBufferPos); // don't pass file end
+					byte* CompressedData = (byte*)appMalloc(CompressedBlockSize);
+					Reader->Seek64(Block.CompressedStart);
+					Reader->Serialize(CompressedData, CompressedBlockSize);
+					appDecompress(CompressedData, CompressedBlockSize, UncompressedBuffer, UncompressedBlockSize, Info->CompressionMethod);
+					appFree(CompressedData);
+				}
 
-			// copy uncompressed data
-			memcpy(data, UncompressedData + ArPos, size);
-			ArPos += size;
+				// data is in buffer, copy it
+				int BytesToCopy = UncompressedBufferPos + Info->CompressionBlockSize - ArPos; // number of bytes until end of the buffer
+				if (BytesToCopy > size) BytesToCopy = size;
+				assert(BytesToCopy > 0);
+
+				// copy uncompressed data
+				int OffsetInBuffer = ArPos - UncompressedBufferPos;
+				memcpy(data, UncompressedBuffer + OffsetInBuffer, BytesToCopy);
+
+				// advance pointers
+				ArPos += BytesToCopy;
+				size  -= BytesToCopy;
+				data  = OffsetPointer(data, BytesToCopy);
+			}
 
 			unguard;
 		}
@@ -184,8 +195,8 @@ public:
 protected:
 	const FPakEntry* Info;
 	FArchive*	Reader;
-	byte*		UncompressedData;
-	int			UncompressedPos;
+	byte*		UncompressedBuffer;
+	int			UncompressedBufferPos;
 };
 
 

@@ -342,6 +342,12 @@ struct FTexture2DMipMap
 			bool cooked = false;
 			if (Ar.ArVer >= VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
 				Ar << cooked;
+			//?? Can all 'Mip.Data.Skip(Ar)' here, but ensure any mip types will be loaded by LoadBulkTexture().
+			//?? Calling Skip() will eliminate extra seeks when interleaving reading of FTexture2DMipMap and
+			//?? bulk data which located in the same uasset, but at different position.
+			//?? To see the problem (performance problem): load data from pak, modify FPakFile, add logging of
+			//?? Seek() and decompression calls. You'll see that loading of big bulk data chinks is interleaved
+			//?? with reading 4-byte ints at different locations.
 			Mip.Data.Serialize(Ar);
 			Ar << Mip.SizeX << Mip.SizeY;
 			if (Ar.ArVer >= VER_UE4_TEXTURE_DERIVED_DATA2 && !cooked)
@@ -349,6 +355,11 @@ struct FTexture2DMipMap
 				FString DerivedDataKey;
 				Ar << DerivedDataKey;
 			}
+	#if 0
+			// Oculus demos ("Henry") can have extra int here
+			int tmp;
+			Ar << tmp;
+	#endif
 			return Ar;
 		}
 #endif // UNREAL4

@@ -462,7 +462,7 @@ public:
 
 	virtual void Seek64(int64 Pos)
 	{
-		if (Pos >= (1LL << 31)) appError("FArchive::Seek64(0x%llX)", Pos);
+		if (Pos >= (1LL << 31)) appError("%s::Seek64(0x%llX) - not implemented", GetName(), Pos);
 		Seek((int)Pos);
 	}
 
@@ -1977,7 +1977,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 // UE3
 #define BULKDATA_StoreInSeparateFile	0x01		// bulk stored in different file
-#define BULKDATA_CompressedZlib			0x02		// unknown name
+#define BULKDATA_CompressedZlib			0x02		// name = BULKDATA_SerializeCompressedZLIB (UE4) ?
 #define BULKDATA_CompressedLzo			0x10		// unknown name
 #define BULKDATA_Unused					0x20		// empty bulk block
 #define BULKDATA_SeparateData			0x40		// unknown name - bulk stored in a different place in the same file
@@ -1992,8 +1992,8 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 #if UNREAL4
 
 #define BULKDATA_PayloadAtEndOfFile		0x0001		// bulk data stored at the end of this file, data offset added to global data offset in package
-//#define BULKDATA_CompressedZlib		0x0002
-//#define BULKDATA_Unused				0x0020
+//#define BULKDATA_CompressedZlib		0x0002		// the same value as for UE3
+//#define BULKDATA_Unused				0x0020		// the same value as for UE3
 #define BULKDATA_ForceInlinePayload		0x0040		// bulk data stored immediately after header
 #define BULKDATA_PayloadInSeperateFile	0x0100		// data stored in .ubulk file near the asset (UE4.12+)
 

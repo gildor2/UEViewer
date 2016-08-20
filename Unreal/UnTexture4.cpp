@@ -32,6 +32,7 @@ struct FTexturePlatformData
 
 	friend FArchive& operator<<(FArchive& Ar, FTexturePlatformData& D)
 	{
+		// see TextureDerivedData.cpp, SerializePlatformData()
 		guard(FTexturePlatformData<<);
 		Ar << D.SizeX << D.SizeY << D.NumSlices << D.PixelFormat;
 		int FirstMip;

@@ -1108,6 +1108,8 @@ void FByteBulkData::Serialize(FArchive &Ar)
 	}
 
 #if UNREAL4
+	// Unreal Engine 4 code
+
 	if (Ar.Game >= GAME_UE4)
 	{
 		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
@@ -1139,6 +1141,8 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		}
 	}
 #endif // UNREAL4
+
+	// Unreal Engine 3 code
 
 	if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
 	{
@@ -1187,7 +1191,28 @@ void FByteBulkData::Skip(FArchive &Ar)
 	guard(FByteBulkData::Skip);
 
 	SerializeHeader(Ar);
-	if (BulkDataOffsetInFile == Ar.Tell())
+
+	if (BulkDataFlags & BULKDATA_Unused)
+	{
+		return;
+	}
+
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4)
+	{
+		if (BulkDataFlags & (BULKDATA_PayloadInSeperateFile | BULKDATA_PayloadAtEndOfFile))
+		{
+			return;
+		}
+		if (BulkDataFlags & BULKDATA_ForceInlinePayload)
+		{
+			Ar.Seek64(Ar.Tell64() + BulkDataSizeOnDisk);
+			return;
+		}
+	}
+#endif // UNREAL4
+
+	if (BulkDataOffsetInFile == Ar.Tell64())
 	{
 		// really should check flags here, but checking position is simpler
 		Ar.Seek64(Ar.Tell64() + BulkDataSizeOnDisk);

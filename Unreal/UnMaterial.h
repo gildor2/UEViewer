@@ -215,6 +215,7 @@ public:
 	void AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures);
 
 	// Texture interface
+	// TODO: make separate class for that, use with multiple inheritance
 	virtual bool Upload()
 	{
 		return false;
