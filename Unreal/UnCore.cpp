@@ -90,14 +90,11 @@ void FArray::Empty(int count, int elementSize)
 	unguardf("%d x %d", count, elementSize);
 }
 
-
-void FArray::Insert(int index, int count, int elementSize)
+void FArray::GrowArray(int count, int elementSize)
 {
-	guard(FArray::Insert);
-	assert(index >= 0);
-	assert(index <= DataCount);
-	assert(count >= 0);
-	if (!count) return;
+	guard(FArray::GrowArray);
+	assert(count > 0);
+
 	// check for available space
 	if (DataCount + count > MaxCount)
 	{
@@ -122,12 +119,27 @@ void FArray::Insert(int index, int count, int elementSize)
 			(MaxCount - prevCount) * elementSize
 		);
 	}
+
+	unguardf("%d x %d", count, elementSize);
+}
+
+void FArray::Insert(int index, int count, int elementSize)
+{
+	guard(FArray::Insert);
+	assert(index >= 0);
+	assert(index <= DataCount);
+	assert(count >= 0);
+	if (!count) return;
+	GrowArray(count, elementSize);
 	// move data
-	memmove(
-		(byte*)DataPtr + (index + count)     * elementSize,
-		(byte*)DataPtr + index               * elementSize,
-						 (DataCount - index) * elementSize
-	);
+	if (index != DataCount)
+	{
+		memmove(
+			(byte*)DataPtr + (index + count)     * elementSize,
+			(byte*)DataPtr + index               * elementSize,
+							 (DataCount - index) * elementSize
+		);
+	}
 	// last operation: advance counter
 	DataCount += count;
 	unguard;

@@ -1303,6 +1303,10 @@ public:
 	{
 		return DataCount;
 	}
+	FORCEINLINE int Max() const
+	{
+		return MaxCount;
+	}
 	FORCEINLINE bool IsValidIndex(int index) const
 	{
 		return index >= 0 && index < DataCount;
@@ -1329,7 +1333,10 @@ protected:
 	// serializers
 	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 
-	void Empty (int count, int elementSize);
+	// clear array and resize to specific count
+	void Empty(int count, int elementSize);
+	// reserve space for 'count' items
+	void GrowArray(int count, int elementSize);
 	// insert 'count' items of size 'elementSize' at position 'index', memory will be zeroed
 	void Insert(int index, int count, int elementSize);
 	// remove items and then move next items to the position of removed items
@@ -1515,6 +1522,20 @@ public:
 		if (!TTypeInfo<T>::IsPod) Destruct(0, DataCount);
 		// remove data array (count=0) or preallocate memory (count>0)
 		FArray::Empty(count, sizeof(T));
+	}
+
+	FORCEINLINE void ResizeTo(int count)
+	{
+		if (count > DataCount)
+		{
+			// grow array
+			FArray::GrowArray(count - DataCount, sizeof(T));
+		}
+		else if (count < DataCount)
+		{
+			// shrink array
+			RemoveAt(count, DataCount - count);
+		}
 	}
 
 	// set new DataCount without reallocation if possible

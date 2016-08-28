@@ -45,6 +45,10 @@ public:
 
 	virtual const char* ClassName() const;
 
+	// Disable/enable window updates. Guaranteed for only one locked window at a time (WinAPI restriction)
+	void LockUpdate();
+	virtual void UnlockUpdate();
+
 	UIElement& Enable(bool enable);
 	FORCEINLINE bool IsEnabled() const   { return Enabled; }
 
@@ -101,6 +105,7 @@ protected:
 	bool		IsRadioButton:1;
 	bool		Enabled;
 	bool		Visible;
+	bool		IsUpdateLocked;
 	UIGroup*	Parent;
 	UIElement*	NextChild;
 	UIMenu*		Menu;
@@ -532,6 +537,8 @@ class UIListbox : public UIElement
 public:
 	UIListbox();
 
+	UIListbox& ReserveItems(int count);
+
 	UIListbox& AddItem(const char* item);
 	UIListbox& AddItems(const char** items);
 	void RemoveAllItems();
@@ -576,12 +583,15 @@ public:
 
 	UIMulticolumnListbox& AddColumn(const char* title, int width = -1, ETextAlign align = TA_Left);
 
+	UIMulticolumnListbox& ReserveItems(int count);
 	int AddItem(const char* item);
 	void AddSubItem(int itemIndex, int column, const char* text);
 	void RemoveItem(int itemIndex);
 	void RemoveAllItems();
 
+	//!! TODO: for VirtualMode, add callbacks for getting item and subitem texts; perhaps disable AddItem() at all
 	UIMulticolumnListbox& AllowMultiselect() { Multiselect = true; return *this; }
+	UIMulticolumnListbox& SetVirtualMode() { IsVirtualMode = true; return *this; }
 
 	// select an item; if index==-1, unselect all items; if add==true - extend current selection
 	// with this item (only when multiselect is enabled)
@@ -599,7 +609,10 @@ public:
 	int GetSelectionIndex(int i = 0) const;							// returns -1 when no items selected
 	int GetSelectionCount() const { return SelectedItems.Num(); }	// returns 0 when no items selected
 
+	virtual void UnlockUpdate();
+
 protected:
+	bool		IsVirtualMode;
 	int			NumColumns;
 	int			ColumnSizes[MAX_COLUMNS];
 	ETextAlign	ColumnAlign[MAX_COLUMNS];

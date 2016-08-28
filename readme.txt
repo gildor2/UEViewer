@@ -173,6 +173,12 @@ detex
 
 Changes
 ~~~~~~~
+28.08.2016
+- improved package dialog:
+  - "filter" box now accepts multiple strings delimited with spaces
+  - 100x times faster "flat view" (noticeable for UE4 games, with 20k+ packages, especially when typing
+    text in "filter" box)
+
 18.08.2016
 - added UE4 sound export
 

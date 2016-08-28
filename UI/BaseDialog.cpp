@@ -54,7 +54,7 @@
 //#define DEBUG_WINDOWS_ERRORS		MAX_DEBUG
 
 //#define DEBUG_MULTILIST_SEL			1
-#define USE_EXPLORER_STYLE			1
+#define USE_EXPLORER_STYLE			1		// use modern control style whenever possible
 
 
 #define FIRST_DIALOG_ID				4000
@@ -110,6 +110,7 @@ UIElement::UIElement()
 ,	IsRadioButton(false)
 ,	Enabled(true)
 ,	Visible(true)
+,	IsUpdateLocked(false)
 ,	Parent(NULL)
 ,	NextChild(NULL)
 ,	Menu(NULL)
@@ -125,6 +126,18 @@ UIElement::~UIElement()
 const char* UIElement::ClassName() const
 {
 	return "UIElement";
+}
+
+void UIElement::LockUpdate()
+{
+	LockWindowUpdate(Wnd);
+	IsUpdateLocked = true;
+}
+
+void UIElement::UnlockUpdate()
+{
+	LockWindowUpdate(NULL);
+	IsUpdateLocked = false;
 }
 
 UIElement& UIElement::Enable(bool enable)
@@ -997,6 +1010,12 @@ UIListbox::UIListbox()
 	Height = DEFAULT_LISTBOX_HEIGHT;
 }
 
+UIListbox& UIListbox::ReserveItems(int count)
+{
+	Items.ResizeTo(Items.Num() + count);
+	return *this;
+}
+
 UIListbox& UIListbox::AddItem(const char* item)
 {
 	new (Items) FString(item);
@@ -1109,6 +1128,7 @@ static void SetExplorerTheme(HWND Wnd)
 UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 :	NumColumns(numColumns)
 ,	Multiselect(false)
+,	IsVirtualMode(false)
 {
 	Height = DEFAULT_LISTBOX_HEIGHT;
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
@@ -1132,17 +1152,25 @@ UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int wid
 	return *this;
 }
 
+UIMulticolumnListbox& UIMulticolumnListbox::ReserveItems(int count)
+{
+	Items.ResizeTo((GetItemCount() + count + 1) * NumColumns);
+	return *this;
+}
+
 int UIMulticolumnListbox::AddItem(const char* item)
 {
 	guard(UIMulticolumnListbox::AddItem);
 
 	assert(Items.Num() % NumColumns == 0);
-	int numItems = Items.Num() / NumColumns - 1;
+	int numItems = GetItemCount();
 	int index = Items.AddZeroed(NumColumns);
 	Items[index] = item;
 
 	if (Wnd)
 	{
+		if (!IsVirtualMode)
+		{
 		LVITEM lvi;
 		lvi.mask = LVIF_TEXT | LVIF_PARAM;
 		lvi.pszText = LPSTR_TEXTCALLBACK;
@@ -1151,10 +1179,25 @@ int UIMulticolumnListbox::AddItem(const char* item)
 		lvi.lParam = numItems;
 		ListView_InsertItem(Wnd, &lvi);
 	}
+		else if (!IsUpdateLocked)
+		{
+			ListView_SetItemCount(Wnd, GetItemCount());
+		}
+	}
 
 	return numItems;
 
 	unguard;
+}
+
+void UIMulticolumnListbox::UnlockUpdate()
+{
+	Super::UnlockUpdate();
+	if (IsVirtualMode)
+	{
+		// for virtual mode, update items only once
+		ListView_SetItemCount(Wnd, GetItemCount());
+	}
 }
 
 void UIMulticolumnListbox::AddSubItem(int itemIndex, int column, const char* text)
@@ -1196,20 +1239,11 @@ int UIMulticolumnListbox::GetSelectionIndex(int i) const
 		const_cast<UIMulticolumnListbox*>(this)->SelectedItems.Sort(CompareInts);
 	}
 	return SelectedItems[i];
-
-/*
-	// this code works only while dialog window exists
-	if (!Wnd) return -1;		// should not happen - there's no API for selecting multiple items, so UI should exist here
-	int pos = ListView_GetNextItem(Wnd, -1, LVNI_SELECTED);
-	while (--i >= 0 && pos >= 0)
-		pos = ListView_GetNextItem(Wnd, pos, LVNI_SELECTED);
-	return pos;
-*/
 }
 
 void UIMulticolumnListbox::RemoveItem(int itemIndex)
 {
-	int numItems = Items.Num() / NumColumns;
+	int numItems = GetItemCount();
 	if (itemIndex < 0 || itemIndex >= numItems)
 		return;									// out of range
 	// remove from Items array
@@ -1219,16 +1253,13 @@ void UIMulticolumnListbox::RemoveItem(int itemIndex)
 	if (Wnd)
 	{
 		// remove item
-		ListView_DeleteItem(Wnd, itemIndex);
-		// renumber items - keep their lParam values correct
-		LVITEM lvi;
-		lvi.mask = LVIF_PARAM;
-		lvi.iSubItem = 0;
-		for (int i = itemIndex; i < numItems - 1; i++) // 1 item was removed, so count is smaller by 1
+		if (!IsVirtualMode)
 		{
-			lvi.iItem = i;
-			lvi.lParam = i;
-			ListView_SetItem(Wnd, &lvi);
+		ListView_DeleteItem(Wnd, itemIndex);
+		}
+		else
+		{
+			ListView_SetItemCount(Wnd, numItems - 1);
 		}
 	}
 	// remove from selection
@@ -1372,6 +1403,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	DWORD style = Multiselect ? 0 : LVS_SINGLESEL;
+	if (IsVirtualMode) style |= LVS_OWNERDATA;
 
 	Wnd = Window(WC_LISTVIEW, "",
 		style | LVS_REPORT | LVS_SHOWSELALWAYS | WS_VSCROLL | WS_TABSTOP,
@@ -1425,7 +1457,9 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	}
 
 	// add items
-	int numItems = (Items.Num() / NumColumns) - 1;
+	int numItems = GetItemCount();
+	if (!IsVirtualMode)
+	{
 	LVITEM lvi;
 	lvi.mask = LVIF_TEXT | LVIF_PARAM;
 	lvi.pszText = LPSTR_TEXTCALLBACK;
@@ -1435,6 +1469,11 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 		lvi.iItem = i;
 		lvi.lParam = i;
 		ListView_InsertItem(Wnd, &lvi);
+	}
+	}
+	else
+	{
+		ListView_SetItemCount(Wnd, numItems);
 	}
 
 	// set selection
@@ -1453,7 +1492,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		// Note: this callback is executed only when items is visualized, so we can
 		// add items in "lazy" fashion.
 		NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lParam;
-		int itemIndex = (plvdi->item.lParam + 1) * NumColumns;
+		int itemIndex = (plvdi->item.iItem + 1) * NumColumns;
 		plvdi->item.pszText = const_cast<char*>(*Items[itemIndex + plvdi->item.iSubItem]);
 		return true;
 	}
@@ -1465,19 +1504,28 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		{
 			if ((nmlv->uOldState ^ nmlv->uNewState) & LVIS_SELECTED)
 			{
-				int item = nmlv->lParam;
-				int pos = SelectedItems.FindItem(item);
+				int item = nmlv->iItem;
 				if (nmlv->uNewState & LVIS_SELECTED)
 				{
 					// the item could be already in selection list when we're creating control
 					// and setting selection for all SelectedItems
+					int pos = SelectedItems.FindItem(item);
 					if (pos < 0)
 						SelectedItems.Add(item);
 				}
 				else
 				{
+					if (item != -1)
+					{
+						int pos = SelectedItems.FindItem(item);
 					assert(pos >= 0);
 					SelectedItems.RemoveAtSwap(pos);
+				}
+					else
+					{
+						// iItem == -1 means all items
+						SelectedItems.Empty();
+					}
 				}
 				// callbacks
 				if (GetSelectionCount() <= 1)
@@ -1496,6 +1544,32 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 			}
 		}
 		return true;
+	}
+
+	if (cmd == LVN_ODSTATECHANGED && IsVirtualMode)
+	{
+		// special selection mode for selecting range of items with Shift key
+		NMLVODSTATECHANGE* state = (NMLVODSTATECHANGE*)lParam;
+		if ((state->uOldState ^ state->uNewState) & LVIS_SELECTED)
+		{
+			assert(state->uNewState & LVIS_SELECTED);	// unselection is made with LVN_ITEMCHANGED, with iItem=-1
+			SelectedItems.Empty(state->iTo - state->iFrom + 1);
+			for (int item = state->iFrom; item <= state->iTo; item++)
+				SelectedItems.Add(item);
+			// notify about selection changes (multiple values changed, so no per-item notifications)
+			if (SelChangedCallback)
+				SelChangedCallback(this);
+#if DEBUG_MULTILIST_SEL
+			PrintSelection("HandleCommand", SelectedItems);
+#endif
+		}
+		return true;
+	}
+
+	if (cmd == LVN_ODFINDITEM && IsVirtualMode)
+	{
+		//!! TODO: search
+		return false;
 	}
 
 	if (cmd == LVN_ITEMACTIVATE)

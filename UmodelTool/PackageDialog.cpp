@@ -112,6 +112,7 @@ void UIPackageDialog::InitUI()
 				.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
 				.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
 				.Expose(FlatPackageList)
+				.SetVirtualMode()		//!! TODO: use callbacks to retrieve item texts
 				.AllowMultiselect()
 				//?? right-align text in numeric columns
 				.AddColumn("Package name")
@@ -266,14 +267,56 @@ void UIPackageDialog::SelectDirFromFilename(const char* filename)
 	}
 }
 
+class CFilter
+{
+public:
+	CFilter(const char* value)
+	{
+		if (value)
+		{
+			char buffer[1024];
+			appStrncpyz(buffer, value, ARRAY_COUNT(buffer));
+			char* start = buffer;
+			bool shouldBreak = false;
+			while (!shouldBreak)
+			{
+				char* end = start;
+				while ((*end != ' ') && (*end != 0))
+				{
+					end++;
+				}
+				shouldBreak = (*end == 0);
+				*end = 0;
+				if (*start != 0)
+				{
+					Values.Add(start);
+				}
+				start = end + 1;
+			}
+		}
+	}
+	bool Filter(const char* str) const
+	{
+//		if (Values.Num() == 0) return true;
+		for (int i = 0; i < Values.Num(); i++)
+		{
+			if (!appStristr(str, *Values[i]))
+				return false;
+		}
+		return true;
+	}
+
+private:
+	TArray<FString>		Values;
+};
+
 void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 {
 	PackageListbox->RemoveAllItems();
 	SelectedDir = text;
 	DirectorySelected = true;
 
-	const char* filter = *PackageFilter;
-	if (!filter[0]) filter = NULL;
+	CFilter filter(*PackageFilter);
 
 	for (int i = 0; i < Packages.Num(); i++)
 	{
@@ -286,7 +329,7 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 			(s && !strcmp(buffer, text)))		// other directory
 		{
 			const char* packageName = s ? s : buffer;
-			if (!filter || appStristr(packageName, filter))
+			if (filter.Filter(packageName))
 			{
 				// this package is in selected directory
 				AddPackageToList(PackageListbox, package, true);
@@ -297,17 +340,21 @@ void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 
 void UIPackageDialog::FillFlatPackageList()
 {
+	FlatPackageList->LockUpdate(); // HUGE performance gain. Warning: don't use "return" here without UnlockUpdate()!
+
 	FlatPackageList->RemoveAllItems();
 
-	const char* filter = *PackageFilter;
-	if (!filter[0]) filter = NULL;
+	CFilter filter(*PackageFilter);
 
+	FlatPackageList->ReserveItems(Packages.Num());
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		const CGameFileInfo* package = Packages[i];
-		if (!filter || appStristr(package->RelativeName, filter))
+		if (filter.Filter(package->RelativeName))
 			AddPackageToList(FlatPackageList, package, false);
 	}
+
+	FlatPackageList->UnlockUpdate();
 }
 
 void UIPackageDialog::AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath)
