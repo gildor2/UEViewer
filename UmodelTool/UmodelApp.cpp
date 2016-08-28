@@ -146,7 +146,7 @@ bool CUmodelApp::ShowPackageUI()
 		TStaticArray<UnPackage*, 256> Packages;
 		for (int i = 0; i < GPackageDialog.SelectedPackages.Num(); i++)
 		{
-			const char* pkgName = *GPackageDialog.SelectedPackages[i];
+			const char* pkgName = GPackageDialog.SelectedPackages[i]->RelativeName;
 			if (!progress.Progress(pkgName, i, GPackageDialog.SelectedPackages.Num()))
 			{
 				cancelled = true;
@@ -274,9 +274,9 @@ bool CUmodelApp::ShowPackageUI()
 	unguard;
 }
 
-void CUmodelApp::SetPackageName(const char* name)
+void CUmodelApp::SetPackage(UnPackage* package)
 {
-	GPackageDialog.SelectPackage(name);
+	GPackageDialog.SelectPackage(package);
 }
 
 void CUmodelApp::ShowErrorDialog()

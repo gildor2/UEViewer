@@ -11,6 +11,189 @@
 
 
 /*-----------------------------------------------------------------------------
+	UIPackageList
+-----------------------------------------------------------------------------*/
+
+class CFilter
+{
+public:
+	CFilter(const char* value)
+	{
+		if (value)
+		{
+			char buffer[1024];
+			appStrncpyz(buffer, value, ARRAY_COUNT(buffer));
+			char* start = buffer;
+			bool shouldBreak = false;
+			while (!shouldBreak)
+			{
+				char* end = start;
+				while ((*end != ' ') && (*end != 0))
+				{
+					end++;
+				}
+				shouldBreak = (*end == 0);
+				*end = 0;
+				if (*start != 0)
+				{
+					Values.Add(start);
+				}
+				start = end + 1;
+			}
+		}
+	}
+	bool Filter(const char* str) const
+	{
+		for (int i = 0; i < Values.Num(); i++)
+		{
+			if (!appStristr(str, *Values[i]))
+				return false;
+		}
+		return true;
+	}
+
+private:
+	TArray<FString>		Values;
+};
+
+
+class UIPackageList : public UIMulticolumnListbox
+{
+   	DECLARE_UI_CLASS(UIPackageList, UIMulticolumnListbox);
+public:
+	bool				StripPath;
+	UIPackageDialog::PackageList Packages;
+
+	enum
+	{
+		COLUMN_Name,
+		COLUMN_NumSkel,
+		COLUMN_NumStat,
+		COLUMN_NumAnim,
+		COLUMN_NumTex,
+		COLUMN_Size,
+		COLUMN_Count
+	};
+
+	UIPackageList(bool InStripPath)
+	:	UIMulticolumnListbox(COLUMN_Count)
+	,	StripPath(InStripPath)
+	{
+		AllowMultiselect();
+		SetVirtualMode();		//!! TODO: use callbacks to retrieve item texts
+		// Add columns
+		//?? right-align text in numeric columns
+		AddColumn("Package name");
+		AddColumn("Skel", 35, TA_Right);
+		AddColumn("Stat", 35, TA_Right);
+		AddColumn("Anim", 35, TA_Right);
+		AddColumn("Tex",  35, TA_Right);
+		AddColumn("Size, Kb", 70, TA_Right);
+	}
+
+	void FillPackageList(UIPackageDialog::PackageList& InPackages, const char* directory, const char* packageFilter)
+	{
+		RemoveAllItems();
+		Packages.Empty();
+
+		CFilter filter(packageFilter);
+
+		for (int i = 0; i < InPackages.Num(); i++)
+		{
+			const CGameFileInfo* package = InPackages[i];
+			char buffer[MAX_PACKAGE_PATH];
+			appStrncpyz(buffer, package->RelativeName, ARRAY_COUNT(buffer));
+			char* s = strrchr(buffer, '/');
+			if (s) *s++ = 0;
+			if ((!s && !directory[0]) ||				// root directory
+				(s && !strcmp(buffer, directory)))		// another directory
+			{
+				const char* packageName = s ? s : buffer;
+				if (filter.Filter(packageName))
+				{
+					// this package is in selected directory
+					AddPackage(package);
+				}
+			}
+		}
+	}
+
+	void FillFlatPackageList(UIPackageDialog::PackageList& InPackages, const char* packageFilter)
+	{
+		LockUpdate(); // HUGE performance gain. Warning: don't use "return" here without UnlockUpdate()!
+
+		RemoveAllItems();
+		Packages.Empty(InPackages.Num());
+
+		CFilter filter(packageFilter);
+
+		ReserveItems(InPackages.Num());
+		for (int i = 0; i < InPackages.Num(); i++)
+		{
+			const CGameFileInfo* package = InPackages[i];
+			if (filter.Filter(package->RelativeName))
+				AddPackage(package);
+		}
+
+		UnlockUpdate();
+	}
+
+	void AddPackage(const CGameFileInfo* package)
+	{
+		Packages.Add(package);
+
+		const char* s = package->RelativeName;
+		if (StripPath)
+		{
+			const char* s2 = strrchr(s, '/');
+			if (s2) s = s2 + 1;
+		}
+		int index = AddItem(s);
+		char buf[32];
+		// put object count information as subitems
+		if (package->PackageScanned)
+		{
+#define ADD_COLUMN(ColumnEnum, Value)		\
+			if (Value)						\
+			{								\
+				appSprintf(ARRAY_ARG(buf), "%d", Value); \
+				AddSubItem(index, ColumnEnum, buf); \
+			}
+			ADD_COLUMN(COLUMN_NumSkel, package->NumSkeletalMeshes);
+			ADD_COLUMN(COLUMN_NumStat, package->NumStaticMeshes);
+			ADD_COLUMN(COLUMN_NumAnim, package->NumAnimations);
+			ADD_COLUMN(COLUMN_NumTex,  package->NumTextures);
+#undef ADD_COLUMN
+		}
+		// size
+		appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
+		AddSubItem(index, COLUMN_Size, buf);
+	}
+
+	void SelectPackages(UIPackageDialog::PackageList& SelectedPackages)
+	{
+		UnselectAllItems();
+		for (int i = 0; i < SelectedPackages.Num(); i++)
+		{
+			int index = Packages.FindItem(SelectedPackages[i]);
+			if (index >= 0)
+				SelectItem(index, true);
+		}
+	}
+
+	void GetSelectedPackages(UIPackageDialog::PackageList& OutPackageList)
+	{
+		OutPackageList.Reset();
+		OutPackageList.AddZeroed(GetSelectionCount());
+		for (int selIndex = 0; selIndex < GetSelectionCount(); selIndex++)
+		{
+			OutPackageList[selIndex] = Packages[GetSelectionIndex(selIndex)];
+		}
+	}
+};
+
+
+/*-----------------------------------------------------------------------------
 	Main UI code
 -----------------------------------------------------------------------------*/
 
@@ -35,11 +218,15 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 	return ModalResult;
 }
 
-void UIPackageDialog::SelectPackage(const char* name)
+void UIPackageDialog::SelectPackage(UnPackage* package)
 {
 	SelectedPackages.Empty();
-	SelectedPackages.Add(name);
-	SelectDirFromFilename(name);
+	const CGameFileInfo* info = appFindGameFile(package->Filename);
+	if (info)
+	{
+		SelectedPackages.Add(info);
+		SelectDirFromFilename(package->Filename);
+	}
 }
 
 static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInfo*> &param)
@@ -47,17 +234,6 @@ static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInf
 	param.Add(file);
 	return true;
 }
-
-enum
-{
-	COLUMN_Name,
-	COLUMN_NumSkel,
-	COLUMN_NumStat,
-	COLUMN_NumAnim,
-	COLUMN_NumTex,
-	COLUMN_Size,
-	COLUMN_Count
-};
 
 void UIPackageDialog::InitUI()
 {
@@ -92,35 +268,10 @@ void UIPackageDialog::InitUI()
 					.SetItemHeight(20)
 					.Expose(PackageTree)
 				+ NewControl(UISpacer)
-				+ NewControl(UIMulticolumnListbox, COLUMN_Count)
-					.SetHeight(-1)
-					.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
-					.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
-					.Expose(PackageListbox)
-					.AllowMultiselect()
-					//?? right-align text in numeric columns
-					.AddColumn("Package name")
-					.AddColumn("Skel", 35, TA_Right)
-					.AddColumn("Stat", 35, TA_Right)
-					.AddColumn("Anim", 35, TA_Right)
-					.AddColumn("Tex",  35, TA_Right)
-					.AddColumn("Size, Kb", 70, TA_Right)
+				+ CreatePackageListControl(true).Expose(PackageListbox)
 			]
 			// page 1: single ListBox
-			+ NewControl(UIMulticolumnListbox, COLUMN_Count)
-				.SetHeight(-1)
-				.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
-				.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
-				.Expose(FlatPackageList)
-				.SetVirtualMode()		//!! TODO: use callbacks to retrieve item texts
-				.AllowMultiselect()
-				//?? right-align text in numeric columns
-				.AddColumn("Package name")
-				.AddColumn("Skel", 35, TA_Right)
-				.AddColumn("Stat", 35, TA_Right)
-				.AddColumn("Anim", 35, TA_Right)
-				.AddColumn("Tex",  35, TA_Right)
-				.AddColumn("Size, Kb", 70, TA_Right)
+			+ CreatePackageListControl(false).Expose(FlatPackageList)
 		]
 	];
 
@@ -205,48 +356,35 @@ void UIPackageDialog::InitUI()
 			.SetCancel()
 	];
 
-	UpdateFlatMode();
+	RefreshPackageListbox();
+}
+
+UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
+{
+	UIPackageList& List = NewControl(UIPackageList, StripPath);
+	List.SetHeight(-1)
+		.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
+		.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this));
+	return List;
 }
 
 /*-----------------------------------------------------------------------------
 	Support for tree and flat package lists
 -----------------------------------------------------------------------------*/
 
+// Retrieve list of selected packages from currently active UIPackageList
 void UIPackageDialog::UpdateSelectedPackages()
 {
-	SelectedPackages.Reset();
-
 	if (!UseFlatView)
 	{
-		// get package name from directory + name
-		for (int selIndex = 0; selIndex < PackageListbox->GetSelectionCount(); selIndex++)
-		{
-			const char* pkgInDir = PackageListbox->GetItem(PackageListbox->GetSelectionIndex(selIndex));
-			const char* dir = *SelectedDir;
-			FString* newPackageName = new (SelectedPackages) FString;
-			if (dir[0])
-			{
-				char buffer[MAX_PACKAGE_PATH];
-				appSprintf(ARRAY_ARG(buffer), "%s/%s", dir, pkgInDir);
-				*newPackageName = buffer;
-			}
-			else
-			{
-				*newPackageName = pkgInDir;
-			}
-		}
+		PackageListbox->GetSelectedPackages(SelectedPackages);
 	}
 	else
 	{
-		// use flat list, with relative filename (including path)
-		for (int selIndex = 0; selIndex < FlatPackageList->GetSelectionCount(); selIndex++)
-		{
-			FString* newPackageName = new (SelectedPackages) FString;
-			const char* text = FlatPackageList->GetItem(FlatPackageList->GetSelectionIndex(selIndex));
-			*newPackageName = text;
-			if (selIndex == 0)
-				SelectDirFromFilename(text);
-		}
+		FlatPackageList->GetSelectedPackages(SelectedPackages);
+		// Update currently selected directory in tree
+		if (SelectedPackages.Num())
+			SelectDirFromFilename(SelectedPackages[0]->RelativeName);
 	}
 }
 
@@ -267,150 +405,42 @@ void UIPackageDialog::SelectDirFromFilename(const char* filename)
 	}
 }
 
-class CFilter
-{
-public:
-	CFilter(const char* value)
-	{
-		if (value)
-		{
-			char buffer[1024];
-			appStrncpyz(buffer, value, ARRAY_COUNT(buffer));
-			char* start = buffer;
-			bool shouldBreak = false;
-			while (!shouldBreak)
-			{
-				char* end = start;
-				while ((*end != ' ') && (*end != 0))
-				{
-					end++;
-				}
-				shouldBreak = (*end == 0);
-				*end = 0;
-				if (*start != 0)
-				{
-					Values.Add(start);
-				}
-				start = end + 1;
-			}
-		}
-	}
-	bool Filter(const char* str) const
-	{
-//		if (Values.Num() == 0) return true;
-		for (int i = 0; i < Values.Num(); i++)
-		{
-			if (!appStristr(str, *Values[i]))
-				return false;
-		}
-		return true;
-	}
-
-private:
-	TArray<FString>		Values;
-};
-
 void UIPackageDialog::OnTreeItemSelected(UITreeView* sender, const char* text)
 {
-	PackageListbox->RemoveAllItems();
 	SelectedDir = text;
 	DirectorySelected = true;
-
-	CFilter filter(*PackageFilter);
-
-	for (int i = 0; i < Packages.Num(); i++)
-	{
-		const CGameFileInfo* package = Packages[i];
-		char buffer[MAX_PACKAGE_PATH];
-		appStrncpyz(buffer, package->RelativeName, ARRAY_COUNT(buffer));
-		char* s = strrchr(buffer, '/');
-		if (s) *s++ = 0;
-		if ((!s && !text[0]) ||					// root directory
-			(s && !strcmp(buffer, text)))		// other directory
-		{
-			const char* packageName = s ? s : buffer;
-			if (filter.Filter(packageName))
-			{
-				// this package is in selected directory
-				AddPackageToList(PackageListbox, package, true);
-			}
-		}
-	}
-}
-
-void UIPackageDialog::FillFlatPackageList()
-{
-	FlatPackageList->LockUpdate(); // HUGE performance gain. Warning: don't use "return" here without UnlockUpdate()!
-
-	FlatPackageList->RemoveAllItems();
-
-	CFilter filter(*PackageFilter);
-
-	FlatPackageList->ReserveItems(Packages.Num());
-	for (int i = 0; i < Packages.Num(); i++)
-	{
-		const CGameFileInfo* package = Packages[i];
-		if (filter.Filter(package->RelativeName))
-			AddPackageToList(FlatPackageList, package, false);
-	}
-
-	FlatPackageList->UnlockUpdate();
-}
-
-void UIPackageDialog::AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath)
-{
-	const char* s = package->RelativeName;
-	if (stripPath)
-	{
-		const char* s2 = strrchr(s, '/');
-		if (s2) s = s2 + 1;
-	}
-	int index = listbox->AddItem(s);
-	char buf[32];
-	// object counts
-	if (package->PackageScanned)
-	{
-#define ADD_COLUMN(ColumnEnum, Value)	\
-		if (Value)						\
-		{								\
-			appSprintf(ARRAY_ARG(buf), "%d", Value); \
-			listbox->AddSubItem(index, ColumnEnum, buf); \
-		}
-		ADD_COLUMN(COLUMN_NumSkel, package->NumSkeletalMeshes);
-		ADD_COLUMN(COLUMN_NumStat, package->NumStaticMeshes);
-		ADD_COLUMN(COLUMN_NumAnim, package->NumAnimations);
-		ADD_COLUMN(COLUMN_NumTex,  package->NumTextures);
-#undef ADD_COLUMN
-	}
-	// size
-	appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
-	listbox->AddSubItem(index, COLUMN_Size, buf);
+	PackageListbox->FillPackageList(Packages, text, *PackageFilter);
 }
 
 void UIPackageDialog::OnFlatViewChanged(UICheckbox* sender, bool value)
 {
+	// call UpdateSelectedPackages using previous UseFlatView value
 	UseFlatView = !UseFlatView;
 	UpdateSelectedPackages();
 	UseFlatView = !UseFlatView;
 
-	UpdateFlatMode();
+	RefreshPackageListbox();
 }
 
-void UIPackageDialog::UpdateFlatMode()
+void UIPackageDialog::RefreshPackageListbox()
 {
+	// What this function does:
+	// 1. clear currently unused list
+	// 2. fill current UIPackageList with filtered list of packages
+	// 3. update selection - preserve it when changing flat mode value, or when typing something in filter box
+	// 4. update dialog button states according to selection state (OnPackageSelected)
+	// 5. activate selected control (use FlatViewPager)
 #if 0
 	appPrintf("Selected packages:\n");
-	for (int i = 0; i < SelectedPackages.Num(); i++) appPrintf("  %s\n", *SelectedPackages[i]);
+	for (int i = 0; i < SelectedPackages.Num(); i++) appPrintf("  %s\n", SelectedPackages[i]->RelativeName);
 #endif
 	if (UseFlatView)
 	{
 		// switching to flat list
 		PackageListbox->RemoveAllItems();
-		FillFlatPackageList();
+		FlatPackageList->FillFlatPackageList(Packages, *PackageFilter);
 		// select item which was active in tree+list
-		FlatPackageList->UnselectAllItems();
-		for (int i = 0; i < SelectedPackages.Num(); i++)
-			FlatPackageList->SelectItem(SelectedPackages[i], true);
+		FlatPackageList->SelectPackages(SelectedPackages);
 		// update buttons enable state
 		OnPackageSelected(FlatPackageList);
 	}
@@ -419,20 +449,13 @@ void UIPackageDialog::UpdateFlatMode()
 		// switching to tree+list
 		FlatPackageList->RemoveAllItems();
 		PackageTree->SelectItem(*SelectedDir);
-		OnTreeItemSelected(PackageTree, *SelectedDir);
+		OnTreeItemSelected(PackageTree, *SelectedDir); // fills package list
 		// select directory and package
-		PackageListbox->UnselectAllItems();
-		for (int i = 0; i < SelectedPackages.Num(); i++)
-		{
-			const char *s = SelectedPackages[i];
-			const char* s2 = strrchr(s, '/');	// strip path
-			if (s2) s = s2+1;
-			//!! todo: compare string between [s,s2] with SelectedDir, add only when strings are equal
-			PackageListbox->SelectItem(s, true);
-		}
+		PackageListbox->SelectPackages(SelectedPackages);
 		// update buttons enable state
 		OnPackageSelected(PackageListbox);
 	}
+	// switch control
 	FlatViewPager->SetActivePage(UseFlatView ? 1 : 0);
 }
 
@@ -440,7 +463,7 @@ void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
 {
 	// re-filter lists
 	UpdateSelectedPackages();
-	UpdateFlatMode();
+	RefreshPackageListbox();
 }
 
 /*-----------------------------------------------------------------------------
@@ -498,7 +521,7 @@ void UIPackageDialog::ScanContent()
 
 	// update package list with new data
 	UpdateSelectedPackages();
-	UpdateFlatMode();
+	RefreshPackageListbox();
 }
 
 
@@ -515,6 +538,7 @@ static void CopyStream(FArchive *Src, FILE *Dst, int Count)
 	}
 }
 
+//!! TODO: move to PackageUtils.cpp
 void UIPackageDialog::SavePackages()
 {
 	guard(UIPackageDialog::SavePackages);
@@ -524,6 +548,8 @@ void UIPackageDialog::SavePackages()
 	//!! - decompress packages
 	//!! - preserve package paths
 	//!! - destination directory
+
+	// We are using selection, so update it.
 	UpdateSelectedPackages();
 
 	UIProgressDialog progress;
@@ -532,9 +558,8 @@ void UIPackageDialog::SavePackages()
 
 	for (int i = 0; i < SelectedPackages.Num(); i++)
 	{
-		char SrcFile[1024];
-		strcpy(SrcFile, *SelectedPackages[i]);
-		const CGameFileInfo* file = appFindGameFile(SrcFile);
+		const CGameFileInfo* file = SelectedPackages[i];
+
 		assert(file);
 		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
 			break;
@@ -553,11 +578,14 @@ void UIPackageDialog::SavePackages()
 			// cleanup
 			delete Ar;
 			fclose(out);
-			unguardf("%s", SrcFile);
+			unguardf("%s", file->RelativeName);
 		}
 
 		// TODO: refactor the code! Should process linked content by adding them to SelectedPackages list etc
 		// Save ubulk files too
+		char SrcFile[1024];
+		strcpy(SrcFile, SelectedPackages[i]->RelativeName);
+
 		char* s = strrchr(SrcFile, '.');
 		if (s && !stricmp(s, ".uasset"))
 		{

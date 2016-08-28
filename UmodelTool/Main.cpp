@@ -1058,7 +1058,7 @@ int main(int argc, char **argv)
 #if HAS_UI
 		// Put argPkgName into package selection dialog, so when opening a package window for the first
 		// time, currently opened package will be selected
-		if (!GApplication.GuiShown) GApplication.SetPackageName(MainPackage->Filename);
+		if (!GApplication.GuiShown) GApplication.SetPackage(MainPackage);
 #endif // HAS_UI
 	main_loop:
 		// show object

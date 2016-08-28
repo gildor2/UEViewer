@@ -2977,7 +2977,11 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 	TRY {
 	return dlg->WndProc(hWnd, msg, wParam, lParam);
 	} CATCH_CRASH {
-/*		if (GErrorHistory[0])
+#if MAX_DEBUG
+		// sometimes when working with debugger, exception inside UI could not be passed outside,
+		// and program crashed bypassing out exception handler - always show error information in
+		// MAX_DEBUG mode
+		if (GErrorHistory[0])
 		{
 //			appPrintf("ERROR: %s\n", GErrorHistory);
 			appNotify("ERROR in WindowProc: %s\n", GErrorHistory);
@@ -2988,7 +2992,8 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 			appNotify("Unknown error in WindowProc\n");
 		}
 //		exit(1);
-//		dlg->CloseDialog(true); */
+//		dlg->CloseDialog(true);
+#endif // MAX_DEBUG
 		THROW;
 	}
 #endif

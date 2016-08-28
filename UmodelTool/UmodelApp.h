@@ -48,7 +48,7 @@ public:
 #if HAS_UI
 	bool ShowStartupDialog(UmodelSettings& settings);
 	bool ShowPackageUI();
-	void SetPackageName(const char* name);
+	void SetPackage(UnPackage* package);
 	void ShowErrorDialog();
 	// menu callbacks
 	void PrevObject()

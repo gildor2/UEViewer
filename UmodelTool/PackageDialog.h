@@ -3,10 +3,14 @@
 
 #if HAS_UI
 
+class UIPackageList;
+
 class UIPackageDialog : public UIBaseDialog
 {
 public:
 	UIPackageDialog();
+
+	typedef TArray<const CGameFileInfo*> PackageList;
 
 	enum EResult
 	{
@@ -16,15 +20,15 @@ public:
 	};
 
 	EResult Show();
-	void SelectPackage(const char* name);
+	void SelectPackage(UnPackage* package);
 
-	TArray<FString>	SelectedPackages;
+	PackageList		SelectedPackages;
 
 protected:
 	UIPageControl*	FlatViewPager;
 	UITreeView*		PackageTree;
-	UIMulticolumnListbox* PackageListbox;
-	UIMulticolumnListbox* FlatPackageList;
+	UIPackageList*	PackageListbox;
+	UIPackageList*	FlatPackageList;
 	UIButton*		OkButton;
 	UIButton*		ExportButton;
 	UIMenuItem*		ScanContentMenu;
@@ -37,7 +41,6 @@ protected:
 	FStaticString<64>  PackageFilter;
 	FStaticString<256> SelectedDir;
 
-	typedef TArray<const CGameFileInfo*> PackageList;
 	PackageList		Packages;
 
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
@@ -52,7 +55,9 @@ protected:
 
 	void UpdateSelectedPackages();
 	void SelectDirFromFilename(const char* filename);
-	void UpdateFlatMode();
+	void RefreshPackageListbox();
+
+	UIPackageList& CreatePackageListControl(bool StripPath);
 
 	void FillFlatPackageList();
 	void AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath);

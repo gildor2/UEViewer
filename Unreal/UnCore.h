@@ -1683,7 +1683,7 @@ template<typename T>
 FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
 	guard(TArray::operator new);
-	assert(size == sizeof(T));
+	assert(size == sizeof(T)); // allocating wrong object? can't disallow allocating of "int" inside "TArray<FString>" at compile time ...
 	int index = Array.AddUninitialized(1);
 	return Array.GetData() + index;
 	unguard;
