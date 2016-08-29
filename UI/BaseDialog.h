@@ -590,6 +590,7 @@ class UIMulticolumnListbox : public UIElement
 	DECLARE_CALLBACK(DblClickCallback, int);					// when double-clicked an item
 	DECLARE_CALLBACK(OnGetItemCount, int&);						// true virtual mode (#3): (int& OutItemCount)
 	DECLARE_CALLBACK(OnGetItemText, const char*&, int, int);	// true virtual mode (#3): (char*& OutText, int ItemIndex, int SubItemIndex)
+	DECLARE_CALLBACK(OnColumnClick, int);						// column clicked
 public:
 	static const int MAX_COLUMNS = 16;
 

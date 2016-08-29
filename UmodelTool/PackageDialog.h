@@ -41,12 +41,16 @@ protected:
 	FStaticString<64>  PackageFilter;
 	FStaticString<256> SelectedDir;
 
+	int				SortedColumn;
+	bool			ReverseSort;
+
 	PackageList		Packages;
 
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
 	void OnPackageSelected(UIMulticolumnListbox* sender);
 	void OnFlatViewChanged(UICheckbox* sender, bool value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
+	void OnColumnClick(UIMulticolumnListbox* sender, int column);
 	void OnExportClicked(UIButton* sender);
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
@@ -56,11 +60,9 @@ protected:
 	void UpdateSelectedPackages();
 	void SelectDirFromFilename(const char* filename);
 	void RefreshPackageListbox();
+	void SortPackages();
 
 	UIPackageList& CreatePackageListControl(bool StripPath);
-
-	void FillFlatPackageList();
-	void AddPackageToList(UIMulticolumnListbox* listbox, const CGameFileInfo* package, bool stripPath);
 
 	virtual void InitUI();
 };

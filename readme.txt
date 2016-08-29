@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+30.08.2016
+- UI: added sorting of packages in package dialog
+
 28.08.2016
 - improved package dialog:
   - "filter" box now accepts multiple strings delimited with spaces

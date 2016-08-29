@@ -261,6 +261,8 @@ UIPackageDialog::UIPackageDialog()
 :	DirectorySelected(false)
 ,	ContentScanned(false)
 ,	UseFlatView(false)
+,	SortedColumn(UIPackageList::COLUMN_Name)
+,	ReverseSort(false)
 {}
 
 UIPackageDialog::EResult UIPackageDialog::Show()
@@ -416,7 +418,8 @@ void UIPackageDialog::InitUI()
 			.SetCancel()
 	];
 
-	RefreshPackageListbox();
+	SortPackages(); // will call RefreshPackageListbox()
+//	RefreshPackageListbox();
 }
 
 UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
@@ -424,7 +427,8 @@ UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
 	UIPackageList& List = NewControl(UIPackageList, StripPath);
 	List.SetHeight(-1)
 		.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
-		.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this));
+		.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
+		.SetOnColumnClick(BIND_MEM_CB(&UIPackageDialog::OnColumnClick, this));
 	return List;
 }
 
@@ -519,10 +523,58 @@ void UIPackageDialog::RefreshPackageListbox()
 	FlatViewPager->SetActivePage(UseFlatView ? 1 : 0);
 }
 
-void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
+/*-----------------------------------------------------------------------------
+	Package list sorting code
+-----------------------------------------------------------------------------*/
+
+// We are working in global package list, no matter if we have all packages
+// are filtered by directory name etc, it should work well in any case.
+
+static bool PackageSort_Reverse;
+static int  PackageSort_Column;
+
+static int PackageSortFunction(const CGameFileInfo* const* pA, const CGameFileInfo* const* pB)
 {
-	// re-filter lists
+	const CGameFileInfo* A = *pA;
+	const CGameFileInfo* B = *pB;
+	if (PackageSort_Reverse) Exchange(A, B);
+	int code = 0;
+	switch (PackageSort_Column)
+	{
+	case UIPackageList::COLUMN_Name:
+		code = stricmp(A->RelativeName, B->RelativeName);
+		break;
+	case UIPackageList::COLUMN_Size:
+		code = A->SizeInKb - B->SizeInKb;
+		break;
+	case UIPackageList::COLUMN_NumSkel:
+		code = A->NumSkeletalMeshes - B->NumSkeletalMeshes;
+		break;
+	case UIPackageList::COLUMN_NumStat:
+		code = A->NumStaticMeshes - B->NumStaticMeshes;
+		break;
+	case UIPackageList::COLUMN_NumAnim:
+		code = A->NumAnimations - B->NumAnimations;
+		break;
+	case UIPackageList::COLUMN_NumTex:
+		code = A->NumTextures - B->NumTextures;
+		break;
+	}
+	// make sort stable
+	if (code == 0)
+		code = pA < pB ? -1 : 1;
+
+	return code;
+}
+
+void UIPackageDialog::SortPackages()
+{
 	UpdateSelectedPackages();
+
+	PackageSort_Reverse = ReverseSort;
+	PackageSort_Column = SortedColumn;
+	Packages.Sort(PackageSortFunction);
+
 	RefreshPackageListbox();
 }
 
@@ -681,6 +733,13 @@ void UIPackageDialog::SavePackages()
 	Miscellaneous UI callbacks
 -----------------------------------------------------------------------------*/
 
+void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
+{
+	// re-filter lists
+	UpdateSelectedPackages();
+	RefreshPackageListbox();
+}
+
 void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender)
 {
 	bool enableButtons = (sender->GetSelectionCount() > 0);
@@ -693,6 +752,25 @@ void UIPackageDialog::OnPackageDblClick(UIMulticolumnListbox* sender, int value)
 {
 	if (value != -1)
 		CloseDialog();
+}
+
+void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
+{
+	//!! TODO: show arrows in ListView header.
+	// References
+	// - HDF_SORTDOWN, HDF_SORTUP
+	// - https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb775247(v=vs.85).aspx
+	// - http://cboard.cprogramming.com/windows-programming/69137-listview-arrow-column-head.html
+	if (SortedColumn == column)
+	{
+		ReverseSort = !ReverseSort;
+	}
+	else
+	{
+		SortedColumn = column;
+		ReverseSort = false;
+	}
+	SortPackages();
 }
 
 void UIPackageDialog::OnExportClicked(UIButton* sender)

@@ -1590,6 +1590,13 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		return true;
 	}
 
+	if (cmd == LVN_COLUMNCLICK)
+	{
+		NMLISTVIEW* nmlv = (NMLISTVIEW*)lParam;
+		if (nmlv->iSubItem >= 0 && nmlv->iSubItem < NumColumns && OnColumnClick)
+			OnColumnClick(this, nmlv->iSubItem);
+	}
+
 	if (cmd == LVN_ODFINDITEM && IsVirtualMode)
 	{
 		//!! TODO: search
