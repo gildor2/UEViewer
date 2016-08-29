@@ -66,6 +66,8 @@ public:
 
 	UIElement& SetMenu(UIMenu* menu);
 
+	void Repaint();
+
 	//!! add SetFontHeight(int)
 	/*	Also support bold-italic. Update 'Height' when AutoSize is set.
 		Requires updates in MeasureTextSize()
@@ -570,12 +572,24 @@ protected:
 
 //?? Probably rename to ListView? But we're supporting only "report" style, so it generally looks
 //?? like a Listbox with columns.
+// Ways of using UIMulticolumnListbox:
+// 1. Normal mode: create, add/remove items, display.
+//    Items are stored inside UIMulticolumnListbox. Win32 object contains placeholders - empty items.
+// 2. Virtual mode: create, SetVirtualMode, add/remove items, display.
+//    Items are stored inside UIMulticolumnListbox. Win32 object contains just number of items. Application
+//    works with UIMulticolumnListbox in this mode in exactly the same was as in "normal" mode, however
+//    work with control performed much faster.
+// 3. "True" virtual model with callbacks: create, SetVirtualMode, set callbacks. Set number of items, display.
+//    Items are stored on the side which created this control. UIMulticolumnListbox and Win32 objects
+//    both holds only items count. This is the fastest mode, with lowest possible memory requirement.
 class UIMulticolumnListbox : public UIElement
 {
 	DECLARE_UI_CLASS(UIMulticolumnListbox, UIElement);
-	DECLARE_CALLBACK(Callback, int);					// when single item selected (not for multiselect)
-	DECLARE_CALLBACK(SelChangedCallback);				// when selection changed
-	DECLARE_CALLBACK(DblClickCallback, int);			// when double-clicked an item
+	DECLARE_CALLBACK(Callback, int);							// when single item selected (not for multiselect)
+	DECLARE_CALLBACK(SelChangedCallback);						// when selection changed
+	DECLARE_CALLBACK(DblClickCallback, int);					// when double-clicked an item
+	DECLARE_CALLBACK(OnGetItemCount, int&);						// true virtual mode (#3): (int& OutItemCount)
+	DECLARE_CALLBACK(OnGetItemText, const char*&, int, int);	// true virtual mode (#3): (char*& OutText, int ItemIndex, int SubItemIndex)
 public:
 	static const int MAX_COLUMNS = 16;
 
@@ -589,7 +603,6 @@ public:
 	void RemoveItem(int itemIndex);
 	void RemoveAllItems();
 
-	//!! TODO: for VirtualMode, add callbacks for getting item and subitem texts; perhaps disable AddItem() at all
 	UIMulticolumnListbox& AllowMultiselect() { Multiselect = true; return *this; }
 	UIMulticolumnListbox& SetVirtualMode() { IsVirtualMode = true; return *this; }
 
@@ -602,9 +615,11 @@ public:
 	UIMulticolumnListbox& UnselectItem(const char* item);
 	UIMulticolumnListbox& UnselectAllItems();
 
-	FORCEINLINE int GetItemCount() const { return Items.Num() / NumColumns - 1; }
-	FORCEINLINE const char* GetItem(int itemIndex) const { return GetSumItem(itemIndex, 0); }
-	const char* GetSumItem(int itemIndex, int column) const;
+	int GetItemCount() const;
+	FORCEINLINE const char* GetItem(int itemIndex) const { return GetSubItem(itemIndex, 0); }
+	const char* GetSubItem(int itemIndex, int column) const;
+
+	FORCEINLINE bool IsTrueVirtualMode() const { return (OnGetItemCount != NULL) && (OnGetItemText != NULL); }
 
 	int GetSelectionIndex(int i = 0) const;							// returns -1 when no items selected
 	int GetSelectionCount() const { return SelectedItems.Num(); }	// returns 0 when no items selected

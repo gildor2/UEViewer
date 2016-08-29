@@ -9,6 +9,7 @@
 
 #include "UnPackage.h"
 
+#define USE_FULLY_VIRTUAL_LIST		1		// disable only for testing, to compare UIMulticolumnListbox behavior in virtual modes
 
 /*-----------------------------------------------------------------------------
 	UIPackageList
@@ -89,10 +90,16 @@ public:
 		AddColumn("Anim", 35, TA_Right);
 		AddColumn("Tex",  35, TA_Right);
 		AddColumn("Size, Kb", 70, TA_Right);
+	#if USE_FULLY_VIRTUAL_LIST
+		SetOnGetItemCount(BIND_MEM_CB(&UIPackageList::GetItemCountHandler, this));
+		SetOnGetItemText(BIND_MEM_CB(&UIPackageList::GetItemTextHandler, this));
+	#endif
 	}
 
 	void FillPackageList(UIPackageDialog::PackageList& InPackages, const char* directory, const char* packageFilter)
 	{
+		LockUpdate();
+
 		RemoveAllItems();
 		Packages.Empty();
 
@@ -116,6 +123,8 @@ public:
 				}
 			}
 		}
+
+		UnlockUpdate(); // this will call Repaint()
 	}
 
 	void FillFlatPackageList(UIPackageDialog::PackageList& InPackages, const char* packageFilter)
@@ -142,6 +151,7 @@ public:
 	{
 		Packages.Add(package);
 
+#if !USE_FULLY_VIRTUAL_LIST
 		const char* s = package->RelativeName;
 		if (StripPath)
 		{
@@ -168,6 +178,7 @@ public:
 		// size
 		appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
 		AddSubItem(index, COLUMN_Size, buf);
+#endif // USE_FULLY_VIRTUAL_LIST
 	}
 
 	void SelectPackages(UIPackageDialog::PackageList& SelectedPackages)
@@ -189,6 +200,55 @@ public:
 		{
 			OutPackageList[selIndex] = Packages[GetSelectionIndex(selIndex)];
 		}
+	}
+
+private:
+	// Virtual list mode: get list item count
+	void GetItemCountHandler(UIMulticolumnListbox* Sender, int& OutCount)
+	{
+		OutCount = Packages.Num();
+	}
+
+	// Virtual list mode: show package information in list
+	void GetItemTextHandler(UIMulticolumnListbox* Sender, const char*& OutText, int ItemIndex, int SubItemIndex)
+	{
+		guard(UIPackageList::GetItemTextHandler);
+
+		static char buf[64]; // returning this value outside by pointer, so it is 'static'
+
+		const CGameFileInfo* file = Packages[ItemIndex];
+		if (SubItemIndex == COLUMN_Name)
+		{
+			OutText = StripPath ? file->ShortFilename : file->RelativeName;
+		}
+		else if (SubItemIndex == COLUMN_Size)
+		{
+			appSprintf(ARRAY_ARG(buf), "%d", file->SizeInKb);
+			OutText = buf;
+		}
+		else if (file->PackageScanned)
+		{
+			int value = 0;
+			switch (SubItemIndex)
+			{
+			case COLUMN_NumSkel: value = file->NumSkeletalMeshes; break;
+			case COLUMN_NumStat: value = file->NumStaticMeshes; break;
+			case COLUMN_NumAnim: value = file->NumAnimations; break;
+			case COLUMN_NumTex:  value = file->NumTextures; break;
+			}
+			if (value != 0)
+			{
+				// don't show zero counts
+				appSprintf(ARRAY_ARG(buf), "%d", value);
+				OutText = buf;
+			}
+			else
+			{
+				OutText = "";
+			}
+		}
+
+		unguard;
 	}
 };
 
@@ -476,11 +536,11 @@ static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
 	{
 		const char* ObjectClass = package->GetObjectName(package->GetExport(idx).ClassIndex);
 
-		if (!stricmp(ObjectClass, "SkeletalMesh"))
+		if (!stricmp(ObjectClass, "SkeletalMesh") || !stricmp(ObjectClass, "DestructibleMesh"))
 			file->NumSkeletalMeshes++;
 		else if (!stricmp(ObjectClass, "StaticMesh"))
 			file->NumStaticMeshes++;
-		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "MeshAnimation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet for UE2 and number of sequences for UE3+
+		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "MeshAnimation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet count for UE2 and number of sequences for UE3+
 			file->NumAnimations++;
 		else if (!strnicmp(ObjectClass, "Texture", 7))
 			file->NumTextures++;

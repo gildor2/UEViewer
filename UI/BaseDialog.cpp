@@ -253,6 +253,11 @@ HWND UIElement::Window(const wchar_t* className, const wchar_t* text, DWORD styl
 	return wnd;
 }
 
+void UIElement::Repaint()
+{
+	InvalidateRect(Wnd, NULL, TRUE);
+}
+
 // This function will add another UIElement to chain for creation. As we're
 // using NextChild for both holding a list of group's children and for
 // this operation, there's no overhead here - adding a group of controls
@@ -1212,7 +1217,16 @@ void UIMulticolumnListbox::AddSubItem(int itemIndex, int column, const char* tex
 	unguard;
 }
 
-const char* UIMulticolumnListbox::GetSumItem(int itemIndex, int column) const
+int UIMulticolumnListbox::GetItemCount() const
+{
+	if (!IsTrueVirtualMode())
+		return Items.Num() / NumColumns - 1;
+	int NumItems = 0;
+	OnGetItemCount(const_cast<UIMulticolumnListbox*>(this), NumItems); // callbacks has non-const "this"
+	return NumItems;
+}
+
+const char* UIMulticolumnListbox::GetSubItem(int itemIndex, int column) const
 {
 	guard(UIMulticolumnListbox::AddSubItem);
 
@@ -1492,8 +1506,18 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		// Note: this callback is executed only when items is visualized, so we can
 		// add items in "lazy" fashion.
 		NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lParam;
-		int itemIndex = (plvdi->item.iItem + 1) * NumColumns;
-		plvdi->item.pszText = const_cast<char*>(*Items[itemIndex + plvdi->item.iSubItem]);
+		int itemIndex    = plvdi->item.iItem;
+		int subItemIndex = plvdi->item.iSubItem;
+		if (!IsTrueVirtualMode())
+		{
+			plvdi->item.pszText = const_cast<char*>(*Items[(itemIndex + 1) * NumColumns + subItemIndex]);
+		}
+		else
+		{
+			const char* text = "";
+			OnGetItemText(this, text, itemIndex, subItemIndex);
+			plvdi->item.pszText = const_cast<char*>(text);
+		}
 		return true;
 	}
 
