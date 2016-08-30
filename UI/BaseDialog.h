@@ -1,14 +1,6 @@
 #ifndef __BASE_DIALOG_H__
 #define __BASE_DIALOG_H__
 
-/*!! TODO:
-- TArray<FString>
-  - make StringArray class - TArray<const char*>
-    - will need a destructor
-  - possible improvements:
-    - add Reserve() for StringArray
-*/
-
 #include "Core.h"
 
 #if HAS_UI	// defined in Build.h, included from Core.h
@@ -1078,6 +1070,7 @@ protected:
 	int			IconResId;
 	bool		DoCloseOnEsc;		//!! awful name
 	UIBaseDialog* ParentDialog;
+	bool		IsDialogConstructed;	// true after InitUI() call
 
 	bool ShowDialog(bool modal, const char* title, int width, int height);
 
@@ -1088,6 +1081,13 @@ protected:
 	virtual void InitUI()
 	{}
 };
+
+
+/*-----------------------------------------------------------------------------
+	Static stuff
+-----------------------------------------------------------------------------*/
+
+void UISetExceptionHandler(void (*Handler)());
 
 
 #endif // HAS_UI

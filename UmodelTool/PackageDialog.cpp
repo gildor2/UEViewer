@@ -136,7 +136,9 @@ public:
 
 		CFilter filter(packageFilter);
 
+#if !USE_FULLY_VIRTUAL_LIST
 		ReserveItems(InPackages.Num());
+#endif
 		for (int i = 0; i < InPackages.Num(); i++)
 		{
 			const CGameFileInfo* package = InPackages[i];
@@ -299,6 +301,8 @@ static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInf
 
 void UIPackageDialog::InitUI()
 {
+	guard(UIPackageDialog::InitUI);
+
 	(*this)
 	[
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
@@ -420,6 +424,8 @@ void UIPackageDialog::InitUI()
 
 	SortPackages(); // will call RefreshPackageListbox()
 //	RefreshPackageListbox();
+
+	unguard;
 }
 
 UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
@@ -439,6 +445,10 @@ UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
 // Retrieve list of selected packages from currently active UIPackageList
 void UIPackageDialog::UpdateSelectedPackages()
 {
+	guard(UIPackageDialog::UpdateSelectedPackages);
+
+	if (!IsDialogConstructed) return;	// nothing to read from controls yet, don't damage selection array
+
 	if (!UseFlatView)
 	{
 		PackageListbox->GetSelectedPackages(SelectedPackages);
@@ -450,6 +460,8 @@ void UIPackageDialog::UpdateSelectedPackages()
 		if (SelectedPackages.Num())
 			SelectDirFromFilename(SelectedPackages[0]->RelativeName);
 	}
+
+	unguard;
 }
 
 void UIPackageDialog::SelectDirFromFilename(const char* filename)
@@ -569,6 +581,8 @@ static int PackageSortFunction(const CGameFileInfo* const* pA, const CGameFileIn
 
 void UIPackageDialog::SortPackages()
 {
+	guard(UIPackageDialog::SortPackages);
+
 	UpdateSelectedPackages();
 
 	PackageSort_Reverse = ReverseSort;
@@ -576,6 +590,8 @@ void UIPackageDialog::SortPackages()
 	Packages.Sort(PackageSortFunction);
 
 	RefreshPackageListbox();
+
+	unguard;
 }
 
 /*-----------------------------------------------------------------------------

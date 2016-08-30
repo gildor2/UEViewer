@@ -1618,9 +1618,11 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 			// handle Ctrl+A
 			if (pnkd->wVKey == 'A')
 			{
-				int numItems = Items.Num() / NumColumns - 1;
+				int numItems = GetItemCount();
+				LockUpdate();
 				for (int i = 0; i < numItems; i++)
 					SetItemSelection(i, true);
+				UnlockUpdate();
 			}
 		}
 
@@ -2797,6 +2799,7 @@ UIBaseDialog::UIBaseDialog()
 ,	DoCloseOnEsc(false)
 ,	ParentDialog(NULL)
 ,	IconResId(0)
+,	IsDialogConstructed(false)
 {}
 
 UIBaseDialog::~UIBaseDialog()
@@ -2984,6 +2987,13 @@ void UIBaseDialog::CloseDialog(bool cancel)
 	Wnd = 0;
 }
 
+static void (*GUIExceptionHandler)() = NULL;
+
+void UISetExceptionHandler(void (*Handler)())
+{
+	GUIExceptionHandler = Handler;
+}
+
 INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	UIBaseDialog* dlg;
@@ -3014,17 +3024,16 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 		// MAX_DEBUG mode
 		if (GErrorHistory[0])
 		{
-//			appPrintf("ERROR: %s\n", GErrorHistory);
 			appNotify("ERROR in WindowProc: %s\n", GErrorHistory);
 		}
 		else
 		{
-//			appPrintf("Unknown error\n");
 			appNotify("Unknown error in WindowProc\n");
 		}
-//		exit(1);
-//		dlg->CloseDialog(true);
 #endif // MAX_DEBUG
+//		dlg->CloseDialog(true);
+		if (GUIExceptionHandler)
+			GUIExceptionHandler();
 		THROW;
 	}
 #endif
@@ -3059,7 +3068,9 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		// release old controls, if dialog is opened 2nd time
 		ReleaseControls();
 		// create controls
+		IsDialogConstructed = false;
 		InitUI();
+		IsDialogConstructed = true;
 		CreateGroupControls(this);
 
 		if (Menu)

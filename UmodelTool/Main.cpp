@@ -632,6 +632,29 @@ static void CommandLineError(const char *fmt, ...)
 	exit(1);
 }
 
+// forward
+void UISetExceptionHandler(void (*Handler)());
+
+static void ExceptionHandler()
+{
+	FFileWriter::CleanupOnError();
+	if (GErrorHistory[0])
+	{
+//		appPrintf("ERROR: %s\n", GErrorHistory);
+		appNotify("ERROR: %s\n", GErrorHistory);
+	}
+	else
+	{
+//		appPrintf("Unknown error\n");
+		appNotify("Unknown error\n");
+	}
+	#if HAS_UI
+	if (GApplication.GuiShown)
+		GApplication.ShowErrorDialog();
+	#endif // HAS_UI
+	exit(1);
+}
+
 
 #define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
@@ -1063,6 +1086,7 @@ int main(int argc, char **argv)
 	main_loop:
 		// show object
 		vpInvertXAxis = true;
+		UISetExceptionHandler(ExceptionHandler);
 		GApplication.VisualizerLoop(APP_CAPTION);
 	}
 #endif // RENDERING
@@ -1078,22 +1102,7 @@ int main(int argc, char **argv)
 
 #if DO_GUARD
 	} CATCH_CRASH {
-		FFileWriter::CleanupOnError();
-		if (GErrorHistory[0])
-		{
-//			appPrintf("ERROR: %s\n", GErrorHistory);
-			appNotify("ERROR: %s\n", GErrorHistory);
-		}
-		else
-		{
-//			appPrintf("Unknown error\n");
-			appNotify("Unknown error\n");
-		}
-	#if HAS_UI
-		if (GApplication.GuiShown)
-			GApplication.ShowErrorDialog();
-	#endif // HAS_UI
-		exit(1);
+		ExceptionHandler();
 	}
 #endif
 	return 0;
