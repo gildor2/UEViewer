@@ -589,23 +589,23 @@ public:
 	UIMulticolumnListbox(int numColumns);
 
 	UIMulticolumnListbox& AddColumn(const char* title, int width = -1, ETextAlign align = TA_Left);
-
-	UIMulticolumnListbox& ReserveItems(int count);
-	int AddItem(const char* item);
-	void AddSubItem(int itemIndex, int column, const char* text);
-	void RemoveItem(int itemIndex);
-	void RemoveAllItems();
-
 	UIMulticolumnListbox& AllowMultiselect() { Multiselect = true; return *this; }
 	UIMulticolumnListbox& SetVirtualMode() { IsVirtualMode = true; return *this; }
+	UIMulticolumnListbox& ShowSortArrow(int columnIndex, bool reverseSort);
+
+	UIMulticolumnListbox& ReserveItems(int count);					// not suitable for "true" virtual mode
+	int AddItem(const char* item);									// not suitable for "true" virtual mode
+	void AddSubItem(int itemIndex, int column, const char* text);	// not suitable for "true" virtual mode
+	void RemoveItem(int itemIndex);									// not suitable for "true" virtual mode
+	void RemoveAllItems();
 
 	// select an item; if index==-1, unselect all items; if add==true - extend current selection
 	// with this item (only when multiselect is enabled)
 	UIMulticolumnListbox& SelectItem(int index, bool add = false);
-	UIMulticolumnListbox& SelectItem(const char* item, bool add = false);
+	UIMulticolumnListbox& SelectItem(const char* item, bool add = false); // not suitable for "true" virtual mode
 	// unselect an item
 	UIMulticolumnListbox& UnselectItem(int index);
-	UIMulticolumnListbox& UnselectItem(const char* item);
+	UIMulticolumnListbox& UnselectItem(const char* item);			// not suitable for "true" virtual mode
 	UIMulticolumnListbox& UnselectAllItems();
 
 	int GetItemCount() const;
@@ -617,6 +617,7 @@ public:
 	int GetSelectionIndex(int i = 0) const;							// returns -1 when no items selected
 	int GetSelectionCount() const { return SelectedItems.Num(); }	// returns 0 when no items selected
 
+	// UIElement functions
 	virtual void UnlockUpdate();
 
 protected:
@@ -625,11 +626,14 @@ protected:
 	int			ColumnSizes[MAX_COLUMNS];
 	ETextAlign	ColumnAlign[MAX_COLUMNS];
 	bool		Multiselect;
+	int			SortColumn;
+	bool		SortMode;
 
 	TArray<FString> Items;		// first NumColumns items - column headers, next NumColumns - 1st line, 2nd line, ...
 	TStaticArray<int, 32> SelectedItems;
 
 	void SetItemSelection(int index, bool select);
+	void UpdateListViewHeaderSort();
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);

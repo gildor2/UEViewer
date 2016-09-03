@@ -589,6 +589,8 @@ void UIPackageDialog::SortPackages()
 	PackageSort_Column = SortedColumn;
 	Packages.Sort(PackageSortFunction);
 
+	FlatPackageList->ShowSortArrow(SortedColumn, ReverseSort);
+	PackageListbox->ShowSortArrow(SortedColumn, ReverseSort);
 	RefreshPackageListbox();
 
 	unguard;
@@ -779,12 +781,13 @@ void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
 	// - http://cboard.cprogramming.com/windows-programming/69137-listview-arrow-column-head.html
 	if (SortedColumn == column)
 	{
+		// when the same column clickec again, change sort mode
 		ReverseSort = !ReverseSort;
 	}
 	else
 	{
 		SortedColumn = column;
-		ReverseSort = false;
+		ReverseSort = (column >= 1); // default sort mode for first (name) column is 'normal', for other columns - 'reverse'
 	}
 	SortPackages();
 }

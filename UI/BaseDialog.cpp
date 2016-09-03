@@ -1134,6 +1134,8 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 :	NumColumns(numColumns)
 ,	Multiselect(false)
 ,	IsVirtualMode(false)
+,	SortColumn(-1)
+,	SortMode(false)
 {
 	Height = DEFAULT_LISTBOX_HEIGHT;
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
@@ -1157,6 +1159,50 @@ UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int wid
 	return *this;
 }
 
+void UIMulticolumnListbox::UpdateListViewHeaderSort()
+{
+	HWND hHeader = ListView_GetHeader(Wnd);
+	if (hHeader)
+	{
+		for (int i = 0; i < NumColumns; i++)
+		{
+			HDITEM hItem;
+			hItem.mask = HDI_FORMAT;
+			if (Header_GetItem(hHeader, i, &hItem))
+			{
+				if (i == SortColumn)
+				{
+					// sorting with this column
+					if (SortMode)
+						hItem.fmt = (hItem.fmt & ~HDF_SORTUP) | HDF_SORTDOWN;
+					else
+						hItem.fmt = (hItem.fmt & ~HDF_SORTDOWN) | HDF_SORTUP;
+				}
+				else
+				{
+					// not sorting with this column
+					hItem.fmt = hItem.fmt & ~(HDF_SORTDOWN|HDF_SORTUP);
+				}
+				Header_SetItem(hHeader, i, &hItem);
+			}
+		}
+	}
+}
+
+UIMulticolumnListbox& UIMulticolumnListbox::ShowSortArrow(int columnIndex, bool reverseSort)
+{
+	if ((SortColumn != columnIndex) || (SortMode != reverseSort))
+	{
+		SortColumn = columnIndex;
+		SortMode = reverseSort;
+		if (Wnd)
+		{
+			UpdateListViewHeaderSort();
+		}
+	}
+	return *this;
+}
+
 UIMulticolumnListbox& UIMulticolumnListbox::ReserveItems(int count)
 {
 	Items.ResizeTo((GetItemCount() + count + 1) * NumColumns);
@@ -1176,14 +1222,14 @@ int UIMulticolumnListbox::AddItem(const char* item)
 	{
 		if (!IsVirtualMode)
 		{
-		LVITEM lvi;
-		lvi.mask = LVIF_TEXT | LVIF_PARAM;
-		lvi.pszText = LPSTR_TEXTCALLBACK;
-		lvi.iSubItem = 0;
-		lvi.iItem = numItems;
-		lvi.lParam = numItems;
-		ListView_InsertItem(Wnd, &lvi);
-	}
+			LVITEM lvi;
+			lvi.mask = LVIF_TEXT | LVIF_PARAM;
+			lvi.pszText = LPSTR_TEXTCALLBACK;
+			lvi.iSubItem = 0;
+			lvi.iItem = numItems;
+			lvi.lParam = numItems;
+			ListView_InsertItem(Wnd, &lvi);
+		}
 		else if (!IsUpdateLocked)
 		{
 			ListView_SetItemCount(Wnd, GetItemCount());
@@ -1269,7 +1315,7 @@ void UIMulticolumnListbox::RemoveItem(int itemIndex)
 		// remove item
 		if (!IsVirtualMode)
 		{
-		ListView_DeleteItem(Wnd, itemIndex);
+			ListView_DeleteItem(Wnd, itemIndex);
 		}
 		else
 		{
@@ -1470,20 +1516,22 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 		ListView_InsertColumn(Wnd, i, &column);
 	}
 
+	UpdateListViewHeaderSort();
+
 	// add items
 	int numItems = GetItemCount();
 	if (!IsVirtualMode)
 	{
-	LVITEM lvi;
-	lvi.mask = LVIF_TEXT | LVIF_PARAM;
-	lvi.pszText = LPSTR_TEXTCALLBACK;
-	lvi.iSubItem = 0;
-	for (i = 0; i < numItems; i++)
-	{
-		lvi.iItem = i;
-		lvi.lParam = i;
-		ListView_InsertItem(Wnd, &lvi);
-	}
+		LVITEM lvi;
+		lvi.mask = LVIF_TEXT | LVIF_PARAM;
+		lvi.pszText = LPSTR_TEXTCALLBACK;
+		lvi.iSubItem = 0;
+		for (i = 0; i < numItems; i++)
+		{
+			lvi.iItem = i;
+			lvi.lParam = i;
+			ListView_InsertItem(Wnd, &lvi);
+		}
 	}
 	else
 	{
@@ -1542,9 +1590,9 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 					if (item != -1)
 					{
 						int pos = SelectedItems.FindItem(item);
-					assert(pos >= 0);
-					SelectedItems.RemoveAtSwap(pos);
-				}
+						assert(pos >= 0);
+						SelectedItems.RemoveAtSwap(pos);
+					}
 					else
 					{
 						// iItem == -1 means all items
@@ -2906,16 +2954,16 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 #if DO_GUARD
 		TRY {
 #endif
-		int result = DialogBoxIndirectParam(
-			hInstance,					// hInstance
-			tmpl,						// lpTemplate
-			ParentWindow,				// hWndParent
-			StaticWndProc,				// lpDialogFunc
-			(LPARAM)this				// lParamInit
-		);
-		GCurrentDialog = ParentDialog;
-		ParentDialog = NULL;
-		return (result != IDCANCEL);
+			int result = DialogBoxIndirectParam(
+				hInstance,				// hInstance
+				tmpl,					// lpTemplate
+				ParentWindow,			// hWndParent
+				StaticWndProc,			// lpDialogFunc
+				(LPARAM)this			// lParamInit
+			);
+			GCurrentDialog = ParentDialog;
+			ParentDialog = NULL;
+			return (result != IDCANCEL);
 #if DO_GUARD
 		} CATCH_CRASH {
 			GCurrentDialog = ParentDialog;
@@ -3016,7 +3064,7 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 	// windows will not allow us to pass SEH through the message handler, so
 	// add a SEH guards here
 	TRY {
-	return dlg->WndProc(hWnd, msg, wParam, lParam);
+		return dlg->WndProc(hWnd, msg, wParam, lParam);
 	} CATCH_CRASH {
 #if MAX_DEBUG
 		// sometimes when working with debugger, exception inside UI could not be passed outside,
