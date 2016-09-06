@@ -646,6 +646,8 @@ void UIPackageDialog::ScanContent()
 	if (cancelled) return;
 	ContentScanned = true;
 
+	SortPackages();
+
 	// finished - no needs to perform scan again, disable button
 	ScanContentMenu->Enable(false);
 
@@ -774,11 +776,6 @@ void UIPackageDialog::OnPackageDblClick(UIMulticolumnListbox* sender, int value)
 
 void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
 {
-	//!! TODO: show arrows in ListView header.
-	// References
-	// - HDF_SORTDOWN, HDF_SORTUP
-	// - https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb775247(v=vs.85).aspx
-	// - http://cboard.cprogramming.com/windows-programming/69137-listview-arrow-column-head.html
 	if (SortedColumn == column)
 	{
 		// when the same column clickec again, change sort mode
