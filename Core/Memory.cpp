@@ -100,12 +100,12 @@ CBlockHeader* CBlockHeader::first = NULL;
 void *appMalloc(int size, int alignment)
 {
 	guard(appMalloc);
-	if (size < 0 || size >= (256<<20))		// upper limit to allocation is 256Mb
-		appError("Trying to allocate %d bytes", size);
+	if (size < 0 || size >= (256<<20))		// upper limit for single allocation is 256Mb
+		appError("Memory: bad allocation size %d bytes", size);
 	assert(alignment > 1 && alignment <= 256 && ((alignment & (alignment - 1)) == 0));
 	void *block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
 	if (!block)
-		appError("Failed to allocate %d bytes", size);
+		appError("Out of memory: failed to allocate %d bytes", size);
 	void *ptr = Align(OffsetPointer(block, sizeof(CBlockHeader)), alignment);
 	if (size > 0)
 		memset(ptr, 0, size);
@@ -149,7 +149,7 @@ void *appMalloc(int size, int alignment)
 #endif
 
 	return ptr;
-	unguardf("size=%d", size);
+	unguardf("size=%d (total=%d Mbytes)", size, (int)(GTotalAllocationSize >> 20));
 }
 
 void* appRealloc(void *ptr, int newSize)

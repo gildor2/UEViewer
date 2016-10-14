@@ -6,3 +6,10 @@
 *.bat eol=crlf
 *.sh eol=lf
 *.pl eol=lf
+
+# Setup Linguist attributes for correct language statistics on Github
+# See https://github.com/github/linguist/blob/master/README.md
+Docs/* linguist-documentation
+libs/* linguist-vendored
+*.h linguist-language=cpp
+# There's also a number of generated files, however it is not possible to mark them with special attribute
