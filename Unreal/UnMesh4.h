@@ -196,6 +196,7 @@ public:
 	UObject					*BodySetup;			// UBodySetup
 	UObject*				NavCollision;		// UNavCollision
 	FGuid					LightingGuid;
+	bool					bUseHighPrecisionTangentBasis;
 
 	TArray<UStaticMeshSocket*> Sockets;
 

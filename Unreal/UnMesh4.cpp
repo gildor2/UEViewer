@@ -850,6 +850,7 @@ void USkeletalMesh4::ConvertMesh()
 
 UStaticMesh4::UStaticMesh4()
 :	ConvertedMesh(NULL)
+,	bUseHighPrecisionTangentBasis(false)
 {}
 
 UStaticMesh4::~UStaticMesh4()
@@ -926,15 +927,26 @@ struct FPositionVertexBuffer4
 
 static int  GNumStaticUVSets   = 1;
 static bool GUseStaticFloatUVs = true;
+static bool GUseHighPrecisionTangents = false;
 
 struct FStaticMeshUVItem4
 {
-	FPackedNormal	Normal[3];
+	FPackedNormal	Normal[3];					//?? do we need 3 items here?
 	FMeshUVFloat	UV[MAX_STATIC_UV_SETS_UE4];
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticMeshUVItem4& V)
 	{
+		if (!GUseHighPrecisionTangents)
+		{
 		Ar << V.Normal[0] << V.Normal[2];	// TangentX and TangentZ
+		}
+		else
+		{
+			FPackedRGBA16N Normal, Tangent;
+			Ar << Normal << Tangent;
+			V.Normal[0] = Normal.ToPackedNormal();
+			V.Normal[2] = Tangent.ToPackedNormal();
+		}
 
 		if (GUseStaticFloatUVs)
 		{
@@ -962,16 +974,24 @@ struct FStaticMeshVertexBuffer4
 	int				Stride;
 	int				NumVertices;
 	bool			bUseFullPrecisionUVs;
+	bool			bUseHighPrecisionTangentBasis;
 	TArray<FStaticMeshUVItem4> UV;
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticMeshVertexBuffer4& S)
 	{
 		guard(FStaticMeshVertexBuffer4<<);
 
+		S.bUseHighPrecisionTangentBasis = false;
+
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		Ar << S.NumTexCoords << S.Stride << S.NumVertices;
 		Ar << S.bUseFullPrecisionUVs;
-		DBG_STAT("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d\n", S.NumTexCoords, S.Stride, S.NumVertices, S.bUseFullPrecisionUVs);
+		if (Ar.ArVer >= VER_UE4_12)
+		{
+			Ar << S.bUseHighPrecisionTangentBasis;
+		}
+		GUseHighPrecisionTangents = S.bUseHighPrecisionTangentBasis;
+		DBG_STAT("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d HQ_Tangent:%d\n", S.NumTexCoords, S.Stride, S.NumVertices, S.bUseFullPrecisionUVs, S.bUseHighPrecisionTangentBasis);
 
 		if (!StripFlags.IsDataStrippedForServer())
 		{

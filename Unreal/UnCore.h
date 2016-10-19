@@ -1107,9 +1107,9 @@ struct FPackedNormal
 
 	FPackedNormal &operator=(const FVector &V)
 	{
-		Data = int((V.X + 1) * 255)
-			+ (int((V.Y + 1) * 255) << 8)
-			+ (int((V.Z + 1) * 255) << 16);
+		Data = int((V.X + 1) * 127.5f)
+			+ (int((V.Y + 1) * 127.5f) << 8)
+			+ (int((V.Z + 1) * 127.5f) << 16);
 		return *this;
 	}
 
@@ -1121,6 +1121,34 @@ struct FPackedNormal
 
 
 #if UNREAL4
+
+// Packed normal replacement, used since UE4.12 for high-precision reflections
+struct FPackedRGBA16N
+{
+	uint16	X, Y, Z, W;
+
+	FPackedNormal ToPackedNormal() const
+	{
+		FPackedNormal r;
+		FVector v = *this;		// conversion
+		r = v;					// conversion
+		return r;
+	}
+
+	operator FVector() const
+	{
+		FVector r;
+		r.X = (X - 32767.5f) / 32767.5f;
+		r.Y = (Y - 32767.5f) / 32767.5f;
+		r.Z = (Z - 32767.5f) / 32767.5f;
+		return r;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FPackedRGBA16N &V)
+	{
+		return Ar << V.X << V.Y << V.Z << V.W;
+	}
+};
 
 struct FIntPoint
 {
@@ -1253,9 +1281,11 @@ SIMPLE_TYPE(FVector4, float)
 SIMPLE_TYPE(FQuat,    float)
 SIMPLE_TYPE(FCoords,  float)
 SIMPLE_TYPE(FColor,   byte)
+SIMPLE_TYPE(FPackedNormal, uint32)
 
 #if UNREAL4
 
+SIMPLE_TYPE(FPackedRGBA16N, uint16)
 SIMPLE_TYPE(FIntPoint,  int)
 SIMPLE_TYPE(FIntVector, int)
 SIMPLE_TYPE(FVector2D,  float)
