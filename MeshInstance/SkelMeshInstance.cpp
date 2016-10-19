@@ -1285,6 +1285,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 
 	if (flags & DF_SHOW_NORMALS)
 	{
+		//!! TODO: performance issues, see StatMeshInstance.cpp, DF_SHOW_NORMALS, for more details.
 		glBegin(GL_LINES);
 		glColor3f(0.5f, 1, 0);
 		const float VisualLength = 1.0f;

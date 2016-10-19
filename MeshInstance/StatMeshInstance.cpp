@@ -11,7 +11,8 @@
 #define SORT_BY_OPACITY			1
 
 
-#define MAX_MESHMATERIALS		256
+// Some huge editor assets (not optimized assets) could have very large number of sections
+#define MAX_MESHMATERIALS		1024
 
 
 CStatMeshInstance::~CStatMeshInstance()
@@ -157,10 +158,15 @@ void CStatMeshInstance::Draw(unsigned flags)
 	// draw mesh normals
 	if (flags & DF_SHOW_NORMALS)
 	{
+		//!! TODO: performance issues when displaying a large mesh (1M+ triangles) with normals/tangents.
+		//!! Possible solution:
+		//!! 1. use vertex buffer for normals, use single draw call
+		//!! 2. cache normal data between render frames
+		//!! 3. DecodeTangents() will do Unpack() for normal and tangent too, so this work is duplicated here
 		int NumVerts = Mesh.NumVerts;
 		glBegin(GL_LINES);
 		glColor3f(0.5, 1, 0);
-		CVec3 tmp, unpacked;
+		CVecT tmp, unpacked;
 		const float VisualLength = 2.0f;
 		for (i = 0; i < NumVerts; i++)
 		{
