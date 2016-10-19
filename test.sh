@@ -159,7 +159,7 @@ function ut4()
 }
 function paragon()
 {
-	CheckDir "data/4/PARAGON"
+	CheckDir C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks
 	run $*
 }
 function ue3()
@@ -183,6 +183,7 @@ function bio()
 	CheckDir {c,e}:/GAMES/BioShock data/2/Bioshock
 	run $*
 }
+function bio2r()  { run1 "${steam[0]/%/BioShock 2 Remastered/ContentBaked/pc}"; }
 function alice()
 {
 	CheckDir "E:/GAMES/Alice Madness Returns/Alice2/AliceGame/CookedPC"

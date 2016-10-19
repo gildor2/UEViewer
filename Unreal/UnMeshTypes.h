@@ -2,7 +2,7 @@
 #define __UNMESHTYPES_H__
 
 /*-----------------------------------------------------------------------------
-	Different compressed quaternion types
+	Different compressed quaternion and position types
 -----------------------------------------------------------------------------*/
 
 // really have data, when W*W == -0.0f, and sqrt(wSq) was returned -INF
