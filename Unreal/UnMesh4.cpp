@@ -98,133 +98,33 @@ void USkeleton::Serialize(FArchive &Ar)
 -----------------------------------------------------------------------------*/
 
 // Custom versions
+
 // FRecomputeTangentCustomVersion
 // =0 - before UE4.12
 // =1 - UE4.12, added 5.04.2016, git fcf22bab, appeared after VER_UE4_NAME_HASHES_SERIALIZED (latest 4.12 version)
-#define FRecomputeTangentCustomVersion_Ver_1	(VER_UE4_NAME_HASHES_SERIALIZED+1)
-
-struct FSkeletalMaterial
+static int GetFRecomputeTangentCustomVersion(const FArchive& Ar)
 {
-	UMaterialInterface*		Material;
-	bool					bEnableShadowCasting;
+	if (Ar.Game <= GAME_UE4_12)
+		return 0;
+	return 1;
+}
 
-	friend FArchive& operator<<(FArchive& Ar, FSkeletalMaterial& M)
-	{
-		Ar << M.Material;
-
-		if (Ar.ArVer >= VER_UE4_MOVE_SKELETALMESH_SHADOWCASTING)
-			Ar << M.bEnableShadowCasting;
-
-		if (Ar.ArVer >= FRecomputeTangentCustomVersion_Ver_1)
-		{
-			bool bRecomputeTangent;
-			Ar << bRecomputeTangent;
-		}
-
-		return Ar;
-	}
-};
-
-struct FSkelMeshSection4
+struct FSkeletalMeshCustomVersion
 {
-	int16					MaterialIndex;
-	int16					ChunkIndex;
-	int						BaseIndex;
-	int						NumTriangles;
-	byte					TriangleSorting;		// TEnumAsByte<ETriangleSortOption>
-	bool					bDisabled;
-	int16					CorrespondClothSectionIndex;
-
-	friend FArchive& operator<<(FArchive& Ar, FSkelMeshSection4& S)
+	enum Type
 	{
-		guard(FSkelMeshSection4<<);
+		BeforeCustomVersionWasAdded = 0,
+		CombineSectionWithChunk = 1,
+		CombineSoftAndRigidVerts = 2,
+		RecalcMaxBoneInfluences = 3,
+		SaveNumVertices = 4,
+	};
 
-		FStripDataFlags StripFlags(Ar);
-		Ar << S.MaterialIndex;
-		Ar << S.ChunkIndex;
-
-		if (!StripFlags.IsDataStrippedForServer())
-		{
-			Ar << S.BaseIndex;
-			Ar << S.NumTriangles;
-		}
-		Ar << S.TriangleSorting;
-
-		if (Ar.ArVer >= VER_UE4_APEX_CLOTH)
-		{
-			Ar << S.bDisabled;
-			Ar << S.CorrespondClothSectionIndex;
-		}
-
-		if (Ar.ArVer >= VER_UE4_APEX_CLOTH_LOD)
-		{
-			byte bEnableClothLOD_DEPRECATED;
-			Ar << bEnableClothLOD_DEPRECATED;
-		}
-
-		if (Ar.ArVer >= FRecomputeTangentCustomVersion_Ver_1)
-		{
-			bool bRecomputeTangent;
-			Ar << bRecomputeTangent;
-		}
-
-		return Ar;
-
-		unguard;
-	}
-};
-
-struct FMultisizeIndexContainer
-{
-	TArray<uint16>			Indices16;
-	TArray<uint32>			Indices32;
-
-	FORCEINLINE bool Is32Bit() const
+	static Type Get(const FArchive& Ar)
 	{
-		return (Indices32.Num() != 0);
-	}
-
-	// very similar to UE3 version (FSkelIndexBuffer3 in UnMesh3.cpp)
-	//?? combine with UE3 version?
-	friend FArchive& operator<<(FArchive& Ar, FMultisizeIndexContainer& B)
-	{
-		guard(FMultisizeIndexContainer<<);
-
-		if (Ar.ArVer < VER_UE4_KEEP_SKEL_MESH_INDEX_DATA)
-		{
-			bool bOldNeedCPUAccess;
-			Ar << bOldNeedCPUAccess;
-		}
-		byte DataSize;
-		Ar << DataSize;
-
-		if (DataSize == 2)
-			B.Indices16.BulkSerialize(Ar);
-		else if (DataSize == 4)
-			B.Indices32.BulkSerialize(Ar);
-		else
-			appError("Unknown DataSize %d", DataSize);
-
-		return Ar;
-
-		unguard;
-	}
-};
-
-struct FApexClothPhysToRenderVertData
-{
-	FVector4				PositionBaryCoordsAndDist;
-	FVector4				NormalBaryCoordsAndDist;
-	FVector4				TangentBaryCoordsAndDist;
-	int16					SimulMeshVertIndices[4];
-	int						Padding[2];
-
-	friend FArchive& operator<<(FArchive& Ar, FApexClothPhysToRenderVertData& V)
-	{
-		Ar << V.PositionBaryCoordsAndDist << V.NormalBaryCoordsAndDist << V.TangentBaryCoordsAndDist;
-		Ar << V.SimulMeshVertIndices[0] << V.SimulMeshVertIndices[1] << V.SimulMeshVertIndices[2] << V.SimulMeshVertIndices[3];
-		Ar << V.Padding[0] << V.Padding[1];
-		return Ar;
+		if (Ar.Game < GAME_UE4_13)
+			return BeforeCustomVersionWasAdded;
+		return SaveNumVertices;
 	}
 };
 
@@ -293,12 +193,213 @@ struct FSoftVertex4
 	}
 };
 
+struct FApexClothPhysToRenderVertData
+{
+	FVector4				PositionBaryCoordsAndDist;
+	FVector4				NormalBaryCoordsAndDist;
+	FVector4				TangentBaryCoordsAndDist;
+	int16					SimulMeshVertIndices[4];
+	int						Padding[2];
+
+	friend FArchive& operator<<(FArchive& Ar, FApexClothPhysToRenderVertData& V)
+	{
+		Ar << V.PositionBaryCoordsAndDist << V.NormalBaryCoordsAndDist << V.TangentBaryCoordsAndDist;
+		Ar << V.SimulMeshVertIndices[0] << V.SimulMeshVertIndices[1] << V.SimulMeshVertIndices[2] << V.SimulMeshVertIndices[3];
+		Ar << V.Padding[0] << V.Padding[1];
+		return Ar;
+	}
+};
+
+struct FSkeletalMaterial
+{
+	UMaterialInterface*		Material;
+	bool					bEnableShadowCasting;
+	FName					MaterialSlotName;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalMaterial& M)
+	{
+		Ar << M.Material;
+
+		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
+		{
+			Ar << M.MaterialSlotName;
+			if (Ar.ContainsEditorData())
+			{
+				FName ImportedMaterialSlotName;
+				Ar << ImportedMaterialSlotName;
+			}
+		}
+		else
+		{
+			if (Ar.ArVer >= VER_UE4_MOVE_SKELETALMESH_SHADOWCASTING)
+				Ar << M.bEnableShadowCasting;
+
+			if (GetFRecomputeTangentCustomVersion(Ar) >= 1)
+			{
+				bool bRecomputeTangent;
+				Ar << bRecomputeTangent;
+			}
+		}
+
+		return Ar;
+	}
+};
+
+struct FSkelMeshSection4
+{
+	int16					MaterialIndex;
+	int						BaseIndex;
+	int						NumTriangles;
+	byte					TriangleSorting;		// TEnumAsByte<ETriangleSortOption>
+	bool					bDisabled;
+	int16					CorrespondClothSectionIndex;
+
+	// Data from FSkelMeshChunk, appeared in FSkelMeshSection after UE4.13
+	int32					NumVertices;
+	uint32					BaseVertexIndex;
+	TArray<FSoftVertex4>	SoftVertices;			// editor-only data
+	TArray<uint16>			BoneMap;
+	int32					MaxBoneInfluences;
+	bool					HasApexClothData;
+	// UE4.14
+	bool					bCastShadow;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkelMeshSection4& S)
+	{
+		guard(FSkelMeshSection4<<);
+
+		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
+
+		FStripDataFlags StripFlags(Ar);
+		Ar << S.MaterialIndex;
+
+		if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSectionWithChunk)
+		{
+			int16 ChunkIndex;
+			Ar << ChunkIndex;
+		}
+
+		if (!StripFlags.IsDataStrippedForServer())
+		{
+			Ar << S.BaseIndex;
+			Ar << S.NumTriangles;
+		}
+		Ar << S.TriangleSorting;
+
+		if (Ar.ArVer >= VER_UE4_APEX_CLOTH)
+		{
+			Ar << S.bDisabled;
+			Ar << S.CorrespondClothSectionIndex;
+		}
+
+		if (Ar.ArVer >= VER_UE4_APEX_CLOTH_LOD)
+		{
+			byte bEnableClothLOD_DEPRECATED;
+			Ar << bEnableClothLOD_DEPRECATED;
+		}
+
+		if (GetFRecomputeTangentCustomVersion(Ar) >= 1)
+		{
+			bool bRecomputeTangent;
+			Ar << bRecomputeTangent;
+		}
+
+		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
+		{
+			Ar << S.bCastShadow;
+		}
+
+		// UE4.13+ stuff
+		S.HasApexClothData = false;
+		if (SkelMeshVer >= FSkeletalMeshCustomVersion::CombineSectionWithChunk)
+		{
+			if (!StripFlags.IsDataStrippedForServer())
+			{
+				Ar << S.BaseVertexIndex;
+			}
+			if (!StripFlags.IsEditorDataStripped())
+			{
+				if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts)
+				{
+					TArray<FRigidVertex4> RigidVertices;
+					Ar << RigidVertices;
+					// these vertices should be converted to FSoftVertex4, but we're dropping this data anyway
+				}
+				Ar << S.SoftVertices;
+			}
+			Ar << S.BoneMap;
+			if (SkelMeshVer >= FSkeletalMeshCustomVersion::SaveNumVertices)
+				Ar << S.NumVertices;
+			if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts)
+			{
+				int NumRigidVerts, NumSoftVerts;
+				Ar << NumRigidVerts << NumSoftVerts;
+			}
+			Ar << S.MaxBoneInfluences;
+
+			// Physics data, drop
+			TArray<FApexClothPhysToRenderVertData> ApexClothMappingData;
+			TArray<FVector> PhysicalMeshVertices;
+			TArray<FVector> PhysicalMeshNormals;
+			int16 CorrespondClothAssetIndex;
+			int16 ClothAssetSubmeshIndex;
+
+			Ar << ApexClothMappingData;
+			Ar << PhysicalMeshVertices << PhysicalMeshNormals;
+			Ar << CorrespondClothAssetIndex << ClothAssetSubmeshIndex;
+
+			S.HasApexClothData = ApexClothMappingData.Num() > 0;
+		}
+
+		return Ar;
+
+		unguard;
+	}
+};
+
+struct FMultisizeIndexContainer
+{
+	TArray<uint16>			Indices16;
+	TArray<uint32>			Indices32;
+
+	FORCEINLINE bool Is32Bit() const
+	{
+		return (Indices32.Num() != 0);
+	}
+
+	// very similar to UE3 version (FSkelIndexBuffer3 in UnMesh3.cpp)
+	//?? combine with UE3 version?
+	friend FArchive& operator<<(FArchive& Ar, FMultisizeIndexContainer& B)
+	{
+		guard(FMultisizeIndexContainer<<);
+
+		if (Ar.ArVer < VER_UE4_KEEP_SKEL_MESH_INDEX_DATA)
+		{
+			bool bOldNeedCPUAccess;
+			Ar << bOldNeedCPUAccess;
+		}
+		byte DataSize;
+		Ar << DataSize;
+
+		if (DataSize == 2)
+			B.Indices16.BulkSerialize(Ar);
+		else if (DataSize == 4)
+			B.Indices32.BulkSerialize(Ar);
+		else
+			appError("Unknown DataSize %d", DataSize);
+
+		return Ar;
+
+		unguard;
+	}
+};
+
 struct FSkelMeshChunk4
 {
 	int						BaseVertexIndex;
 	TArray<FRigidVertex4>	RigidVertices;		// editor-only data
 	TArray<FSoftVertex4>	SoftVertices;		// editor-only data
-	TArray<int16>			BoneMap;
+	TArray<uint16>			BoneMap;
 	int						NumRigidVertices;
 	int						NumSoftVertices;
 	int						MaxBoneInfluences;
@@ -307,6 +408,9 @@ struct FSkelMeshChunk4
 	friend FArchive& operator<<(FArchive& Ar, FSkelMeshChunk4& C)
 	{
 		guard(FSkelMeshChunk4<<);
+
+		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
+		assert(SkelMeshVer >= FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts); // this is somewhere between 4.12 and 4.13, so ignore this
 
 		FStripDataFlags StripFlags(Ar);
 
@@ -323,6 +427,7 @@ struct FSkelMeshChunk4
 		C.HasApexClothData = false;
 		if (Ar.ArVer >= VER_UE4_APEX_CLOTH)
 		{
+			// Physics data, drop
 			TArray<FApexClothPhysToRenderVertData> ApexClothMappingData;
 			TArray<FVector> PhysicalMeshVertices;
 			TArray<FVector> PhysicalMeshNormals;
@@ -542,7 +647,7 @@ struct FStaticLODModel4
 		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
 		{
 			FSkelMeshSection4 &S = Lod.Sections[i1];
-			appPrintf("Sec[%d]: M=%d, Chunk=%d, BaseIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.ChunkIndex, S.BaseIndex, S.NumTriangles);
+			appPrintf("Sec[%d]: Mtl=%d, BaseIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.BaseIndex, S.NumTriangles);
 		}
 #endif
 
@@ -552,15 +657,19 @@ struct FStaticLODModel4
 		Ar << Lod.ActiveBoneIndices;
 		DBG_SKEL("ActiveBones: %d\n", Lod.ActiveBoneIndices.Num());
 
-		Ar << Lod.Chunks;
-#if DEBUG_SKELMESH
-		for (int i1 = 0; i1 < Lod.Chunks.Num(); i1++)
+		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
+		if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSectionWithChunk)
 		{
-			const FSkelMeshChunk4& C = Lod.Chunks[i1];
-			appPrintf("Chunk[%d]: FirstVert=%d Rig=%d (%d), Soft=%d(%d), Bones=%d, MaxInf=%d\n", i1, C.BaseVertexIndex,
-				C.RigidVertices.Num(), C.NumRigidVertices, C.SoftVertices.Num(), C.NumSoftVertices, C.BoneMap.Num(), C.MaxBoneInfluences);
-		}
+			Ar << Lod.Chunks;
+#if DEBUG_SKELMESH
+			for (int i1 = 0; i1 < Lod.Chunks.Num(); i1++)
+			{
+				const FSkelMeshChunk4& C = Lod.Chunks[i1];
+				appPrintf("Chunk[%d]: FirstVert=%d Rig=%d (%d), Soft=%d(%d), Bones=%d, MaxInf=%d\n", i1, C.BaseVertexIndex,
+					C.RigidVertices.Num(), C.NumRigidVertices, C.SoftVertices.Num(), C.NumSoftVertices, C.BoneMap.Num(), C.MaxBoneInfluences);
+			}
 #endif
+		}
 
 		Ar << Lod.Size;
 		if (!StripFlags.IsDataStrippedForServer())
@@ -613,7 +722,10 @@ struct FStaticLODModel4
 	bool HasApexClothData() const
 	{
 		for (int i = 0; i < Chunks.Num(); i++)
-			if (Chunks[i].HasApexClothData)
+			if (Chunks[i].HasApexClothData)			// pre-UE4.13 code
+				return true;
+		for (int i = 0; i < Sections.Num(); i++)	// UE4.13+
+			if (Sections[i].HasApexClothData)
 				return true;
 		return false;
 	}
@@ -679,7 +791,7 @@ void USkeletalMesh4::ConvertMesh()
 	//!! Perhaps rotation/translation are integrated too!
 	Mesh->MeshOrigin.Set(0, 0, 0);
 	Mesh->RotOrigin.Set(0, 0, 0);
-	Mesh->MeshScale.Set(1, 1, 1);							// missing in UE3
+	Mesh->MeshScale.Set(1, 1, 1);							// missing in UE4
 
 	// convert LODs
 	Mesh->Lods.Empty(LODModels.Num());
@@ -689,7 +801,6 @@ void USkeletalMesh4::ConvertMesh()
 		guard(ConvertLod);
 
 		const FStaticLODModel4 &SrcLod = LODModels[lod];
-		if (!SrcLod.Chunks.Num()) continue;
 
 		int NumTexCoords = SrcLod.NumTexCoords;
 		if (NumTexCoords > MAX_MESH_UV_SETS)
@@ -709,7 +820,7 @@ void USkeletalMesh4::ConvertMesh()
 		Lod->AllocateVerts(VertexCount);
 
 		int chunkIndex = 0;
-		const FSkelMeshChunk4 *C = NULL;
+		const TArray<uint16>* BoneMap = NULL;
 		int lastChunkVertex = -1;
 		const FSkeletalMeshVertexBuffer4 &S = SrcLod.VertexBufferGPUSkin;
 		CSkelMeshVertex *D = Lod->Verts;
@@ -718,9 +829,21 @@ void USkeletalMesh4::ConvertMesh()
 		{
 			if (Vert >= lastChunkVertex)
 			{
-				// proceed to next chunk
-				C = &SrcLod.Chunks[chunkIndex++];
-				lastChunkVertex = C->BaseVertexIndex + C->NumRigidVertices + C->NumSoftVertices;
+				// proceed to next chunk or section
+				// pre-UE4.13 code
+				if (SrcLod.Chunks.Num())
+				{
+					const FSkelMeshChunk4& C = SrcLod.Chunks[chunkIndex++];
+					lastChunkVertex = C.BaseVertexIndex + C.NumRigidVertices + C.NumSoftVertices;
+					BoneMap = &C.BoneMap;
+				}
+				else
+				{
+					// UE4.13 has moved chunk information to sections
+					const FSkelMeshSection4& S = SrcLod.Sections[chunkIndex++];
+					lastChunkVertex = S.BaseVertexIndex + S.NumVertices;
+					BoneMap = &S.BoneMap;
+				}
 			}
 
 			// get vertex from GPU skin
@@ -768,7 +891,7 @@ void USkeletalMesh4::ConvertMesh()
 				byte BoneWeight = V->BoneWeight[i];
 				if (BoneWeight == 0) continue;				// skip this influence (but do not stop the loop!)
 				PackedWeights |= BoneWeight << (i2 * 8);
-				D->Bone[i2]   = C->BoneMap[BoneIndex];
+				D->Bone[i2]   = (*BoneMap)[BoneIndex];
 				i2++;
 //				TotalWeight += BoneWeight;
 			}
@@ -938,7 +1061,7 @@ struct FStaticMeshUVItem4
 	{
 		if (!GUseHighPrecisionTangents)
 		{
-		Ar << V.Normal[0] << V.Normal[2];	// TangentX and TangentZ
+			Ar << V.Normal[0] << V.Normal[2];	// TangentX and TangentZ
 		}
 		else
 		{

@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+19.10.2016
+- added UE4.13 support
+
 30.08.2016
 - UI: added sorting of packages in package dialog
 

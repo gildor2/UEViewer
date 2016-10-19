@@ -356,12 +356,14 @@ enum EGame
 		GAME_UE4_10,
 		GAME_UE4_11,
 		GAME_UE4_12,
+		GAME_UE4_13,
+		GAME_UE4_14,
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		12		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		14		// UE4.XX
 
 enum EPlatform
 {
@@ -2205,10 +2207,60 @@ enum
 	VER_UE4_11 = 498,
 		VER_UE4_INNER_ARRAY_TAG_INFO = 500,
 		VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG = 503,
-		VER_UE4_NAME_HASHES_SERIALIZED = 504,			// also used for USkeletalMesh CustomVersion
-	VER_UE4_12,											//!! set real version after release!
+		VER_UE4_NAME_HASHES_SERIALIZED = 504,
+	VER_UE4_12 = 504,
+	VER_UE4_13 = 505,
+		VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS = 507, // not used (affects FPackageFileSummary)
+	VER_UE4_14,			//!! not yet defined - NEW_ENGINE_VERSION
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
+};
+
+// Added in UE4.12
+struct FFrameworkObjectVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+//		MoveCompressedAnimDataToTheDDC = 5,
+		// UE4.12 = 6
+		SmartNameRefactor = 7,
+		RemoveSoundWaveCompressionName = 12,
+		// UE4.13 = 12
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		if (Ar.Game < GAME_UE4_12)
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game == GAME_UE4_12)
+			return (Type)6;
+//		if (Ar.Game == GAME_UE4_13)	// NEW_ENGINE_VERSION
+			return (Type)12;
+	}
+};
+
+struct FEditorObjectVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		// UE4.12 = 2
+		// UE4.13 = 6
+		RefactorMeshEditorMaterials = 8,
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		if (Ar.Game < GAME_UE4_12)
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game == GAME_UE4_12)
+			return (Type)2;
+		if (Ar.Game == GAME_UE4_13)
+			return (Type)6;
+//		if (Ar.Game == GAME_UE4_14)	// NEW_ENGINE_VERSION
+			return (Type)RefactorMeshEditorMaterials;
+	}
 };
 
 class FStripDataFlags

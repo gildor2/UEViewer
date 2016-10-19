@@ -488,7 +488,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	// -4	4.7 (early version, skipped)
 	// -5	4.7
 	// -6	4.11
-	if (S.LegacyVersion < -6 || S.LegacyVersion >= 0)
+	// -7	4.14
+	if (S.LegacyVersion < -7 || S.LegacyVersion >= 0)
 		appError("UE4 LegacyVersion: unsupported value %d", S.LegacyVersion);
 
 	S.IsUnversioned = false;
@@ -595,8 +596,11 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	TArray<FString> AdditionalPackagesToCook;
 	Ar << AdditionalPackagesToCook;
 
-	int TextureAllocations;
-	Ar << TextureAllocations;		// obsolete?
+	if (S.LegacyVersion > -7)
+	{
+		int NumTextureAllocations;
+		Ar << NumTextureAllocations;
+	}
 
 	if (Ar.ArVer >= VER_UE4_ASSET_REGISTRY_TAGS)
 	{

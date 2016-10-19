@@ -121,9 +121,7 @@ public:
 		bool bCooked;
 		Ar << bCooked;
 
-		//!! CustomVersion(FFrameworkObjectVersion)
-
-		if (Ar.ArVer >= VER_UE4_SOUND_COMPRESSION_TYPE_ADDED) //!! && CustomVer < FFrameworkObjectVersion::RemoveSoundWaveCompressionName
+		if (Ar.ArVer >= VER_UE4_SOUND_COMPRESSION_TYPE_ADDED && FFrameworkObjectVersion::Get(Ar) < FFrameworkObjectVersion::RemoveSoundWaveCompressionName)
 		{
 			FName DummyCompressionName;
 			Ar << DummyCompressionName;

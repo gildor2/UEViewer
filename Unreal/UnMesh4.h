@@ -79,7 +79,17 @@ struct FSmartNameMapping
 
 	friend FArchive& operator<<(FArchive& Ar, FSmartNameMapping& N)
 	{
-		return Ar << N.NextUid << N.UidMap;
+		FFrameworkObjectVersion::Type FrwVer = FFrameworkObjectVersion::Get(Ar);
+		if (FrwVer < FFrameworkObjectVersion::SmartNameRefactor)
+		{
+			return Ar << N.NextUid << N.UidMap;
+		}
+		else
+		{
+			// UE4.13+
+			TMap<FName, FGuid> GuidMap;
+			return Ar << GuidMap;
+		}
 	}
 };
 

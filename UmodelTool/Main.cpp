@@ -1086,7 +1086,9 @@ int main(int argc, char **argv)
 	main_loop:
 		// show object
 		vpInvertXAxis = true;
+	#if HAS_UI
 		UISetExceptionHandler(ExceptionHandler);
+	#endif
 		GApplication.VisualizerLoop(APP_CAPTION);
 	}
 #endif // RENDERING
