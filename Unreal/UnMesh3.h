@@ -382,8 +382,8 @@ public:
 	AnimationCompressionFormat TranslationCompressionFormat;
 	AnimationCompressionFormat RotationCompressionFormat;
 	AnimationKeyFormat		KeyEncodingFormat;				// GoW2+
-	TArray<int>				CompressedTrackOffsets;
-	TArray<byte>			CompressedByteStream;
+	TArray<int32>			CompressedTrackOffsets;
+	TArray<uint8>			CompressedByteStream;
 	bool					bIsAdditive;
 	FName					AdditiveRefName;
 #if TUROK
@@ -397,12 +397,12 @@ public:
 	TArray<int>				CompressedTrackTimeOffsets;
 #endif
 #if BATMAN
-	TArray<byte>			AnimZip_Data;
+	TArray<uint8>			AnimZip_Data;
 #endif
 #if TRANSFORMERS
 	TArray<int>				Tracks;							// Transformers: Fall of Cybertron
 	TArray<int>				TrackOffsets;
-	TArray<byte>			Trans3Data;
+	TArray<uint8>			Trans3Data;
 #endif
 
 	UAnimSequence()

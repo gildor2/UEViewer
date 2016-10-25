@@ -174,8 +174,8 @@ struct Name													\
 SCELL_TRACK(FixedPointTrack, FQuatComp,  FQuatComp,   uint16)
 SCELL_TRACK(Quat16Track,     FQuatComp2, FVector,     uint16)	// all types are "large"
 SCELL_TRACK(FixPosTrack,     FQuatComp2, FVectorComp, uint16)	// "small" KeyPos
-SCELL_TRACK(FixTimeTrack,    FQuatComp2, FVector,     byte)	    // "small" KeyTime
-SCELL_TRACK(FixPosTimeTrack, FQuatComp2, FVectorComp, byte)	    // "small" KeyPos and KeyTime
+SCELL_TRACK(FixTimeTrack,    FQuatComp2, FVector,     uint8)    // "small" KeyTime
+SCELL_TRACK(FixPosTimeTrack, FQuatComp2, FVectorComp, uint8)    // "small" KeyPos and KeyTime
 
 
 void AnalogTrack::SerializeSCell(FArchive &Ar)
@@ -414,7 +414,7 @@ void AnalogTrack::SerializeSWRC(FArchive &Ar)
 	float					 PosScale;
 	TArray<FVectorShortSWRC> PosTrack;		// scaled by PosScale
 	TArray<FVectorShortSWRC> RotTrack;
-	TArray<byte>			 TimeTrack;		// frame duration
+	TArray<uint8>			 TimeTrack;		// frame duration
 
 	Ar << PosScale << PosTrack << RotTrack << TimeTrack;
 
@@ -932,7 +932,7 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 	assert(Ar.IsLoading);
 
 	// read FByteBuffer
-	byte *BufferData = NULL;
+	uint8 *BufferData = NULL;
 	int DataSize;
 	int DataFlag;
 	Ar << DataSize;
@@ -960,7 +960,7 @@ bool UMeshAnimation::SerializeUE2XMoves(FArchive &Ar)
 #endif
 	if (!DataFlag && DataSize)
 	{
-		BufferData = (byte*)appMalloc(DataSize);
+		BufferData = (uint8*)appMalloc(DataSize);
 		Ar.Serialize(BufferData, DataSize);
 	}
 	TArray<MotionChunkUC2> Moves2;

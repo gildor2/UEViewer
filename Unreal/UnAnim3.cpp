@@ -234,7 +234,7 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 	{
 		for (int k = 0; k < NumKeys; k++)
 		{
-			byte v;
+			uint8 v;
 			Ar << v;
 			Times.Add(v);
 //			if (k < 4 || k > NumKeys - 5) appPrintf(" %02X ", v);
@@ -307,7 +307,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 
 	// create new reader for keyframe data
 	int StartOffset = Reader1.Tell();	// always equals to 20
-	FMemReader Reader((byte*)Trans3Data.GetData() + StartOffset, Trans3Data.Num() - StartOffset);
+	FMemReader Reader((uint8*)Trans3Data.GetData() + StartOffset, Trans3Data.Num() - StartOffset);
 
 	// key index offsets
 	int StartOfStaticRotations        = 0;
