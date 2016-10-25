@@ -2173,6 +2173,7 @@ enum
 	VER_UE4_FIX_ANIMATIONBASEPOSE_SERIALIZATION = 331,
 	VER_UE4_SUPPORT_8_BONE_INFLUENCES_SKELETAL_MESHES = 332,
 	VER_UE4_SUPPORT_GPUSKINNING_8_BONE_INFLUENCES = 334,
+	VER_UE4_ANIM_SUPPORT_NONUNIFORM_SCALE_ANIMATION = 335,
 	VER_UE4_ENGINE_VERSION_OBJECT = 336,
 	VER_UE4_SKELETON_GUID_SERIALIZATION = 338,
 	// UE4.0 source code was released on GitHub. Note: if we don't have any VER_UE4_...
@@ -2222,7 +2223,7 @@ struct FFrameworkObjectVersion
 	enum Type
 	{
 		BeforeCustomVersionWasAdded = 0,
-//		MoveCompressedAnimDataToTheDDC = 5,
+		MoveCompressedAnimDataToTheDDC = 5,
 		// UE4.12 = 6
 		SmartNameRefactor = 7,
 		RemoveSoundWaveCompressionName = 12,

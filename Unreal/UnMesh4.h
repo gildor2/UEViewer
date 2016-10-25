@@ -4,6 +4,7 @@
 #if UNREAL4
 
 #include "UnMesh.h"			// common types
+#include "UnMesh3.h"		// animation enums
 
 // forwards
 class UMaterialInterface;
@@ -238,6 +239,135 @@ protected:
 };
 
 
+/*-----------------------------------------------------------------------------
+	UAnimSequence
+-----------------------------------------------------------------------------*/
+
+//!! References:
+//!! CompressAnimationsFunctor() - Source/Editor/UnrealEd/Private/Commandlets/PackageUtilities.cpp
+
+struct FCompressedOffsetData
+{
+	DECLARE_STRUCT(FCompressedOffsetData);
+public:
+	TArray<int32>			OffsetData;
+	int32					StripSize;
+
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(OffsetData, int32)
+		PROP_INT(StripSize)
+	END_PROP_TABLE
+
+	friend FArchive& operator<<(FArchive& Ar, FCompressedOffsetData& D)
+	{
+		return Ar << D.OffsetData << D.StripSize;
+	}
+};
+
+
+struct FTrackToSkeletonMap
+{
+	DECLARE_STRUCT(FTrackToSkeletonMap);
+
+	int32					BoneTreeIndex;
+
+	BEGIN_PROP_TABLE
+		PROP_INT(BoneTreeIndex)
+	END_PROP_TABLE
+
+	friend FArchive& operator<<(FArchive& Ar, FTrackToSkeletonMap& M)
+	{
+		return Ar << M.BoneTreeIndex;
+	}
+};
+
+
+struct FRawCurveTracks
+{
+	DECLARE_STRUCT(FRawCurveTracks);
+
+//	TArray<FFloatCurve>		FloatCurves;
+
+	BEGIN_PROP_TABLE
+		PROP_DROP(Dummy)	//!! remove
+//		PROP_ARRAY(FloatCurves, FFloatCurve)
+	END_PROP_TABLE
+
+	friend FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T)
+	{
+		guard(FRawCurveTracks<<);
+		//!! todo: serialize as script structure, or may be skip this data
+		assert(0);
+		return Ar;
+		unguard;
+	}
+};
+
+
+class UAnimationAsset : public UObject
+{
+	DECLARE_CLASS(UAnimationAsset, UObject);
+public:
+	USkeleton*				Skeleton;
+	FGuid					SkeletonGuid;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Skeleton)
+	END_PROP_TABLE
+
+	UAnimationAsset()
+	:	Skeleton(NULL)
+	{}
+
+	virtual void Serialize(FArchive& Ar)
+	{
+		Super::Serialize(Ar);
+		if (Ar.ArVer >= VER_UE4_SKELETON_GUID_SERIALIZATION)
+			Ar << SkeletonGuid;
+	}
+};
+
+
+class UAnimSequenceBase : public UAnimationAsset
+{
+	DECLARE_CLASS(UAnimSequenceBase, UAnimationAsset);
+public:
+//	virtual void Serialize(FArchive& Ar) - almost empty implementation
+};
+
+
+class UAnimSequence4 : public UAnimSequenceBase
+{
+	DECLARE_CLASS(UAnimSequence4, UAnimSequenceBase);
+public:
+	TArray<FRawAnimSequenceTrack> RawAnimationData;
+	TArray<uint8>			CompressedByteStream;
+	bool					bUseRawDataOnly;
+	AnimationKeyFormat		KeyEncodingFormat;
+	AnimationCompressionFormat TranslationCompressionFormat;
+	AnimationCompressionFormat RotationCompressionFormat;
+	AnimationCompressionFormat ScaleCompressionFormat;
+	TArray<int32>			CompressedTrackOffsets;
+	FCompressedOffsetData	CompressedScaleOffsets;
+	FTrackToSkeletonMap		CompressedTrackToSkeletonMapTable;
+	FRawCurveTracks			CompressedCurveData;
+
+	// Before UE4.12 some fields were serialized as properties
+	BEGIN_PROP_TABLE
+		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
+		PROP_ENUM2(TranslationCompressionFormat, AnimationCompressionFormat)
+		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
+		PROP_ENUM2(ScaleCompressionFormat, AnimationCompressionFormat)
+		PROP_ARRAY(CompressedTrackOffsets, int)
+		PROP_STRUC(CompressedScaleOffsets, FCompressedOffsetData)
+		PROP_STRUC(CompressedTrackToSkeletonMapTable, FTrackToSkeletonMap)
+		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
+	END_PROP_TABLE
+
+	virtual void Serialize(FArchive& Ar);
+};
+
+
 #define REGISTER_MESH_CLASSES_U4 \
 	REGISTER_CLASS(USkeleton) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
@@ -245,7 +375,11 @@ protected:
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(FMeshBuildSettings) \
-	REGISTER_CLASS(FStaticMeshSourceModel)
+	REGISTER_CLASS(FStaticMeshSourceModel) \
+	REGISTER_CLASS(FCompressedOffsetData) \
+	REGISTER_CLASS(FTrackToSkeletonMap) \
+	REGISTER_CLASS(FRawCurveTracks) \
+	REGISTER_CLASS_ALIAS(UAnimSequence4, UAnimSequence)
 
 
 #endif // UNREAL4

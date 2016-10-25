@@ -205,16 +205,34 @@ struct FRawAnimSequenceTrack
 	DECLARE_STRUCT(FRawAnimSequenceTrack);
 	TArray<FVector>			PosKeys;
 	TArray<FQuat>			RotKeys;
-	TArray<float>			KeyTimes;
+	TArray<float>			KeyTimes;		// UE3: obsolete
+#if UNREAL4
+	TArray<FVector>			ScaleKeys;
+#endif
 
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(PosKeys,  FVector)
 		PROP_ARRAY(RotKeys,  FQuat)
 		PROP_ARRAY(KeyTimes, float)
+#if UNREAL4
+		PROP_ARRAY(ScaleKeys, FVector)
+#endif
 	END_PROP_TABLE
 
 	friend FArchive& operator<<(FArchive &Ar, FRawAnimSequenceTrack &T)
 	{
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4)
+		{
+			T.PosKeys.BulkSerialize(Ar);
+			T.RotKeys.BulkSerialize(Ar);
+			if (Ar.ArVer >= VER_UE4_ANIM_SUPPORT_NONUNIFORM_SCALE_ANIMATION)
+			{
+				T.ScaleKeys.BulkSerialize(Ar);
+			}
+			return Ar;
+		}
+#endif // UNREAL4
 		if (Ar.ArVer >= 577)
 		{
 			// newer UE3 version has replaced serializer for this structure
