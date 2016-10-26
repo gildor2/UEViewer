@@ -403,6 +403,8 @@ void ExportPsa(const CAnimSet *Anim)
 	static VChunkHeader MainHdr, BoneHdr, AnimHdr, KeyHdr;
 	int i;
 
+	if (!Anim->Sequences.Num()) return;			// empty CAnimSet
+
 	UObject *OriginalAnim = Anim->OriginalAnim;
 
 	FArchive *Ar0 = CreateExportArchive(OriginalAnim, "%s.psa", OriginalAnim->Name);

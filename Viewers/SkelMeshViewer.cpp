@@ -40,6 +40,10 @@ static CAnimSet *GetAnimSet(const UObject *Obj)
 	if (Obj->IsA("AnimSet"))			// UE3
 		return static_cast<const UAnimSet*>(Obj)->ConvertedAnim;
 #endif
+#if UNREAL4
+	if (Obj->IsA("Skeleton"))
+		return static_cast<const USkeleton*>(Obj)->ConvertedAnim;
+#endif
 	return NULL;
 }
 
@@ -73,6 +77,14 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 		if (OriginalMesh->Animation)
 			SkelInst->SetAnim(OriginalMesh->Animation->ConvertedAnim);
 	}
+#if UNREAL4
+	else if (Mesh->OriginalMesh->IsA("SkeletalMesh4"))
+	{
+		// UE4 SkeletalMesh has USkeleton reference, which collects all compatible animations in its PostLoad method
+		const USkeletalMesh4* OriginalMesh = static_cast<USkeletalMesh4*>(Mesh->OriginalMesh);
+		SkelInst->SetAnim(OriginalMesh->Skeleton->ConvertedAnim);
+	}
+#endif // UNREAL4
 	Inst = SkelInst;
 	// compute bounds for the current mesh
 	CVec3 Mins, Maxs;

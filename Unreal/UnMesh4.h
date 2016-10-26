@@ -8,6 +8,7 @@
 
 // forwards
 class UMaterialInterface;
+class UAnimSequence4;
 
 #define NUM_INFLUENCES_UE4				4
 #define MAX_TOTAL_INFLUENCES_UE4		8
@@ -116,7 +117,20 @@ public:
 	FSmartNameContainer		SmartNames;
 	//!! TODO: sockets
 
+	BEGIN_PROP_TABLE
+		PROP_DROP(BoneTree)			// was deprecated before 4.0 release in favor of ReferenceSkeleton
+		PROP_DROP(Notifies)			// not working with notifies in our program
+	END_PROP_TABLE
+
+	// generated stuff
+	TArray<UAnimSequence4*>	Anims;
+	CAnimSet				*ConvertedAnim;
+
 	virtual void Serialize(FArchive &Ar);
+	virtual void PostLoad();
+
+protected:
+	void ConvertAnims();
 };
 
 
@@ -299,6 +313,7 @@ struct FRawCurveTracks
 	friend FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T)
 	{
 		guard(FRawCurveTracks<<);
+		// This structure is always serialized as property list
 		FRawCurveTracks::StaticGetTypeinfo()->SerializeProps(Ar, &T);
 		return Ar;
 		unguard;
@@ -342,31 +357,51 @@ class UAnimSequence4 : public UAnimSequenceBase
 {
 	DECLARE_CLASS(UAnimSequence4, UAnimSequenceBase);
 public:
+	int32					NumFrames;
+	float					RateScale;
+	float					SequenceLength;
 	TArray<FRawAnimSequenceTrack> RawAnimationData;
 	TArray<uint8>			CompressedByteStream;
 	bool					bUseRawDataOnly;
+
 	AnimationKeyFormat		KeyEncodingFormat;
 	AnimationCompressionFormat TranslationCompressionFormat;
 	AnimationCompressionFormat RotationCompressionFormat;
 	AnimationCompressionFormat ScaleCompressionFormat;
 	TArray<int32>			CompressedTrackOffsets;
 	FCompressedOffsetData	CompressedScaleOffsets;
-	TArray<FTrackToSkeletonMap> CompressedTrackToSkeletonMapTable;
+	TArray<FTrackToSkeletonMap> TrackToSkeletonMapTable;			// used for raw data
+	TArray<FTrackToSkeletonMap> CompressedTrackToSkeletonMapTable;	// used for compressed data, missing before 4.12
 	FRawCurveTracks			CompressedCurveData;
 
-	// Before UE4.12 some fields were serialized as properties
 	BEGIN_PROP_TABLE
+		PROP_INT(NumFrames)
+		PROP_FLOAT(RateScale)
+		PROP_FLOAT(SequenceLength)
+		// Before UE4.12 some fields were serialized as properties
 		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
 		PROP_ENUM2(TranslationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(ScaleCompressionFormat, AnimationCompressionFormat)
 		PROP_ARRAY(CompressedTrackOffsets, int)
 		PROP_STRUC(CompressedScaleOffsets, FCompressedOffsetData)
+		PROP_ARRAY(TrackToSkeletonMapTable, FTrackToSkeletonMap)
 		PROP_ARRAY(CompressedTrackToSkeletonMapTable, FTrackToSkeletonMap)
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 	END_PROP_TABLE
 
+	UAnimSequence4::UAnimSequence4()
+	:	RateScale(1.0f)
+	,	TranslationCompressionFormat(ACF_None)
+	,	RotationCompressionFormat(ACF_None)
+	,	ScaleCompressionFormat(ACF_None)
+	,	KeyEncodingFormat(AKF_ConstantKeyLerp)
+	{}
+
 	virtual void Serialize(FArchive& Ar);
+
+	int GetNumTracks() const;
+	int GetTrackBoneIndex(int TrackIndex) const;
 };
 
 

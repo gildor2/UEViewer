@@ -282,6 +282,17 @@ static void ExportAnimSet(const UAnimSet *Anim)
 }
 #endif // UNREAL3
 
+#if UNREAL4
+static void ExportSkeleton(const USkeleton *Skeleton)
+{
+	assert(Skeleton->ConvertedAnim);
+	if (!GSettings.ExportMd5Mesh)
+		ExportPsa(Skeleton->ConvertedAnim);
+	else
+		ExportMd5Anim(Skeleton->ConvertedAnim);
+}
+#endif // UNREAL4
+
 static void RegisterExporters()
 {
 	RegisterExporter("SkeletalMesh",  ExportSkeletalMesh2);
@@ -290,10 +301,10 @@ static void RegisterExporters()
 	RegisterExporter("SkeletalMesh3", ExportSkeletalMesh3);
 	RegisterExporter("AnimSet",       ExportAnimSet      );
 #endif
-	RegisterExporter("VertMesh",      Export3D         );
-	RegisterExporter("StaticMesh",    ExportStaticMesh2);
-	RegisterExporter("Texture",       ExportTexture    );
-	RegisterExporter("Sound",         ExportSound      );
+	RegisterExporter("VertMesh",      Export3D           );
+	RegisterExporter("StaticMesh",    ExportStaticMesh2  );
+	RegisterExporter("Texture",       ExportTexture      );
+	RegisterExporter("Sound",         ExportSound        );
 #if UNREAL3
 	RegisterExporter("StaticMesh3",   ExportStaticMesh3  );
 	RegisterExporter("Texture2D",     ExportTexture      );
@@ -305,9 +316,10 @@ static void RegisterExporters()
 #if UNREAL4
 	RegisterExporter("SkeletalMesh4", ExportSkeletalMesh4);
 	RegisterExporter("StaticMesh4",   ExportStaticMesh4  );
-	RegisterExporter("SoundWave",     ExportSoundWave4);
-#endif
-	RegisterExporter("UnrealMaterial", ExportMaterial);			// register this after Texture/Texture2D exporters
+	RegisterExporter("Skeleton",      ExportSkeleton     );
+	RegisterExporter("SoundWave",     ExportSoundWave4   );
+#endif // UNREAL4
+	RegisterExporter("UnrealMaterial", ExportMaterial    );			// register this after Texture/Texture2D exporters
 }
 
 
@@ -1010,9 +1022,11 @@ int main(int argc, char **argv)
 	}
 	else
 	{
+		UObject::BeginLoad();
 		// fully load all packages
 		for (int pkg = 0; pkg < Packages.Num(); pkg++)
 			LoadWholePackage(Packages[pkg]);
+		UObject::EndLoad();
 	}
 
 	if (!UObject::GObjObjects.Num() && !GApplication.GuiShown)

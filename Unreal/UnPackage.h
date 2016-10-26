@@ -221,6 +221,11 @@ public:
 
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
 
+	static const TArray<UnPackage*>& GetPackageMap()
+	{
+		return PackageMap;
+	}
+
 	// Prepare for serialization of particular object. Will open a reader if it was
 	// closed before.
 	void SetupReader(int ExportIndex);
