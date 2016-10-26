@@ -254,7 +254,7 @@ public:
 	int32					StripSize;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(OffsetData, int32)
+		PROP_ARRAY(OffsetData, int)
 		PROP_INT(StripSize)
 	END_PROP_TABLE
 
@@ -289,15 +289,17 @@ struct FRawCurveTracks
 //	TArray<FFloatCurve>		FloatCurves;
 
 	BEGIN_PROP_TABLE
-		PROP_DROP(Dummy)	//!! remove
-//		PROP_ARRAY(FloatCurves, FFloatCurve)
+	#if 1
+		PROP_DROP(FloatCurves)	// remove when implement float curves
+	#else
+		PROP_ARRAY(FloatCurves, FFloatCurve)
+	#endif
 	END_PROP_TABLE
 
 	friend FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T)
 	{
 		guard(FRawCurveTracks<<);
-		//!! todo: serialize as script structure, or may be skip this data
-		assert(0);
+		FRawCurveTracks::StaticGetTypeinfo()->SerializeProps(Ar, &T);
 		return Ar;
 		unguard;
 	}
@@ -349,7 +351,7 @@ public:
 	AnimationCompressionFormat ScaleCompressionFormat;
 	TArray<int32>			CompressedTrackOffsets;
 	FCompressedOffsetData	CompressedScaleOffsets;
-	FTrackToSkeletonMap		CompressedTrackToSkeletonMapTable;
+	TArray<FTrackToSkeletonMap> CompressedTrackToSkeletonMapTable;
 	FRawCurveTracks			CompressedCurveData;
 
 	// Before UE4.12 some fields were serialized as properties
@@ -360,7 +362,7 @@ public:
 		PROP_ENUM2(ScaleCompressionFormat, AnimationCompressionFormat)
 		PROP_ARRAY(CompressedTrackOffsets, int)
 		PROP_STRUC(CompressedScaleOffsets, FCompressedOffsetData)
-		PROP_STRUC(CompressedTrackToSkeletonMapTable, FTrackToSkeletonMap)
+		PROP_ARRAY(CompressedTrackToSkeletonMapTable, FTrackToSkeletonMap)
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 	END_PROP_TABLE
 
