@@ -410,7 +410,7 @@ struct FSkelMeshChunk4
 		guard(FSkelMeshChunk4<<);
 
 		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
-		assert(SkelMeshVer >= FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts); // this is somewhere between 4.12 and 4.13, so ignore this
+		assert(SkelMeshVer < FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts); // no more chunks since 4.13
 
 		FStripDataFlags StripFlags(Ar);
 
