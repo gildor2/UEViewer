@@ -99,6 +99,83 @@ void USkeleton::PostLoad()
 #define DBG(...)
 #endif
 
+// position
+#define TP(Enum, VecType)						\
+				case Enum:						\
+					{							\
+						VecType v;				\
+						Reader << v;			\
+						A->KeyPos.Add(CVT(v));	\
+					}							\
+					break;
+// position ranged
+#define TPR(Enum, VecType)						\
+				case Enum:						\
+					{							\
+						VecType v;				\
+						Reader << v;			\
+						FVector v2 = v.ToVector(Mins, Ranges); \
+						A->KeyPos.Add(CVT(v2));	\
+					}							\
+					break;
+// rotation
+#define TR(Enum, QuatType)						\
+				case Enum:						\
+					{							\
+						QuatType q;				\
+						Reader << q;			\
+						A->KeyQuat.Add(CVT(q));	\
+					}							\
+					break;
+// rotation ranged
+#define TRR(Enum, QuatType)						\
+				case Enum:						\
+					{							\
+						QuatType q;				\
+						Reader << q;			\
+						FQuat q2 = q.ToQuat(Mins, Ranges); \
+						A->KeyQuat.Add(CVT(q2));\
+					}							\
+					break;
+
+static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int NumFrames)
+{
+	guard(ReadTimeArray);
+
+	Times.Empty(NumKeys);
+	if (NumKeys <= 1) return;
+
+//	appPrintf("  pos=%4X keys (max=%X)[ ", Ar.Tell(), NumFrames);
+	if (NumFrames < 256)
+	{
+		for (int k = 0; k < NumKeys; k++)
+		{
+			uint8 v;
+			Ar << v;
+			Times.Add(v);
+//			if (k < 4 || k > NumKeys - 5) appPrintf(" %02X ", v);
+//			else if (k == 4) appPrintf("...");
+		}
+	}
+	else
+	{
+		for (int k = 0; k < NumKeys; k++)
+		{
+			uint16 v;
+			Ar << v;
+			Times.Add(v);
+//			if (k < 4 || k > NumKeys - 5) appPrintf(" %04X ", v);
+//			else if (k == 4) appPrintf("...");
+		}
+	}
+//	appPrintf(" ]\n");
+
+	// align to 4 bytes
+	Ar.Seek(Align(Ar.Tell(), 4));
+
+	unguard;
+}
+
 void USkeleton::ConvertAnims()
 {
 	guard(USkeleton::ConvertAnims);
@@ -179,10 +256,316 @@ void USkeleton::ConvertAnims()
 		Dst->NumFrames = Seq->NumFrames;
 		Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
 
+		// bone tracks ...
+		Dst->Tracks.Empty(NumTracks);
 
+		FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
+		Reader.SetupFrom(*Package);
 
+		bool HasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
 
+		int offsetIndex = 0;
+		for (j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
+		{
+			CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
 
+			int k;
+
+			if (!Seq->CompressedTrackOffsets.Num())	//?? or if RawAnimData.Num() != 0
+			{
+				// using RawAnimData array
+				assert(Seq->RawAnimationData.Num() == NumTracks);
+				CopyArray(A->KeyPos,  CVT(Seq->RawAnimationData[j].PosKeys));
+				CopyArray(A->KeyQuat, CVT(Seq->RawAnimationData[j].RotKeys));
+				CopyArray(A->KeyTime, Seq->RawAnimationData[j].KeyTimes);	// may be empty
+				for (int k = 0; k < A->KeyTime.Num(); k++)
+					A->KeyTime[k] *= Dst->Rate;
+				continue;
+			}
+
+			FVector Mins, Ranges;	// common ...
+			static const CVec3 nullVec  = { 0, 0, 0 };
+			static const CQuat nullQuat = { 0, 0, 0, 1 };
+
+			//----------------------------------------------
+			// decode AKF_PerTrackCompression data
+			//----------------------------------------------
+			if (Seq->KeyEncodingFormat == AKF_PerTrackCompression)
+			{
+				// this format uses different key storage
+				guard(PerTrackCompression);
+				assert(Seq->TranslationCompressionFormat == ACF_Identity);
+				assert(Seq->RotationCompressionFormat == ACF_Identity);
+
+				int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
+				int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex+1];
+
+				unsigned PackedInfo;
+				AnimationCompressionFormat KeyFormat;
+				int ComponentMask;
+				int NumKeys;
+
+#define DECODE_PER_TRACK_INFO(info)										\
+				KeyFormat = (AnimationCompressionFormat)(info >> 28);	\
+				ComponentMask = (info >> 24) & 0xF;						\
+				NumKeys       = info & 0xFFFFFF;						\
+				HasTimeTracks = (ComponentMask & 8) != 0;
+
+				guard(TransKeys);
+				// read translation keys
+				if (TransOffset == -1)
+				{
+					A->KeyPos.Add(nullVec);
+					DBG("    [%d] no translation data\n", j);
+				}
+				else
+				{
+					Reader.Seek(TransOffset);
+					Reader << PackedInfo;
+					DECODE_PER_TRACK_INFO(PackedInfo);
+					A->KeyPos.Empty(NumKeys);
+					DBG("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
+						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
+					);
+					if (KeyFormat == ACF_IntervalFixed32NoW)
+					{
+						// read mins/maxs
+						Mins.Set(0, 0, 0);
+						Ranges.Set(0, 0, 0);
+						if (ComponentMask & 1) Reader << Mins.X << Ranges.X;
+						if (ComponentMask & 2) Reader << Mins.Y << Ranges.Y;
+						if (ComponentMask & 4) Reader << Mins.Z << Ranges.Z;
+					}
+					for (k = 0; k < NumKeys; k++)
+					{
+						switch (KeyFormat)
+						{
+//						case ACF_None:
+						case ACF_Float96NoW:
+							{
+								FVector v;
+								if (ComponentMask & 7)
+								{
+									v.Set(0, 0, 0);
+									if (ComponentMask & 1) Reader << v.X;
+									if (ComponentMask & 2) Reader << v.Y;
+									if (ComponentMask & 4) Reader << v.Z;
+								}
+								else
+								{
+									// ACF_Float96NoW has a special case for ((ComponentMask & 7) == 0)
+									Reader << v;
+								}
+								A->KeyPos.Add(CVT(v));
+							}
+							break;
+						TPR(ACF_IntervalFixed32NoW, FVectorIntervalFixed32)
+						case ACF_Fixed48NoW:
+							{
+								FVectorFixed48 v;
+								v.X = v.Y = v.Z = 32767;	// corresponds to 0
+								if (ComponentMask & 1) Reader << v.X;
+								if (ComponentMask & 2) Reader << v.Y;
+								if (ComponentMask & 4) Reader << v.Z;
+								FVector v2 = v;				// convert
+								float scale = 1.0f / 128;	// here vector is 128 times smaller
+								v2.X *= scale;
+								v2.Y *= scale;
+								v2.Z *= scale;
+								A->KeyPos.Add(CVT(v2));
+							}
+							break;
+						case ACF_Identity:
+							A->KeyPos.Add(nullVec);
+							break;
+						default:
+							appError("Unknown translation compression method: %d", KeyFormat);
+						}
+					}
+					// align to 4 bytes
+					Reader.Seek(Align(Reader.Tell(), 4));
+					if (HasTimeTracks)
+						ReadTimeArray(Reader, NumKeys, A->KeyPosTime, Seq->NumFrames);
+				}
+				unguard;
+
+				guard(RotKeys);
+				// read rotation keys
+				if (RotOffset == -1)
+				{
+					A->KeyQuat.Add(nullQuat);
+					DBG("    [%d] no rotation data\n", j);
+				}
+				else
+				{
+					Reader.Seek(RotOffset);
+					Reader << PackedInfo;
+					DECODE_PER_TRACK_INFO(PackedInfo);
+					A->KeyQuat.Empty(NumKeys);
+					DBG("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
+						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
+					);
+					if (KeyFormat == ACF_IntervalFixed32NoW)
+					{
+						// read mins/maxs
+						Mins.Set(0, 0, 0);
+						Ranges.Set(0, 0, 0);
+						if (ComponentMask & 1) Reader << Mins.X << Ranges.X;
+						if (ComponentMask & 2) Reader << Mins.Y << Ranges.Y;
+						if (ComponentMask & 4) Reader << Mins.Z << Ranges.Z;
+					}
+					for (k = 0; k < NumKeys; k++)
+					{
+						switch (KeyFormat)
+						{
+//						TR (ACF_None, FQuat)
+						case ACF_Float96NoW:
+							{
+								FQuatFloat96NoW q;
+								Reader << q;
+								FQuat q2 = q;				// convert
+								A->KeyQuat.Add(CVT(q2));
+							}
+							break;
+						case ACF_Fixed48NoW:
+							{
+								FQuatFixed48NoW q;
+								q.X = q.Y = q.Z = 32767;	// corresponds to 0
+								if (ComponentMask & 1) Reader << q.X;
+								if (ComponentMask & 2) Reader << q.Y;
+								if (ComponentMask & 4) Reader << q.Z;
+								FQuat q2 = q;				// convert
+								A->KeyQuat.Add(CVT(q2));
+							}
+							break;
+						TR (ACF_Fixed32NoW, FQuatFixed32NoW)
+						TRR(ACF_IntervalFixed32NoW, FQuatIntervalFixed32NoW)
+						TR (ACF_Float32NoW, FQuatFloat32NoW)
+						case ACF_Identity:
+							A->KeyQuat.Add(nullQuat);
+							break;
+						default:
+							appError("Unknown rotation compression method: %d", KeyFormat);
+						}
+					}
+					// align to 4 bytes
+					Reader.Seek(Align(Reader.Tell(), 4));
+					if (HasTimeTracks)
+						ReadTimeArray(Reader, NumKeys, A->KeyQuatTime, Seq->NumFrames);
+				}
+				unguard;
+
+				unguard;
+				continue;
+				// end of AKF_PerTrackCompression block ...
+			}
+
+			//----------------------------------------------
+			// end of AKF_PerTrackCompression decoder
+			//----------------------------------------------
+
+			// read animations
+			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
+			int TransKeys   = Seq->CompressedTrackOffsets[offsetIndex+1];
+			int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex+2];
+			int RotKeys     = Seq->CompressedTrackOffsets[offsetIndex+3];
+//			appPrintf("[%d:%d:%d] :  %d[%d]  %d[%d]  %d[%d]\n", j, Seq->RotationCompressionFormat, Seq->TranslationCompressionFormat, TransOffset, TransKeys, RotOffset, RotKeys, ScaleOffset, ScaleKeys);
+
+			A->KeyPos.Empty(TransKeys);
+			A->KeyQuat.Empty(RotKeys);
+
+			// read translation keys
+			if (TransKeys)
+			{
+				Reader.Seek(TransOffset);
+				AnimationCompressionFormat TranslationCompressionFormat = Seq->TranslationCompressionFormat;
+				if (TransKeys == 1)
+					TranslationCompressionFormat = ACF_None;	// single key is stored without compression
+			do_not_override_trans_format:
+				// read mins/ranges
+				if (TranslationCompressionFormat == ACF_IntervalFixed32NoW)
+				{
+					Reader << Mins << Ranges;
+				}
+
+				for (k = 0; k < TransKeys; k++)
+				{
+					switch (TranslationCompressionFormat)
+					{
+					TP (ACF_None,               FVector)
+					TP (ACF_Float96NoW,         FVector)
+					TPR(ACF_IntervalFixed32NoW, FVectorIntervalFixed32)
+					TP (ACF_Fixed48NoW,         FVectorFixed48)
+					case ACF_Identity:
+						A->KeyPos.Add(nullVec);
+						break;
+					default:
+						appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
+					}
+				}
+
+			trans_keys_done:
+				// align to 4 bytes
+				Reader.Seek(Align(Reader.Tell(), 4));
+				if (HasTimeTracks)
+					ReadTimeArray(Reader, TransKeys, A->KeyPosTime, Seq->NumFrames);
+			}
+			else
+			{
+//				A->KeyPos.Add(nullVec);
+//				appNotify("No translation keys!");
+			}
+
+#if DEBUG_DECOMPRESS
+			int TransEnd = Reader.Tell();
+#endif
+			// read rotation keys
+			Reader.Seek(RotOffset);
+			AnimationCompressionFormat RotationCompressionFormat = Seq->RotationCompressionFormat;
+			if (RotKeys <= 0)
+				goto rot_keys_done;
+			if (RotKeys == 1)
+			{
+				RotationCompressionFormat = ACF_Float96NoW;	// single key is stored without compression
+			}
+			else if (RotationCompressionFormat == ACF_IntervalFixed32NoW)
+			{
+				// Mins/Ranges are read only when needed - i.e. for ACF_IntervalFixed32NoW
+				Reader << Mins << Ranges;
+			skip_ranges: ;
+			}
+
+			for (k = 0; k < RotKeys; k++)
+			{
+				switch (RotationCompressionFormat)
+				{
+				TR (ACF_None, FQuat)
+				TR (ACF_Float96NoW, FQuatFloat96NoW)
+				TR (ACF_Fixed48NoW, FQuatFixed48NoW)
+				TR (ACF_Fixed32NoW, FQuatFixed32NoW)
+				TRR(ACF_IntervalFixed32NoW, FQuatIntervalFixed32NoW)
+				TR (ACF_Float32NoW, FQuatFloat32NoW)
+				case ACF_Identity:
+					A->KeyQuat.Add(nullQuat);
+					break;
+				default:
+					appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
+				}
+			}
+
+		rot_keys_done:
+			// align to 4 bytes
+			Reader.Seek(Align(Reader.Tell(), 4));
+			if (HasTimeTracks)
+				ReadTimeArray(Reader, RotKeys, A->KeyQuatTime, Seq->NumFrames);
+
+#if DEBUG_DECOMPRESS
+//			appPrintf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
+//				Seq->NumFrames, A->KeyPos.Num(), A->KeyQuat.Num(), *Seq->KeyEncodingFormat);
+			appPrintf("  ->[%d]: t %d .. %d + r %d .. %d (%d/%d keys)\n", j,
+				TransOffset, TransEnd, RotOffset, Reader.Tell(), TransKeys, RotKeys);
+#endif // DEBUG_DECOMPRESS
+		}
 	}
 
 	unguard;
