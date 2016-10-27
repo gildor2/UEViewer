@@ -238,6 +238,7 @@ bool CUmodelApp::ShowPackageUI()
 
 		// fully load all selected packages
 		progress.SetDescription("Loading package");
+		UObject::BeginLoad();
 		for (int i = 0; i < Packages.Num(); i++)
 		{
 			UnPackage* package = Packages[i];
@@ -252,6 +253,7 @@ bool CUmodelApp::ShowPackageUI()
 				break;
 			}
 		}
+		UObject::EndLoad();
 
 		if (cancelled)
 		{
