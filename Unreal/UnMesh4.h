@@ -127,10 +127,8 @@ public:
 	CAnimSet				*ConvertedAnim;
 
 	virtual void Serialize(FArchive &Ar);
-	virtual void PostLoad();
 
-protected:
-	void ConvertAnims();
+	void ConvertAnims(UAnimSequence4* Seq);
 };
 
 
@@ -399,6 +397,7 @@ public:
 	{}
 
 	virtual void Serialize(FArchive& Ar);
+	virtual void PostLoad();
 
 	int GetNumTracks() const;
 	int GetTrackBoneIndex(int TrackIndex) const;
