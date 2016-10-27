@@ -10,7 +10,7 @@
 #include "SkeletalMesh.h"
 #include "TypeConvert.h"
 
-#define DEBUG_DECOMPRESS	1
+//#define DEBUG_DECOMPRESS	1
 
 /*-----------------------------------------------------------------------------
 	USkeleton
@@ -176,6 +176,19 @@ static void ReadTimeArray(FArchive &Ar, int NumKeys, TArray<float> &Times, int N
 	unguard;
 }
 
+static void FixRotationKeys(CAnimSequence* Anim)
+{
+	for (int TrackIndex = 0; TrackIndex < Anim->Tracks.Num(); TrackIndex++)
+	{
+		if (TrackIndex == 0) continue;	// don't fix root track
+		CAnimTrack& Track = Anim->Tracks[TrackIndex];
+		for (int KeyIndex = 0; KeyIndex < Track.KeyQuat.Num(); KeyIndex++)
+		{
+			Track.KeyQuat[KeyIndex].Conjugate();
+		}
+	}
+}
+
 void USkeleton::ConvertAnims()
 {
 	guard(USkeleton::ConvertAnims);
@@ -268,6 +281,10 @@ void USkeleton::ConvertAnims()
 		for (j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
 		{
 			CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
+
+			//!! check if track index the same as bone index
+			int idx = Seq->TrackToSkeletonMapTable[j].BoneTreeIndex;
+			assert(idx == j);
 
 			int k;
 
@@ -481,7 +498,6 @@ void USkeleton::ConvertAnims()
 				AnimationCompressionFormat TranslationCompressionFormat = Seq->TranslationCompressionFormat;
 				if (TransKeys == 1)
 					TranslationCompressionFormat = ACF_None;	// single key is stored without compression
-			do_not_override_trans_format:
 				// read mins/ranges
 				if (TranslationCompressionFormat == ACF_IntervalFixed32NoW)
 				{
@@ -504,7 +520,6 @@ void USkeleton::ConvertAnims()
 					}
 				}
 
-			trans_keys_done:
 				// align to 4 bytes
 				Reader.Seek(Align(Reader.Tell(), 4));
 				if (HasTimeTracks)
@@ -532,7 +547,6 @@ void USkeleton::ConvertAnims()
 			{
 				// Mins/Ranges are read only when needed - i.e. for ACF_IntervalFixed32NoW
 				Reader << Mins << Ranges;
-			skip_ranges: ;
 			}
 
 			for (k = 0; k < RotKeys; k++)
@@ -566,6 +580,9 @@ void USkeleton::ConvertAnims()
 				TransOffset, TransEnd, RotOffset, Reader.Tell(), TransKeys, RotKeys);
 #endif // DEBUG_DECOMPRESS
 		}
+
+		// Now should invert all imported rotations
+		FixRotationKeys(Dst);
 	}
 
 	unguard;

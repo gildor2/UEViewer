@@ -1449,6 +1449,16 @@ public:
 	}
 #endif // DO_ASSERT && !DO_GUARD_MAX
 
+	FORCEINLINE T& Last(int IndexFromEnd = 0)
+	{
+		return *(T*)GetItem(DataCount - IndexFromEnd - 1, sizeof(T));
+	}
+
+	FORCEINLINE const T& Last(int IndexFromEnd = 0) const
+	{
+		return *(T*)GetItem(DataCount - IndexFromEnd - 1, sizeof(T));
+	}
+
 	//!! Possible additions from UE4:
 	//!! Emplace(...)       = new(...)
 	//!! SetNum/SetNumUninitialized/SetNumZeroed
