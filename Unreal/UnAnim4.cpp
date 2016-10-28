@@ -274,14 +274,20 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 	bool HasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
 
-	int offsetIndex = 0;
-	for (int TrackIndex = 0; TrackIndex < NumTracks; TrackIndex++, offsetIndex += offsetsPerBone)
+	for (int BoneIndex = 0; BoneIndex < ReferenceSkeleton.RefBoneInfo.Num(); BoneIndex++)
 	{
 		CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
+		int TrackIndex = Seq->FindTrackForBoneIndex(BoneIndex);
 
-		//!! check if track index the same as bone index
-		int idx = Seq->TrackToSkeletonMapTable[TrackIndex].BoneTreeIndex;
-		assert(idx == TrackIndex);
+		if (TrackIndex < 0)
+		{
+			// this track has no animation, use static pose from ReferenceSkeleton
+			const FTransform& RefPose = ReferenceSkeleton.RefBonePose[BoneIndex];
+			A->KeyPos.Add(CVT(RefPose.Translation));
+			A->KeyQuat.Add(CVT(RefPose.Rotation));
+			//!! RefPose.Scale3D
+			continue;
+		}
 
 		int k;
 
@@ -300,6 +306,8 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		FVector Mins, Ranges;	// common ...
 		static const CVec3 nullVec  = { 0, 0, 0 };
 		static const CQuat nullQuat = { 0, 0, 0, 1 };
+
+		int offsetIndex = TrackIndex * offsetsPerBone;
 
 		//----------------------------------------------
 		// decode AKF_PerTrackCompression data
@@ -393,7 +401,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 						A->KeyPos.Add(nullVec);
 						break;
 					default:
-						appError("Unknown translation compression method: %d", KeyFormat);
+						appError("Unknown translation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
 					}
 				}
 				// align to 4 bytes
@@ -459,7 +467,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 						A->KeyQuat.Add(nullQuat);
 						break;
 					default:
-						appError("Unknown rotation compression method: %d", KeyFormat);
+						appError("Unknown rotation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
 					}
 				}
 				// align to 4 bytes
@@ -513,7 +521,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 					A->KeyPos.Add(nullVec);
 					break;
 				default:
-					appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
+					appError("Unknown translation compression method: %d (%s)", TranslationCompressionFormat, EnumToName(TranslationCompressionFormat));
 				}
 			}
 
@@ -560,7 +568,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 				A->KeyQuat.Add(nullQuat);
 				break;
 			default:
-				appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
+				appError("Unknown rotation compression method: %d (%s)", RotationCompressionFormat, EnumToName(RotationCompressionFormat));
 			}
 		}
 
@@ -643,6 +651,9 @@ void UAnimSequence4::PostLoad()
 	unguard;
 }
 
+// WARNING: the following functions uses some logic to use either CompressedTrackToSkeletonMapTable or TrackToSkeletonMapTable.
+// This logic should be the same everywhere. Note: CompressedTrackToSkeletonMapTable appeared in UE4.12, so it will always be
+// empty when loading animations from older engines.
 
 int UAnimSequence4::GetNumTracks() const
 {
@@ -658,5 +669,16 @@ int UAnimSequence4::GetTrackBoneIndex(int TrackIndex) const
 		return TrackToSkeletonMapTable[TrackIndex].BoneTreeIndex;
 }
 
+
+int UAnimSequence4::FindTrackForBoneIndex(int BoneIndex) const
+{
+	const TArray<FTrackToSkeletonMap>& TrackMap = CompressedTrackToSkeletonMapTable.Num() ? CompressedTrackToSkeletonMapTable : TrackToSkeletonMapTable;
+	for (int TrackIndex = 0; TrackIndex < TrackMap.Num(); TrackIndex++)
+	{
+		if (TrackMap[TrackIndex].BoneTreeIndex == BoneIndex)
+			return TrackIndex;
+	}
+	return INDEX_NONE;
+}
 
 #endif // UNREAL4

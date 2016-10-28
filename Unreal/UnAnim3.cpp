@@ -332,7 +332,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 	case ACF_Float32NoW:
 		QuatSize = 4; break;
 	default:
-		appError("Unknown RotationCompressionFormat %d", RotationCompressionFormat);
+		appError("Unknown RotationCompressionFormat %d (%s)", RotationCompressionFormat, EnumToName(RotationCompressionFormat));
 	}
 
 	// block sizes
@@ -495,7 +495,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 				TR (ACF_Float32NoW, FQuatFloat32NoW)
 				TRR(ACF_IntervalFixed48NoW, FQuatIntervalFixed48NoW_Trans)
 				default:
-					appError("Unknown rotation compression method: %d", RotationCompressionFormat);
+					appError("Unknown rotation compression method: %d (%s)", RotationCompressionFormat, EnumToName(RotationCompressionFormat));
 				}
 			}
 			if (RotationIntervalSize)
@@ -808,7 +808,7 @@ void UAnimSet::ConvertAnims()
 							A->KeyPos.Add(nullVec);
 							break;
 						default:
-							appError("Unknown translation compression method: %d", KeyFormat);
+							appError("Unknown translation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
 						}
 					}
 					// align to 4 bytes
@@ -893,7 +893,7 @@ void UAnimSet::ConvertAnims()
 							A->KeyQuat.Add(nullQuat);
 							break;
 						default:
-							appError("Unknown rotation compression method: %d", KeyFormat);
+							appError("Unknown rotation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
 						}
 					}
 					// align to 4 bytes
@@ -1028,7 +1028,7 @@ void UAnimSet::ConvertAnims()
 						break;
 #endif // ARGONAUTS
 					default:
-						appError("Unknown translation compression method: %d", Seq->TranslationCompressionFormat);
+						appError("Unknown translation compression method: %d (%s)", TranslationCompressionFormat, EnumToName(TranslationCompressionFormat));
 					}
 				}
 
@@ -1155,7 +1155,7 @@ void UAnimSet::ConvertAnims()
 				TR (ACF_Float48NoW, FQuatFloat48NoW_Argo)
 #endif // ARGONAUTS
 				default:
-					appError("Unknown rotation compression method: %d", Seq->RotationCompressionFormat);
+					appError("Unknown rotation compression method: %d (%s)", RotationCompressionFormat, RotationCompressionFormat);
 				}
 			}
 

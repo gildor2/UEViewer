@@ -906,7 +906,7 @@ void USkeletalMesh4::ConvertMesh()
 		//!! use T.Scale3D
 		// fix skeleton; all bones but 0
 		if (i >= 1)
-			Dst->Orientation.w *= -1;
+			Dst->Orientation.Conjugate();
 	}
 	unguard; // ProcessSkeleton
 

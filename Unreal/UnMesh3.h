@@ -246,6 +246,8 @@ struct FRawAnimSequenceTrack
 	}
 };
 
+// Note: this enum should be binary compatible with UE4 AnimationCompressionFormat, because
+// it is serialized by value in UAnimSequence4.
 enum AnimationCompressionFormat
 {
 	ACF_None,

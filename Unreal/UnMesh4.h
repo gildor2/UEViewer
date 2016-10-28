@@ -401,6 +401,7 @@ public:
 
 	int GetNumTracks() const;
 	int GetTrackBoneIndex(int TrackIndex) const;
+	int FindTrackForBoneIndex(int BoneIndex) const;
 };
 
 
