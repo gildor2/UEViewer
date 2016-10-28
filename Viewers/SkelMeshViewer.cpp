@@ -82,7 +82,8 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 	{
 		// UE4 SkeletalMesh has USkeleton reference, which collects all compatible animations in its PostLoad method
 		const USkeletalMesh4* OriginalMesh = static_cast<USkeletalMesh4*>(Mesh->OriginalMesh);
-		SkelInst->SetAnim(OriginalMesh->Skeleton->ConvertedAnim);
+		if (OriginalMesh->Skeleton)
+			SkelInst->SetAnim(OriginalMesh->Skeleton->ConvertedAnim);
 	}
 #endif // UNREAL4
 	Inst = SkelInst;

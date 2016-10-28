@@ -80,6 +80,13 @@ struct FVectorFixed48
 
 SIMPLE_TYPE(FVectorFixed48, uint16)
 
+template<int Log2>
+inline float DecodeFixed48_PerTrackComponent(uint16 Value)
+{
+	const int Offset = (1 << (15 - Log2)) - 1;			// default (for Log2==7) is 255
+	const float InvFactor = 1.0f / (Offset >> Log2);	// default is 1.0f
+	return (Value - Offset) * InvFactor;
+}
 
 // normalized quaternion with 11/11/10-bit fixed point fields
 struct FQuatFixed32NoW

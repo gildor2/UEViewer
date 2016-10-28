@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+28.10.2016
+- added UE4 animation support
+
 19.10.2016
 - added UE4.13 support
 

@@ -729,7 +729,7 @@ void UAnimSet::ConvertAnims()
 				int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
 				int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex+1];
 
-				unsigned PackedInfo;
+				uint32 PackedInfo;
 				AnimationCompressionFormat KeyFormat;
 				int ComponentMask;
 				int NumKeys;
@@ -791,17 +791,22 @@ void UAnimSet::ConvertAnims()
 						TPR(ACF_IntervalFixed32NoW, FVectorIntervalFixed32)
 						case ACF_Fixed48NoW:
 							{
-								FVectorFixed48 v;
-								v.X = v.Y = v.Z = 32767;	// corresponds to 0
-								if (ComponentMask & 1) Reader << v.X;
-								if (ComponentMask & 2) Reader << v.Y;
-								if (ComponentMask & 4) Reader << v.Z;
-								FVector v2 = v;				// convert
-								float scale = 1.0f / 128;	// here vector is 128 times smaller
-								v2.X *= scale;
-								v2.Y *= scale;
-								v2.Z *= scale;
-								A->KeyPos.Add(CVT(v2));
+								uint16 X, Y, Z;
+								CVec3 v;
+								v.Set(0, 0, 0);
+								if (ComponentMask & 1)
+								{
+									Reader << X; v[0] = DecodeFixed48_PerTrackComponent<7>(X);
+								}
+								if (ComponentMask & 2)
+								{
+									Reader << Y; v[1] = DecodeFixed48_PerTrackComponent<7>(Y);
+								}
+								if (ComponentMask & 4)
+								{
+									Reader << Z; v[2] = DecodeFixed48_PerTrackComponent<7>(Z);
+								}
+								A->KeyPos.Add(v);
 							}
 							break;
 						case ACF_Identity:
