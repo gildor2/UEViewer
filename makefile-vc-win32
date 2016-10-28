@@ -645,6 +645,31 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMesh.h \
 	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnAnim4.obj : Unreal/UnAnim4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim4.obj" Unreal/UnAnim4.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
 	Unreal/UnMeshTypes.h \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
@@ -1099,26 +1124,6 @@ $(OUT_1)/UnTexture3.obj : Unreal/UnTexture3.cpp $(DEPENDS)
 
 $(OUT_1)/UnTexture4.obj : Unreal/UnTexture4.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture4.obj" Unreal/UnTexture4.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh3.h \
-	Unreal/UnMesh4.h \
-	Unreal/UnMeshTypes.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-$(OUT_1)/UnAnim4.obj : Unreal/UnAnim4.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim4.obj" Unreal/UnAnim4.cpp
 
 DEPENDS = \
 	Core/Core.h \

@@ -18,7 +18,6 @@
 	Game file system
 -----------------------------------------------------------------------------*/
 
-#define MAX_GAME_FILES			32768		// DC Universe Online has more than 20k upk files
 #define MAX_FOREIGN_FILES		32768
 
 static char RootDirectory[MAX_PACKAGE_PATH];
@@ -132,8 +131,7 @@ static bool FindExtension(const char *Filename, const char **Extensions, int Num
 }
 
 
-static CGameFileInfo *GameFiles[MAX_GAME_FILES];
-int GNumGameFiles = 0;
+static TArray<CGameFileInfo*> GameFiles;
 int GNumPackageFiles = 0;
 int GNumForeignFiles = 0;
 
@@ -209,9 +207,6 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 	guard(RegisterGameFile);
 
 //	printf("..file %s\n", FullName);
-	// return false when MAX_GAME_FILES
-	if (GNumGameFiles >= ARRAY_COUNT(GameFiles))
-		return false;
 
 	if (!parentVfs)		// no nested VFSs
 	{
@@ -297,7 +292,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 
 	// create entry
 	CGameFileInfo *info = new CGameFileInfo;
-	GameFiles[GNumGameFiles++] = info;
+	GameFiles.Add(info);
 	info->IsPackage = IsPackage;
 	info->FileSystem = parentVfs;
 	if (IsPackage) GNumPackageFiles++;
@@ -439,7 +434,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	if (dir[0] == 0) dir = ".";	// using dir="" will cause scanning of "/dir1", "/dir2" etc (i.e. drive root)
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
-	appPrintf("Found %d game files (%d skipped)\n", GNumGameFiles, GNumForeignFiles);
+	appPrintf("Found %d game files (%d skipped)\n", GameFiles.Num(), GNumForeignFiles);
 #if PRINT_HASH_DISTRIBUTION
 	PrintHashDistribution();
 #endif
@@ -708,7 +703,7 @@ FArchive *appCreateFileReader(const CGameFileInfo *info)
 
 void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const char *Ext, void *Param)
 {
-	for (int i = 0; i < GNumGameFiles; i++)
+	for (int i = 0; i < GameFiles.Num(); i++)
 	{
 		const CGameFileInfo *info = GameFiles[i];
 		if (!Ext)

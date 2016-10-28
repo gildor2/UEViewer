@@ -175,6 +175,7 @@ Changes
 ~~~~~~~
 28.10.2016
 - added UE4 animation support
+- removed limit to 32k packages in a game, now number of packages is unlimited
 
 19.10.2016
 - added UE4.13 support

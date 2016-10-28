@@ -388,7 +388,7 @@ public:
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 	END_PROP_TABLE
 
-	UAnimSequence4::UAnimSequence4()
+	UAnimSequence4()
 	:	RateScale(1.0f)
 	,	TranslationCompressionFormat(ACF_None)
 	,	RotationCompressionFormat(ACF_None)

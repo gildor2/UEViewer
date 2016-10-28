@@ -104,7 +104,6 @@ struct CGameFileInfo
 	int			NumTextures;
 };
 
-extern int GNumGameFiles;
 extern int GNumPackageFiles;
 extern int GNumForeignFiles;
 
