@@ -450,7 +450,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 
 	TexData.Platform           = PLATFORM_PC;
 	TexData.OriginalFormatEnum = Format;
-	TexData.OriginalFormatName = EnumToName("ETextureFormat", Format);
+	TexData.OriginalFormatName = EnumToName(Format);
 	TexData.Obj                = this;
 	TexData.Palette            = Palette;
 

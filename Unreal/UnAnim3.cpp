@@ -600,9 +600,9 @@ void UAnimSet::ConvertAnims()
 			NumTracks, Seq->CompressedTrackOffsets.Num(), Seq->CompressedTrackOffsets.Num() / (float)NumTracks,
 			Seq->NumFrames,
 			Seq->CompressedByteStream.Num(),
-			EnumToName("AnimationCompressionFormat", Seq->TranslationCompressionFormat),
-			EnumToName("AnimationCompressionFormat", Seq->RotationCompressionFormat),
-			EnumToName("AnimationKeyFormat",         Seq->KeyEncodingFormat)
+			EnumToName(Seq->TranslationCompressionFormat),
+			EnumToName(Seq->RotationCompressionFormat),
+			EnumToName(Seq->KeyEncodingFormat)
 		);
 	#if TRANSFORMERS
 		if (ArGame == GAME_Transformers && Seq->Trans3Data.Num()) goto no_track_details;
@@ -754,7 +754,7 @@ void UAnimSet::ConvertAnims()
 					DECODE_PER_TRACK_INFO(PackedInfo);
 					A->KeyPos.Empty(NumKeys);
 					DBG("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
-						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
+						KeyFormat, EnumToName(KeyFormat), NumKeys, ComponentMask
 					);
 					if (KeyFormat == ACF_IntervalFixed32NoW)
 					{
@@ -847,7 +847,7 @@ void UAnimSet::ConvertAnims()
 #endif // BORDERLANDS
 					A->KeyQuat.Empty(NumKeys);
 					DBG("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
-						KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
+						KeyFormat, EnumToName(KeyFormat), NumKeys, ComponentMask
 					);
 					if (KeyFormat == ACF_IntervalFixed32NoW)
 					{

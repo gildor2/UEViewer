@@ -228,7 +228,23 @@ struct enumToStr
 	const char* name;
 };
 
-#define _ENUM(name)				const enumToStr name##Names[] =
+template<class T>
+struct TEnumInfo
+{
+	FORCEINLINE static const char* GetName()
+	{
+		staticAssert(0, "Working with unregistered enum");
+		return "UnregisteredEnum";
+	}
+};
+
+#define _ENUM(name)						\
+	template<> struct TEnumInfo<name>	\
+	{									\
+		FORCEINLINE static const char* GetName() { return #name; } \
+	};									\
+	const enumToStr name##Names[] =
+
 #define _E(name)				{ name, #name }
 
 #define REGISTER_ENUM(name)		RegisterEnum(#name, ARRAY_ARG(name##Names));
@@ -241,6 +257,11 @@ const char *EnumToName(const char *EnumName, int Value);
 // find interer value by enum name, ENUM_UNKNOWN when not found
 int NameToEnum(const char *EnumName, const char *Value);
 
+template<class T>
+FORCEINLINE const char* EnumToName(T Value)
+{
+	return EnumToName(TEnumInfo<T>::GetName(), Value);
+}
 
 /*-----------------------------------------------------------------------------
 	UObject class

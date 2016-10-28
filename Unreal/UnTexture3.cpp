@@ -387,7 +387,7 @@ void UUIStreamingTextures::PostLoad()
 		}
 #if 1
 		appPrintf("%d: %s  {%08X} %dx%d %s [%llX + %08X]\n", i, *S.TextureFileCacheName, S.Hash,
-			S.nWidth, S.nHeight, EnumToName("EPixelFormat", Tex->Format),
+			S.nWidth, S.nHeight, EnumToName(Tex->Format),
 			S.BulkDataOffsetInFile, S.BulkDataSizeOnDisk
 		);
 #endif
@@ -486,7 +486,7 @@ static void ReduxReadRtcData()
 	for (int i = 0; i < reduxCatalog.Num(); i++)
 	{
 		const ReduxTextureEntry &Tex = reduxCatalog[i];
-		appPrintf("%d: %s - %s %d %d %d\n", i, *Tex.Name, EnumToName("EPixelFormat", Tex.Format), Tex.f2, Tex.USize, Tex.VSize);
+		appPrintf("%d: %s - %s %d %d %d\n", i, *Tex.Name, EnumToName(Tex.Format), Tex.f2, Tex.USize, Tex.VSize);
 		if (Tex.Format != 2 && Tex.Format != 3 && Tex.Format != 5 && Tex.Format != 7 && Tex.Format != 25) appError("f1=%d", Tex.Format);
 		if (Tex.f2 != 2) appError("f2=%d", Tex.f2);
 		for (int j = 0; j < Tex.Mips.Num(); j++)
@@ -805,7 +805,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	guard(UTexture2D::GetTextureData);
 
 	TexData.OriginalFormatEnum = Format;
-	TexData.OriginalFormatName = EnumToName("EPixelFormat", Format);
+	TexData.OriginalFormatName = EnumToName(Format);
 	TexData.Obj                = this;
 
 #if TRIBES4

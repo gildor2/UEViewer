@@ -135,7 +135,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 		//!! so it is implemented only for UTexture2D.
 		EPixelFormat NewPixelFormat = PF_Unknown;
 		int BytesPerPixel = 0;
-		const char* FormatName = EnumToName("ETextureSourceFormat", Source.Format);
+		const char* FormatName = EnumToName(Source.Format);
 		switch (Source.Format)
 		{
 		case TSF_G8:

@@ -193,8 +193,6 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 {
 	guard(USkeleton::ConvertAnims);
 
-	int i, j;
-
 	CAnimSet* AnimSet = ConvertedAnim;
 
 	if (!AnimSet)
@@ -204,7 +202,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 		// Copy bone names
 		AnimSet->TrackBoneNames.Empty(ReferenceSkeleton.RefBoneInfo.Num());
-		for (i = 0; i < ReferenceSkeleton.RefBoneInfo.Num(); i++)
+		for (int i = 0; i < ReferenceSkeleton.RefBoneInfo.Num(); i++)
 		{
 			AnimSet->TrackBoneNames.Add(ReferenceSkeleton.RefBoneInfo[i].Name);
 		}
@@ -218,17 +216,14 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	int NumTracks = Seq->GetNumTracks();
 
 #if DEBUG_DECOMPRESS
-	appPrintf("Sequence %d (%s):%s %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
+	appPrintf("Sequence %s: %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
 		   "          trans %s, rot %s, scale %s, key %s\n",
-		i, Seq->Name,
-		"", //?? Seq->bIsAdditive ? " [additive]" : "",
-		NumTracks, Seq->CompressedTrackOffsets.Num(), Seq->CompressedTrackOffsets.Num() / (float)NumTracks,
-		Seq->NumFrames,
-		Seq->CompressedByteStream.Num(),
-		EnumToName("AnimationCompressionFormat", Seq->TranslationCompressionFormat),
-		EnumToName("AnimationCompressionFormat", Seq->RotationCompressionFormat),
-		EnumToName("AnimationCompressionFormat", Seq->ScaleCompressionFormat),
-		EnumToName("AnimationKeyFormat",         Seq->KeyEncodingFormat)
+		Seq->Name, NumTracks, Seq->CompressedTrackOffsets.Num(), Seq->CompressedTrackOffsets.Num() / (float)NumTracks,
+		Seq->NumFrames, Seq->CompressedByteStream.Num(),
+		EnumToName(Seq->TranslationCompressionFormat),
+		EnumToName(Seq->RotationCompressionFormat),
+		EnumToName(Seq->ScaleCompressionFormat),
+		EnumToName(Seq->KeyEncodingFormat)
 	);
 	for (int i2 = 0; i2 < Seq->CompressedTrackOffsets.Num(); /*empty*/)
 	{
@@ -260,8 +255,8 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 	if (Seq->CompressedTrackOffsets.Num() != NumTracks * offsetsPerBone && !Seq->RawAnimationData.Num())
 	{
-		appNotify("AnimSequence %s/%s has wrong CompressedTrackOffsets size (has %d, expected %d), removing track",
-			Name, Seq->Name, Seq->CompressedTrackOffsets.Num(), NumTracks * offsetsPerBone);
+		appNotify("AnimSequence %s has wrong CompressedTrackOffsets size (has %d, expected %d), removing track",
+			Seq->Name, Seq->CompressedTrackOffsets.Num(), NumTracks * offsetsPerBone);
 		return;
 	}
 
@@ -280,13 +275,13 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	bool HasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
 
 	int offsetIndex = 0;
-	for (j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
+	for (int TrackIndex = 0; TrackIndex < NumTracks; TrackIndex++, offsetIndex += offsetsPerBone)
 	{
 		CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
 
 		//!! check if track index the same as bone index
-		int idx = Seq->TrackToSkeletonMapTable[j].BoneTreeIndex;
-		assert(idx == j);
+		int idx = Seq->TrackToSkeletonMapTable[TrackIndex].BoneTreeIndex;
+		assert(idx == TrackIndex);
 
 		int k;
 
@@ -294,9 +289,9 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		{
 			// using RawAnimData array
 			assert(Seq->RawAnimationData.Num() == NumTracks);
-			CopyArray(A->KeyPos,  CVT(Seq->RawAnimationData[j].PosKeys));
-			CopyArray(A->KeyQuat, CVT(Seq->RawAnimationData[j].RotKeys));
-			CopyArray(A->KeyTime, Seq->RawAnimationData[j].KeyTimes);	// may be empty
+			CopyArray(A->KeyPos,  CVT(Seq->RawAnimationData[TrackIndex].PosKeys));
+			CopyArray(A->KeyQuat, CVT(Seq->RawAnimationData[TrackIndex].RotKeys));
+			CopyArray(A->KeyTime, Seq->RawAnimationData[TrackIndex].KeyTimes);	// may be empty
 			for (int k = 0; k < A->KeyTime.Num(); k++)
 				A->KeyTime[k] *= Dst->Rate;
 			continue;
@@ -335,7 +330,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			if (TransOffset == -1)
 			{
 				A->KeyPos.Add(nullVec);
-				DBG("    [%d] no translation data\n", j);
+				DBG("    [%d] no translation data\n", TrackIndex);
 			}
 			else
 			{
@@ -343,8 +338,8 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 				Reader << PackedInfo;
 				DECODE_PER_TRACK_INFO(PackedInfo);
 				A->KeyPos.Empty(NumKeys);
-				DBG("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", j,
-					KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
+				DBG("    [%d] trans: fmt=%d (%s), %d keys, mask %d\n", TrackIndex,
+					KeyFormat, EnumToName(KeyFormat), NumKeys, ComponentMask
 				);
 				if (KeyFormat == ACF_IntervalFixed32NoW)
 				{
@@ -413,7 +408,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			if (RotOffset == -1)
 			{
 				A->KeyQuat.Add(nullQuat);
-				DBG("    [%d] no rotation data\n", j);
+				DBG("    [%d] no rotation data\n", TrackIndex);
 			}
 			else
 			{
@@ -421,8 +416,8 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 				Reader << PackedInfo;
 				DECODE_PER_TRACK_INFO(PackedInfo);
 				A->KeyQuat.Empty(NumKeys);
-				DBG("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", j,
-					KeyFormat, EnumToName("AnimationCompressionFormat", KeyFormat), NumKeys, ComponentMask
+				DBG("    [%d] rot  : fmt=%d (%s), %d keys, mask %d\n", TrackIndex,
+					KeyFormat, EnumToName(KeyFormat), NumKeys, ComponentMask
 				);
 				if (KeyFormat == ACF_IntervalFixed32NoW)
 				{
@@ -578,7 +573,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 #if DEBUG_DECOMPRESS
 //		appPrintf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
 //			Seq->NumFrames, A->KeyPos.Num(), A->KeyQuat.Num(), *Seq->KeyEncodingFormat);
-		appPrintf("  -> [%d]: t %d .. %d + r %d .. %d (%d/%d keys)\n", j,
+		appPrintf("  -> [%d]: t %d .. %d + r %d .. %d (%d/%d keys)\n", TrackIndex,
 			TransOffset, TransEnd, RotOffset, Reader.Tell(), TransKeys, RotKeys);
 #endif // DEBUG_DECOMPRESS
 	}
