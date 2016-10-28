@@ -22,6 +22,12 @@
 	USkeleton
 -----------------------------------------------------------------------------*/
 
+USkeleton::~USkeleton()
+{
+	if (ConvertedAnim) delete ConvertedAnim;
+}
+
+
 FArchive& operator<<(FArchive& Ar, FMeshBoneInfo& B)
 {
 	Ar << B.Name << B.ParentIndex;
@@ -68,11 +74,15 @@ void USkeleton::Serialize(FArchive &Ar)
 	unguard;
 }
 
-/*
+
 void USkeleton::PostLoad()
 {
 	guard(USkeleton::PostLoad);
 
+	// Create empty AnimSet if not yet created
+	ConvertAnims(NULL);
+
+/*
 	// Gather all loaded UAnimSequence objects referencing this skeleton
 	const TArray<UnPackage*>& PackageMap = UnPackage::GetPackageMap();
 
@@ -94,10 +104,10 @@ void USkeleton::PostLoad()
 	}
 
 	ConvertAnims();
-
+*/
 	unguard;
 }
-*/
+
 
 #if DEBUG_DECOMPRESS
 #define DBG(...)			appPrintf(__VA_ARGS__)
@@ -216,6 +226,8 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		//TODO: verify if UE4 has AnimRotationOnly stuff
 		AnimSet->AnimRotationOnly = false;
 	}
+
+	if (!Seq) return; // allow calling ConvertAnims(NULL) to create empty AnimSet
 
 //	DBG("----------- Skeleton %s: %d seq, %d bones -----------\n", Name, Anims.Num(), ReferenceSkeleton.RefBoneInfo.Num());
 

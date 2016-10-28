@@ -122,11 +122,18 @@ public:
 		PROP_DROP(Notifies)			// not working with notifies in our program
 	END_PROP_TABLE
 
+	USkeleton()
+	:	ConvertedAnim(NULL)
+	{}
+
+	virtual ~USkeleton();
+
 	// generated stuff
 	TArray<UAnimSequence4*>	Anims;
 	CAnimSet				*ConvertedAnim;
 
 	virtual void Serialize(FArchive &Ar);
+	virtual void PostLoad();
 
 	void ConvertAnims(UAnimSequence4* Seq);
 };
