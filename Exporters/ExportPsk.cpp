@@ -439,7 +439,7 @@ void ExportPsa(const CAnimSet *Anim)
 	{
 		AnimInfoBinary A;
 		memset(&A, 0, sizeof(A));
-		const CAnimSequence &S = Anim->Sequences[i];
+		const CAnimSequence &S = *Anim->Sequences[i];
 		strcpy(A.Name,  *S.Name);
 		strcpy(A.Group, /*??S.Groups.Num() ? *S.Groups[0] :*/ "None");
 		A.TotalBones          = numBones;
@@ -464,7 +464,7 @@ void ExportPsa(const CAnimSet *Anim)
 	bool requireConfig = false;
 	for (i = 0; i < numAnims; i++)
 	{
-		const CAnimSequence &S = Anim->Sequences[i];
+		const CAnimSequence &S = *Anim->Sequences[i];
 		for (int t = 0; t < S.NumFrames; t++)
 		{
 			for (int b = 0; b < numBones; b++)
@@ -532,7 +532,7 @@ void ExportPsa(const CAnimSet *Anim)
 		Ar1->Printf("\n[RemoveTracks]\n");
 		for (i = 0; i < numAnims; i++)
 		{
-			const CAnimSequence &S = Anim->Sequences[i];
+			const CAnimSequence &S = *Anim->Sequences[i];
 			for (int b = 0; b < numBones; b++)
 			{
 #define FLAG_NO_TRANSLATION		1

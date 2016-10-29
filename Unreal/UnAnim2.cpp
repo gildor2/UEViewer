@@ -34,10 +34,12 @@ void UMeshAnimation::ConvertAnims()
 
 	// Sequences
 	int numSeqs = AnimSeqs.Num();
-	AnimSet->Sequences.AddZeroed(numSeqs);
+	AnimSet->Sequences.Empty(numSeqs);
 	for (i = 0; i < numSeqs; i++)
 	{
-		CAnimSequence &S = AnimSet->Sequences[i];
+		CAnimSequence &S = *new CAnimSequence;
+		AnimSet->Sequences.Add(&S);
+
 		const FMeshAnimSeq &Src = AnimSeqs[i];
 		const MotionChunk  &M   = Moves[i];
 

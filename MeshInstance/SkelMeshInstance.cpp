@@ -77,7 +77,7 @@ const char *CSkelMeshInstance::GetAnimName(int Index) const
 	guard(CSkelMeshInstance::GetAnimName);
 	if (Index < 0) return "None";
 	assert(Animation);
-	return Animation->Sequences[Index].Name;
+	return Animation->Sequences[Index]->Name;
 	unguard;
 }
 
@@ -376,7 +376,7 @@ const CAnimSequence *CSkelMeshInstance::FindAnim(const char *AnimName) const
 		return NULL;
 	for (int i = 0; i < Animation->Sequences.Num(); i++)
 	{
-		const CAnimSequence &Seq = Animation->Sequences[i];
+		const CAnimSequence &Seq = *Animation->Sequences[i];
 		if (!stricmp(Seq.Name, AnimName))
 			return &Seq;
 	}

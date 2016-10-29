@@ -241,7 +241,7 @@ class CAnimSet
 public:
 	UObject					*OriginalAnim;			//?? make common for all mesh classes
 	TArray<FName>			TrackBoneNames;
-	TArray<CAnimSequence>	Sequences;
+	TArray<CAnimSequence*>	Sequences;
 
 	bool					AnimRotationOnly;
 	TArray<bool>			UseAnimTranslation;		// per bone; used with AnimRotationOnly mode
@@ -250,6 +250,12 @@ public:
 	CAnimSet(UObject *Original)
 	:	OriginalAnim(Original)
 	{}
+
+	~CAnimSet()
+	{
+		for (int i = 0; i < Sequences.Num(); i++)
+			delete Sequences[i];
+	}
 
 	bool ShouldAnimateTranslation(int BoneIndex, EAnimRotationOnly RotationMode = EARO_AnimSet) const
 	{

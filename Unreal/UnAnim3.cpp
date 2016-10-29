@@ -635,7 +635,8 @@ void UAnimSet::ConvertAnims()
 #if TRANSFORMERS
 		if (ArGame == GAME_Transformers && Seq->Trans3Data.Num())
 		{
-			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
+			CAnimSequence *Dst = new CAnimSequence;
+			AnimSet->Sequences.Add(Dst);
 			Dst->Name      = Seq->SequenceName;
 			Dst->NumFrames = Seq->NumFrames;
 			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
@@ -654,7 +655,8 @@ void UAnimSet::ConvertAnims()
 #if BATMAN
 		if (ArGame >= GAME_Batman2 && ArGame <= GAME_Batman4 && Seq->AnimZip_Data.Num())
 		{
-			CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
+			CAnimSequence *Dst = new CAnimSequence;
+			AnimSet->Sequences.Add(Dst);
 			Dst->Name      = Seq->SequenceName;
 			Dst->NumFrames = Seq->NumFrames;
 			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
@@ -680,7 +682,8 @@ void UAnimSet::ConvertAnims()
 		}
 
 		// create CAnimSequence
-		CAnimSequence *Dst = new (AnimSet->Sequences) CAnimSequence;
+		CAnimSequence *Dst = new CAnimSequence;
+		AnimSet->Sequences.Add(Dst);
 		Dst->Name      = Seq->SequenceName;
 		Dst->NumFrames = Seq->NumFrames;
 		Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;

@@ -301,7 +301,7 @@ void ExportMd5Anim(const CAnimSet *Anim)
 	for (int AnimIndex = 0; AnimIndex < Anim->Sequences.Num(); AnimIndex++)
 	{
 		int i;
-		const CAnimSequence &S = Anim->Sequences[AnimIndex];
+		const CAnimSequence &S = *Anim->Sequences[AnimIndex];
 
 		FArchive *Ar = CreateExportArchive(OriginalAnim, "%s/%s.md5anim", OriginalAnim->Name, *S.Name);
 		if (!Ar) continue;
