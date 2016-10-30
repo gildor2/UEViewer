@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+30.10.2016
+- UI: added possibility to append selected packages to loaded package set
+
 28.10.2016
 - added UE4 animation support
 - removed limit to 32k packages in a game, now number of packages is unlimited

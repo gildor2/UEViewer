@@ -269,7 +269,7 @@ UIPackageDialog::UIPackageDialog()
 
 UIPackageDialog::EResult UIPackageDialog::Show()
 {
-	ModalResult = SHOW;
+	ModalResult = OPEN;
 	if (!ShowModal("Choose a package to open", 500, 200))
 		return CANCEL;
 
@@ -401,6 +401,15 @@ void UIPackageDialog::InitUI()
 		.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
 	];
 
+	UIMenu* openMenu = new UIMenu;
+	(*openMenu)
+	[
+		NewMenuItem("Open (replace loaded set)")
+		.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnOpenClicked, this))
+		+ NewMenuItem("Append (add to loaded set)")
+		.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnAppendClicked, this))
+	];
+
 	// dialog buttons
 	NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 	.SetParent(this)
@@ -410,11 +419,13 @@ void UIPackageDialog::InitUI()
 		.SetWidth(80)
 		.SetMenu(toolsMenu)
 		+ NewControl(UISpacer)
-		+ NewControl(UIButton, "Open")
+		+ NewControl(UIMenuButton, "Open")
 			.SetWidth(80)
+			.SetMenu(openMenu)
 			.Enable(false)
-			.Expose(OkButton)
-			.SetOK()
+			.Expose(OpenButton)
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnOpenClicked, this))
+//			.SetOK() -- this will not let menu to open
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Export")
 			.SetWidth(80)
@@ -775,7 +786,7 @@ void UIPackageDialog::OnFilterTextChanged(UITextEdit* sender, const char* text)
 void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender)
 {
 	bool enableButtons = (sender->GetSelectionCount() > 0);
-	OkButton->Enable(enableButtons);
+	OpenButton->Enable(enableButtons);
 	ExportButton->Enable(enableButtons);
 	SavePackagesMenu->Enable(enableButtons);
 }
@@ -801,7 +812,19 @@ void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
 	SortPackages();
 }
 
-void UIPackageDialog::OnExportClicked(UIButton* sender)
+void UIPackageDialog::OnOpenClicked()
+{
+	ModalResult = OPEN;
+	CloseDialog();
+}
+
+void UIPackageDialog::OnAppendClicked()
+{
+	ModalResult = APPEND;
+	CloseDialog();
+}
+
+void UIPackageDialog::OnExportClicked()
 {
 	ModalResult = EXPORT;
 	CloseDialog();

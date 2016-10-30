@@ -171,15 +171,18 @@ bool CUmodelApp::ShowPackageUI()
 
 		// check whether we need to perform package unloading
 		bool needReload = false;
-		for (int i = 0; i < GFullyLoadedPackages.Num(); i++)
+		if (mode != UIPackageDialog::APPEND)
 		{
-			if (Packages.FindItem(GFullyLoadedPackages[i]) < 0)
+			for (int i = 0; i < GFullyLoadedPackages.Num(); i++)
 			{
-				// One of currently loaded packages is not needed anymore. We can't safely
-				// unload only one package because it could be linked by other loaded packages.
-				// So, unload everything.
-				needReload = true;
-				break;
+				if (Packages.FindItem(GFullyLoadedPackages[i]) < 0)
+				{
+					// One of currently loaded packages is not needed anymore. We can't safely
+					// unload only one package because it could be linked by other loaded packages.
+					// So, unload everything.
+					needReload = true;
+					break;
+				}
 			}
 		}
 

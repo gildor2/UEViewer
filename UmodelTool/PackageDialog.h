@@ -14,7 +14,8 @@ public:
 
 	enum EResult
 	{
-		SHOW,
+		OPEN,
+		APPEND,
 		EXPORT,
 		CANCEL,
 	};
@@ -29,7 +30,7 @@ protected:
 	UITreeView*		PackageTree;
 	UIPackageList*	PackageListbox;
 	UIPackageList*	FlatPackageList;
-	UIButton*		OkButton;
+	UIMenuButton*	OpenButton;
 	UIButton*		ExportButton;
 	UIMenuItem*		ScanContentMenu;
 	UIMenuItem*		SavePackagesMenu;
@@ -51,7 +52,9 @@ protected:
 	void OnFlatViewChanged(UICheckbox* sender, bool value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 	void OnColumnClick(UIMulticolumnListbox* sender, int column);
-	void OnExportClicked(UIButton* sender);
+	void OnOpenClicked();
+	void OnAppendClicked();
+	void OnExportClicked();
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
 	void ScanContent();
