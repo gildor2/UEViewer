@@ -347,13 +347,18 @@ void UIPackageDialog::InitUI()
 		appEnumGameFiles(PackageListEnum, Packages);
 	}
 
-	// add paths of all found packages
+	// add paths of all found packages to the directory tree
 	if (SelectedPackages.Num()) DirectorySelected = true;
 	char prevPath[MAX_PACKAGE_PATH], path[MAX_PACKAGE_PATH];
 	prevPath[0] = 0;
+	// Make a copy of package list sorted by name, to ensure directory tree is always sorted.
+	// Using a copy to not affect package sorting used before.
+	PackageList SortedPackages;
+	CopyArray(SortedPackages, Packages);
+	SortPackages(SortedPackages, UIPackageList::COLUMN_Name, false);
 	for (int i = 0; i < Packages.Num(); i++)
 	{
-		appStrncpyz(path, Packages[i]->RelativeName, ARRAY_COUNT(path));
+		appStrncpyz(path, SortedPackages[i]->RelativeName, ARRAY_COUNT(path));
 		char* s = strrchr(path, '/');
 		if (s)
 		{
@@ -577,6 +582,13 @@ static int PackageSortFunction(const CGameFileInfo* const* pA, const CGameFileIn
 		code = pA < pB ? -1 : 1;
 
 	return code;
+}
+
+/*static*/ void UIPackageDialog::SortPackages(PackageList& List, int Column, bool Reverse)
+{
+	PackageSort_Reverse = Reverse;
+	PackageSort_Column = Column;
+	List.Sort(PackageSortFunction);
 }
 
 void UIPackageDialog::SortPackages()

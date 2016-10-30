@@ -4,7 +4,7 @@ function usage()
 {
 	cat <<EOF
 Usage:
-    test.sh [--64][--nobuild] [--exe=...] [--game=...] <umodel options>
+    test.sh [--64][--nobuild] [--exe=...] [--<game>] <umodel options>
 
 Options:
     --64                    build 64-bit version
@@ -160,7 +160,7 @@ function ut4()
 function paragon()
 {
 	CheckDir C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks
-	run $*
+	run $* -game=ue4.14
 }
 function ue3()
 {
@@ -209,7 +209,7 @@ function tr4()    { run1 "data/3/Tribes4" $*;     }
 
 function thief()  { run1 "${steam[@]/%/Thief/ThiefGame/CookedPCNG}" $*; }
 
-function ark()    { run1 "${steam[@]/%/ARK/ShooterGame/Content}" $*; }
+function ark()    { run1 "${steam[@]/%/ARK/ShooterGame/Content}" $* -game=ue4.6; }
 
 function rund()   {	run1 "data" $*; }
 

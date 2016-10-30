@@ -61,6 +61,7 @@ protected:
 	void SelectDirFromFilename(const char* filename);
 	void RefreshPackageListbox();
 	void SortPackages();
+	static void SortPackages(PackageList& List, int Column, bool Reverse);
 
 	UIPackageList& CreatePackageListControl(bool StripPath);
 
