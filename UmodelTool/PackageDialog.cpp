@@ -558,13 +558,24 @@ void UIPackageDialog::RefreshPackageListbox()
 // We are working in global package list, no matter if we have all packages
 // are filtered by directory name etc, it should work well in any case.
 
+// We can't make qsort stable without storing original package index for comparison.
+// This is because when qsort performs sorting iteration, it will split data into 2 parts,
+// one with smaller sort value, another one with larger sort value. When value is the same,
+// moved data could be reordered.
+
+struct PackageSortHelper
+{
+	const CGameFileInfo* File;
+	int Index;
+};
+
 static bool PackageSort_Reverse;
 static int  PackageSort_Column;
 
-static int PackageSortFunction(const CGameFileInfo* const* pA, const CGameFileInfo* const* pB)
+static int PackageSortFunction(const PackageSortHelper* const pA, const PackageSortHelper* const pB)
 {
-	const CGameFileInfo* A = *pA;
-	const CGameFileInfo* B = *pB;
+	const CGameFileInfo* A = pA->File;
+	const CGameFileInfo* B = pB->File;
 	if (PackageSort_Reverse) Exchange(A, B);
 	int code = 0;
 	switch (PackageSort_Column)
@@ -590,16 +601,33 @@ static int PackageSortFunction(const CGameFileInfo* const* pA, const CGameFileIn
 	}
 	// make sort stable
 	if (code == 0)
-		code = pA < pB ? -1 : 1;
+		code = pA->Index - pB->Index;
 
 	return code;
 }
 
+// Stable sort of packages
 /*static*/ void UIPackageDialog::SortPackages(PackageList& List, int Column, bool Reverse)
 {
+	// prepare helper array
+	TArray<PackageSortHelper> SortedArray;
+	SortedArray.AddUninitialized(List.Num());
+	for (int i = 0; i < List.Num(); i++)
+	{
+		PackageSortHelper& S = SortedArray[i];
+		S.File = List[i];
+		S.Index = i;
+	}
+
 	PackageSort_Reverse = Reverse;
 	PackageSort_Column = Column;
-	List.Sort(PackageSortFunction);
+	SortedArray.Sort(PackageSortFunction);
+
+	// copy sorted data back to List
+	for (int i = 0; i < List.Num(); i++)
+	{
+		List[i] = SortedArray[i].File;
+	}
 }
 
 void UIPackageDialog::SortPackages()
@@ -608,9 +636,7 @@ void UIPackageDialog::SortPackages()
 
 	UpdateSelectedPackages();
 
-	PackageSort_Reverse = ReverseSort;
-	PackageSort_Column = SortedColumn;
-	Packages.Sort(PackageSortFunction);
+	SortPackages(Packages, SortedColumn, ReverseSort);
 
 	FlatPackageList->ShowSortArrow(SortedColumn, ReverseSort);
 	PackageListbox->ShowSortArrow(SortedColumn, ReverseSort);
