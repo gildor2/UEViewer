@@ -170,6 +170,7 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 	unguard;
 }
 
+#if RENDERING
 void CBaseMeshLod::LockMaterials()
 {
 	for (int i = 0; i < Sections.Num(); i++)
@@ -187,3 +188,4 @@ void CBaseMeshLod::UnlockMaterials()
 		if (Material) Material->Unlock();
 	}
 }
+#endif
