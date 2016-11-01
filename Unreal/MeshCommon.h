@@ -186,8 +186,10 @@ struct CBaseMeshLod
 			ExtraUV[i] = (CMeshUVFloat*)appMalloc(sizeof(CMeshUVFloat) * NumVerts);
 	}
 
+#if RENDERING
 	void LockMaterials();
 	void UnlockMaterials();
+#endif
 };
 
 void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const CIndexBuffer &Indices);
