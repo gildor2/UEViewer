@@ -1720,6 +1720,7 @@ protected:
 	T		StaticData[N];
 };
 
+#ifndef NO_OPERATOR_NEW_TARRAY_DEFINITION
 template<typename T>
 FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
@@ -1729,6 +1730,7 @@ FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 	return Array.GetData() + index;
 	unguard;
 }
+#endif
 
 
 // Skip array of items of fixed size
