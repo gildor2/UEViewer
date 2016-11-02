@@ -1720,6 +1720,10 @@ protected:
 	T		StaticData[N];
 };
 
+#ifndef UMODEL_LIB_IN_NAMESPACE
+// Do not compile operator new when building UnCore.h inside a namespace.
+// More info: https://github.com/gildor2/UModel/pull/15/commits/3dc3096a6e81845a75024e060715b76bf345cd1b
+
 template<typename T>
 FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
@@ -1729,6 +1733,8 @@ FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 	return Array.GetData() + index;
 	unguard;
 }
+
+#endif // UMODEL_LIB_IN_NAMESPACE
 
 
 // Skip array of items of fixed size
