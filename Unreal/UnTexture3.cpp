@@ -846,14 +846,18 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		intFormat = TPF_BC5;
 #endif // MASSEFF
 #if UNREAL4
+#if SUPPORT_IPHONE
 	else if (Format == PF_PVRTC2)
 		intFormat = TPF_PVRTC2;
 	else if (Format == PF_PVRTC4)
 		intFormat = TPF_PVRTC4;
+#endif
+#if SUPPORT_ANDROID
 	else if (Format == PF_ETC1)
 		intFormat = TPF_ETC1;
 //!!	else if (Format == PF_ETC2_RGB)		// GL_COMPRESSED_RGB8_ETC2
 //!!	else if (Format == PF_ETC2_RGBA)	// GL_COMPRESSED_RGBA8_ETC2_EAC
+#endif
 #endif // UNREAL4
 	else
 	{
