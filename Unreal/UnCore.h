@@ -1658,7 +1658,7 @@ protected:
 	{}
 	TArray& operator=(const TArray &Other)
 	{
-		return this;
+		return *this;
 	}
 	// Helper function to reduce TLazyArray etc operator<<'s code size.
 	// Used as C-style wrapper around TArray<>::operator<<().
@@ -1910,6 +1910,7 @@ public:
 	{
 		int index = Data.AddUninitialized();
 		Data[index] = ch;
+		return *this;
 	}
 
 	FORCEINLINE void RemoveAt(int index, int count = 1)
