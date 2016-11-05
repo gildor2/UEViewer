@@ -63,7 +63,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // SPLINTER_CELL
 #if RAGNAROK2
-	if (S.PackageFlags & 0x10000 && (Ar.ArVer >= 0x80 && Ar.ArVer < 0x88))	//?? unknown upper limit; known lower limit: 0x80
+	if ((GForceGame == 0) && (S.PackageFlags & 0x10000) && (Ar.ArVer >= 0x80 && Ar.ArVer < 0x88))	//?? unknown upper limit; known lower limit: 0x80
 	{
 		// encrypted Ragnarok Online archive header (data taken by archive analysis)
 		Ar.Game = GAME_Ragnarok2;
