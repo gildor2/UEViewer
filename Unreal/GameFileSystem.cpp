@@ -658,6 +658,76 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 }
 
 
+struct FindPackageWildcardData
+{
+	TArray<const CGameFileInfo*> FoundFiles;
+	bool			WildcardContainsPath;
+	FString			Wildcard;
+};
+
+static bool FindPackageWildcardCallback(const CGameFileInfo *file, FindPackageWildcardData &data)
+{
+	bool useThisPackage = false;
+	if (data.WildcardContainsPath)
+	{
+		useThisPackage = appMatchWildcard(file->RelativeName, *data.Wildcard, true);
+	}
+	else
+	{
+		useThisPackage = appMatchWildcard(file->ShortFilename, *data.Wildcard, true);
+	}
+	if (useThisPackage)
+	{
+		data.FoundFiles.Add(file);
+	}
+	return true;
+}
+
+
+//?? TODO: may be pass "Ext" here
+void appFindGameFiles(const char *Filename, TArray<const CGameFileInfo*>& Files)
+{
+	guard(appFindGameFiles);
+
+	if (!appContainsWildcard(Filename))
+	{
+		const CGameFileInfo* File = appFindGameFile(Filename);
+		if (File)
+			Files.Add(File);
+		return;
+	}
+
+	// here we're working with wildcard and should iterate over all files
+
+	char buf[MAX_PACKAGE_PATH];
+	appStrncpyz(buf, Filename, ARRAY_COUNT(buf));
+	// replace backslashes
+	bool containsPath = false;
+	for (char* s = buf; *s; s++)
+	{
+		char c = *s;
+		if (c == '\\')
+		{
+			*s = '/';
+			containsPath = true;
+		}
+		else if (c == '/')
+		{
+			containsPath = true;
+		}
+	}
+
+	FindPackageWildcardData findData;
+	findData.WildcardContainsPath = containsPath;
+	findData.Wildcard = buf;
+	appEnumGameFiles(FindPackageWildcardCallback, findData);
+
+	CopyArray(Files, findData.FoundFiles);
+
+	unguardf("wildcard=%s", Filename);
+}
+
+
 const char *appSkipRootDir(const char *Filename)
 {
 	if (!RootDirectory[0]) return Filename;

@@ -10,6 +10,7 @@
 
 
 // forward declarations
+template<typename T> class TArray;
 class FArchive;
 class UObject;
 class UnPackage;
@@ -108,8 +109,13 @@ extern int GNumPackageFiles;
 extern int GNumForeignFiles;
 
 // Ext = NULL -> use any package extension
-// Filename can contain extension, but should not contain path
+// Filename can contain extension, but should not contain path.
+// This function is quite fast because it uses hash tables.
 const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NULL);
+// This function allows wildcard use in Filename. When wildcard is used, it iterates over all
+// found files and could be relatively slow.
+void appFindGameFiles(const char *Filename, TArray<const CGameFileInfo*>& Files);
+
 const char *appSkipRootDir(const char *Filename);
 FArchive *appCreateFileReader(const CGameFileInfo *info);
 

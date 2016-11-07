@@ -357,7 +357,8 @@ static void PrintUsage()
 			"       umodel [command] [options] <directory>\n"
 #endif
 			"\n"
-			"    <package>       name of package to load, without file extension\n"
+			"    <package>       name of package to load - this could be a file name\n"
+			"                    with or without extension, or wildcard\n"
 			"    <object>        name of object to load\n"
 			"    <class>         class of object to load (useful, when trying to load\n"
 			"                    object with ambiguous name)\n"
@@ -640,7 +641,7 @@ static void CommandLineError(const char *fmt, ...)
 	va_end(argptr);
 	if (len < 0 || len >= sizeof(buf) - 1) exit(1);
 
-	appPrintf("%s\nTry \"umodel -help\" for more information.\n", buf);
+	appPrintf("UModel: bad command line: %s\nTry \"umodel -help\" for more information.\n", buf);
 	exit(1);
 }
 
@@ -704,7 +705,7 @@ int main(int argc, char **argv)
 
 	static byte mainCmd = CMD_View;
 	static bool exprtAll = false, hasRootDir = false, forceUI = false;
-	TArray<const char*> extraPackages, objectsToLoad;
+	TArray<const char*> packagesToLoad, objectsToLoad;
 	TArray<const char*> params;
 	const char *attachAnimName = NULL;
 	for (int arg = 1; arg < argc; arg++)
@@ -801,7 +802,7 @@ int main(int argc, char **argv)
 		else if (!strnicmp(opt, "pkg=", 4))
 		{
 			const char *pkg = opt+4;
-			extraPackages.Add(pkg);
+			packagesToLoad.Add(pkg);
 		}
 		else if (!strnicmp(opt, "obj=", 4))
 		{
@@ -836,16 +837,17 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			CommandLineError("umodel: invalid option: %s", opt);
+			CommandLineError("invalid option: %s", opt);
 		}
 	}
 
+	// Parse UMODEL [package_name [obj_name [class_name]]]
 	const char *argPkgName   = (params.Num() >= 1) ? params[0] : NULL;
 	const char *argObjName   = (params.Num() >= 2) ? params[1] : NULL;
 	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
 	if (params.Num() > 3)
 	{
-		CommandLineError("umodel: too many arguments, please check your command line.\nYou specified: package=%s, object=%s, class=%s",
+		CommandLineError("too many arguments, please check your command line.\nYou specified: package=%s, object=%s, class=%s",
 			argPkgName, argObjName, argClassName);
 	}
 
@@ -889,24 +891,23 @@ int main(int argc, char **argv)
 	TArray<UnPackage*> Packages;
 	TArray<UObject*> Objects;
 
-#if !HAS_UI
-	if (!argPkgName || !params.Num())
+	if (argPkgName)
 	{
-		CommandLineError("umodel: package name was not specified.");
+		packagesToLoad.Insert(argPkgName, 0);
+		// don't use argPkgName beyond this point
 	}
-#else
-	if (!argPkgName)
-	{
-		if (!GApplication.ShowPackageUI())
-			return 0;		// user has cancelled the dialog when it appears for the first time
-		goto main_loop;
-	}
-#endif // !HAS_UI
-
 	if (argObjName)
 	{
 		objectsToLoad.Insert(argObjName, 0);
+		// don't use argObjName beyond this point
 	}
+
+#if !HAS_UI
+	if (!packagesToLoad.Num() || !params.Num())
+	{
+		CommandLineError("package name was not specified.");
+	}
+#endif // !HAS_UI
 
 	// load the package
 
@@ -915,17 +916,20 @@ int main(int argc, char **argv)
 #endif
 
 	// setup NotifyInfo to describe package only
-	appSetNotifyHeader(argPkgName);
+	if (packagesToLoad.Num() == 1)
+		appSetNotifyHeader(argPkgName);
+
 	// setup root directory
-	if (!hasRootDir)
+	if (!hasRootDir && packagesToLoad.Num())
 	{
 		//!! - place this code before UIStartupDialog, set game path in options so UI
 		//!!   could pick it up
 		//!! - appSetRootDirectory2(): replace with appGetRootDirectoryFromFile() + appSetRootDirectory()
-		if (strchr(argPkgName, '/') || strchr(argPkgName, '\\'))
+		const char* packageName = packagesToLoad[0];
+		if (strchr(packageName, '/') || strchr(packageName, '\\'))
 		{
 			// has path in filename
-			appSetRootDirectory2(argPkgName);
+			appSetRootDirectory2(packageName);
 		}
 		else
 		{
@@ -933,19 +937,61 @@ int main(int argc, char **argv)
 			appSetRootDirectory(".");		// scan for packages
 		}
 	}
-
-	// load main package
-	UnPackage *MainPackage = UnPackage::LoadPackage(argPkgName);
-	if (!MainPackage)
+	else if (!hasRootDir)
 	{
-		appPrintf("ERROR: unable to find/load package %s\n", argPkgName);
-		exit(1);
+		// no packages were specified
+		appSetRootDirectory(".");			// scan for packages
 	}
+
+	// Try to load all packages first.
+	// Note: in this code, packages will be loaded without creating any exported objects.
+	for (int i = 0; i < packagesToLoad.Num(); i++)
+	{
+//		UnPackage *Package = UnPackage::LoadPackage(packagesToLoad[i]);
+		TStaticArray<const CGameFileInfo*, 32> Files;
+		appFindGameFiles(packagesToLoad[i], Files);
+
+		if (!Files.Num())
+		{
+			appPrintf("WARNING: unable to find package %s\n", packagesToLoad[i]);
+		}
+		else
+		{
+			for (int j = 0; j < Files.Num(); j++)
+			{
+				UnPackage* Package = UnPackage::LoadPackage(Files[j]->RelativeName);
+				Packages.Add(Package);
+			}
+		}
+	}
+
+#if !HAS_UI
+	if (!Packages.Num())
+	{
+		CommandLineError("failed to load provided packages");
+	}
+#else
+	if (!Packages.Num())
+	{
+		if (mainCmd != CMD_View)
+		{
+			CommandLineError("failed to load provided packages");
+		}
+		else
+		{
+			// open package selection UI
+			if (!GApplication.ShowPackageUI())
+				return 0;		// user has cancelled the dialog when it appears for the first time
+			goto main_loop;
+		}
+	}
+#endif // HAS_UI
 
 	if (mainCmd == CMD_List)
 	{
 		guard(List);
 		// dump package exports table
+		UnPackage* MainPackage = Packages[0];	//!! TODO: may be work with multiple packages here - not hard, but will require additional output formatting
 		for (int i = 0; i < MainPackage->Summary.ExportCount; i++)
 		{
 			const FObjectExport &Exp = MainPackage->ExportTable[i];
@@ -956,18 +1002,7 @@ int main(int argc, char **argv)
 	}
 
 	// register exporters and classes
-	InitClassAndExportSystems(MainPackage->Game);
-
-	// preload all extra packages first
-	Packages.Add(MainPackage);	// already loaded
-	for (int i = 0; i < extraPackages.Num(); i++)
-	{
-		UnPackage *Package2 = UnPackage::LoadPackage(extraPackages[i]);
-		if (!Package2)
-			appPrintf("WARNING: unable to find/load package %s\n", extraPackages[i]);
-		else
-			Packages.Add(Package2);
-	}
+	InitClassAndExportSystems(Packages[0]->Game);
 
 	if (mainCmd == CMD_PkgInfo)
 	{
@@ -975,12 +1010,12 @@ int main(int argc, char **argv)
 		return 0;					// already displayed when loaded package; extend it?
 	}
 
-	// get requested object info
+	// load requested objects if any, or fully load everything
+	UObject::BeginLoad();
 	if (objectsToLoad.Num())
 	{
 		// selectively load objects
 		int totalFound = 0;
-		UObject::BeginLoad();
 		for (int objIdx = 0; objIdx < objectsToLoad.Num(); objIdx++)
 		{
 			const char *objName   = objectsToLoad[objIdx];
@@ -1018,16 +1053,14 @@ int main(int argc, char **argv)
 			}
 		}
 		appPrintf("Found %d object(s)\n", totalFound);
-		UObject::EndLoad();
 	}
 	else
 	{
-		UObject::BeginLoad();
 		// fully load all packages
 		for (int pkg = 0; pkg < Packages.Num(); pkg++)
 			LoadWholePackage(Packages[pkg]);
-		UObject::EndLoad();
 	}
+	UObject::EndLoad();
 
 	if (!UObject::GObjObjects.Num() && !GApplication.GuiShown)
 	{
@@ -1095,7 +1128,7 @@ int main(int argc, char **argv)
 #if HAS_UI
 		// Put argPkgName into package selection dialog, so when opening a package window for the first
 		// time, currently opened package will be selected
-		if (!GApplication.GuiShown) GApplication.SetPackage(MainPackage);
+		if (!GApplication.GuiShown) GApplication.SetPackage(Packages[0]);
 #endif // HAS_UI
 	main_loop:
 		// show object

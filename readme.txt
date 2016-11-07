@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+07.11.2016
+- added simple wildcard capabilities to command line: now package names could contain "*" character
+
 30.10.2016
 - UI: added possibility to append selected packages to loaded package set
 

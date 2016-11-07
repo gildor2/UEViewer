@@ -172,7 +172,7 @@ void appUnwindThrow(const char *fmt, ...)
 
 
 /*-----------------------------------------------------------------------------
-	Miscellaneous
+	String functions
 -----------------------------------------------------------------------------*/
 
 #define VA_GOODSIZE		512
@@ -330,6 +330,120 @@ void appNormalizeFilename(char *filename)
 		if (*dst == '/') *dst = 0;
 	}
 }
+
+/*-----------------------------------------------------------------------------
+	Simple wildcard matching
+-----------------------------------------------------------------------------*/
+
+// Mask variants:
+// 1) *      - any file
+// 2) *.*    - any file
+// 3) *rest  - name ends with "rest" (for example, ".ext")
+// 4) start* - name starts with "start"
+// 4) text   - name equals "text"
+// Comparision is case-sensitive, when ignoreCase == false (default)
+// A few masks can be separated with ','
+bool appMatchWildcard(const char *name, const char *mask, bool ignoreCase)
+{
+	guard(appMatchWildcard);
+
+	if (!name[0] && !mask[0]) return true;		// empty strings matched
+
+	char NameCopy[1024], MaskCopy[1024];
+	if (ignoreCase)
+	{
+		appStrncpylwr(NameCopy, name, ARRAY_COUNT(NameCopy));
+		appStrncpylwr(MaskCopy, mask, ARRAY_COUNT(MaskCopy));
+	}
+	else
+	{
+		appStrncpyz(NameCopy, name, ARRAY_COUNT(NameCopy));
+		appStrncpyz(MaskCopy, mask, ARRAY_COUNT(MaskCopy));
+	}
+
+	int namelen = strlen(NameCopy);
+
+	// can use TStringSplitter here
+	const char *next;
+	for (mask = MaskCopy; mask; mask = next)
+	{
+		// find next wildcard (comma-separated)
+		next = strchr(mask, ',');
+		int masklen;
+		if (next)
+		{
+			masklen = next - mask;
+			next++;					// skip ','
+		}
+		else
+			masklen = strlen(mask);
+
+		if (!masklen)
+		{
+			// used something like "mask1,,mask3" (2nd mask is empty)
+//??		appPrintf("appMatchWildcard: skip empty mask in \"%s\"\n", mask);
+			continue;
+		}
+
+		// check for a trivial wildcard
+		if (mask[0] == '*')
+		{
+			if (masklen == 1 || (masklen == 3 && mask[1] == '.' && mask[2] == '*'))
+				return true;		// "*" or "*.*" -- any name valid
+		}
+
+		// "*text*" mask
+		if (masklen >= 3 && mask[0] == '*' && mask[masklen-1] == '*')
+		{
+			int		i;
+
+			mask++;
+			masklen -= 2;
+			for (i = 0; i <= namelen - masklen; i++)
+				if (!memcmp(&NameCopy[i], mask, masklen)) return true;
+		}
+		else
+		{
+			// "*text" or "text*" mask
+			const char *suff = strchr(mask, '*');
+			if (next && suff >= next) suff = NULL;		// suff can be in next wildcard
+			if (suff)
+			{
+				int preflen = suff - mask;
+				int sufflen = masklen - preflen - 1;
+				suff++;
+
+				if (namelen < preflen + sufflen)
+					continue;		// name is not long enough
+				if (preflen && memcmp(NameCopy, mask, preflen))
+					continue;		// different prefix
+				if (sufflen && memcmp(NameCopy + namelen - sufflen, suff, sufflen))
+					continue;		// different suffix
+
+				return true;
+			}
+			// exact match ("text")
+			if (namelen == masklen && !memcmp(NameCopy, mask, namelen))
+				return true;
+		}
+	}
+
+	return false;
+	unguard;
+}
+
+
+bool appContainsWildcard(const char *string)
+{
+	if (strchr(string, '*')) return true;
+	if (strchr(string, ',')) return true;
+	return false;
+}
+
+
+/*-----------------------------------------------------------------------------
+	File helpers
+-----------------------------------------------------------------------------*/
 
 void appMakeDirectory(const char *dirname)
 {

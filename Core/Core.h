@@ -294,6 +294,9 @@ void appStrncpylwr(char *dst, const char *src, int count);
 void appStrcatn(char *dst, int count, const char *src);
 const char *appStristr(const char *s1, const char *s2);
 
+bool appMatchWildcard(const char *name, const char *mask, bool ignoreCase = false);
+bool appContainsWildcard(const char *string);
+
 void appNormalizeFilename(char *filename);
 void appMakeDirectory(const char *dirname);
 void appMakeDirectoryForFile(const char *filename);
