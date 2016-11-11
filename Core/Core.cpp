@@ -335,6 +335,7 @@ void appNormalizeFilename(char *filename)
 	Simple wildcard matching
 -----------------------------------------------------------------------------*/
 
+#if 0
 // Mask variants:
 // 1) *      - any file
 // 2) *.*    - any file
@@ -431,6 +432,130 @@ bool appMatchWildcard(const char *name, const char *mask, bool ignoreCase)
 	return false;
 	unguard;
 }
+
+#else
+
+// Wildcard matching function from
+// http://www.drdobbs.com/architecture-and-design/matching-wildcards-an-empirical-way-to-t/240169123
+
+// This function compares text strings, one of which can have wildcards ('*' or '?').
+static bool WildTextCompare(
+	const char *pTameText,   // A string without wildcards
+	const char *pWildText    // A (potentially) corresponding string with wildcards
+)
+{
+	// These two values are set when we observe a wildcard character.  They
+	// represent the locations, in the two strings, from which we start once
+	// we've observed it.
+	const char *pTameBookmark = NULL;
+	const char *pWildBookmark = NULL;
+
+	// Walk the text strings one character at a time.
+	while (true)
+	{
+		// How do you match a unique text string?
+		if (*pWildText == '*')
+		{
+			// Easy: unique up on it!
+			while (*(++pWildText) == '*')
+			{
+			}                          // "xy" matches "x**y"
+
+			if (!*pWildText)
+			{
+				return true;           // "x" matches "*"
+			}
+
+			if (*pWildText != '?')
+			{
+				// Fast-forward to next possible match.
+				while (*pTameText != *pWildText)
+				{
+					if (!(*(++pTameText)))
+						return false;  // "x" doesn't match "*y*"
+				}
+			}
+
+			pWildBookmark = pWildText;
+			pTameBookmark = pTameText;
+		}
+		else if (*pTameText != *pWildText && *pWildText != '?')
+		{
+			// Got a non-match.  If we've set our bookmarks, back up to one
+			// or both of them and retry.
+			//
+			if (pWildBookmark)
+			{
+				if (pWildText != pWildBookmark)
+				{
+					pWildText = pWildBookmark;
+
+					if (*pTameText != *pWildText)
+					{
+						// Don't go this far back again.
+						pTameText = ++pTameBookmark;
+						continue;      // "xy" matches "*y"
+					}
+					else
+					{
+						pWildText++;
+					}
+				}
+
+				if (*pTameText)
+				{
+					pTameText++;
+					continue;          // "mississippi" matches "*sip*"
+				}
+			}
+
+			return false;              // "xy" doesn't match "x"
+		}
+
+		pTameText++;
+		pWildText++;
+
+		// How do you match a tame text string?
+		if (!*pTameText)
+		{
+			// The tame way: unique up on it!
+			while (*pWildText == '*')
+			{
+				pWildText++;           // "x" matches "x*"
+			}
+
+			if (!*pWildText)
+			{
+				return true;           // "x" matches "x"
+			}
+
+			return false;              // "x" doesn't match "xy"
+		}
+	}
+}
+
+bool appMatchWildcard(const char *name, const char *mask, bool ignoreCase)
+{
+	guard(appMatchWildcard);
+
+	if (!name[0] && !mask[0]) return true;		// empty strings matched
+
+	if (ignoreCase)
+	{
+		char NameCopy[1024], MaskCopy[1024];
+		appStrncpylwr(NameCopy, name, ARRAY_COUNT(NameCopy));
+		appStrncpylwr(MaskCopy, mask, ARRAY_COUNT(MaskCopy));
+		return WildTextCompare(NameCopy, MaskCopy);
+	}
+	else
+	{
+		return WildTextCompare(name, mask);
+	}
+
+	unguard;
+}
+
+#endif
 
 
 bool appContainsWildcard(const char *string)
