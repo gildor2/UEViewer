@@ -380,7 +380,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 #if _WIN32
 	appSprintf(ARRAY_ARG(Path), "%s/*.*", dir);
 	_finddatai64_t found;
-	long hFind = _findfirsti64(Path, &found);
+	intptr_t hFind = _findfirsti64(Path, &found);
 	if (hFind == -1) return true;
 	do
 	{
