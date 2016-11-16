@@ -2234,7 +2234,8 @@ enum
 	VER_UE4_12 = 504,
 	VER_UE4_13 = 505,
 		VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS = 507, // not used (affects FPackageFileSummary)
-	VER_UE4_14,			//!! not yet defined - NEW_ENGINE_VERSION
+	VER_UE4_14 = 508,
+		VER_UE4_TemplateIndex_IN_COOKED_EXPORTS = 508,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2248,8 +2249,12 @@ struct FFrameworkObjectVersion
 		MoveCompressedAnimDataToTheDDC = 5,
 		// UE4.12 = 6
 		SmartNameRefactor = 7,
-		RemoveSoundWaveCompressionName = 12,
 		// UE4.13 = 12
+		RemoveSoundWaveCompressionName = 12,
+		// UE4.14 = 17
+		MoveCurveTypesToSkeleton = 15,
+		CacheDestructibleOverlaps = 16,
+		GeometryCacheMissingMaterials = 17,	// not needed now - for UGeometryCache
 	};
 
 	static Type Get(const FArchive& Ar)
@@ -2258,8 +2263,11 @@ struct FFrameworkObjectVersion
 			return BeforeCustomVersionWasAdded;
 		if (Ar.Game == GAME_UE4_12)
 			return (Type)6;
-//		if (Ar.Game == GAME_UE4_13)	// NEW_ENGINE_VERSION
-			return (Type)12;
+		if (Ar.Game == GAME_UE4_13)
+			return RemoveSoundWaveCompressionName;
+//		if (Ar.Game == GAME_UE4_14)
+			return GeometryCacheMissingMaterials;
+		// NEW_ENGINE_VERSION
 	}
 };
 
@@ -2270,6 +2278,7 @@ struct FEditorObjectVersion
 		BeforeCustomVersionWasAdded = 0,
 		// UE4.12 = 2
 		// UE4.13 = 6
+		// UE4.14 = 8
 		RefactorMeshEditorMaterials = 8,
 	};
 
@@ -2281,8 +2290,34 @@ struct FEditorObjectVersion
 			return (Type)2;
 		if (Ar.Game == GAME_UE4_13)
 			return (Type)6;
-//		if (Ar.Game == GAME_UE4_14)	// NEW_ENGINE_VERSION
+//		if (Ar.Game == GAME_UE4_14)
 			return (Type)RefactorMeshEditorMaterials;
+		// NEW_ENGINE_VERSION
+	}
+};
+
+struct FSkeletalMeshCustomVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		// UE4.13 = 4
+		CombineSectionWithChunk = 1,
+		CombineSoftAndRigidVerts = 2,
+		RecalcMaxBoneInfluences = 3,
+		SaveNumVertices = 4,
+		// UE4.14 = 5
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		if (Ar.Game < GAME_UE4_13)
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game == GAME_UE4_13)
+			return SaveNumVertices;
+//		if (Ar.Game == GAME_UE4_14)
+			return (Type)5;
+		// NEW_ENGINE_VERSION
 	}
 };
 

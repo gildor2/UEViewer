@@ -73,9 +73,31 @@ struct FReferencePose
 	}
 };
 
+struct FBoneReference
+{
+	FName					BoneName;
+
+	friend FArchive& operator<<(FArchive& Ar, FBoneReference& B)
+	{
+		return Ar << B.BoneName;
+	}
+};
+
+struct FCurveMetaData
+{
+	bool					bMaterial;
+	bool					bMorphtarget;
+	TArray<FBoneReference>	LinkedBones;
+
+	friend FArchive& operator<<(FArchive& Ar, FCurveMetaData& D)
+	{
+		return Ar << D.bMaterial << D.bMorphtarget << D.LinkedBones;
+	}
+};
 
 struct FSmartNameMapping
 {
+	//!! TODO: these fields are obsolete
 	int16					NextUid;
 	TMap<int16, FName>		UidMap;
 
@@ -86,12 +108,16 @@ struct FSmartNameMapping
 		{
 			return Ar << N.NextUid << N.UidMap;
 		}
-		else
+		// UE4.13+
+		TMap<FName, FGuid> GuidMap;
+		Ar << GuidMap;
+		if (FrwVer >= FFrameworkObjectVersion::MoveCurveTypesToSkeleton)
 		{
-			// UE4.13+
-			TMap<FName, FGuid> GuidMap;
-			return Ar << GuidMap;
+			// UE4.14+
+			TMap<FName, FCurveMetaData> CurveMetaDataMap;
+			Ar << CurveMetaDataMap;
 		}
+		return Ar;
 	}
 };
 
@@ -170,6 +196,22 @@ protected:
 	void ConvertMesh();
 };
 
+
+/*-----------------------------------------------------------------------------
+	UDestructibleMesh
+-----------------------------------------------------------------------------*/
+
+class UDestructibleMesh : public USkeletalMesh4
+{
+	DECLARE_CLASS(UDestructibleMesh, USkeletalMesh4);
+
+	virtual void Serialize(FArchive& Ar)
+	{
+		Super::Serialize(Ar);
+		// This class has lots of PhysX data
+		DROP_REMAINING_DATA(Ar);
+	}
+};
 
 /*-----------------------------------------------------------------------------
 	UStaticMesh
@@ -416,7 +458,7 @@ public:
 	REGISTER_CLASS(USkeleton) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
-	REGISTER_CLASS_ALIAS(USkeletalMesh4, UDestructibleMesh) \
+	REGISTER_CLASS(UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(FMeshBuildSettings) \
 	REGISTER_CLASS(FStaticMeshSourceModel) \

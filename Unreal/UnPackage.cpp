@@ -482,7 +482,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary4);
 
-	// LegacyVersion: contains negative value. Code below supportes up to version -6.
+	// LegacyVersion: contains negative value.
 	// LegacyVersion to engine version map:
 	// -3	4.0
 	// -4	4.7 (early version, skipped)
@@ -1055,11 +1055,14 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 	TArray<int>	LOC(NetObjectCount);
 	FGuid		LOC(Guid);
 	int			LOC(PackageFlags);
+	int			LOC(TemplateIndex);
 #else
 	#define LOC(name) E.name
 #endif // USE_COMPACT_PACKAGE_STRUCTS
 
-	Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
+	Ar << E.ClassIndex << E.SuperIndex;
+	if (Ar.ArVer >= VER_UE4_TemplateIndex_IN_COOKED_EXPORTS) Ar << LOC(TemplateIndex);
+	Ar << E.PackageIndex << E.ObjectName;
 	if (Ar.ArVer < VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES) Ar << LOC(Archetype);
 
 	Ar << E.ObjectFlags;

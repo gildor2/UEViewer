@@ -58,25 +58,6 @@ static int GetFRecomputeTangentCustomVersion(const FArchive& Ar)
 	return 1;
 }
 
-struct FSkeletalMeshCustomVersion
-{
-	enum Type
-	{
-		BeforeCustomVersionWasAdded = 0,
-		CombineSectionWithChunk = 1,
-		CombineSoftAndRigidVerts = 2,
-		RecalcMaxBoneInfluences = 3,
-		SaveNumVertices = 4,
-	};
-
-	static Type Get(const FArchive& Ar)
-	{
-		if (Ar.Game < GAME_UE4_13)
-			return BeforeCustomVersionWasAdded;
-		return SaveNumVertices;
-	}
-};
-
 struct FRigidVertex4
 {
 	FVector				Pos;

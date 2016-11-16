@@ -158,6 +158,7 @@ struct FObjectExport
 	FGuid		Guid;
 	int			PackageFlags;
 	int			U3unk6C;
+	int			TemplateIndex;				// UE4
 	#endif // USE_COMPACT_PACKAGE_STRUCTS
 #endif // UNREAL3
 
