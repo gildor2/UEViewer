@@ -226,7 +226,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 				reader = new FFileReader(FullName);
 				if (!reader) return true;
 				reader->Game = GAME_UE3;
-				vfs = new FObbVFS();
+				vfs = new FObbVFS(FullName);
 			}
 #endif // SUPPORT_ANDROID
 #if UNREAL4
@@ -235,7 +235,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 				reader = new FFileReader(FullName);
 				if (!reader) return true;
 				reader->Game = GAME_UE4;
-				vfs = new FPakVFS();
+				vfs = new FPakVFS(FullName);
 				//!! detect game by file name
 			}
 #endif // UNREAL4

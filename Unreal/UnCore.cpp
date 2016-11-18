@@ -226,7 +226,6 @@ FString::FString(const char* src)
 	}
 }
 
-
 FString& FString::operator=(const char* src)
 {
 	if (src == Data.GetData())
@@ -246,7 +245,6 @@ FString& FString::operator=(const char* src)
 	return *this;
 }
 
-
 FString& FString::operator+=(const char* text)
 {
 	int len = strlen(text);
@@ -264,7 +262,6 @@ FString& FString::operator+=(const char* text)
 	}
 	return *this;
 }
-
 
 char* FString::Detach()
 {
@@ -284,6 +281,41 @@ char* FString::Detach()
 		Data.MaxCount  = 0;
 	}
 	return RetData;
+}
+
+bool FString::StartsWith(const char* Text)
+{
+	if (!Text || !Text[0] || IsEmpty()) return false;
+	return (strncmp(Data.GetData(), Text, strlen(Text)) == 0);
+}
+
+bool FString::EndsWith(const char* Text)
+{
+	if (!Text || !Text[0] || IsEmpty()) return false;
+	int len = strlen(Text);
+	if (len > Data.Num()) return false;
+	return (strncmp(Data.GetData() + Data.Num() - len, Text, len) == 0);
+}
+
+bool FString::RemoveFromStart(const char* Text)
+{
+	if (StartsWith(Text))
+	{
+		RemoveAt(0, strlen(Text));
+		return true;
+	}
+	return false;
+}
+
+bool FString::RemoveFromEnd(const char* Text)
+{
+	if (EndsWith(Text))
+	{
+		int len = strlen(Text);
+		RemoveAt(Len() - len, len);
+		return true;
+	}
+	return false;
 }
 
 

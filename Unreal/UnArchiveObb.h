@@ -56,9 +56,10 @@ protected:
 class FObbVFS : public FVirtualFileSystem
 {
 public:
-	FObbVFS()
+	FObbVFS(const char* InFilename)
 	:	LastInfo(NULL)
 	,	Reader(NULL)
+	,	Filename(InFilename)
 	{}
 
 	virtual ~FObbVFS()
@@ -134,6 +135,7 @@ public:
 	}
 
 protected:
+	FString				Filename;
 	FArchive*			Reader;
 	TArray<FObbEntry>	FileInfos;
 	FObbEntry*			LastInfo;			// cached last accessed file info, simple optimization

@@ -203,9 +203,10 @@ protected:
 class FPakVFS : public FVirtualFileSystem
 {
 public:
-	FPakVFS()
+	FPakVFS(const char* InFilename)
 	:	LastInfo(NULL)
 	,	Reader(NULL)
+	,	Filename(InFilename)
 	{}
 
 	virtual ~FPakVFS()
@@ -233,8 +234,20 @@ public:
 
 		Reader->Seek64(info.IndexOffset);
 
-		FString MountPoint;
+		FStaticString<256> MountPoint;
 		*Reader << MountPoint;
+
+		// Process MountPoint
+		if (!MountPoint.RemoveFromStart("../../.."))
+		{
+			appNotify("Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
+			MountPoint = "Root/";
+		}
+		if (MountPoint[0] != '/' || ( (MountPoint.Len() > 1) && (MountPoint[1] == '.') ))
+		{
+			appNotify("Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
+			MountPoint = "Root/";
+		}
 
 		int count;
 		*Reader << count;
@@ -243,10 +256,13 @@ public:
 		for (int i = 0; i < count; i++)
 		{
 			FPakEntry& E = FileInfos[i];
-			// serialize name
+			// serialize name, combine with MountPoint
 			FStaticString<512> Filename;
 			*Reader << Filename;
-			E.Name = appStrdupPool(Filename);
+			FStaticString<512> CombinedPath;
+			CombinedPath = MountPoint;
+			CombinedPath += Filename;
+			E.Name = appStrdupPool(CombinedPath);
 			// serialize other fields
 			*Reader << E;
 		}
@@ -283,6 +299,7 @@ public:
 	}
 
 protected:
+	FString				Filename;
 	FArchive*			Reader;
 	TArray<FPakEntry>	FileInfos;
 	FPakEntry*			LastInfo;			// cached last accessed file info, simple optimization
