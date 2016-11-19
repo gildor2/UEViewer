@@ -46,17 +46,22 @@
 	USkeletalMesh
 -----------------------------------------------------------------------------*/
 
-// Custom versions
-
-// FRecomputeTangentCustomVersion
-// =0 - before UE4.12
-// =1 - UE4.12, added 5.04.2016, git fcf22bab, appeared after VER_UE4_NAME_HASHES_SERIALIZED (latest 4.12 version)
-static int GetFRecomputeTangentCustomVersion(const FArchive& Ar)
+struct FRecomputeTangentCustomVersion
 {
-	if (Ar.Game <= GAME_UE4_12)
-		return 0;
-	return 1;
-}
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		// UE4.12
+		RuntimeRecomputeTangent = 1,
+	};
+
+	static int Get(const FArchive& Ar)
+	{
+		if (Ar.Game < GAME_UE4_12)
+			return BeforeCustomVersionWasAdded;
+		return RuntimeRecomputeTangent;
+	}
+};
 
 struct FRigidVertex4
 {
@@ -164,7 +169,7 @@ struct FSkeletalMaterial
 			if (Ar.ArVer >= VER_UE4_MOVE_SKELETALMESH_SHADOWCASTING)
 				Ar << M.bEnableShadowCasting;
 
-			if (GetFRecomputeTangentCustomVersion(Ar) >= 1)
+			if (FRecomputeTangentCustomVersion::Get(Ar) >= FRecomputeTangentCustomVersion::RuntimeRecomputeTangent)
 			{
 				bool bRecomputeTangent;
 				Ar << bRecomputeTangent;
@@ -228,7 +233,7 @@ struct FSkelMeshSection4
 			Ar << bEnableClothLOD_DEPRECATED;
 		}
 
-		if (GetFRecomputeTangentCustomVersion(Ar) >= 1)
+		if (FRecomputeTangentCustomVersion::Get(Ar) >= FRecomputeTangentCustomVersion::RuntimeRecomputeTangent)
 		{
 			bool bRecomputeTangent;
 			Ar << bRecomputeTangent;
