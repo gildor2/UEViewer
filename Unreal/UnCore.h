@@ -1179,7 +1179,7 @@ struct FIntVector
 
 struct FVector2D
 {
-	int		X, Y;
+	float	X, Y;
 
 	friend FArchive& operator<<(FArchive &Ar, FVector2D &V)
 	{
