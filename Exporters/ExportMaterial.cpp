@@ -35,6 +35,25 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	PROC(SpecPower);
 	PROC(Opacity);
 	PROC(Emissive);
+	PROC(Cube);
+	PROC(Mask);
+
+	// collect all textures - already exported ones and everything else
+	TArray<UUnrealMaterial*> ExportedTextures;
+	TArray<UUnrealMaterial*> AllTextures;
+	Params.AppendAllTextures(ExportedTextures);
+	Mat->AppendReferencedTextures(AllTextures, false);
+	// now, export only thise which weren't exported yet
+	int numOtherTextures = 0;
+	for (int i = 0; i < AllTextures.Num(); i++)
+	{
+		UUnrealMaterial* Tex = AllTextures[i];
+		if (ExportedTextures.FindItem(Tex) < 0)
+		{
+			Ar->Printf("Other[%d]=%s\n", numOtherTextures++, Tex->Name);
+			ExportObject(Tex);
+		}
+	}
 
 	delete Ar;
 

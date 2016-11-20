@@ -50,7 +50,7 @@ struct CMaterialParams
 
 	void AppendAllTextures(TArray<UUnrealMaterial*>& OutTextures)
 	{
-#define PARAM(name)		if (name != NULL) OutTextures.Add(name);
+#define PARAM(name)		if (name != NULL) OutTextures.AddUnique(name);
 		ITERATE_ALL_PARAMS;
 #undef PARAM
 	}
@@ -212,7 +212,7 @@ public:
 	void SetMaterial();								// main function to use from outside
 
 	//!! WARNING: UTextureCube will not work correctly - referenced textures are not encountered
-	void AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures);
+	virtual void AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered = true) const;
 
 	// Texture interface
 	// TODO: make separate class for that, use with multiple inheritance

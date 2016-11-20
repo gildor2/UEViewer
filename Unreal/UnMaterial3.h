@@ -813,6 +813,7 @@ public:
 #if RENDERING
 	virtual void SetupGL();
 	virtual void GetParams(CMaterialParams &Params) const;
+	virtual void AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered) const;
 	virtual bool IsTranslucent() const;
 #endif
 };
@@ -952,6 +953,7 @@ public:
 #if RENDERING
 	virtual void SetupGL();
 	virtual void GetParams(CMaterialParams &Params) const;
+	virtual void AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered) const;
 	virtual bool IsTranslucent() const
 	{
 		return Parent ? Parent->IsTranslucent() : false;

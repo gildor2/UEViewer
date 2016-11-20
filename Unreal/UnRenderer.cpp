@@ -878,7 +878,7 @@ void UUnrealMaterial::SetMaterial()
 }
 
 
-void UUnrealMaterial::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures)
+void UUnrealMaterial::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered) const
 {
 	guard(UUnrealMaterial::AppendReferencedTextures);
 
@@ -1848,6 +1848,21 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 	unguard;
 }
 
+void UMaterial3::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered) const
+{
+	guard(UMaterial3::AppendReferencedTextures);
+	if (onlyRendered)
+	{
+		// default implementation does that
+		Super::AppendReferencedTextures(OutTextures, onlyRendered);
+	}
+	else
+	{
+		for (int i = 0; i < ReferencedTextures.Num(); i++)
+			OutTextures.AddUnique(ReferencedTextures[i]);
+	}
+	unguard;
+}
 
 bool UTexture2D::Upload()
 {
@@ -2141,6 +2156,22 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	unguard;
 }
 
+void UMaterialInstanceConstant::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered) const
+{
+	guard(UMaterialInstanceConstant::AppendReferencedTextures);
+	if (onlyRendered)
+	{
+		// default implementation does that
+		Super::AppendReferencedTextures(OutTextures, onlyRendered);
+	}
+	else
+	{
+		for (int i = 0; i < TextureParameterValues.Num(); i++)
+			OutTextures.AddUnique(TextureParameterValues[i].ParameterValue);
+		if (Parent) Parent->AppendReferencedTextures(OutTextures, onlyRendered);
+	}
+	unguard;
+}
 
 #endif // UNREAL3
 

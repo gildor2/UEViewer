@@ -1500,6 +1500,12 @@ public:
 	{
 		return AddZeroed(count);
 	}
+	FORCEINLINE int AddUnique(const T& item)
+	{
+		int index = FindItem(item);
+		if (index >= 0) return index;
+		return Add(item);
+	}
 
 	FORCEINLINE void Insert(const T& item, int index)
 	{
