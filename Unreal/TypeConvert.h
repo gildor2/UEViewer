@@ -1,5 +1,5 @@
-#ifndef __TYPECONVERT_H__
-#define __TYPECONVERT_H__
+#ifndef __TYPE_CONVERT_H__
+#define __TYPE_CONVERT_H__
 
 /*-----------------------------------------------------------------------------
 	Compatibility between Core and UnCore math types
@@ -41,7 +41,7 @@ CONVERTER(TArray<FCoords>, TArray<CCoords>)
 #undef CONVERTER
 
 
-#ifdef __MESHCOMMON_H__
+#ifdef __MESH_COMMON_H__
 
 FORCEINLINE CPackedNormal CVT(FPackedNormal V)
 {
@@ -50,7 +50,7 @@ FORCEINLINE CPackedNormal CVT(FPackedNormal V)
 	return ret;
 }
 
-#endif // __MESHCOMMON_H__
+#endif // __MESH_COMMON_H__
 
 
 // declare Core math as SIMPLE_TYPE for better arrays support
@@ -59,4 +59,4 @@ SIMPLE_TYPE(CQuat, float)
 SIMPLE_TYPE(CCoords, float)
 
 
-#endif // __TYPECONVERT_H__
+#endif // __TYPE_CONVERT_H__

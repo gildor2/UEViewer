@@ -1,3 +1,6 @@
+#ifndef __TEXT_CONTAINER_H__
+#define __TEXT_CONTAINER_H__
+
 struct CTextRec
 {
 	char	*text;
@@ -50,3 +53,5 @@ public:
 		CTextContainer::Enumerate((void(*)(const CTextRec*)) func);
 	}
 };
+
+#endif // __TEXT_CONTAINER_H__

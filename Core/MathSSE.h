@@ -1,3 +1,6 @@
+#ifndef __MATH_SSE_H__
+#define __MATH_SSE_H__
+
 #include <xmmintrin.h>
 
 struct CVec4
@@ -197,3 +200,5 @@ FORCEINLINE __m128 UnpackPackedBytes(unsigned Packed)
 	static const __m128 scale = { 1.0f / 255, 1.0f / 255, 1.0f / 255, 1.0f / 255 };
 	return _mm_mul_ps(r2, scale);
 }
+
+#endif // __MATH_SSE_H__

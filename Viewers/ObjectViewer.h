@@ -1,3 +1,6 @@
+#ifndef __OBJECT_VIEWER_H__
+#define __OBJECT_VIEWER_H__
+
 #include "GlWindow.h"
 
 
@@ -224,3 +227,5 @@ private:
 	}
 
 #endif
+
+#endif // __OBJECT_VIEWER_H__

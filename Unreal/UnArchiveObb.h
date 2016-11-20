@@ -1,5 +1,5 @@
-#ifndef __UNARCHIVEOBB_H__
-#define __UNARCHIVEOBB_H__
+#ifndef __UNARCHIVE_OBB_H__
+#define __UNARCHIVE_OBB_H__
 
 #if SUPPORT_ANDROID
 
@@ -161,4 +161,4 @@ protected:
 
 #endif // SUPPORT_ANDROID
 
-#endif // __UNARCHIVEOBB_H__
+#endif // __UNARCHIVE_OBB_H__

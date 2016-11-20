@@ -1,5 +1,5 @@
-#ifndef __SKELETALMESH_H__
-#define __SKELETALMESH_H__
+#ifndef __SKELETAL_MESH_H__
+#define __SKELETAL_MESH_H__
 
 #include "MeshCommon.h"
 
@@ -284,4 +284,4 @@ public:
 	REGISTER_CLASS(CSkelMeshLod)
 
 
-#endif // __SKELETALMESH_H__
+#endif // __SKELETAL_MESH_H__

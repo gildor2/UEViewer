@@ -1,5 +1,5 @@
-#ifndef __STATICMESH_H__
-#define __STATICMESH_H__
+#ifndef __STATIC_MESH_H__
+#define __STATIC_MESH_H__
 
 #include "MeshCommon.h"
 
@@ -107,4 +107,4 @@ private:
 	REGISTER_CLASS(CStaticMeshLod)
 
 
-#endif // __STATICMESH_H__
+#endif // __STATIC_MESH_H__

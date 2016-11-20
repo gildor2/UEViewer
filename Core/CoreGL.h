@@ -1,3 +1,6 @@
+#ifndef __CORE_GL_H__
+#define __CORE_GL_H__
+
 #define USE_GLSL			1			//?? move to Build.h ?
 
 #include "Win32Types.h"
@@ -246,3 +249,5 @@ protected:
 };
 
 #endif // USE_GLSL
+
+#endif // __CORE_GL_H__

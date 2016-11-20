@@ -1,5 +1,5 @@
-#ifndef __UNMESHTYPES_H__
-#define __UNMESHTYPES_H__
+#ifndef __UNMESH_TYPES_H__
+#define __UNMESH_TYPES_H__
 
 /*-----------------------------------------------------------------------------
 	Different compressed quaternion and position types
@@ -692,4 +692,4 @@ struct FQuatPolarEncoded48
 #endif // BORDERLANDS
 
 
-#endif // __UNMESHTYPES_H__
+#endif // __UNMESH_TYPES_H__

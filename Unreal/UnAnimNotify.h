@@ -1,5 +1,5 @@
-#ifndef __UNANIMNOTIFY_H__
-#define __UNANIMNOTIFY_H__
+#ifndef __UNANIM_NOTIFY_H__
+#define __UNANIM_NOTIFY_H__
 
 
 /*-----------------------------------------------------------------------------
@@ -179,4 +179,4 @@ public:
 	REGISTER_CLASS(UAnimNotify_Trigger)
 
 
-#endif // __UNANIMNOTIFY_H__
+#endif // __UNANIM_NOTIFY_H__

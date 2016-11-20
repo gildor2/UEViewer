@@ -1,5 +1,5 @@
-#ifndef __UNMATHTOOLS_H__
-#define __UNMATHTOOLS_H__
+#ifndef __UNMATH_TOOLS_H__
+#define __UNMATH_TOOLS_H__
 
 #include "MeshCommon.h"
 
@@ -141,4 +141,4 @@ struct CVertexShare
 	}
 };
 
-#endif // __UNMATHTOOLS_H__
+#endif // __UNMATH_TOOLS_H__

@@ -1,3 +1,6 @@
+#ifndef __MATH_3D_H__
+#define __MATH_3D_H__
+
 inline void FNegate(const float &a, float &b)
 {
 	b = -a;
@@ -297,3 +300,5 @@ struct CQuat
 };
 
 void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst);
+
+#endif // __MATH_3D_H__

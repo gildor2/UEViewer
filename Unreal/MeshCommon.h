@@ -1,5 +1,5 @@
-#ifndef __MESHCOMMON_H__
-#define __MESHCOMMON_H__
+#ifndef __MESH_COMMON_H__
+#define __MESH_COMMON_H__
 
 // forwards
 class UUnrealMaterial;
@@ -196,4 +196,4 @@ void BuildNormalsCommon(CMeshVertex *Verts, int VertexSize, int NumVerts, const 
 void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer &Indices);
 
 
-#endif // __MESHCOMMON_H__
+#endif // __MESH_COMMON_H__

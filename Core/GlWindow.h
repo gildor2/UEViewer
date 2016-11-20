@@ -1,5 +1,5 @@
-#ifndef __GLWINDOW_H__
-#define __GLWINDOW_H__
+#ifndef __GL_WINDOW_H__
+#define __GL_WINDOW_H__
 
 
 #include "Core.h"
@@ -126,4 +126,4 @@ void DrawKeyHelp(const char *Key, const char *Help);
 #define KEY_ALT			0x20000000
 
 
-#endif // __GLWINDOW_H__
+#endif // __GL_WINDOW_H__

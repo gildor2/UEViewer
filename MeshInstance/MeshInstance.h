@@ -1,5 +1,5 @@
-#ifndef __MESHINSTANCE_H__
-#define __MESHINSTANCE_H__
+#ifndef __MESH_INSTANCE_H__
+#define __MESH_INSTANCE_H__
 
 // forwards
 class UVertMesh;
@@ -293,4 +293,4 @@ protected:
 };
 
 
-#endif // __MESHINSTANCE_H__
+#endif // __MESH_INSTANCE_H__

@@ -1,5 +1,5 @@
-#ifndef __UNARCHIVEPAK_H__
-#define __UNARCHIVEPAK_H__
+#ifndef __UNARCHIVE_PAK_H__
+#define __UNARCHIVE_PAK_H__
 
 #if UNREAL4
 
@@ -325,4 +325,4 @@ protected:
 
 #endif // UNREAL4
 
-#endif // __UNARCHIVEPAK_H__
+#endif // __UNARCHIVE_PAK_H__
