@@ -1859,7 +1859,10 @@ void UMaterial3::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures,
 	else
 	{
 		for (int i = 0; i < ReferencedTextures.Num(); i++)
-			OutTextures.AddUnique(ReferencedTextures[i]);
+		{
+			if (ReferencedTextures[i])
+				OutTextures.AddUnique(ReferencedTextures[i]);
+		}
 	}
 	unguard;
 }
@@ -2167,7 +2170,10 @@ void UMaterialInstanceConstant::AppendReferencedTextures(TArray<UUnrealMaterial*
 	else
 	{
 		for (int i = 0; i < TextureParameterValues.Num(); i++)
-			OutTextures.AddUnique(TextureParameterValues[i].ParameterValue);
+		{
+			if (TextureParameterValues[i].ParameterValue)
+				OutTextures.AddUnique(TextureParameterValues[i].ParameterValue);
+		}
 		if (Parent) Parent->AppendReferencedTextures(OutTextures, onlyRendered);
 	}
 	unguard;
