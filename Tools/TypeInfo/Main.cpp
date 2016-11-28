@@ -229,7 +229,7 @@ void DumpClass(const UClass *Class)
 
 bool DumpTextBuffer(const UTextBuffer *Text)
 {
-	if (!Text->Text.Num()) return false;		// empty
+	if (!Text->Text.Len()) return false;		// empty
 
 	// get class name (UTextBuffer's outer UPackage)
 	const FObjectExport &Exp = Text->Package->GetExport(Text->PackageIndex);
@@ -238,7 +238,7 @@ bool DumpTextBuffer(const UTextBuffer *Text)
 	char Filename[256];
 	appSprintf(ARRAY_ARG(Filename), "%s/%s.uc", Text->Package->Name, ClassName);
 	FFileWriter Ar(Filename);
-	Ar.Serialize((void*)*Text->Text, Text->Text.Num());
+	Ar.Serialize((void*)*Text->Text, Text->Text.Len());
 
 	return true;
 }
