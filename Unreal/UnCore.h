@@ -2244,7 +2244,7 @@ enum
 		VER_UE4_NAME_HASHES_SERIALIZED = 504,
 	VER_UE4_12 = 504,
 	VER_UE4_13 = 505,
-		VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS = 507, // not used (affects FPackageFileSummary)
+		VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS = 507,
 	VER_UE4_14 = 508,
 		VER_UE4_TemplateIndex_IN_COOKED_EXPORTS = 508,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
@@ -2329,6 +2329,27 @@ struct FSkeletalMeshCustomVersion
 //		if (Ar.Game == GAME_UE4_14)
 			return (Type)5;
 		// NEW_ENGINE_VERSION
+	}
+};
+
+struct FRenderingObjectVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		TextureStreamingMeshUVChannelData = 10,
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		if (Ar.Game < GAME_UE4_12)
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game == GAME_UE4_12)
+			return (Type)2;
+		if (Ar.Game == GAME_UE4_13)
+			return (Type)4;
+//		if (Ar.Game == GAME_UE4_14)
+			return (Type)12;
 	}
 };
 

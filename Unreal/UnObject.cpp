@@ -70,6 +70,22 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 		buf[0] = 0;
 		return;
 	}
+#if UNREAL4
+	if (Package != NULL && Package->Game >= GAME_UE4)
+	{
+		// UE4 has full package path in its name, use it
+		appStrncpyz(buf, Package->Filename, bufSize);
+		char* s = strrchr(buf, '.');
+		if (!s)
+		{
+			s = buf + strlen(buf);
+			*s = '.';
+		}
+		s++;
+		appStrncpyz(s, Name, bufSize - (s - buf));
+		return;
+	}
+#endif // UNREAL4
 	const FObjectExport &Exp = Package->GetExport(PackageIndex);
 	if (!Exp.PackageIndex && ForcePackageName)
 	{

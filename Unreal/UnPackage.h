@@ -100,31 +100,31 @@ struct FEngineVersion
 
 struct FPackageFileSummary
 {
-	int			Tag;
+	uint32		Tag;
 #if UNREAL4
-	int			LegacyVersion;
+	int32		LegacyVersion;
 	bool		IsUnversioned;
 #endif
 	uint16		FileVersion;
 	uint16		LicenseeVersion;
-	int			PackageFlags;
-	int			NameCount,   NameOffset;
-	int			ExportCount, ExportOffset;
-	int			ImportCount, ImportOffset;
+	int32		PackageFlags;
+	int32		NameCount,   NameOffset;
+	int32		ExportCount, ExportOffset;
+	int32		ImportCount, ImportOffset;
 	FGuid		Guid;
 	TArray<FGenerationInfo> Generations;
 #if UNREAL3
-	int			HeadersSize;		// used by UE3 for precaching name table
+	int32		HeadersSize;		// used by UE3 for precaching name table
 	FString		PackageGroup;		// "None" or directory name
-	int			DependsOffset;		// number of items = ExportCount
-	int			f38;
-	int			f3C;
-	int			f40;
-	int			EngineVersion;
-	int			CookerVersion;
-	int			CompressionFlags;
+	int32		DependsOffset;		// number of items = ExportCount
+	int32		f38;
+	int32		f3C;
+	int32		f40;
+	int32		EngineVersion;
+	int32		CookerVersion;
+	int32		CompressionFlags;
 	TArray<FCompressedChunk> CompressedChunks;
-	int			U3unk60;
+	int32		U3unk60;
 #endif // UNREAL3
 #if UNREAL4
 	int64		BulkDataStartOffset;
@@ -140,25 +140,25 @@ struct FPackageFileSummary
 
 struct FObjectExport
 {
-	int			ClassIndex;					// object reference
-	int			SuperIndex;					// object reference
-	int			PackageIndex;				// object reference
+	int32		ClassIndex;					// object reference
+	int32		SuperIndex;					// object reference
+	int32		PackageIndex;				// object reference
 	FName		ObjectName;
-	int			SerialSize;
-	int			SerialOffset;
+	int32		SerialSize;
+	int32		SerialOffset;
 	UObject		*Object;					// not serialized, filled by object loader
-	unsigned	ObjectFlags;
+	uint32		ObjectFlags;
 #if UNREAL3
-	unsigned	ExportFlags;				// EF_* flags
+	uint32		ExportFlags;				// EF_* flags
 	#if !USE_COMPACT_PACKAGE_STRUCTS
-	unsigned	ObjectFlags2;				// really, 'int64 ObjectFlags'
-	int			Archetype;
+	uint32		ObjectFlags2;				// really, 'uint64 ObjectFlags'
+	int32		Archetype;
 //	TMap<FName, int> ComponentMap;			-- this field was removed from UE3, so serialize it as a temporaty variable when needed
-	TArray<int>	NetObjectCount;				// generations
+	TArray<int32> NetObjectCount;			// generations
 	FGuid		Guid;
-	int			PackageFlags;
-	int			U3unk6C;
-	int			TemplateIndex;				// UE4
+	int32		PackageFlags;
+	int32		U3unk6C;
+	int32		TemplateIndex;				// UE4
 	#endif // USE_COMPACT_PACKAGE_STRUCTS
 #endif // UNREAL3
 
@@ -170,9 +170,9 @@ struct FObjectImport
 {
 	FName		ClassPackage;
 	FName		ClassName;
-	int			PackageIndex;
+	int32		PackageIndex;
 	FName		ObjectName;
-	bool		Missing;			// not serialized
+	bool		Missing;					// not serialized
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectImport &I);
 };
@@ -273,6 +273,7 @@ public:
 
 	const char* GetObjectName(int PackageIndex) const	//?? GetExportClassName()
 	{
+		guard(UnPackage::GetObjectName);
 		if (PackageIndex < 0)
 		{
 			//?? should point to 'Class' object
@@ -287,6 +288,7 @@ public:
 		{
 			return "Class";
 		}
+		unguardf("Index=%d", PackageIndex);
 	}
 
 	int FindExport(const char *name, const char *className = NULL, int firstIndex = 0) const;

@@ -14,7 +14,7 @@ class UAnimSequence4;
 #define MAX_TOTAL_INFLUENCES_UE4		8
 #define MAX_SKELETAL_UV_SETS_UE4		4
 #define MAX_STATIC_UV_SETS_UE4			8
-#define MAX_STATIC_LODS_UE4				4
+#define MAX_STATIC_LODS_UE4				8		// 4 before 4.9, 8 starting with 4.9
 
 //!! These classes should be explicitly defined
 typedef UObject UStaticMeshSocket;
@@ -27,6 +27,7 @@ typedef UObject UStaticMeshSocket;
 struct FSkeletalMaterial;
 struct FStaticLODModel4;
 struct FSkeletalMeshLODInfo;
+struct FMeshUVChannelInfo;
 
 struct FMeshBoneInfo
 {
@@ -277,9 +278,6 @@ public:
 	// FStaticMeshRenderData fields
 	FBoxSphereBounds		Bounds;
 	float					ScreenSize[MAX_STATIC_LODS_UE4];
-	float					StreamingTextureFactors[MAX_STATIC_UV_SETS_UE4];
-	float					MaxStreamingTextureFactor;
-	bool					bReducedBySimplygon;
 	bool					bLODsShareStaticLighting;
 	TArray<FStaticMeshLODModel4> Lods;
 	TArray<FStaticMeshSourceModel> SourceModels;

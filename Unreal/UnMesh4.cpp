@@ -41,6 +41,8 @@
 #error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
+#define TEXSTREAM_MAX_NUM_UVCHANNELS	4
+
 
 /*-----------------------------------------------------------------------------
 	USkeletalMesh
@@ -145,11 +147,29 @@ struct FApexClothPhysToRenderVertData
 	}
 };
 
+struct FMeshUVChannelInfo
+{
+	bool					bInitialized;
+	bool					bOverrideDensities;
+	float					LocalUVDensities[TEXSTREAM_MAX_NUM_UVCHANNELS];
+
+	friend FArchive& operator<<(FArchive& Ar, FMeshUVChannelInfo& V)
+	{
+		Ar << V.bInitialized << V.bOverrideDensities;
+		for (int i = 0; i < TEXSTREAM_MAX_NUM_UVCHANNELS; i++)
+		{
+			Ar << V.LocalUVDensities[i];
+		}
+		return Ar;
+	}
+};
+
 struct FSkeletalMaterial
 {
 	UMaterialInterface*		Material;
 	bool					bEnableShadowCasting;
 	FName					MaterialSlotName;
+	FMeshUVChannelInfo		UVChannelData;
 
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalMaterial& M)
 	{
@@ -174,6 +194,11 @@ struct FSkeletalMaterial
 				bool bRecomputeTangent;
 				Ar << bRecomputeTangent;
 			}
+		}
+
+		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
+		{
+			Ar << M.UVChannelData;
 		}
 
 		return Ar;
@@ -1229,6 +1254,30 @@ struct FMeshSectionInfo
 	}
 };
 
+
+struct FStaticMaterial
+{
+	UMaterialInterface* MaterialInterface;
+	FName				MaterialSlotName;
+	FMeshUVChannelInfo	UVChannelData;
+
+	friend FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
+	{
+		Ar << M.MaterialInterface << M.MaterialSlotName;
+		if (Ar.ContainsEditorData())
+		{
+			FName ImportedMaterialSlotName;
+			Ar << ImportedMaterialSlotName;
+		}
+		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
+		{
+			Ar << M.UVChannelData;
+		}
+		return Ar;
+	}
+};
+
+
 void UStaticMesh4::Serialize(FArchive &Ar)
 {
 	guard(UStaticMesh4::Serialize);
@@ -1251,6 +1300,7 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 		{
 			FRotator DummyThumbnailAngle;
 			float DummyThumbnailDistance;
+			Ar << DummyThumbnailAngle << DummyThumbnailDistance;
 		}
 		FString HighResSourceMeshName;
 		unsigned HighResSourceMeshCRC;
@@ -1325,20 +1375,59 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 		}
 
 		Ar << Bounds;
-		Ar << bLODsShareStaticLighting << bReducedBySimplygon;
+		Ar << bLODsShareStaticLighting;
 
-		// StreamingTextureFactor for each UV set
-		for (int i = 0; i < MAX_STATIC_UV_SETS_UE4; i++)
-			Ar << StreamingTextureFactors[i];
-		Ar << MaxStreamingTextureFactor;
+		if (Ar.Game < GAME_UE4_14)
+		{
+			bool bReducedBySimplygon;
+			Ar << bReducedBySimplygon;
+		}
+
+		if (FRenderingObjectVersion::Get(Ar) < FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
+		{
+			float StreamingTextureFactors[MAX_STATIC_UV_SETS_UE4];
+			float MaxStreamingTextureFactor;
+			// StreamingTextureFactor for each UV set
+			for (int i = 0; i < MAX_STATIC_UV_SETS_UE4; i++)
+				Ar << StreamingTextureFactors[i];
+			Ar << MaxStreamingTextureFactor;
+		}
 
 		if (bCooked)
 		{
 			// ScreenSize for each LOD
-			for (int i = 0; i < MAX_STATIC_LODS_UE4; i++)
+			int MaxNumLods = (Ar.Game >= GAME_UE4_9) ? MAX_STATIC_LODS_UE4 : 4;
+			for (int i = 0; i < MaxNumLods; i++)
 				Ar << ScreenSize[i];
 		}
 	} // end of FStaticMeshRenderData
+
+	if (Ar.Game >= GAME_UE4_14)
+	{
+		// Serialize following data to obtain material references for UE4.14+.
+		// Don't bother serializing anything beyond this point in earlier versions.
+		bool bHasSpeedTreeWind;
+		Ar << bHasSpeedTreeWind;
+		if (bHasSpeedTreeWind)
+		{
+			//TODO - FSpeedTreeWind serialization
+			DROP_REMAINING_DATA(Ar);
+			char buf[1024];
+			GetFullName(buf, 1024);
+			appNotify("Dropping SpeedTree and material data for StaticMesh %s", buf);
+			return;
+		}
+		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
+		{
+			// UE4.14+ - "Materials" are deprecated, added StaticMaterials
+			TArray<FStaticMaterial> StaticMaterials;
+			Ar << StaticMaterials;
+			// Copy StaticMaterials to Materials
+			Materials.AddUninitialized(StaticMaterials.Num());
+			for (int i = 0; i < StaticMaterials.Num(); i++)
+				Materials[i] = StaticMaterials[i].MaterialInterface;
+		}
+	}
 
 	// remaining is SpeedTree data
 	DROP_REMAINING_DATA(Ar);

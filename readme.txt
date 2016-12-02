@@ -173,8 +173,10 @@ detex
 
 Changes
 ~~~~~~~
+02.12.2016
+- added UE4.14 support
+
 20.11.2016
-- initial UE4.14 support (untested)
 - exporting all referenced textures from materials, not just recognized ones
 - improved layout of UmodelExport directory when exporting UE4 assets
 

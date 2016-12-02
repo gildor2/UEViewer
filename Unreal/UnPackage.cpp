@@ -1051,11 +1051,11 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 #if USE_COMPACT_PACKAGE_STRUCTS
 	#define LOC(name) TMP_##name
 	// locally declare FObjectImport data which are stripped
-	int			LOC(Archetype);
-	TArray<int>	LOC(NetObjectCount);
+	int32		LOC(Archetype);
+	TArray<int32> LOC(NetObjectCount);
 	FGuid		LOC(Guid);
-	int			LOC(PackageFlags);
-	int			LOC(TemplateIndex);
+	int32		LOC(PackageFlags);
+	int32		LOC(TemplateIndex);
 #else
 	#define LOC(name) E.name
 #endif // USE_COMPACT_PACKAGE_STRUCTS
@@ -1069,7 +1069,7 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 
 	Ar << E.SerialSize << E.SerialOffset;
 
-	int bForcedExport, bNotForClient, bNotForServer; // 32-bit bool
+	bool bForcedExport, bNotForClient, bNotForServer;
 	Ar << bForcedExport << bNotForClient << bNotForServer;
 	if (Ar.IsLoading)
 	{
@@ -1087,6 +1087,14 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 	bool bIsAsset;
 	if (Ar.ArVer >= VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT)
 		Ar << bIsAsset;
+
+	if (Ar.ArVer >= VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS)
+	{
+		int32 FirstExportDependency, SerializationBeforeSerializationDependencies, CreateBeforeSerializationDependencies;
+		int32 SerializationBeforeCreateDependencies, CreateBeforeCreateDependencies;
+		Ar << FirstExportDependency << SerializationBeforeSerializationDependencies << CreateBeforeSerializationDependencies;
+		Ar << SerializationBeforeCreateDependencies << CreateBeforeCreateDependencies;
+	}
 
 #undef LOC
 
