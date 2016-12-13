@@ -516,7 +516,7 @@ static byte FindReduxTexture(const UTexture2D *Tex, CTextureData *TexData)
 	for (int i = 0; i < reduxCatalog.Num(); i++)
 	{
 		const ReduxTextureEntry &E = reduxCatalog[i];
-		if (!stricmp(E.Name, ObjName))
+		if (!stricmp(*E.Name, ObjName))
 		{
 			// found it
 			assert(Tex->Format == E.Format);

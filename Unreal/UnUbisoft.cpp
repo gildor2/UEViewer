@@ -368,7 +368,7 @@ public:
 				const FLeadDirEntry& Dir = Hdr.dir[j];
 				if (Dir.id == List.id)
 				{
-					FileName = Dir.Filename;
+					FileName = *Dir.Filename;
 					break;
 				}
 			}

@@ -1889,6 +1889,11 @@ public:
 
 	FString& operator+=(const char* text);
 
+	FORCEINLINE FString& operator+=(const FString& Str)
+	{
+		return operator+=(*Str);
+	}
+
 	// use FString as allocated char*, FString became empty and will not free
 	// detached string in destructor
 	char* Detach();
@@ -1955,14 +1960,18 @@ public:
 	{
 		return IsEmpty() ? "" : Data.GetData();
 	}
-	FORCEINLINE operator const char*() const
-	{
-		return IsEmpty() ? "" : Data.GetData();
-	}
+//	FORCEINLINE operator const char*() const
+//	{
+//		return IsEmpty() ? "" : Data.GetData();
+//	}
 	// comparison
 	friend FORCEINLINE bool operator==(const FString& A, const FString& B)
 	{
 		return !strcmp(*A, *B);
+	}
+	friend FORCEINLINE bool operator==(const char* A, const FString& B)
+	{
+		return !strcmp(A, *B);
 	}
 	friend FORCEINLINE bool operator==(const FString& A, const char* B)
 	{

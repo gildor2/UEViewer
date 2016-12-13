@@ -262,7 +262,7 @@ public:
 			FStaticString<512> CombinedPath;
 			CombinedPath = MountPoint;
 			CombinedPath += Filename;
-			E.Name = appStrdupPool(CombinedPath);
+			E.Name = appStrdupPool(*CombinedPath);
 			// serialize other fields
 			*Reader << E;
 		}

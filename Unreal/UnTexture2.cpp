@@ -402,7 +402,7 @@ static byte *FindBioTexture(const UTexture *Tex)
 			for (int k = 0; k < File.Items.Num(); k++)
 			{
 				const BioBulkCatalogItem &Item = File.Items[k];
-				if (!strcmp(Tex->Name, Item.ObjectName))
+				if (!strcmp(Tex->Name, *Item.ObjectName))
 				{
 					if (abs(needSize - Item.DataSize) > 0x4000)		// differs in 16k
 					{
@@ -417,7 +417,7 @@ static byte *FindBioTexture(const UTexture *Tex)
 						Tex->HasBeenStripped, Tex->StrippedNumMips);
 #endif
 					// found
-					const CGameFileInfo *bulkFile = appFindGameFile(File.Filename);
+					const CGameFileInfo *bulkFile = appFindGameFile(*File.Filename);
 					if (!bulkFile)
 					{
 						// no bulk file

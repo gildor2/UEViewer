@@ -384,6 +384,9 @@ class UIMenuButton : public UIElement
 public:
 	UIMenuButton(const char* text);
 
+//	UIMenuButton& SetOK();
+//	UIMenuButton& SetCancel();
+
 protected:
 	FString		Label;
 
@@ -501,7 +504,7 @@ public:
 
 	FORCEINLINE const char* GetItem(int index) const
 	{
-		return Items[index];
+		return *Items[index];
 	}
 	FORCEINLINE int GetSelectionIndex() const
 	{
@@ -542,7 +545,7 @@ public:
 
 	FORCEINLINE const char* GetItem(int index) const
 	{
-		return Items[index];
+		return *Items[index];
 	}
 	FORCEINLINE int GetSelectionIndex() const
 	{
@@ -734,7 +737,7 @@ public:
 
 	UIMenuItem& Enable(bool enable);
 
-	const char* GetText() const { return Label; }
+	const char* GetText() const { return *Label; }
 	HMENU GetMenuHandle();
 
 	// Update checkboxes and radio groups according to attached variables
@@ -1042,7 +1045,7 @@ public:
 	// Details: 'Escape' key is processed in PumpMessageLoop().
 	FORCEINLINE UIBaseDialog& CloseOnEsc()
 	{
-		DoCloseOnEsc = true;
+		ShouldCloseOnEsc = true;
 		return *this;
 	}
 
@@ -1072,7 +1075,7 @@ public:
 protected:
 	int			NextDialogId;
 	int			IconResId;
-	bool		DoCloseOnEsc;		//!! awful name
+	bool		ShouldCloseOnEsc;
 	UIBaseDialog* ParentDialog;
 	bool		IsDialogConstructed;	// true after InitUI() call
 

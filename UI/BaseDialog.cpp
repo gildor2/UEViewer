@@ -518,6 +518,7 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 	char buffer[MAX_TITLE_LEN];
 	appSprintf(ARRAY_ARG(buffer), "<a href=\"%s\">%s</a>", *Link, *Label);
 	Wnd = Window("SysLink", buffer, ConvertTextAlign(Align), 0, dialog);
+#endif
 	if (!Wnd)
 	{
 		// Fallback to ordinary label if SysLink was not created for some reason.
@@ -525,7 +526,6 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 		// http://stackoverflow.com/questions/1525669/set-static-text-color-win32
 		Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align) | SS_NOTIFY, 0, dialog);
 	}
-#endif
 
 	UpdateEnabled();
 }
@@ -642,6 +642,18 @@ UIMenuButton::UIMenuButton(const char* text)
 	Height = DEFAULT_BUTTON_HEIGHT;
 }
 
+/*UIMenuButton& UIMenuButton::SetOK()
+{
+	Id = IDOK;
+	return *this;
+}
+
+UIMenuButton& UIMenuButton::SetCancel()
+{
+	Id = IDCANCEL;
+	return *this;
+}*/
+
 void UIMenuButton::Create(UIBaseDialog* dialog)
 {
 	Parent->AddVerticalSpace();
@@ -663,7 +675,7 @@ bool UIMenuButton::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (cmd == BCN_DROPDOWN || (cmd == BN_CLICKED && !Callback))
 	{
 		// reference: MFC, CSplitButton::OnDropDown()
-		// create menu or ger its handle
+		// create menu or get its handle
 		HMENU hMenu = Menu->GetHandle(true, true);
 		// get rect of button for menu positioning
 		RECT rectButton;
@@ -697,7 +709,7 @@ UICheckbox::UICheckbox(const char* text, bool value, bool autoSize)
 
 UICheckbox::UICheckbox(const char* text, bool* value, bool autoSize)
 :	Label(text)
-//,	bValue(value) - uninitialized
+//,	bValue(value) - uninitialized, unused
 ,	pValue(value)
 ,	AutoSize(autoSize)
 {
@@ -841,7 +853,7 @@ UITextEdit::UITextEdit(const char* value)
 
 UITextEdit::UITextEdit(FString* value)
 :	pValue(value)
-//,	sValue(value) - uninitialized
+//,	sValue(value) - uninitialized, unused
 ,	IsMultiline(false)
 ,	IsReadOnly(false)
 ,	IsWantFocus(true)
@@ -956,7 +968,7 @@ UICombobox& UICombobox::SelectItem(const char* item)
 	int index = -1;
 	for (int i = 0; i < Items.Num(); i++)
 	{
-		if (!stricmp(Items[i], item))
+		if (!stricmp(*Items[i], item))
 		{
 			index = i;
 			break;
@@ -1054,7 +1066,7 @@ UIListbox& UIListbox::SelectItem(const char* item)
 	int index = -1;
 	for (int i = 0; i < Items.Num(); i++)
 	{
-		if (!stricmp(Items[i], item))
+		if (!stricmp(*Items[i], item))
 		{
 			index = i;
 			break;
@@ -1278,7 +1290,7 @@ const char* UIMulticolumnListbox::GetSubItem(int itemIndex, int column) const
 
 	assert(column >= 0 && column < NumColumns);
 	int index = (itemIndex + 1) * NumColumns + column;
-	return Items[index];
+	return *Items[index];
 
 	unguard;
 }
@@ -1411,7 +1423,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::SelectItem(const char* item, bool ad
 	int index = 0;
 	for (int i = NumColumns; i < Items.Num(); i += NumColumns, index++)
 	{
-		if (!strcmp(Items[i], item))
+		if (!strcmp(*Items[i], item))
 			return SelectItem(index, add);
 	}
 	return *this;
@@ -1430,7 +1442,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::UnselectItem(const char* item)
 	int index = 0;
 	for (int i = NumColumns; i < Items.Num(); i += NumColumns, index++)
 	{
-		if (!strcmp(Items[i], item))
+		if (!strcmp(*Items[i], item))
 			return UnselectItem(index);
 	}
 	return *this;
@@ -1776,7 +1788,7 @@ UITreeView& UITreeView::SelectItem(const char* item)
 	TreeViewItem* foundItem = NULL;
 	for (int i = 0; i < Items.Num(); i++)
 	{
-		if (!stricmp(Items[i]->Label, item))
+		if (!stricmp(*Items[i]->Label, item))
 		{
 			foundItem = Items[i];
 			break;
@@ -2844,7 +2856,7 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 UIBaseDialog::UIBaseDialog()
 :	UIGroup(GROUP_NO_BORDER)
 ,	NextDialogId(FIRST_DIALOG_ID)
-,	DoCloseOnEsc(false)
+,	ShouldCloseOnEsc(false)
 ,	ParentDialog(NULL)
 ,	IconResId(0)
 ,	IsDialogConstructed(false)
@@ -3001,7 +3013,7 @@ bool UIBaseDialog::PumpMessageLoop()
 	MSG msg;
 	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
-		if (msg.message == WM_KEYDOWN && DoCloseOnEsc && msg.wParam == VK_ESCAPE)
+		if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
 		{
 			// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
 			// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key

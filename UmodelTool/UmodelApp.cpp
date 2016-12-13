@@ -604,7 +604,7 @@ void CUmodelApp::WindowCreated()
 			NewMenuItem("Export current object\tCtrl+X")
 			.SetCallback(BIND_MEM_CB(&CUmodelApp::ExportObject, this))
 			+ NewMenuSeparator()
-			+ NewMenuHyperLink("Open export folder", GSettings.ExportPath)	//!! should update if directory will be changed from UI
+			+ NewMenuHyperLink("Open export folder", *GSettings.ExportPath)	//!! should update if directory will be changed from UI
 			+ NewMenuHyperLink("Open screenshots folder", SCREENSHOTS_DIR)
 			+ NewMenuSeparator()
 			+ NewMenuItem("Scan package versions")

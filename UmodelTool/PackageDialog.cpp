@@ -373,7 +373,7 @@ void UIPackageDialog::InitUI()
 		{
 			// find the first directory with packages, but don't select /Game/Engine subdirectories by default
 			bool isUE4EnginePath = strnicmp(path, "Engine/", 7) == 0;
-			if (!isUE4EnginePath && (stricmp(path, SelectedDir) < 0 || SelectedDir.IsEmpty()))
+			if (!isUE4EnginePath && (stricmp(path, *SelectedDir) < 0 || SelectedDir.IsEmpty()))
 			{
 				// set selection to the first directory
 				SelectedDir = s ? path : "";

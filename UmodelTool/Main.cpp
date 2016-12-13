@@ -880,13 +880,13 @@ int main(int argc, char **argv)
 
 	// apply some GSettings
 	if (hasRootDir)
-		appSetRootDirectory(GSettings.GamePath);
+		appSetRootDirectory(*GSettings.GamePath);
 	GForceGame = GSettings.GameOverride;
 	GForcePlatform = GSettings.Platform;
 	GForceCompMethod = GSettings.PackageCompression;
 	if (GSettings.ExportPath.IsEmpty())
 		SetPathOption(GSettings.ExportPath, "UmodelExport");	//!! linux: ~/UmodelExport
-	appSetBaseExportDirectory(GSettings.ExportPath);
+	appSetBaseExportDirectory(*GSettings.ExportPath);
 
 	TArray<UnPackage*> Packages;
 	TArray<UObject*> Objects;
