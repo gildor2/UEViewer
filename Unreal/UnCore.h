@@ -1996,11 +1996,11 @@ public:
 	}
 
 	// operators
-	FORCEINLINE FString& operator=(const char* src)
+	FORCEINLINE FStaticString& operator=(const char* src)
 	{
 		return (FStaticString&) FString::operator=(src);
 	}
-	FORCEINLINE FString& operator=(const FString& src)
+	FORCEINLINE FStaticString& operator=(const FString& src)
 	{
 		return (FStaticString&) FString::operator=(src);
 	}
