@@ -74,7 +74,7 @@ public:
 	static FORCEINLINE int EncodeWidth(float w)
 	{
 		w = bound(w, 0, 1);
-		int iw = w * 255.0f;			// float -> int
+		int iw = (int)(w * 255.0f);		// float -> int
 		return 0xFFFF0000 | iw;
 	}
 
@@ -468,6 +468,7 @@ public:
 		return *this;
 	}
 
+	// Set text in editor field. Passing NULL as text will just refresh value display.
 	void SetText(const char* text = NULL);
 	const char* GetText();
 
@@ -1087,6 +1088,15 @@ protected:
 
 	virtual void InitUI()
 	{}
+
+	// Virtual method which allows to prevent unwanted closing of dialog window. 'Cancel'
+	// parameter indicates if dialog is closed with 'Esc', 'Cancel' button or with 'x'
+	// (this is a parameter for CloseDialog() function passed here). This function should
+	// return 'false' to deny dialog disappearing.
+	virtual bool CanCloseDialog(bool cancel)
+	{
+		return true;
+	}
 };
 
 

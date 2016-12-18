@@ -1,10 +1,14 @@
 #if _WIN32
-#define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
+
+#define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windows headers
+#define _CRT_SECURE_NO_WARNINGS
+#undef UNICODE
+
 #include <windows.h>
 #include <CommCtrl.h>
 #include <ShellAPI.h>				// for ShellExecute
 #include <Shlwapi.h>				// for DllGetVersion stuff
-#endif
+#endif // _WIN32
 
 #include "BaseDialog.h"
 
@@ -917,11 +921,11 @@ void UITextEdit::UpdateText()
 	TextDirty = true;
 
 	int len = GetWindowTextLength(Wnd);
-	FString& S = *pValue;
-	TArray<char>& StrData = S.GetDataArray();
-	StrData.Empty(len+1);
-	StrData.AddUninitialized(len+1);
-	GetWindowText(Wnd, StrData.GetData(), len + 1);
+	char* buf = new char[len+1];
+	GetWindowText(Wnd, buf, len + 1);
+
+	*pValue = buf;
+	delete[] buf;
 }
 
 
@@ -1004,7 +1008,7 @@ bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd == CBN_SELCHANGE)
 	{
-		int v = SendMessage(Wnd, CB_GETCURSEL, 0, 0);
+		int v = (int)SendMessage(Wnd, CB_GETCURSEL, 0, 0);
 		if (v != Value)
 		{
 			Value = v;
@@ -1098,7 +1102,7 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd == LBN_SELCHANGE || cmd == LBN_DBLCLK)
 	{
-		int v = SendMessage(Wnd, LB_GETCURSEL, 0, 0);
+		int v = (int)SendMessage(Wnd, LB_GETCURSEL, 0, 0);
 		if (v != Value)
 		{
 			Value = v;
@@ -1497,7 +1501,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 		if (w == -1)
 			numAutoWidthColumns++;
 		else if (w < 0)
-			w = DecodeWidth(w) * clientWidth;
+			w = int(DecodeWidth(w) * clientWidth);
 		totalWidth += w;
 	}
 	assert(totalWidth <= Width);
@@ -1515,7 +1519,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 		if (w == -1)
 			column.cx = autoColumnWidth;
 		else if (w < 0)
-			column.cx = DecodeWidth(w) * clientWidth;
+			column.cx = int(DecodeWidth(w) * clientWidth);
 		else
 			column.cx = w;
 		switch (ColumnAlign[i])
@@ -2115,7 +2119,7 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 				mii.fState     = fState;
 				mii.wID        = item->Id;
 				mii.dwTypeData = const_cast<char*>(*item->Label);
-				mii.cch        = strlen(mii.dwTypeData);
+				mii.cch        = (UINT)strlen(mii.dwTypeData);
 
 				InsertMenuItem(parentMenu, position, TRUE, &mii);
 			}
@@ -2463,12 +2467,12 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 		if (w == -1 && (Flags & GROUP_HORIZONTAL_LAYOUT))
 			w = AutoWidth;
 		else
-			w = DecodeWidth(w) * parentWidth;
+			w = int(DecodeWidth(w) * parentWidth);
 	}
 
 	if (h < 0 && Height > 0)
 	{
-		h = DecodeWidth(h) * Height;
+		h = int(DecodeWidth(h) * Height);
 	}
 	assert(h >= 0);
 
@@ -2479,22 +2483,22 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 			CursorX += w;
 	}
 	else if (x < 0)
-		x = baseX + DecodeWidth(x) * parentWidth;	// left border of parent control, 'x' is relative value
+		x = baseX + int(DecodeWidth(x) * parentWidth);	// left border of parent control, 'x' is relative value
 	else
-		x = baseX + x;								// treat 'x' as relative value
+		x = baseX + x;									// treat 'x' as relative value
 
 	if (x + w > rightMargin)
 		w = rightMargin - x;
 
 	if (y < 0)
 	{
-		y = Y + CursorY;							// next 'y' value
+		y = Y + CursorY;								// next 'y' value
 		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
 			CursorY += h;
 	}
 	else
 	{
-		y = Y + CursorY + y;						// treat 'y' as relative value
+		y = Y + CursorY + y;							// treat 'y' as relative value
 		// don't change 'Height'
 	}
 
@@ -2621,14 +2625,12 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		for (UIElement* control = FirstChild; control; control = control->NextChild)
 		{
 			numControls++;
-			// some controls could compite size depending on text
-			control->UpdateSize(dialog);
 			// get width of control
 			int w = control->Width;
 			if (w == -1)
 				numAutoWidthControls++;
 			else if (w < 0)
-				w = DecodeWidth(w) * parentWidth;
+				w = int(DecodeWidth(w) * parentWidth);
 			totalWidth += w;
 		}
 		assert(totalWidth <= parentWidth);
@@ -2650,7 +2652,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 	// call 'Create' for all children
 	int maxControlY = Y + Height;
-	bool isRadioGroup;
+	bool isRadioGroup = false;
 	int controlIndex = 0;
 	for (UIElement* control = FirstChild; control; control = control->NextChild, controlIndex++)
 	{
@@ -2925,7 +2927,7 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 	dlg1->cx = width;
 	dlg1->cy = height;
 
-	int titleLen = wcslen(title);
+	int titleLen = (int)wcslen(title);
 	assert(titleLen < MAX_TITLE_LEN);
 	wcscpy(dlg1->title, title);
 
@@ -2966,7 +2968,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 #if DO_GUARD
 		TRY {
 #endif
-			int result = DialogBoxIndirectParam(
+			INT_PTR result = DialogBoxIndirectParam(
 				hInstance,				// hInstance
 				tmpl,					// lpTemplate
 				ParentWindow,			// hWndParent
@@ -3041,10 +3043,12 @@ bool UIBaseDialog::PumpMessageLoop()
 
 void UIBaseDialog::CloseDialog(bool cancel)
 {
-	if (!Wnd) return;
-	DialogClosed(cancel);
-	EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
-	Wnd = 0;
+	if (Wnd && CanCloseDialog(cancel))
+	{
+		DialogClosed(cancel);
+		EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
+		Wnd = 0;
+	}
 }
 
 static void (*GUIExceptionHandler)() = NULL;
