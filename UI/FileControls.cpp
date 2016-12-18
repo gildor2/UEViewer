@@ -1,5 +1,8 @@
 #if _WIN32
 
+#define _CRT_SECURE_NO_WARNINGS
+#undef UNICODE
+
 #include <ObjBase.h>		// CoInitialize()
 #include <Shlwapi.h>		// SH* functions
 #include <Shlobj.h>			// SHBrowseForFolder
@@ -18,6 +21,7 @@
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "comdlg32.lib")
 
 static void InitializeOLE()
 {
@@ -38,6 +42,7 @@ static void InitializeOLE()
 UIFilePathEditor::UIFilePathEditor(FString* path)
 :	UIGroup(GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 ,	Path(path)
+,	Title("Please select a directory:")
 {
 #if _WIN32
 	for (int i = 0; i < Path->Len(); i++)
@@ -103,7 +108,7 @@ void UIFilePathEditor::OnBrowseClicked(UIButton* sender)
 	bi.hwndOwner      = DlgWnd;
 	bi.pidlRoot       = NULL;
 	bi.pszDisplayName = szDisplayName;
-	bi.lpszTitle      = "Please select a directory:";	//!! customize
+	bi.lpszTitle      = *Title;
 	bi.ulFlags        = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 	bi.lParam         = (LPARAM)Editor->GetText();
 	bi.iImage         = 0;
@@ -122,5 +127,115 @@ void UIFilePathEditor::OnBrowseClicked(UIButton* sender)
 	}
 }
 
+
+/*-----------------------------------------------------------------------------
+	UIFileNameEditor
+-----------------------------------------------------------------------------*/
+
+#define BROWSE_BUTTON_WIDTH		70
+
+UIFileNameEditor::UIFileNameEditor(FString* path)
+:	UIGroup(GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+,	Path(path)
+,	bIsSaveDialog(false)
+{
+#if _WIN32
+	for (int i = 0; i < Path->Len(); i++)
+		if ((*Path)[i] == '/') (*Path)[i] = '\\';
+#endif
+}
+
+void UIFileNameEditor::Create(UIBaseDialog* dialog)
+{
+	Super::Create(dialog);
+	InitializeOLE();
+	SHAutoComplete(Editor->GetWnd(), SHACF_FILESYS_ONLY);
+	DlgWnd = dialog->GetWnd();
+}
+
+void UIFileNameEditor::AddCustomControls()
+{
+	(*this)
+	[
+		NewControl(UITextEdit, Path)
+		.Expose(Editor)
+		+ NewControl(UISpacer)
+		+ NewControl(UIButton, "Browse ...")
+		.SetWidth(BROWSE_BUTTON_WIDTH)
+		.SetCallback(BIND_MEM_CB(&UIFileNameEditor::OnBrowseClicked, this))
+	];
+}
+
+void UIFileNameEditor::OnBrowseClicked(UIButton* sender)
+{
+	OPENFILENAME ofn;
+	memset(&ofn, 0, sizeof(ofn));
+
+	char szPathName[1024];
+	appStrncpyz(szPathName, *(*Path), ARRAY_COUNT(szPathName));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner   = DlgWnd;
+	ofn.lpstrFile   = szPathName;
+	ofn.nMaxFile    = ARRAY_COUNT(szPathName);
+
+	// Build filters string. It consists of null-terminated strings concatenated
+	// into single buffer. Ends with extra null character.
+	FStaticString<1024> filterBuf;
+	for (int i = 0; i < Filters.Num(); i++)
+	{
+		const char* s = *Filters[i];
+		const char* s2 = strchr(s, '|');
+		if (s2)
+		{
+			int delimRSize = Filters[i].Len() - int(s2 - s);
+			filterBuf += s;
+			filterBuf[filterBuf.Len() - delimRSize] = 0;
+			filterBuf.AppendChar(0);
+		}
+		else
+		{
+			filterBuf += s;
+			filterBuf.AppendChar(0);
+			filterBuf += s;
+			filterBuf.AppendChar(0);
+		}
+	}
+	// Add "all files" filter, and finish it with extra null character.
+	filterBuf += "All Files (*.*)";
+	filterBuf.AppendChar(0);
+	filterBuf += "*.*";
+	filterBuf.AppendChar(0);
+	filterBuf.AppendChar(0);
+	ofn.lpstrFilter = *filterBuf;
+
+	if (!InitialDirectory.IsEmpty())
+	{
+		ofn.lpstrInitialDir = *InitialDirectory;
+	}
+
+	if (!Title.IsEmpty())
+	{
+		ofn.lpstrTitle = *Title;
+	}
+
+	ofn.Flags = OFN_HIDEREADONLY | OFN_ENABLESIZING | OFN_EXPLORER;
+	if (bIsSaveDialog)
+	{
+		ofn.Flags |= OFN_CREATEPROMPT | OFN_OVERWRITEPROMPT | OFN_NOVALIDATE;
+	}
+	else
+	{
+		ofn.Flags |= OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+	}
+
+	int bSuccess = (bIsSaveDialog) ? GetSaveFileName(&ofn) : GetOpenFileName(&ofn);
+
+	if (bSuccess)
+	{
+		*Path = szPathName;
+		Editor->SetText();
+	}
+}
 
 #endif // HAS_UI
