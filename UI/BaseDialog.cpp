@@ -201,13 +201,49 @@ void UIElement::MeasureTextSize(const char* text, int* width, int* height, HWND 
 	guard(UIElement::MeasureTextSize);
 	if (!wnd) wnd = Wnd;
 	assert(wnd);
+	// set dialog's font for DC
 	HDC dc = GetDC(wnd);
 	HGDIOBJ oldFont = SelectObject(dc, (HFONT)SendMessage(wnd, WM_GETFONT, 0, 0));
+	// measure text size
 	SIZE size;
-	//?? probably use DrawText() with DT_CALCRECT instead of GetTextExtentPoint32()
-	GetTextExtentPoint32(dc, text, strlen(text), &size);
+	GetTextExtentPoint32(dc, text, (int)strlen(text), &size);
 	if (width) *width = size.cx;
 	if (height) *height = size.cy;
+	// restore font
+	SelectObject(dc, oldFont);
+	ReleaseDC(wnd, dc);
+	unguard;
+}
+
+void UIElement::MeasureTextVSize(const char* text, int* width, int* height, HWND wnd)
+{
+	guard(UIElement::MeasureTextVSize);
+	if (!wnd) wnd = Wnd;
+	assert(wnd);
+
+	// get control's width
+	int w = *width;
+	if (w < 0)
+	{
+		//!! see AllocateUISpace() for details, should separate common code in some way
+//		if (w == -1 && (Parent->Flags & GROUP_HORIZONTAL_LAYOUT))
+//			w = Parent->AutoWidth;
+//		else
+			w = int(DecodeWidth(w) * Parent->Width); //!! see parentWidth in AllocateUISpace()
+	}
+
+	// set dialog's font for DC
+	HDC dc = GetDC(wnd);
+	HGDIOBJ oldFont = SelectObject(dc, (HFONT)SendMessage(wnd, WM_GETFONT, 0, 0));
+	// measure text size
+	RECT rc;
+	rc.bottom = rc.top = 0;
+	rc.left = 0;
+	rc.right = w;
+	int h = DrawText(dc, text, -1, &rc, DT_CALCRECT | DT_WORDBREAK);
+	if (width) *width = rc.right - rc.left;
+	if (height) *height = h;
+	// restore font
 	SelectObject(dc, oldFont);
 	ReleaseDC(wnd, dc);
 	unguard;
@@ -484,6 +520,14 @@ static int ConvertTextAlign(ETextAlign align)
 
 void UILabel::Create(UIBaseDialog* dialog)
 {
+	if (Height == -1)
+	{
+		// Auto-size: compute label's height
+		int labelWidth, labelHeight;
+		labelWidth = Width;
+		MeasureTextVSize(*Label, &labelWidth, &labelHeight, dialog->GetWnd());
+		Height = labelHeight;
+	}
 	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align), 0, dialog);
 	UpdateEnabled();
@@ -2609,6 +2653,10 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	// allow UIGroup-based classes to add own controls
 	AddCustomControls();
 
+	// some controls could compite size depending on text
+	for (UIElement* control = FirstChild; control; control = control->NextChild)
+		control->UpdateSize(dialog);
+
 	// determine default width of control in horizontal layout; this value will be used for
 	// all controls which width was not specified (for Width==-1)
 	AutoWidth = 0;
@@ -2628,10 +2676,18 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 			// get width of control
 			int w = control->Width;
 			if (w == -1)
+			{
 				numAutoWidthControls++;
+			}
 			else if (w < 0)
+			{
 				w = int(DecodeWidth(w) * parentWidth);
-			totalWidth += w;
+				totalWidth += w;
+			}
+			else
+			{
+				totalWidth += w;
+			}
 		}
 		assert(totalWidth <= parentWidth);
 		if (numAutoWidthControls)

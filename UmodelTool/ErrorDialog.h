@@ -6,7 +6,7 @@ class UIErrorDialog : public UIBaseDialog
 public:
 	void Show()
 	{
-		ShowModal("Fatal Error", 300, 200);
+		ShowModal("Fatal Error", 350, 250);
 	}
 
 	void InitUI()
@@ -37,6 +37,7 @@ public:
 				+ NewControl(UIGroup, GROUP_NO_BORDER)
 				[
 					NewControl(UILabel, message)
+					.SetHeight(-1)		//!! auto-size label height; use AutoVSize API?
 					+ NewControl(UISpacer, 16)
 					+ NewControl(UILabel, "Call stack:")
 					+ NewControl(UISpacer)

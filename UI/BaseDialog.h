@@ -86,7 +86,10 @@ public:
 		return (w & 0xFF) / 255.0f;		// w=-1 -> 1.0f
 	}
 
+	// Measure text size. There should be a single line of text.
 	void MeasureTextSize(const char* text, int* width, int* height = NULL, HWND wnd = 0);
+	// Measure text size. 'width' contains width limit for multiline text.
+	void MeasureTextVSize(const char* text, int* width, int* height = NULL, HWND wnd = 0);
 
 	friend UIElement& operator+(UIElement& elem, UIElement& next);
 
@@ -173,7 +176,8 @@ public:												\
 	FORCEINLINE ThisClass& SetHeight(int height)     { Height = height; return *this; } \
 	FORCEINLINE ThisClass& Enable(bool enable)       { return (ThisClass&) Super::Enable(enable); } \
 	FORCEINLINE ThisClass& Show(bool visible)        { return (ThisClass&) Super::Show(visible); } \
-	FORCEINLINE ThisClass& Expose(ThisClass*& var)   { var = this; return *this; } \
+	template<class T>								\
+	FORCEINLINE ThisClass& Expose(T*& var)           { var = this; return *this; } \
 	FORCEINLINE ThisClass& SetParent(UIGroup* group) { return (ThisClass&) Super::SetParent(group); } \
 	FORCEINLINE ThisClass& SetParent(UIGroup& group) { return (ThisClass&) Super::SetParent(&group); } \
 	FORCEINLINE ThisClass& SetMenu(UIMenu* menu)     { return (ThisClass&) Super::SetMenu(menu); } \
