@@ -24,7 +24,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 #if SPLINTER_CELL
 	if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 83)
 	{
-		int unk8;
+		int32 unk8;
 		Ar << unk8;
 	}
 #endif // SPLINTER_CELL
@@ -34,7 +34,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 #if LEAD
 	if (Ar.Game == GAME_SplinterCellConv)
 	{
-		int unk10;
+		int32 unk10;
 		Ar << unk10;		// some flags?
 	}
 #endif // LEAD
@@ -45,8 +45,8 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 	if (Ar.Game == GAME_SplinterCellConv && Ar.ArLicenseeVer >= 48)
 	{
 		// this game has additional name table for some packages
-		int ExtraNameCount, ExtraNameOffset;
-		int unkC;
+		int32 ExtraNameCount, ExtraNameOffset;
+		int32 unkC;
 		Ar << ExtraNameCount << ExtraNameOffset;
 		if (ExtraNameOffset < S.ImportOffset) ExtraNameCount = 0;
 		if (Ar.ArLicenseeVer >= 85) Ar << unkC;
@@ -56,7 +56,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 #if SPLINTER_CELL
 	if (Ar.Game == GAME_SplinterCell)
 	{
-		int tmp1;
+		int32 tmp1;
 		TArray<byte> tmp2;
 		Ar << tmp1;								// 0xFF0ADDE
 		Ar << tmp2;
@@ -84,7 +84,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 	if (Ar.ArVer < 68)
 	{
 		// old generations code
-		int HeritageCount, HeritageOffset;
+		int32 HeritageCount, HeritageOffset;
 		Ar << HeritageCount << HeritageOffset;	// not used
 		if (Ar.IsLoading)
 		{
@@ -101,7 +101,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 		// current generations code
 	generations:
 		// always used int for generation count (even for UE1-2)
-		int Count;
+		int32 Count;
 		Ar << Count;
 		S.Generations.Empty(Count);
 		S.Generations.AddZeroed(Count);
@@ -129,7 +129,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if R6VEGAS
 	if (Ar.Game == GAME_R6Vegas2)
 	{
-		int unk8, unkC;
+		int32 unk8, unkC;
 		if (Ar.ArLicenseeVer >= 48) Ar << unk8;
 		if (Ar.ArLicenseeVer >= 49) Ar << unkC;
 	}
@@ -137,7 +137,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if HUXLEY
 	if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 8)
 	{
-		int skip;
+		int32 skip;
 		Ar << skip;								// 0xFEFEFEFE
 		if (Ar.ArLicenseeVer >= 17)
 		{
@@ -151,12 +151,12 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	{
 		if (Ar.ArLicenseeVer >= 181)
 		{
-			int unk1, unk2[3];
+			int32 unk1, unk2[3];
 			Ar << unk1 << unk2[0] << unk2[1] << unk2[2];
 		}
 		if (Ar.ArLicenseeVer >= 55)
 		{
-			int unk8;							// always 0x4BF1EB6B? (not true for later game versions)
+			int32 unk8;							// always 0x4BF1EB6B? (not true for later game versions)
 			Ar << unk8;
 		}
 	}
@@ -164,14 +164,14 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if MORTALONLINE
 	if (Ar.Game == GAME_MortalOnline && Ar.ArLicenseeVer >= 1)
 	{
-		int unk8;
+		int32 unk8;
 		Ar << unk8;								// always 0?
 	}
 #endif
 #if BIOSHOCK3
 	if (Ar.Game == GAME_Bioshock3 && Ar.ArLicenseeVer >= 66)
 	{
-		int unkC;
+		int32 unkC;
 		Ar << unkC;
 	}
 #endif
@@ -187,8 +187,8 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	if (Ar.Engine() == GAME_MIDWAY3 && Ar.ArLicenseeVer >= 2)	//?? Wheelman not checked
 	{
 		// Tag == "A52 ", "MK8 ", "MK  ", "WMAN", "WOO " (Stranglehold), "EPIC", "TNA ", "KORE", "MK10"
-		int Tag;
-		int unk10;
+		int32 Tag;
+		int32 unk10;
 		FGuid unkGuid;
 		Ar << Tag << midwayVer;
 		if (Ar.Game == GAME_Strangle && midwayVer >= 256)
@@ -208,21 +208,21 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if MASSEFF
 	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (S.PackageFlags & 8))
 	{
-		int unk88;
+		int32 unk88;
 		Ar << unk88;
 	}
 #endif // MASSEFF
 #if HAWKEN
 	if (Ar.Game == GAME_Hawken && Ar.ArLicenseeVer >= 2)
 	{
-		int unkVer;
+		int32 unkVer;
 		Ar << unkVer;
 	}
 #endif // HAWKEN
 #if GIGANTIC
 	if (Ar.Game == GAME_Gigantic && Ar.ArLicenseeVer >= 2)
 	{
-		int unk;
+		int32 unk;
 		Ar << unk;
 	}
 #endif // GIGANTIC
@@ -259,7 +259,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if APB
 	if (Ar.Game == GAME_APB)
 	{
-		int unk2C;
+		int32 unk2C;
 		float unk30[5];
 		if (Ar.ArLicenseeVer >= 29) Ar << unk2C;
 		if (Ar.ArLicenseeVer >= 28) Ar << unk30[0] << unk30[1] << unk30[2] << unk30[3] << unk30[4];
@@ -271,8 +271,8 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if MKVSDC
 	if (Ar.Game == GAME_MK)
 	{
-		int unk3C, unk40, unk54;
-		int unk44, unk48, unk4C;
+		int32 unk3C, unk40, unk54;
+		int32 unk44, unk48, unk4C;
 		if (Ar.ArVer >= 524)		// Injustice
 			Ar << unk3C;
 		if (midwayVer >= 16)
@@ -297,14 +297,14 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if WHEELMAN
 	if (Ar.Game == GAME_Wheelman && midwayVer >= 23)
 	{
-		int unk3C;
+		int32 unk3C;
 		Ar << unk3C;
 	}
 #endif // WHEELMAN
 #if STRANGLE
 	if (Ar.Game == GAME_Strangle && Ar.ArVer >= 375)
 	{
-		int unk40;
+		int32 unk40;
 		Ar << unk40;
 	}
 #endif // STRANGLE
@@ -325,7 +325,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	{
 		if (S.PackageFlags & 8)
 		{
-			int unk38;
+			int32 unk38;
 			Ar << unk38;
 		}
 	}
@@ -341,13 +341,13 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	if (Ar.ArVer >= 584)
 	{
 	read_unk38:
-		int unk38;
+		int32 unk38;
 		Ar << unk38;
 	}
 
 	// Guid and generations
 	Ar << S.Guid;
-	int Count;
+	int32 Count;
 	Ar << Count;
 
 #if APB
@@ -383,7 +383,7 @@ cooker_version:
 	// ... MassEffect has some additional structure here ...
 	if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
 	{
-		int unk1, unk2, unk3[2], unk4[2];
+		int32 unk1, unk2, unk3[2], unk4[2];
 		if (Ar.ArLicenseeVer >= 16 && Ar.ArLicenseeVer < 136)
 			Ar << unk1;					// random value, ME1&2
 		if (Ar.ArLicenseeVer >= 32 && Ar.ArLicenseeVer < 136)
@@ -420,8 +420,8 @@ cooker_version:
 
 struct FEnumCustomVersion
 {
-	int				Tag;
-	int				Version;
+	int32			Tag;
+	int32			Version;
 
 	friend FArchive& operator<<(FArchive& Ar, FEnumCustomVersion& V)
 	{
@@ -432,7 +432,7 @@ struct FEnumCustomVersion
 struct FGuidCustomVersion
 {
 	FGuid			Key;
-	int				Version;
+	int32			Version;
 	FString			FriendlyName;
 
 	friend FArchive& operator<<(FArchive& Ar, FGuidCustomVersion& V)
@@ -444,7 +444,7 @@ struct FGuidCustomVersion
 struct FCustomVersion
 {
 	FGuid			Key;
-	int				Version;
+	int32			Version;
 
 	friend FArchive& operator<<(FArchive& Ar, FCustomVersion& V)
 	{
@@ -495,7 +495,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	S.IsUnversioned = false;
 
 	// read versions
-	int VersionUE3, Version, LicenseeVersion;		// note: using int32 instead of uint16 as in UE1-UE3
+	int32 VersionUE3, Version, LicenseeVersion;		// note: using int32 instead of uint16 as in UE1-UE3
 	if (S.LegacyVersion != -4)						// UE4 had some changes for version -4, but these changes were reverted in -5 due to some problems
 		Ar << VersionUE3;
 	Ar << Version << LicenseeVersion;
@@ -534,7 +534,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 	if (Ar.ArVer >= VER_UE4_SERIALIZE_TEXT_IN_PACKAGES)
 	{
-		int GatherableTextDataCount, GatherableTextDataOffset;
+		int32 GatherableTextDataCount, GatherableTextDataOffset;
 		Ar << GatherableTextDataCount << GatherableTextDataOffset;
 	}
 
@@ -543,7 +543,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 	if (Ar.ArVer >= VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP)
 	{
-		int StringAssetReferencesCount, StringAssetReferencesOffset;
+		int32 StringAssetReferencesCount, StringAssetReferencesOffset;
 		Ar << StringAssetReferencesCount << StringAssetReferencesOffset;
 	}
 
@@ -552,12 +552,12 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	// * thumbnail data - sequence of FObjectThumbnail
 	// * thumbnail metadata - array of small headers pointed to 'thumbnail data' objects
 	//   (this metadata is what FPackageFileSummary::ThumbnailTableOffset points to)
-	int ThumbnailTableOffset;
+	int32 ThumbnailTableOffset;
 	Ar << ThumbnailTableOffset;
 
 	// guid and generations
 	Ar << S.Guid;
-	int Count;
+	int32 Count;
 	Ar << Count;
 	S.Generations.Empty(Count);
 	S.Generations.AddZeroed(Count);
@@ -576,7 +576,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	}
 	else
 	{
-		int changelist;
+		int32 changelist;
 		Ar << changelist;
 	}
 
@@ -590,7 +590,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	Ar << S.CompressionFlags;
 	Ar << S.CompressedChunks;
 
-	int PackageSource;
+	int32 PackageSource;
 	Ar << PackageSource;
 
 	TArray<FString> AdditionalPackagesToCook;
@@ -598,13 +598,13 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 	if (S.LegacyVersion > -7)
 	{
-		int NumTextureAllocations;
+		int32 NumTextureAllocations;
 		Ar << NumTextureAllocations;
 	}
 
 	if (Ar.ArVer >= VER_UE4_ASSET_REGISTRY_TAGS)
 	{
-		int AssetRegistryDataOffset;
+		int32 AssetRegistryDataOffset;
 		Ar << AssetRegistryDataOffset;
 	}
 

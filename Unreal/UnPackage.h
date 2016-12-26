@@ -15,9 +15,9 @@
 
 struct FGenerationInfo
 {
-	int			ExportCount, NameCount;
+	int32		ExportCount, NameCount;
 #if UNREAL3
-	int			NetObjectCount;
+	int32		NetObjectCount;
 #endif
 
 	friend FArchive& operator<<(FArchive &Ar, FGenerationInfo &I)
@@ -39,10 +39,10 @@ struct FGenerationInfo
 
 struct FCompressedChunk
 {
-	int			UncompressedOffset;
-	int			UncompressedSize;
-	int			CompressedOffset;
-	int			CompressedSize;
+	int32		UncompressedOffset;
+	int32		UncompressedSize;
+	int32		CompressedOffset;
+	int32		CompressedSize;
 
 	friend FArchive& operator<<(FArchive &Ar, FCompressedChunk &C)
 	{
@@ -65,7 +65,7 @@ struct FCompressedChunk
 #if BULLETSTORM
 		if (Ar.Game == GAME_Bulletstorm && Ar.ArLicenseeVer >= 21)
 		{
-			int unk10;			// unused? could be 0 or 1
+			int32 unk10;		// unused? could be 0 or 1
 			Ar << unk10;
 		}
 #endif // BULLETSTORM
@@ -86,7 +86,7 @@ struct FCompressedChunk
 struct FEngineVersion
 {
 	uint16		Major, Minor, Patch;
-	int			Changelist;
+	int32		Changelist;
 	FString		Branch;
 
 	friend FArchive& operator<<(FArchive& Ar, FEngineVersion& V)
