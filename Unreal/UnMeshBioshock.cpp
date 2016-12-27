@@ -504,7 +504,7 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 {
 	guard(USkeletalMesh::SerializeBioshock);
 
-	UPrimitive::Serialize(Ar);
+	UPrimitive::Serialize(Ar);				// Bounding box and sphere
 	TRIBES_HDR(Ar, 0);
 
 	float					unk90, unk94;
@@ -703,6 +703,7 @@ void UAnimationPackageWrapper::Process()
 }
 
 
+// Bioshock 1
 struct FStaticMeshVertexBio
 {
 	FVector					Pos;
@@ -724,6 +725,29 @@ struct FStaticMeshVertexBio
 
 SIMPLE_TYPE(FStaticMeshVertexBio, int)
 
+// Bioshock 1 remastered
+struct FStaticMeshVertexBio1R
+{
+	FVector					Pos;
+	FVector					Normal[3];
+
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexBio1R &V)
+	{
+		return Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+	}
+
+	operator FStaticMeshVertex() const
+	{
+		FStaticMeshVertex r;
+		r.Pos    = Pos;
+		r.Normal = Normal[2];
+		return r;
+	}
+};
+
+SIMPLE_TYPE(FStaticMeshVertexBio1R, float)
+
+// Bioshock 2 (normal and remastered)
 struct FStaticMeshVertexBio2
 {
 	uint16					Pos[4];
@@ -761,13 +785,23 @@ void UStaticMesh::SerializeBioshockMesh(FArchive &Ar)
 	if (t3_hdrSV < 9)
 	{
 		// Bioshock 1
-		TArray<FStaticMeshVertexBio> BioVerts;
-		Ar << BioVerts;
-		CopyArray(VertexStream.Vert, BioVerts);
+		if (Ar.ArVer < 142)
+		{
+			TArray<FStaticMeshVertexBio> BioVerts;
+			Ar << BioVerts;
+			CopyArray(VertexStream.Vert, BioVerts);
+		}
+		else
+		{
+			// Bioshock 1 remastered
+			TArray<FStaticMeshVertexBio1R> BioVerts;
+			Ar << BioVerts;
+			CopyArray(VertexStream.Vert, BioVerts);
+		}
 	}
 	else
 	{
-		// Bioshock 2
+		// Bioshock 2 and Bioshock 2 remastered
 		TArray<FStaticMeshVertexBio2> BioVerts2;
 		Ar << BioVerts2;
 		CopyArray(VertexStream.Vert, BioVerts2);
