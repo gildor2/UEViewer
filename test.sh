@@ -155,7 +155,7 @@ function ut4()
 {
 	CheckDir C:/3-UnrealEngine/UnrealTournamentDev/UnrealTournament/Content/Paks
 #	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament/Saved/Cooked/WindowsNoEditor/UnrealTournament/Content
-	run $*
+	run $* -game=ue4.13
 }
 function paragon()
 {
@@ -183,7 +183,8 @@ function bio()
 	CheckDir {c,e}:/GAMES/BioShock data/2/Bioshock
 	run $*
 }
-function bio2r()  { run1 "${steam[0]/%/BioShock 2 Remastered/ContentBaked/pc}"; }
+function bio1r()  { run1 "${steam[0]/%/BioShock Remastered/ContentBaked/pc}" $*; }
+function bio2r()  { run1 "${steam[0]/%/BioShock 2 Remastered/ContentBaked/pc}" $*; }
 function alice()
 {
 	CheckDir "E:/GAMES/Alice Madness Returns/Alice2/AliceGame/CookedPC"

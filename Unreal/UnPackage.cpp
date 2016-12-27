@@ -1841,9 +1841,10 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 
 	//!! try to separate the following code too
 #if BIOSHOCK
-	if (Game == GAME_Bioshock)
+	if ((Game == GAME_Bioshock) && (Summary.PackageFlags & 0x20000))
 	{
-		// read compression info
+		// Bioshock has a special flag indicating compression. Compression table follows the package summary.
+		// Read compression tables.
 		int NumChunks, i;
 		TArray<FCompressedChunk> Chunks;
 		*this << NumChunks;
@@ -1860,7 +1861,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 			Chunk->CompressedSize     = 0;			//?? not used
 			UncompOffset             += 32768;
 		}
-		// replace Loader for reading compressed Bioshock archives
+		// Replace Loader for reading compressed Bioshock archives.
 		Loader = new FUE3ArchiveReader(Loader, COMPRESS_ZLIB, Chunks);
 		Loader->SetupFrom(*this);
 	}

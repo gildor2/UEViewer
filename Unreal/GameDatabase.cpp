@@ -536,7 +536,8 @@ void FArchive::DetectGame()
 #endif
 #if BIOSHOCK
 	if ( (ArVer == 141 && (ArLicenseeVer == 56 || ArLicenseeVer == 57)) || //?? Bioshock and Bioshock 2
-		 (ArVer == 143 && ArLicenseeVer == 59) )					// Bioshock 2 multiplayer?
+		 (ArVer == 142 && ArLicenseeVer == 56) ||					// Bioshock Remastered
+		 (ArVer == 143 && ArLicenseeVer == 59) )					// Bioshock 2 multiplayer, Bioshock 2 Remastered
 		SET(GAME_Bioshock);
 #endif
 
