@@ -195,7 +195,7 @@ int main(int argc, char **argv)
 			mem.Seek(pos);
 			FString tmp2;
 			mem << tmp2;
-			if (strcmp(tmp2, *Group) != 0) continue;
+			if (strcmp(*tmp2, *Group) != 0) continue;
 			int flagsPos = mem.Tell();
 			mem << tmp;
 			if (tmp != Summary.PackageFlags) continue;

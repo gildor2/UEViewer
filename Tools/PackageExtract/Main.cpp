@@ -51,7 +51,7 @@ static bool FilterClass(const char *ClassName)	//?? check logic: filter = pass o
 	bool filter = false;
 	for (int fidx = 0; fidx < filters.Num(); fidx++)
 	{
-		if (!stricmp(filters[fidx], ClassName))
+		if (!stricmp(*filters[fidx], ClassName))
 			return true;
 	}
 	return false;
