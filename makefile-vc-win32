@@ -708,6 +708,30 @@ DEPENDS = \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnHavok.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMeshBioshock.obj : Unreal/UnMeshBioshock.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMeshBioshock.obj" Unreal/UnMeshBioshock.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMathTools.h \
@@ -979,28 +1003,6 @@ DEPENDS = \
 
 $(OUT_1)/PackageUtils.obj : Unreal/PackageUtils.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageUtils.obj" Unreal/PackageUtils.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/TypeConvert.h \
-	Unreal/UnCore.h \
-	Unreal/UnHavok.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMaterial2.h \
-	Unreal/UnMesh.h \
-	Unreal/UnMesh2.h \
-	Unreal/UnMeshTypes.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-$(OUT_1)/UnMeshBioshock.obj : Unreal/UnMeshBioshock.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMeshBioshock.obj" Unreal/UnMeshBioshock.cpp
 
 DEPENDS = \
 	Core/Core.h \

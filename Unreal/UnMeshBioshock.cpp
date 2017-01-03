@@ -4,13 +4,14 @@
 #include "UnMeshTypes.h"		// for FPackedNormal
 #include "UnHavok.h"
 
-#include "UnMaterial2.h"		//!! engine dependency
+#include "UnMaterial2.h"		// serialize UMaterial*
 
-#include "TypeConvert.h"		//?? for CQuat.Conjugate() only?
+#include "MeshCommon.h"			// CPackedNormal stuff
+#include "TypeConvert.h"		// CVT macros
 
 #if BIOSHOCK
 
-#define XBOX_HACK	1			// disable XBox360 Havok parsing (endian problems)
+#define XBOX_HACK	1			// disable XBox360 Havok parsing (endianness problems)
 
 /*-----------------------------------------------------------------------------
 	Bioshock 1 & 2 Havok structures
@@ -45,7 +46,7 @@ struct hkaSkeleton5 : hkSkeleton		// hkaSkeleton
 // classes without implementation
 class hkRagdollInstance;
 class hkSkeletonMapper;
-class ap4AnimationPackageAnimation;		//?? implement later
+class ap4AnimationPackageAnimation;
 
 struct ap4AnimationPackageRoot
 {
@@ -81,13 +82,29 @@ struct ap5AnimationPackageRoot
 struct FRigidVertexBio	//?? same layout as FRigidVertex3
 {
 	FVector				Pos;
-	int					Normal[3];
+	FPackedNormal		Normal[3];
 	FMeshUVFloat		UV;
 	byte				BoneIndex;
 
 	friend FArchive& operator<<(FArchive &Ar, FRigidVertexBio &V)
 	{
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		Ar << V.Pos;
+		if (Ar.ArVer < 142)
+		{
+			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		}
+		else
+		{
+			// Bioshock 1 Remastered
+			for (int i = 0; i < 3; i++)
+			{
+				FVector UnpNormal;
+				Ar << UnpNormal;
+				CPackedNormal PN;
+				Pack(PN, CVT(UnpNormal));
+				V.Normal[i] = CVT(PN);
+			}
+		}
 		Ar << V.UV;
 		Ar << V.BoneIndex;
 		return Ar;
@@ -97,16 +114,32 @@ struct FRigidVertexBio	//?? same layout as FRigidVertex3
 struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
 {
 	FVector				Pos;
-	int					Normal[3];
+	FPackedNormal		Normal[3];
 	FMeshUVFloat		UV;
 	byte				BoneIndex[4];
 	byte				BoneWeight[4];
 
 	friend FArchive& operator<<(FArchive &Ar, FSmoothVertexBio &V)
 	{
-		int i;
-		Ar << V.Pos << V.Normal[0] << V.Normal[1] << V.Normal[2] << V.UV;
-		for (i = 0; i < 4; i++)
+		Ar << V.Pos;
+		if (Ar.ArVer < 142)
+		{
+			Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		}
+		else
+		{
+			// Bioshock 1 Remastered
+			for (int i = 0; i < 3; i++)
+			{
+				FVector UnpNormal;
+				Ar << UnpNormal;
+				CPackedNormal PN;
+				Pack(PN, CVT(UnpNormal));
+				V.Normal[i] = CVT(PN);
+			}
+		}
+		Ar << V.UV;
+		for (int i = 0; i < 4; i++)
 			Ar << V.BoneIndex[i] << V.BoneWeight[i];
 		return Ar;
 	}
@@ -116,7 +149,7 @@ struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
 struct FSkelVertexBio2
 {
 	FVector				Pos;
-	int					Normal[3];		// FVectorComp (FVector as 4 bytes)
+	FPackedNormal		Normal[3];		// FVectorComp (FVector as 4 bytes)
 	FMeshUVHalf			UV;
 	int					Pad;
 
@@ -357,21 +390,24 @@ struct FStaticLODModelBio
 	}
 };
 
-static bool CompareCompNormals(int Normal1, int Normal2)
+static bool CompareCompNormals(FPackedNormal Normal1, FPackedNormal Normal2)
 {
+	uint32 N1 = Normal1.Data;
+	uint32 N2 = Normal2.Data;
 	for (int i = 0; i < 3; i++)
 	{
-		char b1 = Normal1 & 0xFF;
-		char b2 = Normal2 & 0xFF;
+		char b1 = N1 & 0xFF;
+		char b2 = N2 & 0xFF;
 		if (abs(b1 - b2) > 10) return false;
-		Normal1 >>= 8;
-		Normal2 >>= 8;
+		N1 >>= 8;
+		N2 >>= 8;
 	}
 	return true;
 }
 
 // partially based on FStaticLODModel::RestoreMesh3()
 //!! convert directly to CSkeletalMesh, eliminate CompareCompNormals()
+//!! also this will allow to use normals and tangents from mesh (currently dropped due to UE2 limitations)
 void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLODModelBio &Lod)
 {
 	guard(FStaticLODModel::RestoreMeshBio);
@@ -379,7 +415,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 	int NumVertices = Lod.SmoothVerts.Num() + Lod.RigidVerts.Num();
 
 	// prepare arrays
-	TArray<int> PointNormals;
+	TArray<FPackedNormal> PointNormals;
 	Points.Empty        (NumVertices);
 	PointNormals.Empty  (NumVertices);
 	Wedges.Empty        (NumVertices);
@@ -527,7 +563,7 @@ void USkeletalMesh::SerializeBioshockMesh(FArchive &Ar)
 	Ar << RefSkeleton << Animation << SkeletalDepth << AttachAliases << AttachBoneNames << AttachCoords;
 	Ar << bioLODModels;
 	Ar << fCC;
-	Ar << Points << Wedges << Triangles << VertInfluences;
+	Ar << Points << Wedges << Triangles << VertInfluences;	//?? check: Bio1_Remastered serializes FMeshFace instead of VTriangle here (see 'Triangles')
 	Ar << CollapseWedge << f1C8;
 	Ar << bioNormals;
 

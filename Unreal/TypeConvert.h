@@ -50,6 +50,13 @@ FORCEINLINE CPackedNormal CVT(FPackedNormal V)
 	return ret;
 }
 
+FORCEINLINE FPackedNormal CVT(CPackedNormal V)
+{
+	FPackedNormal ret;
+	ret.Data = V.Data ^ 0x80808080;		// offset by 128
+	return ret;
+}
+
 #endif // __MESH_COMMON_H__
 
 

@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+27.12.2016
+- Bioshock Remastered (1&2) partial support
+
 02.12.2016
 - added UE4.14 support
 
