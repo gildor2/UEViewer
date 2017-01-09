@@ -957,9 +957,9 @@ struct FUC2Unk2
 
 struct FStaticLODModel
 {
-	TArray<unsigned>		SkinningData;		// floating stream format, contains U/V, weights etc
+	TArray<uint32>			SkinningData;		// floating stream format, contains encoded UV and weights for each of SkinPoints
 	TArray<FSkinPoint>		SkinPoints;			// soft surface points
-	int						NumDynWedges;		// number of wedges in soft sections
+	int						NumSoftWedges;		// number of wedges in soft sections
 	TArray<FSkelMeshSection> SoftSections;
 	TArray<FSkelMeshSection> RigidSections;
 	FRawIndexBuffer			SoftIndices;
@@ -1000,7 +1000,7 @@ struct FStaticLODModel
 			Ar << unk0;
 		}
 #endif // SWRC
-		Ar << M.SkinningData << M.SkinPoints << M.NumDynWedges;
+		Ar << M.SkinningData << M.SkinPoints << M.NumSoftWedges;
 #if EOS
 		if (Ar.Game == GAME_EOS && Ar.ArLicenseeVer >= 42)
 		{

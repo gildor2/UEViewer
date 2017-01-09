@@ -1,5 +1,5 @@
 UMODEL (UE Viewer)
-(c) Konstantin Nosov (Gildor), 2007-2016
+(c) Konstantin Nosov (Gildor), 2007-2017
 
 
 Please support the development by making a donation here:
@@ -167,12 +167,15 @@ PVRTexLib Library
   http://www.imgtec.com/powervr/insider/
 
 detex
-  (c) 2015 Harm Hanemaaijer
+  (c) Harm Hanemaaijer
   https://github.com/hglm/detex
 
 
 Changes
 ~~~~~~~
+09.01.2017
+- fixed incorrect decoding of UE2 skeletal mesh when it has soft and rigid parts
+
 27.12.2016
 - Bioshock Remastered (1&2) partial support
 
