@@ -709,14 +709,14 @@ struct FSkelMeshSection
 	uint16			FirstFace;
 	uint16			NumFaces;
 #if LINEAGE2
-	TArray<int>		LineageBoneMap;			// for smooth sections only
+	TArray<int>		LineageBoneMap;			// for soft sections only
 #endif
 	// Rigid sections:
 	//	MinWedgeIndex/MaxWedgeIndex -> FStaticLODModel.Wedges
 	//	NumStreamIndices = NumFaces*3 == MaxWedgeIndex-MinWedgeIndex+1
 	//	MinStreamIndex/NumStreamIndices -> FStaticLODModel.StaticIndices.Indices
 	//	MinWedgeIndex -> FStaticLODModel.VertexStream.Verts
-	// Smooth sections:
+	// Soft sections:
 	//	NumStreamIndices should contain MaxWedgeIndex-MinWedgeIndex+1 (new imported meshes?),
 	//	but older package versions contains something different (should not rely on this field)
 	//	Other fields are unitialized
@@ -958,11 +958,11 @@ struct FUC2Unk2
 struct FStaticLODModel
 {
 	TArray<unsigned>		SkinningData;		// floating stream format, contains U/V, weights etc
-	TArray<FSkinPoint>		SkinPoints;			// smooth surface points
-	int						NumDynWedges;		// number of wedges in smooth sections
-	TArray<FSkelMeshSection> SmoothSections;
+	TArray<FSkinPoint>		SkinPoints;			// soft surface points
+	int						NumDynWedges;		// number of wedges in soft sections
+	TArray<FSkelMeshSection> SoftSections;
 	TArray<FSkelMeshSection> RigidSections;
-	FRawIndexBuffer			SmoothIndices;
+	FRawIndexBuffer			SoftIndices;
 	FRawIndexBuffer			RigidIndices;
 	FSkinVertexStream		VertexStream;		// for rigid parts
 	TLazyArray<FVertInfluence> VertInfluences;
@@ -1008,7 +1008,7 @@ struct FStaticLODModel
 			Ar << unk;
 		}
 #endif // EOS
-		Ar << M.SmoothSections << M.RigidSections << M.SmoothIndices << M.RigidIndices;
+		Ar << M.SoftSections << M.RigidSections << M.SoftIndices << M.RigidIndices;
 		Ar << M.VertexStream;
 		Ar << M.VertInfluences << M.Wedges << M.Faces << M.Points;
 		Ar << M.LODDistanceFactor;

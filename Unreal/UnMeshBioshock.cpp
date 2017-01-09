@@ -77,7 +77,7 @@ struct ap5AnimationPackageRoot
 	Bioshock's USkeletalMesh
 -----------------------------------------------------------------------------*/
 
-//!! NOTE: Bioshock uses EXACTLY the same rigid/smooth vertex data as older UE3.
+//!! NOTE: Bioshock uses EXACTLY the same rigid/soft vertex data as older UE3.
 //!! Should separate vertex declarations into h-file and use here
 struct FRigidVertexBio	//?? same layout as FRigidVertex3
 {
@@ -111,7 +111,7 @@ struct FRigidVertexBio	//?? same layout as FRigidVertex3
 	}
 };
 
-struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
+struct FSoftVertexBio	//?? same layout as FSoftVertex3 (old version)
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
@@ -119,7 +119,7 @@ struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
 	byte				BoneIndex[4];
 	byte				BoneWeight[4];
 
-	friend FArchive& operator<<(FArchive &Ar, FSmoothVertexBio &V)
+	friend FArchive& operator<<(FArchive &Ar, FSoftVertexBio &V)
 	{
 		Ar << V.Pos;
 		if (Ar.ArVer < 142)
@@ -145,7 +145,7 @@ struct FSmoothVertexBio	//?? same layout as FSmoothVertex3 (old version)
 	}
 };
 
-// Bioshock 2 replacement of FSmoothVertex and FRigidVertex
+// Bioshock 2 replacement of FSoftVertex and FRigidVertex
 struct FSkelVertexBio2
 {
 	FVector				Pos;
@@ -304,11 +304,11 @@ struct FMeshNormalBio
 
 struct FStaticLODModelBio
 {
-	TArray<FSkelMeshSection> Sections;			// standard format, but 1 section = 1 material (rigid and smooth verts
+	TArray<FSkelMeshSection> Sections;			// standard format, but 1 section = 1 material (rigid and soft verts
 												// are placed into a single section)
 	TArray<int16>			Bones;
 	FRawIndexBuffer			IndexBuffer;
-	TArray<FSmoothVertexBio> SmoothVerts;
+	TArray<FSoftVertexBio>	SoftVerts;
 	TArray<FRigidVertexBio>	RigidVerts;
 	TArray<FBioshockUnk1>	f58;
 	float					f64;
@@ -332,7 +332,7 @@ struct FStaticLODModelBio
 		if (t3_hdrSV < 4)
 		{
 			// Bioshock 1
-			Ar << Lod.SmoothVerts << Lod.RigidVerts;
+			Ar << Lod.SoftVerts << Lod.RigidVerts;
 		}
 		else
 		{
@@ -344,13 +344,13 @@ struct FStaticLODModelBio
 			Ar << NumRigidVerts << Verts << Infs;
 			// convert to old version
 			int NumVerts = Verts.Num();
-			Lod.SmoothVerts.Empty(NumVerts);
-			Lod.SmoothVerts.AddUninitialized(NumVerts);
+			Lod.SoftVerts.Empty(NumVerts);
+			Lod.SoftVerts.AddUninitialized(NumVerts);
 			for (int i = 0; i < NumVerts; i++)
 			{
 				const FSkelVertexBio2 &V1    = Verts[i];
 				const FSkelInfluenceBio2 &V2 = Infs[i];
-				FSmoothVertexBio &V = Lod.SmoothVerts[i];
+				FSoftVertexBio &V = Lod.SoftVerts[i];
 				V.Pos = V1.Pos;
 				V.Normal[0] = V1.Normal[0];
 				V.Normal[1] = V1.Normal[1];
@@ -371,7 +371,7 @@ struct FStaticLODModelBio
 		Ar << Lod.VertInfluences << Lod.Wedges << Lod.Faces << Lod.Points << Lod.Normals;
 #if 0
 		appPrintf("sm:%d rig:%d idx:%d bones:%d 58:%d 64:%g 68:%g 6C:%d 70:%d 74:%d 78:%d\n",
-			Lod.SmoothVerts.Num(), Lod.RigidVerts.Num(), Lod.IndexBuffer.Indices.Num(), Lod.Bones.Num(), Lod.f58.Num(),
+			Lod.SoftVerts.Num(), Lod.RigidVerts.Num(), Lod.IndexBuffer.Indices.Num(), Lod.Bones.Num(), Lod.f58.Num(),
 			Lod.f64, Lod.f68, Lod.f6C, Lod.f70, Lod.f74, Lod.f78);
 		appPrintf("inf:%d wedg:%d fac:%d pts:%d norm:%d\n", Lod.VertInfluences.Num(), Lod.Wedges.Num(), Lod.Faces.Num(), Lod.Points.Num(), Lod.Normals.Num());
 		int j;
@@ -412,7 +412,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 {
 	guard(FStaticLODModel::RestoreMeshBio);
 
-	int NumVertices = Lod.SmoothVerts.Num() + Lod.RigidVerts.Num();
+	int NumVertices = Lod.SoftVerts.Num() + Lod.RigidVerts.Num();
 
 	// prepare arrays
 	TArray<FPackedNormal> PointNormals;
@@ -454,10 +454,10 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 	}
 	unguard;
 
-	guard(SmoothVerts);
-	for (Vert = 0; Vert < Lod.SmoothVerts.Num(); Vert++)
+	guard(SoftVerts);
+	for (Vert = 0; Vert < Lod.SoftVerts.Num(); Vert++)
 	{
-		const FSmoothVertexBio &V = Lod.SmoothVerts[Vert];
+		const FSoftVertexBio &V = Lod.SoftVerts[Vert];
 		// find the same point in previous items
 		int PointIndex = -1;	// start with 0, see below
 		while (true)
@@ -504,7 +504,7 @@ void FStaticLODModel::RestoreMeshBio(const USkeletalMesh &Mesh, const FStaticLOD
 	for (Sec = 0; Sec < Lod.Sections.Num(); Sec++)
 	{
 		const FSkelMeshSection &S = Lod.Sections[Sec];
-		FSkelMeshSection *Dst = new (SmoothSections) FSkelMeshSection;
+		FSkelMeshSection *Dst = new (SoftSections) FSkelMeshSection;
 		int MaterialIndex = S.MaterialIndex;
 		Dst->MaterialIndex = MaterialIndex;
 		Dst->FirstFace     = Faces.Num();

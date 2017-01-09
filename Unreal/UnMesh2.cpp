@@ -715,13 +715,13 @@ void USkeletalMesh::ConvertMesh()
 		const FStaticLODModel &SrcLod = LODModels[lod];
 
 #if DEBUG_SKELMESH
-		appPrintf("  Lod %d: Points[%d] Wedges[%d] Influences[%d] Faces[%d]  Rigid(Indices[%d] Verts[%d])  Smooth(Indices[%d] Verts[%d] Stream[%d])\n",
+		appPrintf("  Lod %d: Points[%d] Wedges[%d] Influences[%d] Faces[%d]  Rigid(Indices[%d] Verts[%d])  Soft(Indices[%d] Verts[%d] Stream[%d])\n",
 			lod, SrcLod.Points.Num(), SrcLod.Wedges.Num(), SrcLod.VertInfluences.Num(), SrcLod.Faces.Num(),
 			SrcLod.RigidIndices.Indices.Num(), SrcLod.VertexStream.Verts.Num(),
-			SrcLod.SmoothIndices.Indices.Num(), SrcLod.SkinPoints.Num(), SrcLod.SkinningData.Num()
+			SrcLod.SoftIndices.Indices.Num(), SrcLod.SkinPoints.Num(), SrcLod.SkinningData.Num()
 		);
 #endif
-//		if (SrcLod.Faces.Num() == 0 && SrcLod.SmoothSections.Num() > 0)
+//		if (SrcLod.Faces.Num() == 0 && SrcLod.SoftSections.Num() > 0)
 //			continue;
 
 		CSkelMeshLod *Lod = new (Mesh->Lods) CSkelMeshLod;
@@ -986,10 +986,10 @@ void USkeletalMesh::BuildIndicesForLod(CSkelMeshLod &Lod, const FStaticLODModel 
 
 		int s;
 
-		// smooth sections (influence count >= 2)
-		for (s = 0; s < SrcLod.SmoothSections.Num(); s++)
+		// soft sections (influence count >= 2)
+		for (s = 0; s < SrcLod.SoftSections.Num(); s++)
 		{
-			const FSkelMeshSection &ms = SrcLod.SmoothSections[s];
+			const FSkelMeshSection &ms = SrcLod.SoftSections[s];
 			int MatIndex = ms.MaterialIndex;
 			// if section does not exist - add it
 			if (MatIndex >= NumSections)
@@ -1048,7 +1048,7 @@ bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 {
 	if (!Lod.Points.Num() || !Lod.Wedges.Num() || !Lod.VertInfluences.Num())
 		return false;
-	if (!(Lod.RigidIndices.Indices.Num() + Lod.SmoothIndices.Indices.Num()) && !Lod.Faces.Num())
+	if (!(Lod.RigidIndices.Indices.Num() + Lod.SoftIndices.Indices.Num()) && !Lod.Faces.Num())
 		return false;
 
 	//?? really any mesh with rigid sections should be considered as "bad" (we can't work with such LODs)
@@ -1064,7 +1064,7 @@ bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 		if (PointIndex < 0 || PointIndex >= NumPoints) return false;
 	}
 
-	// verify indices (only RigidIndices, SmoothIndices aren't used)
+	// verify indices (only RigidIndices, SoftIndices aren't used)
 	for (i = 0; i < Lod.RigidIndices.Indices.Num(); i++)
 	{
 		int WedgeIndex = Lod.RigidIndices.Indices[i];
@@ -1073,11 +1073,11 @@ bool USkeletalMesh::IsCorrectLOD(const FStaticLODModel &Lod) const
 
 	int TotalFaces = 0;
 
-	// smooth sections (influence count >= 2)
+	// soft sections (influence count >= 2)
 	int s;
-	for (s = 0; s < Lod.SmoothSections.Num(); s++)
+	for (s = 0; s < Lod.SoftSections.Num(); s++)
 	{
-		const FSkelMeshSection &ms = Lod.SmoothSections[s];
+		const FSkelMeshSection &ms = Lod.SoftSections[s];
 		TotalFaces += ms.NumFaces;
 //		int MatIndex = ms.MaterialIndex;
 //		if (MatIndex < 0 || MatIndex >= ... //??
@@ -1240,8 +1240,8 @@ void FStaticLODModel::RestoreLineageMesh()
 
 	if (Wedges.Num()) return;			// nothing to restore
 	appPrintf("Converting Lineage2 LODModel to standard LODModel ...\n");
-	if (SmoothSections.Num() && RigidSections.Num())
-		appNotify("have smooth & rigid sections");
+	if (SoftSections.Num() && RigidSections.Num())
+		appNotify("have soft & rigid sections");
 
 	int i, j, k;
 	int NumWedges = LineageWedges.Num() + VertexStream.Verts.Num(); // one of them is zero (ensured by assert below)
@@ -1255,7 +1255,7 @@ void FStaticLODModel::RestoreLineageMesh()
 	Wedges.Empty(NumWedges);
 	Points.Empty(NumWedges);			// really, should be a smaller count
 	VertInfluences.Empty(NumWedges);	// min count = NumVerts
-	Faces.Empty((SmoothIndices.Indices.Num() + RigidIndices.Indices.Num()) / 3);
+	Faces.Empty((SoftIndices.Indices.Num() + RigidIndices.Indices.Num()) / 3);
 	TArray<FVector> PointNormals;
 	PointNormals.Empty(NumWedges);
 
@@ -1263,18 +1263,18 @@ void FStaticLODModel::RestoreLineageMesh()
 	TArray<const FSkelMeshSection*> WedgeSection;
 	WedgeSection.Empty(NumWedges);
 	WedgeSection.AddZeroed(NumWedges);
-	// smooth sections
-	guard(SmoothWedges);
-	for (k = 0; k < SmoothSections.Num(); k++)
+	// soft sections
+	guard(SoftWedges);
+	for (k = 0; k < SoftSections.Num(); k++)
 	{
-		const FSkelMeshSection &ms = SmoothSections[k];
+		const FSkelMeshSection &ms = SoftSections[k];
 		for (i = 0; i < ms.NumFaces; i++)
 		{
 			FMeshFace *F = new (Faces) FMeshFace;
 			F->MaterialIndex = ms.MaterialIndex;
 			for (j = 0; j < 3; j++)
 			{
-				int WedgeIndex = SmoothIndices.Indices[(ms.FirstFace + i) * 3 + j];
+				int WedgeIndex = SoftIndices.Indices[(ms.FirstFace + i) * 3 + j];
 				assert(WedgeSection[WedgeIndex] == NULL || WedgeSection[WedgeIndex] == &ms);
 				WedgeSection[WedgeIndex] = &ms;
 				F->iWedge[j] = WedgeIndex;
@@ -1304,8 +1304,8 @@ void FStaticLODModel::RestoreLineageMesh()
 
 	// process wedges
 
-	// convert LineageWedges (smooth sections)
-	guard(BuildSmoothWedges);
+	// convert LineageWedges (soft sections)
+	guard(BuildSoftWedges);
 	for (i = 0; i < LineageWedges.Num(); i++)
 	{
 		const FLineageWedge &LW = LineageWedges[i];

@@ -429,7 +429,7 @@ struct FRigidVertex3
 };
 
 
-struct FSmoothVertex3
+struct FSoftVertex3
 {
 	FVector				Pos;
 	FPackedNormal		Normal[3];
@@ -438,7 +438,7 @@ struct FSmoothVertex3
 	byte				BoneWeight[NUM_INFLUENCES_UE3];
 	int					Color;
 
-	friend FArchive& operator<<(FArchive &Ar, FSmoothVertex3 &V)
+	friend FArchive& operator<<(FArchive &Ar, FSoftVertex3 &V)
 	{
 		int i;
 		int NumUVSets = 1;
@@ -553,16 +553,16 @@ struct FSkelMeshChunk3
 {
 	int					FirstVertex;
 	TArray<FRigidVertex3>  RigidVerts;
-	TArray<FSmoothVertex3> SmoothVerts;
+	TArray<FSoftVertex3>   SoftVerts;
 	TArray<int16>		Bones;
 	int					NumRigidVerts;
-	int					NumSmoothVerts;
+	int					NumSoftVerts;
 	int					MaxInfluences;
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshChunk3 &V)
 	{
 		guard(FSkelMeshChunk3<<);
-		Ar << V.FirstVertex << V.RigidVerts << V.SmoothVerts;
+		Ar << V.FirstVertex << V.RigidVerts << V.SoftVerts;
 #if MKVSDC
 		if (Ar.Game == GAME_MK && Ar.ArVer >= 459)
 		{
@@ -573,14 +573,14 @@ struct FSkelMeshChunk3
 		Ar << V.Bones;
 		if (Ar.ArVer >= 333)
 		{
-			Ar << V.NumRigidVerts << V.NumSmoothVerts;
-			// note: NumRigidVerts and NumSmoothVerts may be non-zero while corresponding
+			Ar << V.NumRigidVerts << V.NumSoftVerts;
+			// note: NumRigidVerts and NumSoftVerts may be non-zero while corresponding
 			// arrays are empty - that's when GPU skin only left
 		}
 		else
 		{
-			V.NumRigidVerts  = V.RigidVerts.Num();
-			V.NumSmoothVerts = V.SmoothVerts.Num();
+			V.NumRigidVerts = V.RigidVerts.Num();
+			V.NumSoftVerts = V.SoftVerts.Num();
 		}
 #if ARMYOF2
 		if (Ar.Game == GAME_ArmyOf2 && Ar.ArLicenseeVer >= 7)
@@ -598,8 +598,8 @@ struct FSkelMeshChunk3
 			Ar << NumTexCoords;
 		}
 #endif // TRANSFORMERS
-		DBG_SKEL("Chunk: FirstVert=%d RigidVerts=%d (%d) SmoothVerts=%d (%d) MaxInfs=%d\n",
-			V.FirstVertex, V.RigidVerts.Num(), V.NumRigidVerts, V.SmoothVerts.Num(), V.NumSmoothVerts, V.MaxInfluences);
+		DBG_SKEL("Chunk: FirstVert=%d RigidVerts=%d (%d) SoftVerts=%d (%d) MaxInfs=%d\n",
+			V.FirstVertex, V.RigidVerts.Num(), V.NumRigidVerts, V.SoftVerts.Num(), V.NumSoftVerts, V.MaxInfluences);
 		return Ar;
 		unguard;
 	}
@@ -688,7 +688,7 @@ struct FGPUVert3Float : FGPUVert3Common
 	FVector				Pos;
 	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
-	FGPUVert3Float& operator=(const FSmoothVertex3 &S)
+	FGPUVert3Float& operator=(const FSoftVertex3 &S)
 	{
 		int i;
 		Pos = S.Pos;
@@ -848,8 +848,8 @@ struct FSkeletalMeshVertexBuffer3
 		if (Ar.ArVer < 493)
 		{
 		old_version:
-			// old version - FSmoothVertex3 array
-			TArray<FSmoothVertex3> Verts;
+			// old version - FSoftVertex3 array
+			TArray<FSoftVertex3> Verts;
 			Verts.BulkSerialize(Ar);
 			DBG_SKEL("... %d verts in old format\n", Verts.Num());
 			// convert verts
@@ -1317,8 +1317,8 @@ struct FStaticLODModel3
 		if (Ar.ArVer < 215)
 		{
 			TArray<FRigidVertex3>  RigidVerts;
-			TArray<FSmoothVertex3> SmoothVerts;
-			Ar << SmoothVerts << RigidVerts;
+			TArray<FSoftVertex3> SoftVerts;
+			Ar << SoftVerts << RigidVerts;
 			appNotify("SkeletalMesh: untested code! (ArVer=%d)", Ar.ArVer);
 		}
 
@@ -1993,7 +1993,7 @@ void USkeletalMesh3::ConvertMesh()
 		if (!VertexCount)
 		{
 			const FSkelMeshChunk3 &C = SrcLod.Chunks[SrcLod.Chunks.Num() - 1];		// last chunk
-			VertexCount = C.FirstVertex + C.NumRigidVerts + C.NumSmoothVerts;
+			VertexCount = C.FirstVertex + C.NumRigidVerts + C.NumSoftVerts;
 		}
 		// allocate the vertices
 		Lod->AllocateVerts(VertexCount);
@@ -2011,7 +2011,7 @@ void USkeletalMesh3::ConvertMesh()
 			{
 				// proceed to next chunk
 				C = &SrcLod.Chunks[chunkIndex++];
-				lastChunkVertex = C->FirstVertex + C->NumRigidVerts + C->NumSmoothVerts;
+				lastChunkVertex = C->FirstVertex + C->NumRigidVerts + C->NumSoftVerts;
 			}
 
 			if (UseGpuSkinVerts)
@@ -2134,8 +2134,8 @@ void USkeletalMesh3::ConvertMesh()
 				}
 				else
 				{
-					// smooth vertex
-					const FSmoothVertex3 &V0 = C->SmoothVerts[Vert - C->FirstVertex - C->NumRigidVerts];
+					// soft vertex
+					const FSoftVertex3 &V0 = C->SoftVerts[Vert - C->FirstVertex - C->NumRigidVerts];
 					// position and normal
 					D->Position = CVT(V0.Pos);
 					UnpackNormals(V0.Normal, *D);
