@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+10.01.2017
+- initial UE4.15 support
+
 09.01.2017
 - fixed incorrect decoding of UE2 skeletal mesh when it has soft and rigid parts
 

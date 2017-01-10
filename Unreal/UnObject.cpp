@@ -281,6 +281,8 @@ enum EPropType // hardcoded in Unreal
 	NAME_Int16Property = 25,
 	NAME_Int8Property = 26,
 	NAME_AssetSubclassProperty = 27,
+	NAME_MapProperty_UE4 = 28,
+	NAME_SetProperty = 29,
 #endif // UNREAL4
 	// property remaps from one engine to another
 #if UNREAL3 || UNREAL4
@@ -359,7 +361,10 @@ struct FPropertyTag
 	int			DataSize;
 	int			BoolValue;
 	FName		EnumName;			// UE3 ver >= 633
+#if UNREAL4
 	FName		InnerType;			// UE4 ver >= VAR_UE4_ARRAY_PROPERTY_INNER_TAGS
+	FName		ValueType;			// UE4 ver >= VER_UE4_PROPERTY_TAG_SET_MAP_SUPPORT
+#endif // UNREAL4
 
 	bool IsValid()
 	{
@@ -428,11 +433,29 @@ struct FPropertyTag
 				}
 			}
 			else if (Tag.Type == NAME_BoolProperty)
+			{
 				Ar << (byte&)Tag.BoolValue;		// byte
+			}
 			else if (Tag.Type == NAME_ByteProperty)
+			{
 				Ar << Tag.EnumName;
+			}
 			else if ((Tag.Type == NAME_ArrayProperty) && (Ar.ArVer >= VAR_UE4_ARRAY_PROPERTY_INNER_TAGS))
+			{
 				Ar << Tag.InnerType;
+			}
+
+			if (Ar.ArVer >= VER_UE4_PROPERTY_TAG_SET_MAP_SUPPORT)
+			{
+				if (Tag.Type == NAME_SetProperty)
+				{
+					Ar << Tag.InnerType;
+				}
+				else if (Tag.Type == NAME_MapProperty_UE4)
+				{
+					Ar << Tag.InnerType << Tag.ValueType;
+				}
+			}
 
 			// serialize property Guid (seem used only for blueprint)
 			if (Ar.ArVer >= VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG)

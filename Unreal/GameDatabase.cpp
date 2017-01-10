@@ -360,6 +360,7 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.12", ue4.12, GAME_UE4_12),
 		G("Unreal engine 4.13", ue4.13, GAME_UE4_13),
 		G("Unreal engine 4.14", ue4.14, GAME_UE4_14),
+		G("Unreal engine 4.15", ue4.15, GAME_UE4_15),
 #endif // UNREAL4
 
 	// end marker
@@ -821,7 +822,8 @@ static const int ue4Versions[] =
 {
 	VER_UE4_0, VER_UE4_1, VER_UE4_2, VER_UE4_3, VER_UE4_4,
 	VER_UE4_5, VER_UE4_6, VER_UE4_7, VER_UE4_8, VER_UE4_9,
-	VER_UE4_10, VER_UE4_11, VER_UE4_12, VER_UE4_13, VER_UE4_14
+	VER_UE4_10, VER_UE4_11, VER_UE4_12, VER_UE4_13, VER_UE4_14,
+	VER_UE4_15,
 };
 #endif // UNREAL4
 

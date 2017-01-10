@@ -1326,8 +1326,12 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 			bool bGuidIsHash;
 			Ar << Guid << bGuidIsHash;
 		}
-		TMap<unsigned, FMeshSectionInfo> MeshSectionInfo;
-		Ar << MeshSectionInfo;
+		if (FEditorObjectVersion::Get(Ar) < FEditorObjectVersion::UPropertryForMeshSection)
+		{
+			// in 4.15 this is serialized as property
+			TMap<unsigned, FMeshSectionInfo> MeshSectionInfo;
+			Ar << MeshSectionInfo;
+		}
 	}
 
 	// serialize FStaticMeshRenderData

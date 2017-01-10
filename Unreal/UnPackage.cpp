@@ -547,6 +547,12 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		Ar << StringAssetReferencesCount << StringAssetReferencesOffset;
 	}
 
+	if (Ar.ArVer >= VER_UE4_ADDED_SEARCHABLE_NAMES)
+	{
+		int32 SearchableNamesOffset;
+		Ar << SearchableNamesOffset;
+	}
+
 	// there's a thumbnail table in source packages with following layout
 	// * package headers
 	// * thumbnail data - sequence of FObjectThumbnail
