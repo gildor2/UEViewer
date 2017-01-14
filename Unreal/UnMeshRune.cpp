@@ -472,11 +472,23 @@ void USkelModel::Serialize(FArchive &Ar)
 
 USkelModel::~USkelModel()
 {
-	// free holded data
+	// Release holded data.
+	// Note: children meshes are stored in GObjObjects array, so these meshes could be released separately
+	// from parent USkelModel. Se we should be careful releasing generated children models.
 	int i;
 	for (i = 0; i < Meshes.Num(); i++)
-		delete Meshes[i];
-	delete Anim;
+	{
+		USkeletalMesh* m = Meshes[i];
+		// Check if this mesh were already released, i.e. pointer is not valid now.
+		if (UObject::GObjObjects.FindItem(m) >= 0)
+		{
+			delete m;
+		}
+	}
+	if (Anim && UObject::GObjObjects.FindItem(Anim) >= 0)
+	{
+		delete Anim;
+	}
 }
 
 
