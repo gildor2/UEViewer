@@ -2689,14 +2689,15 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 				totalWidth += w;
 			}
 		}
-		assert(totalWidth <= parentWidth);
+		if (totalWidth > parentWidth)
+			appNotify("Group(%s) is not wide enough to store children controls: %d < %d", *Label, parentWidth, totalWidth);
 		if (numAutoWidthControls)
 			AutoWidth = (parentWidth - totalWidth) / numAutoWidthControls;
 		if (Flags & GROUP_HORIZONTAL_SPACING)
 		{
 			if (numAutoWidthControls)
 			{
-				appNotify("Group(%s) has GROUP_HORIZONTAL_SPACING and auto-width controls");
+				appNotify("Group(%s) has GROUP_HORIZONTAL_SPACING and auto-width controls", *Label);
 			}
 			else
 			{
@@ -2809,7 +2810,16 @@ void UIGroup::RadioButtonClicked(UIRadioButton* sender)
 UICheckboxGroup::UICheckboxGroup(const char* label, bool value, unsigned flags)
 :	UIGroup(flags)
 ,	Label(label)
-,	Value(value)
+,	bValue(value)
+,	pValue(&bValue)		// points to local variable
+,	CheckboxWnd(0)
+{}
+
+UICheckboxGroup::UICheckboxGroup(const char* label, bool* value, unsigned flags)
+:	UIGroup(flags)
+,	Label(label)
+//,	bValue(value) - uninitialized, unused
+,	pValue(value)
 ,	CheckboxWnd(0)
 {}
 
@@ -2828,8 +2838,8 @@ void UICheckboxGroup::Create(UIBaseDialog* dialog)
 	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
 		Id, X + checkboxOffset, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT);
 
-	CheckDlgButton(DlgWnd, Id, Value ? BST_CHECKED : BST_UNCHECKED);
-	EnableAllControls(Value);
+	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
+	EnableAllControls(*pValue);
 }
 
 bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -2840,10 +2850,10 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 		if (cmd != BN_CLICKED) return false;
 
 		bool checked = (IsDlgButtonChecked(DlgWnd, Id) != BST_UNCHECKED);
-		if (Value != checked)
+		if (*pValue != checked)
 		{
-			Value = checked;
-			EnableAllControls(Value);
+			*pValue = checked;
+			EnableAllControls(*pValue);
 			if (Callback)
 				Callback(this, checked);
 			return true;

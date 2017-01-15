@@ -984,15 +984,17 @@ class UICheckboxGroup : public UIGroup
 	DECLARE_CALLBACK(Callback, bool);
 public:
 	UICheckboxGroup(const char* label, bool value, unsigned flags = 0);
+	UICheckboxGroup(const char* label, bool* value, unsigned flags = 0);
 
 	bool IsChecked() const
 	{
-		return Value;
+		return *pValue;
 	}
 
 protected:
 	FString		Label;			// overrides Label of parent
-	bool		Value;
+	bool		bValue;			// local bool value
+	bool*		pValue;			// pointer to editable value
 	HWND		CheckboxWnd;	// checkbox window
 	HWND		DlgWnd;
 

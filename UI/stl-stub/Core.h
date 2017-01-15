@@ -35,7 +35,7 @@
 #define unguardf(...)
 
 
-static void appError(const char* Format, ...)
+static void appPrintf(const char* Format, ...)
 {
 	va_list	argptr;
 	va_start(argptr, Format);
@@ -44,6 +44,25 @@ static void appError(const char* Format, ...)
 	va_end(argptr);
 
 	printf("%s", buffer);
+#ifdef OutputDebugString
+	if (IsDebuggerPresent())
+		OutputDebugStringA(buffer);
+#endif
+}
+
+static void appError(const char* Format, ...)
+{
+	va_list	argptr;
+	va_start(argptr, Format);
+	char buffer[1024];
+	_vsnprintf_s(buffer, ARRAY_COUNT(buffer), Format, argptr);
+	va_end(argptr);
+
+	appPrintf("%s", buffer);
+#ifdef OutputDebugString
+	if (IsDebuggerPresent())
+		__debugbreak();
+#endif
 	exit(1);
 }
 
@@ -69,6 +88,6 @@ static void appStrncpyz(char *dst, const char *src, int count)
 #define assert(x)				if (!(x)) { appError("Assert: %s", #x); }
 #endif
 
-#define appNotify(...)
+#define appNotify(...)			appPrintf("*** " __VA_ARGS__)
 
 #endif // __CORE_H__
