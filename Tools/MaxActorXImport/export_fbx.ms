@@ -10,6 +10,10 @@
 
  Revision History:
 
+	17.01.2017 v1.05
+	- fixed non-multitake animation export
+	- fixed length of exported animation
+
 	31.07.2016 v1.04
 	- option to save multiple animation is single FBX file (multi-take animation)
 
@@ -182,8 +186,12 @@ fn ExportFbxAnim =
 			local track = Anims[i]
 			local trackName = track.Name
 			local filename = dir + trackName
-			FBXExporterSetParam "SplitAnimationIntoTakes" trackName 0 track.NumRawFrames
-			format "Exporting animation % (% frames) -> %\n" trackName track.NumRawFrames filename
+			local numFrames = track.NumRawFrames-1
+			if (numFrames == 0) then numFrames = 1
+			-- clear Take information before the export
+			FBXExporterSetParam "SplitAnimationIntoTakes" "-clear"
+			FBXExporterSetParam "SplitAnimationIntoTakes" trackName 0 numFrames
+			format "Exporting animation % (% frames) -> %\n" trackName numFrames filename
 
 			ImportPsaFile AnimFileName i
 			SaveAXFile filename
@@ -200,7 +208,9 @@ fn ExportFbxAnim =
 		(
 			local track = Anims[i]
 			local trackName = track.Name
-			FBXExporterSetParam "SplitAnimationIntoTakes" trackName track.FirstRawFrame (track.FirstRawFrame+track.NumRawFrames-1)
+			local numFrames = track.NumRawFrames-1
+			if (numFrames == 0) then numFrames = 1
+			FBXExporterSetParam "SplitAnimationIntoTakes" trackName track.FirstRawFrame (track.FirstRawFrame+numFrames)
 		)
 		SaveAXFile filename
 	)
@@ -251,7 +261,7 @@ fn ExportFbxMeshes path recurse =
 rollout fbxExportRollout "ActorX Batch Export"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.04"
+	label     Lbl1 "Version 1.05"
 	label     Lbl2 "\xA9 2010-2017 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
