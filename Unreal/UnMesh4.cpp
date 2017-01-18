@@ -442,7 +442,7 @@ struct FGPUVert4Common
 			for (int i = 0; i < GNumSkelInfluences; i++)
 				Ar << BoneWeight2[i];
 			// check if sorting needed (possibly 2nd half of influences has zero weight)
-			uint32 PackedWeight2 = * (uint32*) &BoneIndex2[4];
+			uint32 PackedWeight2 = * (uint32*) &BoneWeight2[4];
 			if (PackedWeight2 != 0)
 			{
 //				printf("# %d %d %d %d %d %d %d %d\n", BoneWeight2[0],BoneWeight2[1],BoneWeight2[2],BoneWeight2[3],BoneWeight2[4],BoneWeight2[5],BoneWeight2[6],BoneWeight2[7]);
