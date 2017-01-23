@@ -672,21 +672,32 @@ public:
 
 	UITreeView& SelectItem(const char* item);
 
-	UITreeView& UseFolderIcons()          { DoUseFolderIcons = true; return *this; }
-	UITreeView& SetItemHeight(int value)  { ItemHeight = value; return *this;      }
+	UITreeView& UseFolderIcons()          { bUseFolderIcons = true; return *this; }
+	UITreeView& UseCheckboxes()           { bUseCheckboxes = true; return *this;  }
+	UITreeView& SetItemHeight(int value)  { ItemHeight = value; return *this;     }
+
+	// Checkbox management
+	void SetChecked(const char* item, bool checked = true);
+	bool GetChecked(const char* item);
 
 protected:
 	TArray<TreeViewItem*> Items;
 	FString		RootLabel;
 	TreeViewItem* SelectedItem;
 	int			ItemHeight;
-	bool		DoUseFolderIcons;		//!! awful name
+	bool		bUseFolderIcons;
+	bool		bUseCheckboxes;
+
+	TreeViewItem** HashTable;
+	static int GetHash(const char* text);
 
 	FORCEINLINE TreeViewItem* GetRoot() { return Items[0]; }
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 	void CreateItem(TreeViewItem& item);
+	TreeViewItem* FindItem(const char* item);
+	virtual void DialogClosed(bool cancel);
 };
 
 
@@ -954,7 +965,7 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog);
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
-	virtual void DialogClosed(bool cancel);	//!! NOTE: this feature is not used now
+	virtual void DialogClosed(bool cancel);
 	virtual void UpdateEnabled();
 	virtual void UpdateVisible();
 

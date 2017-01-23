@@ -1751,21 +1751,42 @@ struct TreeViewItem
 {
 	FString			Label;
 	TreeViewItem*	Parent;
+	TreeViewItem*	HashNext;
 	HTREEITEM		hItem;
+	bool			Checked;
 
 	TreeViewItem()
 	:	Parent(NULL)
 	,	hItem(NULL)
+	,	HashNext(NULL)
+	,	Checked(false)
 	{}
 };
+
+#define TREE_HASH_SIZE		256
+#define TREE_HASH_MASK		(TREE_HASH_SIZE-1)
+#define TREE_SEPARATOR_CHAR	'/'
+
+// NOTE: this function don't have to be a part of UITreeView - it is very generic
+/*static*/ int UITreeView::GetHash(const char* text)
+{
+	int hash = 0;
+	while (char c = *text++)
+	{
+		hash = (hash ^ 0x25) + (c & 0xDF);	// 0xDF mask will ignore character's case
+	}
+	return hash & TREE_HASH_MASK;
+}
 
 UITreeView::UITreeView()
 :	SelectedItem(NULL)
 ,	RootLabel("Root")
-,	DoUseFolderIcons(false)
+,	bUseFolderIcons(false)
+,	bUseCheckboxes(false)
 ,	ItemHeight(DEFAULT_TREE_ITEM_HEIGHT)
 {
 	Height = DEFAULT_TREEVIEW_HEIGHT;
+	HashTable = new TreeViewItem*[TREE_HASH_SIZE]; // will be initialized in RemoveAllItems()
 	// create a root item
 	RemoveAllItems();
 }
@@ -1773,7 +1794,29 @@ UITreeView::UITreeView()
 UITreeView::~UITreeView()
 {
 	for (int i = 0; i < Items.Num(); i++)
+	{
 		delete Items[i];
+	}
+	delete[] HashTable;
+}
+
+TreeViewItem* UITreeView::FindItem(const char* item)
+{
+	if (item[0] == 0)
+	{
+		// this is a root node
+		return Items[0];
+	}
+	// lookup item using hash table - it is very useful when tree has lots of items
+	int hash = GetHash(item);
+	for (TreeViewItem* tvitem = HashTable[hash]; tvitem; tvitem = tvitem->HashNext)
+	{
+		if (stricmp(*tvitem->Label, item) == 0)
+		{
+			return tvitem;
+		}
+	}
+	return NULL;
 }
 
 UITreeView& UITreeView::AddItem(const char* item)
@@ -1786,31 +1829,26 @@ UITreeView& UITreeView::AddItem(const char* item)
 	char *s, *n;
 	for (s = buffer; s && s[0]; s = n)
 	{
-		// split path
-		n = strchr(s, '/');
+		// split path: find a separator and replace it with null
+		n = strchr(s, TREE_SEPARATOR_CHAR);
 		if (n) *n = 0;
 		// find this item
-		bool found = false;
-		TreeViewItem* curr;
-		for (int i = 0; i < Items.Num(); i++)
-		{
-			curr = Items[i];
-			if (!strcmp(*curr->Label, buffer))
-			{
-				found = true;
-				break;
-			}
-		}
-		if (!found)
+		TreeViewItem* curr = FindItem(buffer);
+		if (!curr)
 		{
 			curr = new TreeViewItem;
-			curr->Label = buffer;		// names are "a", "a/b", "a/b/c" etc
+			curr->Label = buffer;		// names consists of full path, i.e. they are "a", "a/b", "a/b/c" etc
 			curr->Parent = parent;
+			// insert into hash table
+			int hash = GetHash(buffer);
+			curr->HashNext = HashTable[hash];
+			HashTable[hash] = curr;
+			// finish creation
 			Items.Add(curr);
 			CreateItem(*curr);
 		}
-		// return '/' back and skip it
-		if (n) *n++ = '/';
+		// restore string (return separator back) and skip separator
+		if (n) *n++ = TREE_SEPARATOR_CHAR;
 		parent = curr;
 	}
 
@@ -1820,9 +1858,14 @@ UITreeView& UITreeView::AddItem(const char* item)
 // Note: this function will create "root" item
 void UITreeView::RemoveAllItems()
 {
+	// Remove currently allocated items
 	for (int i = 0; i < Items.Num(); i++)
+	{
 		delete Items[i];
+	}
 	Items.Empty();
+	memset(HashTable, 0, TREE_HASH_SIZE * sizeof(TreeViewItem*));
+
 	if (Wnd) TreeView_DeleteAllItems(Wnd);
 	// add root item, at index 0
 	TreeViewItem* root = new TreeViewItem;
@@ -1831,18 +1874,36 @@ void UITreeView::RemoveAllItems()
 	SelectedItem = root;
 }
 
-UITreeView& UITreeView::SelectItem(const char* item)
+void UITreeView::SetChecked(const char* item, bool checked)
 {
-	TreeViewItem* foundItem = NULL;
-	for (int i = 0; i < Items.Num(); i++)
+	TreeViewItem* foundItem = FindItem(item);
+	if (foundItem && (foundItem->Checked != checked))
 	{
-		if (!stricmp(*Items[i]->Label, item))
+		foundItem->Checked = checked;
+		if (Wnd)
 		{
-			foundItem = Items[i];
-			break;
+			TV_ITEM tvi;
+			tvi.mask = TVIF_HANDLE | TVIF_STATE;
+			tvi.hItem = foundItem->hItem;
+			tvi.stateMask = TVIS_STATEIMAGEMASK;
+			tvi.state = checked ? 2 << 12 : 1 << 12;
+			TreeView_SetItem(Wnd, &tvi);
 		}
 	}
+}
 
+//!! WARNING: this function works only after DialogClosed() is called.
+//!! Workaround: detect state of dialog, and call TreeView_GetItem if dialog is still active.
+//!! Another workaround: hook all relevant messages and update 'Checked' field of TreeViewItem automatically.
+bool UITreeView::GetChecked(const char* item)
+{
+	TreeViewItem* foundItem = FindItem(item);
+	return foundItem && foundItem->Checked;
+}
+
+UITreeView& UITreeView::SelectItem(const char* item)
+{
+	TreeViewItem* foundItem = FindItem(item);
 	if (foundItem && foundItem != SelectedItem)
 	{
 		SelectedItem = foundItem;
@@ -1888,6 +1949,13 @@ void UITreeView::Create(UIBaseDialog* dialog)
 	Wnd = Window(WC_TREEVIEW, "",
 		TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog);
+	if (bUseCheckboxes)
+	{
+		// Can't set TVS_CHECKBOXES immediately - this will not allow to change "checked" state of items after creation.
+		// The known workaround is to set this style separately.
+		DWORD style = GetWindowLong(Wnd, GWL_STYLE);
+		SetWindowLong(Wnd, GWL_STYLE, style | TVS_CHECKBOXES);
+	}
 
 #if USE_EXPLORER_STYLE
 	SetExplorerTheme(Wnd);
@@ -1896,7 +1964,7 @@ void UITreeView::Create(UIBaseDialog* dialog)
 	if (ItemHeight > 0)
 		TreeView_SetItemHeight(Wnd, ItemHeight);
 
-	if (DoUseFolderIcons)
+	if (bUseFolderIcons)
 	{
 		LoadFolderIcons();
 		// Attach image lists to tree view common control
@@ -1955,7 +2023,7 @@ void UITreeView::CreateItem(TreeViewItem& item)
 	else
 	{
 		text = *item.Label;
-		const char* s = strrchr(*item.Label, '/');
+		const char* s = strrchr(*item.Label, TREE_SEPARATOR_CHAR);
 		if (s) text = s+1;
 	}
 
@@ -1963,11 +2031,18 @@ void UITreeView::CreateItem(TreeViewItem& item)
 	tvis.item.mask = TVIF_TEXT;
 	tvis.item.pszText = const_cast<char*>(text);
 
-	if (DoUseFolderIcons)
+	if (bUseFolderIcons)
 	{
 		tvis.item.mask |= TVIF_IMAGE | TVIF_SELECTEDIMAGE;
 //		tvis.item.iImage = 0;
 		tvis.item.iSelectedImage = 1;
+	}
+
+	if (bUseCheckboxes && item.Checked)
+	{
+		tvis.item.mask |= TVIF_STATE;
+		tvis.item.stateMask = TVIS_STATEIMAGEMASK;
+		tvis.item.state = 2 << 12; // checked ? 2 << 12 : 1 << 12;
 	}
 
 	item.hItem = TreeView_InsertItem(Wnd, &tvis);
@@ -1977,6 +2052,23 @@ void UITreeView::CreateItem(TreeViewItem& item)
 		const TreeViewItem* root = GetRoot();
 		if (item.Parent == root || item.Parent->Parent == root)
 			TreeView_Expand(Wnd, item.Parent->hItem, TVE_EXPAND);
+	}
+}
+
+void UITreeView::DialogClosed(bool cancel)
+{
+	if (bUseCheckboxes && !cancel)
+	{
+		// Update checkbox states
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			TreeViewItem* item = Items[i];
+			TV_ITEM tvi;
+			tvi.mask = TVIF_HANDLE | TVIF_STATE;
+			tvi.hItem = item->hItem;
+			TreeView_GetItem(Wnd, &tvi);
+			item->Checked = (tvi.state >> 12) > 1;
+		}
 	}
 }
 
