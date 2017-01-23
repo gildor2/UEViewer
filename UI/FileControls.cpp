@@ -37,6 +37,7 @@ static void InitializeOLE()
 	UIFilePathEditor
 -----------------------------------------------------------------------------*/
 
+#define USE_ELLIPSIS_CHARACTER	1
 #define BROWSE_BUTTON_WIDTH		70
 
 UIFilePathEditor::UIFilePathEditor(FString* path)
@@ -64,9 +65,14 @@ void UIFilePathEditor::AddCustomControls()
 	[
 		NewControl(UITextEdit, Path)
 		.Expose(Editor)
+	#if !USE_ELLIPSIS_CHARACTER
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Browse ...")
 		.SetWidth(BROWSE_BUTTON_WIDTH)
+	#else
+		+ NewControl(UIButton, "...")
+		.SetWidth(20)
+	#endif
 		.SetCallback(BIND_MEM_CB(&UIFilePathEditor::OnBrowseClicked, this))
 	];
 }
@@ -159,23 +165,34 @@ void UIFileNameEditor::AddCustomControls()
 	[
 		NewControl(UITextEdit, Path)
 		.Expose(Editor)
+	#if !USE_ELLIPSIS_CHARACTER
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Browse ...")
 		.SetWidth(BROWSE_BUTTON_WIDTH)
+	#else
+		+ NewControl(UIButton, "...")
+		.SetWidth(20)
+	#endif
 		.SetCallback(BIND_MEM_CB(&UIFileNameEditor::OnBrowseClicked, this))
 	];
 }
 
-void UIFileNameEditor::OnBrowseClicked(UIButton* sender)
+FString ShowFileSelectionDialog(
+	bool bIsSaveDialog,
+	UIBaseDialog* ParentDialog,
+	const FString& InitialFilename,
+	const FString& InitialDirectory,
+	const FString& Title,
+	const TArray<FString>& Filters)
 {
 	OPENFILENAME ofn;
 	memset(&ofn, 0, sizeof(ofn));
 
 	char szPathName[1024];
-	appStrncpyz(szPathName, *(*Path), ARRAY_COUNT(szPathName));
+	appStrncpyz(szPathName, *InitialFilename, ARRAY_COUNT(szPathName));
 
 	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.hwndOwner   = DlgWnd;
+	ofn.hwndOwner   = ParentDialog->GetWnd();
 	ofn.lpstrFile   = szPathName;
 	ofn.nMaxFile    = ARRAY_COUNT(szPathName);
 
@@ -230,10 +247,22 @@ void UIFileNameEditor::OnBrowseClicked(UIButton* sender)
 	}
 
 	int bSuccess = (bIsSaveDialog) ? GetSaveFileName(&ofn) : GetOpenFileName(&ofn);
-
 	if (bSuccess)
 	{
-		*Path = szPathName;
+		return szPathName;
+	}
+	else
+	{
+		return "";
+	}
+}
+
+void UIFileNameEditor::OnBrowseClicked(UIButton* sender)
+{
+	FString filename = ShowFileSelectionDialog(bIsSaveDialog, GetDialog(), *Path, InitialDirectory, Title, Filters);
+	if (!filename.IsEmpty())
+	{
+		*Path = filename;
 		Editor->SetText();
 	}
 }

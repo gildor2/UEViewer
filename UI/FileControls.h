@@ -63,6 +63,16 @@ public:
 		return *this;
 	}
 
+	FORCEINLINE const FString& GetInitialDirectory() const
+	{
+		return InitialDirectory;
+	}
+
+	FORCEINLINE const FString& GetPath() const
+	{
+		return *Path;
+	}
+
 protected:
 	UITextEdit*		Editor;
 	FString*		Path;
@@ -76,6 +86,14 @@ protected:
 	virtual void AddCustomControls();
 	void OnBrowseClicked(UIButton* sender);
 };
+
+FString ShowFileSelectionDialog(
+	bool bIsSaveDialog,
+	UIBaseDialog* ParentDialog,
+	const FString& InitialFilename,
+	const FString& InitialDirectory,
+	const FString& Title,
+	const TArray<FString>& Filters);
 
 
 #endif // HAS_UI
