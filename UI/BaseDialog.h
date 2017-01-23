@@ -50,6 +50,13 @@ public:
 	UIElement& SetParent(UIGroup* group);
 	FORCEINLINE HWND GetWnd() const      { return Wnd; }
 
+	UIBaseDialog* GetDialog();
+
+	virtual bool IsA(const char* type)
+	{
+		return !strcmp("UIElement", type);
+	}
+
 	// Layout functions
 
 	UIElement& SetRect(int x, int y, int width, int height);
@@ -168,6 +175,10 @@ protected:
 	typedef Base Super;								\
 public:												\
 	virtual const char* ClassName() const { return #Class; } \
+	virtual bool IsA(const char* type)				\
+	{												\
+		return !strcmp(#Class, type) || Super::IsA(type); \
+	}												\
 	FORCEINLINE ThisClass& SetRect(int x, int y, int width, int height) \
 	{ return (ThisClass&) Super::SetRect(x, y, width, height); } \
 	FORCEINLINE ThisClass& SetX(int x)               { X = x; return *this; } \
@@ -680,6 +691,10 @@ public:
 	void SetChecked(const char* item, bool checked = true);
 	bool GetChecked(const char* item);
 
+	void Expand(const char* item);
+	void CollapseAll();
+	void ExpandCheckedNodes();
+
 protected:
 	TArray<TreeViewItem*> Items;
 	FString		RootLabel;
@@ -697,6 +712,7 @@ protected:
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
 	void CreateItem(TreeViewItem& item);
 	TreeViewItem* FindItem(const char* item);
+	void UpdateCheckedStates();
 	virtual void DialogClosed(bool cancel);
 };
 

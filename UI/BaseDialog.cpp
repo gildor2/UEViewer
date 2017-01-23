@@ -196,6 +196,18 @@ UIElement& UIElement::SetParent(UIGroup* group)
 	return *this;
 }
 
+UIBaseDialog* UIElement::GetDialog()
+{
+	UIElement* control;
+	for (control = this; control->Parent != NULL; control = control->Parent)
+	{
+		// empty
+	}
+	assert(control->IsA("UIBaseDialog"));
+	UIBaseDialog* dialog = static_cast<UIBaseDialog*>(control);
+	return dialog;
+}
+
 void UIElement::MeasureTextSize(const char* text, int* width, int* height, HWND wnd)
 {
 	guard(UIElement::MeasureTextSize);
@@ -1892,13 +1904,21 @@ void UITreeView::SetChecked(const char* item, bool checked)
 	}
 }
 
-//!! WARNING: this function works only after DialogClosed() is called.
-//!! Workaround: detect state of dialog, and call TreeView_GetItem if dialog is still active.
-//!! Another workaround: hook all relevant messages and update 'Checked' field of TreeViewItem automatically.
 bool UITreeView::GetChecked(const char* item)
 {
 	TreeViewItem* foundItem = FindItem(item);
-	return foundItem && foundItem->Checked;
+
+	if (!foundItem)
+		return false;
+
+	if (Wnd == NULL)
+		return foundItem->Checked;
+
+	TV_ITEM tvi;
+	tvi.mask = TVIF_HANDLE | TVIF_STATE;
+	tvi.hItem = foundItem->hItem;
+	TreeView_GetItem(Wnd, &tvi);
+	return (tvi.state >> 12) > 1;
 }
 
 UITreeView& UITreeView::SelectItem(const char* item)
@@ -2055,9 +2075,50 @@ void UITreeView::CreateItem(TreeViewItem& item)
 	}
 }
 
-void UITreeView::DialogClosed(bool cancel)
+void UITreeView::Expand(const char* item)
 {
-	if (bUseCheckboxes && !cancel)
+	TreeViewItem* foundItem = FindItem(item);
+	if (foundItem)
+	{
+		TreeView_Expand(Wnd, foundItem->hItem, TVE_EXPAND);
+	}
+}
+
+void UITreeView::CollapseAll()
+{
+	LockUpdate();
+	for (int i = 0; i < Items.Num(); i++)
+	{
+		TreeView_Expand(Wnd, Items[i]->hItem, TVE_COLLAPSE);
+	}
+	UnlockUpdate();
+}
+
+void UITreeView::ExpandCheckedNodes()
+{
+	CollapseAll();
+	UpdateCheckedStates();
+
+	LockUpdate();
+
+	for (int i = 0; i < Items.Num(); i++)
+	{
+		TreeViewItem* item = Items[i];
+		if (item->Checked)
+		{
+			for (TreeViewItem* p = item->Parent; p; p = p->Parent)
+			{
+				TreeView_Expand(Wnd, p->hItem, TVE_EXPAND);
+			}
+		}
+	}
+
+	UnlockUpdate();
+}
+
+void UITreeView::UpdateCheckedStates()
+{
+	if (bUseCheckboxes)
 	{
 		// Update checkbox states
 		for (int i = 0; i < Items.Num(); i++)
@@ -2070,6 +2131,13 @@ void UITreeView::DialogClosed(bool cancel)
 			item->Checked = (tvi.state >> 12) > 1;
 		}
 	}
+}
+
+void UITreeView::DialogClosed(bool cancel)
+{
+	UpdateCheckedStates();
+	// Some marker indicating that window is no longer valid
+	Wnd = NULL;
 }
 
 
