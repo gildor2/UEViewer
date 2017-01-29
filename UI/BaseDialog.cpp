@@ -506,8 +506,13 @@ UILabel::UILabel(const char* text, ETextAlign align)
 
 void UILabel::SetText(const char* text)
 {
-	Label = text;
-	if (Wnd) SetWindowText(Wnd, *Label);
+	// Avoid flicker and memory reallocation when label is not changed (useful for
+	// labels which are used as status text for some operation).
+	if (strcmp(text, *Label) != 0)
+	{
+		Label = text;
+		if (Wnd) SetWindowText(Wnd, *Label);
+	}
 }
 
 void UILabel::UpdateSize(UIBaseDialog* dialog)
@@ -2058,11 +2063,11 @@ void UITreeView::CreateItem(TreeViewItem& item)
 		tvis.item.iSelectedImage = 1;
 	}
 
-	if (bUseCheckboxes && item.Checked)
+	if (bUseCheckboxes)
 	{
 		tvis.item.mask |= TVIF_STATE;
 		tvis.item.stateMask = TVIS_STATEIMAGEMASK;
-		tvis.item.state = 2 << 12; // checked ? 2 << 12 : 1 << 12;
+		tvis.item.state = item.Checked ? 2 << 12 : 1 << 12;
 	}
 
 	item.hItem = TreeView_InsertItem(Wnd, &tvis);
@@ -2118,7 +2123,7 @@ void UITreeView::ExpandCheckedNodes()
 
 void UITreeView::UpdateCheckedStates()
 {
-	if (bUseCheckboxes)
+	if (bUseCheckboxes && (Wnd != NULL))
 	{
 		// Update checkbox states
 		for (int i = 0; i < Items.Num(); i++)
