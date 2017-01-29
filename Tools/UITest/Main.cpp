@@ -171,20 +171,24 @@ public:
 	void OnAddItems()
 	{
 		static int nn = 0;
-		int n;
 		char buf[32];
-#define ITEM(text)								\
-		n = list->AddItem(text);				\
-		appSprintf(ARRAY_ARG(buf), "%d", n);	\
-		list->AddSubItem(n, 1, buf);			\
-		appSprintf(ARRAY_ARG(buf), "%d", ++nn);	\
-		list->AddSubItem(n, 2, buf);
-		ITEM("------");
-		ITEM("this");
-		ITEM("is");
-		ITEM("UI");
-		ITEM("framework");
-		ITEM("test");
+		static const char* texts[] =
+		{
+			"------",
+			"this",
+			"is",
+			"UI",
+			"framework",
+			"test",
+		};
+		for (int i = 0; i < ARRAY_COUNT(texts); i++)
+		{
+			int n = list->AddItem(texts[i]);
+			appSprintf(ARRAY_ARG(buf), "%d", n);
+			list->AddSubItem(n, 1, buf);
+			appSprintf(ARRAY_ARG(buf), "%d", ++nn);
+			list->AddSubItem(n, 2, buf);
+		}
 	}
 
 	void OnRemoveItems()
