@@ -155,7 +155,7 @@ function ut4()
 {
 	CheckDir C:/3-UnrealEngine/UnrealTournamentDev/UnrealTournament/Content/Paks
 #	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament/Saved/Cooked/WindowsNoEditor/UnrealTournament/Content
-	run $* -game=ue4.13
+	run $* -game=ue4.15
 }
 function paragon()
 {
