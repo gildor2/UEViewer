@@ -56,13 +56,13 @@ struct FPakEntry
 	int64		Pos;
 	int64		Size;
 	int64		UncompressedSize;
-	int			CompressionMethod;
+	int32		CompressionMethod;
 	byte		Hash[20];
 	byte		bEncrypted;
 	TArray<FPakCompressedBlock> CompressionBlocks;
-	int			CompressionBlockSize;
+	int32		CompressionBlockSize;
 
-	int64		StructSize;					// computed value
+	int32		StructSize;					// computed value
 
 	friend FArchive& operator<<(FArchive& Ar, FPakEntry& P)
 	{
