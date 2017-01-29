@@ -1207,7 +1207,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						appError("Unknown structure type %s", Prop->TypeName);
 					// prepare array
 					Arr->Empty(DataCount, ItemType->SizeOf);
-					Arr->Insert(0, DataCount, ItemType->SizeOf);
+					Arr->InsertZeroed(0, DataCount, ItemType->SizeOf);
 					// serialize items
 					byte *item = (byte*)Arr->GetData();
 					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)

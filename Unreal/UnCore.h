@@ -1376,7 +1376,9 @@ protected:
 	// reserve space for 'count' items
 	void GrowArray(int count, int elementSize);
 	// insert 'count' items of size 'elementSize' at position 'index', memory will be zeroed
-	void Insert(int index, int count, int elementSize);
+	void InsertZeroed(int index, int count, int elementSize);
+	// insert 'count' items of size 'elementSize' at position 'index', memory will be uninitialized
+	void InsertUninitialized(int index, int count, int elementSize);
 	// remove items and then move next items to the position of removed items
 	void Remove(int index, int count, int elementSize);
 	// remove items and then fill the hole with items from array's end
@@ -1479,27 +1481,36 @@ public:
 
 	FORCEINLINE int Add(const T& item)
 	{
-		int index = AddUninitialized();
+		int index = DataCount;
+		FArray::InsertUninitialized(index, 1, sizeof(T));
 		Item(index) = item;
 		return index;
 	}
 	FORCEINLINE int AddZeroed(int count = 1)
 	{
 		int index = DataCount;
-		FArray::Insert(index, count, sizeof(T));
+		FArray::InsertZeroed(index, count, sizeof(T));
 		return index;
 	}
 	FORCEINLINE int AddDefaulted(int count = 1)
 	{
 		int index = DataCount;
-		FArray::Insert(index, count, sizeof(T));
-		if (!TTypeInfo<T>::IsPod) Construct(index, count);
+		if (!TTypeInfo<T>::IsPod)
+		{
+			FArray::InsertUninitialized(index, count, sizeof(T));
+			Construct(index, count);
+		}
+		else
+		{
+			FArray::InsertZeroed(index, count, sizeof(T));
+		}
 		return index;
 	}
-	// There's no way to implement AddUninitialized - FArray functions always zero memory for newly allocated items
 	FORCEINLINE int AddUninitialized(int count = 1)
 	{
-		return AddZeroed(count);
+		int index = DataCount;
+		FArray::InsertUninitialized(index, count, sizeof(T));
+		return index;
 	}
 	FORCEINLINE int AddUnique(const T& item)
 	{
@@ -1510,22 +1521,28 @@ public:
 
 	FORCEINLINE void Insert(const T& item, int index)
 	{
-		InsertUninitialized(index, 1);
+		FArray::InsertUninitialized(index, 1, sizeof(T));
 		Item(index) = item;
 	}
 	FORCEINLINE void InsertZeroed(int index, int count = 1)
 	{
-		FArray::Insert(index, count, sizeof(T));
+		FArray::InsertZeroed(index, count, sizeof(T));
 	}
-	// This function doesn't exist in UE4
 	FORCEINLINE void InsertDefaulted(int index, int count = 1)
 	{
-		FArray::Insert(index, count, sizeof(T));
-		if (!TTypeInfo<T>::IsPod) Construct(index, count);
+		if (!TTypeInfo<T>::IsPod)
+		{
+			FArray::InsertUninitialized(index, count, sizeof(T));
+			Construct(index, count);
+		}
+		else
+		{
+			FArray::InsertZeroed(index, count, sizeof(T));
+		}
 	}
 	FORCEINLINE void InsertUninitialized(int index, int count = 1)
 	{
-		InsertZeroed(index, count);
+		FArray::InsertUninitialized(index, count, sizeof(T));
 	}
 
 	FORCEINLINE void RemoveAt(int index, int count = 1)
@@ -1640,7 +1657,7 @@ public:
 
 #if UNREAL3
 	// Serialize an array, which file contents exactly matches in-memory contents.
-	// Whole array can be read using single read call. Package engine version should
+	// Whole array can be read using a single read call. Package engine version should
 	// equals to game engine version, and endianness should match, otherwise per-element
 	// reading will be performed (as usual in TArray). Implemented in UE3 and UE4.
 	// Note: there is no reading optimization performed here (in umodel).

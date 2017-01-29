@@ -122,9 +122,9 @@ void FArray::GrowArray(int count, int elementSize)
 	unguardf("%d x %d", count, elementSize);
 }
 
-void FArray::Insert(int index, int count, int elementSize)
+void FArray::InsertUninitialized(int index, int count, int elementSize)
 {
-	guard(FArray::Insert);
+	guard(FArray::InsertUninitialized);
 	assert(index >= 0);
 	assert(index <= DataCount);
 	assert(count >= 0);
@@ -139,13 +139,22 @@ void FArray::Insert(int index, int count, int elementSize)
 							 (DataCount - index) * elementSize
 		);
 	}
-	// zero memory which were inserted
-	//!! TODO: perhaps move initialization to AddZeroed etc, and keep
-	//!! memory uninitialized otherwise (and add DEBUG version which will
-	//!! fill uninitialized memory with some non-zero constant)
-	memset((byte*)DataPtr + index * elementSize, 0, count * elementSize);
+#if DEBUG_MEMORY
+	// fill memory with some pattern for debugging
+	memset((byte*)DataPtr + index * elementSize, 0xCC, count * elementSize);
+#endif
 	// last operation: advance counter
 	DataCount += count;
+	unguard;
+}
+
+void FArray::InsertZeroed(int index, int count, int elementSize)
+{
+	guard(FArray::InsertZeroed);
+	if (!count) return;
+	InsertUninitialized(index, count, elementSize);
+	// zero memory which was inserted
+	memset((byte*)DataPtr + index * elementSize, 0, count * elementSize);
 	unguard;
 }
 
