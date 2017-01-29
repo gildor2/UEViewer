@@ -44,10 +44,10 @@ FArray::~FArray()
 	{
 		if (DataPtr)
 			appFree(DataPtr);
-		DataPtr  = NULL;
-		MaxCount = 0;
 	}
 	DataCount = 0;
+	DataPtr   = NULL;
+	MaxCount  = 0;
 }
 
 void FArray::Empty(int count, int elementSize)
@@ -90,16 +90,21 @@ void FArray::Empty(int count, int elementSize)
 	unguardf("%d x %d", count, elementSize);
 }
 
+// This method will grow array's MaxCount. No items will be allocated.
+// The allocated memory is not initialized because items could be inserted
+// and removed at any time - so initialization should be performed in
+// upper level functions like Insert()
 void FArray::GrowArray(int count, int elementSize)
 {
 	guard(FArray::GrowArray);
 	assert(count > 0);
 
+	int prevCount = MaxCount;
+
 	// check for available space
 	if (DataCount + count > MaxCount)
 	{
 		// not enough space, resize ...
-		int prevCount = MaxCount;
 		MaxCount = ((DataCount + count + 15) / 16) * 16 + 16;
 		if (!IsStatic())
 		{
@@ -112,12 +117,6 @@ void FArray::GrowArray(int count, int elementSize)
 			DataPtr = appMalloc(MaxCount * elementSize);
 			memcpy(DataPtr, oldData, prevCount * elementSize);
 		}
-		// zero added memory
-		memset(
-			(byte*)DataPtr + prevCount * elementSize,
-			0,
-			(MaxCount - prevCount) * elementSize
-		);
 	}
 
 	unguardf("%d x %d", count, elementSize);
@@ -140,6 +139,11 @@ void FArray::Insert(int index, int count, int elementSize)
 							 (DataCount - index) * elementSize
 		);
 	}
+	// zero memory which were inserted
+	//!! TODO: perhaps move initialization to AddZeroed etc, and keep
+	//!! memory uninitialized otherwise (and add DEBUG version which will
+	//!! fill uninitialized memory with some non-zero constant)
+	memset((byte*)DataPtr + index * elementSize, 0, count * elementSize);
 	// last operation: advance counter
 	DataCount += count;
 	unguard;
