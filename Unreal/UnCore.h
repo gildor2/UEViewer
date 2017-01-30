@@ -756,6 +756,10 @@ public:
 	{
 		return Reader->GetFileSize() - ArPosOffset;
 	}
+	virtual void Serialize(void *data, int size)
+	{
+		Reader->Serialize(data, size);
+	}
 	virtual void SetStopper(int Pos)
 	{
 		Reader->SetStopper(Pos + ArPosOffset);

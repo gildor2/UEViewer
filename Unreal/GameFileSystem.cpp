@@ -101,7 +101,8 @@ static const char *KnownExtensions[] =
 	"rtc",
 #	endif
 #	if UNREAL4
-	"ubulk",
+	"ubulk",		// separately stored UE4 bulk data
+	"uexp",			// object's data cut from UE4 package when Event Driven Loader is used
 #	endif
 };
 #endif
@@ -146,7 +147,7 @@ static CGameFileInfo* GGameFileHash[GAME_FILE_HASH_SIZE];
 
 
 #if UNREAL3
-const char *GStartupPackage = "startup_xxx";
+const char*           GStartupPackage = "startup_xxx";	// this is just a magic constant pointer, content is meaningless
 static CGameFileInfo* GStartupPackageInfo = NULL;
 static int            GStartupPackageInfoWeight = 0;
 #endif

@@ -173,6 +173,10 @@ detex
 
 Changes
 ~~~~~~~
+30.01.2017
+- added support for UE4 packages which were cooked for Event Driven Loader (UE4.14+): such packages
+  has separated data into .uexp file with the same name as .uasset
+
 10.01.2017
 - initial UE4.15 support
 

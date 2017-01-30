@@ -725,7 +725,7 @@ void UIPackageDialog::SavePackages()
 	guard(UIPackageDialog::SavePackages);
 
 	//!! Possible options:
-	//!! - save used packages (find better name - "imports", "links", "used packages", "referenced packages" ...)
+	//!! - save referenced packages (find better name - "imports", "links", "used packages", "referenced packages" ...)
 	//!! - decompress packages
 	//!! - preserve package paths
 	//!! - destination directory
@@ -745,49 +745,58 @@ void UIPackageDialog::SavePackages()
 		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
 			break;
 
-		FArchive *Ar = appCreateFileReader(file);
-		if (Ar)
+		// Reference in UE4 code: FNetworkPlatformFile::IsAdditionalCookedFileExtension()
+		//!! TODO: perhaps save ALL files with the same path and name but different extension
+		static const char* additionalExtensions[] =
 		{
-			guard(SaveFile);
-			// prepare destination file
-			char OutFile[1024];
-			appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);	//!! make an option, add menu item to open "saved" directory
-			appMakeDirectoryForFile(OutFile);
-			FILE *out = fopen(OutFile, "wb");
-			// copy data
-			CopyStream(Ar, out, Ar->GetFileSize());
-			// cleanup
-			delete Ar;
-			fclose(out);
-			unguardf("%s", file->RelativeName);
-		}
+			"",				// empty string for original extension
+#if UNREAL4
+			".ubulk",
+			".uexp",
+#endif // UNREAL4
+		};
 
-		// TODO: refactor the code! Should process linked content by adding them to SelectedPackages list etc
-		// Save ubulk files too
-		char SrcFile[1024];
-		strcpy(SrcFile, SelectedPackages[i]->RelativeName);
-
-		char* s = strrchr(SrcFile, '.');
-		if (s && !stricmp(s, ".uasset"))
+		for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
 		{
-			// replace file extension
-			strcpy(s, ".ubulk");
-			// then repeat saving procedure for new file
-			const CGameFileInfo* file = appFindGameFile(SrcFile);
-			if (file)
+			char SrcFile[1024];
+#if UNREAL4
+			if (ext > 0)
 			{
-				FArchive *Ar = appCreateFileReader(file);
-				if (Ar)
+				strcpy(SrcFile, SelectedPackages[i]->RelativeName);
+				char* s = strrchr(SrcFile, '.');
+				if (s && !stricmp(s, ".uasset"))
 				{
-					guard(SaveUbulk);
-					char OutFile[1024];
-					appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);	//!! make an option, add menu item to open "saved" directory
-					FILE *out = fopen(OutFile, "wb");
-					CopyStream(Ar, out, Ar->GetFileSize());
-					fclose(out);
-					delete Ar;
-					unguardf("%s", SrcFile);
+					// Find additional file by replacing .uasset extension
+					strcpy(s, additionalExtensions[ext]);
+					file = appFindGameFile(SrcFile);
+					if (!file)
+					{
+						continue;
+					}
 				}
+				else
+				{
+					// there's no needs to process this file anymore - main file was already exported, no other files will exist
+					break;
+				}
+			}
+#endif // UNREAL4
+
+			FArchive *Ar = appCreateFileReader(file);
+			if (Ar)
+			{
+				guard(SaveFile);
+				// prepare destination file
+				char OutFile[1024];
+				appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);
+				appMakeDirectoryForFile(OutFile);
+				FILE *out = fopen(OutFile, "wb");
+				// copy data
+				CopyStream(Ar, out, Ar->GetFileSize());
+				// cleanup
+				delete Ar;
+				fclose(out);
+				unguardf("%s", file->RelativeName);
 			}
 		}
 	}

@@ -1461,6 +1461,8 @@ public:
 	FCompressedChunkHeader	ChunkHeader;
 	int						ChunkDataPos;
 
+	int						PositionOffset;
+
 	FUE3ArchiveReader(FArchive *File, int Flags, const TArray<FCompressedChunk> &Chunks)
 	:	Reader(File)
 	,	IsFullyCompressed(false)
@@ -1470,6 +1472,7 @@ public:
 	,	BufferStart(0)
 	,	BufferEnd(0)
 	,	CurrentChunk(NULL)
+	,	PositionOffset(0)
 	{
 		guard(FUE3ArchiveReader::FUE3ArchiveReader);
 		CopyArray(CompressedChunks, Chunks);
@@ -1631,11 +1634,11 @@ public:
 	// position controller
 	virtual void Seek(int Pos)
 	{
-		Position = Pos;
+		Position = Pos - PositionOffset;
 	}
 	virtual int Tell() const
 	{
-		return Position;
+		return Position + PositionOffset;
 	}
 	virtual int GetFileSize() const
 	{
@@ -1654,7 +1657,7 @@ public:
 			return Chunk.UncompressedOffset + UncompressedSize;
 		}
 #endif // BIOSHOCK
-		return Chunk.UncompressedOffset + Chunk.UncompressedSize;
+		return Chunk.UncompressedOffset + Chunk.UncompressedSize + PositionOffset;
 		unguard;
 	}
 	virtual void SetStopper(int Pos)
@@ -1684,6 +1687,13 @@ public:
 			BufferStart = BufferEnd = BufferSize = 0;
 		}
 		CurrentChunk = NULL;
+	}
+
+	void ReplaceLoaderWithOffset(FArchive* file, int offset)
+	{
+		if (Reader) delete Reader;
+		Reader = file;
+		PositionOffset = offset;
 	}
 };
 
@@ -1929,6 +1939,31 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 	}
 no_depends: ;
 #endif // UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS
+
+#if UNREAL4
+	// Process Event Driven Loader packages: such packages are split into 2 pieces: .uasser with headers
+	// and .uexp with object's data.
+	if (Game >= GAME_UE4 && Summary.HeadersSize == Loader->GetFileSize())
+	{
+		char buf[MAX_PACKAGE_PATH];
+		appStrncpyz(buf, filename, ARRAY_COUNT(buf));
+		char* s = strrchr(buf, '.');
+		if (!s)
+		{
+			s = strchr(buf, 0);
+		}
+		strcpy(s, ".uexp");
+		const CGameFileInfo *expInfo = appFindGameFile(buf);
+		if (expInfo)
+		{
+			// Open .exp file
+			FArchive* expLoader = appCreateFileReader(expInfo);
+			// Replace loader with this file, but add offset so it will work like it is part of original uasset
+			delete Loader;
+			Loader = new FReaderWrapper(expLoader, -Summary.HeadersSize);
+		}
+	}
+#endif // UNREAL4
 
 	// add self to package map
 	char buf[MAX_PACKAGE_PATH];
