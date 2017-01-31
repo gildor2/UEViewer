@@ -87,7 +87,7 @@ struct FPakEntry
 			if (P.CompressionMethod != 0)
 				Ar << P.CompressionBlocks;
 			Ar << P.bEncrypted << P.CompressionBlockSize;
-			if (P.bEncrypted) appError("Encrypted PAKs are not supported");
+//			if (P.bEncrypted) appError("Encrypted PAKs are not supported");
 		}
 
 		P.StructSize = Ar.Tell64() - StartOffset;
@@ -253,6 +253,7 @@ public:
 		*Reader << count;
 		FileInfos.AddZeroed(count);
 
+		int numEncryptedFiles = 0;
 		for (int i = 0; i < count; i++)
 		{
 			FPakEntry& E = FileInfos[i];
@@ -265,7 +266,12 @@ public:
 			E.Name = appStrdupPool(*CombinedPath);
 			// serialize other fields
 			*Reader << E;
+			if (E.bEncrypted)
+			{
+				numEncryptedFiles++;
+			}
 		}
+		appPrintf("Pak(%s): mounted at \"%s\", %d files (%d encrypted)\n", *Filename, *MountPoint, count, numEncryptedFiles);
 
 		return true;
 
@@ -295,6 +301,11 @@ public:
 	{
 		const FPakEntry* info = FindFile(name);
 		if (!info) return NULL;
+		if (info->bEncrypted)
+		{
+			appPrintf("pak(%s): attempt to open encrypted file %s\n", *Filename, name);
+			return NULL;
+		}
 		return new FPakFile(info, Reader);
 	}
 

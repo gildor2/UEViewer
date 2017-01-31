@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+31.01.2017
+- UE4 pak files: umodel skips encrypted files instead of throwing an error
+
 30.01.2017
 - added support for UE4 packages which were cooked for Event Driven Loader (UE4.14+): such packages
   has separated data into .uexp file with the same name as .uasset
