@@ -45,6 +45,32 @@
 
 
 /*-----------------------------------------------------------------------------
+	Common data types
+-----------------------------------------------------------------------------*/
+
+struct FColorVertexBuffer4
+{
+	int				Stride;
+	int				NumVertices;
+	TArray<FColor>	Data;
+
+	friend FArchive& operator<<(FArchive& Ar, FColorVertexBuffer4& S)
+	{
+		guard(FColorVertexBuffer4<<);
+
+		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
+		Ar << S.Stride << S.NumVertices;
+		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
+		if (!StripFlags.IsDataStrippedForServer() && (S.NumVertices > 0)) // zero size arrays are not serialized
+			S.Data.BulkSerialize(Ar);
+		return Ar;
+
+		unguard;
+	}
+};
+
+
+/*-----------------------------------------------------------------------------
 	USkeletalMesh
 -----------------------------------------------------------------------------*/
 
@@ -410,25 +436,19 @@ struct FSkelMeshChunk4
 static int GNumSkelUVSets = 1;
 static int GNumSkelInfluences = 4;
 
-struct FGPUVert4Common
+struct FSkinWeightInfo
 {
-	FPackedNormal		Normal[3];		// Normal[1] (TangentY) is reconstructed from other 2 normals
-						//!! TODO: we're cutting down influences, but holding unused normal here!
-						//!! Should rename Normal[] and split into 2 separate fields
 	byte				BoneIndex[NUM_INFLUENCES_UE4];
 	byte				BoneWeight[NUM_INFLUENCES_UE4];
 
-	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Common &V)
+	friend FArchive& operator<<(FArchive& Ar, FSkinWeightInfo& W)
 	{
-		Ar << V.Normal[0] << V.Normal[2];
-
-		// Influences
-		if (GNumSkelInfluences <= ARRAY_COUNT(V.BoneIndex))
+		if (GNumSkelInfluences <= ARRAY_COUNT(W.BoneIndex))
 		{
 			for (int i = 0; i < GNumSkelInfluences; i++)
-				Ar << V.BoneIndex[i];
+				Ar << W.BoneIndex[i];
 			for (int i = 0; i < GNumSkelInfluences; i++)
-				Ar << V.BoneWeight[i];
+				Ar << W.BoneWeight[i];
 		}
 		else
 		{
@@ -463,9 +483,28 @@ struct FGPUVert4Common
 			// copy influences to vertex
 			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
 			{
-				V.BoneIndex[i] = BoneIndex2[i];
-				V.BoneWeight[i] = BoneWeight2[i];
+				W.BoneIndex[i] = BoneIndex2[i];
+				W.BoneWeight[i] = BoneWeight2[i];
 			}
+		}
+		return Ar;
+	}
+};
+
+struct FGPUVert4Common
+{
+	FPackedNormal		Normal[3];		// Normal[1] (TangentY) is reconstructed from other 2 normals
+						//!! TODO: we're cutting down influences, but holding unused normal here!
+						//!! Should rename Normal[] and split into 2 separate fields
+	FSkinWeightInfo		Infs;
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Common &V)
+	{
+		Ar << V.Normal[0] << V.Normal[2];
+		if (FSkeletalMeshCustomVersion::Get(Ar) < FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
+		{
+			// serialized as separate buffer starting with UE4.15
+			Ar << V.Infs;
 		}
 		return Ar;
 	}
@@ -517,7 +556,8 @@ struct FSkeletalMeshVertexBuffer4
 		Ar << B.NumTexCoords << B.bUseFullPrecisionUVs;
 		DBG_SKEL("  TC=%d FullPrecision=%d\n", B.NumTexCoords, B.bUseFullPrecisionUVs);
 
-		if (Ar.ArVer >= VER_UE4_SUPPORT_GPUSKINNING_8_BONE_INFLUENCES)
+		if (Ar.ArVer >= VER_UE4_SUPPORT_GPUSKINNING_8_BONE_INFLUENCES &&
+			FSkeletalMeshCustomVersion::Get(Ar) < FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
 		{
 			Ar << B.bExtraBoneInfluences;
 			DBG_SKEL("  ExtraInfs=%d\n", B.bExtraBoneInfluences);
@@ -653,12 +693,60 @@ struct FStaticLODModel4
 			DBG_SKEL("TexCoords=%d\n", Lod.NumTexCoords);
 			Ar << Lod.VertexBufferGPUSkin;
 
+			if (SkelMeshVer >= FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
+			{
+				guard(FSkinWeightVertexBuffer<<);
+
+				// Starting with UE4.15 influences are serialized as separate buffer.
+				// See FSkinWeightVertexBuffer in UE4 source for reference.
+				FStripDataFlags SkinWeightStripFlags(Ar);
+
+				bool bExtraBoneInfluences;
+				int32 NumVertices;
+				Ar << bExtraBoneInfluences << NumVertices;
+				assert(Lod.NumVertices == NumVertices);
+
+				if (!SkinWeightStripFlags.IsDataStrippedForServer())
+				{
+					TArray<FSkinWeightInfo> Weights;
+					GNumSkelInfluences = bExtraBoneInfluences ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
+					Weights.BulkSerialize(Ar);
+
+					assert(Weights.Num() == NumVertices);
+					// Copy data to VertexBufferGPUSkin
+					if (Lod.VertexBufferGPUSkin.bUseFullPrecisionUVs)
+					{
+						for (int i = 0; i < NumVertices; i++)
+						{
+							Lod.VertexBufferGPUSkin.VertsFloat[i].Infs = Weights[i];
+						}
+					}
+					else
+					{
+						for (int i = 0; i < NumVertices; i++)
+						{
+							Lod.VertexBufferGPUSkin.VertsHalf[i].Infs = Weights[i];
+						}
+					}
+				}
+				unguard;
+			}
+
 			USkeletalMesh4 *LoadingMesh = (USkeletalMesh4*)UObject::GLoadingObj;
 			assert(LoadingMesh);
 			if (LoadingMesh->bHasVertexColors)
 			{
 				appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
-				Ar << Lod.ColorVertexBuffer;
+				if (SkelMeshVer < FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
+				{
+					Ar << Lod.ColorVertexBuffer;
+				}
+				else
+				{
+					FColorVertexBuffer4 NewColorVertexBuffer;
+					Ar << NewColorVertexBuffer.Data;
+					Exchange(Lod.ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
+				}
 				DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
 			}
 
@@ -847,8 +935,8 @@ void USkeletalMesh4::ConvertMesh()
 			unsigned PackedWeights = 0;
 			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
 			{
-				int BoneIndex  = V->BoneIndex[i];
-				byte BoneWeight = V->BoneWeight[i];
+				int BoneIndex  = V->Infs.BoneIndex[i];
+				byte BoneWeight = V->Infs.BoneWeight[i];
 				if (BoneWeight == 0) continue;				// skip this influence (but do not stop the loop!)
 				PackedWeights |= BoneWeight << (i2 * 8);
 				D->Bone[i2]   = (*BoneMap)[BoneIndex];
@@ -1083,28 +1171,6 @@ struct FStaticMeshVertexBuffer4
 			S.UV.BulkSerialize(Ar);
 		}
 
-		return Ar;
-
-		unguard;
-	}
-};
-
-
-struct FColorVertexBuffer4
-{
-	int				Stride;
-	int				NumVertices;
-	TArray<FColor>	Data;
-
-	friend FArchive& operator<<(FArchive& Ar, FColorVertexBuffer4& S)
-	{
-		guard(FColorVertexBuffer4<<);
-
-		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
-		Ar << S.Stride << S.NumVertices;
-		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
-		if (!StripFlags.IsDataStrippedForServer() && (S.NumVertices > 0)) // zero size arrays are not serialized
-			S.Data.BulkSerialize(Ar);
 		return Ar;
 
 		unguard;

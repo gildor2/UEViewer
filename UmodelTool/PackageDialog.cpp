@@ -372,13 +372,17 @@ void UIPackageDialog::InitUI()
 		if (!DirectorySelected)
 		{
 			// find the first directory with packages, but don't select /Game/Engine subdirectories by default
-			bool isUE4EnginePath = strnicmp(path, "Engine/", 7) == 0;
+			bool isUE4EnginePath = (strnicmp(path, "Engine/", 7) == 0) || (strnicmp(path, "/Engine/", 8) == 0);
 			if (!isUE4EnginePath && (stricmp(path, *SelectedDir) < 0 || SelectedDir.IsEmpty()))
 			{
 				// set selection to the first directory
 				SelectedDir = s ? path : "";
 			}
 		}
+	}
+	if (!SelectedDir.IsEmpty())
+	{
+		PackageTree->Expand(*SelectedDir);	//!! note: will not work at the moment because "Expand" works only after creation of UITreeView
 	}
 
 	// "Tools" menu

@@ -2330,6 +2330,7 @@ struct FEditorObjectVersion
 		RefactorMeshEditorMaterials = 8,
 		// UE4.15 = ?
 		UPropertryForMeshSection = 10,
+		UPropertryForMeshSectionSerialize = 15,	// not sure why engine masked MeshSectionMap twice, not used here
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2361,8 +2362,8 @@ struct FSkeletalMeshCustomVersion
 		RecalcMaxBoneInfluences = 3,
 		SaveNumVertices = 4,
 		// UE4.14 = 5
-		UseSharedColorBufferFormat = 6,		//!! not implemented
-		UseSeparateSkinWeightBuffer = 7,	//!! not implemented
+		UseSharedColorBufferFormat = 6,		// separate vertex stream for vertex influences
+		UseSeparateSkinWeightBuffer = 7,	// use FColorVertexStream for both static and skeletal meshes
 		// UE4.15 = ?
 
 		VersionPlusOne,

@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+01.02.2017
+- updated UE4.15 support
+
 31.01.2017
 - UE4 pak files: umodel skips encrypted files instead of throwing an error
 
