@@ -588,6 +588,7 @@ struct FSkeletalMeshVertexBuffer4
 	}
 };
 
+// Used before 4.15. After 4.15 switched to FColorVertexBuffer4
 struct FSkeletalMeshVertexColorBuffer4
 {
 	TArray<FColor>				Data;
@@ -633,7 +634,7 @@ struct FStaticLODModel4
 	TArray<int>					MeshToImportVertexMap;
 	int							MaxImportVertex;
 	FSkeletalMeshVertexBuffer4	VertexBufferGPUSkin;
-	FSkeletalMeshVertexColorBuffer4 ColorVertexBuffer;
+	FSkeletalMeshVertexColorBuffer4 ColorVertexBuffer;		//!! TODO: switch to FColorVertexBuffer4
 	FSkeletalMeshVertexAPEXClothBuffer APEXClothVertexBuffer;
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticLODModel4& Lod)
@@ -744,7 +745,7 @@ struct FStaticLODModel4
 				else
 				{
 					FColorVertexBuffer4 NewColorVertexBuffer;
-					Ar << NewColorVertexBuffer.Data;
+					Ar << NewColorVertexBuffer;
 					Exchange(Lod.ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
 				}
 				DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
