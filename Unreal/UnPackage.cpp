@@ -441,42 +441,44 @@ struct FGuidCustomVersion
 	}
 };
 
-struct FCustomVersion
+void FCustomVersionContainer::Serialize(FArchive& Ar, int LegacyVersion)
 {
-	FGuid			Key;
-	int32			Version;
-
-	friend FArchive& operator<<(FArchive& Ar, FCustomVersion& V)
+	if (LegacyVersion == -2)
 	{
-		return Ar << V.Key << V.Version;
+		// Before 4.0 release: ECustomVersionSerializationFormat::Enums in Core/Private/Serialization/CustomVersion.cpp
+		TArray<FEnumCustomVersion> VersionsEnum;
+		Ar << VersionsEnum;
 	}
-};
+	else if (LegacyVersion < -2 && LegacyVersion >= -5)
+	{
+		// 4.0 .. 4.10: ECustomVersionSerializationFormat::Guids
+		TArray<FGuidCustomVersion> VersionsGuid;
+		Ar << VersionsGuid;
+	}
+	else
+	{
+		// Starting with 4.11: ECustomVersionSerializationFormat::Optimized
+		Ar << Versions;
+	}
+}
 
-struct FCustomVersionContainer
+int GetUE4CustomVersion(const FArchive& Ar, const FGuid& Guid)
 {
-	TArray<FCustomVersion> Versions;
-
-	void Serialize(FArchive& Ar, int LegacyVersion)
+	guard(GetUE4CustomVersion);
+	const UnPackage* Package = Ar.CastTo<UnPackage>();
+	assert(Package);
+	const FPackageFileSummary &S = Package->Summary;
+	for (int i = 0; i < S.CustomVersionContainer.Versions.Num(); i++)
 	{
-		if (LegacyVersion == -2)
+		const FCustomVersion& V = S.CustomVersionContainer.Versions[i];
+		if (V.Key == Guid)
 		{
-			TArray<FEnumCustomVersion> VersionsEnum;
-			Ar << VersionsEnum;
-			// 'ECustomVersionSerializationFormat::Enums' in Core/Private/Serialization/CustomVersion.cpp
-		}
-		else if (LegacyVersion < -2 && LegacyVersion >= -5)
-		{
-			TArray<FGuidCustomVersion> VersionsGuid;
-			Ar << VersionsGuid;
-			// ECustomVersionSerializationFormat::Guids
-		}
-		else
-		{
-			Ar << Versions;
-			// ECustomVersionSerializationFormat::Optimized
+			return V.Version;
 		}
 	}
-};
+	return -1;
+	unguard;
+}
 
 static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 {
@@ -515,9 +517,9 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	if (S.LegacyVersion <= -2)
 	{
 		// CustomVersions array - not serialized to unversioned packages, and UE4 always consider
-		// all custom versions to use highest available value
-		FCustomVersionContainer versions;
-		versions.Serialize(Ar, S.LegacyVersion);
+		// all custom versions to use highest available value. However this is used for versioned
+		// packages: engine starts to use custom versions heavily starting with 4.12.
+		S.CustomVersionContainer.Serialize(Ar, S.LegacyVersion);
 	}
 
 	if (S.FileVersion == 0 && S.LicenseeVersion == 0)

@@ -95,6 +95,24 @@ struct FEngineVersion
 	}
 };
 
+struct FCustomVersion
+{
+	FGuid			Key;
+	int32			Version;
+
+	friend FArchive& operator<<(FArchive& Ar, FCustomVersion& V)
+	{
+		return Ar << V.Key << V.Version;
+	}
+};
+
+struct FCustomVersionContainer
+{
+	TArray<FCustomVersion> Versions;
+
+	void Serialize(FArchive& Ar, int LegacyVersion);
+};
+
 #endif // UNREAL4
 
 
@@ -104,6 +122,7 @@ struct FPackageFileSummary
 #if UNREAL4
 	int32		LegacyVersion;
 	bool		IsUnversioned;
+	FCustomVersionContainer CustomVersionContainer;
 #endif
 	uint16		FileVersion;
 	uint16		LicenseeVersion;

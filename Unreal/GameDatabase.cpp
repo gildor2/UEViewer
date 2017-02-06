@@ -825,6 +825,8 @@ static const int ue4Versions[] =
 	VER_UE4_10, VER_UE4_11, VER_UE4_12, VER_UE4_13, VER_UE4_14,
 	VER_UE4_15,
 };
+
+staticAssert(ARRAY_COUNT(ue4Versions) == LATEST_SUPPORTED_UE4_VERSION + 1, "ue4Versions[] is outdated");
 #endif // UNREAL4
 
 void FArchive::OverrideVersion()
@@ -838,8 +840,7 @@ void FArchive::OverrideVersion()
 #if UNREAL4
 	if (Game >= GAME_UE4_0 && Game <= GAME_UE4_0 + LATEST_SUPPORTED_UE4_VERSION)
 	{
-		// Special path for UE4.
-		staticAssert(ARRAY_COUNT(ue4Versions) == LATEST_SUPPORTED_UE4_VERSION + 1, "ue4Versions[] is outdated");
+		// Special path for UE4, when engine version is specified and packages are unversioned.
 		if (ArVer == 0)
 		{
 			// Override version only if package is unversioned. Mixed versioned and unversioned packages could
@@ -848,8 +849,23 @@ void FArchive::OverrideVersion()
 		}
 		return;
 	}
+/*	else if (Game == GAME_UE4 && ArVer != 0) -- disabled because versioned packages provides FCustomVersion info
+	{
+		// Path for UE4 when packages are versioned.
+		for (int i = ARRAY_COUNT(ue4Versions) - 1; i >= 0; i--)
+		{
+			printf("arv=%d ue4[%d]=%d\n", ArVer, i, ue4Versions[i]);
+			if (ArVer >= ue4Versions[i])
+			{
+				Game = GAME_UE4_0 + i;
+				return;
+			}
+		}
+		return;
+	} */
 #endif // UNREAL4
 
+	// convert game tag to ArVer
 	int OldVer  = ArVer;
 	int OldLVer = ArLicenseeVer;
 

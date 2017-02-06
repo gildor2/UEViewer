@@ -550,7 +550,7 @@ public:
 		return StaticGetName();
 	}
 
-	virtual bool IsA(const char* type)
+	virtual bool IsA(const char* type) const
 	{
 		return !strcmp(type, "FArchive");
 	}
@@ -560,6 +560,15 @@ public:
 	{
 		if (IsA(T::StaticGetName()))
 			return static_cast<T*>(this);
+		else
+			return NULL;
+	}
+
+	template<typename T>
+	const T* CastTo() const
+	{
+		if (IsA(T::StaticGetName()))
+			return static_cast<const T*>(this);
 		else
 			return NULL;
 	}
@@ -577,7 +586,7 @@ public:									\
 	{									\
 		return StaticGetName();			\
 	}									\
-	virtual bool IsA(const char* type)	\
+	virtual bool IsA(const char* type) const \
 	{									\
 		return !strcmp(type, StaticGetName()) || Super::IsA(type); \
 	}									\
@@ -2039,7 +2048,7 @@ protected:
 class FGuid
 {
 public:
-	unsigned	A, B, C, D;
+	uint32		A, B, C, D;
 
 	friend FArchive& operator<<(FArchive &Ar, FGuid &G)
 	{
@@ -2285,6 +2294,8 @@ enum
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
 
+int GetUE4CustomVersion(const FArchive& Ar, const FGuid& Guid);
+
 struct FFrameworkObjectVersion
 {
 	enum Type
@@ -2306,6 +2317,11 @@ struct FFrameworkObjectVersion
 
 	static Type Get(const FArchive& Ar)
 	{
+		static const FGuid GUID = { 0xCFFC743F, 0x43B04480, 0x939114DF, 0x171D2073 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+
 		if (Ar.Game < GAME_UE4_12)
 			return BeforeCustomVersionWasAdded;
 		if (Ar.Game == GAME_UE4_12)
@@ -2338,6 +2354,11 @@ struct FEditorObjectVersion
 
 	static Type Get(const FArchive& Ar)
 	{
+		static const FGuid GUID = { 0xE4B068ED, 0xF49442E9, 0xA231DA0B, 0x2E46BB41 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+
 		if (Ar.Game < GAME_UE4_12)
 			return BeforeCustomVersionWasAdded;
 		if (Ar.Game == GAME_UE4_12)
@@ -2372,6 +2393,11 @@ struct FSkeletalMeshCustomVersion
 
 	static Type Get(const FArchive& Ar)
 	{
+		static const FGuid GUID = { 0xD78A4A00, 0xE8584697, 0xBAA819B5, 0x487D46B4 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+
 		if (Ar.Game < GAME_UE4_13)
 			return BeforeCustomVersionWasAdded;
 		if (Ar.Game == GAME_UE4_13)
@@ -2396,6 +2422,11 @@ struct FRenderingObjectVersion
 
 	static Type Get(const FArchive& Ar)
 	{
+		static const FGuid GUID = { 0x12F88B9F, 0x88754AFC, 0xA67CD90C, 0x383ABD29 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+
 		if (Ar.Game < GAME_UE4_12)
 			return BeforeCustomVersionWasAdded;
 		if (Ar.Game == GAME_UE4_12)

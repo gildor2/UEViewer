@@ -85,6 +85,11 @@ struct FRecomputeTangentCustomVersion
 
 	static int Get(const FArchive& Ar)
 	{
+		static const FGuid GUID = { 0x5579F886, 0x933A4C1F, 0x83BA087B, 0x6361B92F };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+
 		if (Ar.Game < GAME_UE4_12)
 			return BeforeCustomVersionWasAdded;
 		return RuntimeRecomputeTangent;
@@ -1448,7 +1453,7 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 		Ar << Bounds;
 		Ar << bLODsShareStaticLighting;
 
-		if (Ar.Game < GAME_UE4_14)
+		if (Ar.ArVer < VER_UE4_14)
 		{
 			bool bReducedBySimplygon;
 			Ar << bReducedBySimplygon;
@@ -1467,16 +1472,17 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 		if (bCooked)
 		{
 			// ScreenSize for each LOD
-			int MaxNumLods = (Ar.Game >= GAME_UE4_9) ? MAX_STATIC_LODS_UE4 : 4;
+			int MaxNumLods = (Ar.ArVer >= VER_UE4_9) ? MAX_STATIC_LODS_UE4 : 4;
 			for (int i = 0; i < MaxNumLods; i++)
 				Ar << ScreenSize[i];
 		}
 	} // end of FStaticMeshRenderData
 
-	if (Ar.Game >= GAME_UE4_14)
+	if (Ar.ArVer >= VER_UE4_14)
 	{
 		// Serialize following data to obtain material references for UE4.14+.
 		// Don't bother serializing anything beyond this point in earlier versions.
+		// Note: really, UE4 uses VER_UE4_SPEEDTREE_STATICMESH
 		bool bHasSpeedTreeWind;
 		Ar << bHasSpeedTreeWind;
 		if (bHasSpeedTreeWind)
