@@ -1042,7 +1042,9 @@ sub FlushObjectFile {
 	my $line = "";
 	if ($COMPILER eq "VisualC") {
 		if ($srcType eq "asm") {
-			$line = "nasm.exe -f win32 -i $srcDir -o \"$objFile\"";
+			my $tgt = "win32";
+			$tgt = "win64" if $PLATFORM eq "win64";
+			$line = "nasm.exe -f $tgt ".GenerateOptions($includes, "-I")." -o \"$objFile\"";
 		} elsif ($srcType eq "rc") {
 			my $inc = "";
 			my $defs = "";
@@ -1072,9 +1074,10 @@ sub FlushObjectFile {
 		$line .= " $srcFile";
 	} elsif ($COMPILER eq "GnuC") {	#!! GnuC - other
 		if ($srcType eq "asm") {
-			my $tgt = "elf";		#?? linux: check this
+			my $tgt = "elf32";
+			$tgt = "elf64" if $PLATFORM eq "unix64";
 			$tgt = "coff" if $PLATFORM eq "win32";
-			$line = "nasm -f $tgt -i $srcDir -o \"$objFile\"";
+			$line = "nasm -f $tgt ".GenerateOptions($includes, "-I")." -o \"$objFile\"";
 		} elsif ($srcType eq "rc") {
 			$line .= "windres -O coff -I $srcDir -o $objFile";
 		} else {					#!! GnuC - compiler
