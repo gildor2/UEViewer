@@ -328,6 +328,18 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 		int offsetIndex = TrackIndex * offsetsPerBone;
 
+		// PARAGON has invalid data inside some animation tracks. Not sure if game engine ignores them
+		// or trying to process (this game has holes in data due to wrong pointers in CompressedTrackOffsets).
+		// This causes garbage data to appear instead of real animation track header, with wrong compression
+		// method etc. We're going to skip such tracks with displaying a warning message.
+		if (0) // this is just a placeholder for error handler - it should be located somewhere
+		{
+		track_error:
+			AnimSet->Sequences.RemoveSingle(Dst);
+			delete Dst;
+			return;
+		}
+
 		//----------------------------------------------
 		// decode AKF_PerTrackCompression data
 		//----------------------------------------------
@@ -425,7 +437,12 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 						A->KeyPos.Add(nullVec);
 						break;
 					default:
-						appError("Unknown translation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
+						{
+							char buf[1024];
+							Seq->GetFullName(buf, 1024);
+							appNotify("%s: unknown translation compression method: %d (%s) - dropping track", buf, KeyFormat, EnumToName(KeyFormat));
+							goto track_error;
+						}
 					}
 				}
 				// align to 4 bytes
@@ -491,7 +508,12 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 						A->KeyQuat.Add(nullQuat);
 						break;
 					default:
-						appError("Unknown rotation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
+						{
+							char buf[1024];
+							Seq->GetFullName(buf, 1024);
+							appNotify("%s: unknown rotation compression method: %d (%s) - dropping track", buf, KeyFormat, EnumToName(KeyFormat));
+							goto track_error;
+						}
 					}
 				}
 				// align to 4 bytes
@@ -566,13 +588,12 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		// read rotation keys
 		Reader.Seek(RotOffset);
 		AnimationCompressionFormat RotationCompressionFormat = Seq->RotationCompressionFormat;
-		if (RotKeys <= 0)
-			goto rot_keys_done;
+
 		if (RotKeys == 1)
 		{
 			RotationCompressionFormat = ACF_Float96NoW;	// single key is stored without compression
 		}
-		else if (RotationCompressionFormat == ACF_IntervalFixed32NoW)
+		else if (RotKeys > 1 && RotationCompressionFormat == ACF_IntervalFixed32NoW)
 		{
 			// Mins/Ranges are read only when needed - i.e. for ACF_IntervalFixed32NoW
 			Reader << Mins << Ranges;
@@ -596,7 +617,6 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			}
 		}
 
-		rot_keys_done:
 		// align to 4 bytes
 		Reader.Seek(Align(Reader.Tell(), 4));
 		if (HasTimeTracks)
