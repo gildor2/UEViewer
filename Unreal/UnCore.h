@@ -347,7 +347,6 @@ enum EGame
 
 	GAME_UE4       = 0x10000,
 		// engine versions
-		// NEW_ENGINE_VERSION
 		GAME_UE4_0,
 		GAME_UE4_1,
 		GAME_UE4_2,
@@ -364,12 +363,14 @@ enum EGame
 		GAME_UE4_13,
 		GAME_UE4_14,
 		GAME_UE4_15,
+		GAME_UE4_16,
+		// NEW_ENGINE_VERSION
 		// games
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		15		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		16		// UE4.XX
 
 enum EPlatform
 {
@@ -2289,7 +2290,9 @@ enum
 	VER_UE4_14 = 508,
 		VER_UE4_PROPERTY_TAG_SET_MAP_SUPPORT = 509,
 		VER_UE4_ADDED_SEARCHABLE_NAMES = 510,
-	VER_UE4_15 //!! automatic version, should update when engine will be released
+	VER_UE4_15 = 510,
+		VER_UE4_64BIT_EXPORTMAP_SERIALSIZES = 511,
+	VER_UE4_16,		//!! automatic number, update after release
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2310,6 +2313,7 @@ struct FFrameworkObjectVersion
 		MoveCurveTypesToSkeleton = 15,
 		CacheDestructibleOverlaps = 16,
 		GeometryCacheMissingMaterials = 17,	// not needed now - for UGeometryCache
+		// UE4.15 = 22
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2330,6 +2334,8 @@ struct FFrameworkObjectVersion
 			return RemoveSoundWaveCompressionName;
 		if (Ar.Game == GAME_UE4_14)
 			return GeometryCacheMissingMaterials;
+		if (Ar.Game == GAME_UE4_15)
+			return (Type)22;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2344,9 +2350,8 @@ struct FEditorObjectVersion
 		// UE4.13 = 6
 		// UE4.14 = 8
 		RefactorMeshEditorMaterials = 8,
-		// UE4.15 = ?
+		// UE4.15 = 14
 		UPropertryForMeshSection = 10,
-		UPropertryForMeshSectionSerialize = 15,	// not sure why engine masked MeshSectionMap twice, not used here
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2366,7 +2371,9 @@ struct FEditorObjectVersion
 		if (Ar.Game == GAME_UE4_13)
 			return (Type)6;
 		if (Ar.Game == GAME_UE4_14)
-			return (Type)RefactorMeshEditorMaterials;
+			return RefactorMeshEditorMaterials;
+		if (Ar.Game == GAME_UE4_15)
+			return (Type)14;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2385,7 +2392,7 @@ struct FSkeletalMeshCustomVersion
 		// UE4.14 = 5
 		UseSharedColorBufferFormat = 6,		// separate vertex stream for vertex influences
 		UseSeparateSkinWeightBuffer = 7,	// use FColorVertexStream for both static and skeletal meshes
-		// UE4.15 = ?
+		// UE4.15 = 7
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2404,6 +2411,8 @@ struct FSkeletalMeshCustomVersion
 			return SaveNumVertices;
 		if (Ar.Game == GAME_UE4_14)
 			return (Type)5;
+		if (Ar.Game == GAME_UE4_15)
+			return UseSeparateSkinWeightBuffer;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2433,7 +2442,7 @@ struct FRenderingObjectVersion
 			return (Type)2;
 		if (Ar.Game == GAME_UE4_13)
 			return (Type)4;
-		if (Ar.Game == GAME_UE4_14)
+		if (Ar.Game <= GAME_UE4_15)	// GAME_UE4_14 and 15
 			return (Type)12;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;

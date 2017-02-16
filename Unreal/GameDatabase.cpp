@@ -343,7 +343,6 @@ const GameInfo GListOfGames[] = {
 
 	// Unreal engine 4
 #if UNREAL4
-		// NEW_ENGINE_VERSION
 		G("Unreal engine 4",   ue4,   GAME_UE4  ),		// useless?
 		G("Unreal engine 4.0", ue4.0, GAME_UE4_0),
 		G("Unreal engine 4.1", ue4.1, GAME_UE4_1),
@@ -361,6 +360,8 @@ const GameInfo GListOfGames[] = {
 		G("Unreal engine 4.13", ue4.13, GAME_UE4_13),
 		G("Unreal engine 4.14", ue4.14, GAME_UE4_14),
 		G("Unreal engine 4.15", ue4.15, GAME_UE4_15),
+		G("Unreal engine 4.16", ue4.16, GAME_UE4_16),
+		// NEW_ENGINE_VERSION
 #endif // UNREAL4
 
 	// end marker
@@ -823,7 +824,7 @@ static const int ue4Versions[] =
 	VER_UE4_0, VER_UE4_1, VER_UE4_2, VER_UE4_3, VER_UE4_4,
 	VER_UE4_5, VER_UE4_6, VER_UE4_7, VER_UE4_8, VER_UE4_9,
 	VER_UE4_10, VER_UE4_11, VER_UE4_12, VER_UE4_13, VER_UE4_14,
-	VER_UE4_15,
+	VER_UE4_15, VER_UE4_16,
 };
 
 staticAssert(ARRAY_COUNT(ue4Versions) == LATEST_SUPPORTED_UE4_VERSION + 1, "ue4Versions[] is outdated");

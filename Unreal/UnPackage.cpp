@@ -1075,7 +1075,22 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 
 	Ar << E.ObjectFlags;
 
-	Ar << E.SerialSize << E.SerialOffset;
+	if (Ar.ArVer < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES)
+	{
+		Ar << E.SerialSize << E.SerialOffset;
+	}
+	else
+	{
+		// 64-bit offsets
+		int64 SerialSize64, SerialOffset64;
+		Ar << SerialSize64 << SerialOffset64;
+		//!! perhaps use uint32 for size/offset, but should review all relative code to not send negative values due to casting of uint32 to int32
+		//!! currently limited by 0x80000000
+		assert(SerialSize64 < 0x80000000);
+		assert(SerialOffset64 < 0x80000000);
+		E.SerialSize = (int32)SerialSize64;
+		E.SerialOffset = (int32)SerialOffset64;
+	}
 
 	bool bForcedExport, bNotForClient, bNotForServer;
 	Ar << bForcedExport << bNotForClient << bNotForServer;

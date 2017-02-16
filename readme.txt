@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+16.02.2017
+- final UE4.15 support, initial 4.16 support
+
 06.02.2017
 - improved support for UE4 versioned packages
 
