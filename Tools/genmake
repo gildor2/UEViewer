@@ -1186,7 +1186,7 @@ sub FlushTargetText {
 	my $line;
 
 	# cut file extension
-	my ($shortOutName) = $n =~ /^([^\s\.]+)(\.\w+)?$/;
+	my ($shortOutName) = $n =~ /^(.*?)(\.\w+)?$/;	# strip extension
 	# get used libraries
 	my $libs     = GetTargetOption ($n, "LIBS");
 	my $stdlibs  = GetTargetOption ($n, "STDLIBS");
@@ -1223,6 +1223,9 @@ sub FlushTargetText {
 	#-------------- Visual C++ options --------------------
 	if ($COMPILER eq "VisualC") {
 		$prefix .= "\techo Creating $target \"$n\" ...\n";
+		if ($target eq "static") {
+			return $prefix."\t\$(AR) -out:\"$n\"$fileList";
+		}
 		$line = "\t\$(LINK) -out:\"$n\"";
 		$line .= GenerateOptions ($libpath, "-libpath:") if $libpath ne "";
 		$line .= " $stdlibs" if $stdlibs ne "";
@@ -1251,13 +1254,11 @@ sub FlushTargetText {
 			} else {
 				# if IMPLIB is not specified, delete unneeded linker output
 				$line .= " -implib:\"delete.lib\"";
-				$line .= "\n\techo ... and deleting them ...\n\tdel delete.lib\n\tdel delete.exp";
+				$line .= "\n\t# deleting unneeded files\n\tdel delete.lib\n\tdel delete.exp";
 			}
 			return $prefix.$line;
-		} elsif ($target eq "static") {
-			return $prefix."\t\$(AR) -out:\"$n\"$fileList";
-#		} else {
-#			Error ("unknown target: \"$target\"");
+		} else {
+			Error ("unknown target: \"$target\"");
 		}
 	#--------------- Gnu C Compiler -----------------------
 	} elsif ($COMPILER eq "GnuC") {		#!! GnuC - linker
@@ -1427,19 +1428,20 @@ for $target (@targets) {
 	print FlushTargetText($type, $outfile, $objListName, $dirList)."\n\n";
 }
 
-# refine @sources array: remove files, not linked into any target
+# refine @sources array: remove files which are not linked to any target
 @sources2 = ();
 for $item (@sources) {
 	my ($src, undef, undef, undef, undef, $objListName) = split('%', $item);
 	for my $tgt (@targets) {
+		my $found = 0;
 		my (undef, undef, undef, $tgtObjListName) = split('%', $tgt);
 		for my $listName (split(',', $tgtObjListName)) {
 			if ($objListName eq $listName) {
 				push @sources2, $item;					#?? check for duplicates - single cpp may be included multiple times for different targets
-				undef $item;							# "found" flag
-				last;
+				$found = 1;
 			}
 		}
+		last if $found == 1;
 	}
 # -- it's normal situation now when the object list is not used
 #	WarningOnce("unused object list \"$objListName\"", "unused:$objListName") if defined($item);
