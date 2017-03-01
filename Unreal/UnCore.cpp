@@ -239,6 +239,11 @@ FString::FString(const char* src)
 	}
 }
 
+FString::FString(const FString& Other)
+{
+	*this = Other;
+}
+
 FString& FString::operator=(const char* src)
 {
 	if (src == Data.GetData())

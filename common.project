@@ -6,7 +6,7 @@ CONSOLE    = 1
 OPTIMIZE   = size
 
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
-OLDCRT     = 1
+OLDCRT     = 1				# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
 
 
 #------------------------------------------------

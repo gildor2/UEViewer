@@ -1912,6 +1912,7 @@ public:
 	FString()
 	{}
 	FString(const char* src);
+	FString(const FString& Other);
 
 	FString& operator=(const char* src);
 	FORCEINLINE FString& operator=(const FString& src)
