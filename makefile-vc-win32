@@ -127,13 +127,13 @@ IOS_LIBS_FILES = \
 
 umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 SDL2.lib SDL2main.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/startup/crtexe2.obj ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 SDL2.lib SDL2main.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -D _USING_V110_SDK71_ -D OLDCRT -I ./libs/nvtt
+OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT -I ./libs/nvtt
 
 $(OUT)/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -144,7 +144,7 @@ $(OUT)/DirectDrawSurface.obj : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -GS- -GR-  -O1 -EHs- -Zi -Fd"$(OUT_1)/" -D _USING_V110_SDK71_ -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI
+OPT_MAIN = -GS- -GR-  -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI
 
 DEPENDS = \
 	Core/Core.h \
@@ -1251,7 +1251,7 @@ DEPENDS = \
 $(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
 	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI  -D _USING_V110_SDK71_ -D OLDCRT -D _WIN32 -D WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
 
-OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -D _USING_V110_SDK71_ -D OLDCRT
+OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT
 
 DEPENDS = \
 	libs/PowerVR/PVRTDecompress.h \
@@ -1321,7 +1321,7 @@ DEPENDS = \
 $(OUT)/texture.obj : ./libs/detex/texture.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/texture.obj" ./libs/detex/texture.cpp
 
-OPT_UE3_LIBS = -GS- -GR- -O1 -EHs- -Zi -Fd"$(OUT)/" -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
+OPT_UE3_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 
 DEPENDS = \
 	libs/include/lzo/lzo1x.h \
