@@ -645,7 +645,9 @@ sub AddObjectList {
 			# debugging
 			$opt = GetSrcOption("PDB", 0);
 			if ($opt >= 2) {
-				$options .= " -Zi -Fd\"$objdir/\"";	# enable debugging information; note: no final slash, so pdb will be names as objdir
+				# NOTE: using -Zi will not allow parallel compilation of multiple source files with VS2013+
+#??				$options .= " -Zi -Fd\"$objdir/\"";	# enable debugging information; note: no final slash, so pdb will be names as objdir
+				$options .= " -Z7";						# enable debugging information stored in OBJ file
 			}
 		} elsif ($COMPILER eq "GnuC") {
 			my $opt = GetSrcOption ("WARNLEVEL");
