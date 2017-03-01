@@ -173,6 +173,9 @@ detex
 
 Changes
 ~~~~~~~
+01.03.2017
+- updated SDL2 to 2.0.5
+
 16.02.2017
 - final UE4.15 support, initial 4.16 support
 - added some fix to avoid crash when loading corrupted PARAGON animations
