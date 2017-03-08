@@ -1,4 +1,4 @@
-/*----------------------------------------------------------------------------*/  
+/*----------------------------------------------------------------------------*/
 /**
  *	This confidential and proprietary software may be used only as
  *	authorised by a licensing agreement from ARM Limited
@@ -10,44 +10,44 @@
  *	by a licensing agreement from ARM Limited.
  *
  *	@brief	Percentile tables for ASTC.
- */ 
-/*----------------------------------------------------------------------------*/ 
+ */
+/*----------------------------------------------------------------------------*/
 
 extern const float percentile_table_4x4[2048];
-extern const float percentile_table_4x5[2048];
-extern const float percentile_table_4x6[2048];
-extern const float percentile_table_4x8[2048];
-extern const float percentile_table_4x10[2048];
-extern const float percentile_table_4x12[2048];
-extern const float percentile_table_5x4[2048];
-extern const float percentile_table_5x5[2048];
-extern const float percentile_table_5x6[2048];
-extern const float percentile_table_5x8[2048];
-extern const float percentile_table_5x10[2048];
-extern const float percentile_table_5x12[2048];
-extern const float percentile_table_6x4[2048];
-extern const float percentile_table_6x5[2048];
+//extern const float percentile_table_4x5[2048];
+//extern const float percentile_table_4x6[2048];
+//extern const float percentile_table_4x8[2048];
+//extern const float percentile_table_4x10[2048];
+//extern const float percentile_table_4x12[2048];
+//extern const float percentile_table_5x4[2048];
+//extern const float percentile_table_5x5[2048];
+//extern const float percentile_table_5x6[2048];
+//extern const float percentile_table_5x8[2048];
+//extern const float percentile_table_5x10[2048];
+//extern const float percentile_table_5x12[2048];
+//extern const float percentile_table_6x4[2048];
+//extern const float percentile_table_6x5[2048];
 extern const float percentile_table_6x6[2048];
-extern const float percentile_table_6x8[2048];
-extern const float percentile_table_6x10[2048];
-extern const float percentile_table_6x12[2048];
-extern const float percentile_table_8x4[2048];
-extern const float percentile_table_8x5[2048];
-extern const float percentile_table_8x6[2048];
+//extern const float percentile_table_6x8[2048];
+//extern const float percentile_table_6x10[2048];
+//extern const float percentile_table_6x12[2048];
+//extern const float percentile_table_8x4[2048];
+//extern const float percentile_table_8x5[2048];
+//extern const float percentile_table_8x6[2048];
 extern const float percentile_table_8x8[2048];
-extern const float percentile_table_8x10[2048];
-extern const float percentile_table_8x12[2048];
-extern const float percentile_table_10x4[2048];
-extern const float percentile_table_10x5[2048];
-extern const float percentile_table_10x6[2048];
-extern const float percentile_table_10x8[2048];
+//extern const float percentile_table_8x10[2048];
+//extern const float percentile_table_8x12[2048];
+//extern const float percentile_table_10x4[2048];
+//extern const float percentile_table_10x5[2048];
+//extern const float percentile_table_10x6[2048];
+//extern const float percentile_table_10x8[2048];
 extern const float percentile_table_10x10[2048];
-extern const float percentile_table_10x12[2048];
-extern const float percentile_table_12x4[2048];
-extern const float percentile_table_12x5[2048];
-extern const float percentile_table_12x6[2048];
-extern const float percentile_table_12x8[2048];
-extern const float percentile_table_12x10[2048];
+//extern const float percentile_table_10x12[2048];
+//extern const float percentile_table_12x4[2048];
+//extern const float percentile_table_12x5[2048];
+//extern const float percentile_table_12x6[2048];
+//extern const float percentile_table_12x8[2048];
+//extern const float percentile_table_12x10[2048];
 extern const float percentile_table_12x12[2048];
 
 
@@ -182,6 +182,7 @@ const float percentile_table_4x4[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
 
+#if 0
 const float percentile_table_4x5[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 	1.0000f, 1.0000f, 1.0000f, 0.8886f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
@@ -1884,6 +1885,7 @@ const float percentile_table_6x5[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
+#endif
 
 const float percentile_table_6x6[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.8106f, 0.8853f,
@@ -2016,6 +2018,7 @@ const float percentile_table_6x6[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
 
+#if 0
 const float percentile_table_6x8[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.7507f, 0.8312f, 1.0000f, 1.0000f, 0.9510f, 0.9872f,
 	1.0000f, 1.0000f, 1.0000f, 0.9960f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.7791f, 0.8374f, 0.8893f, 1.0000f, 1.0000f, 0.9809f, 0.9948f,
@@ -2801,6 +2804,7 @@ const float percentile_table_8x6[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
+#endif
 
 const float percentile_table_8x8[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.6539f, 0.8057f, 1.0000f, 1.0000f, 0.8190f, 0.8664f, 1.0000f, 1.0000f, 0.9665f, 0.9926f,
@@ -2933,6 +2937,7 @@ const float percentile_table_8x8[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
 
+#if 0
 const float percentile_table_8x10[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.8029f, 0.8183f, 1.0000f, 1.0000f, 0.9742f, 0.9767f, 1.0000f, 1.0000f, 0.9905f, 0.9983f,
 	1.0000f, 1.0000f, 1.0000f, 0.9980f, 1.0000f, 0.7921f, 0.8421f, 0.8718f, 1.0000f, 0.9775f, 0.9700f, 0.9587f, 1.0000f, 1.0000f, 0.9598f, 0.9960f,
@@ -3718,6 +3723,7 @@ const float percentile_table_10x8[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
+#endif
 
 const float percentile_table_10x10[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.9686f, 0.9633f, 1.0000f, 1.0000f, 0.9876f, 0.9703f, 1.0000f, 1.0000f, 0.9951f, 0.9984f,
@@ -3850,6 +3856,7 @@ const float percentile_table_10x10[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
 
+#if 0
 const float percentile_table_10x12[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.9716f, 0.9549f, 1.0000f, 1.0000f, 0.9881f, 0.9817f, 1.0000f, 1.0000f, 0.9984f, 0.9983f,
 	1.0000f, 1.0000f, 1.0000f, 0.9997f, 1.0000f, 0.9617f, 0.9697f, 0.9825f, 1.0000f, 0.9916f, 0.9941f, 0.9689f, 1.0000f, 1.0000f, 0.9980f, 0.9967f,
@@ -4635,6 +4642,7 @@ const float percentile_table_12x10[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f, 1.0000f,
 };
+#endif
 
 const float percentile_table_12x12[2048] = {
 	1.0000f, 1.0000f, 1.0000f, 1.0000f, 0.6459f, 1.0000f, 0.9751f, 0.9422f, 0.8309f, 1.0000f, 0.9931f, 0.9934f, 0.5189f, 1.0000f, 0.9984f, 0.9983f,
