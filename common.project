@@ -107,8 +107,9 @@ pop(INCLUDES)
 pop(DEFINES)
 
 
-sources(IOS_LIBS) = {
+sources(MOBILE_LIBS) = {
 	$R/libs/PowerVR/*.cpp
+	$R/libs/astc/*.cpp
 }
 LIBINCLUDES += $R/libs/PowerVR
 

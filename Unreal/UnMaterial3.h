@@ -296,7 +296,7 @@ _ENUM(EPixelFormat)
 	_E(PF_ASTC_10x10),
 	_E(PF_ASTC_12x12),
 #endif // UNREAL4
-#if THIEF4
+#if THIEF4 // || UNREAL4
 	_E(PF_BC7),
 #endif
 #if MASSEFF

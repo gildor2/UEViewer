@@ -166,6 +166,10 @@ PVRTexLib Library
   (c) Imagination Technologies Limited
   http://www.imgtec.com/powervr/insider/
 
+ASTC encoder
+  (c) ARM Limited and Contributors
+  https://github.com/ARM-software/astc-encoder
+
 detex
   (c) Harm Hanemaaijer
   https://github.com/hglm/detex
@@ -173,6 +177,9 @@ detex
 
 Changes
 ~~~~~~~
+08.03.2017
+- added ASTC texture format support
+
 01.03.2017
 - updated SDL2 to 2.0.5
 

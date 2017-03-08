@@ -10,6 +10,10 @@
 #	include <PVRTDecompress.h>
 #endif
 
+#if SUPPORT_ANDROID
+#	include "libs/astc/astc_codec_internals.h"
+#endif
+
 #include <detex.h>
 
 #if 0
@@ -42,30 +46,35 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 
 const CPixelFormatInfo PixelFormatInfo[] =
 {
-	// FourCC					BlockSizeX	BlockSizeY	BytesPerBlock	X360AlignX	X360AlignY	Name
-	{ 0,						1,			1,			1,				0,			0,			"P8"	},	// TPF_P8
-	{ 0,						1,			1,			1,				64,			64,			"G8"	},	// TPF_G8
+	// FourCC				BlockSizeX	BlockSizeY BytesPerBlock X360AlignX	X360AlignY	Name
+	{ 0,						1,			1,			1,			0,			0,			"P8"		},	// TPF_P8
+	{ 0,						1,			1,			1,			64,			64,			"G8"		},	// TPF_G8
 //	{																									},	// TPF_G16
-	{ 0,						1,			1,			3,				0,			0,			"RGB8"	},	// TPF_RGB8
-	{ 0,						1,			1,			4,				32,			32,			"RGBA8"	},	// TPF_RGBA8
-	{ 0,						1,			1,			4,				32,			32,			"BGRA8"	},	// TPF_BGRA8
-	{ BYTES4('D','X','T','1'),	4,			4,			8,				128,		128,		"DXT1"	},	// TPF_DXT1
-	{ BYTES4('D','X','T','3'),	4,			4,			16,				128,		128,		"DXT3"	},	// TPF_DXT3
-	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128,		"DXT5"	},	// TPF_DXT5
-	{ BYTES4('D','X','T','5'),	4,			4,			16,				128,		128,		"DXT5N"	},	// TPF_DXT5N
-	{ 0,						1,			1,			2,				64,			32,			"V8U8"	},	// TPF_V8U8
-	{ 0,						1,			1,			2,				64,			32,			"V8U8"	},	// TPF_V8U8_2
-	{ BYTES4('A','T','I','2'),	4,			4,			16,				0,			0,			"BC5"	},	// TPF_BC5
-	{ 0,						4,			4,			16,				0,			0,			"BC7"	},	// TPF_BC7
-	{ 0,						8,			1,			1,				0,			0,			"A1"	},	// TPF_A1
-	{ 0,						1,			1,			2,				0,			0,			"RGBA4"	},	// TPF_RGBA4
+	{ 0,						1,			1,			3,			0,			0,			"RGB8"		},	// TPF_RGB8
+	{ 0,						1,			1,			4,			32,			32,			"RGBA8"		},	// TPF_RGBA8
+	{ 0,						1,			1,			4,			32,			32,			"BGRA8"		},	// TPF_BGRA8
+	{ BYTES4('D','X','T','1'),	4,			4,			8,			128,		128,		"DXT1"		},	// TPF_DXT1
+	{ BYTES4('D','X','T','3'),	4,			4,			16,			128,		128,		"DXT3"		},	// TPF_DXT3
+	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,		"DXT5"		},	// TPF_DXT5
+	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,		"DXT5N"		},	// TPF_DXT5N
+	{ 0,						1,			1,			2,			64,			32,			"V8U8"		},	// TPF_V8U8
+	{ 0,						1,			1,			2,			64,			32,			"V8U8"		},	// TPF_V8U8_2
+	{ BYTES4('A','T','I','2'),	4,			4,			16,			0,			0,			"BC5"		},	// TPF_BC5
+	{ 0,						4,			4,			16,			0,			0,			"BC7"		},	// TPF_BC7
+	{ 0,						8,			1,			1,			0,			0,			"A1"		},	// TPF_A1
+	{ 0,						1,			1,			2,			0,			0,			"RGBA4"		},	// TPF_RGBA4
 #if SUPPORT_IPHONE
-	{ 0,						8,			4,			8,				0,			0,			"PVRTC2"},	// TPF_PVRTC2
-	{ 0,						4,			4,			8,				0,			0,			"PVRTC4"},	// TPF_PVRTC4
+	{ 0,						8,			4,			8,			0,			0,			"PVRTC2"	},	// TPF_PVRTC2
+	{ 0,						4,			4,			8,			0,			0,			"PVRTC4"	},	// TPF_PVRTC4
 #endif
 #if SUPPORT_ANDROID
-	{ 0,						4,			4,			8,				0,			0,			"ETC1"	},	// TPF_ETC1
-	{ 0,						4,			4,			8,				0,			0,			"ETC2"	},	// TPF_ETC2
+	{ 0,						4,			4,			8,			0,			0,			"ETC1"		},	// TPF_ETC1
+	{ 0,						4,			4,			8,			0,			0,			"ETC2"		},	// TPF_ETC2
+	{ 0,						4,			4,			16,			0,			0,			"ATC_4x4"	},	// TPF_ASTC_4x4
+	{ 0,						6,			6,			16,			0,			0,			"ATC_6x6"	},	// TPF_ASTC_6x6
+	{ 0,						8,			8,			16,			0,			0,			"ATC_8x8"	},	// TPF_ASTC_8x8
+	{ 0,						10,			10,			16,			0,			0,			"ATC_10x10"	},	// TPF_ASTC_10x10
+	{ 0,						12,			12,			16,			0,			0,			"ATC_12x12"	},	// TPF_ASTC_12x12
 #endif
 };
 
@@ -282,6 +291,48 @@ byte *CTextureData::Decompress(int MipLevel)
 		}
 		return dst;
 	#endif
+	case TPF_ASTC_4x4:
+	case TPF_ASTC_6x6:
+	case TPF_ASTC_8x8:
+	case TPF_ASTC_10x10:
+	case TPF_ASTC_12x12:
+		{
+			static bool initialized = false;
+			if (!initialized)
+			{
+				build_quantization_mode_table();
+				initialized = true;
+			}
+			int blockDim = PixelFormatInfo[Format].BlockSizeX;
+			assert(PixelFormatInfo[Format].BlockSizeY == blockDim);
+			int xBlocks = (USize + blockDim - 1) / blockDim;
+			int yBlocks = (VSize + blockDim - 1) / blockDim;
+			const int xdim = blockDim, ydim = blockDim, zdim = 1, z = 0;
+			const astc_decode_mode decode_mode = DECODE_LDR;
+			static const swizzlepattern swz_decode = { 0, 1, 2, 3 };
+			imageblock pb;
+
+			astc_codec_image* img = allocate_image(8 /*bitness*/, USize, VSize, 1 /*zsize*/, 0);
+			initialize_image(img);
+
+			for (int y = 0; y < yBlocks; y++)
+			{
+				for (int x = 0; x < xBlocks; x++)
+				{
+					int offset = ((y * xBlocks) + x) * 16;
+					const byte* bp = Data + offset;
+					physical_compressed_block pcb = *(physical_compressed_block *) bp;
+					symbolic_compressed_block scb;
+					physical_to_symbolic(xdim, ydim, zdim, pcb, &scb);
+					decompress_symbolic_block(decode_mode, xdim, ydim, zdim, x * xdim, y * ydim, z * zdim, &scb, &pb);
+					write_imageblock(img, &pb, xdim, ydim, zdim, x * xdim, y * ydim, z * zdim, swz_decode);
+				}
+			}
+
+			memcpy(dst, img->imagedata8[0][0], size);
+			destroy_image(img);
+		}
+		return dst;
 #endif // SUPPORT_ANDROID
 
 	case TPF_BC7:

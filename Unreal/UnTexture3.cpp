@@ -857,7 +857,17 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		intFormat = TPF_ETC1;
 //!!	else if (Format == PF_ETC2_RGB)		// GL_COMPRESSED_RGB8_ETC2
 //!!	else if (Format == PF_ETC2_RGBA)	// GL_COMPRESSED_RGBA8_ETC2_EAC
-#endif
+	else if (Format == PF_ASTC_4x4)
+		intFormat = TPF_ASTC_4x4;
+	else if (Format == PF_ASTC_6x6)
+		intFormat = TPF_ASTC_6x6;
+	else if (Format == PF_ASTC_8x8)
+		intFormat = TPF_ASTC_8x8;
+	else if (Format == PF_ASTC_10x10)
+		intFormat = TPF_ASTC_10x10;
+	else if (Format == PF_ASTC_12x12)
+		intFormat = TPF_ASTC_12x12;
+#endif // SUPPORT_ANDROID
 #endif // UNREAL4
 	else
 	{

@@ -109,7 +109,12 @@ enum ETexturePixelFormat
 #if SUPPORT_ANDROID
 	TPF_ETC1,
 	TPF_ETC2,
-#endif
+	TPF_ASTC_4x4,
+	TPF_ASTC_6x6,
+	TPF_ASTC_8x8,
+	TPF_ASTC_10x10,
+	TPF_ASTC_12x12,
+#endif // SUPPORT_ANDROID
 	TPF_MAX
 };
 
