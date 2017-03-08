@@ -63,6 +63,9 @@ struct CSkelMeshLod : public CBaseMeshLod
 {
 	CSkelMeshVertex			*Verts;
 
+	CSkelMeshLod()
+	:	Verts(NULL)
+	{}
 	~CSkelMeshLod()
 	{
 		if (Verts) appFree(Verts);
