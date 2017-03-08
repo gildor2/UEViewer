@@ -121,16 +121,33 @@ UE3_LIBS_FILES = \
 	$(OUT)/misc.o \
 	$(OUT)/texture.o
 
-IOS_LIBS_FILES = \
-	$(OUT)/PVRTDecompress.o
+MOBILE_LIBS_FILES = \
+	$(OUT)/PVRTDecompress.o \
+	$(OUT)/astc_block_sizes2.o \
+	$(OUT)/astc_color_unquantize.o \
+	$(OUT)/astc_decompress_symbolic.o \
+	$(OUT)/astc_image_load_store.o \
+	$(OUT)/astc_integer_sequence.o \
+	$(OUT)/astc_misc.o \
+	$(OUT)/astc_partition_tables.o \
+	$(OUT)/astc_percentile_tables.o \
+	$(OUT)/astc_quantization.o \
+	$(OUT)/astc_symbolic_physical.o \
+	$(OUT)/astc_weight_quant_xfer_tables.o \
+	$(OUT)/softfloat.o
 
-umodel : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES)
+umodel : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES)
 	@echo Creating executable "umodel" ...
-	$(LINK) -o umodel $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -shared-libgcc -lstdc++ -lm -lGL -ldl -lSDL2 -lSDL2main
+	$(LINK) -o umodel $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -shared-libgcc -lstdc++ -lm -lGL -ldl -lSDL2 -lSDL2main
 
 #------------------------------------------------------------------------------
 #	compiling source files
 #------------------------------------------------------------------------------
+
+OPT_MOBILE_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os
+
+$(OUT)/astc_percentile_tables.o : ./libs/astc/astc_percentile_tables.cpp
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_percentile_tables.o ./libs/astc/astc_percentile_tables.cpp
 
 OPT_NV_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -I ./libs/nvtt
 
@@ -1101,7 +1118,10 @@ DEPENDS_48 = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h \
-	Unreal/UnTextureNVTT.h
+	Unreal/UnTextureNVTT.h \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/vectypes.h
 
 $(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_48)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture.o Unreal/UnTexture.cpp
@@ -1244,79 +1264,124 @@ DEPENDS_57 = \
 $(OUT_1)/UnTextureNVTT.o : Unreal/UnTextureNVTT.cpp $(DEPENDS_57)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTextureNVTT.o Unreal/UnTextureNVTT.cpp
 
-OPT_IOS_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os
-
 DEPENDS_58 = \
 	libs/PowerVR/PVRTDecompress.h \
 	libs/PowerVR/PVRTGlobal.h \
 	libs/PowerVR/PVRTTexture.h
 
 $(OUT)/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_58)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/PVRTDecompress.o ./libs/PowerVR/PVRTDecompress.cpp
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/PVRTDecompress.o ./libs/PowerVR/PVRTDecompress.cpp
 
 DEPENDS_59 = \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/softfloat.h \
+	libs/astc/vectypes.h
+
+$(OUT)/astc_color_unquantize.o : ./libs/astc/astc_color_unquantize.cpp $(DEPENDS_59)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_color_unquantize.o ./libs/astc/astc_color_unquantize.cpp
+
+$(OUT)/astc_decompress_symbolic.o : ./libs/astc/astc_decompress_symbolic.cpp $(DEPENDS_59)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_decompress_symbolic.o ./libs/astc/astc_decompress_symbolic.cpp
+
+$(OUT)/astc_image_load_store.o : ./libs/astc/astc_image_load_store.cpp $(DEPENDS_59)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_image_load_store.o ./libs/astc/astc_image_load_store.cpp
+
+DEPENDS_60 = \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/vectypes.h
+
+$(OUT)/astc_block_sizes2.o : ./libs/astc/astc_block_sizes2.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_block_sizes2.o ./libs/astc/astc_block_sizes2.cpp
+
+$(OUT)/astc_integer_sequence.o : ./libs/astc/astc_integer_sequence.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_integer_sequence.o ./libs/astc/astc_integer_sequence.cpp
+
+$(OUT)/astc_misc.o : ./libs/astc/astc_misc.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_misc.o ./libs/astc/astc_misc.cpp
+
+$(OUT)/astc_partition_tables.o : ./libs/astc/astc_partition_tables.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_partition_tables.o ./libs/astc/astc_partition_tables.cpp
+
+$(OUT)/astc_quantization.o : ./libs/astc/astc_quantization.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_quantization.o ./libs/astc/astc_quantization.cpp
+
+$(OUT)/astc_symbolic_physical.o : ./libs/astc/astc_symbolic_physical.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_symbolic_physical.o ./libs/astc/astc_symbolic_physical.cpp
+
+$(OUT)/astc_weight_quant_xfer_tables.o : ./libs/astc/astc_weight_quant_xfer_tables.cpp $(DEPENDS_60)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_weight_quant_xfer_tables.o ./libs/astc/astc_weight_quant_xfer_tables.cpp
+
+DEPENDS_61 = \
+	libs/astc/softfloat.h
+
+$(OUT)/softfloat.o : ./libs/astc/softfloat.cpp $(DEPENDS_61)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/softfloat.o ./libs/astc/softfloat.cpp
+
+DEPENDS_62 = \
 	libs/detex/bits.h \
 	libs/detex/bptc-tables.h \
 	libs/detex/detex.h
 
-$(OUT)/bptc-tables.o : ./libs/detex/bptc-tables.cpp $(DEPENDS_59)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/bptc-tables.o ./libs/detex/bptc-tables.cpp
+$(OUT)/bptc-tables.o : ./libs/detex/bptc-tables.cpp $(DEPENDS_62)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/bptc-tables.o ./libs/detex/bptc-tables.cpp
 
-$(OUT)/decompress-bptc.o : ./libs/detex/decompress-bptc.cpp $(DEPENDS_59)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/decompress-bptc.o ./libs/detex/decompress-bptc.cpp
+$(OUT)/decompress-bptc.o : ./libs/detex/decompress-bptc.cpp $(DEPENDS_62)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-bptc.o ./libs/detex/decompress-bptc.cpp
 
-DEPENDS_60 = \
+DEPENDS_63 = \
 	libs/detex/bits.h \
 	libs/detex/detex.h
 
-$(OUT)/bits.o : ./libs/detex/bits.cpp $(DEPENDS_60)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/bits.o ./libs/detex/bits.cpp
+$(OUT)/bits.o : ./libs/detex/bits.cpp $(DEPENDS_63)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/bits.o ./libs/detex/bits.cpp
 
-DEPENDS_61 = \
+DEPENDS_64 = \
 	libs/detex/detex.h
 
-$(OUT)/clamp.o : ./libs/detex/clamp.cpp $(DEPENDS_61)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/clamp.o ./libs/detex/clamp.cpp
+$(OUT)/clamp.o : ./libs/detex/clamp.cpp $(DEPENDS_64)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/clamp.o ./libs/detex/clamp.cpp
 
-$(OUT)/decompress-eac.o : ./libs/detex/decompress-eac.cpp $(DEPENDS_61)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/decompress-eac.o ./libs/detex/decompress-eac.cpp
+$(OUT)/decompress-eac.o : ./libs/detex/decompress-eac.cpp $(DEPENDS_64)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-eac.o ./libs/detex/decompress-eac.cpp
 
-$(OUT)/decompress-etc.o : ./libs/detex/decompress-etc.cpp $(DEPENDS_61)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/decompress-etc.o ./libs/detex/decompress-etc.cpp
+$(OUT)/decompress-etc.o : ./libs/detex/decompress-etc.cpp $(DEPENDS_64)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-etc.o ./libs/detex/decompress-etc.cpp
 
-$(OUT)/misc.o : ./libs/detex/misc.cpp $(DEPENDS_61)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/misc.o ./libs/detex/misc.cpp
+$(OUT)/misc.o : ./libs/detex/misc.cpp $(DEPENDS_64)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/misc.o ./libs/detex/misc.cpp
 
-DEPENDS_62 = \
+DEPENDS_65 = \
 	libs/detex/detex.h \
 	libs/detex/file-info.h \
 	libs/detex/misc.h
 
-$(OUT)/dds.o : ./libs/detex/dds.cpp $(DEPENDS_62)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/dds.o ./libs/detex/dds.cpp
+$(OUT)/dds.o : ./libs/detex/dds.cpp $(DEPENDS_65)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/dds.o ./libs/detex/dds.cpp
 
-$(OUT)/file-info.o : ./libs/detex/file-info.cpp $(DEPENDS_62)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/file-info.o ./libs/detex/file-info.cpp
+$(OUT)/file-info.o : ./libs/detex/file-info.cpp $(DEPENDS_65)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/file-info.o ./libs/detex/file-info.cpp
 
-DEPENDS_63 = \
+DEPENDS_66 = \
 	libs/detex/detex.h \
 	libs/detex/half-float.h \
 	libs/detex/hdr.h \
 	libs/detex/misc.h
 
-$(OUT)/convert.o : ./libs/detex/convert.cpp $(DEPENDS_63)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/convert.o ./libs/detex/convert.cpp
+$(OUT)/convert.o : ./libs/detex/convert.cpp $(DEPENDS_66)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/convert.o ./libs/detex/convert.cpp
 
-DEPENDS_64 = \
+DEPENDS_67 = \
 	libs/detex/detex.h \
 	libs/detex/misc.h
 
-$(OUT)/texture.o : ./libs/detex/texture.cpp $(DEPENDS_64)
-	$(CPP) $(OPT_IOS_LIBS) -o $(OUT)/texture.o ./libs/detex/texture.cpp
+$(OUT)/texture.o : ./libs/detex/texture.cpp $(DEPENDS_67)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/texture.o ./libs/detex/texture.cpp
 
 OPT_UE3_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 
-DEPENDS_65 = \
+DEPENDS_68 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
@@ -1328,10 +1393,10 @@ DEPENDS_65 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_65)
+$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_68)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
-DEPENDS_66 = \
+DEPENDS_69 = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/lzo/lzo_conf.h \
@@ -1340,34 +1405,34 @@ DEPENDS_66 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_66)
+$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_69)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo_init.o ./libs/lzo/lzo_init.c
 
-DEPENDS_67 = \
+DEPENDS_70 = \
 	libs/mspack/readbits.h \
 	libs/mspack/readhuff.h \
 	libs/mspack/system.h
 
-$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_67)
+$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_70)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzxd.o ./libs/mspack/lzxd.c
 
-DEPENDS_68 = \
+DEPENDS_71 = \
 	libs/nvtt/nvimage/BlockDXT.h \
 	libs/nvtt/nvimage/ColorBlock.h
 
-$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_68)
+$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_71)
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
-DEPENDS_69 = \
+DEPENDS_72 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_69)
+$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_72)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_70 = \
+DEPENDS_73 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -1376,10 +1441,10 @@ DEPENDS_70 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_70)
+$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_73)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_71 = \
+DEPENDS_74 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -1387,26 +1452,26 @@ DEPENDS_71 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_71)
+$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_74)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_72 = \
+DEPENDS_75 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_72)
+$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_75)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_73 = \
+DEPENDS_76 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_73)
+$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_76)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/adler32.o ./libs/zlib/adler32.c
 
-$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_73)
+$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_76)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

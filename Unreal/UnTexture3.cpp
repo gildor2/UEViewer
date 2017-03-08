@@ -975,6 +975,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 #endif // SUPPORT_ANDROID
 
 	TexData.Format = intFormat;
+	TexData.isNormalmap = (CompressionSettings == TC_Normalmap);
 
 #if SUPPORT_XBOX360
 	if (TexData.Platform == PLATFORM_XBOX360)

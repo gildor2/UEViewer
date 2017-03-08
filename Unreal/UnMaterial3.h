@@ -63,6 +63,54 @@ _ENUM(ETextureSourceFormat)
 	_E(TSF_RGBE8),
 };
 
+enum ETextureCompressionSettings
+{
+	TC_Default,
+	TC_Normalmap,
+	TC_Masks,					// UE4
+	TC_Grayscale,
+	TC_Displacementmap,
+	TC_VectorDisplacementmap,
+	TC_HDR,						// UE4
+	TC_HighDynamicRange = TC_HDR,
+	TC_EditorIcon,				// UE4
+	TC_Alpha,					// UE4
+	TC_DistanceFieldFont,		// UE4
+	TC_HDR_Compressed,			// UE4
+	TC_BC7,						// UE4
+
+	// The following enum values are for UE3
+	TC_NormalmapAlpha,
+	TC_OneBitAlpha,
+	TC_NormalmapUncompressed,
+	TC_NormalmapBC5,
+	TC_OneBitMonochrome,
+	TC_SimpleLightmapModification,
+};
+
+_ENUM(ETextureCompressionSettings)
+{
+	_E(TC_Default),
+	_E(TC_Normalmap),
+	_E(TC_Masks),
+	_E(TC_Grayscale),
+	_E(TC_Displacementmap),
+	_E(TC_VectorDisplacementmap),
+	_E(TC_HDR),
+	_E(TC_HighDynamicRange),
+	_E(TC_EditorIcon),
+	_E(TC_Alpha),
+	_E(TC_DistanceFieldFont),
+	_E(TC_HDR_Compressed),
+	_E(TC_BC7),
+	_E(TC_NormalmapAlpha),
+	_E(TC_OneBitAlpha),
+	_E(TC_NormalmapUncompressed),
+	_E(TC_NormalmapBC5),
+	_E(TC_OneBitMonochrome),
+	_E(TC_SimpleLightmapModification),
+};
+
 struct FTextureSource
 {
 	DECLARE_STRUCT(FTextureSource)
@@ -95,15 +143,18 @@ public:
 	float			UnpackMax[4];
 	FByteBulkData	SourceArt;
 	FTextureSource	Source;
+	ETextureCompressionSettings CompressionSettings;
 
 	UTexture3()
 	{
 		UnpackMax[0] = UnpackMax[1] = UnpackMax[2] = UnpackMax[3] = 1.0f;
+		CompressionSettings = TC_Default;
 	}
 
 	BEGIN_PROP_TABLE
 		PROP_FLOAT(UnpackMin)
 		PROP_FLOAT(UnpackMax)
+		PROP_ENUM2(CompressionSettings, ETextureCompressionSettings)
 #if UNREAL4
 		PROP_STRUC(Source, FTextureSource)
 		PROP_DROP(AssetImportData)
@@ -122,7 +173,6 @@ public:
 		PROP_DROP(bPreserveBorderG)
 		PROP_DROP(bPreserveBorderB)
 		PROP_DROP(bPreserveBorderA)
-		PROP_DROP(CompressionSettings)
 		PROP_DROP(Filter)
 		PROP_DROP(LODGroup)
 		PROP_DROP(LODBias)
@@ -1026,8 +1076,9 @@ public:
 #define REGISTER_MATERIAL_ENUMS_U3		\
 	REGISTER_ENUM(EPixelFormat)			\
 	REGISTER_ENUM(ETextureAddress)		\
+	REGISTER_ENUM(ETextureCompressionSettings) \
 	REGISTER_ENUM(EBlendMode)			\
-	REGISTER_ENUM(EMobileSpecularMask)
+	REGISTER_ENUM(EMobileSpecularMask)	\
 
 #define REGISTER_MATERIAL_CLASSES_U4	\
 	REGISTER_CLASS(FTextureSource)		\

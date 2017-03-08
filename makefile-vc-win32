@@ -122,16 +122,33 @@ UE3_LIBS_FILES = \
 	$(OUT)/misc.obj \
 	$(OUT)/texture.obj
 
-IOS_LIBS_FILES = \
-	$(OUT)/PVRTDecompress.obj
+MOBILE_LIBS_FILES = \
+	$(OUT)/PVRTDecompress.obj \
+	$(OUT)/astc_block_sizes2.obj \
+	$(OUT)/astc_color_unquantize.obj \
+	$(OUT)/astc_decompress_symbolic.obj \
+	$(OUT)/astc_image_load_store.obj \
+	$(OUT)/astc_integer_sequence.obj \
+	$(OUT)/astc_misc.obj \
+	$(OUT)/astc_partition_tables.obj \
+	$(OUT)/astc_percentile_tables.obj \
+	$(OUT)/astc_quantization.obj \
+	$(OUT)/astc_symbolic_physical.obj \
+	$(OUT)/astc_weight_quant_xfer_tables.obj \
+	$(OUT)/softfloat.obj
 
-umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES)
+umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 SDL2.lib SDL2main.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(IOS_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 SDL2.lib SDL2main.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
 #------------------------------------------------------------------------------
+
+OPT_MOBILE_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT
+
+$(OUT)/astc_percentile_tables.obj : ./libs/astc/astc_percentile_tables.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_percentile_tables.obj" ./libs/astc/astc_percentile_tables.cpp
 
 OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT -I ./libs/nvtt
 
@@ -1102,7 +1119,10 @@ DEPENDS = \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h \
-	Unreal/UnTextureNVTT.h
+	Unreal/UnTextureNVTT.h \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/vectypes.h
 
 $(OUT_1)/UnTexture.obj : Unreal/UnTexture.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture.obj" Unreal/UnTexture.cpp
@@ -1251,15 +1271,60 @@ DEPENDS = \
 $(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
 	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI  -D _USING_V110_SDK71_ -D OLDCRT -D _WIN32 -D WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
 
-OPT_IOS_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT
-
 DEPENDS = \
 	libs/PowerVR/PVRTDecompress.h \
 	libs/PowerVR/PVRTGlobal.h \
 	libs/PowerVR/PVRTTexture.h
 
 $(OUT)/PVRTDecompress.obj : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/PVRTDecompress.obj" ./libs/PowerVR/PVRTDecompress.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/PVRTDecompress.obj" ./libs/PowerVR/PVRTDecompress.cpp
+
+DEPENDS = \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/softfloat.h \
+	libs/astc/vectypes.h
+
+$(OUT)/astc_color_unquantize.obj : ./libs/astc/astc_color_unquantize.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_color_unquantize.obj" ./libs/astc/astc_color_unquantize.cpp
+
+$(OUT)/astc_decompress_symbolic.obj : ./libs/astc/astc_decompress_symbolic.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_decompress_symbolic.obj" ./libs/astc/astc_decompress_symbolic.cpp
+
+$(OUT)/astc_image_load_store.obj : ./libs/astc/astc_image_load_store.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_image_load_store.obj" ./libs/astc/astc_image_load_store.cpp
+
+DEPENDS = \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/vectypes.h
+
+$(OUT)/astc_block_sizes2.obj : ./libs/astc/astc_block_sizes2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_block_sizes2.obj" ./libs/astc/astc_block_sizes2.cpp
+
+$(OUT)/astc_integer_sequence.obj : ./libs/astc/astc_integer_sequence.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_integer_sequence.obj" ./libs/astc/astc_integer_sequence.cpp
+
+$(OUT)/astc_misc.obj : ./libs/astc/astc_misc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_misc.obj" ./libs/astc/astc_misc.cpp
+
+$(OUT)/astc_partition_tables.obj : ./libs/astc/astc_partition_tables.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_partition_tables.obj" ./libs/astc/astc_partition_tables.cpp
+
+$(OUT)/astc_quantization.obj : ./libs/astc/astc_quantization.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_quantization.obj" ./libs/astc/astc_quantization.cpp
+
+$(OUT)/astc_symbolic_physical.obj : ./libs/astc/astc_symbolic_physical.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_symbolic_physical.obj" ./libs/astc/astc_symbolic_physical.cpp
+
+$(OUT)/astc_weight_quant_xfer_tables.obj : ./libs/astc/astc_weight_quant_xfer_tables.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_weight_quant_xfer_tables.obj" ./libs/astc/astc_weight_quant_xfer_tables.cpp
+
+DEPENDS = \
+	libs/astc/softfloat.h
+
+$(OUT)/softfloat.obj : ./libs/astc/softfloat.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/softfloat.obj" ./libs/astc/softfloat.cpp
 
 DEPENDS = \
 	libs/detex/bits.h \
@@ -1267,32 +1332,32 @@ DEPENDS = \
 	libs/detex/detex.h
 
 $(OUT)/bptc-tables.obj : ./libs/detex/bptc-tables.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/bptc-tables.obj" ./libs/detex/bptc-tables.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/bptc-tables.obj" ./libs/detex/bptc-tables.cpp
 
 $(OUT)/decompress-bptc.obj : ./libs/detex/decompress-bptc.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/decompress-bptc.obj" ./libs/detex/decompress-bptc.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-bptc.obj" ./libs/detex/decompress-bptc.cpp
 
 DEPENDS = \
 	libs/detex/bits.h \
 	libs/detex/detex.h
 
 $(OUT)/bits.obj : ./libs/detex/bits.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/bits.obj" ./libs/detex/bits.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/bits.obj" ./libs/detex/bits.cpp
 
 DEPENDS = \
 	libs/detex/detex.h
 
 $(OUT)/clamp.obj : ./libs/detex/clamp.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/clamp.obj" ./libs/detex/clamp.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/clamp.obj" ./libs/detex/clamp.cpp
 
 $(OUT)/decompress-eac.obj : ./libs/detex/decompress-eac.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/decompress-eac.obj" ./libs/detex/decompress-eac.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-eac.obj" ./libs/detex/decompress-eac.cpp
 
 $(OUT)/decompress-etc.obj : ./libs/detex/decompress-etc.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/decompress-etc.obj" ./libs/detex/decompress-etc.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-etc.obj" ./libs/detex/decompress-etc.cpp
 
 $(OUT)/misc.obj : ./libs/detex/misc.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/misc.obj" ./libs/detex/misc.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/misc.obj" ./libs/detex/misc.cpp
 
 DEPENDS = \
 	libs/detex/detex.h \
@@ -1300,10 +1365,10 @@ DEPENDS = \
 	libs/detex/misc.h
 
 $(OUT)/dds.obj : ./libs/detex/dds.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/dds.obj" ./libs/detex/dds.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/dds.obj" ./libs/detex/dds.cpp
 
 $(OUT)/file-info.obj : ./libs/detex/file-info.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/file-info.obj" ./libs/detex/file-info.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/file-info.obj" ./libs/detex/file-info.cpp
 
 DEPENDS = \
 	libs/detex/detex.h \
@@ -1312,14 +1377,14 @@ DEPENDS = \
 	libs/detex/misc.h
 
 $(OUT)/convert.obj : ./libs/detex/convert.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/convert.obj" ./libs/detex/convert.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/convert.obj" ./libs/detex/convert.cpp
 
 DEPENDS = \
 	libs/detex/detex.h \
 	libs/detex/misc.h
 
 $(OUT)/texture.obj : ./libs/detex/texture.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_IOS_LIBS) -Fo"$(OUT)/texture.obj" ./libs/detex/texture.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/texture.obj" ./libs/detex/texture.cpp
 
 OPT_UE3_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 

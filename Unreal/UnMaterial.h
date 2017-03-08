@@ -166,6 +166,7 @@ struct CTextureData
 	int						Platform;
 	const char				*OriginalFormatName;	// string value from typeinfo
 	int						OriginalFormatEnum;		// ETextureFormat or EPixelFormat
+	bool					isNormalmap;
 	const UObject			*Obj;					// for error reporting
 	const UPalette			*Palette;				// for TPF_P8
 

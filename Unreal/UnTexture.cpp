@@ -232,7 +232,7 @@ byte *CTextureData::Decompress(int MipLevel)
 				float vf = (v - offset) / 255.0f * 2 - 1;
 				float t  = 1.0f - uf * uf - vf * vf;
 				if (t >= 0)
-					d[2] = 255 - 255 * appFloor(sqrt(t));
+					d[2] = 255 - 255 * appFloor(sqrt(t));	//!! TODO: check for correct function here - should be (t+1.0)*127.5, at least for 'offset==0'
 				else
 					d[2] = 255;
 				d[3] = 255;
@@ -330,6 +330,27 @@ byte *CTextureData::Decompress(int MipLevel)
 			}
 
 			memcpy(dst, img->imagedata8[0][0], size);
+
+			if (isNormalmap)
+			{
+				// UE4 drops blue channel for normal maps before encoding, restore it
+				byte *d = dst;
+				for (int i = 0; i < USize * VSize; i++)
+				{
+					byte u = d[0];
+					byte v = d[1];
+					assert(d[2] == 0);
+					float uf = u / 255.0f * 2 - 1;
+					float vf = v / 255.0f * 2 - 1;
+					float t  = 1.0f - uf * uf - vf * vf;
+					if (t >= 0)
+						d[2] = appFloor((t + 1.0f) * 127.5f);
+					else
+						d[2] = 255;
+					d += 4;
+				}
+			}
+
 			destroy_image(img);
 		}
 		return dst;
