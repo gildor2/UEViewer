@@ -38,14 +38,13 @@ PLATFORM="vc-win32"
 #PLATFORM="mingw32" - not implemented yet
 
 # force PLATFORM=linux under Linux OS
-#?? check this, when cross-compile under wine
 [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
 #[ "$PLATFORM" == "linux" ] && PLATFORM="linux64"
 
 # allow platform overriding from command line
 [ "$1" ] && PLATFORM=$1
 
-export vc_ver=10
+export vc_ver=2010
 
 [ "$project" ] || project="UmodelTool/umodel"		# setup default prohect name
 [ "$root"    ] || root="."

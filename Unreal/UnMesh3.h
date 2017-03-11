@@ -221,6 +221,7 @@ struct FRawAnimSequenceTrack
 
 	friend FArchive& operator<<(FArchive &Ar, FRawAnimSequenceTrack &T)
 	{
+		guard(FRawAnimSequenceTrack<<);
 #if UNREAL4
 		if (Ar.Game >= GAME_UE4)
 		{
@@ -243,6 +244,7 @@ struct FRawAnimSequenceTrack
 			return Ar;
 		}
 		return Ar << T.PosKeys << T.RotKeys << T.KeyTimes;
+		unguard;
 	}
 };
 

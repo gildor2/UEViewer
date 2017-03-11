@@ -1801,6 +1801,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		DIFFUSE (appStristr(Name, "_DI"), 20);
 //		DIFFUSE (appStristr(Name, "_MA"), 8 );		// The Last Remnant; low priority
 		DIFFUSE (appStristr(Name, "_D" ), 11);
+		DIFFUSE (appStristr(Name, "Albedo"), 19);
 		DIFFUSE (!stricmp(Name + len - 2, "_C"), 10);
 		DIFFUSE (!stricmp(Name + len - 3, "_CM"), 12);
 		NORMAL  (!stricmp(Name + len - 2, "_N"), 20);

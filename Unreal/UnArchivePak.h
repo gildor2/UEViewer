@@ -87,7 +87,6 @@ struct FPakEntry
 			if (P.CompressionMethod != 0)
 				Ar << P.CompressionBlocks;
 			Ar << P.bEncrypted << P.CompressionBlockSize;
-//			if (P.bEncrypted) appError("Encrypted PAKs are not supported");
 		}
 
 		P.StructSize = Ar.Tell64() - StartOffset;
@@ -268,6 +267,7 @@ public:
 			*Reader << E;
 			if (E.bEncrypted)
 			{
+//				appPrintf("Encrypted file: %s\n", *Filename);
 				numEncryptedFiles++;
 			}
 		}
