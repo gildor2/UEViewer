@@ -641,6 +641,39 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	UAnimSequence
 -----------------------------------------------------------------------------*/
 
+// PostSerialize() adds some serialization logic to data which were serialized as properties
+
+void FAnimCurveBase::PostSerialize(FArchive& Ar)
+{
+	if (FFrameworkObjectVersion::Get(Ar) < FFrameworkObjectVersion::SmartNameRefactor)
+	{
+		if (Ar.ArVer >= VER_UE4_SKELETON_ADD_SMARTNAMES)
+		{
+			uint16 CurveUid;			// SmartName::UID_Type == uint16 (SmartName is a namespace)
+			Ar << CurveUid;
+		}
+	}
+}
+
+void FRawCurveTracks::PostSerialize(FArchive& Ar)
+{
+	for (int i = 0; i < FloatCurves.Num(); i++)
+	{
+		FloatCurves[i].PostSerialize(Ar);
+	}
+	//!! non-cooked assets also may have TransformCurves
+}
+
+void UAnimSequenceBase::Serialize(FArchive& Ar)
+{
+	guard(UAnimSequenceBase::Serialize);
+
+	Super::Serialize(Ar);
+	RawCurveData.PostSerialize(Ar);		// useful only between VER_UE4_SKELETON_ADD_SMARTNAMES and FFrameworkObjectVersion::SmartNameRefactor
+
+	unguard;
+}
+
 void UAnimSequence4::Serialize(FArchive& Ar)
 {
 	guard(UAnimSequence4::Serialize);

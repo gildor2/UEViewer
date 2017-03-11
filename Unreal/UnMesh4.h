@@ -341,18 +341,58 @@ struct FTrackToSkeletonMap
 };
 
 
+struct FRichCurve // : public FIndexedCurve
+{
+	DECLARE_STRUCT(FRichCurve)
+
+	int						Dummy;	// just to make non-empty structure
+
+	BEGIN_PROP_TABLE
+		PROP_DROP(PreInfinityExtrap)
+		PROP_DROP(PostInfinityExtrap)
+		PROP_DROP(DefaultValue)
+		PROP_DROP(Keys)
+	END_PROP_TABLE
+};
+
+
+struct FAnimCurveBase
+{
+	DECLARE_STRUCT(FAnimCurveBase);
+
+	int						CurveTypeFlags;
+
+	BEGIN_PROP_TABLE
+		PROP_DROP(Name)			// FSmartName
+		PROP_DROP(LastObservedName)
+		PROP_INT(CurveTypeFlags)
+	END_PROP_TABLE
+
+	void PostSerialize(FArchive& Ar);
+};
+
+
+
+struct FFloatCurve : public FAnimCurveBase
+{
+	DECLARE_STRUCT2(FFloatCurve, FAnimCurveBase)
+
+	FRichCurve				FloatCurve;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(FloatCurve, FRichCurve)
+	END_PROP_TABLE
+};
+
+
 struct FRawCurveTracks
 {
 	DECLARE_STRUCT(FRawCurveTracks);
 
-//	TArray<FFloatCurve>		FloatCurves;
+	TArray<FFloatCurve>		FloatCurves;
 
 	BEGIN_PROP_TABLE
-	#if 1
-		PROP_DROP(FloatCurves)	// remove when implement float curves
-	#else
 		PROP_ARRAY(FloatCurves, FFloatCurve)
-	#endif
 	END_PROP_TABLE
 
 	friend FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T)
@@ -363,6 +403,8 @@ struct FRawCurveTracks
 		return Ar;
 		unguard;
 	}
+
+	void PostSerialize(FArchive& Ar);
 };
 
 
@@ -394,7 +436,13 @@ class UAnimSequenceBase : public UAnimationAsset
 {
 	DECLARE_CLASS(UAnimSequenceBase, UAnimationAsset);
 public:
-//	virtual void Serialize(FArchive& Ar) - almost empty implementation
+	FRawCurveTracks			RawCurveData;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(RawCurveData, FRawCurveTracks)
+	END_PROP_TABLE
+
+	virtual void Serialize(FArchive& Ar);
 };
 
 
@@ -462,6 +510,8 @@ public:
 	REGISTER_CLASS(FStaticMeshSourceModel) \
 	REGISTER_CLASS(FCompressedOffsetData) \
 	REGISTER_CLASS(FTrackToSkeletonMap) \
+	REGISTER_CLASS(FRichCurve) \
+	REGISTER_CLASS(FFloatCurve) \
 	REGISTER_CLASS(FRawCurveTracks) \
 	REGISTER_CLASS_ALIAS(UAnimSequence4, UAnimSequence)
 
