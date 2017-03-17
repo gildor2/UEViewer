@@ -170,7 +170,7 @@ static void RegisterClasses(int game)
 	{
 		RegisterUnrealClasses2();
 	}
-	else if (game < GAME_UE4)
+	else if (game < GAME_UE4_BASE)
 	{
 		RegisterUnrealClasses3();
 		RegisterUnreal3rdPartyClasses();

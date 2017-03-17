@@ -274,7 +274,7 @@ FArchive& SerializeBulkArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 	guard(SerializeBulkArray);
 	assert(Ar.IsLoading);
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4) goto new_ver;
+	if (Ar.Game >= GAME_UE4_BASE) goto new_ver;
 #endif
 #if A51
 	if (Ar.Game == GAME_A51 && Ar.ArVer >= 376) goto new_ver;	// partially upgraded old engine
@@ -322,7 +322,7 @@ void SkipBulkArrayData(FArchive &Ar, int Size)
 	// from SerializeBulkArray(), or place it to separate function like
 	// IsNewBulkArrayFormat(Ar).
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4) goto new_ver;
+	if (Ar.Game >= GAME_UE4_BASE) goto new_ver;
 #endif
 	if (Ar.ArVer >= 453)
 	{
@@ -850,7 +850,7 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
 #endif // MKVSDC
 
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 	int64_offsets:
 		// UE4 has 64-bit values here
@@ -890,7 +890,7 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 #endif // MKVSDC
 
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 	int64_offsets:
 		// Tag and BlockSize are really FCompressedChunkBlock, which has 64-bit integers here.
@@ -971,7 +971,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 	guard(FByteBulkData::SerializeHeader);
 
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		guard(Bulk4);
 
@@ -1110,7 +1110,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 #if UNREAL4
 	// Unreal Engine 4 code
 
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
 		{
@@ -1198,7 +1198,7 @@ void FByteBulkData::Skip(FArchive &Ar)
 	}
 
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		if (BulkDataFlags & (BULKDATA_PayloadInSeperateFile | BULKDATA_PayloadAtEndOfFile))
 		{
@@ -1230,7 +1230,7 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 
 	// serialize data block
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		if (!Ar.IsCompressed()) goto serialize_separate_data;
 

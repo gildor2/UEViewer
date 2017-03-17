@@ -177,6 +177,9 @@ detex
 
 Changes
 ~~~~~~~
+17.03.2017
+- changed support for UE4 game tags, cleaned up list of UE4 engine versions from -help and -taglist options
+
 08.03.2017
 - added ASTC texture format support
 

@@ -71,7 +71,7 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 		return;
 	}
 #if UNREAL4
-	if (Package != NULL && Package->Game >= GAME_UE4)
+	if (Package != NULL && Package->Game >= GAME_UE4_BASE)
 	{
 		// UE4 has full package path in its name, use it
 		appStrncpyz(buf, Package->Filename, bufSize);
@@ -178,7 +178,7 @@ void UObject::EndLoad()
 		LoadedObjects.Add(Obj);
 
 #if UNREAL4
-	#define UNVERS_STR		(Package->Game >= GAME_UE4 && Package->Summary.IsUnversioned) ? " (unversioned)" : ""
+	#define UNVERS_STR		(Package->Game >= GAME_UE4_BASE && Package->Summary.IsUnversioned) ? " (unversioned)" : ""
 #else
 	#define UNVERS_STR		""
 #endif
@@ -234,7 +234,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 		STRUC_TYPE(FLinearColor)
 	}
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		/// reference: CureUObject/Classes/Object.h
 		/// objects with native serializer has "atomic" or "immutable" mark
@@ -416,7 +416,7 @@ struct FPropertyTag
 			return Ar;
 
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4)
+		if (Ar.Game >= GAME_UE4_BASE)
 		{
 			FName PropType;
 			Ar << PropType << Tag.DataSize << Tag.ArrayIndex;
@@ -786,7 +786,7 @@ void UObject::Serialize(FArchive &Ar)
 #endif
 
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		if (Ar.ArVer < VER_UE4_REMOVE_NET_INDEX)
 			goto net_index;
@@ -839,7 +839,7 @@ no_net_index:
 	Type->SerializeProps(Ar, this);
 
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		int bSerializeGuid;
 		Ar << bSerializeGuid;
@@ -1193,7 +1193,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 						Ar << AR_INDEX(DataCount);
 					}
 #if UNREAL4
-					if (Ar.Engine() >= GAME_UE4 && Ar.ArVer >= VER_UE4_INNER_ARRAY_TAG_INFO)
+					if (Ar.Engine() >= GAME_UE4_BASE && Ar.ArVer >= VER_UE4_INNER_ARRAY_TAG_INFO)
 					{
 						// Serialize InnerTag, used for some verification
 						FPropertyTag InnerTag;

@@ -235,7 +235,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 			{
 				reader = new FFileReader(FullName);
 				if (!reader) return true;
-				reader->Game = GAME_UE4;
+				reader->Game = GAME_UE4_BASE;
 				vfs = new FPakVFS(FullName);
 				//!! detect game by file name
 			}

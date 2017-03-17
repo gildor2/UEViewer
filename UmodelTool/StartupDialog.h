@@ -5,7 +5,6 @@
 
 #include "UmodelSettings.h"
 
-
 class UIStartupDialog : public UIBaseDialog
 {
 public:
@@ -19,6 +18,8 @@ protected:
 	UICheckboxGroup*	OverrideGameGroup;
 	UICombobox*			OverrideEngineCombo;
 	UICombobox*			OverrideGameCombo;
+
+	TArray<int>			SelectedGameEnums;
 
 	void FillGameList();
 

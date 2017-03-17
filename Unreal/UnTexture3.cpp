@@ -15,7 +15,7 @@
 void UTexture3::Serialize(FArchive &Ar)
 {
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		Serialize4(Ar);
 		return;
@@ -72,7 +72,7 @@ void UTexture2D::Serialize(FArchive &Ar)
 	guard(UTexture2D::Serialize);
 
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		Serialize4(Ar);
 		return;
@@ -673,7 +673,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	else
 	{
 #if UNREAL4
-		if (GetGame() >= GAME_UE4)
+		if (GetGame() >= GAME_UE4_BASE)
 		{
 			//!! check for presence of BULKDATA_PayloadAtEndOfFile flag
 			strcpy(bulkFileName, Package->Filename);

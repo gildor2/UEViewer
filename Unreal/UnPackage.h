@@ -24,7 +24,7 @@ struct FGenerationInfo
 	{
 		Ar << I.ExportCount << I.NameCount;
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4 && Ar.ArVer >= VER_UE4_REMOVE_NET_INDEX) return Ar;
+		if (Ar.Game >= GAME_UE4_BASE && Ar.ArVer >= VER_UE4_REMOVE_NET_INDEX) return Ar;
 #endif
 #if UNREAL3
 		if (Ar.ArVer >= 322) // PACKAGE_V3
@@ -333,7 +333,7 @@ public:
 #if UNREAL4
 	virtual bool ContainsEditorData() const
 	{
-		if (Game < GAME_UE4) return false;
+		if (Game < GAME_UE4_BASE) return false;
 		if (Summary.IsUnversioned) return false;		// unversioned packages definitely has no editor data
 		if (Summary.PackageFlags & PKG_FilterEditorOnly) return false;
 		return true;

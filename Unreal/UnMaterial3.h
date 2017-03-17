@@ -385,7 +385,7 @@ struct FTexture2DMipMap
 	{
 		guard(FTexture2DMipMap<<);
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4)
+		if (Ar.Game >= GAME_UE4_BASE)
 		{
 			// this code is generally the same as for UE3, but it's quite simple, so keep
 			// it in separate code block
@@ -786,7 +786,7 @@ public:
 	{
 		Super::Serialize(Ar);
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4)
+		if (Ar.Game >= GAME_UE4_BASE)
 		{
 			// UE4 has complex FMaterialResource format, so avoid reading anything here, but
 			// scan package's imports for UTexture objects instead

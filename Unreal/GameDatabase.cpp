@@ -343,25 +343,13 @@ const GameInfo GListOfGames[] = {
 
 	// Unreal engine 4
 #if UNREAL4
-		G("Unreal engine 4",   ue4,   GAME_UE4  ),		// useless?
-		G("Unreal engine 4.0", ue4.0, GAME_UE4_0),
-		G("Unreal engine 4.1", ue4.1, GAME_UE4_1),
-		G("Unreal engine 4.2", ue4.2, GAME_UE4_2),
-		G("Unreal engine 4.3", ue4.3, GAME_UE4_3),
-		G("Unreal engine 4.4", ue4.4, GAME_UE4_4),
-		G("Unreal engine 4.5", ue4.5, GAME_UE4_5),
-		G("Unreal engine 4.6", ue4.6, GAME_UE4_6),
-		G("Unreal engine 4.7", ue4.7, GAME_UE4_7),
-		G("Unreal engine 4.8", ue4.8, GAME_UE4_8),
-		G("Unreal engine 4.9", ue4.9, GAME_UE4_9),
-		G("Unreal engine 4.10", ue4.10, GAME_UE4_9),	// 4.10 has the same file version as 4.9
-		G("Unreal engine 4.11", ue4.11, GAME_UE4_11),
-		G("Unreal engine 4.12", ue4.12, GAME_UE4_12),
-		G("Unreal engine 4.13", ue4.13, GAME_UE4_13),
-		G("Unreal engine 4.14", ue4.14, GAME_UE4_14),
-		G("Unreal engine 4.15", ue4.15, GAME_UE4_15),
-		G("Unreal engine 4.16", ue4.16, GAME_UE4_16),
-		// NEW_ENGINE_VERSION
+		// Dummy tag for all UE4 versions
+		{
+			"Unreal engine 4.0-4." STR(LATEST_SUPPORTED_UE4_VERSION),
+			"ue4.[0-" STR(LATEST_SUPPORTED_UE4_VERSION) "]",
+			GAME_UE4(LATEST_SUPPORTED_UE4_VERSION)		// not zero minor version, to make this game appeared in "-help"
+		},
+		// Add custom UE4 versions here
 #endif // UNREAL4
 
 	// end marker
@@ -389,7 +377,7 @@ const char *GetEngineName(int Game)
 	case GAME_UE3:
 	case GAME_MIDWAY3:
 		return "Unreal engine 3";
-	case GAME_UE4:
+	case GAME_UE4_BASE:
 		return "Unreal engine 4";
 	}
 	return "Unknown UE";
@@ -420,7 +408,7 @@ void PrintGameList(bool tags)
 		// game info
 		if (tags)
 		{
-			appPrintf("\n %8s  %s", info.Switch ? info.Switch : "", info.Name);
+			appPrintf("\n %12s  %s", info.Switch ? info.Switch : "", info.Name);
 			continue;
 		}
 		// simple game list
@@ -450,6 +438,25 @@ int FindGameTag(const char *name)
 		if (!key) continue;
 		if (!stricmp(key, name)) return GListOfGames[i].Enum;
 	}
+#if UNREAL4
+	// For UE4 games we use procedurally generated tags
+	if (!strnicmp(name, "ue4.", 4))
+	{
+		const char* ver = name + 4;
+		for (const char* s = ver; *s; s++)
+		{
+			if (!isdigit(*s))
+				return -1;
+		}
+		int nVer = atoi(ver);
+		if (nVer > LATEST_SUPPORTED_UE4_VERSION)
+		{
+			appPrintf("ERROR: provided game tag for UE4 version %d (%s), latest supported version is %d\n", nVer, name, LATEST_SUPPORTED_UE4_VERSION);
+			exit(1);
+		}
+		return GAME_UE4(nVer);
+	}
+#endif // UNREAL4
 	return -1;
 }
 
@@ -776,7 +783,7 @@ void FArchive::DetectGame()
 			Game = GAME_UE2;
 		else
 			Game = GAME_UE3;
-		// UE4 has version numbering from zero, plus is has "unversioned" packages, so GAME_UE4 is set by
+		// UE4 has version numbering from zero, plus is has "unversioned" packages, so GAME_UE4_BASE is set by
 		// FPackageFileSummary serializer explicitly.
 	}
 #undef SET
@@ -818,13 +825,13 @@ static const UEVersionMap ueVersions[] =
 #undef G
 
 #if UNREAL4
-// NEW_ENGINE_VERSION
 static const int ue4Versions[] =
 {
 	VER_UE4_0, VER_UE4_1, VER_UE4_2, VER_UE4_3, VER_UE4_4,
 	VER_UE4_5, VER_UE4_6, VER_UE4_7, VER_UE4_8, VER_UE4_9,
 	VER_UE4_10, VER_UE4_11, VER_UE4_12, VER_UE4_13, VER_UE4_14,
 	VER_UE4_15, VER_UE4_16,
+	// NEW_ENGINE_VERSION
 };
 
 staticAssert(ARRAY_COUNT(ue4Versions) == LATEST_SUPPORTED_UE4_VERSION + 1, "ue4Versions[] is outdated");
@@ -839,14 +846,14 @@ void FArchive::OverrideVersion()
 	}
 
 #if UNREAL4
-	if (Game >= GAME_UE4_0 && Game <= GAME_UE4_0 + LATEST_SUPPORTED_UE4_VERSION)
+	if (Game >= GAME_UE4(0) && Game <= GAME_UE4(LATEST_SUPPORTED_UE4_VERSION))
 	{
 		// Special path for UE4, when engine version is specified and packages are unversioned.
 		if (ArVer == 0)
 		{
 			// Override version only if package is unversioned. Mixed versioned and unversioned packages could
 			// appear in UE4 game when it has editor support (like UT4).
-			ArVer = ue4Versions[Game - GAME_UE4_0];
+			ArVer = ue4Versions[GAME_UE4_GET_MINOR(Game)];
 		}
 		return;
 	}
@@ -910,6 +917,6 @@ void FArchive::OverrideVersion()
 	}
 #endif // DUNDEF
 
-	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4)
+	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4_BASE)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }

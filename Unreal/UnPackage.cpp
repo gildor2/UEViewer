@@ -739,7 +739,7 @@ tag_ok:
 	if ((Version & 0xFFFFF000) == 0xFFFFF000)
 	{
 		S.LegacyVersion = Version;
-		Ar.Game = GAME_UE4;
+		Ar.Game = GAME_UE4_BASE;
 		SerializePackageFileSummary4(Ar, S);
 		//!! note: UE4 requires different DetectGame way, perhaps it's not possible at all
 		//!! (but can use PAK file names for game detection)
@@ -1130,7 +1130,7 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 FArchive& operator<<(FArchive &Ar, FObjectExport &E)
 {
 #if UNREAL4
-	if (Ar.Game >= GAME_UE4)
+	if (Ar.Game >= GAME_UE4_BASE)
 	{
 		SerializeObjectExport4(Ar, E);
 		return Ar;
@@ -1857,7 +1857,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 		}
 #endif // UNREAL3
 #if UNREAL4
-		if (Game >= GAME_UE4 && Summary.IsUnversioned)
+		if (Game >= GAME_UE4_BASE && Summary.IsUnversioned)
 			PKG_LOG("[Unversioned] ");
 #endif // UNREAL4
 		PKG_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
@@ -1960,7 +1960,7 @@ no_depends: ;
 #if UNREAL4
 	// Process Event Driven Loader packages: such packages are split into 2 pieces: .uasser with headers
 	// and .uexp with object's data.
-	if (Game >= GAME_UE4 && Summary.HeadersSize == Loader->GetFileSize())
+	if (Game >= GAME_UE4_BASE && Summary.HeadersSize == Loader->GetFileSize())
 	{
 		char buf[MAX_PACKAGE_PATH];
 		appStrncpyz(buf, filename, ARRAY_COUNT(buf));
@@ -2015,7 +2015,7 @@ void UnPackage::LoadNameTable()
 	for (int i = 0; i < Summary.NameCount; i++)
 	{
 		guard(Name);
-		if ((ArVer < 64) && (Game < GAME_UE4)) // UE4 has restarted versioning from 0
+		if ((ArVer < 64) && (Game < GAME_UE4_BASE)) // UE4 has restarted versioning from 0
 		{
 			char buf[MAX_FNAME_LEN];
 			int len;
@@ -2174,7 +2174,7 @@ void UnPackage::LoadNameTable()
 	#endif
 
 	#if UNREAL4
-			if (Game >= GAME_UE4)
+			if (Game >= GAME_UE4_BASE)
 			{
 				if (ArVer >= VER_UE4_NAME_HASHES_SERIALIZED)
 				{
@@ -2418,7 +2418,7 @@ FArchive& UnPackage::operator<<(FName &N)
 	if (Engine() >= GAME_UE3)
 	{
 		*this << N.Index;
-		if (Game >= GAME_UE4) goto extra_index;
+		if (Game >= GAME_UE4_BASE) goto extra_index;
 	#if R6VEGAS
 		if (Game == GAME_R6Vegas2)
 		{
@@ -2585,7 +2585,7 @@ int UnPackage::FindExportForImport(const char *ObjectName, const char *ClassName
 		ObjIndex = FindExport(ObjectName, ClassName, ObjIndex + 1);
 		if (ObjIndex == INDEX_NONE)
 			break;				// not found
-		if (Game >= GAME_UE4)
+		if (Game >= GAME_UE4_BASE)
 		{
 			// UE4 usually has single object in package. Plus, each object import has a parent UPackage
 			// describing where to get an object, but object export has no parent UObject - so depth
@@ -2700,7 +2700,7 @@ UObject* UnPackage::CreateImport(int index)
 	}
 #if UNREAL3
 	// try to find import in startup package
-	else if (Engine() >= GAME_UE3 && Engine() < GAME_UE4)
+	else if (Engine() >= GAME_UE3 && Engine() < GAME_UE4_BASE)
 	{
 		// check startup package
 		Package = LoadPackage(GStartupPackage);

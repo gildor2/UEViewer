@@ -196,7 +196,7 @@ const char* GetExportPath(const UObject *Obj)
 		appSetBaseExportDirectory(".");	// to simplify code
 
 #if UNREAL4
-	if (Obj->Package && Obj->Package->Game >= GAME_UE4)
+	if (Obj->Package && Obj->Package->Game >= GAME_UE4_BASE)
 	{
 		// Special path for UE4 games - its packages are usually have 1 asset per file, plus
 		// package names could be duplicated across directory tree, with use of full package

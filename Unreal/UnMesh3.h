@@ -223,7 +223,7 @@ struct FRawAnimSequenceTrack
 	{
 		guard(FRawAnimSequenceTrack<<);
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4)
+		if (Ar.Game >= GAME_UE4_BASE)
 		{
 			T.PosKeys.BulkSerialize(Ar);
 			T.RotKeys.BulkSerialize(Ar);

@@ -225,8 +225,11 @@ public:
 
 
 /*-----------------------------------------------------------------------------
-	FArchive class
+	Some enums used to distinguish game, engine and platform
 -----------------------------------------------------------------------------*/
+
+#define GAME_UE4(x)				(GAME_UE4_BASE + x)
+#define GAME_UE4_GET_MINOR(x)	(x - GAME_UE4_BASE)			// reverse operation for GAME_UE4(x)
 
 enum EGame
 {
@@ -345,27 +348,8 @@ enum EGame
 		GAME_Strangle,
 		GAME_TNA,
 
-	GAME_UE4       = 0x10000,
-		// engine versions
-		GAME_UE4_0,
-		GAME_UE4_1,
-		GAME_UE4_2,
-		GAME_UE4_3,
-		GAME_UE4_4,
-		GAME_UE4_5,
-		GAME_UE4_6,
-		GAME_UE4_7,
-		GAME_UE4_8,
-		GAME_UE4_9,
-		GAME_UE4_10,
-		GAME_UE4_11,
-		GAME_UE4_12,
-		GAME_UE4_13,
-		GAME_UE4_14,
-		GAME_UE4_15,
-		GAME_UE4_16,
-		// NEW_ENGINE_VERSION
-		// games
+	GAME_UE4_BASE  = 0x10000,
+		// Add custom UE4 game engines here
 
 	GAME_ENGINE    = 0xFFF00	// mask for game engine
 };
@@ -384,6 +368,10 @@ enum EPlatform
 	PLATFORM_COUNT,
 };
 
+
+/*-----------------------------------------------------------------------------
+	FArchive class
+-----------------------------------------------------------------------------*/
 
 class FArchive
 {
@@ -2327,15 +2315,15 @@ struct FFrameworkObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-		if (Ar.Game < GAME_UE4_12)
+		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4_12)
+		if (Ar.Game == GAME_UE4(12))
 			return (Type)6;
-		if (Ar.Game == GAME_UE4_13)
+		if (Ar.Game == GAME_UE4(13))
 			return RemoveSoundWaveCompressionName;
-		if (Ar.Game == GAME_UE4_14)
+		if (Ar.Game == GAME_UE4(14))
 			return GeometryCacheMissingMaterials;
-		if (Ar.Game == GAME_UE4_15)
+		if (Ar.Game == GAME_UE4(15))
 			return (Type)22;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2365,15 +2353,15 @@ struct FEditorObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-		if (Ar.Game < GAME_UE4_12)
+		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4_12)
+		if (Ar.Game == GAME_UE4(12))
 			return (Type)2;
-		if (Ar.Game == GAME_UE4_13)
+		if (Ar.Game == GAME_UE4(13))
 			return (Type)6;
-		if (Ar.Game == GAME_UE4_14)
+		if (Ar.Game == GAME_UE4(14))
 			return RefactorMeshEditorMaterials;
-		if (Ar.Game == GAME_UE4_15)
+		if (Ar.Game == GAME_UE4(15))
 			return (Type)14;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2406,13 +2394,13 @@ struct FSkeletalMeshCustomVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-		if (Ar.Game < GAME_UE4_13)
+		if (Ar.Game < GAME_UE4(13))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4_13)
+		if (Ar.Game == GAME_UE4(13))
 			return SaveNumVertices;
-		if (Ar.Game == GAME_UE4_14)
+		if (Ar.Game == GAME_UE4(14))
 			return (Type)5;
-		if (Ar.Game == GAME_UE4_15)
+		if (Ar.Game == GAME_UE4(15))
 			return UseSeparateSkinWeightBuffer;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2437,13 +2425,13 @@ struct FRenderingObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-		if (Ar.Game < GAME_UE4_12)
+		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4_12)
+		if (Ar.Game == GAME_UE4(12))
 			return (Type)2;
-		if (Ar.Game == GAME_UE4_13)
+		if (Ar.Game == GAME_UE4(13))
 			return (Type)4;
-		if (Ar.Game <= GAME_UE4_15)	// GAME_UE4_14 and 15
+		if (Ar.Game <= GAME_UE4(15))	// 4.14 and 4.15
 			return (Type)12;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;

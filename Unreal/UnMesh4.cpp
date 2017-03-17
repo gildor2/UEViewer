@@ -90,7 +90,7 @@ struct FRecomputeTangentCustomVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-		if (Ar.Game < GAME_UE4_12)
+		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
 		return RuntimeRecomputeTangent;
 	}
