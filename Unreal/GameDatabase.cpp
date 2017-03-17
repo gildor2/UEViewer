@@ -460,6 +460,43 @@ int FindGameTag(const char *name)
 	return -1;
 }
 
+const char* GetGameTag(int gameEnum)
+{
+	static char buf[64];
+
+	int Count = ARRAY_COUNT(GListOfGames) - 1;	// exclude TABLE_END marker
+	const char* value = NULL;
+	for (int i = 0; i < Count; i++)
+	{
+		if (GListOfGames[i].Enum == gameEnum)
+		{
+			value = GListOfGames[i].Switch;
+			break;
+		}
+	}
+#if UNREAL4
+	if (!value && gameEnum >= GAME_UE4_BASE)
+	{
+		// generate tag
+		int ue4ver = GAME_UE4_GET_MINOR(gameEnum);
+		if (gameEnum == GAME_UE4(ue4ver))
+		{
+			// exactly matching, i.e. not a custom UE4 version
+			appSprintf(ARRAY_ARG(buf), "ue4.%d", ue4ver);
+			return buf;
+		}
+	}
+#endif // UNREAL4
+
+	if (!value)
+	{
+		appSprintf(ARRAY_ARG(buf), "%X", gameEnum);
+		return buf;
+	}
+
+	return value;
+}
+
 
 /*-----------------------------------------------------------------------------
 	Detecting game by package file version

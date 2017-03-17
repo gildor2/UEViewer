@@ -4,6 +4,7 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 
+#include "GameDatabase.h"		// for GetGameTag()
 
 byte GForceCompMethod = 0;		// COMPRESS_...
 
@@ -2000,7 +2001,7 @@ no_depends: ;
 	appPrintProfiler();
 #endif
 
-	unguardf("%s, ver=%d/%d, game=%X", filename, ArVer, ArLicenseeVer, Game);
+	unguardf("%s, ver=%d/%d, game=%s", filename, ArVer, ArLicenseeVer, GetGameTag(Game));
 }
 
 

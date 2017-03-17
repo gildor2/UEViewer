@@ -3,6 +3,8 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 
+#include "GameDatabase.h"		// for GetGameTag()
+
 
 //#define DEBUG_PROPS				1
 //#define PROFILE_LOADING			1
@@ -183,8 +185,8 @@ void UObject::EndLoad()
 	#define UNVERS_STR		""
 #endif
 
-		unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s, game=%X", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
-			Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, Package->Game);
+		unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s, game=%s", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
+			Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, GetGameTag(Package->Game));
 	}
 	// postload objects
 	int i;

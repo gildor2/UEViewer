@@ -983,12 +983,31 @@ DEPENDS_40 = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UmodelTool/Build.h \
-	Unreal/GameDefines.h
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
 
-$(OUT_1)/CoreGL.o : Core/CoreGL.cpp $(DEPENDS_40)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/CoreGL.o Core/CoreGL.cpp
+$(OUT_1)/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_40)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnObject.o Unreal/UnObject.cpp
+
+$(OUT_1)/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_40)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnPackage.o Unreal/UnPackage.cpp
 
 DEPENDS_41 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/CoreGL.o : Core/CoreGL.cpp $(DEPENDS_41)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/CoreGL.o Core/CoreGL.cpp
+
+DEPENDS_42 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1001,10 +1020,10 @@ DEPENDS_41 = \
 	Unreal/UnArchivePak.h \
 	Unreal/UnCore.h
 
-$(OUT_1)/GameFileSystem.o : Unreal/GameFileSystem.cpp $(DEPENDS_41)
+$(OUT_1)/GameFileSystem.o : Unreal/GameFileSystem.cpp $(DEPENDS_42)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/GameFileSystem.o Unreal/GameFileSystem.cpp
 
-DEPENDS_42 = \
+DEPENDS_43 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1017,10 +1036,10 @@ DEPENDS_42 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-$(OUT_1)/PackageUtils.o : Unreal/PackageUtils.cpp $(DEPENDS_42)
+$(OUT_1)/PackageUtils.o : Unreal/PackageUtils.cpp $(DEPENDS_43)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageUtils.o Unreal/PackageUtils.cpp
 
-DEPENDS_43 = \
+DEPENDS_44 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1038,10 +1057,10 @@ DEPENDS_43 = \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMeshRune.o : Unreal/UnMeshRune.cpp $(DEPENDS_43)
+$(OUT_1)/UnMeshRune.o : Unreal/UnMeshRune.cpp $(DEPENDS_44)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnMeshRune.o Unreal/UnMeshRune.cpp
 
-DEPENDS_44 = \
+DEPENDS_45 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1051,10 +1070,10 @@ DEPENDS_44 = \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h
 
-$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_44)
+$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_45)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCore.o Unreal/UnCore.cpp
 
-DEPENDS_45 = \
+DEPENDS_46 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1068,10 +1087,10 @@ DEPENDS_45 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_45)
+$(OUT_1)/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_46)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnHavok.o Unreal/UnHavok.cpp
 
-DEPENDS_46 = \
+DEPENDS_47 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1087,10 +1106,10 @@ DEPENDS_46 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMesh1.o : Unreal/UnMesh1.cpp $(DEPENDS_46)
+$(OUT_1)/UnMesh1.o : Unreal/UnMesh1.cpp $(DEPENDS_47)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnMesh1.o Unreal/UnMesh1.cpp
 
-DEPENDS_47 = \
+DEPENDS_48 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1103,10 +1122,10 @@ DEPENDS_47 = \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h
 
-$(OUT_1)/UnTexture2.o : Unreal/UnTexture2.cpp $(DEPENDS_47)
+$(OUT_1)/UnTexture2.o : Unreal/UnTexture2.cpp $(DEPENDS_48)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture2.o Unreal/UnTexture2.cpp
 
-DEPENDS_48 = \
+DEPENDS_49 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1123,10 +1142,10 @@ DEPENDS_48 = \
 	libs/astc/mathlib.h \
 	libs/astc/vectypes.h
 
-$(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_48)
+$(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_49)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture.o Unreal/UnTexture.cpp
 
-DEPENDS_49 = \
+DEPENDS_50 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1140,25 +1159,11 @@ DEPENDS_49 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-$(OUT_1)/UnTexture3.o : Unreal/UnTexture3.cpp $(DEPENDS_49)
+$(OUT_1)/UnTexture3.o : Unreal/UnTexture3.cpp $(DEPENDS_50)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture3.o Unreal/UnTexture3.cpp
 
-$(OUT_1)/UnTexture4.o : Unreal/UnTexture4.cpp $(DEPENDS_49)
+$(OUT_1)/UnTexture4.o : Unreal/UnTexture4.cpp $(DEPENDS_50)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture4.o Unreal/UnTexture4.cpp
-
-DEPENDS_50 = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnObject.h
-
-$(OUT_1)/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_50)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnUbisoft.o Unreal/UnUbisoft.cpp
 
 DEPENDS_51 = \
 	Core/Core.h \
@@ -1169,14 +1174,10 @@ DEPENDS_51 = \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
-$(OUT_1)/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_51)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnObject.o Unreal/UnObject.cpp
-
-$(OUT_1)/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_51)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnPackage.o Unreal/UnPackage.cpp
+$(OUT_1)/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_51)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnUbisoft.o Unreal/UnUbisoft.cpp
 
 DEPENDS_52 = \
 	Core/Core.h \

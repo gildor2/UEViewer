@@ -984,6 +984,25 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UmodelTool/Build.h \
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnObject.obj" Unreal/UnObject.cpp
+
+$(OUT_1)/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnPackage.obj" Unreal/UnPackage.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
 	Unreal/GameDefines.h
 
 $(OUT_1)/CoreGL.obj : Core/CoreGL.cpp $(DEPENDS)
@@ -1160,24 +1179,6 @@ DEPENDS = \
 
 $(OUT_1)/UnUbisoft.obj : Unreal/UnUbisoft.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnUbisoft.obj" Unreal/UnUbisoft.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnObject.h \
-	Unreal/UnPackage.h
-
-$(OUT_1)/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnObject.obj" Unreal/UnObject.cpp
-
-$(OUT_1)/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnPackage.obj" Unreal/UnPackage.cpp
 
 DEPENDS = \
 	Core/Core.h \
