@@ -23,6 +23,7 @@
 #include "ProgressDialog.h"
 #include "AboutDialog.h"
 #include "ErrorDialog.h"
+#include "UE4VersionDialog.h"
 #include "PackageScanDialog.h"
 #endif
 
@@ -289,6 +290,14 @@ void CUmodelApp::ShowErrorDialog()
 	UIErrorDialog errorDialog;
 	errorDialog.Show();
 }
+
+#if UNREAL4
+int CUmodelApp::ShowUE4UnversionedPackageDialog(int verMin, int verMax)
+{
+	UIUE4VersionDialog dialog;
+	return dialog.Show(verMin, verMax);
+}
+#endif // UNREAL4
 
 #endif // HAS_UI
 

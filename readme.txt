@@ -177,6 +177,9 @@ detex
 
 Changes
 ~~~~~~~
+18.03.2017
+- improved handling of unversioned UE4 packages: displaying a dialog box prompting for entering engine version
+
 17.03.2017
 - changed support for UE4 game tags, cleaned up list of UE4 engine versions from -help and -taglist options
 

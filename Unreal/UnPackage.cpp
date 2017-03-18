@@ -487,12 +487,22 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 	// LegacyVersion: contains negative value.
 	// LegacyVersion to engine version map:
-	// -3	4.0
-	// -4	4.7 (early version, skipped)
-	// -5	4.7
-	// -6	4.11
-	// -7	4.14
-	if (S.LegacyVersion < -7 || S.LegacyVersion >= 0)
+	static const int legacyVerToEngineVer[] =
+	{
+		-1,		// -1
+		-1,		// -2
+		0,		// -3 -> UE4.0
+		7,		// -4 -> UE4.7
+		7,		// -5 ...
+		11,		// -6
+		14,		// -7
+		// add new versions above this line
+		LATEST_SUPPORTED_UE4_VERSION+1				// this line here is just to make code below simpler
+	};
+
+	static const int LatestSupportedLegacyVer = -ARRAY_COUNT(legacyVerToEngineVer)+1;
+//	printf("%d -> %d %d < %d\n", S.LegacyVersion, -S.LegacyVersion - 1, legacyVerToEngineVer[-S.LegacyVersion - 1], LatestSupportedLegacyVer);
+	if (S.LegacyVersion < LatestSupportedLegacyVer || S.LegacyVersion >= 0 || legacyVerToEngineVer[-S.LegacyVersion - 1] < 0)
 		appError("UE4 LegacyVersion: unsupported value %d", S.LegacyVersion);
 
 	S.IsUnversioned = false;
@@ -511,6 +521,30 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	// store file version to archive
 	Ar.ArVer         = S.FileVersion;
 	Ar.ArLicenseeVer = S.LicenseeVersion;
+
+	if (S.FileVersion == 0 && S.LicenseeVersion == 0)
+		S.IsUnversioned = true;
+
+	if (S.IsUnversioned && GForceGame == GAME_UNKNOWN)
+	{
+		int ver = -S.LegacyVersion - 1;
+		int verMin = legacyVerToEngineVer[ver];
+		int verMax = legacyVerToEngineVer[ver+1] - 1;
+		int selectedVersion;
+		if (verMax < verMin)
+		{
+			// if LegacyVersion exactly matches single engine version, don't show any UI
+			selectedVersion = verMin;
+		}
+		else
+		{
+			// display UI if it is supported
+			selectedVersion = UE4UnversionedPackage(verMin, verMax);
+			assert(selectedVersion >= 0 && selectedVersion <= LATEST_SUPPORTED_UE4_VERSION);
+		}
+		GForceGame = GAME_UE4(selectedVersion);
+	}
+
 	// detect game
 	Ar.DetectGame();
 	Ar.OverrideVersion();
@@ -522,12 +556,6 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		// packages: engine starts to use custom versions heavily starting with 4.12.
 		S.CustomVersionContainer.Serialize(Ar, S.LegacyVersion);
 	}
-
-	if (S.FileVersion == 0 && S.LicenseeVersion == 0)
-		S.IsUnversioned = true;
-
-	if (Ar.ArVer == 0 && Ar.ArLicenseeVer == 0)
-		appError("Unversioned UE4 packages are not supported. Please override game using UI or command line.");
 
 	Ar << S.HeadersSize;
 	Ar << S.PackageGroup;

@@ -669,6 +669,21 @@ static void ExceptionHandler()
 }
 
 
+#if UNREAL4
+
+int UE4UnversionedPackage(int verMin, int verMax)
+{
+#if HAS_UI
+	int version = GApplication.ShowUE4UnversionedPackageDialog(verMin, verMax);
+	if (version >= 0) return version;
+#endif
+	appError("Unversioned UE4 packages are not supported. Please restart UModel and select UE4 version in range %d-%d using UI or command line.", verMin, verMax);
+	return -1;
+}
+
+#endif // UNREAL4
+
+
 #define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
 #define OPT_VALUE(name,var,value)		{ name, (byte*)&var, value },

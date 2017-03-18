@@ -13,6 +13,12 @@
 #endif
 
 
+#if UNREAL4
+// Callback called when unversioned package was found.
+int UE4UnversionedPackage(int verMin, int verMax);
+#endif
+
+
 struct FGenerationInfo
 {
 	int32		ExportCount, NameCount;

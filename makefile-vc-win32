@@ -386,6 +386,7 @@ DEPENDS = \
 	UmodelTool/PackageScanDialog.h \
 	UmodelTool/ProgressDialog.h \
 	UmodelTool/StartupDialog.h \
+	UmodelTool/UE4VersionDialog.h \
 	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
 	UmodelTool/res/resource.h \

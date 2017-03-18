@@ -50,6 +50,9 @@ public:
 	bool ShowPackageUI();
 	void SetPackage(UnPackage* package);
 	void ShowErrorDialog();
+	#if UNREAL4
+	int ShowUE4UnversionedPackageDialog(int verMin, int verMax);
+	#endif
 	// menu callbacks
 	void PrevObject()
 	{
