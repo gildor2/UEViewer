@@ -2108,6 +2108,14 @@ void USkeletalMesh3::ConvertMesh()
 						unsigned mask = 0xFF << shift;
 						unsigned w = (PackedWeights & mask) >> shift;
 						w = appRound((float)w * WeightScale);
+						if (w == 0) continue;					// this might happen when weights are bad (Dungeon Defenders has w [1 255 255 0] for the same bone
+#if 0
+						if (w <= 0 || w >= 256)
+							printf("w: %d t: %d s: %g b [%d %d %d %d] w [%d %d %d %d] pw: %08X\n", w, TotalWeight, WeightScale,
+								V->BoneIndex[0], V->BoneIndex[1], V->BoneIndex[2], V->BoneIndex[3],
+								V->BoneWeight[0], V->BoneWeight[1], V->BoneWeight[2], V->BoneWeight[3],
+								PackedWeights);
+#endif
 						assert(w > 0 && w < 256);
 						ScaledWeight |= w << shift;
 					}
