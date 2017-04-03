@@ -177,6 +177,9 @@ detex
 
 Changes
 ~~~~~~~
+03.04.2017
+- implemented loading of Blade & Soul specific animations
+
 18.03.2017
 - improved handling of unversioned UE4 packages: displaying a dialog box prompting for entering engine version
 

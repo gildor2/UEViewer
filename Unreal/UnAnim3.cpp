@@ -519,6 +519,62 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 #endif // TRANSFORMERS
 
 
+#if BLADENSOUL
+
+void ReadBnS_ZOnlyRLE(FArchive& Reader, int RotKeys, CAnimTrack* A)
+{
+	guard(ReadBnS_ZOnlyRLE);
+
+	int32 keyMode, numRLE_keys;
+	Reader << keyMode << numRLE_keys;
+	assert(keyMode >= 0 || keyMode <= 3);
+	// Read RLE decoding table
+	TArray<int16> RLETable;
+	RLETable.AddUninitialized(numRLE_keys * 2);
+	for (int i = 0; i < numRLE_keys; i++)
+	{
+		Reader << RLETable[i*2] << RLETable[i*2+1];
+	}
+	int nextRLE_index = 0;
+	int numAddedKeys = 0;
+	while (numAddedKeys < RotKeys)
+	{
+		FQuatFloat96NoW q;
+		if (keyMode == 0)
+		{
+			Reader << q;
+		}
+		else
+		{
+			q.X = q.Y = q.Z = 0;
+			float v;
+			Reader << v;
+			(&q.X)[keyMode - 1] = v;
+		}
+		FQuat q2 = q;		// conversion
+		// Now decode RLE table
+		if ((nextRLE_index < RLETable.Num()) && (RLETable[nextRLE_index] == numAddedKeys))
+		{
+			int numSameKeys = RLETable[nextRLE_index+1] - RLETable[nextRLE_index] + 1;
+			for (int i = 0; i < numSameKeys; i++)
+			{
+				A->KeyQuat.Add(CVT(q2));
+			}
+			nextRLE_index += 2;
+			numAddedKeys += numSameKeys;
+		}
+		else
+		{
+			A->KeyQuat.Add(CVT(q2));
+			numAddedKeys++;
+		}
+	}
+
+	unguard;
+}
+
+#endif // BLADENSOUL
+
 void UAnimSet::ConvertAnims()
 {
 	guard(UAnimSet::ConvertAnims);
@@ -1094,6 +1150,13 @@ void UAnimSet::ConvertAnims()
 			if (ArGame == GAME_Transformers && RotKeys >= 2)
 				Reader << TransQuatBase;
 #endif // TRANSFORMERS
+#if BLADENSOUL
+			if (ArGame == GAME_BladeNSoul && RotationCompressionFormat == ACF_ZOnlyRLE)
+			{
+				ReadBnS_ZOnlyRLE(Reader, RotKeys, A);
+				goto rot_keys_done;
+			}
+#endif // BLADENSOUL
 
 			for (k = 0; k < RotKeys; k++)
 			{

@@ -282,6 +282,9 @@ enum AnimationCompressionFormat
 #if DISHONORED
 	ACF_EdgeAnim,
 #endif
+#if BLADENSOUL
+	ACF_ZOnlyRLE,
+#endif
 };
 
 _ENUM(AnimationCompressionFormat)
@@ -315,6 +318,9 @@ _ENUM(AnimationCompressionFormat)
 #endif
 #if DISHONORED
 	_E(ACF_EdgeAnim),
+#endif
+#if BLADENSOUL
+	_E(ACF_ZOnlyRLE),
 #endif
 };
 
