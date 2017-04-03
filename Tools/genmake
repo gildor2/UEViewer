@@ -1050,13 +1050,14 @@ sub FlushObjectFile {
 		} elsif ($srcType eq "rc") {
 			my $inc = "";
 			my $defs = "";
-			$inc = " ".GenerateOptions ($includes, "-I ") if $includes ne "";
-			$defs = " ".GenerateOptions ($defines, "-D ") if $defines ne "";
+			$inc = " ".GenerateOptions ($includes, "-i ") if $includes ne "";
+			$defs = " ".GenerateOptions ($defines, "-d ") if $defines ne "";
 			if ($PLATFORM eq "win32") {
-				$defs .= " -D _WIN32 -D WIN32";
+				$defs .= " -d _WIN32 -d WIN32";
 			} else {
-				$defs .= " -D _WIN64 -D WIN64";
+				$defs .= " -d _WIN64 -d WIN64";
 			}
+			$srcDir = "." if $srcDir eq "";		# empty $srcDir means current directory
 			$line = "rc.exe -l 0x409 -i ${srcDir}${inc}${defs} -fo\"$objFile\" -dNDEBUG";
 		} else {
 			# C/C++ file
