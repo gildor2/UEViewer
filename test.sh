@@ -96,7 +96,7 @@ function run()
 	else
 		console_title "$exe $debugOpt $@"
 		echo "Starting $exe $debugOpt $@"
-		./$exe $@
+		./$exe $debugOpt $@
 	fi
 }
 
@@ -316,7 +316,7 @@ fi
 case "" in
 
 "")
-	run ../Epic/UnrealProjects/ShooterGame/Saved/Cooked/WindowsNoEditor/ShooterGame/Content/Characters/Textures/Chr_FPS_D.uasset -game=ue4.4
+	run ../Epic/UnrealProjects/ShooterGame/Saved/Cooked/WindowsNoEditor/ShooterGame/Content/Characters/Textures/Chr_FPS_D.uasset
 #	run1 "C:/Projects/Epic/UnrealTournament4/UnrealTournament/Content" T_CH_Imm_MalcolmBody_D.uasset
 #	run1 data/3/MarvelHeroes UC__MarvelPlayer_Thor_SF.upk -game=mh thor_avengers_diff
 #	run1 data/3X/Injustice -noanim CHAR_Ares.xxx -meshes

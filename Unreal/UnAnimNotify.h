@@ -141,6 +141,9 @@ public:
 		PROP_DROP(VolumeMultiplier)
 		PROP_DROP(PitchMultiplier)
 #endif
+#if BLADENSOUL
+		PROP_DROP(SoundVolume)
+#endif
 #if BATMAN
 		PROP_DROP(CharacterFilter_Enabled)
 		PROP_DROP(CharacterFilter)

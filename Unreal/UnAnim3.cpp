@@ -1163,7 +1163,7 @@ void UAnimSet::ConvertAnims()
 				TR (ACF_Float48NoW, FQuatFloat48NoW_Argo)
 #endif // ARGONAUTS
 				default:
-					appError("Unknown rotation compression method: %d (%s)", RotationCompressionFormat, RotationCompressionFormat);
+					appError("Unknown rotation compression method: %d (%s)", RotationCompressionFormat, EnumToName(RotationCompressionFormat));
 				}
 			}
 

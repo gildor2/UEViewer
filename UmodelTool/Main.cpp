@@ -852,7 +852,7 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			CommandLineError("invalid option: %s", opt);
+			CommandLineError("invalid option: -%s", opt);
 		}
 	}
 
