@@ -423,6 +423,7 @@ void ExportPsa(const CAnimSet *Anim)
 	{
 		FNamedBoneBinary B;
 		memset(&B, 0, sizeof(B));
+		assert(strlen(*Anim->TrackBoneNames[i]) < sizeof(B.Name));
 		strcpy(B.Name, *Anim->TrackBoneNames[i]);
 		B.Flags       = 0;						// reserved
 		B.NumChildren = 0;						// unknown here

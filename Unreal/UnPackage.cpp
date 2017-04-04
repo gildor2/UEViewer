@@ -2195,6 +2195,34 @@ void UnPackage::LoadNameTable()
 				Seek(Tell() + skip);
 			}
 	#endif // AVA
+
+			// Verify name, some Korean games (B&S) has garbage there.
+			// Use separate block to not mess with 'goto crossing variable initialization' error.
+			{
+				bool goodName = true;
+				int numBadChars = 0;
+				for (int j = 0; j < name.Len(); j++)
+				{
+					char c = name[j];
+					if (c < ' ' || c > 0x7F)
+					{
+						// unreadable character
+						goodName = false;
+						break;
+					}
+					if (c == '$') numBadChars++;		// unicode characters replaced with '$' in FString serializer
+				}
+				if (!goodName || (numBadChars && name.Len() >= 64) || (numBadChars >= name.Len() / 2))
+				{
+					// replace name
+					appPrintf("WARNING: fixing name %d\n", i);
+					char buf[64];
+					appSprintf(ARRAY_ARG(buf), "__name_%d__", i);
+					name = buf;
+				}
+			}
+
+			// remember the name
 	#if 0
 			NameTable[i] = new char[name.Num()];
 			strcpy(NameTable[i], *name);
