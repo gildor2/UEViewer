@@ -63,6 +63,7 @@ struct FPakEntry
 	int32		CompressionBlockSize;
 
 	int32		StructSize;					// computed value
+	FPakEntry*	HashNext;					// computed value
 
 	friend FArchive& operator<<(FArchive& Ar, FPakEntry& P)
 	{
@@ -203,14 +204,16 @@ class FPakVFS : public FVirtualFileSystem
 {
 public:
 	FPakVFS(const char* InFilename)
-	:	LastInfo(NULL)
+	:	Filename(InFilename)
 	,	Reader(NULL)
-	,	Filename(InFilename)
+	,	LastInfo(NULL)
+	,	HashTable(NULL)
 	{}
 
 	virtual ~FPakVFS()
 	{
 		delete Reader;
+		if (HashTable) delete[] HashTable;
 	}
 
 	virtual bool AttachReader(FArchive* reader)
@@ -233,7 +236,7 @@ public:
 
 		Reader->Seek64(info.IndexOffset);
 
-		FStaticString<256> MountPoint;
+		FStaticString<MAX_PACKAGE_PATH> MountPoint;
 		*Reader << MountPoint;
 
 		// Process MountPoint
@@ -257,9 +260,9 @@ public:
 		{
 			FPakEntry& E = FileInfos[i];
 			// serialize name, combine with MountPoint
-			FStaticString<512> Filename;
+			FStaticString<MAX_PACKAGE_PATH> Filename;
 			*Reader << Filename;
-			FStaticString<512> CombinedPath;
+			FStaticString<MAX_PACKAGE_PATH> CombinedPath;
 			CombinedPath = MountPoint;
 			CombinedPath += Filename;
 			E.Name = appStrdupPool(*CombinedPath);
@@ -269,6 +272,14 @@ public:
 			{
 //				appPrintf("Encrypted file: %s\n", *Filename);
 				numEncryptedFiles++;
+			}
+		}
+		if (count >= MIN_PAK_SIZE_FOR_HASHING)
+		{
+			// Hash everything
+			for (int i = 0; i < count; i++)
+			{
+				AddFileToHash(&FileInfos[i]);
 			}
 		}
 		appPrintf("Pak(%s): mounted at \"%s\", %d files (%d encrypted)\n", *Filename, *MountPoint, count, numEncryptedFiles);
@@ -310,16 +321,61 @@ public:
 	}
 
 protected:
+	enum { HASH_SIZE = 1024 };
+	enum { HASH_MASK = HASH_SIZE - 1 };
+	enum { MIN_PAK_SIZE_FOR_HASHING = 256 };
+
 	FString				Filename;
 	FArchive*			Reader;
 	TArray<FPakEntry>	FileInfos;
 	FPakEntry*			LastInfo;			// cached last accessed file info, simple optimization
+	FPakEntry**			HashTable;
+
+	static uint16 GetHashForFileName(const char* FileName)
+	{
+		uint16 hash = 0;
+		while (char c = *FileName++)
+		{
+			if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; // lowercase a character
+			hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
+		}
+		hash &= HASH_MASK;
+		return hash;
+	}
+
+	void AddFileToHash(FPakEntry* File)
+	{
+		if (!HashTable)
+		{
+			HashTable = new FPakEntry* [HASH_SIZE];
+			memset(HashTable, 0, sizeof(FPakEntry*) * HASH_SIZE);
+		}
+		uint16 hash = GetHashForFileName(File->Name);
+		File->HashNext = HashTable[hash];
+		HashTable[hash] = File;
+	}
 
 	const FPakEntry* FindFile(const char* name)
 	{
 		if (LastInfo && !stricmp(LastInfo->Name, name))
 			return LastInfo;
 
+		if (HashTable)
+		{
+			// Have a hash table, use it
+			uint16 hash = GetHashForFileName(name);
+			for (FPakEntry* info = HashTable[hash]; info; info = info->HashNext)
+			{
+				if (!stricmp(info->Name, name))
+				{
+					LastInfo = info;
+					return info;
+				}
+			}
+			return NULL;
+		}
+
+		// Linear search without a hash table
 		for (int i = 0; i < FileInfos.Num(); i++)
 		{
 			FPakEntry* info = &FileInfos[i];

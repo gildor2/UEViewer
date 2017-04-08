@@ -177,6 +177,10 @@ detex
 
 Changes
 ~~~~~~~
+08.04.2017
+- Heavily optimized package scanner. Results: PARAGON scanned 30 times faster (reduced scan time from 2.5 min
+  to 4 sec) and requires 35% less memory after package scan.
+
 03.04.2017
 - implemented loading of Blade & Soul specific animations
 

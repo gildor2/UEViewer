@@ -678,16 +678,24 @@ void UIPackageDialog::ScanContent()
 	progress.SetDescription("Scanning package");
 
 	bool cancelled = false;
+	int lastTick = appMilliseconds();
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
 		if (file->PackageScanned) continue;
 
-		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
+		// Update progress dialog
+		int tick = appMilliseconds();
+		if (tick - lastTick > 50)				// do not update too often
 		{
-			cancelled = true;
-			break;
+			if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
+			{
+				cancelled = true;
+				break;
+			}
+			lastTick = tick;
 		}
+
 		UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
 		file->PackageScanned = true;
 		if (!package) continue;		// should not happen
