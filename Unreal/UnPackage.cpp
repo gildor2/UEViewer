@@ -2212,10 +2212,12 @@ void UnPackage::LoadNameTable()
 					}
 					if (c == '$') numBadChars++;		// unicode characters replaced with '$' in FString serializer
 				}
-				if (!goodName || (numBadChars && name.Len() >= 64) || (numBadChars >= name.Len() / 2))
+				if (numBadChars && name.Len() >= 64) goodName = false;
+				if (numBadChars >= name.Len() / 2 && name.Len() > 16) goodName = false;
+				if (!goodName)
 				{
 					// replace name
-					appPrintf("WARNING: fixing name %d\n", i);
+					appPrintf("WARNING: %s: fixing name %d\n", Filename, i);
 					char buf[64];
 					appSprintf(ARRAY_ARG(buf), "__name_%d__", i);
 					name = buf;
