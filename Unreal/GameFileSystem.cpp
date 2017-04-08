@@ -315,13 +315,13 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 		// cut RootDirectory from filename
 		const char *s = FullName + strlen(RootDirectory) + 1;
 		assert(s[-1] == '/');
-		appStrncpyz(info->RelativeName, s, ARRAY_COUNT(info->RelativeName));
+		info->RelativeName = appStrdupPool(s);
 	}
 	else
 	{
 		// file in virtual file system
 		info->SizeInKb = parentVfs->GetFileSize(FullName);
-		appStrncpyz(info->RelativeName, FullName, ARRAY_COUNT(info->RelativeName));
+		info->RelativeName = appStrdupPool(FullName);
 	}
 
 	// find filename

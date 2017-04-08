@@ -1862,7 +1862,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 #endif
 
 	IsLoading = true;
-	appStrncpyz(Filename, appSkipRootDir(filename), ARRAY_COUNT(Filename));
+	Filename = appStrdupPool(appSkipRootDir(filename));
 	Loader = CreateLoader(filename, baseLoader);
 	SetupFrom(*Loader);
 
@@ -2019,7 +2019,7 @@ no_depends: ;
 	appStrncpyz(buf, s, ARRAY_COUNT(buf));
 	char *s2 = strchr(buf, '.');
 	if (s2) *s2 = 0;
-	appStrncpyz(Name, buf, ARRAY_COUNT(Name));
+	Name = appStrdupPool(buf);
 	PackageMap.Add(this);
 
 	// Release package file handle

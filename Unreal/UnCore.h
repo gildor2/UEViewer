@@ -89,9 +89,9 @@ const char *appGetRootDirectory();
 
 struct CGameFileInfo
 {
-	char		RelativeName[MAX_PACKAGE_PATH];		// relative to RootDirectory
-	const char *ShortFilename;						// without path, points to filename part of RelativeName
-	const char *Extension;							// points to extension part (excluding '.') of RelativeName
+	const char*	RelativeName;						// relative to RootDirectory
+	const char*	ShortFilename;						// without path, points to filename part of RelativeName
+	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 	bool		IsPackage;
 	bool		PackageScanned;

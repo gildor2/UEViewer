@@ -222,8 +222,8 @@ class UnPackage : public FArchive
 {
 	DECLARE_ARCHIVE(UnPackage, FArchive);
 public:
-	char					Filename[MAX_PACKAGE_PATH];		// full name with path and extension
-	char					Name[64];						// short name
+	const char*				Filename;			// full name with path and extension
+	const char*				Name;				// short name
 	FArchive				*Loader;
 	// package header
 	FPackageFileSummary		Summary;
