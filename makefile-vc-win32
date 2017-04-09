@@ -1271,7 +1271,7 @@ DEPENDS = \
 	UmodelTool/res/resource.h
 
 $(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
-	rc.exe -l 0x409 -i UmodelTool/res/  -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/includewin32 -I UmodelTool -I UI  -D _USING_V110_SDK71_ -D OLDCRT -D _WIN32 -D WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
+	rc.exe -l 0x409 -i UmodelTool/res/  -i . -i ./Core -i ./Unreal -i ./libs/include -i ./libs/nvtt -i ./libs/PowerVR -i ./libs/detex -i ./libs/includewin32 -i UmodelTool -i UI  -d _USING_V110_SDK71_ -d OLDCRT -d _WIN32 -d WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
 
 DEPENDS = \
 	libs/PowerVR/PVRTDecompress.h \

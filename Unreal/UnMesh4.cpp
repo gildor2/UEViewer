@@ -178,6 +178,18 @@ struct FApexClothPhysToRenderVertData
 	}
 };
 
+struct FClothingSectionData
+{
+	FGuid					AssetGuid;
+	int32					AssetLodIndex;
+
+	friend FArchive& operator<<(FArchive& Ar, FClothingSectionData& D)
+	{
+		Ar << D.AssetGuid << D.AssetLodIndex;
+		return Ar;
+	}
+};
+
 struct FMeshUVChannelInfo
 {
 	bool					bInitialized;
@@ -329,17 +341,27 @@ struct FSkelMeshSection4
 			Ar << S.MaxBoneInfluences;
 
 			// Physics data, drop
-			TArray<FApexClothPhysToRenderVertData> ApexClothMappingData;
+			TArray<FApexClothPhysToRenderVertData> ClothMappingData;
 			TArray<FVector> PhysicalMeshVertices;
 			TArray<FVector> PhysicalMeshNormals;
 			int16 CorrespondClothAssetIndex;
 			int16 ClothAssetSubmeshIndex;
 
-			Ar << ApexClothMappingData;
+			Ar << ClothMappingData;
 			Ar << PhysicalMeshVertices << PhysicalMeshNormals;
-			Ar << CorrespondClothAssetIndex << ClothAssetSubmeshIndex;
+			Ar << CorrespondClothAssetIndex;
+			if (SkelMeshVer < FSkeletalMeshCustomVersion::NewClothingSystemAdded)
+			{
+				Ar << ClothAssetSubmeshIndex;
+			}
+			else
+			{
+				// UE4.16+
+				FClothingSectionData ClothingData;
+				Ar << ClothingData;
+			}
 
-			S.HasApexClothData = ApexClothMappingData.Num() > 0;
+			S.HasApexClothData = ClothMappingData.Num() > 0;
 		}
 
 		return Ar;
@@ -373,11 +395,16 @@ struct FMultisizeIndexContainer
 		Ar << DataSize;
 
 		if (DataSize == 2)
+		{
 			B.Indices16.BulkSerialize(Ar);
-		else if (DataSize == 4)
-			B.Indices32.BulkSerialize(Ar);
+		}
 		else
-			appError("Unknown DataSize %d", DataSize);
+		{
+			// Some PARAGON meshes has DataSize=0, but works well when assuming this is 32-bit integers array
+			if (DataSize != 4)
+				appPrintf("WARNING: FMultisizeIndexContainer data size %d, assuming int32\n", DataSize);
+			B.Indices32.BulkSerialize(Ar);
+		}
 
 		return Ar;
 
@@ -711,6 +738,7 @@ struct FStaticLODModel4
 				int32 NumVertices;
 				Ar << bExtraBoneInfluences << NumVertices;
 				assert(Lod.NumVertices == NumVertices);
+				DBG_SKEL("Infs: extra=%d verts=%d\n", bExtraBoneInfluences, NumVertices);
 
 				if (!SkinWeightStripFlags.IsDataStrippedForServer())
 				{
@@ -1243,6 +1271,21 @@ struct FRawStaticIndexBuffer4
 	}
 };
 
+struct FWeightedRandomSampler
+{
+	TArray<float>			Prob;
+	TArray<uint32>			Alias;
+	float					TotalWeight;
+
+	friend FArchive& operator<<(FArchive& Ar, FWeightedRandomSampler& S)
+	{
+		return Ar << S.Prob << S.Alias << S.TotalWeight;
+	}
+};
+
+typedef FWeightedRandomSampler FStaticMeshSectionAreaWeightedTriangleSampler;
+typedef FWeightedRandomSampler FStaticMeshAreaWeightedSectionSampler;
+
 
 // FStaticMeshLODResources class (named differently here)
 // NOTE: UE4 LOD models has no versioning code inside, versioning is performed before cooking, with constant STATICMESH_DERIVEDDATA_VER
@@ -1306,6 +1349,17 @@ struct FStaticMeshLODModel4
 
 			if (!StripFlags.IsClassDataStripped(1))
 				Ar << Lod.AdjacencyIndexBuffer;
+
+/*??		if (Ar.Game >= GAME_UE4(16))
+			{
+				TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
+				FStaticMeshAreaWeightedSectionSampler AreaWeightedSampler;
+
+				AreaWeightedSectionSamplers.AddUninitialized(Lod.Sections.Num());
+				for (int i = 0; i < AreaWeightedSectionSamplers.Num(); i++)
+					Ar << AreaWeightedSectionSamplers[i];
+				Ar << AreaWeightedSampler;
+			} */
 		}
 
 		return Ar;
@@ -1451,7 +1505,7 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 		}
 
 		Ar << Bounds;
-		Ar << bLODsShareStaticLighting;
+		Ar << bLODsShareStaticLighting;		//!! WARNING: this field in missing in UE4.15, but exists in older versions and in UE4.16 "master"
 
 		if (Ar.ArVer < VER_UE4_14)
 		{
@@ -1492,17 +1546,19 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 			char buf[1024];
 			GetFullName(buf, 1024);
 			appNotify("Dropping SpeedTree and material data for StaticMesh %s", buf);
-			return;
 		}
-		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
+		else
 		{
-			// UE4.14+ - "Materials" are deprecated, added StaticMaterials
-			TArray<FStaticMaterial> StaticMaterials;
-			Ar << StaticMaterials;
-			// Copy StaticMaterials to Materials
-			Materials.AddUninitialized(StaticMaterials.Num());
-			for (int i = 0; i < StaticMaterials.Num(); i++)
-				Materials[i] = StaticMaterials[i].MaterialInterface;
+			if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
+			{
+				// UE4.14+ - "Materials" are deprecated, added StaticMaterials
+				TArray<FStaticMaterial> StaticMaterials;
+				Ar << StaticMaterials;
+				// Copy StaticMaterials to Materials
+				Materials.AddUninitialized(StaticMaterials.Num());
+				for (int i = 0; i < StaticMaterials.Num(); i++)
+					Materials[i] = StaticMaterials[i].MaterialInterface;
+			}
 		}
 	}
 

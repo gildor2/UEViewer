@@ -2382,6 +2382,7 @@ struct FSkeletalMeshCustomVersion
 		UseSharedColorBufferFormat = 6,		// separate vertex stream for vertex influences
 		UseSeparateSkinWeightBuffer = 7,	// use FColorVertexStream for both static and skeletal meshes
 		// UE4.15 = 7
+		NewClothingSystemAdded = 8,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
