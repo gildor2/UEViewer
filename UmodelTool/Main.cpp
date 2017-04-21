@@ -2,6 +2,7 @@
 
 #if _WIN32
 #include <direct.h>					// getcwd
+#include <signal.h>					// abort handler
 #else
 #include <unistd.h>					// getcwd
 #endif
@@ -668,6 +669,13 @@ static void ExceptionHandler()
 	exit(1);
 }
 
+#if _WIN32
+// AbortHandler on linux will cause infinite recurse, but works well on Windows
+static void AbortHandler(int signal)
+{
+	appError("abort() called");
+}
+#endif
 
 #if UNREAL4
 
@@ -694,6 +702,10 @@ int main(int argc, char **argv)
 
 #if DO_GUARD
 	TRY {
+#endif
+
+#if _WIN32
+	signal(SIGABRT, AbortHandler);
 #endif
 
 	guard(Main);
