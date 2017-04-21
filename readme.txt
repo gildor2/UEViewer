@@ -35,6 +35,9 @@ http://www.gildor.org/projects/umodel/faq
 Some tutorials available here:
 http://www.gildor.org/projects/umodel/tutorials
 
+Youtube page with tutorials and news:
+https://www.youtube.com/playlist?list=PLJROJrENPVvK-V8PCTR9qBmY0Q7v4wCym
+
 Other documentation:
 http://www.gildor.org/smf/index.php/board,9.0.html
 

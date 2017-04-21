@@ -631,6 +631,8 @@ void CUmodelApp::WindowCreated()
 			NewMenuCheckbox("Keyboard shortcuts\tH", &IsHelpVisible)
 			+ NewMenuHyperLink("View readme", "readme.txt")	//?? add directory here
 			+ NewMenuSeparator()
+			+ NewMenuHyperLink("Tutorial videos", "https://www.youtube.com/playlist?list=PLJROJrENPVvK-V8PCTR9qBmY0Q7v4wCym")
+			+ NewMenuSeparator()
 			+ NewMenuHyperLink("UModel website", GUmodelHomepage)
 			+ NewMenuHyperLink("UModel FAQ", "http://www.gildor.org/projects/umodel/faq")
 			+ NewMenuHyperLink("Compatibility information", "http://www.gildor.org/projects/umodel/compat")
