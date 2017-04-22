@@ -670,6 +670,7 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	// some games has special tag constants
 #if SPECIAL_TAGS
 	if (S.Tag == 0x9E2A83C2) goto tag_ok;		// Killing Floor
+	if (S.Tag == 0x7E4A8BCA) goto tag_ok;		// iStorm
 #endif // SPECIAL_TAGS
 #if NURIEN
 	if (S.Tag == 0xA94E6C81) goto tag_ok;		// Nurien

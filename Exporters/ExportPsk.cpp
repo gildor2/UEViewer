@@ -18,12 +18,6 @@
 // Here we performing reverse transformation.
 #define MIRROR_MESH				1
 
-/*??
-
-- ActorX + UDK has support for vertex colors - make umodel compatible with this
-
-*/
-
 static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 {
 	assert(Mesh->OriginalMesh);
@@ -44,6 +38,8 @@ static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 		"#exec MESH SCALE       MESH=%s X=%g Y=%g Z=%g\n\n",
 		MeshName, VECTOR_ARG(Mesh->MeshScale)
 	);
+	// TODO: sockets: "ATTACHNAME" directive.
+	// https://unreal.shaungoeppinger.com/skeletal-animation-import-directives/
 }
 
 

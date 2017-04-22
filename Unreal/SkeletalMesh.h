@@ -112,6 +112,14 @@ struct CSkelMeshSocket
 	FName					Name;
 	FName					Bone;
 	CCoords					Transform;
+
+#if DECLARE_VIEWER_PROPS
+	DECLARE_STRUCT(CSkelMeshSocket)
+	BEGIN_PROP_TABLE
+		PROP_NAME(Name)
+		PROP_NAME(Bone)
+	END_PROP_TABLE
+#endif
 };
 
 
@@ -161,6 +169,8 @@ public:
 		PROP_VECTOR(MeshScale)
 		PROP_ROTATOR(RotOrigin)
 		VPROP_ARRAY_COUNT(RefSkeleton, BoneCount)
+		PROP_ARRAY(Sockets, CSkelMeshSocket)
+		VPROP_ARRAY_COUNT(Sockets, SocketCount)
 	END_PROP_TABLE
 private:
 	CSkeletalMesh()									// for InternalConstructor()
@@ -284,7 +294,8 @@ public:
 
 #define REGISTER_SKELMESH_VCLASSES \
 	REGISTER_CLASS(CMeshSection) \
-	REGISTER_CLASS(CSkelMeshLod)
+	REGISTER_CLASS(CSkelMeshLod) \
+	REGISTER_CLASS(CSkelMeshSocket)
 
 
 #endif // __SKELETAL_MESH_H__
