@@ -94,8 +94,8 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 		const CSkelMeshLod &Lod = Mesh0->Lods[0];
 		ComputeBounds(&Lod.Verts[0].Position, Lod.NumVerts, sizeof(CSkelMeshVertex), Mins, Maxs);
 		// ... transform bounds
-		SkelInst->BaseTransformScaled.TransformPointSlow(Mins, Mins);
-		SkelInst->BaseTransformScaled.TransformPointSlow(Maxs, Maxs);
+		SkelInst->BaseTransformScaled.UnTransformPoint(Mins, Mins);
+		SkelInst->BaseTransformScaled.UnTransformPoint(Maxs, Maxs);
 	}
 	else
 	{
@@ -112,8 +112,8 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 			CVec3 Bounds2[2];
 			const CSkelMeshLod &Lod2 = Mesh2->Lods[0];
 			ComputeBounds(&Lod2.Verts[0].Position, Lod2.NumVerts, sizeof(CSkelMeshVertex), Bounds2[0], Bounds2[1]);
-			Inst->BaseTransformScaled.TransformPointSlow(Bounds2[0], Bounds2[0]);
-			Inst->BaseTransformScaled.TransformPointSlow(Bounds2[1], Bounds2[1]);
+			Inst->BaseTransformScaled.UnTransformPoint(Bounds2[0], Bounds2[0]);
+			Inst->BaseTransformScaled.UnTransformPoint(Bounds2[1], Bounds2[1]);
 			ComputeBounds(Bounds2, 2, sizeof(CVec3), Mins, Maxs, true);	// include Bounds2 into Mins/Maxs
 		}
 		// reset animation for all meshes
@@ -128,9 +128,8 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 #if SHOW_BOUNDS
 	appPrintf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
 	appPrintf("Bounds.max = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Max));
-	appPrintf("Origin     = %g %g %g\n", FVECTOR_ARG(Mesh->MeshOrigin));
+	appPrintf("Origin     = %g %g %g\n", VECTOR_ARG(Mesh->MeshOrigin));
 	appPrintf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
-	appPrintf("Offset     = %g %g %g\n", VECTOR_ARG(offset));
 #endif // SHOW_BOUNDS
 }
 
@@ -438,7 +437,7 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 		v[0] = (i & 1) ? B.Min.X : B.Max.X;
 		v[1] = (i & 2) ? B.Min.Y : B.Max.Y;
 		v[2] = (i & 4) ? B.Min.Z : B.Max.Z;
-		MeshInst->BaseTransformScaled.TransformPointSlow(v, v);
+		MeshInst->BaseTransformScaled.UnTransformPoint(v, v);
 	}
 	// can use glDrawElements(), but this will require more GL setup
 	glColor3f(0.5,0.5,1);

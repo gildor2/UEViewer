@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "UnrealClasses.h"
 
+//!! BUG: vertex meshes displayed too dark in GL2 renderer because of missing tangents
+
 #if RENDERING
 
 #include "MeshCommon.h"				// for CMeshSection
@@ -40,18 +42,17 @@ void CVertMeshInstance::FreeRenderBuffers()
 void CVertMeshInstance::SetMesh(const UVertMesh *Mesh)
 {
 	pMesh = Mesh;
-	SetAxis(Mesh->RotOrigin, BaseTransform.axis);
-	BaseTransform.origin[0] = Mesh->MeshOrigin.X * Mesh->MeshScale.X;
-	BaseTransform.origin[1] = Mesh->MeshOrigin.Y * Mesh->MeshScale.Y;
-	BaseTransform.origin[2] = Mesh->MeshOrigin.Z * Mesh->MeshScale.Z;
 
-	BaseTransformScaled.axis = BaseTransform.axis;
+	FRotator R;
+	R = pMesh->RotOrigin;
+	R.Roll = -R.Roll;		// difference from SkeletalMesh: Roll seems inverted
+	RotatorToAxis(R, BaseTransformScaled.axis);
+	BaseTransformScaled.axis[0].Scale(Mesh->MeshScale.X);
+	BaseTransformScaled.axis[1].Scale(Mesh->MeshScale.Y);
+	BaseTransformScaled.axis[2].Scale(Mesh->MeshScale.Z);
 	CVec3 tmp;
-	tmp[0] = 1.0f / Mesh->MeshScale.X;
-	tmp[1] = 1.0f / Mesh->MeshScale.Y;
-	tmp[2] = 1.0f / Mesh->MeshScale.Z;
-	BaseTransformScaled.axis.PrescaleSource(tmp);
-	BaseTransformScaled.origin = CVT(Mesh->MeshOrigin);
+	VectorNegate(CVT(Mesh->MeshOrigin), tmp);
+	BaseTransformScaled.axis.UnTransformVector(tmp, BaseTransformScaled.origin);
 
 	FreeRenderBuffers();
 	if (!pMesh->Faces.Num()) return;
@@ -165,10 +166,10 @@ void CVertMeshInstance::Draw(unsigned flags)
 	int base2 = pMesh->VertexCount * FrameNum2;
 
 	float backLerp = 1 - frac;
-	CVec3 Scale1, Scale2;
-	Scale1 = Scale2 = CVT(pMesh->MeshScale);
-	Scale1.Scale(backLerp);
-	Scale2.Scale(frac);
+//	CVec3 Scale1, Scale2;
+//	Scale1 = Scale2 = CVT(pMesh->MeshScale);
+//	Scale1.Scale(backLerp);
+//	Scale2.Scale(frac);
 
 	// compute deformed mesh
 	const FMeshWedge *W = &pMesh->Wedges[0];
@@ -181,31 +182,37 @@ void CVertMeshInstance::Draw(unsigned flags)
 		// path with no frame lerp
 		// vertex
 		const FMeshVert &V = pMesh->Verts[base1 + W->iVertex];
-		tmp[0] = V.X * pMesh->MeshScale.X;
-		tmp[1] = V.Y * pMesh->MeshScale.Y;
-		tmp[2] = V.Z * pMesh->MeshScale.Z;
-		BaseTransform.TransformPoint(tmp, *pVec);
+		tmp[0] = V.X;// * pMesh->MeshScale.X;
+		tmp[1] = V.Y;// * pMesh->MeshScale.Y;
+		tmp[2] = V.Z;// * pMesh->MeshScale.Z;
+		BaseTransformScaled.UnTransformPoint(tmp, *pVec);
 		// normal
 		const FMeshNorm &N = pMesh->Normals[base1 + W->iVertex];
 		tmp[0] = (N.X - 512.0f) / 512;
 		tmp[1] = (N.Y - 512.0f) / 512;
 		tmp[2] = (N.Z - 512.0f) / 512;
-		BaseTransform.axis.TransformVector(tmp, *pNormal);
+		BaseTransformScaled.axis.UnTransformVector(tmp, *pNormal);
 #else
 		// vertex
 		const FMeshVert &V1 = pMesh->Verts[base1 + W->iVertex];
 		const FMeshVert &V2 = pMesh->Verts[base2 + W->iVertex];
+	#if 0
 		tmp[0] = V1.X * Scale1[0] + V2.X * Scale2[0];
 		tmp[1] = V1.Y * Scale1[1] + V2.Y * Scale2[1];
 		tmp[2] = V1.Z * Scale1[2] + V2.Z * Scale2[2];
-		BaseTransform.TransformPoint(tmp, *pVec);
+	#else
+		tmp[0] = V1.X * backLerp + V2.X * frac;
+		tmp[1] = V1.Y * backLerp + V2.Y * frac;
+		tmp[2] = V1.Z * backLerp + V2.Z * frac;
+	#endif
+		BaseTransformScaled.UnTransformPoint(tmp, *pVec);
 		// normal
 		const FMeshNorm &N1 = pMesh->Normals[base1 + W->iVertex];
 		const FMeshNorm &N2 = pMesh->Normals[base2 + W->iVertex];
 		tmp[0] = (N1.X * backLerp + N2.X * frac - 512.0f) / 512;
 		tmp[1] = (N1.Y * backLerp + N2.Y * frac - 512.0f) / 512;
 		tmp[2] = (N1.Z * backLerp + N2.Z * frac - 512.0f) / 512;
-		BaseTransform.axis.TransformVector(tmp, *pNormal);
+		BaseTransformScaled.axis.UnTransformVector(tmp, *pNormal);
 #endif
 	}
 
@@ -252,6 +259,7 @@ void CVertMeshInstance::Draw(unsigned flags)
 		glColor3f(0.5, 1, 0);
 		for (i = 0; i < pMesh->Wedges.Num(); i++)
 		{
+			Normals[i].NormalizeFast();	// normals are scaled now with BaseTransformScaled, so normalize them for debug view
 			glVertex3fv(Verts[i].v);
 			CVec3 tmp;
 			VectorMA(Verts[i], 2, Normals[i], tmp);

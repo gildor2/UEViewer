@@ -180,18 +180,13 @@ void CSkelMeshInstance::SetMesh(CSkeletalMesh *Mesh)
 
 	// orientation
 
-	SetAxis(pMesh->RotOrigin, BaseTransform.axis);
-	BaseTransform.origin[0] = pMesh->MeshOrigin[0] * pMesh->MeshScale[0];
-	BaseTransform.origin[1] = pMesh->MeshOrigin[1] * pMesh->MeshScale[1];
-	BaseTransform.origin[2] = pMesh->MeshOrigin[2] * pMesh->MeshScale[2];
-
-	BaseTransformScaled.axis = BaseTransform.axis;
+	RotatorToAxis(pMesh->RotOrigin, BaseTransformScaled.axis);
+	BaseTransformScaled.axis[0].Scale(pMesh->MeshScale[0]);
+	BaseTransformScaled.axis[1].Scale(pMesh->MeshScale[1]);
+	BaseTransformScaled.axis[2].Scale(pMesh->MeshScale[2]);
 	CVec3 tmp;
-	tmp[0] = 1.0f / pMesh->MeshScale[0];
-	tmp[1] = 1.0f / pMesh->MeshScale[1];
-	tmp[2] = 1.0f / pMesh->MeshScale[2];
-	BaseTransformScaled.axis.PrescaleSource(tmp);
-	BaseTransformScaled.origin = Mesh->MeshOrigin;
+	VectorNegate(pMesh->MeshOrigin, tmp);
+	BaseTransformScaled.axis.UnTransformVector(tmp, BaseTransformScaled.origin);
 
 	int NumBones = pMesh->RefSkeleton.Num();
 	int NumVerts = 0;
@@ -564,9 +559,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 		// move bone position to global coordinate space
 		if (!i)
 		{
-			// root bone - use BaseTransform
-			// can use inverted BaseTransformScaled to avoid 'slow' operation
-			BaseTransformScaled.TransformCoordsSlow(BC, BC);
+			// root bone - use BaseTransformScaled
+			BaseTransformScaled.UnTransformCoords(BC, BC);
 		}
 		else
 		{

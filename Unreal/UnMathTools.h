@@ -3,14 +3,43 @@
 
 #include "MeshCommon.h"
 
-inline void SetAxis(const FRotator &Rot, CAxis &Axis)
+inline void RotatorToAxis(const FRotator& Rot, CAxis& Axis)
 {
 	CVec3 angles;
-	//?? check: swapped pitch and roll ?
-	angles[YAW]   = -Rot.Yaw   * (180 / 32768.0f);
-	angles[ROLL]  = -Rot.Pitch * (180 / 32768.0f);
-	angles[PITCH] = -Rot.Roll  * (180 / 32768.0f);
+	angles[YAW]   = Rot.Yaw   * (180 / 32768.0f);
+	angles[PITCH] = Rot.Pitch * (180 / 32768.0f);
+	angles[ROLL]  = Rot.Roll  * (180 / 32768.0f);
 	Axis.FromEuler(angles);
+	// X
+	Axis[0][2] *= -1;
+	// Y
+	Axis[1][2] *= -1;
+	// Z
+	Axis[2][0] *= -1;
+	Axis[2][1] *= -1;
+//	printf("Rotator %d %d %d -> axis\n", Rot.Pitch, Rot.Yaw, Rot.Roll);
+//	printf("%7.3f %7.3f %7.3f\n%7.3f %7.3f %7.3f\n%7.3f %7.3f %7.3f\n", VECTOR_ARG(Axis[0]), VECTOR_ARG(Axis[1]), VECTOR_ARG(Axis[2]));
+}
+
+inline void AxisToRotator(const CAxis& Axis, FRotator& Rot)
+{
+//	printf("src:\n");
+//	printf("%7.3f %7.3f %7.3f\n%7.3f %7.3f %7.3f\n%7.3f %7.3f %7.3f\n", VECTOR_ARG(Axis[0]), VECTOR_ARG(Axis[1]), VECTOR_ARG(Axis[2]));
+
+	CVec3 angles;
+	Vec2Euler(Axis[0], angles);
+	Rot.Yaw   =  angles[YAW]   / (180 / 32768.0f);
+	Rot.Pitch = -angles[PITCH] / (180 / 32768.0f);
+	Rot.Roll  =  0;
+	// Now compute ROLL
+	CAxis S;
+	RotatorToAxis(Rot, S);
+	Rot.Roll = atan2(dot(Axis[2], S[1]), dot(Axis[1], S[1])) / M_PI * 32768.0f;
+	// Normalize value
+	if (Rot.Yaw < 0)   Rot.Yaw   += 65536;
+	if (Rot.Pitch < 0) Rot.Pitch += 65536;
+	if (Rot.Roll < 0)  Rot.Roll  += 65536;
+//	printf("r=%d %d %d\n", Rot.Pitch, Rot.Yaw, Rot.Roll);
 }
 
 

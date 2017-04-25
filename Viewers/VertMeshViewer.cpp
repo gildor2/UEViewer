@@ -26,7 +26,7 @@ CVertMeshViewer::CVertMeshViewer(UVertMesh* Mesh, CApplication* Window)
 #if 1
 	VectorAdd(CVT(B.Min), CVT(B.Max), offset);
 	offset.Scale(0.5f);
-	MeshInst->BaseTransformScaled.TransformPointSlow(offset, offset);
+	MeshInst->BaseTransformScaled.UnTransformPoint(offset, offset);
 #else
 	// scale/translate origin
 	float z = (B.Max.Z + B.Min.Z) / 2;

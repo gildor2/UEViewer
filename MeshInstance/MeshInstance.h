@@ -21,7 +21,6 @@ class CMeshInstance
 {
 public:
 	// common properties
-	CCoords			BaseTransform;			// rotation for mesh; have identity axis
 	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
 	// debug
 	bool			bColorMaterials;		//?? replace with DF_COLOR_MATERIALS, but flags are stored outside of mesh and used in MeshInstance::SetMaterial()

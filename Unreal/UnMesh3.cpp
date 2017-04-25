@@ -2258,7 +2258,7 @@ void USkeletalMesh3::PostLoad()
 			DS->Bone = S->BoneName;
 			CCoords &C = DS->Transform;
 			C.origin = CVT(S->RelativeLocation);
-			SetAxis(S->RelativeRotation, C.axis);
+			RotatorToAxis(S->RelativeRotation, C.axis);
 		}
 	}
 
