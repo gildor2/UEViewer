@@ -17,6 +17,10 @@ struct CStaticMeshLod : public CBaseMeshLod
 {
 	CStaticMeshVertex		*Verts;
 
+	CStaticMeshLod()
+	: Verts(NULL)
+	{}
+
 	~CStaticMeshLod()
 	{
 		if (Verts) appFree(Verts);
