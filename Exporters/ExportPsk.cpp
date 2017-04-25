@@ -10,7 +10,7 @@
 #include "Psk.h"
 #include "Exporters.h"
 
-#include "UnMathTools.h"		// CVertexShare
+#include "UnMathTools.h"
 
 
 // PSK uses right-hand coordinates, but unreal uses left-hand.
@@ -23,23 +23,42 @@ static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 	assert(Mesh->OriginalMesh);
 	const char *MeshName = Mesh->OriginalMesh->Name;
 
+	// There's a good description of #exec parameters for a mesh:
+	// https://unreal.shaungoeppinger.com/skeletal-animation-import-directives/
+
 	// mesh info
 	Ar.Printf(
 		"class %s extends Actor;\n\n"
 		"#exec MESH MODELIMPORT MESH=%s MODELFILE=%s.psk\n"
-		"#exec MESH ORIGIN      MESH=%s X=%g Y=%g Z=%g YAW=%d PITCH=%d ROLL=%d\n",
+		"#exec MESH ORIGIN      MESH=%s X=%g Y=%g Z=%g YAW=%d PITCH=%d ROLL=%d\n"
+		"// rotator: P=%d Y=%d R=%d\n",
 		MeshName,
 		MeshName, MeshName,
 		MeshName, VECTOR_ARG(Mesh->MeshOrigin),
-			Mesh->RotOrigin.Yaw >> 8, Mesh->RotOrigin.Pitch >> 8, Mesh->RotOrigin.Roll >> 8
+		Mesh->RotOrigin.Yaw >> 8, Mesh->RotOrigin.Pitch >> 8, Mesh->RotOrigin.Roll >> 8,
+		Mesh->RotOrigin.Pitch, Mesh->RotOrigin.Yaw, Mesh->RotOrigin.Roll
 	);
 	// mesh scale
 	Ar.Printf(
 		"#exec MESH SCALE       MESH=%s X=%g Y=%g Z=%g\n\n",
 		MeshName, VECTOR_ARG(Mesh->MeshScale)
 	);
-	// TODO: sockets: "ATTACHNAME" directive.
-	// https://unreal.shaungoeppinger.com/skeletal-animation-import-directives/
+	// sockets
+	for (int i = 0; i < Mesh->Sockets.Num(); i++)
+	{
+		const CSkelMeshSocket& S = Mesh->Sockets[i];
+		const CCoords& T = S.Transform;
+		FRotator R;
+		AxisToRotator(T.axis, R);
+		Ar.Printf(
+			"#exec MESH ATTACHNAME  MESH=%s BONE=\"%s\" TAG=\"%s\" YAW=%d PITCH=%d ROLL=%d X=%g Y=%g Z=%g\n"
+			"// rotator: P=%d Y=%d R=%d\n",
+			MeshName, *S.Bone, *S.Name,
+			R.Yaw >> 8, R.Pitch >> 8, R.Roll >> 8,
+			VECTOR_ARG(T.origin),
+			R.Pitch, R.Yaw, R.Roll
+		);
+	}
 }
 
 

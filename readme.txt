@@ -180,6 +180,10 @@ detex
 
 Changes
 ~~~~~~~
+25.04.2017
+- fixes with mesh rotation (only affects mesh display in viewer)
+- exporting skeletal mesh with "-uc" parameter will not also dump mesh socket information
+
 09.04.2017
 - updated UE4.16 support
 
