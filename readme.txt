@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+26.04.2017
+- added Android ETC2 texture format support
+
 25.04.2017
 - fixes with mesh rotation (only affects mesh display in viewer)
 - exporting skeletal mesh with "-uc" parameter will not also dump mesh socket information

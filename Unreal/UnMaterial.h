@@ -108,7 +108,8 @@ enum ETexturePixelFormat
 #endif
 #if SUPPORT_ANDROID
 	TPF_ETC1,
-	TPF_ETC2,
+	TPF_ETC2_RGB,
+	TPF_ETC2_RGBA,
 	TPF_ASTC_4x4,
 	TPF_ASTC_6x6,
 	TPF_ASTC_8x8,

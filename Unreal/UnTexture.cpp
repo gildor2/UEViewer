@@ -69,7 +69,8 @@ const CPixelFormatInfo PixelFormatInfo[] =
 #endif
 #if SUPPORT_ANDROID
 	{ 0,						4,			4,			8,			0,			0,			"ETC1"		},	// TPF_ETC1
-	{ 0,						4,			4,			8,			0,			0,			"ETC2"		},	// TPF_ETC2
+	{ 0,						4,			4,			8,			0,			0,			"ETC2_RGB"	},	// TPF_ETC2_RGB
+	{ 0,						4,			4,			16,			0,			0,			"ETC2_RGBA"	},	// TPF_ETC2_RGBA
 	{ 0,						4,			4,			16,			0,			0,			"ATC_4x4"	},	// TPF_ASTC_4x4
 	{ 0,						6,			6,			16,			0,			0,			"ATC_6x6"	},	// TPF_ASTC_6x6
 	{ 0,						8,			8,			16,			0,			0,			"ATC_8x8"	},	// TPF_ASTC_8x8
@@ -275,8 +276,7 @@ byte *CTextureData::Decompress(int MipLevel)
 		}
 #endif
 		return dst;
-	#if 0
-	case TPF_ETC2:
+	case TPF_ETC2_RGB:
 		{
 			detexTexture tex;
 			tex.format = DETEX_TEXTURE_FORMAT_ETC2;
@@ -290,7 +290,20 @@ byte *CTextureData::Decompress(int MipLevel)
 			PROFILE_DDS(appPrintProfiler());
 		}
 		return dst;
-	#endif
+	case TPF_ETC2_RGBA:
+		{
+			detexTexture tex;
+			tex.format = DETEX_TEXTURE_FORMAT_ETC2_EAC;
+			tex.data = const_cast<byte*>(Data);	// will be used as 'const' anyway
+			tex.width = USize;
+			tex.height = VSize;
+			tex.width_in_blocks = USize / 4;
+			tex.height_in_blocks = VSize / 4;
+			PROFILE_DDS(appResetProfiler());
+			detexDecompressTextureLinear(&tex, dst, DETEX_PIXEL_FORMAT_RGBA8);
+			PROFILE_DDS(appPrintProfiler());
+		}
+		return dst;
 	case TPF_ASTC_4x4:
 	case TPF_ASTC_6x6:
 	case TPF_ASTC_8x8:
