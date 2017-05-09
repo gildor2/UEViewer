@@ -125,7 +125,7 @@ sources(UE3_LIBS) = {
 #------------------------------------------------
 
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
-STDLIBS   += SDL2 SDL2main
+STDLIBS   += SDL2
 INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
 OPTIONS   += $WARNINGS
 

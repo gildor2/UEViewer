@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+09.05.2017
+- fixed bug in Win32 SDL2 caused incorrect handling of -path="some path" command line option
+
 26.04.2017
 - added Android ETC2 texture format support
 

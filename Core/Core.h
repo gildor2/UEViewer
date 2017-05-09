@@ -25,6 +25,7 @@
 #include "Build.h"
 
 #if RENDERING
+#	define SDL_MAIN_HANDLED			// prevent overriding of 'main' function on Windows
 #	include <SDL2/SDL.h>			//?? move outside (here for SDL_GetTicks() only?)
 #endif
 
