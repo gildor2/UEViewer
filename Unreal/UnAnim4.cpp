@@ -684,6 +684,11 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 	if (!StripFlags.IsEditorDataStripped())
 	{
 		Ar << RawAnimationData;
+		if (Ar.ArVer >= VER_UE4_ANIMATION_ADD_TRACKCURVES)
+		{
+			TArray<FRawAnimSequenceTrack> SourceRawAnimationData;
+			Ar << SourceRawAnimationData;
+		}
 	}
 
 	if (FFrameworkObjectVersion::Get(Ar) < FFrameworkObjectVersion::MoveCompressedAnimDataToTheDDC)

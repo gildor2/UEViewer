@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+16.05.2017
+- fixed loading of UE4 source animation assets
+
 09.05.2017
 - fixed bug in Win32 SDL2 caused incorrect handling of -path="some path" command line option
 
