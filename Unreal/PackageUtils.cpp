@@ -114,7 +114,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 
 	// read a few first bytes as integers
 	FArchive *Ar = appCreateFileReader(file);
-	unsigned int FileData[16];
+	uint32 FileData[16];
 	Ar->Serialize(FileData, sizeof(FileData));
 	delete Ar;
 
@@ -131,7 +131,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 		//!! Also, this function could react on custom package tags.
 		return true;
 	}
-	unsigned int Version = FileData[1];
+	uint32 Version = FileData[1];
 
 	FileInfo Info;
 
