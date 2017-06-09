@@ -228,17 +228,17 @@ public:
 	Some enums used to distinguish game, engine and platform
 -----------------------------------------------------------------------------*/
 
-#define GAME_UE4(x)				(GAME_UE4_BASE + x)
-#define GAME_UE4_GET_MINOR(x)	(x - GAME_UE4_BASE)			// reverse operation for GAME_UE4(x)
+#define GAME_UE4(x)				(GAME_UE4_BASE + (x << 4))
+#define GAME_UE4_GET_MINOR(x)	((x - GAME_UE4_BASE) >> 4)	// reverse operation for GAME_UE4(x)
 
 enum EGame
 {
 	GAME_UNKNOWN   = 0,			// should be 0
 
-	GAME_UE1       = 0x01000,
+	GAME_UE1       = 0x0100000,
 		GAME_Undying,
 
-	GAME_UE2       = 0x02000,
+	GAME_UE2       = 0x0200000,
 		GAME_UT2,
 		GAME_Pariah,
 		GAME_SplinterCell,
@@ -255,17 +255,17 @@ enum EGame
 		GAME_AA2,
 		GAME_EOS,
 
-	GAME_VENGEANCE = 0x02100,	// variant of UE2
+	GAME_VENGEANCE = 0x0210000,	// variant of UE2
 		GAME_Tribes3,
 		GAME_Swat4,				// not autodetected, overlaps with Tribes3
 		GAME_Bioshock,
 
-	GAME_LEAD      = 0x02200,
+	GAME_LEAD      = 0x0220000,
 
-	GAME_UE2X      = 0x04000,
+	GAME_UE2X      = 0x0400000,
 		GAME_UC2,
 
-	GAME_UE3       = 0x08000,
+	GAME_UE3       = 0x0800000,
 		GAME_EndWar,
 		GAME_MassEffect,
 		GAME_MassEffect2,
@@ -341,17 +341,19 @@ enum EGame
 		GAME_Smite,
 		GAME_DevilsThird,
 
-	GAME_MIDWAY3   = 0x08100,	// variant of UE3
+	GAME_MIDWAY3   = 0x0810000,	// variant of UE3
 		GAME_A51,
 		GAME_Wheelman,
 		GAME_MK,
 		GAME_Strangle,
 		GAME_TNA,
 
-	GAME_UE4_BASE  = 0x10000,
+	GAME_UE4_BASE  = 0x1000000,
+		// bytes: 01.00.0N.NX : 01=UE4, 00=masked by GAME_ENGINE, NN=UE4 subversion, X=game (4 bits, 0=base engine)
 		// Add custom UE4 game engines here
+		GAME_Friday13 = GAME_UE4(14)+1,
 
-	GAME_ENGINE    = 0xFFF00	// mask for game engine
+	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
 
 #define LATEST_SUPPORTED_UE4_VERSION		16		// UE4.XX
@@ -2316,15 +2318,19 @@ struct FFrameworkObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
+#if FRIDAY13
+		if (Ar.Game == GAME_Friday13) return (Type)14;		// pre-UE4.14
+#endif
+
 		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4(12))
+		if (Ar.Game < GAME_UE4(13))
 			return (Type)6;
-		if (Ar.Game == GAME_UE4(13))
+		if (Ar.Game < GAME_UE4(14))
 			return RemoveSoundWaveCompressionName;
-		if (Ar.Game == GAME_UE4(14))
+		if (Ar.Game < GAME_UE4(15))
 			return GeometryCacheMissingMaterials;
-		if (Ar.Game == GAME_UE4(15))
+		if (Ar.Game < GAME_UE4(16))
 			return (Type)22;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2354,15 +2360,19 @@ struct FEditorObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
+#if FRIDAY13
+		if (Ar.Game == GAME_Friday13) return (Type)7;		// pre-UE4.14
+#endif
+
 		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4(12))
+		if (Ar.Game < GAME_UE4(13))
 			return (Type)2;
-		if (Ar.Game == GAME_UE4(13))
+		if (Ar.Game < GAME_UE4(14))
 			return (Type)6;
-		if (Ar.Game == GAME_UE4(14))
+		if (Ar.Game < GAME_UE4(15))
 			return RefactorMeshEditorMaterials;
-		if (Ar.Game == GAME_UE4(15))
+		if (Ar.Game < GAME_UE4(16))
 			return (Type)14;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2398,11 +2408,11 @@ struct FSkeletalMeshCustomVersion
 
 		if (Ar.Game < GAME_UE4(13))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4(13))
+		if (Ar.Game < GAME_UE4(14))
 			return SaveNumVertices;
-		if (Ar.Game == GAME_UE4(14))
+		if (Ar.Game < GAME_UE4(15))
 			return (Type)5;
-		if (Ar.Game == GAME_UE4(15))
+		if (Ar.Game < GAME_UE4(16))
 			return UseSeparateSkinWeightBuffer;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2427,13 +2437,17 @@ struct FRenderingObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
+#if FRIDAY13
+		if (Ar.Game == GAME_Friday13) return (Type)9;		// pre-UE4.14
+#endif
+
 		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game == GAME_UE4(12))
+		if (Ar.Game < GAME_UE4(13))
 			return (Type)2;
-		if (Ar.Game == GAME_UE4(13))
+		if (Ar.Game < GAME_UE4(14))
 			return (Type)4;
-		if (Ar.Game <= GAME_UE4(15))	// 4.14 and 4.15
+		if (Ar.Game < GAME_UE4(16))	// 4.14 and 4.15
 			return (Type)12;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;

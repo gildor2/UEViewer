@@ -121,6 +121,9 @@
 #define STRANGLE		1		// Stranglehold
 #define TNA_IMPACT		1		// TNA iMPACT!
 
+// UE4
+#define FRIDAY13		1		// Friday the 13th: The Game
+
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 
 #endif // __GAME_DEFINES_H__

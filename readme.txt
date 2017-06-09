@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+09.06.2017
+- added Friday the 13th: The Game support, game requires override -game=friday13
+
 16.05.2017
 - fixed loading of UE4 source animation assets
 

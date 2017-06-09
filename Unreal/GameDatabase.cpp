@@ -350,6 +350,9 @@ const GameInfo GListOfGames[] = {
 			GAME_UE4(LATEST_SUPPORTED_UE4_VERSION)		// not zero minor version, to make this game appeared in "-help"
 		},
 		// Add custom UE4 versions here
+#	if FRIDAY13
+		G("Friday the 13th: The Game", friday13, GAME_Friday13),
+#	endif
 #endif // UNREAL4
 
 	// end marker
@@ -894,7 +897,7 @@ void FArchive::OverrideVersion()
 		}
 		return;
 	}
-/*	else if (Game == GAME_UE4 && ArVer != 0) -- disabled because versioned packages provides FCustomVersion info
+/*	else if (Game == GAME_UE4_BASE && ArVer != 0) //-- disabled because versioned packages provides FCustomVersion info
 	{
 		// Path for UE4 when packages are versioned.
 		for (int i = ARRAY_COUNT(ue4Versions) - 1; i >= 0; i--)
@@ -902,7 +905,7 @@ void FArchive::OverrideVersion()
 			printf("arv=%d ue4[%d]=%d\n", ArVer, i, ue4Versions[i]);
 			if (ArVer >= ue4Versions[i])
 			{
-				Game = GAME_UE4_0 + i;
+				Game = GAME_UE4(i);
 				return;
 			}
 		}
