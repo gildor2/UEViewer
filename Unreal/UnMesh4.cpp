@@ -251,8 +251,8 @@ struct FSkeletalMaterial
 struct FSkelMeshSection4
 {
 	int16					MaterialIndex;
-	int						BaseIndex;
-	int						NumTriangles;
+	int32					BaseIndex;
+	int32					NumTriangles;
 	byte					TriangleSorting;		// TEnumAsByte<ETriangleSortOption>
 	bool					bDisabled;
 	int16					CorrespondClothSectionIndex;
@@ -771,7 +771,7 @@ struct FStaticLODModel4
 			if (LoadingMesh->bHasVertexColors)
 			{
 				appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
-				if (SkelMeshVer < FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
+				if (SkelMeshVer < FSkeletalMeshCustomVersion::UseSharedColorBufferFormat)
 				{
 					Ar << Lod.ColorVertexBuffer;
 				}
