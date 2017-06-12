@@ -906,9 +906,9 @@ int main(int argc, char **argv)
 #endif // HAS_UI
 
 	// apply some GSettings
+	GForceGame = GSettings.GameOverride;	// force game fore scanning any game files
 	if (hasRootDir)
 		appSetRootDirectory(*GSettings.GamePath);
-	GForceGame = GSettings.GameOverride;
 	GForcePlatform = GSettings.Platform;
 	GForceCompMethod = GSettings.PackageCompression;
 	if (GSettings.ExportPath.IsEmpty())

@@ -123,6 +123,7 @@
 
 // UE4
 #define FRIDAY13		1		// Friday the 13th: The Game
+#define TEKKEN7			1		// Tekken 7
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 

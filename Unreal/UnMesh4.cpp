@@ -1417,8 +1417,14 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 
 	Ar << BodySetup;
 
+#if TEKKEN7
+	if (Ar.Game == GAME_Tekken7) goto no_nav_collision;
+#endif
+
 	if (Ar.ArVer >= VER_UE4_STATIC_MESH_STORE_NAV_COLLISION)
 		Ar << NavCollision;
+
+no_nav_collision:
 
 	if (!StripFlags.IsEditorDataStripped())
 	{

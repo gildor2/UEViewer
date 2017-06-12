@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+12.06.2017
+- added Tekken 7 support, game requires override -game=tekken7
+
 09.06.2017
 - added Friday the 13th: The Game support, game requires override -game=friday13
 

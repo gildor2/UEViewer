@@ -352,6 +352,7 @@ enum EGame
 		// bytes: 01.00.0N.NX : 01=UE4, 00=masked by GAME_ENGINE, NN=UE4 subversion, X=game (4 bits, 0=base engine)
 		// Add custom UE4 game engines here
 		GAME_Friday13 = GAME_UE4(14)+1,
+		GAME_Tekken7 = GAME_UE4(14)+2,
 
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
@@ -2318,8 +2319,8 @@ struct FFrameworkObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-#if FRIDAY13
-		if (Ar.Game == GAME_Friday13) return (Type)14;		// pre-UE4.14
+#if FRIDAY13 || TEKKEN7
+		if (Ar.Game == GAME_Friday13 || Ar.Game == GAME_Tekken7) return (Type)14;		// pre-UE4.14
 #endif
 
 		if (Ar.Game < GAME_UE4(12))
@@ -2360,8 +2361,8 @@ struct FEditorObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-#if FRIDAY13
-		if (Ar.Game == GAME_Friday13) return (Type)7;		// pre-UE4.14
+#if FRIDAY13 || TEKKEN7
+		if (Ar.Game == GAME_Friday13 || Ar.Game == GAME_Tekken7) return (Type)7;		// pre-UE4.14
 #endif
 
 		if (Ar.Game < GAME_UE4(12))
@@ -2437,8 +2438,8 @@ struct FRenderingObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-#if FRIDAY13
-		if (Ar.Game == GAME_Friday13) return (Type)9;		// pre-UE4.14
+#if FRIDAY13 || TEKKEN7
+		if (Ar.Game == GAME_Friday13 || Ar.Game == GAME_Tekken7) return (Type)9;		// pre-UE4.14
 #endif
 
 		if (Ar.Game < GAME_UE4(12))

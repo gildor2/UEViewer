@@ -89,6 +89,10 @@ struct FPakEntry
 				Ar << P.CompressionBlocks;
 			Ar << P.bEncrypted << P.CompressionBlockSize;
 		}
+#if TEKKEN7
+		if (GForceGame == GAME_Tekken7)
+			P.bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
+#endif
 
 		P.StructSize = Ar.Tell64() - StartOffset;
 

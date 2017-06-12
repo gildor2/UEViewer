@@ -353,6 +353,9 @@ const GameInfo GListOfGames[] = {
 #	if FRIDAY13
 		G("Friday the 13th: The Game", friday13, GAME_Friday13),
 #	endif
+#	if TEKKEN7
+		G("Tekken 7", tekken7, GAME_Tekken7),
+#	endif
 #endif // UNREAL4
 
 	// end marker
