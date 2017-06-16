@@ -320,7 +320,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 	else
 	{
 		// file in virtual file system
-		info->SizeInKb = parentVfs->GetFileSize(FullName);
+		info->SizeInKb = parentVfs->GetFileSize(FullName) / 1024;
 		info->RelativeName = appStrdupPool(FullName);
 	}
 
