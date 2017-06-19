@@ -1055,6 +1055,13 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			appPrintf("  (skipping %s)\n", *Tag.Name);
 #endif
 		skip_property:
+			if (Tag.Type == NAME_BoolProperty && Tag.DataSize != 0)
+			{
+				// BoolProperty has everything in FPropertyTag, but sometimes it has DataSize==4, what
+				// causes error when trying to skip it. This is why we have a separate code here.
+				appPrintf("WARNING: skipping bool property %s with Tag.Size=%d\n", Prop->Name, Tag.DataSize);
+				continue;
+			}
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
