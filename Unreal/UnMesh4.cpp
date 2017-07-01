@@ -1350,7 +1350,7 @@ struct FStaticMeshLODModel4
 			if (!StripFlags.IsClassDataStripped(1))
 				Ar << Lod.AdjacencyIndexBuffer;
 
-/*??		if (Ar.Game >= GAME_UE4(16))
+			if (Ar.Game >= GAME_UE4(16))
 			{
 				TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
 				FStaticMeshAreaWeightedSectionSampler AreaWeightedSampler;
@@ -1359,7 +1359,7 @@ struct FStaticMeshLODModel4
 				for (int i = 0; i < AreaWeightedSectionSamplers.Num(); i++)
 					Ar << AreaWeightedSectionSamplers[i];
 				Ar << AreaWeightedSampler;
-			} */
+			}
 		}
 
 		return Ar;
