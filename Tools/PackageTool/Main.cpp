@@ -7,6 +7,17 @@
 	Main function
 -----------------------------------------------------------------------------*/
 
+#if UNREAL4
+
+int UE4UnversionedPackage(int verMin, int verMax)
+{
+	appError("Unversioned UE4 packages are not supported. Please restart UModel and select UE4 version in range %d-%d using UI or command line.", verMin, verMax);
+	return -1;
+}
+
+#endif // UNREAL4
+
+
 int main(int argc, char **argv)
 {
 #if DO_GUARD
