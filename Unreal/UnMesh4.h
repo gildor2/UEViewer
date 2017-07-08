@@ -134,6 +134,22 @@ struct FSmartNameContainer
 };
 
 
+struct FVirtualBone
+{
+	DECLARE_STRUCT(FVirtualBone);
+
+	FName					SourceBoneName;
+	FName					TargetBoneName;
+	FName					VirtualBoneName;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(SourceBoneName)
+		PROP_NAME(TargetBoneName)
+		PROP_NAME(VirtualBoneName)
+	END_PROP_TABLE
+};
+
+
 class USkeleton : public UObject
 {
 	DECLARE_CLASS(USkeleton, UObject);
@@ -142,9 +158,11 @@ public:
 	TMap<FName, FReferencePose> AnimRetargetSources;
 	FGuid					Guid;
 	FSmartNameContainer		SmartNames;
+	TArray<FVirtualBone>	VirtualBones;
 	//!! TODO: sockets
 
 	BEGIN_PROP_TABLE
+		PROP_ARRAY(VirtualBones, FVirtualBone)
 		PROP_DROP(BoneTree)			// was deprecated before 4.0 release in favor of ReferenceSkeleton
 		PROP_DROP(Notifies)			// not working with notifies in our program
 	END_PROP_TABLE
@@ -513,6 +531,7 @@ public:
 	REGISTER_CLASS(FRichCurve) \
 	REGISTER_CLASS(FFloatCurve) \
 	REGISTER_CLASS(FRawCurveTracks) \
+	REGISTER_CLASS(FVirtualBone) \
 	REGISTER_CLASS_ALIAS(UAnimSequence4, UAnimSequence)
 
 
