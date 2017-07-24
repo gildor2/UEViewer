@@ -244,7 +244,10 @@ void ExportSoundNodeWave(const USoundNodeWave *Snd)
 		//!! data encoded in MP3 format
 	}
 
-	SaveSound(Snd, OffsetPointer(bulk->BulkData, extraHeaderSize), bulk->ElementCount - extraHeaderSize, ext);
+	if (bulk)
+	{
+		SaveSound(Snd, OffsetPointer(bulk->BulkData, extraHeaderSize), bulk->ElementCount - extraHeaderSize, ext);
+	}
 }
 
 #endif // UNREAL3
@@ -268,7 +271,10 @@ void ExportSoundWave4(const USoundWave *Snd)
 		ext = *Snd->CompressedFormatData[0].FormatName; // "OGG"
 	}
 
-	SaveSound(Snd, bulk->BulkData, bulk->ElementCount, ext);
+	if (bulk)
+	{
+		SaveSound(Snd, bulk->BulkData, bulk->ElementCount, ext);
+	}
 }
 
 #endif // UNREAL4
