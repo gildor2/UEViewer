@@ -84,8 +84,21 @@ void CObjectViewer::Draw2D()
 		DrawTextLeft(S_GREEN "Package :" S_WHITE " %s (%s)", Object->Package->Filename, UncookedPkgName);
 
 	DrawTextLeft(S_GREEN "Class   :" S_WHITE " %s\n"
-				 S_GREEN "Object  :" S_WHITE " %s\n",
+				 S_GREEN "Object  :" S_WHITE " %s",
 				 Object->GetRealClassName(), Object->Name);
+
+	// get group name
+	if (Object->Package && Object->Package->Game < GAME_UE4_BASE)
+	{
+		char group[512];
+		Object->GetFullName(ARRAY_ARG(group), false, false);
+		if (group[0])
+		{
+			DrawTextLeft(S_GREEN "Group   :" S_WHITE " %s", group);
+		}
+	}
+
+	DrawTextLeft("");
 }
 
 #endif // RENDERING

@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+27.07.2017
+- showing object's group name in viewer for UE1-UE3 games
+
 12.06.2017
 - added Tekken 7 support, game requires override -game=tekken7
 
