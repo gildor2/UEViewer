@@ -2009,6 +2009,10 @@ no_depends: ;
 			delete Loader;
 			Loader = new FReaderWrapper(expLoader, -Summary.HeadersSize);
 		}
+		else
+		{
+			appPrintf("WARNING: it seems package %s has missing .uexp file\n", filename);
+		}
 	}
 #endif // UNREAL4
 
@@ -2674,6 +2678,33 @@ UObject* UnPackage::CreateExport(int index)
 	if (Exp.Object)
 		return Exp.Object;
 
+
+	// check if this object actually contains only default properties and nothing more
+	bool shouldSkipObject = false;
+
+	if (!strnicmp(Exp.ObjectName, "Default__", 9))
+	{
+		// default properties are not supported -- this is a clean UObject format
+		shouldSkipObject = true;
+	}
+#if UNREAL4
+	if (Game >= GAME_UE4_BASE)
+	{
+		// This could be a blueprint - it contains objects which are marked as 'StaticMesh' class,
+		// but really containing nothing. Such objects are always contained inside some Default__... parent.
+		const char* OuterName = GetObjectPackageName(Exp.PackageIndex);
+		if (OuterName && !strnicmp(OuterName, "Default__", 9))
+		{
+			shouldSkipObject = true;
+		}
+	}
+#endif // UNREAL4
+
+	if (shouldSkipObject)
+	{
+		return NULL;
+	}
+
 	const char *ClassName = GetObjectName(Exp.ClassIndex);
 	UObject *Obj = Exp.Object = CreateClass(ClassName);
 	if (!Obj)
@@ -2724,10 +2755,11 @@ UObject* UnPackage::CreateExport(int index)
 	Obj->PackageIndex = index;
 	Obj->Outer        = Outer;
 	Obj->Name         = Exp.ObjectName;
-	// add object to GObjLoaded for later serialization
-	if (strnicmp(Exp.ObjectName, "Default__", 9) != 0)	// default properties are not supported -- this is a clean UObject format
-		UObject::GObjLoaded.Add(Obj);
 
+	// add object to GObjLoaded for later serialization
+	UObject::GObjLoaded.Add(Obj);
+
+	// perform serialization
 	UObject::EndLoad();
 	return Obj;
 
