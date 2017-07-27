@@ -16,8 +16,8 @@ public:
 
 		Super::Serialize(Ar);
 		Ar << f5C;
-#if UT2 || BATTLE_TERR
-		if ((Ar.Game == GAME_UT2 || Ar.Game == GAME_BattleTerr) && Ar.ArLicenseeVer >= 2)
+#if UT2 || BATTLE_TERR || LOCO
+		if ((Ar.Game == GAME_UT2 || Ar.Game == GAME_BattleTerr || Ar.Game == GAME_Loco) && Ar.ArLicenseeVer >= 2)
 			Ar << f2C;
 #endif
 		Ar << RawData;
