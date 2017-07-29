@@ -347,7 +347,7 @@ const GameInfo GListOfGames[] = {
 		{
 			"Unreal engine 4.0-4." STR(LATEST_SUPPORTED_UE4_VERSION),
 			"ue4.[0-" STR(LATEST_SUPPORTED_UE4_VERSION) "]",
-			GAME_UE4(LATEST_SUPPORTED_UE4_VERSION)		// not zero minor version, to make this game appeared in "-help"
+			GAME_UE4(LATEST_SUPPORTED_UE4_VERSION+1)	// some invalid version number, but not zero - to show this game in "-help" output
 		},
 		// Add custom UE4 versions here
 #	if FRIDAY13
