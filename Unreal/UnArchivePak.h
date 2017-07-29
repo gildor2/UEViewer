@@ -247,12 +247,12 @@ public:
 		if (!MountPoint.RemoveFromStart("../../.."))
 		{
 			appNotify("Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
-			MountPoint = "Root/";
+			MountPoint = "/";
 		}
 		if (MountPoint[0] != '/' || ( (MountPoint.Len() > 1) && (MountPoint[1] == '.') ))
 		{
 			appNotify("Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
-			MountPoint = "Root/";
+			MountPoint = "/";
 		}
 
 		int count;
