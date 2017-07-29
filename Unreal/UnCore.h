@@ -96,6 +96,7 @@ struct CGameFileInfo
 	bool		IsPackage;
 	bool		PackageScanned;
 	int			SizeInKb;							// file size, in kilobytes
+	int			ExtraSizeInKb;						// size of additional non-package files
 	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
 	UnPackage*	Package;
 	// content information, valid when PackageScanned is true

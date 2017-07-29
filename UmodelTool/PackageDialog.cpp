@@ -178,7 +178,7 @@ public:
 #undef ADD_COLUMN
 		}
 		// size
-		appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb);
+		appSprintf(ARRAY_ARG(buf), "%d", package->SizeInKb + package->ExtraSizeInKb);
 		AddSubItem(index, COLUMN_Size, buf);
 #endif // USE_FULLY_VIRTUAL_LIST
 	}
@@ -225,7 +225,7 @@ private:
 		}
 		else if (SubItemIndex == COLUMN_Size)
 		{
-			appSprintf(ARRAY_ARG(buf), "%d", file->SizeInKb);
+			appSprintf(ARRAY_ARG(buf), "%d", file->SizeInKb + file->ExtraSizeInKb);
 			OutText = buf;
 		}
 		else if (file->PackageScanned)
@@ -588,7 +588,7 @@ static int PackageSortFunction(const PackageSortHelper* const pA, const PackageS
 		code = stricmp(A->RelativeName, B->RelativeName);
 		break;
 	case UIPackageList::COLUMN_Size:
-		code = A->SizeInKb - B->SizeInKb;
+		code = (A->SizeInKb - B->SizeInKb) + (A->ExtraSizeInKb - B->ExtraSizeInKb);
 		break;
 	case UIPackageList::COLUMN_NumSkel:
 		code = A->NumSkeletalMeshes - B->NumSkeletalMeshes;
@@ -770,11 +770,11 @@ void UIPackageDialog::SavePackages()
 
 		for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
 		{
-			char SrcFile[1024];
+			char SrcFile[MAX_PACKAGE_PATH];
 #if UNREAL4
 			if (ext > 0)
 			{
-				strcpy(SrcFile, SelectedPackages[i]->RelativeName);
+				appStrncpyz(SrcFile, SelectedPackages[i]->RelativeName, ARRAY_COUNT(SrcFile));
 				char* s = strrchr(SrcFile, '.');
 				if (s && !stricmp(s, ".uasset"))
 				{

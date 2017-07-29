@@ -320,7 +320,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 	else
 	{
 		// file in virtual file system
-		info->SizeInKb = parentVfs->GetFileSize(FullName) / 1024;
+		info->SizeInKb = (parentVfs->GetFileSize(FullName) + 512) / 1024;
 		info->RelativeName = appStrdupPool(FullName);
 	}
 
@@ -436,6 +436,35 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
 	appPrintf("Found %d game files (%d skipped)\n", GameFiles.Num(), GNumForeignFiles);
+
+#if UNREAL4
+	// Should process .uexp and .ubulk files, register their information for .uasset
+	for (int i = 0; i < GameFiles.Num(); i++)
+	{
+		CGameFileInfo *info = GameFiles[i];
+		char SrcFile[MAX_PACKAGE_PATH];
+		appStrncpyz(SrcFile, info->RelativeName, ARRAY_COUNT(SrcFile));
+		char* s = strrchr(SrcFile, '.');
+		if (s && !stricmp(s, ".uasset"))
+		{
+			static const char* additionalExtensions[] =
+			{
+				".ubulk",
+				".uexp",
+			};
+			for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
+			{
+				strcpy(s, additionalExtensions[ext]);
+				const CGameFileInfo* file = appFindGameFile(SrcFile);
+				if (file)
+				{
+					info->ExtraSizeInKb += file->SizeInKb;
+				}
+			}
+		}
+	}
+#endif // UNREAL4
+
 #if PRINT_HASH_DISTRIBUTION
 	PrintHashDistribution();
 #endif
