@@ -215,10 +215,9 @@ function bat3()
 	run $*
 }
 function tr4()    { run1 "data/3/Tribes4" $*;     }
-
 function thief()  { run1 "${steam[@]/%/Thief/ThiefGame/CookedPCNG}" $*; }
-
-function ark()    { run1 "${steam[@]/%/ARK/ShooterGame/Content}" $* -game=ue4.6; }
+function ark()    { run1 "${steam[@]/%/ARK/ShooterGame/Content}" -game=ue4.6 $*; }
+function lawbr    { run1 "${steam[@]/%/LawBreakers/ShooterGame/Content/Paks}" -game=lawbr $*; }
 
 function rund()   {	run1 "data" $*; }
 

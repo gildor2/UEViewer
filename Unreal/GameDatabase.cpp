@@ -356,6 +356,9 @@ const GameInfo GListOfGames[] = {
 #	if TEKKEN7
 		G("Tekken 7", tekken7, GAME_Tekken7),
 #	endif
+#	if LAWBREAKERS
+		G("Lawbreakers", lawbr, GAME_Lawbreakers),
+#	endif
 #endif // UNREAL4
 
 	// end marker
@@ -893,6 +896,15 @@ void FArchive::OverrideVersion()
 	}
 
 #if UNREAL4
+#if LAWBREAKERS
+	if (Game == GAME_Lawbreakers)
+	{
+		// This game uses mostly UE4.13 structures, but has 4.14 package file format. So, game enum
+		// is defined as GAME_UE4(13), but we're defining package version 4.14.
+		ArVer = VER_UE4_14;
+	}
+	else
+#endif // LAWBREAKERS
 	if (Game >= GAME_UE4(0) && Game <= GAME_UE4(LATEST_SUPPORTED_UE4_VERSION))
 	{
 		// Special path for UE4, when engine version is specified and packages are unversioned.

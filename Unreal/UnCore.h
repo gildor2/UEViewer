@@ -352,6 +352,9 @@ enum EGame
 	GAME_UE4_BASE  = 0x1000000,
 		// bytes: 01.00.0N.NX : 01=UE4, 00=masked by GAME_ENGINE, NN=UE4 subversion, X=game (4 bits, 0=base engine)
 		// Add custom UE4 game engines here
+		// 4.13
+		GAME_Lawbreakers = GAME_UE4(13)+1,
+		// 4.14
 		GAME_Friday13 = GAME_UE4(14)+1,
 		GAME_Tekken7 = GAME_UE4(14)+2,
 
@@ -838,8 +841,9 @@ protected:
 	Ar.Seek(Ar.GetStopper());
 
 // research helper
-inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes)
+inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes, const char* Label = NULL)
 {
+	if (Label) appPrintf("%s:", Label);
 	int64 OldPos = Ar.Tell64();
 	for (int i = 0; i < NumBytes; i++)
 	{
@@ -2426,6 +2430,7 @@ struct FRenderingObjectVersion
 	enum Type
 	{
 		BeforeCustomVersionWasAdded = 0,
+		// 4.14
 		TextureStreamingMeshUVChannelData = 10,
 
 		VersionPlusOne,

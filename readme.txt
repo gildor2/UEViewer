@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+29.07.2017
+- implemented Lawbreakers support
+
 28.07.2017
 - added Gigantic auto detection
 

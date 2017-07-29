@@ -1347,7 +1347,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 #if DEBUG_PROPS
 			// show property dump
 			Ar.Seek(PropTagPos);
-			DUMP_ARC_BYTES(Ar, StopPos - PropTagPos);
+			DUMP_ARC_BYTES(Ar, StopPos - PropTagPos, "Dropped bytes");
 #endif
 			appError("%s\'%s\'.%s: Property read error: %d unread bytes", Name, UObject::GLoadingObj->Name, *Tag.Name, StopPos - Pos);
 		}

@@ -216,6 +216,8 @@ struct FSkeletalMaterial
 
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalMaterial& M)
 	{
+		guard(FSkeletalMaterial<<);
+
 		Ar << M.Material;
 
 		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
@@ -239,12 +241,21 @@ struct FSkeletalMaterial
 			}
 		}
 
+#if LAWBREAKERS
+		if (Ar.Game == GAME_Lawbreakers)
+		{
+			int32 unkBool;
+			Ar << unkBool;
+		}
+#endif // LAWBREAKERS
+
 		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
 		{
 			Ar << M.UVChannelData;
 		}
 
 		return Ar;
+		unguard;
 	}
 };
 
@@ -659,11 +670,11 @@ struct FStaticLODModel4
 	TArray<int16>				ActiveBoneIndices;
 	TArray<int16>				RequiredBones;
 	TArray<FSkelMeshChunk4>		Chunks;
-	int							Size;
-	int							NumVertices;
-	int							NumTexCoords;
+	int32						Size;
+	int32						NumVertices;
+	int32						NumTexCoords;
 	FIntBulkData				RawPointIndices;
-	TArray<int>					MeshToImportVertexMap;
+	TArray<int32>				MeshToImportVertexMap;
 	int							MaxImportVertex;
 	FSkeletalMeshVertexBuffer4	VertexBufferGPUSkin;
 	FSkeletalMeshVertexColorBuffer4 ColorVertexBuffer;		//!! TODO: switch to FColorVertexBuffer4
@@ -714,10 +725,16 @@ struct FStaticLODModel4
 		if (!StripFlags.IsEditorDataStripped())
 			Lod.RawPointIndices.Skip(Ar);
 
+#if LAWBREAKERS
+		if (Ar.Game == GAME_Lawbreakers) goto no_import_vertex_map;
+#endif
+
 		if (Ar.ArVer >= VER_UE4_ADD_SKELMESH_MESHTOIMPORTVERTEXMAP)
 		{
 			Ar << Lod.MeshToImportVertexMap << Lod.MaxImportVertex;
 		}
+
+	no_import_vertex_map:
 
 		// geometry
 		if (!StripFlags.IsDataStrippedForServer())
@@ -835,7 +852,13 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 	Ar << Materials;
 #if DEBUG_SKELMESH
 	for (int i1 = 0; i1 < Materials.Num(); i1++)
-		appPrintf("Material[%d] = %s\n", i1, Materials[i1].Material ? Materials[i1].Material->Name : "None");
+	{
+		UObject* Mat = Materials[i1].Material;
+		if (Mat)
+			appPrintf("Material[%d] = %s'%s'\n", i1, Mat->GetClassName(), Mat->Name);
+		else
+			appPrintf("Material[%d] = None\n", i1);
+	}
 #endif
 
 	Ar << RefSkeleton;
@@ -1191,7 +1214,7 @@ struct FStaticMeshVertexBuffer4
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		Ar << S.NumTexCoords << S.Stride << S.NumVertices;
 		Ar << S.bUseFullPrecisionUVs;
-		if (Ar.ArVer >= VER_UE4_12)
+		if (Ar.Game >= GAME_UE4(12))
 		{
 			Ar << S.bUseHighPrecisionTangentBasis;
 		}
@@ -1513,7 +1536,7 @@ no_nav_collision:
 		Ar << Bounds;
 		Ar << bLODsShareStaticLighting;		//!! WARNING: this field in missing in UE4.15, but exists in older versions and in UE4.16 "master"
 
-		if (Ar.ArVer < VER_UE4_14)
+		if (Ar.Game < GAME_UE4(14))
 		{
 			bool bReducedBySimplygon;
 			Ar << bReducedBySimplygon;
@@ -1532,13 +1555,13 @@ no_nav_collision:
 		if (bCooked)
 		{
 			// ScreenSize for each LOD
-			int MaxNumLods = (Ar.ArVer >= VER_UE4_9) ? MAX_STATIC_LODS_UE4 : 4;
+			int MaxNumLods = (Ar.Game >= GAME_UE4(9)) ? MAX_STATIC_LODS_UE4 : 4;
 			for (int i = 0; i < MaxNumLods; i++)
 				Ar << ScreenSize[i];
 		}
 	} // end of FStaticMeshRenderData
 
-	if (Ar.ArVer >= VER_UE4_14)
+	if (Ar.Game >= GAME_UE4(14))
 	{
 		// Serialize following data to obtain material references for UE4.14+.
 		// Don't bother serializing anything beyond this point in earlier versions.
