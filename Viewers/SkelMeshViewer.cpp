@@ -259,6 +259,8 @@ void CSkelMeshViewer::TagMesh(CSkelMeshInstance *Inst)
 	// not tagget yet, create a copy of the mesh
 	CSkelMeshInstance* NewInst = new CSkelMeshInstance();
 	NewInst->SetMesh(Inst->pMesh);
+	// remember animation which is linked to the object (UE2, UE4)
+	NewInst->SetAnim(Inst->GetAnim());
 	TaggedMeshes.Add(NewInst);
 }
 
