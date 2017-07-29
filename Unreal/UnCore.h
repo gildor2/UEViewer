@@ -2290,7 +2290,7 @@ enum
 		VER_UE4_ADDED_SEARCHABLE_NAMES = 510,
 	VER_UE4_15 = 510,
 		VER_UE4_64BIT_EXPORTMAP_SERIALSIZES = 511,
-	VER_UE4_16,		//!! automatic number, update after release
+	VER_UE4_16 = 513,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2312,6 +2312,7 @@ struct FFrameworkObjectVersion
 		CacheDestructibleOverlaps = 16,
 		GeometryCacheMissingMaterials = 17,	// not needed now - for UGeometryCache
 		// UE4.15 = 22
+		// UE4.16 = 23
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2338,6 +2339,8 @@ struct FFrameworkObjectVersion
 			return GeometryCacheMissingMaterials;
 		if (Ar.Game < GAME_UE4(16))
 			return (Type)22;
+		if (Ar.Game < GAME_UE4(17))
+			return (Type)23;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2354,6 +2357,7 @@ struct FEditorObjectVersion
 		RefactorMeshEditorMaterials = 8,
 		// UE4.15 = 14
 		UPropertryForMeshSection = 10,
+		// UE4.16 = 17
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2380,6 +2384,8 @@ struct FEditorObjectVersion
 			return RefactorMeshEditorMaterials;
 		if (Ar.Game < GAME_UE4(16))
 			return (Type)14;
+		if (Ar.Game < GAME_UE4(17))
+			return (Type)17;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2400,6 +2406,7 @@ struct FSkeletalMeshCustomVersion
 		UseSeparateSkinWeightBuffer = 7,	// use FColorVertexStream for both static and skeletal meshes
 		// UE4.15 = 7
 		NewClothingSystemAdded = 8,
+		// UE4.16 = 9
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2420,6 +2427,8 @@ struct FSkeletalMeshCustomVersion
 			return (Type)5;
 		if (Ar.Game < GAME_UE4(16))
 			return UseSeparateSkinWeightBuffer;
+		if (Ar.Game < GAME_UE4(17))
+			return (Type)9;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2430,8 +2439,9 @@ struct FRenderingObjectVersion
 	enum Type
 	{
 		BeforeCustomVersionWasAdded = 0,
-		// 4.14
+		// UE4.14
 		TextureStreamingMeshUVChannelData = 10,
+		// UE4.16 = 15
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2456,6 +2466,8 @@ struct FRenderingObjectVersion
 			return (Type)4;
 		if (Ar.Game < GAME_UE4(16))	// 4.14 and 4.15
 			return (Type)12;
+		if (Ar.Game < GAME_UE4(17))
+			return (Type)15;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
