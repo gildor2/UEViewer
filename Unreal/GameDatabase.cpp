@@ -813,6 +813,10 @@ void FArchive::DetectGame()
 	if ((ArVer == 832 || ArVer == 893) && ArLicenseeVer == 21)	// Remember Me (832) or Life Is Strange (893)
 		SET(GAME_RememberMe);
 #endif
+#if GIGANTIC
+	if (ArVer == 867 && ArLicenseeVer == 9)
+		SET(GAME_Gigantic);
+#endif
 
 	if (check > 1)
 		appNotify("DetectGame collision: detected %d titles, Ver=%d, LicVer=%d", check, ArVer, ArLicenseeVer);

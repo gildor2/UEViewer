@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+28.07.2017
+- added Gigantic auto detection
+
 27.07.2017
 - showing object's group name in viewer for UE1-UE3 games
 
@@ -390,7 +393,7 @@ Changes
 - implemented support for destructible meshes: UE3 FracturedStaticMesh and UE4 DestructibleMesh
 
 07.03.2015
-- added Gigantic (alpha) support
+- added Gigantic (alpha) support (-game=gigantic is required)
 
 02.02.2015
 - implemented Life is Strange support
