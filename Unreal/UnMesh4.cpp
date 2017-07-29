@@ -1097,9 +1097,21 @@ struct FDistanceFieldVolumeData
 	bool			bMeshWasClosed;
 	bool			bBuiltAsIfTwoSided;
 	bool			bMeshWasPlane;
+	// 4.16+
+	TArray<byte>	CompressedDistanceFieldVolume;
+	FVector2D		DistanceMinMax;
 
 	friend FArchive& operator<<(FArchive& Ar, FDistanceFieldVolumeData& V)
 	{
+		guard(FDistanceFieldVolumeData<<);
+		if (Ar.Game >= GAME_UE4(16))
+		{
+			Ar << V.CompressedDistanceFieldVolume;
+			Ar << V.Size << V.LocalBoundingBox << V.DistanceMinMax << V.bMeshWasClosed;
+			Ar << V.bBuiltAsIfTwoSided << V.bMeshWasPlane;
+			return Ar;
+		}
+		// Pre-4.16 version
 		Ar << V.DistanceFieldVolume << V.Size << V.LocalBoundingBox << V.bMeshWasClosed;
 		/// reference: 28.08.2014 - f5238f04
 		if (Ar.ArVer >= VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
@@ -1108,6 +1120,7 @@ struct FDistanceFieldVolumeData
 		if (Ar.ArVer >= VER_UE4_DEPRECATE_UMG_STYLE_ASSETS)
 			Ar << V.bMeshWasPlane;
 		return Ar;
+		unguard;
 	}
 };
 
@@ -1504,6 +1517,8 @@ no_nav_collision:
 
 		Ar << Lods; // original code: TArray<FStaticMeshLODResources> LODResources
 
+		guard(PostLODCode);
+
 		if (bCooked)
 		{
 			if (Ar.ArVer >= VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
@@ -1559,6 +1574,8 @@ no_nav_collision:
 			for (int i = 0; i < MaxNumLods; i++)
 				Ar << ScreenSize[i];
 		}
+
+		unguard;
 	} // end of FStaticMeshRenderData
 
 	if (Ar.Game >= GAME_UE4(14))
