@@ -181,10 +181,15 @@ int main(int argc, char **argv)
 		// read header (raw)
 		int compressedStart   = Summary.CompressedChunks[0].CompressedOffset;
 		int uncompressedStart = Summary.CompressedChunks[0].UncompressedOffset;
-		FILE *h = fopen(Package->Filename, "rb");
+
+		// use game file system to access file to avoid any troubles with locating file
+		const CGameFileInfo* info = appFindGameFile(Package->Filename);
+		assert(info);
+		FArchive* h = appCreateFileReader(info);
+		assert(h);
 		byte *buffer = new byte[compressedStart];
-		fread(buffer, compressedStart, 1, h);
-		fclose(h);
+		h->Serialize(buffer, compressedStart);
+		delete h;
 
 		FMemReader mem(buffer, compressedStart);
 		mem.SetupFrom(*Package);
@@ -270,7 +275,7 @@ int main(int argc, char **argv)
 		if (fwrite(buffer, uncompressedStart, 1, out) != 1) appError("Write failed");
 		delete buffer;
 
-		// copy data
+		// copy remaining data
 		Package->Seek(uncompressedStart);
 		CopyStream(Package, out, uncompressedSize - uncompressedStart);
 	}
