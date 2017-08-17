@@ -620,7 +620,7 @@ void FFileReader::Serialize(void *data, int size)
 				// large block, read directly from file
 				int res = fread(data, size, 1, f);
 				if (res != 1)
-					appError("Unable to serialize %d bytes at pos=0x%llX", size, ArPos64);
+					appError("Unable to read %d bytes at pos=0x%llX", size, ArPos64);
 			#if PROFILE
 				GNumSerialize++;
 				GSerializeBytes += size;
@@ -632,7 +632,7 @@ void FFileReader::Serialize(void *data, int size)
 			// fill buffer
 			int ReadBytes = fread(Buffer, 1, FILE_BUFFER_SIZE, f);
 			if (ReadBytes == 0)
-				appError("Unable to serialize %d bytes at pos=0x%llX", 1, ArPos64);
+				appError("Unable to read %d bytes at pos=0x%llX", 1, ArPos64);
 		#if PROFILE
 			GNumSerialize++;
 			GSerializeBytes += ReadBytes;
@@ -744,7 +744,7 @@ void FFileWriter::Serialize(void *data, int size)
 				}
 				int res = fwrite(data, size, 1, f);
 				if (res != 1)
-					appError("Unable to serialize %d bytes at pos=0x%llX", size, ArPos64);
+					appError("Unable to write %d bytes at pos=0x%llX", size, ArPos64);
 			#if PROFILE
 				GNumSerialize++;
 				GSerializeBytes += size;
@@ -801,7 +801,7 @@ void FFileWriter::FlushBuffer()
 		}
 		int res = fwrite(Buffer, BufferSize, 1, f);
 		if (res != 1)
-			appError("Unable to serialize %d bytes at pos=0x%llX", BufferSize, ArPos64);
+			appError("Unable to write %d bytes at pos=0x%llX", BufferSize, ArPos64);
 #if PROFILE
 		GNumSerialize++;
 		GSerializeBytes += BufferSize;

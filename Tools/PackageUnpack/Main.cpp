@@ -184,8 +184,18 @@ int main(int argc, char **argv)
 
 		// use game file system to access file to avoid any troubles with locating file
 		const CGameFileInfo* info = appFindGameFile(Package->Filename);
-		assert(info);
-		FArchive* h = appCreateFileReader(info);
+		FArchive* h;
+		if (info)
+		{
+			// if file was loaded using search inside game path, use game filesystem, because
+			// direct use of package name may not work
+			h = appCreateFileReader(info);
+		}
+		else
+		{
+			// if file for some reason was not registered, open it using file name
+			h = new FFileReader(argPkgName);
+		}
 		assert(h);
 		byte *buffer = new byte[compressedStart];
 		h->Serialize(buffer, compressedStart);
