@@ -13,9 +13,10 @@ int GNumAllocs = 0;
 size_t GTotalAllocationSize = 0;
 int    GTotalAllocationCount = 0;
 
-#define BLOCK_MAGIC		0xAE
-#define FREE_BLOCK		0xFE
+#define BLOCK_MAGIC				0xAE
+#define FREE_BLOCK				0xFE
 
+#define MAX_ALLOCATION_SIZE		(257<<20)		// upper limit for single allocation is 256+1 Mb
 
 #if DEBUG_MEMORY
 
@@ -100,7 +101,7 @@ CBlockHeader* CBlockHeader::first = NULL;
 void *appMalloc(int size, int alignment)
 {
 	guard(appMalloc);
-	if (size < 0 || size >= (256<<20))		// upper limit for single allocation is 256Mb
+	if (size < 0 || size >= MAX_ALLOCATION_SIZE)
 		appError("Memory: bad allocation size %d bytes", size);
 	assert(alignment > 1 && alignment <= 256 && ((alignment & (alignment - 1)) == 0));
 	void *block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
