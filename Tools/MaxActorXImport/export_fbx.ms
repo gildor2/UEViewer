@@ -10,6 +10,9 @@
 
  Revision History:
 
+    20.09.2017 v1.06
+    - fixed error in fbx animation export when track has 0 frames
+
 	17.01.2017 v1.05
 	- fixed non-multitake animation export
 	- fixed length of exported animation
@@ -209,7 +212,7 @@ fn ExportFbxAnim =
 			local track = Anims[i]
 			local trackName = track.Name
 			local numFrames = track.NumRawFrames-1
-			if (numFrames == 0) then numFrames = 1
+			if (numFrames < 1) then numFrames = 1
 			FBXExporterSetParam "SplitAnimationIntoTakes" trackName track.FirstRawFrame (track.FirstRawFrame+numFrames)
 		)
 		SaveAXFile filename
