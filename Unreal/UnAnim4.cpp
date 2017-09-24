@@ -243,34 +243,40 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		EnumToName(Seq->ScaleCompressionFormat),
 		EnumToName(Seq->KeyEncodingFormat)
 	);
-	for (int i2 = 0; i2 < Seq->CompressedTrackOffsets.Num(); /*empty*/)
+	for (int i2 = 0, localTrackIndex = 0; i2 < Seq->CompressedTrackOffsets.Num(); localTrackIndex++)
 	{
+		// scale information
+		int ScaleStripSize = Seq->CompressedScaleOffsets.StripSize;
+		int ScaleKeys = 0, ScaleOffset = 0;
+		if (ScaleStripSize && Seq->CompressedScaleOffsets.OffsetData.Num())
+		{
+			ScaleOffset = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize];
+			if (ScaleStripSize > 1)
+				ScaleKeys = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize + 1];
+		}
+		// bone name
+		int BoneTrackIndex = Seq->GetTrackBoneIndex(localTrackIndex);
+		const char* BoneName = "(None)";
+		if (BoneTrackIndex >= ReferenceSkeleton.RefBoneInfo.Num())
+			BoneName = "(bad)";
+		else if (BoneTrackIndex >= 0)
+			BoneName = *ReferenceSkeleton.RefBoneInfo[BoneTrackIndex].Name;
+		// offsets
 		if (Seq->KeyEncodingFormat != AKF_PerTrackCompression)
 		{
-			int BoneTrackIndex = Seq->GetTrackBoneIndex(i2/4);
-			const char* BoneName = "(None)";
-			if (BoneTrackIndex >= ReferenceSkeleton.RefBoneInfo.Num())
-				BoneName = "(bad)";
-			else if (BoneTrackIndex >= 0)
-				BoneName = *ReferenceSkeleton.RefBoneInfo[BoneTrackIndex].Name;
 			int TransOffset = Seq->CompressedTrackOffsets[i2  ];
 			int TransKeys   = Seq->CompressedTrackOffsets[i2+1];
 			int RotOffset   = Seq->CompressedTrackOffsets[i2+2];
 			int RotKeys     = Seq->CompressedTrackOffsets[i2+3];
-			appPrintf("    [%d] = trans %d[%d] rot %d[%d] - %s\n", i2/4, TransOffset, TransKeys, RotOffset, RotKeys, BoneName);
+			appPrintf("    [%d] = trans %d[%d] rot %d[%d] scale %d[%d] - %s\n", localTrackIndex,
+				TransOffset, TransKeys, RotOffset, RotKeys, ScaleOffset, ScaleKeys, BoneName);
 			i2 += 4;
 		}
 		else
 		{
-			int BoneTrackIndex = Seq->GetTrackBoneIndex(i2/2);
-			const char* BoneName = "(None)";
-			if (BoneTrackIndex >= ReferenceSkeleton.RefBoneInfo.Num())
-				BoneName = "(bad)";
-			else if (BoneTrackIndex >= 0)
-				BoneName = *ReferenceSkeleton.RefBoneInfo[BoneTrackIndex].Name;
 			int TransOffset = Seq->CompressedTrackOffsets[i2  ];
 			int RotOffset   = Seq->CompressedTrackOffsets[i2+1];
-			appPrintf("    [%d] = trans %d rot %d - %s\n", i2/2, TransOffset, RotOffset, BoneName);
+			appPrintf("    [%d] = trans %d rot %d scale %d - %s\n", localTrackIndex, TransOffset, RotOffset, ScaleOffset, BoneName);
 			i2 += 2;
 		}
 	}
@@ -362,6 +368,13 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
 			int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex+1];
+			int ScaleOffset = (Seq->CompressedScaleOffsets.StripSize > 0) ? Seq->CompressedScaleOffsets.OffsetData[TrackIndex] : -1;
+#if 0
+			const int BytesToDump = 64;
+			if (TransOffset >= 0) { Reader.Seek(TransOffset); DUMP_ARC_BYTES(Reader, BytesToDump, "Trans"); }
+			if (RotOffset >= 0) { Reader.Seek(RotOffset); DUMP_ARC_BYTES(Reader, BytesToDump,  "Rot"); }
+			if (ScaleOffset >= 0) { Reader.Seek(ScaleOffset); DUMP_ARC_BYTES(Reader, BytesToDump, "Scale"); }
+#endif
 
 			uint32 PackedInfo;
 			AnimationCompressionFormat KeyFormat;

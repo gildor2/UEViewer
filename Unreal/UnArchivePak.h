@@ -286,7 +286,13 @@ public:
 				AddFileToHash(&FileInfos[i]);
 			}
 		}
-		appPrintf("Pak(%s): mounted at \"%s\", %d files (%d encrypted)\n", *Filename, *MountPoint, count, numEncryptedFiles);
+		// Print statistics
+		appPrintf("Pak %s: %d files", *Filename, count);
+		if (numEncryptedFiles)
+			appPrintf(" (%d encrypted)", numEncryptedFiles);
+		if (strcmp(*MountPoint, "/") != 0)
+			appPrintf(", mount point: \"%s\"", *MountPoint);
+		appPrintf("\n");
 
 		return true;
 
