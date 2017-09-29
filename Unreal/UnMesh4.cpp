@@ -274,7 +274,7 @@ struct FSkelMeshSection4
 	TArray<FSoftVertex4>	SoftVertices;			// editor-only data
 	TArray<uint16>			BoneMap;
 	int32					MaxBoneInfluences;
-	bool					HasApexClothData;
+	bool					HasClothData;
 	// UE4.14
 	bool					bCastShadow;
 
@@ -324,7 +324,7 @@ struct FSkelMeshSection4
 		}
 
 		// UE4.13+ stuff
-		S.HasApexClothData = false;
+		S.HasClothData = false;
 		if (SkelMeshVer >= FSkeletalMeshCustomVersion::CombineSectionWithChunk)
 		{
 			if (!StripFlags.IsDataStrippedForServer())
@@ -372,7 +372,7 @@ struct FSkelMeshSection4
 				Ar << ClothingData;
 			}
 
-			S.HasApexClothData = ClothMappingData.Num() > 0;
+			S.HasClothData = ClothMappingData.Num() > 0;
 		}
 
 		return Ar;
@@ -432,7 +432,7 @@ struct FSkelMeshChunk4
 	int						NumRigidVertices;
 	int						NumSoftVertices;
 	int						MaxBoneInfluences;
-	bool					HasApexClothData;
+	bool					HasClothData;
 
 	friend FArchive& operator<<(FArchive& Ar, FSkelMeshChunk4& C)
 	{
@@ -453,21 +453,21 @@ struct FSkelMeshChunk4
 
 		Ar << C.BoneMap << C.NumRigidVertices << C.NumSoftVertices << C.MaxBoneInfluences;
 
-		C.HasApexClothData = false;
+		C.HasClothData = false;
 		if (Ar.ArVer >= VER_UE4_APEX_CLOTH)
 		{
 			// Physics data, drop
-			TArray<FApexClothPhysToRenderVertData> ApexClothMappingData;
+			TArray<FApexClothPhysToRenderVertData> ClothMappingData;
 			TArray<FVector> PhysicalMeshVertices;
 			TArray<FVector> PhysicalMeshNormals;
 			int16 CorrespondClothAssetIndex;
 			int16 ClothAssetSubmeshIndex;
 
-			Ar << ApexClothMappingData;
+			Ar << ClothMappingData;
 			Ar << PhysicalMeshVertices << PhysicalMeshNormals;
 			Ar << CorrespondClothAssetIndex << ClothAssetSubmeshIndex;
 
-			C.HasApexClothData = ApexClothMappingData.Num() > 0;
+			C.HasClothData = ClothMappingData.Num() > 0;
 		}
 
 		return Ar;
@@ -647,16 +647,21 @@ struct FSkeletalMeshVertexColorBuffer4
 	}
 };
 
-struct FSkeletalMeshVertexAPEXClothBuffer
+struct FSkeletalMeshVertexClothBuffer
 {
 	// don't need physics - don't serialize any data, simply skip them
-	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshVertexAPEXClothBuffer& B)
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshVertexClothBuffer& B)
 	{
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		if (!StripFlags.IsDataStrippedForServer())
 		{
-			DBG_SKEL("Dropping ApexCloth\n");
+			DBG_SKEL("Dropping Cloth\n");
 			SkipBulkArrayData(Ar);
+			if (FSkeletalMeshCustomVersion::Get(Ar) >= FSkeletalMeshCustomVersion::CompactClothVertexBuffer)
+			{
+				TArray<uint64> ClothIndexMapping;
+				Ar << ClothIndexMapping;
+			}
 		}
 		return Ar;
 	}
@@ -678,7 +683,7 @@ struct FStaticLODModel4
 	int							MaxImportVertex;
 	FSkeletalMeshVertexBuffer4	VertexBufferGPUSkin;
 	FSkeletalMeshVertexColorBuffer4 ColorVertexBuffer;		//!! TODO: switch to FColorVertexBuffer4
-	FSkeletalMeshVertexAPEXClothBuffer APEXClothVertexBuffer;
+	FSkeletalMeshVertexClothBuffer ClothVertexBuffer;
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticLODModel4& Lod)
 	{
@@ -809,8 +814,8 @@ struct FStaticLODModel4
 			if (!StripFlags.IsClassDataStripped(1))
 				Ar << Lod.AdjacencyIndexBuffer;
 
-			if (Ar.ArVer >= VER_UE4_APEX_CLOTH && Lod.HasApexClothData())
-				Ar << Lod.APEXClothVertexBuffer;
+			if (Ar.ArVer >= VER_UE4_APEX_CLOTH && Lod.HasClothData())
+				Ar << Lod.ClothVertexBuffer;
 		}
 
 		return Ar;
@@ -818,13 +823,13 @@ struct FStaticLODModel4
 		unguard;
 	}
 
-	bool HasApexClothData() const
+	bool HasClothData() const
 	{
 		for (int i = 0; i < Chunks.Num(); i++)
-			if (Chunks[i].HasApexClothData)			// pre-UE4.13 code
+			if (Chunks[i].HasClothData)				// pre-UE4.13 code
 				return true;
 		for (int i = 0; i < Sections.Num(); i++)	// UE4.13+
-			if (Sections[i].HasApexClothData)
+			if (Sections[i].HasClothData)
 				return true;
 		return false;
 	}

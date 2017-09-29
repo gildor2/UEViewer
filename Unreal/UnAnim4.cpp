@@ -738,6 +738,13 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 			Ar << CompressedTrackToSkeletonMapTable;
 			Ar << CompressedCurveData;
 
+			if (Ar.Game >= GAME_UE4(17))
+			{
+				// UE4.17+
+				int32 CompressedRawDataSize;
+				Ar << CompressedRawDataSize;
+			}
+
 			// compressed data
 			Ar << CompressedByteStream;
 			Ar << bUseRawDataOnly;

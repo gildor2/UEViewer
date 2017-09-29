@@ -155,12 +155,17 @@ function ut4()
 {
 	CheckDir C:/3-UnrealEngine/UnrealTournamentDev/UnrealTournament/Content/Paks
 #	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament/Saved/Cooked/WindowsNoEditor/UnrealTournament/Content
-	run $* -game=ue4.16
+	run -game=ue4.16 $*
 }
 function paragon()
 {
 	CheckDir C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks
-	run $* -game=ue4.16
+	run -game=ue4.18 $*
+}
+function fortnite()
+{
+	CheckDir C:/3-UnrealEngine/Fortnite/FortniteGame/Content/Paks
+	run -game=ue4.16 $*
 }
 function ue3()
 {

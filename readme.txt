@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+29.09.2017
+- added Unreal engine 4.17 support and initial UE4.18 support
+
 29.07.2017
 - implemented Lawbreakers support
 

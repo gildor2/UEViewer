@@ -361,7 +361,7 @@ enum EGame
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		16		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		18		// UE4.XX
 
 enum EPlatform
 {
@@ -2291,6 +2291,8 @@ enum
 	VER_UE4_15 = 510,
 		VER_UE4_64BIT_EXPORTMAP_SERIALSIZES = 511,
 	VER_UE4_16 = 513,
+	VER_UE4_17 = 513,
+	VER_UE4_18,				//!! todo
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2313,6 +2315,7 @@ struct FFrameworkObjectVersion
 		GeometryCacheMissingMaterials = 17,	// not needed now - for UGeometryCache
 		// UE4.15 = 22
 		// UE4.16 = 23
+		// UE4.17 = 28
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2341,6 +2344,8 @@ struct FFrameworkObjectVersion
 			return (Type)22;
 		if (Ar.Game < GAME_UE4(17))
 			return (Type)23;
+		if (Ar.Game < GAME_UE4(18))
+			return (Type)28;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2358,6 +2363,7 @@ struct FEditorObjectVersion
 		// UE4.15 = 14
 		UPropertryForMeshSection = 10,
 		// UE4.16 = 17
+		// UE4.17 = 20
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2386,6 +2392,8 @@ struct FEditorObjectVersion
 			return (Type)14;
 		if (Ar.Game < GAME_UE4(17))
 			return (Type)17;
+		if (Ar.Game < GAME_UE4(18))
+			return (Type)20;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2406,7 +2414,8 @@ struct FSkeletalMeshCustomVersion
 		UseSeparateSkinWeightBuffer = 7,	// use FColorVertexStream for both static and skeletal meshes
 		// UE4.15 = 7
 		NewClothingSystemAdded = 8,
-		// UE4.16 = 9
+		// UE4.16, UE4.17 = 9
+		CompactClothVertexBuffer = 10,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2427,7 +2436,7 @@ struct FSkeletalMeshCustomVersion
 			return (Type)5;
 		if (Ar.Game < GAME_UE4(16))
 			return UseSeparateSkinWeightBuffer;
-		if (Ar.Game < GAME_UE4(17))
+		if (Ar.Game < GAME_UE4(18)) // 4.16 and 4.17
 			return (Type)9;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2442,6 +2451,7 @@ struct FRenderingObjectVersion
 		// UE4.14
 		TextureStreamingMeshUVChannelData = 10,
 		// UE4.16 = 15
+		// UE4.17 = 19
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2468,10 +2478,43 @@ struct FRenderingObjectVersion
 			return (Type)12;
 		if (Ar.Game < GAME_UE4(17))
 			return (Type)15;
+		if (Ar.Game < GAME_UE4(18))
+			return (Type)19;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
 };
+
+#if 0
+struct FAnimPhysObjectVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		// UE4.16 = 3
+		RemoveUIDFromSmartNameSerialize = 5,
+		// UE4.17 = 7
+		VersionPlusOne,
+		LatestVersion = VersionPlusOne - 1
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		static const FGuid GUID = { 0x12F88B9F, 0x88754AFC, 0xA67CD90C, 0x383ABD29 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+		if (Ar.Game < GAME_UE4(16))
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game < GAME_UE4(17))
+			return (Type)3;
+		if (Ar.Game < GAME_UE4(18))
+			return (Type)7;
+		// NEW_ENGINE_VERSION
+		return LatestVersion;
+	}
+};
+#endif // 0
 
 class FStripDataFlags
 {

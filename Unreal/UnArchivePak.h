@@ -16,6 +16,10 @@ enum
 	PAK_INITIAL = 1,
 	PAK_NO_TIMESTAMPS,
 	PAK_COMPRESSION_ENCRYPTION,
+	PAK_INDEX_ENCRYPTION,				// UE4.17+
+
+	PAK_LATEST_PLUS_ONE,
+	PAK_LATEST = PAK_LATEST_PLUS_ONE - 1
 };
 
 // hack: use ArLicenseeVer to not pass FPakInfo.Version to serializer
@@ -28,13 +32,31 @@ struct FPakInfo
 	int64		IndexOffset;
 	int64		IndexSize;
 	byte		IndexHash[20];
+	// When new fields are added to FPakInfo, they're serialized before 'Magic' to keep compatibility
+	// with older pak file versions. At the same time, structure size grows.
+	byte		bEncryptedIndex;
 
-	enum { Size = sizeof(int) * 2 + sizeof(int64) * 2 + 20 };
+	enum { Size = sizeof(int) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 };
 
 	friend FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 	{
+		// New FPakInfo fields.
+		Ar << P.bEncryptedIndex;
+
+		// Old FPakInfo fields.
 		Ar << P.Magic << P.Version << P.IndexOffset << P.IndexSize;
 		Ar.Serialize(ARRAY_ARG(P.IndexHash));
+
+		// Reset new fields to their default states when seralizing older pak format.
+		if (P.Version < PAK_INDEX_ENCRYPTION)
+		{
+			P.bEncryptedIndex = false;
+		}
+
+		if (P.Version > PAK_LATEST)
+		{
+			appError("Pak file has unsupported version %d", P.Version);
+		}
 		return Ar;
 	}
 };
@@ -231,6 +253,12 @@ public:
 		if (info.Magic != PAK_FILE_MAGIC)		// no endian checking here
 			return false;
 
+		if (info.bEncryptedIndex)
+		{
+			appNotify("WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);
+			return false;
+		}
+
 		// this file looks correct, store 'reader'
 		Reader = reader;
 
@@ -246,12 +274,12 @@ public:
 		// Process MountPoint
 		if (!MountPoint.RemoveFromStart("../../.."))
 		{
-			appNotify("Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
+			appNotify("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
 			MountPoint = "/";
 		}
 		if (MountPoint[0] != '/' || ( (MountPoint.Len() > 1) && (MountPoint[1] == '.') ))
 		{
-			appNotify("Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
+			appNotify("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
 			MountPoint = "/";
 		}
 
