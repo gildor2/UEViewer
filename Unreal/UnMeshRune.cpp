@@ -354,9 +354,9 @@ void USkelModel::Serialize(FArchive &Ar)
 		USkeletalMesh *sm = Meshes[modelIdx];
 		sm->Animation = Anim;
 		// setup ULodMesh
-		sm->RotOrigin.Set(0, 16384, -16384);
+		sm->RotOrigin = RotOffset;
 		sm->MeshScale.Set(1, 1, 1);
-		sm->MeshOrigin.Set(0, 0, 0);
+		sm->MeshOrigin = PosOffset;
 		// copy skeleton
 		sm->RefSkeleton.Empty(joints.Num());
 		for (i = 0; i < joints.Num(); i++)

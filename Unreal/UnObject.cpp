@@ -88,6 +88,12 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 		return;
 	}
 #endif // UNREAL4
+	if (PackageIndex == INDEX_NONE)
+	{
+		// This is a dummy generated export
+		appSprintf(buf, bufSize, "%s.%s", Package->Name, Name);
+		return;
+	}
 	const FObjectExport &Exp = Package->GetExport(PackageIndex);
 	if (!Exp.PackageIndex && ForcePackageName)
 	{
