@@ -393,7 +393,7 @@ static void TakeScreenshot(const char *ObjectName, bool CatchAlpha)
 		// if file exists, append an index
 		appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s_%02d.tga", ObjectName, ++retry);
 	}
-	appPrintf("Writting screenshot %s\n", filename);
+	appPrintf("Writing screenshot %s\n", filename);
 	appMakeDirectoryForFile(filename);
 	FFileWriter Ar(filename);
 	int width, height;

@@ -386,7 +386,7 @@ public:
 			appSprintf(ARRAY_ARG(FullFileName), "%s/%s", OutDir, FileName);
 			appMakeDirectoryForFile(FullFileName);
 			FILE *f = fopen(FullFileName, "rb+");				// open for update
-			if (!f) f = fopen(FullFileName, "wb");				// open for writting
+			if (!f) f = fopen(FullFileName, "wb");				// open for writing
 			if (!f)
 			{
 				appPrintf("ERROR: unable to open file \"%s\"\n", FullFileName);

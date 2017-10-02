@@ -322,7 +322,7 @@ FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
 		if (appFileExists(filename)) return NULL;
 	}
 
-//	appPrintf("... writting %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, filename);
+//	appPrintf("... writing %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, filename);
 
 	appMakeDirectoryForFile(filename);
 	FFileWriter *Ar = new FFileWriter(filename, FRO_NoOpenError);
