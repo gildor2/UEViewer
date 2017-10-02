@@ -278,6 +278,53 @@ struct FStaticMeshSourceModel
 	END_PROP_TABLE
 };
 
+#define TEXSTREAM_MAX_NUM_UVCHANNELS	4
+
+struct FMeshUVChannelInfo
+{
+	bool					bInitialized;
+	bool					bOverrideDensities;
+	float					LocalUVDensities[TEXSTREAM_MAX_NUM_UVCHANNELS];
+
+	friend FArchive& operator<<(FArchive& Ar, FMeshUVChannelInfo& V)
+	{
+		Ar << V.bInitialized << V.bOverrideDensities;
+		for (int i = 0; i < TEXSTREAM_MAX_NUM_UVCHANNELS; i++)
+		{
+			Ar << V.LocalUVDensities[i];
+		}
+		return Ar;
+	}
+};
+
+struct FStaticMaterial
+{
+	DECLARE_STRUCT(FStaticMaterial);
+	UMaterialInterface* MaterialInterface;
+	FName				MaterialSlotName;
+	FMeshUVChannelInfo	UVChannelData;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(MaterialInterface)
+		PROP_NAME(MaterialSlotName)
+	END_PROP_TABLE
+
+/*	friend FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
+	{
+		Ar << M.MaterialInterface << M.MaterialSlotName;
+		if (Ar.ContainsEditorData())
+		{
+			FName ImportedMaterialSlotName;
+			Ar << ImportedMaterialSlotName;
+		}
+		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
+		{
+			Ar << M.UVChannelData;
+		}
+		return Ar;
+	} */
+};
+
 class UStaticMesh4 : public UObject
 {
 	DECLARE_CLASS(UStaticMesh4, UObject);
@@ -290,8 +337,8 @@ public:
 	bool					bUseHighPrecisionTangentBasis;
 
 	TArray<UStaticMeshSocket*> Sockets;
-
-	TArray<UMaterialInterface*> Materials;
+	TArray<UMaterialInterface*> Materials;		// pre-UE4.14
+	TArray<FStaticMaterial> StaticMaterials;	// UE4.14+
 
 	// FStaticMeshRenderData fields
 	FBoxSphereBounds		Bounds;
@@ -303,6 +350,7 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Materials, UObject*)
 		PROP_ARRAY(SourceModels, FStaticMeshSourceModel)
+		PROP_ARRAY(StaticMaterials, FStaticMaterial)
 	END_PROP_TABLE
 
 	UStaticMesh4();
@@ -526,6 +574,7 @@ public:
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(FMeshBuildSettings) \
 	REGISTER_CLASS(FStaticMeshSourceModel) \
+	REGISTER_CLASS(FStaticMaterial) \
 	REGISTER_CLASS(FCompressedOffsetData) \
 	REGISTER_CLASS(FTrackToSkeletonMap) \
 	REGISTER_CLASS(FRichCurve) \

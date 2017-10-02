@@ -125,6 +125,7 @@
 #define FRIDAY13		1		// Friday the 13th: The Game
 #define TEKKEN7			1		// Tekken 7
 #define LAWBREAKERS		1		// Lawbreakers
+#define FORTNITE		1		//?? Fortnite (temp)
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 

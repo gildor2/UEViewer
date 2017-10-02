@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+02.10.2017
+- added Fortnite support (currently requres game override)
+
 29.09.2017
 - added Unreal engine 4.17 support and initial UE4.18 support
 

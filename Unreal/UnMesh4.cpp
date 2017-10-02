@@ -41,7 +41,7 @@
 #error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
-#define TEXSTREAM_MAX_NUM_UVCHANNELS	4
+//#define TEXSTREAM_MAX_NUM_UVCHANNELS	4
 
 
 /*-----------------------------------------------------------------------------
@@ -190,6 +190,7 @@ struct FClothingSectionData
 	}
 };
 
+/*
 struct FMeshUVChannelInfo
 {
 	bool					bInitialized;
@@ -206,6 +207,7 @@ struct FMeshUVChannelInfo
 		return Ar;
 	}
 };
+*/
 
 struct FSkeletalMaterial
 {
@@ -1116,8 +1118,10 @@ struct FDistanceFieldVolumeData
 			Ar << V.bBuiltAsIfTwoSided << V.bMeshWasPlane;
 			return Ar;
 		}
+	older_code:
 		// Pre-4.16 version
-		Ar << V.DistanceFieldVolume << V.Size << V.LocalBoundingBox << V.bMeshWasClosed;
+		Ar << V.DistanceFieldVolume;
+		Ar << V.Size << V.LocalBoundingBox << V.bMeshWasClosed;
 		/// reference: 28.08.2014 - f5238f04
 		if (Ar.ArVer >= VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
 			Ar << V.bBuiltAsIfTwoSided;
@@ -1391,6 +1395,9 @@ struct FStaticMeshLODModel4
 			if (!StripFlags.IsClassDataStripped(1))
 				Ar << Lod.AdjacencyIndexBuffer;
 
+#if FORTNITE
+			if (Ar.Game == GAME_Fortnite) return Ar;
+#endif
 			if (Ar.Game >= GAME_UE4(16))
 			{
 				TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
@@ -1421,7 +1428,7 @@ struct FMeshSectionInfo
 	}
 };
 
-
+/*
 struct FStaticMaterial
 {
 	UMaterialInterface* MaterialInterface;
@@ -1443,7 +1450,21 @@ struct FStaticMaterial
 		return Ar;
 	}
 };
-
+*/
+FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
+{
+	Ar << M.MaterialInterface << M.MaterialSlotName;
+	if (Ar.ContainsEditorData())
+	{
+		FName ImportedMaterialSlotName;
+		Ar << ImportedMaterialSlotName;
+	}
+	if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
+	{
+		Ar << M.UVChannelData;
+	}
+	return Ar;
+}
 
 void UStaticMesh4::Serialize(FArchive &Ar)
 {
@@ -1554,7 +1575,14 @@ no_nav_collision:
 		}
 
 		Ar << Bounds;
-		Ar << bLODsShareStaticLighting;		//!! WARNING: this field in missing in UE4.15, but exists in older versions and in UE4.16 "master"
+
+		// Note: bLODsShareStaticLighting field exists in all engine versions except UE4.15.
+		if (Ar.Game >= GAME_UE4(15) && Ar.Game < GAME_UE4(16)) goto no_LODShareStaticLighting;
+#if FORTNITE
+		if (Ar.Game == GAME_Fortnite) goto no_LODShareStaticLighting;
+#endif
+		Ar << bLODsShareStaticLighting;
+	no_LODShareStaticLighting:
 
 		if (Ar.Game < GAME_UE4(14))
 		{
@@ -1583,11 +1611,12 @@ no_nav_collision:
 		unguard;
 	} // end of FStaticMeshRenderData
 
-	if (Ar.Game >= GAME_UE4(14))
+	if (Ar.Game >= GAME_UE4(14) /* && StaticMaterials.Num() == 0 */) // it seems that StaticMaterials serialized as properties has no material links
 	{
 		// Serialize following data to obtain material references for UE4.14+.
 		// Don't bother serializing anything beyond this point in earlier versions.
 		// Note: really, UE4 uses VER_UE4_SPEEDTREE_STATICMESH
+DUMP_ARC_BYTES(Ar, 64, "SpeedTree");
 		bool bHasSpeedTreeWind;
 		Ar << bHasSpeedTreeWind;
 		if (bHasSpeedTreeWind)
@@ -1603,14 +1632,17 @@ no_nav_collision:
 			if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
 			{
 				// UE4.14+ - "Materials" are deprecated, added StaticMaterials
-				TArray<FStaticMaterial> StaticMaterials;
 				Ar << StaticMaterials;
-				// Copy StaticMaterials to Materials
-				Materials.AddUninitialized(StaticMaterials.Num());
-				for (int i = 0; i < StaticMaterials.Num(); i++)
-					Materials[i] = StaticMaterials[i].MaterialInterface;
 			}
 		}
+	}
+
+	// Copy StaticMaterials to Materials
+	if (Materials.Num() == 0 && StaticMaterials.Num() > 0)
+	{
+		Materials.AddUninitialized(StaticMaterials.Num());
+		for (int i = 0; i < StaticMaterials.Num(); i++)
+			Materials[i] = StaticMaterials[i].MaterialInterface;
 	}
 
 	// remaining is SpeedTree data
