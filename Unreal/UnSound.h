@@ -145,8 +145,11 @@ public:
 
 		if (bStreaming)
 		{
-			appError("USoundWave: streaming data not yet supported (need sample files)");
 			//!! see FStreamedAudioPlatformData::Serialize (AudioDerivedData.cpp)
+			int32 NumChunks;
+			FName AudioFormat;
+			Ar << NumChunks << AudioFormat;
+			appNotify("USoundWave: streaming data: %d chunks in format %s\n", NumChunks, *AudioFormat);
 		}
 
 		// some hack to support more games ...

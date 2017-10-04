@@ -52,11 +52,6 @@ struct FPakInfo
 		{
 			P.bEncryptedIndex = false;
 		}
-
-		if (P.Version > PAK_LATEST)
-		{
-			appError("Pak file has unsupported version %d", P.Version);
-		}
 		return Ar;
 	}
 };
@@ -252,6 +247,11 @@ public:
 		*reader << info;
 		if (info.Magic != PAK_FILE_MAGIC)		// no endian checking here
 			return false;
+
+		if (info.Version > PAK_LATEST)
+		{
+			appError("Pak file has unsupported version %d", info.Version);
+		}
 
 		if (info.bEncryptedIndex)
 		{
