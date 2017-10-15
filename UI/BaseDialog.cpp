@@ -2767,6 +2767,11 @@ void UIGroup::ShowAllControls(bool show)
 void UIGroup::Create(UIBaseDialog* dialog)
 {
 	CreateGroupControls(dialog);
+	// Disable all children controls if this UIGroup is disabled
+	if (!Enabled)
+	{
+		EnableAllControls(Enabled);
+	}
 }
 
 void UIGroup::UpdateEnabled()
