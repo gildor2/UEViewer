@@ -10,6 +10,9 @@
 
  Revision History:
 
+    16.10.2017 v1.34
+    - added possibility to select and open multiple psk files at time
+
 	21.07.2015 v1.33
 	- saving bind pose information inside bone objects, this information will survive saving scene
 	  to a max file
@@ -171,7 +174,7 @@ NOTES:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 133
+global AX_IMPORTER_VERSION = 134
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -473,6 +476,32 @@ fn axGetRootMatrix =
 	m
 )
 
+-- Reference: https://forums.autodesk.com/t5/3ds-max-programming/getopenfilename-for-multiple-files/td-p/4097903
+fn getMultiOpenFilenames caption: "Open" filename: "" types: "All Files (*.*)|*.*" default: 1 =
+(
+	local dlg = DotNetObject "System.Windows.Forms.OpenFileDialog"
+	dlg.multiSelect = true
+	dlg.title = caption
+
+	local p = getFilenamePath filename
+	if doesFileExist p then
+	dlg.initialDirectory = p
+
+	-- MAXScript getOpenFilename uses trailing |;
+	-- OpenFileDialog filter does not.
+	if types == "|" then
+		dlg.filter = (substring types 1 (types.count - 1))
+	else
+		dlg.filter = types
+
+	dlg.filterIndex = default
+
+	local result = dlg.ShowDialog()
+	if (result.Equals result.OK) then
+		dlg.filenames
+	else
+		undefined
+)
 
 -------------------------------------------------------------------------------
 --	ActorX data structures
@@ -1932,7 +1961,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.33.1"
+	label     Lbl1 "Version 1.34"
 	label     Lbl2 "\xA9 2009-2017 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -1960,8 +1989,15 @@ rollout axMeshImportRollout "Mesh Import"
 
 	on BtnImportPsk pressed do
 	(
-		local filename = getOpenFileName types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
+/*		local filename = getOpenFileName types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
 		if filename != undefined then
+		(
+			MeshFileName = filename
+			g_lastDir1 = getFilenamePath MeshFileName
+			if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
+		) */
+		local filenames = getMultiOpenFilenames types:"ActorX Mesh (*.psk,*.pskx)|*.psk|*.pskx|All (*.*)|*.*|" filename:g_lastDir1
+		for filename in filenames do
 		(
 			MeshFileName = filename
 			g_lastDir1 = getFilenamePath MeshFileName
