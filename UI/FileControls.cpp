@@ -1,3 +1,7 @@
+// Simple UI library.
+// Copyright (C) 2017 Konstantin Nosov
+// Licensed under the BSD license. See LICENSE.txt file in the project root for full license information.
+
 #if _WIN32
 
 #define _CRT_SECURE_NO_WARNINGS
