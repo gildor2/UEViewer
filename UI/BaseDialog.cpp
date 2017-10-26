@@ -950,7 +950,14 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 	Id = dialog->GenerateDialogId();
 
 	int style = (IsWantFocus) ? WS_TABSTOP : 0;
-	if (IsMultiline) style |= WS_VSCROLL | ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL;
+	if (IsMultiline)
+	{
+		style |= WS_VSCROLL | ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL;
+	}
+	else
+	{
+		style |= ES_AUTOHSCROLL;
+	}
 	if (IsReadOnly)  style |= ES_READONLY;
 
 	Wnd = Window(WC_EDIT, "", style, WS_EX_CLIENTEDGE, dialog);
