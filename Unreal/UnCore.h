@@ -1495,7 +1495,7 @@ public:
 	{
 		int index = DataCount;
 		FArray::InsertUninitialized(index, 1, sizeof(T));
-		Item(index) = item;
+		new ((T*)DataPtr + index) T(item);
 		return index;
 	}
 	FORCEINLINE int AddZeroed(int count = 1)
@@ -1534,7 +1534,7 @@ public:
 	FORCEINLINE void Insert(const T& item, int index)
 	{
 		FArray::InsertUninitialized(index, 1, sizeof(T));
-		Item(index) = item;
+		new ((T*)DataPtr + index) T(item);
 	}
 	FORCEINLINE void InsertZeroed(int index, int count = 1)
 	{
