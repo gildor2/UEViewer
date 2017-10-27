@@ -246,10 +246,10 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	for (int i2 = 0, localTrackIndex = 0; i2 < Seq->CompressedTrackOffsets.Num(); localTrackIndex++)
 	{
 		// scale information
-		int ScaleStripSize = Seq->CompressedScaleOffsets.StripSize;
 		int ScaleKeys = 0, ScaleOffset = 0;
-		if (ScaleStripSize && Seq->CompressedScaleOffsets.OffsetData.Num())
+		if (Seq->CompressedScaleOffsets.IsValid())
 		{
+			int ScaleStripSize = Seq->CompressedScaleOffsets.StripSize;
 			ScaleOffset = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize];
 			if (ScaleStripSize > 1)
 				ScaleKeys = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize + 1];
@@ -368,7 +368,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 			int TransOffset = Seq->CompressedTrackOffsets[offsetIndex  ];
 			int RotOffset   = Seq->CompressedTrackOffsets[offsetIndex+1];
-			int ScaleOffset = (Seq->CompressedScaleOffsets.StripSize > 0) ? Seq->CompressedScaleOffsets.OffsetData[TrackIndex] : -1;
+			int ScaleOffset = Seq->CompressedScaleOffsets.IsValid() ? Seq->CompressedScaleOffsets.OffsetData[TrackIndex] : -1;
 #if 0
 			const int BytesToDump = 64;
 			if (TransOffset >= 0) { Reader.Seek(TransOffset); DUMP_ARC_BYTES(Reader, BytesToDump, "Trans"); }

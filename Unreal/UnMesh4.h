@@ -387,6 +387,11 @@ public:
 	{
 		return Ar << D.OffsetData << D.StripSize;
 	}
+
+	bool IsValid() const
+	{
+		return StripSize > 0 && OffsetData.Num() != 0;
+	}
 };
 
 

@@ -1616,7 +1616,6 @@ no_nav_collision:
 		// Serialize following data to obtain material references for UE4.14+.
 		// Don't bother serializing anything beyond this point in earlier versions.
 		// Note: really, UE4 uses VER_UE4_SPEEDTREE_STATICMESH
-DUMP_ARC_BYTES(Ar, 64, "SpeedTree");
 		bool bHasSpeedTreeWind;
 		Ar << bHasSpeedTreeWind;
 		if (bHasSpeedTreeWind)
