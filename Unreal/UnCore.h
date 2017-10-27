@@ -2294,7 +2294,7 @@ enum
 		VER_UE4_64BIT_EXPORTMAP_SERIALSIZES = 511,
 	VER_UE4_16 = 513,
 	VER_UE4_17 = 513,
-	VER_UE4_18,				//!! todo
+	VER_UE4_18 = 514,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2318,6 +2318,7 @@ struct FFrameworkObjectVersion
 		// UE4.15 = 22
 		// UE4.16 = 23
 		// UE4.17 = 28
+		// UE4.18 = 30
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2348,6 +2349,8 @@ struct FFrameworkObjectVersion
 			return (Type)23;
 		if (Ar.Game < GAME_UE4(18))
 			return (Type)28;
+		if (Ar.Game < GAME_UE4(19))
+			return (Type)30;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2365,7 +2368,7 @@ struct FEditorObjectVersion
 		// UE4.15 = 14
 		UPropertryForMeshSection = 10,
 		// UE4.16 = 17
-		// UE4.17 = 20
+		// UE4.17, UE4.18 = 20
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2394,7 +2397,7 @@ struct FEditorObjectVersion
 			return (Type)14;
 		if (Ar.Game < GAME_UE4(17))
 			return (Type)17;
-		if (Ar.Game < GAME_UE4(18))
+		if (Ar.Game < GAME_UE4(19))		// UE4.17 and 4.18
 			return (Type)20;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2417,6 +2420,7 @@ struct FSkeletalMeshCustomVersion
 		// UE4.15 = 7
 		NewClothingSystemAdded = 8,
 		// UE4.16, UE4.17 = 9
+		// UE4.18 = 10
 		CompactClothVertexBuffer = 10,
 
 		VersionPlusOne,
@@ -2443,6 +2447,8 @@ struct FSkeletalMeshCustomVersion
 			return UseSeparateSkinWeightBuffer;
 		if (Ar.Game < GAME_UE4(18)) // 4.16 and 4.17
 			return (Type)9;
+		if (Ar.Game < GAME_UE4(19))
+			return CompactClothVertexBuffer;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2457,6 +2463,7 @@ struct FRenderingObjectVersion
 		TextureStreamingMeshUVChannelData = 10,
 		// UE4.16 = 15
 		// UE4.17 = 19
+		// UE4.18 = 20
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2485,6 +2492,8 @@ struct FRenderingObjectVersion
 			return (Type)15;
 		if (Ar.Game < GAME_UE4(18))
 			return (Type)19;
+		if (Ar.Game < GAME_UE4(19))
+			return (Type)20;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2499,6 +2508,7 @@ struct FAnimPhysObjectVersion
 		// UE4.16 = 3
 		RemoveUIDFromSmartNameSerialize = 5,
 		// UE4.17 = 7
+		// UE4.18 = 12
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
@@ -2515,6 +2525,8 @@ struct FAnimPhysObjectVersion
 			return (Type)3;
 		if (Ar.Game < GAME_UE4(18))
 			return (Type)7;
+		if (Ar.Game < GAME_UE4(19))
+			return (Type)12;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
