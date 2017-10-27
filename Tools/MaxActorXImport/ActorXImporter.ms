@@ -1996,12 +1996,15 @@ rollout axMeshImportRollout "Mesh Import"
 			g_lastDir1 = getFilenamePath MeshFileName
 			if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
 		) */
-		local filenames = getMultiOpenFilenames types:"ActorX Mesh (*.psk,*.pskx)|*.psk|*.pskx|All (*.*)|*.*|" filename:g_lastDir1
-		for filename in filenames do
+		local filenames = getMultiOpenFilenames types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*" filename:g_lastDir1
+		if filenames != undefined then
 		(
-			MeshFileName = filename
-			g_lastDir1 = getFilenamePath MeshFileName
-			if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
+			for filename in filenames do
+			(
+				MeshFileName = filename
+				g_lastDir1 = getFilenamePath MeshFileName
+				if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
+			)
 		)
 	)
 )
