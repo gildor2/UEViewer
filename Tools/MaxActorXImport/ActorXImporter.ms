@@ -1989,21 +1989,28 @@ rollout axMeshImportRollout "Mesh Import"
 
 	on BtnImportPsk pressed do
 	(
-/*		local filename = getOpenFileName types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
-		if filename != undefined then
+		if DotNetObject == undefined then
 		(
-			MeshFileName = filename
-			g_lastDir1 = getFilenamePath MeshFileName
-			if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
-		) */
-		local filenames = getMultiOpenFilenames types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*" filename:g_lastDir1
-		if filenames != undefined then
-		(
-			for filename in filenames do
+			-- older Max didn't have functionality for getMultiOpenFilenames
+			local filename = getOpenFileName types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*|" filename:g_lastDir1
+			if filename != undefined then
 			(
 				MeshFileName = filename
 				g_lastDir1 = getFilenamePath MeshFileName
 				if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
+			)
+		)
+		else
+		(
+			local filenames = getMultiOpenFilenames types:"ActorX Mesh (*.psk,*.pskx)|*.psk;*.pskx|All (*.*)|*.*" filename:g_lastDir1
+			if filenames != undefined then
+			(
+				for filename in filenames do
+				(
+					MeshFileName = filename
+					g_lastDir1 = getFilenamePath MeshFileName
+					if DoesFileExist MeshFileName then ImportPskFile MeshFileName skelOnly:g_skelOnly
+				)
 			)
 		)
 	)
