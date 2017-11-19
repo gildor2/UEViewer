@@ -19,7 +19,7 @@ extern "C" {
 # include <config.h>
 #endif
 
-#include <mspack/mspack.h> // Gildor: original: <mspack.h>
+#include "mspack.h" // Gildor: original: <mspack.h>
 
 /* fix for problem with GCC 4 and glibc (thanks to Ville Skytta)
  * http://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=150429

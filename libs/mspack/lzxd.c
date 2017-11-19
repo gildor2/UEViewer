@@ -13,7 +13,7 @@
 /* LZX decompression implementation */
 
 #include "system.h"		// Gildor: original: <system.h>
-#include <mspack/lzx.h>	// Gildor: original: <lzx.h>
+#include "lzx.h"		// Gildor: original: <lzx.h>
 
 /* Microsoft's LZX document (in cab-sdk.exe) and their implementation
  * of the com.ms.util.cab Java package do not concur.
