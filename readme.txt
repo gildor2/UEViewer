@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+19.11.2017
+- exporting "source art" (png) textures whenever possible - for UE3 and UE4 editor packages
+
 02.10.2017
 - added Fortnite support (currently requres game override)
 
