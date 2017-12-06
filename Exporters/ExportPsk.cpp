@@ -151,7 +151,7 @@ static void ExportCommonMeshData
 				}
 				T.MatIndex        = i;
 				T.AuxMatIndex     = 0;
-				T.SmoothingGroups = 0;
+				T.SmoothingGroups = 1;
 #if MIRROR_MESH
 				Exchange(T.WedgeIndex[0], T.WedgeIndex[1]);
 #endif
@@ -178,7 +178,7 @@ static void ExportCommonMeshData
 				}
 				T.MatIndex        = i;
 				T.AuxMatIndex     = 0;
-				T.SmoothingGroups = 0;
+				T.SmoothingGroups = 1;
 #if MIRROR_MESH
 				Exchange(T.WedgeIndex[0], T.WedgeIndex[1]);
 #endif

@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+06.12.2017
+- an attempt to make smoothing groups working: always exporting 1st smoothing group for all mesh faces
+
 19.11.2017
 - exporting "source art" (png) textures whenever possible - for UE3 and UE4 editor packages
 
