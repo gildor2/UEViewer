@@ -27,8 +27,8 @@ enum
 
 struct FPakInfo
 {
-	int			Magic;
-	int			Version;
+	int32		Magic;
+	int32		Version;
 	int64		IndexOffset;
 	int64		IndexSize;
 	byte		IndexHash[20];
@@ -36,7 +36,7 @@ struct FPakInfo
 	// with older pak file versions. At the same time, structure size grows.
 	byte		bEncryptedIndex;
 
-	enum { Size = sizeof(int) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 };
+	enum { Size = sizeof(int32) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 };
 
 	friend FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 	{

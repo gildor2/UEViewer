@@ -124,6 +124,9 @@ void UIFilePathEditor::OnBrowseClicked(UIButton* sender)
 	bi.iImage         = 0;
 	bi.lpfn           = BrowseCallbackProc;
 
+	//TODO: take a look at UE4's FDesktopPlatformWindows::OpenDirectoryDialog()
+	//TODO: this function uses advanced access to FileOpenDialog and able to use if for browsing folders.
+
 	LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
 	char szPathName[1024];
 	if (pidl)

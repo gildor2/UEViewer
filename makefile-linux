@@ -160,7 +160,7 @@ $(OUT)/DirectDrawSurface.o : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.o : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/Image.o ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof  -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I UmodelTool -I UI
+OPT_MAIN = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof  -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I UmodelTool -I UI
 
 DEPENDS_1 = \
 	Core/Core.h \
@@ -768,10 +768,12 @@ DEPENDS_27 = \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h \
+	Unreal/UnTextureNVTT.h
 
-$(OUT_1)/ExportMaterial.o : Exporters/ExportMaterial.cpp $(DEPENDS_27)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ExportMaterial.o Exporters/ExportMaterial.cpp
+$(OUT_1)/ExportTexture.o : Exporters/ExportTexture.cpp $(DEPENDS_27)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ExportTexture.o Exporters/ExportTexture.cpp
 
 DEPENDS_28 = \
 	Core/Core.h \
@@ -784,11 +786,10 @@ DEPENDS_28 = \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h \
-	Unreal/UnTextureNVTT.h
+	Unreal/UnObject.h
 
-$(OUT_1)/ExportTexture.o : Exporters/ExportTexture.cpp $(DEPENDS_28)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ExportTexture.o Exporters/ExportTexture.cpp
+$(OUT_1)/ExportMaterial.o : Exporters/ExportMaterial.cpp $(DEPENDS_28)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ExportMaterial.o Exporters/ExportMaterial.cpp
 
 DEPENDS_29 = \
 	Core/Core.h \
@@ -1206,10 +1207,10 @@ DEPENDS_53 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
-	libs/include/mspack/lzx.h \
-	libs/include/mspack/mspack.h \
-	libs/include/zlib/zconf.h \
-	libs/include/zlib/zlib.h
+	libs/mspack/lzx.h \
+	libs/mspack/mspack.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h
 
 $(OUT_1)/UnCoreCompression.o : Unreal/UnCoreCompression.cpp $(DEPENDS_53)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreCompression.o Unreal/UnCoreCompression.cpp
@@ -1411,6 +1412,8 @@ $(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_69)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo_init.o ./libs/lzo/lzo_init.c
 
 DEPENDS_70 = \
+	libs/mspack/lzx.h \
+	libs/mspack/mspack.h \
 	libs/mspack/readbits.h \
 	libs/mspack/readhuff.h \
 	libs/mspack/system.h
