@@ -10,6 +10,10 @@
 
  Revision History:
 
+	06.12.2017 v1.35
+	- an attempt to make smoothing groups working
+	- renamed "recurse" option to "look in subfolders" to be less confising to new users
+
     16.10.2017 v1.34
     - added possibility to select and open multiple psk files at time
 
@@ -174,7 +178,7 @@ NOTES:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 134
+global AX_IMPORTER_VERSION = 135
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -1185,6 +1189,7 @@ fn ImportPskFile filename skelOnly:false =
 		tri = Tris[i]
 		meshop.setMapFace newMesh 1 i [ tri.Wedge1+1, tri.Wedge0+1, tri.Wedge2+1 ]
 		setFaceMatId newMesh i (tri.MatIndex+1)
+		setFaceSmoothGroup newMesh i tri.SmoothingGroups
 	)
 	-- extra UV sets (code is similar to above!)
 	for j = 2 to numTexCoords do
@@ -1199,15 +1204,6 @@ fn ImportPskFile filename skelOnly:false =
 			uv = uvSet[i]
 			meshop.setMapVert newMesh j i [ uv.x, 1-uv.y, 1-uv.y ]	-- V coordinate is flipped
 		)
-/* commented 18.04.2014 - probably this is not needed, because completely duplicates code for 1st UV set
-		for i = 1 to numTris do
-		(
-			-- setup face vertices and material
-			tri = Tris[i]
-			meshop.setMapFace newMesh j i [ tri.Wedge1+1, tri.Wedge0+1, tri.Wedge2+1 ]
-			setFaceMatId newMesh i (tri.MatIndex+1)
-		)
-*/
 	)
 
 	newMat = multiMaterial numsubs:numMaterials
@@ -1961,7 +1957,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.34"
+	label     Lbl1 "Version 1.35"
 	label     Lbl2 "\xA9 2009-2017 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -2072,7 +2068,7 @@ rollout axTexturesRollout "Materials"
 (
 	edittext EdTexPath     "Path to materials" text:g_texDir width:180 across:2
 	button   BtnBrowseTex  "..."     align:#right height:16
-	checkbox ChkTexRecurse "Recurse" checked:g_texRecurse
+	checkbox ChkTexRecurse "Look in subfolders" checked:g_texRecurse
 	label    LblMissingTex "On missing texture:" across:2
 	radiobuttons RadMissingTex labels:#("do nothing", "ask") default:g_texMissAction align:#left columns:1
 

@@ -10,6 +10,9 @@
 
  Revision History:
 
+	06.12.2017 v1.07
+	- renamed "recurse" option to "look in subfolders" to be less confising to new users
+
     20.09.2017 v1.06
     - fixed error in fbx animation export when track has 0 frames
 
@@ -264,7 +267,7 @@ fn ExportFbxMeshes path recurse =
 rollout fbxExportRollout "ActorX Batch Export"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.05"
+	label     Lbl1 "Version 1.07"
 	label     Lbl2 "\xA9 2010-2017 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
@@ -284,7 +287,7 @@ rollout fbxExportRollout "ActorX Batch Export"
 		label    Lbl12           ""
 		edittext EdMeshPath      "Path to PSK" text:g_meshDir width:180 across:2
 		button   BtnBrowseMesh   "..."     align:#right height:16
-		checkbox ChkMeshRecurse  "Recurse" checked:g_meshRecurse
+		checkbox ChkMeshRecurse  "Look in subfolders" checked:g_meshRecurse
 		checkbox ChkSmGroups     "Smoothing groups" checked:g_fbxSmGroups
 		checkbox ChkSmMesh       "Use FBX TurboSmooth" checked:g_fbxSmMesh
 		button   BtnExportMeshes "Export meshes"
