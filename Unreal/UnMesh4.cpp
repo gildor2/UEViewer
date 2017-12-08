@@ -939,19 +939,19 @@ void USkeletalMesh4::ConvertMesh()
 
 		for (int Vert = 0; Vert < VertexCount; Vert++, D++)
 		{
-			if (Vert >= lastChunkVertex)
+			while (Vert >= lastChunkVertex) // this will fix any issues with empty chunks or sections
 			{
 				// proceed to next chunk or section
-				// pre-UE4.13 code
 				if (SrcLod.Chunks.Num())
 				{
+					// pre-UE4.13 code: chunks
 					const FSkelMeshChunk4& C = SrcLod.Chunks[chunkIndex++];
 					lastChunkVertex = C.BaseVertexIndex + C.NumRigidVertices + C.NumSoftVertices;
 					BoneMap = &C.BoneMap;
 				}
 				else
 				{
-					// UE4.13 has moved chunk information to sections
+					// UE4.13+ code: chunk information migrated to sections
 					const FSkelMeshSection4& S = SrcLod.Sections[chunkIndex++];
 					lastChunkVertex = S.BaseVertexIndex + S.NumVertices;
 					BoneMap = &S.BoneMap;
