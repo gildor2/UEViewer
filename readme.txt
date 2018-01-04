@@ -180,6 +180,10 @@ detex
 
 Changes
 ~~~~~~~
+04.01.2018
+- displaying a warning message in UE4 SkeletalMesh viewer when Skeleton object is not loaded, and therefore
+  animation will not work
+
 06.12.2017
 - an attempt to make smoothing groups working: always exporting 1st smoothing group for all mesh faces
 

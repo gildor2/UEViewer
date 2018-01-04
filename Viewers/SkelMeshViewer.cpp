@@ -297,6 +297,8 @@ void CSkelMeshViewer::Draw2D()
 		USkeletalMesh4* Mesh4 = static_cast<USkeletalMesh4*>(Mesh->OriginalMesh);
 		if (Mesh4->Skeleton)
 			DrawTextLeft(S_GREEN"Skeleton: " S_WHITE "%s", Mesh4->Skeleton->Name);
+		else
+			DrawTextBottomLeft(S_RED"WARNING: no skeleton, animation will not work!");
 	}
 #endif // UNREAL4
 
