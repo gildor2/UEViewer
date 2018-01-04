@@ -2499,7 +2499,6 @@ struct FRenderingObjectVersion
 	}
 };
 
-#if 0
 struct FAnimPhysObjectVersion
 {
 	enum Type
@@ -2508,6 +2507,7 @@ struct FAnimPhysObjectVersion
 		// UE4.16 = 3
 		RemoveUIDFromSmartNameSerialize = 5,
 		// UE4.17 = 7
+		SmartNameRefactorForDeterministicCooking = 10,
 		// UE4.18 = 12
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2531,7 +2531,6 @@ struct FAnimPhysObjectVersion
 		return LatestVersion;
 	}
 };
-#endif // 0
 
 class FStripDataFlags
 {

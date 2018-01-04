@@ -98,20 +98,29 @@ struct FCurveMetaData
 
 struct FSmartNameMapping
 {
-	//!! TODO: these fields are obsolete
-	int16					NextUid;
-	TMap<int16, FName>		UidMap;
+	//!! TODO: no data fields here
+	int32 Dummy;
 
 	friend FArchive& operator<<(FArchive& Ar, FSmartNameMapping& N)
 	{
 		FFrameworkObjectVersion::Type FrwVer = FFrameworkObjectVersion::Get(Ar);
+
 		if (FrwVer < FFrameworkObjectVersion::SmartNameRefactor)
 		{
-			return Ar << N.NextUid << N.UidMap;
+			// pre-UE4.13 code
+			int16					NextUid;
+			TMap<int16, FName>		UidMap;
+			return Ar << NextUid << UidMap;
 		}
+
 		// UE4.13+
-		TMap<FName, FGuid> GuidMap;
-		Ar << GuidMap;
+		if (FAnimPhysObjectVersion::Get(Ar) < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking)
+		{
+			// UE4.13-17
+			TMap<FName, FGuid> GuidMap;
+			Ar << GuidMap;
+		}
+
 		if (FrwVer >= FFrameworkObjectVersion::MoveCurveTypesToSkeleton)
 		{
 			// UE4.14+
