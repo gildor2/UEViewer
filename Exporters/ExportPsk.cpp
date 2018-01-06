@@ -625,6 +625,11 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 	for (int Lod = 0; Lod < MaxLod; Lod++)
 	{
 		guard(Lod);
+		if (Mesh->Lods[Lod].Sections.Num() == 0)
+		{
+			appNotify("Mesh %s Lod %d has no sections\n", OriginalMesh->Name, Lod);
+			continue;
+		}
 		char filename[512];
 		if (Lod == 0)
 			appSprintf(ARRAY_ARG(filename), "%s.pskx", OriginalMesh->Name);
