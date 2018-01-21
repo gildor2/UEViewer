@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+20.01.2018
+- improved laptop keyboard support
+
 04.01.2018
 - updated UE4.18 support
 - displaying a warning message in UE4 SkeletalMesh viewer when Skeleton object is not loaded, and therefore

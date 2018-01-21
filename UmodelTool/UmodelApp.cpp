@@ -510,9 +510,13 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 
 	switch (key)
 	{
-	case SPEC_KEY(PAGEDOWN):
 	case SPEC_KEY(PAGEUP):
-		FindObjectAndCreateVisualizer((key == SPEC_KEY(PAGEDOWN)) ? 1 : -1);
+	case SDLK_KP_9:
+		FindObjectAndCreateVisualizer(-1);
+		break;
+	case SPEC_KEY(PAGEDOWN):
+	case SDLK_KP_3:
+		FindObjectAndCreateVisualizer(1);
 		break;
 	case 's'|KEY_CTRL:
 		DoScreenshot = 1;
