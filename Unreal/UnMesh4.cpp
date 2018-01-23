@@ -1403,7 +1403,7 @@ struct FStaticMeshLODModel4
 				TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
 				FStaticMeshAreaWeightedSectionSampler AreaWeightedSampler;
 
-				AreaWeightedSectionSamplers.AddUninitialized(Lod.Sections.Num());
+				AreaWeightedSectionSamplers.AddZeroed(Lod.Sections.Num());
 				for (int i = 0; i < AreaWeightedSectionSamplers.Num(); i++)
 					Ar << AreaWeightedSectionSamplers[i];
 				Ar << AreaWeightedSampler;
