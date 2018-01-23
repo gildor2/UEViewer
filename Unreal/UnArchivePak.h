@@ -145,6 +145,8 @@ public:
 		{
 			guard(SerializeCompressed);
 
+			assert(!Info->bEncrypted);
+
 			while (size > 0)
 			{
 				if ((UncompressedBuffer == NULL) || (ArPos < UncompressedBufferPos) || (ArPos >= UncompressedBufferPos + Info->CompressionBlockSize))
@@ -161,9 +163,17 @@ public:
 					const FPakCompressedBlock& Block = Info->CompressionBlocks[BlockIndex];
 					int CompressedBlockSize = (int)(Block.CompressedEnd - Block.CompressedStart);
 					int UncompressedBlockSize = min((int)Info->CompressionBlockSize, (int)Info->UncompressedSize - UncompressedBufferPos); // don't pass file end
-					byte* CompressedData = (byte*)appMalloc(CompressedBlockSize);
+					int EncryptedSize = Align(CompressedBlockSize, EncryptionAlign);
+					byte* CompressedData = (byte*)appMalloc(EncryptedSize);
 					Reader->Seek64(Block.CompressedStart);
 					Reader->Serialize(CompressedData, CompressedBlockSize);
+					// Handle encrypted data
+					if (Info->bEncrypted)
+					{
+						if ((GAesKey.Len() == 0) && !UE4EncryptedPak())
+							appError("AES key is required");
+						appDecryptAES(CompressedData, EncryptedSize);
+					}
 					appDecompress(CompressedData, CompressedBlockSize, UncompressedBuffer, UncompressedBlockSize, Info->CompressionMethod);
 					appFree(CompressedData);
 				}
@@ -185,10 +195,56 @@ public:
 
 			unguard;
 		}
+		else if (Info->bEncrypted)
+		{
+			guard(SerializeEncrypted);
+
+			// Uncompressed encrypted data. Reuse compression fields to handle decryption efficiently
+			if (UncompressedBuffer == NULL)
+			{
+				UncompressedBuffer = (byte*)appMalloc(EncryptedBufferSize);
+				UncompressedBufferPos = 0x40000000; // some invalid value
+			}
+			while (size > 0)
+			{
+				if ((ArPos < UncompressedBufferPos) || (ArPos >= UncompressedBufferPos + EncryptedBufferSize))
+				{
+					// Should fetch block and decrypt it.
+					// Note: AES is block encryption, so we should always align read requests for correct decryption.
+					UncompressedBufferPos = ArPos & ~(EncryptionAlign - 1);
+					Reader->Seek64(Info->Pos + Info->StructSize + UncompressedBufferPos);
+					int RemainingSize = Info->Size - UncompressedBufferPos;
+					if (RemainingSize > EncryptedBufferSize)
+						RemainingSize = EncryptedBufferSize;
+					RemainingSize = Align(RemainingSize, EncryptionAlign); // align for AES, pak contains aligned data
+					Reader->Serialize(UncompressedBuffer, RemainingSize);
+					if ((GAesKey.Len() == 0) && !UE4EncryptedPak())
+						appError("AES key is required");
+					appDecryptAES(UncompressedBuffer, RemainingSize);
+				}
+
+				// Now copy decrypted data from UncompressedBuffer (code is very similar to those used in decompression above)
+				int BytesToCopy = UncompressedBufferPos + EncryptedBufferSize - ArPos; // number of bytes until end of the buffer
+				if (BytesToCopy > size) BytesToCopy = size;
+				assert(BytesToCopy > 0);
+
+				// copy uncompressed data
+				int OffsetInBuffer = ArPos - UncompressedBufferPos;
+				memcpy(data, UncompressedBuffer + OffsetInBuffer, BytesToCopy);
+
+				// advance pointers
+				ArPos += BytesToCopy;
+				size  -= BytesToCopy;
+				data  = OffsetPointer(data, BytesToCopy);
+			}
+
+			unguard;
+		}
 		else
 		{
 			guard(SerializeUncompressed);
 
+			// Pure data
 			// seek every time in a case if the same 'Reader' was used by different FPakFile
 			// (this is a lightweight operation for buffered FArchive)
 			Reader->Seek64(Info->Pos + Info->StructSize + ArPos);
@@ -218,6 +274,9 @@ protected:
 	FArchive*	Reader;
 	byte*		UncompressedBuffer;
 	int			UncompressedBufferPos;
+
+	enum { EncryptionAlign = 16 }; // AES-specific constant
+	enum { EncryptedBufferSize = 256 }; //?? TODO: check - may be value 16 will be better for performance
 };
 
 
@@ -255,8 +314,14 @@ public:
 
 		if (info.bEncryptedIndex)
 		{
-			appNotify("WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);
-			return false;
+			if (GAesKey.Len() == 0)
+			{
+				if (!UE4EncryptedPak())
+				{
+					appNotify("WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);
+					return false;
+				}
+			}
 		}
 
 		// this file looks correct, store 'reader'
@@ -268,8 +333,25 @@ public:
 
 		Reader->Seek64(info.IndexOffset);
 
+		// Manage pak files with encrypted index
+		FMemReader* InfoReaderProxy = NULL;
+		byte* InfoBlock = NULL;
+		FArchive* InfoReader = Reader;
+
+		if (info.bEncryptedIndex)
+		{
+			InfoBlock = new byte[info.IndexSize];
+			Reader->Serialize(InfoBlock, info.IndexSize);
+			appDecryptAES(InfoBlock, info.IndexSize);
+			InfoReaderProxy = new FMemReader(InfoBlock, info.IndexSize);
+			InfoReaderProxy->SetupFrom(*Reader);
+			InfoReader = InfoReaderProxy;
+		}
+
+		// Read pak index
+
 		FStaticString<MAX_PACKAGE_PATH> MountPoint;
-		*Reader << MountPoint;
+		*InfoReader << MountPoint;
 
 		// Process MountPoint
 		if (!MountPoint.RemoveFromStart("../../.."))
@@ -284,7 +366,7 @@ public:
 		}
 
 		int count;
-		*Reader << count;
+		*InfoReader << count;
 		FileInfos.AddZeroed(count);
 
 		int numEncryptedFiles = 0;
@@ -293,13 +375,13 @@ public:
 			FPakEntry& E = FileInfos[i];
 			// serialize name, combine with MountPoint
 			FStaticString<MAX_PACKAGE_PATH> Filename;
-			*Reader << Filename;
+			*InfoReader << Filename;
 			FStaticString<MAX_PACKAGE_PATH> CombinedPath;
 			CombinedPath = MountPoint;
 			CombinedPath += Filename;
 			E.Name = appStrdupPool(*CombinedPath);
 			// serialize other fields
-			*Reader << E;
+			*InfoReader << E;
 			if (E.bEncrypted)
 			{
 //				appPrintf("Encrypted file: %s\n", *Filename);
@@ -314,6 +396,13 @@ public:
 				AddFileToHash(&FileInfos[i]);
 			}
 		}
+		// Cleanup
+		if (InfoBlock)
+		{
+			delete[] InfoBlock;
+			delete InfoReaderProxy;
+		}
+
 		// Print statistics
 		appPrintf("Pak %s: %d files", *Filename, count);
 		if (numEncryptedFiles)
@@ -350,11 +439,11 @@ public:
 	{
 		const FPakEntry* info = FindFile(name);
 		if (!info) return NULL;
-		if (info->bEncrypted)
+/*		if (info->bEncrypted)
 		{
 			appPrintf("pak(%s): attempt to open encrypted file %s\n", *Filename, name);
 			return NULL;
-		}
+		} */
 		return new FPakFile(info, Reader);
 	}
 

@@ -2210,6 +2210,15 @@ struct FIntBulkData : public FByteBulkData
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 
+// UE4 has built-in AES encryption
+
+extern FString GAesKey;
+
+void appDecryptAES(byte* Data, int Size);
+
+// Callback called when encrypted pak file is attempted to load
+bool UE4EncryptedPak();
+
 
 /*-----------------------------------------------------------------------------
 	UE4 support

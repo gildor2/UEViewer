@@ -28,6 +28,11 @@ int UE4UnversionedPackage(int verMin, int verMax)
 	return -1;
 }
 
+bool UE4EncryptedPak()
+{
+	return false;
+}
+
 #endif // UNREAL4
 
 

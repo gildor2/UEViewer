@@ -397,6 +397,7 @@ static void PrintUsage()
 #if HAS_UI
 			"    -gui            force startup UI to appear\n" //?? debug-only option?
 #endif
+			"    -aes=key        provide AES decryption key for encrypted pak files\n"
 			"\n"
 			"Compatibility options:\n"
 			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
@@ -689,6 +690,14 @@ int UE4UnversionedPackage(int verMin, int verMax)
 	return -1;
 }
 
+bool UE4EncryptedPak()
+{
+#if HAS_UI
+	appPrintf("\n\n*** REQUESTED AERS KEY ***\n\n");
+#endif
+	return false;
+}
+
 #endif // UNREAL4
 
 
@@ -845,6 +854,10 @@ int main(int argc, char **argv)
 		else if (!stricmp(opt, "3rdparty"))
 		{
 			GSettings.UseScaleForm = GSettings.UseFaceFx = true;
+		}
+		else if (!strnicmp(opt, "aes=", 4))
+		{
+			GAesKey = opt+4;
 		}
 		// information commands
 		else if (!stricmp(opt, "taglist"))

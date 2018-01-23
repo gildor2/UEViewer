@@ -29,6 +29,8 @@
 
 #endif // SUPPORT_XBOX360
 
+// AES code for UE4
+#include "rijndael/rijndael.h"
 
 /*-----------------------------------------------------------------------------
 	ZLib support
@@ -295,4 +297,39 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	return 0;
 
 	unguardf("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, Flags);
+}
+
+
+/*-----------------------------------------------------------------------------
+	AES support
+-----------------------------------------------------------------------------*/
+
+FString GAesKey;
+
+#define AES_KEYBITS		256
+
+void appDecryptAES(byte* Data, int Size)
+{
+	guard(appDecryptAES);
+
+	if (GAesKey.Len() == 0)
+	{
+		appError("Trying to decrypt AES block without providing an AES key");
+	}
+	if (GAesKey.Len() < KEYLENGTH(AES_KEYBITS))
+	{
+		appError("AES key is too short");
+	}
+
+	assert((Size & 15) == 0);
+
+	unsigned long rk[RKLENGTH(AES_KEYBITS)];
+	int nrounds = rijndaelSetupDecrypt(rk, (uint8*) *GAesKey, AES_KEYBITS);
+
+	for (int pos = 0; pos < Size; pos += 16)
+	{
+		rijndaelDecrypt(rk, nrounds, Data + pos, Data + pos);
+	}
+
+	unguard;
 }
