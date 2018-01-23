@@ -24,6 +24,7 @@
 #include "AboutDialog.h"
 #include "ErrorDialog.h"
 #include "UE4VersionDialog.h"
+#include "UE4AesKeyDialog.h"
 #include "PackageScanDialog.h"
 #endif
 
@@ -297,6 +298,13 @@ int CUmodelApp::ShowUE4UnversionedPackageDialog(int verMin, int verMax)
 	UIUE4VersionDialog dialog;
 	return dialog.Show(verMin, verMax);
 }
+
+FString CUmodelApp::ShowUE4AesKeyDialog()
+{
+	UIUE4AesKeyDialog dialog;
+	return dialog.Show();
+}
+
 #endif // UNREAL4
 
 #endif // HAS_UI

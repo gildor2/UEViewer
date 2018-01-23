@@ -180,6 +180,10 @@ detex
 
 Changes
 ~~~~~~~
+23.01.2018
+- added support for loading AES-encrypted UE4 pak files; AES key may be specified with command line option
+  -aes=key, or it will be requested by UI when needed
+
 20.01.2018
 - improved laptop keyboard support
 

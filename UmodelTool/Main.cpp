@@ -693,9 +693,11 @@ int UE4UnversionedPackage(int verMin, int verMax)
 bool UE4EncryptedPak()
 {
 #if HAS_UI
-	appPrintf("\n\n*** REQUESTED AERS KEY ***\n\n");
-#endif
+	GAesKey = GApplication.ShowUE4AesKeyDialog();
+	return GAesKey.Len() > 0;
+#else
 	return false;
+#endif
 }
 
 #endif // UNREAL4
