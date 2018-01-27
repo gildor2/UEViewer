@@ -525,6 +525,17 @@ public:
 	virtual void Serialize(FArchive& Ar);
 };
 
+enum EAnimInterpolationType
+{
+	Linear,
+	Step,
+};
+
+_ENUM(EAnimInterpolationType)
+{
+	_E(Linear),
+	_E(Step),
+};
 
 class UAnimSequence4 : public UAnimSequenceBase
 {
@@ -546,6 +557,7 @@ public:
 	TArray<FTrackToSkeletonMap> TrackToSkeletonMapTable;			// used for raw data
 	TArray<FTrackToSkeletonMap> CompressedTrackToSkeletonMapTable;	// used for compressed data, missing before 4.12
 	FRawCurveTracks			CompressedCurveData;
+	EAnimInterpolationType	Interpolation;
 
 	BEGIN_PROP_TABLE
 		PROP_INT(NumFrames)
@@ -561,6 +573,7 @@ public:
 		PROP_ARRAY(TrackToSkeletonMapTable, FTrackToSkeletonMap)
 		PROP_ARRAY(CompressedTrackToSkeletonMapTable, FTrackToSkeletonMap)
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
+		PROP_ENUM2(Interpolation, EAnimInterpolationType)
 	END_PROP_TABLE
 
 	UAnimSequence4()
@@ -569,6 +582,7 @@ public:
 	,	RotationCompressionFormat(ACF_None)
 	,	ScaleCompressionFormat(ACF_None)
 	,	KeyEncodingFormat(AKF_ConstantKeyLerp)
+	,	Interpolation(Linear)
 	{}
 
 	virtual void Serialize(FArchive& Ar);
