@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+31.01.2018
+- implemented loader for encrtpted compressed UE4 pak files
+
 23.01.2018
 - added support for loading AES-encrypted UE4 pak files; AES key may be specified with command line option
   -aes=key, or it will be requested by UI when needed

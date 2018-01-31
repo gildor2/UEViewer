@@ -119,6 +119,17 @@ struct FPakEntry
 	}
 };
 
+inline bool PakRequireAesKey(bool fatal = true)
+{
+	if ((GAesKey.Len() == 0) && !UE4EncryptedPak())
+	{
+		if (fatal)
+			appError("AES key is required");
+		return false;
+	}
+	return true;
+}
+
 class FPakFile : public FArchive
 {
 	DECLARE_ARCHIVE(FPakFile, FArchive);
@@ -145,8 +156,6 @@ public:
 		{
 			guard(SerializeCompressed);
 
-			assert(!Info->bEncrypted);
-
 			while (size > 0)
 			{
 				if ((UncompressedBuffer == NULL) || (ArPos < UncompressedBufferPos) || (ArPos >= UncompressedBufferPos + Info->CompressionBlockSize))
@@ -163,15 +172,20 @@ public:
 					const FPakCompressedBlock& Block = Info->CompressionBlocks[BlockIndex];
 					int CompressedBlockSize = (int)(Block.CompressedEnd - Block.CompressedStart);
 					int UncompressedBlockSize = min((int)Info->CompressionBlockSize, (int)Info->UncompressedSize - UncompressedBufferPos); // don't pass file end
-					int EncryptedSize = Align(CompressedBlockSize, EncryptionAlign);
-					byte* CompressedData = (byte*)appMalloc(EncryptedSize);
-					Reader->Seek64(Block.CompressedStart);
-					Reader->Serialize(CompressedData, CompressedBlockSize);
-					// Handle encrypted data
-					if (Info->bEncrypted)
+					byte* CompressedData;
+					if (!Info->bEncrypted)
 					{
-						if ((GAesKey.Len() == 0) && !UE4EncryptedPak())
-							appError("AES key is required");
+						CompressedData = (byte*)appMalloc(CompressedBlockSize);
+						Reader->Seek64(Block.CompressedStart);
+						Reader->Serialize(CompressedData, CompressedBlockSize);
+					}
+					else
+					{
+						int EncryptedSize = Align(CompressedBlockSize, EncryptionAlign);
+						CompressedData = (byte*)appMalloc(EncryptedSize);
+						Reader->Seek64(Block.CompressedStart);
+						Reader->Serialize(CompressedData, EncryptedSize);
+						PakRequireAesKey();
 						appDecryptAES(CompressedData, EncryptedSize);
 					}
 					appDecompress(CompressedData, CompressedBlockSize, UncompressedBuffer, UncompressedBlockSize, Info->CompressionMethod);
@@ -218,8 +232,7 @@ public:
 						RemainingSize = EncryptedBufferSize;
 					RemainingSize = Align(RemainingSize, EncryptionAlign); // align for AES, pak contains aligned data
 					Reader->Serialize(UncompressedBuffer, RemainingSize);
-					if ((GAesKey.Len() == 0) && !UE4EncryptedPak())
-						appError("AES key is required");
+					PakRequireAesKey();
 					appDecryptAES(UncompressedBuffer, RemainingSize);
 				}
 
@@ -314,13 +327,10 @@ public:
 
 		if (info.bEncryptedIndex)
 		{
-			if (GAesKey.Len() == 0)
+			if (!PakRequireAesKey(false))
 			{
-				if (!UE4EncryptedPak())
-				{
-					appNotify("WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);
-					return false;
-				}
+				appNotify("WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);
+				return false;
 			}
 		}
 
