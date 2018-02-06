@@ -28,6 +28,12 @@
 #define DBG_STAT(...)
 #endif
 
+#if DEBUG_SKELMESH || DEBUG_STATICMESH
+#define DBG_MESH(...)			appPrintf(__VA_ARGS__);
+#else
+#define DBG_MESH(...)
+#endif
+
 
 #if NUM_INFLUENCES_UE4 != NUM_INFLUENCES
 //!!#error NUM_INFLUENCES_UE4 and NUM_INFLUENCES are not matching!
@@ -60,7 +66,7 @@ struct FColorVertexBuffer4
 
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		Ar << S.Stride << S.NumVertices;
-		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
+		DBG_MESH("ColorStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
 		if (!StripFlags.IsDataStrippedForServer() && (S.NumVertices > 0)) // zero size arrays are not serialized
 			S.Data.BulkSerialize(Ar);
 		return Ar;
@@ -68,6 +74,110 @@ struct FColorVertexBuffer4
 		unguard;
 	}
 };
+
+struct FPositionVertexBuffer4
+{
+	TArray<FVector>	Verts;
+	int				Stride;
+	int				NumVertices;
+
+	friend FArchive& operator<<(FArchive& Ar, FPositionVertexBuffer4& S)
+	{
+		guard(FPositionVertexBuffer4<<);
+
+		Ar << S.Stride << S.NumVertices;
+		DBG_MESH("PositionStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
+		S.Verts.BulkSerialize(Ar);
+		return Ar;
+
+		unguard;
+	}
+};
+
+//?? TODO: rename, because these vars are now used for both mesh types
+static int  GNumStaticUVSets   = 1;
+static bool GUseStaticFloatUVs = true;
+static bool GUseHighPrecisionTangents = false;
+
+struct FStaticMeshUVItem4
+{
+	FPackedNormal	Normal[3];					//?? do we need 3 items here?
+	FMeshUVFloat	UV[MAX_STATIC_UV_SETS_UE4];
+
+	friend FArchive& operator<<(FArchive& Ar, FStaticMeshUVItem4& V)
+	{
+		if (!GUseHighPrecisionTangents)
+		{
+			Ar << V.Normal[0] << V.Normal[2];	// TangentX and TangentZ
+		}
+		else
+		{
+			FPackedRGBA16N Normal, Tangent;
+			Ar << Normal << Tangent;
+			V.Normal[0] = Normal.ToPackedNormal();
+			V.Normal[2] = Tangent.ToPackedNormal();
+		}
+
+		if (GUseStaticFloatUVs)
+		{
+			for (int i = 0; i < GNumStaticUVSets; i++)
+				Ar << V.UV[i];
+		}
+		else
+		{
+			for (int i = 0; i < GNumStaticUVSets; i++)
+			{
+				// read in half format and convert to float
+				FMeshUVHalf UVHalf;
+				Ar << UVHalf;
+				V.UV[i] = UVHalf;		// convert
+			}
+		}
+		return Ar;
+	}
+};
+
+struct FStaticMeshVertexBuffer4
+{
+	int				NumTexCoords;
+	int				Stride;
+	int				NumVertices;
+	bool			bUseFullPrecisionUVs;
+	bool			bUseHighPrecisionTangentBasis;
+	TArray<FStaticMeshUVItem4> UV;
+
+	friend FArchive& operator<<(FArchive& Ar, FStaticMeshVertexBuffer4& S)
+	{
+		guard(FStaticMeshVertexBuffer4<<);
+
+		S.bUseHighPrecisionTangentBasis = false;
+
+		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
+		Ar << S.NumTexCoords;
+		if (Ar.Game < GAME_UE4(19))
+			Ar << S.Stride;				// this field disappeared in 4.19, with no version checks
+		Ar << S.NumVertices;
+		Ar << S.bUseFullPrecisionUVs;
+		if (Ar.Game >= GAME_UE4(12))
+		{
+			Ar << S.bUseHighPrecisionTangentBasis;
+		}
+		GUseHighPrecisionTangents = S.bUseHighPrecisionTangentBasis;
+		DBG_MESH("UV stream: TC:%d IS:%d NV:%d FloatUV:%d HQ_Tangent:%d\n", S.NumTexCoords, S.Stride, S.NumVertices, S.bUseFullPrecisionUVs, S.bUseHighPrecisionTangentBasis);
+
+		if (!StripFlags.IsDataStrippedForServer())
+		{
+			GNumStaticUVSets = S.NumTexCoords;
+			GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
+			S.UV.BulkSerialize(Ar);
+		}
+
+		return Ar;
+
+		unguard;
+	}
+};
+
 
 
 /*-----------------------------------------------------------------------------
@@ -1151,108 +1261,6 @@ struct FStaticMeshSection4
 		Ar << S.MinVertexIndex << S.MaxVertexIndex;
 		Ar << S.bEnableCollision << S.bCastShadow;
 		return Ar;
-	}
-};
-
-
-struct FPositionVertexBuffer4
-{
-	TArray<FVector>	Verts;
-	int				Stride;
-	int				NumVertices;
-
-	friend FArchive& operator<<(FArchive& Ar, FPositionVertexBuffer4& S)
-	{
-		guard(FPositionVertexBuffer4<<);
-
-		Ar << S.Stride << S.NumVertices;
-		DBG_STAT("StaticMesh PositionStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
-		S.Verts.BulkSerialize(Ar);
-		return Ar;
-
-		unguard;
-	}
-};
-
-
-static int  GNumStaticUVSets   = 1;
-static bool GUseStaticFloatUVs = true;
-static bool GUseHighPrecisionTangents = false;
-
-struct FStaticMeshUVItem4
-{
-	FPackedNormal	Normal[3];					//?? do we need 3 items here?
-	FMeshUVFloat	UV[MAX_STATIC_UV_SETS_UE4];
-
-	friend FArchive& operator<<(FArchive& Ar, FStaticMeshUVItem4& V)
-	{
-		if (!GUseHighPrecisionTangents)
-		{
-			Ar << V.Normal[0] << V.Normal[2];	// TangentX and TangentZ
-		}
-		else
-		{
-			FPackedRGBA16N Normal, Tangent;
-			Ar << Normal << Tangent;
-			V.Normal[0] = Normal.ToPackedNormal();
-			V.Normal[2] = Tangent.ToPackedNormal();
-		}
-
-		if (GUseStaticFloatUVs)
-		{
-			for (int i = 0; i < GNumStaticUVSets; i++)
-				Ar << V.UV[i];
-		}
-		else
-		{
-			for (int i = 0; i < GNumStaticUVSets; i++)
-			{
-				// read in half format and convert to float
-				FMeshUVHalf UVHalf;
-				Ar << UVHalf;
-				V.UV[i] = UVHalf;		// convert
-			}
-		}
-		return Ar;
-	}
-};
-
-
-struct FStaticMeshVertexBuffer4
-{
-	int				NumTexCoords;
-	int				Stride;
-	int				NumVertices;
-	bool			bUseFullPrecisionUVs;
-	bool			bUseHighPrecisionTangentBasis;
-	TArray<FStaticMeshUVItem4> UV;
-
-	friend FArchive& operator<<(FArchive& Ar, FStaticMeshVertexBuffer4& S)
-	{
-		guard(FStaticMeshVertexBuffer4<<);
-
-		S.bUseHighPrecisionTangentBasis = false;
-
-		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
-		Ar << S.NumTexCoords << S.Stride << S.NumVertices;
-		Ar << S.bUseFullPrecisionUVs;
-		if (Ar.Game >= GAME_UE4(12))
-		{
-			Ar << S.bUseHighPrecisionTangentBasis;
-		}
-		GUseHighPrecisionTangents = S.bUseHighPrecisionTangentBasis;
-		DBG_STAT("StaticMesh UV stream: TC:%d IS:%d NV:%d FloatUV:%d HQ_Tangent:%d\n", S.NumTexCoords, S.Stride, S.NumVertices, S.bUseFullPrecisionUVs, S.bUseHighPrecisionTangentBasis);
-
-		if (!StripFlags.IsDataStrippedForServer())
-		{
-			GNumStaticUVSets = S.NumTexCoords;
-			GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
-			S.UV.BulkSerialize(Ar);
-		}
-
-		return Ar;
-
-		unguard;
 	}
 };
 
