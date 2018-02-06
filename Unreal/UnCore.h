@@ -1693,6 +1693,26 @@ public:
 		Ar << *(T*)item;		// serialize item
 	}
 
+	// serializer which allows passing custom function: function should have
+	// prototype 'void Func(FArchive& Ar, T& Obj)'
+	typedef void (*SerializerFunc_t)(FArchive& Ar, T& Obj);
+
+	template<SerializerFunc_t F>
+	FArchive& Serialize2(FArchive& Ar)
+	{
+		if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
+			Destruct(0, Num());
+		return FArray::Serialize(Ar, TArray<T>::SerializeItem2<F>, sizeof(T));
+	}
+
+	template<SerializerFunc_t F>
+	static void SerializeItem2(FArchive& Ar, void* item)
+	{
+		if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
+			new (item) T;		// construct item before reading
+		F(Ar, *(T*) item);
+	}
+
 protected:
 	// disable array copying
 	TArray(const TArray &Other)
