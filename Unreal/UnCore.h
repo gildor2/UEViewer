@@ -363,7 +363,7 @@ enum EGame
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		18		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		19		// UE4.XX
 
 enum EPlatform
 {
@@ -2304,6 +2304,8 @@ enum
 	VER_UE4_16 = 513,
 	VER_UE4_17 = 513,
 	VER_UE4_18 = 514,
+		VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID = 516,
+	VER_UE4_19 = 516,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
