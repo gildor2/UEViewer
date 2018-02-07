@@ -1232,10 +1232,12 @@ void CApplication::ProcessKey(int key, bool isDown)
 		ResetView();
 		break;
 	case SPEC_KEY(PAGEUP)|KEY_CTRL:
+	case SDLK_KP_9|KEY_CTRL:
 		textOffset += TEXT_SCROLL_LINES;
 		if (textOffset > 0) textOffset = 0;
 		break;
 	case SPEC_KEY(PAGEDOWN)|KEY_CTRL:
+	case SDLK_KP_3|KEY_CTRL:
 		textOffset -= TEXT_SCROLL_LINES;
 		break;
 #if LIGHTING_MODES

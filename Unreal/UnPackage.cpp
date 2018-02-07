@@ -563,6 +563,12 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 	Ar << S.NameCount << S.NameOffset;
 
+	if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID && Ar.ContainsEditorData())
+	{
+		FString LocalizationId;
+		Ar << LocalizationId;
+	}
+
 	if (Ar.ArVer >= VER_UE4_SERIALIZE_TEXT_IN_PACKAGES)
 	{
 		int32 GatherableTextDataCount, GatherableTextDataOffset;

@@ -8,6 +8,7 @@ OPTIMIZE   = size
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
 OLDCRT     = 1				# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
 
+#?? TODO: UE3_LIBS seems combines all libraries used in UModel, but which aren't for UE3 exactly. Rename constant?
 
 #------------------------------------------------
 #	Compiler-specific options
@@ -116,6 +117,12 @@ LIBINCLUDES += $R/libs/PowerVR
 LIBINCLUDES += $R/libs/detex
 sources(UE3_LIBS) = {
 	$R/libs/detex/*.cpp
+}
+
+# TODO: AES code used for UE4, but added to UE3_LIBS
+LIBINCLUDES += $R/libs/rijndael
+sources(UE3_LIBS) = {
+	$R/libs/rijndael/*.c
 }
 
 

@@ -24,6 +24,7 @@
 #include "AboutDialog.h"
 #include "ErrorDialog.h"
 #include "UE4VersionDialog.h"
+#include "UE4AesKeyDialog.h"
 #include "PackageScanDialog.h"
 #endif
 
@@ -297,6 +298,13 @@ int CUmodelApp::ShowUE4UnversionedPackageDialog(int verMin, int verMax)
 	UIUE4VersionDialog dialog;
 	return dialog.Show(verMin, verMax);
 }
+
+FString CUmodelApp::ShowUE4AesKeyDialog()
+{
+	UIUE4AesKeyDialog dialog;
+	return dialog.Show();
+}
+
 #endif // UNREAL4
 
 #endif // HAS_UI
@@ -510,9 +518,13 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 
 	switch (key)
 	{
-	case SPEC_KEY(PAGEDOWN):
 	case SPEC_KEY(PAGEUP):
-		FindObjectAndCreateVisualizer((key == SPEC_KEY(PAGEDOWN)) ? 1 : -1);
+	case SDLK_KP_9:
+		FindObjectAndCreateVisualizer(-1);
+		break;
+	case SPEC_KEY(PAGEDOWN):
+	case SDLK_KP_3:
+		FindObjectAndCreateVisualizer(1);
 		break;
 	case 's'|KEY_CTRL:
 		DoScreenshot = 1;

@@ -363,7 +363,7 @@ enum EGame
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		18		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		19		// UE4.XX
 
 enum EPlatform
 {
@@ -1693,6 +1693,26 @@ public:
 		Ar << *(T*)item;		// serialize item
 	}
 
+	// serializer which allows passing custom function: function should have
+	// prototype 'void Func(FArchive& Ar, T& Obj)'
+	typedef void (*SerializerFunc_t)(FArchive& Ar, T& Obj);
+
+	template<SerializerFunc_t F>
+	FArchive& Serialize2(FArchive& Ar)
+	{
+		if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
+			Destruct(0, Num());
+		return FArray::Serialize(Ar, TArray<T>::SerializeItem2<F>, sizeof(T));
+	}
+
+	template<SerializerFunc_t F>
+	static void SerializeItem2(FArchive& Ar, void* item)
+	{
+		if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
+			new (item) T;		// construct item before reading
+		F(Ar, *(T*) item);
+	}
+
 protected:
 	// disable array copying
 	TArray(const TArray &Other)
@@ -2210,6 +2230,15 @@ struct FIntBulkData : public FByteBulkData
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 
+// UE4 has built-in AES encryption
+
+extern FString GAesKey;
+
+void appDecryptAES(byte* Data, int Size);
+
+// Callback called when encrypted pak file is attempted to load
+bool UE4EncryptedPak();
+
 
 /*-----------------------------------------------------------------------------
 	UE4 support
@@ -2295,6 +2324,8 @@ enum
 	VER_UE4_16 = 513,
 	VER_UE4_17 = 513,
 	VER_UE4_18 = 514,
+		VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID = 516,
+	VER_UE4_19 = 516,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };

@@ -119,7 +119,8 @@ UE3_LIBS_FILES = \
 	$(OUT)/decompress-etc.o \
 	$(OUT)/file-info.o \
 	$(OUT)/misc.o \
-	$(OUT)/texture.o
+	$(OUT)/texture.o \
+	$(OUT)/rijndael.o
 
 MOBILE_LIBS_FILES = \
 	$(OUT)/PVRTDecompress.o \
@@ -160,7 +161,7 @@ $(OUT)/DirectDrawSurface.o : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.o : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/Image.o ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof  -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I UmodelTool -I UI
+OPT_MAIN = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof  -Os -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/rijndael -I UmodelTool -I UI
 
 DEPENDS_1 = \
 	Core/Core.h \
@@ -385,6 +386,7 @@ DEPENDS_10 = \
 	UmodelTool/PackageScanDialog.h \
 	UmodelTool/ProgressDialog.h \
 	UmodelTool/StartupDialog.h \
+	UmodelTool/UE4AesKeyDialog.h \
 	UmodelTool/UE4VersionDialog.h \
 	UmodelTool/UmodelApp.h \
 	UmodelTool/UmodelSettings.h \
@@ -1209,6 +1211,7 @@ DEPENDS_53 = \
 	libs/include/lzo/lzodefs.h \
 	libs/mspack/lzx.h \
 	libs/mspack/mspack.h \
+	libs/rijndael/rijndael.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
@@ -1429,15 +1432,21 @@ $(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_71)
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
 DEPENDS_72 = \
+	libs/rijndael/rijndael.h
+
+$(OUT)/rijndael.o : ./libs/rijndael/rijndael.c $(DEPENDS_72)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/rijndael.o ./libs/rijndael/rijndael.c
+
+DEPENDS_73 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_72)
+$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_73)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_73 = \
+DEPENDS_74 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -1446,10 +1455,10 @@ DEPENDS_73 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_73)
+$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_74)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_74 = \
+DEPENDS_75 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -1457,26 +1466,26 @@ DEPENDS_74 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_74)
+$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_75)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_75 = \
+DEPENDS_76 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_75)
+$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_76)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_76 = \
+DEPENDS_77 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_76)
+$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_77)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/adler32.o ./libs/zlib/adler32.c
 
-$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_76)
+$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_77)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

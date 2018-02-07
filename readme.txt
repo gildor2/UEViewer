@@ -180,6 +180,16 @@ detex
 
 Changes
 ~~~~~~~
+31.01.2018
+- implemented loader for encrtpted compressed UE4 pak files
+
+23.01.2018
+- added support for loading AES-encrypted UE4 pak files; AES key may be specified with command line option
+  -aes=key, or it will be requested by UI when needed
+
+20.01.2018
+- improved laptop keyboard support
+
 04.01.2018
 - updated UE4.18 support
 - displaying a warning message in UE4 SkeletalMesh viewer when Skeleton object is not loaded, and therefore

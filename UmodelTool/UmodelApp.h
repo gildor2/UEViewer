@@ -52,6 +52,7 @@ public:
 	void ShowErrorDialog();
 	#if UNREAL4
 	int ShowUE4UnversionedPackageDialog(int verMin, int verMax);
+	FString ShowUE4AesKeyDialog();
 	#endif
 	// menu callbacks
 	void PrevObject()

@@ -244,7 +244,7 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
-		/// reference: CureUObject/Classes/Object.h
+		/// reference: CoreUObject/Classes/Object.h
 		/// objects with native serializer has "atomic" or "immutable" mark
 		STRUC_TYPE(FIntPoint)
 		STRUC_TYPE(FLinearColor)
@@ -298,8 +298,11 @@ enum EPropType // hardcoded in Unreal
 	NAME_InterfaceProperty = 15,
 #endif
 #if UNREAL4
+	/// reference: CoreUObject/Public/UObject/UnrealNames.inl
+	// Note: real enum indices doesn't matter in UE4 because type serialized as real FName
 	NAME_TextProperty = 14,
 	NAME_AttributeProperty,
+	NAME_EnumProperty,
 #endif
 };
 
@@ -333,6 +336,7 @@ static const struct
 	F(AttributeProperty),
 	F(AssetObjectProperty),
 	F(AssetSubclassProperty),
+	F(EnumProperty),
 #endif
 #undef F
 };
@@ -1030,7 +1034,7 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 		const char *TypeName = "??";
 	#if BATMAN
-		if (Ar.Game >= GAME_Batman2) // copy-paste of code above
+		if (Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4) // copy-paste of code above
 		{
 			if (Tag.Type < 16)
 				TypeName = GetTypeName(Tag.Type);
@@ -1320,6 +1324,16 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			appError("FixedArray property not implemented");
 			break;
 
+#if UNREAL4
+		case NAME_EnumProperty:
+			{
+				// Possible bug: EnumProperty has DataSize=8, but really serializes nothing
+				//http://www.gildor.org/smf/index.php/topic,6036.0.html
+				StopPos = Ar.Tell();
+			}
+			break;
+#endif // UNREAL4
+
 		// reserved, but not implemented in unreal:
 		case NAME_StringProperty:	//------  string  => used str
 		case NAME_VectorProperty:	//------  vector  => used structure"Vector"
@@ -1351,9 +1365,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 		if (Pos != StopPos)
 		{
 #if DEBUG_PROPS
+			appPrintf("Serialized size mismatch: Pos=%X, Stop=%X\n", Pos, StopPos);
 			// show property dump
 			Ar.Seek(PropTagPos);
-			DUMP_ARC_BYTES(Ar, StopPos - PropTagPos, "Dropped bytes");
+			DUMP_ARC_BYTES(Ar, StopPos - PropTagPos, "Property bytes");
 #endif
 			appError("%s\'%s\'.%s: Property read error: %d unread bytes", Name, UObject::GLoadingObj->Name, *Tag.Name, StopPos - Pos);
 		}
