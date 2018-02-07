@@ -2453,6 +2453,11 @@ struct FSkeletalMeshCustomVersion
 		// UE4.16, UE4.17 = 9
 		// UE4.18 = 10
 		CompactClothVertexBuffer = 10,
+		RemoveSourceData = 11,
+		SplitModelAndRenderData = 12,
+		RemoveTriangleSorting = 13,
+		RemoveDuplicatedClothingSections = 14,
+		DeprecateSectionDisabledFlag = 16,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2480,6 +2485,8 @@ struct FSkeletalMeshCustomVersion
 			return (Type)9;
 		if (Ar.Game < GAME_UE4(19))
 			return CompactClothVertexBuffer;
+		if (Ar.Game < GAME_UE4(20))
+			return DeprecateSectionDisabledFlag;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}

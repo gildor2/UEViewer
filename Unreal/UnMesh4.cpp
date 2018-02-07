@@ -106,6 +106,13 @@ struct FStaticMeshUVItem4
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticMeshUVItem4& V)
 	{
+		SerializeTangents(Ar, V);
+		SerializeTexcoords(Ar, V);
+		return Ar;
+	}
+
+	static void SerializeTangents(FArchive& Ar, FStaticMeshUVItem4& V)
+	{
 		if (!GUseHighPrecisionTangents)
 		{
 			Ar << V.Normal[0] << V.Normal[2];	// TangentX and TangentZ
@@ -117,7 +124,10 @@ struct FStaticMeshUVItem4
 			V.Normal[0] = Normal.ToPackedNormal();
 			V.Normal[2] = Tangent.ToPackedNormal();
 		}
+	}
 
+	static void SerializeTexcoords(FArchive& Ar, FStaticMeshUVItem4& V)
+	{
 		if (GUseStaticFloatUVs)
 		{
 			for (int i = 0; i < GNumStaticUVSets; i++)
@@ -133,7 +143,6 @@ struct FStaticMeshUVItem4
 				V.UV[i] = UVHalf;		// convert
 			}
 		}
-		return Ar;
 	}
 };
 
@@ -151,11 +160,14 @@ struct FStaticMeshVertexBuffer4
 		guard(FStaticMeshVertexBuffer4<<);
 
 		S.bUseHighPrecisionTangentBasis = false;
+		S.Stride = -1;
 
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		Ar << S.NumTexCoords;
 		if (Ar.Game < GAME_UE4(19))
+		{
 			Ar << S.Stride;				// this field disappeared in 4.19, with no version checks
+		}
 		Ar << S.NumVertices;
 		Ar << S.bUseFullPrecisionUVs;
 		if (Ar.Game >= GAME_UE4(12))
@@ -169,7 +181,38 @@ struct FStaticMeshVertexBuffer4
 		{
 			GNumStaticUVSets = S.NumTexCoords;
 			GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
-			S.UV.BulkSerialize(Ar);
+			if (Ar.Game < GAME_UE4(19))
+			{
+				S.UV.BulkSerialize(Ar);
+			}
+			else
+			{
+				// In 4.19 tangents and texture coordinates are stored in separate vertex streams
+				int32 ItemSize, ItemCount;
+				S.UV.AddUninitialized(S.NumVertices);
+
+				// Tangents
+				Ar << ItemSize << ItemCount;
+				DBG_MESH("... tangents: %d items by %d bytes\n", ItemCount, ItemSize);
+				assert(ItemCount == S.NumVertices);
+				int Pos = Ar.Tell();
+				for (int i = 0; i < S.NumVertices; i++)
+				{
+					FStaticMeshUVItem4::SerializeTangents(Ar, S.UV[i]);
+				}
+				assert(Ar.Tell() - Pos == ItemCount * ItemSize);
+
+				// Texture coordinates
+				Ar << ItemSize << ItemCount;
+				DBG_MESH("... texcoords: %d items by %d bytes\n", ItemCount, ItemSize);
+				assert(ItemCount == S.NumVertices * S.NumTexCoords);
+				Pos = Ar.Tell();
+				for (int i = 0; i < S.NumVertices; i++)
+				{
+					FStaticMeshUVItem4::SerializeTexcoords(Ar, S.UV[i]);
+				}
+				assert(Ar.Tell() - Pos == ItemCount * ItemSize);
+			}
 		}
 
 		return Ar;
@@ -203,6 +246,28 @@ struct FRecomputeTangentCustomVersion
 		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
 		return RuntimeRecomputeTangent;
+	}
+};
+
+struct FOverlappingVerticesCustomVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		// UE4.19
+		DetectOVerlappingVertices = 1,
+	};
+
+	static int Get(const FArchive& Ar)
+	{
+		static const FGuid GUID = { 0x612FBE52, 0xDA53400B, 0x910D4F91, 0x9FB1857C };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+
+		if (Ar.Game < GAME_UE4(19))
+			return BeforeCustomVersionWasAdded;
+		return DetectOVerlappingVertices;
 	}
 };
 
@@ -271,7 +336,7 @@ struct FSoftVertex4
 	}
 };
 
-struct FApexClothPhysToRenderVertData
+struct FApexClothPhysToRenderVertData // new structure name: FMeshToMeshVertData
 {
 	FVector4				PositionBaryCoordsAndDist;
 	FVector4				NormalBaryCoordsAndDist;
@@ -371,14 +436,23 @@ struct FSkeletalMaterial
 	}
 };
 
+struct FDuplicatedVerticesBuffer
+{
+	friend FArchive& operator<<(FArchive& Ar, FDuplicatedVerticesBuffer& B)
+	{
+		SkipFixedArray(Ar, sizeof(int32));					// TArray<int32>
+		SkipFixedArray(Ar, sizeof(uint32) + sizeof(uint32)); // TArray<FIndexLengthPair>
+		return Ar;
+	}
+};
+
 struct FSkelMeshSection4
 {
 	int16					MaterialIndex;
 	int32					BaseIndex;
 	int32					NumTriangles;
-	byte					TriangleSorting;		// TEnumAsByte<ETriangleSortOption>
-	bool					bDisabled;
-	int16					CorrespondClothSectionIndex;
+	bool					bDisabled;				// deprecated in UE4.19
+	int16					CorrespondClothSectionIndex; // deprecated in UE4.19
 
 	// Data from FSkelMeshChunk, appeared in FSkelMeshSection after UE4.13
 	int32					NumVertices;
@@ -410,12 +484,18 @@ struct FSkelMeshSection4
 			Ar << S.BaseIndex;
 			Ar << S.NumTriangles;
 		}
-		Ar << S.TriangleSorting;
+		if (SkelMeshVer < FSkeletalMeshCustomVersion::RemoveTriangleSorting)
+		{
+			byte TriangleSorting;		// TEnumAsByte<ETriangleSortOption>
+			Ar << TriangleSorting;
+		}
 
 		if (Ar.ArVer >= VER_UE4_APEX_CLOTH)
 		{
-			Ar << S.bDisabled;
-			Ar << S.CorrespondClothSectionIndex;
+			if (SkelMeshVer < FSkeletalMeshCustomVersion::DeprecateSectionDisabledFlag)
+				Ar << S.bDisabled;
+			if (SkelMeshVer < FSkeletalMeshCustomVersion::RemoveDuplicatedClothingSections)
+				Ar << S.CorrespondClothSectionIndex;
 		}
 
 		if (Ar.ArVer >= VER_UE4_APEX_CLOTH_LOD)
@@ -471,8 +551,14 @@ struct FSkelMeshSection4
 			int16 ClothAssetSubmeshIndex;
 
 			Ar << ClothMappingData;
-			Ar << PhysicalMeshVertices << PhysicalMeshNormals;
+
+			if (SkelMeshVer < FSkeletalMeshCustomVersion::RemoveDuplicatedClothingSections)
+			{
+				Ar << PhysicalMeshVertices << PhysicalMeshNormals;
+			}
+
 			Ar << CorrespondClothAssetIndex;
+
 			if (SkelMeshVer < FSkeletalMeshCustomVersion::NewClothingSystemAdded)
 			{
 				Ar << ClothAssetSubmeshIndex;
@@ -485,9 +571,52 @@ struct FSkelMeshSection4
 			}
 
 			S.HasClothData = ClothMappingData.Num() > 0;
+
+			// UE4.19+
+			if (FOverlappingVerticesCustomVersion::Get(Ar) >= FOverlappingVerticesCustomVersion::DetectOVerlappingVertices)
+			{
+				TMap<int32, TArray<int32> > OverlappingVertices;
+				Ar << OverlappingVertices;
+			}
 		}
 
 		return Ar;
+
+		unguard;
+	}
+
+	// UE4.19+. Prototype: FSkelMeshRenderSection's operator<<
+	static void SerializeRenderItem(FArchive& Ar, FSkelMeshSection4& S)
+	{
+		guard(FSkelMeshSection4::SerializeRenderItem);
+
+		FStripDataFlags StripFlags(Ar);
+
+		Ar << S.MaterialIndex;
+		Ar << S.BaseIndex;
+		Ar << S.NumTriangles;
+
+		bool bRecomputeTangent;
+		Ar << bRecomputeTangent;
+
+		Ar << S.bCastShadow;
+		Ar << S.BaseVertexIndex;
+
+		TArray<FApexClothPhysToRenderVertData> ClothMappingData;
+		Ar << ClothMappingData;
+
+		Ar << S.BoneMap;
+		Ar << S.NumVertices;
+		Ar << S.MaxBoneInfluences;
+
+		int16 CorrespondClothAssetIndex;
+		Ar << CorrespondClothAssetIndex;
+
+		FClothingSectionData ClothingData;
+		Ar << ClothingData;
+
+		FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
+		Ar << DuplicatedVerticesBuffer;
 
 		unguard;
 	}
@@ -779,6 +908,35 @@ struct FSkeletalMeshVertexClothBuffer
 	}
 };
 
+// Starting with UE4.15 influences are serialized as separate buffer.
+struct FSkinWeightVertexBuffer
+{
+	TArray<FSkinWeightInfo> Weights;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkinWeightVertexBuffer& B)
+	{
+		guard(FSkinWeightVertexBuffer<<);
+
+		FStripDataFlags SkinWeightStripFlags(Ar);
+
+		bool bExtraBoneInfluences;
+		int32 NumVertices;
+
+		Ar << bExtraBoneInfluences << NumVertices;
+		DBG_SKEL("Weights: extra=%d verts=%d\n", bExtraBoneInfluences, NumVertices);
+
+		if (!SkinWeightStripFlags.IsDataStrippedForServer())
+		{
+			GNumSkelInfluences = bExtraBoneInfluences ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
+			B.Weights.BulkSerialize(Ar);
+		}
+
+		return Ar;
+		unguard;
+	}
+};
+
+
 struct FStaticLODModel4
 {
 	TArray<FSkelMeshSection4>	Sections;
@@ -797,11 +955,14 @@ struct FStaticLODModel4
 	FSkeletalMeshVertexColorBuffer4 ColorVertexBuffer;		//!! TODO: switch to FColorVertexBuffer4
 	FSkeletalMeshVertexClothBuffer ClothVertexBuffer;
 
+	// Before 4.19, this function is FStaticLODModel::Serialize in UE4 source code. After 4.19,
+	// this is FSkeletalMeshLODModel::Serialize.
 	friend FArchive& operator<<(FArchive& Ar, FStaticLODModel4& Lod)
 	{
 		guard(FStaticLODModel4<<);
 
 		FStripDataFlags StripFlags(Ar);
+		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
 
 		Ar << Lod.Sections;
 #if DEBUG_SKELMESH
@@ -812,13 +973,20 @@ struct FStaticLODModel4
 		}
 #endif
 
-		Ar << Lod.Indices;
+		if (SkelMeshVer < FSkeletalMeshCustomVersion::SplitModelAndRenderData)
+		{
+			Ar << Lod.Indices;
+		}
+		else
+		{
+			// UE4.19+ uses 32-bit index buffer (for editor data)
+			Ar << Lod.Indices.Indices32;
+		}
 		DBG_SKEL("Indices: %d (16) / %d (32)\n", Lod.Indices.Indices16.Num(), Lod.Indices.Indices32.Num());
 
 		Ar << Lod.ActiveBoneIndices;
 		DBG_SKEL("ActiveBones: %d\n", Lod.ActiveBoneIndices.Num());
 
-		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
 		if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSectionWithChunk)
 		{
 			Ar << Lod.Chunks;
@@ -832,7 +1000,7 @@ struct FStaticLODModel4
 #endif
 		}
 
-		Ar << Lod.Size;
+		Ar << Lod.Size;	// legacy
 		if (!StripFlags.IsDataStrippedForServer())
 			Ar << Lod.NumVertices;
 
@@ -858,79 +1026,155 @@ struct FStaticLODModel4
 		{
 			Ar << Lod.NumTexCoords;
 			DBG_SKEL("TexCoords=%d\n", Lod.NumTexCoords);
-			Ar << Lod.VertexBufferGPUSkin;
 
-			if (SkelMeshVer >= FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
+			if (SkelMeshVer < FSkeletalMeshCustomVersion::SplitModelAndRenderData)
 			{
-				guard(FSkinWeightVertexBuffer<<);
+				// Pre-UE4.19 code.
+				Ar << Lod.VertexBufferGPUSkin;
 
-				// Starting with UE4.15 influences are serialized as separate buffer.
-				// See FSkinWeightVertexBuffer in UE4 source for reference.
-				FStripDataFlags SkinWeightStripFlags(Ar);
-
-				bool bExtraBoneInfluences;
-				int32 NumVertices;
-				Ar << bExtraBoneInfluences << NumVertices;
-				assert(Lod.NumVertices == NumVertices);
-				DBG_SKEL("Infs: extra=%d verts=%d\n", bExtraBoneInfluences, NumVertices);
-
-				if (!SkinWeightStripFlags.IsDataStrippedForServer())
+				if (SkelMeshVer >= FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
 				{
-					TArray<FSkinWeightInfo> Weights;
-					GNumSkelInfluences = bExtraBoneInfluences ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
-					Weights.BulkSerialize(Ar);
+					FSkinWeightVertexBuffer SkinWeights;
+					Ar << SkinWeights;
 
-					assert(Weights.Num() == NumVertices);
-					// Copy data to VertexBufferGPUSkin
-					if (Lod.VertexBufferGPUSkin.bUseFullPrecisionUVs)
+					if (SkinWeights.Weights.Num())
 					{
-						for (int i = 0; i < NumVertices; i++)
+						guard(CopyWeights);
+						assert(Lod.NumVertices == SkinWeights.Weights.Num());
+
+						const TArray<FSkinWeightInfo>& Weights = SkinWeights.Weights;
+
+						// Copy data to VertexBufferGPUSkin
+						if (Lod.VertexBufferGPUSkin.bUseFullPrecisionUVs)
 						{
-							Lod.VertexBufferGPUSkin.VertsFloat[i].Infs = Weights[i];
+							for (int i = 0; i < Lod.NumVertices; i++)
+							{
+								Lod.VertexBufferGPUSkin.VertsFloat[i].Infs = Weights[i];
+							}
 						}
+						else
+						{
+							for (int i = 0; i < Lod.NumVertices; i++)
+							{
+								Lod.VertexBufferGPUSkin.VertsHalf[i].Infs = Weights[i];
+							}
+						}
+						unguard;
+					}
+				}
+
+				USkeletalMesh4 *LoadingMesh = (USkeletalMesh4*)UObject::GLoadingObj;
+				assert(LoadingMesh);
+				if (LoadingMesh->bHasVertexColors)
+				{
+					appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
+					if (SkelMeshVer < FSkeletalMeshCustomVersion::UseSharedColorBufferFormat)
+					{
+						Ar << Lod.ColorVertexBuffer;
 					}
 					else
 					{
-						for (int i = 0; i < NumVertices; i++)
-						{
-							Lod.VertexBufferGPUSkin.VertsHalf[i].Infs = Weights[i];
-						}
+						FColorVertexBuffer4 NewColorVertexBuffer;
+						Ar << NewColorVertexBuffer;
+						Exchange(Lod.ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
 					}
+					DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
 				}
-				unguard;
+
+				if (Ar.ArVer < VER_UE4_REMOVE_EXTRA_SKELMESH_VERTEX_INFLUENCES)
+				{
+					appError("Unsupported: extra SkelMesh vertex influences (old mesh format)");
+				}
+
+				if (!StripFlags.IsClassDataStripped(1))
+					Ar << Lod.AdjacencyIndexBuffer;
+
+				if (Ar.ArVer >= VER_UE4_APEX_CLOTH && Lod.HasClothData())
+					Ar << Lod.ClothVertexBuffer;
 			}
+		}
+
+		return Ar;
+
+		unguard;
+	}
+
+	// This function is used only for UE4.19+ data. UE4 source code prototype is
+	// FSkeletalMeshLODRenderData::Serialize().
+	static void SerializeRenderItem(FArchive& Ar, FStaticLODModel4& Lod)
+	{
+		guard(FStaticLODModel4::SerializeRenderItem);
+
+		FStripDataFlags StripFlags(Ar);
+//		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
+
+		Lod.Sections.Serialize2<FSkelMeshSection4::SerializeRenderItem>(Ar);
+#if DEBUG_SKELMESH
+		for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
+		{
+			FSkelMeshSection4 &S = Lod.Sections[i1];
+			appPrintf("Sec[%d]: Mtl=%d, BaseIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.BaseIndex, S.NumTriangles);
+		}
+#endif
+
+		Ar << Lod.Indices;
+		DBG_SKEL("Indices: %d (16) / %d (32)\n", Lod.Indices.Indices16.Num(), Lod.Indices.Indices32.Num());
+		Ar << Lod.ActiveBoneIndices;
+		DBG_SKEL("ActiveBones: %d\n", Lod.ActiveBoneIndices.Num());
+
+		Ar << Lod.RequiredBones;
+
+		if (!StripFlags.IsDataStrippedForServer())
+		{
+			FPositionVertexBuffer4 PositionVertexBuffer;
+			Ar << PositionVertexBuffer;
+
+			FStaticMeshVertexBuffer4 StaticMeshVertexBuffer;
+			Ar << StaticMeshVertexBuffer;
+
+			FSkinWeightVertexBuffer SkinWeightVertexBuffer;
+			Ar << SkinWeightVertexBuffer;
 
 			USkeletalMesh4 *LoadingMesh = (USkeletalMesh4*)UObject::GLoadingObj;
 			assert(LoadingMesh);
 			if (LoadingMesh->bHasVertexColors)
 			{
 				appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
-				if (SkelMeshVer < FSkeletalMeshCustomVersion::UseSharedColorBufferFormat)
-				{
-					Ar << Lod.ColorVertexBuffer;
-				}
-				else
-				{
-					FColorVertexBuffer4 NewColorVertexBuffer;
-					Ar << NewColorVertexBuffer;
-					Exchange(Lod.ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
-				}
+				FColorVertexBuffer4 NewColorVertexBuffer;
+				Ar << NewColorVertexBuffer;
+				Exchange(Lod.ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
 				DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
-			}
-
-			if (Ar.ArVer < VER_UE4_REMOVE_EXTRA_SKELMESH_VERTEX_INFLUENCES)
-			{
-				appError("Unsupported: extra SkelMesh vertex influences (old mesh format)");
 			}
 
 			if (!StripFlags.IsClassDataStripped(1))
 				Ar << Lod.AdjacencyIndexBuffer;
 
-			if (Ar.ArVer >= VER_UE4_APEX_CLOTH && Lod.HasClothData())
+			if (Lod.HasClothData())
 				Ar << Lod.ClothVertexBuffer;
-		}
 
-		return Ar;
+			guard(BuildVertexData);
+
+			// Build vertex buffers (making a kind of pre-4.19 buffers from 4.19+ data)
+			Lod.VertexBufferGPUSkin.bUseFullPrecisionUVs = true;
+			Lod.NumVertices = PositionVertexBuffer.NumVertices;
+			Lod.NumTexCoords = StaticMeshVertexBuffer.NumTexCoords;
+			// build VertsFloat because FStaticMeshUVItem4 always has unpacked (float) texture coordinates
+			Lod.VertexBufferGPUSkin.VertsFloat.AddZeroed(Lod.NumVertices);
+			for (int i = 0; i < Lod.NumVertices; i++)
+			{
+				FGPUVert4Float& V = Lod.VertexBufferGPUSkin.VertsFloat[i];
+				const FStaticMeshUVItem4& SV = StaticMeshVertexBuffer.UV[i];
+				V.Pos = PositionVertexBuffer.Verts[i];
+				V.Infs = SkinWeightVertexBuffer.Weights[i];
+				staticAssert(sizeof(V.Normal) == sizeof(SV.Normal), "FGPUVert4Common.Normal should match FStaticMeshUVItem4.Normal");
+				memcpy(V.Normal, SV.Normal, sizeof(V.Normal));
+				staticAssert(sizeof(V.UV[0]) == sizeof(SV.UV[0]), "FGPUVert4Common.UV should match FStaticMeshUVItem4.UV");
+				staticAssert(sizeof(V.UV) <= sizeof(SV.UV), "SkeletalMesh has more UVs than StaticMesh"); // this is just for correct memcpy below
+				memcpy(V.UV, SV.UV, sizeof(V.UV));
+			}
+
+			unguard;
+		}
 
 		unguard;
 	}
@@ -985,8 +1229,31 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 		appPrintf("  [%d] n=%s p=%d\n", i1, *RefSkeleton.RefBoneInfo[i1].Name, RefSkeleton.RefBoneInfo[i1].ParentIndex);
 #endif
 
-	// serialize FSkeletalMeshResource (contains only array of FStaticLODModel objects)
-	Ar << LODModels;
+	// Serialize FSkeletalMeshResource (contains only array of FStaticLODModel objects). Before UE4.19,
+	// data was stored in a single array of FStaticLODModel structures. Starting with 4.19, editor and runtime
+	// data were separated to FSkeletalMeshLODModel and FSkeletalMeshLODRenderData structures.
+	if (FSkeletalMeshCustomVersion::Get(Ar) < FSkeletalMeshCustomVersion::SplitModelAndRenderData)
+	{
+		// Pre-UE4.19 code: single data array
+		Ar << LODModels;
+	}
+	else
+	{
+		// UE4.19+: 2 data arrays, for editor and for runtime. FSkeletalMeshLODModel and FSkeletalMeshLODRenderData.
+		// We're serializing them both as FStaticLODModel4.
+		if (!StripFlags.IsEditorDataStripped())
+		{
+			// Serialize editor data
+			Ar << LODModels;
+		}
+		bool bCooked;
+		Ar << bCooked;
+		if (bCooked && LODModels.Num() == 0)
+		{
+			// serialize cooked data only if editor data not exists - use custom array serializer function
+			LODModels.Serialize2<FStaticLODModel4::SerializeRenderItem>(Ar);
+		}
+	}
 
 	DROP_REMAINING_DATA(Ar);
 

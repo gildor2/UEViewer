@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+07.02.2018
+- implemented UE4.19 support
+
 31.01.2018
 - implemented loader for encrtpted compressed UE4 pak files
 
