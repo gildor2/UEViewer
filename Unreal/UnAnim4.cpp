@@ -68,8 +68,10 @@ void USkeleton::Serialize(FArchive &Ar)
 	if (Ar.ArVer >= VER_UE4_SKELETON_GUID_SERIALIZATION)
 		Ar << Guid;
 
+	guard(SmartNames);
 	if (Ar.ArVer >= VER_UE4_SKELETON_ADD_SMARTNAMES)
 		Ar << SmartNames;
+	unguard;
 
 	unguard;
 }

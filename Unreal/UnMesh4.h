@@ -89,10 +89,16 @@ struct FCurveMetaData
 	bool					bMaterial;
 	bool					bMorphtarget;
 	TArray<FBoneReference>	LinkedBones;
+	uint8					MaxLOD;
 
 	friend FArchive& operator<<(FArchive& Ar, FCurveMetaData& D)
 	{
-		return Ar << D.bMaterial << D.bMorphtarget << D.LinkedBones;
+		Ar << D.bMaterial << D.bMorphtarget << D.LinkedBones;
+		if (FAnimPhysObjectVersion::Get(Ar) >= FAnimPhysObjectVersion::AddLODToCurveMetaData)
+		{
+			Ar << D.MaxLOD;
+		}
+		return Ar;
 	}
 };
 

@@ -2547,6 +2547,7 @@ struct FAnimPhysObjectVersion
 		// UE4.17 = 7
 		SmartNameRefactorForDeterministicCooking = 10,
 		// UE4.18 = 12
+		AddLODToCurveMetaData = 12,
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
@@ -2564,7 +2565,7 @@ struct FAnimPhysObjectVersion
 		if (Ar.Game < GAME_UE4(18))
 			return (Type)7;
 		if (Ar.Game < GAME_UE4(19))
-			return (Type)12;
+			return AddLODToCurveMetaData;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
