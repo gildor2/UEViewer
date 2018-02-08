@@ -908,7 +908,7 @@ void FArchive::OverrideVersion()
 	}
 	else
 #endif // LAWBREAKERS
-	if (Game >= GAME_UE4(0) && Game <= GAME_UE4(LATEST_SUPPORTED_UE4_VERSION))
+	if (Game >= GAME_UE4(0) && Game < GAME_UE4(LATEST_SUPPORTED_UE4_VERSION+1))
 	{
 		// Special path for UE4, when engine version is specified and packages are unversioned.
 		if (ArVer == 0)
