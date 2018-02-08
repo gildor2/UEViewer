@@ -604,6 +604,7 @@ struct FSkelMeshSection4
 
 		TArray<FApexClothPhysToRenderVertData> ClothMappingData;
 		Ar << ClothMappingData;
+		S.HasClothData = (ClothMappingData.Num() > 0);
 
 		Ar << S.BoneMap;
 		Ar << S.NumVertices;
