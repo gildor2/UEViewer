@@ -359,8 +359,8 @@ const GameInfo GListOfGames[] = {
 #	if LAWBREAKERS
 		G("Lawbreakers", lawbr, GAME_Lawbreakers),
 #	endif
-#	if FORTNITE
-		G("Fortnite", fortnite, GAME_Fortnite),
+#	if PARAGON
+		G("Paragon", paragon, GAME_Paragon),
 #	endif
 #endif // UNREAL4
 

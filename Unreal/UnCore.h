@@ -357,8 +357,8 @@ enum EGame
 		// 4.14
 		GAME_Friday13 = GAME_UE4(14)+1,
 		GAME_Tekken7 = GAME_UE4(14)+2,
-		// 4.16
-		GAME_Fortnite = GAME_UE4(16)+1,
+		// 4.19
+		GAME_Paragon = GAME_UE4(19)+1,
 
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
@@ -2469,8 +2469,8 @@ struct FSkeletalMeshCustomVersion
 		int ver = GetUE4CustomVersion(Ar, GUID);
 		if (ver >= 0)
 			return (Type)ver;
-#if FORTNITE
-		if (Ar.Game == GAME_Fortnite) return (Type)7; // UE4.15 constant
+#if PARAGON
+		if (Ar.Game == GAME_Paragon) return (Type)12;
 #endif
 
 		if (Ar.Game < GAME_UE4(13))

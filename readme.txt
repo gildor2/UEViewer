@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+08.02.2018
+- added Paragon support (requires game override: -game=paragon)
+
 07.02.2018
 - implemented UE4.19 support
 

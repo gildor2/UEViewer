@@ -596,6 +596,15 @@ struct FSkelMeshSection4
 		Ar << S.BaseIndex;
 		Ar << S.NumTriangles;
 
+#if PARAGON
+		if (Ar.Game == GAME_Paragon)
+		{
+			int32 bSomething;
+			Ar << bSomething;
+			assert(bSomething == 0 || bSomething == 1);
+		}
+#endif // PARAGON
+
 		bool bRecomputeTangent;
 		Ar << bRecomputeTangent;
 
@@ -615,6 +624,10 @@ struct FSkelMeshSection4
 
 		FClothingSectionData ClothingData;
 		Ar << ClothingData;
+
+#if PARAGON
+		if (Ar.Game == GAME_Paragon) return;
+#endif
 
 		FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
 		Ar << DuplicatedVerticesBuffer;
@@ -1671,9 +1684,6 @@ struct FStaticMeshLODModel4
 			if (!StripFlags.IsClassDataStripped(1))
 				Ar << Lod.AdjacencyIndexBuffer;
 
-#if FORTNITE
-			if (Ar.Game == GAME_Fortnite) return Ar;
-#endif
 			if (Ar.Game >= GAME_UE4(16))
 			{
 				TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
@@ -1854,10 +1864,9 @@ no_nav_collision:
 
 		// Note: bLODsShareStaticLighting field exists in all engine versions except UE4.15.
 		if (Ar.Game >= GAME_UE4(15) && Ar.Game < GAME_UE4(16)) goto no_LODShareStaticLighting;
-#if FORTNITE
-		if (Ar.Game == GAME_Fortnite) goto no_LODShareStaticLighting;
-#endif
+
 		Ar << bLODsShareStaticLighting;
+
 	no_LODShareStaticLighting:
 
 		if (Ar.Game < GAME_UE4(14))

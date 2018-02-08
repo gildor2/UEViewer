@@ -160,12 +160,12 @@ function ut4()
 function paragon()
 {
 	CheckDir C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks
-	run -game=ue4.18 $*
+	run -game=paragon $*
 }
 function fortnite()
 {
 	CheckDir C:/3-UnrealEngine/Fortnite/FortniteGame/Content/Paks
-	run -game=fortnite $*
+	run -game=ue4.19 $*
 }
 function ue3()
 {
