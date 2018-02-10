@@ -17,7 +17,7 @@ if [ -d .git ]; then
 			! [ "$gitpath" ] && [ -d "$PROGRAMFILES/SmartGitHg/git" ] && gitpath="$PROGRAMFILES/SmartGitHg/git/bin"
 			! [ "$gitpath" ] && [ -d "$LOCALAPPDATA/Atlassian/SourceTree/git_local" ] && gitpath="$LOCALAPPDATA/Atlassian/SourceTree/git_local/bin"
 			[ "$gitpath" ] && PATH="$PATH:$gitpath"
-			# find gi
+			# find git
 			git=`type -p git`
 		fi
 	fi

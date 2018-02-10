@@ -1189,7 +1189,7 @@ int main(int argc, char **argv)
 	appDumpMemoryAllocations();
 #endif
 
-	unguardf("umodel_version=%s", STR(GIT_REVISION));	// using string constant to allow non-git builds (with GIT_REVISION 'unknown')
+	unguardf("umodel_build=%s", STR(GIT_REVISION));	// using string constant to allow non-git builds (with GIT_REVISION 'unknown')
 
 #if DO_GUARD
 	} CATCH_CRASH {
