@@ -487,6 +487,9 @@ public:
 		return *this;
 	}
 
+	// This function may be used for creating text output window
+	void AppendText(const char* text);
+
 	// Set text in editor field. Passing NULL as text will just refresh value display.
 	void SetText(const char* text = NULL);
 	const char* GetText();

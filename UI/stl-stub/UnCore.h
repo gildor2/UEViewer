@@ -145,6 +145,11 @@ public:
 	{
 		return str.c_str();
 	}
+	FORCEINLINE void Empty(int count = 0)
+	{
+		str.resize(0);
+		str.reserve(count);
+	}
 	FORCEINLINE bool IsEmpty() const
 	{
 		return str.length() == 0;

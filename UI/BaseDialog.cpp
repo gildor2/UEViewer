@@ -1000,6 +1000,14 @@ void UITextEdit::UpdateText()
 	delete[] buf;
 }
 
+void UITextEdit::AppendText(const char* text)
+{
+	int currLength = GetWindowTextLength(Wnd);
+	SendMessage(Wnd, EM_SETSEL, currLength, currLength);
+	SendMessage(Wnd, EM_REPLACESEL, FALSE, (LPARAM)text);
+	SendMessage(Wnd, EM_SCROLLCARET, 0, 0);
+}
+
 
 /*-----------------------------------------------------------------------------
 	UICombobox
