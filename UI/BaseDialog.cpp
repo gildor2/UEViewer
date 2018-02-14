@@ -963,6 +963,9 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 	Wnd = Window(WC_EDIT, "", style, WS_EX_CLIENTEDGE, dialog);
 	SetWindowText(Wnd, *(*pValue));
 	UpdateEnabled();
+
+	// Remove limit of 30k characters
+	SendMessage(Wnd, EM_SETLIMITTEXT, 0x100000, 0);
 }
 
 bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
