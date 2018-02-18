@@ -362,6 +362,9 @@ const GameInfo GListOfGames[] = {
 #	if PARAGON
 		G("Paragon", paragon, GAME_Paragon),
 #	endif
+#	if HIT
+		G("Heroes of Incredible Tales", hit, GAME_HIT),
+#	endif
 #endif // UNREAL4
 
 	// end marker

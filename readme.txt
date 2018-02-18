@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+18.02.2018
+- implemented Heroes of Incredible Tales (HIT) static mesh support; requires -game=hit override
+
 08.02.2018
 - added Paragon support (requires game override: -game=paragon)
 
