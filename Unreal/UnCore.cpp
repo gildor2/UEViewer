@@ -241,7 +241,13 @@ FString::FString(const char* src)
 
 FString::FString(const FString& Other)
 {
-	*this = Other;
+	CopyArray(Data, Other.Data);
+}
+
+FString& FString::operator=(const FString& src)
+{
+	CopyArray(Data, src.Data);
+	return *this;
 }
 
 FString& FString::operator=(const char* src)
@@ -277,6 +283,24 @@ FString& FString::operator+=(const char* text)
 	{
 		Data.AddUninitialized(len+1);	// reserve space for null char
 		memcpy(Data.GetData(), text, len+1);
+	}
+	return *this;
+}
+
+FString& FString::AppendChar(char ch)
+{
+	if (Data.Num() == 0)
+	{
+		// empty array - should add a char and null byte
+		Data.AddZeroed(2);
+		Data[0] = ch;
+	}
+	else
+	{
+		// not a empty string, should add one null
+		int nullCharIndex = Data.Num() - 1;
+		Data[nullCharIndex] = ch;
+		Data.AddZeroed(1);
 	}
 	return *this;
 }

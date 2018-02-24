@@ -1935,13 +1935,11 @@ public:
 	FString(const FString& Other);
 
 	FString& operator=(const char* src);
-	FORCEINLINE FString& operator=(const FString& src)
-	{
-		return operator=(*src);
-	}
+	FString& operator=(const FString& src);
 
 	FString& operator+=(const char* text);
 
+	//?? TODO: operate with arrays here
 	FORCEINLINE FString& operator+=(const FString& Str)
 	{
 		return operator+=(*Str);
@@ -1981,12 +1979,7 @@ public:
 	bool RemoveFromStart(const char* Text);
 	bool RemoveFromEnd(const char* Text);
 
-	FORCEINLINE FString& AppendChar(char ch)
-	{
-		int index = Data.AddUninitialized();
-		Data[index] = ch;
-		return *this;
-	}
+	FString& AppendChar(char ch);
 
 	FORCEINLINE void RemoveAt(int index, int count = 1)
 	{
