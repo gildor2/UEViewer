@@ -180,6 +180,9 @@ detex
 
 Changes
 ~~~~~~~
+24.02.2018
+- AES encryption key could be now in hex format: 0x123456789ABCDEF (C-like format)
+
 18.02.2018
 - implemented Heroes of Incredible Tales (HIT) static mesh support; requires -game=hit override
 

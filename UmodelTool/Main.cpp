@@ -397,7 +397,8 @@ static void PrintUsage()
 #if HAS_UI
 			"    -gui            force startup UI to appear\n" //?? debug-only option?
 #endif
-			"    -aes=key        provide AES decryption key for encrypted pak files\n"
+			"    -aes=key        provide AES decryption key for encrypted pak files,\n"
+			"                    key is ASCII or hex string (hex format is 0xAABBCCDD)\n"
 			"\n"
 			"Compatibility options:\n"
 			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
@@ -690,10 +691,49 @@ int UE4UnversionedPackage(int verMin, int verMax)
 	return -1;
 }
 
+static void CheckHexAesKey()
+{
+#define ishex(c)		( (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') )
+#define hextodigit(c)	( (c >= 'a') ? c - 'a' + 10 : c - '0' )
+
+	if (GAesKey.Len() < 3) return;
+	const char* s = *GAesKey;
+
+	// Hex key starts with "0x"
+	if (*s++ != '0') return;
+	if (tolower(*s++) != 'x') return;
+
+	FString NewKey;
+	NewKey.Empty(GAesKey.Len() / 2 + 1);
+
+	int remains = GAesKey.Len() - 2;
+	while (remains > 0)
+	{
+		uint8 b = 0;
+		if ((remains & 1) == 0)
+		{
+			// this code will not be executed only in a case of odd character count, for the first char
+			char c = tolower(*s++);
+			if (!ishex(c)) return;
+			b = hextodigit(c) << 4;
+			remains--;
+		}
+		char c = tolower(*s++);
+		if (!ishex(c)) return;
+		b |= hextodigit(c);
+		remains--;
+
+		NewKey.AppendChar((char)b);
+	}
+
+	GAesKey = NewKey;
+}
+
 bool UE4EncryptedPak()
 {
 #if HAS_UI
 	GAesKey = GApplication.ShowUE4AesKeyDialog();
+	CheckHexAesKey();
 	return GAesKey.Len() > 0;
 #else
 	return false;
@@ -860,6 +900,7 @@ int main(int argc, char **argv)
 		else if (!strnicmp(opt, "aes=", 4))
 		{
 			GAesKey = opt+4;
+			CheckHexAesKey();
 		}
 		// information commands
 		else if (!stricmp(opt, "taglist"))
