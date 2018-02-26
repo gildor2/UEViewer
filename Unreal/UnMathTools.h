@@ -98,7 +98,7 @@ struct CVertexShare
 	// hashing
 	CVec3			Mins, Maxs;
 	CVec3			Extents;
-	int				Hash[1024];
+	int				Hash[16384];
 	TArray<int>		HashNext;
 #endif // USE_HASHING
 
