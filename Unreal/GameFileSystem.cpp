@@ -248,6 +248,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 				if (!vfs->AttachReader(reader))
 				{
 					// something goes wrong
+					appPrintf("File %s has unknown format\n", FullName);
 					delete vfs;
 					delete reader;
 					return true;
