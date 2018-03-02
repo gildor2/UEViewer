@@ -54,7 +54,8 @@ C runtime library for MSVC
 --------------------------
 
 UModel uses custom CRT library for being able to link with MSVCRT.DLL. It is possible to statically link with
-you compiler's CRT by changing in *common.project*
+you compiler's CRT by changing in *common.project*. Please note that custom CRT library will not be compatible
+with Visual Studio 2015, you should always disable it.
 
 ```
 LIBC = shared
