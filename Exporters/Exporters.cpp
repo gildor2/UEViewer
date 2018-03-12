@@ -120,6 +120,36 @@ static bool RegisterProcessedObject(const UObject* Obj)
 	unguard;
 }
 
+struct UniqueNameList
+{
+	UniqueNameList()
+	{
+		Items.Empty(1024);
+	}
+
+	struct Item
+	{
+		FString Name;
+		int Count;
+	};
+	TArray<Item> Items;
+
+	int RegisterName(const char *Name)
+	{
+		for (int i = 0; i < Items.Num(); i++)
+		{
+			Item &V = Items[i];
+			if (V.Name == Name)
+			{
+				return ++V.Count;
+			}
+		}
+		Item *N = new (Items) Item;
+		N->Name = Name;
+		N->Count = 1;
+		return 1;
+	}
+};
 
 bool ExportObject(const UObject *Obj)
 {
@@ -143,7 +173,7 @@ bool ExportObject(const UObject *Obj)
 			strcpy(ExportPath, GetExportPath(Obj));
 			const char *ClassName  = Obj->GetClassName();
 			// check for duplicate name
-			// get name uniqie index
+			// get name unique index
 			char uniqueName[256];
 			appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
 			int uniqieIdx = ExportedNames.RegisterName(uniqueName);
@@ -219,8 +249,11 @@ const char* GetExportPath(const UObject *Obj)
 				PackageName = s + 9;
 			}
 		}
-		int len = appSprintf(ARRAY_ARG(buf), "%s/%s", BaseExportDir, PackageName);
-		if (!stricmp(Obj->Name, Obj->Package->Name))
+		appSprintf(ARRAY_ARG(buf), "%s/%s", BaseExportDir, PackageName);
+		// Check if object's name is the same as uasset name, or if it is the same as uasset with added "_suffix".
+		// Suffix may be added by ExportObject (see 'uniqieIdx').
+		int len = strlen(Obj->Package->Name);
+		if (!strnicmp(Obj->Name, Obj->Package->Name, len) && (Obj->Name[len] == 0 || Obj->Name[len] == '_'))
 		{
 			// Object's name matches with package name, so don't create a directory for it.
 			// Strip package name, leave only path.
