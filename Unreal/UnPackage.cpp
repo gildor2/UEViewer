@@ -2246,8 +2246,12 @@ void UnPackage::LoadNameTable()
 	#if UNREAL4
 			if (Game >= GAME_UE4_BASE)
 			{
+		#if GEARS4
+				if (Game == GAME_Gears4) goto name_hashes;
+		#endif
 				if (ArVer >= VER_UE4_NAME_HASHES_SERIALIZED)
 				{
+				name_hashes:
 					int16 NonCasePreservingHash, CasePreservingHash;
 					*this << NonCasePreservingHash << CasePreservingHash;
 				}

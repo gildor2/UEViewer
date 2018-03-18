@@ -185,7 +185,7 @@ LZ4
 Changes
 ~~~~~~~
 18.03.2018
-- implemented Gears of War 4 pak file support; requires game override -game=gears4 (or use UI)
+- implemented Gears of War 4 pak file and package support; requires game override -game=gears4 (or use UI)
 
 24.02.2018
 - AES encryption key could be now in hex format: 0x123456789ABCDEF (C-like format)
