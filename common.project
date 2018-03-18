@@ -101,6 +101,8 @@ sources(UE3_LIBS) = {
 	$R/libs/zlib/*.c
 	# ... lzx for compresses XBox360 UE3 packages
 	$R/libs/mspack/lzxd.c
+	# ... lz4 for Gears of War 4
+	$R/libs/lz4/lz4.c
 }
 
 pop(INCLUDES)

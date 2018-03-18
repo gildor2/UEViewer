@@ -16,11 +16,13 @@ Tools/UT2down/
 
 # Files produced by umodel
 UmodelExport/
+UmodelSaved/
 Screenshots/
 notify.log
 
 # Executable files and pdb
 umodel.pdb
+.vs/
 Tools/**/*.exe
 Tools/**/*.pdb
 Docs/ObjectVersion.h

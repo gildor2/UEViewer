@@ -29,6 +29,10 @@
 
 #endif // SUPPORT_XBOX360
 
+#if GEARS4
+#	include "lz4/lz4.h"
+#endif
+
 // AES code for UE4
 #include "rijndael/rijndael.h"
 
@@ -292,6 +296,17 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		appError("appDecompress: LZX compression is not supported");
 #endif // SUPPORT_XBOX360
 	}
+
+#if GEARS4
+	if (Flags == COMPRESS_LZ4)
+	{
+		int newLen = LZ4_decompress_safe((const char*)CompressedBuffer, (char*)UncompressedBuffer, CompressedSize, UncompressedSize);
+		if (newLen <= 0)
+			appError("LZ4_decompress_safe returned %d\n", newLen);
+		if (newLen != UncompressedSize) appError("lz4 len mismatch: %d != %d", newLen, UncompressedSize);
+		return newLen;
+	}
+#endif // GEARS4
 
 	appError("appDecompress: unknown compression flags: %d", Flags);
 	return 0;

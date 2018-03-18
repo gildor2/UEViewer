@@ -177,6 +177,11 @@ function ue4()
 	CheckDir C:/Projects/Epic/UnrealEngine4
 	run $*
 }
+function gears4()
+{
+	CheckDir data/4/GOW4
+	run -game=gears4 $*
+}
 function gow()    { run1 "data/3/GearsOfWar" $*;          }
 function gow2()   { run1 "data/3X/GearsOfWar2_X360" $*;   }
 function gow3()   { run1 "data/3X/GOW3_beta_X360" $*;     }

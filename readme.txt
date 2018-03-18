@@ -177,9 +177,16 @@ detex
   (c) Harm Hanemaaijer
   https://github.com/hglm/detex
 
+LZ4
+  (c) Yann Collet
+  http://www.lz4.org
+
 
 Changes
 ~~~~~~~
+18.03.2018
+- implemented Gears of War 4 pak file support; requires game override -game=gears4 (or use UI)
+
 24.02.2018
 - AES encryption key could be now in hex format: 0x123456789ABCDEF (C-like format)
 

@@ -350,6 +350,9 @@ const GameInfo GListOfGames[] = {
 			GAME_UE4(LATEST_SUPPORTED_UE4_VERSION+1)	// some invalid version number, but not zero - to show this game in "-help" output
 		},
 		// Add custom UE4 versions here
+#	if GEARS4
+		G("Gears of War 4", gears4, GAME_Gears4),
+#	endif
 #	if FRIDAY13
 		G("Friday the 13th: The Game", friday13, GAME_Friday13),
 #	endif

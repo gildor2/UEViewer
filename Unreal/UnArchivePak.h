@@ -90,6 +90,29 @@ struct FPakEntry
 		// remember the serialized size of this structure to avoid recomputation later.
 		int64 StartOffset = Ar.Tell64();
 
+#if GEARS4
+		if (GForceGame == GAME_Gears4)
+		{
+			Ar << P.Pos << (int32&)P.Size << (int32&)P.UncompressedSize << (byte&)P.CompressionMethod;
+			if (Ar.PakVer < PAK_NO_TIMESTAMPS)
+			{
+				int64	timestamp;
+				Ar << timestamp;
+			}
+			if (Ar.PakVer >= PAK_COMPRESSION_ENCRYPTION)
+			{
+				if (P.CompressionMethod != 0)
+					Ar << P.CompressionBlocks;
+				Ar << P.CompressionBlockSize;
+				if (P.CompressionMethod == 4)
+				{
+					P.CompressionMethod = COMPRESS_LZ4;
+				}
+			}
+			goto end;
+		}
+#endif // GEARS4
+
 		Ar << P.Pos << P.Size << P.UncompressedSize << P.CompressionMethod;
 
 		if (Ar.PakVer < PAK_NO_TIMESTAMPS)
@@ -111,6 +134,7 @@ struct FPakEntry
 			P.bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
 #endif
 
+	end:
 		P.StructSize = Ar.Tell64() - StartOffset;
 
 		return Ar;

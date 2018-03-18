@@ -354,6 +354,8 @@ enum EGame
 		// Add custom UE4 game engines here
 		// 4.8
 		GAME_HIT = GAME_UE4(8)+1,
+		// 4.12
+		GAME_Gears4 = GAME_UE4(12)+1,
 		// 4.13
 		GAME_Lawbreakers = GAME_UE4(13)+1,
 		// 4.14
@@ -2216,6 +2218,10 @@ struct FIntBulkData : public FByteBulkData
 
 #if SMITE
 #define COMPRESS_LZO_ENC_SMITE	514					// encrypted LZO
+#endif
+
+#if GEARS4
+#define COMPRESS_LZ4		0xFE					// custom umodel's constant
 #endif
 
 #define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
