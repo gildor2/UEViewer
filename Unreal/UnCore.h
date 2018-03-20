@@ -104,6 +104,14 @@ struct CGameFileInfo
 	int			NumStaticMeshes;
 	int			NumAnimations;
 	int			NumTextures;
+
+	void UpdateFrom(const CGameFileInfo* other)
+	{
+		// Copy information from 'other' entry, but preserve hash chains
+		CGameFileInfo* saveHash = HashNext;
+		memcpy(this, other, sizeof(CGameFileInfo));
+		HashNext = saveHash;
+	}
 };
 
 extern int GNumPackageFiles;

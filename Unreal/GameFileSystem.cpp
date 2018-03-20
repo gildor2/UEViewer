@@ -364,8 +364,21 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 
 	// insert CGameFileInfo into hash table
 	int hash = GetHashForFileName(info->ShortFilename, true);
+
+	for (CGameFileInfo* prevInfo = GGameFileHash[hash]; prevInfo; prevInfo = prevInfo->HashNext)
+	{
+		if (stricmp(prevInfo->RelativeName, info->RelativeName) == 0)
+		{
+			// this is a duplicate of the file, keep new information
+			prevInfo->UpdateFrom(info);
+			delete info;
+			return true;
+		}
+	}
+
 	info->HashNext = GGameFileHash[hash];
 	GGameFileHash[hash] = info;
+
 #if DEBUG_HASH
 	printf("--> add(%s) pkg=%d hash=%X\n", info->ShortFilename, info->IsPackage, hash);
 #endif
