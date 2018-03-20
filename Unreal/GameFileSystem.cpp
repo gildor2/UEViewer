@@ -104,6 +104,9 @@ static const char *KnownExtensions[] =
 	"ubulk",		// separately stored UE4 bulk data
 	"uexp",			// object's data cut from UE4 package when Event Driven Loader is used
 #	endif
+#if GEARS4
+	"bundle",
+#endif
 };
 #endif
 
@@ -237,7 +240,6 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 				if (!reader) return true;
 				reader->Game = GAME_UE4_BASE;
 				vfs = new FPakVFS(FullName);
-				//!! detect game by file name
 			}
 #endif // UNREAL4
 			//!! process other VFS types here
@@ -430,12 +432,30 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 }
 
 
+void LoadGears4Manifest(const CGameFileInfo* info);
+
 void appSetRootDirectory(const char *dir, bool recurse)
 {
 	guard(appSetRootDirectory);
 	if (dir[0] == 0) dir = ".";	// using dir="" will cause scanning of "/dir1", "/dir2" etc (i.e. drive root)
 	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
 	ScanGameDirectory(RootDirectory, recurse);
+
+#if GEARS4
+	if (GForceGame == GAME_Gears4)
+	{
+		const CGameFileInfo* manifest = appFindGameFile("BundleManifest.bin");
+		if (manifest)
+		{
+			LoadGears4Manifest(manifest);
+		}
+		else
+		{
+			appError("Gears of War 4 requires BundleManifest.bin file which is missing.");
+		}
+	}
+#endif // GEARS4
+
 	appPrintf("Found %d game files (%d skipped)\n", GameFiles.Num(), GNumForeignFiles);
 
 #if UNREAL4
