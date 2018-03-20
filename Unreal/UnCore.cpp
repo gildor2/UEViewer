@@ -336,7 +336,7 @@ bool FString::EndsWith(const char* Text)
 	if (!Text || !Text[0] || IsEmpty()) return false;
 	int len = strlen(Text);
 	if (len > Data.Num()) return false;
-	return (strncmp(Data.GetData() + Data.Num() - len, Text, len) == 0);
+	return (strncmp(Data.GetData() + Data.Num() - 1 - len, Text, len) == 0);
 }
 
 bool FString::RemoveFromStart(const char* Text)
