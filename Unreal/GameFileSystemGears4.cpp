@@ -7,25 +7,39 @@
 struct FGears4AssetEntry
 {
 	FString AssetName;
-	int32 p1, p2, p3;		// p1 -> large number, p2 -> Array1 index
+	int32 AssetSize;
+	int32		p2, p3;			// p2 -> Array1 index
 	uint8 p4;
 
 	friend FArchive& operator<<(FArchive& Ar, FGears4AssetEntry& E)
 	{
-		return Ar << E.AssetName << E.p1 << E.p2 << E.p3 << E.p4;
+		return Ar << E.AssetName << E.AssetSize << E.p2 << E.p3 << E.p4;
 	}
 };
 
+struct FGears4BundleItem
+{
+	int32 AssetIndex;
+	int32 AssetSize;
+
+	friend FArchive& operator<<(FArchive& Ar, FGears4BundleItem& E)
+	{
+		return Ar << E.AssetIndex << E.AssetSize;
+	}
+};
+
+SIMPLE_TYPE(FGears4BundleItem, int32)
+
 struct FGears4BundleEntry
 {
-	int32 SomeNum;			// -> index at Assets (note: p1.X is the same, but array!)
-	TArray<FIntPoint> p1;	// TArray { int1,int2 }: int1 -> index at Assets, int2 = Assets[index].p1
+	int32 SomeNum;				// -> index at Assets (note: Assets.X is the same, but array!)
+	TArray<FGears4BundleItem> Assets;	// TArray { int1,int2 }: int1 -> index at Assets, int2 = AssetSize
 	TArray<int32> p2;
 
 	friend FArchive& operator<<(FArchive& Ar, FGears4BundleEntry& E)
 	{
 		Ar << E.SomeNum;
-		Ar << E.p1;
+		Ar << E.Assets;
 		Ar << E.p2;
 		return Ar;
 	}
@@ -147,7 +161,7 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 		appPrintf(STR(arr) STR(field1) STR(field2) " = [%d,%d]\n", vmin, vmax); \
 	}
 
-	ANALYZE(Manifest.Assets, .p1);
+//	ANALYZE(Manifest.Assets, .AssetSize);
 	ANALYZE(Manifest.Assets, .p2);
 	ANALYZE(Manifest.Assets, .p3);
 	ANALYZE(Manifest.Assets, .p4);
@@ -156,18 +170,18 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 	ANALYZE(Manifest.Array1, );
 	ANALYZE(Manifest.Array2, );
 	ANALYZE(Manifest.Bundles, .SomeNum);
-	ANALYZE2(Manifest.Bundles, .p1, .X);
-	ANALYZE2(Manifest.Bundles, .p1, .Y);
+	ANALYZE2(Manifest.Bundles, .Assets, .AssetIndex);
+	ANALYZE2(Manifest.Bundles, .Assets, .AssetSize);
 	ANALYZE2(Manifest.Bundles, .p2, );
 
 	for (int i = 0; i < Manifest.Bundles.Num(); i++)
 	{
 		const FGears4BundleEntry& E2 = Manifest.Bundles[i];
-		for (int j = 0; j < E2.p1.Num(); j++)
+		for (int j = 0; j < E2.Assets.Num(); j++)
 		{
-			if (E2.p1[j].X == 55430)
+			if (E2.Assets[j].AssetIndex == 55430)
 			{
-				appPrintf("Found in %d (size=%d)\n", i, E2.p1[j].Y);
+				appPrintf("Found in %d (size=%d)\n", i, E2.Assets[j].AssetSize);
 			}
 		}
 	}
@@ -189,19 +203,24 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 		{
 			// Assets
 			appPrintf("\n***\nFound %s at index %d\n", *E.AssetName, i);
-			appPrintf("p1=%d p2=%d p3=%d p4=%d\n", E.p1, E.p2, E.p3, E.p4);
+			appPrintf("AssetSize=%d p2=%d p3=%d p4=%d\n", E.AssetSize, E.p2, E.p3, E.p4);
 			appPrintf("Array4[%d] = { %d, %d }\n", i, Manifest.Array4[i].X, Manifest.Array4[i].Y);
 			// Array1
 			int Array1Index = E.p2;
 			DIR_REF("Array1", Manifest.Array1[Array1Index]);
 			// Entry
-			int EntryIndex = Manifest.Array4[i].Y;
-			const FGears4BundleEntry& Bundle = Manifest.Bundles[EntryIndex];
-			appPrintf("Bundle[%d] = %d, [%d], [%d]\n", EntryIndex, Bundle.SomeNum, Bundle.p1.Num(), Bundle.p2.Num());
-			ANALYZE(Bundle.p1, .X);
-			for (int i2 = 0; i2 < Bundle.p1.Num(); i2++)
-				DIR_REF("Bundle.p1", Bundle.p1[i2].X);
-			ANALYZE(Bundle.p1, .Y);
+			int BundleIndex = 12586;// Manifest.Array4[i].Y;
+			const FGears4BundleEntry& Bundle = Manifest.Bundles[BundleIndex];
+			appPrintf("Bundle[%d] = %d, [%d], [%d]\n", BundleIndex, Bundle.SomeNum, Bundle.Assets.Num(), Bundle.p2.Num());
+			int32 pos = 0;
+			for (int i2 = 0; i2 < Bundle.Assets.Num(); i2++)
+			{
+				const FGears4BundleItem& BI = Bundle.Assets[i2];
+				appPrintf("offs=%08X size=%08X %d: %s\n", pos, BI.AssetSize, i2, *Manifest.Assets[BI.AssetIndex].AssetName);
+				pos += BI.AssetSize;
+			}
+			appPrintf("... bundle size = 0x%X (%d)\n", pos, pos);
+//			ANALYZE(Bundle.Assets, .AssetSize);
 			ANALYZE(Bundle.p2, );
 			break;
 		}
