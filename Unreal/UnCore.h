@@ -2042,6 +2042,12 @@ public:
 		Data.DataPtr = (void*)&StaticData[0];
 		Data.MaxCount = N;
 	}
+	FORCEINLINE FStaticString(const char* src)
+	{
+		Data.DataPtr = (void*)&StaticData[0];
+		Data.MaxCount = N;
+		FString::operator=(src);
+	}
 
 	// operators
 	FORCEINLINE FStaticString& operator=(const char* src)

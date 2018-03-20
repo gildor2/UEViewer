@@ -206,6 +206,7 @@ static void PrintHashDistribution()
 
 static TArray<FVirtualFileSystem*> GFileSystems;
 
+//?? TODO: always returns 'true' now, can change the function prototype. 'false' was used when number of files was too large.
 static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs = NULL)
 {
 	guard(RegisterGameFile);
@@ -374,6 +375,11 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 	unguardf("%s", FullName);
 }
 
+static int FilenameCmp(const FStaticString<256>* p1, const FStaticString<256>* p2)
+{
+	return stricmp(*(*p1), *(*p2)) > 0;
+}
+
 static bool ScanGameDirectory(const char *dir, bool recurse)
 {
 	guard(ScanGameDirectory);
@@ -381,6 +387,10 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 	char Path[MAX_PACKAGE_PATH];
 	bool res = true;
 //	printf("Scan %s\n", dir);
+
+	TArray<FStaticString<256>> Filenames;
+	Filenames.Empty(256);
+
 #if _WIN32
 	appSprintf(ARRAY_ARG(Path), "%s/*.*", dir);
 	_finddatai64_t found;
@@ -389,17 +399,19 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 	do
 	{
 		if (found.name[0] == '.') continue;			// "." or ".."
-		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, found.name);
 		// directory -> recurse
 		if (found.attrib & _A_SUBDIR)
 		{
 			if (recurse)
+			{
+				appSprintf(ARRAY_ARG(Path), "%s/%s", dir, found.name);
 				res = ScanGameDirectory(Path, recurse);
-			else
-				res = true;
+			}
 		}
 		else
-			res = RegisterGameFile(Path);
+		{
+			Filenames.Add(found.name);
+		}
 	} while (res && _findnexti64(hFind, &found) != -1);
 	_findclose(hFind);
 #else
@@ -418,14 +430,24 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		{
 			if (recurse)
 				res = ScanGameDirectory(Path, recurse);
-			else
-				res = true;
 		}
 		else
-			res = RegisterGameFile(Path);
+		{
+			Filenames.Add(end->d_name);
+		}
 	}
 	closedir(find);
 #endif
+
+	// Register files in sorted order - should be done for pak files, so patches will work.
+	Filenames.Sort(FilenameCmp);
+	for (int i = 0; i < Filenames.Num(); i++)
+	{
+		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, *Filenames[i]);
+		res = RegisterGameFile(Path);
+		if (!res) break;
+	}
+
 	return res;
 
 	unguard;
