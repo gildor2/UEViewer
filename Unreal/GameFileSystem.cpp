@@ -297,10 +297,8 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 
 	// create entry
 	CGameFileInfo *info = new CGameFileInfo;
-	GameFiles.Add(info);
 	info->IsPackage = IsPackage;
 	info->FileSystem = parentVfs;
-	if (IsPackage) GNumPackageFiles++;
 
 	if (!parentVfs)
 	{
@@ -364,7 +362,7 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 
 	// insert CGameFileInfo into hash table
 	int hash = GetHashForFileName(info->ShortFilename, true);
-
+	// find if we have previously registered file with the same name
 	for (CGameFileInfo* prevInfo = GGameFileHash[hash]; prevInfo; prevInfo = prevInfo->HashNext)
 	{
 		if (stricmp(prevInfo->RelativeName, info->RelativeName) == 0)
@@ -372,9 +370,15 @@ static bool RegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs
 			// this is a duplicate of the file, keep new information
 			prevInfo->UpdateFrom(info);
 			delete info;
+#if DEBUG_HASH
+			printf("--> dup(%s) pkg=%d hash=%X\n", prevInfo->ShortFilename, prevInfo->IsPackage, hash);
+#endif
 			return true;
 		}
 	}
+
+	GameFiles.Add(info);
+	if (IsPackage) GNumPackageFiles++;
 
 	info->HashNext = GGameFileHash[hash];
 	GGameFileHash[hash] = info;
