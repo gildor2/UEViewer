@@ -1765,8 +1765,8 @@ void UStaticMesh4::Serialize(FArchive &Ar)
 
 	Ar << BodySetup;
 
-#if TEKKEN7 || HIT
-	if (Ar.Game == GAME_Tekken7 || Ar.Game == GAME_HIT) goto no_nav_collision;
+#if TEKKEN7 || HIT || GEARS4
+	if (Ar.Game == GAME_Tekken7 || Ar.Game == GAME_HIT || Ar.Game == GAME_Gears4) goto no_nav_collision;
 #endif
 
 	if (Ar.ArVer >= VER_UE4_STATIC_MESH_STORE_NAV_COLLISION)

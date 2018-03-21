@@ -882,6 +882,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 	int PropTagPos;
 
+#if DEBUG_PROPS
+	appPrintf("-- Property list for %s --\n", Name);
+#endif
+
 	// property list
 	while (true)
 	{
@@ -1375,6 +1379,10 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 
 		unguardf("(%s.%s, TagPos=%X)", Name, *Tag.Name, PropTagPos);
 	}
+
+#if DEBUG_PROPS
+	appPrintf("-- end of property list --\n");
+#endif
 
 	unguard;
 }
