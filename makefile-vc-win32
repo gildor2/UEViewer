@@ -421,6 +421,7 @@ DEPENDS = \
 	Exporters/Exporters.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnObject.h \

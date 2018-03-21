@@ -83,6 +83,8 @@ void appPrintProfiler();
 	Game directory support
 -----------------------------------------------------------------------------*/
 
+extern char GRootDirectory[];
+
 void appSetRootDirectory(const char *dir, bool recurse = true);
 void appSetRootDirectory2(const char *filename);
 const char *appGetRootDirectory();

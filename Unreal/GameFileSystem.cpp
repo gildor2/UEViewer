@@ -20,7 +20,7 @@
 
 #define MAX_FOREIGN_FILES		32768
 
-static char RootDirectory[MAX_PACKAGE_PATH];
+char GRootDirectory[MAX_PACKAGE_PATH];
 
 
 static const char *PackageExtensions[] =
@@ -287,7 +287,7 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 			{
 				// unknown file type
 				if (++GNumForeignFiles >= MAX_FOREIGN_FILES)
-					appError("Too many unknown files - bad root directory (%s)?", RootDirectory);
+					appError("Too many unknown files - bad root directory (%s)?", GRootDirectory);
 			}
 			return;
 		}
@@ -312,8 +312,8 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 		{
 			info->Size = 0;
 		}
-		// cut RootDirectory from filename
-		const char *s = FullName + strlen(RootDirectory) + 1;
+		// cut GRootDirectory from filename
+		const char *s = FullName + strlen(GRootDirectory) + 1;
 		assert(s[-1] == '/');
 		info->RelativeName = appStrdupPool(s);
 	}
@@ -475,8 +475,8 @@ void appSetRootDirectory(const char *dir, bool recurse)
 {
 	guard(appSetRootDirectory);
 	if (dir[0] == 0) dir = ".";	// using dir="" will cause scanning of "/dir1", "/dir2" etc (i.e. drive root)
-	appStrncpyz(RootDirectory, dir, ARRAY_COUNT(RootDirectory));
-	ScanGameDirectory(RootDirectory, recurse);
+	appStrncpyz(GRootDirectory, dir, ARRAY_COUNT(GRootDirectory));
+	ScanGameDirectory(GRootDirectory, recurse);
 
 #if GEARS4
 	if (GForceGame == GAME_Gears4)
@@ -532,7 +532,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 
 const char *appGetRootDirectory()
 {
-	return RootDirectory[0] ? RootDirectory : NULL;
+	return GRootDirectory[0] ? GRootDirectory : NULL;
 }
 
 
@@ -818,9 +818,9 @@ void appFindGameFiles(const char *Filename, TArray<const CGameFileInfo*>& Files)
 
 const char *appSkipRootDir(const char *Filename)
 {
-	if (!RootDirectory[0]) return Filename;
+	if (!GRootDirectory[0]) return Filename;
 
-	const char *str1 = RootDirectory;
+	const char *str1 = GRootDirectory;
 	const char *str2 = Filename;
 	while (true)
 	{
@@ -836,7 +836,7 @@ const char *appSkipRootDir(const char *Filename)
 			// else - something like this: root="dirname/name2", file="dirname/name2extrachars"
 			return Filename;			// not in root
 		}
-		if (!c2) return Filename;		// Filename is shorter than RootDirectory
+		if (!c2) return Filename;		// Filename is shorter than GRootDirectory
 		if (c1 != c2) return Filename;	// different names
 	}
 }
@@ -848,7 +848,7 @@ FArchive *appCreateFileReader(const CGameFileInfo *info)
 	{
 		// regular file
 		char buf[MAX_PACKAGE_PATH];
-		appSprintf(ARRAY_ARG(buf), "%s/%s", RootDirectory, info->RelativeName);
+		appSprintf(ARRAY_ARG(buf), "%s/%s", GRootDirectory, info->RelativeName);
 		return new FFileReader(buf);
 	}
 	else
