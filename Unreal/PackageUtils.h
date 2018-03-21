@@ -38,4 +38,23 @@ struct FileInfo
 bool ScanPackages(TArray<FileInfo>& info, IProgressCallback* progress = NULL);
 
 
+// Class statistics
+
+struct ClassStats
+{
+	const char*	Name;
+	int			Count;
+
+	ClassStats()
+	{}
+
+	ClassStats(const char* name)
+	:	Name(name)
+	,	Count(0)
+	{}
+};
+
+void CollectPackageStats(const TArray<UnPackage*> &Packages, TArray<ClassStats>& Stats);
+
+
 #endif // __PACKAGE_UTILS_H__

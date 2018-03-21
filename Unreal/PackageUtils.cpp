@@ -194,3 +194,43 @@ bool ScanPackages(TArray<FileInfo>& info, IProgressCallback* progress)
 
 	return !data.Cancelled;
 }
+
+
+/*-----------------------------------------------------------------------------
+	Class statistics
+-----------------------------------------------------------------------------*/
+
+static int CompareClassStats(const ClassStats* p1, const ClassStats* p2)
+{
+	return stricmp(p1->Name, p2->Name);
+}
+
+void CollectPackageStats(const TArray<UnPackage*> &Packages, TArray<ClassStats>& Stats)
+{
+	guard(CollectPackageStats);
+
+	Stats.Empty(256);
+
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		UnPackage* pkg = Packages[i];
+		for (int j = 0; j < pkg->Summary.ExportCount; j++)
+		{
+			const FObjectExport &Exp = pkg->ExportTable[j];
+			const char* className = pkg->GetObjectName(Exp.ClassIndex);
+			ClassStats* found = NULL;
+			for (int k = 0; k < Stats.Num(); k++)
+				if (Stats[k].Name == className)
+				{
+					found = &Stats[k];
+					break;
+				}
+			if (!found)
+				found = new (Stats) ClassStats(className);
+			found->Count++;
+		}
+	}
+	Stats.Sort(CompareClassStats);
+
+	unguard;
+}

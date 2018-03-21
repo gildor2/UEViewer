@@ -512,57 +512,14 @@ bool ExportObjects(const TArray<UObject*> *Objects, IProgressCallback* progress)
 }
 
 
-struct ClassStats
-{
-	const char*	Name;
-	int			Count;
-
-	ClassStats()
-	{}
-
-	ClassStats(const char* name)
-	:	Name(name)
-	,	Count(0)
-	{}
-};
-
-static int CompareClassStats(const ClassStats* p1, const ClassStats* p2)
-{
-	return stricmp(p1->Name, p2->Name);
-}
-
 void DisplayPackageStats(const TArray<UnPackage*> &Packages)
 {
-	guard(DisplayPackageStats);
-
 	TArray<ClassStats> stats;
-	stats.Empty(256);
+	CollectPackageStats(Packages, stats);
 
-	for (int i = 0; i < Packages.Num(); i++)
-	{
-		UnPackage* pkg = Packages[i];
-		for (int j = 0; j < pkg->Summary.ExportCount; j++)
-		{
-			const FObjectExport &Exp = pkg->ExportTable[j];
-			const char* className = pkg->GetObjectName(Exp.ClassIndex);
-			ClassStats* found = NULL;
-			for (int k = 0; k < stats.Num(); k++)
-				if (stats[k].Name == className)
-				{
-					found = &stats[k];
-					break;
-				}
-			if (!found)
-				found = new (stats) ClassStats(className);
-			found->Count++;
-		}
-	}
-	stats.Sort(CompareClassStats);
 	appPrintf("Class statistics:\n");
 	for (int i = 0; i < stats.Num(); i++)
 		appPrintf("%5d %s\n", stats[i].Count, stats[i].Name);
-
-	unguard;
 }
 
 

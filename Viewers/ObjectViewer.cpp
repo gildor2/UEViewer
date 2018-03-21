@@ -5,6 +5,7 @@
 
 #include "ObjectViewer.h"
 #include "UnPackage.h"			// for CObjectViewer::Draw2D()
+#include "PackageUtils.h"
 
 #include "Exporters/Exporters.h"
 
@@ -73,6 +74,14 @@ void CObjectViewer::Draw2D()
 	{
 		DrawTextLeft(S_RED "There's no visual object loaded now.");
 		DrawTextLeft(S_RED "Press <O> to load a different package.");
+
+		TArray<ClassStats> stats;
+		CollectPackageStats(GFullyLoadedPackages, stats);
+
+		DrawTextLeft(S_GREEN"\nClass statistics:");
+		for (int i = 0; i < stats.Num(); i++)
+			DrawTextLeft("%5d %s", stats[i].Count, stats[i].Name);
+
 		return;
 	}
 
