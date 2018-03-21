@@ -20,5 +20,7 @@ public:
 	virtual int GetFileSize(const char* name) = 0;
 };
 
+void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs = NULL);
+
 
 #endif // __GAME_FILE_SYSTEM_H__

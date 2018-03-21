@@ -95,7 +95,8 @@ struct CGameFileInfo
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 	bool		IsPackage;
 	bool		PackageScanned;
-	int			SizeInKb;							// file size, in kilobytes
+	int64		Size;								// file size, in bytes
+	int32		SizeInKb;							// file size, in kilobytes
 	int			ExtraSizeInKb;						// size of additional non-package files
 	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
 	UnPackage*	Package;
