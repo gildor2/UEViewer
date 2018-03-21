@@ -2159,10 +2159,10 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 
 struct FByteBulkData //?? separate FUntypedBulkData
 {
-	int		BulkDataFlags;				// BULKDATA_...
-	int		ElementCount;				// number of array elements
+	int32	BulkDataFlags;				// BULKDATA_...
+	int32	ElementCount;				// number of array elements
 	int64	BulkDataOffsetInFile;		// position in file, points to BulkData; 32-bit in UE3, 64-bit in UE4
-	int		BulkDataSizeOnDisk;			// size of bulk data on disk
+	int32	BulkDataSizeOnDisk;			// size of bulk data on disk
 //	int		SavedBulkDataFlags;
 //	int		SavedElementCount;
 //	int		SavedBulkDataOffsetInFile;

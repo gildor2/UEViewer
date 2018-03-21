@@ -990,11 +990,11 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		}
 		UnPackage* Package = Ar.CastTo<UnPackage>();
 		assert(Package);
-		BulkDataOffsetInFile += Package->Summary.BulkDataStartOffset;
 	#if DEBUG_BULK
-		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X)\n",
-			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X+pkg(%llX))\n",
+			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, Package->Summary.BulkDataStartOffset, BulkDataSizeOnDisk);
 	#endif
+		BulkDataOffsetInFile += Package->Summary.BulkDataStartOffset;
 		return;
 
 		unguard;

@@ -24,9 +24,9 @@
 
 struct FTexturePlatformData
 {
-	int			SizeX;
-	int			SizeY;
-	int			NumSlices;				// 1 for simple texture, 6 for cubemap - 6 textures are joined into one (check!!)
+	int32		SizeX;
+	int32		SizeY;
+	int32		NumSlices;				// 1 for simple texture, 6 for cubemap - 6 textures are joined into one (check!!)
 	FString		PixelFormat;
 	TArray<FTexture2DMipMap> Mips;
 
@@ -34,7 +34,20 @@ struct FTexturePlatformData
 	{
 		// see TextureDerivedData.cpp, SerializePlatformData()
 		guard(FTexturePlatformData<<);
-		Ar << D.SizeX << D.SizeY << D.NumSlices << D.PixelFormat;
+		Ar << D.SizeX << D.SizeY << D.NumSlices;
+
+#if GEARS4
+		if (Ar.Game == GAME_Gears4)
+		{
+			FName PixelFormatName;
+			Ar << PixelFormatName;
+			D.PixelFormat = *PixelFormatName;
+			goto after_pixel_format;
+		}
+#endif // GEARS4
+		Ar << D.PixelFormat;
+
+	after_pixel_format:
 		int FirstMip;
 		Ar << FirstMip;					// only for cooked, but we don't read FTexturePlatformData for non-cooked textures
 		DBG("   SizeX=%d SizeY=%d NumSlices=%d PixelFormat=%s FirstMip=%d\n", D.SizeX, D.SizeY, D.NumSlices, *D.PixelFormat, FirstMip);
@@ -98,14 +111,13 @@ void UTexture2D::Serialize4(FArchive& Ar)
 		Ar << PixelFormatEnum;
 		while (stricmp(PixelFormatEnum, "None") != 0)
 		{
-			int SkipOffset;
+			int32 SkipOffset;
 			Ar << SkipOffset;
 			EPixelFormat PixelFormat = (EPixelFormat)NameToEnum("EPixelFormat", PixelFormatEnum);
-			//?? check whether we can support this pixel format
-			//!! add support for PVRTC textures - for UE3 these formats are mapped to DXT, but
-			//!! in UE4 there's separate enums - should support them in UTexture2D::GetTextureData
+
 			if (Format == PF_Unknown)
 			{
+				//?? check whether we can support this pixel format
 				appPrintf("Loading data for format %s ...\n", PixelFormatEnum.Str);
 				// the texture was not loaded yet
 				FTexturePlatformData Data;

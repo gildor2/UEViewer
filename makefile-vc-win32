@@ -38,6 +38,7 @@ MAIN_FILES = \
 	$(OUT_1)/ExportThirdParty.obj \
 	$(OUT_1)/GameDatabase.obj \
 	$(OUT_1)/GameFileSystem.obj \
+	$(OUT_1)/GameFileSystemGears4.obj \
 	$(OUT_1)/MeshCommon.obj \
 	$(OUT_1)/PackageUtils.obj \
 	$(OUT_1)/SkeletalMesh.obj \
@@ -110,6 +111,7 @@ UE3_LIBS_FILES = \
 	$(OUT)/inftrees.obj \
 	$(OUT)/uncompr.obj \
 	$(OUT)/lzxd.obj \
+	$(OUT)/lz4.obj \
 	$(OUT)/bits.obj \
 	$(OUT)/bptc-tables.obj \
 	$(OUT)/clamp.obj \
@@ -1036,6 +1038,20 @@ DEPENDS = \
 	Core/Win32Types.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
+	Unreal/GameFileSystem.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/GameFileSystemGears4.obj : Unreal/GameFileSystemGears4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameFileSystemGears4.obj" Unreal/GameFileSystemGears4.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
@@ -1210,6 +1226,7 @@ DEPENDS = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
+	libs/lz4/lz4.h \
 	libs/mspack/lzx.h \
 	libs/mspack/mspack.h \
 	libs/rijndael/rijndael.h \
@@ -1420,6 +1437,12 @@ DEPENDS = \
 
 $(OUT)/lzo_init.obj : ./libs/lzo/lzo_init.c $(DEPENDS)
 	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lzo_init.obj" ./libs/lzo/lzo_init.c
+
+DEPENDS = \
+	libs/lz4/lz4.h
+
+$(OUT)/lz4.obj : ./libs/lz4/lz4.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lz4.obj" ./libs/lz4/lz4.c
 
 DEPENDS = \
 	libs/mspack/lzx.h \
