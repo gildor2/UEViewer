@@ -306,6 +306,15 @@ public:
 		return (int)Info->UncompressedSize;
 	}
 
+	virtual void Close()
+	{
+		if (UncompressedBuffer)
+		{
+			appFree(UncompressedBuffer);
+			UncompressedBuffer = NULL;
+		}
+	}
+
 protected:
 	const FPakEntry* Info;
 	FArchive*	Reader;
