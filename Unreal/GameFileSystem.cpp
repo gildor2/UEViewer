@@ -449,7 +449,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		}
 		else
 		{
-			Filenames.Add(end->d_name);
+			Filenames.Add(ent->d_name);
 		}
 	}
 	closedir(find);
