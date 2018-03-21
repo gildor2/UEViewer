@@ -8,7 +8,7 @@ struct FGears4AssetEntry
 {
 	FString AssetName;
 	int32 AssetSize;
-	int32		p2, p3;			// p2 -> Array1 index
+	int32 p2, p3;			// p2 -> Array1 index
 	uint8 p4;
 
 	friend FArchive& operator<<(FArchive& Ar, FGears4AssetEntry& E)
@@ -30,13 +30,21 @@ struct FGears4BundleItem
 
 SIMPLE_TYPE(FGears4BundleItem, int32)
 
-struct FGears4BundleEntry
+struct FGears4Bundle
 {
 	int32 SomeNum;				// -> index at Assets (note: Assets.X is the same, but array!)
 	TArray<FGears4BundleItem> Assets;	// TArray { int1,int2 }: int1 -> index at Assets, int2 = AssetSize
 	TArray<int32> p2;
 
-	friend FArchive& operator<<(FArchive& Ar, FGears4BundleEntry& E)
+	int32 GetBundleSize() const
+	{
+		int32 size = 0;
+		for (int i = 0; i < Assets.Num(); i++)
+			size += Assets[i].AssetSize;
+		return size;
+	}
+
+	friend FArchive& operator<<(FArchive& Ar, FGears4Bundle& E)
 	{
 		Ar << E.SomeNum;
 		Ar << E.Assets;
@@ -49,10 +57,10 @@ struct FGears4Manifest
 {
 	// same size of arrays
 	TArray<FGears4AssetEntry> Assets;
-	TArray<FIntPoint> Array4;	// TArray<bool32,int32>: int32 -> Array3/Entries index
+	TArray<FIntPoint> Array4;	// TArray<bool32,int32>: int32 -> first bundle where asset appears
 
 	// same size of arrays
-	TArray<FGears4BundleEntry> Bundles;
+	TArray<FGears4Bundle> Bundles;
 	TArray<byte> Array3;
 
 	TArray<int32> Array1;		// -> Assets index
@@ -110,6 +118,216 @@ struct FGears4Manifest
 	}
 };
 
+
+struct FGears4BundledInfo
+{
+	const char* Name;
+	CGameFileInfo* Container;
+	int32 Position;
+	int32 Size;
+	FGears4BundledInfo*	HashNext;
+};
+
+class FGears4BundleFile : public FArchive
+{
+	DECLARE_ARCHIVE(FGears4BundleFile, FArchive);
+public:
+	FGears4BundleFile(const FGears4BundledInfo* info)
+	:	Info(info)
+	{
+		guard(FGears4BundleFile::Constructor)
+		Reader = appCreateFileReader(Info->Container);
+		assert(Reader);
+		Reader->SetStopper(Info->Position + Info->Size);
+
+		Reader->Seek(Info->Position);
+
+		unguard;
+	}
+
+	virtual ~FGears4BundleFile()
+	{
+		if (Reader) delete Reader;
+	}
+
+	virtual void Serialize(void *data, int size)
+	{
+		guard(FGears4BundleFile::Serialize);
+		if (ArStopper > 0 && ArPos + size > ArStopper)
+			appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
+
+		Reader->Seek64(Info->Position + ArPos);
+		Reader->Serialize(data, size);
+		ArPos += size;
+
+		unguard;
+	}
+
+	virtual void Seek(int Pos)
+	{
+		guard(FGears4BundleFile::Seek);
+		assert(Pos >= 0 && Pos < Info->Size);
+		ArPos = Pos;
+		unguard;
+	}
+
+	virtual int GetFileSize() const
+	{
+		return (int)Info->Size;
+	}
+
+	virtual void Close()
+	{
+		Reader->Close();
+	}
+
+protected:
+	const FGears4BundledInfo* Info;
+	FArchive*	Reader;
+};
+
+class FGears4VFS : public FVirtualFileSystem
+{
+public:
+	FGears4VFS()
+	:	HashTable(NULL)
+	{}
+
+	virtual ~FGears4VFS()
+	{
+		if (HashTable) delete[] HashTable;
+	}
+
+	void ReserveFiles(int Count)
+	{
+		FileInfos.Empty(Count);
+	}
+
+	bool AddFile(const char* filename, CGameFileInfo* bundleFile, int pos, int size)
+	{
+		guard(FGears4VFS::AddFile);
+
+		if (FindFile(filename))
+		{
+			// do not register file duplicates
+			return false;
+		}
+
+		assert(FileInfos.Num() + 1 < FileInfos.Max()); // if we'll resize array, HashNext will be trushed
+		FGears4BundledInfo* info = new (FileInfos) FGears4BundledInfo;
+
+		info->Name = appStrdupPool(filename);
+		info->Container = bundleFile;
+		info->Position = pos;
+		info->Size = size;
+
+		AddFileToHash(info);
+		return true;
+
+		unguard;
+	}
+
+	// Open the file from bundle
+	virtual FArchive* CreateReader(const char* name)
+	{
+		const FGears4BundledInfo* info = FindFile(name);
+		if (!info) return NULL;
+		return new FGears4BundleFile(info);
+	}
+
+	virtual int GetFileSize(const char* name)
+	{
+		const FGears4BundledInfo* info = FindFile(name);
+		if (!info) return 0;
+		return info->Size;
+	}
+
+	// Empty unneeded functions from FVirtualFileSystem interface
+	virtual bool AttachReader(FArchive* reader)
+	{
+		assert(0);
+		return false;
+	}
+
+	virtual int NumFiles() const
+	{
+		assert(0);
+		return 0;
+	}
+
+	virtual const char* FileName(int i)
+	{
+		assert(0);
+		return NULL;
+	}
+
+protected:
+	enum { HASH_SIZE = 16384 };
+	enum { HASH_MASK = HASH_SIZE - 1 };
+
+	TArray<FGears4BundledInfo> FileInfos;
+	FGears4BundledInfo*	LastInfo;			// cached last accessed file info, simple optimization
+	FGears4BundledInfo** HashTable;
+
+	static uint16 GetHashForFileName(const char* FileName)
+	{
+		uint16 hash = 0;
+		while (char c = *FileName++)
+		{
+			if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; // lowercase a character
+			hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
+		}
+		hash &= HASH_MASK;
+		return hash;
+	}
+
+	void AddFileToHash(FGears4BundledInfo* File)
+	{
+		if (!HashTable)
+		{
+			HashTable = new FGears4BundledInfo* [HASH_SIZE];
+			memset(HashTable, 0, sizeof(FGears4BundledInfo*) * HASH_SIZE);
+		}
+		uint16 hash = GetHashForFileName(File->Name);
+		File->HashNext = HashTable[hash];
+		HashTable[hash] = File;
+	}
+
+	const FGears4BundledInfo* FindFile(const char* name)
+	{
+		if (LastInfo && !stricmp(LastInfo->Name, name))
+			return LastInfo;
+
+		if (HashTable)
+		{
+			// Have a hash table, use it
+			uint16 hash = GetHashForFileName(name);
+			for (FGears4BundledInfo* info = HashTable[hash]; info; info = info->HashNext)
+			{
+				if (!stricmp(info->Name, name))
+				{
+					LastInfo = info;
+					return info;
+				}
+			}
+			return NULL;
+		}
+
+		// Linear search without a hash table
+		for (int i = 0; i < FileInfos.Num(); i++)
+		{
+			FGears4BundledInfo* info = &FileInfos[i];
+			if (!stricmp(info->Name, name))
+			{
+				LastInfo = info;
+				return info;
+			}
+		}
+		return NULL;
+	}
+};
+
+
 void LoadGears4Manifest(const CGameFileInfo* info)
 {
 	guard(LoadGears4Manifest);
@@ -129,7 +347,54 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 
 	delete loader;
 
-	//!!!!!
+	// Process manifest
+	FGears4VFS* FileSystem = new FGears4VFS; // note: this pointer will not be stored anywhere, and not released
+	FileSystem->ReserveFiles(Manifest.Assets.Num());
+
+	int numMissingBundles = 0;
+	int numBadBundles = 0;
+	for (int bundleIndex = 0; bundleIndex < Manifest.Bundles.Num(); bundleIndex++)
+	{
+		const FGears4Bundle& Bundle = Manifest.Bundles[bundleIndex];
+
+		// Find bundle
+		char bundleFilename[MAX_PACKAGE_PATH];
+		appSprintf(ARRAY_ARG(bundleFilename), "/Game/Bundles/%d.bundle", bundleIndex);
+		CGameFileInfo* bundleFile = const_cast<CGameFileInfo*>(appFindGameFile(bundleFilename));
+
+		// Verify if we can use this bundle
+		if (!bundleFile)
+		{
+			numMissingBundles++;
+			continue;
+		}
+		if (bundleFile->Size != Bundle.GetBundleSize())
+		{
+			//?? TODO: probably scan bundle file instead of simply dropping it
+			numBadBundles++;
+			continue;
+		}
+
+		// Register bundled assets
+		int32 pos = 0;
+		for (int assetIndex = 0; assetIndex < Bundle.Assets.Num(); assetIndex++)
+		{
+			const FGears4AssetEntry& Asset = Manifest.Assets[Bundle.Assets[assetIndex].AssetIndex];
+			char buffer[MAX_PACKAGE_PATH];
+			appSprintf(ARRAY_ARG(buffer), "%s.uasset", *Asset.AssetName);
+			int32 size = Bundle.Assets[assetIndex].AssetSize;
+			assert(size == Asset.AssetSize);
+			if (FileSystem->AddFile(buffer, bundleFile, pos, size))
+			{
+				appRegisterGameFile(buffer, FileSystem);
+			}
+			pos += size;
+		}
+	}
+
+	appPrintf("%d/%d bundles missing, %d bundles outdated\n", numMissingBundles, Manifest.Bundles.Num(), numBadBundles);
+
+#if 0
 	appPrintf("\n***\nAssets:%d A1:%d A2:%d Bundles:%d A3:%d A4:%d\n", Manifest.Assets.Num(),
 		Manifest.Array1.Num(), Manifest.Array2.Num(), Manifest.Bundles.Num(), Manifest.Array3.Num(), Manifest.Array4.Num());
 
@@ -176,7 +441,7 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 
 	for (int i = 0; i < Manifest.Bundles.Num(); i++)
 	{
-		const FGears4BundleEntry& E2 = Manifest.Bundles[i];
+		const FGears4Bundle& E2 = Manifest.Bundles[i];
 		for (int j = 0; j < E2.Assets.Num(); j++)
 		{
 			if (E2.Assets[j].AssetIndex == 55430)
@@ -209,14 +474,14 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 			int Array1Index = E.p2;
 			DIR_REF("Array1", Manifest.Array1[Array1Index]);
 			// Entry
-			int BundleIndex = 12586;// Manifest.Array4[i].Y;
-			const FGears4BundleEntry& Bundle = Manifest.Bundles[BundleIndex];
-			appPrintf("Bundle[%d] = %d, [%d], [%d]\n", BundleIndex, Bundle.SomeNum, Bundle.Assets.Num(), Bundle.p2.Num());
+			int BundleIndex = Manifest.Array4[i].Y;
+			const FGears4Bundle& Bundle = Manifest.Bundles[BundleIndex];
+			appPrintf("Bundle[%d] = SomeNum=%d, Assets=%d, p2=%d\n", BundleIndex, Bundle.SomeNum, Bundle.Assets.Num(), Bundle.p2.Num());
 			int32 pos = 0;
 			for (int i2 = 0; i2 < Bundle.Assets.Num(); i2++)
 			{
 				const FGears4BundleItem& BI = Bundle.Assets[i2];
-				appPrintf("offs=%08X size=%08X %d: %s\n", pos, BI.AssetSize, i2, *Manifest.Assets[BI.AssetIndex].AssetName);
+///				appPrintf("offs=%08X size=%08X %d: %s\n", pos, BI.AssetSize, i2, *Manifest.Assets[BI.AssetIndex].AssetName);
 				pos += BI.AssetSize;
 			}
 			appPrintf("... bundle size = 0x%X (%d)\n", pos, pos);
@@ -225,9 +490,7 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 			break;
 		}
 	}
-
-	// breakpoint
-///	assert(0);
+#endif
 
 	unguard;
 }
