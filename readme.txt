@@ -184,11 +184,13 @@ LZ4
 
 Changes
 ~~~~~~~
-21.03.2018
+22.03.2018
 - implemented full Gears of War 4 support
 - displaying information in viewer window about objects in loaded packages when there's nothing visual inside
 - improved umodel's main window title - it now contains information about umodel build version and about path
   to game files
+- preserving all UI elements when closing Package Selection dialog, so next time you'll open it, dialog will
+  be in exactly the same state as when it was closed
 
 18.03.2018
 - implemented Gears of War 4 pak file and package support; requires game override -game=gears4 (or use UI)

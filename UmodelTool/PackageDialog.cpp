@@ -265,40 +265,16 @@ UIPackageDialog::UIPackageDialog()
 ,	UseFlatView(false)
 ,	SortedColumn(UIPackageList::COLUMN_Name)
 ,	ReverseSort(false)
-{}
+{
+	CloseOnEsc();
+	HideOnClose();
+}
 
 UIPackageDialog::EResult UIPackageDialog::Show()
 {
 	ModalResult = CANCEL;
 
-	if (GetWnd() == NULL)
-	{
-		CloseOnEsc();
-		ShowDialog("Choose a package to open", 500, 200);
-	}
-	else
-	{
-		UIBaseDialog::ShowDialog();
-	}
-
-	//!! TODO: this will consume CPU - PeekMessages has no delays
-	//!! Get a special version of PumpMessageLoop() which will use GetMessage instead of PeekMessages
-	//!! Rename: PumpMessageLoop -> PumpMessages (as in UE4)
-	//!! Modal window: set window's parent, EnableWindow(parent, FALSE)
-	//!! Make a special version of modal window which will be hidden instead of destroyed
-	//?? use ShowModal, but add HideOnClose() function -- this function should not affect destructor, it should always destroy
-	while (PumpMessageLoop() && IsVisible())
-	{}
-
-	//!! BUG: start viewer, open package selector, press Esc - viewer window will not be focused; this happens only once - next time focus will be correct
-	//!! probably also parent window issue: parent window is set to NULL when creating dialog, and not changed later
-	//!! - should find a possibility to set parent window for already created dialog which becomes visible
-
-	//!! BUG: scan content will focus viewer window, package selection will go to bottom
-	//!! Pobably this is because of GMainWindow / GCurrentDialog:
-	//!! HWND ParentWindow = GMainWindow;
-	//!! if (GCurrentDialog) ParentWindow = GCurrentDialog->GetWnd();
-	//!! Should stack dialogs, and update them with ShowDialog/HideDialog/CloseDialog
+	ShowModal("Choose a package to open", 500, 200);
 
 	if (ModalResult != CANCEL)
 	{
@@ -487,7 +463,7 @@ UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
 void UIPackageDialog::CloseDialog(EResult Result)
 {
 	ModalResult = Result;
-	UIBaseDialog::HideDialog();
+	UIBaseDialog::CloseDialog(false);
 }
 
 

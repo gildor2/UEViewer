@@ -40,7 +40,7 @@ bool UIProgressDialog::Tick()
 	MemoryLabel->SetText(buffer);
 	appSprintf(ARRAY_ARG(buffer), "%d", UObject::GObjObjects.Num());
 	ObjectsLabel->SetText(buffer);
-	return PumpMessageLoop();
+	return PumpMessages();
 }
 
 void UIProgressDialog::InitUI()
