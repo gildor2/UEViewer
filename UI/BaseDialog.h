@@ -926,6 +926,8 @@ public:
 		Add(&item);
 	}
 	void Remove(UIElement* item);
+
+	// Destroy all controls holded by UIGroup in a case if they should be released before destructor call.
 	void ReleaseControls();
 
 	void AllocateUISpace(int& x, int& y, int& w, int& h);
@@ -1075,6 +1077,9 @@ public:
 	{
 		ShowDialog(false, title, width, height);
 	}
+
+	void ShowDialog();
+	void HideDialog();
 
 	FORCEINLINE bool IsDialogOpen() const
 	{

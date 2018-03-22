@@ -3264,6 +3264,19 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 	unguardf("modal=%d, title=\"%s\"", modal, title);
 }
 
+void UIBaseDialog::ShowDialog()
+{
+	Visible = true;
+	ShowWindow(Wnd, SW_SHOW);
+}
+
+void UIBaseDialog::HideDialog()
+{
+	Visible = false;
+	ShowWindow(Wnd, SW_HIDE);
+	// Don't call Show(false) because it will propagate visibility to all children
+}
+
 bool UIBaseDialog::PumpMessageLoop()
 {
 	guard(UIBaseDialog::PumpMessageLoop);
