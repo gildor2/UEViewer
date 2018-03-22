@@ -47,6 +47,8 @@ protected:
 
 	PackageList		Packages;
 
+	void CloseDialog(EResult Result);
+
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
 	void OnPackageSelected(UIMulticolumnListbox* sender);
 	void OnFlatViewChanged(UICheckbox* sender, bool value);
@@ -55,6 +57,7 @@ protected:
 	void OnOpenClicked();
 	void OnAppendClicked();
 	void OnExportClicked();
+	void OnCancelClicked();
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
 	void ScanContent();

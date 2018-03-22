@@ -269,15 +269,41 @@ UIPackageDialog::UIPackageDialog()
 
 UIPackageDialog::EResult UIPackageDialog::Show()
 {
-	ModalResult = OPEN;
-	if (!ShowModal("Choose a package to open", 500, 200))
-		return CANCEL;
+	ModalResult = CANCEL;
 
-	UpdateSelectedPackages();
+	if (GetWnd() == NULL)
+	{
+		CloseOnEsc();
+		ShowDialog("Choose a package to open", 500, 200);
+	}
+	else
+	{
+		UIBaseDialog::ShowDialog();
+	}
 
-	// controls are not released automatically when dialog closed to be able to
-	// poll them for user selection; release the memory now
-	ReleaseControls();
+	//!! TODO: this will consume CPU - PeekMessages has no delays
+	//!! Get a special version of PumpMessageLoop() which will use GetMessage instead of PeekMessages
+	//!! Rename: PumpMessageLoop -> PumpMessages (as in UE4)
+	//!! Modal window: set window's parent, EnableWindow(parent, FALSE)
+	//!! Make a special version of modal window which will be hidden instead of destroyed
+	//?? use ShowModal, but add HideOnClose() function -- this function should not affect destructor, it should always destroy
+	while (PumpMessageLoop() && IsVisible())
+	{}
+
+	//!! BUG: start viewer, open package selector, press Esc - viewer window will not be focused; this happens only once - next time focus will be correct
+	//!! probably also parent window issue: parent window is set to NULL when creating dialog, and not changed later
+	//!! - should find a possibility to set parent window for already created dialog which becomes visible
+
+	//!! BUG: scan content will focus viewer window, package selection will go to bottom
+	//!! Pobably this is because of GMainWindow / GCurrentDialog:
+	//!! HWND ParentWindow = GMainWindow;
+	//!! if (GCurrentDialog) ParentWindow = GCurrentDialog->GetWnd();
+	//!! Should stack dialogs, and update them with ShowDialog/HideDialog/CloseDialog
+
+	if (ModalResult != CANCEL)
+	{
+		UpdateSelectedPackages();
+	}
 
 	return ModalResult;
 }
@@ -439,7 +465,7 @@ void UIPackageDialog::InitUI()
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Cancel")
 			.SetWidth(80)
-			.SetCancel()
+			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnCancelClicked, this))
 	];
 
 	SortPackages(); // will call RefreshPackageListbox()
@@ -457,6 +483,13 @@ UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
 		.SetOnColumnClick(BIND_MEM_CB(&UIPackageDialog::OnColumnClick, this));
 	return List;
 }
+
+void UIPackageDialog::CloseDialog(EResult Result)
+{
+	ModalResult = Result;
+	UIBaseDialog::HideDialog();
+}
+
 
 /*-----------------------------------------------------------------------------
 	Support for tree and flat package lists
@@ -841,7 +874,9 @@ void UIPackageDialog::OnPackageSelected(UIMulticolumnListbox* sender)
 void UIPackageDialog::OnPackageDblClick(UIMulticolumnListbox* sender, int value)
 {
 	if (value != -1)
-		CloseDialog();
+	{
+		CloseDialog(OPEN);
+	}
 }
 
 void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
@@ -861,20 +896,22 @@ void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
 
 void UIPackageDialog::OnOpenClicked()
 {
-	ModalResult = OPEN;
-	CloseDialog();
+	CloseDialog(OPEN);
 }
 
 void UIPackageDialog::OnAppendClicked()
 {
-	ModalResult = APPEND;
-	CloseDialog();
+	CloseDialog(APPEND);
 }
 
 void UIPackageDialog::OnExportClicked()
 {
-	ModalResult = EXPORT;
-	CloseDialog();
+	CloseDialog(EXPORT);
+}
+
+void UIPackageDialog::OnCancelClicked()
+{
+	CloseDialog(CANCEL);
 }
 
 
