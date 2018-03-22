@@ -3117,13 +3117,16 @@ UIBaseDialog::UIBaseDialog()
 :	UIGroup(GROUP_NO_BORDER)
 ,	NextDialogId(FIRST_DIALOG_ID)
 ,	ShouldCloseOnEsc(false)
+,	ShouldHideOnClose(false)
 ,	ParentDialog(NULL)
 ,	IconResId(0)
 ,	IsDialogConstructed(false)
+,	ClosingDialog(false)
 {}
 
 UIBaseDialog::~UIBaseDialog()
 {
+	ShouldHideOnClose = false;
 	CloseDialog(false);
 }
 
@@ -3200,7 +3203,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 {
 	guard(UIBaseDialog::ShowDialog);
 
-	assert(Wnd == 0);
+	assert(Wnd == 0 || (modal && ShouldHideOnClose));
 
 	if (!hInstance)
 	{
@@ -3208,7 +3211,10 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		InitCommonControls();
 	}
 
-	NextDialogId = FIRST_DIALOG_ID;
+	if (Wnd == 0)
+		NextDialogId = FIRST_DIALOG_ID;
+
+	ClosingDialog = false;
 
 	// convert title to unicode
 	wchar_t wTitle[MAX_TITLE_LEN];
@@ -3218,7 +3224,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 	HWND ParentWindow = GMainWindow;
 	if (GCurrentDialog) ParentWindow = GCurrentDialog->GetWnd();
 
-	if (modal)
+	if (modal && !ShouldHideOnClose)
 	{
 		// modal
 		ParentDialog = GCurrentDialog;
@@ -3244,9 +3250,49 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 		}
 #endif // DO_GUARD
 	}
+	else if (modal) // && ShouldHideOnClose
+	{
+		ParentDialog = GCurrentDialog;
+		GCurrentDialog = this;
+		// modeless window, modal behavior
+		if (Wnd == NULL)
+		{
+			HWND dialog = CreateDialogIndirectParam(
+				hInstance,					// hInstance
+				tmpl,						// lpTemplate
+				ParentWindow,				// hWndParent
+				StaticWndProc,				// lpDialogFunc
+				(LPARAM)this				// lParamInit
+			);
+			assert(dialog);
+			Wnd = dialog;
+		}
+		else
+		{
+			// We're not creating a window, so update its parent - it might be changed from last time call
+			SetWindowLongPtr(Wnd, GWLP_HWNDPARENT, (LONG_PTR)ParentWindow);
+			ShowDialog();
+		}
+
+#if DO_GUARD
+		TRY {
+#endif
+			CustomMessageLoop(true);
+			//?? Catch modal result here - not used now at all
+
+			GCurrentDialog = ParentDialog;
+			ParentDialog = NULL;
+#if DO_GUARD
+		} CATCH_CRASH {
+			GCurrentDialog = ParentDialog;
+			ParentDialog = NULL;
+			THROW;
+		}
+#endif // DO_GUARD
+	}
 	else
 	{
-		// modeless
+		// fully modeless window
 		HWND dialog = CreateDialogIndirectParam(
 			hInstance,					// hInstance
 			tmpl,						// lpTemplate
@@ -3254,12 +3300,12 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 			StaticWndProc,				// lpDialogFunc
 			(LPARAM)this				// lParamInit
 		);
-
 		assert(dialog);
 		// process all messages to allow window to appear on screen
-		PumpMessageLoop();
-		return true;
+		PumpMessages();
 	}
+
+	return true;
 
 	unguardf("modal=%d, title=\"%s\"", modal, title);
 }
@@ -3277,9 +3323,9 @@ void UIBaseDialog::HideDialog()
 	// Don't call Show(false) because it will propagate visibility to all children
 }
 
-bool UIBaseDialog::PumpMessageLoop()
+bool UIBaseDialog::PumpMessages()
 {
-	guard(UIBaseDialog::PumpMessageLoop);
+	guard(UIBaseDialog::PumpMessages);
 
 	if (Wnd == 0) return false;
 
@@ -3312,13 +3358,76 @@ bool UIBaseDialog::PumpMessageLoop()
 	unguard;
 }
 
+// Similar to PumpMessages, but using blocking GetMessage() call instead of PeekMessage(). Also it has
+// 'modal' capabilities.
+void UIBaseDialog::CustomMessageLoop(bool modal)
+{
+	guard(UIBaseDialog::CustomMessageLoop);
+
+	if (Wnd == 0) return;
+
+	// Ensure modal behavior when needed - disable parent window
+	HWND Owner = (HWND)GetWindowLongPtr(Wnd, GWLP_HWNDPARENT);
+	BOOL OldEnabled = FALSE;
+	if (modal && Owner != NULL)
+	{
+		OldEnabled = IsWindowEnabled(Owner);
+		EnableWindow(Owner, FALSE);
+	}
+
+	// Classic message loop, based on GetMessage() call. We're checking 'ClosingDialog' before GetMessage()
+	// to exit modal message loop when window is hidden instead of being closed.
+	MSG msg;
+	while (!ClosingDialog && GetMessage(&msg, NULL, 0, 0))
+	{
+		if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
+		{
+			// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
+			// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
+			// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
+			// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
+			// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
+			// checks are performed because we have very simple hierarchy in our UI system: all children are
+			// parented by single dialog window.
+			// If we'll need nore robust way of processing messages (for example, when we need to process
+			// keys for modal dialogs, or when message loop is processed by code which is not accessible for
+			// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
+			// (because key messages are sent to the focused window only, and not to its parent), but it looks
+			// more complicated.
+			if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
+				CloseDialog(true);
+		}
+
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	if (modal && Owner != NULL)
+	{
+		EnableWindow(Owner, OldEnabled);
+		// When 'this' window is closed (hidden), owner window is disabled. This will cause wrong window to get
+		// focus. Fix that be manually changing focus.
+		SetForegroundWindow(Owner);
+	}
+
+	unguard;
+}
+
 void UIBaseDialog::CloseDialog(bool cancel)
 {
 	if (Wnd && CanCloseDialog(cancel))
 	{
-		DialogClosed(cancel);
-		EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
-		Wnd = 0;
+		if (!ShouldHideOnClose)
+		{
+			DialogClosed(cancel);
+			EndDialog(Wnd, cancel ? IDCANCEL : IDOK);
+			Wnd = 0;
+		}
+		else if (IsVisible())
+		{
+			HideDialog();
+			ClosingDialog = true;
+		}
 	}
 }
 

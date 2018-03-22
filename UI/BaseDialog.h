@@ -1069,15 +1069,20 @@ public:
 		return NextDialogId++;
 	}
 
+	// Show modal dialog. Returns false when dialog window cancelled.
+	// TODO: Result value is valid only when HideOnClose() is not active for this dialog.
 	FORCEINLINE bool ShowModal(const char* title, int width, int height)
 	{
 		return ShowDialog(true, title, width, height);
 	}
+	// Show non-modal window. Funciton will return immediately, code should periodically execute
+	// PumpMessages(), otherwise dialog window will not work.
 	FORCEINLINE void ShowDialog(const char* title, int width, int height)
 	{
 		ShowDialog(false, title, width, height);
 	}
 
+	// Control visibility of dialog window
 	void ShowDialog();
 	void HideDialog();
 
@@ -1087,11 +1092,19 @@ public:
 	}
 
 	// Allow closing of non-modal dialog when Esc key pressed. In order to make
-	// it working, we should call PumpMessageLoop() to handle messages.
-	// Details: 'Escape' key is processed in PumpMessageLoop().
+	// it working, we should call PumpMessages() to handle messages.
+	// Details: 'Escape' key is processed in PumpMessages().
 	FORCEINLINE UIBaseDialog& CloseOnEsc()
 	{
 		ShouldCloseOnEsc = true;
+		return *this;
+	}
+
+	// When selected HideOnClose behavior, CloseDialog() will hide it instead of
+	// destruction. This will allow to show this dialog again without full recreation.
+	FORCEINLINE UIBaseDialog& HideOnClose()
+	{
+		ShouldHideOnClose = true;
 		return *this;
 	}
 
@@ -1107,11 +1120,11 @@ public:
 	// should be used:
 	//	SomeDialogClass dialog;
 	//	dialog.ShowDialog("Title", WIDTH, HEIGHT)
-	//	while (dialog.PumpMessageLoop()) {} -- processing messages while window is visible
+	//	while (dialog.PumpMessages()) { Sleep(0); } -- processing messages while window is visible
 	//	-- at this point dialog window will be closed
 	// If another message loop would be active, everything would work fine except window will
 	// not react on 'Escape' key.
-	bool PumpMessageLoop();
+	bool PumpMessages();
 
 	void CloseDialog(bool cancel = false);
 
@@ -1122,10 +1135,15 @@ protected:
 	int			NextDialogId;
 	int			IconResId;
 	bool		ShouldCloseOnEsc;
+	bool		ShouldHideOnClose;
 	UIBaseDialog* ParentDialog;
 	bool		IsDialogConstructed;	// true after InitUI() call
 
+	int			ClosingDialog;
+
 	bool ShowDialog(bool modal, const char* title, int width, int height);
+
+	void CustomMessageLoop(bool modal);
 
 	// dialog procedure
 	static INT_PTR CALLBACK StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
