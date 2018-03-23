@@ -337,6 +337,9 @@ static const struct
 	F(AssetObjectProperty),
 	F(AssetSubclassProperty),
 	F(EnumProperty),
+	F(UInt64Property),
+	F(UInt32Property),
+	F(UInt16Property),
 #endif
 #undef F
 };
@@ -1073,7 +1076,14 @@ void CTypeInfo::SerializeProps(FArchive &Ar, void *ObjectData) const
 			{
 				// BoolProperty has everything in FPropertyTag, but sometimes it has DataSize==4, what
 				// causes error when trying to skip it. This is why we have a separate code here.
-				appPrintf("WARNING: skipping bool property %s with Tag.Size=%d\n", Prop->Name, Tag.DataSize);
+				appPrintf("WARNING: skipping BoolProperty %s with Tag.Size=%d\n", *Tag.Name, Tag.DataSize);
+				continue;
+			}
+			if (Tag.Type == NAME_EnumProperty && Tag.DataSize == 8)
+			{
+				// See NAME_EnumProperty serialization in this function: this property has DataSize==8, but
+				// really nothing is serialized. Verified with 2 games already.
+				appPrintf("WARNING: skipping EnumProperty %s with Tag.Size=%d\n", *Tag.Name, Tag.DataSize);
 				continue;
 			}
 			// skip property data
