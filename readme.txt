@@ -184,6 +184,9 @@ LZ4
 
 Changes
 ~~~~~~~
+23.03.2018
+- updated for final UE4.19 version (changed SkeletalMesh format)
+
 22.03.2018
 - implemented full Gears of War 4 support
 - displaying information in viewer window about objects in loaded packages when there's nothing visual inside

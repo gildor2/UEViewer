@@ -631,6 +631,7 @@ struct FSkelMeshSection4
 
 		FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
 		Ar << DuplicatedVerticesBuffer;
+		Ar << S.bDisabled;
 
 		unguard;
 	}

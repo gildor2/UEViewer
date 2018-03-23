@@ -2368,6 +2368,7 @@ struct FFrameworkObjectVersion
 		// UE4.16 = 23
 		// UE4.17 = 28
 		// UE4.18 = 30
+		// UE4.19 = 33
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2400,6 +2401,8 @@ struct FFrameworkObjectVersion
 			return (Type)28;
 		if (Ar.Game < GAME_UE4(19))
 			return (Type)30;
+		if (Ar.Game < GAME_UE4(20))
+			return (Type)33;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2418,6 +2421,7 @@ struct FEditorObjectVersion
 		UPropertryForMeshSection = 10,
 		// UE4.16 = 17
 		// UE4.17, UE4.18 = 20
+		// UE4.19 = 23
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2448,6 +2452,8 @@ struct FEditorObjectVersion
 			return (Type)17;
 		if (Ar.Game < GAME_UE4(19))		// UE4.17 and 4.18
 			return (Type)20;
+		if (Ar.Game < GAME_UE4(20))
+			return (Type)23;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2475,7 +2481,8 @@ struct FSkeletalMeshCustomVersion
 		SplitModelAndRenderData = 12,
 		RemoveTriangleSorting = 13,
 		RemoveDuplicatedClothingSections = 14,
-		DeprecateSectionDisabledFlag = 16,
+		DeprecateSectionDisabledFlag = 15,
+		// UE4.19 = 15
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2520,6 +2527,7 @@ struct FRenderingObjectVersion
 		// UE4.16 = 15
 		// UE4.17 = 19
 		// UE4.18 = 20
+		// UE4.19 = 25
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2550,6 +2558,8 @@ struct FRenderingObjectVersion
 			return (Type)19;
 		if (Ar.Game < GAME_UE4(19))
 			return (Type)20;
+		if (Ar.Game < GAME_UE4(20))
+			return (Type)25;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2566,6 +2576,7 @@ struct FAnimPhysObjectVersion
 		SmartNameRefactorForDeterministicCooking = 10,
 		// UE4.18 = 12
 		AddLODToCurveMetaData = 12,
+		// UE4.19 = 16
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
@@ -2584,6 +2595,8 @@ struct FAnimPhysObjectVersion
 			return (Type)7;
 		if (Ar.Game < GAME_UE4(19))
 			return AddLODToCurveMetaData;
+		if (Ar.Game < GAME_UE4(20))
+			return (Type)16;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
