@@ -404,7 +404,7 @@ int nu_pixels, uint8_t * DETEX_RESTRICT target_pixel_buffer) {
 }
 #endif
 // Float to half-float conversion.
-#if 0
+
 static void ConvertPixel32FloatR32ToPixel16FloatR16(uint8_t * DETEX_RESTRICT source_pixel_buffer,
 int nu_pixels, uint8_t * DETEX_RESTRICT target_pixel_buffer) {
 	detexConvertFloatToHalfFloat((float *)source_pixel_buffer, nu_pixels, (uint16_t *)target_pixel_buffer);
@@ -748,7 +748,6 @@ uint8_t * DETEX_RESTRICT target_pixel_buffer) {
 		target_pixelf_buffer += 3;
 	}
 }
-#endif
 
 typedef void (*detexConversionFunc)(uint8_t *source_pixel_buffer, int nu_pixels,
 	uint8_t *target_pixel_buffer);
@@ -809,6 +808,7 @@ detexConversionType detex_conversion_table[] = {
 	{ DETEX_PIXEL_FORMAT_RGBX8, DETEX_PIXEL_FORMAT_RGBX16, ConvertPixel32RGBX8ToPixel64RGBX16 },
 	{ DETEX_PIXEL_FORMAT_RGBA8, DETEX_PIXEL_FORMAT_RGBA16, ConvertPixel32RGBA8ToPixel64RGBA16 },
 	// Integer to half-float conversion (in-place).
+
 	// 35
 	{ DETEX_PIXEL_FORMAT_R16, DETEX_PIXEL_FORMAT_FLOAT_R16, ConvertPixel16R16ToPixel16FloatR16 },
 	{ DETEX_PIXEL_FORMAT_RG16, DETEX_PIXEL_FORMAT_FLOAT_RG16, ConvertPixel32RG16ToPixel32FloatRG16 },
@@ -836,11 +836,13 @@ detexConversionType detex_conversion_table[] = {
 	{ DETEX_PIXEL_FORMAT_FLOAT_RGB32, DETEX_PIXEL_FORMAT_RGB16, ConvertPixel96FloatRGB32ToPixel48RGB16 },
 	{ DETEX_PIXEL_FORMAT_FLOAT_RGBX32, DETEX_PIXEL_FORMAT_RGBX16, ConvertPixel128FloatRGBX32ToPixel64RGBX16 },
 	// Half-float to float conversion.
+#endif
 	// 55
 	{ DETEX_PIXEL_FORMAT_FLOAT_R16, DETEX_PIXEL_FORMAT_FLOAT_R32, ConvertPixel16FloatR16ToPixel32FloatR32 },
 	{ DETEX_PIXEL_FORMAT_FLOAT_RG16, DETEX_PIXEL_FORMAT_FLOAT_RG32, ConvertPixel32FloatRG16ToPixel64FloatRG32 },
 	{ DETEX_PIXEL_FORMAT_FLOAT_RGB16, DETEX_PIXEL_FORMAT_FLOAT_RGB32, ConvertPixel48FloatRGB16ToPixel96FloatRGB32 },
 	{ DETEX_PIXEL_FORMAT_FLOAT_RGBX16, DETEX_PIXEL_FORMAT_FLOAT_RGBX32, ConvertPixel64FloatRGBX16ToPixel128FloatRGBX32 },
+#if 0
 	// HDR Float to float conversion.
 	{ DETEX_PIXEL_FORMAT_FLOAT_R32_HDR, DETEX_PIXEL_FORMAT_FLOAT_R32, ConvertPixel32FloatR32HDRToPixel32FloatR32 },
 	{ DETEX_PIXEL_FORMAT_FLOAT_RG32_HDR, DETEX_PIXEL_FORMAT_FLOAT_RG32, ConvertPixel64FloatRG32HDRToPixel64FloatRG32 },

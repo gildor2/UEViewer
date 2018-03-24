@@ -43,6 +43,30 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 	unguard;
 }
 
+static void float2rgbe(float red, float green, float blue, unsigned char rgbe[4])
+{
+	guard(float2rgbe);
+
+	float v;
+	int e;
+	v = red;
+	if (green > v) v = green;
+	if (blue > v) v = blue;
+	if (v < 1e-32) 
+	{
+		rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
+	}
+	else 
+	{
+		v = frexp(v, &e) * 256.0 / v;
+		rgbe[0] = (unsigned char)(red * v);
+		rgbe[1] = (unsigned char)(green * v);
+		rgbe[2] = (unsigned char)(blue * v);
+		rgbe[3] = (unsigned char)(e + 128);
+	}
+
+	unguard;
+}
 
 const CPixelFormatInfo PixelFormatInfo[] =
 {
@@ -60,6 +84,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ 0,						1,			1,			2,			64,			32,			"V8U8"		},	// TPF_V8U8
 	{ 0,						1,			1,			2,			64,			32,			"V8U8"		},	// TPF_V8U8_2
 	{ BYTES4('A','T','I','2'),	4,			4,			16,			0,			0,			"BC5"		},	// TPF_BC5
+	{ 0,						4,			4,			16,			0,			0,			"BC6H"		},	// TPF_BC6H
 	{ 0,						4,			4,			16,			0,			0,			"BC7"		},	// TPF_BC7
 	{ 0,						8,			1,			1,			0,			0,			"A1"		},	// TPF_A1
 	{ 0,						1,			1,			2,			0,			0,			"RGBA4"		},	// TPF_RGBA4
@@ -368,7 +393,30 @@ byte *CTextureData::Decompress(int MipLevel)
 		}
 		return dst;
 #endif // SUPPORT_ANDROID
+	case TPF_BC6H:
+		{
+			// decompress HDR image as RGBE
+			float *tempData = new float[USize * VSize * 4];
+			detexTexture tex;
+			tex.format = DETEX_TEXTURE_FORMAT_BPTC_FLOAT;
+			tex.data = const_cast<byte*>(Data);
+			tex.width = USize;
+			tex.height = VSize;
+			tex.width_in_blocks = USize / 4;
+			tex.height_in_blocks = VSize / 4;
+			PROFILE_DDS(appResetProfiler());
+			detexDecompressTextureLinear(&tex, reinterpret_cast<uint8_t*>(tempData), DETEX_PIXEL_FORMAT_FLOAT_RGBX32);
+			PROFILE_DDS(appPrintProfiler());
 
+			for (int p = 0; p < USize * VSize; ++p)
+			{
+				float *fPixel = tempData + p * 4;
+				float2rgbe(fPixel[0], fPixel[1], fPixel[2], dst + p * 4);
+			}
+
+			delete[] tempData;
+		}
+		return dst;
 	case TPF_BC7:
 		{
 			detexTexture tex;

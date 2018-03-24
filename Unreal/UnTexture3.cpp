@@ -835,6 +835,8 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		intFormat = TPF_V8U8;
 	else if (Format == PF_BC5)
 		intFormat = TPF_BC5;
+	else if (Format == PF_BC6H)
+		intFormat = TPF_BC6H;
 	else if (Format == PF_BC7)
 		intFormat = TPF_BC7;
 	else if (Format == PF_A1)

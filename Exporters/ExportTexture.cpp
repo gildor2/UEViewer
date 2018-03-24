@@ -186,6 +186,18 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 	unguard;
 }
 
+// Radiance file format
+static void WriteHDR(FArchive &Ar, int width, int height, byte *pic)
+{
+	guard(WriteHDR);
+
+	char hdr[64] = {0};
+	sprintf(hdr, "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y %d +X %d\n", height, width);
+	Ar.Serialize(hdr, strlen(hdr));
+	Ar.Serialize(pic, width * height * 4);
+	unguard;
+}
+
 
 static void WriteDDS(const CTextureData &TexData, const char *Filename)
 {
@@ -280,6 +292,22 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		width = height = 1;
 		pic = new byte[4];
 	}
+
+	// for HDR textures use Radiance format
+	if (TexData.Format == TPF_BC6H)
+	{
+
+		FArchive *Ar = CreateExportArchive(Tex, "%s.hdr", Tex->Name);
+		if (Ar)
+		{
+			WriteHDR(*Ar, width, height, pic);
+			delete Ar;
+		}
+
+		delete pic;
+		return;
+	}
+
 
 #if TGA_SAVE_BOTTOMLEFT
 	// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,

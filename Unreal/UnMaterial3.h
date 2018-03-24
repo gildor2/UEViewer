@@ -273,6 +273,7 @@ enum EPixelFormat
 	PF_ASTC_8x8,
 	PF_ASTC_10x10,
 	PF_ASTC_12x12,
+	PF_BC6H,
 #endif // UNREAL4
 #if THIEF4
 	PF_BC7,
@@ -345,6 +346,7 @@ _ENUM(EPixelFormat)
 	_E(PF_ASTC_8x8),
 	_E(PF_ASTC_10x10),
 	_E(PF_ASTC_12x12),
+	_E(PF_BC6H),
 #endif // UNREAL4
 #if THIEF4 // || UNREAL4
 	_E(PF_BC7),
