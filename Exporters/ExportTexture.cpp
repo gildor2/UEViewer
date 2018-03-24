@@ -245,6 +245,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		if (CheckExportFilePresence(Tex, "%s.tga", Tex->Name)) return;
 		if (CheckExportFilePresence(Tex, "%s.dds", Tex->Name)) return;
 		if (CheckExportFilePresence(Tex, "%s.png", Tex->Name)) return;
+		if (CheckExportFilePresence(Tex, "%s.hdr", Tex->Name)) return;
 	}
 
 	// for UTexture3 (UE3+), can check SourceArt for PNG data and save it if available
