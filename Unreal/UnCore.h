@@ -1245,20 +1245,6 @@ struct TTypeInfo
 	enum { IsPod = IS_POD(T)     };		// type has no constructor/destructor
 };
 
-
-template<typename T1, typename T2>
-struct TAreTypesEqual
-{
-	enum { Value = 0 };
-};
-
-template<typename T>
-struct TAreTypesEqual<T,T>
-{
-	enum { Value = 1 };
-};
-
-
 // Declare type, consists from fields of the same type length
 // (e.g. from ints and floats, or from chars and bytes etc), and
 // which memory layout is the same as disk layout (if endian of
@@ -1345,7 +1331,6 @@ SIMPLE_TYPE(FTransform, float)
 class FArray
 {
 	friend struct CTypeInfo;
-	friend class FString;
 	template<int N> friend class FStaticString;
 
 public:
@@ -1355,6 +1340,8 @@ public:
 	,	DataPtr(NULL)
 	{}
 	~FArray();
+
+	void MoveData(FArray& Other);
 
 	FORCEINLINE void *GetData()
 	{
@@ -1431,6 +1418,7 @@ FArchive& SerializeBulkArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 template<typename T>
 class TArray : public FArray
 {
+	friend class FString; // for rvalue
 public:
 	TArray()
 	:	FArray()
@@ -1730,13 +1718,25 @@ public:
 
 protected:
 	// disable array copying
-	TArray(const TArray &Other)
+	TArray(const TArray& Other)
 	:	FArray()
 	{}
-	TArray& operator=(const TArray &Other)
+	TArray& operator=(const TArray& Other)
 	{
 		return *this;
 	}
+	// but allow rvalue copying - for FString
+	TArray(TArray&& Other)
+	{
+		MoveData(Other);
+	}
+	TArray& operator=(TArray&& Other)
+	{
+		Empty();
+		MoveData(Other);
+		return *this;
+	}
+
 	// Helper function to reduce TLazyArray etc operator<<'s code size.
 	// Used as C-style wrapper around TArray<>::operator<<().
 	static FArchive& SerializeArray(FArchive &Ar, void *Array)
@@ -1945,11 +1945,22 @@ public:
 	FString()
 	{}
 	FString(const char* src);
-	FString(const FString& Other);
 	FString(int count, const char* src);
+
+	FString(const FString& Other);
 
 	FString& operator=(const char* src);
 	FString& operator=(const FString& src);
+
+	// rvalue functions
+	FString(FString&& Other)
+	: Data(MoveTemp(Other.Data))
+	{}
+	FString& operator=(FString&& Other)
+	{
+		Data = MoveTemp(Other.Data);
+		return *this;
+	}
 
 	FString& operator+=(const char* text);
 
@@ -2067,6 +2078,12 @@ public:
 		Data.DataPtr = (void*)&StaticData[0];
 		Data.MaxCount = N;
 		FString::operator=(src);
+	}
+	FORCEINLINE FStaticString(const FString& Other)
+	{
+		Data.DataPtr = (void*)&StaticData[0];
+		Data.MaxCount = N;
+		FString::operator=(Other);
 	}
 
 	// operators

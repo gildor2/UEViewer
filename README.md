@@ -24,8 +24,10 @@ using 'nmake' for Visual Studio or 'make' for gcc.
 
 ### Windows
 
-UModel is compiled using Visual Studio. Currently build is performed with Visual C++ 2010, but in theory
-almost all Visual Studio versions should be supported (perhaps except Visual C++ 6.0 and Visual C++ 2001).
+UModel is compiled using Visual Studio. Required VisualStudio 2010 or newer. Older Visual Studio compilers are
+not suitable because UModel's code using some C++11 stuff.
+
+Currently build is performed with Visual C++ 2010.
 
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
 of these tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You can get everything what you need

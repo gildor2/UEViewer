@@ -699,6 +699,64 @@ bool UE4EncryptedPak()
 
 #endif // UNREAL4
 
+static void TestStrings()
+{
+#define TEST(text, func) \
+	{ \
+		FString s(text) ; \
+		s = s.func(); \
+		printf(STR(func) "(\"" text "\") -> \"%s\"\n", *s); \
+	}
+
+	appResetProfiler();
+
+	{
+		FString s1("  NonEmptyString  ") ;
+		FString s2 = s1.TrimStartAndEnd();
+		printf(STR(func) "() -> \"%s\"\n", *s2); \
+	}
+
+/*	TEST("", TrimStart);
+	TEST("", TrimEnd);
+	TEST("", TrimStartAndEnd);
+	TEST(" ", TrimStart);
+	TEST(" ", TrimEnd);
+	TEST(" ", TrimStartAndEnd);
+	TEST("abcdef ", TrimStart);
+	TEST("abcdef ", TrimEnd);
+	TEST("abcdef ", TrimStartAndEnd);
+	TEST(" abcdef", TrimStart);
+	TEST(" abcdef", TrimEnd);
+	TEST(" abcdef", TrimStartAndEnd);
+	TEST(" abcdef ", TrimStart);
+	TEST(" abcdef ", TrimEnd);
+	TEST(" abcdef ", TrimStartAndEnd); */
+
+	{
+	FStaticString<256> ss1("test_static_string");
+	FString ss2 = ss1;
+	printf("[%s]\n", *ss2);
+	}
+
+	{
+	FString ss1("test_static_string_2");
+	FStaticString<256> ss2 = ss1;
+	printf("[%s]\n", *ss2);
+	}
+
+	{
+	FStaticString<256> ss1("test_static_string_2");
+	FStaticString<256> ss2;
+	FString& p1 = ss1;
+	FString& p2 = ss2;
+	p2 = p1;
+	printf("[%s]\n", *p2);
+	}
+
+	appPrintProfiler();
+	printf("Exitting ...\n");
+	exit(0);
+}
 
 #define OPT_BOOL(name,var)				{ name, (byte*)&var, true  },
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },

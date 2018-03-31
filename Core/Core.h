@@ -258,6 +258,42 @@ template<class T> inline void Exchange(T& A, T& B)
 	B = tmp;
 }
 
+// Stuff for rvalue support. This is a complicated stuff which is not possible to be
+// implemented in a different way, so this is a copy-paste of UE4 code.
+
+template<typename T> struct TRemoveReference      { typedef T Type; };
+template<typename T> struct TRemoveReference<T&>  { typedef T Type; };
+template<typename T> struct TRemoveReference<T&&> { typedef T Type; };
+
+template<typename T> struct TIsLValueReferenceType     { enum { Value = false }; };
+template<typename T> struct TIsLValueReferenceType<T&> { enum { Value = true  }; };
+
+template<typename T1, typename T2>
+struct TAreTypesEqual
+{
+	enum { Value = 0 };
+};
+
+template<typename T>
+struct TAreTypesEqual<T,T>
+{
+	enum { Value = 1 };
+};
+
+template<typename T>
+FORCEINLINE typename TRemoveReference<T>::Type&& MoveTemp(T&& Obj)
+{
+	typedef typename TRemoveReference<T>::Type CastType;
+
+	// Validate that we're not being passed an rvalue or a const object - the former is redundant, the latter is almost certainly a mistake
+	static_assert(TIsLValueReferenceType<T>::Value, "MoveTemp called on an rvalue");
+	static_assert(!TAreTypesEqual<CastType&, const CastType&>::Value, "MoveTemp called on a const object");
+
+	return (CastType&&)Obj;
+}
+
+// Sorting helpers
+
 template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*, const T*))
 {
 	qsort(array, count, sizeof(T), (int (*)(const void*, const void*)) cmpFunc);

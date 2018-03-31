@@ -50,6 +50,16 @@ FArray::~FArray()
 	MaxCount  = 0;
 }
 
+void FArray::MoveData(FArray& Other)
+{
+	DataPtr = Other.DataPtr;
+	DataCount = Other.DataCount;
+	MaxCount = Other.MaxCount;
+	Other.DataPtr = NULL;
+	Other.DataCount = 0;
+	Other.MaxCount = 0;
+}
+
 void FArray::Empty(int count, int elementSize)
 {
 	guard(FArray::Empty);
