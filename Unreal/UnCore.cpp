@@ -239,6 +239,15 @@ FString::FString(const char* src)
 	}
 }
 
+FString::FString(int count, const char* src)
+{
+	if (count)
+	{
+		Data.AddUninitialized(count + 1);
+		strncpy(Data.GetData(), src, count);
+	}
+}
+
 FString::FString(const FString& Other)
 {
 	CopyArray(Data, Other.Data);
@@ -358,6 +367,64 @@ bool FString::RemoveFromEnd(const char* Text)
 		return true;
 	}
 	return false;
+}
+
+FString FString::TrimStart() const
+{
+	FString Copy(*this);
+	Copy.TrimStartInline();
+	return Copy;
+}
+
+FString FString::TrimEnd() const
+{
+	FString Copy(*this);
+	Copy.TrimEndInline();
+	return Copy;
+}
+
+FString FString::TrimStartAndEnd() const
+{
+	FString Copy(*this);
+	Copy.TrimStartAndEndInline();
+	return Copy;
+}
+
+void FString::TrimStartInline()
+{
+	const char* s = Data.GetData();
+	int pos;
+	for (pos = 0; pos < Len(); pos++, s++)
+	{
+		if (!isspace(*s))
+			break;
+	}
+	if (pos > 0)
+	{
+		Data.RemoveAt(0, pos);
+	}
+}
+
+void FString::TrimEndInline()
+{
+	int endPos = Len() - 1;
+	const char* s = Data.GetData() + endPos;
+	int pos;
+	for (pos = endPos; pos >= 0; pos--, s--)
+	{
+		if (!isspace(*s))
+			break;
+	}
+	if (pos < endPos)
+	{
+		Data.RemoveAt(pos + 1, endPos - pos);
+	}
+}
+
+void FString::TrimStartAndEndInline()
+{
+	TrimStartInline();
+	TrimEndInline();
 }
 
 

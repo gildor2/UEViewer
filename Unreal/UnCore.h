@@ -1946,6 +1946,7 @@ public:
 	{}
 	FString(const char* src);
 	FString(const FString& Other);
+	FString(int count, const char* src);
 
 	FString& operator=(const char* src);
 	FString& operator=(const FString& src);
@@ -1991,6 +1992,14 @@ public:
 	bool EndsWith(const char* Text);
 	bool RemoveFromStart(const char* Text);
 	bool RemoveFromEnd(const char* Text);
+
+	// Trimming whitespaces
+	FString TrimStart() const;
+	FString TrimEnd() const;
+	FString TrimStartAndEnd() const;
+	void TrimStartInline();
+	void TrimEndInline();
+	void TrimStartAndEndInline();
 
 	FString& AppendChar(char ch);
 
