@@ -289,13 +289,22 @@ void appNotify(const char *fmt, ...);
 const char *va(const char *format, ...);
 int appSprintf(char *dest, int size, const char *fmt, ...);
 int appSprintf(wchar_t *dest, int size, const wchar_t *fmt, ...);
+// Allocate a copy of string. Analog of strdup(), but allocation is made with appMalloc.
 char* appStrdup(const char* str);
+// Copy string to dst with ensuring that string will not exceed 'count' capacity, including trailing zero character.
+// The resulting string is always null-terminated.
 void appStrncpyz(char *dst, const char *src, int count);
+// The same as appStrncpyz(), but will lowercase characters during copying.
 void appStrncpylwr(char *dst, const char *src, int count);
+// Append src string to dst. Resulting string will never exceed count characters including trailing zero.
+// Result is always null-terminated.
 void appStrcatn(char *dst, int count, const char *src);
+// Finds a substring s2 inside s1 with ignoring character case.
 const char *appStristr(const char *s1, const char *s2);
 
+// Returns 'true' if name matches wildcard 'mask'.
 bool appMatchWildcard(const char *name, const char *mask, bool ignoreCase = false);
+// Returns true is string contains wildcard characters.
 bool appContainsWildcard(const char *string);
 
 void appNormalizeFilename(char *filename);
