@@ -227,13 +227,9 @@ void* FArray::GetItem(int index, int elementSize) const
 
 FString::FString(const char* src)
 {
-	if (!src)
+	int len = src ? strlen(src) + 1 : 1;
+	if (len > 1) // not a empty string
 	{
-		Data.AddZeroed(1);		// null char
-	}
-	else
-	{
-		int len = strlen(src) + 1;
 		Data.AddUninitialized(len);
 		memcpy(Data.GetData(), src, len);
 	}
@@ -265,13 +261,9 @@ FString& FString::operator=(const char* src)
 		return *this; // assigning to self
 
 	Empty();
-	if (!src)
+	int len = src ? strlen(src) + 1 : 1;
+	if (len > 1) // not a empty string
 	{
-		Data.AddZeroed(1);		// null char
-	}
-	else
-	{
-		int len = strlen(src) + 1;
 		Data.AddUninitialized(len);
 		memcpy(Data.GetData(), src, len);
 	}
