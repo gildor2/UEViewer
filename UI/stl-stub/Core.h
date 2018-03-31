@@ -45,6 +45,7 @@ static void appPrintf(const char* Format, ...)
 	va_start(argptr, Format);
 	char buffer[1024];
 	_vsnprintf_s(buffer, ARRAY_COUNT(buffer), Format, argptr);
+	buffer[ARRAY_COUNT(buffer)-1] = 0;
 	va_end(argptr);
 
 	printf("%s", buffer);
