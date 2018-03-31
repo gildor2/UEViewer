@@ -394,7 +394,21 @@ public:
 		// Read pak index
 
 		FStaticString<MAX_PACKAGE_PATH> MountPoint;
-		*InfoReader << MountPoint;
+
+		TRY {
+			// Read MountPoint with catching error, to override error message.
+			*InfoReader << MountPoint;
+		} CATCH {
+			if (info.bEncryptedIndex)
+			{
+				// Display nice error message
+				appError("Error during loading of encrypted pak file index. Probably the provided AES key is not correct.");
+			}
+			else
+			{
+				THROW_AGAIN;
+			}
+		}
 
 		// Process MountPoint
 		if (!MountPoint.RemoveFromStart("../../.."))

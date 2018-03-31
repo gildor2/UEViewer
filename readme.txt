@@ -184,6 +184,9 @@ LZ4
 
 Changes
 ~~~~~~~
+31.03.2018
+- improved handling of AES keys: stripping spaces from key string, improved encryption errors reporting
+
 23.03.2018
 - updated for final UE4.19 version (changed SkeletalMesh format)
 

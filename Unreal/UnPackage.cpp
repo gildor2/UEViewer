@@ -760,7 +760,7 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	if (S.Tag != PACKAGE_FILE_TAG)
 	{
 		if (S.Tag != PACKAGE_FILE_TAG_REV)
-			appError("Wrong tag in package: %08X", S.Tag);
+			appError("Wrong tag in package (%08X). Probably the file is encrypted.", S.Tag);
 		Ar.ReverseBytes = true;
 		S.Tag = PACKAGE_FILE_TAG;
 	}

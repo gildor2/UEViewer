@@ -664,6 +664,10 @@ static void CheckHexAesKey()
 	NewKey.Empty(GAesKey.Len() / 2 + 1);
 
 	int remains = GAesKey.Len() - 2;
+	if (remains & 1)
+	{
+		appError("Hexadecimal AES key contains odd number of characters");
+	}
 	while (remains > 0)
 	{
 		uint8 b = 0;
@@ -671,12 +675,18 @@ static void CheckHexAesKey()
 		{
 			// this code will not be executed only in a case of odd character count, for the first char
 			char c = tolower(*s++);
-			if (!ishex(c)) return;
+			if (!ishex(c))
+			{
+				appError("Illegal character in hexadecimal AES key");
+			}
 			b = hextodigit(c) << 4;
 			remains--;
 		}
 		char c = tolower(*s++);
-		if (!ishex(c)) return;
+		if (!ishex(c))
+		{
+			appError("Illegal character in hexadecimal AES key");
+		}
 		b |= hextodigit(c);
 		remains--;
 
@@ -690,6 +700,7 @@ bool UE4EncryptedPak()
 {
 #if HAS_UI
 	GAesKey = GApplication.ShowUE4AesKeyDialog();
+	GAesKey.TrimStartAndEndInline();
 	CheckHexAesKey();
 	return GAesKey.Len() > 0;
 #else
@@ -915,6 +926,7 @@ int main(int argc, char **argv)
 		else if (!strnicmp(opt, "aes=", 4))
 		{
 			GAesKey = opt+4;
+			GAesKey.TrimStartAndEnd();
 			CheckHexAesKey();
 		}
 		// information commands
