@@ -3,10 +3,16 @@
 LIBC       = shared
 #MAPFILES   = 1
 CONSOLE    = 1
+
+!if "$OPTIMIZE" eq ""		# allow overriding of OPTIMIZE in parent project
 OPTIMIZE   = size
+!endif
 
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
-OLDCRT     = 1				# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
+
+!if "$OLDCRT" eq ""			# allow overriding of OLDCRT in parent project
+OLDCRT = 1					# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
+!endif
 
 #?? TODO: UE3_LIBS seems combines all libraries used in UModel, but which aren't for UE3 exactly. Rename constant?
 

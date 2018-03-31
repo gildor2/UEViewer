@@ -121,9 +121,24 @@ public:
 	FString(const char* src)
 	: str(src)
 	{}
+	FString(const FString& src)
+	: str(src.str)
+	{}
+	FString(FString&& src)
+	: str(std::move(src.str))
+	{}
 	FString& operator=(const char* src)
 	{
 		str = src;
+		return *this;
+	}
+	FString& operator=(const FString& src)
+	{
+		str = src.str;
+	}
+	FString& operator=(FString&& src)
+	{
+		str = std::move(src.str);
 		return *this;
 	}
 	FString& operator+=(const char* text)
