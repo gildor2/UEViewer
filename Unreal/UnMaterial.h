@@ -99,6 +99,7 @@ enum ETexturePixelFormat
 	TPF_V8U8,
 	TPF_V8U8_2,			// different decoding, has color offset compared to TPF_V8U8
 	TPF_BC5,			// alias names: 3Dc, ATI2, BC5
+	TPF_BC6H,
 	TPF_BC7,
 	TPF_A1,				// 8 monochrome pixels per byte
 	TPF_RGBA4,

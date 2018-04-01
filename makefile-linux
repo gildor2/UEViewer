@@ -117,6 +117,8 @@ UE3_LIBS_FILES = \
 	$(OUT)/convert.o \
 	$(OUT)/dds.o \
 	$(OUT)/decompress-bptc.o \
+	$(OUT)/decompress-bptc-float.obj \
+	$(OUT)/half-float.obj \
 	$(OUT)/decompress-eac.o \
 	$(OUT)/decompress-etc.o \
 	$(OUT)/file-info.o \
@@ -1353,6 +1355,12 @@ $(OUT)/bptc-tables.o : ./libs/detex/bptc-tables.cpp $(DEPENDS_63)
 
 $(OUT)/decompress-bptc.o : ./libs/detex/decompress-bptc.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-bptc.o ./libs/detex/decompress-bptc.cpp
+
+$(OUT)/decompress-bptc-float.obj : ./libs/detex/decompress-bptc-float.cpp $(DEPENDS_63)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-bptc-float.obj ./libs/detex/decompress-bptc-float.cpp
+
+$(OUT)/half-float.obj : ./libs/detex/half-float.cpp $(DEPENDS_63)
+	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/half-float.obj ./libs/detex/half-float.cpp
 
 DEPENDS_64 = \
 	libs/detex/bits.h \
