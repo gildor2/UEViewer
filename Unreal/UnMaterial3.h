@@ -274,10 +274,8 @@ enum EPixelFormat
 	PF_ASTC_10x10,
 	PF_ASTC_12x12,
 	PF_BC6H,
-#endif // UNREAL4
-#if THIEF4
 	PF_BC7,
-#endif
+#endif // UNREAL4
 #if MASSEFF
 	PF_NormalMap_LQ,
 	PF_NormalMap_HQ,

@@ -116,7 +116,7 @@ void UTexture2D::Serialize(FArchive &Ar)
 			//   PF_BC6=20
 			//   PF_BC7=21
 			// Other enum values are in the same order.
-			if (Format == PF_R16F)
+			if (Format == 22)
 			{
 				Format = PF_BC7;
 			}
@@ -841,6 +841,8 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		intFormat = TPF_BC7;
 	else if (Format == PF_A1)
 		intFormat = TPF_A1;
+	else if (Format == PF_FloatRGBA)
+		intFormat = TPF_FLOAT_RGBA;
 #if MASSEFF
 //	else if (Format == PF_NormapMap_LQ) -- seems not used
 //		intFormat = TPF_BC5;

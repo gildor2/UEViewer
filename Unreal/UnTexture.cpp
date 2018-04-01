@@ -43,64 +43,40 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 	unguard;
 }
 
-static void float2rgbe(float red, float green, float blue, unsigned char rgbe[4])
-{
-	guard(float2rgbe);
-
-	float v;
-	int e;
-	v = red;
-	if (green > v) v = green;
-	if (blue > v) v = blue;
-	if (v < 1e-32) 
-	{
-		rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
-	}
-	else 
-	{
-		v = frexp(v, &e) * 256.0 / v;
-		rgbe[0] = (unsigned char)(red * v);
-		rgbe[1] = (unsigned char)(green * v);
-		rgbe[2] = (unsigned char)(blue * v);
-		rgbe[3] = (unsigned char)(e + 128);
-	}
-
-	unguard;
-}
-
 const CPixelFormatInfo PixelFormatInfo[] =
 {
-	// FourCC				BlockSizeX	BlockSizeY BytesPerBlock X360AlignX	X360AlignY	Name
-	{ 0,						1,			1,			1,			0,			0,			"P8"		},	// TPF_P8
-	{ 0,						1,			1,			1,			64,			64,			"G8"		},	// TPF_G8
-//	{																									},	// TPF_G16
-	{ 0,						1,			1,			3,			0,			0,			"RGB8"		},	// TPF_RGB8
-	{ 0,						1,			1,			4,			32,			32,			"RGBA8"		},	// TPF_RGBA8
-	{ 0,						1,			1,			4,			32,			32,			"BGRA8"		},	// TPF_BGRA8
-	{ BYTES4('D','X','T','1'),	4,			4,			8,			128,		128,		"DXT1"		},	// TPF_DXT1
-	{ BYTES4('D','X','T','3'),	4,			4,			16,			128,		128,		"DXT3"		},	// TPF_DXT3
-	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,		"DXT5"		},	// TPF_DXT5
-	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,		"DXT5N"		},	// TPF_DXT5N
-	{ 0,						1,			1,			2,			64,			32,			"V8U8"		},	// TPF_V8U8
-	{ 0,						1,			1,			2,			64,			32,			"V8U8"		},	// TPF_V8U8_2
-	{ BYTES4('A','T','I','2'),	4,			4,			16,			0,			0,			"BC5"		},	// TPF_BC5
-	{ 0,						4,			4,			16,			0,			0,			"BC6H"		},	// TPF_BC6H
-	{ 0,						4,			4,			16,			0,			0,			"BC7"		},	// TPF_BC7
-	{ 0,						8,			1,			1,			0,			0,			"A1"		},	// TPF_A1
-	{ 0,						1,			1,			2,			0,			0,			"RGBA4"		},	// TPF_RGBA4
+	// FourCC				BlockSizeX	BlockSizeY BytesPerBlock X360AlignX	X360AlignY	Float	Name
+	{ 0,						1,			1,			1,			0,			0,		0,		"P8"		},	// TPF_P8
+	{ 0,						1,			1,			1,			64,			64,		0,		"G8"		},	// TPF_G8
+//	{																										},	// TPF_G16
+	{ 0,						1,			1,			3,			0,			0,		0,		"RGB8"		},	// TPF_RGB8
+	{ 0,						1,			1,			4,			32,			32,		0,		"RGBA8"		},	// TPF_RGBA8
+	{ 0,						1,			1,			4,			32,			32,		0,		"BGRA8"		},	// TPF_BGRA8
+	{ BYTES4('D','X','T','1'),	4,			4,			8,			128,		128,	0,		"DXT1"		},	// TPF_DXT1
+	{ BYTES4('D','X','T','3'),	4,			4,			16,			128,		128,	0,		"DXT3"		},	// TPF_DXT3
+	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,	0,		"DXT5"		},	// TPF_DXT5
+	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,	0,		"DXT5N"		},	// TPF_DXT5N
+	{ 0,						1,			1,			2,			64,			32,		0,		"V8U8"		},	// TPF_V8U8
+	{ 0,						1,			1,			2,			64,			32,		0,		"V8U8"		},	// TPF_V8U8_2
+	{ BYTES4('A','T','I','2'),	4,			4,			16,			0,			0,		0,		"BC5"		},	// TPF_BC5
+	{ 0,						4,			4,			16,			0,			0,		1,		"BC6H"		},	// TPF_BC6H
+	{ 0,						4,			4,			16,			0,			0,		0,		"BC7"		},	// TPF_BC7
+	{ 0,						8,			1,			1,			0,			0,		0,		"A1"		},	// TPF_A1
+	{ 0,						1,			1,			2,			0,			0,		0,		"RGBA4"		},	// TPF_RGBA4
+	{ 0,						1,			1,			16,			0,			0,		1,		"FLOAT_RGBA"},	// TPF_FLOAT_RGBA
 #if SUPPORT_IPHONE
-	{ 0,						8,			4,			8,			0,			0,			"PVRTC2"	},	// TPF_PVRTC2
-	{ 0,						4,			4,			8,			0,			0,			"PVRTC4"	},	// TPF_PVRTC4
+	{ 0,						8,			4,			8,			0,			0,		0,		"PVRTC2"	},	// TPF_PVRTC2
+	{ 0,						4,			4,			8,			0,			0,		0,		"PVRTC4"	},	// TPF_PVRTC4
 #endif
 #if SUPPORT_ANDROID
-	{ 0,						4,			4,			8,			0,			0,			"ETC1"		},	// TPF_ETC1
-	{ 0,						4,			4,			8,			0,			0,			"ETC2_RGB"	},	// TPF_ETC2_RGB
-	{ 0,						4,			4,			16,			0,			0,			"ETC2_RGBA"	},	// TPF_ETC2_RGBA
-	{ 0,						4,			4,			16,			0,			0,			"ATC_4x4"	},	// TPF_ASTC_4x4
-	{ 0,						6,			6,			16,			0,			0,			"ATC_6x6"	},	// TPF_ASTC_6x6
-	{ 0,						8,			8,			16,			0,			0,			"ATC_8x8"	},	// TPF_ASTC_8x8
-	{ 0,						10,			10,			16,			0,			0,			"ATC_10x10"	},	// TPF_ASTC_10x10
-	{ 0,						12,			12,			16,			0,			0,			"ATC_12x12"	},	// TPF_ASTC_12x12
+	{ 0,						4,			4,			8,			0,			0,		0,		"ETC1"		},	// TPF_ETC1
+	{ 0,						4,			4,			8,			0,			0,		0,		"ETC2_RGB"	},	// TPF_ETC2_RGB
+	{ 0,						4,			4,			16,			0,			0,		0,		"ETC2_RGBA"	},	// TPF_ETC2_RGBA
+	{ 0,						4,			4,			16,			0,			0,		0,		"ATC_4x4"	},	// TPF_ASTC_4x4
+	{ 0,						6,			6,			16,			0,			0,		0,		"ATC_6x6"	},	// TPF_ASTC_6x6
+	{ 0,						8,			8,			16,			0,			0,		0,		"ATC_8x8"	},	// TPF_ASTC_8x8
+	{ 0,						10,			10,			16,			0,			0,		0,		"ATC_10x10"	},	// TPF_ASTC_10x10
+	{ 0,						12,			12,			16,			0,			0,		0,		"ATC_12x12"	},	// TPF_ASTC_12x12
 #endif
 };
 
@@ -131,7 +107,8 @@ byte *CTextureData::Decompress(int MipLevel)
 	int VSize = Mip.VSize;
 	const byte *Data = Mip.CompressedData;
 
-	int size = USize * VSize * 4;
+	int pixelSize = PixelFormatInfo[Format].Float ? 16 : 4;
+	int size = USize * VSize * pixelSize;
 	byte *dst = new byte [size];
 
 #if 0
@@ -194,6 +171,19 @@ byte *CTextureData::Decompress(int MipLevel)
 	case TPF_RGBA8:
 		{
 			memcpy(dst, Data, USize * VSize * 4);
+		}
+		return dst;
+	case TPF_FLOAT_RGBA:
+		{
+			const uint16 *s = (uint16*)Data;
+			float *d = (float*)dst;
+			for (int i = 0; i < USize * VSize; i++)
+			{
+				*d++ = half2float(*s++);
+				*d++ = half2float(*s++);
+				*d++ = half2float(*s++);
+				*d++ = half2float(*s++);
+			}
 		}
 		return dst;
 	case TPF_BGRA8:
@@ -395,8 +385,7 @@ byte *CTextureData::Decompress(int MipLevel)
 #endif // SUPPORT_ANDROID
 	case TPF_BC6H:
 		{
-			// decompress HDR image as RGBE
-			float *tempData = new float[USize * VSize * 4];
+			// decompress HDR image as float[w*h*4]
 			detexTexture tex;
 			tex.format = DETEX_TEXTURE_FORMAT_BPTC_FLOAT;
 			tex.data = const_cast<byte*>(Data);
@@ -405,16 +394,8 @@ byte *CTextureData::Decompress(int MipLevel)
 			tex.width_in_blocks = USize / 4;
 			tex.height_in_blocks = VSize / 4;
 			PROFILE_DDS(appResetProfiler());
-			detexDecompressTextureLinear(&tex, reinterpret_cast<uint8_t*>(tempData), DETEX_PIXEL_FORMAT_FLOAT_RGBX32);
+			detexDecompressTextureLinear(&tex, dst, DETEX_PIXEL_FORMAT_FLOAT_RGBX32);
 			PROFILE_DDS(appPrintProfiler());
-
-			for (int p = 0; p < USize * VSize; ++p)
-			{
-				float *fPixel = tempData + p * 4;
-				float2rgbe(fPixel[0], fPixel[1], fPixel[2], dst + p * 4);
-			}
-
-			delete[] tempData;
 		}
 		return dst;
 	case TPF_BC7:

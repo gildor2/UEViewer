@@ -103,6 +103,7 @@ enum ETexturePixelFormat
 	TPF_BC7,
 	TPF_A1,				// 8 monochrome pixels per byte
 	TPF_RGBA4,
+	TPF_FLOAT_RGBA,
 #if SUPPORT_IPHONE
 	TPF_PVRTC2,
 	TPF_PVRTC4,
@@ -129,6 +130,7 @@ struct CPixelFormatInfo
 	byte		BytesPerBlock;
 	int16		X360AlignX;			// 0 when unknown or not supported on XBox360
 	int16		X360AlignY;
+	byte		Float;				// 0 for RGBA8, 1 for RGBA32
 	const char*	Name;
 };
 

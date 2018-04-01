@@ -187,14 +187,47 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 }
 
 // Radiance file format
+
+static void float2rgbe(float red, float green, float blue, byte* rgbe)
+{
+	float v;
+	int e;
+	v = red;
+	if (green > v) v = green;
+	if (blue > v) v = blue;
+	if (v < 1e-32)
+	{
+		rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
+	}
+	else
+	{
+		v = frexp(v, &e) * 256.0f / v; //?? TODO: check if frexp is slow and could be optimized
+		rgbe[0] = byte(red * v);
+		rgbe[1] = byte(green * v);
+		rgbe[2] = byte(blue * v);
+		rgbe[3] = byte(e + 128);
+	}
+}
+
 static void WriteHDR(FArchive &Ar, int width, int height, byte *pic)
 {
 	guard(WriteHDR);
 
-	char hdr[64] = {0};
-	sprintf(hdr, "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y %d +X %d\n", height, width);
+	char hdr[64];
+	appSprintf(ARRAY_ARG(hdr), "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y %d +X %d\n", height, width);
+
+	//!! TODO: compress HDR file (seems have RLE support)
+	// Convert float[w*h*4] to rgbe[w*h] inplace
+	const float* floatSrc = (float*)pic;
+	byte* byteDst = pic;
+	for (int p = 0; p < width * height; p++, floatSrc += 4, byteDst += 4)
+	{
+		float2rgbe(floatSrc[0], floatSrc[1], floatSrc[2], byteDst);
+	}
+
 	Ar.Serialize(hdr, strlen(hdr));
 	Ar.Serialize(pic, width * height * 4);
+
 	unguard;
 }
 
@@ -294,10 +327,9 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		pic = new byte[4];
 	}
 
-	// for HDR textures use Radiance format
-	if (TexData.Format == TPF_BC6H)
+	// For HDR textures use Radiance format
+	if (PixelFormatInfo[TexData.Format].Float)
 	{
-
 		FArchive *Ar = CreateExportArchive(Tex, "%s.hdr", Tex->Name);
 		if (Ar)
 		{
