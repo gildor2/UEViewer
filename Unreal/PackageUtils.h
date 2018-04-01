@@ -35,7 +35,7 @@ struct FileInfo
 	char	FileName[512];
 };
 
-bool ScanPackages(TArray<FileInfo>& info, IProgressCallback* progress = NULL);
+bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress = NULL);
 
 
 // Class statistics

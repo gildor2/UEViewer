@@ -183,7 +183,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 }
 
 
-bool ScanPackages(TArray<FileInfo>& info, IProgressCallback* progress)
+bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress)
 {
 	info.Empty();
 	ScanPackageData data;

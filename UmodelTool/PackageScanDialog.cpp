@@ -14,7 +14,7 @@ public:
 		progress.Show("Scanning packages");
 		progress.SetDescription("Scanning package");
 
-		bool done = ScanPackages(PkgInfo, &progress);
+		bool done = ScanPackageVersions(PkgInfo, &progress);
 		progress.CloseDialog();
 
 		if (done)
