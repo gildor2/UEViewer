@@ -444,7 +444,7 @@ void Uniform1i(GLint, GLint) ARGS
 //void Uniform4i(GLint, GLint, GLint, GLint, GLint);
 //void Uniform1fv(GLint, GLsizei, const GLfloat *);
 //void Uniform2fv(GLint, GLsizei, const GLfloat *);
-void Uniform3fv(GLint, GLsizei, const GLfloat *);
+void Uniform3fv(GLint, GLsizei, const GLfloat *v);
 //void Uniform4fv(GLint, GLsizei, const GLfloat *);
 //void Uniform1iv(GLint, GLsizei, const GLint *);
 //void Uniform2iv(GLint, GLsizei, const GLint *);
@@ -518,6 +518,8 @@ void FramebufferTexture2DEXT(GLenum target, GLenum attachment, GLenum textarget,
 void FramebufferRenderbufferEXT(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer) ARGS
 //void GetFramebufferAttachmentParameterivEXT(GLenum target, GLenum attachment, GLenum pname, GLint *params) ARGS
 void GenerateMipmapEXT(GLenum target) ARGS
+
+#name GL_ARB_half_float_pixel
 
 #name GL_ARB_texture_float
 

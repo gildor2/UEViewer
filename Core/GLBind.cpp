@@ -27,9 +27,13 @@ struct glDummy_t {
 gl_config_t gl_config;
 
 
-#define DISABLE_LOG 0
-#if !NO_GL_LOG && DISABLE_LOG
-static COutputDeviceFile *LogFile;
+#define ENABLE_LOG 0
+
+#if ENABLE_LOG
+#define NO_GL_LOG 0
+//static COutputDeviceFile *LogFile;
+#else
+#define NO_GL_LOG 1
 #endif
 
 #include "GLBindImpl.h"
@@ -98,7 +102,7 @@ bool QGL_Init(const char *libName)
 #if !USE_SDL
 void QGL_Shutdown()
 {
-#if !NO_GL_LOG
+#if ENABLE_LOG
 	if (LogFile)
 	{
 		delete LogFile;
@@ -338,8 +342,8 @@ void QGL_InitExtensions()
 
 #endif // NUM_EXTENSIONS
 
-#if !NO_GL_LOG
-	GL = logFuncs;		//!! LOGGING
+#if ENABLE_LOG
+	GL = logFuncs;
 #endif
 
 	unguard;
@@ -413,11 +417,11 @@ void QGL_PrintExtensionsString(const char *label, const char *str, const char *m
 	Logging OpenGL function calls
 -----------------------------------------------------------------------------*/
 
-#if !NO_GL_LOG && DISABLE_LOG
+#if ENABLE_LOG
 
 void QGL_EnableLogging(bool enable)
 {
-	if (enable)
+/*	if (enable)
 	{
 		if (!LogFile)
 		{
@@ -443,14 +447,14 @@ void QGL_EnableLogging(bool enable)
 		}
 
 		GL = lib;
-	}
+	} */
 }
 
 
 void QGL_LogMessage(const char *text)
 {
-	if (!LogFile) return;
-	LogFile->Printf("%s\n", text);	// output text with "\n"
+//	if (!LogFile) return;
+//	LogFile->Printf("%s\n", text);	// output text with "\n"
 }
 
 #endif // logging

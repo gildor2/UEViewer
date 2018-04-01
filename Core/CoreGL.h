@@ -9,7 +9,6 @@
 #include <GL/glext.h>
 
 #define USE_SDL			1
-#define NO_GL_LOG		1
 #include "GLBind.h"
 
 bool	QGL_Init(const char *libName);

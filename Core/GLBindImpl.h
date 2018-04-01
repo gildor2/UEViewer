@@ -3,15 +3,15 @@
 #if _WIN32
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	37
-#	define NUM_EXTENSIONS	10
+#	define NUM_EXTENSIONS	11
 #elif __linux__
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	37
-#	define NUM_EXTENSIONS	10
+#	define NUM_EXTENSIONS	11
 #else
 #	define NUM_GLFUNCS	58
 #	define NUM_EXTFUNCS	37
-#	define NUM_EXTENSIONS	10
+#	define NUM_EXTENSIONS	11
 #endif
 
 
@@ -134,6 +134,26 @@ static const char *EnumName(GLenum v)
 {
 	switch (v)
 	{
+	case GL_NEAREST:
+		return "NEAREST";
+	case GL_LINEAR:
+		return "LINEAR";
+	case GL_NEAREST_MIPMAP_NEAREST:
+		return "NEAREST_MIPMAP_NEAREST";
+	case GL_LINEAR_MIPMAP_NEAREST:
+		return "LINEAR_MIPMAP_NEAREST";
+	case GL_NEAREST_MIPMAP_LINEAR:
+		return "NEAREST_MIPMAP_LINEAR";
+	case GL_LINEAR_MIPMAP_LINEAR:
+		return "LINEAR_MIPMAP_LINEAR";
+	case GL_TEXTURE_MAG_FILTER:
+		return "TEXTURE_MAG_FILTER";
+	case GL_TEXTURE_MIN_FILTER:
+		return "TEXTURE_MIN_FILTER";
+	case GL_TEXTURE_WRAP_S:
+		return "TEXTURE_WRAP_S";
+	case GL_TEXTURE_WRAP_T:
+		return "TEXTURE_WRAP_T";
 	default:
 		return va("UNK_%X", v);
 	}
@@ -631,10 +651,10 @@ static void APIENTRY logUniform1i(GLint arg1, GLint arg2)
 	lib.Uniform1i(arg1, arg2);
 }
 
-static void APIENTRY logUniform3fv(GLint arg1, GLsizei arg2, const GLfloat)
+static void APIENTRY logUniform3fv(GLint arg1, GLsizei arg2, const GLfloat * v)
 {
 	printf("%s\n", "glUniform3fv");
-	lib.Uniform3fv(arg1, arg2, GLfloat);
+	lib.Uniform3fv(arg1, arg2, v);
 }
 
 static void APIENTRY logVertexAttrib3fv(GLuint index, const GLfloat * v)
@@ -855,6 +875,7 @@ static extInfo_t extInfo[NUM_EXTENSIONS] = {
 	{"3.1\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_EXT_texture_compression_s3tc\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_EXT_framebuffer_object\0", NULL, NULL, NUM_GLFUNCS+26, 11, 0, 0},
+	{"GL_ARB_half_float_pixel\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_ARB_texture_float\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_ARB_texture_compression_rgtc\0" "GL_EXT_texture_compression_rgtc\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_ARB_texture_compression_bptc\0", NULL, NULL, 0, 0, 0, 0}

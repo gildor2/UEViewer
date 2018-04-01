@@ -89,7 +89,7 @@ struct GL_t
 	void	(APIENTRY * Uniform1f) (GLint, GLfloat);
 	void	(APIENTRY * Uniform2f) (GLint, GLfloat, GLfloat);
 	void	(APIENTRY * Uniform1i) (GLint, GLint);
-	void	(APIENTRY * Uniform3fv) (GLint, GLsizei, const GLfloat *);
+	void	(APIENTRY * Uniform3fv) (GLint, GLsizei, const GLfloat *v);
 	void	(APIENTRY * VertexAttrib3fv) (GLuint index, const GLfloat *v);
 	void	(APIENTRY * VertexAttribPointer) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 	void	(APIENTRY * BindRenderbufferEXT) (GLenum target, GLuint renderbuffer);
@@ -234,9 +234,10 @@ extern GL_t GL;
 #define QGL_3_1	(1 << 4)
 #define QGL_EXT_TEXTURE_COMPRESSION_S3TC	(1 << 5)
 #define QGL_EXT_FRAMEBUFFER_OBJECT	(1 << 6)
-#define QGL_ARB_TEXTURE_FLOAT	(1 << 7)
-#define QGL_ARB_TEXTURE_COMPRESSION_RGTC	(1 << 8)
-#define QGL_ARB_TEXTURE_COMPRESSION_BPTC	(1 << 9)
+#define QGL_ARB_HALF_FLOAT_PIXEL	(1 << 7)
+#define QGL_ARB_TEXTURE_FLOAT	(1 << 8)
+#define QGL_ARB_TEXTURE_COMPRESSION_RGTC	(1 << 9)
+#define QGL_ARB_TEXTURE_COMPRESSION_BPTC	(1 << 10)
 
 #if _WIN32
 
