@@ -13,9 +13,6 @@ UE1 CLASS TREE:
 
 -----------------------------------------------------------------------------*/
 
-//?? declare separately? place to UnCore?
-float half2float(uint16 h);
-
 struct FPackedNormal;
 struct CMeshVertex;
 void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V);

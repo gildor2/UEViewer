@@ -28,30 +28,6 @@
 #define DBG_STAT(...)
 #endif
 
-//?? move outside?
-/*
- * Half = Float16
- * http://www.openexr.com/  source: ilmbase-*.tar.gz/Half/toFloat.cpp
- * http://en.wikipedia.org/wiki/Half_precision
- * Also look at GL_ARB_half_float_pixel
- */
-float half2float(uint16 h)
-{
-	union
-	{
-		float		f;
-		unsigned	df;
-	} f;
-
-	int sign = (h >> 15) & 0x00000001;
-	int exp  = (h >> 10) & 0x0000001F;
-	int mant =  h        & 0x000003FF;
-
-	exp  = exp + (127 - 15);
-	f.df = (sign << 31) | (exp << 23) | (mant << 13);
-	return f.f;
-}
-
 
 //!! RENAME to CopyNormals/ConvertNormals/PutNormals/RepackNormals etc
 void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)

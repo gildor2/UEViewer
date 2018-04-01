@@ -1154,6 +1154,7 @@ struct FPackedNormal
 	}
 };
 
+float half2float(uint16 h);
 
 #if UNREAL4
 
