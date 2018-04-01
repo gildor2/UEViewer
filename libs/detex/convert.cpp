@@ -581,6 +581,7 @@ int nu_pixels, uint8_t * DETEX_RESTRICT target_pixel_buffer) {
 
 // Conversion from normalized half-float to 16-bit integer (in-place).
 
+#if 0
 static void ConvertPixel16FloatR16ToPixel16R16(uint8_t * DETEX_RESTRICT source_pixel_buffer,
 int nu_pixels, uint8_t * DETEX_RESTRICT target_pixel_buffer) {
 	detexConvertNormalizedHalfFloatToUInt16((uint16_t *)source_pixel_buffer, nu_pixels);
@@ -605,6 +606,7 @@ static void ConvertPixel64FloatRGBA16ToPixel64RGBA16(uint8_t * DETEX_RESTRICT so
 int nu_pixels, uint8_t * DETEX_RESTRICT target_pixel_buffer) {
 	detexConvertNormalizedHalfFloatToUInt16((uint16_t *)source_pixel_buffer, nu_pixels * 4);
 }
+#endif
 
 // Conversion from HDR half-float to 16-bit integer (in-place). Depends on gamma parameters.
 

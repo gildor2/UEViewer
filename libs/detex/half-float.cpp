@@ -19,7 +19,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include <fenv.h>
+//#include <fenv.h>
 
 #include "detex.h"
 #include "half-float.h"
@@ -267,11 +267,11 @@ void * DETEX_RESTRICT source, int numel)
 
 
 // Conversion functions.
-
 void detexConvertHalfFloatToFloat(uint16_t *source_buffer, int n, float *target_buffer) {
     halfp2singles(target_buffer, source_buffer, n);
 }
- 
+
+#if 0
 void detexConvertFloatToHalfFloat(float *source_buffer, int n, uint16_t *target_buffer) {
 	singles2halfp(target_buffer, source_buffer, n);
 }
@@ -295,4 +295,4 @@ uint16_t * DETEX_RESTRICT target_buffer) {
 		target_buffer[i] = (uint16_t)u;
 	}
 }
-
+#endif

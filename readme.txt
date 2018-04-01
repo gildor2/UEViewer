@@ -184,6 +184,10 @@ LZ4
 
 Changes
 ~~~~~~~
+01.04.2018
+- implemented HDR texture support; textures are exported into radiance .hdr file format (RGB, no alpha channel);
+  initial implepemtation has been contributed by m0xf (https://github.com/gildor2/UModel/pull/60)
+
 31.03.2018
 - improved handling of AES keys: stripping spaces from key string, improved encryption errors reporting
 

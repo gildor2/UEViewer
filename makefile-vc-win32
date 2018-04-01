@@ -117,12 +117,12 @@ UE3_LIBS_FILES = \
 	$(OUT)/clamp.obj \
 	$(OUT)/convert.obj \
 	$(OUT)/dds.obj \
-	$(OUT)/decompress-bptc.obj \
 	$(OUT)/decompress-bptc-float.obj \
-	$(OUT)/half-float.obj \
+	$(OUT)/decompress-bptc.obj \
 	$(OUT)/decompress-eac.obj \
 	$(OUT)/decompress-etc.obj \
 	$(OUT)/file-info.obj \
+	$(OUT)/half-float.obj \
 	$(OUT)/misc.obj \
 	$(OUT)/texture.obj \
 	$(OUT)/rijndael.obj
@@ -1360,15 +1360,11 @@ DEPENDS = \
 $(OUT)/bptc-tables.obj : ./libs/detex/bptc-tables.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/bptc-tables.obj" ./libs/detex/bptc-tables.cpp
 
-$(OUT)/decompress-bptc.obj : ./libs/detex/decompress-bptc.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-bptc.obj" ./libs/detex/decompress-bptc.cpp
-
 $(OUT)/decompress-bptc-float.obj : ./libs/detex/decompress-bptc-float.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-bptc-float.obj" ./libs/detex/decompress-bptc-float.cpp
 
-$(OUT)/half-float.obj : ./libs/detex/half-float.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/half-float.obj" ./libs/detex/half-float.cpp
-	
+$(OUT)/decompress-bptc.obj : ./libs/detex/decompress-bptc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-bptc.obj" ./libs/detex/decompress-bptc.cpp
 
 DEPENDS = \
 	libs/detex/bits.h \
@@ -1402,6 +1398,13 @@ $(OUT)/dds.obj : ./libs/detex/dds.cpp $(DEPENDS)
 
 $(OUT)/file-info.obj : ./libs/detex/file-info.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/file-info.obj" ./libs/detex/file-info.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/half-float.h
+
+$(OUT)/half-float.obj : ./libs/detex/half-float.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/half-float.obj" ./libs/detex/half-float.cpp
 
 DEPENDS = \
 	libs/detex/detex.h \

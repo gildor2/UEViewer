@@ -44,7 +44,7 @@ PLATFORM="vc-win32"
 # allow platform overriding from command line
 [ "$1" ] && PLATFORM=$1
 
-export vc_ver=2015
+export vc_ver=2010
 
 GENMAKE_OPTIONS=
 if [ $vc_ver -ge 2015 ]; then
