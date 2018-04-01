@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 
 	// scan packages
 	TArray<FileInfo> PkgInfo;
-	ScanPackages(PkgInfo);
+	ScanPackageVersions(PkgInfo);
 
 	printf("Version summary:\n"
 		   "%-9s  %-9s  %s   %s\n", "Ver", "LicVer", "Count", "Filename");
