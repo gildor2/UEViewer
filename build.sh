@@ -44,7 +44,12 @@ PLATFORM="vc-win32"
 # allow platform overriding from command line
 [ "$1" ] && PLATFORM=$1
 
-export vc_ver=2010
+export vc_ver=2015
+
+GENMAKE_OPTIONS=
+if [ $vc_ver -ge 2015 ]; then
+	GENMAKE_OPTIONS=OLDCRT=0
+fi
 
 [ "$project" ] || project="UmodelTool/umodel"		# setup default prohect name
 [ "$root"    ] || root="."
@@ -63,7 +68,7 @@ fi
 
 # update makefile when needed
 # [ $makefile -ot $project ] &&
-$root/Tools/genmake $project.project TARGET=$PLATFORM > $makefile
+$root/Tools/genmake $project.project TARGET=$PLATFORM $GENMAKE_OPTIONS > $makefile
 
 # build
 case "$PLATFORM" in
