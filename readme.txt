@@ -184,6 +184,10 @@ LZ4
 
 Changes
 ~~~~~~~
+02.04.2018
+- added possibility to change shape of material preview with 'S' key
+- fixes some issues with material/texture preview mode (wrong lighting, wrong reflections)
+
 01.04.2018
 - implemented HDR texture support; textures are exported into radiance .hdr file format (RGB, no alpha channel);
   initial implepemtation has been contributed by m0xf (https://github.com/gildor2/UModel/pull/60)
@@ -570,7 +574,7 @@ Changes
 
 01.09.2014
 - first public release of umodel with UI; to show the UI, launch umodel without arguments;
-  to show package selection dialog at any time, press "O" key
+  to show package selection dialog at any time, press 'O' key
 
 31.08.2014
 - improved -pkginfo output: displaying class statistics for loaded package(s)
@@ -746,11 +750,11 @@ Changes
 - fixed crash in StaticMesh with recent Lineage 2 update
 
 20.03.2012
-- Shift+Up/Down key could be used to change scene FOV
+- 'Shift'+'Up'/'Down' key could be used to change scene FOV
 
 19.03.2012
-- Ctrl+Q key will toggle visualization of debug information (text, 3D axis etc)
-- Alt+S key will produce screenshot with transparent background
+- 'Ctrl+Q' key will toggle visualization of debug information (text, 3D axis etc)
+- 'Alt+S' key will produce screenshot with transparent background
 
 07.03.2012
 - implemented Mass Effect 3 support

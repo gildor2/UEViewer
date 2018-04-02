@@ -15,6 +15,8 @@
 
 bool CMaterialViewer::ShowOutline = false;
 bool CMaterialViewer::ShowChannels = false;
+int CMaterialViewer::ShapeIndex = 0;
+
 static void OutlineMaterial(UObject *Obj, int indent = 0);
 
 
@@ -33,6 +35,10 @@ void CMaterialViewer::ProcessKey(int key)
 	case 'c':
 		ShowChannels = !ShowChannels;
 		break;
+	case 's':
+		if (++ShapeIndex >= 2)
+			ShapeIndex = 0;
+		break;
 	default:
 		CObjectViewer::ProcessKey(key);
 	}
@@ -46,6 +52,224 @@ void CMaterialViewer::ShowHelp()
 	DrawKeyHelp("M", "show material graph");
 	if (IsTexture)
 		DrawKeyHelp("C", "show texture channels");
+	DrawKeyHelp("S", "toggle preview shape");
+}
+
+// This function could be used to debug mesh generation code
+static void ShowNormals(const CVec3* Verts, const CVec4* Normals, const CVec3* Tangents, int NumVerts)
+{
+	glDisable(GL_LIGHTING);
+	BindDefaultMaterial(true);
+
+	glBegin(GL_LINES);
+	glColor3f(0.5, 1, 0);
+	CVec3 tmp;
+	const float VisualLength = 5.0f;
+	for (int i = 0; i < NumVerts; i++)
+	{
+		glVertex3fv(Verts[i].v);
+		VectorMA(Verts[i], VisualLength, Normals[i], tmp);
+		glVertex3fv(tmp.v);
+	}
+	glColor3f(0, 0.5f, 1);
+	for (int i = 0; i < NumVerts; i++)
+	{
+		const CVec3 &v = Verts[i];
+		glVertex3fv(v.v);
+		VectorMA(v, VisualLength, Tangents[i], tmp);
+		glVertex3fv(tmp.v);
+	}
+	glColor3f(1, 0, 0.5f);
+	for (int i = 0; i < NumVerts; i++)
+	{
+		// decode binormal
+		CVec3 binormal;
+		cross(Normals[i], Tangents[i], binormal);
+		binormal.Scale(Normals[i].v[3]);
+		// render
+		const CVec3 &v = Verts[i];
+		glVertex3fv(v.v);
+		VectorMA(v, VisualLength, binormal, tmp);
+		glVertex3fv(tmp.v);
+	}
+	glEnd();
+}
+
+void DrawBoxMesh(GLint aNormal, GLint aTangent)
+{
+#define A 100
+// vertex
+#define V000 {-A, -A, -A}
+#define V001 {-A, -A,  A}
+#define V010 {-A,  A, -A}
+#define V011 {-A,  A,  A}
+#define V100 { A, -A, -A}
+#define V101 { A, -A,  A}
+#define V110 { A,  A, -A}
+#define V111 { A,  A,  A}
+	static const CVec3 box[] =
+	{
+		V001, V000, V010, V011,		// near   (x=-A)
+		V111, V110,	V100, V101,		// far    (x=+A)
+		V101, V100, V000, V001,		// left   (y=-A)
+		V011, V010, V110, V111,		// right  (y=+A)
+		V010, V000, V100, V110,		// bottom (z=-A)
+		V001, V011, V111, V101,		// top    (z=+A)
+#undef A
+	};
+#define REP4(...)	{__VA_ARGS__},{__VA_ARGS__},{__VA_ARGS__},{__VA_ARGS__}
+	static const CVec4 normal[] =
+	{
+		REP4(-1, 0, 0, 1 ),
+		REP4( 1, 0, 0, 1 ),
+		REP4( 0,-1, 0, 1 ),
+		REP4( 0, 1, 0, 1 ),
+		REP4( 0, 0,-1, 1 ),
+		REP4( 0, 0, 1, 1 )
+	};
+	static const CVec3 tangent[] =
+	{
+		REP4( 0,-1, 0 ),
+		REP4( 0, 1, 0 ),
+		REP4( 1, 0, 0 ),
+		REP4(-1, 0, 0 ),
+		REP4( 1, 0, 0 ),
+		REP4(-1, 0, 0 )
+	};
+#undef REP4
+	static const float tex[][2] =
+	{
+		{0, 0}, {0, 1}, {1, 1}, {1, 0},
+		{0, 0}, {0, 1}, {1, 1}, {1, 0},
+		{0, 0}, {0, 1}, {1, 1}, {1, 0},
+		{0, 0}, {0, 1}, {1, 1}, {1, 0},
+		{0, 0}, {0, 1}, {1, 1}, {1, 0},
+		{0, 0}, {0, 1}, {1, 1}, {1, 0}
+	};
+	static const int inds[] =
+	{
+		 0, 1, 2, 3,
+		 4, 5, 6, 7,
+		 8, 9,10,11,
+		12,13,14,15,
+		16,17,18,19,
+		20,21,22,23
+	};
+
+	glVertexPointer(3, GL_FLOAT, sizeof(CVec3), box);
+	glNormalPointer(GL_FLOAT, sizeof(CVec4), normal);
+	glTexCoordPointer(2, GL_FLOAT, 0, tex);
+
+	if (aNormal >= 0)
+	{
+		// send 4 components to decode binormal in shader
+		glVertexAttribPointer(aNormal, 4, GL_FLOAT, GL_FALSE, sizeof(CVec4), normal);
+	}
+	if (aTangent >= 0)
+	{
+		glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CVec3), tangent);
+	}
+
+	glDrawElements(GL_QUADS, ARRAY_COUNT(inds), GL_UNSIGNED_INT, inds);
+
+//	ShowNormals(box, normal, tangent, ARRAY_COUNT(box));
+}
+
+
+void DrawSphereMesh(GLint aNormal, GLint aTangent)
+{
+	// 'quality' corresponds to number of segments in 180 degrees, we have 180x360 degrees unwrapped sphere
+	const int quality = 32;
+	const float radius = 150.0f;
+	const float invQuality = 1.0f / quality;
+	const int vertsByX = quality * 2;
+	const int vertsByY = quality + 1;
+	const int numVerts = vertsByX * vertsByY;
+	const int numTris = vertsByX * (vertsByY - 1) * 2;
+
+	static CVec3 pos[numVerts];
+	static float tex[numVerts*2];
+	static CVec4 normal[numVerts];
+	static CVec3 tangent[numVerts];
+	static uint32 inds[numTris * 3];
+
+	static bool initialized = false;
+	if (!initialized)
+	{
+		// Build vertices
+		int vertIndex = 0;
+		for (int y = 0; y < vertsByY; y++)
+		{
+			for (int x = 0; x < vertsByX; x++, vertIndex++)
+			{
+				// vertex positions
+				float longitude = (x * invQuality - 1.0f) * M_PI;
+				float latitude = y * invQuality * M_PI;
+				CVec3& p = pos[vertIndex];
+				p[0] = radius * sin(longitude) * sin(latitude);
+				p[1] = radius * cos(longitude) * sin(latitude);
+				p[2] = radius * cos(latitude);
+
+				// normal
+				CVec4& n = normal[vertIndex];
+				n[0] = sin(longitude) * sin(latitude);
+				n[1] = cos(longitude) * sin(latitude);
+				n[2] = cos(latitude);
+				n[3] = 1.0f;
+
+				// tangent
+				CVec3& t = tangent[vertIndex];
+				t[0] = sin(longitude+M_PI/2);
+				t[1] = cos(longitude+M_PI/2);
+				t[2] = 0;
+
+				// texture coordinates
+				tex[vertIndex*2  ] = x * invQuality;
+				tex[vertIndex*2+1] = y * invQuality;
+			}
+		}
+		assert(vertIndex == numVerts);
+
+		// Build triangles
+		int triangle = 0;
+		for (int y = 0; y < vertsByY - 1; y++)
+		{
+			for (int x = 0; x < vertsByX; x++, triangle += 2)
+			{
+				int index1 = x + y * vertsByX;
+				int index2 = (x + 1) % vertsByX + y * vertsByX; // next by X direction, wrap
+				int index3 = index1 + vertsByX;					// next line
+				int index4 = index2 + vertsByX;					// ...
+				inds[triangle * 3 + 0] = index1;
+				inds[triangle * 3 + 1] = index3;
+				inds[triangle * 3 + 2] = index4;
+				inds[triangle * 3 + 3] = index1;
+				inds[triangle * 3 + 4] = index4;
+				inds[triangle * 3 + 5] = index2;
+			}
+		}
+		assert(triangle == numTris);
+
+		initialized = true;
+	}
+
+	glVertexPointer(3, GL_FLOAT, sizeof(CVec3), pos);
+	glNormalPointer(GL_FLOAT, sizeof(CVec4), normal);
+	glTexCoordPointer(2, GL_FLOAT, 0, tex);
+
+	if (aNormal >= 0)
+	{
+		// send 4 components to decode binormal in shader
+		glVertexAttribPointer(aNormal, 4, GL_FLOAT, GL_FALSE, sizeof(CVec4), normal);
+	}
+	if (aTangent >= 0)
+	{
+		glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CVec3), tangent);
+	}
+
+	glDrawElements(GL_TRIANGLES, numTris * 3, GL_UNSIGNED_INT, inds);
+
+//	ShowNormals(pos, normal, tangent, numVerts);
 }
 
 
@@ -95,127 +319,32 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 	// check tangent space
 	GLint aNormal = -1;
 	GLint aTangent = -1;
-//	GLint aBinormal = -1;
 	const CShader *Sh = GCurrentShader;
 	if (Sh)
 	{
-		aNormal    = Sh->GetAttrib("normal");
-		aTangent   = Sh->GetAttrib("tangent");
-//		aBinormal  = Sh->GetAttrib("binormal");
+		aNormal = Sh->GetAttrib("normal");
+		aTangent = Sh->GetAttrib("tangent");
 	}
-
-	// and draw box ...
-#define A 100
-// vertex
-#define V000 {-A, -A, -A}
-#define V001 {-A, -A,  A}
-#define V010 {-A,  A, -A}
-#define V011 {-A,  A,  A}
-#define V100 { A, -A, -A}
-#define V101 { A, -A,  A}
-#define V110 { A,  A, -A}
-#define V111 { A,  A,  A}
-	static const CVec3 box[] =
-	{
-		V001, V000, V010, V011,		// near   (x=-A)
-		V111, V110,	V100, V101,		// far    (x=+A)
-		V101, V100, V000, V001,		// left   (y=-A)
-		V011, V010, V110, V111,		// right  (y=+A)
-		V010, V000, V100, V110,		// bottom (z=-A)
-		V001, V011, V111, V101,		// top    (z=+A)
-#undef A
-	};
-#define REP4(...)	{__VA_ARGS__},{__VA_ARGS__},{__VA_ARGS__},{__VA_ARGS__}
-	static const CVec4 normal[] =
-	{
-		REP4(-1, 0, 0, 1 ),
-		REP4( 1, 0, 0, 1 ),
-		REP4( 0,-1, 0, 1 ),
-		REP4( 0, 1, 0, 1 ),
-		REP4( 0, 0,-1, 1 ),
-		REP4( 0, 0, 1, 1 )
-	};
-	static const CVec3 tangent[] =
-	{
-		REP4( 0,-1, 0 ),
-		REP4( 0, 1, 0 ),
-		REP4( 1, 0, 0 ),
-		REP4(-1, 0, 0 ),
-		REP4( 1, 0, 0 ),
-		REP4(-1, 0, 0 )
-	};
-//	static const CVec3 binormal[] =
-//	{
-//		REP4( 0, 0, 1 ),
-//		REP4( 0, 0, 1 ),
-//		REP4( 0, 0, 1 ),
-//		REP4( 0, 0, 1 ),
-//		REP4( 0,-1, 0 ),
-//		REP4( 0,-1, 0 )
-//	};
-#undef REP4
-	static const float tex[][2] =
-	{
-		{0, 0}, {0, 1}, {1, 1}, {1, 0},
-		{0, 0}, {0, 1}, {1, 1}, {1, 0},
-		{0, 0}, {0, 1}, {1, 1}, {1, 0},
-		{0, 0}, {0, 1}, {1, 1}, {1, 0},
-		{0, 0}, {0, 1}, {1, 1}, {1, 0},
-		{0, 0}, {0, 1}, {1, 1}, {1, 0}
-	};
-	static const int inds[] =
-	{
-		 0, 1, 2, 3,
-		 4, 5, 6, 7,
-		 8, 9,10,11,
-		12,13,14,15,
-		16,17,18,19,
-		20,21,22,23
-	};
-
-#if 0
-	// verify tangents, should be suitable for binormal computation in shaders
-	// (note: we're not verifying correspondence with UV coordinates)
-	for (int i = 0; i < 24; i++)
-	{
-		CVec4 n4 = normal[i];
-		CVec3 n = n4.ToVec3();
-		CVec3 t = tangent[i];
-		CVec3 b = binormal[i];
-		CVec3 b2;
-		cross(n, t, b2);
-		VectorScale(b2, n4[3], b2);
-		float dd = VectorDistance(b2, b);
-		if (dd > 0.001f) appPrintf("dist[%d] = %g\n", i, dd);
-	}
-#endif
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
-
-	glVertexPointer(3, GL_FLOAT, sizeof(CVec3), box);
-	glNormalPointer(GL_FLOAT, sizeof(CVec4), normal);
-	glTexCoordPointer(2, GL_FLOAT, 0, tex);
-
+	// enable tangents
 	if (aNormal >= 0)
-	{
 		glEnableVertexAttribArray(aNormal);
-		// send 4 components to decode binormal in shader
-		glVertexAttribPointer(aNormal, 4, GL_FLOAT, GL_FALSE, sizeof(CVec4), normal);
-	}
 	if (aTangent >= 0)
-	{
 		glEnableVertexAttribArray(aTangent);
-		glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CVec3), tangent);
-	}
-//	if (aBinormal >= 0)
-//	{
-//		glEnableVertexAttribArray(aBinormal);
-//		glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CVec3), binormal);
-//	}
 
-	glDrawElements(GL_QUADS, ARRAY_COUNT(inds), GL_UNSIGNED_INT, inds);
+	// draw a mesh ...
+	switch (ShapeIndex)
+	{
+	case 0:
+		DrawBoxMesh(aNormal, aTangent);
+		break;
+	case 1:
+		DrawSphereMesh(aNormal, aTangent);
+		break;
+	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -225,8 +354,6 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 		glDisableVertexAttribArray(aNormal);
 	if (aTangent >= 0)
 		glDisableVertexAttribArray(aTangent);
-//	if (aBinormal >= 0)
-//		glDisableVertexAttribArray(aBinormal);
 
 	BindDefaultMaterial(true);
 

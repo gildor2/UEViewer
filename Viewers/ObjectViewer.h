@@ -60,6 +60,7 @@ public:
 	bool			IsTexture;
 	static bool		ShowOutline;
 	static bool		ShowChannels;
+	static int		ShapeIndex;
 
 	CMaterialViewer(UUnrealMaterial* Material, CApplication* Window);
 	virtual ~CMaterialViewer();
