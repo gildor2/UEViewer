@@ -1211,17 +1211,17 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 		{
 			glEnableVertexAttribArray(aNormal);
 			// send 4 components to decode binormal in shader
-			glVertexAttribPointer(aNormal, 4, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Normal);
+			glVertexAttribPointer(aNormal, 4, GL_FLOAT, GL_TRUE, sizeof(CSkinVert), &Skinned[0].Normal);
 		}
 		if (aTangent >= 0)
 		{
 			glEnableVertexAttribArray(aTangent);
-			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Tangent);
+			glVertexAttribPointer(aTangent,  3, GL_FLOAT, GL_TRUE, sizeof(CSkinVert), &Skinned[0].Tangent);
 		}
 //		if (aBinormal >= 0)
 //		{
 //			glEnableVertexAttribArray(aBinormal);
-//			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_FALSE, sizeof(CSkinVert), &Skinned[0].Binormal);
+//			glVertexAttribPointer(aBinormal, 3, GL_FLOAT, GL_TRUE, sizeof(CSkinVert), &Skinned[0].Binormal);
 //		}
 		// draw
 		//?? place this code into CIndexBuffer?

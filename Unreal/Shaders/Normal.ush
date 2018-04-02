@@ -90,7 +90,7 @@ void VertexShaderMain()
 //	mat3 tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(normalize(tangent), normalize(binormal), gl_Normal));
 	vec3 n = normalize(normal.xyz);
 	vec3 t = normalize(tangent);
-	vec3 b = cross(n, t) * (normal.w / 127.0);
+	vec3 b = cross(n, t) * normal.w;
 	mat3 tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(t, b, n));
 #endif
 
@@ -105,7 +105,7 @@ void VertexShaderMain()
 	tangentEye      = normalize(tbn * -eyeVertexPos);				// eye is (0,0,0), so direction to eye = -vertex
 #endif
 #if CUBE
-	tangentToWorld = transpose(tbn);	//!! will not work when tbn is not normalized
+	tangentToWorld = transpose(tbn);	// invert orthonormal matrix
 #endif
 }
 
@@ -171,6 +171,7 @@ void PixelShaderMain()
 	%s
 	normal = normalize(normal);
 	vec3 nLightDir = normalize(tangentLightDir);
+	vec3 nEye      = normalize(tangentEye);
 	// ambient + diffuse
 	float NdotL    = max(dot(normal, nLightDir), 0.0);
 	vec4 color     = ambient + diffuse * NdotL;
@@ -189,7 +190,7 @@ void PixelShaderMain()
 	// specular
 	// per-pixel half vector: average between direction from pixel to
 	// light and from pixel to viewer
-	vec3 halfVector = nLightDir + tangentEye;
+	vec3 halfVector = nLightDir + nEye;
 	vec3 halfV      = normalize(halfVector);
 	float NdotHV    = max(dot(normal, halfV), 0.0);
 	color.rgb += pow(NdotHV, GetMaterialSpecularPower(TexCoord)) * GetMaterialSpecularColor(TexCoord);
@@ -200,7 +201,7 @@ void PixelShaderMain()
 #endif
 
 #if CUBE
-	vec3 reflectVec = tangentToWorld * reflect(tangentEye, normal);
+	vec3 reflectVec = tangentToWorld * reflect(nEye, normal);
 	vec3 reflectColor = GetMaterialCubemap(-reflectVec.xzy);
 	color.rgb += reflectColor * GetCubemapMask(TexCoord);
 #endif
@@ -210,8 +211,8 @@ void PixelShaderMain()
 #endif
 
 /*	//!!
-	vec3 tmp = tangentToWorld * reflect(tangentEye, vec3(1.0, 0.0, 0.0));
-//	vec3 tmp = tangentToWorld * tangentEye;
+	vec3 tmp = tangentToWorld * reflect(nEye, vec3(1.0, 0.0, 0.0));
+//	vec3 tmp = tangentToWorld * nEye;
 //	color.rgb = tmp * 0.5 + vec3(0.5);
 	color.r = 0;
 	color.g = 0;
@@ -220,9 +221,15 @@ void PixelShaderMain()
 //!!color.rgb = texture2D(maskTex, TexCoord).aaa;
 	color.a = GetMaterialOpacity(TexCoord);
 
-//	color.rgb += pow(1.0 - dot(n, tangentEye), 3.5) * vec3(0.5);	// Fresnel
+#if CUBE
+//	color.rgb = (tangentToWorld * reflect(nEye, normal) * 0.5) + 0.5; // colorize as reflection dir
+#endif
+//	color.rgb = vec3(dot(normal, nEye), 0.3, 0.3);
+//	color.rgb = (normal * 0.5) + 0.5;
+//	color.rgb = (nEye* 0.5) + 0.5;
+//	color.rgb += pow(1.0 - dot(normal, nEye), 3.5) * vec3(0.5);	// Fresnel
 #ifdef NORMALMAP
-	color.rgb = pow(dot(normal, tangentEye), 3.5) * vec3(1.0);
+	color.rgb = pow(dot(normal, nEye), 3.5) * vec3(1.0);
 #endif
 
 	gl_FragColor = color;
