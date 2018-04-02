@@ -1411,10 +1411,27 @@ void RegisterClasses(const CClassInfo *Table, int Count)
 {
 	if (Count <= 0) return;
 	assert(GClassCount + Count < ARRAY_COUNT(GClasses));
-	memcpy(GClasses + GClassCount, Table, Count * sizeof(GClasses[0]));
-	GClassCount += Count;
+	for (int i = 0; i < Count; i++)
+	{
+		const char* ClassName = Table[i].Name;
+		bool duplicate = false;
+		for (int j = 0; j < GClassCount; j++)
+		{
+			if (!strcmp(GClasses[j].Name, ClassName))
+			{
+				// Overriding class with a different typeinfo (for example, overriding UE3 class with UE4 one)
+				GClasses[j] = Table[i];
+				duplicate = true;
+				break;
+			}
+		}
+		if (!duplicate)
+		{
+			GClasses[GClassCount++] = Table[i];
+		}
+	}
 #if DEBUG_TYPES
-	appPrintf("*** Register: %d classes ***\n", Count);
+	appPrintf("*** Register: %d classes ***\n", Count); //!! NOTE: printing will not work correctly when "duplicate" is "true" for one or more classes
 	for (int i = GClassCount - Count; i < GClassCount; i++)
 		appPrintf("[%d]:%s\n", i, GClasses[i].TypeInfo()->Name);
 #endif

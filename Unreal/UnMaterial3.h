@@ -381,49 +381,12 @@ struct FTexture2DMipMap
 	int				SizeX;
 	int				SizeY;
 
-	friend FArchive& operator<<(FArchive &Ar, FTexture2DMipMap &Mip)
-	{
-		guard(FTexture2DMipMap<<);
+#if UNREAL3
+	static void Serialize3(FArchive& Ar, FTexture2DMipMap& Mip);
+#endif
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4_BASE)
-		{
-			// this code is generally the same as for UE3, but it's quite simple, so keep
-			// it in separate code block
-			bool cooked = false;
-			if (Ar.ArVer >= VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
-				Ar << cooked;
-			//?? Can all 'Mip.Data.Skip(Ar)' here, but ensure any mip types will be loaded by LoadBulkTexture().
-			//?? Calling Skip() will eliminate extra seeks when interleaving reading of FTexture2DMipMap and
-			//?? bulk data which located in the same uasset, but at different position.
-			//?? To see the problem (performance problem): load data from pak, modify FPakFile, add logging of
-			//?? Seek() and decompression calls. You'll see that loading of big bulk data chinks is interleaved
-			//?? with reading 4-byte ints at different locations.
-			Mip.Data.Serialize(Ar);
-			Ar << Mip.SizeX << Mip.SizeY;
-			if (Ar.ArVer >= VER_UE4_TEXTURE_DERIVED_DATA2 && !cooked)
-			{
-				FString DerivedDataKey;
-				Ar << DerivedDataKey;
-			}
-	#if 0
-			// Oculus demos ("Henry") can have extra int here
-			int tmp;
-			Ar << tmp;
-	#endif
-			return Ar;
-		}
-#endif // UNREAL4
-		Mip.Data.Serialize(Ar);
-#if DARKVOID
-		if (Ar.Game == GAME_DarkVoid)
-		{
-			FByteBulkData DataX360Gamma;
-			DataX360Gamma.Serialize(Ar);
-		}
-#endif // DARKVOID
-		return Ar << Mip.SizeX << Mip.SizeY;
-		unguard;
-	}
+	static void Serialize4(FArchive& Ar, FTexture2DMipMap& Mip);
+#endif
 };
 
 class UTexture2D : public UTexture3
@@ -525,9 +488,9 @@ public:
 };
 
 
-class UTextureCube : public UTexture3
+class UTextureCube3 : public UTexture3
 {
-	DECLARE_CLASS(UTextureCube, UTexture3)
+	DECLARE_CLASS(UTextureCube3, UTexture3)
 public:
 	UTexture2D		*FacePosX;
 	UTexture2D		*FaceNegX;
@@ -560,7 +523,7 @@ public:
 		// some hack to support more games ...
 		if (Ar.Tell() < Ar.GetStopper())
 		{
-			appPrintf("UTextureCube %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+			appPrintf("UTextureCube3 %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
 		skip_rest_quiet:
 			DROP_REMAINING_DATA(Ar);
 		}
@@ -1064,7 +1027,7 @@ public:
 	REGISTER_CLASS_ALIAS(UMaterial3, UMaterial) \
 	REGISTER_CLASS(UTexture2D)			\
 	REGISTER_CLASS(ULightMapTexture2D)	\
-	REGISTER_CLASS(UTextureCube)		\
+	REGISTER_CLASS_ALIAS(UTextureCube3, UTextureCube) \
 	REGISTER_CLASS(FScalarParameterValue)  \
 	REGISTER_CLASS(FTextureParameterValue) \
 	REGISTER_CLASS(FVectorParameterValue)  \
@@ -1081,6 +1044,7 @@ public:
 	REGISTER_ENUM(EMobileSpecularMask)	\
 
 #define REGISTER_MATERIAL_CLASSES_U4	\
+	REGISTER_CLASS_ALIAS(UTexture2D, UTextureCube) \
 	REGISTER_CLASS(FTextureSource)		\
 	REGISTER_CLASS(FMaterialInstanceBasePropertyOverrides)
 

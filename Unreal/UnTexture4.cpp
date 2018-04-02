@@ -22,6 +22,37 @@
 
 #if UNREAL4
 
+void FTexture2DMipMap::Serialize4(FArchive &Ar, FTexture2DMipMap& Mip)
+{
+	guard(FTexture2DMipMap::Serialize4);
+
+	bool cooked = false;
+	if (Ar.ArVer >= VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
+		Ar << cooked;
+
+	//?? Can all 'Mip.Data.Skip(Ar)' here, but ensure any mip types will be loaded by LoadBulkTexture().
+	//?? Calling Skip() will eliminate extra seeks when interleaving reading of FTexture2DMipMap and
+	//?? bulk data which located in the same uasset, but at different position.
+	//?? To see the problem (performance problem): load data from pak, modify FPakFile, add logging of
+	//?? Seek() and decompression calls. You'll see that loading of big bulk data chinks is interleaved
+	//?? with reading 4-byte ints at different locations.
+	Mip.Data.Serialize(Ar);
+	Ar << Mip.SizeX << Mip.SizeY;
+	if (Ar.ArVer >= VER_UE4_TEXTURE_DERIVED_DATA2 && !cooked)
+	{
+		FString DerivedDataKey;
+		Ar << DerivedDataKey;
+	}
+#if 0
+	// Oculus demos ("Henry") can have extra int here
+	int tmp;
+	Ar << tmp;
+#endif
+
+	unguard;
+}
+
+
 struct FTexturePlatformData
 {
 	int32		SizeX;
@@ -51,7 +82,7 @@ struct FTexturePlatformData
 		int FirstMip;
 		Ar << FirstMip;					// only for cooked, but we don't read FTexturePlatformData for non-cooked textures
 		DBG("   SizeX=%d SizeY=%d NumSlices=%d PixelFormat=%s FirstMip=%d\n", D.SizeX, D.SizeY, D.NumSlices, *D.PixelFormat, FirstMip);
-		Ar << D.Mips;
+		D.Mips.Serialize2<FTexture2DMipMap::Serialize4>(Ar);
 		return Ar;
 		unguard;
 	}
@@ -128,7 +159,6 @@ void UTexture2D::Serialize4(FArchive& Ar)
 				SizeX = Data.SizeX;
 				SizeY = Data.SizeY;
 				Format = PixelFormat;
-				//!! NumSlices
 			}
 			else
 			{

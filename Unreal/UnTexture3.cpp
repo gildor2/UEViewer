@@ -12,6 +12,23 @@
 
 #if UNREAL3
 
+/*static*/ void FTexture2DMipMap::Serialize3(FArchive &Ar, FTexture2DMipMap& Mip)
+{
+	guard(FTexture2DMipMap::Serialize3);
+
+	Mip.Data.Serialize(Ar);
+#if DARKVOID
+	if (Ar.Game == GAME_DarkVoid)
+	{
+		FByteBulkData DataX360Gamma;
+		DataX360Gamma.Serialize(Ar);
+	}
+#endif // DARKVOID
+	Ar << Mip.SizeX << Mip.SizeY;
+
+	unguard;
+}
+
 void UTexture3::Serialize(FArchive &Ar)
 {
 #if UNREAL4
@@ -107,7 +124,7 @@ void UTexture2D::Serialize(FArchive &Ar)
 			TArray<int> unk3;
 			Ar << unk1 << unk2 << unk3;
 		}
-		Ar << Mips;
+		Mips.Serialize2<FTexture2DMipMap::Serialize3>(Ar);
 		if (Ar.ArVer >= 677)
 		{
 			// MK X has enum properties serialized as bytes, without text - so PixelFormat values should be remapped
@@ -124,7 +141,9 @@ void UTexture2D::Serialize(FArchive &Ar)
 		goto skip_rest_quiet;				// Injustice has some extra mipmap arrays
 	}
 #endif // MKVSDC
-	Ar << Mips;
+
+	Mips.Serialize2<FTexture2DMipMap::Serialize3>(Ar);
+
 #if BORDERLANDS
 	if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 46) Ar.Seek(Ar.Tell() + 16);	// Borderlands 1,2; some hash; version unknown!!
 #endif
@@ -163,21 +182,21 @@ void UTexture2D::Serialize(FArchive &Ar)
 	}
 
 	if (Ar.ArVer >= 674)
-		Ar << CachedPVRTCMips;
+		CachedPVRTCMips.Serialize2<FTexture2DMipMap::Serialize3>(Ar);
 
 	if (Ar.ArVer >= 857)
 	{
 		int CachedFlashMipsMaxResolution;
 		FByteBulkData CachedFlashMips;
 		Ar << CachedFlashMipsMaxResolution;
-		Ar << CachedATITCMips;
+		CachedATITCMips.Serialize2<FTexture2DMipMap::Serialize3>(Ar);
 		CachedFlashMips.Serialize(Ar);
 	}
 
 #if PLA
 	if (Ar.Game == GAME_PLA) goto skip_rest_quiet;
 #endif
-	if (Ar.ArVer >= 864) Ar << CachedETCMips;
+	if (Ar.ArVer >= 864) CachedETCMips.Serialize2<FTexture2DMipMap::Serialize3>(Ar);
 
 	// some hack to support more games ...
 skip_rest:

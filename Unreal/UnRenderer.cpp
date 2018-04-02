@@ -1933,7 +1933,7 @@ void UTexture2D::Release()
 	unguard;
 }
 
-bool UTextureCube::Upload()
+bool UTextureCube3::Upload()
 {
 	if (!FacePosX || !FacePosY || !FacePosZ || !FaceNegX || !FaceNegY || !FaceNegZ)
 		return false; // one of faces is missing
@@ -1985,9 +1985,9 @@ bool UTextureCube::Upload()
 	return (TexNum != BAD_TEXTURE);
 }
 
-bool UTextureCube::Bind()
+bool UTextureCube3::Bind()
 {
-	guard(UTextureCube::Bind);
+	guard(UTextureCube3::Bind);
 
 	if (!GUseGLSL || !FacePosX || !FacePosY || !FacePosZ || !FaceNegX || !FaceNegY || !FaceNegZ)
 	{
@@ -2011,15 +2011,15 @@ bool UTextureCube::Bind()
 }
 
 
-void UTextureCube::GetParams(CMaterialParams &Params) const
+void UTextureCube3::GetParams(CMaterialParams &Params) const
 {
 	Params.Cube = (UUnrealMaterial*)this;
 }
 
 
-void UTextureCube::Release()
+void UTextureCube3::Release()
 {
-	guard(UTextureCube::Release);
+	guard(UTextureCube3::Release);
 	if (GL_IsValidObject(TexNum, DrawTimestamp))
 		glDeleteTextures(1, &TexNum);
 	Super::Release();

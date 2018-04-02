@@ -300,10 +300,13 @@ void CMaterialViewer::Draw2D()
 		const char *fmt = EnumToName(Tex->Format);
 		DrawTextLeft(S_GREEN "Width   :" S_WHITE " %d\n"
 					 S_GREEN "Height  :" S_WHITE " %d\n"
-					 S_GREEN "Format  :" S_WHITE " %s\n"
-					 S_GREEN "TFCName :" S_WHITE " %s",
+					 S_GREEN "Format  :" S_WHITE " %s\n",
 					 Tex->SizeX, Tex->SizeY,
-					 fmt ? fmt : "???", *Tex->TextureFileCacheName);
+					 fmt ? fmt : "???");
+		if (stricmp(Tex->TextureFileCacheName, "None") != 0)
+		{
+			DrawTextLeft(S_GREEN "TFCName :" S_WHITE " %s", *Tex->TextureFileCacheName);
+		}
 		// get first available mipmap to find its size
 		//!! todo: use CTextureData for this to avoid any code copy-pastes
 		//!! also, display real texture format (TPF_...), again - with CTextureData use
@@ -324,7 +327,7 @@ void CMaterialViewer::Draw2D()
 		if (width != Tex->SizeX || height != Tex->SizeY)
 		{
 			if (width && height)
-				DrawTextLeft(S_RED"Stripped to %dx%d", width, height);
+				DrawTextLeft(S_RED"Cooked size: %dx%d", width, height);
 			else
 				DrawTextLeft(S_RED"Bad texture (no mipmaps)");
 		}
