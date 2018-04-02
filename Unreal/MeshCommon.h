@@ -140,7 +140,7 @@ struct CMeshVertex
 		Unpack(OutNormal, Normal);
 		Unpack(OutTangent, Tangent);
 		cross(OutNormal, OutTangent, OutBinormal);
-		OutNormal.Scale(OutNormal.v[3]);
+		OutBinormal.Scale(OutNormal.v[3]);
 	}
 };
 
