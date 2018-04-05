@@ -24,10 +24,10 @@ using 'nmake' for Visual Studio or 'make' for gcc.
 
 ### Windows
 
-UModel is compiled using Visual Studio. Required VisualStudio 2010 or newer. Older Visual Studio compilers are
+UModel is compiled using Visual Studio. Required VisualStudio 2013 or newer. Older Visual Studio compilers are
 not suitable because UModel's code using some C++11 stuff.
 
-Currently build is performed with Visual C++ 2010.
+Currently build is performed with Visual C++ 2013.
 
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
 of these tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You can get everything what you need
@@ -44,10 +44,15 @@ To launch a build process without a batch, simply execute
 
     bash build.sh
 
+### Windows 64-bit
+Despite we're providing only 32-but builds of UModel, it is possible to compile it for 64-bit platform. To do that, you
+should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-win32` to `vc-win64`. Please note that
+64-bit SDL2.dll is not present in this git repository, you should download this library by yourself.
+
 ### Linux
 
 This system has everything what is required for build by default. You'll only need to install SDL2 development package
-(and of course gcc). To build UModel, execute from console
+(and of course gcc). To build UModel, simply execute the following command from terminal
 
     ./build.sh
 
@@ -55,10 +60,8 @@ This system has everything what is required for build by default. You'll only ne
 C runtime library for MSVC
 --------------------------
 
-UModel uses custom CRT library for being able to link with MSVCRT.DLL. It is possible to statically link with
-you compiler's CRT by changing in *common.project*. Please note that custom CRT library will not be compatible
-with Visual Studio 2015, you should always disable it.
-
+UModel is dynamically linked with CRT library, so it requires CRT DLL files to be installed onto your system. It is possible
+to statically link with you compiler's CRT by changing a line in *common.project* (with cost of growing executable file size):
 ```
 LIBC = shared
 ```
@@ -69,12 +72,18 @@ to
 LIBC = static
 ```
 
-MSVCRT.DLL is choosen because it allows to reduce size of UModel distribution without needs to install compiler
-runtime libraries on system. You may disable MSVCRT.DLL linking by commenting out line
-
+UModel uses custom CRT library for being able to link against MSVCRT.DLL. MSVCRT.DLL is choosen because it allows to
+reduce size of UModel distribution without needs to install compiler runtime libraries on system - MSVCRT.DLL present on
+any Windows system. You may disable MSVCRT.DLL linking by commenting out line
 ```
 OLDCRT = 1
 ```
+
+Please note that custom CRT library will not be compatible with Visual Studio 2015, so it must be disabled in order to
+build with this or newer Visual Studio version. There's no needs to disable OLDCRT manually if you're correctly setting
+*vc_ver* variable in *build.sh* - it will be disabled automatically.
+
+You might also want to disable OLDCRT if you didn't install MSVCRT library as described below.
 
 If you want to use MSVCRT.DLL, you should extract **MSVCRT.zip** archive available
 [here](https://github.com/gildor2/UModel/releases) to the directory LIBS one level above of UModel directory.
