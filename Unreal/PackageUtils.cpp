@@ -92,13 +92,6 @@ struct ScanPackageData
 	int					Index;
 };
 
-static int InfoCmp(const FileInfo *p1, const FileInfo *p2)
-{
-	int dif = p1->Ver - p2->Ver;
-	if (dif) return dif;
-	return p1->LicVer - p2->LicVer;
-}
-
 static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 {
 	guard(ScanPackage);
@@ -190,7 +183,12 @@ bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress)
 	data.PkgInfo = &info;
 	data.Progress = progress;
 	appEnumGameFiles(ScanPackage, data);
-	info.Sort(InfoCmp);
+	info.Sort([](const FileInfo *p1, const FileInfo *p2) -> int
+		{
+			int dif = p1->Ver - p2->Ver;
+			if (dif) return dif;
+			return p1->LicVer - p2->LicVer;
+		});
 
 	return !data.Cancelled;
 }
@@ -199,11 +197,6 @@ bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress)
 /*-----------------------------------------------------------------------------
 	Class statistics
 -----------------------------------------------------------------------------*/
-
-static int CompareClassStats(const ClassStats* p1, const ClassStats* p2)
-{
-	return stricmp(p1->Name, p2->Name);
-}
 
 void CollectPackageStats(const TArray<UnPackage*> &Packages, TArray<ClassStats>& Stats)
 {
@@ -230,7 +223,10 @@ void CollectPackageStats(const TArray<UnPackage*> &Packages, TArray<ClassStats>&
 			found->Count++;
 		}
 	}
-	Stats.Sort(CompareClassStats);
+	Stats.Sort([](const ClassStats* p1, const ClassStats* p2) -> int
+		{
+			return stricmp(p1->Name, p2->Name);
+		});
 
 	unguard;
 }
