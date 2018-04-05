@@ -893,7 +893,7 @@ static const int ue4Versions[] =
 	// NEW_ENGINE_VERSION
 };
 
-staticAssert(ARRAY_COUNT(ue4Versions) == LATEST_SUPPORTED_UE4_VERSION + 1, "ue4Versions[] is outdated");
+static_assert(ARRAY_COUNT(ue4Versions) == LATEST_SUPPORTED_UE4_VERSION + 1, "ue4Versions[] is outdated");
 #endif // UNREAL4
 
 void FArchive::OverrideVersion()

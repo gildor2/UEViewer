@@ -1181,10 +1181,10 @@ struct FStaticLODModel4
 				const FStaticMeshUVItem4& SV = StaticMeshVertexBuffer.UV[i];
 				V.Pos = PositionVertexBuffer.Verts[i];
 				V.Infs = SkinWeightVertexBuffer.Weights[i];
-				staticAssert(sizeof(V.Normal) == sizeof(SV.Normal), "FGPUVert4Common.Normal should match FStaticMeshUVItem4.Normal");
+				static_assert(sizeof(V.Normal) == sizeof(SV.Normal), "FGPUVert4Common.Normal should match FStaticMeshUVItem4.Normal");
 				memcpy(V.Normal, SV.Normal, sizeof(V.Normal));
-				staticAssert(sizeof(V.UV[0]) == sizeof(SV.UV[0]), "FGPUVert4Common.UV should match FStaticMeshUVItem4.UV");
-				staticAssert(sizeof(V.UV) <= sizeof(SV.UV), "SkeletalMesh has more UVs than StaticMesh"); // this is just for correct memcpy below
+				static_assert(sizeof(V.UV[0]) == sizeof(SV.UV[0]), "FGPUVert4Common.UV should match FStaticMeshUVItem4.UV");
+				static_assert(sizeof(V.UV) <= sizeof(SV.UV), "SkeletalMesh has more UVs than StaticMesh"); // this is just for correct memcpy below
 				memcpy(V.UV, SV.UV, sizeof(V.UV));
 			}
 

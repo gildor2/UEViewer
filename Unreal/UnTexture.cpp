@@ -414,7 +414,7 @@ byte *CTextureData::Decompress(int MipLevel)
 		return dst;
 	}
 
-	staticAssert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, Wrong_PixelFormatInfo_array);
+	static_assert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, "Wrong PixelFormatInfo array size");
 	unsigned fourCC = PixelFormatInfo[Format].FourCC;
 	if (!fourCC)
 	{

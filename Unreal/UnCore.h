@@ -1653,7 +1653,7 @@ public:
 		// special case for SIMPLE_TYPE
 		if (TTypeInfo<T>::IsSimpleType)
 		{
-			staticAssert(sizeof(T) == TTypeInfo<T>::NumFields * TTypeInfo<T>::FieldSize, Error_In_TypeInfo);
+			static_assert(sizeof(T) == TTypeInfo<T>::NumFields * TTypeInfo<T>::FieldSize, "Error in TTypeInfo");
 			return A.SerializeSimple(Ar, TTypeInfo<T>::NumFields, TTypeInfo<T>::FieldSize);
 		}
 

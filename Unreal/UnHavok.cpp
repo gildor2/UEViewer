@@ -52,7 +52,7 @@ static void DumpClass(const hkClass *Class)
 			"Struct", "SimpleArray", "HomogenousArray", "hkVariant", "char*",
 			"hkUlong", "hkFlags"
 		};
-		staticAssert(ARRAY_COUNT(TypeTable) == hkClassMember::TYPE_MAX, TypeTable_is_bad);
+		static_assert(ARRAY_COUNT(TypeTable) == hkClassMember::TYPE_MAX, "TypeTable is bad");
 
 		// dump internal information
 		appPrintf("\t// offset=%d type=%s", Mem->m_offset, TypeTable[Mem->m_type.m_storage]);

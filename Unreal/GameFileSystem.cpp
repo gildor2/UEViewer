@@ -633,7 +633,7 @@ void appSetRootDirectory2(const char *filename)
 				"iPhone",
 				"Android",
 			};
-			staticAssert(ARRAY_COUNT(PlatformNames) == PLATFORM_COUNT, Verify_PlatformNames);
+			static_assert(ARRAY_COUNT(PlatformNames) == PLATFORM_COUNT, "PlatformNames has wrong item count");
 			appPrintf("; platform %s", PlatformNames[GForcePlatform]);
 		}
 	}

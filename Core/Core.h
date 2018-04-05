@@ -77,29 +77,6 @@
 #define assert(x)
 #endif // DO_ASSERT
 
-// helper declaration
-template<int> struct CompileTimeError;
-template<>    struct CompileTimeError<true> {};
-
-// Visual C++ 2010 and GCC 4.3 has C++11 static_assert
-#if _MSC_VER >= 1500
-
-#define staticAssert(expr,name)			static_assert(expr, "Static assertion failed " #expr ": " #name)
-
-#elif (__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3))
-
-#define staticAssert(expr,name)			static_assert(expr, #name)
-
-#else
-
-// Pre-C++11 version using templates
-#define staticAssert(expr,name)			\
-	{									\
-		CompileTimeError<(expr) != 0> assert_##name; \
-		(void)assert_##name;			\
-	}
-
-#endif
 
 #undef M_PI
 #define M_PI					(3.14159265358979323846)

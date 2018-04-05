@@ -84,7 +84,7 @@ void DecryptDevlsThird(byte* CompressedBuffer, int CompressedSize)
 		244,  67,  55,   0, 194,  16,  12, 173, 125, 239, 239, 162, 160,  37, 216, 251,
 		220, 169, 141,   1, 131,  82,  44,  91, 172,
 	};
-	staticAssert(ARRAY_COUNT(key) == 761, "Bad key");
+	static_assert(ARRAY_COUNT(key) == 761, "Bad key");
 	uint32 XorIndex = 244109 * CompressedSize + 240169;
     for (int i = 0; i < CompressedSize; i++)
 	{
