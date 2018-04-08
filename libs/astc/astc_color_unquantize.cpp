@@ -10,9 +10,9 @@
  *	by a licensing agreement from ARM Limited.
  *
  *	@brief	Color unquantization functions for ASTC.
- */ 
-/*----------------------------------------------------------------------------*/ 
-	
+ */
+/*----------------------------------------------------------------------------*/
+
 #include "astc_codec_internals.h"
 
 #include "mathlib.h"
@@ -632,7 +632,7 @@ void hdr_rgb_unpack3(const int input[6], int quantization_level, ushort4 * outpu
 		green0 = temp0;
 		green1 = temp1;
 		break;
-	case 2:					// swithc around red and blue
+	case 2:					// switch around red and blue
 		temp0 = red0;
 		temp1 = red1;
 		red0 = blue0;

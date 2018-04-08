@@ -1,4 +1,4 @@
-/*----------------------------------------------------------------------------*/  
+/*----------------------------------------------------------------------------*/
 /**
  *	This confidential and proprietary software may be used only as
  *	authorised by a licensing agreement from ARM Limited
@@ -11,8 +11,8 @@
  *
  *	@brief	Functions to convert a compressed block between the symbolic and
  *			the physical representation.
- */ 
-/*----------------------------------------------------------------------------*/ 
+ */
+/*----------------------------------------------------------------------------*/
 
 #include "astc_codec_internals.h"
 
@@ -69,7 +69,7 @@ physical_compressed_block symbolic_to_physical(int xdim, int ydim, int zdim, con
 		// UNORM16 constant-color block.
 		// This encodes separate constant-color blocks. There is currently
 		// no attempt to coalesce them into larger void-extents.
-	
+
 		static const uint8_t cbytes[8] = { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 		for (i = 0; i < 8; i++)
 			res.data[i] = cbytes[i];
@@ -424,7 +424,7 @@ void physical_to_symbolic(int xdim, int ydim, int zdim, physical_compressed_bloc
 		valuecount_to_decode += vals;
 	}
 
-	// get hold of color component for second-plane in the case of dual plane of weightss.
+	// get hold of color component for second-plane in the case of dual plane of weights.
 	if (is_dual_plane)
 		res->plane2_color_component = read_bits(2, below_weights_pos - 2, pb.data);
 

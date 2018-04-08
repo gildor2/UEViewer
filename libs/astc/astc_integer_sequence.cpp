@@ -1,4 +1,4 @@
-/*----------------------------------------------------------------------------*/  
+/*----------------------------------------------------------------------------*/
 /**
  *	This confidential and proprietary software may be used only as
  *	authorised by a licensing agreement from ARM Limited
@@ -11,8 +11,8 @@
  *
  *	@brief	Functions to encode/decode data using Bounded Integer Sequence
  *			Encoding.
- */ 
-/*----------------------------------------------------------------------------*/ 
+ */
+/*----------------------------------------------------------------------------*/
 #include "astc_codec_internals.h"
 	// unpacked quint triplets <low,middle,high> for each packed-quint value
 static const uint8_t quints_of_integer[128][3] = {
@@ -514,7 +514,7 @@ void encode_ise(int quantization_level, int elements, const uint8_t * input_data
 void decode_ise(int quantization_level, int elements, const uint8_t * input_data, uint8_t * output_data, int bit_offset)
 {
 	int i;
-	// note: due to how the the trit/quint-block unpacking is done in this function,
+	// note: due to how the trit/quint-block unpacking is done in this function,
 	// we may write more temporary results than the number of outputs
 	// The maximum actual number of results is 64 bit, but we keep 4 additional elements
 	// of padding.

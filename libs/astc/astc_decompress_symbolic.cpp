@@ -1,4 +1,4 @@
-/*----------------------------------------------------------------------------*/  
+/*----------------------------------------------------------------------------*/
 /**
  *	This confidential and proprietary software may be used only as
  *	authorised by a licensing agreement from ARM Limited
@@ -11,13 +11,14 @@
  *
  *	@brief	Decompress a block of colors, expressed as a symbolic block,
  *			for ASTC.
- */ 
-/*----------------------------------------------------------------------------*/ 
+ */
+/*----------------------------------------------------------------------------*/
+
+#include <math.h>
 
 #include "astc_codec_internals.h"
 
 #include "softfloat.h"
-#include <math.h>
 #include <stdio.h>
 
 int compute_value_of_texel_int(int texel_to_get, const decimation_table * it, const int *weights)
@@ -244,7 +245,7 @@ void decompress_symbolic_block(astc_decode_mode decode_mode,
 	}
 
 
-	// then un-decimate them.
+	// then undecimate them.
 	int weights[MAX_TEXELS_PER_BLOCK];
 	int plane2_weights[MAX_TEXELS_PER_BLOCK];
 

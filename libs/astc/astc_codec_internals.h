@@ -2,7 +2,7 @@
 /**
  *	This confidential and proprietary software may be used only as
  *	authorised by a licensing agreement from ARM Limited
- *	(C) COPYRIGHT 2011-2012 ARM Limited
+ *	(C) COPYRIGHT 2011-2012, 2018 ARM Limited
  *	ALL RIGHTS RESERVED
  *
  *	The entire notice above must be reproduced on all authorised
@@ -57,7 +57,7 @@ void astc_codec_internal_error(const char *filename, int linenumber);
 // works on Linux only, and slows down encoding significantly.
 // #define DEBUG_CAPTURE_NAN
 
-// the PRINT_DIAGNOSTICS macro enables the -diag commandline switch,
+// the PRINT_DIAGNOSTICS macro enables the -diag command line switch,
 // which can be used to look for codec bugs
 #define DEBUG_PRINT_DIAGNOSTICS
 
@@ -102,7 +102,7 @@ enum astc_decode_mode
 /*
 	Partition table representation:
 	For each block size, we have 3 tables, each with 1024 partitionings;
-	these three tables correspond to 2, 3 and 4 partitions repsectively.
+	these three tables correspond to 2, 3 and 4 partitions respectively.
 	For each partitioning, we have:
 	* a 4-entry table indicating how many texels there are in each of the 4 partitions.
 	  This may be from 0 to a very large value.
@@ -183,16 +183,16 @@ struct block_size_descriptor
 
 // data structure representing one block of an image.
 // it is expanded to float prior to processing to save some computation time
-// on conversions to/from uint8_t (this also allows us to handle hdr textures easily)
+// on conversions to/from uint8_t (this also allows us to handle HDR textures easily)
 struct imageblock
 {
-	float orig_data[MAX_TEXELS_PER_BLOCK * 4];	// original input data
-	float work_data[MAX_TEXELS_PER_BLOCK * 4];	// the data that we will compress, either linear or LNS (0..65535 in both cases)
-	float deriv_data[MAX_TEXELS_PER_BLOCK * 4];	// derivative of the conversion function used, used ot modify error weighting
+	float orig_data[MAX_TEXELS_PER_BLOCK * 4];  // original input data
+	float work_data[MAX_TEXELS_PER_BLOCK * 4];  // the data that we will compress, either linear or LNS (0..65535 in both cases)
+	float deriv_data[MAX_TEXELS_PER_BLOCK * 4]; // derivative of the conversion function used, used to modify error weighting
 
-	uint8_t rgb_lns[MAX_TEXELS_PER_BLOCK * 4];	// 1 if RGB data are being trated as LNS
-	uint8_t alpha_lns[MAX_TEXELS_PER_BLOCK * 4];	// 1 if Alpha data are being trated as LNS
-	uint8_t nan_texel[MAX_TEXELS_PER_BLOCK * 4];	// 1 if the texel is a NaN-texel.
+	uint8_t rgb_lns[MAX_TEXELS_PER_BLOCK];      // 1 if RGB data are being treated as LNS
+	uint8_t alpha_lns[MAX_TEXELS_PER_BLOCK];    // 1 if Alpha data are being treated as LNS
+	uint8_t nan_texel[MAX_TEXELS_PER_BLOCK];    // 1 if the texel is a NaN-texel.
 
 	float red_min, red_max;
 	float green_min, green_max;
@@ -512,11 +512,11 @@ void compute_partition_error_color_weightings(int xdim, int ydim, int zdim, cons
 // function to find the best partitioning for a given block.
 
 void find_best_partitionings(int partition_search_limit, int xdim, int ydim, int zdim, int partition_count, const imageblock * pb, const error_weight_block * ewb, int candidates_to_return,
-							 // best partitionings to use if the endpoint colors are assumed to be uncorrellated
+							 // best partitionings to use if the endpoint colors are assumed to be uncorrelated
 							 int *best_partitions_uncorrellated,
 							 // best partitionings to use if the endpoint colors have the same chroma
 							 int *best_partitions_samechroma,
-							 // best partitionings to use if dual plane of weightss are present
+							 // best partitionings to use if dual plane of weights are present
 							 int *best_partitions_dual_weight_planes);
 
 
@@ -590,7 +590,7 @@ astc_codec_image *astc_codec_load_image(const char *filename, int padding, int *
 int astc_codec_unlink(const char *filename);
 
 // function to store image to file
-// If sucessful, returns the number of channels in input image
+// If successful, returns the number of channels in input image
 // If unsuccessful, returns a negative number.
 int store_ktx_uncompressed_image(const astc_codec_image * img, const char *filename, int bitness);
 int store_dds_uncompressed_image(const astc_codec_image * img, const char *filename, int bitness);
@@ -605,7 +605,7 @@ int get_output_filename_enforced_bitness(const char *filename);
 void compute_error_metrics(int input_image_is_hdr, int input_components, const astc_codec_image * img1, const astc_codec_image * img2, int low_fstop, int high_fstop, int psnrmode);
 
 // fetch an image-block from the input file
-void fetch_imageblock(const astc_codec_image * img, imageblock * pb,	// picture-block to imitialize with image data
+void fetch_imageblock(const astc_codec_image * img, imageblock * pb,	// picture-block to initialize with image data
 					  // block dimensions
 					  int xdim, int ydim, int zdim,
 					  // position in picture to fetch block from
@@ -614,7 +614,7 @@ void fetch_imageblock(const astc_codec_image * img, imageblock * pb,	// picture-
 
 // write an image block to the output file buffer.
 // the data written are taken from orig_data.
-void write_imageblock(astc_codec_image * img, const imageblock * pb,	// picture-block to imitialize with image data
+void write_imageblock(astc_codec_image * img, const imageblock * pb,	// picture-block to initialize with image data
 					  // block dimensions
 					  int xdim, int ydim, int zdim,
 					  // position in picture to write block to.
@@ -698,11 +698,33 @@ struct encoding_choice_errors
 	float rgb_luma_error;		// error of using HDR RGB-scale instead of complete endpoints.
 	float luminance_error;		// error of using luminance instead of RGB
 	float alpha_drop_error;		// error of discarding alpha
-	float rgb_drop_error;		// error of discarding rgb
+	float rgb_drop_error;		// error of discarding RGB
 	int can_offset_encode;
 	int can_blue_contract;
 };
 
+// buffers used to store intermediate data in compress_symbolic_block_fixed_partition_*()
+struct compress_fixed_partition_buffers
+{
+	endpoints_and_weights* ei1;
+	endpoints_and_weights* ei2;
+	endpoints_and_weights* eix1;
+	endpoints_and_weights* eix2;
+	float *decimated_quantized_weights;
+	float *decimated_weights;
+	float *flt_quantized_decimated_quantized_weights;
+	uint8_t *u8_quantized_decimated_quantized_weights;
+};
+
+struct compress_symbolic_block_buffers
+{
+	error_weight_block *ewb;
+	error_weight_block_orig *ewbo;
+	symbolic_compressed_block *tempblocks;
+	imageblock *temp;
+	compress_fixed_partition_buffers *plane1;
+	compress_fixed_partition_buffers *planes2;
+};
 
 void compute_encoding_choice_errors(int xdim, int ydim, int zdim, const imageblock * pb, const partition_info * pi, const error_weight_block * ewb,
 									int separate_component,	// component that is separated out in 2-plane mode, -1 in 1-plane mode
@@ -721,7 +743,7 @@ void determine_optimal_set_of_endpoint_formats_to_use(int xdim, int ydim, int zd
 void recompute_ideal_colors(int xdim, int ydim, int zdim, int weight_quantization_mode, endpoints * ep,	// contains the endpoints we wish to update
 							float4 * rgbs_vectors,	// used to return RGBS-vectors for endpoint mode #6
 							float4 * rgbo_vectors,	// used to return RGBS-vectors for endpoint mode #7
-							float2 * lum_vectors,	// used to return lumiannce-vectors.
+							float2 * lum_vectors,	// used to return luminance-vectors.
 							const uint8_t * weight_set,	// the current set of weight values
 							const uint8_t * plane2_weight_set,	// NULL if plane 2 is not actually used.
 							int plane2_color_component,	// color component for 2nd plane of weights; -1 if the 2nd plane of weights is not present
@@ -758,7 +780,8 @@ void compute_angular_endpoints_2planes(float mode_cutoff,
 /* *********************************** high-level encode and decode functions ************************************ */
 
 float compress_symbolic_block(const astc_codec_image * input_image,
-							  astc_decode_mode decode_mode, int xdim, int ydim, int zdim, const error_weighting_params * ewp, const imageblock * blk, symbolic_compressed_block * scb);
+							  astc_decode_mode decode_mode, int xdim, int ydim, int zdim, const error_weighting_params * ewp, const imageblock * blk, symbolic_compressed_block * scb,
+							  compress_symbolic_block_buffers * tmpbuf);
 
 
 float4 lerp_color_flt(const float4 color0, const float4 color1, float weight,	// 0..1

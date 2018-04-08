@@ -13,12 +13,13 @@
  */
 /*----------------------------------------------------------------------------*/
 
+#include <math.h>
+
 #include "astc_codec_internals.h"
 
 #include "softfloat.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <math.h>
 
 void destroy_image(astc_codec_image * img)
 {
@@ -521,7 +522,7 @@ void imageblock_initialize_orig_from_work(imageblock * pb, int pixelcount)
 
 
 // fetch an imageblock from the input file.
-void fetch_imageblock(const astc_codec_image * img, imageblock * pb,	// picture-block to imitialize with image data
+void fetch_imageblock(const astc_codec_image * img, imageblock * pb,	// picture-block to initialize with image data
 					  // block dimensions
 					  int xdim, int ydim, int zdim,
 					  // position in texture.
@@ -621,9 +622,6 @@ void fetch_imageblock(const astc_codec_image * img, imageblock * pb,	// picture-
 					float af = sf16_to_float(a);
 
 					// equalize the color components somewhat, and get rid of negative values.
-
-					/*
-					   float maxf = MAX( MAX( rf, gf ), bf ); if( maxf < 1e-5f ) maxf = 1e-5f; rf = MAX( rf, maxf * 4e-4f ); gf = MAX( gf, maxf * 4e-4f ); bf = MAX( bf, maxf * 4e-4f ); */
 					rf = MAX(rf, 1e-8f);
 					gf = MAX(gf, 1e-8f);
 					bf = MAX(bf, 1e-8f);
@@ -716,7 +714,7 @@ void fetch_imageblock(const astc_codec_image * img, imageblock * pb,	// picture-
 	int rgb_lns = (max_rgb < 0.15f || max_rgb > 1.0f || max_alpha > 1.0f) ? 1 : 0;
 	int alpha_lns = rgb_lns ? (max_alpha > 1.0f || max_alpha < 0.15f) : 0;
 
-	// not yet though; for the time being, just obey the commandline.
+	// not yet though; for the time being, just obey the command line.
 	rgb_lns = rgb_force_use_of_hdr;
 	alpha_lns = alpha_force_use_of_hdr;
 
@@ -990,6 +988,7 @@ void update_imageblock_flags(imageblock * pb, int xdim, int ydim, int zdim)
 	pb->grayscale = grayscale;
 }
 
+
 #if 0 // Gildor: disabled file APIs
 
 // Helper functions for various error-metric calculations
@@ -1046,7 +1045,7 @@ double mpsnr_sumdiff(double v1, double v2, int low_fstop, int high_fstop)
 
 
 
-// Compute psnr and other error metrics between input and output image
+// Compute PSNR and other error metrics between input and output image
 void compute_error_metrics(int compute_hdr_error_metrics, int input_components, const astc_codec_image * img1, const astc_codec_image * img2, int low_fstop, int high_fstop, int psnrmode)
 {
 	int x, y, z;

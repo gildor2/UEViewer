@@ -438,7 +438,7 @@ static void initialize_decimation_table_2d(
 		dt->texel_num_weights[i] = weightcount_of_texel[i];
 
 		// ensure that all 4 entries are actually initialized.
-		// This allows a branch-free implemntation of compute_value_of_texel_flt()
+		// This allows a branch-free implementation of compute_value_of_texel_flt()
 		for (j = 0; j < 4; j++)
 		{
 			dt->texel_weights_int[i][j] = 0;
@@ -620,7 +620,7 @@ static void initialize_decimation_table_3d(
 		dt->texel_num_weights[i] = weightcount_of_texel[i];
 
 		// ensure that all 4 entries are actually initialized.
-		// This allows a branch-free implemntation of compute_value_of_texel_flt()
+		// This allows a branch-free implementation of compute_value_of_texel_flt()
 		for (j = 0; j < 4; j++)
 		{
 			dt->texel_weights_int[i][j] = 0;
@@ -690,6 +690,9 @@ void construct_block_size_descriptor_2d(int xdim, int ydim, block_size_descripto
 				if (bits_2planes >= MIN_WEIGHT_BITS_PER_BLOCK && bits_2planes <= MAX_WEIGHT_BITS_PER_BLOCK)
 					maxprec_2planes = i;
 			}
+
+			if (2 * x_weights * y_weights > MAX_WEIGHTS_PER_BLOCK)
+				maxprec_2planes = -1;
 
 			bsd->permit_encode[decimation_mode_count] = (x_weights <= xdim && y_weights <= ydim);
 
@@ -840,6 +843,10 @@ void construct_block_size_descriptor_3d(int xdim, int ydim, int zdim, block_size
 					if (bits_2planes >= MIN_WEIGHT_BITS_PER_BLOCK && bits_2planes <= MAX_WEIGHT_BITS_PER_BLOCK)
 						maxprec_2planes = i;
 				}
+
+				if ((2 * x_weights * y_weights * z_weights) > MAX_WEIGHTS_PER_BLOCK)
+					maxprec_2planes = -1;
+
 				bsd->permit_encode[decimation_mode_count] = (x_weights <= xdim && y_weights <= ydim && z_weights <= zdim);
 
 				bsd->decimation_mode_samples[decimation_mode_count] = weight_count;
@@ -952,7 +959,7 @@ void construct_block_size_descriptor_3d(int xdim, int ydim, int zdim, block_size
 static block_size_descriptor *bsd_pointers[4096];
 
 // function to obtain a block size descriptor. If the descriptor does not exist,
-// it is created as needed. Should not be called from within multithreaded code.
+// it is created as needed. Should not be called from within multi-threaded code.
 const block_size_descriptor *get_block_size_descriptor(int xdim, int ydim, int zdim)
 {
 	int bsd_index = xdim + (ydim << 4) + (zdim << 8);

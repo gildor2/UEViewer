@@ -20,7 +20,7 @@
 /******************************************
   helper functions and their lookup tables
  ******************************************/
-/* count leading zeroes functions. Only used when the input is nonzero. */
+/* count leading zeros functions. Only used when the input is nonzero. */
 
 #if defined(__GNUC__) && (defined(__i386) || defined(__amd64))
 #elif defined(__arm__) && defined(__ARMCC_VERSION)
@@ -50,7 +50,7 @@
 
 
 /*
-   32-bit count-leading-zeroes function: use the Assembly instruction whenever possible. */
+   32-bit count-leading-zeros function: use the Assembly instruction whenever possible. */
 SOFTFLOAT_INLINE uint32_t clz32(uint32_t inp)
 {
 	#if defined(__GNUC__) && (defined(__i386) || defined(__amd64))
@@ -87,7 +87,7 @@ SOFTFLOAT_INLINE uint32_t clz32(uint32_t inp)
 static SOFTFLOAT_INLINE uint32_t rtne_shift32(uint32_t inp, uint32_t shamt)
 {
 	uint32_t vl1 = UINT32_C(1) << shamt;
-	uint32_t inp2 = inp + (vl1 >> 1);	/* added 0.5 ulp */
+	uint32_t inp2 = inp + (vl1 >> 1);	/* added 0.5 ULP */
 	uint32_t msk = (inp | UINT32_C(1)) & vl1;	/* nonzero if odd. '| 1' forces it to 1 if the shamt is 0. */
 	msk--;						/* negative if even, nonnegative if odd. */
 	inp2 -= (msk >> 31);		/* subtract epsilon before shift if even. */
@@ -129,19 +129,17 @@ sf32 sf16_to_sf32(sf16 inp)
 		with just 1 table lookup, 2 shifts and 1 add.
 	*/
 
-// Original INT32_C macro causes error in gcc 5.4, so define something else.
-#undef INT32_C
-#define INT32_C(x)	static_cast<int32_t>(x)
+	#define WITH_MB(a) INT32_C((a) | (1 << 31))
 	static const int32_t tbl[64] =
 	{
-		INT32_C(0x80000000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000),
+		WITH_MB(0x00000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000),
 		INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000),
 		INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000),
-		INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x80038000),
-		INT32_C(0x80038000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000),
+		INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), INT32_C(0x1C000), WITH_MB(0x38000),
+		WITH_MB(0x38000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000),
 		INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000),
 		INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000),
-		INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x80070000)
+		INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), INT32_C(0x54000), WITH_MB(0x70000)
 	};
 
 	int32_t res = tbl[inpx >> 10];
@@ -155,7 +153,7 @@ sf32 sf16_to_sf32(sf16 inp)
 	if ((res & UINT32_C(0x3FF)) == 0)
 		return res << 13;
 
-	/* NaN: the exponent field of 'inp' is not zero; NaNs must be quitened. */
+	/* NaN: the exponent field of 'inp' is not zero; NaNs must be quietened. */
 	if ((inpx & 0x7C00) != 0)
 		return (res << 13) | UINT32_C(0x400000);
 
@@ -354,12 +352,12 @@ sf16 sf32_to_sf16(sf32 inp, roundmode rmode)
 		return (((inp & UINT32_C(0x7FFFFF)) + UINT32_C(0x800000)) >> p) | vlx;
 	case 20:
 	case 26:
-		/* denornal, round away from zero. */
+		/* denormal, round away from zero. */
 		p = 126 - ((inp >> 23) & 0xFF);
 		return rtup_shift32((inp & UINT32_C(0x7FFFFF)) + UINT32_C(0x800000), p) | vlx;
 	case 24:
 	case 29:
-		/* denornal, round to nearest-away */
+		/* denormal, round to nearest-away */
 		p = 126 - ((inp >> 23) & 0xFF);
 		return rtna_shift32((inp & UINT32_C(0x7FFFFF)) + UINT32_C(0x800000), p) | vlx;
 	case 23:
@@ -390,7 +388,7 @@ float sf16_to_float(sf16 p)
 	return i.f;
 }
 
-/* convert from native-float to softfloat */
+/* convert from native-float to soft-float */
 
 sf16 float_to_sf16(float p, roundmode rm)
 {
