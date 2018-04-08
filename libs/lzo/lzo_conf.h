@@ -112,6 +112,10 @@
 #  error "this should not happen - check defines for __huge"
 #endif
 
+// Gildor: fixed compilation of ACC_COMPILE_TIME_ASSERT_HEADER/ACC_COMPILE_TIME_ASSERT with gcc 6+
+// (defined in miniacc.h, so do the fix before including that header)
+#define ACC_COMPILE_TIME_ASSERT_HEADER(expr) static_assert(expr, "Static assertion failed");
+
 #if defined(__LZO_IN_MINILZO) || defined(LZO_CFG_FREESTANDING)
 #elif (LZO_OS_DOS16 || LZO_OS_OS216 || LZO_OS_WIN16)
 #  define ACC_WANT_ACC_INCD_H 1
@@ -320,4 +324,3 @@ LZO_EXTERN(const lzo_bytep) lzo_copyright(void);
 /*
 vi:ts=4:et
 */
-
