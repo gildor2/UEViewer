@@ -2072,7 +2072,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	for (i = 0; i < TextureParameterValues.Num(); i++)
 	{
 		const FTextureParameterValue &P = TextureParameterValues[i];
-		const char *Name = P.ParameterName;
+		const char *Name = P.GetName();
 		UTexture3  *Tex  = P.ParameterValue;
 		if (!Tex) continue;
 
@@ -2123,7 +2123,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	for (i = 0; i < VectorParameterValues.Num(); i++)
 	{
 		const FVectorParameterValue &P = VectorParameterValues[i];
-		const char *Name = P.ParameterName;
+		const char *Name = P.GetName();
 		const FLinearColor &Color = P.ParameterValue;
 		EMISSIVE_COLOR(appStristr(Name, "Emissive"), 100);
 #if TRON

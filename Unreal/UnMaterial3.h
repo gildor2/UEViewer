@@ -893,6 +893,23 @@ public:
 	}
 };
 
+#if UNREAL4
+
+struct FMaterialParameterInfo
+{
+	DECLARE_STRUCT(FMaterialParameterInfo)
+
+	FName			Name;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(Name)
+		// Layer information
+		PROP_DROP(Association)
+		PROP_DROP(Index)
+	END_PROP_TABLE
+};
+
+#endif // UNREAL4
 
 struct FScalarParameterValue
 {
@@ -901,10 +918,25 @@ struct FScalarParameterValue
 	FName			ParameterName;
 	float			ParameterValue;
 //	FGuid			ExpressionGUID;
+#if UNREAL4
+	FMaterialParameterInfo ParameterInfo;
+#endif
+
+	const char* GetName() const
+	{
+#if UNREAL4
+		if (ParameterInfo.Name != "None")
+			return *ParameterInfo.Name;
+#endif
+		return ParameterName;
+	}
 
 	BEGIN_PROP_TABLE
 		PROP_NAME(ParameterName)
 		PROP_FLOAT(ParameterValue)
+#if UNREAL4
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
+#endif
 		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
@@ -919,10 +951,25 @@ struct FTextureParameterValue
 	FName			ParameterName;
 	UTexture3		*ParameterValue;
 //	FGuid			ExpressionGUID;
+#if UNREAL4
+	FMaterialParameterInfo ParameterInfo;
+#endif
+
+	const char* GetName() const
+	{
+#if UNREAL4
+		if (ParameterInfo.Name != "None")
+			return *ParameterInfo.Name;
+#endif
+		return ParameterName;
+	}
 
 	BEGIN_PROP_TABLE
 		PROP_NAME(ParameterName)
 		PROP_OBJ(ParameterValue)
+#if UNREAL4
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
+#endif
 		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
@@ -937,10 +984,25 @@ struct FVectorParameterValue
 	FName			ParameterName;
 	FLinearColor	ParameterValue;
 //	FGuid			ExpressionGUID;
+#if UNREAL4
+	FMaterialParameterInfo ParameterInfo;
+#endif
+
+	const char* GetName() const
+	{
+#if UNREAL4
+		if (ParameterInfo.Name != "None")
+			return *ParameterInfo.Name;
+#endif
+		return ParameterName;
+	}
 
 	BEGIN_PROP_TABLE
 		PROP_NAME(ParameterName)
 		PROP_STRUC(ParameterValue, FLinearColor)
+#if UNREAL4
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
+#endif
 		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
@@ -1045,6 +1107,7 @@ public:
 
 #define REGISTER_MATERIAL_CLASSES_U4	\
 	REGISTER_CLASS_ALIAS(UTexture2D, UTextureCube) \
+	REGISTER_CLASS(FMaterialParameterInfo) \
 	REGISTER_CLASS(FTextureSource)		\
 	REGISTER_CLASS(FMaterialInstanceBasePropertyOverrides)
 
