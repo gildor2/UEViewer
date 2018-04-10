@@ -1324,6 +1324,12 @@ void USkeletalMesh4::ConvertMesh()
 		// get vertex count and determine vertex source
 		int VertexCount = SrcLod.VertexBufferGPUSkin.GetVertexCount();
 
+		//!! TODO - UE4 editor asset support, it has vertices inside sections
+		if (VertexCount == 0 && LODModels[lod].Sections.Num() > 0 && LODModels[lod].Sections[0].SoftVertices.Num())
+		{
+			appNotify("This is a editor asset, conversion is not yet supported!");
+		}
+
 		// allocate the vertices
 		Lod->AllocateVerts(VertexCount);
 
