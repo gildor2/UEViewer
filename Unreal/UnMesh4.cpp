@@ -578,6 +578,10 @@ struct FSkelMeshSection4
 				TMap<int32, TArray<int32> > OverlappingVertices;
 				Ar << OverlappingVertices;
 			}
+			if (FReleaseObjectVersion::Get(Ar) >= FReleaseObjectVersion::AddSkeletalMeshSectionDisable)
+			{
+				Ar << S.bDisabled;
+			}
 		}
 
 		return Ar;

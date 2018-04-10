@@ -2610,7 +2610,7 @@ struct FAnimPhysObjectVersion
 
 	static Type Get(const FArchive& Ar)
 	{
-		static const FGuid GUID = { 0x12F88B9F, 0x88754AFC, 0xA67CD90C, 0x383ABD29 };
+		static const FGuid GUID = { 0x29E575DD, 0xE0A34627, 0x9D10D276, 0x232CDCEA };
 		int ver = GetUE4CustomVersion(Ar, GUID);
 		if (ver >= 0)
 			return (Type)ver;
@@ -2624,6 +2624,43 @@ struct FAnimPhysObjectVersion
 			return AddLODToCurveMetaData;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)16;
+		// NEW_ENGINE_VERSION
+		return LatestVersion;
+	}
+};
+
+struct FReleaseObjectVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		AddSkeletalMeshSectionDisable = 12,
+		VersionPlusOne,
+		LatestVersion = VersionPlusOne - 1
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		static const FGuid GUID = { 0x9C54D522, 0xA8264FBE, 0x94210746, 0x61B482D0 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+		if (Ar.Game < GAME_UE4(11))
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game < GAME_UE4(13))
+			return (Type)1;
+		if (Ar.Game < GAME_UE4(14))
+			return (Type)3;
+		if (Ar.Game < GAME_UE4(15))
+			return (Type)4;
+		if (Ar.Game < GAME_UE4(16))
+			return (Type)7;
+		if (Ar.Game < GAME_UE4(17))
+			return (Type)9;
+		if (Ar.Game < GAME_UE4(19))
+			return (Type)10;
+		if (Ar.Game < GAME_UE4(20))
+			return AddSkeletalMeshSectionDisable;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}

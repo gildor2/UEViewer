@@ -280,7 +280,8 @@ enum EPropType // hardcoded in Unreal
 	NAME_MulticastDelegateProperty = 16,
 	NAME_WeakObjectProperty = 17,
 	NAME_LazyObjectProperty = 18,
-	NAME_AssetObjectProperty = 19,
+	NAME_SoftObjectProperty = 19,
+	NAME_AssetObjectProperty = 19, // replaced with SoftObjectProperty in 4.18
 	NAME_UInt64Property = 20,
 	NAME_UInt32Property = 21,
 	NAME_UInt16Property = 22,
@@ -334,6 +335,7 @@ static const struct
 #endif
 #if UNREAL4
 	F(AttributeProperty),
+	F(SoftObjectProperty),
 	F(AssetObjectProperty),
 	F(AssetSubclassProperty),
 	F(EnumProperty),
