@@ -398,6 +398,11 @@ public:
 		PROP_INT(StripSize)
 	END_PROP_TABLE
 
+	int GetOffsetData(int Index, int Offset = 0)
+	{
+		return OffsetData[Index * StripSize + Offset];
+	}
+
 	friend FArchive& operator<<(FArchive& Ar, FCompressedOffsetData& D)
 	{
 		return Ar << D.OffsetData << D.StripSize;
@@ -597,6 +602,7 @@ public:
 	int GetNumTracks() const;
 	int GetTrackBoneIndex(int TrackIndex) const;
 	int FindTrackForBoneIndex(int BoneIndex) const;
+	void TransferPerTrackData(TArray<uint8>& Dst, const TArray<uint8>& Src);
 };
 
 

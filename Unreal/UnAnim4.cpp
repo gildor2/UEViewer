@@ -251,10 +251,14 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		int ScaleKeys = 0, ScaleOffset = 0;
 		if (Seq->CompressedScaleOffsets.IsValid())
 		{
+		#if 0 //?? disabled at 11.04.2017: it takes strip 1 if strip size > 1 - not sure why
 			int ScaleStripSize = Seq->CompressedScaleOffsets.StripSize;
 			ScaleOffset = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize];
 			if (ScaleStripSize > 1)
 				ScaleKeys = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize + 1];
+		#else
+			ScaleKeys = Seq->CompressedScaleOffsets.GetOffsetData(localTrackIndex);
+		#endif
 		}
 		// bone name
 		int BoneTrackIndex = Seq->GetTrackBoneIndex(localTrackIndex);
@@ -345,18 +349,6 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		static const CQuat nullQuat = { 0, 0, 0, 1 };
 
 		int offsetIndex = TrackIndex * offsetsPerBone;
-
-		// PARAGON has invalid data inside some animation tracks. Not sure if game engine ignores them
-		// or trying to process (this game has holes in data due to wrong pointers in CompressedTrackOffsets).
-		// This causes garbage data to appear instead of real animation track header, with wrong compression
-		// method etc. We're going to skip such tracks with displaying a warning message.
-		if (0) // this is just a placeholder for error handler - it should be located somewhere
-		{
-		track_error:
-			AnimSet->Sequences.RemoveSingle(Dst);
-			delete Dst;
-			return;
-		}
 
 		//----------------------------------------------
 		// decode AKF_PerTrackCompression data
@@ -462,12 +454,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 						A->KeyPos.Add(nullVec);
 						break;
 					default:
-						{
-							char buf[1024];
-							Seq->GetFullName(buf, 1024);
-							appNotify("%s: unknown translation compression method: %d (%s) - dropping track", buf, KeyFormat, EnumToName(KeyFormat));
-							goto track_error;
-						}
+						appError("Unknown translation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
 					}
 				}
 				// align to 4 bytes
@@ -533,12 +520,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 						A->KeyQuat.Add(nullQuat);
 						break;
 					default:
-						{
-							char buf[1024];
-							Seq->GetFullName(buf, 1024);
-							appNotify("%s: unknown rotation compression method: %d (%s) - dropping track", buf, KeyFormat, EnumToName(KeyFormat));
-							goto track_error;
-						}
+						appError("Unknown rotation compression method: %d (%s)", KeyFormat, EnumToName(KeyFormat));
 					}
 				}
 				// align to 4 bytes
@@ -549,6 +531,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			unguard;
 
 			unguard;
+
 			continue;
 			// end of AKF_PerTrackCompression block ...
 		}
@@ -642,10 +625,12 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			}
 		}
 
-		// align to 4 bytes
-		Reader.Seek(Align(Reader.Tell(), 4));
 		if (HasTimeTracks)
+		{
+			// align to 4 bytes
+			Reader.Seek(Align(Reader.Tell(), 4));
 			ReadTimeArray(Reader, RotKeys, A->KeyQuatTime, Seq->NumFrames);
+		}
 
 #if DEBUG_DECOMPRESS
 //		appPrintf("[%s : %s] Frames=%d KeyPos.Num=%d KeyQuat.Num=%d KeyFmt=%s\n", *Seq->SequenceName, *TrackBoneNames[j],
@@ -750,12 +735,134 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 			// compressed data
 			Ar << CompressedByteStream;
 			Ar << bUseRawDataOnly;
+
+			if (KeyEncodingFormat == AKF_PerTrackCompression && CompressedScaleOffsets.OffsetData.Num())
+			{
+				TArray<uint8> SwappedData;
+				TransferPerTrackData(SwappedData, CompressedByteStream);
+				Exchange(SwappedData, CompressedByteStream);
+			}
 		}
 	}
 
 	unguard;
 }
 
+// UE4 has some mess in AEFPerTrackCompressionCodec::ByteSwapOut() (and ByteSwapIn): it sends
+// data in order: translation data, rotation data, scale data. However, scale data stored in
+// CompressedByteStream before translation and rotation. In other words, data reordered, but
+// offsets pointed to original data. Here we're reordering data back, duplicating functionality
+// of AEFPerTrackCompressionCodec::ByteSwapOut().
+void UAnimSequence4::TransferPerTrackData(TArray<uint8>& Dst, const TArray<uint8>& Src)
+{
+	guard(UAnimSequence4::TransferPerTrackData);
+
+	Dst.AddZeroed(Src.Num());
+
+	int NumTracks = CompressedTrackOffsets.Num() / 2;
+
+	const uint8* SrcData = Src.GetData();
+
+	for (int TrackIndex = 0; TrackIndex < NumTracks; TrackIndex++)
+	{
+		for (int Kind = 0; Kind < 3; Kind++)
+		{
+			// Get track offset
+			int Offset = 0;
+			switch (Kind)
+			{
+			case 0: // translation data
+				Offset = CompressedTrackOffsets[TrackIndex * 2];
+				break;
+			case 1: // rotation data
+				Offset = CompressedTrackOffsets[TrackIndex * 2 + 1];
+				break;
+			default: // case 2 - scale data
+				Offset = CompressedScaleOffsets.GetOffsetData(TrackIndex);
+			}
+			if (Offset == INDEX_NONE)
+			{
+				continue;
+			}
+
+			uint8* DstData = Dst.GetData() + Offset;
+
+			// Copy data
+
+	#define COPY(size) \
+			{ \
+				int ct = size; /* avoid macro expansion troubles */ \
+				memcpy(DstData, SrcData, size); \
+				SrcData += ct; \
+				DstData += ct; \
+			}
+
+			// Decode animation header
+			uint32 PackedInfo;
+			PackedInfo = *(uint32*)SrcData;
+			COPY(sizeof(uint32));
+
+			AnimationCompressionFormat KeyFormat;
+			int ComponentMask;
+			int NumKeys;
+			bool HasTimeTracks;
+			DECODE_PER_TRACK_INFO(PackedInfo);
+
+			static const int NumComponentsPerMask[8] = { 3, 1, 1, 2, 1, 2, 2, 3 }; // number of identity bits in value, 0 == all bits
+			int NumComponents = NumComponentsPerMask[ComponentMask & 7];
+
+			// mins/randes
+			if (KeyFormat == ACF_IntervalFixed32NoW)
+			{
+				COPY(sizeof(float) * NumComponents * 2);
+			}
+
+			// keys
+			switch (KeyFormat)
+			{
+			case ACF_Float96NoW:
+				COPY(sizeof(float) * NumComponents * NumKeys);
+				break;
+			case ACF_Fixed48NoW:
+				COPY(sizeof(uint16) * NumComponents * NumKeys);
+				break;
+			case ACF_IntervalFixed32NoW:
+			case ACF_Fixed32NoW:
+			case ACF_Float32NoW:
+				COPY(sizeof(uint32) * NumKeys); // always stored full data, ComponentMask used only for mins/ranges
+				break;
+			case ACF_Identity:
+				// nothing
+				break;
+			}
+
+			// time data
+			if (HasTimeTracks)
+			{
+				// padding
+				int CurrentOffset = DstData - Dst.GetData();
+				int AlignedOffset = Align(CurrentOffset, 4);
+				if (AlignedOffset != CurrentOffset)
+				{
+					COPY(AlignedOffset - CurrentOffset);
+				}
+				// copy time
+				COPY((NumFrames < 256 ? sizeof(uint8) : sizeof(uint16)) * NumKeys);
+			}
+
+			// align to 4 bytes
+			int CurrentOffset = DstData - Dst.GetData();
+			int AlignedOffset = Align(CurrentOffset, 4);
+			assert(AlignedOffset <= Dst.Num());
+			if (AlignedOffset != CurrentOffset)
+			{
+				COPY(AlignedOffset - CurrentOffset);
+			}
+		}
+	}
+
+	unguard;
+}
 
 void UAnimSequence4::PostLoad()
 {

@@ -184,6 +184,9 @@ LZ4
 
 Changes
 ~~~~~~~
+11.04.2018
+- fixed long standing issue with many UE4 animation tracks caused either crash or dropping animation
+
 02.04.2018
 - added possibility to change shape of material preview with 'S' key
 - fixes some issues with material/texture preview mode (wrong lighting, wrong reflections)
