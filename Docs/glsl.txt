@@ -12,3 +12,7 @@ ATI:
 - cannot handle "#define WEIGHT (W1+W2+W3...)" - will try to compile macro as it has arguments
 - cannot handle "#version ..." when there is something before it (defines block cannot be before version difective)
   - the same valid for glsl_validate too
+- ATI GLSL compiler has info messages even when shader successfully compiled. More info:
+  http://wine.git.sourceforge.net/git/gitweb.cgi?p=wine/wine;a=blob_plain;f=dlls/wined3d/glsl_shader.c;hb=HEAD
+    (check "spam[]" in print_glsl_info_log())
+  http://www.nabble.com/-2-5--WineD3D:-Improve-the-GLSL-spam-filter-td23278426.html

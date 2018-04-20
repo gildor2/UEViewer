@@ -1,43 +1,20 @@
-Platform: can get platform from Cooked[...] directory name (PS3, Xenon|XBox360, IPhone)
-
 OpenGL error validation:
 - add error checking after texture uploading (at least for compressed formats)
 - add GL_ResetError before all places with GL_CheckError (glBindBufferEXT doesn't have one)
 - error logging for make.pl - use appNotify instead of printf
 
 Logging:
-- appNotify, appPrintf: make with GLog->Printf or GWarn->Printf ? (to allow overriding)
 - Notify.log:
-  - add "-nolog" switch to disable it
+  ? add "-nolog" switch to disable it
   ? place notify.log into directory of umodel.exe
   - add current date/time, some umodel info (version) and cmdline in a case of crash
-
-- check VertMesh export: export ut2004/SkaarjPack_rc, compare *.3d and *.uc files with UT2004 source
-
-Extract.exe:
-? add "-zip" option: convert package to uncompressed zip file
-- add options for browsing package contents with 'FAR Manager MultiArc'
 
 Shaders: when trying to change/compile shader between glBegin/glEnd, GL will not do anything.
 Should check glGetError() and assert? (or make function GL_CheckError() - will appError(code)
 if code != 0)
 
-FArchive:
-? ArVer, ArLicenseeVer -> Ver(), LicenseeVer() + hide these fields
-
-- use lzop to compress shader texts (call from make.pl)
-
 FONTGEN
-! BUG: '&' displayed as '_' (WinAPI feature)
 ? add pseudographics chars (for material outline)
-! combine with Samples/BitmapBuilder (tool for generating .h file)
-! place font information into font DATA[] (not #define), this will allow to use few fonts at the
-  same time
-
-GENMAKE:
-- "OPTIONS" -> CFLAGS + CPPFLAGS (check, how OPTIONS is currently used), and use separate vars
-  for compiling C++ and C code
-  - have one C++ option for ddslib.c - GCC compiler show warning
 
 ! UE1 UTexture has AnimNext field
 ! implement UMaterialSequence (check 2K4Menus package)
@@ -48,32 +25,9 @@ GENMAKE:
   * BUGS in Tribes3 (have in both umodel in TvEd): mesh ImperialLightJulia, anims 46,137
   * bugs with U8V8 texture format
 
-? when exporting mesh, can create .uc with sockets too (if possible)
-  - requires conversion FCoords -> FVector+FRotator
-  ? better - create .config for skeletal mesh
 ? when cannot load some material type, or file is absent - should at least give ability to list these
   mesh material in "show materials" or "dump" mode (create dummy material, and use default texture
   in its Bind() - in this case, default material itself is not needed)
-
-! UObject:
-  - EndLoad():
-    1) sort by package/offset; priority for CURRENT package
-    2) add assert before serialization: should not be already loaded (bool flag for UObject)
-  - add 2 global lists: complete objects and objects, required serialization; use
-    bool flag to check, which list holds object
-  - periodically sort object list before serialization
-    - profile "recurse.sh" before and after modifications (few times, with and w/o output redirection)
-    - testing: try to load from CD (slow random access)
-
-Exporting (typeinfo tool?):
-- TextBuffer export
-  * TextBuffer is exported now, without defaultproperties
-  - will require to get defaultproperties from "Class'Name'.properties" (object with name=ClassName and
-    class name="")
-
-- try to compile with MinGW (checked GCC4 from cygwin, 7.10.2010 - gcc4 has no "-mno-cygwin" switch)
-- move new Math3D parts to Quake2 core (more code to move ?), move animation system to SkelEdit (make
-  compatible)
 
 
 UE2 NOTES:
@@ -136,10 +90,3 @@ FinalBlend
        -> Modifier (any count)
          -> Texture
          -> Modifier (const color)
-
-http://udn.epicgames.com/Three/UT3CustomCharacters.html
-  some info about UT3 skeletal models
-
-http://www.twcenter.net/forums/showthread.php?t=151655
-http://www.twcenter.net/forums/showthread.php?t=134461
-  ms3d <-> 3ds max converters (max script)
