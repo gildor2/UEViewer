@@ -184,6 +184,9 @@ LZ4
 
 Changes
 ~~~~~~~
+20.04.2018
+- added support for loading UE4 editor SkeletalMesh assets
+
 11.04.2018
 - fixed long standing issue with many UE4 animation tracks caused either crash or dropping animation
 

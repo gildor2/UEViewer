@@ -271,67 +271,156 @@ struct FOverlappingVerticesCustomVersion
 	}
 };
 
-struct FRigidVertex4
+static int GNumSkelInfluences = 4;
+
+// Bone influence mapping for skeletal mesh vertex
+struct FSkinWeightInfo
+{
+	byte				BoneIndex[NUM_INFLUENCES_UE4];
+	byte				BoneWeight[NUM_INFLUENCES_UE4];
+
+	friend FArchive& operator<<(FArchive& Ar, FSkinWeightInfo& W)
+	{
+		if (GNumSkelInfluences <= ARRAY_COUNT(W.BoneIndex))
+		{
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << W.BoneIndex[i];
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << W.BoneWeight[i];
+		}
+		else
+		{
+			// possibly this vertex has more vertex influences
+			assert(GNumSkelInfluences <= MAX_TOTAL_INFLUENCES_UE4);
+			// serialize influences
+			byte BoneIndex2[MAX_TOTAL_INFLUENCES_UE4];
+			byte BoneWeight2[MAX_TOTAL_INFLUENCES_UE4];
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << BoneIndex2[i];
+			for (int i = 0; i < GNumSkelInfluences; i++)
+				Ar << BoneWeight2[i];
+			// check if sorting needed (possibly 2nd half of influences has zero weight)
+			uint32 PackedWeight2 = * (uint32*) &BoneWeight2[4];
+			if (PackedWeight2 != 0)
+			{
+//				printf("# %d %d %d %d %d %d %d %d\n", BoneWeight2[0],BoneWeight2[1],BoneWeight2[2],BoneWeight2[3],BoneWeight2[4],BoneWeight2[5],BoneWeight2[6],BoneWeight2[7]);
+				// Here we assume than weights are sorted by value - didn't see the sorting code in UE4, but printing of data shows that.
+				// Compute weight which should be distributed between other bones to keep sum of weights identity.
+				int ExtraWeight = 0;
+				for (int i = NUM_INFLUENCES_UE4; i < MAX_TOTAL_INFLUENCES_UE4; i++)
+					ExtraWeight += BoneWeight2[i];
+				int WeightPerBone = ExtraWeight / NUM_INFLUENCES_UE4; // note: could be division with remainder!
+				for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
+				{
+					BoneWeight2[i] += WeightPerBone;
+					ExtraWeight -= WeightPerBone;
+				}
+				// add remaining weight to the first bone
+				BoneWeight2[0] += ExtraWeight;
+			}
+			// copy influences to vertex
+			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
+			{
+				W.BoneIndex[i] = BoneIndex2[i];
+				W.BoneWeight[i] = BoneWeight2[i];
+			}
+		}
+		return Ar;
+	}
+};
+
+struct FSkelMeshVertexBase
 {
 	FVector				Pos;
-	FPackedNormal		Normal[3];
+	FPackedNormal		Normal[3];		// Normal[1] (TangentY) is reconstructed from other 2 normals
+						//!! TODO: we're cutting down influences, but holding unused normal here!
+						//!! Should rename Normal[] and split into 2 separate fields
+	FSkinWeightInfo		Infs;
+
+	void SerializeForGPU(FArchive& Ar)
+	{
+		Ar << Normal[0] << Normal[2];
+		if (FSkeletalMeshCustomVersion::Get(Ar) < FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
+		{
+			// serialized as separate buffer starting with UE4.15
+			Ar << Infs;
+		}
+		Ar << Pos;
+	}
+
+	void SerializeForEditor(FArchive& Ar)
+	{
+		Ar << Pos;
+		Ar << Normal[0] << Normal[1] << Normal[2];
+	}
+};
+
+// Editor-only skeletal mesh vertex with color and skin data
+struct FSoftVertex4 : public FSkelMeshVertexBase
+{
 	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
-	byte				BoneIndex;
 	FColor				Color;
 
-	friend FArchive& operator<<(FArchive &Ar, FRigidVertex4 &V)
+	friend FArchive& operator<<(FArchive &Ar, FSoftVertex4 &V)
 	{
-		Ar << V.Pos;
-		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		V.SerializeForEditor(Ar);
 
 		for (int i = 0; i < MAX_SKELETAL_UV_SETS_UE4; i++)
 			Ar << V.UV[i];
 
 		Ar << V.Color;
-		Ar << V.BoneIndex;
+		Ar << V.Infs;
 
 		return Ar;
 	}
 };
 
-struct FSoftVertex4
+// Editor-only skeletal mesh vertex used for single boxe (has been deprecated after
+// FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts)
+// TODO: review - we're using exactly the same data layout as for FSoftVertex4, but different
+//   serialization function - can achieve that with TArray::Serialize2<>.
+struct FRigidVertex4 : public FSoftVertex4
 {
-	FVector				Pos;
-	FPackedNormal		Normal[3];
-	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
-	byte				BoneIndex[NUM_INFLUENCES_UE4];
-	byte				BoneWeight[NUM_INFLUENCES_UE4];
-	FColor				Color;
-
-	friend FArchive& operator<<(FArchive &Ar, FSoftVertex4 &V)
+	friend FArchive& operator<<(FArchive &Ar, FRigidVertex4 &V)
 	{
-		int i;
-
-		Ar << V.Pos;
-		Ar << V.Normal[0] << V.Normal[1] << V.Normal[2];
+		V.SerializeForEditor(Ar);
 
 		for (int i = 0; i < MAX_SKELETAL_UV_SETS_UE4; i++)
 			Ar << V.UV[i];
 
 		Ar << V.Color;
+		// Serialize a single bone influence and store it into V.Infs
+		Ar << V.Infs.BoneIndex[0];
+		V.Infs.BoneWeight[0] = 255;
 
-		if (Ar.ArVer >= VER_UE4_SUPPORT_8_BONE_INFLUENCES_SKELETAL_MESHES)
-		{
-			//!! todo: 8 influences will require BoneIndex[] and BoneWeight[] to have 8 items
-			for (i = 0; i < NUM_INFLUENCES_UE4; i++) Ar << V.BoneIndex[i];
-			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influences info
-			for (i = 0; i < NUM_INFLUENCES_UE4; i++) Ar << V.BoneWeight[i];
-			Ar.Seek(Ar.Tell() + MAX_TOTAL_INFLUENCES_UE4 - NUM_INFLUENCES_UE4); // skip 8 influences info
-		}
-		else
-		{
-			// load 4 indices, put zeros to remaining 4 indices
-			for (i = 0; i < 4; i++) Ar << V.BoneIndex[i];
-			for (i = 0; i < 4; i++) Ar << V.BoneWeight[i];
-			for (i = 4; i < NUM_INFLUENCES_UE4; i++) V.BoneIndex[i] = 0;		// TODO: loop from 4 to 4 (0 iterations)
-			for (i = 4; i < NUM_INFLUENCES_UE4; i++) V.BoneWeight[i] = 0;
-		}
+		return Ar;
+	}
+};
 
+static int GNumSkelUVSets = 1;
+
+// GPU vertex with float16 UV data
+struct FGPUVert4Half : public FSkelMeshVertexBase
+{
+	FMeshUVHalf			UV[MAX_SKELETAL_UV_SETS_UE4];
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Half &V)
+	{
+		V.SerializeForGPU(Ar);
+		for (int i = 0; i < GNumSkelUVSets; i++) Ar << V.UV[i];
+		return Ar;
+	}
+};
+
+// GPU vertex with float32 UV data
+struct FGPUVert4Float : public FSkelMeshVertexBase
+{
+	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
+
+	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Float &V)
+	{
+		V.SerializeForGPU(Ar);
+		for (int i = 0; i < GNumSkelUVSets; i++) Ar << V.UV[i];
 		return Ar;
 	}
 };
@@ -529,8 +618,10 @@ struct FSkelMeshSection4
 				{
 					TArray<FRigidVertex4> RigidVertices;
 					Ar << RigidVertices;
+					if (RigidVertices.Num()) appNotify("TODO: %s: dropping rigid vertices", __FUNCTION__);
 					// these vertices should be converted to FSoftVertex4, but we're dropping this data anyway
 				}
+				GNumSkelInfluences = (Ar.ArVer >= VER_UE4_SUPPORT_8_BONE_INFLUENCES_SKELETAL_MESHES) ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
 				Ar << S.SoftVertices;
 			}
 			Ar << S.BoneMap;
@@ -708,7 +799,9 @@ struct FSkelMeshChunk4
 
 		if (!StripFlags.IsEditorDataStripped())
 		{
+			GNumSkelInfluences = (Ar.ArVer >= VER_UE4_SUPPORT_8_BONE_INFLUENCES_SKELETAL_MESHES) ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
 			Ar << C.RigidVertices << C.SoftVertices;
+			if (C.RigidVertices.Num()) appNotify("TODO: %s: dropping rigid vertices", __FUNCTION__);
 		}
 
 		Ar << C.BoneMap << C.NumRigidVertices << C.NumSoftVertices << C.MaxBoneInfluences;
@@ -733,109 +826,6 @@ struct FSkelMeshChunk4
 		return Ar;
 
 		unguard;
-	}
-};
-
-static int GNumSkelUVSets = 1;
-static int GNumSkelInfluences = 4;
-
-struct FSkinWeightInfo
-{
-	byte				BoneIndex[NUM_INFLUENCES_UE4];
-	byte				BoneWeight[NUM_INFLUENCES_UE4];
-
-	friend FArchive& operator<<(FArchive& Ar, FSkinWeightInfo& W)
-	{
-		if (GNumSkelInfluences <= ARRAY_COUNT(W.BoneIndex))
-		{
-			for (int i = 0; i < GNumSkelInfluences; i++)
-				Ar << W.BoneIndex[i];
-			for (int i = 0; i < GNumSkelInfluences; i++)
-				Ar << W.BoneWeight[i];
-		}
-		else
-		{
-			// possibly this vertex has more vertex influences
-			assert(GNumSkelInfluences <= MAX_TOTAL_INFLUENCES_UE4);
-			// serialize influences
-			byte BoneIndex2[MAX_TOTAL_INFLUENCES_UE4];
-			byte BoneWeight2[MAX_TOTAL_INFLUENCES_UE4];
-			for (int i = 0; i < GNumSkelInfluences; i++)
-				Ar << BoneIndex2[i];
-			for (int i = 0; i < GNumSkelInfluences; i++)
-				Ar << BoneWeight2[i];
-			// check if sorting needed (possibly 2nd half of influences has zero weight)
-			uint32 PackedWeight2 = * (uint32*) &BoneWeight2[4];
-			if (PackedWeight2 != 0)
-			{
-//				printf("# %d %d %d %d %d %d %d %d\n", BoneWeight2[0],BoneWeight2[1],BoneWeight2[2],BoneWeight2[3],BoneWeight2[4],BoneWeight2[5],BoneWeight2[6],BoneWeight2[7]);
-				// Here we assume than weights are sorted by value - didn't see the sorting code in UE4, but printing of data shows that.
-				// Compute weight which should be distributed between other bones to keep sum of weights identity.
-				int ExtraWeight = 0;
-				for (int i = NUM_INFLUENCES_UE4; i < MAX_TOTAL_INFLUENCES_UE4; i++)
-					ExtraWeight += BoneWeight2[i];
-				int WeightPerBone = ExtraWeight / NUM_INFLUENCES_UE4; // note: could be division with remainder!
-				for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
-				{
-					BoneWeight2[i] += WeightPerBone;
-					ExtraWeight -= WeightPerBone;
-				}
-				// add remaining weight to the first bone
-				BoneWeight2[0] += ExtraWeight;
-			}
-			// copy influences to vertex
-			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
-			{
-				W.BoneIndex[i] = BoneIndex2[i];
-				W.BoneWeight[i] = BoneWeight2[i];
-			}
-		}
-		return Ar;
-	}
-};
-
-struct FGPUVert4Common
-{
-	FPackedNormal		Normal[3];		// Normal[1] (TangentY) is reconstructed from other 2 normals
-						//!! TODO: we're cutting down influences, but holding unused normal here!
-						//!! Should rename Normal[] and split into 2 separate fields
-	FSkinWeightInfo		Infs;
-
-	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Common &V)
-	{
-		Ar << V.Normal[0] << V.Normal[2];
-		if (FSkeletalMeshCustomVersion::Get(Ar) < FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
-		{
-			// serialized as separate buffer starting with UE4.15
-			Ar << V.Infs;
-		}
-		return Ar;
-	}
-};
-
-struct FGPUVert4Half : FGPUVert4Common
-{
-	FVector				Pos;
-	FMeshUVHalf			UV[MAX_SKELETAL_UV_SETS_UE4];
-
-	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Half &V)
-	{
-		Ar << *((FGPUVert4Common*)&V) << V.Pos;
-		for (int i = 0; i < GNumSkelUVSets; i++) Ar << V.UV[i];
-		return Ar;
-	}
-};
-
-struct FGPUVert4Float : FGPUVert4Common
-{
-	FVector				Pos;
-	FMeshUVFloat		UV[MAX_SKELETAL_UV_SETS_UE4];
-
-	friend FArchive& operator<<(FArchive &Ar, FGPUVert4Float &V)
-	{
-		Ar << *((FGPUVert4Common*)&V) << V.Pos;
-		for (int i = 0; i < GNumSkelUVSets; i++) Ar << V.UV[i];
-		return Ar;
 	}
 };
 
@@ -1324,20 +1314,28 @@ void USkeletalMesh4::ConvertMesh()
 		// get vertex count and determine vertex source
 		int VertexCount = SrcLod.VertexBufferGPUSkin.GetVertexCount();
 
-		//!! TODO - UE4 editor asset support, it has vertices inside sections
-		if (VertexCount == 0 && LODModels[lod].Sections.Num() > 0 && LODModels[lod].Sections[0].SoftVertices.Num())
+		bool bUseVerticesFromSections = false;
+		if (VertexCount == 0 && LODModels[lod].Sections.Num() > 0 && SrcLod.Sections[0].SoftVertices.Num())
 		{
-			appNotify("This is a editor asset, conversion is not yet supported!");
+			// For editor assets, count vertex count from sections. This happens with UE4.19+, where rendering
+			// and editor data were separated (or may be with earlier engine version).
+			bUseVerticesFromSections = true;
+			for (int i = 0; i < SrcLod.Sections.Num(); i++)
+			{
+				VertexCount += SrcLod.Sections[i].SoftVertices.Num();
+			}
 		}
 
 		// allocate the vertices
 		Lod->AllocateVerts(VertexCount);
 
-		int chunkIndex = 0;
-		const TArray<uint16>* BoneMap = NULL;
+		int chunkIndex = -1;
 		int lastChunkVertex = -1;
-		const FSkeletalMeshVertexBuffer4 &S = SrcLod.VertexBufferGPUSkin;
-		CSkelMeshVertex *D = Lod->Verts;
+		int chunkVertexIndex = 0;
+
+		const TArray<uint16>* BoneMap = NULL;
+		const FSkeletalMeshVertexBuffer4& VertBuffer = SrcLod.VertexBufferGPUSkin;
+		CSkelMeshVertex* D = Lod->Verts;
 
 		for (int Vert = 0; Vert < VertexCount; Vert++, D++)
 		{
@@ -1347,56 +1345,65 @@ void USkeletalMesh4::ConvertMesh()
 				if (SrcLod.Chunks.Num())
 				{
 					// pre-UE4.13 code: chunks
-					const FSkelMeshChunk4& C = SrcLod.Chunks[chunkIndex++];
+					const FSkelMeshChunk4& C = SrcLod.Chunks[++chunkIndex];
 					lastChunkVertex = C.BaseVertexIndex + C.NumRigidVertices + C.NumSoftVertices;
 					BoneMap = &C.BoneMap;
 				}
 				else
 				{
 					// UE4.13+ code: chunk information migrated to sections
-					const FSkelMeshSection4& S = SrcLod.Sections[chunkIndex++];
+					const FSkelMeshSection4& S = SrcLod.Sections[++chunkIndex];
 					lastChunkVertex = S.BaseVertexIndex + S.NumVertices;
 					BoneMap = &S.BoneMap;
 				}
+				chunkVertexIndex = 0;
 			}
 
 			// get vertex from GPU skin
-			const FGPUVert4Common *V;		// has normal and influences, but no UV[] and position
+			const FSkelMeshVertexBase *V;				// has everything but UV[]
 
-			if (!S.bUseFullPrecisionUVs)
+			if (bUseVerticesFromSections)
 			{
-				const FMeshUVHalf *SUV;
-				const FGPUVert4Half &V0 = S.VertsHalf[Vert];
-				D->Position = CVT(V0.Pos);
+				const FSoftVertex4& V0 = SrcLod.Sections[chunkIndex].SoftVertices[chunkVertexIndex++];
+				const FMeshUVFloat *SrcUV = V0.UV;
 				V = &V0;
-				SUV = V0.UV;
-				// UV
-				FMeshUVFloat fUV = SUV[0];				// convert half->float
-				D->UV = CVT(fUV);
+				// UV: simply copy float data
+				D->UV = CVT(SrcUV[0]);
 				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
 				{
-					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SrcUV[TexCoordIndex]);
+				}
+			}
+			else if (!VertBuffer.bUseFullPrecisionUVs)
+			{
+				const FGPUVert4Half& V0 = VertBuffer.VertsHalf[Vert];
+				const FMeshUVHalf* SrcUV = V0.UV;
+				V = &V0;
+				// UV: convert half -> float
+				D->UV = CVT(SrcUV[0]);
+				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
+				{
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SrcUV[TexCoordIndex]);
 				}
 			}
 			else
 			{
-				const FMeshUVFloat *SUV;
-				const FGPUVert4Float &V0 = S.VertsFloat[Vert];
+				const FGPUVert4Float& V0 = VertBuffer.VertsFloat[Vert];
+				const FMeshUVFloat *SrcUV = V0.UV;
 				V = &V0;
-				D->Position = CVT(V0.Pos);
-				SUV = V0.UV;
-				// UV
-				FMeshUVFloat fUV = SUV[0];
-				D->UV = CVT(fUV);
+				// UV: simply copy float data
+				D->UV = CVT(SrcUV[0]);
 				for (int TexCoordIndex = 1; TexCoordIndex < NumTexCoords; TexCoordIndex++)
 				{
-					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SUV[TexCoordIndex]);
+					Lod->ExtraUV[TexCoordIndex-1][Vert] = CVT(SrcUV[TexCoordIndex]);
 				}
 			}
-			// convert Normal[3]
+			D->Position = CVT(V->Pos);
 			UnpackNormals(V->Normal, *D);
 			// convert influences
-//			int TotalWeight = 0;
+	#if DEBUG_SKELMESH
+			int TotalWeight = 0;
+	#endif
 			int i2 = 0;
 			unsigned PackedWeights = 0;
 			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
@@ -1407,10 +1414,14 @@ void USkeletalMesh4::ConvertMesh()
 				PackedWeights |= BoneWeight << (i2 * 8);
 				D->Bone[i2]   = (*BoneMap)[BoneIndex];
 				i2++;
-//				TotalWeight += BoneWeight;
+	#if DEBUG_SKELMESH
+				TotalWeight += BoneWeight;
+	#endif
 			}
 			D->PackedWeights = PackedWeights;
-//			assert(TotalWeight == 255);
+	#if DEBUG_SKELMESH
+			assert(TotalWeight == 255);
+	#endif
 			if (i2 < NUM_INFLUENCES_UE4) D->Bone[i2] = INDEX_NONE; // mark end of list
 		}
 
