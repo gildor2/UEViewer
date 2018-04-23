@@ -1,4 +1,4 @@
-# Makefile for VisualC/win32 target
+# Makefile for VisualC/win64 target
 # This file was automatically generated from "UmodelTool/umodel.project": do not edit
 
 #------------------------------------------------------------------------------
@@ -6,15 +6,15 @@
 #------------------------------------------------------------------------------
 
 CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS
-LINK = link.exe -nologo -filealign:512 -incremental:no -machine:X86
+LINK = link.exe -nologo -filealign:512 -incremental:no -machine:X64
 AR   = link.exe -lib -nologo
 
 #------------------------------------------------------------------------------
 #	Directories
 #------------------------------------------------------------------------------
 
-OUT = ./obj/libs-win32
-OUT_1 = ./obj/umodel-win32
+OUT = ./obj/libs-win64
+OUT_1 = ./obj/umodel-win64
 
 #------------------------------------------------------------------------------
 #	symbolic targets
@@ -144,7 +144,7 @@ MOBILE_LIBS_FILES = \
 
 umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 SDL2.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x64 SDL2.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
@@ -1295,7 +1295,7 @@ DEPENDS = \
 	UmodelTool/res/resource.h
 
 $(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
-	rc.exe -l 0x409 -i UmodelTool/res/  -i . -i ./Core -i ./Unreal -i ./libs/include -i ./libs -i ./libs/nvtt -i ./libs/PowerVR -i ./libs/detex -i ./libs/rijndael -i ./libs/includewin32 -i UmodelTool -i UI  -d _USING_V110_SDK71_ -d _WIN32 -d WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
+	rc.exe -l 0x409 -i UmodelTool/res/  -i . -i ./Core -i ./Unreal -i ./libs/include -i ./libs -i ./libs/nvtt -i ./libs/PowerVR -i ./libs/detex -i ./libs/rijndael -i ./libs/includewin32 -i UmodelTool -i UI  -d _USING_V110_SDK71_ -d _WIN64 -d WIN64 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
 
 DEPENDS = \
 	libs/PowerVR/PVRTDecompress.h \
