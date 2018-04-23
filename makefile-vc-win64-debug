@@ -1,0 +1,1542 @@
+# Makefile for VisualC/win64 target
+# This file was automatically generated from "UmodelTool/umodel.project": do not edit
+
+#------------------------------------------------------------------------------
+#	Compiler definitions
+#------------------------------------------------------------------------------
+CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS -D MAX_DEBUG=1
+LINK = link.exe -nologo -filealign:512 -incremental:no -machine:X64
+AR   = link.exe -lib -nologo
+
+#------------------------------------------------------------------------------
+#	Directories
+#------------------------------------------------------------------------------
+
+OUT = ./obj/libs-win64
+OUT_1 = ./obj/umodel-win64
+
+#------------------------------------------------------------------------------
+#	symbolic targets
+#------------------------------------------------------------------------------
+
+ALL : MAIN
+MAIN : umodel.exe
+
+#------------------------------------------------------------------------------
+#	"umodel.exe" target
+#------------------------------------------------------------------------------
+
+MAIN_FILES = \
+	$(OUT_1)/Export3D.obj \
+	$(OUT_1)/Exporters.obj \
+	$(OUT_1)/ExportMaterial.obj \
+	$(OUT_1)/ExportMd5.obj \
+	$(OUT_1)/ExportPsk.obj \
+	$(OUT_1)/ExportSound.obj \
+	$(OUT_1)/ExportTexture.obj \
+	$(OUT_1)/ExportThirdParty.obj \
+	$(OUT_1)/GameDatabase.obj \
+	$(OUT_1)/GameFileSystem.obj \
+	$(OUT_1)/GameFileSystemGears4.obj \
+	$(OUT_1)/MeshCommon.obj \
+	$(OUT_1)/PackageUtils.obj \
+	$(OUT_1)/SkeletalMesh.obj \
+	$(OUT_1)/UnAnim2.obj \
+	$(OUT_1)/UnAnim3.obj \
+	$(OUT_1)/UnAnim4.obj \
+	$(OUT_1)/UnCore.obj \
+	$(OUT_1)/UnCoreCompression.obj \
+	$(OUT_1)/UnCoreDecrypt.obj \
+	$(OUT_1)/UnCoreSerialize.obj \
+	$(OUT_1)/UnHavok.obj \
+	$(OUT_1)/UnMesh1.obj \
+	$(OUT_1)/UnMesh2.obj \
+	$(OUT_1)/UnMesh3.obj \
+	$(OUT_1)/UnMesh4.obj \
+	$(OUT_1)/UnMeshBatman.obj \
+	$(OUT_1)/UnMeshBioshock.obj \
+	$(OUT_1)/UnMeshRune.obj \
+	$(OUT_1)/UnObject.obj \
+	$(OUT_1)/UnPackage.obj \
+	$(OUT_1)/UnRenderer.obj \
+	$(OUT_1)/UnTexture.obj \
+	$(OUT_1)/UnTexture2.obj \
+	$(OUT_1)/UnTexture3.obj \
+	$(OUT_1)/UnTexture4.obj \
+	$(OUT_1)/UnTextureNVTT.obj \
+	$(OUT_1)/UnUbisoft.obj \
+	$(OUT_1)/MaterialViewer.obj \
+	$(OUT_1)/MeshViewer.obj \
+	$(OUT_1)/ObjectViewer.obj \
+	$(OUT_1)/SkelMeshViewer.obj \
+	$(OUT_1)/StatMeshViewer.obj \
+	$(OUT_1)/VertMeshViewer.obj \
+	$(OUT_1)/MeshInstance.obj \
+	$(OUT_1)/SkelMeshInstance.obj \
+	$(OUT_1)/StatMeshInstance.obj \
+	$(OUT_1)/VertMeshInstance.obj \
+	$(OUT_1)/Core.obj \
+	$(OUT_1)/CoreGL.obj \
+	$(OUT_1)/CoreWin32.obj \
+	$(OUT_1)/GLBind.obj \
+	$(OUT_1)/GlWindow.obj \
+	$(OUT_1)/Math3D.obj \
+	$(OUT_1)/Memory.obj \
+	$(OUT_1)/TextContainer.obj \
+	$(OUT_1)/BaseDialog.obj \
+	$(OUT_1)/FileControls.obj \
+	$(OUT_1)/Main.obj \
+	$(OUT_1)/MiscStrings.obj \
+	$(OUT_1)/PackageDialog.obj \
+	$(OUT_1)/PackageScanDialog.obj \
+	$(OUT_1)/ProgressDialog.obj \
+	$(OUT_1)/StartupDialog.obj \
+	$(OUT_1)/UmodelApp.obj \
+	$(OUT_1)/umodel.res
+
+NV_LIBS_FILES = \
+	$(OUT)/BlockDXT.obj \
+	$(OUT)/ColorBlock.obj \
+	$(OUT)/DirectDrawSurface.obj \
+	$(OUT)/Image.obj
+
+UE3_LIBS_FILES = \
+	$(OUT)/lzo_init.obj \
+	$(OUT)/lzo1x_d2.obj \
+	$(OUT)/adler32.obj \
+	$(OUT)/crc32.obj \
+	$(OUT)/inffast.obj \
+	$(OUT)/inflate.obj \
+	$(OUT)/inftrees.obj \
+	$(OUT)/uncompr.obj \
+	$(OUT)/lzxd.obj \
+	$(OUT)/lz4.obj \
+	$(OUT)/bits.obj \
+	$(OUT)/bptc-tables.obj \
+	$(OUT)/clamp.obj \
+	$(OUT)/convert.obj \
+	$(OUT)/dds.obj \
+	$(OUT)/decompress-bptc-float.obj \
+	$(OUT)/decompress-bptc.obj \
+	$(OUT)/decompress-eac.obj \
+	$(OUT)/decompress-etc.obj \
+	$(OUT)/file-info.obj \
+	$(OUT)/half-float.obj \
+	$(OUT)/misc.obj \
+	$(OUT)/texture.obj \
+	$(OUT)/rijndael.obj
+
+MOBILE_LIBS_FILES = \
+	$(OUT)/PVRTDecompress.obj \
+	$(OUT)/astc_block_sizes2.obj \
+	$(OUT)/astc_color_unquantize.obj \
+	$(OUT)/astc_decompress_symbolic.obj \
+	$(OUT)/astc_image_load_store.obj \
+	$(OUT)/astc_integer_sequence.obj \
+	$(OUT)/astc_misc.obj \
+	$(OUT)/astc_partition_tables.obj \
+	$(OUT)/astc_percentile_tables.obj \
+	$(OUT)/astc_quantization.obj \
+	$(OUT)/astc_symbolic_physical.obj \
+	$(OUT)/astc_weight_quant_xfer_tables.obj \
+	$(OUT)/softfloat.obj
+
+umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES)
+	echo Creating executable "umodel.exe" ...
+	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x64 SDL2.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -subsystem:console
+
+#------------------------------------------------------------------------------
+#	compiling source files
+#------------------------------------------------------------------------------
+
+OPT_MOBILE_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_
+
+$(OUT)/astc_percentile_tables.obj : ./libs/astc/astc_percentile_tables.cpp
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_percentile_tables.obj" ./libs/astc/astc_percentile_tables.cpp
+
+OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -I ./libs/nvtt
+
+$(OUT)/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
+	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp
+
+$(OUT)/DirectDrawSurface.obj : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
+	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/DirectDrawSurface.obj" ./libs/nvtt/nvimage/DirectDrawSurface.cpp
+
+$(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
+	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
+
+OPT_MAIN = -GS- -GR-  -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/rijndael -I ./libs/includewin32 -I UmodelTool -I UI
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GLBindImpl.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/GLBind.obj : Core/GLBind.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GLBind.obj" Core/GLBind.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlFont.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/TextContainer.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/Shaders.h
+
+$(OUT_1)/GlWindow.obj : Core/GlWindow.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GlWindow.obj" Core/GlWindow.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/SkelMeshViewer.obj : Viewers/SkelMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkelMeshViewer.obj" Viewers/SkelMeshViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	UmodelTool/MiscStrings.h \
+	UmodelTool/UmodelApp.h \
+	UmodelTool/UmodelSettings.h \
+	UmodelTool/Version.h \
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/PackageUtils.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/UnAnimNotify.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnSound.h \
+	Unreal/UnThirdParty.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/Main.obj : UmodelTool/Main.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Main.obj" UmodelTool/Main.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/StaticMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/StatMeshViewer.obj : Viewers/StatMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/StatMeshViewer.obj" Viewers/StatMeshViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshViewer.obj" Viewers/MeshViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/MaterialViewer.obj : Viewers/MaterialViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MaterialViewer.obj" Viewers/MaterialViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/VertMeshViewer.obj : Viewers/VertMeshViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/VertMeshViewer.obj" Viewers/VertMeshViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UI/BaseDialog.h \
+	UmodelTool/AboutDialog.h \
+	UmodelTool/Build.h \
+	UmodelTool/ErrorDialog.h \
+	UmodelTool/MiscStrings.h \
+	UmodelTool/PackageDialog.h \
+	UmodelTool/PackageScanDialog.h \
+	UmodelTool/ProgressDialog.h \
+	UmodelTool/StartupDialog.h \
+	UmodelTool/UE4AesKeyDialog.h \
+	UmodelTool/UE4VersionDialog.h \
+	UmodelTool/UmodelApp.h \
+	UmodelTool/UmodelSettings.h \
+	UmodelTool/res/resource.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/UmodelApp.obj : UmodelTool/UmodelApp.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UmodelApp.obj" UmodelTool/UmodelApp.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/ObjectViewer.obj : Viewers/ObjectViewer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ObjectViewer.obj" Viewers/ObjectViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/MeshInstance.obj : MeshInstance/MeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshInstance.obj" MeshInstance/MeshInstance.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/Shaders.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/UnRenderer.obj : Unreal/UnRenderer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnRenderer.obj" Unreal/UnRenderer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	Exporters/Psk.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportPsk.obj" Exporters/ExportPsk.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/ExportMd5.obj : Exporters/ExportMd5.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportMd5.obj" Exporters/ExportMd5.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/StaticMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/StatMeshInstance.obj : MeshInstance/StatMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/StatMeshInstance.obj" MeshInstance/StatMeshInstance.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/VertMeshInstance.obj : MeshInstance/VertMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/VertMeshInstance.obj" MeshInstance/VertMeshInstance.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMesh2.obj : Unreal/UnMesh2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh2.obj" Unreal/UnMesh2.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMesh3.obj : Unreal/UnMesh3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh3.obj" Unreal/UnMesh3.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMesh4.obj : Unreal/UnMesh4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh4.obj" Unreal/UnMesh4.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnAnim2.obj : Unreal/UnAnim2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim2.obj" Unreal/UnAnim2.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMesh4.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnAnim4.obj : Unreal/UnAnim4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim4.obj" Unreal/UnAnim4.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh3.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnAnim3.obj : Unreal/UnAnim3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnAnim3.obj" Unreal/UnAnim3.cpp
+
+$(OUT_1)/UnMeshBatman.obj : Unreal/UnMeshBatman.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMeshBatman.obj" Unreal/UnMeshBatman.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/SkeletalMesh.obj : Unreal/SkeletalMesh.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkeletalMesh.obj" Unreal/SkeletalMesh.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnHavok.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnMeshTypes.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMeshBioshock.obj : Unreal/UnMeshBioshock.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMeshBioshock.obj" Unreal/UnMeshBioshock.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/MeshCommon.obj : Unreal/MeshCommon.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshCommon.obj" Unreal/MeshCommon.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h \
+	Unreal/UnTextureNVTT.h
+
+$(OUT_1)/ExportTexture.obj : Exporters/ExportTexture.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportTexture.obj" Exporters/ExportTexture.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportMaterial.obj" Exporters/ExportMaterial.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/Export3D.obj : Exporters/Export3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Export3D.obj" Exporters/Export3D.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/Exporters.obj : Exporters/Exporters.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Exporters.obj" Exporters/Exporters.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnSound.h
+
+$(OUT_1)/ExportSound.obj : Exporters/ExportSound.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportSound.obj" Exporters/ExportSound.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnThirdParty.h
+
+$(OUT_1)/ExportThirdParty.obj : Exporters/ExportThirdParty.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportThirdParty.obj" Exporters/ExportThirdParty.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
+	UI/FileControls.h \
+	UmodelTool/Build.h \
+	UmodelTool/StartupDialog.h \
+	UmodelTool/UmodelSettings.h \
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/StartupDialog.obj : UmodelTool/StartupDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/StartupDialog.obj" UmodelTool/StartupDialog.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
+	UI/FileControls.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/FileControls.obj : UI/FileControls.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/FileControls.obj" UI/FileControls.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
+	UmodelTool/AboutDialog.h \
+	UmodelTool/Build.h \
+	UmodelTool/MiscStrings.h \
+	UmodelTool/PackageDialog.h \
+	UmodelTool/PackageScanDialog.h \
+	UmodelTool/ProgressDialog.h \
+	UmodelTool/res/resource.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnPackage.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/PackageDialog.obj : UmodelTool/PackageDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageDialog.obj" UmodelTool/PackageDialog.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
+	UmodelTool/Build.h \
+	UmodelTool/ProgressDialog.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/ProgressDialog.obj : UmodelTool/ProgressDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ProgressDialog.obj" UmodelTool/ProgressDialog.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
+	UmodelTool/Build.h \
+	UmodelTool/ProgressDialog.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/PackageScanDialog.obj : UmodelTool/PackageScanDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageScanDialog.obj" UmodelTool/PackageScanDialog.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	libs/include/callback.hpp
+
+$(OUT_1)/BaseDialog.obj : UI/BaseDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/BaseDialog.obj" UI/BaseDialog.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/GameDatabase.obj : Unreal/GameDatabase.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameDatabase.obj" Unreal/GameDatabase.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnObject.obj" Unreal/UnObject.cpp
+
+$(OUT_1)/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnPackage.obj" Unreal/UnPackage.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/CoreGL.obj : Core/CoreGL.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/CoreGL.obj" Core/CoreGL.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/GameFileSystem.h \
+	Unreal/UnArchiveObb.h \
+	Unreal/UnArchivePak.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/GameFileSystem.obj : Unreal/GameFileSystem.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameFileSystem.obj" Unreal/GameFileSystem.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/GameFileSystem.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/GameFileSystemGears4.obj : Unreal/GameFileSystemGears4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/GameFileSystemGears4.obj" Unreal/GameFileSystemGears4.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/PackageUtils.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/PackageUtils.obj : Unreal/PackageUtils.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageUtils.obj" Unreal/PackageUtils.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/TypeConvert.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMeshRune.obj : Unreal/UnMeshRune.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMeshRune.obj" Unreal/UnMeshRune.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCore.obj" Unreal/UnCore.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnHavok.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnHavok.obj : Unreal/UnHavok.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnHavok.obj" Unreal/UnHavok.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnMesh.h \
+	Unreal/UnMesh2.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/UnMesh1.obj : Unreal/UnMesh1.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnMesh1.obj" Unreal/UnMesh1.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/UnTexture2.obj : Unreal/UnTexture2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture2.obj" Unreal/UnTexture2.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial2.h \
+	Unreal/UnObject.h \
+	Unreal/UnTextureNVTT.h \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/vectypes.h
+
+$(OUT_1)/UnTexture.obj : Unreal/UnTexture.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture.obj" Unreal/UnTexture.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnTexture3.obj : Unreal/UnTexture3.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture3.obj" Unreal/UnTexture3.cpp
+
+$(OUT_1)/UnTexture4.obj : Unreal/UnTexture4.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexture4.obj" Unreal/UnTexture4.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/UnUbisoft.obj : Unreal/UnUbisoft.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnUbisoft.obj" Unreal/UnUbisoft.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnCoreSerialize.obj : Unreal/UnCoreSerialize.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCoreSerialize.obj" Unreal/UnCoreSerialize.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	libs/include/lzo/lzo1x.h \
+	libs/include/lzo/lzoconf.h \
+	libs/include/lzo/lzodefs.h \
+	libs/lz4/lz4.h \
+	libs/mspack/lzx.h \
+	libs/mspack/mspack.h \
+	libs/rijndael/rijndael.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h
+
+$(OUT_1)/UnCoreCompression.obj : Unreal/UnCoreCompression.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCoreCompression.obj" Unreal/UnCoreCompression.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/Math3D.h \
+	Core/TextContainer.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/TextContainer.obj : Core/TextContainer.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/TextContainer.obj" Core/TextContainer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/Math3D.h \
+	UmodelTool/Build.h \
+	UmodelTool/MiscStrings.h \
+	UmodelTool/Version.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/MiscStrings.obj : UmodelTool/MiscStrings.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MiscStrings.obj" UmodelTool/MiscStrings.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/Math3D.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h
+
+$(OUT_1)/Core.obj : Core/Core.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Core.obj" Core/Core.cpp
+
+$(OUT_1)/CoreWin32.obj : Core/CoreWin32.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/CoreWin32.obj" Core/CoreWin32.cpp
+
+$(OUT_1)/Math3D.obj : Core/Math3D.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Math3D.obj" Core/Math3D.cpp
+
+$(OUT_1)/Memory.obj : Core/Memory.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/Memory.obj" Core/Memory.cpp
+
+$(OUT_1)/UnCoreDecrypt.obj : Unreal/UnCoreDecrypt.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCoreDecrypt.obj" Unreal/UnCoreDecrypt.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/Math3D.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnTextureNVTT.h
+
+$(OUT_1)/UnTextureNVTT.obj : Unreal/UnTextureNVTT.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTextureNVTT.obj" Unreal/UnTextureNVTT.cpp
+
+DEPENDS = \
+	UmodelTool/res/resource.h
+
+$(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
+	rc.exe -l 0x409 -i UmodelTool/res/  -i . -i ./Core -i ./Unreal -i ./libs/include -i ./libs -i ./libs/nvtt -i ./libs/PowerVR -i ./libs/detex -i ./libs/rijndael -i ./libs/includewin32 -i UmodelTool -i UI  -d _USING_V110_SDK71_ -d _WIN64 -d WIN64 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
+
+DEPENDS = \
+	libs/PowerVR/PVRTDecompress.h \
+	libs/PowerVR/PVRTGlobal.h \
+	libs/PowerVR/PVRTTexture.h
+
+$(OUT)/PVRTDecompress.obj : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/PVRTDecompress.obj" ./libs/PowerVR/PVRTDecompress.cpp
+
+DEPENDS = \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/softfloat.h \
+	libs/astc/vectypes.h
+
+$(OUT)/astc_color_unquantize.obj : ./libs/astc/astc_color_unquantize.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_color_unquantize.obj" ./libs/astc/astc_color_unquantize.cpp
+
+$(OUT)/astc_decompress_symbolic.obj : ./libs/astc/astc_decompress_symbolic.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_decompress_symbolic.obj" ./libs/astc/astc_decompress_symbolic.cpp
+
+$(OUT)/astc_image_load_store.obj : ./libs/astc/astc_image_load_store.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_image_load_store.obj" ./libs/astc/astc_image_load_store.cpp
+
+DEPENDS = \
+	libs/astc/astc_codec_internals.h \
+	libs/astc/mathlib.h \
+	libs/astc/vectypes.h
+
+$(OUT)/astc_block_sizes2.obj : ./libs/astc/astc_block_sizes2.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_block_sizes2.obj" ./libs/astc/astc_block_sizes2.cpp
+
+$(OUT)/astc_integer_sequence.obj : ./libs/astc/astc_integer_sequence.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_integer_sequence.obj" ./libs/astc/astc_integer_sequence.cpp
+
+$(OUT)/astc_misc.obj : ./libs/astc/astc_misc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_misc.obj" ./libs/astc/astc_misc.cpp
+
+$(OUT)/astc_partition_tables.obj : ./libs/astc/astc_partition_tables.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_partition_tables.obj" ./libs/astc/astc_partition_tables.cpp
+
+$(OUT)/astc_quantization.obj : ./libs/astc/astc_quantization.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_quantization.obj" ./libs/astc/astc_quantization.cpp
+
+$(OUT)/astc_symbolic_physical.obj : ./libs/astc/astc_symbolic_physical.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_symbolic_physical.obj" ./libs/astc/astc_symbolic_physical.cpp
+
+$(OUT)/astc_weight_quant_xfer_tables.obj : ./libs/astc/astc_weight_quant_xfer_tables.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_weight_quant_xfer_tables.obj" ./libs/astc/astc_weight_quant_xfer_tables.cpp
+
+DEPENDS = \
+	libs/astc/softfloat.h
+
+$(OUT)/softfloat.obj : ./libs/astc/softfloat.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/softfloat.obj" ./libs/astc/softfloat.cpp
+
+DEPENDS = \
+	libs/detex/bits.h \
+	libs/detex/bptc-tables.h \
+	libs/detex/detex.h
+
+$(OUT)/bptc-tables.obj : ./libs/detex/bptc-tables.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/bptc-tables.obj" ./libs/detex/bptc-tables.cpp
+
+$(OUT)/decompress-bptc-float.obj : ./libs/detex/decompress-bptc-float.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-bptc-float.obj" ./libs/detex/decompress-bptc-float.cpp
+
+$(OUT)/decompress-bptc.obj : ./libs/detex/decompress-bptc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-bptc.obj" ./libs/detex/decompress-bptc.cpp
+
+DEPENDS = \
+	libs/detex/bits.h \
+	libs/detex/detex.h
+
+$(OUT)/bits.obj : ./libs/detex/bits.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/bits.obj" ./libs/detex/bits.cpp
+
+DEPENDS = \
+	libs/detex/detex.h
+
+$(OUT)/clamp.obj : ./libs/detex/clamp.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/clamp.obj" ./libs/detex/clamp.cpp
+
+$(OUT)/decompress-eac.obj : ./libs/detex/decompress-eac.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-eac.obj" ./libs/detex/decompress-eac.cpp
+
+$(OUT)/decompress-etc.obj : ./libs/detex/decompress-etc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/decompress-etc.obj" ./libs/detex/decompress-etc.cpp
+
+$(OUT)/misc.obj : ./libs/detex/misc.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/misc.obj" ./libs/detex/misc.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/file-info.h \
+	libs/detex/misc.h
+
+$(OUT)/dds.obj : ./libs/detex/dds.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/dds.obj" ./libs/detex/dds.cpp
+
+$(OUT)/file-info.obj : ./libs/detex/file-info.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/file-info.obj" ./libs/detex/file-info.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/half-float.h
+
+$(OUT)/half-float.obj : ./libs/detex/half-float.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/half-float.obj" ./libs/detex/half-float.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/half-float.h \
+	libs/detex/hdr.h \
+	libs/detex/misc.h
+
+$(OUT)/convert.obj : ./libs/detex/convert.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/convert.obj" ./libs/detex/convert.cpp
+
+DEPENDS = \
+	libs/detex/detex.h \
+	libs/detex/misc.h
+
+$(OUT)/texture.obj : ./libs/detex/texture.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/texture.obj" ./libs/detex/texture.cpp
+
+OPT_UE3_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
+
+DEPENDS = \
+	libs/include/lzo/lzo1x.h \
+	libs/include/lzo/lzoconf.h \
+	libs/include/lzo/lzodefs.h \
+	libs/lzo/config1x.h \
+	libs/lzo/lzo1_d.ch \
+	libs/lzo/lzo1x_d.ch \
+	libs/lzo/lzo_conf.h \
+	libs/lzo/lzo_dict.h \
+	libs/lzo/lzo_ptr.h \
+	libs/lzo/miniacc.h
+
+$(OUT)/lzo1x_d2.obj : ./libs/lzo/lzo1x_d2.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lzo1x_d2.obj" ./libs/lzo/lzo1x_d2.c
+
+DEPENDS = \
+	libs/include/lzo/lzoconf.h \
+	libs/include/lzo/lzodefs.h \
+	libs/lzo/lzo_conf.h \
+	libs/lzo/lzo_dll.ch \
+	libs/lzo/lzo_ptr.h \
+	libs/lzo/miniacc.h \
+	libs/lzo/miniacc.h
+
+$(OUT)/lzo_init.obj : ./libs/lzo/lzo_init.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lzo_init.obj" ./libs/lzo/lzo_init.c
+
+DEPENDS = \
+	libs/lz4/lz4.h
+
+$(OUT)/lz4.obj : ./libs/lz4/lz4.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lz4.obj" ./libs/lz4/lz4.c
+
+DEPENDS = \
+	libs/mspack/lzx.h \
+	libs/mspack/mspack.h \
+	libs/mspack/readbits.h \
+	libs/mspack/readhuff.h \
+	libs/mspack/system.h
+
+$(OUT)/lzxd.obj : ./libs/mspack/lzxd.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lzxd.obj" ./libs/mspack/lzxd.c
+
+DEPENDS = \
+	libs/nvtt/nvimage/BlockDXT.h \
+	libs/nvtt/nvimage/ColorBlock.h
+
+$(OUT)/BlockDXT.obj : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/BlockDXT.obj" ./libs/nvtt/nvimage/BlockDXT.cpp
+
+DEPENDS = \
+	libs/rijndael/rijndael.h
+
+$(OUT)/rijndael.obj : ./libs/rijndael/rijndael.c $(DEPENDS)
+	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/rijndael.obj" ./libs/rijndael/rijndael.c
+
+DEPENDS = \
+	libs/zlib/crc32.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+$(OUT)/crc32.obj : ./libs/zlib/crc32.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/crc32.obj" ./libs/zlib/crc32.c
+
+DEPENDS = \
+	libs/zlib/inffast.h \
+	libs/zlib/inffixed.h \
+	libs/zlib/inflate.h \
+	libs/zlib/inftrees.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+$(OUT)/inflate.obj : ./libs/zlib/inflate.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/inflate.obj" ./libs/zlib/inflate.c
+
+DEPENDS = \
+	libs/zlib/inffast.h \
+	libs/zlib/inflate.h \
+	libs/zlib/inftrees.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+$(OUT)/inffast.obj : ./libs/zlib/inffast.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/inffast.obj" ./libs/zlib/inffast.c
+
+DEPENDS = \
+	libs/zlib/inftrees.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h \
+	libs/zlib/zutil.h
+
+$(OUT)/inftrees.obj : ./libs/zlib/inftrees.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/inftrees.obj" ./libs/zlib/inftrees.c
+
+DEPENDS = \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h
+
+$(OUT)/adler32.obj : ./libs/zlib/adler32.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/adler32.obj" ./libs/zlib/adler32.c
+
+$(OUT)/uncompr.obj : ./libs/zlib/uncompr.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/uncompr.obj" ./libs/zlib/uncompr.c
+
+#------------------------------------------------------------------------------
+#	creating output directories
+#------------------------------------------------------------------------------
+
+$(OUT):
+	if not exist "$(OUT)" mkdir "$(OUT)"
+
+$(OUT_1):
+	if not exist "$(OUT_1)" mkdir "$(OUT_1)"
+
