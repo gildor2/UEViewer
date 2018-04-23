@@ -1,0 +1,320 @@
+#!/bin/bash
+
+# Color constants
+norm="\\033[0m"
+hgl="\\033[1"
+force_nmake=""
+
+# Usage: CheckVC <path> <vc_version> <vc_year>
+function CheckVC()
+{
+	if [ "$workpath" ]; then
+		return  # already found
+	fi
+	# compare supplied version with required
+	if [ "$vc_ver" ]; then
+		if [ "$vc_ver" -gt 2000 ]; then
+			# this is year-based version
+			[ "$vc_ver" -gt "$3" ] && return
+		else
+			[ "$vc_ver" -gt "$2" ] && return
+		fi
+	fi
+	# verify presence
+	if [ -f "$1/bin/nmake.exe" ]; then
+		if [ "$amd64" ] && ! [ -f "$1/bin/amd64/nmake.exe" ]; then
+			return
+		fi
+		workpath="$1"
+		found_vc=$2
+		platform="32 bit"
+		if [ "$amd64" ]; then
+			platform="64 bit"
+		fi
+		echo "Using Visual C++ $2 ($3) [$platform] found at \"$1\" ..."
+	fi
+}
+
+
+function CheckSDK()
+{
+	if [ "$sdkpath" ]; then
+		return  # already found
+	fi
+	# verify presence
+	if [ -d "$1" ] && [ -f "$1/bin/rc.exe" ]; then
+#		sdkpath="/cygdrive/${1//:/}"	# d:/path -> /cygdrive/d/path	- CygWin
+#		sdkpath="/${1//:/}"				# d:/path -> /d/path			- MSys
+		sdkpath="$1"					# no path replacement
+		echo "Found Win32 SDK at \"$1\" ..."
+	fi
+}
+
+
+function AddPath()
+{
+	# Unix has multiple items separated with ":" which is used as drive separator on Windows systems
+#	local p="/cygdrive/${1//:/}"		# d:/path -> /cygdrive/d/path	- CygWin
+	local p="/${1//:/}"					# d:/path -> /d/path			- MSys
+	PATH="$PATH:$p"
+}
+
+
+function PrepareVC()
+{
+	if [ "$workpath" ]; then
+		return			# action already performed
+	fi
+
+	# find "Program Files" dir
+	# note: on 64-bit systems "PROGRAMFILES" will contain path to (x86) dir
+	if [ "$PROGRAMFILES" ]; then
+		progs="${PROGRAMFILES//\\//}"		# get from environment with slash replacement
+	else
+		progs="c:/program files"
+	fi
+
+	# ---------- Find Visual Studio ----------
+
+	CheckVC "$progs/microsoft visual studio/vc98" 6 0			# 6.0
+	CheckVC "$progs/microsoft visual studio .net/vc7" 7 0		# 7.0
+	CheckVC "$progs/microsoft visual studio .net 2003/vc7" 7 0	# 7.1
+	CheckVC "$progs/microsoft visual studio 8/vc" 8 2005		# 8.0 (2005)
+	CheckVC "$progs/microsoft visual studio 9.0/vc" 9 2008		# 9.0 (2008)
+	CheckVC "$progs/microsoft visual studio 10.0/vc" 10 2010	# 10.0 (2010)
+	CheckVC "$progs/microsoft visual studio 11.0/vc" 11 2012	# 11.0 (2012)
+	CheckVC "$progs/microsoft visual studio 12.0/vc" 12 2013	# 12.0 (2013)
+	CheckVC "$progs/microsoft visual studio 14.0/vc" 14 2015	# 14.0 (2015)
+
+	if [ ! "$workpath" ]; then
+		echo -e "${hgl};31mERROR: Visual C++ is not found.${norm}"
+		exit 1
+	fi
+
+	# compute path to additional dlls
+	case $found_vc in
+		6)	ide="$workpath/../common/msdev98/bin"
+			;;
+		*)	ide="$workpath/../common7/IDE"
+			;;
+	esac
+
+	# setup environment variables
+	if [ "$amd64" ]; then
+		AddPath "$workpath/bin/amd64"
+	else
+		AddPath "$workpath/bin"
+		AddPath "$ide"
+	fi
+	INCLUDE="$workpath/INCLUDE;$workpath/MFC/INCLUDE;$workpath/PlatformSDK/Include;$workpath/PlatformSDK/Include/prerelease"
+	if [ -z "$amd64" ]; then
+		LIB="$workpath/LIB;$workpath/PlatformSDK/LIB"
+	else
+		LIB="$workpath/LIB/amd64;$workpath/PlatformSDK/LIB/x64"
+	fi
+
+	# ---------- Find Platform SDK ----------
+
+	CheckSDK "C:/Program Files/Microsoft SDKs/Windows/v6.0A"	# NOTE: not in "Program Files (x86)"
+	CheckSDK "$progs/Microsoft SDKs/Windows/v7.0A"
+	CheckSDK "$progs/Microsoft SDKs/Windows/v7.1"
+	if [ "$sdkpath" ]; then
+		INCLUDE="$INCLUDE;$sdkpath/Include"
+		if [ -z "$amd64" ]; then
+			LIB="$LIB;$sdkpath/Lib"
+		else
+			LIB="$LIB;$sdkpath/Lib/x64"
+		fi
+		AddPath "$sdkpath/bin"			# VC9+ has no RC.exe in its bin directory, using it from the SDK
+	fi
+
+	if [ -z "$sdkpath" ] || [ $found_vc -ge 14 ]; then
+		# VS starting with 2015 version doesn't have CRT, it uses UCRT from Windows Kits/10
+		win10sdk="$progs/Windows Kits/10"
+		if [ -d "$win10sdk" ]; then
+			olddir="$PWD"
+			cd "$win10sdk/Include"
+			win10sdk_ver="0.0.0.0"
+			for d in *; do
+				if [[ $d > $win10sdk_ver ]]; then
+					win10sdk_ver=$d
+				fi
+			done
+			cd "$olddir"
+			INCLUDE="$INCLUDE;$win10sdk/Include/$win10sdk_ver/ucrt;$win10sdk/Include/$win10sdk_ver/um;$win10sdk/Include/$win10sdk_ver/shared"
+			if [ -z "$amd64" ]; then
+				lib_subdir=x86
+			else
+				lib_subdir=x64
+			fi
+			LIB="$LIB;$win10sdk/Lib/$win10sdk_ver/ucrt/$lib_subdir;$win10sdk/Lib/$win10sdk_ver/um/$lib_subdir"
+			# include SDK bin directory (required for rc.exe)
+			AddPath "$win10sdk/bin/$lib_subdir"
+		else
+			echo "ERROR: $win10sdk not found"
+			exit 1
+		fi
+	fi
+
+#	echo " -- PATH: $workpath : $sdkpath"
+#	echo " -- INC: $INCLUDE"
+#	echo " -- LIB: $LIB"
+	export INCLUDE LIB
+}
+
+
+function Make()
+{
+	local line
+	local makefile=$1
+	local mkfile
+	if [ -f $makefile ]; then
+		mkfile=$makefile
+	elif [ -f $makefile.mak ]; then
+		mkfile=$makefile.mak
+	else
+		echo -e "${hgl};31mERROR: makefile \"$makefile\" is not found$norm"
+		exit 1
+	fi
+	shift
+	PrepareVC
+	# choose jom when available
+	# "jom" is nmake replacement with multicore support
+	# http://qt-project.org/wiki/jom
+	# Also verify this CL option: http://msdn.microsoft.com/en-us/library/bb385193(v=vs.120).aspx
+	# (requires passing multiple .cpp files to CL in signle command line)
+	#?? jom is not compatible with VS2013 - has problems with simultaneous access from multiple CL.exe to single pdb file
+	if [ -f "${0%/*}/jom.exe" ] && [ -z "$force_nmake" ]; then
+		make=jom
+	else
+		make=nmake
+	fi
+	echo "CALLING $make $mkfile $*"
+	#?? is CFG used somewhere ?
+	export TIMEFORMAT="Build time: %1R sec"
+	#!! check: perhaps "CFG=" option is not needed; when needed, could add parameter
+	#!! for this script, which will select a confuguration name
+	time vcfilt $make -nologo -s -f $mkfile CFG="$makefile - Win32 Release" $*
+	exit ${PIPESTATUS[0]}
+}
+
+
+function Compile()
+{
+	#?? logging
+	local filename=""
+	local cppopt=""
+	local linkopt=""
+	PrepareVC
+	# get CPP options
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		*.c|*.cpp)
+			# another filename specified
+			filename="$filename $1"
+			;;
+		"/debug"|"--debug")
+			cppopt="$cppopt -Zi"
+			linkopt="-debug"
+			;;
+		"/link")
+			# get linker options
+			shift		# skip "/link"
+			linkopt="$linkopt $*"
+			break
+			;;
+		*)
+			cppopt="$cppopt $1"
+			;;
+		esac
+		shift
+	done
+	if [ -z "$filename" ]; then
+		echo "ERROR: filename is not specified"
+		exit 1
+	fi
+#	echo "CPP: <$cppopt> LNK: <$linkopt>"
+#	linker option "-merge:.rdata=.data" will merge sections, but produce warnings
+	vcfilt cl -nologo -O1 -MD $cppopt $filename -link -filealign:512 $linkopt
+	exit ${PIPESTATUS[0]}
+}
+
+
+function Link()
+{
+	PrepareVC
+	link $*
+}
+
+function Usage()
+{
+cat<<EOF
+Usage: vc32tools [--version=ver] [--64] [--compile <options>] [--make <makefile[.mak]>] [--check] [--help]
+Options:
+  --version=ver force VC++ version to use (version option should go first)
+  --64          use 64-bit compiler
+  --compile     compile c/cpp source file(s)
+                extra options:
+                --debug            create pdb file
+                /link <options>    pass options to linker
+  --link        link source files
+  --make        build specified makefile
+  --check       verify availability of VC++
+  --help        display compiler help pages
+  --nmake       force NMAKE build, ignore JOM presence
+EOF
+}
+
+
+# NOTE: this will tryt to parse command even when called via "source <filename>", i.e. included
+while [ "1" ]; do
+
+	case "$1" in
+		--version=*)			# specify preferred compiler version
+			vc_ver=${1:10}
+			shift
+			continue			# process other switches
+			;;
+		--64)
+			amd64=1
+			shift
+			continue
+			;;
+		--nmake)
+			force_nmake=1
+			shift
+			continue
+			;;
+		--compile)
+			shift
+			Compile $*
+			;;
+		--link)
+			shift
+			Link $*
+			exit
+			;;
+		--make)
+			shift
+			Make $*
+			;;
+		--check)
+			PrepareVC
+			exit
+			;;
+		--help)
+			PrepareVC
+			cl -?
+			exit
+			;;
+		"")		# no commands
+			Usage
+			exit 0
+			;;
+		*)
+			echo "invalid vc32tools command: $1"
+			exit 1
+			;;
+	esac
+
+done
