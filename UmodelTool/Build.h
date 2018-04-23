@@ -1,5 +1,5 @@
 #define DO_GUARD		1
-//#define MAX_DEBUG		1		// Maximal debugging level
+#define MAX_DEBUG		1		// Maximal debugging level
 //#define DEBUG_MEMORY	1
 #define RENDERING		1
 #define PROFILE			1
