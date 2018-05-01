@@ -184,6 +184,9 @@ LZ4
 
 Changes
 ~~~~~~~
+01.04.2018
+- added UE4.20 pak file support
+
 20.04.2018
 - added support for loading UE4 editor SkeletalMesh assets
 

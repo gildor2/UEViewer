@@ -14,9 +14,10 @@
 enum
 {
 	PAK_INITIAL = 1,
-	PAK_NO_TIMESTAMPS,
-	PAK_COMPRESSION_ENCRYPTION,
-	PAK_INDEX_ENCRYPTION,				// UE4.17+
+	PAK_NO_TIMESTAMPS = 2,
+	PAK_COMPRESSION_ENCRYPTION = 3,
+	PAK_INDEX_ENCRYPTION = 4,			// UE4.17+
+	PAK_RELATIVE_CHUNK_OFFSETS = 5,		// UE4.20+
 
 	PAK_LATEST_PLUS_ONE,
 	PAK_LATEST = PAK_LATEST_PLUS_ONE - 1
@@ -133,6 +134,17 @@ struct FPakEntry
 		if (GForceGame == GAME_Tekken7)
 			P.bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
 #endif
+
+		if (Ar.PakVer >= PAK_RELATIVE_CHUNK_OFFSETS)
+		{
+			// Convert relative compressed offsets to absolute
+			for (int i = 0; i < P.CompressionBlocks.Num(); i++)
+			{
+				FPakCompressedBlock& B = P.CompressionBlocks[i];
+				B.CompressedStart += P.Pos;
+				B.CompressedEnd += P.Pos;
+			}
+		}
 
 	end:
 		P.StructSize = Ar.Tell64() - StartOffset;
