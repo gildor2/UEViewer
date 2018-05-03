@@ -92,7 +92,7 @@ static int mspack_read(mspack_file *file, void *buffer, int bytes)
 			file->rest = file->bufSize - file->pos;
 	}
 	if (bytes > file->rest) bytes = file->rest;
-	if (!bytes) return 0;
+	if (bytes <= 0) return 0;
 
 	// copy block data
 	memcpy(buffer, file->buf + file->pos, bytes);
