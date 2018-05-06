@@ -54,27 +54,6 @@ public:
 	int ShowUE4UnversionedPackageDialog(int verMin, int verMax);
 	FString ShowUE4AesKeyDialog();
 	#endif
-	// menu callbacks
-	void PrevObject()
-	{
-		FindObjectAndCreateVisualizer(-1);
-	}
-	void NextObject()
-	{
-		FindObjectAndCreateVisualizer(1);
-	}
-	void TakeScreenshot1()
-	{
-		DoScreenshot = 1;			// regular screenshot
-	}
-	void TakeScreenshot2()
-	{
-		DoScreenshot = 2;			// screenshot with alpha
-	}
-	void ExportObject()
-	{
-		if (Viewer) Viewer->Export();
-	}
 #endif // HAS_UI
 
 #if HAS_MENU

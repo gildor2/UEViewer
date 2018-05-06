@@ -91,8 +91,8 @@ public:
 		AddColumn("Tex",  35, TA_Right);
 		AddColumn("Size, Kb", 70, TA_Right);
 	#if USE_FULLY_VIRTUAL_LIST
-		SetOnGetItemCount(BIND_MEM_CB(&UIPackageList::GetItemCountHandler, this));
-		SetOnGetItemText(BIND_MEM_CB(&UIPackageList::GetItemTextHandler, this));
+		SetOnGetItemCount(BIND_MEMBER(&UIPackageList::GetItemCountHandler, this));
+		SetOnGetItemText(BIND_MEMBER(&UIPackageList::GetItemTextHandler, this));
 	#endif
 	}
 
@@ -310,14 +310,14 @@ void UIPackageDialog::InitUI()
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
 			NewControl(UICheckbox, "Flat view", &UseFlatView)
-				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFlatViewChanged, this))
+				.SetCallback(BIND_MEMBER(&UIPackageDialog::OnFlatViewChanged, this))
 			+ NewControl(UISpacer)
 			+ NewControl(UILabel, "Filter:")
 				.SetY(2)
 				.SetAutoSize()
 			+ NewControl(UITextEdit, &PackageFilter)
 				.SetWidth(120)
-				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFilterTextChanged, this))
+				.SetCallback(BIND_MEMBER(&UIPackageDialog::OnFilterTextChanged, this))
 		]
 		+ NewControl(UIPageControl)
 			.Expose(FlatViewPager)
@@ -331,7 +331,7 @@ void UIPackageDialog::InitUI()
 					.SetRootLabel("Game")
 					.SetWidth(EncodeWidth(0.3f))
 					.SetHeight(-1)
-					.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnTreeItemSelected, this))
+					.SetCallback(BIND_MEMBER(&UIPackageDialog::OnTreeItemSelected, this))
 					.UseFolderIcons()
 					.SetItemHeight(20)
 					.Expose(PackageTree)
@@ -394,26 +394,26 @@ void UIPackageDialog::InitUI()
 		NewMenuItem("Scan content")
 		.Enable(!ContentScanned)
 		.Expose(ScanContentMenu)
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::ScanContent, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::ScanContent, this))
 		+ NewMenuItem("Scan versions")
-		.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
+		.SetCallback(BIND_STATIC(&ShowPackageScanDialog))
 		+ NewMenuSeparator()
 		+ NewMenuItem("Save selected packages")
 		.Enable(SelectedPackages.Num() > 0)
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::SavePackages, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::SavePackages, this))
 		.Expose(SavePackagesMenu)
 		+ NewMenuSeparator()
 		+ NewMenuItem("About UModel")
-		.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
+		.SetCallback(BIND_STATIC(&UIAboutDialog::Show))
 	];
 
 	UIMenu* openMenu = new UIMenu;
 	(*openMenu)
 	[
 		NewMenuItem("Open (replace loaded set)")
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnOpenClicked, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenClicked, this))
 		+ NewMenuItem("Append (add to loaded set)")
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnAppendClicked, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnAppendClicked, this))
 	];
 
 	// dialog buttons
@@ -430,18 +430,18 @@ void UIPackageDialog::InitUI()
 			.SetMenu(openMenu)
 			.Enable(false)
 			.Expose(OpenButton)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnOpenClicked, this))
+			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenClicked, this))
 //			.SetOK() -- this will not let menu to open
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Export")
 			.SetWidth(80)
 			.Enable(false)
 			.Expose(ExportButton)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnExportClicked, this))
+			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportClicked, this))
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Cancel")
 			.SetWidth(80)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnCancelClicked, this))
+			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnCancelClicked, this))
 	];
 
 	SortPackages(); // will call RefreshPackageListbox()
@@ -454,9 +454,9 @@ UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
 {
 	UIPackageList& List = NewControl(UIPackageList, StripPath);
 	List.SetHeight(-1)
-		.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
-		.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
-		.SetOnColumnClick(BIND_MEM_CB(&UIPackageDialog::OnColumnClick, this));
+		.SetSelChangedCallback(BIND_MEMBER(&UIPackageDialog::OnPackageSelected, this))
+		.SetDblClickCallback(BIND_MEMBER(&UIPackageDialog::OnPackageDblClick, this))
+		.SetOnColumnClick(BIND_MEMBER(&UIPackageDialog::OnColumnClick, this));
 	return List;
 }
 

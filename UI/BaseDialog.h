@@ -14,10 +14,6 @@
 
 #include "callback.h"
 
-//!! temporary macros for backwards compatibility with previously used callback library
-#define BIND_MEM_CB			BIND_MEMBER
-#define BIND_FREE_CB		BIND_STATIC
-
 // forwards
 class UIMenu;
 class UIBaseDialog;

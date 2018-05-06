@@ -87,7 +87,7 @@ public:
 						NewControl(UIGroup, "Menu control")
 						[
 							NewControl(UICheckbox, "Enable item #1", true)
-							.SetCallback(BIND_MEMBER(&TestDialog::OnEnableItem1, this))
+							.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { item1->Enable(value); }))
 							+ NewControl(UICheckbox, "Item #1", &value1)
 							+ NewControl(UICheckbox, "Item #2", &value2)
 						]
@@ -123,7 +123,7 @@ public:
 				]
 			]
 			+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
-			.SetRadioCallback(BIND_MEMBER(&TestDialog::OnPageChanged, this))
+			.SetRadioCallback(BIND_LAMBDA([this]() { pager->SetActivePage(tabIndex); }))
 			.SetRadioVariable(&tabIndex)
 			[
 				NewControl(UIRadioButton, "page 1")
@@ -156,8 +156,7 @@ public:
 						+ NewControl(UIButton, "Remove")
 						.SetCallback(BIND_MEMBER(&TestDialog::OnRemoveItems, this))
 						+ NewControl(UIButton, "Unselect")
-						.SetCallback(BIND_MEMBER(&TestDialog::OnUnselectItems, this))
-//						.SetCallback(BIND_LAMBDA( [this]() { list->UnselectAllItems(); } ) ) // same as previous line, but causes C2958 with VC2013
+						.SetCallback(BIND_LAMBDA( [this]() { list->UnselectAllItems(); } ) ) // same as previous line, but causes C2958 with VC2013
 					]
 				]
 			]
@@ -203,21 +202,6 @@ public:
 		for (int i = 0; i < list->GetItemCount(); i++)
 			printf("%d = %s\n", i, list->GetItem(i));
 		printf("------\n");
-	}
-
-	void OnUnselectItems()
-	{
-		list->UnselectAllItems();
-	}
-
-	void OnEnableItem1(UICheckbox* sender, bool value)
-	{
-		item1->Enable(value);
-	}
-
-	void OnPageChanged()
-	{
-		pager->SetActivePage(tabIndex);
 	}
 
 	UIMenuItem*		item1;

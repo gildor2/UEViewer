@@ -599,14 +599,14 @@ void CUmodelApp::WindowCreated()
 			.SetCallback(BIND_LAMBDA([this] () { ShowPackageUI(); })) // binding of bool() to void(), so use lambda here
 			+ NewMenuSeparator()
 			+ NewMenuItem("Exit\tEsc")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::Exit, this))
+			.SetCallback(BIND_MEMBER(&CUmodelApp::Exit, this))
 		]
 		+ NewSubmenu("View")
 		[
 			NewMenuItem("Screenshot\tCtrl+S")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::TakeScreenshot1, this))
+			.SetCallback(BIND_LAMBDA([this]() { DoScreenshot = 1; }))
 			+ NewMenuItem("Screenshot with alpha\tAlt+S")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::TakeScreenshot2, this))
+			.SetCallback(BIND_LAMBDA([this]() { DoScreenshot = 2; }))
 			+ NewMenuSeparator()
 			+ NewMenuCheckbox("Show debug information\tCtrl+Q", &GShowDebugInfo)
 		]
@@ -616,26 +616,26 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuCheckbox("Include materials", &ShowMaterials)
 			+ NewMenuSeparator()
 			+ NewMenuItem("Previous\tPgUp")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::PrevObject, this))
+			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(-1); }))
 			+ NewMenuItem("Next\tPgDn")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::NextObject, this))
+			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(1); }))
 		]
 		+ NewSubmenu("Tools")
 		[
 			NewMenuItem("Export current object\tCtrl+X")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::ExportObject, this))
+			.SetCallback(BIND_LAMBDA([this]() { if (Viewer) Viewer->Export(); }))
 			+ NewMenuSeparator()
 			+ NewMenuHyperLink("Open export folder", *GSettings.ExportPath)	//!! should update if directory will be changed from UI
 			+ NewMenuHyperLink("Open screenshots folder", SCREENSHOTS_DIR)
 			+ NewMenuSeparator()
 			+ NewMenuItem("Scan package versions")
-			.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
+			.SetCallback(BIND_STATIC(&ShowPackageScanDialog))
 		]
 #if MAX_DEBUG
 		+ NewSubmenu("Debug")
 		[
 			NewMenuItem("Dump memory")
-			.SetCallback(BIND_FREE_CB(&DumpMemory))
+			.SetCallback(BIND_STATIC(&DumpMemory))
 		]
 #endif
 		+ NewSubmenu("Help")
@@ -652,7 +652,7 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuHyperLink("Donate", "http://www.gildor.org/en/donate")
 			+ NewMenuSeparator()
 			+ NewMenuItem("About UModel")
-			.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
+			.SetCallback(BIND_STATIC(&UIAboutDialog::Show))
 		]
 	];
 	// attach menu to the SDL window

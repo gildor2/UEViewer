@@ -48,7 +48,7 @@ void UIStartupDialog::InitUI()
 		[
 			NewControl(UICombobox)
 			.Expose(OverrideEngineCombo)
-			.SetCallback(BIND_MEM_CB(&UIStartupDialog::FillGameList, this))
+			.SetCallback(BIND_MEMBER(&UIStartupDialog::FillGameList, this))
 			.SetWidth(EncodeWidth(0.4f))
 			+ NewControl(UISpacer)
 			+ NewControl(UICombobox)
