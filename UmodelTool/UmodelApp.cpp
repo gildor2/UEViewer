@@ -596,7 +596,7 @@ void CUmodelApp::WindowCreated()
 		NewSubmenu("File")
 		[
 			NewMenuItem("Open package ...\tO")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::ShowPackageUI, this))
+			.SetCallback(BIND_LAMBDA([this] () { ShowPackageUI(); })) // binding of bool() to void(), so use lambda here
 			+ NewMenuSeparator()
 			+ NewMenuItem("Exit\tEsc")
 			.SetCallback(BIND_MEM_CB(&CUmodelApp::Exit, this))
