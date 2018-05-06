@@ -46,11 +46,11 @@ public:
 		(*popup)
 		[
 			NewMenuItem("Popup item 1")
-			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			.SetCallback(BIND_MEMBER(&TestDialog::OnMenuItem, this))
 			+ NewMenuItem("Popup item 2")
-			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			.SetCallback(BIND_MEMBER(&TestDialog::OnMenuItem, this))
 			+ NewMenuItem("Popup item 3")
-			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			.SetCallback(BIND_MEMBER(&TestDialog::OnMenuItem, this))
 		];
 
 		(*this)
@@ -87,7 +87,7 @@ public:
 						NewControl(UIGroup, "Menu control")
 						[
 							NewControl(UICheckbox, "Enable item #1", true)
-							.SetCallback(BIND_MEM_CB(&TestDialog::OnEnableItem1, this))
+							.SetCallback(BIND_MEMBER(&TestDialog::OnEnableItem1, this))
 							+ NewControl(UICheckbox, "Item #1", &value1)
 							+ NewControl(UICheckbox, "Item #2", &value2)
 						]
@@ -123,7 +123,7 @@ public:
 				]
 			]
 			+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
-			.SetRadioCallback(BIND_MEM_CB(&TestDialog::OnPageChanged, this))
+			.SetRadioCallback(BIND_MEMBER(&TestDialog::OnPageChanged, this))
 			.SetRadioVariable(&tabIndex)
 			[
 				NewControl(UIRadioButton, "page 1")
@@ -152,11 +152,12 @@ public:
 					.SetWidth(100)
 					[
 						NewControl(UIButton, "Add")
-						.SetCallback(BIND_MEM_CB(&TestDialog::OnAddItems, this))
+						.SetCallback(BIND_MEMBER(&TestDialog::OnAddItems, this))
 						+ NewControl(UIButton, "Remove")
-						.SetCallback(BIND_MEM_CB(&TestDialog::OnRemoveItems, this))
+						.SetCallback(BIND_MEMBER(&TestDialog::OnRemoveItems, this))
 						+ NewControl(UIButton, "Unselect")
-						.SetCallback(BIND_MEM_CB(&TestDialog::OnUnselectItems, this))
+						.SetCallback(BIND_MEMBER(&TestDialog::OnUnselectItems, this))
+//						.SetCallback(BIND_LAMBDA( [this]() { list->UnselectAllItems(); } ) ) // same as previous line, but causes C2958 with VC2013
 					]
 				]
 			]

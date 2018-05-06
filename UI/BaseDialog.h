@@ -12,7 +12,11 @@
 #include "Win32Types.h"
 #include "UnCore.h"					// for TArray and FString
 
-#include "callback.hpp"
+#include "callback.h"
+
+//!! temporary macros for backwards compatibility with previously used callback library
+#define BIND_MEM_CB			BIND_MEMBER
+#define BIND_FREE_CB		BIND_STATIC
 
 // forwards
 class UIMenu;
@@ -202,20 +206,13 @@ private:
 // Notes:
 // - It will automatically add 'ThisClass' pointer as a first parameter of callback function
 // - SetCallback function name depends on VarName
-// - We have 2 SetCallback versions: with full argument list callback and without arguments.
-//   Return value of simple callback is ignored. This should work because we're using cdecl,
-//   so all function parameters are purged from stack by caller.
 #define DECLARE_CALLBACK(VarName, ...)				\
 public:												\
-	typedef util::Callback<void (ThisClass*, __VA_ARGS__)> VarName##_t; \
-	FORCEINLINE ThisClass& Set##VarName(const VarName##_t& cb) \
+	typedef ::Callback<void(ThisClass*, __VA_ARGS__)> VarName##_t; \
+	template<typename CB>							\
+	FORCEINLINE ThisClass& Set##VarName(CB&& cb)	\
 	{												\
-		VarName = cb; return *this;					\
-	}												\
-	template<class T>								\
-	FORCEINLINE ThisClass& Set##VarName(const util::Callback<T ()>& cb) \
-	{												\
-		VarName = (VarName##_t&)cb; return *this;	\
+		this->VarName = Detail::Forward<CB>(cb); return *this; \
 	}												\
 protected:											\
 	VarName##_t		VarName;						\
@@ -747,7 +744,7 @@ public:
 	};
 
 	// Normal menu item
-	FORCEINLINE UIMenuItem(const char* text)
+	UIMenuItem(const char* text)
 	{
 		Init(MI_Text, text);
 	}
@@ -762,7 +759,7 @@ public:
 	// RadioButton
 	UIMenuItem(const char* text, int value);
 	// other types
-	FORCEINLINE UIMenuItem(EType type, const char* text = NULL)
+	UIMenuItem(EType type, const char* text = NULL)
 	{
 		Init(type, text);
 	}

@@ -635,4 +635,4 @@ namespace Detail
 // Easy to use helper macros for binding functions, class methods and lambdas.
 #define BIND_STATIC(func)		Detail::WrapFunction<decltype(func)>::wrap<func>()
 #define BIND_MEMBER(func, obj)	Detail::WrapFunction<decltype(func)>::wrap<func>(obj)
-#define BIND_LAMBDA(...)		Detail::WrapLambda::wrap(__VA_ARGS__)		// should use vararg declaration, otherwise lambdas with multiple captures won't fit 1 argument
+#define BIND_LAMBDA /*(obj)*/	Detail::WrapLambda::wrap /*(obj)*/
