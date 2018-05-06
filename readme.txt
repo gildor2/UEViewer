@@ -143,6 +143,17 @@ sometimes with bad. Umodel will never export full materials (GLSL script etc). D
 too much from this feature.
 
 
+Audio export
+~~~~~~~~~~~~
+Audio assets can't be previewed in UModel, it doesn't have any sound library built-in. However
+you can export sounds. By default, sound loading is disabled in options, so if you'll try to
+export any audio object you'll get nothing. To enable audio loading, you should either pass
+option "-sounds", or check "sounds" option in UModel startup options window. Please note that
+despite you may think that package contains audio, there are many objects in UE3 and UE4 which
+are related to sound rendering, but they do not contain sounds themselves. For UE3, sound
+objects are SoundNodeWave, and SoundWave in UE4. In older versions of UE they have name Sound.
+
+
 Used third-party libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 SDL - Simple DirectMedia Layer
@@ -161,6 +172,10 @@ libmspack - a library for Microsoft compression formats
   (c) Stuart Caie
   http://www.cabextract.org.uk/libmspack/
 
+LZ4
+  (c) Yann Collet
+  http://www.lz4.org
+
 NVIDIA Texture Tools
   (c) NVIDIA
   https://github.com/castano/nvidia-texture-tools
@@ -176,10 +191,6 @@ ASTC encoder
 detex
   (c) Harm Hanemaaijer
   https://github.com/hglm/detex
-
-LZ4
-  (c) Yann Collet
-  http://www.lz4.org
 
 
 Changes
