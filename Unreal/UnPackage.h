@@ -244,8 +244,13 @@ public:
 	// When the package is already loaded, this function will simply return a pointer
 	// to previously loaded UnPackage.
 	static UnPackage *LoadPackage(const char *Name, bool silent = false);
+	// We've protected UnPackage's destructor, however it is possible to use UnloadPackage to destroy package.
+	static void UnloadPackage(UnPackage* package);
 
+	// Create loader FArchive for package
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
+	// Change loader for games with tricky package data
+	void ReplaceLoader();
 
 	static const TArray<UnPackage*>& GetPackageMap()
 	{
