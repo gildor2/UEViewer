@@ -662,58 +662,26 @@ void UIPackageDialog::SortPackages()
 	Content tools
 -----------------------------------------------------------------------------*/
 
-static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
-{
-	for (int idx = 0; idx < package->Summary.ExportCount; idx++)
-	{
-		const char* ObjectClass = package->GetObjectName(package->GetExport(idx).ClassIndex);
-
-		if (!stricmp(ObjectClass, "SkeletalMesh") || !stricmp(ObjectClass, "DestructibleMesh"))
-			file->NumSkeletalMeshes++;
-		else if (!stricmp(ObjectClass, "StaticMesh"))
-			file->NumStaticMeshes++;
-		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "MeshAnimation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet count for UE2 and number of sequences for UE3+
-			file->NumAnimations++;
-		else if (!strnicmp(ObjectClass, "Texture", 7))
-			file->NumTextures++;
-	}
-}
-
-
 void UIPackageDialog::ScanContent()
 {
 	UIProgressDialog progress;
 	progress.Show("Scanning packages");
 	progress.SetDescription("Scanning package");
 
-	bool cancelled = false;
-	for (int i = 0; i < Packages.Num(); i++)
-	{
-		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
-		if (file->PackageScanned) continue;
-
-		// Update progress dialog
-		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
-		{
-			cancelled = true;
-			break;
-		}
-
-		UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
-		file->PackageScanned = true;
-		if (!package) continue;		// should not happen
-
-		ScanPackageExports(package, file);
-	}
+	// perform scan
+	bool done = ::ScanContent(Packages, &progress);
 
 	progress.CloseDialog();
-	if (cancelled) return;
-	ContentScanned = true;
 
+	if (done)
+	{
+		// finished - no needs to perform scan again, disable button
+		ContentScanned = true;
+		ScanContentMenu->Enable(false);
+	}
+
+	// Refresh package list anyway, even for partially scanned content
 	SortPackages();
-
-	// finished - no needs to perform scan again, disable button
-	ScanContentMenu->Enable(false);
 
 	// update package list with new data
 	UpdateSelectedPackages();

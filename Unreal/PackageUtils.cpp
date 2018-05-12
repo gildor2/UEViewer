@@ -75,7 +75,7 @@ void ReleaseAllObjects()
 
 
 /*-----------------------------------------------------------------------------
-	Package scanner
+	Package version scanner
 -----------------------------------------------------------------------------*/
 
 struct ScanPackageData
@@ -191,6 +191,60 @@ bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress)
 		});
 
 	return !data.Cancelled;
+}
+
+
+/*-----------------------------------------------------------------------------
+	Package content
+-----------------------------------------------------------------------------*/
+
+static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
+{
+	for (int idx = 0; idx < package->Summary.ExportCount; idx++)
+	{
+		const char* ObjectClass = package->GetObjectName(package->GetExport(idx).ClassIndex);
+
+		if (!stricmp(ObjectClass, "SkeletalMesh") || !stricmp(ObjectClass, "DestructibleMesh"))
+			file->NumSkeletalMeshes++;
+		else if (!stricmp(ObjectClass, "StaticMesh"))
+			file->NumStaticMeshes++;
+		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "MeshAnimation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet count for UE2 and number of sequences for UE3+
+			file->NumAnimations++;
+		else if (!strnicmp(ObjectClass, "Texture", 7))
+			file->NumTextures++;
+	}
+/*	for (int j = 0; j < package->Summary.NameCount; j++)
+	{
+		if (!stricmp(package->NameTable[j], "PF_BC6H") || !stricmp(package->NameTable[j], "PF_FloatRGBA"))
+		{
+			printf("%s : %s\n", package->NameTable[j], package->Filename);
+		}
+	} */
+}
+
+
+bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback* Progress)
+{
+	bool cancelled = false;
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
+		if (file->PackageScanned) continue;
+
+		// Update progress dialog
+		if (Progress && !Progress->Progress(file->RelativeName, i, Packages.Num()))
+		{
+			cancelled = true;
+			break;
+		}
+
+		UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
+		file->PackageScanned = true;
+		if (!package) continue;		// should not happen
+
+		ScanPackageExports(package, file);
+	}
+	return !cancelled;
 }
 
 
