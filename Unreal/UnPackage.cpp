@@ -2218,9 +2218,11 @@ void UnPackage::LoadNameTable()
 				name.TrimStartAndEndInline();
 				bool goodName = true;
 				int numBadChars = 0;
-				for (int j = 0; j < name.Len(); j++)
+				int nameLen = name.Len();
+				const char* nameStr = *name;
+				for (int j = 0; j < nameLen; j++)
 				{
-					char c = name[j];
+					char c = *nameStr++;
 					if (c < ' ' || c > 0x7F)
 					{
 						// unreadable character
@@ -2229,8 +2231,8 @@ void UnPackage::LoadNameTable()
 					}
 					if (c == '$') numBadChars++;		// unicode characters replaced with '$' in FString serializer
 				}
-				if (numBadChars && name.Len() >= 64) goodName = false;
-				if (numBadChars >= name.Len() / 2 && name.Len() > 16) goodName = false;
+				if (numBadChars && nameLen >= 64) goodName = false;
+				if (numBadChars >= nameLen / 2 && nameLen > 16) goodName = false;
 				if (!goodName)
 				{
 					// replace name

@@ -139,7 +139,7 @@ static TArray<CGameFileInfo*> GameFiles;
 int GNumPackageFiles = 0;
 int GNumForeignFiles = 0;
 
-#define GAME_FILE_HASH_SIZE		4096
+#define GAME_FILE_HASH_SIZE		16384
 #define GAME_FILE_HASH_MASK		(GAME_FILE_HASH_SIZE-1)
 
 //#define PRINT_HASH_DISTRIBUTION	1
