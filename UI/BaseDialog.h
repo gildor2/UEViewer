@@ -770,7 +770,9 @@ public:
 	UIMenuItem& Enable(bool enable);
 
 	const char* GetText() const { return *Label; }
-	HMENU GetMenuHandle();
+
+	// Replace sumbenu content. 'other' will be destroyed after this function call.
+	void ReplaceWith(UIMenuItem* other);
 
 	// Update checkboxes and radio groups according to attached variables
 	void Update();
@@ -788,14 +790,16 @@ public:
 		Add(item); return *this;
 	}
 
+	int GetItemIndex() const;
+
 protected:
 	FStaticString<32> Label;
 	const char*	Link;			// web page link
 	int			Id;
+	HMENU		hMenu;			// valid for MI_Submenu
 
 	EType		Type;
 	bool		Enabled;
-	bool		Checked;
 
 	// Hierarchy
 	UIMenuItem*	Parent;
@@ -807,8 +811,15 @@ protected:
 	void*		pValue;			// pointer to editable value (bool for MI_Checkbox and int for MI_RadioGroup)
 
 	void Init(EType type, const char* label);
+	void DestroyChildren();
+	UIMenu* GetOwner();
+
 	void FillMenuItems(HMENU parentMenu, int& nextId, int& position);
+
+	HMENU GetMenuHandle();
 	bool HandleCommand(int id);
+
+	int GetMaxItemIdRecursive();
 };
 
 class UIMenu : public UIMenuItem // note: we're not using virtual functions in menu classes now
@@ -823,11 +834,10 @@ public:
 	{
 		ReferenceCount++;
 	}
+	void AttachTo(HWND Wnd);
+	void Detach();
 
-	FORCEINLINE void Detach()
-	{
-		if (--ReferenceCount == 0) delete this;
-	}
+	void Redraw();
 
 	// make HandleCommand public for UIMenu
 	FORCEINLINE bool HandleCommand(int id)
@@ -835,9 +845,11 @@ public:
 		return UIMenuItem::HandleCommand(id);
 	}
 
+	int GetNextItemId();
+
 protected:
-	HMENU		hMenu;
 	int			ReferenceCount;
+	HWND		MenuOwner;
 
 	void Create(bool popup);
 };

@@ -2225,13 +2225,18 @@ void UIMenuItem::Init(EType type, const char* label)
 	Label = label ? label : "";
 	Link = NULL;
 	Id = 0;
+	hMenu = NULL;
 	Parent = NextChild = FirstChild = NULL;
 	Enabled = true;
-	Checked = false;
 }
 
 // Destructor: release all child items
 UIMenuItem::~UIMenuItem()
+{
+	DestroyChildren();
+}
+
+void UIMenuItem::DestroyChildren()
 {
 	UIMenuItem* next;
 	for (UIMenuItem* curr = FirstChild; curr; curr = next)
@@ -2267,11 +2272,12 @@ UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next)
 UIMenuItem& UIMenuItem::Enable(bool enable)
 {
 	Enabled = enable;
-	if (!Id) return *this;
-
-	HMENU hMenu = GetMenuHandle();
-	if (hMenu)
-		EnableMenuItem(hMenu, Id, MF_BYCOMMAND | (enable ? MF_ENABLED : MF_DISABLED));
+	if (Id)
+	{
+		HMENU hMenu = GetMenuHandle();
+		if (hMenu)
+			EnableMenuItem(hMenu, Id, MF_BYCOMMAND | (enable ? MF_ENABLED : MF_DISABLED));
+	}
 	return *this;
 }
 
@@ -2304,6 +2310,19 @@ void UIMenuItem::Add(UIMenuItem* item)
 	}
 
 	unguard;
+}
+
+// Get index of 'this' menu item in parent's children list
+int UIMenuItem::GetItemIndex() const
+{
+	if (!Parent) return -1;
+	int index = 0;
+	for (UIMenuItem* item = Parent->FirstChild; item; item = item->NextChild)
+	{
+		if (item == this) return index;
+		index++; // can skip invisible items, if we'll support those
+	}
+	return -1;
 }
 
 // Recursive function for menu creation
@@ -2362,10 +2381,11 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 
 		case MI_Submenu:
 			{
-				HMENU hSubMenu = CreatePopupMenu();
-				AppendMenu(parentMenu, MF_POPUP, (UINT_PTR)hSubMenu, *item->Label);
+				assert(!item->hMenu);
+				item->hMenu = CreatePopupMenu();
+				AppendMenu(parentMenu, MF_POPUP, (UINT_PTR)item->hMenu, *item->Label);
 				int submenuPosition = 0;
-				item->FillMenuItems(hSubMenu, nextId, submenuPosition);
+				item->FillMenuItems(item->hMenu, nextId, submenuPosition);
 			}
 			break;
 
@@ -2475,12 +2495,29 @@ bool UIMenuItem::HandleCommand(int id)
 	unguard;
 }
 
-HMENU UIMenuItem::GetMenuHandle()
+UIMenu* UIMenuItem::GetOwner()
 {
 	UIMenuItem* item = this;
 	while (item->Parent)
 		item = item->Parent;
-	return static_cast<UIMenu*>(item)->GetHandle(false);
+	return static_cast<UIMenu*>(item);
+}
+
+HMENU UIMenuItem::GetMenuHandle()
+{
+	return GetOwner()->GetHandle(false);
+}
+
+int UIMenuItem::GetMaxItemIdRecursive()
+{
+	int maxId = Id;
+	for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
+	{
+		int maxChildId = item->GetMaxItemIdRecursive();
+		if (maxChildId > maxId)
+			maxId = maxChildId;
+	}
+	return maxId;
 }
 
 void UIMenuItem::Update()
@@ -2511,15 +2548,91 @@ void UIMenuItem::Update()
 	unguard;
 }
 
+void UIMenuItem::ReplaceWith(UIMenuItem* other)
+{
+	guard(UIMenuItem::ReplaceWith);
+
+	// Both should be submenus
+	assert(Type == MI_Submenu && other->Type == MI_Submenu);
+	// This should be created, other - not
+	assert(hMenu != NULL && Parent != NULL);
+	assert(other->hMenu == NULL && other->Parent == NULL);
+
+	// Destroy C++ objects
+	DestroyChildren();
+
+	// Destroy all menu items
+	for (int i = GetMenuItemCount(hMenu) - 1; i >= 0; i--)
+	{
+		DeleteMenu(hMenu, i, MF_BYPOSITION);
+	}
+
+	// Now, move other's content into this menu
+	FirstChild = other->FirstChild;
+	other->FirstChild = NULL;
+
+	int nextId = GetOwner()->GetNextItemId();
+	int submenuPosition = 0;
+	FillMenuItems(hMenu, nextId, submenuPosition);
+
+	if (!other->Label.IsEmpty())
+	{
+		//TODO: move to separate function
+		Label = other->Label;
+		MENUITEMINFO mii;
+		memset(&mii, 0, sizeof(mii));
+		mii.cbSize = sizeof(mii);
+		mii.fMask = MIIM_STRING;
+		mii.dwTypeData = (LPSTR)*Label;
+		SetMenuItemInfo(Parent->hMenu, GetItemIndex(), TRUE, &mii);
+		// If Parent is UIMenu, we're working with top-level menu item, so we should refresh menu line
+		UIMenu* Menu = GetOwner();
+		if (Parent == Menu)
+		{
+			Menu->Redraw();
+		}
+	}
+
+	// Cleanup
+	delete other;
+
+	unguard;
+}
+
 UIMenu::UIMenu()
 :	UIMenuItem(MI_Submenu)
-,	hMenu(0)
 ,	ReferenceCount(0)
+,	MenuOwner(NULL)
 {}
 
 UIMenu::~UIMenu()
 {
 	if (hMenu) DestroyMenu(hMenu);
+}
+
+void UIMenu::AttachTo(HWND Wnd)
+{
+	assert(MenuOwner == NULL);
+	MenuOwner = Wnd;
+	ReferenceCount++;
+	SetMenu(MenuOwner, GetHandle(false, true));
+	Redraw();
+}
+
+void UIMenu::Detach()
+{
+	if (MenuOwner)
+	{
+		SetMenu(MenuOwner, NULL);
+		Redraw();
+		MenuOwner = NULL;
+	}
+	if (--ReferenceCount == 0) delete this;
+}
+
+void UIMenu::Redraw()
+{
+	if (MenuOwner) DrawMenuBar(MenuOwner);
 }
 
 HMENU UIMenu::GetHandle(bool popup, bool forceCreate)
@@ -2552,6 +2665,11 @@ void UIMenu::Create(bool popup)
 	}
 
 	unguard;
+}
+
+int UIMenu::GetNextItemId()
+{
+	return max(GetMaxItemIdRecursive() + 1, FIRST_MENU_ID);
 }
 
 
@@ -3533,7 +3651,10 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		CreateGroupControls(this);
 
 		if (Menu)
-			::SetMenu(Wnd, Menu->GetHandle(false, true));
+		{
+			Menu->AttachTo(Wnd);
+			Menu->Detach(); // we already had UIMenu::Attach() called before, so compensate 2nd attach with Detach() call
+		}
 
 		// adjust window size taking into account desired client size and center window on screen
 		r.left   = 0;
