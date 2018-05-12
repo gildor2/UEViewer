@@ -96,13 +96,13 @@ struct CGameFileInfo
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 	bool		IsPackage;
-	bool		PackageScanned;
 	int64		Size;								// file size, in bytes
 	int32		SizeInKb;							// file size, in kilobytes
 	int			ExtraSizeInKb;						// size of additional non-package files
 	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
-	UnPackage*	Package;
+	UnPackage*	Package;							// non-null when corresponding package is loaded
 	// content information, valid when PackageScanned is true
+	bool		PackageScanned;
 	int			NumSkeletalMeshes;
 	int			NumStaticMeshes;
 	int			NumAnimations;

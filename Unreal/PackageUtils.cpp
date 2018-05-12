@@ -238,11 +238,27 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 			break;
 		}
 
-		UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
 		file->PackageScanned = true;
-		if (!package) continue;		// should not happen
 
-		ScanPackageExports(package, file);
+		if (file->Package)
+		{
+			// package already loaded
+			ScanPackageExports(file->Package, file);
+		}
+		else
+		{
+			UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
+			if (!package) continue;		// should not happen
+			ScanPackageExports(package, file);
+		#if 0
+			// this code is disabled: it works, however we're going to use ScanContent not just to get objects counts,
+			// but also for collecting object references
+
+			// now unload package to not waste memory
+			UnPackage::UnloadPackage(package);
+			assert(file->Package == NULL);
+		#endif
+		}
 	}
 	return !cancelled;
 }

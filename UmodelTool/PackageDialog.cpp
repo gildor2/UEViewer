@@ -81,7 +81,7 @@ public:
 	,	StripPath(InStripPath)
 	{
 		AllowMultiselect();
-		SetVirtualMode();		//!! TODO: use callbacks to retrieve item texts
+		SetVirtualMode();
 		// Add columns
 		//?? right-align text in numeric columns
 		AddColumn("Package name");
@@ -295,12 +295,6 @@ void UIPackageDialog::SelectPackage(UnPackage* package)
 	}
 }
 
-static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInfo*> &param)
-{
-	param.Add(file);
-	return true;
-}
-
 void UIPackageDialog::InitUI()
 {
 	guard(UIPackageDialog::InitUI);
@@ -345,8 +339,13 @@ void UIPackageDialog::InitUI()
 
 	if (!Packages.Num())
 	{
-		// not scanned yet
-		appEnumGameFiles(PackageListEnum, Packages);
+		// package list was not filled yet
+		appEnumGameFiles<TArray<const CGameFileInfo*> >( // won't compile with lambda without explicitly providing template argument
+			[](const CGameFileInfo* file, TArray<const CGameFileInfo*>& param) -> bool
+			{
+				param.Add(file);
+				return true;
+			}, Packages);
 	}
 
 	// add paths of all found packages to the directory tree
