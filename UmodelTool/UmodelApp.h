@@ -28,6 +28,9 @@ public:
 	virtual void ProcessKey(int key, bool isDown);
 
 #if RENDERING
+	// Create visualizer for object. If 'test' is true, then visualizer will not be created, but
+	// possibility of creation will be validated, and result of the function will be 'true' if
+	// object can be viewed, or 'false' otherwise.
 	bool CreateVisualizer(UObject *Obj, bool test = false);
 	// dir = 1 - forward direction for search, dir = -1 - backward.
 	// When forceVisualizer is true, dummy visualizer will be created if no supported object found
@@ -56,16 +59,22 @@ public:
 	#endif
 #endif // HAS_UI
 
+protected:
 #if HAS_MENU
 	UIMenu*		MainMenu;
+	UIMenuItem*	ObjectMenu;
+	void CreateMenu();
+	void UpdateObjectMenu();
 	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
 
+	int			ObjIndex;			// index of the current object in UObject::GObjObjects array
+	int			DoScreenshot;
+
+public:
 	bool		GuiShown;
 #if RENDERING
 	CObjectViewer *Viewer;			// used from GlWindow callbacks
-	int			ObjIndex;			// index of the current object in UObject::GObjObjects array
-	int			DoScreenshot;
 	bool		ShowMeshes;
 	bool		ShowMaterials;
 #endif

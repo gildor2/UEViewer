@@ -88,6 +88,9 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 	}
 	// change visualizer
 	CreateVisualizer(Obj);
+#if HAS_MENU
+	UpdateObjectMenu();
+#endif
 	return true;
 
 	unguard;
@@ -447,6 +450,10 @@ CUmodelApp::CUmodelApp()
 ,	ShowMaterials(false)
 ,	ObjIndex(0)
 #endif
+#if HAS_MENU
+,	MainMenu(NULL)
+,	ObjectMenu(NULL)
+#endif
 {
 #if HAS_UI
 	UIBaseDialog::SetGlobalIconResId(IDC_MAIN_ICON);
@@ -587,9 +594,16 @@ void CUmodelApp::WindowCreated()
 	// set window icon
 	SendMessage(wnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDC_MAIN_ICON)));
 	UIBaseDialog::SetMainWindow(wnd);
+	#if HAS_MENU
+	CreateMenu();
+	#endif
 #endif // HAS_UI
+}
 
 #if HAS_MENU
+
+void CUmodelApp::CreateMenu()
+{
 	MainMenu = new UIMenu();
 	(*MainMenu)
 	[
@@ -620,6 +634,8 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuItem("Next\tPgDn")
 			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(1); }))
 		]
+		+ NewSubmenu("Object")
+		.Expose(ObjectMenu)
 		+ NewSubmenu("Tools")
 		[
 			NewMenuItem("Export current object\tCtrl+X")
@@ -655,14 +671,36 @@ void CUmodelApp::WindowCreated()
 			.SetCallback(BIND_STATIC(&UIAboutDialog::Show))
 		]
 	];
+
 	// attach menu to the SDL window
-	SetMenu(wnd, MainMenu->GetHandle(false, true));
+	HWND wnd = GetSDLWindowHandle(GetWindow());
+	MainMenu->AttachTo(wnd);
 	// menu has been attached, resize the window
 	ResizeWindow();
-#endif // HAS_MENU
+
+	UpdateObjectMenu();
 }
 
-#if HAS_MENU
+void CUmodelApp::UpdateObjectMenu()
+{
+	guard(CUmodelApp::UpdateObjectMenu);
+	if (!MainMenu)
+	{
+		// window wasn't created yet, UpdateObjectMenu() will be called explicitly later
+		return;
+	}
+/*	printf("DEBUG: UpdateMenu: %d\n", MainMenu->GetNextItemId()); //!!!
+	UIMenuItem* toolsMenu = &NewSubmenu(UObject::GObjObjects[ObjIndex]->Name)
+	.Expose(toolsMenu)
+	[
+		NewMenuItem("Scan content")
+		.SetCallback(BIND_LAMBDA([]() { printf("\n\n>>> CALLED <<<\n\n"); } ))
+	];
+	ObjectMenu->ReplaceWith(toolsMenu); */
+
+	unguard;
+}
+
 void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	guard(CUmodelApp::WndProc);
@@ -671,6 +709,7 @@ void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 //	if (msg == WM_INITMENU) MainMenu->Update(); -- this doesn't work, because this message dispatched to this WndProc only when menu closed
 	unguard;
 }
+
 #endif // HAS_MENU
 
 #endif // RENDERING
