@@ -3121,6 +3121,7 @@ UIBaseDialog::UIBaseDialog()
 ,	ParentDialog(NULL)
 ,	IconResId(0)
 ,	IsDialogConstructed(false)
+,	DisabledOwnerWnd(NULL)
 ,	ClosingDialog(false)
 {}
 
@@ -3323,6 +3324,62 @@ void UIBaseDialog::HideDialog()
 	// Don't call Show(false) because it will propagate visibility to all children
 }
 
+void UIBaseDialog::BeginModal()
+{
+	if (DisabledOwnerWnd == NULL)
+	{
+		// Disable parent window
+		HWND Owner = (HWND)GetWindowLongPtr(Wnd, GWLP_HWNDPARENT);
+		if (Owner != NULL)
+		{
+			BOOL OldEnabled = IsWindowEnabled(Owner);
+			if (OldEnabled)
+			{
+				EnableWindow(Owner, FALSE);
+				DisabledOwnerWnd = Owner;
+			}
+		}
+	}
+}
+
+void UIBaseDialog::EndModal()
+{
+	if (DisabledOwnerWnd != NULL)
+	{
+		EnableWindow(DisabledOwnerWnd, TRUE);
+		// When 'this' window is closed (hidden), owner window is disabled. This will cause wrong window to get
+		// focus. Fix that be manually changing focus.
+		SetForegroundWindow(DisabledOwnerWnd);
+		DisabledOwnerWnd = NULL;
+	}
+}
+
+void UIBaseDialog::DispatchWindowsMessage(void* pMsg)
+{
+	MSG& msg = *(MSG*)pMsg;
+
+	if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
+	{
+		// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
+		// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
+		// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
+		// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
+		// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
+		// checks are performed because we have very simple hierarchy in our UI system: all children are
+		// parented by single dialog window.
+		// If we'll need nore robust way of processing messages (for example, when we need to process
+		// keys for modal dialogs, or when message loop is processed by code which is not accessible for
+		// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
+		// (because key messages are sent to the focused window only, and not to its parent), but it looks
+		// more complicated.
+		if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
+			CloseDialog(true);
+	}
+
+	TranslateMessage(&msg);
+	DispatchMessage(&msg);
+}
+
 bool UIBaseDialog::PumpMessages()
 {
 	guard(UIBaseDialog::PumpMessages);
@@ -3332,27 +3389,9 @@ bool UIBaseDialog::PumpMessages()
 	MSG msg;
 	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
-		if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
-		{
-			// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
-			// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
-			// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
-			// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
-			// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
-			// checks are performed because we have very simple hierarchy in our UI system: all children are
-			// parented by single dialog window.
-			// If we'll need nore robust way of processing messages (for example, when we need to process
-			// keys for modal dialogs, or when message loop is processed by code which is not accessible for
-			// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
-			// (because key messages are sent to the focused window only, and not to its parent), but it looks
-			// more complicated.
-			if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
-				CloseDialog(true);
-		}
-
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		DispatchWindowsMessage(&msg);
 	}
+	// Return false if window has been closed
 	return (Wnd != 0);
 
 	unguard;
@@ -3366,48 +3405,23 @@ void UIBaseDialog::CustomMessageLoop(bool modal)
 
 	if (Wnd == 0) return;
 
-	// Ensure modal behavior when needed - disable parent window
-	HWND Owner = (HWND)GetWindowLongPtr(Wnd, GWLP_HWNDPARENT);
-	BOOL OldEnabled = FALSE;
-	if (modal && Owner != NULL)
+	if (modal)
 	{
-		OldEnabled = IsWindowEnabled(Owner);
-		EnableWindow(Owner, FALSE);
+		BeginModal();
 	}
 
 	// Classic message loop, based on GetMessage() call. We're checking 'ClosingDialog' before GetMessage()
-	// to exit modal message loop when window is hidden instead of being closed.
+	// to exit modal message loop when window is hidden instead of being closed, otherwise application will
+	// hang with waiting for a message for invisible window.
 	MSG msg;
 	while (!ClosingDialog && GetMessage(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
-		{
-			// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
-			// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
-			// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
-			// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
-			// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
-			// checks are performed because we have very simple hierarchy in our UI system: all children are
-			// parented by single dialog window.
-			// If we'll need nore robust way of processing messages (for example, when we need to process
-			// keys for modal dialogs, or when message loop is processed by code which is not accessible for
-			// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
-			// (because key messages are sent to the focused window only, and not to its parent), but it looks
-			// more complicated.
-			if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
-				CloseDialog(true);
-		}
-
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		DispatchWindowsMessage(&msg);
 	}
 
-	if (modal && Owner != NULL)
+	if (modal)
 	{
-		EnableWindow(Owner, OldEnabled);
-		// When 'this' window is closed (hidden), owner window is disabled. This will cause wrong window to get
-		// focus. Fix that be manually changing focus.
-		SetForegroundWindow(Owner);
+		EndModal();
 	}
 
 	unguard;
@@ -3417,6 +3431,7 @@ void UIBaseDialog::CloseDialog(bool cancel)
 {
 	if (Wnd && CanCloseDialog(cancel))
 	{
+		EndModal();
 		if (!ShouldHideOnClose)
 		{
 			DialogClosed(cancel);

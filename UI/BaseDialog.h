@@ -1119,6 +1119,10 @@ public:
 	// not react on 'Escape' key.
 	bool PumpMessages();
 
+	// Showing a non-modal dialog with custom message loop as modal window
+	void BeginModal();
+	void EndModal();
+
 	void CloseDialog(bool cancel = false);
 
 	static void SetMainWindow(HWND window);
@@ -1131,12 +1135,14 @@ protected:
 	bool		ShouldHideOnClose;
 	UIBaseDialog* ParentDialog;
 	bool		IsDialogConstructed;	// true after InitUI() call
+	HWND		DisabledOwnerWnd;		// non-null value when we're showing modal dialog with custom message loop
 
 	int			ClosingDialog;
 
 	bool ShowDialog(bool modal, const char* title, int width, int height);
 
 	void CustomMessageLoop(bool modal);
+	void DispatchWindowsMessage(void* msg);
 
 	// dialog procedure
 	static INT_PTR CALLBACK StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
