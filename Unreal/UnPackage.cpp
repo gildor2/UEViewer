@@ -2214,6 +2214,8 @@ void UnPackage::LoadNameTable()
 			// Verify name, some Korean games (B&S) has garbage there.
 			// Use separate block to not mess with 'goto crossing variable initialization' error.
 			{
+				// Paragon has many names ended with '\n', so it's good idea to trim spaces
+				name.TrimStartAndEndInline();
 				bool goodName = true;
 				int numBadChars = 0;
 				for (int j = 0; j < name.Len(); j++)
@@ -2232,7 +2234,7 @@ void UnPackage::LoadNameTable()
 				if (!goodName)
 				{
 					// replace name
-					appPrintf("WARNING: %s: fixing name %d\n", Filename, i);
+					appPrintf("WARNING: %s: fixing name %d (%s)\n", Filename, i, *name);
 					char buf[64];
 					appSprintf(ARRAY_ARG(buf), "__name_%d__", i);
 					name = buf;
