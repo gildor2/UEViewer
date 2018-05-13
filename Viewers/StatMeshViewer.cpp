@@ -9,6 +9,9 @@
 
 #include "StaticMesh.h"
 
+#if HAS_UI
+#include "BaseDialog.h"
+#endif
 
 CStatMeshViewer::CStatMeshViewer(CStaticMesh* Mesh0, CApplication* Window)
 :	CMeshViewer(Mesh0->OriginalMesh, Window)
@@ -101,6 +104,24 @@ void CStatMeshViewer::ShowHelp()
 	DrawKeyHelp("U", "cycle UV sets");
 	DrawKeyHelp("Ctrl+U", "display UV");
 }
+
+
+#if HAS_UI
+
+UIMenuItem* CStatMeshViewer::GetObjectMenu(UIMenuItem* menu)
+{
+	assert(!menu);
+	menu = &NewSubmenu("StaticMesh");
+
+	(*menu)
+	[
+		NewMenuCheckbox("Show mesh UVs\tCtrl+U", &ShowUV)
+	];
+
+	return CMeshViewer::GetObjectMenu(menu);
+}
+
+#endif // HAS_UI
 
 
 void CStatMeshViewer::ProcessKey(int key)

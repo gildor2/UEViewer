@@ -59,6 +59,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnMeshRune.o \
 	$(OUT_1)/UnObject.o \
 	$(OUT_1)/UnPackage.o \
+	$(OUT_1)/UnPackageReader.o \
 	$(OUT_1)/UnRenderer.o \
 	$(OUT_1)/UnTexture.o \
 	$(OUT_1)/UnTexture2.o \
@@ -206,6 +207,8 @@ DEPENDS_3 = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
+	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
@@ -272,28 +275,8 @@ DEPENDS_5 = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/MeshCommon.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-$(OUT_1)/SkelMeshInstance.o : MeshInstance/SkelMeshInstance.cpp $(DEPENDS_5)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/SkelMeshInstance.o MeshInstance/SkelMeshInstance.cpp
-
-DEPENDS_6 = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Core/MathSSE.h \
-	Core/Win32Types.h \
-	MeshInstance/MeshInstance.h \
+	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
@@ -305,8 +288,31 @@ DEPENDS_6 = \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 
-$(OUT_1)/StatMeshViewer.o : Viewers/StatMeshViewer.cpp $(DEPENDS_6)
+$(OUT_1)/StatMeshViewer.o : Viewers/StatMeshViewer.cpp $(DEPENDS_5)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/StatMeshViewer.o Viewers/StatMeshViewer.cpp
+
+DEPENDS_6 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UI/BaseDialog.h \
+	UI/callback.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h \
+	Viewers/ObjectViewer.h
+
+$(OUT_1)/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_6)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/MeshViewer.o Viewers/MeshViewer.cpp
 
 DEPENDS_7 = \
 	Core/Core.h \
@@ -320,14 +326,15 @@ DEPENDS_7 = \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h
+	Unreal/UnrealClasses.h
 
-$(OUT_1)/MeshViewer.o : Viewers/MeshViewer.cpp $(DEPENDS_7)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/MeshViewer.o Viewers/MeshViewer.cpp
+$(OUT_1)/SkelMeshInstance.o : MeshInstance/SkelMeshInstance.cpp $(DEPENDS_7)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/SkelMeshInstance.o MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS_8 = \
 	Core/Core.h \
@@ -382,6 +389,7 @@ DEPENDS_10 = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/AboutDialog.h \
 	UmodelTool/Build.h \
 	UmodelTool/ErrorDialog.h \
@@ -406,8 +414,7 @@ DEPENDS_10 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h \
-	Viewers/ObjectViewer.h \
-	libs/include/callback.hpp
+	Viewers/ObjectViewer.h
 
 $(OUT_1)/UmodelApp.o : UmodelTool/UmodelApp.cpp $(DEPENDS_10)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UmodelApp.o UmodelTool/UmodelApp.cpp
@@ -871,13 +878,13 @@ DEPENDS_33 = \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
 	UI/FileControls.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	UmodelTool/StartupDialog.h \
 	UmodelTool/UmodelSettings.h \
 	Unreal/GameDatabase.h \
 	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	libs/include/callback.hpp
+	Unreal/UnCore.h
 
 $(OUT_1)/StartupDialog.o : UmodelTool/StartupDialog.cpp $(DEPENDS_33)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/StartupDialog.o UmodelTool/StartupDialog.cpp
@@ -890,10 +897,10 @@ DEPENDS_34 = \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
 	UI/FileControls.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	libs/include/callback.hpp
+	Unreal/UnCore.h
 
 $(OUT_1)/FileControls.o : UI/FileControls.cpp $(DEPENDS_34)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/FileControls.o UI/FileControls.cpp
@@ -905,6 +912,7 @@ DEPENDS_35 = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/AboutDialog.h \
 	UmodelTool/Build.h \
 	UmodelTool/MiscStrings.h \
@@ -915,8 +923,7 @@ DEPENDS_35 = \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
-	Unreal/UnPackage.h \
-	libs/include/callback.hpp
+	Unreal/UnPackage.h
 
 $(OUT_1)/PackageDialog.o : UmodelTool/PackageDialog.cpp $(DEPENDS_35)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageDialog.o UmodelTool/PackageDialog.cpp
@@ -928,16 +935,15 @@ DEPENDS_36 = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	UmodelTool/ProgressDialog.h \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
-	Unreal/UnCore.h \
-	Unreal/UnObject.h \
-	libs/include/callback.hpp
+	Unreal/UnCore.h
 
-$(OUT_1)/ProgressDialog.o : UmodelTool/ProgressDialog.cpp $(DEPENDS_36)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ProgressDialog.o UmodelTool/ProgressDialog.cpp
+$(OUT_1)/PackageScanDialog.o : UmodelTool/PackageScanDialog.cpp $(DEPENDS_36)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageScanDialog.o UmodelTool/PackageScanDialog.cpp
 
 DEPENDS_37 = \
 	Core/Core.h \
@@ -946,15 +952,16 @@ DEPENDS_37 = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	UmodelTool/ProgressDialog.h \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h \
-	libs/include/callback.hpp
+	Unreal/UnObject.h
 
-$(OUT_1)/PackageScanDialog.o : UmodelTool/PackageScanDialog.cpp $(DEPENDS_37)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageScanDialog.o UmodelTool/PackageScanDialog.cpp
+$(OUT_1)/ProgressDialog.o : UmodelTool/ProgressDialog.cpp $(DEPENDS_37)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ProgressDialog.o UmodelTool/ProgressDialog.cpp
 
 DEPENDS_38 = \
 	Core/Core.h \
@@ -963,10 +970,10 @@ DEPENDS_38 = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	libs/include/callback.hpp
+	Unreal/UnCore.h
 
 $(OUT_1)/BaseDialog.o : UI/BaseDialog.cpp $(DEPENDS_38)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/BaseDialog.o UI/BaseDialog.cpp
@@ -1001,10 +1008,24 @@ DEPENDS_40 = \
 $(OUT_1)/UnObject.o : Unreal/UnObject.cpp $(DEPENDS_40)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnObject.o Unreal/UnObject.cpp
 
-$(OUT_1)/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_40)
+DEPENDS_41 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnPackageUE3Reader.h
+
+$(OUT_1)/UnPackage.o : Unreal/UnPackage.cpp $(DEPENDS_41)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnPackage.o Unreal/UnPackage.cpp
 
-DEPENDS_41 = \
+DEPENDS_42 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1013,10 +1034,10 @@ DEPENDS_41 = \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h
 
-$(OUT_1)/CoreGL.o : Core/CoreGL.cpp $(DEPENDS_41)
+$(OUT_1)/CoreGL.o : Core/CoreGL.cpp $(DEPENDS_42)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/CoreGL.o Core/CoreGL.cpp
 
-DEPENDS_42 = \
+DEPENDS_43 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1029,10 +1050,10 @@ DEPENDS_42 = \
 	Unreal/UnArchivePak.h \
 	Unreal/UnCore.h
 
-$(OUT_1)/GameFileSystem.o : Unreal/GameFileSystem.cpp $(DEPENDS_42)
+$(OUT_1)/GameFileSystem.o : Unreal/GameFileSystem.cpp $(DEPENDS_43)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/GameFileSystem.o Unreal/GameFileSystem.cpp
 
-DEPENDS_43 = \
+DEPENDS_44 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1043,10 +1064,10 @@ DEPENDS_43 = \
 	Unreal/GameFileSystem.h \
 	Unreal/UnCore.h
 
-$(OUT_1)/GameFileSystemGears4.o : Unreal/GameFileSystemGears4.cpp $(DEPENDS_43)
+$(OUT_1)/GameFileSystemGears4.o : Unreal/GameFileSystemGears4.cpp $(DEPENDS_44)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/GameFileSystemGears4.o Unreal/GameFileSystemGears4.cpp
 
-DEPENDS_44 = \
+DEPENDS_45 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1059,10 +1080,10 @@ DEPENDS_44 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-$(OUT_1)/PackageUtils.o : Unreal/PackageUtils.cpp $(DEPENDS_44)
+$(OUT_1)/PackageUtils.o : Unreal/PackageUtils.cpp $(DEPENDS_45)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageUtils.o Unreal/PackageUtils.cpp
 
-DEPENDS_45 = \
+DEPENDS_46 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1080,10 +1101,10 @@ DEPENDS_45 = \
 	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMeshRune.o : Unreal/UnMeshRune.cpp $(DEPENDS_45)
+$(OUT_1)/UnMeshRune.o : Unreal/UnMeshRune.cpp $(DEPENDS_46)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnMeshRune.o Unreal/UnMeshRune.cpp
 
-DEPENDS_46 = \
+DEPENDS_47 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1093,10 +1114,10 @@ DEPENDS_46 = \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h
 
-$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_46)
+$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_47)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCore.o Unreal/UnCore.cpp
 
-DEPENDS_47 = \
+DEPENDS_48 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1110,10 +1131,10 @@ DEPENDS_47 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_47)
+$(OUT_1)/UnHavok.o : Unreal/UnHavok.cpp $(DEPENDS_48)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnHavok.o Unreal/UnHavok.cpp
 
-DEPENDS_48 = \
+DEPENDS_49 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1129,10 +1150,10 @@ DEPENDS_48 = \
 	Unreal/UnObject.h \
 	Unreal/UnrealClasses.h
 
-$(OUT_1)/UnMesh1.o : Unreal/UnMesh1.cpp $(DEPENDS_48)
+$(OUT_1)/UnMesh1.o : Unreal/UnMesh1.cpp $(DEPENDS_49)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnMesh1.o Unreal/UnMesh1.cpp
 
-DEPENDS_49 = \
+DEPENDS_50 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1145,10 +1166,10 @@ DEPENDS_49 = \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h
 
-$(OUT_1)/UnTexture2.o : Unreal/UnTexture2.cpp $(DEPENDS_49)
+$(OUT_1)/UnTexture2.o : Unreal/UnTexture2.cpp $(DEPENDS_50)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture2.o Unreal/UnTexture2.cpp
 
-DEPENDS_50 = \
+DEPENDS_51 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1165,10 +1186,10 @@ DEPENDS_50 = \
 	libs/astc/mathlib.h \
 	libs/astc/vectypes.h
 
-$(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_50)
+$(OUT_1)/UnTexture.o : Unreal/UnTexture.cpp $(DEPENDS_51)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture.o Unreal/UnTexture.cpp
 
-DEPENDS_51 = \
+DEPENDS_52 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1182,25 +1203,11 @@ DEPENDS_51 = \
 	Unreal/UnObject.h \
 	Unreal/UnPackage.h
 
-$(OUT_1)/UnTexture3.o : Unreal/UnTexture3.cpp $(DEPENDS_51)
+$(OUT_1)/UnTexture3.o : Unreal/UnTexture3.cpp $(DEPENDS_52)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture3.o Unreal/UnTexture3.cpp
 
-$(OUT_1)/UnTexture4.o : Unreal/UnTexture4.cpp $(DEPENDS_51)
+$(OUT_1)/UnTexture4.o : Unreal/UnTexture4.cpp $(DEPENDS_52)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTexture4.o Unreal/UnTexture4.cpp
-
-DEPENDS_52 = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnObject.h
-
-$(OUT_1)/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_52)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnUbisoft.o Unreal/UnUbisoft.cpp
 
 DEPENDS_53 = \
 	Core/Core.h \
@@ -1211,12 +1218,42 @@ DEPENDS_53 = \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/UnCore.h \
-	Unreal/UnPackage.h
+	Unreal/UnObject.h
 
-$(OUT_1)/UnCoreSerialize.o : Unreal/UnCoreSerialize.cpp $(DEPENDS_53)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreSerialize.o Unreal/UnCoreSerialize.cpp
+$(OUT_1)/UnUbisoft.o : Unreal/UnUbisoft.cpp $(DEPENDS_53)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnUbisoft.o Unreal/UnUbisoft.cpp
 
 DEPENDS_54 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnPackageUE3Reader.h
+
+$(OUT_1)/UnPackageReader.o : Unreal/UnPackageReader.cpp $(DEPENDS_54)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnPackageReader.o Unreal/UnPackageReader.cpp
+
+DEPENDS_55 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnCoreSerialize.o : Unreal/UnCoreSerialize.cpp $(DEPENDS_55)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreSerialize.o Unreal/UnCoreSerialize.cpp
+
+DEPENDS_56 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1235,20 +1272,20 @@ DEPENDS_54 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-$(OUT_1)/UnCoreCompression.o : Unreal/UnCoreCompression.cpp $(DEPENDS_54)
+$(OUT_1)/UnCoreCompression.o : Unreal/UnCoreCompression.cpp $(DEPENDS_56)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreCompression.o Unreal/UnCoreCompression.cpp
 
-DEPENDS_55 = \
+DEPENDS_57 = \
 	Core/Core.h \
 	Core/Math3D.h \
 	Core/TextContainer.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h
 
-$(OUT_1)/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_55)
+$(OUT_1)/TextContainer.o : Core/TextContainer.cpp $(DEPENDS_57)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/TextContainer.o Core/TextContainer.cpp
 
-DEPENDS_56 = \
+DEPENDS_58 = \
 	Core/Core.h \
 	Core/Math3D.h \
 	UmodelTool/Build.h \
@@ -1256,168 +1293,168 @@ DEPENDS_56 = \
 	UmodelTool/Version.h \
 	Unreal/GameDefines.h
 
-$(OUT_1)/MiscStrings.o : UmodelTool/MiscStrings.cpp $(DEPENDS_56)
+$(OUT_1)/MiscStrings.o : UmodelTool/MiscStrings.cpp $(DEPENDS_58)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/MiscStrings.o UmodelTool/MiscStrings.cpp
 
-DEPENDS_57 = \
+DEPENDS_59 = \
 	Core/Core.h \
 	Core/Math3D.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h
 
-$(OUT_1)/Core.o : Core/Core.cpp $(DEPENDS_57)
+$(OUT_1)/Core.o : Core/Core.cpp $(DEPENDS_59)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Core.o Core/Core.cpp
 
-$(OUT_1)/CoreWin32.o : Core/CoreWin32.cpp $(DEPENDS_57)
+$(OUT_1)/CoreWin32.o : Core/CoreWin32.cpp $(DEPENDS_59)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/CoreWin32.o Core/CoreWin32.cpp
 
-$(OUT_1)/Math3D.o : Core/Math3D.cpp $(DEPENDS_57)
+$(OUT_1)/Math3D.o : Core/Math3D.cpp $(DEPENDS_59)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Math3D.o Core/Math3D.cpp
 
-$(OUT_1)/Memory.o : Core/Memory.cpp $(DEPENDS_57)
+$(OUT_1)/Memory.o : Core/Memory.cpp $(DEPENDS_59)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/Memory.o Core/Memory.cpp
 
-$(OUT_1)/UnCoreDecrypt.o : Unreal/UnCoreDecrypt.cpp $(DEPENDS_57)
+$(OUT_1)/UnCoreDecrypt.o : Unreal/UnCoreDecrypt.cpp $(DEPENDS_59)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreDecrypt.o Unreal/UnCoreDecrypt.cpp
 
-DEPENDS_58 = \
+DEPENDS_60 = \
 	Core/Core.h \
 	Core/Math3D.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/UnTextureNVTT.h
 
-$(OUT_1)/UnTextureNVTT.o : Unreal/UnTextureNVTT.cpp $(DEPENDS_58)
+$(OUT_1)/UnTextureNVTT.o : Unreal/UnTextureNVTT.cpp $(DEPENDS_60)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnTextureNVTT.o Unreal/UnTextureNVTT.cpp
 
-DEPENDS_59 = \
+DEPENDS_61 = \
 	libs/PowerVR/PVRTDecompress.h \
 	libs/PowerVR/PVRTGlobal.h \
 	libs/PowerVR/PVRTTexture.h
 
-$(OUT)/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_59)
+$(OUT)/PVRTDecompress.o : ./libs/PowerVR/PVRTDecompress.cpp $(DEPENDS_61)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/PVRTDecompress.o ./libs/PowerVR/PVRTDecompress.cpp
 
-DEPENDS_60 = \
+DEPENDS_62 = \
 	libs/astc/astc_codec_internals.h \
 	libs/astc/mathlib.h \
 	libs/astc/softfloat.h \
 	libs/astc/vectypes.h
 
-$(OUT)/astc_color_unquantize.o : ./libs/astc/astc_color_unquantize.cpp $(DEPENDS_60)
+$(OUT)/astc_color_unquantize.o : ./libs/astc/astc_color_unquantize.cpp $(DEPENDS_62)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_color_unquantize.o ./libs/astc/astc_color_unquantize.cpp
 
-$(OUT)/astc_decompress_symbolic.o : ./libs/astc/astc_decompress_symbolic.cpp $(DEPENDS_60)
+$(OUT)/astc_decompress_symbolic.o : ./libs/astc/astc_decompress_symbolic.cpp $(DEPENDS_62)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_decompress_symbolic.o ./libs/astc/astc_decompress_symbolic.cpp
 
-$(OUT)/astc_image_load_store.o : ./libs/astc/astc_image_load_store.cpp $(DEPENDS_60)
+$(OUT)/astc_image_load_store.o : ./libs/astc/astc_image_load_store.cpp $(DEPENDS_62)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_image_load_store.o ./libs/astc/astc_image_load_store.cpp
 
-DEPENDS_61 = \
+DEPENDS_63 = \
 	libs/astc/astc_codec_internals.h \
 	libs/astc/mathlib.h \
 	libs/astc/vectypes.h
 
-$(OUT)/astc_block_sizes2.o : ./libs/astc/astc_block_sizes2.cpp $(DEPENDS_61)
+$(OUT)/astc_block_sizes2.o : ./libs/astc/astc_block_sizes2.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_block_sizes2.o ./libs/astc/astc_block_sizes2.cpp
 
-$(OUT)/astc_integer_sequence.o : ./libs/astc/astc_integer_sequence.cpp $(DEPENDS_61)
+$(OUT)/astc_integer_sequence.o : ./libs/astc/astc_integer_sequence.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_integer_sequence.o ./libs/astc/astc_integer_sequence.cpp
 
-$(OUT)/astc_misc.o : ./libs/astc/astc_misc.cpp $(DEPENDS_61)
+$(OUT)/astc_misc.o : ./libs/astc/astc_misc.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_misc.o ./libs/astc/astc_misc.cpp
 
-$(OUT)/astc_partition_tables.o : ./libs/astc/astc_partition_tables.cpp $(DEPENDS_61)
+$(OUT)/astc_partition_tables.o : ./libs/astc/astc_partition_tables.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_partition_tables.o ./libs/astc/astc_partition_tables.cpp
 
-$(OUT)/astc_quantization.o : ./libs/astc/astc_quantization.cpp $(DEPENDS_61)
+$(OUT)/astc_quantization.o : ./libs/astc/astc_quantization.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_quantization.o ./libs/astc/astc_quantization.cpp
 
-$(OUT)/astc_symbolic_physical.o : ./libs/astc/astc_symbolic_physical.cpp $(DEPENDS_61)
+$(OUT)/astc_symbolic_physical.o : ./libs/astc/astc_symbolic_physical.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_symbolic_physical.o ./libs/astc/astc_symbolic_physical.cpp
 
-$(OUT)/astc_weight_quant_xfer_tables.o : ./libs/astc/astc_weight_quant_xfer_tables.cpp $(DEPENDS_61)
+$(OUT)/astc_weight_quant_xfer_tables.o : ./libs/astc/astc_weight_quant_xfer_tables.cpp $(DEPENDS_63)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/astc_weight_quant_xfer_tables.o ./libs/astc/astc_weight_quant_xfer_tables.cpp
 
-DEPENDS_62 = \
+DEPENDS_64 = \
 	libs/astc/softfloat.h
 
-$(OUT)/softfloat.o : ./libs/astc/softfloat.cpp $(DEPENDS_62)
+$(OUT)/softfloat.o : ./libs/astc/softfloat.cpp $(DEPENDS_64)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/softfloat.o ./libs/astc/softfloat.cpp
 
-DEPENDS_63 = \
+DEPENDS_65 = \
 	libs/detex/bits.h \
 	libs/detex/bptc-tables.h \
 	libs/detex/detex.h
 
-$(OUT)/bptc-tables.o : ./libs/detex/bptc-tables.cpp $(DEPENDS_63)
+$(OUT)/bptc-tables.o : ./libs/detex/bptc-tables.cpp $(DEPENDS_65)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/bptc-tables.o ./libs/detex/bptc-tables.cpp
 
-$(OUT)/decompress-bptc-float.o : ./libs/detex/decompress-bptc-float.cpp $(DEPENDS_63)
+$(OUT)/decompress-bptc-float.o : ./libs/detex/decompress-bptc-float.cpp $(DEPENDS_65)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-bptc-float.o ./libs/detex/decompress-bptc-float.cpp
 
-$(OUT)/decompress-bptc.o : ./libs/detex/decompress-bptc.cpp $(DEPENDS_63)
+$(OUT)/decompress-bptc.o : ./libs/detex/decompress-bptc.cpp $(DEPENDS_65)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-bptc.o ./libs/detex/decompress-bptc.cpp
 
-DEPENDS_64 = \
+DEPENDS_66 = \
 	libs/detex/bits.h \
 	libs/detex/detex.h
 
-$(OUT)/bits.o : ./libs/detex/bits.cpp $(DEPENDS_64)
+$(OUT)/bits.o : ./libs/detex/bits.cpp $(DEPENDS_66)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/bits.o ./libs/detex/bits.cpp
 
-DEPENDS_65 = \
+DEPENDS_67 = \
 	libs/detex/detex.h
 
-$(OUT)/clamp.o : ./libs/detex/clamp.cpp $(DEPENDS_65)
+$(OUT)/clamp.o : ./libs/detex/clamp.cpp $(DEPENDS_67)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/clamp.o ./libs/detex/clamp.cpp
 
-$(OUT)/decompress-eac.o : ./libs/detex/decompress-eac.cpp $(DEPENDS_65)
+$(OUT)/decompress-eac.o : ./libs/detex/decompress-eac.cpp $(DEPENDS_67)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-eac.o ./libs/detex/decompress-eac.cpp
 
-$(OUT)/decompress-etc.o : ./libs/detex/decompress-etc.cpp $(DEPENDS_65)
+$(OUT)/decompress-etc.o : ./libs/detex/decompress-etc.cpp $(DEPENDS_67)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/decompress-etc.o ./libs/detex/decompress-etc.cpp
 
-$(OUT)/misc.o : ./libs/detex/misc.cpp $(DEPENDS_65)
+$(OUT)/misc.o : ./libs/detex/misc.cpp $(DEPENDS_67)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/misc.o ./libs/detex/misc.cpp
 
-DEPENDS_66 = \
+DEPENDS_68 = \
 	libs/detex/detex.h \
 	libs/detex/file-info.h \
 	libs/detex/misc.h
 
-$(OUT)/dds.o : ./libs/detex/dds.cpp $(DEPENDS_66)
+$(OUT)/dds.o : ./libs/detex/dds.cpp $(DEPENDS_68)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/dds.o ./libs/detex/dds.cpp
 
-$(OUT)/file-info.o : ./libs/detex/file-info.cpp $(DEPENDS_66)
+$(OUT)/file-info.o : ./libs/detex/file-info.cpp $(DEPENDS_68)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/file-info.o ./libs/detex/file-info.cpp
 
-DEPENDS_67 = \
+DEPENDS_69 = \
 	libs/detex/detex.h \
 	libs/detex/half-float.h
 
-$(OUT)/half-float.o : ./libs/detex/half-float.cpp $(DEPENDS_67)
+$(OUT)/half-float.o : ./libs/detex/half-float.cpp $(DEPENDS_69)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/half-float.o ./libs/detex/half-float.cpp
 
-DEPENDS_68 = \
+DEPENDS_70 = \
 	libs/detex/detex.h \
 	libs/detex/half-float.h \
 	libs/detex/hdr.h \
 	libs/detex/misc.h
 
-$(OUT)/convert.o : ./libs/detex/convert.cpp $(DEPENDS_68)
+$(OUT)/convert.o : ./libs/detex/convert.cpp $(DEPENDS_70)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/convert.o ./libs/detex/convert.cpp
 
-DEPENDS_69 = \
+DEPENDS_71 = \
 	libs/detex/detex.h \
 	libs/detex/misc.h
 
-$(OUT)/texture.o : ./libs/detex/texture.cpp $(DEPENDS_69)
+$(OUT)/texture.o : ./libs/detex/texture.cpp $(DEPENDS_71)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/texture.o ./libs/detex/texture.cpp
 
 OPT_UE3_LIBS = -msse2 -std=c++0x -fno-strict-aliasing -fno-stack-protector -Wno-invalid-offsetof -Os -D DYNAMIC_CRC_TABLE -D BUILDFIXED -D NO_GZIP -I ./libs/include
 
-DEPENDS_70 = \
+DEPENDS_72 = \
 	libs/include/lzo/lzo1x.h \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
@@ -1429,10 +1466,10 @@ DEPENDS_70 = \
 	libs/lzo/lzo_ptr.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_70)
+$(OUT)/lzo1x_d2.o : ./libs/lzo/lzo1x_d2.c $(DEPENDS_72)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo1x_d2.o ./libs/lzo/lzo1x_d2.c
 
-DEPENDS_71 = \
+DEPENDS_73 = \
 	libs/include/lzo/lzoconf.h \
 	libs/include/lzo/lzodefs.h \
 	libs/lzo/lzo_conf.h \
@@ -1441,48 +1478,48 @@ DEPENDS_71 = \
 	libs/lzo/miniacc.h \
 	libs/lzo/miniacc.h
 
-$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_71)
+$(OUT)/lzo_init.o : ./libs/lzo/lzo_init.c $(DEPENDS_73)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzo_init.o ./libs/lzo/lzo_init.c
 
-DEPENDS_72 = \
+DEPENDS_74 = \
 	libs/lz4/lz4.h
 
-$(OUT)/lz4.o : ./libs/lz4/lz4.c $(DEPENDS_72)
+$(OUT)/lz4.o : ./libs/lz4/lz4.c $(DEPENDS_74)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lz4.o ./libs/lz4/lz4.c
 
-DEPENDS_73 = \
+DEPENDS_75 = \
 	libs/mspack/lzx.h \
 	libs/mspack/mspack.h \
 	libs/mspack/readbits.h \
 	libs/mspack/readhuff.h \
 	libs/mspack/system.h
 
-$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_73)
+$(OUT)/lzxd.o : ./libs/mspack/lzxd.c $(DEPENDS_75)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/lzxd.o ./libs/mspack/lzxd.c
 
-DEPENDS_74 = \
+DEPENDS_76 = \
 	libs/nvtt/nvimage/BlockDXT.h \
 	libs/nvtt/nvimage/ColorBlock.h
 
-$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_74)
+$(OUT)/BlockDXT.o : ./libs/nvtt/nvimage/BlockDXT.cpp $(DEPENDS_76)
 	$(CPP) $(OPT_NV_LIBS) -o $(OUT)/BlockDXT.o ./libs/nvtt/nvimage/BlockDXT.cpp
 
-DEPENDS_75 = \
+DEPENDS_77 = \
 	libs/rijndael/rijndael.h
 
-$(OUT)/rijndael.o : ./libs/rijndael/rijndael.c $(DEPENDS_75)
+$(OUT)/rijndael.o : ./libs/rijndael/rijndael.c $(DEPENDS_77)
 	$(CPP) $(OPT_MOBILE_LIBS) -o $(OUT)/rijndael.o ./libs/rijndael/rijndael.c
 
-DEPENDS_76 = \
+DEPENDS_78 = \
 	libs/zlib/crc32.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_76)
+$(OUT)/crc32.o : ./libs/zlib/crc32.c $(DEPENDS_78)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/crc32.o ./libs/zlib/crc32.c
 
-DEPENDS_77 = \
+DEPENDS_79 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inffixed.h \
 	libs/zlib/inflate.h \
@@ -1491,10 +1528,10 @@ DEPENDS_77 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_77)
+$(OUT)/inflate.o : ./libs/zlib/inflate.c $(DEPENDS_79)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inflate.o ./libs/zlib/inflate.c
 
-DEPENDS_78 = \
+DEPENDS_80 = \
 	libs/zlib/inffast.h \
 	libs/zlib/inflate.h \
 	libs/zlib/inftrees.h \
@@ -1502,26 +1539,26 @@ DEPENDS_78 = \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_78)
+$(OUT)/inffast.o : ./libs/zlib/inffast.c $(DEPENDS_80)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inffast.o ./libs/zlib/inffast.c
 
-DEPENDS_79 = \
+DEPENDS_81 = \
 	libs/zlib/inftrees.h \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h \
 	libs/zlib/zutil.h
 
-$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_79)
+$(OUT)/inftrees.o : ./libs/zlib/inftrees.c $(DEPENDS_81)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/inftrees.o ./libs/zlib/inftrees.c
 
-DEPENDS_80 = \
+DEPENDS_82 = \
 	libs/zlib/zconf.h \
 	libs/zlib/zlib.h
 
-$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_80)
+$(OUT)/adler32.o : ./libs/zlib/adler32.c $(DEPENDS_82)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/adler32.o ./libs/zlib/adler32.c
 
-$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_80)
+$(OUT)/uncompr.o : ./libs/zlib/uncompr.c $(DEPENDS_82)
 	$(CPP) $(OPT_UE3_LIBS) -o $(OUT)/uncompr.o ./libs/zlib/uncompr.c
 
 #------------------------------------------------------------------------------

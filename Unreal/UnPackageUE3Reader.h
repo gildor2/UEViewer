@@ -270,4 +270,4 @@ public:
 
 #endif // UNREAL3
 
-#endif __UNPACKAGEUE3READER_H__
+#endif // __UNPACKAGEUE3READER_H__

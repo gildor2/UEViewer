@@ -12,6 +12,10 @@
 #include "UnMesh4.h"
 #include "SkeletalMesh.h"
 
+#if HAS_UI
+#include "BaseDialog.h"
+#endif
+
 #include "Exporters/Exporters.h"
 
 
@@ -507,6 +511,34 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("Ctrl+T", "tag/untag mesh");
 	DrawKeyHelp("Ctrl+U", "display UV");
 }
+
+
+#if HAS_UI
+
+UIMenuItem* CSkelMeshViewer::GetObjectMenu(UIMenuItem* menu)
+{
+	assert(!menu);
+	menu = &NewSubmenu("SkeletalMesh");
+
+	(*menu)
+	[
+		NewMenuCheckbox("Show bone names\tB", &ShowLabels)
+		+NewMenuCheckbox("Show sockets\tA", &ShowAttach)
+		+NewMenuCheckbox("Show influences\tI", &DrawFlags, DF_SHOW_INFLUENCES)
+		+NewMenuCheckbox("Show mesh UVs\tCtrl+U", &ShowUV)
+		+NewMenuSeparator()
+		+NewMenuItem("Cycle skeleton display\tS")
+		.SetCallback(BIND_LAMBDA([this]() { ProcessKey('s'); })) // simulate keypress
+		+NewMenuItem("Tag mesh\tCtrl+T")
+		.SetCallback(BIND_LAMBDA([this]() { ProcessKey(KEY_CTRL|'t'); })) // simulate keypress
+		+NewMenuItem("Untag all meshes")
+		.SetCallback(BIND_LAMBDA([this]() { UntagAllMeshes(); }))
+	];
+
+	return CMeshViewer::GetObjectMenu(menu);
+}
+
+#endif // HAS_UI
 
 
 void CSkelMeshViewer::ProcessKey(int key)

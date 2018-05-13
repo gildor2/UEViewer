@@ -135,7 +135,9 @@ UIMenuItem* CMeshViewer::GetObjectMenu(UIMenuItem* menu)
 
 	(*menu)
 	[
-		NewMenuItem("test")
+		NewMenuCheckbox("Show normals\tN", &DrawFlags, DF_SHOW_NORMALS)
+		+NewMenuCheckbox("Wireframe\tW", &Wireframe)
+		+NewMenuCheckbox("Material IDs\tM", &Inst->bColorMaterials)
 	];
 
 	return menu;

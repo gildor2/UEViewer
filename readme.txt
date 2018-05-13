@@ -195,7 +195,10 @@ detex
 
 Changes
 ~~~~~~~
-01.04.2018
+13.05.2018
+- added viewer menu with object-specific actions
+
+01.05.2018
 - added UE4.20 pak file support
 
 20.04.2018

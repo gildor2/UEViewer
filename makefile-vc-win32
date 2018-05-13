@@ -59,6 +59,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnMeshRune.obj \
 	$(OUT_1)/UnObject.obj \
 	$(OUT_1)/UnPackage.obj \
+	$(OUT_1)/UnPackageReader.obj \
 	$(OUT_1)/UnRenderer.obj \
 	$(OUT_1)/UnTexture.obj \
 	$(OUT_1)/UnTexture2.obj \
@@ -207,6 +208,8 @@ DEPENDS = \
 	Core/Win32Types.h \
 	Exporters/Exporters.h \
 	MeshInstance/MeshInstance.h \
+	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
@@ -273,28 +276,8 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/MeshCommon.h \
-	Unreal/SkeletalMesh.h \
-	Unreal/UnCore.h \
-	Unreal/UnMaterial.h \
-	Unreal/UnMathTools.h \
-	Unreal/UnObject.h \
-	Unreal/UnrealClasses.h
-
-$(OUT_1)/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/GlWindow.h \
-	Core/Math3D.h \
-	Core/MathSSE.h \
-	Core/Win32Types.h \
-	MeshInstance/MeshInstance.h \
+	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
@@ -318,6 +301,8 @@ DEPENDS = \
 	Core/MathSSE.h \
 	Core/Win32Types.h \
 	MeshInstance/MeshInstance.h \
+	UI/BaseDialog.h \
+	UI/callback.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
@@ -329,6 +314,28 @@ DEPENDS = \
 
 $(OUT_1)/MeshViewer.obj : Viewers/MeshViewer.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/MeshViewer.obj" Viewers/MeshViewer.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/GlWindow.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	MeshInstance/MeshInstance.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnObject.h \
+	Unreal/UnrealClasses.h
+
+$(OUT_1)/SkelMeshInstance.obj : MeshInstance/SkelMeshInstance.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SkelMeshInstance.obj" MeshInstance/SkelMeshInstance.cpp
 
 DEPENDS = \
 	Core/Core.h \
@@ -1002,6 +1009,20 @@ DEPENDS = \
 $(OUT_1)/UnObject.obj : Unreal/UnObject.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnObject.obj" Unreal/UnObject.cpp
 
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDatabase.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnPackageUE3Reader.h
+
 $(OUT_1)/UnPackage.obj : Unreal/UnPackage.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnPackage.obj" Unreal/UnPackage.cpp
 
@@ -1202,6 +1223,22 @@ DEPENDS = \
 
 $(OUT_1)/UnUbisoft.obj : Unreal/UnUbisoft.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnUbisoft.obj" Unreal/UnUbisoft.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnPackageUE3Reader.h
+
+$(OUT_1)/UnPackageReader.obj : Unreal/UnPackageReader.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnPackageReader.obj" Unreal/UnPackageReader.cpp
 
 DEPENDS = \
 	Core/Core.h \

@@ -162,6 +162,10 @@ public:
 	static void UntagAllMeshes();
 
 	virtual void ShowHelp() override;
+#if HAS_UI
+	virtual UIMenuItem* GetObjectMenu(UIMenuItem* menu) override;
+#endif
+
 	virtual void Dump() override;
 	virtual void Export() override;
 	virtual void Draw2D() override;
@@ -186,7 +190,12 @@ class CStatMeshViewer : public CMeshViewer
 {
 public:
 	CStatMeshViewer(CStaticMesh* Mesh, CApplication* Window);
+
 	virtual void ShowHelp() override;
+#if HAS_UI
+	virtual UIMenuItem* GetObjectMenu(UIMenuItem* menu) override;
+#endif
+
 	virtual void Dump() override;
 	virtual void Draw2D() override;
 	virtual void ProcessKey(int key) override;
