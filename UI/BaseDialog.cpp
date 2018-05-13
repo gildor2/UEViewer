@@ -2169,7 +2169,7 @@ void UITreeView::DialogClosed(bool cancel)
 
 
 /*-----------------------------------------------------------------------------
-	UIMenu
+	UIMenuItem
 -----------------------------------------------------------------------------*/
 
 // Hyperlink
@@ -2183,6 +2183,7 @@ UIMenuItem::UIMenuItem(const char* text, const char* link)
 UIMenuItem::UIMenuItem(const char* text, bool checked)
 :	bValue(checked)
 ,	pValue(&bValue)
+,	iValue(0) // indicates that pValue is bool and not a mask
 {
 	Init(MI_Checkbox, text);
 }
@@ -2191,7 +2192,18 @@ UIMenuItem::UIMenuItem(const char* text, bool checked)
 UIMenuItem::UIMenuItem(const char* text, bool* checked)
 :	pValue(checked)
 //,	bValue(value) - uninitialized
+,	iValue(0) // indicates that pValue is bool and not a mask
 {
+	Init(MI_Checkbox, text);
+}
+
+// Checkbox
+UIMenuItem::UIMenuItem(const char* text, int* value, int mask)
+:	pValue(value)
+,	iValue(mask) // indicates that pValue is a bitfield with iValue mask
+//,	bValue(value) - uninitialized
+{
+	assert((mask & (mask-1)) == 0 && mask != 0); // should be non-zero value with a single bit set
 	Init(MI_Checkbox, text);
 }
 
@@ -2377,7 +2389,7 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 				UINT fType = MFT_STRING;
 				UINT fState = 0;
 				if (!item->Enabled) fState |= MFS_DISABLED;
-				if (item->Type == MI_Checkbox && *(bool*)item->pValue)
+				if (item->Type == MI_Checkbox && item->GetCheckboxValue())
 				{
 					// checked checkbox
 					fState |= MFS_CHECKED;
@@ -2455,8 +2467,8 @@ bool UIMenuItem::HandleCommand(int id)
 			case MI_Checkbox:
 				{
 					// change value
-					bool value = !*(bool*)item->pValue;
-					*(bool*)item->pValue = value;
+					bool value = !item->GetCheckboxValue();
+					item->SetCheckboxValue(value);
 					// update menu
 					CheckMenuItem(hMenu, item->Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
 					// callbacks
@@ -2557,7 +2569,10 @@ void UIMenuItem::Update()
 	switch (Type)
 	{
 	case MI_Checkbox:
-		CheckMenuItem(hMenu, Id, MF_BYCOMMAND | (*(bool*)pValue ? MF_CHECKED : 0));
+		{
+			bool value = GetCheckboxValue();
+			CheckMenuItem(hMenu, Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
+		}
 		break;
 	case MI_RadioGroup:
 		for (UIMenuItem* button = FirstChild; button; button = button->NextChild)
@@ -2597,6 +2612,10 @@ void UIMenuItem::ReplaceWith(UIMenuItem* other)
 	// Now, move other's content into this menu
 	FirstChild = other->FirstChild;
 	other->FirstChild = NULL;
+	for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
+	{
+		item->Parent = this;
+	}
 
 	int nextId = GetOwner()->GetNextItemId();
 	int submenuPosition = 0;
@@ -2612,6 +2631,43 @@ void UIMenuItem::ReplaceWith(UIMenuItem* other)
 
 	unguard;
 }
+
+bool UIMenuItem::GetCheckboxValue() const
+{
+	assert(Type == MI_Checkbox);
+	if (iValue)
+	{
+		// bitfield
+		return ( *(int*)pValue & iValue ) != 0;
+	}
+	else
+	{
+		// simple bool
+		return *(bool*)pValue;
+	}
+}
+
+void UIMenuItem::SetCheckboxValue(bool newValue)
+{
+	assert(Type == MI_Checkbox);
+	if (iValue)
+	{
+		// bitfield
+		int fullValue = *(int*)pValue;
+		fullValue = fullValue & ~iValue | (newValue ? iValue : 0);
+		*(int*)pValue = fullValue;
+	}
+	else
+	{
+		// simple bool
+		*(bool*)pValue = newValue;
+	}
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIMenu
+-----------------------------------------------------------------------------*/
 
 UIMenu::UIMenu()
 :	UIMenuItem(MI_Submenu)

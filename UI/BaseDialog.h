@@ -749,6 +749,7 @@ public:
 	// Checkbox
 	UIMenuItem(const char* text, bool checked);
 	UIMenuItem(const char* text, bool* checked);
+	UIMenuItem(const char* text, int* value, int mask);
 	// RadioGroup
 	UIMenuItem(int value);
 	UIMenuItem(int* value);
@@ -820,6 +821,9 @@ protected:
 	HMENU GetMenuHandle();
 	bool HandleCommand(int id);
 
+	bool GetCheckboxValue() const;
+	void SetCheckboxValue(bool newValue);
+
 	int GetMaxItemIdRecursive();
 };
 
@@ -877,14 +881,26 @@ FORCEINLINE UIMenuItem& NewMenuSeparator()
 
 // Create a checkbox
 
+// Checkbox which tracks provided value
 FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, bool* value)
 {
 	return *new UIMenuItem(label, value);
 }
 
+// Checkbox with not automatic tracking
 FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, bool value)
 {
 	return *new UIMenuItem(label, value);
+}
+
+FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, int* value, int mask)
+{
+	return *new UIMenuItem(label, value, mask);
+}
+
+FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, unsigned int* value, int mask)
+{
+	return *new UIMenuItem(label, (int*)value, mask);
 }
 
 // Create a radio group: RadioGroup holds a number of RadioItems
