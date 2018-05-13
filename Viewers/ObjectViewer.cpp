@@ -9,7 +9,6 @@
 
 #include "Exporters/Exporters.h"
 
-
 CObjectViewer::CObjectViewer(UObject* Obj, CApplication *Win)
 :	Object(Obj)
 ,	Window(Win)
@@ -109,5 +108,14 @@ void CObjectViewer::Draw2D()
 
 	DrawTextLeft("");
 }
+
+#if HAS_UI
+
+UIMenuItem* CObjectViewer::GetObjectMenu(UIMenuItem* menu)
+{
+	return menu;
+}
+
+#endif // HAS_UI
 
 #endif // RENDERING

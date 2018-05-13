@@ -635,6 +635,7 @@ void CUmodelApp::CreateMenu()
 			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(1); }))
 		]
 		+ NewSubmenu("Object")
+		.Enable(false)
 		.Expose(ObjectMenu)
 		+ NewSubmenu("Tools")
 		[
@@ -684,20 +685,22 @@ void CUmodelApp::CreateMenu()
 void CUmodelApp::UpdateObjectMenu()
 {
 	guard(CUmodelApp::UpdateObjectMenu);
-	if (!MainMenu)
+	if (!MainMenu || !Viewer)
 	{
 		// window wasn't created yet, UpdateObjectMenu() will be called explicitly later
 		return;
 	}
-/*	printf("DEBUG: UpdateMenu: %d\n", MainMenu->GetNextItemId()); //!!!
-	UIMenuItem* toolsMenu = &NewSubmenu(UObject::GObjObjects[ObjIndex]->Name)
-	.Expose(toolsMenu)
-	[
-		NewMenuItem("Scan content")
-		.SetCallback(BIND_LAMBDA([]() { printf("\n\n>>> CALLED <<<\n\n"); } ))
-	];
-	ObjectMenu->ReplaceWith(toolsMenu); */
-
+	UIMenuItem* newObjMenu = Viewer->GetObjectMenu(NULL);
+	if (!newObjMenu)
+	{
+		ObjectMenu->Enable(false);
+		ObjectMenu->SetName("Object");
+	}
+	else
+	{
+		ObjectMenu->Enable(true);
+		ObjectMenu->ReplaceWith(newObjMenu);
+	}
 	unguard;
 }
 
