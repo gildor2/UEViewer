@@ -210,6 +210,16 @@ public:
 		return (stricmp(Str, String) == 0);
 	}
 
+	FORCEINLINE bool operator!=(const FName& Other) const
+	{
+		return !operator==(Other);
+	}
+
+	FORCEINLINE bool operator!=(const char* String) const
+	{
+		return !operator==(String);
+	}
+
 	FORCEINLINE const char *operator*() const
 	{
 		return Str;
@@ -2047,15 +2057,27 @@ public:
 	// comparison
 	friend FORCEINLINE bool operator==(const FString& A, const FString& B)
 	{
-		return !strcmp(*A, *B);
+		return strcmp(*A, *B) == 0;
 	}
 	friend FORCEINLINE bool operator==(const char* A, const FString& B)
 	{
-		return !strcmp(A, *B);
+		return strcmp(A, *B) == 0;
 	}
 	friend FORCEINLINE bool operator==(const FString& A, const char* B)
 	{
-		return !strcmp(*A, B);
+		return strcmp(*A, B) == 0;
+	}
+	friend FORCEINLINE bool operator!=(const FString& A, const FString& B)
+	{
+		return strcmp(*A, *B) != 0;
+	}
+	friend FORCEINLINE bool operator!=(const char* A, const FString& B)
+	{
+		return strcmp(A, *B) != 0;
+	}
+	friend FORCEINLINE bool operator!=(const FString& A, const char* B)
+	{
+		return strcmp(*A, B) != 0;
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);

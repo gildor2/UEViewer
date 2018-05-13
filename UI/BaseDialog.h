@@ -768,6 +768,7 @@ public:
 	UIMenuItem& Expose(UIMenuItem*& var) { var = this; return *this; }
 
 	UIMenuItem& Enable(bool enable);
+	UIMenuItem& SetName(const char* newName);
 
 	const char* GetText() const { return *Label; }
 
@@ -834,7 +835,7 @@ public:
 	{
 		ReferenceCount++;
 	}
-	void AttachTo(HWND Wnd);
+	void AttachTo(HWND Wnd, bool updateRefCount = true);
 	void Detach();
 
 	void Redraw();

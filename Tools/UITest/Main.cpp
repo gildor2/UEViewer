@@ -37,9 +37,16 @@ public:
 					+ NewMenuRadioButton("Value 2", 2)
 				]
 				+ NewMenuSeparator()
+				+ NewSubmenu("Submenu")
+				[
+					NewMenuItem("Submenu 1")
+					+ NewMenuItem("Submenu 2")
+					+ NewMenuItem("Submenu 3")
+				]
 				+ NewMenuItem("Last Item")
 			]
 			+ NewMenuItem("Empty")
+				.Expose(emptyItem)
 		];
 
 		UIMenu* popup = new UIMenu;
@@ -90,6 +97,8 @@ public:
 							.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { item1->Enable(value); }))
 							+ NewControl(UICheckbox, "Item #1", &value1)
 							+ NewControl(UICheckbox, "Item #2", &value2)
+							+ NewControl(UICheckbox, "Enable \"Empty\"", true)
+							.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { emptyItem->Enable(value); }))
 						]
 						+ NewControl(UISpacer)
 						+ NewControl(UIGroup, "Group 1")
@@ -205,6 +214,7 @@ public:
 	}
 
 	UIMenuItem*		item1;
+	UIMenuItem*		emptyItem;
 	UIPageControl*	pager;
 	UIMulticolumnListbox* list;
 	bool			value1;

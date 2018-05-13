@@ -181,6 +181,31 @@ public:
 	{
 		return (int)str.length();
 	}
+	// comparison
+	friend FORCEINLINE bool operator==(const FString& A, const FString& B)
+	{
+		return A.str == B.str;
+	}
+	friend FORCEINLINE bool operator==(const char* A, const FString& B)
+	{
+		return A == B.str;
+	}
+	friend FORCEINLINE bool operator==(const FString& A, const char* B)
+	{
+		return A.str == B;
+	}
+	friend FORCEINLINE bool operator!=(const FString& A, const FString& B)
+	{
+		return A.str != B.str;
+	}
+	friend FORCEINLINE bool operator!=(const char* A, const FString& B)
+	{
+		return A != B.str;
+	}
+	friend FORCEINLINE bool operator!=(const FString& A, const char* B)
+	{
+		return A.str != B;
+	}
 };
 
 // No TStaticArray FStaticString

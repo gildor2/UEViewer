@@ -2272,11 +2272,38 @@ UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next)
 UIMenuItem& UIMenuItem::Enable(bool enable)
 {
 	Enabled = enable;
-	if (Id)
+	if (Parent && Parent->hMenu)
 	{
-		HMENU hMenu = GetMenuHandle();
-		if (hMenu)
-			EnableMenuItem(hMenu, Id, MF_BYCOMMAND | (enable ? MF_ENABLED : MF_DISABLED));
+		EnableMenuItem(Parent->hMenu, GetItemIndex(), MF_BYPOSITION | (enable ? MF_ENABLED : MF_DISABLED));
+		UIMenu* Menu = GetOwner();
+		if (Parent == Menu)
+		{
+			Menu->Redraw();
+		}
+	}
+	return *this;
+}
+
+UIMenuItem& UIMenuItem::SetName(const char* newName)
+{
+	if (Label != newName)
+	{
+		Label = newName;
+		if (Parent && Parent->hMenu)
+		{
+			MENUITEMINFO mii;
+			memset(&mii, 0, sizeof(mii));
+			mii.cbSize = sizeof(mii);
+			mii.fMask = MIIM_STRING;
+			mii.dwTypeData = (LPSTR)*Label;
+			SetMenuItemInfo(Parent->hMenu, GetItemIndex(), TRUE, &mii);
+			// If Parent is UIMenu, we're working with top-level menu item, so we should refresh menu line
+			UIMenu* Menu = GetOwner();
+			if (Parent == Menu)
+			{
+				Menu->Redraw();
+			}
+		}
 	}
 	return *this;
 }
@@ -2577,20 +2604,7 @@ void UIMenuItem::ReplaceWith(UIMenuItem* other)
 
 	if (!other->Label.IsEmpty())
 	{
-		//TODO: move to separate function
-		Label = other->Label;
-		MENUITEMINFO mii;
-		memset(&mii, 0, sizeof(mii));
-		mii.cbSize = sizeof(mii);
-		mii.fMask = MIIM_STRING;
-		mii.dwTypeData = (LPSTR)*Label;
-		SetMenuItemInfo(Parent->hMenu, GetItemIndex(), TRUE, &mii);
-		// If Parent is UIMenu, we're working with top-level menu item, so we should refresh menu line
-		UIMenu* Menu = GetOwner();
-		if (Parent == Menu)
-		{
-			Menu->Redraw();
-		}
+		SetName(*other->Label);
 	}
 
 	// Cleanup
@@ -2610,11 +2624,14 @@ UIMenu::~UIMenu()
 	if (hMenu) DestroyMenu(hMenu);
 }
 
-void UIMenu::AttachTo(HWND Wnd)
+void UIMenu::AttachTo(HWND Wnd, bool updateRefCount)
 {
 	assert(MenuOwner == NULL);
 	MenuOwner = Wnd;
-	ReferenceCount++;
+	if (updateRefCount)
+	{
+		ReferenceCount++;
+	}
 	SetMenu(MenuOwner, GetHandle(false, true));
 	Redraw();
 }
@@ -3652,8 +3669,8 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		if (Menu)
 		{
-			Menu->AttachTo(Wnd);
-			Menu->Detach(); // we already had UIMenu::Attach() called before, so compensate 2nd attach with Detach() call
+			// we already had UIMenu::Attach() called before, so call AttachTo without updating reference count
+			Menu->AttachTo(Wnd, false);
 		}
 
 		// adjust window size taking into account desired client size and center window on screen
