@@ -211,8 +211,10 @@ DEPENDS = \
 	UI/BaseDialog.h \
 	UI/callback.h \
 	UmodelTool/Build.h \
+	UmodelTool/ProgressDialog.h \
 	Unreal/GameDefines.h \
 	Unreal/MeshCommon.h \
+	Unreal/PackageUtils.h \
 	Unreal/SkeletalMesh.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
@@ -222,6 +224,7 @@ DEPENDS = \
 	Unreal/UnMesh3.h \
 	Unreal/UnMesh4.h \
 	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
 	Unreal/UnrealClasses.h \
 	Viewers/ObjectViewer.h
 

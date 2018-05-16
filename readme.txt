@@ -195,6 +195,10 @@ detex
 
 Changes
 ~~~~~~~
+16.05.2018
+- added functionality which finds all animations for currectly opened UE4 SkeletalMesh, accessible with Ctrl+A
+  key or via "SkeletalMesh | Find animations" menu
+
 13.05.2018
 - added viewer menu with object-specific actions
 

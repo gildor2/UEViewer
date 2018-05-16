@@ -13,6 +13,8 @@ class CStaticMesh;
 struct CMeshVertex;
 struct CBaseMeshLod;
 
+class USkeleton;
+
 class UIMenuItem;
 
 
@@ -173,12 +175,17 @@ public:
 	virtual void ProcessKey(int key) override;
 	virtual void ProcessKeyUp(int key) override;
 
+	void AttachAnimSet();
+	void FindUE4Animations();
+
 	virtual void DrawMesh(CMeshInstance *Inst) override;
 
 	static TArray<CSkelMeshInstance*> TaggedMeshes;	// for displaying multipart meshes
 
 private:
 	CSkeletalMesh	*Mesh;
+	bool			bIsUE4Mesh;
+	USkeleton*		Skeleton;
 };
 
 
