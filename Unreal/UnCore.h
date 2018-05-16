@@ -1654,6 +1654,11 @@ public:
 		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
 	}
 
+	FORCEINLINE void Sort(int (*cmpFunc)(const T&, const T&))
+	{
+		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
+	}
+
 	// serializer
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray &A)
 	{

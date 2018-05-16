@@ -11,6 +11,7 @@
 -----------------------------------------------------------------------------*/
 
 TArray<UnPackage*> GFullyLoadedPackages;
+
 bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 {
 	guard(LoadWholePackage);
@@ -183,11 +184,11 @@ bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress)
 	data.PkgInfo = &info;
 	data.Progress = progress;
 	appEnumGameFiles(ScanPackage, data);
-	info.Sort([](const FileInfo *p1, const FileInfo *p2) -> int
+	info.Sort([](const FileInfo& p1, const FileInfo& p2) -> int
 		{
-			int dif = p1->Ver - p2->Ver;
+			int dif = p1.Ver - p2.Ver;
 			if (dif) return dif;
-			return p1->LicVer - p2->LicVer;
+			return p1.LicVer - p2.LicVer;
 		});
 
 	return !data.Cancelled;
@@ -293,9 +294,9 @@ void CollectPackageStats(const TArray<UnPackage*> &Packages, TArray<ClassStats>&
 			found->Count++;
 		}
 	}
-	Stats.Sort([](const ClassStats* p1, const ClassStats* p2) -> int
+	Stats.Sort([](const ClassStats& p1, const ClassStats& p2) -> int
 		{
-			return stricmp(p1->Name, p2->Name);
+			return stricmp(p1.Name, p2.Name);
 		});
 
 	unguard;

@@ -584,7 +584,7 @@ struct PackageSortHelper
 static bool PackageSort_Reverse;
 static int  PackageSort_Column;
 
-static int PackageSortFunction(const PackageSortHelper* const pA, const PackageSortHelper* const pB)
+static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHelper* pB)
 {
 	const CGameFileInfo* A = pA->File;
 	const CGameFileInfo* B = pB->File;

@@ -271,7 +271,12 @@ FORCEINLINE typename TRemoveReference<T>::Type&& MoveTemp(T&& Obj)
 
 // Sorting helpers
 
-template<class T> inline void QSort(T* array, int count, int (*cmpFunc)(const T*, const T*))
+template<class T> FORCEINLINE void QSort(T* array, int count, int (*cmpFunc)(const T*, const T*))
+{
+	qsort(array, count, sizeof(T), (int (*)(const void*, const void*)) cmpFunc);
+}
+
+template<class T> FORCEINLINE void QSort(T* array, int count, int (*cmpFunc)(const T&, const T&))
 {
 	qsort(array, count, sizeof(T), (int (*)(const void*, const void*)) cmpFunc);
 }

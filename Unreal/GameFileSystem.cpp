@@ -451,9 +451,9 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 #endif
 
 	// Register files in sorted order - should be done for pak files, so patches will work.
-	Filenames.Sort([](const FStaticString<256>* p1, const FStaticString<256>* p2) -> int
+	Filenames.Sort([](const FStaticString<256>& p1, const FStaticString<256>& p2) -> int
 		{
-			return stricmp(*(*p1), *(*p2)) > 0;
+			return stricmp(*p1, *p2) > 0;
 		});
 
 	for (int i = 0; i < Filenames.Num(); i++)
