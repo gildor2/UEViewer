@@ -14,7 +14,7 @@ PDB        = 2				# keep enabled, executable is almost the same, except embedded
 OLDCRT     = 1				# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
 !endif
 
-#?? TODO: UE3_LIBS seems combines all libraries used in UModel, but which aren't for UE3 exactly. Rename constant?
+#?? TODO: UE3_LIBS seems combines all libraries used in UModel, but which aren't for UE3 exactly. Should I rename the constant?
 
 #------------------------------------------------
 #	Compiler-specific options
@@ -24,19 +24,15 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 
 !if "$COMPILER" eq "VisualC"
 	CPP_EXCEPT = 0										# used with WIN32_USE_SEH in Core.h
-	OPTIONS = -GS- -GR- 								#?? VC8+
-	# -Wp64 enables 64-bit portability warnings. Note: this option is deprecated, it will display a command line warning.
-	# More information here:
-	# https://connect.microsoft.com/VisualStudio/feedback/details/806763/warnings-c4311-and-c4312-require-wp64-which-is-documented-as-deprecated
-	# http://blogs.msdn.com/b/vcblog/archive/2014/06/13/compiler-switch-deprecation-removal-changes-in-visual-studio-14.aspx
-#	OPTIONS += -Wp64									# 64-bit portability warnings; note: deprecated option, will display a command line warning
+	OPTIONS = -GS- -GR-
 #	WARNINGS += -W4										# maximal warning level for Visual C++
 	DEFINES += _USING_V110_SDK71_						# avoid some warnings, perhaps affects something else
 					# see http://tedwvc.wordpress.com/2014/01/01/how-to-target-xp-with-vc2012-or-vc2013-and-continue-to-use-the-windows-8-x-sdk/
 					# it looks like VS2013 requires _USING_V120_SDK71_
-	!if "$OLDCRT" eq "1"
+
+	WDKCRT = $R/../Libs/msvcrt
+	!if "$OLDCRT" eq "1" && -e "$WDKCRT/msvcrt.project"
 		DEFINES += OLDCRT
-		WDKCRT = $R/../Libs/msvcrt
 		!include $WDKCRT/msvcrt.project
 	!endif
 !endif

@@ -423,7 +423,7 @@ static void PrintUsage()
  			"\n"
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
-			"    -all            export all linked objects too\n"
+			"    -all            used with -dump, will dump all objects instead of specified one\n"
 			"    -uncook         use original package name as a base export directory (UE1-3)\n"
 			"    -groups         use group names instead of class names for directories (UE1-3)\n"
 			"    -uc             create unreal script when possible\n"
@@ -808,7 +808,7 @@ int main(int argc, char **argv)
 	};
 
 	static byte mainCmd = CMD_View;
-	static bool exprtAll = false, hasRootDir = false, forceUI = false;
+	static bool bAll = false, hasRootDir = false, forceUI = false;
 	TArray<const char*> packagesToLoad, objectsToLoad;
 	TArray<const char*> params;
 	const char *attachAnimName = NULL;
@@ -838,7 +838,6 @@ int main(int argc, char **argv)
 			OPT_BOOL ("meshes",    GApplication.ShowMeshes)
 			OPT_BOOL ("materials", GApplication.ShowMaterials)
 #endif
-			OPT_BOOL ("all",     exprtAll)
 			OPT_BOOL ("uncook",  GUncook)
 			OPT_BOOL ("groups",  GUseGroups)
 //			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
@@ -869,8 +868,13 @@ int main(int argc, char **argv)
 		};
 		if (ProcessOption(ARRAY_ARG(options), opt))
 			continue;
+		if (!stricmp(opt, "all") && mainCmd == CMD_Dump)
+		{
+			// -all should be used only with -dump
+			bAll = true;
+		}
 		// more complex options
-		if (!strnicmp(opt, "log=", 4))
+		else if (!strnicmp(opt, "log=", 4))
 		{
 			appOpenLogFile(opt+4);
 		}
@@ -1100,12 +1104,19 @@ int main(int argc, char **argv)
 	if (mainCmd == CMD_List)
 	{
 		guard(List);
-		// dump package exports table
-		UnPackage* MainPackage = Packages[0];	//!! TODO: may be work with multiple packages here - not hard, but will require additional output formatting
-		for (int i = 0; i < MainPackage->Summary.ExportCount; i++)
+		for (int packageIndex = 0; packageIndex < Packages.Num(); packageIndex++)
 		{
-			const FObjectExport &Exp = MainPackage->ExportTable[i];
-			appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, MainPackage->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			UnPackage* Package = Packages[packageIndex];
+			if (Packages.Num() > 1)
+			{
+				appPrintf("\n%s\n", Package->Filename);
+			}
+			// dump package exports table
+			for (int i = 0; i < Package->Summary.ExportCount; i++)
+			{
+				const FObjectExport &Exp = Package->ExportTable[i];
+				appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			}
 		}
 		unguard;
 		return 0;
@@ -1191,7 +1202,7 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_Export)
 	{
-		ExportObjects(exprtAll ? NULL : &Objects);
+		ExportObjects(&Objects); // will export everything if "Objects" array is empty
 		ResetExportedList();
 		if (!GApplication.GuiShown)
 			return 0;
@@ -1206,7 +1217,7 @@ int main(int argc, char **argv)
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			UObject* ExpObj = UObject::GObjObjects[idx];
-			if (!exprtAll)
+			if (!bAll)
 			{
 				if (Packages.FindItem(ExpObj->Package) < 0)					// refine object by package
 					continue;
