@@ -164,6 +164,10 @@ zlib data compression library
   (c) Jean-loup Gailly and Mark Adler
   http://zlib.net/
 
+libpng
+  (c) Glenn Randers-Pehrson
+  http://www.libpng.org/
+
 LZO data compression library
   (c) Markus F.X.J. Oberhumer
   http://www.oberhumer.com/opensource/lzo/
@@ -195,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+19.05.2018
+- implemented support for loading of UE3 and UE4 png-compressed textures
+
 16.05.2018
 - added functionality which finds all animations for currectly opened UE4 SkeletalMesh, accessible with Ctrl+A
   key or via "SkeletalMesh | Find animations" menu

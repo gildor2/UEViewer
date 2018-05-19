@@ -1,4 +1,5 @@
 #include "UnTextureNVTT.h"
+#include "UnTexturePNG.h"
 
 #include "Core.h"
 #include "UnCore.h"
@@ -46,6 +47,7 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 const CPixelFormatInfo PixelFormatInfo[] =
 {
 	// FourCC				BlockSizeX	BlockSizeY BytesPerBlock X360AlignX	X360AlignY	Float	Name
+	{ 0,						0,			0,			0,			0,			0,		0,		"UNKNOWN"	},	// TPF_UNKNOWN
 	{ 0,						1,			1,			1,			0,			0,		0,		"P8"		},	// TPF_P8
 	{ 0,						1,			1,			1,			64,			64,		0,		"G8"		},	// TPF_G8
 //	{																										},	// TPF_G16
@@ -78,6 +80,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ 0,						10,			10,			16,			0,			0,		0,		"ATC_10x10"	},	// TPF_ASTC_10x10
 	{ 0,						12,			12,			16,			0,			0,		0,		"ATC_12x12"	},	// TPF_ASTC_12x12
 #endif
+	{ 0,						1,			1,			0,			0,			0,		0,		"PNG_BGRA"	},	// TPF_PNG_BGRA
 };
 
 
@@ -412,6 +415,13 @@ byte *CTextureData::Decompress(int MipLevel)
 			PROFILE_DDS(appPrintProfiler());
 		}
 		return dst;
+	case TPF_PNG_BGRA:
+		// bool UncompressPNG(const byte* CompressedData int CompressedSize, int Width, int Height, byte* pic)
+		if (UncompressPNG(Mip.CompressedData, Mip.DataSize, Mip.USize, Mip.VSize, dst))
+		{
+			return dst;
+		}
+		break;
 	}
 
 	static_assert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, "Wrong PixelFormatInfo array size");

@@ -281,26 +281,6 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		if (CheckExportFilePresence(Tex, "%s.hdr", Tex->Name)) return;
 	}
 
-	// for UTexture3 (UE3+), can check SourceArt for PNG data and save it if available
-	if (Tex->IsA("Texture3"))
-	{
-		// Note: there are several SourceArt texture formats available. We're detecting PNG
-		// by checking for magic value, however it is possible to analyze bPNGCompressed and
-		// ETextureSourceFormat enum to determine exact format.
-		const UTexture3* Tex3 = static_cast<const UTexture3*>(Tex);
-		const FByteBulkData& Bulk = Tex3->SourceArt;
-		if (Bulk.BulkData && memcmp(Bulk.BulkData, "\x89PNG", 4) == 0)
-		{
-			FArchive *Ar = CreateExportArchive(Tex, "%s.png", Tex->Name);
-			if (Ar)
-			{
-				Ar->Serialize(Bulk.BulkData, Bulk.ElementCount * Bulk.GetElementSize());
-				delete Ar;
-			}
-			return;
-		}
-	}
-
 	byte *pic = NULL;
 	int width, height;
 

@@ -99,12 +99,19 @@ sources(UE3_LIBS) = {
 	# ... lzo for compressed UE3 packages
 	$R/libs/lzo/lzo_init.c
 	$R/libs/lzo/lzo1x_d2.c
-	# ... zlib for compressed UE3 packages
+	# ... zlib for compressed UE3/UE4 packages
 	$R/libs/zlib/*.c
 	# ... lzx for compresses XBox360 UE3 packages
 	$R/libs/mspack/lzxd.c
 	# ... lz4 for Gears of War 4
 	$R/libs/lz4/lz4.c
+}
+
+# ... PNG for compressed source textures
+INCLUDES += $R/libs/zlib
+DEFINES = PNG_USER_CONFIG
+sources(UE3_LIBS) = {
+	$R/libs/libpng/*.c
 }
 
 pop(INCLUDES)

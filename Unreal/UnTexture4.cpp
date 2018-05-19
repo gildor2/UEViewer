@@ -190,13 +190,13 @@ void UTexture2D::Serialize4(FArchive& Ar)
 			NewPixelFormat = PF_B8G8R8A8;
 			break;
 		}
+		Format = NewPixelFormat;
+		SizeX = Source.SizeX;
+		SizeY = Source.SizeY;
+
 		if (Source.NumSlices == 1 && Source.bPNGCompressed == false && BytesPerPixel > 0)
 		{
 			// Cubemaps and PNG images are not supported
-			Format = NewPixelFormat;
-			SizeX = Source.SizeX;
-			SizeY = Source.SizeY;
-
 			int MipSizeX = SizeX;
 			int MipSizeY = SizeY;
 			int MipOffset = 0;
@@ -224,10 +224,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 			}
 			appPrintf("  Loading SourceArt: %s, NumMips=%d, Slices=%d, PNGCompressed=%d\n", FormatName, Source.NumMips, Source.NumSlices, Source.bPNGCompressed);
 		}
-		else
-		{
-			appPrintf("  Skipping SourceArt: %s, NumMips=%d, Slices=%d, PNGCompressed=%d\n", FormatName, Source.NumMips, Source.NumSlices, Source.bPNGCompressed);
-		}
+		// compresses source art will be loaded in UTexture2D::GetTextureData()
 
 		unguard;
 	}

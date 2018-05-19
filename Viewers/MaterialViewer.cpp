@@ -480,6 +480,8 @@ void CMaterialViewer::Draw2D()
 		{
 			if (width && height)
 				DrawTextLeft(S_RED"Cooked size: %dx%d", width, height);
+			else if (Tex->SourceArt.BulkData && Tex->Source.bPNGCompressed)
+				DrawTextLeft("Texture in PNG format");
 			else
 				DrawTextLeft(S_RED"Bad texture (no mipmaps)");
 		}

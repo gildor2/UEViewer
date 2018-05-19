@@ -1892,7 +1892,7 @@ bool UTexture2D::Upload()
 {
 	if (TexNum == BAD_TEXTURE) return false;
 	if (!GL_TouchObject(DrawTimestamp))
-        TexNum = Upload2D(this, Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
+        TexNum = Upload2D(this, Mips.Num() == 0 || Mips.Num() > 1, AddressX == TA_Clamp, AddressY == TA_Clamp);
 	return (TexNum != BAD_TEXTURE);
 }
 

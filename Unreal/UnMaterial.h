@@ -86,6 +86,7 @@ struct CMaterialParams
 // Should change PixelFormatInfo[] in UnTexture.cpp when modify this enum!
 enum ETexturePixelFormat
 {
+	TPF_UNKNOWN,
 	TPF_P8,				// 8-bit paletted
 	TPF_G8,				// 8-bit grayscale
 //	TPF_G16,			// 16-bit grayscale (terrain heightmaps)
@@ -118,6 +119,7 @@ enum ETexturePixelFormat
 	TPF_ASTC_10x10,
 	TPF_ASTC_12x12,
 #endif // SUPPORT_ANDROID
+	TPF_PNG_BGRA,		// UE3+ SourceArt format
 	TPF_MAX
 };
 

@@ -66,6 +66,7 @@ MAIN_FILES = \
 	$(OUT_1)/UnTexture3.obj \
 	$(OUT_1)/UnTexture4.obj \
 	$(OUT_1)/UnTextureNVTT.obj \
+	$(OUT_1)/UnTexturePNG.obj \
 	$(OUT_1)/UnUbisoft.obj \
 	$(OUT_1)/MaterialViewer.obj \
 	$(OUT_1)/MeshViewer.obj \
@@ -113,6 +114,21 @@ UE3_LIBS_FILES = \
 	$(OUT)/uncompr.obj \
 	$(OUT)/lzxd.obj \
 	$(OUT)/lz4.obj \
+	$(OUT)/png.obj \
+	$(OUT)/pngerror.obj \
+	$(OUT)/pngget.obj \
+	$(OUT)/pngmem.obj \
+	$(OUT)/pngpread.obj \
+	$(OUT)/pngread.obj \
+	$(OUT)/pngrio.obj \
+	$(OUT)/pngrtran.obj \
+	$(OUT)/pngrutil.obj \
+	$(OUT)/pngset.obj \
+	$(OUT)/pngtrans.obj \
+	$(OUT)/pngwio.obj \
+	$(OUT)/pngwrite.obj \
+	$(OUT)/pngwtran.obj \
+	$(OUT)/pngwutil.obj \
 	$(OUT)/bits.obj \
 	$(OUT)/bptc-tables.obj \
 	$(OUT)/clamp.obj \
@@ -1186,6 +1202,7 @@ DEPENDS = \
 	Unreal/UnMaterial2.h \
 	Unreal/UnObject.h \
 	Unreal/UnTextureNVTT.h \
+	Unreal/UnTexturePNG.h \
 	libs/astc/astc_codec_internals.h \
 	libs/astc/mathlib.h \
 	libs/astc/vectypes.h
@@ -1278,6 +1295,22 @@ DEPENDS = \
 
 $(OUT_1)/UnCoreCompression.obj : Unreal/UnCoreCompression.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCoreCompression.obj" Unreal/UnCoreCompression.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h \
+	libs/libpng/png.h \
+	libs/libpng/pngconf.h \
+	libs/libpng/pnglibconf.h
+
+$(OUT_1)/UnTexturePNG.obj : Unreal/UnTexturePNG.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnTexturePNG.obj" Unreal/UnTexturePNG.cpp
 
 DEPENDS = \
 	Core/Core.h \
@@ -1490,6 +1523,66 @@ DEPENDS = \
 
 $(OUT)/lzo_init.obj : ./libs/lzo/lzo_init.c $(DEPENDS)
 	$(CPP) -MD $(OPT_UE3_LIBS) -Fo"$(OUT)/lzo_init.obj" ./libs/lzo/lzo_init.c
+
+OPT_UE3_LIBS_2 = -GS- -GR- -O1 -EHs- -Z7 -D PNG_USER_CONFIG -I ./libs/include -I ./libs/zlib
+
+DEPENDS = \
+	libs/libpng/png.h \
+	libs/libpng/pngconf.h \
+	libs/libpng/pngdebug.h \
+	libs/libpng/pnginfo.h \
+	libs/libpng/pnglibconf.h \
+	libs/libpng/pngprefix.h \
+	libs/libpng/pngpriv.h \
+	libs/libpng/pngstruct.h \
+	libs/libpng/pngusr.h \
+	libs/zlib/zconf.h \
+	libs/zlib/zlib.h
+
+$(OUT)/png.obj : ./libs/libpng/png.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/png.obj" ./libs/libpng/png.c
+
+$(OUT)/pngerror.obj : ./libs/libpng/pngerror.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngerror.obj" ./libs/libpng/pngerror.c
+
+$(OUT)/pngget.obj : ./libs/libpng/pngget.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngget.obj" ./libs/libpng/pngget.c
+
+$(OUT)/pngmem.obj : ./libs/libpng/pngmem.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngmem.obj" ./libs/libpng/pngmem.c
+
+$(OUT)/pngpread.obj : ./libs/libpng/pngpread.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngpread.obj" ./libs/libpng/pngpread.c
+
+$(OUT)/pngread.obj : ./libs/libpng/pngread.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngread.obj" ./libs/libpng/pngread.c
+
+$(OUT)/pngrio.obj : ./libs/libpng/pngrio.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngrio.obj" ./libs/libpng/pngrio.c
+
+$(OUT)/pngrtran.obj : ./libs/libpng/pngrtran.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngrtran.obj" ./libs/libpng/pngrtran.c
+
+$(OUT)/pngrutil.obj : ./libs/libpng/pngrutil.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngrutil.obj" ./libs/libpng/pngrutil.c
+
+$(OUT)/pngset.obj : ./libs/libpng/pngset.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngset.obj" ./libs/libpng/pngset.c
+
+$(OUT)/pngtrans.obj : ./libs/libpng/pngtrans.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngtrans.obj" ./libs/libpng/pngtrans.c
+
+$(OUT)/pngwio.obj : ./libs/libpng/pngwio.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngwio.obj" ./libs/libpng/pngwio.c
+
+$(OUT)/pngwrite.obj : ./libs/libpng/pngwrite.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngwrite.obj" ./libs/libpng/pngwrite.c
+
+$(OUT)/pngwtran.obj : ./libs/libpng/pngwtran.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngwtran.obj" ./libs/libpng/pngwtran.c
+
+$(OUT)/pngwutil.obj : ./libs/libpng/pngwutil.c $(DEPENDS)
+	$(CPP) -MD $(OPT_UE3_LIBS_2) -Fo"$(OUT)/pngwutil.obj" ./libs/libpng/pngwutil.c
 
 DEPENDS = \
 	libs/lz4/lz4.h
