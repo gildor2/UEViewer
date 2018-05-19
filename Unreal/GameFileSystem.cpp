@@ -724,12 +724,19 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 		// Short filename matched, now compare path before the filename.
 		// Assume 'ShortFilename' is part of 'buf' and 'info->ShortFilename' is part of 'info->RelativeName'.
 		int matchWeight = 0;
-		const char *s = ShortFilename;
-		const char *d = info->ShortFilename;
-		while (--s >= buf && --d >= info->RelativeName)
+		const char *s = ShortFilename - 1;
+		const char *d = info->ShortFilename - 1;
+		while (s >= buf && d >= info->RelativeName && *s == *d)
 		{
-			if (*s != *d) break;
 			matchWeight++;
+			// don't include pointer decrements into the loop condition, so both pointers will always be decremented
+			s--;
+			d--;
+		}
+		if ((s < buf) && (d < info->RelativeName))
+		{
+			// Both 's' and 'd' pointes beyond buffers, i.e. we have found an exact match
+			return info;
 		}
 //		printf("--> matched: %s (weight=%d)\n", info->RelativeName, matchWeight);
 		if (matchWeight > bestMatchWeight)
