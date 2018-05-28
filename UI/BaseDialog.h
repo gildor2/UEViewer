@@ -850,11 +850,17 @@ public:
 		return UIMenuItem::HandleCommand(id);
 	}
 
+	FORCEINLINE bool IsMainMenu() const
+	{
+		return MenuOwner != NULL;
+	}
+
 	int GetNextItemId();
 
 protected:
 	int			ReferenceCount;
 	HWND		MenuOwner;
+	HMENU		MenuObject;		// don't use UIMenuItem's hMenu here, see UIMenu::Create() for details
 
 	void Create(bool popup);
 };

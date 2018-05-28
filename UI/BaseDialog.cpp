@@ -2359,7 +2359,8 @@ int UIMenuItem::GetItemIndex() const
 	for (UIMenuItem* item = Parent->FirstChild; item; item = item->NextChild)
 	{
 		if (item == this) return index;
-		index++; // can skip invisible items, if we'll support those
+		// todo: can skip invisible items, if we'll support those
+		index++;
 	}
 	return -1;
 }
@@ -2673,11 +2674,12 @@ UIMenu::UIMenu()
 :	UIMenuItem(MI_Submenu)
 ,	ReferenceCount(0)
 ,	MenuOwner(NULL)
+,	MenuObject(NULL)
 {}
 
 UIMenu::~UIMenu()
 {
-	if (hMenu) DestroyMenu(hMenu);
+	if (MenuObject) DestroyMenu(MenuObject);
 }
 
 void UIMenu::AttachTo(HWND Wnd, bool updateRefCount)
@@ -2711,7 +2713,7 @@ void UIMenu::Redraw()
 HMENU UIMenu::GetHandle(bool popup, bool forceCreate)
 {
 	if (!hMenu && forceCreate) Create(popup);
-	return popup ? GetSubMenu(hMenu, 0) : hMenu;
+	return hMenu;
 }
 
 void UIMenu::Create(bool popup)
@@ -2724,18 +2726,18 @@ void UIMenu::Create(bool popup)
 	if (popup)
 	{
 		// TrackPopupMenu can't work with main menu, it requires a submenu handle.
-		// Create dummy submenu to host all menu items. Note: GetMenuHandle() will
-		// return submenu at position 0 when requesting a popup memu handle.
-		hMenu = CreateMenu();
-		HMENU hSubMenu = CreatePopupMenu();
-		AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSubMenu, "");
-		FillMenuItems(hSubMenu, nextId, position);
+		// Create dummy submenu to host all menu items. MenuObject will be a menu
+		// owner here, and hMenu will be a menu itself.
+		MenuObject = CreateMenu();
+		hMenu = CreatePopupMenu();
+		AppendMenu(MenuObject, MF_POPUP, (UINT_PTR)hMenu, "");
 	}
 	else
 	{
-		hMenu = CreateMenu();
-		FillMenuItems(hMenu, nextId, position);
+		hMenu = MenuObject = CreateMenu();
 	}
+
+	FillMenuItems(hMenu, nextId, position);
 
 	unguard;
 }
