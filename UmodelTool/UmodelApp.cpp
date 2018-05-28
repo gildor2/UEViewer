@@ -76,6 +76,9 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 			if (forceVisualizer)
 			{
 				CreateVisualizer(NULL);
+			#if HAS_MENU
+				UpdateObjectMenu();
+			#endif
 				appPrintf("\nThe specified package(s) has no supported objects.\n\n");
 				DisplayPackageStats(GFullyLoadedPackages);
 				return true;

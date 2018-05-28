@@ -71,7 +71,7 @@ void CObjectViewer::Draw2D()
 {
 	if (!Object)
 	{
-		DrawTextLeft(S_RED "There's no visual object loaded now.");
+		DrawTextLeft(S_RED "There's no visual objects loaded now.");
 		DrawTextLeft(S_RED "Press <O> to load a different package.");
 
 		TArray<ClassStats> stats;
