@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+29.05.2018
+- fixed incompatibilities with Ark: Survival Evolved and Dauntless, both games requires explicit game override
+
 19.05.2018
 - implemented support for loading of UE3 and UE4 png-compressed textures
 

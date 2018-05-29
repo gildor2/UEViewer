@@ -353,6 +353,9 @@ const GameInfo GListOfGames[] = {
 #	if GEARS4
 		G("Gears of War 4", gears4, GAME_Gears4),
 #	endif
+#	if ARK
+		G("Ark: Survival Evolved", ark, GAME_Ark),
+#	endif
 #	if FRIDAY13
 		G("Friday the 13th: The Game", friday13, GAME_Friday13),
 #	endif
@@ -361,6 +364,9 @@ const GameInfo GListOfGames[] = {
 #	endif
 #	if LAWBREAKERS
 		G("Lawbreakers", lawbr, GAME_Lawbreakers),
+#	endif
+#	if DAUNTLESS
+		G("Dauntless", dauntless, GAME_Dauntless),
 #	endif
 #	if PARAGON
 		G("Paragon", paragon, GAME_Paragon),

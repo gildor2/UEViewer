@@ -373,6 +373,8 @@ enum EGame
 	GAME_UE4_BASE  = 0x1000000,
 		// bytes: 01.00.0N.NX : 01=UE4, 00=masked by GAME_ENGINE, NN=UE4 subversion, X=game (4 bits, 0=base engine)
 		// Add custom UE4 game engines here
+		// 4.5
+		GAME_Ark = GAME_UE4(5)+1,
 		// 4.8
 		GAME_HIT = GAME_UE4(8)+1,
 		// 4.11
@@ -382,6 +384,8 @@ enum EGame
 		// 4.14
 		GAME_Friday13 = GAME_UE4(14)+1,
 		GAME_Tekken7 = GAME_UE4(14)+2,
+		// 4.17
+		GAME_Dauntless = GAME_UE4(17)+1,
 		// 4.19
 		GAME_Paragon = GAME_UE4(19)+1,
 

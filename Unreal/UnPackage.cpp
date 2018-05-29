@@ -637,12 +637,14 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	int32 PackageSource;
 	Ar << PackageSource;
 
-/*	Ark Survival Evolved - starting with some version (March 2018?), serializaiton requires this:
+#if ARK
+	// Ark: Survival Evolved - starting with some version (March 2018?), serializaiton requires this:
 	if (Ar.Game == GAME_Ark && Ar.ArLicenseeVer >= 10)
 	{
 		int64 unk;		// it seems this value is always 0x1234
 		Ar << unk;
-	} */
+	}
+#endif // ARK
 
 	TArray<FString> AdditionalPackagesToCook;
 	Ar << AdditionalPackagesToCook;

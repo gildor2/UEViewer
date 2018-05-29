@@ -1563,6 +1563,9 @@ struct FStaticMeshSection4
 		Ar << S.FirstIndex << S.NumTriangles;
 		Ar << S.MinVertexIndex << S.MaxVertexIndex;
 		Ar << S.bEnableCollision << S.bCastShadow;
+#if DAUNTLESS
+		if (Ar.Game == GAME_Dauntless) Ar.Seek(Ar.Tell()+8); // 8 zero-filled bytes here
+#endif
 		//?? Has editor-only data?
 		return Ar;
 	}
