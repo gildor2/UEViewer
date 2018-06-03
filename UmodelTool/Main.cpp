@@ -729,6 +729,10 @@ int main(int argc, char **argv)
 {
 	appInitPlatform();
 
+#if PRIVATE_BUILD
+	appPrintf("PRIVATE BUILD\n");
+#endif
+
 #if DO_GUARD
 	TRY {
 #endif
