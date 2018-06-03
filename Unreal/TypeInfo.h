@@ -87,9 +87,13 @@ struct CTypeInfo
 	}
 	bool IsA(const char *TypeName) const;
 	const CPropInfo *FindProperty(const char *Name) const;
-	void SerializeUnrealProps(FArchive &Ar, void *ObjectData) const;
-	void DumpProps(void *Data) const;
 	static void RemapProp(const char *Class, const char *OldName, const char *NewName);
+
+	// Serialize Unreal engine UObject property block
+	void SerializeUnrealProps(FArchive &Ar, void *ObjectData) const;
+
+	void DumpProps(void *Data) const;
+	void DumpProps(void *Data, FArchive& Ar) const;
 };
 
 
@@ -135,6 +139,7 @@ struct CNullType
 #define PROP_BOOL(Field)		_PROP_BASE(Field, bool     )
 #define PROP_FLOAT(Field)		_PROP_BASE(Field, float    )
 #define PROP_NAME(Field)		_PROP_BASE(Field, FName    )
+#define PROP_STRING(Field)		_PROP_BASE(Field, FString  )
 #define PROP_OBJ(Field)			_PROP_BASE(Field, UObject* )
 // structure types; note: structure names corresponds to F<StrucName> C++ struc
 #define PROP_VECTOR(Field)		_PROP_BASE(Field, FVector  )

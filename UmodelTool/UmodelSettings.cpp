@@ -10,6 +10,8 @@
 #include <unistd.h>					// getcwd
 #endif
 
+#define CONFIG_FILE			"umodel.cfg"
+#define EXPORT_DIRECTORY	"UmodelExport"
 
 static void SetPathOption(FString& where, const char* value)
 {
@@ -89,11 +91,48 @@ void CExportSettings::SetPath(const char* path)
 
 void CExportSettings::Reset()
 {
-	SetPath("UmodelExport");
+	SetPath(EXPORT_DIRECTORY);
 	ExportMd5Mesh = false;
 }
 
 void CExportSettings::Apply()
 {
 	appSetBaseExportDirectory(*GSettings.Export.ExportPath);
+}
+
+static void RegisterClasses()
+{
+	static bool registered = false;
+	if (!registered)
+	{
+		BEGIN_CLASS_TABLE
+			REGISTER_CLASS(CExportSettings)
+			REGISTER_CLASS(CUmodelSettings)
+		END_CLASS_TABLE
+		registered = true;
+	}
+}
+
+void CUmodelSettings::Save()
+{
+	guard(CUmodelSettings::Save);
+
+	RegisterClasses();
+
+	FString ConfigFile;
+	SetPathOption(ConfigFile, CONFIG_FILE);
+
+	FArchive* Ar = new FFileWriter(*ConfigFile);
+	if (!Ar)
+	{
+		appPrintf("Error creating file \"%s\" ...\n", *ConfigFile);
+		return;
+	}
+
+	const CTypeInfo* TypeInfo = CUmodelSettings::StaticGetTypeinfo();
+	TypeInfo->DumpProps(this, *Ar);
+
+	delete Ar;
+
+	unguard;
 }

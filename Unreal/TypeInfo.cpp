@@ -362,6 +362,7 @@ static void CollectProps(const CTypeInfo *Type, void *Data, CPropDump &Dump)
 				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 #endif
 				PROCESS(FName,    "%s", *PROP(FName));
+				PROCESS(FString,  "\"%s\"", *PROP(FString));
 				if (Prop->TypeName[0] == '#')
 				{
 					// enum value
@@ -467,8 +468,22 @@ void CTypeInfo::DumpProps(void *Data) const
 	CPropDump Dump;
 	CollectProps(this, Data, Dump);
 
+	// Indent = 0 will actually produce indent anyway, because we have parent CPropDump
+	// object which owns everything else
 	FPrintfArchive Ar;
 	PrintProps(Dump, Ar, 0);
+
+	unguard;
+}
+
+void CTypeInfo::DumpProps(void *Data, FArchive& Ar) const
+{
+	guard(CTypeInfo::DumpProps);
+	CPropDump Dump;
+	CollectProps(this, Data, Dump);
+
+	// Note: using indent -1 for better in-file formatting
+	PrintProps(Dump, Ar, -1);
 
 	unguard;
 }

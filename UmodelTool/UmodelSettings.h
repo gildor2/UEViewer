@@ -1,6 +1,8 @@
 #ifndef __UMODEL_SETINGS_H__
 #define __UMODEL_SETINGS_H__
 
+#include "TypeInfo.h"
+
 struct CStartupSettings
 {
 	FString			GamePath;
@@ -32,8 +34,15 @@ struct CStartupSettings
 
 struct CExportSettings
 {
+	DECLARE_STRUCT(CExportSettings);
+
 	FString			ExportPath;
 	bool			ExportMd5Mesh;
+
+	BEGIN_PROP_TABLE
+		PROP_STRING(ExportPath)
+		PROP_BOOL(ExportMd5Mesh)
+	END_PROP_TABLE
 
 	CExportSettings()
 	{
@@ -48,8 +57,14 @@ struct CExportSettings
 
 struct CUmodelSettings
 {
+	DECLARE_STRUCT(CUmodelSettings);
+
 	CStartupSettings Startup;
 	CExportSettings  Export;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(Export, CExportSettings)
+	END_PROP_TABLE
 
 	CUmodelSettings()
 	{
@@ -61,6 +76,8 @@ struct CUmodelSettings
 		Startup.Reset();
 		Export.Reset();
 	}
+
+	void Save();
 };
 
 extern CUmodelSettings GSettings;
