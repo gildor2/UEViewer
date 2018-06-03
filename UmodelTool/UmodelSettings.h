@@ -25,28 +25,9 @@ struct CStartupSettings
 		Reset();
 	}
 
-	void Reset()
-	{
-		//!! WARNING: if this function will be called from anything else but constructor,
-		//!! should empty string values as well
-		assert(GamePath.IsEmpty());
+	void SetPath(const char* path);
 
-		GameOverride = GAME_UNKNOWN;
-		GamePath = "";
-
-		UseSkeletalMesh = true;
-		UseAnimation = true;
-		UseStaticMesh = true;
-		UseTexture = true;
-		UseLightmapTexture = true;
-
-		UseSound = false;
-		UseScaleForm = false;
-		UseFaceFx = false;
-
-		PackageCompression = 0;
-		Platform = PLATFORM_UNKNOWN;
-	}
+	void Reset();
 };
 
 struct CExportSettings
@@ -59,10 +40,10 @@ struct CExportSettings
 		Reset();
 	}
 
-	void Reset()
-	{
-		ExportMd5Mesh = false;
-	}
+	void SetPath(const char* path);
+
+	void Reset();
+	void Apply();
 };
 
 struct CUmodelSettings

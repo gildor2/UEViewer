@@ -1,10 +1,7 @@
 #include "Core.h"
 
 #if _WIN32
-#include <direct.h>					// getcwd
 #include <signal.h>					// abort handler
-#else
-#include <unistd.h>					// getcwd
 #endif
 
 // Classes for registration
@@ -546,51 +543,6 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 	return false;
 }
 
-static void SetPathOption(FString& where, const char* value)
-{
-	// determine whether absolute path is used
-	const char* value2;
-
-#if _WIN32
-	int isAbsPath = (value[0] != 0) && (value[1] == ':');
-#else
-	int isAbsPath = (value[0] == '~' || value[0] == '/');
-#endif
-	if (isAbsPath)
-	{
-		value2 = value;
-	}
-	else
-	{
-		// relative path
-		char path[512];
-		if (!getcwd(ARRAY_ARG(path)))
-			strcpy(path, ".");	// path is too long, or other error occured
-
-		if (!value || !value[0])
-		{
-			value2 = path;
-		}
-		else
-		{
-			char buffer[512];
-			appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
-			value2 = buffer;
-		}
-	}
-
-	char finalName[512];
-	appStrncpyz(finalName, value2, ARRAY_COUNT(finalName)-1);
-	appNormalizeFilename(finalName);
-
-	where = finalName;
-
-	// strip possible trailing double quote
-	int len = where.Len();
-	if (len > 0 && where[len-1] == '"')
-		where.RemoveAt(len-1);
-}
-
 // Display error message about wrong command line and then exit.
 static void CommandLineError(const char *fmt, ...)
 {
@@ -880,12 +832,12 @@ int main(int argc, char **argv)
 		}
 		else if (!strnicmp(opt, "path=", 5))
 		{
-			SetPathOption(GSettings.Startup.GamePath, opt+5);
+			GSettings.Startup.SetPath(opt+5);
 			hasRootDir = true;
 		}
 		else if (!strnicmp(opt, "out=", 4))
 		{
-			SetPathOption(GSettings.Export.ExportPath, opt+4);
+			GSettings.Export.SetPath(opt+4);
 		}
 		else if (!strnicmp(opt, "game=", 5))
 		{
@@ -973,7 +925,7 @@ int main(int argc, char **argv)
 		// do with directory without UI
 		if (appGetFileType(argPkgName) == FS_DIR)
 		{
-			SetPathOption(GSettings.Startup.GamePath, argPkgName);
+			GSettings.Startup.SetPath(argPkgName);
 			hasRootDir = true;
 			argPkgName = NULL;
 		}
@@ -981,10 +933,6 @@ int main(int argc, char **argv)
 
 	if (argc < 2 || (!hasRootDir && !argPkgName) || forceUI)
 	{
-		// fill game path with current directory, if it's empty - for easier work with UI
-		if (GSettings.Startup.GamePath.IsEmpty())
-			SetPathOption(GSettings.Startup.GamePath, "");
-		//!! the same for -log option
 		// no arguments provided - display startup options
 		bool res = GApplication.ShowStartupDialog(GSettings.Startup);
 		if (!res) exit(0);
@@ -998,9 +946,7 @@ int main(int argc, char **argv)
 		appSetRootDirectory(*GSettings.Startup.GamePath);
 	GForcePlatform = GSettings.Startup.Platform;
 	GForceCompMethod = GSettings.Startup.PackageCompression;
-	if (GSettings.Export.ExportPath.IsEmpty())
-		SetPathOption(GSettings.Export.ExportPath, "UmodelExport");	//!! linux: ~/UmodelExport
-	appSetBaseExportDirectory(*GSettings.Export.ExportPath);
+	GSettings.Export.Apply();
 
 	TArray<UnPackage*> Packages;
 	TArray<UObject*> Objects;
