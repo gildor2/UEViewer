@@ -681,6 +681,24 @@ enum EFileReaderOptions
 };
 
 
+class FPrintfArchive : public FArchive
+{
+	DECLARE_ARCHIVE(FPrintfArchive, FArchive);
+public:
+	FPrintfArchive()
+	{}
+
+	virtual void Seek(int Pos)
+	{
+		appError("FPrintfArchive::Seek");
+	}
+
+	virtual void Serialize(void *data, int size)
+	{
+		appPrintf("%s", data);
+	}
+};
+
 class FFileArchive : public FArchive
 {
 	DECLARE_ARCHIVE(FFileArchive, FArchive);

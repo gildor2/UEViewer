@@ -225,31 +225,16 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 	CTypeInfo dump functionality
 -----------------------------------------------------------------------------*/
 
-static void PrintIndent(int Value)
-{
-	for (int i = 0; i < Value; i++)
-		appPrintf("    ");
-}
-
-
 struct CPropDump
 {
 	FStaticString<32>	Name;
 	FStaticString<32>	Value;
-	bool				IsArrayItem;
 	TArray<CPropDump>	Nested;				// Value should be "" when Nested[] is not empty
+	bool				IsArrayItem;
 
 	CPropDump()
-	{
-		memset(this, 0, sizeof(CPropDump));
-	}
-
-	void PrintTo(FString& Dst, const char *fmt, va_list argptr)
-	{
-		char buffer[1024];
-		vsnprintf(ARRAY_ARG(buffer), fmt, argptr);
-		Dst += buffer;
-	}
+	: IsArrayItem(false)
+	{}
 
 	void PrintName(const char *fmt, ...)
 	{
@@ -265,6 +250,14 @@ struct CPropDump
 		va_start(argptr, fmt);
 		PrintTo(Value, fmt, argptr);
 		va_end(argptr);
+	}
+
+private:
+	void PrintTo(FString& Dst, const char *fmt, va_list argptr)
+	{
+		char buffer[1024];
+		vsnprintf(ARRAY_ARG(buffer), fmt, argptr);
+		Dst += buffer;
 	}
 };
 
@@ -386,15 +379,21 @@ static void CollectProps(const CTypeInfo *Type, void *Data, CPropDump &Dump)
 }
 
 
-static void PrintProps(const CPropDump &Dump, int Indent)
+static void PrintIndent(FArchive& Ar, int Value)
 {
-	PrintIndent(Indent);
+	for (int i = 0; i < Value; i++)
+		Ar.Printf("    ");
+}
+
+static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent)
+{
+	PrintIndent(Ar, Indent);
 
 	int NumNestedProps = Dump.Nested.Num();
 	if (NumNestedProps)
 	{
 		// complex property
-		if (!Dump.Name.IsEmpty()) appPrintf("%s =", *Dump.Name);	// root CPropDump will not have a name
+		if (!Dump.Name.IsEmpty()) Ar.Printf("%s =", *Dump.Name);	// root CPropDump will not have a name
 
 		bool IsSimple = true;
 		int TotalLen = 0;
@@ -422,42 +421,42 @@ static void PrintProps(const CPropDump &Dump, int Indent)
 		if (IsSimple)
 		{
 			// single-line value display
-			appPrintf(" { ");
+			Ar.Printf(" { ");
 			for (i = 0; i < NumNestedProps; i++)
 			{
-				if (i) appPrintf(", ");
+				if (i) Ar.Printf(", ");
 				const CPropDump &Prop = Dump.Nested[i];
 				if (Prop.IsArrayItem)
-					appPrintf("%s", *Prop.Value);
+					Ar.Printf("%s", *Prop.Value);
 				else
-					appPrintf("%s=%s", *Prop.Name, *Prop.Value);
+					Ar.Printf("%s=%s", *Prop.Name, *Prop.Value);
 			}
-			appPrintf(" }\n");
+			Ar.Printf(" }\n");
 		}
 		else
 		{
 			// complex value display
-			appPrintf("\n");
+			Ar.Printf("\n");
 			if (Indent > 0)
 			{
-				PrintIndent(Indent);
-				appPrintf("{\n");
+				PrintIndent(Ar, Indent);
+				Ar.Printf("{\n");
 			}
 
 			for (i = 0; i < NumNestedProps; i++)
-				PrintProps(Dump.Nested[i], Indent+1);
+				PrintProps(Dump.Nested[i], Ar, Indent+1);
 
 			if (Indent > 0)
 			{
-				PrintIndent(Indent);
-				appPrintf("}\n");
+				PrintIndent(Ar, Indent);
+				Ar.Printf("}\n");
 			}
 		}
 	}
 	else
 	{
 		// single property
-		if (!Dump.Name.IsEmpty()) appPrintf("%s = %s\n", *Dump.Name, *Dump.Value);
+		if (!Dump.Name.IsEmpty()) Ar.Printf("%s = %s\n", *Dump.Name, *Dump.Value);
 	}
 }
 
@@ -467,6 +466,9 @@ void CTypeInfo::DumpProps(void *Data) const
 	guard(CTypeInfo::DumpProps);
 	CPropDump Dump;
 	CollectProps(this, Data, Dump);
-	PrintProps(Dump, 0);
+
+	FPrintfArchive Ar;
+	PrintProps(Dump, Ar, 0);
+
 	unguard;
 }
