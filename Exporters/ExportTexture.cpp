@@ -261,6 +261,12 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 	memset(headerBuffer, 0, 128);
 	WriteDDSHeader(headerBuffer, header);
 	FArchive *Ar = new FFileWriter(Filename);
+	if (!Ar->IsOpen())
+	{
+		appPrintf("Error creating file \"%s\" ...\n", Filename);
+		delete Ar;
+		return;
+	}
 	Ar->Serialize(headerBuffer, 128);
 	Ar->Serialize(const_cast<byte*>(Mip.CompressedData), Mip.DataSize);
 	delete Ar;

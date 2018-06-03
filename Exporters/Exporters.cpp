@@ -361,7 +361,7 @@ FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
 	FFileWriter *Ar = new FFileWriter(filename, FRO_NoOpenError);
 	if (!Ar->IsOpen())
 	{
-		appPrintf("Error opening file \"%s\" ...\n", filename);
+		appPrintf("Error creating file \"%s\" ...\n", filename);
 		delete Ar;
 		return NULL;
 	}
