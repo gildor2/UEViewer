@@ -1,7 +1,7 @@
 #ifndef __UMODEL_SETINGS_H__
 #define __UMODEL_SETINGS_H__
 
-struct UmodelSettings
+struct CStartupSettings
 {
 	FString			GamePath;
 	int				GameOverride;
@@ -20,16 +20,12 @@ struct UmodelSettings
 	int				PackageCompression;
 	int				Platform;
 
-	// export options
-	FString			ExportPath;
-	bool			ExportMd5Mesh;
-
-	UmodelSettings()
+	CStartupSettings()
 	{
-		SetDefaults();
+		Reset();
 	}
 
-	void SetDefaults()
+	void Reset()
 	{
 		//!! WARNING: if this function will be called from anything else but constructor,
 		//!! should empty string values as well
@@ -50,13 +46,42 @@ struct UmodelSettings
 
 		PackageCompression = 0;
 		Platform = PLATFORM_UNKNOWN;
+	}
+};
 
-		// export options
+struct CExportSettings
+{
+	FString			ExportPath;
+	bool			ExportMd5Mesh;
 
+	CExportSettings()
+	{
+		Reset();
+	}
+
+	void Reset()
+	{
 		ExportMd5Mesh = false;
 	}
 };
 
-extern UmodelSettings GSettings;
+struct CUmodelSettings
+{
+	CStartupSettings Startup;
+	CExportSettings  Export;
+
+	CUmodelSettings()
+	{
+		Reset();
+	}
+
+	void Reset()
+	{
+		Startup.Reset();
+		Export.Reset();
+	}
+};
+
+extern CUmodelSettings GSettings;
 
 #endif // __UMODEL_SETINGS_H__

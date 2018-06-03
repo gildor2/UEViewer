@@ -102,7 +102,7 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 
 #if HAS_UI
 
-bool CUmodelApp::ShowStartupDialog(UmodelSettings& settings)
+bool CUmodelApp::ShowStartupDialog(CStartupSettings& settings)
 {
 	GuiShown = true;
 	UIStartupDialog dialog(settings);
@@ -645,7 +645,7 @@ void CUmodelApp::CreateMenu()
 			NewMenuItem("Export current object\tCtrl+X")
 			.SetCallback(BIND_LAMBDA([this]() { if (Viewer) Viewer->Export(); }))
 			+ NewMenuSeparator()
-			+ NewMenuHyperLink("Open export folder", *GSettings.ExportPath)	//!! should update if directory will be changed from UI
+			+ NewMenuHyperLink("Open export folder", *GSettings.Export.ExportPath)	//!! should update if directory will be changed from UI
 			+ NewMenuHyperLink("Open screenshots folder", SCREENSHOTS_DIR)
 			+ NewMenuSeparator()
 			+ NewMenuItem("Scan package versions")

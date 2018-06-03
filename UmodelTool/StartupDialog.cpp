@@ -6,7 +6,7 @@
 
 #if HAS_UI
 
-UIStartupDialog::UIStartupDialog(UmodelSettings& settings)
+UIStartupDialog::UIStartupDialog(CStartupSettings& settings)
 :	Opt(settings)
 {}
 

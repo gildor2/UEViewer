@@ -49,7 +49,7 @@ public:
 #endif // RENDERING
 
 #if HAS_UI
-	bool ShowStartupDialog(UmodelSettings& settings);
+	bool ShowStartupDialog(CStartupSettings& settings);
 	bool ShowPackageUI();
 	void SetPackage(UnPackage* package);
 	void ShowErrorDialog();

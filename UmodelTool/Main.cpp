@@ -42,7 +42,7 @@
 //#define DUMP_MEM_ON_EXIT			1
 
 
-UmodelSettings GSettings;
+CUmodelSettings GSettings;
 
 
 /*-----------------------------------------------------------------------------
@@ -180,26 +180,26 @@ static void RegisterClasses(int game)
 	{
 		RegisterUnrealClasses4();
 	}
-	if (GSettings.UseSound) RegisterUnrealSoundClasses();
+	if (GSettings.Startup.UseSound) RegisterUnrealSoundClasses();
 
 	// remove some class loaders when requisted by command line
-	if (!GSettings.UseAnimation)
+	if (!GSettings.Startup.UseAnimation)
 	{
 		UnregisterClass("MeshAnimation", true);
 		UnregisterClass("AnimSet",       true);
 		UnregisterClass("AnimSequence",  true);
 		UnregisterClass("AnimNotify",    true);
 	}
-	if (!GSettings.UseSkeletalMesh)
+	if (!GSettings.Startup.UseSkeletalMesh)
 	{
 		UnregisterClass("SkeletalMesh",       true);
 		UnregisterClass("SkeletalMeshSocket", true);
 	}
-	if (!GSettings.UseStaticMesh) UnregisterClass("StaticMesh", true);
-	if (!GSettings.UseTexture) UnregisterClass("UnrealMaterial", true);
-	if (!GSettings.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
-	if (!GSettings.UseScaleForm) UnregisterClass("SwfMovie", true);
-	if (!GSettings.UseFaceFx)
+	if (!GSettings.Startup.UseStaticMesh) UnregisterClass("StaticMesh", true);
+	if (!GSettings.Startup.UseTexture) UnregisterClass("UnrealMaterial", true);
+	if (!GSettings.Startup.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
+	if (!GSettings.Startup.UseScaleForm) UnregisterClass("SwfMovie", true);
+	if (!GSettings.Startup.UseFaceFx)
 	{
 		UnregisterClass("FaceFXAnimSet", true);
 		UnregisterClass("FaceFXAsset", true);
@@ -215,7 +215,7 @@ static void RegisterClasses(int game)
 static void ExportSkeletalMesh2(const USkeletalMesh *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsk(Mesh->ConvertedMesh);
 	else
 		ExportMd5Mesh(Mesh->ConvertedMesh);
@@ -225,7 +225,7 @@ static void ExportSkeletalMesh2(const USkeletalMesh *Mesh)
 static void ExportSkeletalMesh3(const USkeletalMesh3 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsk(Mesh->ConvertedMesh);
 	else
 		ExportMd5Mesh(Mesh->ConvertedMesh);
@@ -250,7 +250,7 @@ static void ExportStaticMesh3(const UStaticMesh3 *Mesh)
 static void ExportSkeletalMesh4(const USkeletalMesh4 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsk(Mesh->ConvertedMesh);
 	else
 		ExportMd5Mesh(Mesh->ConvertedMesh);
@@ -266,7 +266,7 @@ static void ExportStaticMesh4(const UStaticMesh4 *Mesh)
 static void ExportMeshAnimation(const UMeshAnimation *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsa(Anim->ConvertedAnim);
 	else
 		ExportMd5Anim(Anim->ConvertedAnim);
@@ -276,7 +276,7 @@ static void ExportMeshAnimation(const UMeshAnimation *Anim)
 static void ExportAnimSet(const UAnimSet *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsa(Anim->ConvertedAnim);
 	else
 		ExportMd5Anim(Anim->ConvertedAnim);
@@ -287,7 +287,7 @@ static void ExportAnimSet(const UAnimSet *Anim)
 static void ExportSkeleton(const USkeleton *Skeleton)
 {
 	assert(Skeleton->ConvertedAnim);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsa(Skeleton->ConvertedAnim);
 	else
 		ExportMd5Anim(Skeleton->ConvertedAnim);
@@ -841,16 +841,16 @@ int main(int argc, char **argv)
 			OPT_BOOL ("uncook",  GUncook)
 			OPT_BOOL ("groups",  GUseGroups)
 //			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
-			OPT_BOOL ("md5",     GSettings.ExportMd5Mesh)
+			OPT_BOOL ("md5",     GSettings.Export.ExportMd5Mesh)
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
 			// disable classes
-			OPT_NBOOL("nomesh",  GSettings.UseSkeletalMesh)
-			OPT_NBOOL("nostat",  GSettings.UseStaticMesh)
-			OPT_NBOOL("noanim",  GSettings.UseAnimation)
-			OPT_NBOOL("notex",   GSettings.UseTexture)
-			OPT_NBOOL("nolightmap", GSettings.UseLightmapTexture)
-			OPT_BOOL ("sounds",  GSettings.UseSound)
+			OPT_NBOOL("nomesh",  GSettings.Startup.UseSkeletalMesh)
+			OPT_NBOOL("nostat",  GSettings.Startup.UseStaticMesh)
+			OPT_NBOOL("noanim",  GSettings.Startup.UseAnimation)
+			OPT_NBOOL("notex",   GSettings.Startup.UseTexture)
+			OPT_NBOOL("nolightmap", GSettings.Startup.UseLightmapTexture)
+			OPT_BOOL ("sounds",  GSettings.Startup.UseSound)
 			OPT_BOOL ("dds",     GExportDDS)
 			OPT_BOOL ("notgacomp", GNoTgaCompress)
 			OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
@@ -858,13 +858,13 @@ int main(int argc, char **argv)
 			OPT_BOOL ("gui",     forceUI)
 #endif
 			// platform
-			OPT_VALUE("ps3",     GSettings.Platform, PLATFORM_PS3)
-			OPT_VALUE("ios",     GSettings.Platform, PLATFORM_IOS)
-			OPT_VALUE("android", GSettings.Platform, PLATFORM_ANDROID)
+			OPT_VALUE("ps3",     GSettings.Startup.Platform, PLATFORM_PS3)
+			OPT_VALUE("ios",     GSettings.Startup.Platform, PLATFORM_IOS)
+			OPT_VALUE("android", GSettings.Startup.Platform, PLATFORM_ANDROID)
 			// compression
-			OPT_VALUE("lzo",     GSettings.PackageCompression, COMPRESS_LZO )
-			OPT_VALUE("zlib",    GSettings.PackageCompression, COMPRESS_ZLIB)
-			OPT_VALUE("lzx",     GSettings.PackageCompression, COMPRESS_LZX )
+			OPT_VALUE("lzo",     GSettings.Startup.PackageCompression, COMPRESS_LZO )
+			OPT_VALUE("zlib",    GSettings.Startup.PackageCompression, COMPRESS_ZLIB)
+			OPT_VALUE("lzx",     GSettings.Startup.PackageCompression, COMPRESS_LZX )
 		};
 		if (ProcessOption(ARRAY_ARG(options), opt))
 			continue;
@@ -880,12 +880,12 @@ int main(int argc, char **argv)
 		}
 		else if (!strnicmp(opt, "path=", 5))
 		{
-			SetPathOption(GSettings.GamePath, opt+5);
+			SetPathOption(GSettings.Startup.GamePath, opt+5);
 			hasRootDir = true;
 		}
 		else if (!strnicmp(opt, "out=", 4))
 		{
-			SetPathOption(GSettings.ExportPath, opt+4);
+			SetPathOption(GSettings.Export.ExportPath, opt+4);
 		}
 		else if (!strnicmp(opt, "game=", 5))
 		{
@@ -895,7 +895,7 @@ int main(int argc, char **argv)
 				appPrintf("ERROR: unknown game tag \"%s\". Use -taglist option to display available tags.\n", opt+5);
 				exit(0);
 			}
-			GSettings.GameOverride = tag;
+			GSettings.Startup.GameOverride = tag;
 		}
 		else if (!strnicmp(opt, "pkgver=", 7))
 		{
@@ -925,7 +925,7 @@ int main(int argc, char **argv)
 		}
 		else if (!stricmp(opt, "3rdparty"))
 		{
-			GSettings.UseScaleForm = GSettings.UseFaceFx = true;
+			GSettings.Startup.UseScaleForm = GSettings.Startup.UseFaceFx = true;
 		}
 		else if (!strnicmp(opt, "aes=", 4))
 		{
@@ -973,7 +973,7 @@ int main(int argc, char **argv)
 		// do with directory without UI
 		if (appGetFileType(argPkgName) == FS_DIR)
 		{
-			SetPathOption(GSettings.GamePath, argPkgName);
+			SetPathOption(GSettings.Startup.GamePath, argPkgName);
 			hasRootDir = true;
 			argPkgName = NULL;
 		}
@@ -982,25 +982,25 @@ int main(int argc, char **argv)
 	if (argc < 2 || (!hasRootDir && !argPkgName) || forceUI)
 	{
 		// fill game path with current directory, if it's empty - for easier work with UI
-		if (GSettings.GamePath.IsEmpty())
-			SetPathOption(GSettings.GamePath, "");
+		if (GSettings.Startup.GamePath.IsEmpty())
+			SetPathOption(GSettings.Startup.GamePath, "");
 		//!! the same for -log option
 		// no arguments provided - display startup options
-		bool res = GApplication.ShowStartupDialog(GSettings);
+		bool res = GApplication.ShowStartupDialog(GSettings.Startup);
 		if (!res) exit(0);
 		hasRootDir = true;
 	}
 #endif // HAS_UI
 
 	// apply some GSettings
-	GForceGame = GSettings.GameOverride;	// force game fore scanning any game files
+	GForceGame = GSettings.Startup.GameOverride;	// force game fore scanning any game files
 	if (hasRootDir)
-		appSetRootDirectory(*GSettings.GamePath);
-	GForcePlatform = GSettings.Platform;
-	GForceCompMethod = GSettings.PackageCompression;
-	if (GSettings.ExportPath.IsEmpty())
-		SetPathOption(GSettings.ExportPath, "UmodelExport");	//!! linux: ~/UmodelExport
-	appSetBaseExportDirectory(*GSettings.ExportPath);
+		appSetRootDirectory(*GSettings.Startup.GamePath);
+	GForcePlatform = GSettings.Startup.Platform;
+	GForceCompMethod = GSettings.Startup.PackageCompression;
+	if (GSettings.Export.ExportPath.IsEmpty())
+		SetPathOption(GSettings.Export.ExportPath, "UmodelExport");	//!! linux: ~/UmodelExport
+	appSetBaseExportDirectory(*GSettings.Export.ExportPath);
 
 	TArray<UnPackage*> Packages;
 	TArray<UObject*> Objects;

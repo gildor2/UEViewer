@@ -8,12 +8,12 @@
 class UIStartupDialog : public UIBaseDialog
 {
 public:
-	UIStartupDialog(UmodelSettings& settings);
+	UIStartupDialog(CStartupSettings& settings);
 
 	bool Show();
 
 protected:
-	UmodelSettings&	Opt;
+	CStartupSettings&	Opt;
 
 	UICheckboxGroup*	OverrideGameGroup;
 	UICombobox*			OverrideEngineCombo;
