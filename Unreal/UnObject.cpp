@@ -1572,8 +1572,8 @@ static void PrintIndent(int Value)
 
 struct CPropDump
 {
-	char				Name[64];
-	char				Value[256];
+	FStaticString<32>	Name;
+	FStaticString<32>	Value;
 	bool				IsArrayItem;
 	TArray<CPropDump>	Nested;				// Value should be "" when Nested[] is not empty
 
@@ -1582,22 +1582,18 @@ struct CPropDump
 		memset(this, 0, sizeof(CPropDump));
 	}
 
-	void PrintTo(char *Dst, int DstSize, const char *fmt, va_list argptr)
+	void PrintTo(FString& Dst, const char *fmt, va_list argptr)
 	{
-		int oldLen = strlen(Dst);
-		int len = vsnprintf(Dst + oldLen, DstSize - oldLen, fmt, argptr);
-		if (len < 0 || (len + oldLen >= DstSize))
-		{
-			// overflow
-			memcpy(Dst + DstSize - 4, "...", 4);
-		}
+		char buffer[1024];
+		vsnprintf(ARRAY_ARG(buffer), fmt, argptr);
+		Dst += buffer;
 	}
 
 	void PrintName(const char *fmt, ...)
 	{
 		va_list	argptr;
 		va_start(argptr, fmt);
-		PrintTo(ARRAY_ARG(Name), fmt, argptr);
+		PrintTo(Name, fmt, argptr);
 		va_end(argptr);
 	}
 
@@ -1605,7 +1601,7 @@ struct CPropDump
 	{
 		va_list	argptr;
 		va_start(argptr, fmt);
-		PrintTo(ARRAY_ARG(Value), fmt, argptr);
+		PrintTo(Value, fmt, argptr);
 		va_end(argptr);
 	}
 };
@@ -1729,7 +1725,7 @@ static void PrintProps(const CPropDump &Dump, int Indent)
 	if (NumNestedProps)
 	{
 		// complex property
-		if (Dump.Name[0]) appPrintf("%s =", Dump.Name);	// root CPropDump will not have a name
+		if (!Dump.Name.IsEmpty()) appPrintf("%s =", *Dump.Name);	// root CPropDump will not have a name
 
 		bool IsSimple = true;
 		int TotalLen = 0;
@@ -1744,9 +1740,9 @@ static void PrintProps(const CPropDump &Dump, int Indent)
 				IsSimple = false;
 				break;
 			}
-			TotalLen += strlen(Prop.Value) + 2;
+			TotalLen += Prop.Value.Len() + 2;
 			if (!Prop.IsArrayItem)
-				TotalLen += strlen(Prop.Name);
+				TotalLen += Prop.Name.Len();
 			if (TotalLen >= 80)
 			{
 				IsSimple = false;
@@ -1763,9 +1759,9 @@ static void PrintProps(const CPropDump &Dump, int Indent)
 				if (i) appPrintf(", ");
 				const CPropDump &Prop = Dump.Nested[i];
 				if (Prop.IsArrayItem)
-					appPrintf("%s", Prop.Value);
+					appPrintf("%s", *Prop.Value);
 				else
-					appPrintf("%s=%s", Prop.Name, Prop.Value);
+					appPrintf("%s=%s", *Prop.Name, *Prop.Value);
 			}
 			appPrintf(" }\n");
 		}
@@ -1792,7 +1788,7 @@ static void PrintProps(const CPropDump &Dump, int Indent)
 	else
 	{
 		// single property
-		if (Dump.Name[0]) appPrintf("%s = %s\n", Dump.Name, Dump.Value);
+		if (!Dump.Name.IsEmpty()) appPrintf("%s = %s\n", *Dump.Name, *Dump.Value);
 	}
 }
 
