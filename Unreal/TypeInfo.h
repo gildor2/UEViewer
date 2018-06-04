@@ -93,7 +93,8 @@ struct CTypeInfo
 	void SerializeUnrealProps(FArchive &Ar, void *ObjectData) const;
 
 	void DumpProps(void *Data) const;
-	void DumpProps(void *Data, FArchive& Ar) const;
+	void SaveProps(void *Data, FArchive& Ar) const;
+	bool LoadProps(void *Data, FArchive& Ar) const;
 };
 
 

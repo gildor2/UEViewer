@@ -379,6 +379,7 @@ static void CollectProps(const CTypeInfo *Type, void *Data, CPropDump &Dump)
 	} // Type->Parent loop
 }
 
+#undef PROCESS
 
 static void PrintIndent(FArchive& Ar, int Value)
 {
@@ -386,7 +387,7 @@ static void PrintIndent(FArchive& Ar, int Value)
 		Ar.Printf("    ");
 }
 
-static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent)
+static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool TopLevel)
 {
 	PrintIndent(Ar, Indent);
 
@@ -438,16 +439,16 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent)
 		{
 			// complex value display
 			Ar.Printf("\n");
-			if (Indent > 0)
+			if (!TopLevel)
 			{
 				PrintIndent(Ar, Indent);
 				Ar.Printf("{\n");
 			}
 
 			for (i = 0; i < NumNestedProps; i++)
-				PrintProps(Dump.Nested[i], Ar, Indent+1);
+				PrintProps(Dump.Nested[i], Ar, Indent+1, false);
 
-			if (Indent > 0)
+			if (!TopLevel)
 			{
 				PrintIndent(Ar, Indent);
 				Ar.Printf("}\n");
@@ -471,19 +472,183 @@ void CTypeInfo::DumpProps(void *Data) const
 	// Indent = 0 will actually produce indent anyway, because we have parent CPropDump
 	// object which owns everything else
 	FPrintfArchive Ar;
-	PrintProps(Dump, Ar, 0);
+	PrintProps(Dump, Ar, 0, true);
 
 	unguard;
 }
 
-void CTypeInfo::DumpProps(void *Data, FArchive& Ar) const
+void CTypeInfo::SaveProps(void *Data, FArchive& Ar) const
 {
-	guard(CTypeInfo::DumpProps);
+	guard(CTypeInfo::SaveProps);
 	CPropDump Dump;
 	CollectProps(this, Data, Dump);
 
 	// Note: using indent -1 for better in-file formatting
-	PrintProps(Dump, Ar, -1);
+	PrintProps(Dump, Ar, -1, true);
+
+	unguard;
+}
+
+static void SkipWhitespace(FArchive& Ar)
+{
+	while (!Ar.IsEof())
+	{
+		char c;
+		Ar << c;
+		if (!isspace(c))
+		{
+			Ar.Seek(Ar.Tell() - 1);
+			break;
+		}
+	}
+}
+
+static void GetToken(FArchive& Ar, FString& Out)
+{
+	guard(GetToken);
+
+	Out.Empty();
+
+	SkipWhitespace(Ar);
+
+	char buffer[1024];
+	char* s = buffer;
+
+	while (!Ar.IsEof())
+	{
+		char c;
+		Ar << c;
+		if (c == '"' && s == buffer)
+		{
+			// This is a string
+			while (!Ar.IsEof())
+			{
+				Ar << c;
+				if (c == '"')
+				{
+					break;
+				}
+				if (c == '\r' || c == '\n')
+				{
+					appPrintf("GetToken: mismatched quote at position %d\n", Ar.Tell());
+					break;
+				}
+				*s++ = c;
+			}
+			break;
+		}
+		bool isDelimiter = (c == '=' || c == '{' || c == '}');
+		if (s != buffer && (isspace(c) || isDelimiter))
+		{
+			// Found a delimiter character in the middle of string
+			Ar.Seek(Ar.Tell() - 1);
+			break;
+		}
+		*s++ = c;
+
+		if (isDelimiter)
+		{
+			// Delimiters are single characters, and separate tokens
+			break;
+		}
+	}
+
+	// Return token
+	assert(s < buffer + ARRAY_COUNT(buffer));
+	*s = 0;
+	Out = buffer;
+//	printf("TOKEN: [%s]\n", *Out); //!!!!
+
+	unguard;
+}
+
+bool CTypeInfo::LoadProps(void *Data, FArchive& Ar) const
+{
+	guard(CTypeInfo::LoadProps);
+//	CPropDump Dump;
+//	CollectProps(this, Data, Dump);
+
+	// Note: using indent -1 for better in-file formatting
+//	PrintProps(Dump, Ar, -1);
+
+	while (!Ar.IsEof())
+	{
+		int ArrayIndex = 0; //!! todo: use
+		int LastPosition = Ar.Tell();
+
+		FStaticString<256> Token;
+		GetToken(Ar, Token);
+
+		if (Token == ",")
+		{
+			// Property delimiter
+			continue;
+		}
+
+		if (Token == "}" || Token.IsEmpty())
+		{
+			// End of structure or end of file
+			break;
+		}
+
+		const CPropInfo* Prop = FindProperty(*Token);
+		if (!Prop)
+		{
+			appPrintf("LoadProps: unknown property %s\n", *Token);
+			return false;
+		}
+		byte *value = (byte*)Data + Prop->Offset;
+//		printf("Prop: %s %s\n", Prop->TypeName, Prop->Name); //!!!!
+
+		LastPosition = Ar.Tell();
+		FStaticString<32> Token2;
+		GetToken(Ar, Token2);
+		if (Token2 != "=")
+		{
+			appPrintf("LoadProps: \"=\" expected at position %d\n", LastPosition);
+			return false;
+		}
+
+		const CTypeInfo *StrucType = FindStructType(Prop->TypeName);
+		bool IsStruc = (StrucType != NULL);
+		if (IsStruc)
+		{
+			LastPosition = Ar.Tell();
+			GetToken(Ar, Token2);
+			if (Token2 != "{")
+			{
+				appPrintf("LoadProps: \"{\" expected at position %d\n", LastPosition);
+				return false;
+			}
+			if (!StrucType->LoadProps(value + ArrayIndex * StrucType->SizeOf, Ar))
+			{
+				return false;
+			}
+			// at this point, '}' should be already read
+			continue;
+		}
+
+		GetToken(Ar, Token2);
+		if (IS(FString))
+		{
+			PROP(FString) = Token2;
+		}
+		else if (IS(bool))
+		{
+			PROP(bool) = (stricmp(*Token2, "true") == 0 || Token2 == "1");
+		}
+		else if (IS(int))
+		{
+			PROP(int) = atoi(*Token2);
+		}
+		else
+		{
+			appPrintf("LoadProps: unknown type %s\n", Prop->TypeName);
+			return false;
+		}
+	}
+
+	return true;
 
 	unguard;
 }
