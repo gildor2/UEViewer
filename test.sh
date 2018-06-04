@@ -1,5 +1,9 @@
 #!/bin/bash
 
+S_RED="\033[1;31m"
+S_GREEN="\033[1;32m"
+S_DEFAULT="\033[0m"
+
 function usage()
 {
 	cat <<EOF
@@ -76,7 +80,7 @@ function CheckDir()
 		shift
 	done
 	# error
-	echo "ERROR: the game was not found at ($checkedDirs)"
+	echo -e "${S_RED}ERROR: the game was not found at ($checkedDirs)${S_DEFAULT}"
 	exit
 }
 
@@ -91,11 +95,11 @@ function run()
 {
 	if [ "$foundPath" ]; then
 		console_title "$exe -path="$foundPath" $@"
-		echo "Starting $exe -path="$foundPath" $@"
+		echo -e "${S_GREEN}Starting $exe -path="$foundPath" $@${S_DEFAULT}"
 		./$exe -path="$foundPath" $debugOpt $@
 	else
 		console_title "$exe $debugOpt $@"
-		echo "Starting $exe $debugOpt $@"
+		echo -e "${S_GREEN}Starting $exe $debugOpt $@${S_DEFAULT}"
 		./$exe $debugOpt $@
 	fi
 }
@@ -313,7 +317,11 @@ if [ $# -gt 0 ] || [ "$cmd" ] || [ $path != 0 ]; then
 		args[${#args[@]}]="$value"	# add value to array
 		shift
 	done
-	eval $cmd ${args[*]}			# execute command
+	if [ "`type -t $cmd`" != "function" ]; then
+		echo -e "${S_RED}Unknown command: $cmd${S_DEFAULT}"
+	else
+		eval $cmd ${args[*]}			# execute command
+	fi
 	exit
 fi
 
