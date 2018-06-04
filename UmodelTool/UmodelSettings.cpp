@@ -119,6 +119,7 @@ static void RegisterClasses()
 	if (!registered)
 	{
 		BEGIN_CLASS_TABLE
+			REGISTER_CLASS(CStartupSettings)
 			REGISTER_CLASS(CExportSettings)
 			REGISTER_CLASS(CUmodelSettings)
 		END_CLASS_TABLE
@@ -143,7 +144,34 @@ void CUmodelSettings::Save()
 	}
 
 	const CTypeInfo* TypeInfo = CUmodelSettings::StaticGetTypeinfo();
-	TypeInfo->DumpProps(this, *Ar);
+	TypeInfo->SaveProps(this, *Ar);
+
+	delete Ar;
+
+	unguard;
+}
+
+void CUmodelSettings::Load()
+{
+	guard(CUmodelSettings::Load);
+
+	RegisterClasses();
+
+	FString ConfigFile;
+	SetPathOption(ConfigFile, CONFIG_FILE);
+
+	FArchive* Ar = new FFileReader(*ConfigFile);
+	if (!Ar)
+	{
+		return;
+	}
+
+	const CTypeInfo* TypeInfo = CUmodelSettings::StaticGetTypeinfo();
+	if (!TypeInfo->LoadProps(this, *Ar))
+	{
+		appPrintf("There's an error in %s, ignoring configuration file\n", *ConfigFile);
+		Reset();
+	}
 
 	delete Ar;
 

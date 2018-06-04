@@ -5,6 +5,8 @@
 
 struct CStartupSettings
 {
+	DECLARE_STRUCT(CStartupSettings);
+
 	FString			GamePath;
 	int				GameOverride;
 
@@ -21,6 +23,21 @@ struct CStartupSettings
 	// other compatibility options
 	int				PackageCompression;
 	int				Platform;
+
+	BEGIN_PROP_TABLE
+		PROP_STRING(GamePath)
+		PROP_INT(GameOverride)
+		PROP_BOOL(UseSkeletalMesh)
+		PROP_BOOL(UseAnimation)
+		PROP_BOOL(UseStaticMesh)
+		PROP_BOOL(UseTexture)
+		PROP_BOOL(UseLightmapTexture)
+		PROP_BOOL(UseSound)
+		PROP_BOOL(UseScaleForm)
+		PROP_BOOL(UseFaceFx)
+		PROP_INT(PackageCompression)
+		PROP_INT(Platform)
+	END_PROP_TABLE
 
 	CStartupSettings()
 	{
@@ -64,6 +81,7 @@ struct CUmodelSettings
 
 	BEGIN_PROP_TABLE
 		PROP_STRUC(Export, CExportSettings)
+//		PROP_STRUC(Startup, CStartupSettings) //!! remove
 	END_PROP_TABLE
 
 	CUmodelSettings()
@@ -78,6 +96,7 @@ struct CUmodelSettings
 	}
 
 	void Save();
+	void Load();
 };
 
 extern CUmodelSettings GSettings;

@@ -39,6 +39,8 @@
 //#define DUMP_MEM_ON_EXIT			1
 
 
+// Note: declaring this variable in global scope will have side effect that
+// GSettings.Reset() will be called before main() executed.
 CUmodelSettings GSettings;
 
 
@@ -751,6 +753,10 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 #endif // HAS_UI
+
+#if HAS_CONFIG
+	GSettings.Load();
+#endif
 
 	// parse command line
 	enum
