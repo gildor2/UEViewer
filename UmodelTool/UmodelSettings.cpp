@@ -31,8 +31,21 @@ static void SetPathOption(FString& where, const char* value)
 	{
 		// relative path
 		char path[512];
+#if _WIN32
 		if (!getcwd(ARRAY_ARG(path)))
 			strcpy(path, ".");	// path is too long, or other error occured
+#else
+		// for Unix OS, store everything to the HOME directory ("~/...")
+		if (const char* s = getenv("HOME"))
+		{
+			strcpy(path, s);
+		}
+		else
+		{
+			// fallback: when HOME variable is not registered, store to the path of umodel executable
+			strcpy(path, ".");
+		}
+#endif
 
 		if (!value || !value[0])
 		{
