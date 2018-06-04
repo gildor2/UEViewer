@@ -381,6 +381,7 @@ enum EGame
 		GAME_Gears4 = GAME_UE4(11)+1,
 		// 4.13
 		GAME_Lawbreakers = GAME_UE4(13)+1,
+		GAME_StateOfDecay2 = GAME_UE4(13)+2,
 		// 4.14
 		GAME_Friday13 = GAME_UE4(14)+1,
 		GAME_Tekken7 = GAME_UE4(14)+2,

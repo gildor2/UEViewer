@@ -1019,8 +1019,8 @@ struct FStaticLODModel4
 		if (!StripFlags.IsEditorDataStripped())
 			Lod.RawPointIndices.Skip(Ar);
 
-#if LAWBREAKERS
-		if (Ar.Game == GAME_Lawbreakers) goto no_import_vertex_map;
+#if LAWBREAKERS || SOD2
+		if (Ar.Game == GAME_Lawbreakers || Ar.Game == GAME_StateOfDecay2) goto no_import_vertex_map;
 #endif
 
 		if (Ar.ArVer >= VER_UE4_ADD_SKELMESH_MESHTOIMPORTVERTEXMAP)
@@ -1094,6 +1094,14 @@ struct FStaticLODModel4
 				{
 					appError("Unsupported: extra SkelMesh vertex influences (old mesh format)");
 				}
+
+#if SOD2
+				if (Ar.Game == GAME_StateOfDecay2)
+				{
+					Ar.Seek(Ar.Tell() + 8);
+					return Ar;
+				}
+#endif // SOD2
 
 				if (!StripFlags.IsClassDataStripped(1))
 					Ar << Lod.AdjacencyIndexBuffer;

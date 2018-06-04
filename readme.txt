@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+04.06.2018
+- added State of Decay 2 SkeletalMesh support, requires game override (-game=sod2)
+
 29.05.2018
 - fixed incompatibilities with Ark: Survival Evolved and Dauntless, both games requires explicit game override
 

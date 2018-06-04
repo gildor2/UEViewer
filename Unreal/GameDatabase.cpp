@@ -365,6 +365,9 @@ const GameInfo GListOfGames[] = {
 #	if LAWBREAKERS
 		G("Lawbreakers", lawbr, GAME_Lawbreakers),
 #	endif
+#	if SOD2
+		G("State of Decay 2", sod2, GAME_StateOfDecay2),
+#	endif
 #	if DAUNTLESS
 		G("Dauntless", dauntless, GAME_Dauntless),
 #	endif
