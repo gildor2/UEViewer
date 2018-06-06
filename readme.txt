@@ -199,6 +199,11 @@ detex
 
 Changes
 ~~~~~~~
+06.06.2018
+- added PF_BC4 texture format support
+- fixed a bug: materials and referenced textures weren't exported when UModel failed to recognize at least one
+  texture parameter
+
 04.06.2018
 - added State of Decay 2 SkeletalMesh support, requires game override (-game=sod2)
 - linux: saving all files to the user's home (~/) directory by default
