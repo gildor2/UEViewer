@@ -373,6 +373,10 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 //		if (!GL_SUPPORT(QGL_3_1)) return false;
 //		format = GL_RG8_SNORM;
 //		break;
+	case TPF_BC4:
+		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_RGTC)) return false;
+		format = GL_COMPRESSED_RED_RGTC1;
+		break;
 	case TPF_BC5:
 		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_RGTC)) return false;
 		format = GL_COMPRESSED_RG_RGTC2;

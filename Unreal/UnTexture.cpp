@@ -44,6 +44,10 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 	unguard;
 }
 
+// Some references:
+// https://msdn.microsoft.com/en-us/library/windows/desktop/hh308955.aspx
+// https://msdn.microsoft.com/en-us/library/bb694531.aspx
+
 const CPixelFormatInfo PixelFormatInfo[] =
 {
 	// FourCC				BlockSizeX	BlockSizeY BytesPerBlock X360AlignX	X360AlignY	Float	Name
@@ -60,6 +64,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,	0,		"DXT5N"		},	// TPF_DXT5N
 	{ 0,						1,			1,			2,			64,			32,		0,		"V8U8"		},	// TPF_V8U8
 	{ 0,						1,			1,			2,			64,			32,		0,		"V8U8"		},	// TPF_V8U8_2
+	{ BYTES4('A','T','I','1'),	4,			4,			8,			0,			0,		0,		"BC4"		},	// TPF_BC4
 	{ BYTES4('A','T','I','2'),	4,			4,			16,			0,			0,		0,		"BC5"		},	// TPF_BC5
 	{ 0,						4,			4,			16,			0,			0,		1,		"BC6H"		},	// TPF_BC6H
 	{ 0,						4,			4,			16,			0,			0,		0,		"BC7"		},	// TPF_BC7
@@ -134,7 +139,8 @@ byte *CTextureData::Decompress(int MipLevel)
 	}
 #endif
 
-	// process non-dxt formats here
+	// Process non-dxt formats here. If texture format has FourCC, then it will be
+	// processed by code below this switch.
 	switch (Format)
 	{
 	case TPF_P8:
