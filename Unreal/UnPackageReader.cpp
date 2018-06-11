@@ -331,6 +331,12 @@ public:
 		if (GForcePlatform == PLATFORM_UNKNOWN)
 			Loader->Platform = PLATFORM_XBOX360;			// default platform for "ReverseBytes" mode is PLATFORM_XBOX360
 	}
+	else if (checkDword1 != PACKAGE_FILE_TAG)
+	{
+		// fully compressed package always starts with package tag
+		Loader->Seek(0);
+		return Loader;
+	}
 	// Read 2nd dword after changing byte order in Loader
 	*Loader << checkDword2;
 	Loader->Seek(0);
