@@ -558,6 +558,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		S.CustomVersionContainer.Serialize(Ar, S.LegacyVersion);
 	}
 
+	// Conan Exiles: has TArray<int32[5]> inserted here. Also it has int32=0 before Tag
+
 	Ar << S.HeadersSize;
 	Ar << S.PackageGroup;
 	Ar << S.PackageFlags;
