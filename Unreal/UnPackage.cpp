@@ -1028,6 +1028,15 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 		if (Ar.ArVer >= 573) goto ue3_component_map; // Injustice, version unknown
 	}
 #endif // MKVSDC
+#if ROCKET
+	if (Ar.Game == GAME_Rocket && Ar.ArLicenseeVer >= 22)
+	{
+		// Rocket League has 64-bit SerialOffset in LicenseeVer >= 22, skip HIDWORD
+		int SerialOffsetUpper;
+		Ar << SerialOffsetUpper;
+		assert(SerialOffsetUpper == 0);
+	}
+#endif // ROCKET
 
 	if (Ar.ArVer < 543)
 	{

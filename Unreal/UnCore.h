@@ -362,6 +362,7 @@ enum EGame
 		GAME_MetroConflict,
 		GAME_Smite,
 		GAME_DevilsThird,
+		GAME_Rocket,
 
 	GAME_MIDWAY3   = 0x0810000,	// variant of UE3
 		GAME_A51,

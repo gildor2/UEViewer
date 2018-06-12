@@ -339,6 +339,9 @@ const GameInfo GListOfGames[] = {
 #	if DEVILS_THIRD
 		G("Devil's Third", dev3rd, GAME_DevilsThird),
 #	endif
+#	if ROCKET
+		G("Rocket League", rocket, GAME_Rocket),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4
