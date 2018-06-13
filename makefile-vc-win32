@@ -144,7 +144,7 @@ MOBILE_LIBS_FILES = \
 
 umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 -libpath:/./lib/fbx/lib/vs2015/x86/release SDL2.lib libfbxsdk.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 -libpath:./libs/fbx/lib/vs2015/x86/release SDL2.lib libfbxsdk.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -subsystem:console
 
 #------------------------------------------------------------------------------
 #	compiling source files
