@@ -323,10 +323,25 @@ FString GAesKey;
 
 #define AES_KEYBITS		256
 
-void appDecryptAES(byte* Data, int Size)
+void appDecryptAES(byte* Data, int Size, const char *Key)
 {
 	guard(appDecryptAES);
 
+	assert((Size & 15) == 0);
+
+	unsigned long rk[RKLENGTH(AES_KEYBITS)];
+	int nrounds = rijndaelSetupDecrypt(rk, (uint8*) Key, AES_KEYBITS);
+
+	for (int pos = 0; pos < Size; pos += 16)
+	{
+		rijndaelDecrypt(rk, nrounds, Data + pos, Data + pos);
+	}
+
+	unguard;
+}
+
+void appDecryptAES(byte* Data, int Size)
+{
 	if (GAesKey.Len() == 0)
 	{
 		appError("Trying to decrypt AES block without providing an AES key");
@@ -335,16 +350,6 @@ void appDecryptAES(byte* Data, int Size)
 	{
 		appError("AES key is too short");
 	}
-
-	assert((Size & 15) == 0);
-
-	unsigned long rk[RKLENGTH(AES_KEYBITS)];
-	int nrounds = rijndaelSetupDecrypt(rk, (uint8*) *GAesKey, AES_KEYBITS);
-
-	for (int pos = 0; pos < Size; pos += 16)
-	{
-		rijndaelDecrypt(rk, nrounds, Data + pos, Data + pos);
-	}
-
-	unguard;
+	
+	appDecryptAES(Data, Size, *GAesKey);
 }

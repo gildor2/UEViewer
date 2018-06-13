@@ -362,6 +362,7 @@ enum EGame
 		GAME_MetroConflict,
 		GAME_Smite,
 		GAME_DevilsThird,
+		GAME_Rocket,
 
 	GAME_MIDWAY3   = 0x0810000,	// variant of UE3
 		GAME_A51,
@@ -2329,6 +2330,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 extern FString GAesKey;
 
+void appDecryptAES(byte* Data, int Size, const char *Key);
 void appDecryptAES(byte* Data, int Size);
 
 // Callback called when encrypted pak file is attempted to load
