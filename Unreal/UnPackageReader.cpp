@@ -258,6 +258,71 @@ public:
 
 #endif // NURIEN
 
+/*-----------------------------------------------------------------------------
+	Rocket League
+-----------------------------------------------------------------------------*/
+
+#if ROCKET
+
+class FFileReaderRocket : public FReaderWrapper
+{
+	DECLARE_ARCHIVE(FFileReaderRocket, FReaderWrapper);
+public:
+	int			EncryptionStart, EncryptionEnd;
+
+	FFileReaderRocket(FArchive *File)
+	:	FReaderWrapper(File)
+	,	EncryptionStart(0)
+	,	EncryptionEnd(0)
+	{}
+
+	virtual void Serialize(void *data, int size)
+	{
+		int Pos = Reader->Tell();
+		appPrintf("data %08X size %08X\n", data, size);
+		Reader->Serialize(data, size);
+		
+		// Check if any of the data read was encrypted
+		if (Pos < EncryptionStart && Pos + size <= EncryptionStart)
+			return;
+		
+		if (Pos >= EncryptionEnd)
+			return;
+		
+		// Determine what needs to be decrypted
+		int StartOffset			= max(0, Pos - EncryptionStart);
+		int EndOffset			= min(EncryptionEnd, Pos + size) - EncryptionStart;
+		int CopySize			= EndOffset - StartOffset;
+		int CopyOffset			= max(0, EncryptionStart - Pos);
+		
+		// Round to 16-byte AES blocks
+		int BlockStartOffset	= StartOffset & ~15;
+		int BlockEndOffset		= (EndOffset + 15) & ~15;
+		int EncryptedSize		= BlockEndOffset - BlockStartOffset;
+		int EncryptedOffset		= StartOffset - BlockStartOffset;
+		
+		// Decrypt and copy
+		static const byte key[] = {
+			0xC7, 0xDF, 0x6B, 0x13, 0x25, 0x2A, 0xCC, 0x71,
+			0x47, 0xBB, 0x51, 0xC9, 0x8A, 0xD7, 0xE3, 0x4B,
+			0x7F, 0xE5, 0x00, 0xB7, 0x7F, 0xA5, 0xFA, 0xB2,
+			0x93, 0xE2, 0xF2, 0x4E, 0x6B, 0x17, 0xE7, 0x79
+		};
+		
+		byte *EncryptedBuffer = (byte*)(appMalloc(EncryptedSize));
+		Reader->Seek(EncryptionStart + BlockStartOffset);
+		Reader->Serialize(EncryptedBuffer, EncryptedSize);
+		appDecryptAES(EncryptedBuffer, EncryptedSize, (char*)(key));
+		memcpy(OffsetPointer(data, CopyOffset), &EncryptedBuffer[EncryptedOffset], CopySize);
+		appFree(EncryptedBuffer);
+		
+		// Restore position
+		Reader->Seek(Pos + size);
+	}
+};
+
+#endif // ROCKET
+
 
 /*-----------------------------------------------------------------------------
 	Top-level code
@@ -415,6 +480,59 @@ void UnPackage::ReplaceLoader()
 		}
 	}
 #endif // AA2
+
+#if ROCKET
+	if (Game == GAME_Rocket && (Summary.PackageFlags & 8))
+	{
+		// Rocket League has an encrypted header after FPackageFileSummary containing the name/import/export tables and a compression table
+		TArray<FString> AdditionalPackagesToCook;
+		*this << AdditionalPackagesToCook;
+		
+		// Array of unknown structs
+		int NumUnknownStructs;
+		*this << NumUnknownStructs;
+		
+		for (int i = 0; i < NumUnknownStructs; i++)
+		{
+			int unknown1, unknown2, unknown3, unknown4, unknown5;
+			*this << unknown1;
+			*this << unknown2;
+			*this << unknown3;
+			*this << unknown4;
+			*this << unknown5;
+			
+			TArray<int> unknownArray;
+			*this << unknownArray;
+		}
+		
+		// Info related to encrypted buffer
+		int GarbageSize, CompressedChunkInfoOffset, LastBlockSize;
+		*this << GarbageSize;
+		*this << CompressedChunkInfoOffset;
+		*this << LastBlockSize;
+		
+		// Create a reader to decrypt the rest of Rocket League's header
+		FFileReaderRocket *RocketReader = new FFileReaderRocket(Loader);
+		RocketReader->EncryptionStart = Summary.NameOffset;
+		RocketReader->EncryptionEnd = Summary.HeadersSize;
+		
+		// Create a UE3 compression reader with the chunk info contained in the encrypted RL header
+		RocketReader->Seek(RocketReader->EncryptionStart + CompressedChunkInfoOffset);
+		RocketReader->SetupFrom(*this);
+		
+		// TArray serialization depends on this
+		RocketReader->IsLoading = IsLoading;
+		
+		TArray<FCompressedChunk> Chunks;
+		*RocketReader << Chunks;
+		
+		Loader = new FUE3ArchiveReader(RocketReader, COMPRESS_ZLIB, Chunks);
+		Loader->SetupFrom(*this);
+		
+		// The decompressed chunks will overwrite past CompressedChunkInfoOffset, so don't decrypt past that anymore
+		RocketReader->EncryptionEnd = RocketReader->EncryptionStart + CompressedChunkInfoOffset;
+	}
+#endif // ROCKET
 
 #if NURIEN
 	// Nurien has encryption in header, and no encryption after

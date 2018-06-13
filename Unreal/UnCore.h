@@ -2330,6 +2330,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 extern FString GAesKey;
 
+void appDecryptAES(byte* Data, int Size, const char *Key);
 void appDecryptAES(byte* Data, int Size);
 
 // Callback called when encrypted pak file is attempted to load
