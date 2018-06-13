@@ -279,7 +279,6 @@ public:
 	virtual void Serialize(void *data, int size)
 	{
 		int Pos = Reader->Tell();
-		appPrintf("data %08X size %08X\n", data, size);
 		Reader->Serialize(data, size);
 		
 		// Check if any of the data read was encrypted
