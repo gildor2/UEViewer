@@ -344,7 +344,7 @@ void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen)
 	assert((Size & 15) == 0);
 
 	unsigned long rk[RKLENGTH(AES_KEYBITS)];
-	int nrounds = rijndaelSetupDecrypt(rk, (uint8*) *GAesKey, AES_KEYBITS);
+	int nrounds = rijndaelSetupDecrypt(rk, (const byte*)Key, AES_KEYBITS);
 
 	for (int pos = 0; pos < Size; pos += 16)
 	{

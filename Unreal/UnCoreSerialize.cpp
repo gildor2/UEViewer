@@ -1010,7 +1010,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 
 		BulkDataFlags = 4;						// unknown
 		BulkDataSizeOnDisk = INDEX_NONE;
-		int EndPosition;
+		int32 EndPosition;
 		Ar << EndPosition;
 		if (Ar.ArVer >= 254)
 			Ar << BulkDataSizeOnDisk;
@@ -1040,14 +1040,15 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		// read header
 		Ar << BulkDataFlags << ElementCount;
 		assert(Ar.IsLoading);
-		int tmpBulkDataOffsetInFile32;
+		int32 tmpBulkDataOffsetInFile32;
+
 #if MKVSDC
 		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
 		{
 			// MK X has 64-bit offset and size fields
 			int64 tmpBulkDataSizeOnDisk64;
 			Ar << tmpBulkDataSizeOnDisk64 << BulkDataOffsetInFile;
-			BulkDataSizeOnDisk = (int)tmpBulkDataSizeOnDisk64;
+			BulkDataSizeOnDisk = (int32)tmpBulkDataSizeOnDisk64;
 			goto header_done;
 		}
 #endif // MKVSDC
@@ -1064,7 +1065,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 128)
 		{
-			int BulkDataKey;
+			int32 BulkDataKey;
 			Ar << BulkDataKey;
 		}
 #endif // TRANSFORMERS
