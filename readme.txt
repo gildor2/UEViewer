@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+14.06.2018
+- added Rocket League support, contributed by AltimorTASDK (https://github.com/gildor2/UModel/pull/73)
+
 06.06.2018
 - added PF_BC4 texture format support
 - fixed a bug: materials and referenced textures weren't exported when UModel failed to recognize at least one

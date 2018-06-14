@@ -1060,8 +1060,37 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 			goto header_done;
 		}
 #endif // BATMAN
+#if ROCKET_LEAGUE
+		if (Ar.Game == GAME_RocketLeague && Ar.ArLicenseeVer >= 20)
+		{
+			Ar << BulkDataSizeOnDisk;
+
+			// Offset only serialized with BULKDATA_StoreInSeparateFile
+			if (BulkDataFlags & BULKDATA_StoreInSeparateFile)
+			{
+				// 64-bit in LicenseeVer >= 22
+				if (Ar.ArLicenseeVer >= 22)
+				{
+					Ar << BulkDataOffsetInFile;
+				}
+				else
+				{
+					Ar << tmpBulkDataOffsetInFile32;
+					BulkDataOffsetInFile = tmpBulkDataOffsetInFile32;
+				}
+			}
+			else
+			{
+				BulkDataOffsetInFile = Ar.Tell();
+			}
+
+			goto header_done;
+		}
+#endif // ROCKET_LEAGUE
+
 		Ar << BulkDataSizeOnDisk << tmpBulkDataOffsetInFile32;
 		BulkDataOffsetInFile = tmpBulkDataOffsetInFile32;		// sign extend to allow non-standard TFC systems which uses '-1' in this field
+
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 128)
 		{

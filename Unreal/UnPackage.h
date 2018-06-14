@@ -54,10 +54,10 @@ struct FCompressedChunk
 	{
 		guard(FCompressedChunk<<);
 
-#if MKVSDC
-		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+#if MKVSDC || ROCKET_LEAGUE
+		if ((Ar.Game == GAME_MK && Ar.ArVer >= 677) || (Ar.Game == GAME_RocketLeague && Ar.ArLicenseeVer >= 22))
 		{
-			// MK X has 64-bit file offsets
+			// MK X and Rocket League has 64-bit file offsets
 			int64 UncompressedOffset64, CompressedOffset64;
 			Ar << UncompressedOffset64 << C.UncompressedSize << CompressedOffset64 << C.CompressedSize;
 			C.UncompressedOffset = (int)UncompressedOffset64;
