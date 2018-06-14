@@ -415,9 +415,9 @@ enum EPlatform
 class FArchive
 {
 public:
-	bool	IsLoading;
 	int		ArVer;
 	int		ArLicenseeVer;
+	bool	IsLoading;
 	bool	ReverseBytes;
 
 protected:
@@ -434,6 +434,7 @@ public:
 	,	ArStopper(0)
 	,	ArVer(100000)			//?? something large
 	,	ArLicenseeVer(0)
+	,	IsLoading(true)
 	,	ReverseBytes(false)
 	,	Game(GAME_UNKNOWN)
 	,	Platform(PLATFORM_PC)
@@ -447,6 +448,7 @@ public:
 		ArVer         = Other.ArVer;
 		ArLicenseeVer = Other.ArLicenseeVer;
 		ReverseBytes  = Other.ReverseBytes;
+		IsLoading     = Other.IsLoading;
 		Game          = Other.Game;
 		Platform      = Other.Platform;
 	}
@@ -2329,7 +2331,14 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 extern FString GAesKey;
 
-void appDecryptAES(byte* Data, int Size);
+// Decrypt with arbitrary key
+void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen = -1);
+
+// Decrypt with GAesKey
+inline void appDecryptAES(byte* Data, int Size)
+{
+	appDecryptAES(Data, Size, *GAesKey, GAesKey.Len());
+}
 
 // Callback called when encrypted pak file is attempted to load
 bool UE4EncryptedPak();

@@ -323,15 +323,20 @@ FString GAesKey;
 
 #define AES_KEYBITS		256
 
-void appDecryptAES(byte* Data, int Size)
+void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen)
 {
 	guard(appDecryptAES);
 
-	if (GAesKey.Len() == 0)
+	if (KeyLen <= 0)
+	{
+		KeyLen = strlen(Key);
+	}
+
+	if (KeyLen == 0)
 	{
 		appError("Trying to decrypt AES block without providing an AES key");
 	}
-	if (GAesKey.Len() < KEYLENGTH(AES_KEYBITS))
+	if (KeyLen < KEYLENGTH(AES_KEYBITS))
 	{
 		appError("AES key is too short");
 	}
