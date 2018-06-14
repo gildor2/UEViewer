@@ -60,6 +60,8 @@ class CStaticMesh;
 void ExportPsk(const CSkeletalMesh *Mesh);
 void ExportPsa(const CAnimSet *Anim);
 void ExportStaticMesh(const CStaticMesh *Mesh);
+// FBX
+void ExportFbxStaticMesh(const CStaticMesh *Mesh);
 // MD5Mesh
 void ExportMd5Mesh(const CSkeletalMesh *Mesh);
 void ExportMd5Anim(const CAnimSet *Anim);
@@ -67,6 +69,7 @@ void ExportMd5Anim(const CAnimSet *Anim);
 void Export3D (const UVertMesh *Mesh);
 // TGA
 void ExportTexture(const UUnrealMaterial *Tex);
+const char* GetExportTextureName(const UUnrealMaterial *Tex);
 // UUnrealMaterial
 void ExportMaterial(const UUnrealMaterial *Mat);
 // sound

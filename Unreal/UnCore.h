@@ -172,10 +172,10 @@ public:
 	const char	*Str;
 
 	FName()
-	:	Index(0)
-	,	Str("None")
+		:	Index(0)
+		,	Str("None")
 #if UNREAL3 || UNREAL4
-	,	ExtraIndex(0)
+		,	ExtraIndex(0)
 #endif
 	{}
 
@@ -248,132 +248,132 @@ enum EGame
 	GAME_UNKNOWN   = 0,			// should be 0
 
 	GAME_UE1       = 0x0100000,
-		GAME_Undying,
+	GAME_Undying,
 
 	GAME_UE2       = 0x0200000,
-		GAME_UT2,
-		GAME_Pariah,
-		GAME_SplinterCell,
-		GAME_SplinterCellConv,
-		GAME_Lineage2,
-		GAME_Exteel,
-		GAME_Ragnarok2,
-		GAME_RepCommando,
-		GAME_Loco,
-		GAME_BattleTerr,
-		GAME_UC1,				// note: not UE2X
-		GAME_XIII,
-		GAME_Vanguard,
-		GAME_AA2,
-		GAME_EOS,
+	GAME_UT2,
+	GAME_Pariah,
+	GAME_SplinterCell,
+	GAME_SplinterCellConv,
+	GAME_Lineage2,
+	GAME_Exteel,
+	GAME_Ragnarok2,
+	GAME_RepCommando,
+	GAME_Loco,
+	GAME_BattleTerr,
+	GAME_UC1,				// note: not UE2X
+	GAME_XIII,
+	GAME_Vanguard,
+	GAME_AA2,
+	GAME_EOS,
 
 	GAME_VENGEANCE = 0x0210000,	// variant of UE2
-		GAME_Tribes3,
-		GAME_Swat4,				// not autodetected, overlaps with Tribes3
-		GAME_Bioshock,
+	GAME_Tribes3,
+	GAME_Swat4,				// not autodetected, overlaps with Tribes3
+	GAME_Bioshock,
 
 	GAME_LEAD      = 0x0220000,
 
 	GAME_UE2X      = 0x0400000,
-		GAME_UC2,
+	GAME_UC2,
 
 	GAME_UE3       = 0x0800000,
-		GAME_EndWar,
-		GAME_MassEffect,
-		GAME_MassEffect2,
-		GAME_MassEffect3,
-		GAME_R6Vegas2,
-		GAME_MirrorEdge,
-		GAME_TLR,
-		GAME_Huxley,
-		GAME_Turok,
-		GAME_Fury,
-		GAME_XMen,
-		GAME_MagnaCarta,
-		GAME_ArmyOf2,
-		GAME_CrimeCraft,
-		GAME_50Cent,
-		GAME_AVA,
-		GAME_Frontlines,
-		GAME_Batman,
-		GAME_Batman2,
-		GAME_Batman3,
-		GAME_Batman4,
-		GAME_Borderlands,
-		GAME_AA3,
-		GAME_DarkVoid,
-		GAME_Legendary,
-		GAME_Tera,
-		GAME_BladeNSoul,
-		GAME_APB,
-		GAME_AlphaProtocol,
-		GAME_Transformers,
-		GAME_MortalOnline,
-		GAME_Enslaved,
-		GAME_MOHA,
-		GAME_MOH2010,
-		GAME_Berkanix,
-		GAME_DOH,
-		GAME_DCUniverse,
-		GAME_Bulletstorm,
-		GAME_Undertow,
-		GAME_Singularity,
-		GAME_Tron,
-		GAME_Hunted,
-		GAME_DND,
-		GAME_ShadowsDamned,
-		GAME_Argonauts,
-		GAME_SpecialForce2,
-		GAME_GunLegend,
-		GAME_TaoYuan,
-		GAME_Tribes4,
-		GAME_Dishonored,
-		GAME_Hawken,
-		GAME_Fable,
-		GAME_DmC,
-		GAME_PLA,
-		GAME_AliensCM,
-		GAME_GoWJ,
-		GAME_Bioshock3,
-		GAME_RememberMe,
-		GAME_MarvelHeroes,
-		GAME_LostPlanet3,
-		GAME_XcomB,
-		GAME_Xcom2,
-		GAME_Thief4,
-		GAME_Murdered,
-		GAME_SOV,
-		GAME_VEC,
-		GAME_Dust514,
-		GAME_Guilty,
-		GAME_Alice,
-		GAME_DunDef,
-		GAME_Gigantic,
-		GAME_MetroConflict,
-		GAME_Smite,
-		GAME_DevilsThird,
+	GAME_EndWar,
+	GAME_MassEffect,
+	GAME_MassEffect2,
+	GAME_MassEffect3,
+	GAME_R6Vegas2,
+	GAME_MirrorEdge,
+	GAME_TLR,
+	GAME_Huxley,
+	GAME_Turok,
+	GAME_Fury,
+	GAME_XMen,
+	GAME_MagnaCarta,
+	GAME_ArmyOf2,
+	GAME_CrimeCraft,
+	GAME_50Cent,
+	GAME_AVA,
+	GAME_Frontlines,
+	GAME_Batman,
+	GAME_Batman2,
+	GAME_Batman3,
+	GAME_Batman4,
+	GAME_Borderlands,
+	GAME_AA3,
+	GAME_DarkVoid,
+	GAME_Legendary,
+	GAME_Tera,
+	GAME_BladeNSoul,
+	GAME_APB,
+	GAME_AlphaProtocol,
+	GAME_Transformers,
+	GAME_MortalOnline,
+	GAME_Enslaved,
+	GAME_MOHA,
+	GAME_MOH2010,
+	GAME_Berkanix,
+	GAME_DOH,
+	GAME_DCUniverse,
+	GAME_Bulletstorm,
+	GAME_Undertow,
+	GAME_Singularity,
+	GAME_Tron,
+	GAME_Hunted,
+	GAME_DND,
+	GAME_ShadowsDamned,
+	GAME_Argonauts,
+	GAME_SpecialForce2,
+	GAME_GunLegend,
+	GAME_TaoYuan,
+	GAME_Tribes4,
+	GAME_Dishonored,
+	GAME_Hawken,
+	GAME_Fable,
+	GAME_DmC,
+	GAME_PLA,
+	GAME_AliensCM,
+	GAME_GoWJ,
+	GAME_Bioshock3,
+	GAME_RememberMe,
+	GAME_MarvelHeroes,
+	GAME_LostPlanet3,
+	GAME_XcomB,
+	GAME_Xcom2,
+	GAME_Thief4,
+	GAME_Murdered,
+	GAME_SOV,
+	GAME_VEC,
+	GAME_Dust514,
+	GAME_Guilty,
+	GAME_Alice,
+	GAME_DunDef,
+	GAME_Gigantic,
+	GAME_MetroConflict,
+	GAME_Smite,
+	GAME_DevilsThird,
 
 	GAME_MIDWAY3   = 0x0810000,	// variant of UE3
-		GAME_A51,
-		GAME_Wheelman,
-		GAME_MK,
-		GAME_Strangle,
-		GAME_TNA,
+	GAME_A51,
+	GAME_Wheelman,
+	GAME_MK,
+	GAME_Strangle,
+	GAME_TNA,
 
 	GAME_UE4_BASE  = 0x1000000,
-		// bytes: 01.00.0N.NX : 01=UE4, 00=masked by GAME_ENGINE, NN=UE4 subversion, X=game (4 bits, 0=base engine)
-		// Add custom UE4 game engines here
-		// 4.8
-		GAME_HIT = GAME_UE4(8)+1,
-		// 4.11
-		GAME_Gears4 = GAME_UE4(11)+1,
-		// 4.13
-		GAME_Lawbreakers = GAME_UE4(13)+1,
-		// 4.14
-		GAME_Friday13 = GAME_UE4(14)+1,
-		GAME_Tekken7 = GAME_UE4(14)+2,
-		// 4.19
-		GAME_Paragon = GAME_UE4(19)+1,
+	// bytes: 01.00.0N.NX : 01=UE4, 00=masked by GAME_ENGINE, NN=UE4 subversion, X=game (4 bits, 0=base engine)
+	// Add custom UE4 game engines here
+	// 4.8
+	GAME_HIT = GAME_UE4(8)+1,
+	// 4.11
+	GAME_Gears4 = GAME_UE4(11)+1,
+	// 4.13
+	GAME_Lawbreakers = GAME_UE4(13)+1,
+	// 4.14
+	GAME_Friday13 = GAME_UE4(14)+1,
+	GAME_Tekken7 = GAME_UE4(14)+2,
+	// 4.19
+	GAME_Paragon = GAME_UE4(19)+1,
 
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
@@ -415,13 +415,13 @@ public:
 	int		Platform;			// EPlatform
 
 	FArchive()
-	:	ArPos(0)
-	,	ArStopper(0)
-	,	ArVer(100000)			//?? something large
-	,	ArLicenseeVer(0)
-	,	ReverseBytes(false)
-	,	Game(GAME_UNKNOWN)
-	,	Platform(PLATFORM_PC)
+		:	ArPos(0)
+		,	ArStopper(0)
+		,	ArVer(100000)			//?? something large
+		,	ArLicenseeVer(0)
+		,	ReverseBytes(false)
+		,	Game(GAME_UNKNOWN)
+		,	Platform(PLATFORM_PC)
 	{}
 
 	virtual ~FArchive()
@@ -755,8 +755,8 @@ public:
 	int			ArPosOffset;
 
 	FReaderWrapper(FArchive *File, int Offset = 0)
-	:	Reader(File)
-	,	ArPosOffset(Offset)
+		:	Reader(File)
+		,	ArPosOffset(Offset)
 	{}
 	virtual ~FReaderWrapper()
 	{
@@ -810,8 +810,8 @@ class FMemReader : public FArchive
 	DECLARE_ARCHIVE(FMemReader, FArchive);
 public:
 	FMemReader(const void *data, int size)
-	:	DataPtr((const byte*)data)
-	,	DataSize(size)
+		:	DataPtr((const byte*)data)
+		,	DataSize(size)
 	{
 		IsLoading = true;
 		ArStopper = size;
@@ -902,12 +902,16 @@ struct FVector
 
 	void Set(float _X, float _Y, float _Z)
 	{
-		X = _X; Y = _Y; Z = _Z;
+		X = _X;
+		Y = _Y;
+		Z = _Z;
 	}
 
 	void Scale(float value)
 	{
-		X *= value; Y *= value; Z *= value;
+		X *= value;
+		Y *= value;
+		Z *= value;
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FVector &V)
@@ -955,7 +959,9 @@ struct FRotator
 
 	void Set(int _Yaw, int _Pitch, int _Roll)
 	{
-		Pitch = _Pitch; Yaw = _Yaw; Roll = _Roll;
+		Pitch = _Pitch;
+		Yaw = _Yaw;
+		Roll = _Roll;
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FRotator &R)
@@ -981,7 +987,10 @@ struct FQuat
 
 	void Set(float _X, float _Y, float _Z, float _W)
 	{
-		X = _X; Y = _Y; Z = _Z; W = _W;
+		X = _X;
+		Y = _Y;
+		Z = _Z;
+		W = _W;
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FQuat &F)
@@ -1083,7 +1092,7 @@ struct FColor
 	FColor()
 	{}
 	FColor(byte r, byte g, byte b, byte a = 255)
-	:	R(r), G(g), B(b), A(a)
+		:	R(r), G(g), B(b), A(a)
 	{}
 	friend FArchive& operator<<(FArchive &Ar, FColor &C)
 	{
@@ -1099,7 +1108,10 @@ struct FLinearColor
 
 	void Set(float _R, float _G, float _B, float _A)
 	{
-		R = _R; G = _G; B = _B; A = _A;
+		R = _R;
+		G = _G;
+		B = _B;
+		A = _A;
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FLinearColor &C)
@@ -1143,8 +1155,8 @@ struct FPackedNormal
 	FPackedNormal &operator=(const FVector &V)
 	{
 		Data = int((V.X + 1) * 127.5f)
-			+ (int((V.Y + 1) * 127.5f) << 8)
-			+ (int((V.Z + 1) * 127.5f) << 16);
+		       + (int((V.Y + 1) * 127.5f) << 8)
+		       + (int((V.Z + 1) * 127.5f) << 16);
 		return *this;
 	}
 
@@ -1215,6 +1227,11 @@ struct FVector2D
 		return Ar << V.X << V.Y;
 	}
 };
+
+FORCEINLINE bool operator==(const FVector2D &V1, const FVector2D &V2)
+{
+	return V1.X == V2.X && V1.Y == V2.Y;
+}
 
 struct FTransform
 {
@@ -1336,9 +1353,9 @@ class FArray
 
 public:
 	FORCEINLINE FArray()
-	:	DataCount(0)
-	,	MaxCount(0)
-	,	DataPtr(NULL)
+		:	DataCount(0)
+		,	MaxCount(0)
+		,	DataPtr(NULL)
 	{}
 	~FArray();
 
@@ -1422,7 +1439,7 @@ class TArray : public FArray
 	friend class FString; // for rvalue
 public:
 	TArray()
-	:	FArray()
+		:	FArray()
 	{}
 	~TArray()
 	{
@@ -1679,13 +1696,13 @@ public:
 	// Note: there is no reading optimization performed here (in umodel).
 	FORCEINLINE void BulkSerialize(FArchive& Ar)
 	{
-	#if DO_GUARD_MAX
+#if DO_GUARD_MAX
 		guardfunc;
-	#endif
+#endif
 		SerializeBulkArray(Ar, *this, SerializeArray);
-	#if DO_GUARD_MAX
+#if DO_GUARD_MAX
 		unguard;
-	#endif
+#endif
 	}
 #endif // UNREAL3
 
@@ -1720,7 +1737,7 @@ public:
 protected:
 	// disable array copying
 	TArray(const TArray& Other)
-	:	FArray()
+		:	FArray()
 	{}
 	TArray& operator=(const TArray& Other)
 	{
@@ -1870,7 +1887,8 @@ inline void CopyArray(TArray<T1> &Dst, const TArray<T2> &Src)
 		do		// Count is > 0 here - checked above, so "do ... while" is more suitable (and more compact)
 		{
 			*pDst++ = *pSrc++;
-		} while (--Count);
+		}
+		while (--Count);
 	}
 }
 
@@ -1892,7 +1910,6 @@ struct TMapPair
 	}
 };
 
-
 template<typename TK, typename TV>
 class TMap : public TArray<TMapPair<TK, TV> >
 {
@@ -1900,6 +1917,33 @@ public:
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TMap &Map)
 	{
 		return Ar << (TArray<TMapPair<TK, TV> >&)Map;
+	}
+
+	FORCEINLINE TV& Add(const TK& Key, const TV& Value)
+	{
+		TMapPair<TK, TV> Pair;
+		Pair.Key = Key;
+		Pair.Value = Value;
+		int Index = TArray<TMapPair<TK, TV> >::Add(Pair);
+		TMapPair<TK, TV>& PairAdded = GetData()[Index];
+		return PairAdded.Value;
+	}
+
+	FORCEINLINE TV* Find(const TK& Key)
+	{
+		for (int i = 0; i < this->Num(); ++i)
+		{
+			TMapPair<TK, TV>& Pair = GetData()[i];
+			if (Pair.Key == Key)
+			{
+				return &Pair.Value;
+			}
+		}
+		return nullptr;
+	}
+	FORCEINLINE const TV* Find(const TK& Key) const
+	{
+		return const_cast<TMap*>(this)->Find(Key);
 	}
 };
 
@@ -1955,7 +1999,7 @@ public:
 
 	// rvalue functions
 	FString(FString&& Other)
-	: Data(MoveTemp(Other.Data))
+		: Data(MoveTemp(Other.Data))
 	{}
 	FString& operator=(FString&& Other)
 	{
@@ -2201,8 +2245,8 @@ struct FByteBulkData //?? separate FUntypedBulkData
 //	FArchive *AttachedAr;
 
 	FByteBulkData()
-	:	BulkData(NULL)
-	,	BulkDataOffsetInFile(0)
+		:	BulkData(NULL)
+		,	BulkDataOffsetInFile(0)
 	{}
 
 	virtual ~FByteBulkData()
@@ -2330,46 +2374,46 @@ enum
 	VER_UE4_0 = 342,
 	VER_UE4_1 = 352,
 	VER_UE4_2 = 363,
-		VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
-		VER_UE4_FTEXT_HISTORY = 368,					// used for UStaticMesh versioning
-		VER_UE4_STORE_BONE_EXPORT_NAMES = 370,
+	VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
+	VER_UE4_FTEXT_HISTORY = 368,					// used for UStaticMesh versioning
+	VER_UE4_STORE_BONE_EXPORT_NAMES = 370,
 	VER_UE4_3 = 382,
-		VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
+	VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP = 384,
 	VER_UE4_4 = 385,
-		VER_UE4_SKELETON_ADD_SMARTNAMES = 388,
-		VER_UE4_SOUND_COMPRESSION_TYPE_ADDED = 392,
-		VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN = 394,	// used for UStaticMesh versioning
-		VER_UE4_DEPRECATE_UMG_STYLE_ASSETS = 397,		// used for UStaticMesh versioning
+	VER_UE4_SKELETON_ADD_SMARTNAMES = 388,
+	VER_UE4_SOUND_COMPRESSION_TYPE_ADDED = 392,
+	VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN = 394,	// used for UStaticMesh versioning
+	VER_UE4_DEPRECATE_UMG_STYLE_ASSETS = 397,		// used for UStaticMesh versioning
 	VER_UE4_5 = 401,
 	VER_UE4_6 = 413,
-		VER_UE4_RENAME_WIDGET_VISIBILITY = 416,			// used for UStaticMesh versioning
-		VER_UE4_ANIMATION_ADD_TRACKCURVES = 417,
+	VER_UE4_RENAME_WIDGET_VISIBILITY = 416,			// used for UStaticMesh versioning
+	VER_UE4_ANIMATION_ADD_TRACKCURVES = 417,
 	VER_UE4_7 = 434,
-		VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG = 441,
-		VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION = 444,
+	VER_UE4_STRUCT_GUID_IN_PROPERTY_TAG = 441,
+	VER_UE4_PACKAGE_SUMMARY_HAS_COMPATIBLE_ENGINE_VERSION = 444,
 	VER_UE4_8 = 451,
-		VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
+	VER_UE4_SERIALIZE_TEXT_IN_PACKAGES = 459,
 	VER_UE4_9 = 482,
 	VER_UE4_10 = VER_UE4_9,								// exactly the same file version for 4.9 and 4.10
-		VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT = 485,
-		VER_UE4_SOUND_CONCURRENCY_PACKAGE = 489,		// used for UStaticMesh versioning
+	VER_UE4_COOKED_ASSETS_IN_EDITOR_SUPPORT = 485,
+	VER_UE4_SOUND_CONCURRENCY_PACKAGE = 489,		// used for UStaticMesh versioning
 	VER_UE4_11 = 498,
-		VER_UE4_INNER_ARRAY_TAG_INFO = 500,
-		VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG = 503,
-		VER_UE4_NAME_HASHES_SERIALIZED = 504,
+	VER_UE4_INNER_ARRAY_TAG_INFO = 500,
+	VER_UE4_PROPERTY_GUID_IN_PROPERTY_TAG = 503,
+	VER_UE4_NAME_HASHES_SERIALIZED = 504,
 	VER_UE4_12 = 504,
 	VER_UE4_13 = 505,
-		VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS = 507,
-		VER_UE4_TemplateIndex_IN_COOKED_EXPORTS = 508,
+	VER_UE4_PRELOAD_DEPENDENCIES_IN_COOKED_EXPORTS = 507,
+	VER_UE4_TemplateIndex_IN_COOKED_EXPORTS = 508,
 	VER_UE4_14 = 508,
-		VER_UE4_PROPERTY_TAG_SET_MAP_SUPPORT = 509,
-		VER_UE4_ADDED_SEARCHABLE_NAMES = 510,
+	VER_UE4_PROPERTY_TAG_SET_MAP_SUPPORT = 509,
+	VER_UE4_ADDED_SEARCHABLE_NAMES = 510,
 	VER_UE4_15 = 510,
-		VER_UE4_64BIT_EXPORTMAP_SERIALSIZES = 511,
+	VER_UE4_64BIT_EXPORTMAP_SERIALSIZES = 511,
 	VER_UE4_16 = 513,
 	VER_UE4_17 = 513,
 	VER_UE4_18 = 514,
-		VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID = 516,
+	VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID = 516,
 	VER_UE4_19 = 516,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.

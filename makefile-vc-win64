@@ -33,6 +33,7 @@ MAIN_FILES = \
 	$(OUT_1)/ExportMaterial.obj \
 	$(OUT_1)/ExportMd5.obj \
 	$(OUT_1)/ExportPsk.obj \
+	$(OUT_1)/ExportFbx.obj \
 	$(OUT_1)/ExportSound.obj \
 	$(OUT_1)/ExportTexture.obj \
 	$(OUT_1)/ExportThirdParty.obj \
@@ -166,7 +167,7 @@ $(OUT)/DirectDrawSurface.obj : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -GS- -GR-  -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/rijndael -I ./libs/includewin32 -I UmodelTool -I UI
+OPT_MAIN = -GS- -GR-  -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/fbx/include -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/rijndael -I ./libs/includewin32 -I UmodelTool -I UI
 
 DEPENDS = \
 	Core/Core.h \
@@ -493,6 +494,27 @@ DEPENDS = \
 $(OUT_1)/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportPsk.obj" Exporters/ExportPsk.cpp
 
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/ExportFbx.obj : Exporters/ExportFbx.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportFbx.obj" Exporters/ExportFbx.cpp
+	
 DEPENDS = \
 	Core/Core.h \
 	Core/CoreGL.h \

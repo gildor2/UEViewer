@@ -66,6 +66,7 @@
     <ClCompile Include="Viewers\SkelMeshViewer.cpp" />
     <ClCompile Include="Viewers\StatMeshViewer.cpp" />
     <ClCompile Include="Viewers\VertMeshViewer.cpp" />
+    <ClCompile Include="Exporters\ExportFbx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Core.h" />
@@ -131,6 +132,7 @@
     <ClInclude Include="Unreal\UnTypeinfo.h" />
     <ClInclude Include="Unreal\UnUbisoft.h" />
     <ClInclude Include="Viewers\ObjectViewer.h" />
+    <ClInclude Include="Exporters\ExportFbx.h" />
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="UmodelTool\res\umodel.manifest" />

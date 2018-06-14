@@ -90,15 +90,17 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 		byte a = *src++;
 
 		if (column < width - 1 &&							// not on screen edge; NOTE: when i == size-1, col==width-1
-			b == src[0] && g == src[1] && r == src[2] && a == src[3] &&	// next pixel will be the same
-			!(rle && flag && *flag == 254))					// flag overflow
+		        b == src[0] && g == src[1] && r == src[2] && a == src[3] &&	// next pixel will be the same
+		        !(rle && flag && *flag == 254))					// flag overflow
 		{
 			if (!rle || !flag)
 			{
 				// starting new RLE sequence
 				flag = dst++;
 				*flag = 128 - 1;							// will be incremented below
-				*dst++ = b; *dst++ = g; *dst++ = r;			// store RGB
+				*dst++ = b;
+				*dst++ = g;
+				*dst++ = r;			// store RGB
 				if (colorBytes == 4) *dst++ = a;			// store alpha
 			}
 			(*flag)++;										// enqueue one more texel
@@ -123,7 +125,9 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 					flag = dst++;
 					*flag = 255;
 				}
-				*dst++ = b; *dst++ = g; *dst++ = r;			// store RGB
+				*dst++ = b;
+				*dst++ = g;
+				*dst++ = r;			// store RGB
 				if (colorBytes == 4) *dst++ = a;			// store alpha
 				(*flag)++;
 				if (*flag == 127) flag = NULL;				// check for overflow
@@ -367,3 +371,36 @@ void ExportTexture(const UUnrealMaterial *Tex)
 
 	unguard;
 }
+
+const char* GetExportTextureName(const UUnrealMaterial *Tex)
+{
+	// for UTexture3 (UE3+), can check SourceArt for PNG data and save it if available
+	if (Tex->IsA("Texture3"))
+	{
+		// Note: there are several SourceArt texture formats available. We're detecting PNG
+		// by checking for magic value, however it is possible to analyze bPNGCompressed and
+		// ETextureSourceFormat enum to determine exact format.
+		const UTexture3* Tex3 = static_cast<const UTexture3*>(Tex);
+		const FByteBulkData& Bulk = Tex3->SourceArt;
+		if (Bulk.BulkData && memcmp(Bulk.BulkData, "\x89PNG", 4) == 0)
+		{
+			return GetExportFileName(Tex, "%s.png", Tex->Name);
+		}
+	}
+
+	CTextureData TexData;
+	if (Tex->GetTextureData(TexData))
+	{
+		if (GExportDDS && TexData.IsDXT())
+		{
+			return GetExportFileName(Tex, "%s.dds", Tex->Name);
+		}
+	}
+	// For HDR textures use Radiance format
+	if (PixelFormatInfo[TexData.Format].Float)
+	{
+		return GetExportFileName(Tex, "%s.hdr", Tex->Name);
+	}
+	return GetExportFileName(Tex, "%s.tga", Tex->Name);
+}
+

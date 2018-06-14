@@ -29,6 +29,7 @@
     <ClCompile Include="Core\TextContainer.cpp" />
     <ClCompile Include="Exporters\Export3D.cpp" />
     <ClCompile Include="Exporters\Exporters.cpp" />
+    <ClCompile Include="Exporters\ExportFbx.cpp" />
     <ClCompile Include="Exporters\ExportMaterial.cpp" />
     <ClCompile Include="Exporters\ExportMd5.cpp" />
     <ClCompile Include="Exporters\ExportPsk.cpp" />
@@ -97,6 +98,7 @@
     <ClInclude Include="Core\TextContainer.h" />
     <ClInclude Include="Core\Win32Types.h" />
     <ClInclude Include="Exporters\Exporters.h" />
+    <ClInclude Include="Exporters\ExportFbx.h" />
     <ClInclude Include="Exporters\Psk.h" />
     <ClInclude Include="MeshInstance\MeshInstance.h" />
     <ClInclude Include="UI\BaseDialog.h" />
