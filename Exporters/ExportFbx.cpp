@@ -259,7 +259,7 @@ void DetermineUVsToWeld(TArray<int32>& VertRemap, TArray<int32>& UniqueVerts, co
 	TMap<FVector2D, int32> HashedVerts;
 	for (int32 Vertex = 0; Vertex < VertexCount; Vertex++)
 	{
-		CMeshUVFloat& MeshUV = RenderMesh.ExtraUV[TexCoordSourceIndex][Vertex];
+		const CMeshUVFloat& MeshUV = RenderMesh.GetVertexUV(Vertex, TexCoordSourceIndex);
 		const FVector2D& PositionA = *(FVector2D*)&MeshUV;
 
 		const int32* FoundIndex = HashedVerts.Find(PositionA);
@@ -281,7 +281,9 @@ FbxNode* FFbxExporter::ExportStaticMeshToFbx(const CStaticMesh* StaticMesh, int3
 	FbxMesh* Mesh = nullptr;
 	if ((ExportLOD == 0 || ExportLOD == -1) && LightmapUVChannel == -1)
 	{
-		Mesh = *FbxMeshes.Find(StaticMesh);
+		auto MeshPtr = FbxMeshes.Find(StaticMesh);
+		if (MeshPtr)
+			Mesh = *MeshPtr;
 	}
 
 	if (!Mesh)
@@ -465,7 +467,7 @@ FbxNode* FFbxExporter::ExportStaticMeshToFbx(const CStaticMesh* StaticMesh, int3
 			for (int32 FbxVertIndex = 0; FbxVertIndex < UniqueUVs.Num(); FbxVertIndex++)
 			{
 				int32 UnrealVertIndex = UniqueUVs[FbxVertIndex];
-				const FVector2D& TexCoord = *(FVector2D*)&RenderMesh.ExtraUV[TexCoordSourceIndex][UnrealVertIndex];
+				const FVector2D& TexCoord = *(FVector2D*)&RenderMesh.GetVertexUV(UnrealVertIndex, TexCoordSourceIndex);
 				UVDiffuseLayer->GetDirectArray().Add(FbxVector2(TexCoord.X, -TexCoord.Y + 1.0));
 			}
 
@@ -617,7 +619,7 @@ FbxSurfaceMaterial* FFbxExporter::ExportMaterial(UUnrealMaterial* Material)
 	}
 	if (!FillFbxTextureProperty(FbxSurfaceMaterial::sEmissive, Params.Emissive, FbxMaterial))
 	{
-		((FbxSurfaceLambert*)FbxMaterial)->Emissive.Set(FbxDouble3(Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B));
+		//((FbxSurfaceLambert*)FbxMaterial)->Emissive.Set(FbxDouble3(Params.EmissiveColor.R, Params.EmissiveColor.G, Params.EmissiveColor.B));
 	}
 
 	//Always set the ambient to zero since we dont have ambient in unreal we want to avoid default value in DCCs
@@ -684,6 +686,7 @@ void ExportFbxStaticMesh(const CStaticMesh *Mesh)
 
 	FFbxExporter* FbxExporter = FFbxExporter::GetInstance();
 	FbxExporter->CreateDocument();
+	FbxExporter->ExportStaticMesh(Mesh);
 	const char* Filename = GetExportFileName(OriginalMesh, "%s.fbx", OriginalMesh->Name);
 	FbxExporter->WriteToFile(Filename);
 }
