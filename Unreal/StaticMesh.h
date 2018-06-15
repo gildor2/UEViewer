@@ -48,7 +48,7 @@ struct CStaticMeshLod : public CBaseMeshLod
 		}
 		else
 		{
-			return ExtraUV[UVIndex][VertexIndex];
+			return ExtraUV[UVIndex - 1][VertexIndex];
 		}
 	}
 
