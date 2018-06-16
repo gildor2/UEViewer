@@ -499,7 +499,7 @@ FbxNode* FFbxExporter::ExportStaticMeshToFbx(const CStaticMesh* StaticMesh, int3
 			FbxSurfaceMaterial* FbxMaterial = Material ? this->ExportMaterial(Material) : NULL;
 			if (!FbxMaterial)
 			{
-				FbxMaterial = CreateDefaultMaterial();
+				FbxMaterial = CreateDefaultMaterial(PolygonsIndex);
 			}
 			int32 MatIndex = FbxActor->AddMaterial(FbxMaterial);
 
@@ -553,7 +553,7 @@ FbxNode* FFbxExporter::ExportStaticMeshToFbx(const CStaticMesh* StaticMesh, int3
 			FbxSurfaceMaterial* FbxMaterial = Material ? this->ExportMaterial(Material) : NULL;
 			if (!FbxMaterial)
 			{
-				FbxMaterial = CreateDefaultMaterial();
+				FbxMaterial = CreateDefaultMaterial(PolygonsIndex);
 			}
 			FbxActor->AddMaterial(FbxMaterial);
 		}
@@ -565,15 +565,15 @@ FbxNode* FFbxExporter::ExportStaticMeshToFbx(const CStaticMesh* StaticMesh, int3
 	return FbxActor;
 }
 
-FbxSurfaceMaterial* FFbxExporter::CreateDefaultMaterial()
+FbxSurfaceMaterial* FFbxExporter::CreateDefaultMaterial(int Index)
 {
-	// TODO(sbc): the below cast is needed to avoid clang warning.  The upstream
-	// signature in FBX should really use 'const char *'.
-	FbxSurfaceMaterial* FbxMaterial = Scene->GetMaterial(const_cast<char*>("Fbx Default Material"));
+	char DefaultMaterialName[128];
+	appSprintf(DefaultMaterialName, 128, "DefaultMaterial%d", Index);
+	FbxSurfaceMaterial* FbxMaterial = Scene->GetMaterial(DefaultMaterialName);
 
 	if (!FbxMaterial)
 	{
-		FbxMaterial = FbxSurfaceLambert::Create(Scene, "Fbx Default Material");
+		FbxMaterial = FbxSurfaceLambert::Create(Scene, DefaultMaterialName);
 		((FbxSurfaceLambert*)FbxMaterial)->Diffuse.Set(FbxDouble3(0.72, 0.72, 0.72));
 	}
 

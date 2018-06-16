@@ -120,7 +120,7 @@ private:
 	* @param LightmapUVChannel Optional UV channel to export
 	*/
 	FbxNode* ExportStaticMeshToFbx(const CStaticMesh* StaticMesh, int32 ExportLOD, const char* MeshName, FbxNode* FbxActor, int32 LightmapUVChannel = -1);
-	FbxSurfaceMaterial* CreateDefaultMaterial();
+	FbxSurfaceMaterial* CreateDefaultMaterial(int Index);
 	FbxSurfaceMaterial* ExportMaterial(UUnrealMaterial* Material);
 	bool FillFbxTextureProperty(const char *PropertyName, const UUnrealMaterial* Texture, FbxSurfaceMaterial* FbxMaterial);
 
