@@ -411,7 +411,8 @@ static void PrintUsage()
 			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
 			"\n"
 			"Platform selection:\n"
-			"    -ps3            override platform autodetection to PS3\n"
+			"    -ps3            set platform to PS3\n"
+			"    -ps4            set platform to PS4\n"
 			"    -ios            set platform to iOS (iPhone/iPad)\n"
 			"    -android        set platform to Android\n"
 			"\n"
@@ -821,6 +822,7 @@ int main(int argc, char **argv)
 #endif
 			// platform
 			OPT_VALUE("ps3",     GSettings.Startup.Platform, PLATFORM_PS3)
+			OPT_VALUE("ps4",     GSettings.Startup.Platform, PLATFORM_PS4)
 			OPT_VALUE("ios",     GSettings.Startup.Platform, PLATFORM_IOS)
 			OPT_VALUE("android", GSettings.Startup.Platform, PLATFORM_ANDROID)
 			// compression

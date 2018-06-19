@@ -629,6 +629,7 @@ void appSetRootDirectory2(const char *filename)
 				"PC",
 				"XBox360",
 				"PS3",
+				"PS4",
 				"iPhone",
 				"Android",
 			};

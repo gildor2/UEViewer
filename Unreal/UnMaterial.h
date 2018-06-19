@@ -199,6 +199,9 @@ struct CTextureData
 #if SUPPORT_XBOX360
 	bool DecodeXBox360(int MipLevel);
 #endif
+#if SUPPORT_PS4
+	bool DecodePS4(int MipLevel);
+#endif
 };
 
 

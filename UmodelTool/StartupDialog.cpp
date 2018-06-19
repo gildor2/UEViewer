@@ -123,6 +123,7 @@ void UIStartupDialog::InitUI()
 				+ NewControl(UIRadioButton, "PC", PLATFORM_PC)
 				+ NewControl(UIRadioButton, "XBox360", PLATFORM_XBOX360)
 				+ NewControl(UIRadioButton, "PS3", PLATFORM_PS3)
+				+ NewControl(UIRadioButton, "PS4", PLATFORM_PS4)
 				+ NewControl(UIRadioButton, "iOS", PLATFORM_IOS)
 				+ NewControl(UIRadioButton, "Android", PLATFORM_ANDROID)
 			]

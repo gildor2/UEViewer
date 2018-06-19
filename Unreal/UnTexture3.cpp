@@ -1034,6 +1034,21 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 #endif // SUPPORT_XBOX360
 
+#if SUPPORT_PS4
+	if (TexData.Platform == PLATFORM_PS4)
+	{
+		for (int MipLevel = 0; MipLevel < TexData.Mips.Num(); MipLevel++)
+		{
+			if (!TexData.DecodePS4(MipLevel))
+			{
+				// failed to decode this mip
+				TexData.Mips.RemoveAt(MipLevel, TexData.Mips.Num() - MipLevel);
+				break;
+			}
+		}
+	}
+#endif // SUPPORT_PS4
+
 	return (TexData.Mips.Num() > 0);
 
 	unguardf("%s", Name);

@@ -23,7 +23,7 @@
 #	define PROFILE_DDS(cmd)
 #endif
 
-//#define DEBUG_XBOX360_TEX		1
+//#define DEBUG_PLATFORM_TEX		1
 
 /*-----------------------------------------------------------------------------
 	Texture decompression
@@ -491,7 +491,7 @@ inline int appLog2(int n)
 //		logBpb	log2(bytesPerBlock)
 // Reference:
 //		XGAddress2DTiledOffset() from XDK
-static unsigned GetTiledOffset(int x, int y, int width, int logBpb)
+static unsigned GetXbox360TiledOffset(int x, int y, int width, int logBpb)
 {
 	assert(width <= 8192);
 	assert(x < width);
@@ -532,7 +532,7 @@ static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWi
 	{
 		for (int x = 0; x < originalBlockWidth; x++)			// process only a part of image when originalWidth < tiledWidth
 		{
-			unsigned swzAddr = GetTiledOffset(x, y, blockWidth, logBpp);	// do once for whole block
+			unsigned swzAddr = GetXbox360TiledOffset(x, y, blockWidth, logBpp);	// do once for whole block
 			assert(swzAddr < numImageBlocks);
 			int sy = swzAddr / blockWidth;
 			int sx = swzAddr % blockWidth;
@@ -588,7 +588,7 @@ static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiled
 	if ((tiledBlockWidth >= originalBlockWidth * 2) && (originalWidth == 16))
 	{
 		sxOffset = originalBlockWidth;
-#if DEBUG_XBOX360_TEX
+#if DEBUG_PLATFORM_TEX
 		appPrintf("sxOffset=%d\n", sxOffset);
 #endif
 	}
@@ -600,7 +600,7 @@ static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiled
 	{
 		for (int dx = 0; dx < originalBlockWidth; dx++)
 		{
-			unsigned swzAddr = GetTiledOffset(dx + sxOffset, dy, tiledBlockWidth, logBpp);	// do once for whole block
+			unsigned swzAddr = GetXbox360TiledOffset(dx + sxOffset, dy, tiledBlockWidth, logBpp);	// do once for whole block
 			assert(swzAddr < numImageBlocks);
 			int sy = swzAddr / tiledBlockWidth;
 			int sx = swzAddr % tiledBlockWidth;
@@ -618,7 +618,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 {
 	guard(CTextureData::DecodeXBox360);
 
-#if DEBUG_XBOX360_TEX
+#if DEBUG_PLATFORM_TEX
 	if (MipLevel == 0)
 	{
 		appPrintf("Texture %s in format %s has %d mips:\n", Obj->Name, OriginalFormatName, Mips.Num());
@@ -628,7 +628,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 			appPrintf("%d: %d x %d, 0x%X bytes\n", i, Mip.USize, Mip.VSize, Mip.DataSize);
 		}
 	}
-#endif // DEBUG_XBOX360_TEX
+#endif // DEBUG_PLATFORM_TEX
 
 	if (!Mips.IsValidIndex(MipLevel))
 		return false;
@@ -655,7 +655,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 	int TotalBlocks = Mip.DataSize / Info.BytesPerBlock;
 
 	float bpp = (float)Mip.DataSize / (USize1 * VSize1) * Info.BlockSizeX * Info.BlockSizeY;	// used for validation only
-#if DEBUG_XBOX360_TEX
+#if DEBUG_PLATFORM_TEX
 	appPrintf("DecodeXBox360: %s'%s': %d x %d (%d x %d aligned), %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
 		Mip.USize, Mip.VSize, USize1, VSize1, OriginalFormatName, Info.BytesPerBlock, bpp, Mip.DataSize);
 #endif
@@ -663,7 +663,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 	if (UBlockSize * VBlockSize > TotalBlocks)
 	{
 //		VSize1 = TotalBlocks / UBlockSize * Info.BlockSizeY;
-#if DEBUG_XBOX360_TEX
+#if DEBUG_PLATFORM_TEX
 		appPrintf("... can't fit aligned texture to a tile, dropping mip\n");
 #endif
 		return false;
@@ -708,7 +708,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 	Mip.ReleaseData();
 	Mip.CompressedData = buf;
 	Mip.ShouldFreeData = true;			// data were allocated here ...
-	Mip.DataSize = (Mip.USize / Info.BlockSizeX) * (Mip.VSize / Info.BlockSizeY) * Info.BytesPerBlock; // essential for exporting
+	Mip.DataSize = max(Mip.USize / Info.BlockSizeX, 1) * max(Mip.VSize / Info.BlockSizeY, 1) * Info.BytesPerBlock; // essential for exporting
 
 	return true;	// no error
 
@@ -716,3 +716,125 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 }
 
 #endif // SUPPORT_XBOX360
+
+#if SUPPORT_PS4
+
+// Reference code taken from this forum thread: http://www.gildor.org/smf/index.php/topic,6221.0.html
+
+static void map_block_position(int x, int y, int w, int bx, int& xout, int& yout)
+{
+	int by = bx / 2;
+	int ibx = x / bx;
+	int iby = y / by;
+	int obx = x % bx;
+	int oby = y % by;
+	int block_count_x = w / bx;
+	int bl2s = 2 * block_count_x;
+	int ll = ibx + iby * block_count_x;
+	int ll2 = ll % bl2s;
+	int ll22 = ll2 / 2 + (ll2 % 2) * block_count_x;
+	int llr = ll / bl2s * bl2s + ll22;
+
+	int rbx = llr % block_count_x;
+	int rby = llr / block_count_x;
+
+	xout = rbx * bx + obx;
+	yout = rby * by + oby;
+}
+
+static unsigned GetPS4TiledOffset(int x, int y, int width)
+{
+	int mx, my;
+	map_block_position(x, y, width, 2, mx, my);
+	map_block_position(mx, my, width, 4, mx, my);
+	map_block_position(mx, my, width, 8, mx, my);
+	return mx + my * width;
+}
+
+static void UntileCompressedPS4Texture(const byte *src, byte *dst, int width, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+{
+	guard(UntileCompressedPS4Texture);
+
+	int blockWidth     = width / blockSizeX;			// width of image in blocks
+	int blockHeight    = height / blockSizeY;			// height of image in blocks
+
+	// Image is encoded as 8x8 block min
+	int blockWidth2 = max(blockWidth, 8);
+	int blockHeight2 = max(blockHeight, 8);
+
+	// iterate image blocks
+	for (int sy = 0; sy < blockHeight2; sy++)
+	{
+		for (int sx = 0; sx < blockWidth2; sx++)
+		{
+			unsigned swzAddr = GetPS4TiledOffset(sx, sy, blockWidth2);	// do once for whole block
+			int dy = swzAddr / blockWidth2;
+			int dx = swzAddr % blockWidth2;
+			if (dx >= blockWidth || dy >= blockHeight)
+			{
+				// We're sampling over source image coordinates which could be
+				// larger than target image, so perform clamping
+				continue;
+			}
+
+			byte       *pDst = dst + (dy * blockWidth + dx) * bytesPerBlock;
+			const byte *pSrc = src + (sy * blockWidth2 + sx) * bytesPerBlock;
+			memcpy(pDst, pSrc, bytesPerBlock);
+		}
+	}
+
+	unguard;
+}
+
+
+bool CTextureData::DecodePS4(int MipLevel)
+{
+	guard(CTextureData::DecodePS4);
+
+	if (!Mips.IsValidIndex(MipLevel))
+		return false;
+	CMipMap& Mip = Mips[MipLevel];
+
+	const CPixelFormatInfo &Info = PixelFormatInfo[Format];
+	if (Info.BytesPerBlock == 0)
+	{
+#if DEBUG_PLATFORM_TEX
+		appPrintf("DecodePS4: ignoring format %s\n", Info.Name);
+#endif
+		return true;
+	}
+
+	int UBlockSize = Mip.USize / Info.BlockSizeX;
+	int VBlockSize = Mip.VSize / Info.BlockSizeY;
+	int TotalBlocks = Mip.DataSize / Info.BytesPerBlock;
+
+#if DEBUG_PLATFORM_TEX
+	float bpp = (float)Mip.DataSize / (Mip.USize * Mip.VSize) * Info.BlockSizeX * Info.BlockSizeY;	// used for validation only
+	appPrintf("DecodePS4: %s'%s': %d x %d, %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
+		Mip.USize, Mip.VSize, OriginalFormatName, Info.BytesPerBlock, bpp, Mip.DataSize);
+#endif
+
+	if (UBlockSize * VBlockSize > TotalBlocks)
+	{
+#if DEBUG_PLATFORM_TEX
+		appPrintf("... can't untile PS4 texture, dropping mip\n");
+#endif
+		return false;
+	}
+
+	// untile and unalign
+	byte *buf = (byte*)appMalloc(Mip.DataSize);
+	UntileCompressedPS4Texture(Mip.CompressedData, buf, Mip.USize, Mip.VSize, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
+
+	// release old CompressedData
+	Mip.ReleaseData();
+	Mip.CompressedData = buf;
+	Mip.ShouldFreeData = true;			// data were allocated here ...
+	Mip.DataSize = max(Mip.USize / Info.BlockSizeX, 1) * max(Mip.VSize / Info.BlockSizeY, 1) * Info.BytesPerBlock; // essential for exporting
+
+	return true;	// no error
+
+	unguard;
+}
+
+#endif // SUPPORT_PS4

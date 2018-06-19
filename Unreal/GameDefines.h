@@ -36,10 +36,11 @@
 #define UC1				1
 #define UC2				1
 
-// requires UNREAL3
+// platforms, UE3+
 #define SUPPORT_XBOX360	1		// XBox360 support
 #define SUPPORT_IPHONE	1		// iPhone/iPad support
 #define SUPPORT_ANDROID	1		// Android support
+#define SUPPORT_PS4		1		// Playstation 4 support
 
 #define ENDWAR			1		// EndWar
 #define BIOSHOCK		1		//!! requires UNREAL3 and TRIBES3

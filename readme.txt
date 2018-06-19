@@ -199,6 +199,10 @@ detex
 
 Changes
 ~~~~~~~
+19.06.2018
+- added Playstation 4 platform support, activated with -ps4 command line or in GUI; credit for texture
+  decoding is m0xf (http://www.gildor.org/smf/index.php/topic,6221.0.html)
+
 14.06.2018
 - added Rocket League support, contributed by AltimorTASDK (https://github.com/gildor2/UModel/pull/73)
 
