@@ -95,7 +95,7 @@ static void ShowNormals(const CVec3* Verts, const CVec4* Normals, const CVec3* T
 	glEnd();
 }
 
-void DrawBoxMesh(GLint aNormal, GLint aTangent)
+static void DrawBoxMesh(GLint aNormal, GLint aTangent)
 {
 #define A 100
 // vertex
@@ -176,7 +176,7 @@ void DrawBoxMesh(GLint aNormal, GLint aTangent)
 }
 
 
-void DrawSphereMesh(GLint aNormal, GLint aTangent)
+static void DrawSphereMesh(GLint aNormal, GLint aTangent)
 {
 	// 'quality' corresponds to number of segments in 180 degrees, we have 180x360 degrees unwrapped sphere
 	const int quality = 32;
@@ -407,6 +407,7 @@ void CMaterialViewer::Draw2D()
 		}
 	}
 
+	// UE1 and UE2
 	if (Object->IsA("BitmapMaterial"))
 	{
 		const UBitmapMaterial *Tex = static_cast<UBitmapMaterial*>(Object);
@@ -417,9 +418,35 @@ void CMaterialViewer::Draw2D()
 					 S_GREEN "Format  :" S_WHITE " %s",
 					 Tex->USize, Tex->VSize,
 					 fmt ? fmt : "???");
+
+		if (Object->IsA("Texture"))
+		{
+			const UTexture* Tex2 = static_cast<UTexture*>(Object);
+			int width = 0, height = 0;
+			// There are some textures which has mips with no data, display a message about stripped texture size.
+			// Example: --ut2 DemoPlayerSkins.utx -obj=DemoSkeleton
+			for (int i = 0; i < Tex2->Mips.Num(); i++)
+			{
+				const FMipmap& Mip = Tex2->Mips[i];
+				if (Mip.DataArray.Num())
+				{
+					width = Mip.USize;
+					height = Mip.VSize;
+					break;
+				}
+			}
+			if (width != Tex2->USize || height != Tex2->VSize)
+			{
+				if (width && height)
+					DrawTextLeft(S_RED"Packaged size: %dx%d", width, height);
+				else
+					DrawTextLeft(S_RED"Bad texture (no mipmaps)");
+			}
+		}
 	}
 
 #if UNREAL3
+	// UE3 and UE4
 	if (Object->IsA("Texture2D"))
 	{
 		const UTexture2D *Tex = static_cast<UTexture2D*>(Object);
@@ -438,23 +465,23 @@ void CMaterialViewer::Draw2D()
 		//!! todo: use CTextureData for this to avoid any code copy-pastes
 		//!! also, display real texture format (TPF_...), again - with CTextureData use
 		const TArray<FTexture2DMipMap> *MipsArray = Tex->GetMipmapArray();
-		const FTexture2DMipMap *Mip = NULL;
+		int width = 0, height = 0;
 		for (int i = 0; i < MipsArray->Num(); i++)
-			if ((*MipsArray)[i].Data.BulkData)
+		{
+			const FTexture2DMipMap& Mip = (*MipsArray)[i];
+			if (Mip.Data.BulkData)
 			{
-				Mip = &(*MipsArray)[i];
+				width = Mip.SizeX;
+				height = Mip.SizeY;
 				break;
 			}
-		int width = 0, height = 0;
-		if (Mip)
-		{
-			width  = Mip->SizeX;
-			height = Mip->SizeY;
 		}
 		if (width != Tex->SizeX || height != Tex->SizeY)
 		{
 			if (width && height)
 				DrawTextLeft(S_RED"Cooked size: %dx%d", width, height);
+			else if (Tex->SourceArt.BulkData && Tex->Source.bPNGCompressed)
+				DrawTextLeft("Texture in PNG format");
 			else
 				DrawTextLeft(S_RED"Bad texture (no mipmaps)");
 		}
@@ -593,7 +620,7 @@ inline void FlushProps()
 	memset(linkUsed, 0, sizeof(linkUsed));
 	for (int i = savedFirstLink; i < lastLink; i++)
 	{
-		//!! find duplicates
+		// find duplicates
 		if (linkUsed[i]) continue;		// already dumped
 
 		// find same properties
@@ -654,7 +681,6 @@ static void PropEnum(int value, const char *name, const char *EnumName)
 }
 
 
-//?? rename indent -> level
 static void OutlineMaterial(UObject *Obj, int indent)
 {
 	guard(OutlineMaterial);

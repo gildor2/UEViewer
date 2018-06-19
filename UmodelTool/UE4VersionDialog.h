@@ -36,7 +36,8 @@ public:
 					+NewControl(UILabel, "is used for this game.")
 					+NewControl(UISpacer)
 					+NewControl(UICombobox)
-					.SetCallback(BIND_MEM_CB(&UIUE4VersionDialog::EngineSelected, this))
+					.SetCallback(BIND_MEMBER(&UIUE4VersionDialog::EngineSelected, this))
+//					.SetCallback(BIND_LAMBDA([this]() { OkButton->Enable(true); })) -- error in VS2013
 					.Expose(SelectVersionCombo)
 					+NewControl(UISpacer)
 					+NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)

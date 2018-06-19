@@ -20,6 +20,8 @@ protected:
 	UILabel*	ObjectsLabel;
 	UIProgressBar* ProgressBar;
 
+	int			lastTick;
+
 	virtual void InitUI();
 };
 

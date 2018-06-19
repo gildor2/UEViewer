@@ -1,8 +1,12 @@
 #ifndef __UMODEL_SETINGS_H__
 #define __UMODEL_SETINGS_H__
 
-struct UmodelSettings
+#include "TypeInfo.h"
+
+struct CStartupSettings
 {
+	DECLARE_STRUCT(CStartupSettings);
+
 	FString			GamePath;
 	int				GameOverride;
 
@@ -20,43 +24,81 @@ struct UmodelSettings
 	int				PackageCompression;
 	int				Platform;
 
-	// export options
+	BEGIN_PROP_TABLE
+		PROP_STRING(GamePath)
+		PROP_INT(GameOverride)
+		PROP_BOOL(UseSkeletalMesh)
+		PROP_BOOL(UseAnimation)
+		PROP_BOOL(UseStaticMesh)
+		PROP_BOOL(UseTexture)
+		PROP_BOOL(UseLightmapTexture)
+		PROP_BOOL(UseSound)
+		PROP_BOOL(UseScaleForm)
+		PROP_BOOL(UseFaceFx)
+		PROP_INT(PackageCompression)
+		PROP_INT(Platform)
+	END_PROP_TABLE
+
+	CStartupSettings()
+	{
+		Reset();
+	}
+
+	void SetPath(const char* path);
+
+	void Reset();
+};
+
+struct CExportSettings
+{
+	DECLARE_STRUCT(CExportSettings);
+
 	FString			ExportPath;
 	bool			ExportMd5Mesh;
 
-	UmodelSettings()
+	BEGIN_PROP_TABLE
+		PROP_STRING(ExportPath)
+		PROP_BOOL(ExportMd5Mesh)
+	END_PROP_TABLE
+
+	CExportSettings()
 	{
-		SetDefaults();
+		Reset();
 	}
 
-	void SetDefaults()
-	{
-		//!! WARNING: if this function will be called from anything else but constructor,
-		//!! should empty string values as well
-		assert(GamePath.IsEmpty());
+	void SetPath(const char* path);
 
-		GameOverride = GAME_UNKNOWN;
-		GamePath = "";
-
-		UseSkeletalMesh = true;
-		UseAnimation = true;
-		UseStaticMesh = true;
-		UseTexture = true;
-		UseLightmapTexture = true;
-
-		UseSound = false;
-		UseScaleForm = false;
-		UseFaceFx = false;
-
-		PackageCompression = 0;
-		Platform = PLATFORM_UNKNOWN;
-
-		// export options
-
-		ExportMd5Mesh = false;
-	}
+	void Reset();
+	void Apply();
 };
 
-extern UmodelSettings GSettings;
+struct CUmodelSettings
+{
+	DECLARE_STRUCT(CUmodelSettings);
+
+	CStartupSettings Startup;
+	CExportSettings  Export;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(Export, CExportSettings)
+//		PROP_STRUC(Startup, CStartupSettings) //!! remove
+	END_PROP_TABLE
+
+	CUmodelSettings()
+	{
+		Reset();
+	}
+
+	void Reset()
+	{
+		Startup.Reset();
+		Export.Reset();
+	}
+
+	void Save();
+	void Load();
+};
+
+extern CUmodelSettings GSettings;
 
 #endif // __UMODEL_SETINGS_H__

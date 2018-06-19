@@ -15,9 +15,17 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 
 	if (!Mat) return;
 
+	TArray<UUnrealMaterial*> AllTextures;
+	Mat->AppendReferencedTextures(AllTextures, false);
+
 	CMaterialParams Params;
 	Mat->GetParams(Params);
-	if (Params.IsNull() || Params.Diffuse == Mat) return;	// empty/unknown material, or material itself is a texture
+	if ((Params.IsNull() || Params.Diffuse == Mat) && AllTextures.Num() == 0)
+	{
+		// empty/unknown material, or material itself is a texture
+		appPrintf("Ignoring %s'%s' due to empty parameters\n", Mat->GetClassName(), Mat->Name);
+		return;
+	}
 
 	FArchive *Ar = CreateExportArchive(Mat, "%s.mat", Mat->Name);
 	if (!Ar) return;
@@ -40,9 +48,7 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 
 	// collect all textures - already exported ones and everything else
 	TArray<UUnrealMaterial*> ExportedTextures;
-	TArray<UUnrealMaterial*> AllTextures;
 	Params.AppendAllTextures(ExportedTextures);
-	Mat->AppendReferencedTextures(AllTextures, false);
 	// now, export only thise which weren't exported yet
 	int numOtherTextures = 0;
 	for (int i = 0; i < AllTextures.Num(); i++)

@@ -143,6 +143,17 @@ sometimes with bad. Umodel will never export full materials (GLSL script etc). D
 too much from this feature.
 
 
+Audio export
+~~~~~~~~~~~~
+Audio assets can't be previewed in UModel, it doesn't have any sound library built-in. However
+you can export sounds. By default, sound loading is disabled in options, so if you'll try to
+export any audio object you'll get nothing. To enable audio loading, you should either pass
+option "-sounds", or check "sounds" option in UModel startup options window. Please note that
+despite you may think that package contains audio, there are many objects in UE3 and UE4 which
+are related to sound rendering, but they do not contain sounds themselves. For UE3, sound
+objects are SoundNodeWave, and SoundWave in UE4. In older versions of UE they have name Sound.
+
+
 Used third-party libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 SDL - Simple DirectMedia Layer
@@ -153,6 +164,10 @@ zlib data compression library
   (c) Jean-loup Gailly and Mark Adler
   http://zlib.net/
 
+libpng
+  (c) Glenn Randers-Pehrson
+  http://www.libpng.org/
+
 LZO data compression library
   (c) Markus F.X.J. Oberhumer
   http://www.oberhumer.com/opensource/lzo/
@@ -160,6 +175,10 @@ LZO data compression library
 libmspack - a library for Microsoft compression formats
   (c) Stuart Caie
   http://www.cabextract.org.uk/libmspack/
+
+LZ4
+  (c) Yann Collet
+  http://www.lz4.org
 
 NVIDIA Texture Tools
   (c) NVIDIA
@@ -177,13 +196,37 @@ detex
   (c) Harm Hanemaaijer
   https://github.com/hglm/detex
 
-LZ4
-  (c) Yann Collet
-  http://www.lz4.org
-
 
 Changes
 ~~~~~~~
+14.06.2018
+- added Rocket League support, contributed by AltimorTASDK (https://github.com/gildor2/UModel/pull/73)
+
+06.06.2018
+- added PF_BC4 texture format support
+- fixed a bug: materials and referenced textures weren't exported when UModel failed to recognize at least one
+  texture parameter
+
+04.06.2018
+- added State of Decay 2 SkeletalMesh support, requires game override (-game=sod2)
+- linux: saving all files to the user's home (~/) directory by default
+
+29.05.2018
+- fixed incompatibilities with Ark: Survival Evolved and Dauntless, both games requires explicit game override
+
+19.05.2018
+- implemented support for loading of UE3 and UE4 png-compressed textures
+
+16.05.2018
+- added functionality which finds all animations for currectly opened UE4 SkeletalMesh, accessible with Ctrl+A
+  key or via "SkeletalMesh | Find animations" menu
+
+13.05.2018
+- added viewer menu with object-specific actions
+
+01.05.2018
+- added UE4.20 pak file support
+
 20.04.2018
 - added support for loading UE4 editor SkeletalMesh assets
 

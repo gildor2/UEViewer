@@ -1019,8 +1019,8 @@ struct FStaticLODModel4
 		if (!StripFlags.IsEditorDataStripped())
 			Lod.RawPointIndices.Skip(Ar);
 
-#if LAWBREAKERS
-		if (Ar.Game == GAME_Lawbreakers) goto no_import_vertex_map;
+#if LAWBREAKERS || SOD2
+		if (Ar.Game == GAME_Lawbreakers || Ar.Game == GAME_StateOfDecay2) goto no_import_vertex_map;
 #endif
 
 		if (Ar.ArVer >= VER_UE4_ADD_SKELMESH_MESHTOIMPORTVERTEXMAP)
@@ -1094,6 +1094,14 @@ struct FStaticLODModel4
 				{
 					appError("Unsupported: extra SkelMesh vertex influences (old mesh format)");
 				}
+
+#if SOD2
+				if (Ar.Game == GAME_StateOfDecay2)
+				{
+					Ar.Seek(Ar.Tell() + 8);
+					return Ar;
+				}
+#endif // SOD2
 
 				if (!StripFlags.IsClassDataStripped(1))
 					Ar << Lod.AdjacencyIndexBuffer;
@@ -1549,11 +1557,11 @@ struct FDistanceFieldVolumeData
 
 struct FStaticMeshSection4
 {
-	int				MaterialIndex;
-	int				FirstIndex;
-	int				NumTriangles;
-	int				MinVertexIndex;
-	int				MaxVertexIndex;
+	int32			MaterialIndex;
+	int32			FirstIndex;
+	int32			NumTriangles;
+	int32			MinVertexIndex;
+	int32			MaxVertexIndex;
 	bool			bEnableCollision;
 	bool			bCastShadow;
 
@@ -1563,6 +1571,10 @@ struct FStaticMeshSection4
 		Ar << S.FirstIndex << S.NumTriangles;
 		Ar << S.MinVertexIndex << S.MaxVertexIndex;
 		Ar << S.bEnableCollision << S.bCastShadow;
+#if DAUNTLESS
+		if (Ar.Game == GAME_Dauntless) Ar.Seek(Ar.Tell()+8); // 8 zero-filled bytes here
+#endif
+		//?? Has editor-only data?
 		return Ar;
 	}
 };
@@ -1664,6 +1676,10 @@ struct FStaticMeshLODModel4
 	{
 		guard(FStaticMeshLODModel4<<);
 
+#if DEBUG_STATICMESH
+		DUMP_ARC_BYTES(Ar, 2, "StripFlags");
+#endif
+
 		FStripDataFlags StripFlags(Ar);
 
 		Ar << Lod.Sections;
@@ -1679,15 +1695,30 @@ struct FStaticMeshLODModel4
 
 		Ar << Lod.MaxDeviation;
 
-		if (!StripFlags.IsDataStrippedForServer())
+		enum StripFlags
+		{
+			AdjacencyDataStripFlag = 1,
+			// UE4.20+
+			MinLodDataStripFlag = 2,			// used to drop some LODs
+			ReversedIndexBufferStripFlag = 4,
+		};
+
+		if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(MinLodDataStripFlag))
 		{
 			Ar << Lod.PositionVertexBuffer;
 			Ar << Lod.VertexBuffer;
 			Ar << Lod.ColorVertexBuffer;
 			Ar << Lod.IndexBuffer;
-			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE) Ar << Lod.ReversedIndexBuffer;
+
+			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(ReversedIndexBufferStripFlag))
+			{
+				Ar << Lod.ReversedIndexBuffer;
+			}
 			Ar << Lod.DepthOnlyIndexBuffer;
-			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE) Ar << Lod.ReversedDepthOnlyIndexBuffer;
+			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(ReversedIndexBufferStripFlag))
+			{
+				Ar << Lod.ReversedDepthOnlyIndexBuffer;
+			}
 			/// reference for VER_UE4_SOUND_CONCURRENCY_PACKAGE:
 			/// 25.09.2015 - 948c1698
 
@@ -1703,7 +1734,7 @@ struct FStaticMeshLODModel4
 			if (!StripFlags.IsEditorDataStripped())
 				Ar << Lod.WireframeIndexBuffer;
 
-			if (!StripFlags.IsClassDataStripped(1))
+			if (!StripFlags.IsClassDataStripped(AdjacencyDataStripFlag))
 				Ar << Lod.AdjacencyIndexBuffer;
 
 			if (Ar.Game >= GAME_UE4(16))
@@ -1977,18 +2008,26 @@ void UStaticMesh4::ConvertMesh()
 
 	// convert lods
 	Mesh->Lods.Empty(Lods.Num());
-	for (int lod = 0; lod < Lods.Num(); lod++)
+	for (int lodIndex = 0; lodIndex < Lods.Num(); lodIndex++)
 	{
 		guard(ConvertLod);
 
-		const FStaticMeshLODModel4 &SrcLod = Lods[lod];
-		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
+		const FStaticMeshLODModel4 &SrcLod = Lods[lodIndex];
 
 		int NumTexCoords = SrcLod.VertexBuffer.NumTexCoords;
 		int NumVerts     = SrcLod.PositionVertexBuffer.Verts.Num();
 
+		if (NumVerts == 0 && NumTexCoords == 0 && lodIndex < Lods.Num()-1)
+		{
+			// UE4.20+, see MinLodDataStripFlag
+			appPrintf("Lod #%d is stripped, skipping ...\n", lodIndex);
+			continue;
+		}
+
 		if (NumTexCoords > MAX_MESH_UV_SETS)
 			appError("StaticMesh has %d UV sets", NumTexCoords);
+
+		CStaticMeshLod *Lod = new (Mesh->Lods) CStaticMeshLod;
 
 		Lod->NumTexCoords = NumTexCoords;
 		Lod->HasNormals   = true;
@@ -2030,7 +2069,7 @@ void UStaticMesh4::ConvertMesh()
 		Lod->Indices.Initialize(&SrcLod.IndexBuffer.Indices16, &SrcLod.IndexBuffer.Indices32);
 		if (Lod->Indices.Num() == 0) appError("This StaticMesh doesn't have an index buffer");
 
-		unguardf("lod=%d", lod);
+		unguardf("lod=%d", lodIndex);
 	}
 
 	Mesh->FinalizeMesh();

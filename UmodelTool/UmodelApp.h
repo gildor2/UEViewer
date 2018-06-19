@@ -28,6 +28,9 @@ public:
 	virtual void ProcessKey(int key, bool isDown);
 
 #if RENDERING
+	// Create visualizer for object. If 'test' is true, then visualizer will not be created, but
+	// possibility of creation will be validated, and result of the function will be 'true' if
+	// object can be viewed, or 'false' otherwise.
 	bool CreateVisualizer(UObject *Obj, bool test = false);
 	// dir = 1 - forward direction for search, dir = -1 - backward.
 	// When forceVisualizer is true, dummy visualizer will be created if no supported object found
@@ -46,7 +49,7 @@ public:
 #endif // RENDERING
 
 #if HAS_UI
-	bool ShowStartupDialog(UmodelSettings& settings);
+	bool ShowStartupDialog(CStartupSettings& settings);
 	bool ShowPackageUI();
 	void SetPackage(UnPackage* package);
 	void ShowErrorDialog();
@@ -54,39 +57,24 @@ public:
 	int ShowUE4UnversionedPackageDialog(int verMin, int verMax);
 	FString ShowUE4AesKeyDialog();
 	#endif
-	// menu callbacks
-	void PrevObject()
-	{
-		FindObjectAndCreateVisualizer(-1);
-	}
-	void NextObject()
-	{
-		FindObjectAndCreateVisualizer(1);
-	}
-	void TakeScreenshot1()
-	{
-		DoScreenshot = 1;			// regular screenshot
-	}
-	void TakeScreenshot2()
-	{
-		DoScreenshot = 2;			// screenshot with alpha
-	}
-	void ExportObject()
-	{
-		if (Viewer) Viewer->Export();
-	}
 #endif // HAS_UI
 
+protected:
 #if HAS_MENU
 	UIMenu*		MainMenu;
+	UIMenuItem*	ObjectMenu;
+	void CreateMenu();
+	void UpdateObjectMenu();
 	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
 
+	int			ObjIndex;			// index of the current object in UObject::GObjObjects array
+	int			DoScreenshot;
+
+public:
 	bool		GuiShown;
 #if RENDERING
 	CObjectViewer *Viewer;			// used from GlWindow callbacks
-	int			ObjIndex;			// index of the current object in UObject::GObjObjects array
-	int			DoScreenshot;
 	bool		ShowMeshes;
 	bool		ShowMaterials;
 #endif

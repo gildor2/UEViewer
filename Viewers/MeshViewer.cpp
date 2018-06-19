@@ -7,6 +7,9 @@
 #include "../MeshInstance/MeshInstance.h"
 #include "MeshCommon.h"
 
+#if HAS_UI
+#include "BaseDialog.h"
+#endif
 
 CMeshViewer::~CMeshViewer()
 {
@@ -116,6 +119,31 @@ void CMeshViewer::ShowHelp()
 	DrawKeyHelp("M", "colorize materials");
 }
 
+
+#if HAS_UI
+
+UIMenuItem* CMeshViewer::GetObjectMenu(UIMenuItem* menu)
+{
+	if (!menu)
+	{
+		menu = &NewSubmenu("Mesh");
+	}
+	else
+	{
+		menu->Add(NewMenuSeparator());
+	}
+
+	(*menu)
+	[
+		NewMenuCheckbox("Show normals\tN", &DrawFlags, DF_SHOW_NORMALS)
+		+NewMenuCheckbox("Wireframe\tW", &Wireframe)
+		+NewMenuCheckbox("Material IDs\tM", &Inst->bColorMaterials)
+	];
+
+	return menu;
+}
+
+#endif // HAS_UI
 
 void CMeshViewer::ProcessKey(int key)
 {

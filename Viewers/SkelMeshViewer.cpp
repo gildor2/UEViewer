@@ -12,7 +12,14 @@
 #include "UnMesh4.h"
 #include "SkeletalMesh.h"
 
+#if HAS_UI
+#include "BaseDialog.h"
+#include "../UmodelTool/ProgressDialog.h"
+#endif
+
 #include "Exporters/Exporters.h"
+#include "UnPackage.h"
+#include "PackageUtils.h"
 
 
 #define TEST_ANIMS			1
@@ -57,6 +64,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 ,	ShowLabels(false)
 ,	ShowAttach(false)
 ,	ShowUV(false)
+,	bIsUE4Mesh(false)
 {
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
 	SkelInst->SetMesh(Mesh);
@@ -82,8 +90,10 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 	{
 		// UE4 SkeletalMesh has USkeleton reference, which collects all compatible animations in its PostLoad method
 		const USkeletalMesh4* OriginalMesh = static_cast<USkeletalMesh4*>(Mesh->OriginalMesh);
-		if (OriginalMesh->Skeleton)
-			SkelInst->SetAnim(OriginalMesh->Skeleton->ConvertedAnim);
+		bIsUE4Mesh = true;
+		Skeleton = OriginalMesh->Skeleton;
+		if (Skeleton)
+			SkelInst->SetAnim(Skeleton->ConvertedAnim);
 	}
 #endif // UNREAL4
 	Inst = SkelInst;
@@ -292,11 +302,10 @@ void CSkelMeshViewer::Draw2D()
 	}
 
 #if UNREAL4
-	if (Mesh->OriginalMesh->IsA("SkeletalMesh4"))
+	if (bIsUE4Mesh)
 	{
-		USkeletalMesh4* Mesh4 = static_cast<USkeletalMesh4*>(Mesh->OriginalMesh);
-		if (Mesh4->Skeleton)
-			DrawTextLeft(S_GREEN"Skeleton: " S_WHITE "%s", Mesh4->Skeleton->Name);
+		if (Skeleton)
+			DrawTextLeft(S_GREEN"Skeleton: " S_WHITE "%s", Skeleton->Name);
 		else
 			DrawTextBottomLeft(S_RED"WARNING: no skeleton, animation will not work!");
 	}
@@ -502,11 +511,41 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("A",      "show attach sockets");
 	DrawKeyHelp("F",      "focus camera on mesh");
 	DrawKeyHelp("Ctrl+B", "dump skeleton to console");
-	DrawKeyHelp("Ctrl+A", "cycle mesh animation sets");
+	DrawKeyHelp("Ctrl+A", bIsUE4Mesh ? "find animations (UE4)" : "cycle mesh animation sets");
 	DrawKeyHelp("Ctrl+R", "toggle animation translaton mode");
 	DrawKeyHelp("Ctrl+T", "tag/untag mesh");
 	DrawKeyHelp("Ctrl+U", "display UV");
 }
+
+
+#if HAS_UI
+
+UIMenuItem* CSkelMeshViewer::GetObjectMenu(UIMenuItem* menu)
+{
+	assert(!menu);
+	menu = &NewSubmenu("SkeletalMesh");
+
+	(*menu)
+	[
+		NewMenuCheckbox("Show bone names\tB", &ShowLabels)
+		+NewMenuCheckbox("Show sockets\tA", &ShowAttach)
+		+NewMenuCheckbox("Show influences\tI", &DrawFlags, DF_SHOW_INFLUENCES)
+		+NewMenuCheckbox("Show mesh UVs\tCtrl+U", &ShowUV)
+		+NewMenuSeparator()
+		+NewMenuItem(bIsUE4Mesh ? "Find animations ...\tCtrl+A" : "Cycle AnimSets\tCtrl+A")
+		.SetCallback(BIND_MEMBER(&CSkelMeshViewer::AttachAnimSet, this))
+		+NewMenuItem("Cycle skeleton display\tS")
+		.SetCallback(BIND_LAMBDA([this]() { ProcessKey('s'); })) // simulate keypress
+		+NewMenuItem("Tag mesh\tCtrl+T")
+		.SetCallback(BIND_LAMBDA([this]() { ProcessKey(KEY_CTRL|'t'); })) // simulate keypress
+		+NewMenuItem("Untag all meshes")
+		.SetCallback(BIND_LAMBDA([this]() { UntagAllMeshes(); }))
+	];
+
+	return CMeshViewer::GetObjectMenu(menu);
+}
+
+#endif // HAS_UI
 
 
 void CSkelMeshViewer::ProcessKey(int key)
@@ -652,44 +691,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 #endif // TEST_ANIMS
 
 	case 'a'|KEY_CTRL:
-		{
-			const CAnimSet *PrevAnim = MeshInst->GetAnim();
-			// find next animation set (code is similar to PAGEDOWN handler)
-			int looped = 0;
-			int ObjIndex = -1;
-			bool found = (PrevAnim == NULL);			// whether previous AnimSet was found; NULL -> any
-			while (true)
-			{
-				ObjIndex++;
-				if (ObjIndex >= UObject::GObjObjects.Num())
-				{
-					ObjIndex = 0;
-					looped++;
-					if (looped > 1) break;				// no other objects
-				}
-				const UObject *Obj = UObject::GObjObjects[ObjIndex];
-				const CAnimSet *Anim = GetAnimSet(Obj);
-				if (!Anim) continue;
-
-				if (Anim == PrevAnim)
-				{
-					if (found) break;					// loop detected
-					found = true;
-					continue;
-				}
-
-				if (found && Anim)
-				{
-					// found desired animation set
-					MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
-					for (int i = 0; i < TaggedMeshes.Num(); i++)
-						TaggedMeshes[i]->SetAnim(Anim);
-					AnimIndex = -1;
-					appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
-					break;
-				}
-			}
-		}
+		AttachAnimSet();
 		break;
 
 	case 't'|KEY_CTRL:
@@ -719,6 +721,189 @@ void CSkelMeshViewer::ProcessKey(int key)
 	}
 
 	unguard;
+}
+
+
+void CSkelMeshViewer::AttachAnimSet()
+{
+	guard(CSkelMeshViewer::AttachAnimSet);
+
+	FindUE4Animations();
+
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+
+	const CAnimSet *PrevAnim = MeshInst->GetAnim();
+	// find next animation set (code is similar to PAGEDOWN handler)
+	int looped = 0;
+	int ObjIndex = -1;
+	bool found = (PrevAnim == NULL);			// whether previous AnimSet was found; NULL -> any
+	while (true)
+	{
+		ObjIndex++;
+		if (ObjIndex >= UObject::GObjObjects.Num())
+		{
+			ObjIndex = 0;
+			looped++;
+			if (looped > 1) break;				// no other objects
+		}
+		const UObject *Obj = UObject::GObjObjects[ObjIndex];
+		const CAnimSet *Anim = GetAnimSet(Obj);
+		if (!Anim) continue;
+
+		if (Anim == PrevAnim)
+		{
+			if (found) break;					// loop detected
+			found = true;
+			continue;
+		}
+
+		if (found && Anim)
+		{
+			// found desired animation set
+			MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
+			for (int i = 0; i < TaggedMeshes.Num(); i++)
+				TaggedMeshes[i]->SetAnim(Anim);
+			AnimIndex = -1;
+			appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
+			break;
+		}
+	}
+
+	unguard;
+}
+
+#if !HAS_UI
+
+class ConsoleProgress : public IProgressCallback
+{
+public:
+	ConsoleProgress()
+	: desc("")
+	{}
+	void Show(const char* title)
+	{
+		lastTick = 0;
+		printf("%s:\n", title);
+	}
+	void SetDescription(const char* text)
+	{
+		desc = text;
+	}
+	~ConsoleProgress()
+	{
+		printf("\r%s: done %20s\n", desc, "");
+	}
+	virtual bool Progress(const char* package, int index, int total)
+	{
+		// do not update UI too often
+		int tick = appMilliseconds();
+		if (tick - lastTick < 100)
+			return true;
+		lastTick = tick;
+
+		printf("\r%s: %d/%d %20s\r", desc, index+1, total, "");
+		return true;
+	}
+
+protected:
+	const char* desc;
+	int lastTick;
+};
+
+#define UIProgressDialog ConsoleProgress
+
+#endif // HAS_UI
+
+
+void CSkelMeshViewer::FindUE4Animations()
+{
+#if UNREAL4
+	guard(CSkelMeshViewer::FindUE4Animations);
+
+	if (!bIsUE4Mesh)
+		return;
+
+	if (!Skeleton)
+	{
+		appPrintf("No Skeleton object attached to the mesh, doing nothing\n");
+		return;
+	}
+
+	// Find all packages
+	TArray<const CGameFileInfo*> PackageInfos;
+	appEnumGameFiles<TArray<const CGameFileInfo*> >( // won't compile with lambda without explicitly providing template argument
+		[](const CGameFileInfo* file, TArray<const CGameFileInfo*>& param) -> bool
+		{
+			param.Add(file);
+			return true;
+		}, PackageInfos);
+
+	UIProgressDialog progress;
+	progress.Show("Finding animations");
+	progress.SetDescription("Scanning package");
+
+	// Perform full scan to be able to locate AnimSequence objects
+	if (!ScanContent(PackageInfos, &progress))
+	{
+		appPrintf("Interrupted by user\n");
+		return;
+	}
+
+	// Find potential uasset files with animations
+	TArray<UnPackage*> packagesToLoad;
+	packagesToLoad.Empty(256);
+
+	const char* lookupSkeletonName = Skeleton->Name;
+	for (int i = 0; i < PackageInfos.Num(); i++)
+	{
+		UnPackage* package = PackageInfos[i]->Package;
+		bool found = false;
+		for (int importIndex = 0; importIndex < package->Summary.ImportCount; importIndex++)
+		{
+			FObjectImport& imp = package->GetImport(importIndex);
+			const char* ObjectClass = *imp.ClassName;
+			const char* ObjectName = *imp.ObjectName;
+			if (!stricmp(ObjectClass, "Skeleton") && !stricmp(ObjectName, lookupSkeletonName))
+			{
+				// This uasset refers to the Skeleton object with the same name, check if this
+				// is an exactly the same Skeleton object as we're using
+				const char* referencedFilename = package->GetObjectPackageName(imp.PackageIndex);
+				const CGameFileInfo* referencedFile = appFindGameFile(referencedFilename);
+				if (!stricmp(Skeleton->Package->Filename, referencedFile->RelativeName))
+				{
+					found = true;
+					break;
+				}
+			}
+		}
+
+		if (!found) continue; // this package doesn't use our Skeleton
+
+		// Now, if this package has animation sequence - enqueue it for loading
+		if (PackageInfos[i]->NumAnimations)
+		{
+			packagesToLoad.Add(package);
+		}
+	}
+
+	// Sort packages by name for easier navigation after loading
+	packagesToLoad.Sort([](UnPackage* const& a, UnPackage* const& b) -> int
+		{
+			return stricmp(a->Name, b->Name);
+		});
+
+	// Load queued packages
+	progress.SetDescription("Loading animations");
+	for (int i = 0; i < packagesToLoad.Num(); i++)
+	{
+		UnPackage* package = packagesToLoad[i];
+		if (!progress.Progress(package->Filename, i, packagesToLoad.Num()))
+			break;
+		LoadWholePackage(package);
+	}
+
+	unguard;
+#endif // UNREAL4
 }
 
 

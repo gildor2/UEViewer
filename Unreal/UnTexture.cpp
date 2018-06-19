@@ -1,4 +1,5 @@
 #include "UnTextureNVTT.h"
+#include "UnTexturePNG.h"
 
 #include "Core.h"
 #include "UnCore.h"
@@ -43,9 +44,14 @@ static void PostProcessAlpha(byte *pic, int width, int height)
 	unguard;
 }
 
+// Some references:
+// https://msdn.microsoft.com/en-us/library/windows/desktop/hh308955.aspx
+// https://msdn.microsoft.com/en-us/library/bb694531.aspx
+
 const CPixelFormatInfo PixelFormatInfo[] =
 {
 	// FourCC				BlockSizeX	BlockSizeY BytesPerBlock X360AlignX	X360AlignY	Float	Name
+	{ 0,						0,			0,			0,			0,			0,		0,		"UNKNOWN"	},	// TPF_UNKNOWN
 	{ 0,						1,			1,			1,			0,			0,		0,		"P8"		},	// TPF_P8
 	{ 0,						1,			1,			1,			64,			64,		0,		"G8"		},	// TPF_G8
 //	{																										},	// TPF_G16
@@ -58,6 +64,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ BYTES4('D','X','T','5'),	4,			4,			16,			128,		128,	0,		"DXT5N"		},	// TPF_DXT5N
 	{ 0,						1,			1,			2,			64,			32,		0,		"V8U8"		},	// TPF_V8U8
 	{ 0,						1,			1,			2,			64,			32,		0,		"V8U8"		},	// TPF_V8U8_2
+	{ BYTES4('A','T','I','1'),	4,			4,			8,			0,			0,		0,		"BC4"		},	// TPF_BC4
 	{ BYTES4('A','T','I','2'),	4,			4,			16,			0,			0,		0,		"BC5"		},	// TPF_BC5
 	{ 0,						4,			4,			16,			0,			0,		1,		"BC6H"		},	// TPF_BC6H
 	{ 0,						4,			4,			16,			0,			0,		0,		"BC7"		},	// TPF_BC7
@@ -78,6 +85,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ 0,						10,			10,			16,			0,			0,		0,		"ATC_10x10"	},	// TPF_ASTC_10x10
 	{ 0,						12,			12,			16,			0,			0,		0,		"ATC_12x12"	},	// TPF_ASTC_12x12
 #endif
+	{ 0,						1,			1,			0,			0,			0,		0,		"PNG_BGRA"	},	// TPF_PNG_BGRA
 };
 
 
@@ -131,7 +139,8 @@ byte *CTextureData::Decompress(int MipLevel)
 	}
 #endif
 
-	// process non-dxt formats here
+	// Process non-dxt formats here. If texture format has FourCC, then it will be
+	// processed by code below this switch.
 	switch (Format)
 	{
 	case TPF_P8:
@@ -412,6 +421,13 @@ byte *CTextureData::Decompress(int MipLevel)
 			PROFILE_DDS(appPrintProfiler());
 		}
 		return dst;
+	case TPF_PNG_BGRA:
+		// bool UncompressPNG(const byte* CompressedData int CompressedSize, int Width, int Height, byte* pic)
+		if (UncompressPNG(Mip.CompressedData, Mip.DataSize, Mip.USize, Mip.VSize, dst))
+		{
+			return dst;
+		}
+		break;
 	}
 
 	static_assert(ARRAY_COUNT(PixelFormatInfo) == TPF_MAX, "Wrong PixelFormatInfo array size");

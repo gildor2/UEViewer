@@ -37,6 +37,8 @@ struct FileInfo
 
 bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress = NULL);
 
+bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback* Progress = NULL);
+
 
 // Class statistics
 

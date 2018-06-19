@@ -13,6 +13,9 @@ void UIProgressDialog::Show(const char* title)
 {
 	CloseOnEsc();
 	ShowDialog(title, 250, 200);
+	BeginModal();
+
+	lastTick = 0;
 }
 
 void UIProgressDialog::SetDescription(const char* text)
@@ -22,6 +25,12 @@ void UIProgressDialog::SetDescription(const char* text)
 
 bool UIProgressDialog::Progress(const char* package, int index, int total)
 {
+	// do not update UI too often
+	int tick = appMilliseconds();
+	if (tick - lastTick < 50)
+		return true;
+	lastTick = tick;
+
 	char buffer[512];
 	appSprintf(ARRAY_ARG(buffer), "%s %d/%d", DescriptionText, index+1, total);
 	DescriptionLabel->SetText(buffer);

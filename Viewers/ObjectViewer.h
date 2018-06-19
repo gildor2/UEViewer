@@ -13,6 +13,10 @@ class CStaticMesh;
 struct CMeshVertex;
 struct CBaseMeshLod;
 
+class USkeleton;
+
+class UIMenuItem;
+
 
 #define TEST_FILES		1		// comment line to disable some notifications
 
@@ -45,6 +49,10 @@ public:
 	virtual void ProcessKeyUp(int key)
 	{}
 
+#if HAS_UI
+	virtual UIMenuItem* GetObjectMenu(UIMenuItem* menu);
+#endif
+
 	virtual void Draw3D(float TimeDelta)
 	{}
 };
@@ -63,13 +71,13 @@ public:
 	static int		ShapeIndex;
 
 	CMaterialViewer(UUnrealMaterial* Material, CApplication* Window);
-	virtual ~CMaterialViewer();
+	virtual ~CMaterialViewer() override;
 
-	virtual void ShowHelp();
-	virtual void ProcessKey(int key);
+	virtual void ShowHelp() override;
+	virtual void ProcessKey(int key) override;
 
-	virtual void Draw2D();
-	virtual void Draw3D(float TimeDelta);
+	virtual void Draw2D() override;
+	virtual void Draw3D(float TimeDelta) override;
 };
 
 
@@ -91,13 +99,17 @@ public:
 	,	DrawFlags(0)
 	,	Wireframe(false)
 	{}
-	virtual ~CMeshViewer();
+	virtual ~CMeshViewer() override;
 
 	void InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs);	//?? CBox Bounds?
 
-	virtual void ShowHelp();
-	virtual void ProcessKey(int key);
-	virtual void Draw3D(float TimeDelta);
+	virtual void ShowHelp() override;
+	virtual void ProcessKey(int key) override;
+#if HAS_UI
+	virtual UIMenuItem* GetObjectMenu(UIMenuItem* menu) override;
+#endif
+
+	virtual void Draw3D(float TimeDelta) override;
 
 	virtual void DrawMesh(CMeshInstance *Inst);
 
@@ -118,15 +130,15 @@ public:
 
 	CVertMeshViewer(UVertMesh* Mesh, CApplication* Window);
 
-	virtual void ShowHelp();
-	virtual void ProcessKey(int key);
-	virtual void Dump();
-	virtual void Export();
+	virtual void ShowHelp() override;
+	virtual void ProcessKey(int key) override;
+	virtual void Dump() override;
+	virtual void Export() override;
 #if TEST_FILES
-	virtual void Test();
+	virtual void Test() override;
 #endif
-	virtual void Draw2D();
-	virtual void Draw3D(float TimeDelta);
+	virtual void Draw2D() override;
+	virtual void Draw3D(float TimeDelta) override;
 };
 
 
@@ -151,20 +163,29 @@ public:
 	static void TagMesh(CSkelMeshInstance *Inst);
 	static void UntagAllMeshes();
 
-	virtual void ShowHelp();
-	virtual void Dump();
-	virtual void Export();
-	virtual void Draw2D();
-	virtual void Draw3D(float TimeDelta);
-	virtual void ProcessKey(int key);
-	virtual void ProcessKeyUp(int key);
+	virtual void ShowHelp() override;
+#if HAS_UI
+	virtual UIMenuItem* GetObjectMenu(UIMenuItem* menu) override;
+#endif
 
-	virtual void DrawMesh(CMeshInstance *Inst);
+	virtual void Dump() override;
+	virtual void Export() override;
+	virtual void Draw2D() override;
+	virtual void Draw3D(float TimeDelta) override;
+	virtual void ProcessKey(int key) override;
+	virtual void ProcessKeyUp(int key) override;
+
+	void AttachAnimSet();
+	void FindUE4Animations();
+
+	virtual void DrawMesh(CMeshInstance *Inst) override;
 
 	static TArray<CSkelMeshInstance*> TaggedMeshes;	// for displaying multipart meshes
 
 private:
 	CSkeletalMesh	*Mesh;
+	bool			bIsUE4Mesh;
+	USkeleton*		Skeleton;
 };
 
 
@@ -176,10 +197,15 @@ class CStatMeshViewer : public CMeshViewer
 {
 public:
 	CStatMeshViewer(CStaticMesh* Mesh, CApplication* Window);
-	virtual void ShowHelp();
-	virtual void Dump();
-	virtual void Draw2D();
-	virtual void ProcessKey(int key);
+
+	virtual void ShowHelp() override;
+#if HAS_UI
+	virtual UIMenuItem* GetObjectMenu(UIMenuItem* menu) override;
+#endif
+
+	virtual void Dump() override;
+	virtual void Draw2D() override;
+	virtual void ProcessKey(int key) override;
 
 private:
 	CStaticMesh		*Mesh;

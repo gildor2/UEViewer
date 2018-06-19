@@ -81,7 +81,7 @@ public:
 	,	StripPath(InStripPath)
 	{
 		AllowMultiselect();
-		SetVirtualMode();		//!! TODO: use callbacks to retrieve item texts
+		SetVirtualMode();
 		// Add columns
 		//?? right-align text in numeric columns
 		AddColumn("Package name");
@@ -91,8 +91,8 @@ public:
 		AddColumn("Tex",  35, TA_Right);
 		AddColumn("Size, Kb", 70, TA_Right);
 	#if USE_FULLY_VIRTUAL_LIST
-		SetOnGetItemCount(BIND_MEM_CB(&UIPackageList::GetItemCountHandler, this));
-		SetOnGetItemText(BIND_MEM_CB(&UIPackageList::GetItemTextHandler, this));
+		SetOnGetItemCount(BIND_MEMBER(&UIPackageList::GetItemCountHandler, this));
+		SetOnGetItemText(BIND_MEMBER(&UIPackageList::GetItemTextHandler, this));
 	#endif
 	}
 
@@ -295,12 +295,6 @@ void UIPackageDialog::SelectPackage(UnPackage* package)
 	}
 }
 
-static bool PackageListEnum(const CGameFileInfo *file, TArray<const CGameFileInfo*> &param)
-{
-	param.Add(file);
-	return true;
-}
-
 void UIPackageDialog::InitUI()
 {
 	guard(UIPackageDialog::InitUI);
@@ -310,14 +304,14 @@ void UIPackageDialog::InitUI()
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
 			NewControl(UICheckbox, "Flat view", &UseFlatView)
-				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFlatViewChanged, this))
+				.SetCallback(BIND_MEMBER(&UIPackageDialog::OnFlatViewChanged, this))
 			+ NewControl(UISpacer)
 			+ NewControl(UILabel, "Filter:")
 				.SetY(2)
 				.SetAutoSize()
 			+ NewControl(UITextEdit, &PackageFilter)
 				.SetWidth(120)
-				.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnFilterTextChanged, this))
+				.SetCallback(BIND_MEMBER(&UIPackageDialog::OnFilterTextChanged, this))
 		]
 		+ NewControl(UIPageControl)
 			.Expose(FlatViewPager)
@@ -331,7 +325,7 @@ void UIPackageDialog::InitUI()
 					.SetRootLabel("Game")
 					.SetWidth(EncodeWidth(0.3f))
 					.SetHeight(-1)
-					.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnTreeItemSelected, this))
+					.SetCallback(BIND_MEMBER(&UIPackageDialog::OnTreeItemSelected, this))
 					.UseFolderIcons()
 					.SetItemHeight(20)
 					.Expose(PackageTree)
@@ -345,8 +339,13 @@ void UIPackageDialog::InitUI()
 
 	if (!Packages.Num())
 	{
-		// not scanned yet
-		appEnumGameFiles(PackageListEnum, Packages);
+		// package list was not filled yet
+		appEnumGameFiles<TArray<const CGameFileInfo*> >( // won't compile with lambda without explicitly providing template argument
+			[](const CGameFileInfo* file, TArray<const CGameFileInfo*>& param) -> bool
+			{
+				param.Add(file);
+				return true;
+			}, Packages);
 	}
 
 	// add paths of all found packages to the directory tree
@@ -394,26 +393,26 @@ void UIPackageDialog::InitUI()
 		NewMenuItem("Scan content")
 		.Enable(!ContentScanned)
 		.Expose(ScanContentMenu)
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::ScanContent, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::ScanContent, this))
 		+ NewMenuItem("Scan versions")
-		.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
+		.SetCallback(BIND_STATIC(&ShowPackageScanDialog))
 		+ NewMenuSeparator()
 		+ NewMenuItem("Save selected packages")
 		.Enable(SelectedPackages.Num() > 0)
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::SavePackages, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::SavePackages, this))
 		.Expose(SavePackagesMenu)
 		+ NewMenuSeparator()
 		+ NewMenuItem("About UModel")
-		.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
+		.SetCallback(BIND_STATIC(&UIAboutDialog::Show))
 	];
 
 	UIMenu* openMenu = new UIMenu;
 	(*openMenu)
 	[
 		NewMenuItem("Open (replace loaded set)")
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnOpenClicked, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenClicked, this))
 		+ NewMenuItem("Append (add to loaded set)")
-		.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnAppendClicked, this))
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnAppendClicked, this))
 	];
 
 	// dialog buttons
@@ -430,18 +429,18 @@ void UIPackageDialog::InitUI()
 			.SetMenu(openMenu)
 			.Enable(false)
 			.Expose(OpenButton)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnOpenClicked, this))
+			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenClicked, this))
 //			.SetOK() -- this will not let menu to open
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Export")
 			.SetWidth(80)
 			.Enable(false)
 			.Expose(ExportButton)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnExportClicked, this))
+			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportClicked, this))
 		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Cancel")
 			.SetWidth(80)
-			.SetCallback(BIND_MEM_CB(&UIPackageDialog::OnCancelClicked, this))
+			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnCancelClicked, this))
 	];
 
 	SortPackages(); // will call RefreshPackageListbox()
@@ -454,9 +453,9 @@ UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
 {
 	UIPackageList& List = NewControl(UIPackageList, StripPath);
 	List.SetHeight(-1)
-		.SetSelChangedCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageSelected, this))
-		.SetDblClickCallback(BIND_MEM_CB(&UIPackageDialog::OnPackageDblClick, this))
-		.SetOnColumnClick(BIND_MEM_CB(&UIPackageDialog::OnColumnClick, this));
+		.SetSelChangedCallback(BIND_MEMBER(&UIPackageDialog::OnPackageSelected, this))
+		.SetDblClickCallback(BIND_MEMBER(&UIPackageDialog::OnPackageDblClick, this))
+		.SetOnColumnClick(BIND_MEMBER(&UIPackageDialog::OnColumnClick, this));
 	return List;
 }
 
@@ -585,7 +584,7 @@ struct PackageSortHelper
 static bool PackageSort_Reverse;
 static int  PackageSort_Column;
 
-static int PackageSortFunction(const PackageSortHelper* const pA, const PackageSortHelper* const pB)
+static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHelper* pB)
 {
 	const CGameFileInfo* A = pA->File;
 	const CGameFileInfo* B = pB->File;
@@ -662,64 +661,26 @@ void UIPackageDialog::SortPackages()
 	Content tools
 -----------------------------------------------------------------------------*/
 
-static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
-{
-	for (int idx = 0; idx < package->Summary.ExportCount; idx++)
-	{
-		const char* ObjectClass = package->GetObjectName(package->GetExport(idx).ClassIndex);
-
-		if (!stricmp(ObjectClass, "SkeletalMesh") || !stricmp(ObjectClass, "DestructibleMesh"))
-			file->NumSkeletalMeshes++;
-		else if (!stricmp(ObjectClass, "StaticMesh"))
-			file->NumStaticMeshes++;
-		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "MeshAnimation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet count for UE2 and number of sequences for UE3+
-			file->NumAnimations++;
-		else if (!strnicmp(ObjectClass, "Texture", 7))
-			file->NumTextures++;
-	}
-}
-
-
 void UIPackageDialog::ScanContent()
 {
 	UIProgressDialog progress;
 	progress.Show("Scanning packages");
 	progress.SetDescription("Scanning package");
 
-	bool cancelled = false;
-	int lastTick = appMilliseconds();
-	for (int i = 0; i < Packages.Num(); i++)
-	{
-		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
-		if (file->PackageScanned) continue;
-
-		// Update progress dialog
-		int tick = appMilliseconds();
-		if (tick - lastTick > 50)				// do not update too often
-		{
-			if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
-			{
-				cancelled = true;
-				break;
-			}
-			lastTick = tick;
-		}
-
-		UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
-		file->PackageScanned = true;
-		if (!package) continue;		// should not happen
-
-		ScanPackageExports(package, file);
-	}
+	// perform scan
+	bool done = ::ScanContent(Packages, &progress);
 
 	progress.CloseDialog();
-	if (cancelled) return;
-	ContentScanned = true;
 
+	if (done)
+	{
+		// finished - no needs to perform scan again, disable button
+		ContentScanned = true;
+		ScanContentMenu->Enable(false);
+	}
+
+	// Refresh package list anyway, even for partially scanned content
 	SortPackages();
-
-	// finished - no needs to perform scan again, disable button
-	ScanContentMenu->Enable(false);
 
 	// update package list with new data
 	UpdateSelectedPackages();

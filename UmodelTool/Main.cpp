@@ -1,10 +1,7 @@
 #include "Core.h"
 
 #if _WIN32
-#include <direct.h>					// getcwd
 #include <signal.h>					// abort handler
-#else
-#include <unistd.h>					// getcwd
 #endif
 
 // Classes for registration
@@ -42,7 +39,9 @@
 //#define DUMP_MEM_ON_EXIT			1
 
 
-UmodelSettings GSettings;
+// Note: declaring this variable in global scope will have side effect that
+// GSettings.Reset() will be called before main() executed.
+CUmodelSettings GSettings;
 
 
 /*-----------------------------------------------------------------------------
@@ -180,26 +179,26 @@ static void RegisterClasses(int game)
 	{
 		RegisterUnrealClasses4();
 	}
-	if (GSettings.UseSound) RegisterUnrealSoundClasses();
+	if (GSettings.Startup.UseSound) RegisterUnrealSoundClasses();
 
 	// remove some class loaders when requisted by command line
-	if (!GSettings.UseAnimation)
+	if (!GSettings.Startup.UseAnimation)
 	{
 		UnregisterClass("MeshAnimation", true);
 		UnregisterClass("AnimSet",       true);
 		UnregisterClass("AnimSequence",  true);
 		UnregisterClass("AnimNotify",    true);
 	}
-	if (!GSettings.UseSkeletalMesh)
+	if (!GSettings.Startup.UseSkeletalMesh)
 	{
 		UnregisterClass("SkeletalMesh",       true);
 		UnregisterClass("SkeletalMeshSocket", true);
 	}
-	if (!GSettings.UseStaticMesh) UnregisterClass("StaticMesh", true);
-	if (!GSettings.UseTexture) UnregisterClass("UnrealMaterial", true);
-	if (!GSettings.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
-	if (!GSettings.UseScaleForm) UnregisterClass("SwfMovie", true);
-	if (!GSettings.UseFaceFx)
+	if (!GSettings.Startup.UseStaticMesh) UnregisterClass("StaticMesh", true);
+	if (!GSettings.Startup.UseTexture) UnregisterClass("UnrealMaterial", true);
+	if (!GSettings.Startup.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
+	if (!GSettings.Startup.UseScaleForm) UnregisterClass("SwfMovie", true);
+	if (!GSettings.Startup.UseFaceFx)
 	{
 		UnregisterClass("FaceFXAnimSet", true);
 		UnregisterClass("FaceFXAsset", true);
@@ -215,7 +214,7 @@ static void RegisterClasses(int game)
 static void ExportSkeletalMesh2(const USkeletalMesh *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsk(Mesh->ConvertedMesh);
 	else
 		ExportMd5Mesh(Mesh->ConvertedMesh);
@@ -225,7 +224,7 @@ static void ExportSkeletalMesh2(const USkeletalMesh *Mesh)
 static void ExportSkeletalMesh3(const USkeletalMesh3 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsk(Mesh->ConvertedMesh);
 	else
 		ExportMd5Mesh(Mesh->ConvertedMesh);
@@ -250,7 +249,7 @@ static void ExportStaticMesh3(const UStaticMesh3 *Mesh)
 static void ExportSkeletalMesh4(const USkeletalMesh4 *Mesh)
 {
 	assert(Mesh->ConvertedMesh);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsk(Mesh->ConvertedMesh);
 	else
 		ExportMd5Mesh(Mesh->ConvertedMesh);
@@ -266,7 +265,7 @@ static void ExportStaticMesh4(const UStaticMesh4 *Mesh)
 static void ExportMeshAnimation(const UMeshAnimation *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsa(Anim->ConvertedAnim);
 	else
 		ExportMd5Anim(Anim->ConvertedAnim);
@@ -276,7 +275,7 @@ static void ExportMeshAnimation(const UMeshAnimation *Anim)
 static void ExportAnimSet(const UAnimSet *Anim)
 {
 	assert(Anim->ConvertedAnim);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsa(Anim->ConvertedAnim);
 	else
 		ExportMd5Anim(Anim->ConvertedAnim);
@@ -287,7 +286,7 @@ static void ExportAnimSet(const UAnimSet *Anim)
 static void ExportSkeleton(const USkeleton *Skeleton)
 {
 	assert(Skeleton->ConvertedAnim);
-	if (!GSettings.ExportMd5Mesh)
+	if (!GSettings.Export.ExportMd5Mesh)
 		ExportPsa(Skeleton->ConvertedAnim);
 	else
 		ExportMd5Anim(Skeleton->ConvertedAnim);
@@ -423,7 +422,7 @@ static void PrintUsage()
  			"\n"
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
-			"    -all            export all linked objects too\n"
+			"    -all            used with -dump, will dump all objects instead of specified one\n"
 			"    -uncook         use original package name as a base export directory (UE1-3)\n"
 			"    -groups         use group names instead of class names for directories (UE1-3)\n"
 			"    -uc             create unreal script when possible\n"
@@ -544,51 +543,6 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 		return true;
 	}
 	return false;
-}
-
-static void SetPathOption(FString& where, const char* value)
-{
-	// determine whether absolute path is used
-	const char* value2;
-
-#if _WIN32
-	int isAbsPath = (value[0] != 0) && (value[1] == ':');
-#else
-	int isAbsPath = (value[0] == '~' || value[0] == '/');
-#endif
-	if (isAbsPath)
-	{
-		value2 = value;
-	}
-	else
-	{
-		// relative path
-		char path[512];
-		if (!getcwd(ARRAY_ARG(path)))
-			strcpy(path, ".");	// path is too long, or other error occured
-
-		if (!value || !value[0])
-		{
-			value2 = path;
-		}
-		else
-		{
-			char buffer[512];
-			appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
-			value2 = buffer;
-		}
-	}
-
-	char finalName[512];
-	appStrncpyz(finalName, value2, ARRAY_COUNT(finalName)-1);
-	appNormalizeFilename(finalName);
-
-	where = finalName;
-
-	// strip possible trailing double quote
-	int len = where.Len();
-	if (len > 0 && where[len-1] == '"')
-		where.RemoveAt(len-1);
 }
 
 // Display error message about wrong command line and then exit.
@@ -777,6 +731,10 @@ int main(int argc, char **argv)
 {
 	appInitPlatform();
 
+#if PRIVATE_BUILD
+	appPrintf("PRIVATE BUILD\n");
+#endif
+
 #if DO_GUARD
 	TRY {
 #endif
@@ -796,6 +754,10 @@ int main(int argc, char **argv)
 	}
 #endif // HAS_UI
 
+#if HAS_CONFIG
+	GSettings.Load();
+#endif
+
 	// parse command line
 	enum
 	{
@@ -808,7 +770,7 @@ int main(int argc, char **argv)
 	};
 
 	static byte mainCmd = CMD_View;
-	static bool exprtAll = false, hasRootDir = false, forceUI = false;
+	static bool bAll = false, hasRootDir = false, forceUI = false;
 	TArray<const char*> packagesToLoad, objectsToLoad;
 	TArray<const char*> params;
 	const char *attachAnimName = NULL;
@@ -838,20 +800,19 @@ int main(int argc, char **argv)
 			OPT_BOOL ("meshes",    GApplication.ShowMeshes)
 			OPT_BOOL ("materials", GApplication.ShowMaterials)
 #endif
-			OPT_BOOL ("all",     exprtAll)
 			OPT_BOOL ("uncook",  GUncook)
 			OPT_BOOL ("groups",  GUseGroups)
 //			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
-			OPT_BOOL ("md5",     GSettings.ExportMd5Mesh)
+			OPT_BOOL ("md5",     GSettings.Export.ExportMd5Mesh)
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
 			// disable classes
-			OPT_NBOOL("nomesh",  GSettings.UseSkeletalMesh)
-			OPT_NBOOL("nostat",  GSettings.UseStaticMesh)
-			OPT_NBOOL("noanim",  GSettings.UseAnimation)
-			OPT_NBOOL("notex",   GSettings.UseTexture)
-			OPT_NBOOL("nolightmap", GSettings.UseLightmapTexture)
-			OPT_BOOL ("sounds",  GSettings.UseSound)
+			OPT_NBOOL("nomesh",  GSettings.Startup.UseSkeletalMesh)
+			OPT_NBOOL("nostat",  GSettings.Startup.UseStaticMesh)
+			OPT_NBOOL("noanim",  GSettings.Startup.UseAnimation)
+			OPT_NBOOL("notex",   GSettings.Startup.UseTexture)
+			OPT_NBOOL("nolightmap", GSettings.Startup.UseLightmapTexture)
+			OPT_BOOL ("sounds",  GSettings.Startup.UseSound)
 			OPT_BOOL ("dds",     GExportDDS)
 			OPT_BOOL ("notgacomp", GNoTgaCompress)
 			OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
@@ -859,29 +820,34 @@ int main(int argc, char **argv)
 			OPT_BOOL ("gui",     forceUI)
 #endif
 			// platform
-			OPT_VALUE("ps3",     GSettings.Platform, PLATFORM_PS3)
-			OPT_VALUE("ios",     GSettings.Platform, PLATFORM_IOS)
-			OPT_VALUE("android", GSettings.Platform, PLATFORM_ANDROID)
+			OPT_VALUE("ps3",     GSettings.Startup.Platform, PLATFORM_PS3)
+			OPT_VALUE("ios",     GSettings.Startup.Platform, PLATFORM_IOS)
+			OPT_VALUE("android", GSettings.Startup.Platform, PLATFORM_ANDROID)
 			// compression
-			OPT_VALUE("lzo",     GSettings.PackageCompression, COMPRESS_LZO )
-			OPT_VALUE("zlib",    GSettings.PackageCompression, COMPRESS_ZLIB)
-			OPT_VALUE("lzx",     GSettings.PackageCompression, COMPRESS_LZX )
+			OPT_VALUE("lzo",     GSettings.Startup.PackageCompression, COMPRESS_LZO )
+			OPT_VALUE("zlib",    GSettings.Startup.PackageCompression, COMPRESS_ZLIB)
+			OPT_VALUE("lzx",     GSettings.Startup.PackageCompression, COMPRESS_LZX )
 		};
 		if (ProcessOption(ARRAY_ARG(options), opt))
 			continue;
+		if (!stricmp(opt, "all") && mainCmd == CMD_Dump)
+		{
+			// -all should be used only with -dump
+			bAll = true;
+		}
 		// more complex options
-		if (!strnicmp(opt, "log=", 4))
+		else if (!strnicmp(opt, "log=", 4))
 		{
 			appOpenLogFile(opt+4);
 		}
 		else if (!strnicmp(opt, "path=", 5))
 		{
-			SetPathOption(GSettings.GamePath, opt+5);
+			GSettings.Startup.SetPath(opt+5);
 			hasRootDir = true;
 		}
 		else if (!strnicmp(opt, "out=", 4))
 		{
-			SetPathOption(GSettings.ExportPath, opt+4);
+			GSettings.Export.SetPath(opt+4);
 		}
 		else if (!strnicmp(opt, "game=", 5))
 		{
@@ -891,7 +857,7 @@ int main(int argc, char **argv)
 				appPrintf("ERROR: unknown game tag \"%s\". Use -taglist option to display available tags.\n", opt+5);
 				exit(0);
 			}
-			GSettings.GameOverride = tag;
+			GSettings.Startup.GameOverride = tag;
 		}
 		else if (!strnicmp(opt, "pkgver=", 7))
 		{
@@ -921,7 +887,7 @@ int main(int argc, char **argv)
 		}
 		else if (!stricmp(opt, "3rdparty"))
 		{
-			GSettings.UseScaleForm = GSettings.UseFaceFx = true;
+			GSettings.Startup.UseScaleForm = GSettings.Startup.UseFaceFx = true;
 		}
 		else if (!strnicmp(opt, "aes=", 4))
 		{
@@ -969,7 +935,7 @@ int main(int argc, char **argv)
 		// do with directory without UI
 		if (appGetFileType(argPkgName) == FS_DIR)
 		{
-			SetPathOption(GSettings.GamePath, argPkgName);
+			GSettings.Startup.SetPath(argPkgName);
 			hasRootDir = true;
 			argPkgName = NULL;
 		}
@@ -977,26 +943,20 @@ int main(int argc, char **argv)
 
 	if (argc < 2 || (!hasRootDir && !argPkgName) || forceUI)
 	{
-		// fill game path with current directory, if it's empty - for easier work with UI
-		if (GSettings.GamePath.IsEmpty())
-			SetPathOption(GSettings.GamePath, "");
-		//!! the same for -log option
 		// no arguments provided - display startup options
-		bool res = GApplication.ShowStartupDialog(GSettings);
+		bool res = GApplication.ShowStartupDialog(GSettings.Startup);
 		if (!res) exit(0);
 		hasRootDir = true;
 	}
 #endif // HAS_UI
 
 	// apply some GSettings
-	GForceGame = GSettings.GameOverride;	// force game fore scanning any game files
+	GForceGame = GSettings.Startup.GameOverride;	// force game fore scanning any game files
 	if (hasRootDir)
-		appSetRootDirectory(*GSettings.GamePath);
-	GForcePlatform = GSettings.Platform;
-	GForceCompMethod = GSettings.PackageCompression;
-	if (GSettings.ExportPath.IsEmpty())
-		SetPathOption(GSettings.ExportPath, "UmodelExport");	//!! linux: ~/UmodelExport
-	appSetBaseExportDirectory(*GSettings.ExportPath);
+		appSetRootDirectory(*GSettings.Startup.GamePath);
+	GForcePlatform = GSettings.Startup.Platform;
+	GForceCompMethod = GSettings.Startup.PackageCompression;
+	GSettings.Export.Apply();
 
 	TArray<UnPackage*> Packages;
 	TArray<UObject*> Objects;
@@ -1100,12 +1060,19 @@ int main(int argc, char **argv)
 	if (mainCmd == CMD_List)
 	{
 		guard(List);
-		// dump package exports table
-		UnPackage* MainPackage = Packages[0];	//!! TODO: may be work with multiple packages here - not hard, but will require additional output formatting
-		for (int i = 0; i < MainPackage->Summary.ExportCount; i++)
+		for (int packageIndex = 0; packageIndex < Packages.Num(); packageIndex++)
 		{
-			const FObjectExport &Exp = MainPackage->ExportTable[i];
-			appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, MainPackage->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			UnPackage* Package = Packages[packageIndex];
+			if (Packages.Num() > 1)
+			{
+				appPrintf("\n%s\n", Package->Filename);
+			}
+			// dump package exports table
+			for (int i = 0; i < Package->Summary.ExportCount; i++)
+			{
+				const FObjectExport &Exp = Package->ExportTable[i];
+				appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetObjectName(Exp.ClassIndex), *Exp.ObjectName);
+			}
 		}
 		unguard;
 		return 0;
@@ -1191,7 +1158,7 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_Export)
 	{
-		ExportObjects(exprtAll ? NULL : &Objects);
+		ExportObjects(&Objects); // will export everything if "Objects" array is empty
 		ResetExportedList();
 		if (!GApplication.GuiShown)
 			return 0;
@@ -1206,7 +1173,7 @@ int main(int argc, char **argv)
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
 		{
 			UObject* ExpObj = UObject::GObjObjects[idx];
-			if (!exprtAll)
+			if (!bAll)
 			{
 				if (Packages.FindItem(ExpObj->Package) < 0)					// refine object by package
 					continue;

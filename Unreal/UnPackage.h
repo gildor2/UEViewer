@@ -54,10 +54,10 @@ struct FCompressedChunk
 	{
 		guard(FCompressedChunk<<);
 
-#if MKVSDC
-		if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+#if MKVSDC || ROCKET_LEAGUE
+		if ((Ar.Game == GAME_MK && Ar.ArVer >= 677) || (Ar.Game == GAME_RocketLeague && Ar.ArLicenseeVer >= 22))
 		{
-			// MK X has 64-bit file offsets
+			// MK X and Rocket League has 64-bit file offsets
 			int64 UncompressedOffset64, CompressedOffset64;
 			Ar << UncompressedOffset64 << C.UncompressedSize << CompressedOffset64 << C.CompressedSize;
 			C.UncompressedOffset = (int)UncompressedOffset64;
@@ -244,8 +244,13 @@ public:
 	// When the package is already loaded, this function will simply return a pointer
 	// to previously loaded UnPackage.
 	static UnPackage *LoadPackage(const char *Name, bool silent = false);
+	// We've protected UnPackage's destructor, however it is possible to use UnloadPackage to destroy package.
+	static void UnloadPackage(UnPackage* package);
 
+	// Create loader FArchive for package
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
+	// Change loader for games with tricky package data
+	void ReplaceLoader();
 
 	static const TArray<UnPackage*>& GetPackageMap()
 	{

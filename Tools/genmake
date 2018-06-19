@@ -1257,7 +1257,7 @@ sub FlushTargetText {
 			} else {
 				# if IMPLIB is not specified, delete unneeded linker output
 				$line .= " -implib:\"delete.lib\"";
-				$line .= "\n\t# deleting unneeded files\n\tdel delete.lib\n\tdel delete.exp";
+				$line .= "\n\tdel delete.lib\n\tdel delete.exp";
 			}
 			return $prefix.$line;
 		} else {

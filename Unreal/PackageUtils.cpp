@@ -11,6 +11,7 @@
 -----------------------------------------------------------------------------*/
 
 TArray<UnPackage*> GFullyLoadedPackages;
+
 bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 {
 	guard(LoadWholePackage);
@@ -75,7 +76,7 @@ void ReleaseAllObjects()
 
 
 /*-----------------------------------------------------------------------------
-	Package scanner
+	Package version scanner
 -----------------------------------------------------------------------------*/
 
 struct ScanPackageData
@@ -183,14 +184,84 @@ bool ScanPackageVersions(TArray<FileInfo>& info, IProgressCallback* progress)
 	data.PkgInfo = &info;
 	data.Progress = progress;
 	appEnumGameFiles(ScanPackage, data);
-	info.Sort([](const FileInfo *p1, const FileInfo *p2) -> int
+	info.Sort([](const FileInfo& p1, const FileInfo& p2) -> int
 		{
-			int dif = p1->Ver - p2->Ver;
+			int dif = p1.Ver - p2.Ver;
 			if (dif) return dif;
-			return p1->LicVer - p2->LicVer;
+			return p1.LicVer - p2.LicVer;
 		});
 
 	return !data.Cancelled;
+}
+
+
+/*-----------------------------------------------------------------------------
+	Package content
+-----------------------------------------------------------------------------*/
+
+static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
+{
+	for (int idx = 0; idx < package->Summary.ExportCount; idx++)
+	{
+		const char* ObjectClass = package->GetObjectName(package->GetExport(idx).ClassIndex);
+
+		if (!stricmp(ObjectClass, "SkeletalMesh") || !stricmp(ObjectClass, "DestructibleMesh"))
+			file->NumSkeletalMeshes++;
+		else if (!stricmp(ObjectClass, "StaticMesh"))
+			file->NumStaticMeshes++;
+		else if (!stricmp(ObjectClass, "Animation") || !stricmp(ObjectClass, "MeshAnimation") || !stricmp(ObjectClass, "AnimSequence")) // whole AnimSet count for UE2 and number of sequences for UE3+
+			file->NumAnimations++;
+		else if (!strnicmp(ObjectClass, "Texture", 7))
+			file->NumTextures++;
+	}
+/*	for (int j = 0; j < package->Summary.NameCount; j++)
+	{
+		if (!stricmp(package->NameTable[j], "PF_BC6H") || !stricmp(package->NameTable[j], "PF_FloatRGBA"))
+		{
+			printf("%s : %s\n", package->NameTable[j], package->Filename);
+		}
+	} */
+}
+
+
+bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback* Progress)
+{
+	bool cancelled = false;
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
+		if (file->PackageScanned) continue;
+
+		// Update progress dialog
+		if (Progress && !Progress->Progress(file->RelativeName, i, Packages.Num()))
+		{
+			cancelled = true;
+			break;
+		}
+
+		file->PackageScanned = true;
+
+		if (file->Package)
+		{
+			// package already loaded
+			ScanPackageExports(file->Package, file);
+		}
+		else
+		{
+			UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
+			if (!package) continue;		// should not happen
+			ScanPackageExports(package, file);
+		#if 0
+			// this code is disabled: it works, however we're going to use ScanContent not just to get objects counts,
+			// but also for collecting object references
+
+			// now unload package to not waste memory
+			UnPackage::UnloadPackage(package);
+			assert(file->Package == NULL);
+		#endif
+		}
+	}
+	return !cancelled;
 }
 
 
@@ -223,9 +294,9 @@ void CollectPackageStats(const TArray<UnPackage*> &Packages, TArray<ClassStats>&
 			found->Count++;
 		}
 	}
-	Stats.Sort([](const ClassStats* p1, const ClassStats* p2) -> int
+	Stats.Sort([](const ClassStats& p1, const ClassStats& p2) -> int
 		{
-			return stricmp(p1->Name, p2->Name);
+			return stricmp(p1.Name, p2.Name);
 		});
 
 	unguard;

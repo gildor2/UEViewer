@@ -41,7 +41,7 @@ public:
 						.SetWidth(80)
 						.SetOK()
 //						.Enable(false)
-						.Expose(OkButton)
+//						.Expose(OkButton)
 						+NewControl(UISpacer)
 						+NewControl(UIButton, "Cancel")
 						.SetWidth(80)
@@ -53,7 +53,7 @@ public:
 	}
 
 	FString		Value;
-	UIButton*	OkButton;
+//	UIButton*	OkButton;
 };
 
 #endif // UNREAL4

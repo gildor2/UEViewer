@@ -839,7 +839,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 #endif // TRIBES4
 
-	ETexturePixelFormat intFormat;
+	ETexturePixelFormat intFormat = TPF_UNKNOWN;
 	if (Format == PF_A8R8G8B8 || Format == PF_B8G8R8A8)	// PF_A8R8G8B8 was renamed to PF_B8G8R8A8
 		intFormat = TPF_BGRA8;
 	else if (Format == PF_DXT1)
@@ -852,6 +852,8 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		intFormat = TPF_G8;
 	else if (Format == PF_V8U8)
 		intFormat = TPF_V8U8;
+	else if (Format == PF_BC4)
+		intFormat = TPF_BC4;
 	else if (Format == PF_BC5)
 		intFormat = TPF_BC5;
 	else if (Format == PF_BC6H)
@@ -894,11 +896,6 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		intFormat = TPF_ASTC_12x12;
 #endif // SUPPORT_ANDROID
 #endif // UNREAL4
-	else
-	{
-		appNotify("Unknown texture format: %s (%d)", TexData.OriginalFormatName, Format);
-		return false;
-	}
 
 	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
 	const char* tfcSuffix = NULL;
@@ -932,7 +929,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	}
 #endif // SUPPORT_ANDROID
 
-	if (TexData.Mips.Num() == 0 && MipsArray->Num())
+	if (TexData.Mips.Num() == 0 && MipsArray->Num() && intFormat != TPF_UNKNOWN)
 	{
 		bool bulkFailed = false;
 		bool dataLoaded = false;
@@ -976,6 +973,26 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 //			printf("+%d: %d x %d (%X)\n", mipLevel, DstMip->USize, DstMip->VSize, DstMip->DataSize);
 			TexData.Platform = Package->Platform;
 		}
+	}
+
+	if (TexData.Mips.Num() == 0 && SourceArt.BulkData && Source.bPNGCompressed)
+	{
+		// The texture is encoded only in nSourceArt format (probably this is only UE4, not UE3 case)
+		CMipMap* DstMip = new (TexData.Mips) CMipMap;
+		DstMip->CompressedData = SourceArt.BulkData;
+		DstMip->DataSize = SourceArt.ElementCount * SourceArt.GetElementSize();
+		DstMip->ShouldFreeData = false;
+		DstMip->USize = Source.SizeX;
+		DstMip->VSize = Source.SizeY;
+		TexData.Platform = Package->Platform;
+//		printf("Source png texture %dx%d\n", Source.SizeX, Source.SizeY);
+		intFormat = TPF_PNG_BGRA;
+	}
+
+	if (intFormat == TPF_UNKNOWN)
+	{
+		appNotify("Unknown texture format: %s (%d)", TexData.OriginalFormatName, Format);
+		return false;
 	}
 
 	// Older Android and iOS UE3 versions didn't have dedicated CachedETCMips etc, all data were stored in Mips, but with different format

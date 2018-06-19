@@ -2169,7 +2169,7 @@ void UITreeView::DialogClosed(bool cancel)
 
 
 /*-----------------------------------------------------------------------------
-	UIMenu
+	UIMenuItem
 -----------------------------------------------------------------------------*/
 
 // Hyperlink
@@ -2183,6 +2183,7 @@ UIMenuItem::UIMenuItem(const char* text, const char* link)
 UIMenuItem::UIMenuItem(const char* text, bool checked)
 :	bValue(checked)
 ,	pValue(&bValue)
+,	iValue(0) // indicates that pValue is bool and not a mask
 {
 	Init(MI_Checkbox, text);
 }
@@ -2191,7 +2192,18 @@ UIMenuItem::UIMenuItem(const char* text, bool checked)
 UIMenuItem::UIMenuItem(const char* text, bool* checked)
 :	pValue(checked)
 //,	bValue(value) - uninitialized
+,	iValue(0) // indicates that pValue is bool and not a mask
 {
+	Init(MI_Checkbox, text);
+}
+
+// Checkbox
+UIMenuItem::UIMenuItem(const char* text, int* value, int mask)
+:	pValue(value)
+,	iValue(mask) // indicates that pValue is a bitfield with iValue mask
+//,	bValue(value) - uninitialized
+{
+	assert((mask & (mask-1)) == 0 && mask != 0); // should be non-zero value with a single bit set
 	Init(MI_Checkbox, text);
 }
 
@@ -2225,13 +2237,18 @@ void UIMenuItem::Init(EType type, const char* label)
 	Label = label ? label : "";
 	Link = NULL;
 	Id = 0;
+	hMenu = NULL;
 	Parent = NextChild = FirstChild = NULL;
 	Enabled = true;
-	Checked = false;
 }
 
 // Destructor: release all child items
 UIMenuItem::~UIMenuItem()
+{
+	DestroyChildren();
+}
+
+void UIMenuItem::DestroyChildren()
 {
 	UIMenuItem* next;
 	for (UIMenuItem* curr = FirstChild; curr; curr = next)
@@ -2267,11 +2284,39 @@ UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next)
 UIMenuItem& UIMenuItem::Enable(bool enable)
 {
 	Enabled = enable;
-	if (!Id) return *this;
+	if (Parent && Parent->hMenu)
+	{
+		EnableMenuItem(Parent->hMenu, GetItemIndex(), MF_BYPOSITION | (enable ? MF_ENABLED : MF_DISABLED));
+		UIMenu* Menu = GetOwner();
+		if (Parent == Menu)
+		{
+			Menu->Redraw();
+		}
+	}
+	return *this;
+}
 
-	HMENU hMenu = GetMenuHandle();
-	if (hMenu)
-		EnableMenuItem(hMenu, Id, MF_BYCOMMAND | (enable ? MF_ENABLED : MF_DISABLED));
+UIMenuItem& UIMenuItem::SetName(const char* newName)
+{
+	if (Label != newName)
+	{
+		Label = newName;
+		if (Parent && Parent->hMenu)
+		{
+			MENUITEMINFO mii;
+			memset(&mii, 0, sizeof(mii));
+			mii.cbSize = sizeof(mii);
+			mii.fMask = MIIM_STRING;
+			mii.dwTypeData = (LPSTR)*Label;
+			SetMenuItemInfo(Parent->hMenu, GetItemIndex(), TRUE, &mii);
+			// If Parent is UIMenu, we're working with top-level menu item, so we should refresh menu line
+			UIMenu* Menu = GetOwner();
+			if (Parent == Menu)
+			{
+				Menu->Redraw();
+			}
+		}
+	}
 	return *this;
 }
 
@@ -2306,6 +2351,20 @@ void UIMenuItem::Add(UIMenuItem* item)
 	unguard;
 }
 
+// Get index of 'this' menu item in parent's children list
+int UIMenuItem::GetItemIndex() const
+{
+	if (!Parent) return -1;
+	int index = 0;
+	for (UIMenuItem* item = Parent->FirstChild; item; item = item->NextChild)
+	{
+		if (item == this) return index;
+		// todo: can skip invisible items, if we'll support those
+		index++;
+	}
+	return -1;
+}
+
 // Recursive function for menu creation
 void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 {
@@ -2331,7 +2390,7 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 				UINT fType = MFT_STRING;
 				UINT fState = 0;
 				if (!item->Enabled) fState |= MFS_DISABLED;
-				if (item->Type == MI_Checkbox && *(bool*)item->pValue)
+				if (item->Type == MI_Checkbox && item->GetCheckboxValue())
 				{
 					// checked checkbox
 					fState |= MFS_CHECKED;
@@ -2362,10 +2421,11 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 
 		case MI_Submenu:
 			{
-				HMENU hSubMenu = CreatePopupMenu();
-				AppendMenu(parentMenu, MF_POPUP, (UINT_PTR)hSubMenu, *item->Label);
+				assert(!item->hMenu);
+				item->hMenu = CreatePopupMenu();
+				AppendMenu(parentMenu, MF_POPUP, (UINT_PTR)item->hMenu, *item->Label);
 				int submenuPosition = 0;
-				item->FillMenuItems(hSubMenu, nextId, submenuPosition);
+				item->FillMenuItems(item->hMenu, nextId, submenuPosition);
 			}
 			break;
 
@@ -2408,8 +2468,8 @@ bool UIMenuItem::HandleCommand(int id)
 			case MI_Checkbox:
 				{
 					// change value
-					bool value = !*(bool*)item->pValue;
-					*(bool*)item->pValue = value;
+					bool value = !item->GetCheckboxValue();
+					item->SetCheckboxValue(value);
 					// update menu
 					CheckMenuItem(hMenu, item->Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
 					// callbacks
@@ -2475,12 +2535,29 @@ bool UIMenuItem::HandleCommand(int id)
 	unguard;
 }
 
-HMENU UIMenuItem::GetMenuHandle()
+UIMenu* UIMenuItem::GetOwner()
 {
 	UIMenuItem* item = this;
 	while (item->Parent)
 		item = item->Parent;
-	return static_cast<UIMenu*>(item)->GetHandle(false);
+	return static_cast<UIMenu*>(item);
+}
+
+HMENU UIMenuItem::GetMenuHandle()
+{
+	return GetOwner()->GetHandle(false);
+}
+
+int UIMenuItem::GetMaxItemIdRecursive()
+{
+	int maxId = Id;
+	for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
+	{
+		int maxChildId = item->GetMaxItemIdRecursive();
+		if (maxChildId > maxId)
+			maxId = maxChildId;
+	}
+	return maxId;
 }
 
 void UIMenuItem::Update()
@@ -2493,7 +2570,10 @@ void UIMenuItem::Update()
 	switch (Type)
 	{
 	case MI_Checkbox:
-		CheckMenuItem(hMenu, Id, MF_BYCOMMAND | (*(bool*)pValue ? MF_CHECKED : 0));
+		{
+			bool value = GetCheckboxValue();
+			CheckMenuItem(hMenu, Id, MF_BYCOMMAND | (value ? MF_CHECKED : 0));
+		}
 		break;
 	case MI_RadioGroup:
 		for (UIMenuItem* button = FirstChild; button; button = button->NextChild)
@@ -2511,21 +2591,129 @@ void UIMenuItem::Update()
 	unguard;
 }
 
+void UIMenuItem::ReplaceWith(UIMenuItem* other)
+{
+	guard(UIMenuItem::ReplaceWith);
+
+	// Both should be submenus
+	assert(Type == MI_Submenu && other->Type == MI_Submenu);
+	// This should be created, other - not
+	assert(hMenu != NULL && Parent != NULL);
+	assert(other->hMenu == NULL && other->Parent == NULL);
+
+	// Destroy C++ objects
+	DestroyChildren();
+
+	// Destroy all menu items
+	for (int i = GetMenuItemCount(hMenu) - 1; i >= 0; i--)
+	{
+		DeleteMenu(hMenu, i, MF_BYPOSITION);
+	}
+
+	// Now, move other's content into this menu
+	FirstChild = other->FirstChild;
+	other->FirstChild = NULL;
+	for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
+	{
+		item->Parent = this;
+	}
+
+	int nextId = GetOwner()->GetNextItemId();
+	int submenuPosition = 0;
+	FillMenuItems(hMenu, nextId, submenuPosition);
+
+	if (!other->Label.IsEmpty())
+	{
+		SetName(*other->Label);
+	}
+
+	// Cleanup
+	delete other;
+
+	unguard;
+}
+
+bool UIMenuItem::GetCheckboxValue() const
+{
+	assert(Type == MI_Checkbox);
+	if (iValue)
+	{
+		// bitfield
+		return ( *(int*)pValue & iValue ) != 0;
+	}
+	else
+	{
+		// simple bool
+		return *(bool*)pValue;
+	}
+}
+
+void UIMenuItem::SetCheckboxValue(bool newValue)
+{
+	assert(Type == MI_Checkbox);
+	if (iValue)
+	{
+		// bitfield
+		int fullValue = *(int*)pValue;
+		fullValue = fullValue & ~iValue | (newValue ? iValue : 0);
+		*(int*)pValue = fullValue;
+	}
+	else
+	{
+		// simple bool
+		*(bool*)pValue = newValue;
+	}
+}
+
+
+/*-----------------------------------------------------------------------------
+	UIMenu
+-----------------------------------------------------------------------------*/
+
 UIMenu::UIMenu()
 :	UIMenuItem(MI_Submenu)
-,	hMenu(0)
 ,	ReferenceCount(0)
+,	MenuOwner(NULL)
+,	MenuObject(NULL)
 {}
 
 UIMenu::~UIMenu()
 {
-	if (hMenu) DestroyMenu(hMenu);
+	if (MenuObject) DestroyMenu(MenuObject);
+}
+
+void UIMenu::AttachTo(HWND Wnd, bool updateRefCount)
+{
+	assert(MenuOwner == NULL);
+	MenuOwner = Wnd;
+	if (updateRefCount)
+	{
+		ReferenceCount++;
+	}
+	SetMenu(MenuOwner, GetHandle(false, true));
+	Redraw();
+}
+
+void UIMenu::Detach()
+{
+	if (MenuOwner)
+	{
+		SetMenu(MenuOwner, NULL);
+		Redraw();
+		MenuOwner = NULL;
+	}
+	if (--ReferenceCount == 0) delete this;
+}
+
+void UIMenu::Redraw()
+{
+	if (MenuOwner) DrawMenuBar(MenuOwner);
 }
 
 HMENU UIMenu::GetHandle(bool popup, bool forceCreate)
 {
 	if (!hMenu && forceCreate) Create(popup);
-	return popup ? GetSubMenu(hMenu, 0) : hMenu;
+	return hMenu;
 }
 
 void UIMenu::Create(bool popup)
@@ -2538,20 +2726,25 @@ void UIMenu::Create(bool popup)
 	if (popup)
 	{
 		// TrackPopupMenu can't work with main menu, it requires a submenu handle.
-		// Create dummy submenu to host all menu items. Note: GetMenuHandle() will
-		// return submenu at position 0 when requesting a popup memu handle.
-		hMenu = CreateMenu();
-		HMENU hSubMenu = CreatePopupMenu();
-		AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSubMenu, "");
-		FillMenuItems(hSubMenu, nextId, position);
+		// Create dummy submenu to host all menu items. MenuObject will be a menu
+		// owner here, and hMenu will be a menu itself.
+		MenuObject = CreateMenu();
+		hMenu = CreatePopupMenu();
+		AppendMenu(MenuObject, MF_POPUP, (UINT_PTR)hMenu, "");
 	}
 	else
 	{
-		hMenu = CreateMenu();
-		FillMenuItems(hMenu, nextId, position);
+		hMenu = MenuObject = CreateMenu();
 	}
 
+	FillMenuItems(hMenu, nextId, position);
+
 	unguard;
+}
+
+int UIMenu::GetNextItemId()
+{
+	return max(GetMaxItemIdRecursive() + 1, FIRST_MENU_ID);
 }
 
 
@@ -3121,6 +3314,7 @@ UIBaseDialog::UIBaseDialog()
 ,	ParentDialog(NULL)
 ,	IconResId(0)
 ,	IsDialogConstructed(false)
+,	DisabledOwnerWnd(NULL)
 ,	ClosingDialog(false)
 {}
 
@@ -3323,6 +3517,62 @@ void UIBaseDialog::HideDialog()
 	// Don't call Show(false) because it will propagate visibility to all children
 }
 
+void UIBaseDialog::BeginModal()
+{
+	if (DisabledOwnerWnd == NULL)
+	{
+		// Disable parent window
+		HWND Owner = (HWND)GetWindowLongPtr(Wnd, GWLP_HWNDPARENT);
+		if (Owner != NULL)
+		{
+			BOOL OldEnabled = IsWindowEnabled(Owner);
+			if (OldEnabled)
+			{
+				EnableWindow(Owner, FALSE);
+				DisabledOwnerWnd = Owner;
+			}
+		}
+	}
+}
+
+void UIBaseDialog::EndModal()
+{
+	if (DisabledOwnerWnd != NULL)
+	{
+		EnableWindow(DisabledOwnerWnd, TRUE);
+		// When 'this' window is closed (hidden), owner window is disabled. This will cause wrong window to get
+		// focus. Fix that be manually changing focus.
+		SetForegroundWindow(DisabledOwnerWnd);
+		DisabledOwnerWnd = NULL;
+	}
+}
+
+void UIBaseDialog::DispatchWindowsMessage(void* pMsg)
+{
+	MSG& msg = *(MSG*)pMsg;
+
+	if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
+	{
+		// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
+		// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
+		// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
+		// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
+		// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
+		// checks are performed because we have very simple hierarchy in our UI system: all children are
+		// parented by single dialog window.
+		// If we'll need nore robust way of processing messages (for example, when we need to process
+		// keys for modal dialogs, or when message loop is processed by code which is not accessible for
+		// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
+		// (because key messages are sent to the focused window only, and not to its parent), but it looks
+		// more complicated.
+		if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
+			CloseDialog(true);
+	}
+
+	TranslateMessage(&msg);
+	DispatchMessage(&msg);
+}
+
 bool UIBaseDialog::PumpMessages()
 {
 	guard(UIBaseDialog::PumpMessages);
@@ -3332,27 +3582,9 @@ bool UIBaseDialog::PumpMessages()
 	MSG msg;
 	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
-		if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
-		{
-			// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
-			// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
-			// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
-			// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
-			// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
-			// checks are performed because we have very simple hierarchy in our UI system: all children are
-			// parented by single dialog window.
-			// If we'll need nore robust way of processing messages (for example, when we need to process
-			// keys for modal dialogs, or when message loop is processed by code which is not accessible for
-			// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
-			// (because key messages are sent to the focused window only, and not to its parent), but it looks
-			// more complicated.
-			if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
-				CloseDialog(true);
-		}
-
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		DispatchWindowsMessage(&msg);
 	}
+	// Return false if window has been closed
 	return (Wnd != 0);
 
 	unguard;
@@ -3366,48 +3598,23 @@ void UIBaseDialog::CustomMessageLoop(bool modal)
 
 	if (Wnd == 0) return;
 
-	// Ensure modal behavior when needed - disable parent window
-	HWND Owner = (HWND)GetWindowLongPtr(Wnd, GWLP_HWNDPARENT);
-	BOOL OldEnabled = FALSE;
-	if (modal && Owner != NULL)
+	if (modal)
 	{
-		OldEnabled = IsWindowEnabled(Owner);
-		EnableWindow(Owner, FALSE);
+		BeginModal();
 	}
 
 	// Classic message loop, based on GetMessage() call. We're checking 'ClosingDialog' before GetMessage()
-	// to exit modal message loop when window is hidden instead of being closed.
+	// to exit modal message loop when window is hidden instead of being closed, otherwise application will
+	// hang with waiting for a message for invisible window.
 	MSG msg;
 	while (!ClosingDialog && GetMessage(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN && ShouldCloseOnEsc && msg.wParam == VK_ESCAPE)
-		{
-			// Win32 dialog boxes doesn't receive keyboard messages. By the way, modal boxes receives IDOK
-			// or IDCANCEL commands when user press 'Enter' or 'Escape'. In order to handle the 'Escape' key
-			// in NON-modal boxes, we should have our own message loop. We have one for non-modal dialog
-			// boxes here. We don't have access to the message loop of modal dialog box. Note: we are comparing
-			// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
-			// checks are performed because we have very simple hierarchy in our UI system: all children are
-			// parented by single dialog window.
-			// If we'll need nore robust way of processing messages (for example, when we need to process
-			// keys for modal dialogs, or when message loop is processed by code which is not accessible for
-			// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
-			// (because key messages are sent to the focused window only, and not to its parent), but it looks
-			// more complicated.
-			if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
-				CloseDialog(true);
-		}
-
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		DispatchWindowsMessage(&msg);
 	}
 
-	if (modal && Owner != NULL)
+	if (modal)
 	{
-		EnableWindow(Owner, OldEnabled);
-		// When 'this' window is closed (hidden), owner window is disabled. This will cause wrong window to get
-		// focus. Fix that be manually changing focus.
-		SetForegroundWindow(Owner);
+		EndModal();
 	}
 
 	unguard;
@@ -3417,6 +3624,7 @@ void UIBaseDialog::CloseDialog(bool cancel)
 {
 	if (Wnd && CanCloseDialog(cancel))
 	{
+		EndModal();
 		if (!ShouldHideOnClose)
 		{
 			DialogClosed(cancel);
@@ -3518,7 +3726,10 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		CreateGroupControls(this);
 
 		if (Menu)
-			::SetMenu(Wnd, Menu->GetHandle(false, true));
+		{
+			// we already had UIMenu::Attach() called before, so call AttachTo without updating reference count
+			Menu->AttachTo(Wnd, false);
+		}
 
 		// adjust window size taking into account desired client size and center window on screen
 		r.left   = 0;

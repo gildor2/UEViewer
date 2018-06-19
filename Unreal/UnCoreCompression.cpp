@@ -42,12 +42,12 @@
 
 // using Core memory manager
 
-extern "C" void *zcalloc(int opaque, int items, int size)
+extern "C" void *zcalloc(void* opaque, int items, int size)
 {
 	return appMalloc(items * size);
 }
 
-extern "C" void zcfree(int opaque, void *ptr)
+extern "C" void zcfree(void* opaque, void *ptr)
 {
 	appFree(ptr);
 }
@@ -92,7 +92,7 @@ static int mspack_read(mspack_file *file, void *buffer, int bytes)
 			file->rest = file->bufSize - file->pos;
 	}
 	if (bytes > file->rest) bytes = file->rest;
-	if (!bytes) return 0;
+	if (bytes <= 0) return 0;
 
 	// copy block data
 	memcpy(buffer, file->buf + file->pos, bytes);
@@ -323,15 +323,20 @@ FString GAesKey;
 
 #define AES_KEYBITS		256
 
-void appDecryptAES(byte* Data, int Size)
+void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen)
 {
 	guard(appDecryptAES);
 
-	if (GAesKey.Len() == 0)
+	if (KeyLen <= 0)
+	{
+		KeyLen = strlen(Key);
+	}
+
+	if (KeyLen == 0)
 	{
 		appError("Trying to decrypt AES block without providing an AES key");
 	}
-	if (GAesKey.Len() < KEYLENGTH(AES_KEYBITS))
+	if (KeyLen < KEYLENGTH(AES_KEYBITS))
 	{
 		appError("AES key is too short");
 	}
@@ -339,7 +344,7 @@ void appDecryptAES(byte* Data, int Size)
 	assert((Size & 15) == 0);
 
 	unsigned long rk[RKLENGTH(AES_KEYBITS)];
-	int nrounds = rijndaelSetupDecrypt(rk, (uint8*) *GAesKey, AES_KEYBITS);
+	int nrounds = rijndaelSetupDecrypt(rk, (const byte*)Key, AES_KEYBITS);
 
 	for (int pos = 0; pos < Size; pos += 16)
 	{

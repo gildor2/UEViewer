@@ -9,7 +9,6 @@
 
 #include "Exporters/Exporters.h"
 
-
 CObjectViewer::CObjectViewer(UObject* Obj, CApplication *Win)
 :	Object(Obj)
 ,	Window(Win)
@@ -72,7 +71,7 @@ void CObjectViewer::Draw2D()
 {
 	if (!Object)
 	{
-		DrawTextLeft(S_RED "There's no visual object loaded now.");
+		DrawTextLeft(S_RED "There's no visual objects loaded now.");
 		DrawTextLeft(S_RED "Press <O> to load a different package.");
 
 		TArray<ClassStats> stats;
@@ -109,5 +108,14 @@ void CObjectViewer::Draw2D()
 
 	DrawTextLeft("");
 }
+
+#if HAS_UI
+
+UIMenuItem* CObjectViewer::GetObjectMenu(UIMenuItem* menu)
+{
+	return menu;
+}
+
+#endif // HAS_UI
 
 #endif // RENDERING

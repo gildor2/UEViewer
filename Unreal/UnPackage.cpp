@@ -3,6 +3,7 @@
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnPackage.h"
+#include "UnPackageUE3Reader.h"
 
 #include "GameDatabase.h"		// for GetGameTag()
 
@@ -557,6 +558,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		S.CustomVersionContainer.Serialize(Ar, S.LegacyVersion);
 	}
 
+	// Conan Exiles: has TArray<int32[5]> inserted here. Also it has int32=0 before Tag
+
 	Ar << S.HeadersSize;
 	Ar << S.PackageGroup;
 	Ar << S.PackageFlags;
@@ -636,6 +639,15 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	int32 PackageSource;
 	Ar << PackageSource;
 
+#if ARK
+	// Ark: Survival Evolved - starting with some version (March 2018?), serializaiton requires this:
+	if (Ar.Game == GAME_Ark && Ar.ArLicenseeVer >= 10)
+	{
+		int64 unk;		// it seems this value is always 0x1234
+		Ar << unk;
+	}
+#endif // ARK
+
 	TArray<FString> AdditionalPackagesToCook;
 	Ar << AdditionalPackagesToCook;
 
@@ -643,6 +655,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	{
 		int32 NumTextureAllocations;
 		Ar << NumTextureAllocations;
+		assert(NumTextureAllocations == 0); // actually this was an array before
 	}
 
 	if (Ar.ArVer >= VER_UE4_ASSET_REGISTRY_TAGS)
@@ -1015,6 +1028,15 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 		if (Ar.ArVer >= 573) goto ue3_component_map; // Injustice, version unknown
 	}
 #endif // MKVSDC
+#if ROCKET_LEAGUE
+	if (Ar.Game == GAME_RocketLeague && Ar.ArLicenseeVer >= 22)
+	{
+		// Rocket League has 64-bit SerialOffset in LicenseeVer >= 22, skip HIDWORD
+		int32 SerialOffsetUpper;
+		Ar << SerialOffsetUpper;
+		assert(SerialOffsetUpper == 0);
+	}
+#endif // ROCKET_LEAGUE
 
 	if (Ar.ArVer < 543)
 	{
@@ -1239,629 +1261,8 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 
 
 /*-----------------------------------------------------------------------------
-	Lineage2 file reader
------------------------------------------------------------------------------*/
-
-#if LINEAGE2 || EXTEEL
-
-#define LINEAGE_HEADER_SIZE		28
-
-class FFileReaderLineage : public FReaderWrapper
-{
-	DECLARE_ARCHIVE(FFileReaderLineage, FReaderWrapper);
-public:
-	FFileReaderLineage(FArchive *File, int Key)
-	:	FReaderWrapper(File, LINEAGE_HEADER_SIZE)
-	,	XorKey(Key)
-	{
-		Game = GAME_Lineage2;
-		Seek(0);		// skip header
-	}
-
-	virtual void Serialize(void *data, int size)
-	{
-		Reader->Serialize(data, size);
-		if (XorKey)
-		{
-			int i;
-			byte *p;
-			for (i = 0, p = (byte*)data; i < size; i++, p++)
-				*p ^= XorKey;
-		}
-	}
-
-protected:
-	byte		XorKey;
-};
-
-#endif // LINEAGE2 || EXTEEL
-
-
-/*-----------------------------------------------------------------------------
-	Battle Territory Online
------------------------------------------------------------------------------*/
-
-#if BATTLE_TERR
-
-class FFileReaderBattleTerr : public FReaderWrapper
-{
-	DECLARE_ARCHIVE(FFileReaderBattleTerr, FReaderWrapper);
-public:
-	FFileReaderBattleTerr(FArchive *File)
-	:	FReaderWrapper(File)
-	{
-		Game = GAME_BattleTerr;
-	}
-
-	virtual void Serialize(void *data, int size)
-	{
-		Reader->Serialize(data, size);
-
-		int i;
-		byte *p;
-		for (i = 0, p = (byte*)data; i < size; i++, p++)
-		{
-			byte b = *p;
-			int shift;
-			byte v;
-			for (shift = 1, v = b & (b - 1); v; v = v & (v - 1))	// shift = number of identity bits in 'v' (but b=0 -> shift=1)
-				shift++;
-			b = ROL8(b, shift);
-			*p = b;
-		}
-	}
-};
-
-#endif // BATTLE_TERR
-
-
-/*-----------------------------------------------------------------------------
-	Blade & Soul
------------------------------------------------------------------------------*/
-
-#if AA2
-
-class FFileReaderAA2 : public FReaderWrapper
-{
-	DECLARE_ARCHIVE(FFileReaderAA2, FReaderWrapper);
-public:
-	FFileReaderAA2(FArchive *File)
-	:	FReaderWrapper(File)
-	{}
-
-	virtual void Serialize(void *data, int size)
-	{
-		int StartPos = Reader->Tell();
-		Reader->Serialize(data, size);
-
-		int i;
-		byte *p;
-		for (i = 0, p = (byte*)data; i < size; i++, p++)
-		{
-			byte b = *p;
-		#if 0
-			// used with ArraysAGPCount != 0
-			int shift;
-			byte v;
-			for (shift = 1, v = b & (b - 1); v; v = v & (v - 1))	// shift = number of identity bits in 'v' (but b=0 -> shift=1)
-				shift++;
-			b = ROR8(b, shift);
-		#else
-			// used with ArraysAGPCount == 0
-			int PosXor = StartPos + i;
-			PosXor = (PosXor >> 8) ^ PosXor;
-			b ^= (PosXor & 0xFF);
-			if (PosXor & 2)
-			{
-				b = ROL8(b, 1);
-			}
-		#endif
-			*p = b;
-		}
-	}
-};
-
-#endif // AA2
-
-
-/*-----------------------------------------------------------------------------
-	Blade & Soul
------------------------------------------------------------------------------*/
-
-#if BLADENSOUL
-
-class FFileReaderBnS : public FReaderWrapper
-{
-	DECLARE_ARCHIVE(FFileReaderBnS, FReaderWrapper);
-public:
-	FFileReaderBnS(FArchive *File)
-	:	FReaderWrapper(File)
-	{
-		Game = GAME_BladeNSoul;
-	}
-
-	virtual void Serialize(void *data, int size)
-	{
-		int Pos = Reader->Tell();
-		Reader->Serialize(data, size);
-
-		// Note: similar code exists in DecryptBladeAndSoul()
-		int i;
-		byte *p;
-		static const char *key = "qiffjdlerdoqymvketdcl0er2subioxq";
-		for (i = 0, p = (byte*)data; i < size; i++, p++, Pos++)
-		{
-			*p ^= key[Pos % 32];
-		}
-	}
-};
-
-
-static void DecodeBnSPointer(int &Value, unsigned Code1, unsigned Code2, int Index)
-{
-	unsigned tmp1 = ROR32(Value, (Index + Code2) & 0x1F);
-	unsigned tmp2 = ROR32(Code1, Index % 32);
-	Value = tmp2 ^ tmp1;
-}
-
-
-static void PatchBnSExports(FObjectExport *Exp, const FPackageFileSummary &Summary)
-{
-	unsigned Code1 = ((Summary.HeadersSize & 0xFF) << 24) |
-					 ((Summary.NameCount   & 0xFF) << 16) |
-					 ((Summary.NameOffset  & 0xFF) << 8)  |
-					 ((Summary.ExportCount & 0xFF));
-	unsigned Code2 = (Summary.ExportOffset + Summary.ImportCount + Summary.ImportOffset) & 0x1F;
-
-	for (int i = 0; i < Summary.ExportCount; i++, Exp++)
-	{
-		DecodeBnSPointer(Exp->SerialSize,   Code1, Code2, i);
-		DecodeBnSPointer(Exp->SerialOffset, Code1, Code2, i);
-	}
-}
-
-#endif // BLADENSOUL
-
-#if DUNDEF
-
-static void PatchDunDefExports(FObjectExport *Exp, const FPackageFileSummary &Summary)
-{
-	// Dungeon Defenders has nullified ExportOffset entries starting from some version.
-	// Let's recover them.
-	int CurrentOffset = Summary.HeadersSize;
-	for (int i = 0; i < Summary.ExportCount; i++, Exp++)
-	{
-		if (Exp->SerialOffset == 0)
-			Exp->SerialOffset = CurrentOffset;
-		CurrentOffset = Exp->SerialOffset + Exp->SerialSize;
-	}
-}
-
-#endif // DUNDEF
-
-
-/*-----------------------------------------------------------------------------
-	Nurien
------------------------------------------------------------------------------*/
-
-#if NURIEN
-
-class FFileReaderNurien : public FReaderWrapper
-{
-	DECLARE_ARCHIVE(FFileReaderNurien, FReaderWrapper);
-public:
-	int			Threshold;
-
-	FFileReaderNurien(FArchive *File)
-	:	FReaderWrapper(File)
-	,	Threshold(0x7FFFFFFF)
-	{}
-
-	virtual void Serialize(void *data, int size)
-	{
-		int Pos = Reader->Tell();
-		Reader->Serialize(data, size);
-
-		// only first Threshold bytes are compressed (package headers)
-		if (Pos >= Threshold) return;
-
-		int i;
-		byte *p;
-		static const byte key[] = {
-			0xFE, 0xF2, 0x35, 0x2E, 0x12, 0xFF, 0x47, 0x8A,
-			0xE1, 0x2D, 0x53, 0xE2, 0x21, 0xA3, 0x74, 0xA8
-		};
-		for (i = 0, p = (byte*)data; i < size; i++, p++, Pos++)
-		{
-			if (Pos >= Threshold) return;
-			*p ^= key[Pos & 0xF];
-		}
-	}
-
-	virtual void SetStartingPosition(int pos)
-	{
-		Threshold = pos;
-	}
-};
-
-#endif // NURIEN
-
-
-/*-----------------------------------------------------------------------------
-	UE3 compressed file reader
------------------------------------------------------------------------------*/
-
-#if UNREAL3
-
-class FUE3ArchiveReader : public FArchive
-{
-	DECLARE_ARCHIVE(FUE3ArchiveReader, FArchive);
-public:
-	FArchive				*Reader;
-
-	bool					IsFullyCompressed;
-
-	// compression data
-	int						CompressionFlags;
-	TArray<FCompressedChunk> CompressedChunks;
-	// own file positions, overriding FArchive's one (because parent class is
-	// used for compressed data)
-	int						Stopper;
-	int						Position;
-	// decompression buffer
-	byte					*Buffer;
-	int						BufferSize;
-	int						BufferStart;
-	int						BufferEnd;
-	// chunk
-	const FCompressedChunk	*CurrentChunk;
-	FCompressedChunkHeader	ChunkHeader;
-	int						ChunkDataPos;
-
-	int						PositionOffset;
-
-	FUE3ArchiveReader(FArchive *File, int Flags, const TArray<FCompressedChunk> &Chunks)
-	:	Reader(File)
-	,	IsFullyCompressed(false)
-	,	CompressionFlags(Flags)
-	,	Buffer(NULL)
-	,	BufferSize(0)
-	,	BufferStart(0)
-	,	BufferEnd(0)
-	,	CurrentChunk(NULL)
-	,	PositionOffset(0)
-	{
-		guard(FUE3ArchiveReader::FUE3ArchiveReader);
-		CopyArray(CompressedChunks, Chunks);
-		SetupFrom(*File);
-		assert(CompressionFlags);
-		assert(CompressedChunks.Num());
-		unguard;
-	}
-
-	virtual ~FUE3ArchiveReader()
-	{
-		if (Buffer) delete[] Buffer;
-		if (Reader) delete Reader;
-	}
-
-	virtual bool IsCompressed() const
-	{
-		return true;
-	}
-
-	virtual void Serialize(void *data, int size)
-	{
-		guard(FUE3ArchiveReader::Serialize);
-
-		if (Stopper > 0 && Position + size > Stopper)
-			appError("Serializing behind stopper (%X+%X > %X)", Position, size, Stopper);
-
-		while (true)
-		{
-			// check for valid buffer
-			if (Position >= BufferStart && Position < BufferEnd)
-			{
-				int ToCopy = BufferEnd - Position;						// available size
-				if (ToCopy > size) ToCopy = size;						// shrink by required size
-				memcpy(data, Buffer + Position - BufferStart, ToCopy);	// copy data
-				// advance pointers/counters
-				Position += ToCopy;
-				size     -= ToCopy;
-				data     = OffsetPointer(data, ToCopy);
-				if (!size) return;										// copied enough
-			}
-			// here: data/size points outside of loaded Buffer
-			PrepareBuffer(Position);
-			assert(Position >= BufferStart && Position < BufferEnd);	// validate PrepareBuffer()
-		}
-
-		unguard;
-	}
-
-	void PrepareBuffer(int Pos)
-	{
-		guard(FUE3ArchiveReader::PrepareBuffer);
-		// find compressed chunk
-		const FCompressedChunk *Chunk = NULL;
-		for (int ChunkIndex = 0; ChunkIndex < CompressedChunks.Num(); ChunkIndex++)
-		{
-			Chunk = &CompressedChunks[ChunkIndex];
-			if (Pos < Chunk->UncompressedOffset + Chunk->UncompressedSize)
-				break;
-		}
-		assert(Chunk); // should be at least 1 chunk in CompressedChunks
-
-		// DC Universe has uncompressed package headers but compressed remaining package part
-		if (Pos < Chunk->UncompressedOffset)
-		{
-			if (Buffer) delete[] Buffer;
-			int Size = Chunk->CompressedOffset;
-			Buffer      = new byte[Size];
-			BufferSize  = Size;
-			BufferStart = 0;
-			BufferEnd   = Size;
-			Reader->Seek(0);
-			Reader->Serialize(Buffer, Size);
-			return;
-		}
-
-		if (Chunk != CurrentChunk)
-		{
-			// serialize compressed chunk header
-			Reader->Seek(Chunk->CompressedOffset);
-#if BIOSHOCK
-			if (Game == GAME_Bioshock)
-			{
-				// read block size
-				int CompressedSize;
-				*Reader << CompressedSize;
-				// generate ChunkHeader
-				ChunkHeader.Blocks.Empty(1);
-				FCompressedChunkBlock *Block = new (ChunkHeader.Blocks) FCompressedChunkBlock;
-				Block->UncompressedSize = 32768;
-				if (ArLicenseeVer >= 57)		//?? Bioshock 2; no version code found
-					*Reader << Block->UncompressedSize;
-				Block->CompressedSize = CompressedSize;
-			}
-			else
-#endif // BIOSHOCK
-			{
-				if (Chunk->CompressedSize != Chunk->UncompressedSize)
-					*Reader << ChunkHeader;
-				else
-				{
-					// have seen such block in Borderlands: chunk has CompressedSize==UncompressedSize
-					// and has no compression; no such code in original engine
-					ChunkHeader.BlockSize = -1;	// mark as uncompressed (checked below)
-					ChunkHeader.Sum.CompressedSize = ChunkHeader.Sum.UncompressedSize = Chunk->UncompressedSize;
-					ChunkHeader.Blocks.Empty(1);
-					FCompressedChunkBlock *Block = new (ChunkHeader.Blocks) FCompressedChunkBlock;
-					Block->UncompressedSize = Block->CompressedSize = Chunk->UncompressedSize;
-				}
-			}
-			ChunkDataPos = Reader->Tell();
-			CurrentChunk = Chunk;
-		}
-		// find block in ChunkHeader.Blocks
-		int ChunkPosition = Chunk->UncompressedOffset;
-		int ChunkData     = ChunkDataPos;
-		assert(ChunkPosition <= Pos);
-		const FCompressedChunkBlock *Block = NULL;
-		for (int BlockIndex = 0; BlockIndex < ChunkHeader.Blocks.Num(); BlockIndex++)
-		{
-			Block = &ChunkHeader.Blocks[BlockIndex];
-			if (ChunkPosition + Block->UncompressedSize > Pos)
-				break;
-			ChunkPosition += Block->UncompressedSize;
-			ChunkData     += Block->CompressedSize;
-		}
-		assert(Block);
-		// read compressed data
-		//?? optimize? can share compressed buffer and decompressed buffer between packages
-		byte *CompressedBlock = new byte[Block->CompressedSize];
-		Reader->Seek(ChunkData);
-		Reader->Serialize(CompressedBlock, Block->CompressedSize);
-		// prepare buffer for decompression
-		if (Block->UncompressedSize > BufferSize)
-		{
-			if (Buffer) delete[] Buffer;
-			Buffer = new byte[Block->UncompressedSize];
-			BufferSize = Block->UncompressedSize;
-		}
-		// decompress data
-		guard(DecompressBlock);
-		if (ChunkHeader.BlockSize != -1)	// my own mark
-			appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
-		else
-		{
-			// no compression
-			assert(Block->CompressedSize == Block->UncompressedSize);
-			memcpy(Buffer, CompressedBlock, Block->CompressedSize);
-		}
-		unguardf("block=%X+%X", ChunkData, Block->CompressedSize);
-		// setup BufferStart/BufferEnd
-		BufferStart = ChunkPosition;
-		BufferEnd   = ChunkPosition + Block->UncompressedSize;
-		// cleanup
-		delete[] CompressedBlock;
-		unguard;
-	}
-
-	// position controller
-	virtual void Seek(int Pos)
-	{
-		Position = Pos - PositionOffset;
-	}
-	virtual int Tell() const
-	{
-		return Position + PositionOffset;
-	}
-	virtual int GetFileSize() const
-	{
-		// this function is meaningful for the decompressor tool
-		guard(FUE3ArchiveReader::GetFileSize);
-		const FCompressedChunk &Chunk = CompressedChunks[CompressedChunks.Num() - 1];
-#if BIOSHOCK
-		if (Game == GAME_Bioshock && ArLicenseeVer >= 57)		//?? Bioshock 2; no version code found
-		{
-			// Bioshock 2 has added "UncompressedSize" for block, so we must read it
-			int OldPos = Reader->Tell();
-			int CompressedSize, UncompressedSize;
-			Reader->Seek(Chunk.CompressedOffset);
-			*Reader << CompressedSize << UncompressedSize;
-			Reader->Seek(OldPos);	// go back
-			return Chunk.UncompressedOffset + UncompressedSize;
-		}
-#endif // BIOSHOCK
-		return Chunk.UncompressedOffset + Chunk.UncompressedSize + PositionOffset;
-		unguard;
-	}
-	virtual void SetStopper(int Pos)
-	{
-		Stopper = Pos;
-	}
-	virtual int GetStopper() const
-	{
-		return Stopper;
-	}
-	virtual bool IsOpen() const
-	{
-		return Reader->IsOpen();
-	}
-	virtual bool Open()
-	{
-		return Reader->Open();
-	}
-
-	virtual void Close()
-	{
-		Reader->Close();
-		if (Buffer)
-		{
-			delete[] Buffer;
-			Buffer = NULL;
-			BufferStart = BufferEnd = BufferSize = 0;
-		}
-		CurrentChunk = NULL;
-	}
-
-	void ReplaceLoaderWithOffset(FArchive* file, int offset)
-	{
-		if (Reader) delete Reader;
-		Reader = file;
-		PositionOffset = offset;
-	}
-};
-
-#endif // UNREAL3
-
-/*-----------------------------------------------------------------------------
 	Package loading (creation) / unloading
 -----------------------------------------------------------------------------*/
-
-//!! Move CreateLoader and all loaders to a separate h/cpp.
-//!! Note: it's not enough just to expose CreateLoader to .h file - some loaders
-//!! are accrssed from UnPackage constructor (see all CastTo functions).
-//!! Also, 2 loaders are created directly from UnPackage constructor, after
-//!! FPackageFileSummary surialization - perhaps it's possible to move them
-//!! into CreateLoader too.
-
-FArchive* UnPackage::CreateLoader(const char* filename, FArchive* baseLoader)
-{
-	guard(UnPackage::CreateLoader);
-
-	// setup FArchive
-	FArchive* Loader = (baseLoader) ? baseLoader : new FFileReader(filename);
-
-#if LINEAGE2 || EXTEEL || BATTLE_TERR || NURIEN || BLADENSOUL
-	int checkDword;
-	*Loader << checkDword;
-
-	#if LINEAGE2 || EXTEEL
-	if (checkDword == ('L' | ('i' << 16)))	// unicode string "Lineage2Ver111"
-	{
-		// this is a Lineage2 package
-		Loader->Seek(LINEAGE_HEADER_SIZE);
-		// here is a encrypted by 'xor' standard FPackageFileSummary
-		// to get encryption key, can check 1st byte
-		byte b;
-		*Loader << b;
-		// for Ver111 XorKey==0xAC for Lineage or ==0x42 for Exteel, for Ver121 computed from filename
-		byte XorKey = b ^ (PACKAGE_FILE_TAG & 0xFF);
-		// replace Loader
-		Loader = new FFileReaderLineage(Loader, XorKey);
-	}
-	else
-	#endif // LINEAGE2 || EXTEEL
-	#if BATTLE_TERR
-	if (checkDword == 0x342B9CFC)
-	{
-		// replace Loader
-		Loader = new FFileReaderBattleTerr(Loader);
-	}
-	#endif // BATTLE_TERR
-	#if NURIEN
-	if (checkDword == 0xB01F713F)
-	{
-		// replace loader
-		Loader = new FFileReaderNurien(Loader);
-	}
-	#endif // NURIEN
-	#if BLADENSOUL
-	if (checkDword == 0xF84CEAB0)
-	{
-		if (!GForceGame) GForceGame = GAME_BladeNSoul;
-		Loader = new FFileReaderBnS(Loader);
-	}
-	#endif // BLADENSOUL
-	Loader->Seek(0);	// seek back to header
-#endif // complex
-
-#if UNREAL3
-	// code for fully compressed packages support
-	//!! rewrite this code, merge with game autodetection
-	int checkDword1, checkDword2;
-	*Loader << checkDword1;
-	if (checkDword1 == PACKAGE_FILE_TAG_REV)
-	{
-		Loader->ReverseBytes = true;
-		if (GForcePlatform == PLATFORM_UNKNOWN)
-			Loader->Platform = PLATFORM_XBOX360;			// default platform for "ReverseBytes" mode is PLATFORM_XBOX360
-	}
-	*Loader << checkDword2;
-	Loader->Seek(0);
-	if (checkDword2 == PACKAGE_FILE_TAG || checkDword2 == 0x20000 || checkDword2 == 0x10000)	// seen 0x10000 in Enslaved PS3
-	{
-		//!! NOTES:
-		//!! 1)	GOW1/X360 byte-order logic is failed with Core.u and Ungine.u: package header is little-endian,
-		//!!	but internal structures (should be) big endian; crashed on decompression: should use LZX, but
-		//!!	used ZLIB
-		//!! 2)	MKvsDC/X360 Core.u and Engine.u uses LZO instead of LZX
-		guard(ReadFullyCompressedHeader);
-		// this is a fully compressed package
-		FCompressedChunkHeader H;
-		*Loader << H;
-		TArray<FCompressedChunk> Chunks;
-		FCompressedChunk *Chunk = new (Chunks) FCompressedChunk;
-		Chunk->UncompressedOffset = 0;
-		Chunk->UncompressedSize   = H.Sum.UncompressedSize;
-		Chunk->CompressedOffset   = 0;
-		Chunk->CompressedSize     = H.Sum.CompressedSize;
-		byte CompMethod = GForceCompMethod;
-		if (!CompMethod)
-			CompMethod = (Loader->Platform == PLATFORM_XBOX360) ? COMPRESS_LZX : COMPRESS_FIND;
-		FUE3ArchiveReader* UE3Loader = new FUE3ArchiveReader(Loader, CompMethod, Chunks);
-		UE3Loader->IsFullyCompressed = true;
-		Loader = UE3Loader;
-		unguard;
-	}
-#endif // UNREAL3
-
-	return Loader;
-
-	unguardf("%s", filename);
-}
 
 UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 :	Loader(NULL)
@@ -1912,48 +1313,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 	}
 #endif // DEBUG_PACKAGE
 
-	//!! try to separate the following code too
-#if BIOSHOCK
-	if ((Game == GAME_Bioshock) && (Summary.PackageFlags & 0x20000))
-	{
-		// Bioshock has a special flag indicating compression. Compression table follows the package summary.
-		// Read compression tables.
-		int NumChunks, i;
-		TArray<FCompressedChunk> Chunks;
-		*this << NumChunks;
-		Chunks.Empty(NumChunks);
-		int UncompOffset = Tell() - 4;				//?? there should be a flag signalling presence of compression structures, because of "Tell()-4"
-		for (i = 0; i < NumChunks; i++)
-		{
-			int Offset;
-			*this << Offset;
-			FCompressedChunk *Chunk = new (Chunks) FCompressedChunk;
-			Chunk->UncompressedOffset = UncompOffset;
-			Chunk->UncompressedSize   = 32768;
-			Chunk->CompressedOffset   = Offset;
-			Chunk->CompressedSize     = 0;			//?? not used
-			UncompOffset             += 32768;
-		}
-		// Replace Loader for reading compressed Bioshock archives.
-		Loader = new FUE3ArchiveReader(Loader, COMPRESS_ZLIB, Chunks);
-		Loader->SetupFrom(*this);
-	}
-#endif // BIOSHOCK
-
-#if AA2
-	if (Game == GAME_AA2)
-	{
-		// America's Army 2 has encryption after FPackageFileSummary
-		if (ArLicenseeVer >= 19)
-		{
-			int IsEncrypted;
-			*this << IsEncrypted;
-			if (IsEncrypted) Loader = new FFileReaderAA2(Loader);
-		}
-	}
-#endif // AA2
-	//!! end of loader substitution
-
+	ReplaceLoader();
 
 #if UNREAL3
 	if (Game >= GAME_UE3 && Summary.CompressionFlags && Summary.CompressedChunks.Num())
@@ -1964,11 +1324,6 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 		// replace Loader with special reader for compressed UE3 archives
 		Loader = new FUE3ArchiveReader(Loader, Summary.CompressionFlags, Summary.CompressedChunks);
 	}
-	#if NURIEN
-	FFileReaderNurien* NurienReader = Loader->CastTo<FFileReaderNurien>();
-	if (NurienReader)
-		NurienReader->Threshold = Summary.HeadersSize;
-	#endif // NURIEN
 #endif // UNREAL3
 
 	LoadNameTable();
@@ -1998,8 +1353,9 @@ no_depends: ;
 #endif // UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS
 
 #if UNREAL4
-	// Process Event Driven Loader packages: such packages are split into 2 pieces: .uasser with headers
-	// and .uexp with object's data.
+	// Process Event Driven Loader packages: such packages are split into 2 pieces: .uasset with headers
+	// and .uexp with object's data. At this moment we already have FPackageFileSummary fully loaded,
+	// so we can replace loader with .uexp file - with providing correct position offset.
 	if (Game >= GAME_UE4_BASE && Summary.HeadersSize == Loader->GetFileSize())
 	{
 		char buf[MAX_PACKAGE_PATH];
@@ -2214,11 +1570,15 @@ void UnPackage::LoadNameTable()
 			// Verify name, some Korean games (B&S) has garbage there.
 			// Use separate block to not mess with 'goto crossing variable initialization' error.
 			{
+				// Paragon has many names ended with '\n', so it's good idea to trim spaces
+				name.TrimStartAndEndInline();
 				bool goodName = true;
 				int numBadChars = 0;
-				for (int j = 0; j < name.Len(); j++)
+				int nameLen = name.Len();
+				const char* nameStr = *name;
+				for (int j = 0; j < nameLen; j++)
 				{
-					char c = name[j];
+					char c = *nameStr++;
 					if (c < ' ' || c > 0x7F)
 					{
 						// unreadable character
@@ -2227,12 +1587,12 @@ void UnPackage::LoadNameTable()
 					}
 					if (c == '$') numBadChars++;		// unicode characters replaced with '$' in FString serializer
 				}
-				if (numBadChars && name.Len() >= 64) goodName = false;
-				if (numBadChars >= name.Len() / 2 && name.Len() > 16) goodName = false;
+				if (numBadChars && nameLen >= 64) goodName = false;
+				if (numBadChars >= nameLen / 2 && nameLen > 16) goodName = false;
 				if (!goodName)
 				{
 					// replace name
-					appPrintf("WARNING: %s: fixing name %d\n", Filename, i);
+					appPrintf("WARNING: %s: fixing name %d (%s)\n", Filename, i, *name);
 					char buf[64];
 					appSprintf(ARRAY_ARG(buf), "__name_%d__", i);
 					name = buf;
@@ -2342,6 +1702,9 @@ void UnPackage::LoadImportTable()
 	unguard;
 }
 
+// Game-specific de-obfuscation of export tables
+void PatchBnSExports(FObjectExport *Exp, const FPackageFileSummary &Summary);
+void PatchDunDefExports(FObjectExport *Exp, const FPackageFileSummary &Summary);
 
 void UnPackage::LoadExportTable()
 {
@@ -2381,7 +1744,8 @@ void UnPackage::LoadExportTable()
 UnPackage::~UnPackage()
 {
 	guard(UnPackage::~UnPackage);
-	// free resources
+
+	// free tables
 	if (Loader) delete Loader;
 	delete NameTable;
 	delete ImportTable;
@@ -2393,8 +1757,25 @@ UnPackage::~UnPackage()
 	int i = PackageMap.FindItem(this);
 	assert(i != INDEX_NONE);
 	PackageMap.RemoveAt(i);
+	// unlink package from CGameFileInfo
+	const CGameFileInfo *expInfo = appFindGameFile(Filename);
+	if (expInfo)
+	{
+		assert(expInfo->Package == this);
+		const_cast<CGameFileInfo*>(expInfo)->Package = NULL;
+	}
+
 	unguard;
 }
+
+/*static*/ void UnPackage::UnloadPackage(UnPackage* package)
+{
+	if (package)
+	{
+		delete package;
+	}
+}
+
 
 #if 0
 // Commented, not used
@@ -2971,7 +2352,7 @@ const char *UnPackage::GetUncookedPackageName(int PackageIndex) const
 TArray<UnPackage*>	UnPackage::PackageMap;
 TArray<char*>		MissingPackages;
 
-UnPackage *UnPackage::LoadPackage(const char *Name, bool silent)
+/*static*/ UnPackage *UnPackage::LoadPackage(const char *Name, bool silent)
 {
 	guard(UnPackage::LoadPackage);
 

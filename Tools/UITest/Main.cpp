@@ -37,20 +37,27 @@ public:
 					+ NewMenuRadioButton("Value 2", 2)
 				]
 				+ NewMenuSeparator()
+				+ NewSubmenu("Submenu")
+				[
+					NewMenuItem("Submenu 1")
+					+ NewMenuItem("Submenu 2")
+					+ NewMenuItem("Submenu 3")
+				]
 				+ NewMenuItem("Last Item")
 			]
 			+ NewMenuItem("Empty")
+				.Expose(emptyItem)
 		];
 
 		UIMenu* popup = new UIMenu;
 		(*popup)
 		[
 			NewMenuItem("Popup item 1")
-			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			.SetCallback(BIND_MEMBER(&TestDialog::OnMenuItem, this))
 			+ NewMenuItem("Popup item 2")
-			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			.SetCallback(BIND_MEMBER(&TestDialog::OnMenuItem, this))
 			+ NewMenuItem("Popup item 3")
-			.SetCallback(BIND_MEM_CB(&TestDialog::OnMenuItem, this))
+			.SetCallback(BIND_MEMBER(&TestDialog::OnMenuItem, this))
 		];
 
 		(*this)
@@ -87,9 +94,11 @@ public:
 						NewControl(UIGroup, "Menu control")
 						[
 							NewControl(UICheckbox, "Enable item #1", true)
-							.SetCallback(BIND_MEM_CB(&TestDialog::OnEnableItem1, this))
+							.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { item1->Enable(value); }))
 							+ NewControl(UICheckbox, "Item #1", &value1)
 							+ NewControl(UICheckbox, "Item #2", &value2)
+							+ NewControl(UICheckbox, "Enable \"Empty\"", true)
+							.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { emptyItem->Enable(value); }))
 						]
 						+ NewControl(UISpacer)
 						+ NewControl(UIGroup, "Group 1")
@@ -123,7 +132,7 @@ public:
 				]
 			]
 			+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
-			.SetRadioCallback(BIND_MEM_CB(&TestDialog::OnPageChanged, this))
+			.SetRadioCallback(BIND_LAMBDA([this]() { pager->SetActivePage(tabIndex); }))
 			.SetRadioVariable(&tabIndex)
 			[
 				NewControl(UIRadioButton, "page 1")
@@ -152,11 +161,11 @@ public:
 					.SetWidth(100)
 					[
 						NewControl(UIButton, "Add")
-						.SetCallback(BIND_MEM_CB(&TestDialog::OnAddItems, this))
+						.SetCallback(BIND_MEMBER(&TestDialog::OnAddItems, this))
 						+ NewControl(UIButton, "Remove")
-						.SetCallback(BIND_MEM_CB(&TestDialog::OnRemoveItems, this))
+						.SetCallback(BIND_MEMBER(&TestDialog::OnRemoveItems, this))
 						+ NewControl(UIButton, "Unselect")
-						.SetCallback(BIND_MEM_CB(&TestDialog::OnUnselectItems, this))
+						.SetCallback(BIND_LAMBDA( [this]() { list->UnselectAllItems(); } ) ) // same as previous line, but causes C2958 with VC2013
 					]
 				]
 			]
@@ -204,22 +213,8 @@ public:
 		printf("------\n");
 	}
 
-	void OnUnselectItems()
-	{
-		list->UnselectAllItems();
-	}
-
-	void OnEnableItem1(UICheckbox* sender, bool value)
-	{
-		item1->Enable(value);
-	}
-
-	void OnPageChanged()
-	{
-		pager->SetActivePage(tabIndex);
-	}
-
 	UIMenuItem*		item1;
+	UIMenuItem*		emptyItem;
 	UIPageControl*	pager;
 	UIMulticolumnListbox* list;
 	bool			value1;

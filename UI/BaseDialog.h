@@ -12,7 +12,7 @@
 #include "Win32Types.h"
 #include "UnCore.h"					// for TArray and FString
 
-#include "callback.hpp"
+#include "callback.h"
 
 // forwards
 class UIMenu;
@@ -202,20 +202,13 @@ private:
 // Notes:
 // - It will automatically add 'ThisClass' pointer as a first parameter of callback function
 // - SetCallback function name depends on VarName
-// - We have 2 SetCallback versions: with full argument list callback and without arguments.
-//   Return value of simple callback is ignored. This should work because we're using cdecl,
-//   so all function parameters are purged from stack by caller.
 #define DECLARE_CALLBACK(VarName, ...)				\
 public:												\
-	typedef util::Callback<void (ThisClass*, __VA_ARGS__)> VarName##_t; \
-	FORCEINLINE ThisClass& Set##VarName(const VarName##_t& cb) \
+	typedef ::Callback<void(ThisClass*, __VA_ARGS__)> VarName##_t; \
+	template<typename CB>							\
+	FORCEINLINE ThisClass& Set##VarName(CB&& cb)	\
 	{												\
-		VarName = cb; return *this;					\
-	}												\
-	template<class T>								\
-	FORCEINLINE ThisClass& Set##VarName(const util::Callback<T ()>& cb) \
-	{												\
-		VarName = (VarName##_t&)cb; return *this;	\
+		this->VarName = Detail::Forward<CB>(cb); return *this; \
 	}												\
 protected:											\
 	VarName##_t		VarName;						\
@@ -747,7 +740,7 @@ public:
 	};
 
 	// Normal menu item
-	FORCEINLINE UIMenuItem(const char* text)
+	UIMenuItem(const char* text)
 	{
 		Init(MI_Text, text);
 	}
@@ -756,13 +749,14 @@ public:
 	// Checkbox
 	UIMenuItem(const char* text, bool checked);
 	UIMenuItem(const char* text, bool* checked);
+	UIMenuItem(const char* text, int* value, int mask);
 	// RadioGroup
 	UIMenuItem(int value);
 	UIMenuItem(int* value);
 	// RadioButton
 	UIMenuItem(const char* text, int value);
 	// other types
-	FORCEINLINE UIMenuItem(EType type, const char* text = NULL)
+	UIMenuItem(EType type, const char* text = NULL)
 	{
 		Init(type, text);
 	}
@@ -775,9 +769,12 @@ public:
 	UIMenuItem& Expose(UIMenuItem*& var) { var = this; return *this; }
 
 	UIMenuItem& Enable(bool enable);
+	UIMenuItem& SetName(const char* newName);
 
 	const char* GetText() const { return *Label; }
-	HMENU GetMenuHandle();
+
+	// Replace sumbenu content. 'other' will be destroyed after this function call.
+	void ReplaceWith(UIMenuItem* other);
 
 	// Update checkboxes and radio groups according to attached variables
 	void Update();
@@ -795,14 +792,16 @@ public:
 		Add(item); return *this;
 	}
 
+	int GetItemIndex() const;
+
 protected:
 	FStaticString<32> Label;
 	const char*	Link;			// web page link
 	int			Id;
+	HMENU		hMenu;			// valid for MI_Submenu
 
 	EType		Type;
 	bool		Enabled;
-	bool		Checked;
 
 	// Hierarchy
 	UIMenuItem*	Parent;
@@ -814,8 +813,18 @@ protected:
 	void*		pValue;			// pointer to editable value (bool for MI_Checkbox and int for MI_RadioGroup)
 
 	void Init(EType type, const char* label);
+	void DestroyChildren();
+	UIMenu* GetOwner();
+
 	void FillMenuItems(HMENU parentMenu, int& nextId, int& position);
+
+	HMENU GetMenuHandle();
 	bool HandleCommand(int id);
+
+	bool GetCheckboxValue() const;
+	void SetCheckboxValue(bool newValue);
+
+	int GetMaxItemIdRecursive();
 };
 
 class UIMenu : public UIMenuItem // note: we're not using virtual functions in menu classes now
@@ -830,11 +839,10 @@ public:
 	{
 		ReferenceCount++;
 	}
+	void AttachTo(HWND Wnd, bool updateRefCount = true);
+	void Detach();
 
-	FORCEINLINE void Detach()
-	{
-		if (--ReferenceCount == 0) delete this;
-	}
+	void Redraw();
 
 	// make HandleCommand public for UIMenu
 	FORCEINLINE bool HandleCommand(int id)
@@ -842,9 +850,17 @@ public:
 		return UIMenuItem::HandleCommand(id);
 	}
 
+	FORCEINLINE bool IsMainMenu() const
+	{
+		return MenuOwner != NULL;
+	}
+
+	int GetNextItemId();
+
 protected:
-	HMENU		hMenu;
 	int			ReferenceCount;
+	HWND		MenuOwner;
+	HMENU		MenuObject;		// don't use UIMenuItem's hMenu here, see UIMenu::Create() for details
 
 	void Create(bool popup);
 };
@@ -871,14 +887,26 @@ FORCEINLINE UIMenuItem& NewMenuSeparator()
 
 // Create a checkbox
 
+// Checkbox which tracks provided value
 FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, bool* value)
 {
 	return *new UIMenuItem(label, value);
 }
 
+// Checkbox with not automatic tracking
 FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, bool value)
 {
 	return *new UIMenuItem(label, value);
+}
+
+FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, int* value, int mask)
+{
+	return *new UIMenuItem(label, value, mask);
+}
+
+FORCEINLINE UIMenuItem& NewMenuCheckbox(const char* label, unsigned int* value, int mask)
+{
+	return *new UIMenuItem(label, (int*)value, mask);
 }
 
 // Create a radio group: RadioGroup holds a number of RadioItems
@@ -1126,6 +1154,10 @@ public:
 	// not react on 'Escape' key.
 	bool PumpMessages();
 
+	// Showing a non-modal dialog with custom message loop as modal window
+	void BeginModal();
+	void EndModal();
+
 	void CloseDialog(bool cancel = false);
 
 	static void SetMainWindow(HWND window);
@@ -1138,12 +1170,14 @@ protected:
 	bool		ShouldHideOnClose;
 	UIBaseDialog* ParentDialog;
 	bool		IsDialogConstructed;	// true after InitUI() call
+	HWND		DisabledOwnerWnd;		// non-null value when we're showing modal dialog with custom message loop
 
 	int			ClosingDialog;
 
 	bool ShowDialog(bool modal, const char* title, int width, int height);
 
 	void CustomMessageLoop(bool modal);
+	void DispatchWindowsMessage(void* msg);
 
 	// dialog procedure
 	static INT_PTR CALLBACK StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

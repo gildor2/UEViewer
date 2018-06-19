@@ -10,6 +10,9 @@
 
  Revision History:
 
+	19.05.2018 v1.36
+	- using case-insensitive comparison when finding bones in scene for animation
+
 	06.12.2017 v1.35
 	- an attempt to make smoothing groups working
 	- renamed "recurse" option to "look in subfolders" to be less confising to new users
@@ -178,7 +181,7 @@ NOTES:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 135
+global AX_IMPORTER_VERSION = 136
 
 -------------------------------------------------------------------------------
 --	Global variables
@@ -1716,7 +1719,7 @@ fn ImportPsaFile filename trackNum all:false =
 		for j = 1 to SceneBones.count while notfound do
 		(
 			b = SceneBones[j]
-			if b.name == boneName then
+			if (stricmp b.name boneName) == 0 then
 			(
 				MaxBones[i]     = b
 				BindPoseInfo[i] = custAttributes.get b AXBoneCustomDataDef	-- could be 'undefined'
@@ -1957,7 +1960,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.35"
+	label     Lbl1 "Version 1.36"
 	label     Lbl2 "\xA9 2009-2018 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \

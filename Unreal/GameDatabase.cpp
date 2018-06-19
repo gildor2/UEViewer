@@ -339,6 +339,9 @@ const GameInfo GListOfGames[] = {
 #	if DEVILS_THIRD
 		G("Devil's Third", dev3rd, GAME_DevilsThird),
 #	endif
+#	if ROCKET_LEAGUE
+		G("Rocket League", rocketleague, GAME_RocketLeague),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4
@@ -353,6 +356,9 @@ const GameInfo GListOfGames[] = {
 #	if GEARS4
 		G("Gears of War 4", gears4, GAME_Gears4),
 #	endif
+#	if ARK
+		G("Ark: Survival Evolved", ark, GAME_Ark),
+#	endif
 #	if FRIDAY13
 		G("Friday the 13th: The Game", friday13, GAME_Friday13),
 #	endif
@@ -361,6 +367,12 @@ const GameInfo GListOfGames[] = {
 #	endif
 #	if LAWBREAKERS
 		G("Lawbreakers", lawbr, GAME_Lawbreakers),
+#	endif
+#	if SOD2
+		G("State of Decay 2", sod2, GAME_StateOfDecay2),
+#	endif
+#	if DAUNTLESS
+		G("Dauntless", dauntless, GAME_Dauntless),
 #	endif
 #	if PARAGON
 		G("Paragon", paragon, GAME_Paragon),
@@ -751,6 +763,9 @@ void FArchive::DetectGame()
 #endif
 #if GUILTY
 	if (ArVer == 868 && ArLicenseeVer == 2)		SET(GAME_Guilty);
+#endif
+#if ROCKET_LEAGUE
+	if (ArVer == 868 && (ArLicenseeVer >= 18 && ArLicenseeVer <= 22)) SET(GAME_RocketLeague);
 #endif
 #if SPECIALFORCE2
 	if (ArVer == 904 && (ArLicenseeVer == 9 || ArLicenseeVer == 14)) SET(GAME_SpecialForce2);

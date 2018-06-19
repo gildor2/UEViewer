@@ -490,7 +490,7 @@ struct FRawCurveTracks
 	{
 		guard(FRawCurveTracks<<);
 		// This structure is always serialized as property list
-		FRawCurveTracks::StaticGetTypeinfo()->SerializeProps(Ar, &T);
+		FRawCurveTracks::StaticGetTypeinfo()->SerializeUnrealProps(Ar, &T);
 		return Ar;
 		unguard;
 	}

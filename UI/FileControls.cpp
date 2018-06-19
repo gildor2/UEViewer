@@ -77,7 +77,7 @@ void UIFilePathEditor::AddCustomControls()
 		+ NewControl(UIButton, "...")
 		.SetWidth(20)
 	#endif
-		.SetCallback(BIND_MEM_CB(&UIFilePathEditor::OnBrowseClicked, this))
+		.SetCallback(BIND_MEMBER(&UIFilePathEditor::OnBrowseClicked, this))
 	];
 }
 
@@ -180,7 +180,7 @@ void UIFileNameEditor::AddCustomControls()
 		+ NewControl(UIButton, "...")
 		.SetWidth(20)
 	#endif
-		.SetCallback(BIND_MEM_CB(&UIFileNameEditor::OnBrowseClicked, this))
+		.SetCallback(BIND_MEMBER(&UIFileNameEditor::OnBrowseClicked, this))
 	];
 }
 

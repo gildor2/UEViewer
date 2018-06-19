@@ -76,6 +76,9 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 			if (forceVisualizer)
 			{
 				CreateVisualizer(NULL);
+			#if HAS_MENU
+				UpdateObjectMenu();
+			#endif
 				appPrintf("\nThe specified package(s) has no supported objects.\n\n");
 				DisplayPackageStats(GFullyLoadedPackages);
 				return true;
@@ -88,6 +91,9 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 	}
 	// change visualizer
 	CreateVisualizer(Obj);
+#if HAS_MENU
+	UpdateObjectMenu();
+#endif
 	return true;
 
 	unguard;
@@ -96,7 +102,7 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 
 #if HAS_UI
 
-bool CUmodelApp::ShowStartupDialog(UmodelSettings& settings)
+bool CUmodelApp::ShowStartupDialog(CStartupSettings& settings)
 {
 	GuiShown = true;
 	UIStartupDialog dialog(settings);
@@ -447,6 +453,10 @@ CUmodelApp::CUmodelApp()
 ,	ShowMaterials(false)
 ,	ObjIndex(0)
 #endif
+#if HAS_MENU
+,	MainMenu(NULL)
+,	ObjectMenu(NULL)
+#endif
 {
 #if HAS_UI
 	UIBaseDialog::SetGlobalIconResId(IDC_MAIN_ICON);
@@ -587,26 +597,33 @@ void CUmodelApp::WindowCreated()
 	// set window icon
 	SendMessage(wnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDC_MAIN_ICON)));
 	UIBaseDialog::SetMainWindow(wnd);
+	#if HAS_MENU
+	CreateMenu();
+	#endif
 #endif // HAS_UI
+}
 
 #if HAS_MENU
+
+void CUmodelApp::CreateMenu()
+{
 	MainMenu = new UIMenu();
 	(*MainMenu)
 	[
 		NewSubmenu("File")
 		[
 			NewMenuItem("Open package ...\tO")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::ShowPackageUI, this))
+			.SetCallback(BIND_LAMBDA([this] () { ShowPackageUI(); })) // binding of bool() to void(), so use lambda here
 			+ NewMenuSeparator()
 			+ NewMenuItem("Exit\tEsc")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::Exit, this))
+			.SetCallback(BIND_MEMBER(&CUmodelApp::Exit, this))
 		]
 		+ NewSubmenu("View")
 		[
 			NewMenuItem("Screenshot\tCtrl+S")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::TakeScreenshot1, this))
+			.SetCallback(BIND_LAMBDA([this]() { DoScreenshot = 1; }))
 			+ NewMenuItem("Screenshot with alpha\tAlt+S")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::TakeScreenshot2, this))
+			.SetCallback(BIND_LAMBDA([this]() { DoScreenshot = 2; }))
 			+ NewMenuSeparator()
 			+ NewMenuCheckbox("Show debug information\tCtrl+Q", &GShowDebugInfo)
 		]
@@ -616,26 +633,29 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuCheckbox("Include materials", &ShowMaterials)
 			+ NewMenuSeparator()
 			+ NewMenuItem("Previous\tPgUp")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::PrevObject, this))
+			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(-1); }))
 			+ NewMenuItem("Next\tPgDn")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::NextObject, this))
+			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(1); }))
 		]
+		+ NewSubmenu("Object")
+		.Enable(false)
+		.Expose(ObjectMenu)
 		+ NewSubmenu("Tools")
 		[
 			NewMenuItem("Export current object\tCtrl+X")
-			.SetCallback(BIND_MEM_CB(&CUmodelApp::ExportObject, this))
+			.SetCallback(BIND_LAMBDA([this]() { if (Viewer) Viewer->Export(); }))
 			+ NewMenuSeparator()
-			+ NewMenuHyperLink("Open export folder", *GSettings.ExportPath)	//!! should update if directory will be changed from UI
+			+ NewMenuHyperLink("Open export folder", *GSettings.Export.ExportPath)	//!! should update if directory will be changed from UI
 			+ NewMenuHyperLink("Open screenshots folder", SCREENSHOTS_DIR)
 			+ NewMenuSeparator()
 			+ NewMenuItem("Scan package versions")
-			.SetCallback(BIND_FREE_CB(&ShowPackageScanDialog))
+			.SetCallback(BIND_STATIC(&ShowPackageScanDialog))
 		]
 #if MAX_DEBUG
 		+ NewSubmenu("Debug")
 		[
 			NewMenuItem("Dump memory")
-			.SetCallback(BIND_FREE_CB(&DumpMemory))
+			.SetCallback(BIND_STATIC(&DumpMemory))
 		]
 #endif
 		+ NewSubmenu("Help")
@@ -652,17 +672,41 @@ void CUmodelApp::WindowCreated()
 			+ NewMenuHyperLink("Donate", "http://www.gildor.org/en/donate")
 			+ NewMenuSeparator()
 			+ NewMenuItem("About UModel")
-			.SetCallback(BIND_FREE_CB(&UIAboutDialog::Show))
+			.SetCallback(BIND_STATIC(&UIAboutDialog::Show))
 		]
 	];
+
 	// attach menu to the SDL window
-	SetMenu(wnd, MainMenu->GetHandle(false, true));
+	HWND wnd = GetSDLWindowHandle(GetWindow());
+	MainMenu->AttachTo(wnd);
 	// menu has been attached, resize the window
 	ResizeWindow();
-#endif // HAS_MENU
+
+	UpdateObjectMenu();
 }
 
-#if HAS_MENU
+void CUmodelApp::UpdateObjectMenu()
+{
+	guard(CUmodelApp::UpdateObjectMenu);
+	if (!MainMenu || !Viewer)
+	{
+		// window wasn't created yet, UpdateObjectMenu() will be called explicitly later
+		return;
+	}
+	UIMenuItem* newObjMenu = Viewer->GetObjectMenu(NULL);
+	if (!newObjMenu)
+	{
+		ObjectMenu->Enable(false);
+		ObjectMenu->SetName("Object");
+	}
+	else
+	{
+		ObjectMenu->Enable(true);
+		ObjectMenu->ReplaceWith(newObjMenu);
+	}
+	unguard;
+}
+
 void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	guard(CUmodelApp::WndProc);
@@ -671,6 +715,7 @@ void CUmodelApp::WndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 //	if (msg == WM_INITMENU) MainMenu->Update(); -- this doesn't work, because this message dispatched to this WndProc only when menu closed
 	unguard;
 }
+
 #endif // HAS_MENU
 
 #endif // RENDERING

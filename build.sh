@@ -44,7 +44,9 @@ PLATFORM="vc-win64"
 # allow platform overriding from command line
 [ "$1" ] && PLATFORM=$1
 
-export vc_ver=2013
+# setup default compiler version
+[ "$vc_ver" ] || vc_ver=2013
+export vc_ver
 
 GENMAKE_OPTIONS=
 if [ $vc_ver -ge 2015 ]; then

@@ -56,6 +56,12 @@ struct FSkeletalMeshLODInfo
 		PROP_DROP(BonesEnabled)
 		PROP_DROP(UsedForParticleSpawning)
 #endif
+#if UNREAL4
+		PROP_DROP(ScreenSize)
+		PROP_DROP(ReductionSettings)
+		PROP_DROP(OptimizationSettings)
+		PROP_DROP(RemovedBones)
+#endif
 	END_PROP_TABLE
 };
 

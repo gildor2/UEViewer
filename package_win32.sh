@@ -9,10 +9,10 @@ for i in $filelist; do
 	fi
 done
 
-#if grep -q -E "(XMemDecompress|DialogBoxIndirectParamA)" umodel.exe; then
-#	echo "ERROR: this is a private build"
-#	exit
-#fi
+if grep -q -E "(PRIVATE BUILD)" umodel.exe; then
+	echo "ERROR: this is a private build"
+	exit
+fi
 
 rm -f $archive
 pkzipc -add $archive -level=9 $filelist

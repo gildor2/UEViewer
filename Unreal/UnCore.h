@@ -96,13 +96,13 @@ struct CGameFileInfo
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 	bool		IsPackage;
-	bool		PackageScanned;
 	int64		Size;								// file size, in bytes
 	int32		SizeInKb;							// file size, in kilobytes
 	int			ExtraSizeInKb;						// size of additional non-package files
 	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
-	UnPackage*	Package;
+	UnPackage*	Package;							// non-null when corresponding package is loaded
 	// content information, valid when PackageScanned is true
+	bool		PackageScanned;
 	int			NumSkeletalMeshes;
 	int			NumStaticMeshes;
 	int			NumAnimations;
@@ -208,6 +208,16 @@ public:
 	inline bool operator==(const char* String) const
 	{
 		return (stricmp(Str, String) == 0);
+	}
+
+	FORCEINLINE bool operator!=(const FName& Other) const
+	{
+		return !operator==(Other);
+	}
+
+	FORCEINLINE bool operator!=(const char* String) const
+	{
+		return !operator==(String);
 	}
 
 	FORCEINLINE const char *operator*() const
@@ -352,6 +362,7 @@ enum EGame
 	GAME_MetroConflict,
 	GAME_Smite,
 	GAME_DevilsThird,
+		GAME_RocketLeague,
 
 	GAME_MIDWAY3   = 0x0810000,	// variant of UE3
 	GAME_A51,
@@ -363,15 +374,20 @@ enum EGame
 	GAME_UE4_BASE  = 0x1000000,
 	// bytes: 01.00.0N.NX : 01=UE4, 00=masked by GAME_ENGINE, NN=UE4 subversion, X=game (4 bits, 0=base engine)
 	// Add custom UE4 game engines here
+		// 4.5
+		GAME_Ark = GAME_UE4(5)+1,
 	// 4.8
 	GAME_HIT = GAME_UE4(8)+1,
 	// 4.11
 	GAME_Gears4 = GAME_UE4(11)+1,
 	// 4.13
 	GAME_Lawbreakers = GAME_UE4(13)+1,
+		GAME_StateOfDecay2 = GAME_UE4(13)+2,
 	// 4.14
 	GAME_Friday13 = GAME_UE4(14)+1,
 	GAME_Tekken7 = GAME_UE4(14)+2,
+		// 4.17
+		GAME_Dauntless = GAME_UE4(17)+1,
 	// 4.19
 	GAME_Paragon = GAME_UE4(19)+1,
 
@@ -400,9 +416,9 @@ enum EPlatform
 class FArchive
 {
 public:
-	bool	IsLoading;
 	int		ArVer;
 	int		ArLicenseeVer;
+	bool	IsLoading;
 	bool	ReverseBytes;
 
 protected:
@@ -419,6 +435,7 @@ public:
 		,	ArStopper(0)
 		,	ArVer(100000)			//?? something large
 		,	ArLicenseeVer(0)
+	,	IsLoading(true)
 		,	ReverseBytes(false)
 		,	Game(GAME_UNKNOWN)
 		,	Platform(PLATFORM_PC)
@@ -432,6 +449,7 @@ public:
 		ArVer         = Other.ArVer;
 		ArLicenseeVer = Other.ArLicenseeVer;
 		ReverseBytes  = Other.ReverseBytes;
+		IsLoading     = Other.IsLoading;
 		Game          = Other.Game;
 		Platform      = Other.Platform;
 	}
@@ -666,6 +684,24 @@ enum EFileReaderOptions
 	FRO_NoOpenError = 1,
 };
 
+
+class FPrintfArchive : public FArchive
+{
+	DECLARE_ARCHIVE(FPrintfArchive, FArchive);
+public:
+	FPrintfArchive()
+	{}
+
+	virtual void Seek(int Pos)
+	{
+		appError("FPrintfArchive::Seek");
+	}
+
+	virtual void Serialize(void *data, int size)
+	{
+		appPrintf("%s", data);
+	}
+};
 
 class FFileArchive : public FArchive
 {
@@ -1661,6 +1697,11 @@ public:
 		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
 	}
 
+	FORCEINLINE void Sort(int (*cmpFunc)(const T&, const T&))
+	{
+		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
+	}
+
 	// serializer
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray &A)
 	{
@@ -2091,15 +2132,27 @@ public:
 	// comparison
 	friend FORCEINLINE bool operator==(const FString& A, const FString& B)
 	{
-		return !strcmp(*A, *B);
+		return strcmp(*A, *B) == 0;
 	}
 	friend FORCEINLINE bool operator==(const char* A, const FString& B)
 	{
-		return !strcmp(A, *B);
+		return strcmp(A, *B) == 0;
 	}
 	friend FORCEINLINE bool operator==(const FString& A, const char* B)
 	{
-		return !strcmp(*A, B);
+		return strcmp(*A, B) == 0;
+	}
+	friend FORCEINLINE bool operator!=(const FString& A, const FString& B)
+	{
+		return strcmp(*A, *B) != 0;
+	}
+	friend FORCEINLINE bool operator!=(const char* A, const FString& B)
+	{
+		return strcmp(A, *B) != 0;
+	}
+	friend FORCEINLINE bool operator!=(const FString& A, const char* B)
+	{
+		return strcmp(*A, B) != 0;
 	}
 
 	friend FArchive& operator<<(FArchive &Ar, FString &S);
@@ -2323,7 +2376,14 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 extern FString GAesKey;
 
-void appDecryptAES(byte* Data, int Size);
+// Decrypt with arbitrary key
+void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen = -1);
+
+// Decrypt with GAesKey
+inline void appDecryptAES(byte* Data, int Size)
+{
+	appDecryptAES(Data, Size, *GAesKey, GAesKey.Len());
+}
 
 // Callback called when encrypted pak file is attempted to load
 bool UE4EncryptedPak();

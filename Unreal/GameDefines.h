@@ -112,6 +112,7 @@
 #define SMITE			1
 #define DUNDEF			1		// Dungeon Defenders
 #define DEVILS_THIRD	1		// Devil's Third
+#define ROCKET_LEAGUE	1		// Rocket League
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??
@@ -126,7 +127,10 @@
 #define FRIDAY13		1		// Friday the 13th: The Game
 #define TEKKEN7			1		// Tekken 7
 #define LAWBREAKERS		1		// Lawbreakers
+#define SOD2			1		// State of Decay 2
+#define DAUNTLESS		1		// Dauntless
 #define PARAGON			1		// Paragon
+#define ARK				1		// Ark: Survival Evolved
 #define HIT				1		// Heroes of Incredible Tales
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
