@@ -28,20 +28,20 @@ static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 
 	// mesh info
 	Ar.Printf(
-		"class %s extends Actor;\n\n"
-		"#exec MESH MODELIMPORT MESH=%s MODELFILE=%s.psk\n"
-		"#exec MESH ORIGIN      MESH=%s X=%g Y=%g Z=%g YAW=%d PITCH=%d ROLL=%d\n"
-		"// rotator: P=%d Y=%d R=%d\n",
-		MeshName,
-		MeshName, MeshName,
-		MeshName, VECTOR_ARG(Mesh->MeshOrigin),
-		Mesh->RotOrigin.Yaw >> 8, Mesh->RotOrigin.Pitch >> 8, Mesh->RotOrigin.Roll >> 8,
-		Mesh->RotOrigin.Pitch, Mesh->RotOrigin.Yaw, Mesh->RotOrigin.Roll
+	    "class %s extends Actor;\n\n"
+	    "#exec MESH MODELIMPORT MESH=%s MODELFILE=%s.psk\n"
+	    "#exec MESH ORIGIN      MESH=%s X=%g Y=%g Z=%g YAW=%d PITCH=%d ROLL=%d\n"
+	    "// rotator: P=%d Y=%d R=%d\n",
+	    MeshName,
+	    MeshName, MeshName,
+	    MeshName, VECTOR_ARG(Mesh->MeshOrigin),
+	    Mesh->RotOrigin.Yaw >> 8, Mesh->RotOrigin.Pitch >> 8, Mesh->RotOrigin.Roll >> 8,
+	    Mesh->RotOrigin.Pitch, Mesh->RotOrigin.Yaw, Mesh->RotOrigin.Roll
 	);
 	// mesh scale
 	Ar.Printf(
-		"#exec MESH SCALE       MESH=%s X=%g Y=%g Z=%g\n\n",
-		MeshName, VECTOR_ARG(Mesh->MeshScale)
+	    "#exec MESH SCALE       MESH=%s X=%g Y=%g Z=%g\n\n",
+	    MeshName, VECTOR_ARG(Mesh->MeshScale)
 	);
 	// sockets
 	for (int i = 0; i < Mesh->Sockets.Num(); i++)
@@ -51,12 +51,12 @@ static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 		FRotator R;
 		AxisToRotator(T.axis, R);
 		Ar.Printf(
-			"#exec MESH ATTACHNAME  MESH=%s BONE=\"%s\" TAG=\"%s\" YAW=%d PITCH=%d ROLL=%d X=%g Y=%g Z=%g\n"
-			"// rotator: P=%d Y=%d R=%d\n",
-			MeshName, *S.Bone, *S.Name,
-			R.Yaw >> 8, R.Pitch >> 8, R.Roll >> 8,
-			VECTOR_ARG(T.origin),
-			R.Pitch, R.Yaw, R.Roll
+		    "#exec MESH ATTACHNAME  MESH=%s BONE=\"%s\" TAG=\"%s\" YAW=%d PITCH=%d ROLL=%d X=%g Y=%g Z=%g\n"
+		    "// rotator: P=%d Y=%d R=%d\n",
+		    MeshName, *S.Bone, *S.Name,
+		    R.Yaw >> 8, R.Pitch >> 8, R.Roll >> 8,
+		    VECTOR_ARG(T.origin),
+		    R.Pitch, R.Yaw, R.Roll
 		);
 	}
 }
@@ -68,11 +68,11 @@ static void ExportScript(const CSkeletalMesh *Mesh, FArchive &Ar)
 
 static void ExportCommonMeshData
 (
-	FArchive &Ar,
-	const CMeshSection *Sections, int NumSections,
-	const CMeshVertex  *Verts,    int NumVerts, int VertexSize,
-	const CIndexBuffer &Indices,
-	CVertexShare       &Share
+    FArchive &Ar,
+    const CMeshSection *Sections, int NumSections,
+    const CMeshVertex  *Verts,    int NumVerts, int VertexSize,
+    const CIndexBuffer &Indices,
+    CVertexShare       &Share
 )
 {
 	guard(ExportCommonMeshData);
@@ -214,10 +214,10 @@ static void ExportCommonMeshData
 
 static void ExportExtraUV
 (
-	FArchive &Ar,
-	const CMeshUVFloat* const ExtraUV[],
-	int NumVerts,
-	int NumTexCoords
+    FArchive &Ar,
+    const CMeshUVFloat* const ExtraUV[],
+    int NumVerts,
+    int NumTexCoords
 )
 {
 	guard(ExportExtraUV);
@@ -279,11 +279,11 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 	ExportCommonMeshData
 	(
-		Ar,
-		&Lod.Sections[0], Lod.Sections.Num(),
-		Lod.Verts, Lod.NumVerts, sizeof(CSkelMeshVertex),
-		Lod.Indices,
-		Share
+	    Ar,
+	    &Lod.Sections[0], Lod.Sections.Num(),
+	    Lod.Verts, Lod.NumVerts, sizeof(CSkelMeshVertex),
+	    Lod.Indices,
+	    Share
 	);
 
 	int numBones = Mesh.RefSkeleton.Num();
@@ -354,11 +354,11 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
 
-/*	if (!GExportPskx)						// nothing more to write
-		return;
+	/*	if (!GExportPskx)						// nothing more to write
+			return;
 
-	// pskx extension
-*/
+		// pskx extension
+	*/
 	unguard;
 }
 
@@ -591,11 +591,11 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 
 	ExportCommonMeshData
 	(
-		Ar,
-		&Lod.Sections[0], Lod.Sections.Num(),
-		Lod.Verts, Lod.NumVerts, sizeof(CStaticMeshVertex),
-		Lod.Indices,
-		Share
+	    Ar,
+	    &Lod.Sections[0], Lod.Sections.Num(),
+	    Lod.Verts, Lod.NumVerts, sizeof(CStaticMeshVertex),
+	    Lod.Indices,
+	    Share
 	);
 
 	BoneHdr.DataCount = 0;		// dummy ...
@@ -645,4 +645,6 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 
 		unguardf("%d", Lod);
 	}
+
+	ExportFbxStaticMesh(Mesh);
 }

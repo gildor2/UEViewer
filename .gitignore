@@ -3,10 +3,6 @@ data/
 obj/
 bak/
 
-# Generated files
-Unreal/Shaders.h
-UmodelTool/Version.h
-
 # Ignore makefiles for tools
 Tools/**/makefile-*
 
@@ -26,3 +22,4 @@ umodel.pdb
 Tools/**/*.exe
 Tools/**/*.pdb
 Docs/ObjectVersion.h
+*.log

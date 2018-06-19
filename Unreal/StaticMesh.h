@@ -18,7 +18,7 @@ struct CStaticMeshLod : public CBaseMeshLod
 	CStaticMeshVertex		*Verts;
 
 	CStaticMeshLod()
-	: Verts(NULL)
+		: Verts(NULL)
 	{}
 
 	~CStaticMeshLod()
@@ -40,6 +40,18 @@ struct CStaticMeshLod : public CBaseMeshLod
 		HasTangents = true;
 	}
 
+	const CMeshUVFloat& GetVertexUV(int32 VertexIndex, int32 UVIndex) const
+	{
+		if (UVIndex == 0)
+		{
+			return Verts[VertexIndex].UV;
+		}
+		else
+		{
+			return ExtraUV[UVIndex - 1][VertexIndex];
+		}
+	}
+
 	void AllocateVerts(int Count)
 	{
 		guard(CStaticMeshLod::AllocateVerts);
@@ -53,10 +65,10 @@ struct CStaticMeshLod : public CBaseMeshLod
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMeshLod)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Sections, CMeshSection)
-		PROP_INT(NumVerts)
-		VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
-		PROP_INT(NumTexCoords)
+	PROP_ARRAY(Sections, CMeshSection)
+	PROP_INT(NumVerts)
+	VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
+	PROP_INT(NumTexCoords)
 	END_PROP_TABLE
 #endif // DECLARE_VIEWER_PROPS
 };
@@ -71,7 +83,7 @@ public:
 	TArray<CStaticMeshLod>	Lods;
 
 	CStaticMesh(UObject *Original)
-	:	OriginalMesh(Original)
+		:	OriginalMesh(Original)
 	{}
 
 	void FinalizeMesh()
@@ -97,8 +109,8 @@ public:
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMesh)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Lods, CStaticMeshLod)
-		VPROP_ARRAY_COUNT(Lods, LodCount)
+	PROP_ARRAY(Lods, CStaticMeshLod)
+	VPROP_ARRAY_COUNT(Lods, LodCount)
 	END_PROP_TABLE
 private:
 	CStaticMesh()									// for InternalConstructor()

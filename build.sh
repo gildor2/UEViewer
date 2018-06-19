@@ -33,8 +33,8 @@ last_revision=${last_revision##* }		# cut "#define ..."
 
 #-------------------------------------------------------------
 
-PLATFORM="vc-win32"
-#PLATFORM="vc-win64"
+#PLATFORM="vc-win32"
+PLATFORM="vc-win64"
 #PLATFORM="mingw32" - not implemented yet
 
 # force PLATFORM=linux under Linux OS
