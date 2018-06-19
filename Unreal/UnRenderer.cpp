@@ -13,25 +13,28 @@
 
 #include "Shaders.h"
 
-#define MAX_IMG_SIZE		4096
-#define BAD_TEXTURE			((GLuint) -2)	// the texture object has permanent error, don't try to upload it again
-
-#if 0
-// profiling
-#define PROFILE_UPLOAD(...)	__VA_ARGS__
-#define PROFILE_SHADER(...)	__VA_ARGS__
-#else
-// no profiling
-#define PROFILE_UPLOAD(...)
-#define PROFILE_SHADER(...)
-#endif
+#define MAX_IMG_SIZE			4096
+#define BAD_TEXTURE				((GLuint) -2)	// the texture object has permanent error, don't try to upload it again
 
 static UTexture *DefaultUTexture = NULL;
 static GLuint GetDefaultTexNum();
 
 
 //#define SHOW_SHADER_PARAMS	1
-//#define DEBUG_MIPS			1			// use to debug decompression of lower mip levels, especially for XBox360
+//#define PROFILE				1				// profile everything
+//#define DEBUG_UPLOAD			1				// debug texture uploads
+//#define DEBUG_MIPS			1				// use to debug decompression of lower mip levels, especially for XBox360
+
+
+#if PROFILE || DEBUG_UPLOAD
+// profiling
+#define PROFILE_UPLOAD(...)		__VA_ARGS__
+#define PROFILE_SHADER(...)		__VA_ARGS__
+#else
+// no profiling
+#define PROFILE_UPLOAD(...)
+#define PROFILE_SHADER(...)
+#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -194,6 +197,11 @@ static void GetImageDimensions(int width, int height, int* scaledWidth, int* sca
 	*scaledHeight = sh;
 }
 
+#if DEBUG_UPLOAD
+#define DBG(msg, ...)		appPrintf("TexUp: " msg "\n", __VA_ARGS__);
+#else
+#define DBG(...)
+#endif
 
 // Decompress and upload a texture. Returns false when decompression failed.
 static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData, bool doMipmap)
@@ -210,17 +218,39 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 	const CMipMap& Mip0 = TexData.Mips[0];
 
 	/*----- Calculate internal dimensions of the new texture --------*/
-	int scaledWidth, scaledHeight;
-	GetImageDimensions(Mip0.USize, Mip0.VSize, &scaledWidth, &scaledHeight);
+	int scaledWidth = Mip0.USize;
+	int scaledHeight = Mip0.VSize;
+	bool isPowerOfTwo = (scaledWidth & (scaledWidth-1) == 0) && (scaledHeight & (scaledHeight-1) == 0);
+
+	if ((!GL_SUPPORT(QGL_2_0) && !isPowerOfTwo) || (scaledWidth > MAX_IMG_SIZE) || (scaledHeight > MAX_IMG_SIZE))
+	{
+		GetImageDimensions(Mip0.USize, Mip0.VSize, &scaledWidth, &scaledHeight);
+	}
+
+	if (!isPowerOfTwo && TexData.Mips.Num() < 2)
+	{
+		// MipMap() function won't work correctly with np2 textures
+		doMipmap = false;
+	}
 
 	bool floatTexture = PixelFormatInfo[TexData.Format].Float != 0;
+	if (floatTexture)
+	{
+		// ResampleTexture will not work with floating point data
+		scaledWidth = Mip0.USize;
+		scaledHeight = Mip0.VSize;
+	}
 
-	/*---------------- Resample texture ------------------*/
+	// Resample texture if desired
 	// Copy or resample texture to new buffer (we will generate mipmaps there later)
-	if ((Mip0.USize != scaledWidth || Mip0.VSize != scaledHeight) && !floatTexture) // ResampleTexture will not work with floating point data
+	if (Mip0.USize != scaledWidth || Mip0.VSize != scaledHeight)
 	{
 		byte *scaledPic = new byte [scaledWidth * scaledHeight * 4];
+		DBG("resample %dx%d to %dx%d", Mip0.USize, Mip0.VSize, scaledWidth, scaledHeight);
 		ResampleTexture((unsigned*)pic, Mip0.USize, Mip0.VSize, (unsigned*)scaledPic, scaledWidth, scaledHeight);
+		// replace 'pic' with resampled texture data
+		delete[] pic;
+		pic = scaledPic;
 	}
 
 	/*------------- Determine texture format to upload --------------*/
@@ -235,14 +265,14 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 
 	/*------------------ Upload the image ---------------------------*/
 	// First mipmap
-//	printf("up_uncomp %X (%s, %d mips): %d %d (%d)\n", target, Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num());
+	DBG("up_uncomp %X (%s, %d mips): %d %d (%d)", target, Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num());
 	glTexImage2D(target, 0, format, scaledWidth, scaledHeight, 0, GL_RGBA, floatTexture ? GL_FLOAT : GL_UNSIGNED_BYTE, pic);
 
 	// Upload or build other mipmaps
 	if (doMipmap && TexData.Mips.Num() > 1 && GL_SUPPORT(QGL_1_2)) // GL 1.2 is required for GL_TEXTURE_MAX_LEVEL
 	{
 		guard(UploadMips);
-//		printf("upload mips %s\n", Tex->Name);
+		DBG("upload mips %s", Tex->Name);
 		// use provided mipmaps; assume all have power-of-2 dimensions
 		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, TexData.Mips.Num() - 1);
 		for (int mipLevel = 1; mipLevel < TexData.Mips.Num(); mipLevel++)
@@ -266,7 +296,7 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 #endif // DEBUG_MIPS
 
 			assert(pic);
-//			printf("   mip %d x %d (%X)\n", Mip.USize, Mip.VSize, Mip.DataSize);
+			DBG("   mip %d x %d (%X)", Mip.USize, Mip.VSize, Mip.DataSize);
 			glTexImage2D(target, mipLevel, format, Mip.USize, Mip.VSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
 			delete pic;
 		}
@@ -276,7 +306,7 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 	{
 		guard(BuildMips);
 		// build mipmaps
-//		printf("build mips %s\n", Tex->Name);
+		DBG("build mips %s", Tex->Name);
 		int mipLevel = 0;
 		while (scaledWidth > 1 || scaledHeight > 1)
 		{
@@ -289,6 +319,10 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 			glTexImage2D(target, mipLevel, format, scaledWidth, scaledHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
 		}
 		unguard;
+	}
+	else
+	{
+		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, 0);
 	}
 
 #if DEBUG_MIPS
@@ -405,24 +439,26 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	if (!doMipmap)
 	{
 		// no mipmaps required
+		DBG("up (%s, %d no-mips): %d %d (%d) (%s) (0x%X)", Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize);
 		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
+		glTexParameteri(target2, GL_TEXTURE_MAX_LEVEL, 0);	// GL 1.2
 	}
 	else if (TexData.Mips.Num() > 1 && GL_SUPPORT(QGL_1_2)) // GL 1.2 is required for GL_TEXTURE_MAX_LEVEL
 	{
 		guard(UploadMips);
 		// has mipmaps
-//		printf("up (%s, %d mips): %d %d (%d) (%s) (0x%X)\n", Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize);
+		DBG("up (%s, %d mips): %d %d (%d) (%s) (0x%X)", Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize);
 		glTexParameteri(target2, GL_TEXTURE_MAX_LEVEL, TexData.Mips.Num() - 1);
 		for (int mipLevel = 0; mipLevel < TexData.Mips.Num(); mipLevel++)
 		{
 			const CMipMap& Mip = TexData.Mips[mipLevel];
 			glCompressedTexImage2D(target, mipLevel, format, Mip.USize, Mip.VSize, 0, Mip.DataSize, Mip.CompressedData);
 			GLenum error = glGetError();
-//			printf("   mip %d x %d (%X)\n", Mip.USize, Mip.VSize, Mip.DataSize);
+			DBG("   mip %d x %d (%X)", Mip.USize, Mip.VSize, Mip.DataSize);
 			if (error != 0)
 			{
 				appNotify("Failed to upload mip %d of texture %s in format 0x%04X: error 0x%X\n", mipLevel, Tex->Name, format, error);
-//				printf("%d x %d (%X)\n", Mip.USize, Mip.VSize, Mip.DataSize);
+				DBG("%d x %d (%X)", Mip.USize, Mip.VSize, Mip.DataSize);
 				break;
 			}
 		}
@@ -432,13 +468,14 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	else if (GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT))
 	{
 		// GL 3.0 or GL_EXT_framebuffer_object
-//		printf("up+build_mips (%s): %d %d (%d) (%s) (%d)\n", Tex->Name, Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize); //!!
+		DBG("up+build_mips (%s): %d %d (%d) (%s) (%d)", Tex->Name, Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize);
 		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
 		glGenerateMipmapEXT(target2);
 	}
 	else
 	{
 		// GL 1.4 - set GL_GENERATE_MIPMAP before uploading
+		DBG("up+build_mips (%s): old code", Tex->Name);
 		glTexParameteri(target2, GL_GENERATE_MIPMAP, GL_TRUE);
 		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
 	}
@@ -498,7 +535,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clampS ? GL_CLAMP : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clampT ? GL_CLAMP : GL_REPEAT);
 
-	PROFILE_UPLOAD(appPrintf("Uploaded %s (%dx%d)\n", Tex->Name, TexData.USize, TexData.VSize); appPrintProfiler());
+	PROFILE_UPLOAD(appPrintf("Uploaded %s (%dx%d)\n", Tex->Name, TexData.Mips[0].USize, TexData.Mips[0].VSize); appPrintProfiler());
 	return TexNum;
 
 	unguardf("%s'%s'", Tex->GetClassName(), Tex->Name);
@@ -563,6 +600,7 @@ static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
 	unguard;
 }
 
+#undef DBG
 
 /*-----------------------------------------------------------------------------
 	Unreal materials support
