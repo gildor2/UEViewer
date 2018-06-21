@@ -755,9 +755,7 @@ int main(int argc, char **argv)
 	}
 #endif // HAS_UI
 
-#if HAS_CONFIG
 	GSettings.Load();
-#endif
 
 	// parse command line
 	enum

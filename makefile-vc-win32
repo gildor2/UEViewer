@@ -94,6 +94,7 @@ MAIN_FILES = \
 	$(OUT_1)/PackageDialog.obj \
 	$(OUT_1)/PackageScanDialog.obj \
 	$(OUT_1)/ProgressDialog.obj \
+	$(OUT_1)/SettingsDialog.obj \
 	$(OUT_1)/StartupDialog.obj \
 	$(OUT_1)/UmodelApp.obj \
 	$(OUT_1)/UmodelSettings.obj \
@@ -426,6 +427,7 @@ DEPENDS = \
 	UmodelTool/PackageDialog.h \
 	UmodelTool/PackageScanDialog.h \
 	UmodelTool/ProgressDialog.h \
+	UmodelTool/SettingsDialog.h \
 	UmodelTool/StartupDialog.h \
 	UmodelTool/UE4AesKeyDialog.h \
 	UmodelTool/UE4VersionDialog.h \
@@ -948,6 +950,25 @@ DEPENDS = \
 	UI/FileControls.h \
 	UI/callback.h \
 	UmodelTool/Build.h \
+	UmodelTool/SettingsDialog.h \
+	UmodelTool/UmodelSettings.h \
+	Unreal/GameDefines.h \
+	Unreal/TypeInfo.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/SettingsDialog.obj : UmodelTool/SettingsDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/SettingsDialog.obj" UmodelTool/SettingsDialog.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
+	UI/FileControls.h \
+	UI/callback.h \
+	UmodelTool/Build.h \
 	UmodelTool/StartupDialog.h \
 	UmodelTool/UmodelSettings.h \
 	Unreal/GameDatabase.h \
@@ -988,9 +1009,12 @@ DEPENDS = \
 	UmodelTool/PackageDialog.h \
 	UmodelTool/PackageScanDialog.h \
 	UmodelTool/ProgressDialog.h \
+	UmodelTool/SettingsDialog.h \
+	UmodelTool/UmodelSettings.h \
 	UmodelTool/res/resource.h \
 	Unreal/GameDefines.h \
 	Unreal/PackageUtils.h \
+	Unreal/TypeInfo.h \
 	Unreal/UnCore.h \
 	Unreal/UnPackage.h
 

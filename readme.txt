@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+21.06.2018
+- added configuration file (umodel.cfg) and options window
+
 19.06.2018
 - added Playstation 4 platform support, activated with -ps4 command line or in GUI; credit for texture
   decoding is m0xf (http://www.gildor.org/smf/index.php/topic,6221.0.html)
