@@ -105,7 +105,12 @@ void CExportSettings::SetPath(const char* path)
 void CExportSettings::Reset()
 {
 	SetPath(EXPORT_DIRECTORY);
+
+	ExportDdsTexture = false;
 	ExportMd5Mesh = false;
+	ExportMeshLods = false;
+	SaveUncooked = false;
+	SaveGroups = false;
 }
 
 void CExportSettings::Apply()
@@ -116,7 +121,10 @@ void CExportSettings::Apply()
 	SetPathOption(TmpExportPath, *ExportPath);
 	appSetBaseExportDirectory(*TmpExportPath);
 
+	GExportLods = ExportMeshLods;
 	GExportDDS = ExportDdsTexture;
+	GUncook = SaveUncooked;
+	GUseGroups = SaveGroups;
 }
 
 static void RegisterClasses()

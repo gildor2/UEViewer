@@ -56,11 +56,17 @@ struct CExportSettings
 	FString			ExportPath;
 	bool			ExportDdsTexture;
 	bool			ExportMd5Mesh;
+	bool			ExportMeshLods;
+	bool			SaveUncooked;
+	bool			SaveGroups;
 
 	BEGIN_PROP_TABLE
 		PROP_STRING(ExportPath)
 		PROP_BOOL(ExportDdsTexture)
 		PROP_BOOL(ExportMd5Mesh)
+		PROP_BOOL(ExportMeshLods)
+		PROP_BOOL(SaveUncooked)
+		PROP_BOOL(SaveGroups)
 	END_PROP_TABLE
 
 	CExportSettings()

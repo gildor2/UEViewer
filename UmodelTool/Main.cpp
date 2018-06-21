@@ -424,7 +424,7 @@ static void PrintUsage()
 			"Export options:\n"
 			"    -out=PATH       export everything into PATH instead of the current directory\n"
 			"    -all            used with -dump, will dump all objects instead of specified one\n"
-			"    -uncook         use original package name as a base export directory (UE1-3)\n"
+			"    -uncook         use original package name as a base export directory (UE3)\n"
 			"    -groups         use group names instead of class names for directories (UE1-3)\n"
 			"    -uc             create unreal script when possible\n"
 //			"    -pskx           use pskx format for skeletal mesh\n"
@@ -801,8 +801,8 @@ int main(int argc, char **argv)
 			OPT_BOOL ("meshes",    GApplication.ShowMeshes)
 			OPT_BOOL ("materials", GApplication.ShowMaterials)
 #endif
-			OPT_BOOL ("uncook",  GUncook)
-			OPT_BOOL ("groups",  GUseGroups)
+			OPT_BOOL ("uncook",  GSettings.Export.SaveUncooked)
+			OPT_BOOL ("groups",  GSettings.Export.SaveGroups)
 //			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
 			OPT_BOOL ("md5",     GSettings.Export.ExportMd5Mesh)
 			OPT_BOOL ("lods",    GExportLods)
