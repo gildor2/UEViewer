@@ -387,7 +387,7 @@ static void PrintIndent(FArchive& Ar, int Value)
 		Ar.Printf("    ");
 }
 
-static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool TopLevel)
+static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool TopLevel, int MaxLineWidth = 80)
 {
 	PrintIndent(Ar, Indent);
 
@@ -395,7 +395,12 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 	if (NumNestedProps)
 	{
 		// complex property
-		if (!Dump.Name.IsEmpty()) Ar.Printf("%s =", *Dump.Name);	// root CPropDump will not have a name
+		bool bNamePrinted = false;
+		if (!Dump.Name.IsEmpty())
+		{
+			Ar.Printf("%s =", *Dump.Name);	// root CPropDump will not have a name
+			bNamePrinted = true;
+		}
 
 		bool IsSimple = true;
 		int TotalLen = 0;
@@ -413,7 +418,7 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 			TotalLen += Prop.Value.Len() + 2;
 			if (!Prop.IsArrayItem)
 				TotalLen += Prop.Name.Len();
-			if (TotalLen >= 80)
+			if (TotalLen >= MaxLineWidth)
 			{
 				IsSimple = false;
 				break;
@@ -438,7 +443,7 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 		else
 		{
 			// complex value display
-			Ar.Printf("\n");
+			if (bNamePrinted) Ar.Printf("\n");
 			if (!TopLevel)
 			{
 				PrintIndent(Ar, Indent);
@@ -446,7 +451,9 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 			}
 
 			for (i = 0; i < NumNestedProps; i++)
-				PrintProps(Dump.Nested[i], Ar, Indent+1, false);
+			{
+				PrintProps(Dump.Nested[i], Ar, Indent+1, false, MaxLineWidth);
+			}
 
 			if (!TopLevel)
 			{
@@ -484,7 +491,7 @@ void CTypeInfo::SaveProps(void *Data, FArchive& Ar) const
 	CollectProps(this, Data, Dump);
 
 	// Note: using indent -1 for better in-file formatting
-	PrintProps(Dump, Ar, -1, true);
+	PrintProps(Dump, Ar, -1, true, 20);
 
 	unguard;
 }
@@ -565,11 +572,6 @@ static void GetToken(FArchive& Ar, FString& Out)
 bool CTypeInfo::LoadProps(void *Data, FArchive& Ar) const
 {
 	guard(CTypeInfo::LoadProps);
-//	CPropDump Dump;
-//	CollectProps(this, Data, Dump);
-
-	// Note: using indent -1 for better in-file formatting
-//	PrintProps(Dump, Ar, -1);
 
 	while (!Ar.IsEof())
 	{

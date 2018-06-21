@@ -562,7 +562,7 @@ void FFileArchive::Close()
 	}
 }
 
-bool FFileArchive::OpenFile(const char *Mode)
+bool FFileArchive::OpenFile()
 {
 	guard(FFileArchive::OpenFile);
 	assert(!IsOpen());
@@ -572,9 +572,18 @@ bool FFileArchive::OpenFile(const char *Mode)
 	BufferPos = 0;
 	BufferSize = 0;
 
+	char Mode[4];
+	char* s = Mode;
+	*s++ = IsLoading ? 'r' : 'w';
+	if (!(Options & FAO_TextFile))
+	{
+		*s++ = 'b';
+	}
+	*s++ = 0;
+
 	f = fopen64(FullName, Mode);
 	if (f) return true;			// success
-	if (!(Options & FRO_NoOpenError))
+	if (!(Options & FAO_NoOpenError))
 		appError("Unable to open file %s", FullName);
 
 	return false;
@@ -662,7 +671,7 @@ void FFileReader::Serialize(void *data, int size)
 
 bool FFileReader::Open()
 {
-	return OpenFile("rb");
+	return OpenFile();
 }
 
 int64 FFileReader::GetFileSize64() const
@@ -780,7 +789,7 @@ bool FFileWriter::Open()
 	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
 	BufferPos = 0;
 	BufferSize = 0;
-	return OpenFile("wb");
+	return OpenFile();
 }
 
 void FFileWriter::Close()

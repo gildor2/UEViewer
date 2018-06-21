@@ -680,12 +680,6 @@ FORCEINLINE FArchive& operator<<(FArchive &Ar, float &B)
 }
 
 
-enum EFileReaderOptions
-{
-	FRO_NoOpenError = 1,
-};
-
-
 class FPrintfArchive : public FArchive
 {
 	DECLARE_ARCHIVE(FPrintfArchive, FArchive);
@@ -702,6 +696,12 @@ public:
 	{
 		appPrintf("%s", data);
 	}
+};
+
+enum EFileArchiveOptions
+{
+	FAO_NoOpenError = 1,
+	FAO_TextFile = 2,
 };
 
 class FFileArchive : public FArchive
@@ -735,7 +735,7 @@ protected:
 	int64		ArPos64;
 	int64		FilePos;		// where 'f' position points to (when reading, it usually equals to 'BufferPos + BufferSize')
 
-	bool OpenFile(const char *Mode);
+	bool OpenFile();
 };
 
 
