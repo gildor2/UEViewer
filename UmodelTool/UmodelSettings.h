@@ -54,10 +54,12 @@ struct CExportSettings
 	DECLARE_STRUCT(CExportSettings);
 
 	FString			ExportPath;
+	bool			ExportDdsTexture;
 	bool			ExportMd5Mesh;
 
 	BEGIN_PROP_TABLE
 		PROP_STRING(ExportPath)
+		PROP_BOOL(ExportDdsTexture)
 		PROP_BOOL(ExportMd5Mesh)
 	END_PROP_TABLE
 

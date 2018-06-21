@@ -814,7 +814,7 @@ int main(int argc, char **argv)
 			OPT_NBOOL("notex",   GSettings.Startup.UseTexture)
 			OPT_NBOOL("nolightmap", GSettings.Startup.UseLightmapTexture)
 			OPT_BOOL ("sounds",  GSettings.Startup.UseSound)
-			OPT_BOOL ("dds",     GExportDDS)
+			OPT_BOOL ("dds",     GSettings.Export.ExportDdsTexture)
 			OPT_BOOL ("notgacomp", GNoTgaCompress)
 			OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
 #if HAS_UI

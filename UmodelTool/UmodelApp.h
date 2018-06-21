@@ -53,6 +53,7 @@ public:
 	bool ShowPackageUI();
 	void SetPackage(UnPackage* package);
 	void ShowErrorDialog();
+	void ShowOptionsDialog();
 	#if UNREAL4
 	int ShowUE4UnversionedPackageDialog(int verMin, int verMax);
 	FString ShowUE4AesKeyDialog();

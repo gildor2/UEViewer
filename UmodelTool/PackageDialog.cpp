@@ -5,6 +5,7 @@
 #include "PackageDialog.h"
 #include "PackageScanDialog.h"
 #include "ProgressDialog.h"
+#include "SettingsDialog.h"
 #include "AboutDialog.h"
 
 #include "UnPackage.h"
@@ -401,6 +402,9 @@ void UIPackageDialog::InitUI()
 		.Enable(SelectedPackages.Num() > 0)
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::SavePackages, this))
 		.Expose(SavePackagesMenu)
+		+ NewMenuSeparator()
+		+ NewMenuItem("Options")
+		.SetCallback(BIND_LAMBDA([]() { UISettingsDialog dialog(GSettings); dialog.Show(); }))
 		+ NewMenuSeparator()
 		+ NewMenuItem("About UModel")
 		.SetCallback(BIND_STATIC(&UIAboutDialog::Show))

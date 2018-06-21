@@ -26,6 +26,7 @@
 #include "UE4VersionDialog.h"
 #include "UE4AesKeyDialog.h"
 #include "PackageScanDialog.h"
+#include "SettingsDialog.h"
 #endif
 
 
@@ -292,6 +293,12 @@ void CUmodelApp::SetPackage(UnPackage* package)
 	GPackageDialog.SelectPackage(package);
 }
 
+void CUmodelApp::ShowOptionsDialog()
+{
+	UISettingsDialog dialog(GSettings);
+	dialog.Show();
+}
+
 void CUmodelApp::ShowErrorDialog()
 {
 	UIErrorDialog errorDialog;
@@ -546,6 +553,9 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 	case 'o':
 		ShowPackageUI();
 		break;
+	case 'o'|KEY_CTRL:
+		ShowOptionsDialog();
+		break;
 #endif // HAS_UI
 	}
 
@@ -650,6 +660,9 @@ void CUmodelApp::CreateMenu()
 			+ NewMenuSeparator()
 			+ NewMenuItem("Scan package versions")
 			.SetCallback(BIND_STATIC(&ShowPackageScanDialog))
+			+ NewMenuSeparator()
+			+ NewMenuItem("Options\tCtrl+O")
+			.SetCallback(BIND_MEMBER(&CUmodelApp::ShowOptionsDialog, this))
 		]
 #if MAX_DEBUG
 		+ NewSubmenu("Debug")

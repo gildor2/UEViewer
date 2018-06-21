@@ -110,7 +110,13 @@ void CExportSettings::Reset()
 
 void CExportSettings::Apply()
 {
-	appSetBaseExportDirectory(*GSettings.Export.ExportPath);
+	// Process export path. Do not assume that this is absolute path, so pass it
+	// through SetPathOption().
+	FString TmpExportPath;
+	SetPathOption(TmpExportPath, *ExportPath);
+	appSetBaseExportDirectory(*TmpExportPath);
+
+	GExportDDS = ExportDdsTexture;
 }
 
 static void RegisterClasses()
