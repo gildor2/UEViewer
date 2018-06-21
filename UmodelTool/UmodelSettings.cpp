@@ -150,7 +150,7 @@ void CUmodelSettings::Save()
 	FString ConfigFile;
 	SetPathOption(ConfigFile, CONFIG_FILE);
 
-	FArchive* Ar = new FFileWriter(*ConfigFile, FAO_TextFile);
+	FArchive* Ar = new FFileWriter(*ConfigFile, FAO_TextFile|FAO_NoOpenError);
 	if (!Ar)
 	{
 		appPrintf("Error creating file \"%s\" ...\n", *ConfigFile);
@@ -174,7 +174,7 @@ void CUmodelSettings::Load()
 	FString ConfigFile;
 	SetPathOption(ConfigFile, CONFIG_FILE);
 
-	FArchive* Ar = new FFileReader(*ConfigFile);
+	FArchive* Ar = new FFileReader(*ConfigFile, FAO_NoOpenError);
 	if (!Ar)
 	{
 		return;

@@ -591,7 +591,7 @@ bool FFileArchive::OpenFile()
 }
 
 FFileReader::FFileReader(const char *Filename, unsigned InOptions)
-:	FFileArchive(Filename, Options)
+:	FFileArchive(Filename, InOptions)
 {
 	guard(FFileReader::FFileReader);
 	IsLoading = true;
@@ -695,8 +695,8 @@ int64 FFileReader::GetFileSize64() const
 
 static TArray<FFileWriter*> GFileWriters;
 
-FFileWriter::FFileWriter(const char *Filename, unsigned Options)
-:	FFileArchive(Filename, Options)
+FFileWriter::FFileWriter(const char *Filename, unsigned InOptions)
+:	FFileArchive(Filename, InOptions)
 {
 	guard(FFileWriter::FFileWriter);
 	IsLoading = false;
