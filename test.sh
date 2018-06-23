@@ -91,16 +91,19 @@ function console_title()
 	[ -t 1 ] && echo -en "\033]2;$@\007"
 }
 
+# Note: we're using '"$@"' - i.e. quoted array expansion $@, so it will preserve quotes.
+# http://mywiki.wooledge.org/BashFAQ/050#I.27m_constructing_a_command_based_on_information_that_is_only_known_at_run_time
+
 function run()
 {
 	if [ "$foundPath" ]; then
 		console_title "$exe -path="$foundPath" $@"
 		echo -e "${S_GREEN}Starting $exe -path="$foundPath" $@${S_DEFAULT}"
-		./$exe -path="$foundPath" $debugOpt $@
+		./$exe -path="$foundPath" $debugOpt "$@"
 	else
 		console_title "$exe $debugOpt $@"
 		echo -e "${S_GREEN}Starting $exe $debugOpt $@${S_DEFAULT}"
-		./$exe $debugOpt $@
+		./$exe $debugOpt "$@"
 	fi
 }
 
@@ -123,7 +126,7 @@ function run1()
 	esac
 
 	shift
-	run $*
+	run "$*"
 }
 
 
@@ -289,7 +292,7 @@ fi
 for arg in $*; do
 	case $arg in
 	-path=*)
-		DBG "'-path' is specified"
+		DBG "'-path' is specified: " ${arg:6}
 		path=1
 		;;
 	esac
@@ -320,7 +323,8 @@ if [ $# -gt 0 ] || [ "$cmd" ] || [ $path != 0 ]; then
 	if [ "`type -t $cmd`" != "function" ]; then
 		echo -e "${S_RED}Unknown command: $cmd${S_DEFAULT}"
 	else
-		eval $cmd ${args[*]}			# execute command
+#		eval $cmd "$args[@]"		# execute command
+		$cmd "${args[@]}"			# execute command
 	fi
 	exit
 fi
