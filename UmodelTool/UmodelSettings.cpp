@@ -151,8 +151,9 @@ void CUmodelSettings::Save()
 	SetPathOption(ConfigFile, CONFIG_FILE);
 
 	FArchive* Ar = new FFileWriter(*ConfigFile, FAO_TextFile|FAO_NoOpenError);
-	if (!Ar)
+	if (!Ar->IsOpen())
 	{
+		delete Ar;
 		appPrintf("Error creating file \"%s\" ...\n", *ConfigFile);
 		return;
 	}
@@ -175,8 +176,9 @@ void CUmodelSettings::Load()
 	SetPathOption(ConfigFile, CONFIG_FILE);
 
 	FArchive* Ar = new FFileReader(*ConfigFile, FAO_NoOpenError);
-	if (!Ar)
+	if (!Ar->IsOpen())
 	{
+		delete Ar;
 		return;
 	}
 
