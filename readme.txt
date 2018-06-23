@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+23.06.2018
+- optimized amount of memory used for UE4 animations
+
 21.06.2018
 - added configuration file (umodel.cfg) and options window
 
