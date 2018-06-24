@@ -739,6 +739,7 @@ void UIPackageDialog::SavePackages()
 #if UNREAL4
 			".ubulk",
 			".uexp",
+			".uptnl",
 #endif // UNREAL4
 		};
 

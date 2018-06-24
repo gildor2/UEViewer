@@ -302,7 +302,7 @@ public:
 
 			unguard;
 		}
-		unguard;
+		unguardf("file=%s", Info->Name);
 	}
 
 	virtual void Seek(int Pos)
@@ -310,7 +310,7 @@ public:
 		guard(FPakFile::Seek);
 		assert(Pos >= 0 && Pos < Info->UncompressedSize);
 		ArPos = Pos;
-		unguard;
+		unguardf("file=%s", Info->Name);
 	}
 
 	virtual int GetFileSize() const

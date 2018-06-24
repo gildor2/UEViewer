@@ -103,6 +103,7 @@ static const char *KnownExtensions[] =
 #	if UNREAL4
 	"ubulk",		// separately stored UE4 bulk data
 	"uexp",			// object's data cut from UE4 package when Event Driven Loader is used
+	"uptnl",		// optional ubulk
 #	endif
 #if GEARS4
 	"bundle",

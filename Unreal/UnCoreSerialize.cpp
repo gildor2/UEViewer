@@ -1154,6 +1154,15 @@ void FByteBulkData::Serialize(FArchive &Ar)
 
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
+		if (BulkDataFlags & (BULKDATA_OptionalPayload|BULKDATA_PayloadInSeperateFile))
+		{
+#if DEBUG_BULK
+			appPrintf("data in %s file (flags=%X, pos=%llX+%X)\n",
+				(BulkDataFlags & BULKDATA_OptionalPayload) ? ".uptnl" : ".ubulk",
+				BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
+#endif
+			return;
+		}
 		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
 		{
 #if DEBUG_BULK

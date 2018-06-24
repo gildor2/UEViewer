@@ -2238,6 +2238,8 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 //#define BULKDATA_Unused				0x0020		// the same value as for UE3
 #define BULKDATA_ForceInlinePayload		0x0040		// bulk data stored immediately after header
 #define BULKDATA_PayloadInSeperateFile	0x0100		// data stored in .ubulk file near the asset (UE4.12+)
+#define BULKDATA_SerializeCompressedBitWindow 0x0200 // use platform-specific compression
+#define BULKDATA_OptionalPayload		0x0800		// same as BULKDATA_PayloadInSeperateFile, but stored with .uptnl extension (UE4.20+)
 
 #endif // UNREAL4
 

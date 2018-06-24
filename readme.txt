@@ -199,6 +199,10 @@ detex
 
 Changes
 ~~~~~~~
+24.06.2018
+- fixed loading of UE4 .umap files
+- initial support for UE4.20
+
 23.06.2018
 - optimized amount of memory used for UE4 animations
 
