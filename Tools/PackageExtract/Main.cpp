@@ -124,6 +124,7 @@ int main(int argc, char **argv)
 	};
 
 	static byte mainCmd = CMD_Extract;
+	bool hasRootDir = false;
 	char BaseDir[256];
 	strcpy(BaseDir, ".");
 
@@ -161,6 +162,7 @@ int main(int argc, char **argv)
 		else if (!strnicmp(opt, "path=", 5))
 		{
 			appSetRootDirectory(opt+5);
+			hasRootDir = true;
 		}
 		else if (!strnicmp(opt, "out=", 4))
 		{
@@ -200,6 +202,9 @@ int main(int argc, char **argv)
 		}
 	}
 	if (!argPkgName) goto help;
+
+	if (!hasRootDir)
+		appSetRootDirectory2(argPkgName);
 
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(argPkgName);

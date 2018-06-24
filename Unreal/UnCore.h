@@ -86,6 +86,7 @@ void appPrintProfiler();
 extern char GRootDirectory[];
 
 void appSetRootDirectory(const char *dir, bool recurse = true);
+// Set root directory from package file name
 void appSetRootDirectory2(const char *filename);
 const char *appGetRootDirectory();
 
