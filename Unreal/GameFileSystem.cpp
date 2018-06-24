@@ -492,7 +492,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	}
 #endif // GEARS4
 
-	appPrintf("Found %d game files (%d skipped)\n", GameFiles.Num(), GNumForeignFiles);
+	appPrintf("Found %d game files (%d skipped) at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, dir);
 
 #if UNREAL4
 	// Should process .uexp and .ubulk files, register their information for .uasset
@@ -502,7 +502,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 		char SrcFile[MAX_PACKAGE_PATH];
 		appStrncpyz(SrcFile, info->RelativeName, ARRAY_COUNT(SrcFile));
 		char* s = strrchr(SrcFile, '.');
-		if (s && !stricmp(s, ".uasset"))
+		if (s && (stricmp(s, ".uasset") == 0 || stricmp(s, ".umap") == 0))
 		{
 			static const char* additionalExtensions[] =
 			{

@@ -750,7 +750,7 @@ void UIPackageDialog::SavePackages()
 			{
 				appStrncpyz(SrcFile, SelectedPackages[i]->RelativeName, ARRAY_COUNT(SrcFile));
 				char* s = strrchr(SrcFile, '.');
-				if (s && !stricmp(s, ".uasset"))
+				if (s && (stricmp(s, ".uasset") == 0 || stricmp(s, ".umap") == 0))
 				{
 					// Find additional file by replacing .uasset extension
 					strcpy(s, additionalExtensions[ext]);
