@@ -491,7 +491,7 @@ void ExportPsa(const CAnimSet *Anim)
 
 				BP.Set(0, 0, 0);			// GetBonePosition() will not alter BP and BO when animation tracks are not exists
 				BO.Set(0, 0, 0, 1);
-				S.Tracks[b].GetBonePosition(t, S.NumFrames, false, BP, BO);
+				S.Tracks[b]->GetBonePosition(t, S.NumFrames, false, BP, BO);
 
 				K.Position    = (FVector&) BP;
 				K.Orientation = (FQuat&)   BO;
@@ -506,7 +506,7 @@ void ExportPsa(const CAnimSet *Anim)
 				keysCount--;
 
 				// check for user error
-				if ((S.Tracks[b].KeyPos.Num() == 0) || (S.Tracks[b].KeyQuat.Num() == 0))
+				if ((S.Tracks[b]->KeyPos.Num() == 0) || (S.Tracks[b]->KeyQuat.Num() == 0))
 					requireConfig = true;
 			}
 		}
@@ -555,9 +555,9 @@ void ExportPsa(const CAnimSet *Anim)
 #define FLAG_NO_ROTATION		2
 				static const char *FlagInfo[] = { "", "trans", "rot", "all" };
 				int flag = 0;
-				if (S.Tracks[b].KeyPos.Num() == 0)
+				if (S.Tracks[b]->KeyPos.Num() == 0)
 					flag |= FLAG_NO_TRANSLATION;
-				if (S.Tracks[b].KeyQuat.Num() == 0)
+				if (S.Tracks[b]->KeyQuat.Num() == 0)
 					flag |= FLAG_NO_ROTATION;
 				if (flag)
 					Ar1->Printf("%s.%d=%s\n", *S.Name, b, FlagInfo[flag]);

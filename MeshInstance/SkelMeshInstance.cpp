@@ -472,20 +472,20 @@ void CSkelMeshInstance::UpdateSkeleton()
 				// get bone position from track
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
 				{
-					AnimSeq1->Tracks[BoneIndex].GetBonePosition(Chn->Time, AnimSeq1->NumFrames, Chn->Looped, BP, BO);
+					AnimSeq1->Tracks[BoneIndex]->GetBonePosition(Chn->Time, AnimSeq1->NumFrames, Chn->Looped, BP, BO);
 //const char *bname = *Bone.Name;
 //CQuat BOO = BO;
 //if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
 #if SHOW_ANIM
 //if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
 					DrawTextLeft("%s%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-						AnimSeq1->Tracks[BoneIndex].HasKeys() ? S_GREEN : S_BLUE,
+						AnimSeq1->Tracks[BoneIndex]->HasKeys() ? S_GREEN : S_BLUE,
 						i, *Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
 //if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
 #endif
 //BO.Normalize();
 #if SHOW_BONE_UPDATES
-					if (AnimSeq1->Tracks[BoneIndex].HasKeys())
+					if (AnimSeq1->Tracks[BoneIndex]->HasKeys())
 						BoneUpdateCounts[i]++;
 #endif
 				}
@@ -496,7 +496,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 					CQuat BO2;
 					BP2 = Bone.Position;		// default position - from bind pose
 					BO2 = Bone.Orientation;		// ...
-					AnimSeq2->Tracks[BoneIndex].GetBonePosition(Time2, AnimSeq2->NumFrames, Chn->Looped, BP2, BO2);
+					AnimSeq2->Tracks[BoneIndex]->GetBonePosition(Time2, AnimSeq2->NumFrames, Chn->Looped, BP2, BO2);
 					if (Chn->SecondaryBlend == 1.0f)
 					{
 						BO = BO2;

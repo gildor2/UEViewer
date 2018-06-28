@@ -896,10 +896,12 @@ void CSkelMeshViewer::FindUE4Animations()
 	progress.SetDescription("Loading animations");
 	for (int i = 0; i < packagesToLoad.Num(); i++)
 	{
+		guard(Load);
 		UnPackage* package = packagesToLoad[i];
 		if (!progress.Progress(package->Filename, i, packagesToLoad.Num()))
 			break;
 		LoadWholePackage(package);
+		unguardf("%d/%d", i, packagesToLoad.Num());
 	}
 
 	unguard;

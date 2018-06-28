@@ -49,21 +49,23 @@ void UMeshAnimation::ConvertAnims()
 		S.Rate      = Src.Rate;
 
 		// S.Tracks
-		S.Tracks.AddZeroed(numBones);
+		S.Tracks.Empty(numBones);
 		for (j = 0; j < numBones; j++)
 		{
-			CAnimTrack &T = S.Tracks[j];
+			CAnimTrack* T = new CAnimTrack;
+			S.Tracks.Add(T);
+
 			const AnalogTrack &A = M.AnimTracks[j];
-			CopyArray(T.KeyPos,  CVT(A.KeyPos));
-			CopyArray(T.KeyQuat, CVT(A.KeyQuat));
-			CopyArray(T.KeyTime, A.KeyTime);
+			CopyArray(T->KeyPos,  CVT(A.KeyPos));
+			CopyArray(T->KeyQuat, CVT(A.KeyQuat));
+			CopyArray(T->KeyTime, A.KeyTime);
 			// usually MotionChunk.TrackTime is identical to NumFrames, but some packages exists where
 			// time channel should be adjusted
 			if (M.TrackTime > 0)
 			{
 				float TimeScale = Src.NumFrames / M.TrackTime;
-				for (int k = 0; k < T.KeyTime.Num(); k++)
-					T.KeyTime[k] *= TimeScale;
+				for (int k = 0; k < T->KeyTime.Num(); k++)
+					T->KeyTime[k] *= TimeScale;
 			}
 		}
 	}

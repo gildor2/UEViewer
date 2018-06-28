@@ -199,10 +199,10 @@ static void FixRotationKeys(CAnimSequence* Anim)
 	for (int TrackIndex = 0; TrackIndex < Anim->Tracks.Num(); TrackIndex++)
 	{
 		if (TrackIndex == 0) continue;	// don't fix root track
-		CAnimTrack& Track = Anim->Tracks[TrackIndex];
-		for (int KeyIndex = 0; KeyIndex < Track.KeyQuat.Num(); KeyIndex++)
+		CAnimTrack* Track = Anim->Tracks[TrackIndex];
+		for (int KeyIndex = 0; KeyIndex < Track->KeyQuat.Num(); KeyIndex++)
 		{
-			Track.KeyQuat[KeyIndex].Conjugate();
+			Track->KeyQuat[KeyIndex].Conjugate();
 		}
 	}
 }
@@ -317,7 +317,9 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 	for (int BoneIndex = 0; BoneIndex < ReferenceSkeleton.RefBoneInfo.Num(); BoneIndex++)
 	{
-		CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
+		CAnimTrack *A = new CAnimTrack;
+		Dst->Tracks.Add(A);
+
 		int TrackIndex = Seq->FindTrackForBoneIndex(BoneIndex);
 
 		if (TrackIndex < 0)

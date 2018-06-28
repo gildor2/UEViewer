@@ -393,7 +393,9 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 	int i;
 	for (int Bone = 0; Bone < NumTracks; Bone++)
 	{
-		CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
+		CAnimTrack* A = new CAnimTrack;
+		Dst->Tracks.Add(A);
+
 		int RotKeyIndex   = TrackOffsets[Bone * 2    ];
 		int TransKeyIndex = TrackOffsets[Bone * 2 + 1];
 
@@ -755,7 +757,8 @@ void UAnimSet::ConvertAnims()
 		int offsetIndex = 0;
 		for (j = 0; j < NumTracks; j++, offsetIndex += offsetsPerBone)
 		{
-			CAnimTrack *A = new (Dst->Tracks) CAnimTrack;
+			CAnimTrack *A = new CAnimTrack;
+			Dst->Tracks.Add(A);
 
 			int k;
 

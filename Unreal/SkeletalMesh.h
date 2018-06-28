@@ -208,13 +208,13 @@ private:
 
 struct CAnimTrack
 {
-	TArray<CQuat>			KeyQuat;
-	TArray<CVec3>			KeyPos;
+	TStaticArray<CQuat, 1>	KeyQuat;
+	TStaticArray<CVec3, 1>	KeyPos;
 	// 3 time arrays; should be used either KeyTime or KeyQuatTime + KeyPosTime
 	// When the corresponding array is empty, it will assume that Array[i] == i
-	TArray<float>			KeyTime;
-	TArray<float>			KeyQuatTime;
-	TArray<float>			KeyPosTime;
+	TStaticArray<float, 1>	KeyTime;
+	TStaticArray<float, 1>	KeyQuatTime;
+	TStaticArray<float, 1>	KeyPosTime;
 
 	// DstPos and DstQuat will not be changed when KeyPos and KeyQuat are empty
 	void GetBonePosition(float Frame, float NumFrames, bool Loop, CVec3 &DstPos, CQuat &DstQuat) const;
@@ -232,10 +232,18 @@ public:
 	FName					Name;					// sequence's name
 	int						NumFrames;
 	float					Rate;
-	TArray<CAnimTrack>		Tracks;					// for each CAnimSet.TrackBoneNames
+	TArray<CAnimTrack*>		Tracks;					// for each CAnimSet.TrackBoneNames
 #if ANIM_DEBUG_INFO
 	FString					DebugInfo;
 #endif
+
+	~CAnimSequence()
+	{
+		for (int i = 0; i < Tracks.Num(); i++)
+		{
+			delete Tracks[i];
+		}
+	}
 };
 
 

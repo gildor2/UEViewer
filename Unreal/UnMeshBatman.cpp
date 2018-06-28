@@ -708,7 +708,9 @@ void UAnimSequence::DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) cons
 	for (Bone = 0; Bone < NumTracks; Bone++)
 	{
 		// decompress track
-		CAnimTrack *Track = new (Dst->Tracks) CAnimTrack;
+		CAnimTrack *Track = new CAnimTrack;
+		Dst->Tracks.Add(Track);
+
 		int RotationCodec = FindAndDecodeRotation(Bone, Reader, *Track, Hdr.RotationOffset, Hdr.RotationCount, Owner);
 		int TranslationCodec = FindAndDecodeTranslation(Bone, Reader, *Track, Hdr.TranslationOffset, Hdr.TranslationCount, Owner);
 		// fix quaternions
@@ -743,7 +745,7 @@ void UAnimSequence::DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) cons
 	// fix some missing tracks
 	for (Bone = 0; Bone < NumTracks; Bone++)
 	{
-		if (Dst->Tracks[Bone].HasKeys()) continue;
+		if (Dst->Tracks[Bone]->HasKeys()) continue;
 
 		// find bone name which track will be used instead
 		const char *BoneName = Owner->TrackBoneNames[Bone];
@@ -770,7 +772,7 @@ void UAnimSequence::DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) cons
 #if DEBUG_DECOMPRESS
 		appPrintf("... copying track: %s (%d) -> %s (%d)\n", Replacement, ReplaceBone, BoneName, Bone);
 #endif
-		Dst->Tracks[Bone].CopyFrom(Dst->Tracks[ReplaceBone]);
+		Dst->Tracks[Bone]->CopyFrom(Dst->Tracks[ReplaceBone]);
 	}
 #endif
 
