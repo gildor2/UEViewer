@@ -112,19 +112,34 @@ void FArray::GrowArray(int count, int elementSize)
 	int prevCount = MaxCount;
 
 	// check for available space
-	if (DataCount + count > MaxCount)
+	int newCount = DataCount + count;
+	if (newCount > MaxCount)
 	{
-		// not enough space, resize ...
-		MaxCount = ((DataCount + count + 15) / 16) * 16 + 16;
+		// Not enough space, resize ...
+		// Allow small initial size of array
+		const int minCount = 4;
+		if (newCount > minCount)
+		{
+			MaxCount = Align(DataCount + count, 16) + 16;
+		}
+		else
+		{
+			MaxCount = minCount;
+		}
+		// Align memory block to reduce fragmentation
+		int dataSize = Align(MaxCount * elementSize, 16);
+		// Recompute MaxCount in a case if alignment increases its capacity
+		MaxCount = dataSize / elementSize;
+		// Reallocate memory
 		if (!IsStatic())
 		{
-			DataPtr = appRealloc(DataPtr, MaxCount * elementSize);
+			DataPtr = appRealloc(DataPtr, dataSize);
 		}
 		else
 		{
 			// "static" array becomes non-static
 			void* oldData = DataPtr; // this is a static pointer
-			DataPtr = appMalloc(MaxCount * elementSize);
+			DataPtr = appMalloc(dataSize);
 			memcpy(DataPtr, oldData, prevCount * elementSize);
 		}
 	}
