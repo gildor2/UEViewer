@@ -1163,13 +1163,6 @@ void FByteBulkData::Serialize(FArchive &Ar)
 #endif
 			return;
 		}
-		if (BulkDataFlags & BULKDATA_PayloadInSeperateFile)
-		{
-#if DEBUG_BULK
-			appPrintf("data in .ubulk file (flags=%X, pos=%llX+%X)\n", BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
-#endif
-			return;
-		}
 		if (BulkDataFlags & BULKDATA_PayloadAtEndOfFile)
 		{
 			// stored in the same file, but at different position

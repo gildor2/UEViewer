@@ -501,7 +501,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		LATEST_SUPPORTED_UE4_VERSION+1				// this line here is just to make code below simpler
 	};
 
-	static const int LatestSupportedLegacyVer = -ARRAY_COUNT(legacyVerToEngineVer)+1;
+	static const int LatestSupportedLegacyVer = (int) -ARRAY_COUNT(legacyVerToEngineVer)+1;
 //	appPrintf("%d -> %d %d < %d\n", S.LegacyVersion, -S.LegacyVersion - 1, legacyVerToEngineVer[-S.LegacyVersion - 1], LatestSupportedLegacyVer);
 	if (S.LegacyVersion < LatestSupportedLegacyVer || S.LegacyVersion >= -1)	// -2 is supported
 		appError("UE4 LegacyVersion: unsupported value %d", S.LegacyVersion);

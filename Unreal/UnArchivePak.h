@@ -15,7 +15,7 @@ enum
 {
 	PAK_INITIAL = 1,
 	PAK_NO_TIMESTAMPS = 2,
-	PAK_COMPRESSION_ENCRYPTION = 3,
+	PAK_COMPRESSION_ENCRYPTION = 3,		// UE4.3+
 	PAK_INDEX_ENCRYPTION = 4,			// UE4.17+
 	PAK_RELATIVE_CHUNK_OFFSETS = 5,		// UE4.20+
 
@@ -97,7 +97,7 @@ struct FPakEntry
 			Ar << P.Pos << (int32&)P.Size << (int32&)P.UncompressedSize << (byte&)P.CompressionMethod;
 			if (Ar.PakVer < PAK_NO_TIMESTAMPS)
 			{
-				int64	timestamp;
+				int64 timestamp;
 				Ar << timestamp;
 			}
 			if (Ar.PakVer >= PAK_COMPRESSION_ENCRYPTION)
@@ -106,9 +106,7 @@ struct FPakEntry
 					Ar << P.CompressionBlocks;
 				Ar << P.CompressionBlockSize;
 				if (P.CompressionMethod == 4)
-				{
 					P.CompressionMethod = COMPRESS_LZ4;
-				}
 			}
 			goto end;
 		}
@@ -118,7 +116,7 @@ struct FPakEntry
 
 		if (Ar.PakVer < PAK_NO_TIMESTAMPS)
 		{
-			int64	timestamp;
+			int64 timestamp;
 			Ar << timestamp;
 		}
 
