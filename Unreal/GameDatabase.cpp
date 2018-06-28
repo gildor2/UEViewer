@@ -881,6 +881,13 @@ struct UEVersionMap
 
 static const UEVersionMap ueVersions[] =
 {
+#if UNREAL4
+	#if LAWBREAKERS
+	// This game uses mostly UE4.13 structures, but has 4.14 package file format. So, game enum
+	// is defined as GAME_UE4(13), but we're defining package version 4.14.
+	G(GAME_Lawbreakers, VER_UE4_14)
+	#endif
+#endif // UNREAL4
 #if ENDWAR
 	G(GAME_EndWar, 224)
 #endif
@@ -919,55 +926,47 @@ void FArchive::OverrideVersion()
 		return;
 	}
 
-#if UNREAL4
-#if LAWBREAKERS
-	if (Game == GAME_Lawbreakers)
-	{
-		// This game uses mostly UE4.13 structures, but has 4.14 package file format. So, game enum
-		// is defined as GAME_UE4(13), but we're defining package version 4.14.
-		ArVer = VER_UE4_14;
-	}
-	else
-#endif // LAWBREAKERS
-	if (Game >= GAME_UE4(0) && Game < GAME_UE4(LATEST_SUPPORTED_UE4_VERSION+1))
-	{
-		// Special path for UE4, when engine version is specified and packages are unversioned.
-		if (ArVer == 0)
-		{
-			// Override version only if package is unversioned. Mixed versioned and unversioned packages could
-			// appear in UE4 game when it has editor support (like UT4).
-			ArVer = ue4Versions[GAME_UE4_GET_MINOR(Game)];
-		}
-		return;
-	}
-/*	else if (Game == GAME_UE4_BASE && ArVer != 0) //-- disabled because versioned packages provides FCustomVersion info
-	{
-		// Path for UE4 when packages are versioned.
-		for (int i = ARRAY_COUNT(ue4Versions) - 1; i >= 0; i--)
-		{
-			printf("arv=%d ue4[%d]=%d\n", ArVer, i, ue4Versions[i]);
-			if (ArVer >= ue4Versions[i])
-			{
-				Game = GAME_UE4(i);
-				return;
-			}
-		}
-		return;
-	} */
-#endif // UNREAL4
-
-	// convert game tag to ArVer
+	// Remember current versions for logging
 	int OldVer  = ArVer;
 	int OldLVer = ArLicenseeVer;
 
+	// Simple overrides, when game has exact package version
 	for (int i = 0; i < ARRAY_COUNT(ueVersions); i++)
 	{
 		if (ueVersions[i].GameTag == Game)
 		{
 			ArVer = ueVersions[i].PackageVersion;
-			break;
+			goto end_override;
 		}
 	}
+
+#if UNREAL4
+	if (Game >= GAME_UE4(0) && Game < GAME_UE4(LATEST_SUPPORTED_UE4_VERSION+1) && ArVer == 0)
+	{
+		// Special path for UE4, when engine version is specified and packages are unversioned.
+		// Override version only if package is unversioned. Mixed versioned and unversioned packages could
+		// appear in UE4 game when it has editor support (like UT4).
+		ArVer = ue4Versions[GAME_UE4_GET_MINOR(Game)];
+		return;
+	}
+	else if (Game == GAME_UE4_BASE && ArVer != 0)
+	{
+		// Path for UE4 when packages are versioned: detect engine version by ArVer.
+		// Versioned packages provides FCustomVersion info, however some objects like UStaticMesh doesn't
+		// use versioning, we're relying of GAME_UE4(x) there.
+		for (int i = ARRAY_COUNT(ue4Versions) - 1; i >= 0; i--)
+		{
+			if (ArVer >= ue4Versions[i])
+			{
+				Game = GAME_UE4(i);
+				break;
+			}
+		}
+		return;
+	}
+#endif // UNREAL4
+
+	// Convert game tag to ArVer
 
 #if MASSEFF
 	if (Game == GAME_MassEffect) ArLicenseeVer = OVERRIDE_ME1_LVER;
@@ -1000,6 +999,7 @@ void FArchive::OverrideVersion()
 	}
 #endif // DUNDEF
 
+end_override:
 	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4_BASE)
 		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }
