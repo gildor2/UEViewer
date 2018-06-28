@@ -98,15 +98,45 @@ CBlockHeader* CBlockHeader::first = NULL;
 	Primary allocation functions
 -----------------------------------------------------------------------------*/
 
+#if DEBUG_MEMORY
+#define RESERVE_MEMORY_SIZE (16<<20)
+static void* ReservedMemory = NULL;
+#endif
+
+inline void OutOfMemory(int size)
+{
+#if DEBUG_MEMORY
+	static bool recurse = false;
+	if (recurse) return;
+	recurse = true;
+	// Release reserved memory
+	if (ReservedMemory)
+		free(ReservedMemory);
+	// Log allocations
+	appOpenLogFile("memory.log");
+	appDumpMemoryAllocations();
+#endif
+	// Crash ...
+	appError("Out of memory: failed to allocate %d bytes", size);
+}
+
 void *appMalloc(int size, int alignment)
 {
 	guard(appMalloc);
+
+#if DEBUG_MEMORY
+	// Reserve some amount of memory for possibility to log memory when crashed
+	if (!ReservedMemory) ReservedMemory = malloc(RESERVE_MEMORY_SIZE);
+#endif
+
 	if (size < 0 || size >= MAX_ALLOCATION_SIZE)
 		appError("Memory: bad allocation size %d bytes", size);
 	assert(alignment > 1 && alignment <= 256 && ((alignment & (alignment - 1)) == 0));
+
 	void *block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
 	if (!block)
-		appError("Out of memory: failed to allocate %d bytes", size);
+		OutOfMemory(size);
+
 	void *ptr = Align(OffsetPointer(block, sizeof(CBlockHeader)), alignment);
 	if (size > 0)
 		memset(ptr, 0, size);

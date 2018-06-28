@@ -17,6 +17,8 @@ static FILE *GLogFile = NULL;
 
 void appOpenLogFile(const char *filename)
 {
+	if (GLogFile) fclose(GLogFile);
+
 	GLogFile = fopen(filename, "a");
 	if (!GLogFile)
 		appPrintf("Unable to open log \"%s\"\n", filename);
