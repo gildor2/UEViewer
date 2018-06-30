@@ -55,6 +55,7 @@
 
 #if DEBUG_LAYOUT
 #define DBG_LAYOUT(...)				appPrintf(__VA_ARGS__)
+const char* GetDebugLayoutIndent(); //?? TODO: remove
 #else
 #define DBG_LAYOUT(...)
 #endif
@@ -103,6 +104,84 @@
 static HINSTANCE hInstance;
 
 #endif // _WIN32
+
+
+//!! TODO: remove
+
+void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
+{
+	guard(UIGroup::AllocateUISpace);
+
+	int baseX = X + CursorX;
+	int parentWidth = Width;
+	int rightMargin = X + Width;
+
+	if (!(Flags & GROUP_NO_BORDER))
+	{
+		parentWidth -= GROUP_INDENT * 2;
+		rightMargin -= GROUP_INDENT;
+	}
+
+	DBG_LAYOUT("%s... AllocSpace (%d %d %d %d) IN: Curs: %d,%d W: %d -- ", GetDebugLayoutIndent(), x, y, w, h, CursorX, CursorY, parentWidth);
+
+	if (w < 0)
+	{
+		if (w == -1 && (Flags & GROUP_HORIZONTAL_LAYOUT))
+			w = AutoWidth;
+		else
+			w = int(DecodeWidth(w) * parentWidth);
+	}
+
+	if (h < 0 && Height > 0)
+	{
+		h = int(DecodeWidth(h) * Height);
+	}
+	assert(h >= 0);
+
+	if (x == -1)
+	{
+		x = baseX;
+		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == GROUP_HORIZONTAL_LAYOUT)
+			CursorX += w;
+	}
+	else if (x < 0)
+		x = baseX + int(DecodeWidth(x) * parentWidth);	// left border of parent control, 'x' is relative value
+	else
+		x = baseX + x;									// treat 'x' as relative value
+
+	if (x + w > rightMargin)
+		w = rightMargin - x;
+
+	if (y < 0)
+	{
+		y = Y + CursorY;								// next 'y' value
+		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
+			CursorY += h;
+	}
+	else
+	{
+		y = Y + CursorY + y;							// treat 'y' as relative value
+		// don't change 'Height'
+	}
+
+//	h = unchanged;
+
+	DBG_LAYOUT("OUT: (%d %d %d %d) Curs: %d,%d\n", x, y, w, h, CursorX, CursorY);
+
+	unguard;
+}
+
+void UIGroup::AddVerticalSpace(int size)
+{
+	if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
+		CursorY += (size >= 0 ? size : VERTICAL_SPACING);
+}
+
+void UIGroup::AddHorizontalSpace(int size)
+{
+	if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == GROUP_HORIZONTAL_LAYOUT)
+		CursorX += (size >= 0 ? size : HORIZONTAL_SPACING);
+}
 
 
 /*-----------------------------------------------------------------------------
@@ -350,22 +429,22 @@ UISpacer::UISpacer(int size)
 	Height = (size > 0) ? size : VERTICAL_SPACING;
 }
 
-void UISpacer::Create(UIBaseDialog* dialog)
+void UISpacer::UpdateLayout(UILayoutHelper* layout)
 {
-	assert(Parent->UseAutomaticLayout());
-	if (Parent->UseVerticalLayout())
+	assert(layout->UseAutomaticLayout());
+	if (layout->UseVerticalLayout())
 	{
-		Parent->AddVerticalSpace(Height);
+		layout->layout->AddVerticalSpace(Height);
 	}
 	else
 	{
 		if (Width > 0)
 		{
-			Parent->AddHorizontalSpace(Width);
+			layout->layout->AddHorizontalSpace(Width);
 		}
 		else
 		{
-			Parent->AllocateUISpace(X, Y, Width, Height);
+			layout->layout->AllocateUISpace(X, Y, Width, Height);
 		}
 	}
 }
@@ -383,8 +462,12 @@ UIHorizontalLine::UIHorizontalLine()
 
 void UIHorizontalLine::Create(UIBaseDialog* dialog)
 {
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, "", SS_ETCHEDHORZ, 0, dialog);
+}
+
+void UIHorizontalLine::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
 }
 
 
@@ -403,10 +486,13 @@ UIVerticalLine::UIVerticalLine()
 
 void UIVerticalLine::Create(UIBaseDialog* dialog)
 {
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, "", SS_ETCHEDVERT, 0, dialog);
 }
 
+void UIVerticalLine::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+}
 
 /*-----------------------------------------------------------------------------
 	UIBitmap
@@ -490,9 +576,13 @@ UIBitmap& UIBitmap::SetResourceBitmap(int resId)
 
 void UIBitmap::Create(UIBaseDialog* dialog)
 {
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(WC_STATIC, "", IsIcon ? SS_ICON : SS_BITMAP, 0, dialog);
 	if (Wnd && hImage) SendMessage(Wnd, STM_SETIMAGE, IsIcon ? IMAGE_ICON : IMAGE_BITMAP, (LPARAM)hImage);
+}
+
+void UIBitmap::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
 }
 
 
@@ -541,17 +631,21 @@ static int ConvertTextAlign(ETextAlign align)
 
 void UILabel::Create(UIBaseDialog* dialog)
 {
+	Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align), 0, dialog);
+	UpdateEnabled();
+}
+
+void UILabel::UpdateLayout(UILayoutHelper* layout)
+{
 	if (Height == -1)
 	{
 		// Auto-size: compute label's height
 		int labelWidth, labelHeight;
 		labelWidth = Width;
-		MeasureTextVSize(*Label, &labelWidth, &labelHeight, dialog->GetWnd());
+		MeasureTextVSize(*Label, &labelWidth, &labelHeight, GetDialog()->GetWnd());
 		Height = labelHeight;
 	}
-	Parent->AllocateUISpace(X, Y, Width, Height);
-	Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align), 0, dialog);
-	UpdateEnabled();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
 }
 
 
@@ -566,7 +660,6 @@ UIHyperLink::UIHyperLink(const char* text, const char* link /*, ETextAlign align
 
 void UIHyperLink::Create(UIBaseDialog* dialog)
 {
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
 #if 0
@@ -599,6 +692,11 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 	UpdateEnabled();
 }
 
+void UIHyperLink::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+}
+
 bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd == NM_CLICK || cmd == NM_RETURN || cmd == STN_CLICKED) // STN_CLICKED for WC_STATIC fallback
@@ -628,11 +726,15 @@ void UIProgressBar::SetValue(float value)
 
 void UIProgressBar::Create(UIBaseDialog* dialog)
 {
-	Parent->AddVerticalSpace();
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Wnd = Window(PROGRESS_CLASS, "", 0, 0, dialog);
 	SendMessage(Wnd, PBM_SETRANGE, 0, MAKELPARAM(0, 16384));
 	if (Wnd) SendMessage(Wnd, PBM_SETPOS, (int)(Value * 16384), 0);
+}
+
+void UIProgressBar::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AddVerticalSpace();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
 }
 
 
@@ -660,15 +762,19 @@ UIButton& UIButton::SetCancel()
 
 void UIButton::Create(UIBaseDialog* dialog)
 {
-	Parent->AddVerticalSpace();
-	Parent->AllocateUISpace(X, Y, Width, Height);
-	Parent->AddVerticalSpace();
 	if (Id == 0 || Id >= FIRST_DIALOG_ID)
 		Id = dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
 
 	//!! BS_DEFPUSHBUTTON - for default key
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP, 0, dialog);
 	UpdateEnabled();
+}
+
+void UIButton::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AddVerticalSpace();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+	layout->layout->AddVerticalSpace();
 }
 
 bool UIButton::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -725,9 +831,6 @@ UIMenuButton& UIMenuButton::SetCancel()
 
 void UIMenuButton::Create(UIBaseDialog* dialog)
 {
-	Parent->AddVerticalSpace();
-	Parent->AllocateUISpace(X, Y, Width, Height);
-	Parent->AddVerticalSpace();
 	if (Id == 0 || Id >= FIRST_DIALOG_ID)
 		Id = dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
 
@@ -737,6 +840,13 @@ void UIMenuButton::Create(UIBaseDialog* dialog)
 	if (GetComctl32Version() >= 0x600) flags |= BS_SPLITBUTTON; // not supported in comctl32.dll prior version 6.00
 	Wnd = Window(WC_BUTTON, *Label, flags, 0, dialog);
 	UpdateEnabled();
+}
+
+void UIMenuButton::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AddVerticalSpace();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+	layout->layout->AddVerticalSpace();
 }
 
 bool UIMenuButton::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -797,7 +907,6 @@ void UICheckbox::UpdateSize(UIBaseDialog* dialog)
 
 void UICheckbox::Create(UIBaseDialog* dialog)
 {
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
 	DlgWnd = dialog->GetWnd();
@@ -812,6 +921,11 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
+}
+
+void UICheckbox::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
 }
 
 bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -864,7 +978,6 @@ void UIRadioButton::UpdateSize(UIBaseDialog* dialog)
 
 void UIRadioButton::Create(UIBaseDialog* dialog)
 {
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
 	HWND DlgWnd = dialog->GetWnd();
@@ -879,6 +992,11 @@ void UIRadioButton::Create(UIBaseDialog* dialog)
 
 //	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
+}
+
+void UIRadioButton::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
 }
 
 void UIRadioButton::ButtonSelected(bool value)
@@ -946,7 +1064,6 @@ const char* UITextEdit::GetText()
 
 void UITextEdit::Create(UIBaseDialog* dialog)
 {
-	Parent->AllocateUISpace(X, Y, Width, Height);
 	Id = dialog->GenerateDialogId();
 
 	int style = (IsWantFocus) ? WS_TABSTOP : 0;
@@ -966,6 +1083,11 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 
 	// Remove limit of 30k characters
 	SendMessage(Wnd, EM_SETLIMITTEXT, 0x100000, 0);
+}
+
+void UITextEdit::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
 }
 
 bool UITextEdit::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -1067,9 +1189,6 @@ UICombobox& UICombobox::SelectItem(const char* item)
 
 void UICombobox::Create(UIBaseDialog* dialog)
 {
-	Parent->AddVerticalSpace();
-	Parent->AllocateUISpace(X, Y, Width, Height);
-	Parent->AddVerticalSpace();
 	Id = dialog->GenerateDialogId();
 
 	// Note: we're sending DEFAULT_COMBOBOX_LIST_HEIGHT instead of control's Height here, otherwise
@@ -1085,6 +1204,13 @@ void UICombobox::Create(UIBaseDialog* dialog)
 	// set selection
 	SendMessage(Wnd, CB_SETCURSEL, Value, 0);
 	UpdateEnabled();
+}
+
+void UICombobox::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AddVerticalSpace();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+	layout->layout->AddVerticalSpace();
 }
 
 bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -1165,9 +1291,6 @@ UIListbox& UIListbox::SelectItem(const char* item)
 
 void UIListbox::Create(UIBaseDialog* dialog)
 {
-	Parent->AddVerticalSpace();
-	Parent->AllocateUISpace(X, Y, Width, Height);
-	Parent->AddVerticalSpace();
 	Id = dialog->GenerateDialogId();
 
 	Wnd = Window(WC_LISTBOX, "",
@@ -1179,6 +1302,13 @@ void UIListbox::Create(UIBaseDialog* dialog)
 	// set selection
 	SendMessage(Wnd, LB_SETCURSEL, Value, 0);
 	UpdateEnabled();
+}
+
+void UIListbox::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AddVerticalSpace();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+	layout->layout->AddVerticalSpace();
 }
 
 bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -1556,9 +1686,6 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 {
 	int i;
 
-	Parent->AddVerticalSpace();
-	Parent->AllocateUISpace(X, Y, Width, Height);
-	Parent->AddVerticalSpace();
 	Id = dialog->GenerateDialogId();
 
 	DWORD style = Multiselect ? 0 : LVS_SINGLESEL;
@@ -1642,6 +1769,13 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 		SetItemSelection(SelectedItems[i], true);
 
 	UpdateEnabled();
+}
+
+void UIMulticolumnListbox::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AddVerticalSpace();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+	layout->layout->AddVerticalSpace();
 }
 
 bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -1988,9 +2122,6 @@ static void LoadFolderIcons()
 
 void UITreeView::Create(UIBaseDialog* dialog)
 {
-	Parent->AddVerticalSpace();
-	Parent->AllocateUISpace(X, Y, Width, Height);
-	Parent->AddVerticalSpace();
 	Id = dialog->GenerateDialogId();
 
 	Wnd = Window(WC_TREEVIEW, "",
@@ -2025,6 +2156,13 @@ void UITreeView::Create(UIBaseDialog* dialog)
 	TreeView_SelectItem(Wnd, SelectedItem->hItem);
 
 	UpdateEnabled();
+}
+
+void UITreeView::UpdateLayout(UILayoutHelper* layout)
+{
+	layout->layout->AddVerticalSpace();
+	layout->layout->AllocateUISpace(X, Y, Width, Height);
+	layout->layout->AddVerticalSpace();
 }
 
 bool UITreeView::HandleCommand(int id, int cmd, LPARAM lParam)
@@ -2870,81 +3008,6 @@ const char* GetDebugLayoutIndent()
 
 #endif // DEBUG_LAYOUT
 
-void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
-{
-	guard(UIGroup::AllocateUISpace);
-
-	int baseX = X + CursorX;
-	int parentWidth = Width;
-	int rightMargin = X + Width;
-
-	if (!(Flags & GROUP_NO_BORDER))
-	{
-		parentWidth -= GROUP_INDENT * 2;
-		rightMargin -= GROUP_INDENT;
-	}
-
-	DBG_LAYOUT("%s... AllocSpace (%d %d %d %d) IN: Curs: %d,%d W: %d -- ", GetDebugLayoutIndent(), x, y, w, h, CursorX, CursorY, parentWidth);
-
-	if (w < 0)
-	{
-		if (w == -1 && (Flags & GROUP_HORIZONTAL_LAYOUT))
-			w = AutoWidth;
-		else
-			w = int(DecodeWidth(w) * parentWidth);
-	}
-
-	if (h < 0 && Height > 0)
-	{
-		h = int(DecodeWidth(h) * Height);
-	}
-	assert(h >= 0);
-
-	if (x == -1)
-	{
-		x = baseX;
-		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == GROUP_HORIZONTAL_LAYOUT)
-			CursorX += w;
-	}
-	else if (x < 0)
-		x = baseX + int(DecodeWidth(x) * parentWidth);	// left border of parent control, 'x' is relative value
-	else
-		x = baseX + x;									// treat 'x' as relative value
-
-	if (x + w > rightMargin)
-		w = rightMargin - x;
-
-	if (y < 0)
-	{
-		y = Y + CursorY;								// next 'y' value
-		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
-			CursorY += h;
-	}
-	else
-	{
-		y = Y + CursorY + y;							// treat 'y' as relative value
-		// don't change 'Height'
-	}
-
-//	h = unchanged;
-
-	DBG_LAYOUT("OUT: (%d %d %d %d) Curs: %d,%d\n", x, y, w, h, CursorX, CursorY);
-
-	unguard;
-}
-
-void UIGroup::AddVerticalSpace(int size)
-{
-	if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
-		CursorY += (size >= 0 ? size : VERTICAL_SPACING);
-}
-
-void UIGroup::AddHorizontalSpace(int size)
-{
-	if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == GROUP_HORIZONTAL_LAYOUT)
-		CursorX += (size >= 0 ? size : HORIZONTAL_SPACING);
-}
-
 bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	for (UIElement* ctl = FirstChild; ctl; ctl = ctl->NextChild)
@@ -2989,6 +3052,32 @@ void UIGroup::Create(UIBaseDialog* dialog)
 	}
 }
 
+void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
+{
+	guard(UIGroup::CreateGroupControls);
+
+	// call 'Create' for all children
+	bool isRadioGroup = false;
+	int controlIndex = 0;
+	for (UIElement* control = FirstChild; control; control = control->NextChild, controlIndex++)
+	{
+		guard(ControlCreate);
+		control->Create(dialog);
+		unguardf("index=%d,class=%s", controlIndex, control->ClassName());
+
+		if (control->IsRadioButton) isRadioGroup = true;
+	}
+	if (isRadioGroup) InitializeRadioGroup();
+
+	if (!(Flags & GROUP_NO_BORDER))
+	{
+		// create a group window (border)
+		Wnd = Window(WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0, dialog);
+	}
+
+	unguardf("%s", *Label);
+}
+
 void UIGroup::UpdateEnabled()
 {
 	Super::UpdateEnabled();
@@ -3001,9 +3090,25 @@ void UIGroup::UpdateVisible()
 	ShowAllControls(Visible);
 }
 
-void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
+//?? todo: rename function because it does more than UpdateSize() call
+void UIGroup::UpdateSize(UIBaseDialog* dialog)
 {
-	guard(UIGroup::CreateGroupControls);
+	// allow UIGroup-based classes to add own controls
+	AddCustomControls();
+
+	for (UIElement* control = FirstChild; control; control = control->NextChild)
+	{
+		control->UpdateSize(dialog);
+	}
+}
+
+//?? todo: use inLayout instead of Parent
+void UIGroup::UpdateLayout(UILayoutHelper* inLayout)
+{
+	//?? TODO: change
+	UILayoutHelper layout;
+	layout.layout = this;
+	layout.Flags = Flags;
 
 	// save original positions for second AllocateUISpace call
 	int origX = X, origY = Y, origW = Width, origH = Height;
@@ -3034,13 +3139,6 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	DBG_LAYOUT("%sgroup \"%s\" cursor: %d %d\n", GetDebugLayoutIndent(), *Label, CursorX, CursorY);
 	DebugLayoutDepth++;
 #endif
-
-	// allow UIGroup-based classes to add own controls
-	AddCustomControls();
-
-	// some controls could compite size depending on text
-	for (UIElement* control = FirstChild; control; control = control->NextChild)
-		control->UpdateSize(dialog);
 
 	// determine default width of control in horizontal layout; this value will be used for
 	// all controls which width was not specified (for Width==-1)
@@ -3092,11 +3190,9 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		}
 	}
 
-	// call 'Create' for all children
 	int maxControlY = Y + Height;
-	bool isRadioGroup = false;
-	int controlIndex = 0;
-	for (UIElement* control = FirstChild; control; control = control->NextChild, controlIndex++)
+
+	for (UIElement* control = FirstChild; control; control = control->NextChild)
 	{
 		// evenly space controls for horizontal layout, when requested
 		if (horizontalSpacing > 0 && control != FirstChild)
@@ -3104,16 +3200,12 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		DBG_LAYOUT("%screate %s: x=%d y=%d w=%d h=%d\n", GetDebugLayoutIndent(),
 			control->ClassName(), control->X, control->Y, control->Width, control->Height);
 
-		guard(ControlCreate);
-		control->Create(dialog);
-		unguardf("index=%d,class=%s", controlIndex, control->ClassName());
+		control->UpdateLayout(&layout);
 
 		int bottom = control->Y + control->Height;
 		if (bottom > maxControlY)
 			maxControlY = bottom;
-		if (control->IsRadioButton) isRadioGroup = true;
 	}
-	if (isRadioGroup) InitializeRadioGroup();
 
 	Height = max(Height, maxControlY - Y);
 
@@ -3122,6 +3214,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 
 	if (Parent && !(Parent->Flags & GROUP_HORIZONTAL_LAYOUT))
 	{
+		//?? TODO: review this code
 		// for vertical layout we should call AllocateUISpace again to adjust parent's CursorY
 		// (because height wasn't known when we called AllocateUISpace first time)
 		origH = Height;
@@ -3131,16 +3224,8 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	DebugLayoutDepth--;
 #endif
 
-	if (!(Flags & GROUP_NO_BORDER))
-	{
-		// create a group window (border)
-		Wnd = Window(WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0, dialog);
-	}
-
 	if (Parent)
 		Parent->AddVerticalSpace();
-
-	unguardf("%s", *Label);
 }
 
 void UIGroup::InitializeRadioGroup()
@@ -3285,12 +3370,9 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 {
 	guard(UIPageControl::Create);
 
-	Parent->AllocateUISpace(X, Y, Width, Height);
-
 	int pageIndex = 0;
 	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
 	{
-		CursorX = CursorY = 0;
 		page->Show(pageIndex == ActivePage);
 
 		guard(PageCreate);
@@ -3299,6 +3381,21 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 	}
 
 	unguard;
+}
+
+void UIPageControl::UpdateLayout(UILayoutHelper* inLayout)
+{
+	inLayout->layout->AllocateUISpace(X, Y, Width, Height);
+
+	UILayoutHelper layout;
+	layout.layout = this;
+	layout.Flags = Flags;
+
+	for (UIElement* page = FirstChild; page; page = page->NextChild)
+	{
+		CursorX = CursorY = 0; //?? not sure if this is needed
+		page->UpdateLayout(&layout);
+	}
 }
 
 
@@ -3723,6 +3820,9 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		IsDialogConstructed = false;
 		InitUI();
 		IsDialogConstructed = true;
+
+		UpdateSize(this);
+		UpdateLayout(NULL); //?? check
 		CreateGroupControls(this);
 
 		if (Menu)

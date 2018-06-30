@@ -26,6 +26,45 @@ enum ETextAlign
 	TA_Center,
 };
 
+//?? TODO: review where to place these consts
+// Constants for setting some group properties (Flags)
+#define GROUP_NO_BORDER				1
+#define GROUP_NO_AUTO_LAYOUT		2
+#define GROUP_HORIZONTAL_LAYOUT		4
+#define GROUP_HORIZONTAL_SPACING	8	// for GROUP_HORIZONTAL_LAYOUT, evenly distribute controls
+
+#define GROUP_CUSTOM_LAYOUT			(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
+
+struct UILayoutHelper
+{
+	class UIGroup* layout;
+	int Flags;
+
+	//?? TODO: check if these functions will be in use in UIGroup
+	FORCEINLINE bool UseAutomaticLayout() const
+	{
+		return (Flags & GROUP_NO_AUTO_LAYOUT) == 0;
+	}
+
+	FORCEINLINE bool UseVerticalLayout() const
+	{
+		return (Flags & GROUP_HORIZONTAL_LAYOUT) == 0;
+	}
+
+	FORCEINLINE bool UseHorizontalLayout() const
+	{
+		return (Flags & GROUP_HORIZONTAL_LAYOUT) != 0;
+	}
+
+	int	AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
+	int	CursorX;	// where to place next control in horizontal layout
+	int	CursorY;	// ... for vertical layout
+
+	void AllocateUISpace(int& x, int& y, int& w, int& h);
+	void AddVerticalSpace(int size = -1);
+	void AddHorizontalSpace(int size = -1);
+};
+
 
 /*-----------------------------------------------------------------------------
 	UIElement
@@ -121,8 +160,6 @@ protected:
 	HWND		Wnd;
 	int			Id;
 
-	//!! pass 'inout HWND* wnd' here, don't create a window when already created - but update window position
-	//!! instead (that's for resizing capabilities)
 	HWND Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
 	// Unicode version of Window()
@@ -132,6 +169,7 @@ protected:
 	virtual void Create(UIBaseDialog* dialog) = 0;
 	virtual void UpdateSize(UIBaseDialog* dialog)
 	{}
+	virtual void UpdateLayout(UILayoutHelper* layout) = 0;
 	// Process WM_COMMAND message. 'id' is useless in most cases, useful for
 	// groups only.
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam)
@@ -231,7 +269,9 @@ public:
 	UISpacer(int size = 0);
 
 protected:
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UIBaseDialog* dialog) override
+	{}
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -244,6 +284,7 @@ public:
 
 protected:
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -255,6 +296,7 @@ public:
 
 protected:
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -285,6 +327,8 @@ protected:
 	bool		IsIcon;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
+
 	void LoadResourceImage(int id, UINT type, UINT fuLoad);
 };
 
@@ -305,6 +349,7 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -319,6 +364,7 @@ protected:
 	FString		Link;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -335,6 +381,7 @@ protected:
 	float		Value;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -352,6 +399,7 @@ protected:
 	FString		Label;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -370,6 +418,7 @@ protected:
 	FString		Label;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -392,6 +441,7 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -419,6 +469,7 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -464,6 +515,7 @@ protected:
 	bool		TextDirty;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	// request edited text from UI
 	void UpdateText();
@@ -503,6 +555,7 @@ protected:
 	int			Value;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -544,6 +597,7 @@ protected:
 	int			Value;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -622,6 +676,7 @@ protected:
 	void UpdateListViewHeaderSort();
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -676,6 +731,7 @@ protected:
 	FORCEINLINE TreeViewItem* GetRoot() { return Items[0]; }
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	void CreateItem(TreeViewItem& item);
 	TreeViewItem* FindItem(const char* item);
@@ -898,14 +954,6 @@ FORCEINLINE UIMenuItem& NewMenuRadioButton(const char* label, int value)
 	UI containers
 -----------------------------------------------------------------------------*/
 
-// Constants for setting some group properties (Flags)
-#define GROUP_NO_BORDER				1
-#define GROUP_NO_AUTO_LAYOUT		2
-#define GROUP_HORIZONTAL_LAYOUT		4
-#define GROUP_HORIZONTAL_SPACING	8	// for GROUP_HORIZONTAL_LAYOUT, evenly distribute controls
-
-#define GROUP_CUSTOM_LAYOUT			(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
-
 class UIGroup : public UIElement
 {
 	DECLARE_UI_CLASS(UIGroup, UIElement);
@@ -914,6 +962,14 @@ public:
 	UIGroup(const char* label, unsigned flags = 0);
 	UIGroup(unsigned flags = 0);
 	virtual ~UIGroup() override;
+
+	//?? TODO: remove these
+	int	AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
+	int	CursorX;	// where to place next control in horizontal layout
+	int	CursorY;	// ... for vertical layout
+	void AllocateUISpace(int& x, int& y, int& w, int& h);
+	void AddVerticalSpace(int size = -1);
+	void AddHorizontalSpace(int size = -1);
 
 	void Add(UIElement* item);
 	FORCEINLINE void Add(UIElement& item)
@@ -924,10 +980,6 @@ public:
 
 	// Destroy all controls holded by UIGroup in a case if they should be released before destructor call.
 	void ReleaseControls();
-
-	void AllocateUISpace(int& x, int& y, int& w, int& h);
-	void AddVerticalSpace(int size = -1);
-	void AddHorizontalSpace(int size = -1);
 
 	// Functions used with UIRadioButton - UIGroup works like a "radio group"
 
@@ -973,17 +1025,15 @@ protected:
 	UIElement*	FirstChild;
 	unsigned	Flags;			// combination of GROUP_... flags
 
-	// transient variables used by layout code
-	int			AutoWidth;		// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
-	int			CursorX;		// where to place next control in horizontal layout
-	int			CursorY;		// ... for vertical layout
-
 	// support for children UIRadioButton
 	int			RadioValue;
 	int*		pRadioValue;
 	UIRadioButton* SelectedRadioButton;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateSize(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
+
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	virtual void DialogClosed(bool cancel) override;
 	virtual void UpdateEnabled() override;
@@ -1049,6 +1099,7 @@ protected:
 	int			ActivePage;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
