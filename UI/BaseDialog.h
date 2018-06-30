@@ -178,8 +178,8 @@ protected:
 	typedef Class ThisClass;						\
 	typedef Base Super;								\
 public:												\
-	virtual const char* ClassName() const { return #Class; } \
-	virtual bool IsA(const char* type)				\
+	virtual const char* ClassName() const override { return #Class; } \
+	virtual bool IsA(const char* type) override		\
 	{												\
 		return !strcmp(#Class, type) || Super::IsA(type); \
 	}												\
@@ -215,42 +215,9 @@ protected:											\
 private:
 
 
-// Control creation helpers.
-// Use these to receive 'Type&' value instead of 'Type*' available with 'new Type' call
-
-#define NewControl(type, ...)	_NewControl<type>(__VA_ARGS__)
-
-// C++11 offers Variadic Templates (http://en.wikipedia.org/wiki/Variadic_template), unfortunately
-// Visual Studio prior to 2013 doesn't support them. GCC 4.3 has variadic template support.
-template<class T>
-FORCEINLINE T& _NewControl()
-{
-	return *new T();
-}
-
-template<class T, class P1>
-FORCEINLINE T& _NewControl(P1 p1)
-{
-	return *new T(p1);
-}
-
-template<class T, class P1, class P2>
-FORCEINLINE T& _NewControl(P1 p1, P2 p2)
-{
-	return *new T(p1, p2);
-}
-
-template<class T, class P1, class P2, class P3>
-FORCEINLINE T& _NewControl(P1 p1, P2 p2, P3 p3)
-{
-	return *new T(p1, p2, p3);
-}
-
-template<class T, class P1, class P2, class P3, class P4>
-FORCEINLINE T& _NewControl(P1 p1, P2 p2, P3 p3, P4 p4)
-{
-	return *new T(p1, p2, p3, p4);
-}
+// Control creation helper.
+// Use this to receive 'Type&' value instead of 'Type*' available with 'new Type' call
+#define NewControl(type, ...)	(* new type(__VA_ARGS__))
 
 
 /*-----------------------------------------------------------------------------
@@ -264,7 +231,7 @@ public:
 	UISpacer(int size = 0);
 
 protected:
-	virtual void Create(UIBaseDialog* dialog);
+	virtual void Create(UIBaseDialog* dialog) override;
 };
 
 
@@ -276,7 +243,7 @@ public:
 	UIHorizontalLine();
 
 protected:
-	virtual void Create(UIBaseDialog* dialog);
+	virtual void Create(UIBaseDialog* dialog) override;
 };
 
 
@@ -287,7 +254,7 @@ public:
 	UIVerticalLine();
 
 protected:
-	virtual void Create(UIBaseDialog* dialog);
+	virtual void Create(UIBaseDialog* dialog) override;
 };
 
 
@@ -317,7 +284,7 @@ protected:
 	HANDLE		hImage;
 	bool		IsIcon;
 
-	virtual void Create(UIBaseDialog* dialog);
+	virtual void Create(UIBaseDialog* dialog) override;
 	void LoadResourceImage(int id, UINT type, UINT fuLoad);
 };
 
@@ -336,8 +303,8 @@ protected:
 	ETextAlign	Align;
 	bool		AutoSize;
 
-	virtual void UpdateSize(UIBaseDialog* dialog);
-	virtual void Create(UIBaseDialog* dialog);
+	virtual void UpdateSize(UIBaseDialog* dialog) override;
+	virtual void Create(UIBaseDialog* dialog) override;
 };
 
 
@@ -351,8 +318,8 @@ public:
 protected:
 	FString		Link;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -367,7 +334,7 @@ public:
 protected:
 	float		Value;
 
-	virtual void Create(UIBaseDialog* dialog);
+	virtual void Create(UIBaseDialog* dialog) override;
 };
 
 
@@ -384,8 +351,8 @@ public:
 protected:
 	FString		Label;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -402,8 +369,8 @@ public:
 protected:
 	FString		Label;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -423,9 +390,9 @@ protected:
 
 	HWND		DlgWnd;
 
-	virtual void UpdateSize(UIBaseDialog* dialog);
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void UpdateSize(UIBaseDialog* dialog) override;
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -450,9 +417,9 @@ protected:
 	void ButtonSelected(bool value);
 	void SelectButton();
 
-	virtual void UpdateSize(UIBaseDialog* dialog);
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void UpdateSize(UIBaseDialog* dialog) override;
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -496,8 +463,8 @@ protected:
 	bool		IsWantFocus;
 	bool		TextDirty;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	// request edited text from UI
 	void UpdateText();
 };
@@ -535,8 +502,8 @@ protected:
 	TArray<FString> Items;
 	int			Value;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -576,8 +543,8 @@ protected:
 	TArray<FString> Items;
 	int			Value;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -637,7 +604,7 @@ public:
 	int GetSelectionCount() const { return SelectedItems.Num(); }	// returns 0 when no items selected
 
 	// UIElement functions
-	virtual void UnlockUpdate();
+	virtual void UnlockUpdate() override;
 
 protected:
 	bool		IsVirtualMode;
@@ -654,8 +621,8 @@ protected:
 	void SetItemSelection(int index, bool select);
 	void UpdateListViewHeaderSort();
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -667,7 +634,7 @@ class UITreeView : public UIElement
 	DECLARE_CALLBACK(Callback, const char*);
 public:
 	UITreeView();
-	virtual ~UITreeView();
+	virtual ~UITreeView() override;
 
 	//!! TODO:
 	//!! - HideRootItem() -- may be when label is empty?
@@ -708,12 +675,12 @@ protected:
 
 	FORCEINLINE TreeViewItem* GetRoot() { return Items[0]; }
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	void CreateItem(TreeViewItem& item);
 	TreeViewItem* FindItem(const char* item);
 	void UpdateCheckedStates();
-	virtual void DialogClosed(bool cancel);
+	virtual void DialogClosed(bool cancel) override;
 };
 
 
@@ -946,7 +913,7 @@ class UIGroup : public UIElement
 public:
 	UIGroup(const char* label, unsigned flags = 0);
 	UIGroup(unsigned flags = 0);
-	virtual ~UIGroup();
+	virtual ~UIGroup() override;
 
 	void Add(UIElement* item);
 	FORCEINLINE void Add(UIElement& item)
@@ -1016,11 +983,11 @@ protected:
 	int*		pRadioValue;
 	UIRadioButton* SelectedRadioButton;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
-	virtual void DialogClosed(bool cancel);
-	virtual void UpdateEnabled();
-	virtual void UpdateVisible();
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
+	virtual void DialogClosed(bool cancel) override;
+	virtual void UpdateEnabled() override;
+	virtual void UpdateVisible() override;
 
 	void CreateGroupControls(UIBaseDialog* dialog);
 	void InitializeRadioGroup();
@@ -1062,8 +1029,8 @@ protected:
 	HWND		CheckboxWnd;	// checkbox window
 	HWND		DlgWnd;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam);
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
 
@@ -1081,7 +1048,7 @@ public:
 protected:
 	int			ActivePage;
 
-	virtual void Create(UIBaseDialog* dialog);
+	virtual void Create(UIBaseDialog* dialog) override;
 };
 
 
@@ -1090,7 +1057,7 @@ class UIBaseDialog : public UIGroup
 	DECLARE_UIGROUP_CLASS(UIBaseDialog, UIGroup);
 public:
 	UIBaseDialog();
-	virtual ~UIBaseDialog();
+	virtual ~UIBaseDialog() override;
 
 	FORCEINLINE int GenerateDialogId()
 	{
