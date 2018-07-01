@@ -58,7 +58,7 @@ public:
 
 	UIBaseDialog* GetDialog();
 
-	virtual bool IsA(const char* type)
+	virtual bool IsA(const char* type) const
 	{
 		return !strcmp("UIElement", type);
 	}
@@ -176,12 +176,16 @@ protected:
 //		GroupVar->Add(tmpControl1);				// add controls to group
 //		GroupVar->Add(ControlVar2);
 
+// Note: DECLARE_UI_CLASS allows access to private members from GetDebugLabel(). Probably
+// should change the way how label obtained, like - adding virtual function for debug build etc.
+
 #define DECLARE_UI_CLASS(Class, Base)				\
 	typedef Class ThisClass;						\
 	typedef Base Super;								\
+	friend const char* GetDebugLabel(const UIElement* ctl); \
 public:												\
 	virtual const char* ClassName() const override { return #Class; } \
-	virtual bool IsA(const char* type) override		\
+	virtual bool IsA(const char* type) const override \
 	{												\
 		return !strcmp(#Class, type) || Super::IsA(type); \
 	}												\
@@ -932,14 +936,6 @@ public:
 	UIGroup(unsigned flags = 0);
 	virtual ~UIGroup() override;
 
-	//?? TODO: remove these
-	int	AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
-	int	CursorX;	// where to place next control in horizontal layout
-	int	CursorY;	// ... for vertical layout
-	void AllocateUISpace(int& x, int& y, int& w, int& h);
-	void AddVerticalSpace(int size = -1);
-	void AddHorizontalSpace(int size = -1);
-
 	void Add(UIElement* item);
 	FORCEINLINE void Add(UIElement& item)
 	{
@@ -1174,15 +1170,8 @@ protected:
 
 struct UILayoutHelper
 {
-protected:
-	class UIGroup* layout;
-	int Flags;
-
 public:
-	UILayoutHelper(UIGroup* InGroup, int InFlags)
-	: layout(InGroup)
-	, Flags(InFlags)
-	{}
+	UILayoutHelper(UIGroup* InGroup, int InFlags);
 
 	FORCEINLINE bool UseAutomaticLayout() const
 	{
@@ -1201,24 +1190,31 @@ public:
 
 	FORCEINLINE void AddControl(UIElement* control)
 	{
-		layout->AllocateUISpace(control->X, control->Y, control->Width, control->Height);
+		AllocateSpace(control->X, control->Y, control->Width, control->Height);
 	}
 
 	FORCEINLINE void AddVertSpace(int size = -1)
 	{
-		layout->AddVerticalSpace(size);
+		AddVerticalSpace(size);
 	}
 
 	FORCEINLINE void AddHorzSpace(int size = -1)
 	{
-		layout->AddHorizontalSpace(size);
+		AddHorizontalSpace(size);
 	}
 
-	int	AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
-	int	CursorX;	// where to place next control in horizontal layout
-	int	CursorY;	// ... for vertical layout
+	int			AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
+	int			CursorX;	// where to place next control in horizontal layout
+	int			CursorY;	// ... for vertical layout
 
-///	void AllocateUISpace(int& x, int& y, int& w, int& h);
+protected:
+	int			X;
+	int			Y;
+	int			Width;
+	int			Height;
+	int			Flags;
+
+	void AllocateSpace(int& x, int& y, int& w, int& h);
 	void AddVerticalSpace(int size = -1);
 	void AddHorizontalSpace(int size = -1);
 };
