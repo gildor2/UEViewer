@@ -17,6 +17,7 @@
 // forwards
 class UIMenu;
 class UIBaseDialog;
+struct UILayoutHelper;
 
 
 enum ETextAlign
@@ -24,45 +25,6 @@ enum ETextAlign
 	TA_Left,
 	TA_Right,
 	TA_Center,
-};
-
-//?? TODO: review where to place these consts
-// Constants for setting some group properties (Flags)
-#define GROUP_NO_BORDER				1
-#define GROUP_NO_AUTO_LAYOUT		2
-#define GROUP_HORIZONTAL_LAYOUT		4
-#define GROUP_HORIZONTAL_SPACING	8	// for GROUP_HORIZONTAL_LAYOUT, evenly distribute controls
-
-#define GROUP_CUSTOM_LAYOUT			(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
-
-struct UILayoutHelper
-{
-	class UIGroup* layout;
-	int Flags;
-
-	//?? TODO: check if these functions will be in use in UIGroup
-	FORCEINLINE bool UseAutomaticLayout() const
-	{
-		return (Flags & GROUP_NO_AUTO_LAYOUT) == 0;
-	}
-
-	FORCEINLINE bool UseVerticalLayout() const
-	{
-		return (Flags & GROUP_HORIZONTAL_LAYOUT) == 0;
-	}
-
-	FORCEINLINE bool UseHorizontalLayout() const
-	{
-		return (Flags & GROUP_HORIZONTAL_LAYOUT) != 0;
-	}
-
-	int	AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
-	int	CursorX;	// where to place next control in horizontal layout
-	int	CursorY;	// ... for vertical layout
-
-	void AllocateUISpace(int& x, int& y, int& w, int& h);
-	void AddVerticalSpace(int size = -1);
-	void AddHorizontalSpace(int size = -1);
 };
 
 
@@ -74,6 +36,7 @@ class UIElement
 {
 	friend class UIGroup;
 	friend class UIPageControl;
+	friend struct UILayoutHelper;
 public:
 	UIElement();
 	virtual ~UIElement();
@@ -148,10 +111,11 @@ protected:
 	int			Y;
 	int			Width;
 	int			Height;
+
 	bool		IsGroup:1;
 	bool		IsRadioButton:1;
-	bool		Enabled;
-	bool		Visible;
+	bool		Enabled:1;
+	bool		Visible:1;
 	bool		IsUpdateLocked;
 	UIGroup*	Parent;
 	UIElement*	NextChild;
@@ -411,9 +375,6 @@ class UIMenuButton : public UIElement
 public:
 	UIMenuButton(const char* text);
 
-//	UIMenuButton& SetOK();
-//	UIMenuButton& SetCancel();
-
 protected:
 	FString		Label;
 
@@ -508,7 +469,7 @@ public:
 protected:
 	FString		sValue;
 	FString*	pValue;
-	//?? combine these bools into single dword flags
+
 	bool		IsMultiline;
 	bool		IsReadOnly;
 	bool		IsWantFocus;
@@ -954,6 +915,14 @@ FORCEINLINE UIMenuItem& NewMenuRadioButton(const char* label, int value)
 	UI containers
 -----------------------------------------------------------------------------*/
 
+// Constants for setting some group properties (Flags)
+#define GROUP_NO_BORDER				1
+#define GROUP_NO_AUTO_LAYOUT		2
+#define GROUP_HORIZONTAL_LAYOUT		4
+#define GROUP_HORIZONTAL_SPACING	8	// for GROUP_HORIZONTAL_LAYOUT, evenly distribute controls
+
+#define GROUP_CUSTOM_LAYOUT			(GROUP_NO_BORDER|GROUP_NO_AUTO_LAYOUT)
+
 class UIGroup : public UIElement
 {
 	DECLARE_UI_CLASS(UIGroup, UIElement);
@@ -1003,21 +972,6 @@ public:
 	FORCEINLINE UIGroup& operator[](UIElement& item)
 	{
 		Add(item); return *this;
-	}
-
-	FORCEINLINE bool UseAutomaticLayout() const
-	{
-		return (Flags & GROUP_NO_AUTO_LAYOUT) == 0;
-	}
-
-	FORCEINLINE bool UseVerticalLayout() const
-	{
-		return (Flags & GROUP_HORIZONTAL_LAYOUT) == 0;
-	}
-
-	FORCEINLINE bool UseHorizontalLayout() const
-	{
-		return (Flags & GROUP_HORIZONTAL_LAYOUT) != 0;
 	}
 
 protected:
@@ -1073,7 +1027,6 @@ public:
 	}
 
 protected:
-	FString		Label;			// overrides Label of parent
 	bool		bValue;			// local bool value
 	bool*		pValue;			// pointer to editable value
 	HWND		CheckboxWnd;	// checkbox window
@@ -1212,6 +1165,62 @@ protected:
 	{
 		return true;
 	}
+};
+
+
+/*-----------------------------------------------------------------------------
+	UILayoutHelper
+-----------------------------------------------------------------------------*/
+
+struct UILayoutHelper
+{
+protected:
+	class UIGroup* layout;
+	int Flags;
+
+public:
+	UILayoutHelper(UIGroup* InGroup, int InFlags)
+	: layout(InGroup)
+	, Flags(InFlags)
+	{}
+
+	FORCEINLINE bool UseAutomaticLayout() const
+	{
+		return (Flags & GROUP_NO_AUTO_LAYOUT) == 0;
+	}
+
+	FORCEINLINE bool UseVerticalLayout() const
+	{
+		return (Flags & GROUP_HORIZONTAL_LAYOUT) == 0;
+	}
+
+	FORCEINLINE bool UseHorizontalLayout() const
+	{
+		return (Flags & GROUP_HORIZONTAL_LAYOUT) != 0;
+	}
+
+	FORCEINLINE void AddControl(UIElement* control)
+	{
+		layout->AllocateUISpace(control->X, control->Y, control->Width, control->Height);
+	}
+
+	FORCEINLINE void AddVertSpace(int size = -1)
+	{
+		layout->AddVerticalSpace(size);
+	}
+
+	FORCEINLINE void AddHorzSpace(int size = -1)
+	{
+		layout->AddHorizontalSpace(size);
+	}
+
+	int	AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
+	int	CursorX;	// where to place next control in horizontal layout
+	int	CursorY;	// ... for vertical layout
+
+///	void AllocateUISpace(int& x, int& y, int& w, int& h);
+	void AddVerticalSpace(int size = -1);
+	void AddHorizontalSpace(int size = -1);
 };
 
 
