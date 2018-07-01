@@ -143,14 +143,22 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	// Compute X
 	if (x == -1)
 	{
+		// Automatic X
 		x = baseX;
+		//!! UseHorizontalLayout()
 		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == GROUP_HORIZONTAL_LAYOUT)
 			CursorX += w;
 	}
 	else if (x < 0)
+	{
+		// X is fractional value
 		x = baseX + int(DecodeWidth(x) * parentWidth);	// left border of parent control, 'x' is relative value
+	}
 	else
+	{
+		// X is absolute value
 		x = baseX + x;									// treat 'x' as relative value
+	}
 
 	// Clamp width
 	if (x + w > rightMargin)
@@ -159,12 +167,15 @@ void UIGroup::AllocateUISpace(int& x, int& y, int& w, int& h)
 	// Compute Y
 	if (y < 0)
 	{
+		// Automatic Y
 		y = Y + CursorY;								// next 'y' value
+		//!! UseVerticalLayout()
 		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
 			CursorY += h;
 	}
 	else
 	{
+		// Y is absolute value, wo don't support fractional values yer
 		y = Y + CursorY + y;							// treat 'y' as relative value
 		// don't change 'Height'
 	}
@@ -441,16 +452,14 @@ void UISpacer::UpdateLayout(UILayoutHelper* layout)
 	{
 		layout->AddVertSpace(Height);
 	}
+	else if (Width > 0)
+	{
+		layout->AddHorzSpace(Width);
+	}
 	else
 	{
-		if (Width > 0)
-		{
-			layout->AddHorzSpace(Width);
-		}
-		else
-		{
-			layout->AddControl(this);
-		}
+		// More complex, spacer with fractional width
+		layout->AddControl(this);
 	}
 }
 
@@ -3098,11 +3107,10 @@ void UIGroup::UpdateSize(UIBaseDialog* dialog)
 //?? todo: use oarentLayout instead of Parent
 void UIGroup::UpdateLayout(UILayoutHelper* parentLayout)
 {
+	guard(UIGroup::UpdateLayout);
+
 	//?? TODO: change
 	UILayoutHelper layout(this, Flags);
-
-	// save original positions for second AllocateUISpace call
-	int origX = X, origY = Y, origW = Width, origH = Height;
 
 	if (!(Flags & GROUP_NO_BORDER))
 	{
@@ -3118,8 +3126,12 @@ void UIGroup::UpdateLayout(UILayoutHelper* parentLayout)
 //		if (!(Flags & GROUP_NO_BORDER)) -- makes control layout looking awful
 		parentLayout->AddVertSpace();
 		// request x, y and width; height is not available yet
-		int h = 0;
-        Parent->AllocateUISpace(X, Y, Width, h); //?? NOTE: used 'h' instead of Height here
+		int saveHeight = Height;
+		Height = 0;
+		// Add control with zero height. This will compute all values
+		// of group's position, but won't reserve vertical space.
+		parentLayout->AddControl(this);
+		Height = saveHeight;
 	}
 	else
 	{
@@ -3209,8 +3221,7 @@ void UIGroup::UpdateLayout(UILayoutHelper* parentLayout)
 		//?? TODO: review this code
 		// for vertical layout we should call AllocateUISpace again to adjust parent's CursorY
 		// (because height wasn't known when we called AllocateUISpace first time)
-		origH = Height;
-		Parent->AllocateUISpace(origX, origY, origW, origH);
+		parentLayout->AddVertSpace(Height);
 	}
 #if DEBUG_LAYOUT
 	DebugLayoutDepth--;
@@ -3218,6 +3229,8 @@ void UIGroup::UpdateLayout(UILayoutHelper* parentLayout)
 
 	if (parentLayout)
 		parentLayout->AddVertSpace();
+
+	unguard;
 }
 
 void UIGroup::InitializeRadioGroup()
