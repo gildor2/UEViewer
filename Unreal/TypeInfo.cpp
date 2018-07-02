@@ -227,8 +227,8 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 
 struct CPropDump
 {
-	FStaticString<32>	Name;
-	FStaticString<32>	Value;
+	FString				Name;
+	FString				Value;
 	TArray<CPropDump>	Nested;				// Value should be "" when Nested[] is not empty
 	bool				IsArrayItem;
 

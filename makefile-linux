@@ -89,6 +89,8 @@ MAIN_FILES = \
 	$(OUT_1)/TextContainer.o \
 	$(OUT_1)/BaseDialog.o \
 	$(OUT_1)/FileControls.o \
+	$(OUT_1)/UILayout.o \
+	$(OUT_1)/UIMenu.o \
 	$(OUT_1)/Main.o \
 	$(OUT_1)/MiscStrings.o \
 	$(OUT_1)/PackageDialog.o \
@@ -1001,6 +1003,28 @@ DEPENDS_37 = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	UI/UIPrivate.h \
+	UI/callback.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/BaseDialog.o : UI/BaseDialog.cpp $(DEPENDS_37)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/BaseDialog.o UI/BaseDialog.cpp
+
+$(OUT_1)/UILayout.o : UI/UILayout.cpp $(DEPENDS_37)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UILayout.o UI/UILayout.cpp
+
+$(OUT_1)/UIMenu.o : UI/UIMenu.cpp $(DEPENDS_37)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UIMenu.o UI/UIMenu.cpp
+
+DEPENDS_38 = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
 	UI/callback.h \
 	UmodelTool/AboutDialog.h \
 	UmodelTool/Build.h \
@@ -1017,10 +1041,10 @@ DEPENDS_37 = \
 	Unreal/UnCore.h \
 	Unreal/UnPackage.h
 
-$(OUT_1)/PackageDialog.o : UmodelTool/PackageDialog.cpp $(DEPENDS_37)
+$(OUT_1)/PackageDialog.o : UmodelTool/PackageDialog.cpp $(DEPENDS_38)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageDialog.o UmodelTool/PackageDialog.cpp
 
-DEPENDS_38 = \
+DEPENDS_39 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1036,10 +1060,10 @@ DEPENDS_38 = \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h
 
-$(OUT_1)/ProgressDialog.o : UmodelTool/ProgressDialog.cpp $(DEPENDS_38)
+$(OUT_1)/ProgressDialog.o : UmodelTool/ProgressDialog.cpp $(DEPENDS_39)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/ProgressDialog.o UmodelTool/ProgressDialog.cpp
 
-DEPENDS_39 = \
+DEPENDS_40 = \
 	Core/Core.h \
 	Core/CoreGL.h \
 	Core/GLBind.h \
@@ -1053,23 +1077,8 @@ DEPENDS_39 = \
 	Unreal/PackageUtils.h \
 	Unreal/UnCore.h
 
-$(OUT_1)/PackageScanDialog.o : UmodelTool/PackageScanDialog.cpp $(DEPENDS_39)
+$(OUT_1)/PackageScanDialog.o : UmodelTool/PackageScanDialog.cpp $(DEPENDS_40)
 	$(CPP) $(OPT_MAIN) -o $(OUT_1)/PackageScanDialog.o UmodelTool/PackageScanDialog.cpp
-
-DEPENDS_40 = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UI/BaseDialog.h \
-	UI/callback.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h
-
-$(OUT_1)/BaseDialog.o : UI/BaseDialog.cpp $(DEPENDS_40)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/BaseDialog.o UI/BaseDialog.cpp
 
 DEPENDS_41 = \
 	Core/Core.h \

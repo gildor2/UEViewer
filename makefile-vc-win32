@@ -89,6 +89,8 @@ MAIN_FILES = \
 	$(OUT_1)/TextContainer.obj \
 	$(OUT_1)/BaseDialog.obj \
 	$(OUT_1)/FileControls.obj \
+	$(OUT_1)/UILayout.obj \
+	$(OUT_1)/UIMenu.obj \
 	$(OUT_1)/Main.obj \
 	$(OUT_1)/MiscStrings.obj \
 	$(OUT_1)/PackageDialog.obj \
@@ -1002,6 +1004,28 @@ DEPENDS = \
 	Core/Math3D.h \
 	Core/Win32Types.h \
 	UI/BaseDialog.h \
+	UI/UIPrivate.h \
+	UI/callback.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/UnCore.h
+
+$(OUT_1)/BaseDialog.obj : UI/BaseDialog.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/BaseDialog.obj" UI/BaseDialog.cpp
+
+$(OUT_1)/UILayout.obj : UI/UILayout.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UILayout.obj" UI/UILayout.cpp
+
+$(OUT_1)/UIMenu.obj : UI/UIMenu.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UIMenu.obj" UI/UIMenu.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UI/BaseDialog.h \
 	UI/callback.h \
 	UmodelTool/AboutDialog.h \
 	UmodelTool/Build.h \
@@ -1056,21 +1080,6 @@ DEPENDS = \
 
 $(OUT_1)/PackageScanDialog.obj : UmodelTool/PackageScanDialog.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/PackageScanDialog.obj" UmodelTool/PackageScanDialog.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UI/BaseDialog.h \
-	UI/callback.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h
-
-$(OUT_1)/BaseDialog.obj : UI/BaseDialog.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/BaseDialog.obj" UI/BaseDialog.cpp
 
 DEPENDS = \
 	Core/Core.h \
