@@ -6,16 +6,9 @@
 
 #if HAS_UI
 
-//?? TODO: move to header (copy-paste from main cpp)
-#define VERTICAL_SPACING			4
-#define HORIZONTAL_SPACING			8
+#include "UIPrivate.h"
 
-#define GROUP_INDENT				10
-#define GROUP_MARGIN_TOP			16
-#define GROUP_MARGIN_BOTTOM			7
-
-
-#define DEBUG_LAYOUT				1
+#define DEBUG_LAYOUT				0
 
 #if DEBUG_LAYOUT
 #define DBG_LAYOUT(...)				appPrintf(__VA_ARGS__)
@@ -289,7 +282,6 @@ void UIGroup::UpdateLayout(UILayoutHelper* parentLayout)
 
 	unguard;
 }
-
 
 
 #endif // HAS_UI
