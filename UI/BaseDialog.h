@@ -27,6 +27,26 @@ enum ETextAlign
 	TA_Center,
 };
 
+struct UIRect
+{
+	int			X;
+	int			Y;
+	int			Width;
+	int			Height;
+
+	UIRect(int inX, int inY, int inWidth, int inHeight)
+	: X(inX)
+	, Y(inY)
+	, Width(inWidth)
+	, Height(inHeight)
+	{}
+
+	UIRect(const UIRect& other)
+	{
+		memcpy(this, &other, sizeof(UIRect));
+	}
+};
+
 
 /*-----------------------------------------------------------------------------
 	UIElement
@@ -66,8 +86,8 @@ public:
 	// Layout functions
 
 	UIElement& SetRect(int x, int y, int width, int height);
-	FORCEINLINE int GetWidth() const     { return Width; }
-	FORCEINLINE int GetHeight() const    { return Height; }
+	FORCEINLINE int GetWidth() const     { return Layout.Width; }
+	FORCEINLINE int GetHeight() const    { return Layout.Height; }
 
 	UIElement& SetMenu(UIMenu* menu);
 
@@ -107,10 +127,10 @@ public:
 	friend UIElement& operator+(UIElement& elem, UIElement& next);
 
 protected:
-	int			X;
-	int			Y;
-	int			Width;
-	int			Height;
+	// Layout settings for this control
+	UIRect		Layout;
+	// Computed control's position depending on Layout
+	UIRect		Rect;
 
 	bool		IsGroup:1;
 	bool		IsRadioButton:1;
@@ -191,10 +211,10 @@ public:												\
 	}												\
 	FORCEINLINE ThisClass& SetRect(int x, int y, int width, int height) \
 	{ return (ThisClass&) Super::SetRect(x, y, width, height); } \
-	FORCEINLINE ThisClass& SetX(int x)               { X = x; return *this; } \
-	FORCEINLINE ThisClass& SetY(int y)               { Y = y; return *this; } \
-	FORCEINLINE ThisClass& SetWidth(int width)       { Width = width; return *this; } \
-	FORCEINLINE ThisClass& SetHeight(int height)     { Height = height; return *this; } \
+	FORCEINLINE ThisClass& SetX(int x)               { Layout.X = x; return *this; } \
+	FORCEINLINE ThisClass& SetY(int y)               { Layout.Y = y; return *this; } \
+	FORCEINLINE ThisClass& SetWidth(int width)       { Layout.Width = width; return *this; } \
+	FORCEINLINE ThisClass& SetHeight(int height)     { Layout.Height = height; return *this; } \
 	FORCEINLINE ThisClass& Enable(bool enable)       { return (ThisClass&) Super::Enable(enable); } \
 	FORCEINLINE ThisClass& Show(bool visible)        { return (ThisClass&) Super::Show(visible); } \
 	template<class T>								\
@@ -1190,7 +1210,7 @@ public:
 
 	FORCEINLINE void AddControl(UIElement* control)
 	{
-		AllocateSpace(control->X, control->Y, control->Width, control->Height);
+		AllocateSpace(control->Layout, control->Rect);
 	}
 
 	FORCEINLINE void AddVertSpace(int size = -1)
@@ -1208,13 +1228,10 @@ public:
 	int			CursorY;	// ... for vertical layout
 
 protected:
-	int			X;
-	int			Y;
-	int			Width;
-	int			Height;
+	UIRect		ParentRect;
 	int			Flags;
 
-	void AllocateSpace(int& x, int& y, int& w, int& h);
+	void AllocateSpace(const UIRect& src, UIRect& dst);
 	void AddVerticalSpace(int size = -1);
 	void AddHorizontalSpace(int size = -1);
 };

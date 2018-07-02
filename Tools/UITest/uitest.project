@@ -31,7 +31,7 @@ sources(MAIN) = {
 	$R/Unreal/UnCore.cpp
 !endif
 #	$R/Unreal/GameDatabase.cpp
-	$R/UI/BaseDialog.cpp
+	$R/UI/*.cpp
 	# include manifest - required for UIHyperLink
 	$R/UmodelTool/res/umodel.rc
 }

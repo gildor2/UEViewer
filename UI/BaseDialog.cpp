@@ -73,10 +73,8 @@ static HINSTANCE hInstance;
 -----------------------------------------------------------------------------*/
 
 UIElement::UIElement()
-:	X(-1)
-,	Y(-1)
-,	Width(-1)
-,	Height(-1)
+:	Layout(-1, -1, -1, -1)
+,	Rect(-1, -1, -1, -1)
 ,	IsGroup(false)
 ,	IsRadioButton(false)
 ,	Enabled(true)
@@ -142,10 +140,10 @@ void UIElement::UpdateVisible()
 
 UIElement& UIElement::SetRect(int x, int y, int width, int height)
 {
-	if (x != -1)      X = x;
-	if (y != -1)      Y = y;
-	if (width != -1)  Width = width;
-	if (height != -1) Height = height;
+	if (x != -1)      Layout.X = x;
+	if (y != -1)      Layout.Y = y;
+	if (width != -1)  Layout.Width = width;
+	if (height != -1) Layout.Height = height;
 	return *this;
 }
 
@@ -208,7 +206,9 @@ void UIElement::MeasureTextVSize(const char* text, int* width, int* height, HWND
 //		if (w == -1 && (Parent->Flags & GROUP_HORIZONTAL_LAYOUT))
 //			w = Parent->AutoWidth;
 //		else
-			w = int(DecodeWidth(w) * Parent->Width); //!! see parentWidth in AllocateUISpace()
+		//!! NOTE: using Parent->Rect.Width, because Parent->Layout.Width may be set to non-absolute
+		//!! value. So it is assumed that this code will be run after UpdateLayout called for parent
+			w = int(DecodeWidth(w) * Parent->Rect.Width); //!! see parentWidth in AllocateUISpace()
 	}
 
 	// set dialog's font for DC
@@ -231,10 +231,10 @@ void UIElement::MeasureTextVSize(const char* text, int* width, int* height, HWND
 HWND UIElement::Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 	int id, int x, int y, int w, int h)
 {
-	if (x == -1) x = X;
-	if (y == -1) y = Y;
-	if (w == -1) w = Width;
-	if (h == -1) h = Height;
+	if (x == -1) x = Rect.X;
+	if (y == -1) y = Rect.Y;
+	if (w == -1) w = Rect.Width;
+	if (h == -1) h = Rect.Height;
 	if (id == -1) id = Id;
 
 	HWND dialogWnd = dialog->GetWnd();
@@ -253,10 +253,10 @@ HWND UIElement::Window(const char* className, const char* text, DWORD style, DWO
 HWND UIElement::Window(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 	int id, int x, int y, int w, int h)
 {
-	if (x == -1) x = X;
-	if (y == -1) y = Y;
-	if (w == -1) w = Width;
-	if (h == -1) h = Height;
+	if (x == -1) x = Rect.X;
+	if (y == -1) y = Rect.Y;
+	if (w == -1) w = Rect.Width;
+	if (h == -1) h = Rect.Height;
 	if (id == -1) id = Id;
 
 	HWND dialogWnd = dialog->GetWnd();
@@ -309,8 +309,8 @@ UIElement& operator+(UIElement& elem, UIElement& next)
 
 UISpacer::UISpacer(int size)
 {
-	Width = (size != 0) ? size : HORIZONTAL_SPACING;	// use size==-1 for automatic width (for horizontal layout)
-	Height = (size > 0) ? size : VERTICAL_SPACING;
+	Layout.Width = (size != 0) ? size : HORIZONTAL_SPACING;	// use size==-1 for automatic width (for horizontal layout)
+	Layout.Height = (size > 0) ? size : VERTICAL_SPACING;
 }
 
 void UISpacer::UpdateLayout(UILayoutHelper* layout)
@@ -318,11 +318,12 @@ void UISpacer::UpdateLayout(UILayoutHelper* layout)
 	assert(layout->UseAutomaticLayout());
 	if (layout->UseVerticalLayout())
 	{
-		layout->AddVertSpace(Height);
+		layout->AddVertSpace(Layout.Height);
 	}
-	else if (Width > 0)
+	else if (Layout.Width > 0)
 	{
-		layout->AddHorzSpace(Width);
+		// Simple case: Width is absolute value
+		layout->AddHorzSpace(Layout.Width);
 	}
 	else
 	{
@@ -338,8 +339,8 @@ void UISpacer::UpdateLayout(UILayoutHelper* layout)
 
 UIHorizontalLine::UIHorizontalLine()
 {
-	Width = -1;
-	Height = 2;
+	Layout.Width = -1;
+	Layout.Height = 2;
 }
 
 void UIHorizontalLine::Create(UIBaseDialog* dialog)
@@ -359,8 +360,8 @@ void UIHorizontalLine::UpdateLayout(UILayoutHelper* layout)
 
 UIVerticalLine::UIVerticalLine()
 {
-	Width = 2;
-	Height = -1;
+	Layout.Width = 2;
+	Layout.Height = -1;
 	//!! would be nice to get "Height = -1" working; probably would require 2-pass processing of UIGroup
 	//!! layout: 1st pass would set Height, for example, to 1, plus remember control which requires height
 	//!! change; 2nd pass will resize all remembered controls with the height of group
@@ -385,7 +386,7 @@ void UIVerticalLine::UpdateLayout(UILayoutHelper* layout)
 UIBitmap::UIBitmap()
 :	hImage(0)
 {
-	Width = Height = 0;		// use dimensions from resource
+	Layout.Width = Layout.Height = 0;		// use dimensions from resource
 }
 
 void UIBitmap::LoadResourceImage(int id, UINT type, UINT fuLoad)
@@ -415,7 +416,7 @@ void UIBitmap::LoadResourceImage(int id, UINT type, UINT fuLoad)
 	{
 		rid = MAKEINTRESOURCE(id);
 	}
-	hImage = LoadImage(inst, rid, type, Width, Height, fuLoad);
+	hImage = LoadImage(inst, rid, type, Layout.Width, Layout.Height, fuLoad);
 }
 
 UIBitmap& UIBitmap::SetResourceIcon(int resId)
@@ -427,10 +428,10 @@ UIBitmap& UIBitmap::SetResourceIcon(int resId)
 		appPrintf("UIBitmap::SetResourceIcon: %d\n", GetLastError());
 #endif
 	// Note: can't get icon dimensione using GetObject() - this function would fail.
-	if ((!Width || !Height) && hImage)
+	if ((!Layout.Width || !Layout.Height) && hImage)
 	{
-		Width = GetSystemMetrics(SM_CXICON);
-		Height = GetSystemMetrics(SM_CYICON);
+		Layout.Width = GetSystemMetrics(SM_CXICON);
+		Layout.Height = GetSystemMetrics(SM_CYICON);
 	}
 	return *this;
 }
@@ -445,13 +446,13 @@ UIBitmap& UIBitmap::SetResourceBitmap(int resId)
 	if (!hImage)
 		appPrintf("UIBitmap::SetResourceBitmap: %d\n", GetLastError());
 #endif
-	if ((!Width || !Height) && hImage)
+	if ((!Layout.Width || !Layout.Height) && hImage)
 	{
 		BITMAP bm;
 		memset(&bm, 0, sizeof(bm));
 		GetObject(hImage, sizeof(bm), &bm);
-		Width = bm.bmWidth;
-		Height = bm.bmHeight;
+		Layout.Width = bm.bmWidth;
+		Layout.Height = bm.bmHeight;
 	}
 	return *this;
 }
@@ -477,7 +478,7 @@ UILabel::UILabel(const char* text, ETextAlign align)
 ,	Align(align)
 ,	AutoSize(false)
 {
-	Height = DEFAULT_LABEL_HEIGHT;
+	Layout.Height = DEFAULT_LABEL_HEIGHT;
 }
 
 void UILabel::SetText(const char* text)
@@ -497,7 +498,7 @@ void UILabel::UpdateSize(UIBaseDialog* dialog)
 	{
 		int labelWidth;
 		MeasureTextSize(*Label, &labelWidth, NULL, dialog->GetWnd());
-		Width = labelWidth;
+		Layout.Width = labelWidth;
 	}
 }
 
@@ -519,13 +520,13 @@ void UILabel::Create(UIBaseDialog* dialog)
 
 void UILabel::UpdateLayout(UILayoutHelper* layout)
 {
-	if (Height == -1)
+	if (Layout.Height == -1)
 	{
 		// Auto-size: compute label's height
 		int labelWidth, labelHeight;
-		labelWidth = Width;
+		labelWidth = Layout.Width;
 		MeasureTextVSize(*Label, &labelWidth, &labelHeight, GetDialog()->GetWnd());
-		Height = labelHeight;
+		Layout.Height = labelHeight;
 	}
 	layout->AddControl(this);
 }
@@ -596,7 +597,7 @@ bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam)
 UIProgressBar::UIProgressBar()
 :	Value(0)
 {
-	Height = DEFAULT_PROGRESS_BAR_HEIGHT;
+	Layout.Height = DEFAULT_PROGRESS_BAR_HEIGHT;
 }
 
 void UIProgressBar::SetValue(float value)
@@ -627,7 +628,7 @@ void UIProgressBar::UpdateLayout(UILayoutHelper* layout)
 UIButton::UIButton(const char* text)
 :	Label(text)
 {
-	Height = DEFAULT_BUTTON_HEIGHT;
+	Layout.Height = DEFAULT_BUTTON_HEIGHT;
 }
 
 UIButton& UIButton::SetOK()
@@ -696,7 +697,7 @@ static int GetComctl32Version()
 UIMenuButton::UIMenuButton(const char* text)
 :	Label(text)
 {
-	Height = DEFAULT_BUTTON_HEIGHT;
+	Layout.Height = DEFAULT_BUTTON_HEIGHT;
 }
 
 void UIMenuButton::Create(UIBaseDialog* dialog)
@@ -753,7 +754,7 @@ UICheckbox::UICheckbox(const char* text, bool value, bool autoSize)
 ,	pValue(&bValue)		// points to local variable
 ,	AutoSize(autoSize)
 {
-	Height = DEFAULT_CHECKBOX_HEIGHT;
+	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
 }
 
 UICheckbox::UICheckbox(const char* text, bool* value, bool autoSize)
@@ -762,7 +763,7 @@ UICheckbox::UICheckbox(const char* text, bool* value, bool autoSize)
 ,	pValue(value)
 ,	AutoSize(autoSize)
 {
-	Height = DEFAULT_CHECKBOX_HEIGHT;
+	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
 }
 
 void UICheckbox::UpdateSize(UIBaseDialog* dialog)
@@ -771,7 +772,7 @@ void UICheckbox::UpdateSize(UIBaseDialog* dialog)
 	{
 		int checkboxWidth;
 		MeasureTextSize(*Label, &checkboxWidth, NULL, dialog->GetWnd());
-		Width = checkboxWidth + DEFAULT_CHECKBOX_HEIGHT;
+		Layout.Width = checkboxWidth + DEFAULT_CHECKBOX_HEIGHT;
 	}
 }
 
@@ -787,7 +788,7 @@ void UICheckbox::Create(UIBaseDialog* dialog)
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
-		Id, X, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width));
+		Id, Rect.X, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width));
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
@@ -823,7 +824,7 @@ UIRadioButton::UIRadioButton(const char* text, bool autoSize)
 ,	AutoSize(autoSize)
 {
 	IsRadioButton = true;
-	Height = DEFAULT_CHECKBOX_HEIGHT;
+	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
 }
 
 UIRadioButton::UIRadioButton(const char* text, int value, bool autoSize)
@@ -833,7 +834,7 @@ UIRadioButton::UIRadioButton(const char* text, int value, bool autoSize)
 ,	AutoSize(autoSize)
 {
 	IsRadioButton = true;
-	Height = DEFAULT_CHECKBOX_HEIGHT;
+	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
 }
 
 void UIRadioButton::UpdateSize(UIBaseDialog* dialog)
@@ -842,7 +843,7 @@ void UIRadioButton::UpdateSize(UIBaseDialog* dialog)
 	{
 		int radioWidth;
 		MeasureTextSize(*Label, &radioWidth, NULL, dialog->GetWnd());
-		Width = radioWidth + DEFAULT_CHECKBOX_HEIGHT;
+		Layout.Width = radioWidth + DEFAULT_CHECKBOX_HEIGHT;
 	}
 }
 
@@ -858,7 +859,7 @@ void UIRadioButton::Create(UIBaseDialog* dialog)
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
 	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTORADIOBUTTON, 0, dialog,
-		Id, X, Y, min(radioWidth + DEFAULT_CHECKBOX_HEIGHT, Width));
+		Id, Rect.X, Rect.Y, min(radioWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width));
 
 //	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
@@ -905,7 +906,7 @@ UITextEdit::UITextEdit(const char* value)
 ,	IsWantFocus(true)
 ,	TextDirty(false)
 {
-	Height = DEFAULT_EDIT_HEIGHT;
+	Layout.Height = DEFAULT_EDIT_HEIGHT;
 }
 
 UITextEdit::UITextEdit(FString* value)
@@ -915,7 +916,7 @@ UITextEdit::UITextEdit(FString* value)
 ,	IsReadOnly(false)
 ,	IsWantFocus(true)
 {
-	Height = DEFAULT_EDIT_HEIGHT;
+	Layout.Height = DEFAULT_EDIT_HEIGHT;
 }
 
 void UITextEdit::SetText(const char* text)
@@ -1011,7 +1012,7 @@ void UITextEdit::AppendText(const char* text)
 UICombobox::UICombobox()
 :	Value(-1)
 {
-	Height = DEFAULT_COMBOBOX_HEIGHT;
+	Layout.Height = DEFAULT_COMBOBOX_HEIGHT;
 }
 
 UICombobox& UICombobox::AddItem(const char* item)
@@ -1107,7 +1108,7 @@ bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
 UIListbox::UIListbox()
 :	Value(-1)
 {
-	Height = DEFAULT_LISTBOX_HEIGHT;
+	Layout.Height = DEFAULT_LISTBOX_HEIGHT;
 }
 
 UIListbox& UIListbox::ReserveItems(int count)
@@ -1236,7 +1237,7 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 ,	SortColumn(-1)
 ,	SortMode(false)
 {
-	Height = DEFAULT_LISTBOX_HEIGHT;
+	Layout.Height = DEFAULT_LISTBOX_HEIGHT;
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
 	Items.AddZeroed(numColumns);	// reserve place for header
 }
@@ -1571,7 +1572,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 #endif
 
 	// compute automatic column width
-	int clientWidth = Width - GetSystemMetrics(SM_CXVSCROLL) - 6; // exclude scrollbar and border areas
+	int clientWidth = Rect.Width - GetSystemMetrics(SM_CXVSCROLL) - 6; // exclude scrollbar and border areas
 	int totalWidth = 0;
 	int numAutoWidthColumns = 0;
 	int autoColumnWidth = 0;
@@ -1584,7 +1585,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 			w = int(DecodeWidth(w) * clientWidth);
 		totalWidth += w;
 	}
-	assert(totalWidth <= Width);
+	assert(totalWidth <= Rect.Width);
 	if (numAutoWidthColumns)
 		autoColumnWidth = (clientWidth - totalWidth) / numAutoWidthColumns;
 
@@ -1828,7 +1829,7 @@ UITreeView::UITreeView()
 ,	bUseCheckboxes(false)
 ,	ItemHeight(DEFAULT_TREE_ITEM_HEIGHT)
 {
-	Height = DEFAULT_TREEVIEW_HEIGHT;
+	Layout.Height = DEFAULT_TREEVIEW_HEIGHT;
 	HashTable = new TreeViewItem*[TREE_HASH_SIZE]; // will be initialized in RemoveAllItems()
 	// create a root item
 	RemoveAllItems();
@@ -2458,7 +2459,7 @@ void UICheckboxGroup::Create(UIBaseDialog* dialog)
 	int checkboxOffset = (Flags & GROUP_NO_BORDER) ? 0 : GROUP_INDENT;
 
 	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
-		Id, X + checkboxOffset, Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT);
+		Id, Rect.X + checkboxOffset, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT);
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	EnableAllControls(*pValue);
@@ -2959,10 +2960,11 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		int clientWidth = r.right - r.left;
 
 		// prepare layout variabled
-		X = DEFAULT_HORZ_BORDER;
-		Y = 0;
-		Width = clientWidth - DEFAULT_HORZ_BORDER * 2;
-		Height = 0;
+		Layout.X = DEFAULT_HORZ_BORDER;
+		Layout.Y = 0;
+		Layout.Width = clientWidth - DEFAULT_HORZ_BORDER * 2;
+		Layout.Height = 0;
+		Rect = Layout;
 
 		// release old controls, if dialog is opened 2nd time
 		ReleaseControls();
@@ -2972,7 +2974,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		IsDialogConstructed = true;
 
 		UpdateSize(this);
-		UpdateLayout(NULL); //?? check
+		UpdateLayout(NULL); //?? review
 		CreateGroupControls(this);
 
 		if (Menu)
@@ -2985,7 +2987,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		r.left   = 0;
 		r.top    = 0;
 		r.right  = clientWidth;
-		r.bottom = Height + VERTICAL_SPACING;
+		r.bottom = Rect.Height + VERTICAL_SPACING;
 
 		int newX = (GetSystemMetrics(SM_CXSCREEN) - (r.right - r.left)) / 2;
 		int newY = (GetSystemMetrics(SM_CYSCREEN) - (r.bottom - r.top)) / 2;
