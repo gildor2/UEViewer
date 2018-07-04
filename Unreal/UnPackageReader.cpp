@@ -309,7 +309,7 @@ public:
 		byte *EncryptedBuffer = (byte*)(appMalloc(EncryptedSize));
 		Reader->Seek(EncryptionStart + BlockStartOffset);
 		Reader->Serialize(EncryptedBuffer, EncryptedSize);
-		appDecryptAES(EncryptedBuffer, EncryptedSize, (char*)(key));
+		appDecryptAES(EncryptedBuffer, EncryptedSize, (char*)(key), ARRAY_COUNT(key));
 		memcpy(OffsetPointer(data, CopyOffset), &EncryptedBuffer[EncryptedOffset], CopySize);
 		appFree(EncryptedBuffer);
 
