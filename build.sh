@@ -3,7 +3,7 @@
 #-------------------------------------------------------------
 # Get revision number from Git
 
-revision="unknown"								# this value will be used in a case of missing git
+revision="(unversioned)"						# this value will be used in a case of missing git
 version_file="UmodelTool/Version.h"
 if [ -d .git ]; then
 	git=`type -p git`							# equals to `which git`

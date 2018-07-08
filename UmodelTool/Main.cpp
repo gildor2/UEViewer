@@ -1214,7 +1214,7 @@ int main(int argc, char **argv)
 		UISetExceptionHandler(ExceptionHandler);
 	#endif
 		char Caption[512];
-		appSprintf(ARRAY_ARG(Caption), "%s (build %d) [%s]", APP_CAPTION, GIT_REVISION, GRootDirectory);
+		appSprintf(ARRAY_ARG(Caption), "%s (build %s) [%s]", APP_CAPTION, STR(GIT_REVISION), GRootDirectory);
 		GApplication.VisualizerLoop(Caption);
 	}
 #endif // RENDERING
