@@ -3,6 +3,7 @@
 
 #include "UnObject.h"
 #include "UnMaterial.h"
+#include "UnMaterial3.h"
 
 #include "Exporters.h"
 
@@ -27,7 +28,7 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 		return;
 	}
 
-	FArchive *Ar = CreateExportArchive(Mat, "%s.mat", Mat->Name);
+	FArchive* Ar = CreateExportArchive(Mat, FAO_TextFile, "%s.mat", Mat->Name);
 	if (!Ar) return;
 
 #define PROC(Arg)	\
@@ -46,6 +47,7 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	PROC(Cube);
 	PROC(Mask);
 
+#if 0
 	// collect all textures - already exported ones and everything else
 	TArray<UUnrealMaterial*> ExportedTextures;
 	Params.AppendAllTextures(ExportedTextures);
@@ -58,6 +60,24 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 		{
 			Ar->Printf("Other[%d]=%s\n", numOtherTextures++, Tex->Name);
 			ExportObject(Tex);
+		}
+	}
+#else
+	// Dump material properties to a separate file
+	FArchive* PropAr = CreateExportArchive(Mat, FAO_TextFile, "%s.props.txt", Mat->Name);
+	if (PropAr)
+	{
+		Mat->GetTypeinfo()->SaveProps(Mat, *PropAr);
+		delete PropAr;
+	}
+#endif
+
+	if (Mat->IsA("MaterialInstanceConstant"))
+	{
+		const UMaterialInstanceConstant* Inst = static_cast<const UMaterialInstanceConstant*>(Mat);
+		if (Inst->Parent)
+		{
+			ExportMaterial(Inst->Parent);
 		}
 	}
 

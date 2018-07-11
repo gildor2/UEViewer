@@ -30,7 +30,7 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 	else if (!memcmp(Data, "MSFC", 4))
 		ext = "mp3";		// PS3 MP3 codec
 
-	FArchive *Ar = CreateExportArchive(Obj, "%s.%s", Obj->Name, ext);
+	FArchive *Ar = CreateExportArchive(Obj, 0, "%s.%s", Obj->Name, ext);
 	if (Ar)
 	{
 		Ar->Serialize(Data, DataSize);
@@ -156,7 +156,7 @@ static bool SaveXMASound(const UObject *Obj, void *Data, int DataSize, const cha
 
 	if (Hdr.WaveFormatLength == 0x34)						// sizeof(XMA2WAVEFORMATEX)
 	{
-		Ar = CreateExportArchive(Obj, "%s.%s", Obj->Name, DefExt);
+		Ar = CreateExportArchive(Obj, 0, "%s.%s", Obj->Name, DefExt);
 		if (!Ar) return false;
 
 		WriteRiffHeader(*Ar, ResultFileSize);
@@ -170,7 +170,7 @@ static bool SaveXMASound(const UObject *Obj, void *Data, int DataSize, const cha
 	}
 	else if (Hdr.WaveFormatLength == 0x2C)					// sizeof(XMA2WAVEFORMAT)
 	{
-		Ar = CreateExportArchive(Obj, "%s.%s", Obj->Name, DefExt);
+		Ar = CreateExportArchive(Obj, 0, "%s.%s", Obj->Name, DefExt);
 		if (!Ar) return false;
 
 		WriteRiffHeader(*Ar, ResultFileSize);

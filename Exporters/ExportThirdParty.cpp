@@ -11,7 +11,7 @@
 
 void ExportGfx(const USwfMovie *Swf)
 {
-	FArchive *Ar = CreateExportArchive(Swf, "%s.gfx", Swf->Name);
+	FArchive *Ar = CreateExportArchive(Swf, 0, "%s.gfx", Swf->Name);
 	if (Ar)
 	{
 		Ar->Serialize((void*)&Swf->RawData[0], Swf->RawData.Num());
@@ -21,7 +21,7 @@ void ExportGfx(const USwfMovie *Swf)
 
 void ExportFaceFXAnimSet(const UFaceFXAnimSet *Fx)
 {
-	FArchive *Ar = CreateExportArchive(Fx, "%s.fxa", Fx->Name);
+	FArchive *Ar = CreateExportArchive(Fx, 0, "%s.fxa", Fx->Name);
 	if (Ar)
 	{
 		Ar->Serialize((void*)&Fx->RawFaceFXAnimSetBytes[0], Fx->RawFaceFXAnimSetBytes.Num());
@@ -31,7 +31,7 @@ void ExportFaceFXAnimSet(const UFaceFXAnimSet *Fx)
 
 void ExportFaceFXAsset(const UFaceFXAsset *Fx)
 {
-	FArchive *Ar = CreateExportArchive(Fx, "%s.fxa", Fx->Name);
+	FArchive *Ar = CreateExportArchive(Fx, 0, "%s.fxa", Fx->Name);
 	if (Ar)
 	{
 		Ar->Serialize((void*)&Fx->RawFaceFXActorBytes[0], Fx->RawFaceFXActorBytes.Num());

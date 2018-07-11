@@ -338,7 +338,7 @@ bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...)
 }
 
 
-FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
+FArchive *CreateExportArchive(const UObject *Obj, unsigned FileOptions, const char *fmt, ...)
 {
 	guard(CreateExportArchive);
 
@@ -358,7 +358,7 @@ FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...)
 //	appPrintf("... writing %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, filename);
 
 	appMakeDirectoryForFile(filename);
-	FFileWriter *Ar = new FFileWriter(filename, FAO_NoOpenError);
+	FFileWriter *Ar = new FFileWriter(filename, FAO_NoOpenError | FileOptions);
 	if (!Ar->IsOpen())
 	{
 		appPrintf("Error creating file \"%s\" ...\n", filename);

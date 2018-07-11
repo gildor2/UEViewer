@@ -850,11 +850,10 @@ DEPENDS = \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
 	Unreal/UnMaterial3.h \
-	Unreal/UnObject.h \
-	Unreal/UnTextureNVTT.h
+	Unreal/UnObject.h
 
-$(OUT_1)/ExportTexture.obj : Exporters/ExportTexture.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportTexture.obj" Exporters/ExportTexture.cpp
+$(OUT_1)/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportMaterial.obj" Exporters/ExportMaterial.cpp
 
 DEPENDS = \
 	Core/Core.h \
@@ -868,10 +867,12 @@ DEPENDS = \
 	Unreal/TypeInfo.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
-	Unreal/UnObject.h
+	Unreal/UnMaterial3.h \
+	Unreal/UnObject.h \
+	Unreal/UnTextureNVTT.h
 
-$(OUT_1)/ExportMaterial.obj : Exporters/ExportMaterial.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportMaterial.obj" Exporters/ExportMaterial.cpp
+$(OUT_1)/ExportTexture.obj : Exporters/ExportTexture.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportTexture.obj" Exporters/ExportTexture.cpp
 
 DEPENDS = \
 	Core/Core.h \

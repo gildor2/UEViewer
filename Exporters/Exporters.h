@@ -30,7 +30,7 @@ bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...);
 // Create file for saving UObject.
 // File will be placed in directory selected by GetExportPath(), name is computed from fmt+varargs.
 // Function may return NULL.
-FArchive *CreateExportArchive(const UObject *Obj, const char *fmt, ...);
+FArchive *CreateExportArchive(const UObject *Obj, unsigned FileOptions, const char *fmt, ...);
 
 // configuration
 extern bool GExportScripts;

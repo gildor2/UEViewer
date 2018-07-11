@@ -316,7 +316,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	// For HDR textures use Radiance format
 	if (PixelFormatInfo[TexData.Format].Float)
 	{
-		FArchive *Ar = CreateExportArchive(Tex, "%s.hdr", Tex->Name);
+		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.hdr", Tex->Name);
 		if (Ar)
 		{
 			WriteHDR(*Ar, width, height, pic);
@@ -340,7 +340,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	}
 #endif
 
-	FArchive *Ar = CreateExportArchive(Tex, "%s.tga", Tex->Name);
+	FArchive *Ar = CreateExportArchive(Tex, 0, "%s.tga", Tex->Name);
 	if (Ar)
 	{
 		WriteTGA(*Ar, width, height, pic);

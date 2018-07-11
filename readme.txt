@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+11.07.2018
+- exporting a .props.txt file next to .mat, it contains all material's properties
+
 28.06.2018
 - heavily optimized memory used by animations
 

@@ -375,7 +375,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 	// export script file
 	if (GExportScripts)
 	{
-		FArchive *Ar = CreateExportArchive(OriginalMesh, "%s.uc", OriginalMesh->Name);
+		FArchive *Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.uc", OriginalMesh->Name);
 		if (Ar)
 		{
 			ExportScript(Mesh, *Ar);
@@ -400,7 +400,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		else
 			appSprintf(ARRAY_ARG(filename), "%s_Lod%d.%s", OriginalMesh->Name, Lod, Ext);
 
-		FArchive *Ar = CreateExportArchive(OriginalMesh, "%s", filename);
+		FArchive *Ar = CreateExportArchive(OriginalMesh, 0, "%s", filename);
 		if (Ar)
 		{
 			ExportSkeletalMeshLod(*Mesh, MeshLod, *Ar);
@@ -422,7 +422,7 @@ void ExportPsa(const CAnimSet *Anim)
 
 	UObject *OriginalAnim = Anim->OriginalAnim;
 
-	FArchive *Ar0 = CreateExportArchive(OriginalAnim, "%s.psa", OriginalAnim->Name);
+	FArchive *Ar0 = CreateExportArchive(OriginalAnim, 0, "%s.psa", OriginalAnim->Name);
 	if (!Ar0) return;
 	FArchive &Ar = *Ar0;						// use "Ar << obj" instead of "(*Ar) << obj"
 
@@ -523,7 +523,7 @@ void ExportPsa(const CAnimSet *Anim)
 		return;
 	}
 
-	FArchive *Ar1 = CreateExportArchive(OriginalAnim, "%s.config", OriginalAnim->Name);
+	FArchive *Ar1 = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s.config", OriginalAnim->Name);
 	if (!Ar1) return;
 
 	// we are using UE3 property names here
@@ -636,7 +636,7 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 		else
 			appSprintf(ARRAY_ARG(filename), "%s_Lod%d.pskx", OriginalMesh->Name, Lod);
 
-		FArchive *Ar = CreateExportArchive(OriginalMesh, "%s", filename);
+		FArchive *Ar = CreateExportArchive(OriginalMesh, 0, "%s", filename);
 		if (Ar)
 		{
 			ExportStaticMeshLod(Mesh->Lods[Lod], *Ar);
