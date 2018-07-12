@@ -338,9 +338,9 @@ void UIGroup::ComputeLayout()
 			int h = child->GetHeight();
 			int w = child->GetWidth();
 
-			if (h >= -1)
+			if (h >= 0)
 			{
-				TotalSize += max(h, child->MinHeight);
+				TotalSize += h;
 			}
 			else
 			{
@@ -367,7 +367,7 @@ void UIGroup::ComputeLayout()
 			for (UIElement* child = FirstChild; child; child = child->NextChild)
 			{
 				int h = child->GetHeight();
-				if (h < -1)
+				if (h < 0)
 				{
 					float frac = DecodeWidth(h);
 					float localFracScale = child->MinHeight / frac;
@@ -392,11 +392,7 @@ void UIGroup::ComputeLayout()
 				int h = child->GetHeight();
 				int w = child->GetWidth();
 
-				if (h >= -1)
-				{
-					h = max(h, child->MinHeight);
-				}
-				else
+				if (h < 0)
 				{
 					h = DecodeWidth(h) * FracScale;
 				}
