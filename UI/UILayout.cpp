@@ -353,10 +353,12 @@ void UIGroup::ComputeLayout()
 			int h = child->Rect.Height;
 			int w = child->Rect.Width;
 
-			if (child->IsGroup && Rect.Height <= 0 && (child->Rect.Height < 0 || child->Rect.Width < 0))
+			if (child->IsGroup && (Rect.Height <= 0 || Rect.Width <= 0) && (child->Rect.Height < 0 || child->Rect.Width < 0))
 			{
 				// We should compute size of the child group
 				static_cast<UIGroup*>(child)->ComputeLayout();
+				w = child->Rect.Width;
+				h = child->Rect.Height;
 			}
 
 			if (h >= 0)
