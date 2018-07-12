@@ -57,6 +57,7 @@ class UIElement
 	friend class UIGroup;
 	friend class UIPageControl;
 	friend struct UILayoutHelper;
+	friend struct UILayoutHelper2; //? TEMP
 public:
 	UIElement();
 	virtual ~UIElement();
@@ -129,6 +130,8 @@ public:
 protected:
 	// Layout settings for this control
 	UIRect		Layout;
+	int			MinWidth;
+	int			MinHeight;
 	// Computed control's position depending on Layout
 	UIRect		Rect;
 
@@ -143,6 +146,9 @@ protected:
 
 	HWND		Wnd;
 	int			Id;
+
+	virtual int ComputeWidth() const;
+	virtual int ComputeHeight() const;
 
 	HWND Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
 		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
@@ -351,6 +357,7 @@ public:
 protected:
 	FString		Link;
 
+	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
@@ -386,6 +393,7 @@ public:
 protected:
 	FString		Label;
 
+	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
@@ -402,6 +410,7 @@ public:
 protected:
 	FString		Label;
 
+	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
@@ -963,7 +972,7 @@ public:
 	}
 	void Remove(UIElement* item);
 
-	// Destroy all controls holded by UIGroup in a case if they should be released before destructor call.
+	// Manually destroy all controls owned by UIGroup
 	void ReleaseControls();
 
 	// Functions used with UIRadioButton - UIGroup works like a "radio group"
@@ -1003,6 +1012,7 @@ protected:
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout(UILayoutHelper* layout) override;
+	void ComputeLayout();
 
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	virtual void DialogClosed(bool cancel) override;

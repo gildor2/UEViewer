@@ -76,6 +76,7 @@ void UILayoutHelper::AllocateSpace(const UIRect& src, UIRect& dst)
 	guard(UILayoutHelper::AllocateSpace);
 
 	int baseX = ParentRect.X + CursorX;
+	int baseY = ParentRect.Y + CursorY;
 	int parentWidth = ParentRect.Width;
 	int rightMargin = ParentRect.X + ParentRect.Width;
 
@@ -125,7 +126,7 @@ void UILayoutHelper::AllocateSpace(const UIRect& src, UIRect& dst)
 	else
 	{
 		// X is absolute value
-		x = baseX + x;									// treat 'x' as relative value
+		x = baseX + x;					// treat 'x' as relative value
 	}
 
 	// Clamp width
@@ -133,10 +134,10 @@ void UILayoutHelper::AllocateSpace(const UIRect& src, UIRect& dst)
 		w = rightMargin - x;
 
 	// Compute Y
-	if (y < 0)
+	if (y == -1)
 	{
 		// Automatic Y
-		y = ParentRect.Y + CursorY;						// next 'y' value
+		y = baseY;
 		//!! UseVerticalLayout()
 		if ((Flags & (GROUP_NO_AUTO_LAYOUT|GROUP_HORIZONTAL_LAYOUT)) == 0)
 			CursorY += h;
@@ -144,7 +145,7 @@ void UILayoutHelper::AllocateSpace(const UIRect& src, UIRect& dst)
 	else
 	{
 		// Y is absolute value, wo don't support fractional values yer
-		y = ParentRect.Y + CursorY + y;					// treat 'y' as relative value
+		y = baseY + y;					// treat 'y' as relative value
 		// don't change 'Height'
 	}
 
@@ -295,5 +296,127 @@ void UIGroup::UpdateLayout(UILayoutHelper* parentLayout)
 	unguard;
 }
 
+int UIElement::ComputeWidth() const
+{
+	return Layout.Width;
+}
+
+int UIElement::ComputeHeight() const
+{
+	return Layout.Height;
+}
+
+struct UILayoutHelper2
+{
+	int			TotalSize;			// total size in pixels (dialog units) of controls with known sizes
+	float		TotalFrac;			// total fraction size of controls with proportional sizes
+};
+
+void UIGroup::ComputeLayout()
+{
+	guard(UIGroup::ComputeLayout);
+
+///	const UIRect* parentRect = Parent ? &Parent->Rect : NULL;
+
+	if (Flags & GROUP_HORIZONTAL_LAYOUT)
+	{
+		// Automatic horizontal layout
+		if (Rect.Width <= 0)
+		{
+		}
+		else
+		{
+		}
+	}
+	else if (!(Flags & GROUP_NO_AUTO_LAYOUT))
+	{
+		int TotalSize = 0;
+		float TotalFrac = 0.0f;
+		int MaxWidth = 0;
+		for (UIElement* child = FirstChild; child; child = child->NextChild)
+		{
+			int h = child->GetHeight();
+			int w = child->GetWidth();
+
+			if (h >= -1)
+			{
+				TotalSize += max(h, child->MinHeight);
+			}
+			else
+			{
+				TotalFrac += DecodeWidth(h);
+			}
+
+			if (w < 0)
+			{
+				w = child->MinWidth;
+			}
+
+			MaxWidth = max(w, MaxWidth);
+		}
+
+		if (Rect.Width <= 0)
+		{
+			Rect.Width = MaxWidth;
+		}
+
+		// Automatic vertical layout
+		if (Rect.Height <= 0)
+		{
+			float FracScale = 0;
+			for (UIElement* child = FirstChild; child; child = child->NextChild)
+			{
+				int h = child->GetHeight();
+				if (h < -1)
+				{
+					float frac = DecodeWidth(h);
+					float localFracScale = child->MinHeight / frac;
+					if (localFracScale > FracScale)
+					{
+						FracScale = localFracScale;
+					}
+				}
+			}
+
+			Rect.Height = TotalSize + FracScale;
+		}
+		else
+		{
+			// Compute fraction scale
+			int SizeOfComputedControls = Rect.Height - TotalSize;
+			float FracScale = (TotalFrac > 0) ? SizeOfComputedControls / TotalFrac : 0;
+
+			int y = 0;
+			for (UIElement* child = FirstChild; child; child = child->NextChild)
+			{
+				int h = child->GetHeight();
+				int w = child->GetWidth();
+
+				if (h >= -1)
+				{
+					h = max(h, child->MinHeight);
+				}
+				else
+				{
+					h = DecodeWidth(h) * FracScale;
+				}
+
+				if (w < 0)
+				{
+					w = DecodeWidth(w) * Rect.Width;
+				}
+
+				child->Rect.X = 0;
+				child->Rect.Y = y;
+				child->Rect.Width = w;
+				child->Rect.Height = h;
+
+				y += h;
+			}
+		}
+	}
+
+	unguard;
+}
 
 #endif // HAS_UI
