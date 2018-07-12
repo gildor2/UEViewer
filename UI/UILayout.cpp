@@ -317,6 +317,17 @@ void UIGroup::ComputeLayout()
 	guard(UIGroup::ComputeLayout);
 
 ///	const UIRect* parentRect = Parent ? &Parent->Rect : NULL;
+	int groupBorderTop = 0;
+	int groupBorderLeft = 0;
+	int groupBorderWidth = 0;
+	int groupBorderHeight = 0;
+	if (!(Flags & GROUP_NO_BORDER))
+	{
+		groupBorderTop = GROUP_MARGIN_TOP;
+		groupBorderLeft = GROUP_INDENT;
+		groupBorderWidth = GROUP_INDENT * 2;
+		groupBorderHeight = GROUP_MARGIN_TOP + GROUP_MARGIN_BOTTOM;
+	}
 
 	if (Flags & GROUP_HORIZONTAL_LAYOUT)
 	{
@@ -330,13 +341,22 @@ void UIGroup::ComputeLayout()
 	}
 	else if (!(Flags & GROUP_NO_AUTO_LAYOUT))
 	{
+		// Common layout code
 		int TotalSize = 0;
 		float TotalFrac = 0.0f;
 		int MaxWidth = 0;
 		for (UIElement* child = FirstChild; child; child = child->NextChild)
 		{
-			int h = child->GetHeight();
-			int w = child->GetWidth();
+			child->Rect = child->Layout;
+
+			int h = child->Rect.Height;
+			int w = child->Rect.Width;
+
+			if (child->IsGroup && Rect.Height <= 0 && (child->Rect.Height < 0 || child->Rect.Width < 0))
+			{
+				// We should compute size of the child group
+				static_cast<UIGroup*>(child)->ComputeLayout();
+			}
 
 			if (h >= 0)
 			{
@@ -357,20 +377,21 @@ void UIGroup::ComputeLayout()
 
 		if (Rect.Width <= 0)
 		{
-			Rect.Width = MaxWidth;
+			Rect.Width = MaxWidth + groupBorderWidth;
 		}
 
-		// Automatic vertical layout
 		if (Rect.Height <= 0)
 		{
+			// Automatic vertical layout
 			float FracScale = 0;
 			for (UIElement* child = FirstChild; child; child = child->NextChild)
 			{
-				int h = child->GetHeight();
+				int h = child->Rect.Height;
 				if (h < 0)
 				{
 					float frac = DecodeWidth(h);
-					float localFracScale = child->MinHeight / frac;
+					int minHeight = child->IsGroup ? child->Rect.Height : child->MinHeight;
+					float localFracScale = minHeight / frac;
 					if (localFracScale > FracScale)
 					{
 						FracScale = localFracScale;
@@ -378,19 +399,23 @@ void UIGroup::ComputeLayout()
 				}
 			}
 
-			Rect.Height = TotalSize + FracScale;
+			Rect.Height = TotalSize + FracScale + groupBorderHeight;
 		}
 		else
 		{
-			// Compute fraction scale
-			int SizeOfComputedControls = Rect.Height - TotalSize;
+			// Size is known, perform control layout
+			int groupWidth = Rect.Width - groupBorderWidth;
+			int groupHeight = Rect.Height - groupBorderHeight;
+			int SizeOfComputedControls = groupHeight - TotalSize;
 			float FracScale = (TotalFrac > 0) ? SizeOfComputedControls / TotalFrac : 0;
 
-			int y = 0;
+			// Place controls inside the group
+			int x = Rect.X + groupBorderLeft;
+			int y = Rect.Y + groupBorderTop;
 			for (UIElement* child = FirstChild; child; child = child->NextChild)
 			{
-				int h = child->GetHeight();
-				int w = child->GetWidth();
+				int h = child->Rect.Height;
+				int w = child->Rect.Width;
 
 				if (h < 0)
 				{
@@ -399,13 +424,19 @@ void UIGroup::ComputeLayout()
 
 				if (w < 0)
 				{
-					w = DecodeWidth(w) * Rect.Width;
+					w = DecodeWidth(w) * groupWidth;
 				}
 
-				child->Rect.X = 0;
+				child->Rect.X = x;
 				child->Rect.Y = y;
 				child->Rect.Width = w;
 				child->Rect.Height = h;
+
+				// Perform layout for child group
+				if (child->IsGroup)
+				{
+					static_cast<UIGroup*>(child)->ComputeLayout();
+				}
 
 				y += h;
 			}

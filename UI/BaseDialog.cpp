@@ -3053,12 +3053,15 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		int clientHeight = r.bottom - r.top;
 
 		// prepare layout variables
+#if !NEW_LAYOUT_CODE
 		Layout.X = DEFAULT_HORZ_BORDER;
 		Layout.Y = 0;
 		Layout.Width = clientWidth - DEFAULT_HORZ_BORDER * 2;
-#if !NEW_LAYOUT_CODE
 		Layout.Height = 0;
 #else
+		Layout.X = DEFAULT_HORZ_BORDER;
+		Layout.Y = 0;
+		Layout.Width = clientWidth;
 		Layout.Height = clientHeight;
 #endif
 		Rect = Layout;
@@ -3095,7 +3098,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #if !NEW_LAYOUT_CODE
 		r.right  = clientWidth;
 #else
-		r.right  = Rect.Width;
+		r.right  = Rect.Width + DEFAULT_HORZ_BORDER * 2;
 #endif
 		r.bottom = Rect.Height + VERTICAL_SPACING;
 
