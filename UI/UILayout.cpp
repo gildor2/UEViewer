@@ -343,6 +343,7 @@ void UIGroup::ComputeLayout()
 	{
 		// Common layout code
 		int TotalSize = 0;
+		int MarginsSize = 0;
 		float TotalFrac = 0.0f;
 		int MaxWidth = 0;
 		for (UIElement* child = FirstChild; child; child = child->NextChild)
@@ -372,6 +373,7 @@ void UIGroup::ComputeLayout()
 				w = child->MinWidth;
 			}
 
+			MarginsSize += child->TopMargin + child->BottomMargin;
 			MaxWidth = max(w, MaxWidth);
 		}
 
@@ -399,13 +401,13 @@ void UIGroup::ComputeLayout()
 				}
 			}
 
-			Rect.Height = TotalSize + FracScale + groupBorderHeight;
+			Rect.Height = TotalSize + MarginsSize + FracScale + groupBorderHeight;
 		}
 		else
 		{
 			// Size is known, perform control layout
 			int groupWidth = Rect.Width - groupBorderWidth;
-			int groupHeight = Rect.Height - groupBorderHeight;
+			int groupHeight = Rect.Height - groupBorderHeight - MarginsSize;
 			int SizeOfComputedControls = groupHeight - TotalSize;
 			float FracScale = (TotalFrac > 0) ? SizeOfComputedControls / TotalFrac : 0;
 
@@ -414,6 +416,8 @@ void UIGroup::ComputeLayout()
 			int y = Rect.Y + groupBorderTop;
 			for (UIElement* child = FirstChild; child; child = child->NextChild)
 			{
+				y += child->TopMargin;
+
 				int h = child->Rect.Height;
 				int w = child->Rect.Width;
 
@@ -438,7 +442,7 @@ void UIGroup::ComputeLayout()
 					static_cast<UIGroup*>(child)->ComputeLayout();
 				}
 
-				y += h;
+				y += h + child->BottomMargin;
 			}
 		}
 	}

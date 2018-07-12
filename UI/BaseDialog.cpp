@@ -78,6 +78,8 @@ UIElement::UIElement()
 ,	Rect(-1, -1, -1, -1)
 ,	MinWidth(0)
 ,	MinHeight(0)
+,	TopMargin(0)
+,	BottomMargin(0)
 ,	IsGroup(false)
 ,	IsRadioButton(false)
 ,	Enabled(true)
@@ -621,6 +623,7 @@ UIProgressBar::UIProgressBar()
 	Layout.Height = DEFAULT_PROGRESS_BAR_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_PROGRESS_BAR_HEIGHT;
+	TopMargin = VERTICAL_SPACING;
 }
 
 void UIProgressBar::SetValue(float value)
@@ -652,6 +655,8 @@ UIButton::UIButton(const char* text)
 :	Label(text)
 {
 	Layout.Height = DEFAULT_BUTTON_HEIGHT;
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 }
 
 UIButton& UIButton::SetOK()
@@ -736,6 +741,8 @@ UIMenuButton::UIMenuButton(const char* text)
 :	Label(text)
 {
 	Layout.Height = DEFAULT_BUTTON_HEIGHT;
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 }
 
 void UIMenuButton::UpdateSize(UIBaseDialog* dialog)
@@ -1094,6 +1101,8 @@ UICombobox::UICombobox()
 	Layout.Height = DEFAULT_COMBOBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_COMBOBOX_HEIGHT;
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 }
 
 UICombobox& UICombobox::AddItem(const char* item)
@@ -1192,6 +1201,8 @@ UIListbox::UIListbox()
 	Layout.Height = DEFAULT_LISTBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_LISTBOX_HEIGHT;
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 }
 
 UIListbox& UIListbox::ReserveItems(int count)
@@ -1323,6 +1334,8 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 	Layout.Height = DEFAULT_LISTBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_LISTBOX_HEIGHT * 2;
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
 	Items.AddZeroed(numColumns);	// reserve place for header
@@ -1918,6 +1931,8 @@ UITreeView::UITreeView()
 	Layout.Height = DEFAULT_TREEVIEW_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_TREEVIEW_HEIGHT;
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 
 	HashTable = new TreeViewItem*[TREE_HASH_SIZE]; // will be initialized in RemoveAllItems()
 	// create a root item
@@ -2277,6 +2292,8 @@ UIGroup::UIGroup(const char* label, unsigned flags)
 ,	RadioValue(0)
 ,	pRadioValue(&RadioValue)
 {
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 	IsGroup = true;
 }
 
@@ -2286,6 +2303,8 @@ UIGroup::UIGroup(unsigned flags)
 ,	RadioValue(0)
 ,	pRadioValue(&RadioValue)
 {
+	TopMargin = VERTICAL_SPACING;
+	BottomMargin = VERTICAL_SPACING;
 	IsGroup = true;
 }
 
@@ -3060,7 +3079,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		Layout.Height = 0;
 #else
 		Layout.X = DEFAULT_HORZ_BORDER;
-		Layout.Y = 0;
+		Layout.Y = VERTICAL_SPACING;
 		Layout.Width = clientWidth;
 		Layout.Height = clientHeight;
 #endif
@@ -3100,7 +3119,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #else
 		r.right  = Rect.Width + DEFAULT_HORZ_BORDER * 2;
 #endif
-		r.bottom = Rect.Height + VERTICAL_SPACING;
+		r.bottom = Rect.Y + Rect.Height;
 
 		int newX = (GetSystemMetrics(SM_CXSCREEN) - (r.right - r.left)) / 2;
 		int newY = (GetSystemMetrics(SM_CYSCREEN) - (r.bottom - r.top)) / 2;

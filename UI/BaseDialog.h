@@ -130,8 +130,10 @@ public:
 protected:
 	// Layout settings for this control
 	UIRect		Layout;
-	int			MinWidth;
-	int			MinHeight;
+	short		MinWidth;
+	short		MinHeight;
+	short		TopMargin;
+	short		BottomMargin;
 	// Computed control's position depending on Layout
 	UIRect		Rect;
 
