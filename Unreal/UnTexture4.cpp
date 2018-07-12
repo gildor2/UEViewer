@@ -37,7 +37,7 @@ void FTexture2DMipMap::Serialize4(FArchive &Ar, FTexture2DMipMap& Mip)
 	//?? Seek() and decompression calls. You'll see that loading of big bulk data chinks is interleaved
 	//?? with reading 4-byte ints at different locations.
 	Mip.Data.Serialize(Ar);
-	Ar << Mip.SizeX << Mip.SizeY;
+	Ar << Mip.SizeX << Mip.SizeY << Mip.SizeZ;
 	if (Ar.ArVer >= VER_UE4_TEXTURE_DERIVED_DATA2 && !cooked)
 	{
 		FString DerivedDataKey;
@@ -142,7 +142,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 		Ar << PixelFormatEnum;
 		while (stricmp(PixelFormatEnum, "None") != 0)
 		{
-			int32 SkipOffset;
+			int64 SkipOffset;
 			Ar << SkipOffset;
 			EPixelFormat PixelFormat = (EPixelFormat)NameToEnum("EPixelFormat", PixelFormatEnum);
 
