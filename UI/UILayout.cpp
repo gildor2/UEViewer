@@ -39,10 +39,16 @@ const char* GetDebugLabel(const UIElement* ctl)
 	P(UICheckbox, Label)
 	P(UIRadioButton, Label)
 	P(UILabel, Label)
+	P(UIGroup, Label)
 
 	return "";
 #undef P
 }
+
+#define RECT_ARG(r)		r.X >= -1 ? (float)r.X : DecodeWidth(r.X),				\
+						r.Y >= -1 ? (float)r.Y : DecodeWidth(r.Y),				\
+						r.Width >= -1 ? (float)r.Width : DecodeWidth(r.Width),	\
+						r.Height >= -1 ? (float)r.Height : DecodeWidth(r.Height)
 
 #endif // DEBUG_LAYOUT
 
@@ -311,15 +317,15 @@ void UIGroup::ComputeLayout()
 	guard(UIGroup::ComputeLayout);
 
 #if DEBUG_LAYOUT
-	DBG_LAYOUT("group \"%s\" %s",
+	DBG_LAYOUT("%s \"%s\" %s",
+		ClassName(),
 		(Flags & GROUP_NO_BORDER) ? "(no border)" : *Label,
 		(Flags & GROUP_HORIZONTAL_LAYOUT) ? "[horz]" : "[vert]"
 	);
 	DBG_LAYOUT("{");
 	DebugLayoutDepth++;
-	DBG_LAYOUT("this.Layout: x(%d) y(%d) w(%d) h(%d) - Rect: x(%d) y(%d) w(%d) h(%d)",
-		Layout.X, Layout.Y, Layout.Width, Layout.Height,
-		Rect.X, Rect.Y, Rect.Width, Rect.Height);
+	DBG_LAYOUT("this.Layout: x(%g) y(%g) w(%g) h(%g) - Rect: x(%g) y(%g) w(%g) h(%g)",
+		RECT_ARG(Layout), RECT_ARG(Rect));
 #endif
 
 	int groupBorderTop = 0;
@@ -358,32 +364,71 @@ void UIGroup::ComputeLayout()
 
 		if (child->IsGroup)
 		{
+			//? todo: possibly useless vars
 			bool bComputeWidth = (Rect.Width < 0 && w < 0);
 			bool bComputeHeight = (Rect.Height < 0 && h < 0);
 			bool bFitWidth = (bHorizontalLayout && w == -1);
 			bool bFitHeight = (bVerticalLayout && h == -1);
 
-			if (w < 0 || h < -0)
+			if (w < 0 || h < 0)
 //			if (bComputeWidth || bComputeHeight || w == -1 || h == -1)
 			{
 				// We should compute size of the child group
 				static_cast<UIGroup*>(child)->ComputeLayout();
-//				if (bComputeWidth)
-//				{
+
+				MaxWidth = max(child->Rect.Width, MaxWidth);
+				MaxHeight = max(child->Rect.Height, MaxHeight);
+
+				child->MinWidth = child->Rect.Width;
+				child->MinHeight = child->Rect.Height;
+
+				child->Rect.Width = w;
+				child->Rect.Height = h;
+
+			#if 0
+				w = child->Rect.Width;
+				h = child->Rect.Height;
+			#endif
+
+			#if 0
+				if (w == -1 && bHorizontalLayout)
+				{
 					w = child->Rect.Width;
-//				}
-//				else
-//				{
-//					child->Rect.Width = w;
-//				}
-//				if (bComputeHeight)
-//				{
+				}
+				else
+				{
+					child->MinWidth = child->Rect.Width;
+					child->Rect.Width = w;
+				}
+				if (h == -1 && bVerticalLayout)
+				{
 					h = child->Rect.Height;
-//				}
-//				else
-//				{
+				}
+				else
+				{
+					child->MinHeight = child->Rect.Height;
 					child->Rect.Height = h;
-//				}
+				}
+			#endif
+
+			#if 0
+				if (bComputeWidth)
+				{
+					w = child->Rect.Width;
+				}
+				else
+				{
+					child->Rect.Width = w;
+				}
+				if (bComputeHeight)
+				{
+					h = child->Rect.Height;
+				}
+				else
+				{
+					child->Rect.Height = h;
+				}
+			#endif
 			}
 		}
 
@@ -413,6 +458,7 @@ void UIGroup::ComputeLayout()
 	}
 
 	DBG_LAYOUT(">>> do layout: max_w(%d) max_h(%d) frac_w(%g) frac_h(%g)", MaxWidth, MaxHeight, TotalFracWidth, TotalFracHeight);
+
 	if (bHorizontalLayout)
 	{
 		if (Rect.Height <= 0)
@@ -431,7 +477,7 @@ void UIGroup::ComputeLayout()
 				if (w < 0)
 				{
 					float frac = DecodeWidth(w);
-					int minWidth = child->IsGroup ? child->Rect.Width: child->MinWidth;
+					int minWidth = child->MinWidth;
 					float localFracScale = minWidth / frac;
 					if (localFracScale > FracScale)
 					{
@@ -440,6 +486,7 @@ void UIGroup::ComputeLayout()
 				}
 			}
 
+			FracScale *= TotalFracWidth;
 			Rect.Width = TotalWidth + /* MarginsSize +*/ FracScale + groupBorderWidth;
 			DBG_LAYOUT(">>> computed width: %d", Rect.Width);
 		}
@@ -447,7 +494,7 @@ void UIGroup::ComputeLayout()
 		{
 			// Perform horizontal layout
 			int groupWidth = Rect.Width - groupBorderWidth;
-			int groupHeight = Rect.Height - groupBorderHeight - MarginsSize;
+			int groupHeight = Rect.Height - groupBorderHeight /*- MarginsSize*/;
 			int SizeOfComputedControls = groupWidth - TotalWidth;
 			float FracScale = (TotalFracWidth > 0) ? SizeOfComputedControls / TotalFracWidth : 0;
 
@@ -475,6 +522,10 @@ void UIGroup::ComputeLayout()
 				child->Rect.Y = y;
 				child->Rect.Width = w;
 				child->Rect.Height = h;
+
+				DBG_LAYOUT("... %s(\"%s\") Layout(%g %g %g %g) -> Rect(%g %g %g %g)",
+					child->ClassName(), GetDebugLabel(child),
+					RECT_ARG(child->Layout), RECT_ARG(child->Rect));
 
 				// Perform layout for child group
 				if (child->IsGroup)
@@ -504,7 +555,7 @@ void UIGroup::ComputeLayout()
 				if (h < 0)
 				{
 					float frac = DecodeWidth(h);
-					int minHeight = child->IsGroup ? child->Rect.Height : child->MinHeight;
+					int minHeight = child->MinHeight;
 					float localFracScale = minHeight / frac;
 					if (localFracScale > FracScale)
 					{
@@ -513,6 +564,7 @@ void UIGroup::ComputeLayout()
 				}
 			}
 
+			FracScale *= TotalFracHeight;
 			Rect.Height = TotalHeight + MarginsSize + FracScale + groupBorderHeight;
 			DBG_LAYOUT(">>> computed height: %d", Rect.Height);
 		}
@@ -544,15 +596,14 @@ void UIGroup::ComputeLayout()
 					h = DecodeWidth(h) * FracScale;
 				}
 
-				DBG_LAYOUT("... %s(\"%s\") Layout(%d %d %d %d) -> Rect(%d %d %d %d)",
-					child->ClassName(), GetDebugLabel(child),
-					child->Layout.X, child->Layout.Y, child->Layout.Width, child->Layout.Height,
-					x, y, w, h);
-
 				child->Rect.X = x;
 				child->Rect.Y = y;
 				child->Rect.Width = w;
 				child->Rect.Height = h;
+
+				DBG_LAYOUT("... %s(\"%s\") Layout(%g %g %g %g) -> Rect(%g %g %g %g)",
+					child->ClassName(), GetDebugLabel(child),
+					RECT_ARG(child->Layout), RECT_ARG(child->Rect));
 
 				// Perform layout for child group
 				if (child->IsGroup)
