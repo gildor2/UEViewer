@@ -8,10 +8,10 @@
 
 #include "UIPrivate.h"
 
-#define DEBUG_LAYOUT				0
+//#define DEBUG_LAYOUT				1
 
 #if DEBUG_LAYOUT
-#define DBG_LAYOUT(...)				appPrintf(__VA_ARGS__)
+#define DBG_LAYOUT(msg,...)				appPrintf("%s" msg "\n", GetDebugLayoutIndent(), __VA_ARGS__)
 #else
 #define DBG_LAYOUT(...)
 #endif
@@ -24,9 +24,9 @@ static int DebugLayoutDepth = 0;
 static const char* GetDebugLayoutIndent()
 {
 #define MAX_INDENT 32
-	static char indent[MAX_INDENT*2+1];
+	static char indent[MAX_INDENT*4+1];
 	if (!indent[0]) memset(indent, ' ', sizeof(indent)-1);
-	return &indent[MAX_INDENT*2 - DebugLayoutDepth*2];
+	return &indent[MAX_INDENT*4 - DebugLayoutDepth*4];
 }
 
 const char* GetDebugLabel(const UIElement* ctl)
@@ -310,6 +310,18 @@ void UIGroup::ComputeLayout()
 {
 	guard(UIGroup::ComputeLayout);
 
+#if DEBUG_LAYOUT
+	DBG_LAYOUT("group \"%s\" %s",
+		(Flags & GROUP_NO_BORDER) ? "(no border)" : *Label,
+		(Flags & GROUP_HORIZONTAL_LAYOUT) ? "[horz]" : "[vert]"
+	);
+	DBG_LAYOUT("{");
+	DebugLayoutDepth++;
+	DBG_LAYOUT("this.Layout: x(%d) y(%d) w(%d) h(%d) - Rect: x(%d) y(%d) w(%d) h(%d)",
+		Layout.X, Layout.Y, Layout.Width, Layout.Height,
+		Rect.X, Rect.Y, Rect.Width, Rect.Height);
+#endif
+
 	int groupBorderTop = 0;
 	int groupBorderLeft = 0;
 	int groupBorderWidth = 0;
@@ -336,6 +348,7 @@ void UIGroup::ComputeLayout()
 	float TotalFracWidth = 0.0f, TotalFracHeight = 0.0f;
 	int MarginsSize = 0;
 
+	DBG_LAYOUT(">>> prepare children");
 	for (UIElement* child = FirstChild; child; child = child->NextChild)
 	{
 		child->Rect = child->Layout;
@@ -343,12 +356,35 @@ void UIGroup::ComputeLayout()
 		int w = child->Rect.Width;
 		int h = child->Rect.Height;
 
-		if (child->IsGroup && (Rect.Height <= 0 || Rect.Width <= 0) && (child->Rect.Height < 0 || child->Rect.Width < 0))
+		if (child->IsGroup)
 		{
-			// We should compute size of the child group
-			static_cast<UIGroup*>(child)->ComputeLayout();
-			w = child->Rect.Width;
-			h = child->Rect.Height;
+			bool bComputeWidth = (Rect.Width < 0 && w < 0);
+			bool bComputeHeight = (Rect.Height < 0 && h < 0);
+			bool bFitWidth = (bHorizontalLayout && w == -1);
+			bool bFitHeight = (bVerticalLayout && h == -1);
+
+			if (w < 0 || h < -0)
+//			if (bComputeWidth || bComputeHeight || w == -1 || h == -1)
+			{
+				// We should compute size of the child group
+				static_cast<UIGroup*>(child)->ComputeLayout();
+//				if (bComputeWidth)
+//				{
+					w = child->Rect.Width;
+//				}
+//				else
+//				{
+//					child->Rect.Width = w;
+//				}
+//				if (bComputeHeight)
+//				{
+					h = child->Rect.Height;
+//				}
+//				else
+//				{
+					child->Rect.Height = h;
+//				}
+			}
 		}
 
 		if (h >= 0)
@@ -376,11 +412,13 @@ void UIGroup::ComputeLayout()
 		MaxHeight = max(h, MaxHeight);
 	}
 
+	DBG_LAYOUT(">>> do layout: max_w(%d) max_h(%d) frac_w(%g) frac_h(%g)", MaxWidth, MaxHeight, TotalFracWidth, TotalFracHeight);
 	if (bHorizontalLayout)
 	{
 		if (Rect.Height <= 0)
 		{
 			Rect.Height = MaxHeight + groupBorderHeight;
+			DBG_LAYOUT(">>> set height: %d", Rect.Height);
 		}
 
 		if (Rect.Width <= 0)
@@ -403,6 +441,7 @@ void UIGroup::ComputeLayout()
 			}
 
 			Rect.Width = TotalWidth + /* MarginsSize +*/ FracScale + groupBorderWidth;
+			DBG_LAYOUT(">>> computed width: %d", Rect.Width);
 		}
 		else
 		{
@@ -452,6 +491,7 @@ void UIGroup::ComputeLayout()
 		if (Rect.Width <= 0)
 		{
 			Rect.Width = MaxWidth + groupBorderWidth;
+			DBG_LAYOUT(">>> set width: %d", Rect.Width);
 		}
 
 		if (Rect.Height <= 0)
@@ -474,6 +514,7 @@ void UIGroup::ComputeLayout()
 			}
 
 			Rect.Height = TotalHeight + MarginsSize + FracScale + groupBorderHeight;
+			DBG_LAYOUT(">>> computed height: %d", Rect.Height);
 		}
 		else
 		{
@@ -503,6 +544,11 @@ void UIGroup::ComputeLayout()
 					h = DecodeWidth(h) * FracScale;
 				}
 
+				DBG_LAYOUT("... %s(\"%s\") Layout(%d %d %d %d) -> Rect(%d %d %d %d)",
+					child->ClassName(), GetDebugLabel(child),
+					child->Layout.X, child->Layout.Y, child->Layout.Width, child->Layout.Height,
+					x, y, w, h);
+
 				child->Rect.X = x;
 				child->Rect.Y = y;
 				child->Rect.Width = w;
@@ -518,6 +564,12 @@ void UIGroup::ComputeLayout()
 			}
 		}
 	}
+
+#if DEBUG_LAYOUT
+	DBG_LAYOUT(">>> END: Rect: x(%d) y(%d) w(%d) h(%d)", Rect.X, Rect.Y, Rect.Width, Rect.Height);
+	DebugLayoutDepth--;
+	DBG_LAYOUT("}");
+#endif
 
 	unguard;
 }
