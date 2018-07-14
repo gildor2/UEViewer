@@ -45,6 +45,14 @@ struct UIRect
 	{
 		memcpy(this, &other, sizeof(UIRect));
 	}
+
+	inline void Set(int InX, int InY, int InWidth, int InHeight)
+	{
+		X = InX;
+		Y = InY;
+		Width = InWidth;
+		Height = InHeight;
+	}
 };
 
 
