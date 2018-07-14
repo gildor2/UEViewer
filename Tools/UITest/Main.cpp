@@ -10,7 +10,9 @@ public:
 		value2 = true;
 		value3 = 0;
 		tabIndex = 0;
-		ShowModal("UI Test", 350, 200);
+//		ShowModal("UI Test", 350, 200);
+		ShowModal("UI Test", 0, 0);
+//		ShowModal("UI Test", 450, 300);
 		printf("v1=%d v2=%d v3=%d\n", value1, value2, value3);
 		printf("Text: [%s]\n", *text);
 	}
@@ -83,15 +85,17 @@ public:
 						.SetHeight(16)
 						.SetResourceIcon(IDC_MAIN_ICON)
 				]
-				+ NewControl(UISpacer, 8)
+				+ NewControl(UISpacer, 4)
 				+ NewControl(UIVerticalLine)
-				.SetHeight(100)
-				+ NewControl(UISpacer, 8)
-				+ NewControl(UIGroup, GROUP_NO_BORDER)
+				.SetHeight(-1)
+				+ NewControl(UISpacer, 4)
+				+  NewControl(UIGroup, GROUP_NO_BORDER)
+				.SetWidth(EncodeWidth(1.0f))
 				[
 					NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 					[
 						NewControl(UIGroup, "Menu control")
+						.SetWidth(EncodeWidth(1.0f))
 						[
 							NewControl(UICheckbox, "Enable item #1", true)
 							.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { item1->Enable(value); }))
@@ -100,14 +104,14 @@ public:
 							+ NewControl(UICheckbox, "Enable \"Empty\"", true)
 							.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { emptyItem->Enable(value); }))
 						]
-						+ NewControl(UISpacer)
 						+ NewControl(UIGroup, "Group 1")
+						.SetWidth(EncodeWidth(1.0f))
 						[
 							NewControl(UIButton, "Button 1")
 							+ NewControl(UIButton, "Button 2")
 						]
-						+ NewControl(UISpacer)
 						+ NewControl(UIGroup, "Group 2")
+						.SetWidth(EncodeWidth(1.0f))
 						.SetRadioVariable(&value3)
 						[
 							NewControl(UIRadioButton, "Value 0", 0)
@@ -115,16 +119,15 @@ public:
 							+ NewControl(UIRadioButton, "Value 2", 2)
 						]
 					]
-					+ NewControl(UISpacer, 8)
+					+ NewControl(UISpacer, 4)
 					+ NewControl(UIHorizontalLine)
-					+ NewControl(UISpacer, 8)
+					+ NewControl(UISpacer, 4)
 					+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 					[
 						NewControl(UISpacer, -1)
 						+ NewControl(UIMenuButton, "Menu")
 						.SetWidth(100)
 						.SetMenu(popup)
-						+ NewControl(UISpacer)
 						+ NewControl(UIButton, "Close")
 						.SetWidth(100)
 						.SetOK()
@@ -139,24 +142,28 @@ public:
 				+ NewControl(UIRadioButton, "page 2")
 			]
 			+ NewControl(UIPageControl)
-			.SetHeight(150)
+			.SetHeight(EncodeWidth(1.0f))
 			.Expose(pager)
 			[
 				// page 1
-				NewControl(UITextEdit, &text)
-				.SetHeight(-1)
-				.SetMultiline()
+				NewControl(UIGroup, GROUP_NO_BORDER)
+				[
+					NewControl(UILabel, "Some label for page 1")
+					+ NewControl(UITextEdit, &text)
+					.SetHeight(EncodeWidth(1.0f))
+					.SetMultiline()
+				]
 				// page 2
 				+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 				[
 					NewControl(UIMulticolumnListbox, 3)
 					.Expose(list)
-					.SetHeight(150)
+					.SetHeight(-1)
 					.AddColumn("Column 1", 100)
 					.AddColumn("Column 2", 50)
 					.AddColumn("Column 3")
 					.AllowMultiselect()
-					+ NewControl(UISpacer)
+					.SetWidth(500)
 					+ NewControl(UIGroup, GROUP_NO_BORDER)
 					.SetWidth(100)
 					[
@@ -165,7 +172,9 @@ public:
 						+ NewControl(UIButton, "Remove")
 						.SetCallback(BIND_MEMBER(&TestDialog::OnRemoveItems, this))
 						+ NewControl(UIButton, "Unselect")
-						.SetCallback(BIND_LAMBDA( [this]() { list->UnselectAllItems(); } ) ) // same as previous line, but causes C2958 with VC2013
+						.SetCallback(BIND_LAMBDA( [this]() { list->UnselectAllItems(); } ) )
+						+ NewControl(UIButton, "HAHAHA")
+						.SetHeight(50)
 					]
 				]
 			]
@@ -224,8 +233,47 @@ public:
 	FString			text;
 };
 
-void main()
+class TestDialog2 : public UIBaseDialog
 {
+public:
+	void Show()
+	{
+		Bool = true;
+		Text = "Some Text";
+		ShowModal("UI Test", 200, 100);
+	}
+
+	virtual void InitUI()
+	{
+		(*this)
+		[
+			NewControl(UILabel, "Label")
+#if 1
+			+ NewControl(UIGroup, "Group")
+			[
+				NewControl(UITextEdit, &Text)
+				.SetHeight(-1)
+//				.SetHeight(10)
+			]
+#else
+			+ NewControl(UITextEdit, &Text)
+			.SetHeight(-1)
+#endif
+			+ NewControl(UICheckbox, "Checkbox", &Bool)
+			+ NewControl(UIButton, "Button")
+		];
+	}
+
+	FString Text;
+	bool Bool;
+};
+
+int main()
+{
+#if 1
 	TestDialog dialog;
+#else
+	TestDialog2 dialog;
+#endif
 	dialog.Show();
 }

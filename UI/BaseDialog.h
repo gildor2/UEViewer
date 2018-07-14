@@ -141,6 +141,8 @@ protected:
 	short		MinHeight;
 	short		TopMargin;
 	short		BottomMargin;
+	short		LeftMargin;
+	short		RightMargin;
 	// Computed control's position depending on Layout
 	UIRect		Rect;
 

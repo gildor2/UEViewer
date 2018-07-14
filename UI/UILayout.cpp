@@ -439,13 +439,18 @@ void UIGroup::ComputeLayout()
 			spaceY += y;
 		}
 
-//		MarginsSizeX += child->LeftMargin + child->RightMargin;
+		// LeftMargin is used for all controls except first, RightMargin for all controls except last
+		MarginsSizeX += ((child == FirstChild) ? 0 : child->LeftMargin) + ((child->NextChild) ? child->RightMargin : 0);
 		MarginsSizeY += child->TopMargin + child->BottomMargin;
 		MaxWidth = max(spaceX, MaxWidth);
 		MaxHeight = max(spaceY, MaxHeight);
 	}
 
 	DBG_LAYOUT(">>> do layout: max_w(%d) max_h(%d) frac_w(%g) frac_h(%g)", MaxWidth, MaxHeight, TotalFracWidth, TotalFracHeight);
+
+	// The code below for bHorizontalLayout and bVerticalLayout are almost identical, with difference that
+	// in first place it use width and in second place - height (sometimes vice versa). So, when adding something
+	// in one place we should consider adding similar code to another place.
 
 	if (bHorizontalLayout)
 	{
@@ -480,8 +485,8 @@ void UIGroup::ComputeLayout()
 		else
 		{
 			// Perform horizontal layout
-			int groupWidth = Rect.Width - groupBorderWidth;
-			int groupHeight = Rect.Height - groupBorderHeight - MarginsSizeX;
+			int groupWidth = Rect.Width - groupBorderWidth - MarginsSizeX;
+			int groupHeight = Rect.Height - groupBorderHeight;
 			int SizeOfComputedControls = groupWidth - TotalWidth;
 			float FracScale = (TotalFracWidth > 0) ? SizeOfComputedControls / TotalFracWidth : 0;
 
@@ -490,7 +495,7 @@ void UIGroup::ComputeLayout()
 			int y = Rect.Y + groupBorderTop;
 			for (UIElement* child = FirstChild; child; child = child->NextChild)
 			{
-				// x += child->LeftMargin;
+				x += (child == FirstChild) ? 0 : child->LeftMargin;
 
 				int y0 = child->Rect.Y;
 				int w = child->Rect.Width;
@@ -526,7 +531,7 @@ void UIGroup::ComputeLayout()
 					static_cast<UIGroup*>(child)->ComputeLayout();
 				}
 
-				x += w; // + child->RightMargin;
+				x += w + ((child->NextChild) ? child->RightMargin : 0);
 			}
 		}
 	}

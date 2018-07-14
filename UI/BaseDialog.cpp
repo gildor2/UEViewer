@@ -16,7 +16,7 @@
 
 #include "BaseDialog.h"
 
-//#define NEW_LAYOUT_CODE		1
+#define NEW_LAYOUT_CODE		1
 
 /* Useful links:
 
@@ -80,6 +80,8 @@ UIElement::UIElement()
 ,	MinHeight(0)
 ,	TopMargin(0)
 ,	BottomMargin(0)
+,	LeftMargin(0)
+,	RightMargin(0)
 ,	IsGroup(false)
 ,	IsRadioButton(false)
 ,	Enabled(true)
@@ -623,7 +625,7 @@ UIProgressBar::UIProgressBar()
 	Layout.Height = DEFAULT_PROGRESS_BAR_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_PROGRESS_BAR_HEIGHT;
-	TopMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN; //? review: may be remove
 }
 
 void UIProgressBar::SetValue(float value)
@@ -655,8 +657,10 @@ UIButton::UIButton(const char* text)
 :	Label(text)
 {
 	Layout.Height = DEFAULT_BUTTON_HEIGHT;
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 UIButton& UIButton::SetOK()
@@ -741,8 +745,10 @@ UIMenuButton::UIMenuButton(const char* text)
 :	Label(text)
 {
 	Layout.Height = DEFAULT_BUTTON_HEIGHT;
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 void UIMenuButton::UpdateSize(UIBaseDialog* dialog)
@@ -815,6 +821,8 @@ UICheckbox::UICheckbox(const char* text, bool value, bool autoSize)
 ,	AutoSize(autoSize)
 {
 	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 UICheckbox::UICheckbox(const char* text, bool* value, bool autoSize)
@@ -824,6 +832,8 @@ UICheckbox::UICheckbox(const char* text, bool* value, bool autoSize)
 ,	AutoSize(autoSize)
 {
 	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 void UICheckbox::UpdateSize(UIBaseDialog* dialog)
@@ -896,6 +906,8 @@ UIRadioButton::UIRadioButton(const char* text, bool autoSize)
 {
 	IsRadioButton = true;
 	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 UIRadioButton::UIRadioButton(const char* text, int value, bool autoSize)
@@ -906,6 +918,8 @@ UIRadioButton::UIRadioButton(const char* text, int value, bool autoSize)
 {
 	IsRadioButton = true;
 	Layout.Height = DEFAULT_CHECKBOX_HEIGHT;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 void UIRadioButton::UpdateSize(UIBaseDialog* dialog)
@@ -1101,8 +1115,10 @@ UICombobox::UICombobox()
 	Layout.Height = DEFAULT_COMBOBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_COMBOBOX_HEIGHT;
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 UICombobox& UICombobox::AddItem(const char* item)
@@ -1201,8 +1217,10 @@ UIListbox::UIListbox()
 	Layout.Height = DEFAULT_LISTBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_LISTBOX_HEIGHT;
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 }
 
 UIListbox& UIListbox::ReserveItems(int count)
@@ -1334,8 +1352,10 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 	Layout.Height = DEFAULT_LISTBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_LISTBOX_HEIGHT * 2;
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
 	Items.AddZeroed(numColumns);	// reserve place for header
@@ -1931,8 +1951,10 @@ UITreeView::UITreeView()
 	Layout.Height = DEFAULT_TREEVIEW_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
 	MinHeight = DEFAULT_TREEVIEW_HEIGHT;
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 
 	HashTable = new TreeViewItem*[TREE_HASH_SIZE]; // will be initialized in RemoveAllItems()
 	// create a root item
@@ -2292,8 +2314,10 @@ UIGroup::UIGroup(const char* label, unsigned flags)
 ,	RadioValue(0)
 ,	pRadioValue(&RadioValue)
 {
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 	IsGroup = true;
 }
 
@@ -2303,8 +2327,10 @@ UIGroup::UIGroup(unsigned flags)
 ,	RadioValue(0)
 ,	pRadioValue(&RadioValue)
 {
-	TopMargin = VERTICAL_SPACING;
-	BottomMargin = VERTICAL_SPACING;
+	TopMargin = DEFAULT_MARGIN;
+	BottomMargin = DEFAULT_MARGIN;
+	LeftMargin = DEFAULT_MARGIN;
+	RightMargin = DEFAULT_MARGIN;
 	IsGroup = true;
 }
 
