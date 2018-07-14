@@ -77,7 +77,7 @@ public:
 	}
 	int FindItem(const T& item, int startIndex = 0) const
 	{
-		for (int i = startIndex; i < items.size(); i++)
+		for (int i = startIndex, lastIndex = (int)items.size(); i < lastIndex; i++)
 		{
 			if (items[i] == item)
 			{
@@ -135,6 +135,7 @@ public:
 	FString& operator=(const FString& src)
 	{
 		str = src.str;
+		return *this;
 	}
 	FString& operator=(FString&& src)
 	{

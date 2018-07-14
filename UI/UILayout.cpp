@@ -487,7 +487,7 @@ void UIGroup::ComputeLayout()
 			}
 
 			FracScale *= TotalFracWidth;
-			Rect.Width = TotalWidth + /* MarginsSize +*/ FracScale + groupBorderWidth;
+			Rect.Width = TotalWidth + /* MarginsSize +*/ int(FracScale) + groupBorderWidth;
 			DBG_LAYOUT(">>> computed width: %d", Rect.Width);
 		}
 		else
@@ -510,12 +510,12 @@ void UIGroup::ComputeLayout()
 
 				if (w < 0)
 				{
-					w = DecodeWidth(w) * FracScale;
+					w = int(DecodeWidth(w) * FracScale);
 				}
 
 				if (h < 0)
 				{
-					h = DecodeWidth(h) * groupHeight;
+					h = int(DecodeWidth(h) * groupHeight);
 				}
 
 				child->Rect.X = x;
@@ -565,7 +565,7 @@ void UIGroup::ComputeLayout()
 			}
 
 			FracScale *= TotalFracHeight;
-			Rect.Height = TotalHeight + MarginsSize + FracScale + groupBorderHeight;
+			Rect.Height = TotalHeight + MarginsSize + int(FracScale) + groupBorderHeight;
 			DBG_LAYOUT(">>> computed height: %d", Rect.Height);
 		}
 		else
@@ -588,12 +588,12 @@ void UIGroup::ComputeLayout()
 
 				if (w < 0)
 				{
-					w = DecodeWidth(w) * groupWidth;
+					w = int(DecodeWidth(w) * groupWidth);
 				}
 
 				if (h < 0)
 				{
-					h = DecodeWidth(h) * FracScale;
+					h = int(DecodeWidth(h) * FracScale);
 				}
 
 				child->Rect.X = x;
