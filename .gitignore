@@ -26,3 +26,7 @@ umodel.pdb
 Tools/**/*.exe
 Tools/**/*.pdb
 Docs/ObjectVersion.h
+
+# UI_Dev
+Tools/UITest/vs/Debug/
+Tools/UITest/vs/Release/
