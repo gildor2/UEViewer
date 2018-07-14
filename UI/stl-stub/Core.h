@@ -40,6 +40,13 @@
 #define unguard
 #define unguardf(...)
 
+#if defined(_WIN32) && defined(_DEBUG)
+
+extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent();
+extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA(const char* lpOutputString);
+
+#endif // _WIN32 && _DEBUG
+
 
 static void appPrintf(const char* Format, ...)
 {
@@ -51,7 +58,7 @@ static void appPrintf(const char* Format, ...)
 	va_end(argptr);
 
 	printf("%s", buffer);
-#ifdef OutputDebugString
+#ifdef _DEBUG
 	if (IsDebuggerPresent())
 		OutputDebugStringA(buffer);
 #endif
@@ -66,7 +73,7 @@ static void appError(const char* Format, ...)
 	va_end(argptr);
 
 	appPrintf("%s", buffer);
-#ifdef OutputDebugString
+#ifdef _DEBUG
 	if (IsDebuggerPresent())
 		__debugbreak();
 #endif

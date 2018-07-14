@@ -376,14 +376,31 @@ void UIGroup::ComputeLayout()
 				// We should compute size of the child group
 				static_cast<UIGroup*>(child)->ComputeLayout();
 
+				// We're restoring w and h variables, so update min/max values here
 				MaxWidth = max(child->Rect.Width, MaxWidth);
 				MaxHeight = max(child->Rect.Height, MaxHeight);
 
+				// Store computed width and height as group's MinWidth/MinHeight
 				child->MinWidth = child->Rect.Width;
 				child->MinHeight = child->Rect.Height;
 
-				child->Rect.Width = w;
-				child->Rect.Height = h;
+				// Restore child->Rect values
+				if (!bFitWidth)
+				{
+					child->Rect.Width = w;
+				}
+				else
+				{
+					w = child->Rect.Width;
+				}
+				if (!bFitHeight)
+				{
+					child->Rect.Height = h;
+				}
+				else
+				{
+					h = child->Rect.Height;
+				}
 
 			#if 0
 				w = child->Rect.Width;

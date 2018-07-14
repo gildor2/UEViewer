@@ -2481,10 +2481,73 @@ void UIGroup::UpdateSize(UIBaseDialog* dialog)
 	// allow UIGroup-based classes to add own controls
 	AddCustomControls();
 
+	// Call UpdateSize() for all child controls
 	for (UIElement* control = FirstChild; control; control = control->NextChild)
 	{
 		control->UpdateSize(dialog);
 	}
+
+#if NEW_LAYOUT_CODE
+	// Estimate relative sizes for controls which has auto-size (width or height set to -1).
+	float TotalFracSize = 0.0f;
+	int NumAutoSizeControls = 0;
+	int EncodedAutoWidth = 0;
+	for (int pass = 0; pass < 2; pass++)
+	{
+		for (UIElement* control = FirstChild; control; control = control->NextChild)
+		{
+			// Get relevant size of control
+			int Size = 0;
+			if (Flags & GROUP_HORIZONTAL_LAYOUT)
+			{
+				Size = control->Layout.Width;
+			}
+			else
+			{
+				Size = control->Layout.Height;
+			}
+			// UIGroup has special meaning of -1 size, so skip such controls
+			if (Size == -1 && control->IsGroup)
+			{
+				continue;
+			}
+			if (Size == -1)
+			{
+				// Auto-size control
+				if (pass == 0)
+				{
+					NumAutoSizeControls++;
+				}
+				else
+				{
+					// Store computed size back to control
+					if (Flags & GROUP_HORIZONTAL_LAYOUT)
+					{
+						control->Layout.Width = EncodedAutoWidth;
+					}
+					else
+					{
+						control->Layout.Height = EncodedAutoWidth;
+					}
+				}
+			}
+			else if (Size < 0)
+			{
+				// Control with fraction width
+				TotalFracSize += DecodeWidth(Size);
+			}
+		}
+		if (pass == 0)
+		{
+			// Compute automatic size at pass 0
+			if (NumAutoSizeControls == 0 || TotalFracSize >= 1.0f)
+			{
+				break;
+			}
+			EncodedAutoWidth = EncodeWidth((1.0f - TotalFracSize) / NumAutoSizeControls);
+		}
+	}
+#endif // NEW_LAYOUT_CODE
 }
 
 void UIGroup::InitializeRadioGroup()
