@@ -57,7 +57,6 @@ class UIElement
 	friend class UIGroup;
 	friend class UIPageControl;
 	friend struct UILayoutHelper;
-	friend struct UILayoutHelper2; //? TEMP
 public:
 	UIElement();
 	virtual ~UIElement();
@@ -960,6 +959,7 @@ FORCEINLINE UIMenuItem& NewMenuRadioButton(const char* label, int value)
 
 class UIGroup : public UIElement
 {
+	friend class UIPageControl;
 	DECLARE_UI_CLASS(UIGroup, UIElement);
 	DECLARE_CALLBACK(RadioCallback, int);
 public:
@@ -1014,7 +1014,7 @@ protected:
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout(UILayoutHelper* layout) override;
-	void ComputeLayout();
+	virtual void ComputeLayout();
 
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	virtual void DialogClosed(bool cancel) override;
@@ -1081,6 +1081,7 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout(UILayoutHelper* layout) override;
+	virtual void ComputeLayout() override;
 };
 
 

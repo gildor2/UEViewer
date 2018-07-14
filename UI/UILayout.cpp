@@ -364,14 +364,7 @@ void UIGroup::ComputeLayout()
 
 		if (child->IsGroup)
 		{
-			//? todo: possibly useless vars
-			bool bComputeWidth = (Rect.Width < 0 && w < 0);
-			bool bComputeHeight = (Rect.Height < 0 && h < 0);
-			bool bFitWidth = (bHorizontalLayout && w == -1);
-			bool bFitHeight = (bVerticalLayout && h == -1);
-
 			if (w < 0 || h < 0)
-//			if (bComputeWidth || bComputeHeight || w == -1 || h == -1)
 			{
 				// We should compute size of the child group
 				static_cast<UIGroup*>(child)->ComputeLayout();
@@ -385,6 +378,9 @@ void UIGroup::ComputeLayout()
 				child->MinHeight = child->Rect.Height;
 
 				// Restore child->Rect values
+				bool bFitWidth = (bHorizontalLayout && w == -1);
+				bool bFitHeight = (bVerticalLayout && h == -1);
+
 				if (!bFitWidth)
 				{
 					child->Rect.Width = w;
@@ -401,51 +397,6 @@ void UIGroup::ComputeLayout()
 				{
 					h = child->Rect.Height;
 				}
-
-			#if 0
-				w = child->Rect.Width;
-				h = child->Rect.Height;
-			#endif
-
-			#if 0
-				if (w == -1 && bHorizontalLayout)
-				{
-					w = child->Rect.Width;
-				}
-				else
-				{
-					child->MinWidth = child->Rect.Width;
-					child->Rect.Width = w;
-				}
-				if (h == -1 && bVerticalLayout)
-				{
-					h = child->Rect.Height;
-				}
-				else
-				{
-					child->MinHeight = child->Rect.Height;
-					child->Rect.Height = h;
-				}
-			#endif
-
-			#if 0
-				if (bComputeWidth)
-				{
-					w = child->Rect.Width;
-				}
-				else
-				{
-					child->Rect.Width = w;
-				}
-				if (bComputeHeight)
-				{
-					h = child->Rect.Height;
-				}
-				else
-				{
-					child->Rect.Height = h;
-				}
-			#endif
 			}
 		}
 
@@ -630,6 +581,84 @@ void UIGroup::ComputeLayout()
 
 				y += h + child->BottomMargin;
 			}
+		}
+	}
+
+#if DEBUG_LAYOUT
+	DBG_LAYOUT(">>> END: Rect: x(%d) y(%d) w(%d) h(%d)", Rect.X, Rect.Y, Rect.Width, Rect.Height);
+	DebugLayoutDepth--;
+	DBG_LAYOUT("}");
+#endif
+
+	unguard;
+}
+
+void UIPageControl::ComputeLayout()
+{
+	guard(UIPageControl::ComputeLayout);
+
+#if DEBUG_LAYOUT
+	DBG_LAYOUT("%s \"%s\" %s",
+		ClassName(),
+		(Flags & GROUP_NO_BORDER) ? "(no border)" : *Label,
+		(Flags & GROUP_HORIZONTAL_LAYOUT) ? "[horz]" : "[vert]"
+	);
+	DBG_LAYOUT("{");
+	DebugLayoutDepth++;
+	DBG_LAYOUT("this.Layout: x(%g) y(%g) w(%g) h(%g) - Rect: x(%g) y(%g) w(%g) h(%g)",
+		RECT_ARG(Layout), RECT_ARG(Rect));
+#endif
+
+	int MaxWidth = 0, MaxHeight = 0;
+
+	DBG_LAYOUT(">>> prepare pages");
+	for (UIElement* child = FirstChild; child; child = child->NextChild)
+	{
+		child->Rect = child->Layout;
+
+		int w = child->Rect.Width;
+		int h = child->Rect.Height;
+
+		if (child->IsGroup)
+		{
+			if (w < 0 || h < 0)
+			{
+				// We should compute size of the child group
+				static_cast<UIGroup*>(child)->ComputeLayout();
+
+				// Store computed width and height as group's MinWidth/MinHeight
+				w = child->MinWidth = child->Rect.Width;
+				h = child->MinHeight = child->Rect.Height;
+			}
+		}
+
+		MaxWidth = max(w, MaxWidth);
+		MaxHeight = max(h, MaxHeight);
+	}
+
+	DBG_LAYOUT(">>> do page layout: max_w(%d) max_h(%d)", MaxWidth, MaxHeight);
+
+	if (Rect.Width < 0)
+	{
+		Rect.Width = MaxWidth;
+	}
+	if (Rect.Height < 0)
+	{
+		Rect.Height = MaxHeight;
+	}
+
+	for (UIElement* child = FirstChild; child; child = child->NextChild)
+	{
+		child->Rect = Rect;
+
+		DBG_LAYOUT("... %s(\"%s\") Layout(%g %g %g %g) -> Rect(%g %g %g %g)",
+			child->ClassName(), GetDebugLabel(child),
+			RECT_ARG(child->Layout), RECT_ARG(child->Rect));
+
+		// Perform layout for child page (group)
+		if (child->IsGroup)
+		{
+			static_cast<UIGroup*>(child)->ComputeLayout();
 		}
 	}
 
