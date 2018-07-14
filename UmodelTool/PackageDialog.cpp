@@ -275,7 +275,7 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 {
 	ModalResult = CANCEL;
 
-	ShowModal("Choose a package to open", 500, 200);
+	ShowModal("Choose a package to open", 500, 350);
 
 	if (ModalResult != CANCEL)
 	{
@@ -316,11 +316,11 @@ void UIPackageDialog::InitUI()
 		]
 		+ NewControl(UIPageControl)
 			.Expose(FlatViewPager)
-			.SetHeight(500)
+			.SetHeight(EncodeWidth(1.0f))
 		[
 			// page 0: TreeView + ListBox
 			NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
-			.SetHeight(500)
+			.SetHeight(EncodeWidth(1.0f))
 			[
 				NewControl(UITreeView)
 					.SetRootLabel("Game")

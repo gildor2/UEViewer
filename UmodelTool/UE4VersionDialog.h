@@ -11,7 +11,7 @@ public:
 		VersionMin = verMin;
 		VersionMax = verMax;
 
-		if (!ShowModal("Unreal engine 4 version", 250, 200))
+		if (!ShowModal("Unreal engine 4 version", 240, -1))
 			return -1;
 
 		int selection = SelectVersionCombo->GetSelectionIndex();
@@ -23,6 +23,7 @@ public:
 		(*this)
 		[
 			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+			.SetWidth(EncodeWidth(1.0f))
 			[
 				NewControl(UIBitmap)
 				.SetWidth(48)
@@ -30,6 +31,7 @@ public:
 				.SetResourceIcon(UIBitmap::BI_Question)
 				+ NewControl(UISpacer, 8)
 				+NewControl(UIGroup, GROUP_NO_BORDER)
+				.SetWidth(EncodeWidth(1.0f))
 				[
 					NewControl(UILabel, "UModel has found an unversioned UE4 package. In order to")
 					+NewControl(UILabel, "work correctly please specify which Unreal engine 4 version")

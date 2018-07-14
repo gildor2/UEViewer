@@ -10,7 +10,7 @@ public:
 	static void Show()
 	{
 		UIAboutDialog dialog;
-		dialog.ShowModal("About UModel", 300, 200);
+		dialog.ShowModal("About UModel", 300, -1);
 	}
 
 	//!! - Add these lines:
@@ -21,6 +21,7 @@ public:
 		[
 			// top part
 			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+			.SetWidth(EncodeWidth(1.0f))
 			[
 				// icon
 				NewControl(UIBitmap)
@@ -30,6 +31,7 @@ public:
 				+ NewControl(UISpacer, 8)
 				// and text
 				+ NewControl(UIGroup, GROUP_NO_BORDER)
+				.SetWidth(EncodeWidth(1.0f))
 				[
 					NewControl(UISpacer, 8)
 					+ NewControl(UILabel, "UE Viewer (UModel)")
@@ -45,7 +47,7 @@ public:
 			+ NewControl(UISpacer, 8)
 			+ NewControl(UIHyperLink, "Visit our website", GUmodelHomepage)
 			+ NewControl(UISpacer)
-			+ NewControl(UIHyperLink, "and support the developers", "http://www.gildor.org/en/donate")
+			+ NewControl(UIHyperLink, "Donate", "http://www.gildor.org/en/donate")
 			+ NewControl(UISpacer)
 			// close button
 			+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)

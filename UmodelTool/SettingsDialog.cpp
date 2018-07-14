@@ -11,7 +11,7 @@ UISettingsDialog::UISettingsDialog(CUmodelSettings& settings)
 
 bool UISettingsDialog::Show()
 {
-	if (!ShowModal("Options", 360, 200))
+	if (!ShowModal("Options", 360, -1))
 		return false;
 
 	*OptRef = Opt;
@@ -32,9 +32,11 @@ void UISettingsDialog::InitUI()
 	(*this)
 	[
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+		.SetWidth(EncodeWidth(1.0f))
 		[
 /*			NewControl(UIGroup, "Display")
 			+*/ NewControl(UIGroup, "Export")
+			.SetWidth(EncodeWidth(1.0f))
 			[
 				MakeExportOptions()
 			]
