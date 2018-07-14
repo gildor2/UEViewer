@@ -49,7 +49,6 @@ public:
 					.SetReadOnly()
 					.SetWantFocus(false)
 				]
-				+ NewControl(UISpacer)
 				+ NewControl(UIGroup, GROUP_NO_BORDER)
 				.SetWidth(80)
 				[

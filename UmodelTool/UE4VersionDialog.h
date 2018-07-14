@@ -50,7 +50,6 @@ public:
 						.SetOK()
 						.Enable(false)
 						.Expose(OkButton)
-						+NewControl(UISpacer)
 						+NewControl(UIButton, "Cancel")
 						.SetWidth(80)
 						.SetCancel()

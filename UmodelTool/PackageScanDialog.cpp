@@ -41,7 +41,6 @@ public:
 				+ NewControl(UIButton, "Copy")
 				.SetWidth(80)
 				.SetCallback(BIND_MEMBER(&UIPackageScanDialog::CopyToClipboard, this))
-				+ NewControl(UISpacer)
 				+ NewControl(UIButton, "Close")
 				.SetWidth(80)
 				.SetOK()

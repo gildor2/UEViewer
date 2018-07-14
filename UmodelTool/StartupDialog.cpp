@@ -12,7 +12,7 @@ UIStartupDialog::UIStartupDialog(CStartupSettings& settings)
 
 bool UIStartupDialog::Show()
 {
-	if (!ShowModal("Umodel Startup Options", 360, 200))
+	if (!ShowModal("Umodel Startup Options", -1, -1))
 		return false;
 
 	// process some options
@@ -50,7 +50,6 @@ void UIStartupDialog::InitUI()
 			.Expose(OverrideEngineCombo)
 			.SetCallback(BIND_MEMBER(&UIStartupDialog::FillGameList, this))
 			.SetWidth(EncodeWidth(0.4f))
-			+ NewControl(UISpacer)
 			+ NewControl(UICombobox)
 			.Expose(OverrideGameCombo)
 		]
@@ -85,6 +84,7 @@ void UIStartupDialog::InitUI()
 	.SetParent(this)
 	[
 		NewControl(UIGroup, GROUP_NO_BORDER)
+		.SetWidth(EncodeWidth(0.5f))
 		[
 			NewControl(UILabel, "Common classes:")
 			+ NewControl(UICheckbox, "Skeletal mesh", &Opt.UseSkeletalMesh)
@@ -94,6 +94,7 @@ void UIStartupDialog::InitUI()
 			+ NewControl(UICheckbox, "Lightmaps",     &Opt.UseLightmapTexture)
 		]
 		+ NewControl(UIGroup, GROUP_NO_BORDER)
+		.SetWidth(EncodeWidth(0.5f))
 		[
 			NewControl(UILabel, "Export-only classes:")
 			+ NewControl(UICheckbox, "Sound",     &Opt.UseSound)
@@ -107,7 +108,6 @@ void UIStartupDialog::InitUI()
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
 			NewControl(UIGroup, "Package compression", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
-			.SetWidth(EncodeWidth(0.35f))
 			.SetRadioVariable(&Opt.PackageCompression)
 			[
 				NewControl(UIRadioButton, "Auto", 0)
@@ -115,7 +115,6 @@ void UIStartupDialog::InitUI()
 				+ NewControl(UIRadioButton, "zlib", COMPRESS_ZLIB)
 				+ NewControl(UIRadioButton, "LZX", COMPRESS_LZX)
 			]
-			+ NewControl(UISpacer)
 			+ NewControl(UIGroup, "Platform", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
 			.SetRadioVariable(&Opt.Platform)
 			[
@@ -138,7 +137,6 @@ void UIStartupDialog::InitUI()
 		+ NewControl(UIButton, "OK")
 		.SetWidth(EncodeWidth(0.2f))
 		.SetOK()
-		+ NewControl(UISpacer)
 		+ NewControl(UIButton, "Cancel")
 		.SetWidth(EncodeWidth(0.2f))
 		.SetCancel()
