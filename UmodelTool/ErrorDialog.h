@@ -6,7 +6,7 @@ class UIErrorDialog : public UIBaseDialog
 public:
 	void Show()
 	{
-		ShowModal("Fatal Error", 350, -1);
+		ShowModal("Fatal Error", 475, -1);
 	}
 
 	void InitUI()

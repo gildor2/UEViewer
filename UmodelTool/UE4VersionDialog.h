@@ -11,7 +11,7 @@ public:
 		VersionMin = verMin;
 		VersionMax = verMax;
 
-		if (!ShowModal("Unreal engine 4 version", 240, -1))
+		if (!ShowModal("Unreal engine 4 version", -1, -1))
 			return -1;
 
 		int selection = SelectVersionCombo->GetSelectionIndex();
@@ -33,9 +33,9 @@ public:
 				+NewControl(UIGroup, GROUP_NO_BORDER)
 				.SetWidth(EncodeWidth(1.0f))
 				[
-					NewControl(UILabel, "UModel has found an unversioned UE4 package. In order to")
-					+NewControl(UILabel, "work correctly please specify which Unreal engine 4 version")
-					+NewControl(UILabel, "is used for this game.")
+					NewControl(UILabel, "UModel has found an unversioned UE4 package. In order to").SetAutoSize()
+					+NewControl(UILabel, "work correctly please specify which Unreal engine 4 version").SetAutoSize()
+					+NewControl(UILabel, "is used for this game.").SetAutoSize()
 					+NewControl(UISpacer)
 					+NewControl(UICombobox)
 					.SetCallback(BIND_MEMBER(&UIUE4VersionDialog::EngineSelected, this))

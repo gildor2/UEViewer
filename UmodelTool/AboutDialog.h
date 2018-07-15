@@ -10,7 +10,7 @@ public:
 	static void Show()
 	{
 		UIAboutDialog dialog;
-		dialog.ShowModal("About UModel", 300, -1);
+		dialog.ShowModal("About UModel", 450, -1);
 	}
 
 	//!! - Add these lines:

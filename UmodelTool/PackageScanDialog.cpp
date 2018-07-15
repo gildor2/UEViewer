@@ -18,7 +18,7 @@ public:
 		progress.CloseDialog();
 
 		if (done)
-			ShowModal("Package version report", 350, 200);
+			ShowModal("Package version report", 475, 370);
 	}
 
 	virtual void InitUI()

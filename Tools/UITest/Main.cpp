@@ -10,9 +10,8 @@ public:
 		value2 = true;
 		value3 = 0;
 		tabIndex = 0;
-//		ShowModal("UI Test", 350, 200);
-		ShowModal("UI Test", 0, 0);
-//		ShowModal("UI Test", 450, 300);
+//		ShowModal("UI Test", 0, 0);
+		ShowModal("UI Test", 470, 350);
 		printf("v1=%d v2=%d v3=%d\n", value1, value2, value3);
 		printf("Text: [%s]\n", *text);
 	}
@@ -163,7 +162,7 @@ public:
 					.AddColumn("Column 2", 50)
 					.AddColumn("Column 3")
 					.AllowMultiselect()
-					.SetWidth(500)
+//					.SetWidth(500)
 					+ NewControl(UIGroup, GROUP_NO_BORDER)
 					.SetWidth(100)
 					[

@@ -12,7 +12,7 @@
 void UIProgressDialog::Show(const char* title)
 {
 	CloseOnEsc();
-	ShowDialog(title, 250, -1);
+	ShowDialog(title, 375, -1);
 	BeginModal();
 
 	lastTick = 0;

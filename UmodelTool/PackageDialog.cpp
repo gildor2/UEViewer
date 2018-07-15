@@ -275,7 +275,7 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 {
 	ModalResult = CANCEL;
 
-	ShowModal("Choose a package to open", 500, 350);
+	ShowModal("Choose a package to open", 750, 550);
 
 	if (ModalResult != CANCEL)
 	{

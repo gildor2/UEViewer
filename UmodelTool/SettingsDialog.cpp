@@ -11,7 +11,7 @@ UISettingsDialog::UISettingsDialog(CUmodelSettings& settings)
 
 bool UISettingsDialog::Show()
 {
-	if (!ShowModal("Options", 360, -1))
+	if (!ShowModal("Options", 480, -1))
 		return false;
 
 	*OptRef = Opt;
