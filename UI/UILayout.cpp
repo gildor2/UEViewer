@@ -424,6 +424,15 @@ void UIPageControl::ComputeLayout()
 			}
 		}
 
+		if (w < 0)
+		{
+			w = child->MinWidth;
+		}
+		if (h < 0)
+		{
+			h = child->MinHeight;
+		}
+
 		MaxWidth = max(w, MaxWidth);
 		MaxHeight = max(h, MaxHeight);
 	}

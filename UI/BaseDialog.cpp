@@ -1257,7 +1257,7 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 {
 	Layout.Height = DEFAULT_LISTBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
-	MinHeight = DEFAULT_LISTBOX_HEIGHT * 2;
+	MinHeight = MIN_CONTROL_WIDTH;
 	TopMargin = DEFAULT_MARGIN;
 	BottomMargin = DEFAULT_MARGIN;
 	LeftMargin = DEFAULT_MARGIN;
@@ -1849,7 +1849,7 @@ UITreeView::UITreeView()
 {
 	Layout.Height = DEFAULT_TREEVIEW_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
-	MinHeight = DEFAULT_TREEVIEW_HEIGHT;
+	MinHeight = MIN_CONTROL_WIDTH;
 	TopMargin = DEFAULT_MARGIN;
 	BottomMargin = DEFAULT_MARGIN;
 	LeftMargin = DEFAULT_MARGIN;
