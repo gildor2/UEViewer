@@ -1134,6 +1134,12 @@ public:
 		return *this;
 	}
 
+	FORCEINLINE UIBaseDialog& SetResizeable()
+	{
+		bResizeable = true;
+		return *this;
+	}
+
 	void SetWindowSize(int width, int height);
 
 	// Pumping a message loop, return 'false' when dialog was closed.
@@ -1162,6 +1168,7 @@ protected:
 	int			IconResId;
 	bool		ShouldCloseOnEsc;
 	bool		ShouldHideOnClose;
+	bool		bResizeable;
 	UIBaseDialog* ParentDialog;
 	bool		IsDialogConstructed;	// true after InitUI() call
 	HWND		DisabledOwnerWnd;		// non-null value when we're showing modal dialog with custom message loop
@@ -1176,6 +1183,8 @@ protected:
 	// dialog procedure
 	static INT_PTR CALLBACK StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	INT_PTR WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+	void WindowsSizeChanged();
 
 	virtual void InitUI()
 	{}

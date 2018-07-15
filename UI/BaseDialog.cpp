@@ -282,7 +282,7 @@ void UIElement::UpdateLayout()
 {
 	if (Wnd)
 	{
-		MoveWindow(Wnd, Rect.X, Rect.Y, Rect.Width, Rect.Height, TRUE);
+		MoveWindow(Wnd, Rect.X, Rect.Y, Rect.Width, Rect.Height, FALSE);
 	}
 }
 
@@ -2596,7 +2596,7 @@ void UICheckboxGroup::UpdateLayout()
 
 	int checkboxOffset = (Flags & GROUP_NO_BORDER) ? 0 : GROUP_INDENT;
 
-	MoveWindow(CheckboxWnd, Rect.X + checkboxOffset, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT, TRUE);
+	MoveWindow(CheckboxWnd, Rect.X + checkboxOffset, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT, FALSE);
 }
 
 
@@ -2660,6 +2660,7 @@ UIBaseDialog::UIBaseDialog()
 ,	NextDialogId(FIRST_DIALOG_ID)
 ,	ShouldCloseOnEsc(false)
 ,	ShouldHideOnClose(false)
+,	bResizeable(false)
 ,	ParentDialog(NULL)
 ,	IconResId(0)
 ,	IsDialogConstructed(false)
@@ -2687,7 +2688,7 @@ void UIBaseDialog::SetGlobalIconResId(int iconResId)
 	GGlobalIconResId = iconResId;
 }
 
-static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize)
+static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* title, const wchar_t* fontName, int fontSize, bool resizeable)
 {
 	// This code uses volatile structure DLGTEMPLATEEX. It's described in MSDN, but
 	// cannot be represented as a structure. We're building DLGTEMPLATEEX here.
@@ -2731,6 +2732,11 @@ static DLGTEMPLATE* MakeDialogTemplate(int width, int height, const wchar_t* tit
 	dlg1->cx = width;
 	dlg1->cy = height;
 
+	if (resizeable)
+	{
+		dlg1->style |= WS_THICKFRAME;
+	}
+
 	int titleLen = (int)wcslen(title);
 	assert(titleLen < MAX_TITLE_LEN);
 	wcscpy(dlg1->title, title);
@@ -2766,7 +2772,7 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 	wchar_t wTitle[MAX_TITLE_LEN];
 	mbstowcs(wTitle, title, MAX_TITLE_LEN);
 	// use fixed constants for window size, will be changed after creation anyway
-	DLGTEMPLATE* tmpl = MakeDialogTemplate(100, 50, wTitle, L"MS Shell Dlg", 8);
+	DLGTEMPLATE* tmpl = MakeDialogTemplate(100, 50, wTitle, L"MS Shell Dlg", 8, bResizeable);
 
 	HWND ParentWindow = GMainWindow;
 	if (GCurrentDialog) ParentWindow = GCurrentDialog->GetWnd();
@@ -2997,7 +3003,11 @@ void UIBaseDialog::SetWindowSize(int width, int height)
 	if (!Wnd) return;
 
 	SetWindowPos(Wnd, NULL, 0, 0, width, height, SWP_NOMOVE);
+	WindowsSizeChanged();
+}
 
+void UIBaseDialog::WindowsSizeChanged()
+{
 	RECT r;
 	GetClientRect(Wnd, &r);
 	int clientWidth = r.right - r.left;
@@ -3013,6 +3023,7 @@ void UIBaseDialog::SetWindowSize(int width, int height)
 	ComputeLayout();
 
 	UpdateLayout();
+	Repaint();
 }
 
 static void (*GUIExceptionHandler)() = NULL;
@@ -3088,7 +3099,6 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		// create controls (UIElement objects, not windows)
 		IsDialogConstructed = false;
 		InitUI();
-		IsDialogConstructed = true;
 
 		// prepare layout variables
 
@@ -3098,23 +3108,53 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		Layout.Y = VERTICAL_SPACING;
 		if (Layout.Width > 0)
 		{
-			Layout.Width -= DEFAULT_HORZ_BORDER * 2;
+			Layout.Width -= DEFAULT_HORZ_BORDER*2;
 		}
 		if (Layout.Height > 0)
 		{
 			Layout.Height -= VERTICAL_SPACING;
 		}
 
-		Rect = Layout;
 
 		UpdateSize(this);
+
+		Rect = Layout;
+
+		// compute window's minimal size
+		if (bResizeable)
+		{
+			// perform ComputeLayout() call with zero Rect.Width and Rect.Height to compute
+			// minimal window size
+			Rect.Width = Rect.Height = 0;
+			ComputeLayout();
+			MinWidth = Rect.Width + DEFAULT_HORZ_BORDER*2;
+			MinHeight = Rect.Height + VERTICAL_SPACING;
+		}
+
 		if (Layout.Width <= 0 || Layout.Height <= 0)
 		{
-			ComputeLayout();
+			// one of dimensions unknown
+			if (!(Layout.Width <= 0 && Layout.Height <= 0 && bResizeable))
+			{
+				// we've already computed case with both dimensions unknown when bResizeable is true,
+				// so call ComputeLayout() only for other cases
+				Rect = Layout;
+				ComputeLayout();
+			}
 		}
+		else
+		{
+			if (bResizeable)
+			{
+				// for bResizeable case, we should restore Rect as it contains minimal size now
+				Rect = Layout;
+			}
+		}
+
+		// perform layout of controls, here we should have valid Rect.Width and Rect.Height.
 		ComputeLayout();
 
-		// create all controls
+		// create all controls (OS level)
 		CreateGroupControls(this);
 
 		if (Menu)
@@ -3127,7 +3167,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		RECT r;
 		r.left   = 0;
 		r.top    = 0;
-		r.right  = Rect.Width + DEFAULT_HORZ_BORDER * 2;
+		r.right  = Rect.Width + DEFAULT_HORZ_BORDER*2;
 		r.bottom = Rect.Y + Rect.Height;
 
 		// position window at center of screen
@@ -3137,6 +3177,9 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		// adjust size to take window borders into account, and set window's position
 		AdjustWindowRect(&r, GetWindowLong(Wnd, GWL_STYLE), (Menu != NULL) ? TRUE : FALSE);
 		SetWindowPos(hWnd, NULL, newX, newY, r.right - r.left, r.bottom - r.top, 0);
+
+		// put IsDialogConstructed as the very last operation here
+		IsDialogConstructed = true;
 
 		return TRUE;
 	}
@@ -3149,6 +3192,30 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	if (msg == WM_DESTROY)
 		return TRUE;
+
+	// resize window handler
+	if (msg == WM_SIZE && bResizeable && IsDialogConstructed)
+	{
+		WindowsSizeChanged();
+		return TRUE;
+	}
+
+	// query minimal window size
+	if (msg == WM_GETMINMAXINFO && bResizeable && IsDialogConstructed)
+	{
+		RECT r;
+		r.left = 0;
+		r.top = 0;
+		r.right = MinWidth;
+		r.bottom = MinHeight;
+		AdjustWindowRect(&r, GetWindowLong(Wnd, GWL_STYLE), (Menu != NULL) ? TRUE : FALSE);
+
+		MINMAXINFO* info = (MINMAXINFO*)lParam;
+		info->ptMinTrackSize.x = r.right - r.left;
+		info->ptMinTrackSize.y = r.bottom - r.top;
+
+		return TRUE;
+	}
 
 	int cmd = -1;
 	int id = 0;
