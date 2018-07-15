@@ -2467,6 +2467,12 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 {
 	guard(UIGroup::CreateGroupControls);
 
+	if (!(Flags & GROUP_NO_BORDER))
+	{
+		// create a group window (border)
+		Wnd = Window(WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0, dialog);
+	}
+
 	// call 'Create' for all children
 	bool isRadioGroup = false;
 	int controlIndex = 0;
@@ -2479,12 +2485,6 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 		if (control->IsRadioButton) isRadioGroup = true;
 	}
 	if (isRadioGroup) InitializeRadioGroup();
-
-	if (!(Flags & GROUP_NO_BORDER))
-	{
-		// create a group window (border)
-		Wnd = Window(WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0, dialog);
-	}
 
 	unguardf("%s", *Label);
 }
@@ -2861,7 +2861,11 @@ bool UIBaseDialog::ShowDialog(bool modal, const char* title, int width, int heig
 	// convert title to unicode
 	wchar_t wTitle[MAX_TITLE_LEN];
 	mbstowcs(wTitle, title, MAX_TITLE_LEN);
+#if !NEW_LAYOUT_CODE
 	DLGTEMPLATE* tmpl = MakeDialogTemplate(width, height, wTitle, L"MS Shell Dlg", 8);
+#else
+	DLGTEMPLATE* tmpl = MakeDialogTemplate(100, 50, wTitle, L"MS Shell Dlg", 8);
+#endif
 
 	HWND ParentWindow = GMainWindow;
 	if (GCurrentDialog) ParentWindow = GCurrentDialog->GetWnd();
@@ -3154,23 +3158,32 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (icon)
 			SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(icon)));
 
+		// prepare layout variables
+
+#if !NEW_LAYOUT_CODE
 		// compute client area width
 		RECT r;
 		GetClientRect(Wnd, &r);
 		int clientWidth = r.right - r.left;
 		int clientHeight = r.bottom - r.top;
 
-		// prepare layout variables
-#if !NEW_LAYOUT_CODE
 		Layout.X = DEFAULT_HORZ_BORDER;
 		Layout.Y = 0;
 		Layout.Width = clientWidth - DEFAULT_HORZ_BORDER * 2;
 		Layout.Height = 0;
 #else
+		// adjust layout taking into account margins, so "client rect" of the window
+		// will match original Layout.Width and Layout.Height
 		Layout.X = DEFAULT_HORZ_BORDER;
 		Layout.Y = VERTICAL_SPACING;
-		Layout.Width = clientWidth;
-		Layout.Height = clientHeight;
+		if (Layout.Width > 0)
+		{
+			Layout.Width -= DEFAULT_HORZ_BORDER * 2;
+		}
+		if (Layout.Height > 0)
+		{
+			Layout.Height -= VERTICAL_SPACING;
+		}
 #endif
 		Rect = Layout;
 
@@ -3201,6 +3214,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 
 		// adjust window size taking into account desired client size and center window on screen
+		RECT r;
 		r.left   = 0;
 		r.top    = 0;
 #if !NEW_LAYOUT_CODE
