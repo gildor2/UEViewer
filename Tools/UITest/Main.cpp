@@ -109,7 +109,7 @@ public:
 							NewControl(UIButton, "Button 1")
 							+ NewControl(UIButton, "Button 2")
 						]
-						+ NewControl(UIGroup, "Group 2")
+						+ NewControl(UICheckboxGroup, "Group 2", true)
 						.SetWidth(EncodeWidth(1.0f))
 						.SetRadioVariable(&value3)
 						[
@@ -139,6 +139,7 @@ public:
 			[
 				NewControl(UIRadioButton, "page 1")
 				+ NewControl(UIRadioButton, "page 2")
+				+ NewControl(UIRadioButton, "page 3")
 			]
 			+ NewControl(UIPageControl)
 			.SetHeight(EncodeWidth(1.0f))
@@ -175,6 +176,18 @@ public:
 						+ NewControl(UIButton, "HAHAHA")
 						.SetHeight(50)
 					]
+				]
+				// page 3
+				+ NewControl(UIGroup, GROUP_NO_BORDER)
+				[
+					NewControl(UILabel, "Set window size:")
+					+ NewControl(UISpacer)
+					+ NewControl(UIButton, "450 x 400")
+					.SetCallback(BIND_LAMBDA([this]() { SetWindowSize(450, 400); } ))
+					+ NewControl(UIButton, "700 x 600")
+					.SetCallback(BIND_LAMBDA([this]() { SetWindowSize(700, 600); } ))
+					+ NewControl(UIButton, "1000 x 800")
+					.SetCallback(BIND_LAMBDA([this]() { SetWindowSize(1000, 800); } ))
 				]
 			]
 		];

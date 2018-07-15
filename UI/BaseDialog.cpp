@@ -279,6 +279,14 @@ HWND UIElement::Window(const wchar_t* className, const wchar_t* text, DWORD styl
 	return wnd;
 }
 
+void UIElement::UpdateLayout()
+{
+	if (Wnd)
+	{
+		MoveWindow(Wnd, Rect.X, Rect.Y, Rect.Width, Rect.Height, TRUE);
+	}
+}
+
 void UIElement::Repaint()
 {
 	InvalidateRect(Wnd, NULL, TRUE);
@@ -2576,6 +2584,20 @@ void UIGroup::UpdateSize(UIBaseDialog* dialog)
 #endif // NEW_LAYOUT_CODE
 }
 
+void UIGroup::UpdateLayout()
+{
+	if (Parent != NULL)
+	{
+		// Do not call UpdateLayout for dialog
+		Super::UpdateLayout();
+	}
+
+	for (UIElement* control = FirstChild; control; control = control->NextChild)
+	{
+		control->UpdateLayout();
+	}
+}
+
 void UIGroup::InitializeRadioGroup()
 {
 	guard(UIGroup::InitializeRadioGroup);
@@ -2680,6 +2702,19 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 		}
 	}
 	return Super::HandleCommand(id, cmd, lParam);
+}
+
+void UICheckboxGroup::UpdateLayout()
+{
+	Super::UpdateLayout();
+
+	//TODO: this is a copy-paste of part of Create() method
+	int checkboxWidth;
+	MeasureTextSize(*Label, &checkboxWidth);
+
+	int checkboxOffset = (Flags & GROUP_NO_BORDER) ? 0 : GROUP_INDENT;
+
+	MoveWindow(CheckboxWnd, Rect.X + checkboxOffset, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT, TRUE);
 }
 
 
@@ -3091,6 +3126,29 @@ void UIBaseDialog::CloseDialog(bool cancel)
 	}
 }
 
+void UIBaseDialog::SetWindowSize(int width, int height)
+{
+	if (!Wnd) return;
+
+	SetWindowPos(Wnd, NULL, 0, 0, width, height, SWP_NOMOVE);
+
+	RECT r;
+	GetClientRect(Wnd, &r);
+	int clientWidth = r.right - r.left;
+	int clientHeight = r.bottom - r.top;
+
+	Layout.X = DEFAULT_HORZ_BORDER;
+	Layout.Y = VERTICAL_SPACING;
+	Layout.Width = clientWidth - DEFAULT_HORZ_BORDER*2;
+	Layout.Height = clientHeight - VERTICAL_SPACING;
+
+	Rect = Layout;
+
+	ComputeLayout();
+
+	UpdateLayout();
+}
+
 static void (*GUIExceptionHandler)() = NULL;
 
 void UISetExceptionHandler(void (*Handler)())
@@ -3158,6 +3216,14 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (icon)
 			SendMessage(hWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(icon)));
 
+		// release old controls, if dialog is opened for the 2nd time
+		ReleaseControls();
+
+		// create controls (UIElement objects, not windows)
+		IsDialogConstructed = false;
+		InitUI();
+		IsDialogConstructed = true;
+
 		// prepare layout variables
 
 #if !NEW_LAYOUT_CODE
@@ -3187,13 +3253,6 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 		Rect = Layout;
 
-		// release old controls, if dialog is opened 2nd time
-		ReleaseControls();
-		// create controls
-		IsDialogConstructed = false;
-		InitUI();
-		IsDialogConstructed = true;
-
 		UpdateSize(this);
 #if !NEW_LAYOUT_CODE
 		UpdateLayout(NULL); //?? review
@@ -3205,6 +3264,7 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		ComputeLayout();
 #endif
 
+		// create all controls
 		CreateGroupControls(this);
 
 		if (Menu)
@@ -3224,9 +3284,11 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 		r.bottom = Rect.Y + Rect.Height;
 
+		// position window at center of screen
 		int newX = (GetSystemMetrics(SM_CXSCREEN) - (r.right - r.left)) / 2;
 		int newY = (GetSystemMetrics(SM_CYSCREEN) - (r.bottom - r.top)) / 2;
 
+		// adjust size to take window borders into account, and set window's position
 		AdjustWindowRect(&r, GetWindowLong(Wnd, GWL_STYLE), (Menu != NULL) ? TRUE : FALSE);
 		SetWindowPos(hWnd, NULL, newX, newY, r.right - r.left, r.bottom - r.top, 0);
 

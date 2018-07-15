@@ -171,6 +171,7 @@ protected:
 	virtual void UpdateSize(UIBaseDialog* dialog)
 	{}
 	virtual void UpdateLayout(UILayoutHelper* layout) = 0;
+	virtual void UpdateLayout();
 	// Process WM_COMMAND message. 'id' is useless in most cases, useful for
 	// groups only.
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam)
@@ -1024,6 +1025,7 @@ protected:
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout(UILayoutHelper* layout) override;
+	virtual void UpdateLayout() override;
 	virtual void ComputeLayout();
 
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
@@ -1072,6 +1074,7 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
+	virtual void UpdateLayout() override;
 };
 
 
@@ -1151,6 +1154,8 @@ public:
 		IconResId = iconResId;
 		return *this;
 	}
+
+	void SetWindowSize(int width, int height);
 
 	// Pumping a message loop, return 'false' when dialog was closed.
 	// Should call this function for non-modal dialogs.
