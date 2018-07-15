@@ -10,6 +10,8 @@ class UIPackageScanDialog : public UIBaseDialog
 public:
 	void Show()
 	{
+		SetResizeable();
+
 		UIProgressDialog progress;
 		progress.Show("Scanning packages");
 		progress.SetDescription("Scanning package");

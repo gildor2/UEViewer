@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+15.07.2018
+- make package selection and package version report windows resizable
+
 11.07.2018
 - exporting a .props.txt file next to .mat, it contains all material's properties
 

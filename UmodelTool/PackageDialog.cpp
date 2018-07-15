@@ -269,6 +269,7 @@ UIPackageDialog::UIPackageDialog()
 {
 	CloseOnEsc();
 	HideOnClose();
+	SetResizeable();
 }
 
 UIPackageDialog::EResult UIPackageDialog::Show()
