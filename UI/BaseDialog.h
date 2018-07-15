@@ -17,7 +17,6 @@
 // forwards
 class UIMenu;
 class UIBaseDialog;
-struct UILayoutHelper;
 
 
 enum ETextAlign
@@ -64,7 +63,6 @@ class UIElement
 {
 	friend class UIGroup;
 	friend class UIPageControl;
-	friend struct UILayoutHelper;
 public:
 	UIElement();
 	virtual ~UIElement();
@@ -170,7 +168,6 @@ protected:
 	virtual void Create(UIBaseDialog* dialog) = 0;
 	virtual void UpdateSize(UIBaseDialog* dialog)
 	{}
-	virtual void UpdateLayout(UILayoutHelper* layout) = 0;
 	virtual void UpdateLayout();
 	// Process WM_COMMAND message. 'id' is useless in most cases, useful for
 	// groups only.
@@ -277,7 +274,6 @@ public:
 protected:
 	virtual void Create(UIBaseDialog* dialog) override
 	{}
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -290,7 +286,6 @@ public:
 
 protected:
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -302,7 +297,6 @@ public:
 
 protected:
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -333,7 +327,6 @@ protected:
 	bool		IsIcon;
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 
 	void LoadResourceImage(int id, UINT type, UINT fuLoad);
 };
@@ -355,7 +348,6 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -371,7 +363,6 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -388,7 +379,6 @@ protected:
 	float		Value;
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 };
 
 
@@ -407,7 +397,6 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -424,7 +413,6 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -447,7 +435,6 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -475,7 +462,6 @@ protected:
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -521,7 +507,6 @@ protected:
 	bool		TextDirty;
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	// request edited text from UI
 	void UpdateText();
@@ -561,7 +546,6 @@ protected:
 	int			Value;
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -603,7 +587,6 @@ protected:
 	int			Value;
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -682,7 +665,6 @@ protected:
 	void UpdateListViewHeaderSort();
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -737,7 +719,6 @@ protected:
 	FORCEINLINE TreeViewItem* GetRoot() { return Items[0]; }
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	void CreateItem(TreeViewItem& item);
 	TreeViewItem* FindItem(const char* item);
@@ -1024,7 +1005,6 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual void UpdateLayout() override;
 	virtual void ComputeLayout();
 
@@ -1093,7 +1073,6 @@ protected:
 	int			ActivePage;
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual void UpdateLayout(UILayoutHelper* layout) override;
 	virtual void ComputeLayout() override;
 };
 
@@ -1209,59 +1188,6 @@ protected:
 	{
 		return true;
 	}
-};
-
-
-/*-----------------------------------------------------------------------------
-	UILayoutHelper
------------------------------------------------------------------------------*/
-
-struct UILayoutHelper
-{
-public:
-	UILayoutHelper(UIGroup* InGroup, int InFlags);
-
-	FORCEINLINE bool UseAutomaticLayout() const
-	{
-		return (Flags & GROUP_NO_AUTO_LAYOUT) == 0;
-	}
-
-	FORCEINLINE bool UseVerticalLayout() const
-	{
-		return (Flags & GROUP_HORIZONTAL_LAYOUT) == 0;
-	}
-
-	FORCEINLINE bool UseHorizontalLayout() const
-	{
-		return (Flags & GROUP_HORIZONTAL_LAYOUT) != 0;
-	}
-
-	FORCEINLINE void AddControl(UIElement* control)
-	{
-		AllocateSpace(control->Layout, control->Rect);
-	}
-
-	FORCEINLINE void AddVertSpace(int size = -1)
-	{
-		AddVerticalSpace(size);
-	}
-
-	FORCEINLINE void AddHorzSpace(int size = -1)
-	{
-		AddHorizontalSpace(size);
-	}
-
-	int			AutoWidth;	// used with GROUP_HORIZONTAL_LAYOUT, for controls with width set to -1
-	int			CursorX;	// where to place next control in horizontal layout
-	int			CursorY;	// ... for vertical layout
-
-protected:
-	UIRect		ParentRect;
-	int			Flags;
-
-	void AllocateSpace(const UIRect& src, UIRect& dst);
-	void AddVerticalSpace(int size = -1);
-	void AddHorizontalSpace(int size = -1);
 };
 
 
