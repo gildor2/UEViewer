@@ -38,6 +38,11 @@ void FTexture2DMipMap::Serialize4(FArchive &Ar, FTexture2DMipMap& Mip)
 	//?? with reading 4-byte ints at different locations.
 	Mip.Data.Serialize(Ar);
 	Ar << Mip.SizeX << Mip.SizeY;
+	if (Ar.Game >= GAME_UE4(20))
+	{
+		int32 SizeZ;
+		Ar << SizeZ;
+	}
 	if (Ar.ArVer >= VER_UE4_TEXTURE_DERIVED_DATA2 && !cooked)
 	{
 		FString DerivedDataKey;
@@ -144,6 +149,13 @@ void UTexture2D::Serialize4(FArchive& Ar)
 		{
 			int32 SkipOffset;
 			Ar << SkipOffset;
+			if (Ar.Game >= GAME_UE4(20))
+			{
+				int32 SkipOffsetH;
+				Ar << SkipOffsetH;
+				assert(SkipOffsetH == 0);
+			}
+
 			EPixelFormat PixelFormat = (EPixelFormat)NameToEnum("EPixelFormat", PixelFormatEnum);
 
 			if (Format == PF_Unknown)

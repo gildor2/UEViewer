@@ -199,8 +199,11 @@ detex
 
 Changes
 ~~~~~~~
+16.07.2018
+- updated UE4.20 support
+
 15.07.2018
-- make package selection and package version report windows resizable
+- package selection and package version report windows are now resizable
 
 11.07.2018
 - exporting a .props.txt file next to .mat, it contains all material's properties

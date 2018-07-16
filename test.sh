@@ -172,7 +172,7 @@ function paragon()
 function fortnite()
 {
 	CheckDir C:/3-UnrealEngine/Fortnite/FortniteGame/Content/Paks
-	run -game=ue4.19 $*
+	run -game=ue4.20 $*
 }
 function ue3()
 {

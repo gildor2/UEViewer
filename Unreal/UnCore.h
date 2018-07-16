@@ -395,7 +395,7 @@ enum EGame
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		19		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		20		// UE4.XX
 
 enum EPlatform
 {
@@ -1165,7 +1165,18 @@ struct FPackedNormal
 
 	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
 	{
-		return Ar << N.Data;
+		Ar << N.Data;
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4(20))
+		{
+			// UE4.20 no longer has offset, it uses conversion from int16 to float instead of uint16 to float
+			//?? TODO: possible const: FRenderingObjectVersion::IncreaseNormalPrecision
+			//?? TODO: review, may be use new PackedNormal format for UE code, it is compatible with CPackedNormal
+			//?? (will need to change CVT function for it)
+			N.Data ^= 0x80808080;
+		}
+#endif // UNREAL4
+		return Ar;
 	}
 
 	operator FVector() const
@@ -1220,7 +1231,19 @@ struct FPackedRGBA16N
 
 	friend FArchive& operator<<(FArchive &Ar, FPackedRGBA16N &V)
 	{
-		return Ar << V.X << V.Y << V.Z << V.W;
+		Ar << V.X << V.Y << V.Z << V.W;
+		if (Ar.Game >= GAME_UE4(20))
+		{
+			// UE4.20 no longer has offset, it uses conversion from int16 to float instead of uint16 to float
+			//?? TODO: possible const: FRenderingObjectVersion::IncreaseNormalPrecision
+			//?? TODO: review, may be use new PackedNormal format for UE code, it is compatible with CPackedNormal
+			//?? (will need to change CVT function for it)
+			V.X ^= 0x8000;
+			V.Y ^= 0x8000;
+			V.Z ^= 0x8000;
+			V.W ^= 0x8000;
+		}
+		return Ar;
 	}
 };
 
@@ -1341,11 +1364,11 @@ SIMPLE_TYPE(FVector4, float)
 SIMPLE_TYPE(FQuat,    float)
 SIMPLE_TYPE(FCoords,  float)
 SIMPLE_TYPE(FColor,   byte)
-SIMPLE_TYPE(FPackedNormal, uint32)
+//SIMPLE_TYPE(FPackedNormal, uint32) - has complex serialization
 
 #if UNREAL4
 
-SIMPLE_TYPE(FPackedRGBA16N, uint16)
+//SIMPLE_TYPE(FPackedRGBA16N, uint16) - has complex serialization
 SIMPLE_TYPE(FIntPoint,  int)
 SIMPLE_TYPE(FIntVector, int)
 SIMPLE_TYPE(FVector2D,  float)
@@ -2435,6 +2458,7 @@ enum
 	VER_UE4_18 = 514,
 		VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID = 516,
 	VER_UE4_19 = 516,
+	VER_UE4_20 = 516,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2460,6 +2484,7 @@ struct FFrameworkObjectVersion
 		// UE4.17 = 28
 		// UE4.18 = 30
 		// UE4.19 = 33
+		// UE4.20 = 34
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2494,6 +2519,8 @@ struct FFrameworkObjectVersion
 			return (Type)30;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)33;
+		if (Ar.Game < GAME_UE4(21))
+			return (Type)34;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2513,6 +2540,7 @@ struct FEditorObjectVersion
 		// UE4.16 = 17
 		// UE4.17, UE4.18 = 20
 		// UE4.19 = 23
+		// UE4.20 = 24
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2545,6 +2573,8 @@ struct FEditorObjectVersion
 			return (Type)20;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)23;
+		if (Ar.Game < GAME_UE4(21))
+			return (Type)24;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2574,6 +2604,7 @@ struct FSkeletalMeshCustomVersion
 		RemoveDuplicatedClothingSections = 14,
 		DeprecateSectionDisabledFlag = 15,
 		// UE4.19 = 15
+		// UE4.20 = 16
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2603,6 +2634,8 @@ struct FSkeletalMeshCustomVersion
 			return CompactClothVertexBuffer;
 		if (Ar.Game < GAME_UE4(20))
 			return DeprecateSectionDisabledFlag;
+		if (Ar.Game < GAME_UE4(21))
+			return (Type)16;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2619,6 +2652,8 @@ struct FRenderingObjectVersion
 		// UE4.17 = 19
 		// UE4.18 = 20
 		// UE4.19 = 25
+		// UE4.20
+		IncreaseNormalPrecision = 26,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2651,6 +2686,8 @@ struct FRenderingObjectVersion
 			return (Type)20;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)25;
+		if (Ar.Game < GAME_UE4(21))
+			return IncreaseNormalPrecision;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2668,6 +2705,7 @@ struct FAnimPhysObjectVersion
 		// UE4.18 = 12
 		AddLODToCurveMetaData = 12,
 		// UE4.19 = 16
+		// UE4.20 = 17
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
@@ -2688,6 +2726,8 @@ struct FAnimPhysObjectVersion
 			return AddLODToCurveMetaData;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)16;
+		if (Ar.Game < GAME_UE4(21))
+			return (Type)17;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
