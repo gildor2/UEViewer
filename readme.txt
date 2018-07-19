@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+19.07.2018
+- some fixes for UE4 PNG texture loading
+
 16.07.2018
 - updated UE4.20 support
 

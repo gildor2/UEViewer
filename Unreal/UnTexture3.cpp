@@ -989,6 +989,8 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		TexData.Platform = Package->Platform;
 //		printf("Source png texture %dx%d\n", Source.SizeX, Source.SizeY);
 		intFormat = TPF_PNG_BGRA;
+		if (Source.Format == TSF_RGBA16)
+			intFormat = TPF_PNG_RGBA;
 	}
 
 	if (intFormat == TPF_UNKNOWN)

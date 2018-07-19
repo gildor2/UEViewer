@@ -206,6 +206,8 @@ void UTexture2D::Serialize4(FArchive& Ar)
 		SizeX = Source.SizeX;
 		SizeY = Source.SizeY;
 
+		appPrintf("... Loading SourceArt: %s, NumMips=%d, Slices=%d, PNGCompressed=%d\n", FormatName, Source.NumMips, Source.NumSlices, Source.bPNGCompressed);
+
 		if (Source.NumSlices == 1 && Source.bPNGCompressed == false && BytesPerPixel > 0)
 		{
 			// Cubemaps and PNG images are not supported
@@ -234,7 +236,6 @@ void UTexture2D::Serialize4(FArchive& Ar)
 				memcpy(Mip.Data.BulkData, SourceArt.BulkData + MipOffset, MipDataSize);
 				MipOffset += MipDataSize;
 			}
-			appPrintf("  Loading SourceArt: %s, NumMips=%d, Slices=%d, PNGCompressed=%d\n", FormatName, Source.NumMips, Source.NumSlices, Source.bPNGCompressed);
 		}
 		// compresses source art will be loaded in UTexture2D::GetTextureData()
 

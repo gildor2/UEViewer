@@ -41,7 +41,7 @@ static void user_free(png_structp /*png_ptr*/, png_voidp struct_ptr)
 	appFree(struct_ptr);
 }
 
-bool UncompressPNG(const unsigned char* CompressedData, int CompressedSize, int Width, int Height, unsigned char* pic)
+bool UncompressPNG(const unsigned char* CompressedData, int CompressedSize, int Width, int Height, unsigned char* pic, bool bgra)
 {
 	guard(UncompressPNG);
 
@@ -141,8 +141,12 @@ bool UncompressPNG(const unsigned char* CompressedData, int CompressedSize, int 
 	}
 	png_set_rows(png_ptr, info_ptr, row_pointers);
 
-//	int Transform = (InFormat == ERGBFormat::BGRA) ? PNG_TRANSFORM_BGR : PNG_TRANSFORM_IDENTITY;
-	int Transform = PNG_TRANSFORM_BGR;
+	// Use PNG_TRANSFORM_STRIP_16 to convert 16-bit textures to 8-bit
+	int Transform = PNG_TRANSFORM_STRIP_16;
+	if (bgra)
+	{
+		Transform |= PNG_TRANSFORM_BGR;
+	}
 //	if (BitDepth == 16)
 //	{
 //		Transform |= PNG_TRANSFORM_SWAP_ENDIAN;

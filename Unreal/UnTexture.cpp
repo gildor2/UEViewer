@@ -86,6 +86,7 @@ const CPixelFormatInfo PixelFormatInfo[] =
 	{ 0,						12,			12,			16,			0,			0,		0,		"ATC_12x12"	},	// TPF_ASTC_12x12
 #endif
 	{ 0,						1,			1,			0,			0,			0,		0,		"PNG_BGRA"	},	// TPF_PNG_BGRA
+	{ 0,						1,			1,			0,			0,			0,		0,		"PNG_RGBA"	},	// TPF_PNG_RGBA
 };
 
 
@@ -422,8 +423,8 @@ byte *CTextureData::Decompress(int MipLevel)
 		}
 		return dst;
 	case TPF_PNG_BGRA:
-		// bool UncompressPNG(const byte* CompressedData int CompressedSize, int Width, int Height, byte* pic)
-		if (UncompressPNG(Mip.CompressedData, Mip.DataSize, Mip.USize, Mip.VSize, dst))
+	case TPF_PNG_RGBA:
+		if (UncompressPNG(Mip.CompressedData, Mip.DataSize, Mip.USize, Mip.VSize, dst, Format == TPF_PNG_BGRA))
 		{
 			return dst;
 		}

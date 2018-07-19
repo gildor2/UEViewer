@@ -121,6 +121,7 @@ enum ETexturePixelFormat
 	TPF_ASTC_12x12,
 #endif // SUPPORT_ANDROID
 	TPF_PNG_BGRA,		// UE3+ SourceArt format
+	TPF_PNG_RGBA,
 	TPF_MAX
 };
 
