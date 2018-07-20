@@ -423,6 +423,7 @@ struct FTrackToSkeletonMap
 
 	BEGIN_PROP_TABLE
 		PROP_INT(BoneTreeIndex)
+		PROP_DROP(SkeletonIndex)	// this field was deprecated even before 4.0 release, however it appears in some old assets
 	END_PROP_TABLE
 
 	friend FArchive& operator<<(FArchive& Ar, FTrackToSkeletonMap& M)

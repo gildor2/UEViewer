@@ -1197,6 +1197,15 @@ struct FPackedNormal
 		return *this;
 	}
 
+	FPackedNormal &operator=(const FVector4 &V)
+	{
+		Data = int((V.X + 1) * 127.5f)
+			+ (int((V.Y + 1) * 127.5f) << 8)
+			+ (int((V.Z + 1) * 127.5f) << 16)
+			+ (int((V.W + 1) * 127.5f) << 24);
+		return *this;
+	}
+
 	float GetW() const
 	{
 		return (Data >> 24) / 127.5f - 1;
@@ -2591,20 +2600,21 @@ struct FSkeletalMeshCustomVersion
 		RecalcMaxBoneInfluences = 3,
 		SaveNumVertices = 4,
 		// UE4.14 = 5
+		// UE4.15 = 7
 		UseSharedColorBufferFormat = 6,		// separate vertex stream for vertex influences
 		UseSeparateSkinWeightBuffer = 7,	// use FColorVertexStream for both static and skeletal meshes
-		// UE4.15 = 7
-		NewClothingSystemAdded = 8,
 		// UE4.16, UE4.17 = 9
+		NewClothingSystemAdded = 8,
 		// UE4.18 = 10
 		CompactClothVertexBuffer = 10,
+		// UE4.19 = 15
 		RemoveSourceData = 11,
 		SplitModelAndRenderData = 12,
 		RemoveTriangleSorting = 13,
 		RemoveDuplicatedClothingSections = 14,
 		DeprecateSectionDisabledFlag = 15,
-		// UE4.19 = 15
 		// UE4.20 = 16
+		SectionIgnoreByReduceAdded = 16,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2635,7 +2645,7 @@ struct FSkeletalMeshCustomVersion
 		if (Ar.Game < GAME_UE4(20))
 			return DeprecateSectionDisabledFlag;
 		if (Ar.Game < GAME_UE4(21))
-			return (Type)16;
+			return SectionIgnoreByReduceAdded;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2646,13 +2656,14 @@ struct FRenderingObjectVersion
 	enum Type
 	{
 		BeforeCustomVersionWasAdded = 0,
-		// UE4.14
+		// UE4.14 = 4
+		// UE4.15 = 12
 		TextureStreamingMeshUVChannelData = 10,
 		// UE4.16 = 15
 		// UE4.17 = 19
 		// UE4.18 = 20
 		// UE4.19 = 25
-		// UE4.20
+		// UE4.20 = 26
 		IncreaseNormalPrecision = 26,
 
 		VersionPlusOne,
@@ -2765,6 +2776,8 @@ struct FReleaseObjectVersion
 			return (Type)10;
 		if (Ar.Game < GAME_UE4(20))
 			return AddSkeletalMeshSectionDisable;
+		if (Ar.Game < GAME_UE4(21))
+			return (Type)17;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}

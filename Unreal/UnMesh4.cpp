@@ -351,7 +351,20 @@ struct FSkelMeshVertexBase
 	void SerializeForEditor(FArchive& Ar)
 	{
 		Ar << Pos;
-		Ar << Normal[0] << Normal[1] << Normal[2];
+		if (FRenderingObjectVersion::Get(Ar) < FRenderingObjectVersion::IncreaseNormalPrecision)
+		{
+			Ar << Normal[0] << Normal[1] << Normal[2];
+		}
+		else
+		{
+			// New normals are stored with full floating point precision
+			FVector NewNormalX, NewNormalY;
+			FVector4 NewNormalZ;
+			Ar << NewNormalX << NewNormalY << NewNormalZ;
+			Normal[0] = NewNormalX;
+			Normal[1] = NewNormalY;
+			Normal[2] = NewNormalZ;
+		}
 	}
 };
 
@@ -541,6 +554,7 @@ struct FSkelMeshSection4
 	int32					BaseIndex;
 	int32					NumTriangles;
 	bool					bDisabled;				// deprecated in UE4.19
+	int32					GenerateUpToLodIndex;	// added in UE4.20
 	int16					CorrespondClothSectionIndex; // deprecated in UE4.19
 
 	// Data from FSkelMeshChunk, appeared in FSkelMeshSection after UE4.13
@@ -672,6 +686,10 @@ struct FSkelMeshSection4
 			if (FReleaseObjectVersion::Get(Ar) >= FReleaseObjectVersion::AddSkeletalMeshSectionDisable)
 			{
 				Ar << S.bDisabled;
+			}
+			if (FSkeletalMeshCustomVersion::Get(Ar) >= FSkeletalMeshCustomVersion::SectionIgnoreByReduceAdded)
+			{
+				Ar << S.GenerateUpToLodIndex;
 			}
 		}
 
