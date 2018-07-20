@@ -15,6 +15,7 @@
 	"../../../Engine/Private/SkeletalMesh.cpp",		# for older UE4 version (UE4.18 and less)
 	"RenderingObjectVersion.h",
 	"AnimPhysObjectVersion.h",
+	"ReleaseObjectVersion.h",
 );
 
 sub DBG() {0}
@@ -50,10 +51,14 @@ sub ParseVersionFile
 	my $verfionsCpp = $_[0]."/".$_[1];
 	open(IN, $verfionsCpp) || return; #die "can't open file $verfionsCpp\n";
 
-	print("$_[1]\n") if $dump || $latest;
-
+	my $namespace = "";
 	while (getline0())
 	{
+		if ($line =~ /struct\s+\w+/)
+		{
+			(undef, $namespace) = $line =~ /^struct \s+ ([A-Z]+_API\s+)? (\w+)/x;
+			next;
+		}
 		if ($line =~ /^enum\s*\w+/)
 		{
 			last;
@@ -61,6 +66,11 @@ sub ParseVersionFile
 		print("SKIP: $line\n") if DBG;
 	}
 	return if !defined($line) || $line eq "";
+
+	my ($enumName) = $line =~ /enum\s+(\w+)/;
+	my (undef, $shortFileName) = $_[1] =~ /(.*\/)?([\w\.]+)/;
+	my $fullEnumName = ($namespace eq "") ? $enumName : "$namespace\:\:$enumName";
+	print("[$shortFileName : $fullEnumName]\n") if $dump || $latest;
 
 	if ($line !~ ".*\{")
 	{
@@ -103,11 +113,11 @@ sub ParseVersionFile
 
 		if (uc($findConst) eq uc($name))
 		{
-			print("  $findConst = $value ($_[1])\n");
+			print("    $findConst = $value ($_[1])\n");
 		}
 		else
 		{
-			print("  $name = $value\n") if $dump;
+			print("    $name = $value\n") if $dump;
 		}
 
 		$prevName = $name;
