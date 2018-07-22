@@ -5,9 +5,10 @@
 #	Compiler definitions
 #------------------------------------------------------------------------------
 
-CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS
+CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS -D _USING_V110_SDK71_
 LINK = link.exe -nologo -filealign:512 -incremental:no -machine:X86
 AR   = link.exe -lib -nologo
+RC   = rc.exe -dNDEBUG -l 0x409 -D _USING_V110_SDK71_ -d _WIN32 -d WIN32
 
 #------------------------------------------------------------------------------
 #	Directories
@@ -166,18 +167,18 @@ MOBILE_LIBS_FILES = \
 
 umodel.exe : $(OUT) $(OUT_1) $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES)
 	echo Creating executable "umodel.exe" ...
-	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 SDL2.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console
+	$(LINK) -out:"umodel.exe" -libpath:./libs/SDL2/x86 SDL2.lib -debug -pdb:"umodel.pdb" -opt:ref -opt:icf $(MAIN_FILES) $(NV_LIBS_FILES) $(UE3_LIBS_FILES) $(MOBILE_LIBS_FILES) -nodefaultlib:libcmt.lib -nodefaultlib:msvcprt.lib -manifest:no ./../Libs/msvcrt/lib/Win32/msvcrt.lib ./../Libs/msvcrt/lib/Win32/wdk_msvcrt_win2000.obj -subsystem:console,5.01
 
 #------------------------------------------------------------------------------
 #	compiling source files
 #------------------------------------------------------------------------------
 
-OPT_MOBILE_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT
+OPT_MOBILE_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D OLDCRT
 
 $(OUT)/astc_percentile_tables.obj : ./libs/astc/astc_percentile_tables.cpp
 	$(CPP) -MD $(OPT_MOBILE_LIBS) -Fo"$(OUT)/astc_percentile_tables.obj" ./libs/astc/astc_percentile_tables.cpp
 
-OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT -I ./libs/nvtt
+OPT_NV_LIBS = -GS- -GR- -O1 -EHs- -Z7 -D OLDCRT -I ./libs/nvtt
 
 $(OUT)/ColorBlock.obj : ./libs/nvtt/nvimage/ColorBlock.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/ColorBlock.obj" ./libs/nvtt/nvimage/ColorBlock.cpp
@@ -188,7 +189,7 @@ $(OUT)/DirectDrawSurface.obj : ./libs/nvtt/nvimage/DirectDrawSurface.cpp
 $(OUT)/Image.obj : ./libs/nvtt/nvimage/Image.cpp
 	$(CPP) -MD $(OPT_NV_LIBS) -Fo"$(OUT)/Image.obj" ./libs/nvtt/nvimage/Image.cpp
 
-OPT_MAIN = -GS- -GR-  -O1 -EHs- -Z7 -D _USING_V110_SDK71_ -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/rijndael -I ./libs/includewin32 -I UmodelTool -I UI
+OPT_MAIN = -GS- -GR-  -O1 -EHs- -Z7 -D OLDCRT -I . -I ./Core -I ./Unreal -I ./libs/include -I ./libs -I ./libs/nvtt -I ./libs/PowerVR -I ./libs/detex -I ./libs/rijndael -I ./libs/includewin32 -I UmodelTool -I UI
 
 DEPENDS = \
 	Core/Core.h \
@@ -1466,7 +1467,7 @@ DEPENDS = \
 	UmodelTool/res/resource.h
 
 $(OUT_1)/umodel.res : UmodelTool/res/umodel.rc $(DEPENDS)
-	rc.exe -l 0x409 -i UmodelTool/res/  -i . -i ./Core -i ./Unreal -i ./libs/include -i ./libs -i ./libs/nvtt -i ./libs/PowerVR -i ./libs/detex -i ./libs/rijndael -i ./libs/includewin32 -i UmodelTool -i UI  -d _USING_V110_SDK71_ -d OLDCRT -d _WIN32 -d WIN32 -fo"$(OUT_1)/umodel.res" -dNDEBUG UmodelTool/res/umodel.rc
+	$(RC) -i UmodelTool/res/  -i . -i ./Core -i ./Unreal -i ./libs/include -i ./libs -i ./libs/nvtt -i ./libs/PowerVR -i ./libs/detex -i ./libs/rijndael -i ./libs/includewin32 -i UmodelTool -i UI  -d OLDCRT -fo"$(OUT_1)/umodel.res" UmodelTool/res/umodel.rc
 
 DEPENDS = \
 	libs/PowerVR/PVRTDecompress.h \

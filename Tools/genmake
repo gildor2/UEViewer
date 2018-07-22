@@ -65,6 +65,7 @@ global:
 	CPP_EXCEPT	= 1 == undef | 0		0 = disable C++ exceptions
 	MAPFILES	= 1 | 0 == undef
 	PDB			= 1 | 2 | 0 == undef	1 = link-level, 2 = compile-level, 0 = off (VisualC only)
+	WINXP       = 1 | 0 == undef		explicitly support Windows XP platform
 	STDLIBS		= list of used libraries (for "GNU Make" will append "lib" and will search in paths)
 	LIBRARIES   = path(s) to additional library files
 	LIBC		= static | shared == undef
@@ -532,11 +533,28 @@ sub InitCompiler {
 sub EmitCompilerDefs {
 	Splitter ("Compiler definitions");
 	if ($COMPILER eq "VisualC") {
-		print "CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS\n";
-		my $machine = "X86";
-		$machine = "X64" if $PLATFORM eq "win64";
+		# Windows XP support
+		my $winxp = "";
+		if (GetSrcOption("WINXP", 0) > 0) {
+			# Microsoft: https://blogs.msdn.microsoft.com/vcblog/2012/10/08/windows-xp-targeting-with-c-in-visual-studio-2012/
+			# Also: https://tedwvc.wordpress.com/2014/01/01/how-to-target-xp-with-vc2012-or-vc2013-and-continue-to-use-the-windows-8-x-sdk/
+			$winxp = " -D _USING_V110_SDK71_";
+		}
+		# Compiler
+		print "CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS${winxp}\n";
+		# Linker
+		my $machine = ($PLATFORM eq "win64") ? "X64" : "X86";
 		print "LINK = link.exe -nologo -filealign:512 -incremental:no -machine:$machine\n";
+		# Library manager
 		print "AR   = link.exe -lib -nologo\n";		# cannot use "LIB" name
+		# Resource compiler
+		my $defs;
+		if ($PLATFORM eq "win32") {
+			$defs .= " -d _WIN32 -d WIN32";
+		} else {
+			$defs .= " -d _WIN64 -d WIN64";
+		}
+		print "RC   = rc.exe -dNDEBUG -l 0x409${winxp}${defs}\n"
 	} elsif ($COMPILER eq "GnuC") {
 		my $platf = "gcc";
 		# platform override
@@ -851,13 +869,6 @@ sub CollectFileDependencies {
 	my ($path) = $file =~ /^(\S+)\/[\w+\-\.]+$/;
 	$path = "" if !defined($path);
 
-# -- disabled 08.10.2014: process .rc file like it's ordinary C++ file; perhaps later should allow
-# -- "relaxed" includes, if we'll have any problems: should completely ignore includes which genmake can't find
-#	if ($srcType eq "rc") {
-#		$depends{$file} = "";					# do not parse resources and avoid processing later
-#		return 1;
-#	}
-
 	local *DEP;									# NOTE: "local", not "my"
 	open (DEP, $file) || Error ("cannot open file \"$file\"");	# headers should be already checked, but .c/.cpp - may absent
 	while (my $line = <DEP>) {
@@ -1052,13 +1063,8 @@ sub FlushObjectFile {
 			my $defs = "";
 			$inc = " ".GenerateOptions ($includes, "-i ") if $includes ne "";
 			$defs = " ".GenerateOptions ($defines, "-d ") if $defines ne "";
-			if ($PLATFORM eq "win32") {
-				$defs .= " -d _WIN32 -d WIN32";
-			} else {
-				$defs .= " -d _WIN64 -d WIN64";
-			}
 			$srcDir = "." if $srcDir eq "";		# empty $srcDir means current directory
-			$line = "rc.exe -l 0x409 -i ${srcDir}${inc}${defs} -fo\"$objFile\" -dNDEBUG";
+			$line = "\$(RC) -i ${srcDir}${inc}${defs} -fo\"$objFile\"";
 		} else {
 			# C/C++ file
 			my $crt = GetSrcOption ("LIBC");
@@ -1243,6 +1249,11 @@ sub FlushTargetText {
 			$line .= " -subsystem:console";
 		} else {
 			$line .= " -subsystem:windows";
+		}
+		if (GetSrcOption("WINXP", 0) > 0) {
+			# https://blogs.msdn.microsoft.com/vcblog/2012/10/08/windows-xp-targeting-with-c-in-visual-studio-2012/
+			# append OS version to "subsystem" option
+			$line .= ($PLATFORM eq "win64") ? ",5.02" : ",5.01";
 		}
 		if ($target eq "executable") {
 			return $prefix.$line;
