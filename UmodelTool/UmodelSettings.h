@@ -49,13 +49,21 @@ struct CStartupSettings
 	void Reset();
 };
 
+enum class EExportMeshFormat
+{
+	psk,
+	md5,
+	gltf,
+};
+
 struct CExportSettings
 {
 	DECLARE_STRUCT(CExportSettings);
 
 	FString			ExportPath;
 	bool			ExportDdsTexture;
-	bool			ExportMd5Mesh;
+	EExportMeshFormat SkeletalMeshFormat;
+	EExportMeshFormat StaticMeshFormat;
 	bool			ExportMeshLods;
 	bool			SaveUncooked;
 	bool			SaveGroups;
@@ -63,7 +71,8 @@ struct CExportSettings
 	BEGIN_PROP_TABLE
 		PROP_STRING(ExportPath)
 		PROP_BOOL(ExportDdsTexture)
-		PROP_BOOL(ExportMd5Mesh)
+		PROP_INT(SkeletalMeshFormat)
+		PROP_INT(StaticMeshFormat)
 		PROP_BOOL(ExportMeshLods)
 		PROP_BOOL(SaveUncooked)
 		PROP_BOOL(SaveGroups)

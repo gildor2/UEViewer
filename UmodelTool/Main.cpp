@@ -210,116 +210,73 @@ static void RegisterClasses(int game)
 	Exporters
 -----------------------------------------------------------------------------*/
 
-// wrappers
-static void ExportSkeletalMesh2(const USkeletalMesh *Mesh)
+
+static void CallExportSkeletalMesh(const CSkeletalMesh* Mesh)
 {
-	assert(Mesh->ConvertedMesh);
-	if (!GSettings.Export.ExportMd5Mesh)
-		ExportPsk(Mesh->ConvertedMesh);
-	else
-		ExportMd5Mesh(Mesh->ConvertedMesh);
+	assert(Mesh);
+	switch (GSettings.Export.SkeletalMeshFormat)
+	{
+	case EExportMeshFormat::psk:
+	default:
+		ExportPsk(Mesh);
+		break;
+	case EExportMeshFormat::md5:
+		ExportMd5Mesh(Mesh);
+		break;
+	}
 }
 
-#if UNREAL3
-static void ExportSkeletalMesh3(const USkeletalMesh3 *Mesh)
+static void CallExportStaticMesh(const CStaticMesh* Mesh)
 {
-	assert(Mesh->ConvertedMesh);
-	if (!GSettings.Export.ExportMd5Mesh)
-		ExportPsk(Mesh->ConvertedMesh);
-	else
-		ExportMd5Mesh(Mesh->ConvertedMesh);
-}
-#endif // UNREAL3
-
-static void ExportStaticMesh2(const UStaticMesh *Mesh)
-{
-	assert(Mesh->ConvertedMesh);
-	ExportStaticMesh(Mesh->ConvertedMesh);
+	assert(Mesh);
+	switch (GSettings.Export.StaticMeshFormat)
+	{
+	default:
+		ExportStaticMesh(Mesh);
+		break;
+	}
 }
 
-#if UNREAL3
-static void ExportStaticMesh3(const UStaticMesh3 *Mesh)
+static void CallExportAnimation(const CAnimSet* Anim)
 {
-	assert(Mesh->ConvertedMesh);
-	ExportStaticMesh(Mesh->ConvertedMesh);
+	assert(Anim);
+	switch (GSettings.Export.SkeletalMeshFormat)
+	{
+	case EExportMeshFormat::psk:
+	default:
+		ExportPsa(Anim);
+		break;
+	case EExportMeshFormat::md5:
+		ExportMd5Anim(Anim);
+		break;
+	}
 }
-#endif
-
-#if UNREAL4
-static void ExportSkeletalMesh4(const USkeletalMesh4 *Mesh)
-{
-	assert(Mesh->ConvertedMesh);
-	if (!GSettings.Export.ExportMd5Mesh)
-		ExportPsk(Mesh->ConvertedMesh);
-	else
-		ExportMd5Mesh(Mesh->ConvertedMesh);
-}
-
-static void ExportStaticMesh4(const UStaticMesh4 *Mesh)
-{
-	assert(Mesh->ConvertedMesh);
-	ExportStaticMesh(Mesh->ConvertedMesh);
-}
-#endif
-
-static void ExportMeshAnimation(const UMeshAnimation *Anim)
-{
-	assert(Anim->ConvertedAnim);
-	if (!GSettings.Export.ExportMd5Mesh)
-		ExportPsa(Anim->ConvertedAnim);
-	else
-		ExportMd5Anim(Anim->ConvertedAnim);
-}
-
-#if UNREAL3
-static void ExportAnimSet(const UAnimSet *Anim)
-{
-	assert(Anim->ConvertedAnim);
-	if (!GSettings.Export.ExportMd5Mesh)
-		ExportPsa(Anim->ConvertedAnim);
-	else
-		ExportMd5Anim(Anim->ConvertedAnim);
-}
-#endif // UNREAL3
-
-#if UNREAL4
-static void ExportSkeleton(const USkeleton *Skeleton)
-{
-	assert(Skeleton->ConvertedAnim);
-	if (!GSettings.Export.ExportMd5Mesh)
-		ExportPsa(Skeleton->ConvertedAnim);
-	else
-		ExportMd5Anim(Skeleton->ConvertedAnim);
-}
-#endif // UNREAL4
 
 static void RegisterExporters()
 {
-	RegisterExporter("SkeletalMesh",  ExportSkeletalMesh2);
-	RegisterExporter("MeshAnimation", ExportMeshAnimation);
+	RegisterExporter<USkeletalMesh>([](const USkeletalMesh* Mesh) { CallExportSkeletalMesh(Mesh->ConvertedMesh); });
+	RegisterExporter<UMeshAnimation>([](const UMeshAnimation* Anim) { CallExportAnimation(Anim->ConvertedAnim); });
+	RegisterExporter<UVertMesh>(Export3D);
+	RegisterExporter<UStaticMesh>([](const UStaticMesh* Mesh) { CallExportStaticMesh(Mesh->ConvertedMesh); });
+	RegisterExporter<UTexture>([](const UTexture* Tex) { ExportTexture(Tex); });
+	RegisterExporter<USound>(ExportSound);
 #if UNREAL3
-	RegisterExporter("SkeletalMesh3", ExportSkeletalMesh3);
-	RegisterExporter("AnimSet",       ExportAnimSet      );
-#endif
-	RegisterExporter("VertMesh",      Export3D           );
-	RegisterExporter("StaticMesh",    ExportStaticMesh2  );
-	RegisterExporter("Texture",       ExportTexture      );
-	RegisterExporter("Sound",         ExportSound        );
-#if UNREAL3
-	RegisterExporter("StaticMesh3",   ExportStaticMesh3  );
-	RegisterExporter("Texture2D",     ExportTexture      );
-	RegisterExporter("SoundNodeWave", ExportSoundNodeWave);
-	RegisterExporter("SwfMovie",      ExportGfx          );
-	RegisterExporter("FaceFXAnimSet", ExportFaceFXAnimSet);
-	RegisterExporter("FaceFXAsset",   ExportFaceFXAsset  );
+	RegisterExporter<USkeletalMesh3>([](const USkeletalMesh3* Mesh) { CallExportSkeletalMesh(Mesh->ConvertedMesh); });
+	RegisterExporter<UAnimSet>([](const UAnimSet* Anim) { CallExportAnimation(Anim->ConvertedAnim); });
+	RegisterExporter<UStaticMesh3>([](const UStaticMesh3* Mesh) { CallExportStaticMesh(Mesh->ConvertedMesh); });
+	RegisterExporter<UTexture2D>([](const UTexture2D* Tex) { ExportTexture(Tex); });
+	RegisterExporter<USoundNodeWave>(ExportSoundNodeWave);
+	RegisterExporter<USwfMovie>(ExportGfx);
+	RegisterExporter<UFaceFXAnimSet>(ExportFaceFXAnimSet);
+	RegisterExporter<UFaceFXAsset>(ExportFaceFXAsset);
 #endif // UNREAL3
 #if UNREAL4
-	RegisterExporter("SkeletalMesh4", ExportSkeletalMesh4);
-	RegisterExporter("StaticMesh4",   ExportStaticMesh4  );
-	RegisterExporter("Skeleton",      ExportSkeleton     );
-	RegisterExporter("SoundWave",     ExportSoundWave4   );
+	RegisterExporter<USkeletalMesh4>([](const USkeletalMesh4* Mesh) { CallExportSkeletalMesh(Mesh->ConvertedMesh); });
+	RegisterExporter<UStaticMesh4>([](const UStaticMesh4* Mesh) { CallExportStaticMesh(Mesh->ConvertedMesh); });
+	RegisterExporter<USkeleton>([](const USkeleton* Anim) { CallExportAnimation(Anim->ConvertedAnim); });
+	RegisterExporter<USoundWave>(ExportSoundWave4);
 #endif // UNREAL4
-	RegisterExporter("UnrealMaterial", ExportMaterial    );			// register this after Texture/Texture2D exporters
+	RegisterExporter<UUnrealMaterial>(ExportMaterial);			// register this after Texture/Texture2D exporters
 }
 
 
@@ -802,7 +759,6 @@ int main(int argc, char **argv)
 			OPT_BOOL ("uncook",  GSettings.Export.SaveUncooked)
 			OPT_BOOL ("groups",  GSettings.Export.SaveGroups)
 //			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
-			OPT_BOOL ("md5",     GSettings.Export.ExportMd5Mesh)
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
 			// disable classes
@@ -830,7 +786,11 @@ int main(int argc, char **argv)
 		};
 		if (ProcessOption(ARRAY_ARG(options), opt))
 			continue;
-		if (!stricmp(opt, "all") && mainCmd == CMD_Dump)
+		if (!stricmp(opt, "md5"))
+		{
+			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::md5;
+		}
+		else if (!stricmp(opt, "all") && mainCmd == CMD_Dump)
 		{
 			// -all should be used only with -dump
 			bAll = true;

@@ -9,10 +9,69 @@ UISettingsDialog::UISettingsDialog(CUmodelSettings& settings)
 ,	OptRef(&settings)
 {}
 
+//!! TODO: replace functions with arrays
+
+namespace SkelMeshFmt
+{
+	static const char* Names[] = { "ActorX (psk)", "md5mesh", NULL };
+
+	int EnumToIndex(EExportMeshFormat Fmt)
+	{
+		switch (Fmt)
+		{
+		case EExportMeshFormat::psk:
+			return 0;
+		case EExportMeshFormat::md5:
+			return 1;
+		}
+		return -1;
+	}
+
+	EExportMeshFormat IndexToEnum(int Index)
+	{
+		switch (Index)
+		{
+		case 0:
+		default:
+			return EExportMeshFormat::psk;
+		case 1:
+			return EExportMeshFormat::md5;
+		}
+	}
+}
+
+namespace StatMeshFmt
+{
+	static const char* Names[] = { "ActorX (pskx)", NULL };
+
+	int EnumToIndex(EExportMeshFormat Fmt)
+	{
+		switch (Fmt)
+		{
+		case EExportMeshFormat::psk:
+			return 0;
+		}
+		return -1;
+	}
+
+	EExportMeshFormat IndexToEnum(int Index)
+	{
+		switch (Index)
+		{
+		case 0:
+		default:
+			return EExportMeshFormat::psk;
+		}
+	}
+}
+
 bool UISettingsDialog::Show()
 {
 	if (!ShowModal("Options", 480, -1))
 		return false;
+
+	Opt.Export.SkeletalMeshFormat = SkelMeshFmt::IndexToEnum(SkelMeshFormatCombo->GetSelectionIndex());
+	Opt.Export.StaticMeshFormat = StatMeshFmt::IndexToEnum(StatMeshFormatCombo->GetSelectionIndex());
 
 	*OptRef = Opt;
 
@@ -68,7 +127,20 @@ UIElement& UISettingsDialog::MakeExportOptions()
 		]
 		+ NewControl(UIGroup, "Mesh Export")
 		[
-			NewControl(UICheckbox, "Export skeletal mesh and animation to md5mesh/md5anim", &Opt.Export.ExportMd5Mesh)
+			NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+			[
+				NewControl(UILabel, "Skeletal Mesh:").SetY(4).SetAutoSize()
+				+ NewControl(UICombobox)
+					.AddItems(SkelMeshFmt::Names)
+					.SelectItem(SkelMeshFmt::EnumToIndex(Opt.Export.SkeletalMeshFormat))
+					.Expose(SkelMeshFormatCombo)
+				+ NewControl(UISpacer)
+				+ NewControl(UILabel, "Static Mesh:").SetY(4).SetAutoSize()
+				+ NewControl(UICombobox)
+					.AddItems(StatMeshFmt::Names)
+					.SelectItem(SkelMeshFmt::EnumToIndex(Opt.Export.StaticMeshFormat))
+					.Expose(StatMeshFormatCombo)
+			]
 			+ NewControl(UICheckbox, "Export LODs", &Opt.Export.ExportMeshLods)
 		]
 		+ NewControl(UICheckbox, "Export compressed textures to dds format", &Opt.Export.ExportDdsTexture)

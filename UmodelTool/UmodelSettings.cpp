@@ -107,7 +107,8 @@ void CExportSettings::Reset()
 	SetPath(EXPORT_DIRECTORY);
 
 	ExportDdsTexture = false;
-	ExportMd5Mesh = false;
+	SkeletalMeshFormat = EExportMeshFormat::psk;
+	StaticMeshFormat = EExportMeshFormat::psk;
 	ExportMeshLods = false;
 	SaveUncooked = false;
 	SaveGroups = false;

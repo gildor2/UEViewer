@@ -16,6 +16,9 @@ protected:
 	CUmodelSettings*	OptRef;
 	CUmodelSettings		Opt;
 
+	UICombobox*			SkelMeshFormatCombo;
+	UICombobox*			StatMeshFormatCombo;
+
 	virtual void InitUI();
 
 	UIElement& MakeExportOptions();
