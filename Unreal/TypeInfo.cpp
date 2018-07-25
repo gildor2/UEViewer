@@ -569,6 +569,25 @@ static void GetToken(FArchive& Ar, FString& Out)
 	unguard;
 }
 
+static bool SkipProperty(FArchive& Ar)
+{
+	FStaticString<32> Token;
+	GetToken(Ar, Token);
+	if (Token != "=")
+	{
+		return false;
+	}
+
+	GetToken(Ar, Token);
+	if (Token == "{")
+	{
+		// should skip structure block, not supported at the moment
+		return false;
+	}
+
+	return true;
+}
+
 bool CTypeInfo::LoadProps(void *Data, FArchive& Ar) const
 {
 	guard(CTypeInfo::LoadProps);
@@ -597,7 +616,12 @@ bool CTypeInfo::LoadProps(void *Data, FArchive& Ar) const
 		if (!Prop)
 		{
 			appPrintf("LoadProps: unknown property %s\n", *Token);
-			return false;
+			// Try to recover
+			if (!SkipProperty(Ar))
+			{
+				return false;
+			}
+			continue;
 		}
 		byte *value = (byte*)Data + Prop->Offset;
 //		printf("Prop: %s %s\n", Prop->TypeName, Prop->Name); //!!!!
