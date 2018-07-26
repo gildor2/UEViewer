@@ -63,6 +63,8 @@ void ExportStaticMesh(const CStaticMesh *Mesh);
 // MD5Mesh
 void ExportMd5Mesh(const CSkeletalMesh *Mesh);
 void ExportMd5Anim(const CAnimSet *Anim);
+// glTF
+void ExportStaticMeshGLTF(const CStaticMesh* Mesh);
 // 3D
 void Export3D (const UVertMesh *Mesh);
 // TGA

@@ -9,6 +9,11 @@ struct CVec4
 	{
 		__m128		mm;
 		float		v[4];
+		struct
+		{
+			CVec3		xyz;
+			float		w;
+		};
 	};
 
 	// access to data

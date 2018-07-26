@@ -42,7 +42,7 @@ namespace SkelMeshFmt
 
 namespace StatMeshFmt
 {
-	static const char* Names[] = { "ActorX (pskx)", NULL };
+	static const char* Names[] = { "ActorX (pskx)", "glTF 2.0", NULL };
 
 	int EnumToIndex(EExportMeshFormat Fmt)
 	{
@@ -50,6 +50,8 @@ namespace StatMeshFmt
 		{
 		case EExportMeshFormat::psk:
 			return 0;
+		case EExportMeshFormat::gltf:
+			return 1;
 		}
 		return -1;
 	}
@@ -61,6 +63,8 @@ namespace StatMeshFmt
 		case 0:
 		default:
 			return EExportMeshFormat::psk;
+		case 1:
+			return EExportMeshFormat::gltf;
 		}
 	}
 }
