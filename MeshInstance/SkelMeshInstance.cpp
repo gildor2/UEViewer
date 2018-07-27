@@ -1292,7 +1292,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 			glVertex3fv(tmp.v);
 		}
 #if SHOW_TANGENTS
-		glColor3f(0, 0.5f, 1);
+		glColor3f(1, 0, 0.5f);
 		for (i = 0; i < NumVerts; i++)
 		{
 			const CSkinVert& vert = Skinned[i];
@@ -1301,7 +1301,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 			VectorMA(vert.Position, VisualLength, vert.Tangent, tmp);
 			glVertex3fv(tmp.v);
 		}
-		glColor3f(1, 0, 0.5f);
+		glColor3f(0, 0.5f, 1);
 		for (i = 0; i < NumVerts; i++)
 		{
 			const CSkinVert& vert = Skinned[i];

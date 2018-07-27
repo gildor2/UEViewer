@@ -176,7 +176,7 @@ void CStatMeshInstance::Draw(unsigned flags)
 			glVertex3fv(tmp.v);
 		}
 #if SHOW_TANGENTS
-		glColor3f(0, 0.5f, 1);
+		glColor3f(1, 0, 0.5f);
 		for (i = 0; i < NumVerts; i++)
 		{
 			const CVec3 &v = Mesh.Verts[i].Position;
@@ -185,7 +185,7 @@ void CStatMeshInstance::Draw(unsigned flags)
 			VectorMA(v, VisualLength, unpacked, tmp);
 			glVertex3fv(tmp.v);
 		}
-		glColor3f(1, 0, 0.5f);
+		glColor3f(0, 0.5f, 1);
 		for (i = 0; i < NumVerts; i++)
 		{
 			const CMeshVertex& vert = Mesh.Verts[i];
