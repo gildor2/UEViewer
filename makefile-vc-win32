@@ -31,6 +31,7 @@ MAIN : umodel.exe
 MAIN_FILES = \
 	$(OUT_1)/Export3D.obj \
 	$(OUT_1)/Exporters.obj \
+	$(OUT_1)/ExportGLTF.obj \
 	$(OUT_1)/ExportMaterial.obj \
 	$(OUT_1)/ExportMd5.obj \
 	$(OUT_1)/ExportPsk.obj \
@@ -537,6 +538,28 @@ DEPENDS = \
 
 $(OUT_1)/ExportPsk.obj : Exporters/ExportPsk.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportPsk.obj" Exporters/ExportPsk.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/MathSSE.h \
+	Core/Win32Types.h \
+	Exporters/Exporters.h \
+	UmodelTool/Build.h \
+	UmodelTool/Version.h \
+	Unreal/GameDefines.h \
+	Unreal/MeshCommon.h \
+	Unreal/SkeletalMesh.h \
+	Unreal/StaticMesh.h \
+	Unreal/TypeInfo.h \
+	Unreal/UnCore.h \
+	Unreal/UnMaterial.h \
+	Unreal/UnObject.h
+
+$(OUT_1)/ExportGLTF.obj : Exporters/ExportGLTF.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/ExportGLTF.obj" Exporters/ExportGLTF.cpp
 
 DEPENDS = \
 	Core/Core.h \

@@ -213,7 +213,6 @@ static void ExportSection(const CStaticMeshLod& Lod, int SectonIndex, FArchive& 
 		Exchange((*pNormal)[1], (*pNormal)[2]);
 		Exchange((*pTangent)[1], (*pTangent)[2]);
 		pPos->Scale(0.01f);
-//		(*pTangent)[3] = -1; //??
 		pPos++;
 		pNormal++;
 		pTangent++;

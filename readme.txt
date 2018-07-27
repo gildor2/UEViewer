@@ -199,6 +199,10 @@ detex
 
 Changes
 ~~~~~~~
+27.07.2018
+- added option for exporting static meshes to glTF 2.0 format; activated in options window or with "-gltf"
+  command line option
+
 20.07.2018
 - final UE4.20 support
 
