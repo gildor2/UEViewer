@@ -142,7 +142,7 @@ UIElement& UISettingsDialog::MakeExportOptions()
 				+ NewControl(UILabel, "Static Mesh:").SetY(4).SetAutoSize()
 				+ NewControl(UICombobox)
 					.AddItems(StatMeshFmt::Names)
-					.SelectItem(SkelMeshFmt::EnumToIndex(Opt.Export.StaticMeshFormat))
+					.SelectItem(StatMeshFmt::EnumToIndex(Opt.Export.StaticMeshFormat))
 					.Expose(StatMeshFormatCombo)
 			]
 			+ NewControl(UICheckbox, "Export LODs", &Opt.Export.ExportMeshLods)
