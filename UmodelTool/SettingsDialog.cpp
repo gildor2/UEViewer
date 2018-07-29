@@ -9,73 +9,10 @@ UISettingsDialog::UISettingsDialog(CUmodelSettings& settings)
 ,	OptRef(&settings)
 {}
 
-//!! TODO: replace functions with arrays
-
-namespace SkelMeshFmt
-{
-	static const char* Names[] = { "ActorX (psk)", "md5mesh", NULL };
-
-	int EnumToIndex(EExportMeshFormat Fmt)
-	{
-		switch (Fmt)
-		{
-		case EExportMeshFormat::psk:
-			return 0;
-		case EExportMeshFormat::md5:
-			return 1;
-		}
-		return -1;
-	}
-
-	EExportMeshFormat IndexToEnum(int Index)
-	{
-		switch (Index)
-		{
-		case 0:
-		default:
-			return EExportMeshFormat::psk;
-		case 1:
-			return EExportMeshFormat::md5;
-		}
-	}
-}
-
-namespace StatMeshFmt
-{
-	static const char* Names[] = { "ActorX (pskx)", "glTF 2.0", NULL };
-
-	int EnumToIndex(EExportMeshFormat Fmt)
-	{
-		switch (Fmt)
-		{
-		case EExportMeshFormat::psk:
-			return 0;
-		case EExportMeshFormat::gltf:
-			return 1;
-		}
-		return -1;
-	}
-
-	EExportMeshFormat IndexToEnum(int Index)
-	{
-		switch (Index)
-		{
-		case 0:
-		default:
-			return EExportMeshFormat::psk;
-		case 1:
-			return EExportMeshFormat::gltf;
-		}
-	}
-}
-
 bool UISettingsDialog::Show()
 {
 	if (!ShowModal("Options", 480, -1))
 		return false;
-
-	Opt.Export.SkeletalMeshFormat = SkelMeshFmt::IndexToEnum(SkelMeshFormatCombo->GetSelectionIndex());
-	Opt.Export.StaticMeshFormat = StatMeshFmt::IndexToEnum(StatMeshFormatCombo->GetSelectionIndex());
 
 	*OptRef = Opt;
 
@@ -134,16 +71,15 @@ UIElement& UISettingsDialog::MakeExportOptions()
 			NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 			[
 				NewControl(UILabel, "Skeletal Mesh:").SetY(4).SetAutoSize()
-				+ NewControl(UICombobox)
-					.AddItems(SkelMeshFmt::Names)
-					.SelectItem(SkelMeshFmt::EnumToIndex(Opt.Export.SkeletalMeshFormat))
-					.Expose(SkelMeshFormatCombo)
+				+ NewControl(UICombobox, &Opt.Export.SkeletalMeshFormat)
+					.AddItem("ActorX (psk)", EExportMeshFormat::psk)
+					.AddItem("glTF 2.0", EExportMeshFormat::gltf)
+					.AddItem("md5mesh", EExportMeshFormat::md5)
 				+ NewControl(UISpacer)
 				+ NewControl(UILabel, "Static Mesh:").SetY(4).SetAutoSize()
-				+ NewControl(UICombobox)
-					.AddItems(StatMeshFmt::Names)
-					.SelectItem(StatMeshFmt::EnumToIndex(Opt.Export.StaticMeshFormat))
-					.Expose(StatMeshFormatCombo)
+				+ NewControl(UICombobox, &Opt.Export.StaticMeshFormat)
+					.AddItem("ActorX (pskx)", EExportMeshFormat::psk)
+					.AddItem("glTF 2.0", EExportMeshFormat::gltf)
 			]
 			+ NewControl(UICheckbox, "Export LODs", &Opt.Export.ExportMeshLods)
 		]

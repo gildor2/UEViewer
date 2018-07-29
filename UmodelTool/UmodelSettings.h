@@ -49,7 +49,7 @@ struct CStartupSettings
 	void Reset();
 };
 
-enum class EExportMeshFormat
+enum class EExportMeshFormat : int
 {
 	psk,
 	md5,

@@ -19,8 +19,6 @@ protected:
 	UICombobox*			OverrideEngineCombo;
 	UICombobox*			OverrideGameCombo;
 
-	TArray<int>			SelectedGameEnums;
-
 	void FillGameList();
 
 	virtual void InitUI();

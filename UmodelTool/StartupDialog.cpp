@@ -18,11 +18,10 @@ bool UIStartupDialog::Show()
 	// process some options
 
 	// GameOverride
-	Opt.GameOverride = GAME_UNKNOWN;
 	int selectedGame = OverrideGameCombo->GetSelectionIndex();
-	if (OverrideGameGroup->IsChecked() && (selectedGame >= 0))
+	if (!OverrideGameGroup->IsChecked() || (selectedGame < 0))
 	{
-		Opt.GameOverride = SelectedGameEnums[selectedGame];
+		Opt.GameOverride = GAME_UNKNOWN;
 	}
 
 	return true;
@@ -50,7 +49,7 @@ void UIStartupDialog::InitUI()
 			.Expose(OverrideEngineCombo)
 			.SetCallback(BIND_MEMBER(&UIStartupDialog::FillGameList, this))
 			.SetWidth(EncodeWidth(0.4f))
-			+ NewControl(UICombobox)
+			+ NewControl(UICombobox, &Opt.GameOverride)
 			.Expose(OverrideGameCombo)
 		]
 	];
@@ -75,9 +74,6 @@ void UIStartupDialog::InitUI()
 	{
 		OverrideEngineCombo->SelectItem(GetEngineName(Opt.GameOverride));
 		FillGameList();
-		int gameIndex = SelectedGameEnums.FindItem(Opt.GameOverride);
-		if (gameIndex >= 0)
-			OverrideGameCombo->SelectItem(gameIndex);
 	}
 
 	NewControl(UIGroup, "Engine classes to load", GROUP_HORIZONTAL_LAYOUT)
@@ -158,12 +154,12 @@ static int CompareGames(const GameInfo* const* a, const GameInfo* const* b)
 // Fill list of game titles made with selected engine
 void UIStartupDialog::FillGameList()
 {
+	guard(FillGameList);
+
 	OverrideGameCombo->RemoveAllItems();
 	const char* selectedEngine = OverrideEngineCombo->GetSelectionText();
 
-	TArray<const GameInfo*> SelectedGameInfos;
-	SelectedGameInfos.Empty(128);
-	SelectedGameEnums.Empty(128);
+	TStaticArray<const GameInfo*, 256> SelectedGameInfos;
 
 	int numEngineEntries = 0;
 	int i;
@@ -196,18 +192,18 @@ void UIStartupDialog::FillGameList()
 			{
 				char buf[128];
 				appSprintf(ARRAY_ARG(buf), "Unreal engine 4.%d", ue4ver);
-				OverrideGameCombo->AddItem(buf);
-				SelectedGameEnums.Add(GAME_UE4(ue4ver));
+				OverrideGameCombo->AddItem(buf, GAME_UE4(ue4ver));
 			}
 			continue;
 		}
 #endif // UNREAL4
-		OverrideGameCombo->AddItem(SelectedGameInfos[i]->Name);
-		SelectedGameEnums.Add(SelectedGameInfos[i]->Enum);
+		OverrideGameCombo->AddItem(SelectedGameInfos[i]->Name, SelectedGameInfos[i]->Enum);
 	}
 
 	// select engine item
 	OverrideGameCombo->SelectItem(0);
+
+	unguard;
 }
 
 
