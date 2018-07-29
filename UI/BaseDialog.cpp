@@ -1031,6 +1031,8 @@ void UITextEdit::AppendText(const char* text)
 
 UICombobox::UICombobox()
 :	Value(-1)
+,	pValue(&Value)
+,	Selection(-1)
 {
 	Layout.Height = DEFAULT_COMBOBOX_HEIGHT;
 	MinWidth = MIN_CONTROL_WIDTH;
@@ -1041,9 +1043,9 @@ UICombobox::UICombobox()
 	RightMargin = DEFAULT_MARGIN;
 }
 
-UICombobox& UICombobox::AddItem(const char* item)
+UICombobox& UICombobox::AddItem(const char* item, int value)
 {
-	new (Items) FString(item);
+	new (Items) ComboboxItem(item, value);
 	if (Wnd) SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)item);
 	return *this;
 }
@@ -1063,9 +1065,9 @@ void UICombobox::RemoveAllItems()
 
 UICombobox& UICombobox::SelectItem(int index)
 {
-	if (Value == index) return *this;
-	Value = index;
-	if (Wnd) SendMessage(Wnd, CB_SETCURSEL, Value, 0);
+	if (Selection == index) return *this;
+	Selection = index;
+	if (Wnd) SendMessage(Wnd, CB_SETCURSEL, Selection, 0);
 	return *this;
 }
 
@@ -1074,7 +1076,7 @@ UICombobox& UICombobox::SelectItem(const char* item)
 	int index = -1;
 	for (int i = 0; i < Items.Num(); i++)
 	{
-		if (!stricmp(*Items[i], item))
+		if (!stricmp(*Items[i].Text, item))
 		{
 			index = i;
 			break;
@@ -1095,11 +1097,24 @@ void UICombobox::Create(UIBaseDialog* dialog)
 		CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
 		WS_EX_CLIENTEDGE, dialog,
 		Id, -1, -1, -1, DEFAULT_COMBOBOX_LIST_HEIGHT);
-	// add items
+	// add items and find selected item
+	int v = *pValue;
+	if (Selection < 0)
+	{
+		// if all items will have uninitialized value, then we'll assume values 0,1,2...
+		Selection = v;
+	}
 	for (int i = 0; i < Items.Num(); i++)
-		SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)(*Items[i]));
+	{
+		const ComboboxItem& item = Items[i];
+		SendMessage(Wnd, CB_ADDSTRING, 0, (LPARAM)(*item.Text));
+		if (item.Value >= 0 && item.Value == v)
+		{
+			Selection = i;
+		}
+	}
 	// set selection
-	SendMessage(Wnd, CB_SETCURSEL, Value, 0);
+	SendMessage(Wnd, CB_SETCURSEL, Selection, 0);
 	UpdateEnabled();
 }
 
@@ -1108,11 +1123,13 @@ bool UICombobox::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (cmd == CBN_SELCHANGE)
 	{
 		int v = (int)SendMessage(Wnd, CB_GETCURSEL, 0, 0);
-		if (v != Value)
+		if (v != Selection)
 		{
-			Value = v;
+			Selection = v;
+			int m = Items[v].Value;
+			*pValue = m;
 			if (Callback)
-				Callback(this, Value, GetSelectionText());
+				Callback(this, *pValue, GetSelectionText());
 		}
 		return true;
 	}

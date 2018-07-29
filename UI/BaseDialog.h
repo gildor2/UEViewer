@@ -513,15 +513,47 @@ protected:
 };
 
 
-//!! add "int* pValue" like for other controls
 class UICombobox : public UIElement
 {
 	DECLARE_UI_CLASS(UICombobox, UIElement);
 	DECLARE_CALLBACK(Callback, int, const char*);
+
+	struct ComboboxItem
+	{
+		FString Text;
+		int     Value;
+
+		ComboboxItem(const char* text, int value)
+		: Text(text)
+		, Value(value)
+		{}
+	};
+
 public:
 	UICombobox();
 
-	UICombobox& AddItem(const char* item);
+	UICombobox(int* value)
+	: UICombobox()
+	{
+		pValue = value;
+	}
+
+	template<typename T, typename = typename Detail::TEnableIf<__is_enum(T)>::Type>
+	UICombobox(T* value)
+	: UICombobox()
+	{
+		static_assert(sizeof(T) == sizeof(int), "T should be castable to integer");
+		pValue = (int*)value;
+	}
+
+	UICombobox& AddItem(const char* item, int value = -1);
+
+	template<typename T, typename = typename Detail::TEnableIf<__is_enum(T)>::Type>
+	UICombobox& AddItem(const char* item, T value)
+	{
+		AddItem(item, int(value));
+		return *this;
+	}
 	UICombobox& AddItems(const char** items);
 	void RemoveAllItems();
 
@@ -530,20 +562,22 @@ public:
 
 	FORCEINLINE const char* GetItem(int index) const
 	{
-		return *Items[index];
+		return *Items[index].Text;
 	}
 	FORCEINLINE int GetSelectionIndex() const
 	{
-		return Value;
+		return Selection;
 	}
 	FORCEINLINE const char* GetSelectionText() const
 	{
-		return (Value >= 0) ? *Items[Value] : NULL;
+		return (Selection >= 0) ? *Items[Selection].Text : NULL;
 	}
 
 protected:
-	TArray<FString> Items;
+	TArray<ComboboxItem> Items;
+	int			Selection;
 	int			Value;
+	int*		pValue;
 
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
