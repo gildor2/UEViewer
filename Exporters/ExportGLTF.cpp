@@ -66,6 +66,13 @@ struct BufferData
 	int Count;
 	const char* Type;
 
+	// Data for filling buffer
+	byte* FillPtr;
+#if MAX_DEBUG
+	int FillCount;
+	int ItemSize;
+#endif
+
 	BufferData()
 	: Data(NULL)
 	, DataSize(0)
@@ -86,12 +93,33 @@ struct BufferData
 		DataSize = Align(DataSize, 4);
 		// Use aligned alloc for CVec4
 		Data = (byte*) appMalloc(DataSize, 16);
+
+		FillPtr = Data;
+#if MAX_DEBUG
+		FillCount = 0;
+		ItemSize = InItemSize;
+#endif
+	}
+
+	template<typename T>
+	inline void Put(const T& p)
+	{
+#if MAX_DEBUG
+		assert(sizeof(T) == ItemSize);
+		assert(FillCount++ < Count);
+#endif
+		*(T*)FillPtr = p;
+		FillPtr += sizeof(T);
 	}
 };
 
-static void ExportSection(const CStaticMeshLod& Lod, int SectonIndex, FArchive& Ar, TArray<BufferData>& Data)
+#define VERT(n)		*OffsetPointer(Verts, (n) * VertexSize)
+
+static void ExportSection(const CBaseMeshLod& Lod, const CMeshVertex* Verts, bool bIsSkeletal, int SectonIndex, FArchive& Ar, TArray<BufferData>& Data)
 {
 	guard(ExportSection);
+
+	int VertexSize = bIsSkeletal ? sizeof(CSkelMeshVertex) : sizeof(CStaticMeshVertex);
 
 	const CMeshSection& S = Lod.Sections[SectonIndex];
 	bool bLast = (SectonIndex == Lod.Sections.Num()-1);
@@ -149,19 +177,17 @@ static void ExportSection(const CStaticMeshLod& Lod, int SectonIndex, FArchive& 
 	if (numLocalVerts <= 65536)
 	{
 		IndexBuf.Setup(numLocalIndices, "SCALAR", BufferData::UNSIGNED_SHORT, sizeof(uint16));
-		uint16* p = (uint16*) IndexBuf.Data;
 		for (int idx = 0; idx < numLocalIndices; idx++)
 		{
-			*p++ = indexRemap[localIndices[idx]];
+			IndexBuf.Put<uint16>(indexRemap[localIndices[idx]]);
 		}
 	}
 	else
 	{
 		IndexBuf.Setup(numLocalIndices, "SCALAR", BufferData::UNSIGNED_INT, sizeof(uint32));
-		uint32* p = (uint32*) IndexBuf.Data;
 		for (int idx = 0; idx < numLocalIndices; idx++)
 		{
-			*p++ = indexRemap[localIndices[idx]];
+			IndexBuf.Put<uint32>(indexRemap[localIndices[idx]]);
 		}
 	}
 
@@ -179,54 +205,44 @@ static void ExportSection(const CStaticMeshLod& Lod, int SectonIndex, FArchive& 
 	}
 
 	// Build vertices
-	CVec3* pPos = (CVec3*) PositionBuf.Data;
-	CVec3* pNormal = (CVec3*) NormalBuf.Data;
-	CVec4* pTangent = (CVec4*) TangentBuf.Data;
-	CMeshUVFloat* pUV0 = (CMeshUVFloat*) UVBuf[0]->Data;
-
 	for (int i = 0; i < numLocalVerts; i++)
 	{
 		int vertIndex = revIndexMap[i];
-		const CMeshVertex& V = Lod.Verts[vertIndex];
-		*pPos++ = V.Position;
-		*pUV0++ = V.UV;
+		const CMeshVertex& V = VERT(vertIndex);
 
-		CVec4 tmpNormal, tmpTangent;
-		Unpack(tmpNormal, V.Normal);
-		Unpack(tmpTangent, V.Tangent);
+		CVec3 Position = V.Position;
+
+		CVec4 Normal, Tangent;
+		Unpack(Normal, V.Normal);
+		Unpack(Tangent, V.Tangent);
 		// Unreal (and we are) using normal.w for computing binormal. glTF
 		// uses tangent.w for that.
-		tmpTangent.w = tmpNormal.w;
-		*pNormal++ = tmpNormal;
-		*pTangent++ = tmpTangent;
-	}
+		Tangent.w = Normal.w;
 
-	// Fix vertex orientation: glTF has right-handed coordinate system with Y up,
-	// Unreal uses left-handed system with Z up. Also, Unreal uses 'cm' scale,
-	// while glTF 'm'.
-	pPos = (CVec3*) PositionBuf.Data;
-	pNormal = (CVec3*) NormalBuf.Data;
-	pTangent = (CVec4*) TangentBuf.Data;
-	for (int i = 0; i < numLocalVerts; i++)
-	{
-		Exchange((*pPos)[1], (*pPos)[2]);
-		Exchange((*pNormal)[1], (*pNormal)[2]);
-		Exchange((*pTangent)[1], (*pTangent)[2]);
-		pPos->Scale(0.01f);
-		pPos++;
-		pNormal++;
-		pTangent++;
+		// Fix vertex orientation: glTF has right-handed coordinate system with Y up,
+		// Unreal uses left-handed system with Z up. Also, Unreal uses 'cm' scale,
+		// while glTF 'm'.
+		Exchange(Position[1], Position[2]);
+		Position.Scale(0.01f);
+		Exchange(Normal[1], Normal[2]);
+		Exchange(Tangent[1], Tangent[2]);
+
+		// Fill buffers
+		PositionBuf.Put(Position);
+		NormalBuf.Put(Normal.xyz);
+		TangentBuf.Put(Tangent);
+		UVBuf[0]->Put(V.UV);
 	}
 
 	// Secondary UVs
 	for (int uvIndex = 1; uvIndex < Lod.NumTexCoords; uvIndex++)
 	{
-		CMeshUVFloat* pUV = (CMeshUVFloat*) UVBuf[uvIndex]->Data;
+		BufferData* pBuf = UVBuf[uvIndex];
 		const CMeshUVFloat* srcUV = Lod.ExtraUV[uvIndex-1];
 		for (int i = 0; i < numLocalVerts; i++)
 		{
 			int vertIndex = revIndexMap[i];
-			*pUV++ = srcUV[vertIndex];
+			pBuf->Put(srcUV[vertIndex]);
 		}
 	}
 
@@ -259,7 +275,7 @@ static void ExportSection(const CStaticMeshLod& Lod, int SectonIndex, FArchive& 
 	unguard;
 }
 
-static void ExportStaticMeshLod(const char* MeshName, const CStaticMeshLod& Lod, FArchive& Ar, FArchive& Ar2)
+static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const CMeshVertex* Verts, bool bIsSkeletal, FArchive& Ar, FArchive& Ar2)
 {
 	// Opening brace
 	Ar.Printf("{\n");
@@ -308,7 +324,7 @@ static void ExportStaticMeshLod(const char* MeshName, const CStaticMeshLod& Lod,
 	);
 	for (int i = 0; i < Lod.Sections.Num(); i++)
 	{
-		ExportSection(Lod, i, Ar, Data);
+		ExportSection(Lod, Verts, bIsSkeletal, i, Ar, Data);
 	}
 	Ar.Printf(
 		"      ],\n"
@@ -387,11 +403,48 @@ static void ExportStaticMeshLod(const char* MeshName, const CStaticMeshLod& Lod,
 	for (int i = 0; i < Data.Num(); i++)
 	{
 		const BufferData& B = Data[i];
+#if MAX_DEBUG
+		assert(B.FillCount == B.Count);
+#endif
 		Ar2.Serialize(B.Data, B.DataSize);
 	}
 
 	// Closing brace
 	Ar.Printf("}\n");
+}
+
+static void ExportSkeletalMeshLod(const char* MeshName, const CSkelMeshLod& Lod, FArchive& Ar, FArchive& Ar2)
+{
+	ExportMeshLod(MeshName, Lod, Lod.Verts, true, Ar, Ar2);
+}
+
+static void ExportStaticMeshLod(const char* MeshName, const CStaticMeshLod& Lod, FArchive& Ar, FArchive& Ar2)
+{
+	ExportMeshLod(MeshName, Lod, Lod.Verts, false, Ar, Ar2);
+}
+
+void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh)
+{
+	guard(ExportSkeletalMeshGLTF);
+
+	UObject *OriginalMesh = Mesh->OriginalMesh;
+	if (!Mesh->Lods.Num())
+	{
+		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);
+		return;
+	}
+
+	FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", OriginalMesh->Name);
+	if (Ar)
+	{
+		FArchive* Ar2 = CreateExportArchive(OriginalMesh, 0, "%s.bin", OriginalMesh->Name);
+		assert(Ar2);
+		ExportSkeletalMeshLod(OriginalMesh->Name, Mesh->Lods[0], *Ar, *Ar2);
+		delete Ar;
+		delete Ar2;
+	}
+
+	unguard;
 }
 
 void ExportStaticMeshGLTF(const CStaticMesh* Mesh)

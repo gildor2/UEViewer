@@ -220,6 +220,9 @@ static void CallExportSkeletalMesh(const CSkeletalMesh* Mesh)
 	default:
 		ExportPsk(Mesh);
 		break;
+	case EExportMeshFormat::gltf:
+		ExportSkeletalMeshGLTF(Mesh);
+		break;
 	case EExportMeshFormat::md5:
 		ExportMd5Mesh(Mesh);
 		break;
@@ -398,7 +401,7 @@ static void PrintUsage()
 			"                    performance)\n"
 			"\n"
 			"Supported resources for export:\n"
-			"    SkeletalMesh    exported as ActorX psk file or MD5Mesh\n"
+			"    SkeletalMesh    exported as ActorX psk file, MD5Mesh or glTF\n"
 			"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
 			"    VertMesh        exported as Unreal 3d file\n"
 			"    StaticMesh      exported as psk file with no skeleton (pskx) or glTF\n"
@@ -797,7 +800,7 @@ int main(int argc, char **argv)
 		}
 		else if (!stricmp(opt, "gltf"))
 		{
-			GSettings.Export.StaticMeshFormat = EExportMeshFormat::gltf;
+			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::gltf;
 		}
 		else if (!stricmp(opt, "all") && mainCmd == CMD_Dump)
 		{
