@@ -29,7 +29,7 @@ struct CMeshBoneData
 {
 	// static data (computed after mesh loading)
 	int			BoneMap;			// index of bone in animation tracks
-	CCoords		RefCoords;			// coordinates of bone in reference pose (unused!!)
+	CCoords		RefCoords;			// coordinates of bone in reference pose (used only when computing RefCoordsInv)
 	CCoords		RefCoordsInv;		// inverse of RefCoords
 	int			SubtreeSize;		// count of all children bones (0 for leaf bone)
 	// dynamic data

@@ -693,12 +693,10 @@ static void OutlineMaterial(UObject *Obj, int indent)
 
 	Outline(S_RED "%s'%s'", Obj->GetClassName(), Obj->Name);
 
-	bool processed = false;
 #define MAT_BEGIN(ClassName)	\
 	if (Obj->IsA(#ClassName+1)) \
 	{							\
 		guard(ClassName);		\
-		processed = true;		\
 		ClassName *Mat = static_cast<ClassName*>(Obj);
 
 #define MAT_END					\
@@ -799,10 +797,6 @@ static void OutlineMaterial(UObject *Obj, int indent)
 	MAT_END
 #endif // UNREAL3
 
-	if (!processed)
-	{
-		//!! unknown material
-	}
 	FlushProps();
 	textIndent = oldIndent;
 

@@ -19,6 +19,7 @@ UmodelExport/
 UmodelSaved/
 Screenshots/
 notify.log
+umodel.cfg
 
 # Executable files and pdb
 umodel.pdb

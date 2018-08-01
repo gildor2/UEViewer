@@ -1141,7 +1141,8 @@ struct FStaticLODModel4
 		guard(FStaticLODModel4::SerializeRenderItem);
 
 		FStripDataFlags StripFlags(Ar);
-//		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
+
+		//TODO: check 'MinLodStripFlag' (UE4.20)
 
 		Lod.Sections.Serialize2<FSkelMeshSection4::SerializeRenderItem>(Ar);
 #if DEBUG_SKELMESH
@@ -2098,22 +2099,22 @@ void UStaticMesh4::ConvertMesh()
 
 struct FRawMesh
 {
-	TArray<int>			FaceMaterialIndices;
-	TArray<int>			FaceSmoothingMask;
+	TArray<int32>		FaceMaterialIndices;
+	TArray<uint32>		FaceSmoothingMask;
 	TArray<FVector>		VertexPositions;
-	TArray<int>			WedgeIndices;
+	TArray<int32>		WedgeIndices;
 	TArray<FVector>		WedgeTangent;
 	TArray<FVector>		WedgeBinormal;
 	TArray<FVector>		WedgeNormal;
 	TArray<FVector2D>	WedgeTexCoords[MAX_STATIC_UV_SETS_UE4];
 	TArray<FColor>		WedgeColors;
-	TArray<int>			MaterialIndexToImportIndex;
+	TArray<int32>		MaterialIndexToImportIndex;
 
 	void Serialize(FArchive& Ar)
 	{
 		guard(FRawMesh::Serialize);
 
-		int Version, LicenseeVersion;
+		int32 Version, LicenseeVersion;
 		Ar << Version << LicenseeVersion;
 
 		Ar << FaceMaterialIndices;
