@@ -48,6 +48,27 @@ static void ExportMaterial(UUnrealMaterial* Mat, FArchive& Ar, int index, bool b
 	);
 }
 
+// Fix vector orientation: glTF has right-handed coordinate system with Y up,
+// Unreal uses left-handed system with Z up. Also, Unreal uses 'cm' scale,
+// while glTF 'm'.
+
+inline void TransformPosition(CVec3& pos)
+{
+	Exchange(pos[1], pos[2]);
+	pos.Scale(0.01f);
+}
+
+inline void TransformDirection(CVec3& vec)
+{
+	Exchange(vec[1], vec[2]);
+}
+
+inline void TransformRotation(CQuat& q)
+{
+	Exchange(q.y, q.z);		// same logic as for vector
+//??	q.w *= -1;				// changing left-handed to right-handed, so inverse rotation - works correctly without this line
+}
+
 struct BufferData
 {
 	enum
@@ -65,6 +86,7 @@ struct BufferData
 	int ComponentType;
 	int Count;
 	const char* Type;
+	bool bNormalized;
 
 	// Data for filling buffer
 	byte* FillPtr;
@@ -83,10 +105,11 @@ struct BufferData
 		if (Data) appFree(Data);
 	}
 
-	void Setup(int InCount, const char* InType, int InComponentType, int InItemSize)
+	void Setup(int InCount, const char* InType, int InComponentType, int InItemSize, bool InNormalized = false)
 	{
 		Count = InCount;
 		Type = InType;
+		bNormalized = InNormalized;
 		ComponentType = InComponentType;
 		DataSize = InCount * InItemSize;
 		// Align all buffrrs by 4, as requested by glTF format
@@ -113,13 +136,32 @@ struct BufferData
 	}
 };
 
+struct ExportContext
+{
+	const char* MeshName;
+	const CSkeletalMesh* SkelMesh;
+	const CStaticMesh* StatMesh;
+
+	TArray<BufferData> Data;
+
+	ExportContext()
+	{
+		memset(this, 0, sizeof(this));
+	}
+
+	inline bool IsSkeletal() const
+	{
+		return SkelMesh != NULL;
+	}
+};
+
 #define VERT(n)		*OffsetPointer(Verts, (n) * VertexSize)
 
-static void ExportSection(const CBaseMeshLod& Lod, const CMeshVertex* Verts, bool bIsSkeletal, int SectonIndex, FArchive& Ar, TArray<BufferData>& Data)
+static void ExportSection(ExportContext& Context, const CBaseMeshLod& Lod, const CMeshVertex* Verts, int SectonIndex, FArchive& Ar)
 {
 	guard(ExportSection);
 
-	int VertexSize = bIsSkeletal ? sizeof(CSkelMeshVertex) : sizeof(CStaticMeshVertex);
+	int VertexSize = Context.IsSkeletal() ? sizeof(CSkelMeshVertex) : sizeof(CStaticMeshVertex);
 
 	const CMeshSection& S = Lod.Sections[SectonIndex];
 	bool bLast = (SectonIndex == Lod.Sections.Num()-1);
@@ -140,29 +182,48 @@ static void ExportSection(const CBaseMeshLod& Lod, const CMeshVertex* Verts, boo
 	}
 
 	// Prepare buffers
-	int IndexBufIndex = Data.AddZeroed();
-	int PositionBufIndex = Data.AddZeroed();
-	int NormalBufIndex = Data.AddZeroed();
-	int TangentBufIndex = Data.AddZeroed();
+	int IndexBufIndex = Context.Data.AddZeroed();
+	int PositionBufIndex = Context.Data.AddZeroed();
+	int NormalBufIndex = Context.Data.AddZeroed();
+	int TangentBufIndex = Context.Data.AddZeroed();
+
+	int BonesBufIndex = -1;
+	int WeightsBufIndex = -1;
+	if (Context.IsSkeletal())
+	{
+		BonesBufIndex = Context.Data.AddZeroed();
+		WeightsBufIndex = Context.Data.AddZeroed();
+	}
+
 	int UVBufIndex[MAX_MESH_UV_SETS];
 	for (int i = 0; i < Lod.NumTexCoords; i++)
 	{
-		UVBufIndex[i] = Data.AddZeroed();
+		UVBufIndex[i] = Context.Data.AddZeroed();
 	}
 
-	BufferData& IndexBuf = Data[IndexBufIndex];
-	BufferData& PositionBuf = Data[PositionBufIndex];
-	BufferData& NormalBuf = Data[NormalBufIndex];
-	BufferData& TangentBuf = Data[TangentBufIndex];
+	BufferData& IndexBuf = Context.Data[IndexBufIndex];
+	BufferData& PositionBuf = Context.Data[PositionBufIndex];
+	BufferData& NormalBuf = Context.Data[NormalBufIndex];
+	BufferData& TangentBuf = Context.Data[TangentBufIndex];
 	BufferData* UVBuf[MAX_MESH_UV_SETS];
+	BufferData* BonesBuf = NULL;
+	BufferData* WeightsBuf = NULL;
 
 	PositionBuf.Setup(numLocalVerts, "VEC3", BufferData::FLOAT, sizeof(CVec3));
 	NormalBuf.Setup(numLocalVerts, "VEC3", BufferData::FLOAT, sizeof(CVec3));
 	TangentBuf.Setup(numLocalVerts, "VEC4", BufferData::FLOAT, sizeof(CVec4));
 	for (int i = 0; i < Lod.NumTexCoords; i++)
 	{
-		UVBuf[i] = &Data[UVBufIndex[i]];
+		UVBuf[i] = &Context.Data[UVBufIndex[i]];
 		UVBuf[i]->Setup(numLocalVerts, "VEC2", BufferData::FLOAT, sizeof(CMeshUVFloat));
+	}
+
+	if (Context.IsSkeletal())
+	{
+		BonesBuf = &Context.Data[BonesBufIndex];
+		WeightsBuf = &Context.Data[WeightsBufIndex];
+		BonesBuf->Setup(numLocalVerts, "VEC4", BufferData::UNSIGNED_SHORT, sizeof(uint16)*4);
+		WeightsBuf->Setup(numLocalVerts, "VEC4", BufferData::UNSIGNED_BYTE, sizeof(uint32), /*InNormalized=*/ true);
 	}
 
 	// Prepare and build indices
@@ -216,22 +277,41 @@ static void ExportSection(const CBaseMeshLod& Lod, const CMeshVertex* Verts, boo
 		Unpack(Normal, V.Normal);
 		Unpack(Tangent, V.Tangent);
 		// Unreal (and we are) using normal.w for computing binormal. glTF
-		// uses tangent.w for that.
-		Tangent.w = Normal.w;
+		// uses tangent.w for that. Make this value exactly 1.0 of -1.0 to make glTF
+		// validator happy.
+	#if 0
+		// There's some problem: V.Normal.W == 0x80 -> -1.008 instead of -1.0
+		if (Normal.w > 1.001 || Normal.w < -1.001)
+		{
+			appError("%X -> %g\n", V.Normal.Data, Normal.w);
+		}
+	#endif
+		Tangent.w = (Normal.w < 0) ? -1 : 1;
 
-		// Fix vertex orientation: glTF has right-handed coordinate system with Y up,
-		// Unreal uses left-handed system with Z up. Also, Unreal uses 'cm' scale,
-		// while glTF 'm'.
-		Exchange(Position[1], Position[2]);
-		Position.Scale(0.01f);
-		Exchange(Normal[1], Normal[2]);
-		Exchange(Tangent[1], Tangent[2]);
+		TransformPosition(Position);
+		TransformDirection(Normal);
+		TransformDirection(Tangent);
+
+		Normal.Normalize();
+		Tangent.Normalize();
 
 		// Fill buffers
 		PositionBuf.Put(Position);
 		NormalBuf.Put(Normal.xyz);
 		TangentBuf.Put(Tangent);
 		UVBuf[0]->Put(V.UV);
+	}
+
+	if (Context.IsSkeletal())
+	{
+		for (int i = 0; i < numLocalVerts; i++)
+		{
+			int vertIndex = revIndexMap[i];
+			const CMeshVertex& V0 = VERT(vertIndex);
+			const CSkelMeshVertex& V = static_cast<const CSkelMeshVertex&>(V0);
+			BonesBuf->Put(*(uint64*)&V.Bone);
+			WeightsBuf->Put(V.PackedWeights);
+		}
 	}
 
 	// Secondary UVs
@@ -255,6 +335,14 @@ static void ExportSection(const CBaseMeshLod& Lod, const CMeshVertex* Verts, boo
 		"            \"TANGENT\" : %d,\n",
 		PositionBufIndex, NormalBufIndex, TangentBufIndex
 	);
+	if (Context.IsSkeletal())
+	{
+		Ar.Printf(
+			"            \"JOINTS_0\" : %d,\n"
+			"            \"WEIGHTS_0\" : %d,\n",
+			BonesBufIndex, WeightsBufIndex
+		);
+	}
 	for (int i = 0; i < Lod.NumTexCoords; i++)
 	{
 		Ar.Printf(
@@ -275,8 +363,154 @@ static void ExportSection(const CBaseMeshLod& Lod, const CMeshVertex* Verts, boo
 	unguard;
 }
 
-static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const CMeshVertex* Verts, bool bIsSkeletal, FArchive& Ar, FArchive& Ar2)
+struct CMat4
 {
+	float v[16];
+
+	CMat4(const CCoords& C)
+	{
+		v[0] = C.axis[0][0];
+		v[1] = C.axis[0][1];
+		v[2] = C.axis[0][2];
+		v[3] = 0;
+		v[4] = C.axis[1][0];
+		v[5] = C.axis[1][1];
+		v[6] = C.axis[1][2];
+		v[7] = 0;
+		v[8] = C.axis[2][0];
+		v[9] = C.axis[2][1];
+		v[10] = C.axis[2][2];
+		v[11] = 0;
+		v[12] = C.origin[0];
+		v[13] = C.origin[1];
+		v[14] = C.origin[2];
+		v[15] = 1;
+	}
+};
+
+static void ExportSkinData(ExportContext& Context, const CSkelMeshLod& Lod, FArchive& Ar)
+{
+	guard(ExportSkinData);
+
+	int numBones = Context.SkelMesh->RefSkeleton.Num();
+
+	int MatrixBufIndex = Context.Data.AddZeroed();
+	BufferData& MatrixBuf = Context.Data[MatrixBufIndex];
+	MatrixBuf.Setup(numBones, "MAT4", BufferData::FLOAT, sizeof(CMat4));
+
+	Ar.Printf(
+		"  \"nodes\" : [\n"
+		"    {\n"
+		"      \"name\" : \"%s\",\n"
+		"      \"mesh\" : 0,\n"
+		"      \"skin\" : 0,\n"
+		"      \"children\" : [ 1 ]\n"
+		"    },\n",
+		Context.MeshName);
+
+	TArray<CCoords> BoneCoords;
+	BoneCoords.AddZeroed(numBones);
+
+	for (int boneIndex = 0; boneIndex < numBones; boneIndex++)
+	{
+		const CSkelMeshBone& B = Context.SkelMesh->RefSkeleton[boneIndex];
+
+		// Find all children
+		TStaticArray<int, 32> children;
+		for (int j = 0; j < numBones; j++)
+		{
+			if (boneIndex == j) continue;
+			const CSkelMeshBone& B2 = Context.SkelMesh->RefSkeleton[j];
+			if (B2.ParentIndex == boneIndex)
+			{
+				children.Add(j);
+			}
+		}
+
+		Ar.Printf(
+			"    {\n"
+			"      \"name\" : \"%s\",\n",
+			*B.Name
+		);
+
+		// Write children
+		if (children.Num())
+		{
+			Ar.Printf("      \"children\" : [ %d", children[0]+1);
+			for (int j = 1; j < children.Num(); j++)
+			{
+				Ar.Printf(", %d", children[j]+1);
+			}
+			Ar.Printf(" ],\n");
+		}
+
+		// Bone transform
+		CVec3 bonePos = B.Position;
+		CQuat boneRot = B.Orientation;
+		TransformPosition(bonePos);
+		TransformRotation(boneRot);
+
+		Ar.Printf(
+			"      \"translation\" : [ %g, %g, %g ],\n"
+			"      \"rotation\" : [ %g, %g, %g, %g ]\n",
+			bonePos[0], bonePos[1], bonePos[2],
+			boneRot.x, boneRot.y, boneRot.z, boneRot.w
+		);
+
+		boneRot.w *= -1;
+
+		CCoords& BC = BoneCoords[boneIndex];
+		BC.origin = bonePos;
+		boneRot.ToAxis(BC.axis);
+		if (boneIndex)
+		{
+			// World coordinate
+			BoneCoords[B.ParentIndex].UnTransformCoords(BC, BC);
+		}
+		CCoords InvCoords;
+		InvertCoords(BC, InvCoords);
+
+		CMat4 BC4x4(InvCoords);
+		MatrixBuf.Put(BC4x4);
+
+		// Closing brace
+		Ar.Printf(
+			"    }%s\n",
+			boneIndex == (numBones-1) ? "" : ","
+		);
+	}
+
+	// Close "nodes" array
+	Ar.Printf("  ],\n");
+
+	// Make "skins"
+	Ar.Printf(
+		"  \"skins\" : [\n"
+		"    {\n"
+		"      \"inverseBindMatrices\" : %d,\n"
+		"      \"skeleton\" : 1,\n"
+		"      \"joints\" : [",
+		MatrixBufIndex
+	);
+	for (int i = 0; i < numBones; i++)
+	{
+		if ((i & 31) == 0) Ar.Printf("\n        ");
+		Ar.Printf("%d%s", i+1, (i == numBones-1) ? "" : ",");
+	}
+	Ar.Printf(
+		"\n"
+		"      ]\n"
+		"    }\n"
+		"  ],\n"
+	);
+
+	unguard;
+}
+
+static void ExportMeshLod(ExportContext& Context, const CBaseMeshLod& Lod, const CMeshVertex* Verts, FArchive& Ar, FArchive& Ar2)
+{
+	guard(ExportMeshLod);
+
 	// Opening brace
 	Ar.Printf("{\n");
 
@@ -290,14 +524,6 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 
 	// Scene
 	Ar.Printf(
-		"  \"nodes\" : [\n"
-		"    {\n"
-		"      \"mesh\" : 0,\n"
-		"      \"name\" : \"%s\"\n"
-		"    }\n"
-		"  ],\n",
-		MeshName);
-	Ar.Printf(
 		"  \"scene\" : 0,\n"
 		"  \"scenes\" : [\n"
 		"    {\n"
@@ -305,6 +531,24 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 		"    }\n"
 		"  ],\n"
 	);
+
+	// Nodes
+	if (!Context.IsSkeletal())
+	{
+		Ar.Printf(
+			"  \"nodes\" : [\n"
+			"    {\n"
+			"      \"name\" : \"%s\",\n"
+			"      \"mesh\" : 0\n"
+			"    }\n"
+			"  ],\n",
+			Context.MeshName
+		);
+	}
+	else
+	{
+		ExportSkinData(Context, static_cast<const CSkelMeshLod&>(Lod), Ar);
+	}
 
 	// Materials
 	Ar.Printf("  \"materials\" : [\n");
@@ -315,8 +559,6 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 	Ar.Printf("  ],\n");
 
 	// Meshes
-	TArray<BufferData> Data;
-
 	Ar.Printf(
 		"  \"meshes\" : [\n"
 		"    {\n"
@@ -324,20 +566,20 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 	);
 	for (int i = 0; i < Lod.Sections.Num(); i++)
 	{
-		ExportSection(Lod, Verts, bIsSkeletal, i, Ar, Data);
+		ExportSection(Context, Lod, Verts, i, Ar);
 	}
 	Ar.Printf(
 		"      ],\n"
 		"      \"name\" : \"%s\"\n"
 		"    }\n"
 		"  ],\n",
-		MeshName
+		Context.MeshName
 	);
 
 	int bufferLength = 0;
-	for (int i = 0; i < Data.Num(); i++)
+	for (int i = 0; i < Context.Data.Num(); i++)
 	{
-		bufferLength += Data[i].DataSize;
+		bufferLength += Context.Data[i].DataSize;
 	}
 
 	// Write buffer
@@ -348,7 +590,7 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 		"      \"byteLength\" : %d\n"
 		"    }\n"
 		"  ],\n",
-		MeshName, bufferLength
+		Context.MeshName, bufferLength
 	);
 
 	// Write bufferViews
@@ -356,8 +598,9 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 		"  \"bufferViews\" : [\n"
 	);
 	int bufferOffset = 0;
-	for (int i = 0; i < Data.Num(); i++)
+	for (int i = 0; i < Context.Data.Num(); i++)
 	{
+		const BufferData& B = Context.Data[i];
 		Ar.Printf(
 			"    {\n"
 			"      \"buffer\" : 0,\n"
@@ -365,10 +608,10 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 			"      \"byteLength\" : %d\n"
 			"    }%s\n",
 			bufferOffset,
-			Data[i].DataSize,
-			i == (Data.Num()-1) ? "" : ","
+			B.DataSize,
+			i == (Context.Data.Num()-1) ? "" : ","
 		);
-		bufferOffset += Data[i].DataSize;
+		bufferOffset += B.DataSize;
 	}
 	Ar.Printf(
 		"  ],\n"
@@ -378,21 +621,27 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 	Ar.Printf(
 		"  \"accessors\" : [\n"
 	);
-	for (int i = 0; i < Data.Num(); i++)
+	for (int i = 0; i < Context.Data.Num(); i++)
 	{
-		const BufferData& B = Data[i];
+		const BufferData& B = Context.Data[i];
 		Ar.Printf(
 			"    {\n"
-			"      \"bufferView\" : %d,\n"
+			"      \"bufferView\" : %d,\n",
+			i
+		);
+		if (B.bNormalized)
+		{
+			Ar.Printf("      \"normalized\" : true,\n");
+		}
+		Ar.Printf(
 			"      \"componentType\" : %d,\n"
 			"      \"count\" : %d,\n"
 			"      \"type\" : \"%s\"\n"
 			"    }%s\n",
-			i,
 			B.ComponentType,
 			B.Count,
 			B.Type,
-			i == (Data.Num()-1) ? "" : ","
+			i == (Context.Data.Num()-1) ? "" : ","
 		);
 	}
 	Ar.Printf(
@@ -400,27 +649,21 @@ static void ExportMeshLod(const char* MeshName, const CBaseMeshLod& Lod, const C
 	);
 
 	// Write binary data
-	for (int i = 0; i < Data.Num(); i++)
+	guard(WriteBIN);
+	for (int i = 0; i < Context.Data.Num(); i++)
 	{
-		const BufferData& B = Data[i];
+		const BufferData& B = Context.Data[i];
 #if MAX_DEBUG
 		assert(B.FillCount == B.Count);
 #endif
 		Ar2.Serialize(B.Data, B.DataSize);
 	}
+	unguard;
 
 	// Closing brace
 	Ar.Printf("}\n");
-}
 
-static void ExportSkeletalMeshLod(const char* MeshName, const CSkelMeshLod& Lod, FArchive& Ar, FArchive& Ar2)
-{
-	ExportMeshLod(MeshName, Lod, Lod.Verts, true, Ar, Ar2);
-}
-
-static void ExportStaticMeshLod(const char* MeshName, const CStaticMeshLod& Lod, FArchive& Ar, FArchive& Ar2)
-{
-	ExportMeshLod(MeshName, Lod, Lod.Verts, false, Ar, Ar2);
+	unguard;
 }
 
 void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh)
@@ -437,9 +680,13 @@ void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh)
 	FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", OriginalMesh->Name);
 	if (Ar)
 	{
+		ExportContext Context;
+		Context.MeshName = OriginalMesh->Name;
+		Context.SkelMesh = Mesh;
+
 		FArchive* Ar2 = CreateExportArchive(OriginalMesh, 0, "%s.bin", OriginalMesh->Name);
 		assert(Ar2);
-		ExportSkeletalMeshLod(OriginalMesh->Name, Mesh->Lods[0], *Ar, *Ar2);
+		ExportMeshLod(Context, Mesh->Lods[0], Mesh->Lods[0].Verts, *Ar, *Ar2);
 		delete Ar;
 		delete Ar2;
 	}
@@ -461,9 +708,13 @@ void ExportStaticMeshGLTF(const CStaticMesh* Mesh)
 	FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", OriginalMesh->Name);
 	if (Ar)
 	{
+		ExportContext Context;
+		Context.MeshName = OriginalMesh->Name;
+		Context.StatMesh = Mesh;
+
 		FArchive* Ar2 = CreateExportArchive(OriginalMesh, 0, "%s.bin", OriginalMesh->Name);
 		assert(Ar2);
-		ExportStaticMeshLod(OriginalMesh->Name, Mesh->Lods[0], *Ar, *Ar2);
+		ExportMeshLod(Context, Mesh->Lods[0], Mesh->Lods[0].Verts, *Ar, *Ar2);
 		delete Ar;
 		delete Ar2;
 	}
