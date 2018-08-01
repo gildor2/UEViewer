@@ -556,6 +556,7 @@ DEPENDS = \
 	Unreal/TypeInfo.h \
 	Unreal/UnCore.h \
 	Unreal/UnMaterial.h \
+	Unreal/UnMathTools.h \
 	Unreal/UnObject.h
 
 $(OUT_1)/ExportGLTF.obj : Exporters/ExportGLTF.cpp $(DEPENDS)
