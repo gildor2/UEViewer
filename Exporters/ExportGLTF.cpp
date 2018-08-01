@@ -7,6 +7,8 @@
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
 
+#include "UnMathTools.h"
+
 #include "Exporters.h"
 #include "../UmodelTool/Version.h"
 
@@ -95,6 +97,9 @@ struct BufferData
 	int ItemSize;
 #endif
 
+	FString BoundsMin;
+	FString BoundsMax;
+
 	BufferData()
 	: Data(NULL)
 	, DataSize(0)
@@ -146,7 +151,7 @@ struct ExportContext
 
 	ExportContext()
 	{
-		memset(this, 0, sizeof(this));
+		memset(this, 0, sizeof(*this));
 	}
 
 	inline bool IsSkeletal() const
@@ -252,7 +257,7 @@ static void ExportSection(ExportContext& Context, const CBaseMeshLod& Lod, const
 		}
 	}
 
-	// Build reverse index map for fast loopup of vertex by its new index.
+	// Build reverse index map for fast lookup of vertex by its new index.
 	// It maps new vertex index to old vertex index.
 	TArray<int> revIndexMap;
 	revIndexMap.AddUninitialized(numLocalVerts);
@@ -302,6 +307,15 @@ static void ExportSection(ExportContext& Context, const CBaseMeshLod& Lod, const
 		UVBuf[0]->Put(V.UV);
 	}
 
+	// Compute bounds for PositionBuf
+	CVec3 Mins, Maxs;
+	ComputeBounds((CVec3*)PositionBuf.Data, numLocalVerts, sizeof(CVec3), Mins, Maxs);
+	char buf[256];
+	appSprintf(ARRAY_ARG(buf), "[ %g, %g, %g ]", VECTOR_ARG(Mins));
+	PositionBuf.BoundsMin = buf;
+	appSprintf(ARRAY_ARG(buf), "[ %g, %g, %g ]", VECTOR_ARG(Maxs));
+	PositionBuf.BoundsMax = buf;
+
 	if (Context.IsSkeletal())
 	{
 		for (int i = 0; i < numLocalVerts; i++)
@@ -309,7 +323,21 @@ static void ExportSection(ExportContext& Context, const CBaseMeshLod& Lod, const
 			int vertIndex = revIndexMap[i];
 			const CMeshVertex& V0 = VERT(vertIndex);
 			const CSkelMeshVertex& V = static_cast<const CSkelMeshVertex&>(V0);
-			BonesBuf->Put(*(uint64*)&V.Bone);
+
+			int16 Bones[NUM_INFLUENCES];
+			static_assert(NUM_INFLUENCES == 4, "Code designed for 4 influences");
+			static_assert(sizeof(Bones) == sizeof(V.Bone), "Unexpected V.Bones size");
+			memcpy(Bones, V.Bone, sizeof(Bones));
+			for (int j = 0; j < NUM_INFLUENCES; j++)
+			{
+				// We have INDEX_NONE as list terminator, should replace with something else for glTF
+				if (Bones[j] == INDEX_NONE)
+				{
+					Bones[j] = 0;
+				}
+			}
+
+			BonesBuf->Put(*(uint64*)&Bones);
 			WeightsBuf->Put(V.PackedWeights);
 		}
 	}
@@ -632,6 +660,14 @@ static void ExportMeshLod(ExportContext& Context, const CBaseMeshLod& Lod, const
 		if (B.bNormalized)
 		{
 			Ar.Printf("      \"normalized\" : true,\n");
+		}
+		if (B.BoundsMin.Len())
+		{
+			Ar.Printf(
+				"      \"min\" : %s,\n"
+				"      \"max\" : %s,\n",
+				*B.BoundsMin, *B.BoundsMax
+			);
 		}
 		Ar.Printf(
 			"      \"componentType\" : %d,\n"

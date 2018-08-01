@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+01.08.2018
+- addeed skeletal mesh export in glTF format
+
 27.07.2018
 - added option for exporting static meshes to glTF 2.0 format; activated in options window or with "-gltf"
   command line option
