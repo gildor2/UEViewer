@@ -299,6 +299,7 @@ struct FSkinWeightInfo
 				Ar << BoneIndex2[i];
 			for (int i = 0; i < GNumSkelInfluences; i++)
 				Ar << BoneWeight2[i];
+#if 0
 			// check if sorting needed (possibly 2nd half of influences has zero weight)
 			uint32 PackedWeight2 = * (uint32*) &BoneWeight2[4];
 			if (PackedWeight2 != 0)
@@ -318,6 +319,7 @@ struct FSkinWeightInfo
 				// add remaining weight to the first bone
 				BoneWeight2[0] += ExtraWeight;
 			}
+#endif
 			// copy influences to vertex
 			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
 			{
@@ -1428,9 +1430,6 @@ void USkeletalMesh4::ConvertMesh()
 			D->Position = CVT(V->Pos);
 			UnpackNormals(V->Normal, *D);
 			// convert influences
-	#if DEBUG_SKELMESH
-			int TotalWeight = 0;
-	#endif
 			int i2 = 0;
 			unsigned PackedWeights = 0;
 			for (int i = 0; i < NUM_INFLUENCES_UE4; i++)
@@ -1441,14 +1440,8 @@ void USkeletalMesh4::ConvertMesh()
 				PackedWeights |= BoneWeight << (i2 * 8);
 				D->Bone[i2]   = (*BoneMap)[BoneIndex];
 				i2++;
-	#if DEBUG_SKELMESH
-				TotalWeight += BoneWeight;
-	#endif
 			}
 			D->PackedWeights = PackedWeights;
-	#if DEBUG_SKELMESH
-			assert(TotalWeight == 255);
-	#endif
 			if (i2 < NUM_INFLUENCES_UE4) D->Bone[i2] = INDEX_NONE; // mark end of list
 		}
 

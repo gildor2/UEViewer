@@ -167,7 +167,7 @@ void CSkeletalMesh::FinalizeMesh()
 		{
 			byte UnpackedWeights[NUM_INFLUENCES];
 			// int32 -> byte4
-			*(int*)UnpackedWeights = V->PackedWeights;
+			*(uint32*)UnpackedWeights = V->PackedWeights;
 
 			bool ShouldFix = false;
 			for (int i = 0; i < NUM_INFLUENCES; i++)
@@ -213,8 +213,37 @@ void CSkeletalMesh::FinalizeMesh()
 					}
 				}
 				// pack weights back to vertex
-				V->PackedWeights = *(int*)UnpackedWeights;
+				V->PackedWeights = *(uint32*)UnpackedWeights;
 				NumFixedVerts++;
+			}
+
+			// Check for requirement of renormalizing weights
+			int TotalWeight = 0;
+			int NumInfluences;
+			for (NumInfluences = 0; NumInfluences < NUM_INFLUENCES; NumInfluences++)
+			{
+				int Bone = V->Bone[NumInfluences];
+				if (Bone < 0) break;
+				TotalWeight += UnpackedWeights[NumInfluences];
+			}
+			if (TotalWeight != 255)
+			{
+				// Do renormalization
+				float Scale = 255.0f / TotalWeight;
+				TotalWeight = 0;
+				for (int i = 0; i < NumInfluences; i++)
+				{
+					UnpackedWeights[i] = appRound(UnpackedWeights[i] * Scale);
+					TotalWeight += UnpackedWeights[i];
+				}
+				// There still could be TotalWeight which differs slightly from value 255.
+				// Adjust first bone weight to make sum matching 255. Assume that the first
+				// weight is largest one (it is true at least for UE4), so this adjustnemt
+				// won't be noticeable.
+				int Delta = 255 - TotalWeight;
+				UnpackedWeights[0] += Delta;
+
+				V->PackedWeights = *(uint32*)UnpackedWeights;
 			}
 		}
 	}
