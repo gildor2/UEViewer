@@ -475,6 +475,11 @@ static void ExportSkinData(ExportContext& Context, const CSkelMeshLod& Lod, FArc
 		// Bone transform
 		CVec3 bonePos = B.Position;
 		CQuat boneRot = B.Orientation;
+		if (boneIndex == 0)
+		{
+			boneRot.Conjugate();
+		}
+
 		TransformPosition(bonePos);
 		TransformRotation(boneRot);
 
