@@ -365,14 +365,14 @@ public:
 
 		if (info.Version > PAK_LATEST)
 		{
-			appError("Pak file has unsupported version %d", info.Version);
+			appPrintf("WARNING: Pak file \"%s\" has unsupported version %d\n", *Filename, info.Version);
 		}
 
 		if (info.bEncryptedIndex)
 		{
 			if (!PakRequireAesKey(false))
 			{
-				appNotify("WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);
+				appPrintf("WARNING: Pak \"%s\" has encrypted index. Skipping.\n", *Filename);
 				return false;
 			}
 		}

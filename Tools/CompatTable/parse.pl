@@ -18,7 +18,8 @@ $unget_line = "";
 $inComment  = 0;
 
 sub getline {
-	if ($unget_line ne "") {
+	if ($unget_line ne "")
+	{
 		local $ret = $unget_line;
 		$unget_line = "";
 		return $ret;
