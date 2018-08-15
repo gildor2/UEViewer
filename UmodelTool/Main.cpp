@@ -968,16 +968,7 @@ int main(int argc, char **argv)
 		//!!   could pick it up
 		//!! - appSetRootDirectory2(): replace with appGetRootDirectoryFromFile() + appSetRootDirectory()
 		const char* packageName = packagesToLoad[0];
-		if (strchr(packageName, '/') || strchr(packageName, '\\'))
-		{
-			// has path in filename
-			appSetRootDirectory2(packageName);
-		}
-		else
-		{
-			// no path in filename
-			appSetRootDirectory(".");		// scan for packages
-		}
+		appSetRootDirectory2(packageName);
 	}
 	else if (!hasRootDir)
 	{

@@ -557,7 +557,9 @@ static const char *KnownDirs2[] =
 
 void appSetRootDirectory2(const char *filename)
 {
-	char buf[MAX_PACKAGE_PATH], buf2[MAX_PACKAGE_PATH];
+	guard(appSetRootDirectory2);
+
+	char buf[MAX_PACKAGE_PATH];
 	appStrncpyz(buf, filename, ARRAY_COUNT(buf));
 	char *s;
 	// replace slashes
@@ -565,9 +567,15 @@ void appSetRootDirectory2(const char *filename)
 		if (*s == '\\') *s = '/';
 	// cut filename
 	s = strrchr(buf, '/');
-	*s = 0;
-	// make a copy for fallback
-	strcpy(buf2, buf);
+	if (s)
+	{
+		*s = 0;
+		// make a copy for fallback
+	}
+	else
+	{
+		strcpy(buf, ".");
+	}
 
 	FString root;
 	int detected = 0;				// weigth; 0 = not detected
@@ -641,6 +649,8 @@ void appSetRootDirectory2(const char *filename)
 	// scan root directory
 	appPrintf("\n");
 	appSetRootDirectory(*root, detected != 0);
+
+	unguardf("%s", filename);
 }
 
 
