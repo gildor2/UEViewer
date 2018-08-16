@@ -377,29 +377,66 @@ public:
 			}
 		}
 
-		// this file looks correct, store 'reader'
-		Reader = reader;
-
 		// Read pak index
 
-		Reader->ArLicenseeVer = info.Version;
+		reader->ArLicenseeVer = info.Version;
 
-		Reader->Seek64(info.IndexOffset);
+		reader->Seek64(info.IndexOffset);
 
 		// Manage pak files with encrypted index
 		FMemReader* InfoReaderProxy = NULL;
 		byte* InfoBlock = NULL;
-		FArchive* InfoReader = Reader;
+		FArchive* InfoReader = reader;
 
 		if (info.bEncryptedIndex)
 		{
 			InfoBlock = new byte[info.IndexSize];
-			Reader->Serialize(InfoBlock, info.IndexSize);
+			reader->Serialize(InfoBlock, info.IndexSize);
 			appDecryptAES(InfoBlock, info.IndexSize);
 			InfoReaderProxy = new FMemReader(InfoBlock, info.IndexSize);
-			InfoReaderProxy->SetupFrom(*Reader);
+			InfoReaderProxy->SetupFrom(*reader);
 			InfoReader = InfoReaderProxy;
+
+			// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
+			int32 StringLen;
+			*InfoReader << StringLen;
+			bool bFail = false;
+			if (StringLen > 512 || StringLen < -512)
+			{
+				bFail = true;
+			}
+			if (!bFail)
+			{
+				// Seek to terminating zero character
+				if (StringLen < 0)
+				{
+					InfoReader->Seek(InfoReader->Tell() - (StringLen - 1) * 2);
+					uint16 c;
+					*InfoReader << c;
+					bFail = (c != 0);
+				}
+				else
+				{
+					InfoReader->Seek(InfoReader->Tell() + StringLen - 1);
+					char c;
+					*InfoReader << c;
+					bFail = (c != 0);
+				}
+			}
+			if (bFail)
+			{
+				appPrintf("WARNING: The provided encryption key doesn't work with \"%s\". Skipping.\n", *Filename);
+				delete[] InfoBlock;
+				delete InfoReaderProxy;
+				return false;
+			}
+
+			// Data is ok, seek to data start.
+			InfoReader->Seek(0);
 		}
+
+		// this file looks correct, store 'reader'
+		Reader = reader;
 
 		// Read pak index
 

@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+16.08.2018
+- an attempt to not crash when UE4 pak files has encrypted index, and AES key doesn't match
+
 01.08.2018
 - addeed skeletal mesh export in glTF format
 
