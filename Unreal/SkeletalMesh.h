@@ -134,7 +134,7 @@ public:
 	FRotator				RotOrigin;
 	TArray<CSkelMeshBone>	RefSkeleton;
 	TArray<CSkelMeshLod>	Lods;
-	TArray<CSkelMeshSocket>	Sockets;
+	TArray<CSkelMeshSocket>	Sockets;				//?? common (UE4 has StaticMesh sockets)
 
 	CSkeletalMesh(UObject *Original)
 	:	OriginalMesh(Original)

@@ -58,6 +58,7 @@ static CAnimSet *GetAnimSet(const UObject *Obj)
 CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 :	CMeshViewer(Mesh0->OriginalMesh, Window)
 ,	Mesh(Mesh0)
+,	Anim(NULL)
 ,	AnimIndex(-1)
 ,	IsFollowingMesh(false)
 ,	ShowSkel(0)
@@ -66,24 +67,28 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 ,	ShowUV(false)
 ,	bIsUE4Mesh(false)
 {
+	guard(CSkelMeshViewer::CSkelMeshViewer);
+
 	CSkelMeshInstance *SkelInst = new CSkelMeshInstance();
+	Inst = SkelInst;
 	SkelInst->SetMesh(Mesh);
+
+	// Automatically attach animation if any
+	CAnimSet* AttachAnim = NULL;
 	if (GForceAnimSet)
 	{
-		CAnimSet *AttachAnim = GetAnimSet(GForceAnimSet);
+		AttachAnim = GetAnimSet(GForceAnimSet);
 		if (!AttachAnim)
 		{
 			appPrintf("WARNING: specified wrong AnimSet (%s class) object to attach\n", GForceAnimSet->GetClassName());
 			GForceAnimSet = NULL;
 		}
-		if (AttachAnim)
-			SkelInst->SetAnim(AttachAnim);
 	}
 	else if (Mesh->OriginalMesh->IsA("SkeletalMesh"))	// UE2 class
 	{
 		const USkeletalMesh *OriginalMesh = static_cast<USkeletalMesh*>(Mesh->OriginalMesh);
 		if (OriginalMesh->Animation)
-			SkelInst->SetAnim(OriginalMesh->Animation->ConvertedAnim);
+			AttachAnim = OriginalMesh->Animation->ConvertedAnim;
 	}
 #if UNREAL4
 	else if (Mesh->OriginalMesh->IsA("SkeletalMesh4"))
@@ -93,10 +98,12 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 		bIsUE4Mesh = true;
 		Skeleton = OriginalMesh->Skeleton;
 		if (Skeleton)
-			SkelInst->SetAnim(Skeleton->ConvertedAnim);
+			AttachAnim = Skeleton->ConvertedAnim;
 	}
 #endif // UNREAL4
-	Inst = SkelInst;
+	if (AttachAnim)
+		SetAnim(AttachAnim);
+
 	// compute bounds for the current mesh
 	CVec3 Mins, Maxs;
 	if (Mesh0->Lods.Num())
@@ -141,8 +148,25 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 	appPrintf("Origin     = %g %g %g\n", VECTOR_ARG(Mesh->MeshOrigin));
 	appPrintf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
 #endif // SHOW_BOUNDS
+
+	unguard;
 }
 
+
+void CSkelMeshViewer::SetAnim(const CAnimSet* AnimSet)
+{
+	guard(CSkelMeshViewer::SetAnim);
+
+	Anim = AnimSet;
+
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+	MeshInst->SetAnim(AnimSet);			// will rebind mesh to new animation set
+
+	for (int i = 0; i < TaggedMeshes.Num(); i++)
+		TaggedMeshes[i]->SetAnim(AnimSet);
+
+	unguard;
+}
 
 void CSkelMeshViewer::Dump()
 {
@@ -246,7 +270,6 @@ void CSkelMeshViewer::Export()
 	CMeshViewer::Export();
 
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
-	const CAnimSet *Anim = MeshInst->GetAnim();
 	if (Anim) ExportObject(Anim->OriginalAnim);
 
 	for (int i = 0; i < TaggedMeshes.Num(); i++)
@@ -270,7 +293,7 @@ void CSkelMeshViewer::TagMesh(CSkelMeshInstance *Inst)
 	CSkelMeshInstance* NewInst = new CSkelMeshInstance();
 	NewInst->SetMesh(Inst->pMesh);
 	// remember animation which is linked to the object (UE2, UE4)
-	NewInst->SetAnim(Inst->GetAnim());
+	NewInst->SetAnim(Anim);
 	TaggedMeshes.Add(NewInst);
 }
 
@@ -336,16 +359,15 @@ void CSkelMeshViewer::Draw2D()
 		DrawTextLeft("%s%d: %s", (TaggedMeshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, TaggedMeshes[i]->pMesh->OriginalMesh->Name);
 
 	// show animation information
-	const CAnimSet *AnimSet = MeshInst->GetAnim();
-	if (AnimSet)
+	if (Anim)
 	{
-		DrawTextBottomLeft("\n" S_GREEN "AnimSet : " S_WHITE "%s", AnimSet->OriginalAnim->Name);
+		DrawTextBottomLeft("\n" S_GREEN "AnimSet : " S_WHITE "%s", Anim->OriginalAnim->Name);
 
 		const char *OnOffStatus = NULL;
 		switch (MeshInst->RotationMode)
 		{
 		case EARO_AnimSet:
-			OnOffStatus = (AnimSet->AnimRotationOnly) ? "on" : "off";
+			OnOffStatus = (Anim->AnimRotationOnly) ? "on" : "off";
 			break;
 		case EARO_ForceEnabled:
 			OnOffStatus = S_RED "force on";
@@ -355,10 +377,10 @@ void CSkelMeshViewer::Draw2D()
 			break;
 		}
 		DrawTextBottomLeft(S_GREEN "RotationOnly:" S_WHITE " %s", OnOffStatus);
-		if (AnimSet->UseAnimTranslation.Num() || AnimSet->ForceMeshTranslation.Num())
+		if (Anim->UseAnimTranslation.Num() || Anim->ForceMeshTranslation.Num())
 		{
 			DrawTextBottomLeft(S_GREEN "UseAnimBones:" S_WHITE " %d " S_GREEN "ForceMeshBones:" S_WHITE " %d",
-				AnimSet->UseAnimTranslation.Num(), AnimSet->ForceMeshTranslation.Num());
+				Anim->UseAnimTranslation.Num(), Anim->ForceMeshTranslation.Num());
 		}
 
 		const CAnimSequence *Seq = MeshInst->GetAnim(0);
@@ -732,7 +754,7 @@ void CSkelMeshViewer::AttachAnimSet()
 
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 
-	const CAnimSet *PrevAnim = MeshInst->GetAnim();
+	const CAnimSet *PrevAnim = Anim;
 	// find next animation set (code is similar to PAGEDOWN handler)
 	int looped = 0;
 	int ObjIndex = -1;
@@ -747,22 +769,20 @@ void CSkelMeshViewer::AttachAnimSet()
 			if (looped > 1) break;				// no other objects
 		}
 		const UObject *Obj = UObject::GObjObjects[ObjIndex];
-		const CAnimSet *Anim = GetAnimSet(Obj);
-		if (!Anim) continue;
+		const CAnimSet *NewAnim = GetAnimSet(Obj);
+		if (!NewAnim) continue;
 
-		if (Anim == PrevAnim)
+		if (NewAnim == PrevAnim)
 		{
 			if (found) break;					// loop detected
 			found = true;
 			continue;
 		}
 
-		if (found && Anim)
+		if (found && NewAnim)
 		{
 			// found desired animation set
-			MeshInst->SetAnim(Anim);			// will rebind mesh to new animation set
-			for (int i = 0; i < TaggedMeshes.Num(); i++)
-				TaggedMeshes[i]->SetAnim(Anim);
+			SetAnim(NewAnim);
 			AnimIndex = -1;
 			appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
 			break;

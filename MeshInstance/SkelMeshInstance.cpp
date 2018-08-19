@@ -280,9 +280,13 @@ if (i == 32 || i == 34)
 
 void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 {
+	guard(CSkelMeshInstance::SetAnim);
+
 	if (!pMesh) return;		// mesh is not set yet
 
 	Animation = Anim;
+
+	if (!Anim) return;
 
 	int i;
 	CMeshBoneData *data;
@@ -305,6 +309,8 @@ void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 
 	ClearSkelAnims();
 	PlayAnim(NULL);
+
+	unguard;
 }
 
 

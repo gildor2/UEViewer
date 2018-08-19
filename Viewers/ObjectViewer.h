@@ -9,6 +9,7 @@ class CVertMeshInstance;
 class CSkelMeshInstance;
 
 class CSkeletalMesh;
+class CAnimSet;
 class CStaticMesh;
 struct CMeshVertex;
 struct CBaseMeshLod;
@@ -160,7 +161,7 @@ public:
 
 	CSkelMeshViewer(CSkeletalMesh* Mesh, CApplication* Window);
 
-	static void TagMesh(CSkelMeshInstance *Inst);
+	void TagMesh(CSkelMeshInstance *Inst);
 	static void UntagAllMeshes();
 
 	virtual void ShowHelp() override;
@@ -175,6 +176,8 @@ public:
 	virtual void ProcessKey(int key) override;
 	virtual void ProcessKeyUp(int key) override;
 
+	void SetAnim(const CAnimSet* AnimSet);
+
 	void AttachAnimSet();
 	void FindUE4Animations();
 
@@ -183,7 +186,8 @@ public:
 	static TArray<CSkelMeshInstance*> TaggedMeshes;	// for displaying multipart meshes
 
 private:
-	CSkeletalMesh	*Mesh;
+	CSkeletalMesh*	Mesh;
+	const CAnimSet*	Anim;
 	bool			bIsUE4Mesh;
 	USkeleton*		Skeleton;
 };
