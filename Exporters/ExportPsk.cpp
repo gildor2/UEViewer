@@ -409,6 +409,12 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 
 		unguardf("%d", Lod);
 	}
+
+	// export animation
+	if (Mesh->Anim)
+	{
+		ExportObject(Mesh->Anim->OriginalAnim);
+	}
 }
 
 

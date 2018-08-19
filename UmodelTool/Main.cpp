@@ -253,6 +253,9 @@ static void CallExportAnimation(const CAnimSet* Anim)
 	default:
 		ExportPsa(Anim);
 		break;
+	case EExportMeshFormat::gltf:
+		appPrintf("ERROR: glTF animation could be exported from mesh viewer only.\n");
+		break;
 	case EExportMeshFormat::md5:
 		ExportMd5Anim(Anim);
 		break;

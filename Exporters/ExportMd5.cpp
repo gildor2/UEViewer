@@ -287,6 +287,12 @@ if (i == 32 || i == 34)
 
 	delete Ar;
 
+	// export animation
+	if (Mesh->Anim)
+	{
+		ExportObject(Mesh->Anim->OriginalAnim);
+	}
+
 	unguard;
 }
 

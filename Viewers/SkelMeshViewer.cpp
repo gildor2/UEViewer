@@ -157,11 +157,14 @@ void CSkelMeshViewer::SetAnim(const CAnimSet* AnimSet)
 {
 	guard(CSkelMeshViewer::SetAnim);
 
+	// Store animation reference locally in viewer class
 	Anim = AnimSet;
 
+	// Set animation for base mesh
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
-	MeshInst->SetAnim(AnimSet);			// will rebind mesh to new animation set
+	MeshInst->SetAnim(AnimSet);
 
+	// Set animation to all tagged meshes
 	for (int i = 0; i < TaggedMeshes.Num(); i++)
 		TaggedMeshes[i]->SetAnim(AnimSet);
 
@@ -267,11 +270,12 @@ void CSkelMeshViewer::Dump()
 
 void CSkelMeshViewer::Export()
 {
+	// Export base mesh and animation
+	Mesh->Anim = Anim;
 	CMeshViewer::Export();
+	Mesh->Anim = NULL;
 
-	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
-	if (Anim) ExportObject(Anim->OriginalAnim);
-
+	// Export all tagged meshes
 	for (int i = 0; i < TaggedMeshes.Num(); i++)
 		ExportObject(TaggedMeshes[i]->pMesh->OriginalMesh);
 }
@@ -301,7 +305,10 @@ void CSkelMeshViewer::TagMesh(CSkelMeshInstance *Inst)
 void CSkelMeshViewer::UntagAllMeshes()
 {
 	for (int i = 0; i < TaggedMeshes.Num(); i++)
+	{
+		TaggedMeshes[i]->SetAnim(NULL);
 		delete TaggedMeshes[i];
+	}
 	TaggedMeshes.Empty();
 }
 
