@@ -12,6 +12,8 @@
 #include "Exporters.h"
 #include "../UmodelTool/Version.h"
 
+#define FIRST_BONE_NODE		1
+
 //?? TODO: remove this function
 static CVec3 GetMaterialDebugColor(int Index)
 {
@@ -117,7 +119,7 @@ struct BufferData
 		bNormalized = InNormalized;
 		ComponentType = InComponentType;
 		DataSize = InCount * InItemSize;
-		// Align all buffrrs by 4, as requested by glTF format
+		// Align all buffers by 4, as requested by glTF format
 		DataSize = Align(DataSize, 4);
 		// Use aligned alloc for CVec4
 		Data = (byte*) appMalloc(DataSize, 16);
@@ -464,10 +466,10 @@ static void ExportSkinData(ExportContext& Context, const CSkelMeshLod& Lod, FArc
 		// Write children
 		if (children.Num())
 		{
-			Ar.Printf("      \"children\" : [ %d", children[0]+1);
+			Ar.Printf("      \"children\" : [ %d", children[0]+FIRST_BONE_NODE);
 			for (int j = 1; j < children.Num(); j++)
 			{
-				Ar.Printf(", %d", children[j]+1);
+				Ar.Printf(", %d", children[j]+FIRST_BONE_NODE);
 			}
 			Ar.Printf(" ],\n");
 		}
@@ -528,7 +530,7 @@ static void ExportSkinData(ExportContext& Context, const CSkelMeshLod& Lod, FArc
 	for (int i = 0; i < numBones; i++)
 	{
 		if ((i & 31) == 0) Ar.Printf("\n        ");
-		Ar.Printf("%d%s", i+1, (i == numBones-1) ? "" : ",");
+		Ar.Printf("%d%s", i+FIRST_BONE_NODE, (i == numBones-1) ? "" : ",");
 	}
 	Ar.Printf(
 		"\n"
@@ -536,6 +538,194 @@ static void ExportSkinData(ExportContext& Context, const CSkelMeshLod& Lod, FArc
 		"    }\n"
 		"  ],\n"
 	);
+
+	unguard;
+}
+
+static void ExportAnimations(ExportContext& Context, FArchive& Ar)
+{
+	guard(ExportAnimations);
+
+	const CAnimSet* Anim = Context.SkelMesh->Anim;
+	int NumBones = Context.SkelMesh->RefSkeleton.Num();
+
+	// Build mesh to anim bone map
+
+	TArray<int> BoneMap;
+	BoneMap.Init(-1, NumBones);
+	TArray<int> AnimBones;
+	AnimBones.Empty(NumBones);
+
+	for (int i = 0; i < NumBones; i++)
+	{
+		const CSkelMeshBone &B = Context.SkelMesh->RefSkeleton[i];
+		for (int j = 0; j < Anim->TrackBoneNames.Num(); j++)
+		{
+			if (!stricmp(B.Name, Anim->TrackBoneNames[j]))
+			{
+				BoneMap[i] = j;			// lookup CAnimSet bone by mesh bone index
+				AnimBones.Add(i);		// indicate that the bone has animation
+				break;
+			}
+		}
+	}
+
+	Ar.Printf(
+		"  \"animations\" : [\n"
+	);
+
+	// Iterate over all animations
+	for (int SeqIndex = 0; SeqIndex < Anim->Sequences.Num(); SeqIndex++)
+	{
+		const CAnimSequence &Seq = *Anim->Sequences[SeqIndex];
+
+		Ar.Printf(
+			"    {\n"
+			"      \"name\" : \"%s\",\n",
+			*Seq.Name
+		);
+
+		struct AnimSampler
+		{
+			enum ChannelType
+			{
+				TRANSLATION,
+				ROTATION
+			};
+
+			int BoneNodeIndex;
+			ChannelType Type;
+			const CAnimTrack* Track;
+		};
+
+		TArray<AnimSampler> Samplers;
+		Samplers.Empty(AnimBones.Num() * 2);
+
+		//!! Optimization:
+		//!! 1. there will be missing tracks (AnimRotationOnly etc) - drop such samplers
+		//!! 2. there will be time arrays with single value '0' (when some parameter is not animated, but exists) - reuse between tracks
+		//!! 3. there will be time tracks with identical data - share them between bones
+		//!! 4. there will be data arrays consisting of a single value, try to find identical ones and share
+
+		// Prepare channels array
+		Ar.Printf("      \"channels\" : [\n");
+		for (int BoneIndex = 0; BoneIndex < AnimBones.Num(); BoneIndex++)
+		{
+			int MeshBoneIndex = AnimBones[BoneIndex];
+			int AnimBoneIndex = BoneMap[MeshBoneIndex];
+
+			const CAnimTrack* Track = Seq.Tracks[AnimBoneIndex];
+
+			int TranslationSamplerIndex = Samplers.Num();
+			AnimSampler* Sampler = new (Samplers) AnimSampler;
+			Sampler->Type = AnimSampler::TRANSLATION;
+			Sampler->BoneNodeIndex = MeshBoneIndex + FIRST_BONE_NODE;
+			Sampler->Track = Track;
+
+			int RotationSamplerIndex = Samplers.Num();
+			Sampler = new (Samplers) AnimSampler;
+			Sampler->Type = AnimSampler::ROTATION;
+			Sampler->BoneNodeIndex = MeshBoneIndex + FIRST_BONE_NODE;
+			Sampler->Track = Track;
+
+			// Print glTF information. Not using usual formatting here to make output a little bit more compact.
+			Ar.Printf(
+				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } },\n",
+				TranslationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "translation"
+			);
+			Ar.Printf(
+				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } }%s\n",
+				RotationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "rotation", BoneIndex == AnimBones.Num()-1 ? "" : ","
+			);
+		}
+		Ar.Printf("      ],\n");
+
+		// Prepare samplers
+		Ar.Printf("      \"samplers\" : [\n");
+		for (int SamplerIndex = 0; SamplerIndex < Samplers.Num(); SamplerIndex++)
+		{
+			const AnimSampler& Sampler = Samplers[SamplerIndex];
+
+			// Prepare time array
+			const TArray<float>* TimeArray = (Sampler.Type == AnimSampler::TRANSLATION) ? &Sampler.Track->KeyPosTime : &Sampler.Track->KeyQuatTime;
+			if (TimeArray->Num() == 0)
+			{
+				// For this situation, use track's time array
+				TimeArray = &Sampler.Track->KeyTime;
+			}
+			int NumKeys = Sampler.Type == (AnimSampler::TRANSLATION) ? Sampler.Track->KeyPos.Num() : Sampler.Track->KeyQuat.Num();
+
+			int TimeBufIndex = Context.Data.AddZeroed();
+			BufferData& TimeBuf = Context.Data[TimeBufIndex];
+			TimeBuf.Setup(NumKeys, "SCALAR", BufferData::FLOAT, sizeof(float));
+
+			float RateScale = 1.0f / Seq.Rate;
+			float LastFrameTime = 0;
+			if (TimeArray->Num() == 0 || NumKeys == 1)
+			{
+				// Fill with equally spaced values
+				for (int i = 0; i < NumKeys; i++)
+				{
+					TimeBuf.Put(i * RateScale);
+				}
+				LastFrameTime = NumKeys-1;
+			}
+			else
+			{
+				for (int i = 0; i < TimeArray->Num(); i++)
+				{
+					TimeBuf.Put((*TimeArray)[i] * RateScale);
+				}
+				LastFrameTime = (*TimeArray)[TimeArray->Num()-1];
+			}
+			// Prepare min/max values for time track, it's required by glTF standard
+			TimeBuf.BoundsMin = "[ 0 ]";
+			char buf[64];
+			appSprintf(ARRAY_ARG(buf), "[ %g ]", LastFrameTime * RateScale);
+			TimeBuf.BoundsMax = buf;
+
+			// Prepare data
+			int DataBufIndex = Context.Data.AddZeroed();
+			BufferData& DataBuf = Context.Data[DataBufIndex];
+			if (Sampler.Type == AnimSampler::TRANSLATION)
+			{
+				// Translation track
+				DataBuf.Setup(NumKeys, "VEC3", BufferData::FLOAT, sizeof(CVec3));
+				for (int i = 0; i < NumKeys; i++)
+				{
+					CVec3 Pos = Sampler.Track->KeyPos[i];
+					TransformPosition(Pos);
+					DataBuf.Put(Pos);
+				}
+			}
+			else
+			{
+				// Rotation track
+				DataBuf.Setup(NumKeys, "VEC4", BufferData::FLOAT, sizeof(CQuat));
+				for (int i = 0; i < NumKeys; i++)
+				{
+					CQuat Rot = Sampler.Track->KeyQuat[i];
+					TransformRotation(Rot);
+					if (Sampler.BoneNodeIndex - FIRST_BONE_NODE == 0)
+					{
+						Rot.Conjugate();
+					}
+					DataBuf.Put(Rot);
+				}
+			}
+
+			// Write glTF info
+			Ar.Printf(
+				"        { \"input\" : %d, \"output\" : %d }%s\n",
+				TimeBufIndex, DataBufIndex, SamplerIndex == Samplers.Num()-1 ? "" : ","
+			);
+		}
+		Ar.Printf("      ]\n");
+
+		Ar.Printf("    }%s\n", SeqIndex == Anim->Sequences.Num()-1 ? "" : ",");
+	}
+
+	Ar.Printf("  ],\n");
 
 	unguard;
 }
@@ -609,13 +799,19 @@ static void ExportMeshLod(ExportContext& Context, const CBaseMeshLod& Lod, const
 		Context.MeshName
 	);
 
+	// Write animations
+	if (Context.IsSkeletal() && Context.SkelMesh->Anim)
+	{
+		ExportAnimations(Context, Ar);
+	}
+
+	// Write buffers
 	int bufferLength = 0;
 	for (int i = 0; i < Context.Data.Num(); i++)
 	{
 		bufferLength += Context.Data[i].DataSize;
 	}
 
-	// Write buffer
 	Ar.Printf(
 		"  \"buffers\" : [\n"
 		"    {\n"
