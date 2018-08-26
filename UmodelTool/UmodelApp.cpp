@@ -709,14 +709,16 @@ void CUmodelApp::UpdateObjectMenu()
 	UIMenuItem* newObjMenu = Viewer->GetObjectMenu(NULL);
 	if (!newObjMenu)
 	{
+		// We should replace old menu with a dummy one - we can't keep old menu because it may have
+		// references to data inside objects which are no longer exists
+		newObjMenu = &NewSubmenu("Object");
 		ObjectMenu->Enable(false);
-		ObjectMenu->SetName("Object");
 	}
 	else
 	{
 		ObjectMenu->Enable(true);
-		ObjectMenu->ReplaceWith(newObjMenu);
 	}
+	ObjectMenu->ReplaceWith(newObjMenu);
 	unguard;
 }
 

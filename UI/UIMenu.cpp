@@ -429,17 +429,21 @@ void UIMenuItem::Update()
 	case MI_RadioGroup:
 		for (UIMenuItem* button = FirstChild; button; button = button->NextChild)
 		{
+			guard(RadioGroup);
 			bool checked = (button->iValue == *(int*)pValue);
 			CheckMenuItem(hMenu, button->Id, MF_BYCOMMAND | (checked ? MF_CHECKED : 0));
+			unguard("\"%s\"", *button->Label);
 		}
 		break;
 	case MI_Submenu:
 		for (UIMenuItem* item = FirstChild; item; item = item->NextChild)
+		{
 			item->Update();
+		}
 		break;
 	}
 
-	unguard;
+	unguardf("\"%s\"", *Label);
 }
 
 void UIMenuItem::ReplaceWith(UIMenuItem* other)
