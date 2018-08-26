@@ -507,9 +507,9 @@ extern char GErrorHistory[2048];
 #define unguard			}
 #define unguardf(...)	}
 
-#define TRY				if (1) {
-#define CATCH			} else {
-#define CATCH_CRASH		} else {
+#define TRY				if (1)
+#define CATCH			else
+#define CATCH_CRASH		else
 #define THROW_AGAIN		throw
 #define THROW			throw
 

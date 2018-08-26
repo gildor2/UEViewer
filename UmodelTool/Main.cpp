@@ -534,6 +534,7 @@ void UISetExceptionHandler(void (*Handler)());
 static void ExceptionHandler()
 {
 	FFileWriter::CleanupOnError();
+#if DO_GUARD
 	if (GErrorHistory[0])
 	{
 //		appPrintf("ERROR: %s\n", GErrorHistory);
@@ -544,6 +545,7 @@ static void ExceptionHandler()
 //		appPrintf("Unknown error\n");
 		appNotify("Unknown error\n");
 	}
+#endif // DO_GUARD
 	#if HAS_UI
 	if (GApplication.GuiShown)
 		GApplication.ShowErrorDialog();

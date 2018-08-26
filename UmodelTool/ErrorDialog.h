@@ -11,6 +11,7 @@ public:
 
 	void InitUI()
 	{
+#if DO_GUARD
 		char message[256];
 		char* s = strchr(GErrorHistory, '\n');
 		const char* log;
@@ -62,11 +63,14 @@ public:
 				]
 			]
 		];
+#endif // DO_GUARD
 	}
 
 	static void CopyToClipboard()
 	{
+#if DO_GUARD
 		appCopyTextToClipboard(GErrorHistory);
+#endif
 	}
 };
 
