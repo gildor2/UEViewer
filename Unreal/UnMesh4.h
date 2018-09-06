@@ -69,8 +69,13 @@ struct FReferencePose
 
 	friend FArchive& operator<<(FArchive& Ar, FReferencePose& P)
 	{
-		return Ar << P.PoseName << P.ReferencePose;
-		//!! TODO: non-cooked package also has P.ReferenceMesh (no way to detect if this is saved or not!)
+		Ar << P.PoseName << P.ReferencePose;
+		if (Ar.ContainsEditorData())
+		{
+			UObject* EditorMesh;
+			Ar << EditorMesh;
+		}
+		return Ar;
 	}
 };
 
