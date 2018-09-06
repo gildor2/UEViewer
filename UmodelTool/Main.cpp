@@ -394,7 +394,7 @@ static void PrintUsage()
 			"    -uncook         use original package name as a base export directory (UE3)\n"
 			"    -groups         use group names instead of class names for directories (UE1-3)\n"
 			"    -uc             create unreal script when possible\n"
-//			"    -pskx           use pskx format for skeletal mesh\n"
+			"    -psk            use ActorX format for meshes (default)\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -gltf           use glTF 2.0 format for mesh\n"
 			"    -lods           export all available mesh LOD levels\n"
@@ -771,7 +771,6 @@ int main(int argc, char **argv)
 #endif
 			OPT_BOOL ("uncook",  GSettings.Export.SaveUncooked)
 			OPT_BOOL ("groups",  GSettings.Export.SaveGroups)
-//			OPT_BOOL ("pskx",    GExportPskx)	// -- may be useful in a case of more advanced mesh format
 			OPT_BOOL ("lods",    GExportLods)
 			OPT_BOOL ("uc",      GExportScripts)
 			// disable classes
@@ -799,7 +798,11 @@ int main(int argc, char **argv)
 		};
 		if (ProcessOption(ARRAY_ARG(options), opt))
 			continue;
-		if (!stricmp(opt, "md5"))
+		if (!stricmp(opt, "psk"))
+		{
+			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::psk;
+		}
+		else if (!stricmp(opt, "md5"))
 		{
 			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::md5;
 		}
