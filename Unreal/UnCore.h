@@ -2464,6 +2464,7 @@ enum
 		VER_UE4_64BIT_EXPORTMAP_SERIALSIZES = 511,
 	VER_UE4_16 = 513,
 	VER_UE4_17 = 513,
+		VER_UE4_ADDED_SOFT_OBJECT_PATH = 514,
 	VER_UE4_18 = 514,
 		VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID = 516,
 	VER_UE4_19 = 516,
@@ -2716,6 +2717,7 @@ struct FAnimPhysObjectVersion
 		// UE4.18 = 12
 		AddLODToCurveMetaData = 12,
 		// UE4.19 = 16
+		ChangeRetargetSourceReferenceToSoftObjectPtr = 15,
 		// UE4.20 = 17
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1

@@ -27,6 +27,69 @@ USkeleton::~USkeleton()
 	if (ConvertedAnim) delete ConvertedAnim;
 }
 
+FArchive& operator<<(FArchive& Ar, FReferencePose& P)
+{
+	guard(FReferencePose<<);
+
+	Ar << P.PoseName << P.ReferencePose;
+
+	// Serialize editor asset data
+	if (Ar.ContainsEditorData())
+	{
+		if (FAnimPhysObjectVersion::Get(Ar) < FAnimPhysObjectVersion::ChangeRetargetSourceReferenceToSoftObjectPtr)
+		{
+			UObject* EditorMesh;
+			Ar << EditorMesh;
+		}
+		else
+		{
+			// TSoftObjectPtr<USkeletalMesh>
+			// Implementation is quite deep in source code. See ULinkerLoad::operator<<(FSoftObjectPtr&).
+			// -> FSoftObjectPath::SerializePath()
+			assert(Ar.ArVer >= VER_UE4_ADDED_SOFT_OBJECT_PATH); // different serialization
+			FName AssetPathName;
+			FString SubPathString;
+			Ar << AssetPathName << SubPathString;
+		}
+	}
+
+	return Ar;
+
+	unguard;
+}
+
+FArchive& operator<<(FArchive& Ar, FSmartNameMapping& N)
+{
+	guard(FSmartNameMapping<<);
+
+	FFrameworkObjectVersion::Type FrwVer = FFrameworkObjectVersion::Get(Ar);
+
+	if (FrwVer < FFrameworkObjectVersion::SmartNameRefactor)
+	{
+		// pre-UE4.13 code
+		int16					NextUid;
+		TMap<int16, FName>		UidMap;
+		return Ar << NextUid << UidMap;
+	}
+
+	// UE4.13+
+	if (FAnimPhysObjectVersion::Get(Ar) < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking)
+	{
+		// UE4.13-17
+		TMap<FName, FGuid> GuidMap;
+		Ar << GuidMap;
+	}
+
+	if (FrwVer >= FFrameworkObjectVersion::MoveCurveTypesToSkeleton)
+	{
+		// UE4.14+
+		TMap<FName, FCurveMetaData> CurveMetaDataMap;
+		Ar << CurveMetaDataMap;
+	}
+	return Ar;
+
+	unguard;
+}
 
 FArchive& operator<<(FArchive& Ar, FMeshBoneInfo& B)
 {
