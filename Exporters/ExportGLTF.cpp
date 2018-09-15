@@ -141,6 +141,18 @@ struct BufferData
 		*(T*)FillPtr = p;
 		FillPtr += sizeof(T);
 	}
+
+	bool IsSameAs(const BufferData& Other) const
+	{
+		// Compare metadata
+		if (Count != Other.Count || strcmp(Type, Other.Type) != 0 || ComponentType != Other.ComponentType ||
+			bNormalized != Other.bNormalized || DataSize != Other.DataSize)
+		{
+			return false;
+		}
+		// Compare data
+		return (memcmp(Data, Other.Data, DataSize) == 0);
+	}
 };
 
 struct ExportContext
@@ -159,6 +171,26 @@ struct ExportContext
 	inline bool IsSkeletal() const
 	{
 		return SkelMesh != NULL;
+	}
+
+	// Compare last item of Data with other itest starting with FirstDataIndex, drop the data
+	// if same data block found and return its index. If no matching data were found, return
+	// index of that last data.
+	int GetFinalIndexForLastBlock(int FirstDataIndex)
+	{
+		int LastIndex = Data.Num()-1;
+		const BufferData& LastData = Data[LastIndex];
+		for (int index = FirstDataIndex; index < LastIndex; index++)
+		{
+			if (LastData.IsSameAs(Data[index]))
+			{
+				// Found matching data
+				Data.RemoveAt(LastIndex);
+				return index;
+			}
+		}
+		// Not found
+		return LastIndex;
 	}
 };
 
@@ -574,6 +606,8 @@ static void ExportAnimations(ExportContext& Context, FArchive& Ar)
 		"  \"animations\" : [\n"
 	);
 
+	int FirstDataIndex = Context.Data.Num();
+
 	// Iterate over all animations
 	for (int SeqIndex = 0; SeqIndex < Anim->Sequences.Num(); SeqIndex++)
 	{
@@ -603,9 +637,8 @@ static void ExportAnimations(ExportContext& Context, FArchive& Ar)
 
 		//!! Optimization:
 		//!! 1. there will be missing tracks (AnimRotationOnly etc) - drop such samplers
-		//!! 2. there will be time arrays with single value '0' (when some parameter is not animated, but exists) - reuse between tracks
-		//!! 3. there will be time tracks with identical data - share them between bones
-		//!! 4. there will be data arrays consisting of a single value, try to find identical ones and share
+		//!! 2. store all time tracks in a single BufferView, all rotation tracks in another, and all position track in 3rd one - this
+		//!!    will reduce amount of BufferViews in json text (combine them by data type)
 
 		// Prepare channels array
 		Ar.Printf("      \"channels\" : [\n");
@@ -684,6 +717,9 @@ static void ExportAnimations(ExportContext& Context, FArchive& Ar)
 			appSprintf(ARRAY_ARG(buf), "[ %g ]", LastFrameTime * RateScale);
 			TimeBuf.BoundsMax = buf;
 
+			// Try to reuse TimeBuf from previous tracks
+			TimeBufIndex = Context.GetFinalIndexForLastBlock(FirstDataIndex);
+
 			// Prepare data
 			int DataBufIndex = Context.Data.AddZeroed();
 			BufferData& DataBuf = Context.Data[DataBufIndex];
@@ -713,6 +749,9 @@ static void ExportAnimations(ExportContext& Context, FArchive& Ar)
 					DataBuf.Put(Rot);
 				}
 			}
+
+			// Try to reuse data block as well
+			DataBufIndex = Context.GetFinalIndexForLastBlock(FirstDataIndex);
 
 			// Write glTF info
 			Ar.Printf(
