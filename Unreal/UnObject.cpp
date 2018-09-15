@@ -187,12 +187,13 @@ void UObject::EndLoad()
 
 #if UNREAL4
 	#define UNVERS_STR		(Package->Game >= GAME_UE4_BASE && Package->Summary.IsUnversioned) ? " (unversioned)" : ""
+	#define EDITOR_STR		(Package->ContainsEditorData()) ? " (editor)" : ""
 #else
 	#define UNVERS_STR		""
 #endif
 
-		unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s, game=%s", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
-			Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, GetGameTag(Package->Game));
+		unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s%s, game=%s", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
+			Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, EDITOR_STR, GetGameTag(Package->Game));
 	}
 	// postload objects
 	int i;

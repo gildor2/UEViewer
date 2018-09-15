@@ -458,12 +458,13 @@ public:
 		}
 
 		// Process MountPoint
+		bool badMountPoint = false;
 		if (!MountPoint.RemoveFromStart("../../.."))
-		{
-			appNotify("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
-			MountPoint = "/";
-		}
+			badMountPoint = true;
 		if (MountPoint[0] != '/' || ( (MountPoint.Len() > 1) && (MountPoint[1] == '.') ))
+			badMountPoint = true;
+
+		if (badMountPoint)
 		{
 			appNotify("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
 			MountPoint = "/";
@@ -513,7 +514,7 @@ public:
 			appPrintf(" (%d encrypted)", numEncryptedFiles);
 		if (strcmp(*MountPoint, "/") != 0)
 			appPrintf(", mount point: \"%s\"", *MountPoint);
-		appPrintf("\n");
+		appPrintf(", version %d\n", info.Version);
 
 		return true;
 
