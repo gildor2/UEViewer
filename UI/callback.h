@@ -278,7 +278,7 @@ FORCEINLINE void* operator new(size_t size, Detail::ObjectData& storage)
 
 FORCEINLINE void operator delete(void*, Detail::ObjectData&)
 {
-	// do nothing, this function here is just to shut op compiler warning
+	// do nothing, this function here is just to shut up compiler warning
 }
 
 namespace Detail
@@ -327,7 +327,7 @@ protected:
 	// Declaration of function which will be used for execution of callback. Pointer to object
 	// goes first, parameters - next. Note that C++ will generate a function which will get
 	// the object pointer and call its method by passing all other parameters to the function.
-	// In short words, this wrapper function will strip first argument from parameter list
+	// In other words, this wrapper function will strip first argument from parameter list
 	// and call user function. This could be simplified if we'd pass object pointer last - in
 	// this case, compiler could simply replace the function with a single jump instruction,
 	// however this won't let us to assign no-parameter callback to a callback with parameters.

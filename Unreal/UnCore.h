@@ -387,10 +387,9 @@ enum EGame
 		// 4.14
 		GAME_Friday13 = GAME_UE4(14)+1,
 		GAME_Tekken7 = GAME_UE4(14)+2,
-		// 4.17
-		GAME_Dauntless = GAME_UE4(17)+1,
 		// 4.19
 		GAME_Paragon = GAME_UE4(19)+1,
+		GAME_Dauntless = GAME_UE4(19)+2,
 
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
