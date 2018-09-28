@@ -243,7 +243,7 @@ public:
 	}
 
 	// Empty unneeded functions from FVirtualFileSystem interface
-	virtual bool AttachReader(FArchive* reader)
+	virtual bool AttachReader(FArchive* reader, FString& error)
 	{
 		assert(0);
 		return false;

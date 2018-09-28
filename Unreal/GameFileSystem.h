@@ -7,9 +7,9 @@ public:
 	virtual ~FVirtualFileSystem()
 	{}
 
-	// Attach FArchive which will be used for reading VFS content. This function should
-	// scan VFS directory.
-	virtual bool AttachReader(FArchive* reader) = 0;
+	// Attach FArchive which will be used for reading VFS content. This function should scan
+	// VFS directory. If function failed, it should return false and optionally fill error string.
+	virtual bool AttachReader(FArchive* reader, FString& error) = 0;
 	// Open a file from VFS.
 	virtual FArchive* CreateReader(const char* name) = 0;
 

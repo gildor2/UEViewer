@@ -67,7 +67,7 @@ public:
 		delete Reader;
 	}
 
-	virtual bool AttachReader(FArchive* reader)
+	virtual bool AttachReader(FArchive* reader, FString& error)
 	{
 		guard(FObbVFS::ReadDirectory);
 

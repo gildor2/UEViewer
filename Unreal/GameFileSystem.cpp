@@ -248,10 +248,18 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 			{
 				assert(reader);
 				// read VF directory
-				if (!vfs->AttachReader(reader))
+				FString error;
+				if (!vfs->AttachReader(reader, error))
 				{
 					// something goes wrong
-					appPrintf("File %s has unknown format\n", FullName);
+					if (error.Len())
+					{
+						appPrintf("%s\n", *error);
+					}
+					else
+					{
+						appPrintf("File %s has an unknown format\n", FullName);
+					}
 					delete vfs;
 					delete reader;
 					return;

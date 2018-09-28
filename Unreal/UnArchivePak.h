@@ -352,7 +352,7 @@ public:
 		if (HashTable) delete[] HashTable;
 	}
 
-	virtual bool AttachReader(FArchive* reader)
+	virtual bool AttachReader(FArchive* reader, FString& error)
 	{
 		guard(FPakVFS::ReadDirectory);
 
@@ -372,7 +372,9 @@ public:
 		{
 			if (!PakRequireAesKey(false))
 			{
-				appPrintf("WARNING: Pak \"%s\" has encrypted index. Skipping.\n", *Filename);
+				char buf[1024];
+				appSprintf(ARRAY_ARG(buf), "WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);
+				error = buf;
 				return false;
 			}
 		}
@@ -425,9 +427,11 @@ public:
 			}
 			if (bFail)
 			{
-				appPrintf("WARNING: The provided encryption key doesn't work with \"%s\". Skipping.\n", *Filename);
 				delete[] InfoBlock;
 				delete InfoReaderProxy;
+				char buf[1024];
+				appSprintf(ARRAY_ARG(buf), "WARNING: The provided encryption key doesn't work with \"%s\". Skipping.", *Filename);
+				error = buf;
 				return false;
 			}
 
