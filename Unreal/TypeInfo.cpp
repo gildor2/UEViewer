@@ -164,6 +164,8 @@ int NameToEnum(const char *EnumName, const char *Value)
 {
 	const enumInfo *Info = FindEnum(EnumName);
 	if (!Info) return ENUM_UNKNOWN;		// enum was not found
+	const char* s = strstr(Value, "::"); // UE4 may have "EnumName::Value" text
+	if (s) Value = s+2;
 	for (int i = 0; i < Info->NumValues; i++)
 	{
 		const enumToStr &V = Info->Values[i];

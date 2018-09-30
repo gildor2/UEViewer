@@ -235,9 +235,14 @@ public:
 	int						NumFrames;
 	float					Rate;
 	TArray<CAnimTrack*>		Tracks;					// for each CAnimSet.TrackBoneNames
+	bool					bAdditive;				// used just for on-screen information
 #if ANIM_DEBUG_INFO
 	FString					DebugInfo;
 #endif
+
+	CAnimSequence()
+	: bAdditive(false)
+	{}
 
 	~CAnimSequence()
 	{

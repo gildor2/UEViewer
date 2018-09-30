@@ -393,8 +393,9 @@ void CSkelMeshViewer::Draw2D()
 		const CAnimSequence *Seq = MeshInst->GetAnim(0);
 		if (Seq)
 		{
-			DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " %d/%d (%s) " S_GREEN "Rate:" S_WHITE " %g " S_GREEN "Frames:" S_WHITE " %d",
-				AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames);
+			DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " %d/%d (%s) " S_GREEN "Rate:" S_WHITE " %g " S_GREEN "Frames:" S_WHITE " %d%s",
+				AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames,
+				Seq->bAdditive ? S_RED" (additive)" : "");
 			DrawTextBottomRight(S_GREEN "Time:" S_WHITE " %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
 #if ANIM_DEBUG_INFO
 			const FString& DebugText = Seq->DebugInfo;

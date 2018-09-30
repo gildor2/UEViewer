@@ -698,6 +698,7 @@ void UAnimSet::ConvertAnims()
 			Dst->Name      = Seq->SequenceName;
 			Dst->NumFrames = Seq->NumFrames;
 			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
+			Dst->bAdditive = Seq->bIsAdditive;
 			Seq->DecodeTrans3Anims(Dst, this);
 			continue;
 		}
@@ -718,6 +719,7 @@ void UAnimSet::ConvertAnims()
 			Dst->Name      = Seq->SequenceName;
 			Dst->NumFrames = Seq->NumFrames;
 			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
+			Dst->bAdditive = Seq->bIsAdditive;
 			Seq->DecodeBatman2Anims(Dst, this);
 			continue;
 		}
@@ -745,6 +747,7 @@ void UAnimSet::ConvertAnims()
 		Dst->Name      = Seq->SequenceName;
 		Dst->NumFrames = Seq->NumFrames;
 		Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
+		Dst->bAdditive = Seq->bIsAdditive;
 
 		// bone tracks ...
 		Dst->Tracks.Empty(NumTracks);

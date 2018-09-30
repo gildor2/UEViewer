@@ -369,6 +369,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	Dst->Name      = Seq->Name;
 	Dst->NumFrames = Seq->NumFrames;
 	Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
+	Dst->bAdditive = Seq->AdditiveAnimType != AAT_None;
 
 	// bone tracks ...
 	Dst->Tracks.Empty(NumTracks);
