@@ -110,6 +110,12 @@ public:
 
 	BEGIN_PROP_TABLE
 		PROP_BOOL(bStreaming)
+		PROP_DROP(NumChannels)
+		PROP_DROP(SampleRate)
+		PROP_DROP(bHasVirtualizeWhenSilent)
+		PROP_DROP(bVirtualizeWhenSilent)
+		PROP_DROP(Duration)
+		PROP_DROP(RawPCMDataSize) // not marked as UPROPERTY, but appears in UE4 sounds
 	END_PROP_TABLE
 
 	void Serialize(FArchive &Ar)
@@ -149,7 +155,7 @@ public:
 			int32 NumChunks;
 			FName AudioFormat;
 			Ar << NumChunks << AudioFormat;
-			appNotify("USoundWave: streaming data: %d chunks in format %s\n", NumChunks, *AudioFormat);
+			appPrintf("WARNING: USoundWave streaming data: %d chunks in format %s\n", NumChunks, *AudioFormat);
 		}
 
 		// some hack to support more games ...

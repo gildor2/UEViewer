@@ -275,6 +275,10 @@ void ExportSoundWave4(const USoundWave *Snd)
 	{
 		SaveSound(Snd, bulk->BulkData, bulk->ElementCount, ext);
 	}
+	else
+	{
+		appPrintf("... empty sound %s (streamed sound or unrecognized format)\n", Snd->Name);
+	}
 }
 
 #endif // UNREAL4
