@@ -787,6 +787,13 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 			Ar << CompressedTrackOffsets;
 			Ar << CompressedScaleOffsets;
 
+/*??		if (Ar.Game >= GAME_UE4(21)) -- not in Fortnite yet
+			{
+///DUMP_ARC_BYTES(Ar, 64, "CompressedStream-Segments");
+				// UE4.21+ - added compressed segments
+				Ar << CompressedSegments;
+			} */
+
 			Ar << CompressedTrackToSkeletonMapTable;
 			Ar << CompressedCurveData;
 
@@ -797,8 +804,16 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 				Ar << CompressedRawDataSize;
 			}
 
+			//!! temporary code: it's not in UE4 code base, however some extra integer exists in recent Fortnite at this place
+			if (Ar.Game >= GAME_UE4(21))
+			{
+				Ar.Seek(Ar.Tell()+4);
+			}
+
 			// compressed data
 			Ar << CompressedByteStream;
+
+			// after compressed data ...
 			Ar << bUseRawDataOnly;
 
 			if (KeyEncodingFormat == AKF_PerTrackCompression && CompressedScaleOffsets.OffsetData.Num())

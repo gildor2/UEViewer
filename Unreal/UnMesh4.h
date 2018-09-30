@@ -501,6 +501,7 @@ public:
 
 	BEGIN_PROP_TABLE
 		PROP_STRUC(RawCurveData, FRawCurveTracks)
+		PROP_DROP(Notifies)			// not working with notifies in our program
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive& Ar);
@@ -518,6 +519,23 @@ _ENUM(EAnimInterpolationType)
 	_E(Step),
 };
 
+struct FCompressedSegment
+{
+	int32					StartFrame;
+	int32					NumFrames;
+	int32					ByteStreamOffset;
+	AnimationCompressionFormat TranslationCompressionFormat;
+	AnimationCompressionFormat RotationCompressionFormat;
+	AnimationCompressionFormat ScaleCompressionFormat;
+
+	friend FArchive& operator<<(FArchive& Ar, FCompressedSegment& S)
+	{
+		Ar << S.StartFrame << S.NumFrames << S.ByteStreamOffset;
+		Ar << (byte&)S.TranslationCompressionFormat << (byte&)S.RotationCompressionFormat << (byte&)S.ScaleCompressionFormat;
+		return Ar;
+	}
+};
+
 class UAnimSequence4 : public UAnimSequenceBase
 {
 	DECLARE_CLASS(UAnimSequence4, UAnimSequenceBase);
@@ -527,6 +545,7 @@ public:
 	float					SequenceLength;
 	TArray<FRawAnimSequenceTrack> RawAnimationData;
 	TArray<uint8>			CompressedByteStream;
+	TArray<FCompressedSegment> CompressedSegments;
 	bool					bUseRawDataOnly;
 
 	AnimationKeyFormat		KeyEncodingFormat;
