@@ -624,6 +624,11 @@ static void CheckHexAesKey()
 bool UE4EncryptedPak()
 {
 #if HAS_UI
+	// Don't ask for a key more than once
+	static bool lock = false;
+	if (lock) return false;
+	lock = true;
+
 	GAesKey = GApplication.ShowUE4AesKeyDialog();
 	GAesKey.TrimStartAndEndInline();
 	CheckHexAesKey();
