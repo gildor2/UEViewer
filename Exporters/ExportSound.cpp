@@ -275,6 +275,28 @@ void ExportSoundWave4(const USoundWave *Snd)
 	{
 		SaveSound(Snd, bulk->BulkData, bulk->ElementCount, ext);
 	}
+	else if (Snd->StreamingChunks.Num())
+	{
+		guard(StreamedSound);
+		const char* ext = *Snd->StreamedFormat;
+		if (!strcmp(ext, "OPUS")) ext = "ue4opus";
+		FArchive *Ar = CreateExportArchive(Snd, 0, "%s.%s", Snd->Name, ext);
+		if (Ar)
+		{
+			for (int i = 0; i < Snd->StreamingChunks.Num(); i++)
+			{
+				const FStreamedAudioChunk& Chunk = Snd->StreamingChunks[i];
+				assert(Chunk.DataSize >= Chunk.AudioDataSize);
+				assert(Chunk.DataSize == Chunk.Data.ElementCount);
+				// Load bulk into memory
+				Chunk.Data.SerializeData(Snd);
+				// Export data
+				Ar->Serialize(Chunk.Data.BulkData, Chunk.AudioDataSize);
+			}
+			delete Ar;
+		}
+		unguardf("Format=%s", *Snd->StreamedFormat);
+	}
 	else
 	{
 		appPrintf("... empty sound %s (streamed sound or unrecognized format)\n", Snd->Name);

@@ -95,6 +95,28 @@ struct FSoundFormatData // FFormatContainer item representation
 	}
 };
 
+struct FStreamedAudioChunk
+{
+	FByteBulkData		Data;
+	int32				DataSize;
+	int32				AudioDataSize;
+
+	friend FArchive& operator<<(FArchive& Ar, FStreamedAudioChunk& Chunk)
+	{
+		guard(FStreamedAudioChunk<<);
+
+		bool bCooked;
+		Ar << bCooked;
+		assert(bCooked);
+
+		Chunk.Data.Serialize(Ar);
+		Ar << Chunk.DataSize << Chunk.AudioDataSize;
+		return Ar;
+
+		unguard;
+	}
+};
+
 class USoundWave : public UObject // actual parent is USoundBase
 {
 	DECLARE_CLASS(USoundWave, UObject);
@@ -104,14 +126,20 @@ public:
 	FGuid				CompressedDataGuid;
 	TArray<FSoundFormatData> CompressedFormatData; // FFormatContainer in UE4
 
+	FName				StreamedFormat;
+	TArray<FStreamedAudioChunk> StreamingChunks;
+
+	int32				SampleRate;
+	int32				NumChannels;
+
 	USoundWave()
 	:	bStreaming(false)
 	{}
 
 	BEGIN_PROP_TABLE
+		PROP_INT(NumChannels)
+		PROP_INT(SampleRate)
 		PROP_BOOL(bStreaming)
-		PROP_DROP(NumChannels)
-		PROP_DROP(SampleRate)
 		PROP_DROP(bHasVirtualizeWhenSilent)
 		PROP_DROP(bVirtualizeWhenSilent)
 		PROP_DROP(Duration)
@@ -151,11 +179,17 @@ public:
 
 		if (bStreaming)
 		{
-			//!! see FStreamedAudioPlatformData::Serialize (AudioDerivedData.cpp)
 			int32 NumChunks;
 			FName AudioFormat;
-			Ar << NumChunks << AudioFormat;
-			appPrintf("WARNING: USoundWave streaming data: %d chunks in format %s\n", NumChunks, *AudioFormat);
+			Ar << NumChunks << StreamedFormat;
+			appPrintf("WARNING: USoundWave streaming data: %d chunks in format %s\n", NumChunks, *StreamedFormat); //??
+			StreamingChunks.AddDefaulted(NumChunks);
+			for (int i = 0; i < NumChunks; i++)
+			{
+				guard(Chunk);
+				Ar << StreamingChunks[i];
+				unguardf("%d", i);
+			}
 		}
 
 		// some hack to support more games ...

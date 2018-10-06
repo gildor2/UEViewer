@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+06.10.2018
+- sound export for UE4 attempts to save "ue4opus" file for streamed sounds
+
 22.08.2018
 - implemented glTF skeletal animation export; note that the animation should be opened in mesh viewer for that
 

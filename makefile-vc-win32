@@ -1364,6 +1364,22 @@ DEPENDS = \
 	Unreal/TypeInfo.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
+	Unreal/UnPackage.h
+
+$(OUT_1)/UnCoreSerialize.obj : Unreal/UnCoreSerialize.cpp $(DEPENDS)
+	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCoreSerialize.obj" Unreal/UnCoreSerialize.cpp
+
+DEPENDS = \
+	Core/Core.h \
+	Core/CoreGL.h \
+	Core/GLBind.h \
+	Core/Math3D.h \
+	Core/Win32Types.h \
+	UmodelTool/Build.h \
+	Unreal/GameDefines.h \
+	Unreal/TypeInfo.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
 	Unreal/UnPackage.h \
 	Unreal/UnPackageUE3Reader.h
 
@@ -1382,20 +1398,6 @@ DEPENDS = \
 
 $(OUT_1)/UnCore.obj : Unreal/UnCore.cpp $(DEPENDS)
 	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCore.obj" Unreal/UnCore.cpp
-
-DEPENDS = \
-	Core/Core.h \
-	Core/CoreGL.h \
-	Core/GLBind.h \
-	Core/Math3D.h \
-	Core/Win32Types.h \
-	UmodelTool/Build.h \
-	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnPackage.h
-
-$(OUT_1)/UnCoreSerialize.obj : Unreal/UnCoreSerialize.cpp $(DEPENDS)
-	$(CPP) -MD $(OPT_MAIN) -Fo"$(OUT_1)/UnCoreSerialize.obj" Unreal/UnCoreSerialize.cpp
 
 DEPENDS = \
 	Core/Core.h \

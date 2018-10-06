@@ -1362,11 +1362,10 @@ DEPENDS_56 = \
 	Unreal/TypeInfo.h \
 	Unreal/UnCore.h \
 	Unreal/UnObject.h \
-	Unreal/UnPackage.h \
-	Unreal/UnPackageUE3Reader.h
+	Unreal/UnPackage.h
 
-$(OUT_1)/UnPackageReader.o : Unreal/UnPackageReader.cpp $(DEPENDS_56)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnPackageReader.o Unreal/UnPackageReader.cpp
+$(OUT_1)/UnCoreSerialize.o : Unreal/UnCoreSerialize.cpp $(DEPENDS_56)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreSerialize.o Unreal/UnCoreSerialize.cpp
 
 DEPENDS_57 = \
 	Core/Core.h \
@@ -1376,10 +1375,14 @@ DEPENDS_57 = \
 	Core/Win32Types.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
-	Unreal/UnCore.h
+	Unreal/TypeInfo.h \
+	Unreal/UnCore.h \
+	Unreal/UnObject.h \
+	Unreal/UnPackage.h \
+	Unreal/UnPackageUE3Reader.h
 
-$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_57)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCore.o Unreal/UnCore.cpp
+$(OUT_1)/UnPackageReader.o : Unreal/UnPackageReader.cpp $(DEPENDS_57)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnPackageReader.o Unreal/UnPackageReader.cpp
 
 DEPENDS_58 = \
 	Core/Core.h \
@@ -1389,11 +1392,10 @@ DEPENDS_58 = \
 	Core/Win32Types.h \
 	UmodelTool/Build.h \
 	Unreal/GameDefines.h \
-	Unreal/UnCore.h \
-	Unreal/UnPackage.h
+	Unreal/UnCore.h
 
-$(OUT_1)/UnCoreSerialize.o : Unreal/UnCoreSerialize.cpp $(DEPENDS_58)
-	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCoreSerialize.o Unreal/UnCoreSerialize.cpp
+$(OUT_1)/UnCore.o : Unreal/UnCore.cpp $(DEPENDS_58)
+	$(CPP) $(OPT_MAIN) -o $(OUT_1)/UnCore.o Unreal/UnCore.cpp
 
 DEPENDS_59 = \
 	Core/Core.h \
