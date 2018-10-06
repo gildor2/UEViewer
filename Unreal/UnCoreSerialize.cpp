@@ -2,6 +2,7 @@
 #include "UnCore.h"
 
 #if UNREAL4
+#include "UnObject.h"
 #include "UnPackage.h"			// for accessing FPackageFileSummary from FByteBulkData
 #endif
 
@@ -608,6 +609,8 @@ void FFileReader::Serialize(void *data, int size)
 {
 	guard(FFileReader::Serialize);
 
+	assert(data);
+
 	if (ArStopper > 0 && ArPos64 + size > ArStopper)
 		appError("Serializing behind stopper (%llX+%X > %X)", ArPos64, size, ArStopper);
 
@@ -732,6 +735,8 @@ void FFileWriter::CleanupOnError()
 void FFileWriter::Serialize(void *data, int size)
 {
 	guard(FFileWriter::Serialize);
+
+	assert(data);
 
 	while (size > 0)
 	{
@@ -1360,6 +1365,56 @@ void FByteBulkData::SerializeDataChunk(FArchive &Ar)
 	}
 
 	unguard;
+}
+
+bool FByteBulkData::SerializeData(const UObject* MainObj) const
+{
+#if UNREAL4
+	guard(FByteBulkData::SerializeData(UObject*));
+
+	if (!(BulkDataFlags & (BULKDATA_OptionalPayload|BULKDATA_PayloadInSeperateFile)))
+	{
+		// Already serialized, see FByteBulkData::Serialize()
+		return true;
+	}
+
+	char bulkFileName[256];
+	bulkFileName[0] = 0;
+
+	const UnPackage* Package = MainObj->Package;
+
+	strcpy(bulkFileName, Package->Filename);
+	//!! check for presence of BULKDATA_PayloadAtEndOfFile flag
+	if (BulkDataFlags & (BULKDATA_OptionalPayload|BULKDATA_PayloadInSeperateFile))
+	{
+		// UE4.12+ store bulk payload in .ubulk file (BULKDATA_PayloadInSeperateFile)
+		// UE4.20+ store bulk payload in .uptnl file (BULKDATA_OptionalPayload)
+		// It seems UE4 may store both flags, but priority is to BULKDATA_OptionalPayload.
+		char* s = strrchr(bulkFileName, '.');
+		assert(s);
+		strcpy(s, (BulkDataFlags & BULKDATA_OptionalPayload) ? ".uptnl" : ".ubulk");
+	}
+
+	const CGameFileInfo* bulkFile = appFindGameFile(bulkFileName);
+	if (!bulkFile)
+	{
+		appPrintf("FByteBulkData %s: file %s is missing\n", MainObj->Name, bulkFileName);
+		return false;
+	}
+
+	FArchive *Ar = appCreateFileReader(bulkFile);
+	Ar->SetupFrom(*Package);
+#if DEBUG_BULK
+	appPrintf("%s: Bulk %X %llX [%d] f=%X (%s)\n", MainObj->Name, this, this->BulkDataOffsetInFile, this->ElementCount, this->BulkDataFlags, bulkFileName);
+#endif
+	const_cast<FByteBulkData*>(this)->SerializeData(*Ar);
+	delete Ar;
+	return true;
+
+	unguard;
+#else
+	appError("FByteBulkData::SerializeData(UObject*) call");
+#endif
 }
 
 

@@ -648,7 +648,7 @@ static int GetRealTextureOffset_MH(const UTexture2D *Obj, int MipIndex)
 
 bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix, bool verbose) const
 {
-	const CGameFileInfo *bulkFile = NULL;
+	const CGameFileInfo* bulkFile = NULL;
 
 	guard(UTexture2D::LoadBulkTexture);
 
@@ -694,17 +694,8 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 #if UNREAL4
 		if (GetGame() >= GAME_UE4_BASE)
 		{
-			//!! check for presence of BULKDATA_PayloadAtEndOfFile flag
-			strcpy(bulkFileName, Package->Filename);
-			if (Mip.Data.BulkDataFlags & (BULKDATA_OptionalPayload|BULKDATA_PayloadInSeperateFile))
-			{
-				// UE4.12+ store bulk payload in .ubulk file (BULKDATA_PayloadInSeperateFile)
-				// UE4.20+ store bulk payload in .uptnl file (BULKDATA_OptionalPayload)
-				// It seems UE4 may store both flags, but priority is to BULKDATA_OptionalPayload.
-				char* s = strrchr(bulkFileName, '.');
-				assert(s);
-				strcpy(s, (Mip.Data.BulkDataFlags & BULKDATA_OptionalPayload) ? ".uptnl" : ".ubulk");
-			}
+			// Special case for UE4, it doesn't have TFC but has different data placement
+			return Mip.Data.SerializeData(this);
 		}
 		else
 #endif // UNREAL4

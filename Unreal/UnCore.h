@@ -2312,6 +2312,7 @@ struct FByteBulkData //?? separate FUntypedBulkData
 	// support functions
 	void SerializeHeader(FArchive &Ar);
 	void SerializeData(FArchive &Ar);
+	bool SerializeData(const UObject* MainObj) const;
 	// main functions
 	void Serialize(FArchive &Ar);
 	void Skip(FArchive &Ar);
