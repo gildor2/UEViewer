@@ -183,6 +183,8 @@ NOTES:
 -- constant used to detect ActorX Importer updates during single 3ds Max session
 global AX_IMPORTER_VERSION = 136
 
+g_axProfile = false
+
 -------------------------------------------------------------------------------
 --	Global variables
 -------------------------------------------------------------------------------
@@ -508,6 +510,24 @@ fn getMultiOpenFilenames caption: "Open" filename: "" types: "All Files (*.*)|*.
 		dlg.filenames
 	else
 		undefined
+)
+
+g_axProfileBeginTime = 0
+
+fn axBeginProfile =
+(
+	g_axProfileBeginTime = timeStamp()
+)
+
+fn axProfilePoint title debug:false =
+(
+	if (not debug or g_axProfile) then
+	(
+		local current = timeStamp()
+		local delta = current - g_axProfileBeginTime
+		g_axProfileBeginTime = current
+		format "% took % s\n" title (delta/1000.0)
+	)
 )
 
 -------------------------------------------------------------------------------
@@ -939,7 +959,7 @@ fn ImportPskFile filename skelOnly:false =
 
 	local extraUV = #()
 
-	local profileStartTime = timeStamp()
+	axBeginProfile()
 
 	try
 	(
@@ -1064,6 +1084,8 @@ fn ImportPskFile filename skelOnly:false =
 	format "Read mesh: % verts, % wedges, % tris, % materials, % bones, % influences\n" \
 		numVerts numWedges numTris numMaterials numBones numInfluences
 	fclose file
+
+	axProfilePoint "File loading"
 
 	--------- File is completely read now ---------
 
@@ -1209,6 +1231,8 @@ fn ImportPskFile filename skelOnly:false =
 		)
 	)
 
+	axProfilePoint "Base import" debug:true
+
 	newMat = multiMaterial numsubs:numMaterials
 	if g_skelOnly then numMaterials = 0		-- do not load materials for this option
 	for i = 1 to numMaterials do
@@ -1228,6 +1252,8 @@ fn ImportPskFile filename skelOnly:false =
 --		format "Material[%] = %\n" i Materials[i].MaterialName
 	)
 	newMesh.material = newMat
+
+	axProfilePoint "Material import" debug:true
 
 	update newMesh
 
@@ -1295,6 +1321,8 @@ fn ImportPskFile filename skelOnly:false =
 		return undefined
 	)
 
+	axProfilePoint "Part A" debug:true
+
 --	redrawViews()
 
 	modPanel.setCurrentObject skinMod
@@ -1321,6 +1349,8 @@ fn ImportPskFile filename skelOnly:false =
 			count = 0
 		)
 	)
+
+	axProfilePoint "Prepare influences" debug:true
 
 --	progressStart "Setting weights ..." -- shouldn't call progress functions, causes crash in script
 	disableSceneRedraw()
@@ -1420,6 +1450,9 @@ fn ImportPskFile filename skelOnly:false =
 		throw()
 	)
 	enableSceneRedraw()
+
+	axProfilePoint "Import influences" debug:true
+
 --	progressEnd()
 	if (numRepairedVerts > 0) or (numBadVerts > 0) then
 	(
@@ -1432,8 +1465,7 @@ fn ImportPskFile filename skelOnly:false =
 		MaxBones[1].transform = MaxBones[1].transform * axGetRootMatrix()
 	)
 
-	local profileEndTime = timeStamp()
-	format "Loaded in % sec\n" ((profileEndTime - profileStartTime) / 1000.0)
+	axProfilePoint "Mesh import"
 
 	gc()
 )
