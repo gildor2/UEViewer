@@ -693,7 +693,9 @@ fn ReadVRawBoneInfluence bstream =
 
 fn InfluenceSort v1 v2 =
 (
+	-- we just need to get influences sorted by vertex index
 	local cmp = v1.PointIndex - v2.PointIndex
+	-- add bone index sorting for sort stability
 	if (cmp == 0) then cmp = v1.BoneIndex - v2.BoneIndex
 	cmp
 )
@@ -1278,10 +1280,19 @@ fn ImportPskFile filename skelOnly:false =
 	VertList.count = 0
 	collapsestack newMesh
 
+	if numBones <= 0 then
+	(
+		return undefined
+	)
+
+	-- code above is common for SkeletalMesh (psk) and StaticMesh (pskx)
+	-- code below is executed only for SkeletalMesh
+
 	-- generate skin modifier
-	skinMod = skin ()
+	skinMod = skin()
 	boneIDMap = #()
-	if numBones > 0 then
+
+	if numBones > 0 then	--?? checking not needed as we have numBones always > 0 here
 	(
 		addModifier newMesh skinMod
 		for i = 1 to numBones do
@@ -1311,24 +1322,40 @@ fn ImportPskFile filename skelOnly:false =
 		)
 	)
 
+	axProfilePoint "Preparing skin" debug:true
+
 	if skelOnly then
 	(
 		delete newMesh		-- non-optimal way, may skip mesh creation
 		return undefined
 	)
-	if numBones <= 0 then
-	(
-		return undefined
-	)
-
-	axProfilePoint "Part A" debug:true
 
 --	redrawViews()
 
-	modPanel.setCurrentObject skinMod
+	modPanel.setCurrentObject skinMod 	-- this operation takes a lot of time, and there's no way to move it or optimize
+	axProfilePoint "Selecting skin object" debug:true
 
 	-- setup vertex influences (weights)
-	qsort Infs InfluenceSort
+
+/*	-- verify if influences are sorted by vertex: sorting takes some time, so try to avoid it
+	local sorted = true
+	for i = 2 to numInfluences while sorted do
+	(
+		vert = Infs[i].PointIndex
+		if (vert < Infs[i-1].PointIndex) then
+		(
+			sorted = false
+			format "Sorting broken at index % point %\n" i nextPoint
+		)
+	)
+	axProfilePoint "Verify sort" debug:true
+	-- sort if required
+	if not sorted then */
+	(
+		qsort Infs InfluenceSort
+	)
+
+	axProfilePoint "Sorting influences" debug:true
 
 	-- build vertex to influence map
 	vertInfStart = #()
@@ -1395,7 +1422,8 @@ fn ImportPskFile filename skelOnly:false =
 			)
 */
 			-- This code uses ReplaceVertexWeights with arrays, a few times slower;
-			-- it is still here in a case of bugs with SetVertexWeights path
+			-- it is still here because of bugs with SetVertexWeights path (SetVertexWeights
+			-- sometimes adds influences using its own tricky logic)
 			infBones   = #()
 			infWeights = #()
 			for i = 1 to numInfs do
