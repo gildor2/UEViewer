@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+21.10.2018
+- properly work with uniformly scaled UE4 skeletons
+
 06.10.2018
 - sound export for UE4 attempts to save "ue4opus" file for streamed sounds
 

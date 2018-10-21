@@ -43,22 +43,7 @@ struct FReferenceSkeleton
 	TArray<FTransform>		RefBonePose;
 	TMap<FName, int>		NameToIndexMap;
 
-	friend FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
-	{
-		guard(FReferenceSkeleton<<);
-
-		Ar << S.RefBoneInfo;
-		Ar << S.RefBonePose;
-
-		if (Ar.ArVer >= VER_UE4_REFERENCE_SKELETON_REFACTOR)
-			Ar << S.NameToIndexMap;
-		if (Ar.ArVer < VER_UE4_FIXUP_ROOTBONE_PARENT && S.RefBoneInfo.Num() && S.RefBoneInfo[0].ParentIndex != INDEX_NONE)
-			S.RefBoneInfo[0].ParentIndex = INDEX_NONE;
-
-		return Ar;
-
-		unguard;
-	}
+	friend FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S);
 };
 
 

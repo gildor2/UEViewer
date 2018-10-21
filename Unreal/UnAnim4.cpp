@@ -11,6 +11,7 @@
 #include "TypeConvert.h"
 
 //#define DEBUG_DECOMPRESS	1
+//#define DEBUG_SKELMESH		1
 
 // References in UE4 code: Engine/Public/AnimationCompression.h
 // - FAnimationCompression_PerTrackUtils
@@ -25,6 +26,63 @@
 USkeleton::~USkeleton()
 {
 	if (ConvertedAnim) delete ConvertedAnim;
+}
+
+FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
+{
+	guard(FReferenceSkeleton<<);
+
+	Ar << S.RefBoneInfo;
+	Ar << S.RefBonePose;
+
+	if (Ar.ArVer >= VER_UE4_REFERENCE_SKELETON_REFACTOR)
+		Ar << S.NameToIndexMap;
+
+	int NumBones = S.RefBoneInfo.Num();
+	if (Ar.ArVer < VER_UE4_FIXUP_ROOTBONE_PARENT && NumBones > 0 && S.RefBoneInfo[0].ParentIndex != INDEX_NONE)
+		S.RefBoneInfo[0].ParentIndex = INDEX_NONE;
+
+#if DEBUG_SKELMESH
+	assert(S.RefBonePose.Num() == NumBones);
+	assert(S.NameToIndexMap.Num() == NumBones);
+
+	for (int i = 0; i < NumBones; i++)
+	{
+		appPrintf("bone[%d] \"%s\" parent=%d",
+			i, *S.RefBoneInfo[i].Name, S.RefBoneInfo[i].ParentIndex);
+		FVector Scale = S.RefBonePose[i].Scale3D;
+		CVec3 ScaleDelta;
+		ScaleDelta.Set(Scale.X - 1, Scale.Y - 1, Scale.Z - 1);
+		if (ScaleDelta.GetLengthSq() > 0.001f)
+		{
+			appPrintf(" scale={%g %g %g}", FVECTOR_ARG(Scale));
+		}
+		appPrintf("\n");
+	}
+#endif // DEBUG_SKELMESH
+
+	// Adjust skeleton's scale, if any. Use scale of the root bone.
+	if (NumBones > 0)
+	{
+		FVector RootScale = S.RefBonePose[0].Scale3D;
+		float UniformScale = RootScale.X;
+		if (fabs(RootScale.Y - UniformScale) > 0.001f || fabs(RootScale.Z - UniformScale) > 0.001f)
+		{
+			appNotify("WARNING: skeleton has non-uniform scale {%g %g %g}", FVECTOR_ARG(RootScale));
+		}
+		// Set scale 1.0 for root bone
+//		S.RefBonePose[0].Scale3D.Set(1, 1, 1); -- don't change it, so we can recognize scale later, in AdjustSequenceBySkeleton()
+		// Adjust other bones
+		for (int BoneIndex = 1; BoneIndex < NumBones; BoneIndex++)
+		{
+			FTransform& Transform = S.RefBonePose[BoneIndex];
+			CVT(Transform.Translation).Scale(UniformScale);
+		}
+	}
+
+	return Ar;
+
+	unguard;
 }
 
 FArchive& operator<<(FArchive& Ar, FReferencePose& P)
@@ -127,6 +185,15 @@ void USkeleton::Serialize(FArchive &Ar)
 		DROP_REMAINING_DATA(Ar);
 		return;
 	}
+
+#if DEBUG_SKELMESH
+	appPrintf("Skeleton BoneTree:\n");
+	for (int i = 0; i < BoneTree.Num(); i++)
+	{
+		const FBoneNode& Bone = BoneTree[i];
+		appPrintf("[%d] \"%s\" = %s\n", i, *ReferenceSkeleton.RefBoneInfo[i].Name, EnumToName(Bone.TranslationRetargetingMode));
+	}
+#endif // DEBUG_SKELMESH
 
 	if (Ar.ArVer >= VER_UE4_SKELETON_GUID_SERIALIZATION)
 		Ar << Guid;
@@ -268,6 +335,28 @@ static void FixRotationKeys(CAnimSequence* Anim)
 			Track->KeyQuat[KeyIndex].Conjugate();
 		}
 	}
+}
+
+// Use skeleton's bone settings to adjust animation sequences
+void AdjustSequenceBySkeleton(USkeleton* Skel, CAnimSequence* Anim)
+{
+	guard(AdjustSequenceBySkeleton);
+
+	if (Skel->ReferenceSkeleton.RefBoneInfo.Num() == 0) return;
+
+	float UniformScale = Skel->ReferenceSkeleton.RefBonePose[0].Scale3D.X;
+
+	for (int TrackIndex = 0; TrackIndex < Anim->Tracks.Num(); TrackIndex++)
+	{
+		CAnimTrack* Track = Anim->Tracks[TrackIndex];
+		for (int KeyIndex = 0; KeyIndex < Track->KeyPos.Num(); KeyIndex++)
+		{
+			// Scale translation by UniformScale value
+			Track->KeyPos[KeyIndex].Scale(UniformScale);
+		}
+	}
+
+	unguard;
 }
 
 void USkeleton::ConvertAnims(UAnimSequence4* Seq)
@@ -708,6 +797,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 	// Now should invert all imported rotations
 	FixRotationKeys(Dst);
+	AdjustSequenceBySkeleton(this, Dst);
 
 	unguardf("Skel=%s Anim=%s", Name, Seq->Name);
 }
