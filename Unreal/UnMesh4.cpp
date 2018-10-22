@@ -1489,17 +1489,6 @@ void USkeletalMesh4::ConvertMesh()
 		Dst->ParentIndex = B.ParentIndex;
 		Dst->Position    = CVT(T.Translation);
 		Dst->Orientation = CVT(T.Rotation);
-		if (fabs(T.Scale3D.X - 1.0f) + fabs(T.Scale3D.Y - 1.0f) + fabs(T.Scale3D.Z - 1.0f) > 0.001f)
-		{
-			// TODO: mesh has non-identity scale
-/*			if (i == 0)
-			{
-				// root bone
-				Mesh->MeshScale = CVT(T.Scale3D); -- not works: should scale only the skeleton, but not geometry
-			} */
-			appPrintf("WARNING: Scale[%s] = %g %g %g\n", *B.Name, FVECTOR_ARG(T.Scale3D));
-		}
-		//!! use T.Scale3D
 		// fix skeleton; all bones but 0
 		if (i >= 1)
 			Dst->Orientation.Conjugate();

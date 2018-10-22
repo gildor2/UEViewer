@@ -28,6 +28,21 @@ USkeleton::~USkeleton()
 	if (ConvertedAnim) delete ConvertedAnim;
 }
 
+static CVec3 GetBoneScale(FReferenceSkeleton& Skel, int BoneIndex)
+{
+	CVec3 Scale;
+	Scale.Set(1, 1, 1);
+
+	while (BoneIndex >= 0)
+	{
+		FVector BoneScale = Skel.RefBonePose[BoneIndex].Scale3D;
+		Scale.Scale(CVT(BoneScale));
+		BoneIndex = Skel.RefBoneInfo[BoneIndex].ParentIndex;
+	}
+
+	return Scale;
+}
+
 FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 {
 	guard(FReferenceSkeleton<<);
@@ -64,19 +79,12 @@ FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 	// Adjust skeleton's scale, if any. Use scale of the root bone.
 	if (NumBones > 0)
 	{
-		FVector RootScale = S.RefBonePose[0].Scale3D;
-		float UniformScale = RootScale.X;
-		if (fabs(RootScale.Y - UniformScale) > 0.001f || fabs(RootScale.Z - UniformScale) > 0.001f)
-		{
-			appNotify("WARNING: skeleton has non-uniform scale {%g %g %g}", FVECTOR_ARG(RootScale));
-		}
-		// Set scale 1.0 for root bone
-//		S.RefBonePose[0].Scale3D.Set(1, 1, 1); -- don't change it, so we can recognize scale later, in AdjustSequenceBySkeleton()
 		// Adjust other bones
-		for (int BoneIndex = 1; BoneIndex < NumBones; BoneIndex++)
+		for (int BoneIndex = 0; BoneIndex < NumBones; BoneIndex++)
 		{
 			FTransform& Transform = S.RefBonePose[BoneIndex];
-			CVT(Transform.Translation).Scale(UniformScale);
+			CVec3 Scale = GetBoneScale(S, BoneIndex);
+			CVT(Transform.Translation).Scale(Scale);
 		}
 	}
 
@@ -344,15 +352,14 @@ void AdjustSequenceBySkeleton(USkeleton* Skel, CAnimSequence* Anim)
 
 	if (Skel->ReferenceSkeleton.RefBoneInfo.Num() == 0) return;
 
-	float UniformScale = Skel->ReferenceSkeleton.RefBonePose[0].Scale3D.X;
-
 	for (int TrackIndex = 0; TrackIndex < Anim->Tracks.Num(); TrackIndex++)
 	{
 		CAnimTrack* Track = Anim->Tracks[TrackIndex];
+		CVec3 BoneScale = GetBoneScale(Skel->ReferenceSkeleton, TrackIndex);
 		for (int KeyIndex = 0; KeyIndex < Track->KeyPos.Num(); KeyIndex++)
 		{
-			// Scale translation by UniformScale value
-			Track->KeyPos[KeyIndex].Scale(UniformScale);
+			// Scale translation by accumulated bone scale value
+			Track->KeyPos[KeyIndex].Scale(BoneScale);
 		}
 	}
 
