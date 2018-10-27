@@ -726,21 +726,15 @@ bool UIMenuButton::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (cmd == BCN_DROPDOWN || (cmd == BN_CLICKED && !Callback))
 	{
 		// reference: MFC, CSplitButton::OnDropDown()
-		// create menu or get its handle
-		HMENU hMenu = Menu->GetHandle(true, true);
 		// get rect of button for menu positioning
 		RECT rectButton;
 		GetWindowRect(Wnd, &rectButton);
-		TPMPARAMS tpmParams;
-		tpmParams.cbSize = sizeof(TPMPARAMS);
-		tpmParams.rcExclude = rectButton;
-		int cmd = TrackPopupMenuEx(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
-			rectButton.left, rectButton.bottom, Wnd, &tpmParams);
-		if (cmd)
-			Menu->HandleCommand(cmd);
+		Menu->Popup(this, rectButton.left, rectButton.bottom);
 	}
 	else if (cmd == BN_CLICKED && Callback)
+	{
 		Callback(this);
+	}
 	return true;
 }
 
@@ -1905,6 +1899,19 @@ TreeViewItem* UITreeView::FindItem(const char* item)
 	return NULL;
 }
 
+TreeViewItem* UITreeView::FindItem(void* hItem)
+{
+	for (int i = 0; i < Items.Num(); i++)
+	{
+		TreeViewItem* item = Items[i];
+		if (item->hItem == hItem)
+		{
+			return item;
+		}
+	}
+	return NULL;
+}
+
 UITreeView& UITreeView::AddItem(const char* item)
 {
 	char buffer[1024];
@@ -2008,6 +2015,11 @@ UITreeView& UITreeView::SelectItem(const char* item)
 	return *this;
 }
 
+const char* UITreeView::GetSelectedItem()
+{
+	return SelectedItem ? *SelectedItem->Label : NULL;
+}
+
 // This image list is created once and shared between all possible UITreeView controls.
 static HIMAGELIST GTreeFolderImages;
 
@@ -2076,22 +2088,36 @@ bool UITreeView::HandleCommand(int id, int cmd, LPARAM lParam)
 	if (cmd == TVN_SELCHANGED)
 	{
 		LPNMTREEVIEW data = (LPNMTREEVIEW)lParam;
-		HTREEITEM hItem = data->itemNew.hItem;
-		for (int i = 0; i < Items.Num(); i++)
+		TreeViewItem* item = FindItem(data->itemNew.hItem);
+		if (item && SelectedItem != item)
 		{
-			TreeViewItem* item = Items[i];
-			if (item->hItem == hItem)
-			{
-				if (SelectedItem != item)
-				{
-					SelectedItem = item;
-					if (Callback)
-						Callback(this, *item->Label);
-				}
-				break;
-			}
+			SelectedItem = item;
+			if (Callback)
+				Callback(this, *item->Label);
 		}
 		return true;
+	}
+	else if (cmd == NM_RCLICK && Menu)
+	{
+		// Get mouse pointer location
+		POINT pt;
+		GetCursorPos(&pt);
+
+		// Get tree item under cursor
+		TV_HITTESTINFO tvhip;
+		tvhip.pt = pt;
+		ScreenToClient(Wnd, &tvhip.pt);
+		HTREEITEM hItem = (HTREEITEM)SendMessage(Wnd, TVM_HITTEST, 0, (LPARAM)&tvhip);
+		TreeViewItem* item = FindItem(hItem);
+
+		// Save selection: Win32 will temporarily highlight right-clicked item, and restore selection later.
+		TreeViewItem* oldSelection = SelectedItem;
+		// Set selection to new item
+		SelectedItem = item;
+		// Show menu
+		Menu->Popup(this, pt.x, pt.y);
+		// Restore selection
+		SelectedItem = oldSelection;
 	}
 	return false;
 }

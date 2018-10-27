@@ -726,6 +726,7 @@ public:
 	void RemoveAllItems();
 
 	UITreeView& SelectItem(const char* item);
+	const char* GetSelectedItem();
 
 	UITreeView& UseFolderIcons()          { bUseFolderIcons = true; return *this; }
 	UITreeView& UseCheckboxes()           { bUseCheckboxes = true; return *this;  }
@@ -756,6 +757,7 @@ protected:
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	void CreateItem(TreeViewItem& item);
 	TreeViewItem* FindItem(const char* item);
+	TreeViewItem* FindItem(void* hItem);
 	void UpdateCheckedStates();
 	virtual void DialogClosed(bool cancel) override;
 };
@@ -873,6 +875,8 @@ protected:
 
 class UIMenu : public UIMenuItem // note: we're not using virtual functions in menu classes now
 {
+	typedef UIMenu ThisClass;
+	DECLARE_CALLBACK(BeforePopup, UIElement*);		// this callback is executed when menu is about to pop up
 public:
 	UIMenu();
 	~UIMenu();
@@ -900,6 +904,8 @@ public:
 	}
 
 	int GetNextItemId();
+
+	void Popup(UIElement* Owner, int x, int y);
 
 protected:
 	int			ReferenceCount;

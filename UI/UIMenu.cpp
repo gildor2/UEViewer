@@ -602,4 +602,30 @@ int UIMenu::GetNextItemId()
 	return max(GetMaxItemIdRecursive() + 1, FIRST_MENU_ID);
 }
 
+void UIMenu::Popup(UIElement* Owner, int x, int y)
+{
+	guard(UIMenu::Popup);
+
+	if (BeforePopup)
+	{
+		BeforePopup(this, Owner);
+	}
+
+	// Create menu
+	GetHandle(true, true);
+
+	TPMPARAMS tpmParams;
+	memset(&tpmParams, 0, sizeof(TPMPARAMS));
+	tpmParams.cbSize = sizeof(TPMPARAMS);
+//??	tpmParams.rcExclude = rectButton; - this will let some control to not be covered by menu (used for UIMenuButton before)
+
+	int cmd = TrackPopupMenuEx(hMenu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, x, y, Owner ? Owner->GetWnd() : NULL, &tpmParams);
+	if (cmd)
+	{
+		HandleCommand(cmd);
+	}
+
+	unguard;
+}
+
 #endif // HAS_UI
