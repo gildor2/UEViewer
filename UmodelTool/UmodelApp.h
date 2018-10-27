@@ -27,6 +27,10 @@ public:
 	virtual void BeforeSwap();
 	virtual void ProcessKey(int key, bool isDown);
 
+	// Release all loaded objects from memory, so any package loading or unloading operation
+	// will be safe for viewer
+	void ReleaseViewerAndObjects();
+
 #if RENDERING
 	// Create visualizer for object. If 'test' is true, then visualizer will not be created, but
 	// possibility of creation will be validated, and result of the function will be 'true' if
@@ -85,8 +89,6 @@ extern CUmodelApp GApplication;
 
 // Main.cpp functions
 void InitClassAndExportSystems(int Game);
-bool ExportObjects(const TArray<UObject*> *Objects = NULL, IProgressCallback* progress = NULL);
-void DisplayPackageStats(const TArray<UnPackage*> &Packages);
 
 
 #endif // __UMODEL_APP_H__

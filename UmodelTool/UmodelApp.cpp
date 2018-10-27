@@ -12,6 +12,7 @@
 #include "UnMesh4.h"
 
 #include "UmodelApp.h"
+#include "UmodelCommands.h"
 #include "UmodelSettings.h"
 
 #include "Exporters/Exporters.h"	// for WriteTGA
@@ -123,6 +124,16 @@ static HWND GetSDLWindowHandle(SDL_Window* window)
 	return info.info.win.window;
 }
 
+void CUmodelApp::ReleaseViewerAndObjects()
+{
+	// destroy a viewer before releasing packages
+	CSkelMeshViewer::UntagAllMeshes();
+	delete Viewer;
+	Viewer = NULL;
+
+	ReleaseAllObjects();
+}
+
 // This function will return 'false' when dialog has popped up and cancelled. If
 // user performs some action, and then pop up the dialog again - the function will
 // always return true.
@@ -130,20 +141,22 @@ bool CUmodelApp::ShowPackageUI()
 {
 	guard(CUmodelApp::ShowPackageUI);
 
-	// When we're doing export, then switching back to GUI, then pressing "Esc",
-	// we can't return to the visualizer which was used before doing export because
-	// all object was unloaded. In this case, code will set 'packagesChanged' flag
-	// to true, causing re-initialization of browser list.
-	bool packagesChanged = false;
 	GuiShown = true;
 
 	while (true)
 	{
 		UIPackageDialog::EResult mode = GPackageDialog.Show();
+
 		if (mode == UIPackageDialog::CANCEL)
 		{
-			if (packagesChanged)
+			if (UObject::GObjObjects.Num() == 0)
+			{
+				// When we're doing export, then switching back to GUI, then pressing "Esc",
+				// we can't return to the visualizer which was used before doing export because
+				// all object was unloaded. In this case, code will set 'packagesChanged' flag
+				// to true, causing re-initialization of browser list.
 				FindObjectAndCreateVisualizer(1, true, true);
+			}
 			return false;
 		}
 
@@ -198,52 +211,13 @@ bool CUmodelApp::ShowPackageUI()
 		if (needReload || mode == UIPackageDialog::EXPORT)
 		{
 			// destroy a viewer before releasing packages
-			CSkelMeshViewer::UntagAllMeshes();
-			delete Viewer;
-			Viewer = NULL;
-
-			packagesChanged = true;
-			ReleaseAllObjects();
+			ReleaseViewerAndObjects();
 		}
 
 		if (mode == UIPackageDialog::EXPORT)
 		{
-#if PROFILE
-//			appResetProfiler(); -- there's nested appResetProfiler/appPrintProfiler calls, which are not supported
-#endif
 			progress.SetDescription("Exporting package");
-			// for each package: load a package, export, then release
-			for (int i = 0; i < Packages.Num(); i++)
-			{
-				UnPackage* package = Packages[i];
-				if (!progress.Progress(package->Name, i, Packages.Num()))
-				{
-					cancelled = true;
-					break;
-				}
-				if (!LoadWholePackage(package, &progress))
-				{
-					cancelled = true;
-					break;
-				}
-				if (!ExportObjects(NULL, &progress))
-				{
-					cancelled = true;
-					break;
-				}
-				ReleaseAllObjects();
-			}
-			// cleanup
-			ResetExportedList();
-#if PROFILE
-//			appPrintProfiler();
-#endif
-			if (cancelled)
-			{
-				ReleaseAllObjects();
-				//!! message box
-				appPrintf("Operation interrupted by user.\n");
-			}
+			ExportPackages(Packages, &progress);
 			progress.CloseDialog();
 			continue;		// after export, show the dialog again
 		}
@@ -275,10 +249,10 @@ bool CUmodelApp::ShowPackageUI()
 
 		progress.CloseDialog();
 
-		if (packagesChanged || !Viewer)
+		// Viewer was released if we're releasing package which is currenly used for viewing.
+		if (!Viewer)
 		{
 			FindObjectAndCreateVisualizer(1, true, true);
-			packagesChanged = false;
 		}
 		break;
 	}

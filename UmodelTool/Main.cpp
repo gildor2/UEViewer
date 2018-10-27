@@ -30,6 +30,7 @@
 #include "PackageUtils.h"
 
 #include "UmodelApp.h"
+#include "UmodelCommands.h"
 #include "Version.h"
 #include "MiscStrings.h"
 
@@ -433,62 +434,6 @@ static void PrintVersionInfo()
 			"UE Viewer (UModel)\n" "%s\n" "%s\n" "%s\n",
 			GBuildString, GCopyrightString, GUmodelHomepage
 	);
-}
-
-
-/*-----------------------------------------------------------------------------
-	Package helpers
------------------------------------------------------------------------------*/
-
-// Export all loaded objects.
-bool ExportObjects(const TArray<UObject*> *Objects, IProgressCallback* progress)
-{
-	guard(ExportObjects);
-
-	appPrintf("Exporting objects ...\n");
-
-	// export object(s), if possible
-	UnPackage* notifyPackage = NULL;
-	bool hasObjectList = (Objects != NULL) && Objects->Num();
-
-	//?? when 'Objects' passed, probably iterate over that list instead of GObjObjects
-	for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
-	{
-		if (progress && !progress->Tick()) return false;
-		UObject* ExpObj = UObject::GObjObjects[idx];
-		bool objectSelected = !hasObjectList || (Objects->FindItem(ExpObj) >= 0);
-
-		if (!objectSelected) continue;
-
-		if (notifyPackage != ExpObj->Package)
-		{
-			notifyPackage = ExpObj->Package;
-			appSetNotifyHeader(notifyPackage->Filename);
-		}
-
-		bool done = ExportObject(ExpObj);
-
-		if (!done && hasObjectList)
-		{
-			// display warning message only when failed to export object, specified from command line
-			appPrintf("ERROR: Export object %s: unsupported type %s\n", ExpObj->Name, ExpObj->GetClassName());
-		}
-	}
-
-	return true;
-
-	unguard;
-}
-
-
-void DisplayPackageStats(const TArray<UnPackage*> &Packages)
-{
-	TArray<ClassStats> stats;
-	CollectPackageStats(Packages, stats);
-
-	appPrintf("Class statistics:\n");
-	for (int i = 0; i < stats.Num(); i++)
-		appPrintf("%5d %s\n", stats[i].Count, stats[i].Name);
 }
 
 
@@ -1064,6 +1009,8 @@ int main(int argc, char **argv)
 		return 0;					// already displayed when loaded package; extend it?
 	}
 
+	bool bShouldLoadObjects = (mainCmd != CMD_Export) || (objectsToLoad.Num() > 0);
+
 	// load requested objects if any, or fully load everything
 	UObject::BeginLoad();
 	if (objectsToLoad.Num())
@@ -1108,7 +1055,7 @@ int main(int argc, char **argv)
 		}
 		appPrintf("Found %d object(s)\n", totalFound);
 	}
-	else
+	else if (bShouldLoadObjects)
 	{
 		// fully load all packages
 		for (int pkg = 0; pkg < Packages.Num(); pkg++)
@@ -1116,7 +1063,7 @@ int main(int argc, char **argv)
 	}
 	UObject::EndLoad();
 
-	if (!UObject::GObjObjects.Num() && !GApplication.GuiShown)
+	if (!UObject::GObjObjects.Num() && !GApplication.GuiShown && bShouldLoadObjects)
 	{
 		appPrintf("\nThe specified package(s) has no supported objects.\n\n");
 	no_objects:
@@ -1135,8 +1082,16 @@ int main(int argc, char **argv)
 
 	if (mainCmd == CMD_Export)
 	{
-		ExportObjects(&Objects); // will export everything if "Objects" array is empty
-		ResetExportedList();
+		// If we have list of objects, the process only those ones. Otherwise, process full packages.
+		if (Objects.Num())
+		{
+	        ExportObjects(&Objects); // will export everything if "Objects" array is empty, however we're calling ExportPackages() in this case
+			ResetExportedList();
+		}
+		else
+		{
+			ExportPackages(Packages);
+		}
 		if (!GApplication.GuiShown)
 			return 0;
 		// switch to a viewer in GUI mode

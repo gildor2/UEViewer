@@ -199,6 +199,10 @@ detex
 
 Changes
 ~~~~~~~
+27.10.2018
+- "-export" command line option now uses the same exporting code as GUI, so "-export *" will work correctly without
+  running out of memory
+
 21.10.2018
 - properly work with UE4 skeletons which has scale on bones
 
