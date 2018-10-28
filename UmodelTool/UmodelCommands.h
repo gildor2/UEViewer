@@ -12,4 +12,6 @@ bool ExportPackages(const TArray<UnPackage*>& Packages, IProgressCallback* Progr
 
 void DisplayPackageStats(const TArray<UnPackage*> &Packages);
 
+void SavePackages(const TArray<const CGameFileInfo*>& Packages, IProgressCallback* Progress = NULL);
+
 #endif // __UMODEL_COMMANDS_H__

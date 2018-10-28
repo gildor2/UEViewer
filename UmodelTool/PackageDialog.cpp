@@ -725,20 +725,6 @@ void UIPackageDialog::ScanContent()
 }
 
 
-static void CopyStream(FArchive *Src, FILE *Dst, int Count)
-{
-	byte buffer[16384];
-
-	while (Count > 0)
-	{
-		int Size = min(Count, sizeof(buffer));
-		Src->Serialize(buffer, Size);
-		if (fwrite(buffer, Size, 1, Dst) != 1) appError("Write failed");
-		Count -= Size;
-	}
-}
-
-//!! TODO: move to PackageUtils.cpp
 void UIPackageDialog::SavePackages()
 {
 	guard(UIPackageDialog::SavePackages);
@@ -756,72 +742,7 @@ void UIPackageDialog::SavePackages()
 	progress.Show("Saving packages");
 	progress.SetDescription("Saving package");
 
-	for (int i = 0; i < SelectedPackages.Num(); i++)
-	{
-		const CGameFileInfo* file = SelectedPackages[i];
-
-		assert(file);
-		if (!progress.Progress(file->RelativeName, i, GNumPackageFiles))
-			break;
-
-		// Reference in UE4 code: FNetworkPlatformFile::IsAdditionalCookedFileExtension()
-		//!! TODO: perhaps save ALL files with the same path and name but different extension
-		static const char* additionalExtensions[] =
-		{
-			"",				// empty string for original extension
-#if UNREAL4
-			".ubulk",
-			".uexp",
-			".uptnl",
-#endif // UNREAL4
-		};
-
-		for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
-		{
-			char SrcFile[MAX_PACKAGE_PATH];
-#if UNREAL4
-			if (ext > 0)
-			{
-				appStrncpyz(SrcFile, SelectedPackages[i]->RelativeName, ARRAY_COUNT(SrcFile));
-				char* s = strrchr(SrcFile, '.');
-				if (s && (stricmp(s, ".uasset") == 0 || stricmp(s, ".umap") == 0))
-				{
-					// Find additional file by replacing .uasset extension
-					strcpy(s, additionalExtensions[ext]);
-					file = appFindGameFile(SrcFile);
-					if (!file)
-					{
-						continue;
-					}
-				}
-				else
-				{
-					// there's no needs to process this file anymore - main file was already exported, no other files will exist
-					break;
-				}
-			}
-#endif // UNREAL4
-
-			FArchive *Ar = appCreateFileReader(file);
-			if (Ar)
-			{
-				guard(SaveFile);
-				// prepare destination file
-				char OutFile[1024];
-				appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);
-				appMakeDirectoryForFile(OutFile);
-				FILE *out = fopen(OutFile, "wb");
-				// copy data
-				CopyStream(Ar, out, Ar->GetFileSize());
-				// cleanup
-				delete Ar;
-				fclose(out);
-				unguardf("%s", file->RelativeName);
-			}
-		}
-	}
-
-	progress.CloseDialog();
+	::SavePackages(SelectedPackages, &progress);
 
 	unguard;
 }
