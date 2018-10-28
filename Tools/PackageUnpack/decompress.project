@@ -16,7 +16,9 @@ sources(MAIN) = {
 	$R/Unreal/GameDatabase.cpp
 	$R/Unreal/GameFileSystem.cpp
 	$R/Unreal/TypeInfo.cpp
-	$R/Core/*.cpp
+	$R/Core/Core.cpp
+	$R/Core/CoreWin32.cpp
+	$R/Core/Memory.cpp
 }
 
 target(executable, $PRJ, MAIN + UE3_LIBS, MAIN)

@@ -863,7 +863,7 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkBlock &B)
 		goto int64_offsets;
 #endif // MKVSDC
 
-#if UNREAL4
+#if UNREAL4 || MKVSDC
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
 	int64_offsets:
@@ -906,7 +906,7 @@ FArchive& operator<<(FArchive &Ar, FCompressedChunkHeader &H)
 		goto int64_offsets;
 #endif // MKVSDC
 
-#if UNREAL4
+#if UNREAL4 || MKVSDC
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
 	int64_offsets:
@@ -1414,6 +1414,7 @@ bool FByteBulkData::SerializeData(const UObject* MainObj) const
 	unguard;
 #else
 	appError("FByteBulkData::SerializeData(UObject*) call");
+	return false;
 #endif
 }
 

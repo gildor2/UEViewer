@@ -8,7 +8,6 @@
 
 //#define DEBUG_PROPS				1
 //#define PROFILE_LOADING			1
-//#define DEBUG_TYPES				1
 
 #define DUMP_SHOW_PROP_INDEX	0
 #define DUMP_SHOW_PROP_TYPE		0
@@ -190,6 +189,7 @@ void UObject::EndLoad()
 	#define EDITOR_STR		(Package->ContainsEditorData()) ? " (editor)" : ""
 #else
 	#define UNVERS_STR		""
+	#define EDITOR_STR		""
 #endif
 
 		unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s%s, game=%s", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
@@ -1082,6 +1082,7 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 				appPrintf("WARNING: skipping BoolProperty %s with Tag.Size=%d\n", *Tag.Name, Tag.DataSize);
 				continue;
 			}
+#if UNREAL4
 			if (Tag.Type == NAME_EnumProperty && Tag.DataSize == 8)
 			{
 				// See NAME_EnumProperty serialization in this function: this property has DataSize==8, but
@@ -1089,6 +1090,7 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 				appPrintf("WARNING: skipping EnumProperty %s with Tag.Size=%d\n", *Tag.Name, Tag.DataSize);
 				continue;
 			}
+#endif // UNREAL4
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
