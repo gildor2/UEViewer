@@ -340,6 +340,7 @@ static void PrintUsage()
 			"                    will load whole package\n"
 			"    -list           list contents of package\n"
 			"    -export         export specified object or whole package\n"
+			"    -save           save specified packages\n"
 			"    -taglist        list of tags to override game autodetection\n"
 			"    -version        display umodel version information\n"
 			"    -help           display this help page\n"
@@ -687,6 +688,7 @@ int main(int argc, char **argv)
 		CMD_PkgInfo,
 		CMD_List,
 		CMD_Export,
+		CMD_Save,
 	};
 
 	static byte mainCmd = CMD_View;
@@ -711,6 +713,7 @@ int main(int argc, char **argv)
 			OPT_VALUE("dump",    mainCmd, CMD_Dump)
 			OPT_VALUE("check",   mainCmd, CMD_Check)
 			OPT_VALUE("export",  mainCmd, CMD_Export)
+			OPT_VALUE("save",    mainCmd, CMD_Save)
 			OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
 			OPT_VALUE("list",    mainCmd, CMD_List)
 #if VSTUDIO_INTEGRATION
@@ -935,6 +938,9 @@ int main(int argc, char **argv)
 		appSetRootDirectory(".");			// scan for packages
 	}
 
+	bool bShouldLoadPackages = (mainCmd != CMD_Save);
+	TArray<const CGameFileInfo*> GameFiles;
+
 	// Try to load all packages first.
 	// Note: in this code, packages will be loaded without creating any exported objects.
 	for (int i = 0; i < packagesToLoad.Num(); i++)
@@ -951,19 +957,23 @@ int main(int argc, char **argv)
 		{
 			for (int j = 0; j < Files.Num(); j++)
 			{
-				UnPackage* Package = UnPackage::LoadPackage(Files[j]->RelativeName);
-				Packages.Add(Package);
+				GameFiles.Add(Files[j]);
+				if (bShouldLoadPackages)
+				{
+					UnPackage* Package = UnPackage::LoadPackage(Files[j]->RelativeName);
+					Packages.Add(Package);
+				}
 			}
 		}
 	}
 
 #if !HAS_UI
-	if (!Packages.Num())
+	if (!GameFiles.Num())
 	{
 		CommandLineError("failed to load provided packages");
 	}
 #else
-	if (!Packages.Num())
+	if (!GameFiles.Num())
 	{
 		if (mainCmd != CMD_View)
 		{
@@ -997,6 +1007,12 @@ int main(int argc, char **argv)
 			}
 		}
 		unguard;
+		return 0;
+	}
+
+	if (mainCmd == CMD_Save)
+	{
+		SavePackages(GameFiles);
 		return 0;
 	}
 

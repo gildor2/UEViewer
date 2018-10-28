@@ -102,6 +102,17 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 }
 
 
+void CUmodelApp::ReleaseViewerAndObjects()
+{
+	// destroy a viewer before releasing packages
+	CSkelMeshViewer::UntagAllMeshes();
+	delete Viewer;
+	Viewer = NULL;
+
+	ReleaseAllObjects();
+}
+
+
 #if HAS_UI
 
 bool CUmodelApp::ShowStartupDialog(CStartupSettings& settings)
@@ -122,16 +133,6 @@ static HWND GetSDLWindowHandle(SDL_Window* window)
 	SDL_VERSION(&info.version);
 	SDL_GetWindowWMInfo(window, &info);
 	return info.info.win.window;
-}
-
-void CUmodelApp::ReleaseViewerAndObjects()
-{
-	// destroy a viewer before releasing packages
-	CSkelMeshViewer::UntagAllMeshes();
-	delete Viewer;
-	Viewer = NULL;
-
-	ReleaseAllObjects();
 }
 
 // This function will return 'false' when dialog has popped up and cancelled. If

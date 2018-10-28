@@ -63,6 +63,7 @@ protected:
 
 	void ScanContent();
 	void SavePackages();
+	void SaveFolderPackages();
 
 	void UpdateSelectedPackages();
 	void GetPackagesForSelectedFolder(PackageList& OutPackages);

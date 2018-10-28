@@ -307,6 +307,8 @@ void UIPackageDialog::InitUI()
 	[
 		NewMenuItem("Export folder content")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportFolderClicked, this))
+		+ NewMenuItem("Save folder packages")
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::SaveFolderPackages, this))
 	];
 
 	(*this)
@@ -743,6 +745,23 @@ void UIPackageDialog::SavePackages()
 	progress.SetDescription("Saving package");
 
 	::SavePackages(SelectedPackages, &progress);
+
+	unguard;
+}
+
+
+void UIPackageDialog::SaveFolderPackages()
+{
+	guard(UIPackageDialog::SaveFolderPackages);
+
+	PackageList PackagesToSave;
+	GetPackagesForSelectedFolder(PackagesToSave);
+
+	UIProgressDialog progress;
+	progress.Show("Saving packages");
+	progress.SetDescription("Saving package");
+
+	::SavePackages(PackagesToSave, &progress);
 
 	unguard;
 }
