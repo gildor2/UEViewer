@@ -9,6 +9,7 @@
 #include "AboutDialog.h"
 
 #include "UnPackage.h"
+#include "UmodelCommands.h"
 
 #define USE_FULLY_VIRTUAL_LIST		1		// disable only for testing, to compare UIMulticolumnListbox behavior in virtual modes
 
@@ -301,6 +302,13 @@ void UIPackageDialog::InitUI()
 {
 	guard(UIPackageDialog::InitUI);
 
+	UIMenu* treeMenu = new UIMenu;
+	(*treeMenu)
+	[
+		NewMenuItem("Export folder content")
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportFolderClicked, this))
+	];
+
 	(*this)
 	[
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
@@ -331,6 +339,7 @@ void UIPackageDialog::InitUI()
 					.UseFolderIcons()
 					.SetItemHeight(20)
 					.Expose(PackageTree)
+					.SetMenu(treeMenu)
 				+ CreatePackageListControl(true).Expose(PackageListbox)
 			]
 			// page 1: single ListBox
@@ -491,6 +500,33 @@ void UIPackageDialog::UpdateSelectedPackages()
 	}
 
 	unguard;
+}
+
+void UIPackageDialog::GetPackagesForSelectedFolder(PackageList& OutPackages)
+{
+	const char* folder = PackageTree->GetSelectedItem();
+	if (!folder) return;
+
+	int folderLen = strlen(folder);
+	OutPackages.Empty(1024);
+
+	for (int i = 0; i < Packages.Num(); i++)
+	{
+		const CGameFileInfo* package = Packages[i];
+
+		// When root folder selected, "folder" is a empty string, we'll fill Packages with full list of packages
+		if (folderLen > 0)
+		{
+			if (strncmp(package->RelativeName, folder, folderLen) != 0 ||
+				package->RelativeName[folderLen] != '/')
+			{
+				// Not in this folder
+				continue;
+			}
+		}
+
+		OutPackages.Add(package);
+	}
 }
 
 void UIPackageDialog::SelectDirFromFilename(const char* filename)
@@ -853,5 +889,39 @@ void UIPackageDialog::OnCancelClicked()
 	CloseDialog(CANCEL);
 }
 
+void UIPackageDialog::OnExportFolderClicked()
+{
+	PackageList PackagesToExport;
+	GetPackagesForSelectedFolder(PackagesToExport);
+
+	UIProgressDialog progress;
+	progress.Show("Exporting packages");
+	bool cancelled = false;
+
+	// Load all packages corresponding to PackagesToExport list
+	// NOTE: same code exists in CUmodelApp
+	progress.SetDescription("Scanning package");
+	TArray<UnPackage*> UnrealPackages;
+	UnrealPackages.Empty(PackagesToExport.Num());
+
+	for (int i = 0; i < PackagesToExport.Num(); i++)
+	{
+		const char* pkgName = PackagesToExport[i]->RelativeName;
+		if (!progress.Progress(pkgName, i, PackagesToExport.Num()))
+		{
+			cancelled = true;
+			break;
+		}
+		UnPackage* package = UnPackage::LoadPackage(pkgName);	// should always return non-NULL
+		if (package) UnrealPackages.Add(package);
+	}
+	if (cancelled || !UnrealPackages.Num())
+	{
+		return;
+	}
+
+	progress.SetDescription("Exporting package");
+	ExportPackages(UnrealPackages, &progress);
+}
 
 #endif // HAS_UI

@@ -57,6 +57,7 @@ protected:
 	void OnOpenClicked();
 	void OnAppendClicked();
 	void OnExportClicked();
+	void OnExportFolderClicked();
 	void OnCancelClicked();
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
@@ -64,6 +65,7 @@ protected:
 	void SavePackages();
 
 	void UpdateSelectedPackages();
+	void GetPackagesForSelectedFolder(PackageList& OutPackages);
 	void SelectDirFromFilename(const char* filename);
 	void RefreshPackageListbox();
 	void SortPackages();

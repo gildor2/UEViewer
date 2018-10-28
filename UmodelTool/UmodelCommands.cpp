@@ -13,6 +13,9 @@ bool ExportObjects(const TArray<UObject*> *Objects, IProgressCallback* progress)
 {
 	guard(ExportObjects);
 
+	// Do not print anything to a log and do not do anything if there's no objects loaded
+	if (UObject::GObjObjects.Num() == 0) return true;
+
 	appPrintf("Exporting objects ...\n");
 
 	// export object(s), if possible
@@ -52,6 +55,10 @@ bool ExportObjects(const TArray<UObject*> *Objects, IProgressCallback* progress)
 bool ExportPackages(const TArray<UnPackage*>& Packages, IProgressCallback* Progress)
 {
 	guard(ExportPackages);
+
+	// Register exporters and classes (will be performed only once); use any package
+	// to detect an engine version
+	InitClassAndExportSystems(Packages[0]->Game);
 
 	// We'll entirely unload all objects, so we should reset viewer. Note: CUmodelApp does this too,
 	// however we're calling ExportPackages() from different code places, so call it anyway.
