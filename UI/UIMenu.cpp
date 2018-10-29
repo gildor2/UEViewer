@@ -134,6 +134,15 @@ UIMenuItem& operator+(UIMenuItem& item, UIMenuItem& next)
 
 UIMenuItem& UIMenuItem::Enable(bool enable)
 {
+	if (Type == MI_Submenu)
+	{
+		// Propagate to children
+		for (UIMenuItem* curr = FirstChild; curr; curr = curr->NextChild)
+		{
+			curr->Enable(enable);
+		}
+	}
+
 	Enabled = enable;
 	if (Parent && Parent->hMenu)
 	{

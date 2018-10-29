@@ -1810,6 +1810,15 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 		return true;
 	}
 
+	if (cmd == NM_RCLICK && Menu)
+	{
+		// Get mouse pointer location
+		POINT pt;
+		GetCursorPos(&pt);
+		// Show menu
+		Menu->Popup(this, pt.x, pt.y);
+	}
+
 	return false;
 
 	unguard;
