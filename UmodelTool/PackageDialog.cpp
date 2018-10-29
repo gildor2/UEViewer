@@ -302,13 +302,28 @@ void UIPackageDialog::InitUI()
 {
 	guard(UIPackageDialog::InitUI);
 
-	UIMenu* treeMenu = new UIMenu;
-	(*treeMenu)
+	TreeMenu = new UIMenu;
+	(*TreeMenu)
 	[
 		NewMenuItem("Export folder content")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportFolderClicked, this))
 		+ NewMenuItem("Save folder packages")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::SaveFolderPackages, this))
+	];
+
+	ListMenu = new UIMenu;
+	(*ListMenu)
+	.SetBeforePopup(BIND_MEMBER(&UIPackageDialog::OnBeforeListMenuPopup, this))
+	[
+		NewMenuItem("Open")
+		.SetCallback(BIND_LAMBDA([this]() { CloseDialog(OPEN); }))
+		+ NewMenuItem("Open (add to loaded set)")
+		.SetCallback(BIND_LAMBDA([this]() { CloseDialog(APPEND); }))
+		+ NewMenuItem("Export")
+		.SetCallback(BIND_LAMBDA([this]() { CloseDialog(EXPORT); }))
+		+ NewMenuSeparator()
+		+ NewMenuItem("Save packages")
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::SavePackages, this))
 	];
 
 	(*this)
@@ -341,11 +356,13 @@ void UIPackageDialog::InitUI()
 					.UseFolderIcons()
 					.SetItemHeight(20)
 					.Expose(PackageTree)
-					.SetMenu(treeMenu)
+					.SetMenu(TreeMenu)
 				+ CreatePackageListControl(true).Expose(PackageListbox)
+				.SetMenu(ListMenu)
 			]
 			// page 1: single ListBox
 			+ CreatePackageListControl(false).Expose(FlatPackageList)
+			.SetMenu(ListMenu)
 		]
 	];
 
@@ -425,9 +442,9 @@ void UIPackageDialog::InitUI()
 	(*openMenu)
 	[
 		NewMenuItem("Open (replace loaded set)")
-		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenClicked, this))
+		.SetCallback(BIND_LAMBDA([this]() { CloseDialog(OPEN); }))
 		+ NewMenuItem("Append (add to loaded set)")
-		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnAppendClicked, this))
+		.SetCallback(BIND_LAMBDA([this]() { CloseDialog(APPEND); }))
 	];
 
 	// dialog buttons
@@ -443,16 +460,16 @@ void UIPackageDialog::InitUI()
 			.SetMenu(openMenu)
 			.Enable(false)
 			.Expose(OpenButton)
-			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenClicked, this))
+			.SetCallback(BIND_LAMBDA([this]() { CloseDialog(OPEN); }))
 //			.SetOK() -- this will not let menu to open
 		+ NewControl(UIButton, "Export")
 			.SetWidth(80)
 			.Enable(false)
 			.Expose(ExportButton)
-			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportClicked, this))
+			.SetCallback(BIND_LAMBDA([this]() { CloseDialog(EXPORT); }))
 		+ NewControl(UIButton, "Cancel")
 			.SetWidth(80)
-			.SetCallback(BIND_MEMBER(&UIPackageDialog::OnCancelClicked, this))
+			.SetCallback(BIND_LAMBDA([this]() { CloseDialog(CANCEL); }))
 	];
 
 	SortPackages(); // will call RefreshPackageListbox()
@@ -809,25 +826,6 @@ void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
 	SortPackages();
 }
 
-void UIPackageDialog::OnOpenClicked()
-{
-	CloseDialog(OPEN);
-}
-
-void UIPackageDialog::OnAppendClicked()
-{
-	CloseDialog(APPEND);
-}
-
-void UIPackageDialog::OnExportClicked()
-{
-	CloseDialog(EXPORT);
-}
-
-void UIPackageDialog::OnCancelClicked()
-{
-	CloseDialog(CANCEL);
-}
 
 void UIPackageDialog::OnExportFolderClicked()
 {
@@ -863,5 +861,19 @@ void UIPackageDialog::OnExportFolderClicked()
 	progress.SetDescription("Exporting package");
 	ExportPackages(UnrealPackages, &progress);
 }
+
+void UIPackageDialog::OnBeforeListMenuPopup()
+{
+	// Enable or disable menu items according to current selection
+	if (!UseFlatView)
+	{
+		ListMenu->Enable(PackageListbox->GetSelectionCount() > 0);
+	}
+	else
+	{
+		ListMenu->Enable(FlatPackageList->GetSelectionCount() > 0);
+	}
+}
+
 
 #endif // HAS_UI

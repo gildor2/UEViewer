@@ -34,6 +34,8 @@ protected:
 	UIButton*		ExportButton;
 	UIMenuItem*		ScanContentMenu;
 	UIMenuItem*		SavePackagesMenu;
+	UIMenu*			TreeMenu;
+	UIMenu*			ListMenu;
 
 	EResult			ModalResult;
 	bool			UseFlatView;
@@ -49,16 +51,13 @@ protected:
 
 	void CloseDialog(EResult Result);
 
+	void OnBeforeListMenuPopup();
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
 	void OnPackageSelected(UIMulticolumnListbox* sender);
 	void OnFlatViewChanged(UICheckbox* sender, bool value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 	void OnColumnClick(UIMulticolumnListbox* sender, int column);
-	void OnOpenClicked();
-	void OnAppendClicked();
-	void OnExportClicked();
 	void OnExportFolderClicked();
-	void OnCancelClicked();
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
 	void ScanContent();
