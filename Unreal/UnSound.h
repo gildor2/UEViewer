@@ -109,8 +109,28 @@ struct FStreamedAudioChunk
 		Ar << bCooked;
 		assert(bCooked);
 
-		Chunk.Data.Serialize(Ar);
-		Ar << Chunk.DataSize << Chunk.AudioDataSize;
+		if (Ar.Game < GAME_UE4(4))
+		{
+			// No FStreamedAudioChunk before UE4.3
+			// UE4.3: only bulk
+			Chunk.Data.Serialize(Ar);
+			Chunk.AudioDataSize = Chunk.DataSize = Chunk.Data.ElementCount;
+		}
+		else if (Ar.Game < GAME_UE4(19))
+		{
+			// UE4.4..UE4.18
+			Chunk.Data.Serialize(Ar);
+			Ar << Chunk.DataSize;
+			Chunk.AudioDataSize = Chunk.DataSize;
+		}
+		else
+		{
+			// UE4.19+
+			Chunk.Data.Serialize(Ar);
+			Ar << Chunk.DataSize;
+			Ar << Chunk.AudioDataSize;
+		}
+
 		return Ar;
 
 		unguard;
