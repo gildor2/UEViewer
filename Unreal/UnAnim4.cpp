@@ -572,7 +572,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 				{
 					switch (KeyFormat)
 					{
-//					case ACF_None:
+					case ACF_None:
 					case ACF_Float96NoW:
 						{
 							FVector v;
@@ -655,7 +655,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 				{
 					switch (KeyFormat)
 					{
-//					TR (ACF_None, FQuat)
+					case ACF_None:
 					case ACF_Float96NoW:
 						{
 							FQuatFloat96NoW q;

@@ -343,6 +343,9 @@ static const struct
 	F(UInt64Property),
 	F(UInt32Property),
 	F(UInt16Property),
+	F(Int64Property),
+	F(Int16Property),
+	F(Int8Property),
 #endif
 #undef F
 };
