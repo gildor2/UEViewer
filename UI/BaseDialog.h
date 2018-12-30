@@ -523,6 +523,9 @@ class UICombobox : public UIElement
 		FString Text;
 		int     Value;
 
+		ComboboxItem()
+		{}
+
 		ComboboxItem(const char* text, int value)
 		: Text(text)
 		, Value(value)

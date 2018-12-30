@@ -209,6 +209,17 @@ public:
 	}
 };
 
+// Allow use of std::string as FString parameter
+FORCEINLINE FString* CastString(std::string* str)
+{
+	return reinterpret_cast<FString*>(str);
+}
+
+FORCEINLINE FString& CastString(std::string& str)
+{
+	return reinterpret_cast<FString&>(str);
+}
+
 // No TStaticArray FStaticString
 
 template<typename T, int N>
