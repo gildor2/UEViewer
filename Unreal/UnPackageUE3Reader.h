@@ -186,10 +186,17 @@ public:
 		// decompress data
 		guard(DecompressBlock);
 		if (ChunkHeader.BlockSize != -1)	// my own mark
-			appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, CompressionFlags);
+		{
+			// Decompress block
+			int UsedCompressionFlags = CompressionFlags;
+#if BATMAN
+			if (Game == GAME_Batman4 && CompressionFlags == 8) UsedCompressionFlags = COMPRESS_LZ4;
+#endif
+			appDecompress(CompressedBlock, Block->CompressedSize, Buffer, Block->UncompressedSize, UsedCompressionFlags);
+		}
 		else
 		{
-			// no compression
+			// No compression
 			assert(Block->CompressedSize == Block->UncompressedSize);
 			memcpy(Buffer, CompressedBlock, Block->CompressedSize);
 		}
