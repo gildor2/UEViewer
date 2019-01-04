@@ -161,4 +161,8 @@
 
 #endif // UNREAL4
 
+#if GEARS4 || BATMAN
+#define USE_LZ4			1		// LZ4 compression
+#endif
+
 #endif // __GAME_DEFINES_H__
