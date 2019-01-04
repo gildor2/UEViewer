@@ -1235,19 +1235,22 @@ fn ImportPskFile filename skelOnly:false =
 
 	axProfilePoint "Base import" debug:true
 
-	newMat = multiMaterial numsubs:numMaterials
+	-- import materials
 	if g_skelOnly then numMaterials = 0		-- do not load materials for this option
+	-- setup path to materials and textures
+	local texDir
+	if g_texDir != "" then
+	(
+		texDir = g_texDir
+	)
+	else
+	(
+		texDir = getFilenamePath filename
+	)
+	-- create materials
+	newMat = multiMaterial numsubs:numMaterials
 	for i = 1 to numMaterials do
 	(
-		local texDir
-		if g_texDir != "" then
-		(
-			texDir = g_texDir
-		)
-		else
-		(
-			texDir = getFilenamePath filename
-		)
 		local subMat = axImportMaterial Materials[i].MaterialName texDir
 		newMat.materialList[i] = subMat
 		showTextureMap subMat true
