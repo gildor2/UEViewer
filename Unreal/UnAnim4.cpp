@@ -211,6 +211,16 @@ void USkeleton::Serialize(FArchive &Ar)
 		Ar << SmartNames;
 	unguard;
 
+	if (FAnimObjectVersion::Get(Ar) >= FAnimObjectVersion::StoreMarkerNamesOnSkeleton)
+	{
+		FStripDataFlags StripFlags(Ar);
+		if (!StripFlags.IsEditorDataStripped())
+		{
+			TArray<FName> ExistingMarkerNames;
+			Ar << ExistingMarkerNames;
+		}
+	}
+
 	unguard;
 }
 
@@ -885,12 +895,16 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 			Ar << CompressedTrackOffsets;
 			Ar << CompressedScaleOffsets;
 
-/*??		if (Ar.Game >= GAME_UE4(21)) -- not in Fortnite yet
+			if (Ar.Game >= GAME_UE4(21))
 			{
-///DUMP_ARC_BYTES(Ar, 64, "CompressedStream-Segments");
 				// UE4.21+ - added compressed segments
 				Ar << CompressedSegments;
-			} */
+				if (CompressedSegments.Num())
+				{
+					//?? TODO: CompressedSegments
+					appNotify("animation has CompressedSegments!");
+				}
+			}
 
 			Ar << CompressedTrackToSkeletonMapTable;
 			Ar << CompressedCurveData;
@@ -900,12 +914,6 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 				// UE4.17+
 				int32 CompressedRawDataSize;
 				Ar << CompressedRawDataSize;
-			}
-
-			//!! temporary code: it's not in UE4 code base, however some extra integer exists in recent Fortnite at this place
-			if (Ar.Game >= GAME_UE4(21))
-			{
-				Ar.Seek(Ar.Tell()+4);
 			}
 
 			// compressed data
@@ -1031,6 +1039,7 @@ void UAnimSequence4::TransferPerTrackData(TArray<uint8>& Dst, const TArray<uint8
 			// align to 4 bytes
 			int CurrentOffset = DstData - Dst.GetData();
 			int AlignedOffset = Align(CurrentOffset, 4);
+			printf("[%d/%d] %d < %d\n", TrackIndex, NumTracks, AlignedOffset, Dst.Num());
 			assert(AlignedOffset <= Dst.Num());
 			if (AlignedOffset != CurrentOffset)
 			{

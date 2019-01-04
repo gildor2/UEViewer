@@ -2469,7 +2469,7 @@ enum
 		VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID = 516,
 	VER_UE4_19 = 516,
 	VER_UE4_20 = 516,
-	VER_UE4_21 = 516,
+	VER_UE4_21 = 517,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2495,7 +2495,7 @@ struct FFrameworkObjectVersion
 		// UE4.17 = 28
 		// UE4.18 = 30
 		// UE4.19 = 33
-		// UE4.20 = 34
+		// UE4.20, UE4.21 = 34
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2530,7 +2530,7 @@ struct FFrameworkObjectVersion
 			return (Type)30;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)33;
-		if (Ar.Game < GAME_UE4(21))
+		if (Ar.Game < GAME_UE4(22))
 			return (Type)34;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2552,6 +2552,7 @@ struct FEditorObjectVersion
 		// UE4.17, UE4.18 = 20
 		// UE4.19 = 23
 		// UE4.20 = 24
+		// UE4.21 = 26
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2586,6 +2587,8 @@ struct FEditorObjectVersion
 			return (Type)23;
 		if (Ar.Game < GAME_UE4(21))
 			return (Type)24;
+		if (Ar.Game < GAME_UE4(22))
+			return (Type)26;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2615,7 +2618,7 @@ struct FSkeletalMeshCustomVersion
 		RemoveTriangleSorting = 13,
 		RemoveDuplicatedClothingSections = 14,
 		DeprecateSectionDisabledFlag = 15,
-		// UE4.20 = 16
+		// UE4.20, UE4.21 = 16
 		SectionIgnoreByReduceAdded = 16,
 
 		VersionPlusOne,
@@ -2646,7 +2649,7 @@ struct FSkeletalMeshCustomVersion
 			return CompactClothVertexBuffer;
 		if (Ar.Game < GAME_UE4(20))
 			return DeprecateSectionDisabledFlag;
-		if (Ar.Game < GAME_UE4(21))
+		if (Ar.Game < GAME_UE4(22))
 			return SectionIgnoreByReduceAdded;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2667,6 +2670,7 @@ struct FRenderingObjectVersion
 		// UE4.19 = 25
 		// UE4.20 = 26
 		IncreaseNormalPrecision = 26,
+		// UE4.21 = 27
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2701,6 +2705,34 @@ struct FRenderingObjectVersion
 			return (Type)25;
 		if (Ar.Game < GAME_UE4(21))
 			return IncreaseNormalPrecision;
+		if (Ar.Game < GAME_UE4(22))
+			return (Type)27;
+		// NEW_ENGINE_VERSION
+		return LatestVersion;
+	}
+};
+
+struct FAnimObjectVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		// UE4.21 = 1
+		StoreMarkerNamesOnSkeleton = 2,
+		VersionPlusOne,
+		LatestVersion = VersionPlusOne - 1
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		static const FGuid GUID = { 0xAF43A65D, 0x7FD34947, 0x98733E8E, 0xD9C1BB05 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+		if (Ar.Game < GAME_UE4(21))
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game < GAME_UE4(22))
+			return StoreMarkerNamesOnSkeleton;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2719,7 +2751,7 @@ struct FAnimPhysObjectVersion
 		AddLODToCurveMetaData = 12,
 		// UE4.19 = 16
 		ChangeRetargetSourceReferenceToSoftObjectPtr = 15,
-		// UE4.20 = 17
+		// UE4.20, UE4.21 = 17
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
@@ -2740,7 +2772,7 @@ struct FAnimPhysObjectVersion
 			return AddLODToCurveMetaData;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)16;
-		if (Ar.Game < GAME_UE4(21))
+		if (Ar.Game < GAME_UE4(22))
 			return (Type)17;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2781,6 +2813,8 @@ struct FReleaseObjectVersion
 			return AddSkeletalMeshSectionDisable;
 		if (Ar.Game < GAME_UE4(21))
 			return (Type)17;
+		if (Ar.Game < GAME_UE4(22))
+			return (Type)20;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}

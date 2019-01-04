@@ -16,8 +16,8 @@ SDL 2.0 (for Linux only, windows distribution has SDL2.dll included)
 
 List of supported games
 ~~~~~~~~~~~~~~~~~~~~~~~
-Supported all Unreal engine versions (1-3). The list of supported games consists of
-more than 100 game titles, it is not reasonable to include it here. Some game titles
+Supported all Unreal engine versions (1-4). The list of supported games consists of
+more than 300 game titles, it is not reasonable to include it here. Some game titles
 has limited support or not supported at all. Detailed information can be found here:
 http://www.gildor.org/projects/umodel/compat
 
@@ -199,6 +199,8 @@ detex
 
 Changes
 ~~~~~~~
+04.01.2019
+- added UE4.21 support
 
 29.10.2018
 - UI: added content menu for file list in package dialog

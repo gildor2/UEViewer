@@ -16,8 +16,10 @@ enum
 	PAK_INITIAL = 1,
 	PAK_NO_TIMESTAMPS = 2,
 	PAK_COMPRESSION_ENCRYPTION = 3,		// UE4.3+
-	PAK_INDEX_ENCRYPTION = 4,			// UE4.17+
+	PAK_INDEX_ENCRYPTION = 4,			// UE4.17+ - encrypts only pak file index data leaving file content as is
 	PAK_RELATIVE_CHUNK_OFFSETS = 5,		// UE4.20+
+	PAK_DELETE_RECORDS = 6,				// UE4.21+ - this constant is not used in UE4 code
+	PAK_ENCRYPTION_KEY_GUID = 7,		// allows to use multiple encryption keys over the single project
 
 	PAK_LATEST_PLUS_ONE,
 	PAK_LATEST = PAK_LATEST_PLUS_ONE - 1
@@ -36,13 +38,15 @@ struct FPakInfo
 	// When new fields are added to FPakInfo, they're serialized before 'Magic' to keep compatibility
 	// with older pak file versions. At the same time, structure size grows.
 	byte		bEncryptedIndex;
+	FGuid		EncryptionKeyGuid;
 
-	enum { Size = sizeof(int32) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 };
+	enum { Size = sizeof(int32) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 + sizeof(FGuid)};
 
 	friend FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 	{
 		// New FPakInfo fields.
-		Ar << P.bEncryptedIndex;
+		Ar << P.EncryptionKeyGuid;			// PAK_ENCRYPTION_KEY_GUID
+		Ar << P.bEncryptedIndex;			// PAK_INDEX_ENCRYPTION
 
 		// Old FPakInfo fields.
 		Ar << P.Magic << P.Version << P.IndexOffset << P.IndexSize;
@@ -52,6 +56,10 @@ struct FPakInfo
 		if (P.Version < PAK_INDEX_ENCRYPTION)
 		{
 			P.bEncryptedIndex = false;
+		}
+		if (P.Version < PAK_ENCRYPTION_KEY_GUID)
+		{
+			P.EncryptionKeyGuid = { 0, 0, 0, 0 };
 		}
 		return Ar;
 	}
