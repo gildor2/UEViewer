@@ -6,6 +6,10 @@
 
 #include <sys/stat.h>				// for mkdir(), stat()
 
+#if !_WIN32
+#include <time.h>					// for Linux version of GetTickCount()
+#endif
+
 #if VSTUDIO_INTEGRATION
 #define WIN32_LEAN_AND_MEAN			// exclude rarely-used services from windown headers
 #define _WIN32_WINDOWS 0x0500		// for IsDebuggerPresent()
@@ -533,3 +537,15 @@ unsigned appGetFileType(const char *filename)
 		return FS_FILE;
 	return 0;						// just in case ... (may be, win32 have other file types?)
 }
+
+#if !_WIN32
+
+// POSIX version of GetTickCount()
+unsigned long GetTickCount()
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (uint64)(ts.tv_nsec / 1000000) + ((uint64)ts.tv_sec * 1000ull);
+}
+
+#endif // _WIN32

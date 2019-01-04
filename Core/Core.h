@@ -523,10 +523,15 @@ extern bool GUseDebugger;
 #if RENDERING
 #	define appMilliseconds()		SDL_GetTicks()
 #else
-#	ifndef WINAPI		// detect <windows.h>
-	extern "C" {
-		__declspec(dllimport) unsigned long __stdcall GetTickCount();
-	}
+#	ifdef _WIN32
+#		if !defined(WINAPI) 	// detect <windows.h>
+		extern "C" {
+			__declspec(dllimport) unsigned long __stdcall GetTickCount();
+		}
+#		endif
+			// Local implementation of GetTickCount()
+			unsigned long GetTickCount();
+#	else
 #	endif
 #	define appMilliseconds()		GetTickCount()
 #endif // RENDERING
