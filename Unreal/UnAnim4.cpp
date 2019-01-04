@@ -915,6 +915,11 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 				int32 CompressedRawDataSize;
 				Ar << CompressedRawDataSize;
 			}
+			if (Ar.Game >= GAME_UE4(22))
+			{
+				int32 CompressedNumFrames;
+				Ar << CompressedNumFrames;
+			}
 
 			// compressed data
 			Ar << CompressedByteStream;
@@ -1039,7 +1044,6 @@ void UAnimSequence4::TransferPerTrackData(TArray<uint8>& Dst, const TArray<uint8
 			// align to 4 bytes
 			int CurrentOffset = DstData - Dst.GetData();
 			int AlignedOffset = Align(CurrentOffset, 4);
-			printf("[%d/%d] %d < %d\n", TrackIndex, NumTracks, AlignedOffset, Dst.Num());
 			assert(AlignedOffset <= Dst.Num());
 			if (AlignedOffset != CurrentOffset)
 			{
