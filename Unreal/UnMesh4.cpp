@@ -1162,7 +1162,7 @@ struct FStaticLODModel4
 
 		Ar << Lod.RequiredBones;
 
-		if (!StripFlags.IsDataStrippedForServer())
+		if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(2)) // MinLodStripFlag
 		{
 			FPositionVertexBuffer4 PositionVertexBuffer;
 			Ar << PositionVertexBuffer;
@@ -1184,7 +1184,7 @@ struct FStaticLODModel4
 				DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
 			}
 
-			if (!StripFlags.IsClassDataStripped(1))
+			if (!StripFlags.IsClassDataStripped(1)) // LodAdjacencyStripFlag
 				Ar << Lod.AdjacencyIndexBuffer;
 
 			if (Lod.HasClothData())
@@ -1328,6 +1328,11 @@ void USkeletalMesh4::ConvertMesh()
 		guard(ConvertLod);
 
 		const FStaticLODModel4 &SrcLod = LODModels[lod];
+		if (SrcLod.Indices.Indices16.Num() == 0 && SrcLod.Indices.Indices32.Num() == 0)
+		{
+			appPrintf("Lod %d has no indices, skipping.\n", lod);
+			continue;
+		}
 
 		int NumTexCoords = SrcLod.NumTexCoords;
 		if (NumTexCoords > MAX_MESH_UV_SETS)
