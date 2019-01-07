@@ -320,7 +320,7 @@ void InitClassAndExportSystems(int Game)
 static void PrintUsage()
 {
 	appPrintf(
-			"UE viewer / exporter\n"
+			"Unreal Engine viewer and exporter\n"
 			"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
 #if HAS_UI
 			"       umodel [command] [options] <directory>\n"
@@ -341,9 +341,12 @@ static void PrintUsage()
 			"    -list           list contents of package\n"
 			"    -export         export specified object or whole package\n"
 			"    -save           save specified packages\n"
-			"    -taglist        list of tags to override game autodetection\n"
-			"    -version        display umodel version information\n"
+			"\n"
+			"Help information:\n"
 			"    -help           display this help page\n"
+			"    -version        display umodel version information\n"
+			"    -taglist        list of tags to override game autodetection (for -game=nnn option)\n"
+			"    -gamelist       list of supported games\n"
 			"\n"
 			"Developer commands:\n"
 			"    -log=file       write log to the specified file\n"
@@ -381,11 +384,13 @@ static void PrintUsage()
 			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
 			"\n"
 			"Platform selection:\n"
-			"    -ps3            set platform to PS3\n"
-			"    -ps4            set platform to PS4\n"
-			"    -ios            set platform to iOS (iPhone/iPad)\n"
-			"    -android        set platform to Android\n"
-			"\n"
+			"    -ps3            Playstation 3\n"
+			"    -ps4            Playstation 4\n"
+			"    -ios            iOS (iPhone/iPad)\n"
+			"    -android        Android\n"
+			"\n");
+
+	appPrintf(
 			"Viewer options:\n"
 			"    -meshes         view meshes only\n"
 			"    -materials      view materials only (excluding textures)\n"
@@ -417,10 +422,8 @@ static void PrintUsage()
 			"    FaceFX          fxa\n"
 			"    Sound           exported \"as is\"\n"
 			"\n"
-			"List of supported games:\n"
+			"For list of supported games please use -gamelist option.\n"
 	);
-
-	PrintGameList();
 
 	appPrintf(
 			"\n"
@@ -833,6 +836,12 @@ int main(int argc, char **argv)
 		else if (!stricmp(opt, "taglist"))
 		{
 			PrintGameList(true);
+			return 0;
+		}
+		else if (!stricmp(opt, "gamelist"))
+		{
+			appPrintf("List of supported games:\n\n");
+			PrintGameList();
 			return 0;
 		}
 		else if (!stricmp(opt, "help"))
