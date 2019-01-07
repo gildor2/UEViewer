@@ -36,7 +36,7 @@ void appPrintf(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	assert(len >= 0 && len < ARRAY_COUNT(buf) - 1);
+	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appError("appPrintf: buffer overflow");
 
 	fwrite(buf, len, 1, stdout);
 	if (GLogFile) fwrite(buf, len, 1, GLogFile);
@@ -61,7 +61,7 @@ void appError(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	assert(len >= 0 && len < ARRAY_COUNT(buf) - 1);
+	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appError("appError: buffer overflow");
 
 	GIsSwError = true;
 
@@ -101,7 +101,7 @@ void appNotify(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	assert(len >= 0 && len < ARRAY_COUNT(buf) - 1);
+	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appError("appNotify: buffer overflow");
 
 	fflush(stdout);
 
