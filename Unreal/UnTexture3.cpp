@@ -548,11 +548,9 @@ static byte FindReduxTexture(const UTexture2D *Tex, CTextureData *TexData)
 			appDecompress(CompressedData, Mip.PackedSize, UncompressedData, Mip.UnpackedSize, COMPRESS_ZLIB);
 			appFree(CompressedData);
 			CMipMap* DstMip = new (TexData->Mips) CMipMap;
-			DstMip->CompressedData = UncompressedData;
-			DstMip->ShouldFreeData = true;
+			DstMip->SetOwnedDataBuffer(UncompressedData, Mip.UnpackedSize);
 			DstMip->USize = E.USize;
-			DstMip->VSize    = E.VSize;
-			DstMip->DataSize = Mip.UnpackedSize;
+			DstMip->VSize = E.VSize;
 			return true;
 		}
 	}
@@ -956,9 +954,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 			}
 			// this mipmap has data
 			CMipMap* DstMip = new (TexData.Mips) CMipMap;
-			DstMip->CompressedData = Bulk.BulkData;
-			DstMip->DataSize = Bulk.ElementCount * Bulk.GetElementSize();
-			DstMip->ShouldFreeData = false;
+			DstMip->SetBulkData(Bulk);
 			// Note: UE3 can store incorrect SizeX/SizeY for lowest mips - these values could have 4x4 for all smaller mips
 			// (perhaps minimal size of DXT block). So compute mip size by ourselves.
 			DstMip->USize = max(1, OrigUSize >> mipLevel);
@@ -970,11 +966,9 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 
 	if (TexData.Mips.Num() == 0 && SourceArt.BulkData && Source.bPNGCompressed)
 	{
-		// The texture is encoded only in nSourceArt format (probably this is only UE4, not UE3 case)
+		// The texture is encoded only in SourceArt format (probably this is only UE4, not UE3 case)
 		CMipMap* DstMip = new (TexData.Mips) CMipMap;
-		DstMip->CompressedData = SourceArt.BulkData;
-		DstMip->DataSize = SourceArt.ElementCount * SourceArt.GetElementSize();
-		DstMip->ShouldFreeData = false;
+		DstMip->SetBulkData(SourceArt);
 		DstMip->USize = Source.SizeX;
 		DstMip->VSize = Source.SizeY;
 		TexData.Platform = Package->Platform;

@@ -513,10 +513,8 @@ static unsigned GetXbox360TiledOffset(int x, int y, int width, int logBpb)
 			) >> logBpb;
 }
 
-// Untile decompressed texture.
-// This function also removes U alignment when originalWidth < tiledWidth
-// Note: this function is not used, and now it is outdated. See UntileCompressedXbox360Texture
-// for more details.
+// Untile decompressed texture. The function also removes U alignment when originalWidth < tiledWidth
+// Note: this function is no longer used, and now it is outdated. UntileCompressedXbox360Texture is now used and up-to-date.
 static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWidth, int originalWidth, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
 {
 	guard(UntileXbox360Texture);
@@ -528,7 +526,7 @@ static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWi
 
 	int numImageBlocks = blockWidth * blockHeight;				// used for verification
 
-	// iterate image blocks
+	// iterate over image blocks
 	for (int y = 0; y < blockHeight; y++)
 	{
 		for (int x = 0; x < originalBlockWidth; x++)			// process only a part of image when originalWidth < tiledWidth
@@ -596,7 +594,7 @@ static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiled
 
 	int numImageBlocks = tiledBlockWidth * tiledBlockHeight;	// used for verification
 
-	// iterate image blocks
+	// Iterate over image blocks
 	for (int dy = 0; dy < originalBlockHeight; dy++)
 	{
 		for (int dx = 0; dx < originalBlockWidth; dx++)
@@ -705,12 +703,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 		appReverseBytes(buf, Mip.DataSize / 2, 2);
 	}
 
-	// release old CompressedData
-	Mip.ReleaseData();
-	Mip.CompressedData = buf;
-	Mip.ShouldFreeData = true;			// data were allocated here ...
-	Mip.DataSize = max(Mip.USize / Info.BlockSizeX, 1) * max(Mip.VSize / Info.BlockSizeY, 1) * Info.BytesPerBlock; // essential for exporting
-
+	Mip.SetOwnedDataBuffer(buf, max(Mip.USize / Info.BlockSizeX, 1) * max(Mip.VSize / Info.BlockSizeY, 1) * Info.BytesPerBlock);
 	return true;	// no error
 
 	unguard;
@@ -763,7 +756,7 @@ static void UntileCompressedPS4Texture(const byte *src, byte *dst, int width, in
 	int blockWidth2 = max(blockWidth, 8);
 	int blockHeight2 = max(blockHeight, 8);
 
-	// iterate image blocks
+	// Iterate over image blocks
 	for (int sy = 0; sy < blockHeight2; sy++)
 	{
 		for (int sx = 0; sx < blockWidth2; sx++)
@@ -823,16 +816,11 @@ bool CTextureData::DecodePS4(int MipLevel)
 		return false;
 	}
 
-	// untile and unalign
+	// untile (unswizzle)
 	byte *buf = (byte*)appMalloc(Mip.DataSize);
 	UntileCompressedPS4Texture(Mip.CompressedData, buf, Mip.USize, Mip.VSize, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
-	// release old CompressedData
-	Mip.ReleaseData();
-	Mip.CompressedData = buf;
-	Mip.ShouldFreeData = true;			// data were allocated here ...
-	Mip.DataSize = max(Mip.USize / Info.BlockSizeX, 1) * max(Mip.VSize / Info.BlockSizeY, 1) * Info.BytesPerBlock; // essential for exporting
-
+	Mip.SetOwnedDataBuffer(buf, max(UBlockSize, 1) * max(VBlockSize, 1) * Info.BytesPerBlock);
 	return true;	// no error
 
 	unguard;

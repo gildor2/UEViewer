@@ -144,7 +144,7 @@ extern const CPixelFormatInfo PixelFormatInfo[];	// index in array is TPF_... co
 struct CMipMap
 {
 	const byte*				CompressedData;			// not TArray because we could just point to another data block without memory reallocation
-	int						DataSize;
+	int						DataSize;				// this information is used for exporting compressed texture
 	int						USize;
 	int						VSize;
 	bool					ShouldFreeData;			// free CompressedData when set to true
@@ -156,6 +156,24 @@ struct CMipMap
 	~CMipMap()
 	{
 		ReleaseData();
+	}
+	void SetOwnedDataBuffer(const byte* buf, int size)
+	{
+		// Release old data if any
+		ReleaseData();
+		// Assign new buffer, mark it as we own it (will release by outself)
+		CompressedData = buf;
+		DataSize = size;
+		ShouldFreeData = true;
+	}
+	void SetBulkData(const FByteBulkData& Bulk)
+	{
+		// Release old data if any
+		ReleaseData();
+		// Assign new buffer, mark it as we own it (will release by outself)
+		CompressedData = Bulk.BulkData;
+		DataSize = Bulk.ElementCount * Bulk.GetElementSize();
+		ShouldFreeData = false; // bulk owns data buffer
 	}
 	void ReleaseData()
 	{
@@ -210,12 +228,13 @@ class UUnrealMaterial : public UObject				// no such class in Unreal Engine, nee
 {
 	DECLARE_CLASS(UUnrealMaterial, UObject);
 public:
-	// texture methods
+	// Texture methods.
+	// Fill empty CTextureData structure with actual data for upload.
 	virtual bool GetTextureData(CTextureData &TexData) const
 	{
 		return false;
 	}
-
+	// Release data cached with GetTextureData().
 	virtual void ReleaseTextureData() const
 	{}
 

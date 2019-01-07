@@ -464,11 +464,9 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		if (CompressedData)
 		{
 			CMipMap* DstMip = new (TexData.Mips) CMipMap;
-			DstMip->CompressedData = CompressedData;
-			DstMip->ShouldFreeData = true;
+			DstMip->SetOwnedDataBuffer(CompressedData, (int)CachedBulkDataSize);
 			DstMip->USize = USize;
 			DstMip->VSize = VSize;
-			DstMip->DataSize = (int)CachedBulkDataSize;
 		}
 		TexData.Platform = PackageAr->Platform;
 	}
@@ -482,11 +480,9 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		if (CompressedData)
 		{
 			CMipMap* DstMip = new (TexData.Mips) CMipMap;
-			DstMip->CompressedData = CompressedData;
-			DstMip->ShouldFreeData = true;
+			DstMip->SetOwnedDataBuffer(CompressedData, DataSize);
 			DstMip->USize = USize;
 			DstMip->VSize = VSize;
-			DstMip->DataSize = DataSize;
 		}
 	}
 #endif // UC2
