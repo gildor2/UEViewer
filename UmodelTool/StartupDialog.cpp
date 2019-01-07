@@ -104,6 +104,7 @@ void UIStartupDialog::InitUI()
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
 			NewControl(UIGroup, "Package compression", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
+			.SetWidth(EncodeWidth(1.0f))
 			.SetRadioVariable(&Opt.PackageCompression)
 			[
 				NewControl(UIRadioButton, "Auto", 0)
@@ -111,16 +112,20 @@ void UIStartupDialog::InitUI()
 				+ NewControl(UIRadioButton, "zlib", COMPRESS_ZLIB)
 				+ NewControl(UIRadioButton, "LZX", COMPRESS_LZX)
 			]
-			+ NewControl(UIGroup, "Platform", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
-			.SetRadioVariable(&Opt.Platform)
+			+ NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT)
 			[
-				NewControl(UIRadioButton, "Auto", PLATFORM_UNKNOWN)
-				+ NewControl(UIRadioButton, "PC", PLATFORM_PC)
-				+ NewControl(UIRadioButton, "XBox360", PLATFORM_XBOX360)
-				+ NewControl(UIRadioButton, "PS3", PLATFORM_PS3)
-				+ NewControl(UIRadioButton, "PS4", PLATFORM_PS4)
-				+ NewControl(UIRadioButton, "iOS", PLATFORM_IOS)
-				+ NewControl(UIRadioButton, "Android", PLATFORM_ANDROID)
+				NewControl(UILabel, "Platform:")
+					.SetAutoSize()
+					.SetY(4)
+				+ NewControl(UICombobox, &Opt.Platform)
+					.SetWidth(150)
+					.AddItem("Auto", PLATFORM_UNKNOWN)
+					.AddItem("PC", PLATFORM_PC)
+					.AddItem("XBox360", PLATFORM_XBOX360)
+					.AddItem("PS3", PLATFORM_PS3)
+					.AddItem("PS4", PLATFORM_PS4)
+					.AddItem("iOS", PLATFORM_IOS)
+					.AddItem("Android", PLATFORM_ANDROID)
 			]
 		]
 	];
