@@ -628,7 +628,8 @@ void appSetRootDirectory2(const char *filename)
 		}
 	}
 	appPrintf("Detected game root %s%s", *root, (detected == false) ? " (no recurse)" : "");
-	// detect platform
+
+	// detect platform by cooked folder name
 	if (GForcePlatform == PLATFORM_UNKNOWN && pCooked)
 	{
 		pCooked += 6;	// skip "Cooked" string
@@ -647,6 +648,7 @@ void appSetRootDirectory2(const char *filename)
 				"XBox360",
 				"PS3",
 				"PS4",
+				"Switch",
 				"iPhone",
 				"Android",
 			};
@@ -654,6 +656,7 @@ void appSetRootDirectory2(const char *filename)
 			appPrintf("; platform %s", PlatformNames[GForcePlatform]);
 		}
 	}
+
 	// scan root directory
 	appPrintf("\n");
 	appSetRootDirectory(*root, detected != 0);

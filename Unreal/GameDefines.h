@@ -51,11 +51,12 @@
 #define UC1				1
 #define UC2				1
 
-// platforms, UE3+
+// platforms
 #define SUPPORT_XBOX360	1		// XBox360 support
 #define SUPPORT_IPHONE	1		// iPhone/iPad support
 #define SUPPORT_ANDROID	1		// Android support
 #define SUPPORT_PS4		1		// Playstation 4 support
+#define SUPPORT_SWITCH	1		// Nintendo Switch support
 
 #if UNREAL3
 

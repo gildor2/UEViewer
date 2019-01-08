@@ -221,6 +221,9 @@ struct CTextureData
 #if SUPPORT_PS4
 	bool DecodePS4(int MipLevel);
 #endif
+#if SUPPORT_SWITCH
+	bool DecodeNSW(int MipLevel);
+#endif
 };
 
 

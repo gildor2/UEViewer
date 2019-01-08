@@ -749,10 +749,10 @@ static void UntileCompressedPS4Texture(const byte *src, byte *dst, int width, in
 {
 	guard(UntileCompressedPS4Texture);
 
-	int blockWidth     = width / blockSizeX;			// width of image in blocks
-	int blockHeight    = height / blockSizeY;			// height of image in blocks
+	int blockWidth = width / blockSizeX;			// width of image in blocks
+	int blockHeight = height / blockSizeY;			// height of image in blocks
 
-	// Image is encoded as 8x8 block min
+	// PS4 image is encoded as 8x8 block min
 	int blockWidth2 = max(blockWidth, 8);
 	int blockHeight2 = max(blockHeight, 8);
 
@@ -819,6 +819,131 @@ bool CTextureData::DecodePS4(int MipLevel)
 	// untile (unswizzle)
 	byte *buf = (byte*)appMalloc(Mip.DataSize);
 	UntileCompressedPS4Texture(Mip.CompressedData, buf, Mip.USize, Mip.VSize, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
+
+	Mip.SetOwnedDataBuffer(buf, max(UBlockSize, 1) * max(VBlockSize, 1) * Info.BytesPerBlock);
+	return true;	// no error
+
+	unguard;
+}
+
+#endif // SUPPORT_PS4
+
+#if SUPPORT_SWITCH
+
+// Decode Nintendo Switch (Tegra) texture. Reference code:
+//   https://github.com/aboood40091/BNTX-Extractor
+//   https://github.com/gdkchan/BnTxx/tree/master/BnTxx
+//   https://github.com/yuzu-emu/yuzu/blob/master/src/video_core/textures/decoders.cpp
+// Documentation:
+//   https://envytools.readthedocs.io/en/latest/hw/memory/g80-surface.html#blocklinear-surfaces
+
+// Note: the reference code doesn't doesn't know some texture parameters, it assumes that these parameters
+//   are stored inside BNTX texture file. Unreal engine doesn't store the BNTX header, it has only texture
+//   data, so we have some extensions to code intended to make all textures working. This mostly relies to
+//   "bytes_per_gob_y" computation - reference code just works with value 8, we have different ones.
+
+// Note: 'dataSize' param is used only for verification
+static void UntileCompressedNSWTexture(const byte *src, int dataSize, byte *dst, int width, int height, int blockSizeX, int blockSizeY, int bytesPerBlock)
+{
+	guard(UntileCompressedNSWTexture);
+
+	int blockWidth = width / blockSizeX;			// width of image in blocks
+	int blockHeight = height / blockSizeY;			// height of image in blocks
+
+	// Term "GOB" means "group of bytes". bytes_per_gob_y affects only gobOffset value.
+	int gobs_per_block_x = (blockWidth * bytesPerBlock + 63) / 64;
+	int bytes_per_gob_x = 64;
+	int bytes_per_gob_y = 8;
+
+	if (blockSizeX == 1 && blockSizeY == 1)
+	{
+		// Uncompressed tiled texture
+		bytes_per_gob_y = 16;
+		if (blockHeight < 128) bytes_per_gob_y = 8;
+		//?? didn't find when to switch to value 8 (but it seems code works well anyway)
+	}
+
+	int gob_bytes = bytes_per_gob_x * bytes_per_gob_y; // usually has value 512
+
+	// Smaller textures has different memory layout
+	if (blockHeight < 64) bytes_per_gob_y = 4;
+	if (blockHeight < 32) bytes_per_gob_y = 2;
+	if (blockHeight < 16) bytes_per_gob_y = 1;
+
+//	appPrintf("mip: %d x %d (%d/%d x %d/%d)\n", blockWidth, blockHeight, width, blockSizeX, height, blockSizeY);
+	// Iterate over image blocks
+	for (int dy = 0; dy < blockHeight; dy++)
+	{
+		for (int dx = 0; dx < blockWidth; dx++)
+		{
+			int x_coord_in_block = dx * bytesPerBlock;
+			int y_coord_in_block = dy;
+			unsigned gobOffset =
+				(x_coord_in_block / bytes_per_gob_x) * bytes_per_gob_y +
+				y_coord_in_block / (bytes_per_gob_y * 8) * bytes_per_gob_y * gobs_per_block_x +
+				(y_coord_in_block % (bytes_per_gob_y * 8) >> 3);
+			gobOffset = gobOffset * 512; // should be gob_bytes, but this won't work for (bytes_per_gob_y != 8), so we'll use a constant here
+
+			unsigned offset =
+				(((x_coord_in_block & 0x3f) >> 5) << 8) + //?? 0011.1111 >> 5 -> 0001, i.e. mask 1 bit and shift it to appropriate position
+				(((y_coord_in_block &    7) >> 1) << 6) +
+				(((x_coord_in_block & 0x1f) >> 4) << 5) +
+				( (y_coord_in_block &    1)       << 4) +
+				(  x_coord_in_block &  0xf            );
+
+			unsigned swzAddr = gobOffset + offset;
+//			if (swzAddr >= dataSize) appPrintf("x=%d/%d, y=%d/%d, sy=%d, swzAddr=%d+%d->%d >= %d\n",
+//				dx, blockWidth, dy, blockHeight, bytes_per_gob_y, gobOffset, offset, swzAddr, dataSize);
+			assert(swzAddr < dataSize);
+
+			byte       *pDst = dst + (dy * blockWidth + dx) * bytesPerBlock;
+			const byte *pSrc = src + swzAddr;
+			memcpy(pDst, pSrc, bytesPerBlock);
+		}
+	}
+
+	unguard;
+}
+
+
+bool CTextureData::DecodeNSW(int MipLevel)
+{
+	guard(CTextureData::DecodeNSW);
+
+	if (!Mips.IsValidIndex(MipLevel))
+		return false;
+	CMipMap& Mip = Mips[MipLevel];
+
+	const CPixelFormatInfo &Info = PixelFormatInfo[Format];
+	if (Info.BytesPerBlock == 0)
+	{
+#if DEBUG_PLATFORM_TEX
+		appPrintf("DecodeNSW: ignoring format %s\n", Info.Name);
+#endif
+		return true;
+	}
+
+	int UBlockSize = Mip.USize / Info.BlockSizeX;
+	int VBlockSize = Mip.VSize / Info.BlockSizeY;
+	int TotalBlocks = Mip.DataSize / Info.BytesPerBlock;
+
+#if DEBUG_PLATFORM_TEX
+	float bpp = (float)Mip.DataSize / (Mip.USize * Mip.VSize) * Info.BlockSizeX * Info.BlockSizeY;	// used for validation only
+	appPrintf("DecodeNSW: %s'%s': %d x %d, %s, %d bpp (format), %g bpp (real), %d bytes\n", Obj->GetClassName(), Obj->Name,
+		Mip.USize, Mip.VSize, OriginalFormatName, Info.BytesPerBlock, bpp, Mip.DataSize);
+#endif
+
+	if (UBlockSize * VBlockSize > TotalBlocks)
+	{
+#if DEBUG_PLATFORM_TEX
+		appPrintf("... can't untile NSW texture, dropping mip\n");
+#endif
+		return false;
+	}
+
+	// untile (unswizzle)
+	byte *buf = (byte*)appMalloc(Mip.DataSize);
+	UntileCompressedNSWTexture(Mip.CompressedData, Mip.DataSize, buf, Mip.USize, Mip.VSize, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
 
 	Mip.SetOwnedDataBuffer(buf, max(UBlockSize, 1) * max(VBlockSize, 1) * Info.BytesPerBlock);
 	return true;	// no error

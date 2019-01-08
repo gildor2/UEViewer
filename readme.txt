@@ -199,6 +199,11 @@ detex
 
 Changes
 ~~~~~~~
+08.01.2019
+- added Nintendo Switch texture support; activated with option "-nsw" or with selecting Nintendo Switch from platform
+  list
+- platform list now displayed in UI as a combobox, not as a radio button group
+
 04.01.2019
 - added UE4.21 support
 

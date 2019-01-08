@@ -124,6 +124,7 @@ void UIStartupDialog::InitUI()
 					.AddItem("XBox360", PLATFORM_XBOX360)
 					.AddItem("PS3", PLATFORM_PS3)
 					.AddItem("PS4", PLATFORM_PS4)
+					.AddItem("Nintendo Switch", PLATFORM_SWITCH)
 					.AddItem("iOS", PLATFORM_IOS)
 					.AddItem("Android", PLATFORM_ANDROID)
 			]
