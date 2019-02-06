@@ -11,7 +11,7 @@ UISettingsDialog::UISettingsDialog(CUmodelSettings& settings)
 
 bool UISettingsDialog::Show()
 {
-	if (!ShowModal("Options", 480, -1))
+	if (!ShowModal("Options", -1, -1))
 		return false;
 
 	*OptRef = Opt;
@@ -34,11 +34,17 @@ void UISettingsDialog::InitUI()
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		.SetWidth(EncodeWidth(1.0f))
 		[
+			//!! use pager for this (reqires TabControl)
 /*			NewControl(UIGroup, "Display")
-			+*/ NewControl(UIGroup, "Export")
+			+*/
+			NewControl(UIGroup, "Export")
 			.SetWidth(EncodeWidth(1.0f))
 			[
 				MakeExportOptions()
+			]
+			+ NewControl(UIGroup, "Save packages")
+			[
+				MakeSavePackagesOptions()
 			]
 		]
 		+ NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
@@ -85,6 +91,17 @@ UIElement& UISettingsDialog::MakeExportOptions()
 		]
 		+ NewControl(UICheckbox, "Export compressed textures to dds format", &Opt.Export.ExportDdsTexture)
 		;
+}
+
+UIElement& UISettingsDialog::MakeSavePackagesOptions()
+{
+	return NewControl(UIGroup, "File Layout")
+		[
+			NewControl(UILabel, "Save to this folder")
+			+ NewControl(UIFilePathEditor, &Opt.SavePackages.SavePath)
+			.SetWidth(250)
+			+ NewControl(UICheckbox, "Keep directory structure", &Opt.SavePackages.KeepDirectoryStructure)
+		];
 }
 
 #endif // HAS_UI

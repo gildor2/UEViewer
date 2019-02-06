@@ -203,8 +203,15 @@ void SavePackages(const TArray<const CGameFileInfo*>& Packages, IProgressCallbac
 			{
 				guard(SaveFile);
 				// prepare destination file
-				char OutFile[1024];
-				appSprintf(ARRAY_ARG(OutFile), "UmodelSaved/%s", file->ShortFilename);
+				char OutFile[2048];
+				if (GSettings.SavePackages.KeepDirectoryStructure)
+				{
+					appSprintf(ARRAY_ARG(OutFile), "%s/%s", *GSettings.SavePackages.SavePath, file->RelativeName);
+				}
+				else
+				{
+					appSprintf(ARRAY_ARG(OutFile), "%s/%s", *GSettings.SavePackages.SavePath, file->ShortFilename);
+				}
 				appMakeDirectoryForFile(OutFile);
 				FILE *out = fopen(OutFile, "wb");
 				// copy data

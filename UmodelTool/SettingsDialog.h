@@ -19,6 +19,7 @@ protected:
 	virtual void InitUI();
 
 	UIElement& MakeExportOptions();
+	UIElement& MakeSavePackagesOptions();
 };
 
 #endif // HAS_UI

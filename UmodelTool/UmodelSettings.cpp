@@ -12,6 +12,7 @@
 
 #define CONFIG_FILE			"umodel.cfg"
 #define EXPORT_DIRECTORY	"UmodelExport"
+#define SAVE_DIRECTORY		"UmodelSaved"
 
 static void SetPathOption(FString& where, const char* value)
 {
@@ -128,6 +129,17 @@ void CExportSettings::Apply()
 	GUseGroups = SaveGroups;
 }
 
+void CSavePackagesSettings::SetPath(const char* path)
+{
+	SetPathOption(SavePath, path);
+}
+
+void CSavePackagesSettings::Reset()
+{
+	SetPath(SAVE_DIRECTORY);
+	KeepDirectoryStructure = true;
+}
+
 static void RegisterClasses()
 {
 	static bool registered = false;
@@ -136,6 +148,7 @@ static void RegisterClasses()
 		BEGIN_CLASS_TABLE
 			REGISTER_CLASS(CStartupSettings)
 			REGISTER_CLASS(CExportSettings)
+			REGISTER_CLASS(CSavePackagesSettings)
 			REGISTER_CLASS(CUmodelSettings)
 		END_CLASS_TABLE
 		registered = true;

@@ -89,15 +89,39 @@ struct CExportSettings
 	void Apply();
 };
 
+struct CSavePackagesSettings
+{
+	DECLARE_STRUCT(CSavePackagesSettings);
+
+	FString			SavePath;
+	bool			KeepDirectoryStructure;
+
+	BEGIN_PROP_TABLE
+		PROP_STRING(SavePath)
+		PROP_BOOL(KeepDirectoryStructure)
+	END_PROP_TABLE
+
+	CSavePackagesSettings()
+	{
+		Reset();
+	}
+
+	void SetPath(const char* path);
+
+	void Reset();
+};
+
 struct CUmodelSettings
 {
 	DECLARE_STRUCT(CUmodelSettings);
 
 	CStartupSettings Startup;
 	CExportSettings  Export;
+	CSavePackagesSettings SavePackages;
 
 	BEGIN_PROP_TABLE
 		PROP_STRUC(Export, CExportSettings)
+		PROP_STRUC(SavePackages, CSavePackagesSettings)
 //		PROP_STRUC(Startup, CStartupSettings) //!! remove
 	END_PROP_TABLE
 
@@ -110,6 +134,7 @@ struct CUmodelSettings
 	{
 		Startup.Reset();
 		Export.Reset();
+		SavePackages.Reset();
 	}
 
 	void Save();

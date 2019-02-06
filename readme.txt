@@ -199,6 +199,10 @@ detex
 
 Changes
 ~~~~~~~
+06.02.2019
+- "save packages" now preserves oridinal directory directory structure; Windows version has options for selecting save
+  path and option for building or not directory hierarchy (for linux, same things could be changed in cfg file)
+
 08.01.2019
 - added Nintendo Switch texture support; activated with option "-nsw" or with selecting Nintendo Switch from platform
   list
