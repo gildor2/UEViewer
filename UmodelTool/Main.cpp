@@ -386,6 +386,7 @@ static void PrintUsage()
 			"Platform selection:\n"
 			"    -ps3            Playstation 3\n"
 			"    -ps4            Playstation 4\n"
+			"    -nsw            Nintendo Switch\n"
 			"    -ios            iOS (iPhone/iPad)\n"
 			"    -android        Android\n"
 			"\n");
@@ -746,6 +747,7 @@ int main(int argc, char **argv)
 			// platform
 			OPT_VALUE("ps3",     GSettings.Startup.Platform, PLATFORM_PS3)
 			OPT_VALUE("ps4",     GSettings.Startup.Platform, PLATFORM_PS4)
+			OPT_VALUE("nsw",     GSettings.Startup.Platform, PLATFORM_SWITCH)
 			OPT_VALUE("ios",     GSettings.Startup.Platform, PLATFORM_IOS)
 			OPT_VALUE("android", GSettings.Startup.Platform, PLATFORM_ANDROID)
 			// compression
