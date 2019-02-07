@@ -529,9 +529,9 @@ extern bool GUseDebugger;
 			__declspec(dllimport) unsigned long __stdcall GetTickCount();
 		}
 #		endif
-			// Local implementation of GetTickCount()
-			unsigned long GetTickCount();
 #	else
+		// Local implementation of GetTickCount() for non-Windows platforms
+		unsigned long GetTickCount();
 #	endif
 #	define appMilliseconds()		GetTickCount()
 #endif // RENDERING
