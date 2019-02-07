@@ -1276,6 +1276,11 @@ UIMulticolumnListbox::UIMulticolumnListbox(int numColumns)
 
 	assert(NumColumns > 0 && NumColumns <= MAX_COLUMNS);
 	Items.AddZeroed(numColumns);	// reserve place for header
+	for (int i = 0; i < numColumns; i++)
+	{
+		ColumnSizes[i] = 0;
+		ColumnAlign[i] = TA_Left;
+	}
 }
 
 UIMulticolumnListbox& UIMulticolumnListbox::AddColumn(const char* title, int width, ETextAlign align)

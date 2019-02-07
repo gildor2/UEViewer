@@ -17,11 +17,11 @@ private:
 public:
 	FORCEINLINE T* GetData()
 	{
-		return items.size() > 0 ? &items[0] : NULL;
+		return items.size() > 0 ? &(*items.begin()) : NULL;
 	}
 	FORCEINLINE const T* GetData() const
 	{
-		return items.size() > 0 ? &items[0] : NULL;
+		return items.size() > 0 ? &(*items.begin()) : NULL;
 	}
 	FORCEINLINE T& operator[](int index)
 	{
@@ -93,6 +93,12 @@ public:
 			qsort(&items[0], items.size(), sizeof(T), (int (*)(const void*, const void*)) cmpFunc);
 		}
 	}
+
+	// Ranged for support
+	FORCEINLINE friend T*       begin(      TArray& A) { return &(*A.items.begin()); }
+	FORCEINLINE friend const T* begin(const TArray& A) { return &(*A.items.begin()); }
+	FORCEINLINE friend T*       end  (      TArray& A) { return &(*A.items.end());   }
+	FORCEINLINE friend const T* end  (const TArray& A) { return &(*A.items.end());   }
 };
 
 template<typename T>
