@@ -23,10 +23,9 @@ bool ExportObjects(const TArray<UObject*> *Objects, IProgressCallback* progress)
 	bool hasObjectList = (Objects != NULL) && Objects->Num();
 
 	//?? when 'Objects' passed, probably iterate over that list instead of GObjObjects
-	for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)
+	for (UObject* ExpObj : UObject::GObjObjects)
 	{
 		if (progress && !progress->Tick()) return false;
-		UObject* ExpObj = UObject::GObjObjects[idx];
 		bool objectSelected = !hasObjectList || (Objects->FindItem(ExpObj) >= 0);
 
 		if (!objectSelected) continue;

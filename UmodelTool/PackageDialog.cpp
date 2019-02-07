@@ -47,9 +47,9 @@ public:
 	}
 	bool Filter(const char* str) const
 	{
-		for (int i = 0; i < Values.Num(); i++)
+		for (const FString& Value : Values)
 		{
-			if (!appStristr(str, *Values[i]))
+			if (!appStristr(str, *Value))
 				return false;
 		}
 		return true;
@@ -107,9 +107,8 @@ public:
 
 		CFilter filter(packageFilter);
 
-		for (int i = 0; i < InPackages.Num(); i++)
+		for (const CGameFileInfo* package : InPackages)
 		{
-			const CGameFileInfo* package = InPackages[i];
 			char buffer[MAX_PACKAGE_PATH];
 			appStrncpyz(buffer, package->RelativeName, ARRAY_COUNT(buffer));
 			char* s = strrchr(buffer, '/');
@@ -141,9 +140,8 @@ public:
 #if !USE_FULLY_VIRTUAL_LIST
 		ReserveItems(InPackages.Num());
 #endif
-		for (int i = 0; i < InPackages.Num(); i++)
+		for (const CGameFileInfo* package : InPackages)
 		{
-			const CGameFileInfo* package = InPackages[i];
 			if (filter.Filter(package->RelativeName))
 				AddPackage(package);
 		}
@@ -529,10 +527,8 @@ void UIPackageDialog::GetPackagesForSelectedFolder(PackageList& OutPackages)
 	int folderLen = strlen(folder);
 	OutPackages.Empty(1024);
 
-	for (int i = 0; i < Packages.Num(); i++)
+	for (const CGameFileInfo* package : Packages)
 	{
-		const CGameFileInfo* package = Packages[i];
-
 		// When root folder selected, "folder" is a empty string, we'll fill Packages with full list of packages
 		if (folderLen > 0)
 		{
@@ -751,8 +747,8 @@ void UIPackageDialog::SavePackages()
 	//!! Possible options:
 	//!! - save referenced packages (find better name - "imports", "links", "used packages", "referenced packages" ...)
 	//!! - decompress packages
-	//!! - preserve package paths
-	//!! - destination directory
+	//!! * preserve package paths
+	//!! * destination directory
 
 	// We are using selection, so update it.
 	UpdateSelectedPackages();

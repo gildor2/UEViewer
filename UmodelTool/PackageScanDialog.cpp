@@ -51,9 +51,8 @@ public:
 		];
 
 		// Fill package information
-		for (int i = 0; i < PkgInfo.Num(); i++)
+		for (const FileInfo& Info : PkgInfo)
 		{
-			const FileInfo &Info = PkgInfo[i];
 			char buf[128];
 
 			appSprintf(ARRAY_ARG(buf), "%d (%X)", Info.Ver, Info.Ver);
@@ -74,10 +73,9 @@ protected:
 	void CopyToClipboard()
 	{
 		FStaticString<1024> Report;
-		for (int i = 0; i < PkgInfo.Num(); i++)
+		for (const FileInfo& Info : PkgInfo)
 		{
 			char buf[256];
-			const FileInfo &Info = PkgInfo[i];
 			appSprintf(ARRAY_ARG(buf), "%3d (%3X)  %3d (%3X)  %4d    %s%s\n",
 				Info.Ver, Info.Ver, Info.LicVer, Info.LicVer, Info.Count, Info.FileName,
 				Info.Count > 1 && Info.FileName[0] ? "..." : "");

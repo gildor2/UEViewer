@@ -1719,6 +1719,12 @@ public:
 		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
 	}
 
+	// Ranged for support
+	FORCEINLINE friend T*       begin(      TArray& A) { return (T*) A.DataPtr; }
+	FORCEINLINE friend const T* begin(const TArray& A) { return (const T*) A.DataPtr; }
+	FORCEINLINE friend T*       end  (      TArray& A) { return (T*) A.DataPtr + A.DataCount; }
+	FORCEINLINE friend const T* end  (const TArray& A) { return (const T*) A.DataPtr + A.DataCount; }
+
 	// serializer
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray &A)
 	{
