@@ -992,6 +992,8 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 	{
 		guard(Bulk4);
 
+		bIsUE4Data = true;
+
 		Ar << BulkDataFlags << ElementCount;
 		Ar << BulkDataSizeOnDisk;
 		if (Ar.ArVer < VER_UE4_BULKDATA_AT_LARGE_OFFSETS)
@@ -1372,11 +1374,16 @@ bool FByteBulkData::SerializeData(const UObject* MainObj) const
 #if UNREAL4
 	guard(FByteBulkData::SerializeData(UObject*));
 
+	assert(bIsUE4Data); // the function is supported only for UE4 games
+
 	if (!(BulkDataFlags & (BULKDATA_OptionalPayload|BULKDATA_PayloadInSeperateFile)))
 	{
 		// Already serialized, see FByteBulkData::Serialize()
+		assert(CanReloadBulk() == false);
 		return true;
 	}
+
+	assert(CanReloadBulk() == true);
 
 	char bulkFileName[256];
 	bulkFileName[0] = 0;
@@ -1415,7 +1422,7 @@ bool FByteBulkData::SerializeData(const UObject* MainObj) const
 #else
 	appError("FByteBulkData::SerializeData(UObject*) call");
 	return false;
-#endif
+#endif // UNREAL4
 }
 
 

@@ -779,7 +779,7 @@ void UTexture2D::ReleaseTextureData() const
 	{
 		const FTexture2DMipMap &Mip = (*MipsArray)[n];
 		const FByteBulkData &Bulk = Mip.Data;
-		if (Bulk.BulkData && (Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile))
+		if (Bulk.CanReloadBulk())
 			const_cast<FByteBulkData*>(&Bulk)->ReleaseData();
 	}
 

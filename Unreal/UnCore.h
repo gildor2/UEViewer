@@ -2256,7 +2256,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 -----------------------------------------------------------------------------*/
 
 // UE3
-#define BULKDATA_StoreInSeparateFile	0x01		// bulk stored in different file
+#define BULKDATA_StoreInSeparateFile	0x01		// bulk stored in different file (otherwise it's "inline")
 #define BULKDATA_CompressedZlib			0x02		// name = BULKDATA_SerializeCompressedZLIB (UE4) ?
 #define BULKDATA_CompressedLzo			0x10		// unknown name
 #define BULKDATA_Unused					0x20		// empty bulk block
@@ -2295,9 +2295,16 @@ struct FByteBulkData //?? separate FUntypedBulkData
 //	int		LockStatus;
 //	FArchive *AttachedAr;
 
+#if UNREAL4
+	bool	bIsUE4Data;					// indicates how to treat BulkDataFlags, as these constants aren't compatible between UE3 and UE4
+#endif
+
 	FByteBulkData()
 	:	BulkData(NULL)
 	,	BulkDataOffsetInFile(0)
+#if UNREAL4
+	,	bIsUE4Data(false)
+#endif
 	{}
 
 	virtual ~FByteBulkData()
@@ -2314,6 +2321,17 @@ struct FByteBulkData //?? separate FUntypedBulkData
 	{
 		if (BulkData) appFree(BulkData);
 		BulkData = NULL;
+	}
+
+	bool CanReloadBulk() const
+	{
+#if UNREAL4
+		if (bIsUE4Data)
+		{
+			return (BulkDataFlags & (BULKDATA_OptionalPayload|BULKDATA_PayloadInSeperateFile)) != 0;
+		}
+#endif // UNREAL4
+		return (BulkDataFlags & BULKDATA_StoreInSeparateFile) != 0;
 	}
 
 	// support functions
