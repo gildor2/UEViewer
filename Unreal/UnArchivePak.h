@@ -362,15 +362,20 @@ public:
 
 	virtual bool AttachReader(FArchive* reader, FString& error)
 	{
+		int guardVersion = 0; // used for some details in a case of crash
 		guard(FPakVFS::ReadDirectory);
 
 		// Read pak header
+		int64 HeaderOffset = reader->GetFileSize64() - FPakInfo::Size;
+		assert(HeaderOffset >= 0);
+		reader->Seek64(HeaderOffset);
+
 		FPakInfo info;
-		reader->Seek64(reader->GetFileSize64() - FPakInfo::Size);
 		*reader << info;
 		if (info.Magic != PAK_FILE_MAGIC)		// no endian checking here
 			return false;
 
+		guardVersion = info.Version;
 		if (info.Version > PAK_LATEST)
 		{
 			appPrintf("WARNING: Pak file \"%s\" has unsupported version %d\n", *Filename, info.Version);
@@ -400,6 +405,8 @@ public:
 
 		if (info.bEncryptedIndex)
 		{
+			guard(CheckEncryptedIndex);
+
 			InfoBlock = new byte[info.IndexSize];
 			reader->Serialize(InfoBlock, info.IndexSize);
 			appDecryptAES(InfoBlock, info.IndexSize);
@@ -445,6 +452,8 @@ public:
 
 			// Data is ok, seek to data start.
 			InfoReader->Seek(0);
+
+			unguard;
 		}
 
 		// this file looks correct, store 'reader'
@@ -489,6 +498,8 @@ public:
 		int numEncryptedFiles = 0;
 		for (int i = 0; i < count; i++)
 		{
+			guard(ReadInfo);
+
 			FPakEntry& E = FileInfos[i];
 			// serialize name, combine with MountPoint
 			FStaticString<MAX_PACKAGE_PATH> Filename;
@@ -504,6 +515,8 @@ public:
 //				appPrintf("Encrypted file: %s\n", *Filename);
 				numEncryptedFiles++;
 			}
+
+			unguard("Index=%d/%d", i, count);
 		}
 		if (count >= MIN_PAK_SIZE_FOR_HASHING)
 		{
@@ -530,7 +543,7 @@ public:
 
 		return true;
 
-		unguard;
+		unguardf("PakVer=%d", guardVersion);
 	}
 
 	virtual int GetFileSize(const char* name)
