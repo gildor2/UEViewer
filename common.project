@@ -32,6 +32,7 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 		DEFINES += OLDCRT
 		!include $WDKCRT/msvcrt.project
 	!endif
+	LINKFLAGS += -largeaddressaware						# allow 32-bit build to use more than 2Gb or RAM
 !endif
 
 !if "$COMPILER" eq "GnuC"
