@@ -8,10 +8,6 @@
 #	define PKG_LOG(...)
 #endif
 
-#ifndef USE_COMPACT_PACKAGE_STRUCTS
-#define USE_COMPACT_PACKAGE_STRUCTS		1		// define if you want to drop/skip data which are not used in framework
-#endif
-
 
 #if UNREAL4
 // Callback called when unversioned package was found.
@@ -166,7 +162,7 @@ struct FPackageFileSummary
 struct FObjectExport
 {
 	int32		ClassIndex;					// object reference
-	int32		SuperIndex;					// object reference
+	int32		SuperIndex;					// object reference -- not used in Umodel
 	int32		PackageIndex;				// object reference
 	FName		ObjectName;
 	int32		SerialSize;

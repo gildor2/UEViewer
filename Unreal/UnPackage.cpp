@@ -1843,17 +1843,27 @@ FArchive& UnPackage::operator<<(FName &N)
 
 	assert(IsLoading);
 
+	// Declare aliases for FName.Index and ExtraIndex to allow USE_COMPACT_PACKAGE_STRUCTS to work
+#if !USE_COMPACT_PACKAGE_STRUCTS
+	int32& N_Index = N.Index;
+	#if UNREAL3 || UNREAL4
+	int32& N_ExtraIndex = N.ExtraIndex;
+	#endif
+#else
+	int32 N_Index, N_ExtraIndex;
+#endif // USE_COMPACT_PACKAGE_STRUCTS
+
 #if BIOSHOCK
 	if (Game == GAME_Bioshock)
 	{
-		*this << AR_INDEX(N.Index) << N.ExtraIndex;
-		if (N.ExtraIndex == 0)
+		*this << AR_INDEX(N_Index) << N_ExtraIndex;
+		if (N_ExtraIndex == 0)
 		{
-			N.Str = GetName(N.Index);
+			N.Str = GetName(N_Index);
 		}
 		else
 		{
-			N.Str = appStrdupPool(va("%s%d", GetName(N.Index), N.ExtraIndex-1));	// without "_" char
+			N.Str = appStrdupPool(va("%s%d", GetName(N_Index), N_ExtraIndex-1));	// without "_" char
 		}
 		return *this;
 	}
@@ -1862,55 +1872,55 @@ FArchive& UnPackage::operator<<(FName &N)
 #if UC2
 	if (Engine() == GAME_UE2X && ArVer >= 145)
 	{
-		*this << N.Index;
+		*this << N_Index;
 	}
 	else
 #endif // UC2
 #if LEAD
 	if (Game == GAME_SplinterCellConv && ArVer >= 64)
 	{
-		*this << N.Index;
+		*this << N_Index;
 	}
 	else
 #endif // LEAD
 #if UNREAL3 || UNREAL4
 	if (Engine() >= GAME_UE3)
 	{
-		*this << N.Index;
+		*this << N_Index;
 		if (Game >= GAME_UE4_BASE) goto extra_index;
 	#if R6VEGAS
 		if (Game == GAME_R6Vegas2)
 		{
-			N.ExtraIndex = N.Index >> 19;
-			N.Index &= 0x7FFFF;
+			N_ExtraIndex = N_Index >> 19;
+			N_Index &= 0x7FFFF;
 		}
 	#endif // R6VEGAS
 		if (ArVer >= 343)
 		{
 		extra_index:
-			*this << N.ExtraIndex;
+			*this << N_ExtraIndex;
 		}
 	}
 	else
 #endif // UNREAL3 || UNREAL4
 	{
 		// UE1 and UE2
-		*this << AR_INDEX(N.Index);
+		*this << AR_INDEX(N_Index);
 	}
 
 	// Convert name index to string
 #if UNREAL3 || UNREAL4
-	if (N.ExtraIndex == 0)
+	if (N_ExtraIndex == 0)
 	{
-		N.Str = GetName(N.Index);
+		N.Str = GetName(N_Index);
 	}
 	else
 	{
-		N.Str = appStrdupPool(va("%s_%d", GetName(N.Index), N.ExtraIndex-1));
+		N.Str = appStrdupPool(va("%s_%d", GetName(N_Index), N_ExtraIndex-1));
 	}
 #else
 	// no modern engines compiled
-	N.Str = GetName(N.Index);
+	N.Str = GetName(N_Index);
 #endif // UNREAL3 || UNREAL4
 
 	return *this;

@@ -199,6 +199,12 @@ detex
 
 Changes
 ~~~~~~~
+28.02.2019
+- memory use optimizations, package information now uses 25% less memory
+
+22.02.2019
+- 32-bit Windows build now can use up to 4Gb of RAM when running on 64-bit Windows
+
 06.02.2019
 - "save packages" now preserves oridinal directory directory structure; Windows version has options for selecting save
   path and option for building or not directory hierarchy (for linux, same things could be changed in cfg file)

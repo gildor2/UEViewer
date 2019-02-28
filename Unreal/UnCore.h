@@ -9,6 +9,11 @@
 #undef PLATFORM_UNKNOWN		// defined in windows headers
 
 
+#ifndef USE_COMPACT_PACKAGE_STRUCTS
+#define USE_COMPACT_PACKAGE_STRUCTS		1		// define if you want to drop/skip data which are not used in framework
+#endif
+
+
 // forward declarations
 template<typename T> class TArray;
 class FArchive;
@@ -166,37 +171,35 @@ const char* appStrdupPool(const char* str);
 class FName
 {
 public:
-	int			Index;
-#if UNREAL3 || UNREAL4
-	int			ExtraIndex;
-#endif
 	const char	*Str;
+#if !USE_COMPACT_PACKAGE_STRUCTS
+	int32		Index;
+	#if UNREAL3 || UNREAL4
+	int32		ExtraIndex;
+	#endif
+#endif // USE_COMPACT_PACKAGE_STRUCTS
 
 	FName()
-	:	Index(0)
-	,	Str("None")
-#if UNREAL3 || UNREAL4
+	:	Str("None")
+#if !USE_COMPACT_PACKAGE_STRUCTS
+	,	Index(0)
+	#if UNREAL3 || UNREAL4
 	,	ExtraIndex(0)
-#endif
+	#endif
+#endif // USE_COMPACT_PACKAGE_STRUCTS
 	{}
 
-	inline FName& operator=(const FName &Other)
-	{
-		Index = Other.Index;
-#if UNREAL3 || UNREAL4
-		ExtraIndex = Other.ExtraIndex;
-#endif // UNREAL3
-		Str = Other.Str;
-		return *this;
-	}
+	inline FName& operator=(const FName &Other) = default;
 
 	inline FName& operator=(const char* String)
 	{
 		Str = appStrdupPool(String);
+#if !USE_COMPACT_PACKAGE_STRUCTS
 		Index = 0;
-#if UNREAL3 || UNREAL4
+	#if UNREAL3 || UNREAL4
 		ExtraIndex = 0;
-#endif
+	#endif
+#endif // USE_COMPACT_PACKAGE_STRUCTS
 		return *this;
 	}
 
