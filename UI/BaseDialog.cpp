@@ -1870,6 +1870,7 @@ UITreeView::UITreeView()
 ,	RootLabel("Root")
 ,	bUseFolderIcons(false)
 ,	bUseCheckboxes(false)
+,	bHasRootNode(true)
 ,	ItemHeight(DEFAULT_TREE_ITEM_HEIGHT)
 {
 	Layout.Height = DEFAULT_TREEVIEW_HEIGHT;
@@ -2146,6 +2147,11 @@ void UITreeView::CreateItem(TreeViewItem& item)
 	TVINSERTSTRUCT tvis;
 	memset(&tvis, 0, sizeof(tvis));
 
+	if (!item.Parent && !bHasRootNode)
+	{
+		return;
+	}
+
 	const char* text;
 	if (!item.Parent)
 	{
@@ -2178,7 +2184,7 @@ void UITreeView::CreateItem(TreeViewItem& item)
 
 	item.hItem = TreeView_InsertItem(Wnd, &tvis);
 	// expand root item
-	if (item.Parent)
+	if (item.Parent && bHasRootNode)
 	{
 		const TreeViewItem* root = GetRoot();
 		if (item.Parent == root || item.Parent->Parent == root)

@@ -716,9 +716,6 @@ public:
 	UITreeView();
 	virtual ~UITreeView() override;
 
-	//!! TODO:
-	//!! - HideRootItem() -- may be when label is empty?
-
 	FORCEINLINE UITreeView& SetRootLabel(const char* root)
 	{
 		RootLabel = root;
@@ -734,6 +731,7 @@ public:
 	UITreeView& UseFolderIcons()          { bUseFolderIcons = true; return *this; }
 	UITreeView& UseCheckboxes()           { bUseCheckboxes = true; return *this;  }
 	UITreeView& SetItemHeight(int value)  { ItemHeight = value; return *this;     }
+	UITreeView& HasRootNode(bool value)   { bHasRootNode = value; return *this;   }
 
 	// Checkbox management
 	void SetChecked(const char* item, bool checked = true);
@@ -746,6 +744,7 @@ public:
 protected:
 	TArray<TreeViewItem*> Items;
 	FString		RootLabel;
+	bool		bHasRootNode;
 	TreeViewItem* SelectedItem;
 	int			ItemHeight;
 	bool		bUseFolderIcons;
