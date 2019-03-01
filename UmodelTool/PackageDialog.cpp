@@ -347,7 +347,7 @@ void UIPackageDialog::InitUI()
 			.SetHeight(EncodeWidth(1.0f))
 			[
 				NewControl(UITreeView)
-					.SetRootLabel("Game")
+					.SetRootLabel("All packages")
 					.SetWidth(EncodeWidth(0.3f))
 					.SetHeight(-1)
 					.SetCallback(BIND_MEMBER(&UIPackageDialog::OnTreeItemSelected, this))
@@ -384,6 +384,7 @@ void UIPackageDialog::InitUI()
 	PackageList SortedPackages;
 	CopyArray(SortedPackages, Packages);
 	SortPackages(SortedPackages, UIPackageList::COLUMN_Name, false);
+	bool isUE4 = false;
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		appStrncpyz(path, SortedPackages[i]->RelativeName, ARRAY_COUNT(path));
@@ -399,18 +400,27 @@ void UIPackageDialog::InitUI()
 		}
 		if (!DirectorySelected)
 		{
-			// find the first directory with packages, but don't select /Game/Engine subdirectories by default
-			bool isUE4EnginePath = (strnicmp(path, "Engine/", 7) == 0) || (strnicmp(path, "/Engine/", 8) == 0);
+			// find the first directory with packages, but don't select /Engine subdirectories by default
+			bool isUE4EnginePath = (strnicmp(path, "Engine/", 7) == 0) || (strnicmp(path, "/Engine/", 8) == 0) || strstr(path, "/Plugins/") != NULL;
 			if (!isUE4EnginePath && (stricmp(path, *SelectedDir) < 0 || SelectedDir.IsEmpty()))
 			{
 				// set selection to the first directory
 				SelectedDir = s ? path : "";
 			}
 		}
+		if (path[0] == '/' && !strncmp(path, "/Game/", 6))
+			isUE4 = true;
 	}
 	if (!SelectedDir.IsEmpty())
 	{
 		PackageTree->Expand(*SelectedDir);	//!! note: will not work at the moment because "Expand" works only after creation of UITreeView
+	}
+
+	if (isUE4)
+	{
+		// UE4 may have multiple root nodes for better layout
+//		PackageTree->HasRootNode(false);
+//??		PackageTree->Expand("/Game"); -- doesn't work unless TreeView is already created
 	}
 
 	// "Tools" menu
