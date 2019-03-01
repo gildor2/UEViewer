@@ -360,6 +360,42 @@ public:
 		if (HashTable) delete[] HashTable;
 	}
 
+	void CompactFilePath(FString& Path)
+	{
+		guard(FPakVFS::CompactFilePath);
+
+		if (Path.StartsWith("/Engine/Content"))	// -> /Engine
+		{
+			Path.RemoveAt(7, 8);
+			return;
+		}
+		if (Path.StartsWith("/Engine/Plugins")) // -> /Plugins
+		{
+			Path.RemoveAt(0, 7);
+			return;
+		}
+
+		if (Path[0] != '/')
+			return;
+
+		char* delim = strchr(&Path[1], '/');
+		if (!delim)
+			return;
+		if (strncmp(delim, "/Content/", 9) != 0)
+			return;
+
+		int pos = delim - &Path[0];
+		if (pos > 4)
+		{
+			// /GameName/Content -> /Game
+			int toRemove = pos + 8 - 5;
+			Path.RemoveAt(5, toRemove);
+			memcpy(&Path[1], "Game", 4);
+		}
+
+		unguard;
+	}
+
 	virtual bool AttachReader(FArchive* reader, FString& error)
 	{
 		int guardVersion = 0; // used for some details in a case of crash
@@ -507,6 +543,9 @@ public:
 			FStaticString<MAX_PACKAGE_PATH> CombinedPath;
 			CombinedPath = MountPoint;
 			CombinedPath += Filename;
+			// compact file name
+			CompactFilePath(CombinedPath);
+			// allocate file name in pool
 			E.Name = appStrdupPool(*CombinedPath);
 			// serialize other fields
 			*InfoReader << E;
