@@ -1850,7 +1850,7 @@ FArchive& UnPackage::operator<<(FName &N)
 	int32& N_ExtraIndex = N.ExtraIndex;
 	#endif
 #else
-	int32 N_Index, N_ExtraIndex;
+	int32 N_Index = 0, N_ExtraIndex = 0;
 #endif // USE_COMPACT_PACKAGE_STRUCTS
 
 #if BIOSHOCK
