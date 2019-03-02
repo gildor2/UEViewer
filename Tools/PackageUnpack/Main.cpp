@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 		{
 			// if file was loaded using search inside game path, use game filesystem, because
 			// direct use of package name may not work
-			h = appCreateFileReader(info);
+			h = info->CreateReader();
 		}
 		else
 		{

@@ -110,7 +110,7 @@ static bool ReadXprFile(const CGameFileInfo *file)
 {
 	guard(ReadXprFile);
 
-	FArchive *Ar = appCreateFileReader(file);
+	FArchive *Ar = file->CreateReader();
 
 	int Tag, FileLen, DataStart, DataCount;
 	*Ar << Tag << FileLen << DataStart << DataCount;
@@ -265,7 +265,7 @@ byte *FindXprData(const char *Name, int *DataSize)
 			{
 				// found
 				appPrintf("Loading stream %s from %s (%d bytes)\n", Name, Info->File->RelativeName, File->DataSize);
-				FArchive *Reader = appCreateFileReader(Info->File);
+				FArchive *Reader = Info->File->CreateReader();
 				Reader->Seek(File->DataOffset);
 				byte *buf = (byte*)appMalloc(File->DataSize);
 				Reader->Serialize(buf, File->DataSize);
@@ -361,7 +361,7 @@ static TArray<BioBulkCatalog> bioCatalog;
 static bool BioReadBulkCatalogFile(const CGameFileInfo *file)
 {
 	guard(BioReadBulkCatalogFile);
-	FArchive *Ar = appCreateFileReader(file);
+	FArchive *Ar = file->CreateReader();
 	// setup for reading Bioshock data
 	Ar->ArVer         = 141;
 	Ar->ArLicenseeVer = 0x38;
@@ -426,7 +426,7 @@ static byte *FindBioTexture(const UTexture *Tex)
 					}
 
 					appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, bulkFile->RelativeName);
-					FArchive *Reader = appCreateFileReader(bulkFile);
+					FArchive *Reader = bulkFile->CreateReader();
 					Reader->Seek(Item.DataOffset);
 					byte *buf = (byte*)appMalloc(max(Item.DataSize, needSize));
 					Reader->Serialize(buf, Item.DataSize);

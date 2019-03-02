@@ -18,7 +18,7 @@ static bool ScanFile(const CGameFileInfo *file)
 {
 	guard(ScanFile);
 
-	FArchive *Ar = appCreateFileReader(file);
+	FArchive *Ar = file->CreateReader();
 
 	// setup NotifyInfo to describe package only
 	appSetNotifyHeader(file->RelativeName);

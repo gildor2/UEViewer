@@ -136,7 +136,7 @@ public:
 	:	Info(info)
 	{
 		guard(FGears4BundleFile::Constructor)
-		Reader = appCreateFileReader(Info->Container);
+		Reader = Info->Container->CreateReader();
 		assert(Reader);
 		Reader->SetStopper(Info->Position + Info->Size);
 
@@ -334,7 +334,7 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 
 	appPrintf("Loading Gears4 manifest file %s\n", info->RelativeName);
 
-	FArchive* loader = appCreateFileReader(info);
+	FArchive* loader = info->CreateReader();
 	assert(loader);
 	loader->Game = GAME_Gears4;
 

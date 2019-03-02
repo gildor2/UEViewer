@@ -101,18 +101,20 @@ struct CGameFileInfo
 	const char*	ShortFilename;						// without path, points to filename part of RelativeName
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
-	bool		IsPackage;
 	int64		Size;								// file size, in bytes
 	int32		SizeInKb;							// file size, in kilobytes
-	int			ExtraSizeInKb;						// size of additional non-package files
+	int32		ExtraSizeInKb;						// size of additional non-package files
 	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
 	UnPackage*	Package;							// non-null when corresponding package is loaded
+	bool		IsPackage;
 	// content information, valid when PackageScanned is true
 	bool		PackageScanned;
-	int			NumSkeletalMeshes;
-	int			NumStaticMeshes;
-	int			NumAnimations;
-	int			NumTextures;
+	uint16		NumSkeletalMeshes;
+	uint16		NumStaticMeshes;
+	uint16		NumAnimations;
+	uint16		NumTextures;
+
+	FArchive* CreateReader() const;
 
 	void UpdateFrom(const CGameFileInfo* other)
 	{
@@ -135,7 +137,6 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NUL
 void appFindGameFiles(const char *Filename, TArray<const CGameFileInfo*>& Files);
 
 const char *appSkipRootDir(const char *Filename);
-FArchive *appCreateFileReader(const CGameFileInfo *info);
 
 typedef bool (*EnumGameFilesCallback_t)(const CGameFileInfo*, void*);
 void appEnumGameFilesWorker(EnumGameFilesCallback_t, const char *Ext = NULL, void *Param = NULL);

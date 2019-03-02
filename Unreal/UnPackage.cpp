@@ -1370,7 +1370,7 @@ no_depends: ;
 		if (expInfo)
 		{
 			// Open .exp file
-			FArchive* expLoader = appCreateFileReader(expInfo);
+			FArchive* expLoader = expInfo->CreateReader();
 			// Replace loader with this file, but add offset so it will work like it is part of original uasset
 			delete Loader;
 			Loader = new FReaderWrapper(expLoader, -Summary.HeadersSize);
@@ -2380,7 +2380,7 @@ TArray<char*>		MissingPackages;
 		if (info->Package)
 			return info->Package;
 		// Load the package.
-		UnPackage* package = new UnPackage(info->RelativeName, appCreateFileReader(info), silent);
+		UnPackage* package = new UnPackage(info->RelativeName, info->CreateReader(), silent);
 		// Cache pointer in CGameFileInfo so next time it will be found quickly.
 		const_cast<CGameFileInfo*>(info)->Package = package;
 		return package;

@@ -1296,7 +1296,7 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 		FArchive* loader = NULL;
 		if (info)
 		{
-			loader = appCreateFileReader(info);
+			loader = info->CreateReader();
 			assert(loader);
 		}
 		else
@@ -1409,7 +1409,7 @@ bool FByteBulkData::SerializeData(const UObject* MainObj) const
 		return false;
 	}
 
-	FArchive *Ar = appCreateFileReader(bulkFile);
+	FArchive *Ar = bulkFile->CreateReader();
 	Ar->SetupFrom(*Package);
 #if DEBUG_BULK
 	appPrintf("%s: Bulk %X %llX [%d] f=%X (%s)\n", MainObj->Name, this, this->BulkDataOffsetInFile, this->ElementCount, this->BulkDataFlags, bulkFileName);

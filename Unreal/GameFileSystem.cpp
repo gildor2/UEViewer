@@ -871,19 +871,19 @@ const char *appSkipRootDir(const char *Filename)
 }
 
 
-FArchive *appCreateFileReader(const CGameFileInfo *info)
+FArchive* CGameFileInfo::CreateReader() const
 {
-	if (!info->FileSystem)
+	if (!FileSystem)
 	{
 		// regular file
 		char buf[MAX_PACKAGE_PATH];
-		appSprintf(ARRAY_ARG(buf), "%s/%s", GRootDirectory, info->RelativeName);
+		appSprintf(ARRAY_ARG(buf), "%s/%s", GRootDirectory, RelativeName);
 		return new FFileReader(buf);
 	}
 	else
 	{
 		// file from virtual file system
-		return info->FileSystem->CreateReader(info->RelativeName);
+		return FileSystem->CreateReader(RelativeName);
 	}
 }
 

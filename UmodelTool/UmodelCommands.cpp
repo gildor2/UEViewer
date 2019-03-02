@@ -197,7 +197,7 @@ void SavePackages(const TArray<const CGameFileInfo*>& Packages, IProgressCallbac
 			}
 #endif // UNREAL4
 
-			FArchive *Ar = appCreateFileReader(file);
+			FArchive *Ar = file->CreateReader();
 			if (Ar)
 			{
 				guard(SaveFile);

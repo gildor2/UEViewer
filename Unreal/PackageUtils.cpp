@@ -107,7 +107,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 	}
 
 	// read a few first bytes as integers
-	FArchive *Ar = appCreateFileReader(file);
+	FArchive *Ar = file->CreateReader();
 	uint32 FileData[16];
 	Ar->Serialize(FileData, sizeof(FileData));
 	delete Ar;
