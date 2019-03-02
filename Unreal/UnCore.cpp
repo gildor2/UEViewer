@@ -150,14 +150,14 @@ void FArray::GrowArray(int count, int elementSize)
 void FArray::InsertUninitialized(int index, int count, int elementSize)
 {
 	guard(FArray::InsertUninitialized);
-	assert(index >= 0);
-	assert(index <= DataCount);
-	assert(count >= 0);
+
 	if (!count) return;
 	GrowArray(count, elementSize);
+
 	// move data
 	if (index != DataCount)
 	{
+		assert(index >= 0 && index <= DataCount);
 		memmove(
 			(byte*)DataPtr + (index + count)     * elementSize,
 			(byte*)DataPtr + index               * elementSize,
@@ -187,9 +187,11 @@ void FArray::InsertZeroed(int index, int count, int elementSize)
 void FArray::Remove(int index, int count, int elementSize)
 {
 	guard(FArray::Remove);
-	assert(index >= 0);
+
+	if (!count) return;
 	assert(count > 0);
-	assert(index + count <= DataCount);
+
+	assert(index >= 0 && index + count <= DataCount);
 	// move data
 	if (index + count < DataCount)
 	{
@@ -208,9 +210,11 @@ void FArray::Remove(int index, int count, int elementSize)
 void FArray::RemoveAtSwap(int index, int count, int elementSize)
 {
 	guard(FArray::RemoveAtSwap);
-	assert(index >= 0);
+
+	if (!count) return;
 	assert(count > 0);
-	assert(index + count <= DataCount);
+
+	assert(index >= 0 && index + count <= DataCount);
 	// move data
 	if (index + count < DataCount)
 	{
@@ -265,7 +269,8 @@ FString::FString(int count, const char* src)
 	if (count)
 	{
 		Data.AddUninitialized(count + 1);
-		strncpy(Data.GetData(), src, count);
+		memcpy(Data.GetData(), src, count);
+		Data[count] = 0;
 	}
 }
 

@@ -97,16 +97,20 @@ const char *appGetRootDirectory();
 
 struct CGameFileInfo
 {
+	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
+
 	const char*	RelativeName;						// relative to RootDirectory
 	const char*	ShortFilename;						// without path, points to filename part of RelativeName
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
-	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
+
+	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
+	UnPackage*	Package;							// non-null when corresponding package is loaded
+
 	int64		Size;								// file size, in bytes
 	int32		SizeInKb;							// file size, in kilobytes
 	int32		ExtraSizeInKb;						// size of additional non-package files
-	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
-	UnPackage*	Package;							// non-null when corresponding package is loaded
 	bool		IsPackage;
+
 	// content information, valid when PackageScanned is true
 	bool		PackageScanned;
 	uint16		NumSkeletalMeshes;
@@ -116,6 +120,7 @@ struct CGameFileInfo
 
 	FArchive* CreateReader() const;
 
+	//?? todo: find why it is ever used, change name?
 	void UpdateFrom(const CGameFileInfo* other)
 	{
 		// Copy information from 'other' entry, but preserve hash chains

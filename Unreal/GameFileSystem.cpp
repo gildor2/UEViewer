@@ -157,11 +157,11 @@ static int            GStartupPackageInfoWeight = 0;
 #endif
 
 
-static int GetHashForFileName(const char* FileName, bool stripExtension)
+static int GetHashForFileName(const char* FileName, bool cutExtension)
 {
 	const char* s1 = strrchr(FileName, '/'); // assume path delimiters are normalized
-	s1 = (s1 != NULL) ? s1 + 1 : FileName;
-	const char* s2 = stripExtension ? strrchr(s1, '.') : NULL;
+	s1 = (s1 != NULL) ? s1 + 1 : FileName;   // skip path
+	const char* s2 = cutExtension ? strrchr(s1, '.') : NULL;
 	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
 
 	uint16 hash = 0;
@@ -508,16 +508,17 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	for (int i = 0; i < GameFiles.Num(); i++)
 	{
 		CGameFileInfo *info = GameFiles[i];
-		char SrcFile[MAX_PACKAGE_PATH];
-		appStrncpyz(SrcFile, info->RelativeName, ARRAY_COUNT(SrcFile));
-		char* s = strrchr(SrcFile, '.');
-		if (s && (stricmp(s, ".uasset") == 0 || stricmp(s, ".umap") == 0))
+		if ((stricmp(info->Extension, "uasset") == 0 || stricmp(info->Extension, "umap") == 0))
 		{
 			static const char* additionalExtensions[] =
 			{
 				".ubulk",
 				".uexp",
+				".uptnl",
 			};
+			char SrcFile[MAX_PACKAGE_PATH];
+			appStrncpyz(SrcFile, info->RelativeName, ARRAY_COUNT(SrcFile));
+			char* s = strrchr(SrcFile, '.');
 			for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
 			{
 				strcpy(s, additionalExtensions[ext]);
@@ -665,7 +666,7 @@ void appSetRootDirectory2(const char *filename)
 }
 
 
-const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
+const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 {
 	guard(appFindGameFile);
 
@@ -687,8 +688,9 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 		if (*s == '/') ShortFilename = s + 1;
 	}
 
-	// Get hash before stripping extension (could be required for files with double extension, like .hdr.rtc for games with Redux textures)
-	int hash = GetHashForFileName(buf, /* stripExtension = */ Ext == NULL);
+	// Get hash before stripping extension (could be required for files with double extension, like .hdr.rtc for games with Redux textures).
+	// If 'Ext' has been provided, we're going to append Ext to the filename later, so there's nothing to cut in this case.
+	int hash = GetHashForFileName(buf, /* cutExtension = */ Ext == NULL);
 #if DEBUG_HASH
 	printf("--> find(%s) hash=%X\n", buf, hash);
 #endif
@@ -708,6 +710,10 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 			*s = 0;			// cut extension
 		}
 	}
+	// Now, 'buf' has filename with no extension, and 'Ext' points to extension. 'ShortFilename' contains file name with
+	// stripped path and extension parts.
+	// If 'Ext' is NULL here, the extension is not included into the file name, and we're looking for a package file with
+	// any suitable file extension.
 
 	int nameLen = strlen(ShortFilename);
 #if defined(DEBUG_HASH_NAME) || DEBUG_HASH
@@ -721,7 +727,8 @@ const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext)
 #if defined(DEBUG_HASH_NAME) || DEBUG_HASH
 		printf("----> verify %s\n", info->RelativeName);
 #endif
-		if (info->Extension - 1 - info->ShortFilename != nameLen)	// info->Extension points to char after '.'
+		// check if info's filename length matches required one
+		if (info->Extension - 1 - info->ShortFilename != nameLen)
 		{
 //			printf("-----> wrong length %d\n", info->Extension - info->ShortFilename);
 			continue;		// different filename length
