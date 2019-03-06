@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+06.03.2019
+- made error window larger and resizeable
+
 28.02.2019
 - memory use optimizations, package information now uses 25% less memory
 

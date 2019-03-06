@@ -585,7 +585,9 @@ bool FFileArchive::OpenFile()
 	f = fopen64(FullName, Mode);
 	if (f) return true;			// success
 	if (!(Options & FAO_NoOpenError))
-		appError("Unable to open file %s", FullName);
+	{
+		appError("Can't open file (%s) %s", strerror(errno), FullName);
+	}
 
 	return false;
 	unguard;
