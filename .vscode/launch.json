@@ -1,0 +1,41 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	// C/C++ options: https://github.com/Microsoft/vscode-cpptools/blob/master/launch.md
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "(No arguments)",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/umodel.exe",
+			"args": [],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"externalConsole": false,
+			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
+		},
+		{
+			"name": "Game: Paragon",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/umodel.exe",
+			"args": [ "C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks", "-game=paragon" ],
+			"cwd": "${workspaceFolder}",
+			"externalConsole": false,
+			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
+		},
+		{
+			"name": "Game: Shooter Game",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/umodel.exe",
+			"args": [ "C:/TEMP/UE4_Packaged/WindowsNoEditor/ShooterGame/Content/Paks", "-game=ue4.21" ],
+			"cwd": "${workspaceFolder}",
+			"externalConsole": false,
+			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
+		}
+	]
+}

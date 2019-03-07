@@ -1,0 +1,22 @@
+{
+    "files.exclude": {
+        "umodel*" : true,
+        "*.{exe,dll,bat}": true,
+        "package*.sh": true,
+        "src-arc.sh": true,
+        "**/.vs": true,
+        "**/bak": true,
+        "**/data": true,
+        "**/Docs": true,
+        "**/makefile-*": true,
+        "**/obj": true,
+        "**/Tools/**": true,
+        "**/UI/stl-stub": true,
+        "**/UmodelExport": true,
+        "**/UmodelSaved": true,
+        "**/Screenshots": true
+    },
+    "files.associations": {
+        "*.ush": "hlsl"
+    }
+  }
