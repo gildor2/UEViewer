@@ -95,20 +95,29 @@ void appSetRootDirectory(const char *dir, bool recurse = true);
 void appSetRootDirectory2(const char *filename);
 const char *appGetRootDirectory();
 
+// forwards
+class FString;
+class FVirtualFileSystem;
+
 struct CGameFileInfo
 {
+	friend void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs);
+	friend const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext);
+
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 
+protected:
 	const char*	RelativeName;						// relative to RootDirectory
 	const char*	ShortFilename;						// without path, points to filename part of RelativeName
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 
-	class FVirtualFileSystem* FileSystem;			// owning virtual file system (NULL for OS file system)
+public:
+	FVirtualFileSystem* FileSystem;					// owning virtual file system (NULL for OS file system)
 	UnPackage*	Package;							// non-null when corresponding package is loaded
 
 	int64		Size;								// file size, in bytes
 	int32		SizeInKb;							// file size, in kilobytes
-	int32		ExtraSizeInKb;						// size of additional non-package files
+	int32		ExtraSizeInKb;						// size of additional non-package files (ubulk, uexp etc)
 	bool		IsPackage;
 
 	// content information, valid when PackageScanned is true
@@ -119,6 +128,26 @@ struct CGameFileInfo
 	uint16		NumTextures;
 
 	FArchive* CreateReader() const;
+
+	const char* GetExtension() const
+	{
+		return Extension;
+	}
+
+	// Get full name of the file
+	void GetRelativeName(FString& OutName) const;
+	FString GetRelativeName() const;
+	// Get file path and name without extension
+	void GetRelativeNameNoExt(FString& OutName) const;
+	// Get file name with extension with no path
+	void GetCleanName(FString& OutName) const;
+	// Get path part of the name
+	void GetPath(FString& OutName) const;
+
+	static int CompareNames(const CGameFileInfo& A, const CGameFileInfo& B)
+	{
+		return stricmp(A.RelativeName, B.RelativeName);
+	}
 
 	//?? todo: find why it is ever used, change name?
 	void UpdateFrom(const CGameFileInfo* other)

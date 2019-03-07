@@ -971,7 +971,7 @@ int main(int argc, char **argv)
 				GameFiles.Add(Files[j]);
 				if (bShouldLoadPackages)
 				{
-					UnPackage* Package = UnPackage::LoadPackage(Files[j]->RelativeName);
+					UnPackage* Package = UnPackage::LoadPackage(*Files[j]->GetRelativeName());
 					Packages.Add(Package);
 				}
 			}

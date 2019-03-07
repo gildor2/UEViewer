@@ -2380,7 +2380,7 @@ TArray<char*>		MissingPackages;
 		if (info->Package)
 			return info->Package;
 		// Load the package.
-		UnPackage* package = new UnPackage(info->RelativeName, info->CreateReader(), silent);
+		UnPackage* package = new UnPackage(*info->GetRelativeName(), info->CreateReader(), silent);
 		// Cache pointer in CGameFileInfo so next time it will be found quickly.
 		const_cast<CGameFileInfo*>(info)->Package = package;
 		return package;

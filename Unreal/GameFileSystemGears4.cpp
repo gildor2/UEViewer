@@ -332,7 +332,7 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 {
 	guard(LoadGears4Manifest);
 
-	appPrintf("Loading Gears4 manifest file %s\n", info->RelativeName);
+	appPrintf("Loading Gears4 manifest file %s\n", *info->GetRelativeName());
 
 	FArchive* loader = info->CreateReader();
 	assert(loader);

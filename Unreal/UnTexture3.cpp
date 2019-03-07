@@ -727,7 +727,9 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 
 	assert(bulkFile);									// missing file is processed above
 	if (verbose)
-		appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, bulkFile->RelativeName);
+	{
+		appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Name, MipIndex, Mip.SizeX, Mip.SizeY, *bulkFile->GetRelativeName());
+	}
 
 	FArchive *Ar = bulkFile->CreateReader();
 	Ar->SetupFrom(*Package);
@@ -762,7 +764,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	delete Ar;
 	return true;
 
-	unguardf("File=%s Mip=%d", bulkFile ? bulkFile->RelativeName : "none", MipIndex);
+	unguardf("File=%s Mip=%d", bulkFile ? *bulkFile->GetRelativeName() : "none", MipIndex);
 }
 
 

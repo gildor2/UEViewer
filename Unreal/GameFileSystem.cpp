@@ -505,10 +505,13 @@ void appSetRootDirectory(const char *dir, bool recurse)
 
 #if UNREAL4
 	// Should process .uexp and .ubulk files, register their information for .uasset
+	FStaticString<MAX_PACKAGE_PATH> RelativeName;
+
 	for (int i = 0; i < GameFiles.Num(); i++)
 	{
 		CGameFileInfo *info = GameFiles[i];
-		if ((stricmp(info->Extension, "uasset") == 0 || stricmp(info->Extension, "umap") == 0))
+		const char* Ext = info->GetExtension();
+		if ((stricmp(Ext, "uasset") == 0 || stricmp(Ext, "umap") == 0))
 		{
 			static const char* additionalExtensions[] =
 			{
@@ -516,13 +519,12 @@ void appSetRootDirectory(const char *dir, bool recurse)
 				".uexp",
 				".uptnl",
 			};
-			char SrcFile[MAX_PACKAGE_PATH];
-			appStrncpyz(SrcFile, info->RelativeName, ARRAY_COUNT(SrcFile));
-			char* s = strrchr(SrcFile, '.');
+			info->GetRelativeNameNoExt(RelativeName);
+			char* extPlace = &RelativeName[0] + RelativeName.Len();
 			for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
 			{
-				strcpy(s, additionalExtensions[ext]);
-				const CGameFileInfo* file = appFindGameFile(SrcFile);
+				strcpy(extPlace, additionalExtensions[ext]);
+				const CGameFileInfo* file = appFindGameFile(*RelativeName);
 				if (file)
 				{
 					info->ExtraSizeInKb += file->SizeInKb;
@@ -791,14 +793,18 @@ struct FindPackageWildcardData
 
 static bool FindPackageWildcardCallback(const CGameFileInfo *file, FindPackageWildcardData &data)
 {
+	FStaticString<MAX_PACKAGE_PATH> Name;
+
 	bool useThisPackage = false;
 	if (data.WildcardContainsPath)
 	{
-		useThisPackage = appMatchWildcard(file->RelativeName, *data.Wildcard, true);
+		file->GetRelativeName(Name);
+		useThisPackage = appMatchWildcard(*Name, *data.Wildcard, true);
 	}
 	else
 	{
-		useThisPackage = appMatchWildcard(file->ShortFilename, *data.Wildcard, true);
+		file->GetCleanName(Name);
+		useThisPackage = appMatchWildcard(*Name, *data.Wildcard, true);
 	}
 	if (useThisPackage)
 	{
@@ -895,6 +901,42 @@ FArchive* CGameFileInfo::CreateReader() const
 }
 
 
+void CGameFileInfo::GetRelativeName(FString& OutName) const
+{
+	OutName = RelativeName;
+}
+
+FString CGameFileInfo::GetRelativeName() const
+{
+	FString Result;
+	GetRelativeName(Result);
+	return Result;
+}
+
+void CGameFileInfo::GetRelativeNameNoExt(FString& OutName) const
+{
+	// Ineffective function, but will be replaced later anyway
+	OutName = FString(Extension ? Extension - RelativeName - 1 : strlen(RelativeName), RelativeName);
+}
+
+void CGameFileInfo::GetCleanName(FString& OutName) const
+{
+	OutName = ShortFilename;
+}
+
+void CGameFileInfo::GetPath(FString& OutName) const
+{
+	if (ShortFilename > RelativeName)
+	{
+		// Ineffective function, but will be replaced later anyway
+		OutName = FString(ShortFilename - RelativeName - 1, RelativeName);
+	}
+	else
+	{
+		OutName = "";
+	}
+}
+
 void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const char *Ext, void *Param)
 {
 	for (int i = 0; i < GameFiles.Num(); i++)
@@ -908,7 +950,7 @@ void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const
 		else
 		{
 			// check extension
-			if (stricmp(info->Extension, Ext) != 0) continue;
+			if (stricmp(info->GetExtension(), Ext) != 0) continue;
 		}
 		if (!Callback(info, Param)) break;
 	}

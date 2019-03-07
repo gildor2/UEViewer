@@ -241,7 +241,7 @@ static bool ReadXprFile(const CGameFileInfo *file)
 	delete Ar;
 	return true;
 
-	unguardf("%s", file->RelativeName);
+	unguardf("%s", *file->GetRelativeName());
 }
 
 
@@ -264,7 +264,7 @@ byte *FindXprData(const char *Name, int *DataSize)
 			if (strcmp(File->Name, Name) == 0)
 			{
 				// found
-				appPrintf("Loading stream %s from %s (%d bytes)\n", Name, Info->File->RelativeName, File->DataSize);
+				appPrintf("Loading stream %s from %s (%d bytes)\n", Name, *Info->File->GetRelativeName(), File->DataSize);
 				FArchive *Reader = Info->File->CreateReader();
 				Reader->Seek(File->DataOffset);
 				byte *buf = (byte*)appMalloc(File->DataSize);
@@ -367,13 +367,13 @@ static bool BioReadBulkCatalogFile(const CGameFileInfo *file)
 	Ar->ArLicenseeVer = 0x38;
 	Ar->Game          = GAME_Bioshock;
 	// serialize
-	appPrintf("Reading %s\n", file->RelativeName);
+	appPrintf("Reading %s\n", *file->GetRelativeName());
 	BioBulkCatalog *cat = new (bioCatalog) BioBulkCatalog;
 	*Ar << *cat;
 	// finalize
 	delete Ar;
 	return true;
-	unguardf("%s", file->RelativeName);
+	unguardf("%s", *file->GetRelativeName());
 }
 
 
@@ -425,7 +425,7 @@ static byte *FindBioTexture(const UTexture *Tex)
 						return NULL;
 					}
 
-					appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, bulkFile->RelativeName);
+					appPrintf("Reading %s mip level %d (%dx%d) from %s\n", Tex->Name, 0, Tex->USize, Tex->VSize, *bulkFile->GetRelativeName());
 					FArchive *Reader = bulkFile->CreateReader();
 					Reader->Seek(Item.DataOffset);
 					byte *buf = (byte*)appMalloc(max(Item.DataSize, needSize));

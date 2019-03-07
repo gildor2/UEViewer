@@ -109,14 +109,14 @@ public:
 
 		for (const CGameFileInfo* package : InPackages)
 		{
-			char buffer[MAX_PACKAGE_PATH];
-			appStrncpyz(buffer, package->RelativeName, ARRAY_COUNT(buffer));
-			char* s = strrchr(buffer, '/');
+			FStaticString<MAX_PACKAGE_PATH> RelativeName;
+			package->GetRelativeName(RelativeName);
+			char* s = strrchr(&RelativeName[0], '/');
 			if (s) *s++ = 0;
-			if ((!s && !directory[0]) ||				// root directory
-				(s && !strcmp(buffer, directory)))		// another directory
+			if ((!s && !directory[0]) ||					// root directory
+				(s && !strcmp(*RelativeName, directory)))	// another directory
 			{
-				const char* packageName = s ? s : buffer;
+				const char* packageName = s ? s : *RelativeName;
 				if (filter.Filter(packageName))
 				{
 					// this package is in selected directory
@@ -142,7 +142,9 @@ public:
 #endif
 		for (const CGameFileInfo* package : InPackages)
 		{
-			if (filter.Filter(package->RelativeName))
+			FStaticString<MAX_PACKAGE_PATH> RelativeName;
+			package->GetRelativeName(RelativeName);
+			if (filter.Filter(*RelativeName))
 				AddPackage(package);
 		}
 
@@ -216,17 +218,21 @@ private:
 	{
 		guard(UIPackageList::GetItemTextHandler);
 
-		static char buf[64]; // returning this value outside by pointer, so it is 'static'
+		static FStaticString<MAX_PACKAGE_PATH> Buffer; // returning this value outside by pointer, so it is 'static'
 
 		const CGameFileInfo* file = Packages[ItemIndex];
 		if (SubItemIndex == COLUMN_Name)
 		{
-			OutText = StripPath ? file->ShortFilename : file->RelativeName;
+			if (StripPath)
+				file->GetCleanName(Buffer);
+			else
+				file->GetRelativeName(Buffer);
+			OutText = *Buffer;
 		}
 		else if (SubItemIndex == COLUMN_Size)
 		{
-			appSprintf(ARRAY_ARG(buf), "%d", file->SizeInKb + file->ExtraSizeInKb);
-			OutText = buf;
+			appSprintf(&Buffer[0], 63, "%d", file->SizeInKb + file->ExtraSizeInKb);
+			OutText = *Buffer;
 		}
 		else if (file->PackageScanned)
 		{
@@ -241,8 +247,8 @@ private:
 			if (value != 0)
 			{
 				// don't show zero counts
-				appSprintf(ARRAY_ARG(buf), "%d", value);
-				OutText = buf;
+				appSprintf(&Buffer[0], 63, "%d", value);
+				OutText = *Buffer;
 			}
 			else
 			{
@@ -377,7 +383,7 @@ void UIPackageDialog::InitUI()
 
 	// add paths of all found packages to the directory tree
 	if (SelectedPackages.Num()) DirectorySelected = true;
-	char prevPath[MAX_PACKAGE_PATH], path[MAX_PACKAGE_PATH];
+	char prevPath[MAX_PACKAGE_PATH];
 	prevPath[0] = 0;
 	// Make a copy of package list sorted by name, to ensure directory tree is always sorted.
 	// Using a copy to not affect package sorting used before.
@@ -387,28 +393,29 @@ void UIPackageDialog::InitUI()
 	bool isUE4 = false;
 	for (int i = 0; i < Packages.Num(); i++)
 	{
-		appStrncpyz(path, SortedPackages[i]->RelativeName, ARRAY_COUNT(path));
-		char* s = strrchr(path, '/');
+		FStaticString<MAX_PACKAGE_PATH> RelativeName;
+		SortedPackages[i]->GetRelativeName(RelativeName);
+		char* s = strrchr(&RelativeName[0], '/');
 		if (s)
 		{
 			*s = 0;
 			// simple optimization - avoid calling PackageTree->AddItem() too frequently (assume package list is sorted)
-			if (!strcmp(prevPath, path)) continue;
-			strcpy(prevPath, path);
+			if (!strcmp(prevPath, *RelativeName)) continue;
+			strcpy(prevPath, *RelativeName);
 			// add a directory to TreeView
-			PackageTree->AddItem(path);
+			PackageTree->AddItem(*RelativeName);
 		}
 		if (!DirectorySelected)
 		{
 			// find the first directory with packages, but don't select /Engine subdirectories by default
-			bool isUE4EnginePath = (strnicmp(path, "Engine/", 7) == 0) || (strnicmp(path, "/Engine/", 8) == 0) || strstr(path, "/Plugins/") != NULL;
-			if (!isUE4EnginePath && (stricmp(path, *SelectedDir) < 0 || SelectedDir.IsEmpty()))
+			bool isUE4EnginePath = (strnicmp(*RelativeName, "Engine/", 7) == 0) || (strnicmp(*RelativeName, "/Engine/", 8) == 0) || strstr(*RelativeName, "/Plugins/") != NULL;
+			if (!isUE4EnginePath && (stricmp(*RelativeName, *SelectedDir) < 0 || SelectedDir.IsEmpty()))
 			{
 				// set selection to the first directory
-				SelectedDir = s ? path : "";
+				SelectedDir = s ? RelativeName : "";
 			}
 		}
-		if (path[0] == '/' && !strncmp(path, "/Game/", 6))
+		if (RelativeName[0] == '/' && !strncmp(*RelativeName, "/Game/", 6))
 			isUE4 = true;
 	}
 	if (!SelectedDir.IsEmpty())
@@ -523,7 +530,7 @@ void UIPackageDialog::UpdateSelectedPackages()
 		FlatPackageList->GetSelectedPackages(SelectedPackages);
 		// Update currently selected directory in tree
 		if (SelectedPackages.Num())
-			SelectDirFromFilename(SelectedPackages[0]->RelativeName);
+			SelectDirFromFilename(*SelectedPackages[0]->GetRelativeName());
 	}
 
 	unguard;
@@ -542,8 +549,9 @@ void UIPackageDialog::GetPackagesForSelectedFolder(PackageList& OutPackages)
 		// When root folder selected, "folder" is a empty string, we'll fill Packages with full list of packages
 		if (folderLen > 0)
 		{
-			if (strncmp(package->RelativeName, folder, folderLen) != 0 ||
-				package->RelativeName[folderLen] != '/')
+			FStaticString<MAX_PACKAGE_PATH> Path;
+			package->GetPath(Path);
+			if (!Path.StartsWith(folder) || (Path.Len() != folderLen && Path[folderLen] != '/'))
 			{
 				// Not in this folder
 				continue;
@@ -655,7 +663,7 @@ static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHel
 	switch (PackageSort_Column)
 	{
 	case UIPackageList::COLUMN_Name:
-		code = stricmp(A->RelativeName, B->RelativeName);
+		code = CGameFileInfo::CompareNames(*A, *B);
 		break;
 	case UIPackageList::COLUMN_Size:
 		code = (A->SizeInKb - B->SizeInKb) + (A->ExtraSizeInKb - B->ExtraSizeInKb);
@@ -850,13 +858,14 @@ void UIPackageDialog::OnExportFolderClicked()
 
 	for (int i = 0; i < PackagesToExport.Num(); i++)
 	{
-		const char* pkgName = PackagesToExport[i]->RelativeName;
-		if (!progress.Progress(pkgName, i, PackagesToExport.Num()))
+		FStaticString<MAX_PACKAGE_PATH> RelativeName;
+		PackagesToExport[i]->GetRelativeName(RelativeName);
+		if (!progress.Progress(*RelativeName, i, PackagesToExport.Num()))
 		{
 			cancelled = true;
 			break;
 		}
-		UnPackage* package = UnPackage::LoadPackage(pkgName);	// should always return non-NULL
+		UnPackage* package = UnPackage::LoadPackage(*RelativeName);	// should always return non-NULL
 		if (package) UnrealPackages.Add(package);
 	}
 	if (cancelled || !UnrealPackages.Num())

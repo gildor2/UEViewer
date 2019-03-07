@@ -99,7 +99,9 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 
 	if (data.Progress)
 	{
-		if (!data.Progress->Progress(file->RelativeName, data.Index++, GNumPackageFiles))
+		FStaticString<MAX_PACKAGE_PATH> RelativeName;
+		file->GetRelativeName(RelativeName);
+		if (!data.Progress->Progress(*RelativeName, data.Index++, GNumPackageFiles))
 		{
 			data.Cancelled = true;
 			return false;
@@ -144,8 +146,10 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 	}
 
 	Info.Count  = 0;
-	strcpy(Info.FileName, file->RelativeName);
-//	printf("%s - %d/%d\n", file->RelativeName, Info.Ver, Info.LicVer);
+	FStaticString<MAX_PACKAGE_PATH> RelativeName;
+	file->GetRelativeName(RelativeName);
+	strcpy(Info.FileName, *RelativeName);
+//	printf("%s - %d/%d\n", *RelativeName, Info.Ver, Info.LicVer);
 	int Index = INDEX_NONE;
 	for (int i = 0; i < data.PkgInfo->Num(); i++)
 	{
@@ -173,7 +177,7 @@ static bool ScanPackage(const CGameFileInfo *file, ScanPackageData &data)
 
 	return true;
 
-	unguardf("%s", file->RelativeName);
+	unguardf("%s", *file->GetRelativeName());
 }
 
 
@@ -233,7 +237,9 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		if (file->PackageScanned) continue;
 
 		// Update progress dialog
-		if (Progress && !Progress->Progress(file->RelativeName, i, Packages.Num()))
+		FStaticString<MAX_PACKAGE_PATH> RelativeName;
+		file->GetRelativeName(RelativeName);
+		if (Progress && !Progress->Progress(*RelativeName, i, Packages.Num()))
 		{
 			cancelled = true;
 			break;
@@ -248,7 +254,7 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		}
 		else
 		{
-			UnPackage* package = UnPackage::LoadPackage(file->RelativeName, /*silent=*/ true);	// should always return non-NULL
+			UnPackage* package = UnPackage::LoadPackage(*RelativeName, /*silent=*/ true);	// should always return non-NULL
 			if (!package) continue;		// should not happen
 			ScanPackageExports(package, file);
 		#if 0
