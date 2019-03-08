@@ -17,6 +17,7 @@
         "**/Screenshots": true
     },
     "files.associations": {
-        "*.ush": "hlsl"
+        "*.ush": "hlsl",
+        "*.project": "perl"
     }
   }

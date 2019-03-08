@@ -31,9 +31,9 @@ Currently build is performed with Visual C++ 2013.
 
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
 of these tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You can get everything what you need
-for a build [here](https://github.com/gildor2/UModel/releases). This page contains **BuildTools.zip**. You should
-download it and extract into some directory, let's say to *C:\BuildTools*. After that, put *C:\BuildTools\bin*
-to the system's *PATH* variable. As an alternative it is possible to create a batch file which will temporarily
+for a build [here](https://github.com/gildor2/BuildTools). This page contains **BuildTools**. You should
+download it and extract into some directory (press the green button "Clone or download", then "Download ZIP"). Let's say you extracted them to *C:\BuildTools*. After that, add *C:\BuildTools\bin*
+to the system's *PATH* environment variable. As an alternative it is possible to create a batch file which will temporarily
 modify *PATH* and then execute build script. Here's an example of such file:
 
     @echo off
@@ -55,6 +55,9 @@ This system has everything what is required for build by default. You'll only ne
 (and of course gcc). To build UModel, simply execute the following command from terminal
 
     ./build.sh
+
+### Visual Studio Code
+UModel contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/). Just open umodel's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up. Of course you'll need a [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed.
 
 
 C runtime library for MSVC
@@ -128,22 +131,21 @@ and after that you'll be able to view *TArray* and *FString* structures during d
 Directory structure
 -------------------
 
-**TODO**
-
+    /.vscode - Visual Studio Code project files
     /Core
-      /GL
+      /GL - OpenGL wrapper builder
     /Docs
     /Exporters
-    /Libs
+    /Libs - third-party libraries used for building
     /MeshInstance
-    /obj
+    /obj - all compiled object files goes there
     /Tools
       /CompatTable
       /MaxActorXImport
       /PackageExtract
       /PackageUnpack
-    /UI
-    /UmodelTool
-    /Unreal
-      /Shaders
+    /UI - library used to show UI on Windows
+    /UmodelTool - source code of umodel itself
+    /Unreal - source code of Unreal Engine framework
+      /Shaders - shaders used in UModel
     /Viewers
