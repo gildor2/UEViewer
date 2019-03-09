@@ -1949,11 +1949,35 @@ no_nav_collision:
 			// ScreenSize for each LOD
 			int MaxNumLods = (Ar.Game >= GAME_UE4(9)) ? MAX_STATIC_LODS_UE4 : 4;
 			for (int i = 0; i < MaxNumLods; i++)
+			{
+				// Starting with UE4.20 it uses TPerPlatformProperty<float> = FPerPlatformFloat, which has different serializer
+				if (Ar.Game >= GAME_UE4(20))
+				{
+					bool bFloatCooked;
+					Ar << bFloatCooked;
+				}
 				Ar << ScreenSize[i];
+			}
 		}
 
 		unguard;
 	} // end of FStaticMeshRenderData
+
+	if (bCooked && Ar.Game >= GAME_UE4(20))
+	{
+		guard(SerializeOccluderData);
+		// FStaticMeshOccluderData::SerializeCooked
+		bool bHasOccluderData;
+		Ar << bHasOccluderData;
+		if (bHasOccluderData)
+		{
+			TArray<FVector> Vertices;
+			TArray<uint16> Indices;
+			Vertices.BulkSerialize(Ar);
+			Indices.BulkSerialize(Ar);
+		}
+		unguard;
+	}
 
 	if (Ar.Game >= GAME_UE4(14) /* && StaticMaterials.Num() == 0 */) // it seems that StaticMaterials serialized as properties has no material links
 	{
