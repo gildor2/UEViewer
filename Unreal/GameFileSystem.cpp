@@ -589,7 +589,7 @@ void appSetRootDirectory2(const char *filename)
 	}
 
 	FString root;
-	int detected = 0;				// weigth; 0 = not detected
+	int detected = 0;				// weight; 0 = not detected
 	root = buf;
 
 	// analyze path

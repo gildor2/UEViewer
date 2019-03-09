@@ -19,5 +19,19 @@
     "files.associations": {
         "*.ush": "hlsl",
         "*.project": "perl"
-    }
-  }
+    },
+    "cSpell.words": [
+        "FCOLOR",
+        "FQUAT",
+        "FROTATOR",
+        "FVECTOR",
+        "SKEL",
+        "SKELMESH",
+        "Strncpyz",
+        "UMODEL",
+        "uasset",
+        "ubulk",
+        "uexp",
+        "unguardf"
+    ]
+}

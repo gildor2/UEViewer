@@ -829,7 +829,7 @@ void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
 {
 	if (SortedColumn == column)
 	{
-		// when the same column clickec again, change sort mode
+		// when the same column clicked again, change sort mode
 		ReverseSort = !ReverseSort;
 	}
 	else

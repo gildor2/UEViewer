@@ -494,7 +494,7 @@ public:
 		Platform      = Other.Platform;
 	}
 
-	// Information aboit game and engine this archive belongs to.
+	// Information about game and engine this archive belongs to.
 
 	void DetectGame();
 	void OverrideVersion();
