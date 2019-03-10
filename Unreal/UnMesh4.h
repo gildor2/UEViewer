@@ -306,21 +306,6 @@ struct FStaticMaterial
 		PROP_OBJ(MaterialInterface)
 		PROP_NAME(MaterialSlotName)
 	END_PROP_TABLE
-
-/*	friend FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
-	{
-		Ar << M.MaterialInterface << M.MaterialSlotName;
-		if (Ar.ContainsEditorData())
-		{
-			FName ImportedMaterialSlotName;
-			Ar << ImportedMaterialSlotName;
-		}
-		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
-		{
-			Ar << M.UVChannelData;
-		}
-		return Ar;
-	} */
 };
 
 class UStaticMesh4 : public UObject

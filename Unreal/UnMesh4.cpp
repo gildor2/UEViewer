@@ -163,6 +163,8 @@ struct FStaticMeshVertexBuffer4
 		S.Stride = -1;
 
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
+
+		// FStaticMeshVertexBuffer::SerializeMetaData()
 		Ar << S.NumTexCoords;
 		if (Ar.Game < GAME_UE4(19))
 		{
@@ -1648,7 +1650,7 @@ struct FRawStaticIndexBuffer4
 struct FWeightedRandomSampler
 {
 	TArray<float>			Prob;
-	TArray<uint32>			Alias;
+	TArray<int32>			Alias;
 	float					TotalWeight;
 
 	friend FArchive& operator<<(FArchive& Ar, FWeightedRandomSampler& S)
@@ -1678,6 +1680,14 @@ struct FStaticMeshLODModel4
 	FRawStaticIndexBuffer4   AdjacencyIndexBuffer;
 	float                    MaxDeviation;
 
+	enum EClassDataStripFlag
+	{
+		CDSF_AdjacencyData = 1,
+		// UE4.20+
+		CDSF_MinLodData = 2,			// used to drop some LODs
+		CDSF_ReversedIndexBuffer = 4,
+	};
+
 	static void Serialize(FArchive& Ar, FStaticMeshLODModel4& Lod)
 	{
 		guard(FStaticMeshLODModel4<<);
@@ -1700,58 +1710,131 @@ struct FStaticMeshLODModel4
 
 		Ar << Lod.MaxDeviation;
 
-		enum EClassDataStripFlag
+		if (Ar.Game < GAME_UE4(22))
 		{
-			CDSF_AdjacencyData = 1,
-			// UE4.20+
-			CDSF_MinLodData = 2,			// used to drop some LODs
-			CDSF_ReversedIndexBuffer = 4,
-		};
+			if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(CDSF_MinLodData))
+			{
+				SerializeBuffersLegacy(Ar, Lod, StripFlags);
+			}
+			return;
+		}
 
-		if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(CDSF_MinLodData))
+		// UE4.22+
+		bool bIsLODCookedOut, bInlined;
+		Ar << bIsLODCookedOut << bInlined;
+
+		if (!StripFlags.IsDataStrippedForServer() && !bIsLODCookedOut)
 		{
-			Ar << Lod.PositionVertexBuffer;
-			Ar << Lod.VertexBuffer;
-			Ar << Lod.ColorVertexBuffer;
-			Ar << Lod.IndexBuffer;
-
-			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(CDSF_ReversedIndexBuffer))
+			if (bInlined)
 			{
-				Ar << Lod.ReversedIndexBuffer;
+				SerializeBuffers(Ar, Lod);
+				// FStaticMeshBuffersSize
+				uint32 SerializedBuffersSize, DepthOnlyIBSize, ReversedIBsSize;
+				Ar << SerializedBuffersSize << DepthOnlyIBSize << ReversedIBsSize;
 			}
-			Ar << Lod.DepthOnlyIndexBuffer;
+			else
 			{
-				Ar << Lod.ReversedDepthOnlyIndexBuffer;
-			}
-			/// reference for VER_UE4_SOUND_CONCURRENCY_PACKAGE:
-			/// 25.09.2015 - 948c1698
-
-			if (Ar.ArVer >= VER_UE4_FTEXT_HISTORY && Ar.ArVer < VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
-			{
-				/// reference:
-				/// 03.06.2014 - 1464dcf2
-				/// 28.08.2014 - f5238f04
-				FDistanceFieldVolumeData DistanceFieldData;
-				Ar << DistanceFieldData;
-			}
-
-			if (!StripFlags.IsEditorDataStripped())
-				Ar << Lod.WireframeIndexBuffer;
-
-			if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
-				Ar << Lod.AdjacencyIndexBuffer;
-
-			if (Ar.Game >= GAME_UE4(16))
-			{
-				TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
-				FStaticMeshAreaWeightedSectionSampler AreaWeightedSampler;
-
-				AreaWeightedSectionSamplers.AddZeroed(Lod.Sections.Num());
-				for (int i = 0; i < AreaWeightedSectionSamplers.Num(); i++)
-					Ar << AreaWeightedSectionSamplers[i];
-				Ar << AreaWeightedSampler;
+				// todo
+				appError("Serialize from bulk");
 			}
 		}
+
+		unguard;
+	}
+
+	// Pre-UE4.22 code
+	static void SerializeBuffersLegacy(FArchive& Ar, FStaticMeshLODModel4& Lod, const FStripDataFlags& StripFlags)
+	{
+		guard(FStaticMeshLODModel4::SerializeBuffersLegacy);
+
+		Ar << Lod.PositionVertexBuffer;
+		Ar << Lod.VertexBuffer;
+		Ar << Lod.ColorVertexBuffer;
+		Ar << Lod.IndexBuffer;
+
+		/// reference for VER_UE4_SOUND_CONCURRENCY_PACKAGE (UE4.9+):
+		/// 25.09.2015 - 948c1698
+		if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(CDSF_ReversedIndexBuffer))
+		{
+			Ar << Lod.ReversedIndexBuffer;
+			Ar << Lod.DepthOnlyIndexBuffer;
+			Ar << Lod.ReversedDepthOnlyIndexBuffer;
+		}
+		else
+		{
+			// UE4.8 or older, or when has CDSF_ReversedIndexBuffer
+			Ar << Lod.DepthOnlyIndexBuffer;
+		}
+
+		if (Ar.ArVer >= VER_UE4_FTEXT_HISTORY && Ar.ArVer < VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
+		{
+			/// reference:
+			/// 03.06.2014 - 1464dcf2
+			/// 28.08.2014 - f5238f04
+			FDistanceFieldVolumeData DistanceFieldData;
+			Ar << DistanceFieldData;
+		}
+
+		if (!StripFlags.IsEditorDataStripped())
+			Ar << Lod.WireframeIndexBuffer;
+
+		if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
+			Ar << Lod.AdjacencyIndexBuffer;
+
+		if (Ar.Game >= GAME_UE4(16))
+		{
+			TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
+			FStaticMeshAreaWeightedSectionSampler AreaWeightedSampler;
+
+			AreaWeightedSectionSamplers.AddZeroed(Lod.Sections.Num());
+			for (int i = 0; i < AreaWeightedSectionSamplers.Num(); i++)
+				Ar << AreaWeightedSectionSamplers[i];
+			Ar << AreaWeightedSampler;
+		}
+
+		unguard;
+	}
+
+	// UE4.22+. At the time of UE4.22, the function is exactly the same as SerializeBuffersLegacy (with exception of own
+	// FStripDataFlags), however I decided to split it to avoid later mess with newer engine updates.
+	static void SerializeBuffers(FArchive& Ar, FStaticMeshLODModel4& Lod)
+	{
+		guard(FStaticMeshLODModel4::SerializeBuffers);
+
+#if DEBUG_STATICMESH
+		DUMP_ARC_BYTES(Ar, 2, "SerializeBuffers.StripFlags");
+#endif
+		FStripDataFlags StripFlags(Ar);
+
+		Ar << Lod.PositionVertexBuffer;
+		Ar << Lod.VertexBuffer;
+		Ar << Lod.ColorVertexBuffer;
+		Ar << Lod.IndexBuffer;
+
+		if (!StripFlags.IsClassDataStripped(CDSF_ReversedIndexBuffer))
+		{
+			Ar << Lod.ReversedIndexBuffer;
+		}
+		Ar << Lod.DepthOnlyIndexBuffer;
+
+		if (!StripFlags.IsClassDataStripped(CDSF_ReversedIndexBuffer))
+		{
+			Ar << Lod.ReversedDepthOnlyIndexBuffer;
+		}
+
+		if (!StripFlags.IsEditorDataStripped())
+			Ar << Lod.WireframeIndexBuffer;
+
+		if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
+			Ar << Lod.AdjacencyIndexBuffer;
+
+		TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
+		FStaticMeshAreaWeightedSectionSampler AreaWeightedSampler;
+
+		AreaWeightedSectionSamplers.AddZeroed(Lod.Sections.Num());
+		for (int i = 0; i < AreaWeightedSectionSamplers.Num(); i++)
+			Ar << AreaWeightedSectionSamplers[i];
+		Ar << AreaWeightedSampler;
 
 		unguard;
 	}
@@ -1770,29 +1853,6 @@ struct FMeshSectionInfo
 	}
 };
 
-/*
-struct FStaticMaterial
-{
-	UMaterialInterface* MaterialInterface;
-	FName				MaterialSlotName;
-	FMeshUVChannelInfo	UVChannelData;
-
-	friend FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
-	{
-		Ar << M.MaterialInterface << M.MaterialSlotName;
-		if (Ar.ContainsEditorData())
-		{
-			FName ImportedMaterialSlotName;
-			Ar << ImportedMaterialSlotName;
-		}
-		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::TextureStreamingMeshUVChannelData)
-		{
-			Ar << M.UVChannelData;
-		}
-		return Ar;
-	}
-};
-*/
 FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
 {
 	Ar << M.MaterialInterface << M.MaterialSlotName;
@@ -1884,6 +1944,12 @@ no_nav_collision:
 		}
 
 		Lods.Serialize2<FStaticMeshLODModel4::Serialize>(Ar); // original code: TArray<FStaticMeshLODResources> LODResources
+
+		if (Ar.Game >= GAME_UE4(22))
+		{
+			uint8 NumInlinedLODs;
+			Ar << NumInlinedLODs;
+		}
 
 		guard(PostLODCode);
 
