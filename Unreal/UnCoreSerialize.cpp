@@ -6,6 +6,8 @@
 #include "UnPackage.h"			// for accessing FPackageFileSummary from FByteBulkData
 #endif
 
+#include <errno.h>				// not needed for VC
+
 #if _WIN32
 #include <io.h>					// for _filelengthi64
 #endif
