@@ -25,13 +25,18 @@
         "FQUAT",
         "FROTATOR",
         "FVECTOR",
+        "LODs",
         "SKEL",
         "SKELMESH",
         "Strncpyz",
+        "Tris",
         "UMODEL",
+        "coord",
+        "tex",
         "uasset",
         "ubulk",
         "uexp",
-        "unguardf"
+        "unguardf",
+        "uv"
     ]
 }

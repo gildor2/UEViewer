@@ -26,7 +26,7 @@ static GLuint GetDefaultTexNum();
 //#define DEBUG_MIPS			1				// use to debug decompression of lower mip levels, especially for XBox360
 
 
-#if PROFILE || DEBUG_UPLOAD
+#if DEBUG_UPLOAD
 // profiling
 #define PROFILE_UPLOAD(...)		__VA_ARGS__
 #define PROFILE_SHADER(...)		__VA_ARGS__

@@ -15,6 +15,7 @@
 			"cwd": "${workspaceFolder}",
 			"environment": [],
 			"externalConsole": false,
+			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		},
 		{
@@ -25,6 +26,7 @@
 			"args": [ "C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks", "-game=paragon" ],
 			"cwd": "${workspaceFolder}",
 			"externalConsole": false,
+			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		},
 		{
@@ -35,6 +37,7 @@
 			"args": [ "C:/TEMP/UE4_Packaged/WindowsNoEditor/ShooterGame/Content/Paks", "-game=ue4.21" ],
 			"cwd": "${workspaceFolder}",
 			"externalConsole": false,
+			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		}
 	]
