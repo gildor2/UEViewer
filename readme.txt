@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+10.03.2019
+- UE4.22 StaticMesh support
+
 06.03.2019
 - made error window larger and resizeable
 
