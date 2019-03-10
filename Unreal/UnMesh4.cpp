@@ -1678,7 +1678,7 @@ struct FStaticMeshLODModel4
 	FRawStaticIndexBuffer4   AdjacencyIndexBuffer;
 	float                    MaxDeviation;
 
-	friend FArchive& operator<<(FArchive& Ar, FStaticMeshLODModel4 &Lod)
+	static void Serialize(FArchive& Ar, FStaticMeshLODModel4& Lod)
 	{
 		guard(FStaticMeshLODModel4<<);
 
@@ -1691,9 +1691,8 @@ struct FStaticMeshLODModel4
 		Ar << Lod.Sections;
 #if DEBUG_STATICMESH
 		appPrintf("%d sections\n", Lod.Sections.Num());
-		for (int i = 0; i < Lod.Sections.Num(); i++)
+		for (const FStaticMeshSection4& S : Lod.Sections)
 		{
-			FStaticMeshSection4 &S = Lod.Sections[i];
 			appPrintf("  mat=%d firstIdx=%d numTris=%d firstVers=%d maxVert=%d\n", S.MaterialIndex, S.FirstIndex, S.NumTriangles,
 				S.MinVertexIndex, S.MaxVertexIndex);
 		}
@@ -1701,27 +1700,26 @@ struct FStaticMeshLODModel4
 
 		Ar << Lod.MaxDeviation;
 
-		enum StripFlags
+		enum EClassDataStripFlag
 		{
-			AdjacencyDataStripFlag = 1,
+			CDSF_AdjacencyData = 1,
 			// UE4.20+
-			MinLodDataStripFlag = 2,			// used to drop some LODs
-			ReversedIndexBufferStripFlag = 4,
+			CDSF_MinLodData = 2,			// used to drop some LODs
+			CDSF_ReversedIndexBuffer = 4,
 		};
 
-		if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(MinLodDataStripFlag))
+		if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(CDSF_MinLodData))
 		{
 			Ar << Lod.PositionVertexBuffer;
 			Ar << Lod.VertexBuffer;
 			Ar << Lod.ColorVertexBuffer;
 			Ar << Lod.IndexBuffer;
 
-			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(ReversedIndexBufferStripFlag))
+			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(CDSF_ReversedIndexBuffer))
 			{
 				Ar << Lod.ReversedIndexBuffer;
 			}
 			Ar << Lod.DepthOnlyIndexBuffer;
-			if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(ReversedIndexBufferStripFlag))
 			{
 				Ar << Lod.ReversedDepthOnlyIndexBuffer;
 			}
@@ -1740,7 +1738,7 @@ struct FStaticMeshLODModel4
 			if (!StripFlags.IsEditorDataStripped())
 				Ar << Lod.WireframeIndexBuffer;
 
-			if (!StripFlags.IsClassDataStripped(AdjacencyDataStripFlag))
+			if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
 				Ar << Lod.AdjacencyIndexBuffer;
 
 			if (Ar.Game >= GAME_UE4(16))
@@ -1755,7 +1753,6 @@ struct FStaticMeshLODModel4
 			}
 		}
 
-		return Ar;
 		unguard;
 	}
 };
@@ -1886,7 +1883,7 @@ no_nav_collision:
 			Ar << WedgeMap << MaterialIndexToImportIndex;
 		}
 
-		Ar << Lods; // original code: TArray<FStaticMeshLODResources> LODResources
+		Lods.Serialize2<FStaticMeshLODModel4::Serialize>(Ar); // original code: TArray<FStaticMeshLODResources> LODResources
 
 		guard(PostLODCode);
 
@@ -2049,7 +2046,7 @@ void UStaticMesh4::ConvertMesh()
 
 		if (NumVerts == 0 && NumTexCoords == 0 && lodIndex < Lods.Num()-1)
 		{
-			// UE4.20+, see MinLodDataStripFlag
+			// UE4.20+, see CDSF_MinLodData
 			appPrintf("Lod #%d is stripped, skipping ...\n", lodIndex);
 			continue;
 		}
