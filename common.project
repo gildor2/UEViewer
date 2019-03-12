@@ -144,6 +144,11 @@ STDLIBS   += SDL2
 INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
 OPTIONS   += $WARNINGS
 
+!if defined($DEBUG)
+	DEFINES += MAX_DEBUG
+	OBJDIR  = $OBJDIR-debug
+!endif
+
 !if "$PLATFORM" eq "win32"
 	INCLUDES += $R/libs/includewin32
 	LIBRARIES = $R/libs/SDL2/x86

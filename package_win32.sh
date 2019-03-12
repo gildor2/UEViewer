@@ -14,5 +14,10 @@ if grep -q -E "(PRIVATE BUILD)" umodel.exe; then
 	exit
 fi
 
+if grep -q -E "(DEBUG BUILD)" umodel.exe; then
+	echo "ERROR: this is a debug build"
+	exit
+fi
+
 rm -f $archive
 pkzipc -add $archive -level=9 $filelist

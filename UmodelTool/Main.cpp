@@ -661,6 +661,9 @@ int main(int argc, char **argv)
 #if PRIVATE_BUILD
 	appPrintf("PRIVATE BUILD\n");
 #endif
+#if MAX_DEBUG
+	appPrintf("DEBUG BUILD\n");
+#endif
 
 #if DO_GUARD
 	TRY {

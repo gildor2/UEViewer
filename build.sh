@@ -1,5 +1,18 @@
 #!/bin/bash
 
+while [ "$1" ]; do
+	case "$1" in
+		--debug)
+			debug=1
+			shift
+			;;
+		*)
+			echo "Usage: build.sh [--debug]"
+			exit
+			;;
+	esac
+done
+
 #-------------------------------------------------------------
 # Get revision number from Git
 
@@ -58,6 +71,10 @@ fi
 [ "$render"  ] || render=1
 
 makefile="makefile-$PLATFORM"
+if [ "$debug" ]; then
+	makefile="${makefile}-debug"
+	GENMAKE_OPTIONS="$GENMAKE_OPTIONS DEBUG=1"
+fi
 
 # build shader includes before call to genmake
 if [ $render -eq 1 ]; then
