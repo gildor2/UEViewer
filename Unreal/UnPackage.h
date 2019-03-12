@@ -151,7 +151,8 @@ struct FPackageFileSummary
 	int64		BulkDataStartOffset;
 #endif
 
-	friend FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S);
+	FPackageFileSummary();
+	bool Serialize(FArchive &Ar);
 };
 
 #if UNREAL3
@@ -219,8 +220,9 @@ class UnPackage : public FArchive
 	DECLARE_ARCHIVE(UnPackage, FArchive);
 public:
 	const char*				Filename;			// full name with path and extension
-	const char*				Name;				// short name
+	const char*				Name;				// short name without extension
 	FArchive				*Loader;
+
 	// package header
 	FPackageFileSummary		Summary;
 	// tables
@@ -236,6 +238,9 @@ protected:
 	~UnPackage();
 
 public:
+	// Check if constructor has created a valid package
+	bool IsValid() const { return Summary.NameCount > 0; }
+
 	// Load package using short name (without path and extension) or full path name.
 	// When the package is already loaded, this function will simply return a pointer
 	// to previously loaded UnPackage.

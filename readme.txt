@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+12.03.2019
+- UModel is no longer crashed when trying to open a file with wrong tag - a warning message is displayed instead
+
 10.03.2019
 - UE4.22 StaticMesh support
 

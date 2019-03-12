@@ -185,7 +185,12 @@ bool CUmodelApp::ShowPackageUI()
 			continue;
 		}
 
-		if (!Packages.Num()) break;			// should not happen
+		if (!Packages.Num())
+		{
+			// This will happen only if all selected packages has failed to load (wrong package tag etc).
+			// Show the package UI again.
+			continue;
+		}
 
 		// register exporters and classes (will be performed only once); use any package
 		// to detect an engine version

@@ -959,7 +959,6 @@ int main(int argc, char **argv)
 	// Note: in this code, packages will be loaded without creating any exported objects.
 	for (int i = 0; i < packagesToLoad.Num(); i++)
 	{
-//		UnPackage *Package = UnPackage::LoadPackage(packagesToLoad[i]);
 		TStaticArray<const CGameFileInfo*, 32> Files;
 		appFindGameFiles(packagesToLoad[i], Files);
 
@@ -971,11 +970,23 @@ int main(int argc, char **argv)
 		{
 			for (int j = 0; j < Files.Num(); j++)
 			{
-				GameFiles.Add(Files[j]);
+				bool failed = false;
 				if (bShouldLoadPackages)
 				{
 					UnPackage* Package = UnPackage::LoadPackage(*Files[j]->GetRelativeName());
-					Packages.Add(Package);
+					if (Package)
+					{
+						Packages.Add(Package);
+					}
+					else
+					{
+						failed = true;
+					}
+					
+				}
+				if (!failed)
+				{
+					GameFiles.Add(Files[j]);
 				}
 			}
 		}
