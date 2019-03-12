@@ -19,6 +19,7 @@ byte GForceCompMethod = 0;		// COMPRESS_...
 	Unreal package structures
 -----------------------------------------------------------------------------*/
 
+//todo: make a method of FPackageFileSummary
 static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary2);
@@ -117,6 +118,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 
 #if UNREAL3
 
+//todo: make a method of FPackageFileSummary
 static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary3);
@@ -482,6 +484,7 @@ int GetUE4CustomVersion(const FArchive& Ar, const FGuid& Guid)
 	unguard;
 }
 
+//todo: make a method of FPackageFileSummary
 static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 {
 	guard(SerializePackageFileSummary4);
@@ -681,53 +684,57 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 #endif // UNREAL4
 
+FPackageFileSummary::FPackageFileSummary()
+{
+	memset(this, 0, sizeof(*this));
+}
 
-FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
+bool FPackageFileSummary::Serialize(FArchive &Ar)
 {
 	guard(FPackageFileSummary<<);
 	assert(Ar.IsLoading);						// saving is not supported
 
 	// read package tag
-	Ar << S.Tag;
+	Ar << Tag;
 
 	// some games has special tag constants
 #if SPECIAL_TAGS
-	if (S.Tag == 0x9E2A83C2) goto tag_ok;		// Killing Floor
-	if (S.Tag == 0x7E4A8BCA) goto tag_ok;		// iStorm
+	if (Tag == 0x9E2A83C2) goto tag_ok;			// Killing Floor
+	if (Tag == 0x7E4A8BCA) goto tag_ok;			// iStorm
 #endif // SPECIAL_TAGS
 #if NURIEN
-	if (S.Tag == 0xA94E6C81) goto tag_ok;		// Nurien
+	if (Tag == 0xA94E6C81) goto tag_ok;			// Nurien
 #endif
 #if BATTLE_TERR
-	if (S.Tag == 0xA1B2C93F)
+	if (Tag == 0xA1B2C93F)
 	{
 		Ar.Game = GAME_BattleTerr;
 		goto tag_ok;							// Battle Territory Online
 	}
 #endif // BATTLE_TERR
 #if LOCO
-	if (S.Tag == 0xD58C3147)
+	if (Tag == 0xD58C3147)
 	{
 		Ar.Game = GAME_Loco;
 		goto tag_ok;							// Land of Chaos Online
 	}
 #endif // LOCO
 #if BERKANIX
-	if (S.Tag == 0xF2BAC156)
+	if (Tag == 0xF2BAC156)
 	{
 		Ar.Game = GAME_Berkanix;
 		goto tag_ok;
 	}
 #endif // BERKANIX
 #if HAWKEN
-	if (S.Tag == 0xEA31928C)
+	if (Tag == 0xEA31928C)
 	{
 		Ar.Game = GAME_Hawken;
 		goto tag_ok;
 	}
 #endif // HAWKEN
 #if TAO_YUAN
-	if (S.Tag == 0x12345678)
+	if (Tag == 0x12345678)
 	{
 		int tmp;			// some additional version?
 		Ar << tmp;
@@ -737,7 +744,7 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // TAO_YUAN
 #if STORMWAR
-	if (S.Tag == 0xEC201133)
+	if (Tag == 0xEC201133)
 	{
 		byte Count;
 		Ar << Count;
@@ -746,7 +753,7 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // STORMWAR
 #if GUNLEGEND
-	if (S.Tag == 0x879A4B41)
+	if (Tag == 0x879A4B41)
 	{
 		Ar.Game = GAME_GunLegend;
 		if (!GForceGame) GForceGame = GAME_GunLegend;
@@ -754,14 +761,14 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // GUNLEGEND
 #if MMH7
-	if (S.Tag == 0x4D4D4837)
+	if (Tag == 0x4D4D4837)
 	{
 		Ar.Game = GAME_UE3;	// version conflict with Guilty Gear Xrd
 		goto tag_ok;		// Might & Magic Heroes 7
 	}
 #endif // MMH7
 #if DEVILS_THIRD
-	if (S.Tag == 0x7BC342F0)
+	if (Tag == 0x7BC342F0)
 	{
 		Ar.Game = GAME_DevilsThird;
 		if (!GForceGame) GForceGame = GAME_DevilsThird;
@@ -770,12 +777,16 @@ FArchive& operator<<(FArchive &Ar, FPackageFileSummary &S)
 #endif // DEVILS_THIRD
 
 	// support reverse byte order
-	if (S.Tag != PACKAGE_FILE_TAG)
+	if (Tag != PACKAGE_FILE_TAG)
 	{
-		if (S.Tag != PACKAGE_FILE_TAG_REV)
-			appError("Wrong tag in package (%08X). Probably the file is encrypted.", S.Tag);
+		if (Tag != PACKAGE_FILE_TAG_REV)
+		{
+			UnPackage* file = Ar.CastTo<UnPackage>();
+			appNotify("Wrong package tag (%08X) in file %s. Probably the file is encrypted.", Tag, file ? file->Filename : "(unknown)");
+			return false;
+		}
 		Ar.ReverseBytes = true;
-		S.Tag = PACKAGE_FILE_TAG;
+		Tag = PACKAGE_FILE_TAG;
 	}
 
 	// read version
@@ -791,12 +802,12 @@ tag_ok:
 	// being less than zero, but allows UE1-UE3 LicenseeVersion up to 32767.
 	if ((Version & 0xFFFFF000) == 0xFFFFF000)
 	{
-		S.LegacyVersion = Version;
+		LegacyVersion = Version;
 		Ar.Game = GAME_UE4_BASE;
-		SerializePackageFileSummary4(Ar, S);
+		SerializePackageFileSummary4(Ar, *this);
 		//!! note: UE4 requires different DetectGame way, perhaps it's not possible at all
 		//!! (but can use PAK file names for game detection)
-		return Ar;
+		return true;
 	}
 #endif // UNREAL4
 
@@ -805,11 +816,11 @@ tag_ok:
 		appError("Fully compressed package header?");
 #endif // UNREAL3
 
-	S.FileVersion     = Version & 0xFFFF;
-	S.LicenseeVersion = Version >> 16;
+	FileVersion     = Version & 0xFFFF;
+	LicenseeVersion = Version >> 16;
 	// store file version to archive (required for some structures, for UNREAL3 path)
-	Ar.ArVer         = S.FileVersion;
-	Ar.ArLicenseeVer = S.LicenseeVersion;
+	Ar.ArVer         = FileVersion;
+	Ar.ArLicenseeVer = LicenseeVersion;
 	// detect game
 	Ar.DetectGame();
 	Ar.OverrideVersion();
@@ -818,10 +829,10 @@ tag_ok:
 
 #if UNREAL3
 	if (Ar.Game >= GAME_UE3)
-		SerializePackageFileSummary3(Ar, S);
+		SerializePackageFileSummary3(Ar, *this);
 	else
 #endif
-		SerializePackageFileSummary2(Ar, S);
+		SerializePackageFileSummary2(Ar, *this);
 
 #if DEBUG_PACKAGE
 	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
@@ -829,8 +840,9 @@ tag_ok:
 	appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
 #endif
 
-	return Ar;
-	unguardf("Ver=%d/%d", S.FileVersion, S.LicenseeVersion);
+	return true;
+
+	unguardf("Ver=%d/%d", FileVersion, LicenseeVersion);
 }
 
 
@@ -1279,7 +1291,12 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 	SetupFrom(*Loader);
 
 	// read summary
-	*this << Summary;
+	if (!Summary.Serialize(*this))
+	{
+		// Probably not a package
+		return;
+	}
+
 	Loader->SetupFrom(*this);	// serialization of FPackageFileSummary could change some FArchive properties
 
 #if !DEBUG_PACKAGE
@@ -1744,6 +1761,12 @@ void UnPackage::LoadExportTable()
 UnPackage::~UnPackage()
 {
 	guard(UnPackage::~UnPackage);
+
+	if (!IsValid())
+	{
+		// The package wasn't loaded, nothing to release in destructor.
+		return;
+	}
 
 	// free tables
 	if (Loader) delete Loader;
@@ -2381,6 +2404,11 @@ TArray<char*>		MissingPackages;
 			return info->Package;
 		// Load the package.
 		UnPackage* package = new UnPackage(*info->GetRelativeName(), info->CreateReader(), silent);
+		if (!package->IsValid())
+		{
+			delete package;
+			return NULL;
+		}
 		// Cache pointer in CGameFileInfo so next time it will be found quickly.
 		const_cast<CGameFileInfo*>(info)->Package = package;
 		return package;
@@ -2403,9 +2431,18 @@ TArray<char*>		MissingPackages;
 		for (i = 0; i < PackageMap.Num(); i++)
 			if (!stricmp(LocalName, PackageMap[i]->Filename))
 				return PackageMap[i];
-		// Try to load package.
+
+		// Try to load package using file name.
 		if (appFileExists(Name))
-			return new UnPackage(Name, NULL, silent);
+		{
+			UnPackage* package = new UnPackage(Name, NULL, silent);
+			if (!package->IsValid())
+			{
+				delete package;
+				return NULL;
+			}
+			return package;
+		}
 	}
 
 	// The package is missing. Do not print any warnings: missing package is a normal situation
