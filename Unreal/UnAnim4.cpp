@@ -11,7 +11,8 @@
 #include "TypeConvert.h"
 
 //#define DEBUG_DECOMPRESS	1
-//#define DEBUG_SKELMESH		1
+//#define DEBUG_SKELMESH	1
+//#define DEBUG_ANIM		1
 
 // References in UE4 code: Engine/Public/AnimationCompression.h
 // - FAnimationCompression_PerTrackUtils
@@ -886,14 +887,22 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 
 		if (bSerializeCompressedData)
 		{
+			// UAnimSequence::SerializeCompressedData()
 			// these fields were serialized as properties in pre-UE4.12 engine version
 			Ar << (byte&)KeyEncodingFormat;
 			Ar << (byte&)TranslationCompressionFormat;
 			Ar << (byte&)RotationCompressionFormat;
 			Ar << (byte&)ScaleCompressionFormat;
+		#if DEBUG_ANIM
+			appPrintf("Key: %d Trans: %d Rot: %d Scale: %d\n", KeyEncodingFormat, TranslationCompressionFormat,
+				RotationCompressionFormat, ScaleCompressionFormat);
+		#endif
 
 			Ar << CompressedTrackOffsets;
 			Ar << CompressedScaleOffsets;
+		#if DEBUG_ANIM
+			appPrintf("TrackOffsets: %d ScaleOffsets: %d\n", CompressedTrackOffsets.Num(), CompressedScaleOffsets.OffsetData.Num());
+		#endif
 
 			if (Ar.Game >= GAME_UE4(21))
 			{
@@ -923,6 +932,8 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 
 			// compressed data
 			Ar << CompressedByteStream;
+
+			// End of UAnimSequence::SerializeCompressedData()
 
 			// after compressed data ...
 			Ar << bUseRawDataOnly;
