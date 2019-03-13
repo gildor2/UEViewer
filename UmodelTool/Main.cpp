@@ -834,7 +834,7 @@ int main(int argc, char **argv)
 		else if (!strnicmp(opt, "aes=", 4))
 		{
 			GAesKey = opt+4;
-			GAesKey.TrimStartAndEnd();
+			GAesKey.TrimStartAndEndInline();
 			CheckHexAesKey();
 		}
 		// information commands
