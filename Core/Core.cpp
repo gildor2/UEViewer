@@ -49,7 +49,7 @@ void appPrintf(const char *fmt, ...)
 
 
 /*-----------------------------------------------------------------------------
-	Simple error/notofication functions
+	Simple error/notification functions
 -----------------------------------------------------------------------------*/
 
 bool GIsSwError = false;			// software-gererated error

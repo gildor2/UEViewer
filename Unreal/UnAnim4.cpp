@@ -1072,7 +1072,7 @@ void UAnimSequence4::PostLoad()
 	if (!Skeleton) return;		// missing package etc
 	Skeleton->ConvertAnims(this);
 
-	// Release original animaiton data to save memory
+	// Release original animation data to save memory
 	RawAnimationData.Empty();
 	CompressedByteStream.Empty();
 	CompressedTrackOffsets.Empty();

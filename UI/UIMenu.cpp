@@ -295,7 +295,7 @@ void UIMenuItem::FillMenuItems(HMENU parentMenu, int& nextId, int& position)
 			break;
 
 		default:
-			appError("Unkwnown item type: %d (label=%s)", item->Type, *item->Label);
+			appError("Unknown item type: %d (label=%s)", item->Type, *item->Label);
 		}
 	}
 
@@ -341,7 +341,7 @@ bool UIMenuItem::HandleCommand(int id)
 				break;
 
 			default:
-				appError("Unkwnown item type: %d (label=%s)", item->Type, *item->Label);
+				appError("Unknown item type: %d (label=%s)", item->Type, *item->Label);
 			}
 			return true;
 		}

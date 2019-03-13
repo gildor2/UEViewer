@@ -51,7 +51,7 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	// collect all textures - already exported ones and everything else
 	TArray<UUnrealMaterial*> ExportedTextures;
 	Params.AppendAllTextures(ExportedTextures);
-	// now, export only thise which weren't exported yet
+	// now, export only those which weren't exported yet
 	int numOtherTextures = 0;
 	for (int i = 0; i < AllTextures.Num(); i++)
 	{

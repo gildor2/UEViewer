@@ -1667,7 +1667,7 @@ void UStaticMesh::LoadExternalUC2Data()
 
 	//?? S.NumFaces is used as NumIndices, but it is not a multiply of 3
 	//?? (sometimes is is N*3, sometimes = N*3+1, sometimes - N*3+2 ...)
-	//?? May be UC2 uses triangle strips instead of trangles?
+	//?? May be UC2 uses triangle strips instead of triangles?
 	assert(IndexStream1.Indices.Num() == 0);	//???
 /*	int NumIndices = 0;
 	for (i = 0; i < Sections.Num(); i++)
@@ -1679,7 +1679,7 @@ void UStaticMesh::LoadExternalUC2Data()
 		FindXprData will return block in following format:
 			dword	unk
 			dword	itemSize (6 for index stream = 3 verts * sizeof(int16))
-					(or unknown meanung in a case of trangle strips)
+					(or unknown meaning in a case of triangle strips)
 			dword	unk
 			data[]
 			dword*5	unk (may be include padding?)

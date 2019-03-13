@@ -876,7 +876,7 @@ public:
 #endif
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(bHasStaticPermutationResource)
-		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overrided textures
+		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overriden textures
 		PROP_DROP(ReferencedTextureGuids)
 		PROP_DROP(ParentLightingGuid)
 		// physics

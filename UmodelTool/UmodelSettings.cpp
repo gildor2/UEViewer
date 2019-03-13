@@ -34,7 +34,7 @@ static void SetPathOption(FString& where, const char* value)
 		char path[512];
 #if _WIN32
 		if (!getcwd(ARRAY_ARG(path)))
-			strcpy(path, ".");	// path is too long, or other error occured
+			strcpy(path, ".");	// path is too long, or other error occurred
 #else
 		// for Unix OS, store everything to the HOME directory ("~/...")
 		if (const char* s = getenv("HOME"))

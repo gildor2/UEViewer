@@ -181,7 +181,7 @@ if (i == 32 || i == 34)
 	// write meshes
 	// we are using some terms here:
 	// - "mesh vertex" is a vertex in Lod.Verts[] array, global for whole mesh
-	// - "surcace vertex" is a vertex from the mesh stripped to only one (current) section
+	// - "surface vertex" is a vertex from the mesh stripped to only one (current) section
 	for (int m = 0; m < Lod.Sections.Num(); m++)
 	{
 		const CMeshSection &Sec = Lod.Sections[m];

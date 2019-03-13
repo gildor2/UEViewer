@@ -719,7 +719,7 @@ struct FSkelMeshSection
 	// Soft sections:
 	//	NumStreamIndices should contain MaxWedgeIndex-MinWedgeIndex+1 (new imported meshes?),
 	//	but older package versions contains something different (should not rely on this field)
-	//	Other fields are unitialized
+	//	Other fields are uninitialized
 
 	friend FArchive& operator<<(FArchive &Ar, FSkelMeshSection &S)
 	{

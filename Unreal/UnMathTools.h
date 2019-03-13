@@ -45,7 +45,7 @@ inline void AxisToRotator(const CAxis& Axis, FRotator& Rot)
 
 //?? not inline
 //?? pass CBox, place function into Core/Math32.h
-//?? T = CVec3 or CVec4; CVec4 cound be SSE-optimized! make vmin(V1,V2) and vmax() functions for CVec3 and CVec4
+//?? T = CVec3 or CVec4; CVec4 could be SSE-optimized! make vmin(V1,V2) and vmax() functions for CVec3 and CVec4
 //?? Another solution: use CVec3 only, cast CVec4 to CVec3 and pass correct Stride here - it would work
 template<class T>
 inline void ComputeBounds(const T *Data, int NumVerts, int Stride, CVec3 &Mins, CVec3 &Maxs, bool UpdateBounds = false)

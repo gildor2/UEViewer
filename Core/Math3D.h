@@ -42,7 +42,7 @@ struct CVec3
 	{
 		return v[index];
 	}
-	// NOTE: for fnctions, which requires CVec3 -> float*, can easily do it using CVec3.v field
+	// NOTE: for those functions which requires CVec3 -> float*, we can easily do it using CVec3.v field
 	// trivial setup functions
 	inline void Zero()
 	{

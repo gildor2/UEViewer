@@ -1,7 +1,7 @@
 #ifndef __UNMATERIAL2_H__
 #define __UNMATERIAL2_H__
 
-// Ploygon flags (used in UE1 only ?)
+// Polygon flags (used in UE1 only ?)
 #define PF_Masked			0x00000002
 #define PF_Translucent		0x00000004
 #define PF_Modulated		0x00000040

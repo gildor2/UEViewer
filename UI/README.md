@@ -37,7 +37,7 @@ folder, or set up compiler include paths to use these directories.
 Callback / delegate class
 -------------------------
 
-This library shipped with [Callback class](callback.h) used for binding any function, class method or labmda as an action to UI event. This
+This library shipped with [Callback class](callback.h) used for binding any function, class method or lambda as an action to UI event. This
 class is self-containing, doesn't depend on other UI library parts, on any other C++ library and/or STL. It could be used separately from UI
 library if you need the functionality it provides. The Callback class has been made with use of modern C++, so you will need C++11 supporting
 compiler. For more details please refer to [class' source code](callback.h) (read comments in file header).

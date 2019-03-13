@@ -256,7 +256,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	CVertexShare Share;
 
 	// weld vertices
-	// The code below differs from similar code for StaticMesh export: it relies on wertex weight
+	// The code below differs from similar code for StaticMesh export: it relies on vertex weight
 	// information to not perform occasional welding of vertices which has the same position and
 	// normal, but belongs to different bones.
 //	appResetProfiler();

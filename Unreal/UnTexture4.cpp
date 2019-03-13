@@ -126,7 +126,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 	if (Ar.ArVer < VER_UE4_TEXTURE_SOURCE_ART_REFACTOR)
 	{
 		appNotify("Untested code: UTexture2D::LegacySerialize");
-		// This code lives in UTexture2D::LegacySerialize(). It relies on some depracated properties, and modern
+		// This code lives in UTexture2D::LegacySerialize(). It relies on some deprecated properties, and modern
 		// code UE4 can't read cooked packages prepared with pre-VER_UE4_TEXTURE_SOURCE_ART_REFACTOR version of
 		// the engine. So, it's not possible to know what should happen there unless we'll get some working game
 		// which uses old UE4 version.bDisableDerivedDataCache_DEPRECATED in UE4 serialized as property, when set

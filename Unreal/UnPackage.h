@@ -175,7 +175,7 @@ struct FObjectExport
 	#if !USE_COMPACT_PACKAGE_STRUCTS
 	uint32		ObjectFlags2;				// really, 'uint64 ObjectFlags'
 	int32		Archetype;
-//	TMap<FName, int> ComponentMap;			-- this field was removed from UE3, so serialize it as a temporaty variable when needed
+//	TMap<FName, int> ComponentMap;			-- this field was removed from UE3, so serialize it as a temporary variable when needed
 	TArray<int32> NetObjectCount;			// generations
 	FGuid		Guid;
 	int32		PackageFlags;

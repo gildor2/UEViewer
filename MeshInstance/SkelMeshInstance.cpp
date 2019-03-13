@@ -147,7 +147,7 @@ static int CheckBoneTree(const TArray<CSkelMeshBone> &Bones, int Index,
 {
 	assert(numIndices < maxIndices);
 	static int depth = 0;
-	// remember curerent index, increment for recustion
+	// remember curerent index, increment for recursion
 	int currIndex = numIndices++;
 	// find children of Bone[Index]
 	int treeSize = 0;
@@ -454,8 +454,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 		{
 			if (Stage < data->FirstChannel)
 			{
-				// this bone position will be overrided in following channel(s); all
-				// subhierarchy bones should be overrided too; skip whole subtree
+				// this bone position will be overriden in following channel(s); all
+				// subhierarchy bones should be overriden too; skip whole subtree
 				int skip = data->SubtreeSize;
 				// note: 'skip' equals to subtree size; current bone is excluded - it
 				// will be skipped by 'for' operator (after 'continue')
@@ -806,7 +806,7 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName, float 
 static void GetBoneInfColor(int BoneIndex, float *Color)
 {
 	// most of this code is targetted to make maximal color combinations
-	// which are maximally different for adjancent BoneIndex values
+	// which are maximally different for adjacent BoneIndex values
 	static const float table[] = { 0.9f, 0.3f, 0.6f, 0.0f };
 	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };
 	BoneIndex = (BoneIndex & 0xFFF8) | table2[BoneIndex & 7] ^ 7;

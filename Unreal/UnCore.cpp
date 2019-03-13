@@ -75,7 +75,7 @@ void FArray::Empty(int count, int elementSize)
 	}
 
 	//!! TODO: perhaps round up 'Max' to 16 bytes, allow comparison below to be 'softer'
-	//!! (i.e. when array is 16 items, and calling Empty(15) - don't reallicate it, unless
+	//!! (i.e. when array is 16 items, and calling Empty(15) - don't reallocate it, unless
 	//!! item size is large
 	if (DataPtr)
 	{

@@ -185,7 +185,7 @@ protected:
 //	Expose(var)			save pointer to control in variable
 //	SetParent(parent)	attach control to parent
 
-// Some functions exists in UIElement but overrided here to be able to chain them
+// Some functions exists in UIElement but overriden here to be able to chain them
 // without falling back to UIElement class: UIElement's functions can't return
 // 'this' of derived type, so we're redeclaring functions here.
 
@@ -821,7 +821,7 @@ public:
 
 	const char* GetText() const { return *Label; }
 
-	// Replace sumbenu content. 'other' will be destroyed after this function call.
+	// Replace submenu content. 'other' will be destroyed after this function call.
 	void ReplaceWith(UIMenuItem* other);
 
 	// Update checkboxes and radio groups according to attached variables
@@ -1137,7 +1137,7 @@ public:
 	{
 		return ShowDialog(true, title, width, height);
 	}
-	// Show non-modal window. Funciton will return immediately, code should periodically execute
+	// Show non-modal window. Function will return immediately, code should periodically execute
 	// PumpMessages(), otherwise dialog window will not work.
 	FORCEINLINE void ShowDialog(const char* title, int width, int height)
 	{

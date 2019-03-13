@@ -74,11 +74,11 @@ struct RMesh
 
 struct RJoint
 {
-	// Skeletal structure implimentation
+	// Skeletal structure implementation
 	int				parent;
 	int				children[MAX_CHILD_JOINTS];
 	FName			name;					// Name of joint
-	int				jointgroup;				// Body group this belongs (allows us to animate groups seperately)
+	int				jointgroup;				// Body group this belongs (allows us to animate groups separately)
 	int				flags;					// Default joint flags
 	FRotator		baserot;				// Rotational delta to base orientation
 	FPlane			planes[6];				// Local joint coordinate planes defining a collision box

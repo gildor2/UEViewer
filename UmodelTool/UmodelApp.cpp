@@ -256,7 +256,7 @@ bool CUmodelApp::ShowPackageUI()
 
 		progress.CloseDialog();
 
-		// Viewer was released if we're releasing package which is currenly used for viewing.
+		// Viewer was released if we're releasing package which is currently used for viewing.
 		if (!Viewer)
 		{
 			FindObjectAndCreateVisualizer(1, true, true);

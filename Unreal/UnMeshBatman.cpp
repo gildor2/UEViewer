@@ -39,7 +39,7 @@ TODO:
 * move these bones into correct hierarchy (will require to recompute bindpose)
 - compute tracks for Twist bones in UAnimSet (no "enable fixer" vars in UAnimSet/
   UAnimSequence, so compute them for missing tracks?)
-  - fithout computing: these bones will not be animated and their positions will
+  - without computing: these bones will not be animated and their positions will
     force mesh to be deformed incorrectly (a bit)
 */
 
@@ -66,7 +66,7 @@ void USkeletalMesh3::FixBatman2Skeleton()
 {
 	/*
 		Batman 2 has 2 Twist bones for thigh, calf, forearm and upperarm. These bones
-		are animated proceduraly in game (for less animation memory footprint?) so
+		are animated procedurally in game (for less animation memory footprint?) so
 		these bones has no tracks in UAnimSet. Unfortunately, these bones are attached
 		to incorrect parent bone (legs has separate hierarchy at all!) so we must
 		reattach thesee bones to a better place.

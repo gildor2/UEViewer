@@ -397,7 +397,7 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 
 	if (GIsSwError) return EXCEPTION_EXECUTE_HANDLER;		// no interest to thread context when software-generated errors
 
-	// if FPU exception occured, _clearfp() is required (otherwise, exception will be re-raised again)
+	// if FPU exception occurred, _clearfp() is required (otherwise, exception will be re-raised again)
 	_clearfp();
 
 
@@ -425,7 +425,7 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info)
 			excName = "Integer zero divide";
 			break;
 		case EXCEPTION_PRIV_INSTRUCTION:
-			excName = "Priveleged instruction";
+			excName = "Privileged instruction";
 			break;
 		case EXCEPTION_ILLEGAL_INSTRUCTION:
 			excName = "Illegal opcode";

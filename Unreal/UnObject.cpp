@@ -406,7 +406,7 @@ struct FPropertyTag
 			Ar << UseObject;
 			if (UseObject)
 			{
-				// This code was bever executed in my tests
+				// This code was never executed in my tests
 				Ar << Object;
 				if (!Object)
 				{

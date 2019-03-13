@@ -238,7 +238,7 @@ void CSkeletalMesh::FinalizeMesh()
 				}
 				// There still could be TotalWeight which differs slightly from value 255.
 				// Adjust first bone weight to make sum matching 255. Assume that the first
-				// weight is largest one (it is true at least for UE4), so this adjustnemt
+				// weight is largest one (it is true at least for UE4), so this adjustment
 				// won't be noticeable.
 				int Delta = 255 - TotalWeight;
 				UnpackedWeights[0] += Delta;

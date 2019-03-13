@@ -24,7 +24,7 @@ Features:
   - binding functions:
     callback = BIND_MEMBER(&Class::Method, obj)
     callback = BIND_STATIC(static_func)
-    callback = BIND_LAMNDA([capture](params...) -> ret { body })
+    callback = BIND_LAMBDA([capture](params...) -> ret { body })
 - very efficient callback assignment and call operations, using "move" semantic whenever possible
 - no dependencies on compiler or external libraries, except for malloc/free/memcpy
 

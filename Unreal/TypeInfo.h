@@ -253,7 +253,7 @@ struct TEnumInfo
 void RegisterEnum(const char *EnumName, const enumToStr *Values, int Count);
 // find name of enum item, NULL when not found
 const char *EnumToName(const char *EnumName, int Value);
-// find interer value by enum name, ENUM_UNKNOWN when not found
+// find integer value by enum name, ENUM_UNKNOWN when not found
 int NameToEnum(const char *EnumName, const char *Value);
 
 template<class T>

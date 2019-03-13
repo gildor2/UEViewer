@@ -1002,5 +1002,5 @@ void FArchive::OverrideVersion()
 
 end_override:
 	if ((ArVer != OldVer || ArLicenseeVer != OldLVer) && Game < GAME_UE4_BASE)
-		appPrintf("Overrided version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
+		appPrintf("Overriden version %d/%d -> %d/%d\n", OldVer, OldLVer, ArVer, ArLicenseeVer);
 }

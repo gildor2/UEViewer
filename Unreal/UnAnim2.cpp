@@ -886,7 +886,7 @@ void FixTribesMotionChunk(MotionChunk &M)
 		AnalogTrack &A = M.AnimTracks[i];
 		if (A.Flags & 0x1000)
 		{
-			// bone overrided by Impersonator LipSinc
+			// bone overriden by Impersonator LipSinc
 			// remove translation and rotation tracks (they are not correct anyway)
 			A.KeyQuat.Empty();
 			A.KeyPos.Empty();

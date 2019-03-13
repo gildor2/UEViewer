@@ -79,7 +79,7 @@ void CStatMeshInstance::Draw(unsigned flags)
 
 	/*??
 		Can move tangent/binormal setup here too, but this will require to force shader to use fixed attribute locations
-		(use glBindAttribLocation before glLinkProgram instead of querying atttribute via glGetAtribLocation).
+		(use glBindAttribLocation before glLinkProgram instead of querying attribute via glGetAttribLocation).
 		In this case:
 		- can remove GCurrentShader
 		- can eliminate hasTangent checks below and always bind attributes (when supports GL2.0)

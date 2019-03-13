@@ -413,7 +413,7 @@ UIBitmap& UIBitmap::SetResourceIcon(int resId)
 	if (!hImage)
 		appPrintf("UIBitmap::SetResourceIcon: %d\n", GetLastError());
 #endif
-	// Note: can't get icon dimensione using GetObject() - this function would fail.
+	// Note: can't get icon dimensions using GetObject() - this function would fail.
 	if ((!Layout.Width || !Layout.Height) && hImage)
 	{
 		Layout.Width = GetSystemMetrics(SM_CXICON);
@@ -539,7 +539,7 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 #endif
 
 #if 0
-	// Unicode version (this control, as mentioned in SysLink documentaion, in Unicode-only)
+	// Unicode version (this control, as mentioned in SysLink documentation, in Unicode-only)
 	wchar_t buffer[MAX_TITLE_LEN];
 	appSprintf(ARRAY_ARG(buffer), L"<a href=\"%S\">%S</a>", *Link, *Label);
 	Wnd = Window(WC_LINK, buffer, ConvertTextAlign(Align), 0, dialog);

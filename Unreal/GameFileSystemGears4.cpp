@@ -213,7 +213,7 @@ public:
 			return false;
 		}
 
-		assert(FileInfos.Num() + 1 < FileInfos.Max()); // if we'll resize array, HashNext will be trushed
+		assert(FileInfos.Num() + 1 < FileInfos.Max()); // if we'll resize array, HashNext will be trashed
 		FGears4BundledInfo* info = new (FileInfos) FGears4BundledInfo;
 
 		info->Name = appStrdupPool(filename);

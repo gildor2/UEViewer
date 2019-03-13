@@ -134,7 +134,7 @@ byte *CTextureData::Decompress(int MipLevel)
 			int y0 = y % 16;
 			if (x0 == 0)			d[0] = 255;	// red - binormal axis
 			else if (y0 == 0)		d[2] = 255;	// blue - tangent axis
-			else if (x0 + y0 < 7)	d[1] = 128;	// gark green
+			else if (x0 + y0 < 7)	d[1] = 128;	// dark green
 		}
 		return dst;
 	}
