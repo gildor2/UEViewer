@@ -156,13 +156,12 @@ public:
 		Packages.Add(package);
 
 #if !USE_FULLY_VIRTUAL_LIST
-		const char* s = package->RelativeName;
+		FStaticString<MAX_PACKAGE_PATH> Buffer;
 		if (StripPath)
-		{
-			const char* s2 = strrchr(s, '/');
-			if (s2) s = s2 + 1;
-		}
-		int index = AddItem(s);
+			package->GetCleanName(Buffer);
+		else
+			package->GetRelativeName(Buffer);
+		int index = AddItem(*Buffer);
 		char buf[32];
 		// put object count information as subitems
 		if (package->PackageScanned)

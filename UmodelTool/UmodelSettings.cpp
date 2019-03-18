@@ -6,8 +6,6 @@
 
 #if _WIN32
 #include <direct.h>					// getcwd
-#else
-#include <unistd.h>					// getcwd
 #endif
 
 #define CONFIG_FILE			"umodel.cfg"
