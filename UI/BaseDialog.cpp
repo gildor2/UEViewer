@@ -1785,8 +1785,35 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& re
 
 	if (cmd == LVN_ODFINDITEM && IsVirtualMode)
 	{
-		//!! TODO: search
-		return false;
+		// Search for item
+		result = -1;
+		NMLVFINDITEM* nmf = (NMLVFINDITEM*)lParam;
+		if ((nmf->lvfi.flags & LVFI_STRING) == 0)
+			return false;
+		int start = nmf->iStart;
+		int numItems = GetItemCount();
+		if (start >= numItems)
+			start = 0;
+		int cmpLen = strlen(nmf->lvfi.psz);
+		for (int itemIndex = start; itemIndex < numItems; itemIndex++)
+		{
+			const char* text = "";
+			if (!IsTrueVirtualMode())
+			{
+				text = const_cast<char*>(*Items[(itemIndex + 1) * NumColumns /*+ subItemIndex*/]);
+			}
+			else
+			{
+				OnGetItemText(this, text, itemIndex, 0 /*subItemIndex*/);
+			}
+
+			if (strnicmp(text, nmf->lvfi.psz, cmpLen) == 0)
+			{
+				result = itemIndex;
+				return true;
+			}
+		}
+		return true;
 	}
 
 	if (cmd == LVN_ITEMACTIVATE)
