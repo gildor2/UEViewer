@@ -1683,7 +1683,7 @@ void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
 	UpdateEnabled();
 }
 
-bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam)
+bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 {
 	guard(UIMulticolumnListbox::HandleCommand);
 
@@ -2374,14 +2374,14 @@ void UIGroup::Remove(UIElement* item)
 	unguard;
 }
 
-bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam)
+bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 {
 	for (UIElement* ctl = FirstChild; ctl; ctl = ctl->NextChild)
 	{
 		if (ctl->IsGroup || ctl->Id == id)
 		{
 			// pass command to control or all groups
-			if (ctl->HandleCommand(id, cmd, lParam))
+			if (ctl->HandleCommand(id, cmd, lParam, result))
 				return true;
 			if (ctl->Id == id)
 				return true;
@@ -2629,7 +2629,7 @@ void UICheckboxGroup::Create(UIBaseDialog* dialog)
 	EnableAllControls(*pValue);
 }
 
-bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
+bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 {
 	if (id == Id)
 	{
@@ -2646,7 +2646,7 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam)
 			return true;
 		}
 	}
-	return Super::HandleCommand(id, cmd, lParam);
+	return Super::HandleCommand(id, cmd, lParam, result);
 }
 
 void UICheckboxGroup::UpdateLayout()
@@ -3118,7 +3118,14 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 	// windows will not allow us to pass SEH through the message handler, so
 	// add a SEH guards here
 	TRY {
-		return dlg->WndProc(hWnd, msg, wParam, lParam);
+		INT_PTR result = dlg->WndProc(hWnd, msg, wParam, lParam);
+		if (result)
+		{
+			// For DlgProc we should store result in DWLP_MSGRESULT.
+			// https://devblogs.microsoft.com/oldnewthing/?p=41923
+			SetWindowLongPtr(hWnd, DWLP_MSGRESULT, result);
+		}
+		return result;
 	} CATCH_CRASH {
 #if MAX_DEBUG
 		// sometimes when working with debugger, exception inside UI could not be passed outside,
@@ -3322,9 +3329,10 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	if (id < FIRST_DIALOG_ID || id >= NextDialogId)
 		return TRUE;				// not any of our controls
 
-	bool res = HandleCommand(id, cmd, lParam);   // returns 'true' if command was processed
+	int res = FALSE;
+	HandleCommand(id, cmd, lParam, res); // ignore result
 
-	return res ? TRUE : FALSE;
+	return res;
 
 	unguard;
 }

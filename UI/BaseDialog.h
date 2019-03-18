@@ -175,6 +175,21 @@ protected:
 	{
 		return false;
 	}
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result)
+	{
+		// Default implementation: call "legacy" 3-param HandleCommand
+		if (HandleCommand(id, cmd, lParam))
+		{
+			result = 1; // TRUE
+			return true;
+		}
+		else
+		{
+			result = 0; // FALSE
+			return false;
+		}
+		
+	}
 	virtual void DialogClosed(bool cancel)
 	{}
 	virtual void UpdateEnabled();
@@ -702,7 +717,7 @@ protected:
 	void UpdateListViewHeaderSort();
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 };
 
 
@@ -1050,7 +1065,7 @@ protected:
 	virtual void UpdateLayout() override;
 	virtual void ComputeLayout();
 
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 	virtual void DialogClosed(bool cancel) override;
 	virtual void UpdateEnabled() override;
 	virtual void UpdateVisible() override;
@@ -1095,7 +1110,7 @@ protected:
 	HWND		DlgWnd;
 
 	virtual void Create(UIBaseDialog* dialog) override;
-	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 	virtual void UpdateLayout() override;
 };
 
