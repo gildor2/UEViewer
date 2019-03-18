@@ -164,6 +164,15 @@ bool ExportObject(const UObject *Obj)
 	// check for duplicate object export
 	if (!RegisterProcessedObject(Obj)) return true;
 
+	// For "uncook", different packages may have copies of the same object, which are stored with different quality.
+	// For example, Gears3 has anim sets which cooked with different tracks into different maps. To be able to export
+	// all versions of the file, we're adding unique numeric suffix for that. UE2 and UE4 doesn't require that.
+	bool bAddUniqueSuffix = false;
+	if (GUncook && Obj->Package && (Obj->Package->Game >= GAME_UE3) && (Obj->Package->Game < GAME_UE4_BASE))
+	{
+		bAddUniqueSuffix = true;
+	}
+
 	for (int i = 0; i < numExporters; i++)
 	{
 		const CExporterInfo &Info = exporters[i];
@@ -176,15 +185,20 @@ bool ExportObject(const UObject *Obj)
 			// get name unique index
 			char uniqueName[256];
 			appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
-			int uniqieIdx = ExportedNames.RegisterName(uniqueName);
+
 			const char *OriginalName = NULL;
-			if (uniqieIdx >= 2)
+			if (bAddUniqueSuffix)
 			{
-				appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqieIdx);
-				appPrintf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
-				//?? HACK: temporary replace object name with unique one
-				OriginalName = Obj->Name;
-				const_cast<UObject*>(Obj)->Name = uniqueName;
+				// Add unique numeric suffix when needed
+				int uniqieIdx = ExportedNames.RegisterName(uniqueName);
+				if (uniqieIdx >= 2)
+				{
+					appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqieIdx);
+					appPrintf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
+					// HACK: temporary replace object name with unique one
+					OriginalName = Obj->Name;
+					const_cast<UObject*>(Obj)->Name = uniqueName;
+				}
 			}
 
 			appPrintf("Exporting %s %s to %s\n", Obj->GetClassName(), Obj->Name, ExportPath);

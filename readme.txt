@@ -199,6 +199,10 @@ detex
 
 Changes
 ~~~~~~~
+18.03.2019
+- when exporting, avoiding adding numeric suffixes to files which are saved more than once whenever possible
+  (adding only for UE3 with special options)
+
 12.03.2019
 - UModel is no longer crashed when trying to open a file with wrong tag - a warning message is displayed instead
 
