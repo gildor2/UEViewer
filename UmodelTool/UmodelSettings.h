@@ -67,6 +67,7 @@ struct CExportSettings
 	bool			ExportMeshLods;
 	bool			SaveUncooked;
 	bool			SaveGroups;
+	bool			DontOverwriteFiles;
 
 	BEGIN_PROP_TABLE
 		PROP_STRING(ExportPath)
@@ -76,6 +77,7 @@ struct CExportSettings
 		PROP_BOOL(ExportMeshLods)
 		PROP_BOOL(SaveUncooked)
 		PROP_BOOL(SaveGroups)
+		PROP_BOOL(DontOverwriteFiles)
 	END_PROP_TABLE
 
 	CExportSettings()

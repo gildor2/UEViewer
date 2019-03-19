@@ -111,6 +111,7 @@ void CExportSettings::Reset()
 	ExportMeshLods = false;
 	SaveUncooked = false;
 	SaveGroups = false;
+	DontOverwriteFiles = false;
 }
 
 void CExportSettings::Apply()
@@ -125,6 +126,7 @@ void CExportSettings::Apply()
 	GExportDDS = ExportDdsTexture;
 	GUncook = SaveUncooked;
 	GUseGroups = SaveGroups;
+	GDontOverwriteFiles = DontOverwriteFiles;
 }
 
 void CSavePackagesSettings::SetPath(const char* path)

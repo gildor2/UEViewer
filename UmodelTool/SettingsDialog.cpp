@@ -90,6 +90,7 @@ UIElement& UISettingsDialog::MakeExportOptions()
 			+ NewControl(UICheckbox, "Export LODs", &Opt.Export.ExportMeshLods)
 		]
 		+ NewControl(UICheckbox, "Export compressed textures to dds format", &Opt.Export.ExportDdsTexture)
+		+ NewControl(UICheckbox, "Don't overwrite already exported files", &Opt.Export.DontOverwriteFiles)
 		;
 }
 

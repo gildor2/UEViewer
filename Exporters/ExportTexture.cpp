@@ -279,6 +279,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 {
 	guard(ExportTexture);
 
+#if 0 // disabled 19.03.2019: this code prevents from reexporting texture to dds when tga already exported etc
 	if (GDontOverwriteFiles)
 	{
 		if (CheckExportFilePresence(Tex, "%s.tga", Tex->Name)) return;
@@ -286,6 +287,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		if (CheckExportFilePresence(Tex, "%s.png", Tex->Name)) return;
 		if (CheckExportFilePresence(Tex, "%s.hdr", Tex->Name)) return;
 	}
+#endif
 
 	byte *pic = NULL;
 	int width, height;

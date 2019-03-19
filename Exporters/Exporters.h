@@ -67,8 +67,8 @@ void ExportMd5Anim(const CAnimSet *Anim);
 void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh);
 void ExportStaticMeshGLTF(const CStaticMesh* Mesh);
 // 3D
-void Export3D (const UVertMesh *Mesh);
-// TGA
+void Export3D(const UVertMesh *Mesh);
+// TGA, DDS
 void ExportTexture(const UUnrealMaterial *Tex);
 // UUnrealMaterial
 void ExportMaterial(const UUnrealMaterial *Mat);
