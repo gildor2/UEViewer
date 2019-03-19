@@ -403,7 +403,11 @@ public:
 
 		// Read pak header
 		int64 HeaderOffset = reader->GetFileSize64() - FPakInfo::Size;
-		assert(HeaderOffset >= 0);
+		if (HeaderOffset <= 0)
+		{
+			// The file is too small
+			return false;
+		}
 		reader->Seek64(HeaderOffset);
 
 		FPakInfo info;
