@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+20.03.2019
+- optimized startup and content scan times when working with huge games
+
 18.03.2019
 - when exporting, avoiding adding numeric suffixes to files which are saved more than once whenever possible
   (adding only for UE3 with special options)
