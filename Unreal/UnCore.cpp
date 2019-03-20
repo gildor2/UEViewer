@@ -504,19 +504,30 @@ const char* appStrdupPool(const char* str)
 void PrintStringHashDistribution()
 {
 	int hashCounts[1024];
+	int totalCount = 0;
 	memset(hashCounts, 0, sizeof(hashCounts));
 	for (int hash = 0; hash < STRING_HASH_SIZE; hash++)
 	{
 		int count = 0;
-		for (CStringPoolEntry* item = StringHashTable[hash]; item; item = item->HashNext)
+		for (CStringPoolEntry* info = StringHashTable[hash]; info; info = info->HashNext)
 			count++;
 		assert(count < ARRAY_COUNT(hashCounts));
 		hashCounts[count]++;
+		totalCount += count;
 	}
-	appPrintf("String hash distribution:\n");
+	appPrintf("String hash distribution: collision count -> num chains\n");
+	int totalCount2 = 0;
 	for (int i = 0; i < ARRAY_COUNT(hashCounts); i++)
-		if (hashCounts[i] > 0)
-			appPrintf("%d -> %d\n", i, hashCounts[i]);
+	{
+		int count = hashCounts[i];
+		if (count > 0)
+		{
+			totalCount2 += count * i;
+			float percent = totalCount2 * 100.0f / totalCount;
+			appPrintf("%d -> %d [%.1f%%]\n", i, count, percent);
+		}
+	}
+	assert(totalCount == totalCount2);
 }
 #endif
 
