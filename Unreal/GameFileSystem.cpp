@@ -264,8 +264,13 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 					delete reader;
 					return;
 				}
-				// add game files
+				// pre-size GameFiles
 				int NumVFSFiles = vfs->NumFiles();
+				if (GameFiles.Num() + NumVFSFiles > GameFiles.Max())
+				{
+					GameFiles.Reserve(GameFiles.Num() + NumVFSFiles);
+				}
+				// add game files
 				for (int i = 0; i < NumVFSFiles; i++)
 				{
 					appRegisterGameFile(vfs->FileName(i), vfs);
@@ -385,6 +390,11 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 		}
 	}
 
+	if (GameFiles.Num() + 1 >= GameFiles.Max())
+	{
+		// Resize GameFiles array with large steps
+		GameFiles.Reserve(GameFiles.Num() + 1024);
+	}
 	GameFiles.Add(info);
 	if (IsPackage) GNumPackageFiles++;
 
