@@ -34,7 +34,7 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 	GFullyLoadedPackages.Add(Package);
 
 #if PROFILE
-	appPrintProfiler();
+	appPrintProfiler("Full package loaded");
 #endif
 
 	return true;
@@ -227,9 +227,13 @@ static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
 	} */
 }
 
+//void PrintStringHashDistribution();
 
 bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback* Progress)
 {
+#if PROFILE
+	appResetProfiler();
+#endif
 	bool cancelled = false;
 	for (int i = 0; i < Packages.Num(); i++)
 	{
@@ -267,6 +271,10 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		#endif
 		}
 	}
+//	PrintStringHashDistribution();
+#if PROFILE
+	appPrintProfiler("Scanned packages");
+#endif
 	return !cancelled;
 }
 

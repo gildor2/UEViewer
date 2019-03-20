@@ -67,7 +67,7 @@ extern int GNumSerialize;
 extern int GSerializeBytes;
 
 void appResetProfiler();
-void appPrintProfiler();
+void appPrintProfiler(const char* label = NULL);
 
 #define PROFILE_POINT(Label)	appPrintProfiler(); appPrintf("PROFILE: " #Label "\n");
 

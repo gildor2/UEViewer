@@ -535,7 +535,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clampS ? GL_CLAMP : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clampT ? GL_CLAMP : GL_REPEAT);
 
-	PROFILE_UPLOAD(appPrintf("Uploaded %s (%dx%d)\n", Tex->Name, TexData.Mips[0].USize, TexData.Mips[0].VSize); appPrintProfiler());
+	PROFILE_UPLOAD(appPrintf("Uploaded %s (%dx%d)\n", Tex->Name, TexData.Mips[0].USize, TexData.Mips[0].VSize); appPrintProfiler("..."));
 	return TexNum;
 
 	unguardf("%s'%s'", Tex->GetClassName(), Tex->Name);

@@ -1414,7 +1414,7 @@ no_depends: ;
 	CloseReader();
 
 #if PROFILE_PACKAGE_TABLES
-	appPrintProfiler();
+	appPrintProfiler("Package loaded");
 #endif
 
 	unguardf("%s, ver=%d/%d, game=%s", filename, ArVer, ArLicenseeVer, GetGameTag(Game));

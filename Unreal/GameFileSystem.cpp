@@ -492,6 +492,11 @@ void LoadGears4Manifest(const CGameFileInfo* info);
 void appSetRootDirectory(const char *dir, bool recurse)
 {
 	guard(appSetRootDirectory);
+
+#if PROFILE
+	appResetProfiler();
+#endif
+
 	if (dir[0] == 0) dir = ".";	// using dir="" will cause scanning of "/dir1", "/dir2" etc (i.e. drive root)
 	appStrncpyz(GRootDirectory, dir, ARRAY_COUNT(GRootDirectory));
 	ScanGameDirectory(GRootDirectory, recurse);
@@ -543,6 +548,10 @@ void appSetRootDirectory(const char *dir, bool recurse)
 		}
 	}
 #endif // UNREAL4
+
+#if PROFILE
+	appPrintProfiler("Scanned game directory");
+#endif
 
 #if PRINT_HASH_DISTRIBUTION
 	PrintHashDistribution();
