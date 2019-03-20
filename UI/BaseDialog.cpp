@@ -1149,7 +1149,7 @@ UIListbox::UIListbox()
 
 UIListbox& UIListbox::ReserveItems(int count)
 {
-	Items.ResizeTo(Items.Num() + count);
+	Items.Reserve(Items.Num() + count);
 	return *this;
 }
 
@@ -1346,7 +1346,7 @@ UIMulticolumnListbox& UIMulticolumnListbox::ShowSortArrow(int columnIndex, bool 
 
 UIMulticolumnListbox& UIMulticolumnListbox::ReserveItems(int count)
 {
-	Items.ResizeTo((GetItemCount() + count + 1) * NumColumns);
+	Items.Reserve((GetItemCount() + count + 1) * NumColumns);
 	return *this;
 }
 

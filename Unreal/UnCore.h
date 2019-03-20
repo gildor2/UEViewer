@@ -1719,18 +1719,10 @@ public:
 		FArray::Empty(count, sizeof(T));
 	}
 
-	FORCEINLINE void ResizeTo(int count)
+	FORCEINLINE void Reserve(int count)
 	{
-		if (count > DataCount)
-		{
-			// grow array
-			FArray::GrowArray(count - DataCount, sizeof(T));
-		}
-		else if (count < DataCount)
-		{
-			// shrink array
-			RemoveAt(count, DataCount - count);
-		}
+		if (count > MaxCount)
+			ResizeTo(count);
 	}
 
 	// set new DataCount without reallocation if possible
@@ -1855,6 +1847,20 @@ protected:
 		Empty();
 		MoveData(Other);
 		return *this;
+	}
+
+	FORCEINLINE void ResizeTo(int count)
+	{
+		if (count > DataCount)
+		{
+			// grow array
+			FArray::GrowArray(count - DataCount, sizeof(T));
+		}
+		else if (count < DataCount)
+		{
+			// shrink array
+			RemoveAt(count, DataCount - count);
+		}
 	}
 
 	// Helper function to reduce TLazyArray etc operator<<'s code size.

@@ -63,9 +63,9 @@ public:
 	{
 		return AddZeroed(Count);
 	}
-	FORCEINLINE void ResizeTo(int count)
+	FORCEINLINE void Reserve(int count)
 	{
-		items.resize(count);
+		items.reserve(count);
 	}
 	void RemoveAt(int index, int count = 1)
 	{
