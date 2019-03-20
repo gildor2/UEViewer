@@ -455,12 +455,12 @@ void FString::TrimStartAndEndInline()
 	FName (string) pool
 -----------------------------------------------------------------------------*/
 
-#define STRING_HASH_SIZE		16384
+#define STRING_HASH_SIZE		32768
 
 struct CStringPoolEntry
 {
 	CStringPoolEntry*	HashNext;
-	int					Length;
+	uint16				Length;
 	char				Str[1];
 };
 
@@ -482,10 +482,35 @@ const char* appStrdupPool(const char* str)
 	}
 	hash &= (STRING_HASH_SIZE - 1);
 
-	for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->HashNext)
+#if 0
+	if (true)
 	{
-		if (s->Length == len && !strcmp(str, s->Str))		// found a string
-			return s->Str;
+		// Compare "Length" and first 2 characters with single operation
+		uint32 cmp = len | (str[0] << 16) | (str[1] << 24);
+		for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->HashNext)
+		{
+			uint32 cmp2 = *(uint32*)&s->Length;
+			if (cmp == cmp2)
+			{
+				if (!memcmp(str, s->Str, len))
+				{
+					// found a string
+					return s->Str;
+				}
+			}
+		}
+	}
+	else
+#endif
+	{
+		for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->HashNext)
+		{
+			if (s->Length == len && !memcmp(str, s->Str, len))
+			{
+				// found a string
+				return s->Str;
+			}
+		}
 	}
 
 	if (!StringPool) StringPool = new CMemoryChain();
