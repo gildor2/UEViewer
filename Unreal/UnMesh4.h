@@ -455,16 +455,9 @@ struct FRawCurveTracks
 		PROP_ARRAY(FloatCurves, FFloatCurve)
 	END_PROP_TABLE
 
-	friend FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T)
-	{
-		guard(FRawCurveTracks<<);
-		// This structure is always serialized as property list
-		FRawCurveTracks::StaticGetTypeinfo()->SerializeUnrealProps(Ar, &T);
-		return Ar;
-		unguard;
-	}
-
 	void PostSerialize(FArchive& Ar);
+
+	friend FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T);
 };
 
 

@@ -825,7 +825,8 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	UAnimSequence
 -----------------------------------------------------------------------------*/
 
-// PostSerialize() adds some serialization logic to data which were serialized as properties
+// PostSerialize() adds some serialization logic to data which were serialized as properties. These functions
+// were called in UE4.12 and earlier as "Serialize" and in 4.13 renamed to "PostSerialize".
 
 void FAnimCurveBase::PostSerialize(FArchive& Ar)
 {
@@ -846,6 +847,19 @@ void FRawCurveTracks::PostSerialize(FArchive& Ar)
 		FloatCurves[i].PostSerialize(Ar);
 	}
 	//!! non-cooked assets also may have TransformCurves
+}
+
+ FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T)
+{
+	guard(FRawCurveTracks<<);
+	// This structure is always serialized as property list
+	FRawCurveTracks::StaticGetTypeinfo()->SerializeUnrealProps(Ar, &T);
+	if (Ar.Game < GAME_UE4(13))
+	{
+		T.PostSerialize(Ar);
+	}
+	return Ar;
+	unguard;
 }
 
 void UAnimSequenceBase::Serialize(FArchive& Ar)

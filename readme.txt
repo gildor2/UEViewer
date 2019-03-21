@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+21.03.2019
+- fixed crash with some pre-UE4.13 animation tracks
+
 20.03.2019
 - optimized startup and content scan times when working with huge games
 
