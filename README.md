@@ -1,10 +1,14 @@
 UE Viewer (UModel)
 ==================
 
-UE Viewer, formerly known as "Unreal model viewer", is a viewer for visual resources of games made with
-[Unreal engine](http://www.unrealengine.com/). Currently all engine versions (from 1 to 4) are supported.
+UE Viewer is a viewer for visual resources of games made with [Unreal engine](http://www.unrealengine.com/).
+Currently all engine versions (from 1 to 4) are supported.
 
-There's a place where you may discuss about the source code:
+Previously project was called "Unreal model viewer", however the name
+[has been changed](http://www.gildor.org/smf/index.php/topic,731.0.html) in 2011 to satisfy request
+from Epic Games.
+
+There's a place where you may discuss the source code:
 [gildor.org forums](http://www.gildor.org/smf/index.php?board=37.0).
 
 
@@ -32,9 +36,10 @@ Currently build is performed with Visual C++ 2013.
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
 of these tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You can get everything what you need
 for a build [here](https://github.com/gildor2/BuildTools). This page contains **BuildTools**. You should
-download it and extract into some directory (press the green button "Clone or download", then "Download ZIP"). Let's say you extracted them to *C:\BuildTools*. After that, add *C:\BuildTools\bin*
-to the system's *PATH* environment variable. As an alternative it is possible to create a batch file which will temporarily
-modify *PATH* and then execute build script. Here's an example of such file:
+download it and extract into some directory (press the green button "Clone or download", then "Download ZIP"). Let's say you
+extracted them to *C:\BuildTools*. After that, add *C:\BuildTools\bin* to the system's *PATH* environment variable. As an
+alternative it is possible to create a batch file which will temporarily modify *PATH* and then execute build script.
+Here's an example of such file:
 
     @echo off
     set PATH=%PATH%;C:\BuildTools\bin
@@ -57,7 +62,9 @@ This system has everything what is required for build by default. You'll only ne
     ./build.sh
 
 ### Visual Studio Code
-UModel contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/). Just open umodel's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up. Of course you'll need a [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed.
+UModel contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/).
+Just open umodel's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up.
+Of course you'll need a [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed.
 
 
 C runtime library for MSVC
@@ -75,7 +82,7 @@ to
 LIBC = static
 ```
 
-UModel uses custom CRT library for being able to link against MSVCRT.DLL. MSVCRT.DLL is choosen because it allows to
+UModel uses custom CRT library for being able to link against MSVCRT.DLL. MSVCRT.DLL is chosen because it allows to
 reduce size of UModel distribution without needs to install compiler runtime libraries on system - MSVCRT.DLL present on
 any Windows system. You may disable MSVCRT.DLL linking by commenting out line
 ```
@@ -116,7 +123,9 @@ project. After that you'll get executable with optimizations disabled, and with 
 if umodel.exe crashes, and it is started with *-debug* option, standard Windows window appears with prompt to close
 program or debug it. You may choose "Debug with Visual Studio" there.
 
-If you want to debug umodel.exe in VIsual Studio without having a crash, you may load it either from IDE (```File |
+Also you may use `--debug` parameter for build.sh script.
+
+If you want to debug umodel.exe in Visual Studio without having a crash, you may load it either from IDE (```File |
 Open | Project/Solution```, then select *umodel.exe*), or you may type
 
     devenv umodel.exe
@@ -130,22 +139,33 @@ and after that you'll be able to view *TArray* and *FString* structures during d
 
 Directory structure
 -------------------
+Below is the list of major folders which exists in this repository or which are generated during build process.
+```
+├── .vscode               # Visual Studio Code project files
+├── Core                  # corelibraries not related to Unreal engine
+│   └── GL                # OpenGL wrapper builder
+├── Docs                  # miscellaneous text files
+├── Exporters             # exporters for different object types
+├── Libs                  # third-party libraries used for building
+├── MeshInstance          # mesh renderers
+├── obj                   # all compiled object files goes there
+├── Tools
+│   ├── CompatTable       # source of compatibility table
+│   ├── MaxActorXImport   # ActorX Importer script for 3ds Max
+│   ├── PackageExtract    # Unreal package extractor source
+│   └── PackageUnpack     # unreal package decompressor source
+├── UI                    # library used to show UI on Windows
+├── UmodelTool            # source code of umodel itself
+├── Unreal                # source code of Unreal Engine framework
+│   └── Shaders           # shaders used in UModel's renderer
+├── Viewers               # viewers for different object types
+├── build.sh              # main build script
+├── common.project        # main project file, reused vetween different sub-projects
+├── t.bat                 # Windows CMD caller for test.sh
+└── test.sh               # internal script used for testing
+```
 
-    /.vscode - Visual Studio Code project files
-    /Core
-      /GL - OpenGL wrapper builder
-    /Docs
-    /Exporters
-    /Libs - third-party libraries used for building
-    /MeshInstance
-    /obj - all compiled object files goes there
-    /Tools
-      /CompatTable
-      /MaxActorXImport
-      /PackageExtract
-      /PackageUnpack
-    /UI - library used to show UI on Windows
-    /UmodelTool - source code of umodel itself
-    /Unreal - source code of Unreal Engine framework
-      /Shaders - shaders used in UModel
-    /Viewers
+License
+-------
+The code is not covered with any existing license yet, however I'm thinking about adding BSD 3-clause license. I just probably
+need help from some people who knows about that more than I.
