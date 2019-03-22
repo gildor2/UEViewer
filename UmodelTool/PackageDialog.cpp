@@ -761,12 +761,6 @@ void UIPackageDialog::SavePackages()
 {
 	guard(UIPackageDialog::SavePackages);
 
-	//!! Possible options:
-	//!! - save referenced packages (find better name - "imports", "links", "used packages", "referenced packages" ...)
-	//!! - decompress packages
-	//!! * preserve package paths
-	//!! * destination directory
-
 	// We are using selection, so update it.
 	UpdateSelectedPackages();
 

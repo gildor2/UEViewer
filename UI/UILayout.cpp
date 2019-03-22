@@ -81,7 +81,7 @@ void UIGroup::ComputeLayout()
 	);
 	DBG_LAYOUT("{");
 	DebugLayoutDepth++;
-	DBG_LAYOUT("this.Layout: x(%g) y(%g) w(%g) h(%g) - Rect: x(%g) y(%g) w(%g) h(%g)",
+	DBG_LAYOUT("this: Layout(%g %g %g %g), Rect(%g %g %g %g)",
 		RECT_ARG(Layout), RECT_ARG(Rect));
 #endif
 

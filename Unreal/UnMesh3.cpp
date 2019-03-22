@@ -244,7 +244,6 @@ struct FIndexBuffer3
 	}
 };
 
-// real name (from Android version): FRawStaticIndexBuffer
 struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - has ability to store int indices
 {
 	TArray<uint16>		Indices16;
@@ -293,11 +292,15 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 #endif // PLA
 	old_index_buffer:
 		if (ItemSize == 2)
+		{
 			I.Indices16.BulkSerialize(Ar);
-		else if (ItemSize == 4)
-			I.Indices32.BulkSerialize(Ar);
+		}
 		else
-			appError("Unknown ItemSize %d", ItemSize);
+		{
+			if (ItemSize != 4)
+				appPrintf("WARNING: FMultisizeIndexContainer data size %d, assuming int32\n", ItemSize);
+			I.Indices32.BulkSerialize(Ar);
+		}
 
 		int unk;
 		if (Ar.ArVer < 297) Ar << unk;	// at older version compatible with FRawIndexBuffer
@@ -1543,7 +1546,7 @@ struct FStaticLODModel3
 	no_vert_color:
 		if (Ar.ArVer >= 534)		// post-UT3 code
 			Ar << Lod.ExtraVertexInfluences;
-		if (Ar.ArVer >= 841)		// unknown extra index buffer
+		if (Ar.ArVer >= 841)		// adjacency index buffer
 		{
 			FSkelIndexBuffer3 unk;
 			Ar << unk;

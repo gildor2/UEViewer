@@ -11,10 +11,14 @@
 ---
 
 ### How can I check for umodel updates?
-There is RSS feed available on the main site - check icon on ther upper right corner. But not every game takes its own entry in a news list.
-Forum RSS feed is also available.
-Another option is to subscribe on the [facebook umodel news](http://www.facebook.com/ue.viewer). I am trying to keep it up to date. You can also find a link to the facebook page on the left column of this page, below the site menu.
-The best way to check for a new version is to verify [online version of readme file](http://www.gildor.org/projects/umodel/readme). It contains detailed changelog.
+RSS Feeds:
+- There is RSS feed available on the main site - check icon on the upper right corner. However the main page is rarely updated, only very major news are posted there.
+- Forum RSS feed is also available, you'll get a notification about every new message there.
+- The most detailed (and the most technical) feed is at [Github page of UModel](https://github.com/gildor2/UModel/commits/master.atom). You'll have information about every commit made to UModel's repository.
+
+Other options are to track web pages.
+- If you have a facebook account, you may subscribe to the [facebook UModel news](http://www.facebook.com/ue.viewer). I am trying to keep it up to date. You can also find a link to the facebook page on the left column of this page, below the site menu.
+- Check [online version of readme file](http://www.gildor.org/projects/umodel/readme). It contains non-technical changelog.
 
 ### Which game titles are supported?
 There are more than 300 games made with all Unreal engine versions, for all platform supported by Epic Games. Check this table: http://www.gildor.org/projects/umodel/compat

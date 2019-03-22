@@ -15,11 +15,12 @@ enum
 {
 	PAK_INITIAL = 1,
 	PAK_NO_TIMESTAMPS = 2,
-	PAK_COMPRESSION_ENCRYPTION = 3,		// UE4.3+
-	PAK_INDEX_ENCRYPTION = 4,			// UE4.17+ - encrypts only pak file index data leaving file content as is
-	PAK_RELATIVE_CHUNK_OFFSETS = 5,		// UE4.20+
-	PAK_DELETE_RECORDS = 6,				// UE4.21+ - this constant is not used in UE4 code
-	PAK_ENCRYPTION_KEY_GUID = 7,		// allows to use multiple encryption keys over the single project
+	PAK_COMPRESSION_ENCRYPTION = 3,			// UE4.3+
+	PAK_INDEX_ENCRYPTION = 4,				// UE4.17+ - encrypts only pak file index data leaving file content as is
+	PAK_RELATIVE_CHUNK_OFFSETS = 5,			// UE4.20+
+	PAK_DELETE_RECORDS = 6,					// UE4.21+ - this constant is not used in UE4 code
+	PAK_ENCRYPTION_KEY_GUID = 7,			// ... allows to use multiple encryption keys over the single project
+	PAK_FNAME_BASED_COMPRESSION_METHOD = 8, // UE4.22+ - use string instead of enum for compression method
 
 	PAK_LATEST_PLUS_ONE,
 	PAK_LATEST = PAK_LATEST_PLUS_ONE - 1
@@ -84,7 +85,7 @@ struct FPakEntry
 	int64		UncompressedSize;
 	int32		CompressionMethod;
 	byte		Hash[20];
-	byte		bEncrypted;
+	byte		bEncrypted;					// replaced with 'Flags' in UE4.21
 	TArray<FPakCompressedBlock> CompressionBlocks;
 	int32		CompressionBlockSize;
 
@@ -414,6 +415,12 @@ public:
 		*reader << info;
 		if (info.Magic != PAK_FILE_MAGIC)		// no endian checking here
 			return false;
+
+		//!! TODO
+		if (info.Version >= PAK_FNAME_BASED_COMPRESSION_METHOD)
+		{
+			appError("UE4.22 TODO: pak version 8 (need samples)");
+		}
 
 		guardVersion = info.Version;
 		if (info.Version > PAK_LATEST)
