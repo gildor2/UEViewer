@@ -1023,6 +1023,8 @@ static GLuint GetDefaultTexNum()
 		DefaultUTexture->Format = TEXF_RGBA8;
 		DefaultUTexture->Package = NULL;
 		DefaultUTexture->Name = "Default";
+
+#if 0
 		// create 1st mipmap
 #define TEX_SIZE	64
 		FMipmap &Mip = DefaultUTexture->Mips[0];
@@ -1054,6 +1056,75 @@ static GLuint GetDefaultTexNum()
 			}
 		}
 #undef TEX_SIZE
+#else
+		// create 1st mipmap
+#define TEX_SIZE	512
+		FMipmap &Mip = DefaultUTexture->Mips[0];
+		Mip.USize = Mip.VSize = TEX_SIZE;
+		Mip.DataArray.AddUninitialized(TEX_SIZE*TEX_SIZE*4);
+		byte *pic = &Mip.DataArray[0];
+		for (int x = 0; x < TEX_SIZE; x++)
+		{
+			for (int y = 0; y < TEX_SIZE; y++)
+			{
+				static const byte colors[12][3] =
+				{
+					// colors: bright, mid, dark
+					// red:
+					{ 254,100,66 }, { 203,80,53 }, { 128,50,33 },
+					// green:
+					{ 139,159,66 }, { 125,143,59 }, { 84,96,40 },
+					// blue:
+					{ 184,203,207 }, { 147,162,166 }, { 98,108,110 },
+					// white:
+					{ 249,244,229 }, { 224,219,206 }, { 132,129,121 }
+				};
+				byte *p = pic + y * TEX_SIZE * 4 + x * 4;
+				const int partSize = TEX_SIZE/4;
+				int x1 = x / partSize;
+				int y1 = y / partSize;
+				int x2 = x % partSize;
+				int y2 = y % partSize;
+				int x3 = x2 / (partSize/2);
+				int y3 = y2 / (partSize/2);
+
+				// Dark grid
+				int colorIndex;
+				if (x2 == 0 || x2 == partSize-1 || y2 == 0 || y2 == partSize-1)
+				{
+					colorIndex = -1; // black
+				}
+				else if (x % (partSize/4) == 0 || y % (partSize/4) == 0)
+				{
+					colorIndex = 2; // middle grid, dark color
+				}
+				else
+				{
+					colorIndex = (x3 + y3) & 1;
+				}
+
+				byte r, b, g;
+				if (colorIndex < 0)
+				{
+					// Black border
+					r = g = b = 0;
+				}
+				else
+				{
+					colorIndex = ((x1 + y1) & 3) * 3 + colorIndex;
+					r = colors[colorIndex][0];
+					g = colors[colorIndex][1];
+					b = colors[colorIndex][2];
+				}
+				
+				p[0] = b;
+				p[1] = g;
+				p[2] = r;
+				p[3] = 255;
+			}
+		}
+#undef TEX_SIZE
+#endif
 	}
 	DefaultUTexture->Upload();
 	return DefaultUTexture->TexNum;
@@ -1147,7 +1218,7 @@ bool UTexture::Upload()
 {
 	if (TexNum == BAD_TEXTURE) return false;
 	if (!GL_TouchObject(DrawTimestamp))
-		TexNum = Upload2D(this, Mips.Num() > 1, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
+		TexNum = Upload2D(this, true, UClampMode == TC_Clamp, VClampMode == TC_Clamp);
 	return (TexNum != BAD_TEXTURE);
 }
 

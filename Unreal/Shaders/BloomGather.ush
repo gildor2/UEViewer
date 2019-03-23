@@ -22,7 +22,7 @@ void PixelShaderMain()
 	if (m <= 1.0) m = 0.0;//c = vec3(0.0);
 	c *= 0.5;
 #else
-	m = max(m - 1.0, 0.0);	// note: it looks like alpha in FP-tagret is always limited by 1.0, so scale it in "BloomBlend" shader
+	m = max(m - 1.5, 0.0);	// note: it looks like alpha in FP-tagret is always limited by 1.0, so scale it in "BloomBlend" shader
 #endif
 	gl_FragColor = vec4(c, m);
 }
