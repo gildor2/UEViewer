@@ -98,19 +98,19 @@ You might also want to disable OLDCRT if you didn't install MSVCRT library as de
 If you want to use MSVCRT.DLL, you should extract **MSVCRT.zip** archive available
 [here](https://github.com/gildor2/UModel/releases) to the directory LIBS one level above of UModel directory.
 So, the directory structure should look like this
-
-    /Libs
-      /MSVCRT
-        /include
-        /lib
-        msvcrt.project
-    /UModel
-      /Core
-      /Unreal
-      ...
-      build.sh
-      ...
-
+```
+├── Libs
+│   └── MSVCRT
+│       ├── include
+│       ├── lib
+│       └── msvcrt.project
+├── UModel
+│   ├── Core
+│   ├── Unreal
+│   ...
+│   ├── build.sh
+│   ...
+```
 Also you may change MSVCRT library path by changing **WDKCRT** variable in *common.project*.
 
 

@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+23.03.2019
+- changed default texture ("UV checker")
+
 21.03.2019
 - fixed crash with some pre-UE4.13 animation tracks
 
@@ -312,7 +315,7 @@ Changes
 - implemented support for loading of UE3 and UE4 png-compressed textures
 
 16.05.2018
-- added functionality which finds all animations for currectly opened UE4 SkeletalMesh, accessible with Ctrl+A
+- added functionality which finds all animations for currently opened UE4 SkeletalMesh, accessible with Ctrl+A
   key or via "SkeletalMesh | Find animations" menu
 
 13.05.2018
@@ -386,7 +389,7 @@ Changes
 - exporting "source art" (png) textures whenever possible - for UE3 and UE4 editor packages
 
 02.10.2017
-- added Fortnite support (currently requres game override)
+- added Fortnite support (currently requires game override)
 
 29.09.2017
 - added Unreal engine 4.17 support and initial UE4.18 support
@@ -981,7 +984,7 @@ Changes
 - implemented support for SkeletalMesh with more than 64k vertices
 
 21.11.2011
-- major rewritting of SkeletalMesh subsystem; implemented support for multiple UV sets,
+- major rewriting of SkeletalMesh subsystem; implemented support for multiple UV sets,
   which can be switched in viewer by 'U' key and exported to psk when "-pskx" option is
   supplied
 
@@ -1007,7 +1010,7 @@ Changes
 - improved positioning of the mesh in a viewer
 
 06.11.2011
-- major rewritting of the StaticMesh subsystem
+- major rewriting of the StaticMesh subsystem
   - implemented UE3 LOD support:
     - LODs are exported when "-lods" switch is passed to the command line
     - LODs can be switched in the viewer with 'L' key
@@ -1682,7 +1685,7 @@ Changes
 - additional fix for Lineage LOD models
 
 23.11.2008
-- fixed skeletal LOD model visualisation
+- fixed skeletal LOD model visualization
 - implemented skinning for LOD models
 - Lineage2: implemented support for Lineage-specific LOD models
 - Lineage2: restoring base skeletal mesh from 1st LOD when needed

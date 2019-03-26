@@ -26,7 +26,7 @@ void appPrintProfiler(const char* label)
 	float timeDelta = (appMilliseconds() - ProfileStartTime) / 1000.0f;
 	if (timeDelta < 0.001f && !GNumAllocs && !GSerializeBytes && !GNumSerialize)
 		return;		// nothing to print (perhaps already printed?)
-	appPrintf("%s in %.2g sec, %d allocs, %.2f MBytes serialized in %d calls.\n",
+	appPrintf("%s in %.1f sec, %d allocs, %.2f MBytes serialized in %d calls.\n",
 		label ? label : "Loaded",
 		timeDelta, GNumAllocs, GSerializeBytes / (1024.0f * 1024.0f), GNumSerialize);
 	appResetProfiler();
