@@ -1781,6 +1781,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& re
 		NMLISTVIEW* nmlv = (NMLISTVIEW*)lParam;
 		if (nmlv->iSubItem >= 0 && nmlv->iSubItem < NumColumns && OnColumnClick)
 			OnColumnClick(this, nmlv->iSubItem);
+		return true;
 	}
 
 	if (cmd == LVN_ODFINDITEM && IsVirtualMode)
@@ -1849,6 +1850,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& re
 		GetCursorPos(&pt);
 		// Show menu
 		Menu->Popup(this, pt.x, pt.y);
+		return true;
 	}
 
 	return false;
@@ -3145,11 +3147,17 @@ INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam,
 	// windows will not allow us to pass SEH through the message handler, so
 	// add a SEH guards here
 	TRY {
+		SetWindowLongPtr(hWnd, DWLP_MSGRESULT, 0);
 		INT_PTR result = dlg->WndProc(hWnd, msg, wParam, lParam);
 		if (result)
 		{
 			// For DlgProc we should store result in DWLP_MSGRESULT.
 			// https://devblogs.microsoft.com/oldnewthing/?p=41923
+#if 0 // tiny "spy++" analog code
+			appPrintf("Msg: %X", msg);
+			if (msg == WM_NOTIFY) appPrintf(" Id: %d N: %d R: %d", LOWORD(wParam), ((LPNMHDR)lParam)->code, result);
+			appPrintf("\n");
+#endif
 			SetWindowLongPtr(hWnd, DWLP_MSGRESULT, result);
 		}
 		return result;
@@ -3354,11 +3362,10 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return FALSE;
 
 	if (id < FIRST_DIALOG_ID || id >= NextDialogId)
-		return TRUE;				// not any of our controls
+		return FALSE;				// not any of our controls
 
 	int res = FALSE;
 	HandleCommand(id, cmd, lParam, res); // ignore result
-
 	return res;
 
 	unguard;
