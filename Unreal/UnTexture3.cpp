@@ -982,7 +982,8 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 
 	if (intFormat == TPF_UNKNOWN)
 	{
-		appNotify("Unknown texture format: %s (%d)", TexData.OriginalFormatName, Format);
+		if (SourceArt.BulkData == NULL && Format != PF_Unknown) // do not show warning when browsing source packages
+			appPrintf("Unknown texture format: %s (%d)\n", TexData.OriginalFormatName, Format);
 		return false;
 	}
 

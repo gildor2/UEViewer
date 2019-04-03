@@ -13,17 +13,17 @@
 // Pak file versions
 enum
 {
-	PAK_INITIAL = 1,
-	PAK_NO_TIMESTAMPS = 2,
-	PAK_COMPRESSION_ENCRYPTION = 3,			// UE4.3+
-	PAK_INDEX_ENCRYPTION = 4,				// UE4.17+ - encrypts only pak file index data leaving file content as is
-	PAK_RELATIVE_CHUNK_OFFSETS = 5,			// UE4.20+
-	PAK_DELETE_RECORDS = 6,					// UE4.21+ - this constant is not used in UE4 code
-	PAK_ENCRYPTION_KEY_GUID = 7,			// ... allows to use multiple encryption keys over the single project
-	PAK_FNAME_BASED_COMPRESSION_METHOD = 8, // UE4.22+ - use string instead of enum for compression method
+	PakFile_Version_Initial = 1,
+	PakFile_Version_NoTimestamps = 2,
+	PakFile_Version_CompressionEncryption = 3,		// UE4.3+
+	PakFile_Version_IndexEncryption = 4,			// UE4.17+ - encrypts only pak file index data leaving file content as is
+	PakFile_Version_RelativeChunkOffsets = 5,		// UE4.20+
+	PakFile_Version_DeleteRecords = 6,				// UE4.21+ - this constant is not used in UE4 code
+	PakFile_Version_EncryptionKeyGuid = 7,			// ... allows to use multiple encryption keys over the single project
+	PakFile_Version_FNameBasedCompressionMethod = 8, // UE4.22+ - use string instead of enum for compression method
 
-	PAK_LATEST_PLUS_ONE,
-	PAK_LATEST = PAK_LATEST_PLUS_ONE - 1
+	PakFile_Version_Last,
+	PakFile_Version_Latest = PakFile_Version_Last - 1
 };
 
 // hack: use ArLicenseeVer to not pass FPakInfo.Version to serializer
@@ -46,19 +46,19 @@ struct FPakInfo
 	friend FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 	{
 		// New FPakInfo fields.
-		Ar << P.EncryptionKeyGuid;			// PAK_ENCRYPTION_KEY_GUID
-		Ar << P.bEncryptedIndex;			// PAK_INDEX_ENCRYPTION
+		Ar << P.EncryptionKeyGuid;			// PakFile_Version_EncryptionKeyGuid
+		Ar << P.bEncryptedIndex;			// PakFile_Version_IndexEncryption
 
 		// Old FPakInfo fields.
 		Ar << P.Magic << P.Version << P.IndexOffset << P.IndexSize;
 		Ar.Serialize(ARRAY_ARG(P.IndexHash));
 
 		// Reset new fields to their default states when seralizing older pak format.
-		if (P.Version < PAK_INDEX_ENCRYPTION)
+		if (P.Version < PakFile_Version_IndexEncryption)
 		{
 			P.bEncryptedIndex = false;
 		}
-		if (P.Version < PAK_ENCRYPTION_KEY_GUID)
+		if (P.Version < PakFile_Version_EncryptionKeyGuid)
 		{
 			P.EncryptionKeyGuid = { 0, 0, 0, 0 };
 		}
@@ -104,12 +104,12 @@ struct FPakEntry
 		if (GForceGame == GAME_Gears4)
 		{
 			Ar << P.Pos << (int32&)P.Size << (int32&)P.UncompressedSize << (byte&)P.CompressionMethod;
-			if (Ar.PakVer < PAK_NO_TIMESTAMPS)
+			if (Ar.PakVer < PakFile_Version_NoTimestamps)
 			{
 				int64 timestamp;
 				Ar << timestamp;
 			}
-			if (Ar.PakVer >= PAK_COMPRESSION_ENCRYPTION)
+			if (Ar.PakVer >= PakFile_Version_CompressionEncryption)
 			{
 				if (P.CompressionMethod != 0)
 					Ar << P.CompressionBlocks;
@@ -123,7 +123,7 @@ struct FPakEntry
 
 		Ar << P.Pos << P.Size << P.UncompressedSize << P.CompressionMethod;
 
-		if (Ar.PakVer < PAK_NO_TIMESTAMPS)
+		if (Ar.PakVer < PakFile_Version_NoTimestamps)
 		{
 			int64 timestamp;
 			Ar << timestamp;
@@ -131,7 +131,7 @@ struct FPakEntry
 
 		Ar.Serialize(ARRAY_ARG(P.Hash));
 
-		if (Ar.PakVer >= PAK_COMPRESSION_ENCRYPTION)
+		if (Ar.PakVer >= PakFile_Version_CompressionEncryption)
 		{
 			if (P.CompressionMethod != 0)
 				Ar << P.CompressionBlocks;
@@ -142,7 +142,7 @@ struct FPakEntry
 			P.bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
 #endif
 
-		if (Ar.PakVer >= PAK_RELATIVE_CHUNK_OFFSETS)
+		if (Ar.PakVer >= PakFile_Version_RelativeChunkOffsets)
 		{
 			// Convert relative compressed offsets to absolute
 			for (int i = 0; i < P.CompressionBlocks.Num(); i++)
@@ -417,13 +417,13 @@ public:
 			return false;
 
 		//!! TODO
-		if (info.Version >= PAK_FNAME_BASED_COMPRESSION_METHOD)
+		if (info.Version >= PakFile_Version_FNameBasedCompressionMethod)
 		{
 			appError("UE4.22 TODO: pak version 8 (need samples)");
 		}
 
 		guardVersion = info.Version;
-		if (info.Version > PAK_LATEST)
+		if (info.Version > PakFile_Version_Latest)
 		{
 			appPrintf("WARNING: Pak file \"%s\" has unsupported version %d\n", *Filename, info.Version);
 		}

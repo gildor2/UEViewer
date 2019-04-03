@@ -716,9 +716,8 @@ struct FSkelMeshSection4
 #if PARAGON
 		if (Ar.Game == GAME_Paragon)
 		{
-			int32 bSomething;
+			bool bSomething;
 			Ar << bSomething;
-			assert(bSomething == 0 || bSomething == 1);
 		}
 #endif // PARAGON
 
