@@ -40,8 +40,13 @@ struct FPakInfo
 	// with older pak file versions. At the same time, structure size grows.
 	byte		bEncryptedIndex;
 	FGuid		EncryptionKeyGuid;
+	int32		CompressionMethods[4];
 
-	enum { Size = sizeof(int32) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 + sizeof(FGuid)};
+	enum
+	{
+		Size = sizeof(int32) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 + sizeof(FGuid),
+		Size8 = Size + 32*4					// added size of CompressionMethods as char[32]
+	};
 
 	friend FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 	{
@@ -50,8 +55,34 @@ struct FPakInfo
 		Ar << P.bEncryptedIndex;			// PakFile_Version_IndexEncryption
 
 		// Old FPakInfo fields.
-		Ar << P.Magic << P.Version << P.IndexOffset << P.IndexSize;
+		Ar << P.Magic;
+		if (P.Magic != PAK_FILE_MAGIC)
+		{
+			// Stop immediately when magic is wrong
+			return Ar;
+		}
+		Ar << P.Version << P.IndexOffset << P.IndexSize;
 		Ar.Serialize(ARRAY_ARG(P.IndexHash));
+
+		if (P.Version >= PakFile_Version_FNameBasedCompressionMethod)
+		{
+			for (int i = 0; i < 4; i++)
+			{
+				char name[32+1];
+				Ar.Serialize(name, 32);
+				name[32] = 0;
+				int32 CompressionMethod = 0;
+				if (!stricmp(name, "zlib"))
+				{
+					CompressionMethod = COMPRESS_ZLIB;
+				}
+				else if (name[0])
+				{
+					appPrintf("Warning: unknown compression method for pak: %s\n", name);
+				}
+				P.CompressionMethods[i] = CompressionMethod;
+			}
+		}
 
 		// Reset new fields to their default states when seralizing older pak format.
 		if (P.Version < PakFile_Version_IndexEncryption)
@@ -121,7 +152,18 @@ struct FPakEntry
 		}
 #endif // GEARS4
 
-		Ar << P.Pos << P.Size << P.UncompressedSize << P.CompressionMethod;
+		Ar << P.Pos << P.Size << P.UncompressedSize;
+
+		if (Ar.PakVer < PakFile_Version_FNameBasedCompressionMethod)
+		{
+			Ar << P.CompressionMethod;
+		}
+		else
+		{
+			uint8 CompressionMethodIndex;
+			Ar << CompressionMethodIndex;
+			P.CompressionMethod = CompressionMethodIndex;
+		}
 
 		if (Ar.PakVer < PakFile_Version_NoTimestamps)
 		{
@@ -402,24 +444,32 @@ public:
 		int guardVersion = 0; // used for some details in a case of crash
 		guard(FPakVFS::ReadDirectory);
 
-		// Read pak header
-		int64 HeaderOffset = reader->GetFileSize64() - FPakInfo::Size;
-		if (HeaderOffset <= 0)
-		{
-			// The file is too small
-			return false;
-		}
-		reader->Seek64(HeaderOffset);
-
+		// Pak file may have different header sizes, try them all
+		static const int OffsetsToTry[] = { FPakInfo::Size, FPakInfo::Size8 };
 		FPakInfo info;
-		*reader << info;
-		if (info.Magic != PAK_FILE_MAGIC)		// no endian checking here
-			return false;
 
-		//!! TODO
-		if (info.Version >= PakFile_Version_FNameBasedCompressionMethod)
+		for (int32 Offset : OffsetsToTry)
 		{
-			appError("UE4.22 TODO: pak version 8 (need samples)");
+			// Read pak header
+			int64 HeaderOffset = reader->GetFileSize64() - Offset;
+			if (HeaderOffset <= 0)
+			{
+				// The file is too small
+				return false;
+			}
+			reader->Seek64(HeaderOffset);
+
+			*reader << info;
+			if (info.Magic == PAK_FILE_MAGIC)		// no endian checking here
+			{
+				break;
+			}
+		}
+
+		if (info.Magic != PAK_FILE_MAGIC)
+		{
+			// We didn't find a pak header
+			return false;
 		}
 
 		guardVersion = info.Version;
@@ -565,6 +615,12 @@ public:
 //				appPrintf("Encrypted file: %s\n", *Filename);
 				numEncryptedFiles++;
 			}
+			if (info.Version >= PakFile_Version_FNameBasedCompressionMethod)
+			{
+				int32 CompressionMethodIndex = E.CompressionMethod;
+				assert(CompressionMethodIndex >= 0 && CompressionMethodIndex <= 4);
+				E.CompressionMethod = CompressionMethodIndex > 0 ? info.CompressionMethods[CompressionMethodIndex-1] : 0;
+			}
 
 			unguard("Index=%d/%d", i, count);
 		}
@@ -619,11 +675,6 @@ public:
 	{
 		const FPakEntry* info = FindFile(name);
 		if (!info) return NULL;
-/*		if (info->bEncrypted)
-		{
-			appPrintf("pak(%s): attempt to open encrypted file %s\n", *Filename, name);
-			return NULL;
-		} */
 		return new FPakFile(info, Reader);
 	}
 
