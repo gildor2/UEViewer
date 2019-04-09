@@ -6,8 +6,12 @@ while [ "$1" ]; do
 			debug=1
 			shift
 			;;
+		--vc)
+			vc_ver=$2
+			shift 2
+			;;
 		*)
-			echo "Usage: build.sh [--debug]"
+			echo "Usage: build.sh [--debug] [--vc <version>]"
 			exit
 			;;
 	esac
