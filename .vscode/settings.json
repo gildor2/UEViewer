@@ -20,8 +20,10 @@
         "*.ush": "hlsl",
         "*.project": "perl"
     },
+	"files.trimTrailingWhitespace": true,
     "cSpell.words": [
 		"FCOLOR",
+		"FGPU",
 		"FQUAT",
 		"FROTATOR",
 		"FVECTOR",
@@ -32,6 +34,8 @@
 		"Tris",
 		"UMODEL",
 		"coord",
+		"kdop",
+		"maxs",
 		"tex",
 		"uasset",
 		"ubulk",

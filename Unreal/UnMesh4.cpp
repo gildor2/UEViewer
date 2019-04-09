@@ -94,7 +94,7 @@ struct FPositionVertexBuffer4
 	}
 };
 
-//?? TODO: rename, because these vars are now used for both mesh types
+//?? TODO: rename, because these vars are now used for both mesh types (see FStaticMeshVertexBuffer4)
 static int  GNumStaticUVSets   = 1;
 static bool GUseStaticFloatUVs = true;
 static bool GUseHighPrecisionTangents = false;
@@ -146,6 +146,7 @@ struct FStaticMeshUVItem4
 	}
 };
 
+// Note: this structure is used for both StaticMesh and SkeletalMesh
 struct FStaticMeshVertexBuffer4
 {
 	int				NumTexCoords;
@@ -392,7 +393,7 @@ struct FSoftVertex4 : public FSkelMeshVertexBase
 	}
 };
 
-// Editor-only skeletal mesh vertex used for single boxe (has been deprecated after
+// Editor-only skeletal mesh vertex used for single bone (has been deprecated after
 // FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts)
 // TODO: review - we're using exactly the same data layout as for FSoftVertex4, but different
 //   serialization function - can achieve that with TArray::Serialize2<>.

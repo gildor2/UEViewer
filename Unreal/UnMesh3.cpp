@@ -2130,7 +2130,7 @@ void USkeletalMesh3::ConvertMesh()
 		}
 
 		if (NumReweightedVerts > 0)
-			appPrintf("LOD %d: udjusted weights for %d vertices\n", lod, NumReweightedVerts);
+			appPrintf("LOD %d: adjusted weights for %d vertices\n", lod, NumReweightedVerts);
 
 		unguard;	// ProcessVerts
 
@@ -3400,7 +3400,7 @@ struct FkDOPTriangle3
 
 #if FURY
 
-struct FFuryStaticMeshUnk	// in other ganes this structure serialized after LOD models, in Fury - before
+struct FFuryStaticMeshUnk	// in other games this structure serialized after LOD models, in Fury - before
 {
 	int					unk0;
 	int					fC, f10, f14;
