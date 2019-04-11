@@ -18,10 +18,10 @@ RSS Feeds:
 
 Other options are to track web pages.
 - If you have a facebook account, you may subscribe to the [facebook UModel news](http://www.facebook.com/ue.viewer). I am trying to keep it up to date. You can also find a link to the facebook page on the left column of this page, below the site menu.
-- Check [online version of readme file](http://www.gildor.org/projects/umodel/readme). It contains non-technical changelog.
+- Check [online version of readme file](https://www.gildor.org/projects/umodel/readme). It contains non-technical changelog.
 
 ### Which game titles are supported?
-There are more than 300 games made with all Unreal engine versions, for all platform supported by Epic Games. Check this table: http://www.gildor.org/projects/umodel/compat
+There are more than 300 games made with all Unreal engine versions, for all platform supported by Epic Games. Check this table: https://www.gildor.org/projects/umodel/compat
 
 I'm trying to keep it up-to-date, mostly with reports posted on my forum. Note presense of the filter on the top of the table which lets you to find a game by the part of its name or by the company name quickly.
 
@@ -34,8 +34,8 @@ I had a task on my job to write a skeletal animation system for upcoming game. I
 _If you're really interested, more information is available on my "About me" page, check the link on site's menu._
 
 ### How can I help you?
-The best help is [a donation](http://www.gildor.org/en/donate).
-Also you may vote for the umodel (press "LIKE") on [its Facebook page](http://www.facebook.com/ue.viewer).
+The best help is [a donation](https://www.gildor.org/en/donate).
+Also you may vote for the umodel (press "LIKE") on [its Facebook page](https://www.facebook.com/ue.viewer).
 
 ### I have made some project/video with a help of umodel. Can I add you/your program to the credits?
 Yes of course
@@ -44,7 +44,7 @@ Yes of course
 I see no reason to do so, my site is alive. You should not copy texts from this site, post a link instead. Do not post direct links to files - these links may be (and _will be_) changed in a future.
 
 ### Where could I find the source code?
-The source code is available [at GitHub](https://github.com/gildor2/UModel). The discussion is open [on the forum](http://www.gildor.org/smf/index.php/topic,2392.0.html).
+The source code is available [at GitHub](https://github.com/gildor2/UModel). The discussion is open [on the forum](https://www.gildor.org/smf/index.php/topic,2392.0.html).
 
 ### Where could I get older version of UModel?
 In general, it is not needed to get an older version of UModel. Newer versions should have support for all games which were supported before, and if something is wrong in newer UModel - this is rather a bug and should be fixed. However, with some frequently updated UE4 games, it might be useful to revert to older UModel, for example if game uses some "intermediate" UE4 version. This is mostly happens with "early access" or online games. So, all UModel executables [could be found on GitHub here](https://github.com/gildor2/UModel/commits/master/umodel.exe).
@@ -68,7 +68,7 @@ Ok. The following info is a little bit ourdated - I wrote it for UE2 and UE3 gam
    - Unreal engine 1 or 2. The game executable itself is relatively small (a few hundreds of kilobytes) and has no "key strings" inside.  Most of the engine code is located in core.dll and engine.dll, so I'll need these files as well.
 2. core.u and engine.u (for some UE3 games file extension may be "xxx") - these files contains compiled scripts. Placing all .u files into archive is welcome unless they're too big.
 3. startup_int package (usually present for cooked games).
-4. file version [report of the pkgtool](http://www.gildor.org/smf/index.php/topic,308.msg2979.html#msg2979) - to let me make autodetection of this game with umodel.
+4. file version [report of the pkgtool](https://www.gildor.org/smf/index.php/topic,308.msg2979.html#msg2979) - to let me make autodetection of this game with umodel.
 
 _These files should be compressed to reduce traffic_ - use Rar or 7zip. It is good to send archive which is nearly 50Mb of size.
 
@@ -92,7 +92,7 @@ Extracting an upk or uasset file - this is done with a "package extractor" tool.
 ---
 
 ### Umodel is crashed!
-- When you've got a crash, first of all check the [compatibility table](http://www.gildor.org/projects/umodel/compat). Most probably the game you are trying to open is not fully supported and you must restrict umodel to not load some kinds of resources: use -nomesh, -nostat, -noanim or -notex switches.
+- When you've got a crash, first of all check the [compatibility table](https://www.gildor.org/projects/umodel/compat). Most probably the game you are trying to open is not fully supported and you must restrict umodel to not load some kinds of resources: use -nomesh, -nostat, -noanim or -notex switches.
 - If the game has associated forum thread, please review it - it is possible that the game requires some special options to run.
 - If this is an Unreal engine 4 game, try selecting a different engine version, even if engine version is specified on the forum or somewhere else. UE4 games often gets updates, so the game might use a newer engine.
 
@@ -110,7 +110,7 @@ This is not an error. The package file you're trying to open has nothing to disp
 If you want to know what's inside the particular package, you may try opening it with UModel. In this case you'll see a list of object types stored there - in viewer window and in log.
 
 ### What does error "too many unknown objects" means?
-The answer [is here](http://www.gildor.org/smf/index.php/topic,314.0.html).
+The answer [is here](https://www.gildor.org/smf/index.php/topic,314.0.html).
 
 ### What does error "wrong tag in package" means?
 - You're trying to open non-package file.
@@ -160,7 +160,7 @@ Start umodel with option "-help" from the command line, it will display a full l
 ### How to use umodel in a viewer mode? What umodel can do?
 Viewer will start automatically when you'll not specify "-export", "-list" etc options which affects umodel mode. In a viewer mode press <H> key to display full information about keyboard shortcuts. Note: this list depends on the object beeng displayed - texture and mesh viewer has a different set of commands.
 Also check my brief introduction into umodel:
-http://www.gildor.org/en/projects/umodel/tutorials
+https://www.gildor.org/en/projects/umodel/tutorials
 "Unreal Model Viewer basics"
 
 ### How can I take a screenshot?
@@ -169,7 +169,7 @@ Press <Ctrl+S>. Screenshot will be placed in the current directory, in subdirect
 ### How can I view player models combined from a few meshes?
 Start umodel in a viewer mode. Browse through the meshes. Find a mesh which is a part of "combined mesh". Press <Ctrl+T> ("tag mesh"). Mesh name will appear in a list on the screen. Now, when you will browse to another mesh, tagged mesh will remains on the screen. Use the same method to tag all required meshes (head, legs, torso, arms etc). Note: the combined mesh can be animated in a usual way.
 
-Also I suggest you to watch [second tutorial video](http://www.gildor.org/en/projects/umodel/tutorials).
+Also I suggest you to watch [second tutorial video](https://www.gildor.org/en/projects/umodel/tutorials).
 
 ### How to view animations for UE3 games? When I'm opening a model it has no available animations
 Press <Ctrl+A> key. This key will cycle through all loaded AnimSets (MeshAnimation object for UE2).
@@ -198,11 +198,11 @@ There are a few variants of answer:
 3. material is too complex for umodel, so it is replaced with "default texture"
 4. this is a variant of (1) - you're trying to start umodel with a wrong game path. For example: UE2 game usually has "Textures", "Animations" and some other directories. If you'll start umodel from the "Amimations" directory, umodel will not file textures. You should start it from the parent directory - common for the "Animations" and "Textures".
 
-More info [here](http://www.gildor.org/smf/index.php/topic,407.0.html) and [here](http://www.gildor.org/smf/index.php/topic,36.0.html).
+More info [here](https://www.gildor.org/smf/index.php/topic,407.0.html) and [here](https://www.gildor.org/smf/index.php/topic,36.0.html).
 
 ### Why UE3 game textures are in very low resolution - 64x64 instead of 2048x2048?
 That's another "side effect" (really - feature) of cooking. Check the log. Most probably umodel is unable to find tfc file (usually "textures.tfc"). If this file really exists - verify your "-path=..." option.
-[More info](http://www.gildor.org/smf/index.php/topic,207.0.html). Also check [this thread](http://www.gildor.org/smf/index.php/topic,445.0.html).
+[More info](https://www.gildor.org/smf/index.php/topic,207.0.html). Also check [this thread](https://www.gildor.org/smf/index.php/topic,445.0.html).
 
 Another note: this error often exists when user (following some third-party tutorials) is copying game files to some directory and trying to extract files from that place. This is wrong - umodel is written to open files directly from the game directory, no file copying is required.
 
@@ -271,18 +271,18 @@ If umodel is not crashed - it's ok. Most probably this package has neither textu
 You may recreate package if target game has UnrealEd (of course, if all required data were exported - most data types are not supported, it is impossible to support everything). If the game has no publically available UnrealEd, this task is impossible.
 
 ### How can I load PSK file into 3ds Max?
-Use my [ActorX Importer plugin](http://www.gildor.org/projects/unactorx).
+Use my [ActorX Importer plugin](https://www.gildor.org/projects/unactorx).
 
 ### How can I save (export) PSK/PSA files from 3ds Max or Maya?
-Use [Epic Games ActorX plugin](http://udn.epicgames.com/Three/ActorX.html) for 3ds Max or Maya. These plugins were discontinued by Epic Games in favour of FBX file format, and you will not find versions for recent Max or Maya software. Updated plugins could be found on this site, see [this location](http://www.gildor.org/smf/index.php/topic,1221.0.html).
+Use [Epic Games ActorX plugin](http://udn.epicgames.com/Three/ActorX.html) for 3ds Max or Maya. These plugins were discontinued by Epic Games in favour of FBX file format, and you will not find versions for recent Max or Maya software. Updated plugins could be found on this site, see [this location](https://www.gildor.org/smf/index.php/topic,1221.0.html).
 
 ### Is there PSK/PSA importer for Maya?
-Check [this forum thread](http://www.gildor.org/smf/index.php/topic,2273.0.html).
+Check [this forum thread](https://www.gildor.org/smf/index.php/topic,2273.0.html).
 
 ### Is there importer for Blender?
 Yes. There are number of solutions available (none were made by me). It seems that the best link for Blender psk and psa importer is this one (check "master" and "latest" branches, which one has newer plugin). This script has possibility to import PSKX files.
 
-For more information please refer to these threads: [first](http://www.gildor.org/smf/index.php/topic,718.0.html), [second](http://www.gildor.org/smf/index.php/topic,1745.0.html).
+For more information please refer to these threads: [first](https://www.gildor.org/smf/index.php/topic,718.0.html), [second](https://www.gildor.org/smf/index.php/topic,1745.0.html).
 
 ### What is PSKX format?
 This format is a modified PSK (ActorX mesh) format. Modifications were made by me (Gildor) to allow placing some additional information into the file. You should not try to import PKSX into UnrealEd, it may crash. I have changed file extension specially for people who trying to load such files into programs with PSK support (and asking after that "why that program is crashed when I've loaded psk?"). There is no PSKX documentation available, but I can reveal my changes if there will be any interest.
@@ -290,7 +290,7 @@ This format is a modified PSK (ActorX mesh) format. Modifications were made by m
 Currently PSKX has following additional features in comparison to PSK:
 - can store mesh without a skeleton (i.e. StaticMesh)
 - mesh can be made with more than 64k vertices
-- 
+-
 Earlier versions of the umodel were produced PSAX files too (in some conditions), but later it was overridden with text .config files stored aside with PSA file.
 
 ### What are .mat files exported by UModel?
@@ -299,7 +299,7 @@ UModel generates .mat files to allow ActorX Importer to load materials into 3ds 
 ### Mesh is loaded into 3ds Max untextured, while it is appeared in umodel's viewer correctly
 You should correctly set up ActorX Importer options "Path to materials" and "look in subfolders".
 
-Check this thread for more details. Also you could check [2nd tutorial video](http://www.gildor.org/en/projects/umodel/tutorials), I'm describing how to load textured mesh into 3ds max there.
+Check this thread for more details. Also you could check [2nd tutorial video](https://www.gildor.org/en/projects/umodel/tutorials), I'm describing how to load textured mesh into 3ds max there.
 
 ### How to export sounds?
 Use "-sounds" command line option, or enable sounds from UI. This options is not used by default because I cannot guarantee that umodel will not crash on exporting sounds for particular game.
@@ -309,5 +309,5 @@ Use "-3rdparty" option, or enable assets from UI.
 
 ### How can I export data from all game packages?
 1. GUI approach. Start UModel with GUI, enter all required options on startup window. You will see a window containing list of found game packages. Just select all packages there and press "Export". If packages are located in multiple directories, check "flat view" checkbox, and you will see all packages in a single list.
-2. Old command line approach. Use [this batch extractor](http://www.gildor.org/smf/index.php/topic,1099.0.html). Note that this page has a lot of information about tuning this batch.
+2. Old command line approach. Use [this batch extractor](https://www.gildor.org/smf/index.php/topic,1099.0.html). Note that this page has a lot of information about tuning this batch.
 3. New command line approach. Use command `umodel -export -path=... *.uasset`

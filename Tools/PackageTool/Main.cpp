@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	{
 	help:
 		printf(	"Unreal package scanner\n"
-				"http://www.gildor.org/\n"
+				"https://www.gildor.org/\n"
 				"Usage: pkgtool <path to game files>\n"
 		);
 		exit(0);

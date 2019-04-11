@@ -6,7 +6,7 @@
 #define MAKE_DIRS		1
 //#define DISABLE_WRITE	1		// for quick testing of extraction
 
-#define HOMEPAGE		"http://www.gildor.org/"
+#define HOMEPAGE		"https://www.gildor.org/"
 
 
 #if UNREAL4

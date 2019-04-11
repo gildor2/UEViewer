@@ -1,15 +1,15 @@
 UE Viewer (UModel)
 ==================
 
-UE Viewer is a viewer for visual resources of games made with [Unreal engine](http://www.unrealengine.com/).
+UE Viewer is a viewer for visual resources of games made with [Unreal engine](https://www.unrealengine.com/).
 Currently all engine versions (from 1 to 4) are supported.
 
 Previously project was called "Unreal model viewer", however the name
-[has been changed](http://www.gildor.org/smf/index.php/topic,731.0.html) in 2011 to satisfy request
+[has been changed](https://www.gildor.org/smf/index.php/topic,731.0.html) in 2011 to satisfy request
 from Epic Games.
 
 There's a place where you may discuss the source code:
-[gildor.org forums](http://www.gildor.org/smf/index.php?board=37.0).
+[gildor.org forums](https://www.gildor.org/smf/index.php?board=37.0).
 
 
 Obtaining the source code

@@ -4,7 +4,7 @@
 #include "GameDatabase.h"
 
 #define DEF_UNP_DIR		"unpacked"
-#define HOMEPAGE		"http://www.gildor.org/"
+#define HOMEPAGE		"https://www.gildor.org/"
 
 
 static void CopyStream(FArchive *Src, FILE *Dst, int Count)

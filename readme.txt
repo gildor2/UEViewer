@@ -3,7 +3,7 @@ UMODEL (UE Viewer)
 
 
 Please support the development by making a donation here:
-http://www.gildor.org/en/donate
+https://www.gildor.org/en/donate
 
 
 System requirements
@@ -19,27 +19,27 @@ List of supported games
 Supported all Unreal engine versions (1-4). The list of supported games consists of
 more than 300 game titles, it is not reasonable to include it here. Some game titles
 has limited support or not supported at all. Detailed information can be found here:
-http://www.gildor.org/projects/umodel/compat
+https://www.gildor.org/projects/umodel/compat
 
 
 Web resources
 ~~~~~~~~~~~~~
 Umodel home page and forum:
-http://www.gildor.org/en/projects/umodel
+https://www.gildor.org/en/projects/umodel
 or Russian page:
-http://www.gildor.org/projects/umodel
+https://www.gildor.org/projects/umodel
 
 Umodel FAQ:
-http://www.gildor.org/projects/umodel/faq
+https://www.gildor.org/projects/umodel/faq
 
 Some tutorials available here:
-http://www.gildor.org/projects/umodel/tutorials
+https://www.gildor.org/projects/umodel/tutorials
 
 Youtube page with tutorials and news:
 https://www.youtube.com/playlist?list=PLJROJrENPVvK-V8PCTR9qBmY0Q7v4wCym
 
 Other documentation:
-http://www.gildor.org/smf/index.php/board,9.0.html
+https://www.gildor.org/smf/index.php/board,9.0.html
 
 
 Quick start
@@ -95,9 +95,9 @@ sequences are listed by '[' and ']' keys, playback is started with a Space key.
 Psk/psa export
 ~~~~~~~~~~~~~~
 To load psk or psa into the 3ds Max you'll need ActorX Importer script created by me:
-http://www.gildor.org/projects/unactorx
+https://www.gildor.org/projects/unactorx
 It has own announcements thread here:
-http://www.gildor.org/smf/index.php/topic,228.0.html
+https://www.gildor.org/smf/index.php/topic,228.0.html
 
 Some meshes contains information which cannot fit into psk standard. For this reason I've
 extended the format to hold advanced information. Files in this format has extension pskx
@@ -115,9 +115,9 @@ skeleton hierarchy because Unreal engine uses hierarchy from the mesh, not from 
 animation. Some md5 viewers/importers does require md5anim hierarchy, some - does not.
 
 There is a 3ds Max md5mesh/md5anim importer script available on umodel forum:
-http://www.gildor.org/smf/index.php?topic=87.0
+https://www.gildor.org/smf/index.php?topic=87.0
 or here
-http://www.gildor.org/downloads
+https://www.gildor.org/downloads
 This script was originally created by der_ton, but was updated by me.
 
 Please note that psk/psa format is more powerful, and ActorX Importer script has much more

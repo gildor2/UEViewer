@@ -29,7 +29,7 @@ At the moment this library supports only Windows platform, however it was design
 STL support
 -----------
 
-The library was created specially for [UModel project](http://www.gildor.org/en/projects/umodel). Therefore it uses UModel internal structures
+The library was created specially for [UModel project](https://www.gildor.org/en/projects/umodel). Therefore it uses UModel internal structures
 to hold information, in particular - TArray and FString (these classes are inspired by Unreal engine API). To make library usable in other
 projects, we have created a special wrappers which could be found in [stl-stub](stl-stub) directory. Simply copy them to the main UI library
 folder, or set up compiler include paths to use these directories.

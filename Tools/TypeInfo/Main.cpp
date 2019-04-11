@@ -5,7 +5,7 @@
 
 //!! NOTE: UE3 has comments for properties, stored in package.UMetaData'MetaData'
 
-#define HOMEPAGE		"http://www.gildor.org/"
+#define HOMEPAGE		"https://www.gildor.org/"
 
 
 /*-----------------------------------------------------------------------------

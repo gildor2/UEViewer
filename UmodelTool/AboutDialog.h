@@ -47,7 +47,7 @@ public:
 			+ NewControl(UISpacer, 8)
 			+ NewControl(UIHyperLink, "Visit our website", GUmodelHomepage)
 			+ NewControl(UISpacer)
-			+ NewControl(UIHyperLink, "Donate", "http://www.gildor.org/en/donate")
+			+ NewControl(UIHyperLink, "Donate", "https://www.gildor.org/en/donate")
 			+ NewControl(UISpacer)
 			// close button
 			+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)

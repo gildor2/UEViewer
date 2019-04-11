@@ -713,7 +713,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 
 #if SUPPORT_PS4
 
-// Reference code taken from this forum thread: http://www.gildor.org/smf/index.php/topic,6221.0.html
+// Reference code taken from this forum thread: https://www.gildor.org/smf/index.php/topic,6221.0.html
 
 static void map_block_position(int x, int y, int w, int bx, int& xout, int& yout)
 {
