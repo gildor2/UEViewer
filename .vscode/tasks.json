@@ -8,7 +8,7 @@
 			"type": "shell",
 			"command": "./build.sh",
 			"windows": {
-				"command": "bash build.sh"
+				"command": "bash build.sh --debug"
 			},
 			"group": {
 				"kind": "build",

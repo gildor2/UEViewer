@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+12.04.2019
+- final UE4.22 support
+
 23.03.2019
 - changed default texture ("UV checker")
 

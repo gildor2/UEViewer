@@ -125,6 +125,27 @@ FArchive& operator<<(FArchive& Ar, FReferencePose& P)
 	unguard;
 }
 
+struct FSmartName
+{
+	FName DisplayName;
+
+	friend FArchive& operator<<(FArchive& Ar, FSmartName& N)
+	{
+		Ar << N.DisplayName;
+		if (FAnimPhysObjectVersion::Get(Ar) < FAnimPhysObjectVersion::RemoveUIDFromSmartNameSerialize)
+		{
+			uint16 UID;
+			Ar << UID;
+		}
+		if (FAnimPhysObjectVersion::Get(Ar) < FAnimPhysObjectVersion::SmartNameRefactorForDeterministicCooking)
+		{
+			FGuid Guid;
+			Ar << Guid;
+		}
+		return Ar;
+	}
+};
+
 FArchive& operator<<(FArchive& Ar, FSmartNameMapping& N)
 {
 	guard(FSmartNameMapping<<);
@@ -930,7 +951,16 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 			}
 
 			Ar << CompressedTrackToSkeletonMapTable;
-			Ar << CompressedCurveData;
+
+			if (Ar.Game < GAME_UE4(22))
+			{
+				Ar << CompressedCurveData;
+			}
+			else
+			{
+				TArray<FSmartName> CompressedCurveNames;
+				Ar << CompressedCurveNames;
+			}
 
 			if (Ar.Game >= GAME_UE4(17))
 			{
@@ -946,6 +976,13 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 
 			// compressed data
 			Ar << CompressedByteStream;
+
+			if (Ar.Game >= GAME_UE4(22))
+			{
+				FString CurveCodecPath;
+				TArray<byte> CompressedCurveByteStream;
+				Ar << CurveCodecPath << CompressedCurveByteStream;
+			}
 
 			// End of UAnimSequence::SerializeCompressedData()
 

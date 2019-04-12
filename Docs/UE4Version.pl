@@ -14,6 +14,7 @@
 	"../../../Engine/Public/SkeletalMeshTypes.h",	# for newer UE4 (post UE4.18)
 	"../../../Engine/Private/SkeletalMesh.cpp",		# for older UE4 version (UE4.18 and less)
 	"RenderingObjectVersion.h",
+	"AnimObjectVersion.h",
 	"AnimPhysObjectVersion.h",
 	"ReleaseObjectVersion.h",
 );

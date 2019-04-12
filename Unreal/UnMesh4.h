@@ -41,7 +41,7 @@ struct FReferenceSkeleton
 {
 	TArray<FMeshBoneInfo>	RefBoneInfo;
 	TArray<FTransform>		RefBonePose;
-	TMap<FName, int>		NameToIndexMap;
+	TMap<FName, int32>		NameToIndexMap;
 
 	friend FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S);
 };

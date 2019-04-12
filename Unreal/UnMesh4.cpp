@@ -507,7 +507,13 @@ struct FSkeletalMaterial
 		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
 		{
 			Ar << M.MaterialSlotName;
-			if (Ar.ContainsEditorData())
+			bool bSerializeImportedMaterialSlotName = Ar.ContainsEditorData();
+			if (FCoreObjectVersion::Get(Ar) >= FCoreObjectVersion::SkeletalMaterialEditorDataStripping)
+			{
+				// UE4.22+
+				Ar << bSerializeImportedMaterialSlotName;
+			}
+			if (bSerializeImportedMaterialSlotName)
 			{
 				FName ImportedMaterialSlotName;
 				Ar << ImportedMaterialSlotName;
@@ -1710,7 +1716,7 @@ struct FStaticMeshLODModel4
 
 		Ar << Lod.MaxDeviation;
 
-		if (Ar.Game < GAME_UE4(22))
+		if (Ar.Game < GAME_UE4(23))
 		{
 			if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(CDSF_MinLodData))
 			{
@@ -1742,7 +1748,7 @@ struct FStaticMeshLODModel4
 		unguard;
 	}
 
-	// Pre-UE4.22 code
+	// Pre-UE4.23 code
 	static void SerializeBuffersLegacy(FArchive& Ar, FStaticMeshLODModel4& Lod, const FStripDataFlags& StripFlags)
 	{
 		guard(FStaticMeshLODModel4::SerializeBuffersLegacy);
@@ -1795,7 +1801,8 @@ struct FStaticMeshLODModel4
 		unguard;
 	}
 
-	// UE4.22+. At the time of UE4.22, the function is exactly the same as SerializeBuffersLegacy (with exception of own
+	//todo: review comment, it has been written when I thought that those changes have to appear in 4.22, but they didn't
+	// UE4.23+. At the time of UE4.22, the function is exactly the same as SerializeBuffersLegacy (with exception of own
 	// FStripDataFlags), however I decided to split it to avoid later mess with newer engine updates.
 	static void SerializeBuffers(FArchive& Ar, FStaticMeshLODModel4& Lod)
 	{
@@ -1913,6 +1920,7 @@ no_nav_collision:
 	if (!StripFlags.IsEditorDataStripped())
 	{
 		DBG_STAT("Serializing %d SourceModels\n", SourceModels.Num());
+		assert(Ar.Game < GAME_UE4(22)); //todo: FEditorObjectVersion::StaticMeshDeprecatedRawMesh
 		for (int i = 0; i < SourceModels.Num(); i++)
 		{
 			// Serialize FRawMeshBulkData
@@ -1945,7 +1953,7 @@ no_nav_collision:
 
 		Lods.Serialize2<FStaticMeshLODModel4::Serialize>(Ar); // original code: TArray<FStaticMeshLODResources> LODResources
 
-		if (Ar.Game >= GAME_UE4(22))
+		if (Ar.Game >= GAME_UE4(23))
 		{
 			uint8 NumInlinedLODs;
 			Ar << NumInlinedLODs;
