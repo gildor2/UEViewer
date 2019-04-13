@@ -72,22 +72,18 @@ C runtime library for MSVC
 
 UModel is dynamically linked with CRT library, so it requires CRT DLL files to be installed onto your system. It is possible
 to statically link with you compiler's CRT by changing a line in *common.project* (with cost of growing executable file size):
-```
-LIBC = shared
-```
+
+    LIBC = shared
 
 to
 
-```
-LIBC = static
-```
+    LIBC = static
 
 UModel uses custom CRT library for being able to link against MSVCRT.DLL. MSVCRT.DLL is chosen because it allows to
 reduce size of UModel distribution without needs to install compiler runtime libraries on system - MSVCRT.DLL present on
 any Windows system. You may disable MSVCRT.DLL linking by commenting out line
-```
-OLDCRT = 1
-```
+
+    OLDCRT = 1
 
 Please note that custom CRT library will not be compatible with Visual Studio 2015, so it must be disabled in order to
 build with this or newer Visual Studio version. There's no needs to disable OLDCRT manually if you're correctly setting
