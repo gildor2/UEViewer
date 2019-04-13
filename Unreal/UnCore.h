@@ -2756,7 +2756,12 @@ struct FCoreObjectVersion
 		int ver = GetUE4CustomVersion(Ar, GUID);
 		if (ver >= 0)
 			return (Type)ver;
-
+		if (Ar.Game < GAME_UE4(12))
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game < GAME_UE4(15))
+			return (Type)1;
+		if (Ar.Game < GAME_UE4(22))
+			return (Type)2;
 		if (Ar.Game < GAME_UE4(23))
 			return SkeletalMaterialEditorDataStripping;
 		// NEW_ENGINE_VERSION
