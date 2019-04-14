@@ -312,10 +312,19 @@ void UIPackageDialog::InitUI()
 	[
 		NewMenuItem("Open folder content")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenFolderClicked, this))
-		+NewMenuItem("Export folder content")
+		+ NewMenuItem("Open folder content (append)")
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenAppendFolderClicked, this))
+		+ NewMenuItem("Export folder content")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportFolderClicked, this))
 		+ NewMenuItem("Save folder packages")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::SaveFolderPackages, this))
+		+ NewMenuSeparator()
+		+ NewMenuItem("Scan folder content")
+		.SetCallback(BIND_LAMBDA([this]() {
+				PackageList list;
+				GetPackagesForSelectedFolder(list);
+				ScanContent(list);
+			}))
 	];
 
 	ListMenu = new UIMenu;
@@ -443,7 +452,14 @@ void UIPackageDialog::InitUI()
 		NewMenuItem("Scan content")
 		.Enable(!ContentScanned)
 		.Expose(ScanContentMenu)
-		.SetCallback(BIND_MEMBER(&UIPackageDialog::ScanContent, this))
+		.SetCallback(BIND_LAMBDA([this]() {
+				if (ScanContent(Packages))
+				{
+					// finished - no needs to perform scan again, disable button
+					ContentScanned = true;
+					ScanContentMenu->Enable(false);
+				}
+			}))
 		+ NewMenuItem("Scan versions")
 		.SetCallback(BIND_STATIC(&ShowPackageScanDialog))
 		+ NewMenuSeparator()
@@ -738,23 +754,16 @@ void UIPackageDialog::SortPackages()
 	Content tools
 -----------------------------------------------------------------------------*/
 
-void UIPackageDialog::ScanContent()
+bool UIPackageDialog::ScanContent(const PackageList& packageList)
 {
 	UIProgressDialog progress;
 	progress.Show("Scanning packages");
 	progress.SetDescription("Scanning package");
 
 	// perform scan
-	bool done = ::ScanContent(Packages, &progress);
+	bool done = ::ScanContent(packageList, &progress);
 
 	progress.CloseDialog();
-
-	if (done)
-	{
-		// finished - no needs to perform scan again, disable button
-		ContentScanned = true;
-		ScanContentMenu->Enable(false);
-	}
 
 	// Refresh package list anyway, even for partially scanned content
 	SortPackages();
@@ -762,6 +771,8 @@ void UIPackageDialog::ScanContent()
 	// update package list with new data
 	UpdateSelectedPackages();
 	RefreshPackageListbox();
+
+	return done;
 }
 
 
@@ -846,6 +857,13 @@ void UIPackageDialog::OnOpenFolderClicked()
 	SelectedPackages.Empty();
 	GetPackagesForSelectedFolder(SelectedPackages);
 	CloseDialog(OPEN, true);
+}
+
+void UIPackageDialog::OnOpenAppendFolderClicked()
+{
+	SelectedPackages.Empty();
+	GetPackagesForSelectedFolder(SelectedPackages);
+	CloseDialog(APPEND, true);
 }
 
 void UIPackageDialog::OnExportFolderClicked()

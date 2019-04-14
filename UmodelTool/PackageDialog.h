@@ -60,10 +60,11 @@ protected:
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 	void OnColumnClick(UIMulticolumnListbox* sender, int column);
 	void OnOpenFolderClicked();
+	void OnOpenAppendFolderClicked();
 	void OnExportFolderClicked();
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
-	void ScanContent();
+	bool ScanContent(const PackageList& packageList);
 	void SavePackages();
 	void SaveFolderPackages();
 	void CopyPackagePaths();
