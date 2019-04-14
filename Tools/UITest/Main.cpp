@@ -6,12 +6,14 @@ class TestDialog : public UIBaseDialog
 public:
 	void Show()
 	{
+		SetResizeable();
+
 		value1 = false;
 		value2 = true;
 		value3 = 0;
 		tabIndex = 0;
 //		ShowModal("UI Test", 0, 0);
-		ShowModal("UI Test", 470, 350);
+		ShowModal("UI Test", 600, 500);
 		printf("v1=%d v2=%d v3=%d\n", value1, value2, value3);
 		printf("Text: [%s]\n", *text);
 	}
@@ -68,7 +70,7 @@ public:
 				NewControl(UIGroup, GROUP_NO_BORDER)
 				.SetWidth(70)
 				[
-					NewControl(UIHyperLink, "Test link", "http://www.gildor.org/")
+					NewControl(UIHyperLink, "Test link", "https://www.gildor.org/")
 					+ NewControl(UIBitmap)
 						.SetWidth(64)
 						.SetHeight(64)
@@ -250,34 +252,56 @@ class TestDialog2 : public UIBaseDialog
 public:
 	void Show()
 	{
+		SetResizeable();
 		Bool = true;
 		Text = "Some Text";
-		ShowModal("UI Test", 200, 100);
+		ShowModal("UI Test", -1, -1);
 	}
 
 	virtual void InitUI()
 	{
 		(*this)
 		[
-			NewControl(UILabel, "Label")
-#if 1
-			+ NewControl(UIGroup, "Group")
+			NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 			[
-				NewControl(UITextEdit, &Text)
-				.SetHeight(-1)
-//				.SetHeight(10)
+				NewControl(UICheckbox, "Flat view", false)
+				.SetCallback(BIND_LAMBDA([this](UICheckbox*, bool value) { pager->SetActivePage((int)value); } ))
+				+ NewControl(UISpacer)
+				+ NewControl(UILabel, "Filter:")
+					.SetY(2)
+					.SetAutoSize()
+				+ NewControl(UITextEdit, "some text")
+					.SetWidth(120)
 			]
+#if 1
+			+ NewControl(UIPageControl)
+				.Expose(pager)
 #else
-			+ NewControl(UITextEdit, &Text)
-			.SetHeight(-1)
+			+ NewControl(UIGroup, "Hehe")
 #endif
-			+ NewControl(UICheckbox, "Checkbox", &Bool)
-			+ NewControl(UIButton, "Button")
+				.SetHeight(EncodeWidth(1.0f))
+			[
+				// page 0: TreeView + ListBox
+				NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+				.SetHeight(EncodeWidth(1.0f))
+				[
+					NewControl(UITreeView)
+						.SetRootLabel("Game")
+						.SetWidth(EncodeWidth(0.3f))
+						.SetHeight(-1)
+						.UseFolderIcons()
+						.SetItemHeight(20)
+					+ NewControl(UIMulticolumnListbox, 3)
+				]
+				// page 1: single ListBox
+				+ NewControl(UIMulticolumnListbox, 3)
+			]
 		];
 	}
 
 	FString Text;
 	bool Bool;
+	UIPageControl* pager;
 };
 
 int main()
