@@ -279,13 +279,15 @@ UIPackageDialog::UIPackageDialog()
 UIPackageDialog::EResult UIPackageDialog::Show()
 {
 	ModalResult = CANCEL;
+	DontGetSelectedPackages = false;
 
 	ShowModal("Choose a package to open", 750, 550);
 
-	if (ModalResult != CANCEL)
+	if (ModalResult != CANCEL && !DontGetSelectedPackages)
 	{
 		UpdateSelectedPackages();
 	}
+	DontGetSelectedPackages = false;
 
 	return ModalResult;
 }
@@ -308,7 +310,9 @@ void UIPackageDialog::InitUI()
 	TreeMenu = new UIMenu;
 	(*TreeMenu)
 	[
-		NewMenuItem("Export folder content")
+		NewMenuItem("Open folder content")
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnOpenFolderClicked, this))
+		+NewMenuItem("Export folder content")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::OnExportFolderClicked, this))
 		+ NewMenuItem("Save folder packages")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::SaveFolderPackages, this))
@@ -327,6 +331,9 @@ void UIPackageDialog::InitUI()
 		+ NewMenuSeparator()
 		+ NewMenuItem("Save packages")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::SavePackages, this))
+		+ NewMenuSeparator()
+		+ NewMenuItem("Copy package path")
+		.SetCallback(BIND_MEMBER(&UIPackageDialog::CopyPackagePaths, this))
 	];
 
 	(*this)
@@ -502,9 +509,10 @@ UIPackageList& UIPackageDialog::CreatePackageListControl(bool StripPath)
 	return List;
 }
 
-void UIPackageDialog::CloseDialog(EResult Result)
+void UIPackageDialog::CloseDialog(EResult Result, bool bDontGetSelectedPackages)
 {
 	ModalResult = Result;
+	DontGetSelectedPackages = bDontGetSelectedPackages;
 	UIBaseDialog::CloseDialog(false);
 }
 
@@ -833,6 +841,12 @@ void UIPackageDialog::OnColumnClick(UIMulticolumnListbox* sender, int column)
 	SortPackages();
 }
 
+void UIPackageDialog::OnOpenFolderClicked()
+{
+	SelectedPackages.Empty();
+	GetPackagesForSelectedFolder(SelectedPackages);
+	CloseDialog(OPEN, true);
+}
 
 void UIPackageDialog::OnExportFolderClicked()
 {
@@ -883,5 +897,24 @@ void UIPackageDialog::OnBeforeListMenuPopup()
 	}
 }
 
+void UIPackageDialog::CopyPackagePaths()
+{
+	FStaticString<MAX_PACKAGE_PATH> ToCopy;
+
+	// We are using selection, so update it.
+	UpdateSelectedPackages();
+	for (const CGameFileInfo* package : SelectedPackages)
+	{
+		FStaticString<MAX_PACKAGE_PATH> Path;
+		package->GetRelativeName(Path);
+		if (!ToCopy.IsEmpty())
+		{
+			// Multiple file names
+			ToCopy += "\n";
+		}
+		ToCopy += Path;
+	}
+	appCopyTextToClipboard(*ToCopy);
+}
 
 #endif // HAS_UI

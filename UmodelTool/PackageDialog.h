@@ -41,6 +41,8 @@ protected:
 	bool			UseFlatView;
 	bool			DirectorySelected;
 	bool			ContentScanned;
+	// when true, CloseDialog will not reevaluate SelectedPackages
+	bool			DontGetSelectedPackages;
 	FStaticString<64>  PackageFilter;
 	FStaticString<256> SelectedDir;
 
@@ -49,7 +51,7 @@ protected:
 
 	PackageList		Packages;
 
-	void CloseDialog(EResult Result);
+	void CloseDialog(EResult Result, bool bDontGetSelectedPackages = false);
 
 	void OnBeforeListMenuPopup();
 	void OnTreeItemSelected(UITreeView* sender, const char* text);
@@ -57,12 +59,14 @@ protected:
 	void OnFlatViewChanged(UICheckbox* sender, bool value);
 	void OnPackageDblClick(UIMulticolumnListbox* sender, int value);
 	void OnColumnClick(UIMulticolumnListbox* sender, int column);
+	void OnOpenFolderClicked();
 	void OnExportFolderClicked();
 	void OnFilterTextChanged(UITextEdit* sender, const char* text);
 
 	void ScanContent();
 	void SavePackages();
 	void SaveFolderPackages();
+	void CopyPackagePaths();
 
 	void UpdateSelectedPackages();
 	void GetPackagesForSelectedFolder(PackageList& OutPackages);

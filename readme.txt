@@ -199,6 +199,9 @@ detex
 
 Changes
 ~~~~~~~
+14.04.2019
+- UI improvements for package dialog: added "open" action for folder, added "copy path" action for package list
+
 12.04.2019
 - final UE4.22 support
 
