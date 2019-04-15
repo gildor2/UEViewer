@@ -255,7 +255,7 @@ for arg in "$@"; do		# using quoted $@ will allow to correctly separate argument
 		usage
 		;;
 	--64)
-		buildopt=vc-win64
+		buildopt=--64
 		;;
 	--nobuild)
 		nobuild=1

@@ -51,8 +51,10 @@ To launch a build process without a batch, simply execute
 
 ### Windows 64-bit
 Despite we're providing only 32-but builds of UModel, it is possible to compile it for 64-bit platform. To do that, you
-should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-win32` to `vc-win64`. Please note that
-64-bit SDL2.dll is not present in this git repository, you should download this library by yourself.
+should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-win32` to `vc-win64`. Also 64-bit build could
+be initiated with *--64* option for *build.sh*.
+
+Please note that 64-bit SDL2.dll is not present in this git repository, you should download this library by yourself.
 
 ### Linux
 

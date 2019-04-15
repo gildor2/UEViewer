@@ -10,8 +10,12 @@ while [ "$1" ]; do
 			vc_ver=$2
 			shift 2
 			;;
+		--64)
+			PLATFORM="vc-win64"
+			shift
+			;;
 		*)
-			echo "Usage: build.sh [--debug] [--vc <version>]"
+			echo "Usage: build.sh [--debug] [--vc <version>] [--64]"
 			exit
 			;;
 	esac
@@ -50,16 +54,11 @@ last_revision=${last_revision##* }		# cut "#define ..."
 
 #-------------------------------------------------------------
 
-PLATFORM="vc-win32"
-#PLATFORM="vc-win64"
-#PLATFORM="mingw32" - not implemented yet
+[ "$PLATFORM" ] || PLATFORM="vc-win32"
 
 # force PLATFORM=linux under Linux OS
 [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
 #[ "$PLATFORM" == "linux" ] && PLATFORM="linux64"
-
-# allow platform overriding from command line
-[ "$1" ] && PLATFORM=$1
 
 # setup default compiler version
 [ "$vc_ver" ] || vc_ver=2013
@@ -90,7 +89,6 @@ fi
 
 # prepare makefile parameters, store in obj directory
 projectName=${project##*/}
-echo [$project] [$projectName]
 makefile="$root/obj/makefile-$projectName-$PLATFORM"
 if ! [ -d $root/obj ]; then
 	mkdir $root/obj
