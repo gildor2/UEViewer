@@ -20,6 +20,7 @@ OLDCRT     = 1				# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
 #	Compiler-specific options
 #------------------------------------------------
 
+STDDEFS    =				# common defines
 WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), empty by default
 
 !if "$COMPILER" eq "VisualC"
@@ -29,7 +30,8 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 #	WARNINGS += -W4										# maximal warning level for Visual C++
 	WDKCRT = $R/../Libs/msvcrt
 	!if "$OLDCRT" eq "1" && -e "$WDKCRT/msvcrt.project"
-		DEFINES += OLDCRT
+		STDDEFS += OLDCRT								# used in code to distinguish which functions are available
+		STDDEFS += _NO_CRT_STDIO_INLINE					# UCRT (VS 2015+): without that, all printf functions will use some "common" function
 		!include $WDKCRT/msvcrt.project
 	!endif
 	LINKFLAGS += -largeaddressaware						# allow 32-bit build to use more than 2Gb or RAM
@@ -61,6 +63,7 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 !endif
 
 
+DEFINES = $STDDEFS
 #OPTIONS += -analyze
 
 #------------------------------------------------
@@ -90,7 +93,7 @@ pop(INCLUDES)
 push(DEFINES)
 push(INCLUDES)
 
-DEFINES = DYNAMIC_CRC_TABLE BUILDFIXED NO_GZIP
+DEFINES = $STDDEFS DYNAMIC_CRC_TABLE BUILDFIXED NO_GZIP
 INCLUDES = $R/libs/include
 
 sources(UE3_LIBS) = {
@@ -107,7 +110,7 @@ sources(UE3_LIBS) = {
 
 # ... PNG for compressed source textures
 INCLUDES += $R/libs/zlib
-DEFINES = PNG_USER_CONFIG
+DEFINES = $STDDEFS PNG_USER_CONFIG
 sources(UE3_LIBS) = {
 	$R/libs/libpng/*.c
 }

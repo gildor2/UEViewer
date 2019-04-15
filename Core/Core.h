@@ -359,6 +359,12 @@ FORCEINLINE void operator delete(void* ptr)
 	appFree(ptr);
 }
 
+// C++17 (delete with alignment)
+FORCEINLINE void operator delete(void* ptr, size_t)
+{
+	appFree(ptr);
+}
+
 FORCEINLINE void operator delete[](void* ptr)
 {
 	appFree(ptr);
