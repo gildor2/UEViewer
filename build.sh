@@ -74,19 +74,30 @@ fi
 [ "$root"    ] || root="."
 [ "$render"  ] || render=1
 
-makefile="makefile-$PLATFORM"
-if [ "$debug" ]; then
-	makefile="${makefile}-debug"
-	GENMAKE_OPTIONS="$GENMAKE_OPTIONS DEBUG=1"
-fi
-
 # build shader includes before call to genmake
 if [ $render -eq 1 ]; then
+	# 'cd' calls below won't work if we're not calling from the project's root
+	if [ "$root" != "." ]; then
+		echo "Bad 'root'"
+		exit 1
+	fi
 	# build shaders
 	#?? move to makefile
 	cd "Unreal/Shaders"
 	./make.pl
 	cd "../.."
+fi
+
+# prepare makefile parameters, store in obj directory
+projectName=${project##*/}
+echo [$project] [$projectName]
+makefile="$root/obj/makefile-$projectName-$PLATFORM"
+if ! [ -d $root/obj ]; then
+	mkdir $root/obj
+fi
+if [ "$debug" ]; then
+	makefile="${makefile}-debug"
+	GENMAKE_OPTIONS="$GENMAKE_OPTIONS DEBUG=1"
 fi
 
 # update makefile when needed
