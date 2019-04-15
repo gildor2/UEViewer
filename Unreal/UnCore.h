@@ -423,7 +423,6 @@ enum EGame
 		GAME_Lawbreakers = GAME_UE4(13)+1,
 		GAME_StateOfDecay2 = GAME_UE4(13)+2,
 		// 4.14
-		GAME_Friday13 = GAME_UE4(14)+1,
 		GAME_Tekken7 = GAME_UE4(14)+2,
 		// 4.19
 		GAME_Paragon = GAME_UE4(19)+1,
@@ -937,6 +936,7 @@ protected:
 // research helper
 inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes, const char* Label = NULL)
 {
+	guard(DUMP_ARC_BYTES);
 	if (Label) appPrintf("%s:", Label);
 	int64 OldPos = Ar.Tell64();
 	for (int i = 0; i < NumBytes; i++)
@@ -950,6 +950,7 @@ inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes, const char* Label = NULL)
 	}
 	appPrintf("\n");
 	Ar.Seek64(OldPos);
+	unguard;
 }
 
 inline void DUMP_MEM_BYTES(const void* Data, int NumBytes)
@@ -2581,8 +2582,8 @@ struct FFrameworkObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-#if FRIDAY13 || TEKKEN7
-		if (Ar.Game == GAME_Friday13 || Ar.Game == GAME_Tekken7) return (Type)14;		// pre-UE4.14
+#if TEKKEN7
+		if (Ar.Game == GAME_Tekken7) return (Type)14;		// pre-UE4.14
 #endif
 
 		if (Ar.Game < GAME_UE4(12))
@@ -2642,8 +2643,8 @@ struct FEditorObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-#if FRIDAY13 || TEKKEN7
-		if (Ar.Game == GAME_Friday13 || Ar.Game == GAME_Tekken7) return (Type)7;		// pre-UE4.14
+#if TEKKEN7
+		if (Ar.Game == GAME_Tekken7) return (Type)7;		// pre-UE4.14
 #endif
 
 		if (Ar.Game < GAME_UE4(12))
@@ -2797,8 +2798,8 @@ struct FRenderingObjectVersion
 		if (ver >= 0)
 			return (Type)ver;
 
-#if FRIDAY13 || TEKKEN7
-		if (Ar.Game == GAME_Friday13 || Ar.Game == GAME_Tekken7) return (Type)9;		// pre-UE4.14
+#if TEKKEN7
+		if (Ar.Game == GAME_Tekken7) return (Type)9;		// pre-UE4.14
 #endif
 
 		if (Ar.Game < GAME_UE4(12))

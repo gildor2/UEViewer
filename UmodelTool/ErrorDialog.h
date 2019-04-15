@@ -62,7 +62,7 @@ public:
 					+ NewControl(UIButton, "Copy")
 					.SetWidth(80)
 					.SetCallback(BIND_STATIC(&UIErrorDialog::CopyToClipboard))
-//					.SetCallback(BIND_STATIC([]() { appCopyTextToClipboard(GErrorHistory); })) - error in VS2013
+//					.SetCallback(BIND_LAMBDA([]() { appCopyTextToClipboard(GErrorHistory); })) - error in VS2013
 				]
 			]
 		];

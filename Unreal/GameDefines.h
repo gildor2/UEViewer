@@ -149,7 +149,6 @@
 #if UNREAL4
 
 #define GEARS4			1		// Gears of War 4
-#define FRIDAY13		1		// Friday the 13th: The Game
 #define TEKKEN7			1		// Tekken 7
 #define LAWBREAKERS		1		// Lawbreakers
 #define SOD2			1		// State of Decay 2

@@ -1006,6 +1006,8 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 // CompressedByteStream before translation and rotation. In other words, data reordered, but
 // offsets pointed to original data. Here we're reordering data back, duplicating functionality
 // of AEFPerTrackCompressionCodec::ByteSwapOut().
+// The bug was reported to Epic at UDN: https://udn.unrealengine.com/questions/488635/view.html
+// and it seems it was already fixed for UE4.23.
 void UAnimSequence4::TransferPerTrackData(TArray<uint8>& Dst, const TArray<uint8>& Src)
 {
 	guard(UAnimSequence4::TransferPerTrackData);

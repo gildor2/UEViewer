@@ -42,6 +42,7 @@
 		"uexp",
 		"unguardf",
 		"unversioned",
+		"recurse",
 		"uv"
 	]
 }

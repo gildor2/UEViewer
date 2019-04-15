@@ -835,9 +835,9 @@ tag_ok:
 		SerializePackageFileSummary2(Ar, *this);
 
 #if DEBUG_PACKAGE
-	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", S.EngineVersion, S.CookerVersion, S.CompressionFlags, S.CompressedChunks.Num());
-	appPrintf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", S.NameOffset, S.NameCount, S.ExportOffset, S.ExportCount, S.ImportOffset, S.ImportCount);
-	appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", S.HeadersSize, *S.PackageGroup, S.DependsOffset, S.U3unk60);
+	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", EngineVersion, CookerVersion, CompressionFlags, CompressedChunks.Num());
+	appPrintf("Names:%X[%d] Exports:%X[%d] Imports:%X[%d]\n", NameOffset, NameCount, ExportOffset, ExportCount, ImportOffset, ImportCount);
+	appPrintf("HeadersSize:%X Group:%s DependsOffset:%X U60:%X\n", HeadersSize, *PackageGroup, DependsOffset, U3unk60);
 #endif
 
 	return true;
