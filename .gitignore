@@ -11,6 +11,7 @@ UmodelTool/Version.h
 Tools/**/makefile-*
 
 # Other ignores
+Docs/cmdline.cfg
 Tools/MaxActorXImport/ActorXImporter.ini
 Tools/UT2down/
 

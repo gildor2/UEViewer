@@ -19,22 +19,11 @@
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		},
 		{
-			"name": "Game: Paragon",
+			"name": "Volatile (cmdline.cfg)",
 			"type": "cppvsdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/umodel.exe",
-			"args": [ "C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks", "-game=paragon" ],
-			"cwd": "${workspaceFolder}",
-			"externalConsole": false,
-			"logging": { "moduleLoad": false },
-			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
-		},
-		{
-			"name": "Game: Shooter Game",
-			"type": "cppvsdbg",
-			"request": "launch",
-			"program": "${workspaceFolder}/umodel.exe",
-			"args": [ "C:/TEMP/UE4_Packaged/WindowsNoEditor/ShooterGame/Content/Paks", "-game=ue4.22" ],
+			"args": [ "@${workspaceFolder}/docs/cmdline.cfg" ],
 			"cwd": "${workspaceFolder}",
 			"externalConsole": false,
 			"logging": { "moduleLoad": false },

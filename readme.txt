@@ -55,6 +55,9 @@ You could also drag a package file (.upk, .xxx, .ukx etc) to umodel's icon to la
 the application. However default settings will be used in this case, so if game requires
 some compatibility options, this will not work.
 
+You may also use response file to provide command line arguments. More info is in Wiki page:
+https://github.com/gildor2/UModel/wiki/Response-file
+
 
 GUI
 ~~~
@@ -199,6 +202,10 @@ detex
 
 Changes
 ~~~~~~~
+16.04.2019
+- added response file support, more info: https://github.com/gildor2/UModel/wiki/Response-file
+  - usage: umodel @response.txt
+
 14.04.2019
 - improved package dialog:
   - added "open" actions for folder

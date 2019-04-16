@@ -325,6 +325,7 @@ static void PrintUsage()
 #if HAS_UI
 			"       umodel [command] [options] <directory>\n"
 #endif
+			"       umodel @<response_file>\n"
 			"\n"
 			"    <package>       name of package to load - this could be a file name\n"
 			"                    with or without extension, or wildcard\n"
@@ -654,9 +655,17 @@ static void TestStrings()
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
 #define OPT_VALUE(name,var,value)		{ name, (byte*)&var, value },
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
 	appInitPlatform();
+
+	if (argc == 2 && argv[1][0] == '@')
+	{
+		// Should read command line from a file
+		const char* appName = argv[0];
+		appParseResponseFile(argv[1]+1, argc, argv);
+		argv[0] = appName;
+	}
 
 #if PRIVATE_BUILD
 	appPrintf("PRIVATE BUILD\n");
@@ -982,7 +991,6 @@ int main(int argc, char **argv)
 					{
 						failed = true;
 					}
-					
 				}
 				if (!failed)
 				{
