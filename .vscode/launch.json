@@ -36,7 +36,6 @@
 			"program": "${workspaceFolder}/umodel.exe",
 			"args": [ "C:/TEMP/UE4_Packaged/WindowsNoEditor/ShooterGame/Content/Paks", "-game=ue4.22" ],
 			"cwd": "${workspaceFolder}",
-			"cwd": "${workspaceFolder}",
 			"externalConsole": false,
 			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
