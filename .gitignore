@@ -23,6 +23,7 @@ umodel.cfg
 
 # Executable files and pdb
 umodel.pdb
+SDL2.dll
 .vs/
 Tools/**/*.exe
 Tools/**/*.pdb

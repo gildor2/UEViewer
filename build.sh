@@ -106,9 +106,11 @@ $root/Tools/genmake $project.project TARGET=$PLATFORM $GENMAKE_OPTIONS > $makefi
 case "$PLATFORM" in
 	"vc-win32")
 		vc32tools --make $makefile || exit 1
+		cp $root/libs/SDL2/x86/SDL2.dll .
 		;;
 	"vc-win64")
 		vc32tools --64 --make $makefile || exit 1
+		cp $root/libs/SDL2/x64/SDL2.dll .
 		;;
 	"mingw32"|"cygwin")
 		PATH=/bin:/usr/bin:$PATH			# configure paths for Cygwin
