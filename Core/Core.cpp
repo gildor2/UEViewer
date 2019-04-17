@@ -515,8 +515,10 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 			if (*s == '#' || *s == ';')
 			{
 				s++;
-				while (*s != 0 && *s != '\r' && *s != '\n')
+				while (*s != 0 && *s != '\n')
+				{
 					s++;
+				}
 				continue;
 			}
 			// Parameter
@@ -525,7 +527,7 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 				s++; // skip quote
 				// Process quoted strings
 				if (pass) outArgv[argc] = s;
-				while (*s != '"' && *s != 0)
+				while (*s != '"' && *s != 0 && *s != '\n')
 				{
 					s++;
 				}
@@ -539,7 +541,24 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 				if (pass) outArgv[argc] = s;
 				while (!isspace(*s) && *s != 0)
 				{
-					s++;
+					if (*s == '"')
+					{
+						// Quotes in the middle of parameter (-path="..." etc) - include spaces
+						s++;
+						while (*s != '"'&& *s != '\n' && *s != 0)
+						{
+							s++;
+						}
+						if (*s == '"')
+						{
+							// Skip closing quote so it won't be erased
+							s++;
+						}
+					}
+					else
+					{
+						s++;
+					}
 				}
 				if (pass) *s = 0;
 				s++; // skip space

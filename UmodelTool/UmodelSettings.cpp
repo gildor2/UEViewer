@@ -15,20 +15,23 @@
 static void SetPathOption(FString& where, const char* value)
 {
 	// determine whether absolute path is used
-	const char* value2;
+	FStaticString<512> value2;
+	if (*value == '"')
+	{
+		// path enclosed into double quotes
+		value2 = value+1;
+		// remove closing quote
+		value2.RemoveFromEnd("\"");
+	}
 
 #if _WIN32
-	int isAbsPath = (value[0] != 0) && (value[1] == ':');
+	int isAbsPath = (!value2.IsEmpty() && (value2[1] == ':'));
 #else
-	int isAbsPath = (value[0] == '~' || value[0] == '/');
+	int isAbsPath = (!value2.IsEmpty() && (value2[0] == '~' || value2[0] == '/'));
 #endif
-	if (isAbsPath)
+	if (!isAbsPath)
 	{
-		value2 = value;
-	}
-	else
-	{
-		// relative path
+		// relative path, combine with working directory
 		char path[512];
 #if _WIN32
 		if (!getcwd(ARRAY_ARG(path)))
@@ -46,20 +49,22 @@ static void SetPathOption(FString& where, const char* value)
 		}
 #endif
 
-		if (!value || !value[0])
+		if (value2.IsEmpty())
 		{
+			// empty path - use working directory
 			value2 = path;
 		}
 		else
 		{
+			// relative path - prepend working directory
 			char buffer[512];
-			appSprintf(ARRAY_ARG(buffer), "%s/%s", path, value);
+			appSprintf(ARRAY_ARG(buffer), "%s/%s", path, *value2);
 			value2 = buffer;
 		}
 	}
 
 	char finalName[512];
-	appStrncpyz(finalName, value2, ARRAY_COUNT(finalName)-1);
+	appStrncpyz(finalName, *value2, ARRAY_COUNT(finalName)-1);
 	appNormalizeFilename(finalName);
 
 	where = finalName;

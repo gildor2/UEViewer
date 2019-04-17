@@ -659,14 +659,6 @@ int main(int argc, const char **argv)
 {
 	appInitPlatform();
 
-	if (argc == 2 && argv[1][0] == '@')
-	{
-		// Should read command line from a file
-		const char* appName = argv[0];
-		appParseResponseFile(argv[1]+1, argc, argv);
-		argv[0] = appName;
-	}
-
 #if PRIVATE_BUILD
 	appPrintf("PRIVATE BUILD\n");
 #endif
@@ -683,6 +675,14 @@ int main(int argc, const char **argv)
 #endif
 
 	guard(Main);
+
+	if (argc == 2 && argv[1][0] == '@')
+	{
+		// Should read command line from a file
+		const char* appName = argv[0];
+		appParseResponseFile(argv[1]+1, argc, argv);
+		argv[0] = appName;
+	}
 
 	// display usage
 #if !HAS_UI
