@@ -622,7 +622,7 @@ public:
 				E.CompressionMethod = CompressionMethodIndex > 0 ? info.CompressionMethods[CompressionMethodIndex-1] : 0;
 			}
 
-			unguard("Index=%d/%d", i, count);
+			unguardf("Index=%d/%d", i, count);
 		}
 		if (count >= MIN_PAK_SIZE_FOR_HASHING)
 		{

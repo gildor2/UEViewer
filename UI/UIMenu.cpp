@@ -441,7 +441,7 @@ void UIMenuItem::Update()
 			guard(RadioGroup);
 			bool checked = (button->iValue == *(int*)pValue);
 			CheckMenuItem(hMenu, button->Id, MF_BYCOMMAND | (checked ? MF_CHECKED : 0));
-			unguard("\"%s\"", *button->Label);
+			unguardf("\"%s\"", *button->Label);
 		}
 		break;
 	case MI_Submenu:

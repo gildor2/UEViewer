@@ -23,6 +23,10 @@ static void SetPathOption(FString& where, const char* value)
 		// remove closing quote
 		value2.RemoveFromEnd("\"");
 	}
+	else
+	{
+		value2 = value;
+	}
 
 #if _WIN32
 	int isAbsPath = (!value2.IsEmpty() && (value2[1] == ':'));
