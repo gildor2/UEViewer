@@ -52,6 +52,8 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 	OPTIONS   += {
 		# disable some warnings
 		-Wno-invalid-offsetof							#?? this flag is for C++ only, not for C
+		# enable some warnings
+		-Wunused-value									# warning about expression which is occasionally typed in code and not used anywhare
 	}
 !endif
 
