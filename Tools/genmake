@@ -85,7 +85,7 @@ at a time of registration of source files
 	DEFINES		= define1[=1] [define2 define3 ...]
 	INCLUDES	= path1 [path2 path3 ...]
 	OBJDIR		= directory for obj files (if not specified, obj files will be placed near c/cpp files)
-	WARNLEVEL	= num					compiler warning level (0 - disable; 1 - max; 2+ - less)
+	WARNLEVEL	= num					compiler warning level (0 - disable; 1 - min; 2 - more, max for VC=4, for gcc=2)
 	OPTIMIZE	= size | speed | none
 	INLINES		= no | explicit | all	expanding inlines: disabled | explicit only | any suitable
 	OPTIONS		= string				compiler-dependent: extra options for command line
@@ -674,9 +674,9 @@ sub AddObjectList {
 				if ($opt eq "0") {
 					$options .= " -w";					# disable warnings
 				} elsif ($opt eq "1") {
-					$options .= " -Wall -Wextra";		# max warning level
-				} else { #if ($opt eq "2")
 					$options .= " -Wall";				# all & !extra ...
+				} else { #if ($opt eq "2")
+					$options .= " -Wall -Wextra";		# max warning level
 				}
 			}
 			# optimization strategy
