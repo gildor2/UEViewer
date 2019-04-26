@@ -64,10 +64,10 @@ last_revision=${last_revision##* }		# cut "#define ..."
 [ "$vc_ver" ] || vc_ver=2013
 export vc_ver
 
-GENMAKE_OPTIONS=
-if [ $vc_ver -ge 2015 ]; then
-	GENMAKE_OPTIONS=OLDCRT=0
-fi
+GENMAKE_OPTIONS=VC_VER=$vc_ver
+#if [ $vc_ver -ge 2015 ]; then
+#	GENMAKE_OPTIONS=OLDCRT=0						# previously OLDCRT wasn't usable with VC2015 or newer
+#fi
 
 [ "$project" ] || project="UmodelTool/umodel"		# setup default prohect name
 [ "$root"    ] || root="."

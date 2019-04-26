@@ -33,6 +33,10 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 		STDDEFS += OLDCRT								# used in code to distinguish which functions are available
 		STDDEFS += _NO_CRT_STDIO_INLINE					# UCRT (VS 2015+): without that, all printf functions will use some "common" function
 		!include $WDKCRT/msvcrt.project
+		!if "$VC_VER" >= 2015							# support for OLDCRT with modern compliers
+			OPTIONS += -Zc:threadSafeInit-				# disable calls to C++11 thread-safe static object initializers
+			STDDEFS += _ACRTIMP_ALT=					# remove dllimport from some CRT functions (there're just a few)
+		!endif
 	!endif
 	LINKFLAGS += -largeaddressaware						# allow 32-bit build to use more than 2Gb or RAM
 !endif

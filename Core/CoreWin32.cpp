@@ -519,4 +519,32 @@ void appCopyTextToClipboard(const char* text)
 }
 
 
+#if defined(OLDCRT) && (_MSC_VER  >= 1900)
+
+// Support OLDCRT with VC2015 or newer. VC2015 switched to another CRT model called "Universal CRT".
+// It has some incompatibilities in header files.
+
+// Access stdin/stdout/stderr.
+// UCRT uses __acrt_iob_func(). Older CRT used __iob_func. Also, older CRT used "_iobuf" structure with
+// alias "FILE", however "FILE" in UCRT is just a pointer to something internal structure.
+
+// Define __iob_func locally because it is missing in UCRT
+extern "C" __declspec(dllimport) FILE* __cdecl __iob_func();
+
+// Size of FILE structure for VS2013 and older
+enum { CRT_FILE_SIZE = (sizeof(char*)*3 + sizeof(int)*5) };
+
+// Note that originally this function has dll linkage. We're removing it with _ACRTIMP_ALT="" define
+// in project settings. It is supposed to work correctly as stated in include/.../ucrt/corecrt.h
+// Without that define, both compiler and linker will issue warnings about inconsistent dll linkage.
+// Code would work, however compiler will generate call to __acrt_iob_func via function pointer, and
+// it will add this function to executable exports.
+
+extern "C" FILE* __cdecl __acrt_iob_func(unsigned Index)
+{
+	return (FILE*)((char*)__iob_func() + Index * CRT_FILE_SIZE);
+}
+
+#endif // OLDCRT
+
 #endif // _WIN32
