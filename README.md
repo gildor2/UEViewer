@@ -28,14 +28,15 @@ using 'nmake' for Visual Studio or 'make' for gcc. Build process is controlled w
 To list all options, run `build.sh --help`. Current options are:
 - `--64` compile for Windows 64bit
 - `--debug` make a debug version of executable
-- `--vc <version>` specify which Visual Studio version should be used for compilation
+- `--vc <version>` specify which Visual Studio version should be used for compilation, default is latest compiler
+  installed on your system
 
 ### Windows 32-bit
 
 UModel is compiled using Visual Studio. Required VisualStudio 2013 or newer. Older Visual Studio compilers are
 not suitable because UModel's code using some C++11 stuff.
 
-Currently build is performed with Visual C++ 2013.
+Currently build is performed with Visual C++ 2019.
 
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
 of these tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You can get everything what you need
@@ -66,7 +67,7 @@ This system has everything what is required for build by default. You'll only ne
 
 ### Visual Studio Code
 UModel contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/).
-Just open umodel's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up.
+Just open UModel's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up.
 Of course you'll need a [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed.
 
 
@@ -120,7 +121,9 @@ project. After that you'll get executable with optimizations disabled, and with 
 if umodel.exe crashes, and it is started with *-debug* option, standard Windows window appears with prompt to close
 program or debug it. You may choose "Debug with Visual Studio" there.
 
-Also you may use `--debug` parameter for build.sh script.
+Also you may use `--debug` parameter for build.sh script. This will generate separate set of object files and link into
+debug version of the executable (with the same executable file's name). You may quickly switch between "debug" and "release"
+builds without having to fully recompile the program.
 
 If you want to debug umodel.exe in Visual Studio without having a crash, you may load it either from IDE (```File |
 Open | Project/Solution```, then select *umodel.exe*), or you may type
@@ -133,6 +136,11 @@ It is recommended to use **Visual Studio 2013** IDE or newer because it has more
 versions. You may copy **Tools/umodel.natvis** file to *C:\Users\Your_user_folder\My Documents\Visual Studio 20NN\Visualizers*,
 and after that you'll be able to view *TArray* and *FString* structures during debug session.
 
+### Visual Studio Code
+As was mentioned earlier, UModel source code comes with Visual Studio Code project. You may easily edit, launch and debug UModel
+with it. For debugging, there are 2 configurations: "No arguments" runs UModel with default startup UI, and for command line use
+you may launch 2nd "Volatile" configuration, which reads command line string from file *docs/cmdline.cfg* - please refer to
+[Response files documentation](https://github.com/gildor2/UModel/wiki/Response-file) for details on its format.
 
 Directory structure
 -------------------
