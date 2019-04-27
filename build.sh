@@ -12,6 +12,7 @@ while [ "$1" ]; do
 			;;
 		--64)
 			PLATFORM="vc-win64"
+			VC32TOOLS_OPTIONS="--64"
 			shift
 			;;
 		*)
@@ -60,14 +61,18 @@ last_revision=${last_revision##* }		# cut "#define ..."
 [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
 #[ "$PLATFORM" == "linux" ] && PLATFORM="linux64"
 
-# setup default compiler version
-[ "$vc_ver" ] || vc_ver=2013
-export vc_ver
-
-GENMAKE_OPTIONS=VC_VER=$vc_ver
-#if [ $vc_ver -ge 2015 ]; then
-#	GENMAKE_OPTIONS=OLDCRT=0						# previously OLDCRT wasn't usable with VC2015 or newer
-#fi
+if [ "${PLATFORM:0:3}" == "vc-" ]; then
+	# Visual C++ compiler
+	# setup default compiler version
+	[ "$vc_ver" ] || vc_ver=latest
+	# Find Visual Studio
+	. vc32tools $VC32TOOLS_OPTIONS --version=$vc_ver --check
+	[ -z "$found_vc_year" ] && exit 1				# nothing found
+	# Adjust vc_ver to found one
+	vc_ver=$found_vc_year
+#	echo "Found: $found_vc_year $workpath [$vc_ver]"
+	GENMAKE_OPTIONS=VC_VER=$vc_ver					# specify compiler for genmake script
+fi
 
 [ "$project" ] || project="UmodelTool/umodel"		# setup default prohect name
 [ "$root"    ] || root="."
@@ -95,7 +100,7 @@ if ! [ -d $root/obj ]; then
 fi
 if [ "$debug" ]; then
 	makefile="${makefile}-debug"
-	GENMAKE_OPTIONS="$GENMAKE_OPTIONS DEBUG=1"
+	GENMAKE_OPTIONS+=" DEBUG=1"
 fi
 
 # update makefile when needed
@@ -105,11 +110,11 @@ $root/Tools/genmake $project.project TARGET=$PLATFORM $GENMAKE_OPTIONS > $makefi
 # build
 case "$PLATFORM" in
 	"vc-win32")
-		vc32tools --make $makefile || exit 1
+		Make $makefile || exit 1
 		cp $root/libs/SDL2/x86/SDL2.dll .
 		;;
 	"vc-win64")
-		vc32tools --64 --make $makefile || exit 1
+		Make $makefile || exit 1
 		cp $root/libs/SDL2/x64/SDL2.dll .
 		;;
 	"mingw32"|"cygwin")
