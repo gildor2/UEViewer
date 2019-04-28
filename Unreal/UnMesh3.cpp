@@ -807,6 +807,7 @@ struct FSkeletalMeshVertexBuffer3
 				Ar << S.bUseFullPrecisionUVs;
 			int VertexSize, NumVerts;
 			Ar << S.NumUVSets << VertexSize << NumVerts;
+			assert(S.NumUVSets > 0 && S.NumUVSets < 32); // just verify for some reasonable value
 			GNumGPUUVSets = S.NumUVSets;
 			goto serialize_verts;
 		}

@@ -859,7 +859,7 @@ struct FSkelMeshChunk4
 
 struct FSkeletalMeshVertexBuffer4
 {
-	int						NumTexCoords;
+	int32					NumTexCoords;
 	FVector					MeshExtension;		// not used in engine - there's no support for packed position (look for "FPackedPosition")
 	FVector					MeshOrigin;			// ...
 	bool					bUseFullPrecisionUVs;
@@ -876,6 +876,7 @@ struct FSkeletalMeshVertexBuffer4
 		FStripDataFlags StripFlags(Ar, VER_UE4_STATIC_SKELETAL_MESH_SERIALIZATION_FIX);
 		Ar << B.NumTexCoords << B.bUseFullPrecisionUVs;
 		DBG_SKEL("  TC=%d FullPrecision=%d\n", B.NumTexCoords, B.bUseFullPrecisionUVs);
+		assert(B.NumTexCoords > 0 && B.NumTexCoords < 32); // just verify for some reasonable value
 
 		if (Ar.ArVer >= VER_UE4_SUPPORT_GPUSKINNING_8_BONE_INFLUENCES &&
 			FSkeletalMeshCustomVersion::Get(Ar) < FSkeletalMeshCustomVersion::UseSeparateSkinWeightBuffer)
