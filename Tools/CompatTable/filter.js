@@ -88,7 +88,12 @@ function initFilter() {
 	var param = window.location.search.substring(1);
 	var inp = document.getElementById("filt_input");
 	if (param != "") {
+		// facebook reference id
+		param = param.replace(/\.?\-?\&fbclid=.*/, "");
+		// replace special characters
 		param = unescape(param);
+		param = param.replace(/\+/g, " ");
+		// set input and execute filter
 		inp.value = param;
 		filter(inp, 'compat_table', 'filter_info');
 	}

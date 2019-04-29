@@ -1,17 +1,17 @@
-table.config A:link    { color : #000066; text-decoration : none; font-weight : Bold; }
-table.config A:visited { color : #000066; text-decoration : none; font-weight : Bold; }
-table.config A:active  { color : #000066; text-decoration : none; font-weight : Bold; }
-table.config A:hover   { color : #FF0000; text-decoration : none; font-weight : Bold; }
+table.config A:link    { color : #55617b; text-decoration : none; font-weight : Bold; }
+table.config A:visited { color : #55617b; text-decoration : none; font-weight : Bold; }
+table.config A:active  { color : #55617b; text-decoration : none; font-weight : Bold; }
+table.config A:hover   { color : #770404; text-decoration : none; font-weight : Bold; }
 
 
 table.config {
 	font-family    : Verdana, Arial, Helvetica, sans-serif;
-	font-size      : 10px;
+	font-size      : 11px;
 	border-style   : solid;
 	border-color   : #808080;
 	border-spacing : 1px;
 	border-width   : 1px;
-	border-collapse: separate;
+	border-collapse: collapse;
 	padding        : 0px;
 	line-height    : normal;
 }
@@ -20,39 +20,51 @@ table.config td {
 /*	font-size   : 10px; */
 	font-weight : normal;
 	text-align  : center;
-	border-color: #808080;
+	border-color: #b4e282;
 	border-style: solid;
 	padding     : 1px;
 }
 
+table.config th {
+	position:-webkit-sticky;
+	position:sticky;
+	top         : 0;
+	padding     : 5px;
+}
+
 .detailtxt {
-	color       : #3D3D46;
-	font-size   : 10px;
+	color       : #2D2D36;
+/*	font-size   : 10px; */
 	text-align  : left;
+	font-size   : 9px;
 }
 
 .detailbold {
-	color       : #3D3D46;
-	font-size   : 10px;
+	color       : #FFFFFF;
+	background-color: #606060;
+/*	font-size   : 10px; */
 	font-weight : bold;
 	text-align  : center;
 }
 
 .year {
-	font-size   : 10px;
+/*	font-size   : 10px; */
 	font-weight : bold;
 	text-align  : left;
 	color           : #FFFFFF;
-	background-color: #662222;
+	background-color: #d27a7a;
 }
 
 .engine {
-	font-size   : 10px;
+/*	font-size   : 10px; */
 	font-weight : bold;
 	text-align  : center;
-	color           : #3D3D46;
-	background-color: #80CCFF;
+	color           : #FFFFFF;
+	background-color: #4897cc;
 /*	text-shadow : -0.1em 0.1em #FFFFFF; */
+	position:-webkit-sticky;
+	position:sticky;
+	top         : 24px;
 }
 
 .filter_container, .filter, #filter_info {
