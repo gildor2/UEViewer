@@ -54,13 +54,15 @@ function filter(phrase, _id, _id2) {
 ///				if (reg.test(text)) {
 //					DEBUG("... matched " + text);
 					hide = false;
-					count++;
 				} else {
 					hide = true;
 					break;
 				}
 			}
-			if (!hide) lastInfo = -1;		// do not remove info
+			if (!hide) {
+				count++;
+				lastInfo = -1;		// do not remove info
+			}
 		}
 		if (hide) {
 			table.rows[r].style.display = 'none';
@@ -81,3 +83,16 @@ function filter(phrase, _id, _id2) {
 		filter_info.innerText = '';
 	}
 }
+
+function initFilter() {
+	var param = window.location.search.substring(1);
+	var inp = document.getElementById("filt_input");
+	if (param != "") {
+		param = unescape(param);
+		inp.value = param;
+		filter(inp, 'compat_table', 'filter_info');
+	}
+	document.getElementById("filter_form").addEventListener("submit", function(e) { e.preventDefault(); }, false);
+}
+
+window.addEventListener("load", initFilter, false);

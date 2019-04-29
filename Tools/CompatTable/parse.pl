@@ -126,8 +126,8 @@ EOF
 
 <div class="filter_container">
   <div id="filter_info"></div>
-  <form>
-    <input name="filt" placeholder="FILTER" onkeyup="filter(this, 'compat_table', 'filter_info')" type="text" class="filter">
+  <form id="filter_form">
+    <input name="filt" id="filt_input" placeholder="FILTER" onkeyup="filter(this, 'compat_table', 'filter_info')" type="text" class="filter">
   </form>
   <p />
 </div>
