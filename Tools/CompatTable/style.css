@@ -3,12 +3,11 @@ table.config A:visited { color : #55617b; text-decoration : none; font-weight : 
 table.config A:active  { color : #55617b; text-decoration : none; font-weight : Bold; }
 table.config A:hover   { color : #770404; text-decoration : none; font-weight : Bold; }
 
-
 table.config {
 	font-family    : Verdana, Arial, Helvetica, sans-serif;
 	font-size      : 11px;
 	border-style   : solid;
-	border-color   : #808080;
+	border-color   : #b2c7c7;
 	border-spacing : 1px;
 	border-width   : 1px;
 	border-collapse: collapse;
@@ -17,54 +16,86 @@ table.config {
 }
 
 table.config td {
-/*	font-size   : 10px; */
 	font-weight : normal;
 	text-align  : center;
-	border-color: #b4e282;
 	border-style: solid;
 	padding     : 1px;
 }
 
 table.config th {
-	position:-webkit-sticky;
-	position:sticky;
-	top         : 0;
+	position    : -webkit-sticky;
+	position    : sticky;
+	top         : -1px;
 	padding     : 5px;
+	border-width: 0px;
+	background-color: #606060;
+	/* header text */
+	color       : #FFFFFF;
+	font-weight : bold;
+	text-align  : center;
+}
+
+/* alignment for title and developer columns */
+table.config th:nth-child(2),
+table.config td:nth-child(2),
+table.config th:nth-child(8),
+table.config td:nth-child(8)
+{
+  text-align: left;
+}
+
+.year {
+	background-color: #99b5a5;
+/*	position    : -webkit-sticky;
+	position    : sticky;
+	top         : 43px; */
+}
+
+.year div {
+/*	font-size   : 10px; */
+	font-weight : bold;
+	text-align  : left;
+	color       : #ffffff;
+	padding-left: 10px;
+}
+
+.engine {
+	background-color: #4897cc;
+	position    : -webkit-sticky;
+	position    : sticky;
+	top         : 22px;
+}
+
+.engine div {
+/*	font-size   : 10px; */
+	font-weight : bold;
+/*	text-shadow : -0.1em 0.1em #000000; */
+	text-align  : center;
+	color       : #FFFFFF;
+	padding     : 3px;
+}
+
+.game_full { background-color: #dbffdb; }
+.game_part { background-color: #f0f0f4; }
+.game_bad  { background-color: #ffcbdb; }
+
+.spacer {
+	height      : 10px;
+	border-width: 1px;
+	border-color: #ffffff00;
+}
+
+.footer {
+	color       : #FFFFFF;
+	background-color: #606060;
+	font-weight : bold;
+	text-align  : center;
 }
 
 .detailtxt {
 	color       : #2D2D36;
-/*	font-size   : 10px; */
 	text-align  : left;
 	font-size   : 9px;
-}
-
-.detailbold {
-	color       : #FFFFFF;
-	background-color: #606060;
-/*	font-size   : 10px; */
-	font-weight : bold;
-	text-align  : center;
-}
-
-.year {
-/*	font-size   : 10px; */
-	font-weight : bold;
-	text-align  : left;
-	color           : #FFFFFF;
-	background-color: #d27a7a;
-}
-
-.engine {
-/*	font-size   : 10px; */
-	font-weight : bold;
-	text-align  : center;
-	color           : #FFFFFF;
-	background-color: #4897cc;
-/*	text-shadow : -0.1em 0.1em #FFFFFF; */
-	position:-webkit-sticky;
-	position:sticky;
-	top         : 24px;
 }
 
 .filter_container, .filter, #filter_info {
@@ -76,6 +107,11 @@ table.config th {
 	float       : right;
 	width       : 400px;
 	padding-bottom : 4px;
+/*	padding-right  : 4px;
+	position    : -webkit-sticky;
+	position    : sticky;
+	top         : 3px;
+	z-index     : 1; */
 }
 
 .filter {
