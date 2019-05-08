@@ -297,6 +297,9 @@ struct FSkelIndexBuffer3				// differs from FIndexBuffer3 since version 806 - ha
 		}
 		else
 		{
+#if DMC
+			if (Ar.Game == GAME_DmC && ItemSize == 0) return Ar;
+#endif // DMC
 			if (ItemSize != 4)
 				appPrintf("WARNING: FMultisizeIndexContainer data size %d, assuming int32\n", ItemSize);
 			I.Indices32.BulkSerialize(Ar);
