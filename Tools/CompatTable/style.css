@@ -1,7 +1,22 @@
-table.config A:link    { color : #55617b; text-decoration : none; font-weight : Bold; }
-table.config A:visited { color : #55617b; text-decoration : none; font-weight : Bold; }
-table.config A:active  { color : #55617b; text-decoration : none; font-weight : Bold; }
-table.config A:hover   { color : #770404; text-decoration : none; font-weight : Bold; }
+table.config A:link,
+table.config A:visited,
+table.config A:active
+{ color : #55617b; }
+
+table.config A:hover
+{ color : #770404; }
+
+@media (min-width: 1000px) {
+/* Make links bold when there's enough page width */
+table.config A:link,
+table.config A:visited,
+table.config A:active,
+table.config A:hover
+{
+	text-decoration: none;
+	font-weight    : Bold;
+}
+}
 
 table.config {
 	font-family    : Verdana, Arial, Helvetica, sans-serif;
