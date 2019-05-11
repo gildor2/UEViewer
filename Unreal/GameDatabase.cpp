@@ -377,6 +377,9 @@ const GameInfo GListOfGames[] = {
 #	if HIT
 		G("Heroes of Incredible Tales", hit, GAME_HIT),
 #	endif
+#	if NGB
+		G("New Gundam Breaker", ngb, GAME_NGB),
+#	endif
 #endif // UNREAL4
 
 	// end marker

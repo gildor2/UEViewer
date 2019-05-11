@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+11.05.2019
+- added support for New Gundam Breaker (requires game override, -game=ngb)
+
 16.04.2019
 - added response file support, more info: https://github.com/gildor2/UModel/wiki/Response-file
   - usage: umodel @response.txt

@@ -688,6 +688,13 @@ struct FSkelMeshSection4
 
 			S.HasClothData = ClothMappingData.Num() > 0;
 
+#if NGB
+			if (Ar.Game == GAME_NGB)
+			{
+				int32 unk;
+				Ar << unk;
+			}
+#endif // NGB
 			// UE4.19+
 			if (FOverlappingVerticesCustomVersion::Get(Ar) >= FOverlappingVerticesCustomVersion::DetectOVerlappingVertices)
 			{

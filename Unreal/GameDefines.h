@@ -156,6 +156,7 @@
 #define PARAGON			1		// Paragon
 #define ARK				1		// Ark: Survival Evolved
 #define HIT				1		// Heroes of Incredible Tales
+#define NGB				1		// New Gundam Breaker
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 

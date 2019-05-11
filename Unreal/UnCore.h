@@ -424,6 +424,8 @@ enum EGame
 		GAME_StateOfDecay2 = GAME_UE4(13)+2,
 		// 4.14
 		GAME_Tekken7 = GAME_UE4(14)+2,
+		// 4.16
+		GAME_NGB = GAME_UE4(16)+1,
 		// 4.19
 		GAME_Paragon = GAME_UE4(19)+1,
 		// 4.20
