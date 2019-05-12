@@ -165,10 +165,10 @@ public:
 };
 
 
-static void DecodeBnSPointer(int &Value, unsigned Code1, unsigned Code2, int Index)
+static void DecodeBnSPointer(int32 &Value, uint32 Code1, uint32 Code2, int32 Index)
 {
-	unsigned tmp1 = ROR32(Value, (Index + Code2) & 0x1F);
-	unsigned tmp2 = ROR32(Code1, Index % 32);
+	uint32 tmp1 = ROR32(Value, (Index + Code2) & 0x1F);
+	uint32 tmp2 = ROR32(Code1, Index % 32);
 	Value = tmp2 ^ tmp1;
 }
 
