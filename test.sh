@@ -265,6 +265,7 @@ for arg in "$@"; do		# using quoted $@ will allow to correctly separate argument
 		nobuild=1
 		;;
 	--debug)
+		buildopt=--debug
 		debugOpt=-debug
 		;;
 	--path=*)

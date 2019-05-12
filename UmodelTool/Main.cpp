@@ -868,6 +868,10 @@ int main(int argc, const char **argv)
 			PrintVersionInfo();
 			return 0;
 		}
+		else if (!stricmp(opt, "debug"))
+		{
+			// Do nothing if this option is not supported
+		}
 		else
 		{
 			CommandLineError("invalid option: -%s", opt);
