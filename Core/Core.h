@@ -196,11 +196,11 @@ typedef size_t					address_t;
 #endif
 
 #ifndef ROL32
-#define ROL32(val,shift)		( ((val) << (shift)) | ((val) >> (32-(shift))) )
+#define ROL32(val,shift)		( (unsigned(val) << (shift)) | (unsigned(val) >> (32-(shift))) )
 #endif
 
 #ifndef ROR32
-#define ROR32(val,shift)		( ((val) >> (shift)) | ((val) << (32-(shift))) )
+#define ROR32(val,shift)		( (unsigned(val) >> (shift)) | (unsigned(val) << (32-(shift))) )
 #endif
 
 
