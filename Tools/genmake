@@ -301,23 +301,27 @@ sub getline1 {
 			#-------- conditional directives ------------
 			if ($cmd =~ /^if\w*/) {
 				my ($type) = $cmd =~ /^if(\w+)$/;
-				my $cond = CheckCondition ($type, $args, $cmd);
 				$nestedIf++;						# count of nested if's
-				if ($enabled != 1) {
+				if ($enabled == 1) {
+					my $cond = CheckCondition($type, $args, $cmd);
+					if ($cond == 0) {
+						$enabled = 0;
+					}
+				} else {
 					$nestedIf0++;					# count of disabled if's
-				} elsif ($cond == 0) {
-					$enabled = 0;
 				}
 			} elsif ($cmd =~ /^elif\w*/) {
 				Error ("$cmd without if") if $nestedIf == 0;
 				my ($type) = $cmd =~ /^elif(\w+)$/;
-				my $cond = CheckCondition ($type, $args, $cmd);
 
 				if ($nestedIf0 == 0) {
 					if ($enabled == 1) {
 						$enabled = 2;				# enabled -> wait endif
-					} elsif ($enabled == 0 && $cond != 0) {
-						$enabled = 1;				# disabled -> enabled when cond<>0
+					} elsif ($enabled == 0) {
+						my $cond = CheckCondition($type, $args, $cmd);
+						if ($cond != 0) {
+							$enabled = 1;			# disabled -> enabled when cond<>0
+						}
 					}
 				}
 			} elsif ($cmd eq "else") {
@@ -566,9 +570,9 @@ sub EmitCompilerDefs {
 		} elsif ($PLATFORM eq "unix64") {
 			$platf .= " -m64";
 		}
-		print "CPP  = $platf -pipe -c\n";
-		print "LINK = $platf -pipe -s\n";
-		print "AR   = ar -rcs\n";					# r=(replace files), c=(create archive), s=(write object file index)
+		print "CPP  = \@$platf -pipe -c\n";
+		print "LINK = \@$platf -pipe -s\n";
+		print "AR   = \@ar -rcs\n";					# r=(replace files), c=(create archive), s=(write object file index)
 	}
 	print "\n";
 }
@@ -674,7 +678,7 @@ sub AddObjectList {
 				if ($opt eq "0") {
 					$options .= " -w";					# disable warnings
 				} elsif ($opt eq "1") {
-					$options .= " -Wall";				# all & !extra ...
+					$options .= " -Wall";				# "all" but not "extra" ...
 				} else { #if ($opt eq "2")
 					$options .= " -Wall -Wextra";		# max warning level
 				}
@@ -998,9 +1002,9 @@ $optionVar   = "";		# current options variable
 # will generate makefile lines to compile single object file
 sub FlushObjectFile {
 	my ($srcFile, $objDir, $defines, $includes, $options, $objListName) = @_;
-	my $objFile = GetObjFilename ($srcFile, $objDir);
+	my $objFile = GetObjFilename($srcFile, $objDir);
 	my ($srcType) = $srcFile =~ /\S+\.(\w+)/;
-	my ($srcDir)  = $srcFile =~ /(\S+\/)[\w\.]+/;
+	my ($srcDir, $srcCleanName) = $srcFile =~ /(\S+\/)?([^\/]+)$/;
 
 	# linker-only files - GetObjFilename() returns $srcFile
 	if ($srcFile eq $objFile) {
@@ -1082,17 +1086,19 @@ sub FlushObjectFile {
 		}
 		$line .= " $srcFile";
 	} elsif ($COMPILER eq "GnuC") {	#!! GnuC - other
+		# We're suppressing command line echo with '@', so echo file name ourselves
+		$line .= "\@echo $srcCleanName\n\t";
 		if ($srcType eq "asm") {
 			my $tgt = "elf32";
 			$tgt = "elf64" if $PLATFORM eq "unix64";
 			$tgt = "coff" if $PLATFORM eq "win32";
-			$line = "nasm -f $tgt ".GenerateOptions($includes, "-I")." -o \"$objFile\"";
+			$line .= "nasm -f $tgt ".GenerateOptions($includes, "-I")." -o \"$objFile\"";
 		} elsif ($srcType eq "rc") {
 			$line .= "windres -O coff -I $srcDir -o $objFile";
 		} else {					#!! GnuC - compiler
 			# C/C++ file
 			#?? GnuC/Linux: static/shared LIBC
-			$line = "\$(CPP)";
+			$line .= "\$(CPP)";
 			$line .= " \$($optionVar)" if $options ne "";
 			$line .= " -o $objFile";
 		}
@@ -1228,10 +1234,17 @@ sub FlushTargetText {
 	}
 	$prefix .= "\n";
 
+	if ($target eq "executable") {
+		$prefix .= "\t\@echo Linking $n\n";
+	} elsif ($target eq "shared") {
+		$prefix .= "\t\@echo Linking dynamic library $n\n";
+	} elsif ($target eq "static") {
+		$prefix .= "\t\@echo Creating static library $n\n";
+	}
+
 	# NOTE: this logic may be implemented with our preprocessor (exec some script for each target)
 	#-------------- Visual C++ options --------------------
 	if ($COMPILER eq "VisualC") {
-		$prefix .= "\techo Creating $target \"$n\" ...\n";
 		if ($target eq "static") {
 			return $prefix."\t\$(AR) -out:\"$n\"$fileList";
 		}
@@ -1276,7 +1289,6 @@ sub FlushTargetText {
 		}
 	#--------------- Gnu C Compiler -----------------------
 	} elsif ($COMPILER eq "GnuC") {		#!! GnuC - linker
-		$prefix .= "\t\@echo Creating $target \"$n\" ...\n";
 		$line = "\t\$(LINK) -o $n";
 		$line .= $fileList;
 		my $linkflags = GetTargetOption ($n, "LINKFLAGS");
