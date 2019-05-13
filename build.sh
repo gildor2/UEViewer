@@ -94,7 +94,7 @@ fi
 
 # prepare makefile parameters, store in obj directory
 projectName=${project##*/}
-makefile="$root/obj/makefile-$projectName-$PLATFORM"
+makefile="$root/obj/$projectName-$PLATFORM.mak"
 if ! [ -d $root/obj ]; then
 	mkdir $root/obj
 fi
