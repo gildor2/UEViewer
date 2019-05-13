@@ -153,6 +153,10 @@ struct FPackageFileSummary
 
 	FPackageFileSummary();
 	bool Serialize(FArchive &Ar);
+	// Engine-specific serializers
+	void Serialize2(FArchive& Ar);
+	void Serialize3(FArchive& Ar);
+	void Serialize4(FArchive& Ar);
 };
 
 #if UNREAL3
@@ -185,6 +189,11 @@ struct FObjectExport
 #endif // UNREAL3
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E);
+	// Engine-specific serializers
+	void Serialize2(FArchive& Ar);
+	void Serialize2X(FArchive& Ar);
+	void Serialize3(FArchive& Ar);
+	void Serialize4(FArchive& Ar);
 };
 
 

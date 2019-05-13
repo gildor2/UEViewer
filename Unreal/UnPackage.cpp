@@ -19,10 +19,9 @@ byte GForceCompMethod = 0;		// COMPRESS_...
 	Unreal package structures
 -----------------------------------------------------------------------------*/
 
-//todo: make a method of FPackageFileSummary
-static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
+void FPackageFileSummary::Serialize2(FArchive &Ar)
 {
-	guard(SerializePackageFileSummary2);
+	guard(FPackageFileSummary::Serialize2);
 
 #if SPLINTER_CELL
 	if (Ar.Game == GAME_SplinterCell && Ar.ArLicenseeVer >= 83)
@@ -32,7 +31,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // SPLINTER_CELL
 
-	Ar << S.PackageFlags;
+	Ar << PackageFlags;
 
 #if LEAD
 	if (Ar.Game == GAME_SplinterCellConv)
@@ -42,7 +41,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // LEAD
 
-	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
+	Ar << NameCount << NameOffset << ExportCount << ExportOffset << ImportCount << ImportOffset;
 
 #if LEAD
 	if (Ar.Game == GAME_SplinterCellConv && Ar.ArLicenseeVer >= 48)
@@ -51,7 +50,7 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 		int32 ExtraNameCount, ExtraNameOffset;
 		int32 unkC;
 		Ar << ExtraNameCount << ExtraNameOffset;
-		if (ExtraNameOffset < S.ImportOffset) ExtraNameCount = 0;
+		if (ExtraNameOffset < ImportOffset) ExtraNameCount = 0;
 		if (Ar.ArLicenseeVer >= 85) Ar << unkC;
 		goto generations;	// skip Guid
 	}
@@ -66,16 +65,16 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // SPLINTER_CELL
 #if RAGNAROK2
-	if ((GForceGame == 0) && (S.PackageFlags & 0x10000) && (Ar.ArVer >= 0x80 && Ar.ArVer < 0x88))	//?? unknown upper limit; known lower limit: 0x80
+	if ((GForceGame == 0) && (PackageFlags & 0x10000) && (Ar.ArVer >= 0x80 && Ar.ArVer < 0x88))	//?? unknown upper limit; known lower limit: 0x80
 	{
 		// encrypted Ragnarok Online archive header (data taken by archive analysis)
 		Ar.Game = GAME_Ragnarok2;
-		S.NameCount    ^= 0xD97790C7 ^ 0x1C;
-		S.NameOffset   ^= 0xF208FB9F ^ 0x40;
-		S.ExportCount  ^= 0xEBBDE077 ^ 0x04;
-		S.ExportOffset ^= 0xE292EC62 ^ 0x03E9E1;
-		S.ImportCount  ^= 0x201DA87A ^ 0x05;
-		S.ImportOffset ^= 0xA9B999DF ^ 0x003E9BE;
+		NameCount    ^= 0xD97790C7 ^ 0x1C;
+		NameOffset   ^= 0xF208FB9F ^ 0x40;
+		ExportCount  ^= 0xEBBDE077 ^ 0x04;
+		ExportOffset ^= 0xE292EC62 ^ 0x03E9E1;
+		ImportCount  ^= 0x201DA87A ^ 0x05;
+		ImportOffset ^= 0xA9B999DF ^ 0x003E9BE;
 		return;									// other data is useless for us, and they are encrypted too
 	}
 #endif // RAGNAROK2
@@ -91,25 +90,25 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 		Ar << HeritageCount << HeritageOffset;	// not used
 		if (Ar.IsLoading)
 		{
-			S.Generations.Empty(1);
+			Generations.Empty(1);
 			FGenerationInfo gen;
-			gen.ExportCount = S.ExportCount;
-			gen.NameCount   = S.NameCount;
-			S.Generations.Add(gen);
+			gen.ExportCount = ExportCount;
+			gen.NameCount   = NameCount;
+			Generations.Add(gen);
 		}
 	}
 	else
 	{
-		Ar << S.Guid;
+		Ar << Guid;
 		// current generations code
 	generations:
 		// always used int for generation count (even for UE1-2)
 		int32 Count;
 		Ar << Count;
-		S.Generations.Empty(Count);
-		S.Generations.AddZeroed(Count);
+		Generations.Empty(Count);
+		Generations.AddZeroed(Count);
 		for (int i = 0; i < Count; i++)
-			Ar << S.Generations[i];
+			Ar << Generations[i];
 	}
 
 	unguard;
@@ -118,16 +117,15 @@ static void SerializePackageFileSummary2(FArchive &Ar, FPackageFileSummary &S)
 
 #if UNREAL3
 
-//todo: make a method of FPackageFileSummary
-static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
+void FPackageFileSummary::Serialize3(FArchive &Ar)
 {
-	guard(SerializePackageFileSummary3);
+	guard(FPackageFileSummary::Serialize3);
 
 #if BATMAN
 	if (Ar.Game == GAME_Batman4)
 	{
 		Ar.ArLicenseeVer  &= 0x7FFF;			// higher bit is used for something else, and it's set to 1
-		S.LicenseeVersion &= 0x7FFF;
+		LicenseeVersion &= 0x7FFF;
 	}
 #endif // BATMAN
 #if R6VEGAS
@@ -181,9 +179,9 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #endif
 
 	if (Ar.ArVer >= 249)
-		Ar << S.HeadersSize;
+		Ar << HeadersSize;
 	else
-		S.HeadersSize = 0;
+		HeadersSize = 0;
 
 	// NOTE: A51 and MKVSDC has exactly the same code paths!
 #if A51 || WHEELMAN || MKVSDC || STRANGLE || TNA_IMPACT			//?? special define ?
@@ -205,12 +203,12 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #endif // MIDWAY
 
 	if (Ar.ArVer >= 269)
-		Ar << S.PackageGroup;
+		Ar << PackageGroup;
 
-	Ar << S.PackageFlags;
+	Ar << PackageFlags;
 
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (S.PackageFlags & 8))
+	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (PackageFlags & 8))
 	{
 		int32 unk88;
 		Ar << unk88;
@@ -241,15 +239,15 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 		int64 unk112, unk136, unk120, unk144;
 		int   unk84, unk128, unk132, unk168;
 		FGuid unk152;
-		Ar << S.NameCount << NameOffset64 << S.ExportCount << ExportOffset64 << S.ImportCount << ImportOffset64;
-		S.NameOffset   = (int)NameOffset64;
-		S.ExportOffset = (int)ExportOffset64;
-		S.ImportOffset = (int)ImportOffset64;
+		Ar << NameCount << NameOffset64 << ExportCount << ExportOffset64 << ImportCount << ImportOffset64;
+		NameOffset   = (int)NameOffset64;
+		ExportOffset = (int)ExportOffset64;
+		ImportOffset = (int)ImportOffset64;
 		Ar << unk84 << unk112 << unk136 << unk120 << unk128 << unk132 << unk144;
 		Ar << unk152;
 		Ar << unk168;
 
-		Ar << S.EngineVersion << S.CompressionFlags << S.CompressedChunks;
+		Ar << EngineVersion << CompressionFlags << CompressedChunks;
 
 		// drop everything else in FPackageFileSummary
 		return;
@@ -258,7 +256,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // MKVSDC
 
-	Ar << S.NameCount << S.NameOffset << S.ExportCount << S.ExportOffset;
+	Ar << NameCount << NameOffset << ExportCount << ExportOffset;
 
 #if APB
 	if (Ar.Game == GAME_APB)
@@ -270,7 +268,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // APB
 
-	Ar << S.ImportCount << S.ImportOffset;
+	Ar << ImportCount << ImportOffset;
 
 #if MKVSDC
 	if (Ar.Game == GAME_MK)
@@ -292,8 +290,8 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 			// Mortal Kombat, Injustice:
 			// - no DependsOffset
 			// - no generations (since version 446)
-			Ar << S.Guid;
-			S.DependsOffset = 0;
+			Ar << Guid;
+			DependsOffset = 0;
 			goto engine_version;
 		}
 	}
@@ -314,11 +312,11 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #endif // STRANGLE
 #if TERA
 	// de-obfuscate NameCount for Tera
-	if (Ar.Game == GAME_Tera && (S.PackageFlags & 8)) S.NameCount -= S.NameOffset;
+	if (Ar.Game == GAME_Tera && (PackageFlags & 8)) NameCount -= NameOffset;
 #endif
 
 	if (Ar.ArVer >= 415)
-		Ar << S.DependsOffset;
+		Ar << DependsOffset;
 
 #if BIOSHOCK3
 	if (Ar.Game == GAME_Bioshock3) goto read_unk38;
@@ -327,7 +325,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #if DUNDEF
 	if (Ar.Game == GAME_DunDef)
 	{
-		if (S.PackageFlags & 8)
+		if (PackageFlags & 8)
 		{
 			int32 unk38;
 			Ar << unk38;
@@ -336,7 +334,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 #endif // DUNDEF
 
 	if (Ar.ArVer >= 623)
-		Ar << S.f38 << S.f3C << S.f40;
+		Ar << f38 << f3C << f40;
 
 #if TRANSFORMERS
 	if (Ar.Game == GAME_Transformers && Ar.ArVer >= 535) goto read_unk38;
@@ -350,7 +348,7 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	}
 
 	// Guid and generations
-	Ar << S.Guid;
+	Ar << Guid;
 	int32 Count;
 	Ar << Count;
 
@@ -362,10 +360,10 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 	}
 #endif // APB
 
-	S.Generations.Empty(Count);
-	S.Generations.AddZeroed(Count);
+	Generations.Empty(Count);
+	Generations.AddZeroed(Count);
 	for (int i = 0; i < Count; i++)
-		Ar << S.Generations[i];
+		Ar << Generations[i];
 
 #if ALIENS_CM
 	if (Ar.Game == GAME_AliensCM)
@@ -378,10 +376,10 @@ static void SerializePackageFileSummary3(FArchive &Ar, FPackageFileSummary &S)
 
 engine_version:
 	if (Ar.ArVer >= 245)
-		Ar << S.EngineVersion;
+		Ar << EngineVersion;
 cooker_version:
 	if (Ar.ArVer >= 277)
-		Ar << S.CookerVersion;
+		Ar << CookerVersion;
 
 #if MASSEFF
 	// ... MassEffect has some additional structure here ...
@@ -405,9 +403,9 @@ cooker_version:
 #endif // MASSEFF
 
 	if (Ar.ArVer >= 334)
-		Ar << S.CompressionFlags << S.CompressedChunks;
+		Ar << CompressionFlags << CompressedChunks;
 	if (Ar.ArVer >= 482)
-		Ar << S.U3unk60;
+		Ar << U3unk60;
 //	if (Ar.ArVer >= 516)
 //		Ar << some array ... (U3unk70)
 
@@ -484,10 +482,9 @@ int GetUE4CustomVersion(const FArchive& Ar, const FGuid& Guid)
 	unguard;
 }
 
-//todo: make a method of FPackageFileSummary
-static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
+void FPackageFileSummary::Serialize4(FArchive &Ar)
 {
-	guard(SerializePackageFileSummary4);
+	guard(FPackageFileSummary::Serialize4);
 
 	// LegacyVersion: contains negative value.
 	// LegacyVersion to engine version map:
@@ -505,33 +502,33 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	};
 
 	static const int LatestSupportedLegacyVer = (int) -ARRAY_COUNT(legacyVerToEngineVer)+1;
-//	appPrintf("%d -> %d %d < %d\n", S.LegacyVersion, -S.LegacyVersion - 1, legacyVerToEngineVer[-S.LegacyVersion - 1], LatestSupportedLegacyVer);
-	if (S.LegacyVersion < LatestSupportedLegacyVer || S.LegacyVersion >= -1)	// -2 is supported
-		appError("UE4 LegacyVersion: unsupported value %d", S.LegacyVersion);
+//	appPrintf("%d -> %d %d < %d\n", LegacyVersion, -LegacyVersion - 1, legacyVerToEngineVer[-LegacyVersion - 1], LatestSupportedLegacyVer);
+	if (LegacyVersion < LatestSupportedLegacyVer || LegacyVersion >= -1)	// -2 is supported
+		appError("UE4 LegacyVersion: unsupported value %d", LegacyVersion);
 
-	S.IsUnversioned = false;
+	IsUnversioned = false;
 
 	// read versions
 	int32 VersionUE3, Version, LicenseeVersion;		// note: using int32 instead of uint16 as in UE1-UE3
-	if (S.LegacyVersion != -4)						// UE4 had some changes for version -4, but these changes were reverted in -5 due to some problems
+	if (LegacyVersion != -4)						// UE4 had some changes for version -4, but these changes were reverted in -5 due to some problems
 		Ar << VersionUE3;
 	Ar << Version << LicenseeVersion;
 	// VersionUE3 is ignored
 	assert((Version & ~0xFFFF) == 0);
 	assert((LicenseeVersion & ~0xFFFF) == 0);
-	S.FileVersion     = Version & 0xFFFF;
-	S.LicenseeVersion = LicenseeVersion & 0xFFFF;
+	FileVersion     = Version & 0xFFFF;
+	LicenseeVersion = LicenseeVersion & 0xFFFF;
 
 	// store file version to archive
-	Ar.ArVer         = S.FileVersion;
-	Ar.ArLicenseeVer = S.LicenseeVersion;
+	Ar.ArVer         = FileVersion;
+	Ar.ArLicenseeVer = LicenseeVersion;
 
-	if (S.FileVersion == 0 && S.LicenseeVersion == 0)
-		S.IsUnversioned = true;
+	if (FileVersion == 0 && LicenseeVersion == 0)
+		IsUnversioned = true;
 
-	if (S.IsUnversioned && GForceGame == GAME_UNKNOWN)
+	if (IsUnversioned && GForceGame == GAME_UNKNOWN)
 	{
-		int ver = -S.LegacyVersion - 1;
+		int ver = -LegacyVersion - 1;
 		int verMin = legacyVerToEngineVer[ver];
 		int verMax = legacyVerToEngineVer[ver+1] - 1;
 		int selectedVersion;
@@ -553,21 +550,21 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	Ar.DetectGame();
 	Ar.OverrideVersion();
 
-	if (S.LegacyVersion <= -2)
+	if (LegacyVersion <= -2)
 	{
 		// CustomVersions array - not serialized to unversioned packages, and UE4 always consider
 		// all custom versions to use highest available value. However this is used for versioned
 		// packages: engine starts to use custom versions heavily starting with 4.12.
-		S.CustomVersionContainer.Serialize(Ar, S.LegacyVersion);
+		CustomVersionContainer.Serialize(Ar, LegacyVersion);
 	}
 
 	// Conan Exiles: has TArray<int32[5]> inserted here. Also it has int32=0 before Tag
 
-	Ar << S.HeadersSize;
-	Ar << S.PackageGroup;
-	Ar << S.PackageFlags;
+	Ar << HeadersSize;
+	Ar << PackageGroup;
+	Ar << PackageFlags;
 
-	Ar << S.NameCount << S.NameOffset;
+	Ar << NameCount << NameOffset;
 
 	if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_SUMMARY_LOCALIZATION_ID && Ar.ContainsEditorData())
 	{
@@ -581,8 +578,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 		Ar << GatherableTextDataCount << GatherableTextDataOffset;
 	}
 
-	Ar << S.ExportCount << S.ExportOffset << S.ImportCount << S.ImportOffset;
-	Ar << S.DependsOffset;
+	Ar << ExportCount << ExportOffset << ImportCount << ImportOffset;
+	Ar << DependsOffset;
 
 	if (Ar.ArVer >= VER_UE4_ADD_STRING_ASSET_REFERENCES_MAP)
 	{
@@ -605,13 +602,13 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	Ar << ThumbnailTableOffset;
 
 	// guid and generations
-	Ar << S.Guid;
+	Ar << Guid;
 	int32 Count;
 	Ar << Count;
-	S.Generations.Empty(Count);
-	S.Generations.AddZeroed(Count);
+	Generations.Empty(Count);
+	Generations.AddZeroed(Count);
 	for (int i = 0; i < Count; i++)
-		Ar << S.Generations[i];
+		Ar << Generations[i];
 
 	// engine version
 	if (Ar.ArVer >= VER_UE4_ENGINE_VERSION_OBJECT)
@@ -636,8 +633,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	}
 
 	// compression structures
-	Ar << S.CompressionFlags;
-	Ar << S.CompressedChunks;
+	Ar << CompressionFlags;
+	Ar << CompressedChunks;
 
 	int32 PackageSource;
 	Ar << PackageSource;
@@ -654,7 +651,7 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 	TArray<FString> AdditionalPackagesToCook;
 	Ar << AdditionalPackagesToCook;
 
-	if (S.LegacyVersion > -7)
+	if (LegacyVersion > -7)
 	{
 		int32 NumTextureAllocations;
 		Ar << NumTextureAllocations;
@@ -673,8 +670,8 @@ static void SerializePackageFileSummary4(FArchive &Ar, FPackageFileSummary &S)
 
 	if (Ar.ArVer >= VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET)
 	{
-		Ar << S.BulkDataStartOffset;
-//		appPrintf("Bulk offset: %llX\n", S.BulkDataStartOffset);
+		Ar << BulkDataStartOffset;
+//		appPrintf("Bulk offset: %llX\n", BulkDataStartOffset);
 	}
 
 	//!! other fields - useless for now
@@ -804,7 +801,7 @@ tag_ok:
 	{
 		LegacyVersion = Version;
 		Ar.Game = GAME_UE4_BASE;
-		SerializePackageFileSummary4(Ar, *this);
+		Serialize4(Ar);
 		//!! note: UE4 requires different DetectGame way, perhaps it's not possible at all
 		//!! (but can use PAK file names for game detection)
 		return true;
@@ -829,10 +826,10 @@ tag_ok:
 
 #if UNREAL3
 	if (Ar.Game >= GAME_UE3)
-		SerializePackageFileSummary3(Ar, *this);
+		Serialize3(Ar);
 	else
 #endif
-		SerializePackageFileSummary2(Ar, *this);
+		Serialize2(Ar);
 
 #if DEBUG_PACKAGE
 	appPrintf("EngVer:%d CookVer:%d CompF:%d CompCh:%d\n", EngineVersion, CookerVersion, CompressionFlags, CompressedChunks.Num());
@@ -846,17 +843,17 @@ tag_ok:
 }
 
 
-static void SerializeObjectExport2(FArchive &Ar, FObjectExport &E)
+void FObjectExport::Serialize2(FArchive &Ar)
 {
-	guard(SerializeObjectExport2);
+	guard(FObjectExport::Serialize2);
 
 #if PARIAH
 	if (Ar.Game == GAME_Pariah)
 	{
-		Ar << E.ObjectName << AR_INDEX(E.SuperIndex) << E.PackageIndex << E.ObjectFlags;
-		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SerialSize);
-		if (E.SerialSize)
-			Ar << AR_INDEX(E.SerialOffset);
+		Ar << ObjectName << AR_INDEX(SuperIndex) << PackageIndex << ObjectFlags;
+		Ar << AR_INDEX(ClassIndex) << AR_INDEX(SerialSize);
+		if (SerialSize)
+			Ar << AR_INDEX(SerialOffset);
 		return;
 	}
 #endif // PARIAH
@@ -864,13 +861,13 @@ static void SerializeObjectExport2(FArchive &Ar, FObjectExport &E)
 	if (Ar.Game == GAME_Bioshock)
 	{
 		int unkC, flags2, unk30;
-		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
+		Ar << AR_INDEX(ClassIndex) << AR_INDEX(SuperIndex) << PackageIndex;
 		if (Ar.ArVer >= 132) Ar << unkC;			// unknown
-		Ar << E.ObjectName << E.ObjectFlags;
+		Ar << ObjectName << ObjectFlags;
 		if (Ar.ArLicenseeVer >= 40) Ar << flags2;	// qword flags
-		Ar << AR_INDEX(E.SerialSize);
-		if (E.SerialSize)
-			Ar << AR_INDEX(E.SerialOffset);
+		Ar << AR_INDEX(SerialSize);
+		if (SerialSize)
+			Ar << AR_INDEX(SerialOffset);
 		if (Ar.ArVer >= 130) Ar << unk30;			// unknown
 		return;
 	}
@@ -879,9 +876,9 @@ static void SerializeObjectExport2(FArchive &Ar, FObjectExport &E)
 	if (Ar.Game == GAME_RepCommando && Ar.ArVer >= 151)
 	{
 		int unk0C;
-		Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
+		Ar << AR_INDEX(ClassIndex) << AR_INDEX(SuperIndex) << PackageIndex;
 		if (Ar.ArVer >= 159) Ar << AR_INDEX(unk0C);
-		Ar << E.ObjectName << E.ObjectFlags << E.SerialSize << E.SerialOffset;
+		Ar << ObjectName << ObjectFlags << SerialSize << SerialOffset;
 		return;
 	}
 #endif // SWRC
@@ -889,20 +886,20 @@ static void SerializeObjectExport2(FArchive &Ar, FObjectExport &E)
 	if (Ar.Game == GAME_AA2)
 	{
 		int rnd;	// random value
-		Ar << AR_INDEX(E.SuperIndex) << rnd << AR_INDEX(E.ClassIndex) << E.PackageIndex;
-		Ar << E.ObjectFlags << E.ObjectName << AR_INDEX(E.SerialSize);	// ObjectFlags are serialized in different order, ObjectFlags are negated
-		if (E.SerialSize)
-			Ar << AR_INDEX(E.SerialOffset);
-		E.ObjectFlags = ~E.ObjectFlags;
+		Ar << AR_INDEX(SuperIndex) << rnd << AR_INDEX(ClassIndex) << PackageIndex;
+		Ar << ObjectFlags << ObjectName << AR_INDEX(SerialSize);	// ObjectFlags are serialized in different order, ObjectFlags are negated
+		if (SerialSize)
+			Ar << AR_INDEX(SerialOffset);
+		ObjectFlags = ~ObjectFlags;
 		return;
 	}
 #endif // AA2
 
 	// generic UE1/UE2 code
-	Ar << AR_INDEX(E.ClassIndex) << AR_INDEX(E.SuperIndex) << E.PackageIndex;
-	Ar << E.ObjectName << E.ObjectFlags << AR_INDEX(E.SerialSize);
-	if (E.SerialSize)
-		Ar << AR_INDEX(E.SerialOffset);
+	Ar << AR_INDEX(ClassIndex) << AR_INDEX(SuperIndex) << PackageIndex;
+	Ar << ObjectName << ObjectFlags << AR_INDEX(SerialSize);
+	if (SerialSize)
+		Ar << AR_INDEX(SerialOffset);
 
 	unguard;
 }
@@ -910,26 +907,26 @@ static void SerializeObjectExport2(FArchive &Ar, FObjectExport &E)
 
 #if UC2
 
-static void SerializeObjectExport2X(FArchive &Ar, FObjectExport &E)
+void FObjectExport::Serialize2X(FArchive &Ar)
 {
-	guard(SerializeObjectExport2X);
+	guard(FObjectExport::Serialize2X);
 
-	Ar << E.ClassIndex << E.SuperIndex;
+	Ar << ClassIndex << SuperIndex;
 	if (Ar.ArVer >= 150)
 	{
-		int16 idx = E.PackageIndex;
+		int16 idx = PackageIndex;
 		Ar << idx;
-		E.PackageIndex = idx;
+		PackageIndex = idx;
 	}
 	else
-		Ar << E.PackageIndex;
-	Ar << E.ObjectName << E.ObjectFlags << E.SerialSize;
-	if (E.SerialSize)
-		Ar << E.SerialOffset;
+		Ar << PackageIndex;
+	Ar << ObjectName << ObjectFlags << SerialSize;
+	if (SerialSize)
+		Ar << SerialOffset;
 	// UC2 has strange thing here: indices are serialized as 4-byte int (instead of AR_INDEX),
 	// but stored into 2-byte shorts
-	E.ClassIndex = int16(E.ClassIndex);
-	E.SuperIndex = int16(E.SuperIndex);
+	ClassIndex = int16(ClassIndex);
+	SuperIndex = int16(SuperIndex);
 
 	unguard;
 }
@@ -939,20 +936,17 @@ static void SerializeObjectExport2X(FArchive &Ar, FObjectExport &E)
 
 #if UNREAL3
 
-static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
+void FObjectExport::Serialize3(FArchive &Ar)
 {
-	guard(SerializeObjectExport3);
+	guard(FObjectExport::Serialize3);
 
 #if USE_COMPACT_PACKAGE_STRUCTS
-	#define LOC(name) TMP_##name
 	// locally declare FObjectImport data which are stripped
-	unsigned	LOC(ObjectFlags2);
-	int			LOC(Archetype);
-	FGuid		LOC(Guid);
-	int			LOC(U3unk6C);
-	TStaticArray<int, 16> LOC(NetObjectCount);
-#else
-	#define LOC(name) E.name
+	unsigned	ObjectFlags2;
+	int			Archetype;
+	FGuid		Guid;
+	int			U3unk6C;
+	TStaticArray<int, 16> NetObjectCount;
 #endif // USE_COMPACT_PACKAGE_STRUCTS
 
 #if AA3
@@ -972,20 +966,20 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 		// Ar.MidwayVer >= 22; when < 22 => standard version w/o ObjectFlags
 		int tmp1, tmp2, tmp3;
 		Ar << tmp1;	// 0 or 1
-		Ar << E.ObjectName << E.PackageIndex << E.ClassIndex << E.SuperIndex << LOC(Archetype);
-		Ar << E.ObjectFlags << LOC(ObjectFlags2) << E.SerialSize << E.SerialOffset;
+		Ar << ObjectName << PackageIndex << ClassIndex << SuperIndex << Archetype;
+		Ar << ObjectFlags << ObjectFlags2 << SerialSize << SerialOffset;
 		Ar << tmp2; // zero ?
 		Ar << tmp3; // -1 ?
 		Ar.Seek(Ar.Tell() + 0x14);	// skip raw version of ComponentMap
-		Ar << E.ExportFlags;
+		Ar << ExportFlags;
 		Ar.Seek(Ar.Tell() + 0xC); // skip raw version of NetObjectCount
-		Ar << LOC(Guid);
+		Ar << Guid;
 		return;
 	}
 #endif // WHEELMAN
 
-	Ar << E.ClassIndex << E.SuperIndex << E.PackageIndex << E.ObjectName;
-	if (Ar.ArVer >= 220) Ar << LOC(Archetype);
+	Ar << ClassIndex << SuperIndex << PackageIndex << ObjectName;
+	if (Ar.ArVer >= 220) Ar << Archetype;
 
 #if BATMAN
 	if ((Ar.Game >= GAME_Batman2 && Ar.Game <= GAME_Batman4) && Ar.ArLicenseeVer >= 89)
@@ -1008,11 +1002,11 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 	}
 #endif
 
-	Ar << E.ObjectFlags;
-	if (Ar.ArVer >= 195) Ar << LOC(ObjectFlags2);	// qword flags after version 195
-	Ar << E.SerialSize;
-	if (E.SerialSize || Ar.ArVer >= 249)
-		Ar << E.SerialOffset;
+	Ar << ObjectFlags;
+	if (Ar.ArVer >= 195) Ar << ObjectFlags2;	// qword flags after version 195
+	Ar << SerialSize;
+	if (SerialSize || Ar.ArVer >= 249)
+		Ar << SerialOffset;
 
 #if HUXLEY
 	if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 22)
@@ -1057,7 +1051,7 @@ static void SerializeObjectExport3(FArchive &Ar, FObjectExport &E)
 		Ar << tmpComponentMap;
 	}
 ue3_export_flags:
-	if (Ar.ArVer >= 247) Ar << E.ExportFlags;
+	if (Ar.ArVer >= 247) Ar << ExportFlags;
 
 #if TRANSFORMERS
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 116)
@@ -1073,7 +1067,7 @@ ue3_export_flags:
 	if (Ar.Game == GAME_MK && Ar.ArVer >= 446)
 	{
 		// removed generations (NetObjectCount)
-		Ar << LOC(Guid);
+		Ar << Guid;
 		return;
 	}
 #endif // MKVSDC
@@ -1086,34 +1080,34 @@ ue3_export_flags:
 	}
 #endif // BIOSHOCK3
 
-	if (Ar.ArVer >= 322) Ar << LOC(NetObjectCount) << LOC(Guid);
+	if (Ar.ArVer >= 322) Ar << NetObjectCount << Guid;
 
 #if UNDERTOW
-	if (Ar.Game == GAME_Undertow && Ar.ArVer >= 431) Ar << LOC(U3unk6C);	// partially upgraded?
+	if (Ar.Game == GAME_Undertow && Ar.ArVer >= 431) Ar << U3unk6C;	// partially upgraded?
 #endif
 #if ARMYOF2
 	if (Ar.Game == GAME_ArmyOf2) return;
 #endif
 
-	if (Ar.ArVer >= 475) Ar << LOC(U3unk6C);
+	if (Ar.ArVer >= 475) Ar << U3unk6C;
 
 #if AA3
 	if (Ar.Game == GAME_AA3)
 	{
 		// deobfuscate data
-		E.ClassIndex   ^= AA3Obfuscator;
-		E.SuperIndex   ^= AA3Obfuscator;
-		E.PackageIndex ^= AA3Obfuscator;
-		LOC(Archetype) ^= AA3Obfuscator;
-		E.SerialSize   ^= AA3Obfuscator;
-		E.SerialOffset ^= AA3Obfuscator;
+		ClassIndex   ^= AA3Obfuscator;
+		SuperIndex   ^= AA3Obfuscator;
+		PackageIndex ^= AA3Obfuscator;
+		Archetype    ^= AA3Obfuscator;
+		SerialSize   ^= AA3Obfuscator;
+		SerialOffset ^= AA3Obfuscator;
 	}
 #endif // AA3
 #if THIEF4
 	if (Ar.Game == GAME_Thief4)
 	{
 		int unk5C;
-		if (E.ExportFlags & 8) Ar << unk5C;
+		if (ExportFlags & 8) Ar << unk5C;
 	}
 #endif // THIEF4
 
@@ -1126,32 +1120,29 @@ ue3_export_flags:
 
 #if UNREAL4
 
-static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
+void FObjectExport::Serialize4(FArchive &Ar)
 {
-	guard(SerializeObjectExport4);
+	guard(FObjectExport::Serialize4);
 
 #if USE_COMPACT_PACKAGE_STRUCTS
-	#define LOC(name) TMP_##name
 	// locally declare FObjectImport data which are stripped
-	int32		LOC(Archetype);
-	TArray<int32> LOC(NetObjectCount);
-	FGuid		LOC(Guid);
-	int32		LOC(PackageFlags);
-	int32		LOC(TemplateIndex);
-#else
-	#define LOC(name) E.name
+	int32		Archetype;
+	TArray<int32> NetObjectCount;
+	FGuid		Guid;
+	int32		PackageFlags;
+	int32		TemplateIndex;
 #endif // USE_COMPACT_PACKAGE_STRUCTS
 
-	Ar << E.ClassIndex << E.SuperIndex;
-	if (Ar.ArVer >= VER_UE4_TemplateIndex_IN_COOKED_EXPORTS) Ar << LOC(TemplateIndex);
-	Ar << E.PackageIndex << E.ObjectName;
-	if (Ar.ArVer < VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES) Ar << LOC(Archetype);
+	Ar << ClassIndex << SuperIndex;
+	if (Ar.ArVer >= VER_UE4_TemplateIndex_IN_COOKED_EXPORTS) Ar << TemplateIndex;
+	Ar << PackageIndex << ObjectName;
+	if (Ar.ArVer < VER_UE4_REMOVE_ARCHETYPE_INDEX_FROM_LINKER_TABLES) Ar << Archetype;
 
-	Ar << E.ObjectFlags;
+	Ar << ObjectFlags;
 
 	if (Ar.ArVer < VER_UE4_64BIT_EXPORTMAP_SERIALSIZES)
 	{
-		Ar << E.SerialSize << E.SerialOffset;
+		Ar << SerialSize << SerialOffset;
 	}
 	else
 	{
@@ -1162,20 +1153,20 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 		//!! currently limited by 0x80000000
 		assert(SerialSize64 < 0x80000000);
 		assert(SerialOffset64 < 0x80000000);
-		E.SerialSize = (int32)SerialSize64;
-		E.SerialOffset = (int32)SerialOffset64;
+		SerialSize = (int32)SerialSize64;
+		SerialOffset = (int32)SerialOffset64;
 	}
 
 	bool bForcedExport, bNotForClient, bNotForServer;
 	Ar << bForcedExport << bNotForClient << bNotForServer;
 	if (Ar.IsLoading)
 	{
-		E.ExportFlags = bForcedExport ? EF_ForcedExport : 0;	//?? change this
+		ExportFlags = bForcedExport ? EF_ForcedExport : 0;	//?? change this
 	}
 
-	if (Ar.ArVer < VER_UE4_REMOVE_NET_INDEX) Ar << LOC(NetObjectCount);
+	if (Ar.ArVer < VER_UE4_REMOVE_NET_INDEX) Ar << NetObjectCount;
 
-	Ar << LOC(Guid) << LOC(PackageFlags);
+	Ar << Guid << PackageFlags;
 
 	bool bNotForEditorGame;
 	if (Ar.ArVer >= VER_UE4_LOAD_FOR_EDITOR_GAME)
@@ -1193,8 +1184,6 @@ static void SerializeObjectExport4(FArchive &Ar, FObjectExport &E)
 		Ar << SerializationBeforeCreateDependencies << CreateBeforeCreateDependencies;
 	}
 
-#undef LOC
-
 	unguard;
 }
 
@@ -1206,25 +1195,25 @@ FArchive& operator<<(FArchive &Ar, FObjectExport &E)
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
-		SerializeObjectExport4(Ar, E);
+		E.Serialize4(Ar);
 		return Ar;
 	}
 #endif
 #if UNREAL3
 	if (Ar.Game >= GAME_UE3)
 	{
-		SerializeObjectExport3(Ar, E);
+		E.Serialize3(Ar);
 		return Ar;
 	}
 #endif
 #if UC2
 	if (Ar.Engine() == GAME_UE2X)
 	{
-		SerializeObjectExport2X(Ar, E);
+		E.Serialize2X(Ar);
 		return Ar;
 	}
 #endif
-	SerializeObjectExport2(Ar, E);
+	E.Serialize2(Ar);
 	return Ar;
 }
 
