@@ -50,15 +50,14 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 
 	LIBC      = shared
 	OPTIONS   = -msse2									# enable SSE instructions
-	OPTIONS   += -std=c++0x								# allow C++11 features (Warning!! - C++ only option)
 	OPTIONS   += -fno-strict-aliasing					# required for our uint_cast()-based FP hacks
 	OPTIONS   += -fno-stack-protector					# this will remove GLIBC_2.4 dependency
 	OPTIONS   += {
-		# disable some warnings
-		-Wno-invalid-offsetof							#?? this flag is for C++ only, not for C
 		# enable some warnings
 		-Wunused-value									# warning about expression which is occasionally typed in code and not used anywhare
 	}
+	CPP_OPTIONS += -std=c++0x							# allow C++11 features (Warning!! - C++ only option)
+	CPP_OPTIONS += -Wno-invalid-offsetof
 !endif
 
 # GCC debug build
