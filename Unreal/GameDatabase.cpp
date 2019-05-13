@@ -380,6 +380,9 @@ const GameInfo GListOfGames[] = {
 #	if NGB
 		G("New Gundam Breaker", ngb, GAME_NGB),
 #	endif
+#	if LIS2
+		G("Life is Strange 2", lis2, GAME_LIS2),
+#	endif
 #endif // UNREAL4
 
 	// end marker

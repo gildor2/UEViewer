@@ -962,12 +962,16 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 				Ar << CompressedCurveNames;
 			}
 
+#if LIS2
+			if (Ar.Game == GAME_LIS2) goto no_raw_data_size; // this is basically UE4.17, but with older animation format
+#endif
 			if (Ar.Game >= GAME_UE4(17))
 			{
 				// UE4.17+
 				int32 CompressedRawDataSize;
 				Ar << CompressedRawDataSize;
 			}
+		no_raw_data_size:
 			if (Ar.Game >= GAME_UE4(22))
 			{
 				int32 CompressedNumFrames;

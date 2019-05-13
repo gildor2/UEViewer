@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+13.05.2019
+- added Life is Strange 2 support (requires -game=lis2 override)
+
 11.05.2019
 - added support for New Gundam Breaker (requires game override, -game=ngb)
 

@@ -426,6 +426,8 @@ enum EGame
 		GAME_Tekken7 = GAME_UE4(14)+2,
 		// 4.16
 		GAME_NGB = GAME_UE4(16)+1,
+		// 4.17
+		GAME_LIS2 = GAME_UE4(17)+1,
 		// 4.19
 		GAME_Paragon = GAME_UE4(19)+1,
 		// 4.20
