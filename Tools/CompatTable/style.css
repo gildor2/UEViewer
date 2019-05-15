@@ -56,7 +56,7 @@ table.config td:nth-child(2),
 table.config th:nth-child(8),
 table.config td:nth-child(8)
 {
-  text-align: left;
+	text-align: left;
 }
 
 .year {

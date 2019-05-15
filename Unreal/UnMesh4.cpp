@@ -47,8 +47,6 @@
 #error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
-//#define TEXSTREAM_MAX_NUM_UVCHANNELS	4
-
 
 /*-----------------------------------------------------------------------------
 	Common data types
@@ -471,25 +469,6 @@ struct FClothingSectionData
 		return Ar;
 	}
 };
-
-/*
-struct FMeshUVChannelInfo
-{
-	bool					bInitialized;
-	bool					bOverrideDensities;
-	float					LocalUVDensities[TEXSTREAM_MAX_NUM_UVCHANNELS];
-
-	friend FArchive& operator<<(FArchive& Ar, FMeshUVChannelInfo& V)
-	{
-		Ar << V.bInitialized << V.bOverrideDensities;
-		for (int i = 0; i < TEXSTREAM_MAX_NUM_UVCHANNELS; i++)
-		{
-			Ar << V.LocalUVDensities[i];
-		}
-		return Ar;
-	}
-};
-*/
 
 struct FSkeletalMaterial
 {
