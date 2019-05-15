@@ -8,70 +8,91 @@
 	CSkeletalMesh
 -----------------------------------------------------------------------------*/
 
-struct CBoneProxy
+struct CBoneSortHelper
 {
-	CBoneProxy		*Parent;
-	CSkelMeshBone	*Bone;
-
-/*	bool IsChildOf(const CBoneProxy *Other) const
+	struct Proxy
 	{
-		if (Other == this) return false;
+		Proxy* Parent;
+		CSkelMeshBone* Bone;
+	};
 
-		int i = 0;
-		for (const CBoneProxy *Bone = Parent; Bone; Bone = Bone->Parent)
-		{
-			if (Bone == Other) return true;
-			if (++i >= MAX_MESHBONES) appError("Loop in skeleton");
-		}
-		return false;
-	} */
-};
+	Proxy Bones[MAX_MESHBONES];		//!! rename or pass to SortBones()
+	Proxy* SortedBones[MAX_MESHBONES];
+	int NumBones;
+	int NumSortedBones;
 
-
-static CBoneProxy Bones[MAX_MESHBONES];		//!! rename or pass to SortBones()
-static CBoneProxy *SortedBones[MAX_MESHBONES];
-static int NumSortedBones;
-
-static void SortBoneArray(CBoneProxy *Parent, int NumBones)
-{
-	for (int i = 0; i < NumBones; i++)
+	void SortBoneArray(int NumBones)
 	{
-		CBoneProxy *Bone = &Bones[i];
-		if (Bone->Parent == Parent)
+		this->NumBones = NumBones;
+		NumSortedBones = 1;
+		SortedBones[0] = &Bones[0];
+		SortRecursive(0);
+	}
+
+	void SortRecursive(int ParentIndex)
+	{
+		Proxy* Parent = &Bones[ParentIndex];
+		for (int i = 0; i < NumBones; i++)
 		{
-			if (NumSortedBones >= NumBones) appError("Loop in skeleton");
-			SortedBones[NumSortedBones++] = Bone;
-			SortBoneArray(Bone, NumBones);
+			Proxy* Bone = &Bones[i];
+			if (Bone->Parent == Parent)
+			{
+				if (NumSortedBones >= NumBones) appError("Loop in skeleton");
+				SortedBones[NumSortedBones++] = Bone;
+				SortRecursive(i);
+			}
 		}
 	}
-}
+};
 
 
 void CSkeletalMesh::SortBones()
 {
+	guard(CSkeletalMesh::SortBones);
+
 	int NumBones = RefSkeleton.Num();
 	int i;
 
-	// prepare CBoneProxy array
+#if 0
+	// Check if bone array already have all parents before their children.
+	// This may not give us desired result if we'd like to print bone hierarchy to output - it
+	// assumes more strict bone sequence.
+	bool bAlreadySorted = true;
 	for (i = 0; i < NumBones; i++)
 	{
-		Bones[i].Bone   = &RefSkeleton[i];
-		Bones[i].Parent = (i > 0) ? &Bones[RefSkeleton[i].ParentIndex] : NULL;
-		SortedBones[i]  = &Bones[i];
+		if (RefSkeleton[i].ParentIndex > i)
+		{
+			bAlreadySorted = false;
+			break;
+		}
+	}
+	if (bAlreadySorted)
+	{
+		return;
+	}
+#endif
+
+	// prepare CBoneSortHelper
+	assert(NumBones < MAX_MESHBONES);
+
+	CBoneSortHelper helper;
+	for (i = 0; i < NumBones; i++)
+	{
+		helper.Bones[i].Bone   = &RefSkeleton[i];
+		helper.Bones[i].Parent = (i > 0) ? &helper.Bones[RefSkeleton[i].ParentIndex] : NULL;
+		helper.SortedBones[i] = &helper.Bones[i];
 	}
 
 	// sort bones
-	NumSortedBones = 1;
-	SortedBones[0] = &Bones[0];
-	SortBoneArray(&Bones[0], NumBones);
+	helper.SortBoneArray(NumBones);
 
 	// build remap table
 	int Remap[MAX_MESHBONES];
 	int RemapBack[MAX_MESHBONES];
 	for (i = 0; i < NumBones; i++)
 	{
-		const CBoneProxy *P = SortedBones[i];
-		int OldIndex = P - Bones;
+		const CBoneSortHelper::Proxy *P = helper.SortedBones[i];
+		int OldIndex = P - helper.Bones;
 		Remap[OldIndex] = i;
 		RemapBack[i] = OldIndex;
 //		appPrintf("%s[%d] -> [%d] %s <- %s\n", (i != OldIndex) ? "*" : "", i, OldIndex, *P->Bone->Name, P->Parent ? *P->Parent->Bone->Name : "None");
@@ -104,6 +125,8 @@ void CSkeletalMesh::SortBones()
 			}
 		}
 	}
+
+	unguardf("NumBones=%d", RefSkeleton.Num());
 }
 
 

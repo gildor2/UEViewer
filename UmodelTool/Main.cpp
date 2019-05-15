@@ -509,6 +509,14 @@ static void ExceptionHandler()
 // AbortHandler on linux will cause infinite recurse, but works well on Windows
 static void AbortHandler(int signal)
 {
+	if (GErrorHistory[0])
+	{
+		appPrintf("abort called during error handling\n", signal);
+#if VSTUDIO_INTEGRATION
+		__debugbreak();
+#endif
+		exit(1);
+	}
 	appError("abort() called");
 }
 #endif

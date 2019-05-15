@@ -26,7 +26,7 @@ TODO:
 */
 
 
-#define MAX_MESHBONES				2048
+#define MAX_MESHBONES				(1024*3)		// NGD had a mesh with ~2100 bones! (basepose_0000.uasset)
 #define NUM_INFLUENCES				4
 //#define ANIM_DEBUG_INFO				1
 
