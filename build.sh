@@ -94,7 +94,7 @@ fi
 
 # prepare makefile parameters, store in obj directory
 projectName=${project##*/}
-makefile="$root/obj/$projectName-$PLATFORM.mak"
+makefile="$root/obj/$projectName-$PLATFORM"
 if ! [ -d $root/obj ]; then
 	mkdir $root/obj
 fi
@@ -102,6 +102,7 @@ if [ "$debug" ]; then
 	makefile="${makefile}-debug"
 	GENMAKE_OPTIONS+=" DEBUG=1"
 fi
+makefile="${makefile}.mak"
 
 # update makefile when needed
 # [ $makefile -ot $project ] &&
