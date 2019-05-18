@@ -1756,9 +1756,22 @@ UnPackage::~UnPackage()
 {
 	guard(UnPackage::~UnPackage);
 
+	// Remove self from package table (it will be there even if package is not "valid")
+	int i = PackageMap.FindItem(this);
+	assert(i != INDEX_NONE);
+	PackageMap.RemoveAt(i);
+	// unlink package from CGameFileInfo
+	const CGameFileInfo * expInfo = appFindGameFile(Filename);
+	if (expInfo)
+	{
+		assert(expInfo->Package == this || expInfo->Package == NULL);
+		const_cast<CGameFileInfo*>(expInfo)->Package = NULL;
+	}
+
 	if (!IsValid())
 	{
-		// The package wasn't loaded, nothing to release in destructor.
+		// The package wasn't loaded, nothing to release in destructor. Also it is possible that
+		// it has zero names/imports/exports (happens with some UE3 games).
 		return;
 	}
 
@@ -1770,17 +1783,6 @@ UnPackage::~UnPackage()
 #if UNREAL3
 	if (DependsTable) delete DependsTable;
 #endif
-	// remove self from package table
-	int i = PackageMap.FindItem(this);
-	assert(i != INDEX_NONE);
-	PackageMap.RemoveAt(i);
-	// unlink package from CGameFileInfo
-	const CGameFileInfo *expInfo = appFindGameFile(Filename);
-	if (expInfo)
-	{
-		assert(expInfo->Package == this);
-		const_cast<CGameFileInfo*>(expInfo)->Package = NULL;
-	}
 
 	unguard;
 }
@@ -1831,6 +1833,7 @@ void UnPackage::SetupReader(int ExportIndex)
 
 void UnPackage::CloseReader()
 {
+	guard(UnPackage::CloseReader);
 #if 0
 	FFileArchive* File = FindFileArchive(Loader);
 	assert(File);
@@ -1838,15 +1841,22 @@ void UnPackage::CloseReader()
 #else
 	Loader->Close();
 #endif
+	unguardf("pkg=%s", Filename);
 }
 
 void UnPackage::CloseAllReaders()
 {
-	for (int i = 0; i < PackageMap.Num(); i++)
+	int i;
+
+	guard(UnPackage::CloseAllReaders);
+
+	for (i = 0; i < PackageMap.Num(); i++)
 	{
 		UnPackage* p = PackageMap[i];
 		p->CloseReader();
 	}
+
+	unguardf("%d/%d", i, PackageMap.Num());
 }
 
 

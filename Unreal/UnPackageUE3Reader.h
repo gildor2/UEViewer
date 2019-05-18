@@ -257,6 +257,7 @@ public:
 
 	virtual void Close()
 	{
+		guard(FUE3ArchiveReader::Close);
 		Reader->Close();
 		if (Buffer)
 		{
@@ -265,6 +266,7 @@ public:
 			BufferStart = BufferEnd = BufferSize = 0;
 		}
 		CurrentChunk = NULL;
+		unguard;
 	}
 
 	void ReplaceLoaderWithOffset(FArchive* file, int offset)

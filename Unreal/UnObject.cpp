@@ -202,10 +202,12 @@ void UObject::EndLoad()
 		LoadedObjects[i]->PostLoad();
 	unguardf("%s", LoadedObjects[i]->Name);
 	// cleanup
+	guard(Cleanup);
 	GObjLoaded.Empty();
 	GObjBeginLoadCount--;		// decrement after loading
 	appSetNotifyHeader(NULL);
 	assert(GObjBeginLoadCount == 0);
+	unguard;
 
 	// close all opened file handles
 	UnPackage::CloseAllReaders();
