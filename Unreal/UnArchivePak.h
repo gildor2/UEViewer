@@ -115,15 +115,14 @@ struct FPakEntry
 	int64		Size;
 	int64		UncompressedSize;
 	int32		CompressionMethod;
-	byte		Hash[20];
-	byte		bEncrypted;					// replaced with 'Flags' in UE4.21
 	TArray<FPakCompressedBlock> CompressionBlocks;
 	int32		CompressionBlockSize;
+	byte		bEncrypted;					// replaced with 'Flags' in UE4.21
 
-	int32		StructSize;					// computed value
+	uint16		StructSize;					// computed value
 	FPakEntry*	HashNext;					// computed value
 
-	friend FArchive& operator<<(FArchive& Ar, FPakEntry& P)
+	void Serialize(FArchive& Ar)
 	{
 		guard(FPakEntry<<);
 
@@ -134,7 +133,7 @@ struct FPakEntry
 #if GEARS4
 		if (GForceGame == GAME_Gears4)
 		{
-			Ar << P.Pos << (int32&)P.Size << (int32&)P.UncompressedSize << (byte&)P.CompressionMethod;
+			Ar << Pos << (int32&)Size << (int32&)UncompressedSize << (byte&)CompressionMethod;
 			if (Ar.PakVer < PakFile_Version_NoTimestamps)
 			{
 				int64 timestamp;
@@ -142,27 +141,27 @@ struct FPakEntry
 			}
 			if (Ar.PakVer >= PakFile_Version_CompressionEncryption)
 			{
-				if (P.CompressionMethod != 0)
-					Ar << P.CompressionBlocks;
-				Ar << P.CompressionBlockSize;
-				if (P.CompressionMethod == 4)
-					P.CompressionMethod = COMPRESS_LZ4;
+				if (CompressionMethod != 0)
+					Ar << CompressionBlocks;
+				Ar << CompressionBlockSize;
+				if (CompressionMethod == 4)
+					CompressionMethod = COMPRESS_LZ4;
 			}
 			goto end;
 		}
 #endif // GEARS4
 
-		Ar << P.Pos << P.Size << P.UncompressedSize;
+		Ar << Pos << Size << UncompressedSize;
 
 		if (Ar.PakVer < PakFile_Version_FNameBasedCompressionMethod)
 		{
-			Ar << P.CompressionMethod;
+			Ar << CompressionMethod;
 		}
 		else
 		{
 			uint8 CompressionMethodIndex;
 			Ar << CompressionMethodIndex;
-			P.CompressionMethod = CompressionMethodIndex;
+			CompressionMethod = CompressionMethodIndex;
 		}
 
 		if (Ar.PakVer < PakFile_Version_NoTimestamps)
@@ -171,34 +170,33 @@ struct FPakEntry
 			Ar << timestamp;
 		}
 
-		Ar.Serialize(ARRAY_ARG(P.Hash));
+		uint8 Hash[20];
+		Ar.Serialize(ARRAY_ARG(Hash));
 
 		if (Ar.PakVer >= PakFile_Version_CompressionEncryption)
 		{
-			if (P.CompressionMethod != 0)
-				Ar << P.CompressionBlocks;
-			Ar << P.bEncrypted << P.CompressionBlockSize;
+			if (CompressionMethod != 0)
+				Ar << CompressionBlocks;
+			Ar << bEncrypted << CompressionBlockSize;
 		}
 #if TEKKEN7
 		if (GForceGame == GAME_Tekken7)
-			P.bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
+			bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
 #endif
 
 		if (Ar.PakVer >= PakFile_Version_RelativeChunkOffsets)
 		{
 			// Convert relative compressed offsets to absolute
-			for (int i = 0; i < P.CompressionBlocks.Num(); i++)
+			for (int i = 0; i < CompressionBlocks.Num(); i++)
 			{
-				FPakCompressedBlock& B = P.CompressionBlocks[i];
-				B.CompressedStart += P.Pos;
-				B.CompressedEnd += P.Pos;
+				FPakCompressedBlock& B = CompressionBlocks[i];
+				B.CompressedStart += Pos;
+				B.CompressedEnd += Pos;
 			}
 		}
 
 	end:
-		P.StructSize = Ar.Tell64() - StartOffset;
-
-		return Ar;
+		StructSize = Ar.Tell64() - StartOffset;
 
 		unguard;
 	}
@@ -609,7 +607,7 @@ public:
 			// allocate file name in pool
 			E.Name = appStrdupPool(*CombinedPath);
 			// serialize other fields
-			*InfoReader << E;
+			E.Serialize(*InfoReader);
 			if (E.bEncrypted)
 			{
 //				appPrintf("Encrypted file: %s\n", *Filename);
