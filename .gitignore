@@ -12,6 +12,7 @@ Tools/**/makefile-*
 
 # Other ignores
 Docs/cmdline.cfg
+Docs/fortnite.txt
 Tools/MaxActorXImport/ActorXImporter.ini
 Tools/UT2down/
 
