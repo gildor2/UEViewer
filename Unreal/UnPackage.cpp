@@ -847,6 +847,11 @@ void FObjectExport::Serialize2(FArchive &Ar)
 {
 	guard(FObjectExport::Serialize2);
 
+#if USE_COMPACT_PACKAGE_STRUCTS
+	int32		SuperIndex;
+	uint32		ObjectFlags;
+#endif
+
 #if PARIAH
 	if (Ar.Game == GAME_Pariah)
 	{
@@ -911,6 +916,11 @@ void FObjectExport::Serialize2X(FArchive &Ar)
 {
 	guard(FObjectExport::Serialize2X);
 
+#if USE_COMPACT_PACKAGE_STRUCTS
+	int32		SuperIndex;
+	uint32		ObjectFlags;
+#endif
+
 	Ar << ClassIndex << SuperIndex;
 	if (Ar.ArVer >= 150)
 	{
@@ -942,6 +952,8 @@ void FObjectExport::Serialize3(FArchive &Ar)
 
 #if USE_COMPACT_PACKAGE_STRUCTS
 	// locally declare FObjectImport data which are stripped
+	int32		SuperIndex;
+	uint32		ObjectFlags;
 	unsigned	ObjectFlags2;
 	int			Archetype;
 	FGuid		Guid;
@@ -1126,6 +1138,8 @@ void FObjectExport::Serialize4(FArchive &Ar)
 
 #if USE_COMPACT_PACKAGE_STRUCTS
 	// locally declare FObjectImport data which are stripped
+	int32		SuperIndex;
+	uint32		ObjectFlags;
 	int32		Archetype;
 	TArray<int32> NetObjectCount;
 	FGuid		Guid;
@@ -1218,17 +1232,21 @@ FArchive& operator<<(FArchive &Ar, FObjectExport &E)
 }
 
 
-FArchive& operator<<(FArchive &Ar, FObjectImport &I)
+void FObjectImport::Serialize(FArchive& Ar)
 {
-	guard(SerializeFObjectImport);
+	guard(FObjectImport::Serialize);
+
+#if USE_COMPACT_PACKAGE_STRUCTS
+	FName		ClassPackage;
+#endif
 
 #if UC2
 	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 150)
 	{
-		int16 idx = I.PackageIndex;
-		Ar << I.ClassPackage << I.ClassName << idx << I.ObjectName;
-		I.PackageIndex = idx;
-		return Ar;
+		int16 idx = PackageIndex;
+		Ar << ClassPackage << ClassName << idx << ObjectName;
+		PackageIndex = idx;
+		return;
 	}
 #endif // UC2
 #if PARIAH
@@ -1239,12 +1257,13 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 	if (Ar.Game == GAME_AA2)
 	{
 		byte unk;	// serialized length of ClassName string?
-		return Ar << I.ClassPackage << I.ClassName << unk << I.ObjectName << I.PackageIndex;
+		Ar << ClassPackage << ClassName << unk << ObjectName << PackageIndex;
+		return;
 	}
 #endif
 
 	// this code is the same for all engine versions
-	Ar << I.ClassPackage << I.ClassName << I.PackageIndex << I.ObjectName;
+	Ar << ClassPackage << ClassName << PackageIndex << ObjectName;
 
 #if MKVSDC
 	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
@@ -1254,8 +1273,6 @@ FArchive& operator<<(FArchive &Ar, FObjectImport &I)
 		Ar << unk;
 	}
 #endif // MKVSDC
-
-	return Ar;
 
 	unguard;
 }
@@ -1699,7 +1716,7 @@ void UnPackage::LoadImportTable()
 	FObjectImport *Imp = ImportTable = new FObjectImport[Summary.ImportCount];
 	for (int i = 0; i < Summary.ImportCount; i++, Imp++)
 	{
-		*this << *Imp;
+		Imp->Serialize(*this);
 #if DEBUG_PACKAGE
 		PKG_LOG("Import[%d]: %s'%s'\n", i, *Imp->ClassName, *Imp->ObjectName);
 #endif

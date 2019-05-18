@@ -167,13 +167,15 @@ struct FPackageFileSummary
 struct FObjectExport
 {
 	int32		ClassIndex;					// object reference
-	int32		SuperIndex;					// object reference -- not used in Umodel
 	int32		PackageIndex;				// object reference
 	FName		ObjectName;
 	int32		SerialSize;
 	int32		SerialOffset;
 	UObject		*Object;					// not serialized, filled by object loader
+#if !USE_COMPACT_PACKAGE_STRUCTS
+	int32		SuperIndex;					// object reference
 	uint32		ObjectFlags;
+#endif
 #if UNREAL3
 	uint32		ExportFlags;				// EF_* flags
 	#if !USE_COMPACT_PACKAGE_STRUCTS
@@ -199,13 +201,15 @@ struct FObjectExport
 
 struct FObjectImport
 {
+#if !USE_COMPACT_PACKAGE_STRUCTS
 	FName		ClassPackage;
+#endif
 	FName		ClassName;
 	int32		PackageIndex;
 	FName		ObjectName;
 	bool		Missing;					// not serialized
 
-	friend FArchive& operator<<(FArchive &Ar, FObjectImport &I);
+	void Serialize(FArchive& Ar);
 };
 
 #if UNREAL3
