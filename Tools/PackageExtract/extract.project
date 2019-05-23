@@ -22,4 +22,4 @@ sources(MAIN) = {
 	$R/Core/Memory.cpp
 }
 
-target(executable, $PRJ, MAIN + UE3_LIBS, MAIN)
+target(executable, $PRJ, MAIN + COMP_LIBS + UE4_LIBS, MAIN)

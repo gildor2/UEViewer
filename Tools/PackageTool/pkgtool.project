@@ -11,10 +11,14 @@ sources(MAIN) = {
 	$R/Unreal/UnCoreSerialize.cpp
 	$R/Unreal/UnObject.cpp
 	$R/Unreal/UnPackage.cpp
+	$R/Unreal/UnPackageReader.cpp
 	$R/Unreal/GameDatabase.cpp
 	$R/Unreal/GameFileSystem.cpp
 	$R/Unreal/PackageUtils.cpp
-	$R/Core/*.cpp
+	$R/Unreal/TypeInfo.cpp
+	$R/Core/Core.cpp
+	$R/Core/CoreWin32.cpp
+	$R/Core/Memory.cpp
 }
 
-target(executable, $PRJ, MAIN + UE3_LIBS, MAIN)
+target(executable, $PRJ, MAIN + COMP_LIBS + UE4_LIBS, MAIN)

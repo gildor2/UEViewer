@@ -21,7 +21,7 @@ static bool ScanFile(const CGameFileInfo *file)
 	FArchive *Ar = file->CreateReader();
 
 	// setup NotifyInfo to describe package only
-	appSetNotifyHeader(file->RelativeName);
+	appSetNotifyHeader(*file->GetRelativeName());
 
 	FArchive *TmpAr = CreateUMDReader(Ar);
 	if (!TmpAr)
@@ -31,7 +31,7 @@ static bool ScanFile(const CGameFileInfo *file)
 		return true;
 	}
 
-	printf("Processing: %s\n", file->RelativeName);
+	printf("Processing: %s\n", *file->GetRelativeName());
 	Ar = TmpAr;		// original reader will be destroyed automatically with this reader
 
 	if (!GUnpackUmd)
@@ -41,14 +41,16 @@ static bool ScanFile(const CGameFileInfo *file)
 	else
 	{
 		char FileName[512];
-		appSprintf(ARRAY_ARG(FileName), "%s/%s", BaseDir, file->ShortFilename);
+		FString ShortFilename;
+		file->GetCleanName(ShortFilename);
+		appSprintf(ARRAY_ARG(FileName), "%s/%s", BaseDir, *ShortFilename);
 		SaveUMDArchive(Ar, FileName);
 	}
 
 	delete Ar;
 	return true;
 
-	unguardf("%s", file->RelativeName);
+	unguardf("%s", *file->GetRelativeName());
 }
 
 

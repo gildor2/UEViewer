@@ -21,4 +21,4 @@ sources(MAIN) = {
 !endif
 }
 
-target(executable, $PRJ, MAIN + NV_LIBS + UE3_LIBS + MOBILE_LIBS, MAIN)
+target(executable, $PRJ, MAIN + COMP_LIBS + UE4_LIBS + IMG_LIBS + NV_LIBS + MOBILE_LIBS, MAIN)

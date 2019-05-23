@@ -14,7 +14,6 @@ PDB        = 2				# keep enabled, executable is almost the same, except embedded
 OLDCRT     = 1				# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
 !endif
 
-#?? TODO: UE3_LIBS seems combines all libraries used in UModel, but which aren't for UE3 exactly. Should I rename the constant?
 
 #------------------------------------------------
 #	Compiler-specific options
@@ -101,13 +100,14 @@ push(INCLUDES)
 DEFINES = $STDDEFS DYNAMIC_CRC_TABLE BUILDFIXED NO_GZIP
 INCLUDES = $R/libs/include
 
-sources(UE3_LIBS) = {
+# compression libraries
+sources(COMP_LIBS) = {
 	# ... lzo for compressed UE3 packages
 	$R/libs/lzo/lzo_init.c
 	$R/libs/lzo/lzo1x_d2.c
 	# ... zlib for compressed UE3/UE4 packages
 	$R/libs/zlib/*.c
-	# ... lzx for compresses XBox360 UE3 packages
+	# ... lzx for compressed XBox360 UE3 packages
 	$R/libs/mspack/lzxd.c
 	# ... lz4 for Gears of War 4
 	$R/libs/lz4/lz4.c
@@ -116,7 +116,7 @@ sources(UE3_LIBS) = {
 # ... PNG for compressed source textures
 INCLUDES += $R/libs/zlib
 DEFINES = $STDDEFS PNG_USER_CONFIG
-sources(UE3_LIBS) = {
+sources(IMG_LIBS) = {
 	$R/libs/libpng/*.c
 }
 
@@ -132,13 +132,12 @@ LIBINCLUDES += $R/libs/PowerVR
 
 
 LIBINCLUDES += $R/libs/detex
-sources(UE3_LIBS) = {
+sources(IMG_LIBS) = {
 	$R/libs/detex/*.cpp
 }
 
-# TODO: AES code used for UE4, but added to UE3_LIBS
 LIBINCLUDES += $R/libs/rijndael
-sources(UE3_LIBS) = {
+sources(UE4_LIBS) = {
 	$R/libs/rijndael/*.c
 }
 
