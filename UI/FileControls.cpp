@@ -10,7 +10,7 @@
 #include <ObjBase.h>		// CoInitialize()
 #include <Shlwapi.h>		// SH* functions
 
-// prevent "warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared" win Win7.1 SDK
+// prevent "warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared" with Win7.1 SDK
 #pragma warning(push)
 #pragma warning(disable:4091)
 

@@ -319,6 +319,8 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	AES support
 -----------------------------------------------------------------------------*/
 
+#if UNREAL4
+
 FString GAesKey;
 
 #define AES_KEYBITS		256
@@ -353,3 +355,5 @@ void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen)
 
 	unguard;
 }
+
+#endif // UNREAL4

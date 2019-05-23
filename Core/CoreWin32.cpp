@@ -36,8 +36,14 @@
 #endif
 
 #if USE_DBGHELP
+// prevent "warning C4091: 'typedef ': ignored on left of '' when no variable is declared" with Win7.1 SDK
+#pragma warning(push)
+#pragma warning(disable:4091)
+
 #include <dbghelp.h>
-#endif
+
+#pragma warning(pop)
+#endif // USE_DBGHELP
 
 
 /*-----------------------------------------------------------------------------

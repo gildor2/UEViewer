@@ -2464,12 +2464,12 @@ TArray<char*>		MissingPackages;
 			}
 			return package;
 		}
+		MissingPackages.Add(appStrdup(LocalName));
 	}
 
 	// The package is missing. Do not print any warnings: missing package is a normal situation
 	// in UE3 cooked builds, so print warnings when needed at upper level.
 //	appPrintf("WARNING: package %s was not found\n", Name);
-	MissingPackages.Add(appStrdup(LocalName));
 	return NULL;
 
 	unguardf("%s", Name);

@@ -553,6 +553,17 @@ void PrintStringHashDistribution()
 		}
 	}
 	assert(totalCount == totalCount2);
+
+	// Store string table to a file
+	FILE* f = fopen("StringTable.txt", "w");
+	for (int hash = 0; hash < STRING_HASH_SIZE; hash++)
+	{
+		for (CStringPoolEntry* info = StringHashTable[hash]; info; info = info->HashNext)
+		{
+			fprintf(f, "%s\n", info->Str);
+		}
+	}
+	fclose(f);
 }
 #endif
 
