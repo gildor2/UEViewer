@@ -979,7 +979,19 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 			}
 
 			// compressed data
-			Ar << CompressedByteStream;
+			int32 NumBytes;
+			Ar << NumBytes;
+
+			bool bUseBulkData = false;
+			if (Ar.Game >= GAME_UE4(23))
+				Ar << bUseBulkData;
+			assert(bUseBulkData == false);
+
+			if (NumBytes)
+			{
+				CompressedByteStream.AddUninitialized(NumBytes);
+				Ar.Serialize(CompressedByteStream.GetData(), NumBytes);
+			}
 
 			if (Ar.Game >= GAME_UE4(22))
 			{

@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+12.06.2019
+- initial support for UE4.23
+
 13.05.2019
 - added Life is Strange 2 support (requires -game=lis2 override)
 

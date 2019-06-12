@@ -961,6 +961,42 @@ struct FSkinWeightVertexBuffer
 };
 
 
+// UE4.23+
+ struct FRuntimeSkinWeightProfileData
+ {
+	 struct FSkinWeightOverrideInfo
+	 {
+		 uint32 InfluencesOffset;
+		 uint8 NumInfluences;
+
+		 friend FArchive& operator<<(FArchive& Ar, FSkinWeightOverrideInfo& Data)
+		 {
+			 return Ar << Data.InfluencesOffset << Data.NumInfluences;
+		 }
+	 };
+
+	 TArray<FSkinWeightOverrideInfo> OverridesInfo;
+	 TArray<uint16> Weights;
+	 TMap<uint32, uint32> VertexIndexOverrideIndex;
+
+	 friend FArchive& operator<<(FArchive& Ar, FRuntimeSkinWeightProfileData& Data)
+	 {
+		 return Ar << Data.OverridesInfo << Data.Weights << Data.VertexIndexOverrideIndex;
+	 }
+ };
+
+struct FSkinWeightProfilesData
+{
+	TMap<FName, FRuntimeSkinWeightProfileData> OverrideData;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkinWeightProfilesData& Data)
+	{
+		guard(FSkinWeightProfilesData<<);
+		return Ar << Data.OverrideData;
+		unguard;
+	}
+};
+
 struct FStaticLODModel4
 {
 	TArray<FSkelMeshSection4>	Sections;
@@ -1184,6 +1220,12 @@ struct FStaticLODModel4
 
 			if (Lod.HasClothData())
 				Ar << Lod.ClothVertexBuffer;
+
+			if (Ar.Game >= GAME_UE4(23))
+			{
+				FSkinWeightProfilesData SkinWeightProfilesData;
+				Ar << SkinWeightProfilesData;
+			}
 
 			guard(BuildVertexData);
 
