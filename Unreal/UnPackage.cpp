@@ -1775,8 +1775,11 @@ UnPackage::~UnPackage()
 
 	// Remove self from package table (it will be there even if package is not "valid")
 	int i = PackageMap.FindItem(this);
-	assert(i != INDEX_NONE);
-	PackageMap.RemoveAt(i);
+	if (i != INDEX_NONE)
+	{
+		// Could be INDEX_NONE in a case of bad package
+		PackageMap.RemoveAt(i);
+	}
 	// unlink package from CGameFileInfo
 	const CGameFileInfo * expInfo = appFindGameFile(Filename);
 	if (expInfo)
