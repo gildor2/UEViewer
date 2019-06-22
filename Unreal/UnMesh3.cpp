@@ -2399,6 +2399,12 @@ struct FStaticMeshSection3
 					ps3data.unk5.Num(), ps3data.unk6.Num(), ps3data.unk7.Num(), ps3data.unk8.Num());
 			}
 		}
+		if (Ar.ArVer >= 869)
+		{
+			// Picked from GRAV executable
+			int32 unk;
+			Ar << unk;
+		}
 #if XCOM
 		if (Ar.Game == GAME_XcomB)
 		{
@@ -2407,7 +2413,7 @@ struct FStaticMeshSection3
 		}
 		if (Ar.Game == GAME_Xcom2 && Ar.ArLicenseeVer >= 83)
 		{
-			int unk;
+			int32 unk;
 			Ar << unk;
 		}
 #endif // XCOM

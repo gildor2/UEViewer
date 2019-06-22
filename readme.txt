@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+22.06.2019
+- support for newer UE3 StaticMesh format
+
 12.06.2019
 - initial support for UE4.23
 
