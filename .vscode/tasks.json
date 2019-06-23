@@ -6,14 +6,35 @@
 		{
 			"label": "Build",
 			"type": "shell",
-			"command": "./build.sh",
-			"windows": {
-				"command": "bash build.sh --debug"
-			},
+			"command": "./build.sh --debug",
 			"group": {
 				"kind": "build",
 				"isDefault": true
 			},
+			"presentation": {
+				"reveal": "always",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"problemMatcher": {
+				"owner": "cpp",
+				"fileLocation": [
+					"relative",
+					"${workspaceRoot}"
+				],
+				"pattern": {
+					"regexp": "^(.*)\\((\\d+)\\)\\s+:\\s+(error|warning)\\s+(\\w+\\s*:\\s+.*)$",
+					"file": 1,
+					"line": 2,
+					"severity": 3,
+					"message": 4
+				}
+			}
+		},
+		{
+			"label": "Compile",
+			"type": "shell",
+			"command": "./build.sh --debug --file \"${relativeFile}\"",
 			"presentation": {
 				"reveal": "always",
 				"showReuseMessage": false,

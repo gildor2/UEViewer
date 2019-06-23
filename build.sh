@@ -1,8 +1,12 @@
 #!/bin/bash
 
+
+# Parse command line parameters
+
 while [ "$1" ]; do
 	case "$1" in
 		--debug)
+			# enable debug build
 			debug=1
 			shift
 			;;
@@ -11,12 +15,18 @@ while [ "$1" ]; do
 			shift 2
 			;;
 		--64)
+			# switch to 64 bit platform (Win64)
 			PLATFORM="vc-win64"
 			VC32TOOLS_OPTIONS="--64"
 			shift
 			;;
+		--file)
+			# compile a single file from VSCode, should replace slashes
+			single_file=${2//\\//}
+			shift 2
+			;;
 		*)
-			echo "Usage: build.sh [--debug] [--vc <version>] [--64]"
+			echo "Usage: build.sh [--debug] [--vc <version>] [--64] [--file <cpp file>]"
 			exit
 			;;
 	esac
@@ -108,22 +118,72 @@ makefile="${makefile}.mak"
 # [ $makefile -ot $project ] &&
 $root/Tools/genmake $project.project TARGET=$PLATFORM $GENMAKE_OPTIONS > $makefile
 
+if [ "$single_file" ]; then
+# Using perl with HEREDOC for parsing of makefile to find object file matching required target.
+# Code layout: target=`perl << 'EOF'
+# EOF
+# `
+# 1) using quoted 'EOF' to prevent variable expansion
+# 2) passing parameters to a script using 'export <variable', return value - as output capture
+# 3) putting perl command into `` (inverse quotes)
+# 4) s/// command in perl code has extra quote for '$'
+export makefile
+export single_file
+target=`perl <<'EOF'
+	open(FILE, $ENV{"makefile"}) or die;
+	$nn = 0;					#?? REMOVE
+	$defines = ();
+	while ($line = <FILE>)
+	{
+		next if $line !~ /^\S+/;	# we're interested only in lines starting without indent
+		next if $line =~ /^\#/;		# no comments
+		$line =~ s/(\r|\n)//;		# string end of line
+#		print($line."\n");		#?? REMOVE
+		last if ($nn++ > 200);	#?? REMOVE
+		# parse assignment
+		($var, $val) = $line =~ /^(\w+)\s*\=\s*(.*)$/;
+		if (defined($var) && defined($val)) {
+			$defines{$var} = $val;
+		} else {
+			# parse target
+			($target, $cpp) = $line =~ /^(\S+)\s*\:\s*(\S+)(\s|$)/;
+			if (defined($target) && defined($cpp)) {
+				next if $cpp ne $ENV{"single_file"};	# match with single_file value
+#				print("$cpp -> $target\n");
+				for my $key (keys(%defines)) {
+					my $value = $defines{$key};
+					$target =~ s/\\$\($key\)/$value/g;	# replace $(var) with value
+				}
+#				print("$cpp -> $target\n");
+				print("$target");
+				exit;
+			}
+		}
+	}
+EOF
+`
+#echo "[$target]"
+if [ -z "$target" ]; then echo "Error: failed to find build target for '$single_file'"; exit; fi
+# end of parsing
+fi
+
 # build
+# if $target is empty, whole project will be built, otherwise a single file
 case "$PLATFORM" in
 	"vc-win32")
-		Make $makefile || exit 1
+		Make $makefile $target || exit 1
 		cp $root/libs/SDL2/x86/SDL2.dll .
 		;;
 	"vc-win64")
-		Make $makefile || exit 1
+		Make $makefile $target || exit 1
 		cp $root/libs/SDL2/x64/SDL2.dll .
 		;;
 	"mingw32"|"cygwin")
-		PATH=/bin:/usr/bin:$PATH			# configure paths for Cygwin
-		gccfilt make -f $makefile || exit 1
+		PATH=/bin:/usr/bin:$PATH					# configure paths for Cygwin
+		gccfilt make -f $makefile $target || exit 1
 		;;
 	linux*)
-		make -j 4 -f $makefile || exit 1	# use 4 jobs for build
+		make -j 4 -f $makefile $target || exit 1	# use 4 jobs for build
 		;;
 	*)
 		echo "Unknown PLATFORM=\"$PLATFORM\""

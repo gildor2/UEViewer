@@ -20,7 +20,7 @@
         "*.ush": "hlsl",
         "*.project": "perl"
     },
-	"files.trimTrailingWhitespace": true,
+    "files.trimTrailingWhitespace": true,
     "cSpell.words": [
 		"FCOLOR",
 		"FGPU",

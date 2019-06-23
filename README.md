@@ -70,6 +70,17 @@ UModel contains project files needed for opening and running it from [Visual Stu
 Just open UModel's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up.
 Of course you'll need a [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed.
 
+VSCode project comes with additional build command which could be bound to a key. Just use
+```
+	{
+		"key": "ctrl+f7",
+		"command": "workbench.action.tasks.runTask",
+		"args": "Compile"
+	}
+```
+and then Ctrl+F7 key will compile a file currently opened in editor. Of course, it won't work for headers and other non-cpp
+files.
+
 
 C runtime library for MSVC
 --------------------------
