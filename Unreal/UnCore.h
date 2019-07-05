@@ -426,6 +426,7 @@ enum EGame
 		GAME_Tekken7 = GAME_UE4(14)+2,
 		// 4.16
 		GAME_NGB = GAME_UE4(16)+1,
+		GAME_UT4 = GAME_UE4(16)+2,
 		// 4.17
 		GAME_LIS2 = GAME_UE4(17)+1,
 		// 4.19
@@ -2717,6 +2718,9 @@ struct FSkeletalMeshCustomVersion
 			return (Type)ver;
 #if PARAGON
 		if (Ar.Game == GAME_Paragon) return (Type)12;
+#endif
+#if UT4
+		if (Ar.Game == GAME_UT4) return (Type)5;
 #endif
 
 		if (Ar.Game < GAME_UE4(13))

@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+05.07.2019
+- added support for final version of Unreal Tournament 4 (requires game override: -game=ut4)
+
 22.06.2019
 - support for newer UE3 StaticMesh format
 

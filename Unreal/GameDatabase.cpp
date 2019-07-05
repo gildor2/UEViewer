@@ -374,6 +374,9 @@ const GameInfo GListOfGames[] = {
 #	if PARAGON
 		G("Paragon", paragon, GAME_Paragon),
 #	endif
+#	if UT4
+		G("Unreal Tournament 4", ut4, GAME_UT4),
+#	endif
 #	if HIT
 		G("Heroes of Incredible Tales", hit, GAME_HIT),
 #	endif

@@ -633,7 +633,7 @@ struct FSkelMeshSection4
 				Ar << S.NumVertices;
 			if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSoftAndRigidVerts)
 			{
-				int NumRigidVerts, NumSoftVerts;
+				int32 NumRigidVerts, NumSoftVerts;
 				Ar << NumRigidVerts << NumSoftVerts;
 			}
 			Ar << S.MaxBoneInfluences;
@@ -1815,6 +1815,10 @@ struct FStaticMeshLODModel4
 
 		if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
 			Ar << Lod.AdjacencyIndexBuffer;
+
+#if UT4
+		if (Ar.Game == GAME_UT4) return;
+#endif
 
 		if (Ar.Game >= GAME_UE4(16))
 		{

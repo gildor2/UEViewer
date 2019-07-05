@@ -154,6 +154,7 @@
 #define SOD2			1		// State of Decay 2
 #define DAUNTLESS		1		// Dauntless
 #define PARAGON			1		// Paragon
+#define UT4				1		// Unreal Tournament 4
 #define ARK				1		// Ark: Survival Evolved
 #define HIT				1		// Heroes of Incredible Tales
 #define NGB				1		// New Gundam Breaker
