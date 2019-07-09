@@ -16,20 +16,7 @@
 				"showReuseMessage": false,
 				"clear": true
 			},
-			"problemMatcher": {
-				"owner": "cpp",
-				"fileLocation": [
-					"relative",
-					"${workspaceRoot}"
-				],
-				"pattern": {
-					"regexp": "^(.*)\\((\\d+)\\)\\s+:\\s+(error|warning)\\s+(\\w+\\s*:\\s+.*)$",
-					"file": 1,
-					"line": 2,
-					"severity": 3,
-					"message": 4
-				}
-			}
+			"problemMatcher": "$msCompile"
 		},
 		{
 			"label": "Compile",
@@ -40,20 +27,21 @@
 				"showReuseMessage": false,
 				"clear": true
 			},
-			"problemMatcher": {
-				"owner": "cpp",
-				"fileLocation": [
-					"relative",
-					"${workspaceRoot}"
-				],
-				"pattern": {
-					"regexp": "^(.*)\\((\\d+)\\)\\s+:\\s+(error|warning)\\s+(\\w+\\s*:\\s+.*)$",
-					"file": 1,
-					"line": 2,
-					"severity": 3,
-					"message": 4
-				}
-			}
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Build UITest",
+			"type": "shell",
+			"command": "./build.sh --debug",
+			"presentation": {
+				"reveal": "always",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"options": {
+				"cwd": "Tools/UITest"
+			},
+			"problemMatcher": "$msCompile"
 		}
 	]
 }

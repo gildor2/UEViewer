@@ -10,7 +10,7 @@
         "**/Docs": true,
         "**/makefile-*": true,
         "**/obj": true,
-        "**/Tools/**": true,
+        "**/Tools/{M,P,T,Umd,UT,unpack}*": true,
         "**/UI/stl-stub": true,
         "**/UmodelExport": true,
         "**/UmodelSaved": true,

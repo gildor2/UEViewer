@@ -28,6 +28,18 @@
 			"externalConsole": false,
 			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
+		},
+		{
+			"name": "UI Test",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"preLaunchTask": "Build UITest",
+			"program": "${workspaceFolder}/Tools/UITest/uitest.exe",
+			"args": [],
+			"cwd": "${workspaceFolder}",
+			"externalConsole": false,
+			"logging": { "moduleLoad": false },
+			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		}
 	]
 }
