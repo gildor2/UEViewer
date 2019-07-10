@@ -73,6 +73,67 @@ static HINSTANCE hInstance;
 
 
 /*-----------------------------------------------------------------------------
+	UICreateContext
+-----------------------------------------------------------------------------*/
+
+UICreateContext::UICreateContext(UIBaseDialog* pDialog)
+:	dialog(pDialog)
+{
+	hDialogFont = (HANDLE)SendMessage(dialog->GetWnd(), WM_GETFONT, 0, 0);
+}
+
+HWND UICreateContext::MakeWindow(UIElement* control, const char* className, const char* text, DWORD style, DWORD exStyle, const UIRect* customRect)
+{
+	const UIRect* rect = customRect ? customRect : &control->Rect;
+
+	int x = rect->X;
+	int y = rect->Y;
+	int w = rect->Width;
+	int h = rect->Height;
+
+	if (control->IsVisible())
+	{
+		style |= WS_VISIBLE;
+	}
+
+	HWND dialogWnd = dialog->GetWnd();
+	HWND wnd = CreateWindowEx(exStyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
+		dialogWnd, (HMENU)(size_t)control->Id, hInstance, NULL);		// convert int -> size_t -> HANDLE to avoid warnings on 64-bit platform
+#if DEBUG_WINDOWS_ERRORS
+	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
+#endif
+	SendMessage(wnd, WM_SETFONT, (WPARAM)hDialogFont, MAKELPARAM(TRUE, 0));
+
+	return wnd;
+}
+
+HWND UICreateContext::MakeWindow(UIElement* control, const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle, const UIRect* customRect)
+{
+	const UIRect* rect = customRect ? customRect : &control->Rect;
+
+	int x = rect->X;
+	int y = rect->Y;
+	int w = rect->Width;
+	int h = rect->Height;
+
+	if (control->IsVisible())
+	{
+		style |= WS_VISIBLE;
+	}
+
+	HWND dialogWnd = dialog->GetWnd();
+	HWND wnd = CreateWindowExW(exStyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
+		dialogWnd, (HMENU)(size_t)control->Id, hInstance, NULL);
+#if DEBUG_WINDOWS_ERRORS
+	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
+#endif
+	SendMessage(wnd, WM_SETFONT, (WPARAM)hDialogFont, MAKELPARAM(TRUE, 0));
+
+	return wnd;
+}
+
+
+/*-----------------------------------------------------------------------------
 	UIElement
 -----------------------------------------------------------------------------*/
 
@@ -238,50 +299,6 @@ void UIElement::MeasureTextVSize(const char* text, int* width, int* height, HWND
 	unguard;
 }
 
-HWND UIElement::Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
-	int id, int x, int y, int w, int h)
-{
-	if (x == -1) x = Rect.X;
-	if (y == -1) y = Rect.Y;
-	if (w == -1) w = Rect.Width;
-	if (h == -1) h = Rect.Height;
-	if (id == -1) id = Id;
-
-	HWND dialogWnd = dialog->GetWnd();
-
-	if (Visible) style |= WS_VISIBLE;
-	HWND wnd = CreateWindowEx(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
-		dialogWnd, (HMENU)(size_t)id, hInstance, NULL);		// convert int -> size_t -> HANDLE to avoid warnings on 64-bit platform
-#if DEBUG_WINDOWS_ERRORS
-	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
-#endif
-	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
-
-	return wnd;
-}
-
-HWND UIElement::Window(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
-	int id, int x, int y, int w, int h)
-{
-	if (x == -1) x = Rect.X;
-	if (y == -1) y = Rect.Y;
-	if (w == -1) w = Rect.Width;
-	if (h == -1) h = Rect.Height;
-	if (id == -1) id = Id;
-
-	HWND dialogWnd = dialog->GetWnd();
-
-	if (Visible) style |= WS_VISIBLE;
-	HWND wnd = CreateWindowExW(exstyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
-		dialogWnd, (HMENU)(size_t)id, hInstance, NULL);
-#if DEBUG_WINDOWS_ERRORS
-	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
-#endif
-	SendMessage(wnd, WM_SETFONT, SendMessage(dialogWnd, WM_GETFONT, 0, 0), MAKELPARAM(TRUE, 0));
-
-	return wnd;
-}
-
 void UIElement::UpdateLayout()
 {
 	if (Wnd)
@@ -342,9 +359,9 @@ UIHorizontalLine::UIHorizontalLine()
 	Layout.Height = 2;
 }
 
-void UIHorizontalLine::Create(UIBaseDialog* dialog)
+void UIHorizontalLine::Create(UICreateContext& ctx)
 {
-	Wnd = Window(WC_STATIC, "", SS_ETCHEDHORZ, 0, dialog);
+	Wnd = ctx.MakeWindow(this, WC_STATIC, "", SS_ETCHEDHORZ, 0);
 }
 
 
@@ -361,9 +378,9 @@ UIVerticalLine::UIVerticalLine()
 	//!! change; 2nd pass will resize all remembered controls with the height of group
 }
 
-void UIVerticalLine::Create(UIBaseDialog* dialog)
+void UIVerticalLine::Create(UICreateContext& ctx)
 {
-	Wnd = Window(WC_STATIC, "", SS_ETCHEDVERT, 0, dialog);
+	Wnd = ctx.MakeWindow(this, WC_STATIC, "", SS_ETCHEDVERT, 0);
 }
 
 
@@ -447,9 +464,9 @@ UIBitmap& UIBitmap::SetResourceBitmap(int resId)
 	return *this;
 }
 
-void UIBitmap::Create(UIBaseDialog* dialog)
+void UIBitmap::Create(UICreateContext& ctx)
 {
-	Wnd = Window(WC_STATIC, "", IsIcon ? SS_ICON : SS_BITMAP, 0, dialog);
+	Wnd = ctx.MakeWindow(this, WC_STATIC, "", IsIcon ? SS_ICON : SS_BITMAP, 0);
 	if (Wnd && hImage) SendMessage(Wnd, STM_SETIMAGE, IsIcon ? IMAGE_ICON : IMAGE_BITMAP, (LPARAM)hImage);
 }
 
@@ -504,9 +521,9 @@ static int ConvertTextAlign(ETextAlign align)
 		return SS_CENTER;
 }
 
-void UILabel::Create(UIBaseDialog* dialog)
+void UILabel::Create(UICreateContext& ctx)
 {
-	Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align), 0, dialog);
+	Wnd = ctx.MakeWindow(this, WC_STATIC, *Label, ConvertTextAlign(Align), 0);
 	UpdateEnabled();
 }
 
@@ -530,9 +547,9 @@ void UIHyperLink::UpdateSize(UIBaseDialog* dialog)
 	}
 }
 
-void UIHyperLink::Create(UIBaseDialog* dialog)
+void UIHyperLink::Create(UICreateContext& ctx)
 {
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
 #if 0
 	// works without this code
@@ -546,19 +563,19 @@ void UIHyperLink::Create(UIBaseDialog* dialog)
 	// Unicode version (this control, as mentioned in SysLink documentation, in Unicode-only)
 	wchar_t buffer[MAX_TITLE_LEN];
 	appSprintf(ARRAY_ARG(buffer), L"<a href=\"%S\">%S</a>", *Link, *Label);
-	Wnd = Window(WC_LINK, buffer, ConvertTextAlign(Align), 0, dialog);
+	Wnd = ctx.MakeWindow(this, WC_LINK, buffer, ConvertTextAlign(Align), 0);
 #else
 	// ANSI version works too
 	char buffer[MAX_TITLE_LEN];
 	appSprintf(ARRAY_ARG(buffer), "<a href=\"%s\">%s</a>", *Link, *Label);
-	Wnd = Window("SysLink", buffer, ConvertTextAlign(Align), 0, dialog);
+	Wnd = ctx.MakeWindow(this, "SysLink", buffer, ConvertTextAlign(Align), 0);
 #endif
 	if (!Wnd)
 	{
 		// Fallback to ordinary label if SysLink was not created for some reason.
 		// Could also change text color:
 		// http://stackoverflow.com/questions/1525669/set-static-text-color-win32
-		Wnd = Window(WC_STATIC, *Label, ConvertTextAlign(Align) | SS_NOTIFY, 0, dialog);
+		Wnd = ctx.MakeWindow(this, WC_STATIC, *Label, ConvertTextAlign(Align) | SS_NOTIFY, 0);
 	}
 
 	UpdateEnabled();
@@ -594,9 +611,9 @@ void UIProgressBar::SetValue(float value)
 	if (Wnd) SendMessage(Wnd, PBM_SETPOS, (int)(Value * 16384), 0);
 }
 
-void UIProgressBar::Create(UIBaseDialog* dialog)
+void UIProgressBar::Create(UICreateContext& ctx)
 {
-	Wnd = Window(PROGRESS_CLASS, "", 0, 0, dialog);
+	Wnd = ctx.MakeWindow(this, PROGRESS_CLASS, "", 0, 0);
 	SendMessage(Wnd, PBM_SETRANGE, 0, MAKELPARAM(0, 16384));
 	if (Wnd) SendMessage(Wnd, PBM_SETPOS, (int)(Value * 16384), 0);
 }
@@ -643,13 +660,13 @@ void UIButton::UpdateSize(UIBaseDialog* dialog)
 	}
 }
 
-void UIButton::Create(UIBaseDialog* dialog)
+void UIButton::Create(UICreateContext& ctx)
 {
 	if (Id == 0 || Id >= FIRST_DIALOG_ID)
-		Id = dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
+		Id = ctx.dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
 
 	//!! BS_DEFPUSHBUTTON - for default key
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP, 0, dialog);
+	Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, WS_TABSTOP, 0);
 	UpdateEnabled();
 }
 
@@ -712,16 +729,16 @@ void UIMenuButton::UpdateSize(UIBaseDialog* dialog)
 	}
 }
 
-void UIMenuButton::Create(UIBaseDialog* dialog)
+void UIMenuButton::Create(UICreateContext& ctx)
 {
 	if (Id == 0 || Id >= FIRST_DIALOG_ID)
-		Id = dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
+		Id = ctx.dialog->GenerateDialogId();		// do not override Id which was set outside of Create()
 
 	// should check Common Controls library version - if it's too low, control's window
 	// will be created anyway, but will look completely wrong
 	DWORD flags = WS_TABSTOP;
 	if (GetComctl32Version() >= 0x600) flags |= BS_SPLITBUTTON; // not supported in comctl32.dll prior version 6.00
-	Wnd = Window(WC_BUTTON, *Label, flags, 0, dialog);
+	Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, flags, 0);
 	UpdateEnabled();
 }
 
@@ -790,19 +807,21 @@ void UICheckbox::UpdateSize(UIBaseDialog* dialog)
 	}
 }
 
-void UICheckbox::Create(UIBaseDialog* dialog)
+void UICheckbox::Create(UICreateContext& ctx)
 {
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
-	DlgWnd = dialog->GetWnd();
+	DlgWnd = ctx.dialog->GetWnd();
 
 	// compute width of checkbox, otherwise it would react on whole parent's width area
 	int checkboxWidth;
 	MeasureTextSize(*Label, &checkboxWidth, NULL, DlgWnd);
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
-		Id, Rect.X, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width));
+	UIRect ctlRect = Rect;
+	ctlRect.Width = min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width);
+
+	Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, &ctlRect);
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
@@ -871,19 +890,21 @@ void UIRadioButton::UpdateSize(UIBaseDialog* dialog)
 	}
 }
 
-void UIRadioButton::Create(UIBaseDialog* dialog)
+void UIRadioButton::Create(UICreateContext& ctx)
 {
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
-	HWND DlgWnd = dialog->GetWnd();
+	HWND DlgWnd = ctx.dialog->GetWnd();
 
 	// compute width of checkbox, otherwise it would react on whole parent's width area
 	int radioWidth;
 	MeasureTextSize(*Label, &radioWidth, NULL, DlgWnd);
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
-	Wnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTORADIOBUTTON, 0, dialog,
-		Id, Rect.X, Rect.Y, min(radioWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width));
+	UIRect ctlRect = Rect;
+	ctlRect.Width = min(radioWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width);
+
+	Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, WS_TABSTOP | BS_AUTORADIOBUTTON, 0, &ctlRect);
 
 //	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
@@ -956,9 +977,9 @@ const char* UITextEdit::GetText()
 	return *(*pValue);
 }
 
-void UITextEdit::Create(UIBaseDialog* dialog)
+void UITextEdit::Create(UICreateContext& ctx)
 {
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
 	int style = (IsWantFocus) ? WS_TABSTOP : 0;
 	if (IsMultiline)
@@ -971,7 +992,7 @@ void UITextEdit::Create(UIBaseDialog* dialog)
 	}
 	if (IsReadOnly)  style |= ES_READONLY;
 
-	Wnd = Window(WC_EDIT, "", style, WS_EX_CLIENTEDGE, dialog);
+	Wnd = ctx.MakeWindow(this, WC_EDIT, "", style, WS_EX_CLIENTEDGE);
 	SetWindowText(Wnd, *(*pValue));
 	UpdateEnabled();
 
@@ -1084,17 +1105,19 @@ UICombobox& UICombobox::SelectItem(const char* item)
 	return *this;
 }
 
-void UICombobox::Create(UIBaseDialog* dialog)
+void UICombobox::Create(UICreateContext& ctx)
 {
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
 	// Note: we're sending DEFAULT_COMBOBOX_LIST_HEIGHT instead of control's Height here, otherwise
-	// dropdown list could appear empty (with zero height) or systems not supporting visual styles
+	// dropdown list could appear empty (with zero height) on systems not supporting visual styles
 	// (pre-XP Windows) or when dropdown list is empty
-	Wnd = Window(WC_COMBOBOX, "",
+	UIRect ctlRect = Rect;
+	ctlRect.Height = DEFAULT_COMBOBOX_LIST_HEIGHT;
+
+	Wnd = ctx.MakeWindow(this, WC_COMBOBOX, "",
 		CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
-		WS_EX_CLIENTEDGE, dialog,
-		Id, -1, -1, -1, DEFAULT_COMBOBOX_LIST_HEIGHT);
+		WS_EX_CLIENTEDGE, &ctlRect);
 	// add items and find selected item
 	int v = *pValue;
 	if (Selection < 0)
@@ -1200,13 +1223,13 @@ UIListbox& UIListbox::SelectItem(const char* item)
 	return *this;
 }
 
-void UIListbox::Create(UIBaseDialog* dialog)
+void UIListbox::Create(UICreateContext& ctx)
 {
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
-	Wnd = Window(WC_LISTBOX, "",
+	Wnd = ctx.MakeWindow(this, WC_LISTBOX, "",
 		LBS_NOINTEGRALHEIGHT | LBS_HASSTRINGS | LBS_NOTIFY | WS_VSCROLL | WS_TABSTOP,
-		WS_EX_CLIENTEDGE, dialog);
+		WS_EX_CLIENTEDGE);
 	// add items
 	for (int i = 0; i < Items.Num(); i++)
 		SendMessage(Wnd, LB_ADDSTRING, 0, (LPARAM)(*Items[i]));
@@ -1598,18 +1621,18 @@ void UIMulticolumnListbox::SetItemSelection(int index, bool select)
 	if (select) ListView_EnsureVisible(Wnd, index, FALSE);
 }
 
-void UIMulticolumnListbox::Create(UIBaseDialog* dialog)
+void UIMulticolumnListbox::Create(UICreateContext& ctx)
 {
 	int i;
 
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
 	DWORD style = Multiselect ? 0 : LVS_SINGLESEL;
 	if (IsVirtualMode) style |= LVS_OWNERDATA;
 
-	Wnd = Window(WC_LISTVIEW, "",
+	Wnd = ctx.MakeWindow(this, WC_LISTVIEW, "",
 		style | LVS_REPORT | LVS_SHOWSELALWAYS | WS_VSCROLL | WS_TABSTOP,
-		WS_EX_CLIENTEDGE, dialog);
+		WS_EX_CLIENTEDGE);
 	ListView_SetExtendedListViewStyle(Wnd, LVS_EX_FLATSB | LVS_EX_LABELTIP);
 
 #if USE_EXPLORER_STYLE
@@ -2093,13 +2116,13 @@ static void LoadFolderIcons()
 	FreeLibrary(hDll);
 }
 
-void UITreeView::Create(UIBaseDialog* dialog)
+void UITreeView::Create(UICreateContext& ctx)
 {
-	Id = dialog->GenerateDialogId();
+	Id = ctx.dialog->GenerateDialogId();
 
-	Wnd = Window(WC_TREEVIEW, "",
+	Wnd = ctx.MakeWindow(this, WC_TREEVIEW, "",
 		TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | WS_VSCROLL | WS_TABSTOP,
-		WS_EX_CLIENTEDGE, dialog);
+		WS_EX_CLIENTEDGE);
 	if (bUseCheckboxes)
 	{
 		// Can't set TVS_CHECKBOXES immediately - this will not allow to change "checked" state of items after creation.
@@ -2441,9 +2464,9 @@ void UIGroup::ShowAllControls(bool show)
 		ctl->Show(show);
 }
 
-void UIGroup::Create(UIBaseDialog* dialog)
+void UIGroup::Create(UICreateContext& ctx)
 {
-	CreateGroupControls(dialog);
+	CreateGroupControls(ctx);
 	// Disable all children controls if this UIGroup is disabled
 	if (!Enabled)
 	{
@@ -2451,14 +2474,14 @@ void UIGroup::Create(UIBaseDialog* dialog)
 	}
 }
 
-void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
+void UIGroup::CreateGroupControls(UICreateContext& ctx)
 {
 	guard(UIGroup::CreateGroupControls);
 
 	if (!(Flags & GROUP_NO_BORDER))
 	{
 		// create a group window (border)
-		Wnd = Window(WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0, dialog);
+		Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0);
 	}
 
 	// call 'Create' for all children
@@ -2467,7 +2490,7 @@ void UIGroup::CreateGroupControls(UIBaseDialog* dialog)
 	for (UIElement* control = FirstChild; control; control = control->NextChild, controlIndex++)
 	{
 		guard(ControlCreate);
-		control->Create(dialog);
+		control->Create(ctx);
 		unguardf("index=%d,class=%s", controlIndex, control->ClassName());
 
 		if (control->IsRadioButton) isRadioGroup = true;
@@ -2639,24 +2662,28 @@ UICheckboxGroup::UICheckboxGroup(const char* label, bool* value, unsigned flags)
 ,	CheckboxWnd(0)
 {}
 
-void UICheckboxGroup::Create(UIBaseDialog* dialog)
+void UICheckboxGroup::Create(UICreateContext& ctx)
 {
 	// Call UIGroup::Create with hiding Label from this function. We'll make
 	// own label using checkbox control
 	FString tmpLabel(Detail::MoveTemp(Label));
-	UIGroup::Create(dialog);
+	UIGroup::Create(ctx);
 	Label = Detail::MoveTemp(tmpLabel);
 
-	Id = dialog->GenerateDialogId();
-	DlgWnd = dialog->GetWnd();
+	Id = ctx.dialog->GenerateDialogId();
+	DlgWnd = ctx.dialog->GetWnd();
 
 	int checkboxWidth;
 	MeasureTextSize(*Label, &checkboxWidth);
 
 	int checkboxOffset = (Flags & GROUP_NO_BORDER) ? 0 : GROUP_INDENT;
+	UIRect ctlRect(
+		Rect.X + checkboxOffset,
+		Rect.Y,
+		min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset),
+		DEFAULT_CHECKBOX_HEIGHT);
 
-	CheckboxWnd = Window(WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, dialog,
-		Id, Rect.X + checkboxOffset, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT);
+	CheckboxWnd = ctx.MakeWindow(this, WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, &ctlRect);
 
 	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	EnableAllControls(*pValue);
@@ -2759,7 +2786,7 @@ void UIPageControl::UpdateVisible()
 	}
 }
 
-void UIPageControl::Create(UIBaseDialog* dialog)
+void UIPageControl::Create(UICreateContext& ctx)
 {
 	guard(UIPageControl::Create);
 
@@ -2769,7 +2796,7 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 		page->Show(pageIndex == ActivePage);
 
 		guard(PageCreate);
-		page->Create(dialog);
+		page->Create(ctx);
 		unguardf("index=%d,class=%s", pageIndex, page->ClassName());
 	}
 
@@ -2789,7 +2816,7 @@ void UIPageControl::ComputeLayout()
 UITabControl::UITabControl()
 {}
 
-void UITabControl::Create(UIBaseDialog* dialog)
+void UITabControl::Create(UICreateContext& ctx)
 {
 	guard(UIPageControl::Create);
 
@@ -2800,8 +2827,8 @@ void UITabControl::Create(UIBaseDialog* dialog)
 	InitCommonControlsEx(&iccex);
 
 	// create a tab control window
-	Id = dialog->GenerateDialogId();
-	Wnd = Window(WC_TABCONTROL, *Label, WS_TABSTOP, 0, dialog);
+	Id = ctx.dialog->GenerateDialogId();
+	Wnd = ctx.MakeWindow(this, WC_TABCONTROL, *Label, WS_TABSTOP, 0);
 
 	int pageIndex = 0;
 	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
@@ -2814,7 +2841,7 @@ void UITabControl::Create(UIBaseDialog* dialog)
 		tie.pszText = NULL;
 
 		page->Show(pageIndex == ActivePage);
-		page->Create(dialog);
+		page->Create(ctx);
 
 		if (page->IsGroup)
 		{
@@ -3387,7 +3414,8 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		ComputeLayout();
 
 		// create all controls (OS level)
-		CreateGroupControls(this);
+		UICreateContext ctx(this);
+		CreateGroupControls(ctx);
 
 		if (Menu)
 		{

@@ -25,8 +25,8 @@ protected:
 	FString			Title;
 	HWND			DlgWnd;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual void AddCustomControls();
+	virtual void Create(UICreateContext& ctx) override;
+	virtual void AddCustomControls() override;
 	void OnBrowseClicked(UIButton* sender);
 };
 
@@ -86,8 +86,8 @@ protected:
 	FString			InitialDirectory;
 	TArray<FString>	Filters;
 
-	virtual void Create(UIBaseDialog* dialog);
-	virtual void AddCustomControls();
+	virtual void Create(UICreateContext& ctx) override;
+	virtual void AddCustomControls() override;
 	void OnBrowseClicked(UIButton* sender);
 };
 

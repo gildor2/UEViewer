@@ -16,6 +16,7 @@
 
 // forwards
 class UIMenu;
+class UIElement;
 class UIBaseDialog;
 
 
@@ -59,8 +60,21 @@ struct UIRect
 	UIElement
 -----------------------------------------------------------------------------*/
 
+struct UICreateContext
+{
+	UICreateContext(UIBaseDialog* pDialog);
+
+	HWND MakeWindow(UIElement* control, const char* className, const char* text, DWORD style, DWORD exStyle, const UIRect* customRect = NULL);
+	// Unicode version of Window()
+	HWND MakeWindow(UIElement* control, const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle, const UIRect* customRect = NULL);
+
+	UIBaseDialog* dialog;
+	HANDLE hDialogFont;
+};
+
 class UIElement
 {
+	friend UICreateContext;
 	friend class UIGroup;
 	friend class UIPageControl;
 	friend class UITabControl;
@@ -160,13 +174,7 @@ protected:
 	virtual int ComputeWidth() const;
 	virtual int ComputeHeight() const;
 
-	HWND Window(const char* className, const char* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
-		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
-	// Unicode version of Window()
-	HWND Window(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exstyle, UIBaseDialog* dialog,
-		int id = -1, int x = -1, int y = -1, int w = -1, int h = -1);
-
-	virtual void Create(UIBaseDialog* dialog) = 0;
+	virtual void Create(UICreateContext& ctx) = 0;
 	virtual void UpdateSize(UIBaseDialog* dialog)
 	{}
 	virtual void UpdateLayout();
@@ -287,7 +295,7 @@ public:
 	UISpacer(int size = 0);
 
 protected:
-	virtual void Create(UIBaseDialog* dialog) override
+	virtual void Create(UICreateContext& ctx) override
 	{}
 };
 
@@ -300,7 +308,7 @@ public:
 	UIHorizontalLine();
 
 protected:
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 };
 
 
@@ -311,7 +319,7 @@ public:
 	UIVerticalLine();
 
 protected:
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 };
 
 
@@ -341,7 +349,7 @@ protected:
 	HANDLE		hImage;
 	bool		IsIcon;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 
 	void LoadResourceImage(int id, UINT type, UINT fuLoad);
 };
@@ -362,7 +370,7 @@ protected:
 	bool		AutoSize;
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 };
 
 
@@ -377,7 +385,7 @@ protected:
 	FString		Link;
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -393,7 +401,7 @@ public:
 protected:
 	float		Value;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 };
 
 
@@ -411,7 +419,7 @@ protected:
 	FString		Label;
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -427,7 +435,7 @@ protected:
 	FString		Label;
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -449,7 +457,7 @@ protected:
 	HWND		DlgWnd;
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -476,7 +484,7 @@ protected:
 	void SelectButton();
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -521,7 +529,7 @@ protected:
 	bool		IsWantFocus;
 	bool		TextDirty;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	// request edited text from UI
 	void UpdateText();
@@ -597,7 +605,7 @@ protected:
 	int			Value;
 	int*		pValue;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -638,7 +646,7 @@ protected:
 	TArray<FString> Items;
 	int			Value;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };
 
@@ -716,7 +724,7 @@ protected:
 	void SetItemSelection(int index, bool select);
 	void UpdateListViewHeaderSort();
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 };
 
@@ -770,7 +778,7 @@ protected:
 
 	FORCEINLINE TreeViewItem* GetRoot() { return Items[0]; }
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 	void CreateItem(TreeViewItem& item);
 	TreeViewItem* FindItem(const char* item);
@@ -1061,7 +1069,7 @@ protected:
 	int*		pRadioValue;
 	UIRadioButton* SelectedRadioButton;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void UpdateLayout() override;
 	virtual void ComputeLayout();
@@ -1071,7 +1079,7 @@ protected:
 	virtual void UpdateEnabled() override;
 	virtual void UpdateVisible() override;
 
-	void CreateGroupControls(UIBaseDialog* dialog);
+	void CreateGroupControls(UICreateContext& ctx);
 	void InitializeRadioGroup();
 	void EnableAllControls(bool enabled);
 	void ShowAllControls(bool show);
@@ -1110,7 +1118,7 @@ protected:
 	HWND		CheckboxWnd;	// checkbox window
 	HWND		DlgWnd;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 	virtual void UpdateLayout() override;
 };
@@ -1130,7 +1138,7 @@ public:
 protected:
 	int			ActivePage;
 
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 	virtual void UpdateVisible() override;
 	virtual void ComputeLayout() override;
@@ -1145,7 +1153,7 @@ public:
 	UITabControl();
 
 protected:
-	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void Create(UICreateContext& ctx) override;
 	virtual void UpdateVisible() override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 	virtual void ComputeLayout() override;
