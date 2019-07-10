@@ -1,6 +1,9 @@
 #include "BaseDialog.h"
 #include "../../UmodelTool/res/resource.h"
 
+// Simple 'printf' may work badly in VSCode debugger
+#define printf appPrintf
+
 class TestDialog : public UIBaseDialog
 {
 public:
@@ -109,7 +112,9 @@ public:
 						.SetWidth(EncodeWidth(1.0f))
 						[
 							NewControl(UIButton, "Button 1")
+							.SetCallback(BIND_LAMBDA([] { appPrintf("Button 1 clicked\n"); }))
 							+ NewControl(UIButton, "Button 2")
+							.SetCallback(BIND_LAMBDA([] { appPrintf("Button 2 clicked\n"); }))
 						]
 						+ NewControl(UICheckboxGroup, "Group 2", true)
 						.SetWidth(EncodeWidth(1.0f))
@@ -135,6 +140,7 @@ public:
 					]
 				]
 			]
+#if 0
 			+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 			.SetRadioCallback(BIND_LAMBDA([this]() { pager->SetActivePage(tabIndex); }))
 			.SetRadioVariable(&tabIndex)
@@ -146,17 +152,37 @@ public:
 			+ NewControl(UIPageControl)
 			.SetHeight(EncodeWidth(1.0f))
 			.Expose(pager)
+#else
+			+ NewControl(UITabControl)
+			.SetHeight(EncodeWidth(1.0f))
+#endif
 			[
 				// page 1
-				NewControl(UIGroup, GROUP_NO_BORDER)
+				NewControl(UIGroup, "Page 1", GROUP_NO_BORDER)
 				[
-					NewControl(UILabel, "Some label for page 1")
-					+ NewControl(UITextEdit, &text)
+					NewControl(UILabel, "Just tab page with some controls ...")
+					+ NewControl(UICheckbox, "Some ... checkbox", true)
+					.SetCallback(BIND_LAMBDA([] { appPrintf("Checkbox clicked\n"); }))
+					+ NewControl(UIHorizontalLine)
+					+ NewControl(UISpacer)
+					+ NewControl(UITabControl)
 					.SetHeight(EncodeWidth(1.0f))
-					.SetMultiline()
+					[
+						NewControl(UIGroup, "SubPage1", GROUP_NO_BORDER)
+						[
+							NewControl(UITextEdit, &text)
+							.SetMultiline()
+							.SetHeight(EncodeWidth(1.0f))
+						]
+						+ NewControl(UIGroup, "SubPage2", GROUP_NO_BORDER)
+						[
+							NewControl(UILabel, "Some label here ...")
+							+ NewControl(UILabel, "Another label ...")
+						]
+					]
 				]
 				// page 2
-				+ NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+				+ NewControl(UIGroup, "Page 2", GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 				[
 					NewControl(UIMulticolumnListbox, 3)
 					.Expose(list)
@@ -180,7 +206,7 @@ public:
 					]
 				]
 				// page 3
-				+ NewControl(UIGroup, GROUP_NO_BORDER)
+				+ NewControl(UIGroup, "Page 3", GROUP_NO_BORDER)
 				[
 					NewControl(UILabel, "Set window size:")
 					+ NewControl(UISpacer)
@@ -191,6 +217,7 @@ public:
 					+ NewControl(UIButton, "1000 x 800")
 					.SetCallback(BIND_LAMBDA([this]() { SetWindowSize(1000, 800); } ))
 				]
+				+ NewControl(UILabel, "Label as a page!")
 			]
 		];
 	}
