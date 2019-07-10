@@ -33,6 +33,10 @@
   http://msdn.microsoft.com/ru-ru/library/windows/desktop/bb759827.aspx
 */
 
+/* Windows notes:
+ - When you attach the version 6 manifest, the call to InitcommonControlsEx becomes unnecessary.
+*/
+
 /* GTK+ notes
 - UIMulticolumnListbox and UITreeView could be implemented with GtkTreeView
   https://developer.gnome.org/gtk3/stable/GtkTreeView.html
@@ -2725,6 +2729,21 @@ UIPageControl& UIPageControl::SetActivePage(UIElement* child)
 	return *this;
 }
 
+bool UIPageControl::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
+{
+	// Pass command to active page
+	int pageIndex = 0;
+	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
+	{
+		if (pageIndex == ActivePage)
+		{
+			page->HandleCommand(id, cmd, lParam, result);
+			return true;
+		}
+	}
+	return false;
+}
+
 void UIPageControl::Create(UIBaseDialog* dialog)
 {
 	guard(UIPageControl::Create);
@@ -2740,6 +2759,92 @@ void UIPageControl::Create(UIBaseDialog* dialog)
 	}
 
 	unguard;
+}
+
+void UIPageControl::ComputeLayout()
+{
+	ComputeLayoutWithBorders(0, 0, 0, 0);
+}
+
+
+/*-----------------------------------------------------------------------------
+	UITabControl
+-----------------------------------------------------------------------------*/
+
+UITabControl::UITabControl()
+{}
+
+void UITabControl::Create(UIBaseDialog* dialog)
+{
+	guard(UIPageControl::Create);
+
+	// works without this code
+	INITCOMMONCONTROLSEX iccex;
+	iccex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	iccex.dwICC = ICC_TAB_CLASSES;
+	InitCommonControlsEx(&iccex);
+
+	// create a tab control window
+	Id = dialog->GenerateDialogId();
+	Wnd = Window(WC_TABCONTROL, *Label, WS_TABSTOP, 0, dialog);
+
+	int pageIndex = 0;
+	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
+	{
+		guard(PageCreate);
+
+		TCITEM tie;
+		tie.mask = TCIF_TEXT;
+		tie.iImage = -1;
+		tie.pszText = NULL;
+
+		page->Show(pageIndex == ActivePage);
+		page->Create(dialog);
+
+		if (page->IsGroup)
+		{
+			// Pick group's label as tab name, despite group should have no-border style
+			UIGroup* pageGroup = static_cast<UIGroup*>(page);
+			if (!pageGroup->Label.IsEmpty())
+			{
+				tie.pszText = const_cast<char*>(*pageGroup->Label);
+			}
+		}
+		if (tie.pszText == NULL)
+		{
+			// Should be a UIGroup, but still add something for other controls.
+			// Also there could be UIGroup with no label. Both cases are mistakes.
+			tie.pszText = const_cast<char*>(page->ClassName());
+		}
+		// Add tab
+		TabCtrl_InsertItem(Wnd, pageIndex, &tie);
+
+		unguardf("index=%d,class=%s", pageIndex, page->ClassName());
+	}
+
+	TabCtrl_SetCurSel(Wnd, ActivePage);
+
+	unguard;
+}
+
+bool UITabControl::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
+{
+	if (id == Id)
+	{
+		// A message for us
+		if (cmd == TCN_SELCHANGE)
+		{
+			int iPage = TabCtrl_GetCurSel(Wnd);
+			SetActivePage(iPage);
+		}
+		return true;
+	}
+	return UIPageControl::HandleCommand(id, cmd, lParam, result);
+}
+
+void UITabControl::ComputeLayout()
+{
+	ComputeLayoutWithBorders(TAB_MARGIN_OTHER, TAB_MARGIN_OTHER, TAB_MARGIN_TOP, TAB_MARGIN_OTHER);
 }
 
 
@@ -3219,7 +3324,6 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			Layout.Height -= VERTICAL_SPACING;
 		}
-
 
 		UpdateSize(this);
 

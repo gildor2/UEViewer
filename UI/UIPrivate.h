@@ -32,4 +32,7 @@
 #define GROUP_MARGIN_TOP			16
 #define GROUP_MARGIN_BOTTOM			7
 
+#define TAB_MARGIN_TOP				30
+#define TAB_MARGIN_OTHER			10
+
 #define MAX_TITLE_LEN				256

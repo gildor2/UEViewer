@@ -63,6 +63,7 @@ class UIElement
 {
 	friend class UIGroup;
 	friend class UIPageControl;
+	friend class UITabControl;
 public:
 	UIElement();
 	virtual ~UIElement();
@@ -188,7 +189,6 @@ protected:
 			result = 0; // FALSE
 			return false;
 		}
-		
 	}
 	virtual void DialogClosed(bool cancel)
 	{}
@@ -1009,6 +1009,7 @@ FORCEINLINE UIMenuItem& NewMenuRadioButton(const char* label, int value)
 class UIGroup : public UIElement
 {
 	friend class UIPageControl;
+	friend class UITabControl;
 	DECLARE_UI_CLASS(UIGroup, UIElement);
 	DECLARE_CALLBACK(RadioCallback, int);
 public:
@@ -1130,9 +1131,23 @@ protected:
 	int			ActivePage;
 
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 	virtual void ComputeLayout() override;
+	void ComputeLayoutWithBorders(int borderLeft, int borderRight, int borderTop, int borderBottom);
 };
 
+
+class UITabControl : public UIPageControl
+{
+	DECLARE_UIGROUP_CLASS(UITabControl, UIPageControl);
+public:
+	UITabControl();
+
+protected:
+	virtual void Create(UIBaseDialog* dialog) override;
+	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
+	virtual void ComputeLayout() override;
+};
 
 class UIBaseDialog : public UIGroup
 {

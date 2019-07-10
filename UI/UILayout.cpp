@@ -385,9 +385,9 @@ void UIGroup::ComputeLayout()
 	unguard;
 }
 
-void UIPageControl::ComputeLayout()
+void UIPageControl::ComputeLayoutWithBorders(int borderLeft, int borderRight, int borderTop, int borderBottom)
 {
-	guard(UIPageControl::ComputeLayout);
+	guard(UIPageControl::ComputeLayoutWithBorders);
 
 #if DEBUG_LAYOUT
 	DBG_LAYOUT("%s \"%s\" %s",
@@ -403,6 +403,7 @@ void UIPageControl::ComputeLayout()
 
 	int MaxWidth = 0, MaxHeight = 0;
 
+	// First pass: iterate over all children and find maximal size of the page
 	DBG_LAYOUT(">>> prepare pages");
 	for (UIElement* child = FirstChild; child; child = child->NextChild)
 	{
@@ -437,20 +438,32 @@ void UIPageControl::ComputeLayout()
 		MaxHeight = max(h, MaxHeight);
 	}
 
+	MaxWidth += borderLeft + borderRight;
+	MaxHeight += borderTop + borderBottom;
+
 	DBG_LAYOUT(">>> do page layout: max_w(%d) max_h(%d)", MaxWidth, MaxHeight);
 
+	UIRect childRect = Rect;
+
+	// Work with "fill maximal size" parameters
 	if (Rect.Width < 0)
 	{
-		Rect.Width = MaxWidth;
+		Rect.Width = MaxWidth + borderLeft + borderRight;
 	}
 	if (Rect.Height < 0)
 	{
-		Rect.Height = MaxHeight;
+		Rect.Height = MaxHeight + borderTop + borderBottom;
 	}
 
+	childRect.X += borderLeft;
+	childRect.Y += borderTop;
+	childRect.Width -= borderLeft + borderRight;
+	childRect.Height -= borderTop + borderBottom;
+
+	// Second pass: recompute group layouts with taking into account page control size
 	for (UIElement* child = FirstChild; child; child = child->NextChild)
 	{
-		child->Rect = Rect;
+		child->Rect = childRect;
 
 		DBG_LAYOUT("... %s(\"%s\") Layout(%g %g %g %g) -> Rect(%g %g %g %g)",
 			child->ClassName(), GetDebugLabel(child),
