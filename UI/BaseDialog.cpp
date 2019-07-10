@@ -2744,6 +2744,21 @@ bool UIPageControl::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 	return false;
 }
 
+void UIPageControl::UpdateVisible()
+{
+	// Update visibility only for active page, not calling parent method
+	int pageIndex = 0;
+	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
+	{
+		if (pageIndex == ActivePage)
+		{
+			page->Show(Visible);
+			page->UpdateVisible();
+			break;
+		}
+	}
+}
+
 void UIPageControl::Create(UIBaseDialog* dialog)
 {
 	guard(UIPageControl::Create);
@@ -2840,6 +2855,14 @@ bool UITabControl::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 		return true;
 	}
 	return UIPageControl::HandleCommand(id, cmd, lParam, result);
+}
+
+void UITabControl::UpdateVisible()
+{
+	// Update tab control's visibility, not including pages
+	UIElement::UpdateVisible();
+	// Update page's visibility
+	UIPageControl::UpdateVisible();
 }
 
 void UITabControl::ComputeLayout()

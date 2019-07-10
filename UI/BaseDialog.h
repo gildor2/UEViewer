@@ -1132,6 +1132,7 @@ protected:
 
 	virtual void Create(UIBaseDialog* dialog) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
+	virtual void UpdateVisible() override;
 	virtual void ComputeLayout() override;
 	void ComputeLayoutWithBorders(int borderLeft, int borderRight, int borderTop, int borderBottom);
 };
@@ -1145,6 +1146,7 @@ public:
 
 protected:
 	virtual void Create(UIBaseDialog* dialog) override;
+	virtual void UpdateVisible() override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
 	virtual void ComputeLayout() override;
 };
