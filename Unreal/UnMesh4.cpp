@@ -1998,13 +1998,21 @@ no_nav_collision:
 		{
 			if (Ar.ArVer >= VER_UE4_RENAME_CROUCHMOVESCHARACTERDOWN)
 			{
-				/// reference: 28.08.2014 - f5238f04
+				// UE4.5+, added distance field, reference: 28.08.2014 - f5238f04
 				bool stripped = false;
 				if (Ar.ArVer >= VER_UE4_RENAME_WIDGET_VISIBILITY)
 				{
+					// 4.7+ - using IsDataStrippedForServer for distance field removal
 					/// reference: 13.11.2014 - 48a3c9b7
+					DUMP_ARC_BYTES(Ar, 2);
 					FStripDataFlags StripFlags2(Ar);
-					stripped = StripFlags.IsDataStrippedForServer();
+					stripped = StripFlags2.IsDataStrippedForServer();
+					if (Ar.Game >= GAME_UE4(21))
+					{
+						// 4.21 uses additional strip flag for distance field
+						const uint8 DistanceFieldDataStripFlag = 1;
+						stripped |= StripFlags2.IsClassDataStripped(DistanceFieldDataStripFlag);
+					}
 				}
 				if (!stripped)
 				{

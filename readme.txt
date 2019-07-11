@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+11.07.2019
+- updated Lineage 2 SkeletalMesh support
+
 05.07.2019
 - added support for final version of Unreal Tournament 4 (requires game override: -game=ut4)
 
