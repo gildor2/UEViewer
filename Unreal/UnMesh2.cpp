@@ -157,6 +157,9 @@ lod_fields2:
 	{
 		int unk;
 		Ar << unk;
+		// From forum discussion: version 6 has 1 more byte here
+		if (Version >= 6)
+			Ar.Seek(Ar.Tell()+1);
 	}
 #endif // LINEAGE2
 #if BATTLE_TERR
@@ -358,6 +361,11 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 #if TRIBES3
 	TRIBES_HDR(Ar, 4);
 #endif
+
+#if DEBUG_SKELMESH
+	appPrintf("Version: %d\n", Version);
+#endif
+
 	Ar << Points2;
 #if BATTLE_TERR
 	if (Ar.Game == GAME_BattleTerr && Ar.ArVer >= 134)
