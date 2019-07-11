@@ -2764,8 +2764,9 @@ bool UIPageControl::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 	{
 		if (pageIndex == ActivePage)
 		{
-			page->HandleCommand(id, cmd, lParam, result);
-			return true;
+			if (page->HandleCommand(id, cmd, lParam, result))
+				return true;
+			break;
 		}
 	}
 	return false;
