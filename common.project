@@ -23,7 +23,9 @@ STDDEFS    =				# common defines
 WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), empty by default
 
 !if "$COMPILER" eq "VisualC"
-	CPP_EXCEPT = 0										# used with WIN32_USE_SEH in Core.h
+	!if !defined($CPP_EXCEPT)
+		CPP_EXCEPT = 0									# used with WIN32_USE_SEH in Core.h
+	!endif
 	WINXP      = 1										# we're not using any modern Win32 features, so allow to worn at WinXP
 	OPTIONS = -GS- -GR-
 #	WARNINGS += -W4										# maximal warning level for Visual C++
@@ -154,6 +156,7 @@ OPTIONS   += $WARNINGS
 !if defined($DEBUG)
 	DEFINES += MAX_DEBUG
 	OBJDIR  = $OBJDIR-debug
+	OPTIMIZE = none
 !endif
 
 !if "$PLATFORM" eq "win32"

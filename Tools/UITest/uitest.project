@@ -8,18 +8,21 @@ USE_STL=0
 !endif
 
 !if "$USE_STL" eq "1"
-!message Building STL version
-OLDCRT = 0
+	!message Building STL version
+	OLDCRT = 0
+	CPP_EXCEPT = 1
 !endif
 
 R   = ../..
 PRJ = uitest
+
+# Include common project file, it has settings like output directory etc
 !include ../../common.project
 
 !if "$USE_STL" ne "1"
-INCLUDES += $R/UI
+	INCLUDES += $R/UI
 !else
-INCLUDES = $R/UI/stl-stub $INCLUDES $R/UI
+	INCLUDES = $R/UI/stl-stub $INCLUDES $R/UI
 !endif
 
 sources(MAIN) = {
