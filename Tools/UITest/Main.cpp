@@ -158,11 +158,13 @@ public:
 #endif
 			[
 				// page 1
-				NewControl(UIGroup, "Page 1", GROUP_NO_BORDER)
+				NewControl(UIGroup, "Nested TabControl", GROUP_NO_BORDER)
 				[
 					NewControl(UILabel, "Just tab page with some controls ...")
 					+ NewControl(UICheckbox, "Some ... checkbox", true)
-					.SetCallback(BIND_LAMBDA([] { appPrintf("Checkbox clicked\n"); }))
+					.SetCallback(BIND_LAMBDA([](UICheckbox*, bool value) {
+						appPrintf("Checkbox clicked (%d)\n", value);
+					}))
 					+ NewControl(UIHorizontalLine)
 					+ NewControl(UISpacer)
 					+ NewControl(UITabControl)
@@ -170,9 +172,13 @@ public:
 					[
 						NewControl(UIGroup, "SubPage1", GROUP_NO_BORDER)
 						[
-							NewControl(UITextEdit, &text)
-							.SetMultiline()
+							NewControl(UICheckboxGroup, "CB-group", true)
 							.SetHeight(EncodeWidth(1.0f))
+							[
+								NewControl(UITextEdit, &text)
+								.SetMultiline()
+								.SetHeight(EncodeWidth(1.0f))
+							]
 						]
 						+ NewControl(UIGroup, "SubPage2", GROUP_NO_BORDER)
 						[
@@ -182,7 +188,7 @@ public:
 					]
 				]
 				// page 2
-				+ NewControl(UIGroup, "Page 2", GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+				+ NewControl(UIGroup, "MulticolumnListBox", GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 				[
 					NewControl(UIMulticolumnListbox, 3)
 					.Expose(list)
@@ -206,7 +212,7 @@ public:
 					]
 				]
 				// page 3
-				+ NewControl(UIGroup, "Page 3", GROUP_NO_BORDER)
+				+ NewControl(UIGroup, "Resize Window", GROUP_NO_BORDER)
 				[
 					NewControl(UILabel, "Set window size:")
 					+ NewControl(UISpacer)
@@ -220,6 +226,8 @@ public:
 				+ NewControl(UILabel, "Label as a page!")
 			]
 		];
+
+		list->AddItem("Initial item ...");
 	}
 
 	void OnMenuItem(UIMenuItem* item)
