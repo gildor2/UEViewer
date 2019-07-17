@@ -386,6 +386,9 @@ const GameInfo GListOfGames[] = {
 #	if LIS2
 		G("Life is Strange 2", lis2, GAME_LIS2),
 #	endif
+#	if PUBG
+		G("PUBG PC v6.0.1+", pubg, GAME_PUBG),
+#	endif
 #endif // UNREAL4
 
 	// end marker
