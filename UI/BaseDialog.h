@@ -1165,6 +1165,7 @@ public:
 	UITabControl();
 
 protected:
+	virtual LONG_PTR SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 	virtual void Create(UICreateContext& ctx) override;
 	virtual void UpdateVisible() override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;

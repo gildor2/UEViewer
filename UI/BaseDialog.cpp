@@ -2851,35 +2851,90 @@ void UIPageControl::ComputeLayout()
 -----------------------------------------------------------------------------*/
 
 UITabControl::UITabControl()
-{}
+{
+	// Own child controls for better appearance
+	OwnsControls = true;
+}
+
+
+
+LONG_PTR UITabControl::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	if (uMsg == WM_CTLCOLORSTATIC)
+	{
+		return (LONG_PTR)CreateSolidBrush(RGB(255, 255, 0));
+	}
+
+	//todo: this is copy-paste of part of UIBaseDialog's WndProc
+	//todo: may be put it to UIGroup?
+	//!! REFACTOR:
+	// 1. move code below which handles WM_COMMAND and WM_NOTIFY to UIGroup, SendCommandToChildren or like this
+	// 2. handle IDOK/ IDCANCEL here too, just call GetDialog()->CloseDialog(??) -- TEST THIS (add button to some tab)
+	// 3. cut this code from UITabControl and UIBaseDialog
+	int cmd = -1;
+	int id = 0;
+
+	// retrieve pointer to our class from user data
+	if (uMsg == WM_COMMAND)
+	{
+		id  = LOWORD(wParam);
+		cmd = HIWORD(wParam);
+		if (id == IDOK || id == IDCANCEL)
+		{
+			return SendMessage(GetDialog()->GetWnd(), uMsg, wParam, lParam);
+		}
+	}
+
+	// handle WM_NOTIFY in a similar way
+	if (uMsg == WM_NOTIFY)
+	{
+		id  = LOWORD(wParam);
+		cmd = ((LPNMHDR)lParam)->code;
+	}
+
+	if (cmd != -1 && (id >= FIRST_DIALOG_ID) /* && id < NextDIalogId */)
+	{
+		int res = FALSE;
+		HandleCommand(id, cmd, lParam, res); // ignore result
+		return res;
+	}
+
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
 
 void UITabControl::Create(UICreateContext& ctx)
 {
 	guard(UIPageControl::Create);
 
-	// works without this code
+	// Works without this code
 	INITCOMMONCONTROLSEX iccex;
 	iccex.dwSize = sizeof(INITCOMMONCONTROLSEX);
 	iccex.dwICC = ICC_TAB_CLASSES;
 	InitCommonControlsEx(&iccex);
 
-	// create a tab control window
+	// Create a tab control window
 	Id = ctx.dialog->GenerateDialogId();
 	Wnd = ctx.MakeWindow(this, WC_TABCONTROL, *Label, WS_TABSTOP, 0);
+	EnableSubclass();
+
+	// Create children under TabControl's window
+	UIElement* saveOwner = ctx.owner;
+	ctx.owner = this;
 
 	int pageIndex = 0;
 	for (UIElement* page = FirstChild; page; page = page->NextChild, pageIndex++)
 	{
 		guard(PageCreate);
 
+		// Create page controls
+		page->Show(pageIndex == ActivePage);
+		page->Create(ctx);
+
+		// Create tab item
 		TCITEM tie;
 		tie.mask = TCIF_TEXT;
 		tie.iImage = -1;
 		tie.pszText = NULL;
-
-		page->Show(pageIndex == ActivePage);
-		page->Create(ctx);
-
 		if (page->IsGroup)
 		{
 			// Pick group's label as tab name, despite group should have no-border style
@@ -2902,6 +2957,8 @@ void UITabControl::Create(UICreateContext& ctx)
 	}
 
 	TabCtrl_SetCurSel(Wnd, ActivePage);
+
+	ctx.owner = saveOwner;
 
 	unguard;
 }
