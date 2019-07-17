@@ -1747,6 +1747,9 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& re
 {
 	guard(UIMulticolumnListbox::HandleCommand);
 
+	// Say "message was processed" (will change to FALSE at the end when needed)
+	result = TRUE;
+
 	if (cmd == LVN_GETDISPINFO)
 	{
 		// Note: this callback is executed only when items is visualized, so we can
@@ -1913,6 +1916,8 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& re
 		return true;
 	}
 
+	// Say "message was NOT processed"
+	result = FALSE;
 	return false;
 
 	unguard;
@@ -2464,6 +2469,39 @@ void UIGroup::Remove(UIElement* item)
 	unguard;
 }
 
+bool UIGroup::HandleChildMessages(int uMsg, WPARAM wParam, LPARAM lParam, int& result)
+{
+	int cmd = -1;		// control id
+	int id = 0;			// passed command
+
+	if (uMsg == WM_COMMAND)
+	{
+		id  = LOWORD(wParam);
+		cmd = HIWORD(wParam);
+		if (id == IDOK || id == IDCANCEL)
+		{
+			GetDialog()->CloseDialog(id != IDOK);
+			result = TRUE;
+			return true;
+		}
+	}
+	else if (uMsg == WM_NOTIFY)
+	{
+		// handle WM_NOTIFY in a similar way
+		id  = LOWORD(wParam);
+		cmd = ((LPNMHDR)lParam)->code;
+	}
+
+	if (cmd != -1 && (id >= FIRST_DIALOG_ID) /* && id < NextDIalogId */)
+	{
+		result = FALSE;
+		HandleCommand(id, cmd, lParam, result); // ignore result
+		return true;
+	}
+
+	return false;
+}
+
 bool UIGroup::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 {
 	for (UIElement* ctl = FirstChild; ctl; ctl = ctl->NextChild)
@@ -2874,38 +2912,20 @@ LONG_PTR UITabControl::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		return (LONG_PTR)CreateSolidBrush(RGB(255, 255, 0));
 	}
 
-	//todo: this is copy-paste of part of UIBaseDialog's WndProc
-	//todo: may be put it to UIGroup?
-	//!! REFACTOR:
-	// 1. move code below which handles WM_COMMAND and WM_NOTIFY to UIGroup, SendCommandToChildren or like this
-	// 2. handle IDOK/ IDCANCEL here too, just call GetDialog()->CloseDialog(??) -- TEST THIS (add button to some tab)
-	// 3. cut this code from UITabControl and UIBaseDialog
-	int cmd = -1;
-	int id = 0;
-
-	// retrieve pointer to our class from user data
-	if (uMsg == WM_COMMAND)
+	int result = -1;
+	if (HandleChildMessages(uMsg, wParam, lParam, result))
 	{
-		id  = LOWORD(wParam);
-		cmd = HIWORD(wParam);
-		if (id == IDOK || id == IDCANCEL)
+		if (result != 0)
 		{
-			return SendMessage(GetDialog()->GetWnd(), uMsg, wParam, lParam);
+			// Do not call default proc only in a case if message was handled.
+			// In this case, HandleChildMessages returns 'true' (what means control was found),
+			// and 'result' will be TRUE, what means - message was processed.
+			//todo: should review this, probably use subclass for critical elements instead
+			//todo: of HandleCommand calls.
+			// WHY this "if" was added: without it, TabControl holding ListView will not
+			// let ListView to show its items - items will be there, but with empty text.
+			return result;
 		}
-	}
-
-	// handle WM_NOTIFY in a similar way
-	if (uMsg == WM_NOTIFY)
-	{
-		id  = LOWORD(wParam);
-		cmd = ((LPNMHDR)lParam)->code;
-	}
-
-	if (cmd != -1 && (id >= FIRST_DIALOG_ID) /* && id < NextDIalogId */)
-	{
-		int res = FALSE;
-		HandleCommand(id, cmd, lParam, res); // ignore result
-		return res;
 	}
 
 	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
@@ -3586,44 +3606,24 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return TRUE;
 	}
 
-	int cmd = -1;
-	int id = 0;
-
-	// retrieve pointer to our class from user data
-	if (msg == WM_COMMAND)
+	// Menu commands
+	if (msg == WM_COMMAND && Menu)
 	{
-		id  = LOWORD(wParam);
-		cmd = HIWORD(wParam);
-//		appPrintf("WM_COMMAND cmd=%d id=%d\n", cmd, id);
-		if (id == IDOK || id == IDCANCEL)
+		int id  = LOWORD(wParam);
+		if (id >= FIRST_MENU_ID)
 		{
-			CloseDialog(id != IDOK);
-			return TRUE;
-		}
-
-		if (id >= FIRST_MENU_ID && Menu)
-		{
-			if (Menu->HandleCommand(id))
-				return TRUE;
+			return (Menu->HandleCommand(id)) ? TRUE : FALSE;
 		}
 	}
 
-	// handle WM_NOTIFY in a similar way
-	if (msg == WM_NOTIFY)
+	// Pass WM_COMMAND and WM_NOTIFY to children
+	int result;
+	if (HandleChildMessages(msg, wParam, lParam, result))
 	{
-		id  = LOWORD(wParam);
-		cmd = ((LPNMHDR)lParam)->code;
+		return result;
 	}
 
-	if (cmd == -1)
-		return FALSE;
-
-	if (id < FIRST_DIALOG_ID || id >= NextDialogId)
-		return FALSE;				// not any of our controls
-
-	int res = FALSE;
-	HandleCommand(id, cmd, lParam, res); // ignore result
-	return res;
+	return FALSE;
 
 	unguard;
 }

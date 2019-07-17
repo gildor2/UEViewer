@@ -1092,6 +1092,7 @@ protected:
 	virtual void UpdateVisible() override;
 
 	void CreateGroupControls(UICreateContext& ctx);
+	bool HandleChildMessages(int uMsg, WPARAM wParam, LPARAM lParam, int& result);
 	void InitializeRadioGroup();
 	void EnableAllControls(bool enabled);
 	void ShowAllControls(bool show);
