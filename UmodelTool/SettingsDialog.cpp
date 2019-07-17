@@ -31,18 +31,18 @@ void UISettingsDialog::InitUI()
 
 	(*this)
 	[
-		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+		NewControl(UITabControl)
 		.SetWidth(EncodeWidth(1.0f))
 		[
 			//!! use pager for this (reqires TabControl)
-/*			NewControl(UIGroup, "Display")
+/*			NewControl(UIGroup, "Display", GROUP_NO_BORDER)
 			+*/
-			NewControl(UIGroup, "Export")
+			NewControl(UIGroup, "Export", GROUP_NO_BORDER)
 			.SetWidth(EncodeWidth(1.0f))
 			[
 				MakeExportOptions()
 			]
-			+ NewControl(UIGroup, "Save packages")
+			+ NewControl(UIGroup, "Save packages", GROUP_NO_BORDER)
 			[
 				MakeSavePackagesOptions()
 			]
@@ -100,7 +100,6 @@ UIElement& UISettingsDialog::MakeSavePackagesOptions()
 		[
 			NewControl(UILabel, "Save to this folder")
 			+ NewControl(UIFilePathEditor, &Opt.SavePackages.SavePath)
-			.SetWidth(250)
 			+ NewControl(UICheckbox, "Keep directory structure", &Opt.SavePackages.KeepDirectoryStructure)
 		];
 }

@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+17.07.2019
+- using tabbed dialog for options
+
 11.07.2019
 - updated Lineage 2 SkeletalMesh support
 
