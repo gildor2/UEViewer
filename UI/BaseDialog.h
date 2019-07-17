@@ -180,10 +180,13 @@ protected:
 	virtual int ComputeWidth() const;
 	virtual int ComputeHeight() const;
 
-	// Subclass the control, Windows will call virtual SubclassProc for message handling
+	// Subclass the control, Windows will call virtual SubclassProc for message handling.
+	// Note: we're using cast HWND <-> void* to allow linkage of the program without included windows headers
+	// everywhere when UI library was used (otherwise HWND may be defined in a different way in Win32Types.h,
+	// what makes virtual function signature different and linker will fail).
 	void EnableSubclass();
 	static LONG_PTR CALLBACK StaticSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, ULONG_PTR dwRefData);
-	virtual LONG_PTR SubclassProc(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
+	virtual LONG_PTR SubclassProc(void* hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
 
 	virtual void Create(UICreateContext& ctx) = 0;
 	virtual void UpdateSize(UIBaseDialog* dialog)
@@ -1167,7 +1170,7 @@ public:
 	UITabControl();
 
 protected:
-	virtual LONG_PTR SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
+	virtual LONG_PTR SubclassProc(void* hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 	virtual void Create(UICreateContext& ctx) override;
 	virtual void UpdateVisible() override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;

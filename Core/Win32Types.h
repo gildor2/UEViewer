@@ -41,7 +41,7 @@
 		typedef unsigned int	UINT;
 		typedef HANDLE			HWND;
 		typedef HANDLE			HMENU;
-		typedef INT_PTR			WPARAM;
+		typedef UINT_PTR		WPARAM;
 		typedef LONG_PTR		LPARAM;
 		typedef int (APIENTRY *PROC)();
 		typedef void PIXELFORMATDESCRIPTOR;		// structure

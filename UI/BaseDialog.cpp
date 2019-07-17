@@ -73,6 +73,40 @@ static HINSTANCE hInstance;
 
 
 /*-----------------------------------------------------------------------------
+	uxtheme.dll stuff
+-----------------------------------------------------------------------------*/
+
+static HRESULT (WINAPI * SetWindowTheme)(HWND, LPCWSTR, LPCWSTR) = NULL;
+static HRESULT (WINAPI * EnableThemeDialogTexture)(HWND, DWORD) = NULL;
+static BOOL    (WINAPI * IsAppThemed)() = NULL;			// pre-Win8: check if styles are disabled
+static BOOL    (WINAPI * IsThemeActive)() = NULL;
+static HRESULT (WINAPI * GetThemeColor)(HANDLE hTheme, int iPartId, int iStateId, int iPropId, COLORREF *pColor) = NULL;
+static HANDLE  (WINAPI * OpenThemeData)(HWND hwnd, LPCWSTR pszClassList) = NULL;
+static void    (WINAPI * CloseThemeData)(HANDLE hTheme) = NULL;
+
+static void InitUXTheme()
+{
+	static bool loaded = false;
+	if (!loaded)
+	{
+		loaded = true;
+		HMODULE hDll = LoadLibrary("uxtheme.dll");
+		if (hDll == NULL) return;
+	#define GET(func)			\
+		{ void* fn = GetProcAddress(hDll, #func); *(void**)&func = fn; }
+		GET(SetWindowTheme)
+		GET(EnableThemeDialogTexture)
+		GET(IsAppThemed)
+		GET(IsThemeActive)
+		GET(GetThemeColor)
+		GET(OpenThemeData)
+		GET(CloseThemeData)
+	#undef GET
+	}
+}
+
+
+/*-----------------------------------------------------------------------------
 	UICreateContext
 -----------------------------------------------------------------------------*/
 
@@ -365,9 +399,9 @@ void UIElement::EnableSubclass()
 	unguard;
 }
 
-LONG_PTR UIElement::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LONG_PTR UIElement::SubclassProc(void* hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	return DefSubclassProc((HWND)hWnd, uMsg, wParam, lParam);
 }
 
 
@@ -1298,17 +1332,7 @@ bool UIListbox::HandleCommand(int id, int cmd, LPARAM lParam)
 
 static void SetExplorerTheme(HWND Wnd)
 {
-	static bool loaded = false;
-	static HRESULT (WINAPI *SetWindowTheme)(HWND, LPCWSTR, LPCWSTR) = NULL;
-
-	if (!loaded)
-	{
-		loaded = true;
-		HMODULE hDll = LoadLibrary("uxtheme.dll");
-		if (hDll == NULL) return;
-		SetWindowTheme = (HRESULT (WINAPI *)(HWND, LPCWSTR, LPCWSTR))GetProcAddress(hDll, "SetWindowTheme");
-	}
-
+	InitUXTheme();
 	if (SetWindowTheme != NULL)
 	{
 		SetWindowTheme(Wnd, L"Explorer", NULL);
@@ -2802,7 +2826,7 @@ void UICheckboxGroup::UpdateLayout()
 
 	int checkboxOffset = (Flags & GROUP_NO_BORDER) ? 0 : GROUP_INDENT;
 
-	MoveWindow(CheckboxWnd, Rect.X + checkboxOffset, Rect.Y, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT, FALSE);
+	MoveWindow(CheckboxWnd, Rect.X + checkboxOffset, Rect.Y - 2, min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset), DEFAULT_CHECKBOX_HEIGHT, FALSE);
 }
 
 
@@ -2904,12 +2928,50 @@ UITabControl::UITabControl()
 }
 
 
+static COLORREF GetTabBackgroundColor(HWND Wnd)
+{
+	// Reference: wxWidgets, src/msw/notebook.cpp, wxNotebook::GetThemeBackgroundColour()
+	InitUXTheme();
 
-LONG_PTR UITabControl::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	// Note: caching color this way will not let
+	// 1) have different color for different tab controls (e.g. if one of them has theme disabled)
+	// 2) will not catch changing of theme during app run
+	static COLORREF backgroundColor = 0;
+	if (backgroundColor != 0)
+		return backgroundColor;
+
+	backgroundColor = GetSysColor(COLOR_BTNFACE);
+
+	if (IsAppThemed() && IsThemeActive())
+	{
+#if 1
+		backgroundColor = GetSysColor(COLOR_WINDOW);
+#else
+		// wxWidgets way, unfortunately didn't get fine appearance, "static" color is still grey.
+		HANDLE hTheme = OpenThemeData(Wnd, L"TAB");
+		if (hTheme)
+		{
+			COLORREF themeColor;
+			if (GetThemeColor(hTheme, 10 /* TABP_BODY */, 1 /* NORMAL */, 3821 /* FILLCOLORHINT */, &themeColor) == S_OK)
+			{
+				if (themeColor == 1)
+				{
+					GetThemeColor(hTheme, 10 /* TABP_BODY */, 1 /* NORMAL */, 3802 /* FILLCOLOR */, &themeColor);
+				}
+			}
+			backgroundColor = themeColor;
+			CloseThemeData(hTheme);
+		}
+#endif
+	}
+	return backgroundColor;
+}
+
+LONG_PTR UITabControl::SubclassProc(void* hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (uMsg == WM_CTLCOLORSTATIC)
 	{
-		return (LONG_PTR)CreateSolidBrush(RGB(255, 255, 0));
+		return (LONG_PTR)CreateSolidBrush(GetTabBackgroundColor(Wnd));
 	}
 
 	int result = -1;
@@ -2928,7 +2990,7 @@ LONG_PTR UITabControl::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		}
 	}
 
-	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	return DefSubclassProc((HWND)hWnd, uMsg, wParam, lParam);
 }
 
 void UITabControl::Create(UICreateContext& ctx)
@@ -2945,6 +3007,11 @@ void UITabControl::Create(UICreateContext& ctx)
 	Id = ctx.dialog->GenerateDialogId();
 	Wnd = ctx.MakeWindow(this, WC_TABCONTROL, *Label, WS_TABSTOP, 0);
 	EnableSubclass();
+
+#if 0 // can use this snippet to disable theme for this TabControl
+	InitUXTheme();
+	SetWindowTheme(Wnd, L"", L"");
+#endif
 
 	// Create children under TabControl's window
 	UIElement* saveOwner = ctx.owner;
