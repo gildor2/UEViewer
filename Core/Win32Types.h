@@ -22,10 +22,14 @@
 		typedef void*			HANDLE;
 	#ifndef _WIN64
 		typedef int				INT_PTR;
+		typedef unsigned int	UINT_PTR;
 		typedef long			LONG_PTR;
+		typedef unsigned long	ULONG_PTR;
 	#else
 		typedef __int64			INT_PTR;
+		typedef unsigned __int64 UINT_PTR;
 		typedef __int64			LONG_PTR;
+		typedef unsigned __int64 ULONG_PTR;
 	#endif
 		typedef unsigned		HDC;
 		typedef HANDLE			HGLRC;

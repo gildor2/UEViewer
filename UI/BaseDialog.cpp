@@ -78,7 +78,9 @@ static HINSTANCE hInstance;
 
 UICreateContext::UICreateContext(UIBaseDialog* pDialog)
 :	dialog(pDialog)
+,	owner(pDialog)
 {
+	// Retrieve dialog's font
 	hDialogFont = (HANDLE)SendMessage(dialog->GetWnd(), WM_GETFONT, 0, 0);
 }
 
@@ -96,9 +98,10 @@ HWND UICreateContext::MakeWindow(UIElement* control, const char* className, cons
 		style |= WS_VISIBLE;
 	}
 
-	HWND dialogWnd = dialog->GetWnd();
+	HWND parentWnd = owner->GetWnd();
+	assert(parentWnd);
 	HWND wnd = CreateWindowEx(exStyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
-		dialogWnd, (HMENU)(size_t)control->Id, hInstance, NULL);		// convert int -> size_t -> HANDLE to avoid warnings on 64-bit platform
+		parentWnd, (HMENU)(size_t)control->Id, hInstance, NULL);		// convert int -> size_t -> HANDLE to avoid warnings on 64-bit platform
 #if DEBUG_WINDOWS_ERRORS
 	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
 #endif
@@ -121,9 +124,10 @@ HWND UICreateContext::MakeWindow(UIElement* control, const wchar_t* className, c
 		style |= WS_VISIBLE;
 	}
 
-	HWND dialogWnd = dialog->GetWnd();
+	HWND parentWnd = owner->GetWnd();
+	assert(parentWnd);
 	HWND wnd = CreateWindowExW(exStyle, className, text, style | WS_CHILDWINDOW, x, y, w, h,
-		dialogWnd, (HMENU)(size_t)control->Id, hInstance, NULL);
+		parentWnd, (HMENU)(size_t)control->Id, hInstance, NULL);
 #if DEBUG_WINDOWS_ERRORS
 	if (!wnd) appNotify("CreateWindow failed, GetLastError returned %d\n", GetLastError());
 #endif
@@ -337,6 +341,35 @@ UIElement& operator+(UIElement& elem, UIElement& next)
 
 	unguard;
 }
+
+void UIElement::EnableSubclass()
+{
+	guard(UIElement::EnableSubclass);
+	assert(Wnd);
+	SetWindowSubclass(Wnd, &UIElement::StaticSubclassProc, 0, (DWORD_PTR)this);
+	unguard;
+}
+
+/*static*/ LONG_PTR CALLBACK UIElement::StaticSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, ULONG_PTR dwRefData)
+{
+	guard(UIElement::StaticSubclassProc);
+	UIElement* ctl = (UIElement*)dwRefData;
+	if (ctl)
+	{
+		return ctl->SubclassProc(hWnd, uMsg, wParam, lParam);
+	}
+	else
+	{
+		 return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	}
+	unguard;
+}
+
+LONG_PTR UIElement::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
 
 /*-----------------------------------------------------------------------------
 	UISpacer
@@ -811,11 +844,11 @@ void UICheckbox::Create(UICreateContext& ctx)
 {
 	Id = ctx.dialog->GenerateDialogId();
 
-	DlgWnd = ctx.dialog->GetWnd();
+	ParentWnd = ctx.owner->GetWnd();
 
 	// compute width of checkbox, otherwise it would react on whole parent's width area
 	int checkboxWidth;
-	MeasureTextSize(*Label, &checkboxWidth, NULL, DlgWnd);
+	MeasureTextSize(*Label, &checkboxWidth, NULL, ctx.dialog->GetWnd());
 
 	// add DEFAULT_CHECKBOX_HEIGHT to 'Width' to include checkbox rect
 	UIRect ctlRect = Rect;
@@ -823,14 +856,14 @@ void UICheckbox::Create(UICreateContext& ctx)
 
 	Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, &ctlRect);
 
-	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(ParentWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
 }
 
 bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd != BN_CLICKED) return false;
-	bool checked = (IsDlgButtonChecked(DlgWnd, Id) != BST_UNCHECKED);
+	bool checked = (IsDlgButtonChecked(ParentWnd, Id) != BST_UNCHECKED);
 	if (*pValue != checked)
 	{
 		*pValue = checked;
@@ -2335,6 +2368,7 @@ UIGroup::UIGroup(const char* label, unsigned flags)
 UIGroup::UIGroup(unsigned flags)
 :	FirstChild(NULL)
 ,	Flags(flags)
+,	OwnsControls(false)
 ,	RadioValue(0)
 ,	pRadioValue(&RadioValue)
 {
@@ -2671,7 +2705,7 @@ void UICheckboxGroup::Create(UICreateContext& ctx)
 	Label = Detail::MoveTemp(tmpLabel);
 
 	Id = ctx.dialog->GenerateDialogId();
-	DlgWnd = ctx.dialog->GetWnd();
+	ParentWnd = ctx.owner->GetWnd();
 
 	int checkboxWidth;
 	MeasureTextSize(*Label, &checkboxWidth);
@@ -2683,9 +2717,11 @@ void UICheckboxGroup::Create(UICreateContext& ctx)
 		min(checkboxWidth + DEFAULT_CHECKBOX_HEIGHT, Rect.Width - checkboxOffset),
 		DEFAULT_CHECKBOX_HEIGHT);
 
+	// Adjust checkbox Y
+	ctlRect.Y -= 2;
 	CheckboxWnd = ctx.MakeWindow(this, WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, &ctlRect);
 
-	CheckDlgButton(DlgWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(ParentWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
 	EnableAllControls(*pValue);
 }
 
@@ -2696,7 +2732,7 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 		// checkbox
 		if (cmd != BN_CLICKED) return false;
 
-		bool checked = (IsDlgButtonChecked(DlgWnd, Id) != BST_UNCHECKED);
+		bool checked = (IsDlgButtonChecked(ParentWnd, Id) != BST_UNCHECKED);
 		if (*pValue != checked)
 		{
 			*pValue = checked;
@@ -3172,7 +3208,7 @@ void UIBaseDialog::DispatchWindowsMessage(void* pMsg)
 		// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
 		// (because key messages are sent to the focused window only, and not to its parent), but it looks
 		// more complicated.
-		if (msg.hwnd == Wnd || GetParent(msg.hwnd) == Wnd)
+		if (msg.hwnd == Wnd || ::GetParent(msg.hwnd) == Wnd)
 			CloseDialog(true);
 	}
 
@@ -3281,7 +3317,7 @@ void UISetExceptionHandler(void (*Handler)())
 	GUIExceptionHandler = Handler;
 }
 
-INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+/*static*/INT_PTR CALLBACK UIBaseDialog::StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	UIBaseDialog* dlg;
 
@@ -3478,6 +3514,12 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return TRUE;
 	}
 
+	if (msg == WM_INITMENU && Menu != NULL)
+	{
+		Menu->Update();
+		return TRUE;
+	}
+
 	int cmd = -1;
 	int id = 0;
 
@@ -3498,13 +3540,6 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (Menu->HandleCommand(id))
 				return TRUE;
 		}
-	}
-
-	if (msg == WM_INITMENU && Menu != NULL)
-	{
-		//!! process WM_INITMENUPOPUP for popup menus
-		Menu->Update();
-		return TRUE;
 	}
 
 	// handle WM_NOTIFY in a similar way

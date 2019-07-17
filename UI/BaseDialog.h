@@ -68,7 +68,11 @@ struct UICreateContext
 	// Unicode version of Window()
 	HWND MakeWindow(UIElement* control, const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle, const UIRect* customRect = NULL);
 
+	// Dialog window which owns everything
 	UIBaseDialog* dialog;
+	// Owner of created windows - either dialog or group
+	UIElement* owner;
+	// Font used for created control
 	HANDLE hDialogFont;
 };
 
@@ -95,6 +99,8 @@ public:
 	FORCEINLINE bool IsVisible() const   { return Visible; }
 
 	UIElement& SetParent(UIGroup* group);
+	UIGroup* GetParent()                 { return Parent; }
+	const UIGroup* GetParent() const     { return Parent; }
 	FORCEINLINE HWND GetWnd() const      { return Wnd; }
 
 	UIBaseDialog* GetDialog();
@@ -173,6 +179,11 @@ protected:
 
 	virtual int ComputeWidth() const;
 	virtual int ComputeHeight() const;
+
+	// Subclass the control, Windows will call virtual SubclassProc for message handling
+	void EnableSubclass();
+	static LONG_PTR CALLBACK StaticSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, ULONG_PTR dwRefData);
+	virtual LONG_PTR SubclassProc(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
 
 	virtual void Create(UICreateContext& ctx) = 0;
 	virtual void UpdateSize(UIBaseDialog* dialog)
@@ -454,7 +465,7 @@ protected:
 	bool*		pValue;			// pointer to editable value
 	bool		AutoSize;
 
-	HWND		DlgWnd;
+	HWND		ParentWnd;
 
 	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UICreateContext& ctx) override;
@@ -1063,6 +1074,7 @@ protected:
 	FString		Label;
 	UIElement*	FirstChild;
 	unsigned	Flags;			// combination of GROUP_... flags
+	bool		OwnsControls;	// when true, all children will be created under this window
 
 	// support for children UIRadioButton
 	int			RadioValue;
@@ -1116,7 +1128,7 @@ protected:
 	bool		bValue;			// local bool value
 	bool*		pValue;			// pointer to editable value
 	HWND		CheckboxWnd;	// checkbox window
-	HWND		DlgWnd;
+	HWND		ParentWnd;
 
 	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
