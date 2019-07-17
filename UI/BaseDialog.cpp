@@ -77,7 +77,7 @@ static HINSTANCE hInstance;
 -----------------------------------------------------------------------------*/
 
 static HRESULT (WINAPI * SetWindowTheme)(HWND, LPCWSTR, LPCWSTR) = NULL;
-static HRESULT (WINAPI * EnableThemeDialogTexture)(HWND, DWORD) = NULL;
+//static HRESULT (WINAPI * EnableThemeDialogTexture)(HWND, DWORD) = NULL;
 static BOOL    (WINAPI * IsAppThemed)() = NULL;			// pre-Win8: check if styles are disabled
 static BOOL    (WINAPI * IsThemeActive)() = NULL;
 static HRESULT (WINAPI * GetThemeColor)(HANDLE hTheme, int iPartId, int iStateId, int iPropId, COLORREF *pColor) = NULL;
@@ -95,7 +95,7 @@ static void InitUXTheme()
 	#define GET(func)			\
 		{ void* fn = GetProcAddress(hDll, #func); *(void**)&func = fn; }
 		GET(SetWindowTheme)
-		GET(EnableThemeDialogTexture)
+//		GET(EnableThemeDialogTexture)
 		GET(IsAppThemed)
 		GET(IsThemeActive)
 		GET(GetThemeColor)
@@ -2927,8 +2927,28 @@ UITabControl::UITabControl()
 	OwnsControls = true;
 }
 
+/*
+	There's a big issue with using win32 TabControl with correct background of child "static" controls.
+	These controls appears with grey background which tab page may have white themed background. There's
+	lots of discussions, and the most suitable way to achieve matching colors is to put all page controls
+	into a nested dialog, and call function EnableThemeDialogTexture(PageDialogWnd, ETDT_ENABLETAB). This
+	method will work ONLY if page controls are hosted by dialog. When not - this is a really tricky case.
+	It is possible to disable TabControl theming at all - with use of
 
-static COLORREF GetTabBackgroundColor(HWND Wnd)
+		SetWindowTheme(Wnd, L"", L"");
+
+	call. This will make all pages grey. It is possible to create own "static" (label) with transparent
+	background, or subclass original static to use transparent background. It is possible to specify
+	background color in WM_CTLCOLORSTATIC, however there's no window where we could redirect this message
+	to get correct background. So, we're going a way similar to used in wxWidgets: trying to get fixed
+	color (textured background won't work).
+
+	For reference, the most relevant discussion about this topic, which is made with Microsoft's technical
+	stuff. Other discussions found in in Internet are not so competent, and usually based on guessing.
+	https://microsoft.public.win32.programmer.ui.narkive.com/qRtjCoB9/control-background-color-on-systabcontrol32
+ */
+
+static HBRUSH GetTabBackgroundBrush(HWND Wnd)
 {
 	// Reference: wxWidgets, src/msw/notebook.cpp, wxNotebook::GetThemeBackgroundColour()
 	InitUXTheme();
@@ -2936,19 +2956,20 @@ static COLORREF GetTabBackgroundColor(HWND Wnd)
 	// Note: caching color this way will not let
 	// 1) have different color for different tab controls (e.g. if one of them has theme disabled)
 	// 2) will not catch changing of theme during app run
-	static COLORREF backgroundColor = 0;
-	if (backgroundColor != 0)
-		return backgroundColor;
+	static HBRUSH backgroundBrush = 0;
+	if (backgroundBrush != 0)
+		return backgroundBrush;
 
-	backgroundColor = GetSysColor(COLOR_BTNFACE);
+	// Strange thing, but it works correctly compared to CreateSolidBrush(GetSysColor(COLOR_BTNFACE))
+	backgroundBrush = (HBRUSH)(COLOR_BTNFACE+1);
 
 	if (IsAppThemed() && IsThemeActive())
 	{
-#if 1
-		backgroundColor = GetSysColor(COLOR_WINDOW);
-#else
+		COLORREF backgroundColor = GetSysColor(COLOR_WINDOW);
+#if 0
 		// wxWidgets way, unfortunately didn't get fine appearance, "static" color is still grey.
 		HANDLE hTheme = OpenThemeData(Wnd, L"TAB");
+		appPrintf("theme -> %p\n", hTheme);
 		if (hTheme)
 		{
 			COLORREF themeColor;
@@ -2963,15 +2984,17 @@ static COLORREF GetTabBackgroundColor(HWND Wnd)
 			CloseThemeData(hTheme);
 		}
 #endif
+		// Make a brush. It is shared between TabControls, and if we'll need to change it - object should be released.
+		backgroundBrush = CreateSolidBrush(backgroundColor);
 	}
-	return backgroundColor;
+	return backgroundBrush;
 }
 
 LONG_PTR UITabControl::SubclassProc(void* hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (uMsg == WM_CTLCOLORSTATIC)
 	{
-		return (LONG_PTR)CreateSolidBrush(GetTabBackgroundColor(Wnd));
+		return (LONG_PTR)GetTabBackgroundBrush(Wnd);
 	}
 
 	int result = -1;
