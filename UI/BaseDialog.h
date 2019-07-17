@@ -1132,6 +1132,7 @@ protected:
 
 	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam, int& result) override;
+	virtual void UpdateVisible() override;
 	virtual void UpdateLayout() override;
 };
 

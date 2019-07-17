@@ -2543,7 +2543,10 @@ void UIGroup::UpdateEnabled()
 void UIGroup::UpdateVisible()
 {
 	Super::UpdateVisible();
-	ShowAllControls(Visible);
+	if (!OwnsControls)
+	{
+		ShowAllControls(Visible);
+	}
 }
 
 //?? todo: rename function because it does more than UpdateSize() call
@@ -2743,6 +2746,12 @@ bool UICheckboxGroup::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 		}
 	}
 	return Super::HandleCommand(id, cmd, lParam, result);
+}
+
+void UICheckboxGroup::UpdateVisible()
+{
+	UIGroup::UpdateVisible();
+	ShowWindow(CheckboxWnd, Visible ? SW_SHOW : SW_HIDE);
 }
 
 void UICheckboxGroup::UpdateLayout()
