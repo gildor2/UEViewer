@@ -833,6 +833,7 @@ bool UIMenuButton::HandleCommand(int id, int cmd, LPARAM lParam)
 
 UICheckbox::UICheckbox(const char* text, bool value, bool autoSize)
 :	Label(text)
+,	bInvertValue(false)
 ,	bValue(value)
 ,	pValue(&bValue)		// points to local variable
 ,	AutoSize(autoSize)
@@ -844,6 +845,7 @@ UICheckbox::UICheckbox(const char* text, bool value, bool autoSize)
 
 UICheckbox::UICheckbox(const char* text, bool* value, bool autoSize)
 :	Label(text)
+,	bInvertValue(false)
 //,	bValue(value) - uninitialized, unused
 ,	pValue(value)
 ,	AutoSize(autoSize)
@@ -890,14 +892,14 @@ void UICheckbox::Create(UICreateContext& ctx)
 
 	Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, WS_TABSTOP | BS_AUTOCHECKBOX, 0, &ctlRect);
 
-	CheckDlgButton(ParentWnd, Id, *pValue ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(ParentWnd, Id, (*pValue ^ bInvertValue) ? BST_CHECKED : BST_UNCHECKED);
 	UpdateEnabled();
 }
 
 bool UICheckbox::HandleCommand(int id, int cmd, LPARAM lParam)
 {
 	if (cmd != BN_CLICKED) return false;
-	bool checked = (IsDlgButtonChecked(ParentWnd, Id) != BST_UNCHECKED);
+	bool checked = (IsDlgButtonChecked(ParentWnd, Id) != BST_UNCHECKED) ^ bInvertValue;
 	if (*pValue != checked)
 	{
 		*pValue = checked;

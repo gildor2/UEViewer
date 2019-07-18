@@ -461,9 +461,11 @@ class UICheckbox : public UIElement
 public:
 	UICheckbox(const char* text, bool value, bool autoSize = true);
 	UICheckbox(const char* text, bool* value, bool autoSize = true);
+	UICheckbox& InvertValue() { bInvertValue = true; return *this; }
 
 protected:
 	FString		Label;
+	bool		bInvertValue;	// when we want inverse meaning
 	bool		bValue;			// local bool value
 	bool*		pValue;			// pointer to editable value
 	bool		AutoSize;
