@@ -443,20 +443,20 @@ void UIPageControl::ComputeLayoutWithBorders(int borderLeft, int borderRight, in
 
 	DBG_LAYOUT(">>> do page layout: max_w(%d) max_h(%d)", MaxWidth, MaxHeight);
 
+	// Work with "fill maximal size" parameters
+	if (Rect.Width < 0)
+	{
+		Rect.Width = MaxWidth;
+	}
+	if (Rect.Height < 0)
+	{
+		Rect.Height = MaxHeight;
+	}
+
 	UIRect childRect(0, 0, Rect.Width, Rect.Height);
 	if (!OwnsControls)
 	{
 		childRect = Rect;
-	}
-
-	// Work with "fill maximal size" parameters
-	if (Rect.Width < 0)
-	{
-		Rect.Width = MaxWidth + borderLeft + borderRight;
-	}
-	if (Rect.Height < 0)
-	{
-		Rect.Height = MaxHeight + borderTop + borderBottom;
 	}
 
 	childRect.X += borderLeft;
