@@ -117,6 +117,8 @@ struct CUmodelSettings
 {
 	DECLARE_STRUCT(CUmodelSettings);
 
+	bool			bShowExportOptions;
+	bool			bShowSaveOptions;
 	CStartupSettings Startup;
 	CExportSettings  Export;
 	CSavePackagesSettings SavePackages;
@@ -125,6 +127,8 @@ struct CUmodelSettings
 		PROP_STRUC(Export, CExportSettings)
 		PROP_STRUC(SavePackages, CSavePackagesSettings)
 //		PROP_STRUC(Startup, CStartupSettings) //!! remove
+		PROP_BOOL(bShowExportOptions)
+		PROP_BOOL(bShowSaveOptions)
 	END_PROP_TABLE
 
 	CUmodelSettings()
@@ -134,6 +138,8 @@ struct CUmodelSettings
 
 	void Reset()
 	{
+		bShowExportOptions = true;
+		bShowSaveOptions = true;
 		Startup.Reset();
 		Export.Reset();
 		SavePackages.Reset();
