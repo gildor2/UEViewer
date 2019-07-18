@@ -202,8 +202,10 @@ detex
 
 Changes
 ~~~~~~~
-17.07.2019
-- using tabbed dialog for options
+18.07.2019
+- UI: using tabbed dialog for options
+- UI: showing export and save packages options when user doing these operations, the options window could be
+  suppressed for next export/save
 
 11.07.2019
 - updated Lineage 2 SkeletalMesh support

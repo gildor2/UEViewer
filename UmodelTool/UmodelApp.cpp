@@ -530,6 +530,14 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 	case 's'|KEY_ALT:
 		DoScreenshot = 2;
 		break;
+	case 'x'|KEY_CTRL:
+#if HAS_UI
+		if (Viewer && UISettingsDialog::ShowExportOptions(GSettings))
+#else
+		if (Viewer)
+#endif
+			Viewer->Export();
+		break;
 #if HAS_UI
 	case 'o':
 		ShowPackageUI();
@@ -562,7 +570,9 @@ void CUmodelApp::DrawTexts()
 		DrawKeyHelp("PgUp/PgDn", "browse objects");
 #if HAS_UI
 		DrawKeyHelp("O",         "open package");
+		DrawKeyHelp("Ctrl+O",    "show options");
 #endif
+		DrawKeyHelp("Ctrl+X",	 "export object");
 		DrawKeyHelp("Ctrl+S",    "take screenshot");
 		Viewer->ShowHelp();
 		DrawTextLeft("-----\n");		// divider
@@ -634,7 +644,11 @@ void CUmodelApp::CreateMenu()
 		+ NewSubmenu("Tools")
 		[
 			NewMenuItem("Export current object\tCtrl+X")
-			.SetCallback(BIND_LAMBDA([this]() { if (Viewer) Viewer->Export(); }))
+			.SetCallback(BIND_LAMBDA([this]()
+				{
+					if (Viewer && UISettingsDialog::ShowExportOptions(GSettings))
+						Viewer->Export();
+				}))
 			+ NewMenuSeparator()
 			+ NewMenuHyperLink("Open export folder", *GSettings.Export.ExportPath)	//!! should update if directory will be changed from UI
 			+ NewMenuHyperLink("Open screenshots folder", SCREENSHOTS_DIR)

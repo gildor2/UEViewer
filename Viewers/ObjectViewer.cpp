@@ -47,9 +47,6 @@ void CObjectViewer::ProcessKey(int key)
 
 	switch (key)
 	{
-	case 'x'|KEY_CTRL:
-		Export();
-		break;
 	case 'd':
 		Dump();
 		break;
@@ -62,8 +59,7 @@ void CObjectViewer::ShowHelp()
 {
 	if (!Object) return;
 
-	DrawKeyHelp("D",      "dump info");
-	DrawKeyHelp("Ctrl+X", "export object");
+	DrawKeyHelp("D", "dump info");
 }
 
 

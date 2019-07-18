@@ -503,7 +503,13 @@ void UIPackageDialog::InitUI()
 			.SetWidth(80)
 			.Enable(false)
 			.Expose(ExportButton)
-			.SetCallback(BIND_LAMBDA([this]() { CloseDialog(EXPORT); }))
+			.SetCallback(BIND_LAMBDA([this]()
+			{
+				if (UISettingsDialog::ShowExportOptions(GSettings))
+				{
+					CloseDialog(EXPORT);
+				}
+			}))
 		+ NewControl(UIButton, "Cancel")
 			.SetWidth(80)
 			.SetCallback(BIND_LAMBDA([this]() { CloseDialog(CANCEL); }))
@@ -780,6 +786,9 @@ void UIPackageDialog::SavePackages()
 {
 	guard(UIPackageDialog::SavePackages);
 
+	if (!UISettingsDialog::ShowSavePackagesOptions(GSettings))
+		return;
+
 	// We are using selection, so update it.
 	UpdateSelectedPackages();
 
@@ -796,6 +805,9 @@ void UIPackageDialog::SavePackages()
 void UIPackageDialog::SaveFolderPackages()
 {
 	guard(UIPackageDialog::SaveFolderPackages);
+
+	if (!UISettingsDialog::ShowSavePackagesOptions(GSettings))
+		return;
 
 	PackageList PackagesToSave;
 	GetPackagesForSelectedFolder(PackagesToSave);
@@ -868,6 +880,9 @@ void UIPackageDialog::OnOpenAppendFolderClicked()
 
 void UIPackageDialog::OnExportFolderClicked()
 {
+	if (!UISettingsDialog::ShowExportOptions(GSettings))
+		return;
+
 	PackageList PackagesToExport;
 	GetPackagesForSelectedFolder(PackagesToExport);
 
