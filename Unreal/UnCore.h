@@ -427,6 +427,7 @@ enum EGame
 		// 4.16
 		GAME_NGB = GAME_UE4(16)+1,
 		GAME_UT4 = GAME_UE4(16)+2,
+		GAME_PUBG = GAME_UE4(16)+3,
 		// 4.17
 		GAME_LIS2 = GAME_UE4(17)+1,
 		// 4.19

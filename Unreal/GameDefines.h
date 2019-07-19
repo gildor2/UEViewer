@@ -159,6 +159,7 @@
 #define HIT				1		// Heroes of Incredible Tales
 #define NGB				1		// New Gundam Breaker
 #define LIS2			1		// Life is Strange 2
+#define PUBG			1		// PUBG PC
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 

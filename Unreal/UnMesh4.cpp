@@ -1617,6 +1617,16 @@ struct FStaticMeshSection4
 #if DAUNTLESS
 		if (Ar.Game == GAME_Dauntless) Ar.Seek(Ar.Tell()+8); // 8 zero-filled bytes here
 #endif
+#if PUBG
+		if (Ar.Game == GAME_PUBG) {
+			byte b;
+			int i;
+			Ar << b << i;
+#	if DEBUG_STATICMESH
+			appPrintf("  unk s8=%u, s32=%d\n", b, i);
+#	endif
+		}
+#endif
 		//?? Has editor-only data?
 		return Ar;
 	}
@@ -1721,6 +1731,9 @@ struct FStaticMeshLODModel4
 		// UE4.20+
 		CDSF_MinLodData = 2,			// used to drop some LODs
 		CDSF_ReversedIndexBuffer = 4,
+
+		// PUBG all 3 bits set, no idea what indicates what, they're just always set.
+		CDSF_StripIndexBuffers = 128 | 64 | 32,
 	};
 
 	static void Serialize(FArchive& Ar, FStaticMeshLODModel4& Lod)
@@ -1777,6 +1790,17 @@ struct FStaticMeshLODModel4
 		unguard;
 	}
 
+	// I guess it's highly compressible or something?
+	template<typename T>
+	static inline void UnpackIndex(TArray<T>& arr)
+	{
+		T currentIndex = 0;
+		for (auto i = 0; i < arr.Num(); i++) {
+			currentIndex += arr[i];
+			arr[i] = currentIndex;
+		}
+	}
+
 	// Pre-UE4.23 code
 	static void SerializeBuffersLegacy(FArchive& Ar, FStaticMeshLODModel4& Lod, const FStripDataFlags& StripFlags)
 	{
@@ -1787,8 +1811,18 @@ struct FStaticMeshLODModel4
 		Ar << Lod.ColorVertexBuffer;
 		Ar << Lod.IndexBuffer;
 
+#if PUBG
+		if (Ar.Game == GAME_PUBG && StripFlags.IsClassDataStripped(CDSF_StripIndexBuffers)) {
+			UnpackIndex(Lod.IndexBuffer.Indices16);
+			UnpackIndex(Lod.IndexBuffer.Indices32);
+		}
+#endif
+
 		/// reference for VER_UE4_SOUND_CONCURRENCY_PACKAGE (UE4.9+):
 		/// 25.09.2015 - 948c1698
+#if PUBG
+		if (Ar.Game != GAME_PUBG || !StripFlags.IsClassDataStripped(CDSF_StripIndexBuffers)) {
+#endif
 		if (Ar.ArVer >= VER_UE4_SOUND_CONCURRENCY_PACKAGE && !StripFlags.IsClassDataStripped(CDSF_ReversedIndexBuffer))
 		{
 			Ar << Lod.ReversedIndexBuffer;
@@ -1818,6 +1852,9 @@ struct FStaticMeshLODModel4
 
 #if UT4
 		if (Ar.Game == GAME_UT4) return;
+#endif
+#if PUBG
+		}
 #endif
 
 		if (Ar.Game >= GAME_UE4(16))
