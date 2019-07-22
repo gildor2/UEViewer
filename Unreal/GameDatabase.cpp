@@ -906,6 +906,9 @@ static const UEVersionMap ueVersions[] =
 #if DND
 	G(GAME_DND, 673)						// real version is 674
 #endif
+#if SMITE
+	G(GAME_Smite, 868)						// Paladins, Smite: real version is 893; version 869 has changes in mesh format
+#endif
 	G(GAME_GoWJ, 828)						// real version is 846
 };
 
