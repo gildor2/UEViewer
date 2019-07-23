@@ -597,7 +597,10 @@ public:
 	virtual void Serialize(FArchive& Ar);
 	virtual void PostLoad();
 
+	// UE4.12-4.22
 	void SerializeCompressedData(FArchive& Ar);
+	// UE4.23+
+	void SerializeCompressedData2(FArchive& Ar);
 
 	int GetNumTracks() const;
 	int GetTrackBoneIndex(int TrackIndex) const;

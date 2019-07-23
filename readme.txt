@@ -202,6 +202,9 @@ detex
 
 Changes
 ~~~~~~~
+23.07.2019
+- support for UE4.23 animation changes
+
 18.07.2019
 - UI: using tabbed dialog for options
 - UI: showing export and save packages options when user doing these operations, the options window could be

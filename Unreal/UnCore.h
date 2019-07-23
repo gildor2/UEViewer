@@ -1554,6 +1554,10 @@ public:
 	{
 		return (const T*)DataPtr;
 	}
+	FORCEINLINE unsigned int GetTypeSize() const
+	{
+		return sizeof(T);
+	}
 #if !DO_ASSERT
 	// version without verifications, very compact
 	FORCEINLINE T& operator[](int index)
