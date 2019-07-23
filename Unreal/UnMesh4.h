@@ -597,12 +597,25 @@ public:
 	virtual void Serialize(FArchive& Ar);
 	virtual void PostLoad();
 
+	void SerializeCompressedData(FArchive& Ar);
+
 	int GetNumTracks() const;
 	int GetTrackBoneIndex(int TrackIndex) const;
 	int FindTrackForBoneIndex(int BoneIndex) const;
 	void TransferPerTrackData(TArray<uint8>& Dst, const TArray<uint8>& Src);
 };
 
+
+class UAnimStreamable : public UAnimSequenceBase
+{
+	DECLARE_CLASS(UAnimStreamable, UAnimSequenceBase);
+public:
+	virtual void Serialize(FArchive& Ar)
+	{
+		appPrintf("UAnimStreamable: not implemented\n");
+		DROP_REMAINING_DATA(Ar);
+	}
+};
 
 #define REGISTER_MESH_CLASSES_U4 \
 	REGISTER_CLASS(USkeleton) \
@@ -620,7 +633,8 @@ public:
 	REGISTER_CLASS(FRawCurveTracks) \
 	REGISTER_CLASS(FVirtualBone) \
 	REGISTER_CLASS(FBoneNode) \
-	REGISTER_CLASS_ALIAS(UAnimSequence4, UAnimSequence)
+	REGISTER_CLASS_ALIAS(UAnimSequence4, UAnimSequence) \
+	REGISTER_CLASS(UAnimStreamable)
 
 #define REGISTER_MESH_ENUMS_U4 \
 	REGISTER_ENUM(EAnimInterpolationType) \

@@ -912,110 +912,122 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 
 	if (FFrameworkObjectVersion::Get(Ar) < FFrameworkObjectVersion::MoveCompressedAnimDataToTheDDC)
 	{
-		// part of data were serialized as properties
+		// Part of data were serialized as properties
 		Ar << CompressedByteStream;
 	}
 	else
 	{
+		// UE4.12+
 		bool bSerializeCompressedData;
 		Ar << bSerializeCompressedData;
 
 		if (bSerializeCompressedData)
 		{
-			// UAnimSequence::SerializeCompressedData()
-			// these fields were serialized as properties in pre-UE4.12 engine version
-			Ar << (byte&)KeyEncodingFormat;
-			Ar << (byte&)TranslationCompressionFormat;
-			Ar << (byte&)RotationCompressionFormat;
-			Ar << (byte&)ScaleCompressionFormat;
-		#if DEBUG_ANIM
-			appPrintf("Key: %d Trans: %d Rot: %d Scale: %d\n", KeyEncodingFormat, TranslationCompressionFormat,
-				RotationCompressionFormat, ScaleCompressionFormat);
-		#endif
+			SerializeCompressedData(Ar);
 
-			Ar << CompressedTrackOffsets;
-			Ar << CompressedScaleOffsets;
-		#if DEBUG_ANIM
-			appPrintf("TrackOffsets: %d ScaleOffsets: %d\n", CompressedTrackOffsets.Num(), CompressedScaleOffsets.OffsetData.Num());
-		#endif
-
-			if (Ar.Game >= GAME_UE4(21))
-			{
-				// UE4.21+ - added compressed segments
-				Ar << CompressedSegments;
-				if (CompressedSegments.Num())
-				{
-					//?? TODO: CompressedSegments
-					appNotify("animation has CompressedSegments!");
-				}
-			}
-
-			Ar << CompressedTrackToSkeletonMapTable;
-
-			if (Ar.Game < GAME_UE4(22))
-			{
-				Ar << CompressedCurveData;
-			}
-			else
-			{
-				TArray<FSmartName> CompressedCurveNames;
-				Ar << CompressedCurveNames;
-			}
-
-#if LIS2
-			if (Ar.Game == GAME_LIS2) goto no_raw_data_size; // this is basically UE4.17, but with older animation format
-#endif
-			if (Ar.Game >= GAME_UE4(17))
-			{
-				// UE4.17+
-				int32 CompressedRawDataSize;
-				Ar << CompressedRawDataSize;
-			}
-		no_raw_data_size:
-			if (Ar.Game >= GAME_UE4(22))
-			{
-				int32 CompressedNumFrames;
-				Ar << CompressedNumFrames;
-			}
-
-			// compressed data
-			int32 NumBytes;
-			Ar << NumBytes;
-
-			bool bUseBulkData = false;
-			if (Ar.Game >= GAME_UE4(23))
-				Ar << bUseBulkData;
-			assert(bUseBulkData == false);
-
-			if (NumBytes)
-			{
-				CompressedByteStream.AddUninitialized(NumBytes);
-				Ar.Serialize(CompressedByteStream.GetData(), NumBytes);
-			}
-
-			if (Ar.Game >= GAME_UE4(22))
-			{
-				FString CurveCodecPath;
-				TArray<byte> CompressedCurveByteStream;
-				Ar << CurveCodecPath << CompressedCurveByteStream;
-			}
-
-			// End of UAnimSequence::SerializeCompressedData()
-
-			// after compressed data ...
 			Ar << bUseRawDataOnly;
-
-			if (KeyEncodingFormat == AKF_PerTrackCompression && CompressedScaleOffsets.OffsetData.Num())
-			{
-				TArray<uint8> SwappedData;
-				TransferPerTrackData(SwappedData, CompressedByteStream);
-				Exchange(SwappedData, CompressedByteStream);
-			}
 		}
 	}
 
 	unguard;
 }
+
+void UAnimSequence4::SerializeCompressedData(FArchive& Ar)
+{
+	guard(UAnimSequence4::SerializeCompressedData);
+
+	// These fields were serialized as properties in pre-UE4.12 engine version
+
+	// Since 4.23, code has been moved to FCompressedAnimSequence::SerializeCompressedData()
+
+	// Since 4.23, this is FUECompressedAnimData::SerializeCompressedData
+	Ar << (byte&)KeyEncodingFormat;
+	Ar << (byte&)TranslationCompressionFormat;
+	Ar << (byte&)RotationCompressionFormat;
+	Ar << (byte&)ScaleCompressionFormat;
+#if DEBUG_ANIM
+	appPrintf("Key: %d Trans: %d Rot: %d Scale: %d\n", KeyEncodingFormat, TranslationCompressionFormat,
+		RotationCompressionFormat, ScaleCompressionFormat);
+#endif
+
+	Ar << CompressedTrackOffsets;
+	Ar << CompressedScaleOffsets;
+#if DEBUG_ANIM
+	appPrintf("TrackOffsets: %d ScaleOffsets: %d\n", CompressedTrackOffsets.Num(), CompressedScaleOffsets.OffsetData.Num());
+#endif
+
+	if (Ar.Game >= GAME_UE4(21))
+	{
+		// UE4.21+ - added compressed segments
+		Ar << CompressedSegments;
+		if (CompressedSegments.Num())
+		{
+			//?? TODO: CompressedSegments
+			appNotify("animation has CompressedSegments!");
+		}
+	}
+
+	Ar << CompressedTrackToSkeletonMapTable;
+
+	if (Ar.Game < GAME_UE4(22))
+	{
+		Ar << CompressedCurveData;
+	}
+	else
+	{
+		TArray<FSmartName> CompressedCurveNames;
+		Ar << CompressedCurveNames;
+	}
+
+#if LIS2
+	if (Ar.Game == GAME_LIS2) goto no_raw_data_size; // this is basically UE4.17, but with older animation format
+#endif
+	if (Ar.Game >= GAME_UE4(17))
+	{
+		// UE4.17+
+		int32 CompressedRawDataSize;
+		Ar << CompressedRawDataSize;
+	}
+no_raw_data_size:
+	if (Ar.Game >= GAME_UE4(22))
+	{
+		int32 CompressedNumFrames;
+		Ar << CompressedNumFrames;
+	}
+
+	// compressed data
+	int32 NumBytes;
+	Ar << NumBytes;
+
+	bool bUseBulkData = false;
+	if (Ar.Game >= GAME_UE4(23))
+		Ar << bUseBulkData;
+	assert(bUseBulkData == false);
+
+	if (NumBytes)
+	{
+		CompressedByteStream.AddUninitialized(NumBytes);
+		Ar.Serialize(CompressedByteStream.GetData(), NumBytes);
+	}
+
+	if (Ar.Game >= GAME_UE4(22))
+	{
+		FString CurveCodecPath;
+		TArray<byte> CompressedCurveByteStream;
+		Ar << CurveCodecPath << CompressedCurveByteStream;
+	}
+
+	// Fix layout of "byte swapped" data (workaround for UE4 bug)
+	if (KeyEncodingFormat == AKF_PerTrackCompression && CompressedScaleOffsets.OffsetData.Num() && Ar.Game < GAME_UE4(23))
+	{
+		TArray<uint8> SwappedData;
+		TransferPerTrackData(SwappedData, CompressedByteStream);
+		Exchange(SwappedData, CompressedByteStream);
+	}
+
+	unguard;
+}
+
 
 // UE4 has some mess in AEFPerTrackCompressionCodec::ByteSwapOut() (and ByteSwapIn): it sends
 // data in order: translation data, rotation data, scale data. However, scale data stored in
