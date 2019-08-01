@@ -1754,7 +1754,7 @@ struct FStaticMeshLODModel4
 			return;
 		}
 
-		// UE4.22+
+		// UE4.23+
 		bool bIsLODCookedOut, bInlined;
 		Ar << bIsLODCookedOut << bInlined;
 
@@ -1763,16 +1763,38 @@ struct FStaticMeshLODModel4
 			if (bInlined)
 			{
 				SerializeBuffers(Ar, Lod);
-				// FStaticMeshBuffersSize
-				uint32 SerializedBuffersSize, DepthOnlyIBSize, ReversedIBsSize;
-				Ar << SerializedBuffersSize << DepthOnlyIBSize << ReversedIBsSize;
 			}
 			else
 			{
-				// todo
-				appError("Serialize from bulk");
+				DBG_STAT("Serialize from bulk\n");
+				FByteBulkData Bulk;
+				Bulk.Serialize(Ar);
+				// perform SerializeBuffers on bulk array
+				Bulk.SerializeData(UObject::GLoadingObj);
+
+				FMemReader Reader(Bulk.BulkData, Bulk.ElementCount); // ElementCount is the same as data size, for byte bulk data
+				Reader.SetupFrom(*UObject::GLoadingObj->GetPackageArchive());
+				SerializeBuffers(Reader, Lod);
+
+				// FStaticMeshLODResources::SerializeAvailabilityInfo()
+				uint32 DepthOnlyNumTriangles, PackedData;
+				Ar << DepthOnlyNumTriangles << PackedData;
+				// ... SerializeMetaData() for all arrays
+				Ar.Seek(Ar.Tell() + 4*4 + 2*4 + 2*4 + 6*(2*4));
+/*				StaticMeshVertexBuffer = 2x int32, 2x bool
+				PositionVertexBuffer = 2x int32
+				ColorVertexBuffer = 2x int32
+				IndexBuffer = int32 + bool
+				ReversedIndexBuffer
+				DepthOnlyIndexBuffer
+				ReversedDepthOnlyIndexBuffer
+				WireframeIndexBuffer
+				AdjacencyIndexBuffer */
 			}
 		}
+		// FStaticMeshBuffersSize
+		uint32 SerializedBuffersSize, DepthOnlyIBSize, ReversedIBsSize;
+		Ar << SerializedBuffersSize << DepthOnlyIBSize << ReversedIBsSize;
 
 		unguard;
 	}
