@@ -33,7 +33,7 @@ public:
 				+NewControl(UIGroup, GROUP_NO_BORDER)
 				.SetWidth(EncodeWidth(1.0f))
 				[
-					NewControl(UILabel, "UModel has found an unversioned UE4 package. In order to").SetAutoSize()
+					NewControl(UILabel, "UE Viewer has found an unversioned UE4 package. In order to").SetAutoSize()
 					+NewControl(UILabel, "work correctly please specify which Unreal engine 4 version").SetAutoSize()
 					+NewControl(UILabel, "is used for this game.").SetAutoSize()
 					+NewControl(UISpacer)

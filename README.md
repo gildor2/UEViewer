@@ -1,11 +1,13 @@
-UE Viewer (UModel)
-==================
+UE Viewer
+=========
 
 UE Viewer is a viewer for visual resources of games made with [Unreal engine](https://www.unrealengine.com/).
 Currently all engine versions (from 1 to 4) are supported.
 
 Previously project was called "Unreal model viewer", however the name
 [has been changed](https://www.gildor.org/smf/index.php/topic,731.0.html) in 2011 to meet demand from Epic Games.
+
+Please note that "official" name is "UE Viewer", and a short unofficial name of the project is "umodel".
 
 There's a place where you may discuss the source code:
 [gildor.org forums](https://www.gildor.org/smf/index.php?board=37.0).
@@ -19,8 +21,7 @@ using any Git client, or download it as a [Zip file](https://github.com/gildor2/
 
 Building the source code
 ------------------------
-
-We are using own build system to compile UModel. You may find a Perl script in *Tools/genmake*. This script
+We are using own build system to compile UE Viewer. You may find a Perl script in *Tools/genmake*. This script
 generates makefiles from some human-friendly project format. After that you may build generated makefile
 using 'nmake' for Visual Studio or 'make' for gcc. Build process is controlled with *build.sh* script.
 
@@ -33,8 +34,8 @@ To list all options, run `build.sh --help`. Current options are:
 
 ### Windows 32-bit
 
-UModel is compiled using Visual Studio. Required VisualStudio 2013 or newer. Older Visual Studio compilers are
-not suitable because UModel's code using some C++11 stuff.
+UE Viewer is compiled using Visual Studio. Required VisualStudio 2013 or newer. Older Visual Studio compilers are
+not suitable because viewer's code using some C++11 stuff.
 
 Currently build is performed with Visual C++ 2019.
 
@@ -55,19 +56,19 @@ To launch a build process without a batch, simply execute
     bash build.sh
 
 ### Windows 64-bit
-Despite we're providing only 32-but builds of UModel, it is possible to compile it for 64-bit platform. To do that, you
+Despite we're providing only 32-but builds of UE Viewer, it is possible to compile it for 64-bit platform. To do that, you
 should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-win32` to `vc-win64`. Also 64-bit build could
 be initiated with launching *build.sh --64*.
 
 ### Linux
 This system has everything what is required for build by default. You'll only need to install SDL2 development package
-(and of course gcc). To build UModel, simply execute the following command from terminal
+(and of course gcc). To build UE Viewer, simply execute the following command from terminal
 
     ./build.sh
 
 ### Visual Studio Code
-UModel contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/).
-Just open UModel's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up.
+UE Viewer contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/).
+Just open viewer's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up.
 Of course you'll need a [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed.
 
 VSCode project comes with additional build command which could be bound to a key. Just use
@@ -84,7 +85,7 @@ files.
 
 C runtime library for MSVC
 --------------------------
-UModel is dynamically linked with CRT library, so it requires CRT DLL files to be installed onto your system. It is possible
+UE Viewer is dynamically linked with CRT library, so it requires CRT DLL files to be installed onto your system. It is possible
 to statically link with you compiler's CRT by changing a line in *common.project* (with cost of growing executable file size):
 
     LIBC = shared
@@ -93,8 +94,8 @@ to
 
     LIBC = static
 
-UModel uses custom CRT library for being able to link against MSVCRT.DLL. MSVCRT.DLL is chosen because it allows to
-reduce size of UModel distribution without needs to install compiler runtime libraries on system - MSVCRT.DLL present on
+UE Viewer uses custom CRT library for being able to link against MSVCRT.DLL. MSVCRT.DLL is chosen because it allows to
+reduce size of UE Viewer distribution without needs to install compiler runtime libraries on system - MSVCRT.DLL present on
 any Windows system. You may disable MSVCRT.DLL linking by commenting out line
 
     OLDCRT = 1
@@ -126,8 +127,8 @@ Also you may change MSVCRT library path by changing **WDKCRT** variable in *comm
 
 Debugging in Visual Studio
 --------------------------
-UModel was released without a Visual Studio solution. By the way it is still possible to debug it within an IDE. You
-can build a Debug version of UModel by uncommenting ```#define MAX_DEBUG 1``` in *UmodelTool/Build.h* and rebuilding the
+UE Viewer was released without a Visual Studio solution. By the way it is still possible to debug it within an IDE. You
+can build a Debug version of viewer by uncommenting ```#define MAX_DEBUG 1``` in *UmodelTool/Build.h* and rebuilding the
 project. After that you'll get executable with optimizations disabled, and with some extra features. For example,
 if umodel.exe crashes, and it is started with *-debug* option, standard Windows window appears with prompt to close
 program or debug it. You may choose "Debug with Visual Studio" there.
@@ -148,8 +149,8 @@ versions. You may copy **Tools/umodel.natvis** file to *C:\Users\Your_user_folde
 and after that you'll be able to view *TArray* and *FString* structures during debug session.
 
 ### Visual Studio Code
-As was mentioned earlier, UModel source code comes with Visual Studio Code project. You may easily edit, launch and debug UModel
-with it. For debugging, there are 2 configurations: "No arguments" runs UModel with default startup UI, and for command line use
+As was mentioned earlier, UE Viewer source code comes with Visual Studio Code project. You may easily edit, launch and debug viewer
+with it. For debugging, there are 2 configurations: "No arguments" runs UE Viewer with default startup UI, and for command line use
 you may launch 2nd "Volatile" configuration, which reads command line string from file *docs/cmdline.cfg* - please refer to
 [Response files documentation](https://github.com/gildor2/UModel/wiki/Response-file) for details on its format.
 

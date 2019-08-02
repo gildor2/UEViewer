@@ -30,7 +30,7 @@ public:
 				+NewControl(UIGroup, GROUP_NO_BORDER)
 				.SetWidth(EncodeWidth(1.0f))
 				[
-					NewControl(UILabel, "UModel has found an encrypted UE4 pak file. In order to").SetAutoSize()
+					NewControl(UILabel, "UE Viewer has found an encrypted UE4 pak file. In order to").SetAutoSize()
 					+NewControl(UILabel, "work correctly please specify an AES encryption key which").SetAutoSize()
 					+NewControl(UILabel, "is used for this game.").SetAutoSize()
 					+NewControl(UISpacer)

@@ -1,4 +1,4 @@
-UMODEL (UE Viewer)
+UE Viewer
 (c) Konstantin Nosov (Gildor), 2007-2019
 
 
@@ -24,12 +24,12 @@ https://www.gildor.org/projects/umodel/compat
 
 Web resources
 ~~~~~~~~~~~~~
-Umodel home page and forum:
+UE Viewer home page and forum:
 https://www.gildor.org/en/projects/umodel
 or Russian page:
 https://www.gildor.org/projects/umodel
 
-Umodel FAQ:
+UE Viewer FAQ:
 https://www.gildor.org/projects/umodel/faq
 
 Some tutorials available here:
@@ -40,6 +40,16 @@ https://www.youtube.com/playlist?list=PLJROJrENPVvK-V8PCTR9qBmY0Q7v4wCym
 
 Other documentation:
 https://www.gildor.org/smf/index.php/board,9.0.html
+
+
+Name of the project
+~~~~~~~~~~~~~~~~~~~
+I've started the project in 2007 as some quick test for own skeletal animation system.
+It didn't get a name first. Later I made it more "mature", it becate "UT2004 model viewer".
+Later more games were added, and it became "Unreal model viewer" - short form is "umodel".
+Later Epic Games requested me to remove their trademark "Unreal" from the name, so it became
+"UE Viewer", with the same "shortcut" name which is now used only for executable file name
+and when it's preferred to use shorter (unofficial) name.
 
 
 Quick start

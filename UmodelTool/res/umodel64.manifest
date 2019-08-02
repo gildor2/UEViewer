@@ -3,7 +3,7 @@
 <assemblyIdentity
     version="0.0.1.0"
     processorArchitecture="amd64"
-    name="Umodel"
+    name="UE Viewer"
     type="win32"
 />
 <description>wxWindows application</description>

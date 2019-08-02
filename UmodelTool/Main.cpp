@@ -320,7 +320,7 @@ void InitClassAndExportSystems(int Game)
 static void PrintUsage()
 {
 	appPrintf(
-			"Unreal Engine viewer and exporter\n"
+			"UE Viewer - Unreal Engine viewer and exporter\n"
 			"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
 #if HAS_UI
 			"       umodel [command] [options] <directory>\n"

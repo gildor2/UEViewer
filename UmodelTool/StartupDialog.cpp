@@ -12,7 +12,7 @@ UIStartupDialog::UIStartupDialog(CStartupSettings& settings)
 
 bool UIStartupDialog::Show()
 {
-	if (!ShowModal("Umodel Startup Options", -1, -1))
+	if (!ShowModal("UE Viewer Startup Options", -1, -1))
 		return false;
 
 	// process some options
