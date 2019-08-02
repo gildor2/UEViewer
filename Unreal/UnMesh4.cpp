@@ -945,9 +945,22 @@ struct FSkinWeightVertexBuffer
 
 		bool bExtraBoneInfluences;
 		int32 NumVertices;
+		int32 Stride = 0;
 
-		Ar << bExtraBoneInfluences << NumVertices;
-		DBG_SKEL("Weights: extra=%d verts=%d\n", bExtraBoneInfluences, NumVertices);
+		// UE4.23 changed this structure. Part of data is serialized in FSkinWeightVertexBuffer::SerializeMetaData(),
+		// and there's a typo: it relies on FSkeletalMeshCustomVersion::SplitModelAndRenderData which is UE4.15 constant.
+		// So we're using comparison with UE4.23 instead.
+
+		if (Ar.Game < GAME_UE4(23))
+		{
+			Ar << bExtraBoneInfluences << NumVertices;
+		}
+		else
+		{
+			Ar << bExtraBoneInfluences << Stride << NumVertices;
+		}
+
+		DBG_SKEL("Weights: extra=%d verts=%d stride=%d\n", bExtraBoneInfluences, NumVertices, Stride);
 
 		if (!SkinWeightStripFlags.IsDataStrippedForServer())
 		{
@@ -1014,6 +1027,12 @@ struct FStaticLODModel4
 	FSkeletalMeshVertexBuffer4	VertexBufferGPUSkin;
 	FSkeletalMeshVertexColorBuffer4 ColorVertexBuffer;		//!! TODO: switch to FColorVertexBuffer4
 	FSkeletalMeshVertexClothBuffer ClothVertexBuffer;
+
+	enum EClassDataStripFlag
+	{
+		CDSF_AdjacencyData = 1,
+		CDSF_MinLodData = 2,
+	};
 
 	// Before 4.19, this function is FStaticLODModel::Serialize in UE4 source code. After 4.19,
 	// this is FSkeletalMeshLODModel::Serialize.
@@ -1154,7 +1173,7 @@ struct FStaticLODModel4
 				}
 #endif // SOD2
 
-				if (!StripFlags.IsClassDataStripped(1))
+				if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
 					Ar << Lod.AdjacencyIndexBuffer;
 
 				if (Ar.ArVer >= VER_UE4_APEX_CLOTH && Lod.HasClothData())
@@ -1167,15 +1186,13 @@ struct FStaticLODModel4
 		unguard;
 	}
 
-	// This function is used only for UE4.19+ data. UE4 source code prototype is
+	// This function is used only for UE4.19-UE4.22 data. UE4 source code prototype is
 	// FSkeletalMeshLODRenderData::Serialize().
-	static void SerializeRenderItem(FArchive& Ar, FStaticLODModel4& Lod)
+	static void SerializeRenderItem_Legacy(FArchive& Ar, FStaticLODModel4& Lod)
 	{
-		guard(FStaticLODModel4::SerializeRenderItem);
+		guard(FStaticLODModel4::SerializeRenderItem_Legacy);
 
 		FStripDataFlags StripFlags(Ar);
-
-		//TODO: check 'MinLodStripFlag' (UE4.20)
 
 		Lod.Sections.Serialize2<FSkelMeshSection4::SerializeRenderItem>(Ar);
 #if DEBUG_SKELMESH
@@ -1193,7 +1210,7 @@ struct FStaticLODModel4
 
 		Ar << Lod.RequiredBones;
 
-		if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(2)) // MinLodStripFlag
+		if (!StripFlags.IsDataStrippedForServer() && !StripFlags.IsClassDataStripped(CDSF_MinLodData))
 		{
 			FPositionVertexBuffer4 PositionVertexBuffer;
 			Ar << PositionVertexBuffer;
@@ -1215,17 +1232,11 @@ struct FStaticLODModel4
 				DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
 			}
 
-			if (!StripFlags.IsClassDataStripped(1)) // LodAdjacencyStripFlag
+			if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
 				Ar << Lod.AdjacencyIndexBuffer;
 
 			if (Lod.HasClothData())
 				Ar << Lod.ClothVertexBuffer;
-
-			if (Ar.Game >= GAME_UE4(23))
-			{
-				FSkinWeightProfilesData SkinWeightProfilesData;
-				Ar << SkinWeightProfilesData;
-			}
 
 			guard(BuildVertexData);
 
@@ -1250,6 +1261,133 @@ struct FStaticLODModel4
 
 			unguard;
 		}
+
+		unguard;
+	}
+
+	// This function is used only for UE4.23+ data. It adds LOD streaming functionality and
+	// differs too much from previous code to try keeping code in a single function.
+	// UE4 source code prototype is FSkeletalMeshLODRenderData::Serialize().
+	static void SerializeRenderItem(FArchive& Ar, FStaticLODModel4& Lod)
+	{
+		guard(FStaticLODModel4::SerializeRenderItem);
+
+		if (Ar.Game < GAME_UE4(23))
+		{
+			// Fallback to older code when needed.
+			SerializeRenderItem_Legacy(Ar, Lod);
+			return;
+		}
+
+	#if DEBUG_SKELMESH
+		DUMP_ARC_BYTES(Ar, 2, "Begin RenderItem");
+	#endif
+		FStripDataFlags StripFlags(Ar);
+
+		bool bIsLODCookedOut, bInlined;
+		Ar << bIsLODCookedOut << bInlined;
+		DBG_SKEL("LOD CookedOut: %d Inlined: %d\n", bIsLODCookedOut, bInlined);
+
+		Ar << Lod.RequiredBones;
+
+		if (!StripFlags.IsDataStrippedForServer() && !bIsLODCookedOut)
+		{
+			Lod.Sections.Serialize2<FSkelMeshSection4::SerializeRenderItem>(Ar);
+	#if DEBUG_SKELMESH
+			for (int i1 = 0; i1 < Lod.Sections.Num(); i1++)
+			{
+				FSkelMeshSection4 &S = Lod.Sections[i1];
+				appPrintf("Sec[%d]: Mtl=%d, BaseIdx=%d, NumTris=%d\n", i1, S.MaterialIndex, S.BaseIndex, S.NumTriangles);
+			}
+	#endif
+			Ar << Lod.ActiveBoneIndices;
+			DBG_SKEL("ActiveBones: %d\n", Lod.ActiveBoneIndices.Num());
+
+			uint32 BuffersSize;
+			Ar << BuffersSize;
+
+			if (bInlined)
+			{
+				Lod.SerializeStreamedData(Ar);
+			}
+			else
+			{
+				//todo
+				appError("SkeletalMesh: LOD data in bulk");
+			}
+
+		}
+
+		unguard;
+	}
+
+	// UE4.23 serializer for most LOD data
+	void SerializeStreamedData(FArchive& Ar)
+	{
+		guard(FStaticLODModel4::SerializeStreamedData);
+
+		FStripDataFlags StripFlags(Ar);
+		Ar << Indices;
+		DBG_SKEL("Indices: %d (16) / %d (32)\n", Indices.Indices16.Num(), Indices.Indices32.Num());
+
+		FPositionVertexBuffer4 PositionVertexBuffer;
+		Ar << PositionVertexBuffer;
+
+		FStaticMeshVertexBuffer4 StaticMeshVertexBuffer;
+		Ar << StaticMeshVertexBuffer;
+
+		FSkinWeightVertexBuffer SkinWeightVertexBuffer;
+		Ar << SkinWeightVertexBuffer;
+
+		USkeletalMesh4 *LoadingMesh = (USkeletalMesh4*)UObject::GLoadingObj;
+		assert(LoadingMesh);
+		if (LoadingMesh->bHasVertexColors)
+		{
+			appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
+			FColorVertexBuffer4 NewColorVertexBuffer;
+			Ar << NewColorVertexBuffer;
+			Exchange(ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
+			DBG_SKEL("Colors: %d\n", ColorVertexBuffer.Data.Num());
+		}
+
+		if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
+			Ar << AdjacencyIndexBuffer;
+
+		if (HasClothData())
+			Ar << ClothVertexBuffer;
+
+		//!! Try to share code with SerializeRenderItem_Legacy(), in this case Ar.Game >= GAME_UE4(23) will
+		//!! become usedful. The difference is that "Legacy" function also serializes Sections. ActiveBoneIndices
+		//!! and RequiredBones, plus it has extra "if" for vertex buffer serialization.
+		if (Ar.Game >= GAME_UE4(23))
+		{
+			FSkinWeightProfilesData SkinWeightProfilesData;
+			Ar << SkinWeightProfilesData;
+		}
+
+		//todo: this is a copy-paste of SerializeRenderItem_Legacy code!
+		guard(BuildVertexData);
+
+		// Build vertex buffers (making a kind of pre-4.19 buffers from 4.19+ data)
+		VertexBufferGPUSkin.bUseFullPrecisionUVs = true;
+		NumVertices = PositionVertexBuffer.NumVertices;
+		NumTexCoords = StaticMeshVertexBuffer.NumTexCoords;
+		// build VertsFloat because FStaticMeshUVItem4 always has unpacked (float) texture coordinates
+		VertexBufferGPUSkin.VertsFloat.AddZeroed(NumVertices);
+		for (int i = 0; i < NumVertices; i++)
+		{
+			FGPUVert4Float& V = VertexBufferGPUSkin.VertsFloat[i];
+			const FStaticMeshUVItem4& SV = StaticMeshVertexBuffer.UV[i];
+			V.Pos = PositionVertexBuffer.Verts[i];
+			V.Infs = SkinWeightVertexBuffer.Weights[i];
+			static_assert(sizeof(V.Normal) == sizeof(SV.Normal), "FGPUVert4Common.Normal should match FStaticMeshUVItem4.Normal");
+			memcpy(V.Normal, SV.Normal, sizeof(V.Normal));
+			static_assert(sizeof(V.UV[0]) == sizeof(SV.UV[0]), "FGPUVert4Common.UV should match FStaticMeshUVItem4.UV");
+			static_assert(sizeof(V.UV) <= sizeof(SV.UV), "SkeletalMesh has more UVs than StaticMesh"); // this is just for correct memcpy below
+			memcpy(V.UV, SV.UV, sizeof(V.UV));
+		}
+
+		unguard;
 
 		unguard;
 	}
@@ -2026,7 +2164,6 @@ no_nav_collision:
 				{
 					// 4.7+ - using IsDataStrippedForServer for distance field removal
 					/// reference: 13.11.2014 - 48a3c9b7
-					DUMP_ARC_BYTES(Ar, 2);
 					FStripDataFlags StripFlags2(Ar);
 					stripped = StripFlags2.IsDataStrippedForServer();
 					if (Ar.Game >= GAME_UE4(21))

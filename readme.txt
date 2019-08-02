@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+02.08.2019
+- more UE4.23 stuff: changes in skeletal and static mesh data formats
+
 23.07.2019
 - support for UE4.23 animation changes
 
