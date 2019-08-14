@@ -52,6 +52,7 @@ public:
 		}
 #endif
 		CompressedPCData.Serialize(Ar);
+		if (Ar.Tell() == Ar.GetStopper()) return; // Sudden Attack 2 has only 2 bulks
 		CompressedXbox360Data.Serialize(Ar);
 		CompressedPS3Data.Serialize(Ar);
 
