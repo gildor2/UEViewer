@@ -373,17 +373,6 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		return;
 	}
 
-	// export script file
-	if (GExportScripts)
-	{
-		FArchive *Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.uc", OriginalMesh->Name);
-		if (Ar)
-		{
-			ExportScript(Mesh, *Ar);
-			delete Ar;
-		}
-	}
-
 	int MaxLod = (GExportLods) ? Mesh->Lods.Num() : 1;
 	for (int Lod = 0; Lod < MaxLod; Lod++)
 	{
@@ -409,6 +398,17 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		}
 
 		unguardf("%d", Lod);
+	}
+
+	// export script file
+	if (GExportScripts)
+	{
+		FArchive *Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.uc", OriginalMesh->Name);
+		if (Ar)
+		{
+			ExportScript(Mesh, *Ar);
+			delete Ar;
+		}
 	}
 
 	// export animation
