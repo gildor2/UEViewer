@@ -65,15 +65,64 @@ struct ExportedObjectEntry
 	}
 };
 
-static TArray<ExportedObjectEntry> ProcessedObjects;
-static int ProcessedObjectHash[EXPORTED_LIST_HASH_SIZE];
+struct ExportContext
+{
+	UObject* LastExported;
+	TArray<ExportedObjectEntry> ProcessedObjects;
+	int ProcessedObjectHash[EXPORTED_LIST_HASH_SIZE];
+
+	ExportContext()
+	{
+		Reset();
+	}
+
+	void Reset()
+	{
+		LastExported = NULL;
+		ProcessedObjects.Empty(1024);
+		memset(ProcessedObjectHash, -1, sizeof(ProcessedObjectHash));
+	}
+
+	// Return 'false' if object already exists in a list, otherwise adds it and returns 'true'
+	bool AddItem(const UObject* Obj)
+	{
+		ExportedObjectEntry item(Obj);
+		int h = item.GetHash();
+//		appPrintf("Register: %s/%s/%s (%d) : ", Obj->Package->Name, Obj->GetClassName(), Obj->Name, ProcessedObjects.Num());
+
+		//todo: in general, this is a logic of 'TSet<UObject*>'
+		int newIndex = -1;
+		const ExportedObjectEntry* expEntry;
+		for (newIndex = ProcessedObjectHash[h]; newIndex >= 0; newIndex = expEntry->HashNext)
+		{
+//			appPrintf("-- %d ", newIndex);
+			expEntry = &ProcessedObjects[newIndex];
+			if ((expEntry->Package == item.Package) && (expEntry->ExportIndex == item.ExportIndex))
+			{
+//				appPrintf("-> FOUND\n");
+				return false;		// the object already exists
+			}
+		}
+
+		// not registered yet
+		newIndex = ProcessedObjects.Add(item);
+		ProcessedObjects[newIndex].HashNext = ProcessedObjectHash[h];
+		ProcessedObjectHash[h] = newIndex;
+//		appPrintf("-> none\n");
+
+		return true;
+	}
+};
+
+static ExportContext ctx;
 
 void ResetExportedList()
 {
-	ProcessedObjects.Empty(1024);
+	ctx.Reset();
 }
 
 // return 'false' if object already registered
+//todo: make a method of 'ctx' as this function is 1) almost empty, 2) not public
 static bool RegisterProcessedObject(const UObject* Obj)
 {
 	guard(RegisterProcessedObject);
@@ -85,41 +134,12 @@ static bool RegisterProcessedObject(const UObject* Obj)
 		return true;
 	}
 
-	if (ProcessedObjects.Num() == 0)
-	{
-		// we're adding first item here, initialize hash with -1
-		memset(ProcessedObjectHash, -1, sizeof(ProcessedObjectHash));
-	}
-
-	ExportedObjectEntry exp(Obj);
-	int h = exp.GetHash();
-
-//	appPrintf("Register: %s/%s/%s (%d) : ", Obj->Package->Name, Obj->GetClassName(), Obj->Name, ProcessedObjects.Num());
-
-	int newIndex = -1;
-	const ExportedObjectEntry* expEntry;
-	for (newIndex = ProcessedObjectHash[h]; newIndex >= 0; newIndex = expEntry->HashNext)
-	{
-//		appPrintf("-- %d ", newIndex);
-		expEntry = &ProcessedObjects[newIndex];
-		if ((expEntry->Package == exp.Package) && (expEntry->ExportIndex == exp.ExportIndex))
-		{
-//			appPrintf("-> FOUND\n");
-			return false;		// the object already exists
-		}
-	}
-
-	// not registered yet
-	newIndex = ProcessedObjects.Add(exp);
-	ProcessedObjects[newIndex].HashNext = ProcessedObjectHash[h];
-	ProcessedObjectHash[h] = newIndex;
-//	appPrintf("-> none\n");
-
-	return true;
+	return ctx.AddItem(Obj);
 
 	unguard;
 }
 
+//todo: move to ExportContext and reset with ctx.Reset()?
 struct UniqueNameList
 {
 	UniqueNameList()
@@ -180,20 +200,20 @@ bool ExportObject(const UObject *Obj)
 		{
 			char ExportPath[1024];
 			strcpy(ExportPath, GetExportPath(Obj));
-			const char *ClassName  = Obj->GetClassName();
+			const char* ClassName = Obj->GetClassName();
 			// check for duplicate name
 			// get name unique index
 			char uniqueName[256];
 			appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
 
-			const char *OriginalName = NULL;
+			const char* OriginalName = NULL;
 			if (bAddUniqueSuffix)
 			{
 				// Add unique numeric suffix when needed
-				int uniqieIdx = ExportedNames.RegisterName(uniqueName);
-				if (uniqieIdx >= 2)
+				int uniqueIdx = ExportedNames.RegisterName(uniqueName);
+				if (uniqueIdx >= 2)
 				{
-					appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqieIdx);
+					appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqueIdx);
 					appPrintf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
 					// HACK: temporary replace object name with unique one
 					OriginalName = Obj->Name;
@@ -265,7 +285,7 @@ const char* GetExportPath(const UObject* Obj)
 		}
 		appSprintf(ARRAY_ARG(buf), "%s/%s", BaseExportDir, PackageName);
 		// Check if object's name is the same as uasset name, or if it is the same as uasset with added "_suffix".
-		// Suffix may be added by ExportObject (see 'uniqieIdx').
+		// Suffix may be added by ExportObject (see 'uniqueIdx').
 		int len = strlen(Obj->Package->Name);
 		if (!strnicmp(Obj->Name, Obj->Package->Name, len) && (Obj->Name[len] == 0 || Obj->Name[len] == '_'))
 		{
