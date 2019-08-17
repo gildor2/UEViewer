@@ -230,7 +230,7 @@ void appSetBaseExportDirectory(const char *Dir)
 }
 
 
-const char* GetExportPath(const UObject *Obj)
+const char* GetExportPath(const UObject* Obj)
 {
 	guard(GetExportPath);
 
@@ -284,7 +284,7 @@ const char* GetExportPath(const UObject *Obj)
 	}
 #endif // UNREAL4
 
-	const char *PackageName = "None";
+	const char* PackageName = "None";
 	if (Obj->Package)
 	{
 		PackageName = (GUncook) ? Obj->GetUncookedPackageName() : Obj->Package->Name;
@@ -297,7 +297,7 @@ const char* GetExportPath(const UObject *Obj)
 		// include cooked package name when not uncooking
 		Obj->GetFullName(ARRAY_ARG(group), false, !GUncook);
 		// replace all '.' with '/'
-		for (char *s = group; *s; s++)
+		for (char* s = group; *s; s++)
 			if (*s == '.') *s = '/';
 	}
 	else
@@ -313,7 +313,7 @@ const char* GetExportPath(const UObject *Obj)
 }
 
 
-const char* GetExportFileName(const UObject *Obj, const char *fmt, va_list args)
+const char* GetExportFileName(const UObject* Obj, const char* fmt, va_list args)
 {
 	guard(GetExportFileName);
 
@@ -329,22 +329,22 @@ const char* GetExportFileName(const UObject *Obj, const char *fmt, va_list args)
 }
 
 
-const char* GetExportFileName(const UObject *Obj, const char *fmt, ...)
+const char* GetExportFileName(const UObject* Obj, const char* fmt, ...)
 {
 	va_list	argptr;
 	va_start(argptr, fmt);
-	const char *filename = GetExportFileName(Obj, fmt, argptr);
+	const char* filename = GetExportFileName(Obj, fmt, argptr);
 	va_end(argptr);
 
 	return filename;
 }
 
 
-bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...)
+bool CheckExportFilePresence(const UObject* Obj, const char* fmt, ...)
 {
 	va_list	argptr;
 	va_start(argptr, fmt);
-	const char *filename = GetExportFileName(Obj, fmt, argptr);
+	const char* filename = GetExportFileName(Obj, fmt, argptr);
 	va_end(argptr);
 
 	if (!filename) return false;
@@ -352,7 +352,7 @@ bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...)
 }
 
 
-FArchive *CreateExportArchive(const UObject *Obj, unsigned FileOptions, const char *fmt, ...)
+FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const char* fmt, ...)
 {
 	guard(CreateExportArchive);
 

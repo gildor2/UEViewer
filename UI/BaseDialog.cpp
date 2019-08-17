@@ -2518,7 +2518,7 @@ bool UIGroup::HandleChildMessages(int uMsg, WPARAM wParam, LPARAM lParam, int& r
 		cmd = ((LPNMHDR)lParam)->code;
 	}
 
-	if (cmd != -1 && (id >= FIRST_DIALOG_ID) /* && id < NextDIalogId */)
+	if (cmd != -1 && (id >= FIRST_DIALOG_ID) /* && id < NextDialogId */)
 	{
 		result = FALSE;
 		HandleCommand(id, cmd, lParam, result); // ignore result
@@ -2576,11 +2576,21 @@ void UIGroup::CreateGroupControls(UICreateContext& ctx)
 {
 	guard(UIGroup::CreateGroupControls);
 
+/*	UIElement* saveOwner = ctx.owner;
+	if (OwnsControls)
+	{
+		ctx.owner = this;
+	} */
+
 	if (!(Flags & GROUP_NO_BORDER))
 	{
 		// create a group window (border)
 		Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0);
 	}
+/*	else if (OwnsControls)
+	{
+		Wnd = ctx.MakeWindow(this, WC_BUTTON, *Label, BS_GROUPBOX | WS_GROUP, 0); -- todo: should create some host for child controls, "Button" or "Static" won't work
+	} */
 
 	// call 'Create' for all children
 	bool isRadioGroup = false;
@@ -2594,6 +2604,8 @@ void UIGroup::CreateGroupControls(UICreateContext& ctx)
 		if (control->IsRadioButton) isRadioGroup = true;
 	}
 	if (isRadioGroup) InitializeRadioGroup();
+
+//	ctx.owner = saveOwner;
 
 	unguardf("%s", *Label);
 }
@@ -3381,7 +3393,7 @@ void UIBaseDialog::DispatchWindowsMessage(void* pMsg)
 		// msg.hwnd with dialog's window, and also comparing msg.hwnd's parent with dialog too. No other
 		// checks are performed because we have very simple hierarchy in our UI system: all children are
 		// parented by single dialog window.
-		// If we'll need nore robust way of processing messages (for example, when we need to process
+		// If we'll need more robust way of processing messages (for example, when we need to process
 		// keys for modal dialogs, or when message loop is processed by code which is not accessible for
 		// modification) - we'll need to use SetWindowsHook. Another way is to subclass all controls
 		// (because key messages are sent to the focused window only, and not to its parent), but it looks

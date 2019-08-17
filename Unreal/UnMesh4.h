@@ -172,8 +172,8 @@ public:
 	virtual ~USkeleton();
 
 	// generated stuff
-	TArray<UAnimSequence4*>	Anims;
-	CAnimSet				*ConvertedAnim;
+	TArray<UAnimSequence4*>	OriginalAnims;
+	CAnimSet*				ConvertedAnim;
 
 	virtual void Serialize(FArchive &Ar);
 	virtual void PostLoad();

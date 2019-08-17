@@ -425,6 +425,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 //	DBG("----------- Skeleton %s: %d seq, %d bones -----------\n", Name, Anims.Num(), ReferenceSkeleton.RefBoneInfo.Num());
 
 	int NumTracks = Seq->GetNumTracks();
+	OriginalAnims.Add(Seq);
 
 #if DEBUG_DECOMPRESS
 	appPrintf("Sequence %s: %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
