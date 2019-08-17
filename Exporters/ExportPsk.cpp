@@ -3,6 +3,7 @@
 
 #include "UnObject.h"
 #include "UnMaterial.h"
+#include "UnMesh4.h"		// for USkeleton
 
 #include "SkeletalMesh.h"
 #include "StaticMesh.h"
@@ -417,6 +418,22 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 	}
 }
 
+//todo: review if this function could be reused for glTF
+const UObject* GetPrimaryAnimObject(const CAnimSet* Anim)
+{
+	// When AnimSet consists of just 1 animation track, it is possible that we're exporting
+	// a separate UE4 AnimSequence. In this case it's worth using that AnimSequence's filename,
+	// otherwise we'll have multiple animations mapped to the same exported file.
+	if (Anim->Sequences.Num() && Anim->OriginalAnim->IsA("Skeleton"))
+	{
+		const USkeleton* Skeleton = static_cast<USkeleton*>(Anim->OriginalAnim);
+		if (Skeleton->OriginalAnims.Num() == 1)
+			return Skeleton->OriginalAnims[0];
+	}
+
+	// Not a Skeleton, or has different animation track count
+	return Anim->OriginalAnim;
+}
 
 void ExportPsa(const CAnimSet *Anim)
 {
@@ -426,7 +443,7 @@ void ExportPsa(const CAnimSet *Anim)
 
 	if (!Anim->Sequences.Num()) return;			// empty CAnimSet
 
-	UObject *OriginalAnim = Anim->OriginalAnim;
+	const UObject *OriginalAnim = GetPrimaryAnimObject(Anim);
 
 	FArchive *Ar0 = CreateExportArchive(OriginalAnim, 0, "%s.psa", OriginalAnim->Name);
 	if (!Ar0) return;

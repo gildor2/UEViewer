@@ -181,9 +181,6 @@ bool ExportObject(const UObject *Obj)
 
 	static UniqueNameList ExportedNames;
 
-	// check for duplicate object export
-	if (!RegisterProcessedObject(Obj)) return true;
-
 	// For "uncook", different packages may have copies of the same object, which are stored with different quality.
 	// For example, Gears3 has anim sets which cooked with different tracks into different maps. To be able to export
 	// all versions of the file, we're adding unique numeric suffix for that. UE2 and UE4 doesn't require that.
@@ -221,7 +218,6 @@ bool ExportObject(const UObject *Obj)
 				}
 			}
 
-			appPrintf("Exporting %s %s to %s\n", Obj->GetClassName(), Obj->Name, ExportPath);
 			Info.Func(Obj);
 
 			//?? restore object name
@@ -376,20 +372,32 @@ FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const ch
 {
 	guard(CreateExportArchive);
 
+	bool bNewObject = false;
+	if (ctx.LastExported != Obj)
+	{
+		// Exporting a new object, should perform some actions
+		if (!RegisterProcessedObject(Obj))
+			return NULL; // already exported
+		bNewObject = true;
+	}
+
 	va_list	argptr;
 	va_start(argptr, fmt);
-	const char *filename = GetExportFileName(Obj, fmt, argptr);
+	const char* filename = GetExportFileName(Obj, fmt, argptr);
 	va_end(argptr);
 
 	if (!filename) return NULL;
+
+	if (bNewObject)
+	{
+		appPrintf("Exporting %s %s to %s\n", Obj->GetClassName(), Obj->Name, filename);
+	}
 
 	if (GDontOverwriteFiles)
 	{
 		// check file presence
 		if (appFileExists(filename)) return NULL;
 	}
-
-//	appPrintf("... writing %s'%s' to %s ...\n", Obj->GetClassName(), Obj->Name, filename);
 
 	appMakeDirectoryForFile(filename);
 	FFileWriter *Ar = new FFileWriter(filename, FAO_NoOpenError | FileOptions);
