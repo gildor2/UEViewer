@@ -212,6 +212,13 @@ detex
 
 Changes
 ~~~~~~~
+17.08.2019
+- improved UE4 batch export of animations: now each AnimSequence stored in own psa file with the name of
+  AnimSequence object
+- logging export process with saying exact name of exported animation
+- optimized export of textures: avoiding multi-export when the same texture regerenced by materials etc;
+  in my tests export for UE4 folder performed 3+ times faster
+
 02.08.2019
 - more UE4.23 stuff: changes in skeletal and static mesh data formats
 

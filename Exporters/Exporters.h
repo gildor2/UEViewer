@@ -18,6 +18,9 @@ FORCEINLINE void RegisterExporter(void (*Func)(const T*))
 // This function will clear list of already exported objects
 void ResetExportedList();
 
+// Returns 'true' if Obj has been already exported during current export process
+bool IsObjectExported(const UObject* Obj);
+
 bool ExportObject(const UObject *Obj);
 
 // path

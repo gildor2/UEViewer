@@ -279,6 +279,11 @@ void ExportTexture(const UUnrealMaterial *Tex)
 {
 	guard(ExportTexture);
 
+	// Optimization: the same texture may be passed to export multiple times with different materials
+	// or as separate object, avoid re-export.
+	if (IsObjectExported(Tex))
+		return;
+
 #if 0 // disabled 19.03.2019: this code prevents from reexporting texture to dds when tga already exported etc
 	if (GDontOverwriteFiles)
 	{

@@ -68,8 +68,8 @@ struct ExportedObjectEntry
 struct ExportContext
 {
 	UObject* LastExported;
-	TArray<ExportedObjectEntry> ProcessedObjects;
-	int ProcessedObjectHash[EXPORTED_LIST_HASH_SIZE];
+	TArray<ExportedObjectEntry> Objects;
+	int ObjectHash[EXPORTED_LIST_HASH_SIZE];
 
 	ExportContext()
 	{
@@ -79,13 +79,14 @@ struct ExportContext
 	void Reset()
 	{
 		LastExported = NULL;
-		ProcessedObjects.Empty(1024);
-		memset(ProcessedObjectHash, -1, sizeof(ProcessedObjectHash));
+		Objects.Empty(1024);
+		memset(ObjectHash, -1, sizeof(ObjectHash));
 	}
 
-	// Return 'false' if object already exists in a list, otherwise adds it and returns 'true'
-	bool AddItem(const UObject* Obj)
+	bool ItemExists(const UObject* Obj)
 	{
+		guard(ExportContext::ItemExists);
+
 		ExportedObjectEntry item(Obj);
 		int h = item.GetHash();
 //		appPrintf("Register: %s/%s/%s (%d) : ", Obj->Package->Name, Obj->GetClassName(), Obj->Name, ProcessedObjects.Num());
@@ -93,24 +94,40 @@ struct ExportContext
 		//todo: in general, this is a logic of 'TSet<UObject*>'
 		int newIndex = -1;
 		const ExportedObjectEntry* expEntry;
-		for (newIndex = ProcessedObjectHash[h]; newIndex >= 0; newIndex = expEntry->HashNext)
+		for (newIndex = ObjectHash[h]; newIndex >= 0; newIndex = expEntry->HashNext)
 		{
 //			appPrintf("-- %d ", newIndex);
-			expEntry = &ProcessedObjects[newIndex];
+			expEntry = &Objects[newIndex];
 			if ((expEntry->Package == item.Package) && (expEntry->ExportIndex == item.ExportIndex))
 			{
 //				appPrintf("-> FOUND\n");
-				return false;		// the object already exists
+				return true;		// the object already exists
 			}
 		}
+		return false;
+
+		unguard;
+	}
+
+	// Return 'false' if object already exists in a list, otherwise adds it and returns 'true'
+	bool AddItem(const UObject* Obj)
+	{
+		guard(ExportContext::AddItem);
+
+		if (ItemExists(Obj))
+			return false;
 
 		// not registered yet
-		newIndex = ProcessedObjects.Add(item);
-		ProcessedObjects[newIndex].HashNext = ProcessedObjectHash[h];
-		ProcessedObjectHash[h] = newIndex;
+		ExportedObjectEntry item(Obj);
+		int h = item.GetHash();
+		int newIndex = Objects.Add(item);
+		Objects[newIndex].HashNext = ObjectHash[h];
+		ObjectHash[h] = newIndex;
 //		appPrintf("-> none\n");
 
 		return true;
+
+		unguard;
 	}
 };
 
@@ -125,8 +142,6 @@ void ResetExportedList()
 //todo: make a method of 'ctx' as this function is 1) almost empty, 2) not public
 static bool RegisterProcessedObject(const UObject* Obj)
 {
-	guard(RegisterProcessedObject);
-
 	if (Obj->Package == NULL || Obj->PackageIndex < 0)
 	{
 		// this object was generated; always export it to not write a more complex code here
@@ -135,8 +150,11 @@ static bool RegisterProcessedObject(const UObject* Obj)
 	}
 
 	return ctx.AddItem(Obj);
+}
 
-	unguard;
+bool IsObjectExported(const UObject* Obj)
+{
+	return ctx.ItemExists(Obj);
 }
 
 //todo: move to ExportContext and reset with ctx.Reset()?
