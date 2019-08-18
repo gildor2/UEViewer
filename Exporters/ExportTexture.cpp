@@ -234,7 +234,7 @@ static void WriteHDR(FArchive &Ar, int width, int height, byte *pic)
 }
 
 
-static void WriteDDS(const CTextureData &TexData, const char *Filename)
+static void WriteDDS(const CTextureData &TexData, const UUnrealMaterial* Tex)
 {
 	guard(WriteDDS);
 
@@ -247,6 +247,9 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 	if (!fourCC)
 		appError("unknown texture format %d \n", TexData.Format);	// should not happen - IsDXT() should not pass execution here
 
+	FArchive *Ar = CreateExportArchive(Tex, 0, "%s.dds", Tex->Name);
+	if (!Ar) return;
+
 	nv::DDSHeader header;
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
 //	header.setPixelFormat(32, 0xFF, 0xFF << 8, 0xFF << 16, 0xFF << 24);	// bit count and per-channel masks
@@ -257,18 +260,9 @@ static void WriteDDS(const CTextureData &TexData, const char *Filename)
 //	header.setNormalFlag(TexData.Format == TPF_DXT5N || TexData.Format == TPF_3DC); -- required for decompression only
 	header.setLinearSize(Mip.DataSize);
 
-	appMakeDirectoryForFile(Filename);
-
 	byte headerBuffer[128];							// DDS header is 128 bytes long
 	memset(headerBuffer, 0, 128);
 	WriteDDSHeader(headerBuffer, header);
-	FArchive *Ar = new FFileWriter(Filename);
-	if (!Ar->IsOpen())
-	{
-		appPrintf("Error creating file \"%s\" ...\n", Filename);
-		delete Ar;
-		return;
-	}
 	Ar->Serialize(headerBuffer, 128);
 	Ar->Serialize(const_cast<byte*>(Mip.CompressedData), Mip.DataSize);
 	delete Ar;
@@ -304,7 +298,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	{
 		if (GExportDDS && TexData.IsDXT())
 		{
-			WriteDDS(TexData, GetExportFileName(Tex, "%s.dds", Tex->Name));
+			WriteDDS(TexData, Tex);
 			return;
 		}
 
