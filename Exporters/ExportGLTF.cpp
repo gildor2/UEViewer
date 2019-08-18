@@ -155,7 +155,7 @@ struct BufferData
 	}
 };
 
-struct ExportContext
+struct GLTFExportContext
 {
 	const char* MeshName;
 	const CSkeletalMesh* SkelMesh;
@@ -163,7 +163,7 @@ struct ExportContext
 
 	TArray<BufferData> Data;
 
-	ExportContext()
+	GLTFExportContext()
 	{
 		memset(this, 0, sizeof(*this));
 	}
@@ -196,7 +196,7 @@ struct ExportContext
 
 #define VERT(n)		*OffsetPointer(Verts, (n) * VertexSize)
 
-static void ExportSection(ExportContext& Context, const CBaseMeshLod& Lod, const CMeshVertex* Verts, int SectonIndex, FArchive& Ar)
+static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, const CMeshVertex* Verts, int SectonIndex, FArchive& Ar)
 {
 	guard(ExportSection);
 
@@ -450,7 +450,7 @@ struct CMat4
 	}
 };
 
-static void ExportSkinData(ExportContext& Context, const CSkelMeshLod& Lod, FArchive& Ar)
+static void ExportSkinData(GLTFExportContext& Context, const CSkelMeshLod& Lod, FArchive& Ar)
 {
 	guard(ExportSkinData);
 
@@ -574,7 +574,7 @@ static void ExportSkinData(ExportContext& Context, const CSkelMeshLod& Lod, FArc
 	unguard;
 }
 
-static void ExportAnimations(ExportContext& Context, FArchive& Ar)
+static void ExportAnimations(GLTFExportContext& Context, FArchive& Ar)
 {
 	guard(ExportAnimations);
 
@@ -769,7 +769,7 @@ static void ExportAnimations(ExportContext& Context, FArchive& Ar)
 	unguard;
 }
 
-static void ExportMeshLod(ExportContext& Context, const CBaseMeshLod& Lod, const CMeshVertex* Verts, FArchive& Ar, FArchive& Ar2)
+static void ExportMeshLod(GLTFExportContext& Context, const CBaseMeshLod& Lod, const CMeshVertex* Verts, FArchive& Ar, FArchive& Ar2)
 {
 	guard(ExportMeshLod);
 
@@ -956,7 +956,7 @@ void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh)
 	FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", OriginalMesh->Name);
 	if (Ar)
 	{
-		ExportContext Context;
+		GLTFExportContext Context;
 		Context.MeshName = OriginalMesh->Name;
 		Context.SkelMesh = Mesh;
 
@@ -984,7 +984,7 @@ void ExportStaticMeshGLTF(const CStaticMesh* Mesh)
 	FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", OriginalMesh->Name);
 	if (Ar)
 	{
-		ExportContext Context;
+		GLTFExportContext Context;
 		Context.MeshName = OriginalMesh->Name;
 		Context.StatMesh = Mesh;
 
