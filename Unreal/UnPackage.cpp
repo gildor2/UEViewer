@@ -1833,17 +1833,21 @@ static FFileArchive* FindFileArchive(FArchive* Ar)
 }
 #endif
 
+static TArray<UnPackage*> OpenReaders;
+
 void UnPackage::SetupReader(int ExportIndex)
 {
 	guard(UnPackage::SetupReader);
 	// open loader if it is closed
-#if 0
-	FFileArchive* File = FindFileArchive(Loader);
-	assert(File);
-	if (!File->IsOpen()) File->Open();
-#else
-	if (!Loader->IsOpen()) Loader->Open();
-#endif
+	if (!IsOpen())
+	{
+		Open();
+		if (OpenReaders.Num() == 0)
+		{
+			OpenReaders.Empty(64);
+		}
+		OpenReaders.AddUnique(this);
+	}
 	// setup for object
 	const FObjectExport &Exp = GetExport(ExportIndex);
 	SetStopper(Exp.SerialOffset + Exp.SerialSize);
@@ -1866,17 +1870,15 @@ void UnPackage::CloseReader()
 
 void UnPackage::CloseAllReaders()
 {
-	int i;
-
 	guard(UnPackage::CloseAllReaders);
 
-	for (i = 0; i < PackageMap.Num(); i++)
+	for (UnPackage* p : OpenReaders)
 	{
-		UnPackage* p = PackageMap[i];
 		p->CloseReader();
 	}
+	OpenReaders.Empty();
 
-	unguardf("%d/%d", i, PackageMap.Num());
+	unguard;
 }
 
 
