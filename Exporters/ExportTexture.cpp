@@ -63,7 +63,7 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 			break;
 		}
 
-	byte *packed = (byte*)appMalloc(width * height * colorBytes);
+	byte *packed = (byte*)appMalloc(width * height * colorBytes + 4); // +4 for being able to put uint32 even when 3 bytes needed
 	byte *threshold = packed + width * height * colorBytes - 16; // threshold for "dst"
 
 	src = pic;
@@ -84,13 +84,11 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 			break;
 		}
 
-		byte b = *src++;
-		byte g = *src++;
-		byte r = *src++;
-		byte a = *src++;
+		uint32 pix = *(uint32*)src;
+		src += 4;
 
 		if (column < width - 1 &&							// not on screen edge; NOTE: when i == size-1, col==width-1
-			b == src[0] && g == src[1] && r == src[2] && a == src[3] &&	// next pixel will be the same
+			pix == *(uint32*)src &&							// next pixel will be the same
 			!(rle && flag && *flag == 254))					// flag overflow
 		{
 			if (!rle || !flag)
@@ -98,8 +96,8 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 				// starting new RLE sequence
 				flag = dst++;
 				*flag = 128 - 1;							// will be incremented below
-				*dst++ = b; *dst++ = g; *dst++ = r;			// store RGB
-				if (colorBytes == 4) *dst++ = a;			// store alpha
+				*(uint32*)dst = pix;						// store RGBA
+				dst += colorBytes;							// increment dst by 3 or 4 bytes
 			}
 			(*flag)++;										// enqueue one more texel
 			rle = true;
@@ -123,8 +121,8 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 					flag = dst++;
 					*flag = 255;
 				}
-				*dst++ = b; *dst++ = g; *dst++ = r;			// store RGB
-				if (colorBytes == 4) *dst++ = a;			// store alpha
+				*(uint32*)dst = pix;						// store RGBA
+				dst += colorBytes;							// increment dst by 3 or 4 bytes
 				(*flag)++;
 				if (*flag == 127) flag = NULL;				// check for overflow
 			}
@@ -168,13 +166,17 @@ void WriteTGA(FArchive &Ar, int width, int height, byte *pic)
 		header.image_type = 2;		// uncompressed
 		// convert to 24 bits image, when needed
 		if (colorBytes == 3)
-			for (i = 0, src = dst = pic; i < size; i++)
+		{
+			// Use uint32 for faster data moving
+			dst = pic;
+			uint32* src = (uint32*)pic;
+			for (i = 0; i < size; i++)
 			{
-				*dst++ = *src++;
-				*dst++ = *src++;
-				*dst++ = *src++;
-				src++;
+				uint32 pix = *src++;
+				*((uint32*)dst) = pix;
+				dst += 3;	// increment 'dst' only by 3
 			}
+		}
 		// write data
 		Ar.Serialize(&header, sizeof(header));
 		Ar.Serialize(pic, size * colorBytes);
@@ -340,12 +342,12 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	// it simply ignores orientation flags)
 	for (int i = 0; i < height / 2; i++)
 	{
-		byte *p1 = pic + width * 4 * i;
-		byte *p2 = pic + width * 4 * (height - i - 1);
-		for (int j = 0; j < width * 4; j++)
-			Exchange(p1[j], p2[j]);
+		uint32 *p1 = (uint32*)(pic + width * 4 * i);
+		uint32 *p2 = (uint32*)(pic + width * 4 * (height - i - 1));
+		for (int j = 0; j < width; j++)
+			Exchange(*p1++, *p2++);
 	}
-#endif
+#endif // TGA_SAVE_BOTTOMLEFT
 
 	FArchive *Ar = CreateExportArchive(Tex, 0, "%s.tga", Tex->Name);
 	if (Ar)
