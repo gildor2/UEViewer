@@ -170,7 +170,6 @@ struct CMipMap
 	{
 		// Release old data if any
 		ReleaseData();
-		// Assign new buffer, mark it as we own it (will release by outself)
 		CompressedData = Bulk.BulkData;
 		DataSize = Bulk.ElementCount * Bulk.GetElementSize();
 		ShouldFreeData = false; // bulk owns data buffer

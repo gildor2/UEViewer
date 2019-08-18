@@ -70,6 +70,7 @@ struct ExportContext
 	UObject* LastExported;
 	TArray<ExportedObjectEntry> Objects;
 	int ObjectHash[EXPORTED_LIST_HASH_SIZE];
+	unsigned long startTime;
 
 	ExportContext()
 	{
@@ -133,8 +134,21 @@ struct ExportContext
 
 static ExportContext ctx;
 
-void ResetExportedList()
+void BeginExport()
 {
+	ctx.startTime = appMilliseconds();
+}
+
+void EndExport(bool profile)
+{
+	if (profile)
+	{
+		assert(ctx.startTime);
+		unsigned long elapsedTime = appMilliseconds() - ctx.startTime;
+		appPrintf("Exported %d objects in %.1f sec\n", ctx.Objects.Num(), elapsedTime / 1000.0f);
+	}
+	ctx.startTime = 0;
+
 	ctx.Reset();
 }
 

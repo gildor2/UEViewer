@@ -15,8 +15,9 @@ FORCEINLINE void RegisterExporter(void (*Func)(const T*))
 	RegisterExporter(T::StaticGetTypeinfo()->Name + 1, (ExporterFunc_t)Func);
 }
 
+void BeginExport();
 // This function will clear list of already exported objects
-void ResetExportedList();
+void EndExport(bool profile = false);
 
 // Returns 'true' if Obj has been already exported during current export process
 bool IsObjectExported(const UObject* Obj);

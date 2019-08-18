@@ -69,6 +69,8 @@ bool ExportPackages(const TArray<UnPackage*>& Packages, IProgressCallback* Progr
 //	appResetProfiler(); -- there's nested appResetProfiler/appPrintProfiler calls, which are not supported
 #endif
 
+	BeginExport();
+
 	// For each package: load a package, export, then release
 	for (int i = 0; i < Packages.Num(); i++)
 	{
@@ -97,7 +99,7 @@ bool ExportPackages(const TArray<UnPackage*>& Packages, IProgressCallback* Progr
 	}
 
 	// Cleanup
-	ResetExportedList();
+	EndExport(true);
 
 #if PROFILE
 //	appPrintProfiler();
