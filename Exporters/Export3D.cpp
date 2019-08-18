@@ -162,11 +162,12 @@ void Export3D(const UVertMesh *Mesh)
 
 	// export mesh data
 	Ar = CreateExportArchive(Mesh, 0, "%s_d.3d", Mesh->Name);
-	if (Ar)
-	{
-		ExportMesh(Mesh, *Ar);
-		delete Ar;
-	}
+	if (!Ar)		// can't create or overwrite is disabled
+		return;
+
+	ExportMesh(Mesh, *Ar);
+	delete Ar;
+
 	// export animation frames
 	Ar = CreateExportArchive(Mesh, 0, "%s_a.3d", Mesh->Name);
 	if (Ar)

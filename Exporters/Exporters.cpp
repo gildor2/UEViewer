@@ -67,10 +67,11 @@ struct ExportedObjectEntry
 
 struct ExportContext
 {
-	UObject* LastExported;
+	const UObject* LastExported;
 	TArray<ExportedObjectEntry> Objects;
 	int ObjectHash[EXPORTED_LIST_HASH_SIZE];
 	unsigned long startTime;
+	int NumSkippedObjects;
 
 	ExportContext()
 	{
@@ -80,6 +81,7 @@ struct ExportContext
 	void Reset()
 	{
 		LastExported = NULL;
+		NumSkippedObjects = 0;
 		Objects.Empty(1024);
 		memset(ObjectHash, -1, sizeof(ObjectHash));
 	}
@@ -145,7 +147,7 @@ void EndExport(bool profile)
 	{
 		assert(ctx.startTime);
 		unsigned long elapsedTime = appMilliseconds() - ctx.startTime;
-		appPrintf("Exported %d objects in %.1f sec\n", ctx.Objects.Num(), elapsedTime / 1000.0f);
+		appPrintf("Exported %d/%d objects in %.1f sec\n", ctx.Objects.Num() - ctx.NumSkippedObjects, ctx.Objects.Num(), elapsedTime / 1000.0f);
 	}
 	ctx.startTime = 0;
 
@@ -411,6 +413,7 @@ FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const ch
 		if (!RegisterProcessedObject(Obj))
 			return NULL; // already exported
 		bNewObject = true;
+		ctx.LastExported = Obj;
 	}
 
 	va_list	argptr;
@@ -422,13 +425,18 @@ FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const ch
 
 	if (bNewObject)
 	{
-		appPrintf("Exporting %s %s to %s\n", Obj->GetClassName(), Obj->Name, filename);
-	}
-
-	if (GDontOverwriteFiles)
-	{
-		// check file presence
-		if (appFileExists(filename)) return NULL;
+		// Check for file overwrite only when "new" object is saved. When saving 2nd part of the object - keep
+		// overwrite logic for upper code level. If 1st object part was successfully created, then allow creation
+		// of the 2nd part even if "don't overwrite" is enabled, and 2nd file already exists.
+		if ((GDontOverwriteFiles && appFileExists(filename)) == false)
+		{
+			appPrintf("Exporting %s %s to %s\n", Obj->GetClassName(), Obj->Name, filename);
+		}
+		else
+		{
+			appPrintf("Export: file already exists %s\n", filename);
+			ctx.NumSkippedObjects++;
+		}
 	}
 
 	appMakeDirectoryForFile(filename);

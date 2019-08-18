@@ -310,7 +310,13 @@ void ExportMd5Anim(const CAnimSet *Anim)
 		const CAnimSequence &S = *Anim->Sequences[AnimIndex];
 
 		FArchive *Ar = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s/%s.md5anim", OriginalAnim->Name, *S.Name);
-		if (!Ar) continue;
+		if (!Ar)
+		{
+			if (AnimIndex == 0)	// if file overwrite is disabled and file already exists, don't save animations at all
+				return;
+			// However continue export if some archive was failed to be created
+			continue;
+		}
 
 		Ar->Printf(
 			"MD5Version 10\n"

@@ -396,6 +396,11 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 			ExportSkeletalMeshLod(*Mesh, MeshLod, *Ar);
 			delete Ar;
 		}
+		else if (Lod == 0)
+		{
+			// First LOD was failed to be saved, most likely file already exists
+			return;
+		}
 
 		unguardf("%d", Lod);
 	}
@@ -664,6 +669,11 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 		{
 			ExportStaticMeshLod(Mesh->Lods[Lod], *Ar);
 			delete Ar;
+		}
+		else if (Lod == 0)
+		{
+			// First LOD was failed to be saved, most likely file already exists
+			return;
 		}
 
 		unguardf("%d", Lod);
