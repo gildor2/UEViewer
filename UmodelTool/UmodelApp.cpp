@@ -536,7 +536,11 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 #else
 		if (Viewer)
 #endif
+		{
+			BeginExport();
 			Viewer->Export();
+			EndExport(true);
+		}
 		break;
 #if HAS_UI
 	case 'o':
@@ -647,7 +651,11 @@ void CUmodelApp::CreateMenu()
 			.SetCallback(BIND_LAMBDA([this]()
 				{
 					if (Viewer && UISettingsDialog::ShowExportOptions(GSettings))
+					{
+						BeginExport();
 						Viewer->Export();
+						EndExport(true);
+					}
 				}))
 			+ NewMenuSeparator()
 			+ NewMenuHyperLink("Open export folder", *GSettings.Export.ExportPath)	//!! should update if directory will be changed from UI

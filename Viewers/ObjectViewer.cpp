@@ -34,9 +34,7 @@ void CObjectViewer::Export()
 {
 	if (Object)
 	{
-		BeginExport();
 		ExportObject(Object);
-		EndExport();
 	}
 }
 
