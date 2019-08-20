@@ -2399,12 +2399,13 @@ struct FStaticMeshSection3
 					ps3data.unk5.Num(), ps3data.unk6.Num(), ps3data.unk7.Num(), ps3data.unk8.Num());
 			}
 		}
-		if (Ar.ArVer >= 869)
+#if GRAV
+		if (Ar.Game == GAME_GRAV && Ar.ArVer >= 869)
 		{
-			// Picked from GRAV executable
 			int32 unk;
 			Ar << unk;
 		}
+#endif // GRAV
 #if XCOM
 		if (Ar.Game == GAME_XcomB)
 		{

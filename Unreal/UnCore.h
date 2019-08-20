@@ -402,6 +402,7 @@ enum EGame
 		GAME_Smite,
 		GAME_DevilsThird,
 		GAME_RocketLeague,
+		GAME_GRAV,
 
 	GAME_MIDWAY3   = 0x0810000,	// variant of UE3
 		GAME_A51,
