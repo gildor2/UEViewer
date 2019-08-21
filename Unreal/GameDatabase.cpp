@@ -342,6 +342,9 @@ const GameInfo GListOfGames[] = {
 #	if ROCKET_LEAGUE
 		G("Rocket League", rocketleague, GAME_RocketLeague),
 #	endif
+#	if GRAV
+		G("GRAV", grav, GAME_GRAV),
+#	endif
 #endif // UNREAL3
 
 	// Unreal engine 4
@@ -385,9 +388,6 @@ const GameInfo GListOfGames[] = {
 #	endif
 #	if LIS2
 		G("Life is Strange 2", lis2, GAME_LIS2),
-#	endif
-#	if GRAV
-		G("GRAV", grav, GAME_GRAV),
 #	endif
 #endif // UNREAL4
 
