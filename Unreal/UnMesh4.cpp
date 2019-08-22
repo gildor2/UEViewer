@@ -1181,6 +1181,14 @@ struct FStaticLODModel4
 			}
 		}
 
+#if ASC_ONE
+		if (Ar.Game == GAME_AscOne)
+		{
+			TArray<FSkelMeshSection4> Sections2;
+			Ar << Sections2;
+		}
+#endif // ASC_ONE
+
 		return Ar;
 
 		unguard;
@@ -1441,6 +1449,30 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 	for (int i1 = 0; i1 < RefSkeleton.RefBoneInfo.Num(); i1++)
 		appPrintf("  [%d] n=%s p=%d\n", i1, *RefSkeleton.RefBoneInfo[i1].Name, RefSkeleton.RefBoneInfo[i1].ParentIndex);
 #endif
+
+#if ASC_ONE
+	if (Ar.Game == GAME_AscOne)
+	{
+		// Ascendant One
+		int32 ArCount;
+		Ar << ArCount;
+		Ar.Seek(Ar.Tell() + ArCount * 4);
+		int32 tmp;
+		Ar << tmp;
+		Ar << ArCount;
+		for (int i = 0; i < ArCount; i++)
+		{
+			// Structure:
+			// {
+			//   { FString, FName BoneName1, int32, int32, FName BoneName2, FTransform }
+			//   int32, int32, FVector, 4 x int32
+			// }
+			FString SomeName;
+			Ar << SomeName;
+			Ar.Seek(Ar.Tell() + 4 * 25);
+		}
+	}
+#endif // ASC_ONE
 
 	// Serialize FSkeletalMeshResource (contains only array of FStaticLODModel objects). Before UE4.19,
 	// data was stored in a single array of FStaticLODModel structures. Starting with 4.19, editor and runtime

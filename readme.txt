@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+22.08.2019
+- implemented Ascendant One support, requires -game=asc1 or override in UI
+
 17.08.2019
 - improved UE4 batch export of animations: now each AnimSequence stored in own psa file with the name of
   AnimSequence object

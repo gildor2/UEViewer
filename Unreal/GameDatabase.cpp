@@ -389,6 +389,9 @@ const GameInfo GListOfGames[] = {
 #	if LIS2
 		G("Life is Strange 2", lis2, GAME_LIS2),
 #	endif
+#	if ASC_ONE
+		G("Ascendant One", asc1, GAME_AscOne),
+#	endif
 #endif // UNREAL4
 
 	// end marker
