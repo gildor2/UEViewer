@@ -109,12 +109,13 @@ struct VJointPos
 #endif // ARMYOF2
 			return Ar;
 		}
-#endif
+#endif // UNREAL3
 		return Ar << P.Orientation << P.Position << P.Length << P.Size;
 	}
 };
 
 
+// Used in UE1-UE3, for UE4 it is FMeshBoneInfo
 struct FMeshBone
 {
 	FName			Name;

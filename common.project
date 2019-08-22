@@ -11,7 +11,7 @@ OPTIMIZE   = size
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
 
 !if !defined($OLDCRT)		# allow overriding of OLDCRT in parent project
-OLDCRT     = 1				# OLDCRT=0 is required for VS2015+ (TODO: try to fix that)
+OLDCRT     = 1				# set to 0 (or comment the line) to use "native" compiler's CRT
 !endif
 
 
@@ -51,13 +51,13 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 
 	LIBC      = shared
 	OPTIONS   = -msse2									# enable SSE instructions
-	OPTIONS   += -fno-strict-aliasing					# required for our uint_cast()-based FP hacks
+	OPTIONS   += -fno-strict-aliasing					# required for our uint_cast()-based FP hacks (check!! taken from my Quake2)
 	OPTIONS   += -fno-stack-protector					# this will remove GLIBC_2.4 dependency
 	OPTIONS   += {
 		# enable some warnings
 		-Wunused-value									# warning about expression which is occasionally typed in code and not used anywhare
 	}
-	CPP_OPTIONS += -std=c++0x							# allow C++11 features (Warning!! - C++ only option)
+	CPP_OPTIONS += -std=c++0x							# allow C++11 features
 	CPP_OPTIONS += -Wno-invalid-offsetof
 !endif
 

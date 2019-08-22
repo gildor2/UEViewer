@@ -1483,7 +1483,7 @@ for $item (@sources) {
 }
 @sources = @sources2;
 
-print STDERR "Gathering dependency info ...\n";
+#?? print STDERR "Gathering dependency info ...\n";
 GatherDependInfo ();
 # sort sources array by 1) dependency string, 2) options, etc
 # this will produce smaller makefiles (less DEPENDS= and OPTIONS= changes)
@@ -1520,4 +1520,4 @@ if (@outdirs2) {
 	}
 }
 
-print STDERR "Makefile generated.\n";
+#?? print STDERR "Makefile generated.\n";
