@@ -1645,8 +1645,7 @@ void USkeletalMesh4::ConvertMesh()
 			if (MaterialIndex >= 0 && MaterialIndex < Info.LODMaterialMap.Num())
 				MaterialIndex = Info.LODMaterialMap[MaterialIndex];
 
-			if (S.MaterialIndex < Materials.Num())
-				Dst->Material = Materials[MaterialIndex].Material;
+			Dst->Material   = (S.MaterialIndex < Materials.Num()) ? Materials[MaterialIndex].Material : NULL;
 			Dst->FirstIndex = S.BaseIndex;
 			Dst->NumFaces   = S.NumTriangles;
 		}
