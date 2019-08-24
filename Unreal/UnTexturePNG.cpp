@@ -1,4 +1,4 @@
-#include "libpng/png.h"
+#include <png.h>
 
 #include "Core.h"
 #include "UnCore.h"
@@ -51,7 +51,7 @@ bool UncompressPNG(const unsigned char* CompressedData, int CompressedSize, int 
 	{
 		return false;
 	}
-	if (png_sig_cmp(CompressedData, 0, CompressedSize) != 0)
+	if (png_sig_cmp((unsigned char*)CompressedData, 0, CompressedSize) != 0)
 	{
 		return false;
 	}

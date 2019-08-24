@@ -3,7 +3,7 @@
 
 // includes for package decompression
 #include "lzo/lzo1x.h"
-#include "zlib/zlib.h"
+#include <zlib.h>
 
 #if SUPPORT_XBOX360
 

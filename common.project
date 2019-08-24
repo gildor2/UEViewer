@@ -22,6 +22,8 @@ OLDCRT     = 1				# set to 0 (or comment the line) to use "native" compiler's CR
 STDDEFS    =				# common defines
 WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), empty by default
 
+USE_SYSTEM_LIBS = 0
+
 !if "$COMPILER" eq "VisualC"
 	!if !defined($CPP_EXCEPT)
 		CPP_EXCEPT = 0									# used with WIN32_USE_SEH in Core.h
@@ -59,6 +61,7 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 	}
 	CPP_OPTIONS += -std=c++0x							# allow C++11 features
 	CPP_OPTIONS += -Wno-invalid-offsetof
+	USE_SYSTEM_LIBS = 1
 !endif
 
 # GCC debug build
@@ -107,20 +110,34 @@ sources(COMP_LIBS) = {
 	# ... lzo for compressed UE3 packages
 	$R/libs/lzo/lzo_init.c
 	$R/libs/lzo/lzo1x_d2.c
-	# ... zlib for compressed UE3/UE4 packages
-	$R/libs/zlib/*.c
 	# ... lzx for compressed XBox360 UE3 packages
 	$R/libs/mspack/lzxd.c
 	# ... lz4 for Gears of War 4
 	$R/libs/lz4/lz4.c
 }
 
-# ... PNG for compressed source textures
-INCLUDES += $R/libs/zlib
-DEFINES = $STDDEFS PNG_USER_CONFIG
-sources(IMG_LIBS) = {
-	$R/libs/libpng/*.c
-}
+!if "$USE_SYSTEM_LIBS" eq "0"
+	# ... zlib for compressed UE3/UE4 packages
+	# zlib.h location: used from zlib source code and from UModel code.
+	# Default location for Linux is <zlib.h>
+	LIBINCLUDES += $R/libs/zlib		# for using zlib in source code
+	INCLUDES += $R/libs/zlib		# for building zlib itself
+	sources(COMP_LIBS) = {
+		$R/libs/zlib/*.c
+	}
+	# ... PNG for compressed source textures
+	LIBINCLUDES += $R/libs/libpng
+	DEFINES = $STDDEFS PNG_USER_CONFIG
+	sources(IMG_LIBS) = {
+		$R/libs/libpng/*.c
+	}
+!else
+	STDLIBS += z png
+	!if !-e "/usr/include/png.h"
+		# Probably "png.h" include will fail, add "libpng" subdirectory to include paths
+		LIBINCLUDES += /usr/include/libpng
+	!endif
+!endif
 
 pop(INCLUDES)
 pop(DEFINES)
