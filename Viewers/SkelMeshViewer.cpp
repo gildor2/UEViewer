@@ -782,18 +782,30 @@ void CSkelMeshViewer::AttachAnimSet()
 
 		if (NewAnim == PrevAnim)
 		{
-			if (found) break;					// loop detected
+			// Check for loop while iterating (found the same object twice)
+			if (found) break;
+			// 'NewAnim' is the current animation set, skip it - try to find something else
 			found = true;
 			continue;
 		}
 
 		if (found && NewAnim)
 		{
-			// found desired animation set
-			SetAnim(NewAnim);
-			AnimIndex = -1;
-			appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
-			break;
+			// Passed over current skeleton object
+			if (NewAnim->Sequences.Num())
+			{
+				// found desired animation set
+				SetAnim(NewAnim);
+				AnimIndex = -1;
+				appPrintf("Bound %s'%s' to %s'%s'\n", Object->GetClassName(), Object->Name, Obj->GetClassName(), Obj->Name);
+				break;
+			}
+			else
+			{
+#if MAX_DEBUG
+				appPrintf("Skeleton %s has no animations, continuing search\n", Obj->Name);
+#endif
+			}
 		}
 	}
 
@@ -843,6 +855,7 @@ protected:
 #endif // HAS_UI
 
 
+// Find animations for currently selected skeleton
 void CSkelMeshViewer::FindUE4Animations()
 {
 #if UNREAL4

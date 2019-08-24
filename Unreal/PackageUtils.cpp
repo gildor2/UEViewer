@@ -235,6 +235,7 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 	appResetProfiler();
 #endif
 	bool cancelled = false;
+	bool scanned = false; // says if anywhing was scanned or not, just for profiler message
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
@@ -270,10 +271,12 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 			assert(file->Package == NULL);
 		#endif
 		}
+		scanned = true;
 	}
 //	PrintStringHashDistribution();
 #if PROFILE
-	appPrintProfiler("Scanned packages");
+	if (scanned)
+		appPrintProfiler("Scanned packages");
 #endif
 	return !cancelled;
 }
