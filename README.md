@@ -4,19 +4,19 @@ UE Viewer
 UE Viewer is a viewer for visual resources of games made with [Unreal engine](https://www.unrealengine.com/).
 Currently all engine versions (from 1 to 4) are supported.
 
-Previously project was called "Unreal model viewer", however the name
-[has been changed](https://www.gildor.org/smf/index.php/topic,731.0.html) in 2011 to meet demand from Epic Games.
-
-Please note that "official" name is "UE Viewer", and a short unofficial name of the project is "umodel".
+The project was originally named the "Unreal model viewer", however the name
+[was changed](https://www.gildor.org/smf/index.php/topic,731.0.html) in 2011 to meet the request from Epic Games.
+Please note that "official" project's name is "UE Viewer", and a short unofficial name of the project is "umodel"
+(it was left from the older name "**U**nreal **MODEL** viewer").
 
 There's a place where you may discuss the source code:
 [gildor.org forums](https://www.gildor.org/smf/index.php?board=37.0).
 
 
-Obtaining the source code
--------------------------
-The source code is [available on GitHub](https://github.com/gildor2/UModel). You may either checkout it
-using any Git client, or download it as a [Zip file](https://github.com/gildor2/UModel/archive/master.zip).
+Getting the source code
+-----------------------
+The source code is [available at GitHub](https://github.com/gildor2/UModel). You may either checkout it
+with use of any Git client, or download it as a [Zip file](https://github.com/gildor2/UModel/archive/master.zip).
 
 
 Building the source code
@@ -31,6 +31,13 @@ To list all options, run `build.sh --help`. Current options are:
 - `--debug` make a debug version of executable
 - `--vc <version>` specify which Visual Studio version should be used for compilation, default is latest compiler
   installed on your system
+
+Please note that `build.sh` is not just a shortcut for calling `make -f <makefile>`, it performs more actions.
+It does:
+- Generating a makefile for current platform.
+- Making `UModelTool/Version.h` file which contains current build number based on number of Git commits.
+- Preprocessing shaders (with executing `Unreal/Shaders/make.pl`).
+- It has the possibility to compile just a single cpp file from the project (used with Visual Studio Code Ctrl+F7 key).
 
 ### Windows 32-bit
 
@@ -61,10 +68,18 @@ should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-wi
 be initiated with launching *build.sh --64*.
 
 ### Linux
-This system has everything what is required for build by default. You'll only need to install SDL2 development package
-(and of course gcc). To build UE Viewer, simply execute the following command from terminal
+Linux system has the most of dependencies by default. You'll need to install the following development packages if they're
+not available on your system: SDL2, zlib, libpng. Of course, you'll also need gcc for compiling the project.
+To build UE Viewer, simply execute the following command from terminal
 
     ./build.sh
+
+When compiling for Linux, project will use system's zlib and libpng libraries. If you want to bundle (statically link) them
+into umodel executable, you may find and comment the following line in *common.project*
+
+	USE_SYSTEM_LIBS = 1
+
+In this case, Linux build will be performed in the same way as Windows build, with compiling and bundling mentioned libraries.
 
 ### Visual Studio Code
 UE Viewer contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/).
@@ -82,11 +97,14 @@ VSCode project comes with additional build command which could be bound to a key
 and then Ctrl+F7 key will compile a file currently opened in editor. Of course, it won't work for headers and other non-cpp
 files.
 
+By default, Visual Studio Code project performs Debug build. If you want something else, change `.vscode/tasks.json` file,
+and remove `--debug` option from `build.sh` command.
+
 
 C runtime library for MSVC
 --------------------------
 UE Viewer is dynamically linked with CRT library, so it requires CRT DLL files to be installed onto your system. It is possible
-to statically link with you compiler's CRT by changing a line in *common.project* (with cost of growing executable file size):
+to *statically* link with you compiler's CRT by changing a line in *common.project* (with cost of growing executable file size):
 
     LIBC = shared
 
@@ -95,16 +113,13 @@ to
     LIBC = static
 
 UE Viewer uses custom CRT library for being able to link against MSVCRT.DLL. MSVCRT.DLL is chosen because it allows to
-reduce size of UE Viewer distribution without needs to install compiler runtime libraries on system - MSVCRT.DLL present on
-any Windows system. You may disable MSVCRT.DLL linking by commenting out line
+reduce size of UE Viewer distribution without needs to install compiler runtime libraries onto a Windows system - MSVCRT.DLL present on
+_any_ Windows installation. You may disable MSVCRT.DLL linking by commenting out the line
 
     OLDCRT = 1
 
-Please note that custom CRT library will not be compatible with Visual Studio 2015, so it must be disabled in order to
-build with this or newer Visual Studio version. There's no needs to disable OLDCRT manually if you're correctly setting
-*vc_ver* variable in *build.sh* - it will be disabled automatically.
-
-You might also want to disable OLDCRT if you didn't install MSVCRT library as described below.
+Previously there were some problems with using msvcrt.dll with Visual Studio compiler 2015 and newer. However all issues has been
+solved. For those who interested in details, I've [prepared an article](https://github.com/gildor2/UModel/wiki/Using-MSVCRT.DLL-with-Visual-Studio-compiler).
 
 If you want to use MSVCRT.DLL, you should extract **MSVCRT.zip** archive available
 [here](https://github.com/gildor2/UModel/releases) to the directory LIBS one level above of UModel directory.
@@ -185,4 +200,5 @@ Below is the list of major folders which exists in this repository or which are 
 License
 -------
 The code is not covered with any existing license yet, however I'm thinking about adding BSD 3-clause license. I just probably
-need help from some people who knows about that more than I.
+need help from some people who knows about that more than I (and I don't like the idea of adding license boilerplate into all
+source code files).

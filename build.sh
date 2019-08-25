@@ -131,15 +131,13 @@ export makefile
 export single_file
 target=`perl <<'EOF'
 	open(FILE, $ENV{"makefile"}) or die;
-	$nn = 0;					#?? REMOVE
 	$defines = ();
 	while ($line = <FILE>)
 	{
 		next if $line !~ /^\S+/;	# we're interested only in lines starting without indent
 		next if $line =~ /^\#/;		# no comments
 		$line =~ s/(\r|\n)//;		# string end of line
-#		print($line."\n");		#?? REMOVE
-		last if ($nn++ > 200);	#?? REMOVE
+#		print($line."\n");
 		# parse assignment
 		($var, $val) = $line =~ /^(\w+)\s*\=\s*(.*)$/;
 		if (defined($var) && defined($val)) {
