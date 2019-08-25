@@ -1970,6 +1970,7 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		EMISSIVE(appStristr(Name, "Emis"), 80);
 		SPECULAR(appStristr(Name, "Specular"), 80);
 		OPACITY (appStristr(Name, "Opac"),  80);
+		OPACITY (appStristr(Name, "Alpha"), 100);
 
 		DIFFUSE(i == 0, 1);							// 1st texture as lowest weight
 //		CUBEMAP(Tex->IsTextureCube(), 1);			// any cubemap
@@ -2203,6 +2204,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		OPACITY (appStristr(Name, "opac"), 90);
 		OPACITY (appStristr(Name, "trans") && !appStristr(Name, "transmission"), 80);
 		OPACITY (appStristr(Name, "opacity"), 100);
+		OPACITY (appStristr(Name, "alpha"), 100);
 //??		OPACITY (appStristr(Name, "mask"), 100);
 //??		Params.OpacityFromAlpha = true;
 #if TRON
