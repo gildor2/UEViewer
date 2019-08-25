@@ -979,8 +979,21 @@ void UAnimSequence4::SerializeCompressedData(FArchive& Ar)
 	}
 
 #if LIS2
-	if (Ar.Game == GAME_LIS2) goto no_raw_data_size; // this is basically UE4.17, but with older animation format
-#endif
+	if (Ar.Game == GAME_LIS2)
+	{
+		// Here we'll have either CompressedByteStream, or some 8 byte value. Let's check what's next.
+		// With newer Life Is Strange 2, it seems developers moved CompressedTrackOffsets into CompressedByteStream,
+		// with doing some special encoding at the beginning of data stream. This is the version when byte stream
+		// is prepended with 8-byte value. Also, 1st 4 bytes in byte stream repeats array size.
+		int32 Count;
+		Ar << Count;
+		if (Count != Ar.GetStopper() - Ar.Tell() - 4)
+			Ar.Seek(Ar.Tell() + 4);
+		else
+			Ar.Seek(Ar.Tell() - 4);
+		goto no_raw_data_size; // this is basically UE4.17, but with older animation format
+	}
+#endif // LIS2
 	if (Ar.Game >= GAME_UE4(17))
 	{
 		// UE4.17+
