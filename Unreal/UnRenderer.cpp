@@ -721,7 +721,7 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		DBG("Opacity  : %s", Params.Opacity->Name);
 		glActiveTexture(GL_TEXTURE0 + I_Opacity);
 		if (Params.Opacity->Bind())
-			opacityExpr = va("texture2D(opacTex, TexCoord).%s", !Params.OpacityFromAlpha ? "g" : "a");
+			opacityExpr = va("texture2D(opacTex, TexCoord).%s", !Params.OpacityFromAlpha ? "r" : "a");
 	}
 	else if (Params.Diffuse)
 	{
@@ -1116,7 +1116,7 @@ static GLuint GetDefaultTexNum()
 					g = colors[colorIndex][1];
 					b = colors[colorIndex][2];
 				}
-				
+
 				p[0] = b;
 				p[1] = g;
 				p[2] = r;
@@ -1811,7 +1811,7 @@ void UMaterial3::SetupGL()
 	else
 		glEnable(GL_DEPTH_TEST);
 	// alpha mask
-	if (bIsMasked)
+	if (bIsMasked || BlendMode == BLEND_Masked)
 	{
 		glEnable(GL_BLEND);
 //		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2202,6 +2202,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		CUBEMAP (appStristr(Name, "refl"), 90);
 		OPACITY (appStristr(Name, "opac"), 90);
 		OPACITY (appStristr(Name, "trans") && !appStristr(Name, "transmission"), 80);
+		OPACITY (appStristr(Name, "opacity"), 100);
 //??		OPACITY (appStristr(Name, "mask"), 100);
 //??		Params.OpacityFromAlpha = true;
 #if TRON

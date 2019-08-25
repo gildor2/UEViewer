@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+25.08.2019
+- fixed UE4 masked material display
+
 22.08.2019
 - implemented Ascendant One support, requires -game=asc1 or override in UI
 
