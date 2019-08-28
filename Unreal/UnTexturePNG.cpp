@@ -10,6 +10,15 @@ struct PngReadCtx
 	int ReadOffset;
 };
 
+struct PngWriteCtx
+{
+	TArray<byte>& CompressedData;
+
+	PngWriteCtx(TArray<byte>& pDst)
+	: CompressedData(pDst)
+	{}
+};
+
 static void user_read_compressed(png_structp png_ptr, png_bytep data, png_size_t length)
 {
 	PngReadCtx* ctx = (PngReadCtx*)png_get_io_ptr(png_ptr);
@@ -19,6 +28,17 @@ static void user_read_compressed(png_structp png_ptr, png_bytep data, png_size_t
 	}
 	memcpy(data, ctx->CompressedData + ctx->ReadOffset, length);
 	ctx->ReadOffset += length;
+}
+
+static void user_write_compressed(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+	PngWriteCtx* ctx = (PngWriteCtx*) png_get_io_ptr(png_ptr);
+	int Offset = ctx->CompressedData.AddUninitialized(length);
+	memcpy(ctx->CompressedData.GetData() + Offset, data, length);
+}
+
+static void user_flush_data(png_structp png_ptr)
+{
 }
 
 static void user_error_fn(png_structp png_ptr, png_const_charp error_msg)
@@ -130,9 +150,9 @@ bool UncompressPNG(const unsigned char* CompressedData, int CompressedSize, int 
 //		}
 	}
 
-	const uint32 PixelChannels = 4; // (InFormat == ERGBFormat::Gray) ? 1 : 4;
-	const uint32 BytesPerPixel = 4; // (InBitDepth * PixelChannels) / 8;
-	const uint32 BytesPerRow = BytesPerPixel * Width;
+	const int PixelChannels = 4; // (InFormat == ERGBFormat::Gray) ? 1 : 4;
+	const int BytesPerPixel = 4; // (InBitDepth * PixelChannels) / 8;
+	const int BytesPerRow = BytesPerPixel * Width;
 
 	png_bytep* row_pointers = (png_bytep*) png_malloc(png_ptr, Height * sizeof(png_bytep));
 	for (int i = 0; i < Height; i++)
@@ -165,6 +185,79 @@ bool UncompressPNG(const unsigned char* CompressedData, int CompressedSize, int 
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
 	return true;
+
+	unguard;
+}
+
+void CompressPNG(const unsigned char* pic, int Width, int Height, TArray<byte>& CompressedData)
+{
+	guard(CompressPNG);
+
+	int PixelChannels = /*(RawFormat == ERGBFormat::Gray) ? 1 :*/ 3;
+
+	// Verify alpha channels of texture, see the possibility to drop one
+	const unsigned char* p = pic + 3;
+	for (int i = Width * Height; i > 0; i--, p += 4)
+	{
+		if (*p != 255)
+		{
+			PixelChannels = 4;
+			break;
+		}
+	}
+
+	unsigned char* newPic = NULL;
+	if (PixelChannels == 3)
+	{
+		// Squeeze pixel information if newly allocated memory block
+		newPic = new unsigned char[Width * Height * 3];
+		const unsigned char* s = pic;
+		unsigned char* d = newPic;
+		for (int i = Width * Height; i > 0; i--)
+		{
+			*d++ = *s++;
+			*d++ = *s++;
+			*d++ = *s++;
+			s++;
+		}
+		pic = newPic;
+	}
+
+	PngWriteCtx ctx(CompressedData);
+	ctx.CompressedData.Empty(Width * Height * PixelChannels); // preallocate
+
+	png_structp png_ptr	= png_create_write_struct(PNG_LIBPNG_VER_STRING, &ctx, user_error_fn, user_warning_fn);
+	assert(png_ptr);
+
+	png_infop info_ptr = png_create_info_struct(png_ptr);
+	assert(info_ptr);
+
+	png_bytep* row_pointers = (png_bytep*) png_malloc( png_ptr, Height*sizeof(png_bytep) );
+
+	const int RawBitDepth = 8;
+	png_set_compression_level(png_ptr, 1); // zlib compression level: 0 (uncompressed), 1 (fast) - 9 (slow)
+	png_set_IHDR(png_ptr, info_ptr, Width, Height, RawBitDepth, (PixelChannels == 4) ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_set_write_fn(png_ptr, &ctx, user_write_compressed, user_flush_data);
+
+	const int BytesPerPixel = (RawBitDepth * PixelChannels) / 8;
+	const int BytesPerRow = BytesPerPixel * Width;
+
+	for (int i = 0; i < Height; i++)
+	{
+		row_pointers[i]= (png_bytep)&pic[i * BytesPerRow];
+	}
+	png_set_rows(png_ptr, info_ptr, row_pointers);
+
+	int Transform = PNG_TRANSFORM_IDENTITY;
+	png_write_png(png_ptr, info_ptr, Transform, NULL);
+
+	png_free(png_ptr, row_pointers);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
+
+	if (newPic)
+	{
+		delete[] newPic;
+	}
 
 	unguard;
 }
