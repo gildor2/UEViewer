@@ -409,6 +409,7 @@ static void PrintUsage()
 			"    -gltf           use glTF 2.0 format for mesh\n"
 			"    -lods           export all available mesh LOD levels\n"
 			"    -dds            export textures in DDS format whenever possible\n"
+			"    -png            export textures in PNG format instead of TGA\n"
 			"    -notgacomp      disable TGA compression\n"
 			"    -nooverwrite    prevent existing files from being overwritten (better\n"
 			"                    performance)\n"
@@ -781,6 +782,11 @@ int main(int argc, const char **argv)
 		{
 			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::psk;
 		}
+		if (!stricmp(opt, "png"))
+		{
+			GSettings.Export.TextureFormat = ETextureExportFormat::png;
+			//!! todo: also screenshots
+		}
 		else if (!stricmp(opt, "md5"))
 		{
 			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::md5;
@@ -919,7 +925,7 @@ int main(int argc, const char **argv)
 	}
 #endif // HAS_UI
 
-	// apply some GSettings
+	// apply some of GSettings
 	GForceGame = GSettings.Startup.GameOverride;	// force game fore scanning any game files
 	if (hasRootDir)
 		appSetRootDirectory(*GSettings.Startup.GamePath);

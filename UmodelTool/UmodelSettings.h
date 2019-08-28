@@ -56,6 +56,13 @@ enum class EExportMeshFormat : int
 	gltf,
 };
 
+enum class ETextureExportFormat : int
+{
+	tga,
+	tga_uncomp,
+	png,
+};
+
 struct CExportSettings
 {
 	DECLARE_STRUCT(CExportSettings);
@@ -64,6 +71,7 @@ struct CExportSettings
 	bool			ExportDdsTexture;
 	EExportMeshFormat SkeletalMeshFormat;
 	EExportMeshFormat StaticMeshFormat;
+	ETextureExportFormat TextureFormat;
 	bool			ExportMeshLods;
 	bool			SaveUncooked;
 	bool			SaveGroups;
@@ -74,6 +82,7 @@ struct CExportSettings
 		PROP_BOOL(ExportDdsTexture)
 		PROP_INT(SkeletalMeshFormat)
 		PROP_INT(StaticMeshFormat)
+		PROP_INT(TextureFormat)
 		PROP_BOOL(ExportMeshLods)
 		PROP_BOOL(SaveUncooked)
 		PROP_BOOL(SaveGroups)

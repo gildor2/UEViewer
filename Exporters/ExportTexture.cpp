@@ -8,6 +8,7 @@
 
 #include "Exporters.h"
 
+#include "UnTexturePNG.h"
 
 #define TGA_SAVE_BOTTOMLEFT	1
 
@@ -38,6 +39,7 @@ struct GCC_PACK tgaHdr_t
 
 
 bool GNoTgaCompress = false;
+bool GExportPNG = false;
 bool GExportDDS = false;
 
 //?? place this function outside (cannot place to Core - using FArchive)
@@ -330,24 +332,37 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		return;
 	}
 
-
-#if TGA_SAVE_BOTTOMLEFT
-	// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
-	// it simply ignores orientation flags)
-	for (int i = 0; i < height / 2; i++)
+	if (GExportPNG)
 	{
-		uint32 *p1 = (uint32*)(pic + width * 4 * i);
-		uint32 *p2 = (uint32*)(pic + width * 4 * (height - i - 1));
-		for (int j = 0; j < width; j++)
-			Exchange(*p1++, *p2++);
+		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.png", Tex->Name);
+		if (Ar)
+		{
+			TArray<byte> Data;
+			CompressPNG(pic, width, height, Data);
+			Ar->Serialize(Data.GetData(), Data.Num());
+			delete Ar;
+		}
 	}
+	else
+	{
+#if TGA_SAVE_BOTTOMLEFT
+		// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
+		// it simply ignores orientation flags)
+		for (int i = 0; i < height / 2; i++)
+		{
+			uint32 *p1 = (uint32*)(pic + width * 4 * i);
+			uint32 *p2 = (uint32*)(pic + width * 4 * (height - i - 1));
+			for (int j = 0; j < width; j++)
+				Exchange(*p1++, *p2++);
+		}
 #endif // TGA_SAVE_BOTTOMLEFT
 
-	FArchive *Ar = CreateExportArchive(Tex, 0, "%s.tga", Tex->Name);
-	if (Ar)
-	{
-		WriteTGA(*Ar, width, height, pic);
-		delete Ar;
+		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.tga", Tex->Name);
+		if (Ar)
+		{
+			WriteTGA(*Ar, width, height, pic);
+			delete Ar;
+		}
 	}
 
 	delete pic;

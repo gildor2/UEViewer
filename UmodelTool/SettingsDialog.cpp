@@ -134,18 +134,32 @@ UIElement& UISettingsDialog::MakeExportOptions()
 			[
 				NewControl(UILabel, "Skeletal Mesh:").SetY(4).SetAutoSize()
 				+ NewControl(UICombobox, &Opt.Export.SkeletalMeshFormat)
+					.SetWidth(100)
 					.AddItem("ActorX (psk)", EExportMeshFormat::psk)
 					.AddItem("glTF 2.0", EExportMeshFormat::gltf)
 					.AddItem("md5mesh", EExportMeshFormat::md5)
 				+ NewControl(UISpacer)
 				+ NewControl(UILabel, "Static Mesh:").SetY(4).SetAutoSize()
 				+ NewControl(UICombobox, &Opt.Export.StaticMeshFormat)
+					.SetWidth(100)
 					.AddItem("ActorX (pskx)", EExportMeshFormat::psk)
 					.AddItem("glTF 2.0", EExportMeshFormat::gltf)
 			]
 			+ NewControl(UICheckbox, "Export LODs", &Opt.Export.ExportMeshLods)
 		]
-		+ NewControl(UICheckbox, "Export compressed textures to dds format", &Opt.Export.ExportDdsTexture)
+		+ NewControl(UIGroup, "Texture Export")
+		[
+			NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+			[
+				NewControl(UILabel, "Texture format:").SetY(4).SetAutoSize()
+				+ NewControl(UICombobox, &Opt.Export.TextureFormat)
+					.SetWidth(120)
+					.AddItem("TGA", ETextureExportFormat::tga)
+					.AddItem("TGA (uncompressed)", ETextureExportFormat::tga_uncomp)
+					.AddItem("PNG", ETextureExportFormat::png)
+			]
+			+ NewControl(UICheckbox, "Export compressed textures to dds format", &Opt.Export.ExportDdsTexture)
+		]
 		+ NewControl(UICheckbox, "Don't overwrite already exported files", &Opt.Export.DontOverwriteFiles)
 		;
 }

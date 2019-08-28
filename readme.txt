@@ -212,6 +212,10 @@ detex
 
 Changes
 ~~~~~~~
+28.08.2019
+- added option for exporting textures using PNG format; could be switched on with -png command line option
+  or in Export Options dialog window
+
 25.08.2019
 - fixed UE4 masked material display
 

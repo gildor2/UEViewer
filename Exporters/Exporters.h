@@ -40,6 +40,7 @@ FArchive *CreateExportArchive(const UObject *Obj, unsigned FileOptions, const ch
 extern bool GExportScripts;
 extern bool GExportLods;
 extern bool GNoTgaCompress;
+extern bool GExportPNG;
 extern bool GExportDDS;
 extern bool GUncook;
 extern bool GUseGroups;
