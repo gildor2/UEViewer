@@ -27,7 +27,12 @@ void CMeshViewer::InitViewerPosition(const CVec3 &Mins, const CVec3 &Maxs)
 
 	SetViewOffset(Center);
 	SetDistScale((radius + 10) / 230);
-	MoveCamera(20, 20);
+	float angle = 15;
+	// Before UE4, all objects are looking at X direction (red axis). For UE4
+	// default direction is changed to Y axis (green).
+	if (Object && Object->GetGame() >= GAME_UE4_BASE)
+		angle += 90;
+	MoveCamera(angle, 20);
 }
 
 
