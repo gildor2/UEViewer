@@ -10,6 +10,9 @@
 
  Revision History:
 
+	28.08.2019 v1.37
+	- implemented loading of PNG textures
+
 	19.05.2018 v1.36
 	- using case-insensitive comparison when finding bones in scene for animation
 
@@ -181,7 +184,7 @@ NOTES:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 136
+global AX_IMPORTER_VERSION = 137
 
 g_axProfile = false
 
@@ -779,10 +782,11 @@ fn axFindTexture texDir baseName =
 	(
 		-- TGA
 		foundTex = axFindFile texDir (baseName + ".tga") recurse:g_texRecurse
-/*		if foundTex == undefined then
+		if foundTex == undefined then
 		(
-			-- other formats?
-		) */
+			-- PNG
+			foundTex = axFindFile texDir (baseName + ".png") recurse:g_texRecurse
+		)
 	)
 	foundTex
 )
@@ -843,7 +847,7 @@ fn axImportMaterial matName texDir =
 		if g_texMissAction == 2 then			-- ask
 		(
 			local check = getOpenFileName caption:("Get texture for material " + matName) \
-				types:"Texture files (*.tga,*.dds)|*.tga;*.dds|All (*.*)|*.*|" filename:texFilename
+				types:"Texture files (*.tga,*.dds,*.png)|*.tga;*.dds;*.png|All (*.*)|*.*|" filename:texFilename
 			if check != undefined then texFilename = check
 		)
 	)
@@ -2023,7 +2027,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.36"
+	label     Lbl1 "Version 1.37"
 	label     Lbl2 "\xA9 2009-2019 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
