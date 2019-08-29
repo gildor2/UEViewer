@@ -31,11 +31,13 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	FArchive* Ar = CreateExportArchive(Mat, FAO_TextFile, "%s.mat", Mat->Name);
 	if (!Ar) return;
 
+	TArray<UObject*> ToExport;
+
 #define PROC(Arg)	\
 	if (Params.Arg) \
 	{				\
 		Ar->Printf(#Arg"=%s\n", Params.Arg->Name); \
-		ExportObject(Params.Arg); \
+		ToExport.Add(Params.Arg); \
 	}
 
 	PROC(Diffuse);
@@ -46,6 +48,14 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	PROC(Emissive);
 	PROC(Cube);
 	PROC(Mask);
+
+	// Dump material properties to a separate file
+	FArchive* PropAr = CreateExportArchive(Mat, FAO_TextFile, "%s.props.txt", Mat->Name);
+	if (PropAr)
+	{
+		Mat->GetTypeinfo()->SaveProps(Mat, *PropAr);
+		delete PropAr;
+	}
 
 #if 0
 	// collect all textures - already exported ones and everything else
@@ -62,15 +72,14 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 			ExportObject(Tex);
 		}
 	}
-#else
-	// Dump material properties to a separate file
-	FArchive* PropAr = CreateExportArchive(Mat, FAO_TextFile, "%s.props.txt", Mat->Name);
-	if (PropAr)
-	{
-		Mat->GetTypeinfo()->SaveProps(Mat, *PropAr);
-		delete PropAr;
-	}
 #endif
+
+	// We have done with current object, now let's export referenced objects.
+
+	for (UObject* Obj : ToExport)
+	{
+		ExportObject(Obj);
+	}
 
 	if (Mat->IsA("MaterialInstanceConstant"))
 	{
