@@ -1773,7 +1773,7 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& re
 {
 	guard(UIMulticolumnListbox::HandleCommand);
 
-	// Say "message was processed" (will change to FALSE at the end when needed)
+	// Say "message has been processed" (will change to FALSE at the end when needed)
 	result = TRUE;
 
 	if (cmd == LVN_GETDISPINFO)
@@ -1926,9 +1926,11 @@ bool UIMulticolumnListbox::HandleCommand(int id, int cmd, LPARAM lParam, int& re
 				for (int i = 0; i < numItems; i++)
 					SetItemSelection(i, true);
 				UnlockUpdate();
+				return true;
 			}
 		}
-
+		// The key was not recognized, process it with default handler (pass 'result=FALSE' for that)
+		result = FALSE;
 		return true;
 	}
 
