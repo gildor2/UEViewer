@@ -13,6 +13,7 @@
 	"EditorObjectVersion.h",
 	"../../../Engine/Public/SkeletalMeshTypes.h",	# for newer UE4 (post UE4.18)
 	"../../../Engine/Private/SkeletalMesh.cpp",		# for older UE4 version (UE4.18 and less)
+	"CoreObjectVersion.h",
 	"RenderingObjectVersion.h",
 	"AnimObjectVersion.h",
 	"AnimPhysObjectVersion.h",
@@ -45,7 +46,6 @@ sub getline0
 	}
 	return 0;
 }
-
 
 sub ParseVersionFile
 {
@@ -115,6 +115,7 @@ sub ParseVersionFile
 		if (uc($findConst) eq uc($name))
 		{
 			print("    $findConst = $value ($_[1])\n");
+			$constFound = 1;
 		}
 		else
 		{
@@ -148,9 +149,17 @@ else
 	$findConst = $ARGV[0];
 }
 
+$constFound = !defined($findConst);
+$firstDirectory = 1;
+
 for my $d (@dirs)
 {
-	print "Directory: $d:\n";
+	if (!$firstDirectory)
+	{
+		print("\n#" . "-" x 120 . "\n");
+	}
+	print "#\n# Scanning directory $d:\n#\n\n";
+	$firstDirectory = 0;
 	for my $f (@files)
 	{
 		ParseVersionFile($d, $f);
@@ -158,4 +167,4 @@ for my $d (@dirs)
 	print "\n" if !$dump;
 }
 
-print("$findConst was not found!\n") if defined($findConst);
+print("Constant $findConst was not found!\n") if !$constFound;

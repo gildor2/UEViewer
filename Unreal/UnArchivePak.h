@@ -4,7 +4,7 @@
 #if UNREAL4
 
 
-// NOTE: this implementation has a lot of common things with FObbFile. If there'll be another
+// NOTE: this implementation has a lot of common things with FObbFile. If there will be another
 // one virtual file system with similar implementation, it's worth to make some parent class
 // for all of them which will differs perhaps only with AttachReader() method.
 
@@ -26,8 +26,13 @@ enum
 	PakFile_Version_Latest = PakFile_Version_Last - 1
 };
 
-// hack: use ArLicenseeVer to not pass FPakInfo.Version to serializer
-#define PakVer		ArLicenseeVer
+// Hack: use ArLicenseeVer to not pass FPakInfo.Version to serializer.
+// Note: UE4.22 and UE4.23 are both using version 8, however pak format differs. Due to that, we're adding "PakSubver".
+// Some details are here: https://udn.unrealengine.com/questions/518568/view.html
+
+#define PakVer							(Ar.ArLicenseeVer >> 4)
+#define PakSubver						(Ar.ArLicenseeVer & 15)
+#define MakePakVer(MainVer, SubVer)		(((MainVer) << 4) | (SubVer))
 
 struct FPakInfo
 {
@@ -45,7 +50,8 @@ struct FPakInfo
 	enum
 	{
 		Size = sizeof(int32) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 + sizeof(FGuid),
-		Size8 = Size + 32*4					// added size of CompressionMethods as char[32]
+		Size8 = Size + 32*4,				// added size of CompressionMethods as char[32]
+		Size8a = Size8 + 32					// UE4.23 - also has version 8 (like 4.22) but different pak file structure
 	};
 
 	friend FArchive& operator<<(FArchive& Ar, FPakInfo& P)
@@ -66,6 +72,7 @@ struct FPakInfo
 
 		if (P.Version >= PakFile_Version_FNameBasedCompressionMethod)
 		{
+			// For UE4.23, there are 5 compression methods, but we're ignoring last one.
 			for (int i = 0; i < 4; i++)
 			{
 				char name[32+1];
@@ -134,12 +141,12 @@ struct FPakEntry
 		if (GForceGame == GAME_Gears4)
 		{
 			Ar << Pos << (int32&)Size << (int32&)UncompressedSize << (byte&)CompressionMethod;
-			if (Ar.PakVer < PakFile_Version_NoTimestamps)
+			if (PakVer < PakFile_Version_NoTimestamps)
 			{
 				int64 timestamp;
 				Ar << timestamp;
 			}
-			if (Ar.PakVer >= PakFile_Version_CompressionEncryption)
+			if (PakVer >= PakFile_Version_CompressionEncryption)
 			{
 				if (CompressionMethod != 0)
 					Ar << CompressionBlocks;
@@ -153,18 +160,26 @@ struct FPakEntry
 
 		Ar << Pos << Size << UncompressedSize;
 
-		if (Ar.PakVer < PakFile_Version_FNameBasedCompressionMethod)
+		if (PakVer < PakFile_Version_FNameBasedCompressionMethod)
 		{
 			Ar << CompressionMethod;
 		}
-		else
+		else if (PakVer == PakFile_Version_FNameBasedCompressionMethod && PakSubver == 0)
 		{
+			// UE4.22
 			uint8 CompressionMethodIndex;
 			Ar << CompressionMethodIndex;
 			CompressionMethod = CompressionMethodIndex;
 		}
+		else
+		{
+			// UE4.23+
+			uint32 CompressionMethodIndex;
+			Ar << CompressionMethodIndex;
+			CompressionMethod = CompressionMethodIndex;
+		}
 
-		if (Ar.PakVer < PakFile_Version_NoTimestamps)
+		if (PakVer < PakFile_Version_NoTimestamps)
 		{
 			int64 timestamp;
 			Ar << timestamp;
@@ -173,7 +188,7 @@ struct FPakEntry
 		uint8 Hash[20];
 		Ar.Serialize(ARRAY_ARG(Hash));
 
-		if (Ar.PakVer >= PakFile_Version_CompressionEncryption)
+		if (PakVer >= PakFile_Version_CompressionEncryption)
 		{
 			if (CompressionMethod != 0)
 				Ar << CompressionBlocks;
@@ -184,7 +199,7 @@ struct FPakEntry
 			bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
 #endif
 
-		if (Ar.PakVer >= PakFile_Version_RelativeChunkOffsets)
+		if (PakVer >= PakFile_Version_RelativeChunkOffsets)
 		{
 			// Convert relative compressed offsets to absolute
 			for (int i = 0; i < CompressionBlocks.Num(); i++)
@@ -439,11 +454,12 @@ public:
 
 	virtual bool AttachReader(FArchive* reader, FString& error)
 	{
-		int guardVersion = 0; // used for some details in a case of crash
+		int mainVer = 0, subVer = 0;
+
 		guard(FPakVFS::ReadDirectory);
 
 		// Pak file may have different header sizes, try them all
-		static const int OffsetsToTry[] = { FPakInfo::Size, FPakInfo::Size8 };
+		static const int OffsetsToTry[] = { FPakInfo::Size, FPakInfo::Size8, FPakInfo::Size8a };
 		FPakInfo info;
 
 		for (int32 Offset : OffsetsToTry)
@@ -460,6 +476,11 @@ public:
 			*reader << info;
 			if (info.Magic == PAK_FILE_MAGIC)		// no endian checking here
 			{
+				if (Offset == FPakInfo::Size8a)
+				{
+					assert(info.Version == 8);
+					subVer = 1;
+				}
 				break;
 			}
 		}
@@ -470,11 +491,12 @@ public:
 			return false;
 		}
 
-		guardVersion = info.Version;
 		if (info.Version > PakFile_Version_Latest)
 		{
 			appPrintf("WARNING: Pak file \"%s\" has unsupported version %d\n", *Filename, info.Version);
 		}
+
+		mainVer = info.Version;
 
 		if (info.bEncryptedIndex)
 		{
@@ -489,7 +511,8 @@ public:
 
 		// Read pak index
 
-		reader->ArLicenseeVer = info.Version;
+		// Set PakVer
+		reader->ArLicenseeVer = MakePakVer(mainVer, subVer);
 
 		reader->Seek64(info.IndexOffset);
 
@@ -647,7 +670,7 @@ public:
 
 		return true;
 
-		unguardf("PakVer=%d", guardVersion);
+		unguardf("PakVer=%d.%d", mainVer, subVer);
 	}
 
 	virtual int GetFileSize(const char* name)
