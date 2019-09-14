@@ -54,8 +54,8 @@
 
 struct FColorVertexBuffer4
 {
-	int				Stride;
-	int				NumVertices;
+	int32			Stride;
+	int32			NumVertices;
 	TArray<FColor>	Data;
 
 	friend FArchive& operator<<(FArchive& Ar, FColorVertexBuffer4& S)
@@ -76,8 +76,8 @@ struct FColorVertexBuffer4
 struct FPositionVertexBuffer4
 {
 	TArray<FVector>	Verts;
-	int				Stride;
-	int				NumVertices;
+	int32			Stride;
+	int32			NumVertices;
 
 	friend FArchive& operator<<(FArchive& Ar, FPositionVertexBuffer4& S)
 	{
@@ -147,9 +147,9 @@ struct FStaticMeshUVItem4
 // Note: this structure is used for both StaticMesh and SkeletalMesh
 struct FStaticMeshVertexBuffer4
 {
-	int				NumTexCoords;
-	int				Stride;
-	int				NumVertices;
+	int32			NumTexCoords;
+	int32			Stride;
+	int32			NumVertices;
 	bool			bUseFullPrecisionUVs;
 	bool			bUseHighPrecisionTangentBasis;
 	TArray<FStaticMeshUVItem4> UV;

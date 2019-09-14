@@ -378,8 +378,8 @@ _ENUM(ETextureAddress)
 struct FTexture2DMipMap
 {
 	FByteBulkData	Data;	// FTextureMipBulkData
-	int				SizeX;
-	int				SizeY;
+	int32			SizeX;
+	int32			SizeY;
 
 #if UNREAL3
 	static void Serialize3(FArchive& Ar, FTexture2DMipMap& Mip);
@@ -397,14 +397,14 @@ public:
 	TArray<FTexture2DMipMap> CachedPVRTCMips;
 	TArray<FTexture2DMipMap> CachedATITCMips;
 	TArray<FTexture2DMipMap> CachedETCMips;
-	int				SizeX;
-	int				SizeY;
+	int32			SizeX;
+	int32			SizeY;
 	EPixelFormat	Format;
 	ETextureAddress	AddressX;
 	ETextureAddress	AddressY;
 	FName			TextureFileCacheName;
 	FGuid			TextureFileCacheGuid;
-	int				MipTailBaseIdx;
+	int32			MipTailBaseIdx;
 	bool			bForcePVRTC4;		// iPhone
 #if UNREAL4
 	FIntPoint		ImportedSize;
