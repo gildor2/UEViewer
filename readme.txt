@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+14.09.2019
+- added support for Borderlands 3 skeletal meshes and textures (nothing else works), requires -game=border3
+
 28.08.2019
 - added option for exporting textures using PNG format; could be switched on with -png command line option
   or in Export Options dialog window

@@ -37,12 +37,26 @@ void FTexture2DMipMap::Serialize4(FArchive &Ar, FTexture2DMipMap& Mip)
 	//?? Seek() and decompression calls. You'll see that loading of big bulk data chinks is interleaved
 	//?? with reading 4-byte ints at different locations.
 	Mip.Data.Serialize(Ar);
+
+#if BORDERLANDS3
+	if (Ar.Game == GAME_Borderlands3)
+	{
+		uint16 SizeX, SizeY, SizeZ;
+		Ar << SizeX << SizeY << SizeZ;
+		Mip.SizeX = SizeX;
+		Mip.SizeY = SizeY;
+		goto after_mip_size;
+	}
+#endif // BORDERLANDS3
+
 	Ar << Mip.SizeX << Mip.SizeY;
 	if (Ar.Game >= GAME_UE4(20))
 	{
 		int32 SizeZ;
 		Ar << SizeZ;
 	}
+
+after_mip_size:
 	if (Ar.ArVer >= VER_UE4_TEXTURE_DERIVED_DATA2 && !cooked)
 	{
 		FString DerivedDataKey;

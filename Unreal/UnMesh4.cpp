@@ -1200,6 +1200,9 @@ struct FStaticLODModel4
 	{
 		guard(FStaticLODModel4::SerializeRenderItem_Legacy);
 
+#if DEBUG_SKELMESH
+		DUMP_ARC_BYTES(Ar, 2, "RenderItemLegacy_StripFlags");
+#endif
 		FStripDataFlags StripFlags(Ar);
 
 		Lod.Sections.Serialize2<FSkelMeshSection4::SerializeRenderItem>(Ar);
@@ -1231,6 +1234,20 @@ struct FStaticLODModel4
 
 			USkeletalMesh4 *LoadingMesh = (USkeletalMesh4*)UObject::GLoadingObj;
 			assert(LoadingMesh);
+
+#if BORDERLANDS3
+			if (Ar.Game == GAME_Borderlands3)
+			{
+				// This is a replacement for standard "bHasVertexColors" property
+				assert(LoadingMesh->bHasVertexColors == false);
+				for (int i = 0; i < LoadingMesh->NumVertexColorChannels; i++)
+				{
+					FColorVertexBuffer4 ColorVertexBuffer;
+					Ar << ColorVertexBuffer;
+				}
+			}
+#endif // BORDERLANDS3
+
 			if (LoadingMesh->bHasVertexColors)
 			{
 				appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
@@ -1288,7 +1305,7 @@ struct FStaticLODModel4
 		}
 
 	#if DEBUG_SKELMESH
-		DUMP_ARC_BYTES(Ar, 2, "Begin RenderItem");
+		DUMP_ARC_BYTES(Ar, 2, "Begin RenderItem StripFlags");
 	#endif
 		FStripDataFlags StripFlags(Ar);
 

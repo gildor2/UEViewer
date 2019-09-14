@@ -392,6 +392,9 @@ const GameInfo GListOfGames[] = {
 #	if ASC_ONE
 		G("Ascendant One", asc1, GAME_AscOne),
 #	endif
+#	if BORDERLANDS3
+		G("Borderlands 3", border3, GAME_Borderlands3),
+#	endif
 #endif // UNREAL4
 
 	// end marker

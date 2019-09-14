@@ -192,6 +192,9 @@ public:
 	USkeleton				*Skeleton;
 	TArray<FStaticLODModel4> LODModels;
 	TArray<FSkeletalMeshLODInfo> LODInfo;
+#if BORDERLANDS3
+	byte					NumVertexColorChannels;
+#endif
 
 	// properties
 	bool					bHasVertexColors;
@@ -202,6 +205,9 @@ public:
 		PROP_OBJ(Skeleton)
 		PROP_BOOL(bHasVertexColors)
 		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
+#if BORDERLANDS3
+		PROP_BYTE(NumVertexColorChannels)
+#endif
 	END_PROP_TABLE
 
 	USkeletalMesh4();
