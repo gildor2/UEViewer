@@ -391,14 +391,14 @@ protected:
 class UIHyperLink : public UILabel
 {
 	DECLARE_UI_CLASS(UIHyperLink, UILabel);
+	DECLARE_CALLBACK(Callback);
 public:
-	UIHyperLink(const char* text, const char* link /*, ETextAlign align = TA_Left*/); // align is not working
+	UIHyperLink(const char* text, const char* link = NULL /*, ETextAlign align = TA_Left*/); // align is not working
 	UIHyperLink& SetAutoSize() { return (ThisClass&)Super::SetAutoSize(); }
 
 protected:
 	FString		Link;
 
-	virtual void UpdateSize(UIBaseDialog* dialog) override;
 	virtual void Create(UICreateContext& ctx) override;
 	virtual bool HandleCommand(int id, int cmd, LPARAM lParam) override;
 };

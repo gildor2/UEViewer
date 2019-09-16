@@ -601,18 +601,8 @@ void UILabel::Create(UICreateContext& ctx)
 
 UIHyperLink::UIHyperLink(const char* text, const char* link /*, ETextAlign align*/)
 :	UILabel(text /*, align*/)
-,	Link(link)
+,	Link(link ? link : "")
 {}
-
-void UIHyperLink::UpdateSize(UIBaseDialog* dialog)
-{
-	if (MinWidth == 0)
-	{
-		int labelWidth;
-		MeasureTextSize(*Label, &labelWidth, NULL, dialog->GetWnd());
-		MinWidth = labelWidth;
-	}
-}
 
 void UIHyperLink::Create(UICreateContext& ctx)
 {
@@ -650,9 +640,19 @@ void UIHyperLink::Create(UICreateContext& ctx)
 
 bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam)
 {
+	// Note: disabled control will display blue hyper link anyway. To override that, should use extra code
+	// https://social.msdn.microsoft.com/Forums/vstudio/en-US/bd54bd30-e21f-4dc7-a77f-88de02c63f72/changing-link-label-color-for-syslink?forum=vcgeneral
+
 	if (cmd == NM_CLICK || cmd == NM_RETURN || cmd == STN_CLICKED) // STN_CLICKED for WC_STATIC fallback
 	{
-		ShellExecute(NULL, "open", *Link, NULL, NULL, SW_SHOW);
+		if (Callback)
+		{
+			Callback(this);
+		}
+		else if (!Link.IsEmpty())
+		{
+			ShellExecute(NULL, "open", *Link, NULL, NULL, SW_SHOW);
+		}
 	}
 	return true;
 }
