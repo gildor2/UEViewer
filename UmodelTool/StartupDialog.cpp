@@ -3,6 +3,8 @@
 #include "FileControls.h"
 
 #include "GameDatabase.h"
+#include "MiscStrings.h"
+#include "AboutDialog.h"
 
 #if HAS_UI
 
@@ -12,7 +14,7 @@ UIStartupDialog::UIStartupDialog(CStartupSettings& settings)
 
 bool UIStartupDialog::Show()
 {
-	if (!ShowModal("UE Viewer Startup Options", -1, -1))
+	if (!ShowModal("UE Viewer Startup Options", 500, -1))
 		return false;
 
 	// process some options
@@ -51,6 +53,12 @@ void UIStartupDialog::InitUI()
 			.SetWidth(EncodeWidth(0.4f))
 			+ NewControl(UICombobox, &Opt.GameOverride)
 			.Expose(OverrideGameCombo)
+		]
+		+ NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
+		[
+			NewControl(UISpacer, -1)
+			+ NewControl(UIHyperLink, "Compatibility information", "https://www.gildor.org/projects/umodel/compat")
+			.SetAutoSize()
 		]
 	];
 
@@ -135,12 +143,16 @@ void UIStartupDialog::InitUI()
 	NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 	.SetParent(this)
 	[
-		NewControl(UISpacer, -1)
+		NewControl(UIHyperLink, GBuildString)
+		.SetAutoSize()
+		.SetY(3)
+		.SetCallback(BIND_STATIC(&UIAboutDialog::Show))
+		+ NewControl(UISpacer, -1)
 		+ NewControl(UIButton, "OK")
-		.SetWidth(EncodeWidth(0.2f))
+		.SetWidth(80)
 		.SetOK()
 		+ NewControl(UIButton, "Cancel")
-		.SetWidth(EncodeWidth(0.2f))
+		.SetWidth(80)
 		.SetCancel()
 	];
 
