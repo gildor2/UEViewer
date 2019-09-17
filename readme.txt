@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+17.09.2019
+- implemented glTF LOD export
+
 14.09.2019
 - added support for Borderlands 3 skeletal meshes and textures (nothing else works), requires -game=border3
 
