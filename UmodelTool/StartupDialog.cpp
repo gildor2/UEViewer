@@ -1,12 +1,13 @@
 #include "BaseDialog.h"
+
+#if HAS_UI
+
 #include "StartupDialog.h"
 #include "FileControls.h"
 
 #include "GameDatabase.h"
 #include "MiscStrings.h"
 #include "AboutDialog.h"
-
-#if HAS_UI
 
 UIStartupDialog::UIStartupDialog(CStartupSettings& settings)
 :	Opt(settings)

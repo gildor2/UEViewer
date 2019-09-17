@@ -234,7 +234,7 @@ bool ExportObject(const UObject *Obj)
 			const char* ClassName = Obj->GetClassName();
 			// check for duplicate name
 			// get name unique index
-			char uniqueName[256];
+			char uniqueName[1024];
 			appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
 
 			const char* OriginalName = NULL;
@@ -252,7 +252,12 @@ bool ExportObject(const UObject *Obj)
 				}
 			}
 
+			// Do the export with saving current "LastExported" value. This will fix an issue when object exporter
+			// will call another ExportObject function then continue exporting - without the fix, calling CreateExportArchive()
+			// will always fail because code will recognize object as exported for 2nd time.
+			const UObject* saveLastExported = ctx.LastExported;
 			Info.Func(Obj);
+			ctx.LastExported = saveLastExported;
 
 			//?? restore object name
 			if (OriginalName) const_cast<UObject*>(Obj)->Name = OriginalName;
