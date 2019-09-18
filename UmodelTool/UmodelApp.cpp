@@ -231,7 +231,7 @@ bool CUmodelApp::ShowPackageUI()
 
 		// fully load all selected packages
 		progress.SetDescription("Loading package");
-		UObject::BeginLoad();
+//		UObject::BeginLoad(); - added 27.20.2018 (#dfa0abf), disabled 18.09.2019 - causes UI to freeze when loading objects (LoadWholePackage already does Begin/EndLoad)
 		for (int i = 0; i < Packages.Num(); i++)
 		{
 			UnPackage* package = Packages[i];
@@ -246,7 +246,7 @@ bool CUmodelApp::ShowPackageUI()
 				break;
 			}
 		}
-		UObject::EndLoad();
+//		UObject::EndLoad();
 
 		if (cancelled)
 		{
