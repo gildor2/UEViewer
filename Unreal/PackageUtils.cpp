@@ -18,7 +18,7 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 
 	if (GFullyLoadedPackages.FindItem(Package) >= 0) return true;	// already loaded
 
-#if PROFILE
+#if 0 // PROFILE -- disabled, appears useless - always says "0.00 MBytes serialized in 0 calls"
 	appResetProfiler();
 #endif
 
@@ -33,7 +33,7 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 	UObject::EndLoad();
 	GFullyLoadedPackages.Add(Package);
 
-#if PROFILE
+#if 0 // PROFILE
 	appPrintProfiler("Full package loaded");
 #endif
 

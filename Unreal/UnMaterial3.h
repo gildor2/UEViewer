@@ -644,6 +644,10 @@ public:
 #if MASSEFF
 		PROP_DROP(m_Guid)
 #endif
+#if UNREAL4
+		PROP_DROP(TextureStreamingData)
+		PROP_DROP(SubsurfaceProfile)
+#endif
 	END_PROP_TABLE
 
 #if RENDERING
@@ -743,6 +747,14 @@ public:
 		PROP_DROP(bUsedWithLightEnvironments)
 		PROP_DROP(AllowsEffectsMaterials)
 #endif // MASSEFF
+#if UNREAL4
+		PROP_DROP(bUsedWithMeshParticles)
+		PROP_DROP(bCanMaskedBeAssumedOpaque)
+		PROP_DROP(ShadingModel)
+		PROP_DROP(ShadingModels)
+		PROP_DROP(bEnableResponsiveAA)
+		PROP_DROP(StateId)
+#endif
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)
@@ -843,11 +855,18 @@ struct FMaterialInstanceBasePropertyOverrides
 	bool			bOverride_TwoSided;
 	bool			TwoSided;
 
+	bool			bOverride_OpacityMaskClipValue;
+	float			OpacityMaskClipValue;
+
 	BEGIN_PROP_TABLE
 		PROP_BOOL(bOverride_BlendMode)
 		PROP_ENUM2(BlendMode, EBlendMode)
 		PROP_BOOL(bOverride_TwoSided)
 		PROP_BOOL(TwoSided)
+		PROP_BOOL(bOverride_OpacityMaskClipValue)
+		PROP_FLOAT(OpacityMaskClipValue)
+		PROP_DROP(bOverride_ShadingModel)
+		PROP_DROP(ShadingModel)
 	END_PROP_TABLE
 
 	FMaterialInstanceBasePropertyOverrides()
@@ -884,6 +903,9 @@ public:
 		PROP_DROP(PhysMaterialMaskUVChannel)
 		PROP_DROP(BlackPhysicalMaterial)
 		PROP_DROP(WhitePhysicalMaterial)
+#if UNREAL4
+		PROP_DROP(bOverrideSubsurfaceProfile)
+#endif
 	END_PROP_TABLE
 
 	virtual void Serialize(FArchive &Ar)

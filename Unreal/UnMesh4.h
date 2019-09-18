@@ -208,6 +208,9 @@ public:
 #if BORDERLANDS3
 		PROP_BYTE(NumVertexColorChannels)
 #endif
+		PROP_DROP(bHasBeenSimplified)
+		PROP_DROP(SamplingInfo)
+		PROP_DROP(MinLod)
 	END_PROP_TABLE
 
 	USkeletalMesh4();
@@ -311,6 +314,8 @@ struct FStaticMaterial
 	BEGIN_PROP_TABLE
 		PROP_OBJ(MaterialInterface)
 		PROP_NAME(MaterialSlotName)
+		PROP_DROP(ImportedMaterialSlotName)
+		PROP_DROP(UVChannelData)
 	END_PROP_TABLE
 };
 
@@ -340,6 +345,9 @@ public:
 		PROP_ARRAY(Materials, UObject*)
 		PROP_ARRAY(SourceModels, FStaticMeshSourceModel)
 		PROP_ARRAY(StaticMaterials, FStaticMaterial)
+		PROP_DROP(LightmapUVDensity)
+		PROP_DROP(LightMapResolution)
+		PROP_DROP(ExtendedBounds)
 	END_PROP_TABLE
 
 	UStaticMesh4();

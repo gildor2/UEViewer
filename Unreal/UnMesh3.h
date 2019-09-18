@@ -61,6 +61,15 @@ struct FSkeletalMeshLODInfo
 		PROP_DROP(ReductionSettings)
 		PROP_DROP(OptimizationSettings)
 		PROP_DROP(RemovedBones)
+		PROP_DROP(SourceImportFilename)
+		PROP_DROP(bHasPerLODVertexColors)
+		PROP_DROP(bAllowCPUAccess)
+		PROP_DROP(bSupportUniformlyDistributedSampling)
+		PROP_DROP(BonesToRemove)
+		PROP_DROP(BonesToPrioritize)
+		PROP_DROP(WeightOfPrioritization)
+		PROP_DROP(BakePose)
+		PROP_DROP(BakePoseOverride)
 #endif
 	END_PROP_TABLE
 };

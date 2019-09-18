@@ -175,7 +175,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 			if (Format == PF_Unknown)
 			{
 				//?? check whether we can support this pixel format
-				appPrintf("Loading data for format %s ...\n", PixelFormatEnum.Str);
+//				appPrintf("Loading data for format %s ...\n", PixelFormatEnum.Str);
 				// the texture was not loaded yet
 				FTexturePlatformData Data;
 				Ar << Data;
