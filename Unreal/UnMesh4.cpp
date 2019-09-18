@@ -1521,6 +1521,9 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 
 	ConvertMesh();
 
+	// Release original mesh data to save memory
+	LODModels.Empty();
+
 	unguard;
 }
 
@@ -2335,9 +2338,15 @@ no_nav_collision:
 	DROP_REMAINING_DATA(Ar);
 
 	if (bCooked)
+	{
 		ConvertMesh();
+		// Release original mesh data to save memory
+		Lods.Empty();
+	}
 	else
+	{
 		ConvertSourceModels();
+	}
 
 	unguard;
 }
