@@ -638,7 +638,7 @@ void UIHyperLink::Create(UICreateContext& ctx)
 	UpdateEnabled();
 }
 
-bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam)
+bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam, int& result)
 {
 	// Note: disabled control will display blue hyper link anyway. To override that, should use extra code
 	// https://social.msdn.microsoft.com/Forums/vstudio/en-US/bd54bd30-e21f-4dc7-a77f-88de02c63f72/changing-link-label-color-for-syslink?forum=vcgeneral
@@ -652,6 +652,25 @@ bool UIHyperLink::HandleCommand(int id, int cmd, LPARAM lParam)
 		else if (!Link.IsEmpty())
 		{
 			ShellExecute(NULL, "open", *Link, NULL, NULL, SW_SHOW);
+		}
+		result = 1;
+	}
+	else if (cmd == NM_CUSTOMDRAW)
+	{
+		// SysLink control doesn't change text color for disabled control. Do the change ourselves with use of NM_CUSTOMDRAW.
+		// References:
+		// - https://docs.microsoft.com/en-us/windows/win32/controls/using-custom-draw
+		// - SWT UI library (Java), Link.java, wmNotifyChild() method.
+		LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
+		if (lplvcd->nmcd.dwDrawStage == CDDS_PREPAINT)
+		{
+			if (!Enabled)
+				result = CDRF_NOTIFYITEMDRAW;
+		}
+		else if (lplvcd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+		{
+			if (!Enabled)
+				SetTextColor(lplvcd->nmcd.hdc, GetSysColor(COLOR_GRAYTEXT));
 		}
 	}
 	return true;
