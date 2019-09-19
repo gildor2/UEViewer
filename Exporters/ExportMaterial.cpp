@@ -74,11 +74,14 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 	}
 #endif
 
+	delete Ar;
+
 	// We have done with current object, now let's export referenced objects.
 
 	for (UObject* Obj : ToExport)
 	{
-		ExportObject(Obj);
+		if (Obj != Mat) // UTextureCube::GetParams() adds self to "Cube" field
+			ExportObject(Obj);
 	}
 
 	if (Mat->IsA("MaterialInstanceConstant"))
@@ -89,8 +92,16 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 			ExportMaterial(Inst->Parent);
 		}
 	}
-
-	delete Ar;
+	else if (Mat->IsA("TextureCube3"))
+	{
+		const UTextureCube3* TexCube = static_cast<const UTextureCube3*>(Mat);
+		ExportObject(TexCube->FacePosX);
+		ExportObject(TexCube->FaceNegX);
+		ExportObject(TexCube->FacePosY);
+		ExportObject(TexCube->FaceNegY);
+		ExportObject(TexCube->FacePosZ);
+		ExportObject(TexCube->FaceNegZ);
+	}
 
 #endif // RENDERING
 
