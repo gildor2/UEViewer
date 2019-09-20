@@ -837,6 +837,7 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_ALPHA_TEST);
 
 	glBegin(GL_LINES);
 	for (int i = 0; i < pMesh->RefSkeleton.Num(); i++)
