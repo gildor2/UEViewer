@@ -162,6 +162,7 @@
 #define LIS2			1		// Life is Strange 2
 #define ASC_ONE			1		// Ascendant One
 #define BORDERLANDS3	1		// Borderlands 3
+#define KH3				1		// Kingdom Hearts 3
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 

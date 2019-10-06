@@ -78,6 +78,9 @@ struct FCurveMetaData
 		if (FAnimPhysObjectVersion::Get(Ar) >= FAnimPhysObjectVersion::AddLODToCurveMetaData)
 		{
 			Ar << D.MaxLOD;
+#if KH3
+			if (Ar.Game == GAME_KH3) Ar.Seek(Ar.Tell() + 3); // MaxLOD is int32 here
+#endif
 		}
 		return Ar;
 	}

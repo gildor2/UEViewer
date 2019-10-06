@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+06.10.2019
+- added Kingdom Hearts III support, requires -game=kh3 -ps4
+
 17.09.2019
 - implemented glTF LOD export
 

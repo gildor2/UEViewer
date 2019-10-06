@@ -395,6 +395,9 @@ const GameInfo GListOfGames[] = {
 #	if BORDERLANDS3
 		G("Borderlands 3", border3, GAME_Borderlands3),
 #	endif
+#	if KH3
+		G("Kingdom Hearts 3", kh3, GAME_KH3),
+#	endif
 #endif // UNREAL4
 
 	// end marker

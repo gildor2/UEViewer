@@ -564,6 +564,16 @@ struct FSkelMeshSection4
 		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
 
 		FStripDataFlags StripFlags(Ar);
+
+#if GAME_KH3
+		if (Ar.Game == GAME_KH3)
+		{
+			int32 MaterialIndex;
+			Ar << MaterialIndex;
+			S.MaterialIndex = MaterialIndex;
+		}
+#endif // GAME_KH3
+
 		Ar << S.MaterialIndex;
 
 		if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSectionWithChunk)
@@ -674,7 +684,17 @@ struct FSkelMeshSection4
 				Ar << unk;
 			}
 #endif // NGB
+
+#if KH3
+			if (Ar.Game == GAME_KH3)
+			{
+				// There are 2 integers here
+				Ar.Seek(Ar.Tell() + 8);
+			}
+#endif // KH3
 			// UE4.19+
+			//todo: this code is never reached? (this function is for pre-4.19)
+			//todo: review - may be the function is still used for editor data? Should update function comment.
 			if (FOverlappingVerticesCustomVersion::Get(Ar) >= FOverlappingVerticesCustomVersion::DetectOVerlappingVertices)
 			{
 				TMap<int32, TArray<int32> > OverlappingVertices;

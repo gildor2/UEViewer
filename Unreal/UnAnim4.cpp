@@ -233,6 +233,14 @@ void USkeleton::Serialize(FArchive &Ar)
 		Ar << SmartNames;
 	unguard;
 
+#if KH3
+	if (Ar.Game == GAME_KH3)
+	{
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+#endif // KH3
+
 	if (FAnimObjectVersion::Get(Ar) >= FAnimObjectVersion::StoreMarkerNamesOnSkeleton)
 	{
 		FStripDataFlags StripFlags(Ar);
