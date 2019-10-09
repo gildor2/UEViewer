@@ -2015,7 +2015,24 @@ struct FStaticMeshLODModel4
 
 		Ar << Lod.PositionVertexBuffer;
 		Ar << Lod.VertexBuffer;
+
+#if BORDERLANDS3
+		if (Ar.Game == GAME_Borderlands3)
+		{
+			int32 NumColorStreams;
+			Ar << NumColorStreams;
+			for (int i = 0; i < NumColorStreams; i++)
+			{
+				FColorVertexBuffer4 tmpBuffer;
+				Ar << ((i == 0) ? Lod.ColorVertexBuffer : tmpBuffer);
+			}
+			goto after_color_stream;
+		}
+#endif // BORDERLANDS3
+
 		Ar << Lod.ColorVertexBuffer;
+
+	after_color_stream:
 		Ar << Lod.IndexBuffer;
 
 		/// reference for VER_UE4_SOUND_CONCURRENCY_PACKAGE (UE4.9+):
@@ -2301,6 +2318,21 @@ no_nav_collision:
 				Ar << ScreenSize[i];
 			}
 		}
+
+#if BORDERLANDS3
+		if (Ar.Game == GAME_Borderlands3)
+		{
+			// Array of non-standard array
+			int Count;
+			Ar << Count;
+			for (int i = 0; i < Count; i++)
+			{
+				byte Count2;
+				Ar << Count2;
+				Ar.Seek(Ar.Tell() + Count2 * 12); // bool, bool, float
+			}
+		}
+#endif // BORDERLANDS3
 
 		unguard;
 	} // end of FStaticMeshRenderData

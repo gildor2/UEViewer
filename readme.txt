@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+09.10.2019
+- supported Borderlands 3 static meshes
+
 06.10.2019
 - added Kingdom Hearts III support, requires -game=kh3 -ps4
 
