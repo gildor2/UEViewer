@@ -66,6 +66,13 @@ void CObjectViewer::Draw2D()
 {
 	if (!Object)
 	{
+		if (GFullyLoadedPackages.Num() == 0)
+		{
+			// Nothing loaded, display a different message
+			DrawTextLeft(S_RED "There's no packages has been loaded.");
+			DrawTextLeft(S_RED "Press <O> to select and load a package.");
+			return;
+		}
 		DrawTextLeft(S_RED "There's no visual objects loaded now.");
 		DrawTextLeft(S_RED "Press <O> to load a different package.");
 

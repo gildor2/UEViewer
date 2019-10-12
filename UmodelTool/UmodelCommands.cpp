@@ -120,6 +120,11 @@ bool ExportPackages(const TArray<UnPackage*>& Packages, IProgressCallback* Progr
 
 void DisplayPackageStats(const TArray<UnPackage*> &Packages)
 {
+	if (Packages.Num() == 0)
+	{
+		appPrintf("Nothing has been loaded\n");
+		return;
+	}
 	TArray<ClassStats> stats;
 	CollectPackageStats(Packages, stats);
 

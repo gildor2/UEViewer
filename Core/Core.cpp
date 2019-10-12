@@ -65,6 +65,14 @@ void appError(const char *fmt, ...)
 
 	GIsSwError = true;
 
+#if VSTUDIO_INTEGRATION
+	if (IsDebuggerPresent())
+	{
+		OutputDebugString("Fatal Error: ");
+		OutputDebugString(buf);
+	}
+#endif
+
 #if DO_GUARD
 //	appNotify("ERROR: %s\n", buf);
 	strcpy(GErrorHistory, buf);
