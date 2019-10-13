@@ -1255,7 +1255,7 @@ struct FStaticLODModel3
 	FSkeletalMeshVertexBuffer3 GPUSkin;
 	TArray<FSkeletalMeshVertexInfluences> ExtraVertexInfluences;	// GoW2+ engine
 	int					NumUVSets;
-	TArray<int>			VertexColor;	// since version 710
+	TArray<FColor>		VertexColor;	// since version 710
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticLODModel3 &Lod)
 	{
@@ -1980,6 +1980,8 @@ void USkeletalMesh3::ConvertMesh()
 		}
 		// allocate the vertices
 		Lod->AllocateVerts(VertexCount);
+		if (SrcLod.VertexColor.Num())
+			Lod->AllocateVertexColorBuffer();
 
 		int chunkIndex = 0;
 		const FSkelMeshChunk3 *C = NULL;
@@ -1996,6 +1998,9 @@ void USkeletalMesh3::ConvertMesh()
 				C = &SrcLod.Chunks[chunkIndex++];
 				lastChunkVertex = C->FirstVertex + C->NumRigidVerts + C->NumSoftVerts;
 			}
+
+			if (Lod->VertexColors)
+				Lod->VertexColors[Vert] = SrcLod.VertexColor[Vert];
 
 			if (UseGpuSkinVerts)
 			{
@@ -2603,7 +2608,7 @@ struct FStaticMeshUVItem3
 {
 	FVector				Pos;			// old version (< 472)
 	FPackedNormal		Normal[3];
-	int					f10;			//?? VertexColor?
+	FColor				Color;
 	FMeshUVFloat		UV[NUM_UV_SETS_UE3];
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshUVItem3 &V)
@@ -2627,7 +2632,7 @@ struct FStaticMeshUVItem3
 		if (Ar.Game == GAME_AVA)
 		{
 			assert(Ar.ArVer >= 441);
-			Ar << V.Normal[0] << V.Normal[2] << V.f10;
+			Ar << V.Normal[0] << V.Normal[2] << V.Color;
 			goto uvs;
 		}
 #endif // AVA
@@ -2637,8 +2642,7 @@ struct FStaticMeshUVItem3
 		if (Ar.ArVer < 472)
 		{
 			// old version has position embedded into UVStream (this is not an UVStream, this is a single stream for everything)
-			int unk10;					// pad or color ?
-			Ar << V.Pos << unk10;
+			Ar << V.Pos << V.Color;
 		}
 #if FURY
 		if (Ar.Game == GAME_Fury && Ar.ArLicenseeVer >= 7)
@@ -2665,7 +2669,7 @@ struct FStaticMeshUVItem3
 		if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) goto uvs; // Transformers: Fall of Cybertron, no version in code
 #endif
 		if (Ar.ArVer >= 434 && Ar.ArVer < 615)
-			Ar << V.f10;				// starting from 615 made as separate stream
+			Ar << V.Color;				// starting from 615 made as separate stream
 	uvs:
 		if (GUseStaticFloatUVs)
 		{
@@ -2803,17 +2807,17 @@ struct FStaticMeshUVStream3
 	}
 };
 
-struct FStaticMeshColorStream3
+struct FStaticMeshShadowVolumeStream3
 {
 	int					ItemSize;
 	int					NumVerts;
-	TArray<int>			Colors;
+	TArray<float>		Colors;
 
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshColorStream3 &S)
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshShadowVolumeStream3 &S)
 	{
 		guard(FStaticMeshColorStream3<<);
 		Ar << S.ItemSize << S.NumVerts;
-		DBG_STAT("StaticMesh ColorStream: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
+		DBG_STAT("StaticMesh ShadowVolumeStream: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
 		S.Colors.BulkSerialize(Ar);
 		return Ar;
 		unguard;
@@ -2821,15 +2825,15 @@ struct FStaticMeshColorStream3
 };
 
 // new color stream: difference is that data array is not serialized when NumVerts is 0
-struct FStaticMeshColorStream3New		// ArVer >= 615
+struct FStaticMeshColorStream3		// ArVer >= 615
 {
 	int					ItemSize;
 	int					NumVerts;
-	TArray<int>			Colors;
+	TArray<FColor>		Colors;
 
-	friend FArchive& operator<<(FArchive &Ar, FStaticMeshColorStream3New &S)
+	friend FArchive& operator<<(FArchive &Ar, FStaticMeshColorStream3 &S)
 	{
-		guard(FStaticMeshColorStream3New<<);
+		guard(FStaticMeshColorStream3<<);
 		Ar << S.ItemSize << S.NumVerts;
 		DBG_STAT("StaticMesh ColorStreamNew: IS:%d NV:%d\n", S.ItemSize, S.NumVerts);
 #if THIEF4
@@ -2923,8 +2927,8 @@ struct FStaticMeshLODModel3
 	TArray<FStaticMeshSection3> Sections;
 	FStaticMeshVertexStream3    VertexStream;
 	FStaticMeshUVStream3        UVStream;
-	FStaticMeshColorStream3     ColorStream;	//??
-	FStaticMeshColorStream3New  ColorStream2;	//??
+	FStaticMeshShadowVolumeStream3 ShadowVolumeStream;
+	FStaticMeshColorStream3  ColorStream;
 	FIndexBuffer3		Indices;
 	FIndexBuffer3		Indices2;		// wireframe
 	int					NumVerts;
@@ -3012,9 +3016,9 @@ struct FStaticMeshLODModel3
 			FTRMeshUnkStream unkStream;		// normals?
 			int unkD8;						// part of Indices2
 			Ar << Lod.VertexStream << Lod.UVStream;
-			if (Ar.ArVer >= 516) Ar << Lod.ColorStream2;
+			if (Ar.ArVer >= 516) Ar << Lod.ColorStream;
 			if (Ar.ArLicenseeVer >= 71) Ar << unkStream;
-			if (Ar.ArVer < 536) Ar << Lod.ColorStream;
+			if (Ar.ArVer < 536) Ar << Lod.ShadowVolumeStream;
 			Ar << Lod.NumVerts << Lod.Indices << Lod.Indices2;
 			if (Ar.ArLicenseeVer >= 58) Ar << unkD8;
 			if (Ar.ArLicenseeVer >= 181)	// Fall of Cybertron
@@ -3046,9 +3050,9 @@ struct FStaticMeshLODModel3
 			if (Ar.ArVer >= 615)
 			{
 			color_stream:
-				Ar << Lod.ColorStream2;
+				Ar << Lod.ColorStream;
 			}
-			if (Ar.ArVer < 686) Ar << Lod.ColorStream;	//?? probably this is not a color stream - the same version is used to remove "edges"
+			if (Ar.ArVer < 686) Ar << Lod.ShadowVolumeStream;
 			Ar << Lod.NumVerts;
 			DBG_STAT("NumVerts: %d\n", Lod.NumVerts);
 		}
@@ -3059,11 +3063,11 @@ struct FStaticMeshLODModel3
 			if (Ar.Game == GAME_MK && Ar.ArVer >= 472) // MK9; real version: MidwayVer >= 36
 			{
 				FStaticMeshNormalStream_MK NormalStream;
-				Ar << Lod.VertexStream << Lod.ColorStream << NormalStream << Lod.UVStream;
+				Ar << Lod.VertexStream << Lod.ShadowVolumeStream << NormalStream << Lod.UVStream;
 				if (Ar.ArVer >= 677)
 				{
 					// MK X
-					Ar << Lod.ColorStream2;
+					Ar << Lod.ColorStream;
 				}
 				Ar << Lod.NumVerts;
 				// copy NormalStream into UVStream
@@ -3743,6 +3747,7 @@ void UStaticMesh3::ConvertMesh()
 
 		// vertices
 		Lod->AllocateVerts(NumVerts);
+		Lod->AllocateVertexColorBuffer();
 		for (int i = 0; i < NumVerts; i++)
 		{
 			const FStaticMeshUVItem3 &SUV = SrcLod.UVStream.UV[i];
@@ -3758,7 +3763,32 @@ void UStaticMesh3::ConvertMesh()
 				fUV++;
 				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
 			}
-			//!! also has ColorStream
+			if (SrcLod.ColorStream.Colors.Num())
+				Lod->VertexColors[i] = SrcLod.ColorStream.Colors[i];
+			else
+				Lod->VertexColors[i] = SUV.Color;
+		}
+
+		// Remove vertex colors if they're filled with white color
+		bool bAllWhite = true;
+		bool bAllBlack = true;
+		for (int i = 0; i < NumVerts; i++)
+		{
+			const FColor& c = Lod->VertexColors[i];
+			uint32 ci = *(uint32*) &c;
+			if (ci != 0)
+			{
+				bAllBlack = false;
+			}
+			else if (ci != 0xffffffff)
+			{
+				bAllWhite = false;
+			}
+		}
+		if (bAllWhite || bAllBlack)
+		{
+			appFree(Lod->VertexColors);
+			Lod->VertexColors = NULL;
 		}
 
 		// indices
