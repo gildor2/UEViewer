@@ -81,10 +81,12 @@ void CStatMeshViewer::Draw2D()
 	DrawTextLeft(S_GREEN "LOD     : " S_WHITE "%d/%d\n"
 				 S_GREEN "Verts   : " S_WHITE "%d\n"
 				 S_GREEN "Tris    : " S_WHITE "%d\n"
-				 S_GREEN "UV Set  : " S_WHITE "%d/%d",
+				 S_GREEN "UV Set  : " S_WHITE "%d/%d\n"
+				 S_GREEN "Colors  : " S_WHITE "%s",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
 				 Lod.NumVerts, Lod.Indices.Num() / 3,
-				 MeshInst->UVIndex+1, Lod.NumTexCoords);
+				 MeshInst->UVIndex+1, Lod.NumTexCoords,
+				 Lod.VertexColors ? "present" : "none");
 
 	// code similar to CLodMeshViewer::Draw2D(), but using different fields
 	DrawTextLeft(S_GREEN "Sections: " S_WHITE "%d", Lod.Sections.Num());

@@ -1170,6 +1170,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 		glTexCoordPointer(2, GL_FLOAT, sizeof(CMeshUVFloat), &Mesh.ExtraUV[UVIndex-1][0].U);
 	}
 
+	bool bSetMaterial = true;
 	if (flags & DF_SHOW_INFLUENCES)
 	{
 		// in this mode mesh is displayed colorized instead of textured
@@ -1185,6 +1186,14 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 #endif
+		bSetMaterial = false;
+	}
+	else if (bVertexColors && Mesh.VertexColors)
+	{
+		glEnableClientState(GL_COLOR_ARRAY);
+		glColorPointer(4, GL_UNSIGNED_BYTE, 0, Mesh.VertexColors);
+		BindDefaultMaterial(true);
+		bSetMaterial = false;
 	}
 
 	for (i = 0; i < NumSections; i++)
@@ -1201,7 +1210,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 		if (!Sec.NumFaces) continue;
 
 		// select material
-		if (!(flags & DF_SHOW_INFLUENCES))
+		if (bSetMaterial)
 			SetMaterial(Sec.Material, MaterialIndex);
 		// check tangent space
 		GLint aNormal = -1;

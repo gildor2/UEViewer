@@ -346,10 +346,12 @@ void CSkelMeshViewer::Draw2D()
 				 S_GREEN "Verts   : " S_WHITE "%d\n"
 				 S_GREEN "Tris    : " S_WHITE "%d\n"
 				 S_GREEN "UV Set  : " S_WHITE "%d/%d\n"
-				 S_GREEN "Bones   : " S_WHITE "%d",
+				 S_GREEN "Colors  : " S_WHITE "%s\n"
+				 S_GREEN "Bones   : " S_WHITE "%d\n",
 				 MeshInst->LodNum+1, Mesh->Lods.Num(),
 				 Lod.NumVerts, Lod.Indices.Num() / 3,
 				 MeshInst->UVIndex+1, Lod.NumTexCoords,
+				 Lod.VertexColors ? "present" : "none",
 				 Mesh->RefSkeleton.Num());
 	//!! show MaxInfluences etc
 
@@ -699,12 +701,12 @@ void CSkelMeshViewer::ProcessKey(int key)
 //		MeshInst->SetBlendParams(0, 1.0f, "b_MF_Hand_R");
 //		MeshInst->SetBlendParams(0, 1.0f, "b_MF_ForeTwist2_R");
 		break;
-	case 'c':
+	case 'c'|KEY_CTRL:
 		Alpha -= 0.02;
 		if (Alpha < 0) Alpha = 0;
 		MeshInst->SetSecondaryBlend(2, Alpha);
 		break;
-	case 'v':
+	case 'v'|KEY_CTRL:
 		Alpha += 0.02;
 		if (Alpha > 1) Alpha = 1;
 		MeshInst->SetSecondaryBlend(2, Alpha);

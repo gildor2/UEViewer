@@ -24,9 +24,11 @@ public:
 	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
 	// debug
 	bool			bColorMaterials;		//?? replace with DF_COLOR_MATERIALS, but flags are stored outside of mesh and used in MeshInstance::SetMaterial()
+	bool			bVertexColors;
 
 	CMeshInstance()
 	:	bColorMaterials(false)
+	,	bVertexColors(false)
 	{}
 
 	virtual ~CMeshInstance()

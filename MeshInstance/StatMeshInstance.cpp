@@ -77,6 +77,15 @@ void CStatMeshInstance::Draw(unsigned flags)
 		glTexCoordPointer(2, GL_FLOAT, sizeof(CMeshUVFloat), &Mesh.ExtraUV[UVIndex-1][0].U);
 	}
 
+	bool bSetMaterial = true;
+	if (bVertexColors && Mesh.VertexColors)
+	{
+		glEnableClientState(GL_COLOR_ARRAY);
+		glColorPointer(4, GL_UNSIGNED_BYTE, 0, Mesh.VertexColors);
+		BindDefaultMaterial(true);
+		bSetMaterial = false;
+	}
+
 	/*??
 		Can move tangent/binormal setup here too, but this will require to force shader to use fixed attribute locations
 		(use glBindAttribLocation before glLinkProgram instead of querying attribute via glGetAttribLocation).
@@ -103,7 +112,8 @@ void CStatMeshInstance::Draw(unsigned flags)
 		const CMeshSection &Sec = Mesh.Sections[MaterialIndex];
 		if (!Sec.NumFaces) continue;
 
-		SetMaterial(Sec.Material, MaterialIndex);
+		if (bSetMaterial)
+			SetMaterial(Sec.Material, MaterialIndex);
 
 		// check tangent space
 		GLint aNormal = -1;
@@ -151,6 +161,7 @@ void CStatMeshInstance::Draw(unsigned flags)
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
 
 	glDisable(GL_LIGHTING);
 	BindDefaultMaterial(true);

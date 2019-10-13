@@ -119,6 +119,7 @@ void CMeshViewer::DisplayUV(const CMeshVertex* Verts, int VertexSize, const CBas
 void CMeshViewer::ShowHelp()
 {
 	CObjectViewer::ShowHelp();
+	DrawKeyHelp("C", "show vertex colors");
 	DrawKeyHelp("N", "show normals");
 	DrawKeyHelp("W", "toggle wireframe");
 	DrawKeyHelp("M", "colorize materials");
@@ -143,6 +144,7 @@ UIMenuItem* CMeshViewer::GetObjectMenu(UIMenuItem* menu)
 		NewMenuCheckbox("Show normals\tN", &DrawFlags, DF_SHOW_NORMALS)
 		+NewMenuCheckbox("Wireframe\tW", &Wireframe)
 		+NewMenuCheckbox("Material IDs\tM", &Inst->bColorMaterials)
+		+NewMenuCheckbox("Vertex colors\tC", &Inst->bVertexColors)
 	];
 
 	return menu;
@@ -161,6 +163,10 @@ void CMeshViewer::ProcessKey(int key)
 
 	case 'm':
 		Inst->bColorMaterials = !Inst->bColorMaterials;
+		break;
+
+	case 'c':
+		Inst->bVertexColors = !Inst->bVertexColors;
 		break;
 
 	case 'w':
