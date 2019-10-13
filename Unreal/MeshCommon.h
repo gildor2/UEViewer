@@ -172,18 +172,31 @@ struct CBaseMeshLod
 	TArray<CMeshSection>	Sections;
 	int						NumVerts;
 	CMeshUVFloat*			ExtraUV[MAX_MESH_UV_SETS-1];
+	FColor*					VertexColors;
 	CIndexBuffer			Indices;
+
+	CBaseMeshLod()
+	{
+		memset(this, 0, sizeof(*this));
+	}
 
 	~CBaseMeshLod()
 	{
 		for (int i = 0; i < NumTexCoords-1; i++)
 			appFree(ExtraUV[i]);
+		if (VertexColors)
+			appFree(VertexColors);
 	}
 
 	void AllocateUVBuffers()
 	{
 		for (int i = 0; i < NumTexCoords-1; i++)
 			ExtraUV[i] = (CMeshUVFloat*)appMalloc(sizeof(CMeshUVFloat) * NumVerts);
+	}
+
+	void AllocateVertexColorBuffer()
+	{
+		VertexColors = (FColor*)appMalloc(sizeof(FColor) * NumVerts);
 	}
 
 #if RENDERING

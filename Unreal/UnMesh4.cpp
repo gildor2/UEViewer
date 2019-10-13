@@ -1166,7 +1166,6 @@ struct FStaticLODModel4
 				assert(LoadingMesh);
 				if (LoadingMesh->bHasVertexColors)
 				{
-					appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
 					if (SkelMeshVer < FSkeletalMeshCustomVersion::UseSharedColorBufferFormat)
 					{
 						Ar << Lod.ColorVertexBuffer;
@@ -1366,7 +1365,7 @@ struct FStaticLODModel4
 		unguard;
 	}
 
-	// UE4.23 serializer for most LOD data
+	// UE4.23+ serializer for most of LOD data
 	void SerializeStreamedData(FArchive& Ar)
 	{
 		guard(FStaticLODModel4::SerializeStreamedData);
@@ -1618,6 +1617,9 @@ void USkeletalMesh4::ConvertMesh()
 		const FSkeletalMeshVertexBuffer4& VertBuffer = SrcLod.VertexBufferGPUSkin;
 		CSkelMeshVertex* D = Lod->Verts;
 
+		if (SrcLod.ColorVertexBuffer.Data.Num())
+			Lod->AllocateVertexColorBuffer();
+
 		for (int Vert = 0; Vert < VertexCount; Vert++, D++)
 		{
 			while (Vert >= lastChunkVertex) // this will fix any issues with empty chunks or sections
@@ -1681,6 +1683,11 @@ void USkeletalMesh4::ConvertMesh()
 			}
 			D->Position = CVT(V->Pos);
 			UnpackNormals(V->Normal, *D);
+			if (Lod->VertexColors)
+			{
+				//todo: check if this will work with "source" models - FSoftVertex4 has Color field
+				Lod->VertexColors[Vert] = SrcLod.ColorVertexBuffer.Data[Vert];
+			}
 			// convert influences
 			int i2 = 0;
 			unsigned PackedWeights = 0;
@@ -2457,6 +2464,9 @@ void UStaticMesh4::ConvertMesh()
 
 		// vertices
 		Lod->AllocateVerts(NumVerts);
+		if (SrcLod.ColorVertexBuffer.NumVertices)
+			Lod->AllocateVertexColorBuffer();
+
 		for (int i = 0; i < NumVerts; i++)
 		{
 			const FStaticMeshUVItem4 &SUV = SrcLod.VertexBuffer.UV[i];
@@ -2472,7 +2482,10 @@ void UStaticMesh4::ConvertMesh()
 				fUV++;
 				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
 			}
-			//!! also has ColorStream
+			if (Lod->VertexColors)
+			{
+				Lod->VertexColors[i] = SrcLod.ColorVertexBuffer.Data[i];
+			}
 		}
 
 		// indices
