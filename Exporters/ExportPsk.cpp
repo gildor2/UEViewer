@@ -212,6 +212,21 @@ static void ExportCommonMeshData
 	unguard;
 }
 
+static void ExportVertexColors(FArchive &Ar, const FColor* Colors, int NumVerts)
+{
+	guard(ExportVertexColors);
+
+	if (!Colors) return;
+
+	static VChunkHeader ColorHdr;
+	ColorHdr.DataCount = NumVerts;
+	ColorHdr.DataSize  = sizeof(FColor);
+
+	SAVE_CHUNK(ColorHdr, "VERTEXCOLOR");
+	Ar.Serialize((void*)Colors, sizeof(FColor) * NumVerts);
+
+	unguard;
+}
 
 static void ExportExtraUV
 (
@@ -353,6 +368,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	}
 	assert(NumInfluences == 0);
 
+	ExportVertexColors(Ar, Lod.VertexColors, Lod.NumVerts);
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
 
 /*	if (!GExportPskx)						// nothing more to write
@@ -634,6 +650,7 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 	InfHdr.DataSize  = sizeof(VRawBoneInfluence);
 	SAVE_CHUNK(InfHdr, "RAWWEIGHTS");
 
+	ExportVertexColors(Ar, Lod.VertexColors, Lod.NumVerts);
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
 
 	unguard;

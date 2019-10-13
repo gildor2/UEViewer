@@ -30,7 +30,7 @@ struct VChunkHeader
 
 #define SAVE_CHUNK(var, name)	\
 	strcpy(var.ChunkID, name);	\
-	var.TypeFlag = 1999801;		\
+	var.TypeFlag = 20100422;	\
 	Ar << var;
 //	appPrintf("%08X: %s: type=%d / count=%d / size=%d\n", Ar.Tell(), var.ChunkID, var.TypeFlag, var.DataCount, var.DataSize);
 
