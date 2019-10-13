@@ -10,6 +10,9 @@
 
  Revision History:
 
+    13.10.2019 v1.38
+    - implemented loading of vertex colors
+
 	28.08.2019 v1.37
 	- implemented loading of PNG textures
 
@@ -184,7 +187,7 @@ NOTES:
 */
 
 -- constant used to detect ActorX Importer updates during single 3ds Max session
-global AX_IMPORTER_VERSION = 137
+global AX_IMPORTER_VERSION = 138
 
 g_axProfile = false
 
@@ -647,6 +650,20 @@ fn ReadVMaterial bstream =
 	m
 )
 
+struct VColor
+(
+	R, G, B, A
+)
+
+fn ReadVColor bstream =
+(
+	local c = VColor ()
+	c.R = ReadByte bstream #unsigned
+	c.G = ReadByte bstream #unsigned
+	c.B = ReadByte bstream #unsigned
+	c.A = ReadByte bstream #unsigned
+	c
+)
 
 struct VBone
 (
@@ -677,7 +694,6 @@ fn ReadVBone bstream =
 	b
 )
 
-
 struct VRawBoneInfluence
 (
 	Weight,
@@ -702,7 +718,6 @@ fn InfluenceSort v1 v2 =
 	if (cmp == 0) then cmp = v1.BoneIndex - v2.BoneIndex
 	cmp
 )
-
 
 struct AnimInfoBinary
 (
@@ -737,7 +752,6 @@ fn ReadAnimInfoBinary bstream =
 	v.NumRawFrames        = ReadLong  bstream
 	v
 )
-
 
 struct VQuatAnimKey
 (
@@ -952,6 +966,7 @@ fn ImportPskFile filename skelOnly:false =
 	local Materials = #()
 	local MeshBones = #()
 	local Infs      = #()
+	local Colors    = #()
 
 	--------- Read the file ---------
 
@@ -961,6 +976,7 @@ fn ImportPskFile filename skelOnly:false =
 	local numMaterials  = 0
 	local numBones      = 0
 	local numInfluences = 0
+	local numVertColors = 0
 	local numTexCoords  = 1
 
 	local extraUV = #()
@@ -1058,7 +1074,15 @@ fn ImportPskFile filename skelOnly:false =
 					for i = 1 to numInfluences do Infs[i] = ReadVRawBoneInfluence file
 				)
 
-			-- additional UV set
+			-- Vertex colors --
+			"VERTEXCOLOR":
+				(
+					numVertColors = hdr.DataCount
+					if numVertColors > 0 then Colors[numVertColors] = VColor () -- preallocate
+					for i = 1 to numVertColors do Colors[i] = ReadVColor file
+				)
+
+			-- Additional UV set --
 			"EXTRAUV0":
 				(
 					numUVVerts = hdr.DataCount
@@ -1234,6 +1258,18 @@ fn ImportPskFile filename skelOnly:false =
 			-- set texture coordinates
 			uv = uvSet[i]
 			meshop.setMapVert newMesh j i [ uv.x, 1-uv.y, 1-uv.y ]	-- V coordinate is flipped
+		)
+	)
+	-- vertex colors
+	if numVertColors > 0 then
+	(
+		format "Loading vertex colors ...\n"
+		setNumCPVVerts newMesh numVertColors true
+		defaultVCFaces newMesh
+		for i = 1 to numVertColors do
+		(
+			c = Colors[i]
+			setVertColor newMesh i [ c.R, c.G, c.B, c.A ]
 		)
 	)
 
@@ -2027,7 +2063,7 @@ fn axLoadAnimation index =
 rollout axInfoRollout "ActorX Importer"
 (
 	-- copyright label
-	label     Lbl1 "Version 1.37"
+	label     Lbl1 "Version 1.38"
 	label     Lbl2 "\xA9 2009-2019 Konstantin Nosov (Gildor)"
 	hyperlink Lbl3 "http://www.gildor.org/" \
 					address:"http://www.gildor.org/projects/unactorx" align:#center \
