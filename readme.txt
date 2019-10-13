@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+13.10.2019
+- added full vertex color support (loading, viewing, exporting)
+
 09.10.2019
 - supported Borderlands 3 static meshes
 

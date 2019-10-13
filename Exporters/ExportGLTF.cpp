@@ -226,6 +226,12 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 	int NormalBufIndex = Context.Data.AddZeroed();
 	int TangentBufIndex = Context.Data.AddZeroed();
 
+	int ColorBufIndex = -1;
+	if (Lod.VertexColors)
+	{
+		ColorBufIndex = Context.Data.AddZeroed();
+	}
+
 	int BonesBufIndex = -1;
 	int WeightsBufIndex = -1;
 	if (Context.IsSkeletal())
@@ -245,6 +251,7 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 	BufferData& NormalBuf = Context.Data[NormalBufIndex];
 	BufferData& TangentBuf = Context.Data[TangentBufIndex];
 	BufferData* UVBuf[MAX_MESH_UV_SETS];
+	BufferData* ColorBuf = NULL;
 	BufferData* BonesBuf = NULL;
 	BufferData* WeightsBuf = NULL;
 
@@ -255,6 +262,12 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 	{
 		UVBuf[i] = &Context.Data[UVBufIndex[i]];
 		UVBuf[i]->Setup(numLocalVerts, "VEC2", BufferData::FLOAT, sizeof(CMeshUVFloat));
+	}
+
+	if (Lod.VertexColors)
+	{
+		ColorBuf = &Context.Data[ColorBufIndex];
+		ColorBuf->Setup(numLocalVerts, "VEC4", BufferData::UNSIGNED_BYTE, 4, /*InNormalized=*/ true);
 	}
 
 	if (Context.IsSkeletal())
@@ -350,6 +363,15 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 	appSprintf(ARRAY_ARG(buf), "[ %g, %g, %g ]", VECTOR_ARG(Maxs));
 	PositionBuf.BoundsMax = buf;
 
+	if (Lod.VertexColors)
+	{
+		for (int i = 0; i < numLocalVerts; i++)
+		{
+			int vertIndex = revIndexMap[i];
+			ColorBuf->Put(Lod.VertexColors[vertIndex]);
+		}
+	}
+
 	if (Context.IsSkeletal())
 	{
 		for (int i = 0; i < numLocalVerts; i++)
@@ -397,6 +419,13 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 		"            \"TANGENT\" : %d,\n",
 		PositionBufIndex, NormalBufIndex, TangentBufIndex
 	);
+	if (Lod.VertexColors)
+	{
+		Ar.Printf(
+			"            \"COLOR_0\" : %d,\n",
+			ColorBufIndex
+		);
+	}
 	if (Context.IsSkeletal())
 	{
 		Ar.Printf(
