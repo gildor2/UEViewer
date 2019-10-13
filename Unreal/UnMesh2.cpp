@@ -1592,10 +1592,10 @@ void UStaticMesh::Serialize(FArchive &Ar)
 		}
 		GUC2VectorScale = VectorScale;
 		GUC2VectorBase  = VectorBase;
-		Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1;
+		Ar << VertexStream << ColorStream << AlphaStream << UVStream << IndexStream1;
 		if (Ar.ArLicenseeVer != 1) Ar << IndexStream2;
 		//!!!!!
-//		appPrintf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream1.Color.Num(), ColorStream2.Color.Num(),
+//		appPrintf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream.Color.Num(), AlphaStream.Color.Num(),
 //			UVStream.Num() ? UVStream[0].Data.Num() : -1, IndexStream1.Indices.Num());
 		Ar << f108;
 
@@ -1612,11 +1612,11 @@ void UStaticMesh::Serialize(FArchive &Ar)
 		Ar << VertexStream;
 		if (Ar.ArVer >= 155) Ar << f164;
 		if (Ar.ArVer >= 149) Ar << f160;
-		Ar << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
+		Ar << ColorStream << AlphaStream << UVStream << IndexStream1 << IndexStream2 << f108;
 		goto skip_remaining;
 	}
 #endif // SWRC
-	Ar << VertexStream << ColorStream1 << ColorStream2 << UVStream << IndexStream1 << IndexStream2 << f108;
+	Ar << VertexStream << ColorStream << AlphaStream << UVStream << IndexStream1 << IndexStream2 << f108;
 
 #if 1
 	// UT2 and UE2Runtime has very different collision structures
@@ -1720,8 +1720,8 @@ void UStaticMesh::LoadExternalUC2Data()
 	}
 
 	// other streams:
-	//	ColorStream1 = CS
-	//	ColorStream2 = AS
+	//	ColorStream = CS
+	//	AlphaStream = AS
 
 	for (i = 0; i < UVStream.Num(); i++)
 	{
@@ -1817,7 +1817,7 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << Faces << UVStream << BasisStream;
 	Ar << unk144 << unk150 << unk200;
 
-	Ar << VertexStream << ColorStream1 << ColorStream2 << IndexStream1 << IndexStream2;
+	Ar << VertexStream << ColorStream << AlphaStream << IndexStream1 << IndexStream2;
 
 	// skip the remaining data
 	Ar.Seek(Ar.GetStopper());
@@ -1866,13 +1866,20 @@ void UStaticMesh::ConvertMesh()
 	Lod->NumTexCoords = NumTexCoords;
 
 	Lod->AllocateVerts(NumVerts);
+	if (ColorStream.Color.Num() && UseVertexColor)
+		Lod->AllocateVertexColorBuffer();
+
 	bool PrintedWarning = false;
 	for (i = 0; i < NumVerts; i++)
 	{
 		CStaticMeshVertex &V = Lod->Verts[i];
 		const FStaticMeshVertex &SV = VertexStream.Vert[i];
+
 		V.Position = CVT(SV.Pos);
 		Pack(V.Normal, CVT(SV.Normal));
+		if (Lod->VertexColors)
+			Lod->VertexColors[i] = ColorStream.Color[i];
+
 		for (int j = 0; j < NumTexCoords; j++)
 		{
 			if (i < UVStream[j].Data.Num())		// Lineage2 has meshes with UVStream[i>1].Data size less than NumVerts

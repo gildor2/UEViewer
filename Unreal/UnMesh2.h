@@ -1697,8 +1697,8 @@ public:
 	TArray<FStaticMeshMaterial> Materials;
 	TArray<FStaticMeshSection>  Sections;
 	FStaticMeshVertexStream	VertexStream;
-	FRawColorStream			ColorStream1;	// for Verts
-	FRawColorStream			ColorStream2;
+	FRawColorStream			ColorStream;	// for Verts
+	FRawColorStream			AlphaStream;
 	TArray<FStaticMeshUVStream> UVStream;
 	FRawIndexBuffer			IndexStream1;
 	FRawIndexBuffer			IndexStream2;
