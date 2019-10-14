@@ -87,10 +87,12 @@ const char *CSkelMeshInstance::GetAnimName(int Index) const
 -----------------------------------------------------------------------------*/
 
 CSkelMeshInstance::CSkelMeshInstance()
-:	LodNum(0)
+:	LodIndex(0)
+,	MorphIndex(-1)
 ,	UVIndex(0)
 ,	RotationMode(EARO_AnimSet)
-,	LastLodNum(-2)				// differs from LodNum and from all other values
+,	LastLodIndex(-2)				// differs from LodNum and from all other values
+,	LastMorphIndex(-1)
 ,	MaxAnimChannel(-1)
 ,	Animation(NULL)
 ,	DataBlock(NULL)
@@ -202,12 +204,15 @@ void CSkelMeshInstance::SetMesh(CSkeletalMesh *Mesh)
 		InfColors = NULL;
 	}
 	// allocate data arrays in a single block
-	int DataSize = sizeof(CMeshBoneData) * NumBones + sizeof(CSkinVert) * NumVerts;
+	int NumMorphVerts = Mesh->Morphs.Num() ? NumVerts : 0;
+	int DataSize = sizeof(CMeshBoneData) * NumBones + sizeof(CSkinVert) * NumVerts + sizeof(CSkelMeshVertex) * NumMorphVerts;
 	DataBlock = appMalloc(DataSize, 16);
 	BoneData  = (CMeshBoneData*)DataBlock;
 	Skinned   = (CSkinVert*)(BoneData + NumBones);
+	MorphedVerts = Mesh->Morphs.Num() ? (CSkelMeshVertex*)(Skinned + NumVerts) : NULL;
 
-	LastLodNum = -2;
+	LastLodIndex = -2;
+	LastMorphIndex = -1;
 
 	CMeshBoneData *data;
 	for (i = 0, data = BoneData; i < NumBones; i++, data++)
@@ -1003,14 +1008,16 @@ void CSkelMeshInstance::SkinMeshVerts()
 {
 	guard(CSkelMeshInstance::SkinMeshVerts);
 
-	const CSkelMeshLod& Mesh = pMesh->Lods[LodNum];
+	const CSkelMeshLod& Mesh = pMesh->Lods[LodIndex];
 	int NumVerts = Mesh.NumVerts;
 
 	memset(Skinned, 0, sizeof(CSkinVert) * NumVerts);
 
+	const CSkelMeshVertex* MeshVerts = BuildMorphVerts() ? MorphedVerts : Mesh.Verts;
+
 	for (int i = 0; i < NumVerts; i++)
 	{
-		const CSkelMeshVertex &V = Mesh.Verts[i];
+		const CSkelMeshVertex &V = MeshVerts[i];
 		CSkinVert             &D = Skinned[i];
 
 		CVec4 UnpackedWeights;
@@ -1102,7 +1109,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 
 	if (!pMesh->Lods.Num()) return;
 
-	/*const*/ CSkelMeshLod& Mesh = pMesh->Lods[LodNum];	//?? not 'const' because of BuildTangents(); change this?
+	/*const*/ CSkelMeshLod& Mesh = pMesh->Lods[LodIndex];	//?? not 'const' because of BuildTangents(); change this?
 	int NumSections = Mesh.Sections.Num();
 	int NumVerts    = Mesh.NumVerts;
 	if (!NumSections || !NumVerts) return;
@@ -1356,7 +1363,7 @@ void CSkelMeshInstance::Draw(unsigned flags)
 	guard(CSkelMeshInstance::Draw);
 
 	// switch LOD model
-	if (LodNum != LastLodNum)
+	if (LodIndex != LastLodIndex)
 	{
 		// LOD has been changed
 
@@ -1365,7 +1372,7 @@ void CSkelMeshInstance::Draw(unsigned flags)
 			delete[] InfColors;
 			InfColors = NULL;
 		}
-		LastLodNum = LodNum;
+		LastLodIndex = LodIndex;
 	}
 	// draw ...
 	DrawMesh(flags);
@@ -1380,7 +1387,7 @@ void CSkelMeshInstance::BuildInfColors()
 
 	int i;
 
-	const CSkelMeshLod &Lod = pMesh->Lods[LodNum];
+	const CSkelMeshLod &Lod = pMesh->Lods[LodIndex];
 
 	if (InfColors) delete[] InfColors;
 	InfColors = new CVec3[Lod.NumVerts];
@@ -1403,6 +1410,48 @@ void CSkelMeshInstance::BuildInfColors()
 			VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j]]);
 		}
 	}
+
+	unguard;
+}
+
+
+bool CSkelMeshInstance::BuildMorphVerts()
+{
+	guard(CSkelMeshInstance::BuildMorphVerts);
+
+	if (MorphIndex < 0)
+	{
+		// Morph is inactive
+		return false;
+	}
+
+	if (LodIndex >= pMesh->Morphs[MorphIndex]->Lods.Num())
+	{
+		// No morph information for this LOD
+		return false;
+	}
+
+	if (LastMorphIndex == MorphIndex)
+	{
+		// Already built
+		return true;
+	}
+	LastMorphIndex = MorphIndex;
+
+	const CSkelMeshLod& Lod = pMesh->Lods[LodIndex];
+	const TArray<CMorphVertex>& Deltas = pMesh->Morphs[MorphIndex]->Lods[LodIndex].Vertices;
+
+	// Copy unmodified vertices
+	memcpy(MorphedVerts, Lod.Verts, Lod.NumVerts * sizeof(CSkelMeshVertex));
+
+	// Apply delta
+	for (const CMorphVertex& Delta : Deltas)
+	{
+		CSkelMeshVertex& V = MorphedVerts[Delta.VertexIndex];
+		VectorAdd(V.Position, Delta.PositionDelta, V.Position);
+	}
+
+	return true;
 
 	unguard;
 }

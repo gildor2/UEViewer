@@ -75,7 +75,7 @@ public:
 		Serialize3(Ar);
 	}
 
-	CMorphLod* ConvertMorph();
+	CMorphTarget* ConvertMorph();
 
 #if UNREAL4
 	BEGIN_PROP_TABLE

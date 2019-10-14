@@ -153,7 +153,6 @@ class CSkelMeshViewer : public CMeshViewer
 {
 public:
 	int				AnimIndex;
-	int				MorphIndex;
 	bool			IsFollowingMesh;
 	int				ShowSkel;					// 0 - mesh, 1 - mesh+skel, 2 - skel only
 	bool			ShowLabels;

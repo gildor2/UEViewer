@@ -113,8 +113,13 @@ struct CMorphVertex
 
 struct CMorphLod
 {
-	FString					Name;
 	TArray<CMorphVertex>	Vertices;
+};
+
+struct CMorphTarget
+{
+	FString					Name;
+	TArray<CMorphLod>		Lods;
 };
 
 struct CSkelMeshSocket
@@ -143,7 +148,7 @@ public:
 	FRotator				RotOrigin;
 	TArray<CSkelMeshBone>	RefSkeleton;
 	TArray<CSkelMeshLod>	Lods;
-	TArray<CMorphLod*>		Morphs;
+	TArray<CMorphTarget*>	Morphs;
 	TArray<CSkelMeshSocket>	Sockets;				//?? common (UE4 has StaticMesh sockets)
 	const class CAnimSet*	Anim;
 
@@ -154,7 +159,7 @@ public:
 
 	~CSkeletalMesh()
 	{
-		for (CMorphLod* morph : Morphs)
+		for (CMorphTarget* morph : Morphs)
 		{
 			delete morph;
 		}

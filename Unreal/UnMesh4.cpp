@@ -1546,6 +1546,21 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 	unguard;
 }
 
+void USkeletalMesh4::PostLoad()
+{
+	guard(USkeletalMesh4::PostLoad);
+
+	assert(ConvertedMesh);
+	for (int i = 0; i < MorphTargets.Num(); i++)
+	{
+		guard(ConvertMorph)
+		if (MorphTargets[i])
+			ConvertedMesh->Morphs.Add(MorphTargets[i]->ConvertMorph());
+		unguardf("%d/%d", i, MorphTargets.Num());
+	}
+
+	unguard;
+}
 
 void USkeletalMesh4::ConvertMesh()
 {
@@ -1752,14 +1767,6 @@ void USkeletalMesh4::ConvertMesh()
 			Dst->Orientation.Conjugate();
 	}
 	unguard; // ProcessSkeleton
-
-	for (int i = 0; i < MorphTargets.Num(); i++)
-	{
-		guard(ConvertMorph)
-		if (MorphTargets[i])
-			Mesh->Morphs.Add(MorphTargets[i]->ConvertMorph());
-		unguardf("%d/%d", i, MorphTargets.Num());
-	}
 
 	Mesh->FinalizeMesh();
 

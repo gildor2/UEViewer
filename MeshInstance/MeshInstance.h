@@ -137,7 +137,8 @@ public:
 	CSkeletalMesh	*pMesh;
 
 	// mesh state
-	int			LodNum;
+	int			LodIndex;
+	int			MorphIndex;
 	int			UVIndex;
 	int			RotationMode;				// EAnimRotationOnly
 
@@ -148,7 +149,6 @@ public:
 	void SetAnim(const CAnimSet *Anim);
 
 	void ClearSkelAnims();
-//??	void StopAnimating(bool ClearAllButBase);
 	virtual void Draw(unsigned flags = 0);
 
 	void DumpBones();
@@ -158,7 +158,6 @@ public:
 
 	// skeleton configuration
 	void SetBoneScale(const char *BoneName, float scale = 1.0f);
-	//!! SetBone[Direction|Location|Rotation]()
 
 	// animation control
 	void PlayAnim(const char *AnimName, float Rate = 1, float TweenTime = 0, int Channel = 0)
@@ -217,10 +216,6 @@ public:
 	{
 		GetStage(Channel).SecondaryBlend = BlendAlpha;
 	}
-	//?? -	AnimBlendToAlpha() - animate BlendAlpha coefficient
-	//?? -	functions to smoothly replace current animation with another in a fixed time
-	//??	(run new anim as secondary, ramp alpha from 0 to 1, and when blend becomes 1.0f
-	//??	- replace 1st anim with 2nd, and clear 2nd
 
 	// animation enumeration
 	int GetAnimCount() const;
@@ -235,13 +230,18 @@ public:
 	CVec3 GetMeshOrigin() const;
 
 protected:
-	const CAnimSet		 *Animation;
+	const CAnimSet*		Animation;
 	// mesh data
-	void				 *DataBlock;// all following data is resided here, aligned to 16 bytes
-	struct CMeshBoneData *BoneData;
-	struct CSkinVert     *Skinned;	// soft-skinned vertices
-	CVec3		*InfColors;			// debug: color-by-influence for vertices
-	int			LastLodNum;			// used to detect requirement to rebuild Wedges[]
+	void*				DataBlock;
+
+	// all of the following data is resides inside "DataBlock", aligned to 16 bytes
+	struct CMeshBoneData* BoneData;
+	struct CSkinVert*	Skinned;			// soft-skinned vertices
+	struct CSkelMeshVertex* MorphedVerts;
+
+	CVec3*				InfColors;			// debug: color-by-influence for vertices
+	int					LastLodIndex;		// used to detect requirement to rebuild InfColors[]
+	int					LastMorphIndex;		// used to detect requirement to rebuild MorphedVerts[]
 	// animation state
 	CAnimChan	Channels[MAX_SKELANIMCHANNELS];
 	int			MaxAnimChannel;
@@ -262,6 +262,7 @@ protected:
 	void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 	void UpdateSkeleton();
 	void BuildInfColors();
+	bool BuildMorphVerts();
 };
 
 

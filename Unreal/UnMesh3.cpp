@@ -96,20 +96,22 @@ void FMorphTargetLODModel::Serialize3(FArchive& Ar, FMorphTargetLODModel& Lod)
 	unguard;
 }
 
-CMorphLod* UMorphTarget::ConvertMorph()
+CMorphTarget* UMorphTarget::ConvertMorph()
 {
-	CMorphLod* morph = new CMorphLod;
+	CMorphTarget* morph = new CMorphTarget;
 	morph->Name = Name;
 
 	for (int lodIndex = 0; lodIndex < MorphLODModels.Num(); lodIndex++)
 	{
 		const FMorphTargetLODModel& SrcLod = MorphLODModels[lodIndex];
+		CMorphLod* Lod = new (morph->Lods) CMorphLod;
+
 		int NumVerts = SrcLod.Vertices.Num();
-		morph->Vertices.AddDefaulted(NumVerts);
+		Lod->Vertices.AddDefaulted(NumVerts);
 		for (int i = 0; i < NumVerts; i++)
 		{
 			const FMorphTargetDelta& SV = SrcLod.Vertices[i];
-			CMorphVertex& V = morph->Vertices[i];
+			CMorphVertex& V = Lod->Vertices[i];
 			V.PositionDelta = CVT(SV.PositionDelta);
 			V.NormalDelta = CVT(SV.TangentZDelta);
 			V.VertexIndex = SV.SourceIdx;

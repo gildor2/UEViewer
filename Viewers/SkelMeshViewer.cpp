@@ -60,7 +60,6 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 ,	Mesh(Mesh0)
 ,	Anim(NULL)
 ,	AnimIndex(-1)
-,	MorphIndex(-1)
 ,	IsFollowingMesh(false)
 ,	ShowSkel(0)
 ,	ShowLabels(false)
@@ -325,7 +324,7 @@ void CSkelMeshViewer::Draw2D()
 	}
 
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
-	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodNum];
+	const CSkelMeshLod &Lod = Mesh->Lods[MeshInst->LodIndex];
 
 	if (ShowUV)
 	{
@@ -354,7 +353,7 @@ void CSkelMeshViewer::Draw2D()
 				 S_GREEN "UV Set  : " S_WHITE "%d/%d\n"
 				 S_GREEN "Colors  : " S_WHITE "%s\n"
 				 S_GREEN "Bones   : " S_WHITE "%d\n",
-				 MeshInst->LodNum+1, Mesh->Lods.Num(),
+				 MeshInst->LodIndex+1, Mesh->Lods.Num(),
 				 Lod.NumVerts, Lod.Indices.Num() / 3,
 				 MeshInst->UVIndex+1, Lod.NumTexCoords,
 				 Lod.VertexColors ? "present" : "none",
@@ -419,8 +418,9 @@ void CSkelMeshViewer::Draw2D()
 
 	if (Mesh->Morphs.Num())
 	{
+		int MorphIndex = MeshInst->MorphIndex;
 		int MorphCount = Mesh->Morphs.Num();
-		if (MorphIndex >= 0)
+		if (MeshInst->MorphIndex >= 0)
 		{
 			DrawTextBottomLeft(S_GREEN "Morph: " S_WHITE " %d/%d (%s)", MorphIndex+1, MorphCount, *Mesh->Morphs[MorphIndex]->Name);
 		}
@@ -555,6 +555,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("Space",  "play animation");
 	DrawKeyHelp("X",      "play looped animation");
 	DrawKeyHelp("L",      "cycle mesh LODs");
+	DrawKeyHelp("Ctrl+[]", "prev/next morph");
 	DrawKeyHelp("U",      "cycle UV sets");
 	DrawKeyHelp("S",      "show skeleton");
 	DrawKeyHelp("B",      "show bone names");
@@ -645,6 +646,7 @@ void CSkelMeshViewer::ProcessKey(int key)
 	case ']'|KEY_CTRL:
 		if (Mesh->Morphs.Num())
 		{
+			int& MorphIndex = MeshInst->MorphIndex; // pointer
 			int NumMorphs = Mesh->Morphs.Num();
 			if (key == ('['|KEY_CTRL))
 			{
@@ -693,11 +695,11 @@ void CSkelMeshViewer::ProcessKey(int key)
 
 	// mesh debug output
 	case 'l':
-		if (++MeshInst->LodNum >= Mesh->Lods.Num())
-			MeshInst->LodNum = 0;
+		if (++MeshInst->LodIndex >= Mesh->Lods.Num())
+			MeshInst->LodIndex = 0;
 		break;
 	case 'u':
-		if (++MeshInst->UVIndex >= Mesh->Lods[MeshInst->LodNum].NumTexCoords)
+		if (++MeshInst->UVIndex >= Mesh->Lods[MeshInst->LodIndex].NumTexCoords)
 			MeshInst->UVIndex = 0;
 		break;
 	case 's':

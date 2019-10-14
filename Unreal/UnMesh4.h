@@ -222,6 +222,7 @@ public:
 	virtual ~USkeletalMesh4();
 
 	virtual void Serialize(FArchive &Ar);
+	virtual void PostLoad();
 
 protected:
 	void ConvertMesh();
