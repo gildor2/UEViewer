@@ -52,6 +52,50 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 }
 
 
+/*-----------------------------------------------------------------------------
+	UMorphTarget
+-----------------------------------------------------------------------------*/
+
+/*static*/ void FMorphTargetDelta::Serialize3(FArchive& Ar, FMorphTargetDelta& V)
+{
+	Ar << V.PositionDelta;
+
+	FPackedNormal TangentZDelta;
+	Ar << TangentZDelta;
+	V.TangentZDelta = TangentZDelta; // unpack
+
+	if (Ar.ArVer < 806)
+	{
+		uint16 Idx;
+		Ar << Idx;
+		V.SourceIdx = Idx;
+	}
+	else
+	{
+		Ar << V.SourceIdx;
+	}
+}
+
+void FMorphTargetLODModel::Serialize3(FArchive& Ar, FMorphTargetLODModel& Lod)
+{
+	guard(FMorphTargetLODModel::Serialize3);
+
+	Lod.Vertices.Serialize2<FMorphTargetDelta::Serialize3>(Ar);
+	Ar << Lod.NumBaseMeshVerts;
+
+	unguard;
+}
+
+/*static*/ void UMorphTarget::Serialize3(FArchive& Ar)
+{
+	guard(UMorphTarget::Serialize3);
+
+	Super::Serialize(Ar);
+	MorphLODModels.Serialize2<FMorphTargetLODModel::Serialize3>(Ar);
+
+	unguard;
+}
+
 
 /*-----------------------------------------------------------------------------
 	USkeletalMesh

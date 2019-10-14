@@ -2668,4 +2668,64 @@ void UStaticMesh4::ConvertSourceModels()
 }
 
 
+/*-----------------------------------------------------------------------------
+	UMorphTarget
+-----------------------------------------------------------------------------*/
+
+/*static*/ void FMorphTargetDelta::Serialize4(FArchive& Ar, FMorphTargetDelta& V)
+{
+	Ar << V.PositionDelta;
+
+	if (Ar.ArVer < VER_UE4_MORPHTARGET_CPU_TANGENTZDELTA_FORMATCHANGE)
+	{
+		// Pre-UE4.1
+		FPackedNormal TangentZDelta;
+		Ar << TangentZDelta;
+		V.TangentZDelta = TangentZDelta; // unpack
+	}
+	else
+	{
+		Ar << V.TangentZDelta;
+	}
+
+	Ar << V.SourceIdx;
+}
+
+/*static*/ void FMorphTargetLODModel::Serialize4(FArchive& Ar, FMorphTargetLODModel& Lod)
+{
+	guard(FMorphTargetLODModel::Serialize4);
+
+	Lod.Vertices.Serialize2<FMorphTargetDelta::Serialize4>(Ar);
+	Ar << Lod.NumBaseMeshVerts;
+
+	if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::AddedMorphTargetSectionIndices)
+	{
+		Ar << Lod.SectionIndices;
+	}
+
+	if (Ar.Game >= GAME_UE4(20))
+	{
+		// Actually using FFortniteMainBranchObjectVersion::SaveGeneratedMorphTargetByEngine
+		bool bGeneratedByEngine;
+		Ar << bGeneratedByEngine;
+	}
+
+	unguard;
+}
+
+void UMorphTarget::Serialize4(FArchive& Ar)
+{
+	guard(UMorphTarget::Serialize4);
+
+	Super::Serialize(Ar);
+
+	FStripDataFlags StripFlags(Ar);
+	if (!StripFlags.IsDataStrippedForServer())
+	{
+		MorphLODModels.Serialize2<FMorphTargetLODModel::Serialize4>(Ar);
+	}
+
+	unguard;
+}
+
 #endif // UNREAL4

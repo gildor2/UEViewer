@@ -195,6 +195,7 @@ public:
 	USkeleton				*Skeleton;
 	TArray<FStaticLODModel4> LODModels;
 	TArray<FSkeletalMeshLODInfo> LODInfo;
+	TArray<UMorphTarget*>	MorphTargets;
 #if BORDERLANDS3
 	byte					NumVertexColorChannels;
 #endif
@@ -208,6 +209,7 @@ public:
 		PROP_OBJ(Skeleton)
 		PROP_BOOL(bHasVertexColors)
 		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
+		PROP_ARRAY(MorphTargets, UObject*)
 #if BORDERLANDS3
 		PROP_BYTE(NumVertexColorChannels)
 #endif
@@ -641,6 +643,7 @@ public:
 	REGISTER_CLASS(USkeleton) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
+	REGISTER_CLASS(UMorphTarget) \
 	REGISTER_CLASS(UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(FMeshBuildSettings) \

@@ -2509,6 +2509,7 @@ enum
 	// it doesn't matter for this framework which version will be serialized serialized -
 	// 4.0 or 4.1, because 4.1 has nothing new for supported object formats compared to 4.0.
 	VER_UE4_0 = 342,
+		VER_UE4_MORPHTARGET_CPU_TANGENTZDELTA_FORMATCHANGE = 348,
 	VER_UE4_1 = 352,
 	VER_UE4_2 = 363,
 		VER_UE4_LOAD_FOR_EDITOR_GAME = 365,
@@ -2641,6 +2642,7 @@ struct FEditorObjectVersion
 		// UE4.16 = 17
 		// UE4.17, UE4.18 = 20
 		// UE4.19 = 23
+		AddedMorphTargetSectionIndices = 23,
 		// UE4.20 = 24
 		// UE4.21 = 26
 		// UE4.22 = 30
@@ -2677,7 +2679,7 @@ struct FEditorObjectVersion
 		if (Ar.Game < GAME_UE4(19))
 			return (Type)20;
 		if (Ar.Game < GAME_UE4(20))
-			return (Type)23;
+			return AddedMorphTargetSectionIndices;
 		if (Ar.Game < GAME_UE4(21))
 			return (Type)24;
 		if (Ar.Game < GAME_UE4(22))

@@ -19,6 +19,82 @@ UE3 CLASS TREE:
 
 // forwards
 class UMaterialInterface;
+class USkeletalMesh3;
+
+
+/*-----------------------------------------------------------------------------
+	UMorphTarget
+-----------------------------------------------------------------------------*/
+
+struct FMorphTargetDelta
+{
+	FVector PositionDelta;
+	FVector TangentZDelta;	// FPackedNormal for UE3, FVector for UE4
+	uint32 SourceIdx;
+
+	static void Serialize3(FArchive& Ar, FMorphTargetDelta& V);
+#if UNREAL4
+	static void Serialize4(FArchive& Ar, FMorphTargetDelta& V);
+#endif
+};
+
+struct FMorphTargetLODModel
+{
+	TArray<FMorphTargetDelta> Vertices;
+	int32 NumBaseMeshVerts;
+#if UNREAL4
+	TArray<int32> SectionIndices;
+#endif
+
+	static void Serialize3(FArchive& Ar, FMorphTargetLODModel& Lod);
+#if UNREAL4
+	static void Serialize4(FArchive& Ar, FMorphTargetLODModel& Lod);
+#endif
+};
+
+class UMorphTarget : public UObject
+{
+	DECLARE_CLASS(UMorphTarget, UObject);
+public:
+	TArray<FMorphTargetLODModel> MorphLODModels;
+
+	void Serialize3(FArchive& Ar);
+#if UNREAL4
+	void Serialize4(FArchive& Ar);
+#endif
+
+	virtual void Serialize(FArchive& Ar)
+	{
+#if UNREAL4
+		if (Ar.Game >= GAME_UE4_BASE)
+		{
+			Serialize4(Ar);
+			return;
+		}
+#endif
+		Serialize3(Ar);
+	}
+
+#if UNREAL4
+	BEGIN_PROP_TABLE
+		PROP_DROP(BaseSkelMesh)
+	END_PROP_TABLE
+#endif
+};
+
+// UE3 has UMorphTargetSet to map between USkeletalMesh and UMorphTarget
+class UMorphTargetSet : public UObject
+{
+	DECLARE_CLASS(UMorphTargetSet, UObject)
+public:
+	TArray<UMorphTarget*> Targets;
+	USkeletalMesh3* BaseSkelMesh;
+
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(Targets, UObject*)
+		PROP_OBJ(BaseSkelMesh)
+	END_PROP_TABLE
+};
 
 
 /*-----------------------------------------------------------------------------
@@ -738,6 +814,8 @@ protected:
 	REGISTER_CLASS(USkeletalMeshSocket) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh3, UGolemSkeletalMesh) \
+	REGISTER_CLASS(UMorphTarget) \
+	REGISTER_CLASS(UMorphTargetSet) \
 	REGISTER_CLASS(FRawAnimSequenceTrack) \
 	REGISTER_CLASS(UAnimSequence)	\
 	REGISTER_CLASS(UAnimSet)		\
