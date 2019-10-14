@@ -60,6 +60,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 ,	Mesh(Mesh0)
 ,	Anim(NULL)
 ,	AnimIndex(-1)
+,	MorphIndex(-1)
 ,	IsFollowingMesh(false)
 ,	ShowSkel(0)
 ,	ShowLabels(false)
@@ -335,11 +336,16 @@ void CSkelMeshViewer::Draw2D()
 	if (bIsUE4Mesh)
 	{
 		if (Skeleton)
-			DrawTextLeft(S_GREEN"Skeleton: " S_WHITE "%s", Skeleton->Name);
+			DrawTextLeft(S_GREEN "Skeleton: " S_WHITE "%s", Skeleton->Name);
 		else
 			DrawTextBottomLeft(S_RED"WARNING: no skeleton, animation will not work!");
 	}
 #endif // UNREAL4
+
+	if (Mesh->Morphs.Num())
+	{
+		DrawTextLeft(S_GREEN "Moprhs  : " S_WHITE "%d", Mesh->Morphs.Num());
+	}
 
 	// mesh
 	DrawTextLeft(S_GREEN "LOD     : " S_WHITE "%d/%d\n"
@@ -408,6 +414,19 @@ void CSkelMeshViewer::Draw2D()
 		else
 		{
 			DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " 0/%d (none)", MeshInst->GetAnimCount());
+		}
+	}
+
+	if (Mesh->Morphs.Num())
+	{
+		int MorphCount = Mesh->Morphs.Num();
+		if (MorphIndex >= 0)
+		{
+			DrawTextBottomLeft(S_GREEN "Morph: " S_WHITE " %d/%d (%s)", MorphIndex+1, MorphCount, *Mesh->Morphs[MorphIndex]->Name);
+		}
+		else
+		{
+			DrawTextBottomLeft(S_GREEN "Morph: " S_WHITE " 0/%d (none)", MorphCount);
 		}
 	}
 }
@@ -619,6 +638,24 @@ void CSkelMeshViewer::ProcessKey(int key)
 			MeshInst->TweenAnim(AnimName, 0.25);	// change animation with tweening
 			for (i = 0; i < TaggedMeshes.Num(); i++)
 				TaggedMeshes[i]->TweenAnim(AnimName, 0.25);
+		}
+		break;
+
+	case '['|KEY_CTRL:
+	case ']'|KEY_CTRL:
+		if (Mesh->Morphs.Num())
+		{
+			int NumMorphs = Mesh->Morphs.Num();
+			if (key == ('['|KEY_CTRL))
+			{
+				if (--MorphIndex < -1)
+					MorphIndex = NumMorphs - 1;
+			}
+			else
+			{
+				if (++MorphIndex >= NumMorphs)
+					MorphIndex = -1;
+			}
 		}
 		break;
 

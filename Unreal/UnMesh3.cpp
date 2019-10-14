@@ -96,6 +96,52 @@ void FMorphTargetLODModel::Serialize3(FArchive& Ar, FMorphTargetLODModel& Lod)
 	unguard;
 }
 
+CMorphLod* UMorphTarget::ConvertMorph()
+{
+	CMorphLod* morph = new CMorphLod;
+	morph->Name = Name;
+
+	for (int lodIndex = 0; lodIndex < MorphLODModels.Num(); lodIndex++)
+	{
+		const FMorphTargetLODModel& SrcLod = MorphLODModels[lodIndex];
+		int NumVerts = SrcLod.Vertices.Num();
+		morph->Vertices.AddDefaulted(NumVerts);
+		for (int i = 0; i < NumVerts; i++)
+		{
+			const FMorphTargetDelta& SV = SrcLod.Vertices[i];
+			CMorphVertex& V = morph->Vertices[i];
+			V.PositionDelta = CVT(SV.PositionDelta);
+			V.NormalDelta = CVT(SV.TangentZDelta);
+			V.VertexIndex = SV.SourceIdx;
+		}
+	}
+
+	return morph;
+}
+
+ void UMorphTargetSet::PostLoad()
+ {
+	guard(UMorphTargetSet::PostLoad);
+
+	if (BaseSkelMesh)
+	{
+		if (!BaseSkelMesh->ConvertedMesh)
+		{
+			BaseSkelMesh->PostLoad();
+			assert(BaseSkelMesh->ConvertedMesh);
+		}
+
+		for (UMorphTarget* MorphTarget : Targets)
+		{
+			if (MorphTarget)
+			{
+				BaseSkelMesh->ConvertedMesh->Morphs.Add(MorphTarget->ConvertMorph());
+			}
+		}
+	}
+
+	unguard;
+ }
 
 /*-----------------------------------------------------------------------------
 	USkeletalMesh
@@ -1954,6 +2000,11 @@ after_skeleton:
 void USkeletalMesh3::ConvertMesh()
 {
 	guard(USkeletalMesh3::ConvertMesh);
+
+	// We're calling ConvertMesh explicitly from UMorphTargetSet::PostLoad to ensure
+	// mesh is ready before we're filling morphs, so let's avoid repeating of PostLoad() ...
+	if (ConvertedMesh)
+		return;
 
 	CSkeletalMesh *Mesh = new CSkeletalMesh(this);
 	ConvertedMesh = Mesh;

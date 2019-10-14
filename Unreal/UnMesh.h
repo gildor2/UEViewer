@@ -20,6 +20,7 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V);
 //?? move these declarations outside
 class CSkeletalMesh;
 struct CSkelMeshLod;
+struct CMorphLod;
 class CAnimSet;
 class CAnimSequence;
 class CStaticMesh;

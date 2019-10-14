@@ -49,16 +49,6 @@ struct CSkelMeshVertex : public CMeshVertex
 	}
 };
 
-
-struct CSkelMeshBone
-{
-	FName					Name;
-	int						ParentIndex;
-	CVec3					Position;
-	CQuat					Orientation;
-};
-
-
 struct CSkelMeshLod : public CBaseMeshLod
 {
 	CSkelMeshVertex			*Verts;
@@ -106,6 +96,26 @@ struct CSkelMeshLod : public CBaseMeshLod
 #endif // DECLARE_VIEWER_PROPS
 };
 
+struct CSkelMeshBone
+{
+	FName					Name;
+	int						ParentIndex;
+	CVec3					Position;
+	CQuat					Orientation;
+};
+
+struct CMorphVertex
+{
+	CVec3					PositionDelta;
+	CVec3					NormalDelta;
+	int						VertexIndex;
+};
+
+struct CMorphLod
+{
+	FString					Name;
+	TArray<CMorphVertex>	Vertices;
+};
 
 struct CSkelMeshSocket
 {
@@ -122,11 +132,10 @@ struct CSkelMeshSocket
 #endif
 };
 
-
 class CSkeletalMesh
 {
 public:
-	UObject					*OriginalMesh;			//?? make common for all mesh classes
+	UObject*				OriginalMesh;			//?? make common for all mesh classes
 	FBox					BoundingBox;			//?? common
 	FSphere					BoundingSphere;			//?? common
 	CVec3					MeshOrigin;
@@ -134,6 +143,7 @@ public:
 	FRotator				RotOrigin;
 	TArray<CSkelMeshBone>	RefSkeleton;
 	TArray<CSkelMeshLod>	Lods;
+	TArray<CMorphLod*>		Morphs;
 	TArray<CSkelMeshSocket>	Sockets;				//?? common (UE4 has StaticMesh sockets)
 	const class CAnimSet*	Anim;
 
@@ -141,6 +151,14 @@ public:
 	:	OriginalMesh(Original)
 	,	Anim(NULL)
 	{}
+
+	~CSkeletalMesh()
+	{
+		for (CMorphLod* morph : Morphs)
+		{
+			delete morph;
+		}
+	}
 
 	void FinalizeMesh();
 

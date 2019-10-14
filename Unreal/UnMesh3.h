@@ -75,6 +75,8 @@ public:
 		Serialize3(Ar);
 	}
 
+	CMorphLod* ConvertMorph();
+
 #if UNREAL4
 	BEGIN_PROP_TABLE
 		PROP_DROP(BaseSkelMesh)
@@ -89,6 +91,8 @@ class UMorphTargetSet : public UObject
 public:
 	TArray<UMorphTarget*> Targets;
 	USkeletalMesh3* BaseSkelMesh;
+
+	virtual void PostLoad();			// used to convert and add morphs to UE3 mesh
 
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Targets, UObject*)

@@ -1753,6 +1753,14 @@ void USkeletalMesh4::ConvertMesh()
 	}
 	unguard; // ProcessSkeleton
 
+	for (int i = 0; i < MorphTargets.Num(); i++)
+	{
+		guard(ConvertMorph)
+		if (MorphTargets[i])
+			Mesh->Morphs.Add(MorphTargets[i]->ConvertMorph());
+		unguardf("%d/%d", i, MorphTargets.Num());
+	}
+
 	Mesh->FinalizeMesh();
 
 	unguard;
