@@ -589,6 +589,8 @@ static void BuildMatrices()
 
 	// compute projection matrix
 	tFovY = tan(yFov * M_PI / 360.0f);
+	if ((winWidth / winHeight) < 1)
+		tFovY = tFovY / (winWidth / winHeight);
 	tFovX = tFovY / winHeight * winWidth; // tan(xFov * M_PI / 360.0f);
 	float zMin = zNear * distScale;
 	float zMax = zFar  * distScale;
