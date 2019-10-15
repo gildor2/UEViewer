@@ -98,7 +98,7 @@ keyboard shortcuts by pressing 'H' (Help) key. Here's the list of some shortcuts
   Shift+Up/Down    change scene FOV
   Ctrl+L           switch lighting modes
   Ctrl+Q           toggle visualization of debug information (text, 3D axis etc)
-  Ctrl+G           toggle OpenGL 2.0 / OpenGL 1.1 renderer
+  Ctrl+G           toggle between OpenGL 2.0 (using shaders) and OpenGL 1.1 (no shaders)
   Esc              exit from the umodel
 
 You may attach the AnimSet to the SkeletalMesh object using Ctrl+A key. Animation
@@ -212,6 +212,10 @@ detex
 
 Changes
 ~~~~~~~
+15.10.2019
+- loading and visualizing of UE3 and UE4 MorphTargets; switching between morphs is done with Ctrl+[ and Ctrl+]
+  keys
+
 13.10.2019
 - added full vertex color support (loading, viewing, exporting)
 

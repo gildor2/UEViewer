@@ -1444,11 +1444,26 @@ bool CSkelMeshInstance::BuildMorphVerts()
 	// Copy unmodified vertices
 	memcpy(MorphedVerts, Lod.Verts, Lod.NumVerts * sizeof(CSkelMeshVertex));
 
-	// Apply delta
+	// Apply deltas
 	for (const CMorphVertex& Delta : Deltas)
 	{
 		CSkelMeshVertex& V = MorphedVerts[Delta.VertexIndex];
+		// Morph position
 		VectorAdd(V.Position, Delta.PositionDelta, V.Position);
+		// Morph normal
+		CVec3 Normal;
+		int8 W = V.Normal.GetW();
+		Unpack(Normal, V.Normal);
+		VectorAdd(Normal, Delta.NormalDelta, Normal);
+		Pack(V.Normal, Normal);
+		V.Normal.SetW(W);
+		// Adjust tangent vector to make basis orthonormal
+		CVec3 Tangent;
+		Unpack(Tangent, V.Tangent);
+		float shift = dot(Normal, Tangent); // it will be zero if vertices are perpendicular
+		VectorMA(Tangent, -shift, Normal);  // shift alongside the normal to make vertices perpendicular again
+		Tangent.NormalizeFast();            // ensure result is normalized
+		Pack(V.Tangent, Tangent);
 	}
 
 	return true;
