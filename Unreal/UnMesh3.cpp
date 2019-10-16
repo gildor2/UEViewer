@@ -95,7 +95,7 @@ void FMorphTargetLODModel::Serialize3(FArchive& Ar, FMorphTargetLODModel& Lod)
 
 	if (Ar.Tell() < Ar.GetStopper())
 	{
-		appPrintf("UMorphTarget%s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+		appPrintf("UMorphTarget %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
 		DROP_REMAINING_DATA(Ar);
 	}
 
@@ -127,8 +127,25 @@ CMorphTarget* UMorphTarget::ConvertMorph()
 	return morph;
 }
 
- void UMorphTargetSet::PostLoad()
- {
+void UMorphTargetSet::Serialize(FArchive& Ar)
+{
+	Super::Serialize(Ar);
+
+	if (Ar.ArVer >= 814)
+	{
+		TArray<uint32> RawWedgePointIndices;
+		Ar << RawWedgePointIndices;
+	}
+
+	if (Ar.Tell() < Ar.GetStopper())
+	{
+		appPrintf("UMorphTargetSet %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+		DROP_REMAINING_DATA(Ar);
+	}
+}
+
+void UMorphTargetSet::PostLoad()
+{
 	guard(UMorphTargetSet::PostLoad);
 
 	if (BaseSkelMesh)

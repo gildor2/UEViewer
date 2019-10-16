@@ -92,6 +92,7 @@ public:
 	TArray<UMorphTarget*> Targets;
 	USkeletalMesh3* BaseSkelMesh;
 
+	virtual void Serialize(FArchive& Ar);
 	virtual void PostLoad();			// used to convert and add morphs to UE3 mesh
 
 	BEGIN_PROP_TABLE
