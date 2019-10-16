@@ -93,6 +93,12 @@ void FMorphTargetLODModel::Serialize3(FArchive& Ar, FMorphTargetLODModel& Lod)
 	Super::Serialize(Ar);
 	MorphLODModels.Serialize2<FMorphTargetLODModel::Serialize3>(Ar);
 
+	if (Ar.Tell() < Ar.GetStopper())
+	{
+		appPrintf("UMorphTarget%s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+		DROP_REMAINING_DATA(Ar);
+	}
+
 	unguard;
 }
 
@@ -2077,8 +2083,10 @@ void USkeletalMesh3::ConvertMesh()
 		}
 		// allocate the vertices
 		Lod->AllocateVerts(VertexCount);
-		if (SrcLod.VertexColor.Num())
+		if (SrcLod.VertexColor.Num() == VertexCount)
 			Lod->AllocateVertexColorBuffer();
+		else if (SrcLod.VertexColor.Num())
+			appPrintf("LOD %d has invalid vertex color stream\n", lod);
 
 		int chunkIndex = 0;
 		const FSkelMeshChunk3 *C = NULL;

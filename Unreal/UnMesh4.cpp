@@ -1176,7 +1176,6 @@ struct FStaticLODModel4
 						Ar << NewColorVertexBuffer;
 						Exchange(Lod.ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
 					}
-					DBG_SKEL("Colors: %d\n", Lod.ColorVertexBuffer.Data.Num());
 				}
 
 				if (Ar.ArVer < VER_UE4_REMOVE_EXTRA_SKELMESH_VERTEX_INFLUENCES)
@@ -1387,11 +1386,9 @@ struct FStaticLODModel4
 		assert(LoadingMesh);
 		if (LoadingMesh->bHasVertexColors)
 		{
-			appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
 			FColorVertexBuffer4 NewColorVertexBuffer;
 			Ar << NewColorVertexBuffer;
 			Exchange(ColorVertexBuffer.Data, NewColorVertexBuffer.Data);
-			DBG_SKEL("Colors: %d\n", ColorVertexBuffer.Data.Num());
 		}
 
 		if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
@@ -1632,8 +1629,10 @@ void USkeletalMesh4::ConvertMesh()
 		const FSkeletalMeshVertexBuffer4& VertBuffer = SrcLod.VertexBufferGPUSkin;
 		CSkelMeshVertex* D = Lod->Verts;
 
-		if (SrcLod.ColorVertexBuffer.Data.Num())
+		if (SrcLod.ColorVertexBuffer.Data.Num() == VertexCount)
 			Lod->AllocateVertexColorBuffer();
+		else if (SrcLod.ColorVertexBuffer.Data.Num())
+			appPrintf("LOD %d has invalid vertex color stream\n", lod);
 
 		for (int Vert = 0; Vert < VertexCount; Vert++, D++)
 		{
