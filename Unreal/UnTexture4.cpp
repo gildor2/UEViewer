@@ -79,6 +79,8 @@ struct FTexturePlatformData
 	int32		NumSlices;				// 1 for simple texture, 6 for cubemap - 6 textures are joined into one (check!!)
 	FString		PixelFormat;
 	TArray<FTexture2DMipMap> Mips;
+	int32		isVirtual;
+
 
 	friend FArchive& operator<<(FArchive& Ar, FTexturePlatformData& D)
 	{
@@ -102,6 +104,14 @@ struct FTexturePlatformData
 		Ar << FirstMip;					// only for cooked, but we don't read FTexturePlatformData for non-cooked textures
 		DBG("   SizeX=%d SizeY=%d NumSlices=%d PixelFormat=%s FirstMip=%d\n", D.SizeX, D.SizeY, D.NumSlices, *D.PixelFormat, FirstMip);
 		D.Mips.Serialize2<FTexture2DMipMap::Serialize4>(Ar);
+		if(Ar.ArVer >= VER_UE4_24)
+		{
+			Ar << D.isVirtual;
+			if(D.isVirtual)
+			{
+				appError("UE4.24 TODO: Virtual Textures");
+			}
+		}
 		return Ar;
 		unguard;
 	}
