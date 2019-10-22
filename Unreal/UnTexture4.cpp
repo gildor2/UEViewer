@@ -98,10 +98,22 @@ struct FTexturePlatformData
 		Ar << D.PixelFormat;
 
 	after_pixel_format:
-		int FirstMip;
+		int32 FirstMip;
 		Ar << FirstMip;					// only for cooked, but we don't read FTexturePlatformData for non-cooked textures
 		DBG("   SizeX=%d SizeY=%d NumSlices=%d PixelFormat=%s FirstMip=%d\n", D.SizeX, D.SizeY, D.NumSlices, *D.PixelFormat, FirstMip);
 		D.Mips.Serialize2<FTexture2DMipMap::Serialize4>(Ar);
+
+		if (Ar.Game >= GAME_UE4(23))
+		{
+			bool bIsVirtual;
+			Ar << bIsVirtual;
+			if (bIsVirtual)
+			{
+				// Requires extra serializing
+				appError("VirtualTextures are not supported");
+			}
+		}
+
 		return Ar;
 		unguard;
 	}
@@ -161,6 +173,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 		Ar << PixelFormatEnum;
 		while (stricmp(PixelFormatEnum, "None") != 0)
 		{
+			DBG("  PixelFormat: %s\n", *PixelFormatEnum);
 			int32 SkipOffset;
 			Ar << SkipOffset;
 			if (Ar.Game >= GAME_UE4(20))
