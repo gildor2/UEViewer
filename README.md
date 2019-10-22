@@ -192,7 +192,7 @@ Below is the list of major folders which exists in this repository or which are 
 │   └── Shaders           # shaders used in UModel's renderer
 ├── Viewers               # viewers for different object types
 ├── build.sh              # main build script
-├── common.project        # main project file, reused vetween different sub-projects
+├── common.project        # main project file, reused between different sub-projects
 ├── t.bat                 # Windows CMD caller for test.sh
 └── test.sh               # internal script used for testing
 ```

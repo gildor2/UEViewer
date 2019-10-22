@@ -133,6 +133,11 @@ function run1()
 # all following functions are called as "--func" argument
 # example: test.sh --ut2 HumanMaleA
 
+function cmdline()
+{
+	run @Docs/cmdline.cfg
+}
+
 function gui()
 {
 	run $*

@@ -527,7 +527,6 @@ public:
 		skip_rest_quiet:
 			DROP_REMAINING_DATA(Ar);
 		}
-
 	}
 
 #if RENDERING

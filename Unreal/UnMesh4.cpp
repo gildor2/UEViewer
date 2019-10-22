@@ -2711,6 +2711,7 @@ void UStaticMesh4::ConvertSourceModels()
 
 	Lod.Vertices.Serialize2<FMorphTargetDelta::Serialize4>(Ar);
 	Ar << Lod.NumBaseMeshVerts;
+	DBG_SKEL("MorphLod: %d verts, MeshVerts = %d\n", Lod.Vertices.Num(), Lod.NumBaseMeshVerts);
 
 	if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::AddedMorphTargetSectionIndices)
 	{
