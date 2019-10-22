@@ -971,7 +971,7 @@ struct FSkinWeightVertexBuffer
 		// and there's a typo: it relies on FSkeletalMeshCustomVersion::SplitModelAndRenderData which is UE4.15 constant.
 		// So we're using comparison with UE4.23 instead.
 
-		if (Ar.Game < GAME_UE4(23))
+		if (Ar.Game < GAME_UE4(24))
 		{
 			Ar << bExtraBoneInfluences << NumVertices;
 		}
@@ -1212,7 +1212,7 @@ struct FStaticLODModel4
 		unguard;
 	}
 
-	// This function is used only for UE4.19-UE4.22 data. UE4 source code prototype is
+	// This function is used only for UE4.19-UE4.23 data. UE4 source code prototype is
 	// FSkeletalMeshLODRenderData::Serialize().
 	static void SerializeRenderItem_Legacy(FArchive& Ar, FStaticLODModel4& Lod)
 	{
@@ -1305,17 +1305,23 @@ struct FStaticLODModel4
 			unguard;
 		}
 
+		if (Ar.Game >= GAME_UE4(23))
+		{
+			FSkinWeightProfilesData SkinWeightProfilesData;
+			Ar << SkinWeightProfilesData;
+		}
+
 		unguard;
 	}
 
-	// This function is used only for UE4.23+ data. It adds LOD streaming functionality and
+	// This function is used only for UE4.24+ data. It adds LOD streaming functionality and
 	// differs too much from previous code to try keeping code in a single function.
 	// UE4 source code prototype is FSkeletalMeshLODRenderData::Serialize().
 	static void SerializeRenderItem(FArchive& Ar, FStaticLODModel4& Lod)
 	{
 		guard(FStaticLODModel4::SerializeRenderItem);
 
-		if (Ar.Game < GAME_UE4(23))
+		if (Ar.Game < GAME_UE4(24))
 		{
 			// Fallback to older code when needed.
 			SerializeRenderItem_Legacy(Ar, Lod);
@@ -1358,7 +1364,6 @@ struct FStaticLODModel4
 				//todo
 				appError("SkeletalMesh: LOD data in bulk");
 			}
-
 		}
 
 		unguard;

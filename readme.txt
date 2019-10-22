@@ -212,6 +212,9 @@ detex
 
 Changes
 ~~~~~~~
+22.10.2019
+- finalized UE4.23 support, initial UE4.24 support
+
 15.10.2019
 - loading and visualizing of UE3 and UE4 MorphTargets; switching between morphs is done with Ctrl+[ and Ctrl+]
   keys
