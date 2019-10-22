@@ -2663,6 +2663,9 @@ struct FEditorObjectVersion
 #if TEKKEN7
 		if (Ar.Game == GAME_Tekken7) return (Type)7;		// pre-UE4.14
 #endif
+#if PARAGON
+		if (Ar.Game == GAME_Paragon) return  (Type)22;
+#endif
 
 		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
@@ -2865,6 +2868,7 @@ struct FAnimObjectVersion
 		BeforeCustomVersionWasAdded = 0,
 		// UE4.21-UE4.23 = 2
 		StoreMarkerNamesOnSkeleton = 2,
+
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
@@ -2898,6 +2902,7 @@ struct FAnimPhysObjectVersion
 		// UE4.19 = 16
 		ChangeRetargetSourceReferenceToSoftObjectPtr = 15,
 		// UE4.20-UE4.23 = 17
+
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
@@ -2931,6 +2936,7 @@ struct FReleaseObjectVersion
 	{
 		BeforeCustomVersionWasAdded = 0,
 		AddSkeletalMeshSectionDisable = 12,
+
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
 	};
