@@ -55,7 +55,8 @@ debugOpt=
 # - use as
 #   CheckDir "${steam[@]/%/Some Game Name}"
 #   (this will append "Some Game Name" to all variants of steam path)
-steam=("c:/Program Files (x86)/Steam/SteamApps/common/")
+launcher=("C:/3-UnrealEngine/" "D:/EpicGames/")
+steam=("C:/Program Files (x86)/Steam/SteamApps/common/" "D:/Steam/steamapps/common/")
 
 function CheckDir()
 {
@@ -165,19 +166,19 @@ function ut3()
 }
 function ut4()
 {
-	CheckDir C:/3-UnrealEngine/UnrealTournamentDev/UnrealTournament/Content/Paks
+	CheckDir "${launcher[@]/%/UnrealTournament/UnrealTournament/Content/Paks}"
 #	CheckDir C:/Projects/Epic/UnrealTournament4/UnrealTournament/Saved/Cooked/WindowsNoEditor/UnrealTournament/Content
 	run -game=ut4 $*
 }
 function paragon()
 {
-	CheckDir C:/3-UnrealEngine/Paragon/OrionGame/Content/Paks
+	CheckDir "${launcher[@]/%/Paragon/OrionGame/Content/Paks}"
 	run -game=paragon $*
 }
 function fortnite()
 {
 	read aes < "Docs/fortnite.txt"
-	CheckDir C:/3-UnrealEngine/Fortnite/FortniteGame/Content/Paks
+	CheckDir "${launcher[@]/%/Fortnite/FortniteGame/Content/Paks}"
 	run -game=ue4.23 -aes=$aes $*
 }
 function ue3()
