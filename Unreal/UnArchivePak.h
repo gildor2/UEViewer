@@ -83,6 +83,10 @@ struct FPakInfo
 				{
 					CompressionMethod = COMPRESS_ZLIB;
 				}
+				else if (!stricmp(name, "oodle"))
+				{
+					CompressionMethod = COMPRESS_OODLE;
+				}
 				else if (name[0])
 				{
 					appPrintf("Warning: unknown compression method for pak: %s\n", name);
@@ -641,6 +645,11 @@ public:
 				int32 CompressionMethodIndex = E.CompressionMethod;
 				assert(CompressionMethodIndex >= 0 && CompressionMethodIndex <= 4);
 				E.CompressionMethod = CompressionMethodIndex > 0 ? info.CompressionMethods[CompressionMethodIndex-1] : 0;
+			}
+			else if (E.CompressionMethod == COMPRESS_Custom)
+			{
+				// Custom compression method for UE4.20-UE4.21, use detection code.
+				E.CompressionMethod = COMPRESS_FIND;
 			}
 
 			unguardf("Index=%d/%d", i, count);

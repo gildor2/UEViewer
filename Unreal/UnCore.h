@@ -2442,6 +2442,11 @@ struct FIntBulkData : public FByteBulkData
 #define COMPRESS_LZ4		0xFE					// custom umodel's constant
 #endif
 
+#if UNREAL4
+#define COMPRESS_Custom		4						// UE4.20-4.21
+#define COMPRESS_OODLE		0xFD					// custom umodel's constant
+#endif // UNREAL4
+
 #define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
 
 #define PKG_StoreCompressed	 0x02000000

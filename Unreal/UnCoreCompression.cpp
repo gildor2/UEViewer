@@ -196,6 +196,8 @@ void DecryptDevlsThird(byte* CompressedBuffer, int CompressedSize);
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
 {
+	int OldFlags = Flags;
+
 	guard(appDecompress);
 
 #if BLADENSOUL
@@ -241,10 +243,16 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		// zlib:
 		//   http://tools.ietf.org/html/rfc1950
 		//   http://stackoverflow.com/questions/9050260/what-does-a-zlib-header-look-like
+		// oodle:
+		//   https://github.com/powzix/ooz, kraken.cpp, Kraken_ParseHeader()
 		if ( b1 == 0x78 &&					// b1=CMF: 7=32k buffer (CINFO), 8=deflate (CM)
 			(b2 == 0x9C || b2 == 0xDA) )	// b2=FLG
 		{
 			Flags = COMPRESS_ZLIB;
+		}
+		else if (b1 == 0x8C && (b2 == 5 || b2 == 6 || b2 == 10 || b2 == 11 || b2 == 12))
+		{
+			Flags = COMPRESS_OODLE;
 		}
 		else
 			Flags = COMPRESS_LZO;
@@ -307,25 +315,36 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		return newLen;
 #	endif // USE_XDK
 #else  // SUPPORT_XBOX360
-		appError("appDecompress: LZX compression is not supported");
+		appError("appDecompress: Lzx compression is not supported");
 #endif // SUPPORT_XBOX360
 	}
 
-#if USE_LZ4
 	if (Flags == COMPRESS_LZ4)
 	{
+#if USE_LZ4
 		int newLen = LZ4_decompress_safe((const char*)CompressedBuffer, (char*)UncompressedBuffer, CompressedSize, UncompressedSize);
 		if (newLen <= 0)
 			appError("LZ4_decompress_safe returned %d\n", newLen);
 		if (newLen != UncompressedSize) appError("lz4 len mismatch: %d != %d", newLen, UncompressedSize);
 		return newLen;
-	}
+#else
+		appError("appDecompress: Lz4 compression is not supported");
 #endif // GEARS4
+	}
+
+	if (Flags == COMPRESS_OODLE)
+	{
+#if USE_OODLE
+		TODO
+#else
+		appError("appDecompress: Oodle compression is not supported");
+#endif // USE_OODLE
+	}
 
 	appError("appDecompress: unknown compression flags: %d", Flags);
 	return 0;
 
-	unguardf("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, Flags);
+	unguardf("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, OldFlags);
 }
 
 
