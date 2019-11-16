@@ -42,7 +42,12 @@ static void SetPathOption(FString& where, const char* value)
 			strcpy(path, ".");	// path is too long, or other error occurred
 #else
 		// for Unix OS, store everything to the HOME directory ("~/...")
-		if (const char* s = getenv("HOME"))
+		if (!value2.IsEmpty() && value2[0] == '.' && value2[1] == '/')
+		{
+			// just use working dir
+			strcpy(path, ".");
+		}
+		else if (const char* s = getenv("HOME"))
 		{
 			strcpy(path, s);
 		}
