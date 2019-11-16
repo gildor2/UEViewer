@@ -209,9 +209,16 @@ detex
   (c) Harm Hanemaaijer
   https://github.com/hglm/detex
 
+ooz
+  (c) Powzix
+  https://github.com/powzix/ooz
+
 
 Changes
 ~~~~~~~
+16.11.2019
+- added oodle decompression support
+
 22.10.2019
 - finalized UE4.23 support, initial UE4.24 support
 

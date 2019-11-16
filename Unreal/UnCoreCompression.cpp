@@ -334,8 +334,13 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 	if (Flags == COMPRESS_OODLE)
 	{
-#if USE_OODLE
-		TODO
+#if HAS_OODLE
+		int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
+		int newLen = Kraken_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
+		if (newLen <= 0)
+			appError("Kraken_Decompress returned %d\n", newLen);
+		if (newLen != UncompressedSize) appError("oodle len mismatch: %d != %d", newLen, UncompressedSize);
+		return newLen;
 #else
 		appError("appDecompress: Oodle compression is not supported");
 #endif // USE_OODLE
