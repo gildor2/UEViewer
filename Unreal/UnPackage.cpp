@@ -1294,6 +1294,12 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 	IsLoading = true;
 	Filename = appStrdupPool(appSkipRootDir(filename));
 	Loader = CreateLoader(filename, baseLoader);
+	if (!Loader)
+	{
+		// File is too small
+		return;
+	}
+
 	SetupFrom(*Loader);
 
 	// read summary
