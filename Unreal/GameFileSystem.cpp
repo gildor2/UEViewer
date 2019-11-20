@@ -349,6 +349,7 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 		info->RelativeName = appStrdupPool(FullName);
 	}
 	info->SizeInKb = (info->Size + 512) / 1024;
+	if (info->Size < 16) info->IsPackage = false;
 
 	// find filename
 	const char* s = strrchr(info->RelativeName, '/');
