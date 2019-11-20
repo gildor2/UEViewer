@@ -398,6 +398,9 @@ const GameInfo GListOfGames[] = {
 #	if KH3
 		G("Kingdom Hearts 3", kh3, GAME_KH3),
 #	endif
+#	if JEDI
+		G("Star Wars Jedi: Fallen Order", jedi, GAME_Jedi),
+#	endif
 #endif // UNREAL4
 
 	// end marker

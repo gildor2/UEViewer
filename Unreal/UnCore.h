@@ -438,6 +438,8 @@ enum EGame
 		// 4.20
 		GAME_Dauntless = GAME_UE4(20)+1,
 		GAME_Borderlands3 = GAME_UE4(20)+2,
+		// 4.21
+		GAME_Jedi = GAME_UE4(21)+1,
 
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };

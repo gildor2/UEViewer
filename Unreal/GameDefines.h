@@ -163,6 +163,7 @@
 #define ASC_ONE			1		// Ascendant One
 #define BORDERLANDS3	1		// Borderlands 3
 #define KH3				1		// Kingdom Hearts 3
+#define JEDI			1		// Star Wars Jedi: Fallen Order
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 

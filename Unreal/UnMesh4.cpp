@@ -180,6 +180,14 @@ struct FStaticMeshVertexBuffer4
 
 		if (!StripFlags.IsDataStrippedForServer())
 		{
+#if JEDI
+			if (Ar.Game == GAME_Jedi)
+			{
+				int32 unk;
+				Ar << unk;
+			}
+#endif // JEDI
+
 			GNumStaticUVSets = S.NumTexCoords;
 			GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
 			if (Ar.Game < GAME_UE4(19))

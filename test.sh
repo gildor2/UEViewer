@@ -242,6 +242,11 @@ function tr4()    { run1 "data/3/Tribes4" $*;     }
 function thief()  { run1 "${steam[@]/%/Thief/ThiefGame/CookedPCNG}" $*; }
 function ark()    { run1 "${steam[@]/%/ARK/ShooterGame/Content}" -game=ark $*; }
 function lawbr()  { run1 "${steam[@]/%/LawBreakers/ShooterGame/Content/Paks}" -game=lawbr $*; }
+function jfo()
+{
+	CheckDir "${steam[@]/%/Jedi Fallen Order/SwGame/Content/Paks}"	# "run1" doesn't work with $steam having multiple paths
+	run -game=ue4.21 $*
+}
 
 function rund()   {	run1 "data" $*; }
 
