@@ -250,7 +250,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		{
 			Flags = COMPRESS_ZLIB;
 		}
-		else if (b1 == 0x8C && (b2 == 5 || b2 == 6 || b2 == 10 || b2 == 11 || b2 == 12))
+		else if ((b1 == 0x8C || b1 == 0xCC) && (b2 == 5 || b2 == 6 || b2 == 10 || b2 == 11 || b2 == 12))
 		{
 			Flags = COMPRESS_OODLE;
 		}
@@ -338,7 +338,7 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
 		int newLen = Kraken_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
 		if (newLen <= 0)
-			appError("Kraken_Decompress returned %d\n", newLen);
+			appError("Kraken_Decompress returned %d (magic=%02X/%02X)\n", newLen, CompressedBuffer[0], CompressedBuffer[1]);
 		if (newLen != UncompressedSize) appError("oodle len mismatch: %d != %d", newLen, UncompressedSize);
 		return newLen;
 #else
