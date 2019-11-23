@@ -600,6 +600,15 @@ public:
 			}
 		}
 
+		// Read number of files
+		int32 count;
+		*InfoReader << count;
+		if (!count)
+		{
+			appPrintf("Empty pak file \"%s\"\n", *Filename);
+			return true;
+		}
+
 		// Process MountPoint
 		bool badMountPoint = false;
 		if (!MountPoint.RemoveFromStart("../../.."))
@@ -609,12 +618,10 @@ public:
 
 		if (badMountPoint)
 		{
-			appNotify("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root", *Filename, *MountPoint);
+			appPrintf("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root\n", *Filename, *MountPoint);
 			MountPoint = "/";
 		}
 
-		int count;
-		*InfoReader << count;
 		FileInfos.AddZeroed(count);
 
 		int numEncryptedFiles = 0;
