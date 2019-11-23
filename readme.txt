@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+21.11.2019
+- added Star Wars Jedi: Fallen Order support, requires game override (-game=jedi)
+
 16.11.2019
 - added oodle decompression support
 
