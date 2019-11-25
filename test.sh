@@ -245,7 +245,7 @@ function lawbr()  { run1 "${steam[@]/%/LawBreakers/ShooterGame/Content/Paks}" -g
 function jfo()
 {
 	CheckDir "${steam[@]/%/Jedi Fallen Order/SwGame/Content/Paks}"	# "run1" doesn't work with $steam having multiple paths
-	run -game=ue4.21 $*
+	run -game=jedi $*
 }
 
 function rund()   {	run1 "data" $*; }
