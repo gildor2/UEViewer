@@ -180,16 +180,9 @@ struct FStaticMeshVertexBuffer4
 
 		if (!StripFlags.IsDataStrippedForServer())
 		{
-#if JEDI
-			if (Ar.Game == GAME_Jedi)
-			{
-				int32 unk;
-				Ar << unk;
-			}
-#endif // JEDI
-
 			GNumStaticUVSets = S.NumTexCoords;
 			GUseStaticFloatUVs = S.bUseFullPrecisionUVs;
+
 			if (Ar.Game < GAME_UE4(19))
 			{
 				S.UV.BulkSerialize(Ar);
@@ -197,30 +190,50 @@ struct FStaticMeshVertexBuffer4
 			else
 			{
 				// In 4.19 tangents and texture coordinates are stored in separate vertex streams
-				int32 ItemSize, ItemCount;
-				S.UV.AddUninitialized(S.NumVertices);
+				S.UV.AddZeroed(S.NumVertices);
 
-				// Tangents
-				Ar << ItemSize << ItemCount;
-				DBG_MESH("... tangents: %d items by %d bytes\n", ItemCount, ItemSize);
-				assert(ItemCount == S.NumVertices);
-				int Pos = Ar.Tell();
-				for (int i = 0; i < S.NumVertices; i++)
+#if JEDI
+				if (Ar.Game == GAME_Jedi)
 				{
-					FStaticMeshUVItem4::SerializeTangents(Ar, S.UV[i]);
+					int32 bDropNormals;
+					Ar << bDropNormals;
+					assert(bDropNormals == 0 || bDropNormals == 1); //todo: replace with bool
+					if (bDropNormals)
+					{
+						//!! todo: no tangents, should indicate that tangents should be recreated
+						goto texcoords;
+					}
 				}
-				assert(Ar.Tell() - Pos == ItemCount * ItemSize);
+#endif // JEDI
 
-				// Texture coordinates
-				Ar << ItemSize << ItemCount;
-				DBG_MESH("... texcoords: %d items by %d bytes\n", ItemCount, ItemSize);
-				assert(ItemCount == S.NumVertices * S.NumTexCoords);
-				Pos = Ar.Tell();
-				for (int i = 0; i < S.NumVertices; i++)
 				{
-					FStaticMeshUVItem4::SerializeTexcoords(Ar, S.UV[i]);
+					// Tangents: simulate TArray::BulkSerialize()
+					int32 ItemSize, ItemCount;
+					Ar << ItemSize << ItemCount;
+					DBG_MESH("... tangents: %d items by %d bytes\n", ItemCount, ItemSize);
+					assert(ItemCount == S.NumVertices);
+					int Pos = Ar.Tell();
+					for (int i = 0; i < S.NumVertices; i++)
+					{
+						FStaticMeshUVItem4::SerializeTangents(Ar, S.UV[i]);
+					}
+					assert(Ar.Tell() - Pos == ItemCount * ItemSize);
 				}
-				assert(Ar.Tell() - Pos == ItemCount * ItemSize);
+
+				{
+				texcoords:
+					// Texture coordinates: simulate TArray::BulkSerialize()
+					int32 ItemSize, ItemCount;
+					Ar << ItemSize << ItemCount;
+					DBG_MESH("... texcoords: %d items by %d bytes\n", ItemCount, ItemSize);
+					assert(ItemCount == S.NumVertices * S.NumTexCoords);
+					int Pos = Ar.Tell();
+					for (int i = 0; i < S.NumVertices; i++)
+					{
+						FStaticMeshUVItem4::SerializeTexcoords(Ar, S.UV[i]);
+					}
+					assert(Ar.Tell() - Pos == ItemCount * ItemSize);
+				}
 			}
 		}
 
