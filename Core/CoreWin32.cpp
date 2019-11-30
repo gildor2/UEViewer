@@ -548,7 +548,7 @@ enum { CRT_FILE_SIZE = (sizeof(char*)*3 + sizeof(int)*5) };
 
 extern "C" FILE* __cdecl __acrt_iob_func(unsigned Index)
 {
-	return (FILE*)((char*)__iob_func() + Index * CRT_FILE_SIZE);
+	return (FILE*)((char*)__iob_func() + Index * Align(CRT_FILE_SIZE, sizeof(char*)));
 }
 
 #endif // OLDCRT
