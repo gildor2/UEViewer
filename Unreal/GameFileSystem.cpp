@@ -140,8 +140,7 @@ static TArray<CGameFileInfo*> GameFiles;
 int GNumPackageFiles = 0;
 int GNumForeignFiles = 0;
 
-#define GAME_FILE_HASH_SIZE		16384
-#define GAME_FILE_HASH_MASK		(GAME_FILE_HASH_SIZE-1)
+#define GAME_FILE_HASH_SIZE		32768
 
 //#define PRINT_HASH_DISTRIBUTION	1
 //#define DEBUG_HASH				1
@@ -164,15 +163,15 @@ static int GetHashForFileName(const char* FileName, bool cutExtension)
 	const char* s2 = cutExtension ? strrchr(s1, '.') : NULL;
 	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
 
-	uint16 hash = 0;
+	unsigned int hash = 0;
 	for (int i = 0; i < len; i++)
 	{
 		char c = s1[i];
 		if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; // lowercase a character
-		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
+//		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
+		hash = ROL16(hash, 1) + c;			// note: if we'll use more than 16-bit GAME_FILE_HASH_SIZE value, should use ROL32 here
 	}
-//	hash += (len << 6) - len;
-	hash &= GAME_FILE_HASH_MASK;
+	hash &= (GAME_FILE_HASH_SIZE - 1);
 #ifdef DEBUG_HASH_NAME
 	if (strstr(FileName, DEBUG_HASH_NAME))
 		printf("-> hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash);

@@ -455,7 +455,7 @@ void FString::TrimStartAndEndInline()
 	FName (string) pool
 -----------------------------------------------------------------------------*/
 
-#define STRING_HASH_SIZE		32768
+#define STRING_HASH_SIZE		(65536*4)		// 1Mb of 32-bit pointers
 
 struct CStringPoolEntry
 {
@@ -470,15 +470,11 @@ static CMemoryChain* StringPool;
 const char* appStrdupPool(const char* str)
 {
 	int len = strlen(str);
-	int hash = 0;
+	unsigned int hash = 0;
 	for (int i = 0; i < len; i++)
 	{
 		char c = str[i];
-#if 0
-		hash = (hash + c) ^ 0xABCDEF;
-#else
-		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
-#endif
+		hash = ROL32(hash, 1) + c;
 	}
 	hash &= (STRING_HASH_SIZE - 1);
 

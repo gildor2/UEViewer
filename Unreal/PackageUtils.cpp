@@ -227,8 +227,6 @@ static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
 	} */
 }
 
-//void PrintStringHashDistribution();
-
 bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback* Progress)
 {
 #if PROFILE
@@ -273,7 +271,10 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		}
 		scanned = true;
 	}
-//	PrintStringHashDistribution();
+#if 0
+	void PrintStringHashDistribution();
+	PrintStringHashDistribution();
+#endif
 #if PROFILE
 	if (scanned)
 		appPrintProfiler("Scanned packages");
