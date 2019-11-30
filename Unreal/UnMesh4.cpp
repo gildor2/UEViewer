@@ -1384,13 +1384,14 @@ struct FStaticLODModel4
 			{
 				//todo
 				appError("SkeletalMesh: LOD data in bulk");
+				// bulk, then bDiscardBulkData, then SerializeAvailabilityInfo
 			}
 		}
 
 		unguard;
 	}
 
-	// UE4.23+ serializer for most of LOD data
+	// UE4.24+ serializer for most of LOD data
 	void SerializeStreamedData(FArchive& Ar)
 	{
 		guard(FStaticLODModel4::SerializeStreamedData);
@@ -1423,14 +1424,8 @@ struct FStaticLODModel4
 		if (HasClothData())
 			Ar << ClothVertexBuffer;
 
-		//!! Try to share code with SerializeRenderItem_Legacy(), in this case Ar.Game >= GAME_UE4(23) will
-		//!! become usedful. The difference is that "Legacy" function also serializes Sections. ActiveBoneIndices
-		//!! and RequiredBones, plus it has extra "if" for vertex buffer serialization.
-		if (Ar.Game >= GAME_UE4(23))
-		{
-			FSkinWeightProfilesData SkinWeightProfilesData;
-			Ar << SkinWeightProfilesData;
-		}
+		FSkinWeightProfilesData SkinWeightProfilesData;
+		Ar << SkinWeightProfilesData;
 
 		//todo: this is a copy-paste of SerializeRenderItem_Legacy code!
 		guard(BuildVertexData);
@@ -2025,12 +2020,15 @@ struct FStaticMeshLODModel4
 				DBG_STAT("Serialize from bulk\n");
 				FByteBulkData Bulk;
 				Bulk.Serialize(Ar);
-				// perform SerializeBuffers on bulk array
-				Bulk.SerializeData(UObject::GLoadingObj);
+				if (Bulk.ElementCount > 0)
+				{
+					// perform SerializeBuffers on bulk array
+					Bulk.SerializeData(UObject::GLoadingObj);
 
-				FMemReader Reader(Bulk.BulkData, Bulk.ElementCount); // ElementCount is the same as data size, for byte bulk data
-				Reader.SetupFrom(*UObject::GLoadingObj->GetPackageArchive());
-				SerializeBuffers(Reader, Lod);
+					FMemReader Reader(Bulk.BulkData, Bulk.ElementCount); // ElementCount is the same as data size, for byte bulk data
+					Reader.SetupFrom(*UObject::GLoadingObj->GetPackageArchive());
+					SerializeBuffers(Reader, Lod);
+				}
 
 				// FStaticMeshLODResources::SerializeAvailabilityInfo()
 				uint32 DepthOnlyNumTriangles, PackedData;

@@ -2340,12 +2340,13 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 #define BULKDATA_PayloadInSeperateFile	0x0100		// data stored in .ubulk file near the asset (UE4.12+)
 #define BULKDATA_SerializeCompressedBitWindow 0x0200 // use platform-specific compression
 #define BULKDATA_OptionalPayload		0x0800		// same as BULKDATA_PayloadInSeperateFile, but stored with .uptnl extension (UE4.20+)
+#define BULKDATA_Size64Bit				0x2000		// 64-bit size fields, UE4.22+
 
 #endif // UNREAL4
 
 struct FByteBulkData //?? separate FUntypedBulkData
 {
-	int32	BulkDataFlags;				// BULKDATA_...
+	uint32	BulkDataFlags;				// BULKDATA_...
 	int32	ElementCount;				// number of array elements
 	int64	BulkDataOffsetInFile;		// position in file, points to BulkData; 32-bit in UE3, 64-bit in UE4
 	int32	BulkDataSizeOnDisk;			// size of bulk data on disk

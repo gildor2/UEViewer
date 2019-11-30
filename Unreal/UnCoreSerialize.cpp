@@ -998,7 +998,9 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 
 		bIsUE4Data = true;
 
-		Ar << BulkDataFlags << ElementCount;
+		Ar << BulkDataFlags;
+		assert(!(BulkDataFlags & BULKDATA_Size64Bit));
+		Ar << ElementCount;
 		Ar << BulkDataSizeOnDisk;
 		if (Ar.ArVer < VER_UE4_BULKDATA_AT_LARGE_OFFSETS)
 		{
