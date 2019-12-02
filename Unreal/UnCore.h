@@ -762,14 +762,9 @@ public:
 	FFileArchive(const char *Filename, unsigned InOptions);
 	virtual ~FFileArchive();
 
-	virtual void Seek(int Pos);
-	virtual void Seek64(int64 Pos);
-	virtual int Tell() const;
-	virtual int64 Tell64() const;
 	virtual int GetFileSize() const;
 //	virtual int64 GetFileSize64() const; -- implemented in derived classes
 
-	virtual bool IsEof() const;
 	virtual bool IsOpen() const;
 	virtual void Close();
 
@@ -778,12 +773,10 @@ protected:
 	unsigned	Options;
 	const char	*FullName;		// allocated with appStrdup
 	const char	*ShortName;		// points to FullName[N]
-	int64		FileSize;
 
 	byte*		Buffer;
 	int			BufferSize;
 	int64		BufferPos;		// position of Buffer in file
-	int64		ArPos64;
 	int64		FilePos;		// where 'f' position points to (when reading, it usually equals to 'BufferPos + BufferSize')
 
 	bool OpenFile();
@@ -811,7 +804,18 @@ public:
 
 	virtual void Serialize(void *data, int size);
 	virtual bool Open();
+	virtual void Seek(int Pos);
+	virtual void Seek64(int64 Pos);
+	virtual int Tell() const;
+	virtual int64 Tell64() const;
 	virtual int64 GetFileSize64() const;
+	virtual bool IsEof() const;
+
+protected:
+	int64		SeekPos;
+	int64		FileSize;
+	int			BufferBytesLeft;
+	int			LocalReadPos;
 };
 
 
@@ -825,11 +829,19 @@ public:
 	virtual void Serialize(void *data, int size);
 	virtual bool Open();
 	virtual void Close();
+	virtual void Seek(int Pos);
+	virtual void Seek64(int64 Pos);
+	virtual int Tell() const;
+	virtual int64 Tell64() const;
 	virtual int64 GetFileSize64() const;
+	virtual bool IsEof() const;
 
 	static void CleanupOnError();
 
 protected:
+	int64		FileSize;
+	int64		ArPos64;
+
 	void FlushBuffer();
 };
 
@@ -2338,7 +2350,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 //#define BULKDATA_Unused				0x0020		// the same value as for UE3
 #define BULKDATA_ForceInlinePayload		0x0040		// bulk data stored immediately after header
 #define BULKDATA_PayloadInSeperateFile	0x0100		// data stored in .ubulk file near the asset (UE4.12+)
-#define BULKDATA_SerializeCompressedBitWindow 0x0200 // use platform-specific compression
+#define BULKDATA_SerializeCompressedBitWindow 0x0200 // use platform-specific compression (deprecated, seems not used)
 #define BULKDATA_OptionalPayload		0x0800		// same as BULKDATA_PayloadInSeperateFile, but stored with .uptnl extension (UE4.20+)
 #define BULKDATA_Size64Bit				0x2000		// 64-bit size fields, UE4.22+
 

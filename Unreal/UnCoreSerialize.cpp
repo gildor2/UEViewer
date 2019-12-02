@@ -495,11 +495,9 @@ void FArchive::Printf(const char *fmt, ...)
 FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
 :	Options(InOptions)
 ,	f(NULL)
-,	FileSize(-1)
 ,	Buffer(NULL)
 ,	BufferPos(0)
 ,	BufferSize(0)
-,	ArPos64(0)
 {
 	// process the filename
 	FullName = appStrdup(Filename);
@@ -514,38 +512,11 @@ FFileArchive::~FFileArchive()
 	appFree(const_cast<char*>(FullName));
 }
 
-void FFileArchive::Seek(int Pos)
-{
-	ArPos64 = Pos;
-}
-
-void FFileArchive::Seek64(int64 Pos)
-{
-	ArPos64 = Pos;
-}
-
-int FFileArchive::Tell() const
-{
-	guard(FFileArchive::Tell());
-	return (int)ArPos64;
-	unguard;
-}
-
-int64 FFileArchive::Tell64() const
-{
-	return ArPos64;
-}
-
 int FFileArchive::GetFileSize() const
 {
 	int64 size = GetFileSize64();
 	if (size >= (1LL << 31)) appError("GetFileSize returns 0x%llX", size);
 	return (int)size;
-}
-
-bool FFileArchive::IsEof() const
-{
-	return ArPos64 >= GetFileSize64();
 }
 
 // this function is useful only for FRO_NoOpenError mode
@@ -570,7 +541,7 @@ bool FFileArchive::OpenFile()
 	guard(FFileArchive::OpenFile);
 	assert(!IsOpen());
 
-	ArPos64 = FilePos = 0;
+	FilePos = 0;
 	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
 	BufferPos = 0;
 	BufferSize = 0;
@@ -597,6 +568,10 @@ bool FFileArchive::OpenFile()
 
 FFileReader::FFileReader(const char *Filename, unsigned InOptions)
 :	FFileArchive(Filename, InOptions)
+,	SeekPos(-1)
+,	FileSize(-1)
+,	BufferBytesLeft(0)
+,	LocalReadPos(0)
 {
 	guard(FFileReader::FFileReader);
 	IsLoading = true;
@@ -615,40 +590,69 @@ void FFileReader::Serialize(void *data, int size)
 
 	assert(data);
 
-	if (ArStopper > 0 && ArPos64 + size > ArStopper)
-		appError("Serializing behind stopper (%llX+%X > %X)", ArPos64, size, ArStopper);
+	if (ArStopper > 0 && LocalReadPos + size > ArStopper - BufferPos)
+		appError("Serializing behind stopper (%llX+%X > %X)", BufferPos + LocalReadPos, size, ArStopper);
 
+	// The function is optimized for calling frequently with reading data from buffer
 	while (size > 0)
 	{
-		int64 LocalPos64 = ArPos64 - BufferPos;
-		if (LocalPos64 < 0 || LocalPos64 >= BufferSize)
+		if (BufferBytesLeft > 0)
 		{
-			// seek to desired position if needed
-			if (ArPos64 != FilePos)
+			// Use the buffer
+			byte* BufferPtr = Buffer + LocalReadPos;
+			int CanCopy = size > BufferBytesLeft ? BufferBytesLeft : size;
+			// Copy data. If we're copying 1-2-4 bytes, "special" code works faster than the case with memcpy.
+			switch (CanCopy)
 			{
-				if (fseeko64(f, ArPos64, SEEK_SET) != 0)
-					appError("Error seeking to position 0x%llX", ArPos64);
-				FilePos = ArPos64;
+			case 1:
+				*(byte*)data = *(BufferPtr);
+				break;
+			case 2:
+				*(uint16*)data = *(uint16*)BufferPtr;
+				break;
+			case 4:
+				*(uint32*)data = *(uint32*)BufferPtr;
+				break;
+			default:
+				memcpy(data, BufferPtr, CanCopy);
 			}
-			// the requested data is not in buffer
-			if (size >= FILE_BUFFER_SIZE)
+			// Advance pointers
+			BufferBytesLeft -= CanCopy;
+			data = OffsetPointer(data, CanCopy);
+			size -= CanCopy;
+			LocalReadPos += CanCopy;
+		}
+		else
+		{
+			// Buffer is empty
+			if (SeekPos >= 0)
 			{
-				// large block, read directly from file
+				// Seek to desired position
+				if (SeekPos != FilePos)
+				{
+					if (fseeko64(f, SeekPos, SEEK_SET) != 0)
+						appError("Error seeking to position 0x%llX", SeekPos);
+					FilePos = SeekPos;
+				}
+				SeekPos = -1;
+			}
+			if (size >= FILE_BUFFER_SIZE / 2)
+			{
+				// Large block, read directly to destination skipping buffer
 				int res = fread(data, size, 1, f);
 				if (res != 1)
-					appError("Unable to read %d bytes at pos=0x%llX", size, ArPos64);
+					appError("Unable to read %d bytes at pos=0x%llX", size, FilePos);
 			#if PROFILE
 				GNumSerialize++;
 				GSerializeBytes += size;
 			#endif
-				ArPos64 += size;
 				FilePos += size;
 				return;
 			}
-			// fill buffer
+			// Fill buffer
 			int ReadBytes = fread(Buffer, 1, FILE_BUFFER_SIZE, f);
 			if (ReadBytes == 0)
-				appError("Unable to read %d bytes at pos=0x%llX", 1, ArPos64);
+				appError("Unable to read %d bytes at pos=0x%llX", 1, FilePos);
 		#if PROFILE
 			GNumSerialize++;
 			GSerializeBytes += ReadBytes;
@@ -656,21 +660,9 @@ void FFileReader::Serialize(void *data, int size)
 			BufferPos = FilePos;
 			BufferSize = ReadBytes;
 			FilePos += ReadBytes;
-			// update LocalPos
-			LocalPos64 = ArPos64 - BufferPos;
-			assert(LocalPos64 >= 0 && LocalPos64 < BufferSize);
+			BufferBytesLeft = ReadBytes;
+			LocalReadPos = 0;
 		}
-
-		// here we have 32-bit position in buffer
-		int LocalPos = (int)LocalPos64;
-
-		// have something in buffer
-		int CanCopy = BufferSize - LocalPos;
-		if (CanCopy > size) CanCopy = size;
-		memcpy(data, Buffer + LocalPos, CanCopy);
-		data = OffsetPointer(data, CanCopy);
-		size -= CanCopy;
-		ArPos64 += CanCopy;
 	}
 
 	unguardf("File=%s", ShortName);
@@ -679,6 +671,41 @@ void FFileReader::Serialize(void *data, int size)
 bool FFileReader::Open()
 {
 	return OpenFile();
+}
+
+void FFileReader::Seek(int Pos)
+{
+	Seek64(Pos);
+}
+
+void FFileReader::Seek64(int64 Pos)
+{
+	// Check for buffer validity
+	int64 LocalPos64 = Pos - BufferPos;
+	if (LocalPos64 < 0 || LocalPos64 >= BufferSize)
+	{
+		// Outside of the buffer
+		BufferBytesLeft = 0;
+		// SeekPos will be reset to -1 after actual seek
+		SeekPos = Pos;
+	}
+	else
+	{
+		// Inside of the buffer, recompute number of bytes to the end
+		LocalReadPos = (int)LocalPos64;
+		BufferBytesLeft = BufferSize - LocalReadPos;
+	}
+}
+
+int FFileReader::Tell() const
+{
+	assert((BufferPos >> 32) == 0);
+	return (int)BufferPos + LocalReadPos;
+}
+
+int64 FFileReader::Tell64() const
+{
+	return BufferPos + LocalReadPos;
 }
 
 int64 FFileReader::GetFileSize64() const
@@ -700,10 +727,17 @@ int64 FFileReader::GetFileSize64() const
 	return FileSize;
 }
 
+bool FFileReader::IsEof() const
+{
+	return (BufferBytesLeft == 0) && (FilePos == GetFileSize64());
+}
+
 static TArray<FFileWriter*> GFileWriters;
 
 FFileWriter::FFileWriter(const char *Filename, unsigned InOptions)
 :	FFileArchive(Filename, InOptions)
+,	FileSize(0)
+,	ArPos64(0)
 {
 	guard(FFileWriter::FFileWriter);
 	IsLoading = false;
@@ -798,6 +832,7 @@ bool FFileWriter::Open()
 	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
 	BufferPos = 0;
 	BufferSize = 0;
+	ArPos64 = 0;
 	return OpenFile();
 }
 
@@ -830,9 +865,34 @@ void FFileWriter::FlushBuffer()
 	}
 }
 
+void FFileWriter::Seek(int Pos)
+{
+	ArPos64 = Pos;
+}
+
+void FFileWriter::Seek64(int64 Pos)
+{
+	ArPos64 = Pos;
+}
+
+int FFileWriter::Tell() const
+{
+	return (int)ArPos64;
+}
+
+int64 FFileWriter::Tell64() const
+{
+	return ArPos64;
+}
+
 int64 FFileWriter::GetFileSize64() const
 {
 	return max(FileSize, FilePos + BufferSize);
+}
+
+bool FFileWriter::IsEof() const
+{
+	return ArPos64 >= GetFileSize64();
 }
 
 
