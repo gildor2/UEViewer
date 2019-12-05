@@ -54,7 +54,8 @@ sub getline {
 sub process {
 	my ($file) =@_;
 	open(IN, $file) or die "Unable to read file $file\n";
-	my $name = $file;
+	$file =~ s/\\/\//;
+	my ($name) = $file =~ /.*[\/]([^\/]+)/;
 	$name =~ s/\./_/;
 	print(OUT "\n// $file\nstatic const char ${name}[] = \"${file}\\x00\"");
 	my $accum = "";
@@ -75,17 +76,21 @@ sub process {
 
 # return file modification time
 sub FileTime {
-	my @s = stat($_[0]) or die "File \"${_[0]}\" was not found\n";
+	my @s = stat($_[0]) or die;
 	return $s[9];
 }
 
 
+# Get the directory of script file
+$ThisExec = $0;				# $PROGRAM_NAME does not works
+($root) = $ThisExec =~ /^(.+)[\\\/][^\/\\]+$/;
+$root = "." if !defined($root);
+$OUT = "$root/$OUT";
 
-opendir(DIR, ".");
+opendir(DIR, $root);
 @filelist = readdir(DIR);
 closedir(DIR);
 
-$ThisExec = $0;				# $PROGRAM_NAME does not works
 $ExecTime = FileTime($ThisExec);
 
 my $rebuild = 0;
@@ -95,7 +100,7 @@ if (!-f $OUT) {
 } else {
 	$OutTime = FileTime($OUT);
 	if ($ExecTime > $OutTime) {
-		print STDERR "Updated this script, rebuilding $OUT ...\n";
+		print STDERR "This script has been updated, rebuilding $OUT ...\n";
 		$rebuild = 1;
 	}
 }
@@ -105,13 +110,13 @@ if ($rebuild == 0) {
 	# verify individual file times
 	for $f (@filelist)
 	{
-		if ($f =~ /.*\.($EXTS)$/) {
-			my $ShaderTime = FileTime($f);
+#		if ($f =~ /.*\.($EXTS)$/) {
+			my $ShaderTime = FileTime("$root/$f");
 			if ($ShaderTime > $OutTime) {
-				print STDERR "$f is updated, rebuilding $OUT ...\n";
+				print STDERR "$f has been updated, rebuilding $OUT ...\n";
 				$rebuild = 1;
 			}
-		}
+#		}
 	}
 }
 
@@ -130,7 +135,7 @@ EOF
 
 for $f (@filelist) {
 	if ($f =~ /.*\.($EXTS)$/) {
-		process($f);
+		process("$root/$f");
 	}
 }
 

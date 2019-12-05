@@ -97,9 +97,7 @@ if [ $render -eq 1 ]; then
 	fi
 	# build shaders
 	#?? move to makefile
-	cd "Unreal/Shaders"
-	./make.pl
-	cd "../.."
+	Unreal/Shaders/make.pl
 fi
 
 # prepare makefile parameters, store in obj directory
