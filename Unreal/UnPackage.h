@@ -380,7 +380,7 @@ public:
 	{
 		Loader->SetStopper(Pos);
 	}
-	virtual int  GetStopper() const
+	virtual int GetStopper() const
 	{
 		return Loader->GetStopper();
 	}

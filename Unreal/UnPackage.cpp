@@ -1857,6 +1857,7 @@ void UnPackage::SetupReader(int ExportIndex)
 	// setup for object
 	const FObjectExport &Exp = GetExport(ExportIndex);
 	SetStopper(Exp.SerialOffset + Exp.SerialSize);
+//	appPrintf("Setup for %s: %d + %d -> %d\n", *Exp.ObjectName, Exp.SerialOffset, Exp.SerialSize, Exp.SerialOffset + Exp.SerialSize);
 	Seek(Exp.SerialOffset);
 	unguard;
 }

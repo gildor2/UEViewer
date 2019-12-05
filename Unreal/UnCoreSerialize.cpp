@@ -496,8 +496,9 @@ FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
 :	Options(InOptions)
 ,	f(NULL)
 ,	Buffer(NULL)
-,	BufferPos(0)
 ,	BufferSize(0)
+,	BufferPos(0)
+,	FilePos(0)
 {
 	// process the filename
 	FullName = appStrdup(Filename);
@@ -636,9 +637,15 @@ void FFileReader::Serialize(void *data, int size)
 				}
 				SeekPos = -1;
 			}
+		#if MAX_DEBUG
+			int tell = ftell(f);
+			if (tell != FilePos)
+				appError("Bad FilePos!");
+		#endif
 			if (size >= FILE_BUFFER_SIZE / 2)
 			{
 				// Large block, read directly to destination skipping buffer
+//				appPrintf("read2: %d+%d -> %d\n", (int)FilePos, size, (int)FilePos + size);
 				int res = fread(data, size, 1, f);
 				if (res != 1)
 					appError("Unable to read %d bytes at pos=0x%llX", size, FilePos);
@@ -647,10 +654,16 @@ void FFileReader::Serialize(void *data, int size)
 				GSerializeBytes += size;
 			#endif
 				FilePos += size;
+				BufferPos = FilePos;
+				// Invalidate buffer
+				BufferSize = 0;
+				BufferBytesLeft = 0;
+				LocalReadPos = 0;
 				return;
 			}
 			// Fill buffer
 			int ReadBytes = fread(Buffer, 1, FILE_BUFFER_SIZE, f);
+//			appPrintf("read: %d+%d -> %d\n", (int)FilePos, ReadBytes, (int)FilePos + ReadBytes);
 			if (ReadBytes == 0)
 				appError("Unable to read %d bytes at pos=0x%llX", 1, FilePos);
 		#if PROFILE
@@ -680,14 +693,17 @@ void FFileReader::Seek(int Pos)
 
 void FFileReader::Seek64(int64 Pos)
 {
+//	appPrintf("seek: %d\n", (int)Pos);
 	// Check for buffer validity
 	int64 LocalPos64 = Pos - BufferPos;
 	if (LocalPos64 < 0 || LocalPos64 >= BufferSize)
 	{
-		// Outside of the buffer
+		// Outside of the current buffer, invalidate it
+		BufferSize = 0;
 		BufferBytesLeft = 0;
+		LocalReadPos = 0;
 		// SeekPos will be reset to -1 after actual seek
-		SeekPos = Pos;
+		BufferPos = SeekPos = Pos;
 	}
 	else
 	{
@@ -717,6 +733,7 @@ int64 FFileReader::GetFileSize64() const
 		FFileReader* _this = const_cast<FFileReader*>(this);
 		// don't rewind file back
 		_this->FilePos = _this->FileSize = _filelengthi64(fileno(f));
+		_this->SeekPos = 0;
 #else
 		fseeko64(f, 0, SEEK_END);
 		FFileReader* _this = const_cast<FFileReader*>(this);
