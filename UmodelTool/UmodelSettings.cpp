@@ -207,7 +207,7 @@ void CUmodelSettings::Load()
 	FString ConfigFile;
 	SetPathOption(ConfigFile, CONFIG_FILE);
 
-	FArchive* Ar = new FFileReader(*ConfigFile, FAO_NoOpenError);
+	FArchive* Ar = new FFileReader(*ConfigFile, FAO_TextFile|FAO_NoOpenError);
 	if (!Ar->IsOpen())
 	{
 		delete Ar;
