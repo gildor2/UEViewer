@@ -1,0 +1,17 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "native",
+      "name": "No arguments",
+      "project": "umodel.exe"
+    },
+    {
+      "type": "native",
+      "name": "Use cmdline.cfg",
+      "project": "umodel.exe",
+      "args": [ "@docs/cmdline.cfg" ]
+    }
+  ]
+}

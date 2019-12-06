@@ -1,0 +1,86 @@
+{
+  "configurations": [
+    {
+      "inheritEnvironments": [ "msvc_x86" ],
+      "name": "Win32-Release",
+      "includePath": [
+        "${env.INCLUDE}",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "WIN32",
+        "NDEBUG",
+        "UNICODE",
+        "_UNICODE"
+      ],
+      "intelliSenseMode": "windows-msvc-x86",
+      "environments": [
+        {
+          "BuildOptions": ""
+        }
+      ]
+    },
+    {
+      "inheritEnvironments": [ "msvc_x86" ],
+      "name": "Win32-Debug",
+      "includePath": [
+        "${env.INCLUDE}",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "WIN32",
+        "NDEBUG",
+        "UNICODE",
+        "_UNICODE",
+        "MAX_DEBUG"
+      ],
+      "intelliSenseMode": "windows-msvc-x86",
+      "environments": [
+        {
+          "BuildOptions": "--debug",
+        }
+      ]
+    },
+    {
+      "inheritEnvironments": [ "msvc_x64" ],
+      "name": "Win64-Release",
+      "includePath": [
+        "${env.INCLUDE}",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "WIN32",
+        "NDEBUG",
+        "UNICODE",
+        "_UNICODE"
+      ],
+      "intelliSenseMode": "windows-msvc-x64",
+      "environments": [
+        {
+          "BuildOptions": "--64"
+        }
+      ]
+    },
+    {
+      "inheritEnvironments": [ "msvc_x64" ],
+      "name": "Win64-Debug",
+      "includePath": [
+        "${env.INCLUDE}",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "WIN32",
+        "NDEBUG",
+        "UNICODE",
+        "_UNICODE",
+        "MAX_DEBUG"
+      ],
+      "intelliSenseMode": "windows-msvc-x64",
+      "environments": [
+        {
+          "BuildOptions": "--64 --debug",
+        }
+      ]
+    }
+  ]
+}

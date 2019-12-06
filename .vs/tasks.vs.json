@@ -1,0 +1,27 @@
+{
+  "version": "0.2.1",
+  "tasks": [
+    {
+      "taskName": "Build",
+      "taskLabel": "Build",
+      "appliesTo": "*",
+      "contextType": "build",
+      "type": "launch",
+      "command": "bash.exe",
+      "args": [ "build.sh ${env.BuildOptions}" ],
+      "workingDirectory": "${workspaceRoot}",
+      "inheritEnvironments": [ "${cpp.activeConfiguration}" ],
+    },
+    {
+      "taskName": "Compile",
+      "taskLabel": ": Compile",
+      "appliesTo": "*.c,*.cpp",
+      "contextType": "compile",
+      "type": "launch",
+      "command": "bash.exe",
+      "args": [ "build.sh ${env.BuildOptions} --file ${relativeFile}" ],
+      "workingDirectory": "${workspaceRoot}",
+      "inheritEnvironments": [ "${cpp.activeConfiguration}" ],
+    }
+  ]
+}
