@@ -729,16 +729,13 @@ int64 FFileReader::GetFileSize64() const
 	// lazy file size computation
 	if (FileSize < 0)
 	{
-#if _WIN32
 		FFileReader* _this = const_cast<FFileReader*>(this);
-		// don't rewind file back
-		_this->FilePos = _this->FileSize = _filelengthi64(fileno(f));
-		_this->SeekPos = 0;
+#if _WIN32
+		_this->FileSize = _filelengthi64(fileno(f));
 #else
 		fseeko64(f, 0, SEEK_END);
-		FFileReader* _this = const_cast<FFileReader*>(this);
-		// don't rewind file back
-		_this->FilePos = _this->FileSize = ftello64(f);
+		_this->FileSize = ftello64(f);
+		fseeko64(f, 0, FilePos);
 #endif // _WIN32
 	}
 	return FileSize;
@@ -746,6 +743,12 @@ int64 FFileReader::GetFileSize64() const
 
 bool FFileReader::IsEof() const
 {
+	if (Options & FAO_TextFile)
+	{
+		// We're tracking file position as it returned by our read operations, however "text file" means
+		// skipping "\r" characters, so position may not match.
+		appError("FFileReader::IsEof is not suitable for text files (%s)", FullName);
+	}
 	return (BufferBytesLeft == 0) && (FilePos == GetFileSize64());
 }
 
