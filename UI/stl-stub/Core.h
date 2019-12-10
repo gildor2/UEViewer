@@ -14,10 +14,6 @@
 #include <string.h>
 
 
-#ifndef HAS_UI
-#define HAS_UI 1
-#endif
-
 #undef min
 #undef max
 

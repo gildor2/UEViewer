@@ -1,7 +1,6 @@
-#include "BaseDialog.h"
-
 #if HAS_UI
 
+#include "BaseDialog.h"
 #include "PackageDialog.h"
 #include "PackageScanDialog.h"
 #include "ProgressDialog.h"

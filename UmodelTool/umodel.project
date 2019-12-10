@@ -8,15 +8,26 @@ UMODEL=UmodelTool
 
 INCLUDES += $UMODEL UI
 
+!if "$PLATFORM" eq "win32" || "$PLATFORM" eq "win64"
+	IS_WINDOWS = 1
+!else
+	IS_WINDOWS = 0
+!endif
+
+# Allow GUI for Windows platform
+!if "$IS_WINDOWS" eq "1"
+	DEFINES += HAS_UI=1
+!endif
+
 sources(MAIN) = {
 	Exporters/*.cpp
 	Unreal/*.cpp
 	Viewers/*.cpp
 	MeshInstance/*.cpp
 	Core/*.cpp
-	UI/*.cpp
 	$UMODEL/*.cpp
-!if "$PLATFORM" eq "win32" || "$PLATFORM" eq "win64"
+!if "$IS_WINDOWS" eq "1"
+	UI/*.cpp
 	$UMODEL/res/umodel.rc
 !endif
 }

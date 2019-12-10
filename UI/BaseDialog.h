@@ -7,8 +7,6 @@
 
 #include "Core.h"
 
-#if HAS_UI	// defined in Build.h, included from Core.h
-
 #include "Win32Types.h"
 #include "UnCore.h"					// for TArray and FString
 
@@ -1308,7 +1306,5 @@ protected:
 
 void UISetExceptionHandler(void (*Handler)());
 
-
-#endif // HAS_UI
 
 #endif // __BASE_DIALOG_H__

@@ -14,9 +14,6 @@
 #endif // _WIN32
 
 #include "BaseDialog.h"
-
-#if HAS_UI
-
 #include "UIPrivate.h"
 
 /*-----------------------------------------------------------------------------
@@ -636,5 +633,3 @@ void UIMenu::Popup(UIElement* Owner, int x, int y)
 
 	unguard;
 }
-
-#endif // HAS_UI

@@ -53,8 +53,6 @@
 */
 
 
-#if HAS_UI
-
 //#define DEBUG_WINDOWS_ERRORS		MAX_DEBUG
 //#define DEBUG_MULTILIST_SEL			1
 
@@ -3752,6 +3750,3 @@ INT_PTR UIBaseDialog::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	unguard;
 }
-
-
-#endif // HAS_UI

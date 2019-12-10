@@ -5,7 +5,6 @@
 #ifndef __FILE_CONTROLS_H__
 #define __FILE_CONTROLS_H__
 
-#if HAS_UI
 
 class UIFilePathEditor : public UIGroup
 {
@@ -99,7 +98,5 @@ FString ShowFileSelectionDialog(
 	const FString& Title,
 	const TArray<FString>& Filters);
 
-
-#endif // HAS_UI
 
 #endif // __FILE_CONTROLS_H__

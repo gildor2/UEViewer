@@ -25,8 +25,6 @@
 #include "BaseDialog.h"
 #include "FileControls.h"
 
-#if HAS_UI
-
 #if _WIN32
 
 #pragma comment(lib, "ole32.lib")
@@ -280,5 +278,3 @@ void UIFileNameEditor::OnBrowseClicked(UIButton* sender)
 		Editor->SetText();
 	}
 }
-
-#endif // HAS_UI

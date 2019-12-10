@@ -1,7 +1,6 @@
-#include "BaseDialog.h"
-
 #if HAS_UI
 
+#include "BaseDialog.h"
 #include "ProgressDialog.h"
 #include "UnObject.h"
 

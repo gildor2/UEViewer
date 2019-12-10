@@ -1,8 +1,9 @@
+#if HAS_UI
+
 #include "BaseDialog.h"
 #include "SettingsDialog.h"
 #include "FileControls.h"
 
-#if HAS_UI
 
 UISettingsDialog::UISettingsDialog(CUmodelSettings& settings, OptionsKind kind)
 :	Kind(kind)

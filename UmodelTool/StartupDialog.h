@@ -1,8 +1,6 @@
 #ifndef __STARTUP_DIALOG_H__
 #define __STARTUP_DIALOG_H__
 
-#if HAS_UI
-
 #include "UmodelSettings.h"
 
 class UIStartupDialog : public UIBaseDialog
@@ -23,7 +21,5 @@ protected:
 
 	virtual void InitUI();
 };
-
-#endif // HAS_UI
 
 #endif // __STARTUP_DIALOG_H__

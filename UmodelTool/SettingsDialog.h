@@ -1,8 +1,6 @@
 #ifndef __SETTINGS_DIALOG_H__
 #define __SETTINGS_DIALOG_H__
 
-#if HAS_UI
-
 #include "UmodelSettings.h"
 
 class UISettingsDialog : public UIBaseDialog
@@ -46,7 +44,5 @@ protected:
 	UIElement& MakeSavePackagesOptions();
 	UIElement& MakeUIOptions();
 };
-
-#endif // HAS_UI
 
 #endif // __SETTINGS_DIALOG_H__

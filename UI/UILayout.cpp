@@ -3,9 +3,6 @@
 // Licensed under the BSD license. See LICENSE.txt file in the project root for full license information.
 
 #include "BaseDialog.h"
-
-#if HAS_UI
-
 #include "UIPrivate.h"
 
 //#define DEBUG_LAYOUT				1
@@ -488,5 +485,3 @@ void UIPageControl::ComputeLayoutWithBorders(int borderLeft, int borderRight, in
 
 	unguard;
 }
-
-#endif // HAS_UI

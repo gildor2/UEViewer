@@ -149,7 +149,6 @@ typedef unsigned __int64		uint64;
 #	define FORMAT_SIZE(fmt)		"%z" fmt
 #	undef VSTUDIO_INTEGRATION
 #	undef WIN32_USE_SEH
-#	undef HAS_UI				// not yet supported on this platform
 
 typedef signed long long		int64;
 typedef unsigned long long		uint64;
