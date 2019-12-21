@@ -601,8 +601,16 @@ void FPackageFileSummary::Serialize4(FArchive &Ar)
 	int32 ThumbnailTableOffset;
 	Ar << ThumbnailTableOffset;
 
-	// guid and generations
+	// guid
 	Ar << Guid;
+
+/*	if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER) -- disabled at the moment for Fortnite compatibility
+	{
+		FGuid PersistentGuid, OwnerPersistentGuid;
+		Ar << PersistentGuid << OwnerPersistentGuid;
+	} */
+
+	// generations
 	int32 Count;
 	Ar << Count;
 	Generations.Empty(Count);
