@@ -559,7 +559,7 @@ sub EmitCompilerDefs {
 		} else {
 			$defs .= " -d _WIN64 -d WIN64";
 		}
-		print "RC   = rc.exe -dNDEBUG -l 0x409${winxp}${defs}\n"
+		print "RC   = rc.exe -nologo -dNDEBUG -l 0x409${winxp}${defs}\n"
 	} elsif ($COMPILER eq "GnuC") {
 		my $platf = "gcc";
 		# platform override

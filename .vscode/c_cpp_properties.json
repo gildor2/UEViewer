@@ -3,22 +3,22 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}",
                 "${workspaceFolder}/Core",
-                "${workspaceFolder}/Unreal"
+                "${workspaceFolder}/Unreal",
+                "${workspaceFolder}/UmodelTool",
+                "${workspaceFolder}/libs/includewin32"
             ],
             "defines": [
-                "_DEBUG",
-                "UNICODE",
-                "_UNICODE",
-				"RENDERING",
-				"HAS_UI"
+                "MAX_DEBUG",
+                "RENDERING",
+                "HAS_UI"
             ],
-			"forcedInclude": [
-				"${workspaceFolder}/Unreal/GameDefines.h"
-			],
-            "windowsSdkVersion": "10.0.17134.0",
-            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.22.27905/bin/Hostx64/x64/cl.exe",
+            "forcedInclude": [
+                "${workspaceFolder}/Unreal/GameDefines.h"
+            ],
+            "windowsSdkVersion": "10.0.18362.0",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "msvc-x64",

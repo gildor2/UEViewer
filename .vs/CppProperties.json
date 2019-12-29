@@ -9,9 +9,8 @@
       ],
       "defines": [
         "WIN32",
-        "NDEBUG",
-        "UNICODE",
-        "_UNICODE"
+        "HAS_UI",
+        "RENDERING"
       ],
       "intelliSenseMode": "windows-msvc-x86",
       "environments": [
@@ -29,9 +28,8 @@
       ],
       "defines": [
         "WIN32",
-        "NDEBUG",
-        "UNICODE",
-        "_UNICODE",
+        "HAS_UI",
+        "RENDERING",
         "MAX_DEBUG"
       ],
       "intelliSenseMode": "windows-msvc-x86",
@@ -50,9 +48,8 @@
       ],
       "defines": [
         "WIN32",
-        "NDEBUG",
-        "UNICODE",
-        "_UNICODE"
+        "HAS_UI",
+        "RENDERING"
       ],
       "intelliSenseMode": "windows-msvc-x64",
       "environments": [
@@ -70,9 +67,8 @@
       ],
       "defines": [
         "WIN32",
-        "NDEBUG",
-        "UNICODE",
-        "_UNICODE",
+        "HAS_UI",
+        "RENDERING",
         "MAX_DEBUG"
       ],
       "intelliSenseMode": "windows-msvc-x64",

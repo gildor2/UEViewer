@@ -27,16 +27,16 @@ EOF
 shopt -s extglob
 
 exe=umodel.exe
-c_drive=
+win_drive=
 if [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ]; then
 	exe="umodel"
-	# VirtualBox default C: drive mapping
-	if [ -d "/media/sf_C_DRIVE" ]; then
-		c_drive="/media/sf_C_DRIVE"			# VirtualBox
-	elif [ -d "/mnt/hgfs/C" ]; then
-		c_drive="/mnt/hgfs/C"				# VMware
+	# Windows to VM or Linux path conversion
+#	if [ -d "/media/sf_C_DRIVE" ]; then
+#		c_drive="/media/sf_C_DRIVE"			# VirtualBox - not supported now because it has drive letter in the middle
+	if [ -d "/mnt/hgfs/C" ]; then
+		win_drive="/mnt/hgfs/"				# VMware
 	elif [ -d "/media/c" ]; then
-		c_drive="/media/c"
+		win_drive="/media/"					# linux
 	fi
 fi
 
@@ -66,8 +66,8 @@ function CheckDir()
 		dir=$1
 		DBG "... check $dir"
 		# support Windows paths on Linux
-		if [ "$c_drive" ] && [ "${dir:1:1}" == ":" ]; then
-			dir="${c_drive}${dir:2}"
+		if [ "$win_drive" ] && [ "${dir:1:1}" == ":" ]; then
+			dir="${win_drive}${dir:0:1}/${dir:2}"
 		fi
 		if [ -z "$checkedDirs" ]; then
 			checkedDirs=$dir
@@ -179,7 +179,7 @@ function fortnite()
 {
 	read aes < "Docs/fortnite.txt"
 	CheckDir "${launcher[@]/%/Fortnite/FortniteGame/Content/Paks}"
-	run -game=ue4.23 -aes=$aes $*
+	run -game=ue4.24 -aes=$aes $*
 }
 function ue3()
 {

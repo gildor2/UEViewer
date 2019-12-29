@@ -638,8 +638,8 @@ void FFileReader::Serialize(void *data, int size)
 				SeekPos = -1;
 			}
 		#if MAX_DEBUG
-			int tell = ftell(f);
-			if (tell != FilePos)
+			int tell = ftell(f); // msvcrt.dll doesn't have ftelli64, ftell() returns -1 when position is larger than 4Gb
+			if (tell != -1 && tell != FilePos)
 				appError("Bad FilePos!");
 		#endif
 			if (size >= FILE_BUFFER_SIZE / 2)
