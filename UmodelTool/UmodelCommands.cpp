@@ -162,7 +162,7 @@ void SavePackages(const TArray<const CGameFileInfo*>& Packages, IProgressCallbac
 		assert(mainFile);
 		FStaticString<MAX_PACKAGE_PATH> RelativeName;
 		mainFile->GetRelativeName(RelativeName);
-		if (Progress && !Progress->Progress(*RelativeName, i, GNumPackageFiles))
+		if (Progress && !Progress->Progress(*RelativeName, i, Packages.Num()))
 			break;
 
 		// Reference in UE4 code: FNetworkPlatformFile::IsAdditionalCookedFileExtension()
