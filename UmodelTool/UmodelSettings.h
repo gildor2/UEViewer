@@ -15,6 +15,7 @@ struct CStartupSettings
 	bool			UseAnimation;
 	bool			UseStaticMesh;
 	bool			UseTexture;
+	bool			UseMorphTarget;
 	bool			UseLightmapTexture;
 	bool			UseSound;
 	bool			UseScaleForm;
@@ -31,6 +32,7 @@ struct CStartupSettings
 		PROP_BOOL(UseAnimation)
 		PROP_BOOL(UseStaticMesh)
 		PROP_BOOL(UseTexture)
+		PROP_BOOL(UseMorphTarget)
 		PROP_BOOL(UseLightmapTexture)
 		PROP_BOOL(UseSound)
 		PROP_BOOL(UseScaleForm)

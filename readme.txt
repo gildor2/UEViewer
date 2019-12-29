@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+29.12.2019
+- added option to disable MorphTarget loading: available in UI and with -nomorph command line option
+
 21.11.2019
 - added Star Wars Jedi: Fallen Order support, requires game override (-game=jedi)
 

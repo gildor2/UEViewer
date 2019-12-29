@@ -198,6 +198,7 @@ static void RegisterClasses(int game)
 	}
 	if (!GSettings.Startup.UseStaticMesh) UnregisterClass("StaticMesh", true);
 	if (!GSettings.Startup.UseTexture) UnregisterClass("UnrealMaterial", true);
+	if (!GSettings.Startup.UseMorphTarget) UnregisterClass("MorphTarget", false);
 	if (!GSettings.Startup.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
 	if (!GSettings.Startup.UseScaleForm) UnregisterClass("SwfMovie", true);
 	if (!GSettings.Startup.UseFaceFx)
@@ -379,6 +380,7 @@ static void PrintUsage()
 			"    -noanim         disable loading of MeshAnimation classes\n"
 			"    -nostat         disable loading of StaticMesh class\n"
 			"    -notex          disable loading of Material classes\n"
+			"    -nomorph        disable loading of MorphTarget class\n"
 			"    -nolightmap     disable loading of Lightmap textures\n"
 			"    -sounds         allow export of sounds\n"
 			"    -3rdparty       allow 3rd party asset export (ScaleForm, FaceFX)\n"
@@ -757,6 +759,7 @@ int main(int argc, const char **argv)
 			OPT_NBOOL("nostat",  GSettings.Startup.UseStaticMesh)
 			OPT_NBOOL("noanim",  GSettings.Startup.UseAnimation)
 			OPT_NBOOL("notex",   GSettings.Startup.UseTexture)
+			OPT_NBOOL("nomorph", GSettings.Startup.UseMorphTarget)
 			OPT_NBOOL("nolightmap", GSettings.Startup.UseLightmapTexture)
 			OPT_BOOL ("sounds",  GSettings.Startup.UseSound)
 			OPT_BOOL ("dds",     GSettings.Export.ExportDdsTexture)

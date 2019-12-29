@@ -99,6 +99,7 @@ void CStartupSettings::Reset()
 	UseAnimation = true;
 	UseStaticMesh = true;
 	UseTexture = true;
+	UseMorphTarget = true;
 	UseLightmapTexture = true;
 
 	UseSound = false;

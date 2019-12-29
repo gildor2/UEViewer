@@ -95,6 +95,7 @@ void UIStartupDialog::InitUI()
 			+ NewControl(UICheckbox, "Static mesh",   &Opt.UseStaticMesh)
 			+ NewControl(UICheckbox, "Animation",     &Opt.UseAnimation)
 			+ NewControl(UICheckbox, "Textures",      &Opt.UseTexture)
+			+ NewControl(UICheckbox, "MorphTargets",  &Opt.UseMorphTarget)
 			+ NewControl(UICheckbox, "Lightmaps",     &Opt.UseLightmapTexture)
 		]
 		+ NewControl(UIGroup, GROUP_NO_BORDER)
