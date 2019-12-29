@@ -142,6 +142,15 @@ void UTexture2D::Serialize4(FArchive& Ar)
 {
 	guard(UTexture2D::Serialize4);
 
+#if JEDI
+	if (Ar.Game == GAME_Jedi && !stricmp(Name, "UnchangedPRT"))
+	{
+		// This texture is only the object which has oodle decompression error, skip it
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+#endif // JEDI
+
 	Super::Serialize4(Ar);
 
 	FStripDataFlags StripFlags(Ar);		// note: these flags are used for pre-VER_UE4_TEXTURE_SOURCE_ART_REFACTOR versions
