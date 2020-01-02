@@ -1194,7 +1194,7 @@ int main(int argc, const char **argv)
 	// find any object to display
 	if (!GApplication.FindObjectAndCreateVisualizer(1, GApplication.GuiShown, true))	//!! don't need to pass GuiShown there
 	{
-		appPrintf("\nThe specified package(s) has no objects to diaplay.\n\n");
+		appPrintf("\nThe specified package(s) has no objects to display.\n\n");
 		goto no_objects;
 	}
 

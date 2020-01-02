@@ -2304,7 +2304,7 @@ no_nav_collision:
 
 	//!! TODO: support sockets
 	Ar << Sockets;
-	if (Sockets.Num()) appNotify("StaticMesh has %d sockets", Sockets.Num());
+	if (Sockets.Num()) appPrintf("StaticMesh has %d sockets\n", Sockets.Num());
 
 	// editor models
 	if (!StripFlags.IsEditorDataStripped())
