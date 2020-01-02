@@ -420,6 +420,7 @@ enum EGame
 		GAME_HIT = GAME_UE4(8)+1,
 		// 4.11
 		GAME_Gears4 = GAME_UE4(11)+1,
+		GAME_DaysGone = GAME_UE4(11)+2,
 		// 4.13
 		GAME_Lawbreakers = GAME_UE4(13)+1,
 		GAME_StateOfDecay2 = GAME_UE4(13)+2,

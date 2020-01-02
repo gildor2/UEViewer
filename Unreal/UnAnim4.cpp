@@ -54,6 +54,15 @@ FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 	if (Ar.ArVer >= VER_UE4_REFERENCE_SKELETON_REFACTOR)
 		Ar << S.NameToIndexMap;
 
+#if DAYSGONE
+	if (Ar.Game == GAME_DaysGone)
+	{
+		// Additional per-bone attribute
+		TArray<FVector> unk;
+		Ar << unk;
+	}
+#endif // DAYSGONE
+
 	int NumBones = S.RefBoneInfo.Num();
 	if (Ar.ArVer < VER_UE4_FIXUP_ROOTBONE_PARENT && NumBones > 0 && S.RefBoneInfo[0].ParentIndex != INDEX_NONE)
 		S.RefBoneInfo[0].ParentIndex = INDEX_NONE;

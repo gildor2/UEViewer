@@ -359,6 +359,9 @@ const GameInfo GListOfGames[] = {
 #	if GEARS4
 		G("Gears of War 4", gears4, GAME_Gears4),
 #	endif
+#	if DAYSGONE
+		G("Days Gone", daysgone, GAME_DaysGone),
+#	endif
 #	if ARK
 		G("Ark: Survival Evolved", ark, GAME_Ark),
 #	endif
@@ -907,6 +910,9 @@ static const UEVersionMap ueVersions[] =
 	// This game uses mostly UE4.13 structures, but has 4.14 package file format. So, game enum
 	// is defined as GAME_UE4(13), but we're defining package version 4.14.
 	G(GAME_Lawbreakers, VER_UE4_14)
+	#endif
+	#if DAYSGONE
+	G(GAME_DaysGone, 499)					// 500 = VER_UE4_INNER_ARRAY_TAG_INFO, but it's not here
 	#endif
 #endif // UNREAL4
 #if ENDWAR

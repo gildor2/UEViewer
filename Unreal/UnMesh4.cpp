@@ -73,6 +73,23 @@ struct FColorVertexBuffer4
 	}
 };
 
+#if DAYSGONE
+
+struct FDGPackedVector
+{
+	FVectorFixed48 V;
+	uint16 Pad;
+
+	friend FArchive& operator<<(FArchive& Ar, FDGPackedVector& PV)
+	{
+		return Ar << PV.V << PV.Pad;
+	}
+};
+
+SIMPLE_TYPE(FDGPackedVector, uint16);
+
+#endif // DAYSGONE
+
 struct FPositionVertexBuffer4
 {
 	TArray<FVector>	Verts;
@@ -85,6 +102,36 @@ struct FPositionVertexBuffer4
 
 		Ar << S.Stride << S.NumVertices;
 		DBG_MESH("PositionStream: IS:%d NV:%d\n", S.Stride, S.NumVertices);
+
+#if DAYSGONE
+		if (Ar.Game == GAME_DaysGone)
+		{
+			// This happens only for StaticMesh
+			if (S.Stride == 8)
+			{
+				TArray<FDGPackedVector> PackedVerts;
+				PackedVerts.BulkSerialize(Ar);
+				S.Verts.AddUninitialized(PackedVerts.Num());
+				for (int i = 0; i < PackedVerts.Num(); i++)
+				{
+					S.Verts[i] = PackedVerts[i].V;
+				}
+				//todo: should use some bounds to unpack positions, almost works but a bit distorted data
+				return Ar;
+			}
+			else if (S.Stride == 4)
+			{
+				TArray<uint32> PackedVerts;
+				// No idea which format is used here
+				PackedVerts.BulkSerialize(Ar);
+				//todo: should use some bounds to unpack positions; position is 32-bit, with full use of all bits
+				return Ar;
+			}
+			// else - use standard format
+			assert(S.Stride == 12);
+		}
+#endif // DAYSGONE
+
 		S.Verts.BulkSerialize(Ar);
 		return Ar;
 
@@ -503,6 +550,14 @@ struct FSkeletalMaterial
 		guard(FSkeletalMaterial<<);
 
 		Ar << M.Material;
+
+#if DAYSGONE
+		if (Ar.Game == GAME_DaysGone)
+		{
+			int32 unk1;
+			Ar << unk1;
+		}
+#endif // DAYSGONE
 
 		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
 		{
@@ -1217,6 +1272,15 @@ struct FStaticLODModel4
 
 				if (Ar.ArVer >= VER_UE4_APEX_CLOTH && Lod.HasClothData())
 					Ar << Lod.ClothVertexBuffer;
+
+#if DAYSGONE
+				if (Ar.Game == GAME_DaysGone)
+				{
+					FMultisizeIndexContainer unk1;
+					int32 unk2, unk3, unk4;
+					Ar << unk1 << unk2 << unk3 << unk4;
+				}
+#endif // DAYSGONE
 			}
 		}
 
@@ -2267,6 +2331,14 @@ no_nav_collision:
 	// serialize FStaticMeshRenderData
 	if (bCooked)
 	{
+#if DAYSGONE
+		if (Ar.Game == GAME_DaysGone)
+		{
+			int32 unk;
+			Ar << unk;
+		}
+#endif // DAYSGONE
+
 		// Note: code below still contains 'if (bCooked)' switches, this is because the same
 		// code could be used to read data from DDC, for non-cooked assets.
 		DBG_STAT("Serializing RenderData\n");

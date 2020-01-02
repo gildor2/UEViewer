@@ -86,6 +86,11 @@ enum ETextureCompressionSettings
 	TC_NormalmapBC5,
 	TC_OneBitMonochrome,
 	TC_SimpleLightmapModification,
+
+#if DAYSGONE
+	TC_BendDefault,
+	TC_BendNormalmap,
+#endif
 };
 
 _ENUM(ETextureCompressionSettings)
@@ -109,6 +114,11 @@ _ENUM(ETextureCompressionSettings)
 	_E(TC_NormalmapBC5),
 	_E(TC_OneBitMonochrome),
 	_E(TC_SimpleLightmapModification),
+
+#if DAYSGONE
+	_E(TC_BendDefault),
+	_E(TC_BendNormalmap),
+#endif
 };
 
 struct FTextureSource

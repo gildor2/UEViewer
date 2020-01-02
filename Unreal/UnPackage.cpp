@@ -1647,8 +1647,8 @@ void UnPackage::LoadNameTable()
 	#if UNREAL4
 			if (Game >= GAME_UE4_BASE)
 			{
-		#if GEARS4
-				if (Game == GAME_Gears4) goto name_hashes;
+		#if GEARS4 || DAYSGONE
+				if (Game == GAME_Gears4 || Game == GAME_DaysGone) goto name_hashes;
 		#endif
 				if (ArVer >= VER_UE4_NAME_HASHES_SERIALIZED)
 				{
