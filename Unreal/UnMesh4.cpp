@@ -73,23 +73,6 @@ struct FColorVertexBuffer4
 	}
 };
 
-#if DAYSGONE
-
-struct FDGPackedVector
-{
-	FVectorFixed48 V;
-	uint16 Pad;
-
-	friend FArchive& operator<<(FArchive& Ar, FDGPackedVector& PV)
-	{
-		return Ar << PV.V << PV.Pad;
-	}
-};
-
-SIMPLE_TYPE(FDGPackedVector, uint16);
-
-#endif // DAYSGONE
-
 struct FPositionVertexBuffer4
 {
 	TArray<FVector>	Verts;
@@ -106,24 +89,29 @@ struct FPositionVertexBuffer4
 #if DAYSGONE
 		if (Ar.Game == GAME_DaysGone)
 		{
-			// This happens only for StaticMesh
+			// This is used only for StaticMesh
 			if (S.Stride == 8)
 			{
-				TArray<FDGPackedVector> PackedVerts;
+				TArray<FDGPackedVector64> PackedVerts;
 				PackedVerts.BulkSerialize(Ar);
 				S.Verts.AddUninitialized(PackedVerts.Num());
 				for (int i = 0; i < PackedVerts.Num(); i++)
 				{
-					S.Verts[i] = PackedVerts[i].V;
+					S.Verts[i] = PackedVerts[i];
 				}
 				//todo: should use some bounds to unpack positions, almost works but a bit distorted data
 				return Ar;
 			}
 			else if (S.Stride == 4)
 			{
-				TArray<uint32> PackedVerts;
+				TArray<FDGPackedVector32> PackedVerts;
 				// No idea which format is used here
 				PackedVerts.BulkSerialize(Ar);
+				S.Verts.AddUninitialized(PackedVerts.Num());
+				for (int i = 0; i < PackedVerts.Num(); i++)
+				{
+					S.Verts[i] = PackedVerts[i];
+				}
 				//todo: should use some bounds to unpack positions; position is 32-bit, with full use of all bits
 				return Ar;
 			}
@@ -2334,7 +2322,7 @@ no_nav_collision:
 #if DAYSGONE
 		if (Ar.Game == GAME_DaysGone)
 		{
-			int32 unk;
+			TArray<int32> unk;
 			Ar << unk;
 		}
 #endif // DAYSGONE
@@ -2505,6 +2493,29 @@ no_nav_collision:
 
 	// remaining is SpeedTree data
 	DROP_REMAINING_DATA(Ar);
+
+#if DAYSGONE
+		if (Ar.Game == GAME_DaysGone)
+		{
+			// This game has packed positions, we should unpack it. When loading positions,
+			// we're converting values to range 0..1. Now we should use Bounds for it.
+			FVector Offset = Bounds.Origin;
+			Offset.Subtract(Bounds.BoxExtent);
+			FVector Scale = Bounds.BoxExtent;
+			Scale.Scale(2);
+			for (FStaticMeshLODModel4& Lod : Lods)
+			{
+				if (Lod.PositionVertexBuffer.Stride == 8 || Lod.PositionVertexBuffer.Stride == 4)
+				{
+					for (FVector& V : Lod.PositionVertexBuffer.Verts)
+					{
+						V.Scale(Scale);
+						V.Add(Offset);
+					}
+				}
+			}
+		}
+#endif // DAYSGONE
 
 	if (bCooked)
 	{

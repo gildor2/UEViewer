@@ -1008,6 +1008,27 @@ struct FVector
 		X = _X; Y = _Y; Z = _Z;
 	}
 
+	void Add(const FVector& Other)
+	{
+		X += Other.X;
+		Y += Other.Y;
+		Z += Other.Z;
+	}
+
+	void Subtract(const FVector& Other)
+	{
+		X -= Other.X;
+		Y -= Other.Y;
+		Z -= Other.Z;
+	}
+
+	void Scale(const FVector& Other)
+	{
+		X *= Other.X;
+		Y *= Other.Y;
+		Z *= Other.Z;
+	}
+
 	void Scale(float value)
 	{
 		X *= value; Y *= value; Z *= value;

@@ -535,7 +535,6 @@ struct FQuatFloat48NoW_Argo
 
 SIMPLE_TYPE(FQuatFloat48NoW_Argo, uint16)
 
-
 #endif // ARGONAUTS
 
 
@@ -691,5 +690,51 @@ struct FQuatPolarEncoded48
 
 #endif // BORDERLANDS
 
+
+#if DAYSGONE
+
+struct FDGPackedVector32
+{
+	unsigned		X:10, Y:10, Z:10;
+
+	friend FArchive& operator<<(FArchive& Ar, FDGPackedVector32& PV)
+	{
+		return Ar << GET_DWORD(PV);
+	}
+
+	operator FVector() const
+	{
+		FVector V;
+		V.X = X / 1024.0f;
+		V.Y = Y / 1024.0f;
+		V.Z = Z / 1024.0f;
+		return V;
+	}
+};
+
+SIMPLE_TYPE(FDGPackedVector32, uint32);
+
+struct FDGPackedVector64
+{
+	uint16 X, Y, Z, W;
+
+	friend FArchive& operator<<(FArchive& Ar, FDGPackedVector64& PV)
+	{
+		return Ar << PV.X << PV.Y << PV.Z << PV.W;
+	}
+
+	operator FVector() const
+	{
+		FVector V;
+		V.X = X / 65535.0f;
+		V.Y = Y / 65535.0f;
+		V.Z = Z / 65535.0f;
+		return V;
+	}
+};
+
+SIMPLE_TYPE(FDGPackedVector64, uint16);
+
+#endif // DAYSGONE
 
 #endif // __UNMESH_TYPES_H__

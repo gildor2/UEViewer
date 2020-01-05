@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+05.01.2020
+- added Days Gone (PS4) support, required game override -game=daysgone
+
 29.12.2019
 - added option to disable MorphTarget loading: available in UI and with -nomorph command line option
 
