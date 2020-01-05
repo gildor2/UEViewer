@@ -1234,7 +1234,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 
 	SerializeHeader(Ar);
 
-	if (BulkDataFlags & BULKDATA_Unused)	// skip serializing
+	if (BulkDataFlags & BULKDATA_Unused || ElementCount == 0)	// skip serializing
 	{
 #if DEBUG_BULK
 		appPrintf("bulk with no data\n");
@@ -1258,6 +1258,13 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		}
 		if (BulkDataFlags & BULKDATA_PayloadAtEndOfFile)
 		{
+			if (BulkDataOffsetInFile + 16 >= Ar.GetFileSize64())
+			{
+				appNotify("Bulk position is outside of the file (%d bytes)", BulkDataSizeOnDisk);
+				// Prevent any possible use of this bulk
+				BulkDataFlags |= BULKDATA_Unused;
+				return;
+			}
 			// stored in the same file, but at different position
 			// save archive position
 			int savePos, saveStopper;
