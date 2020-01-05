@@ -1,5 +1,5 @@
 UE Viewer
-(c) Konstantin Nosov (Gildor), 2007-2019
+(c) Konstantin Nosov (Gildor), 2007-2020
 
 
 Please support the development by making a donation here:
