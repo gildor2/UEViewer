@@ -168,11 +168,11 @@ fi
 case "$PLATFORM" in
 	"vc-win32")
 		Make $makefile $target || exit 1
-		cp $root/libs/SDL2/x86/SDL2.dll .
+		[ $render -eq 1 ] && cp $root/libs/SDL2/x86/SDL2.dll .
 		;;
 	"vc-win64")
 		Make $makefile $target || exit 1
-		cp $root/libs/SDL2/x64/SDL2.dll .
+		[ $render -eq 1 ] && cp $root/libs/SDL2/x64/SDL2.dll .
 		;;
 	"mingw32"|"cygwin")
 		PATH=/bin:/usr/bin:$PATH					# configure paths for Cygwin

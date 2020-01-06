@@ -1,7 +1,8 @@
 {
     "files.exclude": {
         "umodel*" : true,
-        "*.{exe,dll,bat}": true,
+        "*.{exe,dll}": true,
+        "*.bat": true,
         "package*.sh": true,
         "src-arc.sh": true,
         "**/.vs": true,
@@ -10,7 +11,10 @@
         "**/Docs": true,
         "**/makefile-*": true,
         "**/obj": true,
-        "**/Tools/{M,P,T,Umd,UT,unpack}*": true,
+        "**/Tools/Max*": true,
+        "**/Tools/Package*": true,
+        "**/Tools/TypeInfo": true,
+        "**/Tools/{UmdExtract,UT2down,unpack_obb.pl}": true,
         "**/UI/stl-stub": true,
         "**/UmodelExport": true,
         "**/UmodelSaved": true,

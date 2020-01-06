@@ -35,7 +35,7 @@
       "intelliSenseMode": "windows-msvc-x86",
       "environments": [
         {
-          "BuildOptions": "--debug",
+          "BuildOptions": "--debug"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "intelliSenseMode": "windows-msvc-x64",
       "environments": [
         {
-          "BuildOptions": "--64 --debug",
+          "BuildOptions": "--64 --debug"
         }
       ]
     }
