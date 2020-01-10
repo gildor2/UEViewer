@@ -212,16 +212,17 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 #if SMITE
 	if (GForceGame == GAME_Smite)
 	{
-		if (Flags == COMPRESS_LZO_ENC_SMITE)
+		if (Flags & 512)
 		{
+			// Simple encryption
 			for (int i = 0; i < CompressedSize; i++)
 				CompressedBuffer[i] ^= 0x2A;
-			// overide compression
-			Flags = COMPRESS_LZO;
+			// Remove encryption flag
+			Flags &= ~512;
 		}
-		else if (Flags == COMPRESS_OODLE_SMITE)
+		if (Flags == 8)
 		{
-			// overide compression
+			// Overide compression, appeared in late 2019 builds
 			Flags = COMPRESS_OODLE;
 		}
 	}

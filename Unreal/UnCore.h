@@ -2471,11 +2471,6 @@ struct FIntBulkData : public FByteBulkData
 #define COMPRESS_LZO_ENC_BNS	8					// encrypted LZO
 #endif
 
-#if SMITE
-#define COMPRESS_LZO_ENC_SMITE	514					// encrypted LZO
-#define COMPRESS_OODLE_SMITE	8
-#endif
-
 #if USE_LZ4
 #define COMPRESS_LZ4		0xFE					// custom umodel's constant
 #endif
