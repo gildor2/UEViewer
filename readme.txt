@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+10.01.2020
+- updated SMITE support
+
 05.01.2020
 - added Days Gone (PS4) support, required game override -game=daysgone
 

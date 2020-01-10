@@ -2473,6 +2473,7 @@ struct FIntBulkData : public FByteBulkData
 
 #if SMITE
 #define COMPRESS_LZO_ENC_SMITE	514					// encrypted LZO
+#define COMPRESS_OODLE_SMITE	8
 #endif
 
 #if USE_LZ4

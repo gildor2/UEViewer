@@ -210,12 +210,20 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 #endif // BLADENSOUL
 
 #if SMITE
-	if (GForceGame == GAME_Smite && Flags == COMPRESS_LZO_ENC_SMITE)
+	if (GForceGame == GAME_Smite)
 	{
-		for (int i = 0; i < CompressedSize; i++)
-			CompressedBuffer[i] ^= 0x2A;
-		// overide compression
-		Flags = COMPRESS_LZO;
+		if (Flags == COMPRESS_LZO_ENC_SMITE)
+		{
+			for (int i = 0; i < CompressedSize; i++)
+				CompressedBuffer[i] ^= 0x2A;
+			// overide compression
+			Flags = COMPRESS_LZO;
+		}
+		else if (Flags == COMPRESS_OODLE_SMITE)
+		{
+			// overide compression
+			Flags = COMPRESS_OODLE;
+		}
 	}
 #endif // SMITE
 
