@@ -302,7 +302,7 @@ enum EPropType // hardcoded in Unreal
 	NAME_InterfaceProperty = 15,
 #endif
 #if UNREAL4
-	/// reference: CoreUObject/Public/UObject/UnrealNames.inl
+	/// reference: Core/Public/UObject/UnrealNames.inl
 	// Note: real enum indices doesn't matter in UE4 because type serialized as real FName
 	NAME_TextProperty = 14,
 	NAME_AttributeProperty,
@@ -348,18 +348,19 @@ static const struct
 	F(Int64Property),
 	F(Int16Property),
 	F(Int8Property),
+	F(SetProperty),
 #endif
 #undef F
 };
 
+// Find NAME_... value according to FName value. Will return -1 if not found.
 static int MapTypeName(const char *Name)
 {
 	guard(MapTypeName);
 	for (int i = 0; i < ARRAY_COUNT(NameToIndex); i++)
 		if (!stricmp(Name, NameToIndex[i].Name))
 			return NameToIndex[i].Index;
-	appError("MapTypeName: unknown type '%s'", Name);
-	return 0;
+	return INDEX_NONE;
 	unguard;
 }
 
@@ -369,6 +370,8 @@ static const char* GetTypeName(int Index)
 	for (int i = 0; i < ARRAY_COUNT(NameToIndex); i++)
 		if (Index == NameToIndex[i].Index)
 			return NameToIndex[i].Name;
+	if (Index == INDEX_NONE)
+		return "(unknown)";
 	appError("GetTypeName: unknown type index %d", Index);
 	return NULL;
 	unguard;
@@ -428,6 +431,10 @@ struct FPropertyTag
 			int unk1C;
 			Ar << PropType << Tag.Name << Tag.StrucName << Tag.DataSize << unk1C << Tag.BoolValue << Tag.ArrayIndex;
 			Tag.Type = MapTypeName(PropType);
+			if (Tag.Type < 0)
+			{
+				appError("MapTypeName: unknown type '%s' for property '%s'", *PropType, *Tag.Name);
+			}
 			// has special situation: PropType="None", Name="SerializedGroup", StrucName=Name of 1st serialized field,
 			// DataSize = size of UObject block; possible, unk1C = offset of 1st serialized field
 			return Ar;
@@ -446,6 +453,10 @@ struct FPropertyTag
 
 			// type-specific serialization
 			Tag.Type = MapTypeName(PropType);
+			if (Tag.Type < 0)
+			{
+				appNotify("WARNING: MapTypeName: unknown type '%s' for property '%s'", *PropType, *Tag.Name);
+			}
 			if (Tag.Type == NAME_StructProperty)
 			{
 				Ar << Tag.StrucName;
@@ -459,7 +470,7 @@ struct FPropertyTag
 			{
 				Ar << (byte&)Tag.BoolValue;		// byte
 			}
-			else if (Tag.Type == NAME_ByteProperty)
+			else if (Tag.Type == NAME_ByteProperty || Tag.Type == NAME_EnumProperty)
 			{
 				Ar << Tag.EnumName;
 			}
@@ -516,6 +527,10 @@ struct FPropertyTag
 			}
 	#endif // MKVSDC
 			Tag.Type = MapTypeName(PropType);
+			if (Tag.Type < 0)
+			{
+				appError("MapTypeName: unknown type '%s' for property '%s'", *PropType, *Tag.Name);
+			}
 			if (Tag.Type == NAME_StructProperty)
 				Ar << Tag.StrucName;
 			else if (Tag.Type == NAME_BoolProperty)
@@ -1087,15 +1102,6 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 				appPrintf("WARNING: skipping BoolProperty %s with Tag.Size=%d\n", *Tag.Name, Tag.DataSize);
 				continue;
 			}
-#if UNREAL4
-			if (Tag.Type == NAME_EnumProperty && Tag.DataSize == 8)
-			{
-				// See NAME_EnumProperty serialization in this function: this property has DataSize==8, but
-				// really nothing is serialized. Verified with 2 games already.
-				appPrintf("WARNING: skipping EnumProperty %s with Tag.Size=%d\n", *Tag.Name, Tag.DataSize);
-				continue;
-			}
-#endif // UNREAL4
 			// skip property data
 			Ar.Seek(StopPos);
 			// serialize other properties
@@ -1351,9 +1357,15 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 #if UNREAL4
 		case NAME_EnumProperty:
 			{
-				// Possible bug: EnumProperty has DataSize=8, but really serializes nothing
-				//http://www.gildor.org/smf/index.php/topic,6036.0.html
-				StopPos = Ar.Tell();
+				FName EnumValue;
+				Ar << EnumValue;
+				assert(Prop->TypeName[0] == '#')
+				int tmpInt = NameToEnum(Prop->TypeName+1, *EnumValue);
+				if (tmpInt == ENUM_UNKNOWN)
+					appNotify("unknown member %s of enum %s", *EnumValue, Prop->TypeName+1);
+				assert(tmpInt >= 0 && tmpInt <= 255);
+				*value = tmpInt;
+				PROP_DBG("%s", *EnumValue);
 			}
 			break;
 #endif // UNREAL4
