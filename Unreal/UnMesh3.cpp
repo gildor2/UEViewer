@@ -1659,7 +1659,6 @@ struct FStaticLODModel3
 				}
 #endif // PLA
 				Lod.VertexColor.BulkSerialize(Ar);
-				appPrintf("INFO: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
 			}
 		}
 	no_vert_color:

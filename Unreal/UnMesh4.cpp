@@ -1341,7 +1341,6 @@ struct FStaticLODModel4
 
 			if (LoadingMesh->bHasVertexColors)
 			{
-				appPrintf("WARNING: SkeletalMesh %s has vertex colors\n", LoadingMesh->Name);
 				FColorVertexBuffer4 NewColorVertexBuffer;
 				Ar << NewColorVertexBuffer;
 				Exchange(Lod.ColorVertexBuffer.Data, NewColorVertexBuffer.Data);

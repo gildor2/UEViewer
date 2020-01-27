@@ -216,6 +216,7 @@ public:
 		PROP_DROP(bHasBeenSimplified)
 		PROP_DROP(SamplingInfo)
 		PROP_DROP(MinLod)
+		PROP_DROP(PhysicsAsset)
 	END_PROP_TABLE
 
 	USkeletalMesh4();
@@ -602,6 +603,7 @@ public:
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 		PROP_ENUM2(Interpolation, EAnimInterpolationType)
 		PROP_ENUM2(AdditiveAnimType, EAdditiveAnimationType)
+		PROP_DROP(RetargetSource)
 	END_PROP_TABLE
 
 	UAnimSequence4()
