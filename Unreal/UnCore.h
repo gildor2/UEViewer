@@ -1200,22 +1200,6 @@ public:
 };
 
 
-struct FColor
-{
-	byte	R, G, B, A;
-
-	FColor()
-	{}
-	FColor(byte r, byte g, byte b, byte a = 255)
-	:	R(r), G(g), B(b), A(a)
-	{}
-	friend FArchive& operator<<(FArchive &Ar, FColor &C)
-	{
-		return Ar << C.R << C.G << C.B << C.A;
-	}
-};
-
-
 // UNREAL3
 struct FLinearColor
 {
@@ -1458,7 +1442,6 @@ SIMPLE_TYPE(FVector,  float)
 SIMPLE_TYPE(FVector4, float)
 SIMPLE_TYPE(FQuat,    float)
 SIMPLE_TYPE(FCoords,  float)
-SIMPLE_TYPE(FColor,   byte)
 //SIMPLE_TYPE(FPackedNormal, uint32) - has complex serialization
 
 #if UNREAL4
@@ -2297,6 +2280,47 @@ public:
 protected:
 	char	StaticData[N];
 };
+
+
+/*-----------------------------------------------------------------------------
+	FColor
+-----------------------------------------------------------------------------*/
+
+struct FColor
+{
+	byte	R, G, B, A;
+
+	FColor()
+	{}
+	FColor(byte r, byte g, byte b, byte a = 255)
+	:	R(r), G(g), B(b), A(a)
+	{}
+	friend FArchive& operator<<(FArchive &Ar, FColor &C)
+	{
+		if (Ar.Game < GAME_UE3)
+			return Ar << C.R << C.G << C.B << C.A;
+		// Since UE3, FColor has different memory layout - BGRA.
+		return Ar << C.B << C.G << C.R << C.A;
+	}
+};
+
+// SIMPLE_TYPE(FColor, byte) - we could use this macro if FColor layout would be const, however it
+// differs between UE1-2 and UE3-4. For better performance, we're using custom TArray<FColor> serializer.
+
+template<>
+inline FArchive& operator<<(FArchive& Ar, TArray<FColor>& CA)
+{
+	CA.SerializeSimple(Ar, 4, 1);
+	if (Ar.Game >= GAME_UE3)
+	{
+		// Replace BGRA with RGBA
+		for (FColor& C : CA)
+		{
+			Exchange(C.R, C.B);
+		}
+	}
+	return Ar;
+}
 
 
 /*-----------------------------------------------------------------------------
