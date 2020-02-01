@@ -1523,10 +1523,6 @@ public:
 
 	void RawCopy(const FArray &Src, int elementSize);
 
-	// serializers
-	FArchive& SerializeSimple(FArchive &Ar, int NumFields, int FieldSize);
-	FArchive& SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
-
 protected:
 	void	*DataPtr;
 	int		DataCount;
@@ -1538,9 +1534,6 @@ protected:
 	{
 		return DataPtr == (void*)(this + 1);
 	}
-
-	// serializers
-	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 
 	// clear array and resize to specific count
 	void Empty(int count, int elementSize);
@@ -1556,6 +1549,11 @@ protected:
 	void RemoveAtSwap(int index, int count, int elementSize);
 
 	void* GetItem(int index, int elementSize) const;
+
+	// serializers
+	FArchive& Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
+	FArchive& SerializeSimple(FArchive &Ar, int NumFields, int FieldSize);
+	FArchive& SerializeRaw(FArchive &Ar, void (*Serializer)(FArchive&, void*), int elementSize);
 };
 
 #if DECLARE_VIEWER_PROPS
@@ -1568,6 +1566,10 @@ FArchive& SerializeLazyArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer
 FArchive& SerializeBulkArray(FArchive &Ar, FArray &Array, FArchive& (*Serializer)(FArchive&, void*));
 #endif
 
+
+// Declare TArray serializer before TArray (part 1)
+template<typename T>
+FArchive& operator<<(FArchive& Ar, TArray<T>& A);
 
 // NOTE: this container cannot hold objects, required constructor/destructor
 // (at least, Add/Insert/Remove functions are not supported, but can serialize
@@ -1807,32 +1809,8 @@ public:
 	FORCEINLINE friend T*       end  (      TArray& A) { return (T*) A.DataPtr + A.DataCount; }
 	FORCEINLINE friend const T* end  (const TArray& A) { return (const T*) A.DataPtr + A.DataCount; }
 
-	// serializer
-	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TArray &A)
-	{
-#if DO_GUARD_MAX
-		guardfunc;
-#endif
-		// special case for SIMPLE_TYPE
-		if (TTypeInfo<T>::IsSimpleType)
-		{
-			static_assert(sizeof(T) == TTypeInfo<T>::NumFields * TTypeInfo<T>::FieldSize, "Error in TTypeInfo");
-			return A.SerializeSimple(Ar, TTypeInfo<T>::NumFields, TTypeInfo<T>::FieldSize);
-		}
-
-		// special case for RAW_TYPE
-		if (TTypeInfo<T>::IsRawType)
-			return A.SerializeRaw(Ar, TArray<T>::SerializeItem, sizeof(T));
-
-		// generic case
-		// erase previous data before loading in a case of non-POD data
-		if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
-			A.Destruct(0, A.Num());		// do not call Empty() - data will be freed anyway in FArray::Serialize()
-		return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
-#if DO_GUARD_MAX
-		unguard;
-#endif
-	}
+	// Declare TArray serializer as "fiend" (part 2)
+	friend FArchive& operator<< <>(FArchive& Ar, TArray& A);
 
 #if UNREAL3
 	// Serialize an array, which file contents exactly matches in-memory contents.
@@ -1941,6 +1919,36 @@ protected:
 			((T*)DataPtr + index + i)->~T();
 	}
 };
+
+// Implementation of TArray serializer (part 3). Removing part 2 will cause some methods inaccessible.
+// Removing part 1 will cause function non-buildable. There's no problems when declaring serializer inside
+// TArray class, however this will not let us making custom TArray serializers for particular classes.
+template<typename T>
+FArchive& operator<<(FArchive& Ar, TArray<T>& A)
+{
+#if DO_GUARD_MAX
+	guardfunc;
+#endif
+	// special case for SIMPLE_TYPE
+	if (TTypeInfo<T>::IsSimpleType)
+	{
+		static_assert(sizeof(T) == TTypeInfo<T>::NumFields * TTypeInfo<T>::FieldSize, "Error in TTypeInfo");
+		return A.SerializeSimple(Ar, TTypeInfo<T>::NumFields, TTypeInfo<T>::FieldSize);
+	}
+
+	// special case for RAW_TYPE
+	if (TTypeInfo<T>::IsRawType)
+		return A.SerializeRaw(Ar, TArray<T>::SerializeItem, sizeof(T));
+
+	// generic case
+	// erase previous data before loading in a case of non-POD data
+	if (!TTypeInfo<T>::IsPod && Ar.IsLoading)
+		A.Destruct(0, A.Num());		// do not call Empty() - data will be freed anyway in FArray::Serialize()
+	return A.Serialize(Ar, TArray<T>::SerializeItem, sizeof(T));
+#if DO_GUARD_MAX
+	unguard;
+#endif
+}
 
 template<typename T>
 inline void Exchange(TArray<T>& A, TArray<T>& B)
