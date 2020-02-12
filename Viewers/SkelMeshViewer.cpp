@@ -939,7 +939,15 @@ void CSkelMeshViewer::FindUE4Animations()
 	const char* lookupSkeletonName = Skeleton->Name;
 	for (int i = 0; i < PackageInfos.Num(); i++)
 	{
-		UnPackage* package = PackageInfos[i]->Package;
+		const CGameFileInfo* info = PackageInfos[i];
+		UnPackage* package = info->Package;
+		if (!package)
+		{
+			// Shouldn't happen, but happen
+			appNotify("Strange package: IsPackage=true, Package is NULL: %s (size %d Kb)", *info->GetRelativeName(), info->SizeInKb + info->ExtraSizeInKb);
+			continue;
+		}
+
 		bool found = false;
 		for (int importIndex = 0; importIndex < package->Summary.ImportCount; importIndex++)
 		{
