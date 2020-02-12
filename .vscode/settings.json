@@ -1,8 +1,9 @@
 {
     "files.exclude": {
-        "umodel*" : true,
-        "*.{exe,dll}": true,
+        "umodel" : true,
+        "*.exe": true,
         "*.bat": true,
+        "*.{cfg,pdb,dll}": true,
         "package*.sh": true,
         "src-arc.sh": true,
         "**/.vs": true,
