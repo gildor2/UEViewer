@@ -9,6 +9,7 @@
 
 #include <ObjBase.h>		// CoInitialize()
 #include <Shlwapi.h>		// SH* functions
+#include <VersionHelpers.h>
 
 // prevent "warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared" with Win7.1 SDK
 #pragma warning(push)
@@ -24,6 +25,7 @@
 
 #include "BaseDialog.h"
 #include "FileControls.h"
+#include "UIPrivate.h"
 
 #if _WIN32
 
@@ -86,6 +88,76 @@ void UIFilePathEditor::AddCustomControls()
 	];
 }
 
+// Browse for folder using more modern UI - FileOpenDialog with selecting for folder instead of a file.
+// It is available since Windows Vista, but it seems Vista has some problems, so we're using it since Windows 8.
+static bool BrowseForFolderNew(const char* Title, HWND ParentWindow, FString* Path)
+{
+	IFileOpenDialog* pFileDialog;
+	if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileDialog))))
+	{
+		DWORD dwFlags = 0;
+		pFileDialog->GetOptions(&dwFlags);
+		pFileDialog->SetOptions(dwFlags | FOS_PICKFOLDERS);
+
+		wchar_t wTitle[MAX_TITLE_LEN];
+		mbstowcs(wTitle, Title, MAX_TITLE_LEN);
+
+		// Set up common settings
+		pFileDialog->SetTitle(wTitle);
+		if (!Path->IsEmpty())
+		{
+			wchar_t wPath[MAX_PATH];
+			mbstowcs(wPath, *(*Path), MAX_PATH);
+
+			// SHCreateItemFromParsingName is not available in WinXP, try to maintain compatibility
+			// at least with not using link-time binding.
+			typedef HRESULT (WINAPI *SHCreateItemFromParsingName_t)(PCWSTR, IBindCtx*, REFIID, void**);
+			static SHCreateItemFromParsingName_t pSHCreateItemFromParsingName = NULL;
+			if (!pSHCreateItemFromParsingName)
+			{
+				pSHCreateItemFromParsingName = (SHCreateItemFromParsingName_t) GetProcAddress(
+					GetModuleHandle("shell32.dll"), "SHCreateItemFromParsingName");
+				assert(pSHCreateItemFromParsingName);
+			}
+
+			IShellItem* pDefaultPathItem;
+			if (SUCCEEDED(pSHCreateItemFromParsingName(wPath, NULL, IID_PPV_ARGS(&pDefaultPathItem))))
+			{
+				pFileDialog->SetFolder(pDefaultPathItem);
+				pDefaultPathItem->Release();
+			}
+		}
+
+		// Show the picker
+		bool Result = false;
+		if (SUCCEEDED(pFileDialog->Show((HWND)ParentWindow)))
+		{
+			IShellItem* pResult;
+			if (SUCCEEDED(pFileDialog->GetResult(&pResult)))
+			{
+				PWSTR pFilePath = NULL;
+				if (SUCCEEDED(pResult->GetDisplayName(SIGDN_FILESYSPATH, &pFilePath)))
+				{
+					// Convert Unicode path to Ansi
+					Result = true;
+					int len = wcslen(pFilePath);
+					char* buf = new char[len+2];
+					wcstombs(buf, pFilePath, len+1);
+					*Path = buf;
+					delete[] buf;
+					::CoTaskMemFree(pFilePath);
+				}
+				pResult->Release();
+			}
+		}
+
+		pFileDialog->Release();
+		return Result;
+	}
+
+	return false;
+}
+
 static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
 	static LPARAM stored_lpData;
@@ -114,33 +186,43 @@ static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPAR
 
 void UIFilePathEditor::OnBrowseClicked(UIButton* sender)
 {
-	BROWSEINFO bi;
-	memset(&bi, 0, sizeof(bi));
-
-	char szDisplayName[MAX_PATH];	// will not be used
-	szDisplayName[0] = 0;
-
-	bi.hwndOwner      = DlgWnd;
-	bi.pidlRoot       = NULL;
-	bi.pszDisplayName = szDisplayName;
-	bi.lpszTitle      = *Title;
-	bi.ulFlags        = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-	bi.lParam         = (LPARAM)Editor->GetText();
-	bi.iImage         = 0;
-	bi.lpfn           = BrowseCallbackProc;
-
-	//TODO: take a look at UE4's FDesktopPlatformWindows::OpenDirectoryDialog()
-	//TODO: this function uses advanced access to FileOpenDialog and able to use if for browsing folders.
-
-	LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
-	char szPathName[1024];
-	if (pidl)
+	// For Windows 7 and later, use IFileOpenDialog. Note that GetVersion is deprecated, so
+	// we're using newer approach for detecting which Windows version is used.
+	if (IsWindows7OrGreater())
 	{
-		BOOL bRet = SHGetPathFromIDList(pidl, szPathName);
-		if (bRet)
+		if (BrowseForFolderNew(*Title, DlgWnd, Path))
 		{
-			*Path = szPathName;
+			// 'Path' is already updated, just need to update UI
 			Editor->SetText();
+		}
+	}
+	else
+	{
+		BROWSEINFO bi;
+		memset(&bi, 0, sizeof(bi));
+
+		char szDisplayName[MAX_PATH];	// will not be used
+		szDisplayName[0] = 0;
+
+		bi.hwndOwner      = DlgWnd;
+		bi.pidlRoot       = NULL;
+		bi.pszDisplayName = szDisplayName;
+		bi.lpszTitle      = *Title;
+		bi.ulFlags        = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+		bi.lParam         = (LPARAM)Editor->GetText();
+		bi.iImage         = 0;
+		bi.lpfn           = BrowseCallbackProc;
+
+		LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+		char szPathName[1024];
+		if (pidl)
+		{
+			BOOL bRet = SHGetPathFromIDList(pidl, szPathName);
+			if (bRet)
+			{
+				*Path = szPathName;
+				Editor->SetText();
+			}
 		}
 	}
 }
