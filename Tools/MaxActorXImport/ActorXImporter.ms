@@ -1049,7 +1049,7 @@ fn ImportPskFile filename skelOnly:false =
 			"MATT0000":
 				(
 					numMaterials = hdr.DataCount
-					Materials[numMaterials] = VMaterial ()	-- preallocate
+					if numMaterials > 0 then Materials[numMaterials] = VMaterial ()	-- preallocate
 					for i = 1 to numMaterials do Materials[i] = ReadVMaterial file
 				)
 
