@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+21.02.2020
+- support for UE4.25 pak file format
+
 10.01.2020
 - updated SMITE support
 

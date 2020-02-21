@@ -21,6 +21,8 @@ enum
 	PakFile_Version_DeleteRecords = 6,				// UE4.21+ - this constant is not used in UE4 code
 	PakFile_Version_EncryptionKeyGuid = 7,			// ... allows to use multiple encryption keys over the single project
 	PakFile_Version_FNameBasedCompressionMethod = 8, // UE4.22+ - use string instead of enum for compression method
+	PakFile_Version_FrozenIndex = 9,				// UE4.25 - temporary value, seems never used
+	PakFile_Version_PathHashIndex = 10,				// UE4.25+ - all file paths are encrypted (stored as 64-bit hash values)
 
 	PakFile_Version_Last,
 	PakFile_Version_Latest = PakFile_Version_Last - 1
@@ -75,14 +77,27 @@ struct FPakEntry
 	int64		Size;
 	int64		UncompressedSize;
 	int32		CompressionMethod;
-	TArray<FPakCompressedBlock> CompressionBlocks;
 	int32		CompressionBlockSize;
+	TArray<FPakCompressedBlock> CompressionBlocks;
 	byte		bEncrypted;					// replaced with 'Flags' in UE4.21
 
-	uint16		StructSize;					// computed value
-	FPakEntry*	HashNext;					// computed value
+	uint16		StructSize;					// computed value: size of FPakEntry prepended to each file
+	FPakEntry*	HashNext;					// computed value: used for fast name lookup
 
 	void Serialize(FArchive& Ar);
+
+	void CopyFrom(const FPakEntry& Other)
+	{
+		memcpy(this, &Other, sizeof(*this));
+	}
+
+	void DecodeFrom(const uint8* Data);
+
+	friend FArchive& operator<<(FArchive& Ar, FPakEntry& E)
+	{
+		E.Serialize(Ar);
+		return Ar;
+	}
 };
 
 inline bool PakRequireAesKey(bool fatal = true)
@@ -155,6 +170,7 @@ public:
 	,	Reader(NULL)
 	,	LastInfo(NULL)
 	,	HashTable(NULL)
+	,	NumEncryptedFiles(0)
 	{}
 
 	virtual ~FPakVFS()
@@ -203,6 +219,15 @@ protected:
 	TArray<FPakEntry>	FileInfos;
 	FPakEntry*			LastInfo;			// cached last accessed file info, simple optimization
 	FPakEntry**			HashTable;
+	FStaticString<MAX_PACKAGE_PATH> MountPoint;
+	int					NumEncryptedFiles;
+
+	void ValidateMountPoint(FString& MountPoint);
+
+	// UE4.24 and older
+	bool LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString& error);
+	// UE4.25 and newer
+	bool LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& error);
 
 	static uint16 GetHashForFileName(const char* FileName)
 	{

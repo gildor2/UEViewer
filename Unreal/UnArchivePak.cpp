@@ -146,6 +146,89 @@ end:
 	unguard;
 }
 
+void FPakEntry::DecodeFrom(const uint8* Data)
+{
+	guard(FPakEntry::DecodeFrom);
+
+	// UE4 reference: FPakFile::DecodePakEntry()
+	uint32 Bitfield = *(uint32*)Data;
+	Data += sizeof(uint32);
+
+	CompressionMethod = (Bitfield >> 23) & 0x3f;
+
+	// Offset follows - either 32 or 64 bit value
+	if (Bitfield & 0x80000000)
+	{
+		Pos = *(uint32*)Data;
+		Data += sizeof(uint32);
+	}
+	else
+	{
+		Pos = *(uint64*)Data;
+		Data += sizeof(uint64);
+	}
+
+	// The same for UncompressedSize
+	if (Bitfield & 0x40000000)
+	{
+		UncompressedSize = *(uint32*)Data;
+		Data += sizeof(uint32);
+	}
+	else
+	{
+		UncompressedSize = *(uint64*)Data;
+		Data += sizeof(uint64);
+	}
+
+	// Size field
+	if (CompressionMethod)
+	{
+		if (Bitfield & 0x20000000)
+		{
+			Size = *(uint32*)Data;
+			Data += sizeof(uint32);
+		}
+		else
+		{
+			Size = *(uint64*)Data;
+			Data += sizeof(uint64);
+		}
+	}
+	else
+	{
+		Size = UncompressedSize;
+	}
+
+	// bEncrypted
+	bEncrypted = (Bitfield >> 22) & 1;
+
+	// Compression information
+	int BlockCount = (Bitfield >> 6) & 0xffff;
+	CompressionBlocks.AddUninitialized(BlockCount);
+	CompressionBlockSize = 0;
+	if (BlockCount)
+	{
+		// CompressionBlockSize
+		if (UncompressedSize < 65536)
+			CompressionBlockSize = UncompressedSize;
+		else
+			CompressionBlockSize = (Bitfield & 0x3f) << 11;
+
+		// CompressionBlocks
+		assert(0);
+	}
+
+	// Compute StructSize: each file still have FPakEntry data prepended, and it should be skipped.
+	StructSize = sizeof(int64) * 3 + sizeof(int32) * 2 + 1 + 20;
+	// Take into account CompressionBlocks
+	if (CompressionMethod)
+	{
+		StructSize += sizeof(int32) + BlockCount * 2 * sizeof(int64);
+	}
+
+	unguard;
+}
+
 void FPakFile::Serialize(void *data, int size)
 {
 	guard(FPakFile::Serialize);
@@ -372,6 +455,88 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 
 	reader->Seek64(info.IndexOffset);
 
+	bool result = false;
+	if (info.Version < PakFile_Version_PathHashIndex)
+	{
+		result = LoadPakIndexLegacy(reader, info, error);
+	}
+	else
+	{
+		result = LoadPakIndex(reader, info, error);
+	}
+
+	if (result)
+	{
+		// Print statistics
+		appPrintf("Pak %s: %d files", *Filename, FileInfos.Num());
+		if (NumEncryptedFiles)
+			appPrintf(" (%d encrypted)", NumEncryptedFiles);
+		if (strcmp(*MountPoint, "/") != 0)
+			appPrintf(", mount point: \"%s\"", *MountPoint);
+		appPrintf(", version %d\n", info.Version);
+	}
+
+	return result;
+
+	unguardf("PakVer=%d.%d", mainVer, subVer);
+}
+
+static bool ValidateString(FArchive& Ar)
+{
+	// We're operating with index data, which is definitely less than 2Gb of size, so use Tell instead of Tell64.
+	int SavePos = Ar.Tell();
+
+	// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
+	int32 StringLen;
+	Ar << StringLen;
+	bool bFail = false;
+
+	if (StringLen > 512 || StringLen < -512)
+	{
+		bFail = true;
+	}
+	if (!bFail)
+	{
+		// Seek to terminating zero character
+		if (StringLen < 0)
+		{
+			Ar.Seek(Ar.Tell() - (StringLen - 1) * 2);
+			uint16 c;
+			Ar << c;
+			bFail = (c != 0);
+		}
+		else
+		{
+			Ar.Seek(Ar.Tell() + StringLen - 1);
+			char c;
+			Ar << c;
+			bFail = (c != 0);
+		}
+	}
+
+	Ar.Seek(SavePos);
+	return !bFail;
+}
+
+void FPakVFS::ValidateMountPoint(FString& MountPoint)
+{
+	bool badMountPoint = false;
+	if (!MountPoint.RemoveFromStart("../../.."))
+		badMountPoint = true;
+	if (MountPoint[0] != '/' || ( (MountPoint.Len() > 1) && (MountPoint[1] == '.') ))
+		badMountPoint = true;
+
+	if (badMountPoint)
+	{
+		appPrintf("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root\n", *Filename, *MountPoint);
+		MountPoint = "/";
+	}
+}
+
+bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString& error)
+{
+	guard(FPakVFS::LoadPakIndexLegacy);
+
 	// Manage pak files with encrypted index
 	FMemReader* InfoReaderProxy = NULL;
 	byte* InfoBlock = NULL;
@@ -389,32 +554,7 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 		InfoReader = InfoReaderProxy;
 
 		// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
-		int32 StringLen;
-		*InfoReader << StringLen;
-		bool bFail = false;
-		if (StringLen > 512 || StringLen < -512)
-		{
-			bFail = true;
-		}
-		if (!bFail)
-		{
-			// Seek to terminating zero character
-			if (StringLen < 0)
-			{
-				InfoReader->Seek(InfoReader->Tell() - (StringLen - 1) * 2);
-				uint16 c;
-				*InfoReader << c;
-				bFail = (c != 0);
-			}
-			else
-			{
-				InfoReader->Seek(InfoReader->Tell() + StringLen - 1);
-				char c;
-				*InfoReader << c;
-				bFail = (c != 0);
-			}
-		}
-		if (bFail)
+		if (!ValidateString(*InfoReader))
 		{
 			delete[] InfoBlock;
 			delete InfoReaderProxy;
@@ -434,8 +574,6 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 	Reader = reader;
 
 	// Read pak index
-
-	FStaticString<MAX_PACKAGE_PATH> MountPoint;
 
 	TRY {
 		// Read MountPoint with catching error, to override error message.
@@ -462,21 +600,11 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 	}
 
 	// Process MountPoint
-	bool badMountPoint = false;
-	if (!MountPoint.RemoveFromStart("../../.."))
-		badMountPoint = true;
-	if (MountPoint[0] != '/' || ( (MountPoint.Len() > 1) && (MountPoint[1] == '.') ))
-		badMountPoint = true;
+	ValidateMountPoint(MountPoint);
 
-	if (badMountPoint)
-	{
-		appPrintf("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root\n", *Filename, *MountPoint);
-		MountPoint = "/";
-	}
-
+	// Read file information
 	FileInfos.AddZeroed(count);
 
-	int numEncryptedFiles = 0;
 	for (int i = 0; i < count; i++)
 	{
 		guard(ReadInfo);
@@ -497,7 +625,7 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 		if (E.bEncrypted)
 		{
 //			appPrintf("Encrypted file: %s\n", *Filename);
-			numEncryptedFiles++;
+			NumEncryptedFiles++;
 		}
 		if (info.Version >= PakFile_Version_FNameBasedCompressionMethod)
 		{
@@ -516,9 +644,9 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 	if (count >= MIN_PAK_SIZE_FOR_HASHING)
 	{
 		// Hash everything
-		for (int i = 0; i < count; i++)
+		for (FPakEntry& E : FileInfos)
 		{
-			AddFileToHash(&FileInfos[i]);
+			AddFileToHash(&E);
 		}
 	}
 	// Cleanup
@@ -528,17 +656,227 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 		delete InfoReaderProxy;
 	}
 
-	// Print statistics
-	appPrintf("Pak %s: %d files", *Filename, count);
-	if (numEncryptedFiles)
-		appPrintf(" (%d encrypted)", numEncryptedFiles);
-	if (strcmp(*MountPoint, "/") != 0)
-		appPrintf(", mount point: \"%s\"", *MountPoint);
-	appPrintf(", version %d\n", info.Version);
+	return true;
+
+	unguard;
+}
+
+bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& error)
+{
+	guard(FPakVFS::LoadPakIndex);
+
+	// Manage pak files with encrypted index
+	FMemReader* InfoReaderProxy = NULL;
+	byte* InfoBlock = NULL;
+	FArchive* InfoReader = reader;
+
+	if (info.bEncryptedIndex)
+	{
+		guard(CheckEncryptedIndex);
+
+		InfoBlock = new byte[info.IndexSize];
+		reader->Serialize(InfoBlock, info.IndexSize);
+		appDecryptAES(InfoBlock, info.IndexSize);
+		InfoReaderProxy = new FMemReader(InfoBlock, info.IndexSize);
+		InfoReaderProxy->SetupFrom(*reader);
+		InfoReader = InfoReaderProxy;
+
+		// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
+		if (!ValidateString(*InfoReader))
+		{
+			delete[] InfoBlock;
+			delete InfoReaderProxy;
+			char buf[1024];
+			appSprintf(ARRAY_ARG(buf), "WARNING: The provided encryption key doesn't work with \"%s\". Skipping.", *Filename);
+			error = buf;
+			return false;
+		}
+
+		// Data is ok, seek to data start.
+		InfoReader->Seek(0);
+
+		unguard;
+	}
+
+	// this file looks correct, store 'reader'
+	Reader = reader;
+
+	// Read pak index
+
+	TRY {
+		// Read MountPoint with catching error, to override error message.
+		*InfoReader << MountPoint;
+	} CATCH {
+		if (info.bEncryptedIndex)
+		{
+			// Display nice error message
+			appError("Error during loading of encrypted pak file index. Probably the provided AES key is not correct.");
+		}
+		else
+		{
+			THROW_AGAIN;
+		}
+	}
+
+	// Read number of files
+	int32 count;
+	*InfoReader << count;
+	if (!count)
+	{
+		appPrintf("Empty pak file \"%s\"\n", *Filename);
+		return true;
+	}
+
+	// Process MountPoint
+	ValidateMountPoint(MountPoint);
+
+	uint64 PathHashSeed;
+	*InfoReader << PathHashSeed;
+
+	// Read directory information
+
+	bool bReaderHasPathHashIndex;
+	int64 PathHashIndexOffset = -1;
+	int64 PathHashIndexSize = 0;
+	*InfoReader << bReaderHasPathHashIndex;
+	if (bReaderHasPathHashIndex)
+	{
+		*InfoReader << PathHashIndexOffset << PathHashIndexSize;
+		// Skip PathHashIndexHash
+		InfoReader->Seek(InfoReader->Tell() + 20);
+	}
+
+	bool bReaderHasFullDirectoryIndex = false;
+	int64 FullDirectoryIndexOffset = -1;
+	int64 FullDirectoryIndexSize = 0;
+	*InfoReader << bReaderHasFullDirectoryIndex;
+	if (bReaderHasFullDirectoryIndex)
+	{
+		*InfoReader << FullDirectoryIndexOffset << FullDirectoryIndexSize;
+		// Skip FullDirectoryIndexHash
+		InfoReader->Seek(InfoReader->Tell() + 20);
+	}
+
+	if (!bReaderHasFullDirectoryIndex)
+	{
+		// todo: read PathHashIndex: PathHashIndexOffset + PathHashIndexSize
+		// todo: structure: TMap<uint64, FPakEntryLocation> (i.e. not array), FPakEntryLocation = int32
+		// todo: seems it maps hash to file index.
+		delete[] InfoBlock;
+		delete InfoReaderProxy;
+		char buf[1024];
+		appSprintf(ARRAY_ARG(buf), "WARNING: Pak file \"%s\" doesn't have a full index. Skipping.", *Filename);
+		error = buf;
+		return false;
+	}
+
+	TArray<uint8> EncodedPakEntries;
+	*InfoReader << EncodedPakEntries;
+
+	// Read 'Files' array. This one holds decoded file entries, without file names.
+	TArray<FPakEntry> Files;
+	*InfoReader << Files;
+
+	// Cleanup: primary directory index will no longer be used
+	if (InfoBlock)
+	{
+		delete[] InfoBlock;
+		delete InfoReaderProxy;
+	}
+
+	// Read the full index
+	assert(bReaderHasFullDirectoryIndex);
+
+	reader->Seek64(FullDirectoryIndexOffset);
+	if (info.bEncryptedIndex)
+	{
+		// Read encrypted data and decrypt
+		InfoBlock = new byte[FullDirectoryIndexSize];
+		reader->Serialize(InfoBlock, FullDirectoryIndexSize);
+		appDecryptAES(InfoBlock, FullDirectoryIndexSize);
+		InfoReaderProxy = new FMemReader(InfoBlock, FullDirectoryIndexSize);
+		InfoReaderProxy->SetupFrom(*reader);
+		InfoReader = InfoReaderProxy;
+	}
+	// Now InfoReader points to the full index data, either with use of 'reader' or 'InfoReaderProxy'.
+	using FPakEntryLocation = int32;
+	typedef TMap<FString, FPakEntryLocation> FPakDirectory;
+	// Each directory has files, it maps clean filename to index
+	TMap<FString, FPakDirectory> DirectoryIndex;
+	guard(ReadFullDirectory);
+	*InfoReader << DirectoryIndex;
+	unguard;
+
+	// Everything has been read now, build "legacy" FileInfos array from new data format
+	FileInfos.AddZeroed(count);
+
+	guard(BuildFullDirectory);
+	int FileIndex = 0;
+	for (const auto& Directory : DirectoryIndex)
+	{
+		// Build folder name. MountPoint ends with '/', directory name too.
+		FStaticString<MAX_PACKAGE_PATH> DirectoryPath;
+		DirectoryPath = MountPoint;
+		DirectoryPath += Directory.Key;
+
+		for (const auto& File : Directory.Value)
+		{
+			FPakEntry& E = FileInfos[FileIndex++];
+
+			// Build the file name. Directory ends with '/'.
+			FStaticString<MAX_PACKAGE_PATH> CombinedPath;
+			CombinedPath = DirectoryPath;
+			CombinedPath += File.Key;
+			// Compact file name
+			CompactFilePath(CombinedPath);
+
+			// File.Value is positive (offset in 'EncodedPakEntries') or negative (index in 'Files')
+			// References in UE4:
+			// FPakFile::DecodePakEntry <- FPakFile::GetPakEntry (decode or pick from 'Files') <- FPakFile::Find (name to index/location)
+			if (File.Value < 0)
+			{
+				// Index in 'Files' array
+				E.CopyFrom(Files[-(File.Value + 1)]);
+			}
+			else
+			{
+				// Pointer in 'EncodedPakEntries'
+				E.DecodeFrom(&EncodedPakEntries[File.Value]);
+			}
+
+			// Allocate file name in pool
+			E.Name = appStrdupPool(*CombinedPath);
+
+			if (E.bEncrypted)
+			{
+//				appPrintf("Encrypted file: %s\n", *Filename);
+				NumEncryptedFiles++;
+			}
+
+			// Convert compression method
+			int32 CompressionMethodIndex = E.CompressionMethod;
+			assert(CompressionMethodIndex >= 0 && CompressionMethodIndex <= 4);
+			E.CompressionMethod = CompressionMethodIndex > 0 ? info.CompressionMethods[CompressionMethodIndex-1] : 0;
+		}
+	}
+	if (FileIndex != FileInfos.Num())
+	{
+		appError("Wrong pak file directory?");
+	}
+	unguard;
+
+	if (count >= MIN_PAK_SIZE_FOR_HASHING)
+	{
+		// Hash everything
+		for (FPakEntry& E : FileInfos)
+		{
+			AddFileToHash(&E);
+		}
+	}
 
 	return true;
 
-	unguardf("PakVer=%d.%d", mainVer, subVer);
+	unguard;
 }
 
 const FPakEntry* FPakVFS::FindFile(const char* name)
