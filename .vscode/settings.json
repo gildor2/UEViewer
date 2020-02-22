@@ -10,7 +10,6 @@
         "**/bak": true,
         "**/data": true,
         "**/Docs": true,
-        "**/makefile-*": true,
         "**/obj": true,
         "**/Tools/Max*": true,
         "**/Tools/Package*": true,

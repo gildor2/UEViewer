@@ -51,6 +51,9 @@ substitution (r-value):
 	${var}
 defined(var)         will be replaced with 0 or 1
 
+stdout capture:
+	`command arg1 arg2`
+
 3. System variables:
 
 platform specification:
@@ -192,9 +195,16 @@ sub ExpandVars {
 		$line =~ s/ \bdefined \s* \( \s* $var \s*\) /$val/x;
 	}
 
+	while (my ($exec) = $line =~ /\`([^\`]+)\`/) {
+		# grab console program's output
+		my $out = qx/$exec/;
+		$out =~ s/\n/ /g;
+		$line =~ s/\`$exec\`/$out/;
+	}
+
 	return $line if $line !~ /\$/;				# line contains no vars
 
-	#!! not fine parser: iterates all variables instead of parsing input string
+	#!! not fine parser: iterates over all variables instead of parsing of input string
 	for my $key (keys(%vars)) {
 		my $value = $vars{$key};
 		$value = "" if !defined($value);
@@ -396,7 +406,7 @@ sub getline {
 			#-------------- other directives ------------------
 			if ($cmd eq "include") {
 				# limit nested includes (and stop infinite recursion)
-				Error ("too much nested includes") if $#includes > 16;
+				Error ("too many nested includes") if $#includes > 16;
 				local $file = ExpandVars($args);
 				push @includes, *IN;
 				local *IN2;							# NOTE: "local", not "my"

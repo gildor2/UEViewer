@@ -259,7 +259,7 @@ public:
 		return !operator==(String);
 	}
 
-	FORCEINLINE const char *operator*() const
+	FORCEINLINE const char* operator*() const
 	{
 		return Str;
 	}
