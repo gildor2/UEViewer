@@ -629,15 +629,6 @@ struct FSkelMeshSection4
 
 		FStripDataFlags StripFlags(Ar);
 
-#if GAME_KH3
-		if (Ar.Game == GAME_KH3)
-		{
-			int32 MaterialIndex;
-			Ar << MaterialIndex;
-			S.MaterialIndex = MaterialIndex;
-		}
-#endif // GAME_KH3
-
 		Ar << S.MaterialIndex;
 
 		if (SkelMeshVer < FSkeletalMeshCustomVersion::CombineSectionWithChunk)
@@ -752,8 +743,13 @@ struct FSkelMeshSection4
 #if KH3
 			if (Ar.Game == GAME_KH3)
 			{
-				// There are 2 integers here
-				Ar.Seek(Ar.Tell() + 8);
+				int32 unk1, unk2;		// bool + array count
+				Ar << unk1 << unk2;
+				if (unk1)
+				{
+					// "npc/n_ca201/mdl/n_ca201_0.uasset" has this, however it crashes anyway
+					Ar.Seek(Ar.Tell() + unk2 * 24);
+				}
 			}
 #endif // KH3
 			// UE4.19+
