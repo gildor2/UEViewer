@@ -1803,10 +1803,12 @@ void USkeletalMesh4::ConvertMesh()
 
 			// remap material for LOD
 			int MaterialIndex = S.MaterialIndex;
-			if (MaterialIndex >= 0 && MaterialIndex < Info.LODMaterialMap.Num())
+			if (Info.LODMaterialMap.IsValidIndex(MaterialIndex))
 				MaterialIndex = Info.LODMaterialMap[MaterialIndex];
+			if (MaterialIndex < 0)	// UE4 using Clamp(0, Materials.Num()), not Materials.Num()-1
+				MaterialIndex = 0;
 
-			Dst->Material   = (S.MaterialIndex < Materials.Num()) ? Materials[MaterialIndex].Material : NULL;
+			Dst->Material   = Materials.IsValidIndex(MaterialIndex) ? Materials[MaterialIndex].Material : NULL;
 			Dst->FirstIndex = S.BaseIndex;
 			Dst->NumFaces   = S.NumTriangles;
 		}
