@@ -2144,7 +2144,7 @@ void UTextureCube3::Release()
 void UMaterialInstanceConstant::SetupGL()
 {
 	// redirect to Parent until UMaterial3
-	if (Parent) Parent->SetupGL();
+	if (Parent && Parent != this) Parent->SetupGL();
 
 #if UNREAL4
 	if (BasePropertyOverrides.bOverride_TwoSided)
@@ -2170,7 +2170,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	guard(UMaterialInstanceConstant::GetParams);
 
 	// get params from linked UMaterial3
-	if (Parent) Parent->GetParams(Params);
+	if (Parent && Parent != this) Parent->GetParams(Params);
 
 	Super::GetParams(Params);
 
@@ -2311,7 +2311,7 @@ void UMaterialInstanceConstant::AppendReferencedTextures(TArray<UUnrealMaterial*
 			if (TextureParameterValues[i].ParameterValue)
 				OutTextures.AddUnique(TextureParameterValues[i].ParameterValue);
 		}
-		if (Parent) Parent->AppendReferencedTextures(OutTextures, onlyRendered);
+		if (Parent && Parent != this) Parent->AppendReferencedTextures(OutTextures, onlyRendered);
 	}
 	unguard;
 }

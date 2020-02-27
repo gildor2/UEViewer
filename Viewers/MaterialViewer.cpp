@@ -772,7 +772,14 @@ static void OutlineMaterial(UObject *Obj, int indent)
 	MAT_END
 
 	MAT_BEGIN(UMaterialInstanceConstant)
-		PROP(Parent)
+		if (Mat->Parent != Mat)
+		{
+			PROP(Parent)
+		}
+		else
+		{
+			Outline(S_RED"Parent = SELF");
+		}
 		// texture
 		if (Mat->TextureParameterValues.Num()) Outline(S_YELLOW"Texture parameters:");
 		for (i = 0; i < Mat->TextureParameterValues.Num(); i++)

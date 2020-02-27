@@ -1062,7 +1062,7 @@ public:
 	virtual void AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered) const;
 	virtual bool IsTranslucent() const
 	{
-		return Parent ? Parent->IsTranslucent() : false;
+		return (Parent && Parent != this) ? Parent->IsTranslucent() : false;
 	}
 #endif
 };
