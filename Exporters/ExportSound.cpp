@@ -243,6 +243,15 @@ void ExportSoundNodeWave(const USoundNodeWave *Snd)
 		//!! 0 means no data for particular object
 		//!! data encoded in MP3 format
 	}
+	else if (Snd->CompressedWiiUData.ElementCount)
+	{
+		bulk = &Snd->CompressedWiiUData;
+		ext = "wiiu";
+	}
+	else if (Snd->CompressedIPhoneData.ElementCount)
+	{
+		bulk = &Snd->CompressedIPhoneData;
+	}
 
 	if (bulk)
 	{

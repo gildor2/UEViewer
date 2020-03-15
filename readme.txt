@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+15.03.2020
+- added UE3 iOS and WiiU sound export
+
 21.02.2020
 - support for UE4.25 pak file format
 
