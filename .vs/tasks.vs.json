@@ -10,7 +10,7 @@
       "command": "bash.exe",
       "args": [ "build.sh ${env.BuildOptions}" ],
       "workingDirectory": "${workspaceRoot}",
-      "inheritEnvironments": [ "${cpp.activeConfiguration}" ],
+      "inheritEnvironments": [ "${cpp.activeConfiguration}" ]
     },
     {
       "taskName": "Compile",
@@ -21,7 +21,7 @@
       "command": "bash.exe",
       "args": [ "build.sh ${env.BuildOptions} --file ${relativeFile}" ],
       "workingDirectory": "${workspaceRoot}",
-      "inheritEnvironments": [ "${cpp.activeConfiguration}" ],
+      "inheritEnvironments": [ "${cpp.activeConfiguration}" ]
     }
   ]
 }
