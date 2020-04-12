@@ -64,8 +64,14 @@ void UnpackNormals(const FPackedNormal SrcNormal[3], CMeshVertex &V)
 	Ar << TangentZDelta;
 	V.TangentZDelta = TangentZDelta; // unpack
 
+#if BATMAN
+	if (Ar.Game >= GAME_Batman && Ar.Game <= GAME_Batman4)
+		goto uint16_idx;
+#endif
+
 	if (Ar.ArVer < 806)
 	{
+	uint16_idx:
 		uint16 Idx;
 		Ar << Idx;
 		V.SourceIdx = Idx;
