@@ -644,7 +644,11 @@ static void Init(const char *caption)
 	sdlWindow = SDL_CreateWindow(caption,
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, winWidth, winHeight,
 		SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
-	if (!sdlWindow) appError("Failed to create SDL window");
+	if (!sdlWindow)
+	{
+		const char* errorString = SDL_GetError();
+		appError("Failed to create SDL window\nError: %s", errorString);
+	}
 	sdlContext = SDL_GL_CreateContext(sdlWindow);
 	#if LIMIT_FPS
 	SDL_GL_SetSwapInterval(0);			// FPS will be limited by Sleep()
