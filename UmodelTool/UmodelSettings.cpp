@@ -12,7 +12,9 @@
 #define EXPORT_DIRECTORY	"UmodelExport"
 #define SAVE_DIRECTORY		"UmodelSaved"
 
-static void SetPathOption(FString& where, const char* value)
+// When bUseCwd is true, relative path will be computed based on current working directory.
+// Currently this option is primarily intended for Linux as Windows version always use current directory as a base.
+static void SetPathOption(FString& where, const char* value, bool bUseCwd = false)
 {
 	// determine whether absolute path is used
 	FStaticString<512> value2;
@@ -42,7 +44,7 @@ static void SetPathOption(FString& where, const char* value)
 			strcpy(path, ".");	// path is too long, or other error occurred
 #else
 		// for Unix OS, store everything to the HOME directory ("~/...")
-		if (!value2.IsEmpty() && value2[0] == '.' && value2[1] == '/')
+		if (bUseCwd || (!value2.IsEmpty() && value2[0] == '.' && value2[1] == '/'))
 		{
 			// just use working dir
 			strcpy(path, ".");
@@ -87,7 +89,7 @@ static void SetPathOption(FString& where, const char* value)
 
 void CStartupSettings::SetPath(const char* path)
 {
-	SetPathOption(GamePath, path);
+	SetPathOption(GamePath, path, true);
 }
 
 void CStartupSettings::Reset()
