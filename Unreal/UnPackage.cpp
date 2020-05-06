@@ -604,11 +604,11 @@ void FPackageFileSummary::Serialize4(FArchive &Ar)
 	// guid
 	Ar << Guid;
 
-/*	if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER) -- disabled at the moment for Fortnite compatibility
+	if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER && Ar.ContainsEditorData())
 	{
 		FGuid PersistentGuid, OwnerPersistentGuid;
 		Ar << PersistentGuid << OwnerPersistentGuid;
-	} */
+	}
 
 	// generations
 	int32 Count;
