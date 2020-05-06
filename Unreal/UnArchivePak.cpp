@@ -22,6 +22,13 @@ FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 	Ar << P.Version << P.IndexOffset << P.IndexSize;
 	Ar.Serialize(ARRAY_ARG(P.IndexHash));
 
+	if (P.Version == PakFile_Version_FrozenIndex)
+	{
+		uint8 bIndexIsFrozen;
+		Ar << bIndexIsFrozen;
+		assert(!bIndexIsFrozen);	// used just for 4.25, so don't do any support unless it's really needed
+	}
+
 	if (P.Version >= PakFile_Version_FNameBasedCompressionMethod)
 	{
 		// For UE4.23, there are 5 compression methods, but we're ignoring last one.
@@ -398,7 +405,7 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 	guard(FPakVFS::ReadDirectory);
 
 	// Pak file may have different header sizes, try them all
-	static const int OffsetsToTry[] = { FPakInfo::Size, FPakInfo::Size8, FPakInfo::Size8a };
+	static const int OffsetsToTry[] = { FPakInfo::Size, FPakInfo::Size8, FPakInfo::Size8a, FPakInfo::Size9 };
 	FPakInfo info;
 
 	for (int32 Offset : OffsetsToTry)

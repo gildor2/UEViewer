@@ -445,7 +445,7 @@ enum EGame
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		24		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		25		// UE4.XX
 
 enum EPlatform
 {
@@ -2630,6 +2630,7 @@ enum
 	VER_UE4_23 = 517,
 		VER_UE4_ADDED_PACKAGE_OWNER = 518,
 	VER_UE4_24 = 518,
+	VER_UE4_25 = 518,
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };
@@ -2658,6 +2659,7 @@ struct FFrameworkObjectVersion
 		// UE4.20, UE4.21 = 34
 		// UE4.22, UE4.23 = 35
 		// UE4.24 = 36
+		// UE4.25 = 37
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2698,6 +2700,8 @@ struct FFrameworkObjectVersion
 			return (Type)35;
 		if (Ar.Game < GAME_UE4(25))
 			return (Type)36;
+		if (Ar.Game < GAME_UE4(26))
+			return (Type)37;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2724,6 +2728,7 @@ struct FEditorObjectVersion
 		StaticMeshDeprecatedRawMesh = 28,	//todo: editor mesh
 		// UE4.23 = 34
 		// UE4.24 = 37
+		// UE4.25 = 38
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2769,6 +2774,8 @@ struct FEditorObjectVersion
 			return (Type)34;
 		if (Ar.Game < GAME_UE4(25))
 			return (Type)37;
+		if (Ar.Game < GAME_UE4(26))
+			return (Type)38;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2800,7 +2807,7 @@ struct FSkeletalMeshCustomVersion
 		DeprecateSectionDisabledFlag = 15,
 		// UE4.20-UE4.22 = 16
 		SectionIgnoreByReduceAdded = 16,
-		// UE4.23-UE4.24 = 17
+		// UE4.23-UE4.25 = 17
 		SkinWeightProfiles = 17, //todo: FSkeletalMeshLODModel::Serialize (editor mesh)
 
 		VersionPlusOne,
@@ -2836,7 +2843,7 @@ struct FSkeletalMeshCustomVersion
 			return DeprecateSectionDisabledFlag;
 		if (Ar.Game < GAME_UE4(23))
 			return SectionIgnoreByReduceAdded;
-		if (Ar.Game < GAME_UE4(25))
+		if (Ar.Game < GAME_UE4(26))
 			return SkinWeightProfiles;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -2852,6 +2859,7 @@ struct FCoreObjectVersion
 		// UE4.12-UE4.14 = 1
 		// UE4.15-UE4.21 = 2
 		// UE4.22-UE4.24 = 3
+		// UE4.25 = 4
 		SkeletalMaterialEditorDataStripping = 3,
 
 		VersionPlusOne,
@@ -2872,6 +2880,8 @@ struct FCoreObjectVersion
 			return (Type)2;
 		if (Ar.Game < GAME_UE4(25))
 			return SkeletalMaterialEditorDataStripping;
+		if (Ar.Game < GAME_UE4(26))
+			return (Type)4;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2895,6 +2905,7 @@ struct FRenderingObjectVersion
 		// UE4.22 = 28
 		// UE4.23 = 31
 		// UE4.24 = 36
+		// UE4.25 = 43
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2937,6 +2948,8 @@ struct FRenderingObjectVersion
 			return (Type)31;
 		if (Ar.Game < GAME_UE4(25))
 			return (Type)36;
+		if (Ar.Game < GAME_UE4(26))
+			return (Type)43;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2949,6 +2962,7 @@ struct FAnimObjectVersion
 		BeforeCustomVersionWasAdded = 0,
 		// UE4.21-UE4.24 = 2
 		StoreMarkerNamesOnSkeleton = 2,
+		// UE4.25 = 7
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2964,6 +2978,8 @@ struct FAnimObjectVersion
 			return BeforeCustomVersionWasAdded;
 		if (Ar.Game < GAME_UE4(25))
 			return StoreMarkerNamesOnSkeleton;
+		if (Ar.Game < GAME_UE4(26))
+			return (Type)7;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
@@ -2982,7 +2998,7 @@ struct FAnimPhysObjectVersion
 		AddLODToCurveMetaData = 12,
 		// UE4.19 = 16
 		ChangeRetargetSourceReferenceToSoftObjectPtr = 15,
-		// UE4.20-UE4.24 = 17
+		// UE4.20-UE4.25 = 17
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -3004,7 +3020,7 @@ struct FAnimPhysObjectVersion
 			return AddLODToCurveMetaData;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)16;
-		if (Ar.Game < GAME_UE4(25))
+		if (Ar.Game < GAME_UE4(26))
 			return (Type)17;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
@@ -3052,6 +3068,8 @@ struct FReleaseObjectVersion
 			return (Type)23;
 		if (Ar.Game < GAME_UE4(25))
 			return (Type)28;
+		if (Ar.Game < GAME_UE4(26))
+			return (Type)30;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}

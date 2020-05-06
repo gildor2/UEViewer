@@ -21,8 +21,8 @@ enum
 	PakFile_Version_DeleteRecords = 6,				// UE4.21+ - this constant is not used in UE4 code
 	PakFile_Version_EncryptionKeyGuid = 7,			// ... allows to use multiple encryption keys over the single project
 	PakFile_Version_FNameBasedCompressionMethod = 8, // UE4.22+ - use string instead of enum for compression method
-	PakFile_Version_FrozenIndex = 9,				// UE4.25 - temporary value, seems never used
-	PakFile_Version_PathHashIndex = 10,				// UE4.25+ - all file paths are encrypted (stored as 64-bit hash values)
+	PakFile_Version_FrozenIndex = 9,				// UE4.25 - used only in 4.25, removed with 4.26
+	PakFile_Version_PathHashIndex = 10,				// UE4.26+ - all file paths are encrypted (stored as 64-bit hash values)
 
 	PakFile_Version_Last,
 	PakFile_Version_Latest = PakFile_Version_Last - 1
@@ -53,7 +53,9 @@ struct FPakInfo
 	{
 		Size = sizeof(int32) * 2 + sizeof(int64) * 2 + 20 + /* new fields */ 1 + sizeof(FGuid),
 		Size8 = Size + 32*4,				// added size of CompressionMethods as char[32]
-		Size8a = Size8 + 32					// UE4.23 - also has version 8 (like 4.22) but different pak file structure
+		Size8a = Size8 + 32,				// UE4.23 - also has version 8 (like 4.22) but different pak file structure
+		Size9 = Size8a + 1,					// UE4.25
+		// Size10 = Size8a
 	};
 
 	friend FArchive& operator<<(FArchive& Ar, FPakInfo& P);
