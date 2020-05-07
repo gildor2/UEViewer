@@ -2859,8 +2859,8 @@ struct FCoreObjectVersion
 		// UE4.12-UE4.14 = 1
 		// UE4.15-UE4.21 = 2
 		// UE4.22-UE4.24 = 3
-		// UE4.25 = 4
 		SkeletalMaterialEditorDataStripping = 3,
+		// UE4.25 = 4
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
@@ -2906,6 +2906,7 @@ struct FRenderingObjectVersion
 		// UE4.23 = 31
 		// UE4.24 = 36
 		// UE4.25 = 43
+		StaticMeshSectionForceOpaqueField = 37,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1

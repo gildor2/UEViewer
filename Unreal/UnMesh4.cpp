@@ -1907,6 +1907,7 @@ struct FStaticMeshSection4
 	int32			MaxVertexIndex;
 	bool			bEnableCollision;
 	bool			bCastShadow;
+	bool			bForceOpaque;
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticMeshSection4& S)
 	{
@@ -1914,6 +1915,10 @@ struct FStaticMeshSection4
 		Ar << S.FirstIndex << S.NumTriangles;
 		Ar << S.MinVertexIndex << S.MaxVertexIndex;
 		Ar << S.bEnableCollision << S.bCastShadow;
+		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::StaticMeshSectionForceOpaqueField)
+		{
+			Ar << S.bForceOpaque;
+		}
 #if DAUNTLESS
 		if (Ar.Game == GAME_Dauntless) Ar.Seek(Ar.Tell()+8); // 8 zero-filled bytes here
 #endif
@@ -1950,6 +1955,13 @@ struct FRawStaticIndexBuffer4
 			TArray<byte> data;
 			Ar << is32bit;
 			data.BulkSerialize(Ar);
+
+			if (Ar.Game >= GAME_UE4(25))
+			{
+				bool bShouldExpandTo32Bit;
+				Ar << bShouldExpandTo32Bit;
+			}
+
 			DBG_STAT("RawIndexBuffer, 32 bit = %d, %d indices (data size = %d)\n", is32bit, data.Num() / (is32bit ? 4 : 2), data.Num());
 			if (!data.Num()) return Ar;
 
@@ -2021,6 +2033,7 @@ struct FStaticMeshLODModel4
 		// UE4.20+
 		CDSF_MinLodData = 2,			// used to drop some LODs
 		CDSF_ReversedIndexBuffer = 4,
+		CDSF_RayTracingResources = 8,	// UE4.25+
 	};
 
 	static void Serialize(FArchive& Ar, FStaticMeshLODModel4& Lod)
@@ -2176,9 +2189,8 @@ struct FStaticMeshLODModel4
 		unguard;
 	}
 
-	//todo: review comment, it has been written when I thought that those changes have to appear in 4.22, but they didn't
-	// UE4.23+. At the time of UE4.22, the function is exactly the same as SerializeBuffersLegacy (with exception of own
-	// FStripDataFlags), however I decided to split it to avoid later mess with newer engine updates.
+	// UE4.23+. At the time of UE4.23, the function is exactly the same as SerializeBuffersLegacy (with exception of own
+	// FStripDataFlags and use of StripFlags for additional index buffers).
 	static void SerializeBuffers(FArchive& Ar, FStaticMeshLODModel4& Lod)
 	{
 		guard(FStaticMeshLODModel4::SerializeBuffers);
@@ -2209,6 +2221,13 @@ struct FStaticMeshLODModel4
 
 		if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
 			Ar << Lod.AdjacencyIndexBuffer;
+
+		// UE4.25+
+		if (!StripFlags.IsClassDataStripped(CDSF_RayTracingResources))
+		{
+			TArray<uint8> RawData;
+			RawData.BulkSerialize(Ar);
+		}
 
 		TArray<FStaticMeshSectionAreaWeightedTriangleSampler> AreaWeightedSectionSamplers;
 		FStaticMeshAreaWeightedSectionSampler AreaWeightedSampler;
