@@ -3890,7 +3890,7 @@ void UStaticMesh3::ConvertMesh()
 				fUV++;
 				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
 			}
-			if (SrcLod.ColorStream.Colors.Num())
+			if (SrcLod.ColorStream.Colors.Num() == NumVerts)
 				Lod->VertexColors[i] = SrcLod.ColorStream.Colors[i];
 			else
 				Lod->VertexColors[i] = SUV.Color;
