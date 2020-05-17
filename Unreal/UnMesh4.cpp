@@ -2223,7 +2223,7 @@ struct FStaticMeshLODModel4
 			Ar << Lod.AdjacencyIndexBuffer;
 
 		// UE4.25+
-		if (!StripFlags.IsClassDataStripped(CDSF_RayTracingResources))
+		if (Ar.Game >= GAME_UE4(25) && !StripFlags.IsClassDataStripped(CDSF_RayTracingResources))
 		{
 			TArray<uint8> RawData;
 			RawData.BulkSerialize(Ar);
