@@ -153,14 +153,14 @@ public:
 		}
 	}
 
+	enum { EncryptionAlign = 16 }; // AES-specific constant
+	enum { EncryptedBufferSize = 256 }; //?? TODO: check - may be value 16 will be better for performance
+
 protected:
 	const FPakEntry* Info;
 	FArchive*	Reader;
 	byte*		UncompressedBuffer;
 	int			UncompressedBufferPos;
-
-	enum { EncryptionAlign = 16 }; // AES-specific constant
-	enum { EncryptedBufferSize = 256 }; //?? TODO: check - may be value 16 will be better for performance
 };
 
 

@@ -209,8 +209,18 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 	// bEncrypted
 	bEncrypted = (Bitfield >> 22) & 1;
 
-	// Compression information
+	// Compressed block count
 	int BlockCount = (Bitfield >> 6) & 0xffff;
+
+	// Compute StructSize: each file still have FPakEntry data prepended, and it should be skipped.
+	StructSize = sizeof(int64) * 3 + sizeof(int32) * 2 + 1 + 20;
+	// Take into account CompressionBlocks
+	if (CompressionMethod)
+	{
+		StructSize += sizeof(int32) + BlockCount * 2 * sizeof(int64);
+	}
+
+	// Compression information
 	CompressionBlocks.AddUninitialized(BlockCount);
 	CompressionBlockSize = 0;
 	if (BlockCount)
@@ -222,15 +232,27 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 			CompressionBlockSize = (Bitfield & 0x3f) << 11;
 
 		// CompressionBlocks
-		assert(0);
-	}
+		if (BlockCount == 1)
+		{
+			FPakCompressedBlock& Block = CompressionBlocks[0];
+			Block.CompressedStart = Pos + StructSize;
+			Block.CompressedEnd = Block.CompressedStart + Size;
+		}
+		else
+		{
+			int64 CurrentOffset = Pos + StructSize;
+			int64 Alignment = bEncrypted ? FPakFile::EncryptionAlign : 1;
+			for (int BlockIndex = 0; BlockIndex < BlockCount; BlockIndex++)
+			{
+				int64 CurrentBlockSize = *(int64*)Data;
+				Data += sizeof(int64);
 
-	// Compute StructSize: each file still have FPakEntry data prepended, and it should be skipped.
-	StructSize = sizeof(int64) * 3 + sizeof(int32) * 2 + 1 + 20;
-	// Take into account CompressionBlocks
-	if (CompressionMethod)
-	{
-		StructSize += sizeof(int32) + BlockCount * 2 * sizeof(int64);
+				FPakCompressedBlock& Block = CompressionBlocks[BlockIndex];
+				Block.CompressedStart = CurrentOffset;
+				Block.CompressedEnd = Block.CompressedStart + CurrentBlockSize;
+				CurrentOffset += Align(CurrentBlockSize, Alignment);
+			}
+		}
 	}
 
 	unguard;
@@ -422,9 +444,8 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 		*reader << info;
 		if (info.Magic == PAK_FILE_MAGIC)		// no endian checking here
 		{
-			if (Offset == FPakInfo::Size8a)
+			if (Offset == FPakInfo::Size8a && info.Version == 8)
 			{
-				assert(info.Version >= 8);
 				subVer = 1;
 			}
 			break;
