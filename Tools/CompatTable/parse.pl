@@ -142,7 +142,7 @@ sub tableHeader {
   <tr>
     <th width="45">Year</th>
     <th width="301">Title</th>
-    <th width="30">Mesh</th>
+    <th width="30">Skel</th>
     <th width="30">Tex</th>
     <th width="30">Anim</th>
     <th width="30">Stat</th>
