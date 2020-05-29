@@ -1021,31 +1021,97 @@ struct FSkinWeightVertexBuffer
 	{
 		guard(FSkinWeightVertexBuffer<<);
 
+		// FSkinWeightDataVertexBuffer since 4.25
+
 		FStripDataFlags SkinWeightStripFlags(Ar);
 
 		bool bExtraBoneInfluences;
 		int32 NumVertices;
 		int32 Stride = 0;
+		bool bVariableBonesPerVertex = false;
+		bool bUse16BitBoneIndex = false;
+
+		bool bNewWeightFormat = FAnimObjectVersion::Get(Ar) >= FAnimObjectVersion::UnlimitedBoneInfluences;
 
 		// UE4.23 changed this structure. Part of data is serialized in FSkinWeightVertexBuffer::SerializeMetaData(),
 		// and there's a typo: it relies on FSkeletalMeshCustomVersion::SplitModelAndRenderData which is UE4.15 constant.
 		// So we're using comparison with UE4.23 instead.
 
+		// FSkinWeightDataVertexBuffer::SerializeMetaData()
 		if (Ar.Game < GAME_UE4(24))
 		{
 			Ar << bExtraBoneInfluences << NumVertices;
 		}
-		else
+		else if (!bNewWeightFormat)
 		{
 			Ar << bExtraBoneInfluences << Stride << NumVertices;
+		}
+		else
+		{
+			int32 MaxBoneInfluences, NumBones;
+			Ar << bVariableBonesPerVertex << MaxBoneInfluences << NumBones << NumVertices;
+			bExtraBoneInfluences = (MaxBoneInfluences > NUM_INFLUENCES_UE4);
+			assert(MaxBoneInfluences <= MAX_TOTAL_INFLUENCES_UE4);
+			if (FAnimObjectVersion::Get(Ar) >= FAnimObjectVersion::IncreaseBoneIndexLimitPerChunk)
+				Ar << bUse16BitBoneIndex;
 		}
 
 		DBG_SKEL("Weights: extra=%d verts=%d stride=%d\n", bExtraBoneInfluences, NumVertices, Stride);
 
+		TArray<byte> NewData; // used for bNewWeightFormat
+
 		if (!SkinWeightStripFlags.IsDataStrippedForServer())
 		{
 			GNumSkelInfluences = bExtraBoneInfluences ? MAX_TOTAL_INFLUENCES_UE4 : NUM_INFLUENCES_UE4;
-			B.Weights.BulkSerialize(Ar);
+			if (!bNewWeightFormat)
+			{
+				B.Weights.BulkSerialize(Ar);
+			}
+			else
+			{
+				NewData.BulkSerialize(Ar);
+			}
+		}
+
+		// End of FSkinWeightDataVertexBuffer
+
+		if (bNewWeightFormat)
+		{
+			guard(NewInfluenceFormat);
+			assert(NewData.Num());
+
+			// FSkinWeightLookupVertexBuffer serializer
+
+			FStripDataFlags LookupStripFlags(Ar);
+
+			// FSkinWeightLookupVertexBuffer::SerializeMetaData
+			int32 NumLookupVertices;
+			Ar << NumLookupVertices;
+			assert(NumLookupVertices == 0 || NumVertices == NumLookupVertices);
+
+			if (!LookupStripFlags.IsDataStrippedForServer())
+			{
+				TArray<uint32> LookupVertexBuffer;
+				LookupVertexBuffer.BulkSerialize(Ar);
+			}
+
+			assert(!bVariableBonesPerVertex);
+			assert(!bUse16BitBoneIndex);
+			// When bVariableBonesPerVertex is set, LookupVertexBuffer is used to fetch influence data. Otherwise, data format
+			// is just like before.
+
+			// Convert influence data
+			FMemReader Reader(NewData.GetData(), NewData.Num());
+			assert(B.Weights.Num() == 0);
+			B.Weights.AddUninitialized(NumVertices);
+			for (int i = 0; i < NumVertices; i++)
+			{
+				FSkinWeightInfo Weight;
+				Reader << Weight;
+				B.Weights[i] = Weight;
+			}
+
+			unguard;
 		}
 
 		return Ar;

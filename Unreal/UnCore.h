@@ -2965,6 +2965,8 @@ struct FAnimObjectVersion
 		// UE4.21-UE4.24 = 2
 		StoreMarkerNamesOnSkeleton = 2,
 		// UE4.25 = 7
+		IncreaseBoneIndexLimitPerChunk = 4,
+		UnlimitedBoneInfluences = 5,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1
