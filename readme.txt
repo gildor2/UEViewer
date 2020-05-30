@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+30.05.2020
+- completed UE4.25 support
+
 15.03.2020
 - added UE3 iOS and WiiU sound export
 

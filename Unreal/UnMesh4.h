@@ -623,6 +623,8 @@ public:
 	void SerializeCompressedData(FArchive& Ar);
 	// UE4.23+
 	void SerializeCompressedData2(FArchive& Ar);
+	// UE4.25+
+	void SerializeCompressedData3(FArchive& Ar);
 
 	int GetNumTracks() const;
 	int GetTrackBoneIndex(int TrackIndex) const;

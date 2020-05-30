@@ -943,8 +943,10 @@ void UAnimSequence4::Serialize(FArchive& Ar)
 		{
 			if (Ar.Game < GAME_UE4(23))
 				SerializeCompressedData(Ar);
-			else
+			else if (Ar.Game < GAME_UE4(25))
 				SerializeCompressedData2(Ar);
+			else
+				SerializeCompressedData3(Ar);
 
 			Ar << bUseRawDataOnly;
 		}
@@ -1052,7 +1054,7 @@ no_raw_data_size:
 	unguard;
 }
 
-// UE4.23 has changed compressed data layout for streaming, so it's worth making a separate
+// UE4.23-4.24 has changed compressed data layout for streaming, so it's worth making a separate
 // serializer function for it.
 void UAnimSequence4::SerializeCompressedData2(FArchive& Ar)
 {
@@ -1132,11 +1134,96 @@ void UAnimSequence4::SerializeCompressedData2(FArchive& Ar)
 	MAP_VIEW(CompressedScaleOffsets.OffsetData, CompressedScaleOffsets_Num);
 	MAP_VIEW(CompressedByteStream, CompressedByteStream_Num);
 	assert(AnimData == AnimDataEnd);
-#undef MAP_VIEW
 
 	FString CurveCodecPath;
 	TArray<byte> CompressedCurveByteStream;
 	Ar << CurveCodecPath << CompressedCurveByteStream;
+
+	unguard;
+}
+
+// UE4.25 has changed data layout, and therefore serialization order has been changed too.
+// In UE4.25 serialization is done in FCompressedAnimSequence::SerializeCompressedData().
+void UAnimSequence4::SerializeCompressedData3(FArchive& Ar)
+{
+	guard(UAnimSequence4::SerializeCompressedData3);
+
+	int32 CompressedRawDataSize;
+	Ar << CompressedRawDataSize;
+
+	Ar << CompressedTrackToSkeletonMapTable;
+
+	TArray<FSmartName> CompressedCurveNames;
+	Ar << CompressedCurveNames;
+
+	int32 NumBytes;
+	Ar << NumBytes;
+
+	bool bUseBulkDataForLoad;
+	Ar << bUseBulkDataForLoad;
+
+	// In UE4.23 CompressedByteStream field exists in FUECompressedAnimData (as TArrayView) and in
+	// FCompressedAnimSequence (as byte array). Serialization is done in FCompressedAnimSequence,
+	// either as TArray or as bulk, and then array is separated onto multiple "views" for
+	// FUECompressedAnimData. We'll use a different name for "joined" serialized array here to
+	// avoid confuse.
+	TArray<byte> SerializedByteStream;
+
+	if (bUseBulkDataForLoad)
+	{
+		appError("Anim: bUseBulkDataForLoad not implemented");
+		//todo: read from bulk to SerializedByteStream
+	}
+	else
+	{
+		if (NumBytes)
+		{
+			SerializedByteStream.AddUninitialized(NumBytes);
+			Ar.Serialize(SerializedByteStream.GetData(), NumBytes);
+		}
+	}
+
+	FString BoneCodecDDCHandle, CurveCodecPath;
+	Ar << BoneCodecDDCHandle << CurveCodecPath;
+#if DEBUG_ANIM
+	appPrintf("BoneCodec (%s) CurveCodec (%s)\n", *BoneCodecDDCHandle, *CurveCodecPath);
+#endif
+
+	TArray<byte> CompressedCurveByteStream;
+	Ar << CompressedCurveByteStream;
+
+	// The following part is ICompressedAnimData::SerializeCompressedData
+	int32 CompressedNumFrames;
+	Ar << CompressedNumFrames;
+	// todo: editor-only data here
+
+	// FUECompressedAnimData::SerializeCompressedData
+	Ar << (byte&)KeyEncodingFormat;
+	Ar << (byte&)TranslationCompressionFormat;
+	Ar << (byte&)RotationCompressionFormat;
+	Ar << (byte&)ScaleCompressionFormat;
+
+	// SerializeView() just serializes array size
+	int32 CompressedTrackOffsets_Num, CompressedScaleOffsets_Num, CompressedByteStream_Num;
+	Ar << CompressedByteStream_Num;
+	Ar << CompressedTrackOffsets_Num;
+	Ar << CompressedScaleOffsets_Num;
+	Ar << CompressedScaleOffsets.StripSize;
+
+	// Setup all array views from single array. In UE4 this is done in FUECompressedAnimData::InitViewsFromBuffer.
+	// We'll simply copy array data away from SerializedByteStream, and then SerializedByteStream
+	// will be released from memory as it is a local variable here.
+	// Note: copying is not byte-order wise, so if there will be any problems in the future,
+	// should use byte swap functions.
+	const byte* AnimData = SerializedByteStream.GetData();
+	const byte* AnimDataEnd = AnimData + SerializedByteStream.Num();
+
+	MAP_VIEW(CompressedTrackOffsets, CompressedTrackOffsets_Num);
+	MAP_VIEW(CompressedScaleOffsets.OffsetData, CompressedScaleOffsets_Num);
+	MAP_VIEW(CompressedByteStream, CompressedByteStream_Num);
+	assert(AnimData == AnimDataEnd);
+
+#undef MAP_VIEW
 
 	unguard;
 }
