@@ -214,13 +214,6 @@ sub readCompanies {
 $engine = "";
 $year = 0;
 
-# statistics
-$fullSupp = 0;		# number of fully supported games in total
-$partSupp = 0;		# number of partially supported games
-$notSupp  = 0;		# number of unsupported games
-$lastEngine = "";
-$yearGames = 0;		# number of supported games in the current year
-
 sub yesno {
 	my ($v) = $_[0];
 	return "Yes" if ($v eq "Y");
@@ -228,16 +221,58 @@ sub yesno {
 	return $v;
 }
 
+# statistics
+$fullSupp = 0;		# number of fully supported games in total
+$partSupp = 0;		# number of partially supported games
+$notSupp  = 0;		# number of unsupported games
+
+$lastEngine = "";
+$yearGames = 0;		# number of supported games in the current year
+%stats = ();
 
 sub flushYearStats {
 	if ($yearGames) {
-		printf("  %d  %3d\n", $year, $yearGames);
+		my $line = sprintf("  %d  %3d", $year, $yearGames);
 		$yearGames = 0;
+		if (defined($line)) {
+			push(@{$stats{$engine}}, $line);
+		}
 	}
 	if ($engine ne $lastEngine) {
 		$lastEngine = $engine;
-		printf("\n%s\n", $engine);
+		$stats{$engine} = [];
 	}
+}
+
+sub flushTotalStats {
+	my $lineIdx = -1;
+
+	# For each year
+	while (1) {
+		my $line = "";
+		# stats
+		my $exists = 0;
+		# index = 0 -> print engine name
+		for $key (sort(keys %stats)) {
+			my $val = "";
+			if ($lineIdx == -1) {
+				$val = $key;
+				$exists = 1;
+			} else {
+				my $aref = \@{$stats{$key}};
+				if ($lineIdx <= $#$aref) {
+					$exists = 1;
+					$val = $aref->[$lineIdx];
+				}
+			}
+			$line .= sprintf("%-20s", $val);
+		}
+		last if !$exists;
+		print("$line\n");
+		#?? engine total
+		$lineIdx++;
+	}
+	printf("\nFound %d supported games (%d fully supported) + %d unsupported\n", $partSupp + $fullSupp, $fullSupp, $notSupp);
 }
 
 sub flushGame {
@@ -372,4 +407,4 @@ tableFooter();
 close(OUT);
 
 flushYearStats();
-printf("\nFound %d supported games (%d fully supported) + %d unsupported\n", $partSupp + $fullSupp, $fullSupp, $notSupp);
+flushTotalStats();
