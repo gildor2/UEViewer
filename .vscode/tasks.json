@@ -42,6 +42,28 @@
 				"cwd": "Tools/UITest"
 			},
 			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Query UE4 Version Constant",
+			"type": "shell",
+			"command": "./UE4Version.pl ${input:ue4const}",
+			"presentation": {
+				"reveal": "always",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"options": {
+				"cwd": "Docs"
+			},
+			"problemMatcher": ""
 		}
 	]
+    "inputs": [
+        {
+            "id": "ue4const",
+            "description": "UE4 C++ constant:",
+            "default": "",
+            "type": "promptString"
+        },
+    ]
 }
