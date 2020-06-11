@@ -116,13 +116,13 @@ static const char *KnownExtensions[] =
 // extracted by umodel to reduce chance to get such error.
 static const char *SkipExtensions[] =
 {
-	"tga", "dds", "bmp", "mat",				// textures, materials
-	"psk", "pskx", "psa", "config",			// meshes, animations
-	"ogg", "wav", "fsb", "xma", "unk",		// sounds
-	"gfx", "fxa",							// 3rd party
-	"md5mesh", "md5anim",					// md5 mesh
-	"uc", "3d",								// vertex mesh
-	"wem",									// WwiseAudio files
+	"tga", "png", "dds", "bmp", "mat", "txt",	// textures, materials
+	"psk", "pskx", "psa", "config", "gltf",		// meshes, animations
+	"ogg", "wav", "fsb", "xma", "unk",			// sounds
+	"gfx", "fxa",								// 3rd party
+	"md5mesh", "md5anim",						// md5 mesh
+	"uc", "3d",									// vertex mesh
+	"wem",										// WwiseAudio files
 };
 
 static bool FindExtension(const char *Filename, const char **Extensions, int NumExtensions)
