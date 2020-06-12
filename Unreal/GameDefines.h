@@ -170,7 +170,7 @@
 
 #endif // UNREAL4
 
-#if GEARS4 || BATMAN
+#if GEARS4 || BATMAN || UNREAL4
 #define USE_LZ4			1		// LZ4 compression
 #endif
 

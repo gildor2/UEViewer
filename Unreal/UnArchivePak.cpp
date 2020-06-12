@@ -46,6 +46,10 @@ FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 			{
 				CompressionMethod = COMPRESS_OODLE;
 			}
+			else if (!stricmp(name, "lz4"))
+			{
+				CompressionMethod = COMPRESS_LZ4;
+			}
 			else if (name[0])
 			{
 				appPrintf("Warning: unknown compression method for pak: %s\n", name);
