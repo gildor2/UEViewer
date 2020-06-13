@@ -2322,6 +2322,8 @@ struct FMeshSectionInfo
 
 FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
 {
+	guard(FStaticMaterial<<);
+
 	Ar << M.MaterialInterface << M.MaterialSlotName;
 	if (Ar.ContainsEditorData())
 	{
@@ -2333,6 +2335,8 @@ FArchive& operator<<(FArchive& Ar, FStaticMaterial& M)
 		Ar << M.UVChannelData;
 	}
 	return Ar;
+
+	unguard;
 }
 
 void UStaticMesh4::Serialize(FArchive &Ar)
@@ -2380,15 +2384,44 @@ no_nav_collision:
 	if (!StripFlags.IsEditorDataStripped())
 	{
 		DBG_STAT("Serializing %d SourceModels\n", SourceModels.Num());
-		assert(Ar.Game < GAME_UE4(22)); //todo: FEditorObjectVersion::StaticMeshDeprecatedRawMesh
+		// Reference: FStaticMeshSourceModel::SerializeBulkData
 		for (int i = 0; i < SourceModels.Num(); i++)
 		{
-			// Serialize FRawMeshBulkData
-			SourceModels[i].BulkData.Serialize(Ar);
-			// drop extra fields
-			FGuid Guid;
-			bool bGuidIsHash;
-			Ar << Guid << bGuidIsHash;
+			if (FEditorObjectVersion::Get(Ar) < FEditorObjectVersion::StaticMeshDeprecatedRawMesh)
+			{
+				// Serialize FRawMeshBulkData
+				SourceModels[i].BulkData.Serialize(Ar);
+				// drop extra fields
+				FGuid Guid;
+				bool bGuidIsHash;
+				Ar << Guid << bGuidIsHash;
+			}
+			else
+			{
+				bool bIsValid;
+				Ar << bIsValid;
+				if (bIsValid)
+				{
+					// FMeshDescriptionBulkData::Serialize
+					FByteBulkData BulkData;
+					BulkData.Serialize(Ar);
+					// drop extra fields
+					if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::MeshDescriptionBulkDataGuid)
+					{
+						FGuid Guid;
+						Ar << Guid;
+					}
+					bool bGuidIsHash;
+					Ar << bGuidIsHash;
+					//!! todo:
+					// - serialization of BulkData: FMeshDescription::Serialize(FArchive& Ar)
+					//   - using CustomVersions derived from uasset's FArchive
+					// - most or all fields are: operator<<( FArchive& Ar, TMeshElementArrayBase& Array ):
+					//   - TBitArray AllocatedIndices, then serialized all items where bit is 1, using element's serializer
+					// - using TBitArray: storing data as uint32 NumBits + uint32[NumWords], where NumWords = RoundUp(NumBits / 32)
+				}
+			}
+
 		}
 		if (FEditorObjectVersion::Get(Ar) < FEditorObjectVersion::UPropertryForMeshSection)
 		{
@@ -2577,26 +2610,26 @@ no_nav_collision:
 	DROP_REMAINING_DATA(Ar);
 
 #if DAYSGONE
-		if (Ar.Game == GAME_DaysGone)
+	if (Ar.Game == GAME_DaysGone)
+	{
+		// This game has packed positions, we should unpack it. When loading positions,
+		// we're converting values to range 0..1. Now we should use Bounds for it.
+		FVector Offset = Bounds.Origin;
+		Offset.Subtract(Bounds.BoxExtent);
+		FVector Scale = Bounds.BoxExtent;
+		Scale.Scale(2);
+		for (FStaticMeshLODModel4& Lod : Lods)
 		{
-			// This game has packed positions, we should unpack it. When loading positions,
-			// we're converting values to range 0..1. Now we should use Bounds for it.
-			FVector Offset = Bounds.Origin;
-			Offset.Subtract(Bounds.BoxExtent);
-			FVector Scale = Bounds.BoxExtent;
-			Scale.Scale(2);
-			for (FStaticMeshLODModel4& Lod : Lods)
+			if (Lod.PositionVertexBuffer.Stride == 8 || Lod.PositionVertexBuffer.Stride == 4)
 			{
-				if (Lod.PositionVertexBuffer.Stride == 8 || Lod.PositionVertexBuffer.Stride == 4)
+				for (FVector& V : Lod.PositionVertexBuffer.Verts)
 				{
-					for (FVector& V : Lod.PositionVertexBuffer.Verts)
-					{
-						V.Scale(Scale);
-						V.Add(Offset);
-					}
+					V.Scale(Scale);
+					V.Add(Offset);
 				}
 			}
 		}
+	}
 #endif // DAYSGONE
 
 	if (bCooked)

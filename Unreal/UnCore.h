@@ -2726,7 +2726,8 @@ struct FEditorObjectVersion
 		// UE4.20 = 24
 		// UE4.21 = 26
 		// UE4.22 = 30
-		StaticMeshDeprecatedRawMesh = 28,	//todo: editor mesh
+		StaticMeshDeprecatedRawMesh = 28,
+		MeshDescriptionBulkDataGuid = 29,
 		// UE4.23 = 34
 		// UE4.24 = 37
 		// UE4.25 = 38
