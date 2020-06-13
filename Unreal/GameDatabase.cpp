@@ -404,6 +404,9 @@ const GameInfo GListOfGames[] = {
 #	if JEDI
 		G("Star Wars Jedi: Fallen Order", jedi, GAME_Jedi),
 #	endif
+#	if SEAOFTHIEVES
+		G("Sea of Thieves", sot, GAME_SeaOfThieves),
+#	endif
 #endif // UNREAL4
 
 	// end marker

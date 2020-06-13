@@ -139,6 +139,12 @@ void FPakEntry::Serialize(FArchive& Ar)
 	if (GForceGame == GAME_Tekken7)
 		bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
 #endif
+#if SEAOFTHIEVES
+	if (GForceGame == GAME_SeaOfThieves && CompressionMethod == COMPRESS_Custom)
+	{
+		CompressionMethod = COMPRESS_LZ4;
+	}
+#endif
 
 	if (PakVer >= PakFile_Version_RelativeChunkOffsets)
 	{

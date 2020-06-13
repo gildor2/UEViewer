@@ -418,6 +418,8 @@ enum EGame
 		GAME_Ark = GAME_UE4(5)+1,
 		// 4.8
 		GAME_HIT = GAME_UE4(8)+1,
+		// 4.10
+		GAME_SeaOfThieves = GAME_UE4(10)+1,
 		// 4.11
 		GAME_Gears4 = GAME_UE4(11)+1,
 		GAME_DaysGone = GAME_UE4(11)+2,

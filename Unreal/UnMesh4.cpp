@@ -1186,8 +1186,16 @@ struct FStaticLODModel4
 	{
 		guard(FStaticLODModel4<<);
 
+#if SEAOFTHIEVES
+		if (Ar.Game == GAME_SeaOfThieves) Ar.Seek(Ar.Tell()+4);
+#endif
+
 		FStripDataFlags StripFlags(Ar);
 		FSkeletalMeshCustomVersion::Type SkelMeshVer = FSkeletalMeshCustomVersion::Get(Ar);
+
+#if SEAOFTHIEVES
+		if (Ar.Game == GAME_SeaOfThieves) Ar.Seek(Ar.Tell()+4);
+#endif
 
 		Ar << Lod.Sections;
 #if DEBUG_SKELMESH
@@ -1341,6 +1349,13 @@ struct FStaticLODModel4
 			Ar << Sections2;
 		}
 #endif // ASC_ONE
+
+#if SEAOFTHIEVES
+		if (Ar.Game == GAME_SeaOfThieves)
+		{
+			Ar.Seek(Ar.Tell() + 42);
+		}
+#endif // SEAOFTHIEVES
 
 		return Ar;
 

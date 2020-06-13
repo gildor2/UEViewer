@@ -672,9 +672,9 @@ void FPackageFileSummary::Serialize4(FArchive &Ar)
 		Ar << AssetRegistryDataOffset;
 	}
 
-#if GEARS4
-	if (Ar.Game == GAME_Gears4) Ar.Seek(Ar.Tell()+6); // no idea what happens inside
-#endif // GEARS4
+#if GEARS4 || SEAOFTHIEVES
+	if (Ar.Game == GAME_Gears4 || Ar.Game == GAME_SeaOfThieves) Ar.Seek(Ar.Tell()+6); // no idea what happens inside
+#endif // GEARS4 || SEAOFTHIEVES
 
 	if (Ar.ArVer >= VER_UE4_SUMMARY_HAS_BULKDATA_OFFSET)
 	{

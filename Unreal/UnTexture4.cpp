@@ -201,6 +201,9 @@ void UTexture2D::Serialize4(FArchive& Ar)
 				// the texture was not loaded yet
 				FTexturePlatformData Data;
 				Ar << Data;
+			#if SEAOFTHIEVES
+				if (Ar.Game == GAME_SeaOfThieves) Ar.Seek(Ar.Tell() + 4);
+			#endif
 				assert(Ar.Tell() == SkipOffset);
 				// copy data to UTexture2D
 				Exchange(Mips, Data.Mips);		// swap arrays to avoid copying
