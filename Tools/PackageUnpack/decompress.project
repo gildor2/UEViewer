@@ -13,6 +13,7 @@ sources(MAIN) = {
 	$R/Unreal/UnObject.cpp
 	$R/Unreal/UnPackage.cpp
 	$R/Unreal/UnPackageReader.cpp
+	$R/Unreal/UnArchivePak.cpp
 	$R/Unreal/GameDatabase.cpp
 	$R/Unreal/GameFileSystem.cpp
 	$R/Unreal/TypeInfo.cpp
