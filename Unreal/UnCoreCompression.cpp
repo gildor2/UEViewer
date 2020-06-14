@@ -220,11 +220,13 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 			// Remove encryption flag
 			Flags &= ~512;
 		}
+	#if USE_OODLE
 		if (Flags == 8)
 		{
 			// Overide compression, appeared in late 2019 builds
 			Flags = COMPRESS_OODLE;
 		}
+	#endif
 	}
 #endif // SMITE
 
@@ -259,10 +261,12 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		{
 			Flags = COMPRESS_ZLIB;
 		}
+#if USE_OODLE
 		else if ((b1 == 0x8C || b1 == 0xCC) && (b2 == 5 || b2 == 6 || b2 == 10 || b2 == 11 || b2 == 12))
 		{
 			Flags = COMPRESS_OODLE;
 		}
+#endif // USE_OODLE
 		else
 			Flags = COMPRESS_LZO;
 	}
@@ -328,32 +332,32 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 #endif // SUPPORT_XBOX360
 	}
 
+#if USE_LZ4
 	if (Flags == COMPRESS_LZ4)
 	{
-#if USE_LZ4
 		int newLen = LZ4_decompress_safe((const char*)CompressedBuffer, (char*)UncompressedBuffer, CompressedSize, UncompressedSize);
 		if (newLen <= 0)
 			appError("LZ4_decompress_safe returned %d\n", newLen);
 		if (newLen != UncompressedSize) appError("lz4 len mismatch: %d != %d", newLen, UncompressedSize);
 		return newLen;
-#else
-		appError("appDecompress: Lz4 compression is not supported");
-#endif // GEARS4
 	}
+#endif // USE_LZ4
 
+#if USE_OODLE // defined for supported engine versions
 	if (Flags == COMPRESS_OODLE)
 	{
-#if HAS_OODLE
+	#if HAS_OODLE // defined in project file
 		int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
 		int newLen = Kraken_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
 		if (newLen <= 0)
 			appError("Kraken_Decompress returned %d (magic=%02X/%02X)\n", newLen, CompressedBuffer[0], CompressedBuffer[1]);
 		if (newLen != UncompressedSize) appError("oodle len mismatch: %d != %d", newLen, UncompressedSize);
 		return newLen;
-#else
+	#else
 		appError("appDecompress: Oodle compression is not supported");
-#endif // USE_OODLE
+	#endif // HAS_OODLE
 	}
+#endif // USE_OODLE
 
 	appError("appDecompress: unknown compression flags: %d", Flags);
 	return 0;

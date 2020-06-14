@@ -2411,16 +2411,18 @@ struct FIntBulkData : public FByteBulkData
 #define COMPRESS_LZO_ENC_BNS	8					// encrypted LZO
 #endif
 
+#if UNREAL4
+#define COMPRESS_Custom		4						// UE4.20-4.21
+#endif // UNREAL4
+
+// Custom compression flags
+#define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
 #if USE_LZ4
 #define COMPRESS_LZ4		0xFE					// custom umodel's constant
 #endif
-
-#if UNREAL4
-#define COMPRESS_Custom		4						// UE4.20-4.21
+#if USE_OODLE
 #define COMPRESS_OODLE		0xFD					// custom umodel's constant
-#endif // UNREAL4
-
-#define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
+#endif
 
 #define PKG_StoreCompressed	 0x02000000
 #define PKG_FilterEditorOnly 0x80000000

@@ -175,4 +175,8 @@
 #define USE_LZ4			1		// LZ4 compression
 #endif
 
+#if SMITE || UNREAL4
+#define USE_OODLE		1		// Oodle compression
+#endif
+
 #endif // __GAME_DEFINES_H__
