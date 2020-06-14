@@ -2009,7 +2009,6 @@ struct FStaticMeshSection4
 };
 
 
-//!! if use this class for SkeletalMesh - use both DBG_STAT and DBG_SKEL
 struct FRawStaticIndexBuffer4
 {
 	TArray<uint16>		Indices16;
@@ -2426,8 +2425,11 @@ no_nav_collision:
 						FGuid Guid;
 						Ar << Guid;
 					}
-					bool bGuidIsHash;
-					Ar << bGuidIsHash;
+					if (FEnterpriseObjectVersion::Get(Ar) >= FEnterpriseObjectVersion::MeshDescriptionBulkDataGuidIsHash)
+					{
+						bool bGuidIsHash;
+						Ar << bGuidIsHash;
+					}
 					//!! todo:
 					// - serialization of BulkData: FMeshDescription::Serialize(FArchive& Ar)
 					//   - using CustomVersions derived from uasset's FArchive

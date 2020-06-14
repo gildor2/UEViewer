@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+13.06.2020
+- Sea of Thieves support, requires game override (-game=sot)
+
 30.05.2020
 - completed UE4.25 support
 

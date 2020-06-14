@@ -18,6 +18,7 @@
 	"AnimObjectVersion.h",
 	"AnimPhysObjectVersion.h",
 	"ReleaseObjectVersion.h",
+	"EnterpriseObjectVersion.h",
 );
 
 sub DBG() {0}

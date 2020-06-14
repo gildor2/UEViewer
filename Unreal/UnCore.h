@@ -3039,6 +3039,7 @@ struct FReleaseObjectVersion
 	enum Type
 	{
 		BeforeCustomVersionWasAdded = 0,
+		// UE4.19 = 12
 		AddSkeletalMeshSectionDisable = 12,
 
 		VersionPlusOne,
@@ -3077,6 +3078,41 @@ struct FReleaseObjectVersion
 			return (Type)28;
 		if (Ar.Game < GAME_UE4(26))
 			return (Type)30;
+		// NEW_ENGINE_VERSION
+		return LatestVersion;
+	}
+};
+
+struct FEnterpriseObjectVersion
+{
+	enum Type
+	{
+		BeforeCustomVersionWasAdded = 0,
+		// UE4.24 = 8
+		MeshDescriptionBulkDataGuidIsHash = 8,
+
+		VersionPlusOne,
+		LatestVersion = VersionPlusOne - 1
+	};
+
+	static Type Get(const FArchive& Ar)
+	{
+		static const FGuid GUID = { 0x9DFFBCD6, 0x494F0158, 0xE2211282, 0x3C92A888 };
+		int ver = GetUE4CustomVersion(Ar, GUID);
+		if (ver >= 0)
+			return (Type)ver;
+		if (Ar.Game < GAME_UE4(20))
+			return BeforeCustomVersionWasAdded;
+		if (Ar.Game < GAME_UE4(21))
+			return (Type)1;
+		if (Ar.Game < GAME_UE4(22))
+			return (Type)4;
+		if (Ar.Game < GAME_UE4(24))
+			return (Type)6;
+		if (Ar.Game < GAME_UE4(25))
+			return MeshDescriptionBulkDataGuidIsHash;
+		if (Ar.Game < GAME_UE4(26))
+			return (Type)10;
 		// NEW_ENGINE_VERSION
 		return LatestVersion;
 	}
