@@ -7,6 +7,7 @@
 
 struct FMeshUVFloat;
 struct CMeshUVFloat;
+struct FPackedNormal;
 
 
 #define CONVERTER(From, To)					\
@@ -41,7 +42,7 @@ CONVERTER(TArray<FCoords>, TArray<CCoords>)
 #undef CONVERTER
 
 
-#ifdef __MESH_COMMON_H__
+#if defined(__MESH_COMMON_H__) && defined(__UNMESH_TYPES_H__) //todo: not nice
 
 FORCEINLINE CPackedNormal CVT(FPackedNormal V)
 {

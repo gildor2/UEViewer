@@ -1232,102 +1232,7 @@ struct FBoxSphereBounds
 };
 
 
-struct FPackedNormal
-{
-	uint32	Data;
-
-	friend FArchive& operator<<(FArchive &Ar, FPackedNormal &N)
-	{
-		Ar << N.Data;
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4(20))
-		{
-			// UE4.20 no longer has offset, it uses conversion from int16 to float instead of uint16 to float
-			//?? TODO: possible const: FRenderingObjectVersion::IncreaseNormalPrecision
-			//?? TODO: review, may be use new PackedNormal format for UE code, it is compatible with CPackedNormal
-			//?? (will need to change CVT function for it)
-			N.Data ^= 0x80808080;
-		}
-#endif // UNREAL4
-		return Ar;
-	}
-
-	operator FVector() const
-	{
-		// "x / 127.5 - 1" comes from Common.usf, TangentBias() macro
-		FVector r;
-		r.X = ( Data        & 0xFF) / 127.5f - 1;
-		r.Y = ((Data >> 8 ) & 0xFF) / 127.5f - 1;
-		r.Z = ((Data >> 16) & 0xFF) / 127.5f - 1;
-		return r;
-	}
-
-	FPackedNormal &operator=(const FVector &V)
-	{
-		Data = int((V.X + 1) * 127.5f)
-			+ (int((V.Y + 1) * 127.5f) << 8)
-			+ (int((V.Z + 1) * 127.5f) << 16);
-		return *this;
-	}
-
-	FPackedNormal &operator=(const FVector4 &V)
-	{
-		Data = int((V.X + 1) * 127.5f)
-			+ (int((V.Y + 1) * 127.5f) << 8)
-			+ (int((V.Z + 1) * 127.5f) << 16)
-			+ (int((V.W + 1) * 127.5f) << 24);
-		return *this;
-	}
-
-	float GetW() const
-	{
-		return (Data >> 24) / 127.5f - 1;
-	}
-};
-
-float half2float(uint16 h);
-
-#if UNREAL4
-
-// Packed normal replacement, used since UE4.12 for high-precision reflections
-struct FPackedRGBA16N
-{
-	uint16	X, Y, Z, W;
-
-	FPackedNormal ToPackedNormal() const
-	{
-		FPackedNormal r;
-		FVector v = *this;		// conversion
-		r = v;					// conversion
-		return r;
-	}
-
-	operator FVector() const
-	{
-		FVector r;
-		r.X = (X - 32767.5f) / 32767.5f;
-		r.Y = (Y - 32767.5f) / 32767.5f;
-		r.Z = (Z - 32767.5f) / 32767.5f;
-		return r;
-	}
-
-	friend FArchive& operator<<(FArchive &Ar, FPackedRGBA16N &V)
-	{
-		Ar << V.X << V.Y << V.Z << V.W;
-		if (Ar.Game >= GAME_UE4(20))
-		{
-			// UE4.20 no longer has offset, it uses conversion from int16 to float instead of uint16 to float
-			//?? TODO: possible const: FRenderingObjectVersion::IncreaseNormalPrecision
-			//?? TODO: review, may be use new PackedNormal format for UE code, it is compatible with CPackedNormal
-			//?? (will need to change CVT function for it)
-			V.X ^= 0x8000;
-			V.Y ^= 0x8000;
-			V.Z ^= 0x8000;
-			V.W ^= 0x8000;
-		}
-		return Ar;
-	}
-};
 
 struct FIntPoint
 {
@@ -1372,6 +1277,8 @@ struct FTransform
 };
 
 #endif // UNREAL4
+
+float half2float(uint16 h);
 
 
 /*-----------------------------------------------------------------------------
@@ -1445,11 +1352,9 @@ SIMPLE_TYPE(FVector,  float)
 SIMPLE_TYPE(FVector4, float)
 SIMPLE_TYPE(FQuat,    float)
 SIMPLE_TYPE(FCoords,  float)
-//SIMPLE_TYPE(FPackedNormal, uint32) - has complex serialization
 
 #if UNREAL4
 
-//SIMPLE_TYPE(FPackedRGBA16N, uint16) - has complex serialization
 SIMPLE_TYPE(FIntPoint,  int)
 SIMPLE_TYPE(FIntVector, int)
 SIMPLE_TYPE(FVector2D,  float)
