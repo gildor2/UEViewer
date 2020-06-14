@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "UnCore.h"
+#include "UE4Version.h"
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMaterial3.h"

@@ -3,6 +3,7 @@
 #if UNREAL4
 
 #include "UnrealClasses.h"
+#include "UE4Version.h"
 #include "UnMesh4.h"
 #include "UnMesh3.h"		// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"

@@ -1,6 +1,7 @@
 #ifndef __UNSOUND_H__
 #define __UNSOUND_H__
 
+#include "UE4Version.h"
 
 class USound : public UObject
 {

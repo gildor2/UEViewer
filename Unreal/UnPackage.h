@@ -26,7 +26,7 @@ struct FGenerationInfo
 	{
 		Ar << I.ExportCount << I.NameCount;
 #if UNREAL4
-		if (Ar.Game >= GAME_UE4_BASE && Ar.ArVer >= VER_UE4_REMOVE_NET_INDEX) return Ar;
+		if (Ar.Game >= GAME_UE4_BASE && Ar.ArVer >= 196 /*VER_UE4_REMOVE_NET_INDEX*/) return Ar;
 #endif
 #if UNREAL3
 		if (Ar.ArVer >= 322) // PACKAGE_V3

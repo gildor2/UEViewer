@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnCore.h"
 #include "GameDatabase.h"
+#include "UE4Version.h"
 
 /*-----------------------------------------------------------------------------
 	List of supported games

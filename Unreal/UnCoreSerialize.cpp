@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "UnCore.h"
+#include "UE4Version.h"
 
 #if UNREAL4
 #include "UnObject.h"
