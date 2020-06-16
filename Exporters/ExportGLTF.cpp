@@ -2,12 +2,12 @@
 #include "UnCore.h"
 
 #include "UnObject.h"
-#include "UnMaterial.h"
+#include "UnrealMaterial/UnMaterial.h"
 
-#include "SkeletalMesh.h"
-#include "StaticMesh.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/StaticMesh.h"
 
-#include "UnMathTools.h"
+#include "UnrealMesh/UnMathTools.h"
 
 #include "Exporters.h"
 #include "../UmodelTool/Version.h"

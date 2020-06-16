@@ -7,14 +7,14 @@
 // Classes for registration
 #include "UnrealClasses.h"
 #include "UnPackage.h"
-#include "UnAnimNotify.h"
+#include "UnrealMesh/UnAnimNotify.h"
 
-#include "UnMaterial2.h"
-#include "UnMaterial3.h"
+#include "UnrealMaterial/UnMaterial2.h"
+#include "UnrealMaterial/UnMaterial3.h"
 
-#include "UnMesh2.h"
-#include "UnMesh3.h"
-#include "UnMesh4.h"
+#include "UnrealMesh/UnMesh2.h"
+#include "UnrealMesh/UnMesh3.h"
+#include "UnrealMesh/UnMesh4.h"
 
 #include "UnSound.h"
 #include "UnThirdParty.h"
@@ -22,8 +22,8 @@
 #include "Exporters/Exporters.h"
 
 #if DECLARE_VIEWER_PROPS
-#include "SkeletalMesh.h"
-#include "StaticMesh.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/StaticMesh.h"
 #endif
 
 #include "GameDatabase.h"

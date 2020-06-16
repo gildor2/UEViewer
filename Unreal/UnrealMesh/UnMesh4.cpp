@@ -7,10 +7,10 @@
 #include "UnMesh4.h"
 #include "UnMesh3.h"		// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
-#include "UnMaterial3.h"
+#include "UnrealMaterial/UnMaterial3.h"
 
-#include "SkeletalMesh.h"
-#include "StaticMesh.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/StaticMesh.h"
 #include "TypeConvert.h"
 
 

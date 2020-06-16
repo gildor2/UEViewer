@@ -22,6 +22,12 @@ INCLUDES += $UMODEL UI
 sources(MAIN) = {
 	Exporters/*.cpp
 	Unreal/*.cpp
+	Unreal/FileSystem/*.cpp
+	Unreal/GameSpecific/*.cpp
+	Unreal/Mesh/*.cpp
+	Unreal/UnrealMaterial/*.cpp
+	Unreal/UnrealMesh/*.cpp
+	Unreal/Wrappers/*.cpp
 	Viewers/*.cpp
 	MeshInstance/*.cpp
 	Core/*.cpp

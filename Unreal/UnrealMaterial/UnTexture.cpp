@@ -1,4 +1,4 @@
-#include "UnTextureNVTT.h"
+#include "Wrappers/TextureNVTT.h"
 
 #include "Core.h"
 #include "UnCore.h"
@@ -6,7 +6,7 @@
 #include "UnMaterial.h"
 #include "UnMaterial2.h"		// for UPalette
 
-#include "UnTexturePNG.h"
+#include "Wrappers/TexturePNG.h"
 
 #if SUPPORT_IPHONE
 #	include <PVRTDecompress.h>

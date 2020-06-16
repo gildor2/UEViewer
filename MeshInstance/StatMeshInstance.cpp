@@ -3,7 +3,7 @@
 
 #if RENDERING
 
-#include "StaticMesh.h"
+#include "Mesh/StaticMesh.h"
 #include "MeshInstance.h"
 
 

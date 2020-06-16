@@ -3,11 +3,11 @@
 
 #if RENDERING
 
-#include "SkeletalMesh.h"
+#include "Mesh/SkeletalMesh.h"
 #include "MeshInstance.h"
 
 #include "GlWindow.h"
-#include "UnMathTools.h"
+#include "UnrealMesh/UnMathTools.h"
 
 
 // debugging

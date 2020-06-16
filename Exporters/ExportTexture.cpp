@@ -1,14 +1,14 @@
-#include "UnTextureNVTT.h"
+#include "Wrappers/TextureNVTT.h"
 
 #include "Core.h"
 #include "UnCore.h"
 #include "UnObject.h"
-#include "UnMaterial.h"
-#include "UnMaterial3.h"
+#include "UnrealMaterial/UnMaterial.h"
+#include "UnrealMaterial/UnMaterial3.h"
 
 #include "Exporters.h"
 
-#include "UnTexturePNG.h"
+#include "Wrappers/TexturePNG.h"
 
 #define TGA_SAVE_BOTTOMLEFT	1
 

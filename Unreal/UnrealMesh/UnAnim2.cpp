@@ -3,7 +3,7 @@
 #include "UnMesh2.h"
 #include "UnMeshTypes.h"
 
-#include "SkeletalMesh.h"
+#include "Mesh/SkeletalMesh.h"
 #include "TypeConvert.h"
 
 

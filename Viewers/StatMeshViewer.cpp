@@ -5,9 +5,9 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
-#include "UnMathTools.h"
+#include "UnrealMesh/UnMathTools.h"
 
-#include "StaticMesh.h"
+#include "Mesh/StaticMesh.h"
 
 #if HAS_UI
 #include "BaseDialog.h"

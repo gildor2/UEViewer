@@ -1,6 +1,6 @@
 #include "UnCore.h"
 #include "UnObject.h"
-#include "UnMaterial.h"
+#include "UnrealMaterial/UnMaterial.h"
 
 class ULodMesh;
 class UVertMesh;

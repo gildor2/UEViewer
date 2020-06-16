@@ -5,7 +5,7 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
-#include "MeshCommon.h"
+#include "Mesh/MeshCommon.h"
 
 #if HAS_UI
 #include "BaseDialog.h"

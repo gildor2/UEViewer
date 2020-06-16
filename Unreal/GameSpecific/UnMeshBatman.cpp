@@ -3,11 +3,11 @@
 #if UNREAL3 && BATMAN
 
 #include "UnrealClasses.h"
-#include "UnMesh3.h"
-#include "UnMeshTypes.h"
+#include "UnrealMesh/UnMesh3.h"
+#include "UnrealMesh/UnMeshTypes.h"
 #include "UnPackage.h"
 
-#include "SkeletalMesh.h"
+#include "Mesh/SkeletalMesh.h"
 #include "TypeConvert.h"
 
 

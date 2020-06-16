@@ -2,8 +2,8 @@
 #include "UnCore.h"
 
 #include "UnObject.h"
-#include "UnMaterial.h"
-#include "UnMaterial3.h"
+#include "UnrealMaterial/UnMaterial.h"
+#include "UnrealMaterial/UnMaterial3.h"
 
 #include "Exporters.h"
 

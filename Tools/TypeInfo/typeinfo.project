@@ -14,7 +14,7 @@ sources(MAIN) = {
 	$R/Unreal/UnPackage.cpp
 	$R/Unreal/UnPackageReader.cpp
 	$R/Unreal/GameDatabase.cpp
-	$R/Unreal/GameFileSystem.cpp
+	$R/Unreal/FileSystem/*.cpp
 	$R/Unreal/TypeInfo.cpp
 	$R/Core/Core.cpp
 	$R/Core/CoreWin32.cpp

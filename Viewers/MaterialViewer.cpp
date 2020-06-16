@@ -4,8 +4,8 @@
 
 #if RENDERING
 
-#include "UnMaterial2.h"
-#include "UnMaterial3.h"
+#include "UnrealMaterial/UnMaterial2.h"
+#include "UnrealMaterial/UnMaterial3.h"
 
 #include "ObjectViewer.h"
 

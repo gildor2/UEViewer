@@ -10,8 +10,8 @@ sources(MAIN) = {
 	$R/Unreal/UnCoreCompression.cpp
 	$R/Unreal/UnCoreSerialize.cpp
 	$R/Unreal/GameDatabase.cpp
-	$R/Unreal/GameFileSystem.cpp
-	$R/Unreal/UnUbisoft.cpp
+	$R/Unreal/FileSystem/GameFileSystem.cpp
+	$R/Unreal/GameSpecific/UnUbisoft.cpp
 	$R/Core/Core.cpp
 	$R/Core/CoreWin32.cpp
 	$R/Core/Memory.cpp

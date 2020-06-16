@@ -7,9 +7,9 @@
 #include "PackageUtils.h"
 #include "UnPackage.h"
 
-#include "UnMesh2.h"
-#include "UnMesh3.h"
-#include "UnMesh4.h"
+#include "UnrealMesh/UnMesh2.h"
+#include "UnrealMesh/UnMesh3.h"
+#include "UnrealMesh/UnMesh4.h"
 
 #include "UmodelApp.h"
 #include "UmodelCommands.h"

@@ -1,17 +1,17 @@
 #include "Core.h"
 #include "UnrealClasses.h"
-#include "UnMesh2.h"
-#include "UnMeshTypes.h"		// for FPackedNormal
+#include "UnrealMesh/UnMesh2.h"
+#include "UnrealMesh/UnMeshTypes.h"		// for FPackedNormal
 #include "UnHavok.h"
 
-#include "UnMaterial2.h"		// serialize UMaterial*
+#include "UnrealMaterial/UnMaterial2.h"	// serialize UMaterial*
 
-#include "MeshCommon.h"			// CPackedNormal stuff
-#include "TypeConvert.h"		// CVT macros
+#include "Mesh/MeshCommon.h"			// CPackedNormal stuff
+#include "TypeConvert.h"				// CVT macros
 
 #if BIOSHOCK
 
-#define XBOX_HACK	1			// disable XBox360 Havok parsing (endianness problems)
+#define XBOX_HACK	1					// disable XBox360 Havok parsing (endianness problems)
 
 /*-----------------------------------------------------------------------------
 	Bioshock 1 & 2 Havok structures

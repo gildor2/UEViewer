@@ -2,16 +2,16 @@
 #include "UnCore.h"
 
 #include "UnObject.h"
-#include "UnMaterial.h"
-#include "UnMesh4.h"		// for USkeleton
+#include "UnrealMaterial/UnMaterial.h"
+#include "UnrealMesh/UnMesh4.h"		// for USkeleton
 
-#include "SkeletalMesh.h"
-#include "StaticMesh.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/StaticMesh.h"
 
 #include "Psk.h"
 #include "Exporters.h"
 
-#include "UnMathTools.h"
+#include "UnrealMesh/UnMathTools.h"
 
 
 // PSK uses right-hand coordinates, but unreal uses left-hand.

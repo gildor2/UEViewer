@@ -6,10 +6,10 @@
 #include "UnMesh3.h"
 #include "UnMeshTypes.h"
 #include "UnMathTools.h"			// for FRotator to FCoords
-#include "UnMaterial3.h"
+#include "UnrealMaterial/UnMaterial3.h"
 
-#include "SkeletalMesh.h"
-#include "StaticMesh.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/StaticMesh.h"
 #include "TypeConvert.h"
 
 

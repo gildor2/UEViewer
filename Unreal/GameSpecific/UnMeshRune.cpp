@@ -1,9 +1,9 @@
 #include "Core.h"
 #include "UnrealClasses.h"
-#include "UnMesh2.h"
+#include "UnrealMesh/UnMesh2.h"
 #include "UnPackage.h"
 
-#include "UnMaterial2.h"
+#include "UnrealMaterial/UnMaterial2.h"
 
 #include "TypeConvert.h"
 

@@ -319,10 +319,10 @@ int main(int argc, char **argv)
 
 #if DO_GUARD
 	} CATCH {
-		if (GErrorHistory[0])
+		if (GError.History[0])
 		{
-//			printf("ERROR: %s\n", GErrorHistory);
-			appNotify("ERROR: %s\n", GErrorHistory);
+//			printf("ERROR: %s\n", GError.History);
+			appNotify("ERROR: %s\n", GError.History);
 		}
 		else
 		{

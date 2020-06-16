@@ -7,7 +7,7 @@
 #include "UnMeshTypes.h"
 #include "UnPackage.h"				// for checking game type
 
-#include "SkeletalMesh.h"
+#include "Mesh/SkeletalMesh.h"
 #include "TypeConvert.h"
 
 

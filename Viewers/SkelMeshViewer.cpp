@@ -5,12 +5,12 @@
 
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
-#include "UnMathTools.h"
+#include "UnrealMesh/UnMathTools.h"
 
-#include "UnMesh2.h"		// for UE2 USkeletalMesh and UMeshAnimation
-#include "UnMesh3.h"		// for UAnimSet
-#include "UnMesh4.h"
-#include "SkeletalMesh.h"
+#include "UnrealMesh/UnMesh2.h"		// for UE2 USkeletalMesh and UMeshAnimation
+#include "UnrealMesh/UnMesh3.h"		// for UAnimSet
+#include "UnrealMesh/UnMesh4.h"
+#include "Mesh/SkeletalMesh.h"
 
 #if HAS_UI
 #include "BaseDialog.h"

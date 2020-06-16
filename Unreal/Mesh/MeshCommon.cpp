@@ -1,9 +1,9 @@
 #include "Core.h"
 #include "UnCore.h"
-#include "UnObject.h"			// for typeinfo
+#include "UnObject.h"					// for typeinfo
 #include "MeshCommon.h"
-#include "UnMathTools.h"		// CVertexShare
-#include "UnMaterial.h"
+#include "UnrealMesh/UnMathTools.h"		// CVertexShare
+#include "UnrealMaterial/UnMaterial.h"
 
 #define STRIP_BINORMAL		1
 

@@ -2,10 +2,10 @@
 #include "UnrealClasses.h"
 #include "UnMesh2.h"
 
-#include "UnMaterial2.h"
+#include "UnrealMaterial/UnMaterial2.h"
 
-#include "SkeletalMesh.h"
-#include "StaticMesh.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Mesh/StaticMesh.h"
 #include "TypeConvert.h"
 
 //#define DEBUG_SKELMESH		1

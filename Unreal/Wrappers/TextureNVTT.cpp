@@ -1,4 +1,4 @@
-#include "UnTextureNVTT.h"
+#include "TextureNVTT.h"
 #include <nvcore/Stream.h>
 
 #include "Core.h"

@@ -7,7 +7,7 @@
 #include "UnMeshTypes.h"
 #include "UnPackage.h"
 
-#include "SkeletalMesh.h"
+#include "Mesh/SkeletalMesh.h"
 #include "TypeConvert.h"
 
 //#define DEBUG_DECOMPRESS	1

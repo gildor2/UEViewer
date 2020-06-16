@@ -5,10 +5,10 @@
 
 #if RENDERING
 
-#include "MeshCommon.h"				// for CMeshSection
+#include "Mesh/MeshCommon.h"			// for CMeshSection
 #include "MeshInstance.h"
-#include "UnMesh2.h"
-#include "UnMathTools.h"
+#include "UnrealMesh/UnMesh2.h"
+#include "UnrealMesh/UnMathTools.h"
 
 #include "TypeConvert.h"
 
