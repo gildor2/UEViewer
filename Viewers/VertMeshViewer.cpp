@@ -1,10 +1,13 @@
 #include "Core.h"
-#include "UnrealClasses.h"
+#include "UnCore.h"
 
 #if RENDERING
 
+#include "UnObject.h"
+
 #include "ObjectViewer.h"
 #include "../MeshInstance/MeshInstance.h"
+#include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMesh/UnMesh2.h"
 
 #include "Exporters/Exporters.h"

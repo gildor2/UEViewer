@@ -1,5 +1,4 @@
 #include "Core.h"
-#include "UnrealClasses.h"
 #include "UnHavok.h"
 
 #if BIOSHOCK			//?? separate define for HAVOK

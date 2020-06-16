@@ -2,7 +2,8 @@
 
 #if UNREAL3
 
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnMesh3.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"				// for checking game type

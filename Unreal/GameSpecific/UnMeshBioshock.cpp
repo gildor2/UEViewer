@@ -1,5 +1,7 @@
 #include "Core.h"
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
+#include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMesh/UnMesh2.h"
 #include "UnrealMesh/UnMeshTypes.h"		// for FPackedNormal
 #include "UnHavok.h"

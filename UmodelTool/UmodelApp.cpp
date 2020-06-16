@@ -3,10 +3,11 @@
 
 #include "Core.h"
 #include "UnCore.h"
-#include "UnrealClasses.h"
+#include "UnObject.h"
 #include "PackageUtils.h"
 #include "UnPackage.h"
 
+#include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMesh/UnMesh2.h"
 #include "UnrealMesh/UnMesh3.h"
 #include "UnrealMesh/UnMesh4.h"

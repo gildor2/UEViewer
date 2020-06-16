@@ -5,10 +5,12 @@
 #endif
 
 // Classes for registration
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnPackage.h"
 #include "UnrealMesh/UnAnimNotify.h"
 
+#include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial2.h"
 #include "UnrealMaterial/UnMaterial3.h"
 

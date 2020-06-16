@@ -2,10 +2,13 @@
 
 #if UNREAL3
 
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnMesh3.h"
 #include "UnMeshTypes.h"
 #include "UnMathTools.h"			// for FRotator to FCoords
+
+#include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial3.h"
 
 #include "Mesh/SkeletalMesh.h"

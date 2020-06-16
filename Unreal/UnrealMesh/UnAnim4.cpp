@@ -2,7 +2,8 @@
 
 #if UNREAL4
 
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnMesh4.h"
 #include "UnMeshTypes.h"
 #include "UnPackage.h"

@@ -14,6 +14,8 @@ class CStaticMesh;
 struct CMeshVertex;
 struct CBaseMeshLod;
 
+class UUnrealMaterial;
+class UVertMesh;
 class USkeleton;
 
 class UIMenuItem;

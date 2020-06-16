@@ -1,9 +1,11 @@
 #include "Core.h"
-#include "UnrealClasses.h"
+#include "UnCore.h"
 #include "MathSSE.h"			// for CVec4
 
 #if RENDERING
 
+#include "UnObject.h"
+#include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial2.h"
 #include "UnrealMaterial/UnMaterial3.h"
 

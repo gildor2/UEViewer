@@ -1,9 +1,12 @@
 #include "Core.h"
-#include "UnrealClasses.h"
 
 //!! BUG: vertex meshes displayed too dark in GL2 renderer because of missing tangents
 
 #if RENDERING
+
+#include "UnCore.h"
+#include "UnObject.h"
+#include "UnrealMaterial/UnMaterial.h"
 
 #include "Mesh/MeshCommon.h"			// for CMeshSection
 #include "MeshInstance.h"

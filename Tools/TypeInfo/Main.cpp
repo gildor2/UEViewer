@@ -1,5 +1,6 @@
 #include "Core.h"
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnPackage.h"
 #include "UnTypeinfo.h"
 

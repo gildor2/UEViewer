@@ -2,11 +2,15 @@
 
 #if UNREAL4
 
-#include "UnrealClasses.h"
+#include "UnCore.h"
 #include "UE4Version.h"
+
+#include "UnObject.h"
 #include "UnMesh4.h"
 #include "UnMesh3.h"		// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
+
+#include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial3.h"
 
 #include "Mesh/SkeletalMesh.h"

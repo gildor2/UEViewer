@@ -1,8 +1,10 @@
 #include "Core.h"
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnMesh2.h"
 
-#include "UnrealMaterial/UnMaterial2.h"
+#include "UnrealMaterial/UnMaterial.h"
+#include "UnrealMaterial/UnMaterial2.h" // for UMaterial* serialization
 
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/StaticMesh.h"

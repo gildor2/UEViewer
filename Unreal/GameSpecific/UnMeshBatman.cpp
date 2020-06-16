@@ -2,7 +2,8 @@
 
 #if UNREAL3 && BATMAN
 
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnrealMesh/UnMesh3.h"
 #include "UnrealMesh/UnMeshTypes.h"
 #include "UnPackage.h"

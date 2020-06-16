@@ -1,8 +1,9 @@
 #include "Core.h"
-#include "UnrealClasses.h"
+#include "UnCore.h"
 
 #if RENDERING
 
+#include "UnObject.h"
 #include "ObjectViewer.h"
 #include "UnPackage.h"			// for CObjectViewer::Draw2D()
 #include "PackageUtils.h"

@@ -1,5 +1,6 @@
 #include "Core.h"
-#include "UnrealClasses.h"
+#include "UnCore.h"
+#include "UnObject.h"
 #include "UnMesh2.h"
 #include "UnMeshTypes.h"
 
