@@ -34,7 +34,9 @@ CONVERTER(FVector,         CVec3          )
 CONVERTER(FQuat,           CQuat          )
 CONVERTER(FCoords,         CCoords        )
 CONVERTER(FMeshUVFloat,    CMeshUVFloat   )
+#if UNREAL3
 CONVERTER(FVector2D,       CMeshUVFloat   )
+#endif
 CONVERTER(TArray<FVector>, TArray<CVec3>  )
 CONVERTER(TArray<FQuat>,   TArray<CQuat>  )
 CONVERTER(TArray<FCoords>, TArray<CCoords>)

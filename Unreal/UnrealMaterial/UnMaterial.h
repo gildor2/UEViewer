@@ -166,6 +166,7 @@ struct CMipMap
 		DataSize = size;
 		ShouldFreeData = true;
 	}
+#if UNREAL3
 	void SetBulkData(const FByteBulkData& Bulk)
 	{
 		// Release old data if any
@@ -174,6 +175,7 @@ struct CMipMap
 		DataSize = Bulk.ElementCount * Bulk.GetElementSize();
 		ShouldFreeData = false; // bulk owns data buffer
 	}
+#endif // UNREAL3
 	void ReleaseData()
 	{
 		if (ShouldFreeData)
