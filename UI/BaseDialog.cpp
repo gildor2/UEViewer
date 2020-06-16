@@ -3567,9 +3567,9 @@ void UISetExceptionHandler(void (*Handler)())
 		// sometimes when working with debugger, exception inside UI could not be passed outside,
 		// and program crashed bypassing out exception handler - always show error information in
 		// MAX_DEBUG mode
-		if (GErrorHistory[0])
+		if (GError.History[0])
 		{
-			appNotify("ERROR in WindowProc: %s\n", GErrorHistory);
+			appNotify("ERROR in WindowProc: %s\n", GError.History);
 		}
 		else
 		{

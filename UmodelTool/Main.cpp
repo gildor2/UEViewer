@@ -490,10 +490,10 @@ static void ExceptionHandler()
 {
 	FFileWriter::CleanupOnError();
 #if DO_GUARD
-	if (GErrorHistory[0])
+	if (GError.History[0])
 	{
-//		appPrintf("ERROR: %s\n", GErrorHistory);
-		appNotify("ERROR: %s\n", GErrorHistory);
+//		appPrintf("ERROR: %s\n", GError.History);
+		appNotify("ERROR: %s\n", GError.History);
 	}
 	else
 	{
@@ -512,7 +512,7 @@ static void ExceptionHandler()
 // AbortHandler on linux will cause infinite recurse, but works well on Windows
 static void AbortHandler(int signal)
 {
-	if (GErrorHistory[0])
+	if (GError.History[0])
 	{
 		appPrintf("abort called during error handling\n", signal);
 #if VSTUDIO_INTEGRATION

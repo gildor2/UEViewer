@@ -290,8 +290,6 @@ inline void QSort(const char** array, int count, int (*cmpFunc)(const char**, co
 void appOpenLogFile(const char *filename);
 void appPrintf(const char *fmt, ...);
 
-extern bool GIsSwError;
-
 void appError(const char *fmt, ...);
 
 
@@ -506,7 +504,28 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info);
 void appUnwindPrefix(const char *fmt);		// not vararg (will display function name for unguardf only)
 NORETURN void appUnwindThrow(const char *fmt, ...);
 
-extern char GErrorHistory[2048];
+// The structure holding full error information, with reset capability.
+struct CErrorContext
+{
+	// Determines if this is an exception or appError throwed
+	bool IsSwError;
+	// Used for error history formatting
+	bool WasError;
+	// Call stack
+	char History[2048];
+
+	CErrorContext()
+	{
+		Reset();
+	}
+	void Reset()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+	void LogHistory(const char *part);
+};
+
+extern CErrorContext GError;
 
 #else  // DO_GUARD
 

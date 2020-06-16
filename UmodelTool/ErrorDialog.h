@@ -14,16 +14,16 @@ public:
 	{
 #if DO_GUARD
 		char message[256];
-		char* s = strchr(GErrorHistory, '\n');
+		char* s = strchr(GError.History, '\n');
 		const char* log;
 		if (s)
 		{
-			appStrncpyz(message, GErrorHistory, min(s - GErrorHistory + 1, ARRAY_COUNT(message)));
+			appStrncpyz(message, GError.History, min(s - GError.History + 1, ARRAY_COUNT(message)));
 			log = s + 1;
 		}
 		else
 		{
-			appStrncpyz(message, GErrorHistory, ARRAY_COUNT(message));
+			appStrncpyz(message, GError.History, ARRAY_COUNT(message));
 			log = "";
 		}
 
@@ -62,7 +62,7 @@ public:
 					+ NewControl(UIButton, "Copy")
 					.SetWidth(80)
 					.SetCallback(BIND_STATIC(&UIErrorDialog::CopyToClipboard))
-//					.SetCallback(BIND_LAMBDA([]() { appCopyTextToClipboard(GErrorHistory); })) - error in VS2013
+//					.SetCallback(BIND_LAMBDA([]() { appCopyTextToClipboard(GError.History); })) - error in VS2013
 				]
 			]
 		];
@@ -72,7 +72,7 @@ public:
 	static void CopyToClipboard()
 	{
 #if DO_GUARD
-		appCopyTextToClipboard(GErrorHistory);
+		appCopyTextToClipboard(GError.History);
 #endif
 	}
 };

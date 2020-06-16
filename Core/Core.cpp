@@ -52,7 +52,7 @@ void appPrintf(const char *fmt, ...)
 	Simple error/notification functions
 -----------------------------------------------------------------------------*/
 
-bool GIsSwError = false;			// software-generated error
+CErrorContext GError;
 
 void appError(const char *fmt, ...)
 {
@@ -63,7 +63,7 @@ void appError(const char *fmt, ...)
 	va_end(argptr);
 	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appError("appError: buffer overflow");
 
-	GIsSwError = true;
+	GError.IsSwError = true;
 
 #if VSTUDIO_INTEGRATION
 	if (IsDebuggerPresent())
@@ -75,8 +75,8 @@ void appError(const char *fmt, ...)
 
 #if DO_GUARD
 //	appNotify("ERROR: %s\n", buf);
-	strcpy(GErrorHistory, buf);
-	appStrcatn(ARRAY_ARG(GErrorHistory), "\n");
+	strcpy(GError.History, buf);
+	appStrcatn(ARRAY_ARG(GError.History), "\n");
 	THROW;
 #else
 	fprintf(stderr, "Fatal Error: %s\n", buf);
@@ -86,18 +86,18 @@ void appError(const char *fmt, ...)
 }
 
 
-static char NotifyBuf[512];
+static char NotifyHeader[512];
 
 void appSetNotifyHeader(const char *fmt, ...)
 {
 	if (!fmt)
 	{
-		NotifyBuf[0] = 0;
+		NotifyHeader[0] = 0;
 		return;
 	}
 	va_list	argptr;
 	va_start(argptr, fmt);
-	vsnprintf(ARRAY_ARG(NotifyBuf), fmt, argptr);
+	vsnprintf(ARRAY_ARG(NotifyHeader), fmt, argptr);
 	va_end(argptr);
 }
 
@@ -118,44 +118,41 @@ void appNotify(const char *fmt, ...)
 	// print to notify file
 	if (FILE *f = fopen("notify.log", "a"))
 	{
-		if (NotifyBuf[0])
-			fprintf(f, "\n******** %s ********\n\n", NotifyBuf);
+		if (NotifyHeader[0])
+			fprintf(f, "\n******** %s ********\n\n", NotifyHeader);
 		fprintf(f, "%s\n", buf);
 		fclose(f);
 	}
 	// print to log file
 	if (GLogFile)
 	{
-		if (NotifyBuf[0])
-			fprintf(GLogFile, "******** %s ********\n", NotifyBuf);
+		if (NotifyHeader[0])
+			fprintf(GLogFile, "******** %s ********\n", NotifyHeader);
 		fprintf(GLogFile, "*** %s\n", buf);
 		fflush(GLogFile);
 	}
 	// print to console
-	if (NotifyBuf[0])
-		fprintf(stderr, "******** %s ********\n", NotifyBuf);
+	if (NotifyHeader[0])
+		fprintf(stderr, "******** %s ********\n", NotifyHeader);
 	fprintf(stderr, "*** %s\n", buf);
 	fflush(stderr);
 	// clean notify header
-	NotifyBuf[0] = 0;
+	NotifyHeader[0] = 0;
 }
 
-
-char GErrorHistory[2048];
-static bool WasError = false;
-
-static void LogHistory(const char *part)
+void CErrorContext::LogHistory(const char *part)
 {
-	if (!GErrorHistory[0]) strcpy(GErrorHistory, "General Protection Fault !\n");
-	appStrcatn(ARRAY_ARG(GErrorHistory), part);
+	if (!History[0])
+		strcpy(History, "General Protection Fault !\n");
+	appStrcatn(ARRAY_ARG(History), part);
 }
 
 void appUnwindPrefix(const char *fmt)
 {
 	char buf[512];
-	appSprintf(ARRAY_ARG(buf), WasError ? " <- %s:" : "%s:", fmt);
-	LogHistory(buf);
-	WasError = false;
+	appSprintf(ARRAY_ARG(buf), GError.WasError ? " <- %s:" : "%s:", fmt);
+	GError.LogHistory(buf);
+	GError.WasError = false;
 }
 
 #if DO_GUARD
@@ -166,7 +163,7 @@ void appUnwindThrow(const char *fmt, ...)
 	va_list argptr;
 
 	va_start(argptr, fmt);
-	if (WasError)
+	if (GError.WasError)
 	{
 		strcpy(buf, " <- ");
 		vsnprintf(buf+4, ARRAY_COUNT(buf)-4, fmt, argptr);
@@ -174,10 +171,10 @@ void appUnwindThrow(const char *fmt, ...)
 	else
 	{
 		vsnprintf(buf, ARRAY_COUNT(buf), fmt, argptr);
-		WasError = true;
+		GError.WasError = true;
 	}
 	va_end(argptr);
-	LogHistory(buf);
+	GError.LogHistory(buf);
 
 	THROW;
 }
