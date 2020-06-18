@@ -448,7 +448,7 @@ enum EGame
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
 
-#define LATEST_SUPPORTED_UE4_VERSION		25		// UE4.XX
+#define LATEST_SUPPORTED_UE4_VERSION		26		// UE4.XX
 
 enum EPlatform
 {

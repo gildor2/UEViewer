@@ -1154,37 +1154,61 @@ struct FSkinWeightVertexBuffer
 
 
 // UE4.23+
- struct FRuntimeSkinWeightProfileData
- {
-	 struct FSkinWeightOverrideInfo
-	 {
-		 uint32 InfluencesOffset;
-		 uint8 NumInfluences;
+struct FRuntimeSkinWeightProfileData
+{
+	// Pre-UE4.26 struct
+	struct FSkinWeightOverrideInfo
+	{
+		uint32 InfluencesOffset;
+		uint8 NumInfluences;
 
-		 friend FArchive& operator<<(FArchive& Ar, FSkinWeightOverrideInfo& Data)
-		 {
-			 return Ar << Data.InfluencesOffset << Data.NumInfluences;
-		 }
-	 };
+		friend FArchive& operator<<(FArchive& Ar, FSkinWeightOverrideInfo& Data)
+		{
+			return Ar << Data.InfluencesOffset << Data.NumInfluences;
+		}
+	};
 
-	 TArray<FSkinWeightOverrideInfo> OverridesInfo;
-	 TArray<uint16> Weights;
-	 TMap<uint32, uint32> VertexIndexOverrideIndex;
+	TMap<uint32, uint32> VertexIndexOverrideIndex;
+	// Pre-UE4.26 data
+	TArray<FSkinWeightOverrideInfo> OverridesInfo;
+	TArray<uint16> Weights;
+	// UE4.26+
+	TArray<byte> BoneIDs;
+	TArray<byte> BoneWeights;
+	byte NumWeightsPerVertex;
 
-	 friend FArchive& operator<<(FArchive& Ar, FRuntimeSkinWeightProfileData& Data)
-	 {
-		 return Ar << Data.OverridesInfo << Data.Weights << Data.VertexIndexOverrideIndex;
-	 }
- };
+	friend FArchive& operator<<(FArchive& Ar, FRuntimeSkinWeightProfileData& Data)
+	{
+		guard(FRuntimeSkinWeightProfileData<<);
+		if (Ar.ArVer < VER_UE4_SKINWEIGHT_PROFILE_DATA_LAYOUT_CHANGES)
+		{
+			Ar << Data.OverridesInfo << Data.Weights;
+		}
+		else
+		{
+			// UE4.26+
+			Ar << Data.BoneIDs << Data.BoneWeights << Data.NumWeightsPerVertex;
+		}
+		Ar << Data.VertexIndexOverrideIndex;
+		return Ar;
+		unguard;
+	}
+};
 
 struct FSkinWeightProfilesData
 {
 	TMap<FName, FRuntimeSkinWeightProfileData> OverrideData;
+	TMap<FString, FRuntimeSkinWeightProfileData> OverrideData2; //todo: shoulc check after 4.26 release
 
 	friend FArchive& operator<<(FArchive& Ar, FSkinWeightProfilesData& Data)
 	{
+		//?? Note: Fortnite 13.00 has FString instead of FName, however 4.26 branch still has FName (but new FRuntimeSkinWeightProfileData)
 		guard(FSkinWeightProfilesData<<);
-		return Ar << Data.OverrideData;
+		DUMP_ARC_BYTES(Ar, 256);
+		if (Ar.Game < GAME_UE4(26))
+			return Ar << Data.OverrideData;
+		else
+			return Ar << Data.OverrideData2;
 		unguard;
 	}
 };
