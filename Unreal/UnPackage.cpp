@@ -468,8 +468,11 @@ void FCustomVersionContainer::Serialize(FArchive& Ar, int LegacyVersion)
 int GetUE4CustomVersion(const FArchive& Ar, const FGuid& Guid)
 {
 	guard(GetUE4CustomVersion);
+
 	const UnPackage* Package = Ar.CastTo<UnPackage>();
-	assert(Package);
+	if (!Package)
+		return -1;
+
 	const FPackageFileSummary &S = Package->Summary;
 	for (int i = 0; i < S.CustomVersionContainer.Versions.Num(); i++)
 	{
@@ -480,6 +483,7 @@ int GetUE4CustomVersion(const FArchive& Ar, const FGuid& Guid)
 		}
 	}
 	return -1;
+
 	unguard;
 }
 
