@@ -386,8 +386,18 @@ void UIPackageDialog::InitUI()
 
 	if (!Packages.Num())
 	{
-		// package list was not filled yet
-		appEnumGameFiles<TArray<const CGameFileInfo*> >( // won't compile with lambda without explicitly providing template argument
+		// Package list was not filled yet
+		// Count packages first for more efficient Packages.Add() when number of packages is very large
+		int NumPackages = 0;
+		appEnumGameFiles<int&>(
+			[](const CGameFileInfo* file, int& param) -> bool
+			{
+				param++;
+				return true;
+			}, NumPackages);
+		Packages.Empty(NumPackages);
+		// Fill Packages list
+		appEnumGameFiles<TArray<const CGameFileInfo*> >(
 			[](const CGameFileInfo* file, TArray<const CGameFileInfo*>& param) -> bool
 			{
 				param.Add(file);
