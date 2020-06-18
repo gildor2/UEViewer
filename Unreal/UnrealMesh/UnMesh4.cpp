@@ -1022,6 +1022,34 @@ struct FSkinWeightVertexBuffer
 {
 	TArray<FSkinWeightInfo> Weights;
 
+	static int MetadataSize(FArchive& Ar)
+	{
+		// FSkinWeightDataVertexBuffer::SerializeMetaData()
+		bool bNewWeightFormat = FAnimObjectVersion::Get(Ar) >= FAnimObjectVersion::UnlimitedBoneInfluences;
+		int NumBytes = 0;
+		if (Ar.Game < GAME_UE4(24))
+		{
+			NumBytes = 2 * sizeof(int32);
+		}
+		else if (!bNewWeightFormat)
+		{
+			NumBytes = 3 * sizeof(int32);
+		}
+		else
+		{
+			int32 MaxBoneInfluences, NumBones;
+			NumBytes = 4 * sizeof(int32);
+			if (FAnimObjectVersion::Get(Ar) >= FAnimObjectVersion::IncreaseBoneIndexLimitPerChunk)
+				NumBytes += sizeof(int32);
+		}
+		// FSkinWeightLookupVertexBuffer::SerializeMetaData
+		if (bNewWeightFormat)
+		{
+			NumBytes += sizeof(int32);
+		}
+		return NumBytes;
+	}
+
 	friend FArchive& operator<<(FArchive& Ar, FSkinWeightVertexBuffer& B)
 	{
 		guard(FSkinWeightVertexBuffer<<);
@@ -1515,9 +1543,46 @@ struct FStaticLODModel4
 			}
 			else
 			{
-				//todo
-				appError("SkeletalMesh: LOD data in bulk");
-				// bulk, then bDiscardBulkData, then SerializeAvailabilityInfo
+				DBG_SKEL("Serialize from bulk\n");
+				FByteBulkData Bulk;
+				Bulk.Serialize(Ar);
+				if (Bulk.ElementCount > 0)
+				{
+					// perform SerializeStreamedData on bulk array
+					Bulk.SerializeData(UObject::GLoadingObj);
+
+					FMemReader Reader(Bulk.BulkData, Bulk.ElementCount); // ElementCount is the same as data size, for byte bulk data
+					Reader.SetupFrom(*UObject::GLoadingObj->GetPackageArchive());
+					Lod.SerializeStreamedData(Reader);
+
+					// FSkeletalMeshLODRenderData::SerializeAvailabilityInfo
+					/* ... SerializeMetaData() for all buffers
+						Indices = 1x byte, 1x int32
+						AdjacencyIndexBuffer = same (if present)
+						StaticMeshVertexBuffer = 2x int32, 2x bool
+						PositionVertexBuffer = 2x int32
+						ColorVertexBuffer = 2x int32
+						SkinWeightVertexBuffer = FSkinWeightVertexBuffer::MetadataSize()
+						ClothVertexBuffer = TArray<uint64>, 2x uint32 (if present)
+						SkinWeightProfilesData = TArray<FName>
+					*/
+					int SkipBytes = 5;
+					if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
+						SkipBytes += 5;
+					SkipBytes += 4*4 + 2*4 + 2*4;
+					SkipBytes += FSkinWeightVertexBuffer::MetadataSize(Ar);
+					Ar.Seek(Ar.Tell() + SkipBytes);
+					if (Lod.HasClothData())
+					{
+						// ClothVertexBuffer
+						TArray<int64> ClothIndexMapping;
+						Ar << ClothIndexMapping;
+						Ar.Seek(Ar.Tell() + 2*4);
+					}
+					// SkinWeightProfilesData
+					TArray<FName> ProfileNames;
+					Ar << ProfileNames;
+				}
 			}
 		}
 
@@ -2180,17 +2245,18 @@ struct FStaticMeshLODModel4
 				// FStaticMeshLODResources::SerializeAvailabilityInfo()
 				uint32 DepthOnlyNumTriangles, PackedData;
 				Ar << DepthOnlyNumTriangles << PackedData;
-				// ... SerializeMetaData() for all arrays
+				/* ... SerializeMetaData() for all buffers
+					StaticMeshVertexBuffer = 2x int32, 2x bool
+					PositionVertexBuffer = 2x int32
+					ColorVertexBuffer = 2x int32
+					IndexBuffer = int32 + bool
+					ReversedIndexBuffer
+					DepthOnlyIndexBuffer
+					ReversedDepthOnlyIndexBuffer
+					WireframeIndexBuffer
+					AdjacencyIndexBuffer
+				*/
 				Ar.Seek(Ar.Tell() + 4*4 + 2*4 + 2*4 + 6*(2*4));
-/*				StaticMeshVertexBuffer = 2x int32, 2x bool
-				PositionVertexBuffer = 2x int32
-				ColorVertexBuffer = 2x int32
-				IndexBuffer = int32 + bool
-				ReversedIndexBuffer
-				DepthOnlyIndexBuffer
-				ReversedDepthOnlyIndexBuffer
-				WireframeIndexBuffer
-				AdjacencyIndexBuffer */
 			}
 		}
 		// FStaticMeshBuffersSize
