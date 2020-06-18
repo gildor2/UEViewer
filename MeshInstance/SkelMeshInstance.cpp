@@ -94,7 +94,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 ,	MorphIndex(-1)
 ,	UVIndex(0)
 ,	RotationMode(EARO_AnimSet)
-,	LastLodIndex(-2)				// differs from LodNum and from all other values
+,	LastLodIndex(-2)				// initialize with value which differs from LodNum and from all other values
 ,	LastMorphIndex(-1)
 ,	MaxAnimChannel(-1)
 ,	Animation(NULL)
@@ -1376,6 +1376,8 @@ void CSkelMeshInstance::Draw(unsigned flags)
 			InfColors = NULL;
 		}
 		LastLodIndex = LodIndex;
+		// Invalidate computed morph data
+		LastMorphIndex = -1;
 	}
 	// draw ...
 	DrawMesh(flags);
