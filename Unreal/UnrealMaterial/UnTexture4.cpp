@@ -4,7 +4,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMaterial3.h"
-#include "UnMaterial4.h"
+#include "UnMaterialExpression.h"
 #include "UnPackage.h"
 
 
@@ -286,10 +286,29 @@ void UTexture2D::Serialize4(FArchive& Ar)
 	unguard;
 }
 
-void UMaterial3::ScanUE4Material()
+void UMaterial3::PostLoad()
 {
-	guard(UMaterial3::ScanUE4Material);
+	guard(UMaterial3::PostLoad);
 
+	ScanMaterialExpressions();
+#if UNREAL4
+	// UE4 has complex FMaterialResource format, so avoid reading anything here, but
+	// scan package's imports for UTexture objects instead. Here we're attempting to
+	// collect data from material expressions, so do the work in PostLoad to ensure
+	// all expressions are serialized.
+	if (GetGame() >= GAME_UE4_BASE)
+		ScanUE4Textures();
+#endif
+
+	unguard;
+}
+
+void UMaterial3::ScanMaterialExpressions()
+{
+	guard(UMaterial3::ScanMaterialExpressions)
+
+	// Note: code is common for UE3 and UE4
+	//todo: may be move code to UE3 cpp file?
 	if (Expressions.Num())
 	{
 		for (const UObject* Obj : Expressions)
@@ -331,6 +350,13 @@ void UMaterial3::ScanUE4Material()
 			}
 		}
 	}
+
+	unguard;
+}
+
+void UMaterial3::ScanUE4Textures()
+{
+	guard(UMaterial3::ScanUE4Textures);
 
 //	printf("--> %d imports\n", Package->Summary.ImportCount);
 	if (ReferencedTextures.Num() == 0)

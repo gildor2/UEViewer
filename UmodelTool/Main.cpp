@@ -13,7 +13,7 @@
 #include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial2.h"
 #include "UnrealMaterial/UnMaterial3.h"
-#include "UnrealMaterial/UnMaterial4.h"
+#include "UnrealMaterial/UnMaterialExpression.h"
 
 #include "UnrealMesh/UnMesh2.h"
 #include "UnrealMesh/UnMesh3.h"
@@ -106,6 +106,7 @@ static void RegisterUnrealClasses3()
 BEGIN_CLASS_TABLE
 //	REGISTER_MATERIAL_CLASSES_U3 -- registered for Bioshock in RegisterCommonUnrealClasses()
 	REGISTER_MESH_CLASSES_U3
+	REGISTER_EXPRESSION_CLASSES
 #if TUROK
 	REGISTER_MESH_CLASSES_TUROK
 #endif
@@ -133,7 +134,7 @@ static void RegisterUnrealClasses4()
 BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U4
 	REGISTER_MATERIAL_CLASSES_U4
-	REGISTER_EXPRESSION_CLASSES_U4
+	REGISTER_EXPRESSION_CLASSES
 END_CLASS_TABLE
 	REGISTER_MATERIAL_ENUMS_U4
 	REGISTER_MESH_ENUMS_U4

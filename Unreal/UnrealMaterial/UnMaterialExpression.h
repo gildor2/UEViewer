@@ -1,5 +1,5 @@
-#ifndef __UNMATERIAL4_H__
-#define __UNMATERIAL4_H__
+#ifndef __UNMATERIAL_EXPRESSION_H__
+#define __UNMATERIAL_EXPRESSION_H__
 
 class UMaterialExpression : public UObject
 {
@@ -98,7 +98,7 @@ public:
 	END_PROP_TABLE
 };
 
-#define REGISTER_EXPRESSION_CLASSES_U4 \
+#define REGISTER_EXPRESSION_CLASSES \
 	REGISTER_CLASS(UMaterialExpressionTextureSample) \
 	REGISTER_CLASS(UMaterialExpressionTextureSampleParameter2D) \
 	REGISTER_CLASS(UMaterialExpressionScalarParameter) \
@@ -106,4 +106,4 @@ public:
 	REGISTER_CLASS_ALIAS(UMaterialExpressionStaticBoolParameter, UMaterialExpressionStaticSwitchParameter) \
 	REGISTER_CLASS(UMaterialExpressionVectorParameter)
 
-#endif // __UNMATERIAL4_H__
+#endif // __UNMATERIAL_EXPRESSION_H__

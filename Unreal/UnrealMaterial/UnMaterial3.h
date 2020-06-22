@@ -846,20 +846,10 @@ public:
 		DROP_REMAINING_DATA(Ar);			//?? drop native data
 	}
 
-	virtual void PostLoad()
-	{
+	virtual void PostLoad();
+	void ScanMaterialExpressions();
 #if UNREAL4
-		// UE4 has complex FMaterialResource format, so avoid reading anything here, but
-		// scan package's imports for UTexture objects instead. Here we're attempting to
-		// collect data from material expressions, so do the work in PostLoad to ensure
-		// all expressions are serialized.
-		if (GetGame() >= GAME_UE4_BASE)
-			ScanUE4Material();
-#endif
-	}
-
-#if UNREAL4
-	void ScanUE4Material();
+	void ScanUE4Textures();
 #endif
 
 #if RENDERING
