@@ -216,6 +216,10 @@ ooz
 
 Changes
 ~~~~~~~
+22.06.2020
+- reading UE3/UE4 material expressions for collecting Material's parameters and their values; this extends
+  material outline, dump and export information
+
 13.06.2020
 - Sea of Thieves support, requires game override (-game=sot)
 

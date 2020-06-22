@@ -695,6 +695,11 @@ public:
 		PROP_ARRAY(Expressions, UObject*)
 		PROP_ENUM2(BlendMode, EBlendMode)
 		PROP_FLOAT(OpacityMaskClipValue)
+#if DECLARE_VIEWER_PROPS
+		PROP_ARRAY(CollectedTextureParameters, CTextureParameterValue)
+		PROP_ARRAY(CollectedScalarParameters, CScalarParameterValue)
+		PROP_ARRAY(CollectedVectorParameters, CVectorParameterValue)
+#endif // DECLARE_VIEWER_PROPS
 		//!! should be used (main material inputs in UE3 material editor)
 		PROP_DROP(DiffuseColor)
 		PROP_DROP(DiffusePower)				// GoW2

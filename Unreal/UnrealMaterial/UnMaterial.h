@@ -338,22 +338,57 @@ struct CParameterValueBase
 {
 	FName Name;
 	FName Group;
+
+#if DECLARE_VIEWER_PROPS
+	DECLARE_STRUCT(CParameterValueBase)
+	BEGIN_PROP_TABLE
+		PROP_NAME(Name)
+		PROP_NAME(Group)
+	END_PROP_TABLE
+#endif // DECLARE_VIEWER_PROPS
 };
 
 struct CTextureParameterValue : public CParameterValueBase
 {
 	UUnrealMaterial* Texture;
+
+#if DECLARE_VIEWER_PROPS
+	DECLARE_STRUCT2(CTextureParameterValue, CParameterValueBase)
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Texture)
+	END_PROP_TABLE
+#endif // DECLARE_VIEWER_PROPS
 };
 
 struct CScalarParameterValue : public CParameterValueBase
 {
 	float Value;
+
+#if DECLARE_VIEWER_PROPS
+	DECLARE_STRUCT2(CScalarParameterValue, CParameterValueBase)
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(Value)
+	END_PROP_TABLE
+#endif // DECLARE_VIEWER_PROPS
 };
 
 struct CVectorParameterValue : public CParameterValueBase
 {
 	FLinearColor Value;
+
+#if DECLARE_VIEWER_PROPS
+	DECLARE_STRUCT2(CVectorParameterValue, CParameterValueBase)
+	BEGIN_PROP_TABLE
+		PROP_STRUC(Value, FLinearColor)
+	END_PROP_TABLE
+#endif // DECLARE_VIEWER_PROPS
 };
+
+
+#define REGISTER_MATERIAL_VCLASSES \
+	REGISTER_CLASS(CTextureParameterValue) \
+	REGISTER_CLASS(CScalarParameterValue) \
+	REGISTER_CLASS(CVectorParameterValue)
 
 
 //!! UE2 mesh uses UMaterial, which sometimes will be declared as 'forward declaration'.
