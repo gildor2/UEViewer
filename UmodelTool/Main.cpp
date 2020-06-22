@@ -122,6 +122,7 @@ BEGIN_CLASS_TABLE
 #endif
 END_CLASS_TABLE
 #endif // UNREAL3
+	SuppressUnknownClass("UBodySetup");
 }
 
 
@@ -135,6 +136,10 @@ END_CLASS_TABLE
 	REGISTER_MATERIAL_ENUMS_U4
 	REGISTER_MESH_ENUMS_U4
 #endif // UNREAL4
+	SuppressUnknownClass("UMaterialFunction");
+	SuppressUnknownClass("UPhysicalMaterial");
+	SuppressUnknownClass("UBodySetup");
+	SuppressUnknownClass("UNavCollision");
 }
 
 

@@ -187,10 +187,12 @@ struct CClassInfo
 };
 
 
-void RegisterClasses(const CClassInfo *Table, int Count);
-void UnregisterClass(const char *Name, bool WholeTree = false);
+void RegisterClasses(const CClassInfo* Table, int Count);
+void UnregisterClass(const char* Name, bool WholeTree = false);
+void SuppressUnknownClass(const char* ClassNameWildcard);
 
-const CTypeInfo *FindClassType(const char *Name, bool ClassType = true);
+const CTypeInfo* FindClassType(const char* Name, bool ClassType = true);
+bool IsSuppressedClass(const char* Name);
 
 FORCEINLINE const CTypeInfo *FindStructType(const char *Name)
 {

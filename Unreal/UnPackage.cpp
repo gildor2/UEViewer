@@ -2183,7 +2183,8 @@ UObject* UnPackage::CreateExport(int index)
 	UObject *Obj = Exp.Object = CreateClass(ClassName);
 	if (!Obj)
 	{
-		appPrintf("WARNING: Unknown class \"%s\" for object \"%s\"\n", ClassName, *Exp.ObjectName);
+		if (!IsSuppressedClass(ClassName))
+			appPrintf("WARNING: Unknown class \"%s\" for object \"%s\"\n", ClassName, *Exp.ObjectName);
 		return NULL;
 	}
 #if UNREAL3
@@ -2301,8 +2302,15 @@ UObject* UnPackage::CreateImport(int index)
 
 	if (!Package)
 	{
-		appPrintf("WARNING: Import(%s'%s'): package %s was not found\n", *Imp.ClassName, *Imp.ObjectName, PackageName);
 		Imp.Missing = true;
+#if UNREAL4
+		if (!strnicmp(PackageName, "/Script/", 8) || !strnicmp(PackageName, "/Engine/", 8))
+		{
+			// Ignore missing engine packages for UE4
+			return NULL;
+		}
+#endif
+		appPrintf("WARNING: Import(%s'%s'): package %s was not found\n", *Imp.ClassName, *Imp.ObjectName, PackageName);
 		return NULL;
 	}
 

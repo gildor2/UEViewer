@@ -6,6 +6,7 @@
 
 #define MAX_CLASSES		256
 #define MAX_ENUMS		32
+#define MAX_SUPPRESSED_CLASSES 32
 
 //#define DEBUG_TYPES				1
 
@@ -14,9 +15,11 @@
 -----------------------------------------------------------------------------*/
 
 static CClassInfo GClasses[MAX_CLASSES];
-static int        GClassCount = 0;
+static int GClassCount = 0;
+static const char* GSuppressedClasses[MAX_SUPPRESSED_CLASSES];
+static int GSuppressedClassCount = 0;
 
-void RegisterClasses(const CClassInfo *Table, int Count)
+void RegisterClasses(const CClassInfo* Table, int Count)
 {
 	if (Count <= 0) return;
 	assert(GClassCount + Count < ARRAY_COUNT(GClasses));
@@ -47,8 +50,7 @@ void RegisterClasses(const CClassInfo *Table, int Count)
 }
 
 
-// may be useful
-void UnregisterClass(const char *Name, bool WholeTree)
+void UnregisterClass(const char* Name, bool WholeTree)
 {
 	for (int i = 0; i < GClassCount; i++)
 		if (!strcmp(GClasses[i].Name + 1, Name) ||
@@ -71,7 +73,17 @@ void UnregisterClass(const char *Name, bool WholeTree)
 }
 
 
-const CTypeInfo *FindClassType(const char *Name, bool ClassType)
+void SuppressUnknownClass(const char* ClassNameWildcard)
+{
+	assert(GSuppressedClassCount < ARRAY_COUNT(GSuppressedClasses));
+#if DEBUG_TYPES
+	appPrintf("Suppress %s\n", ClassNameWildcard);
+#endif
+	GSuppressedClasses[GSuppressedClassCount++] = ClassNameWildcard;
+}
+
+
+const CTypeInfo* FindClassType(const char* Name, bool ClassType)
 {
 	guard(FindClassType);
 #if DEBUG_TYPES
@@ -102,6 +114,17 @@ const CTypeInfo *FindClassType(const char *Name, bool ClassType)
 #endif
 	return NULL;
 	unguardf("%s", Name);
+}
+
+
+bool IsSuppressedClass(const char* Name)
+{
+	for (int i = 0; i < GSuppressedClassCount; i++)
+	{
+		if (appMatchWildcard(Name, GSuppressedClasses[i] + 1))
+			return true;
+	}
+	return false;
 }
 
 

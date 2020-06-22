@@ -1204,7 +1204,6 @@ struct FSkinWeightProfilesData
 	{
 		//?? Note: Fortnite 13.00 has FString instead of FName, however 4.26 branch still has FName (but new FRuntimeSkinWeightProfileData)
 		guard(FSkinWeightProfilesData<<);
-		DUMP_ARC_BYTES(Ar, 256);
 		if (Ar.Game < GAME_UE4(26))
 			return Ar << Data.OverrideData;
 		else

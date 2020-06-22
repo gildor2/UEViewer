@@ -355,6 +355,7 @@ public:
 		PROP_DROP(LightmapUVDensity)
 		PROP_DROP(LightMapResolution)
 		PROP_DROP(ExtendedBounds)
+		PROP_DROP(LightMapCoordinateIndex)
 	END_PROP_TABLE
 
 	UStaticMesh4();

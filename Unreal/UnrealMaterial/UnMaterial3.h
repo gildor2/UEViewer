@@ -724,6 +724,7 @@ public:
 		PROP_DROP(bUsedWithFracturedMeshes)	// GoW2
 		PROP_DROP(bUsedWithFluidSurfaces)	// GoW2
 		PROP_DROP(bUsedWithSplineMeshes)
+		PROP_DROP(bUsedWithInstancedStaticMeshes)
 		// physics
 		PROP_DROP(PhysMaterialMask)
 		PROP_DROP(PhysMaterialMaskUVChannel)
@@ -763,6 +764,8 @@ public:
 		PROP_DROP(ShadingModels)
 		PROP_DROP(bEnableResponsiveAA)
 		PROP_DROP(StateId)
+		PROP_DROP(CachedQualityLevelsUsed)
+		PROP_DROP(bUseMaterialAttributes)
 #endif
 	END_PROP_TABLE
 
