@@ -80,10 +80,10 @@ class UMaterialExpressionStaticBoolParameter : public UMaterialExpressionParamet
 {
 	DECLARE_CLASS(UMaterialExpressionStaticBoolParameter, UMaterialExpressionParameter)
 public:
-	int DefaultValue;
+	bool DefaultValue;
 
 	BEGIN_PROP_TABLE
-		PROP_INT(DefaultValue)
+		PROP_BOOL(DefaultValue)
 	END_PROP_TABLE
 };
 

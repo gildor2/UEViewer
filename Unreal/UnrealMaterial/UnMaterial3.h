@@ -664,6 +664,89 @@ public:
 #endif
 };
 
+#if UNREAL4
+
+enum class EMaterialParameterType
+{
+	Scalar,
+	Vector,
+	Texture,
+	Font,
+	RuntimeVirtualTexture,
+	Count
+};
+
+struct FMaterialParameterInfo
+{
+	DECLARE_STRUCT(FMaterialParameterInfo)
+
+	FName			Name;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(Name)
+		// Layer information
+		PROP_DROP(Association)
+		PROP_DROP(Index)
+	END_PROP_TABLE
+};
+
+struct FMaterialCachedParameterEntry
+{
+	DECLARE_STRUCT(FMaterialCachedParameterEntry)
+
+	TArray<FMaterialParameterInfo> ParameterInfos;
+
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(ParameterInfos, FMaterialParameterInfo)
+		PROP_DROP(NameHashes)
+		PROP_DROP(ExpressionGuids)
+		PROP_DROP(Overrides)
+	END_PROP_TABLE
+};
+
+struct FMaterialCachedParameters
+{
+	DECLARE_STRUCT(FMaterialCachedParameters)
+
+	FMaterialCachedParameterEntry Entries[(int)EMaterialParameterType::Count];
+	TArray<float> ScalarValues;
+	TArray<FLinearColor> VectorValues;
+	TArray<UTexture3*> TextureValues;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(Entries, FMaterialCachedParameterEntry)
+		PROP_ARRAY(ScalarValues, float)
+		PROP_ARRAY(VectorValues, FLinearColor)
+		PROP_ARRAY(TextureValues, UTexture3*)
+		PROP_DROP(FontValues)
+		PROP_DROP(FontPageValues)
+		PROP_DROP(RuntimeVirtualTextureValues)
+	END_PROP_TABLE
+};
+
+struct FMaterialCachedExpressionData
+{
+	DECLARE_STRUCT(FMaterialCachedExpressionData)
+
+	FMaterialCachedParameters Parameters;
+	TArray<UObject*> ReferencedTextures;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(Parameters, FMaterialCachedParameters)
+		PROP_ARRAY(ReferencedTextures, UObject*)
+		PROP_DROP(FunctionInfos)
+		PROP_DROP(ParameterCollectionInfos)
+		PROP_DROP(DefaultLayers)
+		PROP_DROP(DefaultLayerBlends)
+		PROP_DROP(GrassTypes)
+		PROP_DROP(DynamicParameterNames)
+		PROP_DROP(QualityLevelsUsed)
+		PROP_DROP(bHasRuntimeVirtualTextureOutput)
+		PROP_DROP(bHasSceneColor)
+	END_PROP_TABLE
+};
+
+#endif // UNREAL4
 
 class UMaterial3 : public UMaterialInterface
 {
@@ -676,6 +759,9 @@ public:
 	float			OpacityMaskClipValue;
 	TArray<UTexture3*> ReferencedTextures;
 	TArray<UObject*> Expressions;
+#if UNREAL4
+	FMaterialCachedExpressionData CachedExpressionData;
+#endif
 
 	// Generated data
 	TArray<CTextureParameterValue> CollectedTextureParameters;
@@ -693,6 +779,7 @@ public:
 		PROP_BOOL(bIsMasked)
 		PROP_ARRAY(ReferencedTextures, UObject*)
 		PROP_ARRAY(Expressions, UObject*)
+		PROP_STRUC(CachedExpressionData, FMaterialCachedExpressionData)
 		PROP_ENUM2(BlendMode, EBlendMode)
 		PROP_FLOAT(OpacityMaskClipValue)
 #if DECLARE_VIEWER_PROPS
@@ -937,24 +1024,6 @@ public:
 	}
 };
 
-#if UNREAL4
-
-struct FMaterialParameterInfo
-{
-	DECLARE_STRUCT(FMaterialParameterInfo)
-
-	FName			Name;
-
-	BEGIN_PROP_TABLE
-		PROP_NAME(Name)
-		// Layer information
-		PROP_DROP(Association)
-		PROP_DROP(Index)
-	END_PROP_TABLE
-};
-
-#endif // UNREAL4
-
 struct FScalarParameterValue
 {
 	DECLARE_STRUCT(FScalarParameterValue)
@@ -1150,6 +1219,9 @@ public:
 #define REGISTER_MATERIAL_CLASSES_U4	\
 	REGISTER_CLASS_ALIAS(UTexture2D, UTextureCube) \
 	REGISTER_CLASS(FMaterialParameterInfo) \
+	REGISTER_CLASS(FMaterialCachedParameterEntry) \
+	REGISTER_CLASS(FMaterialCachedParameters) \
+	REGISTER_CLASS(FMaterialCachedExpressionData) \
 	REGISTER_CLASS(FTextureSource)		\
 	REGISTER_CLASS(FMaterialInstanceBasePropertyOverrides)
 
