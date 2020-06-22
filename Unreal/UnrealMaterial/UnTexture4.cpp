@@ -4,6 +4,7 @@
 #include "UnObject.h"
 #include "UnMaterial.h"
 #include "UnMaterial3.h"
+#include "UnMaterial4.h"
 #include "UnPackage.h"
 
 
@@ -285,9 +286,28 @@ void UTexture2D::Serialize4(FArchive& Ar)
 	unguard;
 }
 
-void UMaterial3::ScanForTextures()
+void UMaterial3::ScanUE4Material()
 {
-	guard(UMaterial3::ScanForTextures);
+	guard(UMaterial3::ScanUE4Material);
+
+	if (Expressions.Num())
+	{
+		for (const UObject* Obj : Expressions)
+		{
+			if (!Obj) continue;
+
+			if (Obj->IsA("MaterialExpressionTextureSampleParameter"))
+			{
+				const UMaterialExpressionTextureSampleParameter* Expr = static_cast<const UMaterialExpressionTextureSampleParameter*>(Obj);
+				CTextureParameterValue Param;
+				Param.Name = Expr->ParameterName;
+				Param.Group = Expr->Group;
+				Param.Texture = Expr->Texture;
+				CollectedTextureParameters.Add(Param);
+			}
+			// else if ...
+		}
+	}
 
 //	printf("--> %d imports\n", Package->Summary.ImportCount);
 	//!! NOTE: this code will not work when textures are located in the same package - they don't present in import table

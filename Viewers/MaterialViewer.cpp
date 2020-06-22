@@ -771,6 +771,12 @@ static void OutlineMaterial(UObject *Obj, int indent)
 			if (!Tex) continue;
 			Outline("Textures[%d] = %s", i, Tex->Name);
 		}
+		if (Mat->CollectedTextureParameters.Num())
+		{
+			Outline(S_YELLOW"Texture parameters:");
+			for (const CTextureParameterValue &P : Mat->CollectedTextureParameters)
+				Outline("%s = %s", *P.Name, P.Texture ? P.Texture->Name : "NULL");
+		}
 	MAT_END
 
 	MAT_BEGIN(UMaterialInstanceConstant)
@@ -783,25 +789,25 @@ static void OutlineMaterial(UObject *Obj, int indent)
 			Outline(S_RED"Parent = SELF");
 		}
 		// texture
-		if (Mat->TextureParameterValues.Num()) Outline(S_YELLOW"Texture parameters:");
-		for (i = 0; i < Mat->TextureParameterValues.Num(); i++)
+		if (Mat->TextureParameterValues.Num())
 		{
-			const FTextureParameterValue &P = Mat->TextureParameterValues[i];
-			Outline("%s = %s", P.GetName(), P.ParameterValue ? P.ParameterValue->Name : "NULL");
+			Outline(S_YELLOW"Texture parameters:");
+			for (const FTextureParameterValue &P : Mat->TextureParameterValues)
+				Outline("%s = %s", P.GetName(), P.ParameterValue ? P.ParameterValue->Name : "NULL");
 		}
 		// scalar
-		if (Mat->ScalarParameterValues.Num()) Outline(S_YELLOW"Scalar parameters");
-		for (i = 0; i < Mat->ScalarParameterValues.Num(); i++)
+		if (Mat->ScalarParameterValues.Num())
 		{
-			const FScalarParameterValue &P = Mat->ScalarParameterValues[i];
-			Outline("%s = %g", P.GetName(), P.ParameterValue);
+			Outline(S_YELLOW"Scalar parameters");
+			for (const FScalarParameterValue &P : Mat->ScalarParameterValues)
+				Outline("%s = %g", P.GetName(), P.ParameterValue);
 		}
 		// vector
-		if (Mat->VectorParameterValues.Num()) Outline(S_YELLOW"Vector parameters");
-		for (i = 0; i < Mat->VectorParameterValues.Num(); i++)
+		if (Mat->VectorParameterValues.Num())
 		{
-			const FVectorParameterValue &P = Mat->VectorParameterValues[i];
-			Outline("%s = %g %g %g %g", P.GetName(), FCOLOR_ARG(P.ParameterValue));
+			Outline(S_YELLOW"Vector parameters");
+			for (const FVectorParameterValue &P : Mat->VectorParameterValues)
+				Outline("%s = %g %g %g %g", P.GetName(), FCOLOR_ARG(P.ParameterValue));
 		}
 	MAT_END
 #endif // UNREAL3

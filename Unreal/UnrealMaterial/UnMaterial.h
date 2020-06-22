@@ -227,8 +227,8 @@ struct CTextureData
 #endif
 };
 
-
-class UUnrealMaterial : public UObject				// no such class in Unreal Engine, needed as common base for UE1/UE2/UE3
+// There's no such class in Unreal Engine, we use it as common base for UE1/UE2/UE3
+class UUnrealMaterial : public UObject
 {
 	DECLARE_CLASS(UUnrealMaterial, UObject);
 public:
@@ -295,7 +295,7 @@ protected:
 #endif // RENDERING
 };
 
-
+// Another one custom material class used for correctly handling PolyFlags in UE1 while rendering
 class UMaterialWithPolyFlags : public UUnrealMaterial
 {
 	DECLARE_CLASS(UMaterialWithPolyFlags, UUnrealMaterial);
@@ -332,6 +332,14 @@ protected:
 };
 
 
+// Parameters picked up from UMaterial graph
+
+struct CTextureParameterValue
+{
+	FName Name;
+	FName Group;
+	UUnrealMaterial* Texture;
+};
 
 
 //!! UE2 mesh uses UMaterial, which sometimes will be declared as 'forward declaration'.

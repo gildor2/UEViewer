@@ -675,6 +675,10 @@ public:
 	EBlendMode		BlendMode;
 	float			OpacityMaskClipValue;
 	TArray<UTexture3*> ReferencedTextures;
+	TArray<UObject*> Expressions;
+
+	// Generated data
+	TArray<CTextureParameterValue> CollectedTextureParameters;
 
 	UMaterial3()
 	:	OpacityMaskClipValue(0.333f)		//?? check
@@ -686,6 +690,7 @@ public:
 		PROP_BOOL(bDisableDepthTest)
 		PROP_BOOL(bIsMasked)
 		PROP_ARRAY(ReferencedTextures, UObject*)
+		PROP_ARRAY(Expressions, UObject*)
 		PROP_ENUM2(BlendMode, EBlendMode)
 		PROP_FLOAT(OpacityMaskClipValue)
 		//!! should be used (main material inputs in UE3 material editor)
@@ -738,7 +743,6 @@ public:
 		PROP_DROP(EditorY)
 		PROP_DROP(EditorPitch)
 		PROP_DROP(EditorYaw)
-		PROP_DROP(Expressions)				//!! use it
 		PROP_DROP(EditorComments)
 		PROP_DROP(EditorCompounds)
 		PROP_DROP(bUsesDistortion)
@@ -775,9 +779,6 @@ public:
 #if UNREAL4
 		if (Ar.Game >= GAME_UE4_BASE)
 		{
-			// UE4 has complex FMaterialResource format, so avoid reading anything here, but
-			// scan package's imports for UTexture objects instead
-			ScanForTextures();
 			DROP_REMAINING_DATA(Ar);
 			return;
 		}
@@ -843,8 +844,20 @@ public:
 		DROP_REMAINING_DATA(Ar);			//?? drop native data
 	}
 
+	virtual void PostLoad()
+	{
 #if UNREAL4
-	void ScanForTextures();
+		// UE4 has complex FMaterialResource format, so avoid reading anything here, but
+		// scan package's imports for UTexture objects instead. Here we're attempting to
+		// collect data from material expressions, so do the work in PostLoad to ensure
+		// all expressions are serialized.
+		if (GetGame() >= GAME_UE4_BASE)
+			ScanUE4Material();
+#endif
+	}
+
+#if UNREAL4
+	void ScanUE4Material();
 #endif
 
 #if RENDERING
@@ -951,7 +964,6 @@ struct FScalarParameterValue
 
 	FName			ParameterName;
 	float			ParameterValue;
-//	FGuid			ExpressionGUID;
 #if UNREAL4
 	FMaterialParameterInfo ParameterInfo;
 #endif
@@ -971,7 +983,7 @@ struct FScalarParameterValue
 #if UNREAL4
 		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
 #endif
-		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+		PROP_DROP(ExpressionGUID)
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
 #endif
@@ -984,7 +996,6 @@ struct FTextureParameterValue
 
 	FName			ParameterName;
 	UTexture3		*ParameterValue;
-//	FGuid			ExpressionGUID;
 #if UNREAL4
 	FMaterialParameterInfo ParameterInfo;
 #endif
@@ -1004,7 +1015,7 @@ struct FTextureParameterValue
 #if UNREAL4
 		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
 #endif
-		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+		PROP_DROP(ExpressionGUID)
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
 #endif
