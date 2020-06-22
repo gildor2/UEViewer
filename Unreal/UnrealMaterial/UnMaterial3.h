@@ -679,6 +679,8 @@ public:
 
 	// Generated data
 	TArray<CTextureParameterValue> CollectedTextureParameters;
+	TArray<CScalarParameterValue> CollectedScalarParameters;
+	TArray<CVectorParameterValue> CollectedVectorParameters;
 
 	UMaterial3()
 	:	OpacityMaskClipValue(0.333f)		//?? check

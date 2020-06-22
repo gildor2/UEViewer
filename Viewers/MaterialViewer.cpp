@@ -613,7 +613,10 @@ inline void FlushProps()
 {
 	// print ordinary props
 	if (propBuf[0])
+	{
+		Outline("---"); // separator between parameter values and properties
 		Outline("%s", propBuf);
+	}
 	// print material links, links[] array may be modified while printing!
 	int savedFirstLink = firstLink;
 	int lastLink = firstLink + numLinks;
@@ -679,7 +682,9 @@ static void Prop(UUnrealMaterial *value, const char *name)
 static void PropEnum(int value, const char *name, const char *EnumName)
 {
 	const char *n = EnumToName(EnumName, value);
-	Outline("%s = %s (%d)", name, n ? n : "???", value);
+	char buf[256];
+	appSprintf(ARRAY_ARG(buf), "%s = %s (%d)", name, n ? n : "???", value);
+	appStrcatn(ARRAY_ARG(propBuf), buf);
 }
 
 
@@ -771,11 +776,26 @@ static void OutlineMaterial(UObject *Obj, int indent)
 			if (!Tex) continue;
 			Outline("Textures[%d] = %s", i, Tex->Name);
 		}
+		// texture parameters
 		if (Mat->CollectedTextureParameters.Num())
 		{
 			Outline(S_YELLOW"Texture parameters:");
 			for (const CTextureParameterValue &P : Mat->CollectedTextureParameters)
 				Outline("%s = %s", *P.Name, P.Texture ? P.Texture->Name : "NULL");
+		}
+		// scalar
+		if (Mat->CollectedScalarParameters.Num())
+		{
+			Outline(S_YELLOW"Scalar parameters");
+			for (const CScalarParameterValue &P : Mat->CollectedScalarParameters)
+				Outline("%s = %g", *P.Name, P.Value);
+		}
+		// vector
+		if (Mat->CollectedVectorParameters.Num())
+		{
+			Outline(S_YELLOW"Vector parameters");
+			for (const CVectorParameterValue &P : Mat->CollectedVectorParameters)
+				Outline("%s = %g %g %g %g", *P.Name, FCOLOR_ARG(P.Value));
 		}
 	MAT_END
 

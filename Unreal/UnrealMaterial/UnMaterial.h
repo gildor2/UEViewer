@@ -334,11 +334,25 @@ protected:
 
 // Parameters picked up from UMaterial graph
 
-struct CTextureParameterValue
+struct CParameterValueBase
 {
 	FName Name;
 	FName Group;
+};
+
+struct CTextureParameterValue : public CParameterValueBase
+{
 	UUnrealMaterial* Texture;
+};
+
+struct CScalarParameterValue : public CParameterValueBase
+{
+	float Value;
+};
+
+struct CVectorParameterValue : public CParameterValueBase
+{
+	FLinearColor Value;
 };
 
 

@@ -298,30 +298,57 @@ void UMaterial3::ScanUE4Material()
 
 			if (Obj->IsA("MaterialExpressionTextureSampleParameter"))
 			{
-				const UMaterialExpressionTextureSampleParameter* Expr = static_cast<const UMaterialExpressionTextureSampleParameter*>(Obj);
+				const UMaterialExpressionTextureSampleParameter2D* Expr = static_cast<const UMaterialExpressionTextureSampleParameter2D*>(Obj);
 				CTextureParameterValue Param;
 				Param.Name = Expr->ParameterName;
 				Param.Group = Expr->Group;
 				Param.Texture = Expr->Texture;
 				CollectedTextureParameters.Add(Param);
 			}
-			// else if ...
+			else if (Obj->IsA("MaterialExpressionTextureSample"))
+			{
+				// This is not a parameter,
+				const UMaterialExpressionTextureSample* Expr = static_cast<const UMaterialExpressionTextureSample*>(Obj);
+				if (Expr->Texture) ReferencedTextures.AddUnique(Expr->Texture);
+			}
+			else if (Obj->IsA("MaterialExpressionScalarParameter"))
+			{
+				const UMaterialExpressionScalarParameter* Expr = static_cast<const UMaterialExpressionScalarParameter*>(Obj);
+				CScalarParameterValue Param;
+				Param.Name = Expr->ParameterName;
+				Param.Group = Expr->Group;
+				Param.Value = Expr->DefaultValue;
+				CollectedScalarParameters.Add(Param);
+			}
+			else if (Obj->IsA("MaterialExpressionVectorParameter"))
+			{
+				const UMaterialExpressionVectorParameter* Expr = static_cast<const UMaterialExpressionVectorParameter*>(Obj);
+				CVectorParameterValue Param;
+				Param.Name = Expr->ParameterName;
+				Param.Group = Expr->Group;
+				Param.Value = Expr->DefaultValue;
+				CollectedVectorParameters.Add(Param);
+			}
 		}
 	}
 
 //	printf("--> %d imports\n", Package->Summary.ImportCount);
-	//!! NOTE: this code will not work when textures are located in the same package - they don't present in import table
-	//!! but could be found in export table. That's true for Simplygon-generated materials.
-	for (int i = 0; i < Package->Summary.ImportCount; i++)
+	if (ReferencedTextures.Num() == 0)
 	{
-		const FObjectImport &Imp = Package->GetImport(i);
-//		printf("--> import %d (%s)\n", i, *Imp.ClassName);
-		if (stricmp(Imp.ClassName, "Class") == 0 || stricmp(Imp.ClassName, "Package") == 0)
-			continue;		// avoid spamming to log
-		UObject* obj = Package->CreateImport(i);
-//		if (obj) printf("--> %s (%s)\n", obj->Name, obj->GetClassName());
-		if (obj && obj->IsA("Texture3"))
-			ReferencedTextures.Add(static_cast<UTexture3*>(obj));
+		// Scan only if parsing of expressions failed
+		//!! NOTE: this code will not work when textures are located in the same package - they don't present in import table
+		//!! but could be found in export table. That's true for Simplygon-generated materials.
+		for (int i = 0; i < Package->Summary.ImportCount; i++)
+		{
+			const FObjectImport &Imp = Package->GetImport(i);
+//			printf("--> import %d (%s)\n", i, *Imp.ClassName);
+			if (stricmp(Imp.ClassName, "Class") == 0 || stricmp(Imp.ClassName, "Package") == 0)
+				continue;		// avoid spamming to log
+			UObject* obj = Package->CreateImport(i);
+//			if (obj) printf("--> %s (%s)\n", obj->Name, obj->GetClassName());
+			if (obj && obj->IsA("Texture3"))
+				ReferencedTextures.AddUnique(static_cast<UTexture3*>(obj));
+		}
 	}
 
 	unguard;
