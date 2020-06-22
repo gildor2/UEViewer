@@ -894,6 +894,10 @@ no_net_index:
 }
 
 
+// References in UE4:
+// UStruct::SerializeVersionedTaggedProperties()
+//  -> FPropertyTag::SerializeTaggedProperty()
+//  -> FXxxProperty::SerializeItem()
 void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 {
 	guard(CTypeInfo::SerializeUnrealProps);
@@ -1222,8 +1226,8 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 #undef SIMPLE_ARRAY_TYPE
 				else
 				{
-					// read data count
-					int DataCount;
+					// Read data count like generic TArray serializer does
+					int32 DataCount;
 #if UC2
 					if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145)
 					{
@@ -1250,45 +1254,63 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 						Ar << InnerTag;
 					}
 #endif // UNREAL4
+
 					//!! note: some structures should be serialized using SerializeStruc() (FVector etc)
-					// find data typeinfo
+					// Find data typeinfo
 					const CTypeInfo *ItemType = FindStructType(Prop->TypeName);
 					if (!ItemType)
 						appError("Unknown structure type %s", Prop->TypeName);
-					// prepare array
+					// Prepare array
 					Arr->Empty(DataCount, ItemType->SizeOf);
 					Arr->InsertZeroed(0, DataCount, ItemType->SizeOf);
-					// serialize items
-					byte *item = (byte*)Arr->GetData();
-					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
+
+#if UNREAL4
+					// Second queue of "simple serializers", but with InnerTag in UE4.12+
+					if (!stricmp(Prop->TypeName, "FLinearColor"))
 					{
-#if DEBUG_PROPS
-						appPrintf("Item[%d]:\n", i);
-#endif
-						assert(ItemType->Constructor);
-						ItemType->Constructor(item);		// fill default properties
-						ItemType->SerializeUnrealProps(Ar, item);
+						// Reference: FMaterialCachedParameters::VectorValues
+						FLinearColor* p = (FLinearColor*)Arr->GetData();
+						for (int i = 0; i < DataCount; i++)
+							Ar << *p++;
 					}
+					else
+#endif // UNREAL4
+					{
+						// Serialize items
+						byte *item = (byte*)Arr->GetData();
+						for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
+						{
+#if DEBUG_PROPS
+							appPrintf("Item[%d]:\n", i);
+#endif
+							if (ItemType->Constructor)
+								ItemType->Constructor(item);		// fill default properties
+							else
+								memset(item, 0, ItemType->SizeOf);	// no constructor, just initialize with zeros
+
+							ItemType->SerializeUnrealProps(Ar, item);
+						}
 #if 1
-					// fix for strange (UE?) bug - array[1] of empty structure has 1 extra byte
-					// or size is incorrect - 1 byte smaller than should be (?)
-					// Note: such properties cannot be dropped (PROP_DROP) - invalid Tag.Size !
-					int Pos = Ar.Tell();
-					if (Pos + 1 == StopPos && DataCount == 1)
-					{
-#if DEBUG_PROPS
-						appNotify("%s.%s: skipping 1 byte for array property", Name, *Tag.Name);
-#endif
-						Ar.Seek(StopPos);
+						// Fix for strange (UE?) bug - array[1] of empty structure has 1 extra byte
+						// or size is incorrect - 1 byte smaller than should be (?)
+						// Note: such properties cannot be dropped (PROP_DROP) - invalid Tag.Size !
+						int Pos = Ar.Tell();
+						if (Pos + 1 == StopPos && DataCount == 1)
+						{
+	#if DEBUG_PROPS
+							appNotify("%s.%s: skipping 1 byte for array property", Name, *Tag.Name);
+	#endif
+							Ar.Seek(StopPos);
+						}
+						else if (Pos > StopPos)
+						{
+	#if DEBUG_PROPS
+							appNotify("%s.%s: bad size (%d byte less) for array property", Name, *Tag.Name, Pos - StopPos);
+	#endif
+							StopPos = Pos;
+						}
+#endif // 1 -- end of fix
 					}
-					else if (Pos > StopPos)
-					{
-#if DEBUG_PROPS
-						appNotify("%s.%s: bad size (%d byte less) for array property", Name, *Tag.Name, Pos - StopPos);
-#endif
-						StopPos = Pos;
-					}
-#endif // 1 -- fix
 				}
 #if DEBUG_PROPS
 				appPrintf("  } // count=%d\n", Arr->Num());
@@ -1393,7 +1415,7 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 					break;
 				}
 			}
-#endif
+#endif // BATMAN
 			appError("Unknown property type %d, name %s", Tag.Type, *Tag.Name);
 			break;
 		}
