@@ -391,8 +391,6 @@ void FPakFile::Serialize(void *data, int size)
 	unguardf("file=%s", Info->Name);
 }
 
-
-
 void FPakVFS::CompactFilePath(FString& Path)
 {
 	guard(FPakVFS::CompactFilePath);
@@ -428,7 +426,6 @@ void FPakVFS::CompactFilePath(FString& Path)
 
 	unguard;
 }
-
 
 bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 {

@@ -13,6 +13,7 @@
 #include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial2.h"
 #include "UnrealMaterial/UnMaterial3.h"
+#include "UnrealMaterial/UnMaterial4.h"
 
 #include "UnrealMesh/UnMesh2.h"
 #include "UnrealMesh/UnMesh3.h"
@@ -132,10 +133,12 @@ static void RegisterUnrealClasses4()
 BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U4
 	REGISTER_MATERIAL_CLASSES_U4
+	REGISTER_EXPRESSION_CLASSES_U4
 END_CLASS_TABLE
 	REGISTER_MATERIAL_ENUMS_U4
 	REGISTER_MESH_ENUMS_U4
 #endif // UNREAL4
+	SuppressUnknownClass("UMaterialExpression*"); // wildcard
 	SuppressUnknownClass("UMaterialFunction");
 	SuppressUnknownClass("UPhysicalMaterial");
 	SuppressUnknownClass("UBodySetup");

@@ -2184,7 +2184,15 @@ UObject* UnPackage::CreateExport(int index)
 	if (!Obj)
 	{
 		if (!IsSuppressedClass(ClassName))
+		{
 			appPrintf("WARNING: Unknown class \"%s\" for object \"%s\"\n", ClassName, *Exp.ObjectName);
+		}
+#if MAX_DEBUG
+		else
+		{
+			appPrintf("SUPPRESSED: %s\n", ClassName);
+		}
+#endif
 		return NULL;
 	}
 #if UNREAL3
