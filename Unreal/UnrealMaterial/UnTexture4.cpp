@@ -311,6 +311,8 @@ void UMaterial3::ScanMaterialExpressions()
 	//todo: may be move code to UE3 cpp file?
 	if (Expressions.Num())
 	{
+		guard(Expressions);
+
 		for (const UObject* Obj : Expressions)
 		{
 			if (!Obj) continue;
@@ -349,7 +351,37 @@ void UMaterial3::ScanMaterialExpressions()
 				CollectedVectorParameters.Add(Param);
 			}
 		}
+
+		unguard;
 	}
+
+	// UE4.25+
+	guard(CachedExpressionData);
+
+	const FMaterialCachedParameters& Params = CachedExpressionData.Parameters;
+	for (int i = 0; i < Params.TextureValues.Num(); i++)
+	{
+		CTextureParameterValue Param;
+		Param.Name = Params.Entries[(int)EMaterialParameterType::Texture].ParameterInfos[i].Name;
+		Param.Texture = Params.TextureValues[i];
+		CollectedTextureParameters.Add(Param);
+	}
+	for (int i = 0; i < Params.ScalarValues.Num(); i++)
+	{
+		CScalarParameterValue Param;
+		Param.Name = Params.Entries[(int)EMaterialParameterType::Scalar].ParameterInfos[i].Name;
+		Param.Value = Params.ScalarValues[i];
+		CollectedScalarParameters.Add(Param);
+	}
+	for (int i = 0; i < Params.VectorValues.Num(); i++)
+	{
+		CVectorParameterValue Param;
+		Param.Name = Params.Entries[(int)EMaterialParameterType::Vector].ParameterInfos[i].Name;
+		Param.Value = Params.VectorValues[i];
+		CollectedVectorParameters.Add(Param);
+	}
+
+	unguard;
 
 	unguard;
 }
