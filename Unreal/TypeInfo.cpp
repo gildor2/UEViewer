@@ -475,11 +475,12 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 			{
 				if (Prop.bDiscard) continue;
 
-				if (bFirst)
+				if (!bFirst)
 				{
 					Ar.Printf(", ");
-					bFirst = false;
 				}
+				bFirst = false;
+
 				if (Prop.bIsArrayItem)
 					Ar.Printf("%s", *Prop.Value);
 				else
