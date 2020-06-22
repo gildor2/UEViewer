@@ -257,10 +257,12 @@ struct CPropDump
 	FString				Name;
 	FString				Value;
 	TArray<CPropDump>	Nested;				// Value should be "" when Nested[] is not empty
-	bool				IsArrayItem;
+	bool				bIsArrayItem;
+	bool				bDiscard;
 
 	CPropDump()
-	: IsArrayItem(false)
+	: bIsArrayItem(false)
+	, bDiscard(false)
 	{}
 
 	void PrintName(const char *fmt, ...)
@@ -277,6 +279,11 @@ struct CPropDump
 		va_start(argptr, fmt);
 		PrintTo(Value, fmt, argptr);
 		va_end(argptr);
+	}
+
+	void Discard()
+	{
+		bDiscard = true;
 	}
 
 private:
@@ -353,7 +360,7 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 					// create nested CPropDump
 					PD2 = new (PD->Nested) CPropDump;
 					PD2->PrintName("%s[%d]", Prop->Name, ArrayIndex);
-					PD2->IsArrayItem = true;
+					PD2->bIsArrayItem = true;
 				}
 
 				// note: ArrayIndex is used inside PROP macro
@@ -383,7 +390,13 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 						PD2->PrintValue("%s'%s'", obj->GetClassName(), ObjName);
 					}
 					else
+					{
+						if (IsArray)
+						{
+							PD2->Discard();
+						}
 						PD2->PrintValue("None");
+					}
 				}
 #else
 				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
@@ -418,7 +431,7 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 {
 	PrintIndent(Ar, Indent);
 
-	int NumNestedProps = Dump.Nested.Num();
+	const int NumNestedProps = Dump.Nested.Num();
 	if (NumNestedProps)
 	{
 		// complex property
@@ -434,16 +447,17 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 		int i;
 
 		// check whether we can display all nested properties in a single line or not
-		for (i = 0; i < NumNestedProps; i++)
+		for (const CPropDump &Prop : Dump.Nested)
 		{
-			const CPropDump &Prop = Dump.Nested[i];
+			if (Prop.bDiscard) continue;
+
 			if (Prop.Nested.Num())
 			{
 				IsSimple = false;
 				break;
 			}
 			TotalLen += Prop.Value.Len() + 2;
-			if (!Prop.IsArrayItem)
+			if (!Prop.bIsArrayItem)
 				TotalLen += Prop.Name.Len();
 			if (TotalLen >= MaxLineWidth)
 			{
@@ -456,11 +470,17 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 		{
 			// single-line value display
 			Ar.Printf(" { ");
-			for (i = 0; i < NumNestedProps; i++)
+			bool bFirst = true;
+			for (const CPropDump &Prop : Dump.Nested)
 			{
-				if (i) Ar.Printf(", ");
-				const CPropDump &Prop = Dump.Nested[i];
-				if (Prop.IsArrayItem)
+				if (Prop.bDiscard) continue;
+
+				if (bFirst)
+				{
+					Ar.Printf(", ");
+					bFirst = false;
+				}
+				if (Prop.bIsArrayItem)
 					Ar.Printf("%s", *Prop.Value);
 				else
 					Ar.Printf("%s=%s", *Prop.Name, *Prop.Value);
@@ -477,9 +497,10 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 				Ar.Printf("{\n");
 			}
 
-			for (i = 0; i < NumNestedProps; i++)
+			for (const CPropDump &Prop : Dump.Nested)
 			{
-				PrintProps(Dump.Nested[i], Ar, Indent+1, false, MaxLineWidth);
+				if (Prop.bDiscard) continue;
+				PrintProps(Prop, Ar, Indent+1, false, MaxLineWidth);
 			}
 
 			if (!TopLevel)
