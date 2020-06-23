@@ -717,7 +717,7 @@ struct FMaterialCachedParameters
 		PROP_STRUC(Entries, FMaterialCachedParameterEntry)
 		PROP_ARRAY(ScalarValues, float)
 		PROP_ARRAY(VectorValues, FLinearColor)
-		PROP_ARRAY(TextureValues, UTexture3*)
+		PROP_ARRAY(TextureValues, UObject*)
 		PROP_DROP(FontValues)
 		PROP_DROP(FontPageValues)
 		PROP_DROP(RuntimeVirtualTextureValues)

@@ -786,14 +786,14 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		// scalar
 		if (Mat->CollectedScalarParameters.Num())
 		{
-			Outline(S_YELLOW"Scalar parameters");
+			Outline(S_YELLOW"Scalar parameters:");
 			for (const CScalarParameterValue &P : Mat->CollectedScalarParameters)
 				Outline("%s = %g", *P.Name, P.Value);
 		}
 		// vector
 		if (Mat->CollectedVectorParameters.Num())
 		{
-			Outline(S_YELLOW"Vector parameters");
+			Outline(S_YELLOW"Vector parameters:");
 			for (const CVectorParameterValue &P : Mat->CollectedVectorParameters)
 				Outline("%s = %g %g %g %g", *P.Name, FCOLOR_ARG(P.Value));
 		}

@@ -7,6 +7,7 @@
 #define MAX_CLASSES		256
 #define MAX_ENUMS		32
 #define MAX_SUPPRESSED_CLASSES 32
+#define MAX_DUMP_LINE	48
 
 //#define DEBUG_TYPES				1
 
@@ -540,7 +541,7 @@ void CTypeInfo::SaveProps(const void *Data, FArchive& Ar) const
 	CollectProps(this, Data, Dump);
 
 	// Note: using indent -1 for better in-file formatting
-	PrintProps(Dump, Ar, -1, true, 20);
+	PrintProps(Dump, Ar, -1, true, MAX_DUMP_LINE);
 
 	unguard;
 }
