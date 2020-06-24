@@ -236,7 +236,7 @@ static void WriteHDR(FArchive &Ar, int width, int height, byte *pic)
 }
 
 
-static void WriteDDS(const CTextureData &TexData, const UUnrealMaterial* Tex)
+static void WriteDDS(FArchive& Ar, const CTextureData& TexData, const UUnrealMaterial* Tex)
 {
 	guard(WriteDDS);
 
@@ -248,9 +248,6 @@ static void WriteDDS(const CTextureData &TexData, const UUnrealMaterial* Tex)
 	// code from CTextureData::Decompress()
 	if (!fourCC)
 		appError("unknown texture format %d \n", TexData.Format);	// should not happen - IsDXT() should not pass execution here
-
-	FArchive *Ar = CreateExportArchive(Tex, 0, "%s.dds", Tex->Name);
-	if (!Ar) return;
 
 	nv::DDSHeader header;
 	header.setFourCC(fourCC & 0xFF, (fourCC >> 8) & 0xFF, (fourCC >> 16) & 0xFF, (fourCC >> 24) & 0xFF);
@@ -265,9 +262,8 @@ static void WriteDDS(const CTextureData &TexData, const UUnrealMaterial* Tex)
 	byte headerBuffer[128];							// DDS header is 128 bytes long
 	memset(headerBuffer, 0, 128);
 	WriteDDSHeader(headerBuffer, header);
-	Ar->Serialize(headerBuffer, 128);
-	Ar->Serialize(const_cast<byte*>(Mip.CompressedData), Mip.DataSize);
-	delete Ar;
+	Ar.Serialize(headerBuffer, 128);
+	Ar.Serialize(const_cast<byte*>(Mip.CompressedData), Mip.DataSize);
 
 	unguard;
 }
@@ -282,80 +278,81 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	if (IsObjectExported(Tex))
 		return;
 
-	byte *pic = NULL;
-	int width, height;
+	//todo: performance warning: when GDontOverwriteFiles is set, and file already exists - code will
+	//todo: execute slow GetTextureData() anyway and then drop data.
 
 	CTextureData TexData;
-	if (Tex->GetTextureData(TexData))
-	{
-		if (GExportDDS && TexData.IsDXT())
-		{
-			WriteDDS(TexData, Tex);
-			return;
-		}
-
-		width = TexData.Mips[0].USize;
-		height = TexData.Mips[0].VSize;
-		pic = TexData.Decompress();
-	}
-
-	if (!pic)
+	if (!Tex->GetTextureData(TexData) || TexData.Mips.Num() == 0)
 	{
 		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
-		// produce 1x1-pixel tga
-		// should erase file?
-		width = height = 1;
-		pic = new byte[4];
-	}
-
-	// For HDR textures use Radiance format
-	if (PixelFormatInfo[TexData.Format].Float)
-	{
-		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.hdr", Tex->Name);
-		if (Ar)
-		{
-			WriteHDR(*Ar, width, height, pic);
-			delete Ar;
-		}
-
-		delete pic;
 		return;
 	}
 
-	if (GExportPNG)
+	// Try exporting in compressed format
+	if (GExportDDS && PixelFormatInfo[TexData.Format].IsDXT())
 	{
-		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.png", Tex->Name);
+		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.dds", Tex->Name);
+		if (Ar)
+		{
+			WriteDDS(*Ar, TexData, Tex);
+			delete Ar;
+		}
+		return;
+	}
+
+	// Proceed with uncompressed data
+	int width = TexData.Mips[0].USize;
+	int height = TexData.Mips[0].VSize;
+
+	byte* pic = TexData.Decompress();
+	if (!pic)
+	{
+		appPrintf("WARNING: failed to decode texture %s\n", Tex->Name);
+		return;
+	}
+
+	// For HDR textures use Radiance format
+	FArchive* Ar = NULL;
+	if (PixelFormatInfo[TexData.Format].Float)
+	{
+		Ar = CreateExportArchive(Tex, 0, "%s.hdr", Tex->Name);
+		if (Ar)
+		{
+			WriteHDR(*Ar, width, height, pic);
+		}
+	}
+	else if (GExportPNG)
+	{
+		Ar = CreateExportArchive(Tex, 0, "%s.png", Tex->Name);
 		if (Ar)
 		{
 			TArray<byte> Data;
 			CompressPNG(pic, width, height, Data);
 			Ar->Serialize(Data.GetData(), Data.Num());
-			delete Ar;
 		}
 	}
 	else
 	{
-#if TGA_SAVE_BOTTOMLEFT
-		// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
-		// it simply ignores orientation flags)
-		for (int i = 0; i < height / 2; i++)
-		{
-			uint32 *p1 = (uint32*)(pic + width * 4 * i);
-			uint32 *p2 = (uint32*)(pic + width * 4 * (height - i - 1));
-			for (int j = 0; j < width; j++)
-				Exchange(*p1++, *p2++);
-		}
-#endif // TGA_SAVE_BOTTOMLEFT
-
-		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.tga", Tex->Name);
+		Ar = CreateExportArchive(Tex, 0, "%s.tga", Tex->Name);
 		if (Ar)
 		{
+#if TGA_SAVE_BOTTOMLEFT
+			// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
+			// it simply ignores orientation flags)
+			for (int i = 0; i < height / 2; i++)
+			{
+				uint32 *p1 = (uint32*)(pic + width * 4 * i);
+				uint32 *p2 = (uint32*)(pic + width * 4 * (height - i - 1));
+				for (int j = 0; j < width; j++)
+					Exchange(*p1++, *p2++);
+			}
+#endif // TGA_SAVE_BOTTOMLEFT
 			WriteTGA(*Ar, width, height, pic);
-			delete Ar;
 		}
 	}
 
-	delete pic;
+	if (Ar) delete Ar;
+	delete[] pic;
 
 	Tex->ReleaseTextureData();
 

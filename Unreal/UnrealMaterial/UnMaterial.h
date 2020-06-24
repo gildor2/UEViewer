@@ -136,6 +136,11 @@ struct CPixelFormatInfo
 	int16		X360AlignY;
 	byte		Float;				// 0 for RGBA8, 1 for RGBA32
 	const char*	Name;
+
+	bool IsDXT() const
+	{
+		return FourCC != 0;
+	}
 };
 
 
@@ -212,7 +217,6 @@ struct CTextureData
 	}
 
 	unsigned GetFourCC() const;
-	bool IsDXT() const;
 
 	byte *Decompress(int MipLevel = 0);				// may return NULL in a case of error
 

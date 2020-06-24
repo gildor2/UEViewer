@@ -97,12 +97,6 @@ unsigned CTextureData::GetFourCC() const
 }
 
 
-bool CTextureData::IsDXT() const
-{
-	return (Mips.Num() > 0) && (PixelFormatInfo[Format].FourCC != 0);
-}
-
-
 byte *CTextureData::Decompress(int MipLevel)
 {
 	guard(CTextureData::Decompress);
