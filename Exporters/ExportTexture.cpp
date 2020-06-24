@@ -236,7 +236,7 @@ static void WriteHDR(FArchive &Ar, int width, int height, byte *pic)
 }
 
 
-static void WriteDDS(FArchive& Ar, const CTextureData& TexData, const UUnrealMaterial* Tex)
+static void WriteDDS(FArchive& Ar, const CTextureData& TexData)
 {
 	guard(WriteDDS);
 
@@ -268,6 +268,42 @@ static void WriteDDS(FArchive& Ar, const CTextureData& TexData, const UUnrealMat
 	unguard;
 }
 
+static void ExportDDS_Worker(FArchive& Ar, CTextureData& TexData, byte* /*pic*/)
+{
+	WriteDDS(Ar, TexData);
+}
+
+static void ExportHDR_Worker(FArchive& Ar, CTextureData& TexData, byte* pic)
+{
+	WriteHDR(Ar, TexData.Mips[0].USize, TexData.Mips[0].VSize, pic);
+}
+
+static void ExportPNG_Worker(FArchive& Ar, CTextureData& TexData, byte* pic)
+{
+	TArray<byte> Data;
+	CompressPNG(pic, TexData.Mips[0].USize, TexData.Mips[0].VSize, Data);
+	Ar.Serialize(Data.GetData(), Data.Num());
+}
+
+static void ExportTGA_Worker(FArchive& Ar, CTextureData& TexData, byte* pic)
+{
+	int width = TexData.Mips[0].USize;
+	int height = TexData.Mips[0].VSize;
+#if TGA_SAVE_BOTTOMLEFT
+	// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
+	// it simply ignores orientation flags)
+	for (int i = 0; i < height / 2; i++)
+	{
+		uint32 *p1 = (uint32*)(pic + width * 4 * i);
+		uint32 *p2 = (uint32*)(pic + width * 4 * (height - i - 1));
+		for (int j = 0; j < width; j++)
+			Exchange(*p1++, *p2++);
+	}
+#endif // TGA_SAVE_BOTTOMLEFT
+	WriteTGA(Ar, width, height, pic);
+}
+
+
 
 void ExportTexture(const UUnrealMaterial *Tex)
 {
@@ -281,79 +317,84 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	//todo: performance warning: when GDontOverwriteFiles is set, and file already exists - code will
 	//todo: execute slow GetTextureData() anyway and then drop data.
 
-	CTextureData TexData;
-	if (!Tex->GetTextureData(TexData) || TexData.Mips.Num() == 0)
+	ETexturePixelFormat Format = Tex->GetTexturePixelFormat();
+	if (Format == TPF_UNKNOWN)
 	{
-		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
+		// Warning is already logged by GetTexturePixelFormat()
 		return;
 	}
 
-	// Try exporting in compressed format
-	if (GExportDDS && PixelFormatInfo[TexData.Format].IsDXT())
+	void (*Worker)(FArchive& Ar, CTextureData& TexData, byte* pic);
+	bool bNeedDecompressedData = true;
+	const char* Ext = NULL;
+
+	if (GExportDDS && PixelFormatInfo[Format].IsDXT())
 	{
-		FArchive *Ar = CreateExportArchive(Tex, 0, "%s.dds", Tex->Name);
-		if (Ar)
-		{
-			WriteDDS(*Ar, TexData, Tex);
-			delete Ar;
-		}
-		return;
+		Worker = ExportDDS_Worker;
+		bNeedDecompressedData = false;
+		Ext = "dds";
 	}
-
-	// Proceed with uncompressed data
-	int width = TexData.Mips[0].USize;
-	int height = TexData.Mips[0].VSize;
-
-	byte* pic = TexData.Decompress();
-	if (!pic)
+	else if (PixelFormatInfo[Format].Float)
 	{
-		appPrintf("WARNING: failed to decode texture %s\n", Tex->Name);
-		return;
-	}
-
-	// For HDR textures use Radiance format
-	FArchive* Ar = NULL;
-	if (PixelFormatInfo[TexData.Format].Float)
-	{
-		Ar = CreateExportArchive(Tex, 0, "%s.hdr", Tex->Name);
-		if (Ar)
-		{
-			WriteHDR(*Ar, width, height, pic);
-		}
+		Worker = ExportHDR_Worker;
+		Ext = "hdr";
 	}
 	else if (GExportPNG)
 	{
-		Ar = CreateExportArchive(Tex, 0, "%s.png", Tex->Name);
-		if (Ar)
-		{
-			TArray<byte> Data;
-			CompressPNG(pic, width, height, Data);
-			Ar->Serialize(Data.GetData(), Data.Num());
-		}
+		Worker = ExportPNG_Worker;
+		Ext = "png";
 	}
 	else
 	{
-		Ar = CreateExportArchive(Tex, 0, "%s.tga", Tex->Name);
-		if (Ar)
+		Worker = ExportTGA_Worker;
+		Ext = "tga";
+	}
+
+	FArchive* Ar = CreateExportArchive(Tex, 0, "%s.%s", Tex->Name, Ext);
+	if (Ar == NULL)
+	{
+		// Failed to create file, or file already exists with enabled "don't overwrite" mode
+		return;
+	}
+
+	// Get texture data
+	CTextureData TexData;
+	bool bFail = false;
+	if (!Tex->GetTextureData(TexData) || TexData.Mips.Num() == 0)
+	{
+		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
+		bFail = true;
+	}
+
+	byte* pic = NULL;
+	if (!bFail && bNeedDecompressedData)
+	{
+		pic = TexData.Decompress();
+		if (!pic)
 		{
-#if TGA_SAVE_BOTTOMLEFT
-			// flip image vertically (UnrealEd for UE2 have a bug with importing TGA_TOPLEFT images,
-			// it simply ignores orientation flags)
-			for (int i = 0; i < height / 2; i++)
-			{
-				uint32 *p1 = (uint32*)(pic + width * 4 * i);
-				uint32 *p2 = (uint32*)(pic + width * 4 * (height - i - 1));
-				for (int j = 0; j < width; j++)
-					Exchange(*p1++, *p2++);
-			}
-#endif // TGA_SAVE_BOTTOMLEFT
-			WriteTGA(*Ar, width, height, pic);
+			appPrintf("WARNING: failed to decode texture %s\n", Tex->Name);
+			bFail = true;
 		}
 	}
 
-	if (Ar) delete Ar;
-	delete[] pic;
+	if (bFail)
+	{
+		// Close and delete created file
+		if (FFileArchive* FileAr = Ar->CastTo<FFileArchive>())
+		{
+			FileAr->Close();
+			remove(FileAr->GetFileName());
+		}
+		delete Ar;
+		return;
+	}
 
+	// Do the export
+	Worker(*Ar, TexData, pic);
+
+	// Cleanup
+	delete Ar;
+	if (pic) delete[] pic;
 	Tex->ReleaseTextureData();
 
 	unguard;

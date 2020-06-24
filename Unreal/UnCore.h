@@ -773,6 +773,11 @@ public:
 	virtual bool IsOpen() const;
 	virtual void Close();
 
+	const char* GetFileName() const
+	{
+		return FullName;
+	}
+
 protected:
 	FILE		*f;
 	unsigned	Options;

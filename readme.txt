@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+24.06.2020
+- faster export when part of assets were already exported and "don't overwrite already exported files" is enabled
+
 22.06.2020
 - reading UE3/UE4 material expressions for collecting Material's parameters and their values; this extends
   material outline, dump and export information
