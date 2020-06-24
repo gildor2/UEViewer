@@ -444,6 +444,89 @@ static byte *FindBioTexture(const UTexture *Tex)
 
 #endif // BIOSHOCK
 
+ETexturePixelFormat UTexture::GetTexturePixelFormat() const
+{
+	ETexturePixelFormat intFormat = TPF_UNKNOWN;
+	const FArchive* PackageAr = GetPackageArchive();
+
+	//?? return old code back - UE1 and UE2 differs in codes 6 and 7 only
+	if (Package && (PackageAr->Engine() == GAME_UE1))
+	{
+		// UE1 has different ETextureFormat layout
+		switch (Format)
+		{
+		case 0:
+			intFormat = TPF_P8;
+			break;
+//		case 1:
+//			intFormat = TPF_RGB32; // in script source code: TEXF_RGB32, but TEXF_RGBA7 in .h
+//			break;
+//		case 2:
+//			intFormat = TPF_RGB64; // in script source code: TEXF_RGB64, but TEXF_RGB16 in .h
+//			break;
+		case 3:
+			intFormat = TPF_DXT1;
+			break;
+		case 4:
+			intFormat = TPF_RGB8;
+			break;
+		case 5:
+			intFormat = TPF_BGRA8;
+			break;
+		// newer UE1 versions has DXT3 and DXT5
+		case 6:
+			intFormat = TPF_DXT3;
+			break;
+		case 7:
+			intFormat = TPF_DXT5;
+			break;
+		default:
+			appNotify("Unknown UE1 texture format: %d", Format);
+		}
+	}
+	else
+	{
+		// UE2
+		switch (Format)
+		{
+		case TEXF_P8:
+			intFormat = TPF_P8;
+			break;
+		case TEXF_DXT1:
+			intFormat = TPF_DXT1;
+			break;
+		case TEXF_RGB8:
+			intFormat = TPF_RGB8;
+			break;
+		case TEXF_RGBA8:
+			intFormat = TPF_BGRA8;
+			break;
+		case TEXF_DXT3:
+			intFormat = TPF_DXT3;
+			break;
+		case TEXF_DXT5:
+			intFormat = TPF_DXT5;
+			break;
+		case TEXF_L8:
+			intFormat = TPF_G8;
+			break;
+		case TEXF_CxV8U8:
+			intFormat = TPF_V8U8_2;
+			break;
+		case TEXF_DXT5N:
+			intFormat = TPF_DXT5N;
+			break;
+		case TEXF_3DC:
+			intFormat = TPF_BC5;
+			break;
+		default:
+			appNotify("Unknown UE2 texture format: %s (%d)", EnumToName(Format), Format);
+		}
+	}
+
+	return intFormat;
+}
+
 bool UTexture::GetTextureData(CTextureData &TexData) const
 {
 	guard(UTexture::GetTextureData);
@@ -453,6 +536,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 	TexData.OriginalFormatName = EnumToName(Format);
 	TexData.Obj                = this;
 	TexData.Palette            = Palette;
+	TexData.Format             = GetTexturePixelFormat();
 
 	const FArchive* PackageAr = GetPackageArchive();
 
@@ -507,87 +591,6 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		}
 	}
 
-	ETexturePixelFormat intFormat;
-
-	//?? return old code back - UE1 and UE2 differs in codes 6 and 7 only
-	if (Package && (PackageAr->Engine() == GAME_UE1))
-	{
-		// UE1 has different ETextureFormat layout
-		switch (Format)
-		{
-		case 0:
-			intFormat = TPF_P8;
-			break;
-//		case 1:
-//			intFormat = TPF_RGB32; // in script source code: TEXF_RGB32, but TEXF_RGBA7 in .h
-//			break;
-//		case 2:
-//			intFormat = TPF_RGB64; // in script source code: TEXF_RGB64, but TEXF_RGB16 in .h
-//			break;
-		case 3:
-			intFormat = TPF_DXT1;
-			break;
-		case 4:
-			intFormat = TPF_RGB8;
-			break;
-		case 5:
-			intFormat = TPF_BGRA8;
-			break;
-		// newer UE1 versions has DXT3 and DXT5
-		case 6:
-			intFormat = TPF_DXT3;
-			break;
-		case 7:
-			intFormat = TPF_DXT5;
-			break;
-		default:
-			appNotify("Unknown UE1 texture format: %d", Format);
-			return false;
-		}
-	}
-	else
-	{
-		// UE2
-		switch (Format)
-		{
-		case TEXF_P8:
-			intFormat = TPF_P8;
-			break;
-		case TEXF_DXT1:
-			intFormat = TPF_DXT1;
-			break;
-		case TEXF_RGB8:
-			intFormat = TPF_RGB8;
-			break;
-		case TEXF_RGBA8:
-			intFormat = TPF_BGRA8;
-			break;
-		case TEXF_DXT3:
-			intFormat = TPF_DXT3;
-			break;
-		case TEXF_DXT5:
-			intFormat = TPF_DXT5;
-			break;
-		case TEXF_L8:
-			intFormat = TPF_G8;
-			break;
-		case TEXF_CxV8U8:
-			intFormat = TPF_V8U8_2;
-			break;
-		case TEXF_DXT5N:
-			intFormat = TPF_DXT5N;
-			break;
-		case TEXF_3DC:
-			intFormat = TPF_BC5;
-			break;
-		default:
-			appNotify("Unknown UE2 texture format: %s (%d)", TexData.OriginalFormatName, Format);
-			return false;
-		}
-	}
-
-	TexData.Format = intFormat;
-
 #if BIOSHOCK && SUPPORT_XBOX360
 	if (TexData.Mips.Num() && TexData.Platform == PLATFORM_XBOX360)
 	{
@@ -609,7 +612,7 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 		// in order to accept this value when uploading texture to video card (some vendors rejects
 		// large values)
 		//?? Place code to CTextureData method?
-		const CPixelFormatInfo &Info = PixelFormatInfo[intFormat];
+		const CPixelFormatInfo &Info = PixelFormatInfo[TexData.Format];
 		int numBlocks = TexData.Mips[0].USize * TexData.Mips[0].VSize / (Info.BlockSizeX * Info.BlockSizeY);	// used for validation only
 		int requiredDataSize = numBlocks * Info.BytesPerBlock;
 		if (requiredDataSize > TexData.Mips[0].DataSize)

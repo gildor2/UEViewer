@@ -237,6 +237,11 @@ class UUnrealMaterial : public UObject
 	DECLARE_CLASS(UUnrealMaterial, UObject);
 public:
 	// Texture methods.
+	// Convert engine's texture format to internal format value
+	virtual ETexturePixelFormat GetTexturePixelFormat() const
+	{
+		return TPF_UNKNOWN;
+	}
 	// Fill empty CTextureData structure with actual data for upload.
 	virtual bool GetTextureData(CTextureData &TexData) const
 	{

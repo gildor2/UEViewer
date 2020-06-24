@@ -482,6 +482,7 @@ public:
 	,	TexNum(0)
 #endif
 	{}
+	virtual ETexturePixelFormat GetTexturePixelFormat() const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
 	virtual void Serialize(FArchive &Ar);
 

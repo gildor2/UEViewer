@@ -475,6 +475,7 @@ public:
 	const TArray<FTexture2DMipMap>* GetMipmapArray() const;
 
 	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix, bool verbose) const;
+	virtual ETexturePixelFormat GetTexturePixelFormat() const;
 	virtual bool GetTextureData(CTextureData &TexData) const;
 	virtual void ReleaseTextureData() const;
 #if RENDERING
@@ -714,7 +715,7 @@ struct FMaterialCachedParameters
 	TArray<UTexture3*> TextureValues;
 
 	BEGIN_PROP_TABLE
-		PROP_STRUC(Entries, FMaterialCachedParameterEntry)
+		PROP_STRUC(Entries, FMaterialCachedParameterEntry) //todo: will be RuntimeEntries in 4.26
 		PROP_ARRAY(ScalarValues, float)
 		PROP_ARRAY(VectorValues, FLinearColor)
 		PROP_ARRAY(TextureValues, UObject*)

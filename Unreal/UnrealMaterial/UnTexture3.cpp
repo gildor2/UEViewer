@@ -811,28 +811,10 @@ const TArray<FTexture2DMipMap>* UTexture2D::GetMipmapArray() const
 	unguard;
 }
 
-
-bool UTexture2D::GetTextureData(CTextureData &TexData) const
+ETexturePixelFormat UTexture2D::GetTexturePixelFormat() const
 {
-	guard(UTexture2D::GetTextureData);
-
-	TexData.OriginalFormatEnum = Format;
-	TexData.OriginalFormatName = EnumToName(Format);
-	TexData.Obj                = this;
-
-#if TRIBES4
-	if (Package && Package->Game == GAME_Tribes4)
-	{
-		ReduxReadRtcData();
-
-		if (FindReduxTexture(this, &TexData))
-		{
-			TexData.Platform = Package->Platform;
-		}
-	}
-#endif // TRIBES4
-
 	ETexturePixelFormat intFormat = TPF_UNKNOWN;
+
 	if (Format == PF_A8R8G8B8 || Format == PF_B8G8R8A8)	// PF_A8R8G8B8 was renamed to PF_B8G8R8A8
 		intFormat = TPF_BGRA8;
 	else if (Format == PF_DXT1)
@@ -890,16 +872,12 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 #endif // SUPPORT_ANDROID
 #endif // UNREAL4
 
-	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
-	const char* tfcSuffix = NULL;
-
 #if SUPPORT_ANDROID
+	// UE3 Android
 	if (!Mips.Num())
 	{
 		if (CachedETCMips.Num())
 		{
-			MipsArray = &CachedETCMips;
-			tfcSuffix = "ETC";
 			if (Format == PF_DXT1)
 				intFormat = TPF_ETC1;
 			else if (Format == PF_DXT5)
@@ -907,8 +885,6 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		}
 		else if (CachedPVRTCMips.Num())
 		{
-			MipsArray = &CachedPVRTCMips;
-			tfcSuffix = "PVRTC";
 			if (Format == PF_DXT1) // the same code as for iOS
 				intFormat = bForcePVRTC4 ? TPF_PVRTC4 : TPF_PVRTC2;
 			else if (Format == PF_DXT5)
@@ -917,13 +893,102 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		else if (CachedATITCMips.Num())
 		{
 			appPrintf("Unsupported ATI texture compression\n");
-			return false;
+			intFormat = TPF_UNKNOWN;
 		}
 	}
 #endif // SUPPORT_ANDROID
 
-	if (TexData.Mips.Num() == 0 && MipsArray->Num() && intFormat != TPF_UNKNOWN)
+	// Older UE3 Android and iOS engine didn't have dedicated CachedETCMips etc, all data were stored in Mips, but with different format
+#if SUPPORT_IPHONE
+	if (Package->Platform == PLATFORM_IOS && Mips.Num())
 	{
+		if (Format == PF_DXT1)
+			intFormat = bForcePVRTC4 ? TPF_PVRTC4 : TPF_PVRTC2;
+		else if (Format == PF_DXT5)
+			intFormat = TPF_PVRTC4;
+	}
+#endif // SUPPORT_IPHONE
+
+#if SUPPORT_ANDROID
+	if (Package->Platform == PLATFORM_ANDROID && Mips.Num())
+	{
+		if (Format == PF_DXT1)
+			intFormat = TPF_ETC1;
+		else if (Format == PF_DXT5)
+			intFormat = TPF_RGBA4;	// probably check BytesPerPixel - should be 2 for this format
+	}
+#endif // SUPPORT_ANDROID
+
+	// Source data - use even if cooked data is there
+	if (SourceArt.BulkData && Source.bPNGCompressed)
+	{
+		intFormat = TPF_PNG_BGRA;
+		if (Source.Format == TSF_RGBA16)
+			intFormat = TPF_PNG_RGBA;
+	}
+
+	if (intFormat == TPF_UNKNOWN)
+	{
+		// Show warning about unknown format, suppress when browsing source packages
+		if (SourceArt.BulkData == NULL && Format != PF_Unknown)
+			appPrintf("Unknown texture format: %s (%d)\n", EnumToName(Format), Format);
+	}
+
+	return intFormat;
+}
+
+bool UTexture2D::GetTextureData(CTextureData &TexData) const
+{
+	guard(UTexture2D::GetTextureData);
+
+	TexData.OriginalFormatEnum = Format;
+	TexData.OriginalFormatName = EnumToName(Format);
+	TexData.Obj                = this;
+	TexData.Format             = GetTexturePixelFormat();
+	TexData.isNormalmap        = (CompressionSettings == TC_Normalmap);
+
+	if (TexData.Format == TPF_UNKNOWN)
+		return false;
+
+#if TRIBES4
+	if (Package && Package->Game == GAME_Tribes4)
+	{
+		ReduxReadRtcData();
+
+		if (FindReduxTexture(this, &TexData))
+		{
+			TexData.Platform = Package->Platform;
+		}
+	}
+#endif // TRIBES4
+
+	const TArray<FTexture2DMipMap> *MipsArray = &Mips;
+	const char* tfcSuffix = NULL;
+
+#if SUPPORT_ANDROID
+	if (!Mips.Num())
+	{
+		// Partial copy-paste from UTexture2D::GetMipmapArray(), but also provides tfcSuffix
+		if (CachedETCMips.Num())
+		{
+			MipsArray = &CachedETCMips;
+			tfcSuffix = "ETC";
+		}
+		else if (CachedPVRTCMips.Num())
+		{
+			MipsArray = &CachedPVRTCMips;
+			tfcSuffix = "PVRTC";
+		}
+//		else if (CachedATITCMips.Num())
+//		{
+//			return false;
+//		}
+	}
+#endif // SUPPORT_ANDROID
+
+	if (TexData.Mips.Num() == 0 && MipsArray->Num())
+	{
+		// Mips weren't read with code above, and there's cooked mips in known format
 		bool bulkFailed = false;
 		bool dataLoaded = false;
 		int OrigUSize = (*MipsArray)[0].SizeX;
@@ -966,6 +1031,7 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		}
 	}
 
+	// SourceArt reading, data is stored in special bulk block instead of Mips array
 	if (TexData.Mips.Num() == 0 && SourceArt.BulkData && Source.bPNGCompressed)
 	{
 		// The texture is encoded only in SourceArt format (probably this is only UE4, not UE3 case)
@@ -975,41 +1041,9 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		DstMip->VSize = Source.SizeY;
 		TexData.Platform = Package->Platform;
 //		printf("Source png texture %dx%d\n", Source.SizeX, Source.SizeY);
-		intFormat = TPF_PNG_BGRA;
-		if (Source.Format == TSF_RGBA16)
-			intFormat = TPF_PNG_RGBA;
 	}
 
-	if (intFormat == TPF_UNKNOWN)
-	{
-		if (SourceArt.BulkData == NULL && Format != PF_Unknown) // do not show warning when browsing source packages
-			appPrintf("Unknown texture format: %s (%d)\n", TexData.OriginalFormatName, Format);
-		return false;
-	}
-
-	// Older Android and iOS UE3 versions didn't have dedicated CachedETCMips etc, all data were stored in Mips, but with different format
-#if SUPPORT_IPHONE
-	if (Package->Platform == PLATFORM_IOS && Mips.Num())
-	{
-		if (Format == PF_DXT1)
-			intFormat = bForcePVRTC4 ? TPF_PVRTC4 : TPF_PVRTC2;
-		else if (Format == PF_DXT5)
-			intFormat = TPF_PVRTC4;
-	}
-#endif // SUPPORT_IPHONE
-
-#if SUPPORT_ANDROID
-	if (Package->Platform == PLATFORM_ANDROID && Mips.Num())
-	{
-		if (Format == PF_DXT1)
-			intFormat = TPF_ETC1;
-		else if (Format == PF_DXT5)
-			intFormat = TPF_RGBA4;	// probably check BytesPerPixel - should be 2 for this format
-	}
-#endif // SUPPORT_ANDROID
-
-	TexData.Format = intFormat;
-	TexData.isNormalmap = (CompressionSettings == TC_Normalmap);
+	// Decode console textures
 
 #if SUPPORT_XBOX360
 	if (TexData.Platform == PLATFORM_XBOX360)
