@@ -916,6 +916,53 @@ bool FFileWriter::IsEof() const
 	return ArPos64 >= GetFileSize64();
 }
 
+#undef ArPos
+
+/*-----------------------------------------------------------------------------
+	FMemWriter
+-----------------------------------------------------------------------------*/
+
+FMemWriter::FMemWriter()
+{
+	IsLoading = false;
+	Data = new TArray<byte>();
+	Data->Empty(FILE_BUFFER_SIZE);
+}
+
+FMemWriter::~FMemWriter()
+{
+	delete Data;
+}
+
+void FMemWriter::Seek(int Pos)
+{
+	guard(FMemWriter::Seek);
+	assert(Pos >= 0 && Pos <= Data->Num());
+	ArPos = Pos;
+	unguard;
+}
+
+bool FMemWriter::IsEof() const
+{
+	return ArPos >= Data->Num();
+}
+
+void FMemWriter::Serialize(void *data, int size)
+{
+	guard(FMemWriter::Serialize);
+	if (ArPos + size > Data->Num())
+	{
+		Data->AddUninitialized(ArPos + size - Data->Num());
+	}
+	memcpy(Data->GetData() + ArPos, data, size);
+	ArPos += size;
+	unguard;
+}
+int FMemWriter::GetFileSize() const
+{
+	return Data->Num();
+}
+
 
 /*-----------------------------------------------------------------------------
 	Dummy archive class

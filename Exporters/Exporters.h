@@ -5,7 +5,7 @@
 // registration
 typedef void (*ExporterFunc_t)(const UObject*);
 
-void RegisterExporter(const char *ClassName, ExporterFunc_t Func);
+void RegisterExporter(const char* ClassName, ExporterFunc_t Func);
 
 // wrapper to avoid typecasts to ExporterFunc_t
 // T should be an UObject-derived class
@@ -22,19 +22,19 @@ void EndExport(bool profile = false);
 // Returns 'true' if Obj has been already exported during current export process
 bool IsObjectExported(const UObject* Obj);
 
-bool ExportObject(const UObject *Obj);
+bool ExportObject(const UObject* Obj);
 
 // path
-void appSetBaseExportDirectory(const char *Dir);
-const char* GetExportPath(const UObject *Obj);
+void appSetBaseExportDirectory(const char* Dir);
+const char* GetExportPath(const UObject* Obj);
 
-const char* GetExportFileName(const UObject *Obj, const char *fmt, ...);
-bool CheckExportFilePresence(const UObject *Obj, const char *fmt, ...);
+const char* GetExportFileName(const UObject* Obj, const char* fmt, ...);
+bool CheckExportFilePresence(const UObject* Obj, const char* fmt, ...);
 
 // Create file for saving UObject.
 // File will be placed in directory selected by GetExportPath(), name is computed from fmt+varargs.
 // Function may return NULL.
-FArchive *CreateExportArchive(const UObject *Obj, unsigned FileOptions, const char *fmt, ...);
+FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const char* fmt, ...);
 
 // configuration
 extern bool GExportScripts;
@@ -62,31 +62,31 @@ class CAnimSet;
 class CStaticMesh;
 
 // ActorX
-void ExportPsk(const CSkeletalMesh *Mesh);
-void ExportPsa(const CAnimSet *Anim);
-void ExportStaticMesh(const CStaticMesh *Mesh);
+void ExportPsk(const CSkeletalMesh* Mesh);
+void ExportPsa(const CAnimSet* Anim);
+void ExportStaticMesh(const CStaticMesh* Mesh);
 // MD5Mesh
-void ExportMd5Mesh(const CSkeletalMesh *Mesh);
-void ExportMd5Anim(const CAnimSet *Anim);
+void ExportMd5Mesh(const CSkeletalMesh* Mesh);
+void ExportMd5Anim(const CAnimSet* Anim);
 // glTF
 void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh);
 void ExportStaticMeshGLTF(const CStaticMesh* Mesh);
 // 3D
-void Export3D(const UVertMesh *Mesh);
+void Export3D(const UVertMesh* Mesh);
 // TGA, DDS
-void ExportTexture(const UUnrealMaterial *Tex);
+void ExportTexture(const UUnrealMaterial* Tex);
 // UUnrealMaterial
-void ExportMaterial(const UUnrealMaterial *Mat);
+void ExportMaterial(const UUnrealMaterial* Mat);
 // sound
-void ExportSound(const USound *Snd);
-void ExportSoundNodeWave(const USoundNodeWave *Snd);
-void ExportSoundWave4(const USoundWave *Snd);
+void ExportSound(const USound* Snd);
+void ExportSoundNodeWave(const USoundNodeWave* Snd);
+void ExportSoundWave4(const USoundWave* Snd);
 // third party
-void ExportGfx(const USwfMovie *Swf);
-void ExportFaceFXAnimSet(const UFaceFXAnimSet *Fx);
-void ExportFaceFXAsset(const UFaceFXAsset *Fx);
+void ExportGfx(const USwfMovie* Swf);
+void ExportFaceFXAnimSet(const UFaceFXAnimSet* Fx);
+void ExportFaceFXAsset(const UFaceFXAsset* Fx);
 
-void WriteTGA(FArchive &Ar, int width, int height, byte *pic);
+void WriteTGA(FArchive& Ar, int width, int height, byte* pic);
 
 
 #endif // __EXPORT_H__

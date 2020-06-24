@@ -21,20 +21,20 @@ bool GDontOverwriteFiles = false;
 
 struct CExporterInfo
 {
-	const char		*ClassName;
+	const char* ClassName;
 	ExporterFunc_t	Func;
 };
 
 static CExporterInfo exporters[MAX_EXPORTERS];
 static int numExporters = 0;
 
-void RegisterExporter(const char *ClassName, ExporterFunc_t Func)
+void RegisterExporter(const char* ClassName, ExporterFunc_t Func)
 {
 	guard(RegisterExporter);
 	assert(numExporters < MAX_EXPORTERS);
-	CExporterInfo &Info = exporters[numExporters];
+	CExporterInfo& Info = exporters[numExporters];
 	Info.ClassName = ClassName;
-	Info.Func      = Func;
+	Info.Func = Func;
 	numExporters++;
 	unguard;
 }
@@ -276,10 +276,10 @@ bool ExportObject(const UObject *Obj)
 
 static char BaseExportDir[512];
 
-bool GUncook    = false;
+bool GUncook = false;
 bool GUseGroups = false;
 
-void appSetBaseExportDirectory(const char *Dir)
+void appSetBaseExportDirectory(const char* Dir)
 {
 	strcpy(BaseExportDir, Dir);
 }

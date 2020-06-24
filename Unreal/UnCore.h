@@ -661,6 +661,7 @@ public:
 	}
 };
 
+// Some typeinfo for FArchive types
 #define DECLARE_ARCHIVE(Class,Base)		\
 	typedef Class	ThisClass;			\
 	typedef Base	Super;				\
@@ -954,6 +955,30 @@ public:
 protected:
 	const byte *DataPtr;
 	int		DataSize;
+};
+
+class FMemWriter : public FArchive
+{
+	DECLARE_ARCHIVE(FMemReader, FArchive);
+public:
+	FMemWriter();
+	virtual ~FMemWriter();
+
+	virtual void Seek(int Pos);
+
+	virtual bool IsEof() const;
+
+	virtual void Serialize(void *data, int size);
+
+	virtual int GetFileSize() const;
+
+	const TArray<byte>& GetData() const
+	{
+		return *Data;
+	}
+
+protected:
+	TArray<byte>* Data;
 };
 
 
