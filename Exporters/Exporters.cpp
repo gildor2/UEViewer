@@ -174,9 +174,9 @@ bool IsObjectExported(const UObject* Obj)
 }
 
 //todo: move to ExportContext and reset with ctx.Reset()?
-struct UniqueNameList
+struct CUniqueNameList
 {
-	UniqueNameList()
+	CUniqueNameList()
 	{
 		Items.Empty(1024);
 	}
@@ -213,7 +213,7 @@ bool ExportObject(const UObject *Obj)
 	if (strnicmp(Obj->Name, "Default__", 9) == 0)	// default properties object, nothing to export
 		return true;
 
-	static UniqueNameList ExportedNames;
+	static CUniqueNameList ExportedNames;
 
 	// For "uncook", different packages may have copies of the same object, which are stored with different quality.
 	// For example, Gears3 has anim sets which cooked with different tracks into different maps. To be able to export
@@ -441,6 +441,7 @@ FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const ch
 		{
 			appPrintf("Export: file already exists %s\n", filename);
 			ctx.NumSkippedObjects++;
+			return NULL;
 		}
 	}
 
