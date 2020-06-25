@@ -364,6 +364,9 @@ void ExportTexture(const UUnrealMaterial *Tex)
 	{
 		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
 		bFail = true;
+		//?? In this case, texture will be logged as "exported". Example: do the export, the texture will be skipped,
+		//?? then export again (with "don't overwrite" option) - log will indicate number of exported objects to be non-zero,
+		//?? and number will match these "no mipmaps" textures.
 	}
 
 	byte* pic = NULL;

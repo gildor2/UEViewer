@@ -213,6 +213,9 @@ bool ExportObject(const UObject *Obj)
 	if (strnicmp(Obj->Name, "Default__", 9) == 0)	// default properties object, nothing to export
 		return true;
 
+	if (IsObjectExported(Obj))
+		return true;
+
 	static CUniqueNameList ExportedNames;
 
 	// For "uncook", different packages may have copies of the same object, which are stored with different quality.
@@ -395,6 +398,7 @@ const char* GetExportFileName(const UObject* Obj, const char* fmt, ...)
 }
 
 
+//todo: the function is not used
 bool CheckExportFilePresence(const UObject* Obj, const char* fmt, ...)
 {
 	va_list	argptr;
