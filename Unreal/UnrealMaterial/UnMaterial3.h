@@ -472,6 +472,8 @@ public:
 	void Serialize4(FArchive& Ar);
 #endif
 
+	virtual void GetMetadata(FArchive& Ar) const;
+
 	const TArray<FTexture2DMipMap>* GetMipmapArray() const;
 
 	bool LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix, bool verbose) const;

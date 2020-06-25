@@ -251,6 +251,16 @@ public:
 	virtual void ReleaseTextureData() const
 	{}
 
+	void GetMetadata(FArchive& Ar) const
+	{
+		// Use object's name as default metadata, override when needed
+		char ObjName[256];
+		GetFullName(ARRAY_ARG(ObjName));
+		int Len = strlen(ObjName);
+		Ar << Len;
+		Ar.Serialize(ObjName, Len);
+	}
+
 #if RENDERING
 	UUnrealMaterial()
 	:	DrawTimestamp(0)

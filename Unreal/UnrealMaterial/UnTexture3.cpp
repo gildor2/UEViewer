@@ -996,7 +996,6 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 		for (int mipLevel = 0; mipLevel < MipsArray->Num(); mipLevel++)
 		{
 			// find 1st mipmap with non-null data array
-			// reference: DemoPlayerSkins.utx/DemoSkeleton have null-sized 1st 2 mips
 			const FTexture2DMipMap &Mip = (*MipsArray)[mipLevel];
 			const FByteBulkData &Bulk = Mip.Data;
 			if (!Mip.Data.BulkData)
@@ -1095,5 +1094,35 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 	unguardf("%s", Name);
 }
 
+void UTexture2D::GetMetadata(FArchive& Ar) const
+{
+	guard(UTexture2D::GetMetadata);
+
+	const TArray<FTexture2DMipMap>* MipsArray = GetMipmapArray();
+	int NumMips = MipsArray->Num();
+	Ar << NumMips;
+
+	int USize = 0;
+	int VSize = 0;
+	for (int MipLevel = 0; MipLevel < NumMips; MipLevel++)
+	{
+		// find 1st mipmap with non-null data array
+		const FTexture2DMipMap &Mip = (*MipsArray)[MipLevel];
+		const FByteBulkData &Bulk = Mip.Data;
+		if (!Mip.Data.BulkData)
+		{
+			// check for external bulk
+			if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
+			if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue; // equals to BULKDATA_PayloadAtEndOfFile for UE4
+		}
+		USize = Mip.SizeX;
+		VSize = Mip.SizeY;
+		break;
+	}
+
+	Ar << USize << VSize;
+
+	unguard;
+}
 
 #endif // UNREAL3
