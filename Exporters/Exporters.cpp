@@ -174,8 +174,14 @@ bool IsObjectExported(const UObject* Obj)
 }
 
 //todo: move to ExportContext and reset with ctx.Reset()?
+
+// Use CRC32 for hashing, from zlib
+extern "C" unsigned long crc32(unsigned long crc, const byte* buf, unsigned int len);
+
 struct CUniqueNameList
 {
+	typedef uint32 Hash_t;
+
 	CUniqueNameList()
 	{
 		Items.Empty(1024);
@@ -183,25 +189,80 @@ struct CUniqueNameList
 
 	struct Item
 	{
-		FString Name;
-		int Count;
+		Item()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+
+		FString			Name;
+		int				Count;
+		Hash_t			FirstHash;		// use separate Hash_t to avoid using TArray as much as possible
+		TArray<Hash_t>	OtherHashes;
 	};
 	TArray<Item> Items;
 
-	int RegisterName(const char *Name)
+	static Hash_t GetHash(const byte* Buf, int Size)
 	{
-		for (int i = 0; i < Items.Num(); i++)
+		Hash_t crc = crc32(0, NULL, 0);
+		crc = crc32(crc, Buf, (unsigned)Size);
+		return crc;
+	}
+
+	int RegisterName(const char* Name, const TArray<byte>& Meta)
+	{
+		guard(CUniqueNameList::RegisterName);
+
+		// Get hash of the object. Value 0 will mean "no metadata present".
+		Hash_t Hash = 0;
+		if (Meta.Num() != 0)
 		{
-			Item &V = Items[i];
+			Hash = GetHash(Meta.GetData(), Meta.Num());
+		}
+
+		// Find the object using name id
+		Item* foundItem = NULL;
+		for (Item& V : Items)
+		{
 			if (V.Name == Name)
 			{
-				return ++V.Count;
+				foundItem = &V;
+				break;
 			}
 		}
-		Item *N = new (Items) Item;
-		N->Name = Name;
-		N->Count = 1;
-		return 1;
+
+		if (foundItem == NULL)
+		{
+			// New item
+			Item *N = new (Items) Item();
+			N->Name = Name;
+			N->Count = 1;
+			N->FirstHash = Hash;
+			// Return '1' indicating that this is first appearance of the object name
+			return 1;
+		}
+
+		// Object with same name already exists, walk over hashes to find match
+		if (Hash == 0)
+		{
+			// No hash, treat all objects as unique
+			return ++foundItem->Count;
+		}
+
+		if (foundItem->FirstHash == Hash)
+			return 1;
+
+		for (int i = 0; i < foundItem->OtherHashes.Num(); i++)
+		{
+			if (foundItem->OtherHashes[i] == Hash)
+				return i + 2;	// found this hash
+		}
+		// This hash wasn't found
+		foundItem->OtherHashes.Add(Hash);
+		foundItem->Count++;
+		assert(foundItem->Count == foundItem->OtherHashes.Num() + 2);
+		return foundItem->Count;
+
+		unguard;
 	}
 };
 
@@ -213,6 +274,8 @@ bool ExportObject(const UObject *Obj)
 	if (strnicmp(Obj->Name, "Default__", 9) == 0)	// default properties object, nothing to export
 		return true;
 
+	// Check if exactly the same object was already exported. It refers to package.object and not
+	// taking into account that the same object may reside in different packages in cooked UE3 game.
 	if (IsObjectExported(Obj))
 		return true;
 
@@ -235,21 +298,27 @@ bool ExportObject(const UObject *Obj)
 			char ExportPath[1024];
 			strcpy(ExportPath, GetExportPath(Obj));
 			const char* ClassName = Obj->GetClassName();
-			// check for duplicate name
-			// get name unique index
-			char uniqueName[1024];
-			appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
 
+			// Check for duplicate name
 			const char* OriginalName = NULL;
 			if (bAddUniqueSuffix)
 			{
+				// Get object's unique key from its name
+				char uniqueName[1024];
+				appSprintf(ARRAY_ARG(uniqueName), "%s/%s.%s", ExportPath, Obj->Name, ClassName);
+
+				// Get object metadata for better detection of duplicates
+				FMemWriter MetaCollector;
+				Obj->GetMetadata(MetaCollector);
+
 				// Add unique numeric suffix when needed
-				int uniqueIdx = ExportedNames.RegisterName(uniqueName);
+				int uniqueIdx = ExportedNames.RegisterName(uniqueName, MetaCollector.GetData());
 				if (uniqueIdx >= 2)
 				{
+					// Find existing object name with same metadata, or register a new name
 					appSprintf(ARRAY_ARG(uniqueName), "%s_%d", Obj->Name, uniqueIdx);
 					appPrintf("Duplicate name %s found for class %s, renaming to %s\n", Obj->Name, ClassName, uniqueName);
-					// HACK: temporary replace object name with unique one
+					//?? HACK: temporary replace object name with unique one
 					OriginalName = Obj->Name;
 					const_cast<UObject*>(Obj)->Name = uniqueName;
 				}

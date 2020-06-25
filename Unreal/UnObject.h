@@ -44,6 +44,13 @@ public:
 	const char *GetUncookedPackageName() const;
 	void GetFullName(char *buf, int bufSize, bool IncludeObjectName = true, bool IncludeCookedPackageName = true, bool ForcePackageName = false) const;
 
+	// Function which collects metadata from the object into FArchive, it might be useful for quick comparison of 2 objects
+	// during export. It's relevant only for UE3 packages in "uncook" mode, when 2 objects with different quality may match
+	// the same name.
+	virtual void GetMetadata(FArchive& Ar) const
+	{
+	}
+
 	enum { PropLevel = 0 };
 	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps)
 	{
