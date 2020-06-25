@@ -288,6 +288,8 @@ public:
 	void FixBatman2Skeleton();
 #endif
 
+	virtual void GetMetadata(FArchive& Ar) const;
+
 protected:
 	void ConvertMesh();
 };
@@ -712,6 +714,8 @@ public:
 	{
 		ConvertAnims();		// should be called after loading of all used objects
 	}
+
+	virtual void GetMetadata(FArchive& Ar) const;
 };
 
 
@@ -795,6 +799,8 @@ public:
 	virtual ~UStaticMesh3();
 
 	virtual void Serialize(FArchive &Ar);
+
+	virtual void GetMetadata(FArchive& Ar) const;
 
 protected:
 	void ConvertMesh();

@@ -18,6 +18,7 @@ bool GDontOverwriteFiles = false;
 -----------------------------------------------------------------------------*/
 
 #define MAX_EXPORTERS		20
+//#define DEBUG_DUP_FINDER	1
 
 struct CExporterInfo
 {
@@ -312,7 +313,16 @@ bool ExportObject(const UObject *Obj)
 				Obj->GetMetadata(MetaCollector);
 
 				// Add unique numeric suffix when needed
-				int uniqueIdx = ExportedNames.RegisterName(uniqueName, MetaCollector.GetData());
+				const TArray<byte>& Meta = MetaCollector.GetData();
+				int uniqueIdx = ExportedNames.RegisterName(uniqueName, Meta);
+#if DEBUG_DUP_FINDER
+				char buf[512];
+				appSprintf(ARRAY_ARG(buf), "%s -> %d", uniqueName, uniqueIdx);
+				if (Meta.Num())
+				{
+					DUMP_MEM_BYTES(&Meta[0], Meta.Num(), buf);
+				}
+#endif // DEBUG_DUP_FINDER
 				if (uniqueIdx >= 2)
 				{
 					// Find existing object name with same metadata, or register a new name

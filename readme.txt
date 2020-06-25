@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+25.06.2020
+- recognition of duplicated files when exporting UE3 content
+
 24.06.2020
 - faster export when part of assets were already exported and "don't overwrite already exported files" is enabled
 

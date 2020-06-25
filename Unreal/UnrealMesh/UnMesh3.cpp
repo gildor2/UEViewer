@@ -2358,6 +2358,24 @@ void USkeletalMesh3::PostLoad()
 }
 
 
+void USkeletalMesh3::GetMetadata(FArchive& Ar) const
+{
+	guard(USkeletalMesh3::GetMetadata);
+
+	int NumLods = ConvertedMesh ? ConvertedMesh->Lods.Num() : 0;
+	Ar << NumLods;
+
+	if (NumLods)
+	{
+		CSkelMeshLod& Lod = ConvertedMesh->Lods[0];
+		int NumIndices = Lod.Indices.Num();
+		Ar << Lod.NumVerts << Lod.NumTexCoords << NumIndices;
+	}
+
+	unguard;
+}
+
+
 /*-----------------------------------------------------------------------------
 	UStaticMesh
 -----------------------------------------------------------------------------*/
@@ -3933,5 +3951,23 @@ void UStaticMesh3::ConvertMesh()
 	unguard;
 }
 
+
+void UStaticMesh3::GetMetadata(FArchive& Ar) const
+{
+	guard(UStaticMesh3::GetMetadata);
+
+	// Note: exactly the same code as for USkeletalMesh. Also, it is engine-independent, so when needed - can put to common cpp.
+	int NumLods = ConvertedMesh ? ConvertedMesh->Lods.Num() : 0;
+	Ar << NumLods;
+
+	if (NumLods)
+	{
+		CStaticMeshLod& Lod = ConvertedMesh->Lods[0];
+		int NumIndices = Lod.Indices.Num();
+		Ar << Lod.NumVerts << Lod.NumTexCoords << NumIndices;
+	}
+
+	unguard;
+}
 
 #endif // UNREAL3

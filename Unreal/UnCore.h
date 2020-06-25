@@ -1011,8 +1011,9 @@ inline void DUMP_ARC_BYTES(FArchive &Ar, int NumBytes, const char* Label = NULL)
 	unguard;
 }
 
-inline void DUMP_MEM_BYTES(const void* Data, int NumBytes)
+inline void DUMP_MEM_BYTES(const void* Data, int NumBytes, const char* Label = NULL)
 {
+	if (Label) appPrintf("%s:", Label);
 	const byte* b = (byte*)Data;
 	for (int i = 0; i < NumBytes; i++)
 	{

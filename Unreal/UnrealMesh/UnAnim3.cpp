@@ -1333,5 +1333,20 @@ void UBioAnimSetData::PostLoad()
 
 #endif // MASSEFF
 
+void UAnimSet::GetMetadata(FArchive& Ar) const
+{
+	guard(UAnimSet::GetMetadata);
+
+	int NumAnims = ConvertedAnim ? ConvertedAnim->Sequences.Num() : 0;
+	Ar << NumAnims;
+
+	for (int i = 0; i < NumAnims; i++)
+	{
+		CAnimSequence* Seq = ConvertedAnim->Sequences[i];
+		Ar << Seq->NumFrames << Seq->Name;
+	}
+
+	unguard;
+}
 
 #endif // UNREAL3
