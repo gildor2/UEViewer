@@ -107,7 +107,7 @@ inline bool PakRequireAesKey(bool fatal = true)
 	if ((GAesKey.Len() == 0) && !UE4EncryptedPak())
 	{
 		if (fatal)
-			appError("AES key is required");
+			appErrorNoLog("AES key is required");
 		return false;
 	}
 	return true;

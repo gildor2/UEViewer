@@ -24,7 +24,7 @@ static void CopyStream(FArchive *Src, FILE *Dst, int Count)
 
 int UE4UnversionedPackage(int verMin, int verMax)
 {
-	appError("Unversioned UE4 packages are not supported. Please restart UModel and select UE4 version in range %d-%d using UI or command line.", verMin, verMax);
+	appErrorNoLog("Unversioned UE4 packages are not supported. Please restart UModel and select UE4 version in range %d-%d using UI or command line.", verMin, verMax);
 	return -1;
 }
 

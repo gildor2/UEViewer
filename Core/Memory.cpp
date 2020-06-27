@@ -117,7 +117,7 @@ inline void OutOfMemory(int size)
 	appDumpMemoryAllocations();
 #endif
 	// Crash ...
-	appError("Out of memory: failed to allocate %d bytes", size);
+	appErrorNoLog("Out of memory: failed to allocate %d bytes", size);
 }
 
 void *appMalloc(int size, int alignment)

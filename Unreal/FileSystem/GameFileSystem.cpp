@@ -311,7 +311,7 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 			{
 				// unknown file type
 				if (++GNumForeignFiles >= MAX_FOREIGN_FILES)
-					appError("Too many unknown files - bad root directory (%s)?", GRootDirectory);
+					appErrorNoLog("Too many unknown files - bad root directory (%s)?", GRootDirectory);
 			}
 			return;
 		}
@@ -522,7 +522,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 		}
 		else
 		{
-			appError("Gears of War 4 requires BundleManifest.bin file which is missing.");
+			appErrorNoLog("Gears of War 4: missing BundleManifest.bin file.");
 		}
 	}
 #endif // GEARS4

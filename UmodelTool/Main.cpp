@@ -535,7 +535,7 @@ int UE4UnversionedPackage(int verMin, int verMax)
 	int version = GApplication.ShowUE4UnversionedPackageDialog(verMin, verMax);
 	if (version >= 0) return version;
 #endif
-	appError("Unversioned UE4 packages are not supported. Please restart UModel and select UE4 version in range %d-%d using UI or command line.", verMin, verMax);
+	appErrorNoLog("Unversioned UE4 packages are not supported. Please restart UModel and select UE4 version in range %d-%d using UI or command line.", verMin, verMax);
 	return -1;
 }
 
@@ -557,7 +557,7 @@ static void CheckHexAesKey()
 	int remains = GAesKey.Len() - 2;
 	if (remains & 1)
 	{
-		appError("Hexadecimal AES key contains odd number of characters");
+		appErrorNoLog("Hexadecimal AES key contains odd number of characters");
 	}
 	while (remains > 0)
 	{
@@ -568,7 +568,7 @@ static void CheckHexAesKey()
 			char c = tolower(*s++);
 			if (!ishex(c))
 			{
-				appError("Illegal character in hexadecimal AES key");
+				appErrorNoLog("Illegal character in hexadecimal AES key");
 			}
 			b = hextodigit(c) << 4;
 			remains--;
@@ -576,7 +576,7 @@ static void CheckHexAesKey()
 		char c = tolower(*s++);
 		if (!ishex(c))
 		{
-			appError("Illegal character in hexadecimal AES key");
+			appErrorNoLog("Illegal character in hexadecimal AES key");
 		}
 		b |= hextodigit(c);
 		remains--;

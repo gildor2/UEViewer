@@ -615,7 +615,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		if (info.bEncryptedIndex)
 		{
 			// Display nice error message
-			appError("Error during loading of encrypted pak file index. Probably the provided AES key is not correct.");
+			appErrorNoLog("Error during loading of encrypted pak file index. Probably the provided AES key is not correct.");
 		}
 		else
 		{
@@ -743,7 +743,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		if (info.bEncryptedIndex)
 		{
 			// Display nice error message
-			appError("Error during loading of encrypted pak file index. Probably the provided AES key is not correct.");
+			appErrorNoLog("Error during loading of encrypted pak file index. Probably the provided AES key is not correct.");
 		}
 		else
 		{

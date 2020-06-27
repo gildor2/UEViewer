@@ -36,7 +36,7 @@ void appPrintf(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appError("appPrintf: buffer overflow");
+	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appErrorNoLog("appPrintf: buffer overflow");
 
 	fwrite(buf, len, 1, stdout);
 	if (GLogFile) fwrite(buf, len, 1, GLogFile);
@@ -61,7 +61,7 @@ void appError(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appError("appError: buffer overflow");
+	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appErrorNoLog("appError: buffer overflow");
 
 	GError.IsSwError = true;
 
@@ -109,7 +109,7 @@ void appNotify(const char *fmt, ...)
 	char buf[4096];
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
-	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appError("appNotify: buffer overflow");
+	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appErrorNoLog("appNotify: buffer overflow");
 
 	fflush(stdout);
 
@@ -505,7 +505,7 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 	FILE* f = fopen(filename, "r");
 	if (!f)
 	{
-		appError("Unable to find command line file \"%s\"", filename);
+		appErrorNoLog("Unable to find command line file \"%s\"", filename);
 	}
 	// Determine file size
 	fseek(f, 0, SEEK_END);
@@ -517,7 +517,7 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 	len = fread(buffer, 1, len, f);
 	if (len == 0)
 	{
-		appError("Unable to read command line file \"%s\"", filename);
+		appErrorNoLog("Unable to read command line file \"%s\"", filename);
 	}
 	fclose(f);
 	buffer[len] = 0;

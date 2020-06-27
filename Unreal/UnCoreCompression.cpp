@@ -395,11 +395,11 @@ void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen)
 
 	if (KeyLen == 0)
 	{
-		appError("Trying to decrypt AES block without providing an AES key");
+		appErrorNoLog("Trying to decrypt AES block without providing an AES key");
 	}
 	if (KeyLen < KEYLENGTH(AES_KEYBITS))
 	{
-		appError("AES key is too short");
+		appErrorNoLog("AES key is too short");
 	}
 
 	assert((Size & 15) == 0);
