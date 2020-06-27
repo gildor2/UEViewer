@@ -396,7 +396,7 @@ static void PrintUsage()
 			"    -nolightmap     disable loading of Lightmap textures\n"
 			"    -sounds         allow export of sounds\n"
 			"    -3rdparty       allow 3rd party asset export (ScaleForm, FaceFX)\n"
-			"    -lzo|lzx|zlib   force compression method for fully-compressed packages\n"
+			"    -lzo|lzx|zlib   force compression method for UE3 fully-compressed packages\n"
 			"\n"
 			"Platform selection:\n"
 			"    -ps3            Playstation 3\n"
@@ -786,7 +786,7 @@ int main(int argc, const char **argv)
 			OPT_VALUE("nsw",     GSettings.Startup.Platform, PLATFORM_SWITCH)
 			OPT_VALUE("ios",     GSettings.Startup.Platform, PLATFORM_IOS)
 			OPT_VALUE("android", GSettings.Startup.Platform, PLATFORM_ANDROID)
-			// compression
+			// UE3 compression method
 			OPT_VALUE("lzo",     GSettings.Startup.PackageCompression, COMPRESS_LZO )
 			OPT_VALUE("zlib",    GSettings.Startup.PackageCompression, COMPRESS_ZLIB)
 			OPT_VALUE("lzx",     GSettings.Startup.PackageCompression, COMPRESS_LZX )

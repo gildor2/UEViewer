@@ -8,8 +8,6 @@
 
 #include "GameDatabase.h"		// for GetGameTag()
 
-byte GForceCompMethod = 0;		// COMPRESS_...
-
 
 //#define DEBUG_PACKAGE			1
 //#define PROFILE_PACKAGE_TABLES	1

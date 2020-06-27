@@ -2528,7 +2528,7 @@ extern FArchive *GDummySave;
 extern int       GForceGame;
 extern int       GForcePackageVersion;
 extern byte      GForcePlatform;
-extern byte      GForceCompMethod;
+extern byte      GForceCompMethod;	// compression method for UE3 fully compressed packages
 
 
 /*-----------------------------------------------------------------------------

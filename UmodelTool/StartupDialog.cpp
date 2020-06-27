@@ -112,7 +112,7 @@ void UIStartupDialog::InitUI()
 	[
 		NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
-			NewControl(UIGroup, "Package compression", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
+			NewControl(UIGroup, "UE3 package compression", GROUP_HORIZONTAL_LAYOUT|GROUP_HORIZONTAL_SPACING)
 			.SetWidth(EncodeWidth(1.0f))
 			.SetRadioVariable(&Opt.PackageCompression)
 			[
