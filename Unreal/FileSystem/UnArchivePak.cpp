@@ -135,15 +135,13 @@ void FPakEntry::Serialize(FArchive& Ar)
 			Ar << CompressionBlocks;
 		Ar << bEncrypted << CompressionBlockSize;
 	}
+	if (CompressionMethod == COMPRESS_Custom)
+	{
+		CompressionMethod = COMPRESS_FIND;
+	}
 #if TEKKEN7
 	if (GForceGame == GAME_Tekken7)
 		bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
-#endif
-#if SEAOFTHIEVES
-	if (GForceGame == GAME_SeaOfThieves && CompressionMethod == COMPRESS_Custom)
-	{
-		CompressionMethod = COMPRESS_LZ4;
-	}
 #endif
 
 	if (PakVer >= PakFile_Version_RelativeChunkOffsets)

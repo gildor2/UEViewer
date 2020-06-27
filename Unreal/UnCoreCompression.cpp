@@ -267,8 +267,16 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 			Flags = COMPRESS_OODLE;
 		}
 #endif // USE_OODLE
+#if USE_LZ4
+		else if (GForceGame >= GAME_UE4_BASE)
+		{
+			Flags = COMPRESS_LZ4;		// in most cases UE4 games are using either oodle or lz4 - the first one is explicitly recognizable
+		}
+#endif // USE_LZ4
 		else
-			Flags = COMPRESS_LZO;
+		{
+			Flags = COMPRESS_LZO;		// LZO was used only with UE3 games as standard compression method
+		}
 	}
 
 	if (Flags == COMPRESS_LZO)
