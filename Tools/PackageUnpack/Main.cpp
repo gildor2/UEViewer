@@ -319,16 +319,7 @@ int main(int argc, char **argv)
 
 #if DO_GUARD
 	} CATCH {
-		if (GError.History[0])
-		{
-//			printf("ERROR: %s\n", GError.History);
-			appNotify("ERROR: %s\n", GError.History);
-		}
-		else
-		{
-//			printf("Unknown error\n");
-			appNotify("Unknown error\n");
-		}
+		GError.StandardHandler();
 		exit(1);
 	}
 #endif

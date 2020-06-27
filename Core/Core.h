@@ -291,6 +291,7 @@ void appOpenLogFile(const char *filename);
 void appPrintf(const char *fmt, ...);
 
 void appError(const char *fmt, ...);
+#define appErrorNoLog(fmt, ...) { GError.SuppressLog = true; appError(fmt, __VA_ARGS__); }
 
 
 // Log some information
@@ -511,6 +512,8 @@ struct CErrorContext
 	bool IsSwError;
 	// Used for error history formatting
 	bool WasError;
+	// Suppress logging error message to a file (in a case of user mistake)
+	bool SuppressLog;
 	// Call stack
 	char History[2048];
 
@@ -518,10 +521,15 @@ struct CErrorContext
 	{
 		Reset();
 	}
+
 	void Reset()
 	{
 		memset(this, 0, sizeof(*this));
 	}
+
+	// Log error message to console and notify.log, do NOT exit
+	void StandardHandler();
+
 	void LogHistory(const char *part);
 };
 

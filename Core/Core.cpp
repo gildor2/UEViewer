@@ -140,6 +140,25 @@ void appNotify(const char *fmt, ...)
 	NotifyHeader[0] = 0;
 }
 
+void CErrorContext::StandardHandler()
+{
+	void (*PrintFunc)(const char*, ...);
+	PrintFunc = GError.SuppressLog ? appPrintf : appNotify;
+	// appNotify does some markup itself, add explicit marker for pure appPrintf
+	const char* Marker = GError.SuppressLog ? "\n*** " : "";
+
+	if (GError.History[0])
+	{
+//		printf("ERROR: %s\n", GError.History);
+		PrintFunc("%sERROR: %s\n", Marker, GError.History);
+	}
+	else
+	{
+//		printf("Unknown error\n");
+		PrintFunc("%sUnknown error\n", Marker);
+	}
+}
+
 void CErrorContext::LogHistory(const char *part)
 {
 	if (!History[0])
