@@ -2339,7 +2339,15 @@ UObject* UnPackage::CreateImport(int index)
 					continue;		// already checked
 				ObjIndex = Package->FindExportForImport(Imp.ObjectName, Imp.ClassName, this, index);
 				if (ObjIndex != INDEX_NONE)
+				{
+					if (i > 32)
+					{
+						// This is definitely a startup package, reorder PackageMap to pick it up faster next time
+						PackageMap.RemoveAtSwap(i);
+						PackageMap.Insert(Package, 0);
+					}
 					break;			// found
+				}
 			}
 		}
 		if (ObjIndex == INDEX_NONE)
