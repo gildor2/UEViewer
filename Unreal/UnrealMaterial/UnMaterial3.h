@@ -87,6 +87,10 @@ enum ETextureCompressionSettings
 	TC_OneBitMonochrome,
 	TC_SimpleLightmapModification,
 
+#if MASSEFF
+	TC_NormalmapHQ,
+	TC_NormalmapLQ,
+#endif
 #if DAYSGONE
 	TC_BendDefault,
 	TC_BendNormalmap,
@@ -115,6 +119,10 @@ _ENUM(ETextureCompressionSettings)
 	_E(TC_OneBitMonochrome),
 	_E(TC_SimpleLightmapModification),
 
+#if MASSEFF
+	_E(TC_NormalmapHQ),
+	_E(TC_NormalmapLQ),
+#endif
 #if DAYSGONE
 	_E(TC_BendDefault),
 	_E(TC_BendNormalmap),
