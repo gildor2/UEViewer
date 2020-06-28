@@ -8,6 +8,9 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_DROP(Material)
 		PROP_DROP(Function)
+		PROP_DROP(EditorX)
+		PROP_DROP(EditorY)
+		PROP_DROP(Desc)
 	END_PROP_TABLE
 };
 
