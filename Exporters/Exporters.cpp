@@ -260,7 +260,7 @@ struct CUniqueNameList
 		// This hash wasn't found
 		foundItem->OtherHashes.Add(Hash);
 		foundItem->Count++;
-		assert(foundItem->Count == foundItem->OtherHashes.Num() + 2);
+		assert(foundItem->Count == foundItem->OtherHashes.Num() + 1);
 		return foundItem->Count;
 
 		unguard;
