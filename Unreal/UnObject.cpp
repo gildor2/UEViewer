@@ -162,7 +162,6 @@ void UObject::EndLoad()
 	{
 		UObject *Obj = GObjLoaded[0];
 		GObjLoaded.RemoveAt(0);
-		//!! should sort by packages + package offset
 		UnPackage *Package = Obj->Package;
 		guard(LoadObject);
 		Package->SetupReader(Obj->PackageIndex);

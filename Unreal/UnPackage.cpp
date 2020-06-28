@@ -2040,19 +2040,45 @@ FArchive& UnPackage::operator<<(UObject *&Obj)
 
 int UnPackage::FindExport(const char *name, const char *className, int firstIndex) const
 {
+	guard(UnPackage::FindExport);
+
+	// Do the first pass with comparing string pointers instead of using stricmp. We're using
+	// global name pool for all name tables, so this should work in most cases.
 	for (int i = firstIndex; i < Summary.ExportCount; i++)
 	{
 		const FObjectExport &Exp = ExportTable[i];
 		// compare object name
-		if (stricmp(Exp.ObjectName, name) != 0)
-			continue;
-		// if class name specified - compare it too
+		if (*Exp.ObjectName == name) // pointer comparison
+		{
+			// if class name specified - compare it too
+			const char *foundClassName = GetObjectName(Exp.ClassIndex);
+			if (className && (foundClassName != className)) // pointer comparison again
+				continue;
+			return i;
+		}
+	}
+
+	// Second pass: we didn't find the name with pointer match, use string comparison instead.
+	// We may fall back to with with UE3 cooked packages, when trying to find a package which
+	// contains this export, i.e. we won't get the package immediately.
+	for (int i = firstIndex; i < Summary.ExportCount; i++)
+	{
+		const FObjectExport &Exp = ExportTable[i];
+
+		// if class name specified - compare it first, it's faster
 		const char *foundClassName = GetObjectName(Exp.ClassIndex);
-		if (className && stricmp(foundClassName, className) != 0)
+		if (className && (foundClassName != className)) // pointer comparison
 			continue;
-		return i;
+
+		// compare object name
+		if (stricmp(Exp.ObjectName, name) == 0) // string comparison
+		{
+			return i;
+		}
 	}
 	return INDEX_NONE;
+
+	unguard;
 }
 
 
@@ -2121,6 +2147,7 @@ int UnPackage::FindExportForImport(const char *ObjectName, const char *ClassName
 		ObjIndex = FindExport(ObjectName, ClassName, ObjIndex + 1);
 		if (ObjIndex == INDEX_NONE)
 			break;				// not found
+#if UNREAL4
 		if (Game >= GAME_UE4_BASE)
 		{
 			// UE4 usually has single object in package. Plus, each object import has a parent UPackage
@@ -2129,6 +2156,7 @@ int UnPackage::FindExportForImport(const char *ObjectName, const char *ClassName
 			// will always fail.
 			return ObjIndex;
 		}
+#endif // UNREAL4
 		// a few objects in package could have the same name and class but resides in different groups,
 		// so compare full object paths for sure
 		if (CompareObjectPaths(ObjIndex+1, ImporterPackage, -1-ImporterIndex))
@@ -2356,8 +2384,6 @@ const char *UnPackage::GetObjectPackageName(int PackageIndex) const
 }
 
 
-// get full object path in a form
-// "OutermostPackage.Package1...PackageN.ObjectName"
 void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSize, bool IncludeObjectName, bool IncludeCookedPackageName) const
 {
 	guard(UnPackage::GetFullExportNameBase);

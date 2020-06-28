@@ -42,6 +42,9 @@ public:
 	const char *GetRealClassName() const;		// class name from the package export table
 	const char* GetPackageName() const;
 	const char *GetUncookedPackageName() const;
+	// Get full object path in following format: "OutermostPackage.Package1...PackageN.ObjectName".
+	// IncludeCookedPackageName - use "uncooked" package name for UE3 game
+	// ForcePackageName - append package name even if it's missing in export table
 	void GetFullName(char *buf, int bufSize, bool IncludeObjectName = true, bool IncludeCookedPackageName = true, bool ForcePackageName = false) const;
 
 	// Function which collects metadata from the object into FArchive, it might be useful for quick comparison of 2 objects
