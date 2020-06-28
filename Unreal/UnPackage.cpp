@@ -2038,41 +2038,60 @@ FArchive& UnPackage::operator<<(UObject *&Obj)
 	Loading particular import or export package entry
 -----------------------------------------------------------------------------*/
 
+// Helper class for quick case-insensitive comparison of the string pattern with
+// multiple other strings.
+struct FastNameComparer
+{
+	FastNameComparer(const char* text)
+	{
+		len = strlen(text) + 1;
+		assert(len < ARRAY_COUNT(buf));
+		memcpy(buf, text, len);
+		dwords = len / 4;
+		chars = len % 4;
+	}
+
+	bool operator() (const char* other) const
+	{
+		const uint32* a32 = (uint32*)buf;
+		const uint32* b32 = (uint32*)other;
+		for (int i = 0; i < dwords; i++, a32++, b32++)
+		{
+			if (((*a32 ^ *b32) & 0xdfdfdfdf) != 0) // 0xDF to ignore character case
+				return false;
+		}
+		const char* a8 = (char*)a32;
+		const char* b8 = (char*)b32;
+		for (int i = 0; i < chars; i++, a8++, b8++)
+			if (((*a8 ^ *b8) & 0xdf) != 0)
+				return false;
+		return true;
+	}
+
+protected:
+	char buf[256];
+	int len;
+	int dwords;
+	int chars;
+};
+
 int UnPackage::FindExport(const char *name, const char *className, int firstIndex) const
 {
 	guard(UnPackage::FindExport);
 
 	// Do the first pass with comparing string pointers instead of using stricmp. We're using
 	// global name pool for all name tables, so this should work in most cases.
+	FastNameComparer cmp(name);
 	for (int i = firstIndex; i < Summary.ExportCount; i++)
 	{
 		const FObjectExport &Exp = ExportTable[i];
 		// compare object name
-		if (*Exp.ObjectName == name) // pointer comparison
+		if (cmp(Exp.ObjectName))
 		{
 			// if class name specified - compare it too
 			const char *foundClassName = GetObjectName(Exp.ClassIndex);
 			if (className && (foundClassName != className)) // pointer comparison again
 				continue;
-			return i;
-		}
-	}
-
-	// Second pass: we didn't find the name with pointer match, use string comparison instead.
-	// We may fall back to with with UE3 cooked packages, when trying to find a package which
-	// contains this export, i.e. we won't get the package immediately.
-	for (int i = firstIndex; i < Summary.ExportCount; i++)
-	{
-		const FObjectExport &Exp = ExportTable[i];
-
-		// if class name specified - compare it first, it's faster
-		const char *foundClassName = GetObjectName(Exp.ClassIndex);
-		if (className && (foundClassName != className)) // pointer comparison
-			continue;
-
-		// compare object name
-		if (stricmp(Exp.ObjectName, name) == 0) // string comparison
-		{
 			return i;
 		}
 	}
