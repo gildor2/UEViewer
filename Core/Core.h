@@ -291,7 +291,7 @@ void appOpenLogFile(const char *filename);
 void appPrintf(const char *fmt, ...);
 
 void appError(const char *fmt, ...);
-#define appErrorNoLog(fmt, ...) { GError.SuppressLog = true; appError(fmt, __VA_ARGS__); }
+#define appErrorNoLog(...) { GError.SuppressLog = true; appError(__VA_ARGS__); }
 
 
 // Log some information
