@@ -241,7 +241,7 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 	for (int i = 0; i < Packages.Num(); i++)
 	{
 		CGameFileInfo* file = const_cast<CGameFileInfo*>(Packages[i]);		// we'll modify this structure here
-		if (file->PackageScanned) continue;
+		if (file->IsPackageScanned) continue;
 
 		// Update progress dialog
 		FStaticString<MAX_PACKAGE_PATH> RelativeName;
@@ -252,7 +252,7 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 			break;
 		}
 
-		file->PackageScanned = true;
+		file->IsPackageScanned = true;
 
 		if (file->Package)
 		{

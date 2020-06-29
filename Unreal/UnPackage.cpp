@@ -12,7 +12,7 @@
 //#define DEBUG_PACKAGE			1
 //#define PROFILE_PACKAGE_TABLES	1
 
-#define MAX_FNAME_LEN			MAX_PACKAGE_PATH
+#define MAX_FNAME_LEN			MAX_PACKAGE_PATH	// Maximal length of FName, used for stack variables
 
 /*-----------------------------------------------------------------------------
 	Unreal package structures

@@ -659,6 +659,11 @@ static void Init(const char *caption)
 	// initialize GL
 	ResizeWindow(winWidth, winHeight);
 
+//	appPrintf("OpenGL %s / GLSL %s / %s\n",
+//		glGetString(GL_VERSION),
+//		glGetString(GL_SHADING_LANGUAGE_VERSION),
+//		glGetString(GL_VENDOR));
+
 	unguard;
 }
 

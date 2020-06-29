@@ -57,6 +57,7 @@ USE_SYSTEM_LIBS = 0
 	OPTIONS   += -fno-stack-protector					# this will remove GLIBC_2.4 dependency
 	OPTIONS   += {
 		# enable some warnings
+#		-Wsuggest-override								# enforce use of 'override' keyword for virtual methods
 		-Wunused-value									# warning about expression which is occasionally typed in code and not used anywhare
 	}
 	CPP_OPTIONS += -std=c++0x							# allow C++11 features

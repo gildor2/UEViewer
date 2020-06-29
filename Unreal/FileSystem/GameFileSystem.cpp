@@ -392,7 +392,7 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 	{
 		if (RelativeNameCmp(prevInfo->RelativeName))
 		{
-			// this is a duplicate of the file, keep new information
+			// this is a duplicate of the file (patch), use new information
 			prevInfo->UpdateFrom(info);
 			delete info;
 #if DEBUG_HASH
@@ -430,6 +430,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 	bool res = true;
 //	printf("Scan %s\n", dir);
 
+	//todo: check - there's TArray<FStaticString> what's unsafe
 	TArray<FStaticString<256>> Filenames;
 	Filenames.Empty(256);
 

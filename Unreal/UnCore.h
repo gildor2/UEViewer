@@ -76,15 +76,6 @@ void appPrintProfiler(const char* label = NULL);
 #define MAX_PACKAGE_PATH		512
 
 /*-----------------------------------------------------------------------------
-	Game compatibility
------------------------------------------------------------------------------*/
-
-// BIOSHOCK requires UNREAL3
-#if !UNREAL3
-#undef BIOSHOCK
-#endif
-
-/*-----------------------------------------------------------------------------
 	Game directory support
 -----------------------------------------------------------------------------*/
 
@@ -120,8 +111,8 @@ public:
 	int32		ExtraSizeInKb;						// size of additional non-package files (ubulk, uexp etc)
 	bool		IsPackage;
 
-	// content information, valid when PackageScanned is true
-	bool		PackageScanned;
+	// content information, valid when IsPackageScanned is true
+	bool		IsPackageScanned;
 	uint16		NumSkeletalMeshes;
 	uint16		NumStaticMeshes;
 	uint16		NumAnimations;
@@ -149,7 +140,7 @@ public:
 		return stricmp(A.RelativeName, B.RelativeName);
 	}
 
-	//?? todo: find why it is ever used, change name?
+	// Update information about the file when it exists in multiple pak files (e.g. patched)
 	void UpdateFrom(const CGameFileInfo* other)
 	{
 		// Copy information from 'other' entry, but preserve hash chains

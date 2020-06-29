@@ -163,7 +163,7 @@ public:
 		int index = AddItem(*Buffer);
 		char buf[32];
 		// put object count information as subitems
-		if (package->PackageScanned)
+		if (package->IsPackageScanned)
 		{
 #define ADD_COLUMN(ColumnEnum, Value)		\
 			if (Value)						\
@@ -232,7 +232,7 @@ private:
 			appSprintf(&Buffer[0], 63, "%d", file->SizeInKb + file->ExtraSizeInKb);
 			OutText = *Buffer;
 		}
-		else if (file->PackageScanned)
+		else if (file->IsPackageScanned)
 		{
 			int value = 0;
 			switch (SubItemIndex)
@@ -407,8 +407,7 @@ void UIPackageDialog::InitUI()
 
 	// add paths of all found packages to the directory tree
 	if (SelectedPackages.Num()) DirectorySelected = true;
-	char prevPath[MAX_PACKAGE_PATH];
-	prevPath[0] = 0;
+	FStaticString<MAX_PACKAGE_PATH> PrevPath;
 	// Make a copy of package list sorted by name, to ensure directory tree is always sorted.
 	// Using a copy to not affect package sorting used before.
 	PackageList SortedPackages;
@@ -424,8 +423,8 @@ void UIPackageDialog::InitUI()
 		{
 			*s = 0;
 			// simple optimization - avoid calling PackageTree->AddItem() too frequently (assume package list is sorted)
-			if (!strcmp(prevPath, *RelativeName)) continue;
-			strcpy(prevPath, *RelativeName);
+			if (PrevPath == RelativeName) continue;
+			PrevPath = RelativeName;
 			// add a directory to TreeView
 			PackageTree->AddItem(*RelativeName);
 		}
