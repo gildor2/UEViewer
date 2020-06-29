@@ -110,8 +110,6 @@ void FArray::GrowArray(int count, int elementSize)
 	guard(FArray::GrowArray);
 	assert(count > 0);
 
-	int prevCount = MaxCount;
-
 	// check for available space
 	int newCount = DataCount + count;
 	if (newCount > MaxCount)
@@ -141,7 +139,7 @@ void FArray::GrowArray(int count, int elementSize)
 			// "static" array becomes non-static
 			void* oldData = DataPtr; // this is a static pointer
 			DataPtr = appMalloc(dataSize);
-			memcpy(DataPtr, oldData, prevCount * elementSize);
+			memcpy(DataPtr, oldData, DataCount * elementSize);
 		}
 	}
 

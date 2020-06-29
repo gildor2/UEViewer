@@ -387,9 +387,10 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 	// insert CGameFileInfo into hash table
 	int hash = GetHashForFileName(info->ShortFilename, true);
 	// find if we have previously registered file with the same name
+	FastNameComparer RelativeNameCmp(info->RelativeName);
 	for (CGameFileInfo* prevInfo = GGameFileHash[hash]; prevInfo; prevInfo = prevInfo->HashNext)
 	{
-		if (stricmp(prevInfo->RelativeName, info->RelativeName) == 0)
+		if (RelativeNameCmp(prevInfo->RelativeName))
 		{
 			// this is a duplicate of the file, keep new information
 			prevInfo->UpdateFrom(info);

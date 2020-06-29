@@ -917,13 +917,15 @@ const FPakEntry* FPakVFS::FindFile(const char* name)
 	if (LastInfo && !stricmp(LastInfo->Name, name))
 		return LastInfo;
 
+	FastNameComparer cmp(name);
+
 	if (HashTable)
 	{
 		// Have a hash table, use it
 		uint16 hash = GetHashForFileName(name);
 		for (FPakEntry* info = HashTable[hash]; info; info = info->HashNext)
 		{
-			if (!stricmp(info->Name, name))
+			if (cmp(info->Name))
 			{
 				LastInfo = info;
 				return info;

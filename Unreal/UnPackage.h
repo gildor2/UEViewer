@@ -261,6 +261,11 @@ public:
 	// We've protected UnPackage's destructor, however it is possible to use UnloadPackage to destroy package.
 	static void UnloadPackage(UnPackage* package);
 
+	FORCEINLINE static void ReservePackageMap(int count)
+	{
+		PackageMap.Reserve(count);
+	}
+
 	// Create loader FArchive for package
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
 	// Change loader for games with tricky package data
