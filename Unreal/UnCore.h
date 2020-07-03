@@ -92,13 +92,14 @@ class FVirtualFileSystem;
 
 struct CGameFileInfo
 {
-	friend void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs);
+	friend CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const struct CRegisterFileInfo& RegisterInfo);
 	friend const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext);
 
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 
 protected:
 	const char*	RelativeName;						// relative to RootDirectory
+	//todo: replace ShortFilename and Extension with indices inside full filename?
 	const char*	ShortFilename;						// without path, points to filename part of RelativeName
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 
@@ -107,11 +108,14 @@ public:
 	UnPackage*	Package;							// non-null when corresponding package is loaded
 
 	int64		Size;								// file size, in bytes
+													//todo: always used as 32-bit value??
 	int32		SizeInKb;							// file size, in kilobytes
 	int32		ExtraSizeInKb;						// size of additional non-package files (ubulk, uexp etc)
 	bool		IsPackage;
 
 	// content information, valid when IsPackageScanned is true
+	//todo: can store index in some global Info structure, reuse Info for matching cases,
+	//todo: e.g. when uasset has Skel=1+Other=0, or All=0 etc; Index=-1 = not scanned
 	bool		IsPackageScanned;
 	uint16		NumSkeletalMeshes;
 	uint16		NumStaticMeshes;

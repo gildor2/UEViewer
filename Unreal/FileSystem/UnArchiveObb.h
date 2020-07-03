@@ -7,7 +7,7 @@
 struct FObbEntry
 {
 	int64		Pos;
-	int			Size;
+	int32		Size;
 	const char*	Name;
 };
 
@@ -78,7 +78,7 @@ public:
 		// this file looks correct, store 'reader'
 		Reader = reader;
 
-		int count;
+		int32 count;
 		*Reader << count;
 		FileInfos.AddZeroed(count);
 

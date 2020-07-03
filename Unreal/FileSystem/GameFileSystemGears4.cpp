@@ -186,6 +186,7 @@ protected:
 	FArchive*	Reader;
 };
 
+// Dummy VFS container, just used to store file infos in some global list
 class FGears4VFS : public FVirtualFileSystem
 {
 public:
@@ -382,13 +383,17 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 			const FGears4AssetEntry& Asset = Manifest.Assets[Bundle.Assets[assetIndex].AssetIndex];
 			char buffer[MAX_PACKAGE_PATH];
 			appSprintf(ARRAY_ARG(buffer), "%s.uasset", *Asset.AssetName);
-			int32 size = Bundle.Assets[assetIndex].AssetSize;
-			assert(size == Asset.AssetSize);
-			if (FileSystem->AddFile(buffer, bundleFile, pos, size))
+
+			CRegisterFileInfo reg;
+			reg.Size = Bundle.Assets[assetIndex].AssetSize;
+			reg.Filename = buffer;
+
+			assert(reg.Size == Asset.AssetSize);
+			if (FileSystem->AddFile(buffer, bundleFile, pos, reg.Size))
 			{
-				appRegisterGameFile(buffer, FileSystem);
+				appRegisterGameFileInfo(FileSystem, reg);
 			}
-			pos += size;
+			pos += reg.Size;
 		}
 	}
 

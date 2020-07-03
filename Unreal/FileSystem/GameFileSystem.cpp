@@ -125,13 +125,10 @@ static const char *SkipExtensions[] =
 	"wem",										// WwiseAudio files
 };
 
-static bool FindExtension(const char *Filename, const char **Extensions, int NumExtensions)
+static bool FindExtension(const char *Ext, const char **ExtensionsList, int NumExtensions)
 {
-	const char *ext = strrchr(Filename, '.');
-	if (!ext) return false;
-	ext++;
 	for (int i = 0; i < NumExtensions; i++)
-		if (!stricmp(ext, Extensions[i])) return true;
+		if (!stricmp(Ext, ExtensionsList[i])) return true;
 	return false;
 }
 
@@ -156,6 +153,7 @@ static int            GStartupPackageInfoWeight = 0;
 #endif
 
 
+// Compute hash for filename, with skipping file extension
 static int GetHashForFileName(const char* FileName, bool cutExtension)
 {
 	const char* s1 = strrchr(FileName, '/'); // assume path delimiters are normalized
@@ -215,139 +213,151 @@ static void PrintHashDistribution()
 
 //!! add define USE_VFS = SUPPORT_ANDROID || UNREAL4, perhaps || SUPPORT_IOS
 
-//?? TODO: always returns 'true' now, can change the function prototype. 'false' was used when number of files was too large.
-void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
+void appRegisterGameFile(const char *FullName)
 {
 	guard(appRegisterGameFile);
 
 //	printf("..file %s\n", FullName);
 
-	if (!parentVfs)		// no nested VFSs
-	{
-		const char* ext = strrchr(FullName, '.');
-		if (ext)
-		{
-			guard(MountVFS);
+	const char* ext = strrchr(FullName, '.');
+	if (ext == NULL) return;
 
-			ext++;
-			FVirtualFileSystem* vfs = NULL;
-			FArchive* reader = NULL;
+	ext++;
+
+	// Find if this file in an archive with VFS inside
+	FVirtualFileSystem* vfs = NULL;
+	FArchive* reader = NULL;
 
 #if SUPPORT_ANDROID
-			if (!stricmp(ext, "obb"))
-			{
-				GForcePlatform = PLATFORM_ANDROID;
-				reader = new FFileReader(FullName);
-				if (!reader) return;
-				reader->Game = GAME_UE3;
-				vfs = new FObbVFS(FullName);
-			}
+	if (!stricmp(ext, "obb"))
+	{
+		GForcePlatform = PLATFORM_ANDROID;
+		reader = new FFileReader(FullName);
+		if (!reader) return;
+		reader->Game = GAME_UE3;
+		vfs = new FObbVFS(FullName);
+	}
 #endif // SUPPORT_ANDROID
 #if UNREAL4
-			if (!stricmp(ext, "pak"))
-			{
-				reader = new FFileReader(FullName);
-				if (!reader) return;
-				reader->Game = GAME_UE4_BASE;
-				vfs = new FPakVFS(FullName);
-			}
+	if (!stricmp(ext, "pak"))
+	{
+		reader = new FFileReader(FullName);
+		if (!reader) return;
+		reader->Game = GAME_UE4_BASE;
+		vfs = new FPakVFS(FullName);
+	}
 #endif // UNREAL4
-			//!! process other VFS types here
-			//!! note: VFS pointer is not stored in any global list, and not released upon program exit
-			if (vfs)
+	//!! note: VFS pointer is not stored in any global list, and not released upon program exit
+	if (vfs)
+	{
+		assert(reader);
+		// read VF directory
+		FString error;
+		if (!vfs->AttachReader(reader, error))
+		{
+			// something goes wrong
+			if (error.Len())
 			{
-				assert(reader);
-				// read VF directory
-				FString error;
-				if (!vfs->AttachReader(reader, error))
-				{
-					// something goes wrong
-					if (error.Len())
-					{
-						appPrintf("%s\n", *error);
-					}
-					else
-					{
-						appPrintf("File %s has an unknown format\n", FullName);
-					}
-					delete vfs;
-					delete reader;
-					return;
-				}
-				// pre-size GameFiles
-				int NumVFSFiles = vfs->NumFiles();
-				if (GameFiles.Num() + NumVFSFiles > GameFiles.Max())
-				{
-					GameFiles.Reserve(GameFiles.Num() + NumVFSFiles);
-				}
-				// add game files
-				for (int i = 0; i < NumVFSFiles; i++)
-				{
-					appRegisterGameFile(vfs->FileName(i), vfs);
-				}
+				appPrintf("%s\n", *error);
 			}
-
-			unguard;
+			else
+			{
+				appPrintf("File %s has an unknown format\n", FullName);
+			}
+			delete vfs;
+			delete reader;
+			return;
+		}
+		// pre-size GameFiles
+		int NumVFSFiles = vfs->NumFiles();
+		if (GameFiles.Num() + NumVFSFiles > GameFiles.Max())
+		{
+			GameFiles.Reserve(GameFiles.Num() + NumVFSFiles);
+		}
+		// add contained files
+		for (int i = 0; i < NumVFSFiles; i++)
+		{
+			CRegisterFileInfo info;
+			info.Filename = vfs->FileName(i);
+			info.Size = vfs->GetFileSize(info.Filename);
+			appRegisterGameFileInfo(vfs, info);
 		}
 	}
+	else
+	{
+		// Register OS file
+		CRegisterFileInfo info;
+
+		FILE* f = fopen(FullName, "rb");
+		if (f)
+		{
+			fseek(f, 0, SEEK_END);
+			info.Size = ftell(f);
+			fclose(f);
+		}
+		else
+		{
+			// File is not accessible
+			return;
+		}
+		// Cut GRootDirectory from filename
+		const char *s = FullName + strlen(GRootDirectory) + 1;
+		assert(s[-1] == '/');
+		info.Filename = s;
+
+		appRegisterGameFileInfo(NULL, info);
+	}
+
+	unguardf("%s", FullName);
+}
+
+CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CRegisterFileInfo& RegisterInfo)
+{
+	guard(appRegisterGameFileInfo);
+
+	// Verify file extension
+	const char *ext = strrchr(RegisterInfo.Filename, '.');
+	if (!ext) return NULL; // unknown type
+	ext++;
 
 	bool IsPackage = false;
-	if (FindExtension(FullName, ARRAY_ARG(PackageExtensions)))
+	if (FindExtension(ext, ARRAY_ARG(PackageExtensions)))
 	{
 		IsPackage = true;
 	}
 	else
 	{
 #if HAS_SUPPORT_FILES
-		if (!FindExtension(FullName, ARRAY_ARG(KnownExtensions)))
+		// Check for suppressed extensions
+		if (!FindExtension(ext, ARRAY_ARG(KnownExtensions)))
 #endif
 		{
-			// ignore any unknown files inside VFS
-			if (parentVfs) return;
+			// Unknown extension. Check if we should count it or not.
+			// Ignore any unknown files inside VFS
+			if (parentVfs) return NULL;
 			// ignore unknown files inside "cooked" or "content" directories
-			if (appStristr(FullName, "cooked") || appStristr(FullName, "content")) return;
+			if (appStristr(RegisterInfo.Filename, "cooked") || appStristr(RegisterInfo.Filename, "content")) return NULL;
 			// perhaps this file was exported by our tool - skip it
-			if (!FindExtension(FullName, ARRAY_ARG(SkipExtensions)))
+			if (!FindExtension(ext, ARRAY_ARG(SkipExtensions)))
 			{
-				// unknown file type
+				// Unknown file type
 				if (++GNumForeignFiles >= MAX_FOREIGN_FILES)
 					appErrorNoLog("Too many unknown files - bad root directory (%s)?", GRootDirectory);
 			}
-			return;
+			return NULL;
 		}
 	}
 
-	// create entry
+	// A known file type here.
+
+	// Create CGameFileInfo entry
 	CGameFileInfo *info = new CGameFileInfo;
 	info->IsPackage = IsPackage;
 	info->FileSystem = parentVfs;
-
-	if (!parentVfs)
-	{
-		// regular file
-		FILE* f = fopen(FullName, "rb");
-		if (f)
-		{
-			fseek(f, 0, SEEK_END);
-			info->Size = ftell(f);
-			fclose(f);
-		}
-		else
-		{
-			info->Size = 0;
-		}
-		// cut GRootDirectory from filename
-		const char *s = FullName + strlen(GRootDirectory) + 1;
-		assert(s[-1] == '/');
-		info->RelativeName = appStrdupPool(s);
-	}
-	else
-	{
-		// file in virtual file system
-		info->Size = parentVfs->GetFileSize(FullName);
-		info->RelativeName = appStrdupPool(FullName);
-	}
+	info->RelativeName = appStrdupPool(RegisterInfo.Filename);
+	info->Size = RegisterInfo.Size;
 	info->SizeInKb = (info->Size + 512) / 1024;
+
 	if (info->Size < 16) info->IsPackage = false;
 
 	// find filename
@@ -398,7 +408,7 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 #if DEBUG_HASH
 			printf("--> dup(%s) pkg=%d hash=%X\n", prevInfo->ShortFilename, prevInfo->IsPackage, hash);
 #endif
-			return;
+			return prevInfo;
 		}
 	}
 
@@ -417,9 +427,9 @@ void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs)
 	printf("--> add(%s) pkg=%d hash=%X\n", info->ShortFilename, info->IsPackage, hash);
 #endif
 
-	return;
+	return info;
 
-	unguardf("%s", FullName);
+	unguardf("%s", RegisterInfo.Filename);
 }
 
 static bool ScanGameDirectory(const char *dir, bool recurse)

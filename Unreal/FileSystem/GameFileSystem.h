@@ -1,6 +1,24 @@
 #ifndef __GAME_FILE_SYSTEM_H__
 #define __GAME_FILE_SYSTEM_H__
 
+// Register a file located in OS file system. File could be an archive (VFS container).
+void appRegisterGameFile(const char *FullName);
+
+struct CRegisterFileInfo
+{
+	const char* Filename;
+	int64 Size;
+//	int IndexInArchive;
+
+	CRegisterFileInfo()
+	: Filename(NULL)
+	, Size(0)
+	{}
+};
+
+// Low-level function. Register a file inside VFS (parentVFS may be null). No VFS check is performed here.
+CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CRegisterFileInfo& RegisterInfo);
+
 class FVirtualFileSystem
 {
 public:
@@ -19,8 +37,5 @@ public:
 	virtual const char* FileName(int i) = 0;
 	virtual int GetFileSize(const char* name) = 0;
 };
-
-void appRegisterGameFile(const char *FullName, FVirtualFileSystem* parentVfs = NULL);
-
 
 #endif // __GAME_FILE_SYSTEM_H__
