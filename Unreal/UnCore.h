@@ -2103,8 +2103,8 @@ public:
 		return Data.Num() <= 1;
 	}
 
-	bool StartsWith(const char* Text);
-	bool EndsWith(const char* Text);
+	bool StartsWith(const char* Text) const;
+	bool EndsWith(const char* Text) const;
 	bool RemoveFromStart(const char* Text);
 	bool RemoveFromEnd(const char* Text);
 

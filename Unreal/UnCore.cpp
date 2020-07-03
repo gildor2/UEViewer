@@ -355,13 +355,13 @@ char* FString::Detach()
 	return RetData;
 }
 
-bool FString::StartsWith(const char* Text)
+bool FString::StartsWith(const char* Text) const
 {
 	if (!Text || !Text[0] || IsEmpty()) return false;
 	return (strncmp(Data.GetData(), Text, strlen(Text)) == 0);
 }
 
-bool FString::EndsWith(const char* Text)
+bool FString::EndsWith(const char* Text) const
 {
 	if (!Text || !Text[0] || IsEmpty()) return false;
 	int len = strlen(Text);
