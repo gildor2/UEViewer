@@ -111,6 +111,7 @@ public:
 													//todo: always used as 32-bit value??
 	int32		SizeInKb;							// file size, in kilobytes
 	int32		ExtraSizeInKb;						// size of additional non-package files (ubulk, uexp etc)
+	int32		IndexInVfs;							// index in VFS directory; 16 bits are not enough
 	bool		IsPackage;
 
 	// content information, valid when IsPackageScanned is true

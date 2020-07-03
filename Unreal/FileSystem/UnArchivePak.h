@@ -74,7 +74,6 @@ struct FPakCompressedBlock
 
 struct FPakEntry
 {
-	const char*	Name;
 	int64		Pos;
 	int64		Size;
 	int64		UncompressedSize;
@@ -85,6 +84,8 @@ struct FPakEntry
 
 	uint16		StructSize;					// computed value: size of FPakEntry prepended to each file
 	FPakEntry*	HashNext;					// computed value: used for fast name lookup
+
+	CGameFileInfo* FileInfo;
 
 	void Serialize(FArchive& Ar);
 
@@ -136,7 +137,7 @@ public:
 		guard(FPakFile::Seek);
 		assert(Pos >= 0 && Pos < Info->UncompressedSize);
 		ArPos = Pos;
-		unguardf("file=%s", Info->Name);
+		unguardf("file=%s", *Info->FileInfo->GetRelativeName());
 	}
 
 	virtual int GetFileSize() const
@@ -185,30 +186,31 @@ public:
 
 	virtual bool AttachReader(FArchive* reader, FString& error);
 
-	virtual int GetFileSize(const char* name)
-	{
-		const FPakEntry* info = FindFile(name);
-		return (info) ? (int)info->UncompressedSize : 0;
-	}
+//	virtual int GetFileSize(const char* name)
+//	{
+//		const FPakEntry* info = FindFile(name);
+//		return (info) ? (int)info->UncompressedSize : 0;
+//	}
 
-	// iterating over all files
-	virtual int NumFiles() const
-	{
-		return FileInfos.Num();
-	}
+//	// iterating over all files
+//	virtual int NumFiles() const
+//	{
+//		return FileInfos.Num();
+//	}
 
-	virtual const char* FileName(int i)
-	{
-		FPakEntry* info = &FileInfos[i];
-		LastInfo = info;
-		return info->Name;
-	}
+//	virtual const char* FileName(int i)
+//	{
+//		FPakEntry* info = &FileInfos[i];
+//		LastInfo = info;
+//		return info->Name;
+//	}
 
-	virtual FArchive* CreateReader(const char* name)
+	virtual FArchive* CreateReader(int index)
 	{
-		const FPakEntry* info = FindFile(name);
-		if (!info) return NULL;
-		return new FPakFile(info, Reader);
+		guard(FPakVFS::CreateReader);
+		const FPakEntry& info = FileInfos[index];
+		return new FPakFile(&info, Reader);
+		unguard;
 	}
 
 protected:
@@ -231,7 +233,7 @@ protected:
 	// UE4.25 and newer
 	bool LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& error);
 
-	static uint16 GetHashForFileName(const char* FileName)
+/*	static uint16 GetHashForFileName(const char* FileName)
 	{
 		uint16 hash = 0;
 		while (char c = *FileName++)
@@ -241,9 +243,9 @@ protected:
 		}
 		hash &= HASH_MASK;
 		return hash;
-	}
+	} */
 
-	void AddFileToHash(FPakEntry* File)
+/*	void AddFileToHash(FPakEntry* File)
 	{
 		if (!HashTable)
 		{
@@ -253,9 +255,9 @@ protected:
 		uint16 hash = GetHashForFileName(File->Name);
 		File->HashNext = HashTable[hash];
 		HashTable[hash] = File;
-	}
+	} */
 
-	const FPakEntry* FindFile(const char* name);
+//	const FPakEntry* FindFile(const char* name);
 };
 
 

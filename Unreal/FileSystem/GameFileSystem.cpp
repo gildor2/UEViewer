@@ -153,6 +153,12 @@ static int            GStartupPackageInfoWeight = 0;
 #endif
 
 
+void FVirtualFileSystem::Reserve(int count)
+{
+	GameFiles.Reserve(GameFiles.Num() + count);
+}
+
+
 // Compute hash for filename, with skipping file extension
 static int GetHashForFileName(const char* FileName, bool cutExtension)
 {
@@ -268,20 +274,6 @@ void appRegisterGameFile(const char *FullName)
 			delete reader;
 			return;
 		}
-		// pre-size GameFiles
-		int NumVFSFiles = vfs->NumFiles();
-		if (GameFiles.Num() + NumVFSFiles > GameFiles.Max())
-		{
-			GameFiles.Reserve(GameFiles.Num() + NumVFSFiles);
-		}
-		// add contained files
-		for (int i = 0; i < NumVFSFiles; i++)
-		{
-			CRegisterFileInfo info;
-			info.Filename = vfs->FileName(i);
-			info.Size = vfs->GetFileSize(info.Filename);
-			appRegisterGameFileInfo(vfs, info);
-		}
 	}
 	else
 	{
@@ -354,6 +346,7 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 	CGameFileInfo *info = new CGameFileInfo;
 	info->IsPackage = IsPackage;
 	info->FileSystem = parentVfs;
+	info->IndexInVfs = RegisterInfo.IndexInArchive;
 	info->RelativeName = appStrdupPool(RegisterInfo.Filename);
 	info->Size = RegisterInfo.Size;
 	info->SizeInKb = (info->Size + 512) / 1024;
@@ -938,7 +931,7 @@ FArchive* CGameFileInfo::CreateReader() const
 	else
 	{
 		// file from virtual file system
-		return FileSystem->CreateReader(RelativeName);
+		return FileSystem->CreateReader(IndexInVfs);
 	}
 }
 

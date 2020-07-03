@@ -223,25 +223,34 @@ public:
 		info->Size = size;
 
 		AddFileToHash(info);
+
+		// Register file in global FS
+		CRegisterFileInfo reg;
+		reg.Filename = filename;
+		reg.Size = size;
+		reg.IndexInArchive = FileInfos.Num() - 1;
+		RegisterFile(reg);
+
 		return true;
 
 		unguard;
 	}
 
 	// Open the file from bundle
-	virtual FArchive* CreateReader(const char* name)
+	virtual FArchive* CreateReader(int index)
 	{
-		const FGears4BundledInfo* info = FindFile(name);
-		if (!info) return NULL;
-		return new FGears4BundleFile(info);
+		guard(FGears4VFS::CreateReader);
+		const FGears4BundledInfo& info = FileInfos[index];
+		return new FGears4BundleFile(&info);
+		unguard;
 	}
 
-	virtual int GetFileSize(const char* name)
-	{
-		const FGears4BundledInfo* info = FindFile(name);
-		if (!info) return 0;
-		return info->Size;
-	}
+//	virtual int GetFileSize(const char* name)
+//	{
+//		const FGears4BundledInfo* info = FindFile(name);
+//		if (!info) return 0;
+//		return info->Size;
+//	}
 
 	// Empty unneeded functions from FVirtualFileSystem interface
 	virtual bool AttachReader(FArchive* reader, FString& error)
@@ -250,17 +259,17 @@ public:
 		return false;
 	}
 
-	virtual int NumFiles() const
-	{
-		assert(0);
-		return 0;
-	}
-
-	virtual const char* FileName(int i)
-	{
-		assert(0);
-		return NULL;
-	}
+//	virtual int NumFiles() const
+//	{
+//		assert(0);
+//		return 0;
+//	}
+//
+//	virtual const char* FileName(int i)
+//	{
+//		assert(0);
+//		return NULL;
+//	}
 
 protected:
 	enum { HASH_SIZE = 16384 };
@@ -378,22 +387,17 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 
 		// Register bundled assets
 		int32 pos = 0;
+		FileSystem->Reserve(Bundle.Assets.Num());
 		for (int assetIndex = 0; assetIndex < Bundle.Assets.Num(); assetIndex++)
 		{
 			const FGears4AssetEntry& Asset = Manifest.Assets[Bundle.Assets[assetIndex].AssetIndex];
 			char buffer[MAX_PACKAGE_PATH];
 			appSprintf(ARRAY_ARG(buffer), "%s.uasset", *Asset.AssetName);
 
-			CRegisterFileInfo reg;
-			reg.Size = Bundle.Assets[assetIndex].AssetSize;
-			reg.Filename = buffer;
-
-			assert(reg.Size == Asset.AssetSize);
-			if (FileSystem->AddFile(buffer, bundleFile, pos, reg.Size))
-			{
-				appRegisterGameFileInfo(FileSystem, reg);
-			}
-			pos += reg.Size;
+			int size = Bundle.Assets[assetIndex].AssetSize;
+			assert(size == Asset.AssetSize);
+			FileSystem->AddFile(buffer, bundleFile, pos, size);
+			pos += size;
 		}
 	}
 

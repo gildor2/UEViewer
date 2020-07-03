@@ -8,7 +8,6 @@ struct FObbEntry
 {
 	int64		Pos;
 	int32		Size;
-	const char*	Name;
 };
 
 
@@ -81,26 +80,30 @@ public:
 		int32 count;
 		*Reader << count;
 		FileInfos.AddZeroed(count);
+		Reserve(count);
 
 		for (int i = 0; i < count; i++)
 		{
 			FObbEntry& E = FileInfos[i];
 			// file name
-			char FileName[512];
-			int NameLen;
-			*Reader << NameLen;
-			assert(NameLen < ARRAY_COUNT(FileName));
-			Reader->Serialize(FileName, NameLen);
+			FStaticString<MAX_PACKAGE_PATH> FileName;
+			*Reader << FileName;
 			// process name
-			for (char* s = FileName; *s; s++)
+			for (char& c : FileName.GetDataArray())
 			{
-				if (*s == '\\') *s = '/';
+				if (c == '\\') c = '/';
 			}
-			const char* s = FileName;
-			if (s[0] == '.' && s[1] == '.' && s[2] == '/') s += 3;	// skip "../"
-			E.Name = appStrdupPool(s);
+			const char* name = *FileName;
+			if (name[0] == '.' && name[1] == '.' && name[2] == '/') name += 3;	// skip "../"
 			// other fields
 			*Reader << E.Pos << E.Size;
+
+			// Register file in global FS
+			CRegisterFileInfo reg;
+			reg.Filename = name;
+			reg.Size = E.Size;
+			reg.IndexInArchive = i;
+			RegisterFile(reg);
 		}
 
 		return true;
@@ -108,7 +111,7 @@ public:
 		unguard;
 	}
 
-	virtual int GetFileSize(const char* name)
+/*	virtual int GetFileSize(const char* name)
 	{
 		const FObbEntry* info = FindFile(name);
 		return (info) ? info->Size : 0;
@@ -125,13 +128,14 @@ public:
 		FObbEntry* info = &FileInfos[i];
 		LastInfo = info;
 		return info->Name;
-	}
+	} */
 
-	virtual FArchive* CreateReader(const char* name)
+	virtual FArchive* CreateReader(int index)
 	{
-		const FObbEntry* info = FindFile(name);
-		if (!info) return NULL;
-		return new FObbFile(info, Reader);
+		guard(FObbVFS::CreateReader);
+		const FObbEntry& info = FileInfos[index];
+		return new FObbFile(&info, Reader);
+		unguard;
 	}
 
 protected:
@@ -140,7 +144,7 @@ protected:
 	TArray<FObbEntry>	FileInfos;
 	FObbEntry*			LastInfo;			// cached last accessed file info, simple optimization
 
-	const FObbEntry* FindFile(const char* name)
+/*	const FObbEntry* FindFile(const char* name)
 	{
 		if (LastInfo && !stricmp(LastInfo->Name, name))
 			return LastInfo;
@@ -155,7 +159,7 @@ protected:
 			}
 		}
 		return NULL;
-	}
+	} */
 };
 
 
