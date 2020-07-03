@@ -2,7 +2,7 @@
 #define __GAME_FILE_SYSTEM_H__
 
 // Register a file located in OS file system. File could be an archive (VFS container).
-void appRegisterGameFile(const char *FullName);
+void appRegisterGameFile(const char* FullName);
 
 struct CRegisterFileInfo
 {

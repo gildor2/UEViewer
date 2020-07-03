@@ -421,6 +421,7 @@ void UIPackageDialog::InitUI()
 		char* s = strrchr(&RelativeName[0], '/');
 		if (s)
 		{
+			//?? use GetPath()
 			*s = 0;
 			// simple optimization - avoid calling PackageTree->AddItem() too frequently (assume package list is sorted)
 			if (PrevPath == RelativeName) continue;
@@ -586,8 +587,8 @@ void UIPackageDialog::GetPackagesForSelectedFolder(PackageList& OutPackages)
 		// When root folder selected, "folder" is a empty string, we'll fill Packages with full list of packages
 		if (folderLen > 0)
 		{
-			FStaticString<MAX_PACKAGE_PATH> Path;
-			package->GetPath(Path);
+			//todo: use folder index!
+			const FString& Path = package->GetPath();
 			if (!Path.StartsWith(folder) || (Path.Len() != folderLen && Path[folderLen] != '/'))
 			{
 				// Not in this folder

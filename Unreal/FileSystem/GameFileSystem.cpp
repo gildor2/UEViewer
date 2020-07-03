@@ -143,7 +143,22 @@ int GNumForeignFiles = 0;
 //#define DEBUG_HASH				1
 //#define DEBUG_HASH_NAME			"21680"
 
-static CGameFileInfo* GGameFileHash[GAME_FILE_HASH_SIZE];
+static CGameFileInfo* GameFileHash[GAME_FILE_HASH_SIZE];
+
+#define GAME_FOLDER_HASH_SIZE	1024
+
+struct CGameFolderInfo
+{
+	FString Name;
+	uint16 HashNext;		// index in GameFileHash array
+
+	CGameFolderInfo()
+	: HashNext(0)
+	{}
+};
+
+static TArray<CGameFolderInfo> GameFolders;
+static uint16 GameFoldersHash[GAME_FOLDER_HASH_SIZE];
 
 
 #if UNREAL3
@@ -158,29 +173,36 @@ void FVirtualFileSystem::Reserve(int count)
 	GameFiles.Reserve(GameFiles.Num() + count);
 }
 
-
-// Compute hash for filename, with skipping file extension
-static int GetHashForFileName(const char* FileName, bool cutExtension)
+static uint32 GetHashInternal(const char* s, int len)
 {
-	const char* s1 = strrchr(FileName, '/'); // assume path delimiters are normalized
-	s1 = (s1 != NULL) ? s1 + 1 : FileName;   // skip path
-	const char* s2 = cutExtension ? strrchr(s1, '.') : NULL;
-	int len = (s2 != NULL) ? s2 - s1 : strlen(s1);
-
-	unsigned int hash = 0;
+	uint32 hash = 0;
 	for (int i = 0; i < len; i++)
 	{
-		char c = s1[i];
+		char c = *s++;
 		if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; // lowercase a character
 //		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
 		hash = ROL16(hash, 1) + c;			// note: if we'll use more than 16-bit GAME_FILE_HASH_SIZE value, should use ROL32 here
 	}
-	hash &= (GAME_FILE_HASH_SIZE - 1);
+	return hash;
+}
+
+// Compute hash for filename, with skipping file extension. Name should not have path.
+static int GetHashForFileName(const char* FileName, bool cutExtension)
+{
+	const char* s = cutExtension ? strrchr(FileName, '.') : NULL;
+	int len = (s != NULL) ? s - FileName : strlen(FileName);
+
+	uint32 hash = GetHashInternal(FileName, len) & (GAME_FILE_HASH_SIZE - 1);
 #ifdef DEBUG_HASH_NAME
 	if (strstr(FileName, DEBUG_HASH_NAME))
-		printf("-> hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash);
+		appPrintf("-> hash[%s] (%s,%d) -> %X\n", FileName, s1, len, hash);
 #endif
 	return hash;
+}
+
+inline int GetHashForFolderName(const char* FolderName)
+{
+	return GetHashInternal(FolderName, strlen(FolderName)) & (GAME_FOLDER_HASH_SIZE - 1);
 }
 
 #if PRINT_HASH_DISTRIBUTION
@@ -193,7 +215,7 @@ static void PrintHashDistribution()
 	for (int hash = 0; hash < GAME_FILE_HASH_SIZE; hash++)
 	{
 		int count = 0;
-		for (CGameFileInfo* info = GGameFileHash[hash]; info; info = info->HashNext)
+		for (CGameFileInfo* info = GameFileHash[hash]; info; info = info->HashNext)
 			count++;
 		assert(count < ARRAY_COUNT(hashCounts));
 		hashCounts[count]++;
@@ -216,10 +238,53 @@ static void PrintHashDistribution()
 
 #endif // PRINT_HASH_DISTRIBUTION
 
+int appRegisterGameFolder(const char* FolderName)
+{
+	guard(appRegisterGameFolder);
+
+	// Find existing folder entry
+	int hash = GetHashForFolderName(FolderName);
+	for (uint16 index = GameFoldersHash[hash]; index; /* empty */)
+	{
+		CGameFolderInfo& info = GameFolders[index];
+		if (!stricmp(*info.Name, FolderName))
+		{
+			// Found
+			return index;
+		}
+		index = info.HashNext;
+	}
+
+	// Add new entry
+
+	// Initialize GameFolders if needed. Entry with zero index is invalid, so explicitly skip it.
+	if (GameFolders.Num() == 0)
+	{
+		GameFolders.AddDefaulted();
+	}
+
+	if (GameFolders.Num() + 1 >= GameFolders.Max())
+	{
+		// Resize GameFolders array with large steps
+		GameFolders.Reserve(GameFolders.Num() + 256);
+	}
+
+	int newIndex = GameFolders.AddDefaulted();
+	assert(newIndex < 65536); // restriction for uint16
+	CGameFolderInfo& info = GameFolders[newIndex];
+	info.Name = FolderName; // there's no much need to pass folder name through appStrdupPool, so keep it as FString
+	info.HashNext = GameFoldersHash[hash];
+	GameFoldersHash[hash] = newIndex;
+
+	return newIndex;
+
+	unguard;
+}
+
 
 //!! add define USE_VFS = SUPPORT_ANDROID || UNREAL4, perhaps || SUPPORT_IOS
 
-void appRegisterGameFile(const char *FullName)
+void appRegisterGameFile(const char* FullName)
 {
 	guard(appRegisterGameFile);
 
@@ -342,23 +407,34 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 
 	// A known file type here.
 
+	// Split file name and register/find folder
+	FStaticString<MAX_PACKAGE_PATH> Folder;
+	//todo: if RegisterInfo.Path not empty - use it ...
+	const char* ShortFilename = RegisterInfo.Filename;
+	if (const char* s = strrchr(RegisterInfo.Filename, '/'))
+	{
+		// Have a path part inside a filename
+		Folder = RegisterInfo.Filename;
+		// Cut path at '/' location
+		Folder[s - RegisterInfo.Filename] = 0;
+		ShortFilename = s + 1;
+	}
+	int FolderIndex = appRegisterGameFolder(*Folder);
+
 	// Create CGameFileInfo entry
 	CGameFileInfo *info = new CGameFileInfo;
 	info->IsPackage = IsPackage;
 	info->FileSystem = parentVfs;
 	info->IndexInVfs = RegisterInfo.IndexInArchive;
-	info->RelativeName = appStrdupPool(RegisterInfo.Filename);
+	info->ShortFilename = appStrdupPool(ShortFilename);
+	info->FolderIndex = FolderIndex;
 	info->Size = RegisterInfo.Size;
 	info->SizeInKb = (info->Size + 512) / 1024;
 
 	if (info->Size < 16) info->IsPackage = false;
 
-	// find filename
-	const char* s = strrchr(info->RelativeName, '/');
-	if (s) s++; else s = info->RelativeName;
-	info->ShortFilename = s;
 	// find extension
-	s = strrchr(info->ShortFilename, '.');
+	const char* s = strrchr(info->ShortFilename, '.');
 	if (s) s++;
 	info->Extension = s;
 
@@ -390,16 +466,16 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 	// insert CGameFileInfo into hash table
 	int hash = GetHashForFileName(info->ShortFilename, true);
 	// find if we have previously registered file with the same name
-	FastNameComparer RelativeNameCmp(info->RelativeName);
-	for (CGameFileInfo* prevInfo = GGameFileHash[hash]; prevInfo; prevInfo = prevInfo->HashNext)
+	FastNameComparer FilenameCmp(info->ShortFilename);
+	for (CGameFileInfo* prevInfo = GameFileHash[hash]; prevInfo; prevInfo = prevInfo->HashNext)
 	{
-		if (RelativeNameCmp(prevInfo->RelativeName))
+		if ((prevInfo->FolderIndex == FolderIndex) && FilenameCmp(prevInfo->ShortFilename))
 		{
 			// this is a duplicate of the file (patch), use new information
 			prevInfo->UpdateFrom(info);
 			delete info;
 #if DEBUG_HASH
-			printf("--> dup(%s) pkg=%d hash=%X\n", prevInfo->ShortFilename, prevInfo->IsPackage, hash);
+			appPrintf("--> dup(%s) pkg=%d hash=%X\n", prevInfo->ShortFilename, prevInfo->IsPackage, hash);
 #endif
 			return prevInfo;
 		}
@@ -413,11 +489,11 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 	GameFiles.Add(info);
 	if (IsPackage) GNumPackageFiles++;
 
-	info->HashNext = GGameFileHash[hash];
-	GGameFileHash[hash] = info;
+	info->HashNext = GameFileHash[hash];
+	GameFileHash[hash] = info;
 
 #if DEBUG_HASH
-	printf("--> add(%s) pkg=%d hash=%X\n", info->ShortFilename, info->IsPackage, hash);
+	appPrintf("--> add(%s) pkg=%d hash=%X\n", info->ShortFilename, info->IsPackage, hash);
 #endif
 
 	return info;
@@ -550,8 +626,8 @@ void appSetRootDirectory(const char *dir, bool recurse)
 				".uexp",
 				".uptnl",
 			};
-			info->GetRelativeNameNoExt(RelativeName);
-			char* extPlace = &RelativeName[0] + RelativeName.Len();
+			info->GetRelativeName(RelativeName);
+			char* extPlace = strrchr(&RelativeName[0], '.');
 			for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
 			{
 				strcpy(extPlace, additionalExtensions[ext]);
@@ -725,11 +801,21 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 		if (*s == '/') ShortFilename = s + 1;
 	}
 
+	// Get path of the file
+	FStaticString<MAX_PACKAGE_PATH> FindPath;
+	if (ShortFilename > buf)
+	{
+		(char&)(ShortFilename[-1]) = 0; // removing 'const' here ...
+		FindPath = buf;
+	}
+	// else - FindPath will be empty
+
 	// Get hash before stripping extension (could be required for files with double extension, like .hdr.rtc for games with Redux textures).
-	// If 'Ext' has been provided, we're going to append Ext to the filename later, so there's nothing to cut in this case.
-	int hash = GetHashForFileName(buf, /* cutExtension = */ Ext == NULL);
+	// If 'Ext' has been provided, ShortFilename has NO extension, and we're going to append Ext to the filename later, so there's nothing to
+	// cut in this case.
+	int hash = GetHashForFileName(ShortFilename, /* cutExtension = */ Ext == NULL);
 #if DEBUG_HASH
-	printf("--> find(%s) hash=%X\n", buf, hash);
+	appPrintf("--> find(%s) hash=%X\n", ShortFilename, hash);
 #endif
 
 	if (Ext)
@@ -740,7 +826,7 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 	else
 	{
 		// check for extension in filename
-		char *s = strrchr(buf, '.');
+		char *s = strrchr((char*)ShortFilename, '.');
 		if (s)
 		{
 			Ext = s + 1;	// remember extension
@@ -754,15 +840,15 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 
 	int nameLen = strlen(ShortFilename);
 #if defined(DEBUG_HASH_NAME) || DEBUG_HASH
-	printf("--> Loading %s (%s, len=%d, hash=%X)\n", buf, ShortFilename, nameLen, hash);
+	appPrintf("--> Loading %s (%s, len=%d, hash=%X)\n", buf, ShortFilename, nameLen, hash);
 #endif
 
 	CGameFileInfo* bestMatch = NULL;
 	int bestMatchWeight = -1;
-	for (CGameFileInfo* info = GGameFileHash[hash]; info; info = info->HashNext)
+	for (CGameFileInfo* info = GameFileHash[hash]; info; info = info->HashNext)
 	{
 #if defined(DEBUG_HASH_NAME) || DEBUG_HASH
-		printf("----> verify %s\n", info->RelativeName);
+		appPrintf("----> verify %s\n", *info->GetRelativeName());
 #endif
 		// check if info's filename length matches required one
 		if (info->Extension - 1 - info->ShortFilename != nameLen)
@@ -782,7 +868,7 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 			if (!info->IsPackage) continue;
 		}
 
-		// verify a filename
+		// verify a filename (without extension)
 		if (strnicmp(info->ShortFilename, ShortFilename, nameLen) != 0)
 			continue;
 //		if (info->ShortFilename[nameLen] != '.') -- verified before extension comparison
@@ -790,19 +876,41 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 
 		// Short filename matched, now compare path before the filename.
 		// Assume 'ShortFilename' is part of 'buf' and 'info->ShortFilename' is part of 'info->RelativeName'.
+		const FString& InfoPath = info->GetPath();
+		if (FindPath.IsEmpty() || InfoPath.IsEmpty())
+		{
+			// There's no path in input filename or in found file
+			return info;
+		}
+
+		if (FindPath == InfoPath)
+		{
+			// Paths are exactly matching
+			return info;
+		}
+
+		if (FindPath.Len() > InfoPath.Len())
+		{
+			// Can't match these paths - not enough space in InfoPath
+			continue;
+		}
+
 		int matchWeight = 0;
-		const char *s = ShortFilename - 1;
-		const char *d = info->ShortFilename - 1;
-		while (s >= buf && d >= info->RelativeName && *s == *d)
+		const char *s = *InfoPath + InfoPath.Len() - 1;
+		const char *d = *FindPath + FindPath.Len() - 1;
+		int maxCheck = min(InfoPath.Len(), FindPath.Len());
+		// Check if FindPath matches end of InfoPath, case-insensitively
+		while (tolower(*s) == tolower(*d) && maxCheck > 0)
 		{
 			matchWeight++;
+			maxCheck--;
 			// don't include pointer decrements into the loop condition, so both pointers will always be decremented
 			s--;
 			d--;
 		}
-		if ((s < buf) && (d < info->RelativeName))
+		if (maxCheck == 0)
 		{
-			// Both 's' and 'd' pointes beyond buffers, i.e. we have found an exact match
+			// Fully matched
 			return info;
 		}
 //		printf("--> matched: %s (weight=%d)\n", info->RelativeName, matchWeight);
@@ -924,8 +1032,10 @@ FArchive* CGameFileInfo::CreateReader() const
 	if (!FileSystem)
 	{
 		// regular file
+		FStaticString<MAX_PACKAGE_PATH> RelativeName;
+		GetRelativeName(RelativeName);
 		char buf[MAX_PACKAGE_PATH];
-		appSprintf(ARRAY_ARG(buf), "%s/%s", GRootDirectory, RelativeName);
+		appSprintf(ARRAY_ARG(buf), "%s/%s", GRootDirectory, *RelativeName);
 		return new FFileReader(buf);
 	}
 	else
@@ -938,7 +1048,17 @@ FArchive* CGameFileInfo::CreateReader() const
 
 void CGameFileInfo::GetRelativeName(FString& OutName) const
 {
-	OutName = RelativeName;
+	const FString& Folder = GetPath();
+	if (Folder.IsEmpty())
+	{
+		OutName = ShortFilename;
+	}
+	else
+	{
+		char buf[MAX_PACKAGE_PATH];
+		appSprintf(ARRAY_ARG(buf), "%s/%s", *Folder, ShortFilename);
+		OutName = buf;
+	}
 }
 
 FString CGameFileInfo::GetRelativeName() const
@@ -948,28 +1068,28 @@ FString CGameFileInfo::GetRelativeName() const
 	return Result;
 }
 
-void CGameFileInfo::GetRelativeNameNoExt(FString& OutName) const
-{
-	// Ineffective function, but will be replaced later anyway
-	OutName = FString(Extension ? Extension - RelativeName - 1 : strlen(RelativeName), RelativeName);
-}
-
 void CGameFileInfo::GetCleanName(FString& OutName) const
 {
 	OutName = ShortFilename;
 }
 
-void CGameFileInfo::GetPath(FString& OutName) const
+/*static*/ const FString& CGameFileInfo::GetPathByIndex(int index)
 {
-	if (ShortFilename > RelativeName)
+	assert(index > 0 && index < GameFolders.Num());
+	return GameFolders.GetData()[index].Name; // using GetData to avoid another one index check
+}
+
+/*static*/ int CGameFileInfo::CompareNames(const CGameFileInfo& A, const CGameFileInfo& B)
+{
+	const FString& PathA = A.GetPath();
+	const FString& PathB = B.GetPath();
+	// Compare pointers to strings - if path is same, pointers are also same
+	if (&PathA == &PathB)
 	{
-		// Ineffective function, but will be replaced later anyway
-		OutName = FString(ShortFilename - RelativeName - 1, RelativeName);
+		return stricmp(A.ShortFilename, B.ShortFilename);
 	}
-	else
-	{
-		OutName = "";
-	}
+	//todo: compare indices if path will be sorted
+	return stricmp(*PathA, *PathB);
 }
 
 void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const char *Ext, void *Param)

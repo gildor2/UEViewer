@@ -188,8 +188,8 @@ void SavePackages(const TArray<const CGameFileInfo*>& Packages, IProgressCallbac
 				const char* Ext = mainFile->GetExtension();
 				if (stricmp(Ext, "uasset") == 0 || stricmp(Ext, "umap") == 0)
 				{
-					mainFile->GetRelativeNameNoExt(RelativeName);
-					char* extPlace = &RelativeName[0] + RelativeName.Len();
+					mainFile->GetRelativeName(RelativeName);
+					char* extPlace = strrchr(&RelativeName[0], '.');
 					// Find additional file by replacing .uasset extension
 					strcpy(extPlace, additionalExtensions[ext]);
 					file = appFindGameFile(*RelativeName);

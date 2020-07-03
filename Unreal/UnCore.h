@@ -98,9 +98,8 @@ struct CGameFileInfo
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 
 protected:
-	const char*	RelativeName;						// relative to RootDirectory
-	//todo: replace ShortFilename and Extension with indices inside full filename?
 	const char*	ShortFilename;						// without path, points to filename part of RelativeName
+	//todo: replace Extension with index inside full filename?
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 
 public:
@@ -112,6 +111,7 @@ public:
 	int32		SizeInKb;							// file size, in kilobytes
 	int32		ExtraSizeInKb;						// size of additional non-package files (ubulk, uexp etc)
 	int32		IndexInVfs;							// index in VFS directory; 16 bits are not enough
+	uint16		FolderIndex;						// index of folder containing the file (folder is relative to game directory)
 	bool		IsPackage;
 
 	// content information, valid when IsPackageScanned is true
@@ -133,17 +133,16 @@ public:
 	// Get full name of the file
 	void GetRelativeName(FString& OutName) const;
 	FString GetRelativeName() const;
-	// Get file path and name without extension
-	void GetRelativeNameNoExt(FString& OutName) const;
-	// Get file name with extension with no path
+	// Get file name with extension but without path
 	void GetCleanName(FString& OutName) const;
 	// Get path part of the name
-	void GetPath(FString& OutName) const;
-
-	static int CompareNames(const CGameFileInfo& A, const CGameFileInfo& B)
+	const FString& GetPath() const
 	{
-		return stricmp(A.RelativeName, B.RelativeName);
+		return GetPathByIndex(FolderIndex);
 	}
+
+	static const FString& GetPathByIndex(int index);
+	static int CompareNames(const CGameFileInfo& A, const CGameFileInfo& B);
 
 	// Update information about the file when it exists in multiple pak files (e.g. patched)
 	void UpdateFrom(const CGameFileInfo* other)
