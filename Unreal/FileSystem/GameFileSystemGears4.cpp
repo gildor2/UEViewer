@@ -121,10 +121,14 @@ struct FGears4Manifest
 
 struct FGears4BundledInfo
 {
+	// File name. Could be obtained from linked CGameFileInfo, but this makes FindFile more complicated.
 	const char* Name;
+	// Info about bundle containing the file
 	CGameFileInfo* Container;
+	// Position and size inside the bundle
 	int32 Position;
 	int32 Size;
+	// Hashing for FindFile()
 	FGears4BundledInfo*	HashNext;
 };
 
@@ -208,9 +212,9 @@ public:
 	{
 		guard(FGears4VFS::AddFile);
 
+		// Do not register file duplicates (important for Gears4)
 		if (FindFile(filename))
 		{
-			// do not register file duplicates
 			return false;
 		}
 
@@ -245,31 +249,12 @@ public:
 		unguard;
 	}
 
-//	virtual int GetFileSize(const char* name)
-//	{
-//		const FGears4BundledInfo* info = FindFile(name);
-//		if (!info) return 0;
-//		return info->Size;
-//	}
-
-	// Empty unneeded functions from FVirtualFileSystem interface
+	// Empty unneeded function from FVirtualFileSystem interface
 	virtual bool AttachReader(FArchive* reader, FString& error)
 	{
 		assert(0);
 		return false;
 	}
-
-//	virtual int NumFiles() const
-//	{
-//		assert(0);
-//		return 0;
-//	}
-//
-//	virtual const char* FileName(int i)
-//	{
-//		assert(0);
-//		return NULL;
-//	}
 
 protected:
 	enum { HASH_SIZE = 16384 };

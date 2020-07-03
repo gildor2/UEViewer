@@ -652,8 +652,6 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		CombinedPath += Filename;
 		// compact file name
 		CompactFilePath(CombinedPath);
-		// allocate file name in pool
-//		E.Name = appStrdupPool(*CombinedPath);
 		// serialize other fields
 		E.Serialize(*InfoReader);
 		if (E.bEncrypted)
@@ -682,14 +680,17 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 
 		unguardf("Index=%d/%d", i, count);
 	}
-//	if (count >= MIN_PAK_SIZE_FOR_HASHING)
-//	{
-//		// Hash everything
-//		for (FPakEntry& E : FileInfos)
-//		{
-//			AddFileToHash(&E);
-//		}
-//	}
+
+#if 0
+	if (count >= MIN_PAK_SIZE_FOR_HASHING)
+	{
+		// Hash everything
+		for (FPakEntry& E : FileInfos)
+		{
+			AddFileToHash(&E);
+		}
+	}
+#endif
 	// Cleanup
 	if (InfoBlock)
 	{
@@ -886,9 +887,6 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 				E.DecodeFrom(&EncodedPakEntries[File.Value]);
 			}
 
-			// Allocate file name in pool
-//			E.Name = appStrdupPool(*CombinedPath);
-
 			if (E.bEncrypted)
 			{
 //				appPrintf("Encrypted file: %s\n", *Filename);
@@ -916,21 +914,24 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	}
 	unguard;
 
-//	if (count >= MIN_PAK_SIZE_FOR_HASHING)
-//	{
-//		// Hash everything
-//		for (FPakEntry& E : FileInfos)
-//		{
-//			AddFileToHash(&E);
-//		}
-//	}
+#if 0
+	if (count >= MIN_PAK_SIZE_FOR_HASHING)
+	{
+		// Hash everything
+		for (FPakEntry& E : FileInfos)
+		{
+			AddFileToHash(&E);
+		}
+	}
+#endif
 
 	return true;
 
 	unguard;
 }
 
-/*const FPakEntry* FPakVFS::FindFile(const char* name)
+#if 0
+const FPakEntry* FPakVFS::FindFile(const char* name)
 {
 	if (LastInfo && !stricmp(LastInfo->Name, name))
 		return LastInfo;
@@ -963,6 +964,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		}
 	}
 	return NULL;
-}*/
+}
+#endif
 
 #endif // UNREAL4

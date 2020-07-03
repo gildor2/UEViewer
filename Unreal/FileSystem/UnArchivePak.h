@@ -171,39 +171,19 @@ public:
 	FPakVFS(const char* InFilename)
 	:	Filename(InFilename)
 	,	Reader(NULL)
-	,	LastInfo(NULL)
-	,	HashTable(NULL)
+//	,	HashTable(NULL)
 	,	NumEncryptedFiles(0)
 	{}
 
 	virtual ~FPakVFS()
 	{
 		delete Reader;
-		if (HashTable) delete[] HashTable;
+//		if (HashTable) delete[] HashTable;
 	}
 
 	void CompactFilePath(FString& Path);
 
 	virtual bool AttachReader(FArchive* reader, FString& error);
-
-//	virtual int GetFileSize(const char* name)
-//	{
-//		const FPakEntry* info = FindFile(name);
-//		return (info) ? (int)info->UncompressedSize : 0;
-//	}
-
-//	// iterating over all files
-//	virtual int NumFiles() const
-//	{
-//		return FileInfos.Num();
-//	}
-
-//	virtual const char* FileName(int i)
-//	{
-//		FPakEntry* info = &FileInfos[i];
-//		LastInfo = info;
-//		return info->Name;
-//	}
 
 	virtual FArchive* CreateReader(int index)
 	{
@@ -214,15 +194,9 @@ public:
 	}
 
 protected:
-	enum { HASH_SIZE = 1024 };
-	enum { HASH_MASK = HASH_SIZE - 1 };
-	enum { MIN_PAK_SIZE_FOR_HASHING = 256 };
-
 	FString				Filename;
 	FArchive*			Reader;
 	TArray<FPakEntry>	FileInfos;
-	FPakEntry*			LastInfo;			// cached last accessed file info, simple optimization
-	FPakEntry**			HashTable;
 	FStaticString<MAX_PACKAGE_PATH> MountPoint;
 	int					NumEncryptedFiles;
 
@@ -233,7 +207,14 @@ protected:
 	// UE4.25 and newer
 	bool LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& error);
 
-/*	static uint16 GetHashForFileName(const char* FileName)
+#if 0
+	enum { HASH_SIZE = 1024 };
+	enum { HASH_MASK = HASH_SIZE - 1 };
+	enum { MIN_PAK_SIZE_FOR_HASHING = 256 };
+
+	FPakEntry**			HashTable;
+
+	static uint16 GetHashForFileName(const char* FileName)
 	{
 		uint16 hash = 0;
 		while (char c = *FileName++)
@@ -243,9 +224,9 @@ protected:
 		}
 		hash &= HASH_MASK;
 		return hash;
-	} */
+	}
 
-/*	void AddFileToHash(FPakEntry* File)
+	void AddFileToHash(FPakEntry* File)
 	{
 		if (!HashTable)
 		{
@@ -255,9 +236,8 @@ protected:
 		uint16 hash = GetHashForFileName(File->Name);
 		File->HashNext = HashTable[hash];
 		HashTable[hash] = File;
-	} */
-
-//	const FPakEntry* FindFile(const char* name);
+	}
+#endif
 };
 
 

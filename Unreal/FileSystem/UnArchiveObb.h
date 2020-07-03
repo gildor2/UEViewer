@@ -111,25 +111,6 @@ public:
 		unguard;
 	}
 
-/*	virtual int GetFileSize(const char* name)
-	{
-		const FObbEntry* info = FindFile(name);
-		return (info) ? info->Size : 0;
-	}
-
-	// iterating over all files
-	virtual int NumFiles() const
-	{
-		return FileInfos.Num();
-	}
-
-	virtual const char* FileName(int i)
-	{
-		FObbEntry* info = &FileInfos[i];
-		LastInfo = info;
-		return info->Name;
-	} */
-
 	virtual FArchive* CreateReader(int index)
 	{
 		guard(FObbVFS::CreateReader);
@@ -143,23 +124,6 @@ protected:
 	FArchive*			Reader;
 	TArray<FObbEntry>	FileInfos;
 	FObbEntry*			LastInfo;			// cached last accessed file info, simple optimization
-
-/*	const FObbEntry* FindFile(const char* name)
-	{
-		if (LastInfo && !stricmp(LastInfo->Name, name))
-			return LastInfo;
-
-		for (int i = 0; i < FileInfos.Num(); i++)
-		{
-			FObbEntry* info = &FileInfos[i];
-			if (!stricmp(info->Name, name))
-			{
-				LastInfo = info;
-				return info;
-			}
-		}
-		return NULL;
-	} */
 };
 
 
