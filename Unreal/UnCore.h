@@ -975,6 +975,9 @@ public:
 		unguard;
 	}
 
+	// FMemReader doesn't have name table, so FName is serialized as a string
+	virtual FArchive& operator<<(FName& N);
+
 	virtual int GetFileSize() const
 	{
 		return DataSize;

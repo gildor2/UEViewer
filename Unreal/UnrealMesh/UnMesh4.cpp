@@ -1198,16 +1198,11 @@ struct FRuntimeSkinWeightProfileData
 struct FSkinWeightProfilesData
 {
 	TMap<FName, FRuntimeSkinWeightProfileData> OverrideData;
-	TMap<FString, FRuntimeSkinWeightProfileData> OverrideData2; //todo: shoulc check after 4.26 release
 
 	friend FArchive& operator<<(FArchive& Ar, FSkinWeightProfilesData& Data)
 	{
-		//?? Note: Fortnite 13.00 has FString instead of FName, however 4.26 branch still has FName (but new FRuntimeSkinWeightProfileData)
 		guard(FSkinWeightProfilesData<<);
-		if (Ar.Game < GAME_UE4(26))
-			return Ar << Data.OverrideData;
-		else
-			return Ar << Data.OverrideData2;
+		return Ar << Data.OverrideData;
 		unguard;
 	}
 };
