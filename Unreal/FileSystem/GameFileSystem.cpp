@@ -401,6 +401,8 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 	if (!ext) return NULL; // unknown type
 	ext++;
 
+	//todo: for VFS, register ALL files. So, move FindExtension stuff a level above. However, we'll still need
+	// to know if file is a package or not. Note: this will also make pak loading a but faster.
 	bool IsPackage = false;
 	if (FindExtension(ext, ARRAY_ARG(PackageExtensions)))
 	{
@@ -645,31 +647,17 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	appPrintf("Found %d game files (%d skipped) in %d folders at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, GameFolders.Num() - 1, dir);
 
 #if UNREAL4
-	// Should process .uexp and .ubulk files, register their information for .uasset
-	FStaticString<MAX_PACKAGE_PATH> RelativeName;
-
-	for (int i = 0; i < GameFiles.Num(); i++)
+	// Count sizes of additional files. Should process .uexp and .ubulk files, register their information for .uasset.
+	for (CGameFileInfo* info : GameFiles)
 	{
-		CGameFileInfo *info = GameFiles[i];
-		const char* Ext = info->GetExtension();
-		if ((stricmp(Ext, "uasset") == 0 || stricmp(Ext, "umap") == 0))
+		if (info->IsPackage)
 		{
-			static const char* additionalExtensions[] =
+			// Find all files with the same path/name but different extension
+			TStaticArray<const CGameFileInfo*, 32> otherFiles;
+			appFindOtherFiles(info, otherFiles);
+			for (const CGameFileInfo* other : otherFiles)
 			{
-				".ubulk",
-				".uexp",
-				".uptnl",
-			};
-			info->GetRelativeName(RelativeName);
-			char* extPlace = strrchr(&RelativeName[0], '.');
-			for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
-			{
-				strcpy(extPlace, additionalExtensions[ext]);
-				const CGameFileInfo* file = appFindGameFile(*RelativeName);
-				if (file)
-				{
-					info->ExtraSizeInKb += file->SizeInKb;
-				}
+				info->ExtraSizeInKb += other->SizeInKb;
 			}
 		}
 	}
@@ -960,6 +948,39 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 	unguardf("name=%s ext=%s", Filename, Ext);
 }
 
+
+// Find all files with the same base file name (ignoring extension) and same directory as for provided file
+void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& otherFiles)
+{
+	guard(appFindOtherFiles);
+
+	// Get file name to compute hash
+	FStaticString<MAX_PACKAGE_PATH> Name;
+	file->GetCleanName(Name);
+	// Cut extension
+	char* s = strrchr(&Name[0], '.');
+	if (!s) return;
+	*s = 0;
+
+	int hash = GetHashForFileName(*Name, false);
+
+	// Restore point at extension part, for comparing "name."
+	*s = '.';
+	FastNameComparer FilenameCmp(*Name, s - *Name + 1);
+
+	int folderIndex = file->FolderIndex;
+	for (CGameFileInfo* otherFile = GameFileHash[hash]; otherFile; otherFile = otherFile->HashNext)
+	{
+		if (otherFile->FolderIndex != folderIndex || otherFile == file)
+			continue;
+		if (FilenameCmp(otherFile->ShortFilename))
+		{
+			otherFiles.Add(otherFile);
+		}
+	}
+
+	unguard;
+}
 
 struct FindPackageWildcardData
 {

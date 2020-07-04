@@ -165,47 +165,13 @@ void SavePackages(const TArray<const CGameFileInfo*>& Packages, IProgressCallbac
 		if (Progress && !Progress->Progress(*RelativeName, i, Packages.Num()))
 			break;
 
-		// Reference in UE4 code: FNetworkPlatformFile::IsAdditionalCookedFileExtension()
-		//!! TODO: perhaps save ALL files with the same path and name but different extension
-		static const char* additionalExtensions[] =
+		// Find all files with the same name and different extension (e.g. ".uexp", ".ubulk")
+		TStaticArray<const CGameFileInfo*, 32> allFiles;
+		allFiles.Add(mainFile);
+		appFindOtherFiles(mainFile, allFiles);
+
+		for (const CGameFileInfo* file : allFiles)
 		{
-			"",				// empty string for original extension
-#if UNREAL4
-			".ubulk",
-			".uexp",
-			".uptnl",
-#endif // UNREAL4
-		};
-
-		for (int ext = 0; ext < ARRAY_COUNT(additionalExtensions); ext++)
-		{
-			const CGameFileInfo* file = mainFile;
-
-#if UNREAL4
-			// Check for additional UE4 files
-			if (ext > 0)
-			{
-				const char* Ext = mainFile->GetExtension();
-				if (stricmp(Ext, "uasset") == 0 || stricmp(Ext, "umap") == 0)
-				{
-					mainFile->GetRelativeName(RelativeName);
-					char* extPlace = strrchr(&RelativeName[0], '.');
-					// Find additional file by replacing .uasset extension
-					strcpy(extPlace, additionalExtensions[ext]);
-					file = appFindGameFile(*RelativeName);
-					if (!file)
-					{
-						continue;
-					}
-				}
-				else
-				{
-					// there's no needs to process this file anymore - main file was already exported, no other files will exist
-					break;
-				}
-			}
-#endif // UNREAL4
-
 			FArchive *Ar = file->CreateReader();
 			if (Ar)
 			{

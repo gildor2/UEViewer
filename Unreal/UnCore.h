@@ -92,8 +92,10 @@ class FVirtualFileSystem;
 
 struct CGameFileInfo
 {
+	//todo: better - convert these functions to static methods of CGameFileInfo
 	friend CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const struct CRegisterFileInfo& RegisterInfo);
 	friend const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext);
+	friend void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& otherFiles);
 
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 
@@ -182,6 +184,10 @@ FORCEINLINE void appEnumGameFolders(bool (*Callback)(const FString&, int))
 // Filename can contain extension, but should not contain path.
 // This function is quite fast because it uses hash tables.
 const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NULL);
+
+// Find all files with the same base file name (ignoring extension) and same directory as for
+// provided file. Files are filled into 'otherFiles' array, 'file' is not included.
+void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& otherFiles);
 
 // This function allows wildcard use in Filename. When wildcard is used, it iterates over all
 // found files and could be relatively slow.
@@ -2241,9 +2247,20 @@ protected:
 // multiple other strings.
 struct FastNameComparer
 {
+	// Compare full string
 	FastNameComparer(const char* text)
 	{
 		len = strlen(text) + 1;
+		assert(len < ARRAY_COUNT(buf));
+		memcpy(buf, text, len);
+		dwords = len / 4;
+		chars = len % 4;
+	}
+
+	// Compare specified number of characters
+	FastNameComparer(const char* text, int lenToCompare)
+	{
+		len = lenToCompare;
 		assert(len < ARRAY_COUNT(buf));
 		memcpy(buf, text, len);
 		dwords = len / 4;
