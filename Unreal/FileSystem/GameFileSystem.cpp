@@ -151,9 +151,11 @@ struct CGameFolderInfo
 {
 	FString Name;
 	uint16 HashNext;		// index in GameFileHash array
+	uint16 NumFiles;		// number of files located in this folder
 
 	CGameFolderInfo()
 	: HashNext(0)
+	, NumFiles(0)
 	{}
 };
 
@@ -238,11 +240,28 @@ static void PrintHashDistribution()
 
 #endif // PRINT_HASH_DISTRIBUTION
 
-int appRegisterGameFolder(const char* FolderName)
+int appGetGameFolderIndex(const char* FolderName)
 {
-	guard(appRegisterGameFolder);
+	int hash = GetHashForFolderName(FolderName);
+	for (uint16 index = GameFoldersHash[hash]; index; /* empty */)
+	{
+		CGameFolderInfo& info = GameFolders[index];
+		if (!stricmp(*info.Name, FolderName))
+		{
+			// Found
+			return index;
+		}
+		index = info.HashNext;
+	}
+	return -1;
+}
 
-	// Find existing folder entry
+static int RegisterGameFolder(const char* FolderName)
+{
+	guard(RegisterGameFolder);
+
+	// Find existing folder entry. Copy-pasted of appGetGameFolderIndex, but with passing 'hash'
+	// to the code below.
 	int hash = GetHashForFolderName(FolderName);
 	for (uint16 index = GameFoldersHash[hash]; index; /* empty */)
 	{
@@ -419,7 +438,7 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 		Folder[s - RegisterInfo.Filename] = 0;
 		ShortFilename = s + 1;
 	}
-	int FolderIndex = appRegisterGameFolder(*Folder);
+	int FolderIndex = RegisterGameFolder(*Folder);
 
 	// Create CGameFileInfo entry
 	CGameFileInfo *info = new CGameFileInfo;
@@ -488,6 +507,7 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 	}
 	GameFiles.Add(info);
 	if (IsPackage) GNumPackageFiles++;
+	GameFolders[FolderIndex].NumFiles++;
 
 	info->HashNext = GameFileHash[hash];
 	GameFileHash[hash] = info;
@@ -1055,9 +1075,10 @@ void CGameFileInfo::GetRelativeName(FString& OutName) const
 	}
 	else
 	{
-		char buf[MAX_PACKAGE_PATH];
-		appSprintf(ARRAY_ARG(buf), "%s/%s", *Folder, ShortFilename);
-		OutName = buf;
+		// Combine text inside FString instead of using appSptring and assignment
+		OutName = Folder;
+		OutName += "/";
+		OutName += ShortFilename;
 	}
 }
 
@@ -1092,11 +1113,10 @@ void CGameFileInfo::GetCleanName(FString& OutName) const
 	return stricmp(*PathA, *PathB);
 }
 
-void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const char *Ext, void *Param)
+void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char *Ext, void *Param)
 {
-	for (int i = 0; i < GameFiles.Num(); i++)
+	for (const CGameFileInfo *info : GameFiles)
 	{
-		const CGameFileInfo *info = GameFiles[i];
 		if (!Ext)
 		{
 			// enumerate packages
@@ -1108,5 +1128,13 @@ void appEnumGameFilesWorker(bool (*Callback)(const CGameFileInfo*, void*), const
 			if (stricmp(info->GetExtension(), Ext) != 0) continue;
 		}
 		if (!Callback(info, Param)) break;
+	}
+}
+
+void appEnumGameFoldersWorker(EnumGameFoldersCallback_t Callback, void *Param)
+{
+	for (const CGameFolderInfo& info : GameFolders)
+	{
+		if (!Callback(info.Name, info.NumFiles, Param)) break;
 	}
 }
