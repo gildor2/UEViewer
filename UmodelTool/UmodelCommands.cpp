@@ -33,7 +33,7 @@ bool ExportObjects(const TArray<UObject*> *Objects, IProgressCallback* progress)
 		if (notifyPackage != ExpObj->Package)
 		{
 			notifyPackage = ExpObj->Package;
-			appSetNotifyHeader(notifyPackage->Filename);
+			appSetNotifyHeader(*notifyPackage->GetFilename());
 		}
 
 		bool done = ExportObject(ExpObj);

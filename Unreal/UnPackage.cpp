@@ -790,7 +790,7 @@ bool FPackageFileSummary::Serialize(FArchive &Ar)
 		if (Tag != PACKAGE_FILE_TAG_REV)
 		{
 			UnPackage* file = Ar.CastTo<UnPackage>();
-			appNotify("Wrong package tag (%08X) in file %s. Probably the file is encrypted.", Tag, file ? file->Filename : "(unknown)");
+			appNotify("Wrong package tag (%08X) in file %s. Probably the file is encrypted.", Tag, file ? *file->GetFilename() : "(unknown)");
 			return false;
 		}
 		Ar.ReverseBytes = true;
@@ -1293,7 +1293,7 @@ void FObjectImport::Serialize(FArchive& Ar)
 	Package loading (creation) / unloading
 -----------------------------------------------------------------------------*/
 
-UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
+UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool silent)
 :	Loader(NULL)
 {
 	guard(UnPackage::UnPackage);
@@ -1303,7 +1303,19 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 #endif
 
 	IsLoading = true;
-	Filename = appStrdupPool(appSkipRootDir(filename));
+	FileInfo = fileInfo;
+
+	FArchive* baseLoader = NULL;
+	if (FileInfo)
+	{
+		baseLoader = FileInfo->CreateReader();
+	}
+	else
+	{
+		// The file was not registered, so duplicate the file name
+		FilenameNoInfo = appStrdupPool(appSkipRootDir(filename));
+	}
+
 	Loader = CreateLoader(filename, baseLoader);
 	if (!Loader)
 	{
@@ -1326,7 +1338,7 @@ UnPackage::UnPackage(const char *filename, FArchive *baseLoader, bool silent)
 	if (!silent)
 #endif
 	{
-		PKG_LOG("Loading package: %s Ver: %d/%d ", Filename, Loader->ArVer, Loader->ArLicenseeVer);
+		PKG_LOG("Loading package: %s Ver: %d/%d ", *GetFilename(), Loader->ArVer, Loader->ArLicenseeVer);
 			// don't use 'Summary.FileVersion, Summary.LicenseeVersion' because UE4 has overrides for unversioned packages
 #if UNREAL3
 		if (Game >= GAME_UE3)
@@ -1632,7 +1644,7 @@ void UnPackage::LoadNameTable()
 				if (!goodName)
 				{
 					// replace name
-					appPrintf("WARNING: %s: fixing name %d (%s)\n", Filename, i, *name);
+					appPrintf("WARNING: %s: fixing name %d (%s)\n", *GetFilename(), i, *name);
 					char buf[64];
 					appSprintf(ARRAY_ARG(buf), "__name_%d__", i);
 					name = buf;
@@ -1798,11 +1810,10 @@ UnPackage::~UnPackage()
 		PackageMap.RemoveAt(i);
 	}
 	// unlink package from CGameFileInfo
-	const CGameFileInfo * expInfo = appFindGameFile(Filename);
-	if (expInfo)
+	if (FileInfo)
 	{
-		assert(expInfo->Package == this || expInfo->Package == NULL);
-		const_cast<CGameFileInfo*>(expInfo)->Package = NULL;
+		assert(FileInfo->Package == this || FileInfo->Package == NULL);
+		const_cast<CGameFileInfo*>(FileInfo)->Package = NULL;
 	}
 
 	if (!IsValid())
@@ -1883,7 +1894,7 @@ void UnPackage::CloseReader()
 #else
 	Loader->Close();
 #endif
-	unguardf("pkg=%s", Filename);
+	unguardf("pkg=%s", *GetFilename());
 }
 
 void UnPackage::CloseAllReaders()
@@ -2254,7 +2265,7 @@ UObject* UnPackage::CreateExport(int index)
 	UObject::EndLoad();
 	return Obj;
 
-	unguardf("%s:%d", Filename, index);
+	unguardf("%s:%d", *GetFilename(), index);
 }
 
 
@@ -2341,7 +2352,7 @@ UObject* UnPackage::CreateImport(int index)
 	// create object
 	return Package->CreateExport(ObjIndex);
 
-	unguardf("%s:%d", Filename, index);
+	unguardf("%s:%d", *GetFilename(), index);
 }
 
 
@@ -2479,7 +2490,7 @@ TArray<char*>		MissingPackages;
 		if (info->Package)
 			return info->Package;
 		// Load the package.
-		UnPackage* package = new UnPackage(*info->GetRelativeName(), info->CreateReader(), silent);
+		UnPackage* package = new UnPackage(*info->GetRelativeName(), info, silent);
 		if (!package->IsValid())
 		{
 			delete package;
@@ -2505,7 +2516,7 @@ TArray<char*>		MissingPackages;
 		// twice when this function is called with a different filename qualifiers:
 		// "path/package.ext", "package.ext", "package"
 		for (i = 0; i < PackageMap.Num(); i++)
-			if (!stricmp(LocalName, PackageMap[i]->Filename))
+			if (!stricmp(LocalName, *PackageMap[i]->GetFilename()))
 				return PackageMap[i];
 
 		// Try to load package using file name.

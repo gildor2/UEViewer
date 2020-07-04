@@ -1054,7 +1054,7 @@ int main(int argc, const char **argv)
 			UnPackage* Package = Packages[packageIndex];
 			if (Packages.Num() > 1)
 			{
-				appPrintf("\n%s\n", Package->Filename);
+				appPrintf("\n%s\n", *Package->GetFilename());
 			}
 			// dump package exports table
 			for (int i = 0; i < Package->Summary.ExportCount; i++)
@@ -1107,7 +1107,7 @@ int main(int argc, const char **argv)
 
 					found++;
 					totalFound++;
-					appPrintf("Export \"%s\" was found in package \"%s\"\n", objName, Package2->Filename);
+					appPrintf("Export \"%s\" was found in package \"%s\"\n", objName, *Package2->GetFilename());
 
 					// create object from package
 					UObject *Obj = Package2->CreateExport(idx);
@@ -1142,7 +1142,7 @@ int main(int argc, const char **argv)
 	no_objects:
 		appPrintf("Selected package(s):\n");
 		for (int i = 0; i < Packages.Num(); i++)
-			appPrintf("  %s\n", Packages[i]->Filename);
+			appPrintf("  %s\n", *Packages[i]->GetFilename());
 		appPrintf("\n");
 		// display list of classes
 		DisplayPackageStats(Packages);

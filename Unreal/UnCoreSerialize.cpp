@@ -1433,7 +1433,7 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 		UnPackage* Package = Ar.CastTo<UnPackage>();
 		assert(Package);
 		//!! should make the following code as separate function
-		const CGameFileInfo* info = appFindGameFile(Package->Filename);
+		const CGameFileInfo* info = Package->FileInfo;
 		FArchive* loader = NULL;
 		if (info)
 		{
@@ -1442,7 +1442,7 @@ void FByteBulkData::SerializeData(FArchive &Ar)
 		}
 		else
 		{
-			loader = new FFileReader(Package->Filename);
+			loader = new FFileReader(*Package->GetFilename());
 		}
 		loader->Game = Ar.Game;
 
@@ -1531,7 +1531,7 @@ bool FByteBulkData::SerializeData(const UObject* MainObj) const
 
 	const UnPackage* Package = MainObj->Package;
 
-	strcpy(bulkFileName, Package->Filename);
+	strcpy(bulkFileName, *Package->GetFilename());
 	//!! check for presence of BULKDATA_PayloadAtEndOfFile flag
 	if (BulkDataFlags & (BULKDATA_OptionalPayload|BULKDATA_PayloadInSeperateFile))
 	{

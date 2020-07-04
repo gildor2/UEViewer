@@ -382,7 +382,7 @@ const char* GetExportPath(const UObject* Obj)
 		// Special path for UE4 games - its packages are usually have 1 asset per file, plus
 		// package names could be duplicated across directory tree, with use of full package
 		// paths to identify packages.
-		const char* PackageName = Obj->Package->Filename;
+		const char* PackageName = *Obj->Package->GetFilename();
 		// Package name could be:
 		// a) /(GameName|Engine)/Content/... - when loaded from pak file
 		// b) [[GameName/]Content/]... - when not packaged to pak file

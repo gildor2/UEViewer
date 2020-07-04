@@ -316,11 +316,11 @@ UIPackageDialog::EResult UIPackageDialog::Show()
 void UIPackageDialog::SelectPackage(UnPackage* package)
 {
 	SelectedPackages.Empty();
-	const CGameFileInfo* info = appFindGameFile(package->Filename);
+	const CGameFileInfo* info = package->FileInfo;
 	if (info)
 	{
 		SelectedPackages.Add(info);
-		SelectDirFromFilename(package->Filename);
+		SelectedDir = info->GetPath();
 	}
 }
 
@@ -591,7 +591,7 @@ void UIPackageDialog::UpdateSelectedPackages()
 		FlatPackageList->GetSelectedPackages(SelectedPackages);
 		// Update currently selected directory in tree
 		if (SelectedPackages.Num())
-			SelectDirFromFilename(*SelectedPackages[0]->GetRelativeName());
+			SelectedDir = SelectedPackages[0]->GetPath();
 	}
 
 	unguard;
@@ -620,23 +620,6 @@ void UIPackageDialog::GetPackagesForSelectedFolder(PackageList& OutPackages)
 		}
 
 		OutPackages.Add(package);
-	}
-}
-
-void UIPackageDialog::SelectDirFromFilename(const char* filename)
-{
-	// extract a directory name from 1st package name
-	char buffer[512];
-	appStrncpyz(buffer, filename, ARRAY_COUNT(buffer));
-	char* s = strrchr(buffer, '/');
-	if (s)
-	{
-		*s = 0;
-		SelectedDir = buffer;
-	}
-	else
-	{
-		SelectedDir = "";
 	}
 }
 

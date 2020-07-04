@@ -962,7 +962,7 @@ void CSkelMeshViewer::FindUE4Animations()
 				// is an exactly the same Skeleton object as we're using
 				const char* referencedFilename = package->GetObjectPackageName(imp.PackageIndex);
 				const CGameFileInfo* referencedFile = appFindGameFile(referencedFilename);
-				if (!stricmp(Skeleton->Package->Filename, *referencedFile->GetRelativeName()))
+				if (Skeleton->Package->FileInfo == referencedFile)
 				{
 					found = true;
 					break;
@@ -991,7 +991,7 @@ void CSkelMeshViewer::FindUE4Animations()
 	{
 		guard(Load);
 		UnPackage* package = packagesToLoad[i];
-		if (!progress.Progress(package->Filename, i, packagesToLoad.Num()))
+		if (!progress.Progress(*package->GetFilename(), i, packagesToLoad.Num()))
 			break;
 		LoadWholePackage(package);
 		unguardf("%d/%d", i, packagesToLoad.Num());

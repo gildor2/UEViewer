@@ -76,7 +76,7 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 	if (Package != NULL && Package->Game >= GAME_UE4_BASE)
 	{
 		// UE4 has full package path in its name, use it
-		appStrncpyz(buf, Package->Filename, bufSize);
+		appStrncpyz(buf, *Package->GetFilename(), bufSize);
 		char* s = strrchr(buf, '.');
 		if (!s)
 		{
@@ -165,7 +165,7 @@ void UObject::EndLoad()
 		UnPackage *Package = Obj->Package;
 		guard(LoadObject);
 		Package->SetupReader(Obj->PackageIndex);
-		appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, Package->Filename);
+		appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, *Package->GetFilename());
 		// setup NotifyInfo to describe object
 		appSetNotifyHeader("Loading object %s'%s.%s'", Obj->GetClassName(), Package->Name, Obj->Name);
 #if PROFILE_LOADING

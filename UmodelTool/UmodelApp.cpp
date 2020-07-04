@@ -335,7 +335,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 	}
 
 	if (!test)
-		appSetNotifyHeader("%s:  %s'%s'", Obj->Package->Filename, Obj->GetClassName(), Obj->Name);
+		appSetNotifyHeader("%s:  %s'%s'", *Obj->Package->GetFilename(), Obj->GetClassName(), Obj->Name);
 	// create viewer class
 #define CLASS_VIEWER(UClass, CViewer, extraCheck)	\
 	if (Obj->IsA(#UClass + 1))						\
