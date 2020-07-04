@@ -861,17 +861,13 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		FStaticString<MAX_PACKAGE_PATH> DirectoryPath;
 		DirectoryPath = MountPoint;
 		DirectoryPath += Directory.Key;
+		CompactFilePath(DirectoryPath);
+		if (DirectoryPath[DirectoryPath.Len()-1] == '/')
+			DirectoryPath.RemoveAt(DirectoryPath.Len()-1, 1);
 
 		for (const auto& File : Directory.Value)
 		{
 			FPakEntry& E = FileInfos[FileIndex];
-
-			// Build the file name. Directory ends with '/'.
-			FStaticString<MAX_PACKAGE_PATH> CombinedPath;
-			CombinedPath = DirectoryPath;
-			CombinedPath += File.Key;
-			// Compact file name
-			CompactFilePath(CombinedPath);
 
 			// File.Value is positive (offset in 'EncodedPakEntries') or negative (index in 'Files')
 			// References in UE4:
@@ -900,7 +896,8 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 
 			// Register the file
 			CRegisterFileInfo reg;
-			reg.Filename = *CombinedPath;
+			reg.Filename = *File.Key;
+			reg.Path = *DirectoryPath;
 			reg.Size = E.UncompressedSize;
 			reg.IndexInArchive = FileIndex;
 			RegisterFile(reg);

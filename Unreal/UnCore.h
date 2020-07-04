@@ -160,19 +160,23 @@ extern int GNumForeignFiles;
 // Find folder in registered folders list. Returns -1 if not found.
 int appGetGameFolderIndex(const char* FolderName);
 
+int appGetGameFolderCount();
+
 typedef bool (*EnumGameFoldersCallback_t)(const FString&, int, void*);
 void appEnumGameFoldersWorker(EnumGameFoldersCallback_t, void *Param = NULL);
 
+// Callback with number of files plus custom parameter
 template<typename T>
-void appEnumGameFolders(bool (*Callback)(const FString&, int, T&), T& Param)
+FORCEINLINE void appEnumGameFolders(bool (*Callback)(const FString&, int, T&), T& Param)
 {
 	appEnumGameFoldersWorker((EnumGameFoldersCallback_t)Callback, &Param);
 }
 
-//void appEnumGameFolders(bool (*Callback)(const FString&, int))
-//{
-//	appEnumGameFoldersWorker((EnumGameFoldersCallback_t)Callback, NULL);
-//}
+// Callback with number of files in folder
+FORCEINLINE void appEnumGameFolders(bool (*Callback)(const FString&, int))
+{
+	appEnumGameFoldersWorker((EnumGameFoldersCallback_t)Callback, NULL);
+}
 
 // Ext = NULL -> use any package extension
 // Filename can contain extension, but should not contain path.

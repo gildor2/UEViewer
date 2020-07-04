@@ -7,11 +7,13 @@ void appRegisterGameFile(const char* FullName);
 struct CRegisterFileInfo
 {
 	const char* Filename;
+	const char* Path;
 	int64 Size;
 	int IndexInArchive;
 
 	CRegisterFileInfo()
 	: Filename(NULL)
+	, Path(NULL)
 	, Size(0)
 	, IndexInArchive(-1)
 	{}

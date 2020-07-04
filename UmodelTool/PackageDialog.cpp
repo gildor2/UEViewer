@@ -715,6 +715,8 @@ struct PackageSortHelper
 static bool PackageSort_Reverse;
 static int  PackageSort_Column;
 
+// todo: for better performance, return lambda for sorting - select one of functions for sorting by selected column,
+// do not use 'switch' inside sorter function
 static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHelper* pB)
 {
 	const CGameFileInfo* A = pA->File;

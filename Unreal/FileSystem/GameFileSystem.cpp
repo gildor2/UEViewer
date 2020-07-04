@@ -256,6 +256,11 @@ int appGetGameFolderIndex(const char* FolderName)
 	return -1;
 }
 
+int appGetGameFolderCount()
+{
+	return GameFolders.Num();
+}
+
 static int RegisterGameFolder(const char* FolderName)
 {
 	guard(RegisterGameFolder);
@@ -426,19 +431,28 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 
 	// A known file type here.
 
-	// Split file name and register/find folder
-	FStaticString<MAX_PACKAGE_PATH> Folder;
 	//todo: if RegisterInfo.Path not empty - use it ...
 	const char* ShortFilename = RegisterInfo.Filename;
-	if (const char* s = strrchr(RegisterInfo.Filename, '/'))
+	int FolderIndex = 0;
+
+	if (!RegisterInfo.Path)
 	{
-		// Have a path part inside a filename
-		Folder = RegisterInfo.Filename;
-		// Cut path at '/' location
-		Folder[s - RegisterInfo.Filename] = 0;
-		ShortFilename = s + 1;
+		// Split file name and register/find folder
+		FStaticString<MAX_PACKAGE_PATH> Folder;
+		if (const char* s = strrchr(RegisterInfo.Filename, '/'))
+		{
+			// Have a path part inside a filename
+			Folder = RegisterInfo.Filename;
+			// Cut path at '/' location
+			Folder[s - RegisterInfo.Filename] = 0;
+			ShortFilename = s + 1;
+		}
+		FolderIndex = RegisterGameFolder(*Folder);
 	}
-	int FolderIndex = RegisterGameFolder(*Folder);
+	else
+	{
+		FolderIndex = RegisterGameFolder(RegisterInfo.Path);
+	}
 
 	// Create CGameFileInfo entry
 	CGameFileInfo *info = new CGameFileInfo;
@@ -628,7 +642,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	}
 #endif // GEARS4
 
-	appPrintf("Found %d game files (%d skipped) at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, dir);
+	appPrintf("Found %d game files (%d skipped) in %d folders at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, GameFolders.Num() - 1, dir);
 
 #if UNREAL4
 	// Should process .uexp and .ubulk files, register their information for .uasset
