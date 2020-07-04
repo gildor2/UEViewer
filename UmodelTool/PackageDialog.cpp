@@ -44,6 +44,10 @@ public:
 			}
 		}
 	}
+	inline bool IsEmpty() const
+	{
+		return Values.Num() == 0;
+	}
 	bool Filter(const char* str) const
 	{
 		for (const FString& Value : Values)
@@ -97,29 +101,39 @@ public:
 	#endif
 	}
 
+	// Fill package list for selected folder
 	void FillPackageList(UIPackageDialog::PackageList& InPackages, const char* directory, const char* packageFilter)
 	{
 		LockUpdate();
 
 		RemoveAllItems();
-		Packages.Empty();
+		Packages.Empty(256);
+
+		int folderIndex = appGetGameFolderIndex(directory);
+		if (folderIndex <= 0)
+		{
+			UnlockUpdate();
+			return;		// there's no files in this folder
+		}
 
 		CFilter filter(packageFilter);
-
 		for (const CGameFileInfo* package : InPackages)
 		{
-			FStaticString<MAX_PACKAGE_PATH> RelativeName;
-			package->GetRelativeName(RelativeName);
-			char* s = strrchr(&RelativeName[0], '/');
-			if (s) *s++ = 0;
-			if ((!s && !directory[0]) ||					// root directory
-				(s && !strcmp(*RelativeName, directory)))	// another directory
+			if (package->FolderIndex == folderIndex)
 			{
-				const char* packageName = s ? s : *RelativeName;
-				if (filter.Filter(packageName))
+				// This package is in selected directory
+				if (filter.IsEmpty())
 				{
-					// this package is in selected directory
 					AddPackage(package);
+				}
+				else
+				{
+					FStaticString<MAX_PACKAGE_PATH> PackageName;
+					package->GetCleanName(PackageName);
+					if (filter.Filter(*PackageName))
+					{
+						AddPackage(package);
+					}
 				}
 			}
 		}
@@ -127,6 +141,7 @@ public:
 		UnlockUpdate(); // this will call Repaint()
 	}
 
+	// Fill package list for all folders ("flat" mode)
 	void FillFlatPackageList(UIPackageDialog::PackageList& InPackages, const char* packageFilter)
 	{
 		LockUpdate(); // HUGE performance gain. Warning: don't use "return" here without UnlockUpdate()!
@@ -141,10 +156,17 @@ public:
 #endif
 		for (const CGameFileInfo* package : InPackages)
 		{
-			FStaticString<MAX_PACKAGE_PATH> RelativeName;
-			package->GetRelativeName(RelativeName);
-			if (filter.Filter(*RelativeName))
+			if (filter.IsEmpty())
+			{
 				AddPackage(package);
+			}
+			else
+			{
+				FStaticString<MAX_PACKAGE_PATH> RelativeName;
+				package->GetRelativeName(RelativeName);
+				if (filter.Filter(*RelativeName))
+					AddPackage(package);
+			}
 		}
 
 		UnlockUpdate();
@@ -405,54 +427,55 @@ void UIPackageDialog::InitUI()
 			}, Packages);
 	}
 
-	// add paths of all found packages to the directory tree
+	// Add paths of all found packages to the directory tree
+
 	if (SelectedPackages.Num()) DirectorySelected = true;
-	FStaticString<MAX_PACKAGE_PATH> PrevPath;
-	// Make a copy of package list sorted by name, to ensure directory tree is always sorted.
-	// Using a copy to not affect package sorting used before.
-	PackageList SortedPackages;
-	CopyArray(SortedPackages, Packages);
-	SortPackages(SortedPackages, UIPackageList::COLUMN_Name, false);
-	bool isUE4 = false;
-	for (int i = 0; i < Packages.Num(); i++)
-	{
-		FStaticString<MAX_PACKAGE_PATH> RelativeName;
-		SortedPackages[i]->GetRelativeName(RelativeName);
-		char* s = strrchr(&RelativeName[0], '/');
-		if (s)
+
+	TArray<const FString*> Folders;
+	Folders.Empty(4096); //todo
+	appEnumGameFolders<TArray<const FString*> >(
+		[](const FString& Folder, int NumFiles, TArray<const FString*>& Folders) -> bool
 		{
-			//?? use GetPath()
-			*s = 0;
-			// simple optimization - avoid calling PackageTree->AddItem() too frequently (assume package list is sorted)
-			if (PrevPath == RelativeName) continue;
-			PrevPath = RelativeName;
-			// add a directory to TreeView
-			PackageTree->AddItem(*RelativeName);
-		}
+			Folders.Add(&Folder);
+			return true;
+		}, Folders);
+	Folders.Sort([](const FString* const& A, const FString* const& B) -> int
+		{
+			return stricmp(**A, **B);
+		});
+
+	bool isUE4 = false; //todo: not really used
+	for (const FString* Folder : Folders)
+	{
+		// Add a directory to TreeView
+		const FString& Path = *Folder;
+		PackageTree->AddItem(*Path);
+
 		if (!DirectorySelected)
 		{
 			// find the first directory with packages, but don't select /Engine subdirectories by default
-			bool isUE4EnginePath = (strnicmp(*RelativeName, "Engine/", 7) == 0) || (strnicmp(*RelativeName, "/Engine/", 8) == 0) || strstr(*RelativeName, "/Plugins/") != NULL;
-			if (!isUE4EnginePath && (stricmp(*RelativeName, *SelectedDir) < 0 || SelectedDir.IsEmpty()))
+			bool isUE4EnginePath = (strnicmp(*Path, "Engine", 6) == 0) || (strnicmp(*Path, "/Engine", 7) == 0) || strstr(*Path, "/Plugins") != NULL;
+			if (!isUE4EnginePath && (stricmp(*Path, *SelectedDir) < 0 || SelectedDir.IsEmpty()))
 			{
 				// set selection to the first directory
-				SelectedDir = s ? RelativeName : "";
+				SelectedDir = Path;
 			}
 		}
-		if (RelativeName[0] == '/' && !strncmp(*RelativeName, "/Game/", 6))
+		if (!isUE4 && !Path.IsEmpty() && !strnicmp(*Path, "/Game", 5))
 			isUE4 = true;
 	}
+
 	if (!SelectedDir.IsEmpty())
 	{
 		PackageTree->Expand(*SelectedDir);	//!! note: will not work at the moment because "Expand" works only after creation of UITreeView
 	}
 
-	if (isUE4)
+/*	if (isUE4)
 	{
 		// UE4 may have multiple root nodes for better layout
 //		PackageTree->HasRootNode(false);
 //??		PackageTree->Expand("/Game"); -- doesn't work unless TreeView is already created
-	}
+	} */
 
 	// "Tools" menu
 	UIMenu* toolsMenu = new UIMenu;
