@@ -193,7 +193,7 @@ int main(int argc, char **argv)
 		int uncompressedStart = Summary.CompressedChunks[0].UncompressedOffset;
 
 		// use game file system to access file to avoid any troubles with locating file
-		const CGameFileInfo* info = appFindGameFile(Package->Filename);
+		const CGameFileInfo* info = CGameFileInfo::Find(*Package->GetFilename());
 		FArchive* h;
 		if (info)
 		{
