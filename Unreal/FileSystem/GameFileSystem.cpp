@@ -23,6 +23,8 @@
 char GRootDirectory[MAX_PACKAGE_PATH];
 
 
+#define UE4_PACKAGE_EXTENSIONS	"uasset", "umap",
+
 static const char *PackageExtensions[] =
 {
 	"u", "ut2", "utx", "uax", "usx", "ukx",
@@ -30,7 +32,7 @@ static const char *PackageExtensions[] =
 	"upk", "ut3", "xxx", "umap", "udk", "map",
 #endif
 #if UNREAL4
-	"uasset",
+	UE4_PACKAGE_EXTENSIONS
 #endif
 #if RUNE
 	"ums",
@@ -124,6 +126,17 @@ static const char *SkipExtensions[] =
 	"uc", "3d",									// vertex mesh
 	"wem",										// WwiseAudio files
 };
+
+#if UNREAL4
+
+static bool GIsUE4PackageMode = false;
+
+static const char* UE4PackageExtensions[] =
+{
+	UE4_PACKAGE_EXTENSIONS
+};
+
+#endif // UNREAL4
 
 static bool FindExtension(const char *Ext, const char **ExtensionsList, int NumExtensions)
 {
@@ -361,6 +374,7 @@ static void RegisterGameFile(const char* FullName)
 #if UNREAL4
 	if (!stricmp(ext, "pak"))
 	{
+		GIsUE4PackageMode = true; // ignore non-UE4 extensions for speedup file registration
 		reader = new FFileReader(FullName);
 		if (!reader) return;
 		reader->Game = GAME_UE4_BASE;
@@ -426,14 +440,22 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 	if (!ext) return NULL; // unknown type
 	ext++;
 
-	//todo: for VFS, register ALL files. So, move FindExtension stuff a level above. However, we'll still need
 	// to know if file is a package or not. Note: this will also make pak loading a but faster.
 	bool IsPackage = false;
-	if (FindExtension(ext, ARRAY_ARG(PackageExtensions)))
+#if UNREAL4
+	if (GIsUE4PackageMode)
 	{
-		IsPackage = true;
+		// Faster case for UE4 files - it has small list of extensions
+		IsPackage = FindExtension(ext, ARRAY_ARG(UE4PackageExtensions));
 	}
 	else
+#endif
+	{
+		// Longer list for games older than UE4. Processed slower, however we never have such a long list of files as for UE4.
+		IsPackage = FindExtension(ext, ARRAY_ARG(PackageExtensions));
+	}
+
+	if (!parentVfs && !IsPackage)
 	{
 #if HAS_SUPPORT_FILES
 		// Check for suppressed extensions
@@ -441,8 +463,6 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 #endif
 		{
 			// Unknown extension. Check if we should count it or not.
-			// Ignore any unknown files inside VFS
-			if (parentVfs) return NULL;
 			// ignore unknown files inside "cooked" or "content" directories
 			if (appStristr(RegisterInfo.Filename, "cooked") || appStristr(RegisterInfo.Filename, "content")) return NULL;
 			// perhaps this file was exported by our tool - skip it

@@ -28,20 +28,13 @@ public:
 	// Open a file from VFS.
 	virtual FArchive* CreateReader(int index) = 0;
 
-//	// Functions for iteration over all stored files
-//	virtual int NumFiles() const = 0;
-//	virtual const char* FileName(int i) = 0;
-//	virtual int GetFileSize(const char* name) = 0;
-
 	// Reserve space for 'count' files
 	void Reserve(int count);
 
-	CGameFileInfo* RegisterFile(CRegisterFileInfo& info)
+	FORCEINLINE CGameFileInfo* RegisterFile(CRegisterFileInfo& info)
 	{
-		guard(FVirtualFileSystem::RegisterFile);
 		assert(info.IndexInArchive >= 0);
 		return CGameFileInfo::Register(this, info);
-		unguard;
 	}
 };
 
