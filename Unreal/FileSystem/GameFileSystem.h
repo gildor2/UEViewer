@@ -1,9 +1,6 @@
 #ifndef __GAME_FILE_SYSTEM_H__
 #define __GAME_FILE_SYSTEM_H__
 
-// Register a file located in OS file system. File could be an archive (VFS container).
-void appRegisterGameFile(const char* FullName);
-
 struct CRegisterFileInfo
 {
 	const char* Filename;
@@ -18,9 +15,6 @@ struct CRegisterFileInfo
 	, IndexInArchive(-1)
 	{}
 };
-
-// Low-level function. Register a file inside VFS (parentVFS may be null). No VFS check is performed here.
-CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CRegisterFileInfo& RegisterInfo);
 
 class FVirtualFileSystem
 {
@@ -46,7 +40,7 @@ public:
 	{
 		guard(FVirtualFileSystem::RegisterFile);
 		assert(info.IndexInArchive >= 0);
-		return appRegisterGameFileInfo(this, info);
+		return CGameFileInfo::Register(this, info);
 		unguard;
 	}
 };

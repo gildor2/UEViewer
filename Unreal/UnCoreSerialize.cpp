@@ -1557,7 +1557,7 @@ bool FByteBulkData::SerializeData(const UObject* MainObj) const
 		strcpy(s, (BulkDataFlags & BULKDATA_OptionalPayload) ? ".uptnl" : ".ubulk");
 	}
 
-	const CGameFileInfo* bulkFile = appFindGameFile(bulkFileName);
+	const CGameFileInfo* bulkFile = CGameFileInfo::Find(bulkFileName);
 	if (!bulkFile)
 	{
 		appPrintf("FByteBulkData %s: file %s is missing\n", MainObj->Name, bulkFileName);

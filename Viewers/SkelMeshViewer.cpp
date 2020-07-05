@@ -961,7 +961,7 @@ void CSkelMeshViewer::FindUE4Animations()
 				// This uasset refers to the Skeleton object with the same name, check if this
 				// is an exactly the same Skeleton object as we're using
 				const char* referencedFilename = package->GetObjectPackageName(imp.PackageIndex);
-				const CGameFileInfo* referencedFile = appFindGameFile(referencedFilename);
+				const CGameFileInfo* referencedFile = CGameFileInfo::Find(referencedFilename);
 				if (Skeleton->Package->FileInfo == referencedFile)
 				{
 					found = true;

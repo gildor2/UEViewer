@@ -333,9 +333,9 @@ static int RegisterGameFolder(const char* FolderName)
 
 //!! add define USE_VFS = SUPPORT_ANDROID || UNREAL4, perhaps || SUPPORT_IOS
 
-void appRegisterGameFile(const char* FullName)
+static void RegisterGameFile(const char* FullName)
 {
-	guard(appRegisterGameFile);
+	guard(RegisterGameFile);
 
 //	printf("..file %s\n", FullName);
 
@@ -411,15 +411,15 @@ void appRegisterGameFile(const char* FullName)
 		assert(s[-1] == '/');
 		info.Filename = s;
 
-		appRegisterGameFileInfo(NULL, info);
+		CGameFileInfo::Register(NULL, info);
 	}
 
 	unguardf("%s", FullName);
 }
 
-CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CRegisterFileInfo& RegisterInfo)
+CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CRegisterFileInfo& RegisterInfo)
 {
-	guard(appRegisterGameFileInfo);
+	guard(CGameFileInfo::Register);
 
 	// Verify file extension
 	const char *ext = strrchr(RegisterInfo.Filename, '.');
@@ -631,7 +631,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 	for (int i = 0; i < Filenames.Num(); i++)
 	{
 		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, *Filenames[i]);
-		appRegisterGameFile(Path);
+		RegisterGameFile(Path);
 	}
 
 	return res;
@@ -657,7 +657,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 #if GEARS4
 	if (GForceGame == GAME_Gears4)
 	{
-		const CGameFileInfo* manifest = appFindGameFile("BundleManifest.bin");
+		const CGameFileInfo* manifest = CGameFileInfo::Find("BundleManifest.bin");
 		if (manifest)
 		{
 			LoadGears4Manifest(manifest);
@@ -679,7 +679,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 		{
 			// Find all files with the same path/name but different extension
 			TStaticArray<const CGameFileInfo*, 32> otherFiles;
-			appFindOtherFiles(info, otherFiles);
+			info->FindOtherFiles(otherFiles);
 			for (const CGameFileInfo* other : otherFiles)
 			{
 				info->ExtraSizeInKb += other->SizeInKb;
@@ -826,9 +826,9 @@ void appSetRootDirectory2(const char *filename)
 }
 
 
-const CGameFileInfo* appFindGameFile(const char *Filename)
+const CGameFileInfo* CGameFileInfo::Find(const char *Filename)
 {
-	guard(appFindGameFile);
+	guard(CGameFileInfo::Find);
 
 #if UNREAL3
 	bool findStartupPackage = (strcmp(Filename, GStartupPackage) == 0);
@@ -968,13 +968,13 @@ const CGameFileInfo* appFindGameFile(const char *Filename)
 
 
 // Find all files with the same base file name (ignoring extension) and same directory as for provided file
-void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& otherFiles)
+void CGameFileInfo::FindOtherFiles(TArray<const CGameFileInfo*>& files) const
 {
-	guard(appFindOtherFiles);
+	guard(CGameFileInfo::FindOtherFiles);
 
 	// Get file name to compute hash
 	FStaticString<MAX_PACKAGE_PATH> Name;
-	file->GetCleanName(Name);
+	GetCleanName(Name);
 	// Cut extension
 	char* s = strrchr(&Name[0], '.');
 	if (!s) return;
@@ -986,14 +986,13 @@ void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& 
 	*s = '.';
 	FastNameComparer FilenameCmp(*Name, s - *Name + 1);
 
-	int folderIndex = file->FolderIndex;
 	for (CGameFileInfo* otherFile = GameFileHash[hash]; otherFile; otherFile = otherFile->HashNext)
 	{
-		if (otherFile->FolderIndex != folderIndex || otherFile == file)
+		if (otherFile->FolderIndex != FolderIndex || otherFile == this)
 			continue;
 		if (FilenameCmp(otherFile->ShortFilename))
 		{
-			otherFiles.Add(otherFile);
+			files.Add(otherFile);
 		}
 	}
 
@@ -1030,14 +1029,13 @@ static bool FindPackageWildcardCallback(const CGameFileInfo *file, FindPackageWi
 }
 
 
-//?? TODO: may be pass "Ext" here
 void appFindGameFiles(const char *Filename, TArray<const CGameFileInfo*>& Files)
 {
 	guard(appFindGameFiles);
 
 	if (!appContainsWildcard(Filename))
 	{
-		const CGameFileInfo* File = appFindGameFile(Filename);
+		const CGameFileInfo* File = CGameFileInfo::Find(Filename);
 		if (File)
 			Files.Add(File);
 		return;

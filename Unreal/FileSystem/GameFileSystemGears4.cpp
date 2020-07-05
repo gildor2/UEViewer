@@ -124,7 +124,7 @@ struct FGears4BundledInfo
 	// File name. Could be obtained from linked CGameFileInfo, but this makes FindFile more complicated.
 	const char* Name;
 	// Info about bundle containing the file
-	CGameFileInfo* Container;
+	const CGameFileInfo* Container;
 	// Position and size inside the bundle
 	int32 Position;
 	int32 Size;
@@ -208,7 +208,7 @@ public:
 		FileInfos.Empty(Count);
 	}
 
-	bool AddFile(const char* filename, CGameFileInfo* bundleFile, int pos, int size)
+	bool AddFile(const char* filename, const CGameFileInfo* bundleFile, int pos, int size)
 	{
 		guard(FGears4VFS::AddFile);
 
@@ -355,7 +355,7 @@ void LoadGears4Manifest(const CGameFileInfo* info)
 		// Find bundle
 		char bundleFilename[MAX_PACKAGE_PATH];
 		appSprintf(ARRAY_ARG(bundleFilename), "/Game/Bundles/%d.bundle", bundleIndex);
-		CGameFileInfo* bundleFile = const_cast<CGameFileInfo*>(appFindGameFile(bundleFilename));
+		const CGameFileInfo* bundleFile = CGameFileInfo::Find(bundleFilename);
 
 		// Verify if we can use this bundle
 		if (!bundleFile)

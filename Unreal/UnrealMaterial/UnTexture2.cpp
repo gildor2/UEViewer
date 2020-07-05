@@ -417,7 +417,7 @@ static byte *FindBioTexture(const UTexture *Tex)
 						Tex->HasBeenStripped, Tex->StrippedNumMips);
 #endif
 					// found
-					const CGameFileInfo *bulkFile = appFindGameFile(*File.Filename);
+					const CGameFileInfo *bulkFile = CGameFileInfo::Find(*File.Filename);
 					if (!bulkFile)
 					{
 						// no bulk file

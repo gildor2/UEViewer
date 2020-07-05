@@ -471,17 +471,17 @@ static void ReduxReadRtcData()
 	if (ready) return;
 	ready = true;
 
-	const CGameFileInfo *hdrFile = appFindGameFile("texture.cache.hdr.rtc");
+	const CGameFileInfo *hdrFile = CGameFileInfo::Find("texture.cache.hdr.rtc");
 	if (!hdrFile)
 	{
 		appPrintf("WARNING: unable to find %s\n", "texture.cache.hdr.rtc");
 		return;
 	}
 	bool NewReduxSystem = false; // old one for Tribes4, new one - Blacklight: Retribution
-	const CGameFileInfo *dataFile = appFindGameFile("texture.cache.data.rtc");
+	const CGameFileInfo *dataFile = CGameFileInfo::Find("texture.cache.data.rtc");
 	if (!dataFile)
 	{
-		dataFile = appFindGameFile("texture.cache.0.data.rtc");
+		dataFile = CGameFileInfo::Find("texture.cache.0.data.rtc");
 		if (!dataFile)
 		{
 			appPrintf("WARNING: unable to find %s\n", "texture.cache[.0].data.rtc");
@@ -598,7 +598,7 @@ static void ReadMarvelHeroesTFCManifest()
 	if (ready) return;
 	ready = true;
 
-	const CGameFileInfo *fileInfo = appFindGameFile("TextureFileCacheManifest.bin");
+	const CGameFileInfo *fileInfo = CGameFileInfo::Find("TextureFileCacheManifest.bin");
 	if (!fileInfo)
 	{
 		appPrintf("WARNING: unable to find %s\n", "TextureFileCacheManifest.bin");
@@ -674,7 +674,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			// Remove extension (could be added on previous iteration)
 			bulkFileName.RemoveAt(extPos, bulkFileName.Len() - extPos);
 			bulkFileName += bulkFileExt;
-			bulkFile = appFindGameFile(*bulkFileName);
+			bulkFile = CGameFileInfo::Find(*bulkFileName);
 			if (bulkFile) break;
 #if SUPPORT_ANDROID
 			// Android file example: TfcName_DXT.tfc
@@ -683,7 +683,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			bulkFileName += "_";
 			bulkFileName += tfcSuffix;
 			bulkFileName += bulkFileExt;
-			bulkFile = appFindGameFile(*bulkFileName);
+			bulkFile = CGameFileInfo::Find(*bulkFileName);
 			if (bulkFile) break;
 #endif // SUPPORT_ANDROID
 		}
@@ -723,7 +723,7 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			}
 		}
 		if (bulkFileName.IsEmpty()) return false;		// just in case
-		bulkFile = appFindGameFile(*bulkFileName);
+		bulkFile = CGameFileInfo::Find(*bulkFileName);
 		if (!bulkFile)
 		{
 			appPrintf("Decompressing %s: package %s is missing\n", Name, *bulkFileName);

@@ -1418,7 +1418,7 @@ no_depends: ;
 			s = strchr(buf, 0);
 		}
 		strcpy(s, ".uexp");
-		const CGameFileInfo *expInfo = appFindGameFile(buf);
+		const CGameFileInfo *expInfo = CGameFileInfo::Find(buf);
 		if (expInfo)
 		{
 			// Open .exp file
@@ -2478,9 +2478,9 @@ TArray<char*>		MissingPackages;
 
 	const char *LocalName = appSkipRootDir(Name);
 
-	// Call appFindGameFile() first. This function is fast because it uses
+	// Call CGameFileInfo::Find() first. This function is fast because it uses
 	// hashing internally.
-	const CGameFileInfo *info = appFindGameFile(LocalName);
+	const CGameFileInfo *info = CGameFileInfo::Find(LocalName);
 
 	int i;
 

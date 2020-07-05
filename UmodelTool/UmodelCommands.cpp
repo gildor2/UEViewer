@@ -168,7 +168,7 @@ void SavePackages(const TArray<const CGameFileInfo*>& Packages, IProgressCallbac
 		// Find all files with the same name and different extension (e.g. ".uexp", ".ubulk")
 		TStaticArray<const CGameFileInfo*, 32> allFiles;
 		allFiles.Add(mainFile);
-		appFindOtherFiles(mainFile, allFiles);
+		mainFile->FindOtherFiles(allFiles);
 
 		for (const CGameFileInfo* file : allFiles)
 		{

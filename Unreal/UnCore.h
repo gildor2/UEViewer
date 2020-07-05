@@ -92,14 +92,9 @@ class FVirtualFileSystem;
 
 struct CGameFileInfo
 {
-	//todo: better - convert these functions to static methods of CGameFileInfo
-	friend CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const struct CRegisterFileInfo& RegisterInfo);
-	friend const CGameFileInfo* appFindGameFile(const char *Filename);
-	friend void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& otherFiles);
-
+protected:
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 
-protected:
 	const char*	ShortFilename;						// without path, points to filename part of RelativeName
 	//todo: replace Extension with index inside full filename?
 	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
@@ -125,7 +120,24 @@ public:
 	uint16		NumAnimations;
 	uint16		NumTextures;
 
+	// Find/register stuff
+
+	// Low-level function. Register a file inside VFS (parentVFS may be null). No VFS check is performed here.
+	static CGameFileInfo* Register(FVirtualFileSystem* parentVfs, const struct CRegisterFileInfo& RegisterInfo);
+
+	// Ext = NULL -> use any package extension
+	// Filename can contain extension, but should not contain path.
+	// This function is quite fast because it uses hash tables.
+	static const CGameFileInfo* Find(const char *Filename);
+
+	// Find all files with the same base file name (ignoring extension) and same directory as for
+	// this file. Files are filled into 'otherFiles' array, 'this' file is not included.
+	void FindOtherFiles(TArray<const CGameFileInfo*>& files) const;
+
+	// Open the file
 	FArchive* CreateReader() const;
+
+	// Filename stuff
 
 	const char* GetExtension() const
 	{
@@ -179,15 +191,6 @@ FORCEINLINE void appEnumGameFolders(bool (*Callback)(const FString&, int))
 {
 	appEnumGameFoldersWorker((EnumGameFoldersCallback_t)Callback, NULL);
 }
-
-// Ext = NULL -> use any package extension
-// Filename can contain extension, but should not contain path.
-// This function is quite fast because it uses hash tables.
-const CGameFileInfo *appFindGameFile(const char *Filename);
-
-// Find all files with the same base file name (ignoring extension) and same directory as for
-// provided file. Files are filled into 'otherFiles' array, 'file' is not included.
-void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& otherFiles);
 
 // This function allows wildcard use in Filename. When wildcard is used, it iterates over all
 // found files and could be relatively slow.
