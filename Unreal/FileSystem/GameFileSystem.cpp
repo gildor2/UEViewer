@@ -431,6 +431,35 @@ static void RegisterGameFile(const char* FullName)
 	unguardf("%s", FullName);
 }
 
+// Allocator for CGameFileInfo. Use CMemoryChain because:
+// - we don't need to delete CGameFileInfo items (unless doing deallocation once and picking it up again next time)
+// - there's no malloc overhead
+// - file items has good cache locality when enumerating all files
+
+static CMemoryChain* FileInfoChain;
+static CGameFileInfo* DeallocatedFileInfo = NULL;
+
+FORCEINLINE CGameFileInfo* AllocFileInfo()
+{
+	if (DeallocatedFileInfo)
+	{
+		CGameFileInfo* result = DeallocatedFileInfo;
+		DeallocatedFileInfo = NULL;
+		return result;
+	}
+	if (FileInfoChain == NULL)
+	{
+		FileInfoChain = new CMemoryChain();
+	}
+	return (CGameFileInfo*) FileInfoChain->Alloc(sizeof(CGameFileInfo));
+}
+
+FORCEINLINE void DeallocFileInfo(CGameFileInfo* info)
+{
+	assert(DeallocatedFileInfo == NULL);
+	DeallocatedFileInfo = info;
+}
+
 CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CRegisterFileInfo& RegisterInfo)
 {
 	guard(CGameFileInfo::Register);
@@ -476,7 +505,7 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 		}
 	}
 
-	// A known file type here.
+	// A known file type is here.
 
 	//todo: if RegisterInfo.Path not empty - use it ...
 	const char* ShortFilename = RegisterInfo.Filename;
@@ -501,22 +530,21 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 		FolderIndex = RegisterGameFolder(RegisterInfo.Path);
 	}
 
+	int extOffset = ext - ShortFilename;
+	assert(extOffset < 256); // restriction of CGameFileInfo::ExtensionOffset
+
 	// Create CGameFileInfo entry
-	CGameFileInfo *info = new CGameFileInfo;
+	CGameFileInfo* info = AllocFileInfo();
 	info->IsPackage = IsPackage;
 	info->FileSystem = parentVfs;
 	info->IndexInVfs = RegisterInfo.IndexInArchive;
 	info->ShortFilename = appStrdupPool(ShortFilename);
+	info->ExtensionOffset = extOffset;
 	info->FolderIndex = FolderIndex;
 	info->Size = RegisterInfo.Size;
 	info->SizeInKb = (info->Size + 512) / 1024;
 
 	if (info->Size < 16) info->IsPackage = false;
-
-	// find extension
-	const char* s = strrchr(info->ShortFilename, '.');
-	if (s) s++;
-	info->Extension = s;
 
 #if UNREAL3
 	if (info->IsPackage && (strnicmp(info->ShortFilename, "startup", 7) == 0))
@@ -543,8 +571,8 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 	}
 #endif // UNREAL3
 
-	// insert CGameFileInfo into hash table
 	int hash = GetHashForFileName<true>(info->ShortFilename);
+
 	// find if we have previously registered file with the same name
 	FastNameComparer FilenameCmp(info->ShortFilename);
 	for (CGameFileInfo* prevInfo = GameFileHash[hash]; prevInfo; prevInfo = prevInfo->HashNext)
@@ -553,7 +581,8 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 		{
 			// this is a duplicate of the file (patch), use new information
 			prevInfo->UpdateFrom(info);
-			delete info;
+			// return allocated info back to pool, so it will be reused next time
+			DeallocFileInfo(info);
 #if DEBUG_HASH
 			appPrintf("--> dup(%s) pkg=%d hash=%X\n", prevInfo->ShortFilename, prevInfo->IsPackage, hash);
 #endif
@@ -561,6 +590,7 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 		}
 	}
 
+	// Insert new CGameFileInfo into hash table
 	if (GameFiles.Num() + 1 >= GameFiles.Max())
 	{
 		// Resize GameFiles array with large steps
@@ -859,14 +889,31 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename)
 	char buf[MAX_PACKAGE_PATH];
 	appStrncpyz(buf, Filename, ARRAY_COUNT(buf));
 
-	// replace backslashes
+	// Replace backslashes and analyze the string
 	const char* ShortFilename = buf;
-	for (char* s = buf; *s; s++)
+	const char* Extension = NULL;
+	char* s;
+	for (s = buf; *s; s++)
 	{
 		char c = *s;
-		if (c == '\\') *s = '/';
-		if (*s == '/') ShortFilename = s + 1;
+		if (c == '\\')
+		{
+			*s = '/';
+			ShortFilename = s + 1;
+		}
+		else if (c == '/')
+		{
+			ShortFilename = s + 1;
+		}
+		else if (c == '.')
+		{
+			Extension = s + 1;
+		}
 	}
+	// 's' points to the end of string
+	int shortFilenameLen = s - ShortFilename;
+	if (Extension < ShortFilename) // before the last path separator
+		Extension = NULL;
 
 	// Get path of the file
 	FStaticString<MAX_PACKAGE_PATH> FindPath;
@@ -886,55 +933,56 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename)
 #endif
 
 	// check for extension in filename
-	char *s = strrchr((char*)ShortFilename, '.');
-	const char* extension = NULL;
-	if (s)
-	{
-		extension = s + 1;	// remember extension
-		*s = 0;				// .. and cut it
-	}
-	// Now, 'buf' has filename with no extension, and 'Ext' points to extension. 'ShortFilename' contains file name with
-	// stripped path and extension parts.
-	// If 'Ext' is NULL here, the extension is not included into the file name, and we're looking for a package file with
-	// any suitable file extension.
+	int nameLenNoExt = Extension ? Extension - ShortFilename - 1 : shortFilenameLen;
+	assert(nameLenNoExt < 256); // restriction of CGameFileInfo::ExtensionOffset
 
-	int nameLen = strlen(ShortFilename);
+	// Here:
+	// 'buf' contains provided filename path (stripped file name)
+	// 'ShortFilename' points to filename with extension
+	// 'Extension' points to extension, or NULL if not supplied (therefore looking for package file)
+
 #if defined(DEBUG_HASH_NAME) || DEBUG_HASH
-	appPrintf("--> Loading %s (%s, len=%d, hash=%X)\n", buf, ShortFilename, nameLen, hash);
+	appPrintf("--> Loading %s (%s, len=%d, hash=%X)\n", buf, ShortFilename, nameLenNoExt, hash);
 #endif
 
 	CGameFileInfo* bestMatch = NULL;
 	int bestMatchWeight = -1;
+	uint8 extOffsetPattern = nameLenNoExt + 1;	// include '.' to length, just put outside the loop for optimization
+
+	FastNameComparer nameCmp(ShortFilename, nameLenNoExt);
+	FastNameComparer extCmp(Extension ? Extension : "");
+
 	for (CGameFileInfo* info = GameFileHash[hash]; info; info = info->HashNext)
 	{
 #if defined(DEBUG_HASH_NAME) || DEBUG_HASH
 		appPrintf("----> verify %s\n", *info->GetRelativeName());
 #endif
-		// check if info's filename length matches required one
-		if (info->Extension - 1 - info->ShortFilename != nameLen)
+		// Check if info's filename length matches required one
+		if (info->ExtensionOffset != extOffsetPattern)
 		{
-//			printf("-----> wrong length %d\n", info->Extension - info->ShortFilename);
-			continue;		// different filename length
+			// Different filename length
+//			printf("-----> wrong length %d\n", info->ExtensionOffset);
+			continue;
 		}
 
-		// verify extension
-		if (extension)
+		// Compare extension
+		if (Extension)
 		{
-			if (stricmp(info->Extension, extension) != 0) continue;
+			if (!extCmp(info->GetExtension())) continue;
 		}
 		else
 		{
-			// Ext = NULL => should be any package extension
+			// No extension has been provided, so we're looking only for package files
 			if (!info->IsPackage) continue;
 		}
 
-		// verify a filename (without extension)
-		if (strnicmp(info->ShortFilename, ShortFilename, nameLen) != 0)
+		// Verify the filename without extension
+		if (!nameCmp(info->ShortFilename))
 			continue;
-//		if (info->ShortFilename[nameLen] != '.') -- verified before extension comparison
-//			continue;
 
-		// Short filename matched, now compare path before the filename.
+		// Short filename matched, now compare path before the filename. We're using fuzzy search here because
+		// "saved" files may not match the exact file path.
+
 		// Assume 'ShortFilename' is part of 'buf' and 'info->ShortFilename' is part of 'info->RelativeName'.
 		const FString& InfoPath = info->GetPath();
 		if (FindPath.IsEmpty() || InfoPath.IsEmpty())
@@ -1006,9 +1054,10 @@ void CGameFileInfo::FindOtherFiles(TArray<const CGameFileInfo*>& files) const
 	*s = '.';
 	FastNameComparer FilenameCmp(*Name, s - *Name + 1);
 
+	int folderIndex = FolderIndex;
 	for (CGameFileInfo* otherFile = GameFileHash[hash]; otherFile; otherFile = otherFile->HashNext)
 	{
-		if (otherFile->FolderIndex != FolderIndex || otherFile == this)
+		if (otherFile->FolderIndex != folderIndex || otherFile == this)
 			continue;
 		if (FilenameCmp(otherFile->ShortFilename))
 		{

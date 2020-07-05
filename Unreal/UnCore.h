@@ -92,12 +92,16 @@ class FVirtualFileSystem;
 
 struct CGameFileInfo
 {
+public:
+	// Placed here for better cache locality
+	uint16		FolderIndex;						// index of folder containing the file (folder is relative to game directory)
+	bool		IsPackage;
+
 protected:
+	uint8		ExtensionOffset;					// Extension = ShortName+ExtensionOffset, points after '.'
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 
 	const char*	ShortFilename;						// without path, points to filename part of RelativeName
-	//todo: replace Extension with index inside full filename?
-	const char*	Extension;							// points to extension part (excluding '.') of RelativeName
 
 public:
 	FVirtualFileSystem* FileSystem;					// owning virtual file system (NULL for OS file system)
@@ -108,8 +112,6 @@ public:
 	int32		SizeInKb;							// file size, in kilobytes
 	int32		ExtraSizeInKb;						// size of additional non-package files (ubulk, uexp etc)
 	int32		IndexInVfs;							// index in VFS directory; 16 bits are not enough
-	uint16		FolderIndex;						// index of folder containing the file (folder is relative to game directory)
-	bool		IsPackage;
 
 	// content information, valid when IsPackageScanned is true
 	//todo: can store index in some global Info structure, reuse Info for matching cases,
@@ -141,7 +143,7 @@ public:
 
 	const char* GetExtension() const
 	{
-		return Extension;
+		return ShortFilename + ExtensionOffset;
 	}
 
 	// Get full name of the file
@@ -166,6 +168,11 @@ public:
 		memcpy(this, other, sizeof(CGameFileInfo));
 		HashNext = saveHash;
 	}
+
+private:
+	// Hide constructor to prevent allocation outside of file system code
+	FORCEINLINE CGameFileInfo() {}
+	FORCEINLINE ~CGameFileInfo() {}
 };
 
 extern int GNumPackageFiles;
