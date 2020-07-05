@@ -94,7 +94,7 @@ struct CGameFileInfo
 {
 	//todo: better - convert these functions to static methods of CGameFileInfo
 	friend CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const struct CRegisterFileInfo& RegisterInfo);
-	friend const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext);
+	friend const CGameFileInfo* appFindGameFile(const char *Filename);
 	friend void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& otherFiles);
 
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
@@ -183,7 +183,7 @@ FORCEINLINE void appEnumGameFolders(bool (*Callback)(const FString&, int))
 // Ext = NULL -> use any package extension
 // Filename can contain extension, but should not contain path.
 // This function is quite fast because it uses hash tables.
-const CGameFileInfo *appFindGameFile(const char *Filename, const char *Ext = NULL);
+const CGameFileInfo *appFindGameFile(const char *Filename);
 
 // Find all files with the same base file name (ignoring extension) and same directory as for
 // provided file. Files are filled into 'otherFiles' array, 'file' is not included.

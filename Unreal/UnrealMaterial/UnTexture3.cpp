@@ -653,32 +653,38 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	const FTexture2DMipMap &Mip = MipsArray[MipIndex];
 
 	// Here: data is either in TFC file or in other package
-	char bulkFileName[256];
-	bulkFileName[0] = 0;
+	FStaticString<MAX_PACKAGE_PATH> bulkFileName;
 	if (TextureFileCacheName != "None")
 	{
 		// TFC file is assigned
-		static const char* tfcExtensions[] = { "tfc", "xxx" };
-		for (int i = 0; i < ARRAY_COUNT(tfcExtensions); i++)
+		bulkFileName = *TextureFileCacheName;
+
+		// Find position for file extension
+		// MK X has string with file extension - cut it
+		int extPos = bulkFileName.Len();
+		const char* s = strrchr(*bulkFileName, '.');
+		if (s && (!stricmp(s, ".tfc") || !stricmp(s, ".xxx")))
 		{
-			strcpy(bulkFileName, TextureFileCacheName);
-			if (char* s = strchr(bulkFileName, '.'))
-			{
-				// MK X has string with file extension - cut it
-				if (!stricmp(s, ".tfc") || !stricmp(s, ".xxx"))
-					*s = 0;
-			}
-			const char* bulkFileExt = tfcExtensions[i];
-			bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
+			extPos = s - *bulkFileName;
+		}
+
+		static const char* tfcExtensions[] = { ".tfc", ".xxx" };
+		for (const char* bulkFileExt : tfcExtensions)
+		{
+			// Remove extension (could be added on previous iteration)
+			bulkFileName.RemoveAt(extPos, bulkFileName.Len() - extPos);
+			bulkFileName += bulkFileExt;
+			bulkFile = appFindGameFile(*bulkFileName);
 			if (bulkFile) break;
 #if SUPPORT_ANDROID
-			if (!bulkFile)
-			{
-				if (!tfcSuffix) tfcSuffix = "DXT";
-				appSprintf(ARRAY_ARG(bulkFileName), "%s_%s", bulkFileName, tfcSuffix);
-				bulkFile = appFindGameFile(bulkFileName, bulkFileExt);
-				if (bulkFile) break;
-			}
+			// Android file example: TfcName_DXT.tfc
+			if (!tfcSuffix) tfcSuffix = "DXT";
+			bulkFileName.RemoveAt(extPos, bulkFileName.Len() - extPos);
+			bulkFileName += "_";
+			bulkFileName += tfcSuffix;
+			bulkFileName += bulkFileExt;
+			bulkFile = appFindGameFile(*bulkFileName);
+			if (bulkFile) break;
 #endif // SUPPORT_ANDROID
 		}
 		if (!bulkFile)
@@ -712,15 +718,15 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 			const FObjectExport &Exp2 = Package->GetExport(PackageIndex);
 			if (Exp2.ExportFlags & EF_ForcedExport)
 			{
-				strcpy(bulkFileName,  Exp2.ObjectName);
+				bulkFileName = *Exp2.ObjectName;
 //				appPrintf("BULK: %s (%X)\n", *Exp2.ObjectName, Exp2.ExportFlags);
 			}
 		}
-		if (!bulkFileName[0]) return false;				// just in case
-		bulkFile = appFindGameFile(bulkFileName);
+		if (bulkFileName.IsEmpty()) return false;		// just in case
+		bulkFile = appFindGameFile(*bulkFileName);
 		if (!bulkFile)
 		{
-			appPrintf("Decompressing %s: package %s is missing\n", Name, bulkFileName);
+			appPrintf("Decompressing %s: package %s is missing\n", Name, *bulkFileName);
 			return false;
 		}
 	}

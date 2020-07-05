@@ -175,13 +175,12 @@ void FVirtualFileSystem::Reserve(int count)
 	GameFiles.Reserve(GameFiles.Num() + count);
 }
 
-static uint32 GetHashInternal(const char* s, int len)
+FORCEINLINE uint32 GetHashInternal(const char* s, int len)
 {
-	uint32 hash = 0;
+	uint16 hash = 0;
 	for (int i = 0; i < len; i++)
 	{
-		char c = *s++;
-		if (c >= 'A' && c <= 'Z') c += 'a' - 'A'; // lowercase a character
+		char c = *s++ & 0xDF;				// uppercase the character with "& 0xDF"
 //		hash = ROL16(hash, 5) - hash + ((c << 4) + c ^ 0x13F);	// some crazy hash function
 		hash = ROL16(hash, 1) + c;			// note: if we'll use more than 16-bit GAME_FILE_HASH_SIZE value, should use ROL32 here
 	}
@@ -189,10 +188,36 @@ static uint32 GetHashInternal(const char* s, int len)
 }
 
 // Compute hash for filename, with skipping file extension. Name should not have path.
-static int GetHashForFileName(const char* FileName, bool cutExtension)
+template<bool MayHaveExtension>
+static int GetHashForFileName(const char* FileName)
 {
-	const char* s = cutExtension ? strrchr(FileName, '.') : NULL;
-	int len = (s != NULL) ? s - FileName : strlen(FileName);
+	// Locate the end of string or extension
+	const char* s = FileName;
+	int len = -1;
+	while (true)
+	{
+		char c = *s;
+		if (MayHaveExtension)
+		{
+			if (c == '.') len = s - FileName;
+			if (c == 0)
+			{
+				// End of string
+				if (len < 0) len = s - FileName; // preserve strrchr('.') logic
+				break;
+			}
+		}
+		else
+		{
+			if (c == 0)
+			{
+				// End of string
+				len = s - FileName;
+				break;
+			}
+		}
+		s++;
+	}
 
 	uint32 hash = GetHashInternal(FileName, len) & (GAME_FILE_HASH_SIZE - 1);
 #ifdef DEBUG_HASH_NAME
@@ -499,7 +524,7 @@ CGameFileInfo* appRegisterGameFileInfo(FVirtualFileSystem* parentVfs, const CReg
 #endif // UNREAL3
 
 	// insert CGameFileInfo into hash table
-	int hash = GetHashForFileName(info->ShortFilename, true);
+	int hash = GetHashForFileName<true>(info->ShortFilename);
 	// find if we have previously registered file with the same name
 	FastNameComparer FilenameCmp(info->ShortFilename);
 	for (CGameFileInfo* prevInfo = GameFileHash[hash]; prevInfo; prevInfo = prevInfo->HashNext)
@@ -801,7 +826,7 @@ void appSetRootDirectory2(const char *filename)
 }
 
 
-const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
+const CGameFileInfo* appFindGameFile(const char *Filename)
 {
 	guard(appFindGameFile);
 
@@ -835,25 +860,18 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 	// Get hash before stripping extension (could be required for files with double extension, like .hdr.rtc for games with Redux textures).
 	// If 'Ext' has been provided, ShortFilename has NO extension, and we're going to append Ext to the filename later, so there's nothing to
 	// cut in this case.
-	int hash = GetHashForFileName(ShortFilename, /* cutExtension = */ Ext == NULL);
+	int hash = GetHashForFileName<true>(ShortFilename);
 #if DEBUG_HASH
 	appPrintf("--> find(%s) hash=%X\n", ShortFilename, hash);
 #endif
 
-	if (Ext)
+	// check for extension in filename
+	char *s = strrchr((char*)ShortFilename, '.');
+	const char* extension = NULL;
+	if (s)
 	{
-		// extension is provided
-		//assert(!strchr(buf, '.')); -- don't assert because Dungeon Defenders (and perhaps other games) has TFC file names with dots
-	}
-	else
-	{
-		// check for extension in filename
-		char *s = strrchr((char*)ShortFilename, '.');
-		if (s)
-		{
-			Ext = s + 1;	// remember extension
-			*s = 0;			// cut extension
-		}
+		extension = s + 1;	// remember extension
+		*s = 0;				// .. and cut it
 	}
 	// Now, 'buf' has filename with no extension, and 'Ext' points to extension. 'ShortFilename' contains file name with
 	// stripped path and extension parts.
@@ -880,9 +898,9 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 		}
 
 		// verify extension
-		if (Ext)
+		if (extension)
 		{
-			if (stricmp(info->Extension, Ext) != 0) continue;
+			if (stricmp(info->Extension, extension) != 0) continue;
 		}
 		else
 		{
@@ -945,7 +963,7 @@ const CGameFileInfo* appFindGameFile(const char *Filename, const char *Ext)
 	}
 	return bestMatch;
 
-	unguardf("name=%s ext=%s", Filename, Ext);
+	unguardf("name=%s", Filename);
 }
 
 
@@ -962,7 +980,7 @@ void appFindOtherFiles(const CGameFileInfo* file, TArray<const CGameFileInfo*>& 
 	if (!s) return;
 	*s = 0;
 
-	int hash = GetHashForFileName(*Name, false);
+	int hash = GetHashForFileName<false>(*Name);
 
 	// Restore point at extension part, for comparing "name."
 	*s = '.';
