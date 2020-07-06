@@ -107,8 +107,8 @@ void FArray::Empty(int count, int elementSize)
 // upper level functions like Insert()
 void FArray::GrowArray(int count, int elementSize)
 {
-	guard(FArray::GrowArray);
-	assert(count > 0);
+	if (count <= 0)
+		appError("FArray::GrowArray failed: count = %d", count);
 
 	// check for available space
 	int newCount = DataCount + count;
@@ -142,8 +142,6 @@ void FArray::GrowArray(int count, int elementSize)
 			memcpy(DataPtr, oldData, DataCount * elementSize);
 		}
 	}
-
-	unguardf("%d x %d", count, elementSize);
 }
 
 void FArray::InsertUninitialized(int index, int count, int elementSize)

@@ -1464,9 +1464,16 @@ void UnPackage::LoadNameTable()
 
 	Seek(Summary.NameOffset);
 	NameTable = new const char* [Summary.NameCount];
+	FStaticString<MAX_FNAME_LEN> nameStr;
+
 	for (int i = 0; i < Summary.NameCount; i++)
 	{
 		guard(Name);
+
+#if UNREAL4
+		if (Game >= GAME_UE4_BASE) goto ue4_name; // bypass all of pre-UE4 game checks
+#endif
+
 		if ((ArVer < 64) && (Game < GAME_UE4_BASE)) // UE4 has restarted versioning from 0
 		{
 			char buf[MAX_FNAME_LEN];
@@ -1505,8 +1512,6 @@ void UnPackage::LoadNameTable()
 #endif // UC1 || PARIAH
 		else
 		{
-			FStaticString<MAX_FNAME_LEN> name;
-
 #if SPLINTER_CELL
 			if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
 			{
@@ -1604,8 +1609,9 @@ void UnPackage::LoadNameTable()
 			}
 #endif // TRANSFORMERS
 
+		ue4_name:
 			// Korean games sometimes uses Unicode strings ...
-			*this << name;
+			*this << nameStr;
 	#if AVA
 			if (Game == GAME_AVA)
 			{
@@ -1613,7 +1619,7 @@ void UnPackage::LoadNameTable()
 				// V(0) = len ^ 0x3E
 				// V(i) = V(i-1) + 0x48 ^ 0xE1
 				// Number of bytes = (len ^ 7) & 0xF
-				int skip = name.Len();
+				int skip = nameStr.Len();
 				skip = (skip ^ 7) & 0xF;
 				Seek(Tell() + skip);
 			}
@@ -1623,31 +1629,33 @@ void UnPackage::LoadNameTable()
 			// Use separate block to not mess with 'goto crossing variable initialization' error.
 			{
 				// Paragon has many names ended with '\n', so it's good idea to trim spaces
-				name.TrimStartAndEndInline();
+				nameStr.TrimStartAndEndInline();
 				bool goodName = true;
 				int numBadChars = 0;
-				int nameLen = name.Len();
-				const char* nameStr = *name;
-				for (int j = 0; j < nameLen; j++)
+				for (char c : nameStr.GetDataArray())
 				{
-					char c = *nameStr++;
 					if (c < ' ' || c > 0x7F)
 					{
+						if (c == 0) break; // end of line is included into FString
 						// unreadable character
 						goodName = false;
 						break;
 					}
 					if (c == '$') numBadChars++;		// unicode characters replaced with '$' in FString serializer
 				}
-				if (numBadChars && nameLen >= 64) goodName = false;
-				if (numBadChars >= nameLen / 2 && nameLen > 16) goodName = false;
+				if (goodName && numBadChars)
+				{
+					int nameLen = nameStr.Len();
+					if (nameLen >= 64) goodName = false;
+					if (numBadChars >= nameLen / 2 && nameLen > 16) goodName = false;
+				}
 				if (!goodName)
 				{
 					// replace name
-					appPrintf("WARNING: %s: fixing name %d (%s)\n", *GetFilename(), i, *name);
+					appPrintf("WARNING: %s: fixing name %d (%s)\n", *GetFilename(), i, *nameStr);
 					char buf[64];
 					appSprintf(ARRAY_ARG(buf), "__name_%d__", i);
-					name = buf;
+					nameStr = buf;
 				}
 			}
 
@@ -1656,7 +1664,7 @@ void UnPackage::LoadNameTable()
 			NameTable[i] = new char[name.Num()];
 			strcpy(NameTable[i], *name);
 	#else
-			NameTable[i] = appStrdupPool(*name);
+			NameTable[i] = appStrdupPool(*nameStr);
 	#endif
 
 	#if UNREAL4
@@ -1701,11 +1709,11 @@ void UnPackage::LoadNameTable()
 				}
 				else if (ArLicenseeVer < 16)
 				{
-					TrashLen = name.Len() ^ 7;
+					TrashLen = nameStr.Len() ^ 7;
 				}
 				else
 				{
-					TrashLen = name.Len() ^ 6;
+					TrashLen = nameStr.Len() ^ 6;
 				}
 				this->Seek(this->Tell() + (TrashLen & 0xF));
 			}

@@ -366,7 +366,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	// loading
 
 	// serialize character count
-	int len;
+	int32 len;
 #if BIOSHOCK
 	if (Ar.Game == GAME_Bioshock)
 	{
@@ -387,7 +387,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 
 	S.Empty((len >= 0) ? len : -len);
 
-	// resialize the string
+	// serialize the string
 	if (!len)
 	{
 		// empty FString
