@@ -579,9 +579,19 @@ using namespace ProfilerInternal;
 
 #define PROFILE_IF(cond) bool bEnableProfiler = cond;
 
+// Labelling the profile sample
+#define PROFILE_LABEL(text)			ZoneText(text, strlen(text))
+
+// Profiling memory allocations
+#define PROFILE_ALLOC(ptr, size)	TracyAlloc(ptr, size)
+#define PROFILE_FREE(ptr)			TracyFree(ptr)
+
 #else
 
 #define PROFILE_IF(cond)
+#define PROFILE_LABEL(text)
+#define PROFILE_ALLOC(ptr, size)
+#define PROFILE_FREE(ptr)
 
 #endif // TRACY_ENABLE
 

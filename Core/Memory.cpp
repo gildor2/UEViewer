@@ -172,6 +172,8 @@ void *appMalloc(int size, int alignment)
 	hdr->stack = found;
 #endif // DEBUG_MEMORY
 
+	PROFILE_ALLOC(ptr, size);
+
 	// statistics
 	GTotalAllocationSize += size;
 	GTotalAllocationCount++;
@@ -214,6 +216,9 @@ void* appRealloc(void *ptr, int newSize)
 #endif
 	free(block);
 
+	PROFILE_FREE(ptr);
+	PROFILE_ALLOC(newData, newSize);
+
 	// statistics: we're allocating a new block with appMalloc, which counts statistics
 	// for this allocation, so only eliminate statistics from old memory block here
 	GTotalAllocationSize -= oldSize;
@@ -243,6 +248,8 @@ void appFree(void *ptr)
 	hdr->Unlink();
 	memset(ptr, FREE_BLOCK, hdr->blockSize);
 #endif
+
+	PROFILE_FREE(ptr);
 
 	// statistics
 	GTotalAllocationSize -= hdr->blockSize;
@@ -293,6 +300,7 @@ void CMemoryChain::operator delete(void *ptr)
 
 void *CMemoryChain::Alloc(size_t size, int alignment)
 {
+	PROFILE_IF(false)
 	guard(CMemoryChain::Alloc);
 	if (!size) return NULL;
 
