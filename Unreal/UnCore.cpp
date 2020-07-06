@@ -51,14 +51,28 @@ FArray::~FArray()
 	MaxCount  = 0;
 }
 
-void FArray::MoveData(FArray& Other)
+void FArray::MoveData(FArray& Other, int elementSize)
 {
-	DataPtr = Other.DataPtr;
-	DataCount = Other.DataCount;
-	MaxCount = Other.MaxCount;
-	Other.DataPtr = NULL;
-	Other.DataCount = 0;
-	Other.MaxCount = 0;
+	if (!Other.IsStatic())
+	{
+		// Can simply reassign allocated data
+		DataPtr = Other.DataPtr;
+		DataCount = Other.DataCount;
+		MaxCount = Other.MaxCount;
+		Other.DataPtr = NULL;
+		Other.DataCount = 0;
+		Other.MaxCount = 0;
+	}
+	else
+	{
+		// Working with "static" array, should copy data instead
+		int dataSize = Other.DataCount * elementSize;
+		DataPtr = appMalloc(dataSize);
+		DataCount = Other.DataCount;
+		MaxCount = Other.DataCount;
+		memcpy(DataPtr, Other.DataPtr, dataSize);
+		Other.DataCount = 0;
+	}
 }
 
 void FArray::Empty(int count, int elementSize)

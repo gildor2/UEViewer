@@ -1457,7 +1457,7 @@ public:
 	{}
 	~FArray();
 
-	void MoveData(FArray& Other);
+	void MoveData(FArray& Other, int elementSize);
 
 	FORCEINLINE void *GetData()
 	{
@@ -1536,7 +1536,7 @@ FArchive& operator<<(FArchive& Ar, TArray<T>& A);
 template<typename T>
 class TArray : public FArray
 {
-	friend class FString; // for rvalue
+	friend class FString; // for rvalue reference
 public:
 	TArray()
 	:	FArray()
@@ -1829,12 +1829,12 @@ protected:
 	// but allow rvalue copying - for FString
 	TArray(TArray&& Other)
 	{
-		MoveData(Other);
+		MoveData(Other, sizeof(T));
 	}
 	TArray& operator=(TArray&& Other)
 	{
 		Empty();
-		MoveData(Other);
+		MoveData(Other, sizeof(T));
 		return *this;
 	}
 
