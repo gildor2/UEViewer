@@ -136,7 +136,16 @@ void FArray::GrowArray(int count, int elementSize)
 	const int minCount = 4;
 	if (newCount > minCount)
 	{
-		MaxCount = Align(DataCount + count, 16) + 16;
+		if (DataCount > 64 && count == 1)
+		{
+			// Array is large enough, and still growing - do the larger step
+			int increment = DataCount / 8 + 16;
+			MaxCount = Align(DataCount + increment, 16);
+		}
+		else
+		{
+			MaxCount = Align(DataCount + count, 16) + 16;
+		}
 	}
 	else
 	{
