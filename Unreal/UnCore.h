@@ -1616,37 +1616,42 @@ public:
 			*((T*)DataPtr + i) = value;
 	}
 
+	FORCEINLINE int Add(T&& item)
+	{
+		int index = AddUninitialized(1);
+		new ((T*)DataPtr + index) T(MoveTemp(item));
+		return index;
+	}
 	FORCEINLINE int Add(const T& item)
 	{
-		int index = DataCount;
-		FArray::InsertUninitialized(index, 1, sizeof(T));
+		int index = AddUninitialized(1);
 		new ((T*)DataPtr + index) T(item);
 		return index;
 	}
 	FORCEINLINE int AddZeroed(int count = 1)
 	{
-		int index = DataCount;
-		FArray::InsertZeroed(index, count, sizeof(T));
+		int index = AddUninitialized(count);
+		memset((T*)DataPtr + index, 0, sizeof(T) * count);
 		return index;
 	}
 	FORCEINLINE int AddDefaulted(int count = 1)
 	{
-		int index = DataCount;
+		int index = AddUninitialized(count);
 		if (!TTypeInfo<T>::IsPod)
 		{
-			FArray::InsertUninitialized(index, count, sizeof(T));
 			Construct(index, count);
 		}
 		else
 		{
-			FArray::InsertZeroed(index, count, sizeof(T));
+			memset((T*)DataPtr + index, 0, sizeof(T) * count);
 		}
 		return index;
 	}
 	FORCEINLINE int AddUninitialized(int count = 1)
 	{
 		int index = DataCount;
-		FArray::InsertUninitialized(index, count, sizeof(T));
+		ResizeGrow(count);
+		DataCount += count;
 		return index;
 	}
 	FORCEINLINE int AddUnique(const T& item)
@@ -1838,12 +1843,25 @@ protected:
 		return *this;
 	}
 
-	FORCEINLINE void ResizeTo(int count)
+	// Add 'count' uninitialized items. Same as 'ResizeTo', but only with growing possibility
+	// (makes code smaller)
+	FORCEINLINE void ResizeGrow(int count)
 	{
-		if (count > DataCount)
+		int NewCount = DataCount + count;
+		if (NewCount > MaxCount)
 		{
 			// grow array
-			FArray::GrowArray(count - DataCount, sizeof(T));
+			FArray::GrowArray(count, sizeof(T));
+		}
+	}
+
+	// Resize maximum capacity without adding new items
+	FORCEINLINE void ResizeTo(int count)
+	{
+		if (count > MaxCount)
+		{
+			// grow array
+			FArray::GrowArray(count - MaxCount, sizeof(T));
 		}
 		else if (count < DataCount)
 		{

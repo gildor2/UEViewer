@@ -121,40 +121,42 @@ void FArray::Empty(int count, int elementSize)
 // upper level functions like Insert()
 void FArray::GrowArray(int count, int elementSize)
 {
+	//todo: remove appError's later (added 6.07.2020)
 	if (count <= 0)
 		appError("FArray::GrowArray failed: count = %d", count);
 
 	// check for available space
 	int newCount = DataCount + count;
-	if (newCount > MaxCount)
+
+	if (newCount <= MaxCount)
+		appError("FArray::GrowArray: growing beyong MaxCount");
+
+	// Not enough space, resize ...
+	// Allow small initial size of array
+	const int minCount = 4;
+	if (newCount > minCount)
 	{
-		// Not enough space, resize ...
-		// Allow small initial size of array
-		const int minCount = 4;
-		if (newCount > minCount)
-		{
-			MaxCount = Align(DataCount + count, 16) + 16;
-		}
-		else
-		{
-			MaxCount = minCount;
-		}
-		// Align memory block to reduce fragmentation
-		int dataSize = Align(MaxCount * elementSize, 16);
-		// Recompute MaxCount in a case if alignment increases its capacity
-		MaxCount = dataSize / elementSize;
-		// Reallocate memory
-		if (!IsStatic())
-		{
-			DataPtr = appRealloc(DataPtr, dataSize);
-		}
-		else
-		{
-			// "static" array becomes non-static
-			void* oldData = DataPtr; // this is a static pointer
-			DataPtr = appMalloc(dataSize);
-			memcpy(DataPtr, oldData, DataCount * elementSize);
-		}
+		MaxCount = Align(DataCount + count, 16) + 16;
+	}
+	else
+	{
+		MaxCount = minCount;
+	}
+	// Align memory block to reduce fragmentation
+	int dataSize = Align(MaxCount * elementSize, 16);
+	// Recompute MaxCount in a case if alignment increases its capacity
+	MaxCount = dataSize / elementSize;
+	// Reallocate memory
+	if (!IsStatic())
+	{
+		DataPtr = appRealloc(DataPtr, dataSize);
+	}
+	else
+	{
+		// "static" array becomes non-static
+		void* oldData = DataPtr; // this is a static pointer
+		DataPtr = appMalloc(dataSize);
+		memcpy(DataPtr, oldData, DataCount * elementSize);
 	}
 }
 
@@ -163,7 +165,9 @@ void FArray::InsertUninitialized(int index, int count, int elementSize)
 	guard(FArray::InsertUninitialized);
 
 	if (!count) return;
-	GrowArray(count, elementSize);
+
+	if (DataCount + count > MaxCount)
+		GrowArray(count, elementSize);
 
 	// move data
 	if (index != DataCount)
