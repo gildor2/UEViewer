@@ -445,6 +445,7 @@ void UIPackageDialog::InitUI()
 		});
 
 	bool isUE4 = false; //todo: not really used
+	guard(FillFolderTree);
 	for (const FString* Folder : Folders)
 	{
 		// Add a directory to TreeView
@@ -464,6 +465,7 @@ void UIPackageDialog::InitUI()
 		if (!isUE4 && !Path.IsEmpty() && !strnicmp(*Path, "/Game", 5))
 			isUE4 = true;
 	}
+	unguard;
 
 	if (!SelectedDir.IsEmpty())
 	{

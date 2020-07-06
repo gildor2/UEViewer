@@ -1235,6 +1235,7 @@ void CGameFileInfo::GetCleanName(FString& OutName) const
 
 void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char *Ext, void *Param)
 {
+	guard(appEnumGameFilesWorker);
 	for (const CGameFileInfo *info : GameFiles)
 	{
 		if (!Ext)
@@ -1249,6 +1250,7 @@ void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char *Ext, v
 		}
 		if (!Callback(info, Param)) break;
 	}
+	unguard;
 }
 
 void appEnumGameFoldersWorker(EnumGameFoldersCallback_t Callback, void *Param)

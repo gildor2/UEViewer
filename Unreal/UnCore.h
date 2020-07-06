@@ -1764,7 +1764,9 @@ public:
 
 	FORCEINLINE void Sort(int (*cmpFunc)(const T&, const T&))
 	{
+		guard(TArray::Sort);
 		QSort<T>((T*)DataPtr, DataCount, cmpFunc);
+		unguard;
 	}
 
 	// Ranged for support
@@ -1964,14 +1966,17 @@ protected:
 // Do not compile operator new when building UnCore.h inside a namespace.
 // More info: https://github.com/gildor2/UModel/pull/15/commits/3dc3096a6e81845a75024e060715b76bf345cd1b
 
-template<typename T>
+template<typename T, bool bCheck = true>
 FORCEINLINE void* operator new(size_t size, TArray<T> &Array)
 {
-	guard(TArray::operator new);
-	assert(size == sizeof(T)); // allocating wrong object? can't disallow allocating of "int" inside "TArray<FString>" at compile time ...
+	if (bCheck)
+	{
+		// allocating wrong object? can't disallow allocating of "int" inside "TArray<FString>" at compile time ...
+		if (size != sizeof(T))
+			appError("TArray::operator new: size mismatch");
+	}
 	int index = Array.AddUninitialized(1);
 	return Array.GetData() + index;
-	unguard;
 }
 
 #endif // UMODEL_LIB_IN_NAMESPACE
