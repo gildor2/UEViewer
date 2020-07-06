@@ -975,6 +975,7 @@ public:
 
 	virtual void Serialize(void *data, int size)
 	{
+		PROFILE_IF(size >= 1024);
 		guard(FMemReader::Serialize);
 		if (ArStopper > 0 && ArPos + size > ArStopper)
 			appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
@@ -2165,17 +2166,15 @@ public:
 
 	char& operator[](int index)
 	{
-		guard(FString::operator[]);
-		assert(index >= 0 && index < Data.Num());
+		if (unsigned(index >= Data.Num()))
+			appError("FString[%d/%d]", index, Data.Num());
 		return Data.GetData()[index];
-		unguardf("%d/%d", index, Data.Num());
 	}
 	const char& operator[](int index) const
 	{
-		guard(FString::operator[]);
-		assert(index >= 0 && index < Data.Num());
+		if (unsigned(index >= Data.Num()))
+			appError("FString[%d/%d]", index, Data.Num());
 		return Data.GetData()[index];
-		unguardf("%d/%d", index, Data.Num());
 	}
 
 	// convert string to char* - use "*Str"

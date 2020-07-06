@@ -268,6 +268,7 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 
 void FPakFile::Serialize(void *data, int size)
 {
+	PROFILE_IF(size >= 1024);
 	guard(FPakFile::Serialize);
 	if (ArStopper > 0 && ArPos + size > ArStopper)
 		appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);

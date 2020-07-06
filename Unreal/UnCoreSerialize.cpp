@@ -432,6 +432,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 
 void FArchive::ByteOrderSerialize(void *data, int size)
 {
+	PROFILE_IF(size >= 1024);
 	guard(FArchive::ByteOrderSerialize);
 
 	Serialize(data, size);
@@ -588,6 +589,7 @@ FFileReader::~FFileReader()
 
 void FFileReader::Serialize(void *data, int size)
 {
+	PROFILE_IF(size >= 1024);
 	guard(FFileReader::Serialize);
 
 	assert(data);
@@ -963,6 +965,7 @@ bool FMemWriter::IsEof() const
 
 void FMemWriter::Serialize(void *data, int size)
 {
+	PROFILE_IF(size >= 1024);
 	guard(FMemWriter::Serialize);
 	if (ArPos + size > Data->Num())
 	{

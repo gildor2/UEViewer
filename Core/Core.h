@@ -564,10 +564,24 @@ extern CErrorContext GError;
 #undef unguard
 #undef unguardf
 
-#define guard(func)		{ ZoneScopedN(#func);
+//#define guard(func)		{ ZoneScopedN(#func);
+#define guard(func)		{ ZoneNamedN(___tracy_scoped_zone, #func, bEnableProfiler);
 #define guardfunc		{ ZoneScoped;
 #define unguard			}
 #define unguardf(...)	}
+
+// Stuff for conditional profile samples
+namespace ProfilerInternal
+{
+	enum { bEnableProfiler = 1 };
+};
+using namespace ProfilerInternal;
+
+#define PROFILE_IF(cond) bool bEnableProfiler = cond;
+
+#else
+
+#define PROFILE_IF(cond)
 
 #endif // TRACY_ENABLE
 
