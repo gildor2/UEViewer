@@ -827,6 +827,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	{
 		delete[] InfoBlock;
 		delete InfoReaderProxy;
+		InfoBlock = NULL;
 	}
 
 	// Read the full index
@@ -851,6 +852,13 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	guard(ReadFullDirectory);
 	*InfoReader << DirectoryIndex;
 	unguard;
+
+	if (InfoBlock)
+	{
+		delete[] InfoBlock;
+		delete InfoReaderProxy;
+		InfoBlock = NULL;
+	}
 
 	// Everything has been read now, build "legacy" FileInfos array from new data format
 	FileInfos.AddZeroed(count);
