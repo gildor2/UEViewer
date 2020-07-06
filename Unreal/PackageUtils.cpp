@@ -15,6 +15,7 @@ TArray<UnPackage*> GFullyLoadedPackages;
 bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 {
 	guard(LoadWholePackage);
+	PROFILE_LABEL(*Package->GetFilename());
 
 	if (GFullyLoadedPackages.FindItem(Package) >= 0) return true;	// already loaded
 
@@ -39,7 +40,7 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 
 	return true;
 
-	unguardf("%s", Package->Name);
+	unguardf("%s", *Package->GetFilename());
 }
 
 void ReleaseAllObjects()

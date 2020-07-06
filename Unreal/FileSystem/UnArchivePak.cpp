@@ -431,6 +431,7 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 	int mainVer = 0, subVer = 0;
 
 	guard(FPakVFS::ReadDirectory);
+	PROFILE_LABEL(*Filename);
 
 	// Pak file may have different header sizes, try them all
 	static const int OffsetsToTry[] = { FPakInfo::Size, FPakInfo::Size8, FPakInfo::Size8a, FPakInfo::Size9 };
