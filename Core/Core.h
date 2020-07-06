@@ -22,6 +22,12 @@
 #	include <wchar.h>
 #endif
 
+#ifdef TRACY_ENABLE
+#	undef max                     // defined somewhere in C headers, we'll redefine it below anyway
+#	define __PLACEMENT_NEW_INLINE // prevent inclusion of VC "operator new"
+#	include <tracy/Tracy.hpp>     // Include Tracy.hpp header
+#endif
+
 #include "Build.h"
 
 #if RENDERING
@@ -549,6 +555,21 @@ extern CErrorContext GError;
 #define THROW			throw
 
 #endif // DO_GUARD
+
+#ifdef TRACY_ENABLE
+
+// Use guard macros to instrument code
+#undef guard
+#undef guardfunc
+#undef unguard
+#undef unguardf
+
+#define guard(func)		{ ZoneScopedN(#func);
+#define guardfunc		{ ZoneScoped;
+#define unguard			}
+#define unguardf(...)	}
+
+#endif // TRACY_ENABLE
 
 #if VSTUDIO_INTEGRATION
 extern bool GUseDebugger;

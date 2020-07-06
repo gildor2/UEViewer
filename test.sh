@@ -15,7 +15,8 @@ Options:
     --nobuild               prevent from umodel rebuilding
     --exe=<executable>      do not build when overrided (useful for testing with older exe from svn)
     --<game>                choose predefined game path; <game> = ut2|ut3|gow2 etc
-    --debug                 start with -debug option
+    --debug                 build with -debug option
+    --profile               build with --profile option
     --help                  display this help message
     --path=<path>			use instead of -path=... when path has spaces
     -path=<path>            set game path; will disable default game substitution
@@ -259,7 +260,7 @@ nobuild=
 path=0
 
 # parse our command line options
-for arg in "$@"; do		# using quoted $@ will allow to correctly separate arguments like [ --path="some string with spaces" -debug ]
+for arg in "$@"; do		# using quoted $@ will allow to correctly separate arguments like [ --path="some string with spaces" --debug ]
 #	echo "ARG=$arg"
 	case $arg in
 	--help)
@@ -276,8 +277,11 @@ for arg in "$@"; do		# using quoted $@ will allow to correctly separate argument
 		nobuild=1
 		;;
 	--debug)
-		buildopt=--debug
+		buildopt="$buildopt --debug"
 		debugOpt=-debug
+		;;
+	--profile)
+		buildopt="$buildopt --profile"
 		;;
 	--path=*)
 		path=1

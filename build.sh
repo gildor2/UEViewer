@@ -10,6 +10,12 @@ while [ "$1" ]; do
 			debug=1
 			shift
 			;;
+		--profile)
+			profile=1
+			PLATFORM="vc-win64"			# force 64 bit build for profiler
+			VC32TOOLS_OPTIONS="--64"
+			shift
+			;;
 		--vc)
 			vc_ver=$2
 			shift 2
@@ -26,7 +32,7 @@ while [ "$1" ]; do
 			shift 2
 			;;
 		*)
-			echo "Usage: build.sh [--debug] [--vc <version>] [--64] [--file <cpp file>]"
+			echo "Usage: build.sh [--debug] [--profile] [--vc <version>] [--64] [--file <cpp file>]"
 			exit
 			;;
 	esac
@@ -106,9 +112,13 @@ makefile="$root/obj/$projectName-$PLATFORM"
 if ! [ -d $root/obj ]; then
 	mkdir $root/obj
 fi
+# debugging options
 if [ "$debug" ]; then
 	makefile="${makefile}-debug"
 	GENMAKE_OPTIONS+=" DEBUG=1"
+elif [ "$profile" ]; then
+	makefile="${makefile}-profile"
+	GENMAKE_OPTIONS+=" TRACY=1"
 fi
 makefile="${makefile}.mak"
 

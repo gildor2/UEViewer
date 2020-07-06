@@ -14,6 +14,9 @@ PDB        = 2				# keep enabled, executable is almost the same, except embedded
 OLDCRT     = 1				# set to 0 (or comment the line) to use "native" compiler's CRT
 !endif
 
+!if defined(TRACY)
+OLDCRT     = 0				# tracy requires some new C++ features which aren't available with msvcrt.dll
+!endif
 
 #------------------------------------------------
 #	Compiler-specific options
@@ -185,6 +188,15 @@ OPTIONS   += $WARNINGS
 	DEFINES += MAX_DEBUG
 	OBJDIR  = $OBJDIR-debug
 	OPTIMIZE = none
+!endif
+
+!if defined(TRACY)
+	DEFINES += TRACY_ENABLE
+	OBJDIR  = $OBJDIR-profile
+	STDLIBS += advapi32.lib
+	sources(MAIN) = {
+		libs/tracy/TracyClient.cpp
+	}
 !endif
 
 !if "$PLATFORM" eq "win32"
