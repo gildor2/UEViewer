@@ -196,11 +196,12 @@ void UObject::EndLoad()
 			Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, EDITOR_STR, GetGameTag(Package->Game));
 	}
 	// postload objects
-	int i;
-	guard(PostLoad);
-	for (i = 0; i < LoadedObjects.Num(); i++)
-		LoadedObjects[i]->PostLoad();
-	unguardf("%s", LoadedObjects[i]->Name);
+	for (UObject* Obj : LoadedObjects)
+	{
+		guard(PostLoad);
+		Obj->PostLoad();
+		unguardf("%s", Obj->Name);
+	}
 	// cleanup
 	guard(Cleanup);
 	GObjLoaded.Empty();

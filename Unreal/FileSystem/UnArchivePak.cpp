@@ -676,7 +676,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		reg.Filename = *CombinedPath;
 		reg.Size = E.UncompressedSize;
 		reg.IndexInArchive = i;
-		RegisterFile(reg);
+		E.FileInfo = RegisterFile(reg);
 
 		unguardf("Index=%d/%d", i, count);
 	}
@@ -900,7 +900,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 			reg.Path = *DirectoryPath;
 			reg.Size = E.UncompressedSize;
 			reg.IndexInArchive = FileIndex;
-			RegisterFile(reg);
+			E.FileInfo = RegisterFile(reg);
 
 			FileIndex++;
 		}

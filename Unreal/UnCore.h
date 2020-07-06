@@ -1476,7 +1476,7 @@ public:
 	}
 	FORCEINLINE bool IsValidIndex(int index) const
 	{
-		return index >= 0 && index < DataCount;
+		return unsigned(index) < DataCount; // this will handle negative values as well
 	}
 
 	void RawCopy(const FArray &Src, int elementSize);

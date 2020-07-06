@@ -290,7 +290,7 @@ inline void QSort(const char** array, int count, int (*cmpFunc)(const char**, co
 void appOpenLogFile(const char *filename);
 void appPrintf(const char *fmt, ...);
 
-void appError(const char *fmt, ...);
+NORETURN void appError(const char *fmt, ...);
 #define appErrorNoLog(...) { GError.SuppressLog = true; appError(__VA_ARGS__); }
 
 
