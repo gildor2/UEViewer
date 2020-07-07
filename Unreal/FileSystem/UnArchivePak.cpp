@@ -572,27 +572,23 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 {
 	guard(FPakVFS::LoadPakIndexLegacy);
 
-	// Manage pak files with encrypted index
-	FMemReader* InfoReaderProxy = NULL;
-	byte* InfoBlock = NULL;
-	FArchive* InfoReader = reader;
+	// Always read index to memory block for faster serialization
+	TArray<byte> InfoBlock;
+	InfoBlock.SetNumUninitialized(info.IndexSize);
+	reader->Serialize(InfoBlock.GetData(), info.IndexSize);
+	FMemReader InfoReader(InfoBlock.GetData(), info.IndexSize);
+	InfoReader.SetupFrom(*reader);
 
+	// Manage pak files with encrypted index
 	if (info.bEncryptedIndex)
 	{
 		guard(CheckEncryptedIndex);
 
-		InfoBlock = new byte[info.IndexSize];
-		reader->Serialize(InfoBlock, info.IndexSize);
-		appDecryptAES(InfoBlock, info.IndexSize);
-		InfoReaderProxy = new FMemReader(InfoBlock, info.IndexSize);
-		InfoReaderProxy->SetupFrom(*reader);
-		InfoReader = InfoReaderProxy;
+		appDecryptAES(InfoBlock.GetData(), InfoBlock.Num());
 
 		// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
-		if (!ValidateString(*InfoReader))
+		if (!ValidateString(InfoReader))
 		{
-			delete[] InfoBlock;
-			delete InfoReaderProxy;
 			char buf[1024];
 			appSprintf(ARRAY_ARG(buf), "WARNING: The provided encryption key doesn't work with \"%s\". Skipping.", *Filename);
 			error = buf;
@@ -600,7 +596,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		}
 
 		// Data is ok, seek to data start.
-		InfoReader->Seek(0);
+		InfoReader.Seek(0);
 
 		unguard;
 	}
@@ -612,7 +608,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 
 	TRY {
 		// Read MountPoint with catching error, to override error message.
-		*InfoReader << MountPoint;
+		InfoReader << MountPoint;
 	} CATCH {
 		if (info.bEncryptedIndex)
 		{
@@ -627,7 +623,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 
 	// Read number of files
 	int32 count;
-	*InfoReader << count;
+	InfoReader << count;
 	if (!count)
 	{
 		appPrintf("Empty pak file \"%s\"\n", *Filename);
@@ -648,14 +644,14 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		FPakEntry& E = FileInfos[i];
 		// serialize name, combine with MountPoint
 		FStaticString<MAX_PACKAGE_PATH> Filename;
-		*InfoReader << Filename;
+		InfoReader << Filename;
 		FStaticString<MAX_PACKAGE_PATH> CombinedPath;
 		CombinedPath = MountPoint;
 		CombinedPath += Filename;
 		// compact file name
 		CompactFilePath(CombinedPath);
 		// serialize other fields
-		E.Serialize(*InfoReader);
+		E.Serialize(InfoReader);
 		if (E.bEncrypted)
 		{
 //			appPrintf("Encrypted file: %s\n", *Filename);
@@ -693,12 +689,6 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		}
 	}
 #endif
-	// Cleanup
-	if (InfoBlock)
-	{
-		delete[] InfoBlock;
-		delete InfoReaderProxy;
-	}
 
 	return true;
 
@@ -709,27 +699,23 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 {
 	guard(FPakVFS::LoadPakIndex);
 
-	// Manage pak files with encrypted index
-	FMemReader* InfoReaderProxy = NULL;
-	byte* InfoBlock = NULL;
-	FArchive* InfoReader = reader;
+	// Read full index into InfoBlock and setup InfoReader
+	TArray<byte> InfoBlock;
+	InfoBlock.SetNumUninitialized(info.IndexSize);
+	reader->Serialize(InfoBlock.GetData(), info.IndexSize);
+	FMemReader InfoReader(InfoBlock.GetData(), info.IndexSize);
+	InfoReader.SetupFrom(*reader);
 
+	// Manage pak files with encrypted index
 	if (info.bEncryptedIndex)
 	{
 		guard(CheckEncryptedIndex);
 
-		InfoBlock = new byte[info.IndexSize];
-		reader->Serialize(InfoBlock, info.IndexSize);
-		appDecryptAES(InfoBlock, info.IndexSize);
-		InfoReaderProxy = new FMemReader(InfoBlock, info.IndexSize);
-		InfoReaderProxy->SetupFrom(*reader);
-		InfoReader = InfoReaderProxy;
+		appDecryptAES(InfoBlock.GetData(), InfoBlock.Num());
 
 		// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
-		if (!ValidateString(*InfoReader))
+		if (!ValidateString(InfoReader))
 		{
-			delete[] InfoBlock;
-			delete InfoReaderProxy;
 			char buf[1024];
 			appSprintf(ARRAY_ARG(buf), "WARNING: The provided encryption key doesn't work with \"%s\". Skipping.", *Filename);
 			error = buf;
@@ -737,7 +723,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		}
 
 		// Data is ok, seek to data start.
-		InfoReader->Seek(0);
+		InfoReader.Seek(0);
 
 		unguard;
 	}
@@ -749,7 +735,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 
 	TRY {
 		// Read MountPoint with catching error, to override error message.
-		*InfoReader << MountPoint;
+		InfoReader << MountPoint;
 	} CATCH {
 		if (info.bEncryptedIndex)
 		{
@@ -764,7 +750,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 
 	// Read number of files
 	int32 count;
-	*InfoReader << count;
+	InfoReader << count;
 	if (!count)
 	{
 		appPrintf("Empty pak file \"%s\"\n", *Filename);
@@ -776,30 +762,30 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	ValidateMountPoint(MountPoint);
 
 	uint64 PathHashSeed;
-	*InfoReader << PathHashSeed;
+	InfoReader << PathHashSeed;
 
 	// Read directory information
 
 	bool bReaderHasPathHashIndex;
 	int64 PathHashIndexOffset = -1;
 	int64 PathHashIndexSize = 0;
-	*InfoReader << bReaderHasPathHashIndex;
+	InfoReader << bReaderHasPathHashIndex;
 	if (bReaderHasPathHashIndex)
 	{
-		*InfoReader << PathHashIndexOffset << PathHashIndexSize;
+		InfoReader << PathHashIndexOffset << PathHashIndexSize;
 		// Skip PathHashIndexHash
-		InfoReader->Seek(InfoReader->Tell() + 20);
+		InfoReader.Seek(InfoReader.Tell() + 20);
 	}
 
 	bool bReaderHasFullDirectoryIndex = false;
 	int64 FullDirectoryIndexOffset = -1;
 	int64 FullDirectoryIndexSize = 0;
-	*InfoReader << bReaderHasFullDirectoryIndex;
+	InfoReader << bReaderHasFullDirectoryIndex;
 	if (bReaderHasFullDirectoryIndex)
 	{
-		*InfoReader << FullDirectoryIndexOffset << FullDirectoryIndexSize;
+		InfoReader << FullDirectoryIndexOffset << FullDirectoryIndexSize;
 		// Skip FullDirectoryIndexHash
-		InfoReader->Seek(InfoReader->Tell() + 20);
+		InfoReader.Seek(InfoReader.Tell() + 20);
 	}
 
 	if (!bReaderHasFullDirectoryIndex)
@@ -807,8 +793,6 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		// todo: read PathHashIndex: PathHashIndexOffset + PathHashIndexSize
 		// todo: structure: TMap<uint64, FPakEntryLocation> (i.e. not array), FPakEntryLocation = int32
 		// todo: seems it maps hash to file index.
-		delete[] InfoBlock;
-		delete InfoReaderProxy;
 		char buf[1024];
 		appSprintf(ARRAY_ARG(buf), "WARNING: Pak file \"%s\" doesn't have a full index. Skipping.", *Filename);
 		error = buf;
@@ -816,33 +800,24 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	}
 
 	TArray<uint8> EncodedPakEntries;
-	*InfoReader << EncodedPakEntries;
+	InfoReader << EncodedPakEntries;
 
 	// Read 'Files' array. This one holds decoded file entries, without file names.
 	TArray<FPakEntry> Files;
-	*InfoReader << Files;
+	InfoReader << Files;
 
-	// Cleanup: primary directory index will no longer be used
-	if (InfoBlock)
-	{
-		delete[] InfoBlock;
-		delete InfoReaderProxy;
-		InfoBlock = NULL;
-	}
-
-	// Read the full index
+	// Read the full index via the same InfoReader object
 	assert(bReaderHasFullDirectoryIndex);
-
 	reader->Seek64(FullDirectoryIndexOffset);
+	InfoBlock.SetNumUninitialized(FullDirectoryIndexSize);
+	reader->Serialize(InfoBlock.GetData(), FullDirectoryIndexSize);
+	InfoReader = FMemReader(InfoBlock.GetData(), InfoBlock.Num());
+	InfoReader.SetupFrom(*reader);
+
 	if (info.bEncryptedIndex)
 	{
 		// Read encrypted data and decrypt
-		InfoBlock = new byte[FullDirectoryIndexSize];
-		reader->Serialize(InfoBlock, FullDirectoryIndexSize);
-		appDecryptAES(InfoBlock, FullDirectoryIndexSize);
-		InfoReaderProxy = new FMemReader(InfoBlock, FullDirectoryIndexSize);
-		InfoReaderProxy->SetupFrom(*reader);
-		InfoReader = InfoReaderProxy;
+		appDecryptAES(InfoBlock.GetData(), InfoBlock.Num());
 	}
 	// Now InfoReader points to the full index data, either with use of 'reader' or 'InfoReaderProxy'.
 	using FPakEntryLocation = int32;
@@ -850,15 +825,8 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	// Each directory has files, it maps clean filename to index
 	TMap<FString, FPakDirectory> DirectoryIndex;
 	guard(ReadFullDirectory);
-	*InfoReader << DirectoryIndex;
+	InfoReader << DirectoryIndex;
 	unguard;
-
-	if (InfoBlock)
-	{
-		delete[] InfoBlock;
-		delete InfoReaderProxy;
-		InfoBlock = NULL;
-	}
 
 	// Everything has been read now, build "legacy" FileInfos array from new data format
 	FileInfos.AddZeroed(count);

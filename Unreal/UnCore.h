@@ -1616,6 +1616,33 @@ public:
 			*((T*)DataPtr + i) = value;
 	}
 
+	void SetNum(int newCount)
+	{
+		int delta = newCount - DataCount;
+		if (delta > 0)
+		{
+			int index = AddUninitialized(delta);
+			Construct(index. delta);
+		}
+		else if (delta < 0)
+		{
+			RemoveAt(newCount, DataCount - newCount);
+		}
+	}
+
+	FORCEINLINE void SetNumUninitialized(int newCount)
+	{
+		int delta = newCount - DataCount;
+		if (delta > 0)
+		{
+			AddUninitialized(delta);
+		}
+		else if (delta < 0)
+		{
+			RemoveAt(newCount, DataCount - newCount);
+		}
+	}
+
 	FORCEINLINE int Add(T&& item)
 	{
 		int index = AddUninitialized(1);
