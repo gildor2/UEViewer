@@ -185,7 +185,9 @@ static int            GStartupPackageInfoWeight = 0;
 
 void FVirtualFileSystem::Reserve(int count)
 {
+	guard(FVirtualFileSystem::Reserve);
 	GameFiles.Reserve(GameFiles.Num() + count);
+	unguard;
 }
 
 FORCEINLINE uint32 GetHashInternal(const char* s, int len)

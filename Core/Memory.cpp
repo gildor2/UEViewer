@@ -310,6 +310,8 @@ void *CMemoryChain::Alloc(size_t size, int alignment)
 	// check block free space
 	if (start + size > b->end)
 	{
+		PROFILE_IF(true);
+		guard(NewMemoryChain);
 		//?? may be, search in other blocks ...
 		// allocate in the new block
 		b = new (size + alignment - 1) CMemoryChain;
@@ -317,6 +319,7 @@ void *CMemoryChain::Alloc(size_t size, int alignment)
 		b->next = next;
 		next = b;
 		start = Align(b->data, alignment);
+		unguard;
 	}
 	// update pointer to a free space
 	b->data = start + size;

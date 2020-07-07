@@ -808,7 +808,10 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 
 	// Read the full index via the same InfoReader object
 	assert(bReaderHasFullDirectoryIndex);
+
+	guard(ReadFullDirectory);
 	reader->Seek64(FullDirectoryIndexOffset);
+	InfoBlock.Empty(); // avoid reallocation with memcpy
 	InfoBlock.SetNumUninitialized(FullDirectoryIndexSize);
 	reader->Serialize(InfoBlock.GetData(), FullDirectoryIndexSize);
 	InfoReader = FMemReader(InfoBlock.GetData(), InfoBlock.Num());
@@ -819,46 +822,70 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		// Read encrypted data and decrypt
 		appDecryptAES(InfoBlock.GetData(), InfoBlock.Num());
 	}
-	// Now InfoReader points to the full index data, either with use of 'reader' or 'InfoReaderProxy'.
-	using FPakEntryLocation = int32;
-	typedef TMap<FString, FPakEntryLocation> FPakDirectory;
-	// Each directory has files, it maps clean filename to index
-	TMap<FString, FPakDirectory> DirectoryIndex;
-	guard(ReadFullDirectory);
-	InfoReader << DirectoryIndex;
 	unguard;
 
-	// Everything has been read now, build "legacy" FileInfos array from new data format
+	// Now InfoReader points to the full index data, either with use of 'reader' or 'InfoReaderProxy'.
+	// Build "legacy" FileInfos array from new data format
 	FileInfos.AddZeroed(count);
 
 	guard(BuildFullDirectory);
 	int FileIndex = 0;
-	for (const auto& Directory : DirectoryIndex)
+
+	/*
+		// We're unwrapping this complex structure serializer for faster performance (much less allocations)
+		using FPakEntryLocation = int32;
+		typedef TMap<FString, FPakEntryLocation> FPakDirectory;
+		// Each directory has files, it maps clean filename to index
+		TMap<FString, FPakDirectory> DirectoryIndex;
+		InfoReader << DirectoryIndex;
+	*/
+
+	int32 DirectoryCount;
+	InfoReader << DirectoryCount;
+
+	for (int DirectoryIndex = 0; DirectoryIndex < DirectoryCount; DirectoryIndex++)
 	{
+		guard(Directory);
+		// Read DirectoryIndex::Key
+		FStaticString<MAX_PACKAGE_PATH> DirectoryName;
+		InfoReader << DirectoryName;
+
 		// Build folder name. MountPoint ends with '/', directory name too.
 		FStaticString<MAX_PACKAGE_PATH> DirectoryPath;
 		DirectoryPath = MountPoint;
-		DirectoryPath += Directory.Key;
+		DirectoryPath += DirectoryName;
 		CompactFilePath(DirectoryPath);
 		if (DirectoryPath[DirectoryPath.Len()-1] == '/')
 			DirectoryPath.RemoveAt(DirectoryPath.Len()-1, 1);
 
-		for (const auto& File : Directory.Value)
+		// Read size of FPakDirectory (DirectoryIndex::Value)
+		int32 NumFilesInDirectory;
+		InfoReader << NumFilesInDirectory;
+
+		for (int DirectoryFileIndex = 0; DirectoryFileIndex < NumFilesInDirectory; DirectoryFileIndex++)
 		{
+			guard(File);
+			// Read FPakDirectory entry Key
+			FStaticString<MAX_PACKAGE_PATH> DirectoryFileName;
+			InfoReader << DirectoryFileName;
+			// Read FPakDirectory entry Value
+			int32 PakEntryLocation;
+			InfoReader << PakEntryLocation;
+
 			FPakEntry& E = FileInfos[FileIndex];
 
-			// File.Value is positive (offset in 'EncodedPakEntries') or negative (index in 'Files')
+			// PakEntryLocation is positive (offset in 'EncodedPakEntries') or negative (index in 'Files')
 			// References in UE4:
 			// FPakFile::DecodePakEntry <- FPakFile::GetPakEntry (decode or pick from 'Files') <- FPakFile::Find (name to index/location)
-			if (File.Value < 0)
+			if (PakEntryLocation < 0)
 			{
 				// Index in 'Files' array
-				E.CopyFrom(Files[-(File.Value + 1)]);
+				E.CopyFrom(Files[-(PakEntryLocation + 1)]);
 			}
 			else
 			{
 				// Pointer in 'EncodedPakEntries'
-				E.DecodeFrom(&EncodedPakEntries[File.Value]);
+				E.DecodeFrom(&EncodedPakEntries[PakEntryLocation]);
 			}
 
 			if (E.bEncrypted)
@@ -874,14 +901,16 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 
 			// Register the file
 			CRegisterFileInfo reg;
-			reg.Filename = *File.Key;
+			reg.Filename = *DirectoryFileName;
 			reg.Path = *DirectoryPath;
 			reg.Size = E.UncompressedSize;
 			reg.IndexInArchive = FileIndex;
 			E.FileInfo = RegisterFile(reg);
 
 			FileIndex++;
+			unguard;
 		}
+		unguard;
 	}
 	if (FileIndex != FileInfos.Num())
 	{
