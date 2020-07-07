@@ -4,15 +4,17 @@
 struct CRegisterFileInfo
 {
 	const char* Filename;
-	const char* Path;
+	const char* Path;		//todo: probably using `FolderIndex`, so 'Path' could be removed?
 	int64 Size;
 	int IndexInArchive;
+	int FolderIndex;
 
 	CRegisterFileInfo()
 	: Filename(NULL)
 	, Path(NULL)
 	, Size(0)
 	, IndexInArchive(-1)
+	, FolderIndex(0)
 	{}
 };
 
@@ -37,5 +39,7 @@ public:
 		return CGameFileInfo::Register(this, info);
 	}
 };
+
+int RegisterGameFolder(const char* FolderName);
 
 #endif // __GAME_FILE_SYSTEM_H__

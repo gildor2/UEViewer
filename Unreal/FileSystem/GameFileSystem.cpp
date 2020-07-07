@@ -301,7 +301,7 @@ int appGetGameFolderCount()
 	return GameFolders.Num();
 }
 
-static int RegisterGameFolder(const char* FolderName)
+int RegisterGameFolder(const char* FolderName)
 {
 	guard(RegisterGameFolder);
 
@@ -509,11 +509,15 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 
 	// A known file type is here.
 
-	//todo: if RegisterInfo.Path not empty - use it ...
+	// Use RegisterInfo.Path if not empty
 	const char* ShortFilename = RegisterInfo.Filename;
 	int FolderIndex = 0;
 
-	if (!RegisterInfo.Path)
+	if (RegisterInfo.FolderIndex)
+	{
+		FolderIndex = RegisterInfo.FolderIndex;
+	}
+	else if (!RegisterInfo.Path)
 	{
 		// Split file name and register/find folder
 		FStaticString<MAX_PACKAGE_PATH> Folder;

@@ -858,6 +858,8 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		if (DirectoryPath[DirectoryPath.Len()-1] == '/')
 			DirectoryPath.RemoveAt(DirectoryPath.Len()-1, 1);
 
+		int FolderIndex = RegisterGameFolder(*DirectoryPath);
+
 		// Read size of FPakDirectory (DirectoryIndex::Value)
 		int32 NumFilesInDirectory;
 		InfoReader << NumFilesInDirectory;
@@ -902,7 +904,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 			// Register the file
 			CRegisterFileInfo reg;
 			reg.Filename = *DirectoryFileName;
-			reg.Path = *DirectoryPath;
+			reg.FolderIndex = FolderIndex;
 			reg.Size = E.UncompressedSize;
 			reg.IndexInArchive = FileIndex;
 			E.FileInfo = RegisterFile(reg);
