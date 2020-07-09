@@ -52,6 +52,7 @@ USE_SYSTEM_LIBS = 0
 	STDLIBS   = stdc++ m GL 							# libm for math.h functions
 	!if "$PLATFORM" ne "cygwin"
 		STDLIBS += dl	# dlopen() and friends
+		STDLIBS += pthread
 	!endif
 
 	LIBC      = shared
