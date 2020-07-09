@@ -2201,6 +2201,8 @@ static void LoadFolderIcons()
 
 void UITreeView::Create(UICreateContext& ctx)
 {
+	guard(UITreeView::Create);
+
 	Id = ctx.dialog->GenerateDialogId();
 
 	Wnd = ctx.MakeWindow(this, WC_TREEVIEW, "",
@@ -2229,12 +2231,17 @@ void UITreeView::Create(UICreateContext& ctx)
 	}
 
 	// add items
+	guard(CreateItems);
 	for (int i = 0; i < Items.Num(); i++)
 		CreateItem(*Items[i]);
+	unguard;
+
 	// set selection
 	TreeView_SelectItem(Wnd, SelectedItem->hItem);
 
 	UpdateEnabled();
+
+	unguard;
 }
 
 bool UITreeView::HandleCommand(int id, int cmd, LPARAM lParam)

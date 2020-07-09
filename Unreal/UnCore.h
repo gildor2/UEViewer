@@ -1622,7 +1622,7 @@ public:
 		if (delta > 0)
 		{
 			int index = AddUninitialized(delta);
-			Construct(index. delta);
+			Construct(index, delta);
 		}
 		else if (delta < 0)
 		{

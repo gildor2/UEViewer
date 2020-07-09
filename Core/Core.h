@@ -583,7 +583,7 @@ using namespace ProfilerInternal;
 #define PROFILE_LABEL(text)			ZoneText(text, strlen(text))
 
 // Profiling memory allocations
-#define PROFILE_ALLOC(ptr, size)	TracyAlloc(ptr, size)
+#define PROFILE_ALLOC(ptr, size)	TracyAllocS(ptr, size, 32)
 #define PROFILE_FREE(ptr)			TracyFree(ptr)
 
 #else

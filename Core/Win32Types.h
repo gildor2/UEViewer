@@ -7,6 +7,8 @@
 // file, windows.h should be included first, so definitions in this header will be simply
 // ignored. Otherwise type conflicts would appear.
 
+// Good reference: UE4/Engine/Source/Runtime/Core/Public/Windows/MinimalWindowsApi.h
+
 #if _WIN32
 #	ifndef APIENTRY
 #		define APIENTRY __stdcall

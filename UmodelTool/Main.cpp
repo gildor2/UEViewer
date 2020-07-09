@@ -688,6 +688,7 @@ int main(int argc, const char **argv)
 	signal(SIGABRT, AbortHandler);
 #endif
 
+	PROFILE_IF(false);
 	guard(Main);
 
 	if (argc == 2 && argv[1][0] == '@')

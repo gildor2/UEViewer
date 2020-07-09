@@ -408,6 +408,8 @@ void UIPackageDialog::InitUI()
 
 	if (!Packages.Num())
 	{
+		guard(FetchPackageList);
+
 		// Package list was not filled yet
 		// Count packages first for more efficient Packages.Add() when number of packages is very large
 		int NumPackages = 0;
@@ -425,11 +427,15 @@ void UIPackageDialog::InitUI()
 				param.Add(file);
 				return true;
 			}, Packages);
+
+		unguard;
 	}
 
 	// Add paths of all found packages to the directory tree
 
 	if (SelectedPackages.Num()) DirectorySelected = true;
+
+	guard(FillFolderTree);
 
 	TArray<const FString*> Folders;
 	Folders.Empty(4096); //todo
@@ -444,8 +450,7 @@ void UIPackageDialog::InitUI()
 			return stricmp(**A, **B);
 		});
 
-	bool isUE4 = false; //todo: not really used
-	guard(FillFolderTree);
+	// bool isUE4 = false; //todo: not really used
 	for (const FString* Folder : Folders)
 	{
 		// Add a directory to TreeView
@@ -462,9 +467,10 @@ void UIPackageDialog::InitUI()
 				SelectedDir = Path;
 			}
 		}
-		if (!isUE4 && !Path.IsEmpty() && !strnicmp(*Path, "/Game", 5))
-			isUE4 = true;
+		// if (!isUE4 && !Path.IsEmpty() && !strnicmp(*Path, "/Game", 5))
+		//	isUE4 = true;
 	}
+
 	unguard;
 
 	if (!SelectedDir.IsEmpty())
