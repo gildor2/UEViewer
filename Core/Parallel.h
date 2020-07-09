@@ -11,6 +11,21 @@ public:
 	bool TryLock();
 	void Unlock();
 
+	class ScopedLock
+	{
+		CMutex& pMutex;
+	public:
+		ScopedLock(CMutex& mutex)
+		: pMutex(mutex)
+		{
+			mutex.Lock();
+		}
+		~ScopedLock()
+		{
+			pMutex.Unlock();
+		}
+	};
+
 protected:
 
 #ifdef _WIN32
@@ -22,6 +37,25 @@ protected:
 #endif
 };
 
+class CSemaphore
+{
+public:
+	CSemaphore();
+	~CSemaphore();
+
+	void Signal();
+	void Wait();
+
+protected:
+
+#ifdef _WIN32
+	void* data;
+#else
+	enum { SemSize = 16 };
+	char data[SemSize];
+#endif
+};
+
 class CThread
 {
 public:
@@ -30,7 +64,11 @@ public:
 
 	virtual void Run() = 0;
 
+	static int CurrentId();
+
 	static void Sleep(int milliseconds);
+
+	static int GetLogicalCPUCount();
 
 protected:
 	static void ThreadFunc(void* param);
@@ -42,5 +80,64 @@ protected:
 	char thread[ThreadSize];
 #endif
 };
+
+
+#ifdef _WIN32
+
+FORCEINLINE int8 InterlockedIncrement(volatile int8* Value)
+{
+	return (int8)_InterlockedExchangeAdd8((char*)Value, 1) + 1;
+}
+FORCEINLINE int16 InterlockedIncrement(volatile int16* Value)
+{
+	return (int16)_InterlockedIncrement16((short*)Value);
+}
+FORCEINLINE int32 InterlockedIncrement(volatile int32* Value)
+{
+	return (int32)_InterlockedIncrement((long*)Value);
+}
+
+FORCEINLINE int8 InterlockedDecrement(volatile int8* Value)
+{
+	return (int8)_InterlockedExchangeAdd8((char*)Value, -1) - 1;
+}
+FORCEINLINE int16 InterlockedDecrement(volatile int16* Value)
+{
+	return (int16)_InterlockedDecrement16((short*)Value);
+}
+FORCEINLINE int32 InterlockedDecrement(volatile int32* Value)
+{
+	return (int32)_InterlockedDecrement((long*)Value);
+}
+
+#else
+
+FORCEINLINE int8 InterlockedIncrement(volatile int8* Value)
+{
+	return __sync_fetch_and_add(Value, 1) + 1;
+}
+FORCEINLINE int16 InterlockedIncrement(volatile int16* Value)
+{
+	return __sync_fetch_and_add(Value, 1) + 1;
+}
+FORCEINLINE int32 InterlockedIncrement(volatile int32* Value)
+{
+	return __sync_fetch_and_add(Value, 1) + 1;
+}
+
+FORCEINLINE int8 InterlockedDecrement(volatile int8* Value)
+{
+	return __sync_fetch_and_sub(Value, 1) - 1;
+}
+FORCEINLINE int16 InterlockedDecrement(volatile int16* Value)
+{
+	return __sync_fetch_and_sub(Value, 1) - 1;
+}
+FORCEINLINE int32 InterlockedDecrement(volatile int32* Value)
+{
+	return __sync_fetch_and_sub(Value, 1) - 1;
+}
+
+#endif
 
 #endif // __PARALLEL_H__

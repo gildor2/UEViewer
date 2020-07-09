@@ -8,7 +8,7 @@
 
 CMutex::CMutex()
 {
-	static_assert(CriticalSectionSize == sizeof(RTL_CRITICAL_SECTION), "Review CriticalSectionSize");
+	static_assert(CriticalSectionSize >= sizeof(RTL_CRITICAL_SECTION), "Review CriticalSectionSize");
 	InitializeCriticalSection((LPCRITICAL_SECTION)&data);
 }
 
@@ -32,6 +32,26 @@ void CMutex::Unlock()
 	LeaveCriticalSection((LPCRITICAL_SECTION)&data);
 }
 
+CSemaphore::CSemaphore()
+{
+	data = CreateSemaphore(NULL, 0, 32768, NULL);
+}
+
+CSemaphore::~CSemaphore()
+{
+	CloseHandle(data);
+}
+
+void CSemaphore::Signal()
+{
+	ReleaseSemaphore(data, 1, NULL);
+}
+
+void CSemaphore::Wait()
+{
+	WaitForSingleObject(data, INFINITE);
+}
+
 CThread::CThread()
 {
 	thread = _beginthread(ThreadFunc, 0, this);
@@ -41,18 +61,37 @@ CThread::~CThread()
 {
 }
 
+/*static*/ int CThread::CurrentId()
+{
+	return GetCurrentThreadId();
+}
+
 /*static*/ void CThread::Sleep(int milliseconds)
 {
 	::Sleep(milliseconds);
 }
 
+/*static*/ int CThread::GetLogicalCPUCount()
+{
+	static int MaxThreads = -1;
+	if (MaxThreads < 0)
+	{
+    	SYSTEM_INFO info;
+	    GetNativeSystemInfo(&info);
+		MaxThreads = info.dwNumberOfProcessors;
+	}
+    return MaxThreads;
+}
+
 #else // linux
 
 #include <pthread.h>
+#include <unistd.h>
+#include <semaphore.h>
 
 CMutex::CMutex()
 {
-	static_assert(MutexSize >= sizeof(pthread_mutex_t));
+	static_assert(MutexSize >= sizeof(pthread_mutex_t), "Review MutexSize");
 	// Make a recursive mutex
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
@@ -81,9 +120,34 @@ void CMutex::Unlock()
 	pthread_mutex_unlock((pthread_mutex_t*)&data);
 }
 
+CSemaphore::CSemaphore()
+{
+	printf("init_sem(%p)\n", &data);
+	static_assert(SemSize >= sizeof(sem_t), "Review SemSize");
+	sem_init((sem_t*)&data, 0, 0);
+}
+
+CSemaphore::~CSemaphore()
+{
+	printf("del_sem(%p)\n", &data);
+	sem_destroy((sem_t*)data);
+}
+
+void CSemaphore::Signal()
+{
+	printf("sig_sem(%p)\n", &data);
+	sem_post((sem_t*)data);
+}
+
+void CSemaphore::Wait()
+{
+	printf("wait_sem(%p)\n", &data);
+	sem_wait((sem_t*)data);
+}
+
 CThread::CThread()
 {
-	static_assert(ThreadSize >= sizeof(pthread_t));
+	static_assert(ThreadSize >= sizeof(pthread_t), "Review ThreadSize");
 	typedef void* (*start_routine_t)(void*);
 	pthread_create((pthread_t*)&thread, NULL, (start_routine_t)ThreadFunc, this);
 }
@@ -92,17 +156,34 @@ CThread::~CThread()
 {
 }
 
+/*static*/ int CThread::CurrentId()
+{
+	return (int)pthread_self();
+}
+
 /*static*/ void CThread::Sleep(int milliseconds)
 {
 	SDL_Delay(milliseconds); //todo: implement in other way
+}
+
+/*static*/ int CThread::GetLogicalCPUCount()
+{
+	static int MaxThreads = -1;
+	if (MaxThreads < 0)
+		MaxThreads = sysconf(_SC_NPROCESSORS_ONLN);
+    return MaxThreads;
 }
 
 #endif // windows / linux
 
 /*static*/ void CThread::ThreadFunc(void* param)
 {
-	guard(CThread::ThreadFunc);
-	CThread* thread = (CThread*)param;
-	thread->Run();
-	unguard;
+	TRY {
+		CThread* thread = (CThread*)param;
+		thread->Run();
+	} CATCH_CRASH {
+		appPrintf("Exception in thread %d: ", CurrentId());
+		GError.StandardHandler();
+		exit(1);
+	}
 }
