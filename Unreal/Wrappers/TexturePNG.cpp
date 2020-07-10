@@ -53,7 +53,7 @@ static void user_warning_fn(png_structp png_ptr, png_const_charp warning_msg)
 
 static void* user_malloc(png_structp /*png_ptr*/, png_size_t size)
 {
-	return appMalloc(size);
+	return appMallocNoInit(size);
 }
 
 static void user_free(png_structp /*png_ptr*/, png_voidp struct_ptr)

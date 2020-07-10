@@ -284,7 +284,7 @@ void FPakFile::Serialize(void *data, int size)
 				// buffer is not ready
 				if (UncompressedBuffer == NULL)
 				{
-					UncompressedBuffer = (byte*)appMalloc((int)Info->CompressionBlockSize); // size of uncompressed block
+					UncompressedBuffer = (byte*)appMallocNoInit((int)Info->CompressionBlockSize); // size of uncompressed block
 				}
 				// prepare buffer
 				int BlockIndex = ArPos / Info->CompressionBlockSize;
@@ -296,14 +296,14 @@ void FPakFile::Serialize(void *data, int size)
 				byte* CompressedData;
 				if (!Info->bEncrypted)
 				{
-					CompressedData = (byte*)appMalloc(CompressedBlockSize);
+					CompressedData = (byte*)appMallocNoInit(CompressedBlockSize);
 					Reader->Seek64(Block.CompressedStart);
 					Reader->Serialize(CompressedData, CompressedBlockSize);
 				}
 				else
 				{
 					int EncryptedSize = Align(CompressedBlockSize, EncryptionAlign);
-					CompressedData = (byte*)appMalloc(EncryptedSize);
+					CompressedData = (byte*)appMallocNoInit(EncryptedSize);
 					Reader->Seek64(Block.CompressedStart);
 					Reader->Serialize(CompressedData, EncryptedSize);
 					PakRequireAesKey();
@@ -337,7 +337,7 @@ void FPakFile::Serialize(void *data, int size)
 		// Uncompressed encrypted data. Reuse compression fields to handle decryption efficiently
 		if (UncompressedBuffer == NULL)
 		{
-			UncompressedBuffer = (byte*)appMalloc(EncryptedBufferSize);
+			UncompressedBuffer = (byte*)appMallocNoInit(EncryptedBufferSize);
 			UncompressedBufferPos = 0x40000000; // some invalid value
 		}
 		while (size > 0)

@@ -120,7 +120,7 @@ inline void OutOfMemory(int size)
 	appErrorNoLog("Out of memory: failed to allocate %d bytes", size);
 }
 
-void *appMalloc(int size, int alignment)
+void* appMalloc(int size, int alignment, bool noInit)
 {
 	guard(appMalloc);
 
@@ -138,7 +138,7 @@ void *appMalloc(int size, int alignment)
 		OutOfMemory(size);
 
 	void *ptr = Align(OffsetPointer(block, sizeof(CBlockHeader)), alignment);
-	if (size > 0)
+	if (size > 0 && !noInit)
 		memset(ptr, 0, size);
 	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
 	byte offset = (byte*)ptr - (byte*)block;
@@ -190,7 +190,7 @@ void* appRealloc(void *ptr, int newSize)
 	guard(appRealloc);
 
 	// special case
-	if (!ptr) return appMalloc(newSize);
+	if (!ptr) return appMallocNoInit(newSize);
 
 	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
 
@@ -204,7 +204,7 @@ void* appRealloc(void *ptr, int newSize)
 #endif
 
 	int alignment = hdr->align + 1;
-	void *newData = appMalloc(newSize, alignment);
+	void *newData = appMallocNoInit(newSize, alignment);
 
 	memcpy(newData, ptr, min(newSize, oldSize));
 

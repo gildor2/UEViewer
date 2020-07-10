@@ -346,8 +346,14 @@ unsigned appGetFileType(const char *filename);
 
 // Memory management
 
-void* appMalloc(int size, int alignment = 8);
+void* appMalloc(int size, int alignment = 8, bool noInit = false);
 void* appRealloc(void *ptr, int newSize);
+
+FORCEINLINE void* appMallocNoInit(int size, int alignment = 8)
+{
+	return appMalloc(size, alignment, true);
+}
+
 void appFree(void *ptr);
 
 

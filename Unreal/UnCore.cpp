@@ -67,7 +67,7 @@ void FArray::MoveData(FArray& Other, int elementSize)
 	{
 		// Working with "static" array, should copy data instead
 		int dataSize = Other.DataCount * elementSize;
-		DataPtr = appMalloc(dataSize);
+		DataPtr = appMallocNoInit(dataSize);
 		DataCount = Other.DataCount;
 		MaxCount = Other.DataCount;
 		memcpy(DataPtr, Other.DataPtr, dataSize);
@@ -109,7 +109,7 @@ void FArray::Empty(int count, int elementSize)
 
 	if (count)
 	{
-		DataPtr = appMalloc(count * elementSize);
+		DataPtr = appMallocNoInit(count * elementSize);
 	}
 
 	unguardf("%d x %d", count, elementSize);
@@ -164,7 +164,7 @@ void FArray::GrowArray(int count, int elementSize)
 	{
 		// "static" array becomes non-static
 		void* oldData = DataPtr; // this is a static pointer
-		DataPtr = appMalloc(dataSize);
+		DataPtr = appMallocNoInit(dataSize);
 		memcpy(DataPtr, oldData, DataCount * elementSize);
 	}
 }

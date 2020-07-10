@@ -272,7 +272,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 				int MipDataSize = MipSizeX * MipSizeY * BytesPerPixel;
 //				appPrintf("mip %d: %d x %d, %X bytes, offset %X\n", MipIndex, MipSizeX, MipSizeY, MipDataSize, MipOffset);
 				assert(MipOffset + MipDataSize <= SourceDataSize);
-				Mip.Data.BulkData = (byte*)appMalloc(MipDataSize);
+				Mip.Data.BulkData = (byte*)appMallocNoInit(MipDataSize);
 				Mip.Data.ElementCount = MipDataSize;
 				memcpy(Mip.Data.BulkData, SourceArt.BulkData + MipOffset, MipDataSize);
 				MipOffset += MipDataSize;

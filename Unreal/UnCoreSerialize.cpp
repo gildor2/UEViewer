@@ -545,7 +545,7 @@ bool FFileArchive::OpenFile()
 	assert(!IsOpen());
 
 	FilePos = 0;
-	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
+	Buffer = (byte*)appMallocNoInit(FILE_BUFFER_SIZE);
 	BufferPos = 0;
 	BufferSize = 0;
 
@@ -852,7 +852,7 @@ void FFileWriter::Serialize(void *data, int size)
 bool FFileWriter::Open()
 {
 	assert(!IsOpen());
-	Buffer = (byte*)appMalloc(FILE_BUFFER_SIZE);
+	Buffer = (byte*)appMallocNoInit(FILE_BUFFER_SIZE);
 	BufferPos = 0;
 	BufferSize = 0;
 	ArPos64 = 0;
@@ -1113,7 +1113,7 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 	Ar << ChunkHeader;
 	// prepare buffer for reading compressed data
 	int BufferSize = ChunkHeader.BlockSize * 16;
-	byte *ReadBuffer = (byte*)appMalloc(BufferSize);	// BlockSize is size of uncompressed data
+	byte *ReadBuffer = (byte*)appMallocNoInit(BufferSize);	// BlockSize is size of uncompressed data
 	// read and decompress data
 	for (int BlockIndex = 0; BlockIndex < ChunkHeader.Blocks.Num(); BlockIndex++)
 	{
@@ -1127,7 +1127,8 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 	}
 	// finalize
 	assert(Size == 0);			// should be comletely read
-	delete ReadBuffer;
+	appFree(ReadBuffer);
+
 	unguard;
 }
 
@@ -1501,7 +1502,7 @@ void FByteBulkData::SerializeDataChunk(FArchive &Ar)
 	BulkData = NULL;
 	int DataSize = ElementCount * GetElementSize();
 	if (!DataSize) return;		// nothing to serialize
-	BulkData = (byte*)appMalloc(DataSize);
+	BulkData = (byte*)appMallocNoInit(DataSize);
 
 	if (BulkDataFlags & (BULKDATA_CompressedLzo | BULKDATA_CompressedZlib | BULKDATA_CompressedLzx))
 	{
