@@ -1,6 +1,10 @@
 #ifndef __PARALLEL_H__
 #define __PARALLEL_H__
 
+/*-----------------------------------------------------------------------------
+	Generic classes
+-----------------------------------------------------------------------------*/
+
 class CMutex
 {
 public:
@@ -81,6 +85,9 @@ protected:
 #endif
 };
 
+/*-----------------------------------------------------------------------------
+	Atimics
+-----------------------------------------------------------------------------*/
 
 #ifdef _WIN32
 
@@ -139,5 +146,113 @@ FORCEINLINE int32 InterlockedDecrement(volatile int32* Value)
 }
 
 #endif
+
+/*-----------------------------------------------------------------------------
+	Thread pool
+-----------------------------------------------------------------------------*/
+
+namespace ThreadPool
+{
+
+typedef void (*ThreadTask)(void*);
+
+// Execute ThreadTask in thread. Return false if there's no free threads
+bool ExecuteInThread(ThreadTask task, void* taskData);
+
+}
+
+/*-----------------------------------------------------------------------------
+	ParallelFor
+-----------------------------------------------------------------------------*/
+
+//#define DEBUG_PARALLEL_FOR 1
+
+namespace ParallelForImpl
+{
+
+class ParallelForBase
+{
+public:
+	CMutex mutex;
+	CSemaphore endSignal;
+	int8 numActiveThreads;
+	int currentIndex;
+	int lastIndex;
+	int step;
+
+	ParallelForBase(int inCount);
+	~ParallelForBase();
+
+	void Start(::ThreadPool::ThreadTask worker);
+
+	bool GrabInterval(int& idx1, int& idx2);
+};
+
+template<typename F>
+class ParallelForWorker : public ParallelForBase
+{
+public:
+	F& Func;
+
+	ParallelForWorker(int InCount, F& InFunc)
+	: ParallelForBase(InCount)
+	, Func(InFunc)
+	{
+		guard(ParallelFor);
+
+		Start(PoolThreadWorker);
+
+		// Add processing for main thread
+		int idx1, idx2;
+		while (GrabInterval(idx1, idx2))
+		{
+			ExecuteRange(idx1, idx2);
+			//todo: may be periodically check if one of threads were released from another work and can be picked up?
+		}
+		unguard;
+	}
+
+	FORCEINLINE void ExecuteRange(int idx1, int idx2)
+	{
+		guard(ExecuteRange);
+		while (idx1 < idx2)
+		{
+			Func(idx1++);
+		}
+	#if DEBUG_PARALLEL_FOR
+		printf("...... %d: finished\n", CThread::CurrentId()&255);
+	#endif
+		unguard;
+	}
+
+	static void PoolThreadWorker(void* data)
+	{
+		guard(PoolThreadWorker);
+
+		ParallelForWorker& w = *(ParallelForWorker*)data;
+		InterlockedIncrement(&w.numActiveThreads);
+
+		int idx1, idx2;
+		while (w.GrabInterval(idx1, idx2))
+		{
+			w.ExecuteRange(idx1, idx2);
+		}
+
+		// End the thread, send signal if this was the last allocated thread
+		if (InterlockedDecrement(&w.numActiveThreads) == 0)
+			w.endSignal.Signal();
+
+		unguard;
+	}
+};
+
+} // namespace ParallelForImpl
+
+template<typename F>
+FORCEINLINE void ParallelFor(int Count, F& Func)
+{
+	ParallelForImpl::ParallelForWorker<F> Worker(Count, MoveTemp(Func));
+}
+
 
 #endif // __PARALLEL_H__

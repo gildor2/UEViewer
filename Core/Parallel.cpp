@@ -1,6 +1,10 @@
 #include "Core.h"
 #include "Parallel.h"
 
+/*-----------------------------------------------------------------------------
+	Generic classes
+-----------------------------------------------------------------------------*/
+
 #ifdef _WIN32
 
 #include <Windows.h>
@@ -183,3 +187,185 @@ CThread::~CThread()
 		exit(1);
 	}
 }
+
+
+/*-----------------------------------------------------------------------------
+	Thread pool
+-----------------------------------------------------------------------------*/
+
+namespace ThreadPool
+{
+
+class CPoolThread : public CThread
+{
+public:
+	bool bBusy = false;
+	CSemaphore sem;
+
+	void AssignTaskAndWake(ThreadTask inTask, void* inData)
+	{
+		task = inTask;
+		taskData = inData;
+		sem.Signal();
+	}
+
+protected:
+	virtual void Run()
+	{
+		bBusy = false;
+
+		while (true) //todo: there's no "exit" condition
+		{
+			// Wait for signal to start
+			sem.Wait();
+			// Execute task
+			bBusy = true;
+			task(taskData);
+			// Return thread to pool
+			bBusy = false;
+			//? Signal that task was completed
+		}
+	}
+
+	ThreadTask task;
+	void* taskData;
+};
+
+#define MAX_POOL_THREADS 64
+
+static CPoolThread* GThreadPool[MAX_POOL_THREADS];
+static int GNumAllocatedThreads = 0;
+
+static CMutex GPoolMutex;
+
+CPoolThread* AllocateFreeThread()
+{
+	CMutex::ScopedLock lock(GPoolMutex);
+
+	// Find idle thread
+	for (int i = 0; i < GNumAllocatedThreads; i++)
+	{
+		CPoolThread* Thread = GThreadPool[i];
+		if (!Thread->bBusy)
+		{
+			Thread->bBusy = true;
+			return Thread;
+		}
+	}
+
+	static int MaxThreads = -1;
+	if (MaxThreads < 0)
+	{
+		MaxThreads = CThread::GetLogicalCPUCount();
+		MaxThreads = min(MaxThreads, MAX_POOL_THREADS);
+		--MaxThreads; // exclude main thread
+	}
+
+	// Create new thread, if can
+	if (GNumAllocatedThreads < MaxThreads)
+	{
+		CPoolThread* NewThread = new CPoolThread();
+		NewThread->bBusy = true;
+		GThreadPool[GNumAllocatedThreads++] = NewThread;
+		return NewThread;
+	}
+
+	// No free threads, and can't allocate a new one
+	return NULL;
+}
+
+bool ExecuteInThread(ThreadTask task, void* taskData)
+{
+	CPoolThread* thread = AllocateFreeThread();
+	if (thread)
+	{
+		thread->AssignTaskAndWake(task, taskData);
+		return true;
+	}
+	else
+	{
+		// execute in this thread
+//		task(taskData);
+		return false;
+	}
+}
+
+} // namespace ThreadPool
+
+
+/*-----------------------------------------------------------------------------
+	ParallelFor
+-----------------------------------------------------------------------------*/
+
+namespace ParallelForImpl
+{
+
+ParallelForBase::ParallelForBase(int inCount)
+: numActiveThreads(0)
+, currentIndex(0)
+, lastIndex(inCount)
+{}
+
+ParallelForBase::~ParallelForBase()
+{
+	// Wait for completion
+	if (numActiveThreads)
+	{
+		guard(ParallelForWait);
+		endSignal.Wait();
+		unguard;
+	}
+}
+
+void ParallelForBase::Start(ThreadPool::ThreadTask worker)
+{
+	if (lastIndex == 0)
+		return;
+
+	//todo: review code
+	int maxThreads = CThread::GetLogicalCPUCount();
+	int stepDivisor = maxThreads * 20;		// assume each thread will request for data 20 times
+	step = (lastIndex + stepDivisor - 1) / stepDivisor;
+	if (step < 20) step = 20; //?? should override for slow tasks, e.g. processing 10 items 1 second each
+
+	int numThreads = (lastIndex + step - 1) / step;
+
+	// Recompute step to avoid having tiny last step
+	step = (lastIndex + numThreads - 1) / numThreads;
+	assert(step > 0);
+
+	// Clamp numThreads
+	if (numThreads > maxThreads)
+		numThreads = maxThreads;
+
+#if DEBUG_PARALLEL_FOR
+	printf("ParallelFor: %d, %d, step %d (thread %d)\n", currentIndex, lastIndex, step, CThread::CurrentId()&255);
+#endif
+
+	// Allocate threads, exclude 1 thread for the thread executing ParallelFor
+	for (int i = 0; i < numThreads - 1; i++)
+	{
+		if (!ThreadPool::ExecuteInThread(worker, this))
+		{
+			break; // all threads were allocated
+		}
+	}
+}
+
+bool ParallelForBase::GrabInterval(int& idx1, int& idx2)
+{
+	CMutex::ScopedLock lock(mutex);
+	idx1 = currentIndex;
+	if (idx1 >= lastIndex)
+		return false; // all done
+	idx2 = idx1 + step;
+	if (idx2 > lastIndex)
+		idx2 = lastIndex;
+	currentIndex = idx2;
+#if DEBUG_PARALLEL_FOR
+	printf("thread %d: GET %d .. %d [%d]\n", CThread::CurrentId()&255, idx1, idx2, idx2 - idx1);
+#endif
+	return true;
+}
+
+} // namespace ParallelForImpl
