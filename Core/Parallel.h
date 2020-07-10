@@ -33,7 +33,7 @@ protected:
 	char data[CriticalSectionSize];
 #else
 	enum { MutexSize = 40 }; // __SIZEOF_PTHREAD_MUTEX_T
-	char data[MutexSize];
+	size_t data[MutexSize / sizeof(size_t)];
 #endif
 };
 
@@ -52,7 +52,7 @@ protected:
 	void* data;
 #else
 	enum { SemSize = 16 };
-	char data[SemSize];
+	size_t data[SemSize / sizeof(size_t)];
 #endif
 };
 
@@ -77,7 +77,7 @@ protected:
 	uintptr_t thread;
 #else
 	enum { ThreadSize = 8 }; // actually: typedef unsigned long int pthread_t
-	char thread[ThreadSize];
+	size_t thread[ThreadSize / sizeof(size_t)];
 #endif
 };
 

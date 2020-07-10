@@ -91,7 +91,7 @@ CThread::~CThread()
 
 CMutex::CMutex()
 {
-	static_assert(MutexSize >= sizeof(pthread_mutex_t), "Review MutexSize");
+	static_assert(sizeof(data) >= sizeof(pthread_mutex_t), "Review MutexSize");
 	// Make a recursive mutex
 	pthread_mutexattr_t attr;
 	pthread_mutexattr_init(&attr);
@@ -123,7 +123,7 @@ void CMutex::Unlock()
 CSemaphore::CSemaphore()
 {
 	printf("init_sem(%p)\n", &data);
-	static_assert(SemSize >= sizeof(sem_t), "Review SemSize");
+	static_assert(sizeof(data) >= sizeof(sem_t), "Review SemSize");
 	sem_init((sem_t*)&data, 0, 0);
 }
 
@@ -147,7 +147,7 @@ void CSemaphore::Wait()
 
 CThread::CThread()
 {
-	static_assert(ThreadSize >= sizeof(pthread_t), "Review ThreadSize");
+	static_assert(sizeof(thread) >= sizeof(pthread_t), "Review ThreadSize");
 	typedef void* (*start_routine_t)(void*);
 	pthread_create((pthread_t*)&thread, NULL, (start_routine_t)ThreadFunc, this);
 }
@@ -158,7 +158,7 @@ CThread::~CThread()
 
 /*static*/ int CThread::CurrentId()
 {
-	return (int)pthread_self();
+	return (int)pthread_self() >> 6;
 }
 
 /*static*/ void CThread::Sleep(int milliseconds)
