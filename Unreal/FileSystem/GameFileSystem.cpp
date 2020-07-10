@@ -805,67 +805,73 @@ bool ExecuteInThread(ThreadTask task, void* taskData)
 } // namespace ThreadPool
 
 
-//todo: remplate, wrapper for TArray
-class ParallelForWorker
+//#define DEBUG_PARALLEL_FOR 1
+
+class ParallelForBase
 {
 public:
-	void (*func)(CGameFileInfo*);
-	CGameFileInfo** data;
-
-	int currentIndex;
-	int lastIndex;
-	int step;
 	CMutex mutex;
 	CSemaphore endSignal;
 	int8 numActiveThreads;
+	int currentIndex;
+	int lastIndex;
+	int step;
 
-	ParallelForWorker(CGameFileInfo** inData, int inCount, void (*inFunc)(CGameFileInfo*))
-	: func(inFunc)
-	, data(inData)
+	ParallelForBase(int inCount)
+	: numActiveThreads(0)
 	, currentIndex(0)
 	, lastIndex(inCount)
-	, numActiveThreads(0)
+	{}
+
+	~ParallelForBase()
 	{
-		guard(ParallelFor);
+		// Wait for completion
+		if (numActiveThreads)
+		{
+			guard(ParallelForWait);
+			endSignal.Wait();
+			unguard;
+		}
+	}
+
+	void Start(ThreadPool::ThreadTask worker)
+	{
+		if (lastIndex == 0)
+			return;
 
 		//todo: review code
 		int maxThreads = CThread::GetLogicalCPUCount();
-		step = inCount / (maxThreads * 20);
-		if (step < 20) step = 20; //?? should override for slow tasks
-		int numThreads = inCount / step;
+		int stepDivisor = maxThreads * 20;		// assume each thread will request for data 20 times
+		step = (lastIndex + stepDivisor - 1) / stepDivisor;
+		if (step < 20) step = 20; //?? should override for slow tasks, e.g. processing 10 items 1 second each
+
+		int numThreads = (lastIndex + step - 1) / step;
+
+		// Recompute step to avoid having tiny last step
+		step = (lastIndex + numThreads - 1) / numThreads;
+		assert(step > 0);
+
+		// Clamp numThreads
 		if (numThreads > maxThreads)
 			numThreads = maxThreads;
 
-		assert(step > 0);
-//		printf("ParallelFor: %d, %d, step %d (thread %d)\n", currentIndex, lastIndex, step, CThread::CurrentId()&255);
+	#if DEBUG_PARALLEL_FOR
+		printf("ParallelFor: %d, %d, step %d (thread %d)\n", currentIndex, lastIndex, step, CThread::CurrentId()&255);
+	#else
+	#endif
 
-		//todo: if numThreads <= 1 -> skip threads
-		for (int i = 0; i < numThreads; i++)
+		// Allocate threads, exclude 1 thread for the thread executing ParallelFor
+		for (int i = 0; i < numThreads - 1; i++)
 		{
-			if (!ThreadPool::ExecuteInThread(PoolThreadWorker, this))
+			if (!ThreadPool::ExecuteInThread(worker, this))
 			{
 				break; // all threads were allocated
 			}
 		}
-		// Add processing for main thread
-		int idx1, idx2;
-		while (GrabInterval(idx1, idx2))
-		{
-			ExecuteForRange(idx1, idx2);
-			//todo: may be periodically check if one of threads were released from another work and can be picked up?
-		}
-		// Wait for completion
-		if (numActiveThreads)
-		{
-			endSignal.Wait();
-		}
-		unguard;
 	}
 
 	bool GrabInterval(int& idx1, int& idx2)
 	{
-		//todo: if remains a very little value, just include it into the previous loop (e.g.
-		//todo: there'll remain 1 item)
 		CMutex::ScopedLock lock(mutex);
 		idx1 = currentIndex;
 		if (idx1 >= lastIndex)
@@ -874,19 +880,49 @@ public:
 		if (idx2 > lastIndex)
 			idx2 = lastIndex;
 		currentIndex = idx2;
-//		printf("thread %d: GET %d .. %d\n", CThread::CurrentId()&255, idx1, idx2);
+	#if DEBUG_PARALLEL_FOR
+		printf("thread %d: GET %d .. %d [%d]\n", CThread::CurrentId()&255, idx1, idx2, idx2 - idx1);
+	#endif
 		return true;
 	}
+};
 
-	void ExecuteForRange(int idx1, int idx2)
+//todo: template, wrapper for TArray
+template<typename F>
+class ParallelForWorker : public ParallelForBase
+{
+public:
+	F& Func;
+
+	ParallelForWorker(int InCount, F& InFunc)
+	: ParallelForBase(InCount)
+	, Func(InFunc)
 	{
-		auto* ptr = data + idx1;
-		auto* limit = data + idx2;
-//		printf("...... %d: DO %d .. %d\n", CThread::CurrentId()&255, idx1, idx2);
-		while (ptr < limit)
+		guard(ParallelFor);
+
+		Start(PoolThreadWorker);
+
+		// Add processing for main thread
+		int idx1, idx2;
+		while (GrabInterval(idx1, idx2))
 		{
-			func(*ptr++);
+			ExecuteRange(idx1, idx2);
+			//todo: may be periodically check if one of threads were released from another work and can be picked up?
 		}
+		unguard;
+	}
+
+	FORCEINLINE void ExecuteRange(int idx1, int idx2)
+	{
+		guard(ExecuteRange);
+		while (idx1 < idx2)
+		{
+			Func(idx1++);
+		}
+	#if DEBUG_PARALLEL_FOR
+		printf("...... %d: finished\n", CThread::CurrentId()&255);
+	#endif
+		unguard;
 	}
 
 	static void PoolThreadWorker(void* data)
@@ -894,27 +930,27 @@ public:
 		guard(PoolThreadWorker);
 
 		ParallelForWorker& w = *(ParallelForWorker*)data;
-		int n = InterlockedIncrement(&w.numActiveThreads);
-
-//		printf("Add worker (thread %d) -> %d\n", CThread::CurrentId()&255, n);
+		InterlockedIncrement(&w.numActiveThreads);
 
 		int idx1, idx2;
 		while (w.GrabInterval(idx1, idx2))
 		{
-			w.ExecuteForRange(idx1, idx2);
+			w.ExecuteRange(idx1, idx2);
 		}
-
-//		printf("End %d -> %d\n", CThread::CurrentId()&255, w.numActiveThreads-1);
 
 		// End the thread, send signal if this was the last allocated thread
 		if (InterlockedDecrement(&w.numActiveThreads) == 0)
 			w.endSignal.Signal();
 
-//		printf("... return %d\n", CThread::CurrentId()&255);
-
 		unguard;
 	}
 };
+
+template<typename F>
+FORCEINLINE void ParallelFor(int Count, F& Func)
+{
+	ParallelForWorker<F> Worker(Count, MoveTemp(Func));
+}
 
 
 void appSetRootDirectory(const char *dir, bool recurse)
@@ -948,7 +984,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 
 #if UNREAL4
 	// Count sizes of additional files. Should process .uexp and .ubulk files, register their information for .uasset.
-	#if 1
+	#if 0
 	for (CGameFileInfo* info : GameFiles)
 	{
 		if (info->IsPackage)
@@ -963,8 +999,9 @@ void appSetRootDirectory(const char *dir, bool recurse)
 		}
 	}
 	#else
-	ParallelForWorker(GameFiles.GetData(), GameFiles.Num(), [](CGameFileInfo* info)
+	ParallelFor(GameFiles.Num(), [](int index)
 		{
+			CGameFileInfo* info = GameFiles[index];
 			if (info->IsPackage)
 			{
 				// Find all files with the same path/name but different extension
