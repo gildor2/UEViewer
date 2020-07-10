@@ -70,8 +70,12 @@ protected:
 	void UpdateSelectedPackages();
 	void GetPackagesForSelectedFolder(PackageList& OutPackages);
 	void RefreshPackageListbox();
+
+	// Package sort stuff
 	void SortPackages();
+	// Sort helpers
 	static void SortPackages(PackageList& List, int Column, bool Reverse);
+	void UpdateUIAfterSort();
 
 	UIPackageList& CreatePackageListControl(bool StripPath);
 

@@ -10,6 +10,8 @@
 #include "UnPackage.h"
 #include "UmodelCommands.h"
 
+#include "Parallel.h"
+
 #define USE_FULLY_VIRTUAL_LIST		1		// disable only for testing, to compare UIMulticolumnListbox behavior in virtual modes
 
 /*-----------------------------------------------------------------------------
@@ -406,6 +408,7 @@ void UIPackageDialog::InitUI()
 		]
 	];
 
+	CSemaphore packageSortComplete;
 	if (!Packages.Num())
 	{
 		guard(FetchPackageList);
@@ -427,6 +430,12 @@ void UIPackageDialog::InitUI()
 				param.Add(file);
 				return true;
 			}, Packages);
+
+		ThreadPool::TryExecuteInThread([this]()
+			{
+				// Perform sort - 1st part of UIPackageDialog::SortPackages()
+				SortPackages(Packages, SortedColumn, ReverseSort);
+			}, &packageSortComplete);
 
 		unguard;
 	}
@@ -555,8 +564,9 @@ void UIPackageDialog::InitUI()
 			.SetCallback(BIND_LAMBDA([this]() { CloseDialog(CANCEL); }))
 	];
 
-	SortPackages(); // will call RefreshPackageListbox()
-//	RefreshPackageListbox();
+	// Finish sorting of packages - 2nd part of UIPackageDialog::SortPackages()
+	packageSortComplete.Wait();
+	UpdateUIAfterSort();
 
 	unguard;
 }
@@ -745,6 +755,8 @@ static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHel
 // Stable sort of packages
 /*static*/ void UIPackageDialog::SortPackages(PackageList& List, int Column, bool Reverse)
 {
+	guard(SortPackagesInternal);
+
 	// prepare helper array
 	TArray<PackageSortHelper> SortedArray;
 	SortedArray.AddUninitialized(List.Num());
@@ -764,20 +776,25 @@ static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHel
 	{
 		List[i] = SortedArray[i].File;
 	}
+
+	unguard;
 }
 
 void UIPackageDialog::SortPackages()
 {
 	guard(UIPackageDialog::SortPackages);
-
 	UpdateSelectedPackages();
-
 	SortPackages(Packages, SortedColumn, ReverseSort);
+	UpdateUIAfterSort();
+	unguard;
+}
 
+void UIPackageDialog::UpdateUIAfterSort()
+{
+	guard(UIPackageDialog::UpdateUIAfterSort);
 	FlatPackageList->ShowSortArrow(SortedColumn, ReverseSort);
 	PackageListbox->ShowSortArrow(SortedColumn, ReverseSort);
 	RefreshPackageListbox();
-
 	unguard;
 }
 
