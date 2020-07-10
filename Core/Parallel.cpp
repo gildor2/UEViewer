@@ -12,6 +12,10 @@ bool GEnableThreads = true;
 #include <Windows.h>
 #include <process.h> // _beginthread
 
+// Windows.h has InterlockedIncrement/Decrement defines, hide then
+#undef InterlockedIncrement
+#undef InterlockedDecrement
+
 CMutex::CMutex()
 {
 	static_assert(CriticalSectionSize >= sizeof(RTL_CRITICAL_SECTION), "Review CriticalSectionSize");
@@ -358,6 +362,7 @@ void ParallelForBase::Start(ThreadPool::ThreadTask worker)
 		{
 			break; // all threads were allocated
 		}
+		InterlockedIncrement(&numActiveThreads);
 	}
 }
 

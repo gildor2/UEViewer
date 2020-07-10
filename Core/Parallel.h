@@ -91,6 +91,9 @@ protected:
 
 #ifdef _WIN32
 
+#undef InterlockedIncrement
+#undef InterlockedDecrement
+
 FORCEINLINE int8 InterlockedIncrement(volatile int8* Value)
 {
 	return (int8)_InterlockedExchangeAdd8((char*)Value, 1) + 1;
@@ -252,9 +255,6 @@ public:
 		{
 			Func(idx1++);
 		}
-	#if DEBUG_PARALLEL_FOR
-		printf("...... %d: finished\n", CThread::CurrentId()&255);
-	#endif
 		unguard;
 	}
 
@@ -262,8 +262,11 @@ public:
 	{
 		guard(PoolThreadWorker);
 
+	#if DEBUG_PARALLEL_FOR
+		printf("...... %d: started\n", CThread::CurrentId()&255);
+	#endif
+
 		ParallelForWorker& w = *(ParallelForWorker*)data;
-		InterlockedIncrement(&w.numActiveThreads);
 
 		int idx1, idx2;
 		while (w.GrabInterval(idx1, idx2))
@@ -274,6 +277,10 @@ public:
 		// End the thread, send signal if this was the last allocated thread
 		if (InterlockedDecrement(&w.numActiveThreads) == 0)
 			w.endSignal.Signal();
+
+	#if DEBUG_PARALLEL_FOR
+		printf("...... %d: finished\n", CThread::CurrentId()&255);
+	#endif
 
 		unguard;
 	}
