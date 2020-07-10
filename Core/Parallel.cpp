@@ -122,26 +122,22 @@ void CMutex::Unlock()
 
 CSemaphore::CSemaphore()
 {
-	printf("init_sem(%p)\n", &data);
 	static_assert(sizeof(data) >= sizeof(sem_t), "Review SemSize");
 	sem_init((sem_t*)&data, 0, 0);
 }
 
 CSemaphore::~CSemaphore()
 {
-	printf("del_sem(%p)\n", &data);
 	sem_destroy((sem_t*)data);
 }
 
 void CSemaphore::Signal()
 {
-	printf("sig_sem(%p)\n", &data);
 	sem_post((sem_t*)data);
 }
 
 void CSemaphore::Wait()
 {
-	printf("wait_sem(%p)\n", &data);
 	sem_wait((sem_t*)data);
 }
 

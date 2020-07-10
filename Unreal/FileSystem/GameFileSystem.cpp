@@ -5,6 +5,8 @@
 #include "UnArchiveObb.h"
 #include "UnArchivePak.h"
 
+#include "Parallel.h"
+
 // includes for file enumeration
 #if _WIN32
 #	include <io.h>					// for findfirst() set
@@ -698,6 +700,223 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 
 void LoadGears4Manifest(const CGameFileInfo* info);
 
+//???
+
+namespace ThreadPool
+{
+
+typedef void (*ThreadTask)(void*);
+
+//?? private class
+class CPoolThread : public CThread
+{
+public:
+	bool bBusy = false;
+	CSemaphore sem;
+
+	void AssignTaskAndWake(ThreadTask inTask, void* inData)
+	{
+		task = inTask;
+		taskData = inData;
+		sem.Signal();
+	}
+
+protected:
+	virtual void Run()
+	{
+		bBusy = false;
+
+		while (true) //todo: there's no "exit" condition
+		{
+			// Wait for signal to start
+			sem.Wait();
+			// Execute task
+			bBusy = true;
+			task(taskData);
+			// Return thread to pool
+			bBusy = false;
+			//? Signal that task was completed
+		}
+	}
+
+	ThreadTask task;
+	void* taskData;
+};
+
+#define MAX_POOL_THREADS 64
+
+static CPoolThread* GThreadPool[MAX_POOL_THREADS];
+static int GNumAllocatedThreads = 0;
+
+static CMutex GPoolMutex;
+
+CPoolThread* AllocateFreeThread()
+{
+	CMutex::ScopedLock lock(GPoolMutex);
+
+	// Find idle thread
+	for (int i = 0; i < GNumAllocatedThreads; i++)
+	{
+		CPoolThread* Thread = GThreadPool[i];
+		if (!Thread->bBusy)
+		{
+			Thread->bBusy = true;
+			return Thread;
+		}
+	}
+
+	static int MaxThreads = -1;
+	if (MaxThreads < 0)
+	{
+		MaxThreads = CThread::GetLogicalCPUCount();
+		MaxThreads = min(MaxThreads, MAX_POOL_THREADS);
+		--MaxThreads; // exclude main thread
+	}
+
+	// Create new thread, if can
+	if (GNumAllocatedThreads < MaxThreads)
+	{
+		CPoolThread* NewThread = new CPoolThread();
+		NewThread->bBusy = true;
+		GThreadPool[GNumAllocatedThreads++] = NewThread;
+		return NewThread;
+	}
+
+	// No free threads, and can't allocate a new one
+	return NULL;
+}
+
+bool ExecuteInThread(ThreadTask task, void* taskData)
+{
+	CPoolThread* thread = AllocateFreeThread();
+	if (thread)
+	{
+		thread->AssignTaskAndWake(task, taskData);
+		return true;
+	}
+	else
+	{
+		// execute in this thread
+//		task(taskData);
+		return false;
+	}
+}
+
+} // namespace ThreadPool
+
+
+//todo: remplate, wrapper for TArray
+class ParallelForWorker
+{
+public:
+	void (*func)(CGameFileInfo*);
+	CGameFileInfo** data;
+
+	int currentIndex;
+	int lastIndex;
+	int step;
+	CMutex mutex;
+	CSemaphore endSignal;
+	int8 numActiveThreads;
+
+	ParallelForWorker(CGameFileInfo** inData, int inCount, void (*inFunc)(CGameFileInfo*))
+	: func(inFunc)
+	, data(inData)
+	, currentIndex(0)
+	, lastIndex(inCount)
+	, numActiveThreads(0)
+	{
+		guard(ParallelFor);
+
+		//todo: review code
+		int maxThreads = CThread::GetLogicalCPUCount();
+		step = inCount / (maxThreads * 20);
+		if (step < 20) step = 20; //?? should override for slow tasks
+		int numThreads = inCount / step;
+		if (numThreads > maxThreads)
+			numThreads = maxThreads;
+
+		assert(step > 0);
+//		printf("ParallelFor: %d, %d, step %d (thread %d)\n", currentIndex, lastIndex, step, CThread::CurrentId()&255);
+
+		//todo: if numThreads <= 1 -> skip threads
+		for (int i = 0; i < numThreads; i++)
+		{
+			if (!ThreadPool::ExecuteInThread(PoolThreadWorker, this))
+			{
+				break; // all threads were allocated
+			}
+		}
+		// Add processing for main thread
+		int idx1, idx2;
+		while (GrabInterval(idx1, idx2))
+		{
+			ExecuteForRange(idx1, idx2);
+			//todo: may be periodically check if one of threads were released from another work and can be picked up?
+		}
+		// Wait for completion
+		if (numActiveThreads)
+		{
+			endSignal.Wait();
+		}
+		unguard;
+	}
+
+	bool GrabInterval(int& idx1, int& idx2)
+	{
+		//todo: if remains a very little value, just include it into the previous loop (e.g.
+		//todo: there'll remain 1 item)
+		CMutex::ScopedLock lock(mutex);
+		idx1 = currentIndex;
+		if (idx1 >= lastIndex)
+			return false; // all done
+		idx2 = idx1 + step;
+		if (idx2 > lastIndex)
+			idx2 = lastIndex;
+		currentIndex = idx2;
+//		printf("thread %d: GET %d .. %d\n", CThread::CurrentId()&255, idx1, idx2);
+		return true;
+	}
+
+	void ExecuteForRange(int idx1, int idx2)
+	{
+		auto* ptr = data + idx1;
+		auto* limit = data + idx2;
+//		printf("...... %d: DO %d .. %d\n", CThread::CurrentId()&255, idx1, idx2);
+		while (ptr < limit)
+		{
+			func(*ptr++);
+		}
+	}
+
+	static void PoolThreadWorker(void* data)
+	{
+		guard(PoolThreadWorker);
+
+		ParallelForWorker& w = *(ParallelForWorker*)data;
+		int n = InterlockedIncrement(&w.numActiveThreads);
+
+//		printf("Add worker (thread %d) -> %d\n", CThread::CurrentId()&255, n);
+
+		int idx1, idx2;
+		while (w.GrabInterval(idx1, idx2))
+		{
+			w.ExecuteForRange(idx1, idx2);
+		}
+
+//		printf("End %d -> %d\n", CThread::CurrentId()&255, w.numActiveThreads-1);
+
+		// End the thread, send signal if this was the last allocated thread
+		if (InterlockedDecrement(&w.numActiveThreads) == 0)
+			w.endSignal.Signal();
+
+//		printf("... return %d\n", CThread::CurrentId()&255);
+
+		unguard;
+	}
+};
+
+
 void appSetRootDirectory(const char *dir, bool recurse)
 {
 	guard(appSetRootDirectory);
@@ -729,6 +948,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 
 #if UNREAL4
 	// Count sizes of additional files. Should process .uexp and .ubulk files, register their information for .uasset.
+	#if 1
 	for (CGameFileInfo* info : GameFiles)
 	{
 		if (info->IsPackage)
@@ -742,6 +962,21 @@ void appSetRootDirectory(const char *dir, bool recurse)
 			}
 		}
 	}
+	#else
+	ParallelForWorker(GameFiles.GetData(), GameFiles.Num(), [](CGameFileInfo* info)
+		{
+			if (info->IsPackage)
+			{
+				// Find all files with the same path/name but different extension
+				TStaticArray<const CGameFileInfo*, 32> otherFiles;
+				info->FindOtherFiles(otherFiles);
+				for (const CGameFileInfo* other : otherFiles)
+				{
+					info->ExtraSizeInKb += other->SizeInKb;
+				}
+			}
+		});
+	#endif
 #endif // UNREAL4
 
 #if PROFILE
@@ -1261,8 +1496,10 @@ void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char *Ext, v
 
 void appEnumGameFoldersWorker(EnumGameFoldersCallback_t Callback, void *Param)
 {
+	guard(appEnumGameFoldersWorker);
 	for (const CGameFolderInfo& info : GameFolders)
 	{
 		if (!Callback(info.Name, info.NumFiles, Param)) break;
 	}
+	unguard;
 }
