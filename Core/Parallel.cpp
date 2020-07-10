@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "Parallel.h"
 
+bool GEnableThreads = true;
+
 /*-----------------------------------------------------------------------------
 	Generic classes
 -----------------------------------------------------------------------------*/
@@ -199,13 +201,14 @@ namespace ThreadPool
 class CPoolThread : public CThread
 {
 public:
+	// Flag showing if this thead is doing something or not
 	bool bBusy = false;
-	CSemaphore sem;
 
-	void AssignTaskAndWake(ThreadTask inTask, void* inData)
+	void AssignTaskAndWake(ThreadTask inTask, void* inData, CSemaphore* inFence)
 	{
 		task = inTask;
 		taskData = inData;
+		fence = inFence;
 		sem.Signal();
 	}
 
@@ -221,14 +224,21 @@ protected:
 			// Execute task
 			bBusy = true;
 			task(taskData);
+			if (fence) fence->Signal();
 			// Return thread to pool
 			bBusy = false;
 			//? Signal that task was completed
 		}
 	}
 
+	// Executed code
 	ThreadTask task;
+	// Pointer to task context
 	void* taskData;
+	// Object used to signal execution end
+	CSemaphore* fence;
+	// Semaphore used to wake up the thread
+	CSemaphore sem;
 };
 
 #define MAX_POOL_THREADS 64
@@ -259,6 +269,7 @@ CPoolThread* AllocateFreeThread()
 		MaxThreads = CThread::GetLogicalCPUCount();
 		MaxThreads = min(MaxThreads, MAX_POOL_THREADS);
 		--MaxThreads; // exclude main thread
+		if (!GEnableThreads) MaxThreads = 0;
 	}
 
 	// Create new thread, if can
@@ -274,18 +285,16 @@ CPoolThread* AllocateFreeThread()
 	return NULL;
 }
 
-bool ExecuteInThread(ThreadTask task, void* taskData)
+bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence)
 {
 	CPoolThread* thread = AllocateFreeThread();
 	if (thread)
 	{
-		thread->AssignTaskAndWake(task, taskData);
+		thread->AssignTaskAndWake(task, taskData, fence);
 		return true;
 	}
 	else
 	{
-		// execute in this thread
-//		task(taskData);
 		return false;
 	}
 }

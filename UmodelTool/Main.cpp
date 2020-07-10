@@ -47,6 +47,7 @@
 // GSettings.Reset() will be called before main() executed.
 CUmodelSettings GSettings;
 
+extern bool GEnableThreads;
 
 /*-----------------------------------------------------------------------------
 	Table of known Unreal classes
@@ -371,6 +372,7 @@ static void PrintUsage()
 #	if VSTUDIO_INTEGRATION
 			"    -debug          invoke system crash handler on errors\n"
 #	endif
+			"    -nomt           disable multithreading optimizations\n"
 #endif // SHOW_HIDDEN_SWITCHES
 			"\n"
 			"Options:\n"
@@ -888,6 +890,10 @@ int main(int argc, const char **argv)
 		{
 			PrintVersionInfo();
 			return 0;
+		}
+		else if (!stricmp(opt, "nomt"))
+		{
+			GEnableThreads = false;
 		}
 		else if (!stricmp(opt, "debug"))
 		{

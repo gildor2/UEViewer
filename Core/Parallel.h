@@ -157,7 +157,40 @@ namespace ThreadPool
 typedef void (*ThreadTask)(void*);
 
 // Execute ThreadTask in thread. Return false if there's no free threads
-bool ExecuteInThread(ThreadTask task, void* taskData);
+bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence = NULL);
+
+template<typename F>
+FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL)
+{
+	guard(TryExecuteInThread);
+
+	struct Worker
+	{
+		Worker(F&& inTask)
+		: task(MoveTemp(inTask))
+		{}
+
+		F task;
+
+		static void Proc(void* data)
+		{
+			Worker* worker = (Worker*)data;
+			worker->task();
+			delete worker;
+		}
+	};
+
+	Worker* worker = new Worker(MoveTemp(task));
+	if (!ExecuteInThread(Worker::Proc, worker, fence))
+	{
+		// Execute in current thread
+		worker->task();
+		if (fence) fence->Signal();
+		delete worker;
+	}
+
+	unguard;
+}
 
 }
 

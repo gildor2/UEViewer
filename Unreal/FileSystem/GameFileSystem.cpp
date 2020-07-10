@@ -731,21 +731,6 @@ void appSetRootDirectory(const char *dir, bool recurse)
 
 #if UNREAL4
 	// Count sizes of additional files. Should process .uexp and .ubulk files, register their information for .uasset.
-	#if 0
-	for (CGameFileInfo* info : GameFiles)
-	{
-		if (info->IsPackage)
-		{
-			// Find all files with the same path/name but different extension
-			TStaticArray<const CGameFileInfo*, 32> otherFiles;
-			info->FindOtherFiles(otherFiles);
-			for (const CGameFileInfo* other : otherFiles)
-			{
-				info->ExtraSizeInKb += other->SizeInKb;
-			}
-		}
-	}
-	#else
 	ParallelFor(GameFiles.Num(), [](int index)
 		{
 			CGameFileInfo* info = GameFiles[index];
@@ -760,7 +745,6 @@ void appSetRootDirectory(const char *dir, bool recurse)
 				}
 			}
 		});
-	#endif
 #endif // UNREAL4
 
 #if PROFILE
