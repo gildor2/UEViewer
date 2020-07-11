@@ -270,6 +270,7 @@ struct CUniqueNameList
 bool ExportObject(const UObject *Obj)
 {
 	guard(ExportObject);
+	PROFILE_LABEL(Obj->GetClassName());
 
 	if (!Obj) return false;
 	if (strnicmp(Obj->Name, "Default__", 9) == 0)	// default properties object, nothing to export

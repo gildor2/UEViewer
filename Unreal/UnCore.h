@@ -1109,6 +1109,7 @@ struct FVector
 	{
 		Ar << V.X << V.Y << V.Z;
 #if ENDWAR
+		//todo: a single game influences ALL game's serialization speed!
 		if (Ar.Game == GAME_EndWar) Ar.Seek(Ar.Tell() + 4);	// skip W, at ArVer >= 290
 #endif
 		return Ar;

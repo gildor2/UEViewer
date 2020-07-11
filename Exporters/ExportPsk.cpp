@@ -87,25 +87,41 @@ static void ExportCommonMeshData
 	// main psk header
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
+	guard(Points);
 	PtsHdr.DataCount = Share.Points.Num();
 	PtsHdr.DataSize  = sizeof(FVector);
 	SAVE_CHUNK(PtsHdr, "PNTS0000");
-	for (i = 0; i < Share.Points.Num(); i++)
+	if (sizeof(FVector) == sizeof(float) * 3)
 	{
-		FVector V = (FVector&) Share.Points[i];
 #if MIRROR_MESH
-		V.Y = -V.Y;
+		// Mirror mesh inplace
+		for (CVec3& V : Share.Points)
+			V[1] = -V[1]; // V.Y
 #endif
-		Ar << V;
+		Ar.Serialize(Share.Points.GetData(), Share.Points.Num() * sizeof(CVec3));
 	}
+	else
+	{
+		for (i = 0; i < Share.Points.Num(); i++)
+		{
+			FVector V = (FVector&) Share.Points[i];
+#if MIRROR_MESH
+			V.Y = -V.Y;
+#endif
+			Ar << V;
+		}
+	}
+	unguard;
 
 	// get number of faces (some Gears3 meshes may have index buffer larger than needed)
 	// get wedge-material mapping
 	int numFaces = 0;
+	CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
+
+	guard(Wedges);
 	TArray<int> WedgeMat;
 	WedgeMat.Empty(NumVerts);
 	WedgeMat.AddZeroed(NumVerts);
-	CIndexBuffer::IndexAccessor_t Index = Indices.GetAccessor();
 	for (i = 0; i < NumSections; i++)
 	{
 		const CMeshSection &Sec = *SECT(i);
@@ -130,9 +146,18 @@ static void ExportCommonMeshData
 		W.MatIndex   = WedgeMat[i];
 		W.Reserved   = 0;
 		W.Pad        = 0;
-		Ar << W;
+		if (sizeof(VVertex) == sizeof(int32) * 4)
+		{
+			Ar.Serialize(&W, sizeof(W));
+		}
+		else
+		{
+			Ar << W;
+		}
 	}
+	unguard;
 
+	guard(Faces);
 	if (NumVerts <= 65536)
 	{
 		FacesHdr.DataCount = numFaces;
@@ -147,7 +172,7 @@ static void ExportCommonMeshData
 				for (int k = 0; k < 3; k++)
 				{
 					int idx = Index(Sec.FirstIndex + j * 3 + k);
-					assert(idx >= 0 && idx < 65536);
+					assert((idx & ~0xFFFF) == 0); // (idx >= 0 && idx < 65536);
 					T.WedgeIndex[k] = idx;
 				}
 				T.MatIndex        = i;
@@ -156,7 +181,14 @@ static void ExportCommonMeshData
 #if MIRROR_MESH
 				Exchange(T.WedgeIndex[0], T.WedgeIndex[1]);
 #endif
-				Ar << T;
+				if (sizeof(VTriangle16) == 12)
+				{
+					Ar.Serialize(&T, sizeof(T));
+				}
+				else
+				{
+					Ar << T;
+				}
 			}
 		}
 	}
@@ -183,11 +215,14 @@ static void ExportCommonMeshData
 #if MIRROR_MESH
 				Exchange(T.WedgeIndex[0], T.WedgeIndex[1]);
 #endif
+				// This structure is not packed, can't use single serialize call for it
 				Ar << T;
 			}
 		}
 	}
+	unguard;
 
+	guard(Materials);
 	MatrHdr.DataCount = NumSections;
 	MatrHdr.DataSize  = sizeof(VMaterial);
 	SAVE_CHUNK(MatrHdr, "MATT0000");
@@ -208,6 +243,7 @@ static void ExportCommonMeshData
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
 		Ar << M;
 	}
+	unguard;
 
 	unguard;
 }
@@ -248,12 +284,20 @@ static void ExportExtraUV
 		appSprintf(ARRAY_ARG(chunkName), "EXTRAUVS%d", j-1);
 		SAVE_CHUNK(UVHdr, chunkName);
 		const CMeshUVFloat* SUV = ExtraUV[j-1];
-		for (int i = 0; i < NumVerts; i++, SUV++)
+
+		if (sizeof(CMeshUVFloat) == sizeof(float) * 2)
 		{
-			VMeshUV UV;
-			UV.U = SUV->U;
-			UV.V = SUV->V;
-			Ar << UV;
+			Ar.Serialize((void*)SUV, sizeof(CMeshUVFloat) * NumVerts);
+		}
+		else
+		{
+			for (int i = 0; i < NumVerts; i++, SUV++)
+			{
+				VMeshUV UV;
+				UV.U = SUV->U;
+				UV.V = SUV->V;
+				Ar << UV;
+			}
 		}
 	}
 
@@ -276,6 +320,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 	// information to not perform occasional welding of vertices which has the same position and
 	// normal, but belongs to different bones.
 //	appResetProfiler();
+	guard(WeldVerts);
 	Share.Prepare(Lod.Verts, Lod.NumVerts, sizeof(CSkelMeshVertex));
 	for (i = 0; i < Lod.NumVerts; i++)
 	{
@@ -290,6 +335,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 			WeightsHash ^= S.Bone[j] << j;
 		Share.AddVertex(S.Position, S.Normal, WeightsHash);
 	}
+	unguard;
 //	appPrintProfiler();
 //	appPrintf("%d wedges were welded into %d verts\n", Lod.NumVerts, Share.Points.Num());
 
@@ -304,6 +350,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 	int numBones = Mesh.RefSkeleton.Num();
 
+	guard(Bones);
 	BoneHdr.DataCount = numBones;
 	BoneHdr.DataSize  = sizeof(VBone);
 	SAVE_CHUNK(BoneHdr, "REFSKELT");
@@ -331,8 +378,10 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 		Ar << B;
 	}
+	unguard;
 
 	// count influences
+	guard(Influences);
 	int NumInfluences = 0;
 	for (i = 0; i < Share.Points.Num(); i++)
 	{
@@ -363,10 +412,18 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 			I.Weight     = UnpackedWeights.v[j];
 			I.BoneIndex  = V.Bone[j];
 			I.PointIndex = i;
-			Ar << I;
+			if (sizeof(VRawBoneInfluence) == sizeof(int) * 3)
+			{
+				Ar.Serialize(&I, sizeof(I));
+			}
+			else
+			{
+				Ar << I;
+			}
 		}
 	}
 	assert(NumInfluences == 0);
+	unguard;
 
 	ExportVertexColors(Ar, Lod.VertexColors, Lod.NumVerts);
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
@@ -491,10 +548,12 @@ void ExportPsa(const CAnimSet *Anim)
 		Ar << B;
 	}
 
+	int framesCount = 0;
+
+	guard(AnimInfo);
 	AnimHdr.DataCount = numAnims;
 	AnimHdr.DataSize  = sizeof(AnimInfoBinary);
 	SAVE_CHUNK(AnimHdr, "ANIMINFO");
-	int framesCount = 0;
 	for (i = 0; i < numAnims; i++)
 	{
 		AnimInfoBinary A;
@@ -516,14 +575,18 @@ void ExportPsa(const CAnimSet *Anim)
 
 		framesCount += S.NumFrames;
 	}
+	unguard;
 
+	bool requireConfig = false;
+
+	guard(Keys);
 	int keysCount = framesCount * numBones;
 	KeyHdr.DataCount = keysCount;
 	KeyHdr.DataSize  = sizeof(VQuatAnimKey);
 	SAVE_CHUNK(KeyHdr, "ANIMKEYS");
-	bool requireConfig = false;
 	for (i = 0; i < numAnims; i++)
 	{
+		guard(Sequence);
 		const CAnimSequence &S = *Anim->Sequences[i];
 		for (int t = 0; t < S.NumFrames; t++)
 		{
@@ -546,7 +609,15 @@ void ExportPsa(const CAnimSet *Anim)
 				K.Position.Y    *= -1;
 #endif
 
-				Ar << K;
+				if (sizeof(VQuatAnimKey) == sizeof(float) * 8)
+				{
+					// Packed structure, serialize with a single call
+					Ar.Serialize(&K, sizeof(K));
+				}
+				else
+				{
+					Ar << K;
+				}
 				keysCount--;
 
 				// check for user error
@@ -554,8 +625,10 @@ void ExportPsa(const CAnimSet *Anim)
 					requireConfig = true;
 			}
 		}
+		unguard;
 	}
 	assert(keysCount == 0);
+	unguard;
 
 	// psa file is done
 	delete Ar0;
@@ -624,12 +697,14 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 
 	// weld vertices
 //	appResetProfiler();
+	guard(WeldVerts);
 	Share.Prepare(Lod.Verts, Lod.NumVerts, sizeof(CStaticMeshVertex));
 	for (int i = 0; i < Lod.NumVerts; i++)
 	{
 		const CMeshVertex &S = Lod.Verts[i];
 		Share.AddVertex(S.Position, S.Normal);
 	}
+	unguard;
 //	appPrintProfiler();
 //	appPrintf("%d wedges were welded into %d verts\n", Lod.NumVerts, Share.Points.Num());
 
