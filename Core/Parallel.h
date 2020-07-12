@@ -109,6 +109,8 @@ protected:
 #undef InterlockedIncrement
 #undef InterlockedDecrement
 
+// InterlockedIncrement/Decrement functions returns new value
+
 FORCEINLINE int8 InterlockedIncrement(volatile int8* Value)
 {
 	return (int8)_InterlockedExchangeAdd8((char*)Value, 1) + 1;
@@ -118,6 +120,11 @@ FORCEINLINE int16 InterlockedIncrement(volatile int16* Value)
 	return (int16)_InterlockedIncrement16((short*)Value);
 }
 FORCEINLINE int32 InterlockedIncrement(volatile int32* Value)
+{
+	return (int32)_InterlockedIncrement((long*)Value);
+}
+
+FORCEINLINE int32 InterlockedIncrement(volatile uint32* Value)
 {
 	return (int32)_InterlockedIncrement((long*)Value);
 }
@@ -135,7 +142,48 @@ FORCEINLINE int32 InterlockedDecrement(volatile int32* Value)
 	return (int32)_InterlockedDecrement((long*)Value);
 }
 
-#else
+FORCEINLINE int32 InterlockedDecrement(volatile uint32* Value)
+{
+	return (int32)_InterlockedDecrement((long*)Value);
+}
+
+// InterlockedAdd functions returns value before add (i.e. original one)
+
+FORCEINLINE int8 InterlockedAdd(volatile int8* Value, int8 Amount)
+{
+	return (int8)_InterlockedExchangeAdd8((char*)Value, (char)Amount);
+}
+
+FORCEINLINE int16 InterlockedAdd(volatile int16* Value, int16 Amount)
+{
+	return (int16)_InterlockedExchangeAdd16((short*)Value, (short)Amount);
+}
+
+FORCEINLINE int32 InterlockedAdd(volatile int32* Value, int32 Amount)
+{
+	return (int32)::_InterlockedExchangeAdd((long*)Value, (long)Amount);
+}
+
+FORCEINLINE int32 InterlockedAdd(volatile uint32* Value, int32 Amount)
+{
+	return (int32)::_InterlockedExchangeAdd((long*)Value, (long)Amount);
+}
+
+#ifdef _WIN64
+
+FORCEINLINE int32 InterlockedAdd(volatile int64* Value, int64 Amount)
+{
+	return (int32)::_InterlockedExchangeAdd64((__int64*)Value, (__int64)Amount);
+}
+
+FORCEINLINE int32 InterlockedAdd(volatile uint64* Value, int64 Amount)
+{
+	return (int32)::_InterlockedExchangeAdd64((__int64*)Value, (__int64)Amount);
+}
+
+#endif // _WIN64
+
+#else // _WIN32
 
 FORCEINLINE int8 InterlockedIncrement(volatile int8* Value)
 {
@@ -146,6 +194,11 @@ FORCEINLINE int16 InterlockedIncrement(volatile int16* Value)
 	return __sync_fetch_and_add(Value, 1) + 1;
 }
 FORCEINLINE int32 InterlockedIncrement(volatile int32* Value)
+{
+	return __sync_fetch_and_add(Value, 1) + 1;
+}
+
+FORCEINLINE int32 InterlockedIncrement(volatile uint32* Value)
 {
 	return __sync_fetch_and_add(Value, 1) + 1;
 }
@@ -163,7 +216,42 @@ FORCEINLINE int32 InterlockedDecrement(volatile int32* Value)
 	return __sync_fetch_and_sub(Value, 1) - 1;
 }
 
-#endif
+FORCEINLINE int32 InterlockedDecrement(volatile uint32* Value)
+{
+	return __sync_fetch_and_sub(Value, 1) - 1;
+}
+
+FORCEINLINE int8 InterlockedAdd(volatile int8* Value, int8 Amount)
+{
+	return __sync_fetch_and_add(Value, Amount);
+}
+
+FORCEINLINE int16 InterlockedAdd(volatile int16* Value, int16 Amount)
+{
+	return __sync_fetch_and_add(Value, Amount);
+}
+
+FORCEINLINE int32 InterlockedAdd(volatile int32* Value, int32 Amount)
+{
+	return __sync_fetch_and_add(Value, Amount);
+}
+
+FORCEINLINE int32 InterlockedAdd(volatile uint32* Value, int32 Amount)
+{
+	return __sync_fetch_and_add(Value, Amount);
+}
+
+FORCEINLINE int32 InterlockedAdd(volatile int64* Value, int64 Amount)
+{
+	return __sync_fetch_and_add(Value, Amount);
+}
+
+FORCEINLINE int32 InterlockedAdd(volatile uint64* Value, int64 Amount)
+{
+	return __sync_fetch_and_add(Value, Amount);
+}
+
+#endif // _WIN32
 
 /*-----------------------------------------------------------------------------
 	Thread pool
@@ -311,6 +399,28 @@ FORCEINLINE void ParallelFor(int Count, F&& Func)
 
 
 #else // THREADING
+
+// Non-threaded versions of functions
+
+template<typename T>
+FORCEINLINE T InterlockedIncrement(T* Value)
+{
+	return ++(*Value);
+}
+
+template<typename T>
+FORCEINLINE T InterlockedDecrement(T* Value)
+{
+	return --(*Value);
+}
+
+template<typename T, typename T2>
+FORCEINLINE T InterlockedAdd(T* Value, T2 Amount)
+{
+	T Result = *Value;
+	*Value = Result + Amount;;
+	return Result;
+}
 
 template<typename F>
 FORCEINLINE void ParallelFor(int Count, F& Func)
