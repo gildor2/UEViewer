@@ -1,6 +1,8 @@
 #ifndef __PARALLEL_H__
 #define __PARALLEL_H__
 
+#if THREADING
+
 /*-----------------------------------------------------------------------------
 	Generic classes
 -----------------------------------------------------------------------------*/
@@ -307,5 +309,16 @@ FORCEINLINE void ParallelFor(int Count, F& Func)
 	ParallelForImpl::ParallelForWorker<F> Worker(Count, MoveTemp(Func));
 }
 
+
+#else // THREADING
+
+template<typename F>
+FORCEINLINE void ParallelFor(int Count, F& Func)
+{
+	for (int i = 0; i < Count; i++)
+		Func(i);
+}
+
+#endif // THREADING
 
 #endif // __PARALLEL_H__
