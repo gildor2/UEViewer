@@ -16,7 +16,14 @@ bool GEnableThreads = true;
 #undef InterlockedIncrement
 #undef InterlockedDecrement
 
+#if TRACY_DEBUG_MUTEX
+static tracy::SourceLocationData DummyStrLoc({ nullptr, "CMutex Var", __FILE__, __LINE__, 0 });
+#endif
+
 CMutex::CMutex()
+#if TRACY_DEBUG_MUTEX
+: tracy(&DummyStrLoc)
+#endif
 {
 	static_assert(CriticalSectionSize >= sizeof(RTL_CRITICAL_SECTION), "Review CriticalSectionSize");
 	InitializeCriticalSection((LPCRITICAL_SECTION)&data);
@@ -29,20 +36,36 @@ CMutex::~CMutex()
 
 void CMutex::Lock()
 {
+#if TRACY_DEBUG_MUTEX
+	bool b = tracy.BeforeLock();
+#endif
 	EnterCriticalSection((LPCRITICAL_SECTION)&data);
+#if TRACY_DEBUG_MUTEX
+	if (b) tracy.AfterLock();
+#endif
 }
 
 bool CMutex::TryLock()
 {
-	return TryEnterCriticalSection((LPCRITICAL_SECTION)&data) == 0;
+	bool bAcquired = TryEnterCriticalSection((LPCRITICAL_SECTION)&data) == 0;
+#if TRACY_DEBUG_MUTEX
+	tracy.AfterTryLock(bAcquired);
+#endif
+	return bAcquired;
 }
 
 void CMutex::Unlock()
 {
 	LeaveCriticalSection((LPCRITICAL_SECTION)&data);
+#if TRACY_DEBUG_MUTEX
+	tracy.AfterUnlock();
+#endif
 }
 
 CSemaphore::CSemaphore()
+#if TRACY_DEBUG_MUTEX
+: tracy(&DummyStrLoc)
+#endif
 {
 	data = CreateSemaphore(NULL, 0, 32768, NULL);
 }
@@ -55,11 +78,20 @@ CSemaphore::~CSemaphore()
 void CSemaphore::Signal()
 {
 	ReleaseSemaphore(data, 1, NULL);
+#if TRACY_DEBUG_MUTEX
+	tracy.AfterUnlock();
+#endif
 }
 
 void CSemaphore::Wait()
 {
+#if TRACY_DEBUG_MUTEX
+	bool b = tracy.BeforeLock();
+#endif
 	WaitForSingleObject(data, INFINITE);
+#if TRACY_DEBUG_MUTEX
+	if (b) tracy.AfterLock();
+#endif
 }
 
 CThread::CThread()

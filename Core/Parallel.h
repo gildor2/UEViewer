@@ -5,6 +5,13 @@
 	Generic classes
 -----------------------------------------------------------------------------*/
 
+//todo: I wasn't able to make this stuff working - profiler GUI crashes with that
+//#define TRACY_DEBUG_MUTEX 1
+
+#ifndef TRACY_ENABLE
+#undef TRACY_DEBUG_MUTEX
+#endif
+
 class CMutex
 {
 public:
@@ -39,6 +46,9 @@ protected:
 	enum { MutexSize = 40 }; // __SIZEOF_PTHREAD_MUTEX_T
 	size_t data[MutexSize / sizeof(size_t)];
 #endif
+#if TRACY_DEBUG_MUTEX
+	tracy::LockableCtx tracy;
+#endif
 };
 
 class CSemaphore
@@ -57,6 +67,9 @@ protected:
 #else
 	enum { SemSize = 16 };
 	size_t data[SemSize / sizeof(size_t)];
+#endif
+#if TRACY_DEBUG_MUTEX
+	tracy::LockableCtx tracy;
 #endif
 };
 

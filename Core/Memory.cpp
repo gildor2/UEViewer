@@ -5,6 +5,7 @@
 #define MAX_ALLOCATION_POINTS	8192
 #endif // DEBUG_MEMORY
 
+//#define TRACY_DEBUG_MALLOC		1
 
 #if PROFILE
 int GNumAllocs = 0;
@@ -172,7 +173,9 @@ void* appMalloc(int size, int alignment, bool noInit)
 	hdr->stack = found;
 #endif // DEBUG_MEMORY
 
+#if TRACY_DEBUG_MALLOC
 	PROFILE_ALLOC(ptr, size);
+#endif
 
 	// statistics
 	GTotalAllocationSize += size;
@@ -216,8 +219,10 @@ void* appRealloc(void *ptr, int newSize)
 #endif
 	free(block);
 
+#if TRACY_DEBUG_MALLOC
 	PROFILE_FREE(ptr);
 	PROFILE_ALLOC(newData, newSize);
+#endif
 
 	// statistics: we're allocating a new block with appMalloc, which counts statistics
 	// for this allocation, so only eliminate statistics from old memory block here
@@ -249,7 +254,9 @@ void appFree(void *ptr)
 	memset(ptr, FREE_BLOCK, hdr->blockSize);
 #endif
 
+#if TRACY_DEBUG_MALLOC
 	PROFILE_FREE(ptr);
+#endif
 
 	// statistics
 	GTotalAllocationSize -= hdr->blockSize;
