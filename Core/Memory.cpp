@@ -1,4 +1,5 @@
 #include "Core.h"
+#include "Parallel.h"
 
 #if DEBUG_MEMORY
 #define MAX_STACK_TRACE			16
@@ -15,11 +16,16 @@ size_t GTotalAllocationSize = 0;
 int    GTotalAllocationCount = 0;
 
 #define BLOCK_MAGIC				0xAE
+#define UNINIT_BLOCK			0xCC
 #define FREE_BLOCK				0xFE
 
 #define MAX_ALLOCATION_SIZE		(513<<20)		// upper limit for single allocation is 513+1 Mb
 
 #if DEBUG_MEMORY
+
+#if THREADING
+static CMutex GMallocMutex;
+#endif
 
 struct CStackTrace
 {
@@ -134,13 +140,21 @@ void* appMalloc(int size, int alignment, bool noInit)
 		appError("Memory: bad allocation size %d bytes", size);
 	assert(alignment > 1 && alignment <= 256 && ((alignment & (alignment - 1)) == 0));
 
-	void *block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
+	// Allocate memory
+	void* block = malloc(size + sizeof(CBlockHeader) + (alignment - 1));
 	if (!block)
 		OutOfMemory(size);
 
-	void *ptr = Align(OffsetPointer(block, sizeof(CBlockHeader)), alignment);
+	// Initialize the allocated block
+	void* ptr = Align(OffsetPointer(block, sizeof(CBlockHeader)), alignment);
 	if (size > 0 && !noInit)
 		memset(ptr, 0, size);
+#if DEBUG_MEMORY
+	else if (size > 0)
+		memset(ptr, UNINIT_BLOCK, size);
+#endif
+
+	// Prepare block header
 	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
 	byte offset = (byte*)ptr - (byte*)block;
 	hdr->magic     = BLOCK_MAGIC;
@@ -149,12 +163,18 @@ void* appMalloc(int size, int alignment, bool noInit)
 	hdr->blockSize = size;
 
 #if DEBUG_MEMORY
+	// Setup debug stuff
+
+	#if THREADING
+	GMallocMutex.Lock();
+	#endif
 	hdr->Link();
-	// collect a stack trace
+
+	// Collect a call stack
 	CStackTrace stack;
 	appCaptureStackTrace(stack.stack, MAX_STACK_TRACE, 2);
 	stack.UpdateHash();
-	// find similar call stack
+	// Find similar call stack
 	CStackTrace* found = NULL;
 	for (int i = 0; i < GNumAllocationPoints; i++)
 	{
@@ -171,6 +191,9 @@ void* appMalloc(int size, int alignment, bool noInit)
 		*found = stack;
 	}
 	hdr->stack = found;
+	#if THREADING
+	GMallocMutex.Unlock();
+	#endif
 #endif // DEBUG_MEMORY
 
 #if TRACY_DEBUG_MALLOC
@@ -178,45 +201,50 @@ void* appMalloc(int size, int alignment, bool noInit)
 #endif
 
 	// statistics
-	GTotalAllocationSize += size;
-	GTotalAllocationCount++;
+	InterlockedAdd(&GTotalAllocationSize, size);
+	InterlockedIncrement(&GTotalAllocationCount);
 #if PROFILE
-	GNumAllocs++;
+	InterlockedIncrement(&GNumAllocs);
 #endif
 
 	return ptr;
 	unguardf("size=%d (total=%d Mbytes)", size, (int)(GTotalAllocationSize >> 20));
 }
 
-void* appRealloc(void *ptr, int newSize)
+void* appRealloc(void* ptr, int newSize)
 {
 	guard(appRealloc);
 
 	// special case
 	if (!ptr) return appMallocNoInit(newSize);
 
-	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
+	CBlockHeader* hdr = (CBlockHeader*)ptr - 1;
+	assert(hdr->magic == BLOCK_MAGIC);
 
 	int oldSize = hdr->blockSize;
 	if (oldSize == newSize) return ptr;	// size not changed
 
-	assert(hdr->magic == BLOCK_MAGIC);
-	hdr->magic--;		// modify to any value
-#if DEBUG_MEMORY
-	hdr->Unlink();
-#endif
-
+	// Allocate new memory block and copy contents
 	int alignment = hdr->align + 1;
-	void *newData = appMallocNoInit(newSize, alignment);
-
+	void* newData = appMallocNoInit(newSize, alignment);
 	memcpy(newData, ptr, min(newSize, oldSize));
 
+	// Release old memory block
+	hdr->magic--;		// modify to any value
 	int offset = hdr->offset + 1;
-	void *block = OffsetPointer(ptr, -offset);
+	void* block = OffsetPointer(ptr, -offset);
 
 #if DEBUG_MEMORY
+	#if THREADING
+	GMallocMutex.Lock();
+	hdr->Unlink();
+	GMallocMutex.Unlock();
+	#else
+	hdr->Unlink();
+	#endif
 	memset(ptr, FREE_BLOCK, oldSize);
 #endif
+
 	free(block);
 
 #if TRACY_DEBUG_MALLOC
@@ -226,11 +254,11 @@ void* appRealloc(void *ptr, int newSize)
 
 	// statistics: we're allocating a new block with appMalloc, which counts statistics
 	// for this allocation, so only eliminate statistics from old memory block here
-	GTotalAllocationSize -= oldSize;
-	GTotalAllocationCount--;
+	InterlockedAdd(&GTotalAllocationSize, -oldSize);
+	InterlockedDecrement(&GTotalAllocationCount);
 
 #if PROFILE
-	GNumAllocs++;
+	InterlockedIncrement(&GNumAllocs);
 #endif
 
 	return newData;
@@ -238,19 +266,26 @@ void* appRealloc(void *ptr, int newSize)
 	unguard;
 }
 
-void appFree(void *ptr)
+void appFree(void* ptr)
 {
 	guard(appFree);
 	assert(ptr);
-	CBlockHeader *hdr = (CBlockHeader*)ptr - 1;
 
-	int offset = hdr->offset + 1;
-	void *block = OffsetPointer(ptr, -offset);
-
+	CBlockHeader* hdr = (CBlockHeader*)ptr - 1;
 	assert(hdr->magic == BLOCK_MAGIC);
+
 	hdr->magic--;		// modify to any value
+	int offset = hdr->offset + 1;
+	void* block = OffsetPointer(ptr, -offset);
+
 #if DEBUG_MEMORY
+	#if THREADING
+	GMallocMutex.Lock();
 	hdr->Unlink();
+	GMallocMutex.Unlock();
+	#else
+	hdr->Unlink();
+	#endif
 	memset(ptr, FREE_BLOCK, hdr->blockSize);
 #endif
 
@@ -259,8 +294,8 @@ void appFree(void *ptr)
 #endif
 
 	// statistics
-	GTotalAllocationSize -= hdr->blockSize;
-	GTotalAllocationCount--;
+	InterlockedAdd(&GTotalAllocationSize, -hdr->blockSize);
+	InterlockedDecrement(&GTotalAllocationCount);
 
 	free(block);
 
