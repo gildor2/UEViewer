@@ -243,9 +243,9 @@ template<typename F>
 class ParallelForWorker : public ParallelForBase
 {
 public:
-	F& Func;
+	F Func;
 
-	ParallelForWorker(int InCount, F& InFunc)
+	ParallelForWorker(int InCount, F&& InFunc)
 	: ParallelForBase(InCount)
 	, Func(InFunc)
 	{
@@ -304,7 +304,7 @@ public:
 } // namespace ParallelForImpl
 
 template<typename F>
-FORCEINLINE void ParallelFor(int Count, F& Func)
+FORCEINLINE void ParallelFor(int Count, F&& Func)
 {
 	ParallelForImpl::ParallelForWorker<F> Worker(Count, MoveTemp(Func));
 }
