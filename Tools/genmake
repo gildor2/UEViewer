@@ -555,21 +555,24 @@ sub EmitCompilerDefs {
 			# Also: https://tedwvc.wordpress.com/2014/01/01/how-to-target-xp-with-vc2012-or-vc2013-and-continue-to-use-the-windows-8-x-sdk/
 			$winxp = " -D _USING_V110_SDK71_";
 		}
+		# Platform defines
+		my $defs1, $defs2;
+		if ($PLATFORM eq "win32") {
+			$defs1 = " -D _WIN32 -D WIN32";
+			$defs2 = " -d _WIN32 -d WIN32";
+		} else {
+			$defs1 .= " -D _WIN64 -D WIN64";
+			$defs2 .= " -d _WIN64 -d WIN64";
+		}
 		# Compiler
-		print "CPP  = cl.exe -nologo -c -D WIN32 -D _WINDOWS${winxp}\n";
+		print "CPP  = cl.exe -nologo -c $defs1 -D _WINDOWS${winxp}\n";
 		# Linker
 		my $machine = ($PLATFORM eq "win64") ? "X64" : "X86";
 		print "LINK = link.exe -nologo -filealign:512 -incremental:no -machine:$machine\n";
 		# Library manager
 		print "AR   = link.exe -lib -nologo\n";		# cannot use "LIB" name
 		# Resource compiler
-		my $defs;
-		if ($PLATFORM eq "win32") {
-			$defs .= " -d _WIN32 -d WIN32";
-		} else {
-			$defs .= " -d _WIN64 -d WIN64";
-		}
-		print "RC   = rc.exe -nologo -dNDEBUG -l 0x409${winxp}${defs}\n"
+		print "RC   = rc.exe -nologo -dNDEBUG -l 0x409${winxp}${defs2}\n"
 	} elsif ($COMPILER eq "GnuC") {
 		my $platf = "gcc";
 		# platform override
