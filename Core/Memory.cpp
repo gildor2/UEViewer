@@ -166,7 +166,12 @@ void* appMalloc(int size, int alignment, bool noInit)
 	// Setup debug stuff
 
 	#if THREADING
-	GMallocMutex.Lock();
+	bool bLocked = false;
+	if (CThread::NumThreads)
+	{
+		GMallocMutex.Lock();
+		bLocked = true;
+	}
 	#endif
 	hdr->Link();
 
@@ -192,7 +197,10 @@ void* appMalloc(int size, int alignment, bool noInit)
 	}
 	hdr->stack = found;
 	#if THREADING
-	GMallocMutex.Unlock();
+	if (bLocked)
+	{
+		GMallocMutex.Unlock();
+	}
 	#endif
 #endif // DEBUG_MEMORY
 
@@ -236,9 +244,16 @@ void* appRealloc(void* ptr, int newSize)
 
 #if DEBUG_MEMORY
 	#if THREADING
-	GMallocMutex.Lock();
-	hdr->Unlink();
-	GMallocMutex.Unlock();
+	if (CThread::NumThreads)
+	{
+		GMallocMutex.Lock();
+		hdr->Unlink();
+		GMallocMutex.Unlock();
+	}
+	else
+	{
+		hdr->Unlink();
+	}
 	#else
 	hdr->Unlink();
 	#endif
@@ -280,9 +295,16 @@ void appFree(void* ptr)
 
 #if DEBUG_MEMORY
 	#if THREADING
-	GMallocMutex.Lock();
-	hdr->Unlink();
-	GMallocMutex.Unlock();
+	if (CThread::NumThreads)
+	{
+		GMallocMutex.Lock();
+		hdr->Unlink();
+		GMallocMutex.Unlock();
+	}
+	else
+	{
+		hdr->Unlink();
+	}
 	#else
 	hdr->Unlink();
 	#endif

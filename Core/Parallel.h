@@ -89,6 +89,8 @@ public:
 
 	static int GetLogicalCPUCount();
 
+	static int NumThreads;
+
 protected:
 	static void ThreadFunc(void* param);
 
@@ -297,6 +299,14 @@ FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL)
 
 	unguard;
 }
+
+template<typename F>
+FORCEINLINE void TryExecuteInThread(F& task, CSemaphore* fence = NULL)
+{
+	static_assert(sizeof(task) == 0, "TryExecuteInThread can't accept lvalue");
+}
+
+void WaitForCompletion();
 
 }
 

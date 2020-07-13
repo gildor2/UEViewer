@@ -13,6 +13,9 @@
 #include <io.h>					// for _filelengthi64
 #endif
 
+#if THREADING
+#include "Parallel.h"
+#endif
 
 #define FILE_BUFFER_SIZE		4096
 
@@ -757,6 +760,10 @@ bool FFileReader::IsEof() const
 
 static TArray<FFileWriter*> GFileWriters;
 
+#if THREADING
+static CMutex GFileWritersMutex;
+#endif
+
 FFileWriter::FFileWriter(const char *Filename, unsigned InOptions)
 :	FFileArchive(Filename, InOptions)
 ,	FileSize(0)
@@ -765,18 +772,27 @@ FFileWriter::FFileWriter(const char *Filename, unsigned InOptions)
 	guard(FFileWriter::FFileWriter);
 	IsLoading = false;
 	Open();
+#if THREADING
+	CMutex::ScopedLock Lock(GFileWritersMutex);
+#endif
 	GFileWriters.Add(this);
 	unguardf("%s", Filename);
 }
 
 FFileWriter::~FFileWriter()
 {
+#if THREADING
+	CMutex::ScopedLock Lock(GFileWritersMutex);
+#endif
 	GFileWriters.RemoveSingle(this);
 	Close();
 }
 
 void FFileWriter::CleanupOnError()
 {
+#if THREADING
+	CMutex::ScopedLock Lock(GFileWritersMutex);
+#endif
 	for (int i = GFileWriters.Num() - 1; i >= 0; i--)
 	{
 		FFileWriter* Writer = GFileWriters[i];

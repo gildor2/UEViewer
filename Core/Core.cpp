@@ -16,6 +16,13 @@
 #include <windows.h>
 #endif // VSTUDIO_INTEGRATION
 
+#if THREADING
+
+#include "Parallel.h"
+
+static CMutex GLogMutex;
+
+#endif // THREADING
 
 static FILE *GLogFile = NULL;
 
@@ -37,6 +44,11 @@ void appPrintf(const char *fmt, ...)
 	int len = vsnprintf(ARRAY_ARG(buf), fmt, argptr);
 	va_end(argptr);
 	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appErrorNoLog("appPrintf: buffer overflow");
+
+#if THREADING
+	// Make appPrintf thread-safe
+	CMutex::ScopedLock Lock(GLogMutex);
+#endif
 
 	fwrite(buf, len, 1, stdout);
 	if (GLogFile) fwrite(buf, len, 1, GLogFile);
@@ -112,6 +124,11 @@ void appNotify(const char *fmt, ...)
 	if (len < 0 || len >= ARRAY_COUNT(buf) - 1) appErrorNoLog("appNotify: buffer overflow");
 
 	fflush(stdout);
+
+#if THREADING
+	// Make appPrintf thread-safe
+	CMutex::ScopedLock Lock(GLogMutex);
+#endif
 
 	// a bit ugly code: printing the same thing into 3 streams
 

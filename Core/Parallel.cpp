@@ -3,6 +3,8 @@
 
 bool GEnableThreads = true;
 
+int CThread::NumThreads = 0;
+
 /*-----------------------------------------------------------------------------
 	Generic classes
 -----------------------------------------------------------------------------*/
@@ -96,11 +98,13 @@ void CSemaphore::Wait()
 
 CThread::CThread()
 {
+	InterlockedIncrement(&NumThreads);
 	thread = _beginthread(ThreadFunc, 0, this);
 }
 
 CThread::~CThread()
 {
+	InterlockedDecrement(&NumThreads);
 }
 
 /*static*/ int CThread::CurrentId()
@@ -185,6 +189,7 @@ void CSemaphore::Wait()
 
 CThread::CThread()
 {
+	InterlockedIncrement(&NumThreads);
 	static_assert(sizeof(thread) >= sizeof(pthread_t), "Review ThreadSize");
 	typedef void* (*start_routine_t)(void*);
 	pthread_create((pthread_t*)&thread, NULL, (start_routine_t)ThreadFunc, this);
@@ -192,6 +197,7 @@ CThread::CThread()
 
 CThread::~CThread()
 {
+	InterlockedDecrement(&NumThreads);
 }
 
 /*static*/ int CThread::CurrentId()
@@ -234,6 +240,8 @@ CThread::~CThread()
 namespace ThreadPool
 {
 
+static int GNumWorkingThreads = 0;
+
 class CPoolThread : public CThread
 {
 public:
@@ -263,7 +271,8 @@ protected:
 			if (fence) fence->Signal();
 			// Return thread to pool
 			bBusy = false;
-			//? Signal that task was completed
+			InterlockedDecrement(&GNumWorkingThreads);
+			//todo: Signal that task was completed?
 		}
 	}
 
@@ -295,6 +304,7 @@ CPoolThread* AllocateFreeThread()
 		if (!Thread->bBusy)
 		{
 			Thread->bBusy = true;
+			InterlockedIncrement(&GNumWorkingThreads);
 			return Thread;
 		}
 	}
@@ -314,6 +324,7 @@ CPoolThread* AllocateFreeThread()
 		CPoolThread* NewThread = new CPoolThread();
 		NewThread->bBusy = true;
 		GThreadPool[GNumAllocatedThreads++] = NewThread;
+		InterlockedIncrement(&GNumWorkingThreads);
 		return NewThread;
 	}
 
@@ -333,6 +344,16 @@ bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence)
 	{
 		return false;
 	}
+}
+
+void WaitForCompletion()
+{
+	guard(ThreadPool::WaitForCompletion);
+	while (GNumWorkingThreads > 0)
+	{
+		CThread::Sleep(20);
+	}
+	unguard;
 }
 
 } // namespace ThreadPool
