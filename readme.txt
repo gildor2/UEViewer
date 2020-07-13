@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+13.07.2020
+- multiple optimizations (mostly for multi-core CPU), could be disabled with "-nomt" command line option
+
 25.06.2020
 - recognition of duplicated files when exporting UE3 content
 

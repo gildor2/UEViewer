@@ -10,6 +10,8 @@
 
 #include "Wrappers/TexturePNG.h"
 
+#include "Parallel.h"
+
 #define TGA_SAVE_BOTTOMLEFT	1
 
 
@@ -303,7 +305,59 @@ static void ExportTGA_Worker(FArchive& Ar, CTextureData& TexData, byte* pic)
 	WriteTGA(Ar, width, height, pic);
 }
 
+struct CTextureExportWorker
+{
+	CTextureData TexData;
+	FArchive* Ar = NULL;
+	void (*Func)(FArchive& Ar, CTextureData& TexData, byte* pic) = NULL;
+	bool bFail = false;
+	bool bNeedDecompressedData = true;
 
+	FORCEINLINE CTextureExportWorker()
+	{}
+
+	CTextureExportWorker(CTextureExportWorker&& Other)
+	{
+		memcpy(this, &Other, sizeof(*this));
+		memset(&Other, 0, sizeof(*this));
+	}
+
+	void operator()()
+	{
+		byte* pic = NULL;
+		if (!bFail && bNeedDecompressedData)
+		{
+			pic = TexData.Decompress();
+			if (!pic)
+			{
+				bFail = true;
+				// Not sure if this message is useful - there are multiple checks before,
+				// and Decompress() will print a message itself.
+				appPrintf("WARNING: failed to decode texture %s\n", TexData.GetObjectName());
+			}
+		}
+
+		if (bFail)
+		{
+			// Close and delete created file
+			if (FFileArchive* FileAr = Ar->CastTo<FFileArchive>())
+			{
+				FileAr->Close();
+				remove(FileAr->GetFileName());
+			}
+		}
+		else
+		{
+			// Do the export
+			Func(*Ar, TexData, pic);
+		}
+
+		// Cleanup
+		if (pic) delete[] pic;
+//		Tex->ReleaseTextureData(); - the texture might not exist anymore
+		delete Ar;
+	}
+};
 
 void ExportTexture(const UUnrealMaterial *Tex)
 {
@@ -324,81 +378,63 @@ void ExportTexture(const UUnrealMaterial *Tex)
 		return;
 	}
 
-	void (*Worker)(FArchive& Ar, CTextureData& TexData, byte* pic);
-	bool bNeedDecompressedData = true;
+	CTextureExportWorker Worker;
 	const char* Ext = NULL;
 
 	if (GExportDDS && PixelFormatInfo[Format].IsDXT())
 	{
-		Worker = ExportDDS_Worker;
-		bNeedDecompressedData = false;
+		Worker.Func = ExportDDS_Worker;
+		Worker.bNeedDecompressedData = false;
 		Ext = "dds";
 	}
 	else if (PixelFormatInfo[Format].Float)
 	{
-		Worker = ExportHDR_Worker;
+		Worker.Func = ExportHDR_Worker;
 		Ext = "hdr";
 	}
 	else if (GExportPNG)
 	{
-		Worker = ExportPNG_Worker;
+		Worker.Func = ExportPNG_Worker;
 		Ext = "png";
 	}
 	else
 	{
-		Worker = ExportTGA_Worker;
+		Worker.Func = ExportTGA_Worker;
 		Ext = "tga";
 	}
 
-	FArchive* Ar = CreateExportArchive(Tex, 0, "%s.%s", Tex->Name, Ext);
-	if (Ar == NULL)
+	Worker.Ar = CreateExportArchive(Tex, 0, "%s.%s", Tex->Name, Ext);
+	if (Worker.Ar == NULL)
 	{
 		// Failed to create file, or file already exists with enabled "don't overwrite" mode
 		return;
 	}
 
-	// Get texture data
-	CTextureData TexData;
-	bool bFail = false;
-	if (!Tex->GetTextureData(TexData) || TexData.Mips.Num() == 0)
+	// Get texture data in context of the main thread: it's fast anyway
+	if (!Tex->GetTextureData(Worker.TexData) || Worker.TexData.Mips.Num() == 0)
 	{
 		appPrintf("WARNING: texture %s has no valid mipmaps\n", Tex->Name);
-		bFail = true;
+		Worker.bFail = true;
 		//?? In this case, texture will be logged as "exported". Example: do the export, the texture will be skipped,
 		//?? then export again (with "don't overwrite" option) - log will indicate number of exported objects to be non-zero,
 		//?? and number will match these "no mipmaps" textures.
 	}
 
-	byte* pic = NULL;
-	if (!bFail && bNeedDecompressedData)
+#if THREADING
+	if (Worker.TexData.OwnsAllData())
 	{
-		pic = TexData.Decompress();
-		if (!pic)
-		{
-			appPrintf("WARNING: failed to decode texture %s\n", Tex->Name);
-			bFail = true;
-		}
+		//todo: It is possible that we'll execute code in main thread, while pool will be released very soon. Can try to
+		//todo: split task to decompress/compress, or wait for other thread to be released, or add a task to _queue_ (with
+		//todo: limited queue size).
+		ThreadPool::TryExecuteInThread(MoveTemp(Worker));
 	}
-
-	if (bFail)
+	else
 	{
-		// Close and delete created file
-		if (FFileArchive* FileAr = Ar->CastTo<FFileArchive>())
-		{
-			FileAr->Close();
-			remove(FileAr->GetFileName());
-		}
-		delete Ar;
-		return;
+		Worker();
 	}
-
-	// Do the export
-	Worker(*Ar, TexData, pic);
-
-	// Cleanup
-	delete Ar;
-	if (pic) delete[] pic;
-	Tex->ReleaseTextureData();
+#else
+	Worker();
+#endif
 
 	unguard;
 }
