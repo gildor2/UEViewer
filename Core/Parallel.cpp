@@ -3,7 +3,7 @@
 
 bool GEnableThreads = true;
 
-int CThread::NumThreads = 0;
+volatile int CThread::NumThreads = 0;
 
 /*-----------------------------------------------------------------------------
 	Generic classes
@@ -102,6 +102,7 @@ CThread::CThread()
 	thread = _beginthread(ThreadFunc, 0, this);
 }
 
+//todo: not called automatically when thread function completed
 CThread::~CThread()
 {
 	InterlockedDecrement(&NumThreads);
@@ -247,6 +248,7 @@ class CPoolThread : public CThread
 public:
 	// Flag showing if this thead is doing something or not
 	bool bBusy = false;
+	bool bShutdown = false;
 
 	void AssignTaskAndWake(ThreadTask inTask, void* inData, CSemaphore* inFence)
 	{
@@ -256,15 +258,23 @@ public:
 		sem.Signal();
 	}
 
+	void Shutdown()
+	{
+		bShutdown = true;
+		sem.Signal();
+	}
+
 protected:
 	virtual void Run()
 	{
 		bBusy = false;
 
-		while (true) //todo: there's no "exit" condition
+		while (true)
 		{
 			// Wait for signal to start
 			sem.Wait();
+			if (bShutdown) break;
+
 			// Execute task
 			bBusy = true;
 			task(taskData);
@@ -272,8 +282,9 @@ protected:
 			// Return thread to pool
 			bBusy = false;
 			InterlockedDecrement(&GNumWorkingThreads);
-			//todo: Signal that task was completed?
 		}
+		//todo: May be CThread should destroy itself when worker function completed? Just not using CThread anywhere else.
+		delete this;
 	}
 
 	// Executed code
@@ -353,6 +364,34 @@ void WaitForCompletion()
 	{
 		CThread::Sleep(20);
 	}
+	unguard;
+}
+
+void Shutdown()
+{
+	guard(ThreadPool::Shutdown);
+
+	WaitForCompletion();
+	int NumThreadsAfterShutdown = CThread::NumThreads - GNumAllocatedThreads;
+
+	// Signal to all threads to shutdown
+	for (int i = 0; i < GNumAllocatedThreads; i++)
+	{
+		CPoolThread* Thread = GThreadPool[i];
+		Thread->Shutdown();
+	}
+
+	// Wait them to terminate
+	int NumAttempts = 100;
+	while (CThread::NumThreads > NumThreadsAfterShutdown && NumAttempts-- > 0)
+	{
+		CThread::Sleep(20);
+	}
+	if (NumAttempts == 0)
+	{
+		appPrintf("Warning: unable to shutdown %d threads\n", CThread::NumThreads);
+	}
+
 	unguard;
 }
 

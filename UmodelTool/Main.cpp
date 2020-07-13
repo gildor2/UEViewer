@@ -37,6 +37,10 @@
 #include "Version.h"
 #include "MiscStrings.h"
 
+#if THREADING
+#include "Parallel.h"
+#endif
+
 #define APP_CAPTION					"UE Viewer"
 
 //#define SHOW_HIDDEN_SWITCHES		1
@@ -1246,5 +1250,10 @@ int main(int argc, const char **argv)
 		ExceptionHandler();
 	}
 #endif
+
+#if THREADING
+	ThreadPool::Shutdown();
+#endif
+
 	return 0;
 }

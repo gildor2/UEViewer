@@ -89,7 +89,7 @@ public:
 
 	static int GetLogicalCPUCount();
 
-	static int NumThreads;
+	static volatile int NumThreads;
 
 protected:
 	static void ThreadFunc(void* param);
@@ -307,6 +307,8 @@ FORCEINLINE void TryExecuteInThread(F& task, CSemaphore* fence = NULL)
 }
 
 void WaitForCompletion();
+
+void Shutdown();
 
 }
 
