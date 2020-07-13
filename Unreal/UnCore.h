@@ -2658,7 +2658,8 @@ protected:
 	Global variables
 -----------------------------------------------------------------------------*/
 
-extern FArchive *GDummySave;
+extern bool      GExportInProgress;
+extern FArchive *GDummySave;		//todo: not used
 extern int       GForceGame;
 extern int       GForcePackageVersion;
 extern byte      GForcePlatform;

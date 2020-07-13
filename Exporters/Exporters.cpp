@@ -6,11 +6,14 @@
 
 #include "Exporters.h"
 
+#include "Parallel.h"
 
 // configuration variables
 bool GExportScripts      = false;
 bool GExportLods         = false;
 bool GDontOverwriteFiles = false;
+
+bool GExportInProgress   = false;
 
 
 /*-----------------------------------------------------------------------------
@@ -79,11 +82,16 @@ struct ExportContext
 		Reset();
 	}
 
+	void BeginExport()
+	{
+		Objects.Empty(1024);
+	}
+
 	void Reset()
 	{
 		LastExported = NULL;
 		NumSkippedObjects = 0;
-		Objects.Empty(1024);
+		Objects.Empty();
 		memset(ObjectHash, -1, sizeof(ObjectHash));
 	}
 
@@ -139,11 +147,22 @@ static ExportContext ctx;
 
 void BeginExport()
 {
+	GExportInProgress = true;
+	ctx.BeginExport();
 	ctx.startTime = appMilliseconds();
 }
 
 void EndExport(bool profile)
 {
+	assert(GExportInProgress);
+
+#if THREADING
+	// Wait for all workers to complete
+	ThreadPool::WaitForCompletion();
+#endif
+
+	GExportInProgress = false;
+
 	if (profile)
 	{
 		assert(ctx.startTime);
