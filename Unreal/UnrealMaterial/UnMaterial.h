@@ -178,7 +178,18 @@ struct CMipMap
 		ReleaseData();
 		CompressedData = Bulk.BulkData;
 		DataSize = Bulk.ElementCount * Bulk.GetElementSize();
-		ShouldFreeData = false; // bulk owns data buffer
+		if (!GExportInProgress)
+		{
+			// Bulk owns data buffer
+			ShouldFreeData = false;
+		}
+		else
+		{
+			// We can "grab" texture data from this bulk with possibly damaging the UObject data,
+			// however during export this is safe because this texture UObject won't be used anywhere else
+			const_cast<FByteBulkData&>(Bulk).BulkData = NULL;
+			ShouldFreeData = true;
+		}
 	}
 #endif // UNREAL3
 	void ReleaseData()
@@ -196,12 +207,17 @@ struct CTextureData
 	TArray<CMipMap>			Mips;					// mipmaps; could have 0, 1 or N entries
 	ETexturePixelFormat		Format;
 	int						Platform;
-	const char				*OriginalFormatName;	// string value from typeinfo
+	const char*				OriginalFormatName;		// string value from typeinfo
 	int						OriginalFormatEnum;		// ETextureFormat or EPixelFormat
 	bool					isNormalmap;
-	const UObject			*Obj;					// for error reporting
-	const UPalette			*Palette;				// for TPF_P8
+	const UPalette*			Palette;				// for TPF_P8
 
+protected:
+	const char*				ObjectName;
+	const char*				ObjectClass;
+	int						ObjectGame;
+
+public:
 	CTextureData()
 	{
 		memset(this, 0, sizeof(CTextureData));
@@ -210,6 +226,7 @@ struct CTextureData
 	{
 		ReleaseCompressedData();
 	}
+
 	void ReleaseCompressedData()
 	{
 		for (int i = 0; i < Mips.Num(); i++)
@@ -218,7 +235,29 @@ struct CTextureData
 
 	unsigned GetFourCC() const;
 
-	byte *Decompress(int MipLevel = 0);				// may return NULL in a case of error
+	void SetObject(const UObject* Obj)
+	{
+		ObjectClass = Obj->GetClassName();
+		ObjectName = Obj->Name;
+		ObjectGame = Obj->Package ? Obj->GetPackageArchive()->Game : GAME_UNKNOWN;
+	}
+
+	const char* GetObjectName() const
+	{
+		return ObjectName;
+	}
+
+	// Determine if CTextureData could be used without alive UObject (i.e. it's safe to use it after object released)
+	bool OwnsAllData() const
+	{
+		if (Palette) return false;
+		for (const CMipMap& Mip : Mips)
+			if (!Mip.ShouldFreeData)
+				return false;
+		return true;
+	}
+
+	byte* Decompress(int MipLevel = 0);				// may return NULL in a case of error
 
 #if SUPPORT_XBOX360
 	bool DecodeXBox360(int MipLevel);

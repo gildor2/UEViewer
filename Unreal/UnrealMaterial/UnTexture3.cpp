@@ -947,9 +947,9 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 {
 	guard(UTexture2D::GetTextureData);
 
+	TexData.SetObject(this);
 	TexData.OriginalFormatEnum = Format;
 	TexData.OriginalFormatName = EnumToName(Format);
-	TexData.Obj                = this;
 	TexData.Format             = GetTexturePixelFormat();
 	TexData.isNormalmap        = (CompressionSettings == TC_Normalmap);
 

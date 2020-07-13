@@ -97,7 +97,7 @@ unsigned CTextureData::GetFourCC() const
 }
 
 
-byte *CTextureData::Decompress(int MipLevel)
+byte* CTextureData::Decompress(int MipLevel)
 {
 	guard(CTextureData::Decompress);
 
@@ -113,7 +113,7 @@ byte *CTextureData::Decompress(int MipLevel)
 
 	int pixelSize = PixelFormatInfo[Format].Float ? 16 : 4;
 	int size = USize * VSize * pixelSize;
-	byte *dst = new byte [size];
+	byte* dst = new byte [size];
 
 #if 0
 	{
@@ -430,7 +430,7 @@ byte *CTextureData::Decompress(int MipLevel)
 	unsigned fourCC = PixelFormatInfo[Format].FourCC;
 	if (!fourCC)
 	{
-		appNotify("Unable to unpack texture %s: unsupported texture format %s\n", Obj->Name, PixelFormatInfo[Format].Name);
+		appNotify("Unable to unpack texture %s: unsupported texture format %s\n", ObjectName, PixelFormatInfo[Format].Name);
 		memset(dst, 0xFF, size);
 		return dst;
 	}
@@ -637,7 +637,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 
 	error:
 		Mip.ReleaseData();
-		appNotify("ERROR: DecodeXBox360 %s'%s' mip %d (%s=%d): %s", Obj->GetClassName(), Obj->Name, MipLevel,
+		appNotify("ERROR: DecodeXBox360 %s'%s' mip %d (%s=%d): %s", ObjectClass, ObjectName, MipLevel,
 			OriginalFormatName, OriginalFormatEnum, ErrorMessage);
 		return false;
 	}
@@ -666,7 +666,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 #if BIOSHOCK
 	// some verification
 	float rate = bpp / Info.BytesPerBlock;
-	if (Obj->GetGame() == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
+	if (ObjectGame == GAME_Bioshock && (rate >= 1 && rate < 1.5f))	// allow placing of mipmaps into this buffer
 		bpp = Info.BytesPerBlock;
 #endif // BIOSHOCK
 

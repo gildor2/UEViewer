@@ -531,10 +531,10 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 {
 	guard(UTexture::GetTextureData);
 
+	TexData.SetObject(this);
 	TexData.Platform           = PLATFORM_PC;
 	TexData.OriginalFormatEnum = Format;
 	TexData.OriginalFormatName = EnumToName(Format);
-	TexData.Obj                = this;
 	TexData.Palette            = Palette;
 	TexData.Format             = GetTexturePixelFormat();
 
