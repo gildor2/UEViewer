@@ -1017,7 +1017,7 @@ int main(int argc, const char **argv)
 				bool failed = false;
 				if (bShouldLoadPackages)
 				{
-					UnPackage* Package = UnPackage::LoadPackage(*Files[j]->GetRelativeName());
+					UnPackage* Package = UnPackage::LoadPackage(Files[j]);
 					if (Package)
 					{
 						Packages.Add(Package);
@@ -1252,6 +1252,7 @@ int main(int argc, const char **argv)
 #endif
 
 #if THREADING
+	//todo: there are many "return N" above, which are all bypassing ThreadPool::Shutdown
 	ThreadPool::Shutdown();
 #endif
 

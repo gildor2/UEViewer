@@ -262,7 +262,7 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		}
 		else
 		{
-			UnPackage* package = UnPackage::LoadPackage(*RelativeName, /*silent=*/ true);	// should always return non-NULL
+			UnPackage* package = UnPackage::LoadPackage(file, /*silent=*/ true);	// should always return non-NULL
 			if (!package) continue;		// should not happen
 			ScanPackageExports(package, file);
 		#if 0

@@ -947,7 +947,7 @@ void UIPackageDialog::OnExportFolderClicked()
 			cancelled = true;
 			break;
 		}
-		UnPackage* package = UnPackage::LoadPackage(*RelativeName, true);	// should always return non-NULL
+		UnPackage* package = UnPackage::LoadPackage(PackagesToExport[i], true);	// should always return non-NULL
 		if (package) UnrealPackages.Add(package);
 	}
 	if (cancelled || !UnrealPackages.Num())

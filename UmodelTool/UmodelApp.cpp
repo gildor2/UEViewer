@@ -180,7 +180,7 @@ bool CUmodelApp::ShowPackageUI()
 				cancelled = true;
 				break;
 			}
-			UnPackage* package = UnPackage::LoadPackage(*RelativeName);		// should always return non-NULL
+			UnPackage* package = UnPackage::LoadPackage(GPackageDialog.SelectedPackages[i]);	// should always return non-NULL
 			if (package) Packages.Add(package);
 		}
 		if (cancelled)
