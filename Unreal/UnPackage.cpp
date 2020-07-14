@@ -1410,6 +1410,7 @@ no_depends: ;
 	// so we can replace loader with .uexp file - with providing correct position offset.
 	if (Game >= GAME_UE4_BASE && Summary.HeadersSize == Loader->GetFileSize())
 	{
+		guard(FindUexp);
 		char buf[MAX_PACKAGE_PATH];
 		appStrncpyz(buf, filename, ARRAY_COUNT(buf));
 		char* s = strrchr(buf, '.');
@@ -1418,7 +1419,8 @@ no_depends: ;
 			s = strchr(buf, 0);
 		}
 		strcpy(s, ".uexp");
-		const CGameFileInfo *expInfo = CGameFileInfo::Find(buf);
+		// When finding, explicitly tell to use the same folder where .uasset file exists
+		const CGameFileInfo *expInfo = CGameFileInfo::Find(buf, FileInfo ? FileInfo->FolderIndex : -1);
 		if (expInfo)
 		{
 			// Open .exp file
@@ -1431,6 +1433,7 @@ no_depends: ;
 		{
 			appPrintf("WARNING: it seems package %s has missing .uexp file\n", filename);
 		}
+		unguard;
 	}
 #endif // UNREAL4
 
@@ -2482,7 +2485,7 @@ TArray<char*>		MissingPackages;
 
 /*static*/ UnPackage *UnPackage::LoadPackage(const char *Name, bool silent)
 {
-	guard(UnPackage::LoadPackage);
+	guard(UnPackage::LoadPackage(name));
 
 	const char *LocalName = appSkipRootDir(Name);
 
@@ -2492,21 +2495,9 @@ TArray<char*>		MissingPackages;
 
 	int i;
 
-	if (info && info->IsPackage)
+	if (info)
 	{
-		// Check if package was already loaded.
-		if (info->Package)
-			return info->Package;
-		// Load the package.
-		UnPackage* package = new UnPackage(*info->GetRelativeName(), info, silent);
-		if (!package->IsValid())
-		{
-			delete package;
-			return NULL;
-		}
-		// Cache pointer in CGameFileInfo so next time it will be found quickly.
-		const_cast<CGameFileInfo*>(info)->Package = package;
-		return package;
+		return LoadPackage(info, silent);
 	}
 	else
 	{
@@ -2547,4 +2538,29 @@ TArray<char*>		MissingPackages;
 	return NULL;
 
 	unguardf("%s", Name);
+}
+
+/*static*/ UnPackage *UnPackage::LoadPackage(const CGameFileInfo* File, bool silent)
+{
+	guard(UnPackage::LoadPackage(info));
+
+	if (File->IsPackage)
+	{
+		// Check if package was already loaded.
+		if (File->Package)
+			return File->Package;
+		// Load the package with providing 'File' to constructor.
+		UnPackage* package = new UnPackage(*File->GetRelativeName(), File, silent);
+		if (!package->IsValid())
+		{
+			delete package;
+			return NULL;
+		}
+		// Cache pointer in CGameFileInfo so next time it will be found quickly.
+		const_cast<CGameFileInfo*>(File)->Package = package;
+		return package;
+	}
+	return NULL;
+
+	unguardf("%s", *File->GetRelativeName());
 }

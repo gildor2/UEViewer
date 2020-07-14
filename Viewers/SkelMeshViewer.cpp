@@ -945,8 +945,12 @@ void CSkelMeshViewer::FindUE4Animations()
 		UnPackage* package = info->Package;
 		if (!package)
 		{
-			// Shouldn't happen, but happen
-			appNotify("Strange package: IsPackage=true, Package is NULL: %s (size %d Kb)", *info->GetRelativeName(), info->SizeInKb + info->ExtraSizeInKb);
+			// Shouldn't happen, but happens (ScanPackage() should fill Package for all CGameFileInfo).
+			// Example of appearance: ScanPackages may open a WRONG find in a case when game files are extracted from pak, and
+			// user supplies wrong (shorter) game path, e.g. -path=Extported/Meshes, and multiple files with the same name
+			// exists inside that folder. CGameFileInfo::Find has heuristic for finding files using partial path, but it may fail.
+			// In this case, CGameFileInfo will say "it's package", but actually file won't be scanned and/or loaded.
+			//appNotify("Strange package: IsPackage=true, Package is NULL: %s (size %d Kb)", *info->GetRelativeName(), info->SizeInKb + info->ExtraSizeInKb);
 			continue;
 		}
 

@@ -885,7 +885,7 @@ void appSetRootDirectory2(const char *filename)
 }
 
 
-const CGameFileInfo* CGameFileInfo::Find(const char *Filename)
+const CGameFileInfo* CGameFileInfo::Find(const char *Filename, int GameFolder)
 {
 	guard(CGameFileInfo::Find);
 
@@ -973,6 +973,11 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename)
 //			printf("-----> wrong length %d\n", info->ExtensionOffset);
 			continue;
 		}
+		if (GameFolder > 0 && info->FolderIndex != GameFolder)
+		{
+			// We've got explicit folder where to find
+			continue;
+		}
 
 		// Compare extension
 		if (Extension)
@@ -988,6 +993,12 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename)
 		// Verify the filename without extension
 		if (!nameCmp(info->ShortFilename))
 			continue;
+
+		if (GameFolder > 0)
+		{
+			// Everything has been verified, avoid any fuzzy search over multiple folders
+			return info;
+		}
 
 		// Short filename matched, now compare path before the filename. We're using fuzzy search here because
 		// "saved" files may not match the exact file path.
@@ -1009,7 +1020,16 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename)
 		if (FindPath.Len() > InfoPath.Len())
 		{
 			// Can't match these paths - not enough space in InfoPath
-			continue;
+			if (FindPath[0] == '/')
+			{
+				// It seems Find() is called for UE4 package with full name, e.g. when finding package import.
+				// In the case uasset files were unpacked, and "game directory" points at subset of game files,
+				// matching FindPath might be longer than InfoPath.
+			}
+			else
+			{
+				continue;
+			}
 		}
 
 		int matchWeight = 0;

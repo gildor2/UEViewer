@@ -264,7 +264,9 @@ public:
 	// Load package using short name (without path and extension) or full path name.
 	// When the package is already loaded, this function will simply return a pointer
 	// to previously loaded UnPackage.
-	static UnPackage* LoadPackage(const char *Name, bool silent = false);
+	static UnPackage* LoadPackage(const char* Name, bool silent = false);
+	// Load package using existing CGameFileInfo
+	static UnPackage* LoadPackage(const CGameFileInfo* File, bool silent = false);
 	// We've protected UnPackage's destructor, however it is possible to use UnloadPackage to destroy package.
 	static void UnloadPackage(UnPackage* package);
 

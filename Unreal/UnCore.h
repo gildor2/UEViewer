@@ -130,7 +130,7 @@ public:
 	// Ext = NULL -> use any package extension
 	// Filename can contain extension, but should not contain path.
 	// This function is quite fast because it uses hash tables.
-	static const CGameFileInfo* Find(const char *Filename);
+	static const CGameFileInfo* Find(const char *Filename, int GameFolder = -1);
 
 	// Find all files with the same base file name (ignoring extension) and same directory as for
 	// this file. Files are filled into 'otherFiles' array, 'this' file is not included.
