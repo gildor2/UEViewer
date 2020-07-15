@@ -130,6 +130,7 @@ inline void OutOfMemory(int size)
 void* appMalloc(int size, int alignment, bool noInit)
 {
 	guard(appMalloc);
+	PROFILE_LABEL(noInit ? "NoInit" : "Zero");
 
 #if DEBUG_MEMORY
 	// Reserve some amount of memory for possibility to log memory when crashed

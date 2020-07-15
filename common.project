@@ -40,6 +40,7 @@ USE_SYSTEM_LIBS = 0
 		STDDEFS += _NO_CRT_STDIO_INLINE					# UCRT (VS 2015+): without that, all printf functions will use some "common" function
 		!include $WDKCRT/msvcrt.project
 		!if "$VC_VER" >= 2015							# support for OLDCRT with modern compliers
+			OPTIONS += -fp:fast
 			OPTIONS += -Zc:threadSafeInit-				# disable calls to C++11 thread-safe static object initializers
 			STDDEFS += _ACRTIMP_ALT=					# remove dllimport from some CRT functions (there're just a few)
 		!endif
@@ -93,8 +94,10 @@ OBJDIR = $R/obj/libs-$PLATFORM
 !endif
 
 push(INCLUDES)
+push(OPTIMIZE)
 INCLUDES = $R/libs/nvtt
 LIBINCLUDES += $R/libs/nvtt
+OPTIMIZE = speed
 
 sources(NV_LIBS) = {
 #	$R/libs/nvtt/nvcore/*.cpp
@@ -104,6 +107,7 @@ sources(NV_LIBS) = {
 #	$R/libs/nvtt/nvtt/bc7/*.cpp
 }
 
+pop(OPTIMIZE)
 pop(INCLUDES)
 
 
