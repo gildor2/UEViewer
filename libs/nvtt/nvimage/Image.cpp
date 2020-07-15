@@ -13,6 +13,8 @@
 
 using namespace nv;
 
+static_assert(sizeof(Color32) == Image::Color32_Size, "Wrong Color32 size!");
+
 Image::Image() : m_width(0), m_height(0), m_format(Format_RGB), m_data(NULL)
 {
 }
@@ -87,16 +89,6 @@ void Image::free()
 }
 
 
-uint Image::width() const
-{
-	return m_width;
-}
-
-uint Image::height() const
-{
-	return m_height;
-}
-
 const Color32 * Image::scanline(uint h) const
 {
 	nvDebugCheck(h < m_height);
@@ -107,34 +99,6 @@ Color32 * Image::scanline(uint h)
 {
 	nvDebugCheck(h < m_height);
 	return m_data + h * m_width;
-}
-
-const Color32 * Image::pixels() const
-{
-	return m_data;
-}
-
-Color32 * Image::pixels()
-{
-	return m_data;
-}
-
-const Color32 & Image::pixel(uint idx) const
-{
-	nvDebugCheck(idx < m_width * m_height);
-	return m_data[idx];
-}
-
-Color32 & Image::pixel(uint idx)
-{
-	nvDebugCheck(idx < m_width * m_height);
-	return m_data[idx];
-}
-
-
-Image::Format Image::format() const
-{
-	return m_format;
 }
 
 void Image::setFormat(Image::Format f)
