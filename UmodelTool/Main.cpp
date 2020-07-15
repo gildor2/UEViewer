@@ -371,6 +371,7 @@ static void PrintUsage()
 			"    -log=file       write log to the specified file\n"
 			"    -dump           dump object information to console\n"
 			"    -pkginfo        load package and display its information\n"
+			"    -testexport     perform fake export\n"
 #if SHOW_HIDDEN_SWITCHES
 			"    -check          check some assumptions, no other actions performed\n"
 #	if VSTUDIO_INTEGRATION
@@ -898,6 +899,11 @@ int main(int argc, const char **argv)
 		else if (!stricmp(opt, "nomt"))
 		{
 			GEnableThreads = false;
+		}
+		else if (!stricmp(opt, "testexport"))
+		{
+			mainCmd = CMD_Export;
+			GDummyExport = true;
 		}
 		else if (!stricmp(opt, "debug"))
 		{

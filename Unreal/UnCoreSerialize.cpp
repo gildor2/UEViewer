@@ -137,7 +137,7 @@ FArchive& FArray::Serialize(FArchive &Ar, void (*Serializer)(FArchive&, void*), 
 }
 
 
-struct DummyItem	// non-srializeable
+struct DummyItem	// non-serializeable
 {
 	friend FArchive& operator<<(FArchive &Ar, DummyItem &Item)
 	{
@@ -995,24 +995,6 @@ int FMemWriter::GetFileSize() const
 {
 	return Data->Num();
 }
-
-
-/*-----------------------------------------------------------------------------
-	Dummy archive class
------------------------------------------------------------------------------*/
-
-class CDummyArchive : public FArchive
-{
-public:
-	virtual void Seek(int Pos)
-	{}
-	virtual void Serialize(void *data, int size)
-	{}
-};
-
-
-static CDummyArchive DummyArchive;
-FArchive *GDummySave = &DummyArchive;
 
 
 /*-----------------------------------------------------------------------------

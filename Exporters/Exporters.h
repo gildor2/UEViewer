@@ -36,7 +36,7 @@ bool CheckExportFilePresence(const UObject* Obj, const char* fmt, ...);
 // Function may return NULL.
 FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const char* fmt, ...);
 
-// configuration
+// Configuration
 extern bool GExportScripts;
 extern bool GExportLods;
 extern bool GNoTgaCompress;
@@ -45,6 +45,7 @@ extern bool GExportDDS;
 extern bool GUncook;
 extern bool GUseGroups;
 extern bool GDontOverwriteFiles;
+extern bool GDummyExport;
 
 // forwards
 class UObject;

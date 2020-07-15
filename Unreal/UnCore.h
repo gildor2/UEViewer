@@ -1023,6 +1023,17 @@ protected:
 	TArray<byte>* Data;
 };
 
+// Dummy archive class
+class FDummyArchive : public FArchive
+{
+	DECLARE_ARCHIVE(FDummyArchive, FArchive);
+public:
+	virtual void Seek(int Pos)
+	{}
+	virtual void Serialize(void *data, int size)
+	{}
+};
+
 
 // drop remaining object data (until stopper)
 #define DROP_REMAINING_DATA(Ar)							\
@@ -2659,7 +2670,6 @@ protected:
 -----------------------------------------------------------------------------*/
 
 extern bool      GExportInProgress;
-extern FArchive *GDummySave;		//todo: not used
 extern int       GForceGame;
 extern int       GForcePackageVersion;
 extern byte      GForcePlatform;

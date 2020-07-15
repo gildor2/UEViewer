@@ -15,6 +15,8 @@ bool GDontOverwriteFiles = false;
 
 bool GExportInProgress   = false;
 
+bool GDummyExport        = false;
+
 
 /*-----------------------------------------------------------------------------
 	Exporter function management
@@ -547,6 +549,11 @@ FArchive* CreateExportArchive(const UObject* Obj, unsigned FileOptions, const ch
 			ctx.NumSkippedObjects++;
 			return NULL;
 		}
+	}
+
+	if (GDummyExport)
+	{
+		return new FDummyArchive();
 	}
 
 	appMakeDirectoryForFile(filename);
