@@ -1581,11 +1581,23 @@ void UIMulticolumnListbox::RemoveItem(int itemIndex)
 
 void UIMulticolumnListbox::RemoveAllItems()
 {
+	guard(UIMulticolumnListbox::RemoveAllItems);
 	// remove items from local storage and from control
 	int numStrings = Items.Num();
 	if (numStrings > NumColumns)
 		Items.RemoveAt(NumColumns, numStrings - NumColumns);
-	if (Wnd) ListView_DeleteAllItems(Wnd);
+
+	if (Wnd)
+	{
+		if (!IsVirtualMode)
+		{
+			ListView_DeleteAllItems(Wnd);
+		}
+		else
+		{
+			ListView_SetItemCount(Wnd, 0);
+		}
+	}
 
 	// process selection
 	int selCount = SelectedItems.Num();
@@ -1601,6 +1613,7 @@ void UIMulticolumnListbox::RemoveAllItems()
 		if (SelChangedCallback)
 			SelChangedCallback(this);
 	}
+	unguard;
 }
 
 #if DEBUG_MULTILIST_SEL

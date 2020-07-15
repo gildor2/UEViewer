@@ -674,7 +674,7 @@ protected:
 //    Items are stored inside UIMulticolumnListbox. Win32 object contains just number of items. Application
 //    works with UIMulticolumnListbox in this mode in exactly the same was as in "normal" mode, however
 //    work with control performed much faster.
-// 3. "True" virtual model with callbacks: create, SetVirtualMode, set callbacks. Set number of items, display.
+// 3. "True" virtual mode with callbacks: create, SetVirtualMode, set callbacks. Set number of items, display.
 //    Items are stored on the side which created this control. UIMulticolumnListbox and Win32 objects
 //    both holds only items count. This is the fastest mode, with lowest possible memory requirement.
 class UIMulticolumnListbox : public UIElement
