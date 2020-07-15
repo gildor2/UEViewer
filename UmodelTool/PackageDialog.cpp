@@ -106,6 +106,8 @@ public:
 	// Fill package list for selected folder
 	void FillPackageList(UIPackageDialog::PackageList& InPackages, const char* directory, const char* packageFilter)
 	{
+		guard(FillPackageList);
+
 		LockUpdate();
 
 		RemoveAllItems();
@@ -141,11 +143,15 @@ public:
 		}
 
 		UnlockUpdate(); // this will call Repaint()
+
+		unguard;
 	}
 
 	// Fill package list for all folders ("flat" mode)
 	void FillFlatPackageList(UIPackageDialog::PackageList& InPackages, const char* packageFilter)
 	{
+		guard(FillFlatPackageList);
+
 		LockUpdate(); // HUGE performance gain. Warning: don't use "return" here without UnlockUpdate()!
 
 		RemoveAllItems();
@@ -172,6 +178,8 @@ public:
 		}
 
 		UnlockUpdate();
+
+		unguard;
 	}
 
 	void AddPackage(const CGameFileInfo* package)

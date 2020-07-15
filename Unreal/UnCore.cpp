@@ -129,7 +129,7 @@ void FArray::GrowArray(int count, int elementSize)
 	int newCount = DataCount + count;
 
 	if (newCount <= MaxCount)
-		appError("FArray::GrowArray: growing beyong MaxCount");
+		return;
 
 	// Not enough space, resize ...
 	// Allow small initial size of array
