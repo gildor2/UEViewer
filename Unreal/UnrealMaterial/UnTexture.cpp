@@ -113,7 +113,7 @@ byte* CTextureData::Decompress(int MipLevel)
 
 	int pixelSize = PixelFormatInfo[Format].Float ? 16 : 4;
 	int size = USize * VSize * pixelSize;
-	byte* dst = (byte*)appMalloc(size, DEFAULT_ALIGNMENT, true);
+	byte* dst = (byte*)appMallocNoInit(size);
 
 #if 0
 	{
