@@ -423,10 +423,7 @@ void ExportTexture(const UUnrealMaterial *Tex)
 #if THREADING
 	if (Worker.TexData.OwnsAllData())
 	{
-		//todo: It is possible that we'll execute code in main thread, while pool will be released very soon. Can try to
-		//todo: split task to decompress/compress, or wait for other thread to be released, or add a task to _queue_ (with
-		//todo: limited queue size).
-		ThreadPool::TryExecuteInThread(MoveTemp(Worker));
+		ThreadPool::TryExecuteInThread(MoveTemp(Worker), NULL, true);
 	}
 	else
 	{

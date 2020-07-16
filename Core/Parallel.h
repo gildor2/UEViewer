@@ -265,10 +265,10 @@ namespace ThreadPool
 typedef void (*ThreadTask)(void*);
 
 // Execute ThreadTask in thread. Return false if there's no free threads
-bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence = NULL);
+bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence = NULL, bool allowQueue = false);
 
 template<typename F>
-FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL)
+FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL, bool allowQueue = false)
 {
 	guard(TryExecuteInThread);
 
@@ -289,7 +289,7 @@ FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL)
 	};
 
 	Worker* worker = new Worker(MoveTemp(task));
-	if (!ExecuteInThread(Worker::Proc, worker, fence))
+	if (!ExecuteInThread(Worker::Proc, worker, fence, allowQueue))
 	{
 		// Execute in current thread
 		worker->task();
@@ -301,7 +301,7 @@ FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL)
 }
 
 template<typename F>
-FORCEINLINE void TryExecuteInThread(F& task, CSemaphore* fence = NULL)
+FORCEINLINE void TryExecuteInThread(F& task, CSemaphore* fence = NULL, bool allowQueue = false)
 {
 	static_assert(sizeof(task) == 0, "TryExecuteInThread can't accept lvalue");
 }

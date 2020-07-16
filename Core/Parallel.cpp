@@ -241,8 +241,103 @@ CThread::~CThread()
 namespace ThreadPool
 {
 
-static int GNumWorkingThreads = 0;
+#define MAX_POOL_THREADS 64
 
+// Task queue
+namespace Queue
+{
+
+struct CTask
+{
+	ThreadTask	task;
+	void*		data;
+	CSemaphore* fence;
+
+	void Exec()
+	{
+		guard(QueueTask::Exec);
+		task(data);
+		if (fence) fence->Signal();
+		unguard;
+	}
+};
+
+
+CMutex Mutex;
+static CTask Queue[MAX_POOL_THREADS / 2];
+static int QueueSize = 0;
+
+// This function returns false if queue size wasn't enough for returning immediately
+bool PutToQueue(ThreadTask task, void* data, CSemaphore* fence)
+{
+	guard(Queue::PutToQueue);
+
+	// Get size of queue
+	static int MaxQueueSize = -1;
+	if (MaxQueueSize < 0)
+	{
+		MaxQueueSize = CThread::GetLogicalCPUCount() * 3 / 4;
+		if (MaxQueueSize > ARRAY_COUNT(Queue))
+			MaxQueueSize = ARRAY_COUNT(Queue);
+	}
+
+	CTask ToExec;
+
+	{ // Lock scope
+		CMutex::ScopedLock Lock(Mutex);
+
+		if (QueueSize < MaxQueueSize)
+		{
+			// Just put task to queue and return
+			CTask& Item = Queue[QueueSize++];
+			Item.task = task;
+			Item.data = data;
+			Item.fence = fence;
+			return true;
+		}
+
+		// There's not enough space in queue, execute the first item and put new one to the queue's back
+
+		// Grab the first item from queue
+		ToExec = Queue[0];
+		memmove(&Queue[0], &Queue[1], sizeof(CTask) * (QueueSize - 1));
+
+		// Put new item
+		CTask& Item = Queue[QueueSize - 1];
+		Item.task = task;
+		Item.data = data;
+		Item.fence = fence;
+	}
+
+	// Execute the first item in current thread
+	ToExec.Exec();
+
+	// Indicate that we didn't put task to pool, but executed something
+	return false;
+
+	unguard;
+}
+
+bool GetFromQueue(CTask& item)
+{
+	CMutex::ScopedLock Lock(Mutex);
+
+	if (!QueueSize)
+		return false;
+
+	item = Queue[0];
+	if (--QueueSize)
+	{
+		memmove(&Queue[0], &Queue[1], sizeof(CTask) * QueueSize);
+	}
+
+	return true;
+}
+
+} // namespace Queue
+
+
+// Thread for the pool
 class CPoolThread : public CThread
 {
 public:
@@ -279,9 +374,17 @@ protected:
 			bBusy = true;
 			task(taskData);
 			if (fence) fence->Signal();
+
+			// See if there's something in the queue to execute
+			Queue::CTask task;
+			while (Queue::GetFromQueue(task))
+			{
+				task.Exec();
+			}
+
 			// Return thread to pool
 			bBusy = false;
-			InterlockedDecrement(&GNumWorkingThreads);
+			InterlockedDecrement(&NumWorkingThreads);
 		}
 		//todo: May be CThread should destroy itself when worker function completed? Just not using CThread anywhere else.
 		delete this;
@@ -295,27 +398,35 @@ protected:
 	CSemaphore* fence;
 	// Semaphore used to wake up the thread
 	CSemaphore sem;
+
+public:
+	// Statics
+	// Number of awake threads
+	static volatile int NumWorkingThreads;
 };
 
-#define MAX_POOL_THREADS 64
+volatile int CPoolThread::NumWorkingThreads = 0;
 
-static CPoolThread* GThreadPool[MAX_POOL_THREADS];
-static int GNumAllocatedThreads = 0;
+// Thread pool itself
+namespace Pool
+{
 
-static CMutex GPoolMutex;
+static CPoolThread* Pool[MAX_POOL_THREADS];
+static int NumPoolThreads = 0;
+static CMutex Mutex;
 
 CPoolThread* AllocateFreeThread()
 {
-	CMutex::ScopedLock lock(GPoolMutex);
+	CMutex::ScopedLock lock(Mutex);
 
 	// Find idle thread
-	for (int i = 0; i < GNumAllocatedThreads; i++)
+	for (int i = 0; i < NumPoolThreads; i++)
 	{
-		CPoolThread* Thread = GThreadPool[i];
+		CPoolThread* Thread = Pool[i];
 		if (!Thread->bBusy)
 		{
 			Thread->bBusy = true;
-			InterlockedIncrement(&GNumWorkingThreads);
+			InterlockedIncrement(&CPoolThread::NumWorkingThreads);
 			return Thread;
 		}
 	}
@@ -330,12 +441,12 @@ CPoolThread* AllocateFreeThread()
 	}
 
 	// Create new thread, if can
-	if (GNumAllocatedThreads < MaxThreads)
+	if (NumPoolThreads < MaxThreads)
 	{
 		CPoolThread* NewThread = new CPoolThread();
 		NewThread->bBusy = true;
-		GThreadPool[GNumAllocatedThreads++] = NewThread;
-		InterlockedIncrement(&GNumWorkingThreads);
+		Pool[NumPoolThreads++] = NewThread;
+		InterlockedIncrement(&CPoolThread::NumWorkingThreads);
 		return NewThread;
 	}
 
@@ -343,12 +454,21 @@ CPoolThread* AllocateFreeThread()
 	return NULL;
 }
 
-bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence)
+} // namespace Pool
+
+bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence, bool allowQueue)
 {
-	CPoolThread* thread = AllocateFreeThread();
+	CPoolThread* thread = Pool::AllocateFreeThread();
 	if (thread)
 	{
 		thread->AssignTaskAndWake(task, taskData, fence);
+		return true;
+	}
+	else if (allowQueue)
+	{
+		Queue::PutToQueue(task, taskData, fence);
+		//todo: it is possible that after AllocateFreeThread() call buf before PutToQueue completion, one
+		//todo: of the worker threads will be returned to pool
 		return true;
 	}
 	else
@@ -360,7 +480,7 @@ bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence)
 void WaitForCompletion()
 {
 	guard(ThreadPool::WaitForCompletion);
-	while (GNumWorkingThreads > 0)
+	while (CPoolThread::NumWorkingThreads > 0)
 	{
 		CThread::Sleep(20);
 	}
@@ -372,17 +492,17 @@ void Shutdown()
 	guard(ThreadPool::Shutdown);
 
 	WaitForCompletion();
-	int NumThreadsAfterShutdown = CThread::NumThreads - GNumAllocatedThreads;
+	int NumThreadsAfterShutdown = CThread::NumThreads - Pool::NumPoolThreads;
 
 	// Signal to all threads to shutdown
-	for (int i = 0; i < GNumAllocatedThreads; i++)
+	for (int i = 0; i < Pool::NumPoolThreads; i++)
 	{
-		CPoolThread* Thread = GThreadPool[i];
+		CPoolThread* Thread = Pool::Pool[i];
 		Thread->Shutdown();
 	}
 
 	// Wait them to terminate
-	int NumAttempts = 100;
+	int NumAttempts = 200;
 	while (CThread::NumThreads > NumThreadsAfterShutdown && NumAttempts-- > 0)
 	{
 		CThread::Sleep(20);
