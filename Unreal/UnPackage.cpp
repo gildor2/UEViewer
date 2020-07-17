@@ -2177,18 +2177,18 @@ UObject* UnPackage::CreateExport(int index)
 {
 	guard(UnPackage::CreateExport);
 
-	// create empty object
-	FObjectExport &Exp = GetExport(index);
+	// Get previously created object if any
+	FObjectExport& Exp = GetExport(index);
 	if (Exp.Object)
 		return Exp.Object;
 
 
-	// check if this object actually contains only default properties and nothing more
+	// Check if this object just contains default properties
 	bool shouldSkipObject = false;
 
 	if (!strnicmp(Exp.ObjectName, "Default__", 9))
 	{
-		// default properties are not supported -- this is a clean UObject format
+		// Default properties are not supported -- this is a clean UObject format
 		shouldSkipObject = true;
 	}
 #if UNREAL4
@@ -2209,8 +2209,9 @@ UObject* UnPackage::CreateExport(int index)
 		return NULL;
 	}
 
-	const char *ClassName = GetObjectName(Exp.ClassIndex);
-	UObject *Obj = Exp.Object = CreateClass(ClassName);
+	// Create empty object of desired class
+	const char* ClassName = GetObjectName(Exp.ClassIndex);
+	UObject* Obj = Exp.Object = CreateClass(ClassName);
 	if (!Obj)
 	{
 		if (!IsSuppressedClass(ClassName))
@@ -2225,7 +2226,9 @@ UObject* UnPackage::CreateExport(int index)
 #endif
 		return NULL;
 	}
+
 #if UNREAL3
+	// For UE3 we may require finding object in another package
 	if (Game >= GAME_UE3 && (Exp.ExportFlags & EF_ForcedExport)) // ExportFlags appeared in ArVer=247
 	{
 		// find outermost package
@@ -2247,33 +2250,44 @@ UObject* UnPackage::CreateExport(int index)
 		}
 	}
 #endif // UNREAL3
-	UObject::BeginLoad();
 
-	// find outer object
-	UObject *Outer = NULL;
-	if (Exp.PackageIndex)
-	{
-		const FObjectExport &OuterExp = GetExport(Exp.PackageIndex - 1);
-		Outer = OuterExp.Object;
-		if (!Outer)
-		{
-			const char *OuterClassName = GetObjectName(OuterExp.ClassIndex);
-			if (IsKnownClass(OuterClassName))			// avoid error message if class name is not registered
-				Outer = CreateExport(Exp.PackageIndex - 1);
-		}
-	}
-
-	// setup constant object fields
+	// Setup constant object fields
 	Obj->Package      = this;
 	Obj->PackageIndex = index;
-	Obj->Outer        = Outer;
+	Obj->Outer        = NULL;
 	Obj->Name         = Exp.ObjectName;
 
-	// add object to GObjLoaded for later serialization
-	UObject::GObjLoaded.Add(Obj);
+	bool bLoad = true;
+	if (GBeforeLoadObjectCallback)
+		bLoad = GBeforeLoadObjectCallback(Obj);
 
-	// perform serialization
-	UObject::EndLoad();
+	if (bLoad)
+	{
+		// Block UObject serialization
+		UObject::BeginLoad();
+
+		// Find and try to create outer object
+		UObject* Outer = NULL;
+		if (Exp.PackageIndex)
+		{
+			const FObjectExport &OuterExp = GetExport(Exp.PackageIndex - 1);
+			Outer = OuterExp.Object;
+			if (!Outer)
+			{
+				const char* OuterClassName = GetObjectName(OuterExp.ClassIndex);
+				if (IsKnownClass(OuterClassName))			// avoid error message if class name is not registered
+					Outer = CreateExport(Exp.PackageIndex - 1);
+			}
+		}
+		Obj->Outer = Outer;
+
+		// Add object to GObjLoaded for later serialization
+		UObject::GObjLoaded.Add(Obj);
+
+		// Perform serialization
+		UObject::EndLoad();
+	}
+
 	return Obj;
 
 	unguardf("%s:%d", *GetFilename(), index);
@@ -2543,6 +2557,7 @@ TArray<char*>		MissingPackages;
 /*static*/ UnPackage *UnPackage::LoadPackage(const CGameFileInfo* File, bool silent)
 {
 	guard(UnPackage::LoadPackage(info));
+	PROFILE_LABEL(*File->GetRelativeName());
 
 	if (File->IsPackage)
 	{

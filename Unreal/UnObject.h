@@ -14,12 +14,12 @@ class UObject
 
 public:
 	// internal storage
-	UnPackage		*Package;
+	UnPackage*		Package;
+	const char*		Name;
+	UObject*		Outer;			// UObject containing this UObject (e.g. UAnimSet holding UAnimSequence). Not really used here.
 	int				PackageIndex;	// index in package export table; INDEX_NONE for non-packaged (transient) object
-	const char		*Name;
-	UObject			*Outer;
 #if UNREAL3
-	int				NetIndex;
+	int32			NetIndex;
 #endif
 
 //	unsigned	ObjectFlags;
@@ -27,7 +27,7 @@ public:
 	UObject();
 	virtual ~UObject();
 	virtual void Serialize(FArchive &Ar);
-	virtual void PostLoad()			// called after serializing all objects
+	virtual void PostLoad()			// called after serialization of all objects
 	{}
 
 	// RTTI support
@@ -98,5 +98,9 @@ public:
 
 UObject *CreateClass(const char *Name);
 void RegisterCoreClasses();
+
+// This callback is called before placing the object into serialization queue (GObjLoaded). If it returns
+// false, serialization function will not be called.
+extern bool (*GBeforeLoadObjectCallback)(UObject*);
 
 #endif // __UNOBJECT_H__

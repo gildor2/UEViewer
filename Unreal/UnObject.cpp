@@ -18,6 +18,8 @@
 	UObject class
 -----------------------------------------------------------------------------*/
 
+bool (*GBeforeLoadObjectCallback)(UObject*) = NULL;
+
 UObject::UObject()
 :	PackageIndex(INDEX_NONE)
 {
@@ -163,7 +165,10 @@ void UObject::EndLoad()
 		UObject *Obj = GObjLoaded[0];
 		GObjLoaded.RemoveAt(0);
 		UnPackage *Package = Obj->Package;
+
 		guard(LoadObject);
+		PROFILE_LABEL(Obj->GetClassName());
+
 		Package->SetupReader(Obj->PackageIndex);
 		appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, *Package->GetFilename());
 		// setup NotifyInfo to describe object
