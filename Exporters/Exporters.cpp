@@ -147,9 +147,31 @@ struct ExportContext
 
 static ExportContext ctx;
 
+static bool OnObjectLoad(UObject* Obj)
+{
+	guard(OnObjectLoad);
+
+	assert(Obj);
+	const char* Class = Obj->GetClassName();
+
+	if (strncmp(Class, "Texture", 7) == 0)
+	{
+		// For UE3/UE4, the same texture may be reused many times from different materials.
+		// In test case, 580 textures were loaded 18000 times. This callback allows to replace
+		// these textures with dummies as soon as they've got exported
+		bool result = IsObjectExported(Obj) == false;
+//		if (!result) appPrintf("SKIP: %s\n", Obj->Name);
+		return result;
+	}
+	return true;
+
+	unguard;
+}
+
 void BeginExport()
 {
 	GExportInProgress = true;
+	GBeforeLoadObjectCallback = OnObjectLoad;
 	ctx.BeginExport();
 	ctx.startTime = appMilliseconds();
 }
@@ -164,6 +186,7 @@ void EndExport(bool profile)
 #endif
 
 	GExportInProgress = false;
+	GBeforeLoadObjectCallback = NULL;
 
 	if (profile)
 	{
