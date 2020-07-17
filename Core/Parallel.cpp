@@ -276,7 +276,7 @@ bool PutToQueue(ThreadTask task, void* data, CSemaphore* fence)
 	static int MaxQueueSize = -1;
 	if (MaxQueueSize < 0)
 	{
-		MaxQueueSize = CThread::GetLogicalCPUCount() * 3 / 4;
+		MaxQueueSize = CThread::GetLogicalCPUCount() * 2;
 		if (MaxQueueSize > ARRAY_COUNT(Queue))
 			MaxQueueSize = ARRAY_COUNT(Queue);
 	}
@@ -480,6 +480,15 @@ bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence, bool al
 void WaitForCompletion()
 {
 	guard(ThreadPool::WaitForCompletion);
+
+	// Execute tasks from the queue if any
+	Queue::CTask task;
+	while (Queue::GetFromQueue(task))
+	{
+		task.Exec();
+	}
+
+	// Wait for all threads to go to the idle state
 	while (CPoolThread::NumWorkingThreads > 0)
 	{
 		CThread::Sleep(20);
