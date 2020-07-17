@@ -38,6 +38,8 @@ void appOpenLogFile(const char *filename)
 
 void appPrintf(const char *fmt, ...)
 {
+	guard(appPrintf);
+
 	va_list	argptr;
 	va_start(argptr, fmt);
 	char buf[4096];
@@ -57,6 +59,8 @@ void appPrintf(const char *fmt, ...)
 	if (IsDebuggerPresent())
 		OutputDebugString(buf);
 #endif
+
+	unguard;
 }
 
 

@@ -556,7 +556,7 @@ sub EmitCompilerDefs {
 			$winxp = " -D _USING_V110_SDK71_";
 		}
 		# Platform defines
-		my $defs1, $defs2;
+		my ($defs1, $defs2);
 		if ($PLATFORM eq "win32") {
 			$defs1 = " -D _WIN32 -D WIN32";
 			$defs2 = " -d _WIN32 -d WIN32";
