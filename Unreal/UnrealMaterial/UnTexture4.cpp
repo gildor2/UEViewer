@@ -400,12 +400,14 @@ void UMaterial3::ScanUE4Textures()
 		{
 			const FObjectImport &Imp = Package->GetImport(i);
 //			printf("--> import %d (%s)\n", i, *Imp.ClassName);
-			if (stricmp(Imp.ClassName, "Class") == 0 || stricmp(Imp.ClassName, "Package") == 0)
-				continue;		// avoid spamming to log
-			UObject* obj = Package->CreateImport(i);
-//			if (obj) printf("--> %s (%s)\n", obj->Name, obj->GetClassName());
-			if (obj && obj->IsA("Texture3"))
-				ReferencedTextures.AddUnique(static_cast<UTexture3*>(obj));
+			// Only load textures
+			if (strnicmp(Imp.ClassName, "Texture", 7) == 0)
+			{
+				UObject* obj = Package->CreateImport(i);
+//				if (obj) printf("--> %s (%s)\n", obj->Name, obj->GetClassName());
+				if (obj && obj->IsA("Texture3"))
+					ReferencedTextures.AddUnique(static_cast<UTexture3*>(obj));
+			}
 		}
 	}
 
