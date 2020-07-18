@@ -145,6 +145,12 @@ public:
 		return (int)Info->UncompressedSize;
 	}
 
+	virtual bool IsOpen() const
+	{
+		// Not really "open state", but rather indicate that there's something to clean up in Close()
+		return UncompressedBuffer != NULL;
+	}
+
 	virtual void Close()
 	{
 		if (UncompressedBuffer)
