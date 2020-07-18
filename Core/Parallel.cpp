@@ -438,6 +438,9 @@ CPoolThread* AllocateFreeThread()
 		MaxThreads = min(MaxThreads, MAX_POOL_THREADS);
 		--MaxThreads; // exclude main thread
 		if (!GEnableThreads) MaxThreads = 0;
+
+		// Put Shutdown function to 'atexit' sequence
+		atexit(ThreadPool::Shutdown);
 	}
 
 	// Create new thread, if can

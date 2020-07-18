@@ -37,10 +37,6 @@
 #include "Version.h"
 #include "MiscStrings.h"
 
-#if THREADING
-#include "Parallel.h"
-#endif
-
 #define APP_CAPTION					"UE Viewer"
 
 //#define SHOW_HIDDEN_SWITCHES		1
@@ -1255,11 +1251,6 @@ int main(int argc, const char **argv)
 	} CATCH_CRASH {
 		ExceptionHandler();
 	}
-#endif
-
-#if THREADING
-	//todo: there are many "return N" above, which are all bypassing ThreadPool::Shutdown
-	ThreadPool::Shutdown();
 #endif
 
 	return 0;
