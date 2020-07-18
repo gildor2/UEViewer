@@ -47,6 +47,8 @@ void ReleaseAllObjects()
 {
 	guard(ReleaseAllObjects);
 
+	if (!UObject::GObjObjects.Num()) return;
+
 #if 0
 	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
 	appDumpMemoryAllocations();
@@ -69,7 +71,17 @@ void ReleaseAllObjects()
 		}
 	}
 #endif
-	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+
+	// Print currently used memory statistics, but only if it differs from previous one.
+	// This lets to avoid console spam when doing export of packages which has nothing exportable inside.
+	static size_t lastAllocsSize = 0;
+	static int lastAllocsCount = 0;
+	if (GTotalAllocationSize != lastAllocsSize || GTotalAllocationCount != lastAllocsCount)
+	{
+		lastAllocsSize = GTotalAllocationSize;
+		lastAllocsCount = GTotalAllocationCount;
+		appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+	}
 //	appDumpMemoryAllocations();
 
 	unguard;

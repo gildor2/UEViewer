@@ -196,21 +196,26 @@ static void RegisterClasses(int game)
 	}
 	if (GSettings.Startup.UseSound) RegisterUnrealSoundClasses();
 
-	// remove some class loaders when requisted by command line
+	// remove some class loaders when requested by command line
 	if (!GSettings.Startup.UseAnimation)
 	{
 		UnregisterClass("MeshAnimation", true);
-		UnregisterClass("AnimSet",       true);
-		UnregisterClass("AnimSequence",  true);
-		UnregisterClass("AnimNotify",    true);
+		UnregisterClass("AnimSet", true);
+		UnregisterClass("AnimSequence", true);
+		UnregisterClass("AnimNotify", true);
 	}
 	if (!GSettings.Startup.UseSkeletalMesh)
 	{
-		UnregisterClass("SkeletalMesh",       true);
+		UnregisterClass("SkeletalMesh", true);
 		UnregisterClass("SkeletalMeshSocket", true);
+		UnregisterClass("MorphTarget", false);
 	}
 	if (!GSettings.Startup.UseStaticMesh) UnregisterClass("StaticMesh", true);
-	if (!GSettings.Startup.UseTexture) UnregisterClass("UnrealMaterial", true);
+	if (!GSettings.Startup.UseTexture)
+	{
+		UnregisterClass("UnrealMaterial", true);
+		UnregisterClass("MaterialExpression", true);
+	}
 	if (!GSettings.Startup.UseMorphTarget) UnregisterClass("MorphTarget", false);
 	if (!GSettings.Startup.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);
 	if (!GSettings.Startup.UseScaleForm) UnregisterClass("SwfMovie", true);
