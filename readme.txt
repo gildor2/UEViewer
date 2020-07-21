@@ -216,6 +216,10 @@ ooz
 
 Changes
 ~~~~~~~
+21.07.2020
+- UE2 Cubemap support
+- UE4 TextureCube support
+
 13.07.2020
 - multiple optimizations (mostly for multi-core CPU), could be disabled with "-nomt" command line option
 
