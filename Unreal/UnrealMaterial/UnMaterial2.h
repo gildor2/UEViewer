@@ -545,6 +545,28 @@ public:
 };
 
 
+class UCubemap : public UTexture
+{
+	DECLARE_CLASS(UCubemap, UTexture);
+public:
+	UTexture*		Faces[6];
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(Faces)
+	END_PROP_TABLE
+
+#if RENDERING
+	virtual bool Upload();
+	virtual bool Bind();
+	virtual void GetParams(CMaterialParams &Params) const;
+	virtual void Release();
+	virtual bool IsTextureCube() const
+	{
+		return true;
+	}
+#endif // RENDERING
+};
+
 enum EOutputBlending
 {
 	OB_Normal,
@@ -1322,6 +1344,7 @@ public:
 	REGISTER_CLASS(UShader)				\
 	REGISTER_CLASS(UCombiner)			\
 	REGISTER_CLASS(UTexture)			\
+	REGISTER_CLASS(UCubemap)			\
 	REGISTER_CLASS(UFinalBlend)			\
 	REGISTER_CLASS(UTexEnvMap)			\
 	REGISTER_CLASS(UTexOscillator)		\

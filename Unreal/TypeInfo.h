@@ -116,6 +116,7 @@ struct CNullType
 
 
 #define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(((ThisClass*)NULL)->Field) / sizeof(Type) },
+// PROP_ARRAY is used for TArray. For static array (type[N]) use declaration for 'type'.
 #define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
 #define PROP_STRUC(Field,Type)	_PROP_BASE(Field, Type)
 #define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
@@ -132,7 +133,7 @@ struct CNullType
 // note: has special PROP_ENUM(), which is the same as PROP_BYTE(), but when using
 // PROP_BYTE for enumeration value, _PROP_BASE macro will set 'Count' field of
 // CPropInfo to 4 instead of 1 (enumeration values are serialized as byte, but
-// compiler report it as 4-byte field)
+// compiler report it as 4-byte field).
 #define PROP_ENUM(Field)		{ #Field, "byte",   FIELD2OFS(ThisClass, Field), 1 },
 #define PROP_ENUM2(Field,Type)	{ #Field, "#"#Type, FIELD2OFS(ThisClass, Field), 1 },
 #define PROP_BYTE(Field)		_PROP_BASE(Field, byte     )

@@ -1265,6 +1265,90 @@ void UTexture::Release()
 }
 
 
+bool UCubemap::Upload()
+{
+	for (int side = 0; side < 6; side++)
+	{
+		if (Faces[side] == NULL)
+			return false; // one of faces is missing
+	}
+
+	if (TexNum == BAD_TEXTURE) return false;
+	if (GL_TouchObject(DrawTimestamp)) return true;
+
+	// upload all cube sides
+	glGenTextures(1, &TexNum);
+	glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+	for (int side = 0; side < 6; side++)
+	{
+		UTexture *Tex = Faces[side];
+		bool success = UploadCubeSide(Tex, Tex->Mips.Num() > 1, side);
+		// release bulk data immediately
+		//!! better - use Lock (when uploaded)/Unlock (when destroyed/released) for referenced textures
+		Tex->ReleaseTextureData();
+
+		if (!success)
+		{
+			glDeleteTextures(1, &TexNum);
+			TexNum = BAD_TEXTURE;
+			break;
+		}
+	}
+	return (TexNum != BAD_TEXTURE);
+}
+
+bool UCubemap::Bind()
+{
+	guard(UCubemap::Bind);
+
+	bool isBad = false;
+	for (int side = 0; side < 6; side++)
+	{
+		if (Faces[side] == NULL)
+		{
+			isBad = true;
+			break;
+		}
+	}
+
+	if (!GUseGLSL || isBad)
+	{
+		BindDefaultMaterial();
+		return false;
+	}
+
+	glEnable(GL_TEXTURE_CUBE_MAP_ARB);
+
+	if (!Upload())
+	{
+		glDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		return false;
+	}
+
+	// bind texture
+	glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+	return true;
+
+	unguard;
+}
+
+
+void UCubemap::GetParams(CMaterialParams &Params) const
+{
+	Params.Cube = (UUnrealMaterial*)this;
+}
+
+
+void UCubemap::Release()
+{
+	guard(UCubemap::Release);
+	if (GL_IsValidObject(TexNum, DrawTimestamp))
+		glDeleteTextures(1, &TexNum);
+	Super::Release();
+	unguard;
+}
+
+
 void UModifier::SetupGL()
 {
 	guard(UModifier::SetupGL);

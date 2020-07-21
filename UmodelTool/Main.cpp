@@ -289,6 +289,7 @@ static void RegisterExporters()
 	RegisterExporter<UMeshAnimation>([](const UMeshAnimation* Anim) { CallExportAnimation(Anim->ConvertedAnim); });
 	RegisterExporter<UVertMesh>(Export3D);
 	RegisterExporter<UStaticMesh>([](const UStaticMesh* Mesh) { CallExportStaticMesh(Mesh->ConvertedMesh); });
+	RegisterExporter<UCubemap>([](const UCubemap* Tex) { ExportMaterial(Tex); }); //todo: separate Cubemap export
 	RegisterExporter<UTexture>([](const UTexture* Tex) { ExportTexture(Tex); });
 	RegisterExporter<USound>(ExportSound);
 #if UNREAL3
@@ -296,6 +297,7 @@ static void RegisterExporters()
 	RegisterExporter<UAnimSet>([](const UAnimSet* Anim) { CallExportAnimation(Anim->ConvertedAnim); });
 	RegisterExporter<UStaticMesh3>([](const UStaticMesh3* Mesh) { CallExportStaticMesh(Mesh->ConvertedMesh); });
 	RegisterExporter<UTexture2D>([](const UTexture2D* Tex) { ExportTexture(Tex); });
+	//todo: separate UTextureCube3, remove handling from ExportMaterial - or put ALL handling there
 	RegisterExporter<USoundNodeWave>(ExportSoundNodeWave);
 	RegisterExporter<USwfMovie>(ExportGfx);
 	RegisterExporter<UFaceFXAnimSet>(ExportFaceFXAnimSet);

@@ -3,6 +3,7 @@
 
 #include "UnObject.h"
 #include "UnrealMaterial/UnMaterial.h"
+#include "UnrealMaterial/UnMaterial2.h"
 #include "UnrealMaterial/UnMaterial3.h"
 
 #include "Exporters.h"
@@ -15,6 +16,9 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 #if RENDERING				// requires UUnrealMaterial::GetParams()
 
 	if (!Mat) return;
+
+	//todo: handle Mat->IsTexture(), Mat->IsTextureCube() to select exporter code
+	//todo: remove separate texture handling from Main.cpp exporter registraction
 
 	TArray<UUnrealMaterial*> AllTextures;
 	Mat->AppendReferencedTextures(AllTextures, false);
@@ -91,6 +95,12 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 		{
 			ExportMaterial(Inst->Parent);
 		}
+	}
+	else if (Mat->IsA("Cubemap"))
+	{
+		const UCubemap* TexCube = static_cast<const UCubemap*>(Mat);
+		for (int Side = 0; Side < 6; Side++)
+			ExportObject(TexCube->Faces[Side]);
 	}
 	else if (Mat->IsA("TextureCube3"))
 	{
