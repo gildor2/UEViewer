@@ -74,8 +74,9 @@ void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh);
 void ExportStaticMeshGLTF(const CStaticMesh* Mesh);
 // 3D
 void Export3D(const UVertMesh* Mesh);
-// TGA, DDS
+// TGA, DDS, PNG
 void ExportTexture(const UUnrealMaterial* Tex);
+void ExportCubemap(const UUnrealMaterial* Tex);
 // UUnrealMaterial
 void ExportMaterial(const UUnrealMaterial* Mat);
 // sound

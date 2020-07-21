@@ -3,19 +3,30 @@
 
 #include "UnObject.h"
 #include "UnrealMaterial/UnMaterial.h"
-#include "UnrealMaterial/UnMaterial2.h"
 #include "UnrealMaterial/UnMaterial3.h"
 
 #include "Exporters.h"
 
 
-void ExportMaterial(const UUnrealMaterial *Mat)
+void ExportMaterial(const UUnrealMaterial* Mat)
 {
 	guard(ExportMaterial);
 
 #if RENDERING				// requires UUnrealMaterial::GetParams()
 
 	if (!Mat) return;
+
+	if (Mat->IsTextureCube())
+	{
+		ExportCubemap(Mat);
+		return;
+	}
+
+	if (Mat->IsTexture())
+	{
+		ExportTexture(Mat);
+		return;
+	}
 
 	//todo: handle Mat->IsTexture(), Mat->IsTextureCube() to select exporter code
 	//todo: remove separate texture handling from Main.cpp exporter registraction
@@ -95,22 +106,6 @@ void ExportMaterial(const UUnrealMaterial *Mat)
 		{
 			ExportMaterial(Inst->Parent);
 		}
-	}
-	else if (Mat->IsA("Cubemap"))
-	{
-		const UCubemap* TexCube = static_cast<const UCubemap*>(Mat);
-		for (int Side = 0; Side < 6; Side++)
-			ExportObject(TexCube->Faces[Side]);
-	}
-	else if (Mat->IsA("TextureCube3"))
-	{
-		const UTextureCube3* TexCube = static_cast<const UTextureCube3*>(Mat);
-		ExportObject(TexCube->FacePosX);
-		ExportObject(TexCube->FaceNegX);
-		ExportObject(TexCube->FacePosY);
-		ExportObject(TexCube->FaceNegY);
-		ExportObject(TexCube->FacePosZ);
-		ExportObject(TexCube->FaceNegZ);
 	}
 
 #endif // RENDERING

@@ -4,6 +4,7 @@
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnrealMaterial/UnMaterial.h"
+#include "UnrealMaterial/UnMaterial2.h"
 #include "UnrealMaterial/UnMaterial3.h"
 
 #include "Exporters.h"
@@ -359,7 +360,7 @@ struct CTextureExportWorker
 	}
 };
 
-void ExportTexture(const UUnrealMaterial *Tex)
+void ExportTexture(const UUnrealMaterial* Tex)
 {
 	guard(ExportTexture);
 
@@ -432,6 +433,30 @@ void ExportTexture(const UUnrealMaterial *Tex)
 #else
 	Worker();
 #endif
+
+	unguard;
+}
+
+void ExportCubemap(const UUnrealMaterial* Tex)
+{
+	guard(ExportCubemap);
+
+	if (Tex->IsA("Cubemap"))
+	{
+		const UCubemap* TexCube = static_cast<const UCubemap*>(Tex);
+		for (int Side = 0; Side < 6; Side++)
+			ExportObject(TexCube->Faces[Side]);
+	}
+	else if (Tex->IsA("TextureCube3"))
+	{
+		const UTextureCube3* TexCube = static_cast<const UTextureCube3*>(Tex);
+		ExportObject(TexCube->FacePosX);
+		ExportObject(TexCube->FaceNegX);
+		ExportObject(TexCube->FacePosY);
+		ExportObject(TexCube->FaceNegY);
+		ExportObject(TexCube->FacePosZ);
+		ExportObject(TexCube->FaceNegZ);
+	}
 
 	unguard;
 }
