@@ -2669,7 +2669,7 @@ protected:
 	Global variables
 -----------------------------------------------------------------------------*/
 
-extern bool      GExportInProgress;
+extern bool      GExportInProgress; // indicates that batch export is in progress, and exporter may destroy data when done
 extern int       GForceGame;
 extern int       GForcePackageVersion;
 extern byte      GForcePlatform;

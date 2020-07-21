@@ -15,7 +15,7 @@ FORCEINLINE void RegisterExporter(void (*Func)(const T*))
 	RegisterExporter(T::StaticGetTypeinfo()->Name + 1, (ExporterFunc_t)Func);
 }
 
-void BeginExport();
+void BeginExport(bool bBatch = false);
 // This function will clear list of already exported objects
 void EndExport(bool profile = false);
 

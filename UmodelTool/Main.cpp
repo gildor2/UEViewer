@@ -1174,7 +1174,7 @@ int main(int argc, const char **argv)
 		// If we have list of objects, the process only those ones. Otherwise, process full packages.
 		if (Objects.Num())
 		{
-			BeginExport();
+			BeginExport(true);
 	        ExportObjects(&Objects); // will export everything if "Objects" array is empty, however we're calling ExportPackages() in this case
 			EndExport();
 		}

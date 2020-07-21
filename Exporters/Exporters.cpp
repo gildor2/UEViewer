@@ -168,9 +168,9 @@ static bool OnObjectLoad(UObject* Obj)
 	unguard;
 }
 
-void BeginExport()
+void BeginExport(bool bBatch)
 {
-	GExportInProgress = true;
+	GExportInProgress = bBatch; // only signal that we're doing export if not doing that from the viewer
 	GBeforeLoadObjectCallback = OnObjectLoad;
 	ctx.BeginExport();
 	ctx.startTime = appMilliseconds();
@@ -178,7 +178,7 @@ void BeginExport()
 
 void EndExport(bool profile)
 {
-	assert(GExportInProgress);
+//	assert(GExportInProgress); - in non-batch export this might be 'false'
 
 #if THREADING
 	// Wait for all workers to complete
