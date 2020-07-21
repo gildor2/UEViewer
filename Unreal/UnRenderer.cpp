@@ -1201,7 +1201,7 @@ void UTexture::SetupGL()
 
 	glEnable(GL_DEPTH_TEST);
 	// bTwoSided
-	if (bTwoSided)
+	if (bTwoSided || IsTextureCube())
 	{
 		glDisable(GL_CULL_FACE);
 	}
@@ -2106,6 +2106,28 @@ void UMaterial3::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures,
 				OutTextures.AddUnique(ReferencedTextures[i]);
 		}
 	}
+	unguard;
+}
+
+void UTexture2D::SetupGL()
+{
+	guard(UTexture2D::SetupGL);
+
+	glEnable(GL_TEXTURE_2D);
+
+	if (!IsTextureCube())
+	{
+		glDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		glEnable(GL_CULL_FACE);
+	}
+	else
+	{
+		glEnable(GL_TEXTURE_CUBE_MAP_ARB);
+		glDisable(GL_CULL_FACE);
+	}
+
+	glEnable(GL_DEPTH_TEST);
+
 	unguard;
 }
 

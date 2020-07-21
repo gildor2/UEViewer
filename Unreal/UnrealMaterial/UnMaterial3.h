@@ -493,6 +493,7 @@ public:
 	virtual bool GetTextureData(CTextureData &TexData) const;
 	virtual void ReleaseTextureData() const;
 #if RENDERING
+	virtual void SetupGL();
 	virtual bool Upload();
 	virtual bool Bind();
 	virtual void GetParams(CMaterialParams &Params) const;
