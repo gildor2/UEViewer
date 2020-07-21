@@ -35,11 +35,12 @@
 
 // Variables passed from vertex to fragment shader
 varying vec4 diffuse, ambient, specular;
-varying vec3 tangentLightDir, tangentEye;
+varying vec3 tangentLightDir;
+varying mat3 tbn;
+varying vec3 eyeVertexPos;
 #ifdef NEEDS_TANGENT_TO_WORLD
 varying mat3 tangentToWorld;
 #endif
-varying vec3 tmp;
 
 
 attribute vec4 normal;
@@ -75,17 +76,17 @@ void VertexShaderMain()
 	vec3 n = normalize(normal.xyz);
 	vec3 t = normalize(tangent);
 	vec3 b = cross(n, t) * normal.w;
-	mat3 tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(t, b, n));
+	tbn = transpose(mat3(gl_ModelViewMatrix) * mat3(t, b, n));
 
 	// eye-space parameters
 	// note: gl_LightSource.position is already transformed to eye-space
-	vec3 eyeVertexPos = (gl_ModelViewMatrix * gl_Vertex).xyz;		// vertex position in eye space
+	eyeVertexPos = (gl_ModelViewMatrix * gl_Vertex).xyz;		// vertex position in eye space
 	vec3 eyeLightPos  = gl_LightSource[0].position.xyz;				// direction to light in eye space
 	tangentLightDir = normalize(tbn * (eyeLightPos - eyeVertexPos));
-	tangentEye      = normalize(tbn * -eyeVertexPos);				// eye is (0,0,0), so direction to eye = -vertex
 
 #ifdef NEEDS_TANGENT_TO_WORLD
 	// matrix for conversion of tangent space vector to world space
+	//?? todo: it's almost 'tbn', shuld review variable names
 	tangentToWorld = mat3(t, b, n);
 #endif
 }
@@ -152,7 +153,8 @@ void PixelShaderMain()
 	%s
 	normal = normalize(normal);
 	vec3 nLightDir = normalize(tangentLightDir);
-	vec3 nEye      = normalize(tangentEye);
+	vec3 nEye      = normalize(tbn * -eyeVertexPos);	// eye is at (0,0,0), so direction to eye = -vertex
+
 	// ambient + diffuse
 	float NdotL    = max(dot(normal, nLightDir), 0.0);
 	vec4 color     = ambient + diffuse * NdotL;
