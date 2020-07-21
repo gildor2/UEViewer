@@ -470,7 +470,10 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		// GL 3.0 or GL_EXT_framebuffer_object
 		DBG("up+build_mips (%s): %d %d (%d) (%s) (%d)", Tex->Name, Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize);
 		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
-		glGenerateMipmapEXT(target2);
+		if (target2 != GL_TEXTURE_CUBE_MAP_ARB)
+		{
+			glGenerateMipmapEXT(target2);
+		}
 	}
 	else
 	{

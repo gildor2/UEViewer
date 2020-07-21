@@ -587,7 +587,6 @@ bool UTexture::GetTextureData(CTextureData &TexData) const
 			DstMip->USize = Mip.USize;
 			DstMip->VSize = Mip.VSize;
 			DstMip->DataSize = Mip.DataArray.Num();
-			break;
 		}
 	}
 
