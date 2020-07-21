@@ -212,6 +212,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 				SizeX = Data.SizeX;
 				SizeY = Data.SizeY;
 				Format = PixelFormat;
+				NumSlices = Data.NumSlices;
 			}
 			else
 			{

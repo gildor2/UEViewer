@@ -97,7 +97,7 @@ unsigned CTextureData::GetFourCC() const
 }
 
 
-byte* CTextureData::Decompress(int MipLevel)
+byte* CTextureData::Decompress(int MipLevel, int Slice)
 {
 	guard(CTextureData::Decompress);
 
@@ -110,6 +110,12 @@ byte* CTextureData::Decompress(int MipLevel)
 	int USize = Mip.USize;
 	int VSize = Mip.VSize;
 	const byte *Data = Mip.CompressedData;
+
+	if (Slice >= 0)
+	{
+		// 6 slices in UE4 follows each other in memory
+		Data += Mip.DataSize / 6 * Slice;
+	}
 
 	int pixelSize = PixelFormatInfo[Format].Float ? 16 : 4;
 	int size = USize * VSize * pixelSize;

@@ -257,7 +257,7 @@ public:
 		return true;
 	}
 
-	byte* Decompress(int MipLevel = 0);				// may return NULL in a case of error
+	byte* Decompress(int MipLevel = 0, int Slice = -1);		// may return NULL in a case of error
 
 #if SUPPORT_XBOX360
 	bool DecodeXBox360(int MipLevel);

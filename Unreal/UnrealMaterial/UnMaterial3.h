@@ -160,7 +160,9 @@ public:
 	float			UnpackMin[4];
 	float			UnpackMax[4];
 	FByteBulkData	SourceArt;
+#if UNREAL4
 	FTextureSource	Source;
+#endif
 	ETextureCompressionSettings CompressionSettings;
 
 	UTexture3()
@@ -426,6 +428,7 @@ public:
 	bool			bForcePVRTC4;		// iPhone
 #if UNREAL4
 	FIntPoint		ImportedSize;
+	int				NumSlices;			//todo: important only while UTextureCube4 is derived from UTexture2D in out implementation
 #endif
 
 #if RENDERING
@@ -440,6 +443,7 @@ public:
 	,	AddressX(TA_Wrap)
 	,	AddressY(TA_Wrap)
 	,	bForcePVRTC4(false)
+	,	NumSlices(1)
 	{}
 #endif
 
@@ -513,12 +517,12 @@ class UTextureCube3 : public UTexture3
 {
 	DECLARE_CLASS(UTextureCube3, UTexture3)
 public:
-	UTexture2D		*FacePosX;
-	UTexture2D		*FaceNegX;
-	UTexture2D		*FacePosY;
-	UTexture2D		*FaceNegY;
-	UTexture2D		*FacePosZ;
-	UTexture2D		*FaceNegZ;
+	UTexture2D*		FacePosX;
+	UTexture2D*		FaceNegX;
+	UTexture2D*		FacePosY;
+	UTexture2D*		FaceNegY;
+	UTexture2D*		FacePosZ;
+	UTexture2D*		FaceNegZ;
 
 #if RENDERING
 	// rendering implementation fields
@@ -561,6 +565,29 @@ public:
 	}
 #endif // RENDERING
 };
+
+
+#if UNREAL4
+
+// In UE4, UTextureCube is derived from UTexture, however it has almost identical serializer to UTexture2D.
+// In order to reuse the code, we'll derive it from UTexture2D.
+class UTextureCube4 : public UTexture2D
+{
+	DECLARE_CLASS(UTextureCube4, UTexture2D)
+public:
+#if RENDERING
+	virtual bool Upload();
+	virtual bool Bind();
+	virtual void GetParams(CMaterialParams &Params) const;
+	virtual void Release();
+	virtual bool IsTextureCube() const
+	{
+		return true;
+	}
+#endif // RENDERING
+};
+
+#endif // UNREAL4
 
 
 enum EBlendMode
@@ -1228,7 +1255,7 @@ public:
 	REGISTER_ENUM(EMobileSpecularMask)	\
 
 #define REGISTER_MATERIAL_CLASSES_U4	\
-	REGISTER_CLASS_ALIAS(UTexture2D, UTextureCube) \
+	REGISTER_CLASS_ALIAS(UTextureCube4, UTextureCube) \
 	REGISTER_CLASS(FMaterialParameterInfo) \
 	REGISTER_CLASS(FMaterialCachedParameterEntry) \
 	REGISTER_CLASS(FMaterialCachedParameters) \

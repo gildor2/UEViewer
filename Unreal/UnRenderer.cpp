@@ -204,11 +204,11 @@ static void GetImageDimensions(int width, int height, int* scaledWidth, int* sca
 #endif
 
 // Decompress and upload a texture. Returns false when decompression failed.
-static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData, bool doMipmap)
+static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData& TexData, bool doMipmap, int slice = -1)
 {
 	guard(UploadTex);
 
-	byte *pic = TexData.Decompress(0);
+	byte *pic = TexData.Decompress(0, slice);
 	if (!pic)
 	{
 		// some internal decompression error, message should be already printed to log
@@ -278,7 +278,7 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 		for (int mipLevel = 1; mipLevel < TexData.Mips.Num(); mipLevel++)
 		{
 			const CMipMap& Mip = TexData.Mips[mipLevel];
-			byte* pic = TexData.Decompress(mipLevel);
+			byte* pic = TexData.Decompress(mipLevel, slice);
 
 #if DEBUG_MIPS
 			// colorize mip levels
@@ -338,7 +338,7 @@ static bool UploadTex(UUnrealMaterial* Tex, GLenum target, CTextureData &TexData
 
 
 // Try to upload a compressed texture. Returns false when not uploaded (due to hardware restrictions etc).
-static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum target2, CTextureData &TexData, bool doMipmap)
+static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum target2, CTextureData& TexData, bool doMipmap, int slice = -1)
 {
 	guard(UploadCompressedTex);
 
@@ -379,9 +379,19 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		format0 = GL_RGBA16F_ARB;
 		format2 = GL_HALF_FLOAT_ARB;
 	}
+
+	// Allow slices. We're supporting only 6 slices.
+	int dataSize = Mip0.DataSize;
+	const byte* dataPtr = Mip0.CompressedData;
+	if (slice >= 0)
+	{
+		dataSize /= 6;
+		dataPtr += dataSize * slice;
+	}
+
 	if (format1 && format2)
 	{
-		glTexImage2D(target, 0, format0, Mip0.USize, Mip0.VSize, 0, format1, format2, Mip0.CompressedData);
+		glTexImage2D(target, 0, format0, Mip0.USize, Mip0.VSize, 0, format1, format2, dataPtr);
 		//!! support uploading mipmaps here
 		if (doMipmap)
 			glGenerateMipmapEXT(target);
@@ -440,7 +450,7 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	{
 		// no mipmaps required
 		DBG("up (%s, %d no-mips): %d %d (%d) (%s) (0x%X)", Tex->Name, TexData.Mips.Num(), Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize);
-		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
+		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, dataSize, dataPtr);
 		glTexParameteri(target2, GL_TEXTURE_MAX_LEVEL, 0);	// GL 1.2
 	}
 	else if (TexData.Mips.Num() > 1 && GL_SUPPORT(QGL_1_2)) // GL 1.2 is required for GL_TEXTURE_MAX_LEVEL
@@ -452,7 +462,16 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		for (int mipLevel = 0; mipLevel < TexData.Mips.Num(); mipLevel++)
 		{
 			const CMipMap& Mip = TexData.Mips[mipLevel];
-			glCompressedTexImage2D(target, mipLevel, format, Mip.USize, Mip.VSize, 0, Mip.DataSize, Mip.CompressedData);
+			// Slices
+			dataSize = Mip.DataSize;
+			dataPtr = Mip.CompressedData;
+			if (slice >= 0)
+			{
+				dataSize /= 6;
+				dataPtr += dataSize * slice;
+			}
+			// Upload
+			glCompressedTexImage2D(target, mipLevel, format, Mip.USize, Mip.VSize, 0, dataSize, dataPtr);
 			GLenum error = glGetError();
 			DBG("   mip %d x %d (%X)", Mip.USize, Mip.VSize, Mip.DataSize);
 			if (error != 0)
@@ -464,12 +483,11 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		}
 		unguard;
 	}
-	// code below generates mipmaps using OpenGL functionality
 	else if (GL_SUPPORT(QGL_EXT_FRAMEBUFFER_OBJECT))
 	{
-		// GL 3.0 or GL_EXT_framebuffer_object
+		// code below generates mipmaps using GL 3.0 or GL_EXT_framebuffer_object
 		DBG("up+build_mips (%s): %d %d (%d) (%s) (%d)", Tex->Name, Mip0.USize, Mip0.VSize, TexData.Mips.Num(), TexData.OriginalFormatName, Mip0.DataSize);
-		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
+		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, dataSize, dataPtr);
 		if (target2 != GL_TEXTURE_CUBE_MAP_ARB)
 		{
 			glGenerateMipmapEXT(target2);
@@ -480,7 +498,7 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 		// GL 1.4 - set GL_GENERATE_MIPMAP before uploading
 		DBG("up+build_mips (%s): old code", Tex->Name);
 		glTexParameteri(target2, GL_GENERATE_MIPMAP, GL_TRUE);
-		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, Mip0.DataSize, Mip0.CompressedData);
+		glCompressedTexImage2D(target, 0, format, Mip0.USize, Mip0.VSize, 0, dataSize, dataPtr);
 	}
 
 	GLenum error = glGetError();
@@ -545,7 +563,7 @@ static int Upload2D(UUnrealMaterial *Tex, bool doMipmap, bool clampS, bool clamp
 }
 
 
-static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
+static bool UploadCubeSide(UUnrealMaterial *Tex, int side, bool useSlices = false)
 {
 	guard(UploadCubeSide);
 
@@ -567,16 +585,18 @@ static bool UploadCubeSide(UUnrealMaterial *Tex, bool doMipmap, int side)
 	}
 #endif
 
+	int slice = useSlices ? side : 0;
+
 	// Automatic mipmap generation doesn't work with cubemaps, so allow mipmaps only for
 	// explicitly provided data.
 	// https://www.opengl.org/sdk/docs/man/html/glGenerateMipmap.xhtml
-	doMipmap = TexData.Mips.Num() > 0;
+	bool doMipmap = TexData.Mips.Num() > 1;
 
 	GLenum target = GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side;
-	if (!UploadCompressedTex(Tex, target, GL_TEXTURE_CUBE_MAP_ARB, TexData, doMipmap))
+	if (!UploadCompressedTex(Tex, target, GL_TEXTURE_CUBE_MAP_ARB, TexData, doMipmap, slice))
 	{
 		// upload uncompressed
-		if (!UploadTex(Tex, target, TexData, doMipmap))
+		if (!UploadTex(Tex, target, TexData, doMipmap, slice))
 		{
 			// some internal decompression error, message should be already displayed
 			return false;
@@ -1285,7 +1305,7 @@ bool UCubemap::Upload()
 	for (int side = 0; side < 6; side++)
 	{
 		UTexture *Tex = Faces[side];
-		bool success = UploadCubeSide(Tex, Tex->Mips.Num() > 1, side);
+		bool success = UploadCubeSide(Tex, side);
 		// release bulk data immediately
 		//!! better - use Lock (when uploaded)/Unlock (when destroyed/released) for referenced textures
 		Tex->ReleaseTextureData();
@@ -2171,7 +2191,7 @@ bool UTextureCube3::Upload()
 			break;
 		}
 
-		bool success = UploadCubeSide(Tex, Tex->Mips.Num() > 1, side);
+		bool success = UploadCubeSide(Tex, side);
 		// release bulk data immediately
 		//!! better - use Lock (when uploaded)/Unlock (when destroyed/released) for referenced textures
 		Tex->ReleaseTextureData();
@@ -2227,6 +2247,79 @@ void UTextureCube3::Release()
 	unguard;
 }
 
+
+#if UNREAL4
+
+
+bool UTextureCube4::Upload()
+{
+	if (NumSlices != 6)
+		return Super::Upload(); // use as Texture2D
+
+	if (TexNum == BAD_TEXTURE) return false;
+	if (GL_TouchObject(DrawTimestamp)) return true;
+
+	// upload all cube sides
+	glGenTextures(1, &TexNum);
+	glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+	for (int side = 0; side < 6; side++)
+	{
+		bool success = UploadCubeSide(this, side, true);
+		// release bulk data immediately
+
+		if (!success)
+		{
+			glDeleteTextures(1, &TexNum);
+			TexNum = BAD_TEXTURE;
+			break;
+		}
+	}
+
+	ReleaseTextureData();
+
+	return (TexNum != BAD_TEXTURE);
+}
+
+bool UTextureCube4::Bind()
+{
+	guard(UTextureCube4::Bind);
+
+	if (NumSlices != 6) // probably source texture
+		return Super::Bind();
+
+	glEnable(GL_TEXTURE_CUBE_MAP_ARB);
+
+	if (!Upload())
+	{
+		glDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		return false;
+	}
+
+	// bind texture
+	glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, TexNum);
+	return true;
+
+	unguard;
+}
+
+
+void UTextureCube4::GetParams(CMaterialParams &Params) const
+{
+	if (NumSlices != 6) return; // can't show this as cubemap
+	Params.Cube = (UUnrealMaterial*)this;
+}
+
+
+void UTextureCube4::Release()
+{
+	guard(UTextureCube4::Release);
+	if (GL_IsValidObject(TexNum, DrawTimestamp))
+		glDeleteTextures(1, &TexNum);
+	Super::Release();
+	unguard;
+}
+
+#endif // UNREAL4
 
 void UMaterialInstanceConstant::SetupGL()
 {
