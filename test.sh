@@ -137,6 +137,7 @@ function run1()
 
 function cmdline()
 {
+	debugOpt=""					# doesn't work when @cmdline is used
 	run @Docs/cmdline.cfg
 }
 

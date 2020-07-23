@@ -1404,7 +1404,9 @@ struct FStaticLODModel4
 #if SEAOFTHIEVES
 		if (Ar.Game == GAME_SeaOfThieves)
 		{
-			Ar.Seek(Ar.Tell() + 42);
+			Ar.Seek(Ar.Tell() + 24);
+			FMultisizeIndexContainer indices1, indices2;
+			Ar << indices1 << indices2;
 		}
 #endif // SEAOFTHIEVES
 
@@ -2354,6 +2356,10 @@ struct FStaticMeshLODModel4
 				Ar << AreaWeightedSectionSamplers[i];
 			Ar << AreaWeightedSampler;
 		}
+
+#if SEAOFTHIEVES
+		if (Ar.Game == GAME_SeaOfThieves) Ar.Seek(Ar.Tell()+17);
+#endif
 
 		unguard;
 	}
