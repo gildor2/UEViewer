@@ -1800,8 +1800,8 @@ void UnPackage::LoadExportTable()
 //		Perhaps add full support to extract.exe?
 //		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
 //			*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype);
-		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X, exp_f=%08X\n", i, GetObjectName(Exp->ClassIndex),
-			*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags, Exp->ExportFlags);
+		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d  exp_f=%08X\n", i, GetObjectName(Exp->ClassIndex),
+			*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ExportFlags);
 	}
 #endif // DEBUG_PACKAGE
 

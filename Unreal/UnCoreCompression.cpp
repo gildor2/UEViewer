@@ -194,6 +194,8 @@ void DecryptBladeAndSoul(byte* CompressedBuffer, int CompressedSize);
 void DecryptTaoYuan(byte* CompressedBuffer, int CompressedSize);
 void DecryptDevlsThird(byte* CompressedBuffer, int CompressedSize);
 
+static int FoundCompression = -1;
+
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
 {
 	int OldFlags = Flags;
@@ -241,12 +243,19 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	if ((GForceGame == GAME_DevilsThird) && (Flags & 8))
 	{
 		DecryptDevlsThird(CompressedBuffer, CompressedSize);
-		// overide compression
+		// override compression
 		Flags &= ~8;
 	}
 #endif // DEVILS_THIRD
 
-	if (Flags == COMPRESS_FIND && CompressedSize >= 2)
+	if (Flags == COMPRESS_FIND && FoundCompression >= 0)
+	{
+		// Do not detect compression multiple times: there were cases (Sea of Thieves) when
+		// game is using LZ4 compression, however its first 2 bytes occasionally matched oodle,
+		// so one of blocks were mistakenly used oodle.
+		Flags = FoundCompression;
+	}
+	else if (Flags == COMPRESS_FIND && CompressedSize >= 2)
 	{
 		byte b1 = CompressedBuffer[0];
 		byte b2 = CompressedBuffer[1];
@@ -277,6 +286,8 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 		{
 			Flags = COMPRESS_LZO;		// LZO was used only with UE3 games as standard compression method
 		}
+		// Cache detected compression method
+		FoundCompression = Flags;
 	}
 
 	if (Flags == COMPRESS_LZO)
