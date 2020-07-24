@@ -209,7 +209,7 @@ struct FEditorObjectVersion
 		if (Ar.Game == GAME_Tekken7) return (Type)7;		// pre-UE4.14
 #endif
 #if PARAGON
-		if (Ar.Game == GAME_Paragon) return  (Type)22;
+		if (Ar.Game == GAME_Paragon) return (Type)22;
 #endif
 
 		if (Ar.Game < GAME_UE4(12))

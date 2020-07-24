@@ -3,13 +3,6 @@
 
 #if UNREAL4
 
-
-// NOTE: this implementation has a lot of common things with FObbFile. If there will be another
-// one virtual file system with similar implementation, it's worth to make some parent class
-// for all of them which will differs perhaps only with AttachReader() method.
-
-#define PAK_FILE_MAGIC		0x5A6F12E1
-
 // Pak file versions
 enum
 {

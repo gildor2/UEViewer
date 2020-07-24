@@ -78,7 +78,7 @@ struct FTexturePlatformData
 {
 	int32		SizeX;
 	int32		SizeY;
-	int32		NumSlices;				// 1 for simple texture, 6 for cubemap - 6 textures are joined into one (check!!)
+	int32		NumSlices;				// 1 for simple texture, 6 for cubemap - 6 textures are joined into one
 	FString		PixelFormat;
 	TArray<FTexture2DMipMap> Mips;
 

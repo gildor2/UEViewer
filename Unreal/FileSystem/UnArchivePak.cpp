@@ -6,6 +6,8 @@
 
 #if UNREAL4
 
+#define PAK_FILE_MAGIC		0x5A6F12E1
+
 FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 {
 	// New FPakInfo fields.
@@ -21,6 +23,11 @@ FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 	}
 	Ar << P.Version << P.IndexOffset << P.IndexSize;
 	Ar.Serialize(ARRAY_ARG(P.IndexHash));
+
+#if SOD2
+	if (GForceGame == GAME_StateOfDecay2)
+		P.Version &= 0xffff;
+#endif
 
 	if (P.Version == PakFile_Version_FrozenIndex)
 	{
@@ -139,9 +146,14 @@ void FPakEntry::Serialize(FArchive& Ar)
 	{
 		CompressionMethod = COMPRESS_FIND;
 	}
+
 #if TEKKEN7
 	if (GForceGame == GAME_Tekken7)
 		bEncrypted = false;		// Tekken 7 has 'bEncrypted' flag set, but actually there's no encryption
+#endif
+#if SOD2
+	if (GForceGame == GAME_StateOfDecay2 && CompressionMethod > 16)
+		CompressionMethod = COMPRESS_LZ4;
 #endif
 
 	if (PakVer >= PakFile_Version_RelativeChunkOffsets)
