@@ -378,11 +378,11 @@ static void RegisterGameFile(const char* FullName)
 #if UNREAL4
 	if (!stricmp(ext, "pak"))
 	{
-		GIsUE4PackageMode = true; // ignore non-UE4 extensions for speedup file registration
 		reader = new FFileReader(FullName);
 		if (!reader) return;
 		reader->Game = GAME_UE4_BASE;
 		vfs = new FPakVFS(FullName);
+		GIsUE4PackageMode = true; // ignore non-UE4 extensions for speedup file registration
 	}
 #endif // UNREAL4
 	//!! note: VFS pointer is not stored in any global list, and not released upon program exit
@@ -406,6 +406,11 @@ static void RegisterGameFile(const char* FullName)
 			delete reader;
 			return;
 		}
+#if UNREAL4
+		// Reset GIsUE4PackageMode back in a case if .pak file appeared in directory
+		// by accident.
+		GIsUE4PackageMode = false;
+#endif
 	}
 	else
 	{
