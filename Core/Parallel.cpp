@@ -227,6 +227,9 @@ CThread::~CThread()
 		CThread* thread = (CThread*)param;
 		thread->Run();
 	} CATCH_CRASH {
+		// Note: if multiple threads will crash, they'll corrupt error history with
+		// simultaneous writing to GError.
+		//todo: there's no build number displayed, Core has no access to version string
 		appPrintf("Exception in thread %d: ", CurrentId());
 		GError.StandardHandler();
 		exit(1);

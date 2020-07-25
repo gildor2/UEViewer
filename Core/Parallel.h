@@ -365,12 +365,13 @@ public:
 
 	FORCEINLINE void ExecuteRange(int idx1, int idx2)
 	{
-		guard(ExecuteRange);
-		while (idx1 < idx2)
+		int idx = idx1;
+		guard(ParallelForWorker::ExecuteRange);
+		while (idx < idx2)
 		{
-			Func(idx1++);
+			Func(idx++);
 		}
-		unguard;
+		unguardf("%d [%s,%d]/%d", idx, idx1, idx2, lastIndex);
 	}
 
 	static void PoolThreadWorker(void* data)
