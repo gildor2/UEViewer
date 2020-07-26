@@ -194,6 +194,11 @@ struct FStaticMeshVertexBuffer4
 	bool			bUseHighPrecisionTangentBasis;
 	TArray<FStaticMeshUVItem4> UV;
 
+	FStaticMeshVertexBuffer4()
+		: NumTexCoords(0)
+		, NumVertices(0)
+	{}
+
 	friend FArchive& operator<<(FArchive& Ar, FStaticMeshVertexBuffer4& S)
 	{
 		guard(FStaticMeshVertexBuffer4<<);
