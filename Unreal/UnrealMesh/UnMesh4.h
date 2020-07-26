@@ -217,6 +217,7 @@ public:
 		PROP_DROP(SamplingInfo)
 		PROP_DROP(MinLod)
 		PROP_DROP(PhysicsAsset)
+		PROP_DROP(ShadowPhysicsAsset)
 	END_PROP_TABLE
 
 	USkeletalMesh4();

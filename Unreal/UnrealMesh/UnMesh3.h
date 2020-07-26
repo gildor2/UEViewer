@@ -152,6 +152,8 @@ struct FSkeletalMeshLODInfo
 		PROP_DROP(WeightOfPrioritization)
 		PROP_DROP(BakePose)
 		PROP_DROP(BakePoseOverride)
+		PROP_DROP(BuildSettings)
+		PROP_DROP(SkinCacheUsage)
 #endif
 	END_PROP_TABLE
 };

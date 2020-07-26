@@ -209,6 +209,8 @@ static void RegisterClasses(int game)
 		UnregisterClass("SkeletalMesh", true);
 		UnregisterClass("SkeletalMeshSocket", true);
 		UnregisterClass("MorphTarget", false);
+		if (!GSettings.Startup.UseAnimation)
+			UnregisterClass("Skeleton", false);
 	}
 	if (!GSettings.Startup.UseStaticMesh) UnregisterClass("StaticMesh", true);
 	if (!GSettings.Startup.UseTexture)

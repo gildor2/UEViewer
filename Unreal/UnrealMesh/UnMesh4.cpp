@@ -1116,7 +1116,7 @@ struct FSkinWeightVertexBuffer
 		if (bNewWeightFormat)
 		{
 			guard(NewInfluenceFormat);
-			assert(NewData.Num());
+			assert(NewData.Num() || NumVertices == 0); // empty (stripped) mesh will have empty NewData array
 
 			// FSkinWeightLookupVertexBuffer serializer
 
@@ -1139,14 +1139,17 @@ struct FSkinWeightVertexBuffer
 			// is just like before.
 
 			// Convert influence data
-			FMemReader Reader(NewData.GetData(), NewData.Num());
-			assert(B.Weights.Num() == 0);
-			B.Weights.AddUninitialized(NumVertices);
-			for (int i = 0; i < NumVertices; i++)
+			if (NewData.Num())
 			{
-				FSkinWeightInfo Weight;
-				Reader << Weight;
-				B.Weights[i] = Weight;
+				FMemReader Reader(NewData.GetData(), NewData.Num());
+				assert(B.Weights.Num() == 0);
+				B.Weights.AddUninitialized(NumVertices);
+				for (int i = 0; i < NumVertices; i++)
+				{
+					FSkinWeightInfo Weight;
+					Reader << Weight;
+					B.Weights[i] = Weight;
+				}
 			}
 
 			unguard;
