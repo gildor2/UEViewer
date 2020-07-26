@@ -1193,36 +1193,39 @@ void UAnimSequence4::SerializeCompressedData3(FArchive& Ar)
 	TArray<byte> CompressedCurveByteStream;
 	Ar << CompressedCurveByteStream;
 
-	// The following part is ICompressedAnimData::SerializeCompressedData
-	int32 CompressedNumFrames;
-	Ar << CompressedNumFrames;
-	// todo: editor-only data here
+	if (!BoneCodecDDCHandle.IsEmpty())
+	{
+		// The following part is ICompressedAnimData::SerializeCompressedData
+		int32 CompressedNumFrames;
+		Ar << CompressedNumFrames;
+		// todo: editor-only data here
 
-	// FUECompressedAnimData::SerializeCompressedData
-	Ar << (byte&)KeyEncodingFormat;
-	Ar << (byte&)TranslationCompressionFormat;
-	Ar << (byte&)RotationCompressionFormat;
-	Ar << (byte&)ScaleCompressionFormat;
+		// FUECompressedAnimData::SerializeCompressedData
+		Ar << (byte&)KeyEncodingFormat;
+		Ar << (byte&)TranslationCompressionFormat;
+		Ar << (byte&)RotationCompressionFormat;
+		Ar << (byte&)ScaleCompressionFormat;
 
-	// SerializeView() just serializes array size
-	int32 CompressedTrackOffsets_Num, CompressedScaleOffsets_Num, CompressedByteStream_Num;
-	Ar << CompressedByteStream_Num;
-	Ar << CompressedTrackOffsets_Num;
-	Ar << CompressedScaleOffsets_Num;
-	Ar << CompressedScaleOffsets.StripSize;
+		// SerializeView() just serializes array size
+		int32 CompressedTrackOffsets_Num, CompressedScaleOffsets_Num, CompressedByteStream_Num;
+		Ar << CompressedByteStream_Num;
+		Ar << CompressedTrackOffsets_Num;
+		Ar << CompressedScaleOffsets_Num;
+		Ar << CompressedScaleOffsets.StripSize;
 
-	// Setup all array views from single array. In UE4 this is done in FUECompressedAnimData::InitViewsFromBuffer.
-	// We'll simply copy array data away from SerializedByteStream, and then SerializedByteStream
-	// will be released from memory as it is a local variable here.
-	// Note: copying is not byte-order wise, so if there will be any problems in the future,
-	// should use byte swap functions.
-	const byte* AnimData = SerializedByteStream.GetData();
-	const byte* AnimDataEnd = AnimData + SerializedByteStream.Num();
+		// Setup all array views from single array. In UE4 this is done in FUECompressedAnimData::InitViewsFromBuffer.
+		// We'll simply copy array data away from SerializedByteStream, and then SerializedByteStream
+		// will be released from memory as it is a local variable here.
+		// Note: copying is not byte-order wise, so if there will be any problems in the future,
+		// should use byte swap functions.
+		const byte* AnimData = SerializedByteStream.GetData();
+		const byte* AnimDataEnd = AnimData + SerializedByteStream.Num();
 
-	MAP_VIEW(CompressedTrackOffsets, CompressedTrackOffsets_Num);
-	MAP_VIEW(CompressedScaleOffsets.OffsetData, CompressedScaleOffsets_Num);
-	MAP_VIEW(CompressedByteStream, CompressedByteStream_Num);
-	assert(AnimData == AnimDataEnd);
+		MAP_VIEW(CompressedTrackOffsets, CompressedTrackOffsets_Num);
+		MAP_VIEW(CompressedScaleOffsets.OffsetData, CompressedScaleOffsets_Num);
+		MAP_VIEW(CompressedByteStream, CompressedByteStream_Num);
+		assert(AnimData == AnimDataEnd);
+	}
 
 #undef MAP_VIEW
 
