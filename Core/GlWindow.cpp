@@ -904,11 +904,13 @@ static void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHy
 }
 
 
-static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink, bool* pHover, const char* fmt, va_list argptr)
+static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink, bool* pHover, const char* fmt, va_list argptr)
 {
 	guard(DrawTextAtAnchor);
 
 	assert(anchor < ETextAnchor::Last);
+
+	bool bClicked = false;
 
 	bool isBottom = (anchor >= ETextAnchor::BottomLeft);
 	bool isLeft   = (anchor == ETextAnchor::TopLeft || anchor == ETextAnchor::BottomLeft);
@@ -920,7 +922,7 @@ static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 #endif
 
 	if (!isBottom && pos_y >= winHeight && !dumpTexts)	// out of screen
-		return;
+		return bClicked;
 
 	char msg[4096];
 	vsnprintf(ARRAY_ARG(msg), fmt, argptr);
@@ -930,15 +932,15 @@ static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 	nextText_y[int(anchor)] = pos_y + h;
 
 	if (!isBottom && pos_y + h <= 0 && !dumpTexts)		// out of screen
-		return;
+		return bClicked;
 
 	// Determine X position depending on anchor
 	int pos_x = isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w;
 
 	// Check if mouse points at hyperlink
-	if (pHover && bHyperlink)
+	if (bHyperlink)
 	{
-		*pHover = false;
+		if (pHover) *pHover = false;
 
 		// Do the rough estimation of having mouse in the whole text's bounds
 		if (pos_y <= mousePosY && mousePosY < pos_y + h &&
@@ -966,7 +968,10 @@ static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 				pos_x + CHAR_WIDTH * linkStart <= mousePosX &&
 				mousePosX < pos_x + CHAR_WIDTH * offset)
 			{
-				*pHover = true;
+				if (pHover) *pHover = true;
+				// Check if hyperlink has been clicked this frame
+				if ((mouseButtonsDelta & 1) && !(mouseButtons & 1))
+					bClicked = true;
 			}
 		}
 	}
@@ -994,6 +999,8 @@ static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 	}
 #endif
 
+	return bClicked;
+
 	unguard;
 }
 
@@ -1001,7 +1008,7 @@ static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 #define DRAW_TEXT(anchor,color,hyperlink,pHover,fmt) \
 	va_list	argptr;				\
 	va_start(argptr, fmt);		\
-	DrawTextAtAnchor(anchor, color, hyperlink, pHover, fmt, argptr); \
+	bool bClicked = DrawTextAtAnchor(anchor, color, hyperlink, pHover, fmt, argptr); \
 	va_end(argptr);
 
 
@@ -1039,37 +1046,37 @@ void DrawText(ETextAnchor anchor, unsigned color, const char* text, ...)
 bool DrawTextLeftH(bool* isHover, const char* text, ...)
 {
 	DRAW_TEXT(ETextAnchor::TopLeft, WHITE_COLOR, true, isHover, text);
-	return false; //todo
+	return bClicked;
 }
 
 bool DrawTextRightH(bool* isHover, const char* text, ...)
 {
 	DRAW_TEXT(ETextAnchor::TopRight, WHITE_COLOR, true, isHover, text);
-	return false; //todo
+	return bClicked;
 }
 
 bool DrawTextBottomLeftH(bool* isHover, const char* text, ...)
 {
 	DRAW_TEXT(ETextAnchor::BottomLeft, WHITE_COLOR, true, isHover, text);
-	return false; //todo
+	return bClicked;
 }
 
 bool DrawTextBottomRightH(bool* isHover, const char* text, ...)
 {
 	DRAW_TEXT(ETextAnchor::BottomRight, WHITE_COLOR, true, isHover, text);
-	return false; //todo
+	return bClicked;
 }
 
 bool DrawTextH(ETextAnchor anchor, bool* isHover, const char* text, ...)
 {
 	DRAW_TEXT(anchor, WHITE_COLOR, true, isHover, text);
-	return false; //todo
+	return bClicked;
 }
 
 bool DrawTextH(ETextAnchor anchor, bool* isHover, unsigned color, const char* text, ...)
 {
 	DRAW_TEXT(anchor, color, true, isHover, text);
-	return false; //todo
+	return bClicked;
 }
 
 
@@ -1573,6 +1580,8 @@ void CApplication::VisualizerLoop(const char *caption)
 		{
 			SDL_Delay(100);
 		}
+
+		mouseButtonsDelta = 0;		// reset "clicked" state
 	}
 	// shutdown
 	Shutdown();
