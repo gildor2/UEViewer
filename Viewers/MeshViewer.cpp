@@ -193,7 +193,9 @@ void CMeshViewer::PrintMaterialInfo(int Index, UUnrealMaterial *Material, int Nu
 	unsigned color = CMeshInstance::GetMaterialDebugColor(Index);
 	if (Material)
 	{
-		DrawTextH(ETextAnchor::TopLeft, &bHighlight, color, "  %d: " S_HYPERLINK("%s (%s)") ", %d tris", Index, Material->Name, Material->GetClassName(), NumFaces);
+		bool bClicked = DrawTextH(ETextAnchor::TopLeft, &bHighlight, color, "  %d: " S_HYPERLINK("%s (%s)") ", %d tris", Index, Material->Name, Material->GetClassName(), NumFaces);
+		if (bClicked)
+			JumpTo(Material);
 	}
 	else
 	{
