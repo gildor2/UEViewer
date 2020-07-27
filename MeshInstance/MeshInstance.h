@@ -23,13 +23,12 @@ public:
 	// common properties
 	CCoords			BaseTransformScaled;	// rotation for mesh with scaled axis
 	// debug
-	bool			bColorMaterials;		//?? replace with DF_COLOR_MATERIALS, but flags are stored outside of mesh and used in MeshInstance::SetMaterial()
+	static bool		bColorMaterials;		//?? replace with DF_COLOR_MATERIALS, but flags are stored outside of mesh and used in MeshInstance::SetMaterial()
 	bool			bVertexColors;
 	int				HighlightMaterialIndex;
 
 	CMeshInstance()
-	:	bColorMaterials(false)
-	,	bVertexColors(false)
+	:	bVertexColors(false)
 	,	HighlightMaterialIndex(-1)
 	{}
 

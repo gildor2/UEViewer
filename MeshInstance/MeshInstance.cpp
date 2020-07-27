@@ -9,6 +9,9 @@
 #include "GlWindow.h"			// for RGB macro
 
 
+bool CMeshInstance::bColorMaterials = false;
+
+
 unsigned CMeshInstance::GetMaterialDebugColor(int Index)
 {
 #if 0
@@ -55,6 +58,7 @@ void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index)
 	{
 		BindDefaultMaterial(true);
 		glDisable(GL_CULL_FACE);
+#if 0
 		if (Index == HighlightMaterialIndex)
 		{
 			// Some HDR color
@@ -65,6 +69,18 @@ void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index)
 			unsigned color = GetMaterialDebugColor(Index);
 			glColor4ubv((GLubyte*)&color);
 		}
+#else
+		unsigned color = GetMaterialDebugColor(Index);
+		if (HighlightMaterialIndex >= 0 && Index != HighlightMaterialIndex)
+		{
+			// Dim color
+			color >>= 2;
+			color &= 0x3f3f3f3f;
+			// Fix alpha
+			color |= 0xff000000;
+		}
+		glColor4ubv((GLubyte*)&color);
+#endif
 	}
 	unguard;
 }
