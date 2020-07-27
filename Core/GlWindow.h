@@ -8,6 +8,8 @@
 #include "Win32Types.h"
 #endif
 
+#undef None // defined in X11/Xlib.h, included from Linux SDL headers
+
 /*-----------------------------------------------------------------------------
 	Application class
 -----------------------------------------------------------------------------*/
@@ -120,7 +122,6 @@ bool DrawTextRightH(bool* isHover, const char* text, ...);
 bool DrawTextBottomLeftH(bool* isHover, const char* text, ...);
 bool DrawTextBottomRightH(bool* isHover, const char* text, ...);
 
-
 enum class ETextAnchor
 {
 	TopLeft,		// DrawTextLeft
@@ -142,7 +143,7 @@ bool DrawTextH(ETextAnchor anchor, bool* isHover, unsigned color, const char* te
 void FlushTexts();
 
 // called from AppDisplayTexts() callback
-#define KEY_HELP_TAB	11
+#define KEY_HELP_TAB	14
 void DrawKeyHelp(const char *Key, const char *Help);
 
 

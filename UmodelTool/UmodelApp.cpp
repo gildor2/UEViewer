@@ -653,6 +653,7 @@ void CUmodelApp::DrawTexts()
 #endif
 		DrawKeyHelp("Ctrl+X",	 "export object");
 		DrawKeyHelp("Ctrl+S",    "take screenshot");
+		DrawKeyHelp("Alt+Left/Right", "navigate history");
 		Viewer->ShowHelp();
 		DrawTextLeft("-----\n");		// divider
 	}
@@ -716,6 +717,11 @@ void CUmodelApp::CreateMenu()
 			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(-1); }))
 			+ NewMenuItem("Next\tPgDn")
 			.SetCallback(BIND_LAMBDA([this]() { FindObjectAndCreateVisualizer(1); }))
+			+ NewMenuSeparator()
+			+ NewMenuItem("History back\tAlt+Left")
+			.SetCallback(BIND_MEMBER(&CUmodelApp::GoBack, this))
+			+ NewMenuItem("History forward\tAlt+Right")
+			.SetCallback(BIND_MEMBER(&CUmodelApp::GoForward, this))
 		]
 		+ NewSubmenu("Object")
 		.Enable(false)
@@ -781,7 +787,7 @@ void CUmodelApp::UpdateObjectMenu()
 	guard(CUmodelApp::UpdateObjectMenu);
 	if (!MainMenu || !Viewer)
 	{
-		// window wasn't created yet, UpdateObjectMenu() will be called explicitly later
+		// Window wasn't created yet, UpdateObjectMenu() will be called explicitly later
 		return;
 	}
 	UIMenuItem* newObjMenu = Viewer->GetObjectMenu(NULL);

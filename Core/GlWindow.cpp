@@ -701,7 +701,8 @@ struct CRText : public CTextRec
 {
 	short			x, y;
 	ETextAnchor		anchor;
-	bool			hasHyperlink;
+	bool			bHasHyperlink;		// wether hyperlink tags should be stripped or not
+	bool			bHighlightLink;		// wether hyperlink should be highlighted or not
 	unsigned		color;
 };
 
@@ -787,8 +788,6 @@ static void DrawText(const CRText *rec)
 		const char* s = strchr(text, '\n');
 		int len = s ? s - text : strlen(text);
 
-		bool bMouseInCurrentLine = (y <= mousePosY) && (mousePosY < y + CHAR_HEIGHT);
-
 		int x = rec->x;
 		for (int i = 0; i < len; i++)
 		{
@@ -805,27 +804,12 @@ static void DrawText(const CRText *rec)
 					continue;
 				}
 			}
-			else if (rec->hasHyperlink)
+			else if (rec->bHasHyperlink)
 			{
 				if (c == S_HYPER_START)
 				{
-					if (bMouseInCurrentLine)
-					{
-						// Find end of link
-						int linkSize = 0;
-						const char* s = text + i;
-						while (char c = s[linkSize])
-						{
-							if (c == '\n' || c == S_HYPER_END)
-								break;
-							linkSize++;
-						}
-						// Check if mouse points in the middle of link
-						if (x <= mousePosX && mousePosX < x + CHAR_WIDTH * linkSize)
-						{
-							color = RGB255(70, 180, 255);
-						}
-					}
+					if (rec->bHighlightLink)
+						color = RGB255(70, 180, 255);
 					continue;
 				}
 				else if (c == S_HYPER_END)
@@ -890,7 +874,7 @@ void FlushTexts()
 }
 
 
-static void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink, ETextAnchor anchor = ETextAnchor::None)
+static void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink = false, bool bHighlightLink = false, ETextAnchor anchor = ETextAnchor::None)
 {
 	if (!GShowDebugInfo) return;
 
@@ -899,7 +883,8 @@ static void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHy
 	rec->x      = x;
 	rec->y      = y;
 	rec->anchor = anchor;
-	rec->hasHyperlink = bHyperlink;
+	rec->bHasHyperlink = bHyperlink;
+	rec->bHighlightLink = bHighlightLink;
 	rec->color  = color;
 }
 
@@ -938,10 +923,10 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 	int pos_x = isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w;
 
 	// Check if mouse points at hyperlink
+	bool bHighlightLink = false;
+
 	if (bHyperlink)
 	{
-		if (pHover) *pHover = false;
-
 		// Do the rough estimation of having mouse in the whole text's bounds
 		if (pos_y <= mousePosY && mousePosY < pos_y + h &&
 			pos_x <= mousePosX && mousePosX <= pos_x + w)
@@ -965,19 +950,21 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 				offset++;
 			}
 			if (linkStart > 0 &&
-				pos_x + CHAR_WIDTH * linkStart <= mousePosX &&
-				mousePosX < pos_x + CHAR_WIDTH * offset)
+				pos_x + (CHAR_WIDTH - FONT_SPACING) * linkStart <= mousePosX &&
+				mousePosX < pos_x + (CHAR_WIDTH - FONT_SPACING) * offset)
 			{
-				if (pHover) *pHover = true;
+				bHighlightLink = true;
 				// Check if hyperlink has been clicked this frame
 				if ((mouseButtonsDelta & 1) && !(mouseButtons & 1))
 					bClicked = true;
 			}
 		}
+
+		if (pHover) *pHover = bHighlightLink;
 	}
 
 	// Put the text into queue
-	DrawTextPos(pos_x, pos_y, msg, color, bHyperlink, anchor);
+	DrawTextPos(pos_x, pos_y, msg, color, bHyperlink, bHighlightLink, anchor);
 
 #if DUMP_TEXTS
 	if (dumpTexts)
@@ -1113,7 +1100,7 @@ void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
 	vsnprintf(ARRAY_ARG(msg), text, argptr);
 	va_end(argptr);
 
-	DrawTextPos(coords[0], coords[1], msg, false, color);
+	DrawTextPos(coords[0], coords[1], msg, color);
 }
 
 
@@ -1330,6 +1317,7 @@ void CApplication::DrawTexts()
 		DrawTextLeft(S_RED "Keyboard:\n~~~~~~~~~");
 		DrawKeyHelp("Esc",         "exit");
 		DrawKeyHelp("H",           "toggle help");
+		DrawKeyHelp("Ctrl+PgUp/PgDn", "scroll this text");
 		DrawKeyHelp("Alt+Enter",   "toggle fullscreen");
 		DrawKeyHelp("LeftMouse",   "rotate view");
 		DrawKeyHelp("RightMouse",  "zoom view");
