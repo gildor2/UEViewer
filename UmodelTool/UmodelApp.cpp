@@ -50,6 +50,8 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 	{
 		assert(dir > 0); // just in case
 		ObjIndex = -1;
+		BrowseHistory.Empty();
+		CurrentHistoryItem = 0;
 	}
 
 	int looped = 0;
@@ -95,12 +97,28 @@ bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bo
 		if (ObjectSupported(Obj))
 			break;
 	}
+
+	//todo: reuse VisualizeObject() function
 	// change visualizer
 	CreateVisualizer(Obj);
 #if HAS_MENU
 	UpdateObjectMenu();
 #endif
 	return true;
+
+	unguard;
+}
+
+
+void CUmodelApp::VisualizeObject(int newIndex)
+{
+	guard(CUmodelApp::VisualizeObject);
+
+	ObjIndex = newIndex;
+	CreateVisualizer(UObject::GObjObjects[newIndex]);
+#if HAS_MENU
+	UpdateObjectMenu();
+#endif
 
 	unguard;
 }
@@ -359,7 +377,8 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 		return true;								\
 	}
 	// create viewer for known class
-	bool showAll = !(ShowMeshes || ShowMaterials);
+	// note: when 'test' is not set, we'll create a visualizer in any case
+	bool showAll = !(ShowMeshes || ShowMaterials) || !test;
 	if (ShowMeshes || showAll)
 	{
 		CLASS_VIEWER(UVertMesh,       CVertMeshViewer, true);
@@ -502,7 +521,45 @@ void CUmodelApp::BeforeSwap()
 		DoScreenshot = 0;
 	}
 
+	if (Viewer->JumpAfterFrame)
+	{
+		// note: without "const_cast" FindItem won't compile
+		int NewObjectIndex = UObject::GObjObjects.FindItem(const_cast<UObject*>(Viewer->JumpAfterFrame));
+		Viewer->JumpAfterFrame = NULL;
+		if (NewObjectIndex >= 0)
+		{
+			// Remember current object
+			BrowseHistory.RemoveAt(CurrentHistoryItem, BrowseHistory.Num() - CurrentHistoryItem);
+			BrowseHistory.Add(ObjIndex);
+			CurrentHistoryItem = BrowseHistory.Num();
+			// Switch to object
+			VisualizeObject(NewObjectIndex);
+		}
+	}
+
 	unguard;
+}
+
+
+void CUmodelApp::GoBack()
+{
+	// Remember current item
+	if (CurrentHistoryItem == BrowseHistory.Num())
+		BrowseHistory.Add(ObjIndex);
+
+	if (CurrentHistoryItem > 0)
+	{
+		VisualizeObject(BrowseHistory[--CurrentHistoryItem]);
+	}
+}
+
+
+void CUmodelApp::GoForward()
+{
+	if (CurrentHistoryItem < BrowseHistory.Num() - 1)
+	{
+		VisualizeObject(BrowseHistory[++CurrentHistoryItem]);
+	}
 }
 
 
@@ -533,6 +590,12 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 		break;
 	case 's'|KEY_ALT:
 		DoScreenshot = 2;
+		break;
+	case SPEC_KEY(LEFT)|KEY_ALT:
+		GoBack();
+		break;
+	case SPEC_KEY(RIGHT)|KEY_ALT:
+		GoForward();
 		break;
 	case 'x'|KEY_CTRL:
 #if HAS_UI
@@ -571,6 +634,14 @@ void CUmodelApp::ProcessKey(int key, bool isDown)
 
 void CUmodelApp::DrawTexts()
 {
+#if 0
+	DrawTextBottomRight("History: [%d] <- %d", BrowseHistory.Num(), CurrentHistoryItem);
+	for (int i = 0; i < BrowseHistory.Num(); i++)
+	{
+		DrawTextBottomRight("[%d] = %s", i, UObject::GObjObjects[BrowseHistory[i]]->Name);
+	}
+#endif
+
 	guard(CUmodelApp::DrawTexts);
 	CApplication::DrawTexts();
 	if (IsHelpVisible)

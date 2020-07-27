@@ -33,8 +33,10 @@ class CObjectViewer
 public:
 	UObject*		Object;
 	CApplication*	Window;
+	const UObject*	JumpAfterFrame;
 
 	CObjectViewer(UObject* Obj, CApplication* Win);
+
 	virtual ~CObjectViewer()
 	{}
 
@@ -58,6 +60,11 @@ public:
 
 	virtual void Draw3D(float TimeDelta)
 	{}
+
+	void JumpTo(const UObject* Object)
+	{
+		JumpAfterFrame = Object;
+	}
 };
 
 

@@ -13,6 +13,7 @@
 CObjectViewer::CObjectViewer(UObject* Obj, CApplication *Win)
 :	Object(Obj)
 ,	Window(Win)
+,	JumpAfterFrame(NULL)
 {
 	SetDistScale(1);
 	ResetView();
