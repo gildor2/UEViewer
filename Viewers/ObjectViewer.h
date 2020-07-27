@@ -88,6 +88,10 @@ public:
 
 	virtual void Draw2D() override;
 	virtual void Draw3D(float TimeDelta) override;
+
+protected:
+	void FlushProps();
+	void OutlineMaterial(UObject *Obj, int indent = 0);
 };
 
 

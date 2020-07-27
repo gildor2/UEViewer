@@ -19,8 +19,6 @@ bool CMaterialViewer::ShowOutline = false;
 bool CMaterialViewer::ShowChannels = false;
 int CMaterialViewer::ShapeIndex = 0;
 
-static void OutlineMaterial(UObject *Obj, int indent = 0);
-
 
 /*-----------------------------------------------------------------------------
 	Main code
@@ -525,17 +523,17 @@ static int textIndent, prevIndent;
 static bool levelFinished[256];
 #endif
 
-static void Outline(const char *fmt, ...)
+static bool Outline(const char *fmt, ...)
 {
 	char buf[1024];
 	int offset = 0;
-//	buf[offset++] = textIndent + '0'; buf[offset++] = ':';	//??
-//	buf[offset++] = prevIndent + '0'; buf[offset++] = ':';	//??
+
 #if !NEW_OUTLINE
 	buf[offset++] = '^'; buf[offset++] = '1';	// S_RED
 #else
 	buf[offset++] = '^'; buf[offset++] = '6';	// S_CYAN
 #endif
+
 	for (int level = 0; level < textIndent; level++)
 	{
 #if !NEW_OUTLINE
@@ -586,7 +584,13 @@ static void Outline(const char *fmt, ...)
 	vsnprintf(buf + offset, ARRAY_COUNT(buf) - offset, fmt, argptr);
 	va_end(argptr);
 
-	DrawTextLeft("%s", buf);
+	bool bClicked = false;
+	if (strchr(fmt, S_HYPER_START) == NULL)
+		DrawTextLeft("%s", buf);				// not a link
+	else
+		bClicked = DrawTextLeftH(NULL, "%s", buf); // link
+
+	return bClicked;
 }
 
 
@@ -609,8 +613,10 @@ inline void InitProps(bool firstLevel)
 	}
 }
 
-inline void FlushProps()
+void CMaterialViewer::FlushProps()
 {
+	guard(CMaterialViewer::FlushProps);
+
 	// print ordinary props
 	if (propBuf[0])
 	{
@@ -659,6 +665,8 @@ inline void FlushProps()
 	}
 	// restore data
 	firstLink = savedFirstLink;
+
+	unguard;
 }
 
 static void Prop(bool value, const char *name)
@@ -688,9 +696,9 @@ static void PropEnum(int value, const char *name, const char *EnumName)
 }
 
 
-static void OutlineMaterial(UObject *Obj, int indent)
+void CMaterialViewer::OutlineMaterial(UObject *Obj, int indent)
 {
-	guard(OutlineMaterial);
+	guard(CMaterialViewer::OutlineMaterial);
 	assert(Obj);
 	int i;
 
@@ -698,7 +706,17 @@ static void OutlineMaterial(UObject *Obj, int indent)
 	int oldIndent = textIndent;
 	textIndent = indent;
 
-	Outline(S_RED "%s'%s'", Obj->GetClassName(), Obj->Name);
+	bool bHyperlink = indent != 0;
+	if (!bHyperlink)
+	{
+		Outline(S_RED "%s'%s'", Obj->GetClassName(), Obj->Name);
+	}
+	else
+	{
+		bool bClicked = Outline(S_RED S_HYPERLINK("%s'%s'"), Obj->GetClassName(), Obj->Name);
+		if (bClicked)
+			JumpTo(Obj);
+	}
 
 #define MAT_BEGIN(ClassName)	\
 	if (Obj->IsA(#ClassName+1)) \
@@ -774,14 +792,16 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		{
 			const UTexture3 *Tex = Mat->ReferencedTextures[i];
 			if (!Tex) continue;
-			Outline("Textures[%d] = %s", i, Tex->Name);
+			if (Outline("Textures[%d] = " S_HYPERLINK("%s"), i, Tex->Name))
+				JumpTo(Tex);
 		}
 		// texture parameters
 		if (Mat->CollectedTextureParameters.Num())
 		{
 			Outline(S_YELLOW"Texture parameters:");
 			for (const CTextureParameterValue &P : Mat->CollectedTextureParameters)
-				Outline("%s = %s", *P.Name, P.Texture ? P.Texture->Name : "NULL");
+				if (Outline("%s = " S_HYPERLINK("%s"), *P.Name, P.Texture ? P.Texture->Name : "NULL"))
+					JumpTo(P.Texture);
 		}
 		// scalar
 		if (Mat->CollectedScalarParameters.Num())
@@ -813,7 +833,8 @@ static void OutlineMaterial(UObject *Obj, int indent)
 		{
 			Outline(S_YELLOW"Texture parameters:");
 			for (const FTextureParameterValue &P : Mat->TextureParameterValues)
-				Outline("%s = %s", P.GetName(), P.ParameterValue ? P.ParameterValue->Name : "NULL");
+				if (Outline("%s = " S_HYPERLINK("%s"), P.GetName(), P.ParameterValue ? P.ParameterValue->Name : "NULL"))
+					JumpTo(P.ParameterValue);
 		}
 		// scalar
 		if (Mat->ScalarParameterValues.Num())
