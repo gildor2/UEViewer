@@ -116,6 +116,8 @@ public:
 
 	virtual void DrawMesh(CMeshInstance *Inst);
 
+	// Print a text about mesh material. Automatically highlights material if mouse points
+	// at its text record on screen.
 	void PrintMaterialInfo(int Index, UUnrealMaterial *Material, int NumFaces);
 
 	void DisplayUV(const CMeshVertex* Verts, int VertexSize, const CBaseMeshLod* Mesh, int UVIndex);

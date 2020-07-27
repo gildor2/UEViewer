@@ -55,8 +55,16 @@ void CMeshInstance::SetMaterial(UUnrealMaterial *Mat, int Index)
 	{
 		BindDefaultMaterial(true);
 		glDisable(GL_CULL_FACE);
-		unsigned color = GetMaterialDebugColor(Index);
-		glColor4ubv((GLubyte*)&color);
+		if (Index == HighlightMaterialIndex)
+		{
+			// Some HDR color
+			glColor4f(1.0f, 1.0f, 2.0f, 1.0f);
+		}
+		else
+		{
+			unsigned color = GetMaterialDebugColor(Index);
+			glColor4ubv((GLubyte*)&color);
+		}
 	}
 	unguard;
 }
