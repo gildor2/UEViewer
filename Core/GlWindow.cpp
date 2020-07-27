@@ -137,9 +137,6 @@ static float zFar  = 4096;			// far clipping plane
 static float yFov  = DEFAULT_FOV;
 static float tFovX, tFovY;			// tan(fov_x|y)
 
-// mouse state
-static int   mouseButtons;			// bit mask: left=1, middle=2, right=4, wheel up=8, wheel down=16
-
 
 //-----------------------------------------------------------------------------
 // Configuration
@@ -427,26 +424,34 @@ void CApplication::ToggleFullscreen()
 
 // Variables used to store mouse position before switching to relative mode, so
 // the position will be restored after releasing mouse buttons.
-static int mousePosX, mousePosY;
+static int mousePosX = 0, mousePosY = 0;
+static int mouseButtons = 0;			// bit mask: left=1, middle=2, right=4, wheel up=8, wheel down=16
+static int mouseButtonsDelta = 0;		// when some bit is set, it indicates that this button was pressed/released
 
 static void OnMouseButton(int type, int button)
 {
 	int prevButtons = mouseButtons;
-	// update mouse buttons state
+
+	// Update mouse buttons state, catch button state changes
 	int mask = SDL_BUTTON(button);
 	if (type == SDL_MOUSEBUTTONDOWN)
 		mouseButtons |= mask;
 	else
 		mouseButtons &= ~mask;
+
+	// Store info about changed button state
+	mouseButtonsDelta = mouseButtons ^ prevButtons;
+
+	// Capture/release the mouse
 	if (!prevButtons && mouseButtons)
 	{
-		// grabbing mouse
+		// Grabbing mouse
 		SDL_GetMouseState(&mousePosX, &mousePosY);
 		SDL_SetRelativeMouseMode(SDL_TRUE);		// switch to relative mode - mouse cursor will be hidden and remains in single place
 	}
 	else if (prevButtons && !mouseButtons)
 	{
-		// releasing mouse
+		// Releasing mouse
 		SDL_SetRelativeMouseMode(SDL_FALSE);
 		SDL_WarpMouseInWindow(sdlWindow, mousePosX, mousePosY);
 	}
@@ -455,7 +460,12 @@ static void OnMouseButton(int type, int button)
 
 static void OnMouseMove(int mx, int my)
 {
-	if (!mouseButtons) return;
+	if (!mouseButtons)
+	{
+		// Just update mouse position
+		SDL_GetMouseState(&mousePosX, &mousePosY);
+		return;
+	}
 
 	float xDelta = (float)mx / winWidth;
 	float yDelta = (float)my / winHeight;
@@ -481,6 +491,7 @@ static void OnMouseMove(int mx, int my)
 		PanX = xDelta * viewDist * 2;
 		PanY = yDelta * viewDist * 2;
 	}
+
 	MoveCamera(YawDelta, PitchDelta, DistDelta, PanX, PanY);
 }
 
@@ -690,12 +701,13 @@ struct CRText : public CTextRec
 {
 	short			x, y;
 	ETextAnchor		anchor;
+	bool			hasHyperlink;
 	unsigned		color;
 };
 
-static TTextContainer<CRText, 65536> Text;
+static TTextContainer<CRText, 65536> GTextContainer;
 
-static int nextText_y[TA_Last];
+static int nextText_y[int(ETextAnchor::Last)];
 static int textOffset = 0;
 
 #define I 255
@@ -720,13 +732,13 @@ static const unsigned colorTable[8] =
 
 static void ClearTexts()
 {
-	nextText_y[TA_TopLeft] = nextText_y[TA_TopRight] = TOP_TEXT_POS + textOffset;
-	nextText_y[TA_BottomLeft] = nextText_y[TA_BottomRight] = 0;
-	Text.Clear();
+	nextText_y[int(ETextAnchor::TopLeft)] = nextText_y[int(ETextAnchor::TopRight)] = TOP_TEXT_POS + textOffset;
+	nextText_y[int(ETextAnchor::BottomLeft)] = nextText_y[int(ETextAnchor::BottomRight)] = 0;
+	GTextContainer.Clear();
 }
 
 
-static void GetTextExtents(const char *s, int &width, int &height)
+static void GetTextExtents(const char* s, int &width, int &height, bool bHyperlink)
 {
 	int x = 0, w = 0;
 	int h = CHAR_HEIGHT - FONT_SPACING;
@@ -737,6 +749,11 @@ static void GetTextExtents(const char *s, int &width, int &height)
 			if (*s)
 				s++;
 			continue;
+		}
+		if (bHyperlink)
+		{
+			if (c == S_HYPER_START || c == S_HYPER_END)
+				continue;
 		}
 		if (c == '\n')
 		{
@@ -757,32 +774,67 @@ static void DrawText(const CRText *rec)
 	int y = rec->y;
 	const char *text = rec->text;
 
-	if (rec->anchor == TA_BottomLeft || rec->anchor == TA_BottomRight)
+	if (rec->anchor == ETextAnchor::BottomLeft || rec->anchor == ETextAnchor::BottomRight)
 	{
-		y = y + winHeight - nextText_y[rec->anchor] - BOTTOM_TEXT_POS;
+		y = y + winHeight - nextText_y[int(rec->anchor)] - BOTTOM_TEXT_POS;
 	}
 
 	unsigned color = rec->color;
+	unsigned color2 = color;
 
 	while (true)
 	{
-		const char *s = strchr(text, '\n');
+		const char* s = strchr(text, '\n');
 		int len = s ? s - text : strlen(text);
+
+		bool bMouseInCurrentLine = (y <= mousePosY) && (mousePosY < y + CHAR_HEIGHT);
 
 		int x = rec->x;
 		for (int i = 0; i < len; i++)
 		{
 			char c = text[i];
+
+			// Test special characters
 			if (c == COLOR_ESCAPE)
 			{
 				char c2 = text[i+1];
 				if (c2 >= '0' && c2 <= '7')
 				{
-					color = colorTable[c2 - '0'];
+					color = color2 = colorTable[c2 - '0'];
 					i++;
 					continue;
 				}
 			}
+			else if (rec->hasHyperlink)
+			{
+				if (c == S_HYPER_START)
+				{
+					if (bMouseInCurrentLine)
+					{
+						// Find end of link
+						int linkSize = 0;
+						const char* s = text + i;
+						while (char c = s[linkSize])
+						{
+							if (c == '\n' || c == S_HYPER_END)
+								break;
+							linkSize++;
+						}
+						// Check if mouse points in the middle of link
+						if (x <= mousePosX && mousePosX < x + CHAR_WIDTH * linkSize)
+						{
+							color = RGB255(70, 180, 255);
+						}
+					}
+					continue;
+				}
+				else if (c == S_HYPER_END)
+				{
+					color = color2;
+					continue;
+				}
+			}
+
 			DrawChar(c, color, x, y);
 			x += CHAR_WIDTH - FONT_SPACING;
 		}
@@ -829,7 +881,7 @@ void FlushTexts()
 #if DUMP_TEXTS
 	appSetNotifyHeader("Screen texts");
 #endif
-	Text.Enumerate(DrawText);
+	GTextContainer.Enumerate(DrawText);
 	ClearTexts();
 #if DUMP_TEXTS
 	appSetNotifyHeader(NULL);
@@ -838,29 +890,30 @@ void FlushTexts()
 }
 
 
-static void DrawTextPos(int x, int y, const char *text, unsigned color, ETextAnchor anchor = TA_None)
+static void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink, ETextAnchor anchor = ETextAnchor::None)
 {
 	if (!GShowDebugInfo) return;
 
-	CRText *rec = Text.Add(text);
+	CRText *rec = GTextContainer.Add(text);
 	if (!rec) return;
 	rec->x      = x;
 	rec->y      = y;
 	rec->anchor = anchor;
+	rec->hasHyperlink = bHyperlink;
 	rec->color  = color;
 }
 
 
-static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, const char *fmt, va_list argptr)
+static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink, bool* pHover, const char* fmt, va_list argptr)
 {
 	guard(DrawTextAtAnchor);
 
-	assert(anchor >= 0 && anchor < TA_Last);
+	assert(anchor < ETextAnchor::Last);
 
-	bool isBottom = (anchor >= TA_BottomLeft);
-	bool isLeft   = (anchor == TA_TopLeft || anchor == TA_BottomLeft);
+	bool isBottom = (anchor >= ETextAnchor::BottomLeft);
+	bool isLeft   = (anchor == ETextAnchor::TopLeft || anchor == ETextAnchor::BottomLeft);
 
-	int pos_y = nextText_y[anchor];
+	int pos_y = nextText_y[int(anchor)];
 
 #if DUMP_TEXTS
 	if (dumpTexts) pos_y = winHeight / 2;				// trick ...
@@ -872,14 +925,54 @@ static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, const char *fmt
 	char msg[4096];
 	vsnprintf(ARRAY_ARG(msg), fmt, argptr);
 	int w, h;
-	GetTextExtents(msg, w, h);
+	GetTextExtents(msg, w, h, bHyperlink);
 
-	nextText_y[anchor] = pos_y + h;
+	nextText_y[int(anchor)] = pos_y + h;
 
 	if (!isBottom && pos_y + h <= 0 && !dumpTexts)		// out of screen
 		return;
 
-	DrawTextPos(isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w, pos_y, msg, color, anchor);
+	// Determine X position depending on anchor
+	int pos_x = isLeft ? LEFT_BORDER : winWidth - RIGHT_BORDER - w;
+
+	// Check if mouse points at hyperlink
+	if (pHover && bHyperlink)
+	{
+		*pHover = false;
+
+		// Do the rough estimation of having mouse in the whole text's bounds
+		if (pos_y <= mousePosY && mousePosY < pos_y + h &&
+			pos_x <= mousePosX && mousePosX <= pos_x + w)
+		{
+			// Check if we'll get into exact hyperlink bounds, verify only X coordinate now
+			int offset = 0;
+			int linkStart = -1;
+			const char* s = msg;
+			while (char c = *s++)
+			{
+				if (c == '\n' || c == S_HYPER_END)
+					break;
+				if (c == COLOR_ESCAPE)
+					continue;
+				if (c == S_HYPER_START)
+				{
+					linkStart = offset;
+					continue;
+				}
+				// Count a character as printable
+				offset++;
+			}
+			if (linkStart > 0 &&
+				pos_x + CHAR_WIDTH * linkStart <= mousePosX &&
+				mousePosX < pos_x + CHAR_WIDTH * offset)
+			{
+				*pHover = true;
+			}
+		}
+	}
+
+	// Put the text into queue
+	DrawTextPos(pos_x, pos_y, msg, color, bHyperlink, anchor);
 
 #if DUMP_TEXTS
 	if (dumpTexts)
@@ -905,46 +998,78 @@ static void DrawTextAtAnchor(ETextAnchor anchor, unsigned color, const char *fmt
 }
 
 
-#define DRAW_TEXT(anchor,color,fmt)	\
+#define DRAW_TEXT(anchor,color,hyperlink,pHover,fmt) \
 	va_list	argptr;				\
 	va_start(argptr, fmt);		\
-	DrawTextAtAnchor(anchor, color, fmt, argptr); \
+	DrawTextAtAnchor(anchor, color, hyperlink, pHover, fmt, argptr); \
 	va_end(argptr);
 
 
-void DrawTextLeft(const char *text, ...)
+void DrawTextLeft(const char* text, ...)
 {
-	DRAW_TEXT(TA_TopLeft, WHITE_COLOR, text);
+	DRAW_TEXT(ETextAnchor::TopLeft, WHITE_COLOR, false, NULL, text);
+}
+
+void DrawTextRight(const char* text, ...)
+{
+	DRAW_TEXT(ETextAnchor::TopRight, WHITE_COLOR, false, NULL, text);
+}
+
+void DrawTextBottomLeft(const char* text, ...)
+{
+	DRAW_TEXT(ETextAnchor::BottomLeft, WHITE_COLOR, false, NULL, text);
+}
+
+void DrawTextBottomRight(const char* text, ...)
+{
+	DRAW_TEXT(ETextAnchor::BottomRight, WHITE_COLOR, false, NULL, text);
+}
+
+void DrawText(ETextAnchor anchor, const char* text, ...)
+{
+	DRAW_TEXT(anchor, WHITE_COLOR, false, NULL, text);
+}
+
+void DrawText(ETextAnchor anchor, unsigned color, const char* text, ...)
+{
+	DRAW_TEXT(anchor, color, false, NULL, text);
 }
 
 
-void DrawTextRight(const char *text, ...)
+bool DrawTextLeftH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(TA_TopRight, WHITE_COLOR, text);
+	DRAW_TEXT(ETextAnchor::TopLeft, WHITE_COLOR, true, isHover, text);
+	return false; //todo
 }
 
-
-void DrawTextBottomLeft(const char *text, ...)
+bool DrawTextRightH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(TA_BottomLeft, WHITE_COLOR, text);
+	DRAW_TEXT(ETextAnchor::TopRight, WHITE_COLOR, true, isHover, text);
+	return false; //todo
 }
 
-
-void DrawTextBottomRight(const char *text, ...)
+bool DrawTextBottomLeftH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(TA_BottomRight, WHITE_COLOR, text);
+	DRAW_TEXT(ETextAnchor::BottomLeft, WHITE_COLOR, true, isHover, text);
+	return false; //todo
 }
 
-
-void DrawText(ETextAnchor anchor, const char *text, ...)
+bool DrawTextBottomRightH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(anchor, WHITE_COLOR, text);
+	DRAW_TEXT(ETextAnchor::BottomRight, WHITE_COLOR, true, isHover, text);
+	return false; //todo
 }
 
-
-void DrawText(ETextAnchor anchor, unsigned color, const char *text, ...)
+bool DrawTextH(ETextAnchor anchor, bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(anchor, color, text);
+	DRAW_TEXT(anchor, WHITE_COLOR, true, isHover, text);
+	return false; //todo
+}
+
+bool DrawTextH(ETextAnchor anchor, bool* isHover, unsigned color, const char* text, ...)
+{
+	DRAW_TEXT(anchor, color, true, isHover, text);
+	return false; //todo
 }
 
 
@@ -981,7 +1106,7 @@ void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
 	vsnprintf(ARRAY_ARG(msg), text, argptr);
 	va_end(argptr);
 
-	DrawTextPos(coords[0], coords[1], msg, color);
+	DrawTextPos(coords[0], coords[1], msg, false, color);
 }
 
 

@@ -87,27 +87,57 @@ extern bool GShowDebugInfo;
 #define RGBAS(r,g,b,a)		(appRound((r)*255) | (appRound((g)*255)<<8) | (appRound((b)*255)<<16) | (appRound((a)*255)<<24))
 #define RGBS(r,g,b)			(appRound((r)*255) | (appRound((g)*255)<<8) | (appRound((b)*255)<<16) | (255<<24))
 
+// Color codes for DrawText... functions
+#define COLOR_ESCAPE	'^'		// could be used for quick location of color-processing code
 
-void DrawTextLeft(const char *text, ...);
-void DrawTextRight(const char *text, ...);
-void DrawTextBottomLeft(const char *text, ...);
-void DrawTextBottomRight(const char *text, ...);
-void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...);
+#define S_BLACK			"^0"
+#define S_RED			"^1"
+#define S_GREEN			"^2"
+#define S_YELLOW		"^3"
+#define S_BLUE			"^4"
+#define S_MAGENTA		"^5"
+#define S_CYAN			"^6"
+#define S_WHITE			"^7"
 
-enum ETextAnchor
+// Hyperlink support
+#define S_HYPER_START	'{'
+#define S_HYPER_END		'}'
+#define S_HYPERLINK(text)	"{" text "}"
+
+// Draw "stacked" text bound to the particular window corner
+void DrawTextLeft(const char* text, ...);
+void DrawTextRight(const char* text, ...);
+void DrawTextBottomLeft(const char* text, ...);
+void DrawTextBottomRight(const char* text, ...);
+
+// Draw text at 3D space, with arbitrary color
+void DrawText3D(const CVec3 &pos, unsigned color, const char* text, ...);
+
+// Hyperlink support. Functions returns 'true' if link is clicked, and 'isHover' points
+// to boolean value which will receive 'true' if mouse points at the link.
+bool DrawTextLeftH(bool* isHover, const char* text, ...);
+bool DrawTextRightH(bool* isHover, const char* text, ...);
+bool DrawTextBottomLeftH(bool* isHover, const char* text, ...);
+bool DrawTextBottomRightH(bool* isHover, const char* text, ...);
+
+
+enum class ETextAnchor
 {
-	TA_TopLeft,			// DrawTextLeft
-	TA_TopRight,		// DrawTextRight
-	TA_BottomLeft,
-	TA_BottomRight,
+	TopLeft,		// DrawTextLeft
+	TopRight,		// DrawTextRight
+	BottomLeft,		// DrawTextBottomLeft
+	BottomRight,	// DrawTextBottomRight
 
 	// internally used values
-	TA_None,
-	TA_Last
+	None,
+	Last
 };
 
-void DrawText(ETextAnchor anchor, const char *text, ...);
-void DrawText(ETextAnchor anchor, unsigned color, const char *text, ...);
+void DrawText(ETextAnchor anchor, const char* text, ...);
+void DrawText(ETextAnchor anchor, unsigned color, const char* text, ...);
+
+bool DrawTextH(ETextAnchor anchor, bool* isHover, const char* text, ...);
+bool DrawTextH(ETextAnchor anchor, bool* isHover, unsigned color, const char* text, ...);
 
 void FlushTexts();
 

@@ -209,18 +209,6 @@ typedef size_t					address_t;
 #endif
 
 
-#define COLOR_ESCAPE	'^'		// could be used for quick location of color-processing code
-
-#define S_BLACK			"^0"
-#define S_RED			"^1"
-#define S_GREEN			"^2"
-#define S_YELLOW		"^3"
-#define S_BLUE			"^4"
-#define S_MAGENTA		"^5"
-#define S_CYAN			"^6"
-#define S_WHITE			"^7"
-
-
 // Using size_t typecasts - that's platform integer type
 template<class T> inline T OffsetPointer(const T ptr, int offset)
 {
