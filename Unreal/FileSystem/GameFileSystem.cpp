@@ -393,6 +393,11 @@ static void RegisterGameFile(const char* FullName)
 		FString error;
 		if (!vfs->AttachReader(reader, error))
 		{
+#if UNREAL4
+			// Reset GIsUE4PackageMode back in a case if .pak file appeared in directory
+			// by accident.
+			GIsUE4PackageMode = false;
+#endif
 			// something goes wrong
 			if (error.Len())
 			{
@@ -407,8 +412,6 @@ static void RegisterGameFile(const char* FullName)
 			return;
 		}
 #if UNREAL4
-		// Reset GIsUE4PackageMode back in a case if .pak file appeared in directory
-		// by accident.
 		GIsUE4PackageMode = false;
 #endif
 	}
