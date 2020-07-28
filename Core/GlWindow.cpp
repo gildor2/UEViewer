@@ -955,8 +955,13 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 			{
 				bHighlightLink = true;
 				// Check if hyperlink has been clicked this frame
-				if ((mouseButtonsDelta & 1) && !(mouseButtons & 1))
+				// We're catching "click" event. Can't do that with "release button" because
+				// mouse capture (SDL_SetRelativeMouseMode) generates extra events on Windows,
+				// so mouse position will jump between actual one and window center.
+				if ((mouseButtonsDelta & 1) && (mouseButtons & 1))
+				{
 					bClicked = true;
+				}
 			}
 		}
 
