@@ -548,7 +548,8 @@ ParallelForBase::ParallelForBase(int inCount)
 
 ParallelForBase::~ParallelForBase()
 {
-	// Wait for completion
+	// Wait for completion: the last thread which will complete the job will
+	// signal 'endSignal' about completion.
 	if (numActiveThreads)
 	{
 		guard(ParallelForWait);
@@ -568,13 +569,14 @@ void ParallelForBase::Start(ThreadPool::ThreadTask worker)
 	step = (lastIndex + stepDivisor - 1) / stepDivisor;
 	if (step < 20) step = 20; //?? should override for slow tasks, e.g. processing 10 items 1 second each
 
+	// Divide index count by 'step' with rounding up
 	int numThreads = (lastIndex + step - 1) / step;
 
 	// Recompute step to avoid having tiny last step
 	step = (lastIndex + numThreads - 1) / numThreads;
 	assert(step > 0);
 
-	// Clamp numThreads
+	// Clamp numThreads by available thread count
 	if (numThreads > maxThreads)
 		numThreads = maxThreads;
 
@@ -585,11 +587,17 @@ void ParallelForBase::Start(ThreadPool::ThreadTask worker)
 	// Allocate threads, exclude 1 thread for the thread executing ParallelFor
 	for (int i = 0; i < numThreads - 1; i++)
 	{
+		// Just in case, increment thread count before starting a thread, so we'll avoid
+		// the situation when worker thread will execute everything before we'll return
+		// to the invoker (main) thread and increment count.
+		InterlockedIncrement(&numActiveThreads);
 		if (!ThreadPool::ExecuteInThread(worker, this))
 		{
-			break; // all threads were allocated
+			// All threads has been allocated, can't spawn more.
+			// Decrement the thread count as we've failed to use new thread.
+			InterlockedDecrement(&numActiveThreads);
+			break;
 		}
-		InterlockedIncrement(&numActiveThreads);
 	}
 }
 
