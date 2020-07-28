@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+28.07.2020
+- use Ctrl+MouseWheel to scroll long window texts (in addition to Ctrl+PgUp/PgDn)
+
 27.07.2020
 - highlighting mesh material in "show materials" (M key) mode when mouse hovered over material name
 - navigation between referenced objects: material names, texture names, etc works as hyperlinks in "M" mode

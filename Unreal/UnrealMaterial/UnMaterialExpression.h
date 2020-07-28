@@ -32,6 +32,7 @@ class UMaterialExpressionTextureSample : public UMaterialExpressionTextureBase
 public:
 	BEGIN_PROP_TABLE
 		PROP_DROP(Coordinates)
+		PROP_DROP(SamplerSource)
 	END_PROP_TABLE
 };
 
@@ -90,6 +91,19 @@ public:
 	END_PROP_TABLE
 };
 
+class UMaterialExpressionStaticSwitchParameter : public UMaterialExpressionStaticBoolParameter
+{
+	DECLARE_CLASS(UMaterialExpressionStaticSwitchParameter, UMaterialExpressionStaticBoolParameter)
+public:
+	bool DefaultValue;
+
+	BEGIN_PROP_TABLE
+		PROP_BOOL(DefaultValue)
+		PROP_DROP(A)
+		PROP_DROP(B)
+	END_PROP_TABLE
+};
+
 class UMaterialExpressionVectorParameter : public UMaterialExpressionParameter
 {
 	DECLARE_CLASS(UMaterialExpressionVectorParameter, UMaterialExpressionParameter)
@@ -106,7 +120,7 @@ public:
 	REGISTER_CLASS(UMaterialExpressionTextureSampleParameter2D) \
 	REGISTER_CLASS(UMaterialExpressionScalarParameter) \
 	REGISTER_CLASS(UMaterialExpressionStaticBoolParameter) \
-	REGISTER_CLASS_ALIAS(UMaterialExpressionStaticBoolParameter, UMaterialExpressionStaticSwitchParameter) \
+	REGISTER_CLASS(UMaterialExpressionStaticSwitchParameter) \
 	REGISTER_CLASS(UMaterialExpressionVectorParameter)
 
 #endif // __UNMATERIAL_EXPRESSION_H__

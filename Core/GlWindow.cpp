@@ -1323,6 +1323,7 @@ void CApplication::DrawTexts()
 		DrawKeyHelp("Esc",         "exit");
 		DrawKeyHelp("H",           "toggle help");
 		DrawKeyHelp("Ctrl+PgUp/PgDn", "scroll this text");
+		DrawKeyHelp("Ctrl+MouseWheel", "scroll this text");
 		DrawKeyHelp("Alt+Enter",   "toggle fullscreen");
 		DrawKeyHelp("LeftMouse",   "rotate view");
 		DrawKeyHelp("RightMouse",  "zoom view");
@@ -1539,6 +1540,23 @@ void CApplication::VisualizerLoop(const char *caption)
 				break;
 			case SDL_MOUSEMOTION:
 				OnMouseMove(evt.motion.xrel, evt.motion.yrel);
+				break;
+			case SDL_MOUSEWHEEL:
+				{
+					// Ctrl+Wheel - scroll text
+					if (SDL_GetModState() & (KMOD_LCTRL | KMOD_RCTRL))
+					{
+						if (evt.wheel.y > 0)
+						{
+							textOffset += TEXT_SCROLL_LINES * 6;
+							if (textOffset > 0) textOffset = 0;
+						}
+						else if (evt.wheel.y < 0)
+						{
+							textOffset -= TEXT_SCROLL_LINES * 6;
+						}
+					}
+				}
 				break;
 			case SDL_QUIT:
 				RequestingQuit = true;
