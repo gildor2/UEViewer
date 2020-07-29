@@ -36,6 +36,10 @@ static GLuint GetDefaultTexNum();
 #define PROFILE_SHADER(...)
 #endif
 
+#if MAX_DEBUG
+#define SHOW_SHADER_PARAMS 1
+bool GShowShaderParams = false;
+#endif
 
 /*-----------------------------------------------------------------------------
 	Mipmapping and resampling
@@ -655,7 +659,7 @@ const CShader &GL_UseGenericShader(GenericShaderType type)
 
 
 #if SHOW_SHADER_PARAMS
-#define DBG(...)	DrawTextLeft(__VA_ARGS__)
+#define DBG(...)	if (GShowShaderParams) { DrawTextLeft(__VA_ARGS__); }
 #else
 #define DBG(...)
 #endif

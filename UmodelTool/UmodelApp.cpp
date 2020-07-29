@@ -36,6 +36,10 @@ CUmodelApp GApplication;
 
 #define SCREENSHOTS_DIR		"Screenshots"
 
+#if MAX_DEBUG
+extern bool GShowShaderParams;
+#endif
+
 /*-----------------------------------------------------------------------------
 	Object visualizer support
 -----------------------------------------------------------------------------*/
@@ -753,6 +757,7 @@ void CUmodelApp::CreateMenu()
 		[
 			NewMenuItem("Dump memory")
 			.SetCallback(BIND_STATIC(&DumpMemory))
+			+ NewMenuCheckbox("Show shader parameters", &GShowShaderParams)
 		]
 #endif
 		+ NewSubmenu("Help")
