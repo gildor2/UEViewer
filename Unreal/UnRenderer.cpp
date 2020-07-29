@@ -480,7 +480,7 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 			DBG("   mip %d x %d (%X)", Mip.USize, Mip.VSize, Mip.DataSize);
 			if (error != 0)
 			{
-				appNotify("Failed to upload mip %d of texture %s in format 0x%04X: error 0x%X\n", mipLevel, Tex->Name, format, error);
+				appPrintf("Failed to upload mip %d of texture %s in format 0x%04X: error 0x%X\n", mipLevel, Tex->Name, format, error);
 				DBG("%d x %d (%X)", Mip.USize, Mip.VSize, Mip.DataSize);
 				break;
 			}
@@ -508,7 +508,7 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	GLenum error = glGetError();
 	if (error)
 	{
-		appNotify("Failed to upload texture %s in format 0x%04X, error 0x%04X", Tex->Name, format, error);
+		appPrintf("Failed to upload texture %s in format 0x%04X, error 0x%04X\n", Tex->Name, format, error);
 		return false;
 	}
 
@@ -589,7 +589,7 @@ static bool UploadCubeSide(UUnrealMaterial *Tex, int side, bool useSlices = fals
 	}
 #endif
 
-	int slice = useSlices ? side : 0;
+	int slice = useSlices ? side : -1;
 
 	// Automatic mipmap generation doesn't work with cubemaps, so allow mipmaps only for
 	// explicitly provided data.
