@@ -38,7 +38,7 @@ public:
 	virtual void DrawTexts();
 	virtual void BeforeSwap()
 	{}
-	virtual void ProcessKey(int key, bool isDown);
+	virtual void ProcessKey(unsigned key, bool isDown);
 #if _WIN32
 	// Win32 message hook
 	virtual void WndProc(UINT msg, WPARAM wParam, LPARAM lParam)

@@ -41,7 +41,7 @@ void CObjectViewer::Export()
 }
 
 
-void CObjectViewer::ProcessKey(int key)
+void CObjectViewer::ProcessKey(unsigned key)
 {
 	guard(CObjectViewer::ProcessKey);
 	if (!Object) return;

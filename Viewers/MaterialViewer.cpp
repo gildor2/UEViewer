@@ -24,7 +24,7 @@ int CMaterialViewer::ShapeIndex = 0;
 	Main code
 -----------------------------------------------------------------------------*/
 
-void CMaterialViewer::ProcessKey(int key)
+void CMaterialViewer::ProcessKey(unsigned key)
 {
 	guard(CObjectViewer::ProcessKey);
 	switch (key)

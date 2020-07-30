@@ -25,7 +25,7 @@ public:
 	virtual void Draw3D(float TimeDelta);
 	virtual void DrawTexts();
 	virtual void BeforeSwap();
-	virtual void ProcessKey(int key, bool isDown);
+	virtual void ProcessKey(unsigned key, bool isDown);
 
 	// Release all loaded objects from memory, so any package loading or unloading operation
 	// will be safe for viewer

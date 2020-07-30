@@ -128,7 +128,7 @@ UIMenuItem* CStatMeshViewer::GetObjectMenu(UIMenuItem* menu)
 #endif // HAS_UI
 
 
-void CStatMeshViewer::ProcessKey(int key)
+void CStatMeshViewer::ProcessKey(unsigned key)
 {
 	guard(CStatMeshViewer::ProcessKey);
 

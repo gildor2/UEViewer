@@ -567,7 +567,7 @@ void CUmodelApp::GoForward()
 }
 
 
-void CUmodelApp::ProcessKey(int key, bool isDown)
+void CUmodelApp::ProcessKey(unsigned key, bool isDown)
 {
 	guard(CUmodelApp::ProcessKey);
 

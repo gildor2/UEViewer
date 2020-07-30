@@ -602,7 +602,7 @@ UIMenuItem* CSkelMeshViewer::GetObjectMenu(UIMenuItem* menu)
 #endif // HAS_UI
 
 
-void CSkelMeshViewer::ProcessKey(int key)
+void CSkelMeshViewer::ProcessKey(unsigned key)
 {
 	guard(CSkelMeshViewer::ProcessKey);
 #if TEST_ANIMS
@@ -1006,7 +1006,7 @@ void CSkelMeshViewer::FindUE4Animations()
 }
 
 
-void CSkelMeshViewer::ProcessKeyUp(int key)
+void CSkelMeshViewer::ProcessKeyUp(unsigned key)
 {
 	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
 	switch (key)

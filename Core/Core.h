@@ -624,7 +624,7 @@ void appDumpStackTrace(const address_t* buffer, int depth);
 
 inline void appInitPlatform() {}
 
-inline int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip) {}
+inline int appCaptureStackTrace(address_t* buffer, int maxDepth, int framesToSkip) { return 0; }
 inline void appDumpStackTrace(const address_t* buffer, int depth) {}
 
 #endif // _WIN32

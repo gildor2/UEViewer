@@ -159,7 +159,7 @@ UIMenuItem* CMeshViewer::GetObjectMenu(UIMenuItem* menu)
 
 #endif // HAS_UI
 
-void CMeshViewer::ProcessKey(int key)
+void CMeshViewer::ProcessKey(unsigned key)
 {
 	guard(CMeshViewer::ProcessKey);
 	switch (key)

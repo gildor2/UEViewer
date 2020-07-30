@@ -224,7 +224,7 @@ void CVertMeshViewer::ShowHelp()
 }
 
 
-void CVertMeshViewer::ProcessKey(int key)
+void CVertMeshViewer::ProcessKey(unsigned key)
 {
 	guard(CVertMeshViewer::ProcessKey);
 

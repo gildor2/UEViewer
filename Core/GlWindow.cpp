@@ -1347,7 +1347,7 @@ void CApplication::HandleKeyDown(unsigned key, unsigned mod)
 	ProcessKey(key, true);
 }
 
-void CApplication::ProcessKey(int key, bool isDown)
+void CApplication::ProcessKey(unsigned key, bool isDown)
 {
 	if (!isDown)
 		return;
@@ -1511,7 +1511,7 @@ void CApplication::VisualizerLoop(const char *caption)
 				HandleKeyDown(TranslateKey(evt.key.keysym.sym, evt.key.keysym.scancode), evt.key.keysym.mod);
 				break;
 			case SDL_KEYUP:
-				ProcessKey(evt.key.keysym.sym, false);
+				ProcessKey((unsigned)evt.key.keysym.sym, false);
 				break;
 			case SDL_WINDOWEVENT:
 				switch (evt.window.event)
