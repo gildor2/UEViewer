@@ -20,6 +20,7 @@
 
 #if __GNUC__
 #	include <wchar.h>
+#	include <stdint.h>
 #endif
 
 #ifdef TRACY_ENABLE
@@ -156,8 +157,12 @@ typedef unsigned __int64		uint64;
 #	undef VSTUDIO_INTEGRATION
 #	undef WIN32_USE_SEH
 
-typedef signed long long		int64;
-typedef unsigned long long		uint64;
+// Previous definitions:
+//   typedef signed long long		int64;
+//   typedef unsigned long long		uint64;
+// However this fails conversion from size_t to uint64 in gcc and clang, so we're new using standard types from 'stdint.h'
+typedef int64_t					int64;
+typedef uint64_t				uint64;
 
 #else
 

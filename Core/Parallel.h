@@ -173,14 +173,14 @@ FORCEINLINE int32 InterlockedAdd(volatile uint32* Value, int32 Amount)
 
 #ifdef _WIN64
 
-FORCEINLINE int32 InterlockedAdd(volatile int64* Value, int64 Amount)
+FORCEINLINE int64 InterlockedAdd(volatile int64* Value, int64 Amount)
 {
-	return (int32)::_InterlockedExchangeAdd64((__int64*)Value, (__int64)Amount);
+	return (int64)::_InterlockedExchangeAdd64((__int64*)Value, (__int64)Amount);
 }
 
-FORCEINLINE int32 InterlockedAdd(volatile uint64* Value, int64 Amount)
+FORCEINLINE uint64 InterlockedAdd(volatile uint64* Value, int64 Amount)
 {
-	return (int32)::_InterlockedExchangeAdd64((__int64*)Value, (__int64)Amount);
+	return (uint64)::_InterlockedExchangeAdd64((__int64*)Value, (__int64)Amount);
 }
 
 #endif // _WIN64
@@ -243,12 +243,12 @@ FORCEINLINE int32 InterlockedAdd(volatile uint32* Value, int32 Amount)
 	return __sync_fetch_and_add(Value, Amount);
 }
 
-FORCEINLINE int32 InterlockedAdd(volatile int64* Value, int64 Amount)
+FORCEINLINE int64 InterlockedAdd(volatile int64* Value, int64 Amount)
 {
 	return __sync_fetch_and_add(Value, Amount);
 }
 
-FORCEINLINE int32 InterlockedAdd(volatile uint64* Value, int64 Amount)
+FORCEINLINE uint64 InterlockedAdd(volatile uint64* Value, int64 Amount)
 {
 	return __sync_fetch_and_add(Value, Amount);
 }
