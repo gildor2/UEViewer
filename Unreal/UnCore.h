@@ -449,6 +449,8 @@ enum EGame
 		// Add custom UE4 game engines here
 		// 4.5
 		GAME_Ark = GAME_UE4(5)+1,
+		// 4.6
+		GAME_FableLegends = GAME_UE4(6)+1,
 		// 4.8
 		GAME_HIT = GAME_UE4(8)+1,
 		// 4.10

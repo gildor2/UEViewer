@@ -1324,7 +1324,7 @@ void FByteBulkData::Serialize(FArchive &Ar)
 		{
 			if (BulkDataOffsetInFile + 16 >= Ar.GetFileSize64())
 			{
-				appNotify("FByteBulkData::Serialize: position is outside of the file (%d bytes)", BulkDataSizeOnDisk);
+				appPrintf("FByteBulkData::Serialize: position is outside of the file (%d bytes)\n", BulkDataSizeOnDisk);
 				// Prevent any possible use of this bulk
 				BulkDataFlags |= BULKDATA_Unused;
 				return;

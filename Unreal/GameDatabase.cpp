@@ -405,6 +405,9 @@ const GameInfo GListOfGames[] = {
 #	if JEDI
 		G("Star Wars Jedi: Fallen Order", jedi, GAME_Jedi),
 #	endif
+#	if FABLE
+		G("Fable Legends", fablel, GAME_FableLegends),
+#	endif
 #	if SEAOFTHIEVES
 		G("Sea of Thieves", sot, GAME_SeaOfThieves),
 #	endif
@@ -567,6 +570,8 @@ const char* GetGameTag(int gameEnum)
 
 void FArchive::DetectGame()
 {
+	guard(FArchive::DetectGame);
+
 	if (GForcePlatform != PLATFORM_UNKNOWN)
 		Platform = GForcePlatform;
 
@@ -586,13 +591,26 @@ void FArchive::DetectGame()
 	}
 #endif
 
+	int check = 0;					// number of detected games; should be 0 or 1, otherwise autodetect is failed
+#define SET(game)	{ Game = game; check++; }
+
+	if (Game == GAME_UE4_BASE)
+	{
+		// Detection for UE4 games
+#if FABLE
+		if (ArVer == 415 && ArLicenseeVer == 17)
+			SET(GAME_FableLegends); // UE4 game
+#endif
+		if (check > 1)
+			appNotify("DetectGame collision: detected %d titles, Ver=%d, LicVer=%d", check, ArVer, ArLicenseeVer);
+		return;
+	}
+
 	// skip autodetection when Ar.Game is explicitly set by SerializePackageFileSummary, when code detects custom package tag
 	if (Game != GAME_UNKNOWN)
 		return;
 
 	// here Game == GAME_UNKNOWN
-	int check = 0;					// number of detected games; should be 0 or 1, otherwise autodetect is failed
-#define SET(game)	{ Game = game; check++; }
 
 	/*-----------------------------------------------------------------------
 	 * UE2 games
@@ -889,6 +907,8 @@ void FArchive::DetectGame()
 		// FPackageFileSummary serializer explicitly.
 	}
 #undef SET
+
+	unguard;
 }
 
 #define OVERRIDE_ME1_LVER		90			// real version is 1008, which is greater than LicenseeVersion of Mass Effect 2 and 3

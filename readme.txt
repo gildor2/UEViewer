@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+31.07.2020
+- full Fable Legends (canceled game) support
+
 28.07.2020
 - use Ctrl+MouseWheel to scroll long window texts (in addition to Ctrl+PgUp/PgDn)
 
