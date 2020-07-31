@@ -423,12 +423,21 @@ struct CTextureExportWorker
 				// Part of CreateExportArchive
 				appSprintf(ARRAY_ARG(FullPath), "%s/%s/Side_%d.%s", *ExportPath, TexData.GetObjectName(), Slice, *ExportExt);
 
-				Ar = new FFileWriter(FullPath, FAO_NoOpenError);
-				if (!Ar->IsOpen())
+				if (GDummyExport)
 				{
-					appPrintf("Error creating file \"%s\" ...\n", FullPath);
-					delete Ar;
-					bFail = true;
+					// Don't create file in "dummy export" mode
+					//todo: should be some common function, don't copy-paste
+					Ar = new FDummyArchive();
+				}
+				else
+				{
+					Ar = new FFileWriter(FullPath, FAO_NoOpenError);
+					if (!Ar->IsOpen())
+					{
+						appPrintf("Error creating file \"%s\" ...\n", FullPath);
+						delete Ar;
+						bFail = true;
+					}
 				}
 				Ar->ArVer = 128;
 			}
