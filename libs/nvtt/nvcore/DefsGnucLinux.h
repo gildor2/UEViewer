@@ -2,6 +2,8 @@
 #error "Do not include this file directly."
 #endif
 
+#include <stdint.h> // uint8_t, int8_t, ... uintptr_t
+
 // Function linkage
 #define DLL_IMPORT
 #if __GNUC__ >= 4
@@ -17,7 +19,7 @@
 #	define NV_CDECL     __attribute__((cdecl))
 #	define NV_STDCALL   __attribute__((stdcall))
 #else
-#	define NV_CDECL 
+#	define NV_CDECL
 #	define NV_STDCALL
 #endif
 
@@ -58,8 +60,10 @@ typedef signed short        int16;
 typedef unsigned int        uint32;
 typedef signed int          int32;
 
-typedef unsigned long long  uint64;
-typedef signed long long    int64;
+typedef uint64_t            uint64;
+typedef int64_t             int64;
+//typedef unsigned long long  uint64;
+//typedef signed long long    int64;
 
 // Aliases
 typedef uint32              uint;

@@ -43,7 +43,7 @@ namespace nv
 		}
 		FORCEINLINE void * realloc(void * ptr, size_t size)
 		{
-			appRealloc(ptr, size);
+			return appRealloc(ptr, size);
 		}
 #else
 		NVCORE_API void * malloc(size_t size);
