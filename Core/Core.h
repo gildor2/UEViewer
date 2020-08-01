@@ -516,7 +516,7 @@ struct CErrorContext
 	// Determines if this is an exception or appError throwed
 	bool IsSwError;
 	// Used for error history formatting
-	bool WasError;
+	bool FmtNeedArrow;
 	// Suppress logging error message to a file (in a case of user mistake)
 	bool SuppressLog;
 	// Call stack
@@ -525,6 +525,11 @@ struct CErrorContext
 	CErrorContext()
 	{
 		Reset();
+	}
+
+	bool HasError() const
+	{
+		return History[0] != 0;
 	}
 
 	void Reset()

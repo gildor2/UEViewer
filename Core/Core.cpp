@@ -180,6 +180,8 @@ void CErrorContext::StandardHandler()
 	}
 }
 
+#if DO_GUARD
+
 void CErrorContext::LogHistory(const char *part)
 {
 	if (!History[0])
@@ -190,12 +192,10 @@ void CErrorContext::LogHistory(const char *part)
 void appUnwindPrefix(const char *fmt)
 {
 	char buf[512];
-	appSprintf(ARRAY_ARG(buf), GError.WasError ? " <- %s:" : "%s:", fmt);
+	appSprintf(ARRAY_ARG(buf), GError.FmtNeedArrow ? " <- %s: " : "%s: ", fmt);
 	GError.LogHistory(buf);
-	GError.WasError = false;
+	GError.FmtNeedArrow = false;
 }
-
-#if DO_GUARD
 
 void appUnwindThrow(const char *fmt, ...)
 {
@@ -203,7 +203,7 @@ void appUnwindThrow(const char *fmt, ...)
 	va_list argptr;
 
 	va_start(argptr, fmt);
-	if (GError.WasError)
+	if (GError.FmtNeedArrow)
 	{
 		strcpy(buf, " <- ");
 		vsnprintf(buf+4, ARRAY_COUNT(buf)-4, fmt, argptr);
@@ -211,7 +211,7 @@ void appUnwindThrow(const char *fmt, ...)
 	else
 	{
 		vsnprintf(buf, ARRAY_COUNT(buf), fmt, argptr);
-		GError.WasError = true;
+		GError.FmtNeedArrow = true;
 	}
 	va_end(argptr);
 	GError.LogHistory(buf);

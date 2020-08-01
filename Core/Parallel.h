@@ -268,28 +268,36 @@ typedef void (*ThreadTask)(void*);
 // Execute ThreadTask in thread. Return false if there's no free threads
 bool ExecuteInThread(ThreadTask task, void* taskData, CSemaphore* fence = NULL, bool allowQueue = false);
 
+#define TryExecuteInThread(...) TryExecuteInThreadImpl(__FUNCTION__, __VA_ARGS__)
+
 template<typename F>
-FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL, bool allowQueue = false)
+FORCEINLINE void TryExecuteInThreadImpl(const char* errorContext, F&& task, CSemaphore* fence = NULL, bool allowQueue = false)
 {
 	guard(TryExecuteInThread);
 
 	struct Worker
 	{
-		Worker(F&& inTask)
+		Worker(F&& inTask, const char* inContext)
 		: task(MoveTemp(inTask))
+		, context(inContext)
 		{}
 
 		F task;
+		const char* context;
 
 		static void Proc(void* data)
 		{
 			Worker* worker = (Worker*)data;
+
+			guard(TryExecuteInThread);
 			worker->task();
+			unguardf("%s", worker->context);
+
 			delete worker;
 		}
 	};
 
-	Worker* worker = new Worker(MoveTemp(task));
+	Worker* worker = new Worker(MoveTemp(task), errorContext);
 	if (!ExecuteInThread(Worker::Proc, worker, fence, allowQueue))
 	{
 		// Execute in current thread
@@ -302,7 +310,7 @@ FORCEINLINE void TryExecuteInThread(F&& task, CSemaphore* fence = NULL, bool all
 }
 
 template<typename F>
-FORCEINLINE void TryExecuteInThread(F& task, CSemaphore* fence = NULL, bool allowQueue = false)
+FORCEINLINE void TryExecuteInThreadImpl(F& task, CSemaphore* fence = NULL, bool allowQueue = false)
 {
 	static_assert(sizeof(task) == 0, "TryExecuteInThread can't accept lvalue");
 }

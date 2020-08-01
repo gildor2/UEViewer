@@ -1,4 +1,12 @@
 #include "Core.h"
+
+#ifdef _WIN32
+
+#include <Windows.h>
+#include <process.h> // _beginthread
+
+#endif // _WIN32
+
 #include "Parallel.h"
 
 bool GEnableThreads = true;
@@ -9,10 +17,7 @@ volatile int CThread::NumThreads = 0;
 	Generic classes
 -----------------------------------------------------------------------------*/
 
-#ifdef _WIN32
-
-#include <Windows.h>
-#include <process.h> // _beginthread
+#if _WIN32
 
 // Windows.h has InterlockedIncrement/Decrement defines, hide then
 #undef InterlockedIncrement
@@ -227,11 +232,20 @@ CThread::~CThread()
 		CThread* thread = (CThread*)param;
 		thread->Run();
 	} CATCH_CRASH {
-		// Note: if multiple threads will crash, they'll corrupt error history with
-		// simultaneous writing to GError.
-		//todo: there's no build number displayed, Core has no access to version string
-		appPrintf("Exception in thread %d: ", CurrentId());
+		// Lock other threads - only one will raise the error
+		//todo: Note: if multiple threads will crash, they'll corrupt error history with
+		//   simultaneous writing to GError.
+		//todo: drop appNotify context, it's meaningless in thread
+		static volatile int lock;
+		if (InterlockedAdd(&lock, 1) != 0)
+		{
+			while (true) Sleep(1000);
+		}
+
+		appPrintf("\nException in thread %d:\n", CurrentId());
 		GError.StandardHandler();
+
+		//todo: there's no build number displayed, Core has no access to version string
 		exit(1);
 	}
 }
@@ -505,6 +519,12 @@ void WaitForCompletion()
 void Shutdown()
 {
 	guard(ThreadPool::Shutdown);
+
+	if (GError.HasError())
+	{
+		// Do not bother the proper shutdown of threading system in a case of error
+		return;
+	}
 
 	WaitForCompletion();
 	int NumThreadsAfterShutdown = CThread::NumThreads - Pool::NumPoolThreads;
