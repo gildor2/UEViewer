@@ -67,7 +67,7 @@ protected:
 #ifdef _WIN32
 	void* data;
 #else
-	enum { SemSize = 16 };
+	enum { SemSize = sizeof(size_t) * 4 };
 	size_t data[SemSize / sizeof(size_t)];
 #endif
 #if TRACY_DEBUG_MUTEX
@@ -97,7 +97,7 @@ protected:
 #ifdef _WIN32
 	uintptr_t thread;
 #else
-	enum { ThreadSize = 8 }; // actually: typedef unsigned long int pthread_t
+	enum { ThreadSize = sizeof(size_t) }; // actually: typedef unsigned long int pthread_t
 	size_t thread[ThreadSize / sizeof(size_t)];
 #endif
 };
@@ -110,6 +110,7 @@ protected:
 
 #undef InterlockedIncrement
 #undef InterlockedDecrement
+#undef InterlockedAdd
 
 // InterlockedIncrement/Decrement functions returns new value
 
