@@ -57,9 +57,9 @@ stdout capture:
 3. System variables:
 
 platform specification:
-	PLATFORM	= win32 | win64 | cygwin | unix | unix32 | unix64
+	PLATFORM	= win32 | win64 | cygwin | unix | unix32 | unix64 | osx
 	COMPILER	= VisualC | GnuC
-	TARGET		= vc-win32 | vc-win64 | mingw32 | cygwin | linux | linux32 | linux64
+	TARGET		= vc-win32 | vc-win64 | mingw32 | cygwin | linux | linux32 | linux64 | osx
 		Should specify either "TARGET" or "PLATFORM"+"COMPILER"
 		"linux" = use current system's platform
 		"linux32" or "linux64" = cross-compile for different platform
@@ -487,6 +487,9 @@ sub InitCompiler {
 		} elsif ($TARGET eq "linux64") {
 			$COMPILER = "GnuC";
 			$PLATFORM = "unix64";
+		} elsif ($TARGET eq "osx") {
+			$COMPILER = "GnuC";
+			$PLATFORM = "osx";
 		} else {
 			Error ("Unknown TARGET: \"$TARGET\"");
 		}
@@ -509,7 +512,7 @@ sub InitCompiler {
 			$COMPILER = "VisualC";
 		} elsif ($PLATFORM eq "cygwin") {
 			$COMPILER = "GnuC";
-		} elsif ($PLATFORM eq "unix" || $PLATFORM eq "unix32" || $PLATFORM eq "unix64") {
+		} elsif ($PLATFORM eq "unix" || $PLATFORM eq "unix32" || $PLATFORM eq "unix64" || $PLATFORM eq "osx") {
 			$COMPILER = "GnuC";
 		} else {
 			Error ("Unknown PLATFORM: \"$PLATFORM\"");
@@ -533,7 +536,7 @@ sub InitCompiler {
 	} else {
 		die;
 	}
-	if ($PLATFORM eq "unix" || $PLATFORM eq "unix32" || $PLATFORM eq "unix64") {
+	if ($PLATFORM eq "unix" || $PLATFORM eq "unix32" || $PLATFORM eq "unix64" || $PLATFORM eq "osx") {
 		$ExeFileExt = "";
 		$DllFileExt = ".so";
 	} elsif ($PLATFORM eq "win32" || $PLATFORM eq "win64" || $PLATFORM eq "cygwin") {
