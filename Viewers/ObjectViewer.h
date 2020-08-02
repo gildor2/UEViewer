@@ -1,6 +1,8 @@
 #ifndef __OBJECT_VIEWER_H__
 #define __OBJECT_VIEWER_H__
 
+#if RENDERING
+
 #include "GlWindow.h"
 
 
@@ -273,5 +275,7 @@ private:
 	}
 
 #endif
+
+#endif // RENDERING
 
 #endif // __OBJECT_VIEWER_H__

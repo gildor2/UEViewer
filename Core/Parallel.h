@@ -445,7 +445,7 @@ FORCEINLINE T InterlockedAdd(T* Value, T2 Amount)
 }
 
 template<typename F>
-FORCEINLINE void ParallelFor(int Count, F& Func)
+FORCEINLINE void ParallelFor(int Count, F&& Func)
 {
 	for (int i = 0; i < Count; i++)
 		Func(i);

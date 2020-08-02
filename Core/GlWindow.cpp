@@ -1,9 +1,9 @@
-#include <SDL2/SDL_syswm.h>
-#undef DrawText
-
 #include "Core.h"
 
 #if RENDERING
+
+#include <SDL2/SDL_syswm.h>
+#undef DrawText
 
 #include "TextContainer.h"
 #include "GlWindow.h"

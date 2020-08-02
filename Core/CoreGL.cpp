@@ -18,11 +18,11 @@
 
 
 #include "Core.h"
-#include "CoreGL.h"
-//#include "GlWindow.h"		// for DrawTextRight()
-
 
 #if RENDERING
+
+#include "CoreGL.h"
+//#include "GlWindow.h"		// for DrawTextRight()
 
 
 bool GUseGLSL;

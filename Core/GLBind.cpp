@@ -1,8 +1,9 @@
 #include "Core.h"
-#include "CoreGL.h"
-
 
 #if RENDERING
+
+#include "CoreGL.h"
+
 
 #define appWPrintf		appNotify
 #define Com_DPrintf		if (1) {} else appPrintf		//??

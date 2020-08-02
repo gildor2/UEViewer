@@ -1,5 +1,7 @@
 #include "Core.h"
 
+#if THREADING
+
 #ifdef _WIN32
 
 #include <Windows.h>
@@ -638,3 +640,5 @@ bool ParallelForBase::GrabInterval(int& idx1, int& idx2)
 }
 
 } // namespace ParallelForImpl
+
+#endif // THREADING
