@@ -50,10 +50,13 @@ USE_SYSTEM_LIBS = 0
 
 !if "$COMPILER" eq "GnuC"
 	# linux/cygwin + GCC
-	STDLIBS   = stdc++ m GL 							# libm for math.h functions
+	STDLIBS   = m stdc++	 							# libm for math.h functions
 	!if "$PLATFORM" ne "cygwin"
 		STDLIBS += dl	# dlopen() and friends
 		STDLIBS += pthread
+	!endif
+	!if "$PLATFORM" ne "osx"
+		STDLIBS += GL
 	!endif
 
 	LIBC      = shared
@@ -185,7 +188,9 @@ sources(UE4_LIBS) = {
 #------------------------------------------------
 
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
-STDLIBS   += SDL2
+!if "$PLATFORM" ne "osx"
+STDLIBS   += SDL2		# disabled in macOS build
+!endif
 INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
 OPTIONS   += $WARNINGS
 

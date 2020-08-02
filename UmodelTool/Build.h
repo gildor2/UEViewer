@@ -14,7 +14,6 @@
 #ifdef __APPLE__
 #undef RENDERING //todo?
 #undef THREADING //todo?
-#undef HAS_UI
 #endif
 
 // some private games
