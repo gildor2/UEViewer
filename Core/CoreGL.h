@@ -5,8 +5,13 @@
 
 #include "Win32Types.h"
 
+#ifndef __APPLE__
 #include <GL/gl.h>
 #include <GL/glext.h>
+#else
+#include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
+#endif
 
 #define USE_SDL			1
 #include "GLBind.h"

@@ -349,6 +349,10 @@ FORCEINLINE void* appMallocNoInit(int size, int alignment = 8)
 
 void appFree(void *ptr);
 
+#ifndef __APPLE__
+
+// C++ specs doesn't allow inlining of operator new/delete:  https://en.cppreference.com/w/cpp/memory/new/operator_new
+// All compilers are fine with that, except clang on macos. For this case we're providing "static" declaration deparately.
 
 FORCEINLINE void* operator new(size_t size)
 {
@@ -365,13 +369,16 @@ FORCEINLINE void operator delete(void* ptr)
 	appFree(ptr);
 }
 
-// C++17 (delete with alignment)
-FORCEINLINE void operator delete(void* ptr, size_t)
+FORCEINLINE void operator delete[](void* ptr)
 {
 	appFree(ptr);
 }
 
-FORCEINLINE void operator delete[](void* ptr)
+#endif // __APPLE__
+
+
+// C++17 (delete with alignment)
+FORCEINLINE void operator delete(void* ptr, size_t)
 {
 	appFree(ptr);
 }

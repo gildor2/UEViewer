@@ -470,3 +470,28 @@ void appDumpMemoryAllocations()
 }
 
 #endif // DEBUG_MEMORY
+
+
+#ifdef __APPLE__
+
+void* operator new(size_t size)
+{
+	return appMalloc(size);
+}
+
+void* operator new[](size_t size)
+{
+	return appMalloc(size);
+}
+
+void operator delete(void* ptr)
+{
+	appFree(ptr);
+}
+
+void operator delete[](void* ptr)
+{
+	appFree(ptr);
+}
+
+#endif // __APPLE__

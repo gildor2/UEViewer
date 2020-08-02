@@ -495,7 +495,14 @@ void FArchive::Printf(const char *fmt, ...)
 
 	#endif
 
-#endif // _WIN32
+#elif __APPLE__
+
+	// On Darwin, all file APIs are 64-bit
+	#define fopen64			fopen
+	#define fseeko64		fseeko
+	#define ftello64		ftell
+
+#endif // _WIN32 / __APPLE__
 
 FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
 :	Options(InOptions)
