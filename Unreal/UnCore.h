@@ -322,7 +322,7 @@ public:
 	Some enums used to distinguish game, engine and platform
 -----------------------------------------------------------------------------*/
 
-#define GAME_UE4(x)				(GAME_UE4_BASE + (x << 4))
+#define GAME_UE4(x)				(GAME_UE4_BASE + ((x) << 4))
 #define GAME_UE4_GET_MINOR(x)	((x - GAME_UE4_BASE) >> 4)	// reverse operation for GAME_UE4(x)
 
 enum EGame

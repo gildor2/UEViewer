@@ -86,7 +86,7 @@ public:
 				Reader->Serialize(PageTableCompr, TableSizeCompr);
 				int len = appDecompress(PageTableCompr, TableSizeCompr, PageTableUncompr, TableSizeUncompr, COMPRESS_ZLIB);
 				assert(len == TableSizeUncompr);
-				delete PageTableCompr;
+				delete[] PageTableCompr;
 			}
 			else
 			{
@@ -96,7 +96,7 @@ public:
 			Mem.SetupFrom(*Reader);
 			ReadPageTable(Mem, DataStart + DataSkip + 12, (Flags & LEAD_PKG_CHECK_CRC));
 			assert(Mem.Tell() == TableSizeUncompr);
-			delete PageTableUncompr;
+			delete[] PageTableUncompr;
 		}
 		else
 		{
@@ -197,7 +197,7 @@ public:
 			);
 		}
 
-		delete CompressedBuffer;
+		delete[] CompressedBuffer;
 
 		BufferStart = Page * BufferSize;
 		BufferEnd   = BufferStart + BufferSize;
@@ -332,7 +332,7 @@ public:
 		appMakeDirectoryForFile(FileName);
 		FArchive *OutAr = new FFileWriter(FileName);
 		OutAr->Serialize(mem, FileSize);
-		delete mem;
+		delete[] mem;
 		delete OutAr;
 		appPrintf("Extraction done.\n");
 	}
@@ -408,7 +408,7 @@ public:
 			fclose(f);
 		}
 
-		delete Data;
+		delete[] Data;
 
 		return true;
 

@@ -1518,11 +1518,10 @@ void UnPackage::LoadNameTable()
 #if SPLINTER_CELL
 			if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
 			{
-				char buf[MAX_FNAME_LEN];
+				char buf[256];
 				byte len;
 				int flags;
 				*this << len;
-				assert(len < ARRAY_COUNT(buf));
 				Serialize(buf, len+1);
 				NameTable[i] = appStrdupPool(buf);
 				*this << flags;
@@ -1588,10 +1587,9 @@ void UnPackage::LoadNameTable()
 #if R6VEGAS
 			if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
 			{
-				char buf[MAX_FNAME_LEN];
+				char buf[256];
 				byte len;
 				*this << len;
-				assert(len < ARRAY_COUNT(buf));
 				Serialize(buf, len);
 				buf[len] = 0;
 				NameTable[i] = appStrdupPool(buf);

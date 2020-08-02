@@ -901,7 +901,7 @@ void USkeletalMesh::ConvertWedges(CSkelMeshLod &Lod, const TArray<FVector> &Mesh
 		}
 	}
 
-	delete Verts;
+	delete[] Verts;
 
 	unguard;
 }
