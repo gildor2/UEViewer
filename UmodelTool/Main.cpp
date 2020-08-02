@@ -47,7 +47,9 @@
 // GSettings.Reset() will be called before main() executed.
 CUmodelSettings GSettings;
 
+#if THREADING
 extern bool GEnableThreads;
+#endif
 
 /*-----------------------------------------------------------------------------
 	Table of known Unreal classes
@@ -378,7 +380,9 @@ static void PrintUsage()
 #	if VSTUDIO_INTEGRATION
 			"    -debug          invoke system crash handler on errors\n"
 #	endif
+#	if THREADING
 			"    -nomt           disable multithreading optimizations\n"
+#	endif
 #endif // SHOW_HIDDEN_SWITCHES
 			"\n"
 			"Options:\n"
@@ -897,10 +901,12 @@ int main(int argc, const char **argv)
 			PrintVersionInfo();
 			return 0;
 		}
+#if THREADING
 		else if (!stricmp(opt, "nomt"))
 		{
 			GEnableThreads = false;
 		}
+#endif
 		else if (!stricmp(opt, "testexport"))
 		{
 			mainCmd = CMD_Export;
@@ -1132,8 +1138,10 @@ int main(int argc, const char **argv)
 					if (Obj)
 					{
 						Objects.Add(Obj);
+#if RENDERING
 						if (objName == attachAnimName && (Obj->IsA("MeshAnimation") || Obj->IsA("AnimSet")))
 							GForceAnimSet = Obj;
+#endif
 					}
 				}
 				if (found) break;
@@ -1154,7 +1162,12 @@ int main(int argc, const char **argv)
 	}
 	UObject::EndLoad();
 
-	if (!UObject::GObjObjects.Num() && !GApplication.GuiShown && bShouldLoadObjects)
+	bool bNoSupportedObjects = !UObject::GObjObjects.Num() && bShouldLoadObjects;
+#if HAS_UI
+	bNoSupportedObjects &= !GApplication.GuiShown;
+#endif
+
+	if (bNoSupportedObjects)
 	{
 		appPrintf("\nThe specified package(s) has no supported objects.\n\n");
 	no_objects:
@@ -1184,10 +1197,14 @@ int main(int argc, const char **argv)
 		{
 			ExportPackages(Packages);
 		}
+#if HAS_UI || RENDERING
 		if (!GApplication.GuiShown)
 			return 0;
 		// switch to a viewer in GUI mode
 		mainCmd = CMD_View;
+#else
+		return 0;
+#endif
 	}
 
 #if RENDERING

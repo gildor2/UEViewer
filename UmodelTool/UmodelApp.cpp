@@ -1,7 +1,11 @@
-#include <SDL2/SDL_syswm.h>			// for SDL_SysWMinfo
-#undef UnregisterClass
-
 #include "Core.h"
+
+#if RENDERING
+
+#include <SDL2/SDL_syswm.h>			// for SDL_SysWMinfo, does <windows.h> includes
+#undef UnregisterClass
+#undef GetClassName
+
 #include "UnCore.h"
 #include "UnObject.h"
 #include "PackageUtils.h"
@@ -43,8 +47,6 @@ extern bool GShowShaderParams;
 /*-----------------------------------------------------------------------------
 	Object visualizer support
 -----------------------------------------------------------------------------*/
-
-#if RENDERING
 
 bool CUmodelApp::FindObjectAndCreateVisualizer(int dir, bool forceVisualizer, bool newPackage)
 {

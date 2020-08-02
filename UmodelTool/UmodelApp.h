@@ -1,8 +1,11 @@
 #ifndef __UMODEL_APP_H__
 #define __UMODEL_APP_H__
 
-#include "Viewers/ObjectViewer.h"
 #include "UmodelSettings.h"
+
+#if RENDERING || HAS_UI
+
+#include "Viewers/ObjectViewer.h"
 
 class UIMenu;
 class UIMenuItem;
@@ -94,6 +97,8 @@ public:
 };
 
 extern CUmodelApp GApplication;
+
+#endif // RENDERING || HAS_UI
 
 // Main.cpp functions
 void InitClassAndExportSystems(int Game);

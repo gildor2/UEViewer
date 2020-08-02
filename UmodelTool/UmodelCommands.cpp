@@ -59,9 +59,11 @@ bool ExportPackages(const TArray<UnPackage*>& Packages, IProgressCallback* Progr
 	// to detect an engine version
 	InitClassAndExportSystems(Packages[0]->Game);
 
+#if RENDERING
 	// We'll entirely unload all objects, so we should reset viewer. Note: CUmodelApp does this too,
 	// however we're calling ExportPackages() from different code places, so call it anyway.
 	GApplication.ReleaseViewerAndObjects();
+#endif
 
 	bool cancelled = false;
 
