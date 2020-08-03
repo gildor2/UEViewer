@@ -336,6 +336,7 @@ public:
 	CMutex mutex;
 	CSemaphore endSignal;
 	int8 numActiveThreads;
+	bool bAllSentToThreads;
 	int currentIndex;
 	int lastIndex;
 	int step;

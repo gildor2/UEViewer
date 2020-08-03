@@ -564,6 +564,7 @@ namespace ParallelForImpl
 
 ParallelForBase::ParallelForBase(int inCount)
 : numActiveThreads(0)
+, bAllSentToThreads(false)
 , currentIndex(0)
 , lastIndex(inCount)
 {}
@@ -607,7 +608,14 @@ void ParallelForBase::Start(ThreadPool::ThreadTask worker)
 #endif
 
 	// Allocate threads, exclude 1 thread for the thread executing ParallelFor
-	for (int i = 0; i < numThreads - 1; i++)
+
+	// Reserve 1 "active thread", so if the 1st spawned thread will finish the job before
+	// we'll be able to spawn anything else - it won't send "completed" signal.
+	InterlockedIncrement(&numActiveThreads);
+
+	// Spawn as many threads as planned. Stop allocating new threads if job will be completed
+	// faster than planned (verify bAllSentToThreads as a loop condition).
+	for (int i = 0; i < numThreads - 1 && !bAllSentToThreads; i++)
 	{
 		// Just in case, increment thread count before starting a thread, so we'll avoid
 		// the situation when worker thread will execute everything before we'll return
@@ -621,6 +629,12 @@ void ParallelForBase::Start(ThreadPool::ThreadTask worker)
 			break;
 		}
 	}
+
+	// Remove thread "reservation". If at this moment everything has been completed, the
+	// value goes to zero, and we'll not perform waiting for completion in destructor. If
+	// something is still works, then we'll wait, and the worker thread will send a signal
+	// when count finally decremented to 0.
+	InterlockedDecrement(&numActiveThreads);
 }
 
 bool ParallelForBase::GrabInterval(int& idx1, int& idx2)
@@ -628,7 +642,11 @@ bool ParallelForBase::GrabInterval(int& idx1, int& idx2)
 	CMutex::ScopedLock lock(mutex);
 	idx1 = currentIndex;
 	if (idx1 >= lastIndex)
-		return false; // all done
+	{
+		// All items were sent to threads
+		bAllSentToThreads = true;
+		return false;
+	}
 	idx2 = idx1 + step;
 	if (idx2 > lastIndex)
 		idx2 = lastIndex;
