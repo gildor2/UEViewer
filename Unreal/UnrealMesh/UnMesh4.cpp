@@ -1423,7 +1423,11 @@ struct FStaticLODModel4
 #if SEAOFTHIEVES
 		if (Ar.Game == GAME_SeaOfThieves)
 		{
-			Ar.Seek(Ar.Tell() + 24);
+			Ar.Seek(Ar.Tell() + 3);
+			int32 arraySize;
+			Ar << arraySize;
+			Ar.Seek(Ar.Tell() + arraySize * 4);
+			Ar.Seek(Ar.Tell() + 17);
 			FMultisizeIndexContainer indices1, indices2;
 			Ar << indices1 << indices2;
 		}
