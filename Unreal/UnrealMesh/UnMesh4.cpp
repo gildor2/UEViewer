@@ -1387,6 +1387,21 @@ struct FStaticLODModel4
 				}
 #endif // SOD2
 
+#if SEAOFTHIEVES
+				if (Ar.Game == GAME_SeaOfThieves)
+				{
+					int32 SomeArraySize;
+					Ar << SomeArraySize;
+					Ar.Seek(Ar.Tell() + SomeArraySize * 44);
+
+					TArray<int32> array1, array2, array3, array4;
+					Ar << array1 << array2;
+					Ar << array3 << array4;
+
+					Ar.Seek(Ar.Tell() + 13);
+				}
+#endif // SEAOFTHIEVES
+
 				if (!StripFlags.IsClassDataStripped(CDSF_AdjacencyData))
 					Ar << Lod.AdjacencyIndexBuffer;
 
@@ -1423,13 +1438,8 @@ struct FStaticLODModel4
 #if SEAOFTHIEVES
 		if (Ar.Game == GAME_SeaOfThieves)
 		{
-			Ar.Seek(Ar.Tell() + 3);
-			int32 arraySize;
-			Ar << arraySize;
-			Ar.Seek(Ar.Tell() + arraySize * 4);
-			Ar.Seek(Ar.Tell() + 17);
-			FMultisizeIndexContainer indices1, indices2;
-			Ar << indices1 << indices2;
+			FMultisizeIndexContainer indices;
+			Ar << indices;
 		}
 #endif // SEAOFTHIEVES
 
