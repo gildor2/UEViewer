@@ -1253,7 +1253,7 @@ void CGameFileInfo::GetCleanName(FString& OutName) const
 
 /*static*/ const FString& CGameFileInfo::GetPathByIndex(int index)
 {
-	assert(index > 0 && index < GameFolders.Num());
+	assert(GameFolders.IsValidIndex(index));
 	return GameFolders.GetData()[index].Name; // using GetData to avoid another one index check
 }
 

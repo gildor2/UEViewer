@@ -721,10 +721,13 @@ struct PackageSortHelper
 	int Index;
 };
 
+#define USE_FAST_SORTER 0
+
+#if !USE_FAST_SORTER
+
 static bool PackageSort_Reverse;
 static int  PackageSort_Column;
 
-// todo: for better performance, return lambda for sorting - select one of functions for sorting by selected column,
 // do not use 'switch' inside sorter function
 static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHelper* pB)
 {
@@ -760,6 +763,41 @@ static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHel
 	return code;
 }
 
+#else
+
+// This approach minimizes overhead of sort type selection in PackageSortFunction. Interestingly,
+// it doesn't provide enough speedup, but keeping the code just for possible future reference.
+
+#define SORTER0(argA, argB, ...) \
+	[](const PackageSortHelper* pA, const PackageSortHelper* pB) -> int \
+	{ \
+		const CGameFileInfo* A = argA->File; \
+		const CGameFileInfo* B = argB->File; \
+		int code = __VA_ARGS__; \
+		/* make sort stable */ \
+		if (code == 0) \
+			code = pA->Index - pB->Index; \
+		return code; \
+	}
+
+#define SORTER(...) \
+	{ SORTER0(pA, pB, __VA_ARGS__), SORTER0(pB, pA, __VA_ARGS__) }
+
+typedef int (*PackageSortFunction_t)(const PackageSortHelper*, const PackageSortHelper*);
+
+static const PackageSortFunction_t PackageSorter[][2] = {
+	SORTER(CGameFileInfo::CompareNames(*A, *B)),			// COLUMN_Name
+	SORTER(A->NumSkeletalMeshes - B->NumSkeletalMeshes),	// COLUMN_NumSkel
+	SORTER(A->NumStaticMeshes - B->NumStaticMeshes),		// COLUMN_NumStat,
+	SORTER(A->NumAnimations - B->NumAnimations),			// COLUMN_NumAnim
+	SORTER(A->NumTextures - B->NumTextures),				// COLUMN_NumTex
+	SORTER((A->SizeInKb - B->SizeInKb) + (A->ExtraSizeInKb - B->ExtraSizeInKb)), // COLUMN_Size
+};
+
+static_assert(ARRAY_COUNT(PackageSorter) == UIPackageList::COLUMN_Count, "Review PackageSorter");
+
+#endif // USE_FAST_SORTER
+
 // Stable sort of packages
 /*static*/ void UIPackageDialog::SortPackages(PackageList& List, int Column, bool Reverse)
 {
@@ -775,9 +813,13 @@ static int PackageSortFunction(const PackageSortHelper* pA, const PackageSortHel
 		S.Index = i;
 	}
 
+#if !USE_FAST_SORTER
 	PackageSort_Reverse = Reverse;
 	PackageSort_Column = Column;
 	SortedArray.Sort(PackageSortFunction);
+#else
+	SortedArray.Sort(PackageSorter[Column][int(Reverse)]);
+#endif
 
 	// copy sorted data back to List
 	for (int i = 0; i < List.Num(); i++)
