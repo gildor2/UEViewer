@@ -24,6 +24,8 @@
 #include "CoreGL.h"
 //#include "GlWindow.h"		// for DrawTextRight()
 
+int GCurrentFrame = 1;
+int GContextFrame = 0;
 
 bool GUseGLSL;
 

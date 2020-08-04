@@ -4,6 +4,9 @@
 
 #include "CoreGL.h"
 
+#if _MSC_VER
+#pragma comment(lib, "opengl32.lib")
+#endif
 
 #define appWPrintf		appNotify
 #define Com_DPrintf		if (1) {} else appPrintf		//??
