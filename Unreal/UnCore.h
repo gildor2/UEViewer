@@ -416,6 +416,7 @@ enum EGame
 		GAME_PLA,
 		GAME_AliensCM,
 		GAME_GoWJ,
+		GAME_GoWU,
 		GAME_Bioshock3,
 		GAME_RememberMe,
 		GAME_MarvelHeroes,

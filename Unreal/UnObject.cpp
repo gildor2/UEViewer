@@ -547,7 +547,17 @@ struct FPropertyTag
 					Ar << (byte&)Tag.BoolValue;		// byte
 			}
 			else if (Tag.Type == NAME_ByteProperty && Ar.ArVer >= 633)
-				Ar << Tag.EnumName;
+			{
+				bool bHasEnumName = true;
+	#if GEARSU
+				if (Ar.Game == GAME_GoWU) bHasEnumName = false;
+	#endif
+
+				if (bHasEnumName)
+				{
+					Ar << Tag.EnumName;
+				}
+			}
 			return Ar;
 		}
 #endif // UNREAL3

@@ -202,6 +202,10 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 	guard(appDecompress);
 
+#if GEARSU
+	if (GForceGame == GAME_GoWU && Flags == 32) Flags = COMPRESS_LZ4;
+#endif
+
 #if BLADENSOUL
 	if (GForceGame == GAME_BladeNSoul && Flags == COMPRESS_LZO_ENC_BNS)	// note: GForceGame is required (to not pass 'Game' here)
 	{

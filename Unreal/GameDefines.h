@@ -133,6 +133,7 @@
 #define DEVILS_THIRD	1		// Devil's Third
 #define ROCKET_LEAGUE	1		// Rocket League
 #define GRAV			1
+#define GEARSU			1		// Gears of War: Ultimate
 //#define USE_XDK			1		// use some proprietary code for XBox360 support
 
 // Midway UE3 games -- make common define ??

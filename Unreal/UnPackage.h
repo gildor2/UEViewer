@@ -295,28 +295,28 @@ public:
 
 	const char* GetName(int index)
 	{
-		if (index < 0 || index >= Summary.NameCount)
+		if (unsigned(index) >= Summary.NameCount)
 			appError("Package \"%s\": wrong name index %d", *GetFilename(), index);
 		return NameTable[index];
 	}
 
 	FObjectImport& GetImport(int index)
 	{
-		if (index < 0 || index >= Summary.ImportCount)
+		if (unsigned(index) >= Summary.ImportCount)
 			appError("Package \"%s\": wrong import index %d", *GetFilename(), index);
 		return ImportTable[index];
 	}
 
 	const FObjectImport& GetImport(int index) const // duplicate for 'const' package
 	{
-		if (index < 0 || index >= Summary.ImportCount)
+		if (unsigned(index) >= Summary.ImportCount)
 			appError("Package \"%s\": wrong import index %d", *GetFilename(), index);
 		return ImportTable[index];
 	}
 
 	FObjectExport& GetExport(int index)
 	{
-		if (index < 0 || index >= Summary.ExportCount)
+		if (unsigned(index) >= Summary.ExportCount)
 			appError("Package \"%s\": wrong export index %d", *GetFilename(), index);
 		return ExportTable[index];
 	}
@@ -324,7 +324,7 @@ public:
 	// "const" version of the above function
 	const FObjectExport& GetExport(int index) const
 	{
-		if (index < 0 || index >= Summary.ExportCount)
+		if (unsigned(index) >= Summary.ExportCount)
 			appError("Package \"%s\": wrong export index %d", *GetFilename(), index);
 		return ExportTable[index];
 	}

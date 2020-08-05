@@ -2508,6 +2508,11 @@ struct FStaticMeshSection3
 			Ar << unk40;
 		}
 #endif // FABLE
+
+#if GEARSU
+		if (Ar.Game == GAME_GoWU) return Ar;
+#endif
+
 		if (Ar.ArVer >= 514) Ar << S.f30;
 #if ALPHA_PR
 		if (Ar.Game == GAME_AlphaProtocol && Ar.ArLicenseeVer >= 39)
@@ -3194,6 +3199,17 @@ struct FStaticMeshLODModel3
 #if BLADENSOUL
 			if (Ar.Game == GAME_BladeNSoul && Ar.ArVer >= 572) goto color_stream;
 #endif
+#if GEARSU
+			if (Ar.Game == GAME_GoWU)
+			{
+				// Some stream
+				int32 unkCount1, unkCount2, unkStride;
+				Ar << unkCount1 << unkStride << unkCount2;
+				if (unkCount2) Ar.Seek(Ar.Tell() + unkCount2 * 4 + 8); // skip BulkSerialize
+				goto end_of_streams;
+			}
+#endif // GEARSU
+
 			// unknown data in UDK
 			if (Ar.ArVer >= 615)
 			{
@@ -3203,6 +3219,9 @@ struct FStaticMeshLODModel3
 			if (Ar.ArVer < 686) Ar << Lod.ShadowVolumeStream;
 			Ar << Lod.NumVerts;
 			DBG_STAT("NumVerts: %d\n", Lod.NumVerts);
+
+		end_of_streams:
+			;
 		}
 		else if (Ar.ArVer >= 466)
 		{
@@ -3358,6 +3377,10 @@ struct FStaticMeshLODModel3
 		Ar << Lod.Indices2;
 		DBG_STAT("Indices: %d %d\n", Lod.Indices.Indices.Num(), Lod.Indices2.Indices.Num());
 	after_indices:
+
+#if GEARSU
+		if (Ar.Game == GAME_GoWU) return Ar;
+#endif
 
 		if (Ar.ArVer < 686)
 		{
@@ -3673,6 +3696,9 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 #endif // SINGULARITY
 #if BULLETSTORM
 	if (Ar.Game == GAME_Bulletstorm && Ar.ArVer >= 739) goto new_kdop;
+#endif
+#if GEARSU
+	if (Ar.Game == GAME_GoWU) goto new_kdop;
 #endif
 #if MASSEFF
 	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 153) goto new_kdop;

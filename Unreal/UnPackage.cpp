@@ -335,6 +335,10 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 	if (Ar.ArVer >= 623)
 		Ar << f38 << f3C << f40;
 
+#if GEARSU
+	if (Ar.Game == GAME_GoWU) goto guid;
+#endif
+
 #if TRANSFORMERS
 	if (Ar.Game == GAME_Transformers && Ar.ArVer >= 535) goto read_unk38;
 #endif
@@ -346,8 +350,11 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 		Ar << unk38;
 	}
 
-	// Guid and generations
+	// GUID
+guid:
 	Ar << Guid;
+
+	// Generations
 	int32 Count;
 	Ar << Count;
 
@@ -1030,6 +1037,15 @@ void FObjectExport::Serialize3(FArchive &Ar)
 	Ar << SerialSize;
 	if (SerialSize || Ar.ArVer >= 249)
 		Ar << SerialOffset;
+
+#if GEARSU
+	if (Ar.Game == GAME_GoWU)
+	{
+		int32 unk;
+		Ar << unk;
+		if (unk) Ar.Seek(Ar.Tell() + unk * 12);
+	}
+#endif // GEARSU
 
 #if HUXLEY
 	if (Ar.Game == GAME_Huxley && Ar.ArLicenseeVer >= 22)

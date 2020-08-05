@@ -107,6 +107,9 @@ const GameInfo GListOfGames[] = {
 		G3("Gears of War 3"),
 		G("Gears of War: Judgment", gowj, GAME_GoWJ),
 #	endif
+#	if GEARSU
+		G("Gears of War: Ultimate", gowu, GAME_GoWU),
+#	endif
 #	if SUPPORT_IPHONE
 		G3("Infinity Blade"),
 #	endif
@@ -886,6 +889,10 @@ void FArchive::DetectGame()
 	if ((ArVer == 832 || ArVer == 893) && ArLicenseeVer == 21)	// Remember Me (832) or Life Is Strange (893)
 		SET(GAME_RememberMe);
 #endif
+#if GEARSU
+	if (ArVer == 835 && ArLicenseeVer == 56)
+		SET(GAME_GoWU);									// Gears of War: Ultimate
+#endif
 #if GIGANTIC
 	if (ArVer == 867 && ArLicenseeVer == 9)
 		SET(GAME_Gigantic);
@@ -952,6 +959,9 @@ static const UEVersionMap ueVersions[] =
 	G(GAME_DND, 673)						// real version is 674
 #endif
 	G(GAME_GoWJ, 828)						// real version is 846
+#if GEARSU
+	G(GAME_GoWU, 614)						// real version is 835, version is clamped by FStaticMeshUVItem3
+#endif
 };
 
 #undef G
