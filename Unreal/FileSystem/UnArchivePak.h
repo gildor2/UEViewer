@@ -16,6 +16,7 @@ enum
 	PakFile_Version_FNameBasedCompressionMethod = 8, // UE4.22+ - use string instead of enum for compression method
 	PakFile_Version_FrozenIndex = 9,				// UE4.25 - used only in 4.25, removed with 4.26
 	PakFile_Version_PathHashIndex = 10,				// UE4.26+ - all file paths are encrypted (stored as 64-bit hash values)
+	PakFile_Version_Fnv64BugFix = 11,				// UE4.26+ - bug fix in index hash function (MemFnv64)
 
 	PakFile_Version_Last,
 	PakFile_Version_Latest = PakFile_Version_Last - 1
