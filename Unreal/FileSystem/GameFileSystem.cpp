@@ -350,7 +350,7 @@ int RegisterGameFolder(const char* FolderName)
 
 //!! add define USE_VFS = SUPPORT_ANDROID || UNREAL4, perhaps || SUPPORT_IOS
 
-static void RegisterGameFile(const char* FullName)
+static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 {
 	guard(RegisterGameFile);
 
@@ -420,18 +420,27 @@ static void RegisterGameFile(const char* FullName)
 		// Register OS file
 		CRegisterFileInfo info;
 
-		FILE* f = fopen(FullName, "rb");
-		if (f)
+		if (FileSize < 0)
 		{
-			fseek(f, 0, SEEK_END);
-			info.Size = ftell(f);
-			fclose(f);
+			// Get file size
+			FILE* f = fopen(FullName, "rb");
+			if (f)
+			{
+				fseek(f, 0, SEEK_END);
+				info.Size = ftell(f);
+				fclose(f);
+			}
+			else
+			{
+				// File is not accessible
+				return;
+			}
 		}
 		else
 		{
-			// File is not accessible
-			return;
+			info.Size = FileSize;
 		}
+
 		// Cut GRootDirectory from filename
 		const char *s = FullName + strlen(GRootDirectory) + 1;
 		assert(s[-1] == '/');
@@ -636,9 +645,17 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 	bool res = true;
 //	printf("Scan %s\n", dir);
 
+	struct FileInfo
+	{
+		FStaticString<256> Filename;	// short file name
+		int64 Size;						// file size
+	};
+
 	//todo: check - there's TArray<FStaticString> what's unsafe
-	TArray<FStaticString<256>> Filenames;
-	Filenames.Empty(256);
+	TArray<FileInfo> Files;
+	Files.Empty(1024);
+
+	guard(ReadDir);
 
 #if _WIN32
 	appSprintf(ARRAY_ARG(Path), "%s/*.*", dir);
@@ -659,7 +676,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		}
 		else
 		{
-			Filenames.Add(found.name);
+			Files.Add( { found.name, found.size } );
 		}
 	} while (res && _findnexti64(hFind, &found) != -1);
 	_findclose(hFind);
@@ -682,22 +699,24 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		}
 		else
 		{
-			Filenames.Add(ent->d_name);
+			Files.Add( { ent->d_name, buf.st_size } );
 		}
 	}
 	closedir(find);
 #endif
 
+	unguard;
+
 	// Register files in sorted order - should be done for pak files, so patches will work.
-	Filenames.Sort([](const FStaticString<256>& p1, const FStaticString<256>& p2) -> int
+	Files.Sort([](const FileInfo& p1, const FileInfo& p2) -> int
 		{
-			return stricmp(*p1, *p2) > 0;
+			return stricmp(*p1.Filename, *p2.Filename) > 0;
 		});
 
-	for (int i = 0; i < Filenames.Num(); i++)
+	for (const FileInfo& File :  Files)
 	{
-		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, *Filenames[i]);
-		RegisterGameFile(Path);
+		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, *File.Filename);
+		RegisterGameFile(Path, File.Size);
 	}
 
 	return res;
