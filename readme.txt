@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+14.08.2020
+- Gears of War Ultimate Edition support
+
 31.07.2020
 - full Fable Legends (canceled game) support
 

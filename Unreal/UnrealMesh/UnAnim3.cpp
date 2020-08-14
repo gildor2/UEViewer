@@ -168,6 +168,9 @@ void UAnimSequence::Serialize(FArchive &Ar)
 		}
 	}
 #endif // TRANSFORMERS
+#if GEARSU
+	if (Ar.Game == GAME_GoWU) goto old_code;
+#endif
 	if (Ar.ArVer >= 577)
 	{
 	new_code:

@@ -845,6 +845,10 @@ ETexturePixelFormat UTexture2D::GetTexturePixelFormat() const
 		intFormat = TPF_A1;
 	else if (Format == PF_FloatRGBA)
 		intFormat = TPF_FLOAT_RGBA;
+#if GEARSU
+	else if (Format == PF_DXN)
+		intFormat = TPF_BC5;
+#endif
 #if MASSEFF
 //	else if (Format == PF_NormapMap_LQ) -- seems not used
 //		intFormat = TPF_BC5;

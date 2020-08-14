@@ -162,6 +162,9 @@ struct FMeshBone
 #if TRANSFORMERS
 		if (Ar.Game == GAME_Transformers) return Ar; // version 537, but really not upgraded
 #endif
+#if GEARSU
+	if (Ar.Game == GAME_GoWU) return Ar;
+#endif
 #if UNREAL3
 	ue3_unk:
 		if (Ar.ArVer >= 515)

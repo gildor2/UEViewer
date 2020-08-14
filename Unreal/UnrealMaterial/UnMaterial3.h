@@ -296,6 +296,9 @@ enum EPixelFormat
 	PF_BC6H,
 	PF_BC7,
 #endif // UNREAL4
+#if GEARSU
+	PF_DXN,
+#endif
 #if MASSEFF
 	PF_NormalMap_LQ,
 	PF_NormalMap_HQ,
@@ -365,9 +368,10 @@ _ENUM(EPixelFormat)
 	_E(PF_ASTC_10x10),
 	_E(PF_ASTC_12x12),
 	_E(PF_BC6H),
-#endif // UNREAL4
-#if THIEF4 // || UNREAL4
 	_E(PF_BC7),
+#endif // UNREAL4
+#if GEARSU
+	_E(PF_DXN),
 #endif
 #if MASSEFF
 	_E(PF_NormalMap_LQ),

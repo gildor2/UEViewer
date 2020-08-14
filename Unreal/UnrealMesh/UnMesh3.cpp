@@ -296,6 +296,9 @@ struct FSkelMeshSection3
 #if BLADENSOUL
 		if (Ar.Game == GAME_BladeNSoul && Ar.ArVer >= 571) goto new_ver;
 #endif
+#if GEARSU
+		if (Ar.Game == GAME_GoWU) return Ar;
+#endif
 		if (Ar.ArVer >= 599)
 		{
 		new_ver:
@@ -676,6 +679,9 @@ struct FSkelMeshChunk3
 			Ar << unk1C << unk28;
 		}
 #endif // MKVSDC
+#if GEARSU
+		if (Ar.Game == GAME_GoWU) Ar.Seek(Ar.Tell() + 8);
+#endif
 		Ar << V.Bones;
 		if (Ar.ArVer >= 333)
 		{
@@ -735,7 +741,7 @@ struct FEdge3
 };
 
 
-// Structure holding normals and bone influeces
+// Structure holding normals and bone influences
 struct FGPUVert3Common
 {
 	FPackedNormal		Normal[3];
@@ -908,6 +914,31 @@ struct FSkeletalMeshVertexBuffer3
 
 		DBG_SKEL("Reading GPU skin\n");
 
+	#if GEARSU
+		if (Ar.Game == GAME_GoWU)
+		{
+			int32 NumVerts;
+			int32 Stride; // wrong value: contains 0x44, real vertex size is 0x40 - so can't use BulkSerialize
+			Ar << NumVerts << Stride;
+			S.VertsFloat.AddZeroed(NumVerts);
+			for (int i = 0; i < NumVerts; i++)
+			{
+				FGPUVert3Float& V = S.VertsFloat[i];
+				Ar << V.Pos;
+				Ar << V.Normal[0] << V.Normal[2];
+				for (int uv = 0; uv < GNumGPUUVSets; uv++) Ar << V.UV[uv];
+				uint32 Color;
+				Ar << Color;
+				for (int n = 0; n < NUM_INFLUENCES_UE3; n++) Ar << V.BoneIndex[n];
+				for (int n = 0; n < NUM_INFLUENCES_UE3; n++) Ar << V.BoneWeight[n];
+			}
+			S.NumUVSets = GNumGPUUVSets;
+			S.bUsePackedPosition = false;
+			S.bUseFullPrecisionUVs = true;
+			return Ar;
+		}
+	#endif // GEARSU
+
 		if (Ar.IsLoading) S.bUsePackedPosition = false;
 		bool AllowPackedPosition = false;
 		S.NumUVSets = GNumGPUUVSets = 1;
@@ -952,6 +983,7 @@ struct FSkeletalMeshVertexBuffer3
 			}
 		}
 	#endif // ARMYOF2
+
 		if (Ar.ArVer < 493)
 		{
 		old_version:
@@ -1452,6 +1484,18 @@ struct FStaticLODModel3
 		}
 #endif // TRANSFORMERS
 
+#if GEARSU
+		if (Ar.Game == GAME_GoWU)
+		{
+			Ar << Lod.UsedBones;
+			Ar << Lod.Chunks;
+			Ar.Seek(Ar.Tell() + 4);
+			Ar << Lod.NumVertices;
+			Ar.Seek(Ar.Tell() + 8);
+			goto part2;
+		}
+#endif // GEARSU
+
 		if (Ar.ArVer < 686) Ar << Lod.f68;
 		Ar << Lod.UsedBones;
 		if (Ar.ArVer < 686) Ar << Lod.f74;
@@ -1459,6 +1503,7 @@ struct FStaticLODModel3
 		{
 			Ar << Lod.Chunks << Lod.f80 << Lod.NumVertices;
 		}
+	post_chunks:
 		DBG_SKEL("%d chunks, %d bones, %d verts\n", Lod.Chunks.Num(), Lod.UsedBones.Num(), Lod.NumVertices);
 
 #if FRONTLINES
@@ -1596,12 +1641,19 @@ struct FStaticLODModel3
 
 		// UV sets count
 		Lod.NumUVSets = 1;
-		if (Ar.ArVer >= 709)
-			Ar << Lod.NumUVSets;
+
 #if DUNDEF
-		if (Ar.Game == GAME_DunDef && Ar.ArLicenseeVer >= 21)
-			Ar << Lod.NumUVSets;
+		if (Ar.Game == GAME_DunDef && Ar.ArLicenseeVer >= 21) goto serialize_uv_set_count;
 #endif
+#if GEARSU
+		if (Ar.Game == GAME_GoWU) goto serialize_uv_set_count;
+#endif
+
+		if (Ar.ArVer >= 709)
+		{
+		serialize_uv_set_count:
+			Ar << Lod.NumUVSets;
+		}
 		DBG_SKEL("NumUVSets=%d\n", Lod.NumUVSets);
 
 #if MOH2010
@@ -1621,7 +1673,11 @@ struct FStaticLODModel3
 		}
 #endif // FURY
 		if (Ar.ArVer >= 333)
+		{
+			// Usually GPU Skin serializes UV set count, however this is not true for Gears of War: Ultimate
+			GNumGPUUVSets = Lod.NumUVSets;
 			Ar << Lod.GPUSkin;
+		}
 #if MKVSDC
 		if (Ar.Game == GAME_MK && Ar.ArVer >= 459)
 		{
@@ -1637,6 +1693,14 @@ struct FStaticLODModel3
 			if (Ar.ArLicenseeVer >= 42) return Ar;
 		}
 #endif
+#if GEARSU
+		if (Ar.Game == GAME_GoWU)
+		{
+			TArray<FVector> unk; // int ( value, 0, index )
+			Ar << unk;
+			return Ar;
+		}
+#endif // GEARSU
 #if BLOODONSAND
 		if (Ar.Game == GAME_50Cent) return Ar;	// new ArVer, but old engine
 #endif
