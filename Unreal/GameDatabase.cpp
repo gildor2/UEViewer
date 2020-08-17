@@ -890,9 +890,12 @@ void FArchive::DetectGame()
 		SET(GAME_RememberMe);
 #endif
 #if GEARSU
-	if (ArVer == 835 && ArLicenseeVer == 56)
-		SET(GAME_GoWU);									// Gears of War: Ultimate
-#endif
+	if (ArVer == 835 && ArLicenseeVer == 56)			// Gears of War: Ultimate
+	{
+		SET(GAME_GoWU);
+		GForceGame = GAME_GoWU;
+	}
+#endif // GEARSU
 #if GIGANTIC
 	if (ArVer == 867 && ArLicenseeVer == 9)
 		SET(GAME_Gigantic);

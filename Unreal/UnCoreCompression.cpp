@@ -203,8 +203,13 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	guard(appDecompress);
 
 #if GEARSU
-	if (GForceGame == GAME_GoWU && Flags == 32) Flags = COMPRESS_LZ4;
-#endif
+	if (GForceGame == GAME_GoWU)
+	{
+		// It is strange, but this game has 2 Flags both used for LZ4 - probably they were used for different compression
+		// settings of the same algorithm.
+		if (Flags == 4 || Flags == 32) Flags = COMPRESS_LZ4;
+	}
+#endif // GEARSU
 
 #if BLADENSOUL
 	if (GForceGame == GAME_BladeNSoul && Flags == COMPRESS_LZO_ENC_BNS)	// note: GForceGame is required (to not pass 'Game' here)
