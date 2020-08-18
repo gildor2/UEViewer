@@ -9,7 +9,7 @@
 		typedef Base	Super;					\
 		static void InternalConstructor(void *Mem) \
 		{ new(Mem) ThisClass; }					\
-		static const CTypeInfo *StaticGetTypeinfo() \
+		static const CTypeInfo* StaticGetTypeinfo() \
 		{										\
 			int numProps = 0;					\
 			const CPropInfo *props = NULL;		\
@@ -27,7 +27,7 @@
 
 #define DECLARE_STRUCT(Class)					\
 		DECLARE_BASE(Class, CNullType)			\
-		const CTypeInfo *GetTypeinfo() const	\
+		const CTypeInfo* GetTypeinfo() const	\
 		{										\
 			return StaticGetTypeinfo();			\
 		}
@@ -35,7 +35,7 @@
 // structure derived from another structure with typeinfo
 #define DECLARE_STRUCT2(Class,Base)				\
 		DECLARE_BASE(Class, Base)				\
-		const CTypeInfo *GetTypeinfo() const	\
+		const CTypeInfo* GetTypeinfo() const	\
 		{										\
 			return StaticGetTypeinfo();			\
 		}
@@ -43,7 +43,7 @@
 //?? can replace virtual GetClassName() with GetTypeinfo()->Name
 #define DECLARE_CLASS(Class,Base)				\
 		DECLARE_BASE(Class, Base)				\
-		virtual const CTypeInfo *GetTypeinfo() const \
+		virtual const CTypeInfo* GetTypeinfo() const \
 		{										\
 			return StaticGetTypeinfo();			\
 		}										\
@@ -72,7 +72,7 @@ struct CTypeInfo
 	int				NumProps;
 	void (*Constructor)(void*);
 	// methods
-	FORCEINLINE CTypeInfo(const char *AName, const CTypeInfo *AParent, int DataSize,
+	constexpr FORCEINLINE CTypeInfo(const char *AName, const CTypeInfo *AParent, int DataSize,
 					 const CPropInfo *AProps, int PropCount, void (*AConstructor)(void*))
 	:	Name(AName)
 	,	Parent(AParent)
@@ -103,12 +103,12 @@ struct CTypeInfo
 struct CNullType
 {
 	enum { PropLevel = -1 };		// overriden in BEGIN_CLASS_TABLE
-	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps)
+	static constexpr const CPropInfo* StaticGetProps(int& numProps)
 	{
 		numProps = 0;
 		return NULL;
 	}
-	static FORCEINLINE const CTypeInfo *StaticGetTypeinfo()
+	static constexpr const CTypeInfo* StaticGetTypeinfo()
 	{
 		return NULL;
 	}
@@ -125,7 +125,7 @@ struct CNullType
 // BEGIN_PROP_TABLE/END_PROP_TABLE declares property table inside class declaration
 #define BEGIN_PROP_TABLE						\
 	enum { PropLevel = Super::PropLevel + 1 };	\
-	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps) \
+	static const CPropInfo* StaticGetProps(int& numProps) \
 	{											\
 		static const CPropInfo props[] =		\
 		{
@@ -161,7 +161,7 @@ struct CNullType
 // Mix of BEGIN_PROP_TABLE and DECLARE_BASE
 // Allows to declare property table outside of class declaration
 #define BEGIN_PROP_TABLE_EXTERNAL(Class)		\
-static const CTypeInfo* Class##_StaticGetTypeinfo() \
+static FORCEINLINE const CTypeInfo* Class##_StaticGetTypeinfo() \
 {												\
 	static const char ClassName[] = #Class;		\
 	typedef Class ThisClass;					\

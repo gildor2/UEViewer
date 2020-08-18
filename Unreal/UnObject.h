@@ -10,7 +10,18 @@
 
 class UObject
 {
+#if 0
 	DECLARE_BASE(UObject, CNullType)
+#else
+public:
+	// This declaration doesn't have indirection to CNullType::StaticGetProps and therefore is completely 'const' and inlined.
+	// DECLARE_BASE constructs CTypeInfo with reference to CNullType, what makes compiler impossible to optimize it.
+	static const CTypeInfo* StaticGetTypeinfo()
+	{
+		static const CTypeInfo type("UObject", NULL, sizeof(UObject), NULL, 0, NULL);
+		return &type;
+	}
+#endif
 
 public:
 	// internal storage
@@ -31,17 +42,17 @@ public:
 	{}
 
 	// RTTI support
-	inline bool IsA(const char *ClassName) const
+	inline bool IsA(const char* ClassName) const
 	{
 		return GetTypeinfo()->IsA(ClassName);
 	}
-	inline const char *GetClassName() const
+	inline const char* GetClassName() const
 	{
 		return GetTypeinfo()->Name + 1;
 	}
-	const char *GetRealClassName() const;		// class name from the package export table
+	const char* GetRealClassName() const;		// class name from the package export table
 	const char* GetPackageName() const;
-	const char *GetUncookedPackageName() const;
+	const char* GetUncookedPackageName() const;
 	// Get full object path in following format: "OutermostPackage.Package1...PackageN.ObjectName".
 	// IncludeCookedPackageName - use "uncooked" package name for UE3 game
 	// ForcePackageName - append package name even if it's missing in export table
@@ -54,13 +65,14 @@ public:
 	{
 	}
 
-	enum { PropLevel = 0 };
-	static FORCEINLINE const CPropInfo *StaticGetProps(int &numProps)
+	// Empty property table
+	enum { PropLevel = -1 };
+	static constexpr FORCEINLINE const CPropInfo* StaticGetProps(int &numProps)
 	{
 		numProps = 0;
 		return NULL;
 	}
-	virtual const CTypeInfo *GetTypeinfo() const
+	virtual const CTypeInfo* GetTypeinfo() const
 	{
 		return StaticGetTypeinfo();
 	}
@@ -70,7 +82,7 @@ public:
 	static int				GObjBeginLoadCount;
 	static TArray<UObject*>	GObjLoaded;
 	static TArray<UObject*> GObjObjects;
-	static UObject			*GLoadingObj;
+	static UObject*			GLoadingObj;
 
 	static void BeginLoad();
 	static void EndLoad();
@@ -81,15 +93,15 @@ public:
 	int GetArVer() const;
 	int GetLicenseeVer() const;
 
-	void *operator new(size_t Size)
+	void* operator new(size_t Size)
 	{
 		return appMalloc(Size);
 	}
-	void *operator new(size_t Size, void *Mem)	// for inplace constructor
+	void* operator new(size_t Size, void *Mem)	// for inplace constructor
 	{
 		return Mem;
 	}
-	void operator delete(void *Object)
+	void operator delete(void* Object)
 	{
 		appFree(Object);
 	}
