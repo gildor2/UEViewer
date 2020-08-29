@@ -27,6 +27,9 @@ WARNINGS   =				# warnings for our source code (i.e. excluding thirs-parties), e
 
 USE_SYSTEM_LIBS = 0
 
+CPP_STD = c++14				# allow modern C++ features
+							#!! todo: add standard option for that
+
 !if "$COMPILER" eq "VisualC"
 	!if !defined($CPP_EXCEPT)
 		CPP_EXCEPT = 0									# used with WIN32_USE_SEH in Core.h
@@ -46,6 +49,7 @@ USE_SYSTEM_LIBS = 0
 		!endif
 	!endif
 	LINKFLAGS += -largeaddressaware						# allow 32-bit build to use more than 2Gb or RAM
+	OPTIONS += -std:$CPP_STD
 !endif
 
 !if "$COMPILER" eq "GnuC"
@@ -68,7 +72,7 @@ USE_SYSTEM_LIBS = 0
 #		-Wsuggest-override								# enforce use of 'override' keyword for virtual methods
 		-Wunused-value									# warning about expression which is occasionally typed in code and not used anywhare
 	}
-	CPP_OPTIONS += -std=c++0x							# allow C++11 features
+	CPP_OPTIONS += -std=$CPP_STD
 	CPP_OPTIONS += -Wno-invalid-offsetof
 	USE_SYSTEM_LIBS = 1
 !endif
