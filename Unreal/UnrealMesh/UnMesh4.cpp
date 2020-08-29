@@ -2112,6 +2112,7 @@ struct FStaticMeshSection4
 	bool			bEnableCollision;
 	bool			bCastShadow;
 	bool			bForceOpaque;
+	bool			bVisibleInRayTracing;
 
 	friend FArchive& operator<<(FArchive& Ar, FStaticMeshSection4& S)
 	{
@@ -2122,6 +2123,10 @@ struct FStaticMeshSection4
 		if (FRenderingObjectVersion::Get(Ar) >= FRenderingObjectVersion::StaticMeshSectionForceOpaqueField)
 		{
 			Ar << S.bForceOpaque;
+		}
+		if (Ar.Game >= GAME_UE4(26))
+		{
+			Ar << S.bVisibleInRayTracing; //todo: check: StaticMesh always had a custom version for that
 		}
 #if DAUNTLESS
 		if (Ar.Game == GAME_Dauntless) Ar.Seek(Ar.Tell()+8); // 8 zero-filled bytes here
