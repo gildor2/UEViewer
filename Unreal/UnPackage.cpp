@@ -1354,22 +1354,31 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	if (!silent)
 #endif
 	{
-		PKG_LOG("Loading package: %s Ver: %d/%d ", *GetFilename(), Loader->ArVer, Loader->ArLicenseeVer);
+		// Logging. I don't want to drop it entirely because this will reduce error checking possibilities.
+		// Using "\r" at the end of line won't speed up things (on Windows), so keep using "\n".
+		// Combine full log message before sending to appPrintf, it works faster than doing multiple appPrintf calls.
+		char LogBuffer[1024];
+		int LogUsed = 0;
+	#define ADD_LOG(...) LogUsed += appSprintf(LogBuffer + LogUsed, ARRAY_COUNT(LogBuffer) - LogUsed,  __VA_ARGS__);
+		ADD_LOG("Loading package: %s Ver: %d/%d ", *GetFilename(), Loader->ArVer, Loader->ArLicenseeVer);
 			// don't use 'Summary.FileVersion, Summary.LicenseeVersion' because UE4 has overrides for unversioned packages
 #if UNREAL3
 		if (Game >= GAME_UE3)
 		{
-			PKG_LOG("Engine: %d ", Summary.EngineVersion);
+			ADD_LOG("Engine: %d ", Summary.EngineVersion);
 			FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
 			if (UE3Loader && UE3Loader->IsFullyCompressed)
-				PKG_LOG("[FullComp] ");
+				ADD_LOG("[FullComp] ");
 		}
 #endif // UNREAL3
 #if UNREAL4
 		if (Game >= GAME_UE4_BASE && Summary.IsUnversioned)
-			PKG_LOG("[Unversioned] ");
+			ADD_LOG("[Unversioned] ");
 #endif // UNREAL4
-		PKG_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
+		ADD_LOG("Names: %d Exports: %d Imports: %d Game: %X\n", Summary.NameCount, Summary.ExportCount, Summary.ImportCount, Game);
+		// Flush text
+	#undef ADD_LOG
+		PKG_LOG("%s", LogBuffer);
 	}
 
 #if DEBUG_PACKAGE
