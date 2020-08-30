@@ -43,7 +43,7 @@
 #endif
 
 #if defined(__APPLE__)
-//#include "TargetConditionals.h"
+#include <TargetConditionals.h>
 #endif
 
 #include <atomic>		// Requires C++11. Sorry VS2010.

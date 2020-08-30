@@ -7,8 +7,23 @@
 #  include <pthread.h>
 #endif
 
+#ifdef TRACY_MANUAL_LIFETIME
+#  include "tracy_rpmalloc.hpp"
+#endif
+
 namespace tracy
 {
+
+class ThreadExitHandler
+{
+public:
+    ~ThreadExitHandler()
+    {
+#ifdef TRACY_MANUAL_LIFETIME
+        rpmalloc_thread_finalize();
+#endif
+    }
+};
 
 #if defined _WIN32 || defined __CYGWIN__
 

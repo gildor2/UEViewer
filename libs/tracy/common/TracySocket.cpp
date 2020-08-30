@@ -113,27 +113,30 @@ bool Socket::Connect( const char* addr, int port )
     if( m_ptr )
     {
         const auto c = connect( m_connSock, m_ptr->ai_addr, m_ptr->ai_addrlen );
-        assert( c == -1 );
+        if( c == -1 )
+        {
 #if defined _WIN32 || defined __CYGWIN__
-        const auto err = WSAGetLastError();
-        if( err == WSAEALREADY || err == WSAEINPROGRESS ) return false;
-        if( err != WSAEISCONN )
-        {
-            freeaddrinfo( m_res );
-            closesocket( m_connSock );
-            m_ptr = nullptr;
-            return false;
-        }
+            const auto err = WSAGetLastError();
+            if( err == WSAEALREADY || err == WSAEINPROGRESS ) return false;
+            if( err != WSAEISCONN )
+            {
+                freeaddrinfo( m_res );
+                closesocket( m_connSock );
+                m_ptr = nullptr;
+                return false;
+            }
 #else
-        if( errno == EALREADY || errno == EINPROGRESS ) return false;
-        if( errno != EISCONN )
-        {
-            freeaddrinfo( m_res );
-            close( m_connSock );
-            m_ptr = nullptr;
-            return false;
-        }
+            const auto err = errno;
+            if( err == EALREADY || err == EINPROGRESS ) return false;
+            if( err != EISCONN )
+            {
+                freeaddrinfo( m_res );
+                close( m_connSock );
+                m_ptr = nullptr;
+                return false;
+            }
 #endif
+        }
 
 #if defined _WIN32 || defined __CYGWIN__
         u_long nonblocking = 0;
@@ -563,8 +566,10 @@ IpAddress::~IpAddress()
 
 void IpAddress::Set( const struct sockaddr& addr )
 {
-#if __MINGW32__
-    auto ai = (struct sockaddr_in*)&addr;
+#if defined _WIN32 && ( !defined NTDDI_WIN10 || NTDDI_VERSION < NTDDI_WIN10 )
+    struct sockaddr_in tmp;
+    memcpy( &tmp, &addr, sizeof( tmp ) );
+    auto ai = &tmp;
 #else
     auto ai = (const struct sockaddr_in*)&addr;
 #endif

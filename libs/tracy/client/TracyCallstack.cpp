@@ -222,9 +222,9 @@ static const char* GetModuleName( uint64_t addr )
     return "[unknown]";
 }
 
-SymbolData DecodeSymbolAddress( uint64_t ptr )
+CallstackSymbolData DecodeSymbolAddress( uint64_t ptr )
 {
-    SymbolData sym;
+    CallstackSymbolData sym;
     IMAGEHLP_LINE64 line;
     DWORD displacement = 0;
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
@@ -242,9 +242,9 @@ SymbolData DecodeSymbolAddress( uint64_t ptr )
     return sym;
 }
 
-SymbolData DecodeCodeAddress( uint64_t ptr )
+CallstackSymbolData DecodeCodeAddress( uint64_t ptr )
 {
-    SymbolData sym;
+    CallstackSymbolData sym;
     const auto proc = GetCurrentProcess();
     bool done = false;
 
@@ -442,14 +442,10 @@ const char* DecodeCallstackPtrFast( uint64_t ptr )
 
 static int SymbolAddressDataCb( void* data, uintptr_t pc, uintptr_t lowaddr, const char* fn, int lineno, const char* function )
 {
-    auto& sym = *(SymbolData*)data;
+    auto& sym = *(CallstackSymbolData*)data;
     if( !fn )
     {
-        const char* symloc = nullptr;
-        Dl_info dlinfo;
-        if( dladdr( (void*)pc, &dlinfo ) ) symloc = dlinfo.dli_fname;
-        if( !symloc ) symloc = "[unknown]";
-        sym.file = symloc;
+        sym.file = "[unknown]";
         sym.line = 0;
         sym.needFree = false;
     }
@@ -465,20 +461,20 @@ static int SymbolAddressDataCb( void* data, uintptr_t pc, uintptr_t lowaddr, con
 
 static void SymbolAddressErrorCb( void* data, const char* /*msg*/, int /*errnum*/ )
 {
-    auto& sym = *(SymbolData*)data;
+    auto& sym = *(CallstackSymbolData*)data;
     sym.file = "[unknown]";
     sym.line = 0;
     sym.needFree = false;
 }
 
-SymbolData DecodeSymbolAddress( uint64_t ptr )
+CallstackSymbolData DecodeSymbolAddress( uint64_t ptr )
 {
-    SymbolData sym;
+    CallstackSymbolData sym;
     backtrace_pcinfo( cb_bts, ptr, SymbolAddressDataCb, SymbolAddressErrorCb, &sym );
     return sym;
 }
 
-SymbolData DecodeCodeAddress( uint64_t ptr )
+CallstackSymbolData DecodeCodeAddress( uint64_t ptr )
 {
     return DecodeSymbolAddress( ptr );
 }
@@ -494,14 +490,12 @@ static int CallstackDataCb( void* /*data*/, uintptr_t pc, uintptr_t lowaddr, con
     if( !fn && !function )
     {
         const char* symname = nullptr;
-        const char* symloc = nullptr;
         auto vptr = (void*)pc;
         ptrdiff_t symoff = 0;
 
         Dl_info dlinfo;
         if( dladdr( vptr, &dlinfo ) )
         {
-            symloc = dlinfo.dli_fname;
             symname = dlinfo.dli_sname;
             symoff = (char*)pc - (char*)dlinfo.dli_saddr;
 
@@ -518,7 +512,6 @@ static int CallstackDataCb( void* /*data*/, uintptr_t pc, uintptr_t lowaddr, con
         }
 
         if( !symname ) symname = "[unknown]";
-        if( !symloc ) symloc = "[unknown]";
 
         if( symoff == 0 )
         {
@@ -536,15 +529,7 @@ static int CallstackDataCb( void* /*data*/, uintptr_t pc, uintptr_t lowaddr, con
             cb_data[cb_num].name = name;
         }
 
-        char buf[32];
-        const auto addrlen = sprintf( buf, " [%p]", (void*)pc );
-        const auto loclen = strlen( symloc );
-        auto loc = (char*)tracy_malloc( loclen + addrlen + 1 );
-        memcpy( loc, symloc, loclen );
-        memcpy( loc + loclen, buf, addrlen );
-        loc[loclen + addrlen] = '\0';
-        cb_data[cb_num].file = loc;
-
+        cb_data[cb_num].file = CopyString( "[unknown]" );
         cb_data[cb_num].line = 0;
     }
     else
@@ -652,16 +637,16 @@ const char* DecodeCallstackPtrFast( uint64_t ptr )
     return ret;
 }
 
-SymbolData DecodeSymbolAddress( uint64_t ptr )
+CallstackSymbolData DecodeSymbolAddress( uint64_t ptr )
 {
     const char* symloc = nullptr;
     Dl_info dlinfo;
     if( dladdr( (void*)ptr, &dlinfo ) ) symloc = dlinfo.dli_fname;
     if( !symloc ) symloc = "[unknown]";
-    return SymbolData { symloc, 0, false };
+    return CallstackSymbolData { symloc, 0, false };
 }
 
-SymbolData DecodeCodeAddress( uint64_t ptr )
+CallstackSymbolData DecodeCodeAddress( uint64_t ptr )
 {
     return DecodeSymbolAddress( ptr );
 }
@@ -717,15 +702,7 @@ CallstackEntryData DecodeCallstackPtr( uint64_t ptr )
         cb.name = name;
     }
 
-    char buf[32];
-    const auto addrlen = sprintf( buf, " [%p]", (void*)ptr );
-    const auto loclen = strlen( symloc );
-    auto loc = (char*)tracy_malloc( loclen + addrlen + 1 );
-    memcpy( loc, symloc, loclen );
-    memcpy( loc + loclen, buf, addrlen );
-    loc[loclen + addrlen] = '\0';
-    cb.file = loc;
-
+    cb.file = CopyString( "[unknown]" );
     cb.symLen = 0;
     cb.symAddr = (uint64_t)symaddr;
 
