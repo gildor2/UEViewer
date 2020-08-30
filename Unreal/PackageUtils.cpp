@@ -47,6 +47,9 @@ void ReleaseAllObjects()
 {
 	guard(ReleaseAllObjects);
 
+	// It is possible that no objects were loaded, however we have fully loaded packages - always clean up the list
+	GFullyLoadedPackages.Empty();
+
 	if (!UObject::GObjObjects.Num()) return;
 
 #if 0
@@ -56,8 +59,6 @@ void ReleaseAllObjects()
 	for (int i = UObject::GObjObjects.Num() - 1; i >= 0; i--)
 		delete UObject::GObjObjects[i];
 	UObject::GObjObjects.Empty();
-
-	GFullyLoadedPackages.Empty();
 
 #if 0
 	// verify that all object pointers were set to NULL
