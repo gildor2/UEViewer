@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+01.09.2020
+- bugfix: exporting of all referenced textures from materials didn't work
+
 14.08.2020
 - Gears of War Ultimate Edition support
 
