@@ -176,6 +176,8 @@ int CSkeletalMesh::GetRootBone() const
 
 void CSkeletalMesh::FinalizeMesh()
 {
+	guard(CSkeletalMesh::FinalizeMesh);
+
 	for (int lod = 0; lod < Lods.Num(); lod++)
 		Lods[lod].BuildNormals();
 	SortBones();
@@ -271,7 +273,9 @@ void CSkeletalMesh::FinalizeMesh()
 		}
 	}
 
-	if (NumFixedVerts) appPrintf("INFO: fixed %d vertices\n", NumFixedVerts);
+	if (NumFixedVerts) appPrintf("Renormalized bone weights for %d vertices\n", NumFixedVerts);
+
+	unguard;
 }
 
 

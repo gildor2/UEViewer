@@ -921,6 +921,8 @@ struct FSkeletalMeshVertexBuffer3
 			int32 Stride; // wrong value: contains 0x44, real vertex size is 0x40 - so can't use BulkSerialize
 			Ar << NumVerts << Stride;
 			S.VertsFloat.AddZeroed(NumVerts);
+			// Stride = 0x44 -> real size = 0x40
+			// String = 0x4C -> real size = 0x48
 			for (int i = 0; i < NumVerts; i++)
 			{
 				FGPUVert3Float& V = S.VertsFloat[i];
@@ -929,6 +931,7 @@ struct FSkeletalMeshVertexBuffer3
 				for (int uv = 0; uv < GNumGPUUVSets; uv++) Ar << V.UV[uv];
 				uint32 Color;
 				Ar << Color;
+				if (Stride == 0x4C) Ar.Seek(Ar.Tell() + 8); // unknown bytes
 				for (int n = 0; n < NUM_INFLUENCES_UE3; n++) Ar << V.BoneIndex[n];
 				for (int n = 0; n < NUM_INFLUENCES_UE3; n++) Ar << V.BoneWeight[n];
 			}
@@ -1646,7 +1649,14 @@ struct FStaticLODModel3
 		if (Ar.Game == GAME_DunDef && Ar.ArLicenseeVer >= 21) goto serialize_uv_set_count;
 #endif
 #if GEARSU
-		if (Ar.Game == GAME_GoWU) goto serialize_uv_set_count;
+		if (Ar.Game == GAME_GoWU)
+		{
+			Lod.NumUVSets = 4;
+			// Value: usually 4, sometimes 8. It is not NumUVSets
+			int32 unk;
+			Ar << unk;
+			goto gpu_skin;
+		}
 #endif
 
 		if (Ar.ArVer >= 709)
@@ -1674,6 +1684,7 @@ struct FStaticLODModel3
 #endif // FURY
 		if (Ar.ArVer >= 333)
 		{
+		gpu_skin:
 			// Usually GPU Skin serializes UV set count, however this is not true for Gears of War: Ultimate
 			GNumGPUUVSets = Lod.NumUVSets;
 			Ar << Lod.GPUSkin;
