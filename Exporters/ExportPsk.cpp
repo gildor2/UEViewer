@@ -85,6 +85,7 @@ static void ExportCommonMeshData
 #define SECT(n)		(Sections + n)
 
 	// main psk header
+	MainHdr.TypeFlag = PSK_VERSION;
 	SAVE_CHUNK(MainHdr, "ACTRHEAD");
 
 	guard(Points);
@@ -516,7 +517,7 @@ const UObject* GetPrimaryAnimObject(const CAnimSet* Anim)
 void ExportPsa(const CAnimSet *Anim)
 {
 	// using 'static' here to avoid zero-filling unused fields
-	static VChunkHeader MainHdr, BoneHdr, AnimHdr, KeyHdr;
+	static VChunkHeader MainHdr, BoneHdr, AnimHdr, KeyHdr, ScaleKeysHdr;
 	int i;
 
 	if (!Anim->Sequences.Num()) return;			// empty CAnimSet
@@ -530,6 +531,7 @@ void ExportPsa(const CAnimSet *Anim)
 	int numBones = Anim->TrackBoneNames.Num();
 	int numAnims = Anim->Sequences.Num();
 
+	MainHdr.TypeFlag = PSA_VERSION;
 	SAVE_CHUNK(MainHdr, "ANIMHEAD");
 
 	BoneHdr.DataCount = numBones;
@@ -629,6 +631,17 @@ void ExportPsa(const CAnimSet *Anim)
 	}
 	assert(keysCount == 0);
 	unguard;
+
+	// UE3 source code reference: UEditorEngine::ImportPSAIntoAnimSet()
+	// The function doesn't perform any checks for chunk names etc, so we're very restricted in
+	// using very strict order of chunks. If main chunk has version (TypeFlag) at least 20090127,
+	// importer will always read "SCALEKEYS" chunk.
+	if (PSA_VERSION >= 20090127)
+	{
+		ScaleKeysHdr.DataCount = 0;
+		ScaleKeysHdr.DataSize  = 16; // sizeof(VScaleAnimKey) = FVector + float
+		SAVE_CHUNK(ScaleKeysHdr, "SCALEKEYS");
+	}
 
 	// psa file is done
 	delete Ar0;

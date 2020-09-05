@@ -2,6 +2,9 @@
 #define __PSK_H__
 
 
+#define PSK_VERSION		20100422
+#define PSA_VERSION		20100422
+
 /******************************************************************************
  *	Common structures
  *****************************************************************************/
@@ -9,9 +12,9 @@
 struct VChunkHeader
 {
 	char			ChunkID[20];			// text identifier
-	int				TypeFlag;				// version: 1999801 or 2003321
-	int				DataSize;				// sizeof(type)
-	int				DataCount;				// number of array elements
+	uint32			TypeFlag;				// version: 1999801 or 2003321
+	int32			DataSize;				// sizeof(type)
+	int32			DataCount;				// number of array elements
 
 	friend FArchive& operator<<(FArchive &Ar, VChunkHeader &H)
 	{
@@ -30,7 +33,6 @@ struct VChunkHeader
 
 #define SAVE_CHUNK(var, name)	\
 	strcpy(var.ChunkID, name);	\
-	var.TypeFlag = 20100422;	\
 	Ar << var;
 //	appPrintf("%08X: %s: type=%d / count=%d / size=%d\n", Ar.Tell(), var.ChunkID, var.TypeFlag, var.DataCount, var.DataSize);
 
@@ -43,7 +45,7 @@ struct VChunkHeader
 
 struct VVertex
 {
-	int				PointIndex;				// int16, padded to int; used as int for large meshes
+	int32			PointIndex;				// int16, padded to int; used as int for large meshes
 	float			U, V;
 	byte			MatIndex;
 	byte			Reserved;
@@ -80,12 +82,12 @@ struct VTriangle16
 struct VMaterial
 {
 	char			MaterialName[64];
-	int				TextureIndex;
-	unsigned		PolyFlags;
-	int				AuxMaterial;
-	unsigned		AuxFlags;
-	int				LodBias;
-	int				LodStyle;
+	int32			TextureIndex;
+	uint32			PolyFlags;
+	int32			AuxMaterial;
+	uint32			AuxFlags;
+	int32			LodBias;
+	int32			LodStyle;
 
 	friend FArchive& operator<<(FArchive &Ar, VMaterial &M)
 	{
@@ -115,9 +117,9 @@ struct VJointPosPsk
 struct VBone
 {
 	char			Name[64];
-	unsigned		Flags;
-	int				NumChildren;
-	int				ParentIndex;			// 0 if this is the root bone.
+	uint32			Flags;
+	int32			NumChildren;
+	int32			ParentIndex;			// 0 if this is the root bone.
 	VJointPosPsk	BonePos;
 
 	friend FArchive& operator<<(FArchive &Ar, VBone &B)
@@ -131,8 +133,8 @@ struct VBone
 struct VRawBoneInfluence
 {
 	float			Weight;
-	int				PointIndex;
-	int				BoneIndex;
+	int32			PointIndex;
+	int32			BoneIndex;
 
 	friend FArchive& operator<<(FArchive &Ar, VRawBoneInfluence &I)
 	{
@@ -161,10 +163,10 @@ struct VMeshUV
 // NOTE: this structure has different on-disk and in-memory layout and size (due to alignment).
 struct VTriangle32
 {
-	int				WedgeIndex[3];			// Point to three vertices in the vertex list.
+	int32			WedgeIndex[3];			// Point to three vertices in the vertex list.
 	byte			MatIndex;				// Materials can be anything.
 	byte			AuxMatIndex;			// Second material (unused).
-	unsigned		SmoothingGroups;		// 32-bit flag for smoothing groups.
+	uint32			SmoothingGroups;		// 32-bit flag for smoothing groups.
 
 	friend FArchive& operator<<(FArchive &Ar, VTriangle32 &T)
 	{
@@ -183,9 +185,9 @@ struct VTriangle32
 struct FNamedBoneBinary
 {
 	char			Name[64];				// Bone's name
-	unsigned		Flags;					// reserved
-	int				NumChildren;
-	int				ParentIndex;			// 0/NULL if this is the root bone.
+	uint32			Flags;					// reserved
+	int32			NumChildren;
+	int32			ParentIndex;			// 0/NULL if this is the root bone.
 	VJointPosPsk	BonePos;
 
 	friend FArchive& operator<<(FArchive &Ar, FNamedBoneBinary &B)
@@ -203,17 +205,17 @@ struct AnimInfoBinary
 	char			Name[64];				// Animation's name
 	char			Group[64];				// Animation's group name
 
-	int				TotalBones;				// TotalBones * NumRawFrames is number of animation keys to digest.
+	int32			TotalBones;				// TotalBones * NumRawFrames is number of animation keys to digest.
 
-	int				RootInclude;			// 0 none 1 included (unused)
-	int				KeyCompressionStyle;	// Reserved: variants in tradeoffs for compression.
-	int				KeyQuotum;				// Max key quotum for compression; ActorX sets this to numFrames*numBones
+	int32			RootInclude;			// 0 none 1 included (unused)
+	int32			KeyCompressionStyle;	// Reserved: variants in tradeoffs for compression.
+	int32			KeyQuotum;				// Max key quotum for compression; ActorX sets this to numFrames*numBones
 	float			KeyReduction;			// desired
 	float			TrackTime;				// explicit - can be overridden by the animation rate
 	float			AnimRate;				// frames per second.
-	int				StartBone;				// Reserved: for partial animations
-	int				FirstRawFrame;			// global number of first animation frame
-	int				NumRawFrames;			// NumRawFrames and AnimRate dictate tracktime...
+	int32			StartBone;				// Reserved: for partial animations
+	int32			FirstRawFrame;			// global number of first animation frame
+	int32			NumRawFrames;			// NumRawFrames and AnimRate dictate tracktime...
 
 	friend FArchive& operator<<(FArchive &Ar, AnimInfoBinary &A)
 	{
