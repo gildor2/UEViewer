@@ -417,6 +417,10 @@ public:
 
 private:
 	void LoadNameTable();
+	void LoadNameTable3();
+	void LoadNameTable4();
+	bool VerifyName(FString& nameStr, int nameIndex);
+
 	void LoadImportTable();
 	void LoadExportTable();
 

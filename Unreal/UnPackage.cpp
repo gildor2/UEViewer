@@ -1483,6 +1483,38 @@ no_depends: ;
 	unguardf("%s, ver=%d/%d, game=%s", filename, ArVer, ArLicenseeVer, GetGameTag(Game));
 }
 
+bool UnPackage::VerifyName(FString& nameStr, int nameIndex)
+{
+	// Verify name, some Korean games (B&S) has garbage in FName (unicode?)
+	bool goodName = true;
+	int numBadChars = 0;
+	for (char c : nameStr.GetDataArray())
+	{
+		if (c < ' ' || c > 0x7F)
+		{
+			if (c == 0) break; // end of line is included into FString
+			// unreadable character
+			goodName = false;
+			break;
+		}
+		if (c == '$') numBadChars++;		// unicode characters replaced with '$' in FString serializer
+	}
+	if (goodName && numBadChars)
+	{
+		int nameLen = nameStr.Len();
+		if (nameLen >= 64) goodName = false;
+		if (numBadChars >= nameLen / 2 && nameLen > 16) goodName = false;
+	}
+	if (!goodName)
+	{
+		// replace name
+		appPrintf("WARNING: %s: fixing name %d (%s)\n", *GetFilename(), nameIndex, *nameStr);
+		char buf[64];
+		appSprintf(ARRAY_ARG(buf), "__name_%d__", nameIndex);
+		nameStr = buf;
+	}
+	return goodName;
+}
 
 void UnPackage::LoadNameTable()
 {
@@ -1492,17 +1524,33 @@ void UnPackage::LoadNameTable()
 
 	Seek(Summary.NameOffset);
 	NameTable = new const char* [Summary.NameCount];
+
+#if UNREAL4
+	if (Game >= GAME_UE4_BASE)
+	{
+		LoadNameTable4();
+		return;
+	}
+#endif
+#if UNREAL3
+	if (Game >= GAME_UE3)
+	{
+		LoadNameTable3();
+		return;
+	}
+#endif
+
+	// Unreal engine 1 and 2 code
+
+	// Korean games sometimes uses Unicode strings, so use FString for serialization
 	FStaticString<MAX_FNAME_LEN> nameStr;
 
 	for (int i = 0; i < Summary.NameCount; i++)
 	{
 		guard(Name);
 
-#if UNREAL4
-		if (Game >= GAME_UE4_BASE) goto ue4_name; // bypass all of pre-UE4 game checks
-#endif
-
-		if ((ArVer < 64) && (Game < GAME_UE4_BASE)) // UE4 has restarted versioning from 0
+		// UE1
+		if (ArVer < 64)
 		{
 			char buf[MAX_FNAME_LEN];
 			int len;
@@ -1515,12 +1563,11 @@ void UnPackage::LoadNameTable()
 			}
 			assert(len < ARRAY_COUNT(buf));
 			NameTable[i] = appStrdupPool(buf);
-			// skip object flags
-			int tmp;
-			*this << tmp;
+			goto dword_flags;
 		}
+
 #if UC1 || PARIAH
-		else if (Game == GAME_UC1 && ArLicenseeVer >= 28)
+		if (Game == GAME_UC1 && ArLicenseeVer >= 28)
 		{
 		uc1_name:
 			// used uint16 + char[] instead of FString
@@ -1530,234 +1577,95 @@ void UnPackage::LoadNameTable()
 			assert(len < ARRAY_COUNT(buf));
 			Serialize(buf, len+1);
 			NameTable[i] = appStrdupPool(buf);
-			// skip object flags
-			int tmp;
-			*this << tmp;
+			goto dword_flags;
 		}
 	#if PARIAH
-		else if (Game == GAME_Pariah && ((ArLicenseeVer & 0x3F) >= 28)) goto uc1_name;
+		if (Game == GAME_Pariah && ((ArLicenseeVer & 0x3F) >= 28)) goto uc1_name;
 	#endif
 #endif // UC1 || PARIAH
-		else
-		{
+
 #if SPLINTER_CELL
-			if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
-			{
-				char buf[256];
-				byte len;
-				int flags;
-				*this << len;
-				Serialize(buf, len+1);
-				NameTable[i] = appStrdupPool(buf);
-				*this << flags;
-				goto done;
-			}
-#endif // SPLINTER_CELL
-#if LEAD
-			if (Game == GAME_SplinterCellConv && ArVer >= 68)
-			{
-				char buf[MAX_FNAME_LEN];
-				int len;
-				*this << AR_INDEX(len);
-				assert(len < ARRAY_COUNT(buf));
-				Serialize(buf, len);
-				buf[len] = 0;
-				NameTable[i] = appStrdupPool(buf);
-				goto done;
-			}
-#endif // LEAD
-#if AA2
-			if (Game == GAME_AA2)
-			{
-				guard(AA2_FName);
-				char buf[MAX_FNAME_LEN];
-				int len;
-				*this << AR_INDEX(len);
-				// read as unicode string and decrypt
-				assert(len <= 0);
-				len = -len;
-				assert(len < ARRAY_COUNT(buf));
-				char* d = buf;
-				byte shift = 5;
-				for (int j = 0; j < len; j++, d++)
-				{
-					uint16 c;
-					*this << c;
-					uint16 c2 = ROR16(c, shift);
-					assert(c2 < 256);
-					*d = c2 & 0xFF;
-					shift = (c - 5) & 15;
-				}
-				NameTable[i] = appStrdupPool(buf);
-				int unk;
-				*this << AR_INDEX(unk);
-				unguard;
-				goto dword_flags;
-			}
-#endif // AA2
-#if DCU_ONLINE
-			if (Game == GAME_DCUniverse)		// no version checking
-			{
-				char buf[MAX_FNAME_LEN];
-				int len;
-				*this << len;
-				assert(len > 0 && len < 0x3FF);	// requires extra code
-				assert(len < ARRAY_COUNT(buf));
-				Serialize(buf, len);
-				buf[len] = 0;
-				NameTable[i] = appStrdupPool(buf);
-				goto qword_flags;
-			}
-#endif // DCU_ONLINE
-#if R6VEGAS
-			if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
-			{
-				char buf[256];
-				byte len;
-				*this << len;
-				Serialize(buf, len);
-				buf[len] = 0;
-				NameTable[i] = appStrdupPool(buf);
-				goto done;
-			}
-#endif // R6VEGAS
-#if TRANSFORMERS
-			if (Game == GAME_Transformers && ArLicenseeVer >= 181) // Transformers: Fall of Cybertron; no real version in code
-			{
-				char buf[MAX_FNAME_LEN];
-				int len;
-				*this << len;
-				assert(len < ARRAY_COUNT(buf));
-				Serialize(buf, len);
-				buf[len] = 0;
-				NameTable[i] = appStrdupPool(buf);
-				goto qword_flags;
-			}
-#endif // TRANSFORMERS
-
-		ue4_name:
-			// Korean games sometimes uses Unicode strings ...
-			*this << nameStr;
-	#if AVA
-			if (Game == GAME_AVA)
-			{
-				// strange code - package contains some bytes:
-				// V(0) = len ^ 0x3E
-				// V(i) = V(i-1) + 0x48 ^ 0xE1
-				// Number of bytes = (len ^ 7) & 0xF
-				int skip = nameStr.Len();
-				skip = (skip ^ 7) & 0xF;
-				Seek(Tell() + skip);
-			}
-	#endif // AVA
-
-			// Verify name, some Korean games (B&S) has garbage there.
-			// Use separate block to not mess with 'goto crossing variable initialization' error.
-			{
-				// Paragon has many names ended with '\n', so it's good idea to trim spaces
-				nameStr.TrimStartAndEndInline();
-				bool goodName = true;
-				int numBadChars = 0;
-				for (char c : nameStr.GetDataArray())
-				{
-					if (c < ' ' || c > 0x7F)
-					{
-						if (c == 0) break; // end of line is included into FString
-						// unreadable character
-						goodName = false;
-						break;
-					}
-					if (c == '$') numBadChars++;		// unicode characters replaced with '$' in FString serializer
-				}
-				if (goodName && numBadChars)
-				{
-					int nameLen = nameStr.Len();
-					if (nameLen >= 64) goodName = false;
-					if (numBadChars >= nameLen / 2 && nameLen > 16) goodName = false;
-				}
-				if (!goodName)
-				{
-					// replace name
-					appPrintf("WARNING: %s: fixing name %d (%s)\n", *GetFilename(), i, *nameStr);
-					char buf[64];
-					appSprintf(ARRAY_ARG(buf), "__name_%d__", i);
-					nameStr = buf;
-				}
-			}
-
-			// remember the name
-	#if 0
-			NameTable[i] = new char[name.Num()];
-			strcpy(NameTable[i], *name);
-	#else
-			NameTable[i] = appStrdupPool(*nameStr);
-	#endif
-
-	#if UNREAL4
-			if (Game >= GAME_UE4_BASE)
-			{
-		#if GEARS4 || DAYSGONE
-				if (Game == GAME_Gears4 || Game == GAME_DaysGone) goto name_hashes;
-		#endif
-				if (ArVer >= VER_UE4_NAME_HASHES_SERIALIZED)
-				{
-				name_hashes:
-					int16 NonCasePreservingHash, CasePreservingHash;
-					*this << NonCasePreservingHash << CasePreservingHash;
-				}
-				// skip object flags
-				goto done;
-			}
-	#endif
-	#if UNREAL3
-		#if BIOSHOCK
-			if (Game == GAME_Bioshock) goto qword_flags;
-		#endif
-		#if WHEELMAN
-			if (Game == GAME_Wheelman) goto dword_flags;
-		#endif
-		#if MASSEFF
-			if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
-			{
-				if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
-				if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
-			}
-		#endif // MASSEFF
-		#if MKVSDC
-			if (Game == GAME_MK && ArVer >= 677) goto done;		// no flags for MK X
-		#endif
-		#if METRO_CONF
-			if (Game == GAME_MetroConflict)
-			{
-				int TrashLen = 0;
-				if (ArLicenseeVer < 3)
-				{
-				}
-				else if (ArLicenseeVer < 16)
-				{
-					TrashLen = nameStr.Len() ^ 7;
-				}
-				else
-				{
-					TrashLen = nameStr.Len() ^ 6;
-				}
-				this->Seek(this->Tell() + (TrashLen & 0xF));
-			}
-		#endif // METRO_CONF
-			if (Game >= GAME_UE3 && ArVer >= 195)
-			{
-			qword_flags:
-				// object flags are 64-bit in UE3, skip additional 32 bits
-				int64 flags64;
-				*this << flags64;
-				goto done;
-			}
-	#endif // UNREAL3
-
-		dword_flags:
-			int flags32;
-			*this << flags32;
+		if (Game == GAME_SplinterCell && ArLicenseeVer >= 85)
+		{
+			char buf[256];
+			byte len;
+			*this << len;
+			Serialize(buf, len+1);
+			NameTable[i] = appStrdupPool(buf);
+			goto dword_flags;
 		}
+#endif // SPLINTER_CELL
+
+#if LEAD
+		if (Game == GAME_SplinterCellConv && ArVer >= 68)
+		{
+			char buf[MAX_FNAME_LEN];
+			int len;
+			*this << AR_INDEX(len);
+			assert(len < ARRAY_COUNT(buf));
+			Serialize(buf, len);
+			buf[len] = 0;
+			NameTable[i] = appStrdupPool(buf);
+			goto done;
+		}
+#endif // LEAD
+
+#if AA2
+		if (Game == GAME_AA2)
+		{
+			guard(AA2_FName);
+			char buf[MAX_FNAME_LEN];
+			int len;
+			*this << AR_INDEX(len);
+			// read as unicode string and decrypt
+			assert(len <= 0);
+			len = -len;
+			assert(len < ARRAY_COUNT(buf));
+			char* d = buf;
+			byte shift = 5;
+			for (int j = 0; j < len; j++, d++)
+			{
+				uint16 c;
+				*this << c;
+				uint16 c2 = ROR16(c, shift);
+				assert(c2 < 256);
+				*d = c2 & 0xFF;
+				shift = (c - 5) & 15;
+			}
+			NameTable[i] = appStrdupPool(buf);
+			int unk;
+			*this << AR_INDEX(unk);
+			unguard;
+			goto dword_flags;
+		}
+#endif // AA2
+
+		*this << nameStr;
+
+		VerifyName(nameStr, i);
+
+		// Remember the name
+	#if 0
+		NameTable[i] = new char[name.Num()];
+		strcpy(NameTable[i], *name);
+	#else
+		NameTable[i] = appStrdupPool(*nameStr);
+	#endif
+
+	#if BIOSHOCK
+		if (Game == GAME_Bioshock)
+		{
+			// 64-bit flags, like in UE3
+			uint64 flags64;
+			*this << flags64;
+			goto done;
+		}
+	#endif // BIOSHOCK
+
+	dword_flags:
+		uint32 flags32;
+		*this << flags32;
+
 	done: ;
 #if DEBUG_PACKAGE
 		PKG_LOG("Name[%d]: \"%s\"\n", i, NameTable[i]);
@@ -1767,6 +1675,182 @@ void UnPackage::LoadNameTable()
 
 	unguard;
 }
+
+
+#if UNREAL3
+
+void UnPackage::LoadNameTable3()
+{
+	guard(UnPackage::LoadNameTable3);
+
+	FStaticString<MAX_FNAME_LEN> nameStr;
+
+	for (int i = 0; i < Summary.NameCount; i++)
+	{
+		guard(Name);
+
+#if DCU_ONLINE
+		if (Game == GAME_DCUniverse)		// no version checking
+		{
+			char buf[MAX_FNAME_LEN];
+			int len;
+			*this << len;
+			assert(len > 0 && len < 0x3FF);	// requires extra code
+			assert(len < ARRAY_COUNT(buf));
+			Serialize(buf, len);
+			buf[len] = 0;
+			NameTable[i] = appStrdupPool(buf);
+			goto qword_flags;
+		}
+#endif // DCU_ONLINE
+#if R6VEGAS
+		if (Game == GAME_R6Vegas2 && ArLicenseeVer >= 71)
+		{
+			char buf[256];
+			byte len;
+			*this << len;
+			Serialize(buf, len);
+			buf[len] = 0;
+			NameTable[i] = appStrdupPool(buf);
+			goto done;
+		}
+#endif // R6VEGAS
+#if TRANSFORMERS
+		if (Game == GAME_Transformers && ArLicenseeVer >= 181) // Transformers: Fall of Cybertron; no real version in code
+		{
+			char buf[MAX_FNAME_LEN];
+			int len;
+			*this << len;
+			assert(len < ARRAY_COUNT(buf));
+			Serialize(buf, len);
+			buf[len] = 0;
+			NameTable[i] = appStrdupPool(buf);
+			goto qword_flags;
+		}
+#endif // TRANSFORMERS
+
+		*this << nameStr;
+
+#if AVA
+		if (Game == GAME_AVA)
+		{
+			// Strange code - package contains some bytes:
+			// V(0) = len ^ 0x3E
+			// V(i) = V(i-1) + 0x48 ^ 0xE1
+			// Number of bytes = (len ^ 7) & 0xF
+			int skip = nameStr.Len();
+			skip = (skip ^ 7) & 0xF;
+			Seek(Tell() + skip);
+		}
+#endif // AVA
+
+		VerifyName(nameStr, i);
+
+		// Remember the name
+		NameTable[i] = appStrdupPool(*nameStr);
+
+#if WHEELMAN
+		if (Game == GAME_Wheelman) goto dword_flags;
+#endif
+#if MASSEFF
+		if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
+		{
+			if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
+			if (ArLicenseeVer >= 102) goto dword_flags;		// ME2
+		}
+#endif // MASSEFF
+#if MKVSDC
+		if (Game == GAME_MK && ArVer >= 677) goto done;		// no flags for MK X
+#endif
+#if METRO_CONF
+		if (Game == GAME_MetroConflict)
+		{
+			int TrashLen = 0;
+			if (ArLicenseeVer < 3)
+			{
+			}
+			else if (ArLicenseeVer < 16)
+			{
+				TrashLen = nameStr.Len() ^ 7;
+			}
+			else
+			{
+				TrashLen = nameStr.Len() ^ 6;
+			}
+			this->Seek(this->Tell() + (TrashLen & 0xF));
+		}
+#endif // METRO_CONF
+
+		// Generic UE3
+		if (ArVer >= 195)
+		{
+		qword_flags:
+			// Object flags are 64-bit in UE3
+			uint64 flags64;
+			*this << flags64;
+		}
+		else
+		{
+		dword_flags:
+			uint32 flags32;
+			*this << flags32;
+		}
+
+	done: ;
+#if DEBUG_PACKAGE
+		PKG_LOG("Name[%d]: \"%s\"\n", i, NameTable[i]);
+#endif
+		unguardf("%d", i);
+	}
+
+	unguard;
+}
+
+#endif // UNREAL3
+
+
+#if UNREAL4
+
+void UnPackage::LoadNameTable4()
+{
+	guard(UnPackage::LoadNameTable4);
+
+	FStaticString<MAX_FNAME_LEN> nameStr;
+
+	// Process version outside of the loop
+	bool bHasNameHashes = (ArVer >= VER_UE4_NAME_HASHES_SERIALIZED);
+#if GEARS4 || DAYSGONE
+	if (Game == GAME_Gears4 || Game == GAME_DaysGone) bHasNameHashes = true;
+#endif
+
+	for (int i = 0; i < Summary.NameCount; i++)
+	{
+		guard(Name);
+
+		*this << nameStr;
+
+		// Paragon has many names ended with '\n', so it's good idea to trim spaces
+		nameStr.TrimStartAndEndInline();
+
+		// Remember the name
+		NameTable[i] = appStrdupPool(*nameStr);
+
+		if (bHasNameHashes)
+		{
+			int16 NonCasePreservingHash, CasePreservingHash;
+			*this << NonCasePreservingHash << CasePreservingHash;
+		}
+
+#if DEBUG_PACKAGE
+		PKG_LOG("Name[%d]: \"%s\"\n", i, NameTable[i]);
+#endif
+		unguardf("%d", i);
+	}
+
+	unguard;
+}
+
+#endif // UNREAL4
 
 
 void UnPackage::LoadImportTable()
