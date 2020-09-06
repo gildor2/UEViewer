@@ -982,8 +982,11 @@ void UAnimSequence4::SerializeCompressedData(FArchive& Ar)
 	Ar << (byte&)RotationCompressionFormat;
 	Ar << (byte&)ScaleCompressionFormat;
 #if DEBUG_ANIM
-	appPrintf("Key: %d Trans: %d Rot: %d Scale: %d\n", KeyEncodingFormat, TranslationCompressionFormat,
-		RotationCompressionFormat, ScaleCompressionFormat);
+	appPrintf("Key: %d (%s) Trans: %d (%s) Rot: %d (%s) Scale: %d (%s)\n",
+		KeyEncodingFormat, EnumToName(KeyEncodingFormat),
+		TranslationCompressionFormat, EnumToName(TranslationCompressionFormat),
+		RotationCompressionFormat, EnumToName(RotationCompressionFormat),
+		ScaleCompressionFormat, EnumToName(ScaleCompressionFormat));
 #endif
 
 	Ar << CompressedTrackOffsets;
@@ -1085,6 +1088,10 @@ void UAnimSequence4::SerializeCompressedData2(FArchive& Ar)
 	TArray<FSmartName> CompressedCurveNames;
 	Ar << CompressedCurveNames;
 
+#if DEBUG_ANIM
+	appPrintf("TrackToSkeleton: %d, CurveNames: %d\n", CompressedTrackToSkeletonMapTable.Num(), CompressedCurveNames.Num());
+#endif
+
 	// Since 4.23, this is FUECompressedAnimData::SerializeCompressedData
 
 	Ar << (byte&)KeyEncodingFormat;
@@ -1092,8 +1099,11 @@ void UAnimSequence4::SerializeCompressedData2(FArchive& Ar)
 	Ar << (byte&)RotationCompressionFormat;
 	Ar << (byte&)ScaleCompressionFormat;
 #if DEBUG_ANIM
-	appPrintf("Key: %d Trans: %d Rot: %d Scale: %d\n", KeyEncodingFormat, TranslationCompressionFormat,
-		RotationCompressionFormat, ScaleCompressionFormat);
+	appPrintf("Key: %d (%s) Trans: %d (%s) Rot: %d (%s) Scale: %d (%s)\n",
+		KeyEncodingFormat, EnumToName(KeyEncodingFormat),
+		TranslationCompressionFormat, EnumToName(TranslationCompressionFormat),
+		RotationCompressionFormat, EnumToName(RotationCompressionFormat),
+		ScaleCompressionFormat, EnumToName(ScaleCompressionFormat));
 #endif
 
 	int32 CompressedNumFrames;
@@ -1106,6 +1116,10 @@ void UAnimSequence4::SerializeCompressedData2(FArchive& Ar)
 	Ar << CompressedScaleOffsets.StripSize;
 	Ar << CompressedByteStream_Num;
 	// ... end of FUECompressedAnimData::SerializeCompressedData
+
+#if DEBUG_ANIM
+	appPrintf("NumFrames: %d, TrackOffsets: %d, ScaleOffsets: %d, ByteStream: %d\n", CompressedNumFrames, CompressedTrackOffsets_Num, CompressedScaleOffsets_Num, CompressedByteStream_Num);
+#endif
 
 	int32 NumBytes;
 	Ar << NumBytes;
@@ -1155,6 +1169,10 @@ void UAnimSequence4::SerializeCompressedData2(FArchive& Ar)
 	FString CurveCodecPath;
 	TArray<byte> CompressedCurveByteStream;
 	Ar << CurveCodecPath << CompressedCurveByteStream;
+
+#if DEBUG_ANIM
+	appPrintf("CurveCodec: %s, CurveByteStream: %d\n", *CurveCodecPath, CompressedCurveByteStream.Num());
+#endif
 
 	unguard;
 }

@@ -243,6 +243,8 @@ static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
 
 bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback* Progress)
 {
+	guard(ScanContent);
+
 #if PROFILE
 	appResetProfiler();
 #endif
@@ -298,6 +300,8 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		appPrintProfiler("Scanned packages");
 #endif
 	return !cancelled;
+
+	unguard;
 }
 
 
