@@ -27,16 +27,16 @@
 	FCompactIndex
 -----------------------------------------------------------------------------*/
 
-static bool GameUsesFCompactIndex(FArchive &Ar)
+FORCEINLINE bool GameUsesFCompactIndex(FArchive &Ar)
 {
+#if UNREAL3
+	if (Ar.Engine() >= GAME_UE3) return false;
+#endif
 #if UC2
 	if (Ar.Engine() == GAME_UE2X && Ar.ArVer >= 145) return false;
 #endif
 #if VANGUARD
 	if (Ar.Game == GAME_Vanguard && Ar.ArVer >= 128 && Ar.ArLicenseeVer >= 25) return false;
-#endif
-#if UNREAL3
-	if (Ar.Engine() >= GAME_UE3) return false;
 #endif
 	return true;
 }
@@ -370,6 +370,9 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 
 	// serialize character count
 	int32 len;
+
+	if (Ar.Game >= GAME_UE3) goto ue3; // just a shortcut for UE3 and UE4
+
 #if BIOSHOCK
 	if (Ar.Game == GAME_Bioshock)
 	{
@@ -384,11 +387,14 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	else
 #endif
 	if (GameUsesFCompactIndex(Ar))
+	{
 		Ar << AR_INDEX(len);
+	}
 	else
+	{
+	ue3:
 		Ar << len;
-
-	S.Empty((len >= 0) ? len : -len);
+	}
 
 	// serialize the string
 	if (!len)
@@ -396,6 +402,7 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 		// empty FString
 		// original UE has array count == 0 and special handling when converting FString
 		// to char*
+		S.Data.Empty(1);
 		S.Data.AddZeroed(1);
 		return Ar;
 	}
@@ -403,23 +410,27 @@ FArchive& operator<<(FArchive &Ar, FString &S)
 	if (len > 0)
 	{
 		// ANSI string
+		S.Data.Empty(len);
 		S.Data.AddUninitialized(len);
 		Ar.Serialize(S.Data.GetData(), len);
 	}
 	else
 	{
 		// UNICODE string
-		for (int i = 0; i < -len; i++)
+		len = -len;
+		S.Data.Empty(len);
+		for (int i = 0; i < len; i++)
 		{
 			uint16 c;
 			Ar << c;
-#if MASSEFF
-			if (Ar.Game == GAME_MassEffect3 && Ar.ReverseBytes)	// uses little-endian strings for XBox360
-				c = (c >> 8) | ((c & 0xFF) << 8);
-#endif
 			if (c & 0xFF00) c = '$';	//!! incorrect ...
 			S.Data.Add(c & 255);		//!! incorrect ...
 		}
+#if MASSEFF
+		// Xbox360 version of Mass Effect 3 is using little-endian strings
+		if (Ar.Game == GAME_MassEffect3 && Ar.ReverseBytes)
+			appReverseBytes(S.Data.GetData(), len, 2);
+#endif
 	}
 	if (S[abs(len)-1] != 0)
 		appError("Serialized FString is not null-terminated");

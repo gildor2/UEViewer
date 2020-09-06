@@ -12,7 +12,7 @@
 //#define DEBUG_PACKAGE			1
 //#define PROFILE_PACKAGE_TABLES	1
 
-#define MAX_FNAME_LEN			MAX_PACKAGE_PATH	// Maximal length of FName, used for stack variables
+#define MAX_FNAME_LEN			1024	// UE4: NAME_SIZE in NateTypes.h
 
 /*-----------------------------------------------------------------------------
 	Unreal package structures
@@ -1827,6 +1827,7 @@ void UnPackage::LoadNameTable4()
 	{
 		guard(Name);
 
+#if 1
 		*this << nameStr;
 
 		// Paragon has many names ended with '\n', so it's good idea to trim spaces
@@ -1834,11 +1835,31 @@ void UnPackage::LoadNameTable4()
 
 		// Remember the name
 		NameTable[i] = appStrdupPool(*nameStr);
+#else
+		char buf[MAX_FNAME_LEN];
+		int32 Len;
+		*this << Len;
+		if (Len > 0)
+		{
+			this->Serialize(buf, Len);
+		}
+		else
+		{
+			// Unicode name: just make a dummy one and seek
+			appSprintf(ARRAY_ARG(buf), "unicode_%d", i);
+			this->Seek(this->Tell() - Len * 2);
+		}
+		NameTable[i] = appStrdupPool(buf);
+#endif
 
 		if (bHasNameHashes)
 		{
+#if 1
+			this->Seek(this->Tell() + 4); // works faster
+#else
 			int16 NonCasePreservingHash, CasePreservingHash;
 			*this << NonCasePreservingHash << CasePreservingHash;
+#endif
 		}
 
 #if DEBUG_PACKAGE
