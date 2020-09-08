@@ -291,13 +291,13 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		}
 		scanned = true;
 	}
-#if 0
-	void PrintStringHashDistribution();
-	PrintStringHashDistribution();
-#endif
 #if PROFILE
 	if (scanned)
 		appPrintProfiler("Scanned packages");
+#endif
+#if 0
+	void PrintStringHashDistribution();
+	PrintStringHashDistribution();
 #endif
 	return !cancelled;
 

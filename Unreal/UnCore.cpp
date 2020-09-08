@@ -494,53 +494,54 @@ static CMemoryChain* StringPool;
 const char* appStrdupPool(const char* str)
 {
 	int len = strlen(str);
+#if 0
 	unsigned int hash = 0;
 	for (int i = 0; i < len; i++)
 	{
 		char c = str[i];
 		hash = ROL32(hash, 1) + c;
 	}
+#else
+	// The FNV Non-Cryptographic Hash Algorithm
+	// https://tools.ietf.org/html/draft-eastlake-fnv-16
+	// It produces much better has collision distribution and smaller
+	// peak collision chain lengths.
+	#define FNV32prime 0x01000193
+	#define FNV32basis 0x811C9DC5
+	unsigned int hash = FNV32basis;
+	for (const char* s = str, *e = str + len; s < e; s++)
+	{
+		hash = FNV32prime * (hash ^ *s);
+	}
+
+#endif
 	hash &= (STRING_HASH_SIZE - 1);
 
-#if 0
-	if (true)
+	// Find existing string in a pool
+	CStringPoolEntry** prevPoint = &StringHashTable[hash];
+	while (true)
 	{
-		// Compare "Length" and first 2 characters with single operation
-		uint32 cmp = len | (str[0] << 16) | (str[1] << 24);
-		for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->HashNext)
+		CStringPoolEntry* current = *prevPoint;
+		// Keep items sorted by string length - it is almost free, but will
+		// allow faster rejection during search.
+		if (!current || current->Length > len) break;
+		if (current->Length == len && !memcmp(str, current->Str, len))
 		{
-			uint32 cmp2 = *(uint32*)&s->Length;
-			if (cmp == cmp2)
-			{
-				if (!memcmp(str, s->Str, len))
-				{
-					// found a string
-					return s->Str;
-				}
-			}
+			// Found a string
+			return current->Str;
 		}
-	}
-	else
-#endif
-	{
-		for (const CStringPoolEntry* s = StringHashTable[hash]; s; s = s->HashNext)
-		{
-			if (s->Length == len && !memcmp(str, s->Str, len))
-			{
-				// found a string
-				return s->Str;
-			}
-		}
+		prevPoint = &current->HashNext;
 	}
 
 	if (!StringPool) StringPool = new CMemoryChain();
 
-	// allocate new string from pool
+	// Allocate new string from pool
 	CStringPoolEntry* n = (CStringPoolEntry*)StringPool->Alloc(sizeof(CStringPoolEntry) + len);	// note: null byte is taken into account in CStringPoolEntry
-	n->HashNext = StringHashTable[hash];
-	StringHashTable[hash] = n;
 	n->Length = len;
 	memcpy(n->Str, str, len+1);
+	// Insert into the hash collision chain
+	n->HashNext = *prevPoint;
+	*prevPoint = n;
 
 	return n->Str;
 }
@@ -548,19 +549,32 @@ const char* appStrdupPool(const char* str)
 #if 0
 void PrintStringHashDistribution()
 {
-	int hashCounts[1024];
 	int totalCount = 0;
+	uint32 memoryUsed = sizeof(StringHashTable);
+	int hashCounts[1024];
+	int* bucketSizes = new int[STRING_HASH_SIZE];
 	memset(hashCounts, 0, sizeof(hashCounts));
+	memset(bucketSizes, 0, sizeof(bucketSizes));
+
+	// Collect statistics
 	for (int hash = 0; hash < STRING_HASH_SIZE; hash++)
 	{
 		int count = 0;
 		for (CStringPoolEntry* info = StringHashTable[hash]; info; info = info->HashNext)
+		{
 			count++;
+			memoryUsed += sizeof(CStringPoolEntry) + info->Length;
+		}
 		assert(count < ARRAY_COUNT(hashCounts));
 		hashCounts[count]++;
+		bucketSizes[hash] = count;
 		totalCount += count;
 	}
-	appPrintf("String hash distribution: collision count -> num chains\n");
+
+	// Print statistics
+	FILE* f = fopen("StringTableInfo.txt", "w");
+	fprintf(f, "%d strings, %.2f Mb used\n", totalCount, memoryUsed / (1024.0f * 1024.0f));
+	fprintf(f, "String hash distribution: collision count -> num chains\n");
 	int totalCount2 = 0;
 	for (int i = 0; i < ARRAY_COUNT(hashCounts); i++)
 	{
@@ -569,21 +583,45 @@ void PrintStringHashDistribution()
 		{
 			totalCount2 += count * i;
 			float percent = totalCount2 * 100.0f / totalCount;
-			appPrintf("%d -> %d [%.1f%%]\n", i, count, percent);
-		}
-	}
-	assert(totalCount == totalCount2);
-
-	// Store string table to a file
-	FILE* f = fopen("StringTable.txt", "w");
-	for (int hash = 0; hash < STRING_HASH_SIZE; hash++)
-	{
-		for (CStringPoolEntry* info = StringHashTable[hash]; info; info = info->HashNext)
-		{
-			fprintf(f, "%s\n", info->Str);
+			fprintf(f, "%d -> %d [%.1f%%]\n", i, count, percent);
 		}
 	}
 	fclose(f);
+	assert(totalCount == totalCount2);
+
+	// Store string table to a file
+	f = fopen("StringTable.txt", "w");
+	// Sort by bucket sizes
+	for (int i = ARRAY_COUNT(hashCounts) - 1; i > 0; i--)
+	{
+		if (hashCounts[i] == 0) continue; // no buckets of this size
+
+		for (int hash = 0; hash < STRING_HASH_SIZE; hash++)
+		{
+			if (bucketSizes[hash] != i) continue;
+			fprintf(f, "# bucket %d items\n", i);
+			TStaticArray<const CStringPoolEntry*, 1024> Entries;
+			for (CStringPoolEntry* info = StringHashTable[hash]; info; info = info->HashNext)
+			{
+				Entries.Add(info);
+			}
+			Entries.Sort([](const CStringPoolEntry* const& A, const CStringPoolEntry* const& B) -> int
+				{
+					int Diff = A->Length - B->Length;
+					if (Diff) return Diff; // note: already have items sorted by string length
+					return stricmp(A->Str, B->Str);
+				});
+			for (const CStringPoolEntry* info : Entries)
+			{
+				fprintf(f, "%s\n", info->Str);
+			}
+			fprintf(f, "\n");
+		}
+	}
+	fclose(f);
+
+	// Cleanup
+	delete[] bucketSizes;
 }
 #endif
 
