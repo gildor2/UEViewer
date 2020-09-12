@@ -453,6 +453,8 @@ void UnPackage::ReplaceLoader()
 {
 	guard(UnPackage::ReplaceLoader);
 
+	// Current FArchive position is after FPackageFileSummary
+
 #if BIOSHOCK
 	if ((Game == GAME_Bioshock) && (Summary.PackageFlags & 0x20000))
 	{
@@ -477,6 +479,7 @@ void UnPackage::ReplaceLoader()
 		// Replace Loader for reading compressed Bioshock archives.
 		Loader = new FUE3ArchiveReader(Loader, COMPRESS_ZLIB, Chunks);
 		Loader->SetupFrom(*this);
+		return;
 	}
 #endif // BIOSHOCK
 
@@ -490,6 +493,7 @@ void UnPackage::ReplaceLoader()
 			*this << IsEncrypted;
 			if (IsEncrypted) Loader = new FFileReaderAA2(Loader);
 		}
+		return;
 	}
 #endif // AA2
 
@@ -531,6 +535,7 @@ void UnPackage::ReplaceLoader()
 
 		// The decompressed chunks will overwrite past CompressedChunkInfoOffset, so don't decrypt past that anymore
 		RocketReader->EncryptionEnd = RocketReader->EncryptionStart + CompressedChunkInfoOffset;
+		return;
 	}
 #endif // ROCKET_LEAGUE
 
@@ -538,7 +543,10 @@ void UnPackage::ReplaceLoader()
 	// Nurien has encryption in header, and no encryption after
 	FFileReaderNurien* NurienReader = Loader->CastTo<FFileReaderNurien>();
 	if (NurienReader)
+	{
 		NurienReader->Threshold = Summary.HeadersSize;
+		return;
+	}
 #endif // NURIEN
 
 	unguard;

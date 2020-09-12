@@ -212,22 +212,8 @@ struct FObjectImport
 	void Serialize(FArchive& Ar);
 };
 
-#if UNREAL3
 
-struct FObjectDepends
-{
-	TArray<int>	Objects;
-
-	friend FArchive& operator<<(FArchive &Ar, FObjectDepends &D)
-	{
-		return Ar << D.Objects;
-	}
-};
-
-#endif // UNREAL3
-
-
-// In Unreal Engine class with similar functionality named "ULinkerLoad"
+// In Unreal Engine class with similar functionality has name "ULinkerLoad" (and renamed to "FLinkerLoad" in UE4)
 class UnPackage : public FArchive
 {
 	DECLARE_ARCHIVE(UnPackage, FArchive);
@@ -236,17 +222,14 @@ protected:
 public:
 	const char*				Name;				// short name without extension
 	const CGameFileInfo*	FileInfo;
-	FArchive				*Loader;
+	FArchive*				Loader;
 
 	// package header
 	FPackageFileSummary		Summary;
 	// tables
-	const char				**NameTable;
-	FObjectImport			*ImportTable;
-	FObjectExport			*ExportTable;
-#if UNREAL3
-	FObjectDepends			*DependsTable;
-#endif
+	const char**			NameTable;
+	FObjectImport*			ImportTable;
+	FObjectExport*			ExportTable;
 
 protected:
 	UnPackage(const char *filename, const CGameFileInfo* fileInfo = NULL, bool silent = false);

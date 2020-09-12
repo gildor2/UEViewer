@@ -12,7 +12,7 @@
 //#define DEBUG_PACKAGE			1
 //#define PROFILE_PACKAGE_TABLES	1
 
-#define MAX_FNAME_LEN			1024	// UE4: NAME_SIZE in NateTypes.h
+#define MAX_FNAME_LEN			1024	// UE4: NAME_SIZE in NameTypes.h
 
 /*-----------------------------------------------------------------------------
 	Unreal package structures
@@ -1390,9 +1390,11 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	}
 #endif // DEBUG_PACKAGE
 
+	//?? TODO: it is not "replacing", it's WRAPPING around existing loader
 	ReplaceLoader();
 
 #if UNREAL3
+	//?? TODO: could be part of ReplaceLoader()
 	if (Game >= GAME_UE3 && Summary.CompressionFlags && Summary.CompressedChunks.Num())
 	{
 		FUE3ArchiveReader* UE3Loader = Loader->CastTo<FUE3ArchiveReader>();
@@ -1406,28 +1408,6 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	LoadNameTable();
 	LoadImportTable();
 	LoadExportTable();
-
-#if UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS			// we can serialize dependencies when needed
-	if (Game == GAME_DCUniverse || Game == GAME_Bioshock3) goto no_depends;		// has non-standard checks
-	if (Summary.DependsOffset)						// some games are patrially upgraded: ArVer >= 415, but no depends table
-	{
-		guard(ReadDependsTable);
-		Seek(Summary.DependsOffset);
-		FObjectDepends *Dep = DependsTable = new FObjectDepends[Summary.ExportCount];
-		for (int i = 0; i < Summary.ExportCount; i++, Dep++)
-		{
-			*this << *Dep;
-/*			if (Dep->Objects.Num())
-			{
-				const FObjectExport &Exp = ExportTable[i];
-				appPrintf("Depends for %s'%s' = %d\n", GetObjectName(Exp.ClassIndex),
-					*Exp.ObjectName, Dep->Objects[i]);
-			} */
-		}
-		unguard;
-	}
-no_depends: ;
-#endif // UNREAL3 && !USE_COMPACT_PACKAGE_STRUCTS
 
 #if UNREAL4
 	// Process Event Driven Loader packages: such packages are split into 2 pieces: .uasset with headers
@@ -1462,7 +1442,8 @@ no_depends: ;
 	}
 #endif // UNREAL4
 
-	// add self to package map
+	// Register self to package map.
+	// First, strip path and extension from the name.
 	char buf[MAX_PACKAGE_PATH];
 	const char *s = strrchr(filename, '/');
 	if (!s) s = strrchr(filename, '\\');			// WARNING: not processing mixed '/' and '\'
@@ -1471,6 +1452,7 @@ no_depends: ;
 	char *s2 = strchr(buf, '.');
 	if (s2) *s2 = 0;
 	Name = appStrdupPool(buf);
+	// ... then add 'this'
 	PackageMap.Add(this);
 
 	// Release package file handle
@@ -1964,12 +1946,9 @@ UnPackage::~UnPackage()
 
 	// free tables
 	if (Loader) delete Loader;
-	delete NameTable;
-	delete ImportTable;
-	delete ExportTable;
-#if UNREAL3
-	if (DependsTable) delete DependsTable;
-#endif
+	delete[] NameTable;
+	delete[] ImportTable;
+	delete[] ExportTable;
 
 	unguard;
 }
