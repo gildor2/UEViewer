@@ -2,7 +2,7 @@
 #include "UnCore.h"
 
 #include "UnObject.h"
-#include "UnPackage.h"		// for Package->Name
+#include "UnrealPackage/UnPackage.h"	// for Package->Name
 
 #include "Exporters.h"
 

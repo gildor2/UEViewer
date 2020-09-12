@@ -4,7 +4,7 @@
 
 #if UNREAL4
 #include "UnObject.h"
-#include "UnPackage.h"			// for accessing FPackageFileSummary from FByteBulkData
+#include "UnrealPackage/UnPackage.h" // for accessing FPackageFileSummary from FByteBulkData
 #endif
 
 #include <errno.h>				// not needed for VC

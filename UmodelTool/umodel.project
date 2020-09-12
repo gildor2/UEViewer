@@ -27,6 +27,7 @@ sources(MAIN) = {
 	Unreal/Mesh/*.cpp
 	Unreal/UnrealMaterial/*.cpp
 	Unreal/UnrealMesh/*.cpp
+	Unreal/UnrealPackage/*.cpp
 	Unreal/Wrappers/*.cpp
 	Viewers/*.cpp
 	MeshInstance/*.cpp

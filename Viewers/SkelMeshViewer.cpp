@@ -20,8 +20,8 @@
 #endif
 
 #include "Exporters/Exporters.h"
-#include "UnPackage.h"
-#include "PackageUtils.h"
+#include "UnrealPackage/UnPackage.h"
+#include "UnrealPackage/PackageUtils.h"
 
 
 #define TEST_ANIMS			1

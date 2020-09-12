@@ -7,7 +7,7 @@
 #include "SettingsDialog.h"
 #include "AboutDialog.h"
 
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 #include "UmodelCommands.h"
 
 #include "Parallel.h"

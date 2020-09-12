@@ -7,7 +7,7 @@
 // Classes for registration
 #include "UnCore.h"
 #include "UnObject.h"
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 #include "UnrealMesh/UnAnimNotify.h"
 
 #include "UnrealMaterial/UnMaterial.h"
@@ -30,7 +30,7 @@
 #endif
 
 #include "GameDatabase.h"
-#include "PackageUtils.h"
+#include "UnrealPackage/PackageUtils.h"
 
 #include "UmodelApp.h"
 #include "UmodelCommands.h"

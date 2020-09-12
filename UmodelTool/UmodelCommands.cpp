@@ -2,9 +2,9 @@
 #include "UnCore.h"
 
 #include "UnObject.h"
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 
-#include "PackageUtils.h"
+#include "UnrealPackage/PackageUtils.h"
 #include "Exporters/Exporters.h"
 #include "UmodelApp.h"
 

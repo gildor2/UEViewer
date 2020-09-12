@@ -1,6 +1,6 @@
 #include "Core.h"
 #include "UnCore.h"
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 #include "GameDatabase.h"
 
 #define DEF_UNP_DIR		"unpacked"

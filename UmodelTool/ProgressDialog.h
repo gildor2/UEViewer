@@ -1,7 +1,7 @@
 #ifndef __PROGRESS_DIALOG_H__
 #define __PROGRESS_DIALOG_H__
 
-#include "PackageUtils.h"	// for IProgressCallback
+#include "UnrealPackage/PackageUtils.h"	// for IProgressCallback
 
 class UIProgressDialog : public UIBaseDialog, public IProgressCallback
 {

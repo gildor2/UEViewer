@@ -5,8 +5,8 @@
 
 #include "UnObject.h"
 #include "ObjectViewer.h"
-#include "UnPackage.h"			// for CObjectViewer::Draw2D()
-#include "PackageUtils.h"
+#include "UnrealPackage/UnPackage.h"	// for CObjectViewer::Draw2D( - UnPackage::Name
+#include "UnrealPackage/PackageUtils.h"
 
 #include "Exporters/Exporters.h"
 

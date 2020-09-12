@@ -2,7 +2,7 @@
 #include "UnCore.h"
 #include "UnObject.h"
 #include "UnrealMesh/UnMesh2.h"
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 
 #include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial2.h"		// just for static_cast

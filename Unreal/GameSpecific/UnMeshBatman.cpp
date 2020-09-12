@@ -6,7 +6,7 @@
 #include "UnObject.h"
 #include "UnrealMesh/UnMesh3.h"
 #include "UnrealMesh/UnMeshTypes.h"
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 
 #include "Mesh/SkeletalMesh.h"
 #include "TypeConvert.h"

@@ -8,8 +8,8 @@
 
 #include "UnCore.h"
 #include "UnObject.h"
-#include "PackageUtils.h"
-#include "UnPackage.h"
+#include "UnrealPackage/PackageUtils.h"
+#include "UnrealPackage/UnPackage.h"
 
 #include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMesh/UnMesh2.h"

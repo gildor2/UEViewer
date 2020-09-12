@@ -1,7 +1,7 @@
 #include "Core.h"
 #include "UnCore.h"
-#include "UnPackage.h"
-#include "PackageUtils.h"
+#include "UnrealPackage/UnPackage.h"
+#include "UnrealPackage/PackageUtils.h"
 
 /*-----------------------------------------------------------------------------
 	Main function

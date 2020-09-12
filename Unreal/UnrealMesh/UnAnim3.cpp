@@ -6,7 +6,7 @@
 #include "UnObject.h"
 #include "UnMesh3.h"
 #include "UnMeshTypes.h"
-#include "UnPackage.h"				// for checking game type
+#include "UnrealPackage/UnPackage.h"	// for checking game type
 
 #include "Mesh/SkeletalMesh.h"
 #include "TypeConvert.h"

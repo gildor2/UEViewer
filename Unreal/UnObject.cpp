@@ -2,7 +2,7 @@
 #include "UnCore.h"
 #include "UE4Version.h"
 #include "UnObject.h"
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 
 #include "GameDatabase.h"		// for GetGameTag()
 

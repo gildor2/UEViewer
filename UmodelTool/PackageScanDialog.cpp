@@ -2,7 +2,6 @@
 
 #include "BaseDialog.h"
 #include "ProgressDialog.h"
-#include "PackageUtils.h"
 
 class UIPackageScanDialog : public UIBaseDialog
 {
