@@ -2,6 +2,9 @@
 #define __UNPACKAGE_H__
 
 
+#define MAX_FNAME_LEN			1024	// UE4: NAME_SIZE in NameTypes.h
+//#define DEBUG_PACKAGE			1
+
 #if 1
 #	define PKG_LOG(...)		appPrintf(__VA_ARGS__)
 #else
@@ -151,8 +154,14 @@ struct FPackageFileSummary
 	int64		BulkDataStartOffset;
 #endif
 
-	FPackageFileSummary();
+	FPackageFileSummary()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
 	bool Serialize(FArchive &Ar);
+
+private:
 	// Engine-specific serializers
 	void Serialize2(FArchive& Ar);
 	void Serialize3(FArchive& Ar);
@@ -191,6 +200,8 @@ struct FObjectExport
 #endif // UNREAL3
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E);
+
+private:
 	// Engine-specific serializers
 	void Serialize2(FArchive& Ar);
 	void Serialize2X(FArchive& Ar);
@@ -224,9 +235,8 @@ public:
 	const CGameFileInfo*	FileInfo;
 	FArchive*				Loader;
 
-	// package header
+	// Package structures
 	FPackageFileSummary		Summary;
-	// tables
 	const char**			NameTable;
 	FObjectImport*			ImportTable;
 	FObjectExport*			ExportTable;
@@ -241,7 +251,7 @@ public:
 		return FileInfo ? FileInfo->GetRelativeName() : FilenameNoInfo;
 	}
 
-	// Check if constructor has created a valid package
+	// Check if valid package has been created by constructor
 	bool IsValid() const { return Summary.NameCount > 0; }
 
 	// Load package using short name (without path and extension) or full path name.
@@ -250,7 +260,8 @@ public:
 	static UnPackage* LoadPackage(const char* Name, bool silent = false);
 	// Load package using existing CGameFileInfo
 	static UnPackage* LoadPackage(const CGameFileInfo* File, bool silent = false);
-	// We've protected UnPackage's destructor, however it is possible to use UnloadPackage to destroy package.
+	// We've protected UnPackage's destructor, however it is possible to use UnloadPackage to fully destroy it.
+	// This call is just more noticeable in code than use of 'operator delete'.
 	static void UnloadPackage(UnPackage* package);
 
 	FORCEINLINE static void ReservePackageMap(int count)
@@ -258,16 +269,18 @@ public:
 		PackageMap.Reserve(count);
 	}
 
-	// Create loader FArchive for package
-	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
-	// Change loader for games with tricky package data
-	void ReplaceLoader();
-
 	static const TArray<UnPackage*>& GetPackageMap()
 	{
 		return PackageMap;
 	}
 
+protected:
+	// Create loader FArchive for package
+	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
+	// Change loader for games with tricky package data
+	void ReplaceLoader();
+
+public:
 	// Prepare for serialization of particular object. Will open a reader if it was
 	// closed before.
 	void SetupReader(int ExportIndex);
@@ -400,6 +413,7 @@ public:
 
 private:
 	void LoadNameTable();
+	void LoadNameTable2();
 	void LoadNameTable3();
 	void LoadNameTable4();
 	bool VerifyName(FString& nameStr, int nameIndex);
