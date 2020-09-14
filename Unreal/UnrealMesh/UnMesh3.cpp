@@ -1653,9 +1653,13 @@ struct FStaticLODModel3
 		{
 			Lod.NumUVSets = 4;
 			// Value: usually 4, sometimes 8. It is not NumUVSets
-			int32 unk;
-			Ar << unk;
-			goto gpu_skin;
+			int32 unk1;
+			Ar << unk1;
+			GNumGPUUVSets = Lod.NumUVSets;
+			Ar << Lod.GPUSkin;
+			TArray<FVector> unk2; // int ( value, 0, index )
+			Ar << unk2;
+			return Ar;
 		}
 #endif
 
@@ -1684,9 +1688,6 @@ struct FStaticLODModel3
 #endif // FURY
 		if (Ar.ArVer >= 333)
 		{
-		gpu_skin:
-			// Usually GPU Skin serializes UV set count, however this is not true for Gears of War: Ultimate
-			GNumGPUUVSets = Lod.NumUVSets;
 			Ar << Lod.GPUSkin;
 		}
 #if MKVSDC
@@ -1704,14 +1705,6 @@ struct FStaticLODModel3
 			if (Ar.ArLicenseeVer >= 42) return Ar;
 		}
 #endif
-#if GEARSU
-		if (Ar.Game == GAME_GoWU)
-		{
-			TArray<FVector> unk; // int ( value, 0, index )
-			Ar << unk;
-			return Ar;
-		}
-#endif // GEARSU
 #if BLOODONSAND
 		if (Ar.Game == GAME_50Cent) return Ar;	// new ArVer, but old engine
 #endif
