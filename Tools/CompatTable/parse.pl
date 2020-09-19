@@ -165,9 +165,9 @@ sub tableFooter {
       <tr>
         <td style="border-style: none;" width="35">&nbsp</td>
         <td style="border-style: none;"><div align="left" class="detailtxt">
-          <p><b>Year:</b> By clicking on the year for an entry, it will take you to the thread on the form that talks about this game.</p>
-          <p><b>Title:</b> By clicking on the title of a game, it will take you to the Wikipedia information for that game. If the Wikipedia page does not exist it will take you to their website or other press release.</p>
-          <p><b>Developer:</b> By clicking on Developer for an entry it will take you to the Wikipedia information for that developer. If the Wikipedia page does not exist it will take you to their website or other related information.</p>
+          <p><b>Year:</b> click to open the forum thread that talks about this game.</p>
+          <p><b>Title:</b> click to take you to the Wikipedia information for that game. If the Wikipedia page does not exist it will take you to their website or other press release.</p>
+          <p><b>Developer:</b> click to open the Wikipedia information for that developer. If the Wikipedia page does not exist it will take you to another relevant page.</p>
           <p><b>Other columns:</b> Mesh: skeletal mesh, Tex: texture, Anim: skeletal animation, Stat: static mesh.</p>
         </div></td>
       </tr>
