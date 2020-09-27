@@ -95,7 +95,7 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 	Ar << PackageFlags;
 
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (PackageFlags & 8))
+	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (PackageFlags & PKG_Cooked))
 	{
 		int32 unk88;
 		Ar << unk88;
@@ -199,7 +199,7 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 #endif // STRANGLE
 #if TERA
 	// de-obfuscate NameCount for Tera
-	if (Ar.Game == GAME_Tera && (PackageFlags & 8)) NameCount -= NameOffset;
+	if (Ar.Game == GAME_Tera && (PackageFlags & PKG_Cooked)) NameCount -= NameOffset;
 #endif
 
 	if (Ar.ArVer >= 415)
@@ -212,7 +212,7 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 #if DUNDEF
 	if (Ar.Game == GAME_DunDef)
 	{
-		if (PackageFlags & 8)
+		if (PackageFlags & PKG_Cooked)
 		{
 			int32 unk38;
 			Ar << unk38;

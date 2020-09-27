@@ -2603,8 +2603,11 @@ struct FIntBulkData : public FByteBulkData
 #define COMPRESS_OODLE		0xFD					// custom umodel's constant
 #endif
 
-#define PKG_StoreCompressed	 0x02000000
-#define PKG_FilterEditorOnly 0x80000000
+// Note: there's no conflicts between UE3 and UE4 flags - some obsoleve UE3 flags are marked as unused in UE4,
+// and some UE4 flags are missing in UE3 just because bitmask is not fully used there.
+#define PKG_Cooked           0x00000008				// UE3
+#define PKG_StoreCompressed	 0x02000000				// UE3, deprecated in UE4.16
+#define PKG_FilterEditorOnly 0x80000000				// UE4
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 

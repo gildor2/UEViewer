@@ -381,7 +381,7 @@ public:
 		{
 			Func(idx++);
 		}
-		unguardf("%d [%s,%d]/%d", idx, idx1, idx2, lastIndex);
+		unguardf("%d [%d,%d]/%d", idx, idx1, idx2, lastIndex);
 	}
 
 	static void PoolThreadWorker(void* data)
