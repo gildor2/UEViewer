@@ -1153,6 +1153,10 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 {
 	guard(FByteBulkData::SerializeHeader);
 
+#if DEBUG_BULK
+	DUMP_ARC_BYTES(Ar, 32, "Bulk");
+#endif
+
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
@@ -1284,8 +1288,6 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 #endif // TRANSFORMERS
 	}
 
-header_done: ;
-
 #if MCARTA
 	if (Ar.Game == GAME_MagnaCarta && (BulkDataFlags & 0x40))	// different flags
 	{
@@ -1300,6 +1302,8 @@ header_done: ;
 		BulkDataFlags |= BULKDATA_SeparateData;
 	}
 #endif // APB
+
+header_done: ;
 
 #if DEBUG_BULK
 	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X)\n",

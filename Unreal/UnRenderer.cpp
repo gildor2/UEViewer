@@ -481,6 +481,11 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 			if (error != 0)
 			{
 				appPrintf("Failed to upload mip %d of texture %s in format 0x%04X: error 0x%X\n", mipLevel, Tex->Name, format, error);
+				if (mipLevel > 0)
+				{
+					// Recover from error: when failed to upload lower mip levels, make it still working with previous mips
+					glTexParameteri(target2, GL_TEXTURE_MAX_LEVEL, mipLevel - 1);	// GL 1.2
+				}
 				DBG("%d x %d (%X)", Mip.USize, Mip.VSize, Mip.DataSize);
 				break;
 			}
