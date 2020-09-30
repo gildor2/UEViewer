@@ -196,6 +196,42 @@ void DecryptDevlsThird(byte* CompressedBuffer, int CompressedSize);
 
 static int FoundCompression = -1;
 
+static int DetectCompressionMethod(byte* CompressedBuffer)
+{
+	int Flags = 0;
+
+	byte b1 = CompressedBuffer[0];
+	byte b2 = CompressedBuffer[1];
+	// zlib:
+	//   http://tools.ietf.org/html/rfc1950
+	//   http://stackoverflow.com/questions/9050260/what-does-a-zlib-header-look-like
+	// oodle:
+	//   https://github.com/powzix/ooz, kraken.cpp, Kraken_ParseHeader()
+	if ( b1 == 0x78 &&					// b1=CMF: 7=32k buffer (CINFO), 8=deflate (CM)
+		(b2 == 0x9C || b2 == 0xDA) )	// b2=FLG
+	{
+		Flags = COMPRESS_ZLIB;
+	}
+#if USE_OODLE
+	else if ((b1 == 0x8C || b1 == 0xCC) && (b2 == 5 || b2 == 6 || b2 == 10 || b2 == 11 || b2 == 12))
+	{
+		Flags = COMPRESS_OODLE;
+	}
+#endif // USE_OODLE
+#if USE_LZ4
+	else if (GForceGame >= GAME_UE4_BASE)
+	{
+		Flags = COMPRESS_LZ4;		// in most cases UE4 games are using either oodle or lz4 - the first one is explicitly recognizable
+	}
+#endif // USE_LZ4
+	else
+	{
+		Flags = COMPRESS_LZO;		// LZO was used only with UE3 games as standard compression method
+	}
+
+	return Flags;
+}
+
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags)
 {
 	int OldFlags = Flags;
@@ -266,38 +302,12 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	}
 	else if (Flags == COMPRESS_FIND && CompressedSize >= 2)
 	{
-		byte b1 = CompressedBuffer[0];
-		byte b2 = CompressedBuffer[1];
-		// detect compression
-		// zlib:
-		//   http://tools.ietf.org/html/rfc1950
-		//   http://stackoverflow.com/questions/9050260/what-does-a-zlib-header-look-like
-		// oodle:
-		//   https://github.com/powzix/ooz, kraken.cpp, Kraken_ParseHeader()
-		if ( b1 == 0x78 &&					// b1=CMF: 7=32k buffer (CINFO), 8=deflate (CM)
-			(b2 == 0x9C || b2 == 0xDA) )	// b2=FLG
-		{
-			Flags = COMPRESS_ZLIB;
-		}
-#if USE_OODLE
-		else if ((b1 == 0x8C || b1 == 0xCC) && (b2 == 5 || b2 == 6 || b2 == 10 || b2 == 11 || b2 == 12))
-		{
-			Flags = COMPRESS_OODLE;
-		}
-#endif // USE_OODLE
-#if USE_LZ4
-		else if (GForceGame >= GAME_UE4_BASE)
-		{
-			Flags = COMPRESS_LZ4;		// in most cases UE4 games are using either oodle or lz4 - the first one is explicitly recognizable
-		}
-#endif // USE_LZ4
-		else
-		{
-			Flags = COMPRESS_LZO;		// LZO was used only with UE3 games as standard compression method
-		}
+		Flags = DetectCompressionMethod(CompressedBuffer);
 		// Cache detected compression method
 		FoundCompression = Flags;
 	}
+
+restart_decompress:
 
 	if (Flags == COMPRESS_LZO)
 	{
@@ -387,10 +397,30 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	}
 #endif // USE_OODLE
 
+	// Unknown compression flags
+	guard(UnknownCompression);
+#if 0
 	appError("appDecompress: unknown compression flags: %d", Flags);
 	return 0;
+#else
+	// Try to use compression detection
+	if (FoundCompression >= 0)
+	{
+		// Already detected a working decompressor (if it wouldn't be working, we'd already crash)
+	}
+	else
+	{
+		assert(CompressedSize >= 2);
+		FoundCompression = DetectCompressionMethod(CompressedBuffer);
+		appNotify("appDecompress: unknown compression flags %X, detected %X, retrying ...", Flags, FoundCompression);
+		Flags = FoundCompression;
+	}
+	Flags = FoundCompression;
+	goto restart_decompress;
+	unguard;
+#endif
 
-	unguardf("CompSize=%d UncompSize=%d Flags=0x%X", CompressedSize, UncompressedSize, OldFlags);
+	unguardf("CompSize=%d UncompSize=%d Flags=0x%X Bytes=%02X%02X", CompressedSize, UncompressedSize, OldFlags, CompressedBuffer[0], CompressedBuffer[1]);
 }
 
 
