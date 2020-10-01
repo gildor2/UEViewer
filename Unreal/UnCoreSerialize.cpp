@@ -1182,7 +1182,10 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X+pkg(%llX))\n",
 			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, Package->Summary.BulkDataStartOffset, BulkDataSizeOnDisk);
 	#endif
-		BulkDataOffsetInFile += Package->Summary.BulkDataStartOffset;
+		if (!(BulkDataFlags & BULKDATA_NoOffsetFixUp)) // UE4.26 flag
+		{
+			BulkDataOffsetInFile += Package->Summary.BulkDataStartOffset;
+		}
 		return;
 
 		unguard;
