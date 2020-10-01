@@ -26,4 +26,12 @@
     </Expand>
   </Type>
 
+  <Type Name="UObject">
+    <DisplayString>(Name={Name})</DisplayString>
+  </Type>
+
+  <Type Name="UnPackage">
+    <DisplayString>(Name={Name})</DisplayString>
+  </Type>
+
 </AutoVisualizer>

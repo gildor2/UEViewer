@@ -15,8 +15,8 @@ There's a place where you may discuss the source code:
 
 Getting the source code
 -----------------------
-The source code is [available at GitHub](https://github.com/gildor2/UModel). You may either checkout it
-with use of any Git client, or download it as a [Zip file](https://github.com/gildor2/UModel/archive/master.zip).
+The source code is [available at GitHub](https://github.com/gildor2/UEViewer). You may either checkout it
+with use of any Git client, or download it as a [Zip file](https://github.com/gildor2/UEViewer/archive/master.zip).
 
 
 Building the source code
@@ -29,6 +29,7 @@ using 'nmake' for Visual Studio or 'make' for gcc. Build process is controlled w
 To list all options, run `build.sh --help`. Current options are:
 - `--64` compile for Windows 64bit
 - `--debug` make a debug version of executable
+- `--profile` make a special build which is intended to use with external profiler
 - `--vc <version>` specify which Visual Studio version should be used for compilation, default is latest compiler
   installed on your system
 
@@ -48,9 +49,9 @@ Currently build is performed with Visual C++ 2019.
 
 Build system utilizes GNU Tools for building, in particular - Bash and Perl. I've packaged Windows versions
 of these tools which was a part of [MinGW/MSYS project](http://www.mingw.org/). You can get everything what you need
-for a build [here](https://github.com/gildor2/BuildTools). This page contains **BuildTools**. You should
-download it and extract into some directory (press the green button "Clone or download", then "Download ZIP"). Let's say you
-extracted them to *C:\BuildTools*. After that, add *C:\BuildTools\bin* to the system's *PATH* environment variable. As an
+for a build [here](https://github.com/gildor2/BuildTools). You should download it and extract into some directory (press
+the green button "Clone or download", then "Download ZIP"). Let's say you
+extracted everything to *C:\BuildTools*. After that, add *C:\BuildTools\bin* to the system's *PATH* environment variable. As an
 alternative it is possible to create a batch file which will temporarily modify *PATH* and then execute build script.
 Here's an example of such file:
 
@@ -65,7 +66,9 @@ To launch a build process without a batch, simply execute
 ### Windows 64-bit
 Despite we're providing only 32-but builds of UE Viewer, it is possible to compile it for 64-bit platform. To do that, you
 should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-win32` to `vc-win64`. Also 64-bit build could
-be initiated with launching *build.sh --64*.
+be initiated with launching
+
+	build.sh --64
 
 ### Linux
 Linux system has the most of dependencies by default. You'll need to install the following development packages if they're
@@ -80,6 +83,24 @@ into umodel executable, you may find and comment the following line in *common.p
 	USE_SYSTEM_LIBS = 1
 
 In this case, Linux build will be performed in the same way as Windows build, with compiling and bundling mentioned libraries.
+
+### macOS
+UE Viewer is provided with initial support for macOS platform. I'm using VMWare macOS image to build it, so I can't do the
+full testing. Therefore, some features are disabled:
+- no OpenGL support (no visualization) - it is explicitly disabled in *UmodelTool/Build.h*
+- no multithreading support - it's disabled in the same place
+  
+In other words, UE Viewer on macOS works just like a simple command-line exporter utility.
+
+
+Using IDE
+---------
+
+### Visual Studio
+As UE Viewer is using custom cross-platform build system, there's no MSBuild support. However we have a simple Visual Studio
+project which allows to use this IDE to edit, compile, run and debug the project. Project files are located in `.vs` directory.
+In order to open the project, you should start Visual Studio, use "Open a local folder" command, and then choose root project's
+directory. Please note: there's .sln file somewhere in *Tools* folder, don't use it - it is intended for UI framewwork testing.
 
 ### Visual Studio Code
 UE Viewer contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/).
