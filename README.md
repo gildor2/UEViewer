@@ -102,10 +102,13 @@ project which allows to use this IDE to edit, compile, run and debug the project
 In order to open the project, you should start Visual Studio, use "Open a local folder" command, and then choose root project's
 directory. Please note: there's .sln file somewhere in *Tools* folder, don't use it - it is intended for UI framewwork testing.
 
+Please note that you should use Visual Studio 2019 or newer, otherwise [some features will not work](https://www.gildor.org/smf/index.php/topic,7419.0.html).
+
 ### Visual Studio Code
 UE Viewer contains project files needed for opening and running it from [Visual Studio Code](https://code.visualstudio.com/).
 Just open viewer's folder in VSCode, and you'll get everything. Project already has a build task and launch actions set up.
 Of course you'll need a [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) installed.
+You may build, launch and debug UE Viewer using this IDE.
 
 VSCode project comes with additional build command which could be bound to a key. Just use
 ```
@@ -120,6 +123,35 @@ files.
 
 By default, Visual Studio Code project performs Debug build. If you want something else, change `.vscode/tasks.json` file,
 and remove `--debug` option from `build.sh` command.
+
+There are 2 configurations For debugging: "No arguments" runs UE Viewer with default startup UI, and for use of command line
+you may launch 2nd "Volatile" configuration, which reads command line arguments from file *docs/cmdline.cfg* - please refer to
+[Response files documentation](https://github.com/gildor2/UModel/wiki/Response-file) for details on its format. You may also
+edit *.vscode/tasks.json* file to add your own debug configurations.
+
+
+Advanced debugging using Visual Studio
+--------------------------------------
+Initially UE Viewer was released without a Visual Studio solution. However it was possible to debug it within an IDE. The information
+below describes how to build and debug UE Viewer for debugging without use of VS project (e.g. when you're using older IDE version).
+
+You can build a Debug version of viewer by uncommenting ```#define MAX_DEBUG 1``` in *UmodelTool/Build.h* and rebuilding the
+project. After that you'll get executable with optimizations disabled, and with some extra features. For example,
+if umodel.exe crashes, and it is started with *-debug* option, standard Windows window appears with prompt to close
+program or debug it. You may choose "Debug with Visual Studio" there.
+
+Also you may use `--debug` parameter for build.sh script. This will generate separate set of object files and link into
+debug version of the executable (with the same executable file's name). You may quickly switch between "debug" and "release"
+builds without having to fully recompile the program.
+
+If you want to debug umodel.exe in Visual Studio without having a crash, you may load it either from IDE (```File |
+Open | Project/Solution```, then select *umodel.exe*), or you may type in console
+
+    devenv umodel.exe
+
+It is recommended to use **Visual Studio 2013** IDE or newer because it has more advanced debugging features than previous studio
+versions. You may copy **Tools/umodel.natvis** file to *C:\Users\Your_user_folder\My Documents\Visual Studio 20NN\Visualizers*,
+and after that you'll be able to view *TArray* and *FString* structures during debug session.
 
 
 C runtime library for MSVC
@@ -161,39 +193,11 @@ So, the directory structure should look like this
 Also you may change MSVCRT library path by changing **WDKCRT** variable in *common.project*.
 
 
-Debugging in Visual Studio
---------------------------
-UE Viewer was released without a Visual Studio solution. By the way it is still possible to debug it within an IDE. You
-can build a Debug version of viewer by uncommenting ```#define MAX_DEBUG 1``` in *UmodelTool/Build.h* and rebuilding the
-project. After that you'll get executable with optimizations disabled, and with some extra features. For example,
-if umodel.exe crashes, and it is started with *-debug* option, standard Windows window appears with prompt to close
-program or debug it. You may choose "Debug with Visual Studio" there.
-
-Also you may use `--debug` parameter for build.sh script. This will generate separate set of object files and link into
-debug version of the executable (with the same executable file's name). You may quickly switch between "debug" and "release"
-builds without having to fully recompile the program.
-
-If you want to debug umodel.exe in Visual Studio without having a crash, you may load it either from IDE (```File |
-Open | Project/Solution```, then select *umodel.exe*), or you may type
-
-    devenv umodel.exe
-
-from console.
-
-It is recommended to use **Visual Studio 2013** IDE or newer because it has more advanced debugging features than previous studio
-versions. You may copy **Tools/umodel.natvis** file to *C:\Users\Your_user_folder\My Documents\Visual Studio 20NN\Visualizers*,
-and after that you'll be able to view *TArray* and *FString* structures during debug session.
-
-### Visual Studio Code
-As was mentioned earlier, UE Viewer source code comes with Visual Studio Code project. You may easily edit, launch and debug viewer
-with it. For debugging, there are 2 configurations: "No arguments" runs UE Viewer with default startup UI, and for command line use
-you may launch 2nd "Volatile" configuration, which reads command line string from file *docs/cmdline.cfg* - please refer to
-[Response files documentation](https://github.com/gildor2/UModel/wiki/Response-file) for details on its format.
-
 Directory structure
 -------------------
 Below is the list of major folders which exists in this repository or which are generated during build process.
 ```
+├── .vs                   # Visual Studio 2019 project files
 ├── .vscode               # Visual Studio Code project files
 ├── Core                  # corelibraries not related to Unreal engine
 │   └── GL                # OpenGL wrapper builder
