@@ -513,9 +513,6 @@ void UISetExceptionHandler(void (*Handler)());
 static void ExceptionHandler()
 {
 	FFileWriter::CleanupOnError();
-#if DO_GUARD
-	GError.StandardHandler();
-#endif // DO_GUARD
 #if HAS_UI
 	if (GApplication.GuiShown)
 		GApplication.ShowErrorDialog();
@@ -692,6 +689,7 @@ int main(int argc, const char **argv)
 	appPrintf("DEBUG BUILD\n");
 #endif
 
+	// Set up exception handling
 #if DO_GUARD
 	TRY {
 #endif
@@ -699,9 +697,12 @@ int main(int argc, const char **argv)
 #if _WIN32
 	signal(SIGABRT, AbortHandler);
 #endif
+	GError.SetErrorHandler(ExceptionHandler);
 
 	PROFILE_IF(false);
 	guard(Main);
+
+	// Process command line
 
 	if (argc == 2 && argv[1][0] == '@')
 	{
@@ -1271,7 +1272,7 @@ int main(int argc, const char **argv)
 
 #if DO_GUARD
 	} CATCH_CRASH {
-		ExceptionHandler();
+		GError.HandleError();
 	}
 #endif
 

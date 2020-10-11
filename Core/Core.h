@@ -454,14 +454,14 @@ void appDumpMemoryAllocations();
 
 #define unguard							\
 		} catch (...) {					\
-			appUnwindThrow(__FUNC__);	\
+			CErrorContext::UnwindThrow(__FUNC__); \
 		}								\
 	}
 
 #define unguardf(...)					\
 		} catch (...) {					\
-			appUnwindPrefix(__FUNC__);	\
-			appUnwindThrow(__VA_ARGS__);\
+			CErrorContext::SetPrefix(__FUNC__);	\
+			CErrorContext::UnwindThrow(__VA_ARGS__);\
 		}								\
 	}
 
@@ -495,14 +495,14 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info);
 
 #define unguard							\
 		} __except (EXCEPT_FILTER) {	\
-			appUnwindThrow(__FUNC__);	\
+			CErrorContext::UnwindThrow(__FUNC__); \
 		}								\
 	}
 
 #define unguardf(...)					\
 		} __except (EXCEPT_FILTER) {	\
-			appUnwindPrefix(__FUNC__);	\
-			appUnwindThrow(__VA_ARGS__);\
+			CErrorContext::SetPrefix(__FUNC__);	\
+			CErrorContext::UnwindThrow(__VA_ARGS__);\
 		}								\
 	}
 
@@ -514,39 +514,60 @@ long win32ExceptFilter(struct _EXCEPTION_POINTERS *info);
 
 #endif
 
-void appUnwindPrefix(const char *fmt);		// not vararg (will display function name for unguardf only)
-NORETURN void appUnwindThrow(const char *fmt, ...);
-
 // The structure holding full error information, with reset capability.
 struct CErrorContext
 {
+	typedef void (*ErrorHandlerType)();
+
 	// Determines if this is an exception or appError throwed
 	bool IsSwError;
-	// Used for error history formatting
-	bool FmtNeedArrow;
 	// Suppress logging error message to a file (in a case of user mistake)
 	bool SuppressLog;
+
+protected:
+	// Used for error history formatting
+	bool FmtNeedArrow;
+
+	ErrorHandlerType ErrorHandler;
+
+public:
 	// Call stack
 	char History[2048];
 
-	CErrorContext()
+	inline CErrorContext()
 	{
 		Reset();
 	}
 
-	bool HasError() const
+	inline bool HasError() const
 	{
 		return History[0] != 0;
 	}
 
-	void Reset()
+	// Reset the error context. Note: this will reset ErrorHandler as well.
+	inline void Reset()
 	{
 		memset(this, 0, sizeof(*this));
 	}
 
+	// Set custom error handler (executed with HandleError() call)
+	inline void SetErrorHandler(ErrorHandlerType Handler)
+	{
+		ErrorHandler = Handler;
+	}
+
+	static NORETURN void UnwindThrow(const char* fmt, ...);
+
+	// Not vararg (will display function name for unguardf only)
+	static void SetPrefix(const char* prefix);
+
+	// Display the error message
+	void HandleError();
+
 	// Log error message to console and notify.log, do NOT exit
 	void StandardHandler();
 
+protected:
 	void LogHistory(const char *part);
 };
 

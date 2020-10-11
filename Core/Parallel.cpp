@@ -245,9 +245,8 @@ CThread::~CThread()
 		}
 
 		appPrintf("\nException in thread %d:\n", CurrentId());
-		GError.StandardHandler();
+		GError.HandleError();
 
-		//todo: there's no build number displayed, Core has no access to version string
 		exit(1);
 	}
 }

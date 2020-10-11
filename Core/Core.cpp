@@ -161,21 +161,34 @@ void appNotify(const char *fmt, ...)
 	NotifyHeader[0] = 0;
 }
 
+
+void CErrorContext::HandleError()
+{
+	// Lock any other thread from error processing
+	//GLogMutex.Lock(); - this could deadlock GUI ...
+
+	StandardHandler();
+	if (ErrorHandler)
+	{
+		ErrorHandler();
+	}
+}
+
+
 void CErrorContext::StandardHandler()
 {
 	void (*PrintFunc)(const char*, ...);
 	PrintFunc = GError.SuppressLog ? appPrintf : appNotify;
+
 	// appNotify does some markup itself, add explicit marker for pure appPrintf
 	const char* Marker = GError.SuppressLog ? "\n*** " : "";
 
 	if (GError.History[0])
 	{
-//		printf("ERROR: %s\n", GError.History);
 		PrintFunc("%sERROR: %s\n", Marker, GError.History);
 	}
 	else
 	{
-//		printf("Unknown error\n");
 		PrintFunc("%sUnknown error\n", Marker);
 	}
 }
@@ -189,15 +202,15 @@ void CErrorContext::LogHistory(const char *part)
 	appStrcatn(ARRAY_ARG(History), part);
 }
 
-void appUnwindPrefix(const char *fmt)
+void CErrorContext::SetPrefix(const char* prefix)
 {
 	char buf[512];
-	appSprintf(ARRAY_ARG(buf), GError.FmtNeedArrow ? " <- %s: " : "%s: ", fmt);
+	appSprintf(ARRAY_ARG(buf), GError.FmtNeedArrow ? " <- %s: " : "%s: ", prefix);
 	GError.LogHistory(buf);
 	GError.FmtNeedArrow = false;
 }
 
-void appUnwindThrow(const char *fmt, ...)
+void CErrorContext::UnwindThrow(const char *fmt, ...)
 {
 	char buf[512];
 	va_list argptr;
