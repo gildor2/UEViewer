@@ -1022,7 +1022,19 @@ int main(int argc, const char **argv)
 
 		if (!Files.Num())
 		{
-			appPrintf("WARNING: unable to find package %s\n", packagesToLoad[i]);
+			// Handling case when only full package name has been passes: appFindGameFiles
+			// won't handle this, but UnPackage::LoadPackage() has a possibility to find a
+			// package with a full file name.
+			UnPackage* Package = UnPackage::LoadPackage(packagesToLoad[i]);
+			if (!Package)
+			{
+				appPrintf("WARNING: unable to find package %s\n", packagesToLoad[i]);
+			}
+			else
+			{
+				Packages.Add(Package);
+				GameFiles.Add(Package->FileInfo);
+			}
 		}
 		else
 		{
