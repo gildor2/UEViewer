@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+16.10.2020
+- updated Lineage 2 support
+
 01.09.2020
 - bugfix: exporting of all referenced textures from materials didn't work
 

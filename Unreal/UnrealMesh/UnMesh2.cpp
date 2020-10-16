@@ -70,7 +70,30 @@ void ULodMesh::Serialize(FArchive &Ar)
 	guard(ULodMesh::Serialize);
 	Super::Serialize(Ar);
 
-	Ar << Version << VertexCount << Verts;
+	Ar << Version << VertexCount;
+
+#if LINEAGE2
+	if (Ar.Game == GAME_Lineage2 && Ar.ArVer >= 133)
+	{
+		TArray<FVector> NewVerts;
+		Ar << NewVerts;
+		int Count = NewVerts.Num();
+		Verts.AddUninitialized(Count);
+		// Convert FVector to FMeshVert (with losing precision)
+		for (int i = 0; i < Count; i++)
+		{
+			FMeshVert& V = Verts[i];
+			const FVector& SV = NewVerts[i];
+			V.X = SV.X;
+			V.Y = SV.Y;
+			V.Z = SV.Z;
+		}
+		goto post_verts;
+	}
+#endif // LINEAGE2
+
+	Ar << Verts;
+post_verts:
 
 	if (Version <= 1 || Ar.Game == GAME_SplinterCell)
 	{
