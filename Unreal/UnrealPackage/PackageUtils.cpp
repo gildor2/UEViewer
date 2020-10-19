@@ -279,6 +279,9 @@ bool ScanContent(const TArray<const CGameFileInfo*>& Packages, IProgressCallback
 		{
 			UnPackage* package = UnPackage::LoadPackage(file, /*silent=*/ true);	// should always return non-NULL
 			if (!package) continue;		// should not happen
+			// Don't keep the package's reader open
+			package->CloseReader();
+
 			ScanPackageExports(package, file);
 		#if 0
 			// this code is disabled: it works, however we're going to use ScanContent not just to get objects counts,

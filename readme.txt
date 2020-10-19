@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+19.10.2020
+- removed restriction to maximal number of pak files in the game
+
 16.10.2020
 - updated Lineage 2 support
 

@@ -490,7 +490,7 @@ void appInitPlatform()
 	signal(SIGABRT, AbortHandler);
 #endif // VSTUDIO_INTEGRATION
 	// Increase standard 512 open file limit. Note: it seems it can't be increased more than 2048 (stackoverflow says).
-	_setmaxstdio(1024);
+	//_setmaxstdio(1024);
 }
 
 void appCopyTextToClipboard(const char* text)

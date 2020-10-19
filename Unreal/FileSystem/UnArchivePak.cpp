@@ -8,6 +8,11 @@
 
 #define PAK_FILE_MAGIC		0x5A6F12E1
 
+// Number of pak file handles kept open when files no longer used (cache of open pak file handles).
+// We're limiting number of simultaneously open pak files to this value in a case game has number
+// of pak files exceeding C library limitations (2048 files in msvcrt.dll).
+#define MAX_OPEN_PAKS		32
+
 FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 {
 	// New FPakInfo fields.
@@ -278,12 +283,41 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 	unguard;
 }
 
+FPakFile::~FPakFile()
+{
+	// Can't call virtual 'Close' from destructor, so use fully qualified name
+	FPakFile::Close();
+}
+
+void FPakFile::Close()
+{
+	if (UncompressedBuffer)
+	{
+		appFree(UncompressedBuffer);
+		UncompressedBuffer = NULL;
+	}
+	if (IsFileOpen)
+	{
+		Parent->FileClosed();
+		IsFileOpen = false;
+	}
+}
+
 void FPakFile::Serialize(void *data, int size)
 {
 	PROFILE_IF(size >= 1024);
 	guard(FPakFile::Serialize);
 	if (ArStopper > 0 && ArPos + size > ArStopper)
 		appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
+
+	// (Re-)open pak file if needed
+	if (!IsFileOpen)
+	{
+		Parent->FileOpened();
+		IsFileOpen = true;
+	}
+
+	FArchive* Reader = Parent->Reader;
 
 	if (Info->CompressionMethod)
 	{
@@ -523,9 +557,74 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 		appPrintf(", version %d\n", info.Version);
 	}
 
+	// Close the file handle
+	if (Reader)
+	{
+		Reader->Close();
+	}
+
 	return result;
 
 	unguardf("PakVer=%d.%d", mainVer, subVer);
+}
+
+// FPakVFS objects which has Reader open, but no active files (MRU)
+static TStaticArray<FPakVFS*, MAX_OPEN_PAKS>  VFSWithOpenReaders;
+
+FArchive* FPakVFS::CreateReader(int index)
+{
+	guard(FPakVFS::CreateReader);
+
+	const FPakEntry& info = FileInfos[index];
+	FileOpened();
+	return new FPakFile(&info, this);
+
+	unguard;
+}
+
+void FPakVFS::FileOpened()
+{
+	guard(FPakVFS::FileOpened);
+
+	if (NumOpenFiles++ == 0)
+	{
+		// This is the very first open handle in pak.
+		// This pak could be in VFSWithOpenReaders list, in this case just reuse it without opening.
+		int FoundIndex = VFSWithOpenReaders.FindItem(this);
+		if (FoundIndex >= 0)
+		{
+			// This pak should be already opened
+			assert(VFSWithOpenReaders[FoundIndex]->Reader->IsOpen());
+			VFSWithOpenReaders.RemoveAt(FoundIndex);
+		}
+		else
+		{
+			if (!Reader->IsOpen())
+				Reader->Open();
+		}
+	}
+
+	unguard;
+}
+
+void FPakVFS::FileClosed()
+{
+	guard(FPakVFS::FileClosed);
+
+	assert(NumOpenFiles > 0);
+	if (--NumOpenFiles == 0)
+	{
+		// Put this pak file into VFSWithOpenReaders.
+		// Check for MRU list overflow, drop the olders pak file.
+		if (VFSWithOpenReaders.Num() == MAX_OPEN_PAKS)
+		{
+			VFSWithOpenReaders[MAX_OPEN_PAKS-1]->Reader->Close();
+			VFSWithOpenReaders.RemoveAt(MAX_OPEN_PAKS-1);
+		}
+		VFSWithOpenReaders.Insert(this, 0);
+	}
+
+	unguard;
 }
 
 static bool ValidateString(FArchive& Ar)

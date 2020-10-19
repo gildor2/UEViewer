@@ -389,7 +389,7 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 	if (vfs)
 	{
 		assert(reader);
-		// read VF directory
+		// read VFS directory
 		FString error;
 		if (!vfs->AttachReader(reader, error))
 		{
