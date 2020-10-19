@@ -19,7 +19,7 @@ volatile int CThread::NumThreads = 0;
 	Generic classes
 -----------------------------------------------------------------------------*/
 
-#if _WIN32
+#ifdef _WIN32
 
 // Windows.h has InterlockedIncrement/Decrement defines, hide then
 #undef InterlockedIncrement
@@ -106,13 +106,18 @@ void CSemaphore::Wait()
 CThread::CThread()
 {
 	InterlockedIncrement(&NumThreads);
-	thread = _beginthread(ThreadFunc, 0, this);
+	thread = _beginthreadex(NULL, 0, ThreadFunc, this, CREATE_SUSPENDED, NULL);
 }
 
 //todo: not called automatically when thread function completed
 CThread::~CThread()
 {
 	InterlockedDecrement(&NumThreads);
+}
+
+void CThread::Start()
+{
+	ResumeThread((HANDLE)thread);
 }
 
 /*static*/ int CThread::CurrentId()
@@ -197,6 +202,7 @@ void CSemaphore::Wait()
 
 CThread::CThread()
 {
+	bStarted = false;
 	InterlockedIncrement(&NumThreads);
 	static_assert(sizeof(thread) >= sizeof(pthread_t), "Review ThreadSize");
 	typedef void* (*start_routine_t)(void*);
@@ -206,6 +212,11 @@ CThread::CThread()
 CThread::~CThread()
 {
 	InterlockedDecrement(&NumThreads);
+}
+
+void CThread::Start()
+{
+	bStarted = true;
 }
 
 /*static*/ int CThread::CurrentId()
@@ -228,10 +239,24 @@ CThread::~CThread()
 
 #endif // windows / linux
 
+#ifdef _WIN32
+/*static*/ unsigned __stdcall CThread::ThreadFunc(void* param)
+#else
 /*static*/ void CThread::ThreadFunc(void* param)
+#endif
 {
 	TRY {
 		CThread* thread = (CThread*)param;
+
+#ifndef _WIN32
+		// Wait for thread to start. Pthreads doesn't have "create suspended" flag, so wait manually.
+		while (!thread->bStarted)
+		{
+			Sleep(0);
+		}
+#endif // !_WIN32
+
+		// Execute thread function
 		thread->Run();
 	} CATCH_CRASH {
 		// Lock other threads - only one will raise the error
@@ -249,6 +274,10 @@ CThread::~CThread()
 
 		exit(1);
 	}
+
+#ifdef _WIN32
+	return 0;
+#endif
 }
 
 
@@ -465,9 +494,12 @@ CPoolThread* AllocateFreeThread()
 	if (NumPoolThreads < MaxThreads)
 	{
 		CPoolThread* NewThread = new CPoolThread();
+
 		NewThread->bBusy = true;
 		Pool[NumPoolThreads++] = NewThread;
 		InterlockedIncrement(&CPoolThread::NumWorkingThreads);
+
+		NewThread->Start();
 		return NewThread;
 	}
 
