@@ -559,18 +559,21 @@ static void UntileXbox360Texture(const unsigned *src, unsigned *dst, int tiledWi
 //!! Note: this function doesn't work well with non-square textures - UModel will not crash, but textures
 //!! will not appear correctly. Example (from Gears of War 3):
 //!!   umodel GearGame.xxx -game=gowj T_Ramp_Right_To_Left
-static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiledWidth, int originalWidth, int tiledHeight, int originalHeight, int blockSizeX, int blockSizeY, int bytesPerBlock)
+static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int originalWidth, int originalHeight, const CPixelFormatInfo& info)
 {
 	guard(UntileCompressedXbox360Texture);
 
-	int tiledBlockWidth     = tiledWidth / blockSizeX;			// width of image in blocks
-	int originalBlockWidth  = originalWidth / blockSizeX;		// width of image in blocks
-	int tiledBlockHeight    = tiledHeight / blockSizeY;			// height of image in blocks
-	int originalBlockHeight = originalHeight / blockSizeY;		// height of image in blocks
-	int logBpp              = appLog2(bytesPerBlock);
+	int alignedWidth = Align(originalWidth, info.X360AlignX);
+	int alignedHeight = Align(originalHeight, info.X360AlignY);
+
+	int tiledBlockWidth     = alignedWidth / info.BlockSizeX;		// width of image in blocks
+	int originalBlockWidth  = originalWidth / info.BlockSizeX;		// width of image in blocks
+	int tiledBlockHeight    = alignedHeight / info.BlockSizeY;		// height of image in blocks
+	int originalBlockHeight = originalHeight / info.BlockSizeY;		// height of image in blocks
+	int logBpp              = appLog2(info.BytesPerBlock);
 
 	// XBox360 has packed multiple lower mip levels into a single tile - should use special code
-	// to unpack it.
+	// to unpack it. Textures are aligned to bottom-right corder.
 	// Packing looks like this:
 	// ....CCCCBBBBBBBBAAAAAAAAAAAAAAAA
 	// ....CCCCBBBBBBBBAAAAAAAAAAAAAAAA
@@ -584,7 +587,8 @@ static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiled
 	// Force sxOffset=0 and enable DEBUG_MIPS in UnRender.cpp to visualize this layout.
 	// So we should offset X coordinate when unpacking to the width of mip level.
 	// Note: this doesn't work with non-square textures.
-	int sxOffset = 0;
+	int sxOffset = 0, syOffset = 0;
+	// We're handling only size=16 here.
 	if ((tiledBlockWidth >= originalBlockWidth * 2) && (originalWidth == 16))
 	{
 		sxOffset = originalBlockWidth;
@@ -592,15 +596,24 @@ static void UntileCompressedXbox360Texture(const byte *src, byte *dst, int tiled
 		appPrintf("sxOffset=%d\n", sxOffset);
 #endif
 	}
+	if ((tiledBlockHeight >= originalBlockHeight * 2) && (originalHeight == 16))
+	{
+		syOffset = originalBlockHeight;
+#if DEBUG_PLATFORM_TEX
+		appPrintf("syOffset=%d\n", syOffset);
+#endif
+	}
 
 	int numImageBlocks = tiledBlockWidth * tiledBlockHeight;	// used for verification
 
 	// Iterate over image blocks
+	int bytesPerBlock = info.BytesPerBlock;
 	for (int dy = 0; dy < originalBlockHeight; dy++)
 	{
 		for (int dx = 0; dx < originalBlockWidth; dx++)
 		{
-			unsigned swzAddr = GetXbox360TiledOffset(dx + sxOffset, dy, tiledBlockWidth, logBpp);	// do once for whole block
+			// Unswizzle only once for a whole block
+			unsigned swzAddr = GetXbox360TiledOffset(dx + sxOffset, dy + syOffset, tiledBlockWidth, logBpp);
 			assert(swzAddr < numImageBlocks);
 			int sy = swzAddr / tiledBlockWidth;
 			int sx = swzAddr % tiledBlockWidth;
@@ -662,7 +675,6 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 
 	if (UBlockSize * VBlockSize > TotalBlocks)
 	{
-//		VSize1 = TotalBlocks / UBlockSize * Info.BlockSizeY;
 #if DEBUG_PLATFORM_TEX
 		appPrintf("... can't fit aligned texture to a tile, dropping mip\n");
 #endif
@@ -690,7 +702,7 @@ bool CTextureData::DecodeXBox360(int MipLevel)
 
 	// untile and unalign
 	byte *buf = (byte*)appMalloc(Mip.DataSize);   	// older code: 'Mip.DataSize * 16'; perhaps should use Mip.USize * Mip.VSize * BytesPerPixel
-	UntileCompressedXbox360Texture(Mip.CompressedData, buf, USize1, Mip.USize, VSize1, Mip.VSize, Info.BlockSizeX, Info.BlockSizeY, Info.BytesPerBlock);
+	UntileCompressedXbox360Texture(Mip.CompressedData, buf, Mip.USize, Mip.VSize, Info);
 
 	// swap bytes
 	if (Format == TPF_RGBA8 || Format == TPF_BGRA8)
