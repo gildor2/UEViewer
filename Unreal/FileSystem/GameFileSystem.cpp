@@ -4,6 +4,7 @@
 
 #include "UnArchiveObb.h"
 #include "UnArchivePak.h"
+#include "IOStoreFileSystem.h"
 
 #include "Parallel.h"
 
@@ -131,7 +132,7 @@ static const char *SkipExtensions[] =
 
 #if UNREAL4
 
-static bool GIsUE4PackageMode = false;
+static bool GIsUE4Pak = false;
 
 static const char* UE4PackageExtensions[] =
 {
@@ -382,10 +383,15 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 		if (!reader) return;
 		reader->Game = GAME_UE4_BASE;
 		vfs = new FPakVFS(FullName);
-		GIsUE4PackageMode = true; // ignore non-UE4 extensions for speedup file registration
+		GIsUE4Pak = true; // ignore non-UE4 extensions for speedup file registration
+	}
+	else if (!stricmp(ext, "utok") || !stricmp(ext, "ucas"))
+	{
+		// Processed with .pak file, so ignore these files
 	}
 #endif // UNREAL4
-	//!! note: VFS pointer is not stored in any global list, and not released upon program exit
+
+	// Note: VFS pointer is not stored in any global list, and not released at program exit
 	if (vfs)
 	{
 		assert(reader);
@@ -394,9 +400,9 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 		if (!vfs->AttachReader(reader, error))
 		{
 #if UNREAL4
-			// Reset GIsUE4PackageMode back in a case if .pak file appeared in directory
+			// Reset GIsUE4Pak back in a case if .pak file appeared in directory
 			// by accident.
-			GIsUE4PackageMode = false;
+			GIsUE4Pak = false;
 #endif
 			// something goes wrong
 			if (error.Len())
@@ -412,7 +418,40 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 			return;
 		}
 #if UNREAL4
-		GIsUE4PackageMode = false;
+		if (GIsUE4Pak)
+		{
+			// Check for presense of IOStore file system for this pak
+			guard(TokArchive);
+			char Path[MAX_PACKAGE_PATH];
+			appStrncpyz(Path, FullName, ARRAY_COUNT(Path));
+			char* PathExt = Path + (ext - FullName);
+			strcpy(PathExt, "utoc");
+			FILE* tocFile = fopen(Path, "rb");
+			if (tocFile)
+			{
+				fclose(tocFile);
+
+				FVirtualFileSystem* iosVfs = new FIOStoreFileSystem(Path);
+				FArchive* tocReader = new FFileReader(Path);
+				tocReader->Game = GAME_UE4_BASE;
+
+				// Scan contents of IOStore container
+				FString error;
+				if (!iosVfs->AttachReader(tocReader, error))
+				{
+					if (error.Len())
+					{
+						appPrintf("%s\n", *error);
+					}
+					delete iosVfs;
+					delete tocReader;
+				}
+			}
+			unguard;
+
+			// Reset GIsUE4Pak
+			GIsUE4Pak = false;
+		}
 #endif
 	}
 	else
@@ -493,7 +532,7 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 	// to know if file is a package or not. Note: this will also make pak loading a but faster.
 	bool IsPackage = false;
 #if UNREAL4
-	if (GIsUE4PackageMode)
+	if (GIsUE4Pak)
 	{
 		// Faster case for UE4 files - it has small list of extensions
 		IsPackage = FindExtension(ext, ARRAY_ARG(UE4PackageExtensions));
@@ -713,7 +752,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 			return stricmp(*p1.Filename, *p2.Filename) > 0;
 		});
 
-	for (const FileInfo& File :  Files)
+	for (const FileInfo& File : Files)
 	{
 		appSprintf(ARRAY_ARG(Path), "%s/%s", dir, *File.Filename);
 		RegisterGameFile(Path, File.Size);

@@ -13,6 +13,28 @@
 // of pak files exceeding C library limitations (2048 files in msvcrt.dll).
 #define MAX_OPEN_PAKS		32
 
+int32 StringToCompressionMethod(const char* Name)
+{
+	if (!stricmp(Name, "zlib"))
+	{
+		return COMPRESS_ZLIB;
+	}
+	else if (!stricmp(Name, "oodle"))
+	{
+		return COMPRESS_OODLE;
+	}
+	else if (!stricmp(Name, "lz4"))
+	{
+		return COMPRESS_LZ4;
+	}
+	else if (Name[0])
+	{
+		appPrintf("Warning: unknown compression method name: %s\n", Name);
+		return COMPRESS_FIND;
+	}
+	return 0;
+}
+
 FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 {
 	// New FPakInfo fields.
@@ -49,24 +71,7 @@ FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 			char name[32+1];
 			Ar.Serialize(name, 32);
 			name[32] = 0;
-			int32 CompressionMethod = 0;
-			if (!stricmp(name, "zlib"))
-			{
-				CompressionMethod = COMPRESS_ZLIB;
-			}
-			else if (!stricmp(name, "oodle"))
-			{
-				CompressionMethod = COMPRESS_OODLE;
-			}
-			else if (!stricmp(name, "lz4"))
-			{
-				CompressionMethod = COMPRESS_LZ4;
-			}
-			else if (name[0])
-			{
-				appPrintf("Warning: unknown compression method for pak: %s\n", name);
-			}
-			P.CompressionMethods[i] = CompressionMethod;
+			P.CompressionMethods[i] = StringToCompressionMethod(name);
 		}
 	}
 
