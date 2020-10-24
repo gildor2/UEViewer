@@ -1179,8 +1179,8 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 		UnPackage* Package = Ar.CastTo<UnPackage>();
 		assert(Package);
 	#if DEBUG_BULK
-		appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X+pkg(%llX))\n",
-			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, Package->Summary.BulkDataStartOffset, BulkDataSizeOnDisk);
+		appPrintf("BulkHdrEndPos: %X, %d elements x %d bytes, Flags=%X, DataPos=pkg(%llX)+%llX, DiskSize=%X\n",
+			Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, Package->Summary.BulkDataStartOffset, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 	#endif
 		if (!(BulkDataFlags & BULKDATA_NoOffsetFixUp)) // UE4.26 flag
 		{
@@ -1309,7 +1309,7 @@ void FByteBulkData::SerializeHeader(FArchive &Ar)
 header_done: ;
 
 #if DEBUG_BULK
-	appPrintf("pos: %X bulk %X*%d elements (flags=%X, pos=%llX+%X)\n",
+	appPrintf("BulkHdrEndPos: %X, %d elements x %d bytes, Flags=%X, DataPos=%llX, DiskSize=%X\n",
 		Ar.Tell(), ElementCount, GetElementSize(), BulkDataFlags, BulkDataOffsetInFile, BulkDataSizeOnDisk);
 #endif
 
