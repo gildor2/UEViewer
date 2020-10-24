@@ -1216,6 +1216,9 @@ struct FSkeletalMeshVertexBuffer3
 		// skip everything else, would fail if number of LODs is > 1
 
 		// combine vertex data
+		bUseFullPrecisionUVs = false;
+		bUsePackedPosition = false;
+
 		VertsHalf.AddZeroed(NumVertices);
 		int UVIndex = 0;
 		for (int i = 0; i < NumVertices; i++)
