@@ -1,15 +1,13 @@
 #include "Core.h"
 #include "UnCore.h"
 #include "GameFileSystem.h"
+#include "FileSystemUtils.h"
 
 #include "IOStoreFileSystem.h"
 
 #if UNREAL4
 
 #define MAX_COMPRESSION_METHODS 8
-
-// extern
-int32 StringToCompressionMethod(const char* Name);
 
 enum class EIoStoreTocVersion : uint8
 {
@@ -115,7 +113,7 @@ struct FIoFileIndexEntry
 {
 	uint32 Name;
 	uint32 NextFileEntry;
-	uint32 UserData;
+	uint32 UserData;		// index in ChunkIds and ChunkOffsetLengths
 
 	friend FArchive& operator<<(FArchive& Ar, FIoFileIndexEntry& E)
 	{
@@ -124,6 +122,13 @@ struct FIoFileIndexEntry
 };
 
 SIMPLE_TYPE(FIoFileIndexEntry, uint32);
+
+// Notes:
+// - DirectoryEntries[0] seems invalid data, all items are (-1)
+// - FileEntries are sorted by UserData, what equals to index in ChunkIds array (they're filled at the
+//   same time as filling ChunkIds array, see FIoStoreWriterImpl::ProcessChunksThread()).
+// - CompressionBlocks are not in sync with any chunk data, it is sequential compression of the whole
+//   .ucas file. To compute compression block index, file offset is divided by CompressionBlockSize.
 
 struct FIoDirectoryIndexResource
 {
@@ -147,7 +152,7 @@ struct FIoStoreTocResource
 {
 	FIoStoreTocHeader Header;
 	TArray<FIoChunkId> ChunkIds;
-	TArray<FIoOffsetAndLength> ChunkOffsetLengths;
+	TArray<FIoOffsetAndLength> ChunkOffsetLengths; // index here corresponds to ChunkIds
 	TArray<FIoStoreTocCompressedBlockEntry> CompressionBlocks;
 	int CompressionMethods[MAX_COMPRESSION_METHODS];
 	FIoDirectoryIndexResource DirectoryIndex;
@@ -252,12 +257,78 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 		return false;
 	}
 
-	// todo: WHEN all good, ContainerFile should go to "Reader" field, "reader" should be deleted, then return 'true'
-	delete ContainerFile;
-	error = ".utoc Not implemented";
-	return false;
+	// Process DirectoryIndex
+
+	ValidateMountPoint(Resource.DirectoryIndex.MountPoint, ContainerFileName);
+	if (!(Resource.Header.ContainerFlags & (int)EIoContainerFlags::Indexed))
+	{
+		delete ContainerFile;
+		error = ContainerFileName;
+		error += " has no index";
+		return false;
+	}
+
+	guard(ProcessIndex);
+	WalkDirectoryTreeRecursive(Resource.DirectoryIndex, 0, Resource.DirectoryIndex.MountPoint);
+	unguard;
+
+	delete reader;
+	Reader = ContainerFile;
+	appPrintf(".utoc Not implemented!!!\n");
+	return true;
 
 	unguard;
+}
+
+void FIOStoreFileSystem::WalkDirectoryTreeRecursive(struct FIoDirectoryIndexResource& IndexResource, int DirectoryIndex, const FString& ParentDirectory)
+{
+	while (DirectoryIndex != -1)
+	{
+		const FIoDirectoryIndexEntry& Directory = IndexResource.DirectoryEntries[DirectoryIndex];
+		FStaticString<MAX_PACKAGE_PATH> DirectoryPath;
+		DirectoryPath = ParentDirectory;
+		if (Directory.Name != -1)
+		{
+			if (DirectoryPath.Len() && DirectoryPath[DirectoryPath.Len()-1] != '/')
+			{
+				DirectoryPath += "/";
+			}
+			DirectoryPath += IndexResource.StringTable[Directory.Name];
+		}
+		CompactFilePath(DirectoryPath);
+
+		// Process files
+		int FileIndex = Directory.FirstFileEntry;
+		if (FileIndex != -1)
+		{
+			// Register the content folder
+			int FolderIndex = RegisterGameFolder(*DirectoryPath);
+
+			while (FileIndex != -1)
+			{
+				const FIoFileIndexEntry& File = IndexResource.FileEntries[FileIndex];
+				// Register the file
+				CRegisterFileInfo reg;
+				reg.Filename = *IndexResource.StringTable[File.Name];
+				reg.FolderIndex = FolderIndex;
+				reg.Size = 12345; //!! E.UncompressedSize;
+				reg.IndexInArchive = File.UserData;
+				RegisterFile(reg);
+				appPrintf("%s/%s\n", *DirectoryPath, reg.Filename);
+
+				FileIndex = File.NextFileEntry;
+			}
+		}
+
+		// Recurse to child folders
+		if (Directory.FirstChildEntry != -1)
+		{
+			WalkDirectoryTreeRecursive(IndexResource, Directory.FirstChildEntry, DirectoryPath);
+		}
+
+		// Proceed to the sibling directory
+		DirectoryIndex = Directory.NextSiblingEntry;
+	}
 }
 
 FArchive* FIOStoreFileSystem::CreateReader(int index)

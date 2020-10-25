@@ -21,6 +21,8 @@ public:
 	virtual FArchive* CreateReader(int index);
 
 protected:
+	void WalkDirectoryTreeRecursive(struct FIoDirectoryIndexResource& IndexResource, int DirectoryIndex, const FString& ParentDirectory);
+
 	FString				Filename;
 	FArchive*			Reader;
 };
