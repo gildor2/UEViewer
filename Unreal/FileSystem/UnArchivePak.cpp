@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnCore.h"
 #include "GameFileSystem.h"
+#include "FileSystemUtils.h"
 
 #include "UnArchivePak.h"
 
@@ -12,28 +13,6 @@
 // We're limiting number of simultaneously open pak files to this value in a case game has number
 // of pak files exceeding C library limitations (2048 files in msvcrt.dll).
 #define MAX_OPEN_PAKS		32
-
-int32 StringToCompressionMethod(const char* Name)
-{
-	if (!stricmp(Name, "zlib"))
-	{
-		return COMPRESS_ZLIB;
-	}
-	else if (!stricmp(Name, "oodle"))
-	{
-		return COMPRESS_OODLE;
-	}
-	else if (!stricmp(Name, "lz4"))
-	{
-		return COMPRESS_LZ4;
-	}
-	else if (Name[0])
-	{
-		appPrintf("Warning: unknown compression method name: %s\n", Name);
-		return COMPRESS_FIND;
-	}
-	return 0;
-}
 
 FArchive& operator<<(FArchive& Ar, FPakInfo& P)
 {
@@ -441,42 +420,6 @@ void FPakFile::Serialize(void *data, int size)
 	unguardf("file=%s", *Info->FileInfo->GetRelativeName());
 }
 
-void FPakVFS::CompactFilePath(FString& Path)
-{
-	guard(FPakVFS::CompactFilePath);
-
-	if (Path.StartsWith("/Engine/Content"))	// -> /Engine
-	{
-		Path.RemoveAt(7, 8);
-		return;
-	}
-	if (Path.StartsWith("/Engine/Plugins")) // -> /Plugins
-	{
-		Path.RemoveAt(0, 7);
-		return;
-	}
-
-	if (Path[0] != '/')
-		return;
-
-	char* delim = strchr(&Path[1], '/');
-	if (!delim)
-		return;
-	if (strncmp(delim, "/Content/", 9) != 0)
-		return;
-
-	int pos = delim - &Path[0];
-	if (pos > 4)
-	{
-		// /GameName/Content -> /Game
-		int toRemove = pos + 8 - 5;
-		Path.RemoveAt(5, toRemove);
-		memcpy(&Path[1], "Game", 4);
-	}
-
-	unguard;
-}
-
 bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 {
 	int mainVer = 0, subVer = 0;
@@ -669,21 +612,6 @@ static bool ValidateString(FArchive& Ar)
 	return !bFail;
 }
 
-void FPakVFS::ValidateMountPoint(FString& MountPoint)
-{
-	bool badMountPoint = false;
-	if (!MountPoint.RemoveFromStart("../../.."))
-		badMountPoint = true;
-	if (MountPoint[0] != '/' || ( (MountPoint.Len() > 1) && (MountPoint[1] == '.') ))
-		badMountPoint = true;
-
-	if (badMountPoint)
-	{
-		appPrintf("WARNING: Pak \"%s\" has strange mount point \"%s\", mounting to root\n", *Filename, *MountPoint);
-		MountPoint = "/";
-	}
-}
-
 bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString& error)
 {
 	guard(FPakVFS::LoadPakIndexLegacy);
@@ -747,7 +675,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 	}
 
 	// Process MountPoint
-	ValidateMountPoint(MountPoint);
+	ValidateMountPoint(MountPoint, Filename);
 
 	// Read file information
 	FileInfos.AddZeroed(count);
@@ -875,7 +803,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	Reserve(count);
 
 	// Process MountPoint
-	ValidateMountPoint(MountPoint);
+	ValidateMountPoint(MountPoint, Filename);
 
 	uint64 PathHashSeed;
 	InfoReader << PathHashSeed;
@@ -974,11 +902,15 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		if (DirectoryPath[DirectoryPath.Len()-1] == '/')
 			DirectoryPath.RemoveAt(DirectoryPath.Len()-1, 1);
 
-		int FolderIndex = RegisterGameFolder(*DirectoryPath);
-
 		// Read size of FPakDirectory (DirectoryIndex::Value)
 		int32 NumFilesInDirectory;
 		InfoReader << NumFilesInDirectory;
+
+		int FolderIndex = -1;
+		if (NumFilesInDirectory)
+		{
+			FolderIndex = RegisterGameFolder(*DirectoryPath);
+		}
 
 		for (int DirectoryFileIndex = 0; DirectoryFileIndex < NumFilesInDirectory; DirectoryFileIndex++)
 		{

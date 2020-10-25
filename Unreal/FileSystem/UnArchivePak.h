@@ -176,8 +176,6 @@ public:
 //		if (HashTable) delete[] HashTable;
 	}
 
-	void CompactFilePath(FString& Path);
-
 	virtual bool AttachReader(FArchive* reader, FString& error);
 
 	virtual FArchive* CreateReader(int index);
@@ -195,8 +193,6 @@ protected:
 
 	// Called by FPakFile when it is destroyed
 	void FileClosed();
-
-	void ValidateMountPoint(FString& MountPoint);
 
 	// UE4.24 and older
 	bool LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString& error);
