@@ -336,7 +336,7 @@ void FPakFile::Serialize(void *data, int size)
 					CompressedData = (byte*)appMallocNoInit(EncryptedSize);
 					Reader->Seek64(Block.CompressedStart);
 					Reader->Serialize(CompressedData, EncryptedSize);
-					PakRequireAesKey();
+					FileRequiresAesKey();
 					appDecryptAES(CompressedData, EncryptedSize);
 				}
 				appDecompress(CompressedData, CompressedBlockSize, UncompressedBuffer, UncompressedBlockSize, Info->CompressionMethod);
@@ -383,7 +383,7 @@ void FPakFile::Serialize(void *data, int size)
 					RemainingSize = EncryptedBufferSize;
 				RemainingSize = Align(RemainingSize, EncryptionAlign); // align for AES, pak contains aligned data
 				Reader->Serialize(UncompressedBuffer, RemainingSize);
-				PakRequireAesKey();
+				FileRequiresAesKey();
 				appDecryptAES(UncompressedBuffer, RemainingSize);
 			}
 
@@ -468,7 +468,7 @@ bool FPakVFS::AttachReader(FArchive* reader, FString& error)
 
 	if (info.bEncryptedIndex)
 	{
-		if (!PakRequireAesKey(false))
+		if (!FileRequiresAesKey(false))
 		{
 			char buf[1024];
 			appSprintf(ARRAY_ARG(buf), "WARNING: Pak \"%s\" has encrypted index. Skipping.", *Filename);

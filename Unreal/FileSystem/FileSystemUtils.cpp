@@ -74,3 +74,14 @@ int32 StringToCompressionMethod(const char* Name)
 	}
 	return 0;
 }
+
+bool FileRequiresAesKey(bool fatal)
+{
+	if ((GAesKey.Len() == 0) && !UE4EncryptedPak())
+	{
+		if (fatal)
+			appErrorNoLog("AES key is required");
+		return false;
+	}
+	return true;
+}

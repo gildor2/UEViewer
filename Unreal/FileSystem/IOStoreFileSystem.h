@@ -3,18 +3,69 @@
 
 #if UNREAL4
 
+class FIOStoreFileSystem;
+struct FIoOffsetAndLength;
+struct FIoStoreTocCompressedBlockEntry;
+
+class FIOStoreFile : public FArchive
+{
+	DECLARE_ARCHIVE(FIOStoreFile, FArchive);
+public:
+	FIOStoreFile(int InFileIndex, FIOStoreFileSystem* InParent);
+
+	virtual ~FIOStoreFile();
+
+	virtual void Serialize(void *data, int size);
+
+	virtual void Seek(int Pos)
+	{
+		guard(FPakFile::Seek);
+		assert(Pos >= 0 && Pos < UncompressedSize);
+		ArPos = Pos;
+//		unguardf("file=%s", *Info->FileInfo->GetRelativeName());
+		unguardf("file=%d", FileIndex);
+	}
+
+	virtual int GetFileSize() const
+	{
+		return UncompressedSize;
+	}
+
+	virtual bool IsOpen() const
+	{
+		return IsFileOpen;
+	}
+
+	virtual void Close();
+
+	enum { EncryptionAlign = 16 }; // AES-specific constant
+	enum { EncryptedBufferSize = 256 }; //?? TODO: check - may be value 16 will be better for performance
+
+protected:
+	// File (chunk) info
+	FIOStoreFileSystem* Parent;
+	int32		FileIndex;
+
+	// Cached file data
+	uint64		UncompressedOffset;		// offset of the chunk inside whole container
+	uint32		UncompressedSize;		// uncompressed size of the chunk
+
+	// Data for decompression
+	byte*		UncompressedBuffer;
+	int			UncompressedBufferPos;	// buffer's position inside the chunk
+
+	bool		IsFileOpen;
+};
+
 class FIOStoreFileSystem : public FVirtualFileSystem
 {
+	friend FIOStoreFile;
 public:
-	FIOStoreFileSystem(const char* InFilename)
-	:	Filename(InFilename)
-	,	Reader(NULL)
-	{}
+	static const int MAX_COMPRESSION_METHODS = 8;
 
-	~FIOStoreFileSystem()
-	{
-		delete Reader;
-	}
+	FIOStoreFileSystem(const char* InFilename);
+
+	~FIOStoreFileSystem();
 
 	virtual bool AttachReader(FArchive* reader, FString& error);
 
@@ -23,8 +74,16 @@ public:
 protected:
 	void WalkDirectoryTreeRecursive(struct FIoDirectoryIndexResource& IndexResource, int DirectoryIndex, const FString& ParentDirectory);
 
-	FString				Filename;
-	FArchive*			Reader;
+	FString Filename;
+	FArchive* Reader;
+
+	// utoc/ucas information
+	int32 ContainerFlags;
+	int32 CompressionBlockSize;
+	TArray<FIoOffsetAndLength> ChunkLocations;
+	TArray<FIoStoreTocCompressedBlockEntry> CompressionBlocks;
+	int NumCompressionMethods;
+	int CompressionMethods[MAX_COMPRESSION_METHODS];
 };
 
 #endif // UNREAL4

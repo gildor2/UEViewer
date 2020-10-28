@@ -7,4 +7,6 @@ void CompactFilePath(FString& Path);
 
 int32 StringToCompressionMethod(const char* Name);
 
+bool FileRequiresAesKey(bool fatal = true);
+
 #endif // __FILE_SYSTEM_UTILS_H__
