@@ -93,11 +93,18 @@ class FVirtualFileSystem;
 struct CGameFileInfo
 {
 public:
+	enum
+	{
+		GFI_None = 0,
+		GFI_Package = 1,							// This is a package
+		GFI_IOStoreFile = 2,						// This file is located in UE4 IOStore
+	};
+
 	// Placed here for better cache locality
 	uint16		FolderIndex;						// index of folder containing the file (folder is relative to game directory)
-	bool		IsPackage;
 
 protected:
+	uint32		Flags;								// set of GFI_... flags
 	uint8		ExtensionOffset;					// Extension = ShortName+ExtensionOffset, points after '.'
 	CGameFileInfo* HashNext;						// used for fast search; computed from ShortFilename excluding extension
 
@@ -167,6 +174,16 @@ public:
 		CGameFileInfo* saveHash = HashNext;
 		memcpy(this, other, sizeof(CGameFileInfo));
 		HashNext = saveHash;
+	}
+
+	FORCEINLINE bool IsPackage() const
+	{
+		return (Flags & GFI_Package) != 0;
+	}
+
+	FORCEINLINE bool IsIOStoreFile() const
+	{
+		return (Flags & GFI_IOStoreFile) != 0;
 	}
 
 private:

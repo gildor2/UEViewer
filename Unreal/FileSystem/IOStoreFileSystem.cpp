@@ -509,6 +509,7 @@ void FIOStoreFileSystem::WalkDirectoryTreeRecursive(struct FIoDirectoryIndexReso
 				reg.Filename = *IndexResource.StringTable[File.Name];
 				reg.FolderIndex = FolderIndex;
 				reg.Size = ChunkLocations[File.UserData].GetLength();
+				reg.Flags = CGameFileInfo::GFI_IOStoreFile;
 				reg.IndexInArchive = File.UserData;
 				CGameFileInfo* file = RegisterFile(reg);
 #if PRINT_CHUNKS

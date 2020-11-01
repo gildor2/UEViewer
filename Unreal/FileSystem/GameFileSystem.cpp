@@ -599,7 +599,7 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 
 	// Create CGameFileInfo entry
 	CGameFileInfo* info = AllocFileInfo();
-	info->IsPackage = IsPackage;
+	info->Flags = RegisterInfo.Flags | (IsPackage ? CGameFileInfo::GFI_Package : 0);
 	info->FileSystem = parentVfs;
 	info->IndexInVfs = RegisterInfo.IndexInArchive;
 	info->ShortFilename = appStrdupPool(ShortFilename);
@@ -608,10 +608,10 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 	info->Size = RegisterInfo.Size;
 	info->SizeInKb = (info->Size + 512) / 1024;
 
-	if (info->Size < 16) info->IsPackage = false;
+	if (info->Size < 16) info->Flags &= ~CGameFileInfo::GFI_Package;
 
 #if UNREAL3
-	if (info->IsPackage && (strnicmp(info->ShortFilename, "startup", 7) == 0))
+	if (info->IsPackage() && (strnicmp(info->ShortFilename, "startup", 7) == 0))
 	{
 		// Register a startup package
 		// possible name variants:
@@ -800,7 +800,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	ParallelFor(GameFiles.Num(), [](int index)
 		{
 			CGameFileInfo* info = GameFiles[index];
-			if (info->IsPackage)
+			if (info->IsPackage())
 			{
 				// Find all files with the same path/name but different extension
 				TStaticArray<const CGameFileInfo*, 32> otherFiles;
@@ -1053,7 +1053,7 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename, int GameFolder)
 		else
 		{
 			// No extension has been provided, so we're looking only for package files
-			if (!info->IsPackage) continue;
+			if (!info->IsPackage()) continue;
 		}
 
 		// Verify the filename without extension
@@ -1336,7 +1336,7 @@ void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char *Ext, v
 		if (!Ext)
 		{
 			// enumerate packages
-			if (!info->IsPackage) continue;
+			if (!info->IsPackage()) continue;
 		}
 		else
 		{

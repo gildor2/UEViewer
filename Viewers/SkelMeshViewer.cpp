@@ -918,7 +918,7 @@ void CSkelMeshViewer::FindUE4Animations()
 	appEnumGameFiles<TArray<const CGameFileInfo*> >( // won't compile with lambda without explicitly providing template argument
 		[](const CGameFileInfo* file, TArray<const CGameFileInfo*>& param) -> bool
 		{
-			if (file->IsPackage)
+			if (file->IsPackage())
 				param.Add(file);
 			return true;
 		}, PackageInfos);

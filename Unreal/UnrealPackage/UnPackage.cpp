@@ -262,6 +262,11 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	FArchive* baseLoader = NULL;
 	if (FileInfo)
 	{
+		if (FileInfo->IsIOStoreFile())
+		{
+			appPrintf("IO Store package: %s\n", filename);
+			return;
+		}
 		baseLoader = FileInfo->CreateReader();
 	}
 	else
@@ -1270,7 +1275,7 @@ TArray<char*>		MissingPackages;
 	guard(UnPackage::LoadPackage(info));
 	PROFILE_LABEL(*File->GetRelativeName());
 
-	if (File->IsPackage)
+	if (File->IsPackage())
 	{
 		// Check if package was already loaded.
 		if (File->Package)

@@ -6,6 +6,7 @@ struct CRegisterFileInfo
 	const char* Filename;
 	const char* Path;		//todo: probably using `FolderIndex`, so 'Path' could be removed?
 	int64 Size;
+	uint8 Flags;			// CGameFileInfo::GFI_...
 	int IndexInArchive;
 	int FolderIndex;
 
@@ -13,6 +14,7 @@ struct CRegisterFileInfo
 	: Filename(NULL)
 	, Path(NULL)
 	, Size(0)
+	, Flags(CGameFileInfo::GFI_None)
 	, IndexInArchive(-1)
 	, FolderIndex(0)
 	{}
