@@ -1,4 +1,9 @@
 #include "Core.h"
+
+#if USE_OODLE && _WIN32
+#include <windows.h>
+#endif
+
 #include "UnCore.h"
 
 // includes for package decompression
@@ -34,6 +39,7 @@
 #endif
 
 // AES code for UE4
+//todo: move outside, not compression-related
 #include "rijndael/rijndael.h"
 
 /*-----------------------------------------------------------------------------
@@ -184,6 +190,82 @@ static void appDecompressLZX(byte *CompressedBuffer, int CompressedSize, byte *U
 
 #endif // USE_XDK
 
+/*-----------------------------------------------------------------------------
+	Oodle support
+-----------------------------------------------------------------------------*/
+
+#if USE_OODLE && _WIN32
+
+#ifdef _WIN64
+static const char* OodleDllName = "oo2core_5_win64.dll";
+static const char* OodleFuncName = "OodleLZ_Decompress";
+#else
+static const char* OodleDllName = "oo2core_5_win32.dll";
+static const char* OodleFuncName = "_OodleLZ_Decompress@56";
+#endif
+
+typedef size_t (__stdcall *OodleDecompress_t)(
+	void* compressed, size_t compressedSize, void* uncompressed, size_t uncompressedSize,
+	bool bIsSafe,
+	bool bIsCrcCheck,
+	int verboseLevel,
+	void* unk1, size_t unk1Size,
+	void* callback1, void* callback2,
+	void* mem, size_t memSize,
+	int unk2);
+
+static bool bOodleLoaded = false;
+static HMODULE hOodleDll = NULL;
+static OodleDecompress_t OodleLZ_Decompress = NULL;
+
+static void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize)
+{
+	guard(appDecompressOodle);
+
+	if (!bOodleLoaded)
+	{
+		// Find the dll
+		// Try loading from default path(s) first
+		hOodleDll = LoadLibrary(OodleDllName);
+
+		if (!hOodleDll)
+		{
+			static const char* SearchPaths[] =
+			{
+				".", ".\\libs"
+			};
+			for (const char* Path : SearchPaths)
+			{
+				hOodleDll = LoadLibrary(va("%s\\%s", Path, OodleDllName));
+				if (hOodleDll) break;
+			}
+		}
+
+		if (!hOodleDll)
+			appError("Internal Oodle decompressor failed, %s not found", OodleDllName);
+
+		OodleLZ_Decompress = (OodleDecompress_t)GetProcAddress(hOodleDll, OodleFuncName);
+		assert(OodleLZ_Decompress != NULL);
+
+		bOodleLoaded = true;
+	}
+
+	size_t ret = OodleLZ_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize,
+		true, false, 0, NULL, 0, NULL, NULL, NULL, 0, 0);
+	if (ret != UncompressedSize)
+		appError("OodleLZ_Decompress returned %d", ret);
+
+	unguard;
+}
+
+#else
+
+inline void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize)
+{
+	appError("Internal Oodle decompressor failed");
+}
+
+#endif
 
 /*-----------------------------------------------------------------------------
 	appDecompress()
@@ -385,12 +467,28 @@ restart_decompress:
 	if (Flags == COMPRESS_OODLE)
 	{
 	#if HAS_OODLE // defined in project file
-		int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
-		int newLen = Kraken_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
-		if (newLen <= 0)
-			appError("Kraken_Decompress returned %d (magic=%02X/%02X)\n", newLen, CompressedBuffer[0], CompressedBuffer[1]);
-		if (newLen != UncompressedSize) appError("oodle len mismatch: %d != %d", newLen, UncompressedSize);
-		return newLen;
+		static bool bUseDll = false;
+
+		if (!bUseDll)
+		{
+			int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
+			int newLen = Kraken_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
+//			if (newLen <= 0)
+//				appError("Kraken_Decompress returned %d (magic=%02X/%02X)\n", newLen, CompressedBuffer[0], CompressedBuffer[1]);
+//			if (newLen != UncompressedSize) appError("oodle len mismatch: %d != %d", newLen, UncompressedSize);
+			if (newLen != UncompressedSize)
+			{
+				bUseDll = true;
+			}
+		}
+		if (bUseDll)
+		{
+			appDecompressOodle(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
+		}
+		return UncompressedSize;
+	#elif defined(_WIN32)
+		appDecompressOodle(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
+		return UncompressedSize;
 	#else
 		appError("appDecompress: Oodle compression is not supported");
 	#endif // HAS_OODLE

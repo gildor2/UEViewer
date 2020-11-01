@@ -44,3 +44,6 @@ Tools/UITest/vs/Release/
 # ooz library
 libs/oodle/*.h
 libs/oodle/*.cpp
+
+# oodle dll
+libs/oo2core*.dll
