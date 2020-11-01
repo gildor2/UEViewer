@@ -670,7 +670,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 	InfoReader << count;
 	if (!count)
 	{
-		appPrintf("Empty pak file \"%s\"\n", *Filename);
+//		appPrintf("Empty pak file \"%s\"\n", *Filename);
 		return true;
 	}
 
@@ -797,7 +797,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	InfoReader << count;
 	if (!count)
 	{
-		appPrintf("Empty pak file \"%s\"\n", *Filename);
+//		appPrintf("Empty pak file \"%s\"\n", *Filename);
 		return true;
 	}
 	Reserve(count);

@@ -471,7 +471,6 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 
 	delete reader;
 	Reader = ContainerFile;
-	appPrintf(".utoc Not implemented!!!\n");
 	return true;
 
 	unguard;
