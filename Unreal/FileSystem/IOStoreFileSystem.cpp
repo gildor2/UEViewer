@@ -7,6 +7,9 @@
 
 #if UNREAL4
 
+// Print file-chunk mapping for better understanding container structure
+//#define PRINT_CHUNKS 1
+
 enum class EIoStoreTocVersion : uint8
 {
 	Invalid = 0,
@@ -70,7 +73,7 @@ struct FIoStoreTocCompressedBlockEntry
 		return Result & 0xFFFFFF;
 	}
 
-	uint32 GetCompressionMethod() const
+	uint32 GetCompressionMethodIndex() const
 	{
 		return Data[11];
 	}
@@ -307,6 +310,9 @@ void FIOStoreFile::Serialize(void *data, int size)
 
 	FArchive* Reader = Parent->Reader;
 
+	// References:
+	// - FIoStoreReaderImpl::Read() - simpler implementation
+	// - FFileIoStore::ReadBlocks() - more complex asynchronous reading, doing the same
 	while (size > 0)
 	{
 		if ((UncompressedBuffer == NULL) || (ArPos < UncompressedBufferPos) || (ArPos >= UncompressedBufferPos + Parent->CompressionBlockSize))
@@ -321,7 +327,6 @@ void FIOStoreFile::Serialize(void *data, int size)
 			UncompressedBufferPos = int(int64(Parent->CompressionBlockSize) * BlockIndex - UncompressedOffset);
 
 			assert(Parent->ContainerFlags & int(EIoContainerFlags::Compressed));
-			//todo: handle uncompressed data
 			const FIoStoreTocCompressedBlockEntry& Block = Parent->CompressionBlocks[BlockIndex];
 			int CompressedBlockSize = Block.GetCompressedSize();
 			int UncompressedBlockSize = Block.GetUncompressedSize();
@@ -341,11 +346,23 @@ void FIOStoreFile::Serialize(void *data, int size)
 				FileRequiresAesKey();
 				appDecryptAES(CompressedData, EncryptedSize);
 			}
-			uint32 CompressionMethodIndex = Block.GetCompressionMethod();
-			assert(CompressionMethodIndex <= Parent->NumCompressionMethods); // 0 = None is not counted, so "<=" is used here
-			int CompressionFlags = Parent->CompressionMethods[CompressionMethodIndex];
-			appDecompress(CompressedData, CompressedBlockSize, UncompressedBuffer, UncompressedBlockSize, CompressionFlags);
-			appFree(CompressedData);
+			uint32 CompressionMethodIndex = Block.GetCompressionMethodIndex();
+			if (CompressionMethodIndex)
+			{
+				// Compressed data
+				assert(CompressionMethodIndex <= Parent->NumCompressionMethods); // 0 = None is not counted, so "<=" is used here
+				int CompressionFlags = Parent->CompressionMethods[CompressionMethodIndex];
+				appDecompress(CompressedData, CompressedBlockSize, UncompressedBuffer, UncompressedBlockSize, CompressionFlags);
+				appFree(CompressedData);
+			}
+			else
+			{
+				// Uncompressed data
+				//todo: don't allocate 'CompressedData' and don't 'memcpy', read directly to 'UncompressedBuffer'
+				assert(CompressedBlockSize == UncompressedBlockSize);
+				memcpy(UncompressedBuffer, CompressedData, UncompressedBlockSize);
+				appFree(CompressedData);
+			}
 		}
 
 		// data is in buffer, copy it
@@ -380,6 +397,10 @@ FIOStoreFileSystem::~FIOStoreFileSystem()
 {
 	delete Reader;
 }
+
+#if PRINT_CHUNKS
+static TArray<CGameFileInfo*> ChunkInfos;
+#endif
 
 bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 {
@@ -427,9 +448,26 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 	NumCompressionMethods = Resource.Header.CompressionMethodNameCount;
 	memcpy(CompressionMethods, Resource.CompressionMethods, sizeof(CompressionMethods));
 
+#if PRINT_CHUNKS
+	ChunkInfos.Empty(Resource.ChunkIds.Num());
+	ChunkInfos.AddZeroed(Resource.ChunkIds.Num());
+#endif
+
 	guard(ProcessIndex);
 	WalkDirectoryTreeRecursive(Resource.DirectoryIndex, 0, Resource.DirectoryIndex.MountPoint);
 	unguard;
+
+#if PRINT_CHUNKS
+	appPrintf("\n%d chunks\n\n", Resource.ChunkIds.Num());
+	for (int i = 0; i < Resource.ChunkIds.Num(); i++)
+	{
+		const FIoChunkId& Id = Resource.ChunkIds[i];
+		const CGameFileInfo* File = ChunkInfos[i];
+		appPrintf("%08X%08X [%d] #%d: %s\n", *(uint32*)Id, *(uint32*)(Id+4),
+			*(uint32*)(Id+8) & 0xFFFFFF, Id[11], File ? *File->GetRelativeName() : "--"
+		);
+	}
+#endif // PRINT_CHUNKS
 
 	delete reader;
 	Reader = ContainerFile;
@@ -472,7 +510,10 @@ void FIOStoreFileSystem::WalkDirectoryTreeRecursive(struct FIoDirectoryIndexReso
 				reg.FolderIndex = FolderIndex;
 				reg.Size = ChunkLocations[File.UserData].GetLength();
 				reg.IndexInArchive = File.UserData;
-				RegisterFile(reg);
+				CGameFileInfo* file = RegisterFile(reg);
+#if PRINT_CHUNKS
+				ChunkInfos[File.UserData] = file;
+#endif
 
 				FileIndex = File.NextFileEntry;
 			}
