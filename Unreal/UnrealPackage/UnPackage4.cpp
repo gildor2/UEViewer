@@ -406,4 +406,92 @@ void UnPackage::LoadNameTable4()
 	unguard;
 }
 
+/*-----------------------------------------------------------------------------
+	IO Store AsyncPackage
+-----------------------------------------------------------------------------*/
+
+struct FMappedName
+{
+	uint32 NameIndex;
+	uint32 ExtraIndex;
+};
+
+struct FPackageSummary
+{
+	FMappedName Name;
+	FMappedName SourceName;
+	uint32 PackageFlags;
+	uint32 CookedHeaderSize;
+	int32 NameMapNamesOffset;
+	int32 NameMapNamesSize;
+	int32 NameMapHashesOffset;
+	int32 NameMapHashesSize;
+	int32 ImportMapOffset;
+	int32 ExportMapOffset;
+	int32 ExportBundlesOffset;
+	int32 GraphDataOffset;
+	int32 GraphDataSize;
+	int32 Pad;
+};
+
+void UnPackage::LoadPackageIoStore()
+{
+	guard(UnPackage::LoadPackageIoStore);
+
+	FPackageSummary Sum;
+	Loader->Serialize(&Sum, sizeof(Sum));
+
+	// Rewind Loader to zero and load whole header (including summary)
+	int HeaderSize = Sum.GraphDataOffset + Sum.GraphDataSize;
+	byte* HeaderData = new byte[HeaderSize];
+	Loader->Seek(0);
+	Loader->Serialize(HeaderData, HeaderSize);
+
+	FMemReader Reader(HeaderData, HeaderSize);
+	Reader.SetupFrom(*Loader);
+
+	// Load name table
+	// Sum.NameMapHashesOffset points to 'uint64 HashVersion' followed by hashes.
+	// Current HashVersion = 0xC1640000.
+	int NameCount = Sum.NameMapHashesSize / sizeof(uint64) - 1;
+//	Reader.Seek(Sum.NameMapNamesOffset);
+	LoadNameTableIoStore(HeaderData + Sum.NameMapNamesOffset, NameCount, Sum.NameMapNamesSize);
+
+	delete[] HeaderData;
+
+	unguard;
+}
+
+static void SerializeFNameSerializedView(const byte*& Data, FString& Str)
+{
+	// FSerializedNameHeader
+	int Len = ((Data[0] & 0x7F) << 8) | Data[1];
+	bool isUnicode = (Data[0] & 0x80) != 0;
+	assert(!isUnicode);
+	Data += 2;
+
+	Str.GetDataArray().SetNumUninitialized(Len + 1);
+	memcpy(&Str[0], Data, Len);
+	Str[Len] = 0;
+	Data += Len;
+}
+
+void UnPackage::LoadNameTableIoStore(const byte* Data, int NameCount, int TableSize)
+{
+	guard(UnPackage::LoadNameTableIoStore);
+
+	NameTable = new const char* [NameCount];
+
+	const byte* EndPosition = Data + TableSize;
+	for (int i = 0; i < NameCount; i++)
+	{
+		FStaticString<MAX_FNAME_LEN> NameStr;
+		SerializeFNameSerializedView(Data, NameStr);
+		NameTable[i] = appStrdupPool(*NameStr);
+	}
+	assert(Data == EndPosition);
+
+	unguard;
+}
+
 #endif // UNREAL4

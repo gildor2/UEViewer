@@ -421,6 +421,11 @@ private:
 	void LoadImportTable();
 	void LoadExportTable();
 
+#if UNREAL4
+	void LoadPackageIoStore();
+	void LoadNameTableIoStore(const byte* Data, int NameCount, int TableSize);
+#endif // UNREAL4
+
 	static TArray<UnPackage*> PackageMap;
 };
 

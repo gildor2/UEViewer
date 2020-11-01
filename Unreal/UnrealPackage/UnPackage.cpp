@@ -252,21 +252,12 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 {
 	guard(UnPackage::UnPackage);
 
-#if PROFILE_PACKAGE_TABLES
-	appResetProfiler();
-#endif
-
 	IsLoading = true;
 	FileInfo = fileInfo;
 
 	FArchive* baseLoader = NULL;
 	if (FileInfo)
 	{
-		if (FileInfo->IsIOStoreFile())
-		{
-			appPrintf("IO Store package: %s\n", filename);
-			return;
-		}
 		baseLoader = FileInfo->CreateReader();
 	}
 	else
@@ -284,12 +275,24 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 
 	SetupFrom(*Loader);
 
+#if UNREAL4
+	if (FileInfo && FileInfo->IsIOStoreFile())
+	{
+		LoadPackageIoStore();
+		return;
+	}
+#endif // UNREAL4
+
 	// read summary
 	if (!Summary.Serialize(*this))
 	{
 		// Probably not a package
 		return;
 	}
+
+#if PROFILE_PACKAGE_TABLES
+	appResetProfiler();
+#endif
 
 	Loader->SetupFrom(*this);	// serialization of FPackageFileSummary could change some FArchive properties
 
