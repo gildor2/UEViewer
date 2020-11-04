@@ -199,6 +199,12 @@ struct FObjectExport
 	#endif // USE_COMPACT_PACKAGE_STRUCTS
 #endif // UNREAL3
 
+#if UNREAL4
+	// In UE4.26 IO Store package structure is different, 'ClassIndex' is replaced with global
+	// script object index.
+	const char* ClassName_IO;
+#endif
+
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E);
 
 private:
@@ -343,6 +349,15 @@ public:
 			return "Class";
 		}
 		unguardf("Index=%d", PackageIndex);
+	}
+
+	const char* GetClassNameFor(const FObjectExport& Exp) const
+	{
+#if UNREAL4
+		// Allow to explicitly provide the class name
+		if (Exp.ClassName_IO) return Exp.ClassName_IO;
+#endif
+		return GetObjectName(Exp.ClassIndex);
 	}
 
 	int FindExport(const char *name, const char *className = NULL, int firstIndex = 0) const;

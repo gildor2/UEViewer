@@ -26,7 +26,7 @@ bool LoadWholePackage(UnPackage* Package, IProgressCallback* progress)
 	UObject::BeginLoad();
 	for (int idx = 0; idx < Package->Summary.ExportCount; idx++)
 	{
-		if (!IsKnownClass(Package->GetObjectName(Package->GetExport(idx).ClassIndex)))
+		if (!IsKnownClass(Package->GetClassNameFor(Package->GetExport(idx))))
 			continue;
 		if (progress && !progress->Tick()) return false;
 		Package->CreateExport(idx);
@@ -221,7 +221,7 @@ static void ScanPackageExports(UnPackage* package, CGameFileInfo* file)
 {
 	for (int idx = 0; idx < package->Summary.ExportCount; idx++)
 	{
-		const char* ObjectClass = package->GetObjectName(package->GetExport(idx).ClassIndex);
+		const char* ObjectClass = package->GetClassNameFor(package->GetExport(idx));
 
 		if (!stricmp(ObjectClass, "SkeletalMesh") || !stricmp(ObjectClass, "DestructibleMesh"))
 			file->NumSkeletalMeshes++;
@@ -324,7 +324,7 @@ void CollectPackageStats(const TArray<UnPackage*> &Packages, TArray<ClassStats>&
 		for (int j = 0; j < pkg->Summary.ExportCount; j++)
 		{
 			const FObjectExport &Exp = pkg->ExportTable[j];
-			const char* className = pkg->GetObjectName(Exp.ClassIndex);
+			const char* className = pkg->GetClassNameFor(Exp);
 			ClassStats* found = NULL;
 			for (int k = 0; k < Stats.Num(); k++)
 				if (Stats[k].Name == className)

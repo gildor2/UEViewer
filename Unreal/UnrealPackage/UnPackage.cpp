@@ -520,9 +520,9 @@ void UnPackage::LoadExportTable()
 	{
 //		USE_COMPACT_PACKAGE_STRUCTS - makes impossible to dump full information
 //		Perhaps add full support to extract.exe?
-//		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetObjectName(Exp->ClassIndex),
+//		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d flags=%08X:%08X, exp_f=%08X arch=%d\n", i, GetClassNameFor(*Exp),
 //			*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ObjectFlags2, Exp->ObjectFlags, Exp->ExportFlags, Exp->Archetype);
-		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d  exp_f=%08X\n", i, GetObjectName(Exp->ClassIndex),
+		PKG_LOG("Export[%d]: %s'%s' offs=%08X size=%08X parent=%d  exp_f=%08X\n", i, GetClassNameFor(*Exp),
 			*Exp->ObjectName, Exp->SerialOffset, Exp->SerialSize, Exp->PackageIndex, Exp->ExportFlags);
 	}
 #endif // DEBUG_PACKAGE
@@ -763,7 +763,7 @@ FArchive& UnPackage::operator<<(UObject *&Obj)
 	else if (index > 0)
 	{
 //		const FObjectExport &Exp = GetExport(index-1);
-//		appPrintf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetObjectName(Exp.ClassIndex));
+//		appPrintf("PKG: Export[%d] OBJ=%s CLS=%s\n", index, *Exp.ObjectName, GetClassNameFor(Exp));
 		Obj = CreateExport(index-1);
 	}
 	else // index == 0
@@ -793,7 +793,7 @@ int UnPackage::FindExport(const char *name, const char *className, int firstInde
 		if (cmp(Exp.ObjectName))
 		{
 			// if class name specified - compare it too
-			const char *foundClassName = GetObjectName(Exp.ClassIndex);
+			const char* foundClassName = GetClassNameFor(Exp);
 			if (className && (foundClassName != className)) // pointer comparison again
 				continue;
 			return i;
@@ -929,7 +929,7 @@ UObject* UnPackage::CreateExport(int index)
 	}
 
 	// Create empty object of desired class
-	const char* ClassName = GetObjectName(Exp.ClassIndex);
+	const char* ClassName = GetClassNameFor(Exp);
 	UObject* Obj = Exp.Object = CreateClass(ClassName);
 	if (!Obj)
 	{
@@ -993,7 +993,7 @@ UObject* UnPackage::CreateExport(int index)
 			Outer = OuterExp.Object;
 			if (!Outer)
 			{
-				const char* OuterClassName = GetObjectName(OuterExp.ClassIndex);
+				const char* OuterClassName = GetClassNameFor(OuterExp);
 				if (IsKnownClass(OuterClassName))			// avoid error message if class name is not registered
 					Outer = CreateExport(Exp.PackageIndex - 1);
 			}
