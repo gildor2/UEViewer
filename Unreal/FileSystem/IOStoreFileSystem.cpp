@@ -28,7 +28,30 @@ enum class EIoContainerFlags : uint8
 	Indexed = 8,
 };
 
-using FIoChunkId = uint8[12];
+enum class EIoChunkType : uint8
+{
+	Invalid,
+	InstallManifest,
+	ExportBundleData,
+	BulkData,
+	OptionalBulkData,
+	MemoryMappedBulkData,
+	LoaderGlobalMeta,
+	LoaderInitialLoadMeta,
+	LoaderGlobalNames,
+	LoaderGlobalNameHashes,
+	ContainerHeader
+};
+
+struct FIoChunkId
+{
+	uint8 Data[12];
+
+	uint8 GetType() const
+	{
+		return Data[11];
+	}
+};
 
 struct FIoOffsetAndLength
 {
@@ -388,9 +411,10 @@ void FIOStoreFile::Serialize(void *data, int size)
 	FIOStoreFileSystem implementation
 -----------------------------------------------------------------------------*/
 
-FIOStoreFileSystem::FIOStoreFileSystem(const char* InFilename)
+FIOStoreFileSystem::FIOStoreFileSystem(const char* InFilename, bool InIsGlobalContainer)
 :	Filename(InFilename)
 ,	Reader(NULL)
+,	bIsGlobalContainer(InIsGlobalContainer)
 {}
 
 FIOStoreFileSystem::~FIOStoreFileSystem()
@@ -429,10 +453,8 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 		return false;
 	}
 
-	// Process DirectoryIndex
-
-	ValidateMountPoint(Resource.DirectoryIndex.MountPoint, ContainerFileName);
-	if (!(Resource.Header.ContainerFlags & (int)EIoContainerFlags::Indexed))
+	bool bIsIndexed = Resource.Header.ContainerFlags & (int)EIoContainerFlags::Indexed;
+	if (!bIsIndexed && !bIsGlobalContainer)
 	{
 		delete ContainerFile;
 		error = ContainerFileName;
@@ -447,27 +469,39 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 	CompressionBlockSize = Resource.Header.CompressionBlockSize;
 	NumCompressionMethods = Resource.Header.CompressionMethodNameCount;
 	memcpy(CompressionMethods, Resource.CompressionMethods, sizeof(CompressionMethods));
+	Exchange(ChunkIds, Resource.ChunkIds);
 
 #if PRINT_CHUNKS
-	ChunkInfos.Empty(Resource.ChunkIds.Num());
-	ChunkInfos.AddZeroed(Resource.ChunkIds.Num());
+	ChunkInfos.Empty(ChunkIds.Num());
+	ChunkInfos.AddZeroed(ChunkIds.Num());
 #endif
 
-	guard(ProcessIndex);
-	WalkDirectoryTreeRecursive(Resource.DirectoryIndex, 0, Resource.DirectoryIndex.MountPoint);
-	unguard;
+	if (bIsIndexed)
+	{
+		// Process DirectoryIndex
+		guard(ProcessIndex);
+		ValidateMountPoint(Resource.DirectoryIndex.MountPoint, ContainerFileName);
+		WalkDirectoryTreeRecursive(Resource.DirectoryIndex, 0, Resource.DirectoryIndex.MountPoint);
+		unguard;
+	}
 
 #if PRINT_CHUNKS
-	appPrintf("\n%d chunks\n\n", Resource.ChunkIds.Num());
-	for (int i = 0; i < Resource.ChunkIds.Num(); i++)
+	appPrintf("\n%d chunks\n\n", ChunkIds.Num());
+	for (int i = 0; i < ChunkIds.Num(); i++)
 	{
-		const FIoChunkId& Id = Resource.ChunkIds[i];
+		const uint8* Id = ChunkIds[i].Data;
 		const CGameFileInfo* File = ChunkInfos[i];
 		appPrintf("%08X%08X [%d] #%d: %s\n", *(uint32*)Id, *(uint32*)(Id+4),
 			*(uint32*)(Id+8) & 0xFFFFFF, Id[11], File ? *File->GetRelativeName() : "--"
 		);
 	}
 #endif // PRINT_CHUNKS
+
+	if (!bIsGlobalContainer)
+	{
+		// We don't need ChunkIds here
+		ChunkIds.Empty();
+	}
 
 	delete reader;
 	Reader = ContainerFile;
@@ -535,6 +569,55 @@ FArchive* FIOStoreFileSystem::CreateReader(int index)
 	guard(FIOStoreFileSystem::CreateReader);
 
 	return new FIOStoreFile(index, this);;
+
+	unguard;
+}
+
+FArchive* FIOStoreFileSystem::CreateReaderForChunk(int ChunkType)
+{
+	guard(FIOStoreFileSystem::CreateReaderForChunk);
+
+	// Locate the chunk
+	for (int index = 0; index < ChunkIds.Num(); index++)
+	{
+		if (ChunkIds[index].GetType() == ChunkType)
+			return new FIOStoreFile(index, this);;
+	}
+
+	appError("Unable to locate chunk of type %d", ChunkType);
+
+	unguard;
+}
+
+/*static*/ bool FIOStoreFileSystem::LoadGlobalContainer(const char* Filename)
+{
+	guard(FIOStoreFileSystem::LoadGlobalContainer);
+
+	FArchive* tocReader = new FFileReader(Filename, FAO_NoOpenError);
+	if (!tocReader->IsOpen())
+	{
+		delete tocReader;
+		appPrintf("%s not found\n", Filename);
+		return false;
+	}
+
+	FIOStoreFileSystem* globalContainer = new FIOStoreFileSystem(Filename, true);
+	tocReader->Game = GAME_UE4_BASE;
+	FString Error;
+	if (!globalContainer->AttachReader(tocReader, Error))
+	{
+		appPrintf("Error in %s: %s\n", Filename, *Error);
+		delete tocReader;
+		delete globalContainer;
+	}
+
+	FArchive* GlobalNameReader = globalContainer->CreateReaderForChunk((int)EIoChunkType::LoaderGlobalNames);
+	delete GlobalNameReader;
+
+	FArchive* ScriptObjectsReader = globalContainer->CreateReaderForChunk((int)EIoChunkType::LoaderInitialLoadMeta);
+	delete ScriptObjectsReader;
+
+	return true;
 
 	unguard;
 }

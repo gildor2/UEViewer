@@ -4,6 +4,7 @@
 #if UNREAL4
 
 class FIOStoreFileSystem;
+struct FIoChunkId;
 struct FIoOffsetAndLength;
 struct FIoStoreTocCompressedBlockEntry;
 
@@ -63,13 +64,16 @@ class FIOStoreFileSystem : public FVirtualFileSystem
 public:
 	static const int MAX_COMPRESSION_METHODS = 8;
 
-	FIOStoreFileSystem(const char* InFilename);
+	FIOStoreFileSystem(const char* InFilename, bool InIsGlobalContainer = false);
 
 	~FIOStoreFileSystem();
 
 	virtual bool AttachReader(FArchive* reader, FString& error);
 
 	virtual FArchive* CreateReader(int index);
+	FArchive* CreateReaderForChunk(int ChunkType);
+
+	static bool LoadGlobalContainer(const char* Filename);
 
 protected:
 	void WalkDirectoryTreeRecursive(struct FIoDirectoryIndexResource& IndexResource, int DirectoryIndex, const FString& ParentDirectory);
@@ -78,8 +82,10 @@ protected:
 	FArchive* Reader;
 
 	// utoc/ucas information
+	bool bIsGlobalContainer;
 	int32 ContainerFlags;
 	int32 CompressionBlockSize;
+	TArray<FIoChunkId> ChunkIds;
 	TArray<FIoOffsetAndLength> ChunkLocations;
 	TArray<FIoStoreTocCompressedBlockEntry> CompressionBlocks;
 	int NumCompressionMethods;

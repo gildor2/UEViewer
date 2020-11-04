@@ -431,6 +431,21 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 			{
 				fclose(tocFile);
 
+				static bool bGlobalChecked = false;
+				if (!bGlobalChecked)
+				{
+					bGlobalChecked = true;
+					char GlobalPath[MAX_PACKAGE_PATH];
+					strcpy(GlobalPath, Path);
+					char* s = strrchr(GlobalPath, '/');
+					if (s)
+						s++;
+					else
+						s = GlobalPath;
+					strcpy(s, "global.utoc");
+					FIOStoreFileSystem::LoadGlobalContainer(GlobalPath);
+				}
+
 				FVirtualFileSystem* iosVfs = new FIOStoreFileSystem(Path);
 				FArchive* tocReader = new FFileReader(Path);
 				tocReader->Game = GAME_UE4_BASE;
