@@ -414,6 +414,33 @@ struct FMappedName
 {
 	uint32 NameIndex;
 	uint32 ExtraIndex;
+
+	const char* ToString(const char** NameTable) const
+	{
+		if (ExtraIndex == 0)
+			return NameTable[NameIndex];
+		return appStrdupPool(va("%s_%d", NameTable[NameIndex], ExtraIndex - 1));
+	}
+};
+
+struct FPackageObjectIndex
+{
+	uint64 Value;
+
+	FORCEINLINE bool IsNull() const
+	{
+		return (Value >> 62) == 3; // FPackageObjectIndex::Null, original code check whole value to be -1
+	}
+
+	FORCEINLINE bool IsExport() const
+	{
+		return (Value >> 62) == 0; // FPackageObjectIndex::Export
+	}
+
+	FORCEINLINE bool IsImport() const
+	{
+		return (Value >> 62) == 2; // FPackageObjectIndex::PackageImport, also has ScriptImport
+	}
 };
 
 struct FPackageSummary
@@ -434,6 +461,30 @@ struct FPackageSummary
 	int32 Pad;
 };
 
+struct FExportMapEntry
+{
+	uint64 CookedSerialOffset;
+	uint64 CookedSerialSize;
+	FMappedName ObjectName;
+	FPackageObjectIndex OuterIndex;
+	FPackageObjectIndex ClassIndex;
+	FPackageObjectIndex SuperIndex;
+	FPackageObjectIndex TemplateIndex;
+	FPackageObjectIndex GlobalImportIndex;
+	uint32 ObjectFlags;	// EObjectFlags
+	uint8 FilterFlags;	// EExportFilterFlags: client/server flags
+	uint8 Pad[3];
+};
+
+struct FScriptObjectEntry
+{
+	FMappedName ObjectName; // FMinimalName
+	FPackageObjectIndex GlobalIndex;
+	FPackageObjectIndex OuterIndex;
+	FPackageObjectIndex CDOClassIndex;
+};
+
+// Reference: AsyncLoading2.cpp, FAsyncPackage2::Event_ProcessPackageSummary()
 void UnPackage::LoadPackageIoStore()
 {
 	guard(UnPackage::LoadPackageIoStore);
@@ -454,10 +505,22 @@ void UnPackage::LoadPackageIoStore()
 	// Sum.NameMapHashesOffset points to 'uint64 HashVersion' followed by hashes.
 	// Current HashVersion = 0xC1640000.
 	int NameCount = Sum.NameMapHashesSize / sizeof(uint64) - 1;
-//	Reader.Seek(Sum.NameMapNamesOffset);
 	LoadNameTableIoStore(HeaderData + Sum.NameMapNamesOffset, NameCount, Sum.NameMapNamesSize);
 
+	// Load export table
+	// UE4 doesn't compute export count, it uses it from global store
+	int ExportTableSize = Sum.ExportBundlesOffset - Sum.ExportMapOffset;
+	assert(ExportTableSize % sizeof(FExportMapEntry) == 0);
+	int ExportCount = ExportTableSize / sizeof(FExportMapEntry);
+	LoadExportTableIoStore(HeaderData + Sum.ExportMapOffset, ExportCount, ExportTableSize);
+
 	delete[] HeaderData;
+
+	// Replace loader, so it will adjust header sizes.
+	// - Sum.CookedHeaderSize -> original .uasset size
+	// - HeaderSize -> end of new headers
+	Loader = new FReaderWrapper(Loader, HeaderSize - Sum.CookedHeaderSize);
+	appPrintf("HeaderSize: %X, Cooked: %X\n", HeaderSize, Sum.CookedHeaderSize);
 
 	unguard;
 }
@@ -476,10 +539,12 @@ static void SerializeFNameSerializedView(const byte*& Data, FString& Str)
 	Data += Len;
 }
 
+// Reference: UnrealNames.cpp, LoadNameBatch()
 void UnPackage::LoadNameTableIoStore(const byte* Data, int NameCount, int TableSize)
 {
 	guard(UnPackage::LoadNameTableIoStore);
 
+	Summary.NameCount = NameCount;
 	NameTable = new const char* [NameCount];
 
 	const byte* EndPosition = Data + TableSize;
@@ -490,6 +555,140 @@ void UnPackage::LoadNameTableIoStore(const byte* Data, int NameCount, int TableS
 		NameTable[i] = appStrdupPool(*NameStr);
 	}
 	assert(Data == EndPosition);
+
+	unguard;
+}
+
+// Forward
+const char* FindScriptEntryName(const FPackageObjectIndex& ObjectIndex);
+
+void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int TableSize)
+{
+	guard(UnPackage::LoadExportTableIoStore);
+
+	Summary.ExportCount = ExportCount;
+	ExportTable = new FObjectExport[ExportCount];
+
+	const byte* EndPosition = Data + TableSize;
+	for (int i = 0; i < ExportCount; i++)
+	{
+		const FExportMapEntry& E = *(FExportMapEntry*)Data;
+		FObjectExport& Exp = ExportTable[i];
+
+		assert(E.CookedSerialOffset < 0x7FFFFFFF);
+		assert(E.CookedSerialSize < 0x7FFFFFFF);
+		Exp.SerialOffset = (int32)E.CookedSerialOffset;
+		Exp.SerialSize = (int32)E.CookedSerialSize;
+		Exp.ObjectName.Str = E.ObjectName.ToString(NameTable);
+		Exp.ClassName_IO = FindScriptEntryName(E.ClassIndex);
+		//todo: store E.GlobalImportIndex
+		//todo: store E.OuterIndex
+		//appPrintf("%s %s\n", *Exp.ObjectName, Exp.ClassName_IO);
+
+		Data += sizeof(FExportMapEntry);
+	}
+	assert(Data == EndPosition);
+
+	unguard;
+}
+
+struct ObjectIndexHashEntry
+{
+	ObjectIndexHashEntry* Next;
+	const char* Name;
+	FPackageObjectIndex ObjectIndex;
+};
+
+#define OBJECT_HASH_BITS	12
+#define OBJECT_HASH_MASK	((1 << OBJECT_HASH_BITS)-1)
+
+static ObjectIndexHashEntry* ObjectHashHeads[1 << OBJECT_HASH_BITS];
+static ObjectIndexHashEntry* ObjectHashStore = NULL;
+
+FORCEINLINE int ObjectIndexToHash(const FPackageObjectIndex& ObjectIndex)
+{
+	return uint32(ObjectIndex.Value) >> (32 - OBJECT_HASH_BITS);
+}
+
+const char* FindScriptEntryName(const FPackageObjectIndex& ObjectIndex)
+{
+	int Hash = ObjectIndexToHash(ObjectIndex);
+	for (const ObjectIndexHashEntry* Entry = ObjectHashHeads[Hash]; Entry; Entry = Entry->Next)
+	{
+		if (Entry->ObjectIndex.Value == ObjectIndex.Value)
+		{
+			return Entry->Name;
+		}
+	}
+	return "None";
+}
+
+/*static*/ void UnPackage::LoadGlobalData4(FArchive* NameAr, FArchive* MetaAr, int NameCount)
+{
+	guard(UnPackage::LoadGlobalData4);
+
+	// Load EIoChunkType::LoaderGlobalNames chunk
+	// Similar to UnPackage::LoadNameTableIoStore
+	int NameTableSize = NameAr->GetFileSize();
+	byte* NameBuffer = new byte[NameTableSize];
+	NameAr->Serialize(NameBuffer, NameTableSize);
+	const char** GlobalNameTable = new const char* [NameCount];
+
+	const byte* Data = NameBuffer;
+	const byte* EndPosition = Data + NameTableSize;
+	for (int i = 0; i < NameCount; i++)
+	{
+		FStaticString<MAX_FNAME_LEN> NameStr;
+		SerializeFNameSerializedView(Data, NameStr);
+		GlobalNameTable[i] = appStrdupPool(*NameStr);
+	}
+	assert(Data == EndPosition);
+	delete NameBuffer;
+
+	// Load EIoChunkType::LoaderInitialLoadMeta chunk, it contains "script" objects,
+	// what means to us - names of built-in engine classes.
+	int MetaBufferSize = MetaAr->GetFileSize();
+	byte* MetaBuffer = new byte[MetaBufferSize];
+	MetaAr->Serialize(MetaBuffer, MetaBufferSize);
+
+	TArray<FScriptObjectEntry> ScriptObjects;
+	// First 4 bytes are object count
+	uint32 NumObjects = *(uint32*)MetaBuffer;
+	CopyArrayView(ScriptObjects, MetaBuffer + 4, (MetaBufferSize - 4) / sizeof(FScriptObjectEntry));
+	assert(NumObjects == ScriptObjects.Num());
+	delete MetaBuffer;
+
+	// Build GlobalIndex lookup hash and index to name mapping
+	ObjectHashStore = new ObjectIndexHashEntry[NumObjects];
+	memset(ObjectHashHeads, 0, sizeof(ObjectHashHeads));
+
+	for (int i = 0; i < NumObjects; i++)
+	{
+		const FScriptObjectEntry& E = ScriptObjects[i];
+
+		// Didn't find the code which maps FMinimalName to name table index, but the following
+		// trick works fine:
+		int NameIndex = (E.ObjectName.NameIndex) & 0x7fffffff;
+		const char* ScriptName = GlobalNameTable[NameIndex];
+	#if 0
+		appPrintf("%s - [%X %X] [%X %X]\n", ScriptName,
+			uint32(E.GlobalIndex.Value >> 62), uint32(E.GlobalIndex.Value & 0xFFFFFFFF),
+			uint32(E.OuterIndex.Value >> 62), uint32(E.OuterIndex.Value & 0xFFFFFFFF));
+		// Example output:
+		// /Script/Engine - [1 DC7C0922] [3 FFFFFFFF] <- first [] used as FScriptObjectEntry::OuterIndex
+		// SkeletalMesh - [1 CFCE1861] [1 DC7C0922] <- first [] referenced by FExportMapEntry::ClassIndex
+	#endif
+
+		ObjectIndexHashEntry& Entry = ObjectHashStore[i];
+		Entry.Name = ScriptName;
+		Entry.ObjectIndex = E.GlobalIndex;
+
+		int Hash = ObjectIndexToHash(E.GlobalIndex);
+		Entry.Next = ObjectHashHeads[Hash];
+		ObjectHashHeads[Hash] = &Entry;
+	}
+
+	delete GlobalNameTable;
 
 	unguard;
 }

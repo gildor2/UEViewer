@@ -280,6 +280,11 @@ public:
 		return PackageMap;
 	}
 
+#if UNREAL4
+	// Loaded for global IO Store container data
+	static void LoadGlobalData4(FArchive* NameAr, FArchive* MetaAr, int NameCount);
+#endif
+
 protected:
 	// Create loader FArchive for package
 	static FArchive* CreateLoader(const char* filename, FArchive* baseLoader = NULL);
@@ -439,6 +444,7 @@ private:
 #if UNREAL4
 	void LoadPackageIoStore();
 	void LoadNameTableIoStore(const byte* Data, int NameCount, int TableSize);
+	void LoadExportTableIoStore(const byte* Data, int ExportCount, int TableSize);
 #endif // UNREAL4
 
 	static TArray<UnPackage*> PackageMap;

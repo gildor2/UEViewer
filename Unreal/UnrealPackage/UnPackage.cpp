@@ -279,7 +279,8 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	if (FileInfo && FileInfo->IsIOStoreFile())
 	{
 		LoadPackageIoStore();
-		return;
+		if (!IsValid()) return;
+		goto register_package;
 	}
 #endif // UNREAL4
 
@@ -388,6 +389,7 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	}
 #endif // UNREAL4
 
+register_package:
 	// Register self to package map.
 	// First, strip path and extension from the name.
 	char buf[MAX_PACKAGE_PATH];

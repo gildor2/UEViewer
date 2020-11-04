@@ -2,6 +2,7 @@
 #include "UnCore.h"
 #include "GameFileSystem.h"
 #include "FileSystemUtils.h"
+#include "UnrealPackage/UnPackage.h"
 
 #include "IOStoreFileSystem.h"
 
@@ -47,9 +48,9 @@ struct FIoChunkId
 {
 	uint8 Data[12];
 
-	uint8 GetType() const
+	EIoChunkType GetType() const
 	{
-		return Data[11];
+		return (EIoChunkType)Data[11];
 	}
 };
 
@@ -137,14 +138,6 @@ struct FIoStoreTocHeader
 		return true;
 	}
 };
-
-template<typename T>
-void CopyArrayView(TArray<T>& Destination, const void* Source, int Count)
-{
-	Destination.Empty(Count);
-	Destination.AddUninitialized(Count);
-	memcpy(Destination.GetData(), Source, Count * sizeof(T));
-}
 
 struct FIoDirectoryIndexEntry
 {
@@ -349,7 +342,6 @@ void FIOStoreFile::Serialize(void *data, int size)
 			int BlockIndex = int((UncompressedOffset + ArPos) / Parent->CompressionBlockSize);
 			UncompressedBufferPos = int(int64(Parent->CompressionBlockSize) * BlockIndex - UncompressedOffset);
 
-			assert(Parent->ContainerFlags & int(EIoContainerFlags::Compressed));
 			const FIoStoreTocCompressedBlockEntry& Block = Parent->CompressionBlocks[BlockIndex];
 			int CompressedBlockSize = Block.GetCompressedSize();
 			int UncompressedBlockSize = Block.GetUncompressedSize();
@@ -573,19 +565,23 @@ FArchive* FIOStoreFileSystem::CreateReader(int index)
 	unguard;
 }
 
-FArchive* FIOStoreFileSystem::CreateReaderForChunk(int ChunkType)
+int FIOStoreFileSystem::FindChunkByType(EIoChunkType ChunkType)
 {
-	guard(FIOStoreFileSystem::CreateReaderForChunk);
-
-	// Locate the chunk
 	for (int index = 0; index < ChunkIds.Num(); index++)
 	{
 		if (ChunkIds[index].GetType() == ChunkType)
-			return new FIOStoreFile(index, this);;
+			return index;
 	}
+	return INDEX_NONE;
+}
 
-	appError("Unable to locate chunk of type %d", ChunkType);
-
+FArchive* FIOStoreFileSystem::CreateReaderForChunk(EIoChunkType ChunkType)
+{
+	guard(FIOStoreFileSystem::CreateReaderForChunk);
+	int ChunkIndex = FindChunkByType(ChunkType);
+	if (ChunkIndex < 0)
+		appError("Unable to locate chunk of type %d", ChunkType);
+	return new FIOStoreFile(ChunkIndex, this);;
 	unguard;
 }
 
@@ -611,10 +607,17 @@ FArchive* FIOStoreFileSystem::CreateReaderForChunk(int ChunkType)
 		delete globalContainer;
 	}
 
-	FArchive* GlobalNameReader = globalContainer->CreateReaderForChunk((int)EIoChunkType::LoaderGlobalNames);
-	delete GlobalNameReader;
+	// Find name hashes to compute number of global names
+	int NameHashesChunk = globalContainer->FindChunkByType(EIoChunkType::LoaderGlobalNameHashes);
+	if (NameHashesChunk < 0)
+		appError("Missing LoaderGlobalNameHashes chunk");
+	int NameCount = globalContainer->ChunkLocations[NameHashesChunk].GetLength() / sizeof(uint64) - 1;
 
-	FArchive* ScriptObjectsReader = globalContainer->CreateReaderForChunk((int)EIoChunkType::LoaderInitialLoadMeta);
+	// Pass global container data to UnPackage system
+	FArchive* GlobalNameReader = globalContainer->CreateReaderForChunk(EIoChunkType::LoaderGlobalNames);
+	FArchive* ScriptObjectsReader = globalContainer->CreateReaderForChunk(EIoChunkType::LoaderInitialLoadMeta);
+	UnPackage::LoadGlobalData4(GlobalNameReader, ScriptObjectsReader, NameCount);
+	delete GlobalNameReader;
 	delete ScriptObjectsReader;
 
 	return true;

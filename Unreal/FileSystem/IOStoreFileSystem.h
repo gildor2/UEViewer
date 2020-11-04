@@ -4,6 +4,7 @@
 #if UNREAL4
 
 class FIOStoreFileSystem;
+enum class EIoChunkType : uint8;
 struct FIoChunkId;
 struct FIoOffsetAndLength;
 struct FIoStoreTocCompressedBlockEntry;
@@ -71,7 +72,9 @@ public:
 	virtual bool AttachReader(FArchive* reader, FString& error);
 
 	virtual FArchive* CreateReader(int index);
-	FArchive* CreateReaderForChunk(int ChunkType);
+
+	int FindChunkByType(EIoChunkType ChunkType);
+	FArchive* CreateReaderForChunk(EIoChunkType ChunkType);
 
 	static bool LoadGlobalContainer(const char* Filename);
 

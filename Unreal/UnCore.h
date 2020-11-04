@@ -1958,6 +1958,15 @@ protected:
 	}
 };
 
+// UE4 has TArrayView, which makes memory regior appearing as TArray.
+template<typename T>
+void CopyArrayView(TArray<T>& Destination, const void* Source, int Count)
+{
+	Destination.Empty(Count);
+	Destination.AddUninitialized(Count);
+	memcpy(Destination.GetData(), Source, Count * sizeof(T));
+}
+
 // Implementation of TArray serializer (part 3). Removing part 2 will cause some methods inaccessible.
 // Removing part 1 will cause function non-buildable. There's no problems when declaring serializer inside
 // TArray class, however this will not let us making custom TArray serializers for particular classes.
