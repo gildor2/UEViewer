@@ -519,7 +519,9 @@ void UnPackage::LoadPackageIoStore()
 	// Replace loader, so it will adjust header sizes.
 	// - Sum.CookedHeaderSize -> original .uasset size
 	// - HeaderSize -> end of new headers
-	Loader = new FReaderWrapper(Loader, HeaderSize - Sum.CookedHeaderSize);
+	FArchive* NewLoader = new FReaderWrapper(Loader, HeaderSize - Sum.CookedHeaderSize);
+	NewLoader->SetupFrom(*Loader);
+	Loader = NewLoader;
 	appPrintf("HeaderSize: %X, Cooked: %X\n", HeaderSize, Sum.CookedHeaderSize);
 
 	unguard;

@@ -278,6 +278,11 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 #if UNREAL4
 	if (FileInfo && FileInfo->IsIOStoreFile())
 	{
+		// Not called (forced UE4.26):
+		// - May be: UE4UnversionedPackage(verMin, verMax)
+		// - Ar.DetectGame();
+		this->Game = GAME_UE4(26);
+		OverrideVersion();
 		LoadPackageIoStore();
 		if (!IsValid()) return;
 		goto register_package;
