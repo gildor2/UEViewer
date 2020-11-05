@@ -47,3 +47,7 @@ libs/oodle/*.cpp
 
 # oodle dll
 libs/oo2core*.dll
+Tools/PackageExtract/oo2core*.dll
+
+# PackageExtract - ignore all extracted stuff
+Tools/PackageExtract/**/
