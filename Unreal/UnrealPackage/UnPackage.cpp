@@ -281,6 +281,8 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 		// Not called (forced UE4.26):
 		// - May be: UE4UnversionedPackage(verMin, verMax)
 		// - Ar.DetectGame();
+		this->ArVer = 0;
+		this->ArLicenseeVer = 0;
 		this->Game = GAME_UE4(26);
 		OverrideVersion();
 		LoadPackageIoStore();
@@ -507,6 +509,7 @@ void UnPackage::LoadExportTable()
 
 	Seek(Summary.ExportOffset);
 	FObjectExport *Exp = ExportTable = new FObjectExport[Summary.ExportCount];
+	memset(ExportTable, 0, sizeof(FObjectExport) * Summary.ExportCount);
 	for (int i = 0; i < Summary.ExportCount; i++, Exp++)
 	{
 		*this << *Exp;
@@ -615,6 +618,15 @@ void UnPackage::SetupReader(int ExportIndex)
 	}
 	// setup for object
 	const FObjectExport &Exp = GetExport(ExportIndex);
+
+#if UNREAL4
+	if (Exp.RealSerialOffset)
+	{
+		FReaderWrapper* Wrapper = Loader->CastTo<FReaderWrapper>();
+		Wrapper->ArPosOffset = Exp.RealSerialOffset - Exp.SerialOffset;
+	}
+#endif // UNREAL4
+
 	SetStopper(Exp.SerialOffset + Exp.SerialSize);
 //	appPrintf("Setup for %s: %d + %d -> %d\n", *Exp.ObjectName, Exp.SerialOffset, Exp.SerialSize, Exp.SerialOffset + Exp.SerialSize);
 	Seek(Exp.SerialOffset);

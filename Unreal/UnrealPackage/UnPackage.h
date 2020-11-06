@@ -200,9 +200,13 @@ struct FObjectExport
 #endif // UNREAL3
 
 #if UNREAL4
-	// In UE4.26 IO Store package structure is different, 'ClassIndex' is replaced with global
+	// In UE4.26 IoStore package structure is different, 'ClassIndex' is replaced with global
 	// script object index.
 	const char* ClassName_IO;
+	// IoStore has reordered objects, but preserves "CookedSerialOffset" in export table.
+	// We need to serialize data from the "read" offset, but set up the loader so it will
+	// think that offset is like in original package.
+	uint32		RealSerialOffset;
 #endif
 
 	friend FArchive& operator<<(FArchive &Ar, FObjectExport &E);
@@ -444,7 +448,9 @@ private:
 #if UNREAL4
 	void LoadPackageIoStore();
 	void LoadNameTableIoStore(const byte* Data, int NameCount, int TableSize);
-	void LoadExportTableIoStore(const byte* Data, int ExportCount, int TableSize);
+	void LoadExportTableIoStore(
+		const byte* Data, int ExportCount, int TableSize, int PackageHeaderSize,
+		const TArray<struct FExportBundleHeader>& BundleHeaders, const TArray<struct FExportBundleEntry>& BundleEntries);
 #endif // UNREAL4
 
 	static TArray<UnPackage*> PackageMap;

@@ -476,6 +476,23 @@ struct FExportMapEntry
 	uint8 Pad[3];
 };
 
+struct FExportBundleHeader
+{
+	uint32 FirstEntryIndex;
+	uint32 EntryCount;
+};
+
+struct FExportBundleEntry
+{
+	enum EExportCommandType
+	{
+		ExportCommandType_Create,
+		ExportCommandType_Serialize,
+	};
+	uint32 LocalExportIndex;
+	uint32 CommandType;
+};
+
 struct FScriptObjectEntry
 {
 	FMappedName ObjectName; // FMinimalName
@@ -491,6 +508,7 @@ void UnPackage::LoadPackageIoStore()
 
 	FPackageSummary Sum;
 	Loader->Serialize(&Sum, sizeof(Sum));
+	Summary.PackageFlags = Sum.PackageFlags;
 
 	// Rewind Loader to zero and load whole header (including summary)
 	int HeaderSize = Sum.GraphDataOffset + Sum.GraphDataSize;
@@ -507,22 +525,45 @@ void UnPackage::LoadPackageIoStore()
 	int NameCount = Sum.NameMapHashesSize / sizeof(uint64) - 1;
 	LoadNameTableIoStore(HeaderData + Sum.NameMapNamesOffset, NameCount, Sum.NameMapNamesSize);
 
+	// Process export bundles
+
+	// Compute number of export bundle headers, so we could locate entries. In UE4, this information
+	// is stored in global package store, we're not loading it. The idea: compute number of bundle entries
+	// which could fit the buffer. The start iterating data from the start, with processing bundle headers.
+	// When we'll get the number of bundle entries accumulated from headers matching the size of remaining
+	// buffer, stop.
+	const FExportBundleHeader* BundleHeaders = (FExportBundleHeader*)(HeaderData + Sum.ExportBundlesOffset);
+	int RemainingBundleEntryCount = (Sum.GraphDataOffset - Sum.ExportBundlesOffset) / sizeof(FExportBundleEntry);
+	int FoundBundlesCount = 0;
+	const FExportBundleHeader* CurrentBundleHeader = BundleHeaders;
+	while (FoundBundlesCount < RemainingBundleEntryCount)
+	{
+		// This location is occupied by header, so it is not a bundle entry
+		RemainingBundleEntryCount--;
+		FoundBundlesCount += CurrentBundleHeader->EntryCount;
+		CurrentBundleHeader++;
+	}
+	assert(FoundBundlesCount == RemainingBundleEntryCount);
+	// Load export bundles into arrays
+	TArray<FExportBundleHeader> BundleHeadersArray;
+	TArray<FExportBundleEntry> BundleEntriesArray;
+	CopyArrayView(BundleHeadersArray, BundleHeaders, CurrentBundleHeader - BundleHeaders);
+	CopyArrayView(BundleEntriesArray, (FExportBundleEntry*)CurrentBundleHeader, FoundBundlesCount);
+
 	// Load export table
-	// UE4 doesn't compute export count, it uses it from global store
+	// UE4 doesn't compute export count, it uses it from global package store
 	int ExportTableSize = Sum.ExportBundlesOffset - Sum.ExportMapOffset;
 	assert(ExportTableSize % sizeof(FExportMapEntry) == 0);
 	int ExportCount = ExportTableSize / sizeof(FExportMapEntry);
-	LoadExportTableIoStore(HeaderData + Sum.ExportMapOffset, ExportCount, ExportTableSize);
+	LoadExportTableIoStore(HeaderData + Sum.ExportMapOffset, ExportCount, ExportTableSize, HeaderSize, BundleHeadersArray, BundleEntriesArray);
 
+	// All headers were processed, delete the buffer
 	delete[] HeaderData;
 
-	// Replace loader, so it will adjust header sizes.
-	// - Sum.CookedHeaderSize -> original .uasset size
-	// - HeaderSize -> end of new headers
-	FArchive* NewLoader = new FReaderWrapper(Loader, HeaderSize - Sum.CookedHeaderSize);
-	NewLoader->SetupFrom(*Loader);
+	// Replace loader, so we'll be able to adjust offset in UnPackage::SetupReader()
+	FArchive* NewLoader = new FReaderWrapper(Loader, 0);
+	NewLoader->SetupFrom(*this);
 	Loader = NewLoader;
-	appPrintf("HeaderSize: %X, Cooked: %X\n", HeaderSize, Sum.CookedHeaderSize);
 
 	unguard;
 }
@@ -564,32 +605,50 @@ void UnPackage::LoadNameTableIoStore(const byte* Data, int NameCount, int TableS
 // Forward
 const char* FindScriptEntryName(const FPackageObjectIndex& ObjectIndex);
 
-void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int TableSize)
+void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int TableSize, int PackageHeaderSize,
+	const TArray<FExportBundleHeader>& BundleHeaders, const TArray<FExportBundleEntry>& BundleEntries)
 {
 	guard(UnPackage::LoadExportTableIoStore);
 
 	Summary.ExportCount = ExportCount;
 	ExportTable = new FObjectExport[ExportCount];
+	memset(ExportTable, 0, sizeof(FObjectExport) * ExportCount);
 
-	const byte* EndPosition = Data + TableSize;
-	for (int i = 0; i < ExportCount; i++)
+	const FExportMapEntry* ExportEntries = (FExportMapEntry*)Data;
+//	const FExportMapEntry* EndPosition = (FExportMapEntry*)(Data + TableSize);
+
+	// Export data is ordered according to export bundles, so we should do the processing in bundle order
+	int32 CurrentExportOffset = PackageHeaderSize;
+	for (const FExportBundleHeader& BundleHeader : BundleHeaders)
 	{
-		const FExportMapEntry& E = *(FExportMapEntry*)Data;
-		FObjectExport& Exp = ExportTable[i];
+		for (int EntryIndex = 0; EntryIndex < BundleHeader.EntryCount; EntryIndex++)
+		{
+			const FExportBundleEntry& Entry = BundleEntries[BundleHeader.FirstEntryIndex + EntryIndex];
+			if (Entry.CommandType == FExportBundleEntry::ExportCommandType_Serialize)
+			{
+				unsigned ObjectIndex = Entry.LocalExportIndex;
+				assert(ObjectIndex < ExportCount);
 
-		assert(E.CookedSerialOffset < 0x7FFFFFFF);
-		assert(E.CookedSerialSize < 0x7FFFFFFF);
-		Exp.SerialOffset = (int32)E.CookedSerialOffset;
-		Exp.SerialSize = (int32)E.CookedSerialSize;
-		Exp.ObjectName.Str = E.ObjectName.ToString(NameTable);
-		Exp.ClassName_IO = FindScriptEntryName(E.ClassIndex);
-		//todo: store E.GlobalImportIndex
-		//todo: store E.OuterIndex
-		//appPrintf("%s %s\n", *Exp.ObjectName, Exp.ClassName_IO);
+				const FExportMapEntry& E = ExportEntries[ObjectIndex];
+				FObjectExport& Exp = ExportTable[ObjectIndex];
 
-		Data += sizeof(FExportMapEntry);
+				// TODO: FExportMapEntry has FilterFlags which could affect inclusion of exports
+				assert(E.CookedSerialOffset < 0x7FFFFFFF);
+				assert(E.CookedSerialSize < 0x7FFFFFFF);
+				Exp.SerialOffset = (int32)E.CookedSerialOffset;
+				Exp.SerialSize = (int32)E.CookedSerialSize;
+				Exp.ObjectName.Str = E.ObjectName.ToString(NameTable);
+				Exp.ClassName_IO = FindScriptEntryName(E.ClassIndex);
+				// Store "real" offset
+				Exp.RealSerialOffset = CurrentExportOffset;
+				CurrentExportOffset += Exp.SerialSize;
+
+				//todo: store E.GlobalImportIndex
+				//todo: store E.OuterIndex
+				//appPrintf("[%d]: %s'%s' Flags=%X SerialOff=%X RealOff=%X\n", ObjectIndex, Exp.ClassName_IO, *Exp.ObjectName, E.ObjectFlags, Exp.SerialOffset, Exp.RealSerialOffset);
+			}
+		}
 	}
-	assert(Data == EndPosition);
 
 	unguard;
 }
