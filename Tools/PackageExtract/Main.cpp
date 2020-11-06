@@ -335,7 +335,11 @@ int main(int argc, char **argv)
 		byte *data = new byte[Exp.SerialSize];
 		if (Exp.SerialSize)
 		{
+		#if 0
 			Package->Seek(Exp.SerialOffset);
+		#else
+			Package->SetupReader(idx);
+		#endif
 			Package->Serialize(data, Exp.SerialSize);
 		}
 #if !DISABLE_WRITE
