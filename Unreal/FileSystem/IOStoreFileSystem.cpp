@@ -52,6 +52,11 @@ struct FIoChunkId
 	{
 		return (EIoChunkType)Data[11];
 	}
+
+	FPackageId GetPackageId() const
+	{
+		return *(FPackageId*)Data;
+	}
 };
 
 struct FIoOffsetAndLength
@@ -398,6 +403,64 @@ void FIOStoreFile::Serialize(void *data, int size)
 	unguard;
 }
 
+/*-----------------------------------------------------------------------------
+	FPackageId to CGameFileInfo map
+-----------------------------------------------------------------------------*/
+
+struct PackageHashEntry
+{
+	FPackageId Id;
+	const CGameFileInfo* File;
+	PackageHashEntry* Next;
+};
+
+#define PACKAGE_HASH_BITS	12
+#define PACKAGE_HASH_MASK	((1 << PACKAGE_HASH_BITS)-1)
+
+static PackageHashEntry* PackageHashHeads[1 << PACKAGE_HASH_BITS];
+static PackageHashEntry* PackageHashStore = NULL;
+static CMemoryChain* PackageHashMemory = NULL;
+
+FORCEINLINE int PackageIdToHash(FPackageId PackageId)
+{
+	return PackageId & PACKAGE_HASH_MASK;
+}
+
+const CGameFileInfo* FindPackageById(FPackageId PackageId)
+{
+	int Hash = PackageIdToHash(PackageId);
+	for (const PackageHashEntry* Entry = PackageHashHeads[Hash]; Entry; Entry = Entry->Next)
+	{
+		if (Entry->Id == PackageId)
+		{
+			return Entry->File;
+		}
+	}
+	return NULL;
+}
+
+void RegisterPackageId(FPackageId PackageId, const CGameFileInfo* File)
+{
+	int Hash = PackageIdToHash(PackageId);
+	for (PackageHashEntry* Entry = PackageHashHeads[Hash]; Entry; Entry = Entry->Next)
+	{
+		if (Entry->Id == PackageId)
+		{
+			// The file could be overriden in patches
+			Entry->File = File;
+			return;
+		}
+	}
+
+	if (!PackageHashMemory) PackageHashMemory = new CMemoryChain();
+	PackageHashEntry* Entry = (PackageHashEntry*)PackageHashMemory->Alloc(sizeof(PackageHashEntry));
+	Entry->Next = PackageHashHeads[Hash];
+	PackageHashHeads[Hash] = Entry;
+
+	Entry->Id = PackageId;
+	Entry->File = File;
+}
+
 
 /*-----------------------------------------------------------------------------
 	FIOStoreFileSystem implementation
@@ -542,6 +605,10 @@ void FIOStoreFileSystem::WalkDirectoryTreeRecursive(struct FIoDirectoryIndexReso
 #endif
 
 				FileIndex = File.NextFileEntry;
+				if (file->IsPackage())
+				{
+					RegisterPackageId(ChunkIds[File.UserData].GetPackageId(), file);
+				}
 			}
 		}
 

@@ -9,6 +9,8 @@ struct FIoChunkId;
 struct FIoOffsetAndLength;
 struct FIoStoreTocCompressedBlockEntry;
 
+typedef uint64 FPackageId;
+
 class FIOStoreFile : public FArchive
 {
 	DECLARE_ARCHIVE(FIOStoreFile, FArchive);
@@ -94,6 +96,8 @@ protected:
 	int NumCompressionMethods;
 	int CompressionMethods[MAX_COMPRESSION_METHODS];
 };
+
+const CGameFileInfo* FindPackageById(FPackageId PackageId);
 
 #endif // UNREAL4
 

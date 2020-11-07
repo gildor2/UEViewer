@@ -250,6 +250,9 @@ public:
 	const char**			NameTable;
 	FObjectImport*			ImportTable;
 	FObjectExport*			ExportTable;
+#if UNREAL4
+	struct FPackageObjectIndex* ExportIndices_IOS;
+#endif
 
 protected:
 	UnPackage(const char *filename, const CGameFileInfo* fileInfo = NULL, bool silent = false);
@@ -436,6 +439,9 @@ public:
 	}
 
 private:
+	void RegisterPackage(const char* filename);
+	void UnregisterPackage();
+
 	void LoadNameTable();
 	void LoadNameTable2();
 	void LoadNameTable3();
@@ -446,11 +452,13 @@ private:
 	void LoadExportTable();
 
 #if UNREAL4
+	// IsStore AsyncPackage support
 	void LoadPackageIoStore();
 	void LoadNameTableIoStore(const byte* Data, int NameCount, int TableSize);
 	void LoadExportTableIoStore(
 		const byte* Data, int ExportCount, int TableSize, int PackageHeaderSize,
 		const TArray<struct FExportBundleHeader>& BundleHeaders, const TArray<struct FExportBundleEntry>& BundleEntries);
+	void LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages);
 #endif // UNREAL4
 
 	static TArray<UnPackage*> PackageMap;

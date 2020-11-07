@@ -1,10 +1,13 @@
 #include "Core.h"
-#include "UnCore.h"
-#include "UnPackage.h"
 
 #if UNREAL4
 
+#include "UnCore.h"
+#include "UnPackage.h"
 #include "UE4Version.h"
+
+#include "FileSystem/GameFileSystem.h"		// just required for next header
+#include "FileSystem/IOStoreFileSystem.h"	// for FindPackageById()
 
 struct FEnumCustomVersion
 {
@@ -437,9 +440,14 @@ struct FPackageObjectIndex
 		return (Value >> 62) == 0; // FPackageObjectIndex::Export
 	}
 
+	FORCEINLINE bool IsScriptImport() const
+	{
+		return (Value >> 62) == 1;
+	}
+
 	FORCEINLINE bool IsImport() const
 	{
-		return (Value >> 62) == 2; // FPackageObjectIndex::PackageImport, also has ScriptImport
+		return (Value >> 62) == 2; // original function does '|| IsScriptImport()'
 	}
 };
 
@@ -501,10 +509,50 @@ struct FScriptObjectEntry
 	FPackageObjectIndex CDOClassIndex;
 };
 
+static void LoadGraphData(const byte* Data, int DataSize, TArray<const CGameFileInfo*>& OutPackages)
+{
+	guard(LoadGraphData);
+
+	const byte* DataEnd = Data + DataSize;
+	int32 PackageCount = *(int32*)Data;
+	if (PackageCount == 0) return;
+
+	Data += sizeof(int32);
+	OutPackages.Reserve(OutPackages.Num() + PackageCount);
+
+	for (int PackageIndex = 0; PackageIndex < PackageCount; PackageIndex++)
+	{
+		FPackageId PackageId = *(FPackageId*)Data;
+		Data += sizeof(FPackageId);
+		int32 BundleCount = *(int32*)Data;
+		Data += sizeof(int32);
+		// Skip bundle information
+		Data += BundleCount * (sizeof(int32) + sizeof(int32));
+
+		// Find the package
+		const CGameFileInfo* File = FindPackageById(PackageId);
+		if (File)
+		{
+			OutPackages.Add(File);
+//			appPrintf("Depends: %s\n", *File->GetRelativeName());
+		}
+		else
+		{
+			appPrintf("Can't locate package with Id %llX\n", PackageId);
+		}
+	}
+
+	assert(Data == DataEnd);
+
+	unguard;
+}
+
 // Reference: AsyncLoading2.cpp, FAsyncPackage2::Event_ProcessPackageSummary()
 void UnPackage::LoadPackageIoStore()
 {
 	guard(UnPackage::LoadPackageIoStore);
+
+	appPrintf("Loading AsyncPackage %s\n", *GetFilename()); //todo
 
 	FPackageSummary Sum;
 	Loader->Serialize(&Sum, sizeof(Sum));
@@ -556,6 +604,14 @@ void UnPackage::LoadPackageIoStore()
 	assert(ExportTableSize % sizeof(FExportMapEntry) == 0);
 	int ExportCount = ExportTableSize / sizeof(FExportMapEntry);
 	LoadExportTableIoStore(HeaderData + Sum.ExportMapOffset, ExportCount, ExportTableSize, HeaderSize, BundleHeadersArray, BundleEntriesArray);
+
+	// Load import table
+	// Should scan graph first to get list of packages we depends on
+	TStaticArray<const CGameFileInfo*, 32> ImportPackages;
+	LoadGraphData(HeaderData + Sum.GraphDataOffset, Sum.GraphDataSize, ImportPackages);
+	int ImportMapSize = Sum.ExportMapOffset - Sum.ImportMapOffset;
+	int ImportCount = ImportMapSize / sizeof(FPackageObjectIndex);
+	LoadImportTableIoStore(HeaderData + Sum.ImportMapOffset, ImportCount, ImportPackages);
 
 	// All headers were processed, delete the buffer
 	delete[] HeaderData;
@@ -614,6 +670,8 @@ void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int Ta
 	ExportTable = new FObjectExport[ExportCount];
 	memset(ExportTable, 0, sizeof(FObjectExport) * ExportCount);
 
+	ExportIndices_IOS = new FPackageObjectIndex[ExportCount];
+
 	const FExportMapEntry* ExportEntries = (FExportMapEntry*)Data;
 //	const FExportMapEntry* EndPosition = (FExportMapEntry*)(Data + TableSize);
 
@@ -642,15 +700,111 @@ void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int Ta
 				// Store "real" offset
 				Exp.RealSerialOffset = CurrentExportOffset;
 				CurrentExportOffset += Exp.SerialSize;
-
+				// OuterIndex is just a position in current export table, pointing at outer object
 				int64 OuterIndex = int64(E.OuterIndex.Value + 1);
 				assert(OuterIndex >= 0 && OuterIndex <= ExportCount);
 				Exp.PackageIndex = int(OuterIndex);
 
-				//todo: store E.GlobalImportIndex
-//				appPrintf("[%d]: %s'%s' Flags=%X SerialOff=%X RealOff=%X Id=%I64X Parent=%I64d\n", ObjectIndex, Exp.ClassName_IO, *Exp.ObjectName,
+				// Save GlobalImportIndex in separate array
+				ExportIndices_IOS[ObjectIndex] = E.GlobalImportIndex;
+//				appPrintf("Exp[%d]: %s'%s' Flags=%X SerialOff=%X RealOff=%X Id=%I64X Parent=%I64d\n", ObjectIndex, Exp.ClassName_IO, *Exp.ObjectName,
 //					E.ObjectFlags, Exp.SerialOffset, Exp.RealSerialOffset,
 //					E.GlobalImportIndex.Value, E.OuterIndex.Value);
+			}
+		}
+	}
+
+	unguard;
+}
+
+void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages)
+{
+	guard(UnPackage::LoadImportTableIoStore);
+
+	// Preload dependencies
+	TStaticArray<UnPackage*, 32> Packages;
+	Packages.Reserve(ImportPackages.Num());
+	for (const CGameFileInfo* File : ImportPackages)
+	{
+		Packages.Add(UnPackage::LoadPackage(File, true));
+	}
+
+	// Import table is filled with object Ids, we should scan all dependencies to resolve them
+	ImportTable = new FObjectImport[ImportCount];
+	Summary.ImportCount = ImportCount;
+
+	// Create "Package" FObjectImport entries for all ImportPackages
+	TStaticArray<int, 32> PackageIndexMap;
+	PackageIndexMap.Reserve(ImportPackages.Num());
+	const FPackageObjectIndex* DataPtr = (FPackageObjectIndex*)Data;
+	int CreatedPackageIndex = 0;
+	for (int ImportIndex = 0; ImportIndex < ImportCount && CreatedPackageIndex < ImportPackages.Num(); ImportIndex++)
+	{
+		const FPackageObjectIndex& ObjectIndex = DataPtr[ImportIndex];
+
+		if (!ObjectIndex.IsNull())
+			continue;
+
+		const CGameFileInfo* PackageFile = ImportPackages[CreatedPackageIndex];
+		FObjectImport& Imp = ImportTable[ImportIndex];
+		// Get the package file name and cut extension
+		FStaticString<MAX_PACKAGE_PATH> PackageName;
+		PackageFile->GetRelativeName(PackageName);
+		char* Ext = strrchr(&PackageName[0], '.');
+		if (Ext) *Ext = 0;
+		Imp.ObjectName.Str = appStrdupPool(*PackageName); // it should be already in pool
+		Imp.ClassName.Str = "Package";
+		PackageIndexMap.Add(ImportIndex);
+		CreatedPackageIndex++;
+	}
+	assert(CreatedPackageIndex == ImportPackages.Num());
+
+	for (int ImportIndex = 0; ImportIndex < ImportCount; ImportIndex++)
+	{
+		const FPackageObjectIndex& ObjectIndex = DataPtr[ImportIndex];
+
+		FObjectImport& Imp = ImportTable[ImportIndex];
+		if (ObjectIndex.IsNull())
+			continue;
+
+		if (ObjectIndex.IsScriptImport())
+		{
+			const char* Name = FindScriptEntryName(ObjectIndex);
+			Imp.ObjectName.Str = Name;
+			Imp.ClassName.Str = Name[0] == '/' ? "Package" : "Class";
+			Imp.PackageIndex = 0;
+		}
+		else
+		{
+			assert(ObjectIndex.IsImport());
+			const FObjectExport* Exp = NULL;
+			int PackageIndex = 0;
+			for (PackageIndex = 0; PackageIndex < Packages.Num(); PackageIndex++)
+			{
+				UnPackage* ImportPackage = Packages[PackageIndex];
+				if (ImportPackage)
+				{
+					for (int i = 0; i < ImportPackage->Summary.ExportCount; i++)
+					{
+						if (ImportPackage->ExportIndices_IOS[i].Value == ObjectIndex.Value)
+						{
+							Exp = &ImportPackage->ExportTable[i];
+							break;
+						}
+					}
+				}
+				if (Exp) break;
+			}
+			if (Exp)
+			{
+//				appPrintf("Imp[%d]: %s %s\n", ImportIndex, *Exp->ObjectName, Exp->ClassName_IO);
+				Imp.ObjectName.Str = *Exp->ObjectName;
+				Imp.ClassName.Str = Exp->ClassName_IO;
+				Imp.PackageIndex = -PackageIndexMap[PackageIndex] - 1;
+			}
+			else
+			{
+				appPrintf("Unable to resolve import %llX\n", ObjectIndex);
 			}
 		}
 	}
@@ -737,7 +891,7 @@ const char* FindScriptEntryName(const FPackageObjectIndex& ObjectIndex)
 		int NameIndex = (E.ObjectName.NameIndex) & 0x7fffffff;
 		const char* ScriptName = GlobalNameTable[NameIndex];
 	#if 0
-		appPrintf("%s - [%X %X] [%X %X]\n", ScriptName,
+		appPrintf("Script: %s - [%X %X] [%X %X]\n", ScriptName,
 			uint32(E.GlobalIndex.Value >> 62), uint32(E.GlobalIndex.Value & 0xFFFFFFFF),
 			uint32(E.OuterIndex.Value >> 62), uint32(E.OuterIndex.Value & 0xFFFFFFFF));
 		// Example output:

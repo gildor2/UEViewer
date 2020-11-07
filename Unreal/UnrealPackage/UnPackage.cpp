@@ -249,6 +249,9 @@ void FObjectImport::Serialize(FArchive& Ar)
 
 UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool silent)
 :	Loader(NULL)
+#if UNREAL4
+,	ExportIndices_IOS(NULL)
+#endif
 {
 	guard(UnPackage::UnPackage);
 
@@ -285,9 +288,19 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 		this->ArLicenseeVer = 0;
 		this->Game = GAME_UE4(26);
 		OverrideVersion();
+		// Register package before loading, because it is possible that during
+		// loading of import table we'll load other packages to resolve dependencies,
+		// and circular dependencies are possible
+		RegisterPackage(filename);
 		LoadPackageIoStore();
-		if (!IsValid()) return;
-		goto register_package;
+		if (!IsValid())
+		{
+			UnregisterPackage();
+			return;
+		}
+		// Release package file handle
+		CloseReader();
+		return;
 	}
 #endif // UNREAL4
 
@@ -396,7 +409,20 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	}
 #endif // UNREAL4
 
-register_package:
+	RegisterPackage(filename);
+
+	// Release package file handle
+	CloseReader();
+
+#if PROFILE_PACKAGE_TABLES
+	appPrintProfiler("Package loaded");
+#endif
+
+	unguardf("%s, ver=%d/%d, game=%s", filename, ArVer, ArLicenseeVer, GetGameTag(Game));
+}
+
+void UnPackage::RegisterPackage(const char* filename)
+{
 	// Register self to package map.
 	// First, strip path and extension from the name.
 	char buf[MAX_PACKAGE_PATH];
@@ -410,14 +436,28 @@ register_package:
 	// ... then add 'this'
 	PackageMap.Add(this);
 
-	// Release package file handle
-	CloseReader();
+	// Cache pointer in CGameFileInfo so next time it will be found quickly.
+	if (FileInfo)
+	{
+		const_cast<CGameFileInfo*>(FileInfo)->Package = this;
+	}
+}
 
-#if PROFILE_PACKAGE_TABLES
-	appPrintProfiler("Package loaded");
-#endif
-
-	unguardf("%s, ver=%d/%d, game=%s", filename, ArVer, ArLicenseeVer, GetGameTag(Game));
+void UnPackage::UnregisterPackage()
+{
+	// Remove self from package table (it will be there even if package is not "valid")
+	int i = PackageMap.FindItem(this);
+	if (i != INDEX_NONE)
+	{
+		// Could be INDEX_NONE in a case of bad package
+		PackageMap.RemoveAt(i);
+	}
+	// unlink package from CGameFileInfo
+	if (FileInfo)
+	{
+		assert(FileInfo->Package == this || FileInfo->Package == NULL);
+		const_cast<CGameFileInfo*>(FileInfo)->Package = NULL;
+	}
 }
 
 bool UnPackage::VerifyName(FString& nameStr, int nameIndex)
@@ -545,19 +585,7 @@ UnPackage::~UnPackage()
 {
 	guard(UnPackage::~UnPackage);
 
-	// Remove self from package table (it will be there even if package is not "valid")
-	int i = PackageMap.FindItem(this);
-	if (i != INDEX_NONE)
-	{
-		// Could be INDEX_NONE in a case of bad package
-		PackageMap.RemoveAt(i);
-	}
-	// unlink package from CGameFileInfo
-	if (FileInfo)
-	{
-		assert(FileInfo->Package == this || FileInfo->Package == NULL);
-		const_cast<CGameFileInfo*>(FileInfo)->Package = NULL;
-	}
+	UnregisterPackage();
 
 	if (!IsValid())
 	{
@@ -571,6 +599,9 @@ UnPackage::~UnPackage()
 	delete[] NameTable;
 	delete[] ImportTable;
 	delete[] ExportTable;
+#if UNREAL4
+	delete[] ExportIndices_IOS;
+#endif
 
 	unguard;
 }
@@ -1308,8 +1339,6 @@ TArray<char*>		MissingPackages;
 			delete package;
 			return NULL;
 		}
-		// Cache pointer in CGameFileInfo so next time it will be found quickly.
-		const_cast<CGameFileInfo*>(File)->Package = package;
 		return package;
 	}
 	return NULL;
