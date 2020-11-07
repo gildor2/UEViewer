@@ -643,9 +643,14 @@ void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int Ta
 				Exp.RealSerialOffset = CurrentExportOffset;
 				CurrentExportOffset += Exp.SerialSize;
 
+				int64 OuterIndex = int64(E.OuterIndex.Value + 1);
+				assert(OuterIndex >= 0 && OuterIndex <= ExportCount);
+				Exp.PackageIndex = int(OuterIndex);
+
 				//todo: store E.GlobalImportIndex
-				//todo: store E.OuterIndex
-				//appPrintf("[%d]: %s'%s' Flags=%X SerialOff=%X RealOff=%X\n", ObjectIndex, Exp.ClassName_IO, *Exp.ObjectName, E.ObjectFlags, Exp.SerialOffset, Exp.RealSerialOffset);
+//				appPrintf("[%d]: %s'%s' Flags=%X SerialOff=%X RealOff=%X Id=%I64X Parent=%I64d\n", ObjectIndex, Exp.ClassName_IO, *Exp.ObjectName,
+//					E.ObjectFlags, Exp.SerialOffset, Exp.RealSerialOffset,
+//					E.GlobalImportIndex.Value, E.OuterIndex.Value);
 			}
 		}
 	}

@@ -1176,7 +1176,6 @@ void UnPackage::GetFullExportName(const FObjectExport &Exp, char *buf, int bufSi
 		}
 		else
 		{
-			// possible for UE3 forced exports
 			const FObjectExport &Rec = GetExport(PackageIndex-1);
 			PackageIndex = Rec.PackageIndex;
 			PackageName  = Rec.ObjectName;
