@@ -24,7 +24,7 @@ public:
 	virtual void Seek(int Pos)
 	{
 		guard(FPakFile::Seek);
-		assert(Pos >= 0 && Pos < UncompressedSize);
+		assert(Pos >= 0 && Pos <= UncompressedSize);
 		ArPos = Pos;
 //		unguardf("file=%s", *Info->FileInfo->GetRelativeName());
 		unguardf("file=%d", FileIndex);

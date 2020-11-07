@@ -717,36 +717,47 @@ void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int Ta
 	unguard;
 }
 
-void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages)
+struct ImportHelper
 {
-	guard(UnPackage::LoadImportTableIoStore);
-
-	// Preload dependencies
+	const TArray<const CGameFileInfo*>& PackageFiles;
 	TStaticArray<UnPackage*, 32> Packages;
-	Packages.Reserve(ImportPackages.Num());
-	for (const CGameFileInfo* File : ImportPackages)
+	TStaticArray<int, 32> AllocatedPackageImports;
+	FObjectImport* ImportTable;
+	const FPackageObjectIndex* ImportMap;
+	int ImportCount;
+	int NextImportToCheck;
+
+	ImportHelper(const TArray<const CGameFileInfo*>& InPackageFiles, FObjectImport* InImportTable, const FPackageObjectIndex* InImportMap, int InImportCount)
+	: PackageFiles(InPackageFiles)
+	, ImportTable(InImportTable)
+	, ImportMap(InImportMap)
+	, ImportCount(InImportCount)
+	, NextImportToCheck(0)
 	{
-		Packages.Add(UnPackage::LoadPackage(File, true));
+		int NumPackages = PackageFiles.Num();
+		Packages.Reserve(NumPackages);
+		AllocatedPackageImports.Init(-1, NumPackages);
+		// Preload dependencies
+		for (const CGameFileInfo* File : PackageFiles)
+		{
+			Packages.Add(UnPackage::LoadPackage(File, true));
+		}
 	}
 
-	// Import table is filled with object Ids, we should scan all dependencies to resolve them
-	ImportTable = new FObjectImport[ImportCount];
-	Summary.ImportCount = ImportCount;
-
-	// Create "Package" FObjectImport entries for all ImportPackages
-	TStaticArray<int, 32> PackageIndexMap;
-	PackageIndexMap.Reserve(ImportPackages.Num());
-	const FPackageObjectIndex* DataPtr = (FPackageObjectIndex*)Data;
-	int CreatedPackageIndex = 0;
-	for (int ImportIndex = 0; ImportIndex < ImportCount && CreatedPackageIndex < ImportPackages.Num(); ImportIndex++)
+	// Find or create FObjectImport for package specified by its index
+	int GetPackageImportIndex(int PackageIndex)
 	{
-		const FPackageObjectIndex& ObjectIndex = DataPtr[ImportIndex];
+		int Index = AllocatedPackageImports[PackageIndex];
+		if (Index >= 0)
+		{
+			// Already allocated
+			return Index;
+		}
+		Index = FindNullImportEntry();
+		AllocatedPackageImports[PackageIndex] = Index;
 
-		if (!ObjectIndex.IsNull())
-			continue;
-
-		const CGameFileInfo* PackageFile = ImportPackages[CreatedPackageIndex];
-		FObjectImport& Imp = ImportTable[ImportIndex];
+		const CGameFileInfo* PackageFile = PackageFiles[PackageIndex];
+		FObjectImport& Imp = ImportTable[Index];
 		// Get the package file name and cut extension
 		FStaticString<MAX_PACKAGE_PATH> PackageName;
 		PackageFile->GetRelativeName(PackageName);
@@ -754,10 +765,59 @@ void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const 
 		if (Ext) *Ext = 0;
 		Imp.ObjectName.Str = appStrdupPool(*PackageName); // it should be already in pool
 		Imp.ClassName.Str = "Package";
-		PackageIndexMap.Add(ImportIndex);
-		CreatedPackageIndex++;
+
+		return Index;
 	}
-	assert(CreatedPackageIndex == ImportPackages.Num());
+
+	bool FindObjectInPackages(FPackageObjectIndex ObjectIndex, int& OutPackageIndex, const FObjectExport*& OutExportEntry)
+	{
+		for (int PackageIndex = 0; PackageIndex < Packages.Num(); PackageIndex++)
+		{
+			const UnPackage* ImportPackage = Packages[PackageIndex];
+			assert(ImportPackage);
+			for (int i = 0; i < ImportPackage->Summary.ExportCount; i++)
+			{
+				if (ImportPackage->ExportIndices_IOS[i].Value == ObjectIndex.Value)
+				{
+					// Found
+					OutPackageIndex = PackageIndex;
+					OutExportEntry = &ImportPackage->ExportTable[i];
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// Find unused import map entry - there are always exists because IsStore generator
+	// is making import map with same entries as in original cooked files, just replacing
+	// non-object entries with Null.
+	int FindNullImportEntry()
+	{
+		guard(ImportHelper::FindNullImportEntry);
+		for (int Index = NextImportToCheck; Index < ImportCount; Index++)
+		{
+			if (ImportMap[Index].IsNull())
+			{
+				NextImportToCheck = Index + 1;
+				return Index;
+			}
+		}
+		appError("Unable to find Null import entry");
+		unguard;
+	}
+};
+
+void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages)
+{
+	guard(UnPackage::LoadImportTableIoStore);
+
+	// Import table is filled with object Ids, we should scan all dependencies to resolve them
+	ImportTable = new FObjectImport[ImportCount];
+	Summary.ImportCount = ImportCount;
+	const FPackageObjectIndex* DataPtr = (FPackageObjectIndex*)Data;
+
+	ImportHelper Helper(ImportPackages, ImportTable, DataPtr, ImportCount);
 
 	for (int ImportIndex = 0; ImportIndex < ImportCount; ImportIndex++)
 	{
@@ -779,28 +839,12 @@ void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const 
 			assert(ObjectIndex.IsImport());
 			const FObjectExport* Exp = NULL;
 			int PackageIndex = 0;
-			for (PackageIndex = 0; PackageIndex < Packages.Num(); PackageIndex++)
-			{
-				UnPackage* ImportPackage = Packages[PackageIndex];
-				if (ImportPackage)
-				{
-					for (int i = 0; i < ImportPackage->Summary.ExportCount; i++)
-					{
-						if (ImportPackage->ExportIndices_IOS[i].Value == ObjectIndex.Value)
-						{
-							Exp = &ImportPackage->ExportTable[i];
-							break;
-						}
-					}
-				}
-				if (Exp) break;
-			}
-			if (Exp)
+			if (Helper.FindObjectInPackages(ObjectIndex, PackageIndex, Exp))
 			{
 //				appPrintf("Imp[%d]: %s %s\n", ImportIndex, *Exp->ObjectName, Exp->ClassName_IO);
 				Imp.ObjectName.Str = *Exp->ObjectName;
 				Imp.ClassName.Str = Exp->ClassName_IO;
-				Imp.PackageIndex = -PackageIndexMap[PackageIndex] - 1;
+				Imp.PackageIndex = - Helper.GetPackageImportIndex(PackageIndex) - 1;
 			}
 			else
 			{
