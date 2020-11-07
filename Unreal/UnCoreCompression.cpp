@@ -466,6 +466,7 @@ restart_decompress:
 #if USE_OODLE // defined for supported engine versions
 	if (Flags == COMPRESS_OODLE)
 	{
+		//todo: review HAS_OODLE/USE_OODLE, move all stuff to appDecompressOodle
 	#if HAS_OODLE // defined in project file
 		static bool bUseDll = false;
 
@@ -479,6 +480,7 @@ restart_decompress:
 			if (newLen != UncompressedSize)
 			{
 				bUseDll = true;
+				appPrintf("Info: Kraken_Decompress failed, switching to oodle dll\n");
 			}
 		}
 		if (bUseDll)

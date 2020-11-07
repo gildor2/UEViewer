@@ -7,6 +7,8 @@
                 "${workspaceFolder}/Core",
                 "${workspaceFolder}/Unreal",
                 "${workspaceFolder}/UmodelTool",
+                "${workspaceFolder}/libs",
+                "${workspaceFolder}/libs/include",
                 "${workspaceFolder}/libs/includewin32",
                 "${workspaceFolder}/UI"
             ],

@@ -2609,32 +2609,34 @@ struct FIntBulkData : public FByteBulkData
 
 
 // UE3 compression flags; may be used for other engines, so keep it outside of #if UNREAL3 block
-#define COMPRESS_ZLIB		1
-#define COMPRESS_LZO		2
-#define COMPRESS_LZX		4
+#define COMPRESS_ZLIB				1
+#define COMPRESS_LZO				2
+#define COMPRESS_LZX				4
 
 #if BLADENSOUL
-#define COMPRESS_LZO_ENC_BNS	8					// encrypted LZO
+#define COMPRESS_LZO_ENC_BNS		8				// encrypted LZO
 #endif
 
 #if UNREAL4
-#define COMPRESS_Custom		4						// UE4.20-4.21
+#define COMPRESS_Custom				4				// UE4.20-4.21
 #endif // UNREAL4
 
 // Custom compression flags
-#define COMPRESS_FIND		0xFF					// use this flag for appDecompress when exact compression method is not known
+#define COMPRESS_FIND				0xFF			// use this flag for appDecompress when exact compression method is not known
 #if USE_LZ4
-#define COMPRESS_LZ4		0xFE					// custom umodel's constant
+#define COMPRESS_LZ4				0xFE			// custom umodel's constant
 #endif
 #if USE_OODLE
-#define COMPRESS_OODLE		0xFD					// custom umodel's constant
+#define COMPRESS_OODLE				0xFD			// custom umodel's constant
 #endif
 
 // Note: there's no conflicts between UE3 and UE4 flags - some obsoleve UE3 flags are marked as unused in UE4,
 // and some UE4 flags are missing in UE3 just because bitmask is not fully used there.
-#define PKG_Cooked           0x00000008				// UE3
-#define PKG_StoreCompressed	 0x02000000				// UE3, deprecated in UE4.16
-#define PKG_FilterEditorOnly 0x80000000				// UE4
+// UE3 flags
+#define PKG_Cooked					0x00000008		// UE3
+#define PKG_StoreCompressed			0x02000000		// UE3, deprecated in UE4.16
+// UE4 flags
+#define PKG_FilterEditorOnly		0x80000000		// UE4
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);
 
