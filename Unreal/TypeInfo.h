@@ -119,7 +119,8 @@ struct CNullType
 // PROP_ARRAY is used for TArray. For static array (type[N]) use declaration for 'type'.
 #define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
 #define PROP_STRUC(Field,Type)	_PROP_BASE(Field, Type)
-#define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		// signal property, which should be dropped
+#define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		 // signal property, which should be dropped
+#define PROP_ALIAS(Name,Alias)  { #Alias, ">" #Name, 0, 0 }, // register another name for the same property
 
 
 // BEGIN_PROP_TABLE/END_PROP_TABLE declares property table inside class declaration

@@ -226,11 +226,10 @@ static TArray<PropPatch> Patches;
 const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 {
 	guard(CTypeInfo::FindProperty);
-	int i;
 	// check for remap
-	for (i = 0; i < Patches.Num(); i++)
+	for (const PropPatch &p : Patches)
 	{
-		const PropPatch &p = Patches[i];
+		;
 		if (!stricmp(p.ClassName, this->Name) && !stricmp(p.OldName, Name))
 		{
 			Name = p.NewName;
@@ -240,9 +239,34 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 	// find property
 	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
 	{
-		for (i = 0; i < Type->NumProps; i++)
-			if (!(stricmp(Type->Props[i].Name, Name)))
-				return Type->Props + i;
+		const char* AliasName = NULL;
+		const CPropInfo* CurrentProp = Type->Props;
+		for (int i = 0; i < Type->NumProps; i++, CurrentProp++)
+		{
+			if (!(stricmp(CurrentProp->Name, Name)))
+			{
+				if (CurrentProp->TypeName && CurrentProp->TypeName[0] == '>')
+				{
+					// Alias, redirection to another property
+					AliasName = CurrentProp->TypeName + 1;
+					break;
+				}
+				return CurrentProp;
+			}
+		}
+		if (AliasName)
+		{
+			const CPropInfo* CurrentProp = Type->Props;
+			for (int i = 0; i < Type->NumProps; i++, CurrentProp++)
+			{
+				if (!(stricmp(CurrentProp->Name, AliasName)))
+				{
+					assert(!CurrentProp->TypeName || CurrentProp->TypeName[0] != '>'); // no cyclic aliases
+					return CurrentProp;
+				}
+			}
+			appError("Alias %s for property %s::%s not found", AliasName, this->Name, Name);
+		}
 	}
 	return NULL;
 	unguard;

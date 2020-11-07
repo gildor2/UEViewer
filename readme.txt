@@ -216,6 +216,12 @@ ooz
 
 Changes
 ~~~~~~~
+07.11.2020
+- UE4.26 support
+
+01.11.2020
+- using oo2core_5_win32.dll when internal oodle decompressor failed to process compressed block
+
 19.10.2020
 - removed restriction to maximal number of pak files in the game
 

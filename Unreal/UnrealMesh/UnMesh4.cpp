@@ -301,6 +301,11 @@ struct FRecomputeTangentCustomVersion
 		BeforeCustomVersionWasAdded = 0,
 		// UE4.12
 		RuntimeRecomputeTangent = 1,
+		// UE4.26
+		RecomputeTangentVertexColorMask = 2,
+
+		VersionPlusOne,
+		LatestVersion = VersionPlusOne - 1
 	};
 
 	static int Get(const FArchive& Ar)
@@ -312,7 +317,9 @@ struct FRecomputeTangentCustomVersion
 
 		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		return RuntimeRecomputeTangent;
+		if (Ar.Game < GAME_UE4(27))
+			return RecomputeTangentVertexColorMask;
+		return LatestVersion;
 	}
 };
 
@@ -678,6 +685,12 @@ struct FSkelMeshSection4
 			Ar << bRecomputeTangent;
 		}
 
+		if (FRecomputeTangentCustomVersion::Get(Ar) >= FRecomputeTangentCustomVersion::RecomputeTangentVertexColorMask)
+		{
+			uint8 RecomputeTangentsVertexMaskChannel;
+			Ar << RecomputeTangentsVertexMaskChannel;
+		}
+
 		if (FEditorObjectVersion::Get(Ar) >= FEditorObjectVersion::RefactorMeshEditorMaterials)
 		{
 			Ar << S.bCastShadow;
@@ -806,6 +819,11 @@ struct FSkelMeshSection4
 
 		bool bRecomputeTangent;
 		Ar << bRecomputeTangent;
+		if (Ar.Game >= GAME_UE4(26))
+		{
+			uint8 RecomputeTangentsVertexMaskChannel;
+			Ar << RecomputeTangentsVertexMaskChannel;
+		}
 
 		Ar << S.bCastShadow;
 		Ar << S.BaseVertexIndex;

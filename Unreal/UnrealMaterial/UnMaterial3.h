@@ -757,7 +757,8 @@ struct FMaterialCachedParameters
 	TArray<UTexture3*> TextureValues;
 
 	BEGIN_PROP_TABLE
-		PROP_STRUC(Entries, FMaterialCachedParameterEntry) //todo: will be RuntimeEntries in 4.26
+		PROP_STRUC(Entries, FMaterialCachedParameterEntry)
+		PROP_ALIAS(Entries, RuntimeEntries) // renamed in 4.26
 		PROP_ARRAY(ScalarValues, float)
 		PROP_ARRAY(VectorValues, FLinearColor)
 		PROP_ARRAY(TextureValues, UObject*)
