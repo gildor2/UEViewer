@@ -890,11 +890,21 @@ no_net_index:
 	if (Type->IsA("Class"))		// no properties for UClass
 		return;
 
+#if UNREAL4
+	if ((Ar.Game >= GAME_UE4_BASE) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
+	{
+		DUMP_ARC_BYTES(Ar, 256, "UnversionedProperties");
+		appNotify("UnversionedProperties");
+		return;
+	}
+#endif // UNREAL4
+
 	Type->SerializeUnrealProps(Ar, this);
 
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
+		// PossiblySerializeObjectGuid()
 		int bSerializeGuid;
 		Ar << bSerializeGuid;
 		if (bSerializeGuid)

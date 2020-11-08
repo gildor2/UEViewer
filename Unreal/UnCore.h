@@ -2636,6 +2636,7 @@ struct FIntBulkData : public FByteBulkData
 #define PKG_Cooked					0x00000008		// UE3
 #define PKG_StoreCompressed			0x02000000		// UE3, deprecated in UE4.16
 // UE4 flags
+#define PKG_UnversionedProperties	0x00002000		// UE4.25+
 #define PKG_FilterEditorOnly		0x80000000		// UE4
 
 int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize, int Flags);

@@ -534,7 +534,9 @@ static void LoadGraphData(const byte* Data, int DataSize, TArray<const CGameFile
 		if (File)
 		{
 			OutPackages.Add(File);
-//			appPrintf("Depends: %s\n", *File->GetRelativeName());
+		#if DEBUG_PACKAGE
+			appPrintf("Depends: %s\n", *File->GetRelativeName());
+		#endif
 		}
 		else
 		{
@@ -552,10 +554,20 @@ void UnPackage::LoadPackageIoStore()
 {
 	guard(UnPackage::LoadPackageIoStore);
 
-	appPrintf("Loading AsyncPackage %s\n", *GetFilename()); //todo
+#if DEBUG_PACKAGE
+	appPrintf("Loading AsyncPackage %s\n", *GetFilename());
+#endif
 
 	FPackageSummary Sum;
 	Loader->Serialize(&Sum, sizeof(Sum));
+
+	if (Sum.PackageFlags & PKG_UnversionedProperties)
+	{
+		//todo: support unversioned properties
+		appPrintf("AsyncPackage %s has unversioned properties, dropping\n", *GetFilename());
+		return;
+	}
+
 	Summary.PackageFlags = Sum.PackageFlags;
 
 	// Rewind Loader to zero and load whole header (including summary)
@@ -673,7 +685,6 @@ void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int Ta
 	ExportIndices_IOS = new FPackageObjectIndex[ExportCount];
 
 	const FExportMapEntry* ExportEntries = (FExportMapEntry*)Data;
-//	const FExportMapEntry* EndPosition = (FExportMapEntry*)(Data + TableSize);
 
 	// Export data is ordered according to export bundles, so we should do the processing in bundle order
 	int32 CurrentExportOffset = PackageHeaderSize;
@@ -707,9 +718,11 @@ void UnPackage::LoadExportTableIoStore(const byte* Data, int ExportCount, int Ta
 
 				// Save GlobalImportIndex in separate array
 				ExportIndices_IOS[ObjectIndex] = E.GlobalImportIndex;
-//				appPrintf("Exp[%d]: %s'%s' Flags=%X SerialOff=%X RealOff=%X Id=%I64X Parent=%I64d\n", ObjectIndex, Exp.ClassName_IO, *Exp.ObjectName,
-//					E.ObjectFlags, Exp.SerialOffset, Exp.RealSerialOffset,
-//					E.GlobalImportIndex.Value, E.OuterIndex.Value);
+			#if DEBUG_PACKAGE
+				appPrintf("Exp[%d]: %s'%s' Flags=%X SerialOff=%X RealOff=%X Id=%I64X Parent=%I64d\n", ObjectIndex, Exp.ClassName_IO, *Exp.ObjectName,
+					E.ObjectFlags, Exp.SerialOffset, Exp.RealSerialOffset,
+					E.GlobalImportIndex.Value, E.OuterIndex.Value);
+			#endif
 			}
 		}
 	}
@@ -841,7 +854,9 @@ void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const 
 			int PackageIndex = 0;
 			if (Helper.FindObjectInPackages(ObjectIndex, PackageIndex, Exp))
 			{
-//				appPrintf("Imp[%d]: %s %s\n", ImportIndex, *Exp->ObjectName, Exp->ClassName_IO);
+			#if DEBUG_PACKAGE
+				appPrintf("Imp[%d]: %s %s\n", ImportIndex, *Exp->ObjectName, Exp->ClassName_IO);
+			#endif
 				Imp.ObjectName.Str = *Exp->ObjectName;
 				Imp.ClassName.Str = Exp->ClassName_IO;
 				Imp.PackageIndex = - Helper.GetPackageImportIndex(PackageIndex) - 1;
@@ -934,7 +949,7 @@ const char* FindScriptEntryName(const FPackageObjectIndex& ObjectIndex)
 		// trick works fine:
 		int NameIndex = (E.ObjectName.NameIndex) & 0x7fffffff;
 		const char* ScriptName = GlobalNameTable[NameIndex];
-	#if 0
+	#if DEBUG_PACKAGE && 0
 		appPrintf("Script: %s - [%X %X] [%X %X]\n", ScriptName,
 			uint32(E.GlobalIndex.Value >> 62), uint32(E.GlobalIndex.Value & 0xFFFFFFFF),
 			uint32(E.OuterIndex.Value >> 62), uint32(E.OuterIndex.Value & 0xFFFFFFFF));
