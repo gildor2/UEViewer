@@ -565,13 +565,28 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 	unguard;
 }
 
+#define FLATTEN_RECURSE 1
+
 void FIOStoreFileSystem::WalkDirectoryTreeRecursive(struct FIoDirectoryIndexResource& IndexResource, int DirectoryIndex, const FString& ParentDirectory)
 {
+#if FLATTEN_RECURSE
+	struct StackEntry
+	{
+		FString ParentDirectory;
+		int DirectoryIndex;
+	};
+	TArray<StackEntry> Stack;
+	Stack.Empty(32);
+	FStaticString<MAX_PACKAGE_PATH> CurrentParentDirectory = ParentDirectory;
+#else
+	const FString& CurrentParentDirectory = ParentDirectory;
+#endif
+
 	while (DirectoryIndex != -1)
 	{
 		const FIoDirectoryIndexEntry& Directory = IndexResource.DirectoryEntries[DirectoryIndex];
 		FStaticString<MAX_PACKAGE_PATH> DirectoryPath;
-		DirectoryPath = ParentDirectory;
+		DirectoryPath = CurrentParentDirectory;
 		if (Directory.Name != -1)
 		{
 			if (DirectoryPath.Len() && DirectoryPath[DirectoryPath.Len()-1] != '/')
@@ -615,11 +630,35 @@ void FIOStoreFileSystem::WalkDirectoryTreeRecursive(struct FIoDirectoryIndexReso
 		// Recurse to child folders
 		if (Directory.FirstChildEntry != -1)
 		{
+#if FLATTEN_RECURSE
+			// Store current state
+			if (Directory.NextSiblingEntry != -1)
+			{
+				StackEntry* S = new (Stack) StackEntry;
+				S->DirectoryIndex = Directory.NextSiblingEntry;
+				S->ParentDirectory = CurrentParentDirectory;
+			}
+			// Recurse
+			DirectoryIndex = Directory.FirstChildEntry;
+			CurrentParentDirectory = DirectoryPath;
+			continue;
+#else
 			WalkDirectoryTreeRecursive(IndexResource, Directory.FirstChildEntry, DirectoryPath);
+#endif
 		}
 
 		// Proceed to the sibling directory
 		DirectoryIndex = Directory.NextSiblingEntry;
+
+#if FLATTEN_RECURSE
+		if (DirectoryIndex == -1 && Stack.Num())
+		{
+			StackEntry& S = Stack[Stack.Num() - 1];
+			DirectoryIndex = S.DirectoryIndex;
+			CurrentParentDirectory = MoveTemp(S.ParentDirectory);
+			Stack.RemoveAt(Stack.Num() - 1);
+		}
+#endif
 	}
 }
 

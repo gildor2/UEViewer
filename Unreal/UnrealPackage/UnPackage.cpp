@@ -293,13 +293,12 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 		// and circular dependencies are possible
 		RegisterPackage(filename);
 		LoadPackageIoStore();
+		// Release package file handle
+		CloseReader();
 		if (!IsValid())
 		{
 			UnregisterPackage();
-			return;
 		}
-		// Release package file handle
-		CloseReader();
 		return;
 	}
 #endif // UNREAL4
