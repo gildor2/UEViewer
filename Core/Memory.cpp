@@ -412,23 +412,25 @@ int CMemoryChain::GetSize() const
 struct CAllocInfo
 {
 	int				totalBlocks;
-	int				totalBytes;
+	unsigned		totalBytes;
 	const CStackTrace* stack;
 };
 
 static int CompareAllocInfo(const CAllocInfo* p1, const CAllocInfo* p2)
 {
-	int cmp = p2->totalBytes - p1->totalBytes;
-	if (cmp == 0)
-		cmp = p2->totalBlocks - p1->totalBlocks;
-	return cmp;
+	// Can't safely compare unsigned values with 'a - b', especially when a = max_uint and b = 0
+	if (p2->totalBytes > p1->totalBytes)
+		return 1;
+	else if (p2->totalBytes < p1->totalBytes)
+		return -1;
+	return p2->totalBlocks - p1->totalBlocks;
 }
 
 void appDumpMemoryAllocations()
 {
 	appPrintf(
 		"Memory information:\n"
-		FORMAT_SIZE("d")" bytes allocated in %d blocks from %d points\n\n", GTotalAllocationSize, GTotalAllocationCount, GNumAllocationPoints
+		FORMAT_SIZE("u")" bytes allocated in %d blocks from %d points\n\n", GTotalAllocationSize, GTotalAllocationCount, GNumAllocationPoints
 	);
 
 	// collect statistics
@@ -463,7 +465,7 @@ void appDumpMemoryAllocations()
 	for (int i = 0; i < numAllocations; i++)
 	{
 		const CAllocInfo* info = &allocations[i];
-		appPrintf("%d blocks %d bytes\n", info->totalBlocks, info->totalBytes);
+		appPrintf("%d blocks %u bytes\n", info->totalBlocks, info->totalBytes);
 		info->stack->Dump();
 		appPrintf("\n");
 	}
