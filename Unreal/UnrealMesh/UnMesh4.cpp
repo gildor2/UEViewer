@@ -846,6 +846,15 @@ struct FSkelMeshSection4
 		if (Ar.Game == GAME_Paragon) return;
 #endif
 
+#if EVANGELION
+		if (Ar.Game == GAME_Evangelion)
+		{
+			int32 unk1;
+			Ar << unk1;
+			return;
+		}
+#endif // EVANGELION
+
 		FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
 		Ar << DuplicatedVerticesBuffer;
 		Ar << S.bDisabled;

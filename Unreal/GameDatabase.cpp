@@ -381,6 +381,9 @@ const GameInfo GListOfGames[] = {
 #	if DAUNTLESS
 		G("Dauntless", dauntless, GAME_Dauntless),
 #	endif
+#   if EVANGELION
+		G("Evangelion Battlefields", evangelion, GAME_Evangelion),
+#	endif
 #	if PARAGON
 		G("Paragon", paragon, GAME_Paragon),
 #	endif
