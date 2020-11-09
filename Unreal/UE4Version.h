@@ -164,10 +164,10 @@ struct FFrameworkObjectVersion
 			return (Type)35;
 		if (Ar.Game < GAME_UE4(25))
 			return (Type)36;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)37;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -242,10 +242,10 @@ struct FEditorObjectVersion
 			return (Type)37;
 		if (Ar.Game < GAME_UE4(26))
 			return (Type)38;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)40;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -315,10 +315,10 @@ struct FSkeletalMeshCustomVersion
 			return SectionIgnoreByReduceAdded;
 		if (Ar.Game < GAME_UE4(26))
 			return SkinWeightProfiles;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return RemoveEnableClothLOD;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -352,10 +352,10 @@ struct FCoreObjectVersion
 			return (Type)2;
 		if (Ar.Game < GAME_UE4(25))
 			return SkeletalMaterialEditorDataStripping;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)4;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -424,10 +424,10 @@ struct FRenderingObjectVersion
 			return (Type)36;
 		if (Ar.Game < GAME_UE4(26))
 			return (Type)43;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)44;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -459,11 +459,11 @@ struct FAnimObjectVersion
 			return StoreMarkerNamesOnSkeleton;
 		if (Ar.Game < GAME_UE4(26))
 			return (Type)7;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)15;
 
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -502,10 +502,10 @@ struct FAnimPhysObjectVersion
 			return AddLODToCurveMetaData;
 		if (Ar.Game < GAME_UE4(20))
 			return (Type)16;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)17;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -553,10 +553,10 @@ struct FReleaseObjectVersion
 			return (Type)28;
 		if (Ar.Game < GAME_UE4(26))
 			return (Type)30;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)37;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 
@@ -588,10 +588,10 @@ struct FEnterpriseObjectVersion
 			return (Type)6;
 		if (Ar.Game < GAME_UE4(25))
 			return MeshDescriptionBulkDataGuidIsHash;
-		if (Ar.Game < GAME_UE4(27))
+//		if (Ar.Game < GAME_UE4(27))
 			return (Type)10;
 		// NEW_ENGINE_VERSION
-		return LatestVersion;
+//		return LatestVersion;
 	}
 };
 

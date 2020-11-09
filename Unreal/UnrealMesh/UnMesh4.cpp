@@ -317,9 +317,12 @@ struct FRecomputeTangentCustomVersion
 
 		if (Ar.Game < GAME_UE4(12))
 			return BeforeCustomVersionWasAdded;
-		if (Ar.Game < GAME_UE4(27))
+		if (Ar.Game < GAME_UE4(26))
+			return RuntimeRecomputeTangent;
+//		if (Ar.Game < GAME_UE4(27))
 			return RecomputeTangentVertexColorMask;
-		return LatestVersion;
+		// NEW_ENGINE_VERSION
+//		return LatestVersion;
 	}
 };
 
