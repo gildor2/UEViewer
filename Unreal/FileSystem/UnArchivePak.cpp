@@ -253,8 +253,8 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 			int64 Alignment = bEncrypted ? FPakFile::EncryptionAlign : 1;
 			for (int BlockIndex = 0; BlockIndex < BlockCount; BlockIndex++)
 			{
-				int64 CurrentBlockSize = *(int64*)Data;
-				Data += sizeof(int64);
+				uint32 CurrentBlockSize = *(uint32*)Data;
+				Data += sizeof(uint32);
 
 				FPakCompressedBlock& Block = CompressionBlocks[BlockIndex];
 				Block.CompressedStart = CurrentOffset;
