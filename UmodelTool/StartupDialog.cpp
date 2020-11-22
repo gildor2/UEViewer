@@ -57,7 +57,7 @@ void UIStartupDialog::InitUI()
 		+ NewControl(UIGroup, GROUP_HORIZONTAL_LAYOUT|GROUP_NO_BORDER)
 		[
 			NewControl(UISpacer, -1)
-			+ NewControl(UIHyperLink, "Compatibility information", "https://www.gildor.org/projects/umodel/compat")
+			+ NewControl(UIHyperLink, "Game compatibility", "https://www.gildor.org/projects/umodel/compat")
 			.SetAutoSize()
 		]
 	];
@@ -84,28 +84,42 @@ void UIStartupDialog::InitUI()
 		FillGameList();
 	}
 
-	NewControl(UIGroup, "Engine classes to load", GROUP_HORIZONTAL_LAYOUT)
+	static const int DefaultIndent = 20;
+
+	NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 	.SetParent(this)
+	.SetWidth(EncodeWidth(1.0f))
 	[
-		NewControl(UIGroup, GROUP_NO_BORDER)
-		.SetWidth(EncodeWidth(0.5f))
+		NewControl(UIGroup, "View / export object types")
+		.SetWidth(EncodeWidth(0.6f))
 		[
-			NewControl(UILabel, "Common classes:")
-			+ NewControl(UICheckbox, "Skeletal mesh", &Opt.UseSkeletalMesh)
-			+ NewControl(UICheckbox, "Static mesh",   &Opt.UseStaticMesh)
-			+ NewControl(UICheckbox, "Animation",     &Opt.UseAnimation)
-			+ NewControl(UICheckbox, "Vertex mesh",   &Opt.UseVertMesh)
-			+ NewControl(UICheckbox, "Textures",      &Opt.UseTexture)
-			+ NewControl(UICheckbox, "MorphTargets",  &Opt.UseMorphTarget)
-			+ NewControl(UICheckbox, "Lightmaps",     &Opt.UseLightmapTexture)
+			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
+			[
+				NewControl(UIGroup, GROUP_NO_BORDER)
+				.SetWidth(EncodeWidth(1.0f))
+				[
+					NewControl(UICheckbox, "Skeletal mesh", &Opt.UseSkeletalMesh)
+					+ NewControl(UICheckbox, "Morph target", &Opt.UseMorphTarget)
+					  .SetX(DefaultIndent)
+					+ NewControl(UICheckbox, "Animation", &Opt.UseAnimation)
+					+ NewControl(UICheckbox, "Static mesh", &Opt.UseStaticMesh)
+				]
+				+ NewControl(UIGroup, GROUP_NO_BORDER)
+				.SetWidth(EncodeWidth(1.0f))
+				[
+					NewControl(UICheckbox, "Texture", &Opt.UseTexture)
+					+ NewControl(UICheckbox, "Lightmap", &Opt.UseLightmapTexture)
+					  .SetX(DefaultIndent)
+					+ NewControl(UICheckbox, "Vertex mesh", &Opt.UseVertMesh)
+				]
+			]
 		]
-		+ NewControl(UIGroup, GROUP_NO_BORDER)
-		.SetWidth(EncodeWidth(0.5f))
+		+ NewControl(UIGroup, "Export-only types")
+		.SetWidth(EncodeWidth(0.4f))
 		[
-			NewControl(UILabel, "Export-only classes:")
-			+ NewControl(UICheckbox, "Sound",     &Opt.UseSound)
-			+ NewControl(UICheckbox, "ScaleForm", &Opt.UseScaleForm)
-			+ NewControl(UICheckbox, "FaceFX",    &Opt.UseFaceFx)
+			NewControl(UICheckbox, "Sound", &Opt.UseSound)
+			+ NewControl(UICheckbox, "ScaleForm (UE3)", &Opt.UseScaleForm)
+			+ NewControl(UICheckbox, "FaceFX (UE3)", &Opt.UseFaceFx)
 		]
 	];
 
