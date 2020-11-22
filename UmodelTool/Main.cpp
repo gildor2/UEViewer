@@ -215,6 +215,7 @@ static void RegisterClasses(int game)
 			UnregisterClass("Skeleton", false);
 	}
 	if (!GSettings.Startup.UseStaticMesh) UnregisterClass("StaticMesh", true);
+	if (!GSettings.Startup.UseVertMesh) UnregisterClass("VertMesh", true);
 	if (!GSettings.Startup.UseTexture)
 	{
 		UnregisterClass("UnrealMaterial", true);
@@ -403,6 +404,7 @@ static void PrintUsage()
 			"                    unsupported data format\n"
 			"    -noanim         disable loading of MeshAnimation classes\n"
 			"    -nostat         disable loading of StaticMesh class\n"
+			"    -novert         disable loading of VertMesh class\n"
 			"    -notex          disable loading of Material classes\n"
 			"    -nomorph        disable loading of MorphTarget class\n"
 			"    -nolightmap     disable loading of Lightmap textures\n"
@@ -774,6 +776,7 @@ int main(int argc, const char **argv)
 			// disable classes
 			OPT_NBOOL("nomesh",  GSettings.Startup.UseSkeletalMesh)
 			OPT_NBOOL("nostat",  GSettings.Startup.UseStaticMesh)
+			OPT_NBOOL("novert",  GSettings.Startup.UseVertMesh)
 			OPT_NBOOL("noanim",  GSettings.Startup.UseAnimation)
 			OPT_NBOOL("notex",   GSettings.Startup.UseTexture)
 			OPT_NBOOL("nomorph", GSettings.Startup.UseMorphTarget)

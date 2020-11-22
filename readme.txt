@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+22.11.2020
+- added option for disabling vertex mesh loading (-novert command line option)
+
 07.11.2020
 - UE4.26 support
 
