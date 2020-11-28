@@ -92,6 +92,12 @@ struct CTypeInfo
 	// Serialize Unreal engine UObject property block
 	void SerializeUnrealProps(FArchive &Ar, void *ObjectData) const;
 
+	void ReadUnrealProperty(FArchive& Ar, struct FPropertyTag& Tag, void *ObjectData, int PropTagPos) const;
+
+#if BATMAN
+	void SerializeBatmanProps(FArchive &Ar, void *ObjectData) const;
+#endif
+
 	void DumpProps(const void *Data) const;
 	void SaveProps(const void *Data, FArchive& Ar) const;
 	bool LoadProps(void *Data, FArchive& Ar) const;
