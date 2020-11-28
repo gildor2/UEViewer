@@ -893,13 +893,14 @@ no_net_index:
 #if UNREAL4
 	if ((Ar.Game >= GAME_UE4_BASE) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
 	{
-		DUMP_ARC_BYTES(Ar, 256, "UnversionedProperties");
-		appNotify("UnversionedProperties");
+		Type->SerializeUnversionedProperties4(Ar, this);
 		return;
 	}
+	else
 #endif // UNREAL4
-
-	Type->SerializeUnrealProps(Ar, this);
+	{
+		Type->SerializeUnrealProps(Ar, this);
+	}
 
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4_BASE)
@@ -923,7 +924,7 @@ no_net_index:
 // UStruct::SerializeVersionedTaggedProperties()
 //  -> FPropertyTag::SerializeTaggedProperty()
 //  -> FXxxProperty::SerializeItem()
-void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
+void CTypeInfo::SerializeUnrealProps(FArchive& Ar, void* ObjectData) const
 {
 	guard(CTypeInfo::SerializeUnrealProps);
 
@@ -969,7 +970,7 @@ void CTypeInfo::SerializeUnrealProps(FArchive &Ar, void *ObjectData) const
 }
 
 
-void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void *ObjectData, int PropTagPos) const
+void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* ObjectData, int PropTagPos) const
 {
 	guard(CTypeInfo::ReadUnrealProperty);
 
@@ -1347,7 +1348,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void *Object
 
 #if BATMAN
 
-void CTypeInfo::SerializeBatmanProps(FArchive &Ar, void *ObjectData) const
+void CTypeInfo::SerializeBatmanProps(FArchive& Ar, void* ObjectData) const
 {
 	guard(CTypeInfo::SerializeBatmanProps);
 
@@ -1492,6 +1493,154 @@ void CTypeInfo::SerializeBatmanProps(FArchive &Ar, void *ObjectData) const
 
 #endif // BATMAN
 
+#if UNREAL4
+
+/*-----------------------------------------------------------------------------
+	UE4.26+ unversioned properties
+-----------------------------------------------------------------------------*/
+
+struct FUnversionedHeader
+{
+	struct FFragment
+	{
+		int SkipNum;
+		bool bHasAnyZeroes;
+		bool bIsLast;
+		uint8 ValueCount;
+
+		void Unpack(uint16 Packed)
+		{
+			SkipNum       =  Packed & 0x7f;
+			bHasAnyZeroes = (Packed & 0x80) != 0;
+			bIsLast       = (Packed & 0x100) != 0;
+			ValueCount    =  Packed >> 9;
+		}
+	};
+
+	// Serialized values
+	TArray<FFragment> Fragments;
+	TArray<uint8> ZeroMask;
+
+	// Values for property iteration
+	int CurrentPropIndex;
+	int CurrentFragmentIndex;
+	int PropsLeftInFragment;
+	int ZeroMaskIndex;
+	const FFragment* CurrentFragment;
+
+	void Load(FArchive& Ar)
+	{
+		guard(FUnversionedHeader::Load);
+
+		FFragment Fragment;
+		Fragment.bIsLast = false;
+		int ZeroMaskSize = 0;
+
+		while (!Fragment.bIsLast)
+		{
+			uint16 Packed;
+			Ar << Packed;
+			// Unpack data
+			Fragment.Unpack(Packed);
+			Fragments.Add(Fragment);
+			if (Fragment.bHasAnyZeroes)
+			{
+				ZeroMaskSize += Fragment.ValueCount;
+			}
+			appPrintf("Frag: skip %d, %d props, zeros=%d, last=%d\n", Fragment.SkipNum, Fragment.ValueCount, Fragment.bHasAnyZeroes, Fragment.bIsLast);
+		}
+
+		if (ZeroMaskSize)
+		{
+			int NumBytes;
+			if (ZeroMaskSize <= 8)
+				NumBytes = 1;
+			else if (ZeroMaskSize <= 16)
+				NumBytes = 2;
+			else
+				NumBytes = ((ZeroMaskSize + 31) >> 5) * 4; // round to uint32 size
+			ZeroMask.SetNum(NumBytes);
+			Ar.Serialize(&ZeroMask[0], NumBytes);
+		}
+
+		// Initialize iterator
+		CurrentPropIndex = -0;
+		CurrentFragmentIndex = -1;
+		PropsLeftInFragment = 0;
+		ZeroMaskIndex = 0;
+		CurrentFragment = NULL;
+
+		unguard;
+	}
+
+	// Property iteration
+	bool GetNextProperty(int& PropIndex, bool& bIsZeroed)
+	{
+		guard(FUnversionedHeader::GetNextProperty);
+
+		// Switch to next fragment if needed
+		if (PropsLeftInFragment == 0)
+		{
+			while (true)
+			{
+				if (CurrentFragmentIndex == Fragments.Num())
+				{
+					return false;
+				}
+				CurrentFragment = &Fragments[++CurrentFragmentIndex];
+				CurrentPropIndex += CurrentFragment->SkipNum;
+				// There's a loop till fragment has any value, in a case that SkipNum doesn't fit 7 bits value
+				if (CurrentFragment->ValueCount > 0)
+				{
+					PropsLeftInFragment = CurrentFragment->ValueCount;
+					break;
+				}
+			}
+		}
+
+		if (CurrentFragment->bHasAnyZeroes)
+		{
+			bIsZeroed = (ZeroMask[ZeroMaskIndex >> 3] & (1 << (ZeroMaskIndex & 7))) != 0;
+			ZeroMaskIndex++;
+		}
+		else
+		{
+			bIsZeroed = false;
+		}
+
+		PropIndex = CurrentPropIndex++;
+		PropsLeftInFragment--;
+		return true;
+
+		unguard;
+	}
+};
+
+// References in UE4:
+// SerializeUnversionedProperties()
+//  -> FUnversionedHeader
+//  -> FUnversionedPropertySerializer
+//  -> FLinkWalkingSchemaIterator
+void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) const
+{
+	guard(CTypeInfo::SerializeUnversionedProperties4);
+
+	DUMP_ARC_BYTES(Ar, 256, "UnversionedProperties");
+
+	FUnversionedHeader Header;
+	Header.Load(Ar);
+
+	int PropIndex;
+	bool bIsZeroedProp;
+	while (Header.GetNextProperty(PropIndex, bIsZeroedProp))
+	{
+		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp);
+	}
+
+	unguard;
+}
+
+#endif // UNREAL4
 
 /*-----------------------------------------------------------------------------
 	UObject creation

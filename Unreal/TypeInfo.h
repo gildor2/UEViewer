@@ -90,12 +90,16 @@ struct CTypeInfo
 	static void RemapProp(const char *Class, const char *OldName, const char *NewName);
 
 	// Serialize Unreal engine UObject property block
-	void SerializeUnrealProps(FArchive &Ar, void *ObjectData) const;
+	void SerializeUnrealProps(FArchive& Ar, void* ObjectData) const;
 
-	void ReadUnrealProperty(FArchive& Ar, struct FPropertyTag& Tag, void *ObjectData, int PropTagPos) const;
+#if UNREAL4
+	void SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) const;
+#endif
+
+	void ReadUnrealProperty(FArchive& Ar, struct FPropertyTag& Tag, void* ObjectData, int PropTagPos) const;
 
 #if BATMAN
-	void SerializeBatmanProps(FArchive &Ar, void *ObjectData) const;
+	void SerializeBatmanProps(FArchive& Ar, void* ObjectData) const;
 #endif
 
 	void DumpProps(const void *Data) const;
