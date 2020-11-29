@@ -195,7 +195,7 @@ void CompressPNG(const unsigned char* pic, int Width, int Height, TArray<byte>& 
 
 	int PixelChannels = /*(RawFormat == ERGBFormat::Gray) ? 1 :*/ 3;
 
-	// Verify alpha channels of texture, see the possibility to drop one
+	// Verify alpha channels of texture, see the possibility to drop one. First pass: check if alpha is fully opaque
 	const unsigned char* p = pic + 3;
 	for (int i = Width * Height; i > 0; i--, p += 4)
 	{
@@ -204,6 +204,21 @@ void CompressPNG(const unsigned char* pic, int Width, int Height, TArray<byte>& 
 			PixelChannels = 4;
 			break;
 		}
+	}
+	// Check again to see if image is fully transparent - will also remove the alpha channel
+	if (PixelChannels == 4)
+	{
+		p = pic + 3;
+		bool bAllZero = true;
+		for (int i = Width * Height; i > 0; i--, p += 4)
+		{
+			if (*p != 0)
+			{
+				bAllZero = false;
+				break;
+			}
+		}
+		if (bAllZero) PixelChannels = 3;
 	}
 
 	unsigned char* newPic = NULL;
