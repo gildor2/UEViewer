@@ -41,6 +41,7 @@ public:
 
 protected:
 
+	bool bInitialized = false;
 #ifdef _WIN32
 	enum { CriticalSectionSize = sizeof(void*)*4 + sizeof(int)*2 }; // sizeof(RTL_CRITICAL_SECTION)
 	char data[CriticalSectionSize];

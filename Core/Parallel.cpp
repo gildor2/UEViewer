@@ -36,15 +36,18 @@ CMutex::CMutex()
 {
 	static_assert(CriticalSectionSize >= sizeof(RTL_CRITICAL_SECTION), "Review CriticalSectionSize");
 	InitializeCriticalSection((LPCRITICAL_SECTION)&data);
+	bInitialized = true;
 }
 
 CMutex::~CMutex()
 {
+	bInitialized = false;
 	DeleteCriticalSection((LPCRITICAL_SECTION)&data);
 }
 
 void CMutex::Lock()
 {
+	if (!bInitialized) return; // not yet created, or already destroyed
 #if TRACY_DEBUG_MUTEX
 	bool b = tracy.BeforeLock();
 #endif
@@ -56,6 +59,7 @@ void CMutex::Lock()
 
 bool CMutex::TryLock()
 {
+	if (!bInitialized) return true; // not yet created, or already destroyed
 	bool bAcquired = TryEnterCriticalSection((LPCRITICAL_SECTION)&data) == 0;
 #if TRACY_DEBUG_MUTEX
 	tracy.AfterTryLock(bAcquired);
@@ -65,6 +69,7 @@ bool CMutex::TryLock()
 
 void CMutex::Unlock()
 {
+	if (!bInitialized) return; // not yet created, or already destroyed
 	LeaveCriticalSection((LPCRITICAL_SECTION)&data);
 #if TRACY_DEBUG_MUTEX
 	tracy.AfterUnlock();
@@ -157,25 +162,30 @@ CMutex::CMutex()
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init((pthread_mutex_t*)&data, &attr);
 	pthread_mutexattr_destroy(&attr);
+	bInitialized = true;
 }
 
 CMutex::~CMutex()
 {
+	bInitialized = false;
 	pthread_mutex_destroy((pthread_mutex_t*)&data);
 }
 
 void CMutex::Lock()
 {
+	if (!bInitialized) return; // not yet created, or already destroyed
 	pthread_mutex_lock((pthread_mutex_t*)&data);
 }
 
 bool CMutex::TryLock()
 {
+	if (!bInitialized) return true; // not yet created, or already destroyed
 	return pthread_mutex_trylock((pthread_mutex_t*)&data) == 0;
 }
 
 void CMutex::Unlock()
 {
+	if (!bInitialized) return; // not yet created, or already destroyed
 	pthread_mutex_unlock((pthread_mutex_t*)&data);
 }
 
