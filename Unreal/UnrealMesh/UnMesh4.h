@@ -27,7 +27,6 @@ typedef UObject UStaticMeshSocket;
 struct FSkeletalMaterial;
 struct FStaticLODModel4;
 struct FSkeletalMeshLODInfo;
-struct FMeshUVChannelInfo;
 
 struct FMeshBoneInfo
 {
@@ -297,10 +296,19 @@ struct FStaticMeshSourceModel
 
 struct FMeshUVChannelInfo
 {
-	bool					bInitialized;
-	bool					bOverrideDensities;
-	float					LocalUVDensities[TEXSTREAM_MAX_NUM_UVCHANNELS];
+	DECLARE_STRUCT(FMeshUVChannelInfo);
+	bool		bInitialized;
+	bool		bOverrideDensities;
+	float		LocalUVDensities[TEXSTREAM_MAX_NUM_UVCHANNELS];
 
+	// Layout verified for UE4.26
+	BEGIN_PROP_TABLE
+		PROP_BOOL(bInitialized)
+		PROP_BOOL(bOverrideDensities)
+		PROP_FLOAT(LocalUVDensities)
+	END_PROP_TABLE
+
+	// The structure is serialized in both ways: native (SkeletalMesh) and as properties (StaticMesh)
 	friend FArchive& operator<<(FArchive& Ar, FMeshUVChannelInfo& V)
 	{
 		Ar << V.bInitialized << V.bOverrideDensities;
@@ -319,11 +327,12 @@ struct FStaticMaterial
 	FName				MaterialSlotName;
 	FMeshUVChannelInfo	UVChannelData;
 
+	// Layout verified for UE4.26
 	BEGIN_PROP_TABLE
 		PROP_OBJ(MaterialInterface)
 		PROP_NAME(MaterialSlotName)
-		PROP_DROP(ImportedMaterialSlotName)
-		PROP_DROP(UVChannelData)
+		PROP_DROP(ImportedMaterialSlotName, PropType::FName)
+		PROP_STRUC(UVChannelData, FMeshUVChannelInfo)
 	END_PROP_TABLE
 };
 
@@ -344,6 +353,7 @@ public:
 
 	// FStaticMeshRenderData fields
 	FBoxSphereBounds		Bounds;
+	FBoxSphereBounds		ExtendedBounds;		// declared for unversioned property serializer
 	float					ScreenSize[MAX_STATIC_LODS_UE4];
 	bool					bLODsShareStaticLighting;
 	TArray<FStaticMeshLODModel4> Lods;
@@ -353,9 +363,9 @@ public:
 		PROP_ARRAY(Materials, PropType::UObject)
 		PROP_ARRAY(SourceModels, "FStaticMeshSourceModel")
 		PROP_ARRAY(StaticMaterials, "FStaticMaterial")
+		PROP_STRUC(ExtendedBounds, FBoxSphereBounds)
 		PROP_DROP(LightmapUVDensity)
 		PROP_DROP(LightMapResolution)
-		PROP_DROP(ExtendedBounds)
 		PROP_DROP(LightMapCoordinateIndex)
 	END_PROP_TABLE
 
@@ -655,6 +665,7 @@ public:
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(FMeshBuildSettings) \
 	REGISTER_CLASS(FStaticMeshSourceModel) \
+	REGISTER_CLASS(FMeshUVChannelInfo) \
 	REGISTER_CLASS(FStaticMaterial) \
 	REGISTER_CLASS(FCompressedOffsetData) \
 	REGISTER_CLASS(FTrackToSkeletonMap) \
