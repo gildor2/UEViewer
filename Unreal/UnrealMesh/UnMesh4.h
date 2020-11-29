@@ -163,8 +163,8 @@ public:
 	//!! TODO: sockets
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(VirtualBones, FVirtualBone)
-		PROP_ARRAY(BoneTree, FBoneNode)
+		PROP_ARRAY(VirtualBones, "FVirtualBone")
+		PROP_ARRAY(BoneTree, "FBoneNode")
 		PROP_DROP(Notifies)			// not working with notifies in our program
 	END_PROP_TABLE
 
@@ -208,8 +208,8 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Skeleton)
 		PROP_BOOL(bHasVertexColors)
-		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
-		PROP_ARRAY(MorphTargets, UObject*)
+		PROP_ARRAY(LODInfo, "FSkeletalMeshLODInfo")
+		PROP_ARRAY(MorphTargets, PropType::UObject)
 #if BORDERLANDS3
 		PROP_BYTE(NumVertexColorChannels)
 #endif
@@ -350,9 +350,9 @@ public:
 	TArray<FStaticMeshSourceModel> SourceModels;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Materials, UObject*)
-		PROP_ARRAY(SourceModels, FStaticMeshSourceModel)
-		PROP_ARRAY(StaticMaterials, FStaticMaterial)
+		PROP_ARRAY(Materials, PropType::UObject)
+		PROP_ARRAY(SourceModels, "FStaticMeshSourceModel")
+		PROP_ARRAY(StaticMaterials, "FStaticMaterial")
 		PROP_DROP(LightmapUVDensity)
 		PROP_DROP(LightMapResolution)
 		PROP_DROP(ExtendedBounds)
@@ -385,7 +385,7 @@ public:
 	int32					StripSize;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(OffsetData, int)
+		PROP_ARRAY(OffsetData, PropType::Int)
 		PROP_INT(StripSize)
 	END_PROP_TABLE
 
@@ -475,7 +475,7 @@ struct FRawCurveTracks
 	TArray<FFloatCurve>		FloatCurves;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(FloatCurves, FFloatCurve)
+		PROP_ARRAY(FloatCurves, "FFloatCurve")
 	END_PROP_TABLE
 
 	void PostSerialize(FArchive& Ar);
@@ -598,10 +598,10 @@ public:
 		PROP_ENUM2(TranslationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(ScaleCompressionFormat, AnimationCompressionFormat)
-		PROP_ARRAY(CompressedTrackOffsets, int)
+		PROP_ARRAY(CompressedTrackOffsets, PropType::Int)
 		PROP_STRUC(CompressedScaleOffsets, FCompressedOffsetData)
-		PROP_ARRAY(TrackToSkeletonMapTable, FTrackToSkeletonMap)
-		PROP_ARRAY(CompressedTrackToSkeletonMapTable, FTrackToSkeletonMap)
+		PROP_ARRAY(TrackToSkeletonMapTable, "FTrackToSkeletonMap")
+		PROP_ARRAY(CompressedTrackToSkeletonMapTable, "FTrackToSkeletonMap")
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 		PROP_ENUM2(Interpolation, EAnimInterpolationType)
 		PROP_ENUM2(AdditiveAnimType, EAdditiveAnimationType)

@@ -97,7 +97,7 @@ public:
 	virtual void PostLoad();			// used to convert and add morphs to UE3 mesh
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Targets, UObject*)
+		PROP_ARRAY(Targets, PropType::UObject)
 		PROP_OBJ(BaseSkelMesh)
 	END_PROP_TABLE
 };
@@ -122,8 +122,8 @@ struct FSkeletalMeshLODInfo
 	BEGIN_PROP_TABLE
 		PROP_FLOAT(DisplayFactor)
 		PROP_FLOAT(LODHysteresis)
-		PROP_ARRAY(LODMaterialMap, int)
-		PROP_ARRAY(bEnableShadowCasting, bool)
+		PROP_ARRAY(LODMaterialMap, PropType::Int)
+		PROP_ARRAY(bEnableShadowCasting, PropType::Bool)
 		PROP_DROP(TriangleSorting)
 		PROP_DROP(TriangleSortSettings)
 		PROP_DROP(bHasBeenSimplified)
@@ -231,8 +231,8 @@ public:
 	CSkeletalMesh			*ConvertedMesh;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(LODInfo, FSkeletalMeshLODInfo)
-		PROP_ARRAY(Sockets, UObject*)
+		PROP_ARRAY(LODInfo, "FSkeletalMeshLODInfo")
+		PROP_ARRAY(Sockets, PropType::UObject)
 		PROP_BOOL(bHasVertexColors)
 		PROP_DROP(SkelMeshGUID)
 		PROP_DROP(SkelMirrorTable)
@@ -277,7 +277,7 @@ public:
 		PROP_OBJ(Skeleton)
 #endif
 #if DECLARE_VIEWER_PROPS
-		PROP_ARRAY(Materials, UObject*)
+		PROP_ARRAY(Materials, PropType::UObject)
 #endif // DECLARE_VIEWER_PROPS
 	END_PROP_TABLE
 
@@ -312,11 +312,11 @@ struct FRawAnimSequenceTrack
 #endif
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(PosKeys,  FVector)
-		PROP_ARRAY(RotKeys,  FQuat)
-		PROP_ARRAY(KeyTimes, float)
+		PROP_ARRAY(PosKeys,  PropType::FVector)
+		PROP_ARRAY(RotKeys,  "FQuat")
+		PROP_ARRAY(KeyTimes, PropType::Float)
 #if UNREAL4
-		PROP_ARRAY(ScaleKeys, FVector)
+		PROP_ARRAY(ScaleKeys, PropType::FVector)
 #endif
 	END_PROP_TABLE
 
@@ -485,8 +485,8 @@ public:
 
 	BEGIN_PROP_TABLE
 		PROP_BOOL(bAnimRotationOnly)
-		PROP_ARRAY(TrackBoneNames, FName)
-		PROP_ARRAY(UseTranslationBoneNames, FName)
+		PROP_ARRAY(TrackBoneNames, PropType::FName)
+		PROP_ARRAY(UseTranslationBoneNames, PropType::FName)
 	END_PROP_TABLE
 
 	virtual void PostLoad();
@@ -547,26 +547,26 @@ public:
 		PROP_INT(NumFrames)
 		PROP_FLOAT(RateScale)
 		PROP_BOOL(bNoLoopingInterpolation)
-		PROP_ARRAY(RawAnimData, FRawAnimSequenceTrack)
+		PROP_ARRAY(RawAnimData, "FRawAnimSequenceTrack")
 		PROP_ENUM2(TranslationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(RotationCompressionFormat, AnimationCompressionFormat)
 		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
-		PROP_ARRAY(CompressedTrackOffsets, int)
+		PROP_ARRAY(CompressedTrackOffsets, PropType::Int)
 		PROP_BOOL(bIsAdditive)
 		PROP_NAME(AdditiveRefName)
 #if TUROK
-		PROP_ARRAY(KeyFrameData, FBulkKeyframeDataEntry)
+		PROP_ARRAY(KeyFrameData, "FBulkKeyframeDataEntry")
 #endif
 #if MASSEFF
 		PROP_OBJ(m_pBioAnimSetData)
 #endif
 #if ARGONAUTS
-		PROP_ARRAY(CompressedTrackTimeOffsets, int)
+		PROP_ARRAY(CompressedTrackTimeOffsets, PropType::Int)
 		PROP_DROP(CompressedTrackSizes)
 #endif
 #if TRANSFORMERS
-		PROP_ARRAY(Tracks, int)				//?? not used?
-		PROP_ARRAY(TrackOffsets, int)
+		PROP_ARRAY(Tracks, PropType::Int)				//?? not used?
+		PROP_ARRAY(TrackOffsets, PropType::Int)
 #endif
 		// unsupported
 		PROP_DROP(Notifies)
@@ -690,13 +690,13 @@ public:
 
 	BEGIN_PROP_TABLE
 		PROP_BOOL(bAnimRotationOnly)
-		PROP_ARRAY(TrackBoneNames, FName)
-		PROP_ARRAY(Sequences, UObject*)
-		PROP_ARRAY(UseTranslationBoneNames, FName)
-		PROP_ARRAY(ForceMeshTranslationBoneNames, FName)
+		PROP_ARRAY(TrackBoneNames, PropType::FName)
+		PROP_ARRAY(Sequences, PropType::UObject)
+		PROP_ARRAY(UseTranslationBoneNames, PropType::FName)
+		PROP_ARRAY(ForceMeshTranslationBoneNames, PropType::FName)
 		PROP_NAME(PreviewSkelMeshName)
 #if TUROK
-		PROP_ARRAY(BulkDataBlocks, FBulkDataBlock)
+		PROP_ARRAY(BulkDataBlocks, "FBulkDataBlock")
 		PROP_INT(KeyFrameSize)
 		PROP_INT(RotationChannels)
 		PROP_INT(TranslationChannels)

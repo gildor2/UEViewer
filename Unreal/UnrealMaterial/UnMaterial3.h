@@ -740,7 +740,7 @@ struct FMaterialCachedParameterEntry
 	TArray<FMaterialParameterInfo> ParameterInfos;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(ParameterInfos, FMaterialParameterInfo)
+		PROP_ARRAY(ParameterInfos, "FMaterialParameterInfo")
 		PROP_DROP(NameHashes)
 		PROP_DROP(ExpressionGuids)
 		PROP_DROP(Overrides)
@@ -759,9 +759,9 @@ struct FMaterialCachedParameters
 	BEGIN_PROP_TABLE
 		PROP_STRUC(Entries, FMaterialCachedParameterEntry)
 		PROP_ALIAS(Entries, RuntimeEntries) // renamed in 4.26
-		PROP_ARRAY(ScalarValues, float)
-		PROP_ARRAY(VectorValues, FLinearColor)
-		PROP_ARRAY(TextureValues, UObject*)
+		PROP_ARRAY(ScalarValues, PropType::Float)
+		PROP_ARRAY(VectorValues, "FLinearColor")
+		PROP_ARRAY(TextureValues, PropType::UObject)
 		PROP_DROP(FontValues)
 		PROP_DROP(FontPageValues)
 		PROP_DROP(RuntimeVirtualTextureValues)
@@ -777,7 +777,7 @@ struct FMaterialCachedExpressionData
 
 	BEGIN_PROP_TABLE
 		PROP_STRUC(Parameters, FMaterialCachedParameters)
-		PROP_ARRAY(ReferencedTextures, UObject*)
+		PROP_ARRAY(ReferencedTextures, PropType::UObject)
 		PROP_DROP(FunctionInfos)
 		PROP_DROP(ParameterCollectionInfos)
 		PROP_DROP(DefaultLayers)
@@ -821,15 +821,15 @@ public:
 		PROP_BOOL(TwoSided)
 		PROP_BOOL(bDisableDepthTest)
 		PROP_BOOL(bIsMasked)
-		PROP_ARRAY(ReferencedTextures, UObject*)
-		PROP_ARRAY(Expressions, UObject*)
+		PROP_ARRAY(ReferencedTextures, PropType::UObject)
+		PROP_ARRAY(Expressions, PropType::UObject)
 		PROP_STRUC(CachedExpressionData, FMaterialCachedExpressionData)
 		PROP_ENUM2(BlendMode, EBlendMode)
 		PROP_FLOAT(OpacityMaskClipValue)
 #if DECLARE_VIEWER_PROPS
-		PROP_ARRAY(CollectedTextureParameters, CTextureParameterValue)
-		PROP_ARRAY(CollectedScalarParameters, CScalarParameterValue)
-		PROP_ARRAY(CollectedVectorParameters, CVectorParameterValue)
+		PROP_ARRAY(CollectedTextureParameters, "CTextureParameterValue")
+		PROP_ARRAY(CollectedScalarParameters, "CScalarParameterValue")
+		PROP_ARRAY(CollectedVectorParameters, "CVectorParameterValue")
 #endif // DECLARE_VIEWER_PROPS
 		//!! should be used (main material inputs in UE3 material editor)
 		PROP_DROP(DiffuseColor)
@@ -1174,9 +1174,9 @@ public:
 	TArray<FVectorParameterValue>	VectorParameterValues;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(ScalarParameterValues,  FScalarParameterValue )
-		PROP_ARRAY(TextureParameterValues, FTextureParameterValue)
-		PROP_ARRAY(VectorParameterValues,  FVectorParameterValue )
+		PROP_ARRAY(ScalarParameterValues,  "FScalarParameterValue" )
+		PROP_ARRAY(TextureParameterValues, "FTextureParameterValue")
+		PROP_ARRAY(VectorParameterValues,  "FVectorParameterValue" )
 		PROP_DROP(FontParameterValues)
 	END_PROP_TABLE
 

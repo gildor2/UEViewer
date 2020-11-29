@@ -88,7 +88,7 @@ struct CSkelMeshLod : public CBaseMeshLod
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CSkelMeshLod)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Sections, CMeshSection)
+		PROP_ARRAY(Sections, "CMeshSection")
 		PROP_INT(NumVerts)
 		VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
 		PROP_INT(NumTexCoords)
@@ -188,13 +188,13 @@ public:
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CSkeletalMesh)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Lods, CSkelMeshLod)
+		PROP_ARRAY(Lods, "CSkelMeshLod")
 		VPROP_ARRAY_COUNT(Lods, LodCount)
 		PROP_VECTOR(MeshOrigin)						// CVec3 as FVector
 		PROP_VECTOR(MeshScale)
 		PROP_ROTATOR(RotOrigin)
 		VPROP_ARRAY_COUNT(RefSkeleton, BoneCount)
-		PROP_ARRAY(Sockets, CSkelMeshSocket)
+		PROP_ARRAY(Sockets, "CSkelMeshSocket")
 		VPROP_ARRAY_COUNT(Sockets, SocketCount)
 	END_PROP_TABLE
 private:

@@ -1038,9 +1038,14 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 	}
 	byte *value = (byte*)ObjectData + Prop->Offset;
 
-#define CHECK_TYPE(name) \
-	if (strcmp(Prop->TypeName, name)) \
-		appError("Property %s expected type %s but read %s", *Tag.Name, name, Prop->TypeName)
+// If we'll put PropType namespace values into .cpp, we'll have identical constants, so we could
+// simply use (TypeField == Constant). However this breaks compile-time creation of CTypeInfo
+// property lists, they will be created at runtime. So, let's use strcmp at runtime instead.
+#define COMPARE_TYPE(TypeField, Constant)	( strcmp(TypeField, Constant) == 0 )
+
+#define CHECK_TYPE(TypeConst) \
+	if (COMPARE_TYPE(Prop->TypeName, TypeConst)) \
+		appError("Property %s expected type %s but read %s", *Tag.Name, TypeConst, Prop->TypeName)
 
 	int ArrayIndex = Tag.ArrayIndex;
 	switch (Tag.Type)
@@ -1065,7 +1070,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 			else
 			{
 				// error: this property is not marked using PROP_ENUM2
-				CHECK_TYPE("byte");
+				CHECK_TYPE(PropType::Byte);
 				appNotify("EnumProp: %s = %s\n", *Tag.Name, *EnumValue);
 //				PROP_DBG("%s", PROP(byte));
 			}
@@ -1075,7 +1080,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 		{
 			if (Prop->TypeName[0] != '#')
 			{
-				CHECK_TYPE("byte");
+				CHECK_TYPE(PropType::Byte);
 			}
 			Ar << PROP(byte);
 			PROP_DBG("%d", PROP(byte));
@@ -1083,31 +1088,31 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 		break;
 
 	case NAME_IntProperty:
-		CHECK_TYPE("int");
+		CHECK_TYPE(PropType::Int);
 		Ar << PROP(int);
 		PROP_DBG("%d", PROP(int));
 		break;
 
 	case NAME_BoolProperty:
-		CHECK_TYPE("bool");
+		CHECK_TYPE(PropType::Bool);
 		PROP(bool) = Tag.BoolValue != 0;
 		PROP_DBG("%s", PROP(bool) ? "true" : "false");
 		break;
 
 	case NAME_FloatProperty:
-		CHECK_TYPE("float");
+		CHECK_TYPE(PropType::Float);
 		Ar << PROP(float);
 		PROP_DBG("%g", PROP(float));
 		break;
 
 	case NAME_ObjectProperty:
-		CHECK_TYPE("UObject*");
+		CHECK_TYPE(PropType::UObject);
 		Ar << PROP(UObject*);
 		PROP_DBG("%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 		break;
 
 	case NAME_NameProperty:
-		CHECK_TYPE("FName");
+		CHECK_TYPE(PropType::FName);
 		Ar << PROP(FName);
 		PROP_DBG("%s", *PROP(FName));
 		break;
@@ -1262,7 +1267,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 		break;
 
 	case NAME_StrProperty:
-		if (!stricmp(Prop->TypeName, "FName"))
+		if (COMPARE_TYPE(Prop->TypeName, PropType::FName))
 		{
 			// serialize FString to FName
 			// MK X, "TextureFileCacheName": UE3 has it as FName, but MK X as FString
@@ -1274,7 +1279,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 		else
 		{
 			// serialize FString
-			CHECK_TYPE("FString");
+			CHECK_TYPE(PropType::FString);
 			Ar << PROP(FString);
 			PROP_DBG("%s", *PROP(FString));
 		}
@@ -1783,22 +1788,22 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 	#endif
 			Ar.Seek(Ar.Tell() + 4);
 		}
-		else if (!strcmp(Prop->TypeName, "int"))
+		else if (COMPARE_TYPE(Prop->TypeName, PropType::Int))
 		{
 			Ar << PROP(int);
 			PROP_DBG("%d", PROP(int));
 		}
-		else if (!strcmp(Prop->TypeName, "float"))
+		else if (COMPARE_TYPE(Prop->TypeName, PropType::Float))
 		{
 			Ar << PROP(float);
 			PROP_DBG("%g", PROP(float));
 		}
-		else if (!strcmp(Prop->TypeName, "UObject*"))
+		else if (COMPARE_TYPE(Prop->TypeName, PropType::UObject))
 		{
 			Ar << PROP(UObject*);
 			PROP_DBG("%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
 		}
-		else if (!strcmp(Prop->TypeName, "FName"))
+		else if (COMPARE_TYPE(Prop->TypeName, PropType::FName))
 		{
 			Ar << PROP(FName);
 			PROP_DBG("%s", *PROP(FName));

@@ -53,7 +53,7 @@ struct CStaticMeshLod : public CBaseMeshLod
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMeshLod)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Sections, CMeshSection)
+		PROP_ARRAY(Sections, "CMeshSection")
 		PROP_INT(NumVerts)
 		VPROP_ARRAY_COUNT(Indices.Indices16, IndexCount)
 		PROP_INT(NumTexCoords)
@@ -97,7 +97,7 @@ public:
 #if DECLARE_VIEWER_PROPS
 	DECLARE_STRUCT(CStaticMesh)
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Lods, CStaticMeshLod)
+		PROP_ARRAY(Lods, "CStaticMeshLod")
 		VPROP_ARRAY_COUNT(Lods, LodCount)
 	END_PROP_TABLE
 private:

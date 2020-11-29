@@ -69,6 +69,13 @@ struct CPropInfo
 	 *  0  for PROP_DROP - not linked to a read property
 	 */
 	int16			Count;
+
+	constexpr CPropInfo(const char* InName, const char* InTypeName, uint16 InOffset, int16 InCount)
+	: Name(InName)
+	, TypeName(InTypeName)
+	, Offset(InOffset)
+	, Count(InCount)
+	{}
 };
 
 
@@ -134,13 +141,31 @@ struct CNullType
 	}
 };
 
+// Constants for declaring property types
+namespace PropType
+{
+	constexpr const char* Bool = "bool";
+	constexpr const char* Int = "int";
+	constexpr const char* Byte = "byte";
+	constexpr const char* Float = "float";
+	constexpr const char* FName = "FName";
+	constexpr const char* UObject = "UObject*";
+	constexpr const char* FString = "FString";
+	constexpr const char* FVector = "FVector";
+	constexpr const char* FRotator = "FRotator";
+	constexpr const char* FColor = "FColor";
+}
 
-#define _PROP_BASE(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), sizeof(((ThisClass*)NULL)->Field) / sizeof(Type) },
+#define _PROP_BASE(Field,TypeName,BaseType)	{ #Field, TypeName, FIELD2OFS(ThisClass, Field), sizeof(ThisClass::Field) / sizeof(BaseType) },
+
 // PROP_ARRAY is used for TArray. For static array (type[N]) use declaration for 'type'.
-#define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
-#define PROP_STRUC(Field,Type)	_PROP_BASE(Field, Type)
-#define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		 // register a property which should be ignored
-#define PROP_ALIAS(Name,Alias)  { #Alias, ">" #Name, 0, 0 }, // register another name for the same property
+#define PROP_ARRAY(Field,TypeName)			{ #Field, TypeName, FIELD2OFS(ThisClass, Field), -1 }, //todo: should use PropType constants here!
+// Structure property aggregated into the class
+#define PROP_STRUC(Field,Type)				_PROP_BASE(Field, #Type, Type)
+// Register a property which should be ignored
+#define PROP_DROP(Field)					{ #Field, NULL, 0, 0 },
+// Register another name for the same property
+#define PROP_ALIAS(Name,Alias)  			{ #Alias, ">" #Name, 0, 0 },
 
 
 // BEGIN_PROP_TABLE/END_PROP_TABLE declares property table inside class declaration
@@ -150,24 +175,25 @@ struct CNullType
 	{											\
 		static const CPropInfo props[] =		\
 		{
-// simple types
+
+// Simple types
 // note: has special PROP_ENUM(), which is the same as PROP_BYTE(), but when using
 // PROP_BYTE for enumeration value, _PROP_BASE macro will set 'Count' field of
 // CPropInfo to 4 instead of 1 (enumeration values are serialized as byte, but
 // compiler report it as 4-byte field).
-#define PROP_ENUM(Field)		{ #Field, "byte",   FIELD2OFS(ThisClass, Field), 1 },
+#define PROP_ENUM(Field)		{ #Field, PropType::Byte, FIELD2OFS(ThisClass, Field), 1 },
 #define PROP_ENUM2(Field,Type)	{ #Field, "#"#Type, FIELD2OFS(ThisClass, Field), 1 },
-#define PROP_BYTE(Field)		_PROP_BASE(Field, byte     )
-#define PROP_INT(Field)			_PROP_BASE(Field, int      )
-#define PROP_BOOL(Field)		_PROP_BASE(Field, bool     )
-#define PROP_FLOAT(Field)		_PROP_BASE(Field, float    )
-#define PROP_NAME(Field)		_PROP_BASE(Field, FName    )
-#define PROP_STRING(Field)		_PROP_BASE(Field, FString  )
-#define PROP_OBJ(Field)			_PROP_BASE(Field, UObject* )
-// structure types; note: structure names corresponds to F<StrucName> C++ struc
-#define PROP_VECTOR(Field)		_PROP_BASE(Field, FVector  )
-#define PROP_ROTATOR(Field)		_PROP_BASE(Field, FRotator )
-#define PROP_COLOR(Field)		_PROP_BASE(Field, FColor   )
+#define PROP_BYTE(Field)		_PROP_BASE(Field, PropType::Byte, byte )
+#define PROP_INT(Field)			_PROP_BASE(Field, PropType::Int, int32  )
+#define PROP_BOOL(Field)		_PROP_BASE(Field, PropType::Bool, bool )
+#define PROP_FLOAT(Field)		_PROP_BASE(Field, PropType::Float, float)
+#define PROP_NAME(Field)		_PROP_BASE(Field, PropType::FName, FName)
+#define PROP_STRING(Field)		_PROP_BASE(Field, PropType::FString, FString)
+#define PROP_OBJ(Field)			_PROP_BASE(Field, PropType::UObject, UObject*)
+// Structure types; note: structure names corresponds to F<StrucName> C++ struc
+#define PROP_VECTOR(Field)		_PROP_BASE(Field, PropType::FVector, FVector)
+#define PROP_ROTATOR(Field)		_PROP_BASE(Field, PropType::FRotator, FRotator)
+#define PROP_COLOR(Field)		_PROP_BASE(Field, PropType::FColor, FColor)
 
 #define END_PROP_TABLE							\
 		};										\
@@ -176,7 +202,7 @@ struct CNullType
 	}
 
 #if DECLARE_VIEWER_PROPS
-#define VPROP_ARRAY_COUNT(Field,Name)	{ #Name, "int", FIELD2OFS(ThisClass, Field) + ARRAY_COUNT_FIELD_OFFSET, 1 },
+#define VPROP_ARRAY_COUNT(Field,Name)	{ #Name, PropType::Int, FIELD2OFS(ThisClass, Field) + ARRAY_COUNT_FIELD_OFFSET, 1 },
 #endif // DECLARE_VIEWER_PROPS
 
 // Mix of BEGIN_PROP_TABLE and DECLARE_BASE

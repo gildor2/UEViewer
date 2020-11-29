@@ -1721,7 +1721,7 @@ public:
 	CStaticMesh				*ConvertedMesh;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(Materials, FStaticMeshMaterial)
+		PROP_ARRAY(Materials, "FStaticMeshMaterial")
 		PROP_BOOL(UseSimpleLineCollision)
 		PROP_BOOL(UseSimpleBoxCollision)
 		PROP_BOOL(UseSimpleKarmaCollision)

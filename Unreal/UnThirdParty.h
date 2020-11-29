@@ -15,7 +15,7 @@ public:
 	TArray<byte>		RawData;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(RawData, byte)
+		PROP_ARRAY(RawData, PropType::Byte)
 	END_PROP_TABLE
 };
 
