@@ -894,6 +894,9 @@ no_net_index:
 #if UNREAL4
 	if ((Ar.Game >= GAME_UE4_BASE) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
 	{
+	#if DEBUG_PROPS
+		DUMP_ARC_BYTES(Ar, 512, "ALL");
+	#endif
 		Type->SerializeUnversionedProperties4(Ar, this);
 	}
 	else
@@ -1552,7 +1555,9 @@ struct FUnversionedHeader
 			{
 				ZeroMaskSize += Fragment.ValueCount;
 			}
+		#if DEBUG_PROPS
 			appPrintf("Frag: skip %d, %d props, zeros=%d, last=%d\n", Fragment.SkipNum, Fragment.ValueCount, Fragment.bHasAnyZeroes, Fragment.bIsLast);
+		#endif
 		}
 
 		if (ZeroMaskSize)
@@ -1640,8 +1645,10 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 	static const OffsetInfo info[] =
 	{
 	BEGIN("StaticMesh4")
+		MAP(#int64, 0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
 		MAP(StaticMaterials, 2)
 		MAP(LightmapUVDensity, 3)
+		MAP(#int8, 9)						// uint8 bGenerateMeshDistanceField
 		MAP(ExtendedBounds, 20)
 	END
 
@@ -1665,6 +1672,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 	p = info;
 	end = info + ARRAY_COUNT(info);
 
+	bool bClassFound = false;
 	while (p < end)
 	{
 		// Note: StrucType could correspond to a few classes from the list about
@@ -1680,8 +1688,21 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 				return p->Name;
 			}
 		}
-		if (IsOurClass) break;				// the class has been verified, and we didn't find a property
-		p++;								// skip END marker
+		if (IsOurClass)
+		{
+			// the class has been verified, and we didn't find a property
+			bClassFound = true;
+			break;
+		}
+		// skip END marker
+		p++;
+	}
+
+	if (bClassFound)
+	{
+		// We have a declaration of the class, so don't fall back to PROP declaration
+		//todo: review later, actually can "return NULL" from inside the loop body
+		return NULL;
 	}
 
 	// The property not found. Try using CTypeInfo properties, assuming their layout matches UE
@@ -1760,7 +1781,33 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			continue;
 		}
 
-		if (!PropName) continue; //todo: appError or something else
+		if (!PropName)
+		{
+			// Skip the property as if it is int32 or float
+		#if DEBUG_PROPS
+			appPrintf("  unknown prop %d, skip as int32\n", PropIndex);
+		#endif
+			Ar.Seek(Ar.Tell() + 4);
+			continue;
+		}
+
+		if (PropName[0] == '#')
+		{
+			// Special marker, skipping property of known size
+			if (!strcmp(PropName, "#int8"))
+			{
+				Ar.Seek(Ar.Tell() + 1);
+			}
+			else if (!strcmp(PropName, "#int64"))
+			{
+				Ar.Seek(Ar.Tell() + 8);
+			}
+			else
+			{
+				appError("Unknown marker: %s", PropName);
+			}
+			continue;
+		}
 
 		const CPropInfo* Prop = FindProperty(PropName);
 		assert(Prop != NULL);
