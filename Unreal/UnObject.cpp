@@ -895,7 +895,6 @@ no_net_index:
 	if ((Ar.Game >= GAME_UE4_BASE) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
 	{
 		Type->SerializeUnversionedProperties4(Ar, this);
-		return;
 	}
 	else
 #endif // UNREAL4
@@ -1622,9 +1621,11 @@ struct FUnversionedHeader
 	}
 };
 
-const char* CTypeInfo::FindUnversionedProp(int PropIndex) const
+const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) const
 {
 	guard(CTypeInfo::FindUnversionedProp);
+
+	OutArrayIndex = 0;
 
 	struct OffsetInfo
 	{
@@ -1684,9 +1685,30 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex) const
 	}
 
 	// The property not found. Try using CTypeInfo properties, assuming their layout matches UE
-	if (PropIndex < NumProps)
+	int CurrentPropIndex = 0;
+	for (int Index = 0; Index < NumProps; Index++)
 	{
-		return Props[PropIndex].Name;
+		const CPropInfo& Prop = Props[Index];
+		if (Prop.Count >= 2)
+		{
+			// Static array, should count each item as a separate property
+			if (CurrentPropIndex + Prop.Count > PropIndex)
+			{
+				// The property is located inside this array
+				OutArrayIndex = PropIndex - CurrentPropIndex;
+				return Prop.Name;
+			}
+			CurrentPropIndex += Prop.Count;
+		}
+		else
+		{
+			// The same code, but works as Count == 1 for any values
+			if (CurrentPropIndex == PropIndex)
+			{
+				return Prop.Name;
+			}
+			CurrentPropIndex++;
+		}
 	}
 
 	return NULL;
@@ -1702,11 +1724,6 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 {
 	guard(CTypeInfo::SerializeUnversionedProperties4);
 
-	DUMP_ARC_BYTES(Ar, 256, "UnversionedProperties");
-
-	FUnversionedHeader Header;
-	Header.Load(Ar);
-
 #undef PROP_DBG
 #if DEBUG_PROPS
 #	define PROP_DBG(fmt, ...) \
@@ -1715,13 +1732,26 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 #	define PROP_DBG(fmt, ...)
 #endif
 
+#if DEBUG_PROPS
+	appPrintf(">>> Enter struct: %s\n", Name);
+	DUMP_ARC_BYTES(Ar, 32, "Header");
+#endif
+
+	FUnversionedHeader Header;
+	Header.Load(Ar);
+
 	int PropIndex;
 	bool bIsZeroedProp;
 	while (Header.GetNextProperty(PropIndex, bIsZeroedProp))
 	{
-		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp);
-		const char* PropName = FindUnversionedProp(PropIndex);
-		appPrintf("-> %s\n", PropName);
+	#if DEBUG_PROPS
+		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp); //?? REMOVE
+	#endif
+		int ArrayIndex = 0;
+		const char* PropName = FindUnversionedProp(PropIndex, ArrayIndex);
+	#if DEBUG_PROPS
+		DUMP_ARC_BYTES(Ar, 32, "-> ...");
+	#endif
 		if (bIsZeroedProp)
 		{
 		#if DEBUG_PROPS
@@ -1733,14 +1763,9 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 		if (!PropName) continue; //todo: appError or something else
 
 		const CPropInfo* Prop = FindProperty(PropName);
-		if (!Prop)
-		{
-			//todo: unknown property, should know how to skip (not a problem with bIsZeroedProp)
-			continue;
-		}
+		assert(Prop != NULL);
 
 		byte* value = (byte*)ObjectData + Prop->Offset; // used in PROP macro
-		int ArrayIndex = 0; //?? not used yet, but required for PROP macro
 
 		if (Prop->Count == -1)
 		{
@@ -1775,18 +1800,51 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 
 				ItemType->SerializeUnversionedProperties4(Ar, Item);
 			}
+		#if DEBUG_PROPS
+			appPrintf("  } // end of array\n", PropName, DataCount);
+		#endif
 			continue;
 		}
 
-		assert(Prop->Count == 1);
+		if (Prop->Count == 0)
+		{
+			// Handle PROP_DROP macro
+		#if DEBUG_PROPS
+			appPrintf("Drop %s\n", Prop->Name);
+		#endif
+			// Assume DROP_PROP without a type specifier
+			if (!Prop->TypeName ||
+				COMPARE_TYPE(Prop->TypeName, PropType::Int) ||
+				COMPARE_TYPE(Prop->TypeName, PropType::Float) ||
+				COMPARE_TYPE(Prop->TypeName, PropType::UObject))
+			{
+				Ar.Seek(Ar.Tell() + 4);
+			}
+			else if (COMPARE_TYPE(Prop->TypeName, PropType::FName))
+			{
+				Ar.Seek(Ar.Tell() + 8);
+			}
+			else
+			{
+				appError("PROP_DROP(%s::%s) with unknown type", Name, Prop->Name);
+			}
+			continue;
+		}
 
-		if (!Prop->TypeName)
+		assert(Prop->Count >= 1);
+
+		if (Prop->TypeName == NULL)
 		{
 			// Declared as PROP_DROP, consider int32 serializer
 	#if DEBUG_PROPS
 			appPrintf("  (skipping %s as int32)\n", PropName);
 	#endif
 			Ar.Seek(Ar.Tell() + 4);
+		}
+		else if (COMPARE_TYPE(Prop->TypeName, PropType::Bool))
+		{
+			Ar << PROP(byte); // 1-byte boolean (actually UE4 has cases for different bool sizes)
+			PROP_DBG("%d", PROP(int));
 		}
 		else if (COMPARE_TYPE(Prop->TypeName, PropType::Int))
 		{
@@ -1808,12 +1866,23 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			Ar << PROP(FName);
 			PROP_DBG("%s", *PROP(FName));
 		}
+		else if (COMPARE_TYPE(Prop->TypeName, PropType::FVector))
+		{
+			Ar << PROP(FVector);
+			PROP_DBG("%g %g %g", FVECTOR_ARG(PROP(FVector)));
+		}
 		else
 		{
-			//todo: unknown property type
-			appPrintf("Unknown property type %s (%s[%d] -> %s)\n", Prop->TypeName, Name, PropIndex, PropName);
+			const CTypeInfo* ItemType = FindStructType(Prop->TypeName);
+			if (!ItemType)
+				appError("Unknown property type %s (%s[%d] -> %s)\n", Prop->TypeName, Name, PropIndex, PropName);
+			ItemType->SerializeUnversionedProperties4(Ar, value + ArrayIndex * ItemType->SizeOf);
 		}
 	}
+
+#if DEBUG_PROPS
+	appPrintf("<<< End of struct: %s\n", Name);
+#endif
 
 	unguard;
 }

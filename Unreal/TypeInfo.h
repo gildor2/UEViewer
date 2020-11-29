@@ -76,6 +76,14 @@ struct CPropInfo
 	, Offset(InOffset)
 	, Count(InCount)
 	{}
+
+	// Constructor for PROP_DROP
+	constexpr CPropInfo(const char* InName, const char* InTypeName = NULL)
+	: Name(InName)
+	, TypeName(InTypeName)
+	, Offset(0)
+	, Count(0)
+	{}
 };
 
 
@@ -110,7 +118,7 @@ struct CTypeInfo
 
 #if UNREAL4
 	void SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) const;
-	const char* FindUnversionedProp(int PropIndex) const;
+	const char* FindUnversionedProp(int PropIndex, int& OutArrayIndex) const;
 #endif
 
 	void ReadUnrealProperty(FArchive& Ar, struct FPropertyTag& Tag, void* ObjectData, int PropTagPos) const;
@@ -163,7 +171,7 @@ namespace PropType
 // Structure property aggregated into the class
 #define PROP_STRUC(Field,Type)				_PROP_BASE(Field, #Type, Type)
 // Register a property which should be ignored
-#define PROP_DROP(Field)					{ #Field, NULL, 0, 0 },
+#define PROP_DROP(Field, ...)				CPropInfo(#Field, __VA_ARGS__),
 // Register another name for the same property
 #define PROP_ALIAS(Name,Alias)  			{ #Alias, ">" #Name, 0, 0 },
 
