@@ -56,19 +56,28 @@
 
 struct CPropInfo
 {
-	const char	   *Name;		// field name
-	const char	   *TypeName;	// name of the field type
-	uint16			Offset;		// offset of this field from the class start
-	int16			Count;		// number of array items
+	// Field name
+	const char*	 	Name;
+	// Name of the field type
+	const char*		TypeName;
+	// Offset of this field from the class start
+	uint16			Offset;
+	/* Number of array items:
+	 *  1  for ordinary property
+	 *  2+ for static arrays (Type Prop[COUNT])
+	 * -1  for TArray (TArray<Type>)
+	 *  0  for PROP_DROP - not linked to a read property
+	 */
+	int16			Count;
 };
 
 
 struct CTypeInfo
 {
-	const char		*Name;
-	const CTypeInfo *Parent;
+	const char*		Name;
+	const CTypeInfo* Parent;
 	int				SizeOf;
-	const CPropInfo *Props;
+	const CPropInfo* Props;
 	int				NumProps;
 	void (*Constructor)(void*);
 	// methods
@@ -94,6 +103,7 @@ struct CTypeInfo
 
 #if UNREAL4
 	void SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) const;
+	const char* FindUnversionedProp(int PropIndex) const;
 #endif
 
 	void ReadUnrealProperty(FArchive& Ar, struct FPropertyTag& Tag, void* ObjectData, int PropTagPos) const;
@@ -129,7 +139,7 @@ struct CNullType
 // PROP_ARRAY is used for TArray. For static array (type[N]) use declaration for 'type'.
 #define PROP_ARRAY(Field,Type)	{ #Field, #Type, FIELD2OFS(ThisClass, Field), -1 },
 #define PROP_STRUC(Field,Type)	_PROP_BASE(Field, Type)
-#define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		 // signal property, which should be dropped
+#define PROP_DROP(Field)		{ #Field, NULL, 0, 0 },		 // register a property which should be ignored
 #define PROP_ALIAS(Name,Alias)  { #Alias, ">" #Name, 0, 0 }, // register another name for the same property
 
 

@@ -802,11 +802,11 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 		// Note: StrucType could correspond to a few classes from the list about
 		// because of inheritance, so don't "break" a loop when we've scanned some class, check
 		// other classes too
-		bool OurClass = StrucType->IsA(p->Name);
+		bool IsOurClass = StrucType->IsA(p->Name);
 
 		while (++p < end && p->Name)
 		{
-			if (!OurClass) continue;
+			if (!IsOurClass) continue;
 
 //			appPrintf("      ... check %s\n", p->Name);
 			if (p->Offset == TagBat.Offset)
@@ -819,6 +819,7 @@ static bool FindPropBat2(const CTypeInfo *StrucType, const FPropertyTagBat2 &Tag
 				return true;
 			}
 		}
+		if (IsOurClass) break;				// the class has been verified, and we didn't find a property
 		p++;								// skip END marker
 	}
 
@@ -1583,11 +1584,11 @@ struct FUnversionedHeader
 		{
 			while (true)
 			{
-				if (CurrentFragmentIndex == Fragments.Num())
+				if (++CurrentFragmentIndex == Fragments.Num())
 				{
 					return false;
 				}
-				CurrentFragment = &Fragments[++CurrentFragmentIndex];
+				CurrentFragment = &Fragments[CurrentFragmentIndex];
 				CurrentPropIndex += CurrentFragment->SkipNum;
 				// There's a loop till fragment has any value, in a case that SkipNum doesn't fit 7 bits value
 				if (CurrentFragment->ValueCount > 0)
@@ -1616,6 +1617,77 @@ struct FUnversionedHeader
 	}
 };
 
+const char* CTypeInfo::FindUnversionedProp(int PropIndex) const
+{
+	guard(CTypeInfo::FindUnversionedProp);
+
+	struct OffsetInfo
+	{
+		const char* Name;
+		int Index;
+	};
+
+#define BEGIN(type)			{ type,  0    },		// store class name as field name, index is not used
+#define MAP(name,offs)		{ #name, offs },		// field specification
+#define END					{ NULL,  0    },		// end of class - mark with NULL name
+
+	static const OffsetInfo info[] =
+	{
+	BEGIN("StaticMesh4")
+		MAP(StaticMaterials, 2)
+		MAP(LightmapUVDensity, 3)
+		MAP(ExtendedBounds, 20)
+	END
+
+//	BEGIN("Texture2D")
+//		MAP(SizeX, 0xE0)
+//		MAP(SizeY, 0xE4)
+//		MAP(TextureFileCacheName, 0x104)
+//		MAP(OriginalSizeX, 0xE8)
+//		MAP(OriginalSizeY, 0xEC)
+//	END
+	};
+
+#undef MAP
+#undef BEGIN
+#undef END
+
+	// Find a field
+	const OffsetInfo* p;
+	const OffsetInfo* end;
+
+	p = info;
+	end = info + ARRAY_COUNT(info);
+
+	while (p < end)
+	{
+		// Note: StrucType could correspond to a few classes from the list about
+		// because of inheritance, so don't "break" a loop when we've scanned some class, check
+		// other classes too
+		bool IsOurClass = IsA(p->Name);
+
+		while (++p < end && p->Name)
+		{
+			if (!IsOurClass) continue;
+			if (p->Index == PropIndex)
+			{
+				return p->Name;
+			}
+		}
+		if (IsOurClass) break;				// the class has been verified, and we didn't find a property
+		p++;								// skip END marker
+	}
+
+	// The property not found. Try using CTypeInfo properties, assuming their layout matches UE
+	if (PropIndex < NumProps)
+	{
+		return Props[PropIndex].Name;
+	}
+
+	return NULL;
+	unguard;
+}
+
 // References in UE4:
 // SerializeUnversionedProperties()
 //  -> FUnversionedHeader
@@ -1630,11 +1702,112 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 	FUnversionedHeader Header;
 	Header.Load(Ar);
 
+#undef PROP_DBG
+#if DEBUG_PROPS
+#	define PROP_DBG(fmt, ...) \
+		appPrintf("  %s[%d] = " fmt "\n", PropName, ArrayIndex, __VA_ARGS__);
+#else
+#	define PROP_DBG(fmt, ...)
+#endif
+
 	int PropIndex;
 	bool bIsZeroedProp;
 	while (Header.GetNextProperty(PropIndex, bIsZeroedProp))
 	{
 		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp);
+		const char* PropName = FindUnversionedProp(PropIndex);
+		appPrintf("-> %s\n", PropName);
+		if (bIsZeroedProp)
+		{
+		#if DEBUG_PROPS
+			appPrintf("  skip zero prop %d (%s)\n", PropIndex, PropName);
+		#endif
+			continue;
+		}
+
+		if (!PropName) continue; //todo: appError or something else
+
+		const CPropInfo* Prop = FindProperty(PropName);
+		if (!Prop)
+		{
+			//todo: unknown property, should know how to skip (not a problem with bIsZeroedProp)
+			continue;
+		}
+
+		byte* value = (byte*)ObjectData + Prop->Offset; // used in PROP macro
+		int ArrayIndex = 0; //?? not used yet, but required for PROP macro
+
+		if (Prop->Count == -1)
+		{
+			// TArray
+			// Reference: SerializeStruc(Ar, value, Tag.ArrayIndex, Prop->TypeName))
+			const CTypeInfo* ItemType = FindStructType(Prop->TypeName);
+			if (!ItemType)
+				appError("Unknown structure type %s", Prop->TypeName);
+
+			int32 DataCount;
+			Ar << DataCount;
+		#if DEBUG_PROPS
+			appPrintf("  %s[%d] = {\n", PropName, DataCount);
+		#endif
+
+			// Prepare array
+			FArray* Arr = (FArray*)value;
+			Arr->Empty(DataCount, ItemType->SizeOf);
+			Arr->InsertZeroed(0, DataCount, ItemType->SizeOf);
+
+			// Serialize items
+			byte* Item = (byte*)Arr->GetData();
+			for (int i = 0; i < DataCount; i++, Item += ItemType->SizeOf)
+			{
+		#if DEBUG_PROPS
+				appPrintf("Item[%d]:\n", i);
+		#endif
+				if (ItemType->Constructor)
+					ItemType->Constructor(Item);		// fill default properties
+				else
+					memset(Item, 0, ItemType->SizeOf);	// no constructor, just initialize with zeros
+
+				ItemType->SerializeUnversionedProperties4(Ar, Item);
+			}
+			continue;
+		}
+
+		assert(Prop->Count == 1);
+
+		if (!Prop->TypeName)
+		{
+			// Declared as PROP_DROP, consider int32 serializer
+	#if DEBUG_PROPS
+			appPrintf("  (skipping %s as int32)\n", PropName);
+	#endif
+			Ar.Seek(Ar.Tell() + 4);
+		}
+		else if (!strcmp(Prop->TypeName, "int"))
+		{
+			Ar << PROP(int);
+			PROP_DBG("%d", PROP(int));
+		}
+		else if (!strcmp(Prop->TypeName, "float"))
+		{
+			Ar << PROP(float);
+			PROP_DBG("%g", PROP(float));
+		}
+		else if (!strcmp(Prop->TypeName, "UObject*"))
+		{
+			Ar << PROP(UObject*);
+			PROP_DBG("%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
+		}
+		else if (!strcmp(Prop->TypeName, "FName"))
+		{
+			Ar << PROP(FName);
+			PROP_DBG("%s", *PROP(FName));
+		}
+		else
+		{
+			//todo: unknown property type
+			appPrintf("Unknown property type %s (%s[%d] -> %s)\n", Prop->TypeName, Name, PropIndex, PropName);
+		}
 	}
 
 	unguard;
