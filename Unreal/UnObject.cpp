@@ -1643,8 +1643,18 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 
 #define DROP_INT8(index)	{ "#int8", index  },
 #define DROP_INT64(index)	{ "#int64", index },
-#define DROP_VECTOR(index)	{ "#vec3", index  },
+#define DROP_VECTOR3(index)	{ "#vec3", index  },
+#define DROP_VECTOR4(index)	{ "#vec4", index  },	// FQuat, FGuid etc
 
+	if (IsA("TextureCube4"))
+	{
+		// No properties, redirect to UTexture2D by adjusting the property index.
+		// Add number of properties in UTexture2D
+		PropIndex += 6;
+	}
+
+	// todo: can support parent classes (e.g. UStreamableRenderAsset) by recognizing and adjusting index, like we did for UTextureCube
+	// todo: move to separate cpp
 	static const OffsetInfo info[] =
 	{
 	BEGIN("StaticMesh4")
@@ -1660,20 +1670,38 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		DROP_INT8(15)
 		DROP_INT8(16)
 		MAP(Sockets, 17)
-		DROP_VECTOR(18)						// FVector PositiveBoundsExtension
-		DROP_VECTOR(19)						// FVector NegativeBoundsExtension
+		DROP_VECTOR3(18)					// FVector PositiveBoundsExtension
+		DROP_VECTOR3(19)					// FVector NegativeBoundsExtension
 		MAP(AssetUserData, 22)
 
 		MAP(ExtendedBounds, 20)
 	END
 
-//	BEGIN("Texture2D")
-//		MAP(SizeX, 0xE0)
-//		MAP(SizeY, 0xE4)
-//		MAP(TextureFileCacheName, 0x104)
-//		MAP(OriginalSizeX, 0xE8)
-//		MAP(OriginalSizeY, 0xEC)
-//	END
+	BEGIN("Texture2D")
+		DROP_INT8(2)						// uint8 bTemporarilyDisableStreaming:1
+		DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
+		DROP_INT8(4)						// TEnumAsByte<enum TextureAddress> AddressY
+		DROP_INT64(5)						// FIntPoint ImportedSize
+		// Parent class UTexture, starts with index 6
+		DROP_VECTOR4(6)						// FGuid LightingGuid
+		DROP_INT8(8)						// TEnumAsByte<enum TextureCompressionSettings> CompressionSettings
+		DROP_INT8(9)						// TEnumAsByte<enum TextureFilter> Filter
+		DROP_INT8(11)						// TEnumAsByte<enum TextureGroup> LODGroup
+		DROP_INT8(14)						// uint8 SRGB:1
+		DROP_INT8(15)						// uint8 bNoTiling:1
+		DROP_INT8(16)
+		DROP_INT8(17)
+		DROP_INT8(18)
+		DROP_INT8(19)
+		// UStreamableRenderAsset starts at index 21
+		DROP_INT64(21)						// double ForceMipLevelsToBeResidentTimestamp
+		DROP_INT8(25)
+		DROP_INT8(26)
+		DROP_INT8(27)
+		DROP_INT8(28)
+		DROP_INT8(29)
+		DROP_INT8(30)
+	END
 	};
 
 #undef MAP
@@ -1820,6 +1848,10 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			else if (!strcmp(PropName, "#vec3"))
 			{
 				Ar.Seek(Ar.Tell() + 12);
+			}
+			else if (!strcmp(PropName, "#vec4"))
+			{
+				Ar.Seek(Ar.Tell() + 16);
 			}
 			else
 			{
