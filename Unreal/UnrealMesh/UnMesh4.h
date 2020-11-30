@@ -358,11 +358,14 @@ public:
 	bool					bLODsShareStaticLighting;
 	TArray<FStaticMeshLODModel4> Lods;
 	TArray<FStaticMeshSourceModel> SourceModels;
+	TArray<UObject*>		AssetUserData;
 
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Materials, PropType::UObject)
 		PROP_ARRAY(SourceModels, "FStaticMeshSourceModel")
 		PROP_ARRAY(StaticMaterials, "FStaticMaterial")
+		PROP_ARRAY(Sockets, PropType::UObject)	// declared for UE4.26 unversioned props
+		PROP_ARRAY(AssetUserData, PropType::UObject) // declared for UE4.26 unversioned props
 		PROP_STRUC(ExtendedBounds, FBoxSphereBounds)
 		PROP_DROP(LightmapUVDensity)
 		PROP_DROP(LightMapResolution)

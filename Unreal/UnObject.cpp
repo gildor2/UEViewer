@@ -1130,18 +1130,17 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 #endif
 			FArray *Arr = (FArray*)value;
 
-#define SIMPLE_ARRAY_TYPE(type) \
-		if (!strcmp(Prop->TypeName, #type)) { Ar << *(TArray<type>*)Arr; }
+#define SIMPLE_ARRAY_TYPE(TypeConst, CppType) \
+		if (COMPARE_TYPE(Prop->TypeName, TypeConst)) { Ar << *(TArray<CppType>*)Arr; }
 
-			SIMPLE_ARRAY_TYPE(int)
-			else SIMPLE_ARRAY_TYPE(bool)
-			else SIMPLE_ARRAY_TYPE(byte)
-			else SIMPLE_ARRAY_TYPE(float)
-			else SIMPLE_ARRAY_TYPE(UObject*)
-			else SIMPLE_ARRAY_TYPE(FName)
-			else SIMPLE_ARRAY_TYPE(FVector)
-			else SIMPLE_ARRAY_TYPE(FQuat)
-#undef SIMPLE_ARRAY_TYPE
+			SIMPLE_ARRAY_TYPE(PropType::Int, int)
+			else SIMPLE_ARRAY_TYPE(PropType::Bool, bool)
+			else SIMPLE_ARRAY_TYPE(PropType::Byte, byte)
+			else SIMPLE_ARRAY_TYPE(PropType::Float, float)
+			else SIMPLE_ARRAY_TYPE(PropType::UObject, UObject*)
+			else SIMPLE_ARRAY_TYPE(PropType::FName, FName)
+			else SIMPLE_ARRAY_TYPE(PropType::FVector, FVector)
+			else SIMPLE_ARRAY_TYPE("FQuat", FQuat)
 			else
 			{
 				// Read data count like generic TArray serializer does
@@ -1638,17 +1637,33 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		int Index;
 	};
 
-#define BEGIN(type)			{ type,  0    },		// store class name as field name, index is not used
-#define MAP(name,offs)		{ #name, offs },		// field specification
-#define END					{ NULL,  0    },		// end of class - mark with NULL name
+#define BEGIN(type)			{ type,  0        },	// store class name as field name, index is not used
+#define MAP(name,index)		{ #name, index    },	// field specification
+#define END					{ NULL,  0        },	// end of class - mark with NULL name
+
+#define DROP_INT8(index)	{ "#int8", index  },
+#define DROP_INT64(index)	{ "#int64", index },
+#define DROP_VECTOR(index)	{ "#vec3", index  },
 
 	static const OffsetInfo info[] =
 	{
 	BEGIN("StaticMesh4")
-		MAP(#int64, 0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
+		DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
 		MAP(StaticMaterials, 2)
 		MAP(LightmapUVDensity, 3)
-		MAP(#int8, 9)						// uint8 bGenerateMeshDistanceField
+		DROP_INT8(9)						// uint8 bGenerateMeshDistanceField
+		DROP_INT8(10)
+		DROP_INT8(11)
+		DROP_INT8(12)
+		DROP_INT8(13)
+		DROP_INT8(14)
+		DROP_INT8(15)
+		DROP_INT8(16)
+		MAP(Sockets, 17)
+		DROP_VECTOR(18)						// FVector PositiveBoundsExtension
+		DROP_VECTOR(19)						// FVector NegativeBoundsExtension
+		MAP(AssetUserData, 22)
+
 		MAP(ExtendedBounds, 20)
 	END
 
@@ -1802,6 +1817,10 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			{
 				Ar.Seek(Ar.Tell() + 8);
 			}
+			else if (!strcmp(PropName, "#vec3"))
+			{
+				Ar.Seek(Ar.Tell() + 12);
+			}
 			else
 			{
 				appError("Unknown marker: %s", PropName);
@@ -1816,8 +1835,30 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 
 		if (Prop->Count == -1)
 		{
+			guard(HandleTArray);
 			// TArray
 			// Reference: SerializeStruc(Ar, value, Tag.ArrayIndex, Prop->TypeName))
+			// todo: try reusing code between versioned and unversioned properties
+			FArray* Arr = (FArray*)value;
+
+			bool bSerialized = true;
+			SIMPLE_ARRAY_TYPE(PropType::Int, int)
+			else SIMPLE_ARRAY_TYPE(PropType::Bool, bool)
+			else SIMPLE_ARRAY_TYPE(PropType::Byte, byte)
+			else SIMPLE_ARRAY_TYPE(PropType::Float, float)
+			else SIMPLE_ARRAY_TYPE(PropType::UObject, UObject*)
+			else SIMPLE_ARRAY_TYPE(PropType::FName, FName)
+			else SIMPLE_ARRAY_TYPE(PropType::FVector, FVector)
+			else SIMPLE_ARRAY_TYPE("FQuat", FQuat)
+			else bSerialized = false;
+			if (bSerialized)
+			{
+		#if DEBUG_PROPS
+				appPrintf("  %s[%d] {}\n", PropName, Arr->Num());
+		#endif
+				continue;
+			}
+
 			const CTypeInfo* ItemType = FindStructType(Prop->TypeName);
 			if (!ItemType)
 				appError("Unknown structure type %s", Prop->TypeName);
@@ -1829,7 +1870,6 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 		#endif
 
 			// Prepare array
-			FArray* Arr = (FArray*)value;
 			Arr->Empty(DataCount, ItemType->SizeOf);
 			Arr->InsertZeroed(0, DataCount, ItemType->SizeOf);
 
@@ -1851,10 +1891,12 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			appPrintf("  } // end of array\n", PropName, DataCount);
 		#endif
 			continue;
+			unguard;
 		}
 
 		if (Prop->Count == 0)
 		{
+			guard(HandleDrop);
 			// Handle PROP_DROP macro
 		#if DEBUG_PROPS
 			appPrintf("Drop %s\n", Prop->Name);
@@ -1876,8 +1918,10 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 				appError("PROP_DROP(%s::%s) with unknown type", Name, Prop->Name);
 			}
 			continue;
+			unguard;
 		}
 
+		guard(HandleSimpleProp);
 		assert(Prop->Count >= 1);
 
 		if (Prop->TypeName == NULL)
@@ -1925,6 +1969,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 				appError("Unknown property type %s (%s[%d] -> %s)\n", Prop->TypeName, Name, PropIndex, PropName);
 			ItemType->SerializeUnversionedProperties4(Ar, value + ArrayIndex * ItemType->SizeOf);
 		}
+		unguardf("Count=%d, Index=%d", Prop->Count, ArrayIndex);
 	}
 
 #if DEBUG_PROPS
