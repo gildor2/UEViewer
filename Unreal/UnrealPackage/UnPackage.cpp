@@ -1070,7 +1070,14 @@ UObject* UnPackage::CreateImport(int index)
 	if (Imp.Missing) return NULL;	// error message already displayed for this entry
 
 	// load package
-	const char *PackageName = GetObjectPackageName(Imp.PackageIndex);
+	const char* PackageName = GetObjectPackageName(Imp.PackageIndex);
+#if UNREAL4
+	if (!PackageName)
+	{
+		// This could happen with UE4 IoStore structures, if PackageId was not found
+		return NULL;
+	}
+#endif
 	UnPackage *Package = LoadPackage(PackageName);
 	int ObjIndex = INDEX_NONE;
 
