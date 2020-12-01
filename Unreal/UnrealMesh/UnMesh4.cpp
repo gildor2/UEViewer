@@ -2235,6 +2235,14 @@ struct FWeightedRandomSampler
 	}
 };
 
+FArchive& operator<<(FArchive& Ar, FSkeletalMeshSamplingLODBuiltData& V)
+{
+	// Serialize FSkeletalMeshAreaWeightedTriangleSampler AreaWeightedSampler
+	// It is derived from FWeightedRandomSampler
+	FWeightedRandomSampler Sampler;
+	return Ar << Sampler;
+}
+
 typedef FWeightedRandomSampler FStaticMeshSectionAreaWeightedTriangleSampler;
 typedef FWeightedRandomSampler FStaticMeshAreaWeightedSectionSampler;
 
@@ -2561,6 +2569,7 @@ no_nav_collision:
 	Ar << LightingGuid;
 
 	//!! TODO: support sockets
+	// Warning: serialized twice - as UPROPERTY and as a binary serializer
 	Ar << Sockets;
 	if (Sockets.Num()) appPrintf("StaticMesh has %d sockets\n", Sockets.Num());
 

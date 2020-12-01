@@ -56,7 +56,13 @@ struct FReferencePose
 
 struct FBoneReference
 {
+	DECLARE_STRUCT(FBoneReference);
+
 	FName					BoneName;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(BoneName)
+	END_PROP_TABLE
 
 	friend FArchive& operator<<(FArchive& Ar, FBoneReference& B)
 	{
@@ -184,6 +190,102 @@ public:
 };
 
 
+// Skeletal mesh sampling info (declared just for unversioned properties)
+
+struct FSkeletalMeshSamplingRegionBoneFilter
+{
+	DECLARE_STRUCT(FSkeletalMeshSamplingRegionBoneFilter);
+	FName		BoneName;
+	uint8		bIncludeOrExclude;
+	uint8		bApplyToChildren;
+	BEGIN_PROP_TABLE
+		PROP_NAME(BoneName)
+		PROP_BOOL(bIncludeOrExclude)
+		PROP_BOOL(bApplyToChildren)
+	END_PROP_TABLE
+};
+
+struct FSkeletalMeshSamplingRegionMaterialFilter
+{
+	DECLARE_STRUCT(FSkeletalMeshSamplingRegionMaterialFilter);
+	FName		MaterialName;
+	BEGIN_PROP_TABLE
+		PROP_NAME(MaterialName)
+	END_PROP_TABLE
+};
+
+struct FSkeletalMeshSamplingRegion
+{
+	DECLARE_STRUCT(FSkeletalMeshSamplingRegion);
+	FName		Name;
+	int32		LODIndex;
+	uint8		bSupportUniformlyDistributedSampling;
+	TArray<FSkeletalMeshSamplingRegionMaterialFilter> MaterialFilters;
+	TArray<FSkeletalMeshSamplingRegionBoneFilter> BoneFilters;
+	BEGIN_PROP_TABLE
+		PROP_NAME(Name)
+		PROP_INT(LODIndex)
+		PROP_BOOL(bSupportUniformlyDistributedSampling)
+		PROP_ARRAY(MaterialFilters, "FSkeletalMeshSamplingRegionMaterialFilter")
+		PROP_ARRAY(BoneFilters, "FSkeletalMeshSamplingRegionBoneFilter")
+	END_PROP_TABLE
+};
+
+struct FSkeletalMeshSamplingLODBuiltData
+{
+	DECLARE_STRUCT(FSkeletalMeshSamplingLODBuiltData);
+	USE_NATIVE_SERIALIZER;
+	DUMMY_PROP_TABLE
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshSamplingLODBuiltData& V);
+};
+
+struct FSkeletalMeshSamplingRegionBuiltData
+{
+	DECLARE_STRUCT(FSkeletalMeshSamplingRegionBuiltData);
+	USE_NATIVE_SERIALIZER;
+	DUMMY_PROP_TABLE
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshSamplingRegionBuiltData& V)
+	{
+		appError("FSkeletalMeshSamplingRegionBuiltData StaticSerializer");
+		return Ar;
+	}
+};
+
+struct FSkeletalMeshSamplingBuiltData
+{
+	DECLARE_STRUCT(FSkeletalMeshSamplingBuiltData);
+	TArray<FSkeletalMeshSamplingLODBuiltData> WholeMeshBuiltData;
+	TArray<FSkeletalMeshSamplingRegionBuiltData> RegionBuiltData;
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(WholeMeshBuiltData, "FSkeletalMeshSamplingLODBuiltData")
+		PROP_ARRAY(RegionBuiltData, "FSkeletalMeshSamplingRegionBuiltData")
+	END_PROP_TABLE
+};
+
+struct FSkeletalMeshSamplingInfo
+{
+	DECLARE_STRUCT(FSkeletalMeshSamplingInfo);
+	TArray<FSkeletalMeshSamplingRegion> Regions;
+	FSkeletalMeshSamplingBuiltData BuiltData;
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(Regions, "FSkeletalMeshSamplingRegion")
+		PROP_STRUC(BuiltData, FSkeletalMeshSamplingBuiltData)
+	END_PROP_TABLE
+};
+
+// Defined dummy struct just for unversioned properties
+struct FSkeletalMeshBuildSettings
+{
+	DECLARE_STRUCT(FSkeletalMeshBuildSettings);
+	DUMMY_PROP_TABLE
+};
+
+struct FSkeletalMeshOptimizationSettings
+{
+	DECLARE_STRUCT(FSkeletalMeshOptimizationSettings);
+	DUMMY_PROP_TABLE
+};
+
 class USkeletalMesh4 : public UObject
 {
 	DECLARE_CLASS(USkeletalMesh4, UObject);
@@ -195,9 +297,11 @@ public:
 	TArray<FStaticLODModel4> LODModels;
 	TArray<FSkeletalMeshLODInfo> LODInfo;
 	TArray<UMorphTarget*>	MorphTargets;
+	TArray<USkeletalMeshSocket*> Sockets;
 #if BORDERLANDS3
 	byte					NumVertexColorChannels;
 #endif
+	FSkeletalMeshSamplingInfo SamplingInfo;
 
 	// properties
 	bool					bHasVertexColors;
@@ -209,6 +313,8 @@ public:
 		PROP_BOOL(bHasVertexColors)
 		PROP_ARRAY(LODInfo, "FSkeletalMeshLODInfo")
 		PROP_ARRAY(MorphTargets, PropType::UObject)
+		PROP_ARRAY(Sockets, PropType::UObject)
+		PROP_STRUC(SamplingInfo, FSkeletalMeshSamplingInfo)
 #if BORDERLANDS3
 		PROP_BYTE(NumVertexColorChannels)
 #endif
@@ -661,7 +767,17 @@ public:
 
 #define REGISTER_MESH_CLASSES_U4 \
 	REGISTER_CLASS(USkeleton) \
+	REGISTER_CLASS(FBoneReference) \
 	REGISTER_CLASS(FSkeletalMeshLODInfo) \
+	REGISTER_CLASS(FSkeletalMeshSamplingRegionBoneFilter) \
+	REGISTER_CLASS(FSkeletalMeshSamplingRegionMaterialFilter) \
+	REGISTER_CLASS(FSkeletalMeshSamplingRegion) \
+	REGISTER_CLASS(FSkeletalMeshSamplingLODBuiltData) \
+	REGISTER_CLASS(FSkeletalMeshSamplingRegionBuiltData) \
+	REGISTER_CLASS(FSkeletalMeshSamplingBuiltData) \
+	REGISTER_CLASS(FSkeletalMeshSamplingInfo) \
+	REGISTER_CLASS(FSkeletalMeshBuildSettings) \
+	REGISTER_CLASS(FSkeletalMeshOptimizationSettings) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS(UMorphTarget) \
 	REGISTER_CLASS(UDestructibleMesh) \

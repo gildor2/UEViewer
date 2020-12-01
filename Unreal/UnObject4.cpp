@@ -32,7 +32,7 @@ struct PropInfo
 #define MAP(name,index)		{ #name, index,    0 },	// field specification
 #define END					{ NULL,  0,        0 },	// end of class - mark with NULL name
 
-#define DROP_INT8(index)	{ "#int8", index,  0 },
+#define DROP_INT8(index)	{ "#int8", index,  0 }, //todo: can use DROP_INT8_MASK for all INT8, just ensure it will work with Index >= 32
 #define DROP_INT64(index)	{ "#int64", index, 0 },
 #define DROP_VECTOR3(index)	{ "#vec3", index,  0 },
 #define DROP_VECTOR4(index)	{ "#vec4", index,  0 },	// FQuat, FGuid etc
@@ -41,7 +41,7 @@ struct PropInfo
 
 static const PropInfo info[] =
 {
-BEGIN("StaticMesh4")
+BEGIN("UStaticMesh4")
 	DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
 	MAP(StaticMaterials, 2)
 	MAP(LightmapUVDensity, 3)
@@ -53,7 +53,7 @@ BEGIN("StaticMesh4")
 	MAP(AssetUserData, 22)
 END
 
-BEGIN("SkeletalMesh4")
+BEGIN("USkeletalMesh4")
 	MAP(Skeleton, 0)
 	MAP(LODInfo, 7)
 	DROP_INT8(14)						// uint8 bHasBeenSimplified:1
@@ -62,7 +62,7 @@ BEGIN("SkeletalMesh4")
 	MAP(Sockets, 26)
 END
 
-BEGIN("Texture2D")
+BEGIN("UTexture2D")
 	DROP_INT8(2)						// uint8 bTemporarilyDisableStreaming:1
 	DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
 	DROP_INT8(4)						// TEnumAsByte<enum TextureAddress> AddressY
@@ -80,6 +80,17 @@ BEGIN("FSkeletalMeshLODInfo")
 	DROP_INT64(0)						// FPerPlatformFloat ScreenSize
 	MAP(LODHysteresis, 1)
 	MAP(LODMaterialMap, 2)
+	MAP(BuildSettings, 3)
+	MAP(ReductionSettings, 4)
+	DROP_INT8_MASK(11, 12, 13, 14, 15)
+END
+
+BEGIN("FSkeletalMeshBuildSettings")
+	DROP_INT8_MASK(0, 1, 2, 3, 4, 5, 6, 7)
+END
+
+BEGIN("FSkeletalMeshOptimizationSettings")
+	DROP_INT8_MASK(0, 6, 7, 8, 9, 10, 11, 12, 16, 18, 19)
 END
 };
 
@@ -115,7 +126,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		// Note: StrucType could correspond to a few classes from the list about
 		// because of inheritance, so don't "break" a loop when we've scanned some class, check
 		// other classes too
-		bool IsOurClass = IsA(p->Name);
+		bool IsOurClass = IsA(p->Name + 1);
 
 		while (++p < end && p->Name)
 		{

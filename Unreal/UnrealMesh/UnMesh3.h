@@ -140,7 +140,6 @@ struct FSkeletalMeshLODInfo
 #endif
 #if UNREAL4
 		PROP_DROP(ScreenSize)
-		PROP_DROP(ReductionSettings)
 		PROP_DROP(OptimizationSettings)
 		PROP_DROP(RemovedBones)
 		PROP_DROP(SourceImportFilename)
@@ -152,7 +151,8 @@ struct FSkeletalMeshLODInfo
 		PROP_DROP(WeightOfPrioritization)
 		PROP_DROP(BakePose)
 		PROP_DROP(BakePoseOverride)
-		PROP_DROP(BuildSettings)
+		PROP_DROP(BuildSettings, "FSkeletalMeshBuildSettings")
+		PROP_DROP(ReductionSettings, "FSkeletalMeshOptimizationSettings")
 		PROP_DROP(SkinCacheUsage)
 #endif
 	END_PROP_TABLE
