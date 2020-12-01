@@ -8,26 +8,90 @@
 	UE4.26+ unversioned property table
 -----------------------------------------------------------------------------*/
 
+template<int Arg>
+constexpr int MakeBitmask()
+{
+	static_assert(Arg >= 0 && Arg <= 31, "Bad 'Arg'");
+	return 1 << Arg;
+}
+
+template<int Arg1, int Arg2, int... Args>
+constexpr int MakeBitmask()
+{
+	return MakeBitmask<Arg1>() | MakeBitmask<Arg2, Args...>();
+}
+
+struct PropInfo
+{
+	const char* Name;
+	int			Index;
+	uint32		PropMask;
+};
+
+#define BEGIN(type)			{ type,  0,        0 },	// store class name as field name, index is not used
+#define MAP(name,index)		{ #name, index,    0 },	// field specification
+#define END					{ NULL,  0,        0 },	// end of class - mark with NULL name
+
+#define DROP_INT8(index)	{ "#int8", index,  0 },
+#define DROP_INT64(index)	{ "#int64", index, 0 },
+#define DROP_VECTOR3(index)	{ "#vec3", index,  0 },
+#define DROP_VECTOR4(index)	{ "#vec4", index,  0 },	// FQuat, FGuid etc
+
+#define DROP_INT8_MASK(...)	{ "#int8", -1, MakeBitmask<__VA_ARGS__>() },
+
+static const PropInfo info[] =
+{
+BEGIN("StaticMesh4")
+	DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
+	MAP(StaticMaterials, 2)
+	MAP(LightmapUVDensity, 3)
+	DROP_INT8_MASK(9, 10, 11, 12, 13, 14, 15, 16)
+	MAP(Sockets, 17)
+	DROP_VECTOR3(18)					// FVector PositiveBoundsExtension
+	DROP_VECTOR3(19)					// FVector NegativeBoundsExtension
+	MAP(ExtendedBounds, 20)
+	MAP(AssetUserData, 22)
+END
+
+BEGIN("SkeletalMesh4")
+	MAP(Skeleton, 0)
+	MAP(LODInfo, 7)
+	DROP_INT8(14)						// uint8 bHasBeenSimplified:1
+	MAP(bHasVertexColors, 15)
+	MAP(SamplingInfo, 24)
+	MAP(Sockets, 26)
+END
+
+BEGIN("Texture2D")
+	DROP_INT8(2)						// uint8 bTemporarilyDisableStreaming:1
+	DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
+	DROP_INT8(4)						// TEnumAsByte<enum TextureAddress> AddressY
+	DROP_INT64(5)						// FIntPoint ImportedSize
+	// Parent class UTexture, starts with index 6
+	DROP_VECTOR4(6)						// FGuid LightingGuid
+	// UTexture
+	DROP_INT8_MASK(8, 9, 11, 14, 15, 16, 17, 18, 19)
+	// UStreamableRenderAsset starts at index 21
+	DROP_INT64(21)						// double ForceMipLevelsToBeResidentTimestamp
+	DROP_INT8_MASK(25, 26, 27, 28, 29, 30)
+END
+
+BEGIN("FSkeletalMeshLODInfo")
+	DROP_INT64(0)						// FPerPlatformFloat ScreenSize
+	MAP(LODHysteresis, 1)
+	MAP(LODMaterialMap, 2)
+END
+};
+
+#undef MAP
+#undef BEGIN
+#undef END
+
 const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) const
 {
 	guard(CTypeInfo::FindUnversionedProp);
 
 	OutArrayIndex = 0;
-
-	struct OffsetInfo
-	{
-		const char* Name;
-		int Index;
-	};
-
-#define BEGIN(type)			{ type,  0        },	// store class name as field name, index is not used
-#define MAP(name,index)		{ #name, index    },	// field specification
-#define END					{ NULL,  0        },	// end of class - mark with NULL name
-
-#define DROP_INT8(index)	{ "#int8", index  },
-#define DROP_INT64(index)	{ "#int64", index },
-#define DROP_VECTOR3(index)	{ "#vec3", index  },
-#define DROP_VECTOR4(index)	{ "#vec4", index  },	// FQuat, FGuid etc
 
 	if (IsA("TextureCube4"))
 	{
@@ -37,63 +101,10 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 	}
 
 	// todo: can support parent classes (e.g. UStreamableRenderAsset) by recognizing and adjusting index, like we did for UTextureCube
-	// todo: move to separate cpp
-	static const OffsetInfo info[] =
-	{
-	BEGIN("StaticMesh4")
-		DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
-		MAP(StaticMaterials, 2)
-		MAP(LightmapUVDensity, 3)
-		DROP_INT8(9)						// uint8 bGenerateMeshDistanceField
-		DROP_INT8(10)
-		DROP_INT8(11)
-		DROP_INT8(12)
-		DROP_INT8(13)
-		DROP_INT8(14)
-		DROP_INT8(15)
-		DROP_INT8(16)
-		MAP(Sockets, 17)
-		DROP_VECTOR3(18)					// FVector PositiveBoundsExtension
-		DROP_VECTOR3(19)					// FVector NegativeBoundsExtension
-		MAP(AssetUserData, 22)
-
-		MAP(ExtendedBounds, 20)
-	END
-
-	BEGIN("Texture2D")
-		DROP_INT8(2)						// uint8 bTemporarilyDisableStreaming:1
-		DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
-		DROP_INT8(4)						// TEnumAsByte<enum TextureAddress> AddressY
-		DROP_INT64(5)						// FIntPoint ImportedSize
-		// Parent class UTexture, starts with index 6
-		DROP_VECTOR4(6)						// FGuid LightingGuid
-		DROP_INT8(8)						// TEnumAsByte<enum TextureCompressionSettings> CompressionSettings
-		DROP_INT8(9)						// TEnumAsByte<enum TextureFilter> Filter
-		DROP_INT8(11)						// TEnumAsByte<enum TextureGroup> LODGroup
-		DROP_INT8(14)						// uint8 SRGB:1
-		DROP_INT8(15)						// uint8 bNoTiling:1
-		DROP_INT8(16)
-		DROP_INT8(17)
-		DROP_INT8(18)
-		DROP_INT8(19)
-		// UStreamableRenderAsset starts at index 21
-		DROP_INT64(21)						// double ForceMipLevelsToBeResidentTimestamp
-		DROP_INT8(25)
-		DROP_INT8(26)
-		DROP_INT8(27)
-		DROP_INT8(28)
-		DROP_INT8(29)
-		DROP_INT8(30)
-	END
-	};
-
-#undef MAP
-#undef BEGIN
-#undef END
 
 	// Find a field
-	const OffsetInfo* p;
-	const OffsetInfo* end;
+	const PropInfo* p;
+	const PropInfo* end;
 
 	p = info;
 	end = info + ARRAY_COUNT(info);
@@ -109,8 +120,16 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		while (++p < end && p->Name)
 		{
 			if (!IsOurClass) continue;
-			if (p->Index == PropIndex)
+			if (p->PropMask)
 			{
+				if ((1 << PropIndex) & p->PropMask)
+				{
+					return p->Name;
+				}
+			}
+			else if (p->Index == PropIndex)
+			{
+				//todo: not supporting arrays here, arrays relies on class' property table matching layout
 				return p->Name;
 			}
 		}
