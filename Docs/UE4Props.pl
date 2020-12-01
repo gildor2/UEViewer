@@ -2,23 +2,34 @@
 
 @dirs =
 (
-	"../../Epic/UnrealEngine4-latest/Engine/Source/Runtime/Engine/Classes/Engine",
+	"../../Epic/UnrealEngine4-latest/Engine/Source/Runtime/Engine",
 );
 
 @files =
 (
-	"StaticMesh.h",
+	"Public/Components.h",
+	"Public/BoneContainer.h",
+	"Classes/Engine/StreamableRenderAsset.h",
+	"Classes/Engine/StaticMesh.h",
+	"Classes/Engine/SkeletalMesh.h",
+	"Classes/Engine/SkeletalMeshSampling.h",
+	"Classes/Engine/Texture.h",
+	"Classes/Engine/Texture2D.h",
+	"Classes/Engine/TextureCube.h",
 );
 
 sub DBG() {0}
 
-$dump = 0;
-$latest = 0;
+#$dump = 0;
+#$latest = 0;
+
+%classProps = ();
 
 sub getline0
 {
 	while ($line = <IN>)
 	{
+		$lineNo++;
 		# remove CR/LF
 		$line =~ s/\r//;
 		$line =~ s/\n//;
@@ -39,13 +50,48 @@ sub getline0
 
 sub ParseClass
 {
-	my ($type, $className) = @_;
-
-	print("$type $className\n{\n");
+	my ($type, $className, $parent, $text) = @_;
 
 	my $num = 0;
+
+	if (defined($parent))
+	{
+		$text .= "$type $className : public $parent\n{\n";
+		if (exists($classProps{$parent}))
+		{
+			# Don't adjust property indices: parent class is always serialized next
+			# because last PropertyLinkNext of the class points to the first property
+			# of parent class.
+			#$num = $classProps{$parent};
+		}
+	}
+	else
+	{
+		$text .= "$type $className\n{\n";
+	}
+
+	my $brace = -1;
 	while (getline0())
 	{
+		# Handle nested structures
+		if ($line eq "{")
+		{
+			$brace++;
+			while ($brace > 0 && getline0())
+			{
+				if ($line eq "{")
+				{
+					$brace++;
+				}
+				elsif ($line eq "}" || $line eq "};" || $line eq "});")
+				{
+					$brace--;
+				}
+			}
+			next;
+		}
+
+#		print "## $line\n";
 		last if $line =~ "};.*";
 		if ($line =~ "#if WITH_EDITOR")
 		{
@@ -59,29 +105,43 @@ sub ParseClass
 		{
 			getline0();
 			#!! todo: static arrays are not parsed
-			print("    /* $num */ $line\n");
+			$text .= "    /* $num */ $line\n";
 			$num++;
 		}
 	}
 
-	print("};\n");
+	if ($num)
+	{
+		print($text);
+		print("};\n");
+		$classProps{$className} = $num;
+	}
 }
 
 sub ParseHeaderFile
 {
-	my $header = $_[0]."/".$_[1];
+	$header = $_[0]."/".$_[1]; # global variable
+	my $filename = $_[1];
+	$lineNo = 0;
 	open(IN, $header) || return;
+
+	print("//" . "-" x 120 . "\n");
+	print("//  $filename\n");
+	print("//" . "-" x 120 . "\n");
 
 	while (getline0())
 	{
+		my $classLine = $lineNo;
 		if ($line =~ /(struct|class)\s+\w+[^;]*$/)
 		{
 			# struct|class
-			my ($type, undef, $namespace) = $line =~ /^(struct|class) \s+ ([A-Z]+_API\s+)? (\w+)/x;
-			print "\n// $line\n";
+#			my ($type, undef, $namespace) = $line =~ /^(struct|class) \s+ ([A-Z]+_API\s+)? (\w+)/x;
+			my ($type, undef, $namespace, undef, undef, $parent) = $line =~ /^(struct|class) \s+ ([A-Z]+_API\s+)? (\w+) (\s* : \s* (public\s+)? (\w+) )?/x;
 			if (defined($namespace))
 			{
-				ParseClass($type, $namespace);
+				my $comment = "\n// $line\n";
+				$comment .= "// $filename:$classLine\n";
+				ParseClass($type, $namespace, $parent, $comment);
 			}
 			next;
 		}
@@ -107,17 +167,14 @@ sub ParseHeaderFile
 #	$findConst = $ARGV[0];
 #}
 
+print "#include // make C++ syntax highlighting\n";
+
 for my $d (@dirs)
 {
-	if (!$firstDirectory)
-	{
-		print("\n#" . "-" x 120 . "\n");
-	}
-	print "#\n# Scanning directory $d:\n#\n\n";
-	$firstDirectory = 0;
+	print("\n//\n// $d:\n//\n\n");
 	for my $f (@files)
 	{
 		ParseHeaderFile($d, $f);
+		print("\n");
 	}
-	print "\n" if !$dump;
 }
