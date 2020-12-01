@@ -1642,6 +1642,15 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 #	define PROP_DBG(fmt, ...)
 #endif
 
+	if (NativeSerializer)
+	{
+	#if DEBUG_PROPS
+		appPrintf(">>> Native: %s\n", Name);
+	#endif
+		NativeSerializer(Ar, ObjectData);
+		return;
+	}
+
 #if DEBUG_PROPS
 	appPrintf(">>> Enter struct: %s\n", Name);
 	DUMP_ARC_BYTES(Ar, 32, "Header");
@@ -1682,6 +1691,9 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 
 		if (PropName[0] == '#')
 		{
+		#if DEBUG_PROPS
+			appPrintf("  dropping %s\n", PropName + 1);
+		#endif
 			// Special marker, skipping property of known size
 			if (!strcmp(PropName, "#int8"))
 			{
@@ -1793,7 +1805,13 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			}
 			else
 			{
-				appError("PROP_DROP(%s::%s) with unknown type", Name, Prop->Name);
+				const CTypeInfo* ItemType = FindStructType(Prop->TypeName);
+				if (!ItemType)
+					appError("PROP_DROP(%s::%s) with unknown type", Name, Prop->Name);
+			#if DEBUG_PROPS
+				appPrintf("  dropping struct %s\n", Prop->TypeName);
+			#endif
+				ItemType->SerializeUnversionedProperties4(Ar, NULL);
 			}
 			continue;
 			unguard;

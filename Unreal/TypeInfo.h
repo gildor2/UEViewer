@@ -1,6 +1,12 @@
 #ifndef __TYPEINFO_H__
 #define __TYPEINFO_H__
 
+namespace TypeinfoDetail
+{
+	// Default value for StaticSerialize(), could be changed with USE_NATIVE_SERIALIZER macro
+	constexpr void (*StaticSerialize)(FArchive&, void*) = NULL;
+};
+
 // Comparing PropLevel with Super::PropLevel to detect whether we have property
 // table in current class or not
 #define DECLARE_BASE(Class,Base)				\
@@ -11,6 +17,7 @@
 		{ new(Mem) ThisClass; }					\
 		static const CTypeInfo* StaticGetTypeinfo() \
 		{										\
+			using namespace TypeinfoDetail;		\
 			int numProps = 0;					\
 			const CPropInfo *props = NULL;		\
 			if ((int)PropLevel != (int)Super::PropLevel) \
@@ -20,7 +27,8 @@
 				Super::StaticGetTypeinfo(),		\
 				sizeof(ThisClass),				\
 				props, numProps,				\
-				InternalConstructor				\
+				InternalConstructor,			\
+				StaticSerialize					\
 			);									\
 			return &type;						\
 		}
@@ -53,6 +61,16 @@
 			return Ar << *(UObject**)&Res;		\
 		}
 
+// UE3 and UE4 has a possibility to use native serializer for a struct.
+// In UE4 it is declared with ...
+// The serializer is instantiated in UScriptStruct::TCppStructOps::Serialize()
+// when TStructOpsTypeTraits<CPPSTRUCT>::WithSerializer is true.
+//todo: use native serializer for FVector, FGuid etc, clean up UnObject.cpp from explicit handling of these structs
+#define USE_NATIVE_SERIALIZER					\
+		static void StaticSerialize(FArchive& Ar, void* Data) \
+		{										\
+			Ar << *(ThisClass*)Data;			\
+		}
 
 struct CPropInfo
 {
@@ -95,15 +113,17 @@ struct CTypeInfo
 	const CPropInfo* Props;
 	int				NumProps;
 	void (*Constructor)(void*);
+	void (*NativeSerializer)(FArchive&, void*);
 	// methods
 	constexpr FORCEINLINE CTypeInfo(const char *AName, const CTypeInfo *AParent, int DataSize,
-					 const CPropInfo *AProps, int PropCount, void (*AConstructor)(void*))
+					 const CPropInfo *AProps, int PropCount, void (*AConstructor)(void*), void (*ASerializer)(FArchive&, void*))
 	:	Name(AName)
 	,	Parent(AParent)
 	,	SizeOf(DataSize)
 	,	Props(AProps)
 	,	NumProps(PropCount)
 	,	Constructor(AConstructor)
+	,	NativeSerializer(ASerializer)
 	{}
 	inline bool IsClass() const
 	{
@@ -209,6 +229,11 @@ namespace PropType
 		return props;							\
 	}
 
+#define DUMMY_PROP_TABLE						\
+	BEGIN_PROP_TABLE							\
+		PROP_DROP(Dummy)						\
+	END_PROP_TABLE
+
 #if DECLARE_VIEWER_PROPS
 #define VPROP_ARRAY_COUNT(Field,Name)	{ #Name, PropType::Int, FIELD2OFS(ThisClass, Field) + ARRAY_COUNT_FIELD_OFFSET, 1 },
 #endif // DECLARE_VIEWER_PROPS
@@ -218,12 +243,14 @@ namespace PropType
 #define BEGIN_PROP_TABLE_EXTERNAL(Class)		\
 static FORCEINLINE const CTypeInfo* Class##_StaticGetTypeinfo() \
 {												\
+	using namespace TypeinfoDetail;				\
 	static const char ClassName[] = #Class;		\
 	typedef Class ThisClass;					\
 	static const CPropInfo props[] =			\
 	{
 
 // Mix of END_PROP_TABLE and DECLARE_BASE
+//todo: there's no InternalConstructor for this type of object declaration?
 #define END_PROP_TABLE_EXTERNAL					\
 	};											\
 	static const CTypeInfo type(				\
@@ -231,7 +258,8 @@ static FORCEINLINE const CTypeInfo* Class##_StaticGetTypeinfo() \
 		NULL,									\
 		sizeof(ThisClass),						\
 		props, ARRAY_COUNT(props),				\
-		NULL									\
+		NULL,									\
+		StaticSerialize							\
 	);											\
 	return &type;								\
 }

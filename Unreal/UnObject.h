@@ -18,7 +18,7 @@ public:
 	// DECLARE_BASE constructs CTypeInfo with reference to CNullType, what makes compiler impossible to optimize it.
 	static const CTypeInfo* StaticGetTypeinfo()
 	{
-		static const CTypeInfo type("UObject", NULL, sizeof(UObject), NULL, 0, NULL);
+		static const CTypeInfo type("UObject", NULL, sizeof(UObject), NULL, 0, NULL, NULL);
 		return &type;
 	}
 #endif
