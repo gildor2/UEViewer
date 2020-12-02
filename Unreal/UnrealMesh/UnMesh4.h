@@ -244,11 +244,7 @@ struct FSkeletalMeshSamplingRegionBuiltData
 	DECLARE_STRUCT(FSkeletalMeshSamplingRegionBuiltData);
 	USE_NATIVE_SERIALIZER;
 	DUMMY_PROP_TABLE
-	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshSamplingRegionBuiltData& V)
-	{
-		appError("FSkeletalMeshSamplingRegionBuiltData StaticSerializer");
-		return Ar;
-	}
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshSamplingRegionBuiltData& V);
 };
 
 struct FSkeletalMeshSamplingBuiltData
@@ -286,6 +282,15 @@ struct FSkeletalMeshOptimizationSettings
 	DUMMY_PROP_TABLE
 };
 
+struct FSkinWeightProfileInfo
+{
+	DECLARE_STRUCT(FSkinWeightProfileInfo);
+	FName Name;
+	BEGIN_PROP_TABLE
+		PROP_NAME(Name)
+	END_PROP_TABLE
+};
+
 class USkeletalMesh4 : public UObject
 {
 	DECLARE_CLASS(USkeletalMesh4, UObject);
@@ -302,6 +307,7 @@ public:
 	byte					NumVertexColorChannels;
 #endif
 	FSkeletalMeshSamplingInfo SamplingInfo;
+	TArray<FSkinWeightProfileInfo> SkinWeightProfiles;
 
 	// properties
 	bool					bHasVertexColors;
@@ -315,6 +321,7 @@ public:
 		PROP_ARRAY(MorphTargets, PropType::UObject)
 		PROP_ARRAY(Sockets, PropType::UObject)
 		PROP_STRUC(SamplingInfo, FSkeletalMeshSamplingInfo)
+		PROP_ARRAY(SkinWeightProfiles, "FSkinWeightProfileInfo")
 #if BORDERLANDS3
 		PROP_BYTE(NumVertexColorChannels)
 #endif
@@ -464,15 +471,14 @@ public:
 	bool					bLODsShareStaticLighting;
 	TArray<FStaticMeshLODModel4> Lods;
 	TArray<FStaticMeshSourceModel> SourceModels;
-	TArray<UObject*>		AssetUserData;
 
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(Materials, PropType::UObject)
 		PROP_ARRAY(SourceModels, "FStaticMeshSourceModel")
 		PROP_ARRAY(StaticMaterials, "FStaticMaterial")
 		PROP_ARRAY(Sockets, PropType::UObject)	// declared for UE4.26 unversioned props
-		PROP_ARRAY(AssetUserData, PropType::UObject) // declared for UE4.26 unversioned props
 		PROP_STRUC(ExtendedBounds, FBoxSphereBounds)
+		PROP_DROP(AssetUserData)
 		PROP_DROP(LightmapUVDensity)
 		PROP_DROP(LightMapResolution)
 		PROP_DROP(LightMapCoordinateIndex)
@@ -778,6 +784,7 @@ public:
 	REGISTER_CLASS(FSkeletalMeshSamplingInfo) \
 	REGISTER_CLASS(FSkeletalMeshBuildSettings) \
 	REGISTER_CLASS(FSkeletalMeshOptimizationSettings) \
+	REGISTER_CLASS(FSkinWeightProfileInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS(UMorphTarget) \
 	REGISTER_CLASS(UDestructibleMesh) \

@@ -118,6 +118,17 @@ struct FSkeletalMeshLODInfo
 	float					LODHysteresis;
 	TArray<int>				LODMaterialMap;
 	TArray<bool>			bEnableShadowCasting;
+#if UNREAL4
+	TArray<struct FBoneReference> BonesToRemove;
+	TArray<struct FBoneReference> BonesToPrioritize;
+#endif
+
+#if UNREAL4
+	// Put contructor/destructor to cpp to avoid declaration of UE4 structures here
+	// (to let 'struct FBoneReference' work)
+	FSkeletalMeshLODInfo();
+	~FSkeletalMeshLODInfo();
+#endif
 
 	BEGIN_PROP_TABLE
 		PROP_FLOAT(DisplayFactor)
@@ -139,15 +150,15 @@ struct FSkeletalMeshLODInfo
 		PROP_DROP(UsedForParticleSpawning)
 #endif
 #if UNREAL4
+		PROP_ARRAY(BonesToRemove, "FBoneReference")
+		PROP_ARRAY(BonesToPrioritize, "FBoneReference")
 		PROP_DROP(ScreenSize)
 		PROP_DROP(OptimizationSettings)
 		PROP_DROP(RemovedBones)
-		PROP_DROP(SourceImportFilename)
+		PROP_DROP(SourceImportFilename, PropType::FString)
 		PROP_DROP(bHasPerLODVertexColors)
 		PROP_DROP(bAllowCPUAccess)
 		PROP_DROP(bSupportUniformlyDistributedSampling)
-		PROP_DROP(BonesToRemove)
-		PROP_DROP(BonesToPrioritize)
 		PROP_DROP(WeightOfPrioritization)
 		PROP_DROP(BakePose)
 		PROP_DROP(BakePoseOverride)

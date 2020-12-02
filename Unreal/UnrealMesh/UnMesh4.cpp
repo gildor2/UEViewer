@@ -2082,6 +2082,12 @@ UStaticMesh4::~UStaticMesh4()
 	delete ConvertedMesh;
 }
 
+FSkeletalMeshLODInfo::FSkeletalMeshLODInfo()
+{}
+
+FSkeletalMeshLODInfo::~FSkeletalMeshLODInfo()
+{}
+
 
 // Ambient occlusion data
 // When changed, constant DISTANCEFIELD_DERIVEDDATA_VER TEXT is updated
@@ -2241,6 +2247,27 @@ FArchive& operator<<(FArchive& Ar, FSkeletalMeshSamplingLODBuiltData& V)
 	// It is derived from FWeightedRandomSampler
 	FWeightedRandomSampler Sampler;
 	return Ar << Sampler;
+}
+
+FArchive& operator<<(FArchive& Ar, FSkeletalMeshSamplingRegionBuiltData& V)
+{
+	TArray<int32> TriangleIndices;
+	TArray<int32> BoneIndices;
+
+	Ar << TriangleIndices;
+	Ar << BoneIndices;
+
+	// Serialize FSkeletalMeshAreaWeightedTriangleSampler AreaWeightedSampler
+	// It is derived from FWeightedRandomSampler
+	FWeightedRandomSampler Sampler;
+	Ar << Sampler;
+
+	if (Ar.Game >= GAME_UE4(21)) // FNiagaraObjectVersion::SkeletalMeshVertexSampling
+	{
+		TArray<int32> Vertices;
+		Ar << Vertices;
+	}
+	return Ar;
 }
 
 typedef FWeightedRandomSampler FStaticMeshSectionAreaWeightedTriangleSampler;

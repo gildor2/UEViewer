@@ -892,7 +892,7 @@ no_net_index:
 		return;
 
 #if UNREAL4
-	if ((Ar.Game >= GAME_UE4_BASE) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
+	if ((Ar.Game >= GAME_UE4(26)) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
 	{
 	#if DEBUG_PROPS
 		DUMP_ARC_BYTES(Ar, 512, "ALL");
@@ -911,6 +911,11 @@ no_net_index:
 		// PossiblySerializeObjectGuid()
 		int bSerializeGuid;
 		Ar << bSerializeGuid;
+		if (Ar.Game >= GAME_UE4(26) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
+		{
+			if (bSerializeGuid != 0 && bSerializeGuid != 1)
+				appError("Unversioned properties problem");
+		}
 		if (bSerializeGuid)
 		{
 			FGuid guid;
@@ -1711,6 +1716,13 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			{
 				Ar.Seek(Ar.Tell() + 16);
 			}
+			else if (!strcmp(PropName, "#arr_int32"))
+			{
+				int32 Len;
+				Ar << Len;
+				if (Len > 0)
+					Ar.Seek(Ar.Tell() + Len * 4);
+			}
 			else
 			{
 				appError("Unknown marker: %s", PropName);
@@ -1802,6 +1814,15 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			else if (COMPARE_TYPE(Prop->TypeName, PropType::FName))
 			{
 				Ar.Seek(Ar.Tell() + 8);
+			}
+			else if (COMPARE_TYPE(Prop->TypeName, PropType::FString))
+			{
+				int32 Len;
+				Ar << Len;
+				if (Len > 0)
+					Ar.Seek(Ar.Tell() + Len);
+				else if (Len < 0)
+					Ar.Seek(Ar.Tell() - Len * 2);
 			}
 			else
 			{

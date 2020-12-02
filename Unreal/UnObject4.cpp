@@ -28,18 +28,19 @@ struct PropInfo
 	uint32		PropMask;
 };
 
-#define BEGIN(type)			{ type,  0,        0 },	// store class name as field name, index is not used
-#define MAP(name,index)		{ #name, index,    0 },	// field specification
-#define END					{ NULL,  0,        0 },	// end of class - mark with NULL name
+#define BEGIN(type)				{ type,  0,        0 },	// store class name as field name, index is not used
+#define MAP(name,index)			{ #name, index,    0 },	// field specification
+#define END						{ NULL,  0,        0 },	// end of class - mark with NULL name
 
-#define DROP_INT8(index)	{ "#int8", index,  0 }, //todo: can use DROP_INT8_MASK for all INT8, just ensure it will work with Index >= 32
-#define DROP_INT64(index)	{ "#int64", index, 0 },
-#define DROP_VECTOR3(index)	{ "#vec3", index,  0 },
-#define DROP_VECTOR4(index)	{ "#vec4", index,  0 },	// FQuat, FGuid etc
+#define DROP_INT8(index)		{ "#int8", index,  0 }, //todo: can use DROP_INT8_MASK for all INT8, just ensure it will work with Index >= 32
+#define DROP_INT64(index)		{ "#int64", index, 0 },
+#define DROP_VECTOR3(index)		{ "#vec3", index,  0 },
+#define DROP_VECTOR4(index)		{ "#vec4", index,  0 },	// FQuat, FGuid etc
+#define DROP_OBJ_ARRAY(index)	{ "#arr_int32", index, 0 }, // TArray<UObject*>
 
-#define DROP_INT8_MASK(...)	{ "#int8", -1, MakeBitmask<__VA_ARGS__>() },
+#define DROP_INT8_MASK(...)		{ "#int8", -1, MakeBitmask<__VA_ARGS__>() },
 
-static const PropInfo info[] =
+static const PropInfo PropData[] =
 {
 BEGIN("UStaticMesh4")
 	DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
@@ -50,16 +51,25 @@ BEGIN("UStaticMesh4")
 	DROP_VECTOR3(18)					// FVector PositiveBoundsExtension
 	DROP_VECTOR3(19)					// FVector NegativeBoundsExtension
 	MAP(ExtendedBounds, 20)
-	MAP(AssetUserData, 22)
+	DROP_OBJ_ARRAY(22)					// TArray<UAssetUserData*> AssetUserData
 END
 
 BEGIN("USkeletalMesh4")
 	MAP(Skeleton, 0)
+	DROP_VECTOR3(3)						// PositiveBoundsExtension
+	DROP_VECTOR3(4)						// PositiveBoundsExtension
+	MAP(Materials, 5)
 	MAP(LODInfo, 7)
-	DROP_INT8(14)						// uint8 bHasBeenSimplified:1
+	DROP_INT64(8)						// FPerPlatformInt MinLod
+	DROP_INT64(9)						// FPerPlatformBool DisableBelowMinLodStripping
+	DROP_INT8_MASK(10, 11, 12, 13, 14, 16)
 	MAP(bHasVertexColors, 15)
+	MAP(MorphTargets, 21)
+	DROP_OBJ_ARRAY(23)					// TArray<UClothingAssetBase*> MeshClothingAssets
 	MAP(SamplingInfo, 24)
+	DROP_OBJ_ARRAY(25)					// TArray<UAssetUserData*> AssetUserData
 	MAP(Sockets, 26)
+	MAP(SkinWeightProfiles, 27)
 END
 
 BEGIN("UTexture2D")
@@ -67,13 +77,17 @@ BEGIN("UTexture2D")
 	DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
 	DROP_INT8(4)						// TEnumAsByte<enum TextureAddress> AddressY
 	DROP_INT64(5)						// FIntPoint ImportedSize
-	// Parent class UTexture, starts with index 6
-	DROP_VECTOR4(6)						// FGuid LightingGuid
+END
+
+BEGIN("UTexture3")
+	DROP_VECTOR4(0)						// FGuid LightingGuid
 	// UTexture
-	DROP_INT8_MASK(8, 9, 11, 14, 15, 16, 17, 18, 19)
-	// UStreamableRenderAsset starts at index 21
-	DROP_INT64(21)						// double ForceMipLevelsToBeResidentTimestamp
-	DROP_INT8_MASK(25, 26, 27, 28, 29, 30)
+	DROP_INT8_MASK(2, 3, 5, 8, 9, 10, 11, 12, 13)
+END
+
+BEGIN("UStreamableRenderAsset")
+	DROP_INT64(0)						// double ForceMipLevelsToBeResidentTimestamp
+	DROP_INT8_MASK(4, 5, 6, 7, 8, 9)
 END
 
 BEGIN("FSkeletalMeshLODInfo")
@@ -82,6 +96,9 @@ BEGIN("FSkeletalMeshLODInfo")
 	MAP(LODMaterialMap, 2)
 	MAP(BuildSettings, 3)
 	MAP(ReductionSettings, 4)
+	MAP(BonesToRemove, 5)
+	MAP(BonesToPrioritize, 6)
+	MAP(SourceImportFilename, 10)
 	DROP_INT8_MASK(11, 12, 13, 14, 15)
 END
 
@@ -92,11 +109,34 @@ END
 BEGIN("FSkeletalMeshOptimizationSettings")
 	DROP_INT8_MASK(0, 6, 7, 8, 9, 10, 11, 12, 16, 18, 19)
 END
+
+BEGIN("FSkinWeightProfileInfo")
+	MAP(Name, 0)
+	DROP_INT64(1)						// FPerPlatformBool DefaultProfile
+	DROP_INT64(2)						// FPerPlatformInt DefaultProfileFromLODIndex
+END
 };
 
 #undef MAP
 #undef BEGIN
 #undef END
+
+struct ParentInfo
+{
+	const char* ThisName;
+	const char* ParentName; // this could be a UE4 class name which is NOT defined here
+	int NumProps;
+};
+
+static const ParentInfo ParentData[] =
+{
+	// Parent classes should be defined after children, so the whole table could be iterated with a single pass
+	{ "UTextureCube4", "UTexture3", 0 },
+	{ "UTexture2D", "UTexture3", 6 },
+	{ "UTexture3", "UStreamableRenderAsset", 15 },
+	{ "USkeletalMesh4", "UStreamableRenderAsset", 28 },
+	{ "UStaticMesh4", "UStreamableRenderAsset", 25 },
+};
 
 const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) const
 {
@@ -104,21 +144,38 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 
 	OutArrayIndex = 0;
 
-	if (IsA("TextureCube4"))
-	{
-		// No properties, redirect to UTexture2D by adjusting the property index.
-		// Add number of properties in UTexture2D
-		PropIndex += 6;
-	}
+	const char* CurrentClassName = Name;
+	const CTypeInfo* CurrentType = this;
 
-	// todo: can support parent classes (e.g. UStreamableRenderAsset) by recognizing and adjusting index, like we did for UTextureCube
+	//todo: can optimize with checking if class name starts with 'U', but: CTypeInfo::Name skips 'U', plus there could be FSomething (structs)
+	for (const ParentInfo& Parent : ParentData)
+	{
+		// Fast reject
+		if (PropIndex < Parent.NumProps)
+			continue;
+		// Compare types
+		if (CurrentType)
+		{
+			if (!CurrentType->IsA(Parent.ThisName + 1))
+				continue;
+		}
+		else
+		{
+			if (strcmp(CurrentClassName, Parent.ThisName) != 0)
+				continue;
+		}
+		// Types are matching, redirect to parent
+		CurrentClassName = Parent.ParentName;
+		CurrentType = NULL; //todo: use?
+		PropIndex -= Parent.NumProps;
+	}
 
 	// Find a field
 	const PropInfo* p;
 	const PropInfo* end;
 
-	p = info;
-	end = info + ARRAY_COUNT(info);
+	p = PropData;
+	end = PropData + ARRAY_COUNT(PropData);
 
 	bool bClassFound = false;
 	while (p < end)
@@ -126,7 +183,11 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		// Note: StrucType could correspond to a few classes from the list about
 		// because of inheritance, so don't "break" a loop when we've scanned some class, check
 		// other classes too
-		bool IsOurClass = IsA(p->Name + 1);
+		bool IsOurClass;
+		if (CurrentType)
+			IsOurClass = CurrentType->IsA(p->Name + 1);
+		else
+			IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
 
 		while (++p < end && p->Name)
 		{

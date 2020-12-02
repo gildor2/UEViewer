@@ -13,6 +13,7 @@
 	"Classes/Engine/StaticMesh.h",
 	"Classes/Engine/SkeletalMesh.h",
 	"Classes/Engine/SkeletalMeshSampling.h",
+	"Public/Animation/SkinWeightProfile.h",
 	"Classes/Engine/Texture.h",
 	"Classes/Engine/Texture2D.h",
 	"Classes/Engine/TextureCube.h",
