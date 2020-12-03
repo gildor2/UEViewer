@@ -17,6 +17,18 @@
 	"Classes/Engine/Texture.h",
 	"Classes/Engine/Texture2D.h",
 	"Classes/Engine/TextureCube.h",
+	"Classes/Materials/MaterialInterface.h",
+	"Classes/Materials/MaterialInstanceBasePropertyOverrides.h",
+	"Classes/Materials/MaterialLayersFunctions.h",
+	"Public/StaticParameterSet.h",
+	"Classes/Materials/MaterialInstance.h",
+	"Classes/Materials/Material.h",
+	"Classes/Materials/MaterialInstanceConstant.h",
+);
+
+%consts =
+(
+	"EPhysicalMaterialMaskColor::MAX" => 8,
 );
 
 sub DBG() {0}
@@ -84,7 +96,7 @@ sub ParseClass
 				{
 					$brace++;
 				}
-				elsif ($line eq "}" || $line eq "};" || $line eq "});")
+				elsif ($line =~ /^}/)
 				{
 					$brace--;
 				}
@@ -106,8 +118,22 @@ sub ParseClass
 		{
 			getline0();
 			#!! todo: static arrays are not parsed
+			my ($countValue) = $line =~ /.*\[(\S+)\]/;
+			my $increment = 1;
+			if (defined($countValue))
+			{
+				if (exists($consts{$countValue}))
+				{
+					$increment = $consts{$countValue};
+					$text .= "    // $countValue = $increment\n";
+				}
+				else
+				{
+					$text .= "    // Warning: array ofunknown size $countValue\n";
+				}
+			}
 			$text .= "    /* $num */ $line\n";
-			$num++;
+			$num += $increment;
 		}
 	}
 

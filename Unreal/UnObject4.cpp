@@ -85,6 +85,23 @@ BEGIN("UTexture3")
 	DROP_INT8_MASK(2, 3, 5, 8, 9, 10, 11, 12, 13)
 END
 
+BEGIN("UMaterialInstance")
+	MAP(Parent, 9)
+	DROP_INT8_MASK(10, 11)
+	MAP(ScalarParameterValues, 12)
+	MAP(VectorParameterValues, 13)
+	MAP(TextureParameterValues, 14)
+	MAP(BasePropertyOverrides, 17)
+	MAP(StaticParameters, 18)
+	DROP_OBJ_ARRAY(20)					//todo: TArray<UObject*> CachedReferencedTextures
+END
+
+BEGIN("UMaterialInterface")
+	MAP(LightmassSettings, 1)
+	MAP(TextureStreamingData, 2)
+	DROP_OBJ_ARRAY(3)					// TArray<UAssetUserData*> AssetUserData
+END
+
 BEGIN("UStreamableRenderAsset")
 	DROP_INT64(0)						// double ForceMipLevelsToBeResidentTimestamp
 	DROP_INT8_MASK(4, 5, 6, 7, 8, 9)
@@ -115,6 +132,20 @@ BEGIN("FSkinWeightProfileInfo")
 	DROP_INT64(1)						// FPerPlatformBool DefaultProfile
 	DROP_INT64(2)						// FPerPlatformInt DefaultProfileFromLODIndex
 END
+
+BEGIN("FMaterialInstanceBasePropertyOverrides")
+	MAP(bOverride_OpacityMaskClipValue, 0)
+	MAP(bOverride_BlendMode, 1)
+	DROP_INT8_MASK(2, 3, 4, 7, 8, 10)
+	MAP(bOverride_TwoSided, 5)
+	MAP(TwoSided, 6)
+	MAP(BlendMode, 9)
+	MAP(OpacityMaskClipValue, 11)
+END
+
+BEGIN("FLightmassMaterialInterfaceSettings")
+	DROP_INT8_MASK(3, 4, 5, 6, 7)
+END
 };
 
 #undef MAP
@@ -136,6 +167,12 @@ static const ParentInfo ParentData[] =
 	{ "UTexture3", "UStreamableRenderAsset", 15 },
 	{ "USkeletalMesh4", "UStreamableRenderAsset", 28 },
 	{ "UStaticMesh4", "UStreamableRenderAsset", 25 },
+	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // just 1 UObject* property
+	{ "UMaterialInstance", "UMaterialInterface", 21 },
+	{ "FStaticSwitchParameter", "FStaticParameterBase", 1 },
+	{ "FStaticComponentMaskParameter", "FStaticParameterBase", 4 },
+	{ "FStaticTerrainLayerWeightParameter", "FStaticParameterBase", 2 },
+	{ "FStaticMaterialLayersParameter", "FStaticParameterBase", 1 },
 };
 
 const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) const
@@ -166,7 +203,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		}
 		// Types are matching, redirect to parent
 		CurrentClassName = Parent.ParentName;
-		CurrentType = NULL; //todo: use?
+		CurrentType = FindStructType(Parent.ParentName);
 		PropIndex -= Parent.NumProps;
 	}
 
@@ -224,9 +261,10 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 
 	// The property not found. Try using CTypeInfo properties, assuming their layout matches UE
 	int CurrentPropIndex = 0;
-	for (int Index = 0; Index < NumProps; Index++)
+	assert(CurrentType);
+	for (int Index = 0; Index < CurrentType->NumProps; Index++)
 	{
-		const CPropInfo& Prop = Props[Index];
+		const CPropInfo& Prop = CurrentType->Props[Index];
 		if (Prop.Count >= 2)
 		{
 			// Static array, should count each item as a separate property

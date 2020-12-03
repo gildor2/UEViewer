@@ -1051,7 +1051,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 #define COMPARE_TYPE(TypeField, Constant)	( strcmp(TypeField, Constant) == 0 )
 
 #define CHECK_TYPE(TypeConst) \
-	if (COMPARE_TYPE(Prop->TypeName, TypeConst)) \
+	if (!COMPARE_TYPE(Prop->TypeName, TypeConst)) \
 		appError("Property %s expected type %s but read %s", *Tag.Name, TypeConst, Prop->TypeName)
 
 	int ArrayIndex = Tag.ArrayIndex;
@@ -1731,7 +1731,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 		}
 
 		const CPropInfo* Prop = FindProperty(PropName);
-		assert(Prop != NULL);
+		if (!Prop) appError("Property not found: %s\n", PropName);
 
 		byte* value = (byte*)ObjectData + Prop->Offset; // used in PROP macro
 
@@ -1811,6 +1811,15 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			{
 				Ar.Seek(Ar.Tell() + 4);
 			}
+			else if (COMPARE_TYPE(Prop->TypeName, PropType::Byte) ||
+				COMPARE_TYPE(Prop->TypeName, PropType::Bool))
+			{
+				Ar.Seek(Ar.Tell() + 1);
+			}
+			else if (COMPARE_TYPE(Prop->TypeName, PropType::FVector4))
+			{
+				Ar.Seek(Ar.Tell() + 16);
+			}
 			else if (COMPARE_TYPE(Prop->TypeName, PropType::FName))
 			{
 				Ar.Seek(Ar.Tell() + 8);
@@ -1828,7 +1837,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			{
 				const CTypeInfo* ItemType = FindStructType(Prop->TypeName);
 				if (!ItemType)
-					appError("PROP_DROP(%s::%s) with unknown type", Name, Prop->Name);
+					appError("PROP_DROP(%s::%s) with unknown type %s", Name, Prop->Name, Prop->TypeName);
 			#if DEBUG_PROPS
 				appPrintf("  dropping struct %s\n", Prop->TypeName);
 			#endif
@@ -1874,10 +1883,26 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			Ar << PROP(FName);
 			PROP_DBG("%s", *PROP(FName));
 		}
+		//todo: use NATIVE_SERIALIZER!
 		else if (COMPARE_TYPE(Prop->TypeName, PropType::FVector))
 		{
 			Ar << PROP(FVector);
 			PROP_DBG("%g %g %g", FVECTOR_ARG(PROP(FVector)));
+		}
+		else if (COMPARE_TYPE(Prop->TypeName, "FLinearColor"))
+		{
+			Ar << PROP(FLinearColor);
+			PROP_DBG("%g %g %g %g", FCOLOR_ARG(PROP(FLinearColor)));
+		}
+		else if (Prop->TypeName[0] == '#' && Prop->TypeName[1] == 'E')
+		{
+			// enum, serialize as byte
+			uint8& p = PROP(uint8);
+			Ar << p;
+		#if DEBUG_PROPS
+			const char* EnumName = EnumToName(Prop->TypeName + 1, p);
+			appPrintf("  %s = %d (enum %s::%s)\n", PropName, p, Prop->TypeName + 1, EnumName ? EnumName : "<unknown>");
+		#endif
 		}
 		else
 		{

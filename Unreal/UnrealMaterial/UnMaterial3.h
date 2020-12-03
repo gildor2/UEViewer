@@ -602,10 +602,10 @@ enum EBlendMode
 	BLEND_Translucent,
 	BLEND_Additive,
 	BLEND_Modulate,
-	BLEND_ModulateAndAdd,
-	BLEND_SoftMasked,
-	BLEND_AlphaComposite,
-	BLEND_DitheredTranslucent
+	BLEND_AlphaComposite,	// UE4 = 5, UE3 = 7
+	BLEND_DitheredTranslucent, // UE4 = 6,UE3 = 8
+	BLEND_ModulateAndAdd,	// UE3 = 5
+	BLEND_SoftMasked,		// UE3 = 6
 };
 
 _ENUM(EBlendMode)
@@ -615,10 +615,10 @@ _ENUM(EBlendMode)
 	_E(BLEND_Translucent),
 	_E(BLEND_Additive),
 	_E(BLEND_Modulate),
+	_E(BLEND_AlphaComposite),
+	_E(BLEND_DitheredTranslucent),
 	_E(BLEND_ModulateAndAdd),
 	_E(BLEND_SoftMasked),
-	_E(BLEND_AlphaComposite),
-	_E(BLEND_DitheredTranslucent)
 };
 
 enum EMaterialLightingModel	// unused now
@@ -661,6 +661,29 @@ _ENUM(EMobileSpecularMask)
 };
 
 
+#if UNREAL4
+
+struct FLightmassMaterialInterfaceSettings
+{
+	DECLARE_STRUCT(FLightmassMaterialInterfaceSettings);
+	DUMMY_PROP_TABLE
+};
+
+struct FMaterialTextureInfo
+{
+	DECLARE_STRUCT(FMaterialTextureInfo);
+	float			SamplingScale;
+	int32			UVChannelIndex;
+	FName			TextureName;
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(SamplingScale)
+		PROP_INT(UVChannelIndex)
+		PROP_NAME(TextureName)
+	END_PROP_TABLE
+};
+
+#endif // UNREAL4
+
 class UMaterialInterface : public UUnrealMaterial
 {
 	DECLARE_CLASS(UMaterialInterface, UUnrealMaterial)
@@ -673,6 +696,9 @@ public:
 	float			MobileSpecularPower;
 	EMobileSpecularMask MobileSpecularMask;
 	UTexture3		*MobileMaskTexture;
+#if UNREAL4
+	TArray<FMaterialTextureInfo> TextureStreamingData;
+#endif // UNREAL4
 
 	UMaterialInterface()
 	:	MobileSpecularPower(16)
@@ -697,7 +723,8 @@ public:
 		PROP_DROP(m_Guid)
 #endif
 #if UNREAL4
-		PROP_DROP(TextureStreamingData)
+		PROP_ARRAY(TextureStreamingData, "FMaterialTextureInfo")
+		PROP_DROP(LightmassSettings, "FLightmassMaterialInterfaceSettings")
 		PROP_DROP(SubsurfaceProfile)
 #endif
 	END_PROP_TABLE
@@ -728,8 +755,8 @@ struct FMaterialParameterInfo
 	BEGIN_PROP_TABLE
 		PROP_NAME(Name)
 		// Layer information
-		PROP_DROP(Association)
-		PROP_DROP(Index)
+		PROP_DROP(Association, PropType::Byte)
+		PROP_DROP(Index, PropType::Int)
 	END_PROP_TABLE
 };
 
@@ -1030,43 +1057,78 @@ struct FMaterialInstanceBasePropertyOverrides
 	{}
 };
 
-#endif // UNREAL4
-
-class UMaterialInstance : public UMaterialInterface
+struct FStaticParameterBase
 {
-	DECLARE_CLASS(UMaterialInstance, UMaterialInterface)
-public:
-	UUnrealMaterial	*Parent;				// UMaterialInterface*
-#if UNREAL4
-	FMaterialInstanceBasePropertyOverrides BasePropertyOverrides;
-#endif
+	DECLARE_STRUCT(FStaticParameterBase);
+	FMaterialParameterInfo ParameterInfo;
+	bool bOverride;
+	BEGIN_PROP_TABLE
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
+		PROP_BOOL(bOverride)
+		PROP_DROP(ExpressionGUID, PropType::FVector4) // FGuid
+	END_PROP_TABLE
+};
+
+struct FStaticSwitchParameter : public FStaticParameterBase
+{
+	DECLARE_STRUCT2(FStaticSwitchParameter, FStaticParameterBase);
+	bool Value;
+	BEGIN_PROP_TABLE
+		PROP_BOOL(Value)
+	END_PROP_TABLE
+};
+
+struct FStaticComponentMaskParameter : public FStaticParameterBase
+{
+	DECLARE_STRUCT2(FStaticComponentMaskParameter, FStaticParameterBase);
+	bool R;
+	bool G;
+	bool B;
+	bool A;
+	BEGIN_PROP_TABLE
+		PROP_BOOL(R)
+		PROP_BOOL(G)
+		PROP_BOOL(B)
+		PROP_BOOL(A)
+	END_PROP_TABLE
+};
+
+struct FStaticTerrainLayerWeightParameter : public FStaticParameterBase
+{
+	DECLARE_STRUCT2(FStaticTerrainLayerWeightParameter, FStaticParameterBase);
+	int32 WeightmapIndex;
+	bool bWeightBasedBlend;
+	BEGIN_PROP_TABLE
+		PROP_INT(WeightmapIndex)
+		PROP_BOOL(bWeightBasedBlend)
+	END_PROP_TABLE
+};
+
+struct FStaticMaterialLayersParameter : public FStaticParameterBase
+{
+	DECLARE_STRUCT2(FStaticMaterialLayersParameter, FStaticParameterBase);
+	// FMaterialLayersFunctions Value;
+	DUMMY_PROP_TABLE
+};
+
+struct FStaticParameterSet
+{
+	DECLARE_STRUCT(FStaticParameterSet);
+
+	TArray<FStaticSwitchParameter> StaticSwitchParameters;
+	TArray<FStaticComponentMaskParameter> StaticComponentMaskParameters;
+	TArray<FStaticTerrainLayerWeightParameter> TerrainLayerWeightParameters;
+	TArray<FStaticMaterialLayersParameter> MaterialLayersParameters;
 
 	BEGIN_PROP_TABLE
-		PROP_OBJ(Parent)
-#if UNREAL4
-		PROP_STRUC(BasePropertyOverrides, FMaterialInstanceBasePropertyOverrides)
-#endif
-		PROP_DROP(PhysMaterial)
-		PROP_DROP(bHasStaticPermutationResource)
-		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overriden textures
-		PROP_DROP(ReferencedTextureGuids)
-		PROP_DROP(ParentLightingGuid)
-		// physics
-		PROP_DROP(PhysMaterialMask)
-		PROP_DROP(PhysMaterialMaskUVChannel)
-		PROP_DROP(BlackPhysicalMaterial)
-		PROP_DROP(WhitePhysicalMaterial)
-#if UNREAL4
-		PROP_DROP(bOverrideSubsurfaceProfile)
-#endif
+		PROP_ARRAY(StaticSwitchParameters, "FStaticSwitchParameter")
+		PROP_ARRAY(StaticComponentMaskParameters, "FStaticComponentMaskParameter")
+		PROP_ARRAY(TerrainLayerWeightParameters, "FStaticTerrainLayerWeightParameter")
+		PROP_ARRAY(MaterialLayersParameters, "FStaticMaterialLayersParameter")
 	END_PROP_TABLE
-
-	virtual void Serialize(FArchive &Ar)
-	{
-		Super::Serialize(Ar);
-		DROP_REMAINING_DATA(Ar);			//?? drop native data
-	}
 };
+
+#endif // UNREAL4
 
 struct FScalarParameterValue
 {
@@ -1088,12 +1150,12 @@ struct FScalarParameterValue
 	}
 
 	BEGIN_PROP_TABLE
-		PROP_NAME(ParameterName)
-		PROP_FLOAT(ParameterValue)
 #if UNREAL4
-		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo) // property 0 in UE4.26
 #endif
-		PROP_DROP(ExpressionGUID)
+		PROP_FLOAT(ParameterValue)						// property 1
+		PROP_DROP(ExpressionGUID, PropType::FVector4)	// property 2
+		PROP_NAME(ParameterName)
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
 #endif
@@ -1120,12 +1182,12 @@ struct FTextureParameterValue
 	}
 
 	BEGIN_PROP_TABLE
-		PROP_NAME(ParameterName)
-		PROP_OBJ(ParameterValue)
 #if UNREAL4
-		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo) // property 0
 #endif
-		PROP_DROP(ExpressionGUID)
+		PROP_OBJ(ParameterValue)						// property 1
+		PROP_DROP(ExpressionGUID, PropType::FVector4)	// property 2
+		PROP_NAME(ParameterName)
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
 #endif
@@ -1153,32 +1215,67 @@ struct FVectorParameterValue
 	}
 
 	BEGIN_PROP_TABLE
-		PROP_NAME(ParameterName)
-		PROP_STRUC(ParameterValue, FLinearColor)
 #if UNREAL4
-		PROP_STRUC(ParameterInfo, FMaterialParameterInfo)
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo) // property 0
 #endif
-		PROP_DROP(ExpressionGUID)	//!! test nested structure serialization later
+		PROP_STRUC(ParameterValue, FLinearColor)		// property 1
+		PROP_DROP(ExpressionGUID, PropType::FVector4)	// property 2
+		PROP_NAME(ParameterName)
 #if TRANSFORMERS
 		PROP_DROP(ParameterCategory)
 #endif
 	END_PROP_TABLE
 };
 
-class UMaterialInstanceConstant : public UMaterialInstance
+class UMaterialInstance : public UMaterialInterface
 {
-	DECLARE_CLASS(UMaterialInstanceConstant, UMaterialInstance)
+	DECLARE_CLASS(UMaterialInstance, UMaterialInterface)
 public:
-	TArray<FScalarParameterValue>	ScalarParameterValues;
-	TArray<FTextureParameterValue>	TextureParameterValues;
-	TArray<FVectorParameterValue>	VectorParameterValues;
+	UUnrealMaterial	*Parent;				// UMaterialInterface*
+	TArray<FScalarParameterValue> ScalarParameterValues;
+	TArray<FTextureParameterValue> TextureParameterValues;
+	TArray<FVectorParameterValue> VectorParameterValues;
+#if UNREAL4
+	FMaterialInstanceBasePropertyOverrides BasePropertyOverrides;
+	FStaticParameterSet StaticParameters;
+#endif
 
 	BEGIN_PROP_TABLE
+		PROP_OBJ(Parent)
 		PROP_ARRAY(ScalarParameterValues,  "FScalarParameterValue" )
 		PROP_ARRAY(TextureParameterValues, "FTextureParameterValue")
 		PROP_ARRAY(VectorParameterValues,  "FVectorParameterValue" )
 		PROP_DROP(FontParameterValues)
+#if UNREAL4
+		PROP_STRUC(BasePropertyOverrides, FMaterialInstanceBasePropertyOverrides)
+		PROP_STRUC(StaticParameters, FStaticParameterSet)
+#endif
+		PROP_DROP(PhysMaterial)
+		PROP_DROP(bHasStaticPermutationResource)
+		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overriden textures
+		PROP_DROP(ReferencedTextureGuids)
+		PROP_DROP(ParentLightingGuid)
+		// physics
+		PROP_DROP(PhysMaterialMask)
+		PROP_DROP(PhysMaterialMaskUVChannel)
+		PROP_DROP(BlackPhysicalMaterial)
+		PROP_DROP(WhitePhysicalMaterial)
+#if UNREAL4
+		PROP_DROP(bOverrideSubsurfaceProfile)
+#endif
 	END_PROP_TABLE
+
+	virtual void Serialize(FArchive &Ar)
+	{
+		Super::Serialize(Ar);
+		DROP_REMAINING_DATA(Ar);			//?? drop native data
+	}
+};
+
+class UMaterialInstanceConstant : public UMaterialInstance
+{
+	DECLARE_CLASS(UMaterialInstanceConstant, UMaterialInstance)
+public:
 
 #if RENDERING
 	virtual void SetupGL();
@@ -1267,7 +1364,15 @@ public:
 	REGISTER_CLASS(FMaterialCachedParameters) \
 	REGISTER_CLASS(FMaterialCachedExpressionData) \
 	REGISTER_CLASS(FTextureSource)		\
-	REGISTER_CLASS(FMaterialInstanceBasePropertyOverrides)
+	REGISTER_CLASS(FMaterialInstanceBasePropertyOverrides) \
+	REGISTER_CLASS(FStaticParameterBase) \
+	REGISTER_CLASS(FStaticSwitchParameter) \
+	REGISTER_CLASS(FStaticComponentMaskParameter) \
+	REGISTER_CLASS(FStaticTerrainLayerWeightParameter) \
+	REGISTER_CLASS(FStaticMaterialLayersParameter) \
+	REGISTER_CLASS(FStaticParameterSet) \
+	REGISTER_CLASS(FLightmassMaterialInterfaceSettings) \
+	REGISTER_CLASS(FMaterialTextureInfo)
 
 #define REGISTER_MATERIAL_ENUMS_U4		\
 	REGISTER_ENUM(ETextureSourceFormat)

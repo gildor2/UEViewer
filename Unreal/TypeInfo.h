@@ -182,6 +182,7 @@ namespace PropType
 	constexpr const char* FVector = "FVector";
 	constexpr const char* FRotator = "FRotator";
 	constexpr const char* FColor = "FColor";
+	constexpr const char* FVector4 = "FVector4"; // FVector4, FQuat, FGuid etc
 }
 
 #define _PROP_BASE(Field,TypeName,BaseType)	{ #Field, TypeName, FIELD2OFS(ThisClass, Field), sizeof(ThisClass::Field) / sizeof(BaseType) },
