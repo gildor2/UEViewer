@@ -263,8 +263,11 @@ struct FIoStoreTocResource
 		// Directory index data
 		if (Header.ContainerFlags & (int)EIoContainerFlags::Indexed)
 		{
-			assert((Header.ContainerFlags & (int)EIoContainerFlags::Encrypted) == 0); // not supported, not used
 			assert(DataPtr + Header.DirectoryIndexSize <= Buffer + BufferSize);
+			if ((Header.ContainerFlags & (int)EIoContainerFlags::Encrypted) != 0)
+			{
+				appDecryptAES(const_cast<byte*>(DataPtr), Header.DirectoryIndexSize);
+			}
 			FMemReader IndexReader(DataPtr, Header.DirectoryIndexSize);
 			IndexReader.SetupFrom(Ar);
 			DirectoryIndex.Serialize(IndexReader);
