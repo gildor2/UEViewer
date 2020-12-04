@@ -1007,7 +1007,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 	int StopPos = Ar.Tell() + Tag.DataSize;	// for verification
 
 	const CPropInfo *Prop = FindProperty(Tag.Name);
-	if (!Prop || !Prop->TypeName)	// Prop->TypeName==NULL when declared with PROP_DROP() macro
+	if (!Prop || Prop->Count == 0)	// Prop->Count==0 when declared with PROP_DROP() macro
 	{
 		if (!Prop)
 			appPrintf("WARNING: %s \"%s::%s\" was not found\n", DbgTypeName, Name, *Tag.Name);
