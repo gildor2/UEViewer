@@ -8,37 +8,56 @@
 	UE4.26+ unversioned property table
 -----------------------------------------------------------------------------*/
 
+// Make a bitmask from provided bit values.
 template<int Arg>
-constexpr int MakeBitmask()
+constexpr uint32 MakeBitmask()
 {
 	static_assert(Arg >= 0 && Arg <= 31, "Bad 'Arg'");
 	return 1 << Arg;
 }
 
 template<int Arg1, int Arg2, int... Args>
-constexpr int MakeBitmask()
+constexpr uint32 MakeBitmask()
 {
 	return MakeBitmask<Arg1>() | MakeBitmask<Arg2, Args...>();
 }
 
+// Subtract Offset from each input constant and make a bitmask from it.
+// Bitmask from a single constant makes nothing. Bitmask of <N,N+1> will result 1.
+template<int Offset>
+constexpr int MakeBitmaskWithOffset()
+{
+    return 0;
+}
+
+template<int Offset, int Arg2, int... Args>
+constexpr int MakeBitmaskWithOffset()
+{
+	return MakeBitmask<Arg2 - (Offset + 1), Args - (Offset + 1)...>();
+}
+
 struct PropInfo
 {
+	// Name of the property, should exist in class's property table (BEGIN_PROP_TABLE...)
+	// If starts with '#', the property is ignored, and the name is actually a type name.
 	const char* Name;
 	int			Index;
+	// When PropMask is not zero, more than one property is specified with this entry.
+	// PropMask of value '1' means 2 properties: { Index, Index + 1 }
 	uint32		PropMask;
 };
 
-#define BEGIN(type)				{ type,  0,        0 },	// store class name as field name, index is not used
-#define MAP(name,index)			{ #name, index,    0 },	// field specification
-#define END						{ NULL,  0,        0 },	// end of class - mark with NULL name
+#define BEGIN(type)					{ type,  0,        0 },	// store class name as field name, index is not used
+#define MAP(name,index)				{ #name, index,    0 },	// field specification
+#define END							{ NULL,  0,        0 },	// end of class - mark with NULL name
 
-#define DROP_INT8(index)		{ "#int8", index,  0 }, //todo: can use DROP_INT8_MASK for all INT8, just ensure it will work with Index >= 32
-#define DROP_INT64(index)		{ "#int64", index, 0 },
-#define DROP_VECTOR3(index)		{ "#vec3", index,  0 },
-#define DROP_VECTOR4(index)		{ "#vec4", index,  0 },	// FQuat, FGuid etc
-#define DROP_OBJ_ARRAY(index)	{ "#arr_int32", index, 0 }, // TArray<UObject*>
+// Multi-property "drop" instructions
+#define DROP_INT8(index, ...)		{ "#int8", index, MakeBitmaskWithOffset<index,__VA_ARGS__>() },
+#define DROP_INT64(index, ...)		{ "#int64", index, MakeBitmaskWithOffset<index,__VA_ARGS__>() },
+#define DROP_VECTOR3(index, ...)	{ "#vec3", index,  MakeBitmaskWithOffset<index,__VA_ARGS__>() },
+#define DROP_VECTOR4(index, ...)	{ "#vec4", index,  MakeBitmaskWithOffset<index,__VA_ARGS__>() },	// FQuat, FGuid etc
 
-#define DROP_INT8_MASK(...)		{ "#int8", -1, MakeBitmask<__VA_ARGS__>() },
+#define DROP_OBJ_ARRAY(index)		{ "#arr_int32", index, 0 }, // TArray<UObject*>
 
 static const PropInfo PropData[] =
 {
@@ -46,7 +65,7 @@ BEGIN("UStaticMesh4")
 	DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
 	MAP(StaticMaterials, 2)
 	MAP(LightmapUVDensity, 3)
-	DROP_INT8_MASK(9, 10, 11, 12, 13, 14, 15, 16)
+	DROP_INT8(9, 10, 11, 12, 13, 14, 15, 16)
 	MAP(Sockets, 17)
 	DROP_VECTOR3(18)					// FVector PositiveBoundsExtension
 	DROP_VECTOR3(19)					// FVector NegativeBoundsExtension
@@ -62,7 +81,7 @@ BEGIN("USkeletalMesh4")
 	MAP(LODInfo, 7)
 	DROP_INT64(8)						// FPerPlatformInt MinLod
 	DROP_INT64(9)						// FPerPlatformBool DisableBelowMinLodStripping
-	DROP_INT8_MASK(10, 11, 12, 13, 14, 16)
+	DROP_INT8(10, 11, 12, 13, 14, 16)
 	MAP(bHasVertexColors, 15)
 	MAP(MorphTargets, 21)
 	DROP_OBJ_ARRAY(23)					// TArray<UClothingAssetBase*> MeshClothingAssets
@@ -82,12 +101,12 @@ END
 BEGIN("UTexture3")
 	DROP_VECTOR4(0)						// FGuid LightingGuid
 	// UTexture
-	DROP_INT8_MASK(2, 3, 5, 8, 9, 10, 11, 12, 13)
+	DROP_INT8(2, 3, 5, 8, 9, 10, 11, 12, 13)
 END
 
 BEGIN("UMaterialInstance")
 	MAP(Parent, 9)
-	DROP_INT8_MASK(10, 11)
+	DROP_INT8(10, 11)
 	MAP(ScalarParameterValues, 12)
 	MAP(VectorParameterValues, 13)
 	MAP(TextureParameterValues, 14)
@@ -104,7 +123,7 @@ END
 
 BEGIN("UStreamableRenderAsset")
 	DROP_INT64(0)						// double ForceMipLevelsToBeResidentTimestamp
-	DROP_INT8_MASK(4, 5, 6, 7, 8, 9)
+	DROP_INT8(4, 5, 6, 7, 8, 9)
 END
 
 BEGIN("FSkeletalMeshLODInfo")
@@ -116,15 +135,15 @@ BEGIN("FSkeletalMeshLODInfo")
 	MAP(BonesToRemove, 5)
 	MAP(BonesToPrioritize, 6)
 	MAP(SourceImportFilename, 10)
-	DROP_INT8_MASK(11, 12, 13, 14, 15)
+	DROP_INT8(11, 12, 13, 14, 15)
 END
 
 BEGIN("FSkeletalMeshBuildSettings")
-	DROP_INT8_MASK(0, 1, 2, 3, 4, 5, 6, 7)
+	DROP_INT8(0, 1, 2, 3, 4, 5, 6, 7)
 END
 
 BEGIN("FSkeletalMeshOptimizationSettings")
-	DROP_INT8_MASK(0, 6, 7, 8, 9, 10, 11, 12, 16, 18, 19)
+	DROP_INT8(0, 6, 7, 8, 9, 10, 11, 12, 16, 18, 19)
 END
 
 BEGIN("FSkinWeightProfileInfo")
@@ -136,7 +155,7 @@ END
 BEGIN("FMaterialInstanceBasePropertyOverrides")
 	MAP(bOverride_OpacityMaskClipValue, 0)
 	MAP(bOverride_BlendMode, 1)
-	DROP_INT8_MASK(2, 3, 4, 7, 8, 10)
+	DROP_INT8(2, 3, 4, 7, 8, 10)
 	MAP(bOverride_TwoSided, 5)
 	MAP(TwoSided, 6)
 	MAP(BlendMode, 9)
@@ -144,7 +163,7 @@ BEGIN("FMaterialInstanceBasePropertyOverrides")
 END
 
 BEGIN("FLightmassMaterialInterfaceSettings")
-	DROP_INT8_MASK(3, 4, 5, 6, 7)
+	DROP_INT8(3, 4, 5, 6, 7)
 END
 };
 
@@ -231,7 +250,14 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 			if (!IsOurClass) continue;
 			if (p->PropMask)
 			{
-				if ((1 << PropIndex) & p->PropMask)
+				uint32 IndexWithOffset = PropIndex - p->Index;
+				if (IndexWithOffset > 32)
+				{
+					// 'uint' here, so negative values will also go here
+					continue;
+				}
+				if ((IndexWithOffset == 0) ||						// we're implicitly storing first property
+					((1 << (IndexWithOffset - 1)) & p->PropMask))	// and explicitly up to 32 properties more
 				{
 					return p->Name;
 				}
