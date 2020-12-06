@@ -250,6 +250,19 @@ static FORCEINLINE const CTypeInfo* Class##_StaticGetTypeinfo() \
 	static const CPropInfo props[] =			\
 	{
 
+#define BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(Class)	\
+static FORCEINLINE const CTypeInfo* Class##_StaticGetTypeinfo() \
+{												\
+	static const char ClassName[] = #Class;		\
+	typedef Class ThisClass;					\
+	auto StaticSerialize=[](FArchive& Ar, void* Data) \
+	{											\
+		Ar << *(ThisClass*)Data;				\
+	};											\
+	static const CPropInfo props[] =			\
+	{
+
+
 // Mix of END_PROP_TABLE and DECLARE_BASE
 //todo: there's no InternalConstructor for this type of object declaration?
 #define END_PROP_TABLE_EXTERNAL					\

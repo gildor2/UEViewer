@@ -231,39 +231,32 @@ void UObject::EndLoad()
 static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *StrucName)
 {
 	guard(SerializeStruc);
-#define STRUC_TYPE(name)				\
-	if (!strcmp(StrucName, #name))		\
-	{									\
-		Ar << ((name*)Data)[Index];		\
-		return true;					\
-	}
-	STRUC_TYPE(FVector)
-	STRUC_TYPE(FRotator)
-	STRUC_TYPE(FColor)
+
+	bool bForceTaggedSerialize = false;
+
 #if MKVSDC
-	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
+	if (Ar.Game == GAME_MK && Ar.ArVer >= 677 && !strcmp(StrucName, "FBoxSphereBounds"))
 	{
-		STRUC_TYPE(FBoxSphereBounds)
+		// Native serializer for FBoxSphereBounds in MK
+		Ar << *(FBoxSphereBounds*)Data;
+		return true;
 	}
 #endif // MKVSDC
-	if (Ar.ArVer >= 300)	// real version is unknown; native FLinearColor serializer does not work with EndWar
+	if (Ar.ArVer < 300 && !strcmp(StrucName, "FLinearColor"))
 	{
-		STRUC_TYPE(FLinearColor)
+		// real version is unknown; native FLinearColor serializer does not work with EndWar
+		bForceTaggedSerialize = true;
 	}
-#if UNREAL4
-	if (Ar.Game >= GAME_UE4_BASE)
-	{
-		/// reference: CoreUObject/Classes/Object.h
-		/// objects with native serializer has "atomic" or "immutable" mark
-		STRUC_TYPE(FIntPoint)
-		STRUC_TYPE(FLinearColor)
-	}
-#endif // UNREAL4
+
 	// Serialize nested property block
 	const CTypeInfo *ItemType = FindStructType(StrucName);
 	if (!ItemType) return false;
-	ItemType->SerializeUnrealProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
+	if (ItemType->NativeSerializer)
+		ItemType->NativeSerializer(Ar, (byte*)Data + Index * ItemType->SizeOf);
+	else
+		ItemType->SerializeUnrealProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
 	return true;
+
 	unguardf("%s", StrucName);
 }
 
@@ -1952,19 +1945,23 @@ UObject *CreateClass(const char *Name)
 	Typeinfo for Core classes
 -----------------------------------------------------------------------------*/
 
-BEGIN_PROP_TABLE_EXTERNAL(FVector)
+// Native serializers are defined in UE4 as "atomic" or "immutable" mark,
+// or with WithSerializer type trait.
+// reference: CoreUObject/Classes/Object.h
+
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FVector)
 	PROP_FLOAT(X)
 	PROP_FLOAT(Y)
 	PROP_FLOAT(Z)
 END_PROP_TABLE_EXTERNAL
 
-BEGIN_PROP_TABLE_EXTERNAL(FRotator)
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FRotator)
 	PROP_INT(Yaw)
 	PROP_INT(Pitch)
 	PROP_INT(Roll)
 END_PROP_TABLE_EXTERNAL
 
-BEGIN_PROP_TABLE_EXTERNAL(FColor)
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FColor)
 	PROP_BYTE(R)
 	PROP_BYTE(G)
 	PROP_BYTE(B)
@@ -1973,7 +1970,7 @@ END_PROP_TABLE_EXTERNAL
 
 #if UNREAL3
 
-BEGIN_PROP_TABLE_EXTERNAL(FLinearColor)
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FLinearColor)
 	PROP_FLOAT(R)
 	PROP_FLOAT(G)
 	PROP_FLOAT(B)
@@ -1990,7 +1987,7 @@ END_PROP_TABLE_EXTERNAL
 
 #if UNREAL4
 
-BEGIN_PROP_TABLE_EXTERNAL(FIntPoint)
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FIntPoint)
 	PROP_INT(X)
 	PROP_INT(Y)
 END_PROP_TABLE_EXTERNAL
